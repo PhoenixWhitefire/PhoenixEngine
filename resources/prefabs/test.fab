@@ -1,0 +1,7 @@
+{
+  "Class": "ParticleEmitter",
+  "Position": [0,0,0],
+  "Parent": "GameDataModel",
+  "Enabled": true,
+  "MaxParticles": 500
+}

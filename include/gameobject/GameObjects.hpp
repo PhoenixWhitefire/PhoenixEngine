@@ -1,0 +1,9 @@
+#pragma once
+
+// Includes all game objects in order to add them to the list of game objects in the GameObjectFactory class
+
+#include"gameobject/Light.hpp"
+#include"gameobject/Model.hpp"
+#include"gameobject/Base3D.hpp"
+#include"gameobject/Mesh3D.hpp"
+#include"gameobject/ParticleEmitter.hpp"

@@ -1,0 +1,5 @@
+Running OpenGL version 4.6
+Renderer initialized
+Could not load file: resource/models/crow/scene.gltf
+Failed to load model: 'resource/models/crow/scene.gltf'
+Application closing...
