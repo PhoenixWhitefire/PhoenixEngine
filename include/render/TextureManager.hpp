@@ -11,7 +11,7 @@ class Texture
 {
 public:
 	GLuint Identifier = 0;
-	TextureType Usage;
+	TextureType Usage = TextureType::DIFFUSE;
 
 	std::string ImagePath = "";
 	int ImageHeight = -1;

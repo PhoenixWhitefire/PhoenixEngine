@@ -10,15 +10,17 @@ Mesh* GetPrimitiveMesh(PrimitiveType Type)
 	switch (Type)
 	{
 
-	case PrimitiveType::Cube:
-	{
-		PrimitiveMesh = BaseMeshes::Cube();
-	}
+		case PrimitiveType::Cube:
+		{
+			PrimitiveMesh = BaseMeshes::Cube();
+			break;
+		}
 
-	default:
-	{
-		PrimitiveMesh = BaseMeshes::Cube();
-	}
+		default:
+		{
+			PrimitiveMesh = BaseMeshes::Cube();
+			break;
+		}
 
 	}
 
@@ -27,8 +29,7 @@ Mesh* GetPrimitiveMesh(PrimitiveType Type)
 
 void Object_Primitive::Initialize()
 {
-	this->RenderMesh = GetPrimitiveMesh(this->Type);
-
+	this->RenderMesh = *GetPrimitiveMesh(this->Type);
 	this->PreviousType = this->Type;
 }
 
@@ -36,8 +37,7 @@ void Object_Primitive::Update(double DeltaTime)
 {
 	if (this->Type != this->PreviousType)
 	{
-		this->RenderMesh = GetPrimitiveMesh(this->Type);
-
+		this->RenderMesh = *GetPrimitiveMesh(this->Type);
 		this->PreviousType = this->Type;
 	}
 }

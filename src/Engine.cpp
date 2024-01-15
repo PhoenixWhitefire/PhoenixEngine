@@ -57,7 +57,6 @@ void StepPhysicsForObjects(std::vector<std::shared_ptr<GameObject>> Objects, Phy
 
 		if (Object)
 		{
-			//Debug::Log(std::vformat("yee! namE: {} physics: {}", std::make_format_args(Object->Name, Object->ComputePhysics ? "yes" : "nope :(")));
 			Physics.ComputePhysicsForObject(Object, Delta);
 		}
 	}
@@ -133,19 +132,19 @@ EngineObject::EngineObject(Vector2 WindowStartSize, SDL_Window** WindowPtr)
 	
 	//Initialize SDL
 	this->Window = SDL_CreateWindow(
-		"Waiting on game.ini...",
+		"Waiting on configuration...",
 		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		(int)WindowStartSize.X, (int)WindowStartSize.Y,
 		this->SDLWindowFlags
 	);
 
 	bool ConfigFileFound = true;
-	std::string ConfigAscii = FileRW::ReadFile("./game.ini", &ConfigFileFound);
+	std::string ConfigAscii = FileRW::ReadFile("./phoenix.conf", &ConfigFileFound);
 
 	if (ConfigFileFound)
 		EngineJsonConfig = nlohmann::json::parse(ConfigAscii);
 	else
-		throw(std::string("Could not find game.ini configuration file!"));
+		throw(std::string("Could not find configuration file (phoenix.conf)!"));
 
 	if (ConfigAscii == "")
 		throw(std::string("Configuration file game.ini is not configured (empty)"));
@@ -182,7 +181,7 @@ EngineObject::EngineObject(Vector2 WindowStartSize, SDL_Window** WindowPtr)
 	);
 
 	this->PostProcessingShaders->Activate();
-	glUniform1i(glGetUniformLocation(this->PostProcessingShaders->ID, "Texture"), this->m_renderer->m_framebuffer->TextureID);
+	glUniform1i(glGetUniformLocation(this->PostProcessingShaders->ID, "Texture"), 0);
 
 	glEnable(GL_DEPTH_TEST);
 
@@ -287,10 +286,11 @@ std::vector<MeshData_t> EngineObject::m_compileMeshData(std::shared_ptr<GameObje
 			if (Object3D != nullptr) {
 				// TODO: frustum culling
 				// Hold Q to disable distance culling
-				if ((Vector3(glm::vec3(Object3D->Matrix[3])) - this->MainCamera->Position).Magnitude > 100.0f && !UserInput::IsKeyDown(SDLK_q))
+				if ((Vector3(glm::vec3(Object3D->Matrix[3])) - this->MainCamera->Position).Magnitude > 100.0f
+					&& !UserInput::IsKeyDown(SDLK_q))
 					continue;
 
-				std::shared_ptr<Object_Mesh3D> MeshObject = std::dynamic_pointer_cast<Object_Mesh3D>(Object);
+				std::shared_ptr<Object_Mesh> MeshObject = std::dynamic_pointer_cast<Object_Mesh>(Object);
 
 				//TODO: recheck whether we need this
 				// if (MeshObject->HasTransparency)
@@ -348,7 +348,7 @@ std::vector<MeshData_t> m_compileTransparentMeshData(std::shared_ptr<GameObject>
 
 			if (Object3D != nullptr)
 			{
-				std::shared_ptr<Object_Mesh3D> MeshObject = std::dynamic_pointer_cast<Object_Mesh3D>(Object);
+				std::shared_ptr<Object_Mesh> MeshObject = std::dynamic_pointer_cast<Object_Mesh>(Object);
 
 				if (MeshObject != nullptr && MeshObject->HasTransparency)
 				{
@@ -417,17 +417,18 @@ double GetRunningTime()
 void EngineObject::Start()
 {
 	Texture* LoadingScreen = new Texture();
-	LoadingScreen->ImagePath = "./resources/textures/MISSING2_MaximumADHD_status_1665776378145304579.png";
+	LoadingScreen->ImagePath = "resources/textures/MISSING2_MaximumADHD_status_1665776378145304579.png";
 
 	TextureManager::Get()->CreateTexture2D(LoadingScreen, false);
 
 	this->PostProcessingShaders->Activate();
 
-	glUniform1i(glGetUniformLocation(this->PostProcessingShaders->ID, "Texture"), LoadingScreen->Identifier);
+	glUniform1i(glGetUniformLocation(this->PostProcessingShaders->ID, "Texture"), 0);
 
 	glBindVertexArray(this->RectangleVAO);
 	glDisable(GL_DEPTH_TEST);
 
+	glActiveTexture(GL_TEXTURE0);
 	this->m_renderer->m_framebuffer->BindTexture();
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 
@@ -514,7 +515,7 @@ void EngineObject::Start()
 
 	this->PostProcessingShaders->Activate();
 
-	glUniform1i(glGetUniformLocation(this->PostProcessingShaders->ID, "Texture"), LoadingScreen->Identifier);
+	glUniform1i(glGetUniformLocation(this->PostProcessingShaders->ID, "Texture"), 0);
 
 	glBindVertexArray(this->RectangleVAO);
 	glDisable(GL_DEPTH_TEST);
@@ -534,7 +535,7 @@ void EngineObject::Start()
 
 	this->PostProcessingShaders->Activate();
 
-	glUniform1i(glGetUniformLocation(this->PostProcessingShaders->ID, "Texture"), LoadingScreen->Identifier);
+	glUniform1i(glGetUniformLocation(this->PostProcessingShaders->ID, "Texture"), 0);
 
 	glBindVertexArray(this->RectangleVAO);
 	glDisable(GL_DEPTH_TEST);
@@ -575,11 +576,12 @@ void EngineObject::Start()
 
 	this->PostProcessingShaders->Activate();
 
-	glUniform1i(glGetUniformLocation(this->PostProcessingShaders->ID, "Texture"), LoadingScreen->Identifier);
+	glUniform1i(glGetUniformLocation(this->PostProcessingShaders->ID, "Texture"), 0);
 
 	glBindVertexArray(this->RectangleVAO);
 	glDisable(GL_DEPTH_TEST);
 
+	glActiveTexture(GL_TEXTURE0);
 	this->m_renderer->m_framebuffer->BindTexture();
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 
@@ -601,7 +603,7 @@ void EngineObject::Start()
 	// Reset FBO texture from loading screen
 	this->PostProcessingShaders->Activate();
 
-	glUniform1i(glGetUniformLocation(this->PostProcessingShaders->ID, "Texture"), m_renderer->m_framebuffer->TextureID);
+	glUniform1i(glGetUniformLocation(this->PostProcessingShaders->ID, "Texture"), 0);
 
 	Debug::Log("Main program loop start...");
 
@@ -689,7 +691,7 @@ void EngineObject::Start()
 
 		this->m_LightIndex = 0;
 
-		//glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
+		glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
 		glClear(/*GL_COLOR_BUFFER_BIT | */ GL_DEPTH_BUFFER_BIT);
 
 		double DeltaTime = CurrentTime - LastTime;
@@ -742,7 +744,7 @@ void EngineObject::Start()
 
 		//ShadowMapFBO.Unbind();
 
-		glViewport(0, 0, this->WindowSizeX, this->WindowSizeY);
+		//glViewport(0, 0, this->WindowSizeX, this->WindowSizeY);
 
 		Scene.Shaders = this->Shaders3D;
 		this->Shaders3D->Activate();
@@ -755,7 +757,7 @@ void EngineObject::Start()
 
 		//glBindTexture(GL_TEXTURE_CUBE_MAP, ShadowMapFBO.TextureID);
 
-		//Bind framebuffer
+		// Bind framebuffer
 		this->m_renderer->m_framebuffer->Bind();
 
 		auto fboStatMain = glCheckFramebufferStatus(GL_FRAMEBUFFER);
@@ -776,13 +778,9 @@ void EngineObject::Start()
 
 		//ShadowMapFBO.BindTexture();
 
-		//Main render pass
-		this->m_renderer->DrawScene(Scene);
-
 		//After drawing 3D scene
-		//Draw skybox
 
-		//glActiveTexture(GL_TEXTURE0);
+		glActiveTexture(GL_TEXTURE0);
 
 		glDepthFunc(GL_LEQUAL);
 
@@ -812,19 +810,23 @@ void EngineObject::Start()
 		this->m_renderer->DrawMesh(&SkyboxMesh, &SkyboxShaders, Vector3::ONE, view * projection);
 
 		glDepthFunc(GL_LESS);
+
+		//Main render pass
+		this->m_renderer->DrawScene(Scene);
+
+		//Particle emitters' particles need to be drawn after scene due to transparency
+		for (auto emitter : this->m_particleEmitters)
+		{
+			emitter->Update(this->FrameTime);
+			emitter->Render(*this->MainCamera);
+		}
+		
 		glDisable(GL_DEPTH_TEST);
 
 		this->OnFrameRenderGui.Fire(std::make_tuple(this, DeltaTime, CurrentTime));
 
 		glEnable(GL_DEPTH_TEST);
 
-		//Particle emitters' particles need to be drawn after skybox to account for transparency
-		for (int EmitterIndex = 0; EmitterIndex < this->m_particleEmitters.size(); EmitterIndex++)
-		{
-			this->m_particleEmitters[EmitterIndex]->Update(this->FrameTime);
-			this->m_particleEmitters[EmitterIndex]->Render(*this->MainCamera);
-		}
-		
 		//Do framebuffer stuff after everything is drawn
 
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -835,6 +837,7 @@ void EngineObject::Start()
 		glBindVertexArray(this->RectangleVAO);
 		glDisable(GL_DEPTH_TEST);
 
+		glActiveTexture(GL_TEXTURE0);
 		this->m_renderer->m_framebuffer->BindTexture();
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 
@@ -876,7 +879,7 @@ std::vector<std::shared_ptr<GameObject>>& EngineObject::LoadModelAsMeshesAsync(c
 
 	for (int Index = 0; Index < Loader->LoadedObjects.size(); Index++)
 	{
-		std::shared_ptr<Object_Mesh3D> Object = std::dynamic_pointer_cast<Object_Mesh3D>(Loader->LoadedObjects[Index]);
+		std::shared_ptr<Object_Mesh> Object = std::dynamic_pointer_cast<Object_Mesh>(Loader->LoadedObjects[Index]);
 
 		Object->Matrix = glm::translate(Object->Matrix, (glm::vec3)Position);
 

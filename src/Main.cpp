@@ -12,7 +12,8 @@ Anyway, here is a small tour:
 
 - All shader files have a file extension of one of the following: .vert, .frag, .geom
 - The "main" shaders are the two base3d.vert and base3d.frag ones
-- The directory of this file is game-specific, and, understandably, anything the "Engine" directory is all the engine code
+- The directory of this file is game-specific, and, understandably, anything in the "resources" folder is engine-specific
+  (the only folders/files that should exist at distribution should be `resources`, `phoenix.conf`, and the executable)
 - If you are looking for anything interesting, just press CTRL+SHIFT+F and type "TODO"
 
 */
@@ -76,7 +77,7 @@ void HandleInputs(std::tuple<EngineObject*, double, double> Data)
 
 	Camera* Player = Engine->MainCamera;
 
-	EditorContext->Tick(Delta, Player->Matrix);
+	EditorContext->Update(Delta, Player->Matrix);
 
 	//std::shared_ptr<Object_Base3D> crow = std::dynamic_pointer_cast<Object_Base3D>(Engine->Game->GetChild("crow"));
 
@@ -221,6 +222,8 @@ void DrawUI(std::tuple<EngineObject*, double, double> Data)
 
 		ImGui::End();
 
+		EditorContext->RenderUI();
+
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	}
@@ -290,38 +293,6 @@ void Application(int argc, char** argv)
 	SDL_DisplayMode Mode;
 	SDL_GetCurrentDisplayMode(0, &Mode);
 
-	std::shared_ptr<GameObject> PEmitterInst = (GameObjectFactory::CreateGameObject("ParticleEmitter"));
-
-	Texture* firetexture = new Texture();
-	firetexture->ImagePath = "resources/textures/fire.png";
-	firetexture->Usage = TextureType::DIFFUSE;
-
-	TextureManager::Get()->CreateTexture2D(firetexture, true);
-
-	auto ParticleEmitter = std::dynamic_pointer_cast<Object_ParticleEmitter>(PEmitterInst);
-
-	ParticleEmitter->PossibleImages.push_back(firetexture);
-
-	ParticleEmitter->VelocityOverTime.InsertKey(ValueRangeKey<Vector3>(Vector3(0, 2.0f, 0), 0.0f));
-	ParticleEmitter->VelocityOverTime.InsertKey(ValueRangeKey<Vector3>(Vector3(0, 0.0f, 0), 1.0f));
-
-	ParticleEmitter->RandDeviationOverTime.InsertKey(ValueRangeKey<Vector3>(Vector3(0.05f, 0.05f, 0.05f), 0.0f));
-	ParticleEmitter->RandDeviationOverTime.InsertKey(ValueRangeKey<Vector3>(Vector3(0.0f, 0.0f, 0.0f), 0.1f));
-	ParticleEmitter->RandDeviationOverTime.InsertKey(ValueRangeKey<Vector3>(Vector3(0.0f, 0.0f, 0.0f), 1.0f));
-
-	ParticleEmitter->SizeOverTime.InsertKey(ValueRangeKey<float>(0.1f, 0.0f));
-	ParticleEmitter->SizeOverTime.InsertKey(ValueRangeKey<float>(5.0f, 0.25f));
-	ParticleEmitter->SizeOverTime.InsertKey(ValueRangeKey<float>(0.1f, 1.0f));
-
-	ParticleEmitter->TransparencyOverTime.InsertKey(ValueRangeKey<float>(0.0f, 0.0f));
-	ParticleEmitter->TransparencyOverTime.InsertKey(ValueRangeKey<float>(1.0f, 1.0f));
-
-	ParticleEmitter->Lifetime = 10.0f;
-	ParticleEmitter->MaxParticles = 500;
-	ParticleEmitter->Rate = 50;
-
-	PEmitterInst->SetParent(Main->Game);
-
 	LevelModel = GameObjectFactory::CreateGameObject("Model");
 
 	/*
@@ -338,8 +309,6 @@ void Application(int argc, char** argv)
 	LevelModel->ParentLocked = true;
 
 	LoadLevel(MapFile, LevelModel);
-
-	Debug::Log("Loaded map");
 
 	EditorContext->Init(Main->Game);
 
@@ -378,10 +347,12 @@ int main(int argc, char** argv)
 	{
 		Debug::Log(std::vformat("CRASH: {}", std::make_format_args(Error)));
 
+		auto fmtArgs = std::make_format_args(Error);
+
 		SDL_ShowSimpleMessageBox(
 			SDL_MESSAGEBOX_ERROR,
 			"Engine error",
-			std::vformat("An error occurred, and the application needs to close! Error details:\n\n{}", std::make_format_args(Error)).c_str(),
+			std::vformat("An error occurred, and the application needs to close! Error details:\n\n{}", fmtArgs).c_str(),
 			Window
 		);
 	}
@@ -390,3 +361,4 @@ int main(int argc, char** argv)
 	
 	return EXIT_SUCCESS;
 }
+

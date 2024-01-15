@@ -28,7 +28,12 @@ void asyncTextureLoader(void* ManagerPtr)
 
 	Texture* Image = Manager->TexturesToLoadAsync[Manager->TexturesToLoadAsync.size() - 1];
 
-	unsigned char* Data = Manager->LoadImageData(Image->ImagePath.c_str(), &Image->ImageWidth, &Image->ImageHeight, &Image->ImageNumColorChannels);
+	unsigned char* Data = Manager->LoadImageData(
+	Image->ImagePath.c_str(),
+		&Image->ImageWidth,
+		&Image->ImageHeight,
+		&Image->ImageNumColorChannels
+	);
 
 	Image->AttemptedLoad = true;
 
@@ -46,8 +51,9 @@ void TextureManager::CreateTexture2D(Texture* TexturePtr, bool ShouldLoadAsync)
 	{
 		if (TexturePtr->TMP_ImageByteData == nullptr)
 		{
-			Debug::Log(std::vformat("Failed to load texture '{}' (usage:{})", std::make_format_args(TexturePtr->ImagePath, (int)TexturePtr->Usage)));
-			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "stbi info", stbi_failure_reason(), SDL_GetGrabbedWindow());
+			auto FormattedArgs = std::make_format_args(TexturePtr->ImagePath, (int)TexturePtr->Usage);
+			Debug::Log(std::vformat("Failed to load texture '{}' (usage:{})", FormattedArgs));
+			return;
 		}
 
 		glGenTextures(1, &TexturePtr->Identifier);
@@ -58,7 +64,8 @@ void TextureManager::CreateTexture2D(Texture* TexturePtr, bool ShouldLoadAsync)
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-		// Specular textures may be in the form of PNGs, which have 4 color channels. Manually set format if TexturePtr->Usage is specified
+		// Specular textures may be in the form of PNGs, which have 4 color channels.
+		// Manually set format if TexturePtr->Usage is specified
 		// Set Format to 0 to make code try and identify usage through available color channels
 		// TODO: recheck logic?
 		GLenum Format = 0;
@@ -66,36 +73,40 @@ void TextureManager::CreateTexture2D(Texture* TexturePtr, bool ShouldLoadAsync)
 		switch (TexturePtr->ImageNumColorChannels)
 		{
 
-		case (4):
-		{
-			Format = GL_RGBA;
-			break;
-		}
+			case (4):
+			{
+				Format = GL_RGBA;
+				break;
+			}
 
-		case (3):
-		{
-			Format = GL_RGB;
-			break;
-		}
+			case (3):
+			{
+				Format = GL_RGB;
+				break;
+			}
 
-		case (1):
-		{
-			Format = GL_RED;
-			break;
-		}
+			case (1):
+			{
+				Format = GL_RED;
+				break;
+			}
 
-		default:
-		{
-			throw(std::vformat(std::string("Invalid ImageNumColorChannels (was '{}') in TextureManager::CreateTexture2D!"), std::make_format_args(TexturePtr->ImageNumColorChannels)));
-			break;
-		}
+			default:
+			{
+				throw(std::vformat(
+					std::string("Invalid ImageNumColorChannels (was '{}') in TextureManager::CreateTexture2D!"),
+					std::make_format_args(TexturePtr->ImageNumColorChannels)
+				));
+				break;
+			}
 
 		};
 		
 		//if ((Format == GL_RGB) && TexturePtr->Usage == TextureType::SPECULAR)
 		//	Format = GL_RED;
 
-		//glTexStorage2D(GL_TEXTURE_2D, 1, MipMapsInternalFormat, TexturePtr->ImageWidth, TexturePtr->ImageHeight); // TODO: texture mipmaps, 4 is the number of mipmaps
+		// TODO: texture mipmaps, 4 is the number of mipmaps
+		//glTexStorage2D(GL_TEXTURE_2D, 1, MipMapsInternalFormat, TexturePtr->ImageWidth, TexturePtr->ImageHeight);
 
 		glTexImage2D
 		(
@@ -122,13 +133,15 @@ void TextureManager::CreateTexture2D(Texture* TexturePtr, bool ShouldLoadAsync)
 
 		if (!ShouldLoadAsync)
 		{
-			unsigned char* Data = this->LoadImageData(TexturePtr->ImagePath.c_str(), &TexturePtr->ImageWidth, &TexturePtr->ImageHeight, &TexturePtr->ImageNumColorChannels);
+			unsigned char* Data = this->LoadImageData(
+				TexturePtr->ImagePath.c_str(),
+				&TexturePtr->ImageWidth,
+				&TexturePtr->ImageHeight,
+				&TexturePtr->ImageNumColorChannels
+			);
 
 			TexturePtr->TMP_ImageByteData = Data;
-
 			TexturePtr->AttemptedLoad = true;
-
-			// printf("isnotloaded: %s %s\n", TexturePtr->ImagePath.c_str(), TexturePtr->TMP_ImageByteData == nullptr ? "FAILED" : "SUCCESS");
 
 			this->CreateTexture2D(TexturePtr, false);
 		}

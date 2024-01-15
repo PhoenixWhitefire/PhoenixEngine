@@ -14,7 +14,7 @@
 #include<render/TextureManager.hpp>
 #include<Engine.hpp>
 
-#include<gameobject/Mesh3D.hpp>
+#include<gameobject/MeshObject.hpp>
 
 class ModelLoader
 {

@@ -61,10 +61,10 @@ uniform sampler2D ShadowMaps[MAX_LIGHTS];
 uniform LightObject Lights[MAX_LIGHTS];
 
 
-const float LIGHT_AMBIENT = 0.1f;
+const float LIGHT_AMBIENT = 0.2f;
 // pbr?
 const float SPECULAR_MULTIPLIER = 1.f;
-const float SPECULAR_TERM = 8.0f;
+const float SPECULAR_TERM = 32.0f;
 
 // cubemap used for reflections
 uniform Cubemap ReflectionCubemap;
@@ -301,6 +301,7 @@ void main()
 	}
 	*/
 
+	/*
 	vec3 ReflectionTint = vec3(1.0f, 1.0f, 1.0f);
 
 	if (SpecMapValue > 0.f)
@@ -309,10 +310,11 @@ void main()
 
 		ReflectionTint = (SpecMapValue * texture(ReflectionCubemap.Texture, SampleDirection)).xyz;
 	}
+	*/
 
 	vec3 FinalColor = vec3(0.f, 0.f, 0.f);
 
-	vec3 Albedo3 = Albedo.xyz * Frag_VertexColor * ReflectionTint;
+	vec3 Albedo3 = Albedo.xyz * Frag_VertexColor;// * ReflectionTint;
 
 	float AccumulatedShadow = 0.0f;
 

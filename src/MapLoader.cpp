@@ -2,7 +2,7 @@
 
 #include<MapLoader.hpp>
 
-#include"gameobject/Mesh3D.hpp"
+#include"gameobject/MeshObject.hpp"
 #include"gameobject/Light.hpp"
 
 Vector3 GetVector3FromJSON(nlohmann::json JSON)
@@ -119,19 +119,19 @@ void MapLoader::LoadMapIntoObject(const char* MapFilePath, std::shared_ptr<GameO
 		if (PropObject.find("facecull") != PropObject.end())
 		{
 			if ((std::string)PropObject["facecull"] == (std::string)"none")
-				std::dynamic_pointer_cast<Object_Mesh3D>(Model[0])->GetRenderMesh()->CulledFace = FaceCullingMode::None;
+				std::dynamic_pointer_cast<Object_Mesh>(Model[0])->GetRenderMesh()->CulledFace = FaceCullingMode::None;
 			else if ((std::string)PropObject["facecull"] == (std::string)"front")
-				std::dynamic_pointer_cast<Object_Mesh3D>(Model[0])->GetRenderMesh()->CulledFace = FaceCullingMode::FrontFace;
+				std::dynamic_pointer_cast<Object_Mesh>(Model[0])->GetRenderMesh()->CulledFace = FaceCullingMode::FrontFace;
 			else if ((std::string)PropObject["facecull"] == (std::string)"back")
-				std::dynamic_pointer_cast<Object_Mesh3D>(Model[0])->GetRenderMesh()->CulledFace = FaceCullingMode::BackFace;
+				std::dynamic_pointer_cast<Object_Mesh>(Model[0])->GetRenderMesh()->CulledFace = FaceCullingMode::BackFace;
 			else
-				std::dynamic_pointer_cast<Object_Mesh3D>(Model[0])->GetRenderMesh()->CulledFace = FaceCullingMode::BackFace;
+				std::dynamic_pointer_cast<Object_Mesh>(Model[0])->GetRenderMesh()->CulledFace = FaceCullingMode::BackFace;
 		}
 
 		auto prop_3d = std::dynamic_pointer_cast<Object_Base3D>(Model[0]);
 
 		if (PropObject.find("has_transparency") != PropObject.end())
-			std::dynamic_pointer_cast<Object_Mesh3D>(Model[0])->HasTransparency = true;
+			std::dynamic_pointer_cast<Object_Mesh>(Model[0])->HasTransparency = true;
 
 		prop_3d->ComputePhysics = PropObject.value("computePhysics", 0) == 1 ? true : false;
 
@@ -153,7 +153,7 @@ void MapLoader::LoadMapIntoObject(const char* MapFilePath, std::shared_ptr<GameO
 
 			std::shared_ptr<Object_Base3D> Object3D = std::dynamic_pointer_cast<Object_Base3D>(NewObject);
 
-			std::shared_ptr<Object_Mesh3D> MeshObject = std::dynamic_pointer_cast<Object_Mesh3D>(NewObject);
+			std::shared_ptr<Object_Mesh> MeshObject = std::dynamic_pointer_cast<Object_Mesh>(NewObject);
 
 			if (Object.find("name") != Object.end())
 			{
@@ -192,7 +192,7 @@ void MapLoader::LoadMapIntoObject(const char* MapFilePath, std::shared_ptr<GameO
 
 			MeshObject->Size = GetVector3FromJSON(Object["size"]);
 
-			MeshObject->SetRenderMesh(BaseMeshes::Cube());
+			MeshObject->SetRenderMesh(*BaseMeshes::Cube());
 
 			NewObject->SetParent(MapParent);
 

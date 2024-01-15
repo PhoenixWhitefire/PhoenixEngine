@@ -975,7 +975,7 @@
     <ClInclude Include="include\gameobject\Base3D.hpp">
       <Filter>Header Files\gameobject</Filter>
     </ClInclude>
-    <ClInclude Include="include\gameobject\Mesh3D.hpp">
+    <ClInclude Include="include\gameobject\MeshObject.hpp">
       <Filter>Header Files\gameobject</Filter>
     </ClInclude>
     <ClInclude Include="include\gameobject\ParticleEmitter.hpp">
@@ -1109,7 +1109,7 @@
     <ClCompile Include="src\gameobject\Model.cpp">
       <Filter>Source Files\gameobject</Filter>
     </ClCompile>
-    <ClCompile Include="src\gameobject\Mesh3D.cpp">
+    <ClCompile Include="src\gameobject\MeshObject.cpp">
       <Filter>Source Files\gameobject</Filter>
     </ClCompile>
     <ClCompile Include="src\gameobject\ParticleEmitter.cpp">
