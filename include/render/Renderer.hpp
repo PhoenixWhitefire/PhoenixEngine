@@ -28,7 +28,7 @@ struct LightData_t
 
 	Vector3 Position;
 	Color LightColor;
-	float Range;
+	float Range = 60;
 
 	glm::mat4 ShadowMapProjection;
 	bool HasShadowMap = false;

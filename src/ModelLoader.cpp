@@ -39,14 +39,14 @@ ModelLoader::ModelLoader(const char* FilePath, std::shared_ptr<GameObject> Paren
 		// TODO: cleanup code
 		std::shared_ptr<GameObject> M;
 		std::shared_ptr<Object_Base3D> m3d;
-		std::shared_ptr<Object_Mesh3D> mo;
+		std::shared_ptr<Object_Mesh> mo;
 		
 		M = GameObjectFactory::CreateGameObject("MeshPart");
 
 		m3d = std::dynamic_pointer_cast<Object_Base3D>(M);
-		mo = std::dynamic_pointer_cast<Object_Mesh3D>(M);
+		mo = std::dynamic_pointer_cast<Object_Mesh>(M);
 
-		mo->SetRenderMesh(&this->Meshes[MeshIndex]);
+		mo->SetRenderMesh(this->Meshes[MeshIndex]);
 
 		//mo->Orientation = this->MeshRotations[MeshIndex];
 

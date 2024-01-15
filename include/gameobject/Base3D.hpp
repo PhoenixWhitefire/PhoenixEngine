@@ -13,7 +13,7 @@ public:
 	std::string ClassName = "Base3D";
 
 	virtual Mesh* GetRenderMesh();
-	virtual void SetRenderMesh(Mesh*);
+	virtual void SetRenderMesh(Mesh);
 
 	glm::mat4 Matrix = glm::mat4(1.0f);
 	Vector3 Size = Vector3(1.0f, 1.0f, 1.0f);
@@ -32,5 +32,5 @@ public:
 	bool ComputePhysics = false;
 
 protected:
-	Mesh* RenderMesh;
+	Mesh RenderMesh;
 };

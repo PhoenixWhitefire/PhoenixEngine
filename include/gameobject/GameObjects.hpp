@@ -5,5 +5,6 @@
 #include"gameobject/Light.hpp"
 #include"gameobject/Model.hpp"
 #include"gameobject/Base3D.hpp"
-#include"gameobject/Mesh3D.hpp"
+#include"gameobject/MeshObject.hpp"
 #include"gameobject/ParticleEmitter.hpp"
+#include"gameobject/Primitive.hpp"

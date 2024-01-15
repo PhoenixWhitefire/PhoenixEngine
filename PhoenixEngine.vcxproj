@@ -40,7 +40,7 @@
     <ClInclude Include="include\gameobject\Base3D.hpp" />
     <ClInclude Include="include\gameobject\GameObjects.hpp" />
     <ClInclude Include="include\gameobject\Light.hpp" />
-    <ClInclude Include="include\gameobject\Mesh3D.hpp" />
+    <ClInclude Include="include\gameobject\MeshObject.hpp" />
     <ClInclude Include="include\gameobject\Model.hpp" />
     <ClInclude Include="include\gameobject\ParticleEmitter.hpp" />
     <ClInclude Include="include\gameobject\Primitive.hpp" />
@@ -355,7 +355,7 @@
     <ClCompile Include="src\FileRW.cpp" />
     <ClCompile Include="src\gameobject\Base3D.cpp" />
     <ClCompile Include="src\gameobject\Light.cpp" />
-    <ClCompile Include="src\gameobject\Mesh3D.cpp" />
+    <ClCompile Include="src\gameobject\MeshObject.cpp" />
     <ClCompile Include="src\gameobject\Model.cpp" />
     <ClCompile Include="src\gameobject\ParticleEmitter.cpp" />
     <ClCompile Include="src\gameobject\Primitive.cpp" />

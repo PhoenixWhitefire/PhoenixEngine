@@ -6,7 +6,7 @@
 #include<datatype/GameObject.hpp>
 #include<gameobject/Base3D.hpp>
 
-class Object_Mesh3D : public Object_Base3D
+class Object_Mesh : public Object_Base3D
 {
 public:
 	std::string Name = "MeshPart";
@@ -20,5 +20,5 @@ private:
 	std::vector<Vertex> BlankVertices;
 	std::vector<GLuint> BlankIndices;
 
-	static DerivedObjectRegister<Object_Mesh3D> RegisterClassAs;
+	static DerivedObjectRegister<Object_Mesh> RegisterClassAs;
 };

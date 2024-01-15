@@ -1,3 +1,5 @@
+#pragma once
+
 #include<datatype/GameObject.hpp>
 #include<gameobject/Base3D.hpp>
 

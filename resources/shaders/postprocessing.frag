@@ -45,6 +45,8 @@ void main()
 
 	vec3 Color = texture(Texture, FragIn_UV).xyz;
 
+	//Color = vec3(1.0f, 0.0f, 0.0f);
+
 	if (ScreenEdgeBlur)
 	{
 		vec3 BlurredColor;

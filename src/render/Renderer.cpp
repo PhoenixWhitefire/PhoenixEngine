@@ -458,14 +458,17 @@ void Renderer::m_setTextureUniforms(MeshData_t& RenderData, ShaderProgram* Shade
 		Texture* Image = Textures[Index];
 
 		std::string NumberOf;
-
 		std::string Type;
+
+		unsigned int TexUnitOffset = 5;
 
 		switch (Image->Usage)
 		{
 
 		case TextureType::DIFFUSE:
 		{
+			TexUnitOffset = 5;
+
 			Type = DiffuseStr;
 
 			glUniform1i(glGetUniformLocation(Shaders->ID, "HasDiffuse"), 1);
@@ -481,6 +484,8 @@ void Renderer::m_setTextureUniforms(MeshData_t& RenderData, ShaderProgram* Shade
 
 		case TextureType::SPECULAR:
 		{
+			TexUnitOffset = 6;
+
 			Type = SpecularStr;
 			
 			glUniform1i(glGetUniformLocation(Shaders->ID, "HasSpecular"), 1);
@@ -503,14 +508,14 @@ void Renderer::m_setTextureUniforms(MeshData_t& RenderData, ShaderProgram* Shade
 
 		}
 
-		glActiveTexture(GL_TEXTURE0 + 5);
+		glActiveTexture(GL_TEXTURE0 + TexUnitOffset);
 
 		Shaders->Activate();
 
 		glBindTexture(GL_TEXTURE_2D, Image->Identifier);
 
 		std::string ShaderTextureVar = (Type + "Textures[0]");
-		glUniform1i(glGetUniformLocation(Shaders->ID, ShaderTextureVar.c_str()), Image->Identifier);
+		glUniform1i(glGetUniformLocation(Shaders->ID, ShaderTextureVar.c_str()), TexUnitOffset);
 	}
 
 	glUniform1i(glGetUniformLocation(Shaders->ID, "ActiveDiffuseTextures"), NumDiffuse);
