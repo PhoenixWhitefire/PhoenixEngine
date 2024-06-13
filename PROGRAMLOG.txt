@@ -1,5 +1,29 @@
 Running OpenGL version 4.6
 Renderer initialized
-Could not load file: resource/models/crow/scene.gltf
-Failed to load model: 'resource/models/crow/scene.gltf'
+Loaded map file 'levels/dev.world'
+Loaded level: levels/dev.world
+Directional light shadowmap texture id: 17
+Main program loop start...
+GL Debug callback:
+	Type: Low-performance warning
+	Severity: Medium
+	Message: Program/shader state performance warning: Vertex shader in program 3 is being recompiled based on GL state.
+	Source: OpenGL API
+	Error ID: 131218
+
+Changing window resolution: (1280, 720) -> (1536, 793)
+GL Debug callback:
+	Type: ERROR
+	Severity: HIGH
+	Message: GL_INVALID_OPERATION error generated. State(s) are invalid: program texture usage.
+	Source: OpenGL API
+	Error ID: 1282
+
+CRASH: GL Debug callback:
+	Type: ERROR
+	Severity: HIGH
+	Message: GL_INVALID_OPERATION error generated. State(s) are invalid: program texture usage.
+	Source: OpenGL API
+	Error ID: 1282
+
 Application closing...

@@ -25,14 +25,13 @@
     <ClInclude Include="include\datatype\Color.hpp" />
     <ClInclude Include="include\datatype\Event.hpp" />
     <ClInclude Include="include\datatype\GameObject.hpp" />
-    <ClInclude Include="include\datatype\Material.hpp" />
     <ClInclude Include="include\datatype\Mesh.hpp" />
     <ClInclude Include="include\datatype\ValueRange.hpp" />
     <ClInclude Include="include\datatype\ValueRange.ipp" />
     <ClInclude Include="include\datatype\Vector2.hpp" />
     <ClInclude Include="include\datatype\Vector3.hpp" />
     <ClInclude Include="include\Debug.hpp" />
-    <ClInclude Include="include\editor\editor.hpp" />
+    <ClInclude Include="include\editor\Editor.hpp" />
     <ClInclude Include="include\editor\intersectionlib.hpp" />
     <ClInclude Include="include\Engine.hpp" />
     <ClInclude Include="include\EntityComponent.hpp" />
@@ -50,6 +49,7 @@
     <ClInclude Include="include\PhysicsEngine.hpp" />
     <ClInclude Include="include\render\Camera.hpp" />
     <ClInclude Include="include\render\GraphicsAbstractionLayer.hpp" />
+    <ClInclude Include="include\render\Material.hpp" />
     <ClInclude Include="include\render\Renderer.hpp" />
     <ClInclude Include="include\render\ShaderProgram.hpp" />
     <ClInclude Include="include\render\TextureManager.hpp" />
@@ -343,12 +343,11 @@
     <ClCompile Include="src\datatype\Buffer.cpp" />
     <ClCompile Include="src\datatype\Color.cpp" />
     <ClCompile Include="src\datatype\GameObject.cpp" />
-    <ClCompile Include="src\datatype\Material.cpp" />
     <ClCompile Include="src\datatype\Mesh.cpp" />
     <ClCompile Include="src\datatype\Vector2.cpp" />
     <ClCompile Include="src\datatype\Vector3.cpp" />
     <ClCompile Include="src\Debug.cpp" />
-    <ClCompile Include="src\editor\editor.cpp" />
+    <ClCompile Include="src\editor\Editor.cpp" />
     <ClCompile Include="src\editor\intersectionlib.cpp" />
     <ClCompile Include="src\Engine.cpp" />
     <ClCompile Include="src\EntityComponent.cpp" />
@@ -366,6 +365,7 @@
     <ClCompile Include="src\PhysicsEngine.cpp" />
     <ClCompile Include="src\render\Camera.cpp" />
     <ClCompile Include="src\render\GraphicsAbstractionLayer.cpp" />
+    <ClCompile Include="src\render\Material.cpp" />
     <ClCompile Include="src\render\Renderer.cpp" />
     <ClCompile Include="src\render\ShaderProgram.cpp" />
     <ClCompile Include="src\render\TextureManager.cpp" />
@@ -385,8 +385,8 @@
   <ItemGroup>
     <None Include="resources\shaders\base2d.frag" />
     <None Include="resources\shaders\base2d.vert" />
-    <None Include="resources\shaders\base3d.frag" />
-    <None Include="resources\shaders\base3d.vert" />
+    <None Include="resources\shaders\worldUber.frag" />
+    <None Include="resources\shaders\worldUber.vert" />
     <None Include="resources\shaders\dlshadowmap.frag" />
     <None Include="resources\shaders\dlshadowmap.vert" />
     <None Include="resources\shaders\particle.frag" />

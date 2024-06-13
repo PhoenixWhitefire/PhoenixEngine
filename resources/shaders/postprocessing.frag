@@ -5,7 +5,14 @@ in vec2 FragIn_UV;
 out vec4 FragColor;
 
 uniform sampler2D Texture;
-//uniform sampler2D DistortionTexture;
+uniform sampler2D DistortionTexture;
+uniform bool PostProcessingEnabled = false;
+uniform bool ScreenEdgeBlurEnabled = false;
+uniform bool DistortionEnabled = false;
+
+uniform float Time = 0.f;
+
+const vec2 Center = vec2(0.5f, 0.5f);
 
 const vec3 White = vec3(1.0f, 1.0f, 1.0f);
 
@@ -41,29 +48,51 @@ void main()
 	));
 	*/
 
-	bool ScreenEdgeBlur = false;
+	vec2 UVOffset = vec2(0.f, 0.f);
 
-	vec3 Color = texture(Texture, FragIn_UV).xyz;
+	if (DistortionEnabled)
+	{
+		UVOffset = texture(DistortionTexture, FragIn_UV).xy - Center + vec2(Time * 0.5f, Time * 0.25f);
+	}
+
+	//FragColor = vec4(texture(DistortionTexture, FragIn_UV).xyz, 1.0f);
+
+	//return;
+
+	vec3 Color = texture(Texture, FragIn_UV + UVOffset).xyz;
 
 	//Color = vec3(1.0f, 0.0f, 0.0f);
 
-	if (ScreenEdgeBlur)
+	if (ScreenEdgeBlurEnabled)
 	{
+		const float BlurStrength = 2.f;
+		
 		vec3 BlurredColor;
 
-		float RadialBlurWeight = length((FragIn_UV - vec2(0.5, 0.5)) * 2);
+		// Multiply to create wider region of blur,
+		// then exponent to widen the 0% and make the 
+		// transition steeper
+		float RadialBlurWeight = clamp(pow(length(FragIn_UV - Center), 2.5f) * 16.f, 0.f, 1.f);
+
+		//FragColor = vec4(RadialBlurWeight, RadialBlurWeight, RadialBlurWeight, 1.f);
+
+		//return;
 
 		int BlurSampleRadius = 4;
 
-		float BlurSize = 1;
-
-		float BlurSampleWeight = 1.f/(float(BlurSampleRadius) * float(BlurSampleRadius));
+		float BlurSampleBaseWeight = 1.f/(BlurSampleRadius * BlurSampleRadius);
 
 		for (int x = -BlurSampleRadius; x < BlurSampleRadius; x++)
 		{
 			for (int y = -BlurSampleRadius; y < BlurSampleRadius; y++)
 			{
-				BlurredColor += texture(Texture, FragIn_UV + (vec2(x, y) * PixelScale * BlurSize)).xyz * BlurSampleWeight / (BlurSampleRadius);
+				float Dist = length(vec2(x, y) * BlurStrength) / (BlurSampleRadius * BlurStrength);
+
+				float DistFactor = 1.f - Dist;
+				float SampleWeight = pow(DistFactor * 1.f, 1.f) * BlurSampleBaseWeight;
+
+				vec3 SampleCol = texture(Texture, FragIn_UV + (vec2(x, y) * PixelScale)).xyz;
+				BlurredColor += SampleCol * SampleWeight;
 			}
 		}
 
@@ -71,5 +100,5 @@ void main()
 		Color = Color + (BlurredColor - Color) * RadialBlurWeight;
 	}
 	
-	FragColor = vec4(Color, 1.0f);
+	FragColor = vec4(Color * 1.25f, 1.0f);
 }
