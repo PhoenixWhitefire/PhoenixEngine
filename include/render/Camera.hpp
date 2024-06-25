@@ -2,15 +2,12 @@
 
 #include<glm/glm.hpp>
 #include<glm/gtc/matrix_transform.hpp>
-#include<glm/gtc/type_ptr.hpp>
-#include<glm/gtx/rotate_vector.hpp>
-#include<glm/gtx/vector_angle.hpp>
 
-#include"ShaderProgram.hpp"
-#include<datatype/Vector3.hpp>
-#include<datatype/Vector2.hpp>
+#include"datatype/Vector3.hpp"
+#include"datatype/Vector2.hpp"
 
-class Camera {
+class Camera
+{
 public:
 	Camera(Vector2 WindowSize);
 

@@ -1,8 +1,6 @@
 #pragma once
 
-#include<string>
 #include<format>
-
 #include<glm/vec3.hpp>
 
 class Vector3

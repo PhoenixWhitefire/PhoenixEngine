@@ -1,5 +1,5 @@
-#include<gameobject/Primitive.hpp>
-#include<BaseMeshes.hpp>
+#include"gameobject/Primitive.hpp"
+#include"BaseMeshes.hpp"
 
 DerivedObjectRegister<Object_Primitive> Object_Primitive::RegisterClassAs("Primitive");
 
@@ -29,6 +29,9 @@ Mesh* GetPrimitiveMesh(PrimitiveShape Type)
 
 Object_Primitive::Object_Primitive()
 {
+	this->Name = "Primitive";
+	this->ClassName = "Primitive";
+
 	this->RenderMesh = *GetPrimitiveMesh(this->Shape);
 
 	m_properties.insert(std::pair(

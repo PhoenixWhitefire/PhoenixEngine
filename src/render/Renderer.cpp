@@ -1,7 +1,13 @@
-#include<render/Renderer.hpp>
+#include<string>
 #include<format>
+#include<glad/gl.h>
+#include<glm/gtc/type_ptr.hpp>
+#include<glm/gtx/transform.hpp>
 
-#include<render/GraphicsAbstractionLayer.hpp>
+#include"render/GraphicsAbstractionLayer.hpp"
+#include"render/Renderer.hpp"
+#include"datatype/Vector3.hpp"
+#include"Debug.hpp"
 
 GLenum ObjectTypes[] =
 {
@@ -37,39 +43,46 @@ void GLDebugCallback(
 	std::string SourceTmp;
 	const char* Source;
 
-	switch ((unsigned int)source) {
+	switch (source) {
 
-	case (unsigned int)GL_DEBUG_SOURCE_API: {
+	case GL_DEBUG_SOURCE_API:
+	{
 		Source = "OpenGL API";
 		break;
 	}
 
-	case (unsigned int)GL_DEBUG_SOURCE_WINDOW_SYSTEM: {
+	case GL_DEBUG_SOURCE_WINDOW_SYSTEM:
+	{
 		Source = "Window system API";
 		break;
 	}
 
-	case (unsigned int)GL_DEBUG_SOURCE_SHADER_COMPILER: {
+	case GL_DEBUG_SOURCE_SHADER_COMPILER:
+	{
 		Source = "Shader compiler";
 		break;
 	}
 
-	case (unsigned int)GL_DEBUG_SOURCE_THIRD_PARTY: {
+	case GL_DEBUG_SOURCE_THIRD_PARTY:
+	{
 		Source = "Third-party";
 		break;
 	}
 
-	case (unsigned int)GL_DEBUG_SOURCE_APPLICATION: {
+	case GL_DEBUG_SOURCE_APPLICATION:
+	{
 		Source = "User-generated";
 		break;
 	}
 
-	case (unsigned int)GL_DEBUG_SOURCE_OTHER: {
+	case GL_DEBUG_SOURCE_OTHER:
+	{
 		Source = "Other";
 		break;
 	}
 
-	default: {
+	default:
+	{
 		SourceTmp = std::to_string(source);
 
 		Source = SourceTmp.c_str();
@@ -81,29 +94,34 @@ void GLDebugCallback(
 	std::string SeverityTmp;
 	const char* Severity;
 
-	switch ((unsigned int)severity) {
+	switch (severity) {
 
-	case (unsigned int)GL_DEBUG_SEVERITY_HIGH: {
+	case GL_DEBUG_SEVERITY_HIGH:
+	{
 		Severity = "HIGH";
 		break;
 	}
 
-	case (unsigned int)GL_DEBUG_SEVERITY_MEDIUM: {
+	case GL_DEBUG_SEVERITY_MEDIUM:
+	{
 		Severity = "Medium";
 		break;
 	}
 
-	case (unsigned int)GL_DEBUG_SEVERITY_LOW: {
+	case GL_DEBUG_SEVERITY_LOW:
+	{
 		Severity = "Low";
 		break;
 	}
 
-	case (unsigned int)GL_DEBUG_SEVERITY_NOTIFICATION: {
+	case GL_DEBUG_SEVERITY_NOTIFICATION:
+	{
 		Severity = "Notification";
 		break;
 	}
 
-	default: {
+	default:
+	{
 		SeverityTmp = std::to_string(severity);
 
 		Severity = SeverityTmp.c_str();
@@ -115,54 +133,64 @@ void GLDebugCallback(
 	std::string TypeTmp;
 	const char* Type;
 
-	switch ((unsigned int)type) {
+	switch (type)
+	{
 
-	case (unsigned int)GL_DEBUG_TYPE_ERROR: {
+	case GL_DEBUG_TYPE_ERROR: {
 		Type = "ERROR";
 		break;
 	}
 
-	case (unsigned int)GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: {
+	case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
+	{
 		Type = "Deprecated behaviour warning";
 		break;
 	}
 
-	case (unsigned int)GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR: {
+	case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
+	{
 		Type = "Undefined behaviour warning";
 		break;
 	}
 
-	case (unsigned int)GL_DEBUG_TYPE_PORTABILITY: {
+	case GL_DEBUG_TYPE_PORTABILITY:
+	{
 		Type = "Not portable warning";
 		break;
 	}
 
-	case (unsigned int)GL_DEBUG_TYPE_PERFORMANCE: {
+	case GL_DEBUG_TYPE_PERFORMANCE:
+	{
 		Type = "Low-performance warning";
 		break;
 	}
 
-	case (unsigned int)GL_DEBUG_TYPE_MARKER: {
+	case GL_DEBUG_TYPE_MARKER:
+	{
 		Type = "Annotation";
 		break;
 	}
 
-	case (unsigned int)GL_DEBUG_TYPE_PUSH_GROUP: {
+	case GL_DEBUG_TYPE_PUSH_GROUP:
+	{
 		Type = "Group push";
 		break;
 	}
 
-	case (unsigned int)GL_DEBUG_TYPE_POP_GROUP: {
+	case GL_DEBUG_TYPE_POP_GROUP:
+	{
 		Type = "Group pop";
 		break;
 	}
 
-	case (unsigned int)GL_DEBUG_TYPE_OTHER: {
+	case GL_DEBUG_TYPE_OTHER:
+	{
 		Type = "Other";
 		break;
 	}
 
-	default: {
+	default:
+	{
 		TypeTmp = std::to_string(type);
 
 		Type = TypeTmp.c_str();
@@ -171,14 +199,17 @@ void GLDebugCallback(
 
 	}
 
+	const char* messageCChar = message;
+	int idCInt = id;
+
 	std::string DebugString = std::vformat(
 		std::string("GL Debug callback:\n\tType: {}\n\tSeverity: {}\n\tMessage: {}\n\tSource: {}\n\tError ID: {}\n"),
 		std::make_format_args(
 			Type,
 			Severity,
-			(const char*)message,
+			messageCChar,
 			Source,
-			(int)id
+			idCInt
 		)
 	);
 
@@ -188,7 +219,7 @@ void GLDebugCallback(
 		throw(DebugString);
 }
 
-Renderer::Renderer(unsigned int Width, unsigned int Height, SDL_Window* Window, int MSAASamples)
+Renderer::Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window, uint8_t MSAASamples)
 {
 	this->m_window = Window;
 
@@ -202,15 +233,21 @@ Renderer::Renderer(unsigned int Width, unsigned int Height, SDL_Window* Window, 
 	std::string ErrorMessage = "NO ERRORS";
 
 	if (!this->m_glContext)
-		throw(std::vformat("Could not create an OpenGL context, SDL error: {}", std::make_format_args(SDL_GetError())));
+	{
+		const char* sdlErrStr = SDL_GetError();
+		throw(std::vformat("Could not create an OpenGL context, SDL error: {}", std::make_format_args(sdlErrStr)));
+	}
 
 	int GLMakeCurCtxStatus = SDL_GL_MakeCurrent(this->m_window, this->m_glContext);
 
 	if (GLMakeCurCtxStatus < 0)
-		throw(std::vformat("Could not set the current OpenGL context (SDL error): {}", std::make_format_args(GLMakeCurCtxStatus)));
+		throw(std::vformat(
+			"Could not set the current OpenGL context (SDL error): {}",
+			std::make_format_args(GLMakeCurCtxStatus)
+		));
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4); // TODO: If a device has version 4.5, this probably won't work. It should be enforcing a MINIMUM of 3.3!!
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
 
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
@@ -243,7 +280,10 @@ Renderer::Renderer(unsigned int Width, unsigned int Height, SDL_Window* Window, 
 	glGetIntegerv(GL_MAJOR_VERSION, &GLVersionMajor);
 	glGetIntegerv(GL_MINOR_VERSION, &GLVersionMinor);
 
-	std::string glVersionConDbgStrTemp = std::vformat("Running OpenGL version {}.{}", std::make_format_args(GLVersionMajor, GLVersionMinor)).c_str();
+	std::string glVersionConDbgStrTemp = std::vformat(
+		"Running OpenGL version {}.{}",
+		std::make_format_args(GLVersionMajor, GLVersionMinor)
+	).c_str();
 	const char* glVersionConDbgStr = glVersionConDbgStrTemp.c_str();
 
 	Debug::Log(std::string(glVersionConDbgStr));
@@ -270,14 +310,20 @@ Renderer::Renderer(unsigned int Width, unsigned int Height, SDL_Window* Window, 
 	this->m_elementBuffer->Unbind();
 	*/
 
-	//this->m_framebuffer = new FBO(this->m_width, this->m_height, this->m_window, this->m_msaaSamples <= 0 ? false : true, this->m_msaaSamples);
+	/*this->m_framebuffer = new FBO(
+		this->m_width,
+		this->m_height,
+		this->m_window,
+		this->m_msaaSamples <= 0 ? false : true,
+		this->m_msaaSamples
+	 );*/
 
 	this->m_framebuffer = new FBO(this->m_window, this->m_width, this->m_height, this->m_msaaSamples);
 
 	Debug::Log("Renderer initialized");
 }
 
-void Renderer::ChangeResolution(unsigned int Width, unsigned int Height)
+void Renderer::ChangeResolution(uint32_t Width, uint32_t Height)
 {
 	std::string dbgWinResChangeStr = std::vformat(
 		"Changing window resolution: ({}, {}) -> ({}, {})",
@@ -318,22 +364,27 @@ void Renderer::ChangeResolution(unsigned int Width, unsigned int Height)
 
 void Renderer::DrawScene(Scene_t& Scene)
 {
-	unsigned int ShaderProgramID = Scene.Shaders->ID;
+	uint32_t ShaderProgramID = Scene.Shaders->ID;
 
 	Scene.Shaders->Activate();
 
-	for (unsigned int LightIndex = 0; LightIndex < Scene.LightData.size(); LightIndex++)
+	for (uint32_t LightIndex = 0; LightIndex < Scene.LightData.size(); LightIndex++)
 	{
 		LightData_t LightData = Scene.LightData.at(LightIndex);
 
 		std::string LightIdxString = std::to_string(LightIndex);
 		std::string ShaderLightLoc = "Lights[" + LightIdxString + "]";
 		
-		glUniform3f(glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".Position").c_str()), LightData.Position.X, LightData.Position.Y, LightData.Position.Z);
-		glUniform3f(glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".Color").c_str()), LightData.LightColor.R, LightData.LightColor.G, LightData.LightColor.B);
-		glUniform1i(glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".Type").c_str()), (int)LightData.Type);
+		auto PosLoc = glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".Position").c_str());
+		auto ColLoc = glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".Color").c_str());
+		auto TypeLoc = glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".Type").c_str());
+		auto RangeLoc = glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".Range").c_str());
 
-		glUniform1f(glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".Range").c_str()), LightData.Range);
+		glUniform3f(PosLoc, LightData.Position.X, LightData.Position.Y, LightData.Position.Z);
+		glUniform3f(ColLoc, LightData.LightColor.R, LightData.LightColor.G, LightData.LightColor.B);
+		glUniform1i(TypeLoc, (int)LightData.Type);
+
+		glUniform1f(RangeLoc, LightData.Range);
 
 		glUniformMatrix4fv(
 			glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".ShadowMapProjection").c_str()),
@@ -360,14 +411,14 @@ void Renderer::DrawScene(Scene_t& Scene)
 
 	glUniform1i(glGetUniformLocation(ShaderProgramID, "NumLights"), Scene.LightData.size());
 
-	for (unsigned int MeshIndex = 0; MeshIndex < Scene.MeshData.size(); MeshIndex++)
+	for (uint32_t MeshIndex = 0; MeshIndex < Scene.MeshData.size(); MeshIndex++)
 	{
 		MeshData_t RenderData = Scene.MeshData.at(MeshIndex);
 		this->m_setTextureUniforms(RenderData, Scene.Shaders);
 		this->DrawMesh(RenderData.MeshData, Scene.Shaders, RenderData.Size, RenderData.Matrix);
 	}
 
-	for (unsigned int MeshIndex = 0; MeshIndex < Scene.TransparentMeshData.size(); MeshIndex++)
+	for (uint32_t MeshIndex = 0; MeshIndex < Scene.TransparentMeshData.size(); MeshIndex++)
 	{
 		MeshData_t RenderData = Scene.TransparentMeshData.at(MeshIndex);
 		this->m_setTextureUniforms(RenderData, Scene.Shaders);
@@ -443,8 +494,6 @@ void Renderer::m_setTextureUniforms(MeshData_t& RenderData, ShaderProgram* Shade
 	
 	//glDisable(GL_BLEND);
 
-	glUniform1i(glGetUniformLocation(Shaders->ID, "HasDiffuse"), 1);
-
 	glUniform1f(glGetUniformLocation(Shaders->ID, "SpecularMultiplier"), Material->SpecMultiply);
 	glUniform1f(glGetUniformLocation(Shaders->ID, "SpecularPower"), Material->SpecExponent);
 
@@ -472,65 +521,23 @@ void Renderer::m_setTextureUniforms(MeshData_t& RenderData, ShaderProgram* Shade
 
 	return;*/
 
-	unsigned int TexUnitOffset = 5;
+	uint32_t TexUnitOffset = 5;
 
 	for (Texture* Image : Material->DiffuseTextures)
 	{
 		std::string NumberOf;
 		std::string Type;
 
-		switch (Image->Usage)
+		TexUnitOffset++;
+
+		Type = DiffuseStr;
+
+		NumberOf = std::to_string(NumDiffuse);
+
+		if (NumDiffuse > 6)
 		{
-
-		case MaterialTextureType::Diffuse:
-		{
-			TexUnitOffset++;
-
-			Type = DiffuseStr;
-
-			glUniform1i(glGetUniformLocation(Shaders->ID, "HasDiffuse"), 1);
-
-			NumDiffuse++;
-			NumberOf = std::to_string(NumDiffuse);
-
-			if (NumDiffuse > 6)
-			{
-				printf("DIFFUSE TEX LIMIT REACHED!\n");
-				continue;
-			}
-
-			break;
-		}
-
-		case MaterialTextureType::Specular:
-		{
-			TexUnitOffset++;
-
-			Type = SpecularStr;
-			
-			glUniform1i(glGetUniformLocation(Shaders->ID, "HasSpecular"), 1);
-
-			NumSpecular++;
-			NumberOf = std::to_string(NumSpecular);
-
-			if (NumSpecular > 6)
-			{
-				printf("SPECULAR TEX LIMIT REACHED!\n");
-				continue;
-			}
-
-			break;
-		}
-
-		default:
-		{
-			// we may be given a specular texture that was not actually assigned,
-			// likely because the model or material did not have one
-			printf("hoh\n");
-
-			break;
-		}
-
+			Debug::Log("DIFFUSE TEX LIMIT REACHED!");
+			continue;
 		}
 
 		glActiveTexture(GL_TEXTURE0 + TexUnitOffset);
@@ -541,12 +548,37 @@ void Renderer::m_setTextureUniforms(MeshData_t& RenderData, ShaderProgram* Shade
 
 		std::string ShaderTextureVar = (Type + "Textures[0]");
 		glUniform1i(glGetUniformLocation(Shaders->ID, ShaderTextureVar.c_str()), TexUnitOffset);
-
-		break;
 	}
 
-	glUniform1i(glGetUniformLocation(Shaders->ID, "ActiveDiffuseTextures"), NumDiffuse);
-	glUniform1i(glGetUniformLocation(Shaders->ID, "ActiveSpecularTextures"), NumSpecular);
+	for (Texture* Image : Material->SpecularTextures)
+	{
+		std::string NumberOf;
+		std::string Type;
+
+		TexUnitOffset++;
+
+		Type = SpecularStr;
+
+		NumberOf = std::to_string(NumSpecular);
+
+		if (NumSpecular > 6)
+		{
+			Debug::Log("SPECULAR TEX LIMIT REACHED!");
+			continue;
+		}
+
+		glActiveTexture(GL_TEXTURE0 + TexUnitOffset);
+
+		Shaders->Activate();
+
+		glBindTexture(GL_TEXTURE_2D, Image->Identifier);
+
+		std::string ShaderTextureVar = (Type + "Textures[0]");
+		glUniform1i(glGetUniformLocation(Shaders->ID, ShaderTextureVar.c_str()), TexUnitOffset);
+	}
+
+	glUniform1i(glGetUniformLocation(Shaders->ID, "NumDiffuseTextures"), Material->DiffuseTextures.size());
+	glUniform1i(glGetUniformLocation(Shaders->ID, "NumSpecularTextures"), Material->SpecularTextures.size());
 }
 
 void Renderer::SwapBuffers()

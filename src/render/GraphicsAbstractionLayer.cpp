@@ -1,15 +1,23 @@
-#include<render/GraphicsAbstractionLayer.hpp>
-#include <format>
+#include<format>
+#include<imgui/imgui_impl_sdl.h>
+#include<imgui/imgui_impl_opengl3.h>
+#include<SDL2/SDL_syswm.h>
+#include<datatype/Vector3.hpp>
+#include<glm/gtc/type_ptr.hpp>
+#include<glad/gl.h>
+
+#include"render/GraphicsAbstractionLayer.hpp"
+#include"Debug.hpp"
 
 Graphics::Graphics(bool* WasSuccess, GraphicsApi ForceApi, const char* WindowTitle, int WindowSizeX, int WindowSizeY)
 {
-	if (ForceApi == GraphicsApi::Auto) {
+	if (ForceApi == GraphicsApi::Auto)
+	{
 		this->CurrentUsingApi = GraphicsApi::OpenGL;
 		this->WindowFlags |= SDL_WINDOW_OPENGL;
 	}
-	else {
+	else
 		this->CurrentUsingApi = ForceApi;
-	}
 
 	assert(this->CurrentUsingApi != GraphicsApi::None);
 
@@ -20,28 +28,32 @@ Graphics::Graphics(bool* WasSuccess, GraphicsApi ForceApi, const char* WindowTit
 		this->WindowFlags
 	);
 
-	if (!this->Window) {
+	if (!this->Window)
+	{
 		const char* SDLError = SDL_GetError();
-
-		throw(std::vformat("SDL could not create window: {}", std::make_format_args(SDLError)));
 
 		*WasSuccess = false;
 		this->Error = std::string(SDLError);
+
+		throw(std::vformat("SDL could not create window: {}", std::make_format_args(SDLError)));
 
 		return;
 	}
 
 	switch (this->CurrentUsingApi) {
 
-	case GraphicsApi::Vulkan: {
+	case GraphicsApi::Vulkan:
+	{
 		throw(std::string("Vulkan is not currently supported :("));
 		break;
 	}
 
-	case GraphicsApi::OpenGL: {
+	case GraphicsApi::OpenGL:
+	{
 		this->OGL_Context = SDL_GL_CreateContext(this->Window);
 
-		if (!this->OGL_Context) {
+		if (!this->OGL_Context)
+		{
 			const char* SDLError = SDL_GetError();
 
 			throw(std::vformat("SDL could not create an OpenGL context: {}", std::make_format_args(SDLError)));
@@ -55,8 +67,8 @@ Graphics::Graphics(bool* WasSuccess, GraphicsApi ForceApi, const char* WindowTit
 		gladLoadGL((GLADloadfunc)SDL_GL_GetProcAddress);
 
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
 
 		SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
@@ -70,10 +82,11 @@ Graphics::Graphics(bool* WasSuccess, GraphicsApi ForceApi, const char* WindowTit
 		this->GuiIO = &ImGui::GetIO();
 		ImGui::StyleColorsDark();
 		ImGui_ImplSDL2_InitForOpenGL(this->Window, this->OGL_Context);
-		ImGui_ImplOpenGL3_Init("#version 330");
+		ImGui_ImplOpenGL3_Init("#version 460");
 	}
 
-	default: {
+	default:
+	{
 		*WasSuccess = false;
 		this->Error = "Forced specific graphics API but given invalid option";
 
@@ -90,7 +103,7 @@ void GL_SetUniform(Uniform_t Uniform, SDL_Window* Window)
 	switch (Uniform.Type)
 	{
 
-	case (UniformType::INT):
+	case (UniformType::Integer):
 	{
 		glUseProgram(Uniform.ShaderProgramId);
 		glUniform1i(glGetUniformLocation(Uniform.ShaderProgramId, Uniform.Name), *(int*)Uniform.ValuePtr);
@@ -98,7 +111,7 @@ void GL_SetUniform(Uniform_t Uniform, SDL_Window* Window)
 		break;
 	}
 
-	case (UniformType::FLOAT):
+	case (UniformType::Float):
 	{
 		glUseProgram(Uniform.ShaderProgramId);
 		glUniform1f(glGetUniformLocation(Uniform.ShaderProgramId, Uniform.Name), *(float*)Uniform.ValuePtr);
@@ -106,7 +119,7 @@ void GL_SetUniform(Uniform_t Uniform, SDL_Window* Window)
 		break;
 	}
 
-	case (UniformType::FLOAT3):
+	case (UniformType::Vector3):
 	{
 		glUseProgram(Uniform.ShaderProgramId);
 		Vector3 Vec = *(Vector3*)Uniform.ValuePtr;
@@ -115,20 +128,29 @@ void GL_SetUniform(Uniform_t Uniform, SDL_Window* Window)
 		break;
 	}
 
-	case (UniformType::MAT4):
+	case (UniformType::Matrix4x4):
 	{
 		glUseProgram(Uniform.ShaderProgramId);
-		glUniformMatrix4fv(glGetUniformLocation(Uniform.ShaderProgramId, Uniform.Name), 1, GL_FALSE, glm::value_ptr(*(glm::mat4*)Uniform.ValuePtr));
+		glUniformMatrix4fv(
+			glGetUniformLocation(Uniform.ShaderProgramId, Uniform.Name),
+			1,
+			GL_FALSE,
+			glm::value_ptr(*(glm::mat4*)Uniform.ValuePtr)
+		);
 
 		break;
 	}
 
 	default:
 	{
-		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Engine error", "GraphicsAbstractionLayer/GL_SetUniform not implemented for this uniform type!", Window);
-		Debug::Log("GraphicsAbstractionLayer/GL_SetUniform not implemented for this uniform type!");
-		Debug::Save();
-		throw(std::vformat("GL_SetUniform does not have an implementation for type with ID {}", std::make_format_args((int)Uniform.Type)));
+		int Type = (int)Uniform.Type;
+
+		std::string ErrMsg = std::vformat(
+			"GL_SetUniform not implemented for type {}!",
+			std::make_format_args(Type)
+		);
+
+		throw(ErrMsg);
 		break;
 	}
 
@@ -148,10 +170,13 @@ void Graphics::SetUniformBlock(std::vector<Uniform_t> Uniforms)
 
 	default: 
 	{
-		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Engine error", "GraphicsAbstractionLayer::SetUniformBlock not implemented for this API!", this->Window);
-		Debug::Log("GraphicsAbstractionLayer::SetUniformBlock not implemented for this API!");
-		Debug::Save();
-		throw(std::vformat("SetUniformBlock is not implemented for API with ID {}", std::make_format_args((int)this->CurrentUsingApi)));
+		int CurApi = (int)this->CurrentUsingApi;
+		std::string ErrMsg = std::vformat(
+			"SetUniformBlock not implemented for API {}!",
+			std::make_format_args(CurApi)
+		);
+
+		throw(ErrMsg);
 		break;
 	}
 

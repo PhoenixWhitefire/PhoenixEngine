@@ -6,18 +6,18 @@ DerivedObjectRegister<Object_DirectionalLight> Object_DirectionalLight::Register
 
 Object_Light::Object_Light()
 {
-	this->Name = "BaseLight";
+	this->Name = "Light (ABSTRACT)";
 	this->ClassName = "Light";
 
 	m_properties.insert(std::pair(
-		std::string("Color"),
+		"Color",
 		std::pair(PropType::Color, std::pair(
 			[this]() { return this->GetColor(); },
 			[this](GenericType gt) { this->SetColor(gt.Color3); }
 		))
 	));
 	m_properties.insert(std::pair(
-		std::string("Brightness"),
+		"Brightness",
 		std::pair(PropType::Double, std::pair(
 			[this]() { return this->GetBrightness(); },
 			[this](GenericType gt) { this->SetBrightness(gt.Double); }

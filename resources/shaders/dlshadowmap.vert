@@ -1,3 +1,5 @@
+// ShadowMap shader for Directional Lights
+
 #version 460 core
 
 layout (location = 0) in vec3 VertexPosition;

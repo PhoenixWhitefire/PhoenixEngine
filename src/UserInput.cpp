@@ -1,16 +1,18 @@
-#include<UserInput.hpp>
+#include"UserInput.hpp"
 
 const uint8_t* KeyboardState = SDL_GetKeyboardState(NULL);
+
+bool UserInput::InputBeingSunk = false;
 
 bool UserInput::IsKeyDown(SDL_KeyCode Key)
 {
 	return KeyboardState[SDL_GetScancodeFromKey(Key)] == 1;
 }
 
-bool UserInput::IsMouseButtonDown(unsigned int SDLMouseButtonMask)
+bool UserInput::IsMouseButtonDown(uint32_t SDLMouseButtonMask)
 {
 	int x, y;
-	Uint32 Buttons;
+	uint32_t Buttons;
 
 	Buttons = SDL_GetMouseState(&x, &y);
 

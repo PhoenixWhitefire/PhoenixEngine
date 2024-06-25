@@ -2,10 +2,8 @@
 
 #include<vector>
 
-#include<nljson.h>
-
 #include<render/TextureManager.hpp>
-#include<FileRW.hpp>
+
 
 class RenderMaterial
 {

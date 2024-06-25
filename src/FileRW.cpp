@@ -1,4 +1,9 @@
-#include<FileRW.hpp>
+#include<fstream>
+#include<format>
+
+#include"FileRW.hpp"
+#include"GlobalJsonConfig.hpp"
+#include"Debug.hpp"
 
 std::string GetLocalizedFilePath(std::string NonLocalizedPath)
 {
@@ -15,7 +20,8 @@ std::string GetLocalizedFilePath(std::string NonLocalizedPath)
 	}
 	catch (nlohmann::json::type_error e)
 	{
-		printf("err: %s\n", e.what());
+		const char* whatStr = e.what();
+		Debug::Log(std::vformat("Error localizing file path: {}", std::make_format_args(whatStr)));
 	}
 
 	return Path;
@@ -59,7 +65,7 @@ std::string FileRW::ReadFile(std::string FilePath, bool* DoesFileExist)
 
 void FileRW::WriteFile(const char* FilePath, std::string FileContents, bool InResourcesDirectory)
 {
-	std::string Path = GetLocalizedFilePath(FilePath);
+	std::string Path = InResourcesDirectory ? GetLocalizedFilePath(FilePath) : FilePath;
 
 	Debug::Log("Writing file: '" + Path + "'");
 
@@ -67,9 +73,5 @@ void FileRW::WriteFile(const char* FilePath, std::string FileContents, bool InRe
 
 	File << FileContents;
 
-	Debug::Log("Wrote file! Closing handle...");
-
 	File.close();
-
-	Debug::Log("Closed handle!");
 }

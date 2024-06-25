@@ -11,16 +11,10 @@
 //#include"render/GraphicsAbstractionLayer.hpp"
 #include"render/Renderer.hpp"
 #include"render/ShaderProgram.hpp"
-#include"render/Camera.hpp"
-
-#include"datatype/GameObject.hpp"
-#include"datatype/Event.hpp"
 
 #include"PhysicsEngine.hpp"
 #include"ModelLoader.hpp"
 #include"MapLoader.hpp"
-
-#include"ThreadManager.hpp"
 
 class EngineObject
 {
@@ -63,8 +57,12 @@ public:
 	void SetIsFullscreen(bool IsFullscreen);
 	void ResizeWindow(int NewSizeX, int NewSizeY);
 
-	std::vector<std::shared_ptr<GameObject>>& LoadModelAsMeshesAsync(const char* ModelFilePath, Vector3 Size, Vector3 Position);
-	std::vector<std::shared_ptr<GameObject>>& LoadModelAsMeshesAsync(const char* ModelFilePath, Vector3 Size, Vector3 Position, bool AutoParent);
+	std::vector<std::shared_ptr<GameObject>>& LoadModelAsMeshesAsync(
+		const char* ModelFilePath,
+		Vector3 Size,
+		Vector3 Position,
+		bool AutoParent = true
+	);
 
 	Event<std::tuple<EngineObject*, double, double>> OnFrameStart = Event<std::tuple<EngineObject*, double, double>>();
 	Event<std::tuple<EngineObject*, double, double>> OnFrameRenderGui = Event<std::tuple<EngineObject*, double, double>>();
@@ -72,7 +70,7 @@ public:
 
 	PhysicsSolver* Physics = new PhysicsSolver();
 
-	unsigned int MSAASamples = 0;
+	uint8_t MSAASamples = 0;
 
 	float GlobalTimeMultiplier = 1.0f;
 
@@ -81,25 +79,16 @@ public:
 	int WindowSizeX;
 	int WindowSizeY;
 
-	// TODO implement rendering on a separate thread
-	Worker* RenderThread = nullptr;
-
-	ShaderProgram* Shaders3D;
-
 	ShaderProgram* PostProcessingShaders;
+	ShaderProgram* Shaders3D;
 
 	Renderer* m_renderer;
 
 	SDL_Window* Window;
 
-	//The main scene camera
-	Camera* MainCamera;
-
-	std::shared_ptr<GameObject> Game;
+	std::shared_ptr<Object_Workspace> Game;
 
 	bool Exit = false;
-
-	GLuint RectangleVAO, RectangleVBO;
 	
 	static EngineObject* Singleton;
 
@@ -113,6 +102,7 @@ public:
 	float RunningTime = 0.0f;
 
 	nlohmann::json GameConfig;
+
 private:
 	std::vector<MeshData_t> m_compileMeshData(std::shared_ptr<GameObject> RootObject);
 	std::vector<LightData_t> m_compileLightData(std::shared_ptr<GameObject> RootObject);

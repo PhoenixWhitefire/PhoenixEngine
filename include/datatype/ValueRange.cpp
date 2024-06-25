@@ -1,35 +1,6 @@
-// Contains both the declarations and the
-// implementation due to wackyness with templates
+#include<random>
 
-#pragma once
-
-#include<vector>
-
-template <class _vtype> class ValueRangeKey
-{
-public:
-	ValueRangeKey(float time, _vtype value);
-
-	float Time; // Time in the sequence
-	_vtype Value; // Value at this point in time
-	float Envelope; // Random deviation
-};
-
-template <class ValueType> class ValueRange
-{ //IMPORTANT: ValueRange<type>: 'type' should support math operations - '-', '*', '+'
-public:
-	ValueRange(std::vector<ValueRangeKey<ValueType>> InitKeys);
-	ValueRange();
-
-	ValueType GetValue(float Time);
-	void InsertKey(ValueRangeKey<ValueType> Key);
-
-	std::vector<ValueRangeKey<ValueType>> GetKeys();
-	std::vector<ValueType> GetKeysValues();
-
-private:
-	std::vector<ValueRangeKey<ValueType>> m_keys;
-};
+#include"datatype/ValueRange.hpp"
 
 static std::default_random_engine RandGenerator = std::default_random_engine(time(NULL));
 static std::uniform_real_distribution<double> EnvelopDist(0.f, 1.f);

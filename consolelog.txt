@@ -1,15 +1,2 @@
-Running OpenGL version 4.6
-Renderer initialized
-Loaded 3 objects from map file levels/dev.world
-Loaded level: levels/dev.world
-Loaded map
-Directional light shadowmap texture id: 11
-Main program loop start...
-GL Debug callback:
-	Type: Low-performance warning
-	Severity: Medium
-	Message: Program/shader state performance warning: Vertex shader in program 3 is being recompiled based on GL state.
-	Source: OpenGL API
-	Error ID: 131218
-
-Engine main loop exited, quitting application...
+Could not load file: ./game.ini
+CRASH: Could not find game.ini configuration file!

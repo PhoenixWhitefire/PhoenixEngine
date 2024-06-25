@@ -12,9 +12,6 @@ public:
 
 	void SetShape(PrimitiveShape);
 
-	std::string Name = "Primitive";
-	std::string ClassName = "Primitive";
-
 	PrimitiveShape Shape = PrimitiveShape::Cube;
 
 private:

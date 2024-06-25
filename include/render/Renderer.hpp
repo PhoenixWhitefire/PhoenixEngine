@@ -2,16 +2,14 @@
 
 #define SHADER_MAX_LIGHTS 6
 
-#include<glm/gtc/type_ptr.hpp>
-#include<glm/gtc/matrix_transform.hpp>
+#include<glm/matrix.hpp>
 
-#include"ShaderProgram.hpp"
-#include<BaseMeshes.hpp>
-#include<datatype/Mesh.hpp>
-#include<datatype/Buffer.hpp>
-#include<render/Material.hpp>
-
-#include<render/GraphicsAbstractionLayer.hpp>
+#include"render/ShaderProgram.hpp"
+#include"render/Material.hpp"
+#include"datatype/Mesh.hpp"
+#include"datatype/Buffer.hpp"
+#include"datatype/Color.hpp"
+#include"datatype/Vector3.hpp"
 
 struct MeshData_t
 {
@@ -49,39 +47,40 @@ struct Scene_t
 	ShaderProgram* Shaders = (ShaderProgram*)nullptr;
 };
 
-class Renderer {
-	public:
-		Renderer(unsigned int Width, unsigned int Height, SDL_Window* Window, int MSAASamples);
+class Renderer
+{
+public:
+	Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window, uint8_t MSAASamples);
 
-		// Changes the rendering resolution
-		void ChangeResolution(unsigned int Width, unsigned int Height);
+	// Changes the rendering resolution
+	void ChangeResolution(uint32_t newWidth, uint32_t newHeight);
 
-		void DrawScene(Scene_t& Scene);
+	void DrawScene(Scene_t& Scene);
 
-		// Submits a single draw call
-		void DrawMesh(
-			Mesh* Object,
-			ShaderProgram* Shaders,
-			Vector3 Size,
-			glm::mat4 Matrix = glm::mat4(1.0f)
-		);
+	// Submits a single draw call
+	void DrawMesh(
+		Mesh* Object,
+		ShaderProgram* Shaders,
+		Vector3 Size,
+		glm::mat4 Matrix = glm::mat4(1.0f)
+	);
 
-		void SwapBuffers();
+	void SwapBuffers();
 
-		FBO* m_framebuffer = nullptr;
+	FBO* m_framebuffer = nullptr;
 
-		SDL_GLContext m_glContext;
+	SDL_GLContext m_glContext;
 
-	private:
-		void m_setTextureUniforms(MeshData_t& Mesh, ShaderProgram* Shaders);
+private:
+	void m_setTextureUniforms(MeshData_t& Mesh, ShaderProgram* Shaders);
 
-		VAO* m_vertexArray = nullptr;
-		VBO* m_vertexBuffer = nullptr;
-		EBO* m_elementBuffer = nullptr;
+	VAO* m_vertexArray = nullptr;
+	VBO* m_vertexBuffer = nullptr;
+	EBO* m_elementBuffer = nullptr;
 
-		SDL_Window* m_window;
+	SDL_Window* m_window;
+	
+	uint32_t m_width, m_height;
 
-		unsigned int m_width, m_height;
-
-		int m_msaaSamples;
+	int m_msaaSamples;
 };

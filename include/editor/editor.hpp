@@ -1,11 +1,7 @@
 #pragma once
 
-#include<editor/intersectionlib.hpp>
-#include<datatype/Event.hpp>
 #include<datatype/GameObject.hpp>
-#include<gameobject/MeshObject.hpp>
 #include<gameobject/Primitive.hpp>
-#include<render/Camera.hpp>
 
 class Editor
 {
@@ -18,6 +14,7 @@ public:
 	void RenderUI();
 
 private:
+
 	std::shared_ptr<GameObject> MyCube;
 	std::shared_ptr<Object_Primitive> MyCube3D;
 

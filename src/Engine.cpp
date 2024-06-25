@@ -1,8 +1,24 @@
-#include<Engine.hpp>
+#include<chrono>
+#include<string>
+#include<format>
+#include<glad/gl.h>
+#include<stb_image.h>
+#include<imgui/imgui_impl_sdl.h>
+#include<glm/matrix.hpp>
+#include<glm/gtc/type_ptr.hpp>
+#include<glm/gtc/matrix_transform.hpp>
+
+#include"Engine.hpp"
+#include"ThreadManager.hpp"
+#include"Debug.hpp"
+#include"FileRW.hpp"
 
 EngineObject* EngineObject::Singleton = nullptr;
 
-std::vector<Vertex> SkyboxVertices =
+uint32_t RectangleVAO, RectangleVBO;
+static auto ChronoStartTime = std::chrono::high_resolution_clock::now();
+
+static std::vector<Vertex> SkyboxVertices =
 {
 	/*
 	//   Coordinates
@@ -27,7 +43,7 @@ std::vector<Vertex> SkyboxVertices =
 
 };
 
-std::vector<GLuint> SkyboxIndices =
+static std::vector<uint32_t> SkyboxIndices =
 {
 	// Right
 	1, 2, 6,
@@ -49,9 +65,9 @@ std::vector<GLuint> SkyboxIndices =
 	6, 2, 3
 };
 
-void StepPhysicsForObjects(std::vector<std::shared_ptr<GameObject>> Objects, PhysicsSolver& Physics, double Delta)
+static void StepPhysicsForObjects(std::vector<std::shared_ptr<GameObject>> Objects, PhysicsSolver& Physics, double Delta)
 {
-	for (unsigned int Index = 0; Index < Objects.size(); Index++)
+	for (uint32_t Index = 0; Index < Objects.size(); Index++)
 	{
 		std::shared_ptr<Object_Base3D> Object = std::dynamic_pointer_cast<Object_Base3D>(Objects[Index]);
 
@@ -68,9 +84,6 @@ void EngineObject::ResizeWindow(int NewSizeX, int NewSizeY)
 	this->WindowSizeY = NewSizeY;
 
 	SDL_SetWindowSize(this->Window, NewSizeX, NewSizeY);
-
-	this->MainCamera->WindowWidth = NewSizeX;
-	this->MainCamera->WindowHeight = NewSizeY;
 
 	SDL_SetWindowPosition(this->Window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 
@@ -121,6 +134,7 @@ void EngineObject::SetIsFullscreen(bool Fullscreen)
 
 EngineObject::EngineObject(Vector2 WindowStartSize, SDL_Window** WindowPtr)
 {
+	this->m_DrawCallBatch = nullptr;
 	EngineObject::Singleton = this;
 
 	//GameObject::GameObjectTable["Model"] = &Object_Model()
@@ -158,20 +172,24 @@ EngineObject::EngineObject(Vector2 WindowStartSize, SDL_Window** WindowPtr)
 	if (WindowPtr)
 		*WindowPtr = this->Window;
 
-	this->MainCamera = new Camera(WindowStartSize);
-
 	ShaderProgram::Window = this->Window;
 
 	if (!this->Window)
-		throw(std::vformat("SDL error: Could not create window: {}\n", std::make_format_args(SDL_GetError())));
+	{
+		// TODO 25/06/2024:
+		// HOH???
+		// After updating VS, suddenly ::make_format_args doesn't work if
+		// the args are defined directly in the parameter??
+		std::string errStr = SDL_GetError();
+		throw(std::vformat("SDL error: Could not create window: {}\n", std::make_format_args(errStr)));
+	}
 
 	// TODO: Engine->MSAASamples does nothing, attempting to specify via below ctor's argument leads to OpenGL error "Target doesn't match the texture's target"
 	this->m_renderer = new Renderer(this->WindowSizeX, this->WindowSizeY, this->Window, 0);
 
 	ShaderProgram::BaseShaderPath = "shaders/";
 
-	this->Game = (GameObjectFactory::CreateGameObject("Model"));
-	this->Game->Name = "GameDataModel";
+	this->Game = std::dynamic_pointer_cast<Object_Workspace>(GameObjectFactory::CreateGameObject("Workspace"));
 
 	this->Shaders3D = new ShaderProgram("worldUber.vert", "worldUber.frag");
 
@@ -189,11 +207,11 @@ EngineObject::EngineObject(Vector2 WindowStartSize, SDL_Window** WindowPtr)
 
 	//Post-processing framebuffer
 
-	glGenVertexArrays(1, &this->RectangleVAO);
-	glGenBuffers(1, &this->RectangleVBO);
-	glBindVertexArray(this->RectangleVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, this->RectangleVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(this->RectangleVertices), &this->RectangleVertices, GL_STATIC_DRAW);
+	glGenVertexArrays(1, &RectangleVAO);
+	glGenBuffers(1, &RectangleVBO);
+	glBindVertexArray(RectangleVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, RectangleVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(RectangleVertices), &RectangleVertices, GL_STATIC_DRAW);
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(1);
@@ -264,7 +282,7 @@ std::vector<LightData_t> EngineObject::m_compileLightData(std::shared_ptr<GameOb
 		{
 			std::vector<LightData_t> ChildData = this->m_compileLightData(Object);
 
-			for (unsigned int CDataIdx = 0; CDataIdx < ChildData.size(); CDataIdx++)
+			for (uint32_t CDataIdx = 0; CDataIdx < ChildData.size(); CDataIdx++)
 				DataList.push_back(ChildData[CDataIdx]);
 		}
 	}
@@ -278,43 +296,43 @@ std::vector<MeshData_t> EngineObject::m_compileMeshData(std::shared_ptr<GameObje
 
 	std::vector<MeshData_t> DataList;
 
+	std::shared_ptr<Object_Camera> SceneCamera = this->Game->GetSceneCamera();
+
 	for (std::shared_ptr<GameObject> Object : Objects)
 	{
-		if (Object->Enabled) {
+		if (Object->Enabled)
+		{
 			std::shared_ptr<Object_Base3D> Object3D = std::dynamic_pointer_cast<Object_Base3D>(Object);
 
-			if (Object3D != nullptr) {
+			if (Object3D != nullptr)
+			{
 				// TODO: frustum culling
 				// Hold R to disable distance culling
-				if ((Vector3(glm::vec3(Object3D->Matrix[3])) - this->MainCamera->Position).Magnitude > 100.0f
+				if ((Vector3(glm::vec3(Object3D->Matrix[3])) - glm::vec3(SceneCamera->Matrix[3])).Magnitude > 100.0f
 					&& !UserInput::IsKeyDown(SDLK_r))
 					continue;
-
-				std::shared_ptr<Object_Mesh> MeshObject = std::dynamic_pointer_cast<Object_Mesh>(Object);
 
 				//TODO: recheck whether we need this
 				// if (MeshObject->HasTransparency)
 					//continue;
 
-				if (MeshObject != nullptr) {
-					glm::mat4 ModelMatrix = glm::mat4(1.0f);
+				glm::mat4 ModelMatrix = glm::mat4(1.0f);
 
-					std::shared_ptr<Object_Model> ParentModel = std::dynamic_pointer_cast<Object_Model>(Object->Parent);
+				std::shared_ptr<Object_Model> ParentModel = std::dynamic_pointer_cast<Object_Model>(Object->Parent);
 
-					if (ParentModel)
-						ModelMatrix = ParentModel->Matrix;
+				if (ParentModel)
+					ModelMatrix = ParentModel->Matrix;
 
-					MeshData_t Data;
-					Data.MeshData = MeshObject->GetRenderMesh();
-					Data.Material = Object3D->Material;
-					Data.Matrix = ModelMatrix * Object3D->Matrix;
-					Data.Size = MeshObject->Size;
-					Data.Transparency = MeshObject->Transparency;
-					Data.Reflectivity = MeshObject->Reflectivity;
-					Data.TintColor = MeshObject->ColorRGB;
+				MeshData_t Data;
+				Data.MeshData = Object3D->GetRenderMesh();
+				Data.Material = Object3D->Material;
+				Data.Matrix = ModelMatrix * Object3D->Matrix;
+				Data.Size = Object3D->Size;
+				Data.Transparency = Object3D->Transparency;
+				Data.Reflectivity = Object3D->Reflectivity;
+				Data.TintColor = Object3D->ColorRGB;
 
-					DataList.push_back(Data);
-				}
+				DataList.push_back(Data);
 			}
 
 			std::shared_ptr<Object_ParticleEmitter> PEmitterObject = std::dynamic_pointer_cast<Object_ParticleEmitter>(Object);
@@ -328,7 +346,7 @@ std::vector<MeshData_t> EngineObject::m_compileMeshData(std::shared_ptr<GameObje
 			{
 				std::vector<MeshData_t> ChildData = this->m_compileMeshData(Object);
 
-				for (unsigned int CDataIdx = 0; CDataIdx < ChildData.size(); CDataIdx++)
+				for (uint32_t CDataIdx = 0; CDataIdx < ChildData.size(); CDataIdx++)
 					DataList.push_back(ChildData[CDataIdx]);
 			}
 		}
@@ -337,11 +355,7 @@ std::vector<MeshData_t> EngineObject::m_compileMeshData(std::shared_ptr<GameObje
 	return DataList;
 }
 
-#include<chrono>
-
-auto ChronoStartTime = std::chrono::high_resolution_clock::now();
-
-double GetRunningTime()
+static double GetRunningTime()
 {
 	auto ChronoTime = std::chrono::high_resolution_clock::now();
 
@@ -359,7 +373,7 @@ void EngineObject::Start()
 
 	glUniform1i(glGetUniformLocation(this->PostProcessingShaders->ID, "Texture"), 0);
 
-	glBindVertexArray(this->RectangleVAO);
+	glBindVertexArray(RectangleVAO);
 	glDisable(GL_DEPTH_TEST);
 
 	glActiveTexture(GL_TEXTURE0);
@@ -422,7 +436,7 @@ void EngineObject::Start()
 	{
 		int Width, Height, NumberChannels;
 
-		unsigned char* ImageBytes = stbi_load(SkyboxCubemapImages[ImageIndex].c_str(), &Width, &Height, &NumberChannels, 0);
+		uint8_t* ImageBytes = stbi_load(SkyboxCubemapImages[ImageIndex].c_str(), &Width, &Height, &NumberChannels, 0);
 
 		if (ImageBytes != nullptr)
 		{
@@ -457,7 +471,7 @@ void EngineObject::Start()
 
 	glUniform1i(glGetUniformLocation(this->PostProcessingShaders->ID, "Texture"), 0);
 
-	glBindVertexArray(this->RectangleVAO);
+	glBindVertexArray(RectangleVAO);
 	glDisable(GL_DEPTH_TEST);
 
 	this->m_renderer->m_framebuffer->BindTexture();
@@ -477,7 +491,7 @@ void EngineObject::Start()
 
 	glUniform1i(glGetUniformLocation(this->PostProcessingShaders->ID, "Texture"), 0);
 
-	glBindVertexArray(this->RectangleVAO);
+	glBindVertexArray(RectangleVAO);
 	glDisable(GL_DEPTH_TEST);
 
 	this->m_renderer->m_framebuffer->BindTexture();
@@ -518,7 +532,7 @@ void EngineObject::Start()
 
 	glUniform1i(glGetUniformLocation(this->PostProcessingShaders->ID, "Texture"), 0);
 
-	glBindVertexArray(this->RectangleVAO);
+	glBindVertexArray(RectangleVAO);
 	glDisable(GL_DEPTH_TEST);
 
 	glActiveTexture(GL_TEXTURE0);
@@ -576,7 +590,7 @@ void EngineObject::Start()
 		// Wait the appropriate amount of time between frames
 		if (!VSync && (FrameDelta < FpsCapDelta))
 		{
-			Sleep((FpsCapDelta - FrameDelta) * 1000);
+			SDL_Delay((FpsCapDelta - FrameDelta) * 1000);
 		}
 
 		this->m_particleEmitters.clear();
@@ -623,19 +637,6 @@ void EngineObject::Start()
 			}
 		}
 
-		bool IsWindowSizeValid = MainCamera->WindowWidth > 0 && MainCamera->WindowHeight > 0;
-		float Aspect = IsWindowSizeValid ? (float)MainCamera->WindowWidth / MainCamera->WindowHeight : -1.0f;
-
-		// TODO: there used to be an issue where the first frame had a 0x0 window size,
-		// check if this it's still needed
-		if (Aspect < 0.0f)
-		{
-			MainCamera->WindowWidth, MainCamera->WindowHeight = 800, 800;
-			Debug::Log("The window size was reset to 800x800 because it was below or equal to 0.");
-
-			continue;
-		}
-
 		this->m_LightIndex = 0;
 
 		glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
@@ -644,6 +645,8 @@ void EngineObject::Start()
 		double DeltaTime = CurrentTime - LastTime;
 		LastTime = CurrentTime;
 		FrameStart = CurrentTime;
+
+		this->Game->Update(DeltaTime);
 
 		StepPhysicsForObjects(this->Game->GetChildren(), *this->Physics, DeltaTime);
 
@@ -689,7 +692,6 @@ void EngineObject::Start()
 		//Scene.Shaders = &ShadowMapShaders;
 
 		this->OnFrameStart.Fire(std::make_tuple(this, DeltaTime, CurrentTime));
-		this->MainCamera->Update();
 
 		//this->m_renderer->DrawScene(Scene);
 
@@ -699,7 +701,6 @@ void EngineObject::Start()
 
 		Scene.Shaders = this->Shaders3D;
 		this->Shaders3D->Activate();
-		this->MainCamera->Update();
 
 		CurrentTime = this->RunningTime;
 
@@ -721,11 +722,18 @@ void EngineObject::Start()
 		glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+		double AspectRatio = this->WindowSizeX / this->WindowSizeY;
+
+		std::shared_ptr<Object_Camera> SceneCamera = this->Game->GetSceneCamera();
+
+		glm::mat4 CameraMatrix = SceneCamera->GetMatrixForAspectRatio(AspectRatio);
+		float* CamMatrixPtr = glm::value_ptr(CameraMatrix);
+
 		glUniformMatrix4fv(
 			glGetUniformLocation(this->Shaders3D->ID, "CameraMatrix"),
 			1,
 			GL_FALSE,
-			glm::value_ptr(this->MainCamera->Matrix)
+			CamMatrixPtr
 		);
 
 		//ShadowMapFBO.BindTexture();
@@ -738,20 +746,27 @@ void EngineObject::Start()
 
 		SkyboxShaders.Activate();
 
+		glm::vec3 CamPos = glm::vec3(SceneCamera->Matrix[3]);
+		glm::vec3 CamForward = glm::vec3(SceneCamera->Matrix[2]);
+
 		glm::mat4 view = glm::mat4(1.0f);
 		glm::mat4 projection = glm::mat4(1.0f);
 		// We make the mat4 into a mat3 and then a mat4 again in order to get rid of the last row and column
 		// The last row and column affect the translation of the skybox (which we don't want to affect)
 		view = glm::mat4(
 			glm::mat3(
-				glm::lookAt(MainCamera->Position, MainCamera->Position + MainCamera->LookVec, MainCamera->UpVec)
+				glm::lookAt(
+					CamPos,
+					CamPos + CamForward,
+					glm::vec3(Vector3::UP)
+				)
 			)
 		);
 		projection = glm::perspective(
-			glm::radians(45.0f),
-			(float)MainCamera->WindowWidth / MainCamera->WindowHeight,
-			MainCamera->NearPlane,
-			MainCamera->FarPlane
+			glm::radians(SceneCamera->FieldOfView),
+			(float)AspectRatio,
+			SceneCamera->NearPlane,
+			SceneCamera->FarPlane
 		);
 
 		glUniformMatrix4fv(glGetUniformLocation(SkyboxShaders.ID, "ViewMat"), 1, GL_FALSE, glm::value_ptr(view));
@@ -767,10 +782,10 @@ void EngineObject::Start()
 		this->m_renderer->DrawScene(Scene);
 
 		//Particle emitters' particles need to be drawn after scene due to transparency
-		for (auto emitter : this->m_particleEmitters)
+		for (auto& emitter : this->m_particleEmitters)
 		{
 			emitter->Update(this->FrameTime);
-			emitter->Render(*this->MainCamera);
+			emitter->Render(CameraMatrix);
 		}
 		
 		glDisable(GL_DEPTH_TEST);
@@ -792,12 +807,25 @@ void EngineObject::Start()
 			auto DistortionLoc = glGetUniformLocation(PostProcessingShaders->ID, "DistortionEnabled");
 			auto TimeLoc = glGetUniformLocation(PostProcessingShaders->ID, "Time");
 
+			auto BlurVignetteStrength = glGetUniformLocation(PostProcessingShaders->ID, "BlurVignetteStrength");
+			auto BlurVignetteDistMul = glGetUniformLocation(PostProcessingShaders->ID, "BlurVignetteDistMul");
+			auto BlurVignetteDistExp = glGetUniformLocation(PostProcessingShaders->ID, "BlurVignetteDistExp");
+			auto BlurVignetteSampleRadius = glGetUniformLocation(PostProcessingShaders->ID, "BlurVignetteSampleRadius");
+
 			glUniform1i(VignetteBlurLoc, int(EngineJsonConfig.value("postfx_blurvignette", false)));
 			glUniform1i(DistortionLoc, int(EngineJsonConfig.value("postfx_distortion", false)));
 
+			if (EngineJsonConfig.find("postfx_blurvignette_blurstrength") != EngineJsonConfig.end())
+			{
+				glUniform1f(BlurVignetteStrength, (float)EngineJsonConfig["postfx_blurvignette_blurstrength"]);
+				glUniform1f(BlurVignetteDistMul, (float)EngineJsonConfig["postfx_blurvignette_weightexp"]);
+				glUniform1f(BlurVignetteDistExp, (float)EngineJsonConfig["postfx_blurvignette_weightmul"]);
+				glUniform1i(BlurVignetteSampleRadius, (float)EngineJsonConfig["postfx_blurvignette_sampleradius"]);
+			}
+
 			glUniform1f(TimeLoc, RunningTime);
 
-			glBindVertexArray(this->RectangleVAO);
+			glBindVertexArray(RectangleVAO);
 			glDisable(GL_DEPTH_TEST);
 
 			glActiveTexture(GL_TEXTURE0);
@@ -840,7 +868,12 @@ void EngineObject::Start()
 	}
 }
 
-std::vector<std::shared_ptr<GameObject>>& EngineObject::LoadModelAsMeshesAsync(const char* ModelFilePath, Vector3 Size, Vector3 Position, bool AutoParent)
+std::vector<std::shared_ptr<GameObject>>& EngineObject::LoadModelAsMeshesAsync(
+	const char* ModelFilePath,
+	Vector3 Size,
+	Vector3 Position,
+	bool AutoParent
+)
 {
 	// TODO: fix memory leak, we need  Loader.LoadedObjects but without 'new' it gets deleted along with ModelLoader
 	ModelLoader* Loader = new ModelLoader(ModelFilePath, AutoParent ? this->Game : nullptr, this->Window);
@@ -857,11 +890,6 @@ std::vector<std::shared_ptr<GameObject>>& EngineObject::LoadModelAsMeshesAsync(c
 	return Loader->LoadedObjects;
 }
 
-std::vector<std::shared_ptr<GameObject>>& EngineObject::LoadModelAsMeshesAsync(const char* ModelFilePath, Vector3 Size, Vector3 Position)
-{
-	return this->LoadModelAsMeshesAsync(ModelFilePath, Size, Position, true);
-}
-
 EngineObject::~EngineObject()
 {
 	this->Exit = true;
@@ -871,8 +899,6 @@ EngineObject::~EngineObject()
 
 	delete this->Physics;
 	delete this->m_renderer;
-
-	delete this->MainCamera;
 
 	Debug::Log("Engine closing...");
 

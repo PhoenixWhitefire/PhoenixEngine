@@ -1,10 +1,12 @@
-#include<editor/intersectionlib.hpp>
+#include<unordered_map>
+
+#include"editor/intersectionlib.hpp"
 
 typedef std::unordered_map<IntersectionLib::HittableObject*, std::vector<IntersectionLib::Triangle>> HittableObjectTrianglesCacheType;
 
 static HittableObjectTrianglesCacheType HittableObjectTrianglesCache;
 
-std::vector<IntersectionLib::Triangle> GetTrianglesFromHittableObject(IntersectionLib::HittableObject* HittableObject)
+static std::vector<IntersectionLib::Triangle> GetTrianglesFromHittableObject(IntersectionLib::HittableObject* HittableObject)
 {
 	HittableObjectTrianglesCacheType::iterator it = HittableObjectTrianglesCache.find(HittableObject);
 
@@ -15,7 +17,7 @@ std::vector<IntersectionLib::Triangle> GetTrianglesFromHittableObject(Intersecti
 		std::vector<IntersectionLib::Triangle> Triangles;
 		Triangles.reserve(TargetMesh->Indices.size() / 3);
 
-		for (unsigned int Indice = 0; Indice * 3 < TargetMesh->Indices.size(); Indice++)
+		for (uint32_t Indice = 0; Indice * 3 < TargetMesh->Indices.size(); Indice++)
 		{
 			IntersectionLib::Triangle NewTri = IntersectionLib::Triangle();
 
@@ -42,12 +44,12 @@ std::vector<IntersectionLib::Triangle> GetTrianglesFromHittableObject(Intersecti
 
 const double OneSixth = 1.0f / 6.0f;
 
-double GetSignedVolume(Vector3 A, Vector3 B, Vector3 C, Vector3 D)
+static double GetSignedVolume(Vector3 A, Vector3 B, Vector3 C, Vector3 D)
 {
 	return OneSixth * (((B - A).Cross(C - A)).Dot(D - A));
 }
 
-int GetSign(double Number)
+static int GetSign(double Number)
 {
 	return (0 < Number) - (Number < 0);
 }

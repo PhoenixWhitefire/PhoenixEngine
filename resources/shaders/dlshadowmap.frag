@@ -1,3 +1,5 @@
+// ShadowMap shader for Directional Lights
+
 #version 460 core
 
 const int MAX_DIFFUSE_TEXTURES = 6;

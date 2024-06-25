@@ -1,5 +1,6 @@
-#include<datatype/Vector3.hpp>
-#include"glm/geometric.hpp"
+#include<glm/geometric.hpp>
+
+#include"datatype/Vector3.hpp"
 
 Vector3& Vector3::ZERO = *new Vector3(0.f, 0.f, 0.f);
 Vector3& Vector3::UP = *new Vector3(0.f, 1.f, 0.f);

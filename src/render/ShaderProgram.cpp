@@ -1,5 +1,8 @@
-#include<render/ShaderProgram.hpp>
 #include<format>
+#include<glad/gl.h>
+
+#include"render/ShaderProgram.hpp"
+#include"FileRW.hpp"
 
 std::string ShaderProgram::BaseShaderPath = "";
 SDL_Window* ShaderProgram::Window = nullptr;
@@ -79,7 +82,7 @@ ShaderProgram::~ShaderProgram()
 	glDeleteProgram(this->ID);
 }
 
-void ShaderProgram::PrintErrors(unsigned int Object, const char* Type)
+void ShaderProgram::PrintErrors(uint32_t Object, const char* Type)
 {
 
 	char InfoLog[1024];
@@ -100,7 +103,7 @@ void ShaderProgram::PrintErrors(unsigned int Object, const char* Type)
 	}
 	else
 	{
-		GLint HasLinked;
+		int HasLinked;
 
 		glGetProgramiv(Object, GL_LINK_STATUS, &HasLinked);
 

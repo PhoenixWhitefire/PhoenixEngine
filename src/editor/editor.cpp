@@ -1,30 +1,33 @@
+#include<glm/gtc/matrix_transform.hpp>
+#include<imgui/imgui.h>
+
 #include"editor/editor.hpp"
-#include"BaseMeshes.hpp"
-#include"glm/gtc/matrix_transform.hpp"
-#include"render/Material.hpp"
-#include"gameobject/Model.hpp"
-#include <gameobject/Light.hpp>
+#include"editor/intersectionlib.hpp"
+#include"gameobject/GameObjects.hpp"
+#include"Debug.hpp"
 
 static char* NewObjectClass = (char*)malloc(32);
 static std::vector<std::shared_ptr<GameObject>> EditorCreatedObjs;
+static const char* ParentString = "[Parent]";
+static double InvalidObjectErrTimeRemaining = 0.f;
+
+static std::shared_ptr<GameObject> CurrentUIHierarchyRoot;
 
 Editor::Editor()
 {
-	printf("created editor object\n");
+	Debug::Log("Editor object was created");
 }
 
 static std::vector<IntersectionLib::HittableObject*> Objects;
 
-void AddChildrenToObjects(std::shared_ptr<GameObject> Parent)
+static void AddChildrenToObjects(std::shared_ptr<GameObject> Parent)
 {
 	for (std::shared_ptr<GameObject> Obj : Parent->GetChildren())
 	{
-		std::shared_ptr<Object_Mesh> Obj3D = std::dynamic_pointer_cast<Object_Mesh>(Obj);
+		std::shared_ptr<Object_Base3D> Obj3D = std::dynamic_pointer_cast<Object_Base3D>(Obj);
 
 		if (Obj3D)
 		{
-			printf("Handling insertion of %s '%s'\n", Obj->ClassName.c_str(), Obj->Name.c_str());
-
 			IntersectionLib::HittableObject* NewObject = new IntersectionLib::HittableObject();
 			NewObject->CollisionMesh = Obj3D->GetRenderMesh();
 			NewObject->Id = Objects.size();
@@ -53,7 +56,7 @@ void AddChildrenToObjects(std::shared_ptr<GameObject> Parent)
 
 std::shared_ptr<GameObject> Root;
 
-void ResetAndAddObjects(std::shared_ptr<GameObject> New)
+static void ResetAndAddObjects(std::shared_ptr<GameObject> New)
 {
 	Objects.clear();
 
@@ -70,21 +73,22 @@ void Editor::Init(std::shared_ptr<GameObject> GameWorkspace)
 
 	this->MyCube->Name = "RaycastTEST";
 
-	Mesh* CubeMesh = this->MyCube3D->GetRenderMesh();
-	Mesh CubeMeshColored = Mesh(CubeMesh->Vertices, CubeMesh->Indices, glm::vec3(0.0f, 0.0f, 1.0f));
-
-	this->MyCube3D->SetRenderMesh(CubeMeshColored);
+	this->MyCube3D->ColorRGB = Color(0.f, 0.f, 1.f);
 
 	this->Workspace = GameWorkspace;
 	this->MyCube->SetParent(this->Workspace);
 
 	//GameWorkspace->OnChildAdded.Connect(ResetAndAddObjects);
 
-	printf("editor init done\n");
+	CurrentUIHierarchyRoot = Workspace;
+
+	Debug::Log("Editor init done");
 }
 
 void Editor::Update(double DeltaTime, glm::mat4 CameraMatrix)
 {
+	InvalidObjectErrTimeRemaining -= DeltaTime;
+
 	Vector3 CamPos = Vector3(CameraMatrix[3].x, CameraMatrix[3].y, CameraMatrix[3].z);
 
 	glm::mat4 ForwardMat = glm::translate(CameraMatrix, glm::vec3(0.0f, 0.0f, -50.0f));
@@ -93,17 +97,23 @@ void Editor::Update(double DeltaTime, glm::mat4 CameraMatrix)
 	Vector3 RayDir = RayTargetPos - CamPos;
 
 	// TODO
-	//IntersectionLib::IntersectionResult Result = IntersectionLib::Traceline(CamPos, RayDir, Objects);
+	IntersectionLib::IntersectionResult Result = IntersectionLib::Traceline(CamPos, RayDir, Objects);
 	
-	//if (Result.DidHit)
-	//	this->MyCube3D->Matrix = glm::translate(glm::mat4(1.0f), glm::vec3(Result.HitPosition));
+	if (Result.DidHit)
+		this->MyCube3D->Matrix = glm::translate(glm::mat4(1.0f), glm::vec3(Result.HitPosition));
 }
 
-bool ImGuiHierarchyItemsGetter(void* Data, int Index, const char** OutText)
+static bool ImGuiHierarchyItemsGetter(void* Data, int Index, const char** OutText)
 {
-	GameObject* Parent = (GameObject*)Data;
+	//GameObject* Parent = (GameObject*)Data;
 
-	std::shared_ptr<GameObject> SelectedChild = Parent->GetChildren()[Index];
+	if (Index == 0)
+	{
+		*OutText = ParentString;
+		return true;
+	}
+
+	std::shared_ptr<GameObject> SelectedChild = CurrentUIHierarchyRoot->GetChildren()[Index - 1];
 
 	*OutText = SelectedChild->Name.c_str();
 
@@ -117,19 +127,55 @@ void Editor::RenderUI()
 	ImGui::InputText("New obj class", NewObjectClass, 32);
 	bool Create = ImGui::Button("Create obj");
 
+	if (InvalidObjectErrTimeRemaining > 0.f)
+		ImGui::Text("Invalid GameObject!");
+
+	if (CurrentUIHierarchyRoot->Parent)
+	{
+		bool AscendHierarchy = ImGui::Button(std::vformat(
+			"Ascend to parent {}",
+			std::make_format_args(CurrentUIHierarchyRoot->Parent->Name)
+		).c_str());
+
+		if (AscendHierarchy)
+		{
+			CurrentUIHierarchyRoot = CurrentUIHierarchyRoot->Parent;
+			this->hierarchyCurItem = 0;
+		}
+	}
+
 	ImGui::ListBox(
-		"Scene hierarchy",
+		std::vformat("Children of {}", std::make_format_args(CurrentUIHierarchyRoot->Name)).c_str(),
 		&this->hierarchyCurItem,
 		&ImGuiHierarchyItemsGetter,
 		&*this->Workspace,
-		this->Workspace->GetChildren().size()
+		CurrentUIHierarchyRoot->GetChildren().size() + 1
 	);
+
+	std::shared_ptr<GameObject> selected = CurrentUIHierarchyRoot;
+
+	if (hierarchyCurItem > 0)
+		selected = CurrentUIHierarchyRoot->GetChildren()[this->hierarchyCurItem - 1];
+
+	if (selected->GetChildren().size() > 0)
+	{
+		size_t numChildren = selected->GetChildren().size();
+
+		bool ChangeView = ImGui::Button(std::vformat(
+			"View {} children",
+			std::make_format_args(numChildren)
+		).c_str());
+
+		if (ChangeView)
+		{
+			CurrentUIHierarchyRoot = selected;
+			this->hierarchyCurItem = 0;
+		}
+	}
 
 	ImGui::Text("Properties:");
 
 	const std::string ClassFmt = "Class: {}";
-
-	std::shared_ptr<GameObject> selected = this->Workspace->GetChildren()[this->hierarchyCurItem];
 
 	ImGui::Text(std::vformat(ClassFmt, std::make_format_args(selected->ClassName)).c_str());
 
@@ -237,13 +283,20 @@ void Editor::RenderUI()
 
 	if (Create)
 	{
-		auto newObj = GameObjectFactory::CreateGameObject(NewObjectClass);
-		newObj->SetParent(this->Workspace);
+		auto ValidObjects = GameObjectFactory::GameObjectMap;
 
-		// so that silly little C++ STL doesnt de-alloc our new object
-		// and instantly crash
-		// (this whole codebase is garbage and i have no clue how to fix it)
-		// 13/06/2024
-		EditorCreatedObjs.push_back(newObj);
+		if (ValidObjects->find(NewObjectClass) == ValidObjects->end())
+			InvalidObjectErrTimeRemaining = 2.f;
+		else
+		{
+			auto newObj = GameObjectFactory::CreateGameObject(NewObjectClass);
+			newObj->SetParent(CurrentUIHierarchyRoot);
+
+			// so that silly little C++ STL doesnt de-alloc our new object
+			// and instantly crash
+			// (this whole codebase is garbage and i have no clue how to fix it)
+			// 13/06/2024
+			EditorCreatedObjs.push_back(newObj);
+		}
 	}
 }

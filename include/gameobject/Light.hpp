@@ -1,9 +1,9 @@
 #pragma once
 
-#include<datatype/GameObject.hpp>
+#include"datatype/GameObject.hpp"
 
-#include<datatype/Color.hpp>
-#include<datatype/Vector3.hpp>
+#include"datatype/Color.hpp"
+#include"datatype/Vector3.hpp"
 
 class Object_Light : public GameObject
 {

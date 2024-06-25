@@ -1,14 +1,13 @@
 #pragma once
 
-#include<memory>
+#include<functional>
 #include<vector>
 #include<string>
 #include<map>
-#include<functional>
 
-#include<datatype/Event.hpp>
-#include<datatype/Vector3.hpp>
-#include<datatype/Color.hpp>
+#include"datatype/Vector3.hpp"
+#include"datatype/Color.hpp"
+#include"datatype/Event.hpp"
 
 // pls trust me im not this revolting irl 13/06/2024
 #define PHX_GetPropValue(GenericType)    \
@@ -67,7 +66,7 @@ public:
 
 	void SetParent(std::shared_ptr<GameObject> Parent);
 	void AddChild(std::shared_ptr<GameObject> Child);
-	void RemoveChild(unsigned int ObjectId);
+	void RemoveChild(uint32_t ObjectId);
 
 	virtual void Initialize();
 	virtual void Update(double DeltaTime);
@@ -109,7 +108,7 @@ public:
 
 	bool ParentLocked = false;
 
-	unsigned int GameObjectId = 0;
+	uint32_t GameObjectId = 0;
 
 protected:
 	std::vector<std::shared_ptr<GameObject>> m_children;

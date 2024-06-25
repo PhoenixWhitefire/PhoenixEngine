@@ -1,5 +1,8 @@
-#include<render/Material.hpp>
-#include<format>
+#include<nljson.h>
+
+#include"render/Material.hpp"
+#include"FileRW.hpp"
+#include"Debug.hpp"
 
 std::vector<RenderMaterial*> RenderMaterial::s_loadedMaterials;
 static const std::string MissingTexPath = "textures/MISSING2_MaximumADHD_status_1665776378145304579.png";
@@ -56,7 +59,6 @@ RenderMaterial::RenderMaterial(std::string MaterialName)
 		}
 
 		this->DiffuseTextures.push_back(new Texture());
-		this->SpecularTextures.push_back(new Texture());
 
 		this->DiffuseTextures[0]->Usage = MaterialTextureType::Diffuse;
 
@@ -74,6 +76,8 @@ RenderMaterial::RenderMaterial(std::string MaterialName)
 
 		if (HasSpecular)
 		{
+			this->SpecularTextures.push_back(new Texture());
+
 			this->SpecularTextures[0]->Usage = MaterialTextureType::Specular;
 			this->SpecularTextures[0]->ImagePath = "resources/" + JSONMaterialData.value(
 				"specular",

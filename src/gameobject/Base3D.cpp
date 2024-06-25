@@ -4,6 +4,9 @@ static RenderMaterial* DefaultRenderMat = nullptr;
 
 Object_Base3D::Object_Base3D()
 {
+	this->Name = "Base3D";
+	this->ClassName = "Base3D";
+
 	if (!DefaultRenderMat)
 		DefaultRenderMat = new RenderMaterial("floortiles");
 
@@ -12,7 +15,8 @@ Object_Base3D::Object_Base3D()
 	m_properties.insert(std::pair(
 		std::string("Size"),
 		std::pair(PropType::Vector3, std::pair(
-			[this]() {
+			[this]()
+			{
 				GenericType gt;
 				gt.Type = PropType::Vector3;
 				gt.Vector3 = this->Size;
@@ -24,13 +28,15 @@ Object_Base3D::Object_Base3D()
 	m_properties.insert(std::pair(
 		std::string("Position"),
 		std::pair(PropType::Vector3, std::pair(
-			[this]() {
+			[this]()
+			{
 				GenericType gt;
 				gt.Type = PropType::Vector3;
 				gt.Vector3 = Vector3(glm::vec3(this->Matrix[3]));
 				return gt;
 			},
-			[this](GenericType gt) {
+			[this](GenericType gt)
+			{
 				this->Matrix[3] = glm::vec4(gt.Vector3.X, gt.Vector3.Y, gt.Vector3.Z, 1.f);
 			}
 		))
@@ -38,15 +44,14 @@ Object_Base3D::Object_Base3D()
 	m_properties.insert(std::pair(
 		std::string("ColorRGB"),
 		std::pair(PropType::Color, std::pair(
-			[this]() {
+			[this]()
+			{
 				GenericType gt;
 				gt.Type = PropType::Color;
 				gt.Color3 = this->ColorRGB;
 				return gt;
 			},
-			[this](GenericType gt) {
-				this->ColorRGB = gt.Color3;
-			}
+			[this](GenericType gt) { this->ColorRGB = gt.Color3; }
 		))
 	));
 	m_properties.insert(std::pair(
@@ -63,11 +68,6 @@ Object_Base3D::Object_Base3D()
 			[this](GenericType gt) { this->Reflectivity = gt.Double; }
 		))
 	));
-}
-
-void Object_Base3D::SetRenderMesh(Mesh NewRenderMesh)
-{
-	this->RenderMesh = NewRenderMesh;
 }
 
 Mesh* Object_Base3D::GetRenderMesh()

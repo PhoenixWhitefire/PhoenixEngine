@@ -1,4 +1,4 @@
-#version 330 core
+#version 460 core
 
 in vec2 FragIn_UV;
 
@@ -9,6 +9,11 @@ uniform sampler2D DistortionTexture;
 uniform bool PostProcessingEnabled = false;
 uniform bool ScreenEdgeBlurEnabled = false;
 uniform bool DistortionEnabled = false;
+
+uniform float BlurVignetteStrength = 2.f;
+uniform float BlurVignetteDistMul = 2.5f;
+uniform float BlurVignetteDistExp = 16.f;
+uniform int BlurVignetteSampleRadius = 4;
 
 uniform float Time = 0.f;
 
@@ -65,20 +70,18 @@ void main()
 
 	if (ScreenEdgeBlurEnabled)
 	{
-		const float BlurStrength = 2.f;
-		
 		vec3 BlurredColor;
 
 		// Multiply to create wider region of blur,
 		// then exponent to widen the 0% and make the 
 		// transition steeper
-		float RadialBlurWeight = clamp(pow(length(FragIn_UV - Center), 2.5f) * 16.f, 0.f, 1.f);
+		float RadialBlurWeight = clamp(pow(length(FragIn_UV - Center), BlurVignetteDistExp) * BlurVignetteDistMul, 0.f, 1.f);
 
 		//FragColor = vec4(RadialBlurWeight, RadialBlurWeight, RadialBlurWeight, 1.f);
 
 		//return;
 
-		int BlurSampleRadius = 4;
+		int BlurSampleRadius = BlurVignetteSampleRadius;
 
 		float BlurSampleBaseWeight = 1.f/(BlurSampleRadius * BlurSampleRadius);
 
@@ -86,7 +89,7 @@ void main()
 		{
 			for (int y = -BlurSampleRadius; y < BlurSampleRadius; y++)
 			{
-				float Dist = length(vec2(x, y) * BlurStrength) / (BlurSampleRadius * BlurStrength);
+				float Dist = length(vec2(x, y) * BlurVignetteStrength) / (BlurSampleRadius * BlurVignetteStrength);
 
 				float DistFactor = 1.f - Dist;
 				float SampleWeight = pow(DistFactor * 1.f, 1.f) * BlurSampleBaseWeight;

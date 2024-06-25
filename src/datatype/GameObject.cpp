@@ -2,7 +2,7 @@
 #include<iterator>
 #include<algorithm>
 
-static unsigned int NumGameObjects = 0;
+static uint32_t NumGameObjects = 0;
 
 GameObjectFactory::GameObjectMapType* GameObjectFactory::GameObjectMap = new GameObjectMapType();
 
@@ -134,12 +134,12 @@ void GameObject::SetParent(std::shared_ptr<GameObject> NewParent)
 	if (!this->ParentLocked)
 		NewParent->AddChild(std::shared_ptr<GameObject>(this));
 	else
-		throw(std::string( "Error: Attempted to set parent of a parent-locked instance!"));
+		throw(std::string( "Error: Attempted to set parent of a parent-locked GameObject!"));
 	
 }
 
 void GameObject::AddChild(std::shared_ptr<GameObject> NewChild)
-{ //Use <Instance>.SetParent
+{ //Use <GameObject>.SetParent
 	this->m_children.push_back(NewChild);
 
 	std::shared_ptr<GameObject> MeAsInstance(this);
@@ -149,9 +149,9 @@ void GameObject::AddChild(std::shared_ptr<GameObject> NewChild)
 	this->OnChildAdded.Fire(NewChild);
 }
 
-void GameObject::RemoveChild(unsigned int ToRemoveId)
+void GameObject::RemoveChild(uint32_t ToRemoveId)
 {
-	for (unsigned int ChildIdx = 0; ChildIdx < this->m_children.size(); ChildIdx++)
+	for (uint32_t ChildIdx = 0; ChildIdx < this->m_children.size(); ChildIdx++)
 	{
 		if (this->m_children[ChildIdx]->GameObjectId == ToRemoveId)
 		{
@@ -211,14 +211,16 @@ std::shared_ptr<GameObject> GameObjectFactory::CreateGameObject(std::string cons
 	GameObjectMapType::iterator it = GetGameObjectMap()->find(ObjectClass);
 
 	if (it == GetGameObjectMap()->end())
-		return NULL;
+		throw(std::vformat(
+			"Attempted to create invalid GameObject '{}'!",
+			std::make_format_args(ObjectClass)
+		));
 
 	std::shared_ptr<GameObject> CreatedObject = it->second();
 	CreatedObject->GameObjectId = NumGameObjects;
 	NumGameObjects++;
 
 	CreatedObject->ClassName = ObjectClass;
-	CreatedObject->Name = ObjectClass;
 
 	return CreatedObject;
 }

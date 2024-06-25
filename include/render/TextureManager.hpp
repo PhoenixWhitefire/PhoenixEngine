@@ -1,16 +1,13 @@
 #pragma once
 
-#include<stb_image.h>
-#include"ShaderProgram.hpp"
-
-#include<ThreadManager.hpp>
+#include<vector>
 
 enum class MaterialTextureType { NotAssigned, Diffuse, Specular };
 
 class Texture
 {
 public:
-	GLuint Identifier = 0;
+	uint32_t Identifier = 0;
 	MaterialTextureType Usage = MaterialTextureType::Diffuse;
 
 	std::string ImagePath = "";
@@ -20,7 +17,7 @@ public:
 
 	bool AttemptedLoad = false;
 
-	unsigned char* TMP_ImageByteData = nullptr;
+	uint8_t* TMP_ImageByteData = nullptr;
 };
 
 class TextureManager {
@@ -44,7 +41,7 @@ public:
 	/*
 	Load an image's data, used internally by TextureManager::CreateTexture2D and is a separate function for asynchronous loading
 	*/
-	unsigned char* LoadImageData(const char* ImagePath, int* ImageWidth, int* ImageHeight, int* ImageColorChannels);
+	uint8_t* LoadImageData(const char* ImagePath, int* ImageWidth, int* ImageHeight, int* ImageColorChannels);
 
 	static TextureManager* Singleton;
 

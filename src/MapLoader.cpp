@@ -1,9 +1,18 @@
 // TODO: cleanup code!
 
-#include<MapLoader.hpp>
+#include<nljson.h>
+#include<SDL2/SDL_messagebox.h>
+#include<SDL2/SDL_video.h>
+#include<glm/gtc/matrix_transform.hpp>
 
-#include"gameobject/MeshObject.hpp"
-#include"gameobject/Light.hpp"
+#include"MapLoader.hpp"
+
+#include"render/Material.hpp"
+#include"gameobject/GameObjects.hpp"
+#include"BaseMeshes.hpp"
+#include"FileRW.hpp"
+#include"Engine.hpp"
+#include"Debug.hpp"
 
 typedef std::shared_ptr<GameObject> GameObjectPtr;
 typedef std::shared_ptr<Object_Base3D> Base3DObjectPtr;
@@ -62,18 +71,20 @@ void LoadMapVersion1(const char* MapPath, std::string Contents, GameObjectPtr Ma
 	}
 	catch (nlohmann::json::exception e)
 	{
+		const char* whatStr = e.what();
+
 		SDL_ShowSimpleMessageBox(
 			0,
 			"Engine error",
 			std::vformat(
 				"Could not parse map data from file '{}': {}",
-				std::make_format_args(MapPath, e.what())
+				std::make_format_args(MapPath, whatStr)
 			).c_str(),
 
 			SDL_GetGrabbedWindow()
 		);
 
-		throw(std::vformat("Could not parse map data from file '{}': {}", std::make_format_args(MapPath, e.what())));
+		throw(std::vformat("Could not parse map data from file '{}': {}", std::make_format_args(MapPath, whatStr)));
 
 		return;
 	}
@@ -83,10 +94,10 @@ void LoadMapVersion1(const char* MapPath, std::string Contents, GameObjectPtr Ma
 	nlohmann::json LightsNode = JSONData["lights"];
 
 	std::vector<std::string> LoadedTexturePaths;
-	std::vector<GLuint*> LoadedTextures;
+	std::vector<uint32_t*> LoadedTextures;
 
 	std::vector<Vertex> ev(0);
-	std::vector<GLuint> ei(0);
+	std::vector<uint32_t> ei(0);
 
 	Mesh EmptyMesh = Mesh(ev, ei);
 
@@ -94,7 +105,7 @@ void LoadMapVersion1(const char* MapPath, std::string Contents, GameObjectPtr Ma
 	// oh, the wonders of pointers
 	std::vector<GameObjectPtr>* loadedObjectsReference = new std::vector<GameObjectPtr>();
 
-	for (unsigned int Index = 0; Index < ModelsNode.size(); Index++)
+	for (uint32_t Index = 0; Index < ModelsNode.size(); Index++)
 	{
 		nlohmann::json PropObject;
 
@@ -104,7 +115,8 @@ void LoadMapVersion1(const char* MapPath, std::string Contents, GameObjectPtr Ma
 		}
 		catch (nlohmann::json::type_error e)
 		{
-			throw(std::vformat("Failed to decode map data: {}", std::make_format_args(e.what())));
+			const char* whatStr = e.what();
+			throw(std::vformat("Failed to decode map data: {}", std::make_format_args(whatStr)));
 		}
 
 		std::string ModelPath = PropObject["path"];
@@ -130,16 +142,21 @@ void LoadMapVersion1(const char* MapPath, std::string Contents, GameObjectPtr Ma
 				Model[0]->Name = PropObject["name"];
 		}
 
+		Mesh* mesh = std::dynamic_pointer_cast<Object_Mesh>(Model[0])->GetRenderMesh();
+
 		if (PropObject.find("facecull") != PropObject.end())
 		{
 			if ((std::string)PropObject["facecull"] == (std::string)"none")
-				std::dynamic_pointer_cast<Object_Mesh>(Model[0])->GetRenderMesh()->CulledFace = FaceCullingMode::None;
+				mesh->CulledFace = FaceCullingMode::None;
+
 			else if ((std::string)PropObject["facecull"] == (std::string)"front")
-				std::dynamic_pointer_cast<Object_Mesh>(Model[0])->GetRenderMesh()->CulledFace = FaceCullingMode::FrontFace;
+				mesh->CulledFace = FaceCullingMode::FrontFace;
+
 			else if ((std::string)PropObject["facecull"] == (std::string)"back")
-				std::dynamic_pointer_cast<Object_Mesh>(Model[0])->GetRenderMesh()->CulledFace = FaceCullingMode::BackFace;
+				mesh->CulledFace = FaceCullingMode::BackFace;
+
 			else
-				std::dynamic_pointer_cast<Object_Mesh>(Model[0])->GetRenderMesh()->CulledFace = FaceCullingMode::BackFace;
+				mesh->CulledFace = FaceCullingMode::BackFace;
 		}
 
 		auto prop_3d = std::dynamic_pointer_cast<Object_Base3D>(Model[0]);
@@ -160,7 +177,7 @@ void LoadMapVersion1(const char* MapPath, std::string Contents, GameObjectPtr Ma
 		}
 	}
 
-	for (unsigned int Index = 0; Index < PartsNode.size(); Index++)
+	for (uint32_t Index = 0; Index < PartsNode.size(); Index++)
 	{
 		nlohmann::json Object = PartsNode[Index];
 
@@ -248,7 +265,7 @@ void LoadMapVersion1(const char* MapPath, std::string Contents, GameObjectPtr Ma
 								+ std::to_string((float)Index / (float)PartsNode.size());
 	}
 
-	for (unsigned int LightIndex = 0; LightIndex < LightsNode.size(); LightIndex++)
+	for (uint32_t LightIndex = 0; LightIndex < LightsNode.size(); LightIndex++)
 	{
 		nlohmann::json LightObject = LightsNode[LightIndex];
 
@@ -273,7 +290,6 @@ void LoadMapVersion1(const char* MapPath, std::string Contents, GameObjectPtr Ma
 
 		if (LightType == "DirectionalLight")
 		{
-			printf("direclight??\n");
 			DirectionalLightPtr DirectLight = std::dynamic_pointer_cast<Object_DirectionalLight>(Object);
 			DirectLight->Position = GetVector3FromJSON(LightObject["position"]);
 			DirectLight->LightColor = Color(LightColor.X, LightColor.Y, LightColor.Z);
@@ -291,9 +307,6 @@ void MapLoader::LoadMapIntoObject(const char* MapFilePath, GameObjectPtr MapPare
 	//TODO fix de-allocation issues, std::shared_ptr has caused the majority of runtime access
 	// violations ever for the engine
 	// pwf 2022
-	// ULTRA EXTREME 1000% TODO: requires nuclear-level refactoring all throughout engine code,
-	// if only I wasn't so stupid before :(
-	// Maybe void* is better?
 	// idk, TODO find better solution future me
 
 	if (!MapExists)

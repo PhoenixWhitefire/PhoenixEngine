@@ -1,4 +1,6 @@
-#version 330 core
+// Skybox shader
+
+#version 460 core
 
 in vec3 FragIn_Direction;
 

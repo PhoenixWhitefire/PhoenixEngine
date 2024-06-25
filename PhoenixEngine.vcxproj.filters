@@ -897,9 +897,6 @@
     <ClInclude Include="include\Engine.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\EntityComponent.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\FileRW.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -936,9 +933,6 @@
     <ClInclude Include="include\datatype\ValueRange.hpp">
       <Filter>Header Files\datatype</Filter>
     </ClInclude>
-    <ClInclude Include="include\datatype\ValueRange.ipp">
-      <Filter>Header Files\datatype</Filter>
-    </ClInclude>
     <ClInclude Include="include\datatype\Vector2.hpp">
       <Filter>Header Files\datatype</Filter>
     </ClInclude>
@@ -955,9 +949,6 @@
       <Filter>Header Files\render</Filter>
     </ClInclude>
     <ClInclude Include="include\render\TextureManager.hpp">
-      <Filter>Header Files\render</Filter>
-    </ClInclude>
-    <ClInclude Include="include\render\Camera.hpp">
       <Filter>Header Files\render</Filter>
     </ClInclude>
     <ClInclude Include="include\gameobject\Light.hpp">
@@ -993,6 +984,12 @@
     <ClInclude Include="include\render\Material.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\gameobject\Camera.hpp">
+      <Filter>Header Files\gameobject</Filter>
+    </ClInclude>
+    <ClInclude Include="include\gameobject\Workspace.hpp">
+      <Filter>Header Files\gameobject</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="vendor\gl.c">
@@ -1025,9 +1022,6 @@
     <ClCompile Include="vendor\imgui\imgui_widgets.cpp">
       <Filter>Vendor Files</Filter>
     </ClCompile>
-    <ClCompile Include="include\datatype\Event.cpp">
-      <Filter>Header Files\datatype</Filter>
-    </ClCompile>
     <ClCompile Include="src\AnimationService.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -1038,9 +1032,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Engine.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\EntityComponent.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\FileRW.cpp">
@@ -1091,9 +1082,6 @@
     <ClCompile Include="src\render\TextureManager.cpp">
       <Filter>Source Files\render</Filter>
     </ClCompile>
-    <ClCompile Include="src\render\Camera.cpp">
-      <Filter>Source Files\render</Filter>
-    </ClCompile>
     <ClCompile Include="src\Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -1126,6 +1114,12 @@
     </ClCompile>
     <ClCompile Include="src\render\Material.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gameobject\Camera.cpp">
+      <Filter>Source Files\gameobject</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gameobject\Workspace.cpp">
+      <Filter>Source Files\gameobject</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
