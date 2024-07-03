@@ -164,8 +164,8 @@ static void HandleInputs(std::tuple<EngineObject*, double, double> Data)
 		float RotationY = -MouseSensitivity * ((double)DeltaMouseX - (WindowSizeX / 2.0f)) / WindowSizeX;
 
 		// TODO: ??? 28/04/2024
-		RotationX -= MouseSensitivity / 2.f;
-		RotationY -= MouseSensitivity / 2.f;
+		//RotationX -= MouseSensitivity / 2.f;
+		//RotationY -= MouseSensitivity / 2.f;
 
 		//printf("RX: %f RY: %f\n", RotationX, RotationY);
 
@@ -470,7 +470,7 @@ int main(int argc, char** argv)
 			"Engine error",
 			std::vformat(
 				"An unexpected error occurred, and the application will now close. Error details (S):\n\n{}",
-				fmtArgs
+				std::make_format_args(Error)
 			).c_str(),
 			Window
 		);
@@ -486,7 +486,7 @@ int main(int argc, char** argv)
 			"Engine error",
 			std::vformat(
 				"An unexpected error occurred, and the application will now close. Error details (C):\n\n{}",
-				fmtArgs
+				std::make_format_args(Error)
 			).c_str(),
 			Window
 		);

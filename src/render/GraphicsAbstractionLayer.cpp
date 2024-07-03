@@ -11,6 +11,9 @@
 
 Graphics::Graphics(bool* WasSuccess, GraphicsApi ForceApi, const char* WindowTitle, int WindowSizeX, int WindowSizeY)
 {
+	this->OGL_Context = nullptr;
+	this->GuiIO = nullptr;
+
 	if (ForceApi == GraphicsApi::Auto)
 	{
 		this->CurrentUsingApi = GraphicsApi::OpenGL;
@@ -83,6 +86,8 @@ Graphics::Graphics(bool* WasSuccess, GraphicsApi ForceApi, const char* WindowTit
 		ImGui::StyleColorsDark();
 		ImGui_ImplSDL2_InitForOpenGL(this->Window, this->OGL_Context);
 		ImGui_ImplOpenGL3_Init("#version 460");
+
+		break;
 	}
 
 	default:
@@ -98,7 +103,7 @@ Graphics::Graphics(bool* WasSuccess, GraphicsApi ForceApi, const char* WindowTit
 	*WasSuccess = true;
 }
 
-void GL_SetUniform(Uniform_t Uniform, SDL_Window* Window)
+static void GL_SetUniform(Uniform_t Uniform, SDL_Window* Window)
 {
 	switch (Uniform.Type)
 	{
@@ -143,7 +148,7 @@ void GL_SetUniform(Uniform_t Uniform, SDL_Window* Window)
 
 	default:
 	{
-		int Type = (int)Uniform.Type;
+		int Type = int(Uniform.Type);
 
 		std::string ErrMsg = std::vformat(
 			"GL_SetUniform not implemented for type {}!",
@@ -157,7 +162,7 @@ void GL_SetUniform(Uniform_t Uniform, SDL_Window* Window)
 	}
 }
 
-void Graphics::SetUniformBlock(std::vector<Uniform_t> Uniforms)
+void Graphics::SetUniformBlock(std::vector<Uniform_t> Uniforms) const
 {
 	switch (this->CurrentUsingApi)
 	{
@@ -166,14 +171,16 @@ void Graphics::SetUniformBlock(std::vector<Uniform_t> Uniforms)
 	{
 		for (int UniformIdx = 0; UniformIdx < Uniforms.size(); UniformIdx++)
 			GL_SetUniform(Uniforms[UniformIdx], this->Window);
+		break;
 	}
 
 	default: 
 	{
-		int CurApi = (int)this->CurrentUsingApi;
+		int curApi = int(this->CurrentUsingApi);
+
 		std::string ErrMsg = std::vformat(
 			"SetUniformBlock not implemented for API {}!",
-			std::make_format_args(CurApi)
+			std::make_format_args(curApi)
 		);
 
 		throw(ErrMsg);

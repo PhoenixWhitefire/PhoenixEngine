@@ -10,16 +10,18 @@
 #include"datatype/Buffer.hpp"
 #include"datatype/Color.hpp"
 #include"datatype/Vector3.hpp"
+#include"gameobject/Base3D.hpp"
 
 struct MeshData_t
 {
 	Mesh* MeshData = nullptr;
-	RenderMaterial* Material;
+	RenderMaterial* Material = nullptr;
 	Vector3 Size;
 	Color TintColor;
 	float Transparency = 0.f;
 	float Reflectivity = 0.f;
 	glm::mat4 Matrix = glm::mat4(1.0f);
+	FaceCullingMode FaceCulling = FaceCullingMode::BackFace;
 };
 
 enum class LightType { DirectionalLight, Pointlight, Spotlight };
@@ -62,7 +64,8 @@ public:
 		Mesh* Object,
 		ShaderProgram* Shaders,
 		Vector3 Size,
-		glm::mat4 Matrix = glm::mat4(1.0f)
+		glm::mat4 Matrix = glm::mat4(1.0f),
+		FaceCullingMode Culling = FaceCullingMode::BackFace
 	);
 
 	void SwapBuffers();

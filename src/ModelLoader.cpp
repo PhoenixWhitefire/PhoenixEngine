@@ -50,7 +50,7 @@ ModelLoader::ModelLoader(const char* FilePath, std::shared_ptr<GameObject> Paren
 		std::shared_ptr<Object_Base3D> m3d;
 		std::shared_ptr<Object_Mesh> mo;
 		
-		M = GameObjectFactory::CreateGameObject("MeshPart");
+		M = GameObjectFactory::CreateGameObject("Mesh");
 
 		m3d = std::dynamic_pointer_cast<Object_Base3D>(M);
 		mo = std::dynamic_pointer_cast<Object_Mesh>(M);

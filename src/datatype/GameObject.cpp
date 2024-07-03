@@ -44,24 +44,31 @@ GameObject::GameObject()
 	//this->Parent = nullptr;
 
 	m_properties.insert(std::pair(
-		std::string("ClassName"),
+		"ClassName",
 		std::pair(PropType::String, std::pair(
 			[this]() { return this->GetClassName(); },
 			[this](GenericType gt) { this->SetName(gt.String); }
 		))
 	));
 	m_properties.insert(std::pair(
-		std::string("Name"),
+		"Name",
 		std::pair(PropType::String, std::pair(
 			[this]() { return this->GetName(); },
 			[this](GenericType gt) { this->SetName(gt.String); }
 		))
 	));
 	m_properties.insert(std::pair(
-		std::string("Enabled"),
+		"Enabled",
 		std::pair(PropType::Bool, std::pair(
 			[this]() { return this->GetEnabled(); },
 			[this](GenericType gt) { this->SetEnabled(gt.Bool); }
+		))
+	));
+	m_properties.insert(std::pair(
+		"ObjectId",
+		std::pair(PropType::Integer, std::pair(
+			[this]() { return GenericType{ PropType::Integer, "", false, 0.f, (int)this->GameObjectId}; },
+			[this](GenericType gt) { this->GameObjectId = gt.Integer; }
 		))
 	));
 }

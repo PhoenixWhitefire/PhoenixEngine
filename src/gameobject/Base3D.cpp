@@ -13,20 +13,7 @@ Object_Base3D::Object_Base3D()
 	this->Material = DefaultRenderMat;
 
 	m_properties.insert(std::pair(
-		std::string("Size"),
-		std::pair(PropType::Vector3, std::pair(
-			[this]()
-			{
-				GenericType gt;
-				gt.Type = PropType::Vector3;
-				gt.Vector3 = this->Size;
-				return gt;
-			},
-			[this](GenericType gt) { this->Size = gt.Vector3; }
-		))
-	));
-	m_properties.insert(std::pair(
-		std::string("Position"),
+		"Position",
 		std::pair(PropType::Vector3, std::pair(
 			[this]()
 			{
@@ -42,7 +29,20 @@ Object_Base3D::Object_Base3D()
 		))
 	));
 	m_properties.insert(std::pair(
-		std::string("ColorRGB"),
+		"Size",
+		std::pair(PropType::Vector3, std::pair(
+			[this]()
+			{
+				GenericType gt;
+				gt.Type = PropType::Vector3;
+				gt.Vector3 = this->Size;
+				return gt;
+			},
+			[this](GenericType gt) { this->Size = gt.Vector3; }
+		))
+	));
+	m_properties.insert(std::pair(
+		"ColorRGB",
 		std::pair(PropType::Color, std::pair(
 			[this]()
 			{
@@ -55,17 +55,24 @@ Object_Base3D::Object_Base3D()
 		))
 	));
 	m_properties.insert(std::pair(
-		std::string("Transparency"),
+		"Transparency",
 		std::pair(PropType::Double, std::pair(
 			[this]() { return GenericType{PropType::Double, "", false, this->Transparency}; },
 			[this](GenericType gt) { this->Transparency = gt.Double; }
 		))
 	));
 	m_properties.insert(std::pair(
-		std::string("Reflectivity"),
+		"Reflectivity",
 		std::pair(PropType::Double, std::pair(
 			[this]() { return GenericType{ PropType::Double, "", false, this->Reflectivity }; },
 			[this](GenericType gt) { this->Reflectivity = gt.Double; }
+		))
+	));
+	m_properties.insert(std::pair(
+		"FaceCulling",
+		std::pair(PropType::Integer, std::pair(
+			[this]() { return GenericType{ PropType::Integer, "", false, 0.f, (int)this->FaceCulling }; },
+			[this](GenericType gt) { this->FaceCulling = (FaceCullingMode)gt.Integer; }
 		))
 	));
 }

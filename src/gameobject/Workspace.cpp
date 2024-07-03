@@ -16,7 +16,7 @@ Object_Workspace::Object_Workspace()
 
 	FallbackCamera->GenericMovement = true;
 	FallbackCamera->IsSceneCamera = true;
-	
+
 	this->m_children.push_back(std::dynamic_pointer_cast<GameObject>(FallbackCamera));
 	FallbackCamera->Parent = MeAsObject;
 

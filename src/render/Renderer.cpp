@@ -207,9 +207,9 @@ void GLDebugCallback(
 		std::make_format_args(
 			Type,
 			Severity,
-			messageCChar,
+			message,
 			Source,
-			idCInt
+			id
 		)
 	);
 
@@ -415,14 +415,14 @@ void Renderer::DrawScene(Scene_t& Scene)
 	{
 		MeshData_t RenderData = Scene.MeshData.at(MeshIndex);
 		this->m_setTextureUniforms(RenderData, Scene.Shaders);
-		this->DrawMesh(RenderData.MeshData, Scene.Shaders, RenderData.Size, RenderData.Matrix);
+		this->DrawMesh(RenderData.MeshData, Scene.Shaders, RenderData.Size, RenderData.Matrix, RenderData.FaceCulling);
 	}
 
 	for (uint32_t MeshIndex = 0; MeshIndex < Scene.TransparentMeshData.size(); MeshIndex++)
 	{
 		MeshData_t RenderData = Scene.TransparentMeshData.at(MeshIndex);
 		this->m_setTextureUniforms(RenderData, Scene.Shaders);
-		this->DrawMesh(RenderData.MeshData, Scene.Shaders, RenderData.Size, RenderData.Matrix);
+		this->DrawMesh(RenderData.MeshData, Scene.Shaders, RenderData.Size, RenderData.Matrix, RenderData.FaceCulling);
 	}
 }
 
@@ -430,13 +430,14 @@ void Renderer::DrawMesh(
 	Mesh* Object,
 	ShaderProgram* Shaders,
 	Vector3 Size,
-	glm::mat4 Matrix
+	glm::mat4 Matrix,
+	FaceCullingMode FaceCulling
 )
 {
 	if (!this->m_glContext)
 		throw(std::string("NULL m_glContext in DrawMesh!"));
 
-	switch (Object->CulledFace)
+	switch (FaceCulling)
 	{
 
 	case FaceCullingMode::None:

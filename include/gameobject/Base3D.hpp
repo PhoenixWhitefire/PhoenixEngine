@@ -9,6 +9,8 @@
 #include"datatype/Vector3.hpp"
 #include"render/Material.hpp"
 
+enum class FaceCullingMode { None, BackFace, FrontFace };
+
 class Object_Base3D : public GameObject
 {
 public:
@@ -31,6 +33,8 @@ public:
 	RenderMaterial* Material;
 
 	bool ComputePhysics = false;
+
+	FaceCullingMode FaceCulling = FaceCullingMode::BackFace;
 
 protected:
 	Mesh RenderMesh;

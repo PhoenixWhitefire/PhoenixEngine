@@ -57,9 +57,9 @@ void TextureManager::CreateTexture2D(Texture* TexturePtr, bool ShouldLoadAsync)
 	{
 		if (TexturePtr->TMP_ImageByteData == nullptr)
 		{
-			std::string Path = TexturePtr->ImagePath;
-			int Usage = (int)TexturePtr->Usage;
-			auto FormattedArgs = std::make_format_args(Path, Usage);
+			std::string imgPath = TexturePtr->ImagePath;
+			int Usage = int(TexturePtr->Usage);
+			auto FormattedArgs = std::make_format_args(imgPath, Usage);
 			Debug::Log(std::vformat("Failed to load texture '{}' (usage:{})", FormattedArgs));
 			return;
 		}
@@ -101,10 +101,9 @@ void TextureManager::CreateTexture2D(Texture* TexturePtr, bool ShouldLoadAsync)
 
 			default:
 			{
-				int NColChannels = TexturePtr->ImageNumColorChannels;
 				throw(std::vformat(
 					std::string("Invalid ImageNumColorChannels (was '{}') in TextureManager::CreateTexture2D!"),
-					std::make_format_args(NColChannels)
+					std::make_format_args(TexturePtr->ImageNumColorChannels)
 				));
 				break;
 			}

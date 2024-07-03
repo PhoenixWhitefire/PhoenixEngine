@@ -38,11 +38,11 @@ enum class PropType {
 // i just cant 13/06/2024
 struct GenericType
 {
-	PropType Type;
+	PropType Type = PropType::Bool;
 	std::string String;
 	bool Bool;
-	double Double;
-	int Integer;
+	double Double = 0.f;
+	int Integer = 0;
 	Color Color3;
 	Vector3 Vector3;
 };

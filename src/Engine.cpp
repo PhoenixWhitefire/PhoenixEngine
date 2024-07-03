@@ -176,11 +176,7 @@ EngineObject::EngineObject(Vector2 WindowStartSize, SDL_Window** WindowPtr)
 
 	if (!this->Window)
 	{
-		// TODO 25/06/2024:
-		// HOH???
-		// After updating VS, suddenly ::make_format_args doesn't work if
-		// the args are defined directly in the parameter??
-		std::string errStr = SDL_GetError();
+		const char* errStr = SDL_GetError();
 		throw(std::vformat("SDL error: Could not create window: {}\n", std::make_format_args(errStr)));
 	}
 
@@ -331,6 +327,7 @@ std::vector<MeshData_t> EngineObject::m_compileMeshData(std::shared_ptr<GameObje
 				Data.Transparency = Object3D->Transparency;
 				Data.Reflectivity = Object3D->Reflectivity;
 				Data.TintColor = Object3D->ColorRGB;
+				Data.FaceCulling = Object3D->FaceCulling;
 
 				DataList.push_back(Data);
 			}
@@ -598,7 +595,6 @@ void EngineObject::Start()
 		this->Shaders3D->Activate();
 
 		Mesh SkyboxMesh = Mesh(SkyboxVertices, SkyboxIndices);
-		SkyboxMesh.CulledFace = FaceCullingMode::None;
 
 		while (SDL_PollEvent(&PollingEvent) != 0)
 		{
@@ -722,7 +718,7 @@ void EngineObject::Start()
 		glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		double AspectRatio = this->WindowSizeX / this->WindowSizeY;
+		double AspectRatio = (float)this->WindowSizeX / (float)this->WindowSizeY;
 
 		std::shared_ptr<Object_Camera> SceneCamera = this->Game->GetSceneCamera();
 
@@ -769,12 +765,11 @@ void EngineObject::Start()
 			SceneCamera->FarPlane
 		);
 
-		glUniformMatrix4fv(glGetUniformLocation(SkyboxShaders.ID, "ViewMat"), 1, GL_FALSE, glm::value_ptr(view));
-		glUniformMatrix4fv(glGetUniformLocation(SkyboxShaders.ID, "ProjectionMat"), 1, GL_FALSE, glm::value_ptr(projection));
+		glUniformMatrix4fv(glGetUniformLocation(SkyboxShaders.ID, "CameraMatrix"), 1, GL_FALSE, glm::value_ptr(projection * view));
 
 		glBindTexture(GL_TEXTURE_CUBE_MAP, SkyboxCubemap);
 		
-		this->m_renderer->DrawMesh(&SkyboxMesh, &SkyboxShaders, Vector3::ONE, view * projection);
+		this->m_renderer->DrawMesh(&SkyboxMesh, &SkyboxShaders, Vector3::ONE, view * projection, FaceCullingMode::FrontFace);
 
 		glDepthFunc(GL_LESS);
 

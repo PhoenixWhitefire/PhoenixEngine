@@ -36,7 +36,7 @@ public:
 		int WindowSizeX = 1400, int WindowSizeY = 700
 	);
 
-	void SetUniformBlock(std::vector<Uniform_t> Uniforms);
+	void SetUniformBlock(std::vector<Uniform_t> Uniforms) const;
 	void SetFeature(GraphicsFeature Feature, bool IsEnabled);
 
 	SDL_Window* Window;
