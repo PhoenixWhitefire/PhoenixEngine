@@ -44,14 +44,14 @@ static bool PreviouslyPressingF11 = false;
 static bool PreviouslyPressingP = false;
 static bool IsInputBeingSunk = false;
 
-ImGuiIO* m_imGuiIO = nullptr;
+static ImGuiIO* m_imGuiIO = nullptr;
 
 static const float MouseSensitivity = 100.0f;
 static const float MovementSpeed = 15.f;
 
-Editor* EditorContext = nullptr;
+static Editor* EditorContext = nullptr;
 
-int PrevMouseX, PrevMouseY = 0;
+static int PrevMouseX, PrevMouseY = 0;
 
 static int FindArgumentInCliArgs(int ArgCount, char** Arguments, const char* SeekingArgument)
 {
@@ -87,35 +87,38 @@ static void HandleInputs(std::tuple<EngineObject*, double, double> Data)
 
 	glm::vec3 ForwardVec = glm::vec3(Camera->Matrix[0][2], Camera->Matrix[1][2], Camera->Matrix[2][2]);
 	glm::vec3 UpVec = Vector3::UP;
+	
+	UserInput::InputBeingSunk = m_imGuiIO->WantCaptureKeyboard || m_imGuiIO->WantCaptureMouse || m_imGuiIO->WantTextInput;
 
 	if (!UserInput::InputBeingSunk)
 	{
 		float DisplacementSpeed = MovementSpeed * DeltaTime;
 
+		// TODO NOTE 07/07/2024 Why is horizontal movement reversed??
 		if (UserInput::IsKeyDown(SDLK_LSHIFT))
 			DisplacementSpeed *= 0.5f;
 
-		glm::vec3 Displacement;
+		Vector3 Displacement;
 
 		if (UserInput::IsKeyDown(SDLK_w))
-			Displacement += ForwardVec * DisplacementSpeed;
+			Displacement += Vector3::FORWARD * DisplacementSpeed;
 
 		if (UserInput::IsKeyDown(SDLK_a))
-			Displacement += -glm::normalize(glm::cross(ForwardVec, UpVec)) * DisplacementSpeed;
+			Displacement += Vector3::LEFT * DisplacementSpeed;
 
 		if (UserInput::IsKeyDown(SDLK_s))
-			Displacement += -ForwardVec * DisplacementSpeed;
+			Displacement += Vector3::BACKWARD * DisplacementSpeed;
 
 		if (UserInput::IsKeyDown(SDLK_d))
-			Displacement += glm::normalize(glm::cross(ForwardVec, UpVec)) * DisplacementSpeed;
+			Displacement += Vector3::RIGHT * DisplacementSpeed;
 
 		if (UserInput::IsKeyDown(SDLK_q))
-			Displacement += glm::vec3(0.f, -DisplacementSpeed, 0.f);
+			Displacement += Vector3::UP * DisplacementSpeed;
 
 		if (UserInput::IsKeyDown(SDLK_e))
-			Displacement += glm::vec3(0.f, DisplacementSpeed, 0.f);
+			Displacement += Vector3::DOWN * DisplacementSpeed;
 
-		Camera->Matrix = glm::translate(Camera->Matrix, Displacement);
+		Camera->Matrix = glm::translate(Camera->Matrix, glm::vec3(Displacement));
 	}
 
 	int MouseX;
@@ -162,12 +165,6 @@ static void HandleInputs(std::tuple<EngineObject*, double, double> Data)
 
 		float RotationX = -MouseSensitivity * ((double)DeltaMouseY - (WindowSizeY / 2.0f)) / WindowSizeY;
 		float RotationY = -MouseSensitivity * ((double)DeltaMouseX - (WindowSizeX / 2.0f)) / WindowSizeX;
-
-		// TODO: ??? 28/04/2024
-		//RotationX -= MouseSensitivity / 2.f;
-		//RotationY -= MouseSensitivity / 2.f;
-
-		//printf("RX: %f RY: %f\n", RotationX, RotationY);
 
 		glm::vec3 NewOrientation = glm::rotate(
 			ForwardVec,
@@ -402,7 +399,7 @@ static void Application(int argc, char** argv)
 	if (ForceAllObjectPhysicsArgIdx > 0)
 		forceAllObjectPhysics = true;
 
-	const char* MapFile = hasMapFromArgs ? MapFileFromArgs : "levels/dev.world";
+	const char* MapFile = hasMapFromArgs ? MapFileFromArgs : "levels/dev_fmtv2.world";
 
 	srand(time(0));
 

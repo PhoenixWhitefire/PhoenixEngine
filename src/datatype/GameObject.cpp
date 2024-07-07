@@ -1,6 +1,8 @@
-#include<datatype/GameObject.hpp>
 #include<iterator>
 #include<algorithm>
+
+#include"datatype/GameObject.hpp"
+#include"Debug.hpp"
 
 static uint32_t NumGameObjects = 0;
 
@@ -47,7 +49,7 @@ GameObject::GameObject()
 		"ClassName",
 		std::pair(PropType::String, std::pair(
 			[this]() { return this->GetClassName(); },
-			[this](GenericType gt) { this->SetName(gt.String); }
+			nullptr
 		))
 	));
 	m_properties.insert(std::pair(
@@ -68,7 +70,7 @@ GameObject::GameObject()
 		"ObjectId",
 		std::pair(PropType::Integer, std::pair(
 			[this]() { return GenericType{ PropType::Integer, "", false, 0.f, (int)this->GameObjectId}; },
-			[this](GenericType gt) { this->GameObjectId = gt.Integer; }
+			nullptr
 		))
 	));
 }

@@ -24,14 +24,14 @@ Object_Light::Object_Light()
 		))
 	));
 	m_properties.insert(std::pair(
-		std::string("Shadows"),
+		"Shadows",
 		std::pair(PropType::Bool, std::pair(
 			[this]() { return this->GetShadowsEnabled(); },
 			[this](GenericType gt) { this->SetShadowsEnabled(gt.Bool); }
 		))
 	));
 	m_properties.insert(std::pair(
-		std::string("Position"),
+		"Position",
 		std::pair(PropType::Vector3, std::pair(
 			[this]() { return this->GetPosition(); },
 			[this](GenericType gt) { this->SetPosition(gt.Vector3); }
@@ -39,7 +39,7 @@ Object_Light::Object_Light()
 	));
 }
 
-GenericType Object_Light::GetColor()
+GenericType Object_Light::GetColor() const
 {
 	GenericType gt;
 	gt.Type = PropType::Color;
@@ -68,7 +68,7 @@ GenericType Object_Light::GetShadowsEnabled()
 	};
 }
 
-GenericType Object_Light::GetPosition()
+GenericType Object_Light::GetPosition() const
 {
 	GenericType gt;
 	gt.Type = PropType::Vector3;
@@ -102,7 +102,7 @@ Object_PointLight::Object_PointLight()
 	this->ClassName = "PointLight";
 
 	m_properties.insert(std::pair(
-		std::string("Range"),
+		"Range",
 		std::pair(PropType::Double, std::pair(
 			[this]() { return this->GetRange(); },
 			[this](GenericType gt) { this->SetRange(gt.Double); }
@@ -130,6 +130,17 @@ Object_DirectionalLight::Object_DirectionalLight()
 {
 	this->Name = "DirectionalLight";
 	this->ClassName = "DirectionalLight";
+
+	// Direction is just Position under-the-hood. Remove the duplicate
+	m_properties.erase("Position");
+	// Redirect it to the Position member
+	m_properties.insert(std::pair(
+		"Direction",
+		std::pair(PropType::Vector3, std::pair(
+			[this]() { return this->GetPosition(); },
+			[this](GenericType gt) { this->SetPosition(gt.Vector3); }
+		))
+	));
 }
 
 Object_SpotLight::Object_SpotLight()
@@ -138,7 +149,7 @@ Object_SpotLight::Object_SpotLight()
 	this->ClassName = "SpotLight";
 
 	m_properties.insert(std::pair(
-		std::string("Range"),
+		"Range",
 		std::pair(PropType::Double, std::pair(
 			[this]() { return this->GetRange(); },
 			[this](GenericType gt) { this->SetRange(gt.Double); }
@@ -146,7 +157,7 @@ Object_SpotLight::Object_SpotLight()
 	));
 
 	m_properties.insert(std::pair(
-		std::string("OuterCone"),
+		"OuterCone",
 		std::pair(PropType::Double, std::pair(
 			[this]() { return this->GetOuterCone(); },
 			[this](GenericType gt) { this->SetOuterCone(gt.Double); }
@@ -154,7 +165,7 @@ Object_SpotLight::Object_SpotLight()
 	));
 
 	m_properties.insert(std::pair(
-		std::string("InnerCone"),
+		"InnerCone",
 		std::pair(PropType::Double, std::pair(
 			[this]() { return this->GetInnerCone(); },
 			[this](GenericType gt) { this->SetInnerCone(gt.Double); }

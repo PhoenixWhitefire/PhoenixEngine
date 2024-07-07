@@ -1,9 +1,13 @@
 Running OpenGL version 4.6
 Renderer initialized
 Editor object was created
-Loaded map file 'levels/dev.world'
+The Map Version is 2
+Deserialize error: Member 'Material' of Primitive 'Primitive' has no prop setter!
+Deserialize warning: Member 'Size' is not defined in the API for the Class Primitive (Name: 'Primitive')!
+Deserialize error: Member 'Material' of Primitive 'Primitive' has no prop setter!
+Loaded map file 'levels/dev_fmtv2.world'
 Editor init done
-Directional light shadowmap texture id: 17
+Directional light shadowmap texture id: 6
 Main program loop start...
 GL Debug callback:
 	Type: Low-performance warning
@@ -12,5 +16,31 @@ GL Debug callback:
 	Source: OpenGL API
 	Error ID: 131218
 
-Loaded map file 'levels/mtlcachetest.world'
+Failed to load texture '/textures/MISSING2_MaximumADHD_status_1665776378145304579.png' (usage:1)
+GL Debug callback:
+	Type: Low-performance warning
+	Severity: Medium
+	Message: Program/shader state performance warning: Vertex shader in program 3 is being recompiled based on GL state.
+	Source: OpenGL API
+	Error ID: 131218
+
+The Map Version is 1
+Loaded map file 'levels/dev.world'
+The Map Version is 1
+Loaded map file 'levels/de_dust2.world'
+Changing window resolution: (1280, 720) -> (1274, 720)
+GL Debug callback:
+	Type: ERROR
+	Severity: HIGH
+	Message: GL_INVALID_OPERATION error generated. State(s) are invalid: program texture usage.
+	Source: OpenGL API
+	Error ID: 1282
+
+CRASH: GL Debug callback:
+	Type: ERROR
+	Severity: HIGH
+	Message: GL_INVALID_OPERATION error generated. State(s) are invalid: program texture usage.
+	Source: OpenGL API
+	Error ID: 1282
+
 Application closing...

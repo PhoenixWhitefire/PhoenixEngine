@@ -327,22 +327,26 @@ static void LoadMapVersion2(const char* MapPath, std::string Contents, GameObjec
 
 	for (nlohmann::json Item : GameObjectsNode)
 	{
-		std::string Class = Item["Class"];
+		std::string Class = Item["ClassName"];
 		std::string Name = Item["Name"];
 
 		GameObjectPtr NewObject = GameObjectFactory::CreateGameObject(Class);
 
 		loadedObjectsReference->push_back(NewObject);
 
-		for (auto& Property : NewObject->GetProperties())
+		// https://json.nlohmann.me/features/iterators/#access-object-key-during-iteration
+		for (auto it = Item.begin(); it != Item.end(); ++it)
 		{
-			std::string MemberName = std::get<0>(Property);
-			PropType MemberType = std::get<0>(std::get<1>(Property));
-			int MemberTypeInt = int(MemberType);
+			std::string MemberName = it.key();
 
-			if (Item.find(MemberName) == Item.end())
+			if (MemberName == "ClassName")
+				continue;
+
+			PropList_t::iterator MemberIter = NewObject->GetProperties().find(MemberName);
+
+			if (MemberIter == NewObject->GetProperties().end())
 			{
-				const char* FmtStr = "Deserialize warning: Member {} is not provided for class {} with name {}!";
+				const char* FmtStr = "Deserialize warning: Member '{}' is not defined in the API for the Class {} (Name: '{}')!";
 				auto FmtArgs = std::make_format_args(
 					MemberName,
 					Class,
@@ -353,7 +357,25 @@ static void LoadMapVersion2(const char* MapPath, std::string Contents, GameObjec
 				continue;
 			}
 
-			auto& PropSetter = std::get<1>(std::get<1>(std::get<1>(Property)));
+			PropDef_t Member = NewObject->GetProperties()[MemberName];
+
+			PropType MemberType = std::get<0>(Member);
+			int MemberTypeInt = int(MemberType);
+
+			auto PropSetter = std::get<1>(std::get<1>(Member));
+
+			if (!PropSetter)
+			{
+				const char* FmtStr = "Deserialize error: Member '{}' of {} '{}' has no prop setter!";
+				auto FmtArgs = std::make_format_args(
+					MemberName,
+					Class,
+					Name
+				);
+				Debug::Log(std::vformat(FmtStr, FmtArgs));
+
+				continue;
+			}
 
 			switch (MemberType)
 			{
@@ -459,16 +481,16 @@ void MapLoader::LoadMapIntoObject(const char* MapFilePath, GameObjectPtr MapPare
 
 	std::string JsonFileContents = FileContents.substr(JsonStartLoc);
 
-	try
-	{
+	//try
+	//{
 		if (Version == 1.f)
 			LoadMapVersion1(MapFilePath, JsonFileContents, MapParent);
 		else
 			if (Version == 2.f)
 				LoadMapVersion2(MapFilePath, JsonFileContents, MapParent);
-	}
-	catch (nlohmann::json::type_error e)
-	{
+	//}
+	//catch (nlohmann::json::type_error e)
+	/*{
 		std::string errmsg = (std::string(e.what()) + " with contents:\n" + JsonFileContents);
 
 		Debug::Log(errmsg);
@@ -479,7 +501,7 @@ void MapLoader::LoadMapIntoObject(const char* MapFilePath, GameObjectPtr MapPare
 			errmsg.c_str(),
 			SDL_GetGrabbedWindow()
 		);
-	}
+	}*/
 
 	Debug::Log(
 		std::vformat(

@@ -13,6 +13,7 @@ public:
 
 	void SetRenderMesh(Mesh);
 
+	std::string Asset;
 	bool HasTransparency = false;
 
 private:

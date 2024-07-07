@@ -7,6 +7,16 @@
 [Rr]esources/
 [Vv]endor/
 [Ll]ib/
+[Vv]endor/
+
+# Shortcuts
+*.lnk
+
+*.exe
+*.dll
+
+[Dd]esktop.ini
+[Ii]mgui.ini
 
 # User-specific files
 *.rsuser

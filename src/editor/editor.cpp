@@ -186,6 +186,13 @@ void Editor::RenderUI()
 		PropDef_t prop = std::get<1>(propListItem);
 		PropGetSet_t getSet = std::get<1>(prop);
 
+		if (!std::get<1>(getSet))
+		{
+			// no setter (locked property, such as ClassName or ObjectId)
+			// 07/07/2024
+			continue;
+		}
+
 		switch (std::get<0>(prop))
 		{
 

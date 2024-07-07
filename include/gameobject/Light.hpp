@@ -11,10 +11,10 @@ public:
 
 	Object_Light();
 
-	GenericType GetColor();
+	GenericType GetColor() const;
 	GenericType GetBrightness();
 	GenericType GetShadowsEnabled();
-	GenericType GetPosition();
+	GenericType GetPosition() const;
 
 	void SetColor(Color);
 	void SetBrightness(float);
