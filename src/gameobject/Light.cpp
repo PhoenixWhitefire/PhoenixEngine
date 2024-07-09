@@ -11,31 +11,51 @@ Object_Light::Object_Light()
 
 	m_properties.insert(std::pair(
 		"Color",
-		std::pair(PropType::Color, std::pair(
+		PropInfo
+		{
+			PropType::Color,
+			PropReflection
+		{
 			[this]() { return this->GetColor(); },
 			[this](GenericType gt) { this->SetColor(gt.Color3); }
-		))
+		}
+		}
 	));
 	m_properties.insert(std::pair(
 		"Brightness",
-		std::pair(PropType::Double, std::pair(
+		PropInfo
+		{
+			PropType::Double,
+			PropReflection
+		{
 			[this]() { return this->GetBrightness(); },
 			[this](GenericType gt) { this->SetBrightness(gt.Double); }
-		))
+		}
+		}
 	));
 	m_properties.insert(std::pair(
 		"Shadows",
-		std::pair(PropType::Bool, std::pair(
+		PropInfo
+		{
+			PropType::Bool,
+			PropReflection
+		{
 			[this]() { return this->GetShadowsEnabled(); },
 			[this](GenericType gt) { this->SetShadowsEnabled(gt.Bool); }
-		))
+		}
+		}
 	));
 	m_properties.insert(std::pair(
 		"Position",
-		std::pair(PropType::Vector3, std::pair(
+		PropInfo
+		{
+			PropType::Vector3,
+			PropReflection
+		{
 			[this]() { return this->GetPosition(); },
 			[this](GenericType gt) { this->SetPosition(gt.Vector3); }
-		))
+		}
+		}
 	));
 }
 
@@ -103,10 +123,15 @@ Object_PointLight::Object_PointLight()
 
 	m_properties.insert(std::pair(
 		"Range",
-		std::pair(PropType::Double, std::pair(
+		PropInfo
+		{
+			PropType::Double,
+			PropReflection
+		{
 			[this]() { return this->GetRange(); },
 			[this](GenericType gt) { this->SetRange(gt.Double); }
-		))
+		}
+		}
 	));
 }
 
@@ -136,10 +161,15 @@ Object_DirectionalLight::Object_DirectionalLight()
 	// Redirect it to the Position member
 	m_properties.insert(std::pair(
 		"Direction",
-		std::pair(PropType::Vector3, std::pair(
+		PropInfo
+		{
+			PropType::Vector3,
+			PropReflection
+		{
 			[this]() { return this->GetPosition(); },
 			[this](GenericType gt) { this->SetPosition(gt.Vector3); }
-		))
+		}
+		}
 	));
 }
 
@@ -150,26 +180,41 @@ Object_SpotLight::Object_SpotLight()
 
 	m_properties.insert(std::pair(
 		"Range",
-		std::pair(PropType::Double, std::pair(
+		PropInfo
+		{
+			PropType::Double,
+			PropReflection
+		{
 			[this]() { return this->GetRange(); },
 			[this](GenericType gt) { this->SetRange(gt.Double); }
-		))
+		}
+		}
 	));
 
 	m_properties.insert(std::pair(
 		"OuterCone",
-		std::pair(PropType::Double, std::pair(
+		PropInfo
+		{
+			PropType::Double,
+			PropReflection
+		{
 			[this]() { return this->GetOuterCone(); },
 			[this](GenericType gt) { this->SetOuterCone(gt.Double); }
-		))
+		}
+		}
 	));
 
 	m_properties.insert(std::pair(
 		"InnerCone",
-		std::pair(PropType::Double, std::pair(
+		PropInfo
+		{
+			PropType::Double,
+			PropReflection
+		{
 			[this]() { return this->GetInnerCone(); },
 			[this](GenericType gt) { this->SetInnerCone(gt.Double); }
-		))
+		}
+		}
 	));
 }
 

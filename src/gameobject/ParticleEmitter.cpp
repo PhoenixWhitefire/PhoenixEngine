@@ -62,76 +62,113 @@ Object_ParticleEmitter::Object_ParticleEmitter()
 	this->TransparencyOverTime.InsertKey(ValueRangeKey<float>(0.8, 0.5));
 	this->TransparencyOverTime.InsertKey(ValueRangeKey<float>(1, 1));
 
-	this->m_properties.insert(std::pair(
+	m_properties.insert(std::pair(
 		"EmitterEnabled",
-		std::pair(PropType::Bool, std::pair(
+		PropInfo
+		{
+		PropType::Bool,
+		PropReflection
+		{
 			[this]()
 			{
-				return GenericType{ PropType::Bool, "", this->EmitterEnabled };
+				GenericType gt;
+				gt.Type = PropType::Bool;
+				gt.Bool = this->EmitterEnabled;
+				return gt;
 			},
+
 			[this](GenericType gt)
 			{
 				this->EmitterEnabled = gt.Bool;
 			}
-		))
+		}
+		}
 	));
-	this->m_properties.insert(std::pair(
+	m_properties.insert(std::pair(
 		"Rate",
-		std::pair(PropType::Double, std::pair(
+		PropInfo
+		{
+		PropType::Integer,
+		PropReflection
+		{
 			[this]()
 			{
-				return GenericType{ PropType::Double, "", false, this->Rate };
+				GenericType gt;
+				gt.Type = PropType::Integer;
+				gt.Integer = this->Rate;
+				return gt;
 			},
+
 			[this](GenericType gt)
 			{
-				this->Rate = gt.Double;
+				this->Rate = gt.Integer;
 			}
-		))
+		}
+		}
 	));
-	this->m_properties.insert(std::pair(
+	m_properties.insert(std::pair(
 		"MaxParticles",
-		std::pair(PropType::Integer, std::pair(
+		PropInfo
+		{
+		PropType::Integer,
+		PropReflection
+		{
 			[this]()
 			{
-				return GenericType{ PropType::Integer, "", false, 0.f, this->MaxParticles };
+				GenericType gt;
+				gt.Type = PropType::Integer;
+				gt.Integer = this->MaxParticles;
+				return gt;
 			},
+
 			[this](GenericType gt)
 			{
 				this->MaxParticles = gt.Integer;
 			}
-		))
+		}
+		}
 	));
 	this->m_properties.insert(std::pair(
 		"Lifetime",
-		std::pair(PropType::Vector3, std::pair(
-			[this]()
+		PropInfo
+		{
+			PropType::Vector3,
+			PropReflection
 			{
-				auto gt = GenericType();
-				gt.Type = PropType::Vector3;
-				gt.Vector3 = Vector3(this->Lifetime.X, this->Lifetime.Y, 0.f);
-				return gt;
-			},
-			[this](GenericType gt)
-			{
-				this->Lifetime = Vector2(gt.Vector3.Y, gt.Vector3.Y);
+				[this]()
+				{
+					auto gt = GenericType();
+					gt.Type = PropType::Vector3;
+					gt.Vector3 = Vector3(this->Lifetime.X, this->Lifetime.Y, 0.f);
+					return gt;
+				},
+				[this](GenericType gt)
+				{
+					this->Lifetime = Vector2(gt.Vector3.Y, gt.Vector3.Y);
+				}
 			}
-		))
+		}
 	));
 	this->m_properties.insert(std::pair(
 		"Offset",
-		std::pair(PropType::Vector3, std::pair(
-			[this]()
+		PropInfo
+		{
+			PropType::Vector3,
+			PropReflection
 			{
-				auto gt = GenericType();
-				gt.Type = PropType::Vector3;
-				gt.Vector3 = this->Offset;
-				return gt;
-			},
-			[this](GenericType gt)
-			{
-				this->Offset = gt.Vector3;
+				[this]()
+				{
+					auto gt = GenericType();
+					gt.Type = PropType::Vector3;
+					gt.Vector3 = this->Offset;
+					return gt;
+				},
+				[this](GenericType gt)
+				{
+					this->Offset = gt.Vector3;
+				}
 			}
-		))
+		}
 	));
 }
 

@@ -990,6 +990,27 @@
     <ClInclude Include="include\gameobject\Workspace.hpp">
       <Filter>Header Files\gameobject</Filter>
     </ClInclude>
+    <ClInclude Include="include\gameobject\Script.hpp">
+      <Filter>Header Files\gameobject</Filter>
+    </ClInclude>
+    <ClInclude Include="..\LuauLib\VM\include\lua.h">
+      <Filter>Vendor Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\LuauLib\Compiler\include\luacode.h">
+      <Filter>Vendor Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\LuauLib\Compiler\include\Luau\Compiler.h">
+      <Filter>Vendor Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\LuauLib\Common\include\Luau\Common.h">
+      <Filter>Vendor Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\LuauLib\Ast\include\Luau\Ast.h">
+      <Filter>Vendor Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\LuauLib\Common\include\Luau\Bytecode.h">
+      <Filter>Vendor Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="vendor\gl.c">
@@ -1119,6 +1140,9 @@
       <Filter>Source Files\gameobject</Filter>
     </ClCompile>
     <ClCompile Include="src\gameobject\Workspace.cpp">
+      <Filter>Source Files\gameobject</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gameobject\Script.cpp">
       <Filter>Source Files\gameobject</Filter>
     </ClCompile>
   </ItemGroup>

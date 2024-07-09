@@ -9,22 +9,6 @@
 #include"datatype/Color.hpp"
 #include"datatype/Event.hpp"
 
-// pls trust me im not this revolting irl 13/06/2024
-#define PHX_GetPropValue(GenericType)    \
-{                                        \
-	switch (GenericType.Type) :          \
-		case (0):                        \
-			return NULL;                 \
-		case (1):                        \
-			return GenericType.Double;   \
-		case (2):                        \
-			return GenericType.Float;    \
-		case(3):                         \
-			return GenericType.Integer;  \
-		case(4):                         \
-			return GenericType.String;   \
-}
-
 enum class PropType {
 	NONE,
 	String,
@@ -45,12 +29,50 @@ struct GenericType
 	int Integer = 0;
 	Color Color3;
 	Vector3 Vector3;
+
+	operator std::string()
+	{
+		switch (this->Type)
+		{
+		case (PropType::String):
+			return this->String;
+
+		case (PropType::Bool):
+			return this->Bool ? "true" : "false";
+
+		case (PropType::Double):
+			return std::to_string(this->Double);
+
+		case (PropType::Integer):
+			return std::to_string(this->Integer);
+
+		case (PropType::Color):
+			return std::string(this->Color3);
+
+		case (PropType::Vector3):
+			return std::string(this->Vector3);
+
+		default:
+			return std::string("Cast failed");
+		}
+	}
 };
 
-typedef std::pair<std::function<GenericType(void)>, std::function<void(GenericType)>> PropGetSet_t;
-typedef std::pair<PropType, PropGetSet_t> PropDef_t;
-typedef std::unordered_map<std::string, PropDef_t> PropList_t;
-typedef std::pair<std::string, PropDef_t> PropListItem_t;
+struct PropReflection
+{
+	std::function<GenericType(void)> Getter;
+	std::function<void(GenericType)> Setter;
+};
+
+struct PropInfo
+{
+	PropType Type;
+	PropReflection Reflection;
+};
+
+typedef std::unordered_map<std::string, PropInfo> PropList_t;
+
+typedef std::unordered_map<std::string, std::function<void(void)>> ProcList_t;
 
 class GameObject
 {
@@ -74,6 +96,7 @@ public:
 	std::shared_ptr<GameObject> GetChild(std::string ChildName);
 
 	PropList_t GetProperties();
+	ProcList_t GetProcedures();
 
 	GenericType GetName();
 	GenericType GetClassName();
@@ -84,6 +107,8 @@ public:
 
 	std::string Name = "GameObject";
 	std::string ClassName = "GameObject";
+
+	bool DidInit = false;
 
 	std::shared_ptr<GameObject> operator [] (std::string ChildName)
 	{
@@ -114,6 +139,7 @@ protected:
 	std::vector<std::shared_ptr<GameObject>> m_children;
 
 	PropList_t m_properties;
+	ProcList_t m_procedures;
 };
 
 // I followed this StackOverflow post:

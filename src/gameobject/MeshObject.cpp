@@ -9,10 +9,26 @@ Object_Mesh::Object_Mesh()
 
 	m_properties.insert(std::pair(
 		"Asset",
-		std::pair(PropType::String, std::pair(
-			[this]() { return GenericType{PropType::String, this->Asset}; },
-			[this](GenericType gt) {this->Asset = gt.String; }
-		))
+		PropInfo
+		{
+		PropType::String,
+		PropReflection
+		{
+			[this]()
+			{
+				GenericType gt;
+				gt.Type = PropType::String;
+				gt.String = this->Asset;
+				return gt;
+			},
+
+			[this](GenericType gt)
+			{
+				// TODO: asset reloading
+				this->Asset = gt.String;
+			}
+		}
+		}
 	));
 }
 

@@ -19,6 +19,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\LuauLib\Ast\include\Luau\Ast.h" />
+    <ClInclude Include="..\LuauLib\Common\include\Luau\Bytecode.h" />
+    <ClInclude Include="..\LuauLib\Common\include\Luau\Common.h" />
+    <ClInclude Include="..\LuauLib\Compiler\include\luacode.h" />
+    <ClInclude Include="..\LuauLib\Compiler\include\Luau\Compiler.h" />
+    <ClInclude Include="..\LuauLib\VM\include\lua.h" />
     <ClInclude Include="include\AnimationService.hpp" />
     <ClInclude Include="include\BaseMeshes.hpp" />
     <ClInclude Include="include\datatype\Buffer.hpp" />
@@ -42,6 +48,7 @@
     <ClInclude Include="include\gameobject\Model.hpp" />
     <ClInclude Include="include\gameobject\ParticleEmitter.hpp" />
     <ClInclude Include="include\gameobject\Primitive.hpp" />
+    <ClInclude Include="include\gameobject\Script.hpp" />
     <ClInclude Include="include\gameobject\Workspace.hpp" />
     <ClInclude Include="include\GlobalJsonConfig.hpp" />
     <ClInclude Include="include\MapLoader.hpp" />
@@ -356,6 +363,7 @@
     <ClCompile Include="src\gameobject\Model.cpp" />
     <ClCompile Include="src\gameobject\ParticleEmitter.cpp" />
     <ClCompile Include="src\gameobject\Primitive.cpp" />
+    <ClCompile Include="src\gameobject\Script.cpp" />
     <ClCompile Include="src\gameobject\Workspace.cpp" />
     <ClCompile Include="src\GlobalJsonConfig.cpp" />
     <ClCompile Include="src\Main.cpp" />
@@ -506,6 +514,11 @@
     <None Include="vendor\glm\gtx\vector_query.inl" />
     <None Include="vendor\glm\gtx\wrap.inl" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\LuauLib\LuauLib.vcxproj">
+      <Project>{a5a0ab40-c627-4210-9262-84c267b6cd94}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
@@ -557,11 +570,13 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LibraryPath>dll;lib;$(LibraryPath)</LibraryPath>
-    <ExecutablePath>C:\Users\phoen\Documents\PhoenixEngine\dll;$(ExecutablePath)</ExecutablePath>
+    <ExecutablePath>dll;$(ExecutablePath)</ExecutablePath>
+    <IncludePath>include;vendor;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LibraryPath>dll;lib;$(LibraryPath)</LibraryPath>
-    <ExecutablePath>C:\Users\phoen\Documents\PhoenixEngine\dll;$(ExecutablePath)</ExecutablePath>
+    <ExecutablePath>dll;$(ExecutablePath)</ExecutablePath>
+    <IncludePath>include;vendor;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -593,7 +608,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>vendor;include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\phoen\Documents\LuauLib\VM\include;C:\Users\phoen\Documents\LuauLib\Compiler\include;C:\Users\phoen\Documents\LuauLib\Common\include;C:\Users\phoen\Documents\LuauLib\Ast\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -606,7 +621,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>vendor;include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\phoen\Documents\LuauLib\VM\include;C:\Users\phoen\Documents\LuauLib\Compiler\include;C:\Users\phoen\Documents\LuauLib\Common\include;C:\Users\phoen\Documents\LuauLib\Ast\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>

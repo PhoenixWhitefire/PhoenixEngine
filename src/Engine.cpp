@@ -65,6 +65,21 @@ static std::vector<uint32_t> SkyboxIndices =
 	6, 2, 3
 };
 
+static void UpdateDescendants(std::shared_ptr<GameObject> root, double DeltaTime)
+{
+	for (auto& obj : root->GetChildren())
+	{
+		if (!obj->DidInit)
+			obj->Initialize();
+		obj->DidInit = true;
+
+		obj->Update(DeltaTime);
+
+		if (obj->GetChildren().size() > 0)
+			UpdateDescendants(obj, DeltaTime);
+	}
+}
+
 static void StepPhysicsForObjects(std::vector<std::shared_ptr<GameObject>> Objects, PhysicsSolver& Physics, double Delta)
 {
 	for (uint32_t Index = 0; Index < Objects.size(); Index++)
@@ -316,8 +331,8 @@ std::vector<MeshData_t> EngineObject::m_compileMeshData(std::shared_ptr<GameObje
 
 				std::shared_ptr<Object_Model> ParentModel = std::dynamic_pointer_cast<Object_Model>(Object->Parent);
 
-				if (ParentModel)
-					ModelMatrix = ParentModel->Matrix;
+				//if (ParentModel)
+				//	ModelMatrix = ParentModel->Matrix;
 
 				MeshData_t Data;
 				Data.MeshData = Object3D->GetRenderMesh();
@@ -336,8 +351,6 @@ std::vector<MeshData_t> EngineObject::m_compileMeshData(std::shared_ptr<GameObje
 
 			if (PEmitterObject != nullptr)
 				this->m_particleEmitters.push_back(PEmitterObject);
-
-			Object->Update(1.f / this->FramesPerSecond);
 
 			if (Object->GetChildren().size() > 0)
 			{
@@ -643,6 +656,7 @@ void EngineObject::Start()
 		FrameStart = CurrentTime;
 
 		this->Game->Update(DeltaTime);
+		UpdateDescendants(Game, DeltaTime);
 
 		StepPhysicsForObjects(this->Game->GetChildren(), *this->Physics, DeltaTime);
 

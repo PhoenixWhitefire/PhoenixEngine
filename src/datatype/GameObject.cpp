@@ -47,31 +47,54 @@ GameObject::GameObject()
 
 	m_properties.insert(std::pair(
 		"ClassName",
-		std::pair(PropType::String, std::pair(
-			[this]() { return this->GetClassName(); },
-			nullptr
-		))
+		PropInfo
+		{
+			PropType::String,
+			PropReflection
+			{
+				[this]() { return this->GetClassName(); },
+				nullptr
+			}
+		}
 	));
+
 	m_properties.insert(std::pair(
 		"Name",
-		std::pair(PropType::String, std::pair(
-			[this]() { return this->GetName(); },
-			[this](GenericType gt) { this->SetName(gt.String); }
-		))
+		PropInfo
+		{
+			PropType::String,
+			PropReflection
+			{
+				[this]() { return this->GetName(); },
+				[this](GenericType gt) { this->SetName(gt.String); }
+			}
+		}
 	));
+
 	m_properties.insert(std::pair(
 		"Enabled",
-		std::pair(PropType::Bool, std::pair(
-			[this]() { return this->GetEnabled(); },
-			[this](GenericType gt) { this->SetEnabled(gt.Bool); }
-		))
+		PropInfo
+		{
+			PropType::Bool,
+			PropReflection
+			{
+				[this]() { return this->GetEnabled(); },
+				[this](GenericType gt) { this->SetEnabled(gt.Bool); }
+			}
+		}
 	));
+
 	m_properties.insert(std::pair(
 		"ObjectId",
-		std::pair(PropType::Integer, std::pair(
-			[this]() { return GenericType{ PropType::Integer, "", false, 0.f, (int)this->GameObjectId}; },
-			nullptr
-		))
+		PropInfo
+		{
+			PropType::Integer,
+			PropReflection
+			{
+				[this]() { return GenericType{ PropType::Integer, "", false, 0.f, (int)this->GameObjectId}; },
+				nullptr
+			}
+		}
 	));
 }
 
@@ -100,6 +123,11 @@ void GameObject::Update(double DeltaTime)
 PropList_t GameObject::GetProperties()
 {
 	return this->m_properties;
+}
+
+ProcList_t GameObject::GetProcedures()
+{
+	return this->m_procedures;
 }
 
 /*

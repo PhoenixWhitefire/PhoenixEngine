@@ -36,8 +36,8 @@ static void AddChildrenToObjects(std::shared_ptr<GameObject> Parent)
 
 			std::shared_ptr<Object_Model> ParentModel = std::dynamic_pointer_cast<Object_Model>(Obj->Parent);
 
-			if (ParentModel)
-				ModelMatrix = ParentModel->Matrix;
+			//if (ParentModel)
+			//	ModelMatrix = ParentModel->Matrix;
 
 			NewObject->Matrix = ModelMatrix * Obj3D->Matrix;
 			
@@ -173,34 +173,46 @@ void Editor::RenderUI()
 		}
 	}
 
+	std::shared_ptr<Object_Script> script = std::dynamic_pointer_cast<Object_Script>(selected);
+
 	ImGui::Text("Properties:");
 
-	const std::string ClassFmt = "Class: {}";
-
-	ImGui::Text(std::vformat(ClassFmt, std::make_format_args(selected->ClassName)).c_str());
-
-	for (PropListItem_t propListItem : selected->GetProperties())
+	for (auto& proc : selected->GetProcedures())
 	{
-		const char* name = std::get<0>(propListItem).c_str();
+		bool runProc = ImGui::Button(proc.first.c_str());
 
-		PropDef_t prop = std::get<1>(propListItem);
-		PropGetSet_t getSet = std::get<1>(prop);
+		if (runProc)
+			proc.second();
+	}
 
-		if (!std::get<1>(getSet))
+	for (auto& propListItem : selected->GetProperties())
+	{
+		PropInfo prop = propListItem.second;
+
+		const char* name = propListItem.first.c_str();
+
+		PropReflection getSet = prop.Reflection;
+
+		auto curVal = getSet.Getter();
+
+		if (!getSet.Setter)
 		{
 			// no setter (locked property, such as ClassName or ObjectId)
 			// 07/07/2024
+
+			std::string curValStr = curVal;
+
+			ImGui::Text(std::vformat("{}: {}", std::make_format_args(name, curValStr)).c_str());
+
 			continue;
 		}
 
-		switch (std::get<0>(prop))
+		switch (prop.Type)
 		{
 
 		case (PropType::String):
 		{
-			auto gt = std::get<0>(getSet)();
-
-			uint8_t allocSize = uint8_t(fmax(64, gt.String.length()));
+			uint8_t allocSize = uint8_t(fmax(64, curVal.String.length()));
 
 			char* buf = (char*)malloc(allocSize);
 
@@ -210,13 +222,13 @@ void Editor::RenderUI()
 				return;
 			}
 
-			memcpy(buf, gt.String.c_str(), allocSize);
+			memcpy(buf, curVal.String.c_str(), allocSize);
 
 			ImGui::InputText(name, buf, 64);
 
-			gt.String = buf;
+			curVal.String = buf;
 
-			std::get<1>(getSet)(gt);
+			getSet.Setter(curVal);
 
 			free(buf);
 
@@ -225,61 +237,54 @@ void Editor::RenderUI()
 
 		case (PropType::Bool):
 		{
-			auto gt = std::get<0>(getSet)();
+			ImGui::Checkbox(name, &curVal.Bool);
 
-			ImGui::Checkbox(name, &gt.Bool);
-
-			std::get<1>(getSet)(gt);
+			getSet.Setter(curVal);
 			break;
 		}
 
 		case (PropType::Double):
 		{
-			auto gt = std::get<0>(getSet)();
-
-			ImGui::InputDouble(name, &gt.Double);
-
-			std::get<1>(getSet)(gt);
+			ImGui::InputDouble(name, &curVal.Double);
+			
+			getSet.Setter(curVal);
 			break;
 		}
 
 		case (PropType::Integer):
 		{
-			auto gt = std::get<0>(getSet)();
+			ImGui::InputInt(name, &curVal.Integer);
 
-			ImGui::InputInt(name, &gt.Integer);
-
-			std::get<1>(getSet)(gt);
+			getSet.Setter(curVal);
 			break;
 		}
 
 		case (PropType::Color):
 		{
-			auto gt = std::get<0>(getSet)();
-			float entry[3] = {gt.Color3.R, gt.Color3.G, gt.Color3.B};
+			float entry[3] = {curVal.Color3.R, curVal.Color3.G, curVal.Color3.B};
 
 			ImGui::InputFloat3(name, entry);
 
-			gt.Color3.R = entry[0];
-			gt.Color3.G = entry[1];
-			gt.Color3.B = entry[2];
+			curVal.Color3.R = entry[0];
+			curVal.Color3.G = entry[1];
+			curVal.Color3.B = entry[2];
 
-			std::get<1>(getSet)(gt);
+			getSet.Setter(curVal);
+
 			break;
 		}
 
 		case (PropType::Vector3):
 		{
-			auto gt = std::get<0>(getSet)();
-			float entry[3] = { gt.Vector3.X, gt.Vector3.Y, gt.Vector3.Z };
+			float entry[3] = { curVal.Vector3.X, curVal.Vector3.Y, curVal.Vector3.Z };
 
 			ImGui::InputFloat3(name, entry);
 
-			gt.Vector3.X = entry[0];
-			gt.Vector3.Y = entry[1];
-			gt.Vector3.Z = entry[2];
+			curVal.Vector3.X = entry[0];
+			curVal.Vector3.Y = entry[1];
+			curVal.Vector3.Z = entry[2];
 
-			std::get<1>(getSet)(gt);
+			getSet.Setter(curVal);
 			break;
 		}
 

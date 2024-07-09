@@ -233,7 +233,7 @@ static void LoadMapVersion1(const char* MapPath, std::string Contents, GameObjec
 
 			if (Object.find("material") != Object.end())
 			{
-				RenderMaterial* MeshMaterial = new RenderMaterial(Object["material"]);
+				RenderMaterial* MeshMaterial = RenderMaterial::GetMaterial(Object["material"]);
 
 				Object3D->Material = MeshMaterial;
 
@@ -357,12 +357,12 @@ static void LoadMapVersion2(const char* MapPath, std::string Contents, GameObjec
 				continue;
 			}
 
-			PropDef_t Member = NewObject->GetProperties()[MemberName];
+			PropInfo Member = NewObject->GetProperties()[MemberName];
 
-			PropType MemberType = std::get<0>(Member);
+			PropType MemberType = Member.Type;
 			int MemberTypeInt = int(MemberType);
 
-			auto PropSetter = std::get<1>(std::get<1>(Member));
+			auto PropSetter = Member.Reflection.Setter;
 
 			if (!PropSetter)
 			{

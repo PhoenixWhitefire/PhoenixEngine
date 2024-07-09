@@ -2,12 +2,11 @@ Running OpenGL version 4.6
 Renderer initialized
 Editor object was created
 The Map Version is 2
-Deserialize error: Member 'Material' of Primitive 'Primitive' has no prop setter!
-Deserialize warning: Member 'Size' is not defined in the API for the Class Primitive (Name: 'Primitive')!
-Deserialize error: Member 'Material' of Primitive 'Primitive' has no prop setter!
+Deserialize warning: Member 'Name' is not defined in the API for the Class Primitive (Name: 'Primitive')!
+Deserialize warning: Member 'SourceFile' is not defined in the API for the Class Script (Name: 'TestScript')!
 Loaded map file 'levels/dev_fmtv2.world'
 Editor init done
-Directional light shadowmap texture id: 6
+Directional light shadowmap texture id: 8
 Main program loop start...
 GL Debug callback:
 	Type: Low-performance warning
@@ -16,19 +15,66 @@ GL Debug callback:
 	Source: OpenGL API
 	Error ID: 131218
 
-Failed to load texture '/textures/MISSING2_MaximumADHD_status_1665776378145304579.png' (usage:1)
-GL Debug callback:
-	Type: Low-performance warning
-	Severity: Medium
-	Message: Program/shader state performance warning: Vertex shader in program 3 is being recompiled based on GL state.
-	Source: OpenGL API
-	Error ID: 131218
-
-The Map Version is 1
-Loaded map file 'levels/dev.world'
-The Map Version is 1
-Loaded map file 'levels/de_dust2.world'
-Changing window resolution: (1280, 720) -> (1274, 720)
+Could not load file: resources/materials/p.mtl
+Could not load file: resources/materials/p.mtl
+Could not load file: resources/materials/p.mtl
+Could not load file: resources/materials/p.mtl
+Could not load file: resources/materials/pl.mtl
+Could not load file: resources/materials/pl.mtl
+Could not load file: resources/materials/pl.mtl
+Could not load file: resources/materials/pl.mtl
+Could not load file: resources/materials/pl.mtl
+Could not load file: resources/materials/pl.mtl
+Could not load file: resources/materials/pl.mtl
+Could not load file: resources/materials/pl.mtl
+Could not load file: resources/materials/pl.mtl
+Could not load file: resources/materials/pl.mtl
+Could not load file: resources/materials/pl.mtl
+Could not load file: resources/materials/pl.mtl
+Could not load file: resources/materials/pl.mtl
+Could not load file: resources/materials/pl.mtl
+Could not load file: resources/materials/pl.mtl
+Could not load file: resources/materials/pl.mtl
+Could not load file: resources/materials/pla.mtl
+Could not load file: resources/materials/pla.mtl
+Could not load file: resources/materials/pla.mtl
+Could not load file: resources/materials/pla.mtl
+Could not load file: resources/materials/pla.mtl
+Could not load file: resources/materials/pla.mtl
+Could not load file: resources/materials/pla.mtl
+Could not load file: resources/materials/pla.mtl
+Could not load file: resources/materials/plas.mtl
+Could not load file: resources/materials/plas.mtl
+Could not load file: resources/materials/plas.mtl
+Could not load file: resources/materials/plas.mtl
+Could not load file: resources/materials/plas.mtl
+Could not load file: resources/materials/plas.mtl
+Could not load file: resources/materials/plas.mtl
+Could not load file: resources/materials/plas.mtl
+Could not load file: resources/materials/plas.mtl
+Could not load file: resources/materials/plas.mtl
+Could not load file: resources/materials/plas.mtl
+Could not load file: resources/materials/plas.mtl
+Could not load file: resources/materials/plast.mtl
+Could not load file: resources/materials/plast.mtl
+Could not load file: resources/materials/plast.mtl
+Could not load file: resources/materials/plast.mtl
+Could not load file: resources/materials/plast.mtl
+Could not load file: resources/materials/plast.mtl
+Could not load file: resources/materials/plast.mtl
+Could not load file: resources/materials/plast.mtl
+Could not load file: resources/materials/plasti.mtl
+Could not load file: resources/materials/plasti.mtl
+Could not load file: resources/materials/plasti.mtl
+Could not load file: resources/materials/plasti.mtl
+Could not load file: resources/materials/plasti.mtl
+Could not load file: resources/materials/plasti.mtl
+Could not load file: resources/materials/plasti.mtl
+Could not load file: resources/materials/plasti.mtl
+Could not load file: resources/materials/plasti.mtl
+Could not load file: resources/materials/plasti.mtl
+Changing window resolution: (1280, 720) -> (1308, 720)
+Changing window resolution: (1308, 720) -> (1287, 720)
 GL Debug callback:
 	Type: ERROR
 	Severity: HIGH

@@ -4,7 +4,7 @@
 #include"FileRW.hpp"
 #include"Debug.hpp"
 
-std::vector<RenderMaterial*> RenderMaterial::s_loadedMaterials;
+std::unordered_map<std::string, RenderMaterial*> RenderMaterial::s_loadedMaterials;
 static const std::string MissingTexPath = "textures/MISSING2_MaximumADHD_status_1665776378145304579.png";
 
 RenderMaterial::RenderMaterial()
@@ -26,79 +26,78 @@ RenderMaterial::RenderMaterial()
 RenderMaterial::RenderMaterial(std::string MaterialName)
 {
 	this->Name = MaterialName;
+	
+	bool matExists = true;
+	std::string FileData = FileRW::ReadFile("materials/" + MaterialName + ".mtl", &matExists);
 
-	int CachedMaterialIdx = -1;
+	nlohmann::json JSONMaterialData;
 
-	for (int SearchIndex = 0; SearchIndex < RenderMaterial::s_loadedMaterials.size(); SearchIndex++)
+	if (matExists)
 	{
-		if (RenderMaterial::s_loadedMaterials[SearchIndex]->Name == MaterialName)
-		{
-			CachedMaterialIdx = SearchIndex;
-			break;
-		}
+		JSONMaterialData = nlohmann::json::parse(FileData);
+	}
+	else
+	{
+		JSONMaterialData["albedo"] = "";
+
+		Debug::Log("Unknown material: '" + MaterialName + "'");
+
+		return;
 	}
 
-	// frickign cache thang no work
-	if (CachedMaterialIdx == -1)
+	this->DiffuseTextures.push_back(new Texture());
+
+	this->DiffuseTextures[0]->Usage = MaterialTextureType::Diffuse;
+
+	bool HasSpecularTexture = JSONMaterialData.find("specular") != JSONMaterialData.end();
+	this->HasSpecular = HasSpecularTexture;
+
+	this->DiffuseTextures[0]->ImagePath = "resources/" + JSONMaterialData.value(
+		"albedo",
+		MissingTexPath
+	);
+
+	TextureManager::Get()->CreateTexture2D(
+		this->DiffuseTextures[0]
+	);
+
+	if (HasSpecular)
 	{
-		//const char* MaterialPath = ("./resources/materials/" + MaterialName + ".mtl");
+		this->SpecularTextures.push_back(new Texture());
 
-		std::string FileData = FileRW::ReadFile("materials/" + MaterialName + ".mtl");
-
-		nlohmann::json JSONMaterialData;
-
-		if (FileData != "")
-		{
-			JSONMaterialData = nlohmann::json::parse(FileData);
-		}
-		else
-		{
-			JSONMaterialData["albedo"] = "";
-
-			Debug::Log("Unknown material: '" + MaterialName + "'");
-		}
-
-		this->DiffuseTextures.push_back(new Texture());
-
-		this->DiffuseTextures[0]->Usage = MaterialTextureType::Diffuse;
-
-		bool HasSpecularTexture = JSONMaterialData.find("specular") != JSONMaterialData.end();
-		this->HasSpecular = HasSpecularTexture;
-
-		this->DiffuseTextures[0]->ImagePath = "resources/" + JSONMaterialData.value(
-			"albedo",
+		this->SpecularTextures[0]->Usage = MaterialTextureType::Specular;
+		this->SpecularTextures[0]->ImagePath = "resources/" + JSONMaterialData.value(
+			"specular",
 			MissingTexPath
 		);
 
 		TextureManager::Get()->CreateTexture2D(
-			this->DiffuseTextures[0]
+			this->SpecularTextures[0]
 		);
+	}
 
-		if (HasSpecular)
+	this->SpecExponent = JSONMaterialData.value("specExponent", this->SpecExponent);
+	this->SpecMultiply = JSONMaterialData.value("specMultiply", this->SpecMultiply);
+}
+
+RenderMaterial* RenderMaterial::GetMaterial(std::string Name)
+{
+	auto it = RenderMaterial::s_loadedMaterials.find(Name);
+
+	if (it == RenderMaterial::s_loadedMaterials.end())
+	{
+		bool matExists = true;
+		std::string FileData = FileRW::ReadFile("materials/" + Name + ".mtl", &matExists);
+
+		if (matExists)
 		{
-			this->SpecularTextures.push_back(new Texture());
-
-			this->SpecularTextures[0]->Usage = MaterialTextureType::Specular;
-			this->SpecularTextures[0]->ImagePath = "resources/" + JSONMaterialData.value(
-				"specular",
-				MissingTexPath
-			);
-
-			TextureManager::Get()->CreateTexture2D(
-				this->SpecularTextures[0]
-			);
+			RenderMaterial* newMat = new RenderMaterial(Name);
+			RenderMaterial::s_loadedMaterials.insert(std::pair(Name, newMat));
+			return newMat;
 		}
-
-		this->SpecExponent = JSONMaterialData.value("specExponent", this->SpecExponent);
-		this->SpecMultiply = JSONMaterialData.value("specMultiply", this->SpecMultiply);
-
-		RenderMaterial::s_loadedMaterials.push_back(this);
+		else
+			return RenderMaterial::GetMaterial("err");
 	}
 	else
-	{
-		RenderMaterial* CachedMaterial = RenderMaterial::s_loadedMaterials[CachedMaterialIdx];
-		this->HasSpecular = CachedMaterial->HasSpecular;
-		this->DiffuseTextures = CachedMaterial->DiffuseTextures;
-		this->SpecularTextures = CachedMaterial->SpecularTextures;
-	}
+		return it->second;
 }

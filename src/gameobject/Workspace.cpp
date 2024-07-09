@@ -24,7 +24,11 @@ Object_Workspace::Object_Workspace()
 
 	m_properties.insert(std::pair(
 		"SceneCamera",
-		std::pair(PropType::String, std::pair(
+		PropInfo
+		{
+			PropType::String,
+			PropReflection
+			{
 			[this]()
 			{
 				return GenericType
@@ -51,7 +55,8 @@ Object_Workspace::Object_Workspace()
 					//	std::make_format_args(gt.String)
 					//));
 			}
-		))
+		}
+		}
 	));
 }
 

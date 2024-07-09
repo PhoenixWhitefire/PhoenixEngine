@@ -1,5 +1,8 @@
 #pragma once
 
+#include<string>
+#include<format>
+
 class Color
 {
 public:
@@ -34,5 +37,10 @@ public:
 			this->G * other,
 			this->B * other
 		);
+	}
+
+	operator std::string()
+	{
+		return std::vformat("{}, {}, {}", std::make_format_args(this->R, this->G, this->B));
 	}
 };

@@ -11,7 +11,7 @@
 
 float Quad[];
 
-class _particle
+struct _particle
 {
 public:
 	double Lifetime;
@@ -21,7 +21,7 @@ public:
 
 	Texture* Image = nullptr;
 
-	Vector3 Position; // World position
+	Vector3 Position;
 	
 };
 

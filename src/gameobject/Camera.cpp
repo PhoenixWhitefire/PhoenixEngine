@@ -17,21 +17,45 @@ Object_Camera::Object_Camera()
 
 	m_properties.insert(std::pair(
 		"GenericMovement",
-		std::pair(PropType::Bool, std::pair(
-			[this]() { return GenericType{ PropType::Bool, "", this->GenericMovement }; },
-			[this](GenericType gt) { this->GenericMovement = gt.Bool; }
-		))
+		PropInfo
+		{
+		PropType::Bool,
+		PropReflection
+		{
+			[this]()
+			{
+				GenericType gt;
+				gt.Type = PropType::Bool;
+				gt.Bool = this->GenericMovement;
+				return gt;
+			},
+
+			[this](GenericType gt)
+			{
+				this->GenericMovement = gt.Bool;
+			}
+		}
+		}
 	));
 	m_properties.insert(std::pair(
 		"FieldOfView",
-		std::pair(PropType::Double, std::pair(
-			[this]() { return GenericType{ PropType::Double, "", false, this->FieldOfView }; },
-			[this](GenericType gt) { this->FieldOfView = gt.Double; }
-		))
+		PropInfo
+		{
+			PropType::Double,
+			PropReflection
+			{
+				[this]() { return GenericType{ PropType::Double, "", false, this->FieldOfView}; },
+				[this](GenericType gt) { this->FieldOfView = gt.Double; }
+			}
+		}
 	));
 	m_properties.insert(std::pair(
 		"Position",
-		std::pair(PropType::Vector3, std::pair(
+		PropInfo
+		{
+		PropType::Vector3,
+		PropReflection
+		{
 			[this]()
 			{
 				GenericType gt;
@@ -44,7 +68,8 @@ Object_Camera::Object_Camera()
 			{
 				this->Matrix[3] = glm::vec4(gt.Vector3.X, gt.Vector3.Y, gt.Vector3.Z, 1.f);
 			}
-		))
+		}
+		}
 	));
 }
 
