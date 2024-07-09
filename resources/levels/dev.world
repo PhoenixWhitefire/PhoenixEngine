@@ -1,0 +1,61 @@
+{
+  "props": [
+    {
+      "name": "crow",
+      "path": "models/crow/scene.gltf",
+      "position":[0,0,0],
+      "orient": [0,0,0],
+      "size": [1,1,1],
+      "computePhysics": 0
+    },
+    {
+      "name": "g",
+      "path": "models/grass/scene.gltf",
+      "position":[100,0,15],
+      "orient": [0,0,0],
+      "size": [1,1,1],
+      "facecull": "none"
+    },
+    {
+      "name": "gr",
+      "path": "models/ground/scene.gltf",
+      "position":[100,0,15],
+      "orient": [0,0,0],
+      "size": [1,1,1],
+      "facecull": "none"
+    },
+    {
+      "name": "windows10",
+      "path": "models/windows/scene.gltf",
+      "position":[100,5,15],
+      "orient": [0,0,0],
+      "size": [1,1,1],
+      "facecull": "none"
+    }
+  ],
+  "parts": [
+    {
+      "type":"MeshPart",
+      "position":[0,0,0],
+      "material":"floortiles",
+      "size":[50,1,50],
+      "dmesh":"Cube",
+      "name": "shinyfloor"
+    },
+    {
+      "type":"MeshPart",
+      "position":[0,9,-5],
+      "name" : "wood",
+      "material":"wood",
+      "size":[20,17,2],
+      "dmesh":"Cube"
+    }
+  ],
+  "lights": [
+      {
+        "type":"DirectionalLight",
+        "position":[0.5,0.5,0.5],
+        "color":[1,1,1]
+      }
+    ]
+  }
