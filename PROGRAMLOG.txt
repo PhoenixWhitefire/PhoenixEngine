@@ -2,7 +2,6 @@ Running OpenGL version 4.6
 Renderer initialized
 Editor object was created
 The Map Version is 2
-Deserialize warning: Member 'Name' is not defined in the API for the Class Primitive (Name: 'Primitive')!
 Deserialize warning: Member 'SourceFile' is not defined in the API for the Class Script (Name: 'TestScript')!
 Loaded map file 'levels/dev_fmtv2.world'
 Editor init done
@@ -14,79 +13,5 @@ GL Debug callback:
 	Message: Program/shader state performance warning: Vertex shader in program 3 is being recompiled based on GL state.
 	Source: OpenGL API
 	Error ID: 131218
-
-Could not load file: resources/materials/p.mtl
-Could not load file: resources/materials/p.mtl
-Could not load file: resources/materials/p.mtl
-Could not load file: resources/materials/p.mtl
-Could not load file: resources/materials/pl.mtl
-Could not load file: resources/materials/pl.mtl
-Could not load file: resources/materials/pl.mtl
-Could not load file: resources/materials/pl.mtl
-Could not load file: resources/materials/pl.mtl
-Could not load file: resources/materials/pl.mtl
-Could not load file: resources/materials/pl.mtl
-Could not load file: resources/materials/pl.mtl
-Could not load file: resources/materials/pl.mtl
-Could not load file: resources/materials/pl.mtl
-Could not load file: resources/materials/pl.mtl
-Could not load file: resources/materials/pl.mtl
-Could not load file: resources/materials/pl.mtl
-Could not load file: resources/materials/pl.mtl
-Could not load file: resources/materials/pl.mtl
-Could not load file: resources/materials/pl.mtl
-Could not load file: resources/materials/pla.mtl
-Could not load file: resources/materials/pla.mtl
-Could not load file: resources/materials/pla.mtl
-Could not load file: resources/materials/pla.mtl
-Could not load file: resources/materials/pla.mtl
-Could not load file: resources/materials/pla.mtl
-Could not load file: resources/materials/pla.mtl
-Could not load file: resources/materials/pla.mtl
-Could not load file: resources/materials/plas.mtl
-Could not load file: resources/materials/plas.mtl
-Could not load file: resources/materials/plas.mtl
-Could not load file: resources/materials/plas.mtl
-Could not load file: resources/materials/plas.mtl
-Could not load file: resources/materials/plas.mtl
-Could not load file: resources/materials/plas.mtl
-Could not load file: resources/materials/plas.mtl
-Could not load file: resources/materials/plas.mtl
-Could not load file: resources/materials/plas.mtl
-Could not load file: resources/materials/plas.mtl
-Could not load file: resources/materials/plas.mtl
-Could not load file: resources/materials/plast.mtl
-Could not load file: resources/materials/plast.mtl
-Could not load file: resources/materials/plast.mtl
-Could not load file: resources/materials/plast.mtl
-Could not load file: resources/materials/plast.mtl
-Could not load file: resources/materials/plast.mtl
-Could not load file: resources/materials/plast.mtl
-Could not load file: resources/materials/plast.mtl
-Could not load file: resources/materials/plasti.mtl
-Could not load file: resources/materials/plasti.mtl
-Could not load file: resources/materials/plasti.mtl
-Could not load file: resources/materials/plasti.mtl
-Could not load file: resources/materials/plasti.mtl
-Could not load file: resources/materials/plasti.mtl
-Could not load file: resources/materials/plasti.mtl
-Could not load file: resources/materials/plasti.mtl
-Could not load file: resources/materials/plasti.mtl
-Could not load file: resources/materials/plasti.mtl
-Changing window resolution: (1280, 720) -> (1308, 720)
-Changing window resolution: (1308, 720) -> (1287, 720)
-GL Debug callback:
-	Type: ERROR
-	Severity: HIGH
-	Message: GL_INVALID_OPERATION error generated. State(s) are invalid: program texture usage.
-	Source: OpenGL API
-	Error ID: 1282
-
-CRASH: GL Debug callback:
-	Type: ERROR
-	Severity: HIGH
-	Message: GL_INVALID_OPERATION error generated. State(s) are invalid: program texture usage.
-	Source: OpenGL API
-	Error ID: 1282
 
 Application closing...

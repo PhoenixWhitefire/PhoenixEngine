@@ -608,7 +608,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Users\phoen\Documents\LuauLib\VM\include;C:\Users\phoen\Documents\LuauLib\Compiler\include;C:\Users\phoen\Documents\LuauLib\Common\include;C:\Users\phoen\Documents\LuauLib\Ast\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\LuauLib\VM\include;$(ProjectDir)\..\LuauLib\Compiler\include;$(ProjectDir)\..\LuauLib\Common\include;$(ProjectDir)\..\LuauLib\Ast\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -621,7 +621,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Users\phoen\Documents\LuauLib\VM\include;C:\Users\phoen\Documents\LuauLib\Compiler\include;C:\Users\phoen\Documents\LuauLib\Common\include;C:\Users\phoen\Documents\LuauLib\Ast\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\LuauLib\VM\include;$(ProjectDir)\..\LuauLib\Compiler\include;$(ProjectDir)\..\LuauLib\Common\include;$(ProjectDir)\..\LuauLib\Ast\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
