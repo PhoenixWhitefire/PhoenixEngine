@@ -1,10 +1,10 @@
 #pragma once
 
 #include<glm/matrix.hpp>
-#include<datatype/Vector3.hpp>
 #include<vector>
 
-#include<datatype/Mesh.hpp>
+#include"datatype/Vector3.hpp"
+#include"datatype/Mesh.hpp"
 
 namespace IntersectionLib
 {
@@ -12,7 +12,7 @@ namespace IntersectionLib
 	{
 		bool DidHit = false;
 		Vector3 HitPosition;
-		unsigned int HitObjectId = 0;
+		uint32_t HitObjectId = 0;
 	};
 
 	struct Triangle
@@ -26,7 +26,7 @@ namespace IntersectionLib
 	{
 		Mesh* CollisionMesh = nullptr;
 		glm::mat4 Matrix = glm::mat4(1.0f);
-		unsigned int Id = 0;
+		uint32_t Id = 0;
 	};
 
 	IntersectionResult Traceline(Vector3 LineStart, Vector3 LineEnd, std::vector<HittableObject*> Objects);

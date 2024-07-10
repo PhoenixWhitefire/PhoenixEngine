@@ -1,4 +1,9 @@
-#include<render/Camera.hpp>
+#include<glm/gtc/type_ptr.hpp>
+#include<glm/gtx/rotate_vector.hpp>
+#include<glm/gtx/vector_angle.hpp>
+
+#include"render/Camera.hpp"
+#include"Debug.hpp"
 
 Camera::Camera(Vector2 WindowSize)
 {
@@ -14,7 +19,7 @@ void Camera::Update()
 
 	if (isnan(AspectRatio))
 	{
-		Debug::Log(std::vformat("NaN aspect ratio;\nwindow width: {}\nwindow height: {}\n", std::make_format_args(this->WindowWidth, this->WindowHeight)));
+		Debug::Log(std::vformat("Camera had NaN aspect ratio {}/{}!", std::make_format_args(WindowWidth, WindowHeight)));
 		return;
 	}
 
@@ -27,5 +32,5 @@ void Camera::Update()
 	this->Matrix = ProjectionMatrix * ViewMatrix;
 
 	// fish out the upvector from the generated matrix
-	this->UpVec = glm::vec3(this->Matrix[0][1], this->Matrix[1][1], this->Matrix[2][1]);
+	//this->UpVec = glm::vec3(this->Matrix[0][1], this->Matrix[1][1], this->Matrix[2][1]);
 }

@@ -1,8 +1,6 @@
 #pragma once
 
-#include<string>
 #include<format>
-
 #include<glm/vec3.hpp>
 
 class Vector3
@@ -36,7 +34,19 @@ public:
 
 	Vector3& operator += (const Vector3 Right)
 	{
-		Vector3 NewVec = Vector3(Right.X + this->X, Right.Y + this->Y, Right.Z + this->Z);
+		Vector3 NewVec = Vector3(X - Right.X, Y - Right.Y, Z - Right.Z);
+
+		this->X = NewVec.X;
+		this->Y = NewVec.Y;
+		this->Z = NewVec.Z;
+		this->Magnitude = NewVec.Magnitude;
+
+		return *this;
+	}
+
+	Vector3& operator -= (const Vector3 Right)
+	{
+		Vector3 NewVec = Vector3(Right.X - this->X, Right.Y - this->Y, Right.Z - this->Z);
 
 		this->X = NewVec.X;
 		this->Y = NewVec.Y;

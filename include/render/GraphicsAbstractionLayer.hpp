@@ -4,33 +4,20 @@
 
 #include<string>
 #include<vector>
-
-#include<datatype/Vector3.hpp>
-#include<glm/gtc/type_ptr.hpp>
-
-#include<Debug.hpp>
-
-#include<glad/gl.h>
-
-#include<SDL2/SDL.h>
-#include<SDL2/SDL_syswm.h>
-
 #include<imgui/imgui.h>
-#include<imgui/imgui.h>
-#include<imgui/imgui_impl_sdl.h>
-#include<imgui/imgui_impl_opengl3.h>
-//#include<imgui/imgui_impl_vulkan.h>
+#include<SDL2/SDL_video.h>
+#include<SDL2/SDL_opengl.h>
 
 enum class GraphicsApi { Auto, None, OpenGL, Vulkan }; //None for saying that graphics has not been initialized.
-enum class UniformType { INT, FLOAT, FLOAT3, MAT4 };
-enum class GraphicsFeature { DEPTH_TESTING, BLENDING };
+enum class UniformType { Integer, Float, Vector3, Matrix4x4 };
+enum class GraphicsFeature { DepthTesting, TransparencyBlending };
 
 struct Uniform_t
 {
 	const char* Name;
 	void* ValuePtr;
-	unsigned int ShaderProgramId;
-	UniformType Type;
+	uint32_t ShaderProgramId;
+	UniformType Type = UniformType::Float;
 };
 
 class Graphics
@@ -49,7 +36,7 @@ public:
 		int WindowSizeX = 1400, int WindowSizeY = 700
 	);
 
-	void SetUniformBlock(std::vector<Uniform_t> Uniforms);
+	void SetUniformBlock(std::vector<Uniform_t> Uniforms) const;
 	void SetFeature(GraphicsFeature Feature, bool IsEnabled);
 
 	SDL_Window* Window;

@@ -1,24 +1,24 @@
 #pragma once
 
-#include<datatype/Color.hpp>
-#include<datatype/Mesh.hpp>
+#include"datatype/Color.hpp"
+#include"datatype/Mesh.hpp"
 
-#include<datatype/GameObject.hpp>
-#include<gameobject/Base3D.hpp>
+#include"datatype/GameObject.hpp"
+#include"gameobject/Base3D.hpp"
 
 class Object_Mesh : public Object_Base3D
 {
 public:
-	std::string Name = "MeshPart";
-	std::string ClassName = "MeshPart";
+	Object_Mesh();
 
-	std::vector<Texture*> Textures;
+	void SetRenderMesh(Mesh);
 
+	std::string Asset;
 	bool HasTransparency = false;
 
 private:
 	std::vector<Vertex> BlankVertices;
-	std::vector<GLuint> BlankIndices;
+	std::vector<uint32_t> BlankIndices;
 
 	static DerivedObjectRegister<Object_Mesh> RegisterClassAs;
 };

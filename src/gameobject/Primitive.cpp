@@ -1,16 +1,16 @@
-#include<gameobject/Primitive.hpp>
-#include<BaseMeshes.hpp>
+#include"gameobject/Primitive.hpp"
+#include"BaseMeshes.hpp"
 
 DerivedObjectRegister<Object_Primitive> Object_Primitive::RegisterClassAs("Primitive");
 
-Mesh* GetPrimitiveMesh(PrimitiveType Type)
+Mesh* GetPrimitiveMesh(PrimitiveShape Type)
 {
 	Mesh* PrimitiveMesh;
 
 	switch (Type)
 	{
 
-		case PrimitiveType::Cube:
+		case PrimitiveShape::Cube:
 		{
 			PrimitiveMesh = BaseMeshes::Cube();
 			break;
@@ -27,17 +27,37 @@ Mesh* GetPrimitiveMesh(PrimitiveType Type)
 	return PrimitiveMesh;
 }
 
-void Object_Primitive::Initialize()
+Object_Primitive::Object_Primitive()
 {
-	this->RenderMesh = *GetPrimitiveMesh(this->Type);
-	this->PreviousType = this->Type;
+	this->Name = "Primitive";
+	this->ClassName = "Primitive";
+
+	this->RenderMesh = *GetPrimitiveMesh(this->Shape);
+
+	m_properties.insert(std::pair(
+		std::string("Shape"),
+		PropInfo
+		{
+			PropType::Integer,
+			PropReflection
+			{
+				[this]() {
+					GenericType gt;
+					gt.Type = PropType::Integer;
+					gt.Integer = (int)this->Shape;
+
+					return gt;
+				},
+				[this](GenericType gt) {
+					this->SetShape((PrimitiveShape)gt.Integer);
+				}
+			}
+		}
+	));
 }
 
-void Object_Primitive::Update(double DeltaTime)
+void Object_Primitive::SetShape(PrimitiveShape shape)
 {
-	if (this->Type != this->PreviousType)
-	{
-		this->RenderMesh = *GetPrimitiveMesh(this->Type);
-		this->PreviousType = this->Type;
-	}
+	this->Shape = shape;
+	this->RenderMesh = *GetPrimitiveMesh(shape);
 }

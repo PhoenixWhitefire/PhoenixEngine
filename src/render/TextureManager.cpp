@@ -1,5 +1,11 @@
-#include<render/TextureManager.hpp>
+#include<stb_image.h>
 #include<format>
+#include<glad/gl.h>
+
+#include"render/TextureManager.hpp"
+#include"render/ShaderProgram.hpp"
+#include"ThreadManager.hpp"
+#include"Debug.hpp"
 
 TextureManager* TextureManager::Singleton = new TextureManager();
 
@@ -13,11 +19,11 @@ TextureManager* TextureManager::Get()
 	return TextureManager::Singleton;
 }
 
-unsigned char* TextureManager::LoadImageData(const char* ImagePath, int* ImageWidth, int* ImageHeight, int* ImageColorChannels)
+uint8_t* TextureManager::LoadImageData(const char* ImagePath, int* ImageWidth, int* ImageHeight, int* ImageColorChannels)
 {
 	stbi_set_flip_vertically_on_load(true);
 
-	unsigned char* ImageData = stbi_load(ImagePath, ImageWidth, ImageHeight, ImageColorChannels, 0);
+	uint8_t* ImageData = stbi_load(ImagePath, ImageWidth, ImageHeight, ImageColorChannels, 0);
 	
 	return ImageData;
 }
@@ -28,7 +34,7 @@ void asyncTextureLoader(void* ManagerPtr)
 
 	Texture* Image = Manager->TexturesToLoadAsync[Manager->TexturesToLoadAsync.size() - 1];
 
-	unsigned char* Data = Manager->LoadImageData(
+	uint8_t* Data = Manager->LoadImageData(
 	Image->ImagePath.c_str(),
 		&Image->ImageWidth,
 		&Image->ImageHeight,
@@ -51,7 +57,9 @@ void TextureManager::CreateTexture2D(Texture* TexturePtr, bool ShouldLoadAsync)
 	{
 		if (TexturePtr->TMP_ImageByteData == nullptr)
 		{
-			auto FormattedArgs = std::make_format_args(TexturePtr->ImagePath, (int)TexturePtr->Usage);
+			std::string imgPath = TexturePtr->ImagePath;
+			int Usage = int(TexturePtr->Usage);
+			auto FormattedArgs = std::make_format_args(imgPath, Usage);
 			Debug::Log(std::vformat("Failed to load texture '{}' (usage:{})", FormattedArgs));
 			return;
 		}
@@ -129,11 +137,12 @@ void TextureManager::CreateTexture2D(Texture* TexturePtr, bool ShouldLoadAsync)
 	}
 	else
 	{
+		// TODO: fix multithreading
 		ShouldLoadAsync = false;
 
 		if (!ShouldLoadAsync)
 		{
-			unsigned char* Data = this->LoadImageData(
+			uint8_t* Data = this->LoadImageData(
 				TexturePtr->ImagePath.c_str(),
 				&TexturePtr->ImageWidth,
 				&TexturePtr->ImageHeight,
@@ -170,7 +179,9 @@ void TextureManager::FinalizeAsyncLoadedTextures()
 	{
 		Image->Identifier = 0xFFFFFFFF; //image failed to load
 
-		Debug::Log(std::vformat("image failed to load: {}", std::make_format_args(Image->ImagePath)));
+		std::string Path = Image->ImagePath;
+
+		Debug::Log(std::vformat("image failed to load (parallel): {}", std::make_format_args(Path)));
 
 		this->AsyncLoadedTextures.pop_back();
 	}

@@ -2,27 +2,27 @@
 
 #include<random>
 
-#include<render/TextureManager.hpp>
-#include<render/ShaderProgram.hpp>
-#include<datatype/ValueRange.hpp>
-#include<datatype/Buffer.hpp>
-#include<render/Camera.hpp>
-
-#include<datatype/GameObject.hpp>
+#include"datatype/ValueRange.hpp"
+#include"datatype/Buffer.hpp"
+#include"datatype/GameObject.hpp"
+#include"render/ShaderProgram.hpp"
+#include"render/TextureManager.hpp"
+#include"datatype/Vector2.hpp"
 
 float Quad[];
 
-class _particle
+struct _particle
 {
 public:
-	double AliveTime = 0.0f;
+	double Lifetime;
+	double TimeAliveFor;
+	float Size;
+	float Transparency;
 
 	Texture* Image = nullptr;
 
-	Vector3 Position; //World position
-	float Size = 1.0f; //1x1x1
-
-	float Transparency = 0.0f;
+	Vector3 Position;
+	
 };
 
 class Object_ParticleEmitter : public GameObject
@@ -30,36 +30,25 @@ class Object_ParticleEmitter : public GameObject
 public:
 	Object_ParticleEmitter();
 
-	bool DidInit = false;
-
 	void Update(double Delta);
-	void Render(Camera SceneCamera);
+	void Render(glm::mat4 CameraMatrix);
 
-	static ShaderProgram* ParticleShaders;
+	bool EmitterEnabled = true;
 
-	Vector3 Offset; //If parent is a valid Base3D, position will be Parent.Position + Offset, else just Offset
-	ValueRange<Vector3> VelocityOverTime;
-	ValueRange<Vector3> RandDeviationOverTime;
-
+	float Rate = 50.0f; //Particles to be spawned every second
 	int MaxParticles = 500;
 
-	bool Enabled = true;
+	Vector2 Lifetime = Vector2(1.5f, 2.f); // Randomly chosen between the range X - Y;
+	Vector3 Offset; // If parent is a valid Base3D, position will be Parent.Position + Offset, else just Offset
 
 	std::vector<Texture*> PossibleImages; //A random one is chosen every time a particle needs to be spawned
 
-	float Lifetime = 3.0f;
-
 	ValueRange<float> TransparencyOverTime;
 	ValueRange<float> SizeOverTime;
-
-	float Rate = 50.0f; //Particles to be spawned every second
-
-	static std::default_random_engine rand_generator;
-
-	static DerivedObjectRegister<Object_ParticleEmitter> RegisterClassAs;
-
+	ValueRange<Vector3> VelocityOverTime;
+	
 private:
-	unsigned int m_getUsableIndex();
+	uint32_t m_getUsableIndex();
 
 	std::vector<_particle*> m_particles;
 
@@ -68,4 +57,9 @@ private:
 	VAO VertArray;
 	VBO VertBuffer;
 	EBO ElementBuffer;
+
+	static std::default_random_engine s_RandGenerator;
+	static ShaderProgram* s_ParticleShaders;
+
+	static DerivedObjectRegister<Object_ParticleEmitter> RegisterClassAs;
 };

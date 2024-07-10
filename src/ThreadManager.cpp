@@ -1,4 +1,7 @@
-#include<ThreadManager.hpp>
+#include<SDL2/SDL_timer.h>
+#include<SDL2/SDL_messagebox.h>
+
+#include"ThreadManager.hpp"
 
 ThreadManager* ThreadManager::Singleton = new ThreadManager();
 
@@ -13,13 +16,6 @@ void _workerTaskRunner(Worker* ThisWorker)
 			SDL_Delay(50); // TODO could probably have a better method for giving the CPU time to do other stuff
 
 			continue;
-		}
-
-		if (ThisWorker->TaskQueue.size() > 10000)
-		{
-			throw("TaskWorker: too many tasks (>10000)!!");
-			printf("This should not be printing!\n");
-			return;
 		}
 
 		Task* CurrentTask = ThisWorker->TaskQueue[ThisWorker->TaskQueue.size() - 1];
@@ -38,16 +34,16 @@ void _workerTaskRunner(Worker* ThisWorker)
 
 void Worker::WaitForCurrentTaskFinish()
 {
-	unsigned int LastTask = this->TaskIdx;
+	uint32_t LastTask = this->TaskIdx;
 
 	while ((LastTask == this->TaskIdx) || (this->Status != WorkerStatus::RunningTask))
-		SDL_Delay(50);
+		SDL_Delay(25);
 }
 
 void Worker::WaitForAllTasksFinish()
 {
 	while (this->Status != WorkerStatus::WaitingForTask)
-		SDL_Delay(50);
+		SDL_Delay(25);
 }
 
 ThreadManager::ThreadManager()
@@ -124,7 +120,10 @@ void ThreadManager::DispatchJob(Task& Job)
 ThreadManager* ThreadManager::Get()
 {
 	if (!ThreadManager::Singleton)
-		throw("ThreadManager::Singleton is somehow NULL in ThreadManager::Get, even though it is created before this function is even defined.");
+	{
+		throw(std::string("ThreadManager::Get was called before Engine was initialized."));
+		return nullptr;
+	}
 
 	return ThreadManager::Singleton;
 }

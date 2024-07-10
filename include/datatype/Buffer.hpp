@@ -1,78 +1,76 @@
 #pragma once
 
 #include<vector>
-
 #include<glm/glm.hpp>
+#include<SDL2/SDL_video.h>
 
-#include<render/GraphicsAbstractionLayer.hpp>
-#include"Vector2.hpp"
-#include"Vector3.hpp"
-#include"Color.hpp"
-
-#include<format>
-#include"../Debug.hpp"
-
-struct Vertex {
+struct Vertex
+{
 	glm::vec3 position;
 	glm::vec3 normal;
 	glm::vec3 color;
 	glm::vec2 texUV;
 };
 
-class VBO {
+class VBO
+{
+
 public:
 	VBO();
 
-	void SetBufferData(std::vector<Vertex>& Vertices);
+	void SetBufferData(std::vector<Vertex>& Vertices) const;
 
-	void Bind();
+	void Bind() const;
 	void Unbind();
-	void Delete();
+	void Delete() const;
 
-	GLuint ID;
+	uint32_t ID = 0;
 };
 
-class VAO {
+class VAO
+{
 public:
 	VAO();
 
-	void LinkAttrib(VBO& VertexBuffer, GLuint Layout, GLuint Components, GLenum Type, GLsizei Stride, void* Offset);
+	void LinkAttrib(VBO& VertexBuffer, uint32_t Layout, uint32_t Components, uint32_t Type, int Stride, void* Offset);
 
-	void Bind();
+	void Bind() const;
 	void Unbind();
-	void Delete();
+	void Delete() const;
 
-	GLuint ID;
+	uint32_t ID = 0;
 };
 
-class EBO {
+class EBO
+{
 public:
 	EBO();
 
-	void SetBufferData(std::vector<GLuint>& Indices);
+	void SetBufferData(std::vector<uint32_t>& Indices) const;
 
-	void Bind();
+	void Bind() const;
 	void Unbind();
-	void Delete();
+	void Delete() const;
 
-	GLuint ID;
+	uint32_t ID = 0;
 };
 
-class FBO {
+class FBO
+{
 public:
 	FBO(SDL_Window* Window, int Width, int Height, int MSSamples = 0, bool AttachRenderBuffer = true);
 
-	void Bind();
+	void Bind() const;
 	void Unbind();
-	void Delete();
+	void Delete() const;
 
-	void BindTexture();
+	void BindTexture() const;
 	void UnbindTexture();
 
 	int MSAASamples = 0;
 
-	GLuint ID;
+	uint32_t ID = 0;
 
-	GLuint RenderBufferID;
-	GLuint TextureID;
+	uint32_t RenderBufferID = 0;
+	uint32_t TextureID = 0;
 };

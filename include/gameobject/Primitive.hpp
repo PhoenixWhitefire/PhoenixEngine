@@ -3,21 +3,17 @@
 #include<datatype/GameObject.hpp>
 #include<gameobject/Base3D.hpp>
 
-enum class PrimitiveType { Cube };
+enum class PrimitiveShape { Cube };
 
 class Object_Primitive : public Object_Base3D
 {
 public:
-	std::string Name = "Primitive";
-	std::string ClassName = "Primitive";
+	Object_Primitive();
 
-	PrimitiveType Type = PrimitiveType::Cube;
+	void SetShape(PrimitiveShape);
 
-	void Initialize();
-	void Update(double DeltaTime);
+	PrimitiveShape Shape = PrimitiveShape::Cube;
 
 private:
 	static DerivedObjectRegister<Object_Primitive> RegisterClassAs;
-
-	PrimitiveType PreviousType = PrimitiveType::Cube;
 };

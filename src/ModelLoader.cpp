@@ -1,6 +1,17 @@
-#include<ModelLoader.hpp>
+#include<thread>
 
-#include<GlobalJsonConfig.hpp>
+#include<nljson.h>
+
+#include<glm/glm.hpp>
+#include<glm/gtc/matrix_transform.hpp>
+#include<glm/gtc/type_ptr.hpp>
+#include<glm/gtx/rotate_vector.hpp>
+#include<glm/gtx/vector_angle.hpp>
+
+#include"ModelLoader.hpp"
+#include"GlobalJsonConfig.hpp"
+#include"FileRW.hpp"
+#include"Debug.hpp"
 
 ModelLoader::ModelLoader(const char* FilePath, std::shared_ptr<GameObject> Parent, SDL_Window* Window)
 {
@@ -27,11 +38,9 @@ ModelLoader::ModelLoader(const char* FilePath, std::shared_ptr<GameObject> Paren
 	}
 
 	this->JSONData = nlohmann::json::parse(TextData);
-
 	this->File = FilePath;
 
 	this->Data = GetData();
-
 	this->TraverseNode(0);
 
 	for (int MeshIndex = 0; MeshIndex < this->Meshes.size(); MeshIndex++)
@@ -41,7 +50,7 @@ ModelLoader::ModelLoader(const char* FilePath, std::shared_ptr<GameObject> Paren
 		std::shared_ptr<Object_Base3D> m3d;
 		std::shared_ptr<Object_Mesh> mo;
 		
-		M = GameObjectFactory::CreateGameObject("MeshPart");
+		M = GameObjectFactory::CreateGameObject("Mesh");
 
 		m3d = std::dynamic_pointer_cast<Object_Base3D>(M);
 		mo = std::dynamic_pointer_cast<Object_Mesh>(M);
@@ -52,10 +61,40 @@ ModelLoader::ModelLoader(const char* FilePath, std::shared_ptr<GameObject> Paren
 
 		m3d->Size = this->MeshScales[MeshIndex];
 
+		m3d->Material = new RenderMaterial();
+
+		m3d->Material->DiffuseTextures.clear();
+		m3d->Material->SpecularTextures.clear();
+
 		mo->Matrix = this->MeshMatrices[MeshIndex];
 		mo->Size = this->MeshScales[MeshIndex];
 
-		mo->Textures = this->MeshTextures[MeshIndex];
+		for (int tix = 0; tix < this->MeshTextures[MeshIndex].size(); tix++)
+		{
+			Texture* tex = this->MeshTextures[MeshIndex][tix];
+
+			switch (tex->Usage)
+			{
+
+			case (MaterialTextureType::Diffuse):
+			{
+				m3d->Material->DiffuseTextures.push_back(tex);
+				break;
+			}
+
+			case (MaterialTextureType::Specular):
+			{
+				m3d->Material->SpecularTextures.push_back(tex);
+				break;
+			}
+
+			default:
+				break;
+
+			}
+		}
+
+		//mo->Textures = this->MeshTextures[MeshIndex];
 
 		if (Parent != nullptr)
 			M->SetParent(Parent);
@@ -74,13 +113,13 @@ ModelLoader::ModelLoader(const char* FilePath, std::shared_ptr<GameObject> Paren
 	*/
 }
 
-void ModelLoader::LoadMesh(unsigned int indMesh, glm::vec3 Translation, glm::quat Rotation, glm::vec3 Scale, glm::mat4 matrix)
+void ModelLoader::LoadMesh(uint32_t indMesh, glm::vec3 Translation, glm::quat Rotation, glm::vec3 Scale, glm::mat4 matrix)
 {
 	// Get all accessor indices
-	unsigned int posAccInd = JSONData["meshes"][indMesh]["primitives"][0]["attributes"]["POSITION"];
-	unsigned int normalAccInd = JSONData["meshes"][indMesh]["primitives"][0]["attributes"]["NORMAL"];
-	unsigned int texAccInd = JSONData["meshes"][indMesh]["primitives"][0]["attributes"]["TEXCOORD_0"];
-	unsigned int indAccInd = JSONData["meshes"][indMesh]["primitives"][0]["indices"];
+	uint32_t posAccInd = JSONData["meshes"][indMesh]["primitives"][0]["attributes"]["POSITION"];
+	uint32_t normalAccInd = JSONData["meshes"][indMesh]["primitives"][0]["attributes"]["NORMAL"];
+	uint32_t texAccInd = JSONData["meshes"][indMesh]["primitives"][0]["attributes"]["TEXCOORD_0"];
+	uint32_t indAccInd = JSONData["meshes"][indMesh]["primitives"][0]["indices"];
 
 	// Use accessor indices to get all vertices components
 	std::vector<float> posVec = GetFloats(JSONData["accessors"][posAccInd]);
@@ -92,7 +131,7 @@ void ModelLoader::LoadMesh(unsigned int indMesh, glm::vec3 Translation, glm::qua
 
 	// Combine all the vertex components and also get the indices and textures
 	std::vector<Vertex> vertices = AssembleVertices(positions, normals, texUVs);
-	std::vector<GLuint> indices = GetIndices(JSONData["accessors"][indAccInd]);
+	std::vector<uint32_t> indices = GetIndices(JSONData["accessors"][indAccInd]);
 	std::vector<Texture*> textures = GetTextures();
 
 	this->MeshTextures.push_back(textures);
@@ -108,7 +147,7 @@ void ModelLoader::LoadMesh(unsigned int indMesh, glm::vec3 Translation, glm::qua
 	Meshes.push_back(NewMesh);
 }
 
-void ModelLoader::TraverseNode(unsigned int nextNode, glm::mat4 matrix)
+void ModelLoader::TraverseNode(uint32_t nextNode, glm::mat4 matrix)
 {
 	// Current node
 	nlohmann::json node = JSONData["nodes"][nextNode];
@@ -118,7 +157,7 @@ void ModelLoader::TraverseNode(unsigned int nextNode, glm::mat4 matrix)
 	if (node.find("translation") != node.end())
 	{
 		float transValues[3]{};
-		for (unsigned int i = 0; i < node["translation"].size(); i++)
+		for (uint32_t i = 0; i < node["translation"].size(); i++)
 			transValues[i] = (node["translation"][i]);
 		translation = glm::make_vec3(transValues);
 	}
@@ -140,7 +179,7 @@ void ModelLoader::TraverseNode(unsigned int nextNode, glm::mat4 matrix)
 	if (node.find("scale") != node.end())
 	{
 		float scaleValues[3]{};
-		for (unsigned int i = 0; i < node["scale"].size(); i++)
+		for (uint32_t i = 0; i < node["scale"].size(); i++)
 			scaleValues[i] = (node["scale"][i]);
 		scale = glm::make_vec3(scaleValues);
 	}
@@ -149,7 +188,7 @@ void ModelLoader::TraverseNode(unsigned int nextNode, glm::mat4 matrix)
 	if (node.find("matrix") != node.end())
 	{
 		float matValues[16]{};
-		for (unsigned int i = 0; i < node["matrix"].size(); i++)
+		for (uint32_t i = 0; i < node["matrix"].size(); i++)
 			matValues[i] = (node["matrix"][i]);
 		matNode = glm::make_mat4(matValues);
 	}
@@ -181,13 +220,13 @@ void ModelLoader::TraverseNode(unsigned int nextNode, glm::mat4 matrix)
 	// Check if the node has children, and if it does, apply this function to them with the matNextNode
 	if (node.find("children") != node.end())
 	{
-		for (unsigned int i = 0; i < node["children"].size(); i++) {
+		for (uint32_t i = 0; i < node["children"].size(); i++) {
 			TraverseNode(node["children"][i], matNextNode);
 		}
 	}
 }
 
-std::vector<unsigned char> ModelLoader::GetData()
+std::vector<uint8_t> ModelLoader::GetData()
 {
 	// Create a place to store the raw text, and get the uri of the .bin file
 	std::string bytesText;
@@ -199,7 +238,7 @@ std::vector<unsigned char> ModelLoader::GetData()
 	bytesText = FileRW::ReadFile((fileDirectory + uri));
 
 	// Transform the raw text data into bytes and put them in a vector
-	std::vector<unsigned char> data(bytesText.begin(), bytesText.end());
+	std::vector<uint8_t> data(bytesText.begin(), bytesText.end());
 	return data;
 }
 
@@ -208,17 +247,17 @@ std::vector<float> ModelLoader::GetFloats(nlohmann::json accessor)
 	std::vector<float> floatVec;
 
 	// Get properties from the accessor
-	unsigned int buffViewInd = accessor.value("bufferView", 1);
-	unsigned int count = accessor["count"];
-	unsigned int accByteOffset = accessor.value("byteOffset", 0);
+	uint32_t buffViewInd = accessor.value("bufferView", 1);
+	uint32_t count = accessor["count"];
+	uint32_t accByteOffset = accessor.value("byteOffset", 0);
 	std::string type = accessor["type"];
 
 	// Get properties from the bufferView
 	nlohmann::json bufferView = JSONData["bufferViews"][buffViewInd];
-	unsigned int byteOffset = bufferView["byteOffset"];
+	uint32_t byteOffset = bufferView["byteOffset"];
 
 	// Interpret the type and store it into numPerVert
-	unsigned int numPerVert;
+	uint32_t numPerVert;
 	if (type == "SCALAR") numPerVert = 1;
 	else if (type == "VEC2") numPerVert = 2;
 	else if (type == "VEC3") numPerVert = 3;
@@ -226,11 +265,11 @@ std::vector<float> ModelLoader::GetFloats(nlohmann::json accessor)
 	else throw(std::string("Could not decode GLTF model: Type is invalid (not SCALAR, VEC2, VEC3, or VEC4)"));
 
 	// Go over all the bytes in the data at the correct place using the properties from above
-	unsigned int beginningOfData = byteOffset + accByteOffset;
-	unsigned int lengthOfData = count * 4 * numPerVert;
-	for (unsigned int i = beginningOfData; i < beginningOfData + lengthOfData; i)
+	uint32_t beginningOfData = byteOffset + accByteOffset;
+	uint32_t lengthOfData = count * 4 * numPerVert;
+	for (uint32_t i = beginningOfData; i < beginningOfData + lengthOfData; i)
 	{
-		unsigned char bytes[] = { Data[i++], Data[i++], Data[i++], Data[i++] };
+		uint8_t bytes[] = { Data[i++], Data[i++], Data[i++], Data[i++] };
 		float value;
 		std::memcpy(&value, bytes, sizeof(float));
 		floatVec.push_back(value);
@@ -239,50 +278,50 @@ std::vector<float> ModelLoader::GetFloats(nlohmann::json accessor)
 	return floatVec;
 }
 
-std::vector<GLuint> ModelLoader::GetIndices(nlohmann::json accessor)
+std::vector<uint32_t> ModelLoader::GetIndices(nlohmann::json accessor)
 {
-	std::vector<GLuint> indices;
+	std::vector<uint32_t> indices;
 
 	// Get properties from the accessor
-	unsigned int buffViewInd = accessor.value("bufferView", 0);
-	unsigned int count = accessor["count"];
-	unsigned int accByteOffset = accessor.value("byteOffset", 0);
-	unsigned int componentType = accessor["componentType"];
+	uint32_t buffViewInd = accessor.value("bufferView", 0);
+	uint32_t count = accessor["count"];
+	uint32_t accByteOffset = accessor.value("byteOffset", 0);
+	uint32_t componentType = accessor["componentType"];
 
 	// Get properties from the bufferView
 	nlohmann::json bufferView = JSONData["bufferViews"][buffViewInd];
-	unsigned int byteOffset = bufferView.value("byteOffset", 0);
+	uint32_t byteOffset = bufferView.value("byteOffset", 0);
 
-	// Get indices with regards to their type: unsigned int, unsigned short, or short
-	unsigned int beginningOfData = byteOffset + accByteOffset;
+	// Get indices with regards to their type: uint32_t, uint16_t, or short
+	uint32_t beginningOfData = byteOffset + accByteOffset;
 	if (componentType == 5125)
 	{
-		for (unsigned int i = beginningOfData; i < byteOffset + accByteOffset + count * 4; i)
+		for (uint32_t i = beginningOfData; i < byteOffset + accByteOffset + count * 4; i)
 		{
-			unsigned char bytes[] = { Data[i++], Data[i++], Data[i++], Data[i++] };
-			unsigned int value;
-			std::memcpy(&value, bytes, sizeof(unsigned int));
-			indices.push_back((GLuint)value);
+			uint8_t bytes[] = { Data[i++], Data[i++], Data[i++], Data[i++] };
+			uint32_t value;
+			std::memcpy(&value, bytes, sizeof(uint32_t));
+			indices.push_back(value);
 		}
 	}
 	else if (componentType == 5123)
 	{
-		for (unsigned int i = beginningOfData; i < byteOffset + accByteOffset + count * 2; i)
+		for (uint32_t i = beginningOfData; i < byteOffset + accByteOffset + count * 2; i)
 		{
-			unsigned char bytes[] = { Data[i++], Data[i++] };
-			unsigned short value;
-			std::memcpy(&value, bytes, sizeof(unsigned short));
-			indices.push_back((GLuint)value);
+			uint8_t bytes[] = { Data[i++], Data[i++] };
+			uint16_t value;
+			std::memcpy(&value, bytes, sizeof(uint16_t));
+			indices.push_back(value);
 		}
 	}
 	else if (componentType == 5122)
 	{
-		for (unsigned int i = beginningOfData; i < byteOffset + accByteOffset + count * 2; i)
+		for (uint32_t i = beginningOfData; i < byteOffset + accByteOffset + count * 2; i)
 		{
-			unsigned char bytes[] = { Data[i++], Data[i++] };
+			uint8_t bytes[] = { Data[i++], Data[i++] };
 			short value;
-			std::memcpy(&value, bytes, sizeof(short));
-			indices.push_back((GLuint)value);
+			std::memcpy(&value, bytes, sizeof(uint16_t));
+			indices.push_back(value);
 		}
 	}
 
@@ -297,7 +336,7 @@ std::vector<Texture*> ModelLoader::GetTextures()
 	std::string fileDirectory = (std::string)EngineJsonConfig["ResourcesDirectory"] + fileStr.substr(0, fileStr.find_last_of('/') + 1);
 
 	// Go over all images
-	for (unsigned int i = 0; i < JSONData["images"].size(); i++)
+	for (uint32_t i = 0; i < JSONData["images"].size(); i++)
 	{
 		// uri of current texture
 		std::string texPath = JSONData["images"][i]["uri"];
@@ -306,9 +345,9 @@ std::vector<Texture*> ModelLoader::GetTextures()
 
 		// Check if the texture has already been loaded
 		bool skip = false;
-		unsigned int OldTextureIndex = 0;
+		uint32_t OldTextureIndex = 0;
 
-		for (unsigned int j = 0; j < LoadedTexturePaths.size(); j++)
+		for (uint32_t j = 0; j < LoadedTexturePaths.size(); j++)
 		{
 			if (LoadedTexturePaths[j] == texPath)
 			{
@@ -322,16 +361,19 @@ std::vector<Texture*> ModelLoader::GetTextures()
 		// If the texture has been loaded, skip this
 		if (!skip)
 		{
-			TextureType TexType = TextureType::NOTASSIGNED;
+			MaterialTextureType TexType = MaterialTextureType::NotAssigned;
 
-			if (texPath.find("baseColor") != std::string::npos || texPath.find("diffuse") != std::string::npos) {
-				TexType = TextureType::DIFFUSE;
-			}
-			else if (texPath.find("metallicRoughness") != std::string::npos || texPath.find("specular") != std::string::npos) {
-				TexType = TextureType::SPECULAR;
-			}
-			else {
-				Debug::Log(std::vformat("Could not determine how texture '{}' is meant to be used!", std::make_format_args(texPath)));
+			// TODO: set usage based on how it's defined in the file itself
+			if (texPath.find("baseColor") != std::string::npos || texPath.find("diffuse") != std::string::npos)
+				TexType = MaterialTextureType::Diffuse;
+			else if (texPath.find("metallicRoughness") != std::string::npos || texPath.find("specular") != std::string::npos)
+				TexType = MaterialTextureType::Specular;
+			else
+			{
+				Debug::Log(std::vformat(
+					"Could not determine how texture '{}' is meant to be used!",
+					std::make_format_args(texPath)
+				));
 
 				continue;
 			}
@@ -348,9 +390,8 @@ std::vector<Texture*> ModelLoader::GetTextures()
 
 			textures.push_back(texture);
 		}
-		else {
+		else
 			textures.push_back(LoadedTextures[OldTextureIndex]);
-		}
 	}
 
 	return textures;
@@ -389,21 +430,20 @@ std::vector<glm::vec2> ModelLoader::GroupFloatsVec2(std::vector<float> floatVec)
 	}
 	return vectors;
 }
+
 std::vector<glm::vec3> ModelLoader::GroupFloatsVec3(std::vector<float> floatVec)
 {
 	std::vector<glm::vec3> vectors;
 	for (int i = 0; i < floatVec.size(); i)
-	{
 		vectors.push_back(glm::vec3(floatVec[i++], floatVec[i++], floatVec[i++]));
-	}
+
 	return vectors;
 }
 std::vector<glm::vec4> ModelLoader::GroupFloatsVec4(std::vector<float> floatVec)
 {
 	std::vector<glm::vec4> vectors;
 	for (int i = 0; i < floatVec.size(); i)
-	{
 		vectors.push_back(glm::vec4(floatVec[i++], floatVec[i++], floatVec[i++], floatVec[i++]));
-	}
+
 	return vectors;
 }

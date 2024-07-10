@@ -1,8 +1,13 @@
-#include<FileRW.hpp>
+#include<fstream>
+#include<format>
 
-std::string FileRW::ReadFile(std::string FilePath, bool* DoesFileExist)
+#include"FileRW.hpp"
+#include"GlobalJsonConfig.hpp"
+#include"Debug.hpp"
+
+std::string GetLocalizedFilePath(std::string NonLocalizedPath)
 {
-	std::string Path = std::string(FilePath);
+	std::string Path = NonLocalizedPath;
 
 	// TODO: allow paths specified in resource files (eg materials and levels etc) to not have to start from the root
 	// and start from resources/ automatically
@@ -15,8 +20,17 @@ std::string FileRW::ReadFile(std::string FilePath, bool* DoesFileExist)
 	}
 	catch (nlohmann::json::type_error e)
 	{
-		printf("err: %s\n", e.what());
+		const char* whatStr = e.what();
+		Debug::Log(std::vformat("Error localizing file path: {}", std::make_format_args(whatStr)));
 	}
+
+	return Path;
+}
+
+std::string FileRW::ReadFile(std::string FilePath, bool* DoesFileExist)
+{
+	std::string Path = std::string(FilePath);
+	Path = GetLocalizedFilePath(Path);
 
 	std::ifstream File(Path, std::ios::binary);
 
@@ -51,7 +65,7 @@ std::string FileRW::ReadFile(std::string FilePath, bool* DoesFileExist)
 
 void FileRW::WriteFile(const char* FilePath, std::string FileContents, bool InResourcesDirectory)
 {
-	std::string Path = FilePath;
+	std::string Path = InResourcesDirectory ? GetLocalizedFilePath(FilePath) : FilePath;
 
 	Debug::Log("Writing file: '" + Path + "'");
 

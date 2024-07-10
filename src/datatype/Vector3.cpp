@@ -1,4 +1,6 @@
-#include<datatype/Vector3.hpp>
+#include<glm/geometric.hpp>
+
+#include"datatype/Vector3.hpp"
 
 Vector3& Vector3::ZERO = *new Vector3(0.f, 0.f, 0.f);
 Vector3& Vector3::UP = *new Vector3(0.f, 1.f, 0.f);
@@ -36,22 +38,28 @@ Vector3::Vector3() {
 
 double Vector3::Dot(Vector3 OtherVec)
 {
-	double Product = 0.f;
+	/*double Product = 0.f;
 
 	Product += this->X * OtherVec.X;
 	Product += this->Y * OtherVec.Y;
 	Product += this->Z * OtherVec.Z;
 
-	return Product;
+	return Product;*/
+
+	// Gave up
+	return glm::dot(glm::vec3(*this), glm::vec3(OtherVec));
 }
 
 Vector3 Vector3::Cross(Vector3 OtherVec)
 {
-	Vector3 CrossVec;
+	/*Vector3 CrossVec;
 
 	CrossVec.X = this->Y * OtherVec.Z - this->Z * OtherVec.Y;
 	CrossVec.Y = this->Z * OtherVec.X - this->X * OtherVec.Z;
 	CrossVec.Z = this->X * OtherVec.Y - this->Y * OtherVec.X;
 
-	return CrossVec;
+	return CrossVec;*/
+
+	// Gave up
+	return glm::cross(glm::vec3(*this), glm::vec3(OtherVec));
 }

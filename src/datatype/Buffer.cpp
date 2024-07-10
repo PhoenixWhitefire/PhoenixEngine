@@ -1,4 +1,7 @@
-#include<datatype/Buffer.hpp>
+#include<string>
+#include<glad/gl.h>
+
+#include"datatype/Buffer.hpp"
 
 VBO::VBO()
 {
@@ -7,13 +10,13 @@ VBO::VBO()
 	glBufferData(GL_ARRAY_BUFFER, 0, {}, GL_STREAM_DRAW);
 }
 
-void VBO::SetBufferData(std::vector<Vertex>& vertices)
+void VBO::SetBufferData(std::vector<Vertex>& vertices) const
 {
 	this->Bind();
 	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STREAM_DRAW);
 }
 
-void VBO::Bind()
+void VBO::Bind() const
 {
 	glBindBuffer(GL_ARRAY_BUFFER, this->ID);
 }
@@ -23,7 +26,7 @@ void VBO::Unbind()
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-void VBO::Delete()
+void VBO::Delete() const
 {
 	glDeleteBuffers(1, &this->ID);
 }
@@ -41,7 +44,7 @@ void VAO::LinkAttrib(VBO& VertexBuffer, GLuint Layout, GLuint Components, GLenum
 	VertexBuffer.Unbind();
 }
 
-void VAO::Bind()
+void VAO::Bind() const
 {
 	glBindVertexArray(this->ID);
 }
@@ -51,7 +54,7 @@ void VAO::Unbind()
 	glBindVertexArray(0);
 }
 
-void VAO::Delete()
+void VAO::Delete() const
 {
 	glDeleteVertexArrays(1, &this->ID);
 }
@@ -63,13 +66,13 @@ EBO::EBO()
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 0, {}, GL_STREAM_DRAW);
 }
 
-void EBO::SetBufferData(std::vector<GLuint>& indices)
+void EBO::SetBufferData(std::vector<GLuint>& indices) const
 {
 	this->Bind();
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLuint), indices.data(), GL_STREAM_DRAW);
 }
 
-void EBO::Bind()
+void EBO::Bind() const
 {
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->ID);
 }
@@ -79,7 +82,7 @@ void EBO::Unbind()
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
-void EBO::Delete()
+void EBO::Delete() const
 {
 	glDeleteBuffers(1, &this->ID);
 }
@@ -114,8 +117,8 @@ FBO::FBO(SDL_Window* Window, int Width, int Height, int MSSamples, bool AttachRe
 		glTexParameteri(Binding, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(Binding, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-		glTexParameteri(Binding, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-		glTexParameteri(Binding, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+		glTexParameteri(Binding, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(Binding, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	}
 
 	this->Bind();
@@ -163,7 +166,7 @@ FBO::FBO(SDL_Window* Window, int Width, int Height, int MSSamples, bool AttachRe
 	//	throw(std::vformat("Could not create a framebuffer: OGL error ID {}", std::make_format_args((int)FBOStatus)));
 }
 
-void FBO::Bind()
+void FBO::Bind() const
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, this->ID);
 }
@@ -173,7 +176,7 @@ void FBO::Unbind()
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void FBO::BindTexture()
+void FBO::BindTexture() const
 {
 	glBindTexture(/*this->MSAASamples > 0 ? GL_TEXTURE_2D_MULTISAMPLE : */ GL_TEXTURE_2D, this->TextureID);
 }
@@ -183,7 +186,7 @@ void FBO::UnbindTexture()
 	glBindTexture(/*this->MSAASamples > 0 ? GL_TEXTURE_2D_MULTISAMPLE : */ GL_TEXTURE_2D, 0);
 }
 
-void FBO::Delete()
+void FBO::Delete() const
 {
 	glDeleteFramebuffers(1, &this->ID);
 	glDeleteRenderbuffers(1, &this->ID);

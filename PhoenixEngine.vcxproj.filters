@@ -897,9 +897,6 @@
     <ClInclude Include="include\Engine.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\EntityComponent.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\FileRW.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -930,16 +927,10 @@
     <ClInclude Include="include\datatype\GameObject.hpp">
       <Filter>Header Files\datatype</Filter>
     </ClInclude>
-    <ClInclude Include="include\datatype\Material.hpp">
-      <Filter>Header Files\datatype</Filter>
-    </ClInclude>
     <ClInclude Include="include\datatype\Mesh.hpp">
       <Filter>Header Files\datatype</Filter>
     </ClInclude>
     <ClInclude Include="include\datatype\ValueRange.hpp">
-      <Filter>Header Files\datatype</Filter>
-    </ClInclude>
-    <ClInclude Include="include\datatype\ValueRange.ipp">
       <Filter>Header Files\datatype</Filter>
     </ClInclude>
     <ClInclude Include="include\datatype\Vector2.hpp">
@@ -958,9 +949,6 @@
       <Filter>Header Files\render</Filter>
     </ClInclude>
     <ClInclude Include="include\render\TextureManager.hpp">
-      <Filter>Header Files\render</Filter>
-    </ClInclude>
-    <ClInclude Include="include\render\Camera.hpp">
       <Filter>Header Files\render</Filter>
     </ClInclude>
     <ClInclude Include="include\gameobject\Light.hpp">
@@ -990,8 +978,38 @@
     <ClInclude Include="include\editor\intersectionlib.hpp">
       <Filter>Header Files\editor</Filter>
     </ClInclude>
-    <ClInclude Include="include\editor\editor.hpp">
+    <ClInclude Include="include\editor\Editor.hpp">
       <Filter>Header Files\editor</Filter>
+    </ClInclude>
+    <ClInclude Include="include\render\Material.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\gameobject\Camera.hpp">
+      <Filter>Header Files\gameobject</Filter>
+    </ClInclude>
+    <ClInclude Include="include\gameobject\Workspace.hpp">
+      <Filter>Header Files\gameobject</Filter>
+    </ClInclude>
+    <ClInclude Include="include\gameobject\Script.hpp">
+      <Filter>Header Files\gameobject</Filter>
+    </ClInclude>
+    <ClInclude Include="..\LuauLib\VM\include\lua.h">
+      <Filter>Vendor Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\LuauLib\Compiler\include\luacode.h">
+      <Filter>Vendor Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\LuauLib\Compiler\include\Luau\Compiler.h">
+      <Filter>Vendor Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\LuauLib\Common\include\Luau\Common.h">
+      <Filter>Vendor Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\LuauLib\Ast\include\Luau\Ast.h">
+      <Filter>Vendor Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\LuauLib\Common\include\Luau\Bytecode.h">
+      <Filter>Vendor Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1025,9 +1043,6 @@
     <ClCompile Include="vendor\imgui\imgui_widgets.cpp">
       <Filter>Vendor Files</Filter>
     </ClCompile>
-    <ClCompile Include="include\datatype\Event.cpp">
-      <Filter>Header Files\datatype</Filter>
-    </ClCompile>
     <ClCompile Include="src\AnimationService.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -1038,9 +1053,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Engine.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\EntityComponent.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\FileRW.cpp">
@@ -1067,9 +1079,6 @@
     <ClCompile Include="src\datatype\GameObject.cpp">
       <Filter>Source Files\datatype</Filter>
     </ClCompile>
-    <ClCompile Include="src\datatype\Material.cpp">
-      <Filter>Source Files\datatype</Filter>
-    </ClCompile>
     <ClCompile Include="src\datatype\Mesh.cpp">
       <Filter>Source Files\datatype</Filter>
     </ClCompile>
@@ -1092,9 +1101,6 @@
       <Filter>Source Files\render</Filter>
     </ClCompile>
     <ClCompile Include="src\render\TextureManager.cpp">
-      <Filter>Source Files\render</Filter>
-    </ClCompile>
-    <ClCompile Include="src\render\Camera.cpp">
       <Filter>Source Files\render</Filter>
     </ClCompile>
     <ClCompile Include="src\Main.cpp">
@@ -1121,11 +1127,23 @@
     <ClCompile Include="src\gameobject\Base3D.cpp">
       <Filter>Source Files\gameobject</Filter>
     </ClCompile>
-    <ClCompile Include="src\editor\editor.cpp">
+    <ClCompile Include="src\editor\Editor.cpp">
       <Filter>Source Files\editor</Filter>
     </ClCompile>
     <ClCompile Include="src\editor\intersectionlib.cpp">
       <Filter>Source Files\editor</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\Material.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gameobject\Camera.cpp">
+      <Filter>Source Files\gameobject</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gameobject\Workspace.cpp">
+      <Filter>Source Files\gameobject</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gameobject\Script.cpp">
+      <Filter>Source Files\gameobject</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1462,10 +1480,10 @@
     <None Include="resources\shaders\base2d.vert">
       <Filter>Resource Files\shaders</Filter>
     </None>
-    <None Include="resources\shaders\base3d.frag">
+    <None Include="resources\shaders\worldUber.frag">
       <Filter>Resource Files\shaders</Filter>
     </None>
-    <None Include="resources\shaders\base3d.vert">
+    <None Include="resources\shaders\worldUber.vert">
       <Filter>Resource Files\shaders</Filter>
     </None>
     <None Include="resources\shaders\dlshadowmap.frag">

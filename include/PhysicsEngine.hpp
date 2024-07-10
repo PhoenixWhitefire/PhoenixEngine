@@ -1,10 +1,7 @@
 #pragma once
 
-#include<datatype/GameObject.hpp>
-#include<gameobject/Base3D.hpp>
-
+#include"gameobject/Base3D.hpp"
 #include<datatype/Vector3.hpp>
-#include<glm/gtc/matrix_transform.hpp>
 
 class PhysicsSolver
 {

@@ -1,4 +1,5 @@
-#include<BaseMeshes.hpp>
+#include"BaseMeshes.hpp"
+#include"datatype/Vector3.hpp"
 
 Mesh* BaseMeshes::m_Cube = nullptr;
 
@@ -52,7 +53,7 @@ Mesh* BaseMeshes::Cube() {
 	};
 
 	// counter-clockwise order
-	std::vector<GLuint> Indices = {
+	std::vector<uint32_t> Indices = {
 		// front face
 		0, 1, 2,
 		2, 3, 0,

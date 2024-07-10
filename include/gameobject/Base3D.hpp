@@ -1,19 +1,22 @@
 #pragma once
 
-#include<datatype/GameObject.hpp>
-#include<datatype/Mesh.hpp>
-
-#include<datatype/Color.hpp>
-#include<datatype/Vector3.hpp>
-
 #include<glm/matrix.hpp>
 
-class Object_Base3D : public GameObject {
+#include"datatype/GameObject.hpp"
+#include"datatype/Mesh.hpp"
+
+#include"datatype/Color.hpp"
+#include"datatype/Vector3.hpp"
+#include"render/Material.hpp"
+
+enum class FaceCullingMode { None, BackFace, FrontFace };
+
+class Object_Base3D : public GameObject
+{
 public:
-	std::string ClassName = "Base3D";
+	Object_Base3D();
 
 	virtual Mesh* GetRenderMesh();
-	virtual void SetRenderMesh(Mesh);
 
 	glm::mat4 Matrix = glm::mat4(1.0f);
 	Vector3 Size = Vector3(1.0f, 1.0f, 1.0f);
@@ -27,9 +30,11 @@ public:
 
 	Color ColorRGB = Color(1.0f, 1.0f, 1.0f);
 
-	std::string Material = "";
+	RenderMaterial* Material;
 
 	bool ComputePhysics = false;
+
+	FaceCullingMode FaceCulling = FaceCullingMode::BackFace;
 
 protected:
 	Mesh RenderMesh;
