@@ -1,4 +1,4 @@
 # PhoenixEngine
 garbage spaghett
 
-`main` will only be updated when this PoS is stable, not that `main` is stable anyway. Please download from `dev` instead.
+`dev` has all the latest stuff, but `main` is not necessarily more stable. Just download from `dev`. I'll push changes to `main` whenever I feel like it, like Today.
