@@ -5,6 +5,7 @@
 #include"Debug.hpp"
 
 static uint32_t NumGameObjects = 0;
+std::shared_ptr<GameObject> GameObject::DataModel = nullptr;
 
 GameObjectFactory::GameObjectMapType* GameObjectFactory::GameObjectMap = new GameObjectMapType();
 
@@ -130,6 +131,23 @@ ProcList_t GameObject::GetProcedures()
 	return this->m_procedures;
 }
 
+PropInfo* GameObject::GetProperty(std::string PropName)
+{
+	auto it = this->m_properties.find(PropName);
+
+	if (it == m_properties.end())
+		throw(std::vformat("'{}' is not a valid property for class {}!", std::make_format_args(PropName, this->ClassName)));
+	else
+		return &it->second;
+}
+
+void GameObject::SetProperty(std::string PropName, GenericType gt)
+{
+	auto prop = this->GetProperty(PropName);
+
+	prop->Reflection.Setter(gt);
+}
+
 /*
 GameObject* GameObjectFactory::CreateGameObject(std::string ObjectClass)
 {
@@ -142,6 +160,21 @@ GameObject* GameObjectFactory::CreateGameObject(const char* ObjectClass)
 	return GameObjectFactory::CreateGameObject(ObjClass);
 }
 */
+
+std::string GameObject::GetFullName()
+{
+	std::string FullName = this->Name;
+	auto curInst = this;
+
+	while (curInst->Parent)
+	{
+		auto& parent = curInst->Parent;
+		FullName = parent->Name + "." + FullName;
+		curInst = parent.get();
+	}
+
+	return FullName;
+}
 
 std::vector<std::shared_ptr<GameObject>> GameObject::GetChildren()
 {

@@ -2,10 +2,10 @@ Running OpenGL version 4.6
 Renderer initialized
 Editor object was created
 The Map Version is 2
-Deserialize warning: Member 'SourceFile' is not defined in the API for the Class Script (Name: 'TestScript')!
+Deserialize warning: Member 'Position' is not defined in the API for the Class Primitive (Name: 'Primitive')!
 Loaded map file 'levels/dev_fmtv2.world'
 Editor init done
-Directional light shadowmap texture id: 8
+Directional light shadowmap texture id: 7
 Main program loop start...
 GL Debug callback:
 	Type: Low-performance warning
@@ -14,4 +14,8 @@ GL Debug callback:
 	Source: OpenGL API
 	Error ID: 131218
 
+Changing window resolution: (1280, 720) -> (1293, 720)
+Changing window resolution: (1293, 720) -> (1317, 720)
+Changing window resolution: (1317, 720) -> (1536, 793)
+Changing window resolution: (1536, 793) -> (1317, 720)
 Application closing...

@@ -5,6 +5,7 @@
 #include"editor/intersectionlib.hpp"
 #include"gameobject/GameObjects.hpp"
 #include"Debug.hpp"
+#include"UserInput.hpp"
 
 static char* NewObjectClass = (char*)malloc(32);
 static std::vector<std::shared_ptr<GameObject>> EditorCreatedObjs;
@@ -12,6 +13,9 @@ static const char* ParentString = "[Parent]";
 static double InvalidObjectErrTimeRemaining = 0.f;
 
 static std::shared_ptr<GameObject> CurrentUIHierarchyRoot;
+
+static bool prevWantKeyboard = false;
+static std::unordered_map<std::string, GenericType> prevVals;
 
 Editor::Editor()
 {
@@ -123,6 +127,8 @@ static bool ImGuiHierarchyItemsGetter(void* Data, int Index, const char** OutTex
 void Editor::RenderUI()
 {
 	ImGui::Begin("Editor");
+
+	bool wantKeyboard = ImGui::GetIO().WantCaptureKeyboard;
 
 	ImGui::InputText("New obj class", NewObjectClass, 32);
 	bool Create = ImGui::Button("Create obj");
@@ -248,6 +254,7 @@ void Editor::RenderUI()
 			ImGui::InputDouble(name, &curVal.Double);
 			
 			getSet.Setter(curVal);
+
 			break;
 		}
 
@@ -256,6 +263,7 @@ void Editor::RenderUI()
 			ImGui::InputInt(name, &curVal.Integer);
 
 			getSet.Setter(curVal);
+
 			break;
 		}
 
@@ -285,11 +293,14 @@ void Editor::RenderUI()
 			curVal.Vector3.Z = entry[2];
 
 			getSet.Setter(curVal);
+
 			break;
 		}
 
 		}
 	}
+
+	prevWantKeyboard = ImGui::GetIO().WantCaptureKeyboard;
 
 	ImGui::End();
 

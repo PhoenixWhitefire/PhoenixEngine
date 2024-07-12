@@ -200,7 +200,10 @@ EngineObject::EngineObject(Vector2 WindowStartSize, SDL_Window** WindowPtr)
 
 	ShaderProgram::BaseShaderPath = "shaders/";
 
-	this->Game = std::dynamic_pointer_cast<Object_Workspace>(GameObjectFactory::CreateGameObject("Workspace"));
+	auto DataModel = GameObjectFactory::CreateGameObject("Workspace");
+
+	this->Game = std::dynamic_pointer_cast<Object_Workspace>(DataModel);
+	GameObject::DataModel = DataModel;
 
 	this->Shaders3D = new ShaderProgram("worldUber.vert", "worldUber.frag");
 
@@ -374,23 +377,7 @@ static double GetRunningTime()
 
 void EngineObject::Start()
 {
-	Texture* LoadingScreen = new Texture();
-	LoadingScreen->ImagePath = "resources/textures/MISSING2_MaximumADHD_status_1665776378145304579.png";
-
-	TextureManager::Get()->CreateTexture2D(LoadingScreen, false);
-
-	this->PostProcessingShaders->Activate();
-
-	glUniform1i(glGetUniformLocation(this->PostProcessingShaders->ID, "Texture"), 0);
-
-	glBindVertexArray(RectangleVAO);
-	glDisable(GL_DEPTH_TEST);
-
-	glActiveTexture(GL_TEXTURE0);
-	this->m_renderer->m_framebuffer->BindTexture();
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-
-	this->Physics->WorldGravity = Vector3::DOWN * 9.8f; // Earth's gravity is 9.8N... I think?
+	this->Physics->WorldGravity = Vector3::DOWN * 9.8f; // Earth's gravity is 9.8N
 
 	double LastTime = this->RunningTime;
 
@@ -477,16 +464,6 @@ void EngineObject::Start()
 
 	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
-	this->PostProcessingShaders->Activate();
-
-	glUniform1i(glGetUniformLocation(this->PostProcessingShaders->ID, "Texture"), 0);
-
-	glBindVertexArray(RectangleVAO);
-	glDisable(GL_DEPTH_TEST);
-
-	this->m_renderer->m_framebuffer->BindTexture();
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-
 	//Texture HDRISkyboxTexture("Assets/Textures/hdri_sky_1.jpeg", "Diffuse", 0);
 
 	ShaderProgram SkyboxShaders("skybox.vert", "skybox.frag");
@@ -496,16 +473,6 @@ void EngineObject::Start()
 	SkyboxShaders.Activate();
 
 	glUniform1i(glGetUniformLocation(SkyboxShaders.ID, "SkyCubemap"), 0);
-
-	this->PostProcessingShaders->Activate();
-
-	glUniform1i(glGetUniformLocation(this->PostProcessingShaders->ID, "Texture"), 0);
-
-	glBindVertexArray(RectangleVAO);
-	glDisable(GL_DEPTH_TEST);
-
-	this->m_renderer->m_framebuffer->BindTexture();
-	glDrawArrays(GL_TRIANGLES, 0, 6);
 
 	int ShadowMapWidth = 2048;
 	int ShadowMapHeight = 2048;
@@ -538,17 +505,6 @@ void EngineObject::Start()
 
 	SDL_PollEvent(&PollingEvent);
 
-	this->PostProcessingShaders->Activate();
-
-	glUniform1i(glGetUniformLocation(this->PostProcessingShaders->ID, "Texture"), 0);
-
-	glBindVertexArray(RectangleVAO);
-	glDisable(GL_DEPTH_TEST);
-
-	glActiveTexture(GL_TEXTURE0);
-	this->m_renderer->m_framebuffer->BindTexture();
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-
 	float LastFrame = GetRunningTime();
 
 	double FrameStart = 0.0f;
@@ -564,11 +520,6 @@ void EngineObject::Start()
 	this->m_renderer->m_framebuffer->Unbind();
 	this->m_renderer->m_framebuffer->UnbindTexture();
 
-	// Reset FBO texture from loading screen
-	this->PostProcessingShaders->Activate();
-
-	glUniform1i(glGetUniformLocation(this->PostProcessingShaders->ID, "Texture"), 0);
-
 	Texture DistortionTexture;
 	DistortionTexture.ImagePath = "resources/textures/MISSING2_MaximumADHD_status_1665776378145304579.png";
 	TextureManager::Get()->CreateTexture2D(&DistortionTexture, false);
@@ -577,6 +528,8 @@ void EngineObject::Start()
 	glBindTexture(GL_TEXTURE_2D, DistortionTexture.Identifier);
 
 	glUniform1i(glGetUniformLocation(this->PostProcessingShaders->ID, "DistortionTexture"), 17);
+
+	Mesh SkyboxMesh = Mesh(SkyboxVertices, SkyboxIndices);
 
 	Debug::Log("Main program loop start...");
 
@@ -606,8 +559,6 @@ void EngineObject::Start()
 		this->m_particleEmitters.clear();
 
 		this->Shaders3D->Activate();
-
-		Mesh SkyboxMesh = Mesh(SkyboxVertices, SkyboxIndices);
 
 		while (SDL_PollEvent(&PollingEvent) != 0)
 		{
@@ -648,7 +599,7 @@ void EngineObject::Start()
 
 		this->m_LightIndex = 0;
 
-		glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
+		glClearColor(0.086f, 0.105f, 0.21f, 1.0f);
 		glClear(/*GL_COLOR_BUFFER_BIT | */ GL_DEPTH_BUFFER_BIT);
 
 		double DeltaTime = CurrentTime - LastTime;
@@ -719,18 +670,10 @@ void EngineObject::Start()
 
 		//glBindTexture(GL_TEXTURE_CUBE_MAP, ShadowMapFBO.TextureID);
 
-		// Bind framebuffer
-		if (EngineJsonConfig.value("postfx_enabled", false))
-			this->m_renderer->m_framebuffer->Bind();
-
 		auto fboStatMain = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 
 		if (fboStatMain != GL_FRAMEBUFFER_COMPLETE)
 			Debug::Log(std::vformat("fboStatMainNotComplete ID: {}", std::make_format_args(fboStatMain)));
-
-		// TODO required?
-		glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		double AspectRatio = (float)this->WindowSizeX / (float)this->WindowSizeY;
 
@@ -747,8 +690,6 @@ void EngineObject::Start()
 		);
 
 		//ShadowMapFBO.BindTexture();
-
-		//After drawing 3D scene
 
 		glActiveTexture(GL_TEXTURE0);
 
@@ -783,7 +724,11 @@ void EngineObject::Start()
 
 		glBindTexture(GL_TEXTURE_CUBE_MAP, SkyboxCubemap);
 		
-		this->m_renderer->DrawMesh(&SkyboxMesh, &SkyboxShaders, Vector3::ONE, view * projection, FaceCullingMode::FrontFace);
+		if (EngineJsonConfig.value("postfx_enabled", false))
+			m_renderer->m_framebuffer->Bind();
+
+		// Skybox mesh winding order means that "BackFace" is outside the mesh.
+		this->m_renderer->DrawMesh(&SkyboxMesh, &SkyboxShaders, Vector3::ONE, projection * view, FaceCullingMode::BackFace);
 
 		glDepthFunc(GL_LESS);
 
@@ -805,11 +750,10 @@ void EngineObject::Start()
 
 		//Do framebuffer stuff after everything is drawn
 
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		this->m_renderer->m_framebuffer->Unbind();
 
 		if (EngineJsonConfig.value("postfx_enabled", false))
 		{
-			this->m_renderer->m_framebuffer->Unbind();
 			this->PostProcessingShaders->Activate();
 
 			auto VignetteBlurLoc = glGetUniformLocation(PostProcessingShaders->ID, "ScreenEdgeBlurEnabled");
@@ -833,21 +777,21 @@ void EngineObject::Start()
 			}
 
 			glUniform1f(TimeLoc, RunningTime);
+			glUniform1i(glGetUniformLocation(PostProcessingShaders->ID, "Texture"), 1);
+			glUniform1i(glGetUniformLocation(PostProcessingShaders->ID, "DistortionTexture"), 2);
 
 			glBindVertexArray(RectangleVAO);
 			glDisable(GL_DEPTH_TEST);
 
 			glActiveTexture(GL_TEXTURE0);
-			this->m_renderer->m_framebuffer->BindTexture();
+			m_renderer->m_framebuffer->BindTexture();
+
+			glActiveTexture(GL_TEXTURE2);
+			glBindTexture(GL_TEXTURE_2D, DistortionTexture.Identifier);
+			
 			glDrawArrays(GL_TRIANGLES, 0, 6);
 
 			glEnable(GL_DEPTH_TEST);
-
-			this->m_renderer->m_framebuffer->UnbindTexture();
-		}
-		else
-		{
-			this->m_renderer->m_framebuffer->Unbind();
 		}
 
 		// End of frame

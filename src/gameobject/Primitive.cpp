@@ -3,7 +3,7 @@
 
 DerivedObjectRegister<Object_Primitive> Object_Primitive::RegisterClassAs("Primitive");
 
-Mesh* GetPrimitiveMesh(PrimitiveShape Type)
+static Mesh* GetPrimitiveMesh(PrimitiveShape Type)
 {
 	Mesh* PrimitiveMesh;
 
@@ -33,6 +33,8 @@ Object_Primitive::Object_Primitive()
 	this->ClassName = "Primitive";
 
 	this->RenderMesh = *GetPrimitiveMesh(this->Shape);
+
+	this->Material = RenderMaterial::GetMaterial("plastic");
 
 	m_properties.insert(std::pair(
 		std::string("Shape"),

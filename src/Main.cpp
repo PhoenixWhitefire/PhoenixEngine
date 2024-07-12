@@ -88,7 +88,7 @@ static void HandleInputs(std::tuple<EngineObject*, double, double> Data)
 	glm::vec3 ForwardVec = glm::vec3(Camera->Matrix[0][2], Camera->Matrix[1][2], Camera->Matrix[2][2]);
 	glm::vec3 UpVec = Vector3::UP;
 	
-	UserInput::InputBeingSunk = m_imGuiIO->WantCaptureKeyboard || m_imGuiIO->WantCaptureMouse || m_imGuiIO->WantTextInput;
+	UserInput::InputBeingSunk = m_imGuiIO->WantCaptureKeyboard;
 
 	if (!UserInput::InputBeingSunk)
 	{

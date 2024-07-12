@@ -9,6 +9,12 @@
 [Ll]ib/
 [Vv]endor/
 
+![Rr]esources/scripts/
+
+PROGRAMLOG.txt
+consolelog.txt
+console.log
+
 # Shortcuts
 *.lnk
 

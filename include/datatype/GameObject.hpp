@@ -80,9 +80,6 @@ public:
 	GameObject();
 	~GameObject();
 
-	//static GameObject* New(std::string Type);
-	//static GameObject* New(const char* Type);
-
 	std::vector<std::shared_ptr<GameObject>> GetChildren();
 	std::shared_ptr<GameObject> GetChildOfClass(std::string lass);
 
@@ -97,13 +94,19 @@ public:
 
 	PropList_t GetProperties();
 	ProcList_t GetProcedures();
+	PropInfo* GetProperty(std::string Name);
+	void SetProperty(std::string Name, GenericType gt);
 
 	GenericType GetName();
 	GenericType GetClassName();
 	GenericType GetEnabled();
 
+	std::string GetFullName();
+
 	void SetName(std::string);
 	void SetEnabled(bool);
+
+	static std::shared_ptr<GameObject> DataModel;
 
 	std::string Name = "GameObject";
 	std::string ClassName = "GameObject";

@@ -9,7 +9,7 @@ void Debug::Save()
 {
 	Debug::Log("Application closing...");
 
-	FileRW::WriteFile("./PROGRAMLOG.txt", Debug::ProgramLog, true);
+	FileRW::WriteFile("log.txt", Debug::ProgramLog, false);
 }
 
 void Debug::Log(std::string Message)
