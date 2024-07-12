@@ -1,0 +1,33 @@
+{
+  "brick": {
+    "diffuse": "./Assets/Textures/bricks.png"
+  },
+  "woodplanks": {
+    "diffuse": "./Assets/Textures/planks.png",
+    "specular": "./Assets/Textures/planksSpec.png"
+  },
+  "wood": {
+    "diffuse": "./Assets/Textures/wood.png"
+  },
+  "concrete": {
+    "diffuse": "./Assets/Textures/concrete.png"
+  },
+  "plastic": {
+    "diffuse": "./Assets/Textures/plastic.png"
+  },
+  "smoothplastic": {
+    "diffuse": "./Assets/Textures/plastic.png"
+  },
+  "metal": {
+    "diffuse": "./Assets/Textures/metal.png"
+  },
+  "diamondplate": {
+    "diffuse": "./Assets/Textures/diamondplate.jpg"
+  },
+  "corrodedmetal": {
+    "diffuse": "./Assets/Textures/corrodedmetal.png"
+  },
+  "slate": {
+    "diffuse": "./Assets/Textures/slate.jpg"
+  }
+}

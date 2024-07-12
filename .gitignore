@@ -4,12 +4,13 @@
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
 # Phoenix Engine
-[Rr]esources/
 [Vv]endor/
 [Ll]ib/
 [Vv]endor/
 
-![Rr]esources/scripts/
+[Rr]esources/models/
+[Rr]esources/levels/
+[Rr]esources/textures/
 
 PROGRAMLOG.txt
 consolelog.txt
