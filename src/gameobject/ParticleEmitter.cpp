@@ -26,7 +26,7 @@ Object_ParticleEmitter::Object_ParticleEmitter()
 	this->ClassName = "ParticleEmitter";
 
 	if (!Object_ParticleEmitter::s_ParticleShaders)
-		Object_ParticleEmitter::s_ParticleShaders = new ShaderProgram("particle.vert", "particle.frag");
+		Object_ParticleEmitter::s_ParticleShaders = ShaderProgram::GetShaderProgram("particle");
 
 	this->VertArray.Bind();
 

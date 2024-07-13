@@ -46,7 +46,7 @@ struct Scene_t
 	std::vector<MeshData_t> TransparentMeshData;
 	std::vector<LightData_t> LightData;
 
-	ShaderProgram* Shaders = (ShaderProgram*)nullptr;
+	std::vector<ShaderProgram*> UniqueShaders;
 };
 
 class Renderer

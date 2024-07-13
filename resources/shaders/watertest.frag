@@ -1,4 +1,4 @@
-// Uber shader for world geometry
+// Water test shader - 13/07/2024
 
 // TODO: Remove unnecessary variables
 // - 21/06/2024

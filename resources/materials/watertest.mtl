@@ -1,0 +1,5 @@
+{
+  "albedo": "textures/slate.jpg",
+  "specular": "textures/waterdistort.jpg",
+  "shaderprogram": "watertest"
+}

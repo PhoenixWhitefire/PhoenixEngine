@@ -16,6 +16,7 @@
 #include"ModelLoader.hpp"
 #include"MapLoader.hpp"
 
+// TODO: cleanup structure of public vs private
 class EngineObject
 {
 public:
@@ -80,7 +81,6 @@ public:
 	int WindowSizeY;
 
 	ShaderProgram* PostProcessingShaders;
-	ShaderProgram* Shaders3D;
 
 	Renderer* m_renderer;
 

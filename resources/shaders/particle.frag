@@ -1,4 +1,6 @@
-#version 330 core
+// Particle.frag - Particles
+
+#version 460 core
 
 uniform sampler2D Image;
 

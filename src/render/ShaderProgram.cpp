@@ -1,25 +1,74 @@
 #include<format>
 #include<glad/gl.h>
+#include<nljson.h>
 
 #include"render/ShaderProgram.hpp"
 #include"FileRW.hpp"
+#include"Debug.hpp"
 
-std::string ShaderProgram::BaseShaderPath = "";
-SDL_Window* ShaderProgram::Window = nullptr;
+static const std::string BaseShaderPath = "shaders/";
+std::unordered_map<std::string, ShaderProgram*> ShaderProgram::s_programs;
 
-ShaderProgram::ShaderProgram(std::string VertexShaderPath, std::string FragmentShaderPath, std::string GeometryShaderPath)
+ShaderProgram::ShaderProgram(std::string ProgramName)
 {
-	bool HasGeometryShader = GeometryShaderPath.length() > 0;
+	this->Name = ProgramName;
 
-	std::string VertexShaderStrSource = FileRW::ReadFile(ShaderProgram::BaseShaderPath + VertexShaderPath);
-	std::string FragmentShaderStrSource = FileRW::ReadFile(ShaderProgram::BaseShaderPath + FragmentShaderPath);
-	std::string GeometryShaderStrSource = HasGeometryShader ? FileRW::ReadFile(ShaderProgram::BaseShaderPath + GeometryShaderPath) : "";
+	bool ShpExists = true;
+	std::string ShpContents = FileRW::ReadFile(BaseShaderPath + ProgramName + ".shp", &ShpExists);
 
-	if (VertexShaderStrSource == "")
-		throw(std::vformat("Could not load VERTEX shader! File specified: {}", std::make_format_args(VertexShaderPath)));
+	if (!ShpExists)
+	{
+		if (ProgramName == "error")
+			throw("Cannot load the fallback Shader Program ('error.shp'), giving up.");
 
-	if (FragmentShaderStrSource == "")
-		throw(std::vformat("Could not load FRAGMENT shader! File specified: {}", std::make_format_args(VertexShaderPath)));
+		// TODO: a different function for error logging
+		// Should also fire a callback so that an Output can be implemented
+		// 13/07/2024
+		Debug::Log(std::vformat(
+			"**ERR** Shader program '{}' does not exist! Geometry will appear magenta",
+			std::make_format_args(ProgramName))
+		);
+
+		ShaderProgram* fallback = ShaderProgram::GetShaderProgram("error");
+
+		this->ID = fallback->ID;
+
+		return;
+	}
+
+	nlohmann::json ShpJson = nlohmann::json::parse(ShpContents);
+
+	bool HasGeometryShader = ShpJson.find("Geometry") != ShpJson.end();
+
+	bool VertexShdExists = true;
+	bool FragmentShdExists = true;
+	bool GeometryShdExists = true;
+
+	std::string VertexShaderPath = ShpJson.value("Vertex", "worldUber.vert");
+	std::string FragmentShaderPath = ShpJson.value("Fragment", "worldUber.frag");
+	std::string GeoShaderPath = ShpJson.value("Geometry", "");
+
+	std::string VertexShaderStrSource = FileRW::ReadFile(BaseShaderPath + VertexShaderPath, &VertexShdExists);
+	std::string FragmentShaderStrSource = FileRW::ReadFile(BaseShaderPath + FragmentShaderPath, &FragmentShdExists);
+	std::string GeometryShaderStrSource = HasGeometryShader ? FileRW::ReadFile(BaseShaderPath + GeoShaderPath, &GeometryShdExists) : "";
+
+	if (!VertexShdExists)
+		throw(std::vformat(
+			"Could not load Vertex shader for program {}! File specified: {}",
+			std::make_format_args(this->Name, VertexShaderPath)
+		));
+
+	if (!FragmentShdExists)
+		throw(std::vformat(
+			"Could not load Fragment shader for program {}! File specified: {}",
+			std::make_format_args(this->Name, FragmentShaderPath)
+		));
+
+	if (!GeometryShdExists)
+		throw(std::vformat(
+			"Could not load Geometry shader for program {}! File specified: {}",
+			std::make_format_args(this->Name, GeoShaderPath)
+		));
 
 	const char* VertexSource = VertexShaderStrSource.c_str();
 	const char* FragmentSource = FragmentShaderStrSource.c_str();
@@ -28,6 +77,10 @@ ShaderProgram::ShaderProgram(std::string VertexShaderPath, std::string FragmentS
 
 	GLuint VertexShader = glCreateShader(GL_VERTEX_SHADER);
 	GLuint FragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+
+	// TODO: Make a default fallback Geometry Shader so I don't have to bother with this -
+	// Looks a little too complicated rn tho
+	// 13/07/2024
 	GLuint GeometryShader = HasGeometryShader ? glCreateShader(GL_GEOMETRY_SHADER) : 0;
 
 	glShaderSource(VertexShader, 1, &VertexSource, NULL);
@@ -36,7 +89,6 @@ ShaderProgram::ShaderProgram(std::string VertexShaderPath, std::string FragmentS
 	if (HasGeometryShader)
 	{
 		glShaderSource(GeometryShader, 1, &GeometrySource, NULL);
-
 		glCompileShader(GeometryShader);
 
 		this->PrintErrors(GeometryShader, "geometry shader");
@@ -53,9 +105,8 @@ ShaderProgram::ShaderProgram(std::string VertexShaderPath, std::string FragmentS
 	glAttachShader(this->ID, VertexShader);
 	glAttachShader(this->ID, FragmentShader);
 	
-	if (HasGeometryShader) {
+	if (HasGeometryShader)
 		glAttachShader(this->ID, GeometryShader);
-	}
 	
 	glEnableVertexAttribArray(0);
 
@@ -67,12 +118,11 @@ ShaderProgram::ShaderProgram(std::string VertexShaderPath, std::string FragmentS
 	glDeleteShader(VertexShader);
 	glDeleteShader(FragmentShader);
 	
-	if (HasGeometryShader) {
+	if (HasGeometryShader)
 		glDeleteShader(GeometryShader);
-	}
 }
 
-void ShaderProgram::Activate()
+void ShaderProgram::Activate() const
 {
 	glUseProgram(this->ID);
 }
@@ -82,9 +132,8 @@ ShaderProgram::~ShaderProgram()
 	glDeleteProgram(this->ID);
 }
 
-void ShaderProgram::PrintErrors(uint32_t Object, const char* Type)
+void ShaderProgram::PrintErrors(uint32_t Object, const char* Type) const
 {
-
 	char InfoLog[1024];
 
 	if (Object != this->ID)
@@ -96,7 +145,10 @@ void ShaderProgram::PrintErrors(uint32_t Object, const char* Type)
 		{
 			glGetShaderInfoLog(Object, 1024, NULL, InfoLog);
 
-			std::string ErrorString = std::vformat("Error while compiling {}:\n{}", std::make_format_args(Type, InfoLog));
+			std::string ErrorString = std::vformat(
+				"Error while compiling {} for program {}:\n{}",
+				std::make_format_args(Type, this->Name, InfoLog)
+			);
 
 			throw(ErrorString);
 		}
@@ -114,4 +166,27 @@ void ShaderProgram::PrintErrors(uint32_t Object, const char* Type)
 			throw(std::vformat("Error while linking shader program:\n{}", std::make_format_args(InfoLog)));
 		}
 	}
+}
+
+ShaderProgram* ShaderProgram::GetShaderProgram(std::string ProgramName)
+{
+	auto it = s_programs.find(ProgramName);
+
+	if (it != s_programs.end())
+		return it->second;
+	else
+	{
+		ShaderProgram* NewProgram = new ShaderProgram(ProgramName);
+		s_programs.insert(std::pair(ProgramName, NewProgram));
+
+		return NewProgram;
+	}
+}
+
+void ShaderProgram::ClearAll()
+{
+	for (auto& it : s_programs)
+		delete it.second;
+
+	s_programs.clear();
 }

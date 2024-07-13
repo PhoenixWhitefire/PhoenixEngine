@@ -1,3 +1,4 @@
+#include<format>
 #include<nljson.h>
 
 #include"render/Material.hpp"
@@ -18,6 +19,8 @@ RenderMaterial::RenderMaterial()
 	this->DiffuseTextures[0]->ImagePath = "resources/" + MissingTexPath;
 	this->SpecularTextures[0]->ImagePath = "resources/" + MissingTexPath;
 
+	this->Shader = ShaderProgram::GetShaderProgram("worldUber");
+
 	TextureManager::Get()->CreateTexture2D(
 		this->DiffuseTextures[0]
 	);
@@ -26,7 +29,7 @@ RenderMaterial::RenderMaterial()
 RenderMaterial::RenderMaterial(std::string MaterialName)
 {
 	this->Name = MaterialName;
-	
+
 	bool matExists = true;
 	std::string FileData = FileRW::ReadFile("materials/" + MaterialName + ".mtl", &matExists);
 
@@ -34,16 +37,29 @@ RenderMaterial::RenderMaterial(std::string MaterialName)
 
 	if (matExists)
 	{
-		JSONMaterialData = nlohmann::json::parse(FileData);
+		try
+		{
+			JSONMaterialData = nlohmann::json::parse(FileData);
+		}
+		catch (nlohmann::json::parse_error e)
+		{
+			std::string errmsg = e.what();
+			throw(std::vformat("Parse error trying to load material {}: {}", std::make_format_args(MaterialName, errmsg)));
+		}
 	}
 	else
 	{
 		JSONMaterialData["albedo"] = "";
 
+		this->Shader = ShaderProgram::GetShaderProgram("error");
+
 		Debug::Log("Unknown material: '" + MaterialName + "'");
 
 		return;
 	}
+
+	std::string desiredShp = JSONMaterialData.value("shaderprogram", "worldUber");
+	this->Shader = ShaderProgram::GetShaderProgram(desiredShp);
 
 	this->DiffuseTextures.push_back(new Texture());
 

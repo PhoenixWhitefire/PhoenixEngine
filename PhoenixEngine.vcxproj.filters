@@ -1519,5 +1519,14 @@
     <None Include="resources\shaders\skybox.vert">
       <Filter>Resource Files\shaders</Filter>
     </None>
+    <None Include="resources\shaders\watertest.vert">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
+    <None Include="resources\shaders\watertest.geom">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
+    <None Include="resources\shaders\watertest.frag">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

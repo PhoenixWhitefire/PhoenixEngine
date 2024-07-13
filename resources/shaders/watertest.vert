@@ -1,4 +1,5 @@
-// Uber shader for world geometry
+// Water test VERTEX shader - wavy animations
+// 13/07/2024
 
 #version 460 core
 
@@ -12,6 +13,8 @@ uniform mat4 CameraMatrix;
 uniform mat4 Matrix = mat4(1.0f);
 uniform mat4 Scale = mat4(1.0f);
 
+uniform float Time = 0.f;
+
 out vec3 Frag_VertexColor;
 out vec2 Frag_UV;
 
@@ -22,7 +25,12 @@ out mat4 Frag_ModelMatrix;
 
 void main()
 {
-	Frag_CurrentPosition = vec3(Matrix * Scale * vec4(VertexPosition, 1.0f));
+	Frag_CurrentPosition = vec3(Matrix * Scale * vec4(VertexPosition, 1.f);
+
+	vec3 VertOffset = vec3(0.f, sin(Time + Frag_CurrentPosition.x + Frag_CurrentPosition.y), 0.f);
+
+	Frag_CurrentPosition = vec3(Matrix * Scale * vec4(VertexPosition + VertOffset, 1.f);
+
 	Frag_VertexNormal = VertexNormal;
 	Frag_VertexColor = VertexColor;
 	Frag_CamMatrix = CameraMatrix;

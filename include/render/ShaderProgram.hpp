@@ -1,19 +1,26 @@
 #pragma once
 
+#include<unordered_map>
 #include<SDL2/SDL_video.h>
 
 class ShaderProgram
 {
 public:
-	ShaderProgram(std::string VertexShaderPath, std::string FragmentShaderPath, std::string GeometryShaderPath = "");
+	// DOES NOT CACHE PROGRAMS!
+	// Use (static) ShaderProgram::GetShaderProgram instead!
+	ShaderProgram(std::string ProgramName);
 	~ShaderProgram();
 
-	void PrintErrors(uint32_t Object, const char* Type);
+	static ShaderProgram* GetShaderProgram(std::string ProgramName);
+	static void ClearAll();
 
-	void Activate();
+	void PrintErrors(uint32_t Object, const char* Type) const;
 
-	static std::string BaseShaderPath;
-	static SDL_Window* Window;
+	void Activate() const;
 
+	std::string Name;
 	uint32_t ID;
+
+private:
+	static std::unordered_map<std::string, ShaderProgram*> s_programs;
 };

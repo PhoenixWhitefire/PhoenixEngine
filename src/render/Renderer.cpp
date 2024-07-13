@@ -364,65 +364,65 @@ void Renderer::ChangeResolution(uint32_t Width, uint32_t Height)
 
 void Renderer::DrawScene(Scene_t& Scene)
 {
-	uint32_t ShaderProgramID = Scene.Shaders->ID;
-
-	Scene.Shaders->Activate();
-
-	for (uint32_t LightIndex = 0; LightIndex < Scene.LightData.size(); LightIndex++)
+	for (ShaderProgram* Shader : Scene.UniqueShaders)
 	{
-		LightData_t LightData = Scene.LightData.at(LightIndex);
+		auto ShaderProgramID = Shader->ID;
+		Shader->Activate();
 
-		std::string LightIdxString = std::to_string(LightIndex);
-		std::string ShaderLightLoc = "Lights[" + LightIdxString + "]";
-		
-		auto PosLoc = glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".Position").c_str());
-		auto ColLoc = glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".Color").c_str());
-		auto TypeLoc = glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".Type").c_str());
-		auto RangeLoc = glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".Range").c_str());
+		for (uint32_t LightIndex = 0; LightIndex < Scene.LightData.size(); LightIndex++)
+		{
+			LightData_t LightData = Scene.LightData.at(LightIndex);
 
-		glUniform3f(PosLoc, LightData.Position.X, LightData.Position.Y, LightData.Position.Z);
-		glUniform3f(ColLoc, LightData.LightColor.R, LightData.LightColor.G, LightData.LightColor.B);
-		glUniform1i(TypeLoc, (int)LightData.Type);
+			std::string LightIdxString = std::to_string(LightIndex);
+			std::string ShaderLightLoc = "Lights[" + LightIdxString + "]";
 
-		glUniform1f(RangeLoc, LightData.Range);
+			auto PosLoc = glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".Position").c_str());
+			auto ColLoc = glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".Color").c_str());
+			auto TypeLoc = glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".Type").c_str());
+			auto RangeLoc = glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".Range").c_str());
 
-		glUniformMatrix4fv(
-			glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".ShadowMapProjection").c_str()),
-			1,
-			GL_FALSE,
-			glm::value_ptr(LightData.ShadowMapProjection)
-		);
+			glUniform3f(PosLoc, LightData.Position.X, LightData.Position.Y, LightData.Position.Z);
+			glUniform3f(ColLoc, LightData.LightColor.R, LightData.LightColor.G, LightData.LightColor.B);
+			glUniform1i(TypeLoc, (int)LightData.Type);
 
-		// TODO: replace true with LightData.HasShadowMap
-		glUniform1i(glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".HasShadowMap").c_str()), LightData.HasShadowMap);
+			glUniform1f(RangeLoc, LightData.Range);
 
-		glUniform1i(glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".ShadowMapIndex").c_str()), LightData.ShadowMapIndex);
+			glUniformMatrix4fv(
+				glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".ShadowMapProjection").c_str()),
+				1,
+				GL_FALSE,
+				glm::value_ptr(LightData.ShadowMapProjection)
+			);
 
-		std::string ShadowMapLutKey = std::string("ShadowMaps[") + std::to_string(LightData.ShadowMapIndex) + "]";
+			// TODO: replace true with LightData.HasShadowMap
+			glUniform1i(glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".HasShadowMap").c_str()), LightData.HasShadowMap);
 
-		glUniform1i(
-			glGetUniformLocation(
-				ShaderProgramID,
-				ShadowMapLutKey.c_str()
-			),
-			LightData.ShadowMapTextureId
-		);
+			glUniform1i(glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".ShadowMapIndex").c_str()), LightData.ShadowMapIndex);
+
+			std::string ShadowMapLutKey = std::string("ShadowMaps[") + std::to_string(LightData.ShadowMapIndex) + "]";
+
+			glUniform1i(
+				glGetUniformLocation(
+					ShaderProgramID,
+					ShadowMapLutKey.c_str()
+				),
+				LightData.ShadowMapTextureId
+			);
+		}
+
+		glUniform1i(glGetUniformLocation(ShaderProgramID, "NumLights"), Scene.LightData.size());
 	}
 
-	glUniform1i(glGetUniformLocation(ShaderProgramID, "NumLights"), Scene.LightData.size());
-
-	for (uint32_t MeshIndex = 0; MeshIndex < Scene.MeshData.size(); MeshIndex++)
+	for (MeshData_t RenderData : Scene.MeshData)
 	{
-		MeshData_t RenderData = Scene.MeshData.at(MeshIndex);
-		this->m_setTextureUniforms(RenderData, Scene.Shaders);
-		this->DrawMesh(RenderData.MeshData, Scene.Shaders, RenderData.Size, RenderData.Matrix, RenderData.FaceCulling);
+		this->m_setTextureUniforms(RenderData, RenderData.Material->Shader);
+		this->DrawMesh(RenderData.MeshData, RenderData.Material->Shader, RenderData.Size, RenderData.Matrix, RenderData.FaceCulling);
 	}
 
-	for (uint32_t MeshIndex = 0; MeshIndex < Scene.TransparentMeshData.size(); MeshIndex++)
+	for (MeshData_t RenderData : Scene.MeshData)
 	{
-		MeshData_t RenderData = Scene.TransparentMeshData.at(MeshIndex);
-		this->m_setTextureUniforms(RenderData, Scene.Shaders);
-		this->DrawMesh(RenderData.MeshData, Scene.Shaders, RenderData.Size, RenderData.Matrix, RenderData.FaceCulling);
+		this->m_setTextureUniforms(RenderData, RenderData.Material->Shader);
+		this->DrawMesh(RenderData.MeshData, RenderData.Material->Shader, RenderData.Size, RenderData.Matrix, RenderData.FaceCulling);
 	}
 }
 

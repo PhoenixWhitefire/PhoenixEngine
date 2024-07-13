@@ -1,0 +1,4 @@
+{
+    "Vertex": "worldUber.vert",
+    "Fragment": "worldUber.frag"
+}

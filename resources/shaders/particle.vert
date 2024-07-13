@@ -1,4 +1,6 @@
-#version 330 core
+// particle.vert - Particles
+
+#version 460 core
 
 layout (location = 0) in vec2 VertexPosition;
 

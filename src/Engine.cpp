@@ -171,12 +171,22 @@ EngineObject::EngineObject(Vector2 WindowStartSize, SDL_Window** WindowPtr)
 	std::string ConfigAscii = FileRW::ReadFile("./phoenix.conf", &ConfigFileFound);
 
 	if (ConfigFileFound)
-		EngineJsonConfig = nlohmann::json::parse(ConfigAscii);
+	{
+		try
+		{
+			EngineJsonConfig = nlohmann::json::parse(ConfigAscii);
+		}
+		catch (nlohmann::json::parse_error err)
+		{
+			auto errmsg = err.what();
+			throw(std::vformat("Parse error while loading configuration: {}", std::make_format_args(errmsg)));
+		}
+	}
 	else
 		throw(std::string("Could not find configuration file (phoenix.conf)!"));
 
 	if (ConfigAscii == "")
-		throw(std::string("Configuration file game.ini is not configured (empty)"));
+		throw(std::string("Configuration file phoenix.conf is not configured (empty)"));
 
 	this->GameConfig = EngineJsonConfig;
 
@@ -187,37 +197,27 @@ EngineObject::EngineObject(Vector2 WindowStartSize, SDL_Window** WindowPtr)
 	if (WindowPtr)
 		*WindowPtr = this->Window;
 
-	ShaderProgram::Window = this->Window;
-
 	if (!this->Window)
 	{
 		const char* errStr = SDL_GetError();
 		throw(std::vformat("SDL error: Could not create window: {}\n", std::make_format_args(errStr)));
 	}
 
-	// TODO: Engine->MSAASamples does nothing, attempting to specify via below ctor's argument leads to OpenGL error "Target doesn't match the texture's target"
+	// TODO: Engine->MSAASamples does nothing, attempting to specify via below ctor's argument leads to
+	// OpenGL error "Target doesn't match the texture's target"
 	this->m_renderer = new Renderer(this->WindowSizeX, this->WindowSizeY, this->Window, 0);
-
-	ShaderProgram::BaseShaderPath = "shaders/";
 
 	auto DataModel = GameObjectFactory::CreateGameObject("Workspace");
 
 	this->Game = std::dynamic_pointer_cast<Object_Workspace>(DataModel);
 	GameObject::DataModel = DataModel;
 
-	this->Shaders3D = new ShaderProgram("worldUber.vert", "worldUber.frag");
-
-	this->PostProcessingShaders = new ShaderProgram(
-		"postprocessing.vert",
-		"postprocessing.frag"
-	);
+	this->PostProcessingShaders = ShaderProgram::GetShaderProgram("postprocessing");
 
 	this->PostProcessingShaders->Activate();
 	glUniform1i(glGetUniformLocation(this->PostProcessingShaders->ID, "Texture"), 0);
 
 	glEnable(GL_DEPTH_TEST);
-
-	this->Shaders3D->Activate();
 
 	//Post-processing framebuffer
 
@@ -379,42 +379,27 @@ void EngineObject::Start()
 {
 	this->Physics->WorldGravity = Vector3::DOWN * 9.8f; // Earth's gravity is 9.8N
 
+	// TODO:
+	// wtf are these
+	// 13/07/2024
 	double LastTime = this->RunningTime;
+	float LastFrame = GetRunningTime();
+	double FrameStart = 0.0f;
+	float LastSecond = LastFrame;
 
-	this->Shaders3D->Activate();
+	this->Exit = false;
 
-	SDL_Event PollingEvent;
-
-	SDL_PollEvent(&PollingEvent);
-
-	double LastSecond = 0.0f;
-
-	/*this->SkyboxVAO = new VAO();
-	this->SkyboxVBO = new VBO();
-	this->SkyboxEBO = new EBO();
-
-	this->SkyboxVAO->Bind();
-	this->SkyboxVBO->Bind();
-	this->SkyboxVBO->SetBufferData(SkyboxVertices);
-	this->SkyboxEBO->Bind();
-	this->SkyboxEBO->SetBufferData(SkyboxIndices);
-	this->SkyboxVAO->LinkAttrib(*this->SkyboxVBO, 0, 3, GL_FLOAT, 3 * sizeof(float), (void*)0);
-	
-	this->SkyboxVBO->Unbind();
-	this->SkyboxVAO->Unbind();
-	this->SkyboxEBO->Unbind();*/
-
-	SDL_PollEvent(&PollingEvent);
-	
-	std::string SkyboxCubemapImages[6] =
+	static const std::string SkyboxCubemapImages[6] =
 	{
-		"./resources/Textures/Sky1/right.jpg",
-		"./resources/Textures/Sky1/left.jpg",
-		"./resources/Textures/Sky1/top.jpg",
-		"./resources/Textures/Sky1/bottom.jpg",
-		"./resources/Textures/Sky1/front.jpg",
-		"./resources/Textures/Sky1/back.jpg"
+		"Sky1/right.jpg",
+		"Sky1/left.jpg",
+		"Sky1/top.jpg",
+		"Sky1/bottom.jpg",
+		"Sky1/front.jpg",
+		"Sky1/back.jpg"
 	};
+
+	static const std::string BaseTexturePath = "./resources/textures/";
 
 	GLuint SkyboxCubemap = 0;
 
@@ -427,13 +412,21 @@ void EngineObject::Start()
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 	//glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_LOD_BIAS, 15.f);
 
-	SDL_PollEvent(&PollingEvent);
-
 	for (int ImageIndex = 0; ImageIndex < 6; ImageIndex++)
 	{
 		int Width, Height, NumberChannels;
 
-		uint8_t* ImageBytes = stbi_load(SkyboxCubemapImages[ImageIndex].c_str(), &Width, &Height, &NumberChannels, 0);
+		std::string ImagePath = BaseTexturePath + SkyboxCubemapImages[ImageIndex];
+
+		// TODO: replace with TextureManager calls
+		// 13/07/2024
+		uint8_t* ImageBytes = stbi_load(
+			ImagePath.c_str(),
+			&Width,
+			&Height,
+			&NumberChannels,
+			0
+		);
 
 		if (ImageBytes != nullptr)
 		{
@@ -455,67 +448,22 @@ void EngineObject::Start()
 			//glGenerateMipmap(GL_TEXTURE_CUBE_MAP_POSITIVE_X + ImageIndex);
 
 			stbi_image_free(ImageBytes);
-
-			SDL_PollEvent(&PollingEvent);
 		}
 		else
-			Debug::Log("Failed to load image for skybox cubemap: '" + SkyboxCubemapImages[ImageIndex] + "'");
+			Debug::Log("Failed to load image for skybox cubemap: '" + ImagePath + "'");
 	}
 
 	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
 	//Texture HDRISkyboxTexture("Assets/Textures/hdri_sky_1.jpeg", "Diffuse", 0);
 
-	ShaderProgram SkyboxShaders("skybox.vert", "skybox.frag");
-
-	SDL_PollEvent(&PollingEvent);
+	ShaderProgram SkyboxShaders = *ShaderProgram::GetShaderProgram("skybox");
 
 	SkyboxShaders.Activate();
 
 	glUniform1i(glGetUniformLocation(SkyboxShaders.ID, "SkyCubemap"), 0);
 
-	int ShadowMapWidth = 2048;
-	int ShadowMapHeight = 2048;
-	
-	FBO ShadowMapFBO = FBO(this->Window, ShadowMapWidth, ShadowMapHeight, 0, false);
-
-	ShadowMapFBO.BindTexture();
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, ShadowMapWidth, ShadowMapHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-
-	// Prevents darkness outside the frustrum
-	float clampColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, clampColor);
-
-	ShadowMapFBO.Bind();
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, ShadowMapFBO.TextureID, 0);
-
-	// Needed since we don't touch the color buffer
-	glDrawBuffer(GL_NONE);
-	glReadBuffer(GL_NONE);
-
-	ShadowMapFBO.Unbind();
-
-	Debug::Log(std::vformat("Directional light shadowmap texture id: {}", std::make_format_args(ShadowMapFBO.TextureID)));
-
-	ShaderProgram ShadowMapShaders("dlshadowmap.vert", "dlshadowmap.frag");
-
-	SDL_PollEvent(&PollingEvent);
-
-	float LastFrame = GetRunningTime();
-
-	double FrameStart = 0.0f;
-
-	Shaders3D->Activate();
-
-	this->Exit = false;
-
 	Scene_t Scene = Scene_t();
-
-	Scene.Shaders = this->Shaders3D;
 
 	this->m_renderer->m_framebuffer->Unbind();
 	this->m_renderer->m_framebuffer->UnbindTexture();
@@ -527,9 +475,12 @@ void EngineObject::Start()
 	glActiveTexture(GL_TEXTURE17);
 	glBindTexture(GL_TEXTURE_2D, DistortionTexture.Identifier);
 
+	this->PostProcessingShaders->Activate();
 	glUniform1i(glGetUniformLocation(this->PostProcessingShaders->ID, "DistortionTexture"), 17);
 
 	Mesh SkyboxMesh = Mesh(SkyboxVertices, SkyboxIndices);
+
+	SDL_Event PollingEvent;
 
 	Debug::Log("Main program loop start...");
 
@@ -540,25 +491,25 @@ void EngineObject::Start()
 		Scene.MeshData.clear();
 		Scene.LightData.clear();
 
-		double CurrentTime = this->RunningTime;
-
 		// TODO texture streaming should use low-quality versions so they don't appear black!
 		TextureManager::Get()->FinalizeAsyncLoadedTextures();
 
 		this->FpsCap = std::clamp(this->FpsCap, 1, 600);
 
-		double FrameDelta = CurrentTime - LastFrame;
+		double FrameDelta = RunningTime - LastFrame;
 		double FpsCapDelta = 1.f / this->FpsCap;
 
 		// Wait the appropriate amount of time between frames
 		if (!VSync && (FrameDelta < FpsCapDelta))
-		{
 			SDL_Delay((FpsCapDelta - FrameDelta) * 1000);
-		}
+
+		double DeltaTime = RunningTime - LastTime;
+		LastTime = RunningTime;
+		FrameStart = RunningTime;
+
+		this->OnFrameStart.Fire(std::make_tuple(this, DeltaTime, RunningTime));
 
 		this->m_particleEmitters.clear();
-
-		this->Shaders3D->Activate();
 
 		while (SDL_PollEvent(&PollingEvent) != 0)
 		{
@@ -602,78 +553,10 @@ void EngineObject::Start()
 		glClearColor(0.086f, 0.105f, 0.21f, 1.0f);
 		glClear(/*GL_COLOR_BUFFER_BIT | */ GL_DEPTH_BUFFER_BIT);
 
-		double DeltaTime = CurrentTime - LastTime;
-		LastTime = CurrentTime;
-		FrameStart = CurrentTime;
-
 		this->Game->Update(DeltaTime);
 		UpdateDescendants(Game, DeltaTime);
 
 		StepPhysicsForObjects(this->Game->GetChildren(), *this->Physics, DeltaTime);
-
-		// Aggregate mesh and light data into a list
-		Scene.MeshData = this->m_compileMeshData(this->Game);
-		Scene.LightData = this->m_compileLightData(this->Game);
-
-		glm::mat4 orthgonalProjection = glm::ortho(-35.0f, 35.0f, -35.0f, 35.0f, 0.1f, 150.0f);
-		glm::mat4 lightView = glm::lookAt(
-			20.0f * glm::vec3(0.5f,0.5f,0.5f),
-			glm::vec3(0.f, 0.f, 0.f),
-			glm::vec3(0.0f, 1.0f, 0.0f)
-		);
-
-		glm::mat4 lightProjection = orthgonalProjection * lightView;
-
-		if (Scene.LightData.size() == 0)
-			Scene.LightData.reserve(1);
-
-		Scene.LightData[0].ShadowMapTextureId = ShadowMapFBO.TextureID;
-		Scene.LightData[0].ShadowMapProjection = lightProjection;
-		
-		Shaders3D->Activate();
-
-		//Scene.TransparentMeshData = m_compileTransparentMeshData(this->Game);
-		Scene.TransparentMeshData = {};
-
-		// TODO Re-implement shadow map
-		//Shadow map for directional light
-
-		//ShadowMapFBO.BindTexture();
-
-		//glViewport(0, 0, ShadowMapWidth, ShadowMapHeight);
-		//ShadowMapFBO.Bind();
-
-		auto fboStat = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-
-		if (fboStat != GL_FRAMEBUFFER_COMPLETE)
-			Debug::Log(std::vformat("fboStatNotComplete ID: {}", std::make_format_args(fboStat)));
-
-		//ShadowMapShaders.Activate();
-
-		//Scene.Shaders = &ShadowMapShaders;
-
-		this->OnFrameStart.Fire(std::make_tuple(this, DeltaTime, CurrentTime));
-
-		//this->m_renderer->DrawScene(Scene);
-
-		//ShadowMapFBO.Unbind();
-
-		//glViewport(0, 0, this->WindowSizeX, this->WindowSizeY);
-
-		Scene.Shaders = this->Shaders3D;
-		this->Shaders3D->Activate();
-
-		CurrentTime = this->RunningTime;
-
-		glUniform1f(glGetUniformLocation(Shaders3D->ID, "Time"), (float)CurrentTime);
-		glUniform1i(glGetUniformLocation(SkyboxShaders.ID, "SkyboxCubemap"), SkyboxCubemap);
-
-		//glBindTexture(GL_TEXTURE_CUBE_MAP, ShadowMapFBO.TextureID);
-
-		auto fboStatMain = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-
-		if (fboStatMain != GL_FRAMEBUFFER_COMPLETE)
-			Debug::Log(std::vformat("fboStatMainNotComplete ID: {}", std::make_format_args(fboStatMain)));
 
 		double AspectRatio = (float)this->WindowSizeX / (float)this->WindowSizeY;
 
@@ -682,20 +565,42 @@ void EngineObject::Start()
 		glm::mat4 CameraMatrix = SceneCamera->GetMatrixForAspectRatio(AspectRatio);
 		float* CamMatrixPtr = glm::value_ptr(CameraMatrix);
 
-		glUniformMatrix4fv(
-			glGetUniformLocation(this->Shaders3D->ID, "CameraMatrix"),
-			1,
-			GL_FALSE,
-			CamMatrixPtr
-		);
+		// Aggregate mesh and light data into a list
+		Scene.MeshData = this->m_compileMeshData(this->Game);
+		Scene.LightData = this->m_compileLightData(this->Game);
 
-		//ShadowMapFBO.BindTexture();
+		std::unordered_map<ShaderProgram*, ShaderProgram*> uniqueShaderMap;
+
+		for (MeshData_t md : Scene.MeshData)
+		{
+			if (uniqueShaderMap.find(md.Material->Shader) == uniqueShaderMap.end())
+				uniqueShaderMap.insert(std::pair(md.Material->Shader, md.Material->Shader));
+		}
+
+		for (auto& it : uniqueShaderMap)
+		{
+			ShaderProgram* shp = it.second;
+
+			shp->Activate();
+
+			glUniformMatrix4fv(
+				glGetUniformLocation(shp->ID, "CameraMatrix"),
+				1,
+				GL_FALSE,
+				CamMatrixPtr
+			);
+
+			glUniform1f(glGetUniformLocation(shp->ID, "Time"), (float)RunningTime);
+			Scene.UniqueShaders.push_back(shp);
+		}
 
 		glActiveTexture(GL_TEXTURE0);
 
 		glDepthFunc(GL_LEQUAL);
 
 		SkyboxShaders.Activate();
+
+		glUniform1i(glGetUniformLocation(SkyboxShaders.ID, "SkyboxCubemap"), SkyboxCubemap);
 
 		glm::vec3 CamPos = glm::vec3(SceneCamera->Matrix[3]);
 		glm::vec3 CamForward = glm::vec3(SceneCamera->Matrix[2]);
@@ -744,7 +649,7 @@ void EngineObject::Start()
 		
 		glDisable(GL_DEPTH_TEST);
 
-		this->OnFrameRenderGui.Fire(std::make_tuple(this, DeltaTime, CurrentTime));
+		this->OnFrameRenderGui.Fire(std::make_tuple(this, DeltaTime, RunningTime));
 
 		glEnable(GL_DEPTH_TEST);
 
@@ -798,21 +703,23 @@ void EngineObject::Start()
 
 		this->RunningTime = GetRunningTime();
 
-		CurrentTime = this->RunningTime;
+		double curTimePrevSwap = RunningTime;
 
 		SDL_GL_SwapWindow(this->Window);
 
+		this->RunningTime = GetRunningTime();
+
 		// Should be calculated before swapping buffers due to VSync
-		this->FrameTime = CurrentTime - FrameStart;
-		LastFrame = CurrentTime;
+		this->FrameTime = curTimePrevSwap - FrameStart;
+		LastFrame = RunningTime;
 
 		this->m_DrawnFramesInSecond++;
 
 		this->OnFrameEnd.Fire(std::make_tuple(this, this->FrameTime, GetRunningTime()));
 
-		if (CurrentTime - LastSecond > 1.0f)
+		if (RunningTime - LastSecond > 1.0f)
 		{
-			LastSecond = CurrentTime;
+			LastSecond = RunningTime;
 
 			this->FramesPerSecond = this->m_DrawnFramesInSecond;
 
@@ -847,8 +754,7 @@ EngineObject::~EngineObject()
 {
 	this->Exit = true;
 
-	delete this->PostProcessingShaders;
-	delete this->Shaders3D;
+	ShaderProgram::ClearAll();
 
 	delete this->Physics;
 	delete this->m_renderer;

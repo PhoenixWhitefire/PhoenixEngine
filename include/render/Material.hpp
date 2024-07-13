@@ -4,6 +4,7 @@
 #include<unordered_map>
 
 #include"render/TextureManager.hpp"
+#include"render/ShaderProgram.hpp"
 
 class RenderMaterial
 {
@@ -21,6 +22,8 @@ public:
 
 	std::vector<Texture*> DiffuseTextures;
 	std::vector<Texture*> SpecularTextures;
+
+	ShaderProgram* Shader;
 
 	bool HasSpecular = false;
 	float SpecExponent = 32.f;
