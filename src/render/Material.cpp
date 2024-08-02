@@ -12,6 +12,7 @@ RenderMaterial::RenderMaterial()
 {
 	this->Name = "*ERROR*";
 	this->HasSpecular = false;
+	this->Translucency = false;
 
 	this->DiffuseTextures.push_back(new Texture());
 	this->SpecularTextures.push_back(new Texture());
@@ -67,6 +68,7 @@ RenderMaterial::RenderMaterial(std::string MaterialName)
 
 	bool HasSpecularTexture = JSONMaterialData.find("specular") != JSONMaterialData.end();
 	this->HasSpecular = HasSpecularTexture;
+	this->Translucency = JSONMaterialData.value("translucency", false);
 
 	this->DiffuseTextures[0]->ImagePath = "resources/" + JSONMaterialData.value(
 		"albedo",

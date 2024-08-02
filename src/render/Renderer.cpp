@@ -488,7 +488,7 @@ void Renderer::m_setTextureUniforms(MeshData_t& RenderData, ShaderProgram* Shade
 	
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	if (RenderData.Transparency > 0.f)
+	if (RenderData.Transparency > 0.f || RenderData.Material->Translucency)
 		glEnable(GL_BLEND);
 	else // the gosh darn grass model is practically 50% transparent
 		glDisable(GL_BLEND);

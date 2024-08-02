@@ -107,6 +107,8 @@ in mat4 Frag_ModelMatrix;
 
 in mat4 Frag_CamMatrix;
 
+in float Frag_Time;
+
 out vec4 FragColor;
 
 float GetShadowValueForLight(int LightIndex, vec3 Normal)
@@ -218,7 +220,7 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 ViewDirection, vec3 Albedo, flo
 
 		if (Diffuse > 0.0f && Shadow == 0.0f) {
 			vec3 reflectDir = reflect(-LightDirection, Normal);
-			float specAmt = pow(max(dot(ViewDirection, reflectDir), 0.f), 1.f);
+			float specAmt = pow(max(dot(ViewDirection, reflectDir), 8.f), 1.f);
 			Specular = specAmt * 0.5f;
 		}
 
@@ -289,7 +291,19 @@ void main()
 	mat3 NormalMatrix = transpose(inverse(mat3(Frag_ModelMatrix)));
 	vec3 Normal = normalize(NormalMatrix * Frag_VertexNormal);
 
-	vec2 UV = Frag_UV;
+	vec2 UV = (Frag_CurrentPosition.xy + Frag_CurrentPosition.yz) * 0.1f;
+	
+	vec2 UVOffset = texture(SpecularTextures[0], UV).xy;
+	UVOffset = vec2(
+		UVOffset.x + Frag_Time,
+		UVOffset.y + Frag_Time
+	) * 0.1f;
+
+	UV = UV + UVOffset;
+	UV = vec2(
+		mod(UV.x, 1.f),
+		mod(UV.y, 1.f)
+	);
 
 	vec3 ViewDirection = CameraPosition - Frag_CurrentPosition;
 
@@ -300,32 +314,14 @@ void main()
 	{
 	    float mipmapLevel = textureQueryLod(DiffuseTextures[TexIdx], UV).x;
         vec4 texColMipped = textureLod(DiffuseTextures[TexIdx], UV, mipmapLevel);
-        Albedo += vec4(texColMipped.xyz * texColMipped.w, 0.0f);
-
-		if (texColMipped.w < Albedo.w)
-		{
-			Albedo = vec4(Albedo.xyz, texColMipped.w);
-		}
+        Albedo += vec4(texColMipped.xyz, 0.0f);
+		float alpha = Albedo.b + 0.5f;
+		Albedo = vec4(Albedo.xyz, alpha);
 	}
 
 	FragColor = Albedo;
-
-	if (NumSpecularTextures > 0)
-	{
-		SpecMapValue = 0.0f;
-		
-		for (int TexIdx = 0; TexIdx < NumSpecularTextures; TexIdx++)
-		{
-			SpecMapValue += texture(SpecularTextures[TexIdx], UV).x;
-		}
-	}
-
+	
 	Albedo -= vec4(0.f, 0.f, 0.f, Transparency);
-
-	// completely transparent region
-	// alpha is for some reason never 0?? <--- Specifically on the dev.world grass mesh
-	if (Albedo.a < 0.2f)
-		discard;
 	
 	vec3 FinalColor = vec3(0.f, 0.f, 0.f);
 
@@ -356,12 +352,12 @@ void main()
 			Normal,
 			ViewDirection,
 			Albedo3,
-			SpecMapValue,
+			1,
 			AccumulatedShadow
 		);
 	}
-
-	FinalColor += LightAmbient;
+	const vec3 BLUE = vec3(0.46f, 0.68f, 0.87f);
+	FinalColor += BLUE * 0.2f;
 
 	vec3 FragCol3 = FinalColor.xyz;
 

@@ -23,19 +23,19 @@ out vec3 Frag_VertexNormal;
 out mat4 Frag_CamMatrix;
 out mat4 Frag_ModelMatrix;
 
+out float Frag_Time;
+
 void main()
 {
-	Frag_CurrentPosition = vec3(Matrix * Scale * vec4(VertexPosition, 1.f);
+	Frag_CurrentPosition = vec3(Matrix * Scale * vec4(VertexPosition, 1.f));
 
-	vec3 VertOffset = vec3(0.f, sin(Time + Frag_CurrentPosition.x + Frag_CurrentPosition.y), 0.f);
-
-	Frag_CurrentPosition = vec3(Matrix * Scale * vec4(VertexPosition + VertOffset, 1.f);
 
 	Frag_VertexNormal = VertexNormal;
 	Frag_VertexColor = VertexColor;
 	Frag_CamMatrix = CameraMatrix;
 	// i cant remember WHAT causes this to be necessary, but it is.
 	Frag_UV = mat2(0.0f, -1.0f, 1.0f, 0.0f) * TexUV;
+	Frag_Time = Time;
 
 	Frag_ModelMatrix = Matrix;
 

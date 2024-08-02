@@ -9,8 +9,14 @@
 #include"Debug.hpp"
 
 #define LUA_THROW(err) lua_pushstring(L, err); lua_error(L)
+#define LUA_ASSERT(res, err) if (!res) { LUA_THROW(err); }
 
 DerivedObjectRegister<Object_Script> Object_Script::RegisterClassAs("Script");
+
+struct IGameObject
+{
+	GameObject* ptr;
+};
 
 static std::string lua_TypeToString(lua_Type t)
 {
@@ -38,6 +44,96 @@ static std::string lua_TypeToString(lua_Type t)
 	}
 	}
 }
+
+static void pushGameObject(lua_State* L, GameObject* obj)
+{
+	void* ptrToObj = lua_newuserdata(L, sizeof(IGameObject));
+	new (ptrToObj) IGameObject();
+
+	((IGameObject*)ptrToObj)->ptr = obj;
+
+	luaL_getmetatable(L, "GameObjectMetatable");
+	lua_setmetatable(L, -2);
+}
+
+static auto api_newobject = [](lua_State* L)
+	{
+		Object_Script* script = (Object_Script*)lua_topointer(L, lua_upvalueindex(1));
+
+		if (!lua_isstring(L, -1))
+		{
+			std::string t = lua_TypeToString((lua_Type)lua_type(L, 1));
+			const std::string fmtstr = "newobject called with arg of type {}, but should be string!";
+
+			LUA_THROW(std::vformat(fmtstr, std::make_format_args(t)).c_str());
+		}
+
+		std::shared_ptr<GameObject> newObject = GameObjectFactory::CreateGameObject(lua_tostring(L, -1));
+
+		pushGameObject(L, newObject.get());
+
+		return 1;
+	};
+
+static auto api_gameobjindex = [](lua_State* L)
+	{
+		LUA_ASSERT(lua_isuserdata(L, -2), "Expected userdata");
+		LUA_ASSERT(lua_isstring(L, -1), "Expected index of type string");
+
+		GameObject* obj = (GameObject*)lua_touserdata(L, -2);
+		const char* key = lua_tostring(L, -1);
+
+		if (strcmp(key, "Name") == 0)
+			lua_pushstring(L, obj->Name.c_str());
+
+		else if (strcmp(key, "ClassName") == 0)
+			lua_pushstring(L, obj->Name.c_str());
+
+		else if (strcmp(key, "Parent") == 0)
+		{
+			if (!obj->Parent)
+				lua_pushnil(L);
+			else
+				pushGameObject(L, obj->Parent.get());
+		}
+
+		return 1;
+	};
+
+static auto api_gameobjnewindex = [](lua_State* L)
+	{
+		return 0;
+	};
+
+static auto api_vec3index = [](lua_State* L)
+	{
+		LUA_ASSERT(lua_isuserdata(L, -2), "Expected userdata");
+		LUA_ASSERT(lua_isstring(L, -1), "Expected index of type string");
+
+		Vector3* vec = (Vector3*)lua_touserdata(L, -2);
+		const char* key = lua_tostring(L, -1);
+
+		if (strcmp(key, "X") == 0)
+			lua_pushnumber(L, vec->X);
+
+		else if (strcmp(key, "Y") == 0)
+			lua_pushnumber(L, vec->Y);
+
+		else if (strcmp(key, "Z") == 0)
+			lua_pushnumber(L, vec->Z);
+
+		else if (strcmp(key, "Z") == 0)
+			lua_pushnumber(L, vec->Z);
+
+		else
+		{
+			lua_getglobal(L, "Vector3");
+			lua_pushstring(L, key);
+			lua_rawget(L, -2);
+		}
+
+		return 1;
+	};
 
 static void* l_alloc(void* ud, void* ptr, size_t osize,
 	size_t nsize) {
@@ -104,7 +200,7 @@ void Object_Script::Update(double dt)
 				std::string fullname = this->GetFullName();
 
 				Debug::Log(std::vformat(
-					"Luau error: {}: {}",
+					"Luau runtime error: {}: {}",
 					std::make_format_args(fullname, errstr)
 				));
 			}
@@ -163,104 +259,83 @@ bool Object_Script::Reload()
 	{
 		// Run the script
 
-		auto api_newobject = [](lua_State* L)
+		//pushGameObject(L, GameObject::DataModel.get());
+		//lua_setglobal(L, "game");
+
+		lua_newtable(L);
+		int vec3MTIdx = lua_gettop(L);
+		lua_pushvalue(L, vec3MTIdx);
+		lua_setglobal(L, "Vector3");
+
+		/*lua_pushcfunction(L, [](lua_State* L)
 			{
-				Object_Script* script = (Object_Script*)lua_topointer(L, lua_upvalueindex(1));
 
-				if (!lua_isstring(L, -2))
-				{
-					/*auto t = lua_TypeToString((lua_Type)lua_type(L, 1)).c_str();
-					const std::string fmtstr = "newobject called with arg of type {}, but should be string!";
-
-					LUA_THROW(std::vformat(fmtstr, t));*/
-
-					throw("incorrect type for newobject");
-				}
-
-				std::shared_ptr<GameObject> newObject = GameObjectFactory::CreateGameObject(lua_tostring(L, -2));
-				newObject->SetParent(GameObject::DataModel);
-
-				if (lua_isstring(L, -1))
-				{
-					const char* name = lua_tostring(L, -1);
-					newObject->Name = name;
-				}
-
-				script->newobjs.push_back(newObject);
-
-				return 0;
-			};
-
-		auto api_setpropv3 = [](lua_State* L) -> int
-			{
-				Object_Script* script = (Object_Script*)lua_topointer(L, lua_upvalueindex(1));
-
-				if (!lua_isstring(L, -5))
-					throw("Blud isn't a string :skull:");
-
-				std::string targetname = lua_tostring(L, -5);
-				std::string propname = lua_tostring(L, -4);
+				printf("KILL YOURSELF\n");
 				int isx = true;
 				int isy = true;
 				int isz = true;
-				
+
 				double x = lua_tonumberx(L, -3, &isx);
 				double y = lua_tonumberx(L, -2, &isy);
 				double z = lua_tonumberx(L, -1, &isz);
 
-				auto target = GameObject::DataModel->GetChild(targetname);
+				Vector3* newvec = (Vector3*)lua_newuserdata(L, sizeof(Vector3));
+				*newvec = Vector3(isx ? x : 0.f, (isx && isy) ? y : 0.f, (isx && isy && isz) ? z : 0.f);
 
-				if (!target)
-				{
-					std::string errstr = std::vformat(
-						"Target not found for setpropvec3 {}",
-						std::make_format_args(targetname)
-					);
-					lua_pushstring(L, errstr.c_str());
-					lua_error(L);
-				}
+				luaL_getmetatable(L, "Vector3Metatable");
+				lua_setmetatable(L, -2);
 
-				auto propinfo = target->GetProperty(propname);
+				return 1;
+			}, "Vector3.new");*/
 
-				if (!propinfo)
-				{
-					std::string errstr = std::vformat(
-						"Inv prop for {} named {}",
-						std::make_format_args(targetname, propname)
-					);
-					lua_pushstring(L, errstr.c_str());
-					lua_error(L);
-				}
+		try
+		{
+			lua_pushstring(L, "KILL YOURSELF");
+			lua_setfield(L, -2, "new");
+		}
+		catch (lua_exception e)
+		{
+			throw(e.what());
+		}
 
-				if (propinfo->Type != PropType::Vector3)
-				{
-					int typeId = (int)propinfo->Type;
+		luaL_newmetatable(L, "Vector3Metatable");
 
-					std::string errstr = std::vformat(
-						"Prop for {} named {} not vec3, instead type id {}",
-						std::make_format_args(targetname, propname, typeId)
-					);
-					lua_pushstring(L, errstr.c_str());
-					lua_error(L);
-				}
+		lua_pushstring(L, "__index");
+		lua_pushcfunction(L, api_vec3index, "Vector3.__index");
+		lua_settable(L, -4);
 
-				GenericType gt;
-				gt.Type = PropType::Vector3;
-				gt.Vector3 = Vector3(x, y, z);
+		/*lua_newtable(L);
+		int gameObjTableIdx = lua_gettop(L);
+		lua_pushvalue(L, gameObjTableIdx);
 
-				propinfo->Reflection.Setter(gt);
+		lua_pushcfunction(L, api_newobject, "GameObject.new");
+		lua_setfield(L, -2, "new");
+
+		lua_pushcfunction(L, [](lua_State* L)
+			{
+				GameObject* gameobj = (GameObject*)lua_touserdata(L, -2);
+
+				auto gt = GenericType();
+				gt.Vector3 = *(Vector3*)lua_touserdata(L, -1);
+
+				gameobj->SetProperty("Position", gt);
 
 				return 0;
-			};
+			}, "GameObjectMove");
+		lua_setfield(L, -2, "SetPosition");
 
-		lua_pushlightuserdata(L, this);
-		lua_pushcclosure(L, api_newobject, "newobject", 1);
-		lua_setglobal(L, "newobject");
+		lua_setglobal(L, "GameObject");*/
 
-		lua_pushlightuserdata(L, this);
-		lua_pushcclosure(L, api_setpropv3, "setpropvec3", 1);
-		lua_setglobal(L, "setpropvec3");
+		/*luaL_newmetatable(L, "GameObjectMetatable");
 
+		lua_pushvalue(L, gameObjTableIdx);
+		lua_setfield(L, -3, "__index");*/
+
+		
+		/*
+		lua_pushvalue(L, gameObjTableIdx);
+		lua_setfield(L, -3, "__newindex");*/
+		
 		try
 		{
 			int resumeresult = lua_resume(L, L, 0);
@@ -278,7 +353,7 @@ bool Object_Script::Reload()
 				const char* errstr = lua_tostring(L, topidx);
 
 				Debug::Log(std::vformat(
-					"Luau error: {}: {}",
+					"Luau script init error: {}: {}",
 					std::make_format_args(FullName, errstr)
 				));
 			}

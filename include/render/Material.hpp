@@ -26,6 +26,7 @@ public:
 	ShaderProgram* Shader;
 
 	bool HasSpecular = false;
+	bool Translucency = false;
 	float SpecExponent = 32.f;
 	float SpecMultiply = 1.f;
 

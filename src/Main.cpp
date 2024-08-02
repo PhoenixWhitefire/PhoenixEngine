@@ -458,32 +458,32 @@ int main(int argc, char** argv)
 	}
 	catch (std::string Error)
 	{
-		Debug::Log(std::vformat("CRASH: {}", std::make_format_args(Error)));
-
 		auto fmtArgs = std::make_format_args(Error);
+
+		Debug::Log(std::vformat("CRASH (S): {}", fmtArgs));
 
 		SDL_ShowSimpleMessageBox(
 			SDL_MESSAGEBOX_ERROR,
 			"Engine error",
 			std::vformat(
 				"An unexpected error occurred, and the application will now close. Error details (S):\n\n{}",
-				std::make_format_args(Error)
+				fmtArgs
 			).c_str(),
 			Window
 		);
 	}
 	catch (const char* Error)
 	{
-		Debug::Log(std::vformat("CRASH: {}", std::make_format_args(Error)));
-
 		auto fmtArgs = std::make_format_args(Error);
+
+		Debug::Log(std::vformat("CRASH (C): {}", fmtArgs));
 
 		SDL_ShowSimpleMessageBox(
 			SDL_MESSAGEBOX_ERROR,
 			"Engine error",
 			std::vformat(
 				"An unexpected error occurred, and the application will now close. Error details (C):\n\n{}",
-				std::make_format_args(Error)
+				fmtArgs
 			).c_str(),
 			Window
 		);

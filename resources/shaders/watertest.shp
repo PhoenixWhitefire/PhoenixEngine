@@ -1,5 +1,4 @@
 {
     "Vertex": "watertest.vert",
-    "Fragment": "watertest.frag",
-    "Geometry": "watertest.geom"
+    "Fragment": "watertest.frag"
 }
