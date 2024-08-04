@@ -43,14 +43,12 @@ Object_Primitive::Object_Primitive()
 			PropType::Integer,
 			PropReflection
 			{
-				[this]() {
-					GenericType gt;
-					gt.Type = PropType::Integer;
-					gt.Integer = (int)this->Shape;
-
-					return gt;
+				[this]()
+				{
+					return (int)this->Shape;
 				},
-				[this](GenericType gt) {
+				[this](GenericType gt)
+				{
 					this->SetShape((PrimitiveShape)gt.Integer);
 				}
 			}

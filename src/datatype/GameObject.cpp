@@ -53,7 +53,7 @@ GameObject::GameObject()
 			PropType::String,
 			PropReflection
 			{
-				[this]() { return this->GetClassName(); },
+				[this]() { return this->ClassName; },
 				nullptr
 			}
 		}
@@ -66,8 +66,8 @@ GameObject::GameObject()
 			PropType::String,
 			PropReflection
 			{
-				[this]() { return this->GetName(); },
-				[this](GenericType gt) { this->SetName(gt.String); }
+				[this]() { return this->Name; },
+				[this](GenericType gt) { this->Name = gt; }
 			}
 		}
 	));
@@ -79,8 +79,8 @@ GameObject::GameObject()
 			PropType::Bool,
 			PropReflection
 			{
-				[this]() { return this->GetEnabled(); },
-				[this](GenericType gt) { this->SetEnabled(gt.Bool); }
+				[this]() { return this->Enabled; },
+				[this](GenericType gt) { this->Enabled = gt.Bool; }
 			}
 		}
 	));
@@ -92,7 +92,7 @@ GameObject::GameObject()
 			PropType::Integer,
 			PropReflection
 			{
-				[this]() { return GenericType{ PropType::Integer, "", false, 0.f, (int)this->GameObjectId}; },
+				[this]() { return this->ObjectId; },
 				nullptr
 			}
 		}
@@ -102,7 +102,7 @@ GameObject::GameObject()
 GameObject::~GameObject()
 {
 	if (this->Parent)
-		this->Parent->RemoveChild(this->GameObjectId);
+		this->Parent->RemoveChild(this->ObjectId);
 
 	// delete all the children
 	//for (unsigned int ChildIndex = 0; ChildIndex < this->m_children.size(); ChildIndex++)
@@ -121,14 +121,14 @@ void GameObject::Update(double DeltaTime)
 {
 }
 
-PropList_t GameObject::GetProperties()
+PropList_t& GameObject::GetProperties()
 {
 	return this->m_properties;
 }
 
-ProcList_t GameObject::GetProcedures()
+FuncList_t& GameObject::GetFunctions()
 {
-	return this->m_procedures;
+	return this->m_functions;
 }
 
 PropInfo* GameObject::GetProperty(std::string PropName)
@@ -141,11 +141,26 @@ PropInfo* GameObject::GetProperty(std::string PropName)
 		return &it->second;
 }
 
+GenericFunction_t* GameObject::GetFunction(std::string Name)
+{
+	auto it = this->m_functions.find(Name);
+
+	if (it == m_functions.end())
+		throw(std::vformat("'{}' is not a valid function for class {}!", std::make_format_args(Name, this->ClassName)));
+	else
+		return &it->second;
+}
+
 void GameObject::SetProperty(std::string PropName, GenericType gt)
 {
 	auto prop = this->GetProperty(PropName);
 
 	prop->Reflection.Setter(gt);
+}
+
+GenericTypeArray GameObject::CallFunction(std::string Name, GenericTypeArray Args)
+{
+	return (*this->GetFunction(Name))(Args);
 }
 
 /*
@@ -176,7 +191,7 @@ std::string GameObject::GetFullName()
 	return FullName;
 }
 
-std::vector<std::shared_ptr<GameObject>> GameObject::GetChildren()
+std::vector<std::shared_ptr<GameObject>>& GameObject::GetChildren()
 {
 	return this->m_children;
 }
@@ -223,7 +238,7 @@ void GameObject::RemoveChild(uint32_t ToRemoveId)
 {
 	for (uint32_t ChildIdx = 0; ChildIdx < this->m_children.size(); ChildIdx++)
 	{
-		if (this->m_children[ChildIdx]->GameObjectId == ToRemoveId)
+		if (this->m_children[ChildIdx]->ObjectId == ToRemoveId)
 		{
 			//this->OnChildRemoving.Fire(this->m_children[ChildIdx]);
 
@@ -235,44 +250,6 @@ void GameObject::RemoveChild(uint32_t ToRemoveId)
 			break;
 		}
 	}
-}
-
-GenericType GameObject::GetClassName()
-{
-	return
-	{
-		PropType::String,
-		this->ClassName
-	};
-}
-
-GenericType GameObject::GetName()
-{
-	return
-	{
-		PropType::String,
-		this->Name
-	};
-}
-
-GenericType GameObject::GetEnabled()
-{
-	return
-	{
-		PropType::Bool,
-		"",
-		this->Enabled
-	};
-}
-
-void GameObject::SetName(std::string name)
-{
-	this->Name = name;
-}
-
-void GameObject::SetEnabled(bool enabled)
-{
-	this->Enabled = enabled;
 }
 
 std::shared_ptr<GameObject> GameObjectFactory::CreateGameObject(std::string const& ObjectClass)
@@ -287,7 +264,7 @@ std::shared_ptr<GameObject> GameObjectFactory::CreateGameObject(std::string cons
 		));
 
 	std::shared_ptr<GameObject> CreatedObject = it->second();
-	CreatedObject->GameObjectId = NumGameObjects;
+	CreatedObject->ObjectId = NumGameObjects;
 	NumGameObjects++;
 
 	CreatedObject->ClassName = ObjectClass;

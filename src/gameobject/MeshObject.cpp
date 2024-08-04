@@ -16,10 +16,7 @@ Object_Mesh::Object_Mesh()
 		{
 			[this]()
 			{
-				GenericType gt;
-				gt.Type = PropType::String;
-				gt.String = this->Asset;
-				return gt;
+				return this->Asset;
 			},
 
 			[this](GenericType gt)

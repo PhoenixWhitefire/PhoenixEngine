@@ -1,4 +1,4 @@
-#include<gameobject/Light.hpp>
+#include"gameobject/Light.hpp"
 
 DerivedObjectRegister<Object_PointLight> Object_PointLight::RegisterClassAs("PointLight");
 DerivedObjectRegister<Object_SpotLight> Object_SpotLight::RegisterClassAs("SpotLight");
@@ -16,8 +16,8 @@ Object_Light::Object_Light()
 			PropType::Color,
 			PropReflection
 		{
-			[this]() { return this->GetColor(); },
-			[this](GenericType gt) { this->SetColor(gt.Color3); }
+			[this]() { return this->LightColor; },
+			[this](GenericType gt) { this->LightColor = gt; }
 		}
 		}
 	));
@@ -28,8 +28,8 @@ Object_Light::Object_Light()
 			PropType::Double,
 			PropReflection
 		{
-			[this]() { return this->GetBrightness(); },
-			[this](GenericType gt) { this->SetBrightness(gt.Double); }
+			[this]() { return this->Brightness; },
+			[this](GenericType gt) { this->Brightness = (double)gt; }
 		}
 		}
 	));
@@ -40,8 +40,8 @@ Object_Light::Object_Light()
 			PropType::Bool,
 			PropReflection
 		{
-			[this]() { return this->GetShadowsEnabled(); },
-			[this](GenericType gt) { this->SetShadowsEnabled(gt.Bool); }
+			[this]() { return this->Shadows; },
+			[this](GenericType gt) { this->Shadows = gt; }
 		}
 		}
 	));
@@ -52,68 +52,11 @@ Object_Light::Object_Light()
 			PropType::Vector3,
 			PropReflection
 		{
-			[this]() { return this->GetPosition(); },
-			[this](GenericType gt) { this->SetPosition(gt.Vector3); }
+			[this]() { return this->Position; },
+			[this](GenericType gt) { this->Position = gt; }
 		}
 		}
 	));
-}
-
-GenericType Object_Light::GetColor() const
-{
-	GenericType gt;
-	gt.Type = PropType::Color;
-	gt.Color3 = this->LightColor;
-	return gt;
-}
-
-GenericType Object_Light::GetBrightness()
-{
-	return
-	{
-		PropType::Double,
-		"",
-		false,
-		this->Brightness
-	};
-}
-
-GenericType Object_Light::GetShadowsEnabled()
-{
-	return
-	{
-		PropType::Bool,
-		"",
-		this->Shadows
-	};
-}
-
-GenericType Object_Light::GetPosition() const
-{
-	GenericType gt;
-	gt.Type = PropType::Vector3;
-	gt.Vector3 = this->Position;
-	return gt;
-}
-
-void Object_Light::SetColor(Color col)
-{
-	this->LightColor = col;
-}
-
-void Object_Light::SetBrightness(float br)
-{
-	this->Brightness = br;
-}
-
-void Object_Light::SetShadowsEnabled(bool b)
-{
-	this->Shadows = b;
-}
-
-void Object_Light::SetPosition(Vector3 v3)
-{
-	this->Position = v3;
 }
 
 Object_PointLight::Object_PointLight()
@@ -128,27 +71,11 @@ Object_PointLight::Object_PointLight()
 			PropType::Double,
 			PropReflection
 		{
-			[this]() { return this->GetRange(); },
-			[this](GenericType gt) { this->SetRange(gt.Double); }
+			[this]() { return this->Range; },
+			[this](GenericType gt) { this->Range = (double)gt; }
 		}
 		}
 	));
-}
-
-GenericType Object_PointLight::GetRange()
-{
-	return
-	{
-		PropType::Double,
-		"",
-		false,
-		this->Range
-	};
-}
-
-void Object_PointLight::SetRange(float r)
-{
-	this->Range = r;
 }
 
 Object_DirectionalLight::Object_DirectionalLight()
@@ -166,8 +93,8 @@ Object_DirectionalLight::Object_DirectionalLight()
 			PropType::Vector3,
 			PropReflection
 		{
-			[this]() { return this->GetPosition(); },
-			[this](GenericType gt) { this->SetPosition(gt.Vector3); }
+			[this]() { return this->Position; },
+			[this](GenericType gt) { this->Position = gt; }
 		}
 		}
 	));
@@ -185,8 +112,8 @@ Object_SpotLight::Object_SpotLight()
 			PropType::Double,
 			PropReflection
 		{
-			[this]() { return this->GetRange(); },
-			[this](GenericType gt) { this->SetRange(gt.Double); }
+			[this]() { return this->Range; },
+			[this](GenericType gt) { this->Range = (double)gt; }
 		}
 		}
 	));
@@ -198,8 +125,8 @@ Object_SpotLight::Object_SpotLight()
 			PropType::Double,
 			PropReflection
 		{
-			[this]() { return this->GetOuterCone(); },
-			[this](GenericType gt) { this->SetOuterCone(gt.Double); }
+			[this]() { return this->OuterCone; },
+			[this](GenericType gt) { this->OuterCone = (double)gt; }
 		}
 		}
 	));
@@ -211,57 +138,9 @@ Object_SpotLight::Object_SpotLight()
 			PropType::Double,
 			PropReflection
 		{
-			[this]() { return this->GetInnerCone(); },
-			[this](GenericType gt) { this->SetInnerCone(gt.Double); }
+			[this]() { return this->InnerCone; },
+			[this](GenericType gt) { this->InnerCone = (double)gt; }
 		}
 		}
 	));
-}
-
-GenericType Object_SpotLight::GetRange()
-{
-	return
-	{
-		PropType::Double,
-		"",
-		false,
-		this->Range
-	};
-}
-
-GenericType Object_SpotLight::GetOuterCone()
-{
-	return
-	{
-		PropType::Double,
-		"",
-		false,
-		this->Range
-	};
-}
-
-GenericType Object_SpotLight::GetInnerCone()
-{
-	return
-	{
-		PropType::Double,
-		"",
-		false,
-		this->Range
-	};
-}
-
-void Object_SpotLight::SetRange(float r)
-{
-	this->Range = r;
-}
-
-void Object_SpotLight::SetOuterCone(float o)
-{
-	this->OuterCone = o;
-}
-
-void Object_SpotLight::SetInnerCone(float i)
-{
-	this->InnerCone = i;
 }

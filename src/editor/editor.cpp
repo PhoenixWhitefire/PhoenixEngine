@@ -183,12 +183,12 @@ void Editor::RenderUI()
 
 	ImGui::Text("Properties:");
 
-	for (auto& proc : selected->GetProcedures())
+	for (auto& proc : selected->GetFunctions())
 	{
 		bool runProc = ImGui::Button(proc.first.c_str());
 
 		if (runProc)
-			proc.second();
+			proc.second({});
 	}
 
 	for (auto& propListItem : selected->GetProperties())
@@ -206,7 +206,7 @@ void Editor::RenderUI()
 			// no setter (locked property, such as ClassName or ObjectId)
 			// 07/07/2024
 
-			std::string curValStr = curVal;
+			std::string curValStr = curVal.ToString();
 
 			ImGui::Text(std::vformat("{}: {}", std::make_format_args(name, curValStr)).c_str());
 
@@ -269,13 +269,15 @@ void Editor::RenderUI()
 
 		case (PropType::Color):
 		{
-			float entry[3] = {curVal.Color3.R, curVal.Color3.G, curVal.Color3.B};
+			Color col = curVal;
+
+			float entry[3] = { col.R, col.G, col.B};
 
 			ImGui::InputFloat3(name, entry);
 
-			curVal.Color3.R = entry[0];
-			curVal.Color3.G = entry[1];
-			curVal.Color3.B = entry[2];
+			col.R = entry[0];
+			col.G = entry[1];
+			col.B = entry[2];
 
 			getSet.Setter(curVal);
 
@@ -284,13 +286,15 @@ void Editor::RenderUI()
 
 		case (PropType::Vector3):
 		{
-			float entry[3] = { curVal.Vector3.X, curVal.Vector3.Y, curVal.Vector3.Z };
+			Vector3 vec = curVal;
+
+			float entry[3] = { vec.X, vec.Y, vec.Z };
 
 			ImGui::InputFloat3(name, entry);
 
-			curVal.Vector3.X = entry[0];
-			curVal.Vector3.Y = entry[1];
-			curVal.Vector3.Z = entry[2];
+			vec.X = entry[0];
+			vec.Y = entry[1];
+			vec.Z = entry[2];
 
 			getSet.Setter(curVal);
 

@@ -24,10 +24,7 @@ Object_Camera::Object_Camera()
 		{
 			[this]()
 			{
-				GenericType gt;
-				gt.Type = PropType::Bool;
-				gt.Bool = this->GenericMovement;
-				return gt;
+				return this->GenericMovement;
 			},
 
 			[this](GenericType gt)
@@ -44,7 +41,7 @@ Object_Camera::Object_Camera()
 			PropType::Double,
 			PropReflection
 			{
-				[this]() { return GenericType{ PropType::Double, "", false, this->FieldOfView}; },
+				[this]() { return this->FieldOfView; },
 				[this](GenericType gt) { this->FieldOfView = gt.Double; }
 			}
 		}
@@ -58,15 +55,14 @@ Object_Camera::Object_Camera()
 		{
 			[this]()
 			{
-				GenericType gt;
-				gt.Type = PropType::Vector3;
-				gt.Vector3 = Vector3((glm::vec3)this->Matrix[3]);
-				return gt;
+				Vector3 pos = Vector3((glm::vec3)this->Matrix[3]);
+				return pos;
 			},
 
 			[this](GenericType gt)
 			{
-				this->Matrix[3] = glm::vec4(gt.Vector3.X, gt.Vector3.Y, gt.Vector3.Z, 1.f);
+				Vector3& vec = *(Vector3*)gt.Pointer;
+				this->Matrix[3] = glm::vec4(vec.X, vec.Y, vec.Z, 1.f);
 			}
 		}
 		}

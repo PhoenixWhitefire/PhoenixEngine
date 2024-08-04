@@ -383,28 +383,28 @@ static void LoadMapVersion2(const char* MapPath, std::string Contents, GameObjec
 			case (PropType::String):
 			{
 				std::string PropValue = Item[MemberName];
-				PropSetter(GenericType{ PropType::String, PropValue });
+				PropSetter(PropValue);
 				break;
 			}
 
 			case (PropType::Bool):
 			{
 				bool PropValue = Item[MemberName];
-				PropSetter(GenericType{ PropType::String, "", PropValue});
+				PropSetter(PropValue);
 				break;
 			}
 
 			case (PropType::Double):
 			{
 				double PropValue = Item[MemberName];
-				PropSetter(GenericType{ PropType::Double, "", false, PropValue});
+				PropSetter(PropValue);
 				break;
 			}
 
 			case (PropType::Integer):
 			{
 				int PropValue = Item[MemberName];
-				PropSetter(GenericType{ PropType::Integer, "", false, 0.f, PropValue});
+				PropSetter(PropValue);
 				break;
 			}
 
@@ -412,14 +412,14 @@ static void LoadMapVersion2(const char* MapPath, std::string Contents, GameObjec
 			{
 				Vector3 PropVec3 = GetVector3FromJSON(Item[MemberName]);
 				Color PropValue = Color(PropVec3.X, PropVec3.Y, PropVec3.Z);
-				PropSetter(GenericType{ PropType::Integer, "", false, 0.f, NULL, PropValue});
+				PropSetter(PropValue);
 				break;
 			}
 
 			case (PropType::Vector3):
 			{
 				Vector3 PropValue = GetVector3FromJSON(Item[MemberName]);
-				PropSetter(GenericType{ PropType::Integer, "", false, 0.f, NULL, Color(), PropValue});
+				PropSetter(PropValue);
 				break;
 			}
 

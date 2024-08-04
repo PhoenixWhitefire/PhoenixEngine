@@ -460,7 +460,7 @@ int main(int argc, char** argv)
 	{
 		auto fmtArgs = std::make_format_args(Error);
 
-		Debug::Log(std::vformat("CRASH (S): {}", fmtArgs));
+		Debug::Log(std::vformat("CRASH (STRING): {}", fmtArgs));
 
 		SDL_ShowSimpleMessageBox(
 			SDL_MESSAGEBOX_ERROR,
@@ -476,7 +476,7 @@ int main(int argc, char** argv)
 	{
 		auto fmtArgs = std::make_format_args(Error);
 
-		Debug::Log(std::vformat("CRASH (C): {}", fmtArgs));
+		Debug::Log(std::vformat("CRASH (CCHAR): {}", fmtArgs));
 
 		SDL_ShowSimpleMessageBox(
 			SDL_MESSAGEBOX_ERROR,

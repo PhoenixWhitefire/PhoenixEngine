@@ -71,10 +71,7 @@ Object_ParticleEmitter::Object_ParticleEmitter()
 		{
 			[this]()
 			{
-				GenericType gt;
-				gt.Type = PropType::Bool;
-				gt.Bool = this->EmitterEnabled;
-				return gt;
+				return this->EmitterEnabled;
 			},
 
 			[this](GenericType gt)
@@ -93,10 +90,7 @@ Object_ParticleEmitter::Object_ParticleEmitter()
 		{
 			[this]()
 			{
-				GenericType gt;
-				gt.Type = PropType::Integer;
-				gt.Integer = this->Rate;
-				return gt;
+				return this->Rate;
 			},
 
 			[this](GenericType gt)
@@ -115,10 +109,7 @@ Object_ParticleEmitter::Object_ParticleEmitter()
 		{
 			[this]()
 			{
-				GenericType gt;
-				gt.Type = PropType::Integer;
-				gt.Integer = this->MaxParticles;
-				return gt;
+				return this->MaxParticles;
 			},
 
 			[this](GenericType gt)
@@ -137,14 +128,12 @@ Object_ParticleEmitter::Object_ParticleEmitter()
 			{
 				[this]()
 				{
-					auto gt = GenericType();
-					gt.Type = PropType::Vector3;
-					gt.Vector3 = Vector3(this->Lifetime.X, this->Lifetime.Y, 0.f);
-					return gt;
+					return Vector3(this->Lifetime.X, this->Lifetime.Y, 0.f);
 				},
 				[this](GenericType gt)
 				{
-					this->Lifetime = Vector2(gt.Vector3.Y, gt.Vector3.Y);
+					Vector3 vec = gt;
+					this->Lifetime = Vector2(vec.X, vec.Y);
 				}
 			}
 		}
@@ -158,14 +147,11 @@ Object_ParticleEmitter::Object_ParticleEmitter()
 			{
 				[this]()
 				{
-					auto gt = GenericType();
-					gt.Type = PropType::Vector3;
-					gt.Vector3 = this->Offset;
-					return gt;
+					return this->Offset;
 				},
 				[this](GenericType gt)
 				{
-					this->Offset = gt.Vector3;
+					this->Offset = gt;
 				}
 			}
 		}

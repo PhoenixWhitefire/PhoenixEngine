@@ -1,5 +1,7 @@
 #pragma once
 
+#define PHX_ASSERT(res, err) if (!res) throw(err)
+
 #include<functional>
 #include<vector>
 #include<string>
@@ -9,7 +11,8 @@
 #include"datatype/Color.hpp"
 #include"datatype/Event.hpp"
 
-enum class PropType {
+enum class PropType
+{
 	NONE,
 	String,
 	Bool,
@@ -20,17 +23,73 @@ enum class PropType {
 };
 
 // i just cant 13/06/2024
+// 04/08/2024: Removed Vector3 and Color, replaced with void* Pointer
 struct GenericType
 {
 	PropType Type = PropType::Bool;
 	std::string String;
-	bool Bool;
+	bool Bool = true;
 	double Double = 0.f;
 	int Integer = 0;
-	Color Color3;
-	Vector3 Vector3;
+	void* Pointer = nullptr;
 
-	operator std::string()
+	GenericType(std::string str)
+	{
+		this->Type = PropType::String;
+		this->String = str;
+	}
+
+	GenericType(bool b)
+	{
+		this->Type = PropType::Bool;
+		this->Bool = b;
+	}
+
+	GenericType(double d)
+	{
+		this->Type = PropType::Double;
+		this->Double = d;
+	}
+
+	GenericType(int i)
+	{
+		this->Type = PropType::Integer;
+		this->Integer = i;
+	}
+
+	GenericType(uint32_t i)
+	{
+		this->Type = PropType::Integer;
+		this->Integer = i;
+	}
+
+	GenericType(Vector3 v)
+	{
+		this->Type = PropType::Vector3;
+		this->Pointer = malloc(sizeof(v));
+		if (this->Pointer != NULL)
+			memcpy(this->Pointer, &v, sizeof(v));
+		else
+			throw("Tried to cast Vector3 to GenericType, met an allocation error in the process.");
+	}
+
+	GenericType(Color v)
+	{
+		this->Type = PropType::Color;
+		this->Pointer = malloc(sizeof(v));
+		if (this->Pointer != NULL)
+			memcpy(this->Pointer, &v, sizeof(v));
+		else
+			throw("Tried to cast Vector3 to GenericType, met an allocation error in the process.");
+	}
+
+	//~GenericType()
+	//{
+	//	//if (this->Pointer)
+	//		//delete this->Pointer; // 04/08/2024 TODO: Instant crash. Fix. Memory leak because of above malloc.
+	//}
+
+	std::string ToString()
 	{
 		switch (this->Type)
 		{
@@ -47,16 +106,58 @@ struct GenericType
 			return std::to_string(this->Integer);
 
 		case (PropType::Color):
-			return std::string(this->Color3);
+			return std::string(*(Color*)this->Pointer);
 
 		case (PropType::Vector3):
-			return std::string(this->Vector3);
+			return std::string(*(Vector3*)this->Pointer);
 
 		default:
-			return std::string("Cast failed");
+		{
+			int tInt = (int)this->Type;
+			return std::vformat("Cast failed, Type ID was: {}", std::make_format_args(tInt));
+		}
+			
 		}
 	}
+
+	operator std::string()
+	{
+		return this->Type == PropType::String ? this->String : throw("GenericType was not a String");
+	}
+
+	operator bool()
+	{
+		return this->Type == PropType::Bool ? this->Bool : throw("GenericType was not a Bool");
+	}
+
+	operator double()
+	{
+		return this->Type == PropType::Double ? this->Double : throw("GenericType was not a Double");
+	}
+
+	operator int()
+	{
+		return this->Type == PropType::Integer ? this->Integer : throw("GenericType was not an Integer");
+	}
+
+	operator Vector3()
+	{
+		return this->Type == PropType::Vector3 ? *(Vector3*)this->Pointer : throw("GenericType was not a Vector3");
+	}
+
+	operator Color()
+	{
+		return this->Type == PropType::Color ? *(Color*)this->Pointer : throw("GenericType was not a Color");
+	}
+
+	operator std::vector<GenericType>()
+	{
+		auto vec = std::vector<GenericType>();
+		vec.push_back(*this);
+	}
 };
+
+typedef std::vector<GenericType> GenericTypeArray;
 
 struct PropReflection
 {
@@ -70,9 +171,11 @@ struct PropInfo
 	PropReflection Reflection;
 };
 
+typedef std::function<GenericTypeArray(GenericTypeArray)> GenericFunction_t;
+
 typedef std::unordered_map<std::string, PropInfo> PropList_t;
 
-typedef std::unordered_map<std::string, std::function<void(void)>> ProcList_t;
+typedef std::unordered_map<std::string, GenericFunction_t> FuncList_t;
 
 class GameObject
 {
@@ -80,7 +183,7 @@ public:
 	GameObject();
 	~GameObject();
 
-	std::vector<std::shared_ptr<GameObject>> GetChildren();
+	std::vector<std::shared_ptr<GameObject>>& GetChildren();
 	std::shared_ptr<GameObject> GetChildOfClass(std::string lass);
 
 	void SetParent(std::shared_ptr<GameObject> Parent);
@@ -92,19 +195,16 @@ public:
 
 	std::shared_ptr<GameObject> GetChild(std::string ChildName);
 
-	PropList_t GetProperties();
-	ProcList_t GetProcedures();
-	PropInfo* GetProperty(std::string Name);
-	void SetProperty(std::string Name, GenericType gt);
+	PropList_t& GetProperties();
+	FuncList_t& GetFunctions();
 
-	GenericType GetName();
-	GenericType GetClassName();
-	GenericType GetEnabled();
+	PropInfo* GetProperty(std::string Name);
+	GenericFunction_t* GetFunction(std::string Name);
+
+	void SetProperty(std::string Name, GenericType gt);
+	GenericTypeArray CallFunction(std::string Name, GenericTypeArray args);
 
 	std::string GetFullName();
-
-	void SetName(std::string);
-	void SetEnabled(bool);
 
 	static std::shared_ptr<GameObject> DataModel;
 
@@ -136,13 +236,13 @@ public:
 
 	bool ParentLocked = false;
 
-	uint32_t GameObjectId = 0;
+	uint32_t ObjectId = 0;
 
 protected:
 	std::vector<std::shared_ptr<GameObject>> m_children;
 
 	PropList_t m_properties;
-	ProcList_t m_procedures;
+	FuncList_t m_functions;
 };
 
 // I followed this StackOverflow post:

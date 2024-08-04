@@ -21,15 +21,15 @@ Object_Base3D::Object_Base3D()
 		{
 			[this]()
 			{
-				GenericType gt;
-				gt.Type = PropType::Vector3;
-				gt.Vector3 = Vector3((glm::vec3)this->Matrix[3]);
-				return gt;
+				Vector3 v = Vector3((glm::vec3)this->Matrix[3]);
+				return v;
 			},
 
 			[this](GenericType gt)
 			{
-				this->Matrix[3] = glm::vec4(gt.Vector3.X, gt.Vector3.Y, gt.Vector3.Z, 1.f);
+
+				Vector3& vec = *(Vector3*)gt.Pointer;
+				this->Matrix[3] = glm::vec4(vec.X, vec.Y, vec.Z, 1.f);
 			}
 		}
 		}
@@ -43,15 +43,12 @@ Object_Base3D::Object_Base3D()
 		{
 			[this]()
 			{
-				GenericType gt;
-				gt.Type = PropType::Vector3;
-				gt.Vector3 = this->Size;
-				return gt;
+				return this->Size;
 			},
 
 			[this](GenericType gt)
 			{
-				this->Size = gt.Vector3;
+				this->Size = gt;
 			}
 		}
 		}
@@ -64,7 +61,7 @@ Object_Base3D::Object_Base3D()
 			PropType::String,
 			PropReflection
 			{
-				[this]() { return GenericType{PropType::String, this->Material->Name}; },
+				[this]() { return this->Name; },
 				[this](GenericType gt)
 				{
 					this->Material = RenderMaterial::GetMaterial(gt.String);
@@ -82,15 +79,12 @@ Object_Base3D::Object_Base3D()
 		{
 			[this]()
 			{
-				GenericType gt;
-				gt.Type = PropType::Color;
-				gt.Color3 = this->ColorRGB;
-				return gt;
+				return this->ColorRGB;
 			},
 
 			[this](GenericType gt)
 			{
-				this->ColorRGB = gt.Color3;
+				this->ColorRGB = gt;
 			}
 		}
 		}
@@ -104,10 +98,7 @@ Object_Base3D::Object_Base3D()
 		{
 			[this]()
 			{
-				GenericType gt;
-				gt.Type = PropType::Double;
-				gt.Double = this->Transparency;
-				return gt;
+				return this->Transparency;
 			},
 
 			[this](GenericType gt)
@@ -126,10 +117,7 @@ Object_Base3D::Object_Base3D()
 		{
 			[this]()
 			{
-				GenericType gt;
-				gt.Type = PropType::Double;
-				gt.Double = this->Reflectivity;
-				return gt;
+				return this->Reflectivity;
 			},
 
 			[this](GenericType gt)
@@ -148,10 +136,7 @@ Object_Base3D::Object_Base3D()
 		{
 			[this]()
 			{
-				GenericType gt;
-				gt.Type = PropType::Integer;
-				gt.Integer = (int)this->FaceCulling;
-				return gt;
+				return (int)this->FaceCulling;
 			},
 
 			[this](GenericType gt)

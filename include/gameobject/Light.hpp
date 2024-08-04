@@ -11,16 +11,6 @@ public:
 
 	Object_Light();
 
-	GenericType GetColor() const;
-	GenericType GetBrightness();
-	GenericType GetShadowsEnabled();
-	GenericType GetPosition() const;
-
-	void SetColor(Color);
-	void SetBrightness(float);
-	void SetShadowsEnabled(bool);
-	void SetPosition(Vector3);
-
 	Color LightColor = Color(1.0f, 1.0f, 1.0f);
 	float Brightness = 1.0f;
 	bool Shadows = false;
@@ -33,9 +23,6 @@ class Object_PointLight : public Object_Light
 public:
 
 	Object_PointLight();
-
-	GenericType GetRange();
-	void SetRange(float);
 
 	float Range = 16.f;
 
@@ -56,14 +43,6 @@ class Object_SpotLight : public Object_Light
 {
 public:
 	Object_SpotLight();
-
-	GenericType GetRange();
-	GenericType GetOuterCone();
-	GenericType GetInnerCone();
-
-	void SetRange(float);
-	void SetOuterCone(float);
-	void SetInnerCone(float);
 
 	float Range = 16.f;
 

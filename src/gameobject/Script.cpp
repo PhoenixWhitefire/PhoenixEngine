@@ -161,15 +161,19 @@ Object_Script::Object_Script()
 			PropType::String,
 			PropReflection
 			{
-				[this]() { return GenericType{ PropType::String, this->SourceFile }; },
+				[this]() { return this->SourceFile; },
 				[this](GenericType gt) { this->SourceFile = gt.String; }
 			}
 		}
 	));
 
-	m_procedures.insert(std::pair(
+	m_functions.insert(std::pair(
 		"Reload",
-		[this]() { this->Reload(); }
+		[this](GenericTypeArray)
+		{
+			GenericTypeArray res = (GenericType)this->Reload();
+			return res;
+		}
 	));
 }
 

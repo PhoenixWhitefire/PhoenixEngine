@@ -31,11 +31,7 @@ Object_Workspace::Object_Workspace()
 			{
 			[this]()
 			{
-				return GenericType
-				{
-					PropType::String,
-					this->m_sceneCamera->Name
-				};
+				return m_sceneCamera->Name;
 			},
 
 			[this](GenericType gt)
