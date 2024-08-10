@@ -23,10 +23,10 @@ public:
 
 	Vector3 LinearVelocity;
 	Vector3 AngularVelocity;
-	float Mass = 1.0f;
+	double Mass = 1.0f;
 
-	float Transparency = 0.0f;
-	float Reflectivity = 0.0f;
+	double Transparency = 0.0f;
+	double Reflectivity = 0.0f;
 
 	Color ColorRGB = Color(1.0f, 1.0f, 1.0f);
 

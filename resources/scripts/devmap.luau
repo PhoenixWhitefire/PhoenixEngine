@@ -1,24 +1,17 @@
 -- devmap.luau, 10/07/2024
 
-local totaltime = 0
-
---local v3 = Vector3.new(5, 10, 3)
-
---for k, v in v3 do
---	print(k, "=", v)
---end
-
-print("NIKO")
-
-local cube = GameObject.new("Primitive")
-
-print("HI")
-
-function Update(DeltaTime)
-	totaltime += DeltaTime
-	print("PINT")
-	local nvec3 = Vector3.new(math.sin(totaltime) * 15, 10, math.cos(totaltime) * 15)
-	print("BRUH")
-	cube:SetPosition(nvec3)
-	print("SETPOS")
+local function printTable(tbl, depth)
+    depth = depth or 0
+    print(string.rep("    ", depth), "{")
+    for k, v in tbl do
+        if typeof(v) == "table" then
+            print(k, "=")
+            printTable(v, depth + 1)
+            continue
+        end
+        print(string.rep("    ", depth + 1), k, "=", v)
+    end
+    print(string.rep("    ", depth), "}")
 end
+
+printTable(game)

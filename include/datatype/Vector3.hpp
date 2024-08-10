@@ -3,13 +3,16 @@
 #include<format>
 #include<glm/vec3.hpp>
 
-class Vector3
+#include"Reflection.hpp"
+
+class Vector3 : public Reflection::Reflectable
 {
 public:
-	Vector3(glm::vec3 GLMVector);
+	Vector3();
 
 	Vector3(double X, double Y, double Z);
-	Vector3();
+	Vector3(glm::vec3);
+	Vector3(Reflection::GenericValue);
 
 	Vector3 Cross(Vector3 OtherVec);
 	double Dot(Vector3 OtherVec);
@@ -132,5 +135,19 @@ public:
 	operator std::string()
 	{
 		return std::vformat("{}, {}, {}", std::make_format_args(this->X, this->Y, this->Z));
+	}
+
+	operator Reflection::GenericValue()
+	{
+		Reflection::GenericValue value;
+		value.Type = Reflection::ValueType::Vector3;
+		
+		value.Pointer = malloc(sizeof(Vector3));
+		if (value.Pointer != NULL)
+			memcpy(value.Pointer, (void*)this, sizeof(Vector3));
+		else
+			throw("Tried to cast Vector3 to Reflection::GenericValue, met an allocation error in the process.");
+
+		return value;
 	}
 };

@@ -7,26 +7,8 @@ Object_Mesh::Object_Mesh()
 	this->Name = "Mesh";
 	this->ClassName = "Mesh";
 
-	m_properties.insert(std::pair(
-		"Asset",
-		PropInfo
-		{
-		PropType::String,
-		PropReflection
-		{
-			[this]()
-			{
-				return this->Asset;
-			},
-
-			[this](GenericType gt)
-			{
-				// TODO: asset reloading
-				this->Asset = gt.String;
-			}
-		}
-		}
-	));
+	// TODO: asset reloading
+	REFLECTION_DECLAREPROP_SIMPLE(Asset, Reflection::ValueType::String);
 }
 
 void Object_Mesh::SetRenderMesh(Mesh NewRenderMesh)

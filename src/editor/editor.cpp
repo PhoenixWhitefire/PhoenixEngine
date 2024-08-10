@@ -15,7 +15,6 @@ static double InvalidObjectErrTimeRemaining = 0.f;
 static std::shared_ptr<GameObject> CurrentUIHierarchyRoot;
 
 static bool prevWantKeyboard = false;
-static std::unordered_map<std::string, GenericType> prevVals;
 
 Editor::Editor()
 {
@@ -181,27 +180,20 @@ void Editor::RenderUI()
 
 	std::shared_ptr<Object_Script> script = std::dynamic_pointer_cast<Object_Script>(selected);
 
+	if (script)
+		if (ImGui::Button("Reload"))
+			script->Reload();
+
 	ImGui::Text("Properties:");
-
-	for (auto& proc : selected->GetFunctions())
-	{
-		bool runProc = ImGui::Button(proc.first.c_str());
-
-		if (runProc)
-			proc.second({});
-	}
 
 	for (auto& propListItem : selected->GetProperties())
 	{
-		PropInfo prop = propListItem.second;
-
 		const char* name = propListItem.first.c_str();
+		Reflection::Property& prop = propListItem.second;
 
-		PropReflection getSet = prop.Reflection;
+		Reflection::GenericValue curVal = prop.Getter();
 
-		auto curVal = getSet.Getter();
-
-		if (!getSet.Setter)
+		if (!prop.Setter)
 		{
 			// no setter (locked property, such as ClassName or ObjectId)
 			// 07/07/2024
@@ -216,7 +208,7 @@ void Editor::RenderUI()
 		switch (prop.Type)
 		{
 
-		case (PropType::String):
+		case (Reflection::ValueType::String):
 		{
 			uint8_t allocSize = uint8_t(fmax(64, curVal.String.length()));
 
@@ -234,40 +226,40 @@ void Editor::RenderUI()
 
 			curVal.String = buf;
 
-			getSet.Setter(curVal);
+			prop.Setter(curVal);
 
 			free(buf);
 
 			break;
 		}
 
-		case (PropType::Bool):
+		case (Reflection::ValueType::Bool):
 		{
 			ImGui::Checkbox(name, &curVal.Bool);
 
-			getSet.Setter(curVal);
+			prop.Setter(curVal);
 			break;
 		}
 
-		case (PropType::Double):
+		case (Reflection::ValueType::Double):
 		{
 			ImGui::InputDouble(name, &curVal.Double);
 			
-			getSet.Setter(curVal);
+			prop.Setter(curVal);
 
 			break;
 		}
 
-		case (PropType::Integer):
+		case (Reflection::ValueType::Integer):
 		{
 			ImGui::InputInt(name, &curVal.Integer);
 
-			getSet.Setter(curVal);
+			prop.Setter(curVal);
 
 			break;
 		}
 
-		case (PropType::Color):
+		case (Reflection::ValueType::Color):
 		{
 			Color col = curVal;
 
@@ -279,12 +271,12 @@ void Editor::RenderUI()
 			col.G = entry[1];
 			col.B = entry[2];
 
-			getSet.Setter(curVal);
+			prop.Setter(curVal);
 
 			break;
 		}
 
-		case (PropType::Vector3):
+		case (Reflection::ValueType::Vector3):
 		{
 			Vector3 vec = curVal;
 
@@ -296,7 +288,7 @@ void Editor::RenderUI()
 			vec.Y = entry[1];
 			vec.Z = entry[2];
 
-			getSet.Setter(curVal);
+			prop.Setter(curVal);
 
 			break;
 		}

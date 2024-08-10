@@ -9,54 +9,10 @@ Object_Light::Object_Light()
 	this->Name = "Light (ABSTRACT)";
 	this->ClassName = "Light";
 
-	m_properties.insert(std::pair(
-		"Color",
-		PropInfo
-		{
-			PropType::Color,
-			PropReflection
-		{
-			[this]() { return this->LightColor; },
-			[this](GenericType gt) { this->LightColor = gt; }
-		}
-		}
-	));
-	m_properties.insert(std::pair(
-		"Brightness",
-		PropInfo
-		{
-			PropType::Double,
-			PropReflection
-		{
-			[this]() { return this->Brightness; },
-			[this](GenericType gt) { this->Brightness = (double)gt; }
-		}
-		}
-	));
-	m_properties.insert(std::pair(
-		"Shadows",
-		PropInfo
-		{
-			PropType::Bool,
-			PropReflection
-		{
-			[this]() { return this->Shadows; },
-			[this](GenericType gt) { this->Shadows = gt; }
-		}
-		}
-	));
-	m_properties.insert(std::pair(
-		"Position",
-		PropInfo
-		{
-			PropType::Vector3,
-			PropReflection
-		{
-			[this]() { return this->Position; },
-			[this](GenericType gt) { this->Position = gt; }
-		}
-		}
-	));
+	REFLECTION_DECLAREPROP_SIMPLE(LightColor, Reflection::ValueType::Color);
+	REFLECTION_DECLAREPROP_SIMPLE(Brightness, Reflection::ValueType::Double);
+	REFLECTION_DECLAREPROP_SIMPLE(Shadows, Reflection::ValueType::Bool);
+	REFLECTION_DECLAREPROP_SIMPLE(Position, Reflection::ValueType::Vector3);
 }
 
 Object_PointLight::Object_PointLight()
@@ -64,18 +20,7 @@ Object_PointLight::Object_PointLight()
 	this->Name = "PointLight";
 	this->ClassName = "PointLight";
 
-	m_properties.insert(std::pair(
-		"Range",
-		PropInfo
-		{
-			PropType::Double,
-			PropReflection
-		{
-			[this]() { return this->Range; },
-			[this](GenericType gt) { this->Range = (double)gt; }
-		}
-		}
-	));
+	REFLECTION_DECLAREPROP_SIMPLE(Range, Reflection::ValueType::Double);
 }
 
 Object_DirectionalLight::Object_DirectionalLight()
@@ -86,18 +31,21 @@ Object_DirectionalLight::Object_DirectionalLight()
 	// Direction is just Position under-the-hood. Remove the duplicate
 	m_properties.erase("Position");
 	// Redirect it to the Position member
-	m_properties.insert(std::pair(
-		"Direction",
-		PropInfo
+	REFLECTION_DECLAREPROP(
+		Direction,
+		Reflection::ValueType::Vector3,
+		[this]()
 		{
-			PropType::Vector3,
-			PropReflection
+			return this->Position;
+		},
+		[this](Reflection::GenericValue gv)
 		{
-			[this]() { return this->Position; },
-			[this](GenericType gt) { this->Position = gt; }
+			this->Position = Vector3(gv);
+			// Normalize
+			if (this->Position.Magnitude > 0.f)
+				this->Position = this->Position / this->Position.Magnitude;
 		}
-		}
-	));
+	);
 }
 
 Object_SpotLight::Object_SpotLight()
@@ -105,42 +53,7 @@ Object_SpotLight::Object_SpotLight()
 	this->Name = "SpotLight";
 	this->ClassName = "SpotLight";
 
-	m_properties.insert(std::pair(
-		"Range",
-		PropInfo
-		{
-			PropType::Double,
-			PropReflection
-		{
-			[this]() { return this->Range; },
-			[this](GenericType gt) { this->Range = (double)gt; }
-		}
-		}
-	));
-
-	m_properties.insert(std::pair(
-		"OuterCone",
-		PropInfo
-		{
-			PropType::Double,
-			PropReflection
-		{
-			[this]() { return this->OuterCone; },
-			[this](GenericType gt) { this->OuterCone = (double)gt; }
-		}
-		}
-	));
-
-	m_properties.insert(std::pair(
-		"InnerCone",
-		PropInfo
-		{
-			PropType::Double,
-			PropReflection
-		{
-			[this]() { return this->InnerCone; },
-			[this](GenericType gt) { this->InnerCone = (double)gt; }
-		}
-		}
-	));
+	REFLECTION_DECLAREPROP_SIMPLE(Range, Reflection::ValueType::Double);
+	REFLECTION_DECLAREPROP_SIMPLE(OuterCone, Reflection::ValueType::Double);
+	REFLECTION_DECLAREPROP_SIMPLE(InnerCone, Reflection::ValueType::Double);
 }

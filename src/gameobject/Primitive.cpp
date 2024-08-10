@@ -36,24 +36,18 @@ Object_Primitive::Object_Primitive()
 
 	this->Material = RenderMaterial::GetMaterial("plastic");
 
-	m_properties.insert(std::pair(
-		std::string("Shape"),
-		PropInfo
+	REFLECTION_DECLAREPROP(
+		Shape,
+		Reflection::ValueType::Integer,
+		[this]()
 		{
-			PropType::Integer,
-			PropReflection
-			{
-				[this]()
-				{
-					return (int)this->Shape;
-				},
-				[this](GenericType gt)
-				{
-					this->SetShape((PrimitiveShape)gt.Integer);
-				}
-			}
+			return (int)this->Shape;
+		},
+		[this](Reflection::GenericValue gv)
+		{
+			this->SetShape((PrimitiveShape)gv.Integer);
 		}
-	));
+	);
 }
 
 void Object_Primitive::SetShape(PrimitiveShape shape)

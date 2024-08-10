@@ -620,7 +620,7 @@ void EngineObject::Start()
 		);
 		projection = glm::perspective(
 			glm::radians(SceneCamera->FieldOfView),
-			(float)AspectRatio,
+			AspectRatio,
 			SceneCamera->NearPlane,
 			SceneCamera->FarPlane
 		);

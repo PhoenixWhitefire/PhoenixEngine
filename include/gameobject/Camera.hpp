@@ -20,9 +20,9 @@ public:
 	bool IsSceneCamera = false;
 
 	glm::mat4 Matrix = glm::mat4(1.0f);
-	float FieldOfView = 70.f;
-	float NearPlane = 0.1f;
-	float FarPlane = 1000.f;
+	double FieldOfView = 70.f;
+	double NearPlane = 0.1f;
+	double FarPlane = 1000.f;
 
 	// When in GenericMovement mode
 	float MovementSpeed = 0.5f;

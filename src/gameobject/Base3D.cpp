@@ -12,140 +12,52 @@ Object_Base3D::Object_Base3D()
 
 	this->Material = DefaultRenderMat;
 
-	m_properties.insert(std::pair(
-		"Position",
-		PropInfo
+	REFLECTION_DECLAREPROP(
+		Position,
+		Reflection::ValueType::Vector3,
+		[this]()
 		{
-		PropType::Vector3,
-		PropReflection
+			Vector3 v = Vector3((glm::vec3)this->Matrix[3]);
+			return v;
+		},
+		[this](Reflection::GenericValue gv)
 		{
-			[this]()
-			{
-				Vector3 v = Vector3((glm::vec3)this->Matrix[3]);
-				return v;
-			},
+			Vector3& vec = *(Vector3*)gv.Pointer;
+			this->Matrix[3] = glm::vec4(vec.X, vec.Y, vec.Z, 1.f);
+		}
+	);
 
-			[this](GenericType gt)
-			{
+	REFLECTION_DECLAREPROP_SIMPLE(Size, Reflection::ValueType::Vector3);
 
-				Vector3& vec = *(Vector3*)gt.Pointer;
-				this->Matrix[3] = glm::vec4(vec.X, vec.Y, vec.Z, 1.f);
-			}
-		}
-		}
-	));
-	m_properties.insert(std::pair(
-		"Size",
-		PropInfo
+	REFLECTION_DECLAREPROP(
+		Material,
+		Reflection::ValueType::String,
+		[this]()
 		{
-		PropType::Vector3,
-		PropReflection
+			return this->Material->Name;
+		},
+		[this](Reflection::GenericValue gv)
 		{
-			[this]()
-			{
-				return this->Size;
-			},
+			this->Material = RenderMaterial::GetMaterial(gv.String);
+		}
+	);
 
-			[this](GenericType gt)
-			{
-				this->Size = gt;
-			}
-		}
-		}
-	));
+	REFLECTION_DECLAREPROP_SIMPLE(ColorRGB, Reflection::ValueType::Color);
+	REFLECTION_DECLAREPROP_SIMPLE(Transparency, Reflection::ValueType::Double);
+	REFLECTION_DECLAREPROP_SIMPLE(Reflectivity, Reflection::ValueType::Double);
 
-	m_properties.insert(std::pair(
-		"Material",
-		PropInfo
+	REFLECTION_DECLAREPROP(
+		FaceCulling,
+		Reflection::ValueType::Integer,
+		[this]()
 		{
-			PropType::String,
-			PropReflection
-			{
-				[this]() { return this->Name; },
-				[this](GenericType gt)
-				{
-					this->Material = RenderMaterial::GetMaterial(gt.String);
-				}
-			}
-		}
-	));
-
-	m_properties.insert(std::pair(
-		"ColorRGB",
-		PropInfo
+			return (int)this->FaceCulling;
+		},
+		[this](Reflection::GenericValue gv)
 		{
-		PropType::Color,
-		PropReflection
-		{
-			[this]()
-			{
-				return this->ColorRGB;
-			},
-
-			[this](GenericType gt)
-			{
-				this->ColorRGB = gt;
-			}
+			this->FaceCulling = (FaceCullingMode)gv.Integer;
 		}
-		}
-	));
-	m_properties.insert(std::pair(
-		"Transparency",
-		PropInfo
-		{
-		PropType::Double,
-		PropReflection
-		{
-			[this]()
-			{
-				return this->Transparency;
-			},
-
-			[this](GenericType gt)
-			{
-				this->Transparency = gt.Double;
-			}
-		}
-		}
-	));
-	m_properties.insert(std::pair(
-		"Reflectivity",
-		PropInfo
-		{
-		PropType::Double,
-		PropReflection
-		{
-			[this]()
-			{
-				return this->Reflectivity;
-			},
-
-			[this](GenericType gt)
-			{
-				this->Reflectivity = gt.Double;
-			}
-		}
-		}
-	));
-	m_properties.insert(std::pair(
-		"FaceCulling",
-		PropInfo
-		{
-		PropType::Integer,
-		PropReflection
-		{
-			[this]()
-			{
-				return (int)this->FaceCulling;
-			},
-
-			[this](GenericType gt)
-			{
-				this->FaceCulling = (FaceCullingMode)gt.Integer;
-			}
-		}
-		}
-	));
+	);
 }
 
 Mesh* Object_Base3D::GetRenderMesh()

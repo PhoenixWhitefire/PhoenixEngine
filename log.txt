@@ -2,10 +2,11 @@ Running OpenGL version 4.6
 Renderer initialized
 Editor object was created
 The Map Version is 2
-Deserialize warning: Member 'Position' is not defined in the API for the Class Mesh (Name: 'ground')!
 Failed to load texture 'resources/textures/waterdistort.jpg' (usage:2)
+Deserialize warning: Member 'Color' is not defined in the API for the Class DirectionalLight (Name: 'Sun')!
 Loaded map file 'levels/dev_fmtv2.world'
 Editor init done
 Main program loop start...
-CRASH: incorrect type for newobject
+Luau script init error: Workspace.LoadedLevel.MainScript: attempt to call a table value
+Changing window resolution: (1280, 720) -> (1280, 719)
 Application closing...

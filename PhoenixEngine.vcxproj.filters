@@ -1011,6 +1011,9 @@
     <ClInclude Include="..\LuauLib\Common\include\Luau\Bytecode.h">
       <Filter>Vendor Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\Reflection.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="vendor\gl.c">
@@ -1144,6 +1147,9 @@
     </ClCompile>
     <ClCompile Include="src\gameobject\Script.cpp">
       <Filter>Source Files\gameobject</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Reflection.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

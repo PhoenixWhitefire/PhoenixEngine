@@ -62,100 +62,57 @@ Object_ParticleEmitter::Object_ParticleEmitter()
 	this->TransparencyOverTime.InsertKey(ValueRangeKey<float>(0.8, 0.5));
 	this->TransparencyOverTime.InsertKey(ValueRangeKey<float>(1, 1));
 
-	m_properties.insert(std::pair(
-		"EmitterEnabled",
-		PropInfo
-		{
-		PropType::Bool,
-		PropReflection
-		{
-			[this]()
-			{
-				return this->EmitterEnabled;
-			},
+	REFLECTION_DECLAREPROP_SIMPLE(EmitterEnabled, Reflection::ValueType::Bool);
 
-			[this](GenericType gt)
-			{
-				this->EmitterEnabled = gt.Bool;
-			}
-		}
-		}
-	));
-	m_properties.insert(std::pair(
-		"Rate",
-		PropInfo
+	REFLECTION_DECLAREPROP(
+		Rate,
+		Reflection::ValueType::Integer,
+		[this]()
 		{
-		PropType::Integer,
-		PropReflection
+			return this->Rate;
+		},
+		[this](Reflection::GenericValue gv)
 		{
-			[this]()
-			{
-				return this->Rate;
-			},
+			int newRate = gv.Integer;
+			if (newRate < 0)
+				throw(std::vformat("Rate must be >=0, {} instead", std::make_format_args(newRate)));
+			else
+				this->Rate = newRate;
+		}
+	);
 
-			[this](GenericType gt)
-			{
-				this->Rate = gt.Integer;
-			}
-		}
-		}
-	));
-	m_properties.insert(std::pair(
-		"MaxParticles",
-		PropInfo
+	REFLECTION_DECLAREPROP(
+		MaxParticles,
+		Reflection::ValueType::Integer,
+		[this]()
 		{
-		PropType::Integer,
-		PropReflection
+			return this->MaxParticles;
+		},
+		[this](Reflection::GenericValue gv)
 		{
-			[this]()
-			{
-				return this->MaxParticles;
-			},
+			int newMax = gv.Integer;
+			if (newMax < 0)
+				throw(std::vformat("MaxParticles must be >=0, {} instead", std::make_format_args(newMax)));
+			else
+				this->MaxParticles = newMax;
+		}
+	);
 
-			[this](GenericType gt)
-			{
-				this->MaxParticles = gt.Integer;
-			}
-		}
-		}
-	));
-	this->m_properties.insert(std::pair(
-		"Lifetime",
-		PropInfo
+	REFLECTION_DECLAREPROP(
+		Lifetime,
+		Reflection::ValueType::Vector3,
+		[this]()
 		{
-			PropType::Vector3,
-			PropReflection
-			{
-				[this]()
-				{
-					return Vector3(this->Lifetime.X, this->Lifetime.Y, 0.f);
-				},
-				[this](GenericType gt)
-				{
-					Vector3 vec = gt;
-					this->Lifetime = Vector2(vec.X, vec.Y);
-				}
-			}
-		}
-	));
-	this->m_properties.insert(std::pair(
-		"Offset",
-		PropInfo
+			return Vector3(this->Lifetime.X, this->Lifetime.Y, 0.f);
+		},
+		[this](Reflection::GenericValue gv)
 		{
-			PropType::Vector3,
-			PropReflection
-			{
-				[this]()
-				{
-					return this->Offset;
-				},
-				[this](GenericType gt)
-				{
-					this->Offset = gt;
-				}
-			}
+			Vector3 newLifetime = gv;
+			this->Lifetime = Vector2(newLifetime.X, newLifetime.Y);
 		}
-	));
+	);
+
+	REFLECTION_DECLAREPROP_SIMPLE(Offset, Reflection::ValueType::Vector3);
 }
 
 uint32_t Object_ParticleEmitter::m_getUsableIndex()

@@ -54,6 +54,7 @@
     <ClInclude Include="include\MapLoader.hpp" />
     <ClInclude Include="include\ModelLoader.hpp" />
     <ClInclude Include="include\PhysicsEngine.hpp" />
+    <ClInclude Include="include\Reflection.hpp" />
     <ClInclude Include="include\render\GraphicsAbstractionLayer.hpp" />
     <ClInclude Include="include\render\Material.hpp" />
     <ClInclude Include="include\render\Renderer.hpp" />
@@ -370,6 +371,7 @@
     <ClCompile Include="src\MapLoader.cpp" />
     <ClCompile Include="src\ModelLoader.cpp" />
     <ClCompile Include="src\PhysicsEngine.cpp" />
+    <ClCompile Include="src\Reflection.cpp" />
     <ClCompile Include="src\render\GraphicsAbstractionLayer.cpp" />
     <ClCompile Include="src\render\Material.cpp" />
     <ClCompile Include="src\render\Renderer.cpp" />

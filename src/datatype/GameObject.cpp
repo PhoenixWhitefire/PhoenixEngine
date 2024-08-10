@@ -44,59 +44,10 @@ inline std::vector<T> erase_indices(const std::vector<T>& data, std::vector<size
 
 GameObject::GameObject()
 {
-	//this->Parent = nullptr;
-
-	m_properties.insert(std::pair(
-		"ClassName",
-		PropInfo
-		{
-			PropType::String,
-			PropReflection
-			{
-				[this]() { return this->ClassName; },
-				nullptr
-			}
-		}
-	));
-
-	m_properties.insert(std::pair(
-		"Name",
-		PropInfo
-		{
-			PropType::String,
-			PropReflection
-			{
-				[this]() { return this->Name; },
-				[this](GenericType gt) { this->Name = gt; }
-			}
-		}
-	));
-
-	m_properties.insert(std::pair(
-		"Enabled",
-		PropInfo
-		{
-			PropType::Bool,
-			PropReflection
-			{
-				[this]() { return this->Enabled; },
-				[this](GenericType gt) { this->Enabled = gt.Bool; }
-			}
-		}
-	));
-
-	m_properties.insert(std::pair(
-		"ObjectId",
-		PropInfo
-		{
-			PropType::Integer,
-			PropReflection
-			{
-				[this]() { return this->ObjectId; },
-				nullptr
-			}
-		}
-	));
+	REFLECTION_DECLAREPROP_SIMPLE_READONLY(ClassName, Reflection::ValueType::String);
+	REFLECTION_DECLAREPROP_SIMPLE(Name, Reflection::ValueType::String);
+	REFLECTION_DECLAREPROP_SIMPLE(Enabled, Reflection::ValueType::Bool);
+	REFLECTION_DECLAREPROP_SIMPLE_READONLY(ObjectId, Reflection::ValueType::Integer);
 }
 
 GameObject::~GameObject()
@@ -119,48 +70,6 @@ void GameObject::Initialize()
 
 void GameObject::Update(double DeltaTime)
 {
-}
-
-PropList_t& GameObject::GetProperties()
-{
-	return this->m_properties;
-}
-
-FuncList_t& GameObject::GetFunctions()
-{
-	return this->m_functions;
-}
-
-PropInfo* GameObject::GetProperty(std::string PropName)
-{
-	auto it = this->m_properties.find(PropName);
-
-	if (it == m_properties.end())
-		throw(std::vformat("'{}' is not a valid property for class {}!", std::make_format_args(PropName, this->ClassName)));
-	else
-		return &it->second;
-}
-
-GenericFunction_t* GameObject::GetFunction(std::string Name)
-{
-	auto it = this->m_functions.find(Name);
-
-	if (it == m_functions.end())
-		throw(std::vformat("'{}' is not a valid function for class {}!", std::make_format_args(Name, this->ClassName)));
-	else
-		return &it->second;
-}
-
-void GameObject::SetProperty(std::string PropName, GenericType gt)
-{
-	auto prop = this->GetProperty(PropName);
-
-	prop->Reflection.Setter(gt);
-}
-
-GenericTypeArray GameObject::CallFunction(std::string Name, GenericTypeArray Args)
-{
-	return (*this->GetFunction(Name))(Args);
 }
 
 /*

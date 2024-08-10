@@ -342,7 +342,7 @@ static void LoadMapVersion2(const char* MapPath, std::string Contents, GameObjec
 			if (MemberName == "ClassName")
 				continue;
 
-			PropList_t::iterator MemberIter = NewObject->GetProperties().find(MemberName);
+			auto MemberIter = NewObject->GetProperties().find(MemberName);
 
 			if (MemberIter == NewObject->GetProperties().end())
 			{
@@ -357,12 +357,12 @@ static void LoadMapVersion2(const char* MapPath, std::string Contents, GameObjec
 				continue;
 			}
 
-			PropInfo Member = NewObject->GetProperties()[MemberName];
+			auto& Member = NewObject->GetProperty(MemberName);
 
-			PropType MemberType = Member.Type;
+			Reflection::ValueType MemberType = Member.Type;
 			int MemberTypeInt = int(MemberType);
 
-			auto PropSetter = Member.Reflection.Setter;
+			auto& PropSetter = Member.Setter;
 
 			if (!PropSetter)
 			{
@@ -380,35 +380,35 @@ static void LoadMapVersion2(const char* MapPath, std::string Contents, GameObjec
 			switch (MemberType)
 			{
 
-			case (PropType::String):
+			case (Reflection::ValueType::String):
 			{
 				std::string PropValue = Item[MemberName];
 				PropSetter(PropValue);
 				break;
 			}
 
-			case (PropType::Bool):
+			case (Reflection::ValueType::Bool):
 			{
 				bool PropValue = Item[MemberName];
 				PropSetter(PropValue);
 				break;
 			}
 
-			case (PropType::Double):
+			case (Reflection::ValueType::Double):
 			{
 				double PropValue = Item[MemberName];
 				PropSetter(PropValue);
 				break;
 			}
 
-			case (PropType::Integer):
+			case (Reflection::ValueType::Integer):
 			{
 				int PropValue = Item[MemberName];
 				PropSetter(PropValue);
 				break;
 			}
 
-			case (PropType::Color):
+			case (Reflection::ValueType::Color):
 			{
 				Vector3 PropVec3 = GetVector3FromJSON(Item[MemberName]);
 				Color PropValue = Color(PropVec3.X, PropVec3.Y, PropVec3.Z);
@@ -416,7 +416,7 @@ static void LoadMapVersion2(const char* MapPath, std::string Contents, GameObjec
 				break;
 			}
 
-			case (PropType::Vector3):
+			case (Reflection::ValueType::Vector3):
 			{
 				Vector3 PropValue = GetVector3FromJSON(Item[MemberName]);
 				PropSetter(PropValue);

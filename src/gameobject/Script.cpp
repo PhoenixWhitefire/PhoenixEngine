@@ -154,27 +154,7 @@ Object_Script::Object_Script()
 
 	this->L = lua_newstate(l_alloc, nullptr);
 
-	m_properties.insert(std::pair(
-		"SourceFile",
-		PropInfo
-		{
-			PropType::String,
-			PropReflection
-			{
-				[this]() { return this->SourceFile; },
-				[this](GenericType gt) { this->SourceFile = gt.String; }
-			}
-		}
-	));
-
-	m_functions.insert(std::pair(
-		"Reload",
-		[this](GenericTypeArray)
-		{
-			GenericTypeArray res = (GenericType)this->Reload();
-			return res;
-		}
-	));
+	REFLECTION_DECLAREPROP_SIMPLE(SourceFile, Reflection::ValueType::String);
 }
 
 void Object_Script::Initialize()
@@ -294,19 +274,19 @@ bool Object_Script::Reload()
 
 		try
 		{
-			lua_pushstring(L, "KILL YOURSELF");
-			lua_setfield(L, -2, "new");
+			//lua_pushstring(L, "KILL YOURSELF");
+			//lua_setfield(L, -2, "new");
 		}
 		catch (lua_exception e)
 		{
 			throw(e.what());
 		}
 
-		luaL_newmetatable(L, "Vector3Metatable");
+		/*luaL_newmetatable(L, "Vector3Metatable");
 
 		lua_pushstring(L, "__index");
 		lua_pushcfunction(L, api_vec3index, "Vector3.__index");
-		lua_settable(L, -4);
+		lua_settable(L, -4);*/
 
 		/*lua_newtable(L);
 		int gameObjTableIdx = lua_gettop(L);

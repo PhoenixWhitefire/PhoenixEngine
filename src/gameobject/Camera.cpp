@@ -15,58 +15,23 @@ Object_Camera::Object_Camera()
 	PrevMouseX = 0;
 	PrevMouseY = 0;
 
-	m_properties.insert(std::pair(
-		"GenericMovement",
-		PropInfo
-		{
-		PropType::Bool,
-		PropReflection
-		{
-			[this]()
-			{
-				return this->GenericMovement;
-			},
+	REFLECTION_DECLAREPROP_SIMPLE(GenericMovement, Reflection::ValueType::Bool);
+	REFLECTION_DECLAREPROP_SIMPLE(FieldOfView, Reflection::ValueType::Double);
 
-			[this](GenericType gt)
-			{
-				this->GenericMovement = gt.Bool;
-			}
-		}
-		}
-	));
-	m_properties.insert(std::pair(
-		"FieldOfView",
-		PropInfo
+	REFLECTION_DECLAREPROP(
+		Position,
+		Reflection::ValueType::Vector3,
+		[this]()
 		{
-			PropType::Double,
-			PropReflection
-			{
-				[this]() { return this->FieldOfView; },
-				[this](GenericType gt) { this->FieldOfView = gt.Double; }
-			}
-		}
-	));
-	m_properties.insert(std::pair(
-		"Position",
-		PropInfo
+			Vector3 v = Vector3((glm::vec3)this->Matrix[3]);
+			return v;
+		},
+		[this](Reflection::GenericValue gv)
 		{
-		PropType::Vector3,
-		PropReflection
-		{
-			[this]()
-			{
-				Vector3 pos = Vector3((glm::vec3)this->Matrix[3]);
-				return pos;
-			},
-
-			[this](GenericType gt)
-			{
-				Vector3& vec = *(Vector3*)gt.Pointer;
-				this->Matrix[3] = glm::vec4(vec.X, vec.Y, vec.Z, 1.f);
-			}
+			Vector3& vec = *(Vector3*)gv.Pointer;
+			this->Matrix[3] = glm::vec4(vec.X, vec.Y, vec.Z, 1.f);
 		}
-		}
-	));
+	);
 }
 
 void Object_Camera::Update(double DeltaTime)
@@ -87,7 +52,7 @@ glm::mat4 Object_Camera::GetMatrixForAspectRatio(double AspectRatio) const
 	glm::vec3 ForwardVec = glm::vec3(this->Matrix[2]);
 
 	ViewMatrix = glm::lookAt(Position, Position + ForwardVec, (glm::vec3)Vector3::UP);
-	ProjectionMatrix = glm::perspective(glm::radians(this->FieldOfView), (float)AspectRatio, this->NearPlane, this->FarPlane);
+	ProjectionMatrix = glm::perspective(glm::radians(this->FieldOfView), AspectRatio, this->NearPlane, this->FarPlane);
 
 	return ProjectionMatrix * ViewMatrix;
 }

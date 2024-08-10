@@ -22,38 +22,31 @@ Object_Workspace::Object_Workspace()
 
 	this->m_sceneCamera = FallbackCamera;
 
-	m_properties.insert(std::pair(
-		"SceneCamera",
-		PropInfo
+	REFLECTION_DECLAREPROP(
+		SceneCamera,
+		Reflection::ValueType::String,
+		[this]()
 		{
-			PropType::String,
-			PropReflection
-			{
-			[this]()
-			{
-				return m_sceneCamera->Name;
-			},
+			return m_sceneCamera->Name;
+		},
+		[this](Reflection::GenericValue gv)
+		{
+			auto newObj = this->GetChild(gv.String);
+			auto newCam = newObj ? std::dynamic_pointer_cast<Object_Camera>(newObj) : nullptr;
 
-			[this](GenericType gt)
+			if (newCam)
 			{
-				auto newObj = this->GetChild(gt.String);
-				auto newCam = newObj ? std::dynamic_pointer_cast<Object_Camera>(newObj) : nullptr;
-
-				if (newCam)
-				{
-					this->m_sceneCamera->IsSceneCamera = false;
-					this->m_sceneCamera = newCam;
-					newCam->IsSceneCamera = true;
-				}
-				//else
-					//Debug::Log(std::vformat(
-					//	"Attempted to change the scene camera to '{}', but it is not a child of Workspace!",
-					//	std::make_format_args(gt.String)
-					//));
+				this->m_sceneCamera->IsSceneCamera = false;
+				this->m_sceneCamera = newCam;
+				newCam->IsSceneCamera = true;
 			}
+			//else
+				//Debug::Log(std::vformat(
+				//	"Attempted to change the scene camera to '{}', but it is not a child of Workspace!",
+				//	std::make_format_args(gv.String)
+				//));
 		}
-		}
-	));
+	);
 }
 
 std::shared_ptr<Object_Camera> Object_Workspace::GetSceneCamera()
