@@ -19,12 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\LuauLib\Ast\include\Luau\Ast.h" />
     <ClInclude Include="..\LuauLib\Common\include\Luau\Bytecode.h" />
     <ClInclude Include="..\LuauLib\Common\include\Luau\Common.h" />
-    <ClInclude Include="..\LuauLib\Compiler\include\luacode.h" />
     <ClInclude Include="..\LuauLib\Compiler\include\Luau\Compiler.h" />
-    <ClInclude Include="..\LuauLib\VM\include\lua.h" />
     <ClInclude Include="include\AnimationService.hpp" />
     <ClInclude Include="include\BaseMeshes.hpp" />
     <ClInclude Include="include\datatype\Buffer.hpp" />
@@ -42,6 +39,7 @@
     <ClInclude Include="include\FileRW.hpp" />
     <ClInclude Include="include\gameobject\Base3D.hpp" />
     <ClInclude Include="include\gameobject\Camera.hpp" />
+    <ClInclude Include="include\gameobject\DataModel.hpp" />
     <ClInclude Include="include\gameobject\GameObjects.hpp" />
     <ClInclude Include="include\gameobject\Light.hpp" />
     <ClInclude Include="include\gameobject\MeshObject.hpp" />
@@ -359,6 +357,7 @@
     <ClCompile Include="src\FileRW.cpp" />
     <ClCompile Include="src\gameobject\Base3D.cpp" />
     <ClCompile Include="src\gameobject\Camera.cpp" />
+    <ClCompile Include="src\gameobject\DataModel.cpp" />
     <ClCompile Include="src\gameobject\Light.cpp" />
     <ClCompile Include="src\gameobject\MeshObject.cpp" />
     <ClCompile Include="src\gameobject\Model.cpp" />
@@ -519,11 +518,6 @@
     <None Include="vendor\glm\gtx\vector_query.inl" />
     <None Include="vendor\glm\gtx\wrap.inl" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\LuauLib\LuauLib.vcxproj">
-      <Project>{a5a0ab40-c627-4210-9262-84c267b6cd94}</Project>
-    </ProjectReference>
-  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
@@ -576,12 +570,12 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LibraryPath>dll;lib;$(LibraryPath)</LibraryPath>
     <ExecutablePath>dll;$(ExecutablePath)</ExecutablePath>
-    <IncludePath>include;vendor;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);luau/Common/include;include;vendor;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LibraryPath>dll;lib;$(LibraryPath)</LibraryPath>
     <ExecutablePath>dll;$(ExecutablePath)</ExecutablePath>
-    <IncludePath>include;vendor;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);luau/Common/include;include;vendor;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -613,26 +607,26 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir)\..\LuauLib\VM\include;$(ProjectDir)\..\LuauLib\Compiler\include;$(ProjectDir)\..\LuauLib\Common\include;$(ProjectDir)\..\LuauLib\Ast\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>luau\Common\include;luau\VM\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>dll;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opengl32.lib;sdl2/SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;sdl2/SDL2.lib;Luau.Ast.lib;Luau.Compiler.lib;Luau.VM.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>Console</SubSystem>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir)\..\LuauLib\VM\include;$(ProjectDir)\..\LuauLib\Compiler\include;$(ProjectDir)\..\LuauLib\Common\include;$(ProjectDir)\..\LuauLib\Ast\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>luau\Common\include;luau\VM\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>opengl32.lib;sdl2/SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;sdl2/SDL2.lib;Luau.Ast.lib;Luau.Compiler.lib;Luau.VM.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>dll;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <SubSystem>Console</SubSystem>
     </Link>

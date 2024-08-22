@@ -10,12 +10,8 @@ in vec2 FragIn_UV;
 uniform int UseTexture;
 
 void main(){
-	if (UseTexture == 0) {
+	if (UseTexture == 0)
 		FragColor = vec4(FragIn_VertexColor, 1.0f);
-	}
-	else {
+	else
 		FragColor = texture(Tex0, FragIn_UV);
-	}
-
-	//FragColor = vec4(FragIn_VColor, 1.0f);
 }

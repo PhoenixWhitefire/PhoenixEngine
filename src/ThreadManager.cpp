@@ -1,11 +1,10 @@
 #include<SDL2/SDL_timer.h>
-#include<SDL2/SDL_messagebox.h>
 
 #include"ThreadManager.hpp"
 
 ThreadManager* ThreadManager::Singleton = new ThreadManager();
 
-void _workerTaskRunner(Worker* ThisWorker)
+static void _workerTaskRunner(Worker* ThisWorker)
 {
 	while (true)
 	{
@@ -32,7 +31,7 @@ void _workerTaskRunner(Worker* ThisWorker)
 	}
 }
 
-void Worker::WaitForCurrentTaskFinish()
+void Worker::WaitForCurrentTaskFinish() const
 {
 	uint32_t LastTask = this->TaskIdx;
 
@@ -40,15 +39,10 @@ void Worker::WaitForCurrentTaskFinish()
 		SDL_Delay(25);
 }
 
-void Worker::WaitForAllTasksFinish()
+void Worker::WaitForAllTasksFinish() const
 {
 	while (this->Status != WorkerStatus::WaitingForTask)
 		SDL_Delay(25);
-}
-
-ThreadManager::ThreadManager()
-{
-	this->ApplicationWindow = nullptr;
 }
 
 std::vector<Worker*> ThreadManager::GetWorkers()
@@ -108,7 +102,7 @@ void ThreadManager::DispatchJob(Task& Job)
 	{
 		//OnErrorEvent.Fire("Could not DispatchJob, number of workers may be too low or none are DefaultTaskWorker.");
 
-		throw(std::string("Could not DispatchJob, there might not be any workers or none are a DefaultTaskWorker"));
+		throw("Could not DispatchJob, there might not be any workers or none are a DefaultTaskWorker");
 
 		return;
 	}
@@ -121,7 +115,7 @@ ThreadManager* ThreadManager::Get()
 {
 	if (!ThreadManager::Singleton)
 	{
-		throw(std::string("ThreadManager::Get was called before Engine was initialized."));
+		throw("ThreadManager::Get was called before Engine was initialized.");
 		return nullptr;
 	}
 

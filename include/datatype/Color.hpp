@@ -21,8 +21,11 @@ public:
 	@return A color made from the specified RGB values
 	*/
 	Color(float R, float G, float B);
-
 	Color(Reflection::GenericValue);
+
+	Reflection::GenericValue ToGenericValue();
+	// Returns formatted `R, G, B`
+	std::string ToString();
 
 	float R, G, B;
 
@@ -42,24 +45,5 @@ public:
 			this->G * other,
 			this->B * other
 		);
-	}
-
-	operator std::string()
-	{
-		return std::vformat("{}, {}, {}", std::make_format_args(this->R, this->G, this->B));
-	}
-
-	operator Reflection::GenericValue()
-	{
-		Reflection::GenericValue value;
-		value.Type = Reflection::ValueType::Color;
-
-		value.Pointer = malloc(sizeof(Color));
-		if (value.Pointer != NULL)
-			memcpy(value.Pointer, (void*)this, sizeof(Color));
-		else
-			throw("Tried to cast Color to Reflection::GenericValue, met an allocation error in the process.");
-
-		return value;
 	}
 };

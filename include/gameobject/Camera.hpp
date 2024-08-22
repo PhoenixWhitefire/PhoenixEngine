@@ -8,6 +8,7 @@ class Object_Camera : public GameObject
 {
 public:
 	Object_Camera();
+
 	void Update(double);
 	// Given the camera's current position and rotation,
 	// get it's Matrix accounting for Projection (FoV, AspectRatio, NearPlane and FarPlane)
@@ -29,7 +30,10 @@ public:
 	float MouseSensitivity = 100.f;
 	
 private:
-	static DerivedObjectRegister<Object_Camera> RegisterClassAs;
+	static RegisterDerivedObject<Object_Camera> RegisterClassAs;
+
+	static void s_DeclareReflections();
+	static bool s_DidInitReflection;
 
 	// When in GenericMovement mode
 	bool FirstDragFrame = false;

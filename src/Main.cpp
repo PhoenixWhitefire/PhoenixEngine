@@ -32,17 +32,18 @@ Anyway, here is a small tour:
 #include<glm/gtx/rotate_vector.hpp>
 #include<glm/gtx/vector_angle.hpp>
 
+#include"editor/editor.hpp"
 #include"Engine.hpp"
 #include"UserInput.hpp"
-#include"editor/editor.hpp"
-#include"Debug.hpp"
+#include"GlobalJsonConfig.hpp"
 #include"FileRW.hpp"
+#include"Debug.hpp"
 
 static bool FirstDragFrame = false;
 
 static bool PreviouslyPressingF11 = false;
-static bool PreviouslyPressingP = false;
 static bool IsInputBeingSunk = false;
+static bool MouseCaptured = false;
 
 static ImGuiIO* m_imGuiIO = nullptr;
 
@@ -53,7 +54,13 @@ static Editor* EditorContext = nullptr;
 
 static int PrevMouseX, PrevMouseY = 0;
 
-static int FindArgumentInCliArgs(int ArgCount, char** Arguments, const char* SeekingArgument)
+static glm::vec3 CamForward = glm::vec3(0.f, 0.f, -1.f);
+
+static int FindArgumentInCliArgs(
+	int ArgCount,
+	char** Arguments,
+	const char* SeekingArgument
+)
 {
 	// linear search through all cli arguments
 	for (int CurrentArgIdx = 0; CurrentArgIdx < ArgCount; CurrentArgIdx++)
@@ -77,16 +84,11 @@ static void HandleInputs(std::tuple<EngineObject*, double, double> Data)
 	double CurrentTime = std::get<2>(Data);
 
 	if (EngineJsonConfig.value("developer", false))
-		EditorContext->Update(DeltaTime, Engine->Game->GetSceneCamera()->Matrix);
+		EditorContext->Update(DeltaTime, Engine->Workspace->GetSceneCamera()->Matrix);
 
-	//std::shared_ptr<Object_Base3D> crow = std::dynamic_pointer_cast<Object_Base3D>(Engine->Game->GetChild("crow"));
+	Object_Camera* Camera = Engine->Workspace->GetSceneCamera();
 
-	//crow->Matrix = glm::translate(glm::mat4(1.0f), 20.f * glm::vec3(0.5f, 0.5f, 0.5f));
-
-	std::shared_ptr<Object_Camera> Camera = Engine->Game->GetSceneCamera();
-
-	glm::vec3 ForwardVec = glm::vec3(Camera->Matrix[0][2], Camera->Matrix[1][2], Camera->Matrix[2][2]);
-	glm::vec3 UpVec = Vector3::UP;
+	const glm::vec3 UpVec = Vector3::yAxis;
 	
 	UserInput::InputBeingSunk = m_imGuiIO->WantCaptureKeyboard;
 
@@ -94,157 +96,203 @@ static void HandleInputs(std::tuple<EngineObject*, double, double> Data)
 	{
 		float DisplacementSpeed = MovementSpeed * DeltaTime;
 
-		// TODO NOTE 07/07/2024 Why is horizontal movement reversed??
 		if (UserInput::IsKeyDown(SDLK_LSHIFT))
 			DisplacementSpeed *= 0.5f;
 
-		Vector3 Displacement;
+		Vector3 Displacement = Vector3();
 
 		if (UserInput::IsKeyDown(SDLK_w))
-			Displacement += Vector3::FORWARD * DisplacementSpeed;
+			Displacement += Vector3(0, 0, DisplacementSpeed);
 
 		if (UserInput::IsKeyDown(SDLK_a))
-			Displacement += Vector3::LEFT * DisplacementSpeed;
+			Displacement += Vector3(DisplacementSpeed, 0, 0);
 
 		if (UserInput::IsKeyDown(SDLK_s))
-			Displacement += Vector3::BACKWARD * DisplacementSpeed;
+			Displacement += Vector3(0, 0, -DisplacementSpeed);
 
 		if (UserInput::IsKeyDown(SDLK_d))
-			Displacement += Vector3::RIGHT * DisplacementSpeed;
+			Displacement += Vector3(-DisplacementSpeed, 0, 0);
 
 		if (UserInput::IsKeyDown(SDLK_q))
-			Displacement += Vector3::UP * DisplacementSpeed;
+			Displacement += Vector3(0, -DisplacementSpeed, 0);
 
 		if (UserInput::IsKeyDown(SDLK_e))
-			Displacement += Vector3::DOWN * DisplacementSpeed;
+			Displacement += Vector3(0, DisplacementSpeed, 0);
 
 		Camera->Matrix = glm::translate(Camera->Matrix, glm::vec3(Displacement));
 	}
 
-	int MouseX;
-	int MouseY;
+	int mouseX;
+	int mouseY;
 
-	SDL_Window* Window = Engine->Window;
+	SDL_Window* window = Engine->Window;
 
-	uint32_t ActiveMouseButton = SDL_GetMouseState(&MouseX, &MouseY);
+	uint32_t activeMouseButton = SDL_GetMouseState(&mouseX, &mouseY);
 
-	if (ActiveMouseButton & SDL_BUTTON_RMASK)
+	IsInputBeingSunk = m_imGuiIO->WantCaptureKeyboard || m_imGuiIO->WantCaptureMouse;
+
+	if (MouseCaptured)
 	{
-		//ImGui::SetMouseCursor(ImGuiMouseCursor_None);
+		// Doesn't hide unless we tell ImGui to hide the cursor too
+		// (Otherwise it flickers)
+		// 22/08/2024
+		ImGui::SetMouseCursor(ImGuiMouseCursor_None);
+		SDL_ShowCursor(SDL_DISABLE);
 
-		int DeltaMouseX = PrevMouseX - MouseX;
-		int DeltaMouseY = PrevMouseY - MouseY;
+		int windowSizeX, windowSizeY;
 
-		int WindowSizeX, WindowSizeY;
-
-		SDL_GetWindowSize(Window, &WindowSizeX, &WindowSizeY);
+		SDL_GetWindowSize(window, &windowSizeX, &windowSizeY);
 
 		if (FirstDragFrame)
 		{
-			SDL_SetWindowMouseGrab(Window, SDL_TRUE);
-			SDL_ShowCursor(SDL_DISABLE);
+			
+			SDL_SetWindowMouseGrab(window, SDL_TRUE);
 
-			SDL_WarpMouseInWindow(Window, WindowSizeX / 2, WindowSizeY / 2);
+			SDL_WarpMouseInWindow(window, windowSizeX / 2, windowSizeY / 2);
 
-			SDL_GetMouseState(&MouseX, &MouseY);
+			SDL_GetMouseState(&mouseX, &mouseY);
 
-			PrevMouseX = MouseX;
-			PrevMouseY = MouseY;
+			PrevMouseX = windowSizeX / 2;
+			PrevMouseY = windowSizeY / 2;
 
 			FirstDragFrame = false;
 		}
-		else
-		{
-			//SDL_WarpMouseInWindow(Engine->Window, Engine->WindowSizeX / 2, Engine->WindowSizeY / 2);
 
-			/*SDL_GetMouseState(&MouseX, &MouseY);
+		int deltaMouseX = PrevMouseX - mouseX;
+		int deltaMouseY = PrevMouseY - mouseY;
 
-			PrevMouseX = MouseX;
-			PrevMouseY = MouseY;*/
-		}
+		float RotationX = MouseSensitivity * ((double)deltaMouseY - (windowSizeY / 2.0f)) / windowSizeY;
+		float RotationY = MouseSensitivity * ((double)deltaMouseX - (windowSizeX / 2.0f)) / windowSizeX;
+		RotationX += 50.f; // TODO 22/08/2024: Why??
+		RotationY += 50.f;
 
-		float RotationX = -MouseSensitivity * ((double)DeltaMouseY - (WindowSizeY / 2.0f)) / WindowSizeY;
-		float RotationY = -MouseSensitivity * ((double)DeltaMouseX - (WindowSizeX / 2.0f)) / WindowSizeX;
-
-		glm::vec3 NewOrientation = glm::rotate(
-			ForwardVec,
-			glm::radians(-RotationX),
-			glm::normalize(glm::cross(ForwardVec, UpVec))
+		glm::vec3 newForward = glm::rotate(
+			CamForward,
+			glm::radians(RotationX),
+			glm::normalize(glm::cross(CamForward, UpVec))
 		);
 
-		if (abs(glm::angle(NewOrientation, UpVec) - glm::radians(90.0f)) <= glm::radians(85.0f))
-			ForwardVec = NewOrientation;
+		if (abs(glm::angle(newForward, UpVec) - glm::radians(90.0f)) <= glm::radians(85.0f))
+			CamForward = newForward;
 
-		ForwardVec = glm::rotate(ForwardVec, glm::radians(-RotationY), UpVec);
+		CamForward = glm::rotate(CamForward, glm::radians(-RotationY), UpVec);
 
 		glm::vec3 Position = glm::vec3(Camera->Matrix[3]);
 
-		Camera->Matrix = glm::lookAt(Position, Position + ForwardVec, UpVec);
+		Camera->Matrix = glm::lookAt(Position, Position + CamForward, UpVec);
 
 		// Keep the mouse in the window.
 		// Teleport it to the other side if it hits the edge.
 
-		if (MouseX <= 10)
-			MouseX = WindowSizeX - 20;
+		int newMouseX = mouseX, newMouseY = mouseY;
 
-		if (MouseX >= WindowSizeX - 10)
-			MouseX = 20;
+		if (mouseX <= 10)
+			newMouseX = windowSizeX - 20;
 
-		if (MouseY <= 10)
-			MouseY = WindowSizeY - 20;
+		if (mouseX >= windowSizeX - 10)
+			newMouseX = 20;
 
-		if (MouseY >= WindowSizeY - 10)
-			MouseY = 20;
+		if (mouseY <= 10)
+			newMouseY = windowSizeY - 20;
 
-		SDL_WarpMouseInWindow(Window, MouseX, MouseY);
+		if (mouseY >= windowSizeY - 10)
+			newMouseY = 20;
+
+		if (IsInputBeingSunk)
+			newMouseX, newMouseY = windowSizeX / 2, windowSizeY / 2;
+
+		if (newMouseX != mouseX || newMouseY != mouseY)
+		{
+			SDL_WarpMouseInWindow(window, newMouseX, newMouseY);
+			mouseX = newMouseX;
+			mouseY = newMouseY;
+		}
+
+		if (activeMouseButton & SDL_BUTTON_RMASK)
+		{
+			MouseCaptured = false;
+			SDL_WarpMouseInWindow(window, windowSizeX / 2, windowSizeY / 2);
+		}
 	}
 	else
 	{
-		//ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
-		SDL_SetWindowMouseGrab(Window, SDL_FALSE);
-		SDL_ShowCursor(SDL_ENABLE);
+		if (!FirstDragFrame)
+		{
+			SDL_ShowCursor(SDL_ENABLE);
+			SDL_SetWindowMouseGrab(window, SDL_FALSE);
 
-		FirstDragFrame = true;
+			ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
+
+			FirstDragFrame = true;
+		}
+
+		if (activeMouseButton & SDL_BUTTON_LMASK && !IsInputBeingSunk)
+			MouseCaptured = true;
 	}
 
-	PrevMouseX = MouseX;
-	PrevMouseY = MouseY;
+	PrevMouseX = mouseX;
+	PrevMouseY = mouseY;
 
 	if (UserInput::IsKeyDown(SDLK_F11))
-	{
 		if (!PreviouslyPressingF11)
 		{
 			PreviouslyPressingF11 = true;
-
 			Engine->SetIsFullscreen(!Engine->IsFullscreen);
 		}
-	}
 	else
 		PreviouslyPressingF11 = false;
 }
 
 static char* LevelPathBuf;
 
-static void LoadLevel(const char* LevelPath, std::shared_ptr<GameObject> Into)
+static void LoadLevel(const std::string& LevelPath)
 {
-	EngineObject* Engine = EngineObject::Get();
+	GameObject* workspace = GameObject::s_DataModel->GetChild("Workspace");
 
-	for (int i = 0; i < Into->GetChildren().size(); i++)
-		Into->GetChildren()[i]->Enabled = false; // TODO: GameObject->~GameObject crashes :(
+	GameObject* prevModel = workspace->GetChild("LevelModel");
 
-	MapLoader::LoadMapIntoObject(LevelPath, Into);
+	if (prevModel)
+		delete prevModel;
+
+	GameObject* levelModel = GameObject::CreateGameObject("Model");
+	levelModel->Name = "Level";
+	levelModel->SetParent(workspace);
+
+	MapLoader::LoadMapIntoObject(LevelPath, levelModel);
 }
-
-std::shared_ptr<GameObject> LevelModel = nullptr;
 
 static void DrawUI(std::tuple<EngineObject*, double, double> Data)
 {
 	EngineObject* Engine = std::get<0>(Data);
 
-	// Draw UI
-	// We want it to appear on top of everything, so it needs to be drawn at the end
+	if (UserInput::IsKeyDown(SDLK_j) && !IsInputBeingSunk)
+	{
+		printf("BEGIN DUMP WORLD ARRAY\n");
+		printf("%zi OBJECTS: \n", GameObject::s_WorldArray.size());
 
-	if (Engine->GameConfig["developer"] == true)
+		for (auto& pair : GameObject::s_WorldArray)
+			printf(
+				"%i: %s '%s', Parent %i\n",
+				pair.first,
+				pair.second->ClassName.c_str(),
+				pair.second->Name.c_str(),
+				pair.second->Parent
+			);
+
+		printf("END DUMP WORLD ARRAY\n");
+	}
+
+	if (UserInput::IsKeyDown(SDLK_l) && !IsInputBeingSunk)
+	{
+		Debug::Log("Dumping GameObject API...\n");
+
+		auto dump = GameObject::DumpApiToJson();
+		FileRW::WriteFile("apidump.json", dump.dump(2), false);
+
+		Debug::Log("API dump finished");
+	}
+
+	if (EngineJsonConfig["developer"] == true)
 	{
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplSDL2_NewFrame();
@@ -255,7 +303,7 @@ static void DrawUI(std::tuple<EngineObject*, double, double> Data)
 		ImGui::InputText("Load level", LevelPathBuf, 64);
 
 		if (ImGui::Button("Load"))
-			LoadLevel(LevelPathBuf, LevelModel);
+			LoadLevel(LevelPathBuf);
 
 		ImGui::End();
 
@@ -326,7 +374,7 @@ static void DrawUI(std::tuple<EngineObject*, double, double> Data)
 
 		if (SaveConfig)
 		{
-			FileRW::WriteFile("phoenix.conf", EngineJsonConfig.dump(), false);
+			FileRW::WriteFile("phoenix.conf", EngineJsonConfig.dump(2), false);
 			Debug::Log("The JSON Config overwrote the pre-existing 'phoenix.conf'.");
 		}
 
@@ -338,111 +386,87 @@ static void DrawUI(std::tuple<EngineObject*, double, double> Data)
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	}
 
-	if (m_imGuiIO->WantCaptureKeyboard || m_imGuiIO->WantCaptureMouse)
-		IsInputBeingSunk = true;
-	else
-		IsInputBeingSunk = false;
-}
-
-static void setChildrenComputePhysicsTrue(std::shared_ptr<GameObject> obj)
-{
-	for (uint32_t objidx = 0; objidx < obj->GetChildren().size(); objidx++)
-	{
-		std::shared_ptr<Object_Base3D> obj3d = std::dynamic_pointer_cast<Object_Base3D>(obj->GetChildren()[objidx]);
-
-		if (obj3d)
-			obj3d->ComputePhysics = true;
-
-		if (obj->GetChildren()[objidx]->GetChildren().size() > 0)
-			setChildrenComputePhysicsTrue(obj->GetChildren()[objidx]);
-	}
+	IsInputBeingSunk = m_imGuiIO->WantCaptureKeyboard || m_imGuiIO->WantCaptureMouse;
 }
 
 static void Application(int argc, char** argv)
 {
-	EngineObject* Main = EngineObject::Get();
+	EngineObject* Engine = EngineObject::Get();
 
 	EditorContext = EngineJsonConfig.value("developer", false) ? new Editor() : nullptr;
 	
 	LevelPathBuf = (char*)malloc(64);
 
 	if (!LevelPathBuf)
-	{
-		throw(std::string("WHY IS LevelPathBuf NULL?!"));
-		return;
-	}
+		throw("Could not allocate buffer for Level Path");
 
 	for (int i = 0; i < 64; i++)
-		LevelPathBuf[i] = 'a';
+		LevelPathBuf[i] = '\0';
 
-	LevelPathBuf[63] = '\0';
-
-	const char* MapFileFromArgs;
+	const char* mapFileFromArgs;
 	bool hasMapFromArgs = false;
 
-	bool forceAllObjectPhysics = false;
+	int mapFileArgIdx = FindArgumentInCliArgs(argc, argv, "-loadmap");
 
-	int MapFileArgIdx = FindArgumentInCliArgs(argc, argv, "-loadmap");
-	int ForceAllObjectPhysicsArgIdx = FindArgumentInCliArgs(argc, argv, "-phys_forceallobjectphysics");
-
-	if (MapFileArgIdx > 0)
+	if (mapFileArgIdx > 0)
 	{
 		Debug::Log(std::vformat(
 			"Map to load specified from launch argument. Map was: {}",
-			std::make_format_args(argv[MapFileArgIdx + 1])
+			std::make_format_args(argv[mapFileArgIdx + 1])
 		));
 
-		MapFileFromArgs = argv[MapFileArgIdx + 1];
+		mapFileFromArgs = argv[mapFileArgIdx + 1];
 		hasMapFromArgs = true;
 	}
 
-	if (ForceAllObjectPhysicsArgIdx > 0)
-		forceAllObjectPhysics = true;
-
-	const char* MapFile = hasMapFromArgs ? MapFileFromArgs : "levels/dev_fmtv2.world";
+	std::string mapFile = hasMapFromArgs ?
+							mapFileFromArgs
+							: EngineJsonConfig.value("RootScene", "levels/empty.world");
 
 	srand(time(0));
 
-	SDL_DisplayMode Mode;
-	SDL_GetCurrentDisplayMode(0, &Mode);
-
-	LevelModel = GameObjectFactory::CreateGameObject("Model");
-
-	/*
-	if (forceAllObjectPhysics)
-	{
-		Debug::Log("FORCE ALL OBJECT PHYSICS IS ENABLED! (through -phys_forceallobjectphysics)");
-
-		setChildrenComputePhysicsTrue(Main->Game);
-	}
-	*/
-
-	LevelModel->SetParent(EngineObject::Get()->Game);
-	LevelModel->Name = "LoadedLevel";
-
-	LoadLevel(MapFile, LevelModel);
+	LoadLevel(mapFile);
 
 	if (EditorContext)
-		EditorContext->Init(Main->Game);
+		EditorContext->Init();
 
-	Main->OnFrameStart.Connect(HandleInputs);
-	Main->OnFrameRenderGui.Connect(DrawUI);
+	Engine->OnFrameStart.Connect(HandleInputs);
+	Engine->OnFrameRenderGui.Connect(DrawUI);
 
-	Main->Start();
+	Engine->Start();
+
+	delete Engine;
+}
+
+static void HandleCrash(SDL_Window* Window, std::string Error)
+{
+	auto fmtArgs = std::make_format_args(
+		Error,
+		"If this is the first time this has happened, please re-try. Otherwise, contact the developers."
+	);
+
+	Debug::Log(std::vformat("CRASH: {}", fmtArgs));
+
+	std::string errMessage = std::vformat(
+		"An unexpected error occurred, and the application will now close. Error details:\n\n{}\n\n{}",
+		fmtArgs
+	);
+
+	SDL_ShowSimpleMessageBox(
+		SDL_MESSAGEBOX_ERROR,
+		"Engine error",
+		errMessage.c_str(),
+		Window
+	);
 }
 
 int main(int argc, char** argv)
 {
-	EngineObject* Engine = nullptr;
-
 	SDL_Window* Window;
 
 	try
 	{
-		SDL_DisplayMode Mode;
-		SDL_GetCurrentDisplayMode(0, &Mode);
-
-		Engine = EngineObject::Get(Vector2(1280, 720), &Window);
+		EngineObject* Engine = EngineObject::Get(Vector2(1280, 720), &Window);
 		//Engine->MSAASamples = 2;
 
 		IMGUI_CHECKVERSION();
@@ -451,46 +475,21 @@ int main(int argc, char** argv)
 		m_imGuiIO = &ImGui::GetIO();
 		(void)m_imGuiIO;
 		ImGui::StyleColorsDark();
-		ImGui_ImplSDL2_InitForOpenGL(Engine->Window, Engine->m_renderer->m_glContext);
+		ImGui_ImplSDL2_InitForOpenGL(Window, Engine->RendererContext->GLContext);
 		ImGui_ImplOpenGL3_Init("#version 460");
 
 		Application(argc, argv);
 	}
 	catch (std::string Error)
 	{
-		auto fmtArgs = std::make_format_args(Error);
-
-		Debug::Log(std::vformat("CRASH (STRING): {}", fmtArgs));
-
-		SDL_ShowSimpleMessageBox(
-			SDL_MESSAGEBOX_ERROR,
-			"Engine error",
-			std::vformat(
-				"An unexpected error occurred, and the application will now close. Error details (S):\n\n{}",
-				fmtArgs
-			).c_str(),
-			Window
-		);
+		HandleCrash(Window, Error);
 	}
 	catch (const char* Error)
 	{
-		auto fmtArgs = std::make_format_args(Error);
-
-		Debug::Log(std::vformat("CRASH (CCHAR): {}", fmtArgs));
-
-		SDL_ShowSimpleMessageBox(
-			SDL_MESSAGEBOX_ERROR,
-			"Engine error",
-			std::vformat(
-				"An unexpected error occurred, and the application will now close. Error details (C):\n\n{}",
-				fmtArgs
-			).c_str(),
-			Window
-		);
+		HandleCrash(Window, Error);
 	}
 	
-	Debug::Save();
-	
-	return EXIT_SUCCESS;
-}
+	Debug::Log("Application closing...");
 
+	Debug::Save();
+}

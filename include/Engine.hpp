@@ -1,16 +1,14 @@
 #pragma once
 
 #include<filesystem>
+#include<nljson.h>
 
-#include<UserInput.hpp>
+#include"gameobject/GameObjects.hpp"
 
-#include<GlobalJsonConfig.hpp>
-
-#include<gameobject/GameObjects.hpp>
-
-//#include"render/GraphicsAbstractionLayer.hpp"
-#include"render/Renderer.hpp"
 #include"render/ShaderProgram.hpp"
+#include"render/Renderer.hpp"
+
+#include"datatype/Vector2.hpp"
 
 #include"PhysicsEngine.hpp"
 #include"ModelLoader.hpp"
@@ -22,7 +20,7 @@ class EngineObject
 public:
 	/*
 	Creates an Engine object
-	@param The size of the window (in integer form with Vector2Int)
+	@param The size of the window (overriden by `DefaultWindowSize` in the config file)
 	@return An engine object
 	*/
 
@@ -30,7 +28,7 @@ public:
 
 	/*
 	Gets the engine object, creates one if it doesn't exist already
-	@param The size of the window
+	@param The size of the window (overriden by `DefaultWindowSize` in the config file)
 	@return The pointer to the object
 	*/
 	static EngineObject* Get(Vector2 WindowStartSize, SDL_Window** WindowPtr);
@@ -57,41 +55,27 @@ public:
 
 	void SetIsFullscreen(bool IsFullscreen);
 	void ResizeWindow(int NewSizeX, int NewSizeY);
-
-	std::vector<std::shared_ptr<GameObject>>& LoadModelAsMeshesAsync(
-		const char* ModelFilePath,
-		Vector3 Size,
-		Vector3 Position,
-		bool AutoParent = true
-	);
+	void OnWindowResized(int NewSizeX, int NewSizeY);
 
 	Event<std::tuple<EngineObject*, double, double>> OnFrameStart = Event<std::tuple<EngineObject*, double, double>>();
 	Event<std::tuple<EngineObject*, double, double>> OnFrameRenderGui = Event<std::tuple<EngineObject*, double, double>>();
 	Event<std::tuple<EngineObject*, double, double>> OnFrameEnd = Event<std::tuple<EngineObject*, double, double>>();
-
-	PhysicsSolver* Physics = new PhysicsSolver();
-
-	uint8_t MSAASamples = 0;
-
-	float GlobalTimeMultiplier = 1.0f;
 
 	bool IsFullscreen = false;
 
 	int WindowSizeX;
 	int WindowSizeY;
 
+	Object_DataModel* DataModel;
+	Object_Workspace* Workspace;
+
 	ShaderProgram* PostProcessingShaders;
 
-	Renderer* m_renderer;
-
+	Renderer* RendererContext;
 	SDL_Window* Window;
-
-	std::shared_ptr<Object_Workspace> Game;
 
 	bool Exit = false;
 	
-	static EngineObject* Singleton;
-
 	int FpsCap = 60;
 
 	int FramesPerSecond = 0;
@@ -101,33 +85,10 @@ public:
 
 	float RunningTime = 0.0f;
 
-	nlohmann::json GameConfig;
-
 private:
-	std::vector<MeshData_t> m_compileMeshData(std::shared_ptr<GameObject> RootObject);
-	std::vector<LightData_t> m_compileLightData(std::shared_ptr<GameObject> RootObject);
-
-	std::vector<std::shared_ptr<Object_ParticleEmitter>> m_particleEmitters;
-
 	int m_DrawnFramesInSecond = -1;
 
-	Mesh* m_DrawCallBatch;
+	uint32_t m_SDLWindowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
 
-	float RectangleVertices[24] = {
-		 1.0f, -1.0f,    1.0f, 0.0f,
-		-1.0f, -1.0f,    0.0f, 0.0f,
-		-1.0f,  1.0f,    0.0f, 1.0f,
-
-		 1.0f,  1.0f,    1.0f, 1.0f,
-		 1.0f, -1.0f,    1.0f, 0.0f,
-		-1.0f,  1.0f,    0.0f, 1.0f
-	};
-
-	VAO* SkyboxVAO = nullptr;
-	VBO* SkyboxVBO = nullptr;
-	EBO* SkyboxEBO = nullptr;
-
-	uint32_t SDLWindowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
-
-	int m_LightIndex = 0;
+	static EngineObject* Singleton;
 };

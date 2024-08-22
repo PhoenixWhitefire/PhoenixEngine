@@ -1,10 +1,9 @@
 #pragma once
 
-class Debug
-{
-public:
-	static void Log(std::string Message);
-	static void Save();
+#include<string>
 
-	static std::string ProgramLog;
+namespace Debug
+{
+	void Log(std::string const&);
+	void Save();
 };

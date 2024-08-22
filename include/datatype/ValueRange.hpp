@@ -4,6 +4,7 @@
 #pragma once
 
 #include<vector>
+#include<random>
 
 template <class _vtype> class ValueRangeKey
 {
@@ -35,9 +36,8 @@ static std::default_random_engine RandGenerator = std::default_random_engine(tim
 static std::uniform_real_distribution<double> EnvelopDist(0.f, 1.f);
 
 template <class _vtype> ValueRangeKey<_vtype>::ValueRangeKey(float time, _vtype value)
+	: Value(value), Time(time)
 {
-	this->Value = value;
-	this->Time = time;
 }
 
 template <class ValueType> ValueRange<ValueType>::ValueRange(std::vector<ValueRangeKey<ValueType>> InitKeys)

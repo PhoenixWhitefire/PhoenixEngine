@@ -1,12 +1,13 @@
 Running OpenGL version 4.6
 Renderer initialized
+DataModel initialized
 Editor object was created
-The Map Version is 2
-Failed to load texture 'resources/textures/waterdistort.jpg' (usage:2)
-Deserialize warning: Member 'Color' is not defined in the API for the Class DirectionalLight (Name: 'Sun')!
-Loaded map file 'levels/dev_fmtv2.world'
+The Map Version is 1
+Loaded map file 'levels/dev.world'
 Editor init done
 Main program loop start...
-Luau script init error: Workspace.LoadedLevel.MainScript: attempt to call a table value
-Changing window resolution: (1280, 720) -> (1280, 719)
+Main loop exited
+Engine destructing...
+DataModel destructing...
 Application closing...
+Writing file: 'log.txt'...

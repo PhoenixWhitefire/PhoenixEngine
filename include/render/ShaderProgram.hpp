@@ -8,10 +8,10 @@ class ShaderProgram
 public:
 	// DOES NOT CACHE PROGRAMS!
 	// Use (static) ShaderProgram::GetShaderProgram instead!
-	ShaderProgram(std::string ProgramName);
+	ShaderProgram(std::string const&);
 	~ShaderProgram();
 
-	static ShaderProgram* GetShaderProgram(std::string ProgramName);
+	static ShaderProgram* GetShaderProgram(std::string const&);
 	static void ClearAll();
 
 	void PrintErrors(uint32_t Object, const char* Type) const;

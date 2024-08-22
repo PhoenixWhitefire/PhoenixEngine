@@ -1,19 +1,15 @@
 #include<thread>
-
 #include<nljson.h>
-
 #include<glm/glm.hpp>
 #include<glm/gtc/matrix_transform.hpp>
 #include<glm/gtc/type_ptr.hpp>
-#include<glm/gtx/rotate_vector.hpp>
-#include<glm/gtx/vector_angle.hpp>
 
 #include"ModelLoader.hpp"
 #include"GlobalJsonConfig.hpp"
 #include"FileRW.hpp"
 #include"Debug.hpp"
 
-ModelLoader::ModelLoader(const char* FilePath, std::shared_ptr<GameObject> Parent, SDL_Window* Window)
+ModelLoader::ModelLoader(const char* FilePath, GameObject* Parent)
 {
 	this->File = "";
 
@@ -23,16 +19,7 @@ ModelLoader::ModelLoader(const char* FilePath, std::shared_ptr<GameObject> Paren
 
 	if (TextData == "")
 	{
-		Debug::Log("Failed to load model: '" + FilePathString + "'");
-
-		SDL_ShowSimpleMessageBox(
-			SDL_MESSAGEBOX_ERROR,
-			"Engine error",
-			"A model was not found or could not be loaded.",
-			Window
-		);
-
-		Debug::Save();
+		Debug::Log("Failed to load model (TextData empty): '" + FilePathString + "'");
 
 		return;
 	}
@@ -46,14 +33,14 @@ ModelLoader::ModelLoader(const char* FilePath, std::shared_ptr<GameObject> Paren
 	for (int MeshIndex = 0; MeshIndex < this->Meshes.size(); MeshIndex++)
 	{
 		// TODO: cleanup code
-		std::shared_ptr<GameObject> M;
-		std::shared_ptr<Object_Base3D> m3d;
-		std::shared_ptr<Object_Mesh> mo;
+		GameObject* M;
+		Object_Base3D* m3d;
+		Object_Mesh* mo;
 		
-		M = GameObjectFactory::CreateGameObject("Mesh");
+		M = GameObject::CreateGameObject("Mesh");
 
-		m3d = std::dynamic_pointer_cast<Object_Base3D>(M);
-		mo = std::dynamic_pointer_cast<Object_Mesh>(M);
+		m3d = dynamic_cast<Object_Base3D*>(M);
+		mo = dynamic_cast<Object_Mesh*>(M);
 
 		mo->SetRenderMesh(this->Meshes[MeshIndex]);
 
@@ -97,9 +84,9 @@ ModelLoader::ModelLoader(const char* FilePath, std::shared_ptr<GameObject> Paren
 		//mo->Textures = this->MeshTextures[MeshIndex];
 
 		if (Parent != nullptr)
+		{
 			M->SetParent(Parent);
-
-		this->LoadedObjects.push_back(M);
+		}
 	}
 
 	// TODO: fix matrices
@@ -262,7 +249,7 @@ std::vector<float> ModelLoader::GetFloats(nlohmann::json accessor)
 	else if (type == "VEC2") numPerVert = 2;
 	else if (type == "VEC3") numPerVert = 3;
 	else if (type == "VEC4") numPerVert = 4;
-	else throw(std::string("Could not decode GLTF model: Type is invalid (not SCALAR, VEC2, VEC3, or VEC4)"));
+	else throw("Could not decode GLTF model: Type is not handled (not SCALAR, VEC2, VEC3, or VEC4)");
 
 	// Go over all the bytes in the data at the correct place using the properties from above
 	uint32_t beginningOfData = byteOffset + accByteOffset;
@@ -333,7 +320,8 @@ std::vector<Texture*> ModelLoader::GetTextures()
 	std::vector<Texture*> textures;
 
 	std::string fileStr = std::string(File);
-	std::string fileDirectory = (std::string)EngineJsonConfig["ResourcesDirectory"] + fileStr.substr(0, fileStr.find_last_of('/') + 1);
+	std::string resDir = EngineJsonConfig["ResourcesDirectory"];
+	std::string fileDirectory = resDir + fileStr.substr(0, fileStr.find_last_of('/') + 1);
 
 	// Go over all images
 	for (uint32_t i = 0; i < JSONData["images"].size(); i++)

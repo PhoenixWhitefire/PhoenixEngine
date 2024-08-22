@@ -52,7 +52,7 @@ struct Scene_t
 class Renderer
 {
 public:
-	Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window, uint8_t MSAASamples);
+	Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window);
 
 	// Changes the rendering resolution
 	void ChangeResolution(uint32_t newWidth, uint32_t newHeight);
@@ -70,20 +70,20 @@ public:
 
 	void SwapBuffers();
 
-	FBO* m_framebuffer = nullptr;
+	FBO* Framebuffer = nullptr;
 
-	SDL_GLContext m_glContext;
+	SDL_GLContext GLContext = nullptr;
 
 private:
-	void m_setTextureUniforms(MeshData_t& Mesh, ShaderProgram* Shaders);
+	void m_SetTextureUniforms(MeshData_t& Mesh, ShaderProgram* Shaders);
 
-	VAO* m_vertexArray = nullptr;
-	VBO* m_vertexBuffer = nullptr;
-	EBO* m_elementBuffer = nullptr;
+	VAO* m_VertexArray = nullptr;
+	VBO* m_VertexBuffer = nullptr;
+	EBO* m_ElementBuffer = nullptr;
 
-	SDL_Window* m_window;
+	SDL_Window* m_Window = nullptr;
 	
-	uint32_t m_width, m_height;
+	uint32_t m_Width, m_Height = 0;
 
-	int m_msaaSamples;
+	int m_MsaaSamples = 0;
 };

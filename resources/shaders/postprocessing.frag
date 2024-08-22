@@ -12,6 +12,8 @@ in vec2 FragIn_UV;
 out vec4 FragColor;
 
 uniform sampler2D Texture;
+
+uniform bool PostFXEnabled = false;
 uniform sampler2D DistortionTexture;
 uniform bool PostProcessingEnabled = false;
 uniform bool ScreenEdgeBlurEnabled = false;
@@ -48,6 +50,12 @@ float kernel[9] = float[]
 
 void main()
 {
+	if (!PostFXEnabled)
+	{
+		FragColor = texture(Texture, FragIn_UV);
+		return;
+	}
+
 	ivec2 TextureSize = textureSize(Texture, 0);
 
 	// the size of the pixel relative to the screen

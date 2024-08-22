@@ -1,8 +1,8 @@
 #pragma once
 
+/*
 #include<vector>
-#include<lua.h>
-#include<luacode.h>
+#include<luau/VM/src/lstate.h>
 
 #include"datatype/GameObject.hpp"
 
@@ -15,12 +15,10 @@ public:
 	void Initialize();
 	void Update(double);
 
-	bool LoadScript(std::string scriptFile);
+	bool LoadScript(std::string const& scriptFile);
 	bool Reload();
 
-	std::string SourceFile = "scripts/default.luau";
-
-	std::vector<std::shared_ptr<GameObject>> newobjs;
+	std::string SourceFile = "scripts/empty.luau";
 
 private:
 
@@ -30,5 +28,7 @@ private:
 
 	bool hasUpdate = false;
 
-	static DerivedObjectRegister<Object_Script> RegisterClassAs;
+	static RegisterDerivedObject<Object_Script> RegisterClassAs;
+	static void s_DeclareReflections();
 };
+*/

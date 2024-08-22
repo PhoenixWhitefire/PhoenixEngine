@@ -23,9 +23,9 @@ public:
 
 	// Yield the calling thread for the worker to finish the task it's currently on.
 	// Will not yield if the worker isn't performing a task (in WaitingForTask state)
-	void WaitForCurrentTaskFinish();
+	void WaitForCurrentTaskFinish() const;
 	// Yield the calling thread for the worker to finish all it's tasks.
-	void WaitForAllTasksFinish();
+	void WaitForAllTasksFinish() const;
 
 	std::vector<Task*> TaskQueue;
 	
@@ -35,13 +35,12 @@ public:
 
 	// The number of tasks it has completed. Used by WaitForCurrentTaskFinish to judge if it has moved on to a different task.
 	// Is incremented after it completes a task.
-	uint32_t TaskIdx;
+	uint32_t TaskIdx = 0;
 };
 
 class ThreadManager
 {
 public:
-	ThreadManager();
 
 	std::vector<Worker*> CreateWorkers(int NumWorkers, WorkerType Type);
 	std::vector<Worker*> GetWorkers();
@@ -50,8 +49,6 @@ public:
 	void DispatchJob(Task& Job);
 
 	static ThreadManager* Get();
-
-	SDL_Window* ApplicationWindow;
 
 private:
 	static ThreadManager* Singleton;

@@ -16,6 +16,11 @@ public:
 	bool Shadows = false;
 
 	Vector3 Position;
+
+private:
+	
+	static void s_DeclareReflections();
+	static bool s_DidInitReflection;
 };
 
 class Object_PointLight : public Object_Light
@@ -27,7 +32,9 @@ public:
 	double Range = 16.f;
 
 private:
-	static DerivedObjectRegister<Object_PointLight> RegisterClassAs;
+	static RegisterDerivedObject<Object_PointLight> RegisterClassAs;
+	static void s_DeclareReflections();
+	static bool s_DidInitReflection;
 };
 
 class Object_DirectionalLight : public Object_Light
@@ -36,7 +43,9 @@ public:
 	Object_DirectionalLight();
 
 private:
-	static DerivedObjectRegister<Object_DirectionalLight> RegisterClassAs;
+	static RegisterDerivedObject<Object_DirectionalLight> RegisterClassAs;
+	static void s_DeclareReflections();
+	static bool s_DidInitReflection;
 };
 
 class Object_SpotLight : public Object_Light
@@ -50,5 +59,7 @@ public:
 	double InnerCone = 95.f;
 
 private:
-	static DerivedObjectRegister<Object_SpotLight> RegisterClassAs;
+	static RegisterDerivedObject<Object_SpotLight> RegisterClassAs;
+	static void s_DeclareReflections();
+	static bool s_DidInitReflection;
 };

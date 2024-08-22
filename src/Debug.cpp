@@ -1,20 +1,16 @@
-#include<string>
-
 #include"Debug.hpp"
 #include"FileRW.hpp"
 
-std::string Debug::ProgramLog = "";
+static std::string ProgramLog = "";
 
 void Debug::Save()
 {
-	Debug::Log("Application closing...");
-
-	FileRW::WriteFile("log.txt", Debug::ProgramLog, false);
+	FileRW::WriteFile("log.txt", ProgramLog, false);
 }
 
-void Debug::Log(std::string Message)
+void Debug::Log(std::string const& Message)
 {
-	Debug::ProgramLog.append(Message + "\n");
+	ProgramLog.append(Message + "\n");
 
 	printf((Message + "\n").c_str());
 }

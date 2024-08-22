@@ -1,11 +1,13 @@
 #pragma once
 
 #define PHX_ASSERT(res, err) if (!res) throw(err)
+#define NULL_GAMEOBJECT_ID 0xFFFFFFu
 
 #include<functional>
 #include<vector>
 #include<string>
-#include<map>
+#include<unordered_map>
+#include<nljson.h>
 
 #include"Reflection.hpp"
 #include"datatype/Vector3.hpp"
@@ -16,83 +18,75 @@ class GameObject : public Reflection::Reflectable
 {
 public:
 	GameObject();
-	~GameObject();
+	virtual ~GameObject();
 
-	std::vector<std::shared_ptr<GameObject>>& GetChildren();
-	std::shared_ptr<GameObject> GetChildOfClass(std::string lass);
+	static bool IsValidObjectClass(std::string const&);
+	static GameObject* CreateGameObject(std::string const&);
+	static GameObject* GetObjectById(uint32_t);
 
-	void SetParent(std::shared_ptr<GameObject> Parent);
-	void AddChild(std::shared_ptr<GameObject> Child);
-	void RemoveChild(uint32_t ObjectId);
+	static GameObject* s_DataModel;
+	static std::unordered_map<uint32_t, GameObject*> s_WorldArray;
 
 	virtual void Initialize();
 	virtual void Update(double DeltaTime);
 
-	std::shared_ptr<GameObject> GetChild(std::string ChildName);
+	std::vector<GameObject*> GetChildren();
+
+	GameObject* GetParent();
+	GameObject* GetChild(std::string const&);
+	// EXACT match, does not account for inheritance
+	GameObject* GetChildOfClass(std::string const&);
+	GameObject* GetChildById(uint32_t);
 
 	std::string GetFullName();
 
-	static std::shared_ptr<GameObject> DataModel;
+	void Destroy();
+
+	void SetParent(GameObject*);
+	void AddChild(GameObject*);
+	void RemoveChild(uint32_t);
+
+	uint32_t ObjectId = 0;
 
 	std::string Name = "GameObject";
 	std::string ClassName = "GameObject";
 
-	bool DidInit = false;
-
-	std::shared_ptr<GameObject> operator [] (std::string ChildName)
-	{
-		for (int Index = 0; Index < this->m_children.size(); Index++)
-			if (this->m_children[Index]->Name == ChildName)
-				return this->m_children[Index];
-
-		return nullptr;
-	}
-
-	bool operator ! ()
-	{
-		return false;
-	}
-
-	std::shared_ptr<GameObject> Parent;
-
 	bool Enabled = true;
-
-	Event<std::shared_ptr<GameObject>> OnChildAdded;
-	Event<std::shared_ptr<GameObject>> OnChildRemoving;
-
 	bool ParentLocked = false;
 
-	int32_t ObjectId = 0;
+	uint32_t Parent;
+
+	Event<GameObject*> OnChildAdded;
+	Event<GameObject*> OnChildRemoving;
+
+	static nlohmann::json DumpApiToJson();
 
 protected:
-	std::vector<std::shared_ptr<GameObject>> m_children;
+	std::unordered_map<uint32_t, uint32_t> m_children;
+
+	// I followed this StackOverflow post:
+	// https://stackoverflow.com/a/582456/16875161
+
+	// Needs to be in `protected` because `RegisterDerivedObject`
+	typedef std::unordered_map<std::string, GameObject* (*)()> GameObjectMapType;
+	static GameObjectMapType* m_getGameObjectMap();
+	static GameObjectMapType* m_gameObjectMap;
+
+private:
+	static void s_DeclareReflections();
+	static bool s_DidInitReflection;
 };
 
-// I followed this StackOverflow post:
-// https://stackoverflow.com/a/582456/16875161
-
-struct GameObjectFactory
+template<typename T> GameObject* createT_baseGameObject()
 {
-	static std::shared_ptr<GameObject> CreateGameObject(std::string const& ObjectClass);
-
-	// TODO: understand contructor type voodoo, + is this even a good method?
-	typedef std::map<std::string, std::shared_ptr<GameObject>(*)()> GameObjectMapType;
-
-	static GameObjectMapType* GetGameObjectMap();
-
-	static GameObjectMapType* GameObjectMap;
-};
-
-template<typename T> std::shared_ptr<GameObject> createT_baseGameObject()
-{
-	return std::shared_ptr<GameObject>(new T);
+	return dynamic_cast<GameObject*>(new T);
 }
 
 template <typename T>
-struct DerivedObjectRegister : GameObjectFactory
+struct RegisterDerivedObject : GameObject
 {
-	DerivedObjectRegister(std::string const& ObjectClass)
+	RegisterDerivedObject(std::string const& ObjectClass)
 	{
-		GetGameObjectMap()->insert(std::make_pair(ObjectClass, &createT_baseGameObject<T>));
+		m_getGameObjectMap()->insert(std::make_pair(ObjectClass, &createT_baseGameObject<T>));
 	}
 };

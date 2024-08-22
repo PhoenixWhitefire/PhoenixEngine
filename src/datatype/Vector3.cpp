@@ -2,41 +2,40 @@
 
 #include"datatype/Vector3.hpp"
 
-Vector3& Vector3::ZERO = *new Vector3(0.f, 0.f, 0.f);
-Vector3& Vector3::UP = *new Vector3(0.f, 1.f, 0.f);
-Vector3& Vector3::DOWN = *new Vector3(0.f, -1.f, 0.f);
-Vector3& Vector3::LEFT = *new Vector3(-1.f, 0.f, 0.f);
-Vector3& Vector3::RIGHT = *new Vector3(1.f, 0.f, 0.f);
-Vector3& Vector3::FORWARD = *new Vector3(0.f, 0.f, -1.f);
-Vector3& Vector3::BACKWARD = *new Vector3(0.f, 0.f, 1.f);
-Vector3& Vector3::ONE = *new Vector3(1.f, 1.f, 1.f);
+bool Vector3::s_DidInitReflection = false;
 
-static Reflection::PropertyMap createVecProps(Vector3 v)
+Vector3 Vector3::zero = Vector3(0.f, 0.f, 0.f);
+Vector3 Vector3::xAxis = Vector3(-1.f, 0.f, 0.f);
+Vector3 Vector3::yAxis = Vector3(0.f, 1.f, 0.f);
+Vector3 Vector3::zAxis = Vector3(0.f, 0.f, 1.f);
+Vector3 Vector3::one = Vector3(1.f, 1.f, 1.f);
+
+struct IVector3
 {
-	Reflection::PropertyMap props;
+	IVector3(Vector3 v);
 
-	props.insert(std::pair("X", Reflection::Property(
-		Reflection::ValueType::Double,
-		[v]() { return v.X; },
-		NULL
-	)));
-	props.insert(std::pair("Y", Reflection::Property(
-		Reflection::ValueType::Double,
-		[v]() { return v.Y; },
-		NULL
-	)));
-	props.insert(std::pair("Z", Reflection::Property(
-		Reflection::ValueType::Double,
-		[v]() { return v.Z; },
-		NULL
-	)));
-	props.insert(std::pair("Magnitude", Reflection::Property(
-		Reflection::ValueType::Double,
-		[v]() { return v.Magnitude; },
-		NULL
-	)));
+	double X, Y, Z = 0.f;
+};
 
-	return props;
+IVector3::IVector3(Vector3 v)
+	: X(v.X), Y(v.Y), Z(v.Z)
+{
+}
+
+void Vector3::s_DeclareReflections()
+{
+	if (s_DidInitReflection)
+		return;
+	s_DidInitReflection = true;
+
+	return;
+
+	Vector3::ApiReflection = new Reflection::ReflectionInfo();
+
+	REFLECTION_DECLAREPROP_SIMPLE_READONLY(Vector3, X, Double);
+	REFLECTION_DECLAREPROP_SIMPLE_READONLY(Vector3, Y, Double);
+	REFLECTION_DECLAREPROP_SIMPLE_READONLY(Vector3, Z, Double);
+	REFLECTION_DECLAREPROP_SIMPLE_READONLY(Vector3, Magnitude, Double);
 }
 
 Vector3::Vector3()
@@ -47,18 +46,18 @@ Vector3::Vector3()
 
 	this->Magnitude = 0.f;
 
-	this->m_properties = createVecProps(*this);
+	s_DeclareReflections();
 }
 
-Vector3::Vector3(double X, double Y, double Z)
+Vector3::Vector3(double x, double y, double z)
 {
-	this->X = X;
-	this->Y = Y;
-	this->Z = Z;
+	this->X = x;
+	this->Y = y;
+	this->Z = z;
 
 	this->Magnitude = sqrt((this->X * this->X) + (this->Y * this->Y) + (this->Z * this->Z));
 
-	this->m_properties = createVecProps(*this);
+	s_DeclareReflections();
 }
 
 Vector3::Vector3(glm::vec3 GLMVector)
@@ -69,22 +68,67 @@ Vector3::Vector3(glm::vec3 GLMVector)
 
 	this->Magnitude = sqrt((this->X * this->X) + (this->Y * this->Y) + (this->Z * this->Z));
 
-	this->m_properties = createVecProps(*this);
+	s_DeclareReflections();
 }
 
-Vector3::Vector3(Reflection::GenericValue value)
+Vector3::Vector3(Reflection::GenericValue gv)
+	: X(0.f), Y(0.f), Z(0.f), Magnitude(0.f)
 {
-	if (value.Type != Reflection::ValueType::Vector3)
-		throw("GenericValue was not a Vector3");
+	if (gv.Type != Reflection::ValueType::Vector3)
+	{
+		std::string typeName = Reflection::TypeAsString(gv.Type);
+		throw(std::vformat(
+			"Attempted to construct Vector3, but GenericValue was {} instead",
+			std::make_format_args(typeName)
+		));
+	}
 
-	Vector3* vec = (Vector3*)value.Pointer;
+	if (!gv.Pointer)
+	{
+		throw("Attempted to construct Vector3, but GenericValue.Pointer was NULL");
+	}
 
-	this->X = vec->X;
-	this->Y = vec->Y;
-	this->Z = vec->Z;
-	this->Magnitude = vec->Magnitude;
+	/*Vector3 vec = *(Vector3*)gv.Pointer;
+	this->X = vec.X;
+	this->Y = vec.Y;
+	this->Z = vec.Z;
+	this->Magnitude = vec.Magnitude;*/
 
-	this->m_properties = createVecProps(*this);
+	IVector3 simplevec = *(IVector3*)gv.Pointer;
+	Vector3 vec(simplevec.X, simplevec.Y, simplevec.Z);
+
+	this->X = vec.X;
+	this->Y = vec.Y;
+	this->Z = vec.Z;
+	this->Magnitude = vec.Magnitude;
+
+	s_DeclareReflections();
+}
+
+Reflection::GenericValue Vector3::ToGenericValue()
+{
+	//REFLECTION_OPERATORGENERICTOCOMPLEX(Vector3);
+
+	if ((uint64_t)this == 0x108)
+		return Vector3(-999.f, 999.f, -999.f).ToGenericValue();
+
+	IVector3 simplevec(*this);
+
+	Reflection::GenericValue gv;
+	gv.Type = Reflection::ValueType::Vector3;
+	gv.Pointer = malloc(sizeof(IVector3));
+
+	if (!gv.Pointer)
+		throw("Allocation error on Vector3::ToGenericValue");
+
+	memcpy(gv.Pointer, &simplevec, sizeof(simplevec));
+
+	return gv;
+}
+
+std::string Vector3::ToString()
+{
+	return std::vformat("{}, {}, {}", std::make_format_args(X, Y, Z));
 }
 
 double Vector3::Dot(Vector3 OtherVec)
@@ -113,4 +157,106 @@ Vector3 Vector3::Cross(Vector3 OtherVec)
 
 	// Gave up
 	return glm::cross(glm::vec3(*this), glm::vec3(OtherVec));
+}
+
+Vector3 Vector3::operator+(Vector3 Other)
+{
+	return Vector3(Other.X + this->X, Other.Y + this->Y, Other.Z + this->Z);
+}
+
+Vector3& Vector3::operator+=(const Vector3 Right)
+{
+	Vector3 NewVec = Vector3(X + Right.X, Y + Right.Y, Z + Right.Z);
+
+	this->X = NewVec.X;
+	this->Y = NewVec.Y;
+	this->Z = NewVec.Z;
+	this->Magnitude = NewVec.Magnitude;
+
+	return *this;
+}
+
+Vector3& Vector3::operator-=(const Vector3 Right)
+{
+	Vector3 NewVec = Vector3(Right.X - this->X, Right.Y - this->Y, Right.Z - this->Z);
+
+	this->X = NewVec.X;
+	this->Y = NewVec.Y;
+	this->Z = NewVec.Z;
+	this->Magnitude = NewVec.Magnitude;
+
+	return *this;
+}
+
+Vector3 Vector3::operator*(Vector3 Right)
+{
+	return Vector3
+	(
+		this->X * Right.X,
+		this->Y * Right.Y,
+		this->Z * Right.Z
+	);
+}
+
+Vector3 Vector3::operator/(float Divisor)
+{
+	return Vector3
+	(
+		this->X / Divisor,
+		this->Y / Divisor,
+		this->Z / Divisor
+	);
+}
+
+Vector3 Vector3::operator*(float Multiplier)
+{
+	return Vector3
+	(
+		this->X * Multiplier,
+		this->Y * Multiplier,
+		this->Z * Multiplier
+	);
+}
+
+Vector3 Vector3::operator/(double Divisor)
+{
+	return Vector3
+	(
+		this->X / Divisor,
+		this->Y / Divisor,
+		this->Z / Divisor
+	);
+}
+
+Vector3 Vector3::operator*(double Multiplier)
+{
+	return Vector3
+	(
+		this->X * Multiplier,
+		this->Y * Multiplier,
+		this->Z * Multiplier
+	);
+}
+
+Vector3 Vector3::operator-(Vector3 Other)
+{
+	return Vector3(this->X - Other.X, this->Y - Other.Y, this->Z - Other.Z);
+}
+
+Vector3 Vector3::operator-()
+{
+	return Vector3(-X, -Y, -Z);
+}
+
+bool Vector3::operator==(Vector3 Other)
+{
+	if (Other.X == this->X && Other.Y == this->Y && Other.Z == this->Z)
+		return true;
+	else
+		return false;
+}
+
+Vector3::operator glm::vec3()
+{
+	return glm::vec3(this->X, this->Y, this->Z);
 }

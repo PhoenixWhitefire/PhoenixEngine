@@ -4,17 +4,21 @@
 #include"gameobject/Camera.hpp"
 #include"datatype/Vector2.hpp"
 
-class Object_Workspace : public GameObject
+class Object_Workspace : public Object_Model
 {
 public:
 	Object_Workspace();
 
-	std::shared_ptr<Object_Camera> GetSceneCamera();
-	void SetSceneCamera(std::shared_ptr<Object_Camera>);
+	void Initialize();
+
+	Object_Camera* GetSceneCamera();
+	void SetSceneCamera(Object_Camera*);
 
 private:
 
-	std::shared_ptr<Object_Camera> m_sceneCamera;
+	static RegisterDerivedObject<Object_Workspace> RegisterClassAs;
+	static void s_DeclareReflections();
+	static bool s_DidInitReflection;
 
-	static DerivedObjectRegister<Object_Workspace> RegisterClassAs;
+	Object_Camera* m_sceneCamera;
 };

@@ -7,21 +7,32 @@
 
 #include"MapLoader.hpp"
 
-#include"render/Material.hpp"
 #include"gameobject/GameObjects.hpp"
+#include"render/Material.hpp"
+#include"ModelLoader.hpp"
 #include"BaseMeshes.hpp"
 #include"FileRW.hpp"
-#include"Engine.hpp"
 #include"Debug.hpp"
 
-typedef std::shared_ptr<GameObject> GameObjectPtr;
-typedef std::shared_ptr<Object_Base3D> Base3DObjectPtr;
-typedef std::shared_ptr<Object_Mesh> MeshObjectPtr;
-typedef std::shared_ptr<Object_Primitive> PrimitiveObjectPtr;
-typedef std::shared_ptr<Object_Light> LightObjectPtr;
-typedef std::shared_ptr<Object_DirectionalLight> DirectionalLightPtr;
-typedef std::shared_ptr<Object_PointLight> PointLightPtr;
-typedef std::shared_ptr<Object_SpotLight> SpotLightPtr;
+static auto LoadModelAsMeshes(
+	const char* ModelFilePath,
+	Vector3 Size,
+	Vector3 Position,
+	bool AutoParent = true
+)
+{
+	ModelLoader Loader(ModelFilePath, AutoParent ? dynamic_cast<GameObject*>(GameObject::s_DataModel) : nullptr);
+
+	for (GameObject* object : Loader.LoadedObjs)
+	{
+		Object_Mesh* mesh = dynamic_cast<Object_Mesh*>(object);
+
+		mesh->Matrix = glm::translate(mesh->Matrix, (glm::vec3)Position);
+		mesh->Size = mesh->Size * Size;
+	}
+
+	return Loader.LoadedObjs;
+}
 
 static Vector3 GetVector3FromJSON(nlohmann::json JSON)
 {
@@ -49,23 +60,22 @@ static Vector3 GetVector3FromJSON(nlohmann::json JSON)
 	return Vec3;
 }
 
-static float GetVersion(std::string MapFileContents)
+static float GetVersion(std::string const& MapFileContents)
 {
-	size_t MatchLocation = MapFileContents.find("#VERSION");
+	size_t MatchLocation = MapFileContents.find("#Version");
 
 	float Version = 1.f;
 
 	if (MatchLocation != std::string::npos)
 	{
-		std::string SubStr = MapFileContents.substr(MatchLocation + 9, 6);
-		printf("%s\n", SubStr.c_str());
+		std::string SubStr = MapFileContents.substr(MatchLocation + 9, 4);
 		Version = std::stof(SubStr);
 	}
 	
 	return Version;
 }
 
-static void LoadMapVersion1(const char* MapPath, std::string Contents, GameObjectPtr MapParent)
+static void LoadMapVersion1(const std::string& MapPath, const std::string& Contents, GameObject* MapParent)
 {
 	nlohmann::json JSONData;
 
@@ -87,6 +97,18 @@ static void LoadMapVersion1(const char* MapPath, std::string Contents, GameObjec
 		return;
 	}
 
+	if (JSONData.find("parts") == JSONData.end())
+		throw(std::vformat(
+			"Required node `parts` in map file '{}' not present",
+			std::make_format_args(MapPath)
+		));
+
+	if (JSONData.find("lights") == JSONData.end())
+		throw(std::vformat(
+			"Required node `lights` in map file '{}' not present",
+			std::make_format_args(MapPath)
+		));
+
 	nlohmann::json PartsNode = JSONData["parts"];
 	nlohmann::json ModelsNode = JSONData.find("props") != JSONData.end() ? JSONData["props"] : nlohmann::json({});
 	nlohmann::json LightsNode = JSONData["lights"];
@@ -101,10 +123,11 @@ static void LoadMapVersion1(const char* MapPath, std::string Contents, GameObjec
 
 	// need to have this, else everything gets dealloc'd and crashes :)
 	// oh, the wonders of pointers
-	std::vector<GameObjectPtr>* loadedObjectsReference = new std::vector<GameObjectPtr>();
+	std::vector<GameObject*>* loadedObjectsReference = new std::vector<GameObject*>();
 
 	for (uint32_t Index = 0; Index < ModelsNode.size(); Index++)
 	{
+		break;
 		nlohmann::json PropObject;
 
 		try
@@ -123,36 +146,45 @@ static void LoadMapVersion1(const char* MapPath, std::string Contents, GameObjec
 		Vector3 Orientation = GetVector3FromJSON(PropObject["orient"]);
 		Vector3 Size = GetVector3FromJSON(PropObject["size"]);
 
-		auto& Model = EngineObject::Get()->LoadModelAsMeshesAsync(ModelPath.c_str(), Size, Position);
+		std::vector<GameObject*> Model = LoadModelAsMeshes(ModelPath.c_str(), Size, Position);
 
-		if (PropObject.find("name") != PropObject.end())
-		{
-			if (Model.size() == 0)
-				Debug::Log(
-					std::vformat(
-						"Model was given name '{}' in map file '{}', but has no meshes!",
-						std::make_format_args("<cast error>",
-							MapPath
-						)
+		std::string modelName = PropObject.value("name", "<UN-NAMED>");
+
+		if (Model.size() == 0)
+			Debug::Log(
+				std::vformat(
+					"Model '{}' in map file '{}' has no meshes!",
+					std::make_format_args(
+						modelName,
+						MapPath
 					)
-				);
-			else // TODO: all meshes should be given the name, plus a number probably
-				Model[0]->Name = PropObject["name"];
+				)
+			);
+		else
+		{
+			for (uint32_t index = 0; index < Model.size(); index++)
+			{
+				GameObject* mesh = Model[index];
+				mesh->Name = std::vformat("{}_{}", std::make_format_args(modelName, index));
+			}
 		}
 
-		Mesh* mesh = std::dynamic_pointer_cast<Object_Mesh>(Model[0])->GetRenderMesh();
+		Mesh* mesh = dynamic_cast<Object_Mesh*>(Model[0])->GetRenderMesh();
 
-		auto prop_3d = std::dynamic_pointer_cast<Object_Base3D>(Model[0]);
+		auto prop_3d = dynamic_cast<Object_Base3D*>(Model[0]);
 
 		if (PropObject.find("facecull") != PropObject.end())
 		{
-			if ((std::string)PropObject["facecull"] == (std::string)"none")
+			std::string facecullNameStr = std::string(PropObject["facecull"]);
+			const char* facecullName = facecullNameStr.c_str();
+
+			if (strcmp(facecullName, "none") == 0)
 				prop_3d->FaceCulling = FaceCullingMode::None;
 
-			else if ((std::string)PropObject["facecull"] == (std::string)"front")
+			else if (strcmp(facecullName, "front") == 0)
 				prop_3d->FaceCulling = FaceCullingMode::FrontFace;
 
-			else if ((std::string)PropObject["facecull"] == (std::string)"back")
+			else if (strcmp(facecullName, "back") == 0)
 				prop_3d->FaceCulling = FaceCullingMode::BackFace;
 
 			else
@@ -160,7 +192,7 @@ static void LoadMapVersion1(const char* MapPath, std::string Contents, GameObjec
 		}
 
 		if (PropObject.find("has_transparency") != PropObject.end())
-			std::dynamic_pointer_cast<Object_Mesh>(Model[0])->HasTransparency = true;
+			dynamic_cast<Object_Mesh*>(Model[0])->HasTransparency = true;
 
 		prop_3d->ComputePhysics = PropObject.value("computePhysics", 0) == 1 ? true : false;
 
@@ -183,19 +215,16 @@ static void LoadMapVersion1(const char* MapPath, std::string Contents, GameObjec
 
 		if (Object["type"] == "MeshPart")
 		{
-			GameObjectPtr NewObject = (GameObjectFactory::CreateGameObject("Mesh"));
+			// Yeah, "MeshPart" as the type and `Primitive`s as the result.
+			// Like just use V2 bro why the hell you botherin' this musty-ahh
+			// format?
+			GameObject* NewObject = GameObject::CreateGameObject("Primitive");
 
-			Base3DObjectPtr Object3D = std::dynamic_pointer_cast<Object_Base3D>(NewObject);
-			MeshObjectPtr MeshObject = std::dynamic_pointer_cast<Object_Mesh>(NewObject);
+			Object_Base3D* Object3D = dynamic_cast<Object_Base3D*>(NewObject);
 
 			loadedObjectsReference->push_back(NewObject);
 
-			if (Object.find("name") != Object.end())
-			{
-				NewObject->Name = Object["name"];
-				Object3D->Name = Object["name"];
-				MeshObject->Name = Object["name"];
-			}
+			NewObject->Name = Object.value("Name", NewObject->Name);
 
 			Vector3 Position = GetVector3FromJSON(Object["position"]);
 			Vector3 Orientation;
@@ -225,9 +254,7 @@ static void LoadMapVersion1(const char* MapPath, std::string Contents, GameObjec
 				Object3D->ColorRGB = Color(ColorVect.X, ColorVect.Y, ColorVect.Z);
 			}
 
-			MeshObject->Size = GetVector3FromJSON(Object["size"]);
-
-			MeshObject->SetRenderMesh(*BaseMeshes::Cube());
+			Object3D->Size = GetVector3FromJSON(Object["size"]);
 
 			NewObject->SetParent(MapParent);
 
@@ -269,8 +296,8 @@ static void LoadMapVersion1(const char* MapPath, std::string Contents, GameObjec
 
 		std::string LightType = LightObject["type"];
 
-		GameObjectPtr Object = (GameObjectFactory::CreateGameObject(LightType));
-		LightObjectPtr Light = std::dynamic_pointer_cast<Object_Light>(Object);
+		GameObject* Object = (GameObject::CreateGameObject(LightType));
+		Object_Light* Light = dynamic_cast<Object_Light*>(Object);
 
 		loadedObjectsReference->push_back(Object);
 
@@ -282,13 +309,13 @@ static void LoadMapVersion1(const char* MapPath, std::string Contents, GameObjec
 
 		if (LightType == "PointLight")
 		{
-			PointLightPtr Pointlight = std::dynamic_pointer_cast<Object_PointLight>(Object);
+			Object_PointLight* Pointlight = dynamic_cast<Object_PointLight*>(Object);
 			Pointlight->Range = LightObject["range"];
 		}
 
 		if (LightType == "DirectionalLight")
 		{
-			DirectionalLightPtr DirectLight = std::dynamic_pointer_cast<Object_DirectionalLight>(Object);
+			Object_DirectionalLight* DirectLight = dynamic_cast<Object_DirectionalLight*>(Object);
 			DirectLight->Position = GetVector3FromJSON(LightObject["position"]);
 			DirectLight->LightColor = Color(LightColor.X, LightColor.Y, LightColor.Z);
 		}
@@ -297,7 +324,7 @@ static void LoadMapVersion1(const char* MapPath, std::string Contents, GameObjec
 	}
 }
 
-static void LoadMapVersion2(const char* MapPath, std::string Contents, GameObjectPtr MapParent)
+static void LoadMapVersion2(const std::string& MapPath, const std::string& Contents, GameObject* MapParent)
 {
 	nlohmann::json JSONData;
 
@@ -319,20 +346,30 @@ static void LoadMapVersion2(const char* MapPath, std::string Contents, GameObjec
 		return;
 	}
 
-	nlohmann::json GameObjectsNode = JSONData["GameObjects"];
+	if (JSONData.find("GameObjects") == JSONData.end())
+		throw(std::vformat(
+			"The `GameObjects` key is not present in the map file '{}'",
+			std::make_format_args(MapPath)
+		));
 
-	// need to have this, else everything gets dealloc'd and crashes :)
-	// oh, the wonders of pointers
-	std::vector<GameObjectPtr>* loadedObjectsReference = new std::vector<GameObjectPtr>();
+	nlohmann::json GameObjectsNode = JSONData["GameObjects"];
 
 	for (nlohmann::json Item : GameObjectsNode)
 	{
+		if (Item.find("ClassName") == Item.end())
+			throw("An object was missing it's `ClassName` key.");
+
 		std::string Class = Item["ClassName"];
+
+		if (Item.find("Name") == Item.end())
+			throw(std::vformat(
+				"A {} was missing it's `Name` key.",
+				std::make_format_args(Class)
+			));
+
 		std::string Name = Item["Name"];
 
-		GameObjectPtr NewObject = GameObjectFactory::CreateGameObject(Class);
-
-		loadedObjectsReference->push_back(NewObject);
+		GameObject* NewObject = GameObject::CreateGameObject(Class);
 
 		// https://json.nlohmann.me/features/iterators/#access-object-key-during-iteration
 		for (auto it = Item.begin(); it != Item.end(); ++it)
@@ -341,12 +378,23 @@ static void LoadMapVersion2(const char* MapPath, std::string Contents, GameObjec
 
 			if (MemberName == "ClassName")
 				continue;
+			
+			printf(
+				"%s CLASS HAS %zi PROPERTIES (%zi CASTED), CUR: %s\n",
+				Class.c_str(),
+				NewObject->ApiReflection->GetProperties().size(),
+				dynamic_cast<Object_Mesh*>(NewObject)->ApiReflection->GetProperties().size(),
+				MemberName.c_str()
+			);
 
-			auto MemberIter = NewObject->GetProperties().find(MemberName);
+			for (auto& p : NewObject->ApiReflection->GetProperties())
+				printf("%s\n", p.first.c_str());
 
-			if (MemberIter == NewObject->GetProperties().end())
+			bool HasProp = NewObject->ApiReflection->HasProperty(MemberName);
+
+			if (!HasProp)
 			{
-				const char* FmtStr = "Deserialize warning: Member '{}' is not defined in the API for the Class {} (Name: '{}')!";
+				const char* FmtStr = "Deserialization warning: Member '{}' is not defined in the API for the Class {} (Name: '{}')!";
 				auto FmtArgs = std::make_format_args(
 					MemberName,
 					Class,
@@ -357,16 +405,15 @@ static void LoadMapVersion2(const char* MapPath, std::string Contents, GameObjec
 				continue;
 			}
 
-			auto& Member = NewObject->GetProperty(MemberName);
+			auto& Member = NewObject->ApiReflection->GetProperty(MemberName);
 
 			Reflection::ValueType MemberType = Member.Type;
-			int MemberTypeInt = int(MemberType);
+			
+			auto& PropSetter = Member.Set;
 
-			auto& PropSetter = Member.Setter;
-
-			if (!PropSetter)
+			if (!Member.Settable)
 			{
-				const char* FmtStr = "Deserialize error: Member '{}' of {} '{}' has no prop setter!";
+				const char* FmtStr = "Deserialization warning: Member '{}' of {} '{}' is read-only!";
 				auto FmtArgs = std::make_format_args(
 					MemberName,
 					Class,
@@ -383,28 +430,28 @@ static void LoadMapVersion2(const char* MapPath, std::string Contents, GameObjec
 			case (Reflection::ValueType::String):
 			{
 				std::string PropValue = Item[MemberName];
-				PropSetter(PropValue);
+				PropSetter(NewObject, PropValue);
 				break;
 			}
 
 			case (Reflection::ValueType::Bool):
 			{
 				bool PropValue = Item[MemberName];
-				PropSetter(PropValue);
+				PropSetter(NewObject, PropValue);
 				break;
 			}
 
 			case (Reflection::ValueType::Double):
 			{
 				double PropValue = Item[MemberName];
-				PropSetter(PropValue);
+				PropSetter(NewObject, PropValue);
 				break;
 			}
 
 			case (Reflection::ValueType::Integer):
 			{
 				int PropValue = Item[MemberName];
-				PropSetter(PropValue);
+				PropSetter(NewObject, PropValue);
 				break;
 			}
 
@@ -412,24 +459,27 @@ static void LoadMapVersion2(const char* MapPath, std::string Contents, GameObjec
 			{
 				Vector3 PropVec3 = GetVector3FromJSON(Item[MemberName]);
 				Color PropValue = Color(PropVec3.X, PropVec3.Y, PropVec3.Z);
-				PropSetter(PropValue);
+				Reflection::GenericValue gv = PropValue.ToGenericValue();
+				PropSetter(NewObject, gv);
 				break;
 			}
 
 			case (Reflection::ValueType::Vector3):
 			{
 				Vector3 PropValue = GetVector3FromJSON(Item[MemberName]);
-				PropSetter(PropValue);
+				Reflection::GenericValue gv = PropValue.ToGenericValue();
+				PropSetter(NewObject, gv);
 				break;
 			}
 
 			default:
 			{
-				const char* FmtStr = "Deserialize warning: Not reading prop '{}' of class {} because it's type ({}) is unknown";
+				const char* FmtStr = "Deserialization warning: Not reading prop '{}' of class {} because it's type ({}) is unknown";
+				std::string MemberTypeName = Reflection::TypeAsString(MemberType);
 				auto FmtArgs = std::make_format_args(
 					MemberName,
 					Class,
-					MemberTypeInt
+					MemberTypeName
 				);
 				Debug::Log(std::vformat(FmtStr, FmtArgs));
 				break;
@@ -442,15 +492,10 @@ static void LoadMapVersion2(const char* MapPath, std::string Contents, GameObjec
 	}
 }
 
-void MapLoader::LoadMapIntoObject(const char* MapFilePath, GameObjectPtr MapParent)
+void MapLoader::LoadMapIntoObject(const std::string& MapFilePath, GameObject* MapParent)
 {
 	bool MapExists = true;
 	std::string FileContents = FileRW::ReadFile(MapFilePath, &MapExists);
-
-	//TODO fix de-allocation issues, std::shared_ptr has caused the majority of runtime access
-	// violations ever for the engine
-	// pwf 2022
-	// idk, TODO find better solution future me
 
 	if (!MapExists)
 	{
@@ -481,28 +526,12 @@ void MapLoader::LoadMapIntoObject(const char* MapFilePath, GameObjectPtr MapPare
 
 	std::string JsonFileContents = FileContents.substr(JsonStartLoc);
 
-	//try
-	//{
-		if (Version == 1.f)
-			LoadMapVersion1(MapFilePath, JsonFileContents, MapParent);
-		else
-			if (Version == 2.f)
-				LoadMapVersion2(MapFilePath, JsonFileContents, MapParent);
-	//}
-	//catch (nlohmann::json::type_error e)
-	/*{
-		std::string errmsg = (std::string(e.what()) + " with contents:\n" + JsonFileContents);
-
-		Debug::Log(errmsg);
-
-		SDL_ShowSimpleMessageBox(
-			SDL_MESSAGEBOX_ERROR,
-			"map load error (NLJSON)",
-			errmsg.c_str(),
-			SDL_GetGrabbedWindow()
-		);
-	}*/
-
+	if (Version == 1.f)
+		LoadMapVersion1(MapFilePath, JsonFileContents, MapParent);
+	else
+		if (Version == 2.f)
+			LoadMapVersion2(MapFilePath, JsonFileContents, MapParent);
+		
 	Debug::Log(
 		std::vformat(
 			"Loaded map file '{}'",

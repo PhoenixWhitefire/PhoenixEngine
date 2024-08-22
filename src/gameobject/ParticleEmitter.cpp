@@ -7,18 +7,82 @@
 #include"datatype/Vector2.hpp"
 #include"datatype/Buffer.hpp"
 
-DerivedObjectRegister<Object_ParticleEmitter> Object_ParticleEmitter::RegisterClassAs("ParticleEmitter");
+RegisterDerivedObject<Object_ParticleEmitter> Object_ParticleEmitter::RegisterClassAs("ParticleEmitter");
 
 ShaderProgram* Object_ParticleEmitter::s_ParticleShaders = nullptr;
 std::default_random_engine Object_ParticleEmitter::s_RandGenerator = std::default_random_engine(time(NULL));
+bool Object_ParticleEmitter::s_DidInitReflection = false;
 
-float Quad[] = {
+float Quad[] =
+{
 	//Triangle 1 - left
 	-0.5f,  0.5f,
 	-0.5f, -0.5f,
 	 0.5f, -0.5f,
 	 0.5f,  0.5f,
 };
+
+void Object_ParticleEmitter::s_DeclareReflections()
+{
+	if (s_DidInitReflection)
+		//return;
+	s_DidInitReflection = true;
+
+	REFLECTION_DECLAREPROP_SIMPLE(Object_ParticleEmitter, EmitterEnabled, Bool);
+
+	REFLECTION_DECLAREPROP(
+		"Rate",
+		Integer,
+		[](Reflection::BaseReflectable* g)
+		{
+			return dynamic_cast<Object_ParticleEmitter*>(g)->Rate;
+		},
+		[](Reflection::BaseReflectable* g, Reflection::GenericValue gv)
+		{
+			int newRate = gv.Integer;
+			if (newRate < 0)
+				throw(std::vformat("Rate must be >=0, {} instead", std::make_format_args(newRate)));
+			else
+				dynamic_cast<Object_ParticleEmitter*>(g)->Rate = newRate;
+		}
+	);
+
+	REFLECTION_DECLAREPROP(
+		"MaxParticles",
+		Integer,
+		[](Reflection::BaseReflectable* g)
+		{
+			return dynamic_cast<Object_ParticleEmitter*>(g)->MaxParticles;
+		},
+		[](Reflection::BaseReflectable* g, Reflection::GenericValue gv)
+		{
+			int newMax = gv.Integer;
+			if (newMax < 0)
+				throw(std::vformat("MaxParticles must be >=0, {} instead", std::make_format_args(newMax)));
+			else
+				dynamic_cast<Object_ParticleEmitter*>(g)->MaxParticles = newMax;
+		}
+	);
+
+	REFLECTION_DECLAREPROP(
+		"Lifetime",
+		Vector3,
+		[](Reflection::BaseReflectable* g)
+		{
+			Object_ParticleEmitter* p = dynamic_cast<Object_ParticleEmitter*>(g);
+			return Vector3(p->Lifetime.X, p->Lifetime.Y, 0.f).ToGenericValue();
+		},
+		[](Reflection::BaseReflectable* g, Reflection::GenericValue gv)
+		{
+			Vector3 newLifetime = gv;
+			dynamic_cast<Object_ParticleEmitter*>(g)->Lifetime = Vector2(newLifetime.X, newLifetime.Y);
+		}
+	);
+
+	REFLECTION_DECLAREPROP_SIMPLE_TYPECAST(Object_ParticleEmitter, Offset, Vector3);
+
+	REFLECTION_INHERITAPI(GameObject);
+}
 
 Object_ParticleEmitter::Object_ParticleEmitter()
 {
@@ -62,57 +126,7 @@ Object_ParticleEmitter::Object_ParticleEmitter()
 	this->TransparencyOverTime.InsertKey(ValueRangeKey<float>(0.8, 0.5));
 	this->TransparencyOverTime.InsertKey(ValueRangeKey<float>(1, 1));
 
-	REFLECTION_DECLAREPROP_SIMPLE(EmitterEnabled, Reflection::ValueType::Bool);
-
-	REFLECTION_DECLAREPROP(
-		Rate,
-		Reflection::ValueType::Integer,
-		[this]()
-		{
-			return this->Rate;
-		},
-		[this](Reflection::GenericValue gv)
-		{
-			int newRate = gv.Integer;
-			if (newRate < 0)
-				throw(std::vformat("Rate must be >=0, {} instead", std::make_format_args(newRate)));
-			else
-				this->Rate = newRate;
-		}
-	);
-
-	REFLECTION_DECLAREPROP(
-		MaxParticles,
-		Reflection::ValueType::Integer,
-		[this]()
-		{
-			return this->MaxParticles;
-		},
-		[this](Reflection::GenericValue gv)
-		{
-			int newMax = gv.Integer;
-			if (newMax < 0)
-				throw(std::vformat("MaxParticles must be >=0, {} instead", std::make_format_args(newMax)));
-			else
-				this->MaxParticles = newMax;
-		}
-	);
-
-	REFLECTION_DECLAREPROP(
-		Lifetime,
-		Reflection::ValueType::Vector3,
-		[this]()
-		{
-			return Vector3(this->Lifetime.X, this->Lifetime.Y, 0.f);
-		},
-		[this](Reflection::GenericValue gv)
-		{
-			Vector3 newLifetime = gv;
-			this->Lifetime = Vector2(newLifetime.X, newLifetime.Y);
-		}
-	);
-
-	REFLECTION_DECLAREPROP_SIMPLE(Offset, Reflection::ValueType::Vector3);
+	s_DeclareReflections();
 }
 
 uint32_t Object_ParticleEmitter::m_getUsableIndex()
@@ -165,7 +179,7 @@ void Object_ParticleEmitter::Update(double Delta)
 {
 	float TimeBetweenSpawn = 1.0f / this->Rate;
 
-	std::shared_ptr<Object_Base3D> Parent3D = std::dynamic_pointer_cast<Object_Base3D>(this->Parent);
+	Object_Base3D* Parent3D = dynamic_cast<Object_Base3D*>(this->GetParent());
 
 	Vector3 WorldPosition = Parent3D ? Vector3(glm::vec3(Parent3D->Matrix[3])) + this->Offset : this->Offset;
 

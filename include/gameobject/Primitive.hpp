@@ -15,5 +15,7 @@ public:
 	PrimitiveShape Shape = PrimitiveShape::Cube;
 
 private:
-	static DerivedObjectRegister<Object_Primitive> RegisterClassAs;
+	static RegisterDerivedObject<Object_Primitive> RegisterClassAs;
+	static void s_DeclareReflections();
+	static bool s_DidInitReflection;
 };

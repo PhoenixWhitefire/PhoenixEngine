@@ -9,7 +9,7 @@
 #include"datatype/Vector3.hpp"
 #include"Debug.hpp"
 
-GLenum ObjectTypes[] =
+static GLenum ObjectTypes[] =
 {
 	GL_BUFFER,
 	GL_SHADER,
@@ -24,10 +24,10 @@ GLenum ObjectTypes[] =
 	GL_FRAMEBUFFER
 };
 
-std::string DiffuseStr = "Diffuse";
-std::string SpecularStr = "Specular";
+static std::string const& DiffuseStr = "Diffuse";
+static std::string const& SpecularStr = "Specular";
 
-void GLDebugCallback(
+static void GLDebugCallback(
 	GLenum source,
 	GLenum type,
 	GLuint id,
@@ -37,13 +37,19 @@ void GLDebugCallback(
 	const void* userParam)
 {
 	// not very important
-	if (severity == GL_DEBUG_SEVERITY_NOTIFICATION)
+	//if (severity == GL_DEBUG_SEVERITY_NOTIFICATION)
+		//return;
+
+	// ID for:
+	// "Buffer object X will use VIDEO memory as the source for buffer object operations"
+	if (id == 131185)
 		return;
 
 	std::string SourceTmp;
 	const char* Source;
 
-	switch (source) {
+	switch (source)
+	{
 
 	case GL_DEBUG_SOURCE_API:
 	{
@@ -94,7 +100,8 @@ void GLDebugCallback(
 	std::string SeverityTmp;
 	const char* Severity;
 
-	switch (severity) {
+	switch (severity)
+	{
 
 	case GL_DEBUG_SEVERITY_HIGH:
 	{
@@ -215,35 +222,33 @@ void GLDebugCallback(
 
 	Debug::Log(DebugString);
 
-	if (type != GL_DEBUG_TYPE_PERFORMANCE)
+	if (severity > GL_DEBUG_SEVERITY_NOTIFICATION)
 		throw(DebugString);
 }
 
-Renderer::Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window, uint8_t MSAASamples)
+Renderer::Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window)
 {
-	this->m_window = Window;
+	m_Window = Window;
 
-	this->m_width = Width;
-	this->m_height = Height;
+	m_Width = Width;
+	m_Height = Height;
 
-	this->m_msaaSamples = MSAASamples;
+	this->GLContext = SDL_GL_CreateContext(m_Window);
 
-	this->m_glContext = SDL_GL_CreateContext(this->m_window);
+	std::string errorMessage = "NO ERRORS";
 
-	std::string ErrorMessage = "NO ERRORS";
-
-	if (!this->m_glContext)
+	if (!this->GLContext)
 	{
 		const char* sdlErrStr = SDL_GetError();
 		throw(std::vformat("Could not create an OpenGL context, SDL error: {}", std::make_format_args(sdlErrStr)));
 	}
 
-	int GLMakeCurCtxStatus = SDL_GL_MakeCurrent(this->m_window, this->m_glContext);
+	int glMakeCurrentStatus = SDL_GL_MakeCurrent(m_Window, this->GLContext);
 
-	if (GLMakeCurCtxStatus < 0)
+	if (glMakeCurrentStatus < 0)
 		throw(std::vformat(
 			"Could not set the current OpenGL context (SDL error): {}",
-			std::make_format_args(GLMakeCurCtxStatus)
+			std::make_format_args(glMakeCurrentStatus)
 		));
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -254,10 +259,10 @@ Renderer::Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window, uint8_t 
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
-	bool GladStatus = gladLoadGL((GLADloadfunc)SDL_GL_GetProcAddress);
+	bool gladStatus = gladLoadGL((GLADloadfunc)SDL_GL_GetProcAddress);
 
-	if (!GladStatus)
-		throw(std::string("GLAD could not load OpenGL. Please update your drivers (min OGL ver: 4.6)."));
+	if (!gladStatus)
+		throw("GLAD could not load OpenGL. Please update your drivers (min OGL ver: 4.6).");
 
 	glEnable(GL_DEBUG_OUTPUT);
 	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
@@ -271,95 +276,71 @@ Renderer::Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window, uint8_t 
 	glCullFace(GL_FRONT);
 	glFrontFace(GL_CCW);
 	
-	SDL_GL_SetSwapInterval(1);
+	glViewport(0, 0, m_Width, m_Height);
 
-	glViewport(0, 0, this->m_width, this->m_height);
+	int glVersionMajor, glVersionMinor = 0;
 
-	int GLVersionMajor, GLVersionMinor = 0;
+	glGetIntegerv(GL_MAJOR_VERSION, &glVersionMajor);
+	glGetIntegerv(GL_MINOR_VERSION, &glVersionMinor);
 
-	glGetIntegerv(GL_MAJOR_VERSION, &GLVersionMajor);
-	glGetIntegerv(GL_MINOR_VERSION, &GLVersionMinor);
-
-	std::string glVersionConDbgStrTemp = std::vformat(
+	std::string glVersionStr = std::vformat(
 		"Running OpenGL version {}.{}",
-		std::make_format_args(GLVersionMajor, GLVersionMinor)
+		std::make_format_args(glVersionMajor, glVersionMinor)
 	).c_str();
-	const char* glVersionConDbgStr = glVersionConDbgStrTemp.c_str();
 
-	Debug::Log(std::string(glVersionConDbgStr));
+	Debug::Log(glVersionStr);
 
-	this->m_vertexArray = new VAO();
-	this->m_vertexArray->Bind();
+	m_VertexArray = new VAO();
+	m_VertexArray->Bind();
 
-	this->m_vertexBuffer = new VBO();
-	this->m_elementBuffer = new EBO();
+	m_VertexBuffer = new VBO();
+	m_ElementBuffer = new EBO();
 
-	this->m_vertexArray->LinkAttrib(*this->m_vertexBuffer, 0, 3, GL_FLOAT, sizeof(Vertex), (void*)0);
-	this->m_vertexArray->LinkAttrib(*this->m_vertexBuffer, 1, 3, GL_FLOAT, sizeof(Vertex), (void*)(3 * sizeof(float)));
-	this->m_vertexArray->LinkAttrib(*this->m_vertexBuffer, 2, 3, GL_FLOAT, sizeof(Vertex), (void*)(6 * sizeof(float)));
-	this->m_vertexArray->LinkAttrib(*this->m_vertexBuffer, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)(9 * sizeof(float)));
+	m_VertexArray->LinkAttrib(*m_VertexBuffer, 0, 3, GL_FLOAT, sizeof(Vertex), (void*)0);
+	m_VertexArray->LinkAttrib(*m_VertexBuffer, 1, 3, GL_FLOAT, sizeof(Vertex), (void*)(3 * sizeof(float)));
+	m_VertexArray->LinkAttrib(*m_VertexBuffer, 2, 3, GL_FLOAT, sizeof(Vertex), (void*)(6 * sizeof(float)));
+	m_VertexArray->LinkAttrib(*m_VertexBuffer, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)(9 * sizeof(float)));
 
-	// TODO: batching draw calls
-	// I actually coded this, then it didn't work, then I accidentally deleted the batching code when it was a 1-line fix
-	// I am now sad
-
-	// TODO: side effects of not doing this?
-	/*
-	this->m_vertexArray->Unbind();
-	this->m_vertexBuffer->Unbind();
-	this->m_elementBuffer->Unbind();
-	*/
-
-	/*this->m_framebuffer = new FBO(
-		this->m_width,
-		this->m_height,
-		this->m_window,
-		this->m_msaaSamples <= 0 ? false : true,
-		this->m_msaaSamples
-	 );*/
-
-	this->m_framebuffer = new FBO(this->m_window, this->m_width, this->m_height, this->m_msaaSamples);
+	this->Framebuffer = new FBO(m_Window, m_Width, m_Height, m_MsaaSamples);
 
 	Debug::Log("Renderer initialized");
 }
 
 void Renderer::ChangeResolution(uint32_t Width, uint32_t Height)
 {
-	std::string dbgWinResChangeStr = std::vformat(
+	std::string resChangedStr = std::vformat(
 		"Changing window resolution: ({}, {}) -> ({}, {})",
 		std::make_format_args(
-			this->m_width,
-			this->m_height,
+			m_Width,
+			m_Height,
 			Width,
 			Height
 		)
 	);
 
-	Debug::Log(dbgWinResChangeStr);
+	Debug::Log(resChangedStr);
 
-	this->m_width = Width;
-	this->m_height = Height;
+	m_Width = Width;
+	m_Height = Height;
 
-	glViewport(0, 0, this->m_width, this->m_height);
+	glViewport(0, 0, m_Width, m_Height);
 
 	// TODO fix msaa
 
 	//this->m_framebuffer->Bind();
-	this->m_framebuffer->BindTexture();
+	this->Framebuffer->BindTexture();
 
-	if (this->m_framebuffer->MSAASamples > 0)
-		glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, this->m_msaaSamples, GL_RGB, this->m_width, this->m_height, GL_TRUE);
+	if (this->Framebuffer->MSAASamples > 0)
+		glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, m_MsaaSamples, GL_RGB, m_Width, m_Height, GL_TRUE);
 	else
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, this->m_width, this->m_height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_Width, m_Height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 
-	glBindRenderbuffer(GL_RENDERBUFFER, this->m_framebuffer->RenderBufferID);
+	glBindRenderbuffer(GL_RENDERBUFFER, this->Framebuffer->RenderBufferID);
 
-	if (this->m_framebuffer->MSAASamples > 0)
-		glRenderbufferStorageMultisample(GL_RENDERBUFFER, this->m_msaaSamples, GL_DEPTH32F_STENCIL8, this->m_width, this->m_height);
+	if (this->Framebuffer->MSAASamples > 0)
+		glRenderbufferStorageMultisample(GL_RENDERBUFFER, m_MsaaSamples, GL_DEPTH32F_STENCIL8, m_Width, m_Height);
 	else
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH32F_STENCIL8, this->m_width, this->m_height);
-
-	this->SwapBuffers();
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH32F_STENCIL8, m_Width, m_Height);
 }
 
 void Renderer::DrawScene(Scene_t& Scene)
@@ -415,13 +396,7 @@ void Renderer::DrawScene(Scene_t& Scene)
 
 	for (MeshData_t RenderData : Scene.MeshData)
 	{
-		this->m_setTextureUniforms(RenderData, RenderData.Material->Shader);
-		this->DrawMesh(RenderData.MeshData, RenderData.Material->Shader, RenderData.Size, RenderData.Matrix, RenderData.FaceCulling);
-	}
-
-	for (MeshData_t RenderData : Scene.MeshData)
-	{
-		this->m_setTextureUniforms(RenderData, RenderData.Material->Shader);
+		m_SetTextureUniforms(RenderData, RenderData.Material->Shader);
 		this->DrawMesh(RenderData.MeshData, RenderData.Material->Shader, RenderData.Size, RenderData.Matrix, RenderData.FaceCulling);
 	}
 }
@@ -434,8 +409,8 @@ void Renderer::DrawMesh(
 	FaceCullingMode FaceCulling
 )
 {
-	if (!this->m_glContext)
-		throw(std::string("NULL m_glContext in DrawMesh!"));
+	if (!this->GLContext)
+		throw("NULL GLContext in DrawMesh!");
 
 	switch (FaceCulling)
 	{
@@ -449,7 +424,7 @@ void Renderer::DrawMesh(
 	case FaceCullingMode::BackFace:
 	{
 		glEnable(GL_CULL_FACE);
-		glCullFace(GL_FRONT); // WTF?
+		glCullFace(GL_FRONT);
 		break;
 	}
 
@@ -464,10 +439,10 @@ void Renderer::DrawMesh(
 
 	Shaders->Activate();
 
-	this->m_vertexArray->Bind();
+	m_VertexArray->Bind();
 
-	this->m_vertexBuffer->SetBufferData(Object->Vertices);
-	this->m_elementBuffer->SetBufferData(Object->Indices);
+	m_VertexBuffer->SetBufferData(Object->Vertices);
+	m_ElementBuffer->SetBufferData(Object->Indices);
 
 	glm::mat4 Scale = glm::mat4(1.0f);
 	Scale = glm::scale(Scale, (glm::vec3)Size);
@@ -478,7 +453,7 @@ void Renderer::DrawMesh(
 	glDrawElements(GL_TRIANGLES, Object->Indices.size(), GL_UNSIGNED_INT, 0);
 }
 
-void Renderer::m_setTextureUniforms(MeshData_t& RenderData, ShaderProgram* Shaders)
+void Renderer::m_SetTextureUniforms(MeshData_t& RenderData, ShaderProgram* Shaders)
 {
 	RenderMaterial* Material = RenderData.Material;
 	Shaders->Activate();
@@ -584,5 +559,5 @@ void Renderer::m_setTextureUniforms(MeshData_t& RenderData, ShaderProgram* Shade
 
 void Renderer::SwapBuffers()
 {
-	SDL_GL_SwapWindow(this->m_window);
+	SDL_GL_SwapWindow(m_Window);
 }

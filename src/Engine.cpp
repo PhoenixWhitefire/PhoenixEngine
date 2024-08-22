@@ -1,6 +1,7 @@
 #include<chrono>
 #include<string>
 #include<format>
+#include<SDL2/SDL.h>
 #include<glad/gl.h>
 #include<stb_image.h>
 #include<imgui/imgui_impl_sdl.h>
@@ -9,14 +10,34 @@
 #include<glm/gtc/matrix_transform.hpp>
 
 #include"Engine.hpp"
+
+#include"gameobject/GameObjects.hpp"
+#include"GlobalJsonConfig.hpp"
 #include"ThreadManager.hpp"
-#include"Debug.hpp"
+#include"UserInput.hpp"
 #include"FileRW.hpp"
+#include"Debug.hpp"
 
 EngineObject* EngineObject::Singleton = nullptr;
 
-uint32_t RectangleVAO, RectangleVBO;
+static uint32_t RectangleVAO, RectangleVBO;
 static auto ChronoStartTime = std::chrono::high_resolution_clock::now();
+
+// TODO: move 13/08/2024
+static int WindowSizeXBeforeFullscreen = 800;
+static int WindowSizeYBeforeFullscreen = 800;
+static int WindowPosXBeforeFullscreen = SDL_WINDOWPOS_CENTERED;
+static int WindowPosYBeforeFullscreen = SDL_WINDOWPOS_CENTERED;
+
+static float RectangleVertices[24] = {
+		 1.0f, -1.0f,    1.0f, 0.0f,
+		-1.0f, -1.0f,    0.0f, 0.0f,
+		-1.0f,  1.0f,    0.0f, 1.0f,
+
+		 1.0f,  1.0f,    1.0f, 1.0f,
+		 1.0f, -1.0f,    1.0f, 0.0f,
+		-1.0f,  1.0f,    0.0f, 1.0f
+};
 
 static std::vector<Vertex> SkyboxVertices =
 {
@@ -65,14 +86,10 @@ static std::vector<uint32_t> SkyboxIndices =
 	6, 2, 3
 };
 
-static void UpdateDescendants(std::shared_ptr<GameObject> root, double DeltaTime)
+static void UpdateDescendants(GameObject* root, double DeltaTime)
 {
-	for (auto& obj : root->GetChildren())
+	for (GameObject* obj : root->GetChildren())
 	{
-		if (!obj->DidInit)
-			obj->Initialize();
-		obj->DidInit = true;
-
 		obj->Update(DeltaTime);
 
 		if (obj->GetChildren().size() > 0)
@@ -80,35 +97,20 @@ static void UpdateDescendants(std::shared_ptr<GameObject> root, double DeltaTime
 	}
 }
 
-static void StepPhysicsForObjects(std::vector<std::shared_ptr<GameObject>> Objects, PhysicsSolver& Physics, double Delta)
+void EngineObject::ResizeWindow(int NewSizeX, int NewSizeY)
 {
-	for (uint32_t Index = 0; Index < Objects.size(); Index++)
-	{
-		std::shared_ptr<Object_Base3D> Object = std::dynamic_pointer_cast<Object_Base3D>(Objects[Index]);
+	SDL_SetWindowSize(this->Window, NewSizeX, NewSizeY);
 
-		if (Object)
-		{
-			Physics.ComputePhysicsForObject(Object, Delta);
-		}
-	}
+	this->OnWindowResized(NewSizeX, NewSizeY);
 }
 
-void EngineObject::ResizeWindow(int NewSizeX, int NewSizeY)
+void EngineObject::OnWindowResized(int NewSizeX, int NewSizeY)
 {
 	this->WindowSizeX = NewSizeX;
 	this->WindowSizeY = NewSizeY;
 
-	SDL_SetWindowSize(this->Window, NewSizeX, NewSizeY);
-
-	SDL_SetWindowPosition(this->Window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
-
-	this->m_renderer->ChangeResolution(NewSizeX, NewSizeY);
+	RendererContext->ChangeResolution(WindowSizeX, WindowSizeY);
 }
-
-int WindowSizeXBeforeFullscreen = 800;
-int WindowSizeYBeforeFullscreen = 800;
-int WindowPosXBeforeFullscreen = SDL_WINDOWPOS_CENTERED;
-int WindowPosYBeforeFullscreen = SDL_WINDOWPOS_CENTERED;
 
 void EngineObject::SetIsFullscreen(bool Fullscreen)
 {
@@ -119,39 +121,35 @@ void EngineObject::SetIsFullscreen(bool Fullscreen)
 		WindowSizeXBeforeFullscreen = this->WindowSizeX;
 		WindowSizeYBeforeFullscreen = this->WindowSizeY;
 
-		//SDL_GetWindowSize(this->Window, &WindowSizeXBeforeFullscreen, &WindowSizeYBeforeFullscreen);
 		SDL_GetWindowPosition(this->Window, &WindowPosXBeforeFullscreen, &WindowPosYBeforeFullscreen);
 
-		SDL_DisplayMode Mode;
-
-		SDL_GetCurrentDisplayMode(0, &Mode);
-
-		SDL_SetWindowSize(this->Window, Mode.w, Mode.h);
-
-		this->WindowSizeX = Mode.w;
-		this->WindowSizeY = Mode.h;
-
-		this->ResizeWindow(Mode.w, Mode.h);
+		// SDL_SetWindowFullscreen will trigger a Resize event and call ::OnWindowResized down the pipeline.
 	}
 	else
 	{
-		SDL_SetWindowSize(this->Window, WindowSizeXBeforeFullscreen, WindowSizeYBeforeFullscreen);
 		SDL_SetWindowPosition(this->Window, WindowPosXBeforeFullscreen, WindowPosYBeforeFullscreen);
-
-		this->WindowSizeX = WindowSizeXBeforeFullscreen;
-		this->WindowSizeY = WindowSizeYBeforeFullscreen;
-
-		this->ResizeWindow(WindowPosXBeforeFullscreen, WindowPosYBeforeFullscreen);
+		this->ResizeWindow(WindowSizeXBeforeFullscreen, WindowSizeYBeforeFullscreen);
 	}
 
-	SDL_SetWindowFullscreen(this->Window, this->IsFullscreen ? SDL_WINDOW_FULLSCREEN : this->SDLWindowFlags);
+	SDL_SetWindowFullscreen(this->Window, this->IsFullscreen ? SDL_WINDOW_FULLSCREEN : m_SDLWindowFlags);
 }
 
 EngineObject::EngineObject(Vector2 WindowStartSize, SDL_Window** WindowPtr)
 {
-	this->m_DrawCallBatch = nullptr;
 	EngineObject::Singleton = this;
 
+	// 15/08/2024:
+	// Hmm, this single commented-out line look like the remnants
+	//  of my first attempt trying to get behavior like we have
+	// `GameObject::CreateGameObject` today.
+	// My idea was, "Since constructors return objects, why don't I
+	// just have a list of constructors"?
+	// I didn't really think it would work initially, because it wouldn't
+	// even be returning the base class and thus there couldn't be an assignable
+	// type, but I didn't expect the _actual_ error to be:
+	// :cloud_with_lightning: "The pointer to a constructor shalt never be taken" :high_voltage:
+	// ... or something along those lines.
+	// 
 	//GameObject::GameObjectTable["Model"] = &Object_Model()
 
 	this->WindowSizeX = WindowStartSize.X;
@@ -159,12 +157,12 @@ EngineObject::EngineObject(Vector2 WindowStartSize, SDL_Window** WindowPtr)
 
 	SDL_Init(SDL_INIT_VIDEO);
 	
-	//Initialize SDL
+	// Initialize SDL
 	this->Window = SDL_CreateWindow(
 		"Waiting on configuration...",
 		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		(int)WindowStartSize.X, (int)WindowStartSize.Y,
-		this->SDLWindowFlags
+		m_SDLWindowFlags
 	);
 
 	bool ConfigFileFound = true;
@@ -183,16 +181,18 @@ EngineObject::EngineObject(Vector2 WindowStartSize, SDL_Window** WindowPtr)
 		}
 	}
 	else
-		throw(std::string("Could not find configuration file (phoenix.conf)!"));
+		throw("Could not find configuration file (phoenix.conf)!");
 
 	if (ConfigAscii == "")
-		throw(std::string("Configuration file phoenix.conf is not configured (empty)"));
+		throw("Configuration file is empty");
 
-	this->GameConfig = EngineJsonConfig;
+	SDL_SetWindowSize(
+		this->Window,
+		EngineJsonConfig["DefaultWindowSize"][0],
+		EngineJsonConfig["DefaultWindowSize"][1]
+	);
 
-	SDL_SetWindowSize(this->Window, this->GameConfig["DefaultWindowSize"][0], this->GameConfig["DefaultWindowSize"][1]);
-
-	SDL_SetWindowTitle(this->Window, std::string(this->GameConfig["WindowTitle"]).c_str());
+	SDL_SetWindowTitle(this->Window, EngineJsonConfig.value("GameTitle", "PhoenixEngine").c_str());
 
 	if (WindowPtr)
 		*WindowPtr = this->Window;
@@ -200,17 +200,24 @@ EngineObject::EngineObject(Vector2 WindowStartSize, SDL_Window** WindowPtr)
 	if (!this->Window)
 	{
 		const char* errStr = SDL_GetError();
-		throw(std::vformat("SDL error: Could not create window: {}\n", std::make_format_args(errStr)));
+		throw(std::vformat("SDL could not create the window: {}\n", std::make_format_args(errStr)));
 	}
 
 	// TODO: Engine->MSAASamples does nothing, attempting to specify via below ctor's argument leads to
 	// OpenGL error "Target doesn't match the texture's target"
-	this->m_renderer = new Renderer(this->WindowSizeX, this->WindowSizeY, this->Window, 0);
+	this->RendererContext = new Renderer(this->WindowSizeX, this->WindowSizeY, this->Window);
 
-	auto DataModel = GameObjectFactory::CreateGameObject("Workspace");
+	GameObject* newDataModel = GameObject::CreateGameObject("DataModel");
 
-	this->Game = std::dynamic_pointer_cast<Object_Workspace>(DataModel);
-	GameObject::DataModel = DataModel;
+	this->DataModel = dynamic_cast<Object_DataModel*>(newDataModel);
+	GameObject::s_DataModel = newDataModel;
+
+	GameObject* WorkspaceShared = DataModel->GetChild("Workspace");
+
+	if (!WorkspaceShared)
+		throw("The Workspace was removed, or otherwise could not be found.");
+
+	this->Workspace = dynamic_cast<Object_Workspace*>(WorkspaceShared);
 
 	this->PostProcessingShaders = ShaderProgram::GetShaderProgram("postprocessing");
 
@@ -219,7 +226,7 @@ EngineObject::EngineObject(Vector2 WindowStartSize, SDL_Window** WindowPtr)
 
 	glEnable(GL_DEPTH_TEST);
 
-	//Post-processing framebuffer
+	// Post-processing framebuffer
 
 	glGenVertexArrays(1, &RectangleVAO);
 	glGenBuffers(1, &RectangleVBO);
@@ -230,8 +237,6 @@ EngineObject::EngineObject(Vector2 WindowStartSize, SDL_Window** WindowPtr)
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-
-	ThreadManager::Get()->ApplicationWindow = this->Window;
 
 	ThreadManager::Get()->CreateWorkers(4, WorkerType::DefaultTaskWorker);
 }
@@ -252,25 +257,22 @@ EngineObject* EngineObject::Get()
 		return new EngineObject(Vector2(800, 800), nullptr);
 }
 
-std::shared_ptr<Object_Base3D> LastDrawn;
-
-std::vector<LightData_t> EngineObject::m_compileLightData(std::shared_ptr<GameObject> RootObject)
+static std::vector<LightData_t> compileLightData(GameObject* RootObject)
 {
-	std::vector<std::shared_ptr<GameObject>> Objects = RootObject->GetChildren();
-
+	std::vector<GameObject*> Objects = RootObject->GetChildren();
 	std::vector<LightData_t> DataList;
 
-	for (std::shared_ptr<GameObject> Object : Objects)
+	for (GameObject* Object : Objects)
 	{
 		if (!Object->Enabled)
 			continue;
 
-		std::shared_ptr<Object_Light> LightObject = std::dynamic_pointer_cast<Object_Light>(Object);
+		Object_Light* LightObject = dynamic_cast<Object_Light*>(Object);
 
 		if (LightObject)
 		{
-			std::shared_ptr<Object_DirectionalLight> Directional = std::dynamic_pointer_cast<Object_DirectionalLight>(LightObject);
-			std::shared_ptr<Object_PointLight> Point = std::dynamic_pointer_cast<Object_PointLight>(LightObject);
+			Object_DirectionalLight* Directional = dynamic_cast<Object_DirectionalLight*>(LightObject);
+			Object_PointLight* Point = dynamic_cast<Object_PointLight*>(LightObject);
 
 			LightData_t Data;
 
@@ -294,7 +296,7 @@ std::vector<LightData_t> EngineObject::m_compileLightData(std::shared_ptr<GameOb
 
 		if (Object->GetChildren().size() > 0)
 		{
-			std::vector<LightData_t> ChildData = this->m_compileLightData(Object);
+			std::vector<LightData_t> ChildData = compileLightData(Object);
 
 			for (uint32_t CDataIdx = 0; CDataIdx < ChildData.size(); CDataIdx++)
 				DataList.push_back(ChildData[CDataIdx]);
@@ -304,25 +306,22 @@ std::vector<LightData_t> EngineObject::m_compileLightData(std::shared_ptr<GameOb
 	return DataList;
 }
 
-std::vector<MeshData_t> EngineObject::m_compileMeshData(std::shared_ptr<GameObject> RootObject)
+static std::vector<MeshData_t> compileMeshData(GameObject* RootObject, Object_Camera* SceneCamera)
 {
-	std::vector<std::shared_ptr<GameObject>> Objects = RootObject->GetChildren();
-
+	std::vector<GameObject*> Objects = RootObject->GetChildren();
 	std::vector<MeshData_t> DataList;
 
-	std::shared_ptr<Object_Camera> SceneCamera = this->Game->GetSceneCamera();
-
-	for (std::shared_ptr<GameObject> Object : Objects)
+	for (GameObject* Object : Objects)
 	{
 		if (Object->Enabled)
 		{
-			std::shared_ptr<Object_Base3D> Object3D = std::dynamic_pointer_cast<Object_Base3D>(Object);
+			Object_Base3D* Object3D = dynamic_cast<Object_Base3D*>(Object);
 
 			if (Object3D != nullptr)
 			{
 				// TODO: frustum culling
 				// Hold R to disable distance culling
-				if ((Vector3(glm::vec3(Object3D->Matrix[3])) - glm::vec3(SceneCamera->Matrix[3])).Magnitude > 100.0f
+				if (glm::distance(glm::vec3(Object3D->Matrix[3]), glm::vec3(SceneCamera->Matrix[3])) > 100.0f
 					&& !UserInput::IsKeyDown(SDLK_r))
 					continue;
 
@@ -331,11 +330,6 @@ std::vector<MeshData_t> EngineObject::m_compileMeshData(std::shared_ptr<GameObje
 					//continue;
 
 				glm::mat4 ModelMatrix = glm::mat4(1.0f);
-
-				std::shared_ptr<Object_Model> ParentModel = std::dynamic_pointer_cast<Object_Model>(Object->Parent);
-
-				//if (ParentModel)
-				//	ModelMatrix = ParentModel->Matrix;
 
 				MeshData_t Data;
 				Data.MeshData = Object3D->GetRenderMesh();
@@ -350,14 +344,9 @@ std::vector<MeshData_t> EngineObject::m_compileMeshData(std::shared_ptr<GameObje
 				DataList.push_back(Data);
 			}
 
-			std::shared_ptr<Object_ParticleEmitter> PEmitterObject = std::dynamic_pointer_cast<Object_ParticleEmitter>(Object);
-
-			if (PEmitterObject != nullptr)
-				this->m_particleEmitters.push_back(PEmitterObject);
-
 			if (Object->GetChildren().size() > 0)
 			{
-				std::vector<MeshData_t> ChildData = this->m_compileMeshData(Object);
+				std::vector<MeshData_t> ChildData = compileMeshData(Object, SceneCamera);
 
 				for (uint32_t CDataIdx = 0; CDataIdx < ChildData.size(); CDataIdx++)
 					DataList.push_back(ChildData[CDataIdx]);
@@ -377,8 +366,6 @@ static double GetRunningTime()
 
 void EngineObject::Start()
 {
-	this->Physics->WorldGravity = Vector3::DOWN * 9.8f; // Earth's gravity is 9.8N
-
 	// TODO:
 	// wtf are these
 	// 13/07/2024
@@ -399,7 +386,7 @@ void EngineObject::Start()
 		"Sky1/back.jpg"
 	};
 
-	static const std::string BaseTexturePath = "./resources/textures/";
+	 std::string BaseTexturePath = std::string(EngineJsonConfig["ResourcesDirectory"]) + "textures/";
 
 	GLuint SkyboxCubemap = 0;
 
@@ -457,19 +444,18 @@ void EngineObject::Start()
 
 	//Texture HDRISkyboxTexture("Assets/Textures/hdri_sky_1.jpeg", "Diffuse", 0);
 
-	ShaderProgram SkyboxShaders = *ShaderProgram::GetShaderProgram("skybox");
+	ShaderProgram* SkyboxShaders = ShaderProgram::GetShaderProgram("skybox");
 
-	SkyboxShaders.Activate();
+	SkyboxShaders->Activate();
 
-	glUniform1i(glGetUniformLocation(SkyboxShaders.ID, "SkyCubemap"), 0);
+	glUniform1i(glGetUniformLocation(SkyboxShaders->ID, "SkyCubemap"), 0);
 
 	Scene_t Scene = Scene_t();
 
-	this->m_renderer->m_framebuffer->Unbind();
-	this->m_renderer->m_framebuffer->UnbindTexture();
+	RendererContext->Framebuffer->Unbind();
 
 	Texture DistortionTexture;
-	DistortionTexture.ImagePath = "resources/textures/MISSING2_MaximumADHD_status_1665776378145304579.png";
+	DistortionTexture.ImagePath = "textures/MISSING2_MaximumADHD_status_1665776378145304579.png";
 	TextureManager::Get()->CreateTexture2D(&DistortionTexture, false);
 
 	glActiveTexture(GL_TEXTURE17);
@@ -484,14 +470,19 @@ void EngineObject::Start()
 
 	Debug::Log("Main program loop start...");
 
-	while (!this->Exit)
+	while (!(this->Exit || this->DataModel->WantExit))
 	{
+		if (this->Workspace->ObjectId == NULL_GAMEOBJECT_ID)
+		{
+			Debug::Log("Workspace was Destroyed, shutting down");
+			break;
+		}
+
 		this->RunningTime = GetRunningTime();
 
 		Scene.MeshData.clear();
 		Scene.LightData.clear();
 
-		// TODO texture streaming should use low-quality versions so they don't appear black!
 		TextureManager::Get()->FinalizeAsyncLoadedTextures();
 
 		this->FpsCap = std::clamp(this->FpsCap, 1, 600);
@@ -509,28 +500,32 @@ void EngineObject::Start()
 
 		this->OnFrameStart.Fire(std::make_tuple(this, DeltaTime, RunningTime));
 
-		this->m_particleEmitters.clear();
-
 		while (SDL_PollEvent(&PollingEvent) != 0)
 		{
 			ImGui_ImplSDL2_ProcessEvent(&PollingEvent);
 
-			if (PollingEvent.type == SDL_WINDOWEVENT)
+			switch (PollingEvent.type) 
 			{
-				switch (PollingEvent.window.event) {
 
-				case SDL_WINDOWEVENT_RESIZED: {
-					int NewSizeX, NewSizeY;
+			case (SDL_QUIT):
+			{
+				this->Exit = true;
+				break;
+			}
 
-					SDL_GetWindowSize(this->Window, &NewSizeX, &NewSizeY);
+			case (SDL_WINDOWEVENT):
+			{
+				switch (PollingEvent.window.event)
+				{
+
+				case (SDL_WINDOWEVENT_RESIZED):
+				{
+					int NewSizeX = PollingEvent.window.data1;
+					int NewSizeY = PollingEvent.window.data2;
 
 					// Only call ChangeResolution if the new resolution is actually different
 					if (NewSizeX != this->WindowSizeX || NewSizeY != this->WindowSizeY)
-					{
-						this->WindowSizeX = NewSizeX;
-						this->WindowSizeY = NewSizeY;
-						this->m_renderer->ChangeResolution(PollingEvent.window.data1, PollingEvent.window.data2);
-					}
+						this->OnWindowResized(NewSizeX, NewSizeY);
 
 					break;
 				}
@@ -538,37 +533,25 @@ void EngineObject::Start()
 				}
 			}
 
-			switch (PollingEvent.type) {
-
-			case SDL_QUIT: {
-				this->Exit = true;
-				break;
-			}
-
 			}
 		}
 
-		this->m_LightIndex = 0;
+		DataModel->Update(DeltaTime);
+		UpdateDescendants(dynamic_cast<GameObject*>(DataModel), DeltaTime);
 
-		glClearColor(0.086f, 0.105f, 0.21f, 1.0f);
-		glClear(/*GL_COLOR_BUFFER_BIT | */ GL_DEPTH_BUFFER_BIT);
+		double AspectRatio = (double)this->WindowSizeX / (double)this->WindowSizeY;
 
-		this->Game->Update(DeltaTime);
-		UpdateDescendants(Game, DeltaTime);
-
-		StepPhysicsForObjects(this->Game->GetChildren(), *this->Physics, DeltaTime);
-
-		double AspectRatio = (float)this->WindowSizeX / (float)this->WindowSizeY;
-
-		std::shared_ptr<Object_Camera> SceneCamera = this->Game->GetSceneCamera();
+		GameObject* workspaceBase = dynamic_cast<GameObject*>(Workspace);
+		Object_Camera* SceneCamera = this->Workspace->GetSceneCamera();
 
 		glm::mat4 CameraMatrix = SceneCamera->GetMatrixForAspectRatio(AspectRatio);
 		float* CamMatrixPtr = glm::value_ptr(CameraMatrix);
 
 		// Aggregate mesh and light data into a list
-		Scene.MeshData = this->m_compileMeshData(this->Game);
-		Scene.LightData = this->m_compileLightData(this->Game);
+		Scene.MeshData = compileMeshData(workspaceBase, SceneCamera);
+		Scene.LightData = compileLightData(workspaceBase);
 
+		// Hashmap better than linaer serch
 		std::unordered_map<ShaderProgram*, ShaderProgram*> uniqueShaderMap;
 
 		for (MeshData_t md : Scene.MeshData)
@@ -598,26 +581,21 @@ void EngineObject::Start()
 
 		glDepthFunc(GL_LEQUAL);
 
-		SkyboxShaders.Activate();
+		SkyboxShaders->Activate();
 
-		glUniform1i(glGetUniformLocation(SkyboxShaders.ID, "SkyboxCubemap"), SkyboxCubemap);
+		glUniform1i(glGetUniformLocation(SkyboxShaders->ID, "SkyboxCubemap"), 0);
 
 		glm::vec3 CamPos = glm::vec3(SceneCamera->Matrix[3]);
 		glm::vec3 CamForward = glm::vec3(SceneCamera->Matrix[2]);
 
-		glm::mat4 view = glm::mat4(1.0f);
+		glm::mat4 view = glm::mat4(1.f);
 		glm::mat4 projection = glm::mat4(1.0f);
+
 		// We make the mat4 into a mat3 and then a mat4 again in order to get rid of the last row and column
 		// The last row and column affect the translation of the skybox (which we don't want to affect)
-		view = glm::mat4(
-			glm::mat3(
-				glm::lookAt(
-					CamPos,
-					CamPos + CamForward,
-					glm::vec3(Vector3::UP)
-				)
-			)
-		);
+
+		view = glm::mat4(glm::mat3(glm::lookAt(CamPos, CamPos + CamForward, glm::vec3(0.f, 1.f, 0.f))));
+		
 		projection = glm::perspective(
 			glm::radians(SceneCamera->FieldOfView),
 			AspectRatio,
@@ -625,28 +603,33 @@ void EngineObject::Start()
 			SceneCamera->FarPlane
 		);
 
-		glUniformMatrix4fv(glGetUniformLocation(SkyboxShaders.ID, "CameraMatrix"), 1, GL_FALSE, glm::value_ptr(projection * view));
+		glUniformMatrix4fv(
+			glGetUniformLocation(SkyboxShaders->ID, "CameraMatrix"),
+			1,
+			GL_FALSE,
+			glm::value_ptr(projection * view)
+		);
 
 		glBindTexture(GL_TEXTURE_CUBE_MAP, SkyboxCubemap);
 		
-		if (EngineJsonConfig.value("postfx_enabled", false))
-			m_renderer->m_framebuffer->Bind();
+		RendererContext->Framebuffer->Bind();
+
+		glClearColor(0.086f, 0.105f, 0.21f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// Skybox mesh winding order means that "BackFace" is outside the mesh.
-		this->m_renderer->DrawMesh(&SkyboxMesh, &SkyboxShaders, Vector3::ONE, projection * view, FaceCullingMode::BackFace);
+		RendererContext->DrawMesh(&SkyboxMesh,
+			SkyboxShaders,
+			Vector3::one * 15.f,
+			projection * view,
+			FaceCullingMode::None
+		);
 
 		glDepthFunc(GL_LESS);
 
 		//Main render pass
-		this->m_renderer->DrawScene(Scene);
+		RendererContext->DrawScene(Scene);
 
-		//Particle emitters' particles need to be drawn after scene due to transparency
-		for (auto& emitter : this->m_particleEmitters)
-		{
-			emitter->Update(this->FrameTime);
-			emitter->Render(CameraMatrix);
-		}
-		
 		glDisable(GL_DEPTH_TEST);
 
 		this->OnFrameRenderGui.Fire(std::make_tuple(this, DeltaTime, RunningTime));
@@ -655,11 +638,13 @@ void EngineObject::Start()
 
 		//Do framebuffer stuff after everything is drawn
 
-		this->m_renderer->m_framebuffer->Unbind();
+		RendererContext->Framebuffer->Unbind();
+
+		this->PostProcessingShaders->Activate();
 
 		if (EngineJsonConfig.value("postfx_enabled", false))
 		{
-			this->PostProcessingShaders->Activate();
+			glUniform1i(glGetUniformLocation(PostProcessingShaders->ID, "PostFXEnabled"), 1);
 
 			auto VignetteBlurLoc = glGetUniformLocation(PostProcessingShaders->ID, "ScreenEdgeBlurEnabled");
 			auto DistortionLoc = glGetUniformLocation(PostProcessingShaders->ID, "DistortionEnabled");
@@ -682,22 +667,27 @@ void EngineObject::Start()
 			}
 
 			glUniform1f(TimeLoc, RunningTime);
-			glUniform1i(glGetUniformLocation(PostProcessingShaders->ID, "Texture"), 1);
+			
 			glUniform1i(glGetUniformLocation(PostProcessingShaders->ID, "DistortionTexture"), 2);
-
-			glBindVertexArray(RectangleVAO);
-			glDisable(GL_DEPTH_TEST);
-
-			glActiveTexture(GL_TEXTURE0);
-			m_renderer->m_framebuffer->BindTexture();
 
 			glActiveTexture(GL_TEXTURE2);
 			glBindTexture(GL_TEXTURE_2D, DistortionTexture.Identifier);
-			
-			glDrawArrays(GL_TRIANGLES, 0, 6);
-
-			glEnable(GL_DEPTH_TEST);
 		}
+		else
+		{
+			glUniform1i(glGetUniformLocation(PostProcessingShaders->ID, "PostFXEnabled"), 0);
+		}
+
+		glUniform1i(glGetUniformLocation(PostProcessingShaders->ID, "Texture"), 1);
+		glActiveTexture(GL_TEXTURE1);
+		RendererContext->Framebuffer->BindTexture();
+
+		glBindVertexArray(RectangleVAO);
+		glDisable(GL_DEPTH_TEST);
+
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+
+		glEnable(GL_DEPTH_TEST);
 
 		// End of frame
 
@@ -705,7 +695,7 @@ void EngineObject::Start()
 
 		double curTimePrevSwap = RunningTime;
 
-		SDL_GL_SwapWindow(this->Window);
+		RendererContext->SwapBuffers();
 
 		this->RunningTime = GetRunningTime();
 
@@ -726,43 +716,18 @@ void EngineObject::Start()
 			this->m_DrawnFramesInSecond = -1;
 		}
 	}
-}
 
-std::vector<std::shared_ptr<GameObject>>& EngineObject::LoadModelAsMeshesAsync(
-	const char* ModelFilePath,
-	Vector3 Size,
-	Vector3 Position,
-	bool AutoParent
-)
-{
-	// TODO: fix memory leak, we need  Loader.LoadedObjects but without 'new' it gets deleted along with ModelLoader
-	ModelLoader* Loader = new ModelLoader(ModelFilePath, AutoParent ? this->Game : nullptr, this->Window);
-
-	for (int Index = 0; Index < Loader->LoadedObjects.size(); Index++)
-	{
-		std::shared_ptr<Object_Mesh> Object = std::dynamic_pointer_cast<Object_Mesh>(Loader->LoadedObjects[Index]);
-
-		Object->Matrix = glm::translate(Object->Matrix, (glm::vec3)Position);
-
-		Object->Size = Object->Size * Size;
-	}
-
-	return Loader->LoadedObjects;
+	Debug::Log("Main loop exited");
 }
 
 EngineObject::~EngineObject()
 {
-	this->Exit = true;
+	Debug::Log("Engine destructing...");
 
 	ShaderProgram::ClearAll();
 
-	delete this->Physics;
-	delete this->m_renderer;
+	delete this->DataModel;
+	delete this->RendererContext;
 
-	Debug::Log("Engine closing...");
-
-	Debug::Save();
-
-	// TODO fix crash
-	//this->Game->~GameObject();
+	SDL_DestroyWindow(this->Window);
 }

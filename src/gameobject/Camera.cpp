@@ -5,7 +5,35 @@
 #include"gameobject/Camera.hpp"
 #include"UserInput.hpp"
 
-DerivedObjectRegister<Object_Camera> Object_Camera::RegisterClassAs("Camera");
+RegisterDerivedObject<Object_Camera> Object_Camera::RegisterClassAs("Camera");
+bool Object_Camera::s_DidInitReflection = false;
+
+void Object_Camera::s_DeclareReflections()
+{
+	if (s_DidInitReflection)
+		//return;
+	s_DidInitReflection = true;
+
+	REFLECTION_DECLAREPROP_SIMPLE(Object_Camera, GenericMovement, Bool);
+	REFLECTION_DECLAREPROP_SIMPLE(Object_Camera, FieldOfView, Double);
+
+	REFLECTION_DECLAREPROP(
+		"Position",
+		Vector3,
+		[](Reflection::BaseReflectable* g)
+		{
+			Vector3 v = Vector3((glm::vec3)dynamic_cast<Object_Camera*>(g)->Matrix[3]);
+			return v.ToGenericValue();
+		},
+		[](Reflection::BaseReflectable* g, Reflection::GenericValue gv)
+		{
+			Vector3 vec = Vector3(gv);
+			dynamic_cast<Object_Camera*>(g)->Matrix[3] = glm::vec4(vec.X, vec.Y, vec.Z, 1.f);
+		}
+	);
+
+	REFLECTION_INHERITAPI(GameObject);
+}
 
 Object_Camera::Object_Camera()
 {
@@ -15,23 +43,9 @@ Object_Camera::Object_Camera()
 	PrevMouseX = 0;
 	PrevMouseY = 0;
 
-	REFLECTION_DECLAREPROP_SIMPLE(GenericMovement, Reflection::ValueType::Bool);
-	REFLECTION_DECLAREPROP_SIMPLE(FieldOfView, Reflection::ValueType::Double);
+	this->Matrix = glm::lookAt(glm::vec3(), glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f, 1.f, 0.f));
 
-	REFLECTION_DECLAREPROP(
-		Position,
-		Reflection::ValueType::Vector3,
-		[this]()
-		{
-			Vector3 v = Vector3((glm::vec3)this->Matrix[3]);
-			return v;
-		},
-		[this](Reflection::GenericValue gv)
-		{
-			Vector3& vec = *(Vector3*)gv.Pointer;
-			this->Matrix[3] = glm::vec4(vec.X, vec.Y, vec.Z, 1.f);
-		}
-	);
+	s_DeclareReflections();
 }
 
 void Object_Camera::Update(double DeltaTime)
@@ -51,7 +65,7 @@ glm::mat4 Object_Camera::GetMatrixForAspectRatio(double AspectRatio) const
 	glm::vec3 Position = glm::vec3(this->Matrix[3]);
 	glm::vec3 ForwardVec = glm::vec3(this->Matrix[2]);
 
-	ViewMatrix = glm::lookAt(Position, Position + ForwardVec, (glm::vec3)Vector3::UP);
+	ViewMatrix = glm::lookAt(Position, Position + ForwardVec, (glm::vec3)Vector3::yAxis);
 	ProjectionMatrix = glm::perspective(glm::radians(this->FieldOfView), AspectRatio, this->NearPlane, this->FarPlane);
 
 	return ProjectionMatrix * ViewMatrix;

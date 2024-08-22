@@ -6,164 +6,221 @@
 #include<functional>
 #include<string>
 #include<vector>
+#include<format>
+
+#define REFLECTION_OPERATORGENERICTOCOMPLEX(type) Reflection::GenericValue gv;                \
+gv.Type = Reflection::ValueType::type;                                                        \
+gv.Pointer = malloc(sizeof(type));                                                            \
+if (!gv.Pointer)                                                                              \
+throw(std::vformat(                                                                           \
+	"Allocation error while casting {} to Reflection::GenericValue (malloc nullptr)",         \
+	std::make_format_args(#type)                                                              \
+));                                                                                           \
+memcpy(gv.Pointer, this, sizeof(type));                                                       \
+return gv                                                                                     \
+
+#define REFLECTION_INHERITAPI(base) ApiReflection->s_Properties.insert( \
+	base::ApiReflection->s_Properties.begin(),                          \
+	base::ApiReflection->s_Properties.end()                             \
+);                                                                      \
+ApiReflection->s_Functions.insert(                                      \
+		base::ApiReflection->s_Functions.begin(),                       \
+		base::ApiReflection->s_Functions.end()                          \
+);                                                                      \
 
 // The following macros (REFLECTION_DECLAREPROP, _DECLAREPROP_SIMPLE and _SIMPLE_READONLY)
-// are meant to be called in member functions of Reflection::Reflectable-deriving classes,
-// as they use the `m_properties` member.
+// are meant to be called in member functions of Reflection::ReflectionInfo-deriving classes,
+// as they use the `s_Properties` member.
 
 // Declare a property with a custom Getter and Setter
-#define REFLECTION_DECLAREPROP(name, type, get, set) m_properties.insert(std::pair( \
-	#name,                                                                          \
-	Reflection::Property                                                            \
-	{	                                                                            \
-		type,                                                                       \
-		get,                                                                        \
-		set,                                                                        \
-	}                                                                               \
-))                                                                                  \
+#define REFLECTION_DECLAREPROP(strname, type, get, set) ApiReflection->s_Properties.insert(std::pair(    \
+	strname,                                                                                 \
+	Reflection::IProperty                                                                 \
+	{	                                                                                     \
+		Reflection::ValueType::type,                                                         \
+		get,                                                                                 \
+		set                                                                                  \
+	}                                                                                        \
+))                                                                                           \
 
 // Declare a property with the preset Getter (return x) and Setter (x = y)
-#define REFLECTION_DECLAREPROP_SIMPLE(name, type) REFLECTION_DECLAREPROP( \
-	name,                                                                 \
-	type,                                                                 \
-	[this]()                                                              \
-	{                                                                     \
-		return name;                                                      \
-	},                                                                    \
-	[this](Reflection::GenericValue gv)                                   \
-	{                                                                     \
-		name = gv;                                                    \
-	}                                                                     \
-)                                                                         \
+#define REFLECTION_DECLAREPROP_SIMPLE(c, name, type) REFLECTION_DECLAREPROP(   \
+	#name,                                                                     \
+	type,                                                                      \
+	[](Reflection::BaseReflectable* p)                                             \
+	{                                                                          \
+		return (Reflection::GenericValue)dynamic_cast<c*>(p)->name;            \
+	},                                                                         \
+	[](Reflection::BaseReflectable* p, Reflection::GenericValue gv)                \
+	{                                                                          \
+		dynamic_cast<c*>(p)->name = gv.type;                                   \
+	}                                                                          \
+)                                                                              \
+
+// Same as above, but for Complex Types that use Pointer (Vector3 and Color)
+// Calls their `operator Reflection::GenericValue`
+#define REFLECTION_DECLAREPROP_SIMPLE_TYPECAST(c, name, type) REFLECTION_DECLAREPROP( \
+	#name,                                                                              \
+	type,                                                                               \
+	[](Reflection::BaseReflectable* p)                                                      \
+	{                                                                                   \
+		return dynamic_cast<c*>(p)->name.ToGenericValue();                              \
+	},                                                                                  \
+	[](Reflection::BaseReflectable* p, Reflection::GenericValue gv)                         \
+	{                                                                                   \
+		dynamic_cast<c*>(p)->name = type(gv);                                           \
+	}                                                                                   \
+)                                                                                       \
 
 // Declare a property with the preset Getter, but no Setter
-#define REFLECTION_DECLAREPROP_SIMPLE_READONLY(name, type) REFLECTION_DECLAREPROP( \
-	name,                                                                          \
-	type,                                                                          \
-	[this]()                                                                       \
-	{                                                                              \
-		return name;                                                               \
-	},                                                                             \
-	nullptr                                                                        \
-)                                                                                  \
+#define REFLECTION_DECLAREPROP_SIMPLE_READONLY(c, name, type) REFLECTION_DECLAREPROP(   \
+	#name,                                                                              \
+	type,                                                                               \
+	[](Reflection::BaseReflectable* p)                                                      \
+	{                                                                                   \
+		return Reflection::GenericValue(dynamic_cast<c*>(p)->name);                     \
+	},                                                                                  \
+	nullptr,                                                                            \
+)                                                                                       \
+
+#define REFLECTION_DECLAREFUNC(strname, ins, outs, func) ApiReflection->s_Functions.insert(std::pair(strname, \
+	Reflection::IFunction(                                                                     \
+		ins,                                                                                      \
+		outs,                                                                                     \
+		func                                                                                      \
+	)                                                                                             \
+))                                                                                                \
+
+#define REFLECTION_DECLAREPROC(strname, func) REFLECTION_DECLAREFUNC(\
+	strname,                                                        \
+	{},                                                           \
+	{},                                                           \
+	func                                                          \
+)                                                                 \
 
 namespace Reflection
 {
 	enum class ValueType
 	{
-		NONE,
+		None = 0,
 		String,
 		Bool,
 		Double,
 		Integer,
 		Color,
-		Vector3
+		Vector3,
+		// 12/08/2024:
+		// Yep, it's all coming together now...
+		// Why have a GenericValueArray, when a GenericValue can simply BE an Array?
+		Array,
+		// Keys will be Strings. Odd items of GenericValue.Array will be the keys, even items will be the values
+		Map,
+		// Must ALWAYS be the last element
+		_count
 	};
+
+	std::string TypeAsString(ValueType);
 
 	struct GenericValue
 	{
-		ValueType Type = ValueType::NONE;
+		Reflection::ValueType Type = Reflection::ValueType::None;
 		std::string String;
 		bool Bool = true;
 		double Double = 0.f;
 		int Integer = 0;
 		void* Pointer = nullptr;
+		std::vector<GenericValue> Array;
 
 		GenericValue();
-		GenericValue(std::string);
+		GenericValue(std::string const&);
 		GenericValue(bool);
 		GenericValue(double);
 		GenericValue(int);
 		GenericValue(uint32_t);
 
-		std::string ToString();
+		std::string ToString() const;
 
-		operator std::string()
-		{
-			return this->Type == ValueType::String ? this->String : throw("GenericType was not a String");
-		}
-
-		operator bool()
-		{
-			return this->Type == ValueType::Bool ? this->Bool : throw("GenericType was not a Bool");
-		}
-
-		operator double()
-		{
-			return this->Type == ValueType::Double ? this->Double : throw("GenericType was not a Double");
-		}
-
-		operator int()
-		{
-			return this->Type == ValueType::Integer ? this->Integer : throw("GenericType was not an Integer");
-		}
-
-		operator std::vector<GenericValue>()
-		{
-			auto vec = std::vector<GenericValue>();
-			vec.push_back(*this);
-			return vec;
-		}
+		// Throws errors if the type does not match
+		std::string AsString() const;
+		bool AsBool() const;
+		double AsDouble() const;
+		int AsInt() const;
 	};
 
-	typedef std::vector<GenericValue> GenericValueArray;
-
-	struct Property
+	class BaseReflectable
 	{
-		Property
+	public:
+		virtual void pointlessPolymorhpismRequirementMeeter();
+	};
+
+	struct IProperty
+	{
+		IProperty
 		(
-			ValueType,
-			std::function<GenericValue(void)>,
-			std::function<void(GenericValue)>
+			Reflection::ValueType,
+			std::function<Reflection::GenericValue(Reflection::BaseReflectable*)>,
+			std::function<void(Reflection::BaseReflectable*, Reflection::GenericValue)>
 		);
 
-		ValueType Type;
-		std::function<GenericValue(void)> Getter;
-		std::function<void(GenericValue)> Setter;
+		IProperty
+		(
+			Reflection::ValueType,
+			bool,
+			std::function<Reflection::GenericValue(Reflection::BaseReflectable*)>,
+			std::function<void(Reflection::BaseReflectable*, Reflection::GenericValue)>
+		);
+
+		Reflection::ValueType Type;
+		bool Settable = true;
+
+		std::function<Reflection::GenericValue(Reflection::BaseReflectable*)> Get;
+		std::function<void(Reflection::BaseReflectable*, Reflection::GenericValue)> Set;
 	};
 
-	struct Function
+	struct IFunction
 	{
-		Function
+		IFunction
 		(
 			std::vector<ValueType> inputs,
 			std::vector<ValueType> outputs,
-			std::function<GenericValueArray(GenericValueArray)> func
+			std::function<GenericValue(Reflection::BaseReflectable*, GenericValue)> func
 		);
 
 		std::vector<ValueType> Inputs;
 		std::vector<ValueType> Outputs;
 
-		GenericValueArray operator () (GenericValueArray Input)
-		{
-			return this->Func(Input);
-		}
-
-		std::function<GenericValueArray(GenericValueArray)> Func;
+		std::function<GenericValue(Reflection::BaseReflectable*, GenericValue)> Func;
 	};
 
-	typedef std::unordered_map<std::string, Reflection::Property> PropertyMap;
-	typedef std::unordered_map<std::string, Reflection::Function> FunctionMap;
+	struct ReflectionInfo
+	{
+		typedef std::unordered_map<std::string, Reflection::IProperty> PropertyMap;
+		typedef std::unordered_map<std::string, Reflection::IFunction> FunctionMap;
 
-	class Reflectable
+		virtual PropertyMap& GetProperties();
+		virtual FunctionMap& GetFunctions();
+
+		virtual bool HasProperty(const std::string&);
+		virtual bool HasFunction(const std::string&);
+
+		virtual Reflection::IProperty& GetProperty(const std::string&);
+		virtual Reflection::IFunction& GetFunction(const std::string&);
+
+		virtual GenericValue GetPropertyValue(const std::string&);
+
+		virtual void SetPropertyValue(const std::string&, GenericValue&);
+		virtual GenericValue CallFunction(const std::string&, GenericValue);
+
+		PropertyMap s_Properties;
+		FunctionMap s_Functions;
+		bool s_DidInitReflection = false;
+	};
+
+	class Reflectable : public BaseReflectable
 	{
 	public:
-		PropertyMap& GetProperties();
-		FunctionMap& GetFunctions();
+		Reflectable();
 
-		bool HasProperty(const std::string&);
-		bool HasFunction(const std::string&);
-
-		Reflection::Property& GetProperty(const std::string&);
-		Reflection::Function& GetFunction(const std::string&);
-
-		GenericValue GetPropertyValue(const std::string&);
-
-		void SetPropertyValue(const std::string&, GenericValue&);
-		GenericValueArray CallFunction(const std::string&, GenericValueArray);
-
-	protected:
-		PropertyMap m_properties;
-		FunctionMap m_functions;
+		static Reflection::ReflectionInfo* ApiReflection;
 	};
 }

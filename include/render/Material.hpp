@@ -14,9 +14,9 @@ public:
 	// Creates a completely new material from the given name.
 	// SHOULD NOT BE USED DIRECTLY! USE RenderMaterial::GetMaterial INSTEAD!
 	// 
-	RenderMaterial(std::string MaterialName);
+	RenderMaterial(std::string const&);
 	// Fetches a material. Caches materials.
-	static RenderMaterial* GetMaterial(std::string Name);
+	static RenderMaterial* GetMaterial(std::string const& Name);
 
 	std::string Name;
 

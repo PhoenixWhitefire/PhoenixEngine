@@ -885,9 +885,6 @@
     <ClInclude Include="vendor\SDL2\SDL_vulkan.h">
       <Filter>Vendor Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\AnimationService.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\BaseMeshes.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -981,9 +978,6 @@
     <ClInclude Include="include\editor\Editor.hpp">
       <Filter>Header Files\editor</Filter>
     </ClInclude>
-    <ClInclude Include="include\render\Material.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\gameobject\Camera.hpp">
       <Filter>Header Files\gameobject</Filter>
     </ClInclude>
@@ -993,25 +987,25 @@
     <ClInclude Include="include\gameobject\Script.hpp">
       <Filter>Header Files\gameobject</Filter>
     </ClInclude>
-    <ClInclude Include="..\LuauLib\VM\include\lua.h">
-      <Filter>Vendor Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\LuauLib\Compiler\include\luacode.h">
-      <Filter>Vendor Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\LuauLib\Compiler\include\Luau\Compiler.h">
       <Filter>Vendor Files</Filter>
     </ClInclude>
     <ClInclude Include="..\LuauLib\Common\include\Luau\Common.h">
       <Filter>Vendor Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\LuauLib\Ast\include\Luau\Ast.h">
-      <Filter>Vendor Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\LuauLib\Common\include\Luau\Bytecode.h">
       <Filter>Vendor Files</Filter>
     </ClInclude>
     <ClInclude Include="include\Reflection.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\gameobject\DataModel.hpp">
+      <Filter>Header Files\gameobject</Filter>
+    </ClInclude>
+    <ClInclude Include="include\render\Material.hpp">
+      <Filter>Header Files\render</Filter>
+    </ClInclude>
+    <ClInclude Include="include\AnimationService.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -1045,9 +1039,6 @@
     </ClCompile>
     <ClCompile Include="vendor\imgui\imgui_widgets.cpp">
       <Filter>Vendor Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\AnimationService.cpp">
-      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\BaseMeshes.cpp">
       <Filter>Source Files</Filter>
@@ -1136,9 +1127,6 @@
     <ClCompile Include="src\editor\intersectionlib.cpp">
       <Filter>Source Files\editor</Filter>
     </ClCompile>
-    <ClCompile Include="src\render\Material.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\gameobject\Camera.cpp">
       <Filter>Source Files\gameobject</Filter>
     </ClCompile>
@@ -1149,6 +1137,15 @@
       <Filter>Source Files\gameobject</Filter>
     </ClCompile>
     <ClCompile Include="src\Reflection.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gameobject\DataModel.cpp">
+      <Filter>Source Files\gameobject</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\Material.cpp">
+      <Filter>Source Files\render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\AnimationService.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -1,45 +1,30 @@
 #include"gameobject/Workspace.hpp"
-#include"Debug.hpp"
 
-DerivedObjectRegister<Object_Workspace> Object_Workspace::RegisterClassAs("Workspace");
+RegisterDerivedObject<Object_Workspace> Object_Workspace::RegisterClassAs("Workspace");
+bool Object_Workspace::s_DidInitReflection = false;
 
-Object_Workspace::Object_Workspace()
+void Object_Workspace::s_DeclareReflections()
 {
-	this->Name = "Workspace";
-	this->ClassName = "Workspace";
-
-	std::shared_ptr<Object_Workspace> WorkspacePtr = std::make_shared<Object_Workspace>(*this);
-	std::shared_ptr<GameObject> MeAsObject = std::dynamic_pointer_cast<GameObject>(WorkspacePtr);
-
-	std::shared_ptr<Object_Camera> FallbackCamera = std::dynamic_pointer_cast<Object_Camera>
-		(GameObjectFactory::CreateGameObject("Camera"));
-
-	FallbackCamera->GenericMovement = true;
-	FallbackCamera->IsSceneCamera = true;
-
-	this->m_children.push_back(std::dynamic_pointer_cast<GameObject>(FallbackCamera));
-	FallbackCamera->Parent = MeAsObject;
-
-	this->m_sceneCamera = FallbackCamera;
+	if (s_DidInitReflection)
+		//return;
+	s_DidInitReflection = true;
 
 	REFLECTION_DECLAREPROP(
-		SceneCamera,
-		Reflection::ValueType::String,
-		[this]()
+		"SceneCamera",
+		String,
+		[](Reflection::BaseReflectable* g)
 		{
-			return m_sceneCamera->Name;
+			return dynamic_cast<Object_Workspace*>(g)->GetSceneCamera()->Name;
 		},
-		[this](Reflection::GenericValue gv)
+		[](Reflection::BaseReflectable* g, Reflection::GenericValue gv)
 		{
-			auto newObj = this->GetChild(gv.String);
-			auto newCam = newObj ? std::dynamic_pointer_cast<Object_Camera>(newObj) : nullptr;
+			Object_Workspace* p = dynamic_cast<Object_Workspace*>(g);
+
+			auto newObj = p->GetChild(gv.String);
+			auto newCam = newObj ? dynamic_cast<Object_Camera*>(newObj) : nullptr;
 
 			if (newCam)
-			{
-				this->m_sceneCamera->IsSceneCamera = false;
-				this->m_sceneCamera = newCam;
-				newCam->IsSceneCamera = true;
-			}
+				p->SetSceneCamera(newCam);
 			//else
 				//Debug::Log(std::vformat(
 				//	"Attempted to change the scene camera to '{}', but it is not a child of Workspace!",
@@ -47,14 +32,44 @@ Object_Workspace::Object_Workspace()
 				//));
 		}
 	);
+
+	REFLECTION_INHERITAPI(Object_Model);
 }
 
-std::shared_ptr<Object_Camera> Object_Workspace::GetSceneCamera()
+Object_Workspace::Object_Workspace()
+{
+	this->Name = "Workspace";
+	this->ClassName = "Workspace";
+	this->m_sceneCamera = nullptr;
+
+	s_DeclareReflections();
+}
+
+void Object_Workspace::Initialize()
+{
+	GameObject* workspaceBase = dynamic_cast<GameObject*>(this);
+
+	GameObject* fallbackCameraBase = GameObject::CreateGameObject("Camera");
+	Object_Camera* fallbackCamera = dynamic_cast<Object_Camera*>(fallbackCameraBase);
+
+	fallbackCamera->GenericMovement = true;
+	fallbackCamera->IsSceneCamera = true;
+
+	fallbackCameraBase->SetParent(this);
+
+	this->m_sceneCamera = fallbackCamera;
+}
+
+Object_Camera* Object_Workspace::GetSceneCamera()
 {
 	return m_sceneCamera;
 }
 
-void Object_Workspace::SetSceneCamera(std::shared_ptr<Object_Camera> NewCam)
+void Object_Workspace::SetSceneCamera(Object_Camera* NewCam)
 {
+	if (m_sceneCamera && m_sceneCamera != NewCam)
+		m_sceneCamera->IsSceneCamera = false;
+
 	this->m_sceneCamera = NewCam;
+	NewCam->IsSceneCamera = true;
 }

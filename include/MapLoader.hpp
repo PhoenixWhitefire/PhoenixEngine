@@ -1,9 +1,8 @@
 #pragma once
 
-#include<datatype/GameObject.hpp>
+#include"datatype/GameObject.hpp"
 
-class MapLoader
+struct MapLoader
 {
-public:
-	static void LoadMapIntoObject(const char* MapFilePath, std::shared_ptr<GameObject> MapParent);
+	static void LoadMapIntoObject(const std::string& MapFilePath, GameObject* MapParent);
 };

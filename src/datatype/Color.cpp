@@ -1,4 +1,4 @@
-#include<datatype/Color.hpp>
+#include"datatype/Color.hpp"
 
 Color::Color()
 {
@@ -14,14 +14,35 @@ Color::Color(float R, float G, float B)
 	this->B = B;
 }
 
-Color::Color(Reflection::GenericValue value)
+Color::Color(Reflection::GenericValue gv)
+	: R(0.f), G(0.f), B(0.f)
 {
-	if (value.Type != Reflection::ValueType::Color)
-		throw("GenericValue was not a Color");
+	if (gv.Type != Reflection::ValueType::Color)
+	{
+		std::string typeName = Reflection::TypeAsString(gv.Type);
+		throw(std::vformat(
+			"Attempted to construct Color, but GenericValue was {} instead",
+			std::make_format_args(typeName)
+		));
+	}
 
-	Color* col = (Color*)value.Pointer;
+	if (!gv.Pointer)
+	{
+		throw("Attempted to construct Color, but GenericValue.Pointer was NULL");
+	}
 
-	this->R = col->R;
-	this->G = col->G;
-	this->B = col->B;
+	Color col = *(Color*)gv.Pointer;
+	this->R = col.R;
+	this->G = col.G;
+	this->B = col.B;
+}
+
+Reflection::GenericValue Color::ToGenericValue()
+{
+	REFLECTION_OPERATORGENERICTOCOMPLEX(Color);
+}
+
+std::string Color::ToString()
+{
+	return std::vformat("{}, {}, {}", std::make_format_args(this->R, this->G, this->B));
 }

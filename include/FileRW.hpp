@@ -12,7 +12,7 @@ namespace FileRW
 	@param OPTIONAL bool* DoesFileExist: Gets set to true or false depending on whether the file exists.
 	ReadFile will always return an empty string if the file does not exist, hence this parameters' existence.
 	*/
-	std::string ReadFile(std::string FilePath, bool* DoesFileExist = nullptr);
+	std::string ReadFile(std::string const&, bool* DoesFileExist = nullptr);
 
-	void WriteFile(const char* FilePath, std::string FileContents, bool InResourcesDirectory);
+	void WriteFile(const std::string& FilePath, const std::string& FileContents, bool InResourcesDirectory);
 };

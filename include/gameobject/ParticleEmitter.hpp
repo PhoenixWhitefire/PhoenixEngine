@@ -61,5 +61,7 @@ private:
 	static std::default_random_engine s_RandGenerator;
 	static ShaderProgram* s_ParticleShaders;
 
-	static DerivedObjectRegister<Object_ParticleEmitter> RegisterClassAs;
+	static RegisterDerivedObject<Object_ParticleEmitter> RegisterClassAs;
+	static void s_DeclareReflections();
+	static bool s_DidInitReflection;
 };

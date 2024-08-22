@@ -1,194 +1,280 @@
-#include<iterator>
 #include<algorithm>
 
 #include"datatype/GameObject.hpp"
-#include"Debug.hpp"
 
 static uint32_t NumGameObjects = 0;
-std::shared_ptr<GameObject> GameObject::DataModel = nullptr;
+bool GameObject::s_DidInitReflection = false;
+GameObject* GameObject::s_DataModel = nullptr;
+std::unordered_map<uint32_t, GameObject*> GameObject::s_WorldArray = {};
 
-GameObjectFactory::GameObjectMapType* GameObjectFactory::GameObjectMap = new GameObjectMapType();
+GameObject::GameObjectMapType* GameObject::m_gameObjectMap = new GameObjectMapType();
 
-// https://stackoverflow.com/questions/7571937/how-to-delete-items-from-a-stdvector-given-a-list-of-indices
-template<typename T>
-inline std::vector<T> erase_indices(const std::vector<T>& data, std::vector<size_t>& indicesToDelete/* can't assume copy elision, don't pass-by-value */)
+static Reflection::GenericValue destroyObject(Reflection::BaseReflectable* obj, Reflection::GenericValue gv)
 {
-	if (indicesToDelete.empty())
-		return data;
+	dynamic_cast<GameObject*>(obj)->Destroy();
+	return Reflection::GenericValue();
+}
 
-	std::vector<T> ret;
-	ret.reserve(data.size() - indicesToDelete.size());
+void GameObject::s_DeclareReflections()
+{
+	if (s_DidInitReflection)
+			//return;
+	s_DidInitReflection = true;
 
-	std::sort(indicesToDelete.begin(), indicesToDelete.end());
+	//GameObject::ApiReflection = new Reflection::ReflectionInfo();
 
-	// new we can assume there is at least 1 element to delete. copy blocks at a time.
-	typename std::vector<T>::const_iterator itBlockBegin = data.begin();
-	for (std::vector<size_t>::const_iterator it = indicesToDelete.begin(); it != indicesToDelete.end(); ++it)
-	{
-		typename std::vector<T>::const_iterator itBlockEnd = data.begin() + *it;
-		if (itBlockBegin != itBlockEnd)
-		{
-			std::copy(itBlockBegin, itBlockEnd, std::back_inserter(ret));
-		}
-		itBlockBegin = itBlockEnd + 1;
-	}
+	REFLECTION_DECLAREPROP_SIMPLE_READONLY(GameObject, ClassName, String);
+	REFLECTION_DECLAREPROP_SIMPLE(GameObject, Name, String);
+	REFLECTION_DECLAREPROP_SIMPLE(GameObject, Enabled, Bool);
+	REFLECTION_DECLAREPROP_SIMPLE_READONLY(GameObject, ObjectId, Integer);
+	
+	REFLECTION_DECLAREPROC("Destroy", destroyObject);
 
-	// copy last block.
-	if (itBlockBegin != data.end())
-	{
-		std::copy(itBlockBegin, data.end(), std::back_inserter(ret));
-	}
-
-	return ret;
+	REFLECTION_INHERITAPI(Reflection::Reflectable);
 }
 
 GameObject::GameObject()
 {
-	REFLECTION_DECLAREPROP_SIMPLE_READONLY(ClassName, Reflection::ValueType::String);
-	REFLECTION_DECLAREPROP_SIMPLE(Name, Reflection::ValueType::String);
-	REFLECTION_DECLAREPROP_SIMPLE(Enabled, Reflection::ValueType::Bool);
-	REFLECTION_DECLAREPROP_SIMPLE_READONLY(ObjectId, Reflection::ValueType::Integer);
+	this->Parent = NULL_GAMEOBJECT_ID;
+
+	GameObject::s_DeclareReflections();
 }
 
 GameObject::~GameObject()
 {
-	if (this->Parent)
-		this->Parent->RemoveChild(this->ObjectId);
+	if (GameObject* parent = this->GetParent())
+		parent->RemoveChild(ObjectId);
 
-	// delete all the children
-	//for (unsigned int ChildIndex = 0; ChildIndex < this->m_children.size(); ChildIndex++)
-	//	this->m_children[ChildIndex]->~GameObject();
+	for (GameObject* child : this->GetChildren())
+		delete child;
 
-	this->m_children.clear();
+	this->ObjectId = NULL_GAMEOBJECT_ID;
 }
 
+bool GameObject::IsValidObjectClass(std::string const& ObjectClass)
+{
+	GameObjectMapType::iterator it = m_getGameObjectMap()->find(ObjectClass);
+
+	if (it == m_getGameObjectMap()->end())
+		return false;
+	else
+		return true;
+}
+
+GameObject* GameObject::GetObjectById(uint32_t Id)
+{
+	auto it = s_WorldArray.find(Id);
+	return it != s_WorldArray.end() ? it->second : nullptr;
+}
 
 void GameObject::Initialize()
 {
-	
 }
 
 void GameObject::Update(double DeltaTime)
 {
 }
 
-/*
-GameObject* GameObjectFactory::CreateGameObject(std::string ObjectClass)
+void GameObject::Destroy()
 {
-	return GameObjectFactory::CreateGameObject(ObjectClass);
+	s_WorldArray.erase(this->ObjectId);
+	delete this;
 }
-
-GameObject* GameObjectFactory::CreateGameObject(const char* ObjectClass)
-{
-	std::string ObjClass = *new std::string(ObjectClass);
-	return GameObjectFactory::CreateGameObject(ObjClass);
-}
-*/
 
 std::string GameObject::GetFullName()
 {
 	std::string FullName = this->Name;
 	auto curInst = this;
 
-	while (curInst->Parent)
+	while (GameObject* parent = curInst->GetParent())
 	{
-		auto& parent = curInst->Parent;
 		FullName = parent->Name + "." + FullName;
-		curInst = parent.get();
+		curInst = parent;
 	}
 
 	return FullName;
 }
 
-std::vector<std::shared_ptr<GameObject>>& GameObject::GetChildren()
+void GameObject::SetParent(GameObject* newParent)
 {
-	return this->m_children;
-}
+	GameObject* oldParent = GameObject::GetObjectById(Parent);
 
-std::shared_ptr<GameObject> GameObject::GetChildOfClass(std::string Class)
-{
-	for (int Index = 0; Index < this->m_children.size(); Index++)
-		if (this->m_children[Index]->ClassName == Class) 
-			return this->m_children[Index];
+	if (newParent == oldParent)
+		return;
 
-	return nullptr;
-}
+	uint32_t prevId = Parent;
 
-std::shared_ptr<GameObject> GameObject::GetChild(std::string ChildName)
-{
-	for (int Index = 0; Index < this->m_children.size(); Index++)
-		if (this->m_children[Index]->Name == ChildName)
-			return this->m_children[Index];
-
-	return nullptr;
-}
-
-void GameObject::SetParent(std::shared_ptr<GameObject> NewParent)
-{
-	if (!this->ParentLocked)
-		NewParent->AddChild(std::shared_ptr<GameObject>(this));
+	if (!newParent)
+		this->Parent = NULL_GAMEOBJECT_ID;
 	else
-		throw(std::string( "Error: Attempted to set parent of a parent-locked GameObject!"));
-	
-}
-
-void GameObject::AddChild(std::shared_ptr<GameObject> NewChild)
-{ //Use <GameObject>.SetParent
-	this->m_children.push_back(NewChild);
-
-	std::shared_ptr<GameObject> MeAsInstance(this);
-
-	NewChild->Parent = MeAsInstance;
-
-	this->OnChildAdded.Fire(NewChild);
-}
-
-void GameObject::RemoveChild(uint32_t ToRemoveId)
-{
-	for (uint32_t ChildIdx = 0; ChildIdx < this->m_children.size(); ChildIdx++)
 	{
-		if (this->m_children[ChildIdx]->ObjectId == ToRemoveId)
-		{
-			//this->OnChildRemoving.Fire(this->m_children[ChildIdx]);
-
-			//std::vector<size_t> toDelete = { ChildIdx };
-
-			//this->m_children = erase_indices<std::shared_ptr<GameObject>>(m_children, toDelete);
-
-			//this->m_children.insert(ChildIdx, nullptr);
-			break;
-		}
+		this->Parent = newParent->ObjectId;
+		newParent->AddChild(this);
 	}
+
+	if (oldParent)
+		oldParent->RemoveChild(this->ObjectId);
 }
 
-std::shared_ptr<GameObject> GameObjectFactory::CreateGameObject(std::string const& ObjectClass)
+void GameObject::AddChild(GameObject* c)
 {
-	// TODO: use a hashmap?
-	GameObjectMapType::iterator it = GetGameObjectMap()->find(ObjectClass);
+	this->m_children.insert(std::pair(c->ObjectId, c->ObjectId));
+}
 
-	if (it == GetGameObjectMap()->end())
+void GameObject::RemoveChild(uint32_t id)
+{
+	auto it = m_children.find(id);
+
+	if (it != m_children.end())
+		m_children.erase(it);
+	else
+		throw(std::vformat("ID:{} is _not my ({}) sonnn~_", std::make_format_args(ObjectId, id)));
+}
+
+GameObject* GameObject::GetParent()
+{
+	auto it = s_WorldArray.find(this->Parent);
+
+	if (it == s_WorldArray.end())
+	{
+		this->Parent = NULL_GAMEOBJECT_ID;
+		return nullptr;
+	}
+	else
+		return it->second;
+}
+
+std::vector<GameObject*> GameObject::GetChildren()
+{
+	std::vector<GameObject*> children;
+
+	for (auto& childEntry : this->m_children)
+	{
+		uint32_t childId = childEntry.second;
+
+		GameObject* child = GameObject::GetObjectById(childId);
+
+		if (child)
+			children.push_back(child);
+		else
+			m_children.erase(childEntry.first);
+	}
+
+	return children;
+}
+
+GameObject* GameObject::GetChildById(uint32_t id)
+{
+	auto it = m_children.find(id);
+
+	return it != m_children.end() ? s_WorldArray[id] : nullptr;
+}
+
+GameObject* GameObject::GetChild(std::string const& ChildName)
+{
+	for (auto& it : m_children)
+	{
+		GameObject* child = GameObject::GetObjectById(it.second);
+
+		if (!child)
+		{
+			m_children.erase(it.first);
+			continue;
+		}
+
+		if (child->Name == ChildName)
+			return child;
+	}
+
+	return nullptr;
+}
+
+
+GameObject* GameObject::GetChildOfClass(std::string const& Class)
+{
+	for (auto& it : m_children)
+	{
+		GameObject* child = this->GetChildById(m_children[it.second]);
+
+		if (!child)
+		{
+			this->m_children.erase(it.first);
+			continue;
+		}
+
+		if (child->ClassName == Class)
+			return child;
+	}
+
+	return nullptr;
+}
+
+GameObject* GameObject::CreateGameObject(std::string const& ObjectClass)
+{
+	GameObjectMapType::iterator it = m_getGameObjectMap()->find(ObjectClass);
+
+	if (it == m_getGameObjectMap()->end())
 		throw(std::vformat(
 			"Attempted to create invalid GameObject '{}'!",
 			std::make_format_args(ObjectClass)
 		));
 
-	std::shared_ptr<GameObject> CreatedObject = it->second();
-	CreatedObject->ObjectId = NumGameObjects;
+	GameObject* CreatedObject = it->second();
+	// ID:0 is a reserved ID
+	// Whenever anyone tries to use it, we know that an uninitialized
+	// Object was involved.
+	// To indicate a NULL Object, use `NULL_GAMEOBJECT_ID`.
+	// Thus, add 1 so that the first create Object has ID 1 and not 0.
+	CreatedObject->ObjectId = NumGameObjects + 1;
 	NumGameObjects++;
 
-	CreatedObject->ClassName = ObjectClass;
+	s_WorldArray.insert(std::pair(CreatedObject->ObjectId, CreatedObject));
+
+	CreatedObject->Initialize();
 
 	return CreatedObject;
 }
 
-GameObjectFactory::GameObjectMapType* GameObjectFactory::GetGameObjectMap()
+GameObject::GameObjectMapType* GameObject::m_getGameObjectMap()
 {
 	// Copied from StackOverflow post:
 	// 
 	// never delete'ed. (exist until program termination)
 	// because we can't guarantee correct destruction order 
-	if (!GameObjectMap)
-		GameObjectMap = new GameObjectMapType;
+	if (!m_gameObjectMap)
+		m_gameObjectMap = new GameObjectMapType;
 
-	return GameObjectMap;
+	return m_gameObjectMap;
+}
+
+nlohmann::json GameObject::DumpApiToJson()
+{
+	nlohmann::json dump{};
+	
+	for (auto& g : *GameObject::m_getGameObjectMap())
+	{
+		auto newobj = g.second();
+		dump[g.first] = nlohmann::json();
+
+		for (auto& p : newobj->ApiReflection->GetProperties())
+			dump[g.first][p.first] = Reflection::TypeAsString(p.second.Type);
+
+		for (auto& f : newobj->ApiReflection->GetFunctions())
+		{
+			std::string istring = "";
+			std::string ostring = "";
+
+			for (Reflection::ValueType i : f.second.Inputs)
+				istring += Reflection::TypeAsString(i) + ",";
+
+			for (Reflection::ValueType o : f.second.Outputs)
+				ostring += Reflection::TypeAsString(o) + ",";
+
+			dump[g.first][f.first] = std::vformat("({}) -> ({})", std::make_format_args(istring, ostring));
+		}
+
+		delete newobj;
+	}
+
+	return dump;
 }

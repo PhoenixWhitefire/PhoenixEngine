@@ -11,7 +11,8 @@ uniform vec2 Position;
 uniform float Scale;
 uniform float Time;
 
-void main(){
+void main()
+{
 	gl_Position = vec4(Position.x + VertexPosition.x * Scale, Position.y + VertexPosition.y * Scale, 0.0f, 1.0f);
 
 	FragIn_VertexColor = VertexColor;

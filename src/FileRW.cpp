@@ -5,7 +5,7 @@
 #include"GlobalJsonConfig.hpp"
 #include"Debug.hpp"
 
-std::string GetLocalizedFilePath(std::string NonLocalizedPath)
+static std::string GetLocalizedFilePath(std::string const& NonLocalizedPath)
 {
 	std::string Path = NonLocalizedPath;
 
@@ -16,18 +16,18 @@ std::string GetLocalizedFilePath(std::string NonLocalizedPath)
 	try
 	{
 		if (Path[0] != '.')
-			Path.insert(0, std::string(EngineJsonConfig["ResourcesDirectory"]));
+			Path.insert(0, EngineJsonConfig.value("ResourcesDirectory", "resources/"));
 	}
 	catch (nlohmann::json::type_error e)
 	{
 		const char* whatStr = e.what();
-		Debug::Log(std::vformat("Error localizing file path: {}", std::make_format_args(whatStr)));
+		Debug::Log(std::vformat("Error localizing file path: '{}'", std::make_format_args(whatStr)));
 	}
 
 	return Path;
 }
 
-std::string FileRW::ReadFile(std::string FilePath, bool* DoesFileExist)
+std::string FileRW::ReadFile(std::string const& FilePath, bool* DoesFileExist)
 {
 	std::string Path = std::string(FilePath);
 	Path = GetLocalizedFilePath(Path);
@@ -54,7 +54,7 @@ std::string FileRW::ReadFile(std::string FilePath, bool* DoesFileExist)
 	}
 	else
 	{
-		Debug::Log("Could not load file: " + (std::string)Path);
+		Debug::Log(std::vformat("Could not load file: '{}'", std::make_format_args(Path)));
 
 		if (DoesFileExist != nullptr)
 			*DoesFileExist = false;
@@ -63,11 +63,11 @@ std::string FileRW::ReadFile(std::string FilePath, bool* DoesFileExist)
 	}
 }
 
-void FileRW::WriteFile(const char* FilePath, std::string FileContents, bool InResourcesDirectory)
+void FileRW::WriteFile(const std::string& FilePath, const std::string& FileContents, bool InResourcesDirectory)
 {
 	std::string Path = InResourcesDirectory ? GetLocalizedFilePath(FilePath) : FilePath;
 
-	Debug::Log("Writing file: '" + Path + "'");
+	Debug::Log("Writing file: '" + Path + "'...");
 
 	std::ofstream File(Path.c_str());
 

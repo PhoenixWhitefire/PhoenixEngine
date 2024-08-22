@@ -11,3 +11,4 @@
 #include"gameobject/Camera.hpp"
 #include"gameobject/Workspace.hpp"
 #include"gameobject/Script.hpp"
+#include"gameobject/DataModel.hpp"

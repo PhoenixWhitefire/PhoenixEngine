@@ -20,5 +20,7 @@ private:
 	std::vector<Vertex> BlankVertices;
 	std::vector<uint32_t> BlankIndices;
 
-	static DerivedObjectRegister<Object_Mesh> RegisterClassAs;
+	static RegisterDerivedObject<Object_Mesh> RegisterClassAs;
+	static void s_DeclareReflections();
+	static bool s_DidInitReflection;
 };

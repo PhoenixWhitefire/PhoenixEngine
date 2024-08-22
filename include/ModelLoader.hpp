@@ -2,18 +2,20 @@
 
 #include<vector>
 
+#include"gameobject/MeshObject.hpp"
+#include<glm/matrix.hpp>
+#include<vector>
 
-#include<render/TextureManager.hpp>
-#include<Engine.hpp>
-
-#include<gameobject/MeshObject.hpp>
+#include"datatype/GameObject.hpp"
+#include"render/Material.hpp"
+#include"datatype/Mesh.hpp"
 
 class ModelLoader
 {
 public:
-	ModelLoader(const char* FilePath, std::shared_ptr<GameObject> Parent, SDL_Window* Window);
+	ModelLoader(const char* FilePath, GameObject* Parent);
 
-	std::vector<std::shared_ptr<GameObject>> LoadedObjects;
+	std::vector<GameObject*> LoadedObjs;
 
 private:
 	const char* File;

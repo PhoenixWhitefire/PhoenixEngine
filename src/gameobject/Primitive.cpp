@@ -1,7 +1,8 @@
 #include"gameobject/Primitive.hpp"
 #include"BaseMeshes.hpp"
 
-DerivedObjectRegister<Object_Primitive> Object_Primitive::RegisterClassAs("Primitive");
+RegisterDerivedObject<Object_Primitive> Object_Primitive::RegisterClassAs("Primitive");
+bool Object_Primitive::s_DidInitReflection = false;
 
 static Mesh* GetPrimitiveMesh(PrimitiveShape Type)
 {
@@ -27,6 +28,29 @@ static Mesh* GetPrimitiveMesh(PrimitiveShape Type)
 	return PrimitiveMesh;
 }
 
+void Object_Primitive::s_DeclareReflections()
+{
+	if (s_DidInitReflection)
+		//return;
+	s_DidInitReflection = true;
+
+	REFLECTION_DECLAREPROP(
+		"Shape",
+		Integer,
+		[](Reflection::BaseReflectable* g)
+		{
+			return (int)dynamic_cast<Object_Primitive*>(g)->Shape;
+		},
+		[](Reflection::BaseReflectable* g, Reflection::GenericValue gv)
+		{
+			dynamic_cast<Object_Primitive*>(g)->SetShape((PrimitiveShape)gv.Integer);
+		}
+	);
+
+	REFLECTION_INHERITAPI(Object_Base3D);
+	REFLECTION_INHERITAPI(GameObject);
+}
+
 Object_Primitive::Object_Primitive()
 {
 	this->Name = "Primitive";
@@ -36,18 +60,7 @@ Object_Primitive::Object_Primitive()
 
 	this->Material = RenderMaterial::GetMaterial("plastic");
 
-	REFLECTION_DECLAREPROP(
-		Shape,
-		Reflection::ValueType::Integer,
-		[this]()
-		{
-			return (int)this->Shape;
-		},
-		[this](Reflection::GenericValue gv)
-		{
-			this->SetShape((PrimitiveShape)gv.Integer);
-		}
-	);
+	s_DeclareReflections();
 }
 
 void Object_Primitive::SetShape(PrimitiveShape shape)

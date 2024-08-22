@@ -4,6 +4,7 @@
 
 #include"render/TextureManager.hpp"
 #include"render/ShaderProgram.hpp"
+#include"GlobalJsonConfig.hpp"
 #include"ThreadManager.hpp"
 #include"Debug.hpp"
 
@@ -53,13 +54,15 @@ void asyncTextureLoader(void* ManagerPtr)
 
 void TextureManager::CreateTexture2D(Texture* TexturePtr, bool ShouldLoadAsync)
 {
+	std::string ResDir = EngineJsonConfig["ResourcesDirectory"];
+	std::string ActualPath = ResDir + TexturePtr->ImagePath;
+
 	if (TexturePtr->AttemptedLoad)
 	{
 		if (TexturePtr->TMP_ImageByteData == nullptr)
 		{
-			std::string imgPath = TexturePtr->ImagePath;
 			int Usage = int(TexturePtr->Usage);
-			auto FormattedArgs = std::make_format_args(imgPath, Usage);
+			auto FormattedArgs = std::make_format_args(ActualPath, Usage);
 			Debug::Log(std::vformat("Failed to load texture '{}' (usage:{})", FormattedArgs));
 			return;
 		}
@@ -102,8 +105,8 @@ void TextureManager::CreateTexture2D(Texture* TexturePtr, bool ShouldLoadAsync)
 			default:
 			{
 				throw(std::vformat(
-					std::string("Invalid ImageNumColorChannels (was '{}') in TextureManager::CreateTexture2D!"),
-					std::make_format_args(TexturePtr->ImageNumColorChannels)
+					std::string("Invalid ImageNumColorChannels (was '{}') in for '{}'!"),
+					std::make_format_args(TexturePtr->ImageNumColorChannels, ActualPath)
 				));
 				break;
 			}
@@ -143,7 +146,7 @@ void TextureManager::CreateTexture2D(Texture* TexturePtr, bool ShouldLoadAsync)
 		if (!ShouldLoadAsync)
 		{
 			uint8_t* Data = this->LoadImageData(
-				TexturePtr->ImagePath.c_str(),
+				ActualPath.c_str(),
 				&TexturePtr->ImageWidth,
 				&TexturePtr->ImageHeight,
 				&TexturePtr->ImageNumColorChannels
@@ -159,7 +162,7 @@ void TextureManager::CreateTexture2D(Texture* TexturePtr, bool ShouldLoadAsync)
 			Task* LoadTextureTask = new Task();
 			LoadTextureTask->FuncArgument = (void*)this;
 			LoadTextureTask->Function = asyncTextureLoader;
-			LoadTextureTask->DbgInfo = "LoadTextureTask: Tex: " + TexturePtr->ImagePath;
+			LoadTextureTask->DbgInfo = "LoadTextureTask: Tex: " + ActualPath;
 			
 			ThreadManager::Get()->DispatchJob(*LoadTextureTask);
 
@@ -177,7 +180,7 @@ void TextureManager::FinalizeAsyncLoadedTextures()
 
 	if (Image->TMP_ImageByteData == nullptr)
 	{
-		Image->Identifier = 0xFFFFFFFF; //image failed to load
+		Image->Identifier = 0xFFFFFFFF; // image failed to load
 
 		std::string Path = Image->ImagePath;
 

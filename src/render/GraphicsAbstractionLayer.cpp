@@ -47,7 +47,7 @@ Graphics::Graphics(bool* WasSuccess, GraphicsApi ForceApi, const char* WindowTit
 
 	case GraphicsApi::Vulkan:
 	{
-		throw(std::string("Vulkan is not currently supported :("));
+		throw("Vulkan is not currently supported :(");
 		break;
 	}
 

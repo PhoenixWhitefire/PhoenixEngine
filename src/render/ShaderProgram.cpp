@@ -9,7 +9,7 @@
 static const std::string BaseShaderPath = "shaders/";
 std::unordered_map<std::string, ShaderProgram*> ShaderProgram::s_programs;
 
-ShaderProgram::ShaderProgram(std::string ProgramName)
+ShaderProgram::ShaderProgram(std::string const& ProgramName)
 {
 	this->Name = ProgramName;
 
@@ -129,7 +129,27 @@ void ShaderProgram::Activate() const
 
 ShaderProgram::~ShaderProgram()
 {
-	glDeleteProgram(this->ID);
+	auto it = std::find_if(
+		s_programs.begin(),
+		s_programs.end(),
+		[this](auto&& p)
+		{
+			return p.second == this;
+		}
+	);
+
+	if (it != s_programs.end())
+	{
+		glDeleteProgram(ID);
+		s_programs.erase(it->first);
+	}
+	else
+		Debug::Log(std::vformat(
+			"Program (ID:{}) does not exist in the registry, not deleting.",
+			std::make_format_args(ID)
+		));
+	
+	ID = 0xFFFFFFu;
 }
 
 void ShaderProgram::PrintErrors(uint32_t Object, const char* Type) const
@@ -168,7 +188,7 @@ void ShaderProgram::PrintErrors(uint32_t Object, const char* Type) const
 	}
 }
 
-ShaderProgram* ShaderProgram::GetShaderProgram(std::string ProgramName)
+ShaderProgram* ShaderProgram::GetShaderProgram(std::string const& ProgramName)
 {
 	auto it = s_programs.find(ProgramName);
 
@@ -185,8 +205,5 @@ ShaderProgram* ShaderProgram::GetShaderProgram(std::string ProgramName)
 
 void ShaderProgram::ClearAll()
 {
-	for (auto& it : s_programs)
-		delete it.second;
-
 	s_programs.clear();
 }

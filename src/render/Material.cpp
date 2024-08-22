@@ -17,8 +17,8 @@ RenderMaterial::RenderMaterial()
 	this->DiffuseTextures.push_back(new Texture());
 	this->SpecularTextures.push_back(new Texture());
 
-	this->DiffuseTextures[0]->ImagePath = "resources/" + MissingTexPath;
-	this->SpecularTextures[0]->ImagePath = "resources/" + MissingTexPath;
+	this->DiffuseTextures[0]->ImagePath = MissingTexPath;
+	this->SpecularTextures[0]->ImagePath = MissingTexPath;
 
 	this->Shader = ShaderProgram::GetShaderProgram("worldUber");
 
@@ -27,7 +27,7 @@ RenderMaterial::RenderMaterial()
 	);
 }
 
-RenderMaterial::RenderMaterial(std::string MaterialName)
+RenderMaterial::RenderMaterial(std::string const& MaterialName)
 {
 	this->Name = MaterialName;
 
@@ -70,7 +70,7 @@ RenderMaterial::RenderMaterial(std::string MaterialName)
 	this->HasSpecular = HasSpecularTexture;
 	this->Translucency = JSONMaterialData.value("translucency", false);
 
-	this->DiffuseTextures[0]->ImagePath = "resources/" + JSONMaterialData.value(
+	this->DiffuseTextures[0]->ImagePath = JSONMaterialData.value(
 		"albedo",
 		MissingTexPath
 	);
@@ -84,7 +84,7 @@ RenderMaterial::RenderMaterial(std::string MaterialName)
 		this->SpecularTextures.push_back(new Texture());
 
 		this->SpecularTextures[0]->Usage = MaterialTextureType::Specular;
-		this->SpecularTextures[0]->ImagePath = "resources/" + JSONMaterialData.value(
+		this->SpecularTextures[0]->ImagePath = JSONMaterialData.value(
 			"specular",
 			MissingTexPath
 		);
@@ -98,7 +98,7 @@ RenderMaterial::RenderMaterial(std::string MaterialName)
 	this->SpecMultiply = JSONMaterialData.value("specMultiply", this->SpecMultiply);
 }
 
-RenderMaterial* RenderMaterial::GetMaterial(std::string Name)
+RenderMaterial* RenderMaterial::GetMaterial(std::string const& Name)
 {
 	auto it = RenderMaterial::s_loadedMaterials.find(Name);
 

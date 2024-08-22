@@ -38,4 +38,8 @@ public:
 
 protected:
 	Mesh RenderMesh;
+
+private:
+	static void s_DeclareReflections();
+	static bool s_DidInitReflection;
 };

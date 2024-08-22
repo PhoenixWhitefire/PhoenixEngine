@@ -1,4 +1,4 @@
-#include<string>
+#include<format>
 #include<glad/gl.h>
 
 #include"datatype/Buffer.hpp"
@@ -95,36 +95,31 @@ FBO::FBO(SDL_Window* Window, int Width, int Height, int MSSamples, bool AttachRe
 
 	glGenFramebuffers(1, &this->ID);
 	
-	GLenum Binding = MSSamples > 0 ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D;
+	GLenum binding = MSSamples > 0 ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D;
 
 	glActiveTexture(GL_TEXTURE0);
 
 	glGenTextures(1, &this->TextureID);
-	glBindTexture(Binding, this->TextureID);
+	glBindTexture(binding, this->TextureID);
 	
 	if (MSSamples > 0)
-	{
 		glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, MSSamples, GL_RGB, Width, Height, GL_TRUE);
-	}
 	else
 	{
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Width, Height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 		glGenerateMipmap(GL_TEXTURE_2D);
 	}
 
-	if (Binding != GL_TEXTURE_2D_MULTISAMPLE)
+	if (binding != GL_TEXTURE_2D_MULTISAMPLE)
 	{
-		glTexParameteri(Binding, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(Binding, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(binding, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(binding, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-		glTexParameteri(Binding, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(Binding, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(binding, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(binding, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	}
 
 	this->Bind();
-
-	std::string NameStr = "FBO_" + (std::string)(MSSamples > 0 ? "2" : "1");
-	const char* Name = NameStr.c_str();
 
 	// TODO fix shadowmap specific stuff!
 
@@ -151,19 +146,17 @@ FBO::FBO(SDL_Window* Window, int Width, int Height, int MSSamples, bool AttachRe
 		glBindRenderbuffer(GL_RENDERBUFFER, this->RenderBufferID);
 
 		if (MSSamples > 0)
-			glRenderbufferStorageMultisample(GL_RENDERBUFFER, MSSamples, GL_DEPTH32F_STENCIL8, Width, Height);
+			glRenderbufferStorageMultisample(GL_RENDERBUFFER, MSSamples, GL_DEPTH24_STENCIL8, Width, Height);
 		else
 			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, Width, Height);
 
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, this->RenderBufferID);
 	}
 
-	//GLuint err = glGetError();
+	auto fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 
-	//auto FBOStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-
-	//if (FBOStatus != GL_FRAMEBUFFER_COMPLETE)
-	//	throw(std::vformat("Could not create a framebuffer: OGL error ID {}", std::make_format_args((int)FBOStatus)));
+	if (fboStatus != GL_FRAMEBUFFER_COMPLETE)
+		throw(std::vformat("Could not create a framebuffer, error ID: {}", std::make_format_args(fboStatus)));
 }
 
 void FBO::Bind() const
