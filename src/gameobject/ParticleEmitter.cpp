@@ -13,6 +13,8 @@ ShaderProgram* Object_ParticleEmitter::s_ParticleShaders = nullptr;
 std::default_random_engine Object_ParticleEmitter::s_RandGenerator = std::default_random_engine(time(NULL));
 bool Object_ParticleEmitter::s_DidInitReflection = false;
 
+static const std::string MissingTexPath = "textures/MISSING2_MaximumADHD_status_1665776378145304579.png";
+
 float Quad[] =
 {
 	//Triangle 1 - left
@@ -108,9 +110,7 @@ Object_ParticleEmitter::Object_ParticleEmitter()
 	this->ElementBuffer.Bind();
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(quadinds), &quadinds, GL_STREAM_DRAW);
 
-	Texture* DefaultImage = new Texture();
-	DefaultImage->ImagePath = "/textures/MISSING2_MaximumADHD_status_1665776378145304579.png";
-	TextureManager::Get()->CreateTexture2D(DefaultImage);
+	Texture* DefaultImage = TextureManager::Get()->LoadTextureFromPath(MissingTexPath);
 
 	this->PossibleImages = { DefaultImage };
 

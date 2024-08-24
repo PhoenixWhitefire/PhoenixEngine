@@ -72,7 +72,7 @@ void main()
 
 	if (DistortionEnabled)
 	{
-		UVOffset = texture(DistortionTexture, FragIn_UV).xy - Center + vec2(Time * 0.5f, Time * 0.25f);
+		UVOffset = (texture(DistortionTexture, FragIn_UV).xy - Center) * (sin(Time) * 5);
 	}
 
 	//FragColor = vec4(texture(DistortionTexture, FragIn_UV).xyz, 1.0f);

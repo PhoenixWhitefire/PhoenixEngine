@@ -38,6 +38,7 @@ ModelLoader::ModelLoader(const char* FilePath, GameObject* Parent)
 		Object_Mesh* mo;
 		
 		M = GameObject::CreateGameObject("Mesh");
+		LoadedObjs.push_back(M);
 
 		m3d = dynamic_cast<Object_Base3D*>(M);
 		mo = dynamic_cast<Object_Mesh*>(M);
@@ -320,8 +321,7 @@ std::vector<Texture*> ModelLoader::GetTextures()
 	std::vector<Texture*> textures;
 
 	std::string fileStr = std::string(File);
-	std::string resDir = EngineJsonConfig["ResourcesDirectory"];
-	std::string fileDirectory = resDir + fileStr.substr(0, fileStr.find_last_of('/') + 1);
+	std::string fileDirectory = fileStr.substr(0, fileStr.find_last_of('/') + 1);
 
 	// Go over all images
 	for (uint32_t i = 0; i < JSONData["images"].size(); i++)
@@ -366,12 +366,9 @@ std::vector<Texture*> ModelLoader::GetTextures()
 				continue;
 			}
 
-			Texture* texture = new Texture();
+			Texture* texture = TextureManager::Get()->LoadTextureFromPath(FullTexturePath);
 
-			texture->ImagePath = FullTexturePath;
 			texture->Usage = TexType;
-
-			TextureManager::Get()->CreateTexture2D(texture);
 
 			LoadedTextures.push_back(texture);
 			LoadedTexturePaths.push_back(texPath);

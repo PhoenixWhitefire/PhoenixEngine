@@ -9,8 +9,8 @@ class Object_DataModel : public GameObject
 {
 public:
 	Object_DataModel();
-	~Object_DataModel();
-
+	~Object_DataModel() override;
+	
 	void Initialize();
 
 	bool WantExit = false;

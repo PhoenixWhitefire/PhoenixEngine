@@ -1,13 +1,15 @@
 #pragma once
 
 #include<vector>
+#include<future>
+
+#define TEXTUREMANAGER_INVALID_ID 0xFFFFFFu
 
 enum class MaterialTextureType { NotAssigned, Diffuse, Specular };
 
-class Texture
+struct Texture
 {
-public:
-	uint32_t Identifier = 0;
+	uint32_t Identifier = TEXTUREMANAGER_INVALID_ID;
 	MaterialTextureType Usage = MaterialTextureType::Diffuse;
 
 	std::string ImagePath = "";
@@ -17,11 +19,15 @@ public:
 
 	bool AttemptedLoad = false;
 
+	// De-allocated after the Texture is uploaded to the GPU
 	uint8_t* TMP_ImageByteData = nullptr;
 };
 
-class TextureManager {
+class TextureManager
+{
 public:
+	TextureManager();
+
 	static TextureManager* Get();
 
 	/*
@@ -31,12 +37,12 @@ public:
 
 	/*
 	Load texture data from an image file and upload it to the GPU as a GL_TEXTURE_2D
-	@param A pointer to a Texture with Texture.ImagePath property set to the texture path
-	@param Should it be loaded in a separate thread without freezing the game.
-	If ShouldLoadAsync is true, then Texture->Identifier will be -1 and will change to the correct value
-	when the image is finished loading
+	@param The image path
+	@param Should it be loaded in a separate thread without freezing the game
+	If ShouldLoadAsync is true, then Texture->Identifier will be TEXTUREMANAGER_INVALID_ID until
+	the Texture is ready to use.
 	*/
-	void CreateTexture2D(Texture* TexturePtr, bool ShouldLoadAsync = true);
+	Texture* LoadTextureFromPath(std::string Path, bool ShouldLoadAsync = true);
 
 	/*
 	Load an image's data, used internally by TextureManager::CreateTexture2D and is a separate function for asynchronous loading
@@ -45,6 +51,7 @@ public:
 
 	static TextureManager* Singleton;
 
-	std::vector<Texture*> TexturesToLoadAsync;
-	std::vector<Texture*> AsyncLoadedTextures;
+private:
+	std::vector<std::promise<Texture*>*> m_TexPromises;
+	std::unordered_map<std::string, Texture*> m_Textures;
 };

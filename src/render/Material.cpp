@@ -14,17 +14,9 @@ RenderMaterial::RenderMaterial()
 	this->HasSpecular = false;
 	this->Translucency = false;
 
-	this->DiffuseTextures.push_back(new Texture());
-	this->SpecularTextures.push_back(new Texture());
-
-	this->DiffuseTextures[0]->ImagePath = MissingTexPath;
-	this->SpecularTextures[0]->ImagePath = MissingTexPath;
-
 	this->Shader = ShaderProgram::GetShaderProgram("worldUber");
 
-	TextureManager::Get()->CreateTexture2D(
-		this->DiffuseTextures[0]
-	);
+	this->DiffuseTextures.push_back(TextureManager::Get()->LoadTextureFromPath(MissingTexPath));
 }
 
 RenderMaterial::RenderMaterial(std::string const& MaterialName)
@@ -62,7 +54,10 @@ RenderMaterial::RenderMaterial(std::string const& MaterialName)
 	std::string desiredShp = JSONMaterialData.value("shaderprogram", "worldUber");
 	this->Shader = ShaderProgram::GetShaderProgram(desiredShp);
 
-	this->DiffuseTextures.push_back(new Texture());
+	this->DiffuseTextures.push_back(TextureManager::Get()->LoadTextureFromPath(JSONMaterialData.value(
+		"albedo",
+		MissingTexPath
+	)));
 
 	this->DiffuseTextures[0]->Usage = MaterialTextureType::Diffuse;
 
@@ -70,28 +65,14 @@ RenderMaterial::RenderMaterial(std::string const& MaterialName)
 	this->HasSpecular = HasSpecularTexture;
 	this->Translucency = JSONMaterialData.value("translucency", false);
 
-	this->DiffuseTextures[0]->ImagePath = JSONMaterialData.value(
-		"albedo",
-		MissingTexPath
-	);
-
-	TextureManager::Get()->CreateTexture2D(
-		this->DiffuseTextures[0]
-	);
-
 	if (HasSpecular)
 	{
-		this->SpecularTextures.push_back(new Texture());
-
-		this->SpecularTextures[0]->Usage = MaterialTextureType::Specular;
-		this->SpecularTextures[0]->ImagePath = JSONMaterialData.value(
+		this->SpecularTextures.push_back(TextureManager::Get()->LoadTextureFromPath(JSONMaterialData.value(
 			"specular",
 			MissingTexPath
-		);
+		)));
 
-		TextureManager::Get()->CreateTexture2D(
-			this->SpecularTextures[0]
-		);
+		this->SpecularTextures[0]->Usage = MaterialTextureType::Specular;
 	}
 
 	this->SpecExponent = JSONMaterialData.value("specExponent", this->SpecExponent);

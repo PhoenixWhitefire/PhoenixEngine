@@ -62,9 +62,10 @@ struct Cubemap
 
 uniform sampler2D ShadowAtlas;
 
-// the actual number of textures the mesh has/lights in the scene
+// the actual number of textures the mesh has
 uniform int NumDiffuseTextures = 1;
 uniform int NumSpecularTextures = 1;
+
 uniform int NumLights = 0;
 
 // uniform arrays
@@ -73,8 +74,7 @@ uniform sampler2D SpecularTextures[MAX_SPECULAR_TEXTURES];
 //uniform sampler2D ShadowMaps[MAX_SHADOWCASTING_LIGHTS]; <-- Replaced with shadow atlas!
 uniform LightObject Lights[MAX_LIGHTS];
 
-
-uniform vec3 LightAmbient = vec3(.05f,.05f,.05f);
+uniform vec3 LightAmbient = vec3(.2f,.2f,.2f);
 uniform float SpecularMultiplier = 1.f;
 uniform float SpecularPower = 32.0f;
 
@@ -361,7 +361,7 @@ void main()
 		);
 	}
 
-	FinalColor += LightAmbient;
+	FinalColor += LightAmbient * Albedo3;
 
 	vec3 FragCol3 = FinalColor.xyz;
 

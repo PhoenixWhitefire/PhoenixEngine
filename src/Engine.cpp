@@ -157,6 +157,15 @@ EngineObject::EngineObject(Vector2 WindowStartSize, SDL_Window** WindowPtr)
 
 	SDL_Init(SDL_INIT_VIDEO);
 	
+	// Must be set *before* window creation
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
+
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+
 	// Initialize SDL
 	this->Window = SDL_CreateWindow(
 		"Waiting on configuration...",
@@ -366,6 +375,8 @@ static double GetRunningTime()
 
 void EngineObject::Start()
 {
+	Debug::Log("Final initializations...");
+
 	// TODO:
 	// wtf are these
 	// 13/07/2024
@@ -378,15 +389,17 @@ void EngineObject::Start()
 
 	static const std::string SkyboxCubemapImages[6] =
 	{
-		"Sky1/right.jpg",
 		"Sky1/left.jpg",
+		"Sky1/right.jpg",
 		"Sky1/top.jpg",
 		"Sky1/bottom.jpg",
 		"Sky1/front.jpg",
 		"Sky1/back.jpg"
 	};
 
-	 std::string BaseTexturePath = std::string(EngineJsonConfig["ResourcesDirectory"]) + "textures/";
+	std::vector<Texture*> SkyboxFacesLoading;
+
+	std::string BaseTexturePath = std::string(EngineJsonConfig["ResourcesDirectory"]) + "textures/";
 
 	GLuint SkyboxCubemap = 0;
 
@@ -399,45 +412,29 @@ void EngineObject::Start()
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 	//glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_LOD_BIAS, 15.f);
 
+	for (const std::string skyboxFace : SkyboxCubemapImages)
+	{
+		Texture* tx = TextureManager::Get()->LoadTextureFromPath("textures/" + skyboxFace);
+		SkyboxFacesLoading.push_back(tx);
+	}
+
+	GLubyte WhitePixel = 0xFF;
+
 	for (int ImageIndex = 0; ImageIndex < 6; ImageIndex++)
 	{
-		int Width, Height, NumberChannels;
-
-		std::string ImagePath = BaseTexturePath + SkyboxCubemapImages[ImageIndex];
-
-		// TODO: replace with TextureManager calls
-		// 13/07/2024
-		uint8_t* ImageBytes = stbi_load(
-			ImagePath.c_str(),
-			&Width,
-			&Height,
-			&NumberChannels,
-			0
+		glTexImage2D(
+			GL_TEXTURE_CUBE_MAP_POSITIVE_X + ImageIndex,
+			0,
+			GL_RED,
+			1,
+			1,
+			0,
+			GL_RED,
+			GL_UNSIGNED_BYTE,
+			(void*)&WhitePixel
 		);
 
-		if (ImageBytes != nullptr)
-		{
-			stbi_set_flip_vertically_on_load(false);
-
-			glTexImage2D(
-				GL_TEXTURE_CUBE_MAP_POSITIVE_X + ImageIndex,
-				0,
-				GL_RGB,
-				Width,
-				Height,
-				0,
-				GL_RGB,
-				GL_UNSIGNED_BYTE,
-				ImageBytes
-			);
-
-			glGenerateMipmap(GL_TEXTURE_2D);
-			//glGenerateMipmap(GL_TEXTURE_CUBE_MAP_POSITIVE_X + ImageIndex);
-
-			stbi_image_free(ImageBytes);
-		}
-		else
-			Debug::Log("Failed to load image for skybox cubemap: '" + ImagePath + "'");
+		glGenerateMipmap(GL_TEXTURE_2D);
 	}
 
 	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
@@ -448,21 +445,13 @@ void EngineObject::Start()
 
 	SkyboxShaders->Activate();
 
-	glUniform1i(glGetUniformLocation(SkyboxShaders->ID, "SkyCubemap"), 0);
+	glUniform1i(glGetUniformLocation(SkyboxShaders->ID, "SkyCubemap"), 3);
 
 	Scene_t Scene = Scene_t();
 
 	RendererContext->Framebuffer->Unbind();
 
-	Texture DistortionTexture;
-	DistortionTexture.ImagePath = "textures/MISSING2_MaximumADHD_status_1665776378145304579.png";
-	TextureManager::Get()->CreateTexture2D(&DistortionTexture, false);
-
-	glActiveTexture(GL_TEXTURE17);
-	glBindTexture(GL_TEXTURE_2D, DistortionTexture.Identifier);
-
-	this->PostProcessingShaders->Activate();
-	glUniform1i(glGetUniformLocation(this->PostProcessingShaders->ID, "DistortionTexture"), 17);
+	Texture* DistortionTexture = TextureManager::Get()->LoadTextureFromPath("textures/screendistort.jpg");
 
 	Mesh SkyboxMesh = Mesh(SkyboxVertices, SkyboxIndices);
 
@@ -484,6 +473,41 @@ void EngineObject::Start()
 		Scene.LightData.clear();
 
 		TextureManager::Get()->FinalizeAsyncLoadedTextures();
+
+		bool skyboxLoaded = true;
+
+		for (int idx = 0; idx < SkyboxFacesLoading.size(); idx++)
+		{
+			Texture* face = SkyboxFacesLoading[idx];
+
+			if (face->AttemptedLoad && face->Identifier != TEXTUREMANAGER_INVALID_ID)
+			{
+				//glDeleteTextures(1, &face->Identifier);
+
+				glActiveTexture(GL_TEXTURE3);
+				glBindTexture(GL_TEXTURE_CUBE_MAP, SkyboxCubemap);
+
+				glTexImage2D(
+					GL_TEXTURE_CUBE_MAP_POSITIVE_X + idx,
+					0,
+					GL_RGB,
+					face->ImageWidth,
+					face->ImageHeight,
+					0,
+					GL_RGB,
+					GL_UNSIGNED_BYTE,
+					face->TMP_ImageByteData
+				);
+			}
+			else
+				skyboxLoaded = false;
+		}
+
+		if (skyboxLoaded && SkyboxFacesLoading.size() > 0)
+		{
+			SkyboxFacesLoading.clear();
+			glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+		}
 
 		this->FpsCap = std::clamp(this->FpsCap, 1, 600);
 
@@ -577,13 +601,13 @@ void EngineObject::Start()
 			Scene.UniqueShaders.push_back(shp);
 		}
 
-		glActiveTexture(GL_TEXTURE0);
+		glActiveTexture(GL_TEXTURE3);
 
 		glDepthFunc(GL_LEQUAL);
 
 		SkyboxShaders->Activate();
 
-		glUniform1i(glGetUniformLocation(SkyboxShaders->ID, "SkyboxCubemap"), 0);
+		glUniform1i(glGetUniformLocation(SkyboxShaders->ID, "SkyCubemap"), 3);
 
 		glm::vec3 CamPos = glm::vec3(SceneCamera->Matrix[3]);
 		glm::vec3 CamForward = glm::vec3(SceneCamera->Matrix[2]);
@@ -668,10 +692,10 @@ void EngineObject::Start()
 
 			glUniform1f(TimeLoc, RunningTime);
 			
-			glUniform1i(glGetUniformLocation(PostProcessingShaders->ID, "DistortionTexture"), 2);
-
 			glActiveTexture(GL_TEXTURE2);
-			glBindTexture(GL_TEXTURE_2D, DistortionTexture.Identifier);
+			glBindTexture(GL_TEXTURE_2D, DistortionTexture->Identifier);
+
+			glUniform1i(glGetUniformLocation(PostProcessingShaders->ID, "DistortionTexture"), 2);
 		}
 		else
 		{

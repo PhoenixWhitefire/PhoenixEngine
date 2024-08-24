@@ -14,15 +14,14 @@ float Quad[];
 struct _particle
 {
 public:
-	double Lifetime;
-	double TimeAliveFor;
-	float Size;
-	float Transparency;
+	double Lifetime = 01.f;
+	double TimeAliveFor = 0.f;
+	float Size = 1.f;
+	float Transparency = 0.f;
 
 	Texture* Image = nullptr;
 
-	Vector3 Position;
-	
+	Vector3 Position{};
 };
 
 class Object_ParticleEmitter : public GameObject

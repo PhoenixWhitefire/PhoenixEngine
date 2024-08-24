@@ -110,7 +110,7 @@ static void LoadMapVersion1(const std::string& MapPath, const std::string& Conte
 		));
 
 	nlohmann::json PartsNode = JSONData["parts"];
-	nlohmann::json ModelsNode = JSONData.find("props") != JSONData.end() ? JSONData["props"] : nlohmann::json({});
+	nlohmann::json ModelsNode = JSONData.value("props", nlohmann::json{});
 	nlohmann::json LightsNode = JSONData["lights"];
 
 	std::vector<std::string> LoadedTexturePaths;
@@ -121,13 +121,8 @@ static void LoadMapVersion1(const std::string& MapPath, const std::string& Conte
 
 	Mesh EmptyMesh = Mesh(ev, ei);
 
-	// need to have this, else everything gets dealloc'd and crashes :)
-	// oh, the wonders of pointers
-	std::vector<GameObject*>* loadedObjectsReference = new std::vector<GameObject*>();
-
 	for (uint32_t Index = 0; Index < ModelsNode.size(); Index++)
 	{
-		break;
 		nlohmann::json PropObject;
 
 		try
@@ -166,10 +161,9 @@ static void LoadMapVersion1(const std::string& MapPath, const std::string& Conte
 			{
 				GameObject* mesh = Model[index];
 				mesh->Name = std::vformat("{}_{}", std::make_format_args(modelName, index));
+				mesh->SetParent(GameObject::s_DataModel->GetChild("Workspace")->GetChild("Level"));
 			}
 		}
-
-		Mesh* mesh = dynamic_cast<Object_Mesh*>(Model[0])->GetRenderMesh();
 
 		auto prop_3d = dynamic_cast<Object_Base3D*>(Model[0]);
 
@@ -221,8 +215,6 @@ static void LoadMapVersion1(const std::string& MapPath, const std::string& Conte
 			GameObject* NewObject = GameObject::CreateGameObject("Primitive");
 
 			Object_Base3D* Object3D = dynamic_cast<Object_Base3D*>(NewObject);
-
-			loadedObjectsReference->push_back(NewObject);
 
 			NewObject->Name = Object.value("Name", NewObject->Name);
 
@@ -298,8 +290,6 @@ static void LoadMapVersion1(const std::string& MapPath, const std::string& Conte
 
 		GameObject* Object = (GameObject::CreateGameObject(LightType));
 		Object_Light* Light = dynamic_cast<Object_Light*>(Object);
-
-		loadedObjectsReference->push_back(Object);
 
 		Light->Position = GetVector3FromJSON(LightObject["position"]);
 

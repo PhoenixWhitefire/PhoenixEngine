@@ -1,5 +1,6 @@
 #include<stb_image.h>
 #include<format>
+#include<functional>
 #include<glad/gl.h>
 
 #include"render/TextureManager.hpp"
@@ -8,14 +9,121 @@
 #include"ThreadManager.hpp"
 #include"Debug.hpp"
 
+static const std::string MissingTexPath = "textures/MISSING2_MaximumADHD_status_1665776378145304579.png";
+static const std::string TexLoadErr =
+"Attempted to load texture '{}', but it failed. Additionally, the replacement Missing Texture could not be loaded.";
+
 TextureManager* TextureManager::Singleton = new TextureManager();
+
+typedef std::function<Texture*(TextureManager*, Texture*)> AsyncTexT;
+
+static void registerTexture(Texture* texture)
+{
+	if (texture->TMP_ImageByteData == nullptr)
+	{
+		auto FormattedArgs = std::make_format_args(texture->ImagePath);
+		Debug::Log(std::vformat("Failed to load texture '{}'", FormattedArgs));
+
+		if (texture->ImagePath != MissingTexPath)
+		{
+			Texture* replacement = TextureManager::Get()->LoadTextureFromPath(MissingTexPath, false);
+			texture->Identifier = replacement->Identifier;
+			texture->AttemptedLoad = true;
+			texture->ImageHeight = replacement->ImageHeight;
+			texture->ImageWidth = replacement->ImageWidth;
+			texture->ImageNumColorChannels = replacement->ImageNumColorChannels;
+
+			return;
+		}
+		else
+			throw(std::vformat(TexLoadErr, std::make_format_args(texture->ImagePath)));
+	}
+
+	glGenTextures(1, &texture->Identifier);
+	glBindTexture(GL_TEXTURE_2D, texture->Identifier);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	//printf("%s %i\n", texture->ImagePath.c_str(), texture->Identifier);
+
+	// Specular textures may be in the form of PNGs, which have 4 color channels.
+	// Manually set format if TexturePtr->Usage is specified
+	// Set Format to 0 to make code try and identify usage through available color channels
+	// TODO: recheck logic?
+	GLenum Format = 0;
+
+	switch (texture->ImageNumColorChannels)
+	{
+
+	case (4):
+	{
+		Format = GL_RGBA;
+		break;
+	}
+
+	case (3):
+	{
+		Format = GL_RGB;
+		break;
+	}
+
+	case (1):
+	{
+		Format = GL_RED;
+		break;
+	}
+
+	default:
+	{
+		throw(std::vformat(
+			std::string("Invalid ImageNumColorChannels (was '{}') for '{}'!"),
+			std::make_format_args(texture->ImageNumColorChannels, texture->ImagePath)
+		));
+		break;
+	}
+
+	};
+
+	//if ((Format == GL_RGB) && TexturePtr->Usage == TextureType::SPECULAR)
+	//	Format = GL_RED;
+
+	// TODO: texture mipmaps, 4 is the number of mipmaps
+	//glTexStorage2D(GL_TEXTURE_2D, 1, MipMapsInternalFormat, TexturePtr->ImageWidth, TexturePtr->ImageHeight);
+
+	glTexImage2D
+	(
+		GL_TEXTURE_2D,
+		0,
+		GL_RGBA,
+		texture->ImageWidth,
+		texture->ImageHeight,
+		0,
+		Format,
+		GL_UNSIGNED_BYTE,
+		texture->TMP_ImageByteData
+	);
+
+	glGenerateMipmap(GL_TEXTURE_2D);
+
+	// Can't free this now bcuz Engine.cpp needs it for skybox images
+	// 23/08/2024
+	//stbi_image_free(texture->TMP_ImageByteData);
+	//texture->TMP_ImageByteData = nullptr;
+	glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+TextureManager::TextureManager()
+	: m_Textures{}, m_TexPromises{}
+{
+}
 
 TextureManager* TextureManager::Get()
 {
 	if (!TextureManager::Singleton)
-	{
 		TextureManager::Singleton = new TextureManager();
-	}
 
 	return TextureManager::Singleton;
 }
@@ -29,14 +137,10 @@ uint8_t* TextureManager::LoadImageData(const char* ImagePath, int* ImageWidth, i
 	return ImageData;
 }
 
-void asyncTextureLoader(void* ManagerPtr)
+static Texture* asyncTextureLoader(TextureManager* Manager, Texture* Image)
 {
-	TextureManager* Manager = (TextureManager*)ManagerPtr;
-
-	Texture* Image = Manager->TexturesToLoadAsync[Manager->TexturesToLoadAsync.size() - 1];
-
 	uint8_t* Data = Manager->LoadImageData(
-	Image->ImagePath.c_str(),
+		Image->ImagePath.c_str(),
 		&Image->ImageWidth,
 		&Image->ImageHeight,
 		&Image->ImageNumColorChannels
@@ -46,154 +150,89 @@ void asyncTextureLoader(void* ManagerPtr)
 
 	Image->TMP_ImageByteData = Data;
 
-	Manager->AsyncLoadedTextures.push_back(Image);
-	Manager->TexturesToLoadAsync.pop_back();
-
-	Image = nullptr;
+	return Image;
 }
 
-void TextureManager::CreateTexture2D(Texture* TexturePtr, bool ShouldLoadAsync)
+Texture* TextureManager::LoadTextureFromPath(std::string Path, bool ShouldLoadAsync)
 {
 	std::string ResDir = EngineJsonConfig["ResourcesDirectory"];
-	std::string ActualPath = ResDir + TexturePtr->ImagePath;
+	std::string ActualPath = ResDir + Path;
 
-	if (TexturePtr->AttemptedLoad)
+	auto it = m_Textures.find(Path);
+	
+	if (it == m_Textures.end())
 	{
-		if (TexturePtr->TMP_ImageByteData == nullptr)
+		Texture* texture = new Texture();
+
+		if (Path != MissingTexPath)
+			texture->Identifier = this->LoadTextureFromPath(MissingTexPath, false)->Identifier;
+
+		texture->ImagePath = ActualPath;
+
+		m_Textures.insert(std::pair(Path, texture));
+
+		//ShouldLoadAsync = false;
+
+		if (ShouldLoadAsync)
 		{
-			int Usage = int(TexturePtr->Usage);
-			auto FormattedArgs = std::make_format_args(ActualPath, Usage);
-			Debug::Log(std::vformat("Failed to load texture '{}' (usage:{})", FormattedArgs));
-			return;
-		}
-
-		glGenTextures(1, &TexturePtr->Identifier);
-		glBindTexture(GL_TEXTURE_2D, TexturePtr->Identifier);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-		// Specular textures may be in the form of PNGs, which have 4 color channels.
-		// Manually set format if TexturePtr->Usage is specified
-		// Set Format to 0 to make code try and identify usage through available color channels
-		// TODO: recheck logic?
-		GLenum Format = 0;
-
-		switch (TexturePtr->ImageNumColorChannels)
-		{
-
-			case (4):
-			{
-				Format = GL_RGBA;
-				break;
-			}
-
-			case (3):
-			{
-				Format = GL_RGB;
-				break;
-			}
-
-			case (1):
-			{
-				Format = GL_RED;
-				break;
-			}
-
-			default:
-			{
-				throw(std::vformat(
-					std::string("Invalid ImageNumColorChannels (was '{}') in for '{}'!"),
-					std::make_format_args(TexturePtr->ImageNumColorChannels, ActualPath)
-				));
-				break;
-			}
-
-		};
-		
-		//if ((Format == GL_RGB) && TexturePtr->Usage == TextureType::SPECULAR)
-		//	Format = GL_RED;
-
-		// TODO: texture mipmaps, 4 is the number of mipmaps
-		//glTexStorage2D(GL_TEXTURE_2D, 1, MipMapsInternalFormat, TexturePtr->ImageWidth, TexturePtr->ImageHeight);
-
-		glTexImage2D
-		(
-			GL_TEXTURE_2D,
-			0,
-			GL_RGBA,
-			TexturePtr->ImageWidth,
-			TexturePtr->ImageHeight,
-			0,
-			Format,
-			GL_UNSIGNED_BYTE,
-			TexturePtr->TMP_ImageByteData
-		);
-
-		glGenerateMipmap(GL_TEXTURE_2D);
-
-		stbi_image_free(TexturePtr->TMP_ImageByteData);
-		TexturePtr->TMP_ImageByteData = nullptr;
-		glBindTexture(GL_TEXTURE_2D, 0);
-	}
-	else
-	{
-		// TODO: fix multithreading
-		ShouldLoadAsync = false;
-
-		if (!ShouldLoadAsync)
-		{
-			uint8_t* Data = this->LoadImageData(
-				ActualPath.c_str(),
-				&TexturePtr->ImageWidth,
-				&TexturePtr->ImageHeight,
-				&TexturePtr->ImageNumColorChannels
-			);
-
-			TexturePtr->TMP_ImageByteData = Data;
-			TexturePtr->AttemptedLoad = true;
-
-			this->CreateTexture2D(TexturePtr, false);
-		}
-		else
-		{
-			Task* LoadTextureTask = new Task();
+			/*Task* LoadTextureTask = new Task();
 			LoadTextureTask->FuncArgument = (void*)this;
 			LoadTextureTask->Function = asyncTextureLoader;
 			LoadTextureTask->DbgInfo = "LoadTextureTask: Tex: " + ActualPath;
-			
-			ThreadManager::Get()->DispatchJob(*LoadTextureTask);
 
-			this->TexturesToLoadAsync.push_back(TexturePtr);
+			ThreadManager::Get()->DispatchJob(*LoadTextureTask);*/
+
+			std::promise<Texture*>* promise = new std::promise<Texture*>();
+
+			std::thread(
+				[promise, this, texture](AsyncTexT loader)
+				{
+					promise->set_value_at_thread_exit(loader(this, texture));
+				}
+			, asyncTextureLoader).detach();
+
+			m_TexPromises.push_back(promise);
 		}
+		else
+		{
+			uint8_t* Data = this->LoadImageData(
+				ActualPath.c_str(),
+				&texture->ImageWidth,
+				&texture->ImageHeight,
+				&texture->ImageNumColorChannels
+			);
+
+			texture->TMP_ImageByteData = Data;
+			texture->AttemptedLoad = true;
+
+			registerTexture(texture);
+		}
+
+		return texture;
 	}
+	else
+		return it->second;
 }
 
 void TextureManager::FinalizeAsyncLoadedTextures()
 {
-	if (this->AsyncLoadedTextures.size() == 0)
+	if (m_TexPromises.size() == 0)
 		return;
 
-	Texture* Image = this->AsyncLoadedTextures[this->AsyncLoadedTextures.size() - 1];
-
-	if (Image->TMP_ImageByteData == nullptr)
+	for (auto promise : m_TexPromises)
 	{
-		Image->Identifier = 0xFFFFFFFF; // image failed to load
+		auto f = promise->get_future();
 
-		std::string Path = Image->ImagePath;
+		if (!f._Is_ready())
+			continue;
 
-		Debug::Log(std::vformat("image failed to load (parallel): {}", std::make_format_args(Path)));
-
-		this->AsyncLoadedTextures.pop_back();
+		Texture* image = f.get();
+		registerTexture(image);
+		
+		delete promise;
 	}
 
-	this->CreateTexture2D(Image);
-
-	this->AsyncLoadedTextures.pop_back();
-
-	this->FinalizeAsyncLoadedTextures();
+	m_TexPromises.clear();
 }
 
 /*
