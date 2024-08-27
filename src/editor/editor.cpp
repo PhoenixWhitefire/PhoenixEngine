@@ -140,7 +140,7 @@ void Editor::RenderUI()
 		&this->hierarchyCurItem,
 		&ImGuiHierarchyItemsGetter,
 		nullptr,
-		CurrentUIHierarchyRoot->GetChildren().size() + 1
+		-1
 	);
 
 	GameObject* selected = CurrentUIHierarchyRoot;

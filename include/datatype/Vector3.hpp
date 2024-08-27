@@ -11,6 +11,7 @@ public:
 	Vector3();
 
 	Vector3(double X, double Y, double Z);
+	Vector3(glm::tvec3<double, glm::highp>);
 	Vector3(glm::vec3);
 	Vector3(Reflection::GenericValue);
 
@@ -42,7 +43,8 @@ public:
 	Vector3 operator - (Vector3 Other);
 	Vector3 operator - ();
 	bool operator == (Vector3 Other);
-	operator glm::vec3();
+	operator glm::tvec3<double, glm::highp>();
+	operator glm::tvec3<float, glm::highp>();
 
 private:
 	static void s_DeclareReflections();

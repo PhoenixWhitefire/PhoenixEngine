@@ -16,7 +16,7 @@ void Object_Light::s_DeclareReflections()
 	s_DidInitReflection = true;
 
 	REFLECTION_DECLAREPROP_SIMPLE_TYPECAST(Object_Light, LightColor, Color);
-	REFLECTION_DECLAREPROP_SIMPLE(Object_Light, Brightness, Double);
+	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_Light, Brightness, Double, float);
 	REFLECTION_DECLAREPROP_SIMPLE(Object_Light, Shadows, Bool);
 	REFLECTION_DECLAREPROP_SIMPLE_TYPECAST(Object_Light, Position, Vector3);
 
@@ -59,7 +59,7 @@ void Object_PointLight::s_DeclareReflections()
 		//return;
 	s_DidInitReflection = true;
 
-	REFLECTION_DECLAREPROP_SIMPLE(Object_PointLight, Range, Double);
+	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_PointLight, Range, Double, float);
 
 	REFLECTION_INHERITAPI(Object_Light);
 	REFLECTION_INHERITAPI(GameObject);
@@ -71,9 +71,9 @@ void Object_SpotLight::s_DeclareReflections()
 		//return;
 	s_DidInitReflection = true;
 
-	REFLECTION_DECLAREPROP_SIMPLE(Object_SpotLight, Range, Double);
-	REFLECTION_DECLAREPROP_SIMPLE(Object_SpotLight, OuterCone, Double);
-	REFLECTION_DECLAREPROP_SIMPLE(Object_SpotLight, InnerCone, Double);
+	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_SpotLight, Range, Double, float);
+	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_SpotLight, OuterCone, Double, float);
+	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_SpotLight, InnerCone, Double, float);
 
 	REFLECTION_INHERITAPI(Object_Light);
 	REFLECTION_INHERITAPI(GameObject);

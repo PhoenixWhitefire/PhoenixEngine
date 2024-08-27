@@ -10,6 +10,9 @@ static const std::string MissingTexPath = "textures/MISSING2_MaximumADHD_status_
 
 RenderMaterial::RenderMaterial()
 {
+	this->SpecMultiply = .5f;
+	this->SpecExponent = 8.f;
+
 	this->Name = "*ERROR*";
 	this->HasSpecular = false;
 	this->Translucency = false;
@@ -85,8 +88,9 @@ RenderMaterial* RenderMaterial::GetMaterial(std::string const& Name)
 
 	if (it == RenderMaterial::s_loadedMaterials.end())
 	{
+		std::string fullPath = "materials/" + Name + ".mtl";
 		bool matExists = true;
-		std::string FileData = FileRW::ReadFile("materials/" + Name + ".mtl", &matExists);
+		std::string FileData = FileRW::ReadFile(fullPath, &matExists);
 
 		if (matExists)
 		{
@@ -95,7 +99,14 @@ RenderMaterial* RenderMaterial::GetMaterial(std::string const& Name)
 			return newMat;
 		}
 		else
+		{
+			Debug::Log("Failed to load material '" + fullPath + "'");
+
+			if (Name == "err")
+				throw("Failed to load the 'err' material. It is required due to technical reasons (I'm lazy)");
+
 			return RenderMaterial::GetMaterial("err");
+		}
 	}
 	else
 		return it->second;

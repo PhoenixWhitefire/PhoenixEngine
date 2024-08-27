@@ -12,7 +12,7 @@ public:
 	Object_Light();
 
 	Color LightColor = Color(1.0f, 1.0f, 1.0f);
-	double Brightness = 1.0f;
+	float Brightness = 1.0f;
 	bool Shadows = false;
 
 	Vector3 Position;
@@ -29,7 +29,7 @@ public:
 
 	Object_PointLight();
 
-	double Range = 16.f;
+	float Range = 16.f;
 
 private:
 	static RegisterDerivedObject<Object_PointLight> RegisterClassAs;
@@ -53,10 +53,10 @@ class Object_SpotLight : public Object_Light
 public:
 	Object_SpotLight();
 
-	double Range = 16.f;
+	float Range = 16.f;
 
-	double OuterCone = 90.f;
-	double InnerCone = 95.f;
+	float OuterCone = 90.f;
+	float InnerCone = 95.f;
 
 private:
 	static RegisterDerivedObject<Object_SpotLight> RegisterClassAs;

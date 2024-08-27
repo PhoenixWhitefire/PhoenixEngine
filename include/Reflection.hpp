@@ -57,6 +57,20 @@ ApiReflection->s_Functions.insert(                                      \
 	}                                                                          \
 )                                                                              \
 
+// Declare a property with the preset Getter (return x) and Setter (x = y)
+#define REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(c, name, type, cast) REFLECTION_DECLAREPROP(   \
+	#name,                                                                     \
+	type,                                                                      \
+	[](Reflection::BaseReflectable* p)                                             \
+	{                                                                          \
+		return (Reflection::GenericValue)dynamic_cast<c*>(p)->name;            \
+	},                                                                         \
+	[](Reflection::BaseReflectable* p, Reflection::GenericValue gv)                \
+	{                                                                          \
+		dynamic_cast<c*>(p)->name = static_cast<cast>(gv.type);                \
+	}                                                                          \
+)  
+
 // Same as above, but for Complex Types that use Pointer (Vector3 and Color)
 // Calls their `operator Reflection::GenericValue`
 #define REFLECTION_DECLAREPROP_SIMPLE_TYPECAST(c, name, type) REFLECTION_DECLAREPROP( \
@@ -109,6 +123,7 @@ namespace Reflection
 		Integer,
 		Color,
 		Vector3,
+		Pointer,
 		// 12/08/2024:
 		// Yep, it's all coming together now...
 		// Why have a GenericValueArray, when a GenericValue can simply BE an Array?
@@ -137,6 +152,7 @@ namespace Reflection
 		GenericValue(double);
 		GenericValue(int);
 		GenericValue(uint32_t);
+		GenericValue(void*);
 
 		std::string ToString() const;
 

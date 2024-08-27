@@ -19,9 +19,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\LuauLib\Common\include\Luau\Bytecode.h" />
-    <ClInclude Include="..\LuauLib\Common\include\Luau\Common.h" />
-    <ClInclude Include="..\LuauLib\Compiler\include\Luau\Compiler.h" />
     <ClInclude Include="include\AnimationService.hpp" />
     <ClInclude Include="include\BaseMeshes.hpp" />
     <ClInclude Include="include\datatype\Buffer.hpp" />
@@ -204,11 +201,11 @@
     <ClInclude Include="vendor\glm\vec3.hpp" />
     <ClInclude Include="vendor\glm\vec4.hpp" />
     <ClInclude Include="vendor\glm\vector_relational.hpp" />
+    <ClInclude Include="vendor\imgui\backends\imgui_impl_opengl3.h" />
+    <ClInclude Include="vendor\imgui\backends\imgui_impl_opengl3_loader.h" />
+    <ClInclude Include="vendor\imgui\backends\imgui_impl_sdl2.h" />
     <ClInclude Include="vendor\imgui\imconfig.h" />
     <ClInclude Include="vendor\imgui\imgui.h" />
-    <ClInclude Include="vendor\imgui\imgui_impl_opengl3.h" />
-    <ClInclude Include="vendor\imgui\imgui_impl_opengl3_loader.h" />
-    <ClInclude Include="vendor\imgui\imgui_impl_sdl.h" />
     <ClInclude Include="vendor\imgui\imgui_internal.h" />
     <ClInclude Include="vendor\imgui\imstb_rectpack.h" />
     <ClInclude Include="vendor\imgui\imstb_textedit.h" />
@@ -302,44 +299,7 @@
     <ClInclude Include="vendor\SDL2\SDL_version.h" />
     <ClInclude Include="vendor\SDL2\SDL_video.h" />
     <ClInclude Include="vendor\SDL2\SDL_vulkan.h" />
-    <ClInclude Include="vendor\slicksocket\callback.h" />
-    <ClInclude Include="vendor\slicksocket\http_client.h" />
-    <ClInclude Include="vendor\slicksocket\socket_client.h" />
-    <ClInclude Include="vendor\slicksocket\socket_server.h" />
-    <ClInclude Include="vendor\slicksocket\websocket_client.h" />
     <ClInclude Include="vendor\stb_image.h" />
-    <ClInclude Include="vendor\vulkan\vk_enum_string_helper.h" />
-    <ClInclude Include="vendor\vulkan\vk_icd.h" />
-    <ClInclude Include="vendor\vulkan\vk_layer.h" />
-    <ClInclude Include="vendor\vulkan\vk_platform.h" />
-    <ClInclude Include="vendor\vulkan\vk_sdk_platform.h" />
-    <ClInclude Include="vendor\vulkan\vulkan.h" />
-    <ClInclude Include="vendor\vulkan\vulkan.hpp" />
-    <ClInclude Include="vendor\vulkan\vulkan_android.h" />
-    <ClInclude Include="vendor\vulkan\vulkan_beta.h" />
-    <ClInclude Include="vendor\vulkan\vulkan_core.h" />
-    <ClInclude Include="vendor\vulkan\vulkan_directfb.h" />
-    <ClInclude Include="vendor\vulkan\vulkan_enums.hpp" />
-    <ClInclude Include="vendor\vulkan\vulkan_format_traits.hpp" />
-    <ClInclude Include="vendor\vulkan\vulkan_fuchsia.h" />
-    <ClInclude Include="vendor\vulkan\vulkan_funcs.hpp" />
-    <ClInclude Include="vendor\vulkan\vulkan_ggp.h" />
-    <ClInclude Include="vendor\vulkan\vulkan_handles.hpp" />
-    <ClInclude Include="vendor\vulkan\vulkan_hash.hpp" />
-    <ClInclude Include="vendor\vulkan\vulkan_ios.h" />
-    <ClInclude Include="vendor\vulkan\vulkan_macos.h" />
-    <ClInclude Include="vendor\vulkan\vulkan_metal.h" />
-    <ClInclude Include="vendor\vulkan\vulkan_profiles.h" />
-    <ClInclude Include="vendor\vulkan\vulkan_profiles.hpp" />
-    <ClInclude Include="vendor\vulkan\vulkan_raii.hpp" />
-    <ClInclude Include="vendor\vulkan\vulkan_screen.h" />
-    <ClInclude Include="vendor\vulkan\vulkan_structs.hpp" />
-    <ClInclude Include="vendor\vulkan\vulkan_vi.h" />
-    <ClInclude Include="vendor\vulkan\vulkan_wayland.h" />
-    <ClInclude Include="vendor\vulkan\vulkan_win32.h" />
-    <ClInclude Include="vendor\vulkan\vulkan_xcb.h" />
-    <ClInclude Include="vendor\vulkan\vulkan_xlib.h" />
-    <ClInclude Include="vendor\vulkan\vulkan_xlib_xrandr.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\AnimationService.cpp" />
@@ -380,11 +340,11 @@
     <ClCompile Include="src\UserInput.cpp" />
     <ClCompile Include="vendor\gl.c" />
     <ClCompile Include="vendor\glm\detail\glm.cpp" />
+    <ClCompile Include="vendor\imgui\backends\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="vendor\imgui\backends\imgui_impl_sdl2.cpp" />
     <ClCompile Include="vendor\imgui\imgui.cpp" />
     <ClCompile Include="vendor\imgui\imgui_demo.cpp" />
     <ClCompile Include="vendor\imgui\imgui_draw.cpp" />
-    <ClCompile Include="vendor\imgui\imgui_impl_opengl3.cpp" />
-    <ClCompile Include="vendor\imgui\imgui_impl_sdl.cpp" />
     <ClCompile Include="vendor\imgui\imgui_tables.cpp" />
     <ClCompile Include="vendor\imgui\imgui_widgets.cpp" />
     <ClCompile Include="vendor\stb.cpp" />
@@ -517,6 +477,13 @@
     <None Include="vendor\glm\gtx\vector_angle.inl" />
     <None Include="vendor\glm\gtx\vector_query.inl" />
     <None Include="vendor\glm\gtx\wrap.inl" />
+    <None Include="vendor\glm\readme.md" />
+    <None Include="vendor\SDL2\SDL_config.h.cmake" />
+    <None Include="vendor\SDL2\SDL_config.h.in" />
+    <None Include="vendor\SDL2\SDL_config_macosx.h.orig" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="vendor\imgui\LICENSE.txt" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -607,26 +574,28 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>luau\Common\include;luau\VM\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>vendor\imgui;luau\Common\include;luau\VM\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <WarningLevel>Level3</WarningLevel>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>dll;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opengl32.lib;sdl2/SDL2.lib;Luau.Ast.lib;Luau.Compiler.lib;Luau.VM.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;SDL2.lib;Luau.Ast.lib;Luau.Compiler.lib;Luau.VM.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>Console</SubSystem>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>luau\Common\include;luau\VM\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>vendor\imgui;luau\Common\include;luau\VM\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <WarningLevel>Level3</WarningLevel>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>opengl32.lib;sdl2/SDL2.lib;Luau.Ast.lib;Luau.Compiler.lib;Luau.VM.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;SDL2.lib;Luau.Ast.lib;Luau.Compiler.lib;Luau.VM.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>dll;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <SubSystem>Console</SubSystem>
     </Link>

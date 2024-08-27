@@ -1,4 +1,5 @@
 #include<thread>
+#include<filesystem>
 #include<nljson.h>
 #include<glm/glm.hpp>
 #include<glm/gtc/matrix_transform.hpp>
@@ -9,23 +10,63 @@
 #include"FileRW.hpp"
 #include"Debug.hpp"
 
-ModelLoader::ModelLoader(const char* FilePath, GameObject* Parent)
+ModelLoader::ModelLoader(const char* ModelPath, GameObject* Parent)
 {
 	this->File = "";
 
-	std::string FilePathString = std::string(FilePath);
+	std::string modelPathString = std::string(ModelPath);
+	std::string gltfFilePath = modelPathString + "/scene.gltf";
 
-	std::string TextData = FileRW::ReadFile(FilePathString);
+	bool fileExists = true;
+	std::string textData = FileRW::ReadFile(gltfFilePath, &fileExists);
 
-	if (TextData == "")
+	if (!fileExists)
 	{
-		Debug::Log("Failed to load model (TextData empty): '" + FilePathString + "'");
-
+		Debug::Log("Failed to load model '" + modelPathString + "', `scene.gltf` not found.");
 		return;
 	}
 
-	this->JSONData = nlohmann::json::parse(TextData);
-	this->File = FilePath;
+	bool hasMaterialOverride = true;
+	std::string overrideMaterial = FileRW::ReadFile(
+		modelPathString + "/material.mtl",
+		&hasMaterialOverride
+	);
+	std::string overrideMaterialPath = "";
+
+	if (hasMaterialOverride)
+	{
+		// TODO
+		// HACK HACK HACK
+		// Copy the `material.mtl` into `resources/materials/`,
+		// so that we can do `RenderMaterial::GetMaterial` instead of weird
+		// file path `../` etc nonsense
+
+		std::string resDir = EngineJsonConfig.value("ResourcesDirectory", "resources/");
+
+		// MKDIR `resources/materials/models/`
+		std::string modelsSubDirectory = resDir + "materials/models";
+		bool createDirectorySuccess = !std::filesystem::is_directory(modelsSubDirectory)
+						? std::filesystem::create_directory(modelsSubDirectory)
+						: true;
+
+		if (!createDirectorySuccess)
+			throw(std::vformat(
+				"Failed to `std::filesystem::create_directory` with path '{}'",
+				std::make_format_args(modelsSubDirectory)
+			));
+
+		// resources/materials/models/crow.mtl
+		overrideMaterialPath = "materials/"
+								+ modelPathString
+								+ ".mtl";
+
+		std::string originPath = resDir + modelPathString + "/material.mtl";
+
+		FileRW::WriteFile(overrideMaterialPath, overrideMaterial, true);
+	}
+
+	this->JSONData = nlohmann::json::parse(textData);
+	this->File = gltfFilePath.c_str();
 
 	this->Data = GetData();
 	this->TraverseNode(0);
@@ -49,39 +90,45 @@ ModelLoader::ModelLoader(const char* FilePath, GameObject* Parent)
 
 		m3d->Size = this->MeshScales[MeshIndex];
 
-		m3d->Material = new RenderMaterial();
-
-		m3d->Material->DiffuseTextures.clear();
-		m3d->Material->SpecularTextures.clear();
-
-		mo->Matrix = this->MeshMatrices[MeshIndex];
-		mo->Size = this->MeshScales[MeshIndex];
-
-		for (int tix = 0; tix < this->MeshTextures[MeshIndex].size(); tix++)
+		if (hasMaterialOverride)
+			// `materials/{models/[MODEL NAME]}.mtl`
+			m3d->Material = RenderMaterial::GetMaterial(modelPathString);
+		else
 		{
-			Texture* tex = this->MeshTextures[MeshIndex][tix];
+			m3d->Material = new RenderMaterial();
 
-			switch (tex->Usage)
+			m3d->Material->DiffuseTextures.clear();
+			m3d->Material->SpecularTextures.clear();
+
+			mo->Matrix = this->MeshMatrices[MeshIndex];
+			mo->Size = this->MeshScales[MeshIndex];
+
+			for (int tix = 0; tix < this->MeshTextures[MeshIndex].size(); tix++)
 			{
+				Texture* tex = this->MeshTextures[MeshIndex][tix];
 
-			case (MaterialTextureType::Diffuse):
-			{
-				m3d->Material->DiffuseTextures.push_back(tex);
-				break;
-			}
+				switch (tex->Usage)
+				{
 
-			case (MaterialTextureType::Specular):
-			{
-				m3d->Material->SpecularTextures.push_back(tex);
-				break;
-			}
+				case (MaterialTextureType::Diffuse):
+				{
+					m3d->Material->DiffuseTextures.push_back(tex);
+					break;
+				}
 
-			default:
-				break;
+				case (MaterialTextureType::Specular):
+				{
+					m3d->Material->SpecularTextures.push_back(tex);
+					break;
+				}
 
+				default:
+					break;
+
+				}
 			}
 		}
-
+		
 		//mo->Textures = this->MeshTextures[MeshIndex];
 
 		if (Parent != nullptr)

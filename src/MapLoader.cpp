@@ -60,6 +60,32 @@ static Vector3 GetVector3FromJSON(nlohmann::json JSON)
 	return Vec3;
 }
 
+static Color GetColorFromJson(nlohmann::json JSON)
+{
+	int Index = -1;
+
+	Color col;
+
+	try
+	{
+		col = Color(
+			JSON[++Index],
+			JSON[++Index],
+			JSON[++Index]
+		);
+	}
+	catch (nlohmann::json::type_error TErr)
+	{
+		Debug::Log(
+			"Could not read Color!\nError: '"
+			+ std::string(TErr.what())
+			+ "'"
+		);
+	}
+
+	return col;
+}
+
 static float GetVersion(std::string const& MapFileContents)
 {
 	size_t MatchLocation = MapFileContents.find("#Version");
@@ -235,16 +261,24 @@ static void LoadMapVersion1(const std::string& MapPath, const std::string& Conte
 
 			Object3D->Matrix = glm::translate(Object3D->Matrix, (glm::vec3)Position);
 
-			Object3D->Matrix = glm::rotate(Object3D->Matrix, glm::radians((float)Orientation.X), glm::vec3(1.0f, 0.0f, 0.0f));
-			Object3D->Matrix = glm::rotate(Object3D->Matrix, glm::radians((float)Orientation.Y), glm::vec3(0.0f, 1.0f, 0.0f));
-			Object3D->Matrix = glm::rotate(Object3D->Matrix, glm::radians((float)Orientation.Z), glm::vec3(0.0f, 0.0f, 1.0f));
+			Object3D->Matrix = glm::rotate(
+				Object3D->Matrix, 
+				glm::radians(static_cast<float>(Orientation.X)),
+				glm::vec3(1.0f, 0.0f, 0.0f)
+			);
+			Object3D->Matrix = glm::rotate(
+				Object3D->Matrix, 
+				glm::radians(static_cast<float>(Orientation.Y)),
+				glm::vec3(0.0f, 1.0f, 0.0f)
+			);
+			Object3D->Matrix = glm::rotate(
+				Object3D->Matrix, 
+				glm::radians(static_cast<float>(Orientation.Z)),
+				glm::vec3(0.0f, 0.0f, 1.0f)
+			);
 
 			if (Object.find("color") != Object.end())
-			{
-				Vector3 ColorVect = GetVector3FromJSON(Object["color"]);
-
-				Object3D->ColorRGB = Color(ColorVect.X, ColorVect.Y, ColorVect.Z);
-			}
+				Object3D->ColorRGB = GetColorFromJson(Object["color"]);
 
 			Object3D->Size = GetVector3FromJSON(Object["size"]);
 
@@ -293,21 +327,12 @@ static void LoadMapVersion1(const std::string& MapPath, const std::string& Conte
 
 		Light->Position = GetVector3FromJSON(LightObject["position"]);
 
-		Vector3 LightColor = GetVector3FromJSON(LightObject["color"]);
-
-		Light->LightColor = Color(LightColor.X, LightColor.Y, LightColor.Z);
+		Light->LightColor = GetColorFromJson(LightObject["color"]);
 
 		if (LightType == "PointLight")
 		{
 			Object_PointLight* Pointlight = dynamic_cast<Object_PointLight*>(Object);
 			Pointlight->Range = LightObject["range"];
-		}
-
-		if (LightType == "DirectionalLight")
-		{
-			Object_DirectionalLight* DirectLight = dynamic_cast<Object_DirectionalLight*>(Object);
-			DirectLight->Position = GetVector3FromJSON(LightObject["position"]);
-			DirectLight->LightColor = Color(LightColor.X, LightColor.Y, LightColor.Z);
 		}
 
 		Object->SetParent(MapParent);
@@ -448,7 +473,11 @@ static void LoadMapVersion2(const std::string& MapPath, const std::string& Conte
 			case (Reflection::ValueType::Color):
 			{
 				Vector3 PropVec3 = GetVector3FromJSON(Item[MemberName]);
-				Color PropValue = Color(PropVec3.X, PropVec3.Y, PropVec3.Z);
+				Color PropValue = Color(
+					static_cast<float>(PropVec3.X),
+					static_cast<float>(PropVec3.Y),
+					static_cast<float>(PropVec3.Z)
+				);
 				Reflection::GenericValue gv = PropValue.ToGenericValue();
 				PropSetter(NewObject, gv);
 				break;

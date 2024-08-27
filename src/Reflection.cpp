@@ -35,6 +35,11 @@ Reflection::GenericValue::GenericValue(uint32_t i)
 {
 }
 
+Reflection::GenericValue::GenericValue(void* p)
+	: Type(ValueType::Pointer), Pointer(p)
+{
+}
+
 std::string Reflection::GenericValue::ToString() const
 {
 	switch (this->Type)

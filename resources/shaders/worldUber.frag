@@ -63,10 +63,10 @@ struct Cubemap
 uniform sampler2D ShadowAtlas;
 
 // the actual number of textures the mesh has
-uniform int NumDiffuseTextures = 1;
-uniform int NumSpecularTextures = 1;
+uniform unsigned int NumDiffuseTextures = 1;
+uniform unsigned int NumSpecularTextures = 1;
 
-uniform int NumLights = 0;
+uniform unsigned int NumLights = 0;
 
 // uniform arrays
 uniform sampler2D DiffuseTextures[MAX_DIFFUSE_TEXTURES];
@@ -218,8 +218,8 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 ViewDirection, vec3 Albedo, flo
 
 		if (Diffuse > 0.0f && Shadow == 0.0f) {
 			vec3 reflectDir = reflect(-LightDirection, Normal);
-			float specAmt = pow(max(dot(ViewDirection, reflectDir), 0.f), 1.f);
-			Specular = specAmt * 0.5f;
+			float specAmt = pow(max(dot(ViewDirection, reflectDir), 0.f), SpecularPower);
+			Specular = specAmt * SpecularMultiplier;
 		}
 
 		FinalColor = Albedo * (Diffuse + (SpecMapValue * Specular)) * LightColor * (1.0f - Shadow);

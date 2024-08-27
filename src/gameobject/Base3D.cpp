@@ -44,8 +44,8 @@ void Object_Base3D::s_DeclareReflections()
 	);
 
 	REFLECTION_DECLAREPROP_SIMPLE_TYPECAST(Object_Base3D, ColorRGB, Color);
-	REFLECTION_DECLAREPROP_SIMPLE(Object_Base3D, Transparency, Double);
-	REFLECTION_DECLAREPROP_SIMPLE(Object_Base3D, Reflectivity, Double);
+	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_Base3D, Transparency, Double, float);
+	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_Base3D, Reflectivity, Double, float);
 
 	REFLECTION_DECLAREPROP(
 		"FaceCulling",

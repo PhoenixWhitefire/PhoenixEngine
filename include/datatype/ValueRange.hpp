@@ -6,72 +6,71 @@
 #include<vector>
 #include<random>
 
-template <class _vtype> class ValueRangeKey
+template <class T> class ValueSequenceKeypoint
 {
 public:
-	ValueRangeKey(float time, _vtype value);
+	ValueSequenceKeypoint(float time, T value);
 
 	float Time; // Time in the sequence
-	_vtype Value; // Value at this point in time
+	T Value; // Value at this point in time
 	float Envelope; // Random deviation
 };
 
-template <class ValueType> class ValueRange
-{ //IMPORTANT: ValueRange<type>: 'type' should support math operations - '-', '*', '+'
+template <class T> class ValueSequence
+{ //IMPORTANT: ValueSequence<type>: 'type' should support math operations - '-', '*', '+'
 public:
-	ValueRange(std::vector<ValueRangeKey<ValueType>> InitKeys);
-	ValueRange();
+	ValueSequence(std::vector<ValueSequenceKeypoint<T>> InitKeys);
+	ValueSequence();
 
-	ValueType GetValue(float Time);
-	void InsertKey(ValueRangeKey<ValueType> Key);
+	T GetValue(float Time);
+	void InsertKey(ValueSequenceKeypoint<T> Key);
 
-	std::vector<ValueRangeKey<ValueType>> GetKeys();
-	std::vector<ValueType> GetKeysValues();
+	std::vector<ValueSequenceKeypoint<T>> GetKeys();
+	std::vector<T> GetKeysValues();
 
 private:
-	std::vector<ValueRangeKey<ValueType>> m_keys;
+	std::vector<ValueSequenceKeypoint<T>> m_Keys;
 };
 
-static std::default_random_engine RandGenerator = std::default_random_engine(time(NULL));
-static std::uniform_real_distribution<double> EnvelopDist(0.f, 1.f);
+static std::default_random_engine RandGenerator = std::default_random_engine(static_cast<unsigned int>(time(NULL)));
+static std::uniform_real_distribution<float> EnvelopDist(0.f, 1.f);
 
-template <class _vtype> ValueRangeKey<_vtype>::ValueRangeKey(float time, _vtype value)
-	: Value(value), Time(time)
+template <class T> ValueSequenceKeypoint<T>::ValueSequenceKeypoint(float time, T value)
+	: Value(value), Time(time), Envelope(0.f)
 {
 }
 
-template <class ValueType> ValueRange<ValueType>::ValueRange(std::vector<ValueRangeKey<ValueType>> InitKeys)
+template <class T> ValueSequence<T>::ValueSequence(std::vector<ValueSequenceKeypoint<T>> initialKeys)
+	: m_Keys(initialKeys)
 {
-	this->m_keys = InitKeys;
 }
 
-template <class ValueType> ValueRange<ValueType>::ValueRange()
+template <class T> ValueSequence<T>::ValueSequence()
 {
-
 }
 
-template <typename T> bool m_compare(ValueRangeKey<T> A, ValueRangeKey<T> B)
+template <typename T> bool m_compare(ValueSequenceKeypoint<T> A, ValueSequenceKeypoint<T> B)
 {
 	return (A.Time < B.Time);
 }
 
-template <class ValueType> ValueType ValueRange<ValueType>::GetValue(float Time)
+template <class T> T ValueSequence<T>::GetValue(float Time)
 {
-	if (this->m_keys.size() < 2)
-		return ValueType();
+	if (m_Keys.size() < 2)
+		return T();
 
-	double Deviation = EnvelopDist(RandGenerator);
+	float Deviation = EnvelopDist(RandGenerator);
 
 	if (Time == 0)
-		return this->m_keys[0].Value * (this->m_keys[0].Envelope * Deviation);
+		return m_Keys[0].Value * (m_Keys[0].Envelope * Deviation);
 
 	if (Time == 1)
-		return this->m_keys[this->m_keys.size() - 1].Value * (this->m_keys[this->m_keys.size() - 1].Envelope * Deviation);
+		return m_Keys[m_Keys.size() - 1].Value * (m_Keys[m_Keys.size() - 1].Envelope * Deviation);
 
-	for (int KeyIndex = 0; KeyIndex < (this->m_keys.size() - 1); KeyIndex++)
+	for (int KeyIndex = 0; KeyIndex < (m_Keys.size() - 1); KeyIndex++)
 	{
-		ValueRangeKey<ValueType> CurrentKey = this->m_keys[KeyIndex];
-		ValueRangeKey<ValueType> NextKey = this->m_keys[KeyIndex + 1]; //Will always exist because of Keys.size() - 1
+		ValueSequenceKeypoint<T> CurrentKey = m_Keys[KeyIndex];
+		ValueSequenceKeypoint<T> NextKey = m_Keys[KeyIndex + 1]; //Will always exist because of Keys.size() - 1
 
 		if (Time >= CurrentKey.Time && Time < NextKey.Time)
 		{
@@ -83,27 +82,27 @@ template <class ValueType> ValueType ValueRange<ValueType>::GetValue(float Time)
 		}
 	}
 
-	return ValueType();
+	return T();
 }
 
-template <class ValueType> std::vector<ValueRangeKey<ValueType>> ValueRange<ValueType>::GetKeys()
+template <class T> std::vector<ValueSequenceKeypoint<T>> ValueSequence<T>::GetKeys()
 {
-	return this->m_keys;
+	return m_Keys;
 }
 
-template <class ValueType> std::vector<ValueType> ValueRange<ValueType>::GetKeysValues()
+template <class T> std::vector<T> ValueSequence<T>::GetKeysValues()
 {
-	std::vector<ValueType> values;
+	std::vector<T> values;
 
-	for (int Index = 0; Index < this->m_keys.size(); Index++)
-		values.push_back(this->m_keys[Index].Value);
+	for (int Index = 0; Index < m_Keys.size(); Index++)
+		values.push_back(m_Keys[Index].Value);
 
 	return values;
 }
 
-template <class ValueType> void ValueRange<ValueType>::InsertKey(ValueRangeKey<ValueType> Key)
+template <class T> void ValueSequence<T>::InsertKey(ValueSequenceKeypoint<T> Key)
 {
-	this->m_keys.push_back(Key);
+	m_Keys.push_back(Key);
 
-	//std::sort(this->m_keys.begin(), this->m_keys.end(), m_compare);
+	//std::sort(m_Keys.begin(), m_Keys.end(), m_compare);
 }

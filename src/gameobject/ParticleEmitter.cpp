@@ -10,7 +10,7 @@
 RegisterDerivedObject<Object_ParticleEmitter> Object_ParticleEmitter::RegisterClassAs("ParticleEmitter");
 
 ShaderProgram* Object_ParticleEmitter::s_ParticleShaders = nullptr;
-std::default_random_engine Object_ParticleEmitter::s_RandGenerator = std::default_random_engine(time(NULL));
+std::default_random_engine Object_ParticleEmitter::s_RandGenerator = std::default_random_engine(static_cast<uint32_t>(time(NULL)));
 bool Object_ParticleEmitter::s_DidInitReflection = false;
 
 static const std::string MissingTexPath = "textures/MISSING2_MaximumADHD_status_1665776378145304579.png";
@@ -77,7 +77,10 @@ void Object_ParticleEmitter::s_DeclareReflections()
 		[](Reflection::BaseReflectable* g, Reflection::GenericValue gv)
 		{
 			Vector3 newLifetime = gv;
-			dynamic_cast<Object_ParticleEmitter*>(g)->Lifetime = Vector2(newLifetime.X, newLifetime.Y);
+			dynamic_cast<Object_ParticleEmitter*>(g)->Lifetime = Vector2(
+				static_cast<float>(newLifetime.X),
+				static_cast<float>(newLifetime.Y)
+			);
 		}
 	);
 
@@ -118,18 +121,18 @@ Object_ParticleEmitter::Object_ParticleEmitter()
 	this->VertBuffer.Unbind();
 	this->ElementBuffer.Unbind();
 
-	this->VelocityOverTime.InsertKey(ValueRangeKey<Vector3>(0, Vector3(0, 5, 0)));
-	this->VelocityOverTime.InsertKey(ValueRangeKey<Vector3>(0.75, Vector3(0, 2.5, 0)));
-	this->VelocityOverTime.InsertKey(ValueRangeKey<Vector3>(1, Vector3(0, 0, 0)));
+	this->VelocityOverTime.InsertKey(ValueSequenceKeypoint<Vector3>(0, Vector3(0, 5, 0)));
+	this->VelocityOverTime.InsertKey(ValueSequenceKeypoint<Vector3>(0.75, Vector3(0, 2.5, 0)));
+	this->VelocityOverTime.InsertKey(ValueSequenceKeypoint<Vector3>(1, Vector3(0, 0, 0)));
 
-	this->TransparencyOverTime.InsertKey(ValueRangeKey<float>(0, 0));
-	this->TransparencyOverTime.InsertKey(ValueRangeKey<float>(0.8, 0.5));
-	this->TransparencyOverTime.InsertKey(ValueRangeKey<float>(1, 1));
+	this->TransparencyOverTime.InsertKey(ValueSequenceKeypoint<float>(0.f, 0.f));
+	this->TransparencyOverTime.InsertKey(ValueSequenceKeypoint<float>(.8f, .5f));
+	this->TransparencyOverTime.InsertKey(ValueSequenceKeypoint<float>(1.f, 1.f));
 
 	s_DeclareReflections();
 }
 
-uint32_t Object_ParticleEmitter::m_getUsableIndex()
+size_t Object_ParticleEmitter::m_getUsableIndex()
 {
 	if (this->m_particles.size() == 0) //Are there any particles at all?
 	{
@@ -166,7 +169,8 @@ uint32_t Object_ParticleEmitter::m_getUsableIndex()
 		}
 	}
 
-	if (this->m_particles.size() < this->MaxParticles) {
+	if (this->m_particles.size() < this->MaxParticles)
+	{
 		this->m_particles.resize(this->m_particles.size() + 1);
 
 		return this->m_particles.size() - 1;
@@ -194,7 +198,7 @@ void Object_ParticleEmitter::Update(double Delta)
 		float numimages = (float)this->PossibleImages.size();
 
 		std::uniform_real_distribution<double> rand_idx(0, numimages);
-		std::uniform_real_distribution<double> lifetimeDist(this->Lifetime.X, this->Lifetime.Y);
+		std::uniform_real_distribution<float> lifetimeDist(this->Lifetime.X, this->Lifetime.Y);
 
 		NewParticle = new _particle();
 		NewParticle->Image = this->PossibleImages[(uint32_t)rand_idx(Object_ParticleEmitter::s_RandGenerator)];
@@ -214,7 +218,7 @@ void Object_ParticleEmitter::Update(double Delta)
 
 		if (Particle != nullptr && Particle != NewParticle)
 		{
-			Particle->TimeAliveFor += Delta;
+			Particle->TimeAliveFor += static_cast<float>(Delta);
 
 			float LifeProgress = Particle->TimeAliveFor / Particle->Lifetime;
 
@@ -257,9 +261,9 @@ void Object_ParticleEmitter::Render(glm::mat4 CameraMatrix)
 
 		glUniform3f(
 			glGetUniformLocation(Object_ParticleEmitter::s_ParticleShaders->ID, "Position"),
-			Particle->Position.X,
-			Particle->Position.Y,
-			Particle->Position.Z
+			static_cast<float>(Particle->Position.X),
+			static_cast<float>(Particle->Position.Y),
+			static_cast<float>(Particle->Position.Z)
 		);
 
 		glUniform1f(

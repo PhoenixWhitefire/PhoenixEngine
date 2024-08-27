@@ -56,8 +56,8 @@ public:
 
 	uint32_t Parent;
 
-	Event<GameObject*> OnChildAdded;
-	Event<GameObject*> OnChildRemoving;
+	EventSignal<GameObject*> OnChildAdded;
+	EventSignal<GameObject*> OnChildRemoving;
 
 	static nlohmann::json DumpApiToJson();
 

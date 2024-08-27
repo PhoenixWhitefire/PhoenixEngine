@@ -2,7 +2,7 @@
   "props": [
     {
       "name": "crow",
-      "path": "models/crow/scene.gltf",
+      "path": "models/crow",
       "position":[0,0,0],
       "orient": [0,0,0],
       "size": [1,1,1],
@@ -10,7 +10,7 @@
     },
     {
       "name": "g",
-      "path": "models/grass/scene.gltf",
+      "path": "models/grass",
       "position":[100,0,15],
       "orient": [0,0,0],
       "size": [1,1,1],
@@ -18,7 +18,7 @@
     },
     {
       "name": "gr",
-      "path": "models/ground/scene.gltf",
+      "path": "models/ground",
       "position":[100,0,15],
       "orient": [0,0,0],
       "size": [1,1,1],
@@ -26,7 +26,7 @@
     },
     {
       "name": "windows10",
-      "path": "models/windows/scene.gltf",
+      "path": "models/windows",
       "position":[100,5,15],
       "orient": [0,0,0],
       "size": [1,1,1],

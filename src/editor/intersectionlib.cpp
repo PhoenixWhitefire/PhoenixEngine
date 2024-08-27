@@ -17,7 +17,7 @@ static std::vector<IntersectionLib::Triangle> GetTrianglesFromHittableObject(Int
 		std::vector<IntersectionLib::Triangle> Triangles;
 		Triangles.reserve(TargetMesh->Indices.size() / 3);
 
-		for (uint32_t Indice = 0; Indice * 3 < TargetMesh->Indices.size(); Indice++)
+		for (size_t Indice = 0; Indice * 3 < TargetMesh->Indices.size(); Indice++)
 		{
 			IntersectionLib::Triangle NewTri = IntersectionLib::Triangle();
 
@@ -74,8 +74,8 @@ IntersectionLib::IntersectionResult IntersectionLib::Traceline(
 			Vector3 E2 = Tri.P3 - Tri.P1;
 			Vector3 N = E1.Cross(E2);
 
-			float det = -LineDirection.Dot(N);
-			float invdet = 1.f / det;
+			double det = -LineDirection.Dot(N);
+			double invdet = 1.f / det;
 
 			Vector3 AO = LineStart - Tri.P1;
 			Vector3 DAO = AO.Cross(LineDirection);

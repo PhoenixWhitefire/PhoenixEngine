@@ -14,8 +14,8 @@ float Quad[];
 struct _particle
 {
 public:
-	double Lifetime = 01.f;
-	double TimeAliveFor = 0.f;
+	float Lifetime = 1.f;
+	float TimeAliveFor = 0.f;
 	float Size = 1.f;
 	float Transparency = 0.f;
 
@@ -34,7 +34,7 @@ public:
 
 	bool EmitterEnabled = true;
 
-	float Rate = 50.0f; //Particles to be spawned every second
+	int Rate = 50; //Particles to be spawned every second
 	int MaxParticles = 500;
 
 	Vector2 Lifetime = Vector2(1.5f, 2.f); // Randomly chosen between the range X - Y;
@@ -42,12 +42,12 @@ public:
 
 	std::vector<Texture*> PossibleImages; //A random one is chosen every time a particle needs to be spawned
 
-	ValueRange<float> TransparencyOverTime;
-	ValueRange<float> SizeOverTime;
-	ValueRange<Vector3> VelocityOverTime;
+	ValueSequence<float> TransparencyOverTime;
+	ValueSequence<float> SizeOverTime;
+	ValueSequence<Vector3> VelocityOverTime;
 	
 private:
-	uint32_t m_getUsableIndex();
+	size_t m_getUsableIndex();
 
 	std::vector<_particle*> m_particles;
 

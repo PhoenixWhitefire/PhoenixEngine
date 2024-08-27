@@ -60,6 +60,17 @@ Vector3::Vector3(double x, double y, double z)
 	s_DeclareReflections();
 }
 
+Vector3::Vector3(glm::tvec3<double, glm::highp> GLMVector)
+{
+	this->X = GLMVector.x;
+	this->Y = GLMVector.y;
+	this->Z = GLMVector.z;
+
+	this->Magnitude = sqrt((this->X * this->X) + (this->Y * this->Y) + (this->Z * this->Z));
+
+	s_DeclareReflections();
+}
+
 Vector3::Vector3(glm::vec3 GLMVector)
 {
 	this->X = GLMVector.x;
@@ -142,7 +153,9 @@ double Vector3::Dot(Vector3 OtherVec)
 	return Product;*/
 
 	// Gave up
-	return glm::dot(glm::vec3(*this), glm::vec3(OtherVec));
+	auto me = glm::tvec3<double, glm::highp>(*this);
+	auto them = glm::tvec3<double, glm::highp>(OtherVec);
+	return glm::dot(me, them);
 }
 
 Vector3 Vector3::Cross(Vector3 OtherVec)
@@ -156,7 +169,9 @@ Vector3 Vector3::Cross(Vector3 OtherVec)
 	return CrossVec;*/
 
 	// Gave up
-	return glm::cross(glm::vec3(*this), glm::vec3(OtherVec));
+	auto me = glm::tvec3<double, glm::highp>(*this);
+	auto them = glm::tvec3<double, glm::highp>(OtherVec);
+	return glm::cross(me, them);
 }
 
 Vector3 Vector3::operator+(Vector3 Other)
@@ -256,7 +271,12 @@ bool Vector3::operator==(Vector3 Other)
 		return false;
 }
 
-Vector3::operator glm::vec3()
+Vector3::operator glm::tvec3<float, glm::highp>()
+{
+	return glm::vec3(this->X, this->Y, this->Z);
+}
+
+Vector3::operator glm::tvec3<double, glm::highp>()
 {
 	return glm::vec3(this->X, this->Y, this->Z);
 }

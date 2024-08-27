@@ -27,16 +27,15 @@ static std::string GetLocalizedFilePath(std::string const& NonLocalizedPath)
 	return Path;
 }
 
-std::string FileRW::ReadFile(std::string const& FilePath, bool* DoesFileExist)
+std::string FileRW::ReadFile(std::string const& ShortPath, bool* DoesFileExist)
 {
-	std::string Path = std::string(FilePath);
-	Path = GetLocalizedFilePath(Path);
+	std::string actualPath = GetLocalizedFilePath(ShortPath);
 
-	std::ifstream File(Path, std::ios::binary);
+	std::ifstream File(actualPath, std::ios::binary);
 
 	std::string Contents = *new std::string();
 
-	if (File)
+	if (File && File.is_open())
 	{
 		if (DoesFileExist != nullptr)
 			*DoesFileExist = true;
@@ -54,24 +53,29 @@ std::string FileRW::ReadFile(std::string const& FilePath, bool* DoesFileExist)
 	}
 	else
 	{
-		Debug::Log(std::vformat("Could not load file: '{}'", std::make_format_args(Path)));
-
-		if (DoesFileExist != nullptr)
+		if (DoesFileExist == nullptr)
+			Debug::Log(std::vformat("Could not load file: '{}'", std::make_format_args(actualPath)));
+		else
 			*DoesFileExist = false;
 
 		return Contents;
 	}
 }
 
-void FileRW::WriteFile(const std::string& FilePath, const std::string& FileContents, bool InResourcesDirectory)
+void FileRW::WriteFile(const std::string& ShortPath, const std::string& FileContents, bool InResourcesDirectory)
 {
-	std::string Path = InResourcesDirectory ? GetLocalizedFilePath(FilePath) : FilePath;
+	std::string path = InResourcesDirectory ? GetLocalizedFilePath(ShortPath) : ShortPath;
 
-	Debug::Log("Writing file: '" + Path + "'...");
+	std::ofstream File(path.c_str());
 
-	std::ofstream File(Path.c_str());
-
-	File << FileContents;
-
-	File.close();
+	if (File && File.is_open())
+	{
+		File << FileContents;
+		File.close();
+	}
+	else
+		throw(std::vformat(
+			"FileRW::WriteFile could not open the handle to '{}'",
+			std::make_format_args(path)
+		));
 }

@@ -1,14 +1,17 @@
+Application initalization
+SDL version:
+	Compiled with: 2.0.22
+	Current: 2.30.6
+Window created.
 Running OpenGL version 4.6
 Renderer initialized
 DataModel initialized
+Engine constructed.
+Initializing ImGui 1.91.1 WIP (#19104)
+ImGui initialized.
 Editor object was created
 The Map Version is 1
 Loaded map file 'levels/dev.world'
 Editor init done
 Final initializations...
 Main program loop start...
-Main loop exited
-Engine destructing...
-DataModel destructing...
-Application closing...
-Writing file: 'log.txt'...

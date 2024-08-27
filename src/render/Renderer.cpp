@@ -354,8 +354,18 @@ void Renderer::DrawScene(Scene_t& Scene)
 			auto TypeLoc = glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".Type").c_str());
 			auto RangeLoc = glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".Range").c_str());
 
-			glUniform3f(PosLoc, LightData.Position.X, LightData.Position.Y, LightData.Position.Z);
-			glUniform3f(ColLoc, LightData.LightColor.R, LightData.LightColor.G, LightData.LightColor.B);
+			glUniform3f(
+				PosLoc,
+				static_cast<float>(LightData.Position.X),
+				static_cast<float>(LightData.Position.Y),
+				static_cast<float>(LightData.Position.Z)
+			);
+			glUniform3f(
+				ColLoc,
+				static_cast<float>(LightData.LightColor.R),
+				static_cast<float>(LightData.LightColor.G),
+				static_cast<float>(LightData.LightColor.B)
+			);
 			glUniform1i(TypeLoc, (int)LightData.Type);
 
 			glUniform1f(RangeLoc, LightData.Range);
@@ -382,8 +392,7 @@ void Renderer::DrawScene(Scene_t& Scene)
 				LightData.ShadowMapTextureId
 			);
 		}
-
-		glUniform1i(glGetUniformLocation(ShaderProgramID, "NumLights"), Scene.LightData.size());
+		glUniform1ui(glGetUniformLocation(ShaderProgramID, "NumLights"), static_cast<uint32_t>(Scene.LightData.size()));
 	}
 
 	for (MeshData_t RenderData : Scene.MeshData)
@@ -442,7 +451,7 @@ void Renderer::DrawMesh(
 	glUniformMatrix4fv(glGetUniformLocation(Shaders->ID, "Matrix"), 1, GL_FALSE, glm::value_ptr(Matrix));
 	glUniformMatrix4fv(glGetUniformLocation(Shaders->ID, "Scale"), 1, GL_FALSE, glm::value_ptr(Scale));
 
-	glDrawElements(GL_TRIANGLES, Object->Indices.size(), GL_UNSIGNED_INT, 0);
+	glDrawElements(GL_TRIANGLES, static_cast<int>(Object->Indices.size()), GL_UNSIGNED_INT, 0);
 }
 
 void Renderer::m_SetTextureUniforms(MeshData_t& RenderData, ShaderProgram* Shaders)
@@ -464,7 +473,7 @@ void Renderer::m_SetTextureUniforms(MeshData_t& RenderData, ShaderProgram* Shade
 
 	glUniform1f(glGetUniformLocation(Shaders->ID, "SpecularMultiplier"), Material->SpecMultiply);
 	glUniform1f(glGetUniformLocation(Shaders->ID, "SpecularPower"), Material->SpecExponent);
-
+	
 	glUniform1f(glGetUniformLocation(Shaders->ID, "Reflectivity"), RenderData.Reflectivity);
 	glUniform1f(glGetUniformLocation(Shaders->ID, "Transparency"), RenderData.Transparency);
 
@@ -545,8 +554,14 @@ void Renderer::m_SetTextureUniforms(MeshData_t& RenderData, ShaderProgram* Shade
 		glUniform1i(glGetUniformLocation(Shaders->ID, ShaderTextureVar.c_str()), TexUnitOffset);
 	}
 
-	glUniform1i(glGetUniformLocation(Shaders->ID, "NumDiffuseTextures"), Material->DiffuseTextures.size());
-	glUniform1i(glGetUniformLocation(Shaders->ID, "NumSpecularTextures"), Material->SpecularTextures.size());
+	glUniform1ui(
+		glGetUniformLocation(Shaders->ID, "NumDiffuseTextures"),
+		static_cast<uint32_t>(Material->DiffuseTextures.size())
+	);
+	glUniform1ui(
+		glGetUniformLocation(Shaders->ID, "NumSpecularTextures"),
+		static_cast<uint32_t>(Material->SpecularTextures.size())
+	);
 }
 
 void Renderer::SwapBuffers()

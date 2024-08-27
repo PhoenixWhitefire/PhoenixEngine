@@ -1,0 +1,9 @@
+{
+
+  "albedo": "models/crow/diffuse.png",
+
+  "specExponent": 2,
+
+  "specMultiply": 0.01
+
+}

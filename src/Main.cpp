@@ -13,24 +13,24 @@ Anyway, here is a small tour:
 - All shader files have a file extension of one of the following: .vert, .frag
 - The "main" shaders are the two worldUber.vert and worldUber.frag ones
 - "phoenix.conf" contains some configuration. Set "developer" to "false" to disable the debug UIs.
-- Hold R to disable distance culling
-- WASD to move horizontally, Q/E to move down/up. Right-click and drag to look. LShift to move slower.
+- WASD to move horizontally, Q/E to move down/up. Left-click to look around. Right-click to stop. LShift to move slower.
+- Hold `R` to disable distance culling
+- Press `J` to dump object hierarchy. `I` to dump GameObject API.
 - F11 to toggle fullscreen.
 
+https://github.com/Phoenixwhitefire/PhoenixEngine
 
 */
 
 #define SDL_MAIN_HANDLED
 
-#include<iostream>
-#include<cmath>
-#include<math.h>
-#include<nljson.h>
+#include<filesystem>
 #include<imgui/imgui.h>
-#include<imgui/imgui_impl_opengl3.h>
-#include<imgui/imgui_impl_sdl.h>
+#include<imgui/backends/imgui_impl_opengl3.h>
+#include<imgui/backends/imgui_impl_sdl2.h>
 #include<glm/gtx/rotate_vector.hpp>
 #include<glm/gtx/vector_angle.hpp>
+#include<SDL2/SDL_revision.h>
 
 #include"editor/editor.hpp"
 #include"Engine.hpp"
@@ -51,10 +51,46 @@ static const float MouseSensitivity = 100.0f;
 static const float MovementSpeed = 15.f;
 
 static Editor* EditorContext = nullptr;
+static EngineObject* EngineInstance = nullptr;
 
 static int PrevMouseX, PrevMouseY = 0;
 
-static glm::vec3 CamForward = glm::vec3(0.f, 0.f, -1.f);
+static glm::tvec3<double, glm::highp> CamForward = glm::vec3(0.f, 0.f, -1.f);
+
+static void logSdlVersion()
+{
+	SDL_version sdlCompiledVersion{};
+	SDL_version sdlDynamicVersion{};
+
+	SDL_VERSION(&sdlCompiledVersion);
+	SDL_GetVersion(&sdlDynamicVersion);
+
+	std::string sdlCompiledVersionStr = std::vformat(
+		"{}.{}.{}",
+		std::make_format_args(
+			sdlCompiledVersion.major,
+			sdlCompiledVersion.minor,
+			sdlCompiledVersion.patch
+		)
+	);
+
+	std::string sdlDynamicVersionStr = std::vformat(
+		"{}.{}.{}",
+		std::make_format_args(
+			sdlDynamicVersion.major,
+			sdlDynamicVersion.minor,
+			sdlDynamicVersion.patch
+		)
+	);
+
+	Debug::Log(std::vformat(
+		"SDL version:\n\tCompiled with: {}\n\tCurrent: {}",
+		std::make_format_args(
+			sdlCompiledVersionStr,
+			sdlDynamicVersionStr
+		)
+	));
+}
 
 static int FindArgumentInCliArgs(
 	int ArgCount,
@@ -76,30 +112,27 @@ static int FindArgumentInCliArgs(
 	return 0;
 }
 
-static void HandleInputs(std::tuple<EngineObject*, double, double> Data)
+static void HandleInputs(Reflection::GenericValue Data)
 {
-
-	EngineObject* Engine = std::get<0>(Data);
-	double DeltaTime = std::get<1>(Data);
-	double CurrentTime = std::get<2>(Data);
+	double DeltaTime = Data.Double;
 
 	if (EngineJsonConfig.value("developer", false))
-		EditorContext->Update(DeltaTime, Engine->Workspace->GetSceneCamera()->Matrix);
+		EditorContext->Update(DeltaTime, EngineInstance->Workspace->GetSceneCamera()->Matrix);
 
-	Object_Camera* Camera = Engine->Workspace->GetSceneCamera();
+	Object_Camera* Camera = EngineInstance->Workspace->GetSceneCamera();
 
-	const glm::vec3 UpVec = Vector3::yAxis;
+	const glm::tvec3<double, glm::highp> UpVec = Vector3::yAxis;
 	
 	UserInput::InputBeingSunk = m_imGuiIO->WantCaptureKeyboard;
 
 	if (!UserInput::InputBeingSunk)
 	{
-		float DisplacementSpeed = MovementSpeed * DeltaTime;
+		double DisplacementSpeed = MovementSpeed * DeltaTime;
 
 		if (UserInput::IsKeyDown(SDLK_LSHIFT))
 			DisplacementSpeed *= 0.5f;
 
-		Vector3 Displacement = Vector3();
+		Vector3 Displacement{};
 
 		if (UserInput::IsKeyDown(SDLK_w))
 			Displacement += Vector3(0, 0, DisplacementSpeed);
@@ -119,13 +152,13 @@ static void HandleInputs(std::tuple<EngineObject*, double, double> Data)
 		if (UserInput::IsKeyDown(SDLK_e))
 			Displacement += Vector3(0, DisplacementSpeed, 0);
 
-		Camera->Matrix = glm::translate(Camera->Matrix, glm::vec3(Displacement));
+		Camera->Matrix = glm::translate(Camera->Matrix, glm::vec3((glm::tvec3<double>)Displacement));
 	}
 
 	int mouseX;
 	int mouseY;
 
-	SDL_Window* window = Engine->Window;
+	SDL_Window* window = EngineInstance->Window;
 
 	uint32_t activeMouseButton = SDL_GetMouseState(&mouseX, &mouseY);
 
@@ -161,12 +194,12 @@ static void HandleInputs(std::tuple<EngineObject*, double, double> Data)
 		int deltaMouseX = PrevMouseX - mouseX;
 		int deltaMouseY = PrevMouseY - mouseY;
 
-		float RotationX = MouseSensitivity * ((double)deltaMouseY - (windowSizeY / 2.0f)) / windowSizeY;
-		float RotationY = MouseSensitivity * ((double)deltaMouseX - (windowSizeX / 2.0f)) / windowSizeX;
+		double RotationX = MouseSensitivity * ((double)deltaMouseY - (windowSizeY / 2.0f)) / windowSizeY;
+		double RotationY = MouseSensitivity * ((double)deltaMouseX - (windowSizeX / 2.0f)) / windowSizeX;
 		RotationX += 50.f; // TODO 22/08/2024: Why??
 		RotationY += 50.f;
 
-		glm::vec3 newForward = glm::rotate(
+		glm::tvec3<double, glm::highp> newForward = glm::rotate(
 			CamForward,
 			glm::radians(RotationX),
 			glm::normalize(glm::cross(CamForward, UpVec))
@@ -177,7 +210,7 @@ static void HandleInputs(std::tuple<EngineObject*, double, double> Data)
 
 		CamForward = glm::rotate(CamForward, glm::radians(-RotationY), UpVec);
 
-		glm::vec3 Position = glm::vec3(Camera->Matrix[3]);
+		glm::tvec3<double, glm::highp> Position{ Camera->Matrix[3] };
 
 		Camera->Matrix = glm::lookAt(Position, Position + CamForward, UpVec);
 
@@ -237,7 +270,7 @@ static void HandleInputs(std::tuple<EngineObject*, double, double> Data)
 		if (!PreviouslyPressingF11)
 		{
 			PreviouslyPressingF11 = true;
-			Engine->SetIsFullscreen(!Engine->IsFullscreen);
+			EngineInstance->SetIsFullscreen(!EngineInstance->IsFullscreen);
 		}
 	else
 		PreviouslyPressingF11 = false;
@@ -261,10 +294,8 @@ static void LoadLevel(const std::string& LevelPath)
 	MapLoader::LoadMapIntoObject(LevelPath, levelModel);
 }
 
-static void DrawUI(std::tuple<EngineObject*, double, double> Data)
+static void DrawUI(Reflection::GenericValue Data)
 {
-	EngineObject* Engine = std::get<0>(Data);
-
 	if (UserInput::IsKeyDown(SDLK_j) && !IsInputBeingSunk)
 	{
 		printf("BEGIN DUMP WORLD ARRAY\n");
@@ -309,29 +340,29 @@ static void DrawUI(std::tuple<EngineObject*, double, double> Data)
 
 		ImGui::Begin("Info");
 
-		ImGui::Text("FPS: %d", Engine->FramesPerSecond);
-		ImGui::Text("Frame time: %dms", (int)ceil(Engine->FrameTime * 1000));
+		ImGui::Text("FPS: %d", EngineInstance->FramesPerSecond);
+		ImGui::Text("Frame time: %dms", (int)ceil(EngineInstance->FrameTime * 1000));
 
 		ImGui::End();
 
 		ImGui::Begin("Settings");
 
-		ImGui::Checkbox("VSync", &Engine->VSync);
+		ImGui::Checkbox("VSync", &EngineInstance->VSync);
 
-		bool WasFullscreen = Engine->IsFullscreen;
+		bool WasFullscreen = EngineInstance->IsFullscreen;
 
-		ImGui::Checkbox("Fullscreen", &Engine->IsFullscreen);
+		ImGui::Checkbox("Fullscreen", &EngineInstance->IsFullscreen);
 
-		if (Engine->IsFullscreen != WasFullscreen)
-			Engine->SetIsFullscreen(Engine->IsFullscreen);
+		if (EngineInstance->IsFullscreen != WasFullscreen)
+			EngineInstance->SetIsFullscreen(EngineInstance->IsFullscreen);
 
-		if (Engine->VSync)
+		if (EngineInstance->VSync)
 			SDL_GL_SetSwapInterval(1);
 		else
 		{
 			SDL_GL_SetSwapInterval(0);
 
-			ImGui::InputInt("FPS max", &Engine->FpsCap, 1, 30);
+			ImGui::InputInt("FPS max", &EngineInstance->FpsCap, 1, 30);
 		}
 
 		bool PostFXEnabled = EngineJsonConfig.value("postfx_enabled", false);
@@ -356,7 +387,7 @@ static void DrawUI(std::tuple<EngineObject*, double, double> Data)
 				float DistFactorMultiplier = EngineJsonConfig.value("postfx_blurvignette_blurstrength", 2.f);
 				float WeightExponent = EngineJsonConfig.value("postfx_blurvignette_weightexp", 16.f);
 				float WeightMultiplier = EngineJsonConfig.value("postfx_blurvignette_weightmul", 2.5f);
-				float SampleRadius = EngineJsonConfig.value("postfx_blurvignette_sampleradius", 4);
+				float SampleRadius = EngineJsonConfig.value("postfx_blurvignette_sampleradius", 4.f);
 
 				ImGui::InputFloat("Vignette dist weight factor", &DistFactorMultiplier);
 				ImGui::InputFloat("Vignette weight exponent", &WeightExponent);
@@ -391,7 +422,43 @@ static void DrawUI(std::tuple<EngineObject*, double, double> Data)
 
 static void Application(int argc, char** argv)
 {
-	EngineObject* Engine = EngineObject::Get();
+	const char* imGuiVersion = IMGUI_VERSION;
+	int imGuiVersionNum = IMGUI_VERSION_NUM;
+
+	Debug::Log(std::vformat(
+		"Initializing ImGui {} (#{})",
+		std::make_format_args(imGuiVersion, imGuiVersionNum)
+	));
+
+	bool imGuiVersionCorrect = IMGUI_CHECKVERSION();
+
+	if (!imGuiVersionCorrect)
+	{
+		const char* errLn1 = "ImGui has detected a version mis-match between the compiled headers{}{}{}{}{}";
+		const char* errLn2 = " and the linked library. Please ensure version";
+		const char* errLn3 = " (#";
+		const char* errLn4 = ") is linked.";
+
+		throw(std::vformat(
+			errLn1,
+			std::make_format_args(
+				errLn2,
+				imGuiVersion,
+				errLn3,
+				imGuiVersionNum,
+				errLn4
+			)
+		));
+	}
+
+	ImGui::CreateContext();
+
+	m_imGuiIO = &ImGui::GetIO();
+	ImGui::StyleColorsDark();
+	ImGui_ImplSDL2_InitForOpenGL(EngineInstance->Window, EngineInstance->RendererContext->GLContext);
+	ImGui_ImplOpenGL3_Init("#version 460");
+
+	Debug::Log("ImGui initialized.");
 
 	EditorContext = EngineJsonConfig.value("developer", false) ? new Editor() : nullptr;
 	
@@ -423,32 +490,36 @@ static void Application(int argc, char** argv)
 							mapFileFromArgs
 							: EngineJsonConfig.value("RootScene", "levels/empty.world");
 
-	srand(time(0));
-
 	LoadLevel(mapFile);
 
 	if (EditorContext)
 		EditorContext->Init();
 
-	Engine->OnFrameStart.Connect(HandleInputs);
-	Engine->OnFrameRenderGui.Connect(DrawUI);
+	EngineInstance->OnFrameStart.Connect(HandleInputs);
+	EngineInstance->OnFrameRenderGui.Connect(DrawUI);
 
-	Engine->Start();
+	EngineInstance->Start();
 
-	delete Engine;
+	// After the Main Loop exits
+
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplSDL2_Shutdown();
+
+	// Engine destructor is called as the `EngineObject`'s scope terminates in `main`.
 }
 
-static void HandleCrash(SDL_Window* Window, std::string Error)
+static void handleCrash(SDL_Window* Window, std::string Error, std::string ExceptionType)
 {
 	auto fmtArgs = std::make_format_args(
+		ExceptionType,
 		Error,
 		"If this is the first time this has happened, please re-try. Otherwise, contact the developers."
 	);
 
-	Debug::Log(std::vformat("CRASH: {}", fmtArgs));
+	Debug::Log(std::vformat("CRASH - {}: {}", fmtArgs));
 
 	std::string errMessage = std::vformat(
-		"An unexpected error occurred, and the application will now close. Error details:\n\n{}\n\n{}",
+		"An unexpected error occurred, and the application will now close. Details:\n\nType: {}\nError: {}\n\n{}",
 		fmtArgs
 	);
 
@@ -456,40 +527,42 @@ static void HandleCrash(SDL_Window* Window, std::string Error)
 		SDL_MESSAGEBOX_ERROR,
 		"Engine error",
 		errMessage.c_str(),
-		Window
+		nullptr
 	);
 }
 
 int main(int argc, char** argv)
 {
-	SDL_Window* Window;
+	Debug::Log("Application initalization");
+
+	logSdlVersion();
+
+	SDL_Window* window = nullptr;
 
 	try
 	{
-		EngineObject* Engine = EngineObject::Get(Vector2(1280, 720), &Window);
+		EngineObject engine{};
+		EngineInstance = &engine;
+		window = engine.Window;
+
 		//Engine->MSAASamples = 2;
 
-		IMGUI_CHECKVERSION();
-		ImGui::CreateContext();
-
-		m_imGuiIO = &ImGui::GetIO();
-		(void)m_imGuiIO;
-		ImGui::StyleColorsDark();
-		ImGui_ImplSDL2_InitForOpenGL(Window, Engine->RendererContext->GLContext);
-		ImGui_ImplOpenGL3_Init("#version 460");
-
 		Application(argc, argv);
+
+		Debug::Log("Application closing...");
+
+		Debug::Save();
 	}
 	catch (std::string Error)
 	{
-		HandleCrash(Window, Error);
+		handleCrash(window, Error, "std::string");
 	}
 	catch (const char* Error)
 	{
-		HandleCrash(Window, Error);
+		handleCrash(window, Error, "const char*");
 	}
-	
-	Debug::Log("Application closing...");
-
-	Debug::Save();
+	catch (std::filesystem::filesystem_error Error)
+	{
+		handleCrash(window, Error.what(), "std::filesystem::filesystem_error");
+	}
 }

@@ -46,9 +46,13 @@ GameObject::~GameObject()
 		parent->RemoveChild(ObjectId);
 
 	for (GameObject* child : this->GetChildren())
-		delete child;
+		child->Destroy();
 
-	this->ObjectId = NULL_GAMEOBJECT_ID;
+	s_WorldArray.erase(this->ObjectId);
+
+	this->Parent = NULL_GAMEOBJECT_ID;
+	//this->ObjectId = NULL_GAMEOBJECT_ID;
+	this->ParentLocked = true;
 }
 
 bool GameObject::IsValidObjectClass(std::string const& ObjectClass)
@@ -77,7 +81,6 @@ void GameObject::Update(double DeltaTime)
 
 void GameObject::Destroy()
 {
-	s_WorldArray.erase(this->ObjectId);
 	delete this;
 }
 
@@ -133,6 +136,9 @@ void GameObject::RemoveChild(uint32_t id)
 
 GameObject* GameObject::GetParent()
 {
+	if (this->Parent == NULL_GAMEOBJECT_ID)
+		return nullptr;
+
 	auto it = s_WorldArray.find(this->Parent);
 
 	if (it == s_WorldArray.end())
@@ -146,6 +152,10 @@ GameObject* GameObject::GetParent()
 
 std::vector<GameObject*> GameObject::GetChildren()
 {
+	// 27/08/2024: A destroyed Object keeps getting destructed twice somewhere
+	if (this->ObjectId == NULL_GAMEOBJECT_ID)
+		return {};
+
 	std::vector<GameObject*> children;
 
 	for (auto& childEntry : this->m_children)

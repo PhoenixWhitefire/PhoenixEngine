@@ -4,10 +4,10 @@
 #include<SDL2/SDL.h>
 #include<glad/gl.h>
 #include<stb_image.h>
-#include<imgui/imgui_impl_sdl.h>
 #include<glm/matrix.hpp>
 #include<glm/gtc/type_ptr.hpp>
 #include<glm/gtc/matrix_transform.hpp>
+#include<imgui/backends/imgui_impl_sdl2.h>
 
 #include"Engine.hpp"
 
@@ -17,8 +17,6 @@
 #include"UserInput.hpp"
 #include"FileRW.hpp"
 #include"Debug.hpp"
-
-EngineObject* EngineObject::Singleton = nullptr;
 
 static uint32_t RectangleVAO, RectangleVBO;
 static auto ChronoStartTime = std::chrono::high_resolution_clock::now();
@@ -134,10 +132,8 @@ void EngineObject::SetIsFullscreen(bool Fullscreen)
 	SDL_SetWindowFullscreen(this->Window, this->IsFullscreen ? SDL_WINDOW_FULLSCREEN : m_SDLWindowFlags);
 }
 
-EngineObject::EngineObject(Vector2 WindowStartSize, SDL_Window** WindowPtr)
+EngineObject::EngineObject()
 {
-	EngineObject::Singleton = this;
-
 	// 15/08/2024:
 	// Hmm, this single commented-out line look like the remnants
 	//  of my first attempt trying to get behavior like we have
@@ -152,8 +148,8 @@ EngineObject::EngineObject(Vector2 WindowStartSize, SDL_Window** WindowPtr)
 	// 
 	//GameObject::GameObjectTable["Model"] = &Object_Model()
 
-	this->WindowSizeX = WindowStartSize.X;
-	this->WindowSizeY = WindowStartSize.Y;
+	const int InitialWindowSizeX = 1280, InitialWindowSizeY = 720;
+	this->WindowSizeX = InitialWindowSizeX, this->WindowSizeY = InitialWindowSizeY;
 
 	SDL_Init(SDL_INIT_VIDEO);
 	
@@ -170,7 +166,7 @@ EngineObject::EngineObject(Vector2 WindowStartSize, SDL_Window** WindowPtr)
 	this->Window = SDL_CreateWindow(
 		"Waiting on configuration...",
 		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-		(int)WindowStartSize.X, (int)WindowStartSize.Y,
+		InitialWindowSizeX, InitialWindowSizeY,
 		m_SDLWindowFlags
 	);
 
@@ -203,14 +199,13 @@ EngineObject::EngineObject(Vector2 WindowStartSize, SDL_Window** WindowPtr)
 
 	SDL_SetWindowTitle(this->Window, EngineJsonConfig.value("GameTitle", "PhoenixEngine").c_str());
 
-	if (WindowPtr)
-		*WindowPtr = this->Window;
-
 	if (!this->Window)
 	{
 		const char* errStr = SDL_GetError();
 		throw(std::vformat("SDL could not create the window: {}\n", std::make_format_args(errStr)));
 	}
+
+	Debug::Log("Window created.");
 
 	// TODO: Engine->MSAASamples does nothing, attempting to specify via below ctor's argument leads to
 	// OpenGL error "Target doesn't match the texture's target"
@@ -248,22 +243,8 @@ EngineObject::EngineObject(Vector2 WindowStartSize, SDL_Window** WindowPtr)
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 
 	ThreadManager::Get()->CreateWorkers(4, WorkerType::DefaultTaskWorker);
-}
 
-EngineObject* EngineObject::Get(Vector2 WindowStartSize, SDL_Window** WindowPtr)
-{
-	if (EngineObject::Singleton != nullptr)
-		return EngineObject::Singleton;
-	else
-		return new EngineObject(WindowStartSize, WindowPtr);
-}
-
-EngineObject* EngineObject::Get()
-{
-	if (EngineObject::Singleton != nullptr)
-		return EngineObject::Singleton;
-	else
-		return new EngineObject(Vector2(800, 800), nullptr);
+	Debug::Log("Engine constructed.");
 }
 
 static std::vector<LightData_t> compileLightData(GameObject* RootObject)
@@ -381,9 +362,9 @@ void EngineObject::Start()
 	// wtf are these
 	// 13/07/2024
 	double LastTime = this->RunningTime;
-	float LastFrame = GetRunningTime();
+	double LastFrame = GetRunningTime();
 	double FrameStart = 0.0f;
-	float LastSecond = LastFrame;
+	double LastSecond = LastFrame;
 
 	this->Exit = false;
 
@@ -516,13 +497,13 @@ void EngineObject::Start()
 
 		// Wait the appropriate amount of time between frames
 		if (!VSync && (FrameDelta < FpsCapDelta))
-			SDL_Delay((FpsCapDelta - FrameDelta) * 1000);
+			SDL_Delay(static_cast<uint32_t>((FpsCapDelta - FrameDelta) * 1000));
 
 		double DeltaTime = RunningTime - LastTime;
 		LastTime = RunningTime;
 		FrameStart = RunningTime;
 
-		this->OnFrameStart.Fire(std::make_tuple(this, DeltaTime, RunningTime));
+		this->OnFrameStart.Fire(DeltaTime);
 
 		while (SDL_PollEvent(&PollingEvent) != 0)
 		{
@@ -656,7 +637,7 @@ void EngineObject::Start()
 
 		glDisable(GL_DEPTH_TEST);
 
-		this->OnFrameRenderGui.Fire(std::make_tuple(this, DeltaTime, RunningTime));
+		this->OnFrameRenderGui.Fire(DeltaTime);
 
 		glEnable(GL_DEPTH_TEST);
 
@@ -687,10 +668,10 @@ void EngineObject::Start()
 				glUniform1f(BlurVignetteStrength, (float)EngineJsonConfig["postfx_blurvignette_blurstrength"]);
 				glUniform1f(BlurVignetteDistMul, (float)EngineJsonConfig["postfx_blurvignette_weightexp"]);
 				glUniform1f(BlurVignetteDistExp, (float)EngineJsonConfig["postfx_blurvignette_weightmul"]);
-				glUniform1i(BlurVignetteSampleRadius, (float)EngineJsonConfig["postfx_blurvignette_sampleradius"]);
+				glUniform1i(BlurVignetteSampleRadius, (int)EngineJsonConfig["postfx_blurvignette_sampleradius"]);
 			}
 
-			glUniform1f(TimeLoc, RunningTime);
+			glUniform1f(TimeLoc, static_cast<float>(RunningTime));
 			
 			glActiveTexture(GL_TEXTURE2);
 			glBindTexture(GL_TEXTURE_2D, DistortionTexture->Identifier);
@@ -729,7 +710,7 @@ void EngineObject::Start()
 
 		this->m_DrawnFramesInSecond++;
 
-		this->OnFrameEnd.Fire(std::make_tuple(this, this->FrameTime, GetRunningTime()));
+		this->OnFrameEnd.Fire(DeltaTime);
 
 		if (RunningTime - LastSecond > 1.0f)
 		{
@@ -738,6 +719,8 @@ void EngineObject::Start()
 			this->FramesPerSecond = this->m_DrawnFramesInSecond;
 
 			this->m_DrawnFramesInSecond = -1;
+
+			Debug::Save();
 		}
 	}
 
@@ -750,8 +733,18 @@ EngineObject::~EngineObject()
 
 	ShaderProgram::ClearAll();
 
-	delete this->DataModel;
 	delete this->RendererContext;
 
+	// TODO:
+	// 27/08/2024:
+	// Even if I call the destructors here and clear the vector as well,
+	// C++ *still* calls them again at program exit as the scope terminates.
+	// It doesn't cause a use-after-free, YET
+	delete this->DataModel;
+	GameObject::s_DataModel = nullptr;
+	this->Workspace = nullptr;
+	this->DataModel = nullptr;
+
 	SDL_DestroyWindow(this->Window);
+	SDL_Quit();
 }

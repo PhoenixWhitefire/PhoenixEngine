@@ -6,71 +6,69 @@
 #include<functional>
 #include<vector>
 
-template <class _ptype> class EventConnection
+template <class T> class EventConnection
 {
 public:
-	EventConnection(std::function<void(_ptype)> Function);
+	EventConnection(std::function<void(T)> Function);
 
 	void Disconnect();
-	void Fire(_ptype Value);
+	void Fire(T Value);
 
 	bool Connected = true;
+
 private:
-	std::function<void(_ptype)> m_fnConnectedFunction;
+	std::function<void(T)> m_Callback;
 };
 
-template <class ParamType> class Event
+template <class T> class EventSignal
 {
 public:
-	EventConnection<ParamType> Connect(std::function<void(ParamType)> Function);
+	EventConnection<T> Connect(std::function<void(T)> Function);
 	void DisconnectAll();
-	void Fire(ParamType Value);
+	void Fire(T Value);
 
-	std::vector<EventConnection<ParamType>> GetConnections();
+	std::vector<EventConnection<T>> GetConnections();
 
 private:
-	std::vector<EventConnection<ParamType>> m_vcConnections;
+	std::vector<EventConnection<T>> m_Connections;
 };
 
-template <class _ptype> EventConnection<_ptype>::EventConnection(std::function<void(_ptype)> Function)
+template <class T> EventConnection<T>::EventConnection(std::function<void(T)> function)
+	: m_Callback(function)
 {
-	this->m_fnConnectedFunction = Function;
 }
 
-template <class _ptype> void EventConnection<_ptype>::Disconnect()
+template <class T> void EventConnection<T>::Disconnect()
 {
 	this->Connected = false;
 }
 
-template <class _ptype> void EventConnection<_ptype>::Fire(_ptype Value)
+template <class T> void EventConnection<T>::Fire(T Value)
 {
-	this->m_fnConnectedFunction(Value);
+	m_Callback(Value);
 }
 
-template <class ParamType> EventConnection<ParamType> Event<ParamType>::Connect(std::function<void(ParamType)> Function)
+template <class T> EventConnection<T> EventSignal<T>::Connect(std::function<void(T)> function)
 {
-	EventConnection<ParamType> NewConnection = EventConnection<ParamType>(Function);
+	EventConnection<T> newConnection = EventConnection<T>(function);
+	m_Connections.push_back(newConnection);
 
-	this->m_vcConnections.push_back(NewConnection);
-
-	return NewConnection;
+	return newConnection;
 }
 
-template <class ParamType> void Event<ParamType>::DisconnectAll()
+template <class T> void EventSignal<T>::DisconnectAll()
 {
-	for (int Index = 0; Index < this->m_vcConnections.size(); Index++) {
-		this->m_vcConnections[Index].Disconnect();
-	}
+	for (int Index = 0; Index < m_Connections.size(); Index++)
+		m_Connections[Index].Disconnect();
 }
 
-template <class ParamType> void Event<ParamType>::Fire(ParamType Value)
+template <class T> void EventSignal<T>::Fire(T Value)
 {
-	for (int Index = 0; Index < this->m_vcConnections.size(); Index++) {
-		((EventConnection<ParamType>)this->m_vcConnections[Index]).Fire(Value);
-	}
+	for (int Index = 0; Index < m_Connections.size(); Index++)
+		((EventConnection<T>)m_Connections[Index]).Fire(Value);
 }
 
-template <class ParamType> std::vector<EventConnection<ParamType>> Event<ParamType>::GetConnections()
+template <class T> std::vector<EventConnection<T>> EventSignal<T>::GetConnections()
 {
-	return this->m_vcConnections;
+	return m_Connections;
 }
