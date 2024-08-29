@@ -7,7 +7,7 @@
 #include<vector>
 #include<string>
 #include<unordered_map>
-#include<nljson.h>
+#include<nljson.hpp>
 
 #include"Reflection.hpp"
 #include"datatype/Vector3.hpp"

@@ -135,12 +135,14 @@ void Editor::RenderUI()
 		}
 	}
 
+	int nItems = static_cast<int>(CurrentUIHierarchyRoot->GetChildren().size() + 1);
+
 	ImGui::ListBox(
 		std::vformat("Children of {}", std::make_format_args(CurrentUIHierarchyRoot->Name)).c_str(),
 		&this->hierarchyCurItem,
 		&ImGuiHierarchyItemsGetter,
 		nullptr,
-		-1
+		nItems
 	);
 
 	GameObject* selected = CurrentUIHierarchyRoot;

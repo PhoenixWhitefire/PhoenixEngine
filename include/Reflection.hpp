@@ -123,7 +123,8 @@ namespace Reflection
 		Integer,
 		Color,
 		Vector3,
-		Pointer,
+		Matrix,
+		GameObject,
 		// 12/08/2024:
 		// Yep, it's all coming together now...
 		// Why have a GenericValueArray, when a GenericValue can simply BE an Array?
@@ -152,7 +153,6 @@ namespace Reflection
 		GenericValue(double);
 		GenericValue(int);
 		GenericValue(uint32_t);
-		GenericValue(void*);
 
 		std::string ToString() const;
 

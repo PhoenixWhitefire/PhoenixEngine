@@ -1,7 +1,7 @@
 #pragma once
 
 #include<filesystem>
-#include<nljson.h>
+#include<nljson.hpp>
 
 #include"gameobject/GameObjects.hpp"
 

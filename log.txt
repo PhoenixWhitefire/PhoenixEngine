@@ -1,6 +1,6 @@
 Application initalization
 SDL version:
-	Compiled with: 2.0.22
+	Compiled with: 2.30.6
 	Current: 2.30.6
 Window created.
 Running OpenGL version 4.6
@@ -15,3 +15,8 @@ Loaded map file 'levels/dev.world'
 Editor init done
 Final initializations...
 Main program loop start...
+Workspace was Destroyed, shutting down
+Main loop exited
+Engine destructing...
+DataModel destructing...
+Application closing...

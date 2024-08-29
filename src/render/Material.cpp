@@ -1,5 +1,5 @@
 #include<format>
-#include<nljson.h>
+#include<nljson.hpp>
 
 #include"render/Material.hpp"
 #include"FileRW.hpp"

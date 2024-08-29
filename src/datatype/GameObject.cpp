@@ -48,6 +48,8 @@ GameObject::~GameObject()
 	for (GameObject* child : this->GetChildren())
 		child->Destroy();
 
+	m_children.clear();
+
 	s_WorldArray.erase(this->ObjectId);
 
 	this->Parent = NULL_GAMEOBJECT_ID;

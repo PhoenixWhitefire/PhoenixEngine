@@ -1,6 +1,6 @@
 // TODO: cleanup code!
 
-#include<nljson.h>
+#include<nljson.hpp>
 #include<SDL2/SDL_messagebox.h>
 #include<SDL2/SDL_video.h>
 #include<glm/gtc/matrix_transform.hpp>

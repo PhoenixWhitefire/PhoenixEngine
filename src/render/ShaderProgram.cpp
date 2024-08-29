@@ -1,6 +1,6 @@
 #include<format>
 #include<glad/gl.h>
-#include<nljson.h>
+#include<nljson.hpp>
 
 #include"render/ShaderProgram.hpp"
 #include"FileRW.hpp"

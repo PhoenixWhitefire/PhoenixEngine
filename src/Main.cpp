@@ -549,9 +549,7 @@ int main(int argc, char** argv)
 
 		Application(argc, argv);
 
-		Debug::Log("Application closing...");
-
-		Debug::Save();
+		Debug::Save(); // in case FileRW::WriteFile throws an exception
 	}
 	catch (std::string Error)
 	{
@@ -565,4 +563,8 @@ int main(int argc, char** argv)
 	{
 		handleCrash(window, Error.what(), "std::filesystem::filesystem_error");
 	}
+
+	Debug::Log("Application closing...");
+
+	Debug::Save();
 }

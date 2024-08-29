@@ -1,5 +1,5 @@
 #pragma once
 
-#include<nljson.h>
+#include<nljson.hpp>
 
 extern nlohmann::json EngineJsonConfig;

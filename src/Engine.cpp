@@ -442,7 +442,7 @@ void EngineObject::Start()
 
 	while (!(this->Exit || this->DataModel->WantExit))
 	{
-		if (this->Workspace->ObjectId == NULL_GAMEOBJECT_ID)
+		if (!DataModel->GetChildOfClass("Workspace"))
 		{
 			Debug::Log("Workspace was Destroyed, shutting down");
 			break;

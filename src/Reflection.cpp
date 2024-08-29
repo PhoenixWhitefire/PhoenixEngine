@@ -35,11 +35,6 @@ Reflection::GenericValue::GenericValue(uint32_t i)
 {
 }
 
-Reflection::GenericValue::GenericValue(void* p)
-	: Type(ValueType::Pointer), Pointer(p)
-{
-}
-
 std::string Reflection::GenericValue::ToString() const
 {
 	switch (this->Type)
@@ -190,7 +185,7 @@ Reflection::Reflectable::Reflectable()
 	Reflectable::ApiReflection = new Reflection::ReflectionInfo();
 }
 
-static const char* valueTypeNames[static_cast<int>(Reflection::ValueType::_count)] =
+static const char* valueTypeNames[] =
 {
 		"None",
 		"String",
@@ -199,12 +194,14 @@ static const char* valueTypeNames[static_cast<int>(Reflection::ValueType::_count
 		"Integer",
 		"Color",
 		"Vector3",
+		"Matrix",
+		"GameObject",
 		"Array",
 		"Map"
 };
 
 static_assert(
-	std::size(valueTypeNames) == (int)Reflection::ValueType::_count,
+	std::size(valueTypeNames) == (static_cast<uint32_t>(Reflection::ValueType::_count)),
 	"`ValueTypeNames` does not have the same number of elements as `ValueType`"
 );
 
