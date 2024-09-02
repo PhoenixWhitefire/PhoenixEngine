@@ -87,7 +87,7 @@ void EBO::Delete() const
 	glDeleteBuffers(1, &this->ID);
 }
 
-FBO::FBO(SDL_Window* Window, int Width, int Height, int MSSamples, bool AttachRenderBuffer)
+FBO::FBO(int Width, int Height, int MSSamples, bool AttachRenderBuffer)
 {
 	this->MSAASamples = MSSamples;
 

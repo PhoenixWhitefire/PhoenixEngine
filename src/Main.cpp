@@ -12,7 +12,7 @@ Anyway, here is a small tour:
 
 - All shader files have a file extension of one of the following: .vert, .frag
 - The "main" shaders are the two worldUber.vert and worldUber.frag ones
-- "phoenix.conf" contains some configuration. Set "developer" to "false" to disable the debug UIs.
+- "phoenix.conf" contains some configuration. Set "Developer" to "false" to disable the debug UIs.
 - WASD to move horizontally, Q/E to move down/up. Left-click to look around. Right-click to stop. LShift to move slower.
 - Hold `R` to disable distance culling
 - Press `J` to dump object hierarchy. `I` to dump GameObject API.
@@ -32,12 +32,13 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 #include<glm/gtx/vector_angle.hpp>
 #include<SDL2/SDL_revision.h>
 
-#include"editor/editor.hpp"
 #include"Engine.hpp"
-#include"UserInput.hpp"
 #include"GlobalJsonConfig.hpp"
+#include"SceneFormat.hpp"
+#include"UserInput.hpp"
 #include"FileRW.hpp"
 #include"Debug.hpp"
+#include"editor/editor.hpp"
 
 static bool FirstDragFrame = false;
 
@@ -116,8 +117,8 @@ static void HandleInputs(Reflection::GenericValue Data)
 {
 	double DeltaTime = Data.Double;
 
-	if (EngineJsonConfig.value("developer", false))
-		EditorContext->Update(DeltaTime, EngineInstance->Workspace->GetSceneCamera()->Matrix);
+	if (EngineJsonConfig.value("Developer", false))
+		EditorContext->Update(DeltaTime, EngineInstance->Workspace->GetSceneCamera()->Transform);
 
 	Object_Camera* Camera = EngineInstance->Workspace->GetSceneCamera();
 
@@ -152,7 +153,7 @@ static void HandleInputs(Reflection::GenericValue Data)
 		if (UserInput::IsKeyDown(SDLK_e))
 			Displacement += Vector3(0, DisplacementSpeed, 0);
 
-		Camera->Matrix = glm::translate(Camera->Matrix, glm::vec3((glm::tvec3<double>)Displacement));
+		Camera->Transform = glm::translate(Camera->Transform, glm::vec3((glm::tvec3<double>)Displacement));
 	}
 
 	int mouseX;
@@ -210,9 +211,9 @@ static void HandleInputs(Reflection::GenericValue Data)
 
 		CamForward = glm::rotate(CamForward, glm::radians(-RotationY), UpVec);
 
-		glm::tvec3<double, glm::highp> Position{ Camera->Matrix[3] };
+		glm::tvec3<double, glm::highp> Position{ Camera->Transform[3] };
 
-		Camera->Matrix = glm::lookAt(Position, Position + CamForward, UpVec);
+		Camera->Transform = glm::lookAt(Position, Position + CamForward, UpVec);
 
 		// Keep the mouse in the window.
 		// Teleport it to the other side if it hits the edge.
@@ -276,22 +277,37 @@ static void HandleInputs(Reflection::GenericValue Data)
 		PreviouslyPressingF11 = false;
 }
 
-static char* LevelPathBuf;
+static char* LevelLoadPathBuf;
+static char* LevelSavePathBuf;
 
 static void LoadLevel(const std::string& LevelPath)
 {
+	Debug::Log(std::vformat("Loading scene: '{}'", std::make_format_args(LevelPath)));
+
 	GameObject* workspace = GameObject::s_DataModel->GetChild("Workspace");
 
-	GameObject* prevModel = workspace->GetChild("LevelModel");
+	GameObject* prevModel = workspace->GetChild("Level");
 
 	if (prevModel)
-		delete prevModel;
+		prevModel->Destroy();
 
 	GameObject* levelModel = GameObject::CreateGameObject("Model");
 	levelModel->Name = "Level";
 	levelModel->SetParent(workspace);
 
-	MapLoader::LoadMapIntoObject(LevelPath, levelModel);
+	bool loadSuccess = true;
+
+	std::vector<GameObject*> Objects = SceneFormat::Deserialize(FileRW::ReadFile(LevelPath), &loadSuccess);
+
+	if (loadSuccess)
+	{
+		for (GameObject* object : Objects)
+			object->SetParent(levelModel);
+	}
+	else
+		throw("Failed to load level: " + SceneFormat::GetLastErrorString());
+
+	//MapLoader::LoadMapIntoObject(LevelPath, levelModel);
 }
 
 static void DrawUI(Reflection::GenericValue Data)
@@ -315,7 +331,7 @@ static void DrawUI(Reflection::GenericValue Data)
 
 	if (UserInput::IsKeyDown(SDLK_l) && !IsInputBeingSunk)
 	{
-		Debug::Log("Dumping GameObject API...\n");
+		Debug::Log("Dumping GameObject API...");
 
 		auto dump = GameObject::DumpApiToJson();
 		FileRW::WriteFile("apidump.json", dump.dump(2), false);
@@ -323,18 +339,63 @@ static void DrawUI(Reflection::GenericValue Data)
 		Debug::Log("API dump finished");
 	}
 
-	if (EngineJsonConfig["developer"] == true)
+	if (EditorContext)
 	{
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplSDL2_NewFrame();
 		ImGui::NewFrame();
 
-		ImGui::Begin("Load level");
+		ImGui::Begin("Level");
 
-		ImGui::InputText("Load level", LevelPathBuf, 64);
+		static std::string saveMessage;
+		static double saveMessageTimeLeft;
+
+		ImGui::InputText("Save target", LevelSavePathBuf, 64);
+
+		if (ImGui::Button("Save"))
+		{
+			GameObject* levelModel = EngineInstance->Workspace->GetChild("Level");
+
+			if (levelModel)
+			{
+				std::string levelSavePath(LevelSavePathBuf);
+
+				bool alreadyExists = false;
+				std::string prevFile = FileRW::ReadFile(levelSavePath, &alreadyExists);
+
+				if (alreadyExists && prevFile.find("#Version 02.00") == std::string::npos)
+				{
+					// V2 does not have full parity with V1 as of 02/09/2024
+					// (models)
+					saveMessage = "Not saving as that file already exists as a V1";
+					saveMessageTimeLeft = 1.5;
+				}
+				else
+				{
+					std::string serialized = SceneFormat::Serialize(levelModel->GetChildren(), LevelLoadPathBuf);
+					FileRW::WriteFile(levelSavePath, serialized, true);
+
+					saveMessage = std::vformat("Saved as '{}'", std::make_format_args(levelSavePath));
+					saveMessageTimeLeft = 1.f;
+				}
+			}
+			else
+			{
+				saveMessage = "Save failed as Workspace had no `Level` child";
+				saveMessageTimeLeft = 1.f;
+			}
+		}
+
+		if (saveMessageTimeLeft > 0.f)
+		{
+			ImGui::Text(saveMessage.c_str());
+			saveMessageTimeLeft -= Data.AsDouble();
+		}
+
+		ImGui::InputText("Load target", LevelLoadPathBuf, 64);
 
 		if (ImGui::Button("Load"))
-			LoadLevel(LevelPathBuf);
+			LoadLevel(LevelLoadPathBuf);
 
 		ImGui::End();
 
@@ -426,7 +487,7 @@ static void Application(int argc, char** argv)
 	int imGuiVersionNum = IMGUI_VERSION_NUM;
 
 	Debug::Log(std::vformat(
-		"Initializing ImGui {} (#{})",
+		"Initializing ImGui {} (#{})...",
 		std::make_format_args(imGuiVersion, imGuiVersionNum)
 	));
 
@@ -458,19 +519,31 @@ static void Application(int argc, char** argv)
 	ImGui_ImplSDL2_InitForOpenGL(EngineInstance->Window, EngineInstance->RendererContext->GLContext);
 	ImGui_ImplOpenGL3_Init("#version 460");
 
-	Debug::Log("ImGui initialized.");
-
-	EditorContext = EngineJsonConfig.value("developer", false) ? new Editor() : nullptr;
+	EditorContext = EngineJsonConfig.value("Developer", false) ? new Editor() : nullptr;
 	
-	LevelPathBuf = (char*)malloc(64);
+	LevelLoadPathBuf = (char*)malloc(64);
+	LevelSavePathBuf = (char*)malloc(64);
 
-	if (!LevelPathBuf)
-		throw("Could not allocate buffer for Level Path");
+	if (!LevelLoadPathBuf)
+		throw("Could not allocate buffer for Level load path");
+
+	if (!LevelSavePathBuf)
+		throw("Could not allocate buffer for Level save path");
+
+	static const char* defaultLoadLevel = "levels/dev.world";
+	static const char* defaultSaveLevel = "levels/save.world";
 
 	for (int i = 0; i < 64; i++)
-		LevelPathBuf[i] = '\0';
+		LevelLoadPathBuf[i] = i < strlen(defaultLoadLevel)
+								? defaultLoadLevel[i]
+								: '\0';
 
-	const char* mapFileFromArgs;
+	for (int i = 0; i < 64; i++)
+		LevelSavePathBuf[i] = i < strlen(defaultSaveLevel)
+								? defaultSaveLevel[i]
+								: '\0';
+
+	const char* mapFileFromArgs{};
 	bool hasMapFromArgs = false;
 
 	int mapFileArgIdx = FindArgumentInCliArgs(argc, argv, "-loadmap");
@@ -508,7 +581,7 @@ static void Application(int argc, char** argv)
 	// Engine destructor is called as the `EngineObject`'s scope terminates in `main`.
 }
 
-static void handleCrash(SDL_Window* Window, std::string Error, std::string ExceptionType)
+static void handleCrash(std::string Error, std::string ExceptionType)
 {
 	auto fmtArgs = std::make_format_args(
 		ExceptionType,
@@ -533,7 +606,7 @@ static void handleCrash(SDL_Window* Window, std::string Error, std::string Excep
 
 int main(int argc, char** argv)
 {
-	Debug::Log("Application initalization");
+	Debug::Log("Application initializing...");
 
 	logSdlVersion();
 
@@ -553,15 +626,15 @@ int main(int argc, char** argv)
 	}
 	catch (std::string Error)
 	{
-		handleCrash(window, Error, "std::string");
+		handleCrash(Error, "std::string");
 	}
 	catch (const char* Error)
 	{
-		handleCrash(window, Error, "const char*");
+		handleCrash(Error, "const char*");
 	}
 	catch (std::filesystem::filesystem_error Error)
 	{
-		handleCrash(window, Error.what(), "std::filesystem::filesystem_error");
+		handleCrash(Error.what(), "std::filesystem::filesystem_error");
 	}
 
 	Debug::Log("Application closing...");

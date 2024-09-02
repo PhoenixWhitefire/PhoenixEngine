@@ -25,7 +25,7 @@ namespace IntersectionLib
 	struct HittableObject
 	{
 		Mesh* CollisionMesh = nullptr;
-		glm::mat4 Matrix = glm::mat4(1.0f);
+		glm::mat4 Transform = glm::mat4(1.0f);
 		uint32_t Id = 0;
 	};
 

@@ -2,13 +2,13 @@
 
 RegisterDerivedObject<Object_Model> Object_Model::RegisterClassAs("Model");
 
-static bool didInitReflection = false;
+static bool s_DidInitReflection = false;
 
 void Object_Model::s_DeclareReflections()
 {
-	if (didInitReflection)
-		//return;
-	didInitReflection = true;
+	if (s_DidInitReflection)
+		return;
+	s_DidInitReflection = true;
 
 	REFLECTION_INHERITAPI(GameObject);
 }

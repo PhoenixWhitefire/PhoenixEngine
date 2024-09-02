@@ -1,19 +1,19 @@
 #include"gameobject/MeshObject.hpp"
 
 RegisterDerivedObject<Object_Mesh> Object_Mesh::RegisterClassAs("Mesh");
-bool Object_Mesh::s_DidInitReflection = false;
+static bool s_DidInitReflection = false;
 
 void Object_Mesh::s_DeclareReflections()
 {
 	if (s_DidInitReflection)
-		//return;
+		return;
 	s_DidInitReflection = true;
+
+	REFLECTION_INHERITAPI(GameObject);
+	REFLECTION_INHERITAPI(Base3D);
 
 	// TODO: asset reloading
 	REFLECTION_DECLAREPROP_SIMPLE(Object_Mesh, Asset, String);
-
-	REFLECTION_INHERITAPI(Object_Base3D);
-	REFLECTION_INHERITAPI(GameObject);
 }
 
 Object_Mesh::Object_Mesh()

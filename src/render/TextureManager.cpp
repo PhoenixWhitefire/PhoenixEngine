@@ -15,7 +15,7 @@ static const std::string TexLoadErr =
 
 TextureManager* TextureManager::Singleton = new TextureManager();
 
-typedef std::function<Texture*(TextureManager*, Texture*)> AsyncTexT;
+typedef std::function<Texture*(TextureManager*, Texture*, std::string)> AsyncTexT;
 
 static void registerTexture(Texture* texture)
 {
@@ -137,10 +137,10 @@ uint8_t* TextureManager::LoadImageData(const char* ImagePath, int* ImageWidth, i
 	return ImageData;
 }
 
-static Texture* asyncTextureLoader(TextureManager* Manager, Texture* Image)
+static Texture* asyncTextureLoader(TextureManager* Manager, Texture* Image, std::string ActualPath)
 {
 	uint8_t* Data = Manager->LoadImageData(
-		Image->ImagePath.c_str(),
+		ActualPath.c_str(),
 		&Image->ImageWidth,
 		&Image->ImageHeight,
 		&Image->ImageNumColorChannels
@@ -153,7 +153,7 @@ static Texture* asyncTextureLoader(TextureManager* Manager, Texture* Image)
 	return Image;
 }
 
-Texture* TextureManager::LoadTextureFromPath(std::string Path, bool ShouldLoadAsync)
+Texture* TextureManager::LoadTextureFromPath(const std::string& Path, bool ShouldLoadAsync)
 {
 	std::string ResDir = EngineJsonConfig["ResourcesDirectory"];
 	std::string ActualPath = ResDir + Path;
@@ -163,11 +163,10 @@ Texture* TextureManager::LoadTextureFromPath(std::string Path, bool ShouldLoadAs
 	if (it == m_Textures.end())
 	{
 		Texture* texture = new Texture();
+		texture->ImagePath = Path;
 
 		if (Path != MissingTexPath)
 			texture->Identifier = this->LoadTextureFromPath(MissingTexPath, false)->Identifier;
-
-		texture->ImagePath = ActualPath;
 
 		m_Textures.insert(std::pair(Path, texture));
 
@@ -185,9 +184,9 @@ Texture* TextureManager::LoadTextureFromPath(std::string Path, bool ShouldLoadAs
 			std::promise<Texture*>* promise = new std::promise<Texture*>();
 
 			std::thread(
-				[promise, this, texture](AsyncTexT loader)
+				[promise, this, texture, ActualPath](AsyncTexT loader)
 				{
-					promise->set_value_at_thread_exit(loader(this, texture));
+					promise->set_value_at_thread_exit(loader(this, texture, ActualPath));
 				}
 			, asyncTextureLoader).detach();
 
@@ -223,7 +222,7 @@ void TextureManager::FinalizeAsyncLoadedTextures()
 	{
 		auto f = promise->get_future();
 
-		if (!f._Is_ready())
+		if (!f.valid())
 			continue;
 
 		Texture* image = f.get();

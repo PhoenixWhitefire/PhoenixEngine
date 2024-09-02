@@ -95,13 +95,7 @@ ModelLoader::ModelLoader(const char* ModelPath, GameObject* Parent)
 			m3d->Material = RenderMaterial::GetMaterial(modelPathString);
 		else
 		{
-			m3d->Material = new RenderMaterial();
-
-			m3d->Material->DiffuseTextures.clear();
-			m3d->Material->SpecularTextures.clear();
-
-			mo->Matrix = this->MeshMatrices[MeshIndex];
-			mo->Size = this->MeshScales[MeshIndex];
+			nlohmann::json materialJson{};
 
 			for (int tix = 0; tix < this->MeshTextures[MeshIndex].size(); tix++)
 			{
@@ -112,13 +106,19 @@ ModelLoader::ModelLoader(const char* ModelPath, GameObject* Parent)
 
 				case (MaterialTextureType::Diffuse):
 				{
-					m3d->Material->DiffuseTextures.push_back(tex);
+					//m3d->Material->DiffuseTextures.push_back(tex);
+
+					materialJson["albedo"] = std::string("/") + tex->ImagePath;
+
 					break;
 				}
 
 				case (MaterialTextureType::Specular):
 				{
-					m3d->Material->SpecularTextures.push_back(tex);
+					//m3d->Material->SpecularTextures.push_back(tex);
+
+					materialJson["specular"] = std::string("/") + tex->ImagePath;
+
 					break;
 				}
 
@@ -127,14 +127,19 @@ ModelLoader::ModelLoader(const char* ModelPath, GameObject* Parent)
 
 				}
 			}
+
+			FileRW::WriteFile("materials/" + modelPathString + ".mtl", materialJson.dump(2), true);
+
+			mo->Material = RenderMaterial::GetMaterial(modelPathString);
 		}
+
+		mo->Transform = this->MeshMatrices[MeshIndex];
+		mo->Size = this->MeshScales[MeshIndex];
 		
 		//mo->Textures = this->MeshTextures[MeshIndex];
 
 		if (Parent != nullptr)
-		{
 			M->SetParent(Parent);
-		}
 	}
 
 	// TODO: fix matrices
@@ -173,9 +178,13 @@ void ModelLoader::LoadMesh(uint32_t indMesh, glm::vec3 Translation, glm::quat Ro
 
 	Mesh NewMesh = Mesh(vertices, indices);
 
+	// TODO 30/08/2024 (also in Mesh.hpp)
+	// Yes, this,
+	// All of it
+	// Kill it with hammers
 	NewMesh.Matrix = matrix;
 	NewMesh.Translation = Translation;
-	//NewMesh.Rotation = Rotation;
+	NewMesh.Rotation = Rotation;
 	NewMesh.Scale = Scale;
 
 	// Combine the vertices, indices, and textures into a mesh

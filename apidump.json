@@ -5,33 +5,37 @@
     "Enabled": "Bool",
     "FieldOfView": "Double",
     "GenericMovement": "Bool",
+    "Matrix": "Matrix",
     "Name": "String",
-    "ObjectId": "Integer",
-    "Position": "Vector3"
+    "ObjectId": "Integer"
   },
   "DataModel": {
     "ClassName": "String",
-    "Close": "() -> ()",
     "Destroy": "() -> ()",
     "Enabled": "Bool",
     "Name": "String",
     "ObjectId": "Integer"
   },
   "DirectionalLight": {
-    "Brightness": "Double",
-    "Direction": "Vector3",
-    "LightColor": "Color",
-    "Shadows": "Bool"
+    "ClassName": "String",
+    "Destroy": "() -> ()",
+    "Enabled": "Bool",
+    "Name": "String",
+    "ObjectId": "Integer"
+  },
+  "GameObject": {
+    "ClassName": "String",
+    "Destroy": "() -> ()",
+    "Enabled": "Bool",
+    "Name": "String",
+    "ObjectId": "Integer"
   },
   "Mesh": {
-    "Asset": "String",
-    "ColorRGB": "Color",
-    "FaceCulling": "Integer",
-    "Material": "String",
-    "Position": "Vector3",
-    "Reflectivity": "Double",
-    "Size": "Vector3",
-    "Transparency": "Double"
+    "ClassName": "String",
+    "Destroy": "() -> ()",
+    "Enabled": "Bool",
+    "Name": "String",
+    "ObjectId": "Integer"
   },
   "Model": {
     "ClassName": "String",
@@ -41,44 +45,38 @@
     "ObjectId": "Integer"
   },
   "ParticleEmitter": {
-    "EmitterEnabled": "Bool",
-    "Lifetime": "Vector3",
-    "MaxParticles": "Integer",
-    "Offset": "Vector3",
-    "Rate": "Integer"
+    "ClassName": "String",
+    "Destroy": "() -> ()",
+    "Enabled": "Bool",
+    "Name": "String",
+    "ObjectId": "Integer"
   },
   "PointLight": {
-    "Brightness": "Double",
-    "LightColor": "Color",
-    "Position": "Vector3",
-    "Range": "Double",
-    "Shadows": "Bool"
+    "ClassName": "String",
+    "Destroy": "() -> ()",
+    "Enabled": "Bool",
+    "Name": "String",
+    "ObjectId": "Integer"
   },
   "Primitive": {
-    "ColorRGB": "Color",
-    "FaceCulling": "Integer",
-    "Material": "String",
-    "Position": "Vector3",
-    "Reflectivity": "Double",
-    "Shape": "Integer",
-    "Size": "Vector3",
-    "Transparency": "Double"
+    "ClassName": "String",
+    "Destroy": "() -> ()",
+    "Enabled": "Bool",
+    "Name": "String",
+    "ObjectId": "Integer"
   },
   "SpotLight": {
-    "Brightness": "Double",
-    "InnerCone": "Double",
-    "LightColor": "Color",
-    "OuterCone": "Double",
-    "Position": "Vector3",
-    "Range": "Double",
-    "Shadows": "Bool"
+    "ClassName": "String",
+    "Destroy": "() -> ()",
+    "Enabled": "Bool",
+    "Name": "String",
+    "ObjectId": "Integer"
   },
   "Workspace": {
     "ClassName": "String",
     "Destroy": "() -> ()",
     "Enabled": "Bool",
     "Name": "String",
-    "ObjectId": "Integer",
-    "SceneCamera": "String"
+    "ObjectId": "Integer"
   }
 }

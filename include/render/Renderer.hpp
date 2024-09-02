@@ -15,12 +15,13 @@
 struct MeshData_t
 {
 	Mesh* MeshData = nullptr;
-	RenderMaterial* Material = nullptr;
+	glm::mat4 Transform = glm::mat4(1.0f);
 	Vector3 Size;
+	RenderMaterial* Material = nullptr;
 	Color TintColor;
 	float Transparency = 0.f;
 	float Reflectivity = 0.f;
-	glm::mat4 Matrix = glm::mat4(1.0f);
+	
 	FaceCullingMode FaceCulling = FaceCullingMode::BackFace;
 };
 
@@ -64,7 +65,7 @@ public:
 		Mesh* Object,
 		ShaderProgram* Shaders,
 		Vector3 Size,
-		glm::mat4 Matrix = glm::mat4(1.0f),
+		glm::mat4 Transform = glm::mat4(1.0f),
 		FaceCullingMode Culling = FaceCullingMode::BackFace
 	);
 

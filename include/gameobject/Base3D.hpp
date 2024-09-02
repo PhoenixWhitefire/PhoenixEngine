@@ -18,7 +18,7 @@ public:
 
 	virtual Mesh* GetRenderMesh();
 
-	glm::mat4 Matrix = glm::mat4(1.0f);
+	glm::mat4 Transform = glm::mat4(1.0f);
 	Vector3 Size = Vector3(1.0f, 1.0f, 1.0f);
 
 	Vector3 LinearVelocity;
@@ -36,10 +36,12 @@ public:
 
 	FaceCullingMode FaceCulling = FaceCullingMode::BackFace;
 
+	PHX_GAMEOBJECT_API_REFLECTION;
+
 protected:
 	Mesh RenderMesh;
 
 private:
 	static void s_DeclareReflections();
-	static bool s_DidInitReflection;
+	static inline Api s_Api{};
 };

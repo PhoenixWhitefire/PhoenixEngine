@@ -8,9 +8,9 @@ void PhysicsEngine::ComputePhysicsForObject(Object_Base3D* Object, double Delta)
 	{
 		// base "collision" and then teleport test
 		// TODO: implement collisions
-		if (glm::vec3(Object->Matrix[3]).y <= 0)
+		if (glm::vec3(Object->Transform[3]).y <= 0)
 		{
-			Object->Matrix = glm::translate(Object->Matrix, glm::vec3(0.0f, 150.0f, 0.0f));
+			Object->Transform = glm::translate(Object->Transform, glm::vec3(0.0f, 150.0f, 0.0f));
 			return;
 		}
 
@@ -18,6 +18,6 @@ void PhysicsEngine::ComputePhysicsForObject(Object_Base3D* Object, double Delta)
 
 		Object->LinearVelocity = Object->LinearVelocity + (GravityForce / Object->Mass * Delta);
 
-		Object->Matrix = glm::translate(Object->Matrix, glm::vec3(Object->LinearVelocity * Delta));
+		Object->Transform = glm::translate(Object->Transform, glm::vec3(Object->LinearVelocity * Delta));
 	}
 }

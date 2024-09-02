@@ -9,6 +9,9 @@
 #include"datatype/Vector3.hpp"
 #include"Debug.hpp"
 
+static std::string const& DiffuseStr = "Diffuse";
+static std::string const& SpecularStr = "Specular";
+
 static GLenum ObjectTypes[] =
 {
 	GL_BUFFER,
@@ -24,17 +27,49 @@ static GLenum ObjectTypes[] =
 	GL_FRAMEBUFFER
 };
 
-static std::string const& DiffuseStr = "Diffuse";
-static std::string const& SpecularStr = "Specular";
+static std::unordered_map<GLenum, std::string> GLEnumToStringMap =
+{
+	{ GL_DEBUG_SOURCE_API, "OpenGL"},
+	{ GL_DEBUG_SOURCE_WINDOW_SYSTEM, "Window system" },
+	{ GL_DEBUG_SOURCE_SHADER_COMPILER, "Shader compiler" },
+	{ GL_DEBUG_SOURCE_THIRD_PARTY, "Third-party" },
+	{ GL_DEBUG_SOURCE_APPLICATION, "User-generated :3" },
+	{ GL_DEBUG_SOURCE_OTHER, "Other" },
+
+	{ GL_DEBUG_SEVERITY_HIGH, "High" },
+	{ GL_DEBUG_SEVERITY_MEDIUM, "Medium" },
+	{ GL_DEBUG_SEVERITY_LOW, "Low" },
+	{ GL_DEBUG_SEVERITY_NOTIFICATION, "Notification" },
+
+	{ GL_DEBUG_TYPE_ERROR, "Error" },
+	{ GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR, "Deprecated behavior" },
+	{ GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR, "Undefined behavior" },
+	{ GL_DEBUG_TYPE_PORTABILITY, "Portability" },
+	{ GL_DEBUG_TYPE_PERFORMANCE, "Performance" },
+	{ GL_DEBUG_TYPE_MARKER, "Marker" },
+	{ GL_DEBUG_TYPE_PUSH_GROUP, "Push group" },
+	{ GL_DEBUG_TYPE_POP_GROUP, "Pop group" },
+	{ GL_DEBUG_TYPE_OTHER, "Other" }
+};
+
+static std::string glEnumToString(GLenum Id)
+{
+	auto it = GLEnumToStringMap.find(Id);
+	if (it != GLEnumToStringMap.end())
+		return it->second;
+	else
+		return std::vformat("ID:{}", std::make_format_args(Id));
+}
 
 static void GLDebugCallback(
-	GLenum source,
-	GLenum type,
-	GLuint id,
-	GLenum severity,
-	GLsizei length,
-	const GLchar* message,
-	const void* userParam)
+	GLenum SourceId,
+	GLenum TypeId,
+	GLuint Id,
+	GLenum SeverityId,
+	GLsizei MessageLength,
+	const GLchar* Message,
+	const void* /*Userparam*/
+)
 {
 	// not very important
 	//if (severity == GL_DEBUG_SEVERITY_NOTIFICATION)
@@ -42,187 +77,46 @@ static void GLDebugCallback(
 
 	// ID for:
 	// "Buffer object X will use VIDEO memory as the source for buffer object operations"
-	if (id == 131185)
+	if (Id == 131185)
 		return;
 
-	std::string SourceTmp;
-	const char* Source;
+	std::string sourceName = glEnumToString(SourceId);
+	std::string severityName = glEnumToString(SeverityId);
+	std::string typeName = glEnumToString(TypeId);
 
-	switch (source)
+	std::string messageStr = Message;
+
+	// `GLsizei` is a smelly `int`
+	int actualMessageLength = static_cast<int>(strlen(Message));
+
+	// 30/08/2024: There is now this weird gap inbetween `Message` and `Source`,
+	// I think it's cause I'm not respecting `MessageLength`
+	// ...
+	// NVM Idk why it is
+	if (actualMessageLength != MessageLength)
 	{
+		Debug::Log(std::vformat(
+			"Renderer::GLDebugCallback: `strlen` differs from message length: {} vs {}",
+			std::make_format_args(actualMessageLength, MessageLength)
+		));
 
-	case GL_DEBUG_SOURCE_API:
-	{
-		Source = "OpenGL API";
-		break;
+		messageStr = messageStr.substr(0, MessageLength);
 	}
-
-	case GL_DEBUG_SOURCE_WINDOW_SYSTEM:
-	{
-		Source = "Window system API";
-		break;
-	}
-
-	case GL_DEBUG_SOURCE_SHADER_COMPILER:
-	{
-		Source = "Shader compiler";
-		break;
-	}
-
-	case GL_DEBUG_SOURCE_THIRD_PARTY:
-	{
-		Source = "Third-party";
-		break;
-	}
-
-	case GL_DEBUG_SOURCE_APPLICATION:
-	{
-		Source = "User-generated";
-		break;
-	}
-
-	case GL_DEBUG_SOURCE_OTHER:
-	{
-		Source = "Other";
-		break;
-	}
-
-	default:
-	{
-		SourceTmp = std::to_string(source);
-
-		Source = SourceTmp.c_str();
-		break;
-	}
-
-	}
-
-	std::string SeverityTmp;
-	const char* Severity;
-
-	switch (severity)
-	{
-
-	case GL_DEBUG_SEVERITY_HIGH:
-	{
-		Severity = "HIGH";
-		break;
-	}
-
-	case GL_DEBUG_SEVERITY_MEDIUM:
-	{
-		Severity = "Medium";
-		break;
-	}
-
-	case GL_DEBUG_SEVERITY_LOW:
-	{
-		Severity = "Low";
-		break;
-	}
-
-	case GL_DEBUG_SEVERITY_NOTIFICATION:
-	{
-		Severity = "Notification";
-		break;
-	}
-
-	default:
-	{
-		SeverityTmp = std::to_string(severity);
-
-		Severity = SeverityTmp.c_str();
-		break;
-	}
-
-	}
-
-	std::string TypeTmp;
-	const char* Type;
-
-	switch (type)
-	{
-
-	case GL_DEBUG_TYPE_ERROR: {
-		Type = "ERROR";
-		break;
-	}
-
-	case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
-	{
-		Type = "Deprecated behaviour warning";
-		break;
-	}
-
-	case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
-	{
-		Type = "Undefined behaviour warning";
-		break;
-	}
-
-	case GL_DEBUG_TYPE_PORTABILITY:
-	{
-		Type = "Not portable warning";
-		break;
-	}
-
-	case GL_DEBUG_TYPE_PERFORMANCE:
-	{
-		Type = "Low-performance warning";
-		break;
-	}
-
-	case GL_DEBUG_TYPE_MARKER:
-	{
-		Type = "Annotation";
-		break;
-	}
-
-	case GL_DEBUG_TYPE_PUSH_GROUP:
-	{
-		Type = "Group push";
-		break;
-	}
-
-	case GL_DEBUG_TYPE_POP_GROUP:
-	{
-		Type = "Group pop";
-		break;
-	}
-
-	case GL_DEBUG_TYPE_OTHER:
-	{
-		Type = "Other";
-		break;
-	}
-
-	default:
-	{
-		TypeTmp = std::to_string(type);
-
-		Type = TypeTmp.c_str();
-		break;
-	}
-
-	}
-
-	const char* messageCChar = message;
-	int idCInt = id;
 
 	std::string DebugString = std::vformat(
 		std::string("GL Debug callback:\n\tType: {}\n\tSeverity: {}\n\tMessage: {}\n\tSource: {}\n\tError ID: {}\n"),
 		std::make_format_args(
-			Type,
-			Severity,
-			message,
-			Source,
-			id
+			typeName,
+			severityName,
+			messageStr,
+			sourceName,
+			Id
 		)
 	);
 
 	Debug::Log(DebugString);
 
-	if (severity > GL_DEBUG_SEVERITY_NOTIFICATION)
+	if (SeverityId > GL_DEBUG_SEVERITY_NOTIFICATION)
 		throw(DebugString);
 }
 
@@ -293,7 +187,7 @@ Renderer::Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window)
 	m_VertexArray->LinkAttrib(*m_VertexBuffer, 2, 3, GL_FLOAT, sizeof(Vertex), (void*)(6 * sizeof(float)));
 	m_VertexArray->LinkAttrib(*m_VertexBuffer, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)(9 * sizeof(float)));
 
-	this->Framebuffer = new FBO(m_Window, m_Width, m_Height, m_MsaaSamples);
+	this->Framebuffer = new FBO(m_Width, m_Height, m_MsaaSamples);
 
 	Debug::Log("Renderer initialized");
 }
@@ -392,13 +286,19 @@ void Renderer::DrawScene(Scene_t& Scene)
 				LightData.ShadowMapTextureId
 			);
 		}
-		glUniform1ui(glGetUniformLocation(ShaderProgramID, "NumLights"), static_cast<uint32_t>(Scene.LightData.size()));
+		glUniform1i(glGetUniformLocation(ShaderProgramID, "NumLights"), static_cast<int32_t>(Scene.LightData.size()));
 	}
 
 	for (MeshData_t RenderData : Scene.MeshData)
 	{
 		m_SetTextureUniforms(RenderData, RenderData.Material->Shader);
-		this->DrawMesh(RenderData.MeshData, RenderData.Material->Shader, RenderData.Size, RenderData.Matrix, RenderData.FaceCulling);
+		this->DrawMesh(
+			RenderData.MeshData,
+			RenderData.Material->Shader,
+			RenderData.Size,
+			RenderData.Transform,
+			RenderData.FaceCulling
+		);
 	}
 }
 
@@ -527,40 +427,41 @@ void Renderer::m_SetTextureUniforms(MeshData_t& RenderData, ShaderProgram* Shade
 		glUniform1i(glGetUniformLocation(Shaders->ID, ShaderTextureVar.c_str()), TexUnitOffset);
 	}
 
-	for (Texture* Image : Material->SpecularTextures)
-	{
-		std::string NumberOf;
-		std::string Type;
-
-		TexUnitOffset++;
-
-		Type = SpecularStr;
-
-		NumberOf = std::to_string(NumSpecular);
-
-		if (NumSpecular > 6)
+	if (Material->HasSpecular)
+		for (Texture* Image : Material->SpecularTextures)
 		{
-			Debug::Log("SPECULAR TEX LIMIT REACHED!");
-			continue;
+			std::string NumberOf;
+			std::string Type;
+
+			TexUnitOffset++;
+
+			Type = SpecularStr;
+
+			NumberOf = std::to_string(NumSpecular);
+
+			if (NumSpecular > 6)
+			{
+				Debug::Log("SPECULAR TEX LIMIT REACHED!");
+				continue;
+			}
+
+			glActiveTexture(GL_TEXTURE0 + TexUnitOffset);
+
+			Shaders->Activate();
+
+			glBindTexture(GL_TEXTURE_2D, Image->Identifier);
+
+			std::string ShaderTextureVar = (Type + "Textures[0]");
+			glUniform1i(glGetUniformLocation(Shaders->ID, ShaderTextureVar.c_str()), TexUnitOffset);
 		}
 
-		glActiveTexture(GL_TEXTURE0 + TexUnitOffset);
-
-		Shaders->Activate();
-
-		glBindTexture(GL_TEXTURE_2D, Image->Identifier);
-
-		std::string ShaderTextureVar = (Type + "Textures[0]");
-		glUniform1i(glGetUniformLocation(Shaders->ID, ShaderTextureVar.c_str()), TexUnitOffset);
-	}
-
-	glUniform1ui(
+	glUniform1i(
 		glGetUniformLocation(Shaders->ID, "NumDiffuseTextures"),
-		static_cast<uint32_t>(Material->DiffuseTextures.size())
+		static_cast<int32_t>(Material->DiffuseTextures.size())
 	);
-	glUniform1ui(
+	glUniform1i(
 		glGetUniformLocation(Shaders->ID, "NumSpecularTextures"),
-		static_cast<uint32_t>(Material->SpecularTextures.size())
+		Material->HasSpecular ? static_cast<int32_t>(Material->SpecularTextures.size()) : 0
 	);
 }
 

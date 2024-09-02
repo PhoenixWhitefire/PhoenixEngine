@@ -90,7 +90,7 @@
     <ClInclude Include="include\FileRW.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\MapLoader.hpp">
+    <ClInclude Include="include\SceneFormat.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\ModelLoader.hpp">
@@ -1343,7 +1343,7 @@
     <ClCompile Include="src\FileRW.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\MapLoader.cpp">
+    <ClCompile Include="src\SceneFormat.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\ModelLoader.cpp">

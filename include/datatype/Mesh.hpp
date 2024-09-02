@@ -16,6 +16,10 @@ struct Mesh
 	std::vector<Vertex> Vertices;
 	std::vector<uint32_t> Indices;
 
+	// TODO 30/08/2024 (also in ModelLoader.cpp)
+	// Yes, this,
+	// All of it
+	// Kill it with hammers
 	glm::mat4 Matrix = glm::mat4(1.0f);
 	glm::vec3 Translation = glm::vec3(0.0f, 0.0f, 0.0f);
 	glm::quat Rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);

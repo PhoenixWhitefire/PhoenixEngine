@@ -15,8 +15,10 @@ public:
 
 	bool WantExit = false;
 
+	PHX_GAMEOBJECT_API_REFLECTION;
+
 private:
 	static RegisterDerivedObject<Object_DataModel> RegisterObjectAs;
 	static void s_DeclareReflections();
-	static bool s_DidInitReflection;
+	static inline Api s_Api{};
 };

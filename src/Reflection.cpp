@@ -3,7 +3,7 @@
 #include"datatype/Color.hpp"
 #include"datatype/GameObject.hpp"
 
-Reflection::ReflectionInfo* Reflection::Reflectable::ApiReflection = new Reflection::ReflectionInfo();
+//Reflection::Reflectable* Reflection::Reflectable::ApiReflection = new Reflection::Reflectable();
 
 Reflection::GenericValue::GenericValue()
 	: Type(ValueType::None), Pointer(nullptr)
@@ -30,9 +30,23 @@ Reflection::GenericValue::GenericValue(int i)
 {
 }
 
+Reflection::GenericValue::GenericValue(int64_t i)
+	: Type(ValueType::Integer), Integer(i), Pointer(nullptr)
+{
+}
+
 Reflection::GenericValue::GenericValue(uint32_t i)
 	: Type(ValueType::Integer), Integer(i), Pointer(nullptr)
 {
+}
+
+Reflection::GenericValue::GenericValue(const glm::mat4& m)
+	: Type(ValueType::Matrix), Pointer(malloc(sizeof(m)))
+{
+	if (!Pointer)
+		throw("Allocation error while constructing GenericValue from glm::mat4");
+
+	memcpy(Pointer, &m, sizeof(m));
 }
 
 std::string Reflection::GenericValue::ToString() const
@@ -70,132 +84,125 @@ std::string Reflection::GenericValue::ToString() const
 
 std::string Reflection::GenericValue::AsString() const
 {
-	return this->Type == ValueType::String ? this->String : throw("GenericValue was not a String");
+	return Type == ValueType::String
+		? String : throw("GenericValue was not a String, but was a " + Reflection::TypeAsString(Type));
 }
 bool Reflection::GenericValue::AsBool() const
 {
-	return this->Type == ValueType::Bool ? this->Bool : throw("GenericValue was not a Bool");
+	return Type == ValueType::Bool
+		? Bool
+		: throw("GenericValue was not a Bool, but was a " + Reflection::TypeAsString(Type));
 }
 double Reflection::GenericValue::AsDouble() const
 {
-	return this->Type == ValueType::Double ? this->Double : throw("GenericValue was not a Double");
+	return Type == ValueType::Double
+		? Double
+		: throw("GenericValue was not a Double, but was a " + Reflection::TypeAsString(Type));
 }
-int Reflection::GenericValue::AsInt() const
+int64_t Reflection::GenericValue::AsInt() const
 {
-	return this->Type == ValueType::Integer ? this->Integer : throw("GenericValue was not an Integer");
+	return Type == ValueType::Integer
+		? Integer
+		: throw("GenericValue was not an Integer, but was a " + Reflection::TypeAsString(Type));
+}
+glm::mat4 Reflection::GenericValue::AsMatrix() const
+{
+	glm::mat4* mptr = (glm::mat4*)Pointer;
+
+	return Type == ValueType::Matrix
+		? *mptr
+		: throw("GenericValue was not a Matrix, but was a " + Reflection::TypeAsString(Type));
 }
 
-void Reflection::BaseReflectable::pointlessPolymorhpismRequirementMeeter()
+Reflection::PropertyMap& Reflection::Reflectable::GetProperties()
 {
-	throw("I think the set of events leading up to the moment of me writing this have irreversibly removed several years off my lifespan.");
+	return  s_Properties;
 }
 
-Reflection::IProperty::IProperty
-(
-	Reflection::ValueType type,
-	std::function<Reflection::GenericValue(Reflection::BaseReflectable*)> getter,
-	std::function<void(Reflection::BaseReflectable*, Reflection::GenericValue)> setter
-) : Type(type), Get(getter), Set(setter), Settable(setter != nullptr)
+Reflection::FunctionMap& Reflection::Reflectable::GetFunctions()
 {
+	return  s_Functions;
 }
 
-Reflection::IProperty::IProperty
-(
-	Reflection::ValueType type,
-	bool canBeSet,
-	std::function<Reflection::GenericValue(Reflection::BaseReflectable*)> getter,
-	std::function<void(Reflection::BaseReflectable*, Reflection::GenericValue)> setter
-) : Type(type), Settable(canBeSet), Get(getter), Set(setter)
+bool Reflection::Reflectable::HasProperty(const std::string& name)
 {
-}
-
-Reflection::IFunction::IFunction
-(
-	std::vector<ValueType> inputs,
-	std::vector<ValueType> outputs,
-	std::function<GenericValue(Reflection::BaseReflectable*, GenericValue)> func
-) : Inputs(inputs), Outputs(outputs), Func(func)
-{
-}
-
-Reflection::ReflectionInfo::PropertyMap& Reflection::ReflectionInfo::GetProperties()
-{
-	return s_Properties;
-}
-
-Reflection::ReflectionInfo::FunctionMap& Reflection::ReflectionInfo::GetFunctions()
-{
-	return s_Functions;
-}
-
-bool Reflection::ReflectionInfo::HasProperty(const std::string& name)
-{
-	if (s_Properties.size() == 0)
+	if ( s_Properties.size() == 0)
 		return false;
-	return s_Properties.find(name) != s_Properties.end();
+	return  s_Properties.find(name) !=  s_Properties.end();
 }
 
-bool Reflection::ReflectionInfo::HasFunction(const std::string& name)
+bool Reflection::Reflectable::HasFunction(const std::string& name)
 {
-	return s_Functions.find(name) != s_Functions.end();
+	return  s_Functions.find(name) !=  s_Functions.end();
 }
 
-Reflection::IProperty& Reflection::ReflectionInfo::GetProperty(const std::string& name)
+Reflection::IProperty& Reflection::Reflectable::GetProperty(const std::string& name)
 {
-	if (!this->HasProperty(name))
+	if (!HasProperty(name))
 		throw(std::vformat("(GetProperty) No Property named {}", std::make_format_args(name)));
 	else
-		return s_Properties.find(name)->second;
+		return  s_Properties.find(name)->second;
 }
 
-Reflection::IFunction& Reflection::ReflectionInfo::GetFunction(const std::string& name)
+Reflection::IFunction& Reflection::Reflectable::GetFunction(const std::string& name)
 {
-	if (!this->HasFunction(name))
+	if (!HasFunction(name))
 		throw(std::vformat("(GetFunction) No Function named {}", std::make_format_args(name)));
 	else
-		return s_Functions.find(name)->second;
+		return  s_Functions.find(name)->second;
 }
 
-Reflection::GenericValue Reflection::ReflectionInfo::GetPropertyValue(const std::string& name)
+Reflection::GenericValue Reflection::Reflectable::GetPropertyValue(const std::string& name)
 {
-	if (!this->HasProperty(name))
+	if (!HasProperty(name))
 		throw(std::vformat("(GetPropertyValue) No Property named {}", std::make_format_args(name)));
 	else
-		return s_Properties.find(name)->second.Get((Reflection::BaseReflectable*)this);
+		return  s_Properties.find(name)->second.Get(dynamic_cast<Reflection::Reflectable*>(this));
 }
 
-void Reflection::ReflectionInfo::SetPropertyValue(const std::string& name, GenericValue& value)
+void Reflection::Reflectable::SetPropertyValue(const std::string& name, GenericValue& value)
 {
-	if (!this->HasProperty(name))
+	if (!HasProperty(name))
 		throw(std::vformat("(SetPropertyValue) No Property named {}", std::make_format_args(name)));
 	else
-		s_Properties.find(name)->second.Set((Reflection::BaseReflectable*)this, value);
+		 s_Properties.find(name)->second.Set((Reflection::Reflectable*)this, value);
 }
 
-Reflection::GenericValue Reflection::ReflectionInfo::CallFunction(const std::string& name, GenericValue input)
+Reflection::GenericValue Reflection::Reflectable::CallFunction(const std::string& name, GenericValue input)
 {
-	if (!this->HasFunction(name))
+	if (!HasFunction(name))
 		throw(std::vformat("(CallFunction) No Function named {}", std::make_format_args(name)));
 	else
-		return s_Functions.find(name)->second.Func((Reflection::BaseReflectable*)this, input);
+		return  s_Functions.find(name)->second.Func((Reflection::Reflectable*)this, input);
 }
+
+static bool s_DidInitReflection = false;
 
 Reflection::Reflectable::Reflectable()
 {
-	Reflectable::ApiReflection = new Reflection::ReflectionInfo();
+	if (s_DidInitReflection)
+		return;
+	s_DidInitReflection = true;
+
+	//Reflectable::ApiReflection = new Reflection::Reflectable();
+	
 }
 
-static const char* valueTypeNames[] =
+static std::string valueTypeNames[] =
 {
 		"None",
-		"String",
+
 		"Bool",
-		"Double",
 		"Integer",
+		"Double",
+		"String",
+
 		"Color",
 		"Vector3",
 		"Matrix",
+
 		"GameObject",
+
 		"Array",
 		"Map"
 };
@@ -205,7 +212,7 @@ static_assert(
 	"`ValueTypeNames` does not have the same number of elements as `ValueType`"
 );
 
-std::string Reflection::TypeAsString(ValueType t)
+const std::string& Reflection::TypeAsString(ValueType t)
 {
 	return valueTypeNames[(int)t];
 }

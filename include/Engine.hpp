@@ -12,7 +12,6 @@
 
 #include"PhysicsEngine.hpp"
 #include"ModelLoader.hpp"
-#include"MapLoader.hpp"
 
 // TODO: cleanup structure of public vs private
 class EngineObject

@@ -29,9 +29,9 @@ private:
 
 	std::vector<std::vector<Texture*>> MeshTextures;
 
-	void LoadMesh(uint32_t indMesh, glm::vec3 Translation, glm::quat Rotation, glm::vec3 Scale, glm::mat4 matrix);
+	void LoadMesh(uint32_t indMesh, glm::vec3 Translation, glm::quat Rotation, glm::vec3 Scale, glm::mat4 Transform);
 
-	void TraverseNode(uint32_t NextNode, glm::mat4 Matrix = glm::mat4(1.0f));
+	void TraverseNode(uint32_t NextNode, glm::mat4 Transform = glm::mat4(1.0f));
 
 	std::vector<std::string> LoadedTexturePaths;
 	std::vector<Texture*> LoadedTextures;

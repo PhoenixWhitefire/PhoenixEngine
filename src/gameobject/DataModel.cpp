@@ -5,9 +5,9 @@
 #include"Debug.hpp"
 
 RegisterDerivedObject<Object_DataModel> Object_DataModel::RegisterObjectAs("DataModel");
-bool Object_DataModel::s_DidInitReflection = false;
+static bool s_DidInitReflection = false;
 
-static Reflection::GenericValue closeDataModel(Reflection::BaseReflectable* g, Reflection::GenericValue params)
+static Reflection::GenericValue closeDataModel(GameObject* g, Reflection::GenericValue params)
 {
 	dynamic_cast<Object_DataModel*>(g)->WantExit = true;
 	return Reflection::GenericValue();
@@ -16,12 +16,12 @@ static Reflection::GenericValue closeDataModel(Reflection::BaseReflectable* g, R
 void Object_DataModel::s_DeclareReflections()
 {
 	if (s_DidInitReflection)
-		//return;
+		return;
 	s_DidInitReflection = true;
 
-	REFLECTION_DECLAREPROC("Close", closeDataModel);
-
 	REFLECTION_INHERITAPI(GameObject);
+
+	REFLECTION_DECLAREPROC("Close", closeDataModel);
 }
 
 Object_DataModel::Object_DataModel()

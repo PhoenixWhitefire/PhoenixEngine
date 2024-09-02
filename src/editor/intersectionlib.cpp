@@ -25,9 +25,9 @@ static std::vector<IntersectionLib::Triangle> GetTrianglesFromHittableObject(Int
 			Vector3 Vertex2 = TargetMesh->Vertices[TargetMesh->Indices[Indice * 3 + 1]].position;
 			Vector3 Vertex3 = TargetMesh->Vertices[TargetMesh->Indices[Indice * 3 + 2]].position;
 
-			Vertex1 = glm::vec3(glm::vec4((glm::vec3)Vertex1, 1.0f) * HittableObject->Matrix);
-			Vertex2 = glm::vec3(glm::vec4((glm::vec3)Vertex2, 1.0f) * HittableObject->Matrix);
-			Vertex3 = glm::vec3(glm::vec4((glm::vec3)Vertex3, 1.0f) * HittableObject->Matrix);
+			Vertex1 = glm::vec3(glm::vec4((glm::vec3)Vertex1, 1.0f) * HittableObject->Transform);
+			Vertex2 = glm::vec3(glm::vec4((glm::vec3)Vertex2, 1.0f) * HittableObject->Transform);
+			Vertex3 = glm::vec3(glm::vec4((glm::vec3)Vertex3, 1.0f) * HittableObject->Transform);
 
 			Triangles.push_back(NewTri);
 		}
@@ -44,15 +44,15 @@ static std::vector<IntersectionLib::Triangle> GetTrianglesFromHittableObject(Int
 
 const double OneSixth = 1.0f / 6.0f;
 
-static double GetSignedVolume(Vector3 A, Vector3 B, Vector3 C, Vector3 D)
-{
-	return OneSixth * (((B - A).Cross(C - A)).Dot(D - A));
-}
+//static double GetSignedVolume(Vector3 A, Vector3 B, Vector3 C, Vector3 D)
+//{
+//	return OneSixth * (((B - A).Cross(C - A)).Dot(D - A));
+//}
 
-static int GetSign(double Number)
-{
-	return (0 < Number) - (Number < 0);
-}
+//static int GetSign(double Number)
+//{
+//	return (0 < Number) - (Number < 0);
+//}
 
 // Credit: https://stackoverflow.com/a/42752998/16875161
 IntersectionLib::IntersectionResult IntersectionLib::Traceline(
@@ -65,7 +65,7 @@ IntersectionLib::IntersectionResult IntersectionLib::Traceline(
 
 	for (HittableObject* Object : Objects)
 	{
-		Mesh* CurMesh = Object->CollisionMesh;
+		//Mesh* CurMesh = Object->CollisionMesh;
 		auto Tris = GetTrianglesFromHittableObject(Object);
 
 		for (Triangle Tri : Tris)

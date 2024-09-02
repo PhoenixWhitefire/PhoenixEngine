@@ -3,13 +3,15 @@
 #include"datatype/GameObject.hpp"
 
 static uint32_t NumGameObjects = 0;
-bool GameObject::s_DidInitReflection = false;
+static bool s_DidInitReflection = false;
 GameObject* GameObject::s_DataModel = nullptr;
 std::unordered_map<uint32_t, GameObject*> GameObject::s_WorldArray = {};
 
 GameObject::GameObjectMapType* GameObject::m_gameObjectMap = new GameObjectMapType();
 
-static Reflection::GenericValue destroyObject(Reflection::BaseReflectable* obj, Reflection::GenericValue gv)
+static RegisterDerivedObject<GameObject> RegisterClassAs("GameObject");
+
+static Reflection::GenericValue destroyObject(GameObject* obj, const Reflection::GenericValue gv)
 {
 	dynamic_cast<GameObject*>(obj)->Destroy();
 	return Reflection::GenericValue();
@@ -18,10 +20,8 @@ static Reflection::GenericValue destroyObject(Reflection::BaseReflectable* obj, 
 void GameObject::s_DeclareReflections()
 {
 	if (s_DidInitReflection)
-			//return;
+			return;
 	s_DidInitReflection = true;
-
-	//GameObject::ApiReflection = new Reflection::ReflectionInfo();
 
 	REFLECTION_DECLAREPROP_SIMPLE_READONLY(GameObject, ClassName, String);
 	REFLECTION_DECLAREPROP_SIMPLE(GameObject, Name, String);
@@ -30,12 +30,12 @@ void GameObject::s_DeclareReflections()
 	
 	REFLECTION_DECLAREPROC("Destroy", destroyObject);
 
-	REFLECTION_INHERITAPI(Reflection::Reflectable);
+	//REFLECTION_INHERITAPI(Reflection::Reflectable);
 }
 
 GameObject::GameObject()
 {
-	this->Parent = NULL_GAMEOBJECT_ID;
+	this->Parent = PHX_GAMEOBJECT_NULL_ID;
 
 	GameObject::s_DeclareReflections();
 }
@@ -48,12 +48,12 @@ GameObject::~GameObject()
 	for (GameObject* child : this->GetChildren())
 		child->Destroy();
 
-	m_children.clear();
+	m_Children.clear();
 
 	s_WorldArray.erase(this->ObjectId);
 
-	this->Parent = NULL_GAMEOBJECT_ID;
-	//this->ObjectId = NULL_GAMEOBJECT_ID;
+	this->Parent = PHX_GAMEOBJECT_NULL_ID;
+	//this->ObjectId = PHX_GAMEOBJECT_NULL_ID;
 	this->ParentLocked = true;
 }
 
@@ -77,7 +77,7 @@ void GameObject::Initialize()
 {
 }
 
-void GameObject::Update(double DeltaTime)
+void GameObject::Update(double)
 {
 }
 
@@ -107,10 +107,8 @@ void GameObject::SetParent(GameObject* newParent)
 	if (newParent == oldParent)
 		return;
 
-	uint32_t prevId = Parent;
-
 	if (!newParent)
-		this->Parent = NULL_GAMEOBJECT_ID;
+		this->Parent = PHX_GAMEOBJECT_NULL_ID;
 	else
 	{
 		this->Parent = newParent->ObjectId;
@@ -123,29 +121,29 @@ void GameObject::SetParent(GameObject* newParent)
 
 void GameObject::AddChild(GameObject* c)
 {
-	this->m_children.insert(std::pair(c->ObjectId, c->ObjectId));
+	m_Children.insert(std::pair(c->ObjectId, c->ObjectId));
 }
 
 void GameObject::RemoveChild(uint32_t id)
 {
-	auto it = m_children.find(id);
+	auto it = m_Children.find(id);
 
-	if (it != m_children.end())
-		m_children.erase(it);
+	if (it != m_Children.end())
+		m_Children.erase(it);
 	else
 		throw(std::vformat("ID:{} is _not my ({}) sonnn~_", std::make_format_args(ObjectId, id)));
 }
 
 GameObject* GameObject::GetParent()
 {
-	if (this->Parent == NULL_GAMEOBJECT_ID)
+	if (this->Parent == PHX_GAMEOBJECT_NULL_ID)
 		return nullptr;
 
 	auto it = s_WorldArray.find(this->Parent);
 
 	if (it == s_WorldArray.end())
 	{
-		this->Parent = NULL_GAMEOBJECT_ID;
+		this->Parent = PHX_GAMEOBJECT_NULL_ID;
 		return nullptr;
 	}
 	else
@@ -154,13 +152,9 @@ GameObject* GameObject::GetParent()
 
 std::vector<GameObject*> GameObject::GetChildren()
 {
-	// 27/08/2024: A destroyed Object keeps getting destructed twice somewhere
-	if (this->ObjectId == NULL_GAMEOBJECT_ID)
-		return {};
-
 	std::vector<GameObject*> children;
 
-	for (auto& childEntry : this->m_children)
+	for (auto& childEntry : m_Children)
 	{
 		uint32_t childId = childEntry.second;
 
@@ -169,28 +163,52 @@ std::vector<GameObject*> GameObject::GetChildren()
 		if (child)
 			children.push_back(child);
 		else
-			m_children.erase(childEntry.first);
+			m_Children.erase(childEntry.first);
 	}
 
 	return children;
 }
 
+std::vector<GameObject*> GameObject::GetDescendants()
+{
+	std::vector<GameObject*> descendants;
+
+	for (auto& childEntry : m_Children)
+	{
+		uint32_t childId = childEntry.second;
+
+		GameObject* child = GameObject::GetObjectById(childId);
+
+		if (child)
+		{
+			descendants.push_back(child);
+
+			std::vector<GameObject*> childrenDescendants = child->GetDescendants();
+			std::copy(childrenDescendants.begin(), childrenDescendants.end(), std::back_inserter(descendants));
+		}
+		else
+			m_Children.erase(childEntry.first);
+	}
+
+	return descendants;
+}
+
 GameObject* GameObject::GetChildById(uint32_t id)
 {
-	auto it = m_children.find(id);
+	auto it = m_Children.find(id);
 
-	return it != m_children.end() ? s_WorldArray[id] : nullptr;
+	return it != m_Children.end() ? s_WorldArray[id] : nullptr;
 }
 
 GameObject* GameObject::GetChild(std::string const& ChildName)
 {
-	for (auto& it : m_children)
+	for (auto& it : m_Children)
 	{
 		GameObject* child = GameObject::GetObjectById(it.second);
 
 		if (!child)
 		{
-			m_children.erase(it.first);
+			m_Children.erase(it.first);
 			continue;
 		}
 
@@ -204,13 +222,13 @@ GameObject* GameObject::GetChild(std::string const& ChildName)
 
 GameObject* GameObject::GetChildOfClass(std::string const& Class)
 {
-	for (auto& it : m_children)
+	for (auto& it : m_Children)
 	{
-		GameObject* child = this->GetChildById(m_children[it.second]);
+		GameObject* child = this->GetChildById(m_Children[it.second]);
 
 		if (!child)
 		{
-			this->m_children.erase(it.first);
+			m_Children.erase(it.first);
 			continue;
 		}
 
@@ -235,7 +253,7 @@ GameObject* GameObject::CreateGameObject(std::string const& ObjectClass)
 	// ID:0 is a reserved ID
 	// Whenever anyone tries to use it, we know that an uninitialized
 	// Object was involved.
-	// To indicate a NULL Object, use `NULL_GAMEOBJECT_ID`.
+	// To indicate a NULL Object, use `PHX_GAMEOBJECT_NULL_ID`.
 	// Thus, add 1 so that the first create Object has ID 1 and not 0.
 	CreatedObject->ObjectId = NumGameObjects + 1;
 	NumGameObjects++;
@@ -263,15 +281,17 @@ nlohmann::json GameObject::DumpApiToJson()
 {
 	nlohmann::json dump{};
 	
+	dump["GameObject"] = nlohmann::json();
+
 	for (auto& g : *GameObject::m_getGameObjectMap())
 	{
 		auto newobj = g.second();
 		dump[g.first] = nlohmann::json();
 
-		for (auto& p : newobj->ApiReflection->GetProperties())
+		for (auto& p : newobj->GetProperties())
 			dump[g.first][p.first] = Reflection::TypeAsString(p.second.Type);
 
-		for (auto& f : newobj->ApiReflection->GetFunctions())
+		for (auto& f : newobj->GetFunctions())
 		{
 			std::string istring = "";
 			std::string ostring = "";
@@ -285,7 +305,7 @@ nlohmann::json GameObject::DumpApiToJson()
 			dump[g.first][f.first] = std::vformat("({}) -> ({})", std::make_format_args(istring, ostring));
 		}
 
-		delete newobj;
+		//delete newobj;
 	}
 
 	return dump;

@@ -45,9 +45,7 @@ AnimationService& AnimationService::Get() {
 }
 */
 animation_t& AnimationService::LoadAnimationJSON(const char* File) {
-	throw(std::string("Animator class is disabled"));
-
-	return *(animation_t*)nullptr;
+	throw(std::string("Animator class is disabled @ " + std::string(File)));
 
 	/*
 	std::string FileContentsString = FileRW::ReadFile(File);

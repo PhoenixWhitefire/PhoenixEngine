@@ -57,14 +57,7 @@ std::vector<Worker*> ThreadManager::CreateWorkers(int NumWorkers, WorkerType Typ
 	for (int WorkerIndex = 0; WorkerIndex < NumWorkers; WorkerIndex++)
 	{
 		Worker* NewWorker = new Worker();
-
-		NewWorker->TaskQueue = std::vector<Task*>({});
-
-		NewWorker->TaskQueue.resize(0);
-
-		NewWorker->TaskIdx = 0;
-
-		NewWorker->Type = WorkerType::DefaultTaskWorker;
+		NewWorker->Type = Type;
 
 		NewWorker->Thread = new std::thread(&_workerTaskRunner, NewWorker);
 		NewWorker->Thread->detach();
@@ -114,10 +107,7 @@ void ThreadManager::DispatchJob(Task& Job)
 ThreadManager* ThreadManager::Get()
 {
 	if (!ThreadManager::Singleton)
-	{
 		throw("ThreadManager::Get was called before Engine was initialized.");
-		return nullptr;
-	}
 
 	return ThreadManager::Singleton;
 }

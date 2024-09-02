@@ -20,7 +20,7 @@ public:
 	bool GenericMovement = true;
 	bool IsSceneCamera = false;
 
-	glm::mat4 Matrix = glm::mat4(1.0f);
+	glm::mat4 Transform = glm::mat4(1.0f);
 	double FieldOfView = 70.f;
 	double NearPlane = 0.1f;
 	double FarPlane = 1000.f;
@@ -28,12 +28,14 @@ public:
 	// When in GenericMovement mode
 	float MovementSpeed = 0.5f;
 	float MouseSensitivity = 100.f;
+
+	PHX_GAMEOBJECT_API_REFLECTION;
 	
 private:
 	static RegisterDerivedObject<Object_Camera> RegisterClassAs;
 
 	static void s_DeclareReflections();
-	static bool s_DidInitReflection;
+	static inline Api s_Api{};
 
 	// When in GenericMovement mode
 	bool FirstDragFrame = false;

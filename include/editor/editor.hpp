@@ -10,7 +10,7 @@ public:
 	Editor();
 
 	void Init();
-	void Update(double DeltaTime, glm::mat4 CameraMatrix);
+	void Update(double DeltaTime, glm::mat4 CameraTransform);
 	void RenderUI();
 
 private:

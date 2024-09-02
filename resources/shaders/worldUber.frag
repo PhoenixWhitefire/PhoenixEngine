@@ -63,10 +63,10 @@ struct Cubemap
 uniform sampler2D ShadowAtlas;
 
 // the actual number of textures the mesh has
-uniform unsigned int NumDiffuseTextures = 1;
-uniform unsigned int NumSpecularTextures = 1;
+uniform int NumDiffuseTextures = 1;
+uniform int NumSpecularTextures = 1;
 
-uniform unsigned int NumLights = 0;
+uniform int NumLights = 0;
 
 // uniform arrays
 uniform sampler2D DiffuseTextures[MAX_DIFFUSE_TEXTURES];
@@ -75,8 +75,8 @@ uniform sampler2D SpecularTextures[MAX_SPECULAR_TEXTURES];
 uniform LightObject Lights[MAX_LIGHTS];
 
 uniform vec3 LightAmbient = vec3(.2f,.2f,.2f);
-uniform float SpecularMultiplier = 1.f;
-uniform float SpecularPower = 32.0f;
+uniform float SpecularMultiplier = 0.5f;
+uniform float SpecularPower = 16.0f;
 
 uniform float Reflectivity = 0.f;
 uniform float Transparency = 0.f;

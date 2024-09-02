@@ -2,25 +2,18 @@
 
 #include"datatype/Vector3.hpp"
 
-bool Vector3::s_DidInitReflection = false;
-
 Vector3 Vector3::zero = Vector3(0.f, 0.f, 0.f);
 Vector3 Vector3::xAxis = Vector3(-1.f, 0.f, 0.f);
 Vector3 Vector3::yAxis = Vector3(0.f, 1.f, 0.f);
 Vector3 Vector3::zAxis = Vector3(0.f, 0.f, 1.f);
 Vector3 Vector3::one = Vector3(1.f, 1.f, 1.f);
 
+static bool s_DidInitReflection = false;
+
 struct IVector3
 {
-	IVector3(Vector3 v);
-
-	double X, Y, Z = 0.f;
+	double X = 0.f, Y = 0.f, Z = 0.f;
 };
-
-IVector3::IVector3(Vector3 v)
-	: X(v.X), Y(v.Y), Z(v.Z)
-{
-}
 
 void Vector3::s_DeclareReflections()
 {
@@ -28,14 +21,32 @@ void Vector3::s_DeclareReflections()
 		return;
 	s_DidInitReflection = true;
 
-	return;
-
-	Vector3::ApiReflection = new Reflection::ReflectionInfo();
-
+	//Vector3::ApiReflection = new Reflection::ReflectionInfo();
+	/*
 	REFLECTION_DECLAREPROP_SIMPLE_READONLY(Vector3, X, Double);
 	REFLECTION_DECLAREPROP_SIMPLE_READONLY(Vector3, Y, Double);
 	REFLECTION_DECLAREPROP_SIMPLE_READONLY(Vector3, Z, Double);
 	REFLECTION_DECLAREPROP_SIMPLE_READONLY(Vector3, Magnitude, Double);
+
+	std::vector<Reflection::ValueType> ins = { Reflection::ValueType::Vector3, Reflection::ValueType::Bool };
+
+	REFLECTION_DECLAREFUNC(
+		"FuzzyEq",
+		ins,
+		{ Reflection::ValueType::Bool },
+		[](Reflection::Reflectable* p, Reflection::GenericValue& gv)
+		{
+			Vector3 me = *dynamic_cast<Vector3*>(p);
+			Vector3 other = Vector3(gv.Array[0]);
+			double fuzz = gv.Array[1].AsDouble();
+
+			double totalDiff = std::abs(me.X - other.X) + std::abs(me.Y - other.Y) + std::abs(me.Z - other.Z);
+
+			return Reflection::GenericValue(totalDiff <= fuzz);
+		}
+	);*/
+
+	//REFLECTION_INHERITAPI(Reflection::Reflectable);
 }
 
 Vector3::Vector3()
@@ -95,9 +106,7 @@ Vector3::Vector3(Reflection::GenericValue gv)
 	}
 
 	if (!gv.Pointer)
-	{
 		throw("Attempted to construct Vector3, but GenericValue.Pointer was NULL");
-	}
 
 	/*Vector3 vec = *(Vector3*)gv.Pointer;
 	this->X = vec.X;
@@ -105,8 +114,9 @@ Vector3::Vector3(Reflection::GenericValue gv)
 	this->Z = vec.Z;
 	this->Magnitude = vec.Magnitude;*/
 
-	IVector3 simplevec = *(IVector3*)gv.Pointer;
-	Vector3 vec(simplevec.X, simplevec.Y, simplevec.Z);
+	IVector3* simplevec = static_cast<IVector3*>(gv.Pointer);
+
+	Vector3 vec(simplevec->X, simplevec->Y, simplevec->Z);
 
 	this->X = vec.X;
 	this->Y = vec.Y;
@@ -120,10 +130,7 @@ Reflection::GenericValue Vector3::ToGenericValue()
 {
 	//REFLECTION_OPERATORGENERICTOCOMPLEX(Vector3);
 
-	if ((uint64_t)this == 0x108)
-		return Vector3(-999.f, 999.f, -999.f).ToGenericValue();
-
-	IVector3 simplevec(*this);
+	IVector3 simplevec{ X, Y, Z };
 
 	Reflection::GenericValue gv;
 	gv.Type = Reflection::ValueType::Vector3;

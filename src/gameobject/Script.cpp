@@ -12,7 +12,7 @@
 //RegisterDerivedObject<Object_Script> Object_Script::RegisterClassAs("Script");
 
 #if 0
-static bool didInitReflection = false;
+static bool s_DidInitReflection = false;
 static lua_State* DefaultState = nullptr;
 
 static const std::unordered_map<Reflection::ValueType, lua_Type> ReflectionTypeToLuaType =
@@ -196,7 +196,7 @@ template <class T> static void pushFunction(lua_State* L, T* obj, const char* na
 			const char* fname = lua_tostring(L, lua_upvalueindex(2));
 			std::string fnamestr = fname;
 
-			auto& func = refl->ApiReflection->GetFunction(fnamestr);
+			auto& func = refl->GetFunction(fnamestr);
 			std::vector<Reflection::ValueType>& paramTypes = func.Inputs;
 
 			int numParams = paramTypes.size();
@@ -328,12 +328,12 @@ static auto api_gameobjindex = [](lua_State* L)
 		if (!lua_isnil(L, -1))
 			return 1;
 
-		if (obj->ApiReflection->HasProperty(key))
+		if (obj->HasProperty(key))
 		{
-			Reflection::GenericValue value = obj->ApiReflection->GetPropertyValue(key);
+			Reflection::GenericValue value = obj->GetPropertyValue(key);
 			pushGenericValue(L, value);
 		}
-		if (obj->ApiReflection->HasFunction(key))
+		if (obj->HasFunction(key))
 		{
 			pushFunction<GameObject>(L, obj, key);
 		}
@@ -373,12 +373,12 @@ static auto api_gameobjnewindex = [](lua_State* L)
 
 		std::string keystr = key;
 
-		for (auto& p : obj->ApiReflection->GetProperties())
+		for (auto& p : obj->GetProperties())
 			printf("%s\n", p.first.c_str());
 
-		if (obj->ApiReflection->HasProperty(key))
+		if (obj->HasProperty(key))
 		{
-			auto& prop = obj->ApiReflection->GetProperty(key);
+			auto& prop = obj->GetProperty(key);
 
 			int iArgType = lua_type(L, -1);
 			lua_Type argType = (lua_Type)iArgType;
@@ -402,7 +402,7 @@ static auto api_gameobjnewindex = [](lua_State* L)
 				Reflection::GenericValue newvalue = luaTypeToGeneric(L, desiredType, &wasSuccessful);
 
 				if (wasSuccessful)
-					obj->ApiReflection->SetPropertyValue(key, newvalue);
+					obj->SetPropertyValue(key, newvalue);
 			}
 		}
 		else
@@ -463,16 +463,16 @@ static auto api_vec3index = [](lua_State* L)
 
 		std::string keystr = key;
 
-		auto& props = vec->ApiReflection->GetProperties();
+		auto& props = vec->GetProperties();
 
-		if (vec->ApiReflection->HasProperty(key))
+		if (vec->HasProperty(key))
 		{
-			Reflection::GenericValue value = vec->ApiReflection->GetPropertyValue(key);
+			Reflection::GenericValue value = vec->GetPropertyValue(key);
 			pushGenericValue(L, value);
 
 			return 1;
 		}
-		else if (vec->ApiReflection->HasFunction(key))
+		else if (vec->HasFunction(key))
 		{
 			pushFunction<Vector3>(L, vec, key);
 
@@ -583,11 +583,11 @@ void Object_Script::s_DeclareReflections()
 	REFLECTION_DECLAREPROP(
 		"SourceFile",
 		String,
-		[](Reflection::BaseReflectable* refl)
+		[](Reflection::Reflectable* refl)
 		{
 			return Reflection::GenericValue(dynamic_cast<Object_Script*>(refl)->SourceFile);
 		},
-		[](Reflection::BaseReflectable* refl, Reflection::GenericValue newval)
+		[](Reflection::Reflectable* refl, Reflection::GenericValue newval)
 		{
 			Object_Script* scr = dynamic_cast<Object_Script*>(refl);
 			scr->SourceFile = newval.String;
@@ -600,7 +600,7 @@ void Object_Script::s_DeclareReflections()
 		"Reload",
 		{},
 		{ Reflection::ValueType::Bool },
-		[](Reflection::BaseReflectable* scr, Reflection::GenericValue)
+		[](Reflection::Reflectable* scr, Reflection::GenericValue)
 		{
 			bool reloadSuccess = dynamic_cast<Object_Script*>(scr)->Reload();
 			return Reflection::GenericValue(reloadSuccess);

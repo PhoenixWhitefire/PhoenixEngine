@@ -17,6 +17,7 @@ public:
 	RenderMaterial(std::string const&);
 	// Fetches a material. Caches materials.
 	static RenderMaterial* GetMaterial(std::string const& Name);
+	static std::vector<RenderMaterial*> GetLoadedMaterials();
 
 	std::string Name;
 

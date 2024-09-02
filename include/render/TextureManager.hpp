@@ -42,7 +42,7 @@ public:
 	If ShouldLoadAsync is true, then Texture->Identifier will be TEXTUREMANAGER_INVALID_ID until
 	the Texture is ready to use.
 	*/
-	Texture* LoadTextureFromPath(std::string Path, bool ShouldLoadAsync = true);
+	Texture* LoadTextureFromPath(const std::string& Path, bool ShouldLoadAsync = true);
 
 	/*
 	Load an image's data, used internally by TextureManager::CreateTexture2D and is a separate function for asynchronous loading

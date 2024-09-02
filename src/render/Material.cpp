@@ -11,7 +11,7 @@ static const std::string MissingTexPath = "textures/MISSING2_MaximumADHD_status_
 RenderMaterial::RenderMaterial()
 {
 	this->SpecMultiply = .5f;
-	this->SpecExponent = 8.f;
+	this->SpecExponent = 16.f;
 
 	this->Name = "*ERROR*";
 	this->HasSpecular = false;
@@ -110,4 +110,14 @@ RenderMaterial* RenderMaterial::GetMaterial(std::string const& Name)
 	}
 	else
 		return it->second;
+}
+
+std::vector<RenderMaterial*> RenderMaterial::GetLoadedMaterials()
+{
+	std::vector<RenderMaterial*> mats;
+
+	for (auto& it : s_loadedMaterials)
+		mats.push_back(it.second);
+
+	return mats;
 }

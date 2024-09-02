@@ -17,10 +17,12 @@ public:
 
 	Vector3 Position;
 
+	PHX_GAMEOBJECT_API_REFLECTION;
+
 private:
 	
 	static void s_DeclareReflections();
-	static bool s_DidInitReflection;
+	static inline Api s_Api{};
 };
 
 class Object_PointLight : public Object_Light
@@ -31,10 +33,12 @@ public:
 
 	float Range = 16.f;
 
+	PHX_GAMEOBJECT_API_REFLECTION;
+
 private:
 	static RegisterDerivedObject<Object_PointLight> RegisterClassAs;
 	static void s_DeclareReflections();
-	static bool s_DidInitReflection;
+	static inline Api s_Api{};
 };
 
 class Object_DirectionalLight : public Object_Light
@@ -42,10 +46,12 @@ class Object_DirectionalLight : public Object_Light
 public:
 	Object_DirectionalLight();
 
+	PHX_GAMEOBJECT_API_REFLECTION;
+
 private:
 	static RegisterDerivedObject<Object_DirectionalLight> RegisterClassAs;
 	static void s_DeclareReflections();
-	static bool s_DidInitReflection;
+	static inline Api s_Api{};
 };
 
 class Object_SpotLight : public Object_Light
@@ -58,8 +64,10 @@ public:
 	float OuterCone = 90.f;
 	float InnerCone = 95.f;
 
+	PHX_GAMEOBJECT_API_REFLECTION;
+
 private:
 	static RegisterDerivedObject<Object_SpotLight> RegisterClassAs;
 	static void s_DeclareReflections();
-	static bool s_DidInitReflection;
+	static inline Api s_Api{};
 };

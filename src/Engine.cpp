@@ -152,6 +152,8 @@ EngineObject::EngineObject()
 	this->WindowSizeX = InitialWindowSizeX, this->WindowSizeY = InitialWindowSizeY;
 
 	SDL_Init(SDL_INIT_VIDEO);
+
+	Debug::Log("Initialized SDL Video subsystem");
 	
 	// Must be set *before* window creation
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -162,6 +164,8 @@ EngineObject::EngineObject()
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
+	Debug::Log("Set OpenGL window attributes");
+
 	// Initialize SDL
 	this->Window = SDL_CreateWindow(
 		"Waiting on configuration...",
@@ -169,6 +173,8 @@ EngineObject::EngineObject()
 		InitialWindowSizeX, InitialWindowSizeY,
 		m_SDLWindowFlags
 	);
+
+	Debug::Log("Window created");
 
 	bool ConfigFileFound = true;
 	std::string ConfigAscii = FileRW::ReadFile("./phoenix.conf", &ConfigFileFound);
@@ -205,11 +211,13 @@ EngineObject::EngineObject()
 		throw(std::vformat("SDL could not create the window: {}\n", std::make_format_args(errStr)));
 	}
 
-	Debug::Log("Window created.");
+	Debug::Log("Window configured");
 
 	// TODO: Engine->MSAASamples does nothing, attempting to specify via below ctor's argument leads to
 	// OpenGL error "Target doesn't match the texture's target"
 	this->RendererContext = new Renderer(this->WindowSizeX, this->WindowSizeY, this->Window);
+
+	Debug::Log("Creating datamodel...");
 
 	GameObject* newDataModel = GameObject::CreateGameObject("DataModel");
 
@@ -244,7 +252,7 @@ EngineObject::EngineObject()
 
 	ThreadManager::Get()->CreateWorkers(4, WorkerType::DefaultTaskWorker);
 
-	Debug::Log("Engine constructed.");
+	Debug::Log("Engine constructed");
 }
 
 static std::vector<LightData_t> compileLightData(GameObject* RootObject)
@@ -311,7 +319,7 @@ static std::vector<MeshData_t> compileMeshData(GameObject* RootObject, Object_Ca
 			{
 				// TODO: frustum culling
 				// Hold R to disable distance culling
-				if (glm::distance(glm::vec3(Object3D->Matrix[3]), glm::vec3(SceneCamera->Matrix[3])) > 100.0f
+				if (glm::distance(glm::vec3(Object3D->Transform[3]), glm::vec3(SceneCamera->Transform[3])) > 100.0f
 					&& !UserInput::IsKeyDown(SDLK_r))
 					continue;
 
@@ -319,18 +327,17 @@ static std::vector<MeshData_t> compileMeshData(GameObject* RootObject, Object_Ca
 				// if (MeshObject->HasTransparency)
 					//continue;
 
-				glm::mat4 ModelMatrix = glm::mat4(1.0f);
-
-				MeshData_t Data;
-				Data.MeshData = Object3D->GetRenderMesh();
-				Data.Material = Object3D->Material;
-				Data.Matrix = ModelMatrix * Object3D->Matrix;
-				Data.Size = Object3D->Size;
-				Data.Transparency = Object3D->Transparency;
-				Data.Reflectivity = Object3D->Reflectivity;
-				Data.TintColor = Object3D->ColorRGB;
-				Data.FaceCulling = Object3D->FaceCulling;
-
+				MeshData_t Data
+				{
+					Object3D->GetRenderMesh(),
+					Object3D->Transform,
+					Object3D->Size,
+					Object3D->Material,
+					Object3D->ColorRGB,
+					Object3D->Transparency,
+					Object3D->Reflectivity,
+					Object3D->FaceCulling
+				};
 				DataList.push_back(Data);
 			}
 
@@ -368,19 +375,19 @@ void EngineObject::Start()
 
 	this->Exit = false;
 
+	const std::string SkyPath = "textures/Sky1/";
+
 	static const std::string SkyboxCubemapImages[6] =
 	{
-		"Sky1/left.jpg",
-		"Sky1/right.jpg",
-		"Sky1/top.jpg",
-		"Sky1/bottom.jpg",
-		"Sky1/front.jpg",
-		"Sky1/back.jpg"
+		"right",
+		"left",
+		"bottom",
+		"top",
+		"front",
+		"back"
 	};
 
 	std::vector<Texture*> SkyboxFacesLoading;
-
-	std::string BaseTexturePath = std::string(EngineJsonConfig["ResourcesDirectory"]) + "textures/";
 
 	GLuint SkyboxCubemap = 0;
 
@@ -395,7 +402,7 @@ void EngineObject::Start()
 
 	for (const std::string skyboxFace : SkyboxCubemapImages)
 	{
-		Texture* tx = TextureManager::Get()->LoadTextureFromPath("textures/" + skyboxFace);
+		Texture* tx = TextureManager::Get()->LoadTextureFromPath(SkyPath + skyboxFace + ".jpg");
 		SkyboxFacesLoading.push_back(tx);
 	}
 
@@ -481,7 +488,10 @@ void EngineObject::Start()
 				);
 			}
 			else
+			{
 				skyboxLoaded = false;
+				break;
+			}
 		}
 
 		if (skyboxLoaded && SkyboxFacesLoading.size() > 0)
@@ -590,8 +600,8 @@ void EngineObject::Start()
 
 		glUniform1i(glGetUniformLocation(SkyboxShaders->ID, "SkyCubemap"), 3);
 
-		glm::vec3 CamPos = glm::vec3(SceneCamera->Matrix[3]);
-		glm::vec3 CamForward = glm::vec3(SceneCamera->Matrix[2]);
+		glm::vec3 CamPos = glm::vec3(SceneCamera->Transform[3]);
+		glm::vec3 CamForward = glm::vec3(SceneCamera->Transform[2]);
 
 		glm::mat4 view = glm::mat4(1.f);
 		glm::mat4 projection = glm::mat4(1.0f);

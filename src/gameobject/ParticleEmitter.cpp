@@ -11,7 +11,7 @@ RegisterDerivedObject<Object_ParticleEmitter> Object_ParticleEmitter::RegisterCl
 
 ShaderProgram* Object_ParticleEmitter::s_ParticleShaders = nullptr;
 std::default_random_engine Object_ParticleEmitter::s_RandGenerator = std::default_random_engine(static_cast<uint32_t>(time(NULL)));
-bool Object_ParticleEmitter::s_DidInitReflection = false;
+static bool s_DidInitReflection = false;
 
 static const std::string MissingTexPath = "textures/MISSING2_MaximumADHD_status_1665776378145304579.png";
 
@@ -27,54 +27,55 @@ float Quad[] =
 void Object_ParticleEmitter::s_DeclareReflections()
 {
 	if (s_DidInitReflection)
-		//return;
+		return;
 	s_DidInitReflection = true;
+
+	REFLECTION_INHERITAPI(GameObject);
 
 	REFLECTION_DECLAREPROP_SIMPLE(Object_ParticleEmitter, EmitterEnabled, Bool);
 
 	REFLECTION_DECLAREPROP(
 		"Rate",
 		Integer,
-		[](Reflection::BaseReflectable* g)
+		[](GameObject* g)
 		{
 			return dynamic_cast<Object_ParticleEmitter*>(g)->Rate;
 		},
-		[](Reflection::BaseReflectable* g, Reflection::GenericValue gv)
+		[](GameObject* g, Reflection::GenericValue gv)
 		{
-			int newRate = gv.Integer;
-			if (newRate < 0)
-				throw(std::vformat("Rate must be >=0, {} instead", std::make_format_args(newRate)));
-			else
-				dynamic_cast<Object_ParticleEmitter*>(g)->Rate = newRate;
+			int64_t newRate = gv.Integer;
+			if (newRate < 0 || newRate > 0xFFFFFFu)
+				throw("ParticleEmitter.Rate must be within uint32_t bounds (0 < Rate <= 0xFFFFFFu)");
+			dynamic_cast<Object_ParticleEmitter*>(g)->Rate = static_cast<uint32_t>(newRate);
+				
 		}
 	);
 
 	REFLECTION_DECLAREPROP(
 		"MaxParticles",
 		Integer,
-		[](Reflection::BaseReflectable* g)
+		[](GameObject* g)
 		{
 			return dynamic_cast<Object_ParticleEmitter*>(g)->MaxParticles;
 		},
-		[](Reflection::BaseReflectable* g, Reflection::GenericValue gv)
+		[](GameObject* g, Reflection::GenericValue gv)
 		{
-			int newMax = gv.Integer;
-			if (newMax < 0)
-				throw(std::vformat("MaxParticles must be >=0, {} instead", std::make_format_args(newMax)));
-			else
-				dynamic_cast<Object_ParticleEmitter*>(g)->MaxParticles = newMax;
+			int64_t newMax = gv.Integer;
+			if (newMax < 0 || newMax > 0xFFFFFFu)
+				throw("ParticleEmitter.MaxParticles must be within uint32_t bounds (0 < MaxParticles <= 0xFFFFFFu)");
+			dynamic_cast<Object_ParticleEmitter*>(g)->MaxParticles = static_cast<uint32_t>(newMax);
 		}
 	);
 
 	REFLECTION_DECLAREPROP(
 		"Lifetime",
 		Vector3,
-		[](Reflection::BaseReflectable* g)
+		[](GameObject* g)
 		{
 			Object_ParticleEmitter* p = dynamic_cast<Object_ParticleEmitter*>(g);
 			return Vector3(p->Lifetime.X, p->Lifetime.Y, 0.f).ToGenericValue();
 		},
-		[](Reflection::BaseReflectable* g, Reflection::GenericValue gv)
+		[](GameObject* g, Reflection::GenericValue gv)
 		{
 			Vector3 newLifetime = gv;
 			dynamic_cast<Object_ParticleEmitter*>(g)->Lifetime = Vector2(
@@ -85,8 +86,6 @@ void Object_ParticleEmitter::s_DeclareReflections()
 	);
 
 	REFLECTION_DECLAREPROP_SIMPLE_TYPECAST(Object_ParticleEmitter, Offset, Vector3);
-
-	REFLECTION_INHERITAPI(GameObject);
 }
 
 Object_ParticleEmitter::Object_ParticleEmitter()
@@ -185,7 +184,7 @@ void Object_ParticleEmitter::Update(double Delta)
 
 	Object_Base3D* Parent3D = dynamic_cast<Object_Base3D*>(this->GetParent());
 
-	Vector3 WorldPosition = Parent3D ? Vector3(glm::vec3(Parent3D->Matrix[3])) + this->Offset : this->Offset;
+	Vector3 WorldPosition = Parent3D ? Vector3(glm::vec3(Parent3D->Transform[3])) + this->Offset : this->Offset;
 
 	_particle* NewParticle = nullptr;
 

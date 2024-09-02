@@ -20,6 +20,8 @@ public:
 
 	std::string SourceFile = "scripts/empty.luau";
 
+	PHX_GAMEOBJECT_API_REFLECTION;
+
 private:
 
 	std::string m_source;
@@ -30,5 +32,6 @@ private:
 
 	static RegisterDerivedObject<Object_Script> RegisterClassAs;
 	static void s_DeclareReflections();
+	static inline Api s_Api{};
 };
 */

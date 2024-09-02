@@ -1,39 +1,37 @@
 #include"gameobject/Workspace.hpp"
 
 RegisterDerivedObject<Object_Workspace> Object_Workspace::RegisterClassAs("Workspace");
-bool Object_Workspace::s_DidInitReflection = false;
+static bool s_DidInitReflection = false;
+
+static auto scget(GameObject* g)
+{
+	return dynamic_cast<Object_Workspace*>(g)->GetSceneCamera()->Name;
+}
+
+static void scset(GameObject* g, Reflection::GenericValue gv)
+{
+	Object_Workspace* p = dynamic_cast<Object_Workspace*>(g);
+	auto newObj = p->GetChild(gv.String);
+	auto newCam = newObj ? dynamic_cast<Object_Camera*>(newObj) : nullptr;
+	if (newCam)
+		p->SetSceneCamera(newCam);
+}
 
 void Object_Workspace::s_DeclareReflections()
 {
 	if (s_DidInitReflection)
-		//return;
+		return;
 	s_DidInitReflection = true;
+
+	REFLECTION_INHERITAPI(GameObject);
+	REFLECTION_INHERITAPI(Model);
 
 	REFLECTION_DECLAREPROP(
 		"SceneCamera",
-		String,
-		[](Reflection::BaseReflectable* g)
-		{
-			return dynamic_cast<Object_Workspace*>(g)->GetSceneCamera()->Name;
-		},
-		[](Reflection::BaseReflectable* g, Reflection::GenericValue gv)
-		{
-			Object_Workspace* p = dynamic_cast<Object_Workspace*>(g);
-
-			auto newObj = p->GetChild(gv.String);
-			auto newCam = newObj ? dynamic_cast<Object_Camera*>(newObj) : nullptr;
-
-			if (newCam)
-				p->SetSceneCamera(newCam);
-			//else
-				//Debug::Log(std::vformat(
-				//	"Attempted to change the scene camera to '{}', but it is not a child of Workspace!",
-				//	std::make_format_args(gv.String)
-				//));
-		}
+		GameObject,
+		scget,
+		scset
 	);
-
-	REFLECTION_INHERITAPI(Object_Model);
 }
 
 Object_Workspace::Object_Workspace()
@@ -47,8 +45,6 @@ Object_Workspace::Object_Workspace()
 
 void Object_Workspace::Initialize()
 {
-	GameObject* workspaceBase = dynamic_cast<GameObject*>(this);
-
 	GameObject* fallbackCameraBase = GameObject::CreateGameObject("Camera");
 	Object_Camera* fallbackCamera = dynamic_cast<Object_Camera*>(fallbackCameraBase);
 

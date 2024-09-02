@@ -109,7 +109,7 @@ void main()
 				float DistFactor = 1.f - Dist;
 				float SampleWeight = pow(DistFactor * 1.f, 1.f) * BlurSampleBaseWeight;
 
-				vec3 SampleCol = texture(Texture, FragIn_UV + (vec2(x, y) * PixelScale)).xyz;
+				vec3 SampleCol = texture(Texture, FragIn_UV + (vec2(x, y) * PixelScale) + UVOffset).xyz;
 				BlurredColor += SampleCol * SampleWeight;
 			}
 		}

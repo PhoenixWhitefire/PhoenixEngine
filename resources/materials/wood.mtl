@@ -1,3 +1,5 @@
 {
-  "albedo": "textures/wood.png"
+  "albedo": "textures/wood.png",
+  "specExponent": 0.5,
+  "specMultiply": 0.5
 }

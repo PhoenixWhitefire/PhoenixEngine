@@ -30,12 +30,12 @@ public:
 	Object_ParticleEmitter();
 
 	void Update(double Delta);
-	void Render(glm::mat4 CameraMatrix);
+	void Render(glm::mat4 CameraTransform);
 
 	bool EmitterEnabled = true;
 
-	int Rate = 50; //Particles to be spawned every second
-	int MaxParticles = 500;
+	uint32_t Rate = 50; //Particles to be spawned every second
+	uint32_t MaxParticles = 500;
 
 	Vector2 Lifetime = Vector2(1.5f, 2.f); // Randomly chosen between the range X - Y;
 	Vector3 Offset; // If parent is a valid Base3D, position will be Parent.Position + Offset, else just Offset
@@ -46,6 +46,8 @@ public:
 	ValueSequence<float> SizeOverTime;
 	ValueSequence<Vector3> VelocityOverTime;
 	
+	PHX_GAMEOBJECT_API_REFLECTION;
+
 private:
 	size_t m_getUsableIndex();
 
@@ -62,5 +64,5 @@ private:
 
 	static RegisterDerivedObject<Object_ParticleEmitter> RegisterClassAs;
 	static void s_DeclareReflections();
-	static bool s_DidInitReflection;
+	static inline Api s_Api{};
 };

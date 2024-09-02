@@ -1,28 +1,28 @@
 #include"gameobject/Base3D.hpp"
 
-bool Object_Base3D::s_DidInitReflection = false;
+static bool s_DidInitReflection = false;
 static RenderMaterial* DefaultRenderMat = nullptr;
+
+RegisterDerivedObject<Object_Base3D> RegisterClassAs("Base3D");
 
 void Object_Base3D::s_DeclareReflections()
 {
 	if (s_DidInitReflection)
-		//return;
+		return;
 	s_DidInitReflection = true;
 
+	REFLECTION_INHERITAPI(GameObject);
+
 	REFLECTION_DECLAREPROP(
-		"Position",
-		Vector3,
-		[](Reflection::BaseReflectable* g)
+		"Transform",
+		Matrix,
+		[](GameObject* p)
 		{
-			Object_Base3D* p = dynamic_cast<Object_Base3D*>(g);
-			Vector3 v = Vector3((glm::vec3)p->Matrix[3]);
-			return v.ToGenericValue();
+			return Reflection::GenericValue(dynamic_cast<Object_Base3D*>(p)->Transform);
 		},
-		[](Reflection::BaseReflectable* g, Reflection::GenericValue gv)
+		[](GameObject* p, const Reflection::GenericValue& gv)
 		{
-			Object_Base3D* p = dynamic_cast<Object_Base3D*>(g);
-			Vector3 vec = gv;
-			p->Matrix[3] = glm::vec4(vec.X, vec.Y, vec.Z, 1.f);
+			dynamic_cast<Object_Base3D*>(p)->Transform = gv.AsMatrix();
 		}
 	);
 
@@ -31,12 +31,12 @@ void Object_Base3D::s_DeclareReflections()
 	REFLECTION_DECLAREPROP(
 		"Material",
 		String,
-		[](Reflection::BaseReflectable* g)
+		[](GameObject* g)
 		{
 			Object_Base3D* p = dynamic_cast<Object_Base3D*>(g);
 			return p->Material->Name;
 		},
-		[](Reflection::BaseReflectable* g, Reflection::GenericValue gv)
+		[](GameObject* g, Reflection::GenericValue gv)
 		{
 			Object_Base3D* p = dynamic_cast<Object_Base3D*>(g);
 			p->Material = RenderMaterial::GetMaterial(gv.String);
@@ -50,19 +50,17 @@ void Object_Base3D::s_DeclareReflections()
 	REFLECTION_DECLAREPROP(
 		"FaceCulling",
 		Integer,
-		[](Reflection::BaseReflectable* g)
+		[](GameObject* g)
 		{
 			Object_Base3D* p = dynamic_cast<Object_Base3D*>(g);
 			return (int)p->FaceCulling;
 		},
-		[](Reflection::BaseReflectable* g, Reflection::GenericValue gv)
+		[](GameObject* g, Reflection::GenericValue gv)
 		{
 			Object_Base3D* p = dynamic_cast<Object_Base3D*>(g);
 			p->FaceCulling = (FaceCullingMode)gv.Integer;
 		}
 	);
-
-	REFLECTION_INHERITAPI(GameObject);
 }
 
 Object_Base3D::Object_Base3D()

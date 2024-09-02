@@ -58,7 +58,7 @@ public:
 class FBO
 {
 public:
-	FBO(SDL_Window* Window, int Width, int Height, int MSSamples = 0, bool AttachRenderBuffer = true);
+	FBO(int Width, int Height, int MSSamples = 0, bool AttachRenderBuffer = true);
 
 	void Bind() const;
 	void Unbind();

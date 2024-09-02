@@ -2,7 +2,7 @@
 #include"BaseMeshes.hpp"
 
 RegisterDerivedObject<Object_Primitive> Object_Primitive::RegisterClassAs("Primitive");
-bool Object_Primitive::s_DidInitReflection = false;
+static bool s_DidInitReflection = false;
 
 static Mesh* GetPrimitiveMesh(PrimitiveShape Type)
 {
@@ -31,24 +31,24 @@ static Mesh* GetPrimitiveMesh(PrimitiveShape Type)
 void Object_Primitive::s_DeclareReflections()
 {
 	if (s_DidInitReflection)
-		//return;
+		return;
 	s_DidInitReflection = true;
+
+	REFLECTION_INHERITAPI(GameObject);
+	REFLECTION_INHERITAPI(Base3D);
 
 	REFLECTION_DECLAREPROP(
 		"Shape",
 		Integer,
-		[](Reflection::BaseReflectable* g)
+		[](GameObject* g)
 		{
 			return (int)dynamic_cast<Object_Primitive*>(g)->Shape;
 		},
-		[](Reflection::BaseReflectable* g, Reflection::GenericValue gv)
+		[](GameObject* g, Reflection::GenericValue gv)
 		{
 			dynamic_cast<Object_Primitive*>(g)->SetShape((PrimitiveShape)gv.Integer);
 		}
 	);
-
-	REFLECTION_INHERITAPI(Object_Base3D);
-	REFLECTION_INHERITAPI(GameObject);
 }
 
 Object_Primitive::Object_Primitive()

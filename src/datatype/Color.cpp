@@ -27,9 +27,7 @@ Color::Color(Reflection::GenericValue gv)
 	}
 
 	if (!gv.Pointer)
-	{
 		throw("Attempted to construct Color, but GenericValue.Pointer was NULL");
-	}
 
 	Color col = *(Color*)gv.Pointer;
 	this->R = col.R;
@@ -39,7 +37,16 @@ Color::Color(Reflection::GenericValue gv)
 
 Reflection::GenericValue Color::ToGenericValue()
 {
-	REFLECTION_OPERATORGENERICTOCOMPLEX(Color);
+	Reflection::GenericValue gv;
+	gv.Type = Reflection::ValueType::Color;
+	gv.Pointer = malloc(sizeof(Color));
+
+	if (!gv.Pointer)
+		throw("Allocation error on Color::ToGenericValue");
+
+	memcpy(gv.Pointer, this, sizeof(Color));
+
+	return gv;
 }
 
 std::string Color::ToString()
