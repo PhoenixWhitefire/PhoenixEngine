@@ -12,7 +12,7 @@ The following libraries are used:
 * Glad, OpenGL API - [glad.dav1d.de/](glad.dav1d.de/)
 * GLM, matrix math - [@g-truc/glm](github.com/g-truc/glm/)
 * nlohmann::json, JSON decoding/encoding for materials and scenes - [@nlohmann/json](https://github.com/nlohmann/json/)
-* ImGui, GUIs - [@ocornut/ImGui](github.com/ocornut/imgui/)
+* Dear ImGui, GUIs - [@ocornut/ImGui](github.com/ocornut/imgui/)
 * STB Image, image loading - [@nothings/stb](github.com/nothings/stb)
 * Vulkan (UNUSED) - [Khronos Group](khronos.org/)
 * OpenGL, rendering - [Khronos Group](khronos.org/)

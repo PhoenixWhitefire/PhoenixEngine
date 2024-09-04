@@ -14,13 +14,13 @@
 
 struct MeshData_t
 {
-	Mesh* MeshData = nullptr;
-	glm::mat4 Transform = glm::mat4(1.0f);
+	Mesh* MeshData{};
+	glm::mat4 Transform{};
 	Vector3 Size;
-	RenderMaterial* Material = nullptr;
+	RenderMaterial* Material{};
 	Color TintColor;
-	float Transparency = 0.f;
-	float Reflectivity = 0.f;
+	float Transparency{};
+	float Reflectivity{};
 	
 	FaceCullingMode FaceCulling = FaceCullingMode::BackFace;
 };
@@ -33,12 +33,12 @@ struct LightData_t
 
 	Vector3 Position;
 	Color LightColor;
-	float Range = 60;
+	float Range = 60.f;
 
-	glm::mat4 ShadowMapProjection;
+	glm::mat4 ShadowMapProjection{};
 	bool HasShadowMap = false;
-	int ShadowMapIndex = 0;
-	int ShadowMapTextureId = 0;
+	int ShadowMapIndex{};
+	int ShadowMapTextureId{};
 };
 
 struct Scene_t

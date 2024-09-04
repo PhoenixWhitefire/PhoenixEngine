@@ -1942,6 +1942,9 @@
     <None Include="vendor\glm\detail\type_vec4_simd.inl">
       <Filter>Vendor Files\glm\detail</Filter>
     </None>
+    <None Include="README.md">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="vendor\imgui\LICENSE.txt">

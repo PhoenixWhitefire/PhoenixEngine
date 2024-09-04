@@ -1,0 +1,308 @@
+// Automatically generated as levels/dev.world
+#Version 02.00
+
+{
+  "GameObjects": [
+    {
+      "Asset": "",
+      "ClassName": "Mesh",
+      "ColorRGB": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Enabled": true,
+      "FaceCulling": 1,
+      "Material": "models/crow",
+      "Name": "crow_0",
+      "ObjectId": 17,
+      "Reflectivity": 0.0,
+      "Size": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "Transparency": 0.0
+    },
+    {
+      "Brightness": 2.0,
+      "ClassName": "DirectionalLight",
+      "Direction": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "Enabled": true,
+      "LightColor": [
+        1.0,
+        0.967704713344574,
+        0.8627451062202454
+      ],
+      "Name": "DirectionalLight",
+      "ObjectId": 26,
+      "Shadows": false
+    },
+    {
+      "Asset": "",
+      "ClassName": "Mesh",
+      "ColorRGB": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Enabled": true,
+      "FaceCulling": 0,
+      "Material": "testmat",
+      "Name": "g_0",
+      "ObjectId": 18,
+      "Reflectivity": 0.0,
+      "Size": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          15.0,
+          0.0,
+          100.0,
+          1.0
+        ]
+      ],
+      "Transparency": 0.0
+    },
+    {
+      "Asset": "",
+      "ClassName": "Mesh",
+      "ColorRGB": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Enabled": true,
+      "FaceCulling": 0,
+      "Material": "testmat",
+      "Name": "gr_0",
+      "ObjectId": 19,
+      "Reflectivity": 0.0,
+      "Size": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          15.0,
+          0.0,
+          100.0,
+          1.0
+        ]
+      ],
+      "Transparency": 0.0
+    },
+    {
+      "Asset": "",
+      "ClassName": "Mesh",
+      "ColorRGB": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Enabled": true,
+      "FaceCulling": 0,
+      "Material": "testmat",
+      "Name": "windows10_0",
+      "ObjectId": 20,
+      "Reflectivity": 0.0,
+      "Size": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          15.0,
+          5.0,
+          100.0,
+          1.0
+        ]
+      ],
+      "Transparency": 0.0
+    },
+    {
+      "ClassName": "Primitive",
+      "ColorRGB": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Enabled": true,
+      "FaceCulling": 1,
+      "Material": "floortiles",
+      "Name": "Primitive",
+      "ObjectId": 21,
+      "Reflectivity": 0.0,
+      "Shape": 0,
+      "Size": [
+        50.0,
+        1.0,
+        50.0
+      ],
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "Transparency": 0.0
+    },
+    {
+      "ClassName": "Primitive",
+      "ColorRGB": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Enabled": true,
+      "FaceCulling": 1,
+      "Material": "wood",
+      "Name": "Primitive",
+      "ObjectId": 22,
+      "Reflectivity": 0.0,
+      "Shape": 0,
+      "Size": [
+        2.0,
+        17.0,
+        20.0
+      ],
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          -5.0,
+          9.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "Transparency": 0.0
+    }
+  ],
+  "SceneName": "levels/dev.world"
+}

@@ -6,7 +6,16 @@
 // 01/09/2024:
 // MUST be added to the `public` section of *all* objects so
 // any APIs they declare can be found
-#define PHX_GAMEOBJECT_API_REFLECTION virtual const PropertyMap& GetProperties()  \
+#define PHX_GAMEOBJECT_API_REFLECTION static const PropertyMap& s_GetProperties()  \
+{ \
+	return s_Api.Properties; \
+} \
+ \
+static const FunctionMap& s_GetFunctions() \
+{ \
+	return s_Api.Functions; \
+} \
+virtual const PropertyMap& GetProperties()  \
 { \
 	return s_Api.Properties; \
 } \

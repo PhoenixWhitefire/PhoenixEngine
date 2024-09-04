@@ -647,7 +647,17 @@ void EngineObject::Start()
 
 		glDisable(GL_DEPTH_TEST);
 
+		uint32_t dataModelId = DataModel->ObjectId;
+
 		this->OnFrameRenderGui.Fire(DeltaTime);
+
+		if (!GameObject::GetObjectById(dataModelId))
+		{
+			Debug::Log("DataModel was Destroy'd, shutting down...");
+			this->DataModel = nullptr;
+			GameObject::s_DataModel = nullptr;
+			break;
+		}
 
 		glEnable(GL_DEPTH_TEST);
 
@@ -689,9 +699,7 @@ void EngineObject::Start()
 			glUniform1i(glGetUniformLocation(PostProcessingShaders->ID, "DistortionTexture"), 2);
 		}
 		else
-		{
 			glUniform1i(glGetUniformLocation(PostProcessingShaders->ID, "PostFXEnabled"), 0);
-		}
 
 		glUniform1i(glGetUniformLocation(PostProcessingShaders->ID, "Texture"), 1);
 		glActiveTexture(GL_TEXTURE1);

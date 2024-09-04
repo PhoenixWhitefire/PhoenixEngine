@@ -20,6 +20,7 @@ RenderMaterial::RenderMaterial()
 	this->Shader = ShaderProgram::GetShaderProgram("worldUber");
 
 	this->DiffuseTextures.push_back(TextureManager::Get()->LoadTextureFromPath(MissingTexPath));
+	this->SpecularTextures.push_back(TextureManager::Get()->LoadTextureFromPath(MissingTexPath));
 }
 
 RenderMaterial::RenderMaterial(std::string const& MaterialName)
@@ -77,6 +78,8 @@ RenderMaterial::RenderMaterial(std::string const& MaterialName)
 
 		this->SpecularTextures[0]->Usage = MaterialTextureType::Specular;
 	}
+	else
+		this->SpecularTextures.push_back(TextureManager::Get()->LoadTextureFromPath(MissingTexPath));
 
 	this->SpecExponent = JSONMaterialData.value("specExponent", this->SpecExponent);
 	this->SpecMultiply = JSONMaterialData.value("specMultiply", this->SpecMultiply);

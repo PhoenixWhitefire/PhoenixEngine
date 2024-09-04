@@ -487,6 +487,7 @@
     <ClCompile Include="vendor\stb.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="README.md" />
     <None Include="resources\shaders\base2d.frag" />
     <None Include="resources\shaders\base2d.vert" />
     <None Include="resources\shaders\watertest.frag" />

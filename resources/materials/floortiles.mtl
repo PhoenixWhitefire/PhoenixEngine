@@ -2,5 +2,5 @@
   "albedo": "textures/floortiles.png",
   "specExponent": 0.5,
   "specMultiply": 0.5,
-  "specular": "textures/address-san.jpg"
+  "specular": "textures/floortilesSpecular.png"
 }

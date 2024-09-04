@@ -397,6 +397,8 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 	nlohmann::json GameObjectsNode = JsonData["GameObjects"];
 
 	std::unordered_map<int64_t, GameObject*> objectsMap;
+	std::unordered_map<int64_t, int64_t> realIdToSceneId;
+	std::unordered_map<GameObject*, std::unordered_map<std::string, uint32_t>> objectProps;
 
 	for (uint32_t itemIndex = 0; itemIndex < GameObjectsNode.size(); itemIndex++)
 	{
@@ -430,7 +432,10 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 
 		GameObject* NewObject = GameObject::CreateGameObject(Class);
 
-		objectsMap.insert(std::pair(item.value("ObjectId", 0), NewObject));
+		objectsMap.insert(std::pair(item.value("ObjectId", PHX_GAMEOBJECT_NULL_ID), NewObject));
+		realIdToSceneId.insert(std::pair(NewObject->ObjectId, item.value("ObjectId", PHX_GAMEOBJECT_NULL_ID)));
+
+		objectProps.insert(std::pair(NewObject, std::unordered_map<std::string, uint32_t>{}));
 
 		// https://json.nlohmann.me/features/iterators/#access-object-key-during-iteration
 		for (auto memberIt = item.begin(); memberIt != item.end(); ++memberIt)
@@ -540,6 +545,12 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 				break;
 			}
 
+			case (Reflection::ValueType::GameObject):
+			{
+				objectProps[NewObject].insert(std::pair(MemberName, MemberValue));
+				break;
+			}
+
 			default:
 			{
 				const char* FmtStr = "Deserialization warning: Not reading prop '{}' of class {} because it's type ({}) is unknown";
@@ -562,47 +573,43 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 	for (auto& it : objectsMap)
 	{
 		GameObject* object = it.second;
-		Objects.push_back(object);
 
-		for (auto& prop : object->GetProperties())
+		// If it has a `Parent` key we know it isn't a Root Node
+		if (objectProps[object].find("Parent") == objectProps[object].end())
+			Objects.push_back(object);
+
+		for (auto& objectProp : objectProps[object])
 		{
-			if (prop.second.Type == Reflection::ValueType::GameObject)
+			const std::string& propName = objectProp.first;
+			const uint32_t sceneRelativeId = objectProp.second;
+
+			auto target = objectsMap.find(sceneRelativeId);
+
+			if (target != objectsMap.end())
 			{
-				int64_t sceneRelativeId = prop.second.Get(object).AsInt();
+				Reflection::GenericValue gv;
+				gv.Type = Reflection::ValueType::GameObject;
+				gv.Integer = target->second->ObjectId;
 
-				if (sceneRelativeId == PHX_GAMEOBJECT_NULL_ID)
-					continue;
-				else
-				{
-					auto target = objectsMap.find(sceneRelativeId);
+				object->SetPropertyValue(propName, gv);
+			}
+			else
+			{
+				Debug::Log(std::vformat(
+					"{} '{}' refers to invalid scene-relative Object ID {} for prop {}. To avoid UB, it will be NULL'd.",
+					std::make_format_args(
+						object->ClassName,
+						object->Name,
+						sceneRelativeId,
+						object->ObjectId
+					)
+				));
 
-					if (target != objectsMap.end())
-					{
-						Reflection::GenericValue gv;
-						gv.Type = Reflection::ValueType::GameObject;
-						gv.Integer = target->second->ObjectId;
+				Reflection::GenericValue gv;
+				gv.Type = Reflection::ValueType::GameObject;
+				gv.Integer = 0;
 
-						prop.second.Set(object, gv);
-					}
-					else
-					{
-						Debug::Log(std::vformat(
-							"{} '{}' refers to invalid scene-relative Object ID {} for prop {}. To avoid UB, it will be NULL'd.",
-							std::make_format_args(
-								object->Name,
-								object->ClassName,
-								sceneRelativeId,
-								prop.first
-							)
-						));
-
-						Reflection::GenericValue gv;
-						gv.Type = Reflection::ValueType::GameObject;
-						gv.Integer = 0;
-
-						prop.second.Set(object, gv);
-					}
-				}
+				object->SetPropertyValue(propName, gv);
 			}
 		}
 	}
@@ -709,10 +716,10 @@ static nlohmann::json serializeObject(GameObject* Object)
 
 		case (Reflection::ValueType::GameObject):
 		{
-			auto target = GameObject::s_WorldArray.find(static_cast<uint32_t>(value.AsInt()));
+			auto target = GameObject::s_WorldArray.find(static_cast<uint32_t>(value.Integer));
 
 			if (target != GameObject::s_WorldArray.end())
-				item[propName] = value.AsInt();
+				item[propName] = value.Integer;
 			else
 				item[propName] = PHX_GAMEOBJECT_NULL_ID;
 		}

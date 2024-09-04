@@ -58,6 +58,11 @@ static int PrevMouseX, PrevMouseY = 0;
 
 static glm::tvec3<double, glm::highp> CamForward = glm::vec3(0.f, 0.f, -1.f);
 
+static const char* ErrLn1 = "Dear ImGui has detected a version mis-match between the compiled headers{}{}{}{}{}";
+static const char* ErrLn2 = " and the linked library. Please ensure version";
+static const char* ErrLn3 = " (#";
+static const char* ErrLn4 = ") is linked.";
+
 static void logSdlVersion()
 {
 	SDL_version sdlCompiledVersion{};
@@ -167,7 +172,7 @@ static void HandleInputs(Reflection::GenericValue Data)
 
 	if (MouseCaptured)
 	{
-		// Doesn't hide unless we tell ImGui to hide the cursor too
+		// Doesn't hide unless we tell Dear ImGui to hide the cursor too
 		// (Otherwise it flickers)
 		// 22/08/2024
 		ImGui::SetMouseCursor(ImGuiMouseCursor_None);
@@ -487,7 +492,7 @@ static void Application(int argc, char** argv)
 	int imGuiVersionNum = IMGUI_VERSION_NUM;
 
 	Debug::Log(std::vformat(
-		"Initializing ImGui {} (#{})...",
+		"Initializing our Dearest ImGui {} (#{})...",
 		std::make_format_args(imGuiVersion, imGuiVersionNum)
 	));
 
@@ -495,19 +500,14 @@ static void Application(int argc, char** argv)
 
 	if (!imGuiVersionCorrect)
 	{
-		const char* errLn1 = "ImGui has detected a version mis-match between the compiled headers{}{}{}{}{}";
-		const char* errLn2 = " and the linked library. Please ensure version";
-		const char* errLn3 = " (#";
-		const char* errLn4 = ") is linked.";
-
 		throw(std::vformat(
-			errLn1,
+			ErrLn1,
 			std::make_format_args(
-				errLn2,
+				ErrLn2,
 				imGuiVersion,
-				errLn3,
+				ErrLn3,
 				imGuiVersionNum,
-				errLn4
+				ErrLn4
 			)
 		));
 	}

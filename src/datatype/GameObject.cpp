@@ -1,6 +1,7 @@
 #include<algorithm>
 
 #include"datatype/GameObject.hpp"
+#include"Debug.hpp"
 
 static uint32_t NumGameObjects = 0;
 static bool s_DidInitReflection = false;
@@ -27,6 +28,56 @@ void GameObject::s_DeclareReflections()
 	REFLECTION_DECLAREPROP_SIMPLE(GameObject, Name, String);
 	REFLECTION_DECLAREPROP_SIMPLE(GameObject, Enabled, Bool);
 	REFLECTION_DECLAREPROP_SIMPLE_READONLY(GameObject, ObjectId, Integer);
+	REFLECTION_DECLAREPROP(
+		"Parent",
+		GameObject,
+		[](GameObject* p)
+		{
+			Reflection::GenericValue gv;
+			gv.Type = Reflection::ValueType::GameObject;
+			gv.Integer = p->GetParent() ? p->GetParent()->ObjectId : PHX_GAMEOBJECT_NULL_ID;
+			return gv;
+		},
+		[](GameObject* p, const Reflection::GenericValue& gv)
+		{
+			if (p->Parent == gv.Integer)
+				return;
+
+			GameObject* newParent = GameObject::GetObjectById(static_cast<uint32_t>(gv.Integer));
+
+			if (!newParent)
+				p->SetParent(nullptr);
+			else
+			{
+				if (newParent != p)
+				{
+					std::vector<GameObject*> descendants = p->GetDescendants();
+
+					bool isOwnDescendant = false;
+
+					for (GameObject* d : descendants)
+						if (d == newParent)
+						{
+							isOwnDescendant = true;
+							break;
+						}
+
+					if (!isOwnDescendant)
+						p->SetParent(newParent);
+					else
+						Debug::Log(std::vformat(
+							"Tried to make object ID:{} a descendant of itself",
+							std::make_format_args(p->ObjectId)
+						));
+				}
+				else
+					Debug::Log(std::vformat(
+						"Tried to make object ID:{} it's own parent",
+						std::make_format_args(p->ObjectId)
+					));
+			}
+		}
+	);
 	
 	REFLECTION_DECLAREPROC("Destroy", destroyObject);
 
@@ -69,6 +120,9 @@ bool GameObject::IsValidObjectClass(std::string const& ObjectClass)
 
 GameObject* GameObject::GetObjectById(uint32_t Id)
 {
+	if (Id == PHX_GAMEOBJECT_NULL_ID)
+		return nullptr;
+
 	auto it = s_WorldArray.find(Id);
 	return it != s_WorldArray.end() ? it->second : nullptr;
 }

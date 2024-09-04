@@ -1,82 +1,159 @@
 {
+  "Base3D": {
+    "ClassName": "String",
+    "ColorRGB": "Color",
+    "Destroy": "() -> ()",
+    "Enabled": "Bool",
+    "FaceCulling": "Integer",
+    "Material": "String",
+    "Name": "String",
+    "ObjectId": "Integer",
+    "Parent": "GameObject",
+    "Reflectivity": "Double",
+    "Size": "Vector3",
+    "Transform": "Matrix",
+    "Transparency": "Double"
+  },
   "Camera": {
     "ClassName": "String",
     "Destroy": "() -> ()",
     "Enabled": "Bool",
     "FieldOfView": "Double",
     "GenericMovement": "Bool",
-    "Matrix": "Matrix",
     "Name": "String",
-    "ObjectId": "Integer"
+    "ObjectId": "Integer",
+    "Parent": "GameObject",
+    "Transform": "Matrix"
   },
   "DataModel": {
     "ClassName": "String",
+    "Close": "() -> ()",
     "Destroy": "() -> ()",
     "Enabled": "Bool",
     "Name": "String",
-    "ObjectId": "Integer"
+    "ObjectId": "Integer",
+    "Parent": "GameObject"
   },
   "DirectionalLight": {
+    "Brightness": "Double",
     "ClassName": "String",
     "Destroy": "() -> ()",
+    "Direction": "Vector3",
     "Enabled": "Bool",
+    "LightColor": "Color",
     "Name": "String",
-    "ObjectId": "Integer"
+    "ObjectId": "Integer",
+    "Parent": "GameObject",
+    "Shadows": "Bool"
   },
   "GameObject": {
     "ClassName": "String",
     "Destroy": "() -> ()",
     "Enabled": "Bool",
     "Name": "String",
-    "ObjectId": "Integer"
+    "ObjectId": "Integer",
+    "Parent": "GameObject"
   },
-  "Mesh": {
+  "Light": {
+    "Brightness": "Double",
     "ClassName": "String",
     "Destroy": "() -> ()",
     "Enabled": "Bool",
+    "LightColor": "Color",
     "Name": "String",
-    "ObjectId": "Integer"
+    "ObjectId": "Integer",
+    "Parent": "GameObject",
+    "Position": "Vector3",
+    "Shadows": "Bool"
+  },
+  "Mesh": {
+    "Asset": "String",
+    "ClassName": "String",
+    "ColorRGB": "Color",
+    "Destroy": "() -> ()",
+    "Enabled": "Bool",
+    "FaceCulling": "Integer",
+    "Material": "String",
+    "Name": "String",
+    "ObjectId": "Integer",
+    "Parent": "GameObject",
+    "Reflectivity": "Double",
+    "Size": "Vector3",
+    "Transform": "Matrix",
+    "Transparency": "Double"
   },
   "Model": {
     "ClassName": "String",
     "Destroy": "() -> ()",
     "Enabled": "Bool",
     "Name": "String",
-    "ObjectId": "Integer"
+    "ObjectId": "Integer",
+    "Parent": "GameObject"
   },
   "ParticleEmitter": {
     "ClassName": "String",
     "Destroy": "() -> ()",
+    "EmitterEnabled": "Bool",
     "Enabled": "Bool",
+    "Lifetime": "Vector3",
+    "MaxParticles": "Integer",
     "Name": "String",
-    "ObjectId": "Integer"
+    "ObjectId": "Integer",
+    "Offset": "Vector3",
+    "Parent": "GameObject",
+    "Rate": "Integer"
   },
   "PointLight": {
+    "Brightness": "Double",
     "ClassName": "String",
     "Destroy": "() -> ()",
     "Enabled": "Bool",
+    "LightColor": "Color",
     "Name": "String",
-    "ObjectId": "Integer"
+    "ObjectId": "Integer",
+    "Parent": "GameObject",
+    "Position": "Vector3",
+    "Range": "Double",
+    "Shadows": "Bool"
   },
   "Primitive": {
     "ClassName": "String",
+    "ColorRGB": "Color",
     "Destroy": "() -> ()",
     "Enabled": "Bool",
+    "FaceCulling": "Integer",
+    "Material": "String",
     "Name": "String",
-    "ObjectId": "Integer"
+    "ObjectId": "Integer",
+    "Parent": "GameObject",
+    "Reflectivity": "Double",
+    "Shape": "Integer",
+    "Size": "Vector3",
+    "Transform": "Matrix",
+    "Transparency": "Double"
   },
   "SpotLight": {
+    "Brightness": "Double",
     "ClassName": "String",
     "Destroy": "() -> ()",
     "Enabled": "Bool",
+    "InnerCone": "Double",
+    "LightColor": "Color",
     "Name": "String",
-    "ObjectId": "Integer"
+    "ObjectId": "Integer",
+    "OuterCone": "Double",
+    "Parent": "GameObject",
+    "Position": "Vector3",
+    "Range": "Double",
+    "Shadows": "Bool"
   },
   "Workspace": {
     "ClassName": "String",
     "Destroy": "() -> ()",
     "Enabled": "Bool",
     "Name": "String",
-    "ObjectId": "Integer"
+    "ObjectId": "Integer",
+    "Parent": "GameObject",
+    "SceneCamera": "GameObject"
   }
 }

@@ -4,6 +4,7 @@
 #include"editor/editor.hpp"
 #include"editor/intersectionlib.hpp"
 #include"gameobject/GameObjects.hpp"
+#include"render/TextureManager.hpp"
 #include"UserInput.hpp"
 #include"FileRW.hpp"
 #include"Debug.hpp"
@@ -21,6 +22,8 @@ static char* diffuseBuf = (char*)malloc(64);
 static char* specBuf = (char*)malloc(64);
 
 static std::string DefaultNewMtlName = "new";
+
+static std::string ErrorTexture = "textures/MISSING2_MaximumADHD_status_1665776378145304579.png";
 
 static nlohmann::json DefaultNewMaterial{};
 
@@ -120,7 +123,23 @@ void Editor::Update(double DeltaTime, glm::mat4 CameraTransform)
 	//	this->MyCube3D->Matrix = glm::translate(glm::mat4(1.0f), glm::vec3(Result.HitPosition));
 }
 
-static bool ImGuiHierarchyItemsGetter(void*, int Index, const char** OutText)
+static std::vector<GameObject*> getVisibleChildren()
+{
+	std::vector<GameObject*> children;
+
+	if (CurrentUIHierarchyRoot)
+		children = CurrentUIHierarchyRoot->GetChildren();
+	else
+		for (auto& it : GameObject::s_WorldArray)
+		{
+			if (!it.second->GetParent())
+				children.push_back(it.second);
+		}
+			
+	return children;
+}
+
+static bool objectsIterator(void*, int Index, const char** OutText)
 {
 	//GameObject* Parent = (GameObject*)Data;
 
@@ -130,9 +149,8 @@ static bool ImGuiHierarchyItemsGetter(void*, int Index, const char** OutText)
 		return true;
 	}
 
-	GameObject* SelectedChild = CurrentUIHierarchyRoot->GetChildren()[(size_t)Index - 1];
-
-	*OutText = SelectedChild->Name.c_str();
+	GameObject* selected = getVisibleChildren()[(size_t)Index - 1];
+	*OutText = selected->Name.c_str();
 
 	return true;
 }
@@ -194,19 +212,45 @@ static void materialEditor()
 
 	prevItem = mtlCurItem;
 
+	TextureManager* texManager = TextureManager::Get();
+
 	ImGui::InputText("Diffuse", diffuseBuf, 64);
+	
+	Texture* curDiffuse = curItem->DiffuseTextures[0];
+
+	ImGui::Image(
+		(void*)curDiffuse->Identifier,
+		ImVec2(256, 256),
+		// Flip the Y axis. Either OpenGL or Dear ImGui is bottom-up
+		ImVec2(0, 1),
+		ImVec2(1, 0)
+	);
+
 	ImGui::InputText("Specular", specBuf, 64);
+
+	Texture* curSpecular = curItem->HasSpecular
+							? curItem->SpecularTextures[0]
+							: nullptr;
+
+	if (curSpecular)
+		ImGui::Image(
+			(void*)curSpecular->Identifier,
+			ImVec2(256, 256),
+			// Flip the Y axis. Either OpenGL or Dear ImGui is bottom-up
+			ImVec2(0, 1),
+			ImVec2(1, 0)
+		);
 
 	if (ImGui::Button("Update textures"))
 	{
-		curItem->DiffuseTextures[0] = TextureManager::Get()->LoadTextureFromPath(diffuseBuf);
+		curItem->DiffuseTextures[0] = texManager->LoadTextureFromPath(diffuseBuf);
 
 		if (curItem->HasSpecular)
 		{
 			if (curItem->SpecularTextures.size() > 0)
-				curItem->SpecularTextures[0] = TextureManager::Get()->LoadTextureFromPath(specBuf);
+				curItem->SpecularTextures[0] = texManager->LoadTextureFromPath(specBuf);
 			else
-				curItem->SpecularTextures.push_back(TextureManager::Get()->LoadTextureFromPath(specBuf));
+				curItem->SpecularTextures.push_back(texManager->LoadTextureFromPath(specBuf));
 		}
 	}
 
@@ -242,43 +286,55 @@ void Editor::RenderUI()
 
 	ImGui::Begin("Editor");
 
-	ImGui::InputText("New obj class", NewObjectClass, 32);
-	bool Create = ImGui::Button("Create obj");
+	ImGui::InputText("New object", NewObjectClass, 32);
+	bool Create = ImGui::Button("Create");
 
 	if (InvalidObjectErrTimeRemaining > 0.f)
 		ImGui::Text("Invalid GameObject!");
 
-	if (GameObject* rootParent = CurrentUIHierarchyRoot->GetParent())
+	if (CurrentUIHierarchyRoot)
 	{
-		if (!rootParent)
-			throw("WHAT");
-
 		bool AscendHierarchy = ImGui::Button(std::vformat(
 			"Ascend to parent {}",
-			std::make_format_args(rootParent->Name)
+			std::make_format_args(CurrentUIHierarchyRoot->Name)
 		).c_str());
 
 		if (AscendHierarchy)
 		{
-			CurrentUIHierarchyRoot = rootParent;
+			CurrentUIHierarchyRoot = CurrentUIHierarchyRoot->GetParent();
 			this->hierarchyCurItem = 0;
 		}
 	}
 
-	int nItems = static_cast<int>(CurrentUIHierarchyRoot->GetChildren().size() + 1);
+	std::vector<GameObject*> children = getVisibleChildren();
+
+	std::string parentText;
+
+	if (CurrentUIHierarchyRoot)
+	{
+		parentText = std::vformat(
+			"Children of {}",
+			std::make_format_args(CurrentUIHierarchyRoot->Name)
+		).c_str();
+	}
+	else
+		parentText = "Root objects";
 
 	ImGui::ListBox(
-		std::vformat("Children of {}", std::make_format_args(CurrentUIHierarchyRoot->Name)).c_str(),
+		parentText.c_str(),
 		&this->hierarchyCurItem,
-		&ImGuiHierarchyItemsGetter,
+		&objectsIterator,
 		nullptr,
-		nItems
+		static_cast<int>(children.size()) + 1
 	);
 
-	GameObject* selected = CurrentUIHierarchyRoot;
+	GameObject* selected = nullptr;
 
 	if (hierarchyCurItem > 0)
-		selected = CurrentUIHierarchyRoot->GetChildren()[(size_t)this->hierarchyCurItem - 1];
+		if (children.size() > 0)
+			selected = children[(size_t)this->hierarchyCurItem - 1];
+		else
+			hierarchyCurItem = -1;
 
 	if (selected && selected->GetChildren().size() > 0)
 	{
@@ -300,7 +356,7 @@ void Editor::RenderUI()
 	if (selected != GameObject::s_DataModel)
 		if (ImGui::Button("Destroy"))
 		{
-			if (selected && selected == CurrentUIHierarchyRoot && CurrentUIHierarchyRoot->Parent)
+			if (selected && selected == CurrentUIHierarchyRoot && CurrentUIHierarchyRoot->GetParent())
 				CurrentUIHierarchyRoot = CurrentUIHierarchyRoot->GetParent();
 
 			delete selected;
@@ -319,14 +375,14 @@ void Editor::RenderUI()
 
 		ImGui::Text("Properties:");
 
-		auto props = selected->GetProperties();
+		auto& props = selected->GetProperties();
 
 		for (auto& propListItem : props)
 		{
 			const char* propName = propListItem.first.c_str();
-			IProperty& prop = propListItem.second;
+			const IProperty& prop = propListItem.second;
 
-			Reflection::GenericValue curVal = selected->GetPropertyValue(propName);
+			const Reflection::GenericValue curVal = selected->GetPropertyValue(propName);
 
 			if (!prop.Set)
 			{
@@ -361,8 +417,7 @@ void Editor::RenderUI()
 
 				ImGui::InputText(propName, buf, 64);
 
-				curVal.String = std::string(buf);
-				newVal = curVal;
+				newVal.String = std::string(buf);
 
 				free(buf);
 
@@ -371,16 +426,14 @@ void Editor::RenderUI()
 
 			case (Reflection::ValueType::Bool):
 			{
-				ImGui::Checkbox(propName, &curVal.Bool);
-				newVal = curVal;
+				ImGui::Checkbox(propName, &newVal.Bool);
 				
 				break;
 			}
 
 			case (Reflection::ValueType::Double):
 			{
-				ImGui::InputDouble(propName, &curVal.Double);
-				newVal = curVal;
+				ImGui::InputDouble(propName, &newVal.Double);
 
 				break;
 			}
@@ -388,7 +441,7 @@ void Editor::RenderUI()
 			case (Reflection::ValueType::Integer):
 			{
 				// TODO BIG BAD HACK HACK HACK
-				// stoobid imgui :'(
+				// stoobid Dear ImGui :'(
 				// only allows 32-bit integer input
 				// 01/09/2024
 				int32_t valAs32Bit = static_cast<int32_t>(curVal.Integer);
@@ -396,7 +449,21 @@ void Editor::RenderUI()
 				ImGui::InputInt(propName, &valAs32Bit);
 
 				newVal.Integer = valAs32Bit;
-				newVal = curVal;
+
+				break;
+			}
+
+			case (Reflection::ValueType::GameObject):
+			{
+				// TODO BIG BAD HACK HACK HACK
+				// stoobid Dear ImGui :'(
+				// only allows 32-bit integer input
+				// 01/09/2024
+				int32_t id = static_cast<int32_t>(curVal.Integer);
+
+				ImGui::InputInt(propName, &id);
+
+				newVal.Integer = id;
 
 				break;
 			}

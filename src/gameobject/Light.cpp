@@ -31,7 +31,7 @@ void Object_DirectionalLight::s_DeclareReflections()
 	s_DirectionalDidInitReflection = true;
 
 	REFLECTION_INHERITAPI(GameObject);
-	REFLECTION_INHERITAPI(Light);
+	REFLECTION_INHERITAPI(Object_Light);
 
 	// Direction is just Position under-the-hood. Remove the duplicate
 	s_Api.Properties.erase("Position");
@@ -62,7 +62,7 @@ void Object_PointLight::s_DeclareReflections()
 	s_PointDidInitReflection = true;
 
 	REFLECTION_INHERITAPI(GameObject);
-	REFLECTION_INHERITAPI(Light);
+	REFLECTION_INHERITAPI(Object_Light);
 
 	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_PointLight, Range, Double, float);
 }
@@ -74,7 +74,7 @@ void Object_SpotLight::s_DeclareReflections()
 	s_SpotDidInitReflection = true;
 
 	REFLECTION_INHERITAPI(GameObject);
-	REFLECTION_INHERITAPI(Light);
+	REFLECTION_INHERITAPI(Object_Light);
 
 	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_SpotLight, Range, Double, float);
 	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_SpotLight, OuterCone, Double, float);
@@ -83,7 +83,7 @@ void Object_SpotLight::s_DeclareReflections()
 
 Object_Light::Object_Light()
 {
-	this->Name = "Light (ABSTRACT)";
+	this->Name = "Light";
 	this->ClassName = "Light";
 
 	s_DeclareReflections();

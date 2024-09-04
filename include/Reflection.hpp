@@ -9,10 +9,9 @@
 #include<format>
 #include<glm/mat4x4.hpp>
 
-#define REFLECTION_INHERITAPI(baseclass) {            \
-auto base = GameObject::CreateGameObject(#baseclass); \
-auto& props = base->GetProperties();                  \
-auto& funcs = base->GetFunctions();                   \
+#define REFLECTION_INHERITAPI(base) {                 \
+const PropertyMap& props = base::s_GetProperties();     \
+const FunctionMap& funcs = base::s_GetFunctions();      \
 s_Api.Properties.insert(                              \
 	props.begin(),                                    \
 	props.end()                                       \

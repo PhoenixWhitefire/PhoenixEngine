@@ -35,7 +35,7 @@ void Object_Primitive::s_DeclareReflections()
 	s_DidInitReflection = true;
 
 	REFLECTION_INHERITAPI(GameObject);
-	REFLECTION_INHERITAPI(Base3D);
+	REFLECTION_INHERITAPI(Object_Base3D);
 
 	REFLECTION_DECLAREPROP(
 		"Shape",

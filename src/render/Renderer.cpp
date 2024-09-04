@@ -89,10 +89,8 @@ static void GLDebugCallback(
 	// `GLsizei` is a smelly `int`
 	int actualMessageLength = static_cast<int>(strlen(Message));
 
-	// 30/08/2024: There is now this weird gap inbetween `Message` and `Source`,
-	// I think it's cause I'm not respecting `MessageLength`
-	// ...
-	// NVM Idk why it is
+	// It feels important that a `MessageLength` is provided,
+	// maybe some drivers do not NULL-terminate their strings correctly?
 	if (actualMessageLength != MessageLength)
 	{
 		Debug::Log(std::vformat(

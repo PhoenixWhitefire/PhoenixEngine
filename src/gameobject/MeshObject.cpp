@@ -10,7 +10,7 @@ void Object_Mesh::s_DeclareReflections()
 	s_DidInitReflection = true;
 
 	REFLECTION_INHERITAPI(GameObject);
-	REFLECTION_INHERITAPI(Base3D);
+	REFLECTION_INHERITAPI(Object_Base3D);
 
 	// TODO: asset reloading
 	REFLECTION_DECLAREPROP_SIMPLE(Object_Mesh, Asset, String);

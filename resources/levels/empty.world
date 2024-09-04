@@ -1,0 +1,5 @@
+#version 02.00
+
+{
+  GameObjects = {}
+}

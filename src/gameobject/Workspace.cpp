@@ -24,7 +24,7 @@ void Object_Workspace::s_DeclareReflections()
 	s_DidInitReflection = true;
 
 	REFLECTION_INHERITAPI(GameObject);
-	REFLECTION_INHERITAPI(Model);
+	REFLECTION_INHERITAPI(Object_Model);
 
 	REFLECTION_DECLAREPROP(
 		"SceneCamera",

@@ -8,7 +8,6 @@ vendor/
 lib/
 dll/
 resources/models/
-resources/levels/
 resources/textures/
 PROGRAMLOG.txt
 consolelog.txt
