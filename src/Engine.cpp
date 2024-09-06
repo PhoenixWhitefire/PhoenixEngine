@@ -306,20 +306,20 @@ static std::vector<LightData_t> compileLightData(GameObject* RootObject)
 
 static std::vector<MeshData_t> compileMeshData(GameObject* RootObject, Object_Camera* SceneCamera)
 {
-	std::vector<GameObject*> Objects = RootObject->GetChildren();
-	std::vector<MeshData_t> DataList;
+	std::vector<GameObject*> objects = RootObject->GetChildren();
+	std::vector<MeshData_t> dataList;
 
-	for (GameObject* Object : Objects)
+	for (GameObject* object : objects)
 	{
-		if (Object->Enabled)
+		if (object->Enabled)
 		{
-			Object_Base3D* Object3D = dynamic_cast<Object_Base3D*>(Object);
+			Object_Base3D* object3D = dynamic_cast<Object_Base3D*>(object);
 
-			if (Object3D != nullptr)
+			if (object3D)
 			{
 				// TODO: frustum culling
 				// Hold R to disable distance culling
-				if (glm::distance(glm::vec3(Object3D->Transform[3]), glm::vec3(SceneCamera->Transform[3])) > 100.0f
+				if (glm::distance(glm::vec3(object3D->Transform[3]), glm::vec3(SceneCamera->Transform[3])) > 100.0f
 					&& !UserInput::IsKeyDown(SDLK_r))
 					continue;
 
@@ -327,31 +327,32 @@ static std::vector<MeshData_t> compileMeshData(GameObject* RootObject, Object_Ca
 				// if (MeshObject->HasTransparency)
 					//continue;
 
-				MeshData_t Data
+				MeshData_t data
 				{
-					Object3D->GetRenderMesh(),
-					Object3D->Transform,
-					Object3D->Size,
-					Object3D->Material,
-					Object3D->ColorRGB,
-					Object3D->Transparency,
-					Object3D->Reflectivity,
-					Object3D->FaceCulling
+					object3D->GetRenderMesh(),
+					object3D->Transform,
+					object3D->Size,
+					object3D->Material,
+					object3D->ColorRGB,
+					object3D->Transparency,
+					object3D->Reflectivity,
+					object3D->FaceCulling
 				};
-				DataList.push_back(Data);
+
+				dataList.push_back(data);
 			}
 
-			if (Object->GetChildren().size() > 0)
+			if (object->GetChildren().size() > 0)
 			{
-				std::vector<MeshData_t> ChildData = compileMeshData(Object, SceneCamera);
+				std::vector<MeshData_t> ChildData = compileMeshData(object, SceneCamera);
 
 				for (uint32_t CDataIdx = 0; CDataIdx < ChildData.size(); CDataIdx++)
-					DataList.push_back(ChildData[CDataIdx]);
+					dataList.push_back(ChildData[CDataIdx]);
 			}
 		}
 	}
 
-	return DataList;
+	return dataList;
 }
 
 static double GetRunningTime()
@@ -644,6 +645,14 @@ void EngineObject::Start()
 
 		//Main render pass
 		RendererContext->DrawScene(Scene);
+
+		for (GameObject* object : Workspace->GetDescendants())
+		{
+			Object_ParticleEmitter* particleEmitter = dynamic_cast<Object_ParticleEmitter*>(object);
+
+			if (particleEmitter)
+				particleEmitter->Render(SceneCamera->Transform);
+		}
 
 		glDisable(GL_DEPTH_TEST);
 

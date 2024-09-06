@@ -359,7 +359,7 @@ void Editor::RenderUI()
 		parentText.c_str(),
 		&m_HierarchyCurItem,
 		&objectsIterator,
-		nullptr,
+		m_CurrentUIHierarchyRoot,
 		static_cast<int>(children.size()) + 1
 	);
 

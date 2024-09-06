@@ -15,17 +15,17 @@ out vec2 FragIn_VertexPosition;
 
 void main()
 {
-	//vec3 CurrentPosition = vec3(Scale * vec4(VertexPosition.x, VertexPosition.y, 0.0f, 1.0f));
+	vec3 CurrentPosition = vec3(Scale * vec4(VertexPosition.x, VertexPosition.y, 0.0f, 1.0f));
 	
 	//gl_Position = CameraMatrix * vec4(CurrentPosition, 1.0f);
 
-	vec4 ViewPosition = CameraMatrix * vec4(Position * 5.0f, 1.0f);
+	//vec4 ViewPosition = CameraMatrix * vec4(Position * 5.0f, 1.0f);
 
-	float Distance = -Position.z * 50.0f;
+	//float Distance = -Position.z * 50.0f;
 
-	gl_Position = vec4(1.0f, 0.5f, 0.5f, 1.0f);
+	gl_Position = vec4(VertexPosition.x, VertexPosition.y, 0.0f, 1.0f);
 
 	//gl_Position = ViewPosition + vec4(VertexPosition.xy * Distance * vec3(Scale).x, 0.0f, 0.0f);
 
-	FragIn_VertexPosition = vec2(1.0f, 0.5f);//VertexPosition;
+	FragIn_VertexPosition = VertexPosition;
 }

@@ -138,6 +138,9 @@ Object_ParticleEmitter::Object_ParticleEmitter()
 	this->TransparencyOverTime.InsertKey(ValueSequenceKeypoint<float>(.8f, .5f));
 	this->TransparencyOverTime.InsertKey(ValueSequenceKeypoint<float>(1.f, 1.f));
 
+	this->SizeOverTime.InsertKey(ValueSequenceKeypoint<float>(0.f, 1.f));
+	this->SizeOverTime.InsertKey(ValueSequenceKeypoint<float>(1.f, 1.f));
+
 	s_DeclareReflections();
 }
 
@@ -247,7 +250,7 @@ void Object_ParticleEmitter::Render(glm::mat4 CameraMatrix)
 		{
 			removeElement(m_Particles, index);
 
-			delete particle;
+			//delete particle;
 
 			continue;
 		}

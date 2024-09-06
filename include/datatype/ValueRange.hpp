@@ -56,29 +56,32 @@ template <typename T> bool m_compare(ValueSequenceKeypoint<T> A, ValueSequenceKe
 
 template <class T> T ValueSequence<T>::GetValue(float Time)
 {
-	if (m_Keys.size() < 2)
+	if (m_Keys.size() == 0)
 		return T();
 
-	float Deviation = EnvelopDist(RandGenerator);
+	if (m_Keys.size() == 1)
+		return m_Keys[0].Value;
 
-	if (Time == 0)
-		return m_Keys[0].Value * (m_Keys[0].Envelope * Deviation);
+	//float deviation = EnvelopDist(RandGenerator);
 
-	if (Time == 1)
-		return m_Keys[m_Keys.size() - 1].Value * (m_Keys[m_Keys.size() - 1].Envelope * Deviation);
+	if (Time == 0.f)
+		return m_Keys[0].Value;// + (m_Keys[0].Envelope * deviation);
 
-	for (int KeyIndex = 0; KeyIndex < (m_Keys.size() - 1); KeyIndex++)
+	if (Time == 1.f)
+		return m_Keys[m_Keys.size() - 1].Value;// + (m_Keys[m_Keys.size() - 1].Envelope * deviation);
+
+	for (size_t keyIndex = 0; keyIndex < (m_Keys.size() - 1); keyIndex++)
 	{
-		ValueSequenceKeypoint<T> CurrentKey = m_Keys[KeyIndex];
-		ValueSequenceKeypoint<T> NextKey = m_Keys[KeyIndex + 1]; //Will always exist because of Keys.size() - 1
+		ValueSequenceKeypoint<T> currentKey = m_Keys[keyIndex];
+		ValueSequenceKeypoint<T> nextKey = m_Keys[keyIndex + 1]; //Will always exist because of Keys.size() - 1
 
-		if (Time >= CurrentKey.Time && Time < NextKey.Time)
+		if (Time >= currentKey.Time && Time < nextKey.Time)
 		{
-			float Alpha = (Time - CurrentKey.Time) / (NextKey.Time - CurrentKey.Time);
+			float alpha = (Time - currentKey.Time) / (nextKey.Time - currentKey.Time);
 
-			float EnveLerp = CurrentKey.Envelope + (NextKey.Envelope - CurrentKey.Envelope) * Alpha;
+			//float enveLerp = currentKey.Envelope + (nextKey.Envelope - currentKey.Envelope) * alpha;
 
-			return ((NextKey.Value - CurrentKey.Value) * Alpha + CurrentKey.Value) * (EnveLerp * Deviation);
+			return ((nextKey.Value - currentKey.Value) * alpha + currentKey.Value);// + (enveLerp * deviation);
 		}
 	}
 

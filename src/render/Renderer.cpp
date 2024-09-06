@@ -114,7 +114,9 @@ static void GLDebugCallback(
 
 	Debug::Log(debugString);
 
-	if (SeverityId > GL_DEBUG_SEVERITY_NOTIFICATION)
+	// ID 131218:
+	// "Vertex shader in program is being recompiled based on GL state"
+	if (Id != 131218 && SeverityId > GL_DEBUG_SEVERITY_NOTIFICATION)
 		throw(debugString);
 }
 
