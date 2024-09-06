@@ -1,80 +1,315 @@
-#Version 2.00
+// Automatically generated as levels/dev_fmtv2.world
+#Version 02.00
 
 {
   "GameObjects": [
     {
-      "Name": "crow",
+      "Asset": "",
       "ClassName": "Mesh",
-      "Asset": "models/crow/scene.gltf",
-      "FaceCulling": 0,
-      "Position": [0,0,0]
+      "ColorRGB": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Enabled": true,
+      "FaceCulling": 1,
+      "Material": "models/crow",
+      "Name": "crow_0",
+      "ObjectId": 14,
+      "Reflectivity": 0.0,
+      "Size": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "Transparency": 0.0
     },
-    
     {
-      "Name": "grass",
+      "Asset": "",
       "ClassName": "Mesh",
-      "Asset": "models/grass/scene.gltf",
+      "ColorRGB": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Enabled": true,
       "FaceCulling": 0,
-      "Position": [0,0,0]
+      "Material": "models/grass",
+      "Name": "g_0",
+      "ObjectId": 15,
+      "Reflectivity": 0.0,
+      "Size": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          15.0,
+          0.0,
+          100.0,
+          1.0
+        ]
+      ],
+      "Transparency": 0.0
     },
-    
     {
-      "Name": "ground",
+      "Asset": "",
       "ClassName": "Mesh",
-      "Asset": "models/ground/scene.gltf",
+      "ColorRGB": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Enabled": true,
       "FaceCulling": 0,
-      "Position": [0,0,0]
+      "Material": "models/ground",
+      "Name": "gr_0",
+      "ObjectId": 16,
+      "Reflectivity": 0.0,
+      "Size": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          15.0,
+          0.0,
+          100.0,
+          1.0
+        ]
+      ],
+      "Transparency": 0.0
     },
-
     {
-      "Name": "windows10",
+      "Asset": "",
       "ClassName": "Mesh",
-      "Asset": "models/windows/scene.gltf",
+      "ColorRGB": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Enabled": true,
       "FaceCulling": 0,
-      "Position": [100,5,15]
+      "Material": "models/windows",
+      "Name": "windows10_0",
+      "ObjectId": 17,
+      "Reflectivity": 0.0,
+      "Size": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          15.0,
+          5.0,
+          100.0,
+          1.0
+        ]
+      ],
+      "Transparency": 0.0
     },
-    
     {
+      "ClassName": "Primitive",
+      "ColorRGB": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Enabled": true,
+      "FaceCulling": 1,
+      "Material": "floortiles",
       "Name": "Primitive",
-      "ClassName": "Primitive",
+      "ObjectId": 18,
+      "Reflectivity": 0.0,
       "Shape": 0,
-      "Position": [0,9,-5],
-      "Size": [20,17,2],
-      "Material": "plastic"
+      "Size": [
+        50.0,
+        1.0,
+        50.0
+      ],
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "Transparency": 0.0
     },
-    
     {
+      "ClassName": "Primitive",
+      "ColorRGB": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Enabled": true,
+      "FaceCulling": 1,
+      "Material": "wood",
       "Name": "Primitive",
-      "ClassName": "Primitive",
+      "ObjectId": 19,
+      "Reflectivity": 0.0,
       "Shape": 0,
-      "Position": [0,0,0],
-      "Size": [50,1,50],
-      "Material": "floortiles"
+      "Size": [
+        2.0,
+        17.0,
+        20.0
+      ],
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          -5.0,
+          9.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "Transparency": 0.0
     },
-
     {
-      "Name": "water",
-      "ClassName": "Primitive",
-      "Shape": 0,
-      "Position": [0,1.75,0],
-      "Size": [50,2.5,50],
-      "Material": "watertest",
-      "FaceCulling": 0,
-      "Reflectivity": 0.75,
-      "ColorRGB": [0.87, 0.68, 0.46]
-    },
-    
-    {
-      "Name": "Sun",
+      "Brightness": 1.0,
       "ClassName": "DirectionalLight",
-      "Direction": [0.5,0.5,0.5],
-      "LightColor": [1,1,1]
+      "Direction": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "Enabled": true,
+      "LightColor": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Name": "DirectionalLight",
+      "ObjectId": 20,
+      "Shadows": false
     },
-    
     {
-        "Name": "MainScript",
-        "ClassName": "Script",
-        "SourceFile": "scripts/devmap.luau"
+      "ClassName": "Script",
+      "Enabled": true,
+      "Name": "MainScript",
+      "ObjectId": 21,
+      "SourceFile": "scripts/devmap.luau"
     }
-  ]
+  ],
+  "SceneName": "levels/dev_fmtv2.world"
 }

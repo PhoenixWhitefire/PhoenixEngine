@@ -101,7 +101,7 @@ static void GLDebugCallback(
 		messageStr = messageStr.substr(0, MessageLength);
 	}
 
-	std::string DebugString = std::vformat(
+	std::string debugString = std::vformat(
 		std::string("GL Debug callback:\n\tType: {}\n\tSeverity: {}\n\tMessage: {}\n\tSource: {}\n\tError ID: {}\n"),
 		std::make_format_args(
 			typeName,
@@ -112,10 +112,10 @@ static void GLDebugCallback(
 		)
 	);
 
-	Debug::Log(DebugString);
+	Debug::Log(debugString);
 
 	if (SeverityId > GL_DEBUG_SEVERITY_NOTIFICATION)
-		throw(DebugString);
+		throw(debugString);
 }
 
 Renderer::Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window)
@@ -229,67 +229,77 @@ void Renderer::ChangeResolution(uint32_t Width, uint32_t Height)
 
 void Renderer::DrawScene(Scene_t& Scene)
 {
-	for (ShaderProgram* Shader : Scene.UniqueShaders)
+	for (ShaderProgram* shader : Scene.UniqueShaders)
 	{
-		auto ShaderProgramID = Shader->ID;
-		Shader->Activate();
+		auto shaderProgramID = shader->ID;
+		shader->Activate();
 
-		for (uint32_t LightIndex = 0; LightIndex < Scene.LightData.size(); LightIndex++)
+		// TODO 05/09/2024
+		// Branching in shader VS separate array uniforms?
+		// Oh and uniform locations should probably be cached
+		for (uint32_t lightIndex = 0; lightIndex < Scene.LightData.size(); lightIndex++)
 		{
-			LightData_t LightData = Scene.LightData.at(LightIndex);
+			LightData_t lightData = Scene.LightData.at(lightIndex);
 
-			std::string LightIdxString = std::to_string(LightIndex);
-			std::string ShaderLightLoc = "Lights[" + LightIdxString + "]";
+			std::string lightIdxString = std::to_string(lightIndex);
+			std::string shaderLightLoc = "Lights[" + lightIdxString + "]";
 
-			auto PosLoc = glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".Position").c_str());
-			auto ColLoc = glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".Color").c_str());
-			auto TypeLoc = glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".Type").c_str());
-			auto RangeLoc = glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".Range").c_str());
+			auto posLoc = glGetUniformLocation(shaderProgramID, (shaderLightLoc + ".Position").c_str());
+			auto colLoc = glGetUniformLocation(shaderProgramID, (shaderLightLoc + ".Color").c_str());
+			auto typeLoc = glGetUniformLocation(shaderProgramID, (shaderLightLoc + ".Type").c_str());
+			auto rangeLoc = glGetUniformLocation(shaderProgramID, (shaderLightLoc + ".Range").c_str());
 
 			glUniform3f(
-				PosLoc,
-				static_cast<float>(LightData.Position.X),
-				static_cast<float>(LightData.Position.Y),
-				static_cast<float>(LightData.Position.Z)
+				posLoc,
+				static_cast<float>(lightData.Position.X),
+				static_cast<float>(lightData.Position.Y),
+				static_cast<float>(lightData.Position.Z)
 			);
 			glUniform3f(
-				ColLoc,
-				static_cast<float>(LightData.LightColor.R),
-				static_cast<float>(LightData.LightColor.G),
-				static_cast<float>(LightData.LightColor.B)
+				colLoc,
+				static_cast<float>(lightData.LightColor.R),
+				static_cast<float>(lightData.LightColor.G),
+				static_cast<float>(lightData.LightColor.B)
 			);
-			glUniform1i(TypeLoc, (int)LightData.Type);
+			glUniform1i(typeLoc, (int)lightData.Type);
 
-			glUniform1f(RangeLoc, LightData.Range);
+			glUniform1f(rangeLoc, lightData.Range);
 
 			glUniformMatrix4fv(
-				glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".ShadowMapProjection").c_str()),
+				glGetUniformLocation(shaderProgramID, (shaderLightLoc + ".ShadowMapProjection").c_str()),
 				1,
 				GL_FALSE,
-				glm::value_ptr(LightData.ShadowMapProjection)
+				glm::value_ptr(lightData.ShadowMapProjection)
 			);
 
-			// TODO: replace true with LightData.HasShadowMap
-			glUniform1i(glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".HasShadowMap").c_str()), LightData.HasShadowMap);
+			glUniform1i(
+				glGetUniformLocation(shaderProgramID, (shaderLightLoc + ".HasShadowMap").c_str()),
+				lightData.HasShadowMap
+			);
 
-			glUniform1i(glGetUniformLocation(ShaderProgramID, (ShaderLightLoc + ".ShadowMapIndex").c_str()), LightData.ShadowMapIndex);
+			glUniform1i(
+				glGetUniformLocation(shaderProgramID, (shaderLightLoc + ".ShadowMapIndex").c_str()),
+				lightData.ShadowMapIndex
+			);
 
-			std::string ShadowMapLutKey = std::string("ShadowMaps[") + std::to_string(LightData.ShadowMapIndex) + "]";
+			std::string ShadowMapLutKey = std::string("ShadowMaps[") + std::to_string(lightData.ShadowMapIndex) + "]";
 
 			glUniform1i(
 				glGetUniformLocation(
-					ShaderProgramID,
+					shaderProgramID,
 					ShadowMapLutKey.c_str()
 				),
-				LightData.ShadowMapTextureId
+				lightData.ShadowMapTextureId
 			);
 		}
-		glUniform1i(glGetUniformLocation(ShaderProgramID, "NumLights"), static_cast<int32_t>(Scene.LightData.size()));
+
+		glUniform1i(glGetUniformLocation(shaderProgramID, "NumLights"), static_cast<int32_t>(Scene.LightData.size()));
 	}
 
 	for (MeshData_t RenderData : Scene.MeshData)
 	{
 		m_SetTextureUniforms(RenderData, RenderData.Material->Shader);
+
 		this->DrawMesh(
 			RenderData.MeshData,
 			RenderData.Material->Shader,
@@ -308,9 +318,6 @@ void Renderer::DrawMesh(
 	FaceCullingMode FaceCulling
 )
 {
-	if (!this->GLContext)
-		throw("NULL GLContext in DrawMesh!");
-
 	switch (FaceCulling)
 	{
 
@@ -343,34 +350,33 @@ void Renderer::DrawMesh(
 	m_VertexBuffer->SetBufferData(Object->Vertices);
 	m_ElementBuffer->SetBufferData(Object->Indices);
 
-	glm::mat4 Scale = glm::mat4(1.0f);
-	Scale = glm::scale(Scale, (glm::vec3)Size);
+	glm::mat4 scale = glm::scale(glm::mat4(1.f), glm::vec3(Size));
 
 	glUniformMatrix4fv(glGetUniformLocation(Shaders->ID, "Matrix"), 1, GL_FALSE, glm::value_ptr(Matrix));
-	glUniformMatrix4fv(glGetUniformLocation(Shaders->ID, "Scale"), 1, GL_FALSE, glm::value_ptr(Scale));
+	glUniformMatrix4fv(glGetUniformLocation(Shaders->ID, "Scale"), 1, GL_FALSE, glm::value_ptr(scale));
 
 	glDrawElements(GL_TRIANGLES, static_cast<int>(Object->Indices.size()), GL_UNSIGNED_INT, 0);
 }
 
 void Renderer::m_SetTextureUniforms(MeshData_t& RenderData, ShaderProgram* Shaders)
 {
-	RenderMaterial* Material = RenderData.Material;
+	RenderMaterial* material = RenderData.Material;
 	Shaders->Activate();
 
-	int NumDiffuse = 0;
-	int NumSpecular = 0;
+	int numDiffuse = 0;
+	int numSpecular = 0;
 	
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	if (RenderData.Transparency > 0.f || RenderData.Material->Translucency)
+	if (RenderData.Transparency > 0.f || RenderData.Material->HasTranslucency)
 		glEnable(GL_BLEND);
 	else // the gosh darn grass model is practically 50% transparent
 		glDisable(GL_BLEND);
 	
 	//glDisable(GL_BLEND);
 
-	glUniform1f(glGetUniformLocation(Shaders->ID, "SpecularMultiplier"), Material->SpecMultiply);
-	glUniform1f(glGetUniformLocation(Shaders->ID, "SpecularPower"), Material->SpecExponent);
+	glUniform1f(glGetUniformLocation(Shaders->ID, "SpecularMultiplier"), material->SpecMultiply);
+	glUniform1f(glGetUniformLocation(Shaders->ID, "SpecularPower"), material->SpecExponent);
 	
 	glUniform1f(glGetUniformLocation(Shaders->ID, "Reflectivity"), RenderData.Reflectivity);
 	glUniform1f(glGetUniformLocation(Shaders->ID, "Transparency"), RenderData.Transparency);
@@ -398,7 +404,22 @@ void Renderer::m_SetTextureUniforms(MeshData_t& RenderData, ShaderProgram* Shade
 
 	uint32_t TexUnitOffset = 5;
 
-	for (Texture* Image : Material->DiffuseTextures)
+	/*
+		TODO 05/09/2024:
+
+		I'm conflicted whether to allow multiple textures of the same type
+
+		PROS:
+		* Texture "masking"
+		* Multiple UV map support
+		
+		CONS:
+		* Extra machinery and boilerplate, and it's overall more effort
+		
+		I'll leave this here just in case
+	*/
+
+	for (Texture* Image : { material->DiffuseTexture })
 	{
 		std::string NumberOf;
 		std::string Type;
@@ -407,9 +428,9 @@ void Renderer::m_SetTextureUniforms(MeshData_t& RenderData, ShaderProgram* Shade
 
 		Type = DiffuseStr;
 
-		NumberOf = std::to_string(NumDiffuse);
+		NumberOf = std::to_string(numDiffuse);
 
-		if (NumDiffuse > 6)
+		if (numDiffuse > 6)
 		{
 			Debug::Log("DIFFUSE TEX LIMIT REACHED!");
 			continue;
@@ -425,8 +446,8 @@ void Renderer::m_SetTextureUniforms(MeshData_t& RenderData, ShaderProgram* Shade
 		glUniform1i(glGetUniformLocation(Shaders->ID, ShaderTextureVar.c_str()), TexUnitOffset);
 	}
 
-	if (Material->HasSpecular)
-		for (Texture* Image : Material->SpecularTextures)
+	if (material->HasSpecular)
+		for (Texture* Image : { material->SpecularTexture })
 		{
 			std::string NumberOf;
 			std::string Type;
@@ -435,9 +456,9 @@ void Renderer::m_SetTextureUniforms(MeshData_t& RenderData, ShaderProgram* Shade
 
 			Type = SpecularStr;
 
-			NumberOf = std::to_string(NumSpecular);
+			NumberOf = std::to_string(numSpecular);
 
-			if (NumSpecular > 6)
+			if (numSpecular > 6)
 			{
 				Debug::Log("SPECULAR TEX LIMIT REACHED!");
 				continue;
@@ -455,11 +476,12 @@ void Renderer::m_SetTextureUniforms(MeshData_t& RenderData, ShaderProgram* Shade
 
 	glUniform1i(
 		glGetUniformLocation(Shaders->ID, "NumDiffuseTextures"),
-		static_cast<int32_t>(Material->DiffuseTextures.size())
+		1 //static_cast<int32_t>(Material->DiffuseTextures.size())
 	);
 	glUniform1i(
 		glGetUniformLocation(Shaders->ID, "NumSpecularTextures"),
-		Material->HasSpecular ? static_cast<int32_t>(Material->SpecularTextures.size()) : 0
+		//Material->HasSpecular ? static_cast<int32_t>(Material->SpecularTextures.size()) : 0
+		material->HasSpecular ? 1 : 0
 	);
 }
 

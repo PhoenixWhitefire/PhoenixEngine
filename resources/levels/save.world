@@ -1,4 +1,4 @@
-// Automatically generated as levels/dev.world
+// Automatically generated as levels/save.world
 #Version 02.00
 
 {
@@ -15,7 +15,7 @@
       "FaceCulling": 1,
       "Material": "models/crow",
       "Name": "crow_0",
-      "ObjectId": 17,
+      "ObjectId": 14,
       "Reflectivity": 0.0,
       "Size": [
         1.0,
@@ -51,24 +51,6 @@
       "Transparency": 0.0
     },
     {
-      "Brightness": 2.0,
-      "ClassName": "DirectionalLight",
-      "Direction": [
-        0.5,
-        0.5,
-        0.5
-      ],
-      "Enabled": true,
-      "LightColor": [
-        1.0,
-        0.967704713344574,
-        0.8627451062202454
-      ],
-      "Name": "DirectionalLight",
-      "ObjectId": 26,
-      "Shadows": false
-    },
-    {
       "Asset": "",
       "ClassName": "Mesh",
       "ColorRGB": [
@@ -78,9 +60,9 @@
       ],
       "Enabled": true,
       "FaceCulling": 0,
-      "Material": "testmat",
+      "Material": "models/grass",
       "Name": "g_0",
-      "ObjectId": 18,
+      "ObjectId": 15,
       "Reflectivity": 0.0,
       "Size": [
         1.0,
@@ -125,9 +107,9 @@
       ],
       "Enabled": true,
       "FaceCulling": 0,
-      "Material": "testmat",
+      "Material": "models/ground",
       "Name": "gr_0",
-      "ObjectId": 19,
+      "ObjectId": 16,
       "Reflectivity": 0.0,
       "Size": [
         1.0,
@@ -172,9 +154,9 @@
       ],
       "Enabled": true,
       "FaceCulling": 0,
-      "Material": "testmat",
+      "Material": "models/windows",
       "Name": "windows10_0",
-      "ObjectId": 20,
+      "ObjectId": 17,
       "Reflectivity": 0.0,
       "Size": [
         1.0,
@@ -220,7 +202,7 @@
       "FaceCulling": 1,
       "Material": "floortiles",
       "Name": "Primitive",
-      "ObjectId": 21,
+      "ObjectId": 18,
       "Reflectivity": 0.0,
       "Shape": 0,
       "Size": [
@@ -267,7 +249,7 @@
       "FaceCulling": 1,
       "Material": "wood",
       "Name": "Primitive",
-      "ObjectId": 22,
+      "ObjectId": 19,
       "Reflectivity": 0.0,
       "Shape": 0,
       "Size": [
@@ -302,7 +284,32 @@
         ]
       ],
       "Transparency": 0.0
+    },
+    {
+      "Brightness": 1.0,
+      "ClassName": "DirectionalLight",
+      "Direction": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "Enabled": true,
+      "LightColor": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Name": "DirectionalLight",
+      "ObjectId": 20,
+      "Shadows": false
+    },
+    {
+      "ClassName": "Script",
+      "Enabled": true,
+      "Name": "MainScript",
+      "ObjectId": 21,
+      "SourceFile": "scripts/empty.luau"
     }
   ],
-  "SceneName": "levels/dev.world"
+  "SceneName": "levels/save.world"
 }

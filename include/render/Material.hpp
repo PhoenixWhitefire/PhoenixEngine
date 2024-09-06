@@ -9,29 +9,24 @@
 class RenderMaterial
 {
 public:
-
-	explicit RenderMaterial();
-	// Creates a completely new material from the given name.
-	// SHOULD NOT BE USED DIRECTLY! USE RenderMaterial::GetMaterial INSTEAD!
-	// 
-	RenderMaterial(std::string const&);
 	// Fetches a material. Caches materials.
 	static RenderMaterial* GetMaterial(std::string const& Name);
 	static std::vector<RenderMaterial*> GetLoadedMaterials();
 
-	std::string Name;
+	std::string Name{};
+	ShaderProgram* Shader{};
 
-	std::vector<Texture*> DiffuseTextures;
-	std::vector<Texture*> SpecularTextures;
+	Texture* DiffuseTexture{};
+	Texture* SpecularTexture{};
 
-	ShaderProgram* Shader;
-
+	bool HasTranslucency = false;
 	bool HasSpecular = false;
-	bool Translucency = false;
-	float SpecExponent = 32.f;
-	float SpecMultiply = 1.f;
+	float SpecExponent = 16.f;
+	float SpecMultiply = .5f;
 
 private:
+	RenderMaterial();
+	RenderMaterial(std::string const&);
 
-	static std::unordered_map<std::string, RenderMaterial*> s_loadedMaterials;
+	static inline std::unordered_map<std::string, RenderMaterial*> s_LoadedMaterials;
 };

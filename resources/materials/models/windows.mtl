@@ -1,3 +1,4 @@
 {
-  "albedo": "/models/windows/diffuse.png"
+  "albedo": "models/windows/diffuse.png",
+  "originalPath": "models/windowsmaterial.mtl"
 }

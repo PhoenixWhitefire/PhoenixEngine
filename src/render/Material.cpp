@@ -5,22 +5,20 @@
 #include"FileRW.hpp"
 #include"Debug.hpp"
 
-std::unordered_map<std::string, RenderMaterial*> RenderMaterial::s_loadedMaterials;
 static const std::string MissingTexPath = "textures/MISSING2_MaximumADHD_status_1665776378145304579.png";
 
 RenderMaterial::RenderMaterial()
 {
-	this->SpecMultiply = .5f;
-	this->SpecExponent = 16.f;
-
 	this->Name = "*ERROR*";
+	this->HasTranslucency = false;
 	this->HasSpecular = false;
-	this->Translucency = false;
 
 	this->Shader = ShaderProgram::GetShaderProgram("worldUber");
 
-	this->DiffuseTextures.push_back(TextureManager::Get()->LoadTextureFromPath(MissingTexPath));
-	this->SpecularTextures.push_back(TextureManager::Get()->LoadTextureFromPath(MissingTexPath));
+	TextureManager* texManager = TextureManager::Get();
+
+	this->DiffuseTexture = texManager->LoadTextureFromPath(MissingTexPath);
+	this->SpecularTexture = this->DiffuseTexture;
 }
 
 RenderMaterial::RenderMaterial(std::string const& MaterialName)
@@ -28,15 +26,15 @@ RenderMaterial::RenderMaterial(std::string const& MaterialName)
 	this->Name = MaterialName;
 
 	bool matExists = true;
-	std::string FileData = FileRW::ReadFile("materials/" + MaterialName + ".mtl", &matExists);
+	std::string fileData = FileRW::ReadFile("materials/" + MaterialName + ".mtl", &matExists);
 
-	nlohmann::json JSONMaterialData;
+	nlohmann::json jsonMaterialData;
 
 	if (matExists)
 	{
 		try
 		{
-			JSONMaterialData = nlohmann::json::parse(FileData);
+			jsonMaterialData = nlohmann::json::parse(fileData);
 		}
 		catch (nlohmann::json::parse_error e)
 		{
@@ -46,8 +44,6 @@ RenderMaterial::RenderMaterial(std::string const& MaterialName)
 	}
 	else
 	{
-		JSONMaterialData["albedo"] = "";
-
 		this->Shader = ShaderProgram::GetShaderProgram("error");
 
 		Debug::Log("Unknown material: '" + MaterialName + "'");
@@ -55,41 +51,37 @@ RenderMaterial::RenderMaterial(std::string const& MaterialName)
 		return;
 	}
 
-	std::string desiredShp = JSONMaterialData.value("shaderprogram", "worldUber");
+	TextureManager* texManager = TextureManager::Get();
+
+	std::string desiredShp = jsonMaterialData.value("shaderprogram", "worldUber");
 	this->Shader = ShaderProgram::GetShaderProgram(desiredShp);
 
-	this->DiffuseTextures.push_back(TextureManager::Get()->LoadTextureFromPath(JSONMaterialData.value(
+	this->DiffuseTexture = texManager->LoadTextureFromPath(jsonMaterialData.value(
 		"albedo",
 		MissingTexPath
-	)));
+	));
 
-	this->DiffuseTextures[0]->Usage = MaterialTextureType::Diffuse;
-
-	bool HasSpecularTexture = JSONMaterialData.find("specular") != JSONMaterialData.end();
-	this->HasSpecular = HasSpecularTexture;
-	this->Translucency = JSONMaterialData.value("translucency", false);
+	bool hasSpecularTexture = jsonMaterialData.find("specular") != jsonMaterialData.end();
+	this->HasTranslucency = jsonMaterialData.value("translucency", false);
+	this->HasSpecular = hasSpecularTexture;
 
 	if (HasSpecular)
-	{
-		this->SpecularTextures.push_back(TextureManager::Get()->LoadTextureFromPath(JSONMaterialData.value(
+		this->SpecularTexture = texManager->LoadTextureFromPath(jsonMaterialData.value(
 			"specular",
 			MissingTexPath
-		)));
-
-		this->SpecularTextures[0]->Usage = MaterialTextureType::Specular;
-	}
+		));
 	else
-		this->SpecularTextures.push_back(TextureManager::Get()->LoadTextureFromPath(MissingTexPath));
+		this->SpecularTexture = texManager->LoadTextureFromPath(MissingTexPath);
 
-	this->SpecExponent = JSONMaterialData.value("specExponent", this->SpecExponent);
-	this->SpecMultiply = JSONMaterialData.value("specMultiply", this->SpecMultiply);
+	this->SpecExponent = jsonMaterialData.value("specExponent", this->SpecExponent);
+	this->SpecMultiply = jsonMaterialData.value("specMultiply", this->SpecMultiply);
 }
 
 RenderMaterial* RenderMaterial::GetMaterial(std::string const& Name)
 {
-	auto it = RenderMaterial::s_loadedMaterials.find(Name);
+	auto it = s_LoadedMaterials.find(Name);
 
-	if (it == RenderMaterial::s_loadedMaterials.end())
+	if (it == s_LoadedMaterials.end())
 	{
 		std::string fullPath = "materials/" + Name + ".mtl";
 		bool matExists = true;
@@ -98,7 +90,8 @@ RenderMaterial* RenderMaterial::GetMaterial(std::string const& Name)
 		if (matExists)
 		{
 			RenderMaterial* newMat = new RenderMaterial(Name);
-			RenderMaterial::s_loadedMaterials.insert(std::pair(Name, newMat));
+			s_LoadedMaterials.insert(std::pair(Name, newMat));
+
 			return newMat;
 		}
 		else
@@ -119,7 +112,7 @@ std::vector<RenderMaterial*> RenderMaterial::GetLoadedMaterials()
 {
 	std::vector<RenderMaterial*> mats;
 
-	for (auto& it : s_loadedMaterials)
+	for (auto& it : s_LoadedMaterials)
 		mats.push_back(it.second);
 
 	return mats;

@@ -29,9 +29,9 @@ static void registerTexture(Texture* texture)
 			Texture* replacement = TextureManager::Get()->LoadTextureFromPath(MissingTexPath, false);
 			texture->Identifier = replacement->Identifier;
 			texture->AttemptedLoad = true;
-			texture->ImageHeight = replacement->ImageHeight;
-			texture->ImageWidth = replacement->ImageWidth;
-			texture->ImageNumColorChannels = replacement->ImageNumColorChannels;
+			texture->Height = replacement->Height;
+			texture->Width = replacement->Width;
+			texture->NumColorChannels = replacement->NumColorChannels;
 
 			return;
 		}
@@ -55,7 +55,7 @@ static void registerTexture(Texture* texture)
 	// TODO: recheck logic?
 	GLenum Format = 0;
 
-	switch (texture->ImageNumColorChannels)
+	switch (texture->NumColorChannels)
 	{
 
 	case (4):
@@ -80,7 +80,7 @@ static void registerTexture(Texture* texture)
 	{
 		throw(std::vformat(
 			std::string("Invalid ImageNumColorChannels (was '{}') for '{}'!"),
-			std::make_format_args(texture->ImageNumColorChannels, texture->ImagePath)
+			std::make_format_args(texture->NumColorChannels, texture->ImagePath)
 		));
 		break;
 	}
@@ -98,8 +98,8 @@ static void registerTexture(Texture* texture)
 		GL_TEXTURE_2D,
 		0,
 		GL_RGBA,
-		texture->ImageWidth,
-		texture->ImageHeight,
+		texture->Width,
+		texture->Height,
 		0,
 		Format,
 		GL_UNSIGNED_BYTE,
@@ -141,9 +141,9 @@ static Texture* asyncTextureLoader(TextureManager* Manager, Texture* Image, std:
 {
 	uint8_t* Data = Manager->LoadImageData(
 		ActualPath.c_str(),
-		&Image->ImageWidth,
-		&Image->ImageHeight,
-		&Image->ImageNumColorChannels
+		&Image->Width,
+		&Image->Height,
+		&Image->NumColorChannels
 	);
 
 	Image->AttemptedLoad = true;
@@ -196,9 +196,9 @@ Texture* TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 		{
 			uint8_t* Data = this->LoadImageData(
 				ActualPath.c_str(),
-				&texture->ImageWidth,
-				&texture->ImageHeight,
-				&texture->ImageNumColorChannels
+				&texture->Width,
+				&texture->Height,
+				&texture->NumColorChannels
 			);
 
 			texture->TMP_ImageByteData = Data;

@@ -574,7 +574,10 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 	{
 		GameObject* object = it.second;
 
-		// If it has a `Parent` key we know it isn't a Root Node
+		// !! IMPORTANT !!
+		// The `Parent` key *should not* be set for Root Nodes as their parent
+		// *is not part of the scene!*
+		// 04/09/2024
 		if (objectProps[object].find("Parent") == objectProps[object].end())
 			Objects.push_back(object);
 
@@ -601,7 +604,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 						object->ClassName,
 						object->Name,
 						sceneRelativeId,
-						object->ObjectId
+						propName
 					)
 				));
 
@@ -649,7 +652,7 @@ std::vector<GameObject*> SceneFormat::Deserialize(
 	return objects;
 }
 
-static nlohmann::json serializeObject(GameObject* Object)
+static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = false)
 {
 	nlohmann::json item{};
 
@@ -659,6 +662,13 @@ static nlohmann::json serializeObject(GameObject* Object)
 		const IProperty& propInfo = prop.second;
 
 		if (!propInfo.Set && propName != "ObjectId" && propName != "ClassName")
+			continue;
+
+		// !! IMPORTANT !!
+		// The `Parent` key *should not* be set for Root Nodes as their parent
+		// *is not part of the scene!*
+		// 04/09/2024
+		if (IsRootNode && propName == "Parent")
 			continue;
 
 		Reflection::GenericValue value = propInfo.Get(Object);
@@ -739,7 +749,7 @@ std::string SceneFormat::Serialize(std::vector<GameObject*> Objects, const std::
 
 	for (GameObject* rootObject : Objects)
 	{
-		objectsArray.push_back(serializeObject(rootObject));
+		objectsArray.push_back(serializeObject(rootObject, true));
 		
 		for (GameObject* desc : rootObject->GetDescendants())
 			objectsArray.push_back(serializeObject(desc));

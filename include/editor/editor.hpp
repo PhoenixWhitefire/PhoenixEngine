@@ -6,7 +6,6 @@
 class Editor
 {
 public:
-
 	Editor();
 
 	void Init();
@@ -15,5 +14,18 @@ public:
 
 private:
 
-	int hierarchyCurItem = 0;
+	void m_RenderMaterialEditor();
+
+	GameObject* m_CurrentUIHierarchyRoot{};
+	int m_HierarchyCurItem = -1;
+
+	char* m_NewObjectClass{};
+	double m_InvalidObjectErrTimeRemaining{};
+
+	char* m_MtlCreateNameBuf{};
+	char* m_MtlDiffuseBuf{};
+	char* m_MtlSpecBuf{};
+
+	int m_MtlCurItem = -1;
+	int m_MtlPrevItem = -1;
 };

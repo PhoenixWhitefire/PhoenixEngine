@@ -1,6 +1,6 @@
 #pragma once
 
-/*
+
 #include<vector>
 #include<luau/VM/src/lstate.h>
 
@@ -23,15 +23,12 @@ public:
 	PHX_GAMEOBJECT_API_REFLECTION;
 
 private:
+	std::string m_Source;
+	char* m_Bytecode;
+	lua_State* m_L;
 
-	std::string m_source;
-	char* m_bytecode;
-	lua_State* L;
+	bool m_HasUpdate = false;
 
-	bool hasUpdate = false;
-
-	static RegisterDerivedObject<Object_Script> RegisterClassAs;
 	static void s_DeclareReflections();
 	static inline Api s_Api{};
 };
-*/

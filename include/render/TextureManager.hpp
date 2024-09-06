@@ -5,22 +5,18 @@
 
 #define TEXTUREMANAGER_INVALID_ID 0xFFFFFFu
 
-enum class MaterialTextureType { NotAssigned, Diffuse, Specular };
-
 struct Texture
 {
 	uint32_t Identifier = TEXTUREMANAGER_INVALID_ID;
-	MaterialTextureType Usage = MaterialTextureType::Diffuse;
 
-	std::string ImagePath = "";
-	int ImageHeight = -1;
-	int ImageWidth = -1;
-	int ImageNumColorChannels = -1;
+	std::string ImagePath{};
+	int Width, Height = -1;
+	int NumColorChannels = -1;
 
 	bool AttemptedLoad = false;
 
 	// De-allocated after the Texture is uploaded to the GPU
-	uint8_t* TMP_ImageByteData = nullptr;
+	uint8_t* TMP_ImageByteData{};
 };
 
 class TextureManager

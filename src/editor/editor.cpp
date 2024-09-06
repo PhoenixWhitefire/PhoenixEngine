@@ -9,42 +9,40 @@
 #include"FileRW.hpp"
 #include"Debug.hpp"
 
-static char* NewObjectClass = nullptr;
+constexpr uint32_t OBJECT_NEW_CLASSNAME_BUFSIZE = 16;
+constexpr uint32_t MATERIAL_NEW_NAME_BUFSIZE = 16;
+constexpr uint32_t MATERIAL_TEXTUREPATH_BUFSIZE = 64;
+constexpr std::string MATERIAL_NEW_NAME_DEFAULT = "newmaterial";
+
 static const char* ParentString = "[Parent]";
-static double InvalidObjectErrTimeRemaining = 0.f;
-
-static GameObject* CurrentUIHierarchyRoot;
-
-static bool prevWantKeyboard = false;
-
-static char* newMtlName = (char*)malloc(64);
-static char* diffuseBuf = (char*)malloc(64);
-static char* specBuf = (char*)malloc(64);
-
-static std::string DefaultNewMtlName = "new";
 
 static std::string ErrorTexture = "textures/MISSING2_MaximumADHD_status_1665776378145304579.png";
 
 static nlohmann::json DefaultNewMaterial{};
 
+static char* bufferInitialize(uint32_t capacity, const std::string& initializeValue = "")
+{
+	char* buf = (char*)malloc(capacity);
+
+	if (!buf)
+		throw("There are bigger problems at hand.");
+
+	if (initializeValue != "")
+		for (uint32_t i = 0; i < capacity; i++)
+			buf[i] = 0;
+	else
+		for (uint32_t i = 0; i < capacity; i++)
+			buf[i] = i < initializeValue.size() ? initializeValue.at(i) : 0;
+
+	return buf;
+}
+
 Editor::Editor()
 {
-	NewObjectClass = (char*)malloc(sizeof(char)*32);
-
-	if (!NewObjectClass)
-		throw("There are bigger issues at hand");
-
-	for (int i = 0; i < 32; i++)
-		NewObjectClass[i] = 0;
-
-	for (int i = 0; i < 64; i++)
-		newMtlName[i] = DefaultNewMtlName[i];
-
-	for (int i = 0; i < 64; i++)
-	{
-		diffuseBuf[i] = 0;
-		specBuf[i] = 0;
-	}
+	m_NewObjectClass = bufferInitialize(OBJECT_NEW_CLASSNAME_BUFSIZE);
+	m_MtlCreateNameBuf = bufferInitialize(MATERIAL_NEW_NAME_BUFSIZE, MATERIAL_NEW_NAME_DEFAULT);
+	m_MtlDiffuseBuf = bufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
+	m_MtlSpecBuf = bufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
 
 	DefaultNewMaterial["albedo"] = "textures/plastic.png";
 
@@ -100,14 +98,14 @@ void Editor::Init()
 
 	//GameWorkspace->OnChildAdded.Connect(ResetAndAddObjects);
 
-	CurrentUIHierarchyRoot = GameObject::s_DataModel;
+	m_CurrentUIHierarchyRoot = GameObject::s_DataModel;
 
 	Debug::Log("Editor init done");
 }
 
 void Editor::Update(double DeltaTime, glm::mat4 CameraTransform)
 {
-	InvalidObjectErrTimeRemaining -= DeltaTime;
+	m_InvalidObjectErrTimeRemaining -= DeltaTime;
 
 	Vector3 CamPos = Vector3(CameraTransform[3].x, CameraTransform[3].y, CameraTransform[3].z);
 
@@ -123,7 +121,7 @@ void Editor::Update(double DeltaTime, glm::mat4 CameraTransform)
 	//	this->MyCube3D->Matrix = glm::translate(glm::mat4(1.0f), glm::vec3(Result.HitPosition));
 }
 
-static std::vector<GameObject*> getVisibleChildren()
+static std::vector<GameObject*> getVisibleChildren(GameObject* CurrentUIHierarchyRoot)
 {
 	std::vector<GameObject*> children;
 
@@ -139,7 +137,7 @@ static std::vector<GameObject*> getVisibleChildren()
 	return children;
 }
 
-static bool objectsIterator(void*, int Index, const char** OutText)
+static bool objectsIterator(void* Root, int Index, const char** OutText)
 {
 	//GameObject* Parent = (GameObject*)Data;
 
@@ -149,7 +147,7 @@ static bool objectsIterator(void*, int Index, const char** OutText)
 		return true;
 	}
 
-	GameObject* selected = getVisibleChildren()[(size_t)Index - 1];
+	GameObject* selected = getVisibleChildren((GameObject*)Root).at((size_t)Index - 1);
 	*OutText = selected->Name.c_str();
 
 	return true;
@@ -159,7 +157,7 @@ static bool mtlIterator(void*, int index, const char** outText)
 {
 	RenderMaterial* selected = RenderMaterial::GetLoadedMaterials()[index];
 
-	*outText = selected->Name.c_str();;
+	*outText = selected->Name.c_str();
 
 	return true;
 }
@@ -169,91 +167,122 @@ static bool mtlIterator(void*, int index, const char** outText)
 // baguette with a doge face on a white background low-res
 // with the caption "pain"
 // and it's just him screaming into the mic
-static void materialEditor()
+void Editor::m_RenderMaterialEditor()
 {
 	ImGui::Begin("Materials");
 
-	static int mtlCurItem = 0;
-	static int prevItem = -1;
-
-	ImGui::InputText("New material", newMtlName, 64);
+	ImGui::InputText("New material", m_MtlCreateNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
 
 	if (ImGui::Button("Create"))
 	{
 		FileRW::WriteFile(
-			"materials/" + std::string(newMtlName) + ".mtl",
+			"materials/" + std::string(m_MtlCreateNameBuf) + ".mtl",
 			DefaultNewMaterial.dump(2), true
 		);
-		RenderMaterial::GetMaterial(newMtlName);
+
+		RenderMaterial::GetMaterial(m_MtlCreateNameBuf);
 	}
 
 	ImGui::ListBox(
 		"Active materials",
-		&mtlCurItem,
+		&m_MtlCurItem,
 		&mtlIterator,
 		nullptr,
 		static_cast<int>(RenderMaterial::GetLoadedMaterials().size())
 	);
 
-	RenderMaterial* curItem = RenderMaterial::GetLoadedMaterials()[mtlCurItem];
-
-	if (mtlCurItem != prevItem)
+	if (m_MtlCurItem == -1)
 	{
-		for (int i = 0; i < 64; i++)
-			diffuseBuf[i] = curItem->DiffuseTextures[0]->ImagePath[i];
+		ImGui::End();
 
-		if (curItem->SpecularTextures.size() >= 1)
-			for (int i = 0; i < 64; i++)
-				specBuf[i] = curItem->SpecularTextures[0]->ImagePath[i];
-		else
-			for (int i = 0; i < 64; i++)
-				specBuf[i] = 0;
+		return;
 	}
 
-	prevItem = mtlCurItem;
+	RenderMaterial* curItem = RenderMaterial::GetLoadedMaterials().at(m_MtlCurItem);
+
+	if (m_MtlCurItem != m_MtlPrevItem)
+	{
+		for (uint32_t i = 0; i < MATERIAL_TEXTUREPATH_BUFSIZE; i++)
+			m_MtlDiffuseBuf[i] = i < curItem->DiffuseTexture->ImagePath.size()
+									? curItem->DiffuseTexture->ImagePath.at(i)
+									: 0;
+
+		if (curItem->HasSpecular)
+			for (uint32_t i = 0; i < MATERIAL_TEXTUREPATH_BUFSIZE; i++)
+				m_MtlSpecBuf[i] = i < curItem->SpecularTexture->ImagePath.size()
+									? curItem->SpecularTexture->ImagePath.at(i)
+									: 0;
+		else
+			for (int i = 0; i < 64; i++)
+				m_MtlSpecBuf[i] = 0;
+	}
+
+	m_MtlPrevItem = m_MtlCurItem;
 
 	TextureManager* texManager = TextureManager::Get();
 
-	ImGui::InputText("Diffuse", diffuseBuf, 64);
+	ImGui::InputText("Diffuse", m_MtlDiffuseBuf, 64);
 	
-	Texture* curDiffuse = curItem->DiffuseTextures[0];
+	Texture* curDiffuse = curItem->DiffuseTexture;
 
 	ImGui::Image(
-		(void*)curDiffuse->Identifier,
+		// first cast to uint64_t to get rid of the
+		// "'type cast': conversion from 'uint32_t' to 'void *' of greater size"
+		// warning
+		(void*)((uint64_t)curDiffuse->Identifier),
 		ImVec2(256, 256),
 		// Flip the Y axis. Either OpenGL or Dear ImGui is bottom-up
 		ImVec2(0, 1),
 		ImVec2(1, 0)
 	);
 
-	ImGui::InputText("Specular", specBuf, 64);
+	ImGui::Text(std::vformat(
+		"Resolution: {}x{}",
+		std::make_format_args(curDiffuse->Width, curDiffuse->Height)
+	).c_str());
+	ImGui::Text(std::vformat(
+		"# Color channels: {}",
+		std::make_format_args(curDiffuse->NumColorChannels)
+	).c_str());
+
+	ImGui::InputText("Specular", m_MtlSpecBuf, 64);
 
 	Texture* curSpecular = curItem->HasSpecular
-							? curItem->SpecularTextures[0]
+							? curItem->SpecularTexture
 							: nullptr;
 
 	if (curSpecular)
+	{
 		ImGui::Image(
-			(void*)curSpecular->Identifier,
+			// first cast to uint64_t to get rid of the
+			// "'type cast': conversion from 'uint32_t' to 'void *' of greater size"
+			// warning
+			(void*)((uint64_t)curSpecular->Identifier),
 			ImVec2(256, 256),
 			// Flip the Y axis. Either OpenGL or Dear ImGui is bottom-up
 			ImVec2(0, 1),
 			ImVec2(1, 0)
 		);
 
-	if (ImGui::Button("Update textures"))
-	{
-		curItem->DiffuseTextures[0] = texManager->LoadTextureFromPath(diffuseBuf);
-
-		if (curItem->HasSpecular)
-		{
-			if (curItem->SpecularTextures.size() > 0)
-				curItem->SpecularTextures[0] = texManager->LoadTextureFromPath(specBuf);
-			else
-				curItem->SpecularTextures.push_back(texManager->LoadTextureFromPath(specBuf));
-		}
+		ImGui::Text(std::vformat(
+			"Resolution: {}x{}",
+			std::make_format_args(curSpecular->Width, curSpecular->Height)
+		).c_str());
+		ImGui::Text(std::vformat(
+			"# Color channels: {}",
+			std::make_format_args(curSpecular->NumColorChannels)
+		).c_str());
 	}
 
+	if (ImGui::Button("Update textures"))
+	{
+		curItem->DiffuseTexture = texManager->LoadTextureFromPath(m_MtlDiffuseBuf);
+
+		if (curItem->HasSpecular)
+			curItem->SpecularTexture = texManager->LoadTextureFromPath(m_MtlSpecBuf);
+	}
+
+	ImGui::Checkbox("Has translucency", &curItem->HasTranslucency);
 	ImGui::InputFloat("Spec pow", &curItem->SpecExponent);
 	ImGui::InputFloat("Spec mul", &curItem->SpecMultiply);
 	ImGui::Checkbox("Has spec map", &curItem->HasSpecular);
@@ -262,13 +291,19 @@ static void materialEditor()
 	{
 		nlohmann::json newMtlConfig{};
 
-		newMtlConfig["albedo"] = curItem->DiffuseTextures[0]->ImagePath;
+		newMtlConfig["albedo"] = curItem->DiffuseTexture->ImagePath;
 
-		if (curItem->HasSpecular)
-			newMtlConfig["specular"] = curItem->SpecularTextures[0]->ImagePath;
+		if (curItem->HasSpecular && curItem->SpecularTexture)
+			newMtlConfig["specular"] = curItem->SpecularTexture->ImagePath;
 
 		newMtlConfig["specExponent"] = curItem->SpecExponent;
 		newMtlConfig["specMultiply"] = curItem->SpecMultiply;
+		newMtlConfig["translucency"] = curItem->HasTranslucency;
+
+		// overwrite the model material override
+		auto start = curItem->Name.find("models/");
+		if (start != std::string::npos)
+			FileRW::WriteFile(start + "/material.mtl", newMtlConfig.dump(2), true);
 
 		FileRW::WriteFile(
 			"materials/" + curItem->Name + ".mtl",
@@ -282,39 +317,39 @@ static void materialEditor()
 
 void Editor::RenderUI()
 {
-	materialEditor();
+	m_RenderMaterialEditor();
 
 	ImGui::Begin("Editor");
 
-	ImGui::InputText("New object", NewObjectClass, 32);
-	bool Create = ImGui::Button("Create");
+	ImGui::InputText("New object", m_NewObjectClass, 32);
+	bool createObject = ImGui::Button("Create");
 
-	if (InvalidObjectErrTimeRemaining > 0.f)
+	if (m_InvalidObjectErrTimeRemaining > 0.f)
 		ImGui::Text("Invalid GameObject!");
 
-	if (CurrentUIHierarchyRoot)
+	if (m_CurrentUIHierarchyRoot)
 	{
-		bool AscendHierarchy = ImGui::Button(std::vformat(
+		bool ascendHierarchy = ImGui::Button(std::vformat(
 			"Ascend to parent {}",
-			std::make_format_args(CurrentUIHierarchyRoot->Name)
+			std::make_format_args(m_CurrentUIHierarchyRoot->Name)
 		).c_str());
 
-		if (AscendHierarchy)
+		if (ascendHierarchy)
 		{
-			CurrentUIHierarchyRoot = CurrentUIHierarchyRoot->GetParent();
-			this->hierarchyCurItem = 0;
+			m_CurrentUIHierarchyRoot = m_CurrentUIHierarchyRoot->GetParent();
+			m_HierarchyCurItem = 0;
 		}
 	}
 
-	std::vector<GameObject*> children = getVisibleChildren();
+	std::vector<GameObject*> children = getVisibleChildren(m_CurrentUIHierarchyRoot);
 
 	std::string parentText;
 
-	if (CurrentUIHierarchyRoot)
+	if (m_CurrentUIHierarchyRoot)
 	{
 		parentText = std::vformat(
 			"Children of {}",
-			std::make_format_args(CurrentUIHierarchyRoot->Name)
+			std::make_format_args(m_CurrentUIHierarchyRoot->Name)
 		).c_str();
 	}
 	else
@@ -322,7 +357,7 @@ void Editor::RenderUI()
 
 	ImGui::ListBox(
 		parentText.c_str(),
-		&this->hierarchyCurItem,
+		&m_HierarchyCurItem,
 		&objectsIterator,
 		nullptr,
 		static_cast<int>(children.size()) + 1
@@ -330,25 +365,30 @@ void Editor::RenderUI()
 
 	GameObject* selected = nullptr;
 
-	if (hierarchyCurItem > 0)
+	if (m_HierarchyCurItem > 0)
 		if (children.size() > 0)
-			selected = children[(size_t)this->hierarchyCurItem - 1];
+			selected = children[(size_t)m_HierarchyCurItem - 1];
 		else
-			hierarchyCurItem = -1;
+			m_HierarchyCurItem = -1;
 
-	if (selected && selected->GetChildren().size() > 0)
+	if (selected)
 	{
 		size_t numChildren = selected->GetChildren().size();
 
-		bool ChangeView = ImGui::Button(std::vformat(
-			"View {} children",
-			std::make_format_args(numChildren)
-		).c_str());
+		bool stepInto = false;
+		
+		if (numChildren > 0)
+			stepInto = ImGui::Button(std::vformat(
+				"View {} children",
+				std::make_format_args(numChildren)
+			).c_str());
+		else
+			stepInto = ImGui::Button("Step into");
 
-		if (ChangeView)
+		if (stepInto)
 		{
-			CurrentUIHierarchyRoot = selected;
-			this->hierarchyCurItem = 0;
+			m_CurrentUIHierarchyRoot = selected;
+			m_HierarchyCurItem = -1;
 		}
 	}
 
@@ -356,22 +396,22 @@ void Editor::RenderUI()
 	if (selected != GameObject::s_DataModel)
 		if (ImGui::Button("Destroy"))
 		{
-			if (selected && selected == CurrentUIHierarchyRoot && CurrentUIHierarchyRoot->GetParent())
-				CurrentUIHierarchyRoot = CurrentUIHierarchyRoot->GetParent();
+			if (selected && selected == m_CurrentUIHierarchyRoot && m_CurrentUIHierarchyRoot->GetParent())
+				m_CurrentUIHierarchyRoot = m_CurrentUIHierarchyRoot->GetParent();
 
 			delete selected;
 			selected = nullptr;
-			// in case we delete the bottom-most item
-			this->hierarchyCurItem = (hierarchyCurItem - 1) >= 0 ? (hierarchyCurItem - 1) : 0;
+
+			m_HierarchyCurItem = -1;
 		}
 
 	if (selected)
 	{
-		//Object_Script* script = dynamic_cast<Object_Script*>(selected);
+		Object_Script* script = dynamic_cast<Object_Script*>(selected);
 
-		//if (script)
-			//if (ImGui::Button("Reload"))
-				//script->Reload();
+		if (script)
+			if (ImGui::Button("Reload"))
+				script->Reload();
 
 		ImGui::Text("Properties:");
 
@@ -528,20 +568,18 @@ void Editor::RenderUI()
 		}
 	}
 
-	prevWantKeyboard = ImGui::GetIO().WantCaptureKeyboard;
-
 	ImGui::End();
 
-	if (Create)
+	if (createObject)
 	{
-		if (!GameObject::IsValidObjectClass(NewObjectClass))
-			InvalidObjectErrTimeRemaining = 2.f;
+		if (!GameObject::IsValidObjectClass(m_NewObjectClass))
+			m_InvalidObjectErrTimeRemaining = 2.f;
 		else
 		{
-			GameObject* newObj = GameObject::CreateGameObject(NewObjectClass);
+			GameObject* newObj = GameObject::CreateGameObject(m_NewObjectClass);
 
-			if (CurrentUIHierarchyRoot)
-				newObj->SetParent(CurrentUIHierarchyRoot);
+			if (m_CurrentUIHierarchyRoot)
+				newObj->SetParent(m_CurrentUIHierarchyRoot);
 		}
 	}
 }

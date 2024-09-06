@@ -49,15 +49,15 @@ public:
 	PHX_GAMEOBJECT_API_REFLECTION;
 
 private:
-	size_t m_getUsableIndex();
+	size_t m_GetUsableParticleIndex();
 
-	std::vector<_particle*> m_particles;
+	std::vector<_particle*> m_Particles;
 
-	double m_lastSpawnedDelta = 0.f;
+	double m_TimeSinceLastSpawn = 0.f;
 
-	VAO VertArray;
-	VBO VertBuffer;
-	EBO ElementBuffer;
+	VAO m_VertArray;
+	VBO m_VertBuffer;
+	EBO m_ElementBuffer;
 
 	static std::default_random_engine s_RandGenerator;
 	static ShaderProgram* s_ParticleShaders;

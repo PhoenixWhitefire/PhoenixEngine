@@ -377,7 +377,7 @@ static void DrawUI(Reflection::GenericValue Data)
 				}
 				else
 				{
-					std::string serialized = SceneFormat::Serialize(levelModel->GetChildren(), LevelLoadPathBuf);
+					std::string serialized = SceneFormat::Serialize(levelModel->GetChildren(), levelSavePath);
 					FileRW::WriteFile(levelSavePath, serialized, true);
 
 					saveMessage = std::vformat("Saved as '{}'", std::make_format_args(levelSavePath));

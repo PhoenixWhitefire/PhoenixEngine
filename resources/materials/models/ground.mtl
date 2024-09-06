@@ -1,4 +1,4 @@
 {
-  "albedo": "/models/ground/diffuse.png",
-  "specular": "/models/ground/specular.png"
+  "albedo": "models/ground/diffuse.png",
+  "specular": "models/ground/specular.png"
 }

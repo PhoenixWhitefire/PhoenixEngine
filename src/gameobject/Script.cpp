@@ -1,5 +1,5 @@
-﻿//#include<luau/Compiler/include/luacode.h>
-//#include<luau/VM/include/lualib.h>
+﻿#include<luau/Compiler/include/luacode.h>
+#include<luau/VM/include/lualib.h>
 
 #include"gameobject/Script.hpp"
 #include"datatype/GameObject.hpp"
@@ -9,9 +9,8 @@
 #define LUA_THROW(err) lua_pushstring(L, err); lua_error(L)
 #define LUA_ASSERT(res, err, onfail) if (!res) { LUA_THROW(err); onfail; }
 
-//RegisterDerivedObject<Object_Script> Object_Script::RegisterClassAs("Script");
+static RegisterDerivedObject<Object_Script> RegisterClassAs("Script");
 
-#if 0
 static bool s_DidInitReflection = false;
 static lua_State* DefaultState = nullptr;
 
@@ -101,9 +100,9 @@ static void pushVector3(lua_State* L, Vector3 vec)
 
 static void pushGameObject(lua_State* L, GameObject* obj)
 {
-	void* ptrToObj = lua_newuserdata(L, sizeof(GameObject));
+	void* ptrToObj = lua_newuserdata(L, sizeof(&obj));
 
-	ptrToObj = obj;
+	ptrToObj = &obj;
 
 	luaL_getmetatable(L, "GameObject");
 	lua_setmetatable(L, -2);
@@ -120,7 +119,7 @@ static void pushGenericValue(lua_State* L, Reflection::GenericValue& gv)
 	}
 	case (Reflection::ValueType::Integer):
 	{
-		lua_pushinteger(L, gv.Integer);
+		lua_pushinteger(L, static_cast<int32_t>(gv.Integer));
 		break;
 	}
 	case (Reflection::ValueType::Double):
@@ -197,9 +196,9 @@ template <class T> static void pushFunction(lua_State* L, T* obj, const char* na
 			std::string fnamestr = fname;
 
 			auto& func = refl->GetFunction(fnamestr);
-			std::vector<Reflection::ValueType>& paramTypes = func.Inputs;
+			const std::vector<Reflection::ValueType>& paramTypes = func.Inputs;
 
-			int numParams = paramTypes.size();
+			int numParams = static_cast<int32_t>(paramTypes.size());
 			int numArgs = lua_gettop(L);
 
 			if (numArgs != numParams)
@@ -311,22 +310,22 @@ static auto api_gameobjindex = [](lua_State* L)
 		);*/
 		LUA_ASSERT(lua_isstring(L, -1), "Expected index of type string", return 0);
 
-		lua_pushstring(L, "__type");
-		lua_gettable(L, -3);
-		printf("api_gameobjindex: arg mtt __type: %s\n", lua_tostring(L, -1));
+		//lua_pushstring(L, "__type");
+		//lua_gettable(L, -3);
+		//printf("api_gameobjindex: arg mtt __type: %s\n", lua_tostring(L, -1));
 
-		GameObject* obj = (GameObject*)lua_touserdata(L, -2);
+		GameObject* obj = *(GameObject**)lua_touserdata(L, -2);
 		const char* key = lua_tostring(L, -1);
 
 		std::string keystr = key;
 
-		lua_getglobal(L, "GameObject");
-		lua_pushstring(L, key);
-		lua_rawget(L, -2);
+		//lua_getglobal(L, "GameObject");
+		//lua_pushstring(L, key);
+		//lua_rawget(L, -2);
 
-		// Pass-through to GameObject.new
-		if (!lua_isnil(L, -1))
-			return 1;
+		//// Pass-through to GameObject.new
+		//if (!lua_isnil(L, -1))
+		//	return 1;
 
 		if (obj->HasProperty(key))
 		{
@@ -416,7 +415,7 @@ static auto api_gameobjnewindex = [](lua_State* L)
 
 static auto api_gameobjecttostring = [](lua_State* L)
 	{
-		GameObject* obj = (GameObject*)lua_touserdata(L, -3);
+		GameObject* obj = *(GameObject**)lua_touserdata(L, -1);
 		lua_pushstring(L, obj->GetFullName().c_str());
 		
 		return 1;
@@ -462,8 +461,6 @@ static auto api_vec3index = [](lua_State* L)
 			return 1;
 
 		std::string keystr = key;
-
-		auto& props = vec->GetProperties();
 
 		if (vec->HasProperty(key))
 		{
@@ -576,18 +573,18 @@ static void initDefaultState()
 
 void Object_Script::s_DeclareReflections()
 {
-	if (didInitReflection)
+	if (s_DidInitReflection)
 		return;
-	didInitReflection = true;
+	s_DidInitReflection = true;
 
 	REFLECTION_DECLAREPROP(
 		"SourceFile",
 		String,
-		[](Reflection::Reflectable* refl)
+		[](GameObject* refl)
 		{
 			return Reflection::GenericValue(dynamic_cast<Object_Script*>(refl)->SourceFile);
 		},
-		[](Reflection::Reflectable* refl, Reflection::GenericValue newval)
+		[](GameObject* refl, Reflection::GenericValue newval)
 		{
 			Object_Script* scr = dynamic_cast<Object_Script*>(refl);
 			scr->SourceFile = newval.String;
@@ -600,7 +597,7 @@ void Object_Script::s_DeclareReflections()
 		"Reload",
 		{},
 		{ Reflection::ValueType::Bool },
-		[](Reflection::Reflectable* scr, Reflection::GenericValue)
+		[](GameObject* scr, Reflection::GenericValue)
 		{
 			bool reloadSuccess = dynamic_cast<Object_Script*>(scr)->Reload();
 			return Reflection::GenericValue(reloadSuccess);
@@ -614,13 +611,13 @@ Object_Script::Object_Script()
 {
 	this->Name = "Script";
 	this->ClassName = "Script";
-	this->m_bytecode = NULL;
+	m_Bytecode = NULL;
 
 	if (!DefaultState)
 		initDefaultState();
 
 	// `L` is initialized in Object_Script::Reload
-	this->L = nullptr;
+	m_L = nullptr;
 
 	s_DeclareReflections();
 }
@@ -632,23 +629,23 @@ void Object_Script::Initialize()
 
 void Object_Script::Update(double dt)
 {
-	if (this->hasUpdate)
+	if (m_HasUpdate)
 	{
-		lua_getglobal(L, "Update");
+		lua_getglobal(m_L, "Update");
 
-		if (!lua_isfunction(L, -1))
-			this->hasUpdate = false;
+		if (!lua_isfunction(m_L, -1))
+			m_HasUpdate = false;
 		else
 		{
-			lua_pushnumber(L, dt);
-			int succ = lua_pcall(L, 1, 0, 0);
+			lua_pushnumber(m_L, dt);
+			int succ = lua_pcall(m_L, 1, 0, 0);
 
 			if (succ != 0)
 			{
-				this->hasUpdate = false;
+				m_HasUpdate = false;
 
-				int topidx = lua_gettop(L);
-				const char* errstr = lua_tostring(L, topidx);
+				int topidx = lua_gettop(m_L);
+				const char* errstr = lua_tostring(m_L, topidx);
 				std::string fullname = this->GetFullName();
 
 				Debug::Log(std::vformat(
@@ -673,7 +670,7 @@ bool Object_Script::LoadScript(std::string const& scriptFile)
 bool Object_Script::Reload()
 {
 	bool fileExists = true;
-	m_source = FileRW::ReadFile(SourceFile, &fileExists);
+	m_Source = FileRW::ReadFile(SourceFile, &fileExists);
 
 	if (!fileExists)
 	{
@@ -688,12 +685,11 @@ bool Object_Script::Reload()
 		return false;
 	}
 
-	if (this->L)
-		lua_resetthread(L);
+	if (m_L)
+		lua_resetthread(m_L);
 	else
 	{
-		lua_State* ML = lua_mainthread(DefaultState);
-		this->L = lua_newthread(DefaultState);
+		m_L = lua_newthread(DefaultState);
 	}
 
 	std::string FullName = this->GetFullName();
@@ -705,30 +701,30 @@ bool Object_Script::Reload()
 	size_t bytecodeSize = 0;
 	// Keeps crashing upon reloading the script twice, maybe
 	// `malloc` some so it isn't a nullptr (due to the `free`)
-	this->m_bytecode = (char*)malloc(4);
-	this->m_bytecode = luau_compile(m_source.c_str(), m_source.length(), NULL, &bytecodeSize);
+	m_Bytecode = (char*)malloc(4);
+	m_Bytecode = luau_compile(m_Source.c_str(), m_Source.length(), NULL, &bytecodeSize);
 
-	int result = luau_load(L, chunkname.c_str(), m_bytecode, bytecodeSize, 0);
+	int result = luau_load(m_L, chunkname.c_str(), m_Bytecode, bytecodeSize, 0);
 	
-	free(m_bytecode);
+	free(m_Bytecode);
 
 	if (result == 0)
 	{
 		// Run the script
 
-		int resumeresult = lua_resume(L, nullptr, 0);
+		int resumeResult = lua_resume(m_L, nullptr, 0);
 
-		if (resumeresult == 0)
+		if (resumeResult == 0)
 		{
-			lua_getglobal(L, "Update");
+			lua_getglobal(m_L, "Update");
 
-			if (lua_isfunction(L, -1))
-				this->hasUpdate = true;
+			if (lua_isfunction(m_L, -1))
+				m_HasUpdate = true;
 		}
 		else
 		{
-			int topidx = lua_gettop(L);
-			const char* errstr = lua_tostring(L, topidx);
+			int topidx = lua_gettop(m_L);
+			const char* errstr = lua_tostring(m_L, topidx);
 
 			Debug::Log(std::vformat(
 				"Luau script init error: {}: {}",
@@ -740,12 +736,10 @@ bool Object_Script::Reload()
 	}
 	else
 	{
-		int topidx = lua_gettop(L);
-		const char* errstr = lua_tostring(L, topidx);
+		int topidx = lua_gettop(m_L);
+		const char* errstr = lua_tostring(m_L, topidx);
 
 		Debug::Log(std::vformat("Luau compile error {}: {}: '{}'", std::make_format_args(result, this->Name, errstr)));
 		return false;
 	}
 }
-
-#endif

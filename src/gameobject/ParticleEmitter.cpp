@@ -24,6 +24,16 @@ float Quad[] =
 	 0.5f,  0.5f,
 };
 
+template <class T> static void removeElement(std::vector<T> vec, size_t elem)
+{
+	_particle* prevLast = vec[vec.size() - 1];
+
+	vec[vec.size() - 1] = vec[elem];
+	vec[elem] = prevLast;
+
+	vec.pop_back();
+}
+
 void Object_ParticleEmitter::s_DeclareReflections()
 {
 	if (s_DidInitReflection)
@@ -96,11 +106,11 @@ Object_ParticleEmitter::Object_ParticleEmitter()
 	if (!Object_ParticleEmitter::s_ParticleShaders)
 		Object_ParticleEmitter::s_ParticleShaders = ShaderProgram::GetShaderProgram("particle");
 
-	this->VertArray.Bind();
+	m_VertArray.Bind();
 
-	this->VertArray.LinkAttrib(this->VertBuffer, 0, 2, GL_FLOAT, 2 * sizeof(float), (void*)0);
+	m_VertArray.LinkAttrib(m_VertBuffer, 0, 2, GL_FLOAT, 2 * sizeof(float), (void*)0);
 
-	this->VertBuffer.Bind();
+	m_VertBuffer.Bind();
 	glBufferData(GL_ARRAY_BUFFER, sizeof(Quad), &Quad, GL_STREAM_DRAW);
 
 	GLuint quadinds[] =
@@ -109,16 +119,16 @@ Object_ParticleEmitter::Object_ParticleEmitter()
 		2, 3, 0
 	};
 
-	this->ElementBuffer.Bind();
+	m_ElementBuffer.Bind();
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(quadinds), &quadinds, GL_STREAM_DRAW);
 
 	Texture* DefaultImage = TextureManager::Get()->LoadTextureFromPath(MissingTexPath);
 
 	this->PossibleImages = { DefaultImage };
 
-	this->VertArray.Unbind();
-	this->VertBuffer.Unbind();
-	this->ElementBuffer.Unbind();
+	m_VertArray.Unbind();
+	m_VertBuffer.Unbind();
+	m_ElementBuffer.Unbind();
 
 	this->VelocityOverTime.InsertKey(ValueSequenceKeypoint<Vector3>(0, Vector3(0, 5, 0)));
 	this->VelocityOverTime.InsertKey(ValueSequenceKeypoint<Vector3>(0.75, Vector3(0, 2.5, 0)));
@@ -131,158 +141,144 @@ Object_ParticleEmitter::Object_ParticleEmitter()
 	s_DeclareReflections();
 }
 
-size_t Object_ParticleEmitter::m_getUsableIndex()
+size_t Object_ParticleEmitter::m_GetUsableParticleIndex()
 {
-	if (this->m_particles.size() == 0) //Are there any particles at all?
+	if (m_Particles.size() == 0) //Are there any particles at all?
 	{
-		this->m_particles.resize(1); //Resize array to length 1
+		m_Particles.resize(1); //Resize array to length 1
 
 		return 0;
 	}
 	else
 	{
-		if ((!this->m_particles[0]) || this->m_particles[0]->TimeAliveFor > this->m_particles[0]->Lifetime)
-		{ //Check if oldest particle shouldn't be active (ideal)
-			delete this->m_particles[0];
-
-			this->m_particles[0] = nullptr;
-
-			return 0;
-		}
-		else
+		for (size_t index = 0; index < m_Particles.size(); index++)
 		{
-			for (int Index = 0; Index < this->m_particles.size(); Index++)
-			{
-				if (this->m_particles[Index] == nullptr)
-					continue;
+			_particle* particle = m_Particles[index];
 
-				if (this->m_particles[Index]->TimeAliveFor > this->m_particles[Index]->Lifetime)
-				{ //Get first inactive particle
-					delete this->m_particles[Index];
+			if (particle->TimeAliveFor > particle->Lifetime)
+			{ //Get first inactive particle
 
-					this->m_particles[Index] = nullptr;
+				removeElement(m_Particles, index);
 
-					return Index;
-				}
+				delete particle;
+
+				return index;
 			}
 		}
 	}
 
-	if (this->m_particles.size() < this->MaxParticles)
+	if (m_Particles.size() < this->MaxParticles)
 	{
-		this->m_particles.resize(this->m_particles.size() + 1);
+		m_Particles.resize(m_Particles.size() + 1);
 
-		return this->m_particles.size() - 1;
+		return m_Particles.size() - 1;
 	}
 
 	return 0;
 }
 
-void Object_ParticleEmitter::Update(double Delta)
+void Object_ParticleEmitter::Update(double DeltaTime)
 {
-	float TimeBetweenSpawn = 1.0f / this->Rate;
+	float timeBetweenSpawn = 1.0f / this->Rate;
 
-	Object_Base3D* Parent3D = dynamic_cast<Object_Base3D*>(this->GetParent());
+	Object_Base3D* parent3D = dynamic_cast<Object_Base3D*>(this->GetParent());
 
-	Vector3 WorldPosition = Parent3D ? Vector3(glm::vec3(Parent3D->Transform[3])) + this->Offset : this->Offset;
+	Vector3 worldPosition = parent3D ? Vector3(glm::vec3(parent3D->Transform[3])) + this->Offset : this->Offset;
 
-	_particle* NewParticle = nullptr;
+	_particle* newParticle = nullptr;
 
-	if (this->m_lastSpawnedDelta >= TimeBetweenSpawn && this->PossibleImages.size() > 0 && EmitterEnabled)
+	if (m_TimeSinceLastSpawn >= timeBetweenSpawn && this->PossibleImages.size() > 0 && this->EmitterEnabled)
 	{
-		this->m_lastSpawnedDelta = 0.0f;
+		m_TimeSinceLastSpawn = 0.0f;
 
 		//Spawn a new particle
 
 		float numimages = (float)this->PossibleImages.size();
 
-		std::uniform_real_distribution<double> rand_idx(0, numimages);
+		std::uniform_real_distribution<double> randIndex(0, numimages);
 		std::uniform_real_distribution<float> lifetimeDist(this->Lifetime.X, this->Lifetime.Y);
 
-		NewParticle = new _particle();
-		NewParticle->Image = this->PossibleImages[(uint32_t)rand_idx(Object_ParticleEmitter::s_RandGenerator)];
-		NewParticle->Position = WorldPosition;
-		NewParticle->Lifetime = lifetimeDist(Object_ParticleEmitter::s_RandGenerator);
+		newParticle = new _particle();
+		newParticle->Image = this->PossibleImages[(uint32_t)randIndex(Object_ParticleEmitter::s_RandGenerator)];
+		newParticle->Position = worldPosition;
+		newParticle->Lifetime = lifetimeDist(Object_ParticleEmitter::s_RandGenerator);
 
-		this->m_particles[this->m_getUsableIndex()] = NewParticle;
+		m_Particles[m_GetUsableParticleIndex()] = newParticle;
 	}
 	else
-	{
-		this->m_lastSpawnedDelta += Delta;
-	}
+		m_TimeSinceLastSpawn += DeltaTime;
 
-	for (int Index = 0; Index < this->m_particles.size(); Index++)
+	for (_particle* particle : m_Particles)
 	{
-		_particle* Particle = this->m_particles[Index];
-
-		if (Particle != nullptr && Particle != NewParticle)
+		if (particle != newParticle)
 		{
-			Particle->TimeAliveFor += static_cast<float>(Delta);
+			particle->TimeAliveFor += static_cast<float>(DeltaTime);
 
-			float LifeProgress = Particle->TimeAliveFor / Particle->Lifetime;
+			float LifeProgress = particle->TimeAliveFor / particle->Lifetime;
 
-			Particle->Position = Particle->Position + (this->VelocityOverTime.GetValue(LifeProgress) * Delta);
-			Particle->Size = this->SizeOverTime.GetValue(LifeProgress);
+			particle->Position = particle->Position + (this->VelocityOverTime.GetValue(LifeProgress) * DeltaTime);
+			particle->Size = this->SizeOverTime.GetValue(LifeProgress);
 
-			Particle->Transparency = this->TransparencyOverTime.GetValue(LifeProgress);
+			particle->Transparency = this->TransparencyOverTime.GetValue(LifeProgress);
 		}
 	}
 }
 
 void Object_ParticleEmitter::Render(glm::mat4 CameraMatrix)
 {
-	if (this->m_particles.size() == 0)
+	if (m_Particles.size() == 0)
 		return;
 
-	this->VertArray.Bind();
-	this->VertBuffer.Bind();
-	this->ElementBuffer.Bind();
+	m_VertArray.Bind();
+	m_VertBuffer.Bind();
+	m_ElementBuffer.Bind();
 
-	Object_ParticleEmitter::s_ParticleShaders->Activate();
+	s_ParticleShaders->Activate();
 
 	glEnable(GL_BLEND);
 
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
-	for (int Index = 0; Index < this->m_particles.size(); Index++)
+	for (size_t index = 0; index < m_Particles.size(); index++)
 	{
-		_particle* Particle = this->m_particles[Index];
+		_particle* particle = m_Particles[index];
 
-		if (Particle == nullptr || Particle->TimeAliveFor > Particle->Lifetime)
+		if (particle->TimeAliveFor > particle->Lifetime)
 		{
-			delete this->m_particles[Index];
-			this->m_particles[Index] = nullptr;
+			removeElement(m_Particles, index);
+
+			delete particle;
 
 			continue;
 		}
 
-		Object_ParticleEmitter::s_ParticleShaders->Activate();
+		s_ParticleShaders->Activate();
 
 		glUniform3f(
-			glGetUniformLocation(Object_ParticleEmitter::s_ParticleShaders->ID, "Position"),
-			static_cast<float>(Particle->Position.X),
-			static_cast<float>(Particle->Position.Y),
-			static_cast<float>(Particle->Position.Z)
+			glGetUniformLocation(s_ParticleShaders->ID, "Position"),
+			static_cast<float>(particle->Position.X),
+			static_cast<float>(particle->Position.Y),
+			static_cast<float>(particle->Position.Z)
 		);
 
 		glUniform1f(
-			glGetUniformLocation(Object_ParticleEmitter::s_ParticleShaders->ID, "Transparency"),
-			Particle->Transparency
+			glGetUniformLocation(s_ParticleShaders->ID, "Transparency"),
+			particle->Transparency
 		);
 
 		glm::mat4 Scale = glm::mat4(1.0f);
 
-		Scale = glm::scale(Scale, glm::vec3(Particle->Size, Particle->Size, Particle->Size));
+		Scale = glm::scale(Scale, glm::vec3(particle->Size, particle->Size, particle->Size));
 
 		glUniformMatrix4fv(
-			glGetUniformLocation(Object_ParticleEmitter::s_ParticleShaders->ID, "Scale"),
+			glGetUniformLocation(s_ParticleShaders->ID, "Scale"),
 			1,
 			GL_FALSE,
 			glm::value_ptr(Scale)
 		);
 
 		glUniformMatrix4fv(
-			glGetUniformLocation(Object_ParticleEmitter::s_ParticleShaders->ID, "CameraMatrix"),
+			glGetUniformLocation(s_ParticleShaders->ID, "CameraMatrix"),
 			1,
 			GL_FALSE,
 			glm::value_ptr(CameraMatrix)
@@ -291,25 +287,25 @@ void Object_ParticleEmitter::Render(glm::mat4 CameraMatrix)
 		glm::vec4 CameraPos = CameraMatrix[3];
 
 		glUniform3f(
-			glGetUniformLocation(Object_ParticleEmitter::s_ParticleShaders->ID, "CameraPosition"),
+			glGetUniformLocation(s_ParticleShaders->ID, "CameraPosition"),
 			CameraPos.x,
 			CameraPos.y,
 			CameraPos.z
 		);
 
-		glBindTexture(GL_TEXTURE_2D, Particle->Image->Identifier);
+		glBindTexture(GL_TEXTURE_2D, particle->Image->Identifier);
 
 		GLint ActiveID;
 		glGetIntegerv(GL_TEXTURE_BINDING_2D, &ActiveID);
 
-		glUniform1i(glGetUniformLocation(Object_ParticleEmitter::s_ParticleShaders->ID, "Image"), ActiveID);
+		glUniform1i(glGetUniformLocation(s_ParticleShaders->ID, "Image"), ActiveID);
 
 		glDrawElements(GL_TRIANGLES, 7, GL_UNSIGNED_INT, 0);
 	}
 
-	this->VertArray.Unbind();
-	this->VertBuffer.Unbind();
-	this->ElementBuffer.Unbind();
+	m_VertArray.Unbind();
+	m_VertBuffer.Unbind();
+	m_ElementBuffer.Unbind();
 
 	glDisable(GL_BLEND);
 }

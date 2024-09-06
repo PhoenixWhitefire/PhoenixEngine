@@ -13,12 +13,15 @@ DataModel initialized
 Engine constructed
 Initializing our Dearest ImGui 1.91.1 WIP (#19104)...
 Editor object was created
-Loading scene: 'levels/hierarchy.world'
+Loading scene: 'levels/dev_fmtv2.world'
 Scene version is 2
 Scene loaded
 Editor init done
 Final initializations...
 Main program loop start...
+Loading scene: 'levels/dev.world'
+Scene version is 1
+Scene loaded
 Main loop exited
 Engine destructing...
 DataModel destructing...

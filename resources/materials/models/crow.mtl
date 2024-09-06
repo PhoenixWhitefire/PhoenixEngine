@@ -1,5 +1,6 @@
-{
-  "albedo": "models/crow/diffuse.png",
-  "specExponent": 2,
-  "specMultiply": 0.01
+{
+  "albedo": "models/crow/diffuse.png",
+  "originalPath": "models/crowmaterial.mtl",
+  "specExponent": 2,
+  "specMultiply": 0.01
 }
