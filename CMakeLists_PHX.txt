@@ -1,0 +1,10 @@
+07/09/2024 PWK2K
+Additional modifications to the `CMakeLists.txt`, in case it needs to be re-generated (I used cmake_converter)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_C_STANDARD 17)
+set(CMAKE_VS_PLATFORM_TOOLSET v143)
+
+!! REMEMBER TO PUT THIS *AFTER* THE PROJECT NAME HAS BEEN SET AS "PhoenixEngine" (i.e. after `set(PROJECT_NAME PhoenixEngine)`)
+
+set_property(GLOBAL PROPERTY VS_STARTUP_PROJECT PhoenixEngine)

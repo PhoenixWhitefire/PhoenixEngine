@@ -2,7 +2,7 @@
 
 #include<random>
 
-#include"datatype/ValueRange.hpp"
+#include"datatype/ValueSequence.hpp"
 #include"datatype/Buffer.hpp"
 #include"datatype/GameObject.hpp"
 #include"render/ShaderProgram.hpp"

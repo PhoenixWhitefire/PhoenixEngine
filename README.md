@@ -3,6 +3,19 @@ garbaj spaghett
 
 "Game Engine" that can load models (GLTF), materials (albedo+specular), textures, scripts (DISABLED RN), scenes, and can also do some color-only post-processing stuff.
 
+# Building
+**Certain files are not present in the Git source tree! These are primarily non-essential game assets, but may include third-party library files and DLLs.**
+
+* CMake
+	* Minimum enforced version is `3.16.0`
+	* I personally only tested with `3.30.2` (latest right now is `3.30.3`)
+* C++ Standard `20` and C Standard `17`
+* Visual Studio Platform Toolset `v143`
+* Windows SDK `10.0`
+* MSVC
+
+`git clone`, then `cmake -S "./" -B "./"`. Change the Startup Project in VS from `ALL_BUILD` in `CMakePredefinedTargets` to `PhoenixEngine`.
+
 # Attributions
 3rd-party code compiled directly with the Engine is located in the `vendor` folder
 

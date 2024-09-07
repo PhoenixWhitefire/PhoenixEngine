@@ -4,6 +4,11 @@ set(CMAKE_SYSTEM_VERSION 10.0 CACHE STRING "" FORCE)
 
 project(PhoenixEngine C CXX)
 
+# PWF2K 07/09/2024
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_C_STANDARD 17)
+set(CMAKE_VS_PLATFORM_TOOLSET v143)
+
 ################################################################################
 # Set target arch type if empty. Visual studio solution generator provides it.
 ################################################################################
@@ -12,8 +17,7 @@ if(NOT CMAKE_VS_PLATFORM_NAME)
 endif()
 message("${CMAKE_VS_PLATFORM_NAME} architecture in use")
 
-if(NOT ("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64"
-     OR "${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x86"))
+if(NOT ("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64"))
     message(FATAL_ERROR "${CMAKE_VS_PLATFORM_NAME} arch is not supported!")
 endif()
 
@@ -22,9 +26,7 @@ endif()
 ################################################################################
 set(CMAKE_CONFIGURATION_TYPES
     "Debug"
-    "MinSizeRel"
     "Release"
-    "RelWithDebInfo"
     CACHE STRING "" FORCE
 )
 
@@ -35,18 +37,11 @@ if(MSVC)
     # remove default flags provided with CMake for MSVC
     set(CMAKE_C_FLAGS "")
     set(CMAKE_C_FLAGS_DEBUG "")
-    set(CMAKE_C_FLAGS_MINSIZEREL "")
     set(CMAKE_C_FLAGS_RELEASE "")
-    set(CMAKE_C_FLAGS_RELWITHDEBINFO "")
     set(CMAKE_CXX_FLAGS "")
     set(CMAKE_CXX_FLAGS_DEBUG "")
-    set(CMAKE_CXX_FLAGS_MINSIZEREL "")
     set(CMAKE_CXX_FLAGS_RELEASE "")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "")
 endif()
-
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_C_STANDARD 17)
 
 ################################################################################
 # Global linker options
@@ -61,18 +56,10 @@ if(MSVC)
     set(CMAKE_MODULE_LINKER_FLAGS_DEBUG "${CMAKE_MODULE_LINKER_FLAGS}")
     set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS}")
     set(CMAKE_STATIC_LINKER_FLAGS_DEBUG "${CMAKE_STATIC_LINKER_FLAGS}")
-    set(CMAKE_EXE_LINKER_FLAGS_MINSIZEREL "${CMAKE_EXE_LINKER_FLAGS}")
-    set(CMAKE_MODULE_LINKER_FLAGS_MINSIZEREL "${CMAKE_MODULE_LINKER_FLAGS}")
-    set(CMAKE_SHARED_LINKER_FLAGS_MINSIZEREL "${CMAKE_SHARED_LINKER_FLAGS}")
-    set(CMAKE_STATIC_LINKER_FLAGS_MINSIZEREL "${CMAKE_STATIC_LINKER_FLAGS}")
     set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS}")
     set(CMAKE_MODULE_LINKER_FLAGS_RELEASE "${CMAKE_MODULE_LINKER_FLAGS}")
     set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS}")
     set(CMAKE_STATIC_LINKER_FLAGS_RELEASE "${CMAKE_STATIC_LINKER_FLAGS}")
-    set(CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS}")
-    set(CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_MODULE_LINKER_FLAGS}")
-    set(CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_SHARED_LINKER_FLAGS}")
-    set(CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_STATIC_LINKER_FLAGS}")
 endif()
 
 ################################################################################
@@ -98,9 +85,6 @@ include(CMake/GlobalSettingsInclude.cmake OPTIONAL)
 # Use solution folders feature
 ################################################################################
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-
-# 07/09/2024 PWF2K: Set PhoenixEngine as the Startup Project
-set_property(GLOBAL PROPERTY VS_STARTUP_PROJECT PhoenixEngine)
 
 ################################################################################
 # Sub-projects
@@ -134,6 +118,9 @@ set_property(GLOBAL PROPERTY VS_STARTUP_PROJECT PhoenixEngine)
 
 set(PROJECT_NAME PhoenixEngine)
 
+# PWFK2K 07/09/2024
+set_property(GLOBAL PROPERTY VS_STARTUP_PROJECT PhoenixEngine)
+
 ################################################################################
 # Source groups
 ################################################################################
@@ -142,6 +129,7 @@ set(Header_Files
     "include/BaseMeshes.hpp"
     "include/Debug.hpp"
     "include/Engine.hpp"
+    "include/EntityComponent.hpp"
     "include/FileRW.hpp"
     "include/GlobalJsonConfig.hpp"
     "include/ModelLoader.hpp"
@@ -156,10 +144,11 @@ source_group("Header Files" FILES ${Header_Files})
 set(Header_Files__datatype
     "include/datatype/Buffer.hpp"
     "include/datatype/Color.hpp"
+    "include/datatype/Event.cpp"
     "include/datatype/Event.hpp"
     "include/datatype/GameObject.hpp"
     "include/datatype/Mesh.hpp"
-    "include/datatype/ValueRange.hpp"
+    "include/datatype/ValueSequence.hpp"
     "include/datatype/Vector2.hpp"
     "include/datatype/Vector3.hpp"
 )
@@ -203,21 +192,29 @@ source_group("Resource Files" FILES ${Resource_Files})
 set(Resource_Files__shaders
     "resources/shaders/base2d.frag"
     "resources/shaders/base2d.vert"
+    "resources/shaders/default.geom"
     "resources/shaders/dlshadowmap.frag"
     "resources/shaders/dlshadowmap.vert"
+    "resources/shaders/error.frag"
+    "resources/shaders/error.shp"
     "resources/shaders/particle.frag"
+    "resources/shaders/particle.shp"
     "resources/shaders/particle.vert"
     "resources/shaders/pointlightshadow.frag"
     "resources/shaders/pointlightshadow.geom"
     "resources/shaders/pointlightshadow.vert"
     "resources/shaders/postprocessing.frag"
+    "resources/shaders/postprocessing.shp"
     "resources/shaders/postprocessing.vert"
     "resources/shaders/skybox.frag"
+    "resources/shaders/skybox.shp"
     "resources/shaders/skybox.vert"
     "resources/shaders/watertest.frag"
     "resources/shaders/watertest.geom"
+    "resources/shaders/watertest.shp"
     "resources/shaders/watertest.vert"
     "resources/shaders/worldUber.frag"
+    "resources/shaders/worldUber.shp"
     "resources/shaders/worldUber.vert"
 )
 source_group("Resource Files\\shaders" FILES ${Resource_Files__shaders})
@@ -227,6 +224,7 @@ set(Source_Files
     "src/BaseMeshes.cpp"
     "src/Debug.cpp"
     "src/Engine.cpp"
+    "src/EntityComponent.cpp"
     "src/FileRW.cpp"
     "src/GlobalJsonConfig.cpp"
     "src/Main.cpp"
@@ -889,128 +887,101 @@ set(ALL_FILES
 add_executable(${PROJECT_NAME} ${ALL_FILES})
 
 use_props(${PROJECT_NAME} "${CMAKE_CONFIGURATION_TYPES}" "${DEFAULT_CXX_PROPS}")
-set(ROOT_NAMESPACE PhoenixEngine)
-
 set_target_properties(${PROJECT_NAME} PROPERTIES
     VS_GLOBAL_KEYWORD "Win32Proj"
 )
-if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x86")
-    set_target_properties(${PROJECT_NAME} PROPERTIES
-        INTERPROCEDURAL_OPTIMIZATION_MINSIZEREL     "TRUE"
-        INTERPROCEDURAL_OPTIMIZATION_RELEASE        "TRUE"
-        INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO "TRUE"
-    )
-endif()
+################################################################################
+# Target name
+################################################################################
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    TARGET_NAME_DEBUG   "PhoenixEngine"
+    TARGET_NAME_RELEASE "PhoenixEngine"
+)
+################################################################################
+# Output directory
+################################################################################
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    OUTPUT_DIRECTORY_DEBUG   "${CMAKE_CURRENT_SOURCE_DIR}/x64/Debug/"
+    OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/x64/Release/"
+)
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY_DEBUG   "${CMAKE_CURRENT_SOURCE_DIR}/x64/Debug"
+    ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/x64/Release"
+)
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    ARCHIVE_OUTPUT_NAME_DEBUG   "PhoenixEngine"
+    ARCHIVE_OUTPUT_NAME_RELEASE "PhoenixEngine"
+)
+################################################################################
+# MSVC runtime library
+################################################################################
+get_property(MSVC_RUNTIME_LIBRARY_DEFAULT TARGET ${PROJECT_NAME} PROPERTY MSVC_RUNTIME_LIBRARY)
+string(CONCAT "MSVC_RUNTIME_LIBRARY_STR"
+    $<$<CONFIG:Debug>:
+        MultiThreadedDebugDLL
+    >
+    $<$<CONFIG:Release>:
+        MultiThreadedDLL
+    >
+    $<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:Release>>>:${MSVC_RUNTIME_LIBRARY_DEFAULT}>
+)
+set_target_properties(${PROJECT_NAME} PROPERTIES MSVC_RUNTIME_LIBRARY ${MSVC_RUNTIME_LIBRARY_STR})
+
 ################################################################################
 # Include directories
 ################################################################################
-if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
-    target_include_directories(${PROJECT_NAME} PUBLIC
-        "${CMAKE_CURRENT_SOURCE_DIR}/;"
-        "${CMAKE_CURRENT_SOURCE_DIR}/include/;"
-        "${CMAKE_CURRENT_SOURCE_DIR}/vendor/;"
-        "${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui;"
-        "${CMAKE_CURRENT_SOURCE_DIR}/luau/Common/include;"
-        "${CMAKE_CURRENT_SOURCE_DIR}/luau/VM/include"
-    )
-endif()
+target_include_directories(${PROJECT_NAME} PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/.;"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include;"
+    "${CMAKE_CURRENT_SOURCE_DIR}/vendor;"
+    "${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui;"
+    "${CMAKE_CURRENT_SOURCE_DIR}/luau/Common/include;"
+    "${CMAKE_CURRENT_SOURCE_DIR}/luau/VM/include"
+)
 
 ################################################################################
 # Compile definitions
 ################################################################################
-if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x86")
-    target_compile_definitions(${PROJECT_NAME} PRIVATE
-        "$<$<CONFIG:Debug>:"
-            "_DEBUG"
-        ">"
-        "$<$<CONFIG:MinSizeRel>:"
-            "NDEBUG"
-        ">"
-        "$<$<CONFIG:Release>:"
-            "NDEBUG"
-        ">"
-        "$<$<CONFIG:RelWithDebInfo>:"
-            "NDEBUG"
-        ">"
-        "WIN32;"
-        "_CONSOLE;"
-        "UNICODE;"
-        "_UNICODE"
-    )
-endif()
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    "$<$<CONFIG:Debug>:"
+        "CMAKE_INTDIR=\"Debug\""
+    ">"
+    "$<$<CONFIG:Release>:"
+        "CMAKE_INTDIR=\"Release\""
+    ">"
+    "_MBCS"
+)
 
 ################################################################################
 # Compile and link options
 ################################################################################
 if(MSVC)
-    if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
-        target_compile_options(${PROJECT_NAME} PRIVATE
-            /MP;
-            /W4;
-            ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
-            ${DEFAULT_CXX_EXCEPTION_HANDLING}
-        )
-    elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x86")
-        target_compile_options(${PROJECT_NAME} PRIVATE
-            $<$<CONFIG:MinSizeRel>:
-                /Oi;
-                /Gy
-            >
-            $<$<CONFIG:Release>:
-                /Oi;
-                /Gy
-            >
-            $<$<CONFIG:RelWithDebInfo>:
-                /Oi;
-                /Gy
-            >
-            /permissive-;
-            /sdl;
-            /W3;
-            ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
-            ${DEFAULT_CXX_EXCEPTION_HANDLING}
-        )
-    endif()
-    if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
-        target_link_options(${PROJECT_NAME} PRIVATE
-            /DEBUG:FULL;
-            /SUBSYSTEM:CONSOLE
-        )
-    elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x86")
-        target_link_options(${PROJECT_NAME} PRIVATE
-            $<$<CONFIG:MinSizeRel>:
-                /OPT:REF;
-                /OPT:ICF
-            >
-            $<$<CONFIG:Release>:
-                /OPT:REF;
-                /OPT:ICF
-            >
-            $<$<CONFIG:RelWithDebInfo>:
-                /OPT:REF;
-                /OPT:ICF
-            >
-            /DEBUG;
-            /SUBSYSTEM:CONSOLE
-        )
-    endif()
+    target_compile_options(${PROJECT_NAME} PRIVATE
+        /MP;
+        /W4;
+        /Zi;
+        ${DEFAULT_CXX_EXCEPTION_HANDLING};
+        /Y-
+    )
+    target_link_options(${PROJECT_NAME} PRIVATE
+        /MANIFEST;
+        /DEBUG:FULL;
+        /SUBSYSTEM:CONSOLE;
+        /INCREMENTAL
+    )
 endif()
 
 ################################################################################
 # Dependencies
 ################################################################################
-if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
-    set(ADDITIONAL_LIBRARY_DEPENDENCIES
-        "opengl32;"
-        "SDL2;"
-    )
-endif()
+set(ADDITIONAL_LIBRARY_DEPENDENCIES
+    "opengl32;"
+    "SDL2"
+)
 target_link_libraries(${PROJECT_NAME} PRIVATE "${ADDITIONAL_LIBRARY_DEPENDENCIES}")
 
-if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
-    target_link_directories(${PROJECT_NAME} PRIVATE
-        "${CMAKE_CURRENT_SOURCE_DIR}/dll;"
-        "${CMAKE_CURRENT_SOURCE_DIR}/lib"
-    )
-endif()
+target_link_directories(${PROJECT_NAME} PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/dll;"
+    "${CMAKE_CURRENT_SOURCE_DIR}/lib"
+)
 
