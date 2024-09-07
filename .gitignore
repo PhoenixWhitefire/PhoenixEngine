@@ -12,6 +12,10 @@ resources/textures/
 PROGRAMLOG.txt
 consolelog.txt
 console.log
+PhoenixEngine.sln
+PhoenixEngine.vcxproj
+PhoenixEngine.vcxproj.filters
+
 
 # Shortcuts
 *.lnk
@@ -19,8 +23,7 @@ console.log
 *.exe
 *.dll
 
-[Dd]esktop.ini
-[Ii]mgui.ini
+desktop.ini
 
 # User-specific files
 *.rsuser
@@ -380,3 +383,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/PhoenixEngine.sln
+/PhoenixEngine.vcxproj
+/PhoenixEngine.vcxproj.filters
