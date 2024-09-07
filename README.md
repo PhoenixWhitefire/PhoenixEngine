@@ -14,7 +14,11 @@ garbaj spaghett
 * Windows SDK `10.0`
 * MSVC
 
-`git clone`, then `cmake -S "./" -B "./"`. Change the Startup Project in VS from `ALL_BUILD` in `CMakePredefinedTargets` to `PhoenixEngine`.
+1. `git clone https://github.com/PhoenixWhitefire/PhoenixEngine --recursive`
+	* `git clone https://github.com/PhoenixWhitefire/PhoenixEngine --recursive -b dev` for the `dev` branch	
+2. `cmake -S "./" -B "./"`
+3. Change the Startup Project in Visual Studio from `ALL_BUILD` (in the `CMakePredefinedTargets` filter) to `PhoenixEngine`
+4. Build!
 
 # Attributions
 3rd-party code compiled directly with the Engine is located in the `vendor` folder
