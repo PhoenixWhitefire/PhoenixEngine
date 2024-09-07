@@ -11,6 +11,28 @@
 
 static RegisterDerivedObject<Object_Script> RegisterClassAs("Script");
 
+// TODO 07/09/2024
+// Temporarily disabled because of linking errors with CMake
+// and "mismatched symbols"
+Object_Script::Object_Script()
+	: m_Bytecode(), m_L()
+{
+}
+
+void Object_Script::Initialize()
+{
+}
+
+void Object_Script::Update(double)
+{
+}
+
+bool Object_Script::Reload()
+{
+	return true;
+}
+
+#if 0
 static bool s_DidInitReflection = false;
 static lua_State* DefaultState = nullptr;
 
@@ -743,3 +765,4 @@ bool Object_Script::Reload()
 		return false;
 	}
 }
+#endif

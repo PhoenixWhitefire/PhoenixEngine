@@ -12,7 +12,7 @@
 constexpr uint32_t OBJECT_NEW_CLASSNAME_BUFSIZE = 16;
 constexpr uint32_t MATERIAL_NEW_NAME_BUFSIZE = 16;
 constexpr uint32_t MATERIAL_TEXTUREPATH_BUFSIZE = 64;
-constexpr std::string MATERIAL_NEW_NAME_DEFAULT = "newmaterial";
+constexpr const char* MATERIAL_NEW_NAME_DEFAULT = "newmaterial";
 
 static const char* ParentString = "[Parent]";
 

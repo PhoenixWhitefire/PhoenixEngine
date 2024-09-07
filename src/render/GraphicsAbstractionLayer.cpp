@@ -58,12 +58,10 @@ Graphics::Graphics(bool* WasSuccess, GraphicsApi ForceApi, const char* WindowTit
 		{
 			const char* SDLError = SDL_GetError();
 
-			throw(std::vformat("SDL could not create an OpenGL context: {}", std::make_format_args(SDLError)));
-
-			*WasSuccess = false;
-			this->Error = std::string(SDLError);
-
-			return;
+			throw(std::vformat(
+				"SDL could not create an OpenGL context: {}",
+				std::make_format_args(SDLError)
+			));
 		}
 
 		gladLoadGL((GLADloadfunc)SDL_GL_GetProcAddress);
