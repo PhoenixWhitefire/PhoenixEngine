@@ -4,7 +4,6 @@
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
 # Phoenix Engine
-vendor/
 lib/
 dll/
 resources/models/
