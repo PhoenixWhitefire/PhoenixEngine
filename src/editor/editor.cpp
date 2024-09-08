@@ -303,7 +303,7 @@ void Editor::m_RenderMaterialEditor()
 		// overwrite the model material override
 		auto start = curItem->Name.find("models/");
 		if (start != std::string::npos)
-			FileRW::WriteFile(start + "/material.mtl", newMtlConfig.dump(2), true);
+			FileRW::WriteFile(curItem->Name + "/material.mtl", newMtlConfig.dump(2), true);
 
 		FileRW::WriteFile(
 			"materials/" + curItem->Name + ".mtl",

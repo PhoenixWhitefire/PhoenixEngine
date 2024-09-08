@@ -1,4 +1,7 @@
 {
   "albedo": "models/windows/diffuse.png",
-  "originalPath": "models/windowsmaterial.mtl"
+  "originalPath": "models/windowsmaterial.mtl",
+  "specExponent": 16.0,
+  "specMultiply": 0.5,
+  "translucency": true
 }
