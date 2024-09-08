@@ -132,6 +132,32 @@ void EngineObject::SetIsFullscreen(bool Fullscreen)
 	SDL_SetWindowFullscreen(this->Window, this->IsFullscreen ? SDL_WINDOW_FULLSCREEN : m_SDLWindowFlags);
 }
 
+void EngineObject::LoadConfiguration()
+{
+	bool ConfigFileFound = true;
+	std::string ConfigAscii = FileRW::ReadFile("./phoenix.conf", &ConfigFileFound);
+
+	if (ConfigFileFound)
+	{
+		try
+		{
+			EngineJsonConfig = nlohmann::json::parse(ConfigAscii);
+		}
+		catch (nlohmann::json::parse_error err)
+		{
+			auto errmsg = err.what();
+			throw(std::vformat("Parse error while loading configuration: {}", std::make_format_args(errmsg)));
+		}
+	}
+	else
+		throw("Could not find configuration file (phoenix.conf)!");
+
+	if (ConfigAscii == "")
+		throw("Configuration file is empty");
+
+	Debug::Log("Configuration loaded");
+}
+
 EngineObject::EngineObject()
 {
 	// 15/08/2024:
@@ -176,26 +202,7 @@ EngineObject::EngineObject()
 
 	Debug::Log("Window created");
 
-	bool ConfigFileFound = true;
-	std::string ConfigAscii = FileRW::ReadFile("./phoenix.conf", &ConfigFileFound);
-
-	if (ConfigFileFound)
-	{
-		try
-		{
-			EngineJsonConfig = nlohmann::json::parse(ConfigAscii);
-		}
-		catch (nlohmann::json::parse_error err)
-		{
-			auto errmsg = err.what();
-			throw(std::vformat("Parse error while loading configuration: {}", std::make_format_args(errmsg)));
-		}
-	}
-	else
-		throw("Could not find configuration file (phoenix.conf)!");
-
-	if (ConfigAscii == "")
-		throw("Configuration file is empty");
+	LoadConfiguration();
 
 	SDL_SetWindowSize(
 		this->Window,

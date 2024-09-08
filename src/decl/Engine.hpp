@@ -39,6 +39,8 @@ public:
 	// something other than `ResizeWindow`
 	void OnWindowResized(int NewSizeX, int NewSizeY);
 
+	void LoadConfiguration();
+
 	EventSignal<Reflection::GenericValue> OnFrameStart{};
 	EventSignal<Reflection::GenericValue> OnFrameRenderGui{};
 	EventSignal<Reflection::GenericValue> OnFrameEnd{};

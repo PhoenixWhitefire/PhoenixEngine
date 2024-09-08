@@ -278,15 +278,16 @@ static std::vector<GameObject*> LoadMapVersion1(
 
 			Object3D->Transform = glm::translate(Object3D->Transform, (glm::vec3)Position);
 
-			Object3D->Transform = glm::rotate(
-				Object3D->Transform,
-				glm::radians(static_cast<float>(Orientation.X)),
-				glm::vec3(1.0f, 0.0f, 0.0f)
-			);
+			// YXZ Rotation order
 			Object3D->Transform = glm::rotate(
 				Object3D->Transform,
 				glm::radians(static_cast<float>(Orientation.Y)),
 				glm::vec3(0.0f, 1.0f, 0.0f)
+			);
+			Object3D->Transform = glm::rotate(
+				Object3D->Transform,
+				glm::radians(static_cast<float>(Orientation.X)),
+				glm::vec3(1.0f, 0.0f, 0.0f)
 			);
 			Object3D->Transform = glm::rotate(
 				Object3D->Transform,

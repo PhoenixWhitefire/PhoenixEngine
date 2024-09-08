@@ -13,12 +13,22 @@ ShaderProgram::ShaderProgram(std::string const& ProgramName)
 {
 	this->Name = ProgramName;
 
+	this->Reload();
+}
+
+void ShaderProgram::Reload()
+{
+	if (this->ID != UINT32_MAX)
+		glDeleteProgram(this->ID);
+
+	this->ID = glCreateProgram();
+
 	bool ShpExists = true;
-	std::string ShpContents = FileRW::ReadFile(BaseShaderPath + ProgramName + ".shp", &ShpExists);
+	std::string ShpContents = FileRW::ReadFile(BaseShaderPath + Name + ".shp", &ShpExists);
 
 	if (!ShpExists)
 	{
-		if (ProgramName == "error")
+		if (Name == "error")
 			throw("Cannot load the fallback Shader Program ('error.shp'), giving up.");
 
 		// TODO: a different function for error logging
@@ -26,7 +36,7 @@ ShaderProgram::ShaderProgram(std::string const& ProgramName)
 		// 13/07/2024
 		Debug::Log(std::vformat(
 			"**ERR** Shader program '{}' does not exist! Geometry will appear magenta",
-			std::make_format_args(ProgramName))
+			std::make_format_args(Name))
 		);
 
 		ShaderProgram* fallback = ShaderProgram::GetShaderProgram("error");
@@ -50,7 +60,9 @@ ShaderProgram::ShaderProgram(std::string const& ProgramName)
 
 	std::string VertexShaderStrSource = FileRW::ReadFile(BaseShaderPath + VertexShaderPath, &VertexShdExists);
 	std::string FragmentShaderStrSource = FileRW::ReadFile(BaseShaderPath + FragmentShaderPath, &FragmentShdExists);
-	std::string GeometryShaderStrSource = HasGeometryShader ? FileRW::ReadFile(BaseShaderPath + GeoShaderPath, &GeometryShdExists) : "";
+	std::string GeometryShaderStrSource = HasGeometryShader
+											? FileRW::ReadFile(BaseShaderPath + GeoShaderPath, &GeometryShdExists)
+											: "";
 
 	if (!VertexShdExists)
 		throw(std::vformat(
@@ -93,21 +105,19 @@ ShaderProgram::ShaderProgram(std::string const& ProgramName)
 
 		this->PrintErrors(GeometryShader, "geometry shader");
 	}
-	
+
 	glCompileShader(VertexShader);
 	glCompileShader(FragmentShader);
-	
+
 	this->PrintErrors(VertexShader, "vertex shader");
 	this->PrintErrors(FragmentShader, "fragment shader");
 
-	this->ID = glCreateProgram();
-
 	glAttachShader(this->ID, VertexShader);
 	glAttachShader(this->ID, FragmentShader);
-	
+
 	if (HasGeometryShader)
 		glAttachShader(this->ID, GeometryShader);
-	
+
 	glEnableVertexAttribArray(0);
 
 	glLinkProgram(this->ID);
@@ -117,7 +127,7 @@ ShaderProgram::ShaderProgram(std::string const& ProgramName)
 	//free shader code from memory, they've already been compiled so aren't needed anymore
 	glDeleteShader(VertexShader);
 	glDeleteShader(FragmentShader);
-	
+
 	if (HasGeometryShader)
 		glDeleteShader(GeometryShader);
 }
@@ -206,4 +216,10 @@ ShaderProgram* ShaderProgram::GetShaderProgram(std::string const& ProgramName)
 void ShaderProgram::ClearAll()
 {
 	s_programs.clear();
+}
+
+void ShaderProgram::ReloadAll()
+{
+	for (auto& it : s_programs)
+		it.second->Reload();
 }

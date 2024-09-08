@@ -15,7 +15,8 @@ Anyway, here is a small tour:
 - "phoenix.conf" contains some configuration. Set "Developer" to "false" to disable the debug UIs.
 - WASD to move horizontally, Q/E to move down/up. Left-click to look around. Right-click to stop. LShift to move slower.
 - Hold `R` to disable distance culling
-- Press `J` to dump object hierarchy. `I` to dump GameObject API.
+- Press `J` to dump object hierarchy. `L` to dump GameObject API.
+- `K` to reload all shaders, `I` to reload configuration
 - F11 to toggle fullscreen.
 
 https://github.com/Phoenixwhitefire/PhoenixEngine
@@ -343,6 +344,22 @@ static void DrawUI(Reflection::GenericValue Data)
 		FileRW::WriteFile("apidump.json", dump.dump(2), false);
 
 		Debug::Log("API dump finished");
+	}
+
+	if (UserInput::IsKeyDown(SDLK_i) && !IsInputBeingSunk)
+	{
+		Debug::Log("Reloading configuration...");
+
+		EngineInstance->LoadConfiguration();
+	}
+
+	if (UserInput::IsKeyDown(SDLK_k) && !IsInputBeingSunk)
+	{
+		Debug::Log("Reloading shaders...");
+
+		ShaderProgram::ReloadAll();
+
+		Debug::Log("Shaders reloaded");
 	}
 
 	if (EditorContext)
