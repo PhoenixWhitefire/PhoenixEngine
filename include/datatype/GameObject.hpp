@@ -1,7 +1,9 @@
 #pragma once
 
+#include<stdint.h>
+
 #define PHX_ASSERT(res, err) if (!res) throw(err)
-#define PHX_GAMEOBJECT_NULL_ID 0xFFFFFFu
+#define PHX_GAMEOBJECT_NULL_ID UINT32_MAX
 
 // 01/09/2024:
 // MUST be added to the `public` section of *all* objects so

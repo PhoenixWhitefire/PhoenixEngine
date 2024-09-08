@@ -7,19 +7,11 @@
 dll/
 resources/models/
 resources/textures/
-PROGRAMLOG.txt
-consolelog.txt
-console.log
-PhoenixEngine.sln
-PhoenixEngine.vcxproj
-PhoenixEngine.vcxproj.filters
-
 
 # Shortcuts
 *.lnk
 
 *.exe
-*.dll
 
 desktop.ini
 
@@ -384,3 +376,5 @@ FodyWeavers.xsd
 /PhoenixEngine.sln
 /PhoenixEngine.vcxproj
 /PhoenixEngine.vcxproj.filters
+/Vendor/Vendor.vcxproj
+/Vendor/Vendor.vcxproj.filters

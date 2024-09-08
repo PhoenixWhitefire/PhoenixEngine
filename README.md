@@ -17,11 +17,10 @@ garbaj spaghett
 1. `git clone https://github.com/PhoenixWhitefire/PhoenixEngine --recursive`
 	* `git clone https://github.com/PhoenixWhitefire/PhoenixEngine --recursive -b dev` for the `dev` branch	
 2. `cmake -S "./" -B "./"`
-3. Change the Startup Project in Visual Studio from `ALL_BUILD` (in the `CMakePredefinedTargets` filter) to `PhoenixEngine`
-4. Build!
+3. Open the resulting `.sln` and Build the Solution!
 
 # Attributions
-3rd-party code compiled directly with the Engine is located in the `vendor` folder
+3rd-party code is located in the `Vendor` directory and compiled into `lib/Vendor.lib` and statically linked with the Engine.
 
 The following libraries are used:
 

@@ -149,7 +149,7 @@ ShaderProgram::~ShaderProgram()
 			std::make_format_args(ID)
 		));
 	
-	ID = 0xFFFFFFu;
+	ID = UINT32_MAX;
 }
 
 void ShaderProgram::PrintErrors(uint32_t Object, const char* Type) const

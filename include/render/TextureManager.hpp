@@ -2,8 +2,9 @@
 
 #include<vector>
 #include<future>
+#include<stdint.h>
 
-#define TEXTUREMANAGER_INVALID_ID 0xFFFFFFu
+#define TEXTUREMANAGER_INVALID_ID UINT32_MAX
 
 struct Texture
 {

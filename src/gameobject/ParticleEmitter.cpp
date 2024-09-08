@@ -54,8 +54,8 @@ void Object_ParticleEmitter::s_DeclareReflections()
 		[](GameObject* g, Reflection::GenericValue gv)
 		{
 			int64_t newRate = gv.Integer;
-			if (newRate < 0 || newRate > 0xFFFFFFu)
-				throw("ParticleEmitter.Rate must be within uint32_t bounds (0 < Rate <= 0xFFFFFFu)");
+			if (newRate < 0 || newRate > UINT32_MAX)
+				throw("ParticleEmitter.Rate must be within uint32_t bounds (0 <= Rate <= 0xFFFFFFFFu)");
 			dynamic_cast<Object_ParticleEmitter*>(g)->Rate = static_cast<uint32_t>(newRate);
 				
 		}
@@ -71,8 +71,8 @@ void Object_ParticleEmitter::s_DeclareReflections()
 		[](GameObject* g, Reflection::GenericValue gv)
 		{
 			int64_t newMax = gv.Integer;
-			if (newMax < 0 || newMax > 0xFFFFFFu)
-				throw("ParticleEmitter.MaxParticles must be within uint32_t bounds (0 < MaxParticles <= 0xFFFFFFu)");
+			if (newMax < 0 || newMax > UINT32_MAX)
+				throw("ParticleEmitter.MaxParticles must be within uint32_t bounds (0 < MaxParticles <= 0xFFFFFFFFu)");
 			dynamic_cast<Object_ParticleEmitter*>(g)->MaxParticles = static_cast<uint32_t>(newMax);
 		}
 	);

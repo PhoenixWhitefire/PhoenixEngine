@@ -4,7 +4,6 @@ set(CMAKE_SYSTEM_VERSION 10.0 CACHE STRING "" FORCE)
 
 project(PhoenixEngine C CXX)
 
-# PWF2K 07/09/2024
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_VS_PLATFORM_TOOLSET v143)
@@ -17,7 +16,8 @@ if(NOT CMAKE_VS_PLATFORM_NAME)
 endif()
 message("${CMAKE_VS_PLATFORM_NAME} architecture in use")
 
-if(NOT ("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64"))
+if(NOT ("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32"
+     OR "${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64"))
     message(FATAL_ERROR "${CMAKE_VS_PLATFORM_NAME} arch is not supported!")
 endif()
 
@@ -89,6 +89,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 ################################################################################
 # Sub-projects
 ################################################################################
+add_subdirectory(Vendor)
 
 
 
@@ -117,9 +118,6 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 
 set(PROJECT_NAME PhoenixEngine)
-
-# PWFK2K 07/09/2024
-set_property(GLOBAL PROPERTY VS_STARTUP_PROJECT PhoenixEngine)
 
 ################################################################################
 # Source groups
@@ -276,584 +274,6 @@ set(Source_Files__render
 )
 source_group("Source Files\\render" FILES ${Source_Files__render})
 
-set(Vendor_Files
-    "vendor/nljson.hpp"
-    "vendor/stb.cpp"
-    "vendor/stb_image.h"
-)
-source_group("Vendor Files" FILES ${Vendor_Files})
-
-set(Vendor_Files__SDL2
-    "vendor/SDL2/begin_code.h"
-    "vendor/SDL2/close_code.h"
-    "vendor/SDL2/SDL.h"
-    "vendor/SDL2/SDL_assert.h"
-    "vendor/SDL2/SDL_atomic.h"
-    "vendor/SDL2/SDL_audio.h"
-    "vendor/SDL2/SDL_bits.h"
-    "vendor/SDL2/SDL_blendmode.h"
-    "vendor/SDL2/SDL_clipboard.h"
-    "vendor/SDL2/SDL_config.h"
-    "vendor/SDL2/SDL_cpuinfo.h"
-    "vendor/SDL2/SDL_egl.h"
-    "vendor/SDL2/SDL_endian.h"
-    "vendor/SDL2/SDL_error.h"
-    "vendor/SDL2/SDL_events.h"
-    "vendor/SDL2/SDL_filesystem.h"
-    "vendor/SDL2/SDL_gamecontroller.h"
-    "vendor/SDL2/SDL_gesture.h"
-    "vendor/SDL2/SDL_guid.h"
-    "vendor/SDL2/SDL_haptic.h"
-    "vendor/SDL2/SDL_hidapi.h"
-    "vendor/SDL2/SDL_hints.h"
-    "vendor/SDL2/SDL_joystick.h"
-    "vendor/SDL2/SDL_keyboard.h"
-    "vendor/SDL2/SDL_keycode.h"
-    "vendor/SDL2/SDL_loadso.h"
-    "vendor/SDL2/SDL_locale.h"
-    "vendor/SDL2/SDL_log.h"
-    "vendor/SDL2/SDL_main.h"
-    "vendor/SDL2/SDL_messagebox.h"
-    "vendor/SDL2/SDL_metal.h"
-    "vendor/SDL2/SDL_misc.h"
-    "vendor/SDL2/SDL_mouse.h"
-    "vendor/SDL2/SDL_mutex.h"
-    "vendor/SDL2/SDL_name.h"
-    "vendor/SDL2/SDL_opengl.h"
-    "vendor/SDL2/SDL_opengl_glext.h"
-    "vendor/SDL2/SDL_opengles.h"
-    "vendor/SDL2/SDL_opengles2.h"
-    "vendor/SDL2/SDL_opengles2_gl2.h"
-    "vendor/SDL2/SDL_opengles2_gl2ext.h"
-    "vendor/SDL2/SDL_opengles2_gl2platform.h"
-    "vendor/SDL2/SDL_opengles2_khrplatform.h"
-    "vendor/SDL2/SDL_pixels.h"
-    "vendor/SDL2/SDL_platform.h"
-    "vendor/SDL2/SDL_power.h"
-    "vendor/SDL2/SDL_quit.h"
-    "vendor/SDL2/SDL_rect.h"
-    "vendor/SDL2/SDL_render.h"
-    "vendor/SDL2/SDL_revision.h"
-    "vendor/SDL2/SDL_rwops.h"
-    "vendor/SDL2/SDL_scancode.h"
-    "vendor/SDL2/SDL_sensor.h"
-    "vendor/SDL2/SDL_shape.h"
-    "vendor/SDL2/SDL_stdinc.h"
-    "vendor/SDL2/SDL_surface.h"
-    "vendor/SDL2/SDL_system.h"
-    "vendor/SDL2/SDL_syswm.h"
-    "vendor/SDL2/SDL_test.h"
-    "vendor/SDL2/SDL_test_assert.h"
-    "vendor/SDL2/SDL_test_common.h"
-    "vendor/SDL2/SDL_test_compare.h"
-    "vendor/SDL2/SDL_test_crc32.h"
-    "vendor/SDL2/SDL_test_font.h"
-    "vendor/SDL2/SDL_test_fuzzer.h"
-    "vendor/SDL2/SDL_test_harness.h"
-    "vendor/SDL2/SDL_test_images.h"
-    "vendor/SDL2/SDL_test_log.h"
-    "vendor/SDL2/SDL_test_md5.h"
-    "vendor/SDL2/SDL_test_memory.h"
-    "vendor/SDL2/SDL_test_random.h"
-    "vendor/SDL2/SDL_thread.h"
-    "vendor/SDL2/SDL_timer.h"
-    "vendor/SDL2/SDL_touch.h"
-    "vendor/SDL2/SDL_types.h"
-    "vendor/SDL2/SDL_version.h"
-    "vendor/SDL2/SDL_video.h"
-    "vendor/SDL2/SDL_vulkan.h"
-)
-source_group("Vendor Files\\SDL2" FILES ${Vendor_Files__SDL2})
-
-set(Vendor_Files__glad
-    "vendor/glad/gl.c"
-    "vendor/glad/gl.h"
-)
-source_group("Vendor Files\\glad" FILES ${Vendor_Files__glad})
-
-set(Vendor_Files__glad__KHR
-    "vendor/glad/KHR/khrplatform.h"
-)
-source_group("Vendor Files\\glad\\KHR" FILES ${Vendor_Files__glad__KHR})
-
-set(Vendor_Files__glm
-    "vendor/glm/common.hpp"
-    "vendor/glm/copying.txt"
-    "vendor/glm/exponential.hpp"
-    "vendor/glm/ext.hpp"
-    "vendor/glm/fwd.hpp"
-    "vendor/glm/geometric.hpp"
-    "vendor/glm/glm.cppm"
-    "vendor/glm/glm.hpp"
-    "vendor/glm/integer.hpp"
-    "vendor/glm/mat2x2.hpp"
-    "vendor/glm/mat2x3.hpp"
-    "vendor/glm/mat2x4.hpp"
-    "vendor/glm/mat3x2.hpp"
-    "vendor/glm/mat3x3.hpp"
-    "vendor/glm/mat3x4.hpp"
-    "vendor/glm/mat4x2.hpp"
-    "vendor/glm/mat4x3.hpp"
-    "vendor/glm/mat4x4.hpp"
-    "vendor/glm/matrix.hpp"
-    "vendor/glm/packing.hpp"
-    "vendor/glm/trigonometric.hpp"
-    "vendor/glm/vec2.hpp"
-    "vendor/glm/vec3.hpp"
-    "vendor/glm/vec4.hpp"
-    "vendor/glm/vector_relational.hpp"
-)
-source_group("Vendor Files\\glm" FILES ${Vendor_Files__glm})
-
-set(Vendor_Files__glm__detail
-    "vendor/glm/detail/_features.hpp"
-    "vendor/glm/detail/_fixes.hpp"
-    "vendor/glm/detail/_noise.hpp"
-    "vendor/glm/detail/_swizzle.hpp"
-    "vendor/glm/detail/_swizzle_func.hpp"
-    "vendor/glm/detail/_vectorize.hpp"
-    "vendor/glm/detail/compute_common.hpp"
-    "vendor/glm/detail/compute_vector_decl.hpp"
-    "vendor/glm/detail/compute_vector_relational.hpp"
-    "vendor/glm/detail/func_common.inl"
-    "vendor/glm/detail/func_common_simd.inl"
-    "vendor/glm/detail/func_exponential.inl"
-    "vendor/glm/detail/func_exponential_simd.inl"
-    "vendor/glm/detail/func_geometric.inl"
-    "vendor/glm/detail/func_geometric_simd.inl"
-    "vendor/glm/detail/func_integer.inl"
-    "vendor/glm/detail/func_integer_simd.inl"
-    "vendor/glm/detail/func_matrix.inl"
-    "vendor/glm/detail/func_matrix_simd.inl"
-    "vendor/glm/detail/func_packing.inl"
-    "vendor/glm/detail/func_packing_simd.inl"
-    "vendor/glm/detail/func_trigonometric.inl"
-    "vendor/glm/detail/func_trigonometric_simd.inl"
-    "vendor/glm/detail/func_vector_relational.inl"
-    "vendor/glm/detail/func_vector_relational_simd.inl"
-    "vendor/glm/detail/glm.cpp"
-    "vendor/glm/detail/qualifier.hpp"
-    "vendor/glm/detail/setup.hpp"
-    "vendor/glm/detail/type_float.hpp"
-    "vendor/glm/detail/type_half.hpp"
-    "vendor/glm/detail/type_half.inl"
-    "vendor/glm/detail/type_mat2x2.hpp"
-    "vendor/glm/detail/type_mat2x2.inl"
-    "vendor/glm/detail/type_mat2x3.hpp"
-    "vendor/glm/detail/type_mat2x3.inl"
-    "vendor/glm/detail/type_mat2x4.hpp"
-    "vendor/glm/detail/type_mat2x4.inl"
-    "vendor/glm/detail/type_mat3x2.hpp"
-    "vendor/glm/detail/type_mat3x2.inl"
-    "vendor/glm/detail/type_mat3x3.hpp"
-    "vendor/glm/detail/type_mat3x3.inl"
-    "vendor/glm/detail/type_mat3x4.hpp"
-    "vendor/glm/detail/type_mat3x4.inl"
-    "vendor/glm/detail/type_mat4x2.hpp"
-    "vendor/glm/detail/type_mat4x2.inl"
-    "vendor/glm/detail/type_mat4x3.hpp"
-    "vendor/glm/detail/type_mat4x3.inl"
-    "vendor/glm/detail/type_mat4x4.hpp"
-    "vendor/glm/detail/type_mat4x4.inl"
-    "vendor/glm/detail/type_mat4x4_simd.inl"
-    "vendor/glm/detail/type_quat.hpp"
-    "vendor/glm/detail/type_quat.inl"
-    "vendor/glm/detail/type_quat_simd.inl"
-    "vendor/glm/detail/type_vec1.hpp"
-    "vendor/glm/detail/type_vec1.inl"
-    "vendor/glm/detail/type_vec2.hpp"
-    "vendor/glm/detail/type_vec2.inl"
-    "vendor/glm/detail/type_vec3.hpp"
-    "vendor/glm/detail/type_vec3.inl"
-    "vendor/glm/detail/type_vec4.hpp"
-    "vendor/glm/detail/type_vec4.inl"
-    "vendor/glm/detail/type_vec4_simd.inl"
-)
-source_group("Vendor Files\\glm\\detail" FILES ${Vendor_Files__glm__detail})
-
-set(Vendor_Files__glm__ext
-    "vendor/glm/ext/_matrix_vectorize.hpp"
-    "vendor/glm/ext/matrix_clip_space.hpp"
-    "vendor/glm/ext/matrix_clip_space.inl"
-    "vendor/glm/ext/matrix_common.hpp"
-    "vendor/glm/ext/matrix_common.inl"
-    "vendor/glm/ext/matrix_double2x2.hpp"
-    "vendor/glm/ext/matrix_double2x2_precision.hpp"
-    "vendor/glm/ext/matrix_double2x3.hpp"
-    "vendor/glm/ext/matrix_double2x3_precision.hpp"
-    "vendor/glm/ext/matrix_double2x4.hpp"
-    "vendor/glm/ext/matrix_double2x4_precision.hpp"
-    "vendor/glm/ext/matrix_double3x2.hpp"
-    "vendor/glm/ext/matrix_double3x2_precision.hpp"
-    "vendor/glm/ext/matrix_double3x3.hpp"
-    "vendor/glm/ext/matrix_double3x3_precision.hpp"
-    "vendor/glm/ext/matrix_double3x4.hpp"
-    "vendor/glm/ext/matrix_double3x4_precision.hpp"
-    "vendor/glm/ext/matrix_double4x2.hpp"
-    "vendor/glm/ext/matrix_double4x2_precision.hpp"
-    "vendor/glm/ext/matrix_double4x3.hpp"
-    "vendor/glm/ext/matrix_double4x3_precision.hpp"
-    "vendor/glm/ext/matrix_double4x4.hpp"
-    "vendor/glm/ext/matrix_double4x4_precision.hpp"
-    "vendor/glm/ext/matrix_float2x2.hpp"
-    "vendor/glm/ext/matrix_float2x2_precision.hpp"
-    "vendor/glm/ext/matrix_float2x3.hpp"
-    "vendor/glm/ext/matrix_float2x3_precision.hpp"
-    "vendor/glm/ext/matrix_float2x4.hpp"
-    "vendor/glm/ext/matrix_float2x4_precision.hpp"
-    "vendor/glm/ext/matrix_float3x2.hpp"
-    "vendor/glm/ext/matrix_float3x2_precision.hpp"
-    "vendor/glm/ext/matrix_float3x3.hpp"
-    "vendor/glm/ext/matrix_float3x3_precision.hpp"
-    "vendor/glm/ext/matrix_float3x4.hpp"
-    "vendor/glm/ext/matrix_float3x4_precision.hpp"
-    "vendor/glm/ext/matrix_float4x2.hpp"
-    "vendor/glm/ext/matrix_float4x2_precision.hpp"
-    "vendor/glm/ext/matrix_float4x3.hpp"
-    "vendor/glm/ext/matrix_float4x3_precision.hpp"
-    "vendor/glm/ext/matrix_float4x4.hpp"
-    "vendor/glm/ext/matrix_float4x4_precision.hpp"
-    "vendor/glm/ext/matrix_int2x2.hpp"
-    "vendor/glm/ext/matrix_int2x2_sized.hpp"
-    "vendor/glm/ext/matrix_int2x3.hpp"
-    "vendor/glm/ext/matrix_int2x3_sized.hpp"
-    "vendor/glm/ext/matrix_int2x4.hpp"
-    "vendor/glm/ext/matrix_int2x4_sized.hpp"
-    "vendor/glm/ext/matrix_int3x2.hpp"
-    "vendor/glm/ext/matrix_int3x2_sized.hpp"
-    "vendor/glm/ext/matrix_int3x3.hpp"
-    "vendor/glm/ext/matrix_int3x3_sized.hpp"
-    "vendor/glm/ext/matrix_int3x4.hpp"
-    "vendor/glm/ext/matrix_int3x4_sized.hpp"
-    "vendor/glm/ext/matrix_int4x2.hpp"
-    "vendor/glm/ext/matrix_int4x2_sized.hpp"
-    "vendor/glm/ext/matrix_int4x3.hpp"
-    "vendor/glm/ext/matrix_int4x3_sized.hpp"
-    "vendor/glm/ext/matrix_int4x4.hpp"
-    "vendor/glm/ext/matrix_int4x4_sized.hpp"
-    "vendor/glm/ext/matrix_integer.hpp"
-    "vendor/glm/ext/matrix_integer.inl"
-    "vendor/glm/ext/matrix_projection.hpp"
-    "vendor/glm/ext/matrix_projection.inl"
-    "vendor/glm/ext/matrix_relational.hpp"
-    "vendor/glm/ext/matrix_relational.inl"
-    "vendor/glm/ext/matrix_transform.hpp"
-    "vendor/glm/ext/matrix_transform.inl"
-    "vendor/glm/ext/matrix_uint2x2.hpp"
-    "vendor/glm/ext/matrix_uint2x2_sized.hpp"
-    "vendor/glm/ext/matrix_uint2x3.hpp"
-    "vendor/glm/ext/matrix_uint2x3_sized.hpp"
-    "vendor/glm/ext/matrix_uint2x4.hpp"
-    "vendor/glm/ext/matrix_uint2x4_sized.hpp"
-    "vendor/glm/ext/matrix_uint3x2.hpp"
-    "vendor/glm/ext/matrix_uint3x2_sized.hpp"
-    "vendor/glm/ext/matrix_uint3x3.hpp"
-    "vendor/glm/ext/matrix_uint3x3_sized.hpp"
-    "vendor/glm/ext/matrix_uint3x4.hpp"
-    "vendor/glm/ext/matrix_uint3x4_sized.hpp"
-    "vendor/glm/ext/matrix_uint4x2.hpp"
-    "vendor/glm/ext/matrix_uint4x2_sized.hpp"
-    "vendor/glm/ext/matrix_uint4x3.hpp"
-    "vendor/glm/ext/matrix_uint4x3_sized.hpp"
-    "vendor/glm/ext/matrix_uint4x4.hpp"
-    "vendor/glm/ext/matrix_uint4x4_sized.hpp"
-    "vendor/glm/ext/quaternion_common.hpp"
-    "vendor/glm/ext/quaternion_common.inl"
-    "vendor/glm/ext/quaternion_common_simd.inl"
-    "vendor/glm/ext/quaternion_double.hpp"
-    "vendor/glm/ext/quaternion_double_precision.hpp"
-    "vendor/glm/ext/quaternion_exponential.hpp"
-    "vendor/glm/ext/quaternion_exponential.inl"
-    "vendor/glm/ext/quaternion_float.hpp"
-    "vendor/glm/ext/quaternion_float_precision.hpp"
-    "vendor/glm/ext/quaternion_geometric.hpp"
-    "vendor/glm/ext/quaternion_geometric.inl"
-    "vendor/glm/ext/quaternion_relational.hpp"
-    "vendor/glm/ext/quaternion_relational.inl"
-    "vendor/glm/ext/quaternion_transform.hpp"
-    "vendor/glm/ext/quaternion_transform.inl"
-    "vendor/glm/ext/quaternion_trigonometric.hpp"
-    "vendor/glm/ext/quaternion_trigonometric.inl"
-    "vendor/glm/ext/scalar_common.hpp"
-    "vendor/glm/ext/scalar_common.inl"
-    "vendor/glm/ext/scalar_constants.hpp"
-    "vendor/glm/ext/scalar_constants.inl"
-    "vendor/glm/ext/scalar_int_sized.hpp"
-    "vendor/glm/ext/scalar_integer.hpp"
-    "vendor/glm/ext/scalar_integer.inl"
-    "vendor/glm/ext/scalar_packing.hpp"
-    "vendor/glm/ext/scalar_packing.inl"
-    "vendor/glm/ext/scalar_reciprocal.hpp"
-    "vendor/glm/ext/scalar_reciprocal.inl"
-    "vendor/glm/ext/scalar_relational.hpp"
-    "vendor/glm/ext/scalar_relational.inl"
-    "vendor/glm/ext/scalar_uint_sized.hpp"
-    "vendor/glm/ext/scalar_ulp.hpp"
-    "vendor/glm/ext/scalar_ulp.inl"
-    "vendor/glm/ext/vector_bool1.hpp"
-    "vendor/glm/ext/vector_bool1_precision.hpp"
-    "vendor/glm/ext/vector_bool2.hpp"
-    "vendor/glm/ext/vector_bool2_precision.hpp"
-    "vendor/glm/ext/vector_bool3.hpp"
-    "vendor/glm/ext/vector_bool3_precision.hpp"
-    "vendor/glm/ext/vector_bool4.hpp"
-    "vendor/glm/ext/vector_bool4_precision.hpp"
-    "vendor/glm/ext/vector_common.hpp"
-    "vendor/glm/ext/vector_common.inl"
-    "vendor/glm/ext/vector_double1.hpp"
-    "vendor/glm/ext/vector_double1_precision.hpp"
-    "vendor/glm/ext/vector_double2.hpp"
-    "vendor/glm/ext/vector_double2_precision.hpp"
-    "vendor/glm/ext/vector_double3.hpp"
-    "vendor/glm/ext/vector_double3_precision.hpp"
-    "vendor/glm/ext/vector_double4.hpp"
-    "vendor/glm/ext/vector_double4_precision.hpp"
-    "vendor/glm/ext/vector_float1.hpp"
-    "vendor/glm/ext/vector_float1_precision.hpp"
-    "vendor/glm/ext/vector_float2.hpp"
-    "vendor/glm/ext/vector_float2_precision.hpp"
-    "vendor/glm/ext/vector_float3.hpp"
-    "vendor/glm/ext/vector_float3_precision.hpp"
-    "vendor/glm/ext/vector_float4.hpp"
-    "vendor/glm/ext/vector_float4_precision.hpp"
-    "vendor/glm/ext/vector_int1.hpp"
-    "vendor/glm/ext/vector_int1_sized.hpp"
-    "vendor/glm/ext/vector_int2.hpp"
-    "vendor/glm/ext/vector_int2_sized.hpp"
-    "vendor/glm/ext/vector_int3.hpp"
-    "vendor/glm/ext/vector_int3_sized.hpp"
-    "vendor/glm/ext/vector_int4.hpp"
-    "vendor/glm/ext/vector_int4_sized.hpp"
-    "vendor/glm/ext/vector_integer.hpp"
-    "vendor/glm/ext/vector_integer.inl"
-    "vendor/glm/ext/vector_packing.hpp"
-    "vendor/glm/ext/vector_packing.inl"
-    "vendor/glm/ext/vector_reciprocal.hpp"
-    "vendor/glm/ext/vector_reciprocal.inl"
-    "vendor/glm/ext/vector_relational.hpp"
-    "vendor/glm/ext/vector_relational.inl"
-    "vendor/glm/ext/vector_uint1.hpp"
-    "vendor/glm/ext/vector_uint1_sized.hpp"
-    "vendor/glm/ext/vector_uint2.hpp"
-    "vendor/glm/ext/vector_uint2_sized.hpp"
-    "vendor/glm/ext/vector_uint3.hpp"
-    "vendor/glm/ext/vector_uint3_sized.hpp"
-    "vendor/glm/ext/vector_uint4.hpp"
-    "vendor/glm/ext/vector_uint4_sized.hpp"
-    "vendor/glm/ext/vector_ulp.hpp"
-    "vendor/glm/ext/vector_ulp.inl"
-)
-source_group("Vendor Files\\glm\\ext" FILES ${Vendor_Files__glm__ext})
-
-set(Vendor_Files__glm__gtc
-    "vendor/glm/gtc/bitfield.hpp"
-    "vendor/glm/gtc/bitfield.inl"
-    "vendor/glm/gtc/color_space.hpp"
-    "vendor/glm/gtc/color_space.inl"
-    "vendor/glm/gtc/constants.hpp"
-    "vendor/glm/gtc/constants.inl"
-    "vendor/glm/gtc/epsilon.hpp"
-    "vendor/glm/gtc/epsilon.inl"
-    "vendor/glm/gtc/integer.hpp"
-    "vendor/glm/gtc/integer.inl"
-    "vendor/glm/gtc/matrix_access.hpp"
-    "vendor/glm/gtc/matrix_access.inl"
-    "vendor/glm/gtc/matrix_integer.hpp"
-    "vendor/glm/gtc/matrix_inverse.hpp"
-    "vendor/glm/gtc/matrix_inverse.inl"
-    "vendor/glm/gtc/matrix_transform.hpp"
-    "vendor/glm/gtc/matrix_transform.inl"
-    "vendor/glm/gtc/noise.hpp"
-    "vendor/glm/gtc/noise.inl"
-    "vendor/glm/gtc/packing.hpp"
-    "vendor/glm/gtc/packing.inl"
-    "vendor/glm/gtc/quaternion.hpp"
-    "vendor/glm/gtc/quaternion.inl"
-    "vendor/glm/gtc/quaternion_simd.inl"
-    "vendor/glm/gtc/random.hpp"
-    "vendor/glm/gtc/random.inl"
-    "vendor/glm/gtc/reciprocal.hpp"
-    "vendor/glm/gtc/round.hpp"
-    "vendor/glm/gtc/round.inl"
-    "vendor/glm/gtc/type_aligned.hpp"
-    "vendor/glm/gtc/type_precision.hpp"
-    "vendor/glm/gtc/type_precision.inl"
-    "vendor/glm/gtc/type_ptr.hpp"
-    "vendor/glm/gtc/type_ptr.inl"
-    "vendor/glm/gtc/ulp.hpp"
-    "vendor/glm/gtc/ulp.inl"
-    "vendor/glm/gtc/vec1.hpp"
-)
-source_group("Vendor Files\\glm\\gtc" FILES ${Vendor_Files__glm__gtc})
-
-set(Vendor_Files__glm__gtx
-    "vendor/glm/gtx/associated_min_max.hpp"
-    "vendor/glm/gtx/associated_min_max.inl"
-    "vendor/glm/gtx/bit.hpp"
-    "vendor/glm/gtx/bit.inl"
-    "vendor/glm/gtx/closest_point.hpp"
-    "vendor/glm/gtx/closest_point.inl"
-    "vendor/glm/gtx/color_encoding.hpp"
-    "vendor/glm/gtx/color_encoding.inl"
-    "vendor/glm/gtx/color_space.hpp"
-    "vendor/glm/gtx/color_space.inl"
-    "vendor/glm/gtx/color_space_YCoCg.hpp"
-    "vendor/glm/gtx/color_space_YCoCg.inl"
-    "vendor/glm/gtx/common.hpp"
-    "vendor/glm/gtx/common.inl"
-    "vendor/glm/gtx/compatibility.hpp"
-    "vendor/glm/gtx/compatibility.inl"
-    "vendor/glm/gtx/component_wise.hpp"
-    "vendor/glm/gtx/component_wise.inl"
-    "vendor/glm/gtx/dual_quaternion.hpp"
-    "vendor/glm/gtx/dual_quaternion.inl"
-    "vendor/glm/gtx/easing.hpp"
-    "vendor/glm/gtx/easing.inl"
-    "vendor/glm/gtx/euler_angles.hpp"
-    "vendor/glm/gtx/euler_angles.inl"
-    "vendor/glm/gtx/extend.hpp"
-    "vendor/glm/gtx/extend.inl"
-    "vendor/glm/gtx/extended_min_max.hpp"
-    "vendor/glm/gtx/extended_min_max.inl"
-    "vendor/glm/gtx/exterior_product.hpp"
-    "vendor/glm/gtx/exterior_product.inl"
-    "vendor/glm/gtx/fast_exponential.hpp"
-    "vendor/glm/gtx/fast_exponential.inl"
-    "vendor/glm/gtx/fast_square_root.hpp"
-    "vendor/glm/gtx/fast_square_root.inl"
-    "vendor/glm/gtx/fast_trigonometry.hpp"
-    "vendor/glm/gtx/fast_trigonometry.inl"
-    "vendor/glm/gtx/float_notmalize.inl"
-    "vendor/glm/gtx/functions.hpp"
-    "vendor/glm/gtx/functions.inl"
-    "vendor/glm/gtx/gradient_paint.hpp"
-    "vendor/glm/gtx/gradient_paint.inl"
-    "vendor/glm/gtx/handed_coordinate_space.hpp"
-    "vendor/glm/gtx/handed_coordinate_space.inl"
-    "vendor/glm/gtx/hash.hpp"
-    "vendor/glm/gtx/hash.inl"
-    "vendor/glm/gtx/integer.hpp"
-    "vendor/glm/gtx/integer.inl"
-    "vendor/glm/gtx/intersect.hpp"
-    "vendor/glm/gtx/intersect.inl"
-    "vendor/glm/gtx/io.hpp"
-    "vendor/glm/gtx/io.inl"
-    "vendor/glm/gtx/log_base.hpp"
-    "vendor/glm/gtx/log_base.inl"
-    "vendor/glm/gtx/matrix_cross_product.hpp"
-    "vendor/glm/gtx/matrix_cross_product.inl"
-    "vendor/glm/gtx/matrix_decompose.hpp"
-    "vendor/glm/gtx/matrix_decompose.inl"
-    "vendor/glm/gtx/matrix_factorisation.hpp"
-    "vendor/glm/gtx/matrix_factorisation.inl"
-    "vendor/glm/gtx/matrix_interpolation.hpp"
-    "vendor/glm/gtx/matrix_interpolation.inl"
-    "vendor/glm/gtx/matrix_major_storage.hpp"
-    "vendor/glm/gtx/matrix_major_storage.inl"
-    "vendor/glm/gtx/matrix_operation.hpp"
-    "vendor/glm/gtx/matrix_operation.inl"
-    "vendor/glm/gtx/matrix_query.hpp"
-    "vendor/glm/gtx/matrix_query.inl"
-    "vendor/glm/gtx/matrix_transform_2d.hpp"
-    "vendor/glm/gtx/matrix_transform_2d.inl"
-    "vendor/glm/gtx/mixed_product.hpp"
-    "vendor/glm/gtx/mixed_product.inl"
-    "vendor/glm/gtx/norm.hpp"
-    "vendor/glm/gtx/norm.inl"
-    "vendor/glm/gtx/normal.hpp"
-    "vendor/glm/gtx/normal.inl"
-    "vendor/glm/gtx/normalize_dot.hpp"
-    "vendor/glm/gtx/normalize_dot.inl"
-    "vendor/glm/gtx/number_precision.hpp"
-    "vendor/glm/gtx/optimum_pow.hpp"
-    "vendor/glm/gtx/optimum_pow.inl"
-    "vendor/glm/gtx/orthonormalize.hpp"
-    "vendor/glm/gtx/orthonormalize.inl"
-    "vendor/glm/gtx/pca.hpp"
-    "vendor/glm/gtx/pca.inl"
-    "vendor/glm/gtx/perpendicular.hpp"
-    "vendor/glm/gtx/perpendicular.inl"
-    "vendor/glm/gtx/polar_coordinates.hpp"
-    "vendor/glm/gtx/polar_coordinates.inl"
-    "vendor/glm/gtx/projection.hpp"
-    "vendor/glm/gtx/projection.inl"
-    "vendor/glm/gtx/quaternion.hpp"
-    "vendor/glm/gtx/quaternion.inl"
-    "vendor/glm/gtx/range.hpp"
-    "vendor/glm/gtx/raw_data.hpp"
-    "vendor/glm/gtx/raw_data.inl"
-    "vendor/glm/gtx/rotate_normalized_axis.hpp"
-    "vendor/glm/gtx/rotate_normalized_axis.inl"
-    "vendor/glm/gtx/rotate_vector.hpp"
-    "vendor/glm/gtx/rotate_vector.inl"
-    "vendor/glm/gtx/scalar_multiplication.hpp"
-    "vendor/glm/gtx/scalar_relational.hpp"
-    "vendor/glm/gtx/scalar_relational.inl"
-    "vendor/glm/gtx/spline.hpp"
-    "vendor/glm/gtx/spline.inl"
-    "vendor/glm/gtx/std_based_type.hpp"
-    "vendor/glm/gtx/std_based_type.inl"
-    "vendor/glm/gtx/string_cast.hpp"
-    "vendor/glm/gtx/string_cast.inl"
-    "vendor/glm/gtx/texture.hpp"
-    "vendor/glm/gtx/texture.inl"
-    "vendor/glm/gtx/transform.hpp"
-    "vendor/glm/gtx/transform.inl"
-    "vendor/glm/gtx/transform2.hpp"
-    "vendor/glm/gtx/transform2.inl"
-    "vendor/glm/gtx/type_aligned.hpp"
-    "vendor/glm/gtx/type_aligned.inl"
-    "vendor/glm/gtx/type_trait.hpp"
-    "vendor/glm/gtx/type_trait.inl"
-    "vendor/glm/gtx/vec_swizzle.hpp"
-    "vendor/glm/gtx/vector_angle.hpp"
-    "vendor/glm/gtx/vector_angle.inl"
-    "vendor/glm/gtx/vector_query.hpp"
-    "vendor/glm/gtx/vector_query.inl"
-    "vendor/glm/gtx/wrap.hpp"
-    "vendor/glm/gtx/wrap.inl"
-)
-source_group("Vendor Files\\glm\\gtx" FILES ${Vendor_Files__glm__gtx})
-
-set(Vendor_Files__glm__simd
-    "vendor/glm/simd/common.h"
-    "vendor/glm/simd/exponential.h"
-    "vendor/glm/simd/geometric.h"
-    "vendor/glm/simd/integer.h"
-    "vendor/glm/simd/matrix.h"
-    "vendor/glm/simd/neon.h"
-    "vendor/glm/simd/packing.h"
-    "vendor/glm/simd/platform.h"
-    "vendor/glm/simd/trigonometric.h"
-    "vendor/glm/simd/vector_relational.h"
-)
-source_group("Vendor Files\\glm\\simd" FILES ${Vendor_Files__glm__simd})
-
-set(Vendor_Files__imgui
-    "vendor/imgui/imconfig.h"
-    "vendor/imgui/imgui.cpp"
-    "vendor/imgui/imgui.h"
-    "vendor/imgui/imgui_demo.cpp"
-    "vendor/imgui/imgui_draw.cpp"
-    "vendor/imgui/imgui_internal.h"
-    "vendor/imgui/imgui_tables.cpp"
-    "vendor/imgui/imgui_widgets.cpp"
-    "vendor/imgui/imstb_rectpack.h"
-    "vendor/imgui/imstb_textedit.h"
-    "vendor/imgui/imstb_truetype.h"
-    "vendor/imgui/LICENSE.txt"
-)
-source_group("Vendor Files\\imgui" FILES ${Vendor_Files__imgui})
-
-set(Vendor_Files__imgui__backends
-    "vendor/imgui/backends/imgui_impl_opengl3.cpp"
-    "vendor/imgui/backends/imgui_impl_opengl3.h"
-    "vendor/imgui/backends/imgui_impl_opengl3_loader.h"
-    "vendor/imgui/backends/imgui_impl_sdl2.cpp"
-    "vendor/imgui/backends/imgui_impl_sdl2.h"
-)
-source_group("Vendor Files\\imgui\\backends" FILES ${Vendor_Files__imgui__backends})
-
 set(ALL_FILES
     ${Header_Files}
     ${Header_Files__datatype}
@@ -867,18 +287,6 @@ set(ALL_FILES
     ${Source_Files__editor}
     ${Source_Files__gameobject}
     ${Source_Files__render}
-    ${Vendor_Files}
-    ${Vendor_Files__SDL2}
-    ${Vendor_Files__glad}
-    ${Vendor_Files__glad__KHR}
-    ${Vendor_Files__glm}
-    ${Vendor_Files__glm__detail}
-    ${Vendor_Files__glm__ext}
-    ${Vendor_Files__glm__gtc}
-    ${Vendor_Files__glm__gtx}
-    ${Vendor_Files__glm__simd}
-    ${Vendor_Files__imgui}
-    ${Vendor_Files__imgui__backends}
 )
 
 ################################################################################
@@ -893,95 +301,213 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 ################################################################################
 # Target name
 ################################################################################
-set_target_properties(${PROJECT_NAME} PROPERTIES
-    TARGET_NAME_DEBUG   "PhoenixEngine"
-    TARGET_NAME_RELEASE "PhoenixEngine"
-)
+if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        TARGET_NAME_DEBUG   "PhoenixEngine"
+        TARGET_NAME_RELEASE "PhoenixEngine"
+    )
+elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        TARGET_NAME_DEBUG   "PhoenixEngine"
+        TARGET_NAME_RELEASE "PhoenixEngine"
+    )
+endif()
 ################################################################################
 # Output directory
 ################################################################################
-set_target_properties(${PROJECT_NAME} PROPERTIES
-    OUTPUT_DIRECTORY_DEBUG   "${CMAKE_CURRENT_SOURCE_DIR}/x64/Debug/"
-    OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/x64/Release/"
-)
-set_target_properties(${PROJECT_NAME} PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY_DEBUG   "${CMAKE_CURRENT_SOURCE_DIR}/x64/Debug"
-    ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/x64/Release"
-)
-set_target_properties(${PROJECT_NAME} PROPERTIES
-    ARCHIVE_OUTPUT_NAME_DEBUG   "PhoenixEngine"
-    ARCHIVE_OUTPUT_NAME_RELEASE "PhoenixEngine"
-)
+if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        OUTPUT_DIRECTORY_DEBUG   "${CMAKE_CURRENT_SOURCE_DIR}/x64/Debug/"
+        OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/x64/Release/"
+    )
+elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        OUTPUT_DIRECTORY_DEBUG   "${CMAKE_CURRENT_SOURCE_DIR}/x64/Debug/"
+        OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/x64/Release/"
+    )
+endif()
+if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        ARCHIVE_OUTPUT_DIRECTORY_DEBUG   "${CMAKE_CURRENT_SOURCE_DIR}/x64/Debug"
+        ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/x64/Release"
+    )
+elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        ARCHIVE_OUTPUT_DIRECTORY_DEBUG   "${CMAKE_CURRENT_SOURCE_DIR}/x64/Debug"
+        ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/x64/Release"
+    )
+endif()
+if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        ARCHIVE_OUTPUT_NAME_DEBUG   "PhoenixEngine"
+        ARCHIVE_OUTPUT_NAME_RELEASE "PhoenixEngine"
+    )
+elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        ARCHIVE_OUTPUT_NAME_DEBUG   "PhoenixEngine"
+        ARCHIVE_OUTPUT_NAME_RELEASE "PhoenixEngine"
+    )
+endif()
 ################################################################################
 # MSVC runtime library
 ################################################################################
 get_property(MSVC_RUNTIME_LIBRARY_DEFAULT TARGET ${PROJECT_NAME} PROPERTY MSVC_RUNTIME_LIBRARY)
-string(CONCAT "MSVC_RUNTIME_LIBRARY_STR"
-    $<$<CONFIG:Debug>:
-        MultiThreadedDebugDLL
-    >
-    $<$<CONFIG:Release>:
-        MultiThreadedDLL
-    >
-    $<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:Release>>>:${MSVC_RUNTIME_LIBRARY_DEFAULT}>
-)
+if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
+    string(CONCAT "MSVC_RUNTIME_LIBRARY_STR"
+        $<$<CONFIG:Debug>:
+            MultiThreadedDebugDLL
+        >
+        $<$<CONFIG:Release>:
+            MultiThreadedDLL
+        >
+        $<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:Release>>>:${MSVC_RUNTIME_LIBRARY_DEFAULT}>
+    )
+elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
+    string(CONCAT "MSVC_RUNTIME_LIBRARY_STR"
+        $<$<CONFIG:Debug>:
+            MultiThreadedDebugDLL
+        >
+        $<$<CONFIG:Release>:
+            MultiThreadedDLL
+        >
+        $<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:Release>>>:${MSVC_RUNTIME_LIBRARY_DEFAULT}>
+    )
+endif()
 set_target_properties(${PROJECT_NAME} PROPERTIES MSVC_RUNTIME_LIBRARY ${MSVC_RUNTIME_LIBRARY_STR})
 
 ################################################################################
 # Include directories
 ################################################################################
-target_include_directories(${PROJECT_NAME} PUBLIC
-    "${CMAKE_CURRENT_SOURCE_DIR}/.;"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include;"
-    "${CMAKE_CURRENT_SOURCE_DIR}/vendor;"
-    "${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui;"
-    "${CMAKE_CURRENT_SOURCE_DIR}/luau/Common/include;"
-    "${CMAKE_CURRENT_SOURCE_DIR}/luau/VM/include"
-)
+if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
+    target_include_directories(${PROJECT_NAME} PUBLIC
+        "${CMAKE_CURRENT_SOURCE_DIR}/.;"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include;"
+        "${CMAKE_CURRENT_SOURCE_DIR}/Vendor;"
+        "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/imgui;"
+        "${CMAKE_CURRENT_SOURCE_DIR}/luau/Common/include;"
+        "${CMAKE_CURRENT_SOURCE_DIR}/luau/VM/include"
+    )
+elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
+    target_include_directories(${PROJECT_NAME} PUBLIC
+        "${CMAKE_CURRENT_SOURCE_DIR}/.;"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include;"
+        "${CMAKE_CURRENT_SOURCE_DIR}/Vendor;"
+        "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/imgui;"
+        "${CMAKE_CURRENT_SOURCE_DIR}/luau/Common/include;"
+        "${CMAKE_CURRENT_SOURCE_DIR}/luau/VM/include"
+    )
+endif()
 
 ################################################################################
 # Compile definitions
 ################################################################################
-target_compile_definitions(${PROJECT_NAME} PRIVATE
-    "$<$<CONFIG:Debug>:"
-        "CMAKE_INTDIR=\"Debug\""
-    ">"
-    "$<$<CONFIG:Release>:"
-        "CMAKE_INTDIR=\"Release\""
-    ">"
-    "_MBCS"
-)
+if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
+    target_compile_definitions(${PROJECT_NAME} PRIVATE
+        "$<$<CONFIG:Debug>:"
+            "CMAKE_INTDIR=\"Debug\""
+        ">"
+        "$<$<CONFIG:Release>:"
+            "CMAKE_INTDIR=\"Release\""
+        ">"
+        "_MBCS"
+    )
+elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
+    target_compile_definitions(${PROJECT_NAME} PRIVATE
+        "$<$<CONFIG:Debug>:"
+            "CMAKE_INTDIR=\"Debug\""
+        ">"
+        "$<$<CONFIG:Release>:"
+            "CMAKE_INTDIR=\"Release\""
+        ">"
+        "_MBCS"
+    )
+endif()
 
 ################################################################################
 # Compile and link options
 ################################################################################
 if(MSVC)
-    target_compile_options(${PROJECT_NAME} PRIVATE
-        /MP;
-        /W4;
-        /Zi;
-        ${DEFAULT_CXX_EXCEPTION_HANDLING};
-        /Y-
-    )
-    target_link_options(${PROJECT_NAME} PRIVATE
-        /MANIFEST;
-        /DEBUG:FULL;
-        /SUBSYSTEM:CONSOLE;
-        /INCREMENTAL
-    )
+    if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
+        target_compile_options(${PROJECT_NAME} PRIVATE
+            $<$<CONFIG:Release>:
+                /Zc:__cplusplus
+            >
+            /MP;
+            /W4;
+            /Zi;
+            ${DEFAULT_CXX_EXCEPTION_HANDLING};
+            /Y-
+        )
+    elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
+        target_compile_options(${PROJECT_NAME} PRIVATE
+            $<$<CONFIG:Release>:
+                /Zc:__cplusplus
+            >
+            /MP;
+            /W4;
+            /Zi;
+            ${DEFAULT_CXX_EXCEPTION_HANDLING};
+            /Y-
+        )
+    endif()
+    if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
+        target_link_options(${PROJECT_NAME} PRIVATE
+            $<$<CONFIG:Debug>:
+                /INCREMENTAL
+            >
+            $<$<CONFIG:Release>:
+                /INCREMENTAL:NO;
+                /LTCG
+            >
+            /MANIFEST;
+            /DEBUG:FULL;
+            /SUBSYSTEM:CONSOLE
+        )
+    elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
+        target_link_options(${PROJECT_NAME} PRIVATE
+            $<$<CONFIG:Debug>:
+                /INCREMENTAL
+            >
+            $<$<CONFIG:Release>:
+                /INCREMENTAL:NO;
+                /LTCG
+            >
+            /MANIFEST;
+            /DEBUG:FULL;
+            /SUBSYSTEM:CONSOLE
+        )
+    endif()
 endif()
 
 ################################################################################
 # Dependencies
 ################################################################################
-set(ADDITIONAL_LIBRARY_DEPENDENCIES
-    "opengl32;"
-    "SDL2"
-)
+if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
+    set(ADDITIONAL_LIBRARY_DEPENDENCIES
+        "opengl32;"
+        "SDL2;"
+        "Vendor"
+    )
+elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
+    set(ADDITIONAL_LIBRARY_DEPENDENCIES
+        "opengl32;"
+        "SDL2;"
+        "Vendor"
+    )
+endif()
 target_link_libraries(${PROJECT_NAME} PRIVATE "${ADDITIONAL_LIBRARY_DEPENDENCIES}")
 
-target_link_directories(${PROJECT_NAME} PRIVATE
-    "${CMAKE_CURRENT_SOURCE_DIR}/dll;"
-    "${CMAKE_CURRENT_SOURCE_DIR}/lib"
-)
+if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
+    target_link_directories(${PROJECT_NAME} PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/dll;"
+        "${CMAKE_CURRENT_SOURCE_DIR}/lib"
+    )
+elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
+    target_link_directories(${PROJECT_NAME} PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/dll;"
+        "${CMAKE_CURRENT_SOURCE_DIR}/lib"
+    )
+endif()
+
+set_property(GLOBAL PROPERTY VS_STARTUP_PROJECT PhoenixEngine)
 
