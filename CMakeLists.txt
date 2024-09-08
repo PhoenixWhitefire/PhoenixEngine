@@ -123,62 +123,61 @@ set(PROJECT_NAME PhoenixEngine)
 # Source groups
 ################################################################################
 set(Header_Files
-    "include/AnimationService.hpp"
-    "include/BaseMeshes.hpp"
-    "include/Debug.hpp"
-    "include/Engine.hpp"
-    "include/EntityComponent.hpp"
-    "include/FileRW.hpp"
-    "include/GlobalJsonConfig.hpp"
-    "include/ModelLoader.hpp"
-    "include/PhysicsEngine.hpp"
-    "include/Reflection.hpp"
-    "include/SceneFormat.hpp"
-    "include/ThreadManager.hpp"
-    "include/UserInput.hpp"
+    "src/decl/AnimationService.hpp"
+    "src/decl/BaseMeshes.hpp"
+    "src/decl/Debug.hpp"
+    "src/decl/Engine.hpp"
+    "src/decl/EntityComponent.hpp"
+    "src/decl/FileRW.hpp"
+    "src/decl/GlobalJsonConfig.hpp"
+    "src/decl/ModelLoader.hpp"
+    "src/decl/PhysicsEngine.hpp"
+    "src/decl/Reflection.hpp"
+    "src/decl/SceneFormat.hpp"
+    "src/decl/ThreadManager.hpp"
+    "src/decl/UserInput.hpp"
 )
 source_group("Header Files" FILES ${Header_Files})
 
 set(Header_Files__datatype
-    "include/datatype/Buffer.hpp"
-    "include/datatype/Color.hpp"
-    "include/datatype/Event.cpp"
-    "include/datatype/Event.hpp"
-    "include/datatype/GameObject.hpp"
-    "include/datatype/Mesh.hpp"
-    "include/datatype/ValueSequence.hpp"
-    "include/datatype/Vector2.hpp"
-    "include/datatype/Vector3.hpp"
+    "src/decl/datatype/Buffer.hpp"
+    "src/decl/datatype/Color.hpp"
+    "src/decl/datatype/Event.hpp"
+    "src/decl/datatype/GameObject.hpp"
+    "src/decl/datatype/Mesh.hpp"
+    "src/decl/datatype/ValueSequence.hpp"
+    "src/decl/datatype/Vector2.hpp"
+    "src/decl/datatype/Vector3.hpp"
 )
 source_group("Header Files\\datatype" FILES ${Header_Files__datatype})
 
 set(Header_Files__editor
-    "include/editor/Editor.hpp"
-    "include/editor/intersectionlib.hpp"
+    "src/decl/editor/Editor.hpp"
+    "src/decl/editor/IntersectionLib.hpp"
 )
 source_group("Header Files\\editor" FILES ${Header_Files__editor})
 
 set(Header_Files__gameobject
-    "include/gameobject/Base3D.hpp"
-    "include/gameobject/Camera.hpp"
-    "include/gameobject/DataModel.hpp"
-    "include/gameobject/GameObjects.hpp"
-    "include/gameobject/Light.hpp"
-    "include/gameobject/MeshObject.hpp"
-    "include/gameobject/Model.hpp"
-    "include/gameobject/ParticleEmitter.hpp"
-    "include/gameobject/Primitive.hpp"
-    "include/gameobject/Script.hpp"
-    "include/gameobject/Workspace.hpp"
+    "src/decl/gameobject/Base3D.hpp"
+    "src/decl/gameobject/Camera.hpp"
+    "src/decl/gameobject/DataModel.hpp"
+    "src/decl/gameobject/GameObjects.hpp"
+    "src/decl/gameobject/Light.hpp"
+    "src/decl/gameobject/MeshObject.hpp"
+    "src/decl/gameobject/Model.hpp"
+    "src/decl/gameobject/ParticleEmitter.hpp"
+    "src/decl/gameobject/Primitive.hpp"
+    "src/decl/gameobject/Script.hpp"
+    "src/decl/gameobject/Workspace.hpp"
 )
 source_group("Header Files\\gameobject" FILES ${Header_Files__gameobject})
 
 set(Header_Files__render
-    "include/render/GraphicsAbstractionLayer.hpp"
-    "include/render/Material.hpp"
-    "include/render/Renderer.hpp"
-    "include/render/ShaderProgram.hpp"
-    "include/render/TextureManager.hpp"
+    "src/decl/render/GraphicsAbstractionLayer.hpp"
+    "src/decl/render/Material.hpp"
+    "src/decl/render/Renderer.hpp"
+    "src/decl/render/ShaderProgram.hpp"
+    "src/decl/render/TextureManager.hpp"
 )
 source_group("Header Files\\render" FILES ${Header_Files__render})
 
@@ -218,59 +217,59 @@ set(Resource_Files__shaders
 source_group("Resource Files\\shaders" FILES ${Resource_Files__shaders})
 
 set(Source_Files
-    "src/AnimationService.cpp"
-    "src/BaseMeshes.cpp"
-    "src/Debug.cpp"
-    "src/Engine.cpp"
-    "src/EntityComponent.cpp"
-    "src/FileRW.cpp"
-    "src/GlobalJsonConfig.cpp"
-    "src/Main.cpp"
-    "src/ModelLoader.cpp"
-    "src/PhysicsEngine.cpp"
-    "src/Reflection.cpp"
-    "src/SceneFormat.cpp"
-    "src/ThreadManager.cpp"
-    "src/UserInput.cpp"
+    "src/impl/AnimationService.cpp"
+    "src/impl/BaseMeshes.cpp"
+    "src/impl/Debug.cpp"
+    "src/impl/Engine.cpp"
+    "src/impl/EntityComponent.cpp"
+    "src/impl/FileRW.cpp"
+    "src/impl/GlobalJsonConfig.cpp"
+    "src/impl/Main.cpp"
+    "src/impl/ModelLoader.cpp"
+    "src/impl/PhysicsEngine.cpp"
+    "src/impl/Reflection.cpp"
+    "src/impl/SceneFormat.cpp"
+    "src/impl/ThreadManager.cpp"
+    "src/impl/UserInput.cpp"
 )
 source_group("Source Files" FILES ${Source_Files})
 
 set(Source_Files__datatype
-    "src/datatype/Buffer.cpp"
-    "src/datatype/Color.cpp"
-    "src/datatype/GameObject.cpp"
-    "src/datatype/Mesh.cpp"
-    "src/datatype/Vector2.cpp"
-    "src/datatype/Vector3.cpp"
+    "src/impl/datatype/Buffer.cpp"
+    "src/impl/datatype/Color.cpp"
+    "src/impl/datatype/GameObject.cpp"
+    "src/impl/datatype/Mesh.cpp"
+    "src/impl/datatype/Vector2.cpp"
+    "src/impl/datatype/Vector3.cpp"
 )
 source_group("Source Files\\datatype" FILES ${Source_Files__datatype})
 
 set(Source_Files__editor
-    "src/editor/editor.cpp"
-    "src/editor/intersectionlib.cpp"
+    "src/impl/editor/Editor.cpp"
+    "src/impl/editor/IntersectionLib.cpp"
 )
 source_group("Source Files\\editor" FILES ${Source_Files__editor})
 
 set(Source_Files__gameobject
-    "src/gameobject/Base3D.cpp"
-    "src/gameobject/Camera.cpp"
-    "src/gameobject/DataModel.cpp"
-    "src/gameobject/Light.cpp"
-    "src/gameobject/MeshObject.cpp"
-    "src/gameobject/Model.cpp"
-    "src/gameobject/ParticleEmitter.cpp"
-    "src/gameobject/Primitive.cpp"
-    "src/gameobject/Script.cpp"
-    "src/gameobject/Workspace.cpp"
+    "src/impl/gameobject/Base3D.cpp"
+    "src/impl/gameobject/Camera.cpp"
+    "src/impl/gameobject/DataModel.cpp"
+    "src/impl/gameobject/Light.cpp"
+    "src/impl/gameobject/MeshObject.cpp"
+    "src/impl/gameobject/Model.cpp"
+    "src/impl/gameobject/ParticleEmitter.cpp"
+    "src/impl/gameobject/Primitive.cpp"
+    "src/impl/gameobject/Script.cpp"
+    "src/impl/gameobject/Workspace.cpp"
 )
 source_group("Source Files\\gameobject" FILES ${Source_Files__gameobject})
 
 set(Source_Files__render
-    "src/render/GraphicsAbstractionLayer.cpp"
-    "src/render/Material.cpp"
-    "src/render/Renderer.cpp"
-    "src/render/ShaderProgram.cpp"
-    "src/render/TextureManager.cpp"
+    "src/impl/render/GraphicsAbstractionLayer.cpp"
+    "src/impl/render/Material.cpp"
+    "src/impl/render/Renderer.cpp"
+    "src/impl/render/ShaderProgram.cpp"
+    "src/impl/render/TextureManager.cpp"
 )
 source_group("Source Files\\render" FILES ${Source_Files__render})
 
@@ -381,7 +380,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES MSVC_RUNTIME_LIBRARY ${MSVC_RUN
 if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
     target_include_directories(${PROJECT_NAME} PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/.;"
-        "${CMAKE_CURRENT_SOURCE_DIR}/include;"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/decl;"
         "${CMAKE_CURRENT_SOURCE_DIR}/Vendor;"
         "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/imgui;"
         "${CMAKE_CURRENT_SOURCE_DIR}/luau/Common/include;"
@@ -390,7 +389,7 @@ if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
 elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
     target_include_directories(${PROJECT_NAME} PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/.;"
-        "${CMAKE_CURRENT_SOURCE_DIR}/include;"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/decl;"
         "${CMAKE_CURRENT_SOURCE_DIR}/Vendor;"
         "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/imgui;"
         "${CMAKE_CURRENT_SOURCE_DIR}/luau/Common/include;"
@@ -510,4 +509,3 @@ elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
 endif()
 
 set_property(GLOBAL PROPERTY VS_STARTUP_PROJECT PhoenixEngine)
-

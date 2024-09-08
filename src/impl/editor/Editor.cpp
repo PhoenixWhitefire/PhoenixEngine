@@ -1,8 +1,8 @@
 #include<glm/gtc/matrix_transform.hpp>
 #include<imgui/imgui.h>
 
-#include"editor/editor.hpp"
-#include"editor/intersectionlib.hpp"
+#include"editor/Editor.hpp"
+#include"editor/IntersectionLib.hpp"
 #include"gameobject/GameObjects.hpp"
 #include"render/TextureManager.hpp"
 #include"UserInput.hpp"

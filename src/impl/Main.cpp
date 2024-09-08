@@ -25,12 +25,10 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 #define SDL_MAIN_HANDLED
 
 #include<filesystem>
-#include<imgui/imgui.h>
 #include<imgui/backends/imgui_impl_opengl3.h>
 #include<imgui/backends/imgui_impl_sdl2.h>
 #include<glm/gtx/rotate_vector.hpp>
 #include<glm/gtx/vector_angle.hpp>
-#include<SDL2/SDL_revision.h>
 
 #include"Engine.hpp"
 #include"GlobalJsonConfig.hpp"
@@ -38,7 +36,7 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 #include"UserInput.hpp"
 #include"FileRW.hpp"
 #include"Debug.hpp"
-#include"editor/editor.hpp"
+#include"editor/Editor.hpp"
 
 static bool FirstDragFrame = false;
 
@@ -58,10 +56,13 @@ static int PrevMouseX, PrevMouseY = 0;
 
 static glm::tvec3<double, glm::highp> CamForward = glm::vec3(0.f, 0.f, -1.f);
 
-static const char* ErrLn1 = "Dear ImGui has detected a version mis-match between the compiled headers{}{}{}{}{}";
-static const char* ErrLn2 = " and the linked library. Please ensure version";
-static const char* ErrLn3 = " (#";
-static const char* ErrLn4 = ") is linked.";
+static const char* ImGuiErrLn1 =
+"Dear ImGui has detected a version mis-match between the compiled headers{}{}{}{}{}";
+static const char* ImGuiErrLn2 =
+" and the linked library. Please ensure version";
+static const char* ImGuiErrLn3 =
+" (#";
+static const char* ImGuiErrLn4 = ") is linked.";
 
 static void logSdlVersion()
 {
@@ -501,13 +502,13 @@ static void Application(int argc, char** argv)
 	if (!imGuiVersionCorrect)
 	{
 		throw(std::vformat(
-			ErrLn1,
+			ImGuiErrLn1,
 			std::make_format_args(
-				ErrLn2,
+				ImGuiErrLn2,
 				imGuiVersion,
-				ErrLn3,
+				ImGuiErrLn3,
 				imGuiVersionNum,
-				ErrLn4
+				ImGuiErrLn4
 			)
 		));
 	}
