@@ -26,7 +26,7 @@ float Quad[] =
 
 template <class T> static void removeElement(std::vector<T> vec, size_t elem)
 {
-	_particle* prevLast = vec[vec.size() - 1];
+	_particle prevLast = vec[vec.size() - 1];
 
 	vec[vec.size() - 1] = vec[elem];
 	vec[elem] = prevLast;
@@ -156,14 +156,12 @@ size_t Object_ParticleEmitter::m_GetUsableParticleIndex()
 	{
 		for (size_t index = 0; index < m_Particles.size(); index++)
 		{
-			_particle* particle = m_Particles[index];
+			_particle& particle = m_Particles[index];
 
-			if (particle->TimeAliveFor > particle->Lifetime)
+			if (particle.TimeAliveFor > particle.Lifetime)
 			{ //Get first inactive particle
 
 				removeElement(m_Particles, index);
-
-				delete particle;
 
 				return index;
 			}
@@ -188,7 +186,7 @@ void Object_ParticleEmitter::Update(double DeltaTime)
 
 	Vector3 worldPosition = parent3D ? Vector3(glm::vec3(parent3D->Transform[3])) + this->Offset : this->Offset;
 
-	_particle* newParticle = nullptr;
+	size_t newParticleIndex = UINT32_MAX;
 
 	if (m_TimeSinceLastSpawn >= timeBetweenSpawn && this->PossibleImages.size() > 0 && this->EmitterEnabled)
 	{
@@ -201,29 +199,31 @@ void Object_ParticleEmitter::Update(double DeltaTime)
 		std::uniform_real_distribution<double> randIndex(0, numimages);
 		std::uniform_real_distribution<float> lifetimeDist(this->Lifetime.X, this->Lifetime.Y);
 
-		newParticle = new _particle();
-		newParticle->Image = this->PossibleImages[(uint32_t)randIndex(Object_ParticleEmitter::s_RandGenerator)];
-		newParticle->Position = worldPosition;
-		newParticle->Lifetime = lifetimeDist(Object_ParticleEmitter::s_RandGenerator);
+		_particle newParticle
+		{
+			lifetimeDist(s_RandGenerator),
+			0.f,
+			1.f,
+			0.f,
+			this->PossibleImages[(uint32_t)randIndex(s_RandGenerator)]
+		};
 
-		m_Particles[m_GetUsableParticleIndex()] = newParticle;
+		newParticleIndex = m_GetUsableParticleIndex();
+		m_Particles[newParticleIndex] = newParticle;
 	}
 	else
 		m_TimeSinceLastSpawn += DeltaTime;
 
-	for (_particle* particle : m_Particles)
+	for (_particle& particle : m_Particles)
 	{
-		if (particle != newParticle)
-		{
-			particle->TimeAliveFor += static_cast<float>(DeltaTime);
+		particle.TimeAliveFor += static_cast<float>(DeltaTime);
 
-			float LifeProgress = particle->TimeAliveFor / particle->Lifetime;
+		float LifeProgress = particle.TimeAliveFor / particle.Lifetime;
 
-			particle->Position = particle->Position + (this->VelocityOverTime.GetValue(LifeProgress) * DeltaTime);
-			particle->Size = this->SizeOverTime.GetValue(LifeProgress);
+		particle.Position = particle.Position + (this->VelocityOverTime.GetValue(LifeProgress) * DeltaTime);
+		particle.Size = this->SizeOverTime.GetValue(LifeProgress);
 
-			particle->Transparency = this->TransparencyOverTime.GetValue(LifeProgress);
-		}
+		particle.Transparency = this->TransparencyOverTime.GetValue(LifeProgress);
 	}
 }
 
@@ -244,9 +244,9 @@ void Object_ParticleEmitter::Render(glm::mat4 CameraMatrix)
 
 	for (size_t index = 0; index < m_Particles.size(); index++)
 	{
-		_particle* particle = m_Particles[index];
+		_particle& particle = m_Particles[index];
 
-		if (particle->TimeAliveFor > particle->Lifetime)
+		if (particle.TimeAliveFor > particle.Lifetime)
 		{
 			removeElement(m_Particles, index);
 
@@ -257,51 +257,25 @@ void Object_ParticleEmitter::Render(glm::mat4 CameraMatrix)
 
 		s_ParticleShaders->Activate();
 
-		glUniform3f(
-			glGetUniformLocation(s_ParticleShaders->ID, "Position"),
-			static_cast<float>(particle->Position.X),
-			static_cast<float>(particle->Position.Y),
-			static_cast<float>(particle->Position.Z)
+		s_ParticleShaders->SetUniformFloat3(
+			"Position",
+			static_cast<float>(particle.Position.X),
+			static_cast<float>(particle.Position.Y),
+			static_cast<float>(particle.Position.Z)
 		);
 
-		glUniform1f(
-			glGetUniformLocation(s_ParticleShaders->ID, "Transparency"),
-			particle->Transparency
-		);
+		s_ParticleShaders->SetUniformFloat("Transparency", particle.Transparency);
 
-		glm::mat4 Scale = glm::mat4(1.0f);
+		glm::mat4 scale = glm::scale(glm::mat4(1.f), glm::vec3(particle.Size, particle.Size, particle.Size));
 
-		Scale = glm::scale(Scale, glm::vec3(particle->Size, particle->Size, particle->Size));
+		s_ParticleShaders->SetUniformMatrix("Scale", scale);
 
-		glUniformMatrix4fv(
-			glGetUniformLocation(s_ParticleShaders->ID, "Scale"),
-			1,
-			GL_FALSE,
-			glm::value_ptr(Scale)
-		);
+		s_ParticleShaders->SetUniformMatrix("CameraMatrix", CameraMatrix);
 
-		glUniformMatrix4fv(
-			glGetUniformLocation(s_ParticleShaders->ID, "CameraMatrix"),
-			1,
-			GL_FALSE,
-			glm::value_ptr(CameraMatrix)
-		);
+		glActiveTexture(GL_TEXTURE4);
+		glBindTexture(GL_TEXTURE_2D, particle.Image->Identifier);
 
-		glm::vec4 CameraPos = CameraMatrix[3];
-
-		glUniform3f(
-			glGetUniformLocation(s_ParticleShaders->ID, "CameraPosition"),
-			CameraPos.x,
-			CameraPos.y,
-			CameraPos.z
-		);
-
-		glBindTexture(GL_TEXTURE_2D, particle->Image->Identifier);
-
-		GLint ActiveID;
-		glGetIntegerv(GL_TEXTURE_BINDING_2D, &ActiveID);
-
-		glUniform1i(glGetUniformLocation(s_ParticleShaders->ID, "Image"), ActiveID);
+		s_ParticleShaders->SetUniformInt("Image", 4);
 
 		glDrawElements(GL_TRIANGLES, 7, GL_UNSIGNED_INT, 0);
 	}

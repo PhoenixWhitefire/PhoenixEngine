@@ -12,11 +12,11 @@ bool UserInput::IsKeyDown(SDL_KeyCode Key)
 bool UserInput::IsMouseButtonDown(uint32_t SDLMouseButtonMask)
 {
 	int x, y;
-	uint32_t Buttons;
+	uint32_t buttons;
 
-	Buttons = SDL_GetMouseState(&x, &y);
+	buttons = SDL_GetMouseState(&x, &y);
 
-	if ((Buttons & SDLMouseButtonMask) != 0)
+	if ((buttons & SDLMouseButtonMask) != 0)
 		return true;
 
 	return false;

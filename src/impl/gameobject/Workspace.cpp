@@ -3,18 +3,12 @@
 RegisterDerivedObject<Object_Workspace> Object_Workspace::RegisterClassAs("Workspace");
 static bool s_DidInitReflection = false;
 
-static auto scget(GameObject* g)
-{
-	return dynamic_cast<Object_Workspace*>(g)->GetSceneCamera()->Name;
-}
+static Object_Camera* s_FallbackCamera = nullptr;
 
-static void scset(GameObject* g, Reflection::GenericValue gv)
+static void createDefaultCamera()
 {
-	Object_Workspace* p = dynamic_cast<Object_Workspace*>(g);
-	auto newObj = p->GetChild(gv.String);
-	auto newCam = newObj ? dynamic_cast<Object_Camera*>(newObj) : nullptr;
-	if (newCam)
-		p->SetSceneCamera(newCam);
+	s_FallbackCamera = dynamic_cast<Object_Camera*>(GameObject::CreateGameObject("Camera"));
+	s_FallbackCamera->GenericMovement = true;
 }
 
 void Object_Workspace::s_DeclareReflections()
@@ -29,8 +23,25 @@ void Object_Workspace::s_DeclareReflections()
 	REFLECTION_DECLAREPROP(
 		"SceneCamera",
 		GameObject,
-		scget,
-		scset
+		[](GameObject* p)
+		{
+			Object_Workspace* workspace = dynamic_cast<Object_Workspace*>(p);
+
+			Reflection::GenericValue gv;
+			gv.Type = Reflection::ValueType::GameObject;
+
+			gv.Integer = workspace->GetSceneCamera()
+						? workspace->GetSceneCamera()->ObjectId
+						: PHX_GAMEOBJECT_NULL_ID;
+
+			return gv;
+		},
+		[](GameObject* p, const Reflection::GenericValue& gv)
+		{
+			dynamic_cast<Object_Workspace*>(p)->SetSceneCamera(
+				dynamic_cast<Object_Camera*>(GameObject::GetObjectById(static_cast<uint32_t>(gv.Integer)))
+			);
+		}
 	);
 }
 
@@ -38,34 +49,37 @@ Object_Workspace::Object_Workspace()
 {
 	this->Name = "Workspace";
 	this->ClassName = "Workspace";
-	this->m_sceneCamera = nullptr;
+	m_SceneCamera = nullptr;
 
 	s_DeclareReflections();
 }
 
 void Object_Workspace::Initialize()
 {
-	GameObject* fallbackCameraBase = GameObject::CreateGameObject("Camera");
-	Object_Camera* fallbackCamera = dynamic_cast<Object_Camera*>(fallbackCameraBase);
-
-	fallbackCamera->GenericMovement = true;
-	fallbackCamera->IsSceneCamera = true;
-
-	fallbackCameraBase->SetParent(this);
-
-	this->m_sceneCamera = fallbackCamera;
+	if (!s_FallbackCamera)
+	{
+		createDefaultCamera();
+		
+		s_FallbackCamera->SetParent(this);
+		this->SetSceneCamera(s_FallbackCamera);
+	}
 }
 
 Object_Camera* Object_Workspace::GetSceneCamera()
 {
-	return m_sceneCamera;
+	if (!s_FallbackCamera)
+		createDefaultCamera();
+
+	return m_SceneCamera ? m_SceneCamera : s_FallbackCamera;
 }
 
 void Object_Workspace::SetSceneCamera(Object_Camera* NewCam)
 {
-	if (m_sceneCamera && m_sceneCamera != NewCam)
-		m_sceneCamera->IsSceneCamera = false;
+	if (m_SceneCamera && m_SceneCamera != NewCam)
+		m_SceneCamera->IsSceneCamera = false;
 
-	this->m_sceneCamera = NewCam;
-	NewCam->IsSceneCamera = true;
+	m_SceneCamera = NewCam;
+
+	if (NewCam)
+		NewCam->IsSceneCamera = true;
 }

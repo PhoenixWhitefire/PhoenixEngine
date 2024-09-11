@@ -36,7 +36,14 @@ VAO::VAO()
 	glGenVertexArrays(1, &this->ID);
 }
 
-void VAO::LinkAttrib(VBO& VertexBuffer, GLuint Layout, GLuint Components, GLenum Type, GLsizei Stride, void* Offset)
+void VAO::LinkAttrib(
+	VBO& VertexBuffer,
+	uint32_t Layout,
+	uint32_t Components,
+	uint32_t Type,
+	int32_t Stride,
+	void* Offset
+)
 {
 	VertexBuffer.Bind();
 	glVertexAttribPointer(Layout, Components, Type, GL_FALSE, Stride, Offset);

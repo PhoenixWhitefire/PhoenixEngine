@@ -7,7 +7,7 @@
 RegisterDerivedObject<Object_DataModel> Object_DataModel::RegisterObjectAs("DataModel");
 static bool s_DidInitReflection = false;
 
-static Reflection::GenericValue closeDataModel(GameObject* g, Reflection::GenericValue params)
+static Reflection::GenericValue closeDataModel(GameObject* g, const Reflection::GenericValue&)
 {
 	dynamic_cast<Object_DataModel*>(g)->WantExit = true;
 	return Reflection::GenericValue();
@@ -22,6 +22,13 @@ void Object_DataModel::s_DeclareReflections()
 	REFLECTION_INHERITAPI(GameObject);
 
 	REFLECTION_DECLAREPROC("Close", closeDataModel);
+	REFLECTION_DECLAREPROC(
+		"Destroy",
+		[](GameObject*, const Reflection::GenericValue&) -> Reflection::GenericValue
+		{
+			throw("Cannot Destroy a DataModel");
+		}
+	);
 }
 
 Object_DataModel::Object_DataModel()

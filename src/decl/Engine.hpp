@@ -53,8 +53,6 @@ public:
 	Object_DataModel* DataModel;
 	Object_Workspace* Workspace;
 
-	ShaderProgram* PostProcessingShaders;
-
 	Renderer* RendererContext;
 	SDL_Window* Window;
 

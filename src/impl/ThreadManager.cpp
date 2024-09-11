@@ -17,15 +17,15 @@ static void _workerTaskRunner(Worker* ThisWorker)
 			continue;
 		}
 
-		Task* CurrentTask = ThisWorker->TaskQueue[ThisWorker->TaskQueue.size() - 1];
+		Task* currentTask = ThisWorker->TaskQueue[ThisWorker->TaskQueue.size() - 1];
 
 		ThisWorker->Status = WorkerStatus::RunningTask;
 
-		CurrentTask->Function(CurrentTask->FuncArgument);
+		currentTask->Function(currentTask->FuncArgument);
 
 		ThisWorker->TaskIdx++;
 
-		delete CurrentTask;
+		delete currentTask;
 
 		ThisWorker->TaskQueue.pop_back();
 	}
@@ -33,9 +33,9 @@ static void _workerTaskRunner(Worker* ThisWorker)
 
 void Worker::WaitForCurrentTaskFinish() const
 {
-	uint32_t LastTask = this->TaskIdx;
+	uint32_t lastTask = this->TaskIdx;
 
-	while ((LastTask == this->TaskIdx) || (this->Status != WorkerStatus::RunningTask))
+	while ((lastTask == this->TaskIdx) || (this->Status != WorkerStatus::RunningTask))
 		SDL_Delay(25);
 }
 
@@ -47,51 +47,47 @@ void Worker::WaitForAllTasksFinish() const
 
 std::vector<Worker*> ThreadManager::GetWorkers()
 {
-	return this->m_Workers;
+	return m_Workers;
 }
 
 std::vector<Worker*> ThreadManager::CreateWorkers(int NumWorkers, WorkerType Type)
 {
-	std::vector<Worker*> NewWorkers;
+	std::vector<Worker*> newWorkers;
 
-	for (int WorkerIndex = 0; WorkerIndex < NumWorkers; WorkerIndex++)
+	for (int index = 0; index < NumWorkers; index++)
 	{
-		Worker* NewWorker = new Worker();
-		NewWorker->Type = Type;
+		Worker* newWorker = new Worker();
+		newWorker->Type = Type;
 
-		NewWorker->Thread = new std::thread(&_workerTaskRunner, NewWorker);
-		NewWorker->Thread->detach();
+		newWorker->Thread = new std::thread(&_workerTaskRunner, newWorker);
+		newWorker->Thread->detach();
 
-		this->m_Workers.push_back(NewWorker);
-		NewWorkers.push_back(NewWorker);
+		m_Workers.push_back(newWorker);
+		newWorkers.push_back(newWorker);
 	}
 
-	return NewWorkers;
+	return newWorkers;
 }
 
 void ThreadManager::DispatchJob(Task& Job)
 {
-	Worker* AssignedWorker = nullptr;
+	Worker* assignedWorker = nullptr;
 
-	for (int Index = 0; Index < this->m_Workers.size(); Index++)
+	for (Worker* worker : m_Workers)
 	{
-		Worker* CurrentWorker = this->m_Workers[Index];
-
-		CurrentWorker->Type = WorkerType::DefaultTaskWorker;
-
-		if (CurrentWorker->Type == WorkerType::DefaultTaskWorker)
+		if (worker->Type == WorkerType::DefaultTaskWorker)
 		{
-			if (CurrentWorker->Status == WorkerStatus::WaitingForTask)
-				AssignedWorker = CurrentWorker;
+			if (worker->Status == WorkerStatus::WaitingForTask)
+				assignedWorker = worker;
 			else
 			{
-				if (!AssignedWorker || (CurrentWorker->TaskQueue.size() < AssignedWorker->TaskQueue.size()))
-					AssignedWorker = CurrentWorker;
+				if (!assignedWorker || (worker->TaskQueue.size() < assignedWorker->TaskQueue.size()))
+					assignedWorker = worker;
 			}
 		}
 	}
 
-	if (!AssignedWorker)
+	if (!assignedWorker)
 	{
 		//OnErrorEvent.Fire("Could not DispatchJob, number of workers may be too low or none are DefaultTaskWorker.");
 
@@ -101,7 +97,7 @@ void ThreadManager::DispatchJob(Task& Job)
 	}
 
 	// got a worker, tell it to do the task
-	AssignedWorker->TaskQueue.push_back(&Job);
+	assignedWorker->TaskQueue.push_back(&Job);
 }
 
 ThreadManager* ThreadManager::Get()

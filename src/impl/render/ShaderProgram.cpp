@@ -1,19 +1,25 @@
 #include<format>
 #include<glad/gl.h>
 #include<nljson.hpp>
+#include<glm/gtc/type_ptr.hpp>
 
 #include"render/ShaderProgram.hpp"
+#include"datatype/Vector3.hpp"
 #include"FileRW.hpp"
 #include"Debug.hpp"
 
 static const std::string BaseShaderPath = "shaders/";
-std::unordered_map<std::string, ShaderProgram*> ShaderProgram::s_programs;
 
 ShaderProgram::ShaderProgram(std::string const& ProgramName)
 {
 	this->Name = ProgramName;
 
 	this->Reload();
+}
+
+void ShaderProgram::Activate() const
+{
+	glUseProgram(this->ID);
 }
 
 void ShaderProgram::Reload()
@@ -23,12 +29,12 @@ void ShaderProgram::Reload()
 
 	this->ID = glCreateProgram();
 
-	bool ShpExists = true;
-	std::string ShpContents = FileRW::ReadFile(BaseShaderPath + Name + ".shp", &ShpExists);
+	bool shpExists = true;
+	std::string shpContents = FileRW::ReadFile(BaseShaderPath + Name + ".shp", &shpExists);
 
-	if (!ShpExists)
+	if (!shpExists)
 	{
-		if (Name == "error")
+		if (this->Name == "error")
 			throw("Cannot load the fallback Shader Program ('error.shp'), giving up.");
 
 		// TODO: a different function for error logging
@@ -36,7 +42,7 @@ void ShaderProgram::Reload()
 		// 13/07/2024
 		Debug::Log(std::vformat(
 			"**ERR** Shader program '{}' does not exist! Geometry will appear magenta",
-			std::make_format_args(Name))
+			std::make_format_args(this->Name))
 		);
 
 		ShaderProgram* fallback = ShaderProgram::GetShaderProgram("error");
@@ -46,112 +52,227 @@ void ShaderProgram::Reload()
 		return;
 	}
 
-	nlohmann::json ShpJson = nlohmann::json::parse(ShpContents);
+	nlohmann::json shpJson = nlohmann::json::parse(shpContents);
 
-	bool HasGeometryShader = ShpJson.find("Geometry") != ShpJson.end();
+	bool hasGeometryShader = shpJson.find("Geometry") != shpJson.end();
 
-	bool VertexShdExists = true;
-	bool FragmentShdExists = true;
-	bool GeometryShdExists = true;
+	bool vertexShdExists = true;
+	bool fragmentShdExists = true;
+	bool geometryShdExists = true;
 
-	std::string VertexShaderPath = ShpJson.value("Vertex", "worldUber.vert");
-	std::string FragmentShaderPath = ShpJson.value("Fragment", "worldUber.frag");
-	std::string GeoShaderPath = ShpJson.value("Geometry", "");
+	std::string vertexShaderPath = shpJson.value("Vertex", "worldUber.vert");
+	std::string fragmentShaderPath = shpJson.value("Fragment", "worldUber.frag");
+	std::string geoShaderPath = shpJson.value("Geometry", "");
 
-	std::string VertexShaderStrSource = FileRW::ReadFile(BaseShaderPath + VertexShaderPath, &VertexShdExists);
-	std::string FragmentShaderStrSource = FileRW::ReadFile(BaseShaderPath + FragmentShaderPath, &FragmentShdExists);
-	std::string GeometryShaderStrSource = HasGeometryShader
-											? FileRW::ReadFile(BaseShaderPath + GeoShaderPath, &GeometryShdExists)
+	std::string vertexShaderStrSource = FileRW::ReadFile(BaseShaderPath + vertexShaderPath, &vertexShdExists);
+	std::string fragmentShaderStrSource = FileRW::ReadFile(BaseShaderPath + fragmentShaderPath, &fragmentShdExists);
+	std::string geometryShaderStrSource = hasGeometryShader
+											? FileRW::ReadFile(BaseShaderPath + geoShaderPath, &geometryShdExists)
 											: "";
 
-	if (!VertexShdExists)
+	if (!vertexShdExists)
 		throw(std::vformat(
 			"Could not load Vertex shader for program {}! File specified: {}",
-			std::make_format_args(this->Name, VertexShaderPath)
+			std::make_format_args(this->Name, vertexShaderPath)
 		));
 
-	if (!FragmentShdExists)
+	if (!fragmentShdExists)
 		throw(std::vformat(
 			"Could not load Fragment shader for program {}! File specified: {}",
-			std::make_format_args(this->Name, FragmentShaderPath)
+			std::make_format_args(this->Name, fragmentShaderPath)
 		));
 
-	if (!GeometryShdExists)
+	if (!geometryShdExists)
 		throw(std::vformat(
 			"Could not load Geometry shader for program {}! File specified: {}",
-			std::make_format_args(this->Name, GeoShaderPath)
+			std::make_format_args(this->Name, geoShaderPath)
 		));
 
-	const char* VertexSource = VertexShaderStrSource.c_str();
-	const char* FragmentSource = FragmentShaderStrSource.c_str();
+	const char* vertexSource = vertexShaderStrSource.c_str();
+	const char* fragmentSource = fragmentShaderStrSource.c_str();
 
-	const char* GeometrySource = GeometryShaderStrSource.c_str();
+	const char* geometrySource = geometryShaderStrSource.c_str();
 
-	GLuint VertexShader = glCreateShader(GL_VERTEX_SHADER);
-	GLuint FragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 
 	// TODO: Make a default fallback Geometry Shader so I don't have to bother with this -
 	// Looks a little too complicated rn tho
 	// 13/07/2024
-	GLuint GeometryShader = HasGeometryShader ? glCreateShader(GL_GEOMETRY_SHADER) : 0;
+	GLuint geometryShader = hasGeometryShader ? glCreateShader(GL_GEOMETRY_SHADER) : 0;
 
-	glShaderSource(VertexShader, 1, &VertexSource, NULL);
-	glShaderSource(FragmentShader, 1, &FragmentSource, NULL);
+	glShaderSource(vertexShader, 1, &vertexSource, NULL);
+	glShaderSource(fragmentShader, 1, &fragmentSource, NULL);
 
-	if (HasGeometryShader)
+	if (hasGeometryShader)
 	{
-		glShaderSource(GeometryShader, 1, &GeometrySource, NULL);
-		glCompileShader(GeometryShader);
+		glShaderSource(geometryShader, 1, &geometrySource, NULL);
+		glCompileShader(geometryShader);
 
-		this->PrintErrors(GeometryShader, "geometry shader");
+		m_PrintErrors(geometryShader, "geometry shader");
 	}
 
-	glCompileShader(VertexShader);
-	glCompileShader(FragmentShader);
+	glCompileShader(vertexShader);
+	glCompileShader(fragmentShader);
 
-	this->PrintErrors(VertexShader, "vertex shader");
-	this->PrintErrors(FragmentShader, "fragment shader");
+	m_PrintErrors(vertexShader, "vertex shader");
+	m_PrintErrors(fragmentShader, "fragment shader");
 
-	glAttachShader(this->ID, VertexShader);
-	glAttachShader(this->ID, FragmentShader);
+	glAttachShader(this->ID, vertexShader);
+	glAttachShader(this->ID, fragmentShader);
 
-	if (HasGeometryShader)
-		glAttachShader(this->ID, GeometryShader);
+	if (hasGeometryShader)
+		glAttachShader(this->ID, geometryShader);
 
 	glEnableVertexAttribArray(0);
 
 	glLinkProgram(this->ID);
 
-	this->PrintErrors(this->ID, "shader program");
+	m_PrintErrors(this->ID, "shader program");
 
 	//free shader code from memory, they've already been compiled so aren't needed anymore
-	glDeleteShader(VertexShader);
-	glDeleteShader(FragmentShader);
+	glDeleteShader(vertexShader);
+	glDeleteShader(fragmentShader);
 
-	if (HasGeometryShader)
-		glDeleteShader(GeometryShader);
+	if (hasGeometryShader)
+		glDeleteShader(geometryShader);
 }
 
-void ShaderProgram::Activate() const
+void ShaderProgram::SetUniformInt(const char* UniformName, int Value) const
 {
-	glUseProgram(this->ID);
+	this->Activate();
+
+	GLint location = glGetUniformLocation(this->ID, UniformName);
+	glUniform1i(location, Value);
+}
+
+void ShaderProgram::SetUniformFloat(const char* UniformName, float Value) const
+{
+	this->Activate();
+
+	GLint location = glGetUniformLocation(this->ID, UniformName);
+	glUniform1f(location, Value);
+}
+
+void ShaderProgram::SetUniformFloat3(const char* UniformName, float X, float Y, float Z) const
+{
+	this->Activate();
+
+	GLint location = glGetUniformLocation(this->ID, UniformName);
+	glUniform3f(location, X, Y, Z);
+}
+
+void ShaderProgram::SetUniformMatrix(const char* UniformName, const glm::mat4& Matrix) const
+{
+	this->Activate();
+
+	GLint location = glGetUniformLocation(this->ID, UniformName);
+	glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(Matrix));
+}
+
+void ShaderProgram::SetUniform(const char* UniformName, const Reflection::GenericValue& Value) const
+{
+	this->Activate();
+
+	GLint location = glGetUniformLocation(this->ID, UniformName);
+
+	switch (Value.Type)
+	{
+	case (Reflection::ValueType::Bool):
+	{
+		glUniform1i(location, Value.Bool);
+		break;
+	}
+	case (Reflection::ValueType::Integer):
+	{
+		glUniform1i(location, static_cast<int32_t>(Value.Integer));
+		break;
+	}
+	case (Reflection::ValueType::Double):
+	{
+		glUniform1f(location, static_cast<float>(Value.Double));
+		break;
+	}
+	case (Reflection::ValueType::Vector3):
+	{
+		Vector3 vec = Vector3(Value);
+		glUniform3f(
+			location,
+			static_cast<float>(vec.X),
+			static_cast<float>(vec.Y),
+			static_cast<float>(vec.Z)
+		);
+		break;
+	}
+	case (Reflection::ValueType::Matrix):
+	{
+		glm::mat4 mat = Value.AsMatrix();
+		glUniform4fv(location, 1, glm::value_ptr(mat));
+		break;
+	}
+
+	default:
+	{
+		const std::string typeName = Reflection::TypeAsString(Value.Type);
+		throw(std::vformat(
+			"Unrecognized uniform type '{}' trying to set '{}' for program '{}'",
+			std::make_format_args(typeName, UniformName, this->Name)
+		));
+	}
+	}
+}
+
+void ShaderProgram::m_PrintErrors(uint32_t Object, const char* Type) const
+{
+	char infoLog[1024];
+
+	if (Object != this->ID)
+	{
+		GLint hasCompiled;
+		glGetShaderiv(Object, GL_COMPILE_STATUS, &hasCompiled);
+
+		if (hasCompiled == GL_FALSE)
+		{
+			glGetShaderInfoLog(Object, 1024, NULL, infoLog);
+
+			std::string errorString = std::vformat(
+				"Error while compiling {} for program '{}':\n{}",
+				std::make_format_args(Type, this->Name, infoLog)
+			);
+
+			throw(errorString);
+		}
+	}
+	else
+	{
+		int hasLinked;
+
+		glGetProgramiv(Object, GL_LINK_STATUS, &hasLinked);
+
+		if (hasLinked == GL_FALSE)
+		{
+			glGetProgramInfoLog(Object, 1024, NULL, infoLog);
+
+			throw(std::vformat("Error while linking shader program:\n{}", std::make_format_args(infoLog)));
+		}
+	}
 }
 
 ShaderProgram::~ShaderProgram()
 {
 	auto it = std::find_if(
-		s_programs.begin(),
-		s_programs.end(),
+		s_Programs.begin(),
+		s_Programs.end(),
 		[this](auto&& p)
 		{
 			return p.second == this;
 		}
 	);
 
-	if (it != s_programs.end())
+	if (it != s_Programs.end())
 	{
 		glDeleteProgram(ID);
-		s_programs.erase(it->first);
+		s_Programs.erase(it->first);
 	}
 	else
 		Debug::Log(std::vformat(
@@ -162,64 +283,31 @@ ShaderProgram::~ShaderProgram()
 	ID = UINT32_MAX;
 }
 
-void ShaderProgram::PrintErrors(uint32_t Object, const char* Type) const
-{
-	char InfoLog[1024];
-
-	if (Object != this->ID)
-	{
-		GLint HasCompiled;
-		glGetShaderiv(Object, GL_COMPILE_STATUS, &HasCompiled);
-
-		if (HasCompiled == GL_FALSE)
-		{
-			glGetShaderInfoLog(Object, 1024, NULL, InfoLog);
-
-			std::string ErrorString = std::vformat(
-				"Error while compiling {} for program {}:\n{}",
-				std::make_format_args(Type, this->Name, InfoLog)
-			);
-
-			throw(ErrorString);
-		}
-	}
-	else
-	{
-		int HasLinked;
-
-		glGetProgramiv(Object, GL_LINK_STATUS, &HasLinked);
-
-		if (HasLinked == GL_FALSE)
-		{
-			glGetProgramInfoLog(Object, 1024, NULL, InfoLog);
-
-			throw(std::vformat("Error while linking shader program:\n{}", std::make_format_args(InfoLog)));
-		}
-	}
-}
-
 ShaderProgram* ShaderProgram::GetShaderProgram(std::string const& ProgramName)
 {
-	auto it = s_programs.find(ProgramName);
+	auto it = s_Programs.find(ProgramName);
 
-	if (it != s_programs.end())
+	if (it != s_Programs.end())
 		return it->second;
 	else
 	{
-		ShaderProgram* NewProgram = new ShaderProgram(ProgramName);
-		s_programs.insert(std::pair(ProgramName, NewProgram));
+		ShaderProgram* newProgram = new ShaderProgram(ProgramName);
+		s_Programs.insert(std::pair(ProgramName, newProgram));
 
-		return NewProgram;
+		return newProgram;
 	}
 }
 
 void ShaderProgram::ClearAll()
 {
-	s_programs.clear();
+	for (auto& programIt : s_Programs)
+		delete programIt.second;
+
+	s_Programs.clear();
 }
 
 void ShaderProgram::ReloadAll()
 {
-	for (auto& it : s_programs)
+	for (auto& it : s_Programs)
 		it.second->Reload();
 }

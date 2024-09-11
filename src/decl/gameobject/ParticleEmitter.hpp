@@ -13,7 +13,6 @@ float Quad[];
 
 struct _particle
 {
-public:
 	float Lifetime = 1.f;
 	float TimeAliveFor = 0.f;
 	float Size = 1.f;
@@ -51,7 +50,7 @@ public:
 private:
 	size_t m_GetUsableParticleIndex();
 
-	std::vector<_particle*> m_Particles;
+	std::vector<_particle> m_Particles;
 
 	double m_TimeSinceLastSpawn = 0.f;
 

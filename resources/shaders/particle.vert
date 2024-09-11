@@ -5,7 +5,6 @@
 layout (location = 0) in vec2 VertexPosition;
 
 uniform mat4 CameraMatrix = mat4(1.0f);
-uniform vec3 CameraPosition;
 
 uniform mat4 Scale = mat4(1.0f);
 

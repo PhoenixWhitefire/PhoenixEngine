@@ -366,7 +366,7 @@ void Editor::RenderUI()
 	GameObject* selected = nullptr;
 
 	if (m_HierarchyCurItem > 0)
-		if (children.size() > 0)
+		if (children.size() >= m_HierarchyCurItem)
 			selected = children[(size_t)m_HierarchyCurItem - 1];
 		else
 			m_HierarchyCurItem = -1;

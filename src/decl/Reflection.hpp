@@ -26,15 +26,12 @@ s_Api.Functions.insert(                               \
 // as they use the `s_Api.Properties` member.
 
 // Declare a property with a custom Getter and Setter
-#define REFLECTION_DECLAREPROP(strname, type, get, set) s_Api.Properties.insert(std::pair(    \
-	strname,                                                                                 \
-	IProperty                                                                 \
+#define REFLECTION_DECLAREPROP(strname, type, get, set) s_Api.Properties[strname] = IProperty\
 	{	                                                                                     \
 		Reflection::ValueType::type,                                                         \
 		get,                                                                                 \
 		set                                                                                  \
 	}                                                                                        \
-))                                                                                           \
 
 // Declare a property with the preset Getter (return x) and Setter (x = y)
 #define REFLECTION_DECLAREPROP_SIMPLE(c, name, type) REFLECTION_DECLAREPROP(   \
@@ -90,13 +87,12 @@ s_Api.Functions.insert(                               \
 	nullptr,                                                                            \
 )                                                                                       \
 
-#define REFLECTION_DECLAREFUNC(strname, ins, outs, func) s_Api.Functions.insert(std::pair(strname, \
-	IFunction{                                                                     \
+#define REFLECTION_DECLAREFUNC(strname, ins, outs, func) s_Api.Functions[strname] = IFunction \
+	{    \
 		ins,                                                                                      \
 		outs,                                                                                     \
 		func                                                                                      \
 	}                                                                                             \
-))                                                                                                \
 
 #define REFLECTION_DECLAREPROC(strname, func) REFLECTION_DECLAREFUNC(\
 	strname,                                                        \

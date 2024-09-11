@@ -13,9 +13,7 @@ static const std::string MissingTexPath = "textures/MISSING2_MaximumADHD_status_
 static const std::string TexLoadErr =
 "Attempted to load texture '{}', but it failed. Additionally, the replacement Missing Texture could not be loaded.";
 
-TextureManager* TextureManager::Singleton = new TextureManager();
-
-typedef std::function<Texture*(TextureManager*, Texture*, std::string)> AsyncTexT;
+typedef std::function<Texture*(TextureManager*, Texture*, std::string)> AsyncTexLoader_t;
 
 static void registerTexture(Texture* texture)
 {
@@ -118,14 +116,13 @@ static void registerTexture(Texture* texture)
 TextureManager::TextureManager()
 	: m_Textures{}, m_TexPromises{}
 {
+	this->LoadTextureFromPath(MissingTexPath, false);
 }
 
 TextureManager* TextureManager::Get()
 {
-	if (!TextureManager::Singleton)
-		TextureManager::Singleton = new TextureManager();
-
-	return TextureManager::Singleton;
+	static TextureManager instance;
+	return &instance;
 }
 
 uint8_t* TextureManager::LoadImageData(const char* ImagePath, int* ImageWidth, int* ImageHeight, int* ImageColorChannels)
@@ -184,13 +181,14 @@ Texture* TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 			std::promise<Texture*>* promise = new std::promise<Texture*>();
 
 			std::thread(
-				[promise, this, texture, ActualPath](AsyncTexT loader)
+				[promise, this, texture, ActualPath](AsyncTexLoader_t loader)
 				{
 					promise->set_value_at_thread_exit(loader(this, texture, ActualPath));
 				}
 			, asyncTextureLoader).detach();
 
 			m_TexPromises.push_back(promise);
+			m_TexFutures.push_back(promise->get_future().share());
 		}
 		else
 		{
@@ -218,20 +216,36 @@ void TextureManager::FinalizeAsyncLoadedTextures()
 	if (m_TexPromises.size() == 0)
 		return;
 
-	for (auto promise : m_TexPromises)
+	for (size_t promiseIndex = 0; promiseIndex < m_TexPromises.size(); promiseIndex++)
 	{
-		auto f = promise->get_future();
+		std::promise<Texture*>* promise = m_TexPromises[promiseIndex];
+		auto& f = m_TexFutures[promiseIndex];
 
-		if (!f.valid())
+		// https://stackoverflow.com/a/10917945/16875161
+		// TODO 10/09/2024
+		// Surely there's gotta be a better way than this `wait_for` bullshit
+		if (!f.valid() || (f.wait_for(std::chrono::seconds(0)) != std::future_status::ready))
 			continue;
 
 		Texture* image = f.get();
 		registerTexture(image);
 		
+		// remove element (ugly)
+		// 10/09/2024
+		auto lastPromise = m_TexPromises[m_TexPromises.size() - 1];
+		m_TexPromises[m_TexPromises.size() - 1] = promise;
+		m_TexPromises[promiseIndex] = lastPromise;
+
+		m_TexPromises.pop_back();
+
+		auto& lastFuture = m_TexFutures[m_TexFutures.size() - 1];
+		m_TexFutures[m_TexFutures.size() - 1] = f;
+		m_TexFutures[promiseIndex] = lastFuture;
+
+		m_TexFutures.pop_back();
+
 		delete promise;
 	}
-
-	m_TexPromises.clear();
 }
 
 /*

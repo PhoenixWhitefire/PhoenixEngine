@@ -42,10 +42,9 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 static bool FirstDragFrame = false;
 
 static bool PreviouslyPressingF11 = false;
-static bool IsInputBeingSunk = false;
 static bool MouseCaptured = false;
 
-static ImGuiIO* m_imGuiIO = nullptr;
+static ImGuiIO* GuiIO = nullptr;
 
 static const float MouseSensitivity = 100.0f;
 static const float MovementSpeed = 15.f;
@@ -100,179 +99,175 @@ static void logSdlVersion()
 	));
 }
 
-static int FindArgumentInCliArgs(
+static int findArgumentInCliArgs(
 	int ArgCount,
 	char** Arguments,
 	const char* SeekingArgument
 )
 {
 	// linear search through all cli arguments
-	for (int CurrentArgIdx = 0; CurrentArgIdx < ArgCount; CurrentArgIdx++)
+	for (int argIndex = 0; argIndex < ArgCount; argIndex++)
 	{
 		// strcmp makes no sense, why does it return 0 if they match and not 1??
-		if (strcmp(Arguments[CurrentArgIdx], SeekingArgument) == 0)
-		{
-			return CurrentArgIdx;
-		}
+		if (strcmp(Arguments[argIndex], SeekingArgument) == 0)
+			return argIndex;
 	}
 
 	// argument not found
 	return 0;
 }
 
-static void HandleInputs(Reflection::GenericValue Data)
+static void handleInputs(Reflection::GenericValue Data)
 {
-	double DeltaTime = Data.Double;
+	double deltaTime = Data.Double;
 
 	if (EngineJsonConfig.value("Developer", false))
-		EditorContext->Update(DeltaTime, EngineInstance->Workspace->GetSceneCamera()->Transform);
+		EditorContext->Update(deltaTime, EngineInstance->Workspace->GetSceneCamera()->Transform);
 
-	Object_Camera* Camera = EngineInstance->Workspace->GetSceneCamera();
+	Object_Camera* camera = EngineInstance->Workspace->GetSceneCamera();
 
-	const glm::tvec3<double, glm::highp> UpVec = Vector3::yAxis;
-	
-	UserInput::InputBeingSunk = m_imGuiIO->WantCaptureKeyboard;
-
-	if (!UserInput::InputBeingSunk)
+	if (camera->GenericMovement)
 	{
-		double DisplacementSpeed = MovementSpeed * DeltaTime;
+		static const glm::tvec3<double, glm::highp> UpVec = Vector3::yAxis;
 
-		if (UserInput::IsKeyDown(SDLK_LSHIFT))
-			DisplacementSpeed *= 0.5f;
+		UserInput::InputBeingSunk = GuiIO->WantCaptureKeyboard || GuiIO->WantCaptureMouse;
 
-		Vector3 Displacement{};
+		if (!UserInput::InputBeingSunk)
+		{
+			double displacementSpeed = MovementSpeed * deltaTime;
 
-		if (UserInput::IsKeyDown(SDLK_w))
-			Displacement += Vector3(0, 0, DisplacementSpeed);
+			if (UserInput::IsKeyDown(SDLK_LSHIFT))
+				displacementSpeed *= 0.5f;
 
-		if (UserInput::IsKeyDown(SDLK_a))
-			Displacement += Vector3(DisplacementSpeed, 0, 0);
+			Vector3 displacement{};
 
-		if (UserInput::IsKeyDown(SDLK_s))
-			Displacement += Vector3(0, 0, -DisplacementSpeed);
+			if (UserInput::IsKeyDown(SDLK_w))
+				displacement += Vector3(0, 0, displacementSpeed);
 
-		if (UserInput::IsKeyDown(SDLK_d))
-			Displacement += Vector3(-DisplacementSpeed, 0, 0);
+			if (UserInput::IsKeyDown(SDLK_a))
+				displacement += Vector3(displacementSpeed, 0, 0);
 
-		if (UserInput::IsKeyDown(SDLK_q))
-			Displacement += Vector3(0, -DisplacementSpeed, 0);
+			if (UserInput::IsKeyDown(SDLK_s))
+				displacement += Vector3(0, 0, -displacementSpeed);
 
-		if (UserInput::IsKeyDown(SDLK_e))
-			Displacement += Vector3(0, DisplacementSpeed, 0);
+			if (UserInput::IsKeyDown(SDLK_d))
+				displacement += Vector3(-displacementSpeed, 0, 0);
 
-		Camera->Transform = glm::translate(Camera->Transform, glm::vec3((glm::tvec3<double>)Displacement));
+			if (UserInput::IsKeyDown(SDLK_q))
+				displacement += Vector3(0, -displacementSpeed, 0);
+
+			if (UserInput::IsKeyDown(SDLK_e))
+				displacement += Vector3(0, displacementSpeed, 0);
+
+			camera->Transform = glm::translate(camera->Transform, (glm::vec3)displacement);
+		}
+
+		int mouseX;
+		int mouseY;
+
+		SDL_Window* window = EngineInstance->Window;
+
+		uint32_t activeMouseButton = SDL_GetMouseState(&mouseX, &mouseY);
+
+		if (MouseCaptured)
+		{
+			// Doesn't hide unless we tell Dear ImGui to hide the cursor too
+			// (Otherwise it flickers)
+			// 22/08/2024
+			ImGui::SetMouseCursor(ImGuiMouseCursor_None);
+			PHX_SDL_CALL(SDL_ShowCursor, SDL_DISABLE);
+
+			int windowSizeX, windowSizeY;
+
+			SDL_GetWindowSize(window, &windowSizeX, &windowSizeY);
+
+			if (FirstDragFrame)
+			{
+				SDL_SetWindowMouseGrab(window, SDL_TRUE);
+
+				SDL_WarpMouseInWindow(window, windowSizeX / 2, windowSizeY / 2);
+
+				mouseX, mouseY = windowSizeX / 2, windowSizeY / 2;
+				PrevMouseX, PrevMouseY = mouseX, mouseY;
+
+				FirstDragFrame = false;
+			}
+
+			int deltaMouseX = PrevMouseX - mouseX;
+			int deltaMouseY = PrevMouseY - mouseY;
+
+			double rotationX = MouseSensitivity * ((double)deltaMouseY - (windowSizeY / 2.0f)) / windowSizeY;
+			double rotationY = MouseSensitivity * ((double)deltaMouseX - (windowSizeX / 2.0f)) / windowSizeX;
+			rotationX += 50.f; // TODO 22/08/2024: Why??
+			rotationY += 50.f;
+
+			glm::tvec3<double, glm::highp> newForward = glm::rotate(
+				CamForward,
+				glm::radians(rotationX),
+				glm::normalize(glm::cross(CamForward, UpVec))
+			);
+
+			if (abs(glm::angle(newForward, UpVec) - glm::radians(90.0f)) <= glm::radians(85.0f))
+				CamForward = newForward;
+
+			CamForward = glm::rotate(CamForward, glm::radians(-rotationY), UpVec);
+
+			glm::tvec3<double, glm::highp> position{ camera->Transform[3] };
+
+			camera->Transform = glm::lookAt(position, position + CamForward, UpVec);
+
+			// Keep the mouse in the window.
+			// Teleport it to the other side if it hits the edge.
+
+			int newMouseX = mouseX, newMouseY = mouseY;
+
+			if (mouseX <= 10)
+				newMouseX = windowSizeX - 20;
+
+			if (mouseX >= windowSizeX - 10)
+				newMouseX = 20;
+
+			if (mouseY <= 10)
+				newMouseY = windowSizeY - 20;
+
+			if (mouseY >= windowSizeY - 10)
+				newMouseY = 20;
+
+			if (UserInput::InputBeingSunk)
+				newMouseX, newMouseY = windowSizeX / 2, windowSizeY / 2;
+
+			if (newMouseX != mouseX || newMouseY != mouseY)
+			{
+				SDL_WarpMouseInWindow(window, newMouseX, newMouseY);
+				mouseX = newMouseX;
+				mouseY = newMouseY;
+			}
+
+			if (activeMouseButton & SDL_BUTTON_RMASK)
+			{
+				MouseCaptured = false;
+				SDL_WarpMouseInWindow(window, windowSizeX / 2, windowSizeY / 2);
+			}
+		}
+		else
+		{
+			if (!FirstDragFrame)
+			{
+				PHX_SDL_CALL(SDL_ShowCursor, SDL_ENABLE);
+				SDL_SetWindowMouseGrab(window, SDL_FALSE);
+
+				ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
+
+				FirstDragFrame = true;
+			}
+
+			if (activeMouseButton & SDL_BUTTON_LMASK && !UserInput::InputBeingSunk)
+				MouseCaptured = true;
+		}
+
+		PrevMouseX = mouseX;
+		PrevMouseY = mouseY;
 	}
-
-	int mouseX;
-	int mouseY;
-
-	SDL_Window* window = EngineInstance->Window;
-
-	uint32_t activeMouseButton = SDL_GetMouseState(&mouseX, &mouseY);
-
-	IsInputBeingSunk = m_imGuiIO->WantCaptureKeyboard || m_imGuiIO->WantCaptureMouse;
-
-	if (MouseCaptured)
-	{
-		// Doesn't hide unless we tell Dear ImGui to hide the cursor too
-		// (Otherwise it flickers)
-		// 22/08/2024
-		ImGui::SetMouseCursor(ImGuiMouseCursor_None);
-		SDL_ShowCursor(SDL_DISABLE);
-
-		int windowSizeX, windowSizeY;
-
-		SDL_GetWindowSize(window, &windowSizeX, &windowSizeY);
-
-		if (FirstDragFrame)
-		{
-			
-			SDL_SetWindowMouseGrab(window, SDL_TRUE);
-
-			SDL_WarpMouseInWindow(window, windowSizeX / 2, windowSizeY / 2);
-
-			SDL_GetMouseState(&mouseX, &mouseY);
-
-			PrevMouseX = windowSizeX / 2;
-			PrevMouseY = windowSizeY / 2;
-
-			FirstDragFrame = false;
-		}
-
-		int deltaMouseX = PrevMouseX - mouseX;
-		int deltaMouseY = PrevMouseY - mouseY;
-
-		double RotationX = MouseSensitivity * ((double)deltaMouseY - (windowSizeY / 2.0f)) / windowSizeY;
-		double RotationY = MouseSensitivity * ((double)deltaMouseX - (windowSizeX / 2.0f)) / windowSizeX;
-		RotationX += 50.f; // TODO 22/08/2024: Why??
-		RotationY += 50.f;
-
-		glm::tvec3<double, glm::highp> newForward = glm::rotate(
-			CamForward,
-			glm::radians(RotationX),
-			glm::normalize(glm::cross(CamForward, UpVec))
-		);
-
-		if (abs(glm::angle(newForward, UpVec) - glm::radians(90.0f)) <= glm::radians(85.0f))
-			CamForward = newForward;
-
-		CamForward = glm::rotate(CamForward, glm::radians(-RotationY), UpVec);
-
-		glm::tvec3<double, glm::highp> Position{ Camera->Transform[3] };
-
-		Camera->Transform = glm::lookAt(Position, Position + CamForward, UpVec);
-
-		// Keep the mouse in the window.
-		// Teleport it to the other side if it hits the edge.
-
-		int newMouseX = mouseX, newMouseY = mouseY;
-
-		if (mouseX <= 10)
-			newMouseX = windowSizeX - 20;
-
-		if (mouseX >= windowSizeX - 10)
-			newMouseX = 20;
-
-		if (mouseY <= 10)
-			newMouseY = windowSizeY - 20;
-
-		if (mouseY >= windowSizeY - 10)
-			newMouseY = 20;
-
-		if (IsInputBeingSunk)
-			newMouseX, newMouseY = windowSizeX / 2, windowSizeY / 2;
-
-		if (newMouseX != mouseX || newMouseY != mouseY)
-		{
-			SDL_WarpMouseInWindow(window, newMouseX, newMouseY);
-			mouseX = newMouseX;
-			mouseY = newMouseY;
-		}
-
-		if (activeMouseButton & SDL_BUTTON_RMASK)
-		{
-			MouseCaptured = false;
-			SDL_WarpMouseInWindow(window, windowSizeX / 2, windowSizeY / 2);
-		}
-	}
-	else
-	{
-		if (!FirstDragFrame)
-		{
-			SDL_ShowCursor(SDL_ENABLE);
-			SDL_SetWindowMouseGrab(window, SDL_FALSE);
-
-			ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
-
-			FirstDragFrame = true;
-		}
-
-		if (activeMouseButton & SDL_BUTTON_LMASK && !IsInputBeingSunk)
-			MouseCaptured = true;
-	}
-
-	PrevMouseX = mouseX;
-	PrevMouseY = mouseY;
 
 	if (UserInput::IsKeyDown(SDLK_F11))
 		if (!PreviouslyPressingF11)
@@ -291,7 +286,7 @@ static void LoadLevel(const std::string& LevelPath)
 {
 	Debug::Log(std::vformat("Loading scene: '{}'", std::make_format_args(LevelPath)));
 
-	GameObject* workspace = GameObject::s_DataModel->GetChild("Workspace");
+	Object_Workspace* workspace = EngineInstance->Workspace;
 
 	GameObject* prevModel = workspace->GetChild("Level");
 
@@ -304,11 +299,20 @@ static void LoadLevel(const std::string& LevelPath)
 
 	bool loadSuccess = true;
 
-	std::vector<GameObject*> Objects = SceneFormat::Deserialize(FileRW::ReadFile(LevelPath), &loadSuccess);
+	// 11/09/2024
+	// Today marks the day a Luau script can move the Camera
+	// It''ll set `GenericMovement` to false so that `HandleInputs` doesn't
+	//  mess with it
+	// We set it to true here in case the next level does not have a Camera Control Script
+	// (cause I still want to look around :3)
+	// (without having to go to the Camera in the Hierarchy and manually re-enable it :3)
+	workspace->GetSceneCamera()->GenericMovement = true;
+
+	std::vector<GameObject*> objects = SceneFormat::Deserialize(FileRW::ReadFile(LevelPath), &loadSuccess);
 
 	if (loadSuccess)
 	{
-		for (GameObject* object : Objects)
+		for (GameObject* object : objects)
 			object->SetParent(levelModel);
 	}
 	else
@@ -317,9 +321,9 @@ static void LoadLevel(const std::string& LevelPath)
 	//MapLoader::LoadMapIntoObject(LevelPath, levelModel);
 }
 
-static void DrawUI(Reflection::GenericValue Data)
+static void drawUI(Reflection::GenericValue Data)
 {
-	if (UserInput::IsKeyDown(SDLK_j) && !IsInputBeingSunk)
+	if (UserInput::IsKeyDown(SDLK_j) && !UserInput::InputBeingSunk)
 	{
 		printf("BEGIN DUMP WORLD ARRAY\n");
 		printf("%zi OBJECTS: \n", GameObject::s_WorldArray.size());
@@ -336,7 +340,7 @@ static void DrawUI(Reflection::GenericValue Data)
 		printf("END DUMP WORLD ARRAY\n");
 	}
 
-	if (UserInput::IsKeyDown(SDLK_l) && !IsInputBeingSunk)
+	if (UserInput::IsKeyDown(SDLK_l) && !UserInput::InputBeingSunk)
 	{
 		Debug::Log("Dumping GameObject API...");
 
@@ -346,14 +350,14 @@ static void DrawUI(Reflection::GenericValue Data)
 		Debug::Log("API dump finished");
 	}
 
-	if (UserInput::IsKeyDown(SDLK_i) && !IsInputBeingSunk)
+	if (UserInput::IsKeyDown(SDLK_i) && !UserInput::InputBeingSunk)
 	{
 		Debug::Log("Reloading configuration...");
 
 		EngineInstance->LoadConfiguration();
 	}
 
-	if (UserInput::IsKeyDown(SDLK_k) && !IsInputBeingSunk)
+	if (UserInput::IsKeyDown(SDLK_k) && !UserInput::InputBeingSunk)
 	{
 		Debug::Log("Reloading shaders...");
 
@@ -433,11 +437,11 @@ static void DrawUI(Reflection::GenericValue Data)
 
 		ImGui::Checkbox("VSync", &EngineInstance->VSync);
 
-		bool WasFullscreen = EngineInstance->IsFullscreen;
+		bool wasFullscreen = EngineInstance->IsFullscreen;
 
 		ImGui::Checkbox("Fullscreen", &EngineInstance->IsFullscreen);
 
-		if (EngineInstance->IsFullscreen != WasFullscreen)
+		if (EngineInstance->IsFullscreen != wasFullscreen)
 			EngineInstance->SetIsFullscreen(EngineInstance->IsFullscreen);
 
 		if (EngineInstance->VSync)
@@ -449,45 +453,43 @@ static void DrawUI(Reflection::GenericValue Data)
 			ImGui::InputInt("FPS max", &EngineInstance->FpsCap, 1, 30);
 		}
 
-		bool PostFXEnabled = EngineJsonConfig.value("postfx_enabled", false);
+		bool postFxEnabled = EngineJsonConfig.value("postfx_enabled", false);
 
-		ImGui::Checkbox("Post-Processing", &PostFXEnabled);
+		ImGui::Checkbox("Post-Processing", &postFxEnabled);
 
-		EngineJsonConfig["postfx_enabled"] = PostFXEnabled;
+		EngineJsonConfig["postfx_enabled"] = postFxEnabled;
 
-		if (PostFXEnabled)
+		if (postFxEnabled)
 		{
-			bool BlurVignette = EngineJsonConfig.value("postfx_blurvignette", false);
-			bool Distortion = EngineJsonConfig.value("postfx_distortion", false);
+			bool blurVignette = EngineJsonConfig.value("postfx_blurvignette", false);
+			bool distortion = EngineJsonConfig.value("postfx_distortion", false);
 
-			ImGui::Checkbox("Blur vignette", &BlurVignette);
-			ImGui::Checkbox("Distortion", &Distortion);
+			ImGui::Checkbox("Blur vignette", &blurVignette);
+			ImGui::Checkbox("Distortion", &distortion);
 
-			EngineJsonConfig["postfx_blurvignette"] = BlurVignette;
-			EngineJsonConfig["postfx_distortion"] = Distortion;
+			EngineJsonConfig["postfx_blurvignette"] = blurVignette;
+			EngineJsonConfig["postfx_distortion"] = distortion;
 
 			if (EngineJsonConfig["postfx_blurvignette"])
 			{
-				float DistFactorMultiplier = EngineJsonConfig.value("postfx_blurvignette_blurstrength", 2.f);
-				float WeightExponent = EngineJsonConfig.value("postfx_blurvignette_weightexp", 16.f);
-				float WeightMultiplier = EngineJsonConfig.value("postfx_blurvignette_weightmul", 2.5f);
-				float SampleRadius = EngineJsonConfig.value("postfx_blurvignette_sampleradius", 4.f);
+				float distFactorMultiplier = EngineJsonConfig.value("postfx_blurvignette_blurstrength", 2.f);
+				float weightExponent = EngineJsonConfig.value("postfx_blurvignette_weightexp", 2.f);
+				float weightMultiplier = EngineJsonConfig.value("postfx_blurvignette_weightmul", 2.5f);
+				float sampleRadius = EngineJsonConfig.value("postfx_blurvignette_sampleradius", 4.f);
 
-				ImGui::InputFloat("Vignette dist weight factor", &DistFactorMultiplier);
-				ImGui::InputFloat("Vignette weight exponent", &WeightExponent);
-				ImGui::InputFloat("Vignette weight multiplier", &WeightMultiplier);
-				ImGui::InputFloat("Vignette sample radius", &SampleRadius);
+				ImGui::InputFloat("Vignette dist weight factor", &distFactorMultiplier);
+				ImGui::InputFloat("Vignette weight exponent", &weightExponent);
+				ImGui::InputFloat("Vignette weight multiplier", &weightMultiplier);
+				ImGui::InputFloat("Vignette sample radius", &sampleRadius);
 
-				EngineJsonConfig["postfx_blurvignette_blurstrength"] = DistFactorMultiplier;
-				EngineJsonConfig["postfx_blurvignette_weightexp"] = WeightExponent;
-				EngineJsonConfig["postfx_blurvignette_weightmul"] = WeightMultiplier;
-				EngineJsonConfig["postfx_blurvignette_sampleradius"] = SampleRadius;
+				EngineJsonConfig["postfx_blurvignette_blurstrength"] = distFactorMultiplier;
+				EngineJsonConfig["postfx_blurvignette_weightexp"] = weightExponent;
+				EngineJsonConfig["postfx_blurvignette_weightmul"] = weightMultiplier;
+				EngineJsonConfig["postfx_blurvignette_sampleradius"] = sampleRadius;
 			}
 		}
 
-		bool SaveConfig = ImGui::Button("Save Post FX settings");
-
-		if (SaveConfig)
+		if (ImGui::Button("Save Post FX settings"))
 		{
 			FileRW::WriteFile("phoenix.conf", EngineJsonConfig.dump(2), false);
 			Debug::Log("The JSON Config overwrote the pre-existing 'phoenix.conf'.");
@@ -500,8 +502,6 @@ static void DrawUI(Reflection::GenericValue Data)
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	}
-
-	IsInputBeingSunk = m_imGuiIO->WantCaptureKeyboard || m_imGuiIO->WantCaptureMouse;
 }
 
 static void Application(int argc, char** argv)
@@ -532,10 +532,17 @@ static void Application(int argc, char** argv)
 
 	ImGui::CreateContext();
 
-	m_imGuiIO = &ImGui::GetIO();
+	GuiIO = &ImGui::GetIO();
 	ImGui::StyleColorsDark();
-	ImGui_ImplSDL2_InitForOpenGL(EngineInstance->Window, EngineInstance->RendererContext->GLContext);
-	ImGui_ImplOpenGL3_Init("#version 460");
+
+	if (!ImGui_ImplSDL2_InitForOpenGL(
+			EngineInstance->Window,
+			EngineInstance->RendererContext->GLContext
+		))
+		throw("ImGui intialization failure on ImGui_ImplSDL2_InitForOpenGL");
+
+	if (!ImGui_ImplOpenGL3_Init("#version 460"))
+		throw("ImGui initialization failure on ImGui_ImplOpenGL3_Init");
 
 	EditorContext = EngineJsonConfig.value("Developer", false) ? new Editor() : nullptr;
 	
@@ -564,7 +571,7 @@ static void Application(int argc, char** argv)
 	const char* mapFileFromArgs{};
 	bool hasMapFromArgs = false;
 
-	int mapFileArgIdx = FindArgumentInCliArgs(argc, argv, "-loadmap");
+	int mapFileArgIdx = findArgumentInCliArgs(argc, argv, "-loadmap");
 
 	if (mapFileArgIdx > 0)
 	{
@@ -586,8 +593,8 @@ static void Application(int argc, char** argv)
 	if (EditorContext)
 		EditorContext->Init();
 
-	EngineInstance->OnFrameStart.Connect(HandleInputs);
-	EngineInstance->OnFrameRenderGui.Connect(DrawUI);
+	EngineInstance->OnFrameStart.Connect(handleInputs);
+	EngineInstance->OnFrameRenderGui.Connect(drawUI);
 
 	EngineInstance->Start();
 

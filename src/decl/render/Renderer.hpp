@@ -1,7 +1,5 @@
 #pragma once
 
-#define SHADER_MAX_LIGHTS 6
-
 #include<glm/matrix.hpp>
 
 #include"render/ShaderProgram.hpp"
@@ -12,9 +10,29 @@
 #include"datatype/Vector3.hpp"
 #include"gameobject/Base3D.hpp"
 
-struct MeshData_t
+#define SHADER_MAX_LIGHTS 6
+
+/*
+	09/09/2024
+	Why can't SDL have something like OpenGL's Debug Log?
+	They have their own logging stuff, but it doesn't seem to do anything with errors
+*/
+#define PHX_SDL_CALL(func, ...) \
+{ \
+	int status = func(__VA_ARGS__); \
+	if (status < 0) \
+	{ \
+		const char* errMessage = SDL_GetError(); \
+		throw(std::vformat( \
+			std::string("Error in ") + std::string(#func) + std::string(":\nCode: {}\nMessage: {}"), \
+			std::make_format_args(status, errMessage) \
+		)); \
+	} \
+} \
+
+struct RenderItem
 {
-	Mesh* MeshData{};
+	Mesh* RenderMesh{};
 	glm::mat4 Transform{};
 	Vector3 Size;
 	RenderMaterial* Material{};
@@ -25,11 +43,11 @@ struct MeshData_t
 	FaceCullingMode FaceCulling = FaceCullingMode::BackFace;
 };
 
-enum class LightType { DirectionalLight, Pointlight, Spotlight };
+enum class LightType { Directional, Point, Spot };
 
-struct LightData_t
+struct LightItem
 {
-	LightType Type = LightType::Pointlight;
+	LightType Type = LightType::Point;
 
 	Vector3 Position;
 	Color LightColor;
@@ -41,11 +59,10 @@ struct LightData_t
 	int ShadowMapTextureId{};
 };
 
-struct Scene_t
+struct Scene
 {
-	std::vector<MeshData_t> MeshData;
-	std::vector<MeshData_t> TransparentMeshData;
-	std::vector<LightData_t> LightData;
+	std::vector<RenderItem> RenderList;
+	std::vector<LightItem> LightingList;
 
 	std::vector<ShaderProgram*> UniqueShaders;
 };
@@ -58,7 +75,7 @@ public:
 	// Changes the rendering resolution
 	void ChangeResolution(uint32_t newWidth, uint32_t newHeight);
 
-	void DrawScene(Scene_t& Scene);
+	void DrawScene(const Scene& Scene);
 
 	// Submits a single draw call
 	void DrawMesh(
@@ -76,7 +93,7 @@ public:
 	SDL_GLContext GLContext = nullptr;
 
 private:
-	void m_SetTextureUniforms(MeshData_t& Mesh, ShaderProgram* Shaders);
+	void m_SetTextureUniforms(const RenderItem& Mesh, ShaderProgram* Shaders);
 
 	VAO* m_VertexArray = nullptr;
 	VBO* m_VertexBuffer = nullptr;

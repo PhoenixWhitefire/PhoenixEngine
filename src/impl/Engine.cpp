@@ -17,6 +17,7 @@
 #include"UserInput.hpp"
 #include"FileRW.hpp"
 #include"Debug.hpp"
+#include"BaseMeshes.hpp"
 
 static uint32_t RectangleVAO, RectangleVBO;
 static auto ChronoStartTime = std::chrono::high_resolution_clock::now();
@@ -37,61 +38,47 @@ static float RectangleVertices[24] = {
 		-1.0f,  1.0f,    0.0f, 1.0f
 };
 
-static std::vector<Vertex> SkyboxVertices =
+static const std::unordered_map<SDL_LogPriority, const std::string> LogPriorityStringMap =
 {
-	/*
-	//   Coordinates
-	-1.0f, -1.0f,  1.0f,//        7--------6
-	 1.0f, -1.0f,  1.0f,//       /|       /|
-	 1.0f, -1.0f, -1.0f,//      4--------5 |
-	-1.0f, -1.0f, -1.0f,//      | |      | |
-	-1.0f,  1.0f,  1.0f,//      | 3------|-2
-	 1.0f,  1.0f,  1.0f,//      |/       |/
-	 1.0f,  1.0f, -1.0f,//      0--------1
-	-1.0f,  1.0f, -1.0f,
-	*/
-
-	Vertex{ glm::vec3( -1.0f, -1.0f,  1.0f), glm::vec3(), glm::vec3(), glm::vec2() },
-	Vertex{ glm::vec3(  1.0f, -1.0f,  1.0f), glm::vec3(), glm::vec3(), glm::vec2() },
-	Vertex{ glm::vec3(  1.0f, -1.0f, -1.0f), glm::vec3(), glm::vec3(), glm::vec2() },
-	Vertex{ glm::vec3( -1.0f, -1.0f, -1.0f), glm::vec3(), glm::vec3(), glm::vec2() },
-	Vertex{ glm::vec3( -1.0f,  1.0f,  1.0f), glm::vec3(), glm::vec3(), glm::vec2() },
-	Vertex{ glm::vec3(  1.0f,  1.0f,  1.0f), glm::vec3(), glm::vec3(), glm::vec2() },
-	Vertex{ glm::vec3(  1.0f,  1.0f, -1.0f), glm::vec3(), glm::vec3(), glm::vec2() },
-	Vertex{ glm::vec3( -1.0f,  1.0f, -1.0f), glm::vec3(), glm::vec3(), glm::vec2() },
-
+	{ SDL_LOG_PRIORITY_VERBOSE, "Verbose" },
+	{ SDL_LOG_PRIORITY_DEBUG, "Debug" },
+	{ SDL_LOG_PRIORITY_INFO, "Info" },
+	{ SDL_LOG_PRIORITY_WARN, "Warning" },
+	{ SDL_LOG_PRIORITY_ERROR, "Error" },
+	{ SDL_LOG_PRIORITY_CRITICAL, "Critical" },
+	{ SDL_NUM_LOG_PRIORITIES, "[This string should never be displayed]" }
 };
 
-static std::vector<uint32_t> SkyboxIndices =
+static void sdlLog(void*, int Type, SDL_LogPriority Priority, const char* Message)
 {
-	// Right
-	1, 2, 6,
-	6, 5, 1,
-	// Left
-	0, 4, 7,
-	7, 3, 0,
-	// Top
-	4, 5, 6,
-	6, 7, 4,
-	// Bottom
-	0, 3, 2,
-	2, 1, 0,
-	// Back
-	0, 1, 5,
-	5, 4, 0,
-	// Front
-	3, 7, 6,
-	6, 2, 3
-};
+	auto priorityIt = LogPriorityStringMap.find(Priority);
 
-static void UpdateDescendants(GameObject* root, double DeltaTime)
+	std::string priorityName;
+
+	if (priorityIt == LogPriorityStringMap.end())
+		priorityName = std::to_string((int)Priority);
+	else
+		priorityName = priorityIt->second;
+
+	std::string logString = std::vformat(
+		"SDL log -\nType: {}\nPriority: {}\nMessage: {}",
+		std::make_format_args(Type, priorityName, Message)
+	);
+
+	if (Priority < SDL_LOG_PRIORITY_ERROR)
+		Debug::Log(logString);
+	else
+		throw(logString);
+}
+
+static void updateDescendants(GameObject* Root, double DeltaTime)
 {
-	for (GameObject* obj : root->GetChildren())
+	for (GameObject* object : Root->GetChildren())
 	{
-		obj->Update(DeltaTime);
+		object->Update(DeltaTime);
 
-		if (obj->GetChildren().size() > 0)
-			UpdateDescendants(obj, DeltaTime);
+		if (object->GetChildren().size() > 0)
+			updateDescendants(object, DeltaTime);
 	}
 }
 
@@ -174,49 +161,62 @@ EngineObject::EngineObject()
 	// 
 	//GameObject::GameObjectTable["Model"] = &Object_Model()
 
-	const int InitialWindowSizeX = 1280, InitialWindowSizeY = 720;
-	this->WindowSizeX = InitialWindowSizeX, this->WindowSizeY = InitialWindowSizeY;
+	this->LoadConfiguration();
 
-	SDL_Init(SDL_INIT_VIDEO);
+	nlohmann::json defaultWindowSize = EngineJsonConfig.value(
+		"DefaultWindowSize",
+		nlohmann::json::array({ 1280, 720 })
+	);
+
+	this->WindowSizeX = defaultWindowSize[0], this->WindowSizeY = defaultWindowSize[1];
+
+	PHX_SDL_CALL(SDL_Init, SDL_INIT_VIDEO);
 
 	Debug::Log("Initialized SDL Video subsystem");
-	
+
+	// This is easily the worst complaint I've had about this library,
+	// the log function *does not called even when an error retrievable by SDL_GetError occurs*!
+	// It's complete RUBBISH, USELESS, TRASH, BULLSHIT
+	// 09/09/2024
+	SDL_LogSetOutputFunction(sdlLog, nullptr);
+
 	// Must be set *before* window creation
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
+	PHX_SDL_CALL(
+		SDL_GL_SetAttribute,
+		SDL_GL_CONTEXT_PROFILE_MASK, 
+		SDL_GL_CONTEXT_PROFILE_CORE
+	);
+	PHX_SDL_CALL(
+		SDL_GL_SetAttribute,
+		SDL_GL_CONTEXT_MAJOR_VERSION, 
+		EngineJsonConfig.value("SDL_GL_VersionMajor", 4)
+	);
+	PHX_SDL_CALL(
+		SDL_GL_SetAttribute,
+		SDL_GL_CONTEXT_MINOR_VERSION, 
+		EngineJsonConfig.value("SDL_GL_VersionMinor", 6)
+	);
 
-	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+	PHX_SDL_CALL(SDL_GL_SetAttribute, SDL_GL_DOUBLEBUFFER, 1);
+	PHX_SDL_CALL(SDL_GL_SetAttribute, SDL_GL_DEPTH_SIZE, 24);
+	PHX_SDL_CALL(SDL_GL_SetAttribute, SDL_GL_STENCIL_SIZE, 8);
 
-	Debug::Log("Set OpenGL window attributes");
-
-	// Initialize SDL
 	this->Window = SDL_CreateWindow(
 		"Waiting on configuration...",
 		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-		InitialWindowSizeX, InitialWindowSizeY,
+		this->WindowSizeX, this->WindowSizeY,
 		m_SDLWindowFlags
 	);
-
-	Debug::Log("Window created");
-
-	LoadConfiguration();
-
-	SDL_SetWindowSize(
-		this->Window,
-		EngineJsonConfig["DefaultWindowSize"][0],
-		EngineJsonConfig["DefaultWindowSize"][1]
-	);
-
-	SDL_SetWindowTitle(this->Window, EngineJsonConfig.value("GameTitle", "PhoenixEngine").c_str());
 
 	if (!this->Window)
 	{
 		const char* errStr = SDL_GetError();
 		throw(std::vformat("SDL could not create the window: {}\n", std::make_format_args(errStr)));
 	}
+
+	Debug::Log("Window created");
+
+	SDL_SetWindowTitle(this->Window, EngineJsonConfig.value("GameTitle", "PhoenixEngine").c_str());
 
 	Debug::Log("Window configured");
 
@@ -231,19 +231,9 @@ EngineObject::EngineObject()
 	this->DataModel = dynamic_cast<Object_DataModel*>(newDataModel);
 	GameObject::s_DataModel = newDataModel;
 
-	GameObject* WorkspaceShared = DataModel->GetChild("Workspace");
+	GameObject* workspace = DataModel->GetChild("Workspace");
 
-	if (!WorkspaceShared)
-		throw("The Workspace was removed, or otherwise could not be found.");
-
-	this->Workspace = dynamic_cast<Object_Workspace*>(WorkspaceShared);
-
-	this->PostProcessingShaders = ShaderProgram::GetShaderProgram("postprocessing");
-
-	this->PostProcessingShaders->Activate();
-	glUniform1i(glGetUniformLocation(this->PostProcessingShaders->ID, "Texture"), 0);
-
-	glEnable(GL_DEPTH_TEST);
+	this->Workspace = dynamic_cast<Object_Workspace*>(workspace);
 
 	// Post-processing framebuffer
 
@@ -262,59 +252,57 @@ EngineObject::EngineObject()
 	Debug::Log("Engine constructed");
 }
 
-static std::vector<LightData_t> compileLightData(GameObject* RootObject)
+static std::vector<LightItem> createLightingList(GameObject* RootObject)
 {
-	std::vector<GameObject*> Objects = RootObject->GetChildren();
-	std::vector<LightData_t> DataList;
+	std::vector<GameObject*> objects = RootObject->GetChildren();
+	std::vector<LightItem> dataList;
 
-	for (GameObject* Object : Objects)
+	for (GameObject* object : objects)
 	{
-		if (!Object->Enabled)
+		if (!object->Enabled)
 			continue;
 
-		Object_Light* LightObject = dynamic_cast<Object_Light*>(Object);
+		Object_Light* light = dynamic_cast<Object_Light*>(object);
 
-		if (LightObject)
+		if (light)
 		{
-			Object_DirectionalLight* Directional = dynamic_cast<Object_DirectionalLight*>(LightObject);
-			Object_PointLight* Point = dynamic_cast<Object_PointLight*>(LightObject);
+			Object_DirectionalLight* directional = dynamic_cast<Object_DirectionalLight*>(light);
+			Object_PointLight* point = dynamic_cast<Object_PointLight*>(light);
 
-			LightData_t Data;
+			LightItem data;
 
-			if (Directional)
+			if (directional)
 			{
-				Data.Position = LightObject->Position;
-				Data.LightColor = LightObject->LightColor * LightObject->Brightness;
-				Data.Type = LightType::DirectionalLight;
+				data.Position = light->Position;
+				data.LightColor = light->LightColor * light->Brightness;
+				data.Type = LightType::Directional;
 			}
 
-			if (Point)
+			if (point)
 			{
-				Data.Position = LightObject->Position;
-				Data.LightColor = LightObject->LightColor * LightObject->Brightness;
-				Data.Type = LightType::Pointlight;
-				Data.Range = Point->Range;
+				data.Position = light->Position;
+				data.LightColor = light->LightColor * light->Brightness;
+				data.Type = LightType::Point;
+				data.Range = point->Range;
 			}
 
-			DataList.push_back(Data);
+			dataList.push_back(data);
 		}
 
-		if (Object->GetChildren().size() > 0)
+		if (object->GetChildren().size() > 0)
 		{
-			std::vector<LightData_t> ChildData = compileLightData(Object);
-
-			for (uint32_t CDataIdx = 0; CDataIdx < ChildData.size(); CDataIdx++)
-				DataList.push_back(ChildData[CDataIdx]);
+			std::vector<LightItem> childData = createLightingList(object);
+			std::copy(childData.begin(), childData.end(), std::back_inserter(dataList));
 		}
 	}
 
-	return DataList;
+	return dataList;
 }
 
-static std::vector<MeshData_t> compileMeshData(GameObject* RootObject, Object_Camera* SceneCamera)
+static std::vector<RenderItem> createRenderList(GameObject* RootObject, Object_Camera* SceneCamera)
 {
 	std::vector<GameObject*> objects = RootObject->GetChildren();
-	std::vector<MeshData_t> dataList;
+	std::vector<RenderItem> dataList;
 
 	for (GameObject* object : objects)
 	{
@@ -326,15 +314,19 @@ static std::vector<MeshData_t> compileMeshData(GameObject* RootObject, Object_Ca
 			{
 				// TODO: frustum culling
 				// Hold R to disable distance culling
-				if (glm::distance(glm::vec3(object3D->Transform[3]), glm::vec3(SceneCamera->Transform[3])) > 100.0f
-					&& !UserInput::IsKeyDown(SDLK_r))
+				if (glm::distance(
+						glm::vec3(object3D->Transform[3]),
+						glm::vec3(SceneCamera->Transform[3])
+					) > 100.0f
+					&& !UserInput::IsKeyDown(SDLK_r)
+				)
 					continue;
 
 				//TODO: recheck whether we need this
 				// if (MeshObject->HasTransparency)
 					//continue;
 
-				MeshData_t data
+				RenderItem data
 				{
 					object3D->GetRenderMesh(),
 					object3D->Transform,
@@ -351,10 +343,8 @@ static std::vector<MeshData_t> compileMeshData(GameObject* RootObject, Object_Ca
 
 			if (object->GetChildren().size() > 0)
 			{
-				std::vector<MeshData_t> ChildData = compileMeshData(object, SceneCamera);
-
-				for (uint32_t CDataIdx = 0; CDataIdx < ChildData.size(); CDataIdx++)
-					dataList.push_back(ChildData[CDataIdx]);
+				std::vector<RenderItem> childData = createRenderList(object, SceneCamera);
+				std::copy(childData.begin(), childData.end(), std::back_inserter(dataList));
 			}
 		}
 	}
@@ -364,9 +354,9 @@ static std::vector<MeshData_t> compileMeshData(GameObject* RootObject, Object_Ca
 
 static double GetRunningTime()
 {
-	auto ChronoTime = std::chrono::high_resolution_clock::now();
+	auto chronoTime = std::chrono::high_resolution_clock::now();
 
-	return std::chrono::duration_cast<std::chrono::nanoseconds>(ChronoTime - ChronoStartTime).count() / 1e+9;
+	return std::chrono::duration_cast<std::chrono::nanoseconds>(chronoTime - ChronoStartTime).count() / 1e+9;
 }
 
 void EngineObject::Start()
@@ -395,12 +385,12 @@ void EngineObject::Start()
 		"back"
 	};
 
-	std::vector<Texture*> SkyboxFacesLoading;
+	std::vector<Texture*> skyboxFacesLoading;
 
-	GLuint SkyboxCubemap = 0;
+	GLuint skyboxCubemap = 0;
 
-	glGenTextures(1, &SkyboxCubemap);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, SkyboxCubemap);
+	glGenTextures(1, &skyboxCubemap);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemap);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -410,16 +400,16 @@ void EngineObject::Start()
 
 	for (const std::string skyboxFace : SkyboxCubemapImages)
 	{
-		Texture* tx = TextureManager::Get()->LoadTextureFromPath(SkyPath + skyboxFace + ".jpg");
-		SkyboxFacesLoading.push_back(tx);
+		Texture* tex = TextureManager::Get()->LoadTextureFromPath(SkyPath + skyboxFace + ".jpg");
+		skyboxFacesLoading.push_back(tex);
 	}
 
-	GLubyte WhitePixel = 0xFF;
+	GLubyte whitePixel = 0xFF;
 
-	for (int ImageIndex = 0; ImageIndex < 6; ImageIndex++)
+	for (int imageIndex = 0; imageIndex < 6; imageIndex++)
 	{
 		glTexImage2D(
-			GL_TEXTURE_CUBE_MAP_POSITIVE_X + ImageIndex,
+			GL_TEXTURE_CUBE_MAP_POSITIVE_X + imageIndex,
 			0,
 			GL_RED,
 			1,
@@ -427,7 +417,7 @@ void EngineObject::Start()
 			0,
 			GL_RED,
 			GL_UNSIGNED_BYTE,
-			(void*)&WhitePixel
+			(void*)&whitePixel
 		);
 
 		glGenerateMipmap(GL_TEXTURE_2D);
@@ -437,26 +427,32 @@ void EngineObject::Start()
 
 	//Texture HDRISkyboxTexture("Assets/Textures/hdri_sky_1.jpeg", "Diffuse", 0);
 
-	ShaderProgram* SkyboxShaders = ShaderProgram::GetShaderProgram("skybox");
+	ShaderProgram* postFxShaders = ShaderProgram::GetShaderProgram("postprocessing");
+	ShaderProgram* skyboxShaders = ShaderProgram::GetShaderProgram("skybox");
 
-	SkyboxShaders->Activate();
+	postFxShaders->SetUniformInt("Texture", 1);
+	postFxShaders->SetUniformInt("DistortionTexture", 2);
 
-	glUniform1i(glGetUniformLocation(SkyboxShaders->ID, "SkyCubemap"), 3);
+	skyboxShaders->SetUniformInt("SkyCubemap", 3);
 
-	Scene_t Scene = Scene_t();
+	Scene scene = Scene();
 
 	RendererContext->Framebuffer->Unbind();
 
-	Texture* DistortionTexture = TextureManager::Get()->LoadTextureFromPath("textures/screendistort.jpg");
+	Texture* distortionTexture = TextureManager::Get()->LoadTextureFromPath("textures/screendistort.jpg");
 
-	Mesh SkyboxMesh = Mesh(SkyboxVertices, SkyboxIndices);
-
-	SDL_Event PollingEvent;
+	SDL_Event pollingEvent;
 
 	Debug::Log("Main program loop start...");
 
-	while (!(this->Exit || this->DataModel->WantExit))
+	while (!this->Exit)
 	{
+		if (this->DataModel->WantExit)
+		{
+			Debug::Log("DataModel requested shutdown");
+			break;
+		}
+
 		if (!DataModel->GetChildOfClass("Workspace"))
 		{
 			Debug::Log("Workspace was Destroyed, shutting down");
@@ -465,26 +461,26 @@ void EngineObject::Start()
 
 		this->RunningTime = GetRunningTime();
 
-		Scene.MeshData.clear();
-		Scene.LightData.clear();
+		scene.RenderList.clear();
+		scene.LightingList.clear();
 
 		TextureManager::Get()->FinalizeAsyncLoadedTextures();
 
 		bool skyboxLoaded = true;
 
-		for (int idx = 0; idx < SkyboxFacesLoading.size(); idx++)
+		for (int index = 0; index < skyboxFacesLoading.size(); index++)
 		{
-			Texture* face = SkyboxFacesLoading[idx];
+			Texture* face = skyboxFacesLoading[index];
 
 			if (face->AttemptedLoad && face->Identifier != TEXTUREMANAGER_INVALID_ID)
 			{
 				//glDeleteTextures(1, &face->Identifier);
 
 				glActiveTexture(GL_TEXTURE3);
-				glBindTexture(GL_TEXTURE_CUBE_MAP, SkyboxCubemap);
+				glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemap);
 
 				glTexImage2D(
-					GL_TEXTURE_CUBE_MAP_POSITIVE_X + idx,
+					GL_TEXTURE_CUBE_MAP_POSITIVE_X + index,
 					0,
 					GL_RGB,
 					face->Width,
@@ -502,32 +498,32 @@ void EngineObject::Start()
 			}
 		}
 
-		if (skyboxLoaded && SkyboxFacesLoading.size() > 0)
+		if (skyboxLoaded && skyboxFacesLoading.size() > 0)
 		{
-			SkyboxFacesLoading.clear();
+			skyboxFacesLoading.clear();
 			glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 		}
 
 		this->FpsCap = std::clamp(this->FpsCap, 1, 600);
 
-		double FrameDelta = RunningTime - LastFrame;
-		double FpsCapDelta = 1.f / this->FpsCap;
+		double frameDelta = RunningTime - LastFrame;
+		double fpsCapDelta = 1.f / this->FpsCap;
 
 		// Wait the appropriate amount of time between frames
-		if (!VSync && (FrameDelta < FpsCapDelta))
-			SDL_Delay(static_cast<uint32_t>((FpsCapDelta - FrameDelta) * 1000));
+		if (!VSync && (frameDelta < fpsCapDelta))
+			SDL_Delay(static_cast<uint32_t>((fpsCapDelta - frameDelta) * 1000));
 
-		double DeltaTime = RunningTime - LastTime;
+		double deltaTime = RunningTime - LastTime;
 		LastTime = RunningTime;
 		FrameStart = RunningTime;
 
-		this->OnFrameStart.Fire(DeltaTime);
+		this->OnFrameStart.Fire(deltaTime);
 
-		while (SDL_PollEvent(&PollingEvent) != 0)
+		while (SDL_PollEvent(&pollingEvent) != 0)
 		{
-			ImGui_ImplSDL2_ProcessEvent(&PollingEvent);
+			ImGui_ImplSDL2_ProcessEvent(&pollingEvent);
 
-			switch (PollingEvent.type) 
+			switch (pollingEvent.type) 
 			{
 
 			case (SDL_QUIT):
@@ -538,13 +534,13 @@ void EngineObject::Start()
 
 			case (SDL_WINDOWEVENT):
 			{
-				switch (PollingEvent.window.event)
+				switch (pollingEvent.window.event)
 				{
 
 				case (SDL_WINDOWEVENT_RESIZED):
 				{
-					int NewSizeX = PollingEvent.window.data1;
-					int NewSizeY = PollingEvent.window.data2;
+					int NewSizeX = pollingEvent.window.data1;
+					int NewSizeY = pollingEvent.window.data2;
 
 					// Only call ChangeResolution if the new resolution is actually different
 					if (NewSizeX != this->WindowSizeX || NewSizeY != this->WindowSizeY)
@@ -559,25 +555,24 @@ void EngineObject::Start()
 			}
 		}
 
-		DataModel->Update(DeltaTime);
-		UpdateDescendants(dynamic_cast<GameObject*>(DataModel), DeltaTime);
+		DataModel->Update(deltaTime);
+		updateDescendants(dynamic_cast<GameObject*>(DataModel), deltaTime);
 
-		double AspectRatio = (double)this->WindowSizeX / (double)this->WindowSizeY;
+		double aspectRatio = (double)this->WindowSizeX / (double)this->WindowSizeY;
 
-		GameObject* workspaceBase = dynamic_cast<GameObject*>(Workspace);
-		Object_Camera* SceneCamera = this->Workspace->GetSceneCamera();
+		GameObject* workspace = dynamic_cast<GameObject*>(Workspace);
+		Object_Camera* sceneCamera = this->Workspace->GetSceneCamera();
 
-		glm::mat4 CameraMatrix = SceneCamera->GetMatrixForAspectRatio(AspectRatio);
-		float* CamMatrixPtr = glm::value_ptr(CameraMatrix);
+		glm::mat4 cameraMatrix = sceneCamera->GetMatrixForAspectRatio(aspectRatio);
 
 		// Aggregate mesh and light data into a list
-		Scene.MeshData = compileMeshData(workspaceBase, SceneCamera);
-		Scene.LightData = compileLightData(workspaceBase);
+		scene.RenderList = createRenderList(workspace, sceneCamera);
+		scene.LightingList = createLightingList(workspace);
 
 		// Hashmap better than linaer serch
 		std::unordered_map<ShaderProgram*, ShaderProgram*> uniqueShaderMap;
 
-		for (MeshData_t md : Scene.MeshData)
+		for (RenderItem md : scene.RenderList)
 		{
 			if (uniqueShaderMap.find(md.Material->Shader) == uniqueShaderMap.end())
 				uniqueShaderMap.insert(std::pair(md.Material->Shader, md.Material->Shader));
@@ -587,29 +582,18 @@ void EngineObject::Start()
 		{
 			ShaderProgram* shp = it.second;
 
-			shp->Activate();
+			shp->SetUniformMatrix("CameraMatrix", cameraMatrix);
+			shp->SetUniformFloat("Time", static_cast<float>(this->RunningTime));
 
-			glUniformMatrix4fv(
-				glGetUniformLocation(shp->ID, "CameraMatrix"),
-				1,
-				GL_FALSE,
-				CamMatrixPtr
-			);
-
-			glUniform1f(glGetUniformLocation(shp->ID, "Time"), (float)RunningTime);
-			Scene.UniqueShaders.push_back(shp);
+			scene.UniqueShaders.push_back(shp);
 		}
 
 		glActiveTexture(GL_TEXTURE3);
 
 		glDepthFunc(GL_LEQUAL);
 
-		SkyboxShaders->Activate();
-
-		glUniform1i(glGetUniformLocation(SkyboxShaders->ID, "SkyCubemap"), 3);
-
-		glm::vec3 CamPos = glm::vec3(SceneCamera->Transform[3]);
-		glm::vec3 CamForward = glm::vec3(SceneCamera->Transform[2]);
+		glm::vec3 camPos = glm::vec3(sceneCamera->Transform[3]);
+		glm::vec3 camForward = glm::vec3(sceneCamera->Transform[2]);
 
 		glm::mat4 view = glm::mat4(1.f);
 		glm::mat4 projection = glm::mat4(1.0f);
@@ -617,61 +601,57 @@ void EngineObject::Start()
 		// We make the mat4 into a mat3 and then a mat4 again in order to get rid of the last row and column
 		// The last row and column affect the translation of the skybox (which we don't want to affect)
 
-		view = glm::mat4(glm::mat3(glm::lookAt(CamPos, CamPos + CamForward, glm::vec3(0.f, 1.f, 0.f))));
-		
+		view = glm::mat4(glm::mat3(glm::lookAt(camPos, camPos + camForward, glm::vec3(0.f, 1.f, 0.f))));
+
 		projection = glm::perspective(
-			glm::radians(SceneCamera->FieldOfView),
-			AspectRatio,
-			SceneCamera->NearPlane,
-			SceneCamera->FarPlane
+			glm::radians(sceneCamera->FieldOfView),
+			aspectRatio,
+			sceneCamera->NearPlane,
+			sceneCamera->FarPlane
 		);
 
-		glUniformMatrix4fv(
-			glGetUniformLocation(SkyboxShaders->ID, "CameraMatrix"),
-			1,
-			GL_FALSE,
-			glm::value_ptr(projection * view)
-		);
+		skyboxShaders->SetUniformMatrix("CameraMatrix", projection * view);
 
-		glBindTexture(GL_TEXTURE_CUBE_MAP, SkyboxCubemap);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemap);
 		
 		RendererContext->Framebuffer->Bind();
 
 		glClearColor(0.086f, 0.105f, 0.21f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		// Skybox mesh winding order means that "BackFace" is outside the mesh.
-		RendererContext->DrawMesh(&SkyboxMesh,
-			SkyboxShaders,
-			Vector3::one * 15.f,
+		
+		RendererContext->DrawMesh(
+			BaseMeshes::Cube(),
+			skyboxShaders,
+			Vector3::one,
 			projection * view,
-			FaceCullingMode::None
+			FaceCullingMode::FrontFace // Cull the Outside, not the Inside
 		);
 
 		glDepthFunc(GL_LESS);
 
 		//Main render pass
-		RendererContext->DrawScene(Scene);
+		RendererContext->DrawScene(scene);
 
-		for (GameObject* object : Workspace->GetDescendants())
+		for (GameObject* object : this->Workspace->GetDescendants())
 		{
 			Object_ParticleEmitter* particleEmitter = dynamic_cast<Object_ParticleEmitter*>(object);
 
 			if (particleEmitter)
-				particleEmitter->Render(SceneCamera->Transform);
+				particleEmitter->Render(sceneCamera->Transform);
 		}
 
 		glDisable(GL_DEPTH_TEST);
 
-		uint32_t dataModelId = DataModel->ObjectId;
+		uint32_t dataModelId = this->DataModel->ObjectId;
 
-		this->OnFrameRenderGui.Fire(DeltaTime);
+		this->OnFrameRenderGui.Fire(deltaTime);
 
 		if (!GameObject::GetObjectById(dataModelId))
 		{
 			Debug::Log("DataModel was Destroy'd, shutting down...");
 			this->DataModel = nullptr;
 			GameObject::s_DataModel = nullptr;
+
 			break;
 		}
 
@@ -681,43 +661,46 @@ void EngineObject::Start()
 
 		RendererContext->Framebuffer->Unbind();
 
-		this->PostProcessingShaders->Activate();
-
 		if (EngineJsonConfig.value("postfx_enabled", false))
 		{
-			glUniform1i(glGetUniformLocation(PostProcessingShaders->ID, "PostFXEnabled"), 1);
-
-			auto VignetteBlurLoc = glGetUniformLocation(PostProcessingShaders->ID, "ScreenEdgeBlurEnabled");
-			auto DistortionLoc = glGetUniformLocation(PostProcessingShaders->ID, "DistortionEnabled");
-			auto TimeLoc = glGetUniformLocation(PostProcessingShaders->ID, "Time");
-
-			auto BlurVignetteStrength = glGetUniformLocation(PostProcessingShaders->ID, "BlurVignetteStrength");
-			auto BlurVignetteDistMul = glGetUniformLocation(PostProcessingShaders->ID, "BlurVignetteDistMul");
-			auto BlurVignetteDistExp = glGetUniformLocation(PostProcessingShaders->ID, "BlurVignetteDistExp");
-			auto BlurVignetteSampleRadius = glGetUniformLocation(PostProcessingShaders->ID, "BlurVignetteSampleRadius");
-
-			glUniform1i(VignetteBlurLoc, int(EngineJsonConfig.value("postfx_blurvignette", false)));
-			glUniform1i(DistortionLoc, int(EngineJsonConfig.value("postfx_distortion", false)));
+			postFxShaders->SetUniformInt("PostFxEnabled", 1);
+			postFxShaders->SetUniformInt(
+				"ScreenEdgeBlurEnabled",
+				EngineJsonConfig.value("postfx_blurvignette", false)
+			);
+			postFxShaders->SetUniformInt(
+				"DistortionEnabled",
+				EngineJsonConfig.value("postfx_distortion", false)
+			);
 
 			if (EngineJsonConfig.find("postfx_blurvignette_blurstrength") != EngineJsonConfig.end())
 			{
-				glUniform1f(BlurVignetteStrength, (float)EngineJsonConfig["postfx_blurvignette_blurstrength"]);
-				glUniform1f(BlurVignetteDistMul, (float)EngineJsonConfig["postfx_blurvignette_weightexp"]);
-				glUniform1f(BlurVignetteDistExp, (float)EngineJsonConfig["postfx_blurvignette_weightmul"]);
-				glUniform1i(BlurVignetteSampleRadius, (int)EngineJsonConfig["postfx_blurvignette_sampleradius"]);
+				postFxShaders->SetUniformFloat(
+					"BlurVignetteStrength",
+					EngineJsonConfig["postfx_blurvignette_blurstrength"]
+				);
+				postFxShaders->SetUniformFloat(
+					"BlurVignetteDistMul",
+					EngineJsonConfig["postfx_blurvignette_weightmul"]
+				);
+				postFxShaders->SetUniformFloat(
+					"BlurVignetteDistExp",
+					EngineJsonConfig["postfx_blurvignette_weightexp"]
+				);
+				postFxShaders->SetUniformInt(
+					"BlurVignetteSampleRadius",
+					EngineJsonConfig["postfx_blurvignette_sampleradius"]
+				);
 			}
 
-			glUniform1f(TimeLoc, static_cast<float>(RunningTime));
-			
-			glActiveTexture(GL_TEXTURE2);
-			glBindTexture(GL_TEXTURE_2D, DistortionTexture->Identifier);
+			postFxShaders->SetUniformFloat("Time", static_cast<float>(this->RunningTime));
 
-			glUniform1i(glGetUniformLocation(PostProcessingShaders->ID, "DistortionTexture"), 2);
+			glActiveTexture(GL_TEXTURE2);
+			glBindTexture(GL_TEXTURE_2D, distortionTexture->Identifier);
 		}
 		else
-			glUniform1i(glGetUniformLocation(PostProcessingShaders->ID, "PostFXEnabled"), 0);
+			postFxShaders->SetUniformInt("PostFxEnabled", 0);
 
-		glUniform1i(glGetUniformLocation(PostProcessingShaders->ID, "Texture"), 1);
 		glActiveTexture(GL_TEXTURE1);
 		RendererContext->Framebuffer->BindTexture();
 
@@ -742,17 +725,17 @@ void EngineObject::Start()
 		this->FrameTime = curTimePrevSwap - FrameStart;
 		LastFrame = RunningTime;
 
-		this->m_DrawnFramesInSecond++;
+		m_DrawnFramesInSecond++;
 
-		this->OnFrameEnd.Fire(DeltaTime);
+		this->OnFrameEnd.Fire(deltaTime);
 
 		if (RunningTime - LastSecond > 1.0f)
 		{
 			LastSecond = RunningTime;
 
-			this->FramesPerSecond = this->m_DrawnFramesInSecond;
+			this->FramesPerSecond = m_DrawnFramesInSecond;
 
-			this->m_DrawnFramesInSecond = -1;
+			m_DrawnFramesInSecond = -1;
 
 			Debug::Save();
 		}

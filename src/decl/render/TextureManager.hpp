@@ -23,8 +23,6 @@ struct Texture
 class TextureManager
 {
 public:
-	TextureManager();
-
 	static TextureManager* Get();
 
 	/*
@@ -46,9 +44,10 @@ public:
 	*/
 	uint8_t* LoadImageData(const char* ImagePath, int* ImageWidth, int* ImageHeight, int* ImageColorChannels);
 
-	static TextureManager* Singleton;
-
 private:
+	TextureManager();
+
 	std::vector<std::promise<Texture*>*> m_TexPromises;
+	std::vector<std::shared_future<Texture*>> m_TexFutures;
 	std::unordered_map<std::string, Texture*> m_Textures;
 };

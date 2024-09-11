@@ -32,7 +32,14 @@ class VAO
 public:
 	VAO();
 
-	void LinkAttrib(VBO& VertexBuffer, uint32_t Layout, uint32_t Components, uint32_t Type, int Stride, void* Offset);
+	void LinkAttrib(
+		VBO& VertexBuffer,
+		uint32_t Layout,
+		uint32_t Components,
+		uint32_t Type,
+		int32_t Stride,
+		void* Offset
+	);
 
 	void Bind() const;
 	void Unbind();

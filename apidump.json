@@ -132,6 +132,16 @@
     "Transform": "Matrix",
     "Transparency": "Double"
   },
+  "Script": {
+    "ClassName": "String",
+    "Destroy": "() -> ()",
+    "Enabled": "Bool",
+    "Name": "String",
+    "ObjectId": "Integer",
+    "Parent": "GameObject",
+    "Reload": "() -> (Bool,)",
+    "SourceFile": "String"
+  },
   "SpotLight": {
     "Brightness": "Double",
     "ClassName": "String",
