@@ -1,7 +1,7 @@
 [submodule "luau"]
 	path = luau
 	url = https://github.com/Luau-lang/luau/
-[submodule "Vendor/imgui"]
+[submodule "imgui"]
 	path = "imgui"
 	url = https://github.com/ocornut/imgui
 	branch = docking

@@ -17,7 +17,16 @@ garbaj spaghett
 1. `git clone https://github.com/PhoenixWhitefire/PhoenixEngine --recursive`
 	* `git clone https://github.com/PhoenixWhitefire/PhoenixEngine --recursive -b dev` for the `dev` branch	
 2. `cmake -S "./" -B "./"`
-3. Open the resulting `.sln` and Build the Solution!
+3. Place `imgui` into the `Vendor` directory (not sure how to do it on my side)
+4. Open the resulting `.sln`, and you should have
+	* `PhoenixEngine` as the startup project
+	* A Solution Folder called "Vendor", containing:
+		* `Luau.Ast`
+		* `Luau.Common`
+		* `Luau.Compiler`
+		* `Luau.VM`
+		* `Misc`
+5. Build the Solution. `Debug` does not work because of conflicts with Luau. Use `Release`.
 
 # Attributions
 3rd-party code is located in the `Vendor` directory and compiled into `lib/Vendor.lib` and statically linked with the Engine.
