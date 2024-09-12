@@ -1,4 +1,7 @@
 {
   "albedo": "models/grass/diffuse.png",
-  "specular": "models/grass/specular.png"
+  "specExponent": 0.5,
+  "specMultiply": 0.5,
+  "specular": "models/grass/specular.png",
+  "translucency": false
 }

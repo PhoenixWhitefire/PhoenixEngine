@@ -9,7 +9,7 @@ local Camera = workspace.SceneCamera
 Camera.GenericMovement = false
 
 local function updateCubes(DeltaTime)
-    if xisKeyPressed("t") then
+    if input_keypressed("t") then
         NumCubes += 1
         local newCube = GameObject.new("Primitive")
         newCube.Name = `Cube{#Cubes}`
@@ -21,9 +21,9 @@ local function updateCubes(DeltaTime)
     
     for spawnTime, cube in Cubes do
         local mat = cube.Transform
-        xmat4_setv(mat, 3, 0, math.sin(TotalTime - spawnTime) * 15)
-        xmat4_setv(mat, 3, 1, 5)
-        xmat4_setv(mat, 3, 2, math.cos(TotalTime - spawnTime) * 15)
+        matrix_setv(mat, 3, 0, math.sin(TotalTime - spawnTime) * 15)
+        matrix_setv(mat, 3, 1, 5)
+        matrix_setv(mat, 3, 2, math.cos(TotalTime - spawnTime) * 15)
         cube.Transform = mat
     end
 end
@@ -31,15 +31,15 @@ end
 local function handleCameraMovement(DeltaTime)
     local speed = 15 * DeltaTime
     
-    local moveX = (if xisKeyPressed("a") then 1 else 0) - (if xisKeyPressed("d") then 1 else 0)
-    local moveY = (if xisKeyPressed("e") then 1 else 0) - (if xisKeyPressed("q") then 1 else 0)
-    local moveZ = (if xisKeyPressed("w") then 1 else 0) - (if xisKeyPressed("s") then 1 else 0)
+    local moveX = (if input_keypressed("a") then 1 else 0) - (if input_keypressed("d") then 1 else 0)
+    local moveY = (if input_keypressed("e") then 1 else 0) - (if input_keypressed("q") then 1 else 0)
+    local moveZ = (if input_keypressed("w") then 1 else 0) - (if input_keypressed("s") then 1 else 0)
     
     local transrights = Camera.Transform
     
-    xmat4_setv(transrights, 3, 0, xmat4_getv(transrights, 3, 0) + (moveX * speed))
-    xmat4_setv(transrights, 3, 1, xmat4_getv(transrights, 3, 1) + (moveY * speed))
-    xmat4_setv(transrights, 3, 2, xmat4_getv(transrights, 3, 2) + (moveZ * speed))
+    matrix_setv(transrights, 3, 0, matrix_getv(transrights, 3, 0) + (moveX * speed))
+    matrix_setv(transrights, 3, 1, matrix_getv(transrights, 3, 1) + (moveY * speed))
+    matrix_setv(transrights, 3, 2, matrix_getv(transrights, 3, 2) + (moveZ * speed))
     
     Camera.Transform = transrights -- We give the Camera some rights (this means `Object_Camera` is canonically trans)
 end

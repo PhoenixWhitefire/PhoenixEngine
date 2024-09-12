@@ -372,6 +372,8 @@ static void drawUI(Reflection::GenericValue Data)
 		ImGui_ImplSDL2_NewFrame();
 		ImGui::NewFrame();
 
+		//ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
+
 		ImGui::Begin("Level");
 
 		static std::string saveMessage;
@@ -533,6 +535,7 @@ static void Application(int argc, char** argv)
 	ImGui::CreateContext();
 
 	GuiIO = &ImGui::GetIO();
+	//GuiIO->ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	ImGui::StyleColorsDark();
 
 	if (!ImGui_ImplSDL2_InitForOpenGL(

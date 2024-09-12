@@ -637,9 +637,9 @@ static void initDefaultState()
 
 				return 1;
 			},
-			"xmat4_getv"
+			"matrix_getv"
 		);
-		lua_setglobal(DefaultState, "xmat4_getv");
+		lua_setglobal(DefaultState, "matrix_getv");
 
 		lua_pushcfunction(
 			DefaultState,
@@ -654,9 +654,9 @@ static void initDefaultState()
 
 				return 0;
 			},
-			"xmat4_setv"
+			"matrix_setv"
 		);
-		lua_setglobal(DefaultState, "xmat4_setv");
+		lua_setglobal(DefaultState, "matrix_setv");
 	}
 
 	// GameObject
@@ -699,9 +699,9 @@ static void initDefaultState()
 			
 			return 1;
 		},
-		"xisKeyPressed"
+		"input_keypressed"
 	);
-	lua_setglobal(DefaultState, "xisKeyPressed");
+	lua_setglobal(DefaultState, "input_keypressed");
 }
 
 void Object_Script::s_DeclareReflections()

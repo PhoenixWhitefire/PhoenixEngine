@@ -1,12 +1,8 @@
 cmake_minimum_required(VERSION 3.16.0 FATAL_ERROR)
 
-set(CMAKE_SYSTEM_VERSION 10.0 CACHE STRING "" FORCE)
+set(CMAKE_SYSTEM_VERSION 10.0.22621.0 CACHE STRING "" FORCE)
 
 project(PhoenixEngine C CXX)
-
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_C_STANDARD 17)
-set(CMAKE_VS_PLATFORM_TOOLSET v143)
 
 ################################################################################
 # Set target arch type if empty. Visual studio solution generator provides it.
@@ -26,7 +22,9 @@ endif()
 ################################################################################
 set(CMAKE_CONFIGURATION_TYPES
     "Debug"
+    "MinSizeRel"
     "Release"
+    "RelWithDebInfo"
     CACHE STRING "" FORCE
 )
 
@@ -37,10 +35,14 @@ if(MSVC)
     # remove default flags provided with CMake for MSVC
     set(CMAKE_C_FLAGS "")
     set(CMAKE_C_FLAGS_DEBUG "")
+    set(CMAKE_C_FLAGS_MINSIZEREL "")
     set(CMAKE_C_FLAGS_RELEASE "")
+    set(CMAKE_C_FLAGS_RELWITHDEBINFO "")
     set(CMAKE_CXX_FLAGS "")
     set(CMAKE_CXX_FLAGS_DEBUG "")
+    set(CMAKE_CXX_FLAGS_MINSIZEREL "")
     set(CMAKE_CXX_FLAGS_RELEASE "")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "")
 endif()
 
 ################################################################################
@@ -56,10 +58,18 @@ if(MSVC)
     set(CMAKE_MODULE_LINKER_FLAGS_DEBUG "${CMAKE_MODULE_LINKER_FLAGS}")
     set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS}")
     set(CMAKE_STATIC_LINKER_FLAGS_DEBUG "${CMAKE_STATIC_LINKER_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS_MINSIZEREL "${CMAKE_EXE_LINKER_FLAGS}")
+    set(CMAKE_MODULE_LINKER_FLAGS_MINSIZEREL "${CMAKE_MODULE_LINKER_FLAGS}")
+    set(CMAKE_SHARED_LINKER_FLAGS_MINSIZEREL "${CMAKE_SHARED_LINKER_FLAGS}")
+    set(CMAKE_STATIC_LINKER_FLAGS_MINSIZEREL "${CMAKE_STATIC_LINKER_FLAGS}")
     set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS}")
     set(CMAKE_MODULE_LINKER_FLAGS_RELEASE "${CMAKE_MODULE_LINKER_FLAGS}")
     set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS}")
     set(CMAKE_STATIC_LINKER_FLAGS_RELEASE "${CMAKE_STATIC_LINKER_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS}")
+    set(CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_MODULE_LINKER_FLAGS}")
+    set(CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_SHARED_LINKER_FLAGS}")
+    set(CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_STATIC_LINKER_FLAGS}")
 endif()
 
 ################################################################################
@@ -89,6 +99,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 ################################################################################
 # Sub-projects
 ################################################################################
+add_subdirectory(luau)
 add_subdirectory(Vendor)
 
 
@@ -302,13 +313,17 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 ################################################################################
 if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
     set_target_properties(${PROJECT_NAME} PROPERTIES
-        TARGET_NAME_DEBUG   "PhoenixEngine"
-        TARGET_NAME_RELEASE "PhoenixEngine"
+        TARGET_NAME_DEBUG          "PhoenixEngine"
+        TARGET_NAME_MINSIZEREL     "PhoenixEngine"
+        TARGET_NAME_RELEASE        "PhoenixEngine"
+        TARGET_NAME_RELWITHDEBINFO "PhoenixEngine"
     )
 elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
     set_target_properties(${PROJECT_NAME} PROPERTIES
-        TARGET_NAME_DEBUG   "PhoenixEngine"
-        TARGET_NAME_RELEASE "PhoenixEngine"
+        TARGET_NAME_DEBUG          "PhoenixEngine"
+        TARGET_NAME_MINSIZEREL     "PhoenixEngine"
+        TARGET_NAME_RELEASE        "PhoenixEngine"
+        TARGET_NAME_RELWITHDEBINFO "PhoenixEngine"
     )
 endif()
 ################################################################################
@@ -316,35 +331,47 @@ endif()
 ################################################################################
 if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
     set_target_properties(${PROJECT_NAME} PROPERTIES
-        OUTPUT_DIRECTORY_DEBUG   "${CMAKE_CURRENT_SOURCE_DIR}/x64/Debug/"
-        OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/x64/Release/"
+        OUTPUT_DIRECTORY_DEBUG          "${CMAKE_CURRENT_SOURCE_DIR}/x64/Debug/"
+        OUTPUT_DIRECTORY_MINSIZEREL     "${CMAKE_CURRENT_SOURCE_DIR}/x64/Release/"
+        OUTPUT_DIRECTORY_RELEASE        "${CMAKE_CURRENT_SOURCE_DIR}/x64/Release/"
+        OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_CURRENT_SOURCE_DIR}/x64/Release/"
     )
 elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
     set_target_properties(${PROJECT_NAME} PROPERTIES
-        OUTPUT_DIRECTORY_DEBUG   "${CMAKE_CURRENT_SOURCE_DIR}/x64/Debug/"
-        OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/x64/Release/"
+        OUTPUT_DIRECTORY_DEBUG          "${CMAKE_CURRENT_SOURCE_DIR}/x64/Debug/"
+        OUTPUT_DIRECTORY_MINSIZEREL     "${CMAKE_CURRENT_SOURCE_DIR}/x64/Release/"
+        OUTPUT_DIRECTORY_RELEASE        "${CMAKE_CURRENT_SOURCE_DIR}/x64/Release/"
+        OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_CURRENT_SOURCE_DIR}/x64/Release/"
     )
 endif()
 if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
     set_target_properties(${PROJECT_NAME} PROPERTIES
-        ARCHIVE_OUTPUT_DIRECTORY_DEBUG   "${CMAKE_CURRENT_SOURCE_DIR}/x64/Debug"
-        ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/x64/Release"
+        ARCHIVE_OUTPUT_DIRECTORY_DEBUG          "${CMAKE_CURRENT_SOURCE_DIR}/x64/Debug"
+        ARCHIVE_OUTPUT_DIRECTORY_MINSIZEREL     "${CMAKE_CURRENT_SOURCE_DIR}/x64/Release"
+        ARCHIVE_OUTPUT_DIRECTORY_RELEASE        "${CMAKE_CURRENT_SOURCE_DIR}/x64/Release"
+        ARCHIVE_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_CURRENT_SOURCE_DIR}/x64/Release"
     )
 elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
     set_target_properties(${PROJECT_NAME} PROPERTIES
-        ARCHIVE_OUTPUT_DIRECTORY_DEBUG   "${CMAKE_CURRENT_SOURCE_DIR}/x64/Debug"
-        ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/x64/Release"
+        ARCHIVE_OUTPUT_DIRECTORY_DEBUG          "${CMAKE_CURRENT_SOURCE_DIR}/x64/Debug"
+        ARCHIVE_OUTPUT_DIRECTORY_MINSIZEREL     "${CMAKE_CURRENT_SOURCE_DIR}/x64/Release"
+        ARCHIVE_OUTPUT_DIRECTORY_RELEASE        "${CMAKE_CURRENT_SOURCE_DIR}/x64/Release"
+        ARCHIVE_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_CURRENT_SOURCE_DIR}/x64/Release"
     )
 endif()
 if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
     set_target_properties(${PROJECT_NAME} PROPERTIES
-        ARCHIVE_OUTPUT_NAME_DEBUG   "PhoenixEngine"
-        ARCHIVE_OUTPUT_NAME_RELEASE "PhoenixEngine"
+        ARCHIVE_OUTPUT_NAME_DEBUG          "PhoenixEngine"
+        ARCHIVE_OUTPUT_NAME_MINSIZEREL     "PhoenixEngine"
+        ARCHIVE_OUTPUT_NAME_RELEASE        "PhoenixEngine"
+        ARCHIVE_OUTPUT_NAME_RELWITHDEBINFO "PhoenixEngine"
     )
 elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
     set_target_properties(${PROJECT_NAME} PROPERTIES
-        ARCHIVE_OUTPUT_NAME_DEBUG   "PhoenixEngine"
-        ARCHIVE_OUTPUT_NAME_RELEASE "PhoenixEngine"
+        ARCHIVE_OUTPUT_NAME_DEBUG          "PhoenixEngine"
+        ARCHIVE_OUTPUT_NAME_MINSIZEREL     "PhoenixEngine"
+        ARCHIVE_OUTPUT_NAME_RELEASE        "PhoenixEngine"
+        ARCHIVE_OUTPUT_NAME_RELWITHDEBINFO "PhoenixEngine"
     )
 endif()
 ################################################################################
@@ -356,20 +383,32 @@ if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
         $<$<CONFIG:Debug>:
             MultiThreadedDebugDLL
         >
+        $<$<CONFIG:MinSizeRel>:
+            MultiThreadedDLL
+        >
         $<$<CONFIG:Release>:
             MultiThreadedDLL
         >
-        $<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:Release>>>:${MSVC_RUNTIME_LIBRARY_DEFAULT}>
+        $<$<CONFIG:RelWithDebInfo>:
+            MultiThreadedDLL
+        >
+        $<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:MinSizeRel>,$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>>:${MSVC_RUNTIME_LIBRARY_DEFAULT}>
     )
 elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
     string(CONCAT "MSVC_RUNTIME_LIBRARY_STR"
         $<$<CONFIG:Debug>:
             MultiThreadedDebugDLL
         >
+        $<$<CONFIG:MinSizeRel>:
+            MultiThreadedDLL
+        >
         $<$<CONFIG:Release>:
             MultiThreadedDLL
         >
-        $<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:Release>>>:${MSVC_RUNTIME_LIBRARY_DEFAULT}>
+        $<$<CONFIG:RelWithDebInfo>:
+            MultiThreadedDLL
+        >
+        $<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:MinSizeRel>,$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>>:${MSVC_RUNTIME_LIBRARY_DEFAULT}>
     )
 endif()
 set_target_properties(${PROJECT_NAME} PROPERTIES MSVC_RUNTIME_LIBRARY ${MSVC_RUNTIME_LIBRARY_STR})
@@ -405,7 +444,13 @@ if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
         "$<$<CONFIG:Debug>:"
             "CMAKE_INTDIR=\"Debug\""
         ">"
+        "$<$<CONFIG:MinSizeRel>:"
+            "CMAKE_INTDIR=\"Release\""
+        ">"
         "$<$<CONFIG:Release>:"
+            "CMAKE_INTDIR=\"Release\""
+        ">"
+        "$<$<CONFIG:RelWithDebInfo>:"
             "CMAKE_INTDIR=\"Release\""
         ">"
         "_MBCS"
@@ -415,7 +460,13 @@ elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
         "$<$<CONFIG:Debug>:"
             "CMAKE_INTDIR=\"Debug\""
         ">"
+        "$<$<CONFIG:MinSizeRel>:"
+            "CMAKE_INTDIR=\"Release\""
+        ">"
         "$<$<CONFIG:Release>:"
+            "CMAKE_INTDIR=\"Release\""
+        ">"
+        "$<$<CONFIG:RelWithDebInfo>:"
             "CMAKE_INTDIR=\"Release\""
         ">"
         "_MBCS"
@@ -428,9 +479,16 @@ endif()
 if(MSVC)
     if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
         target_compile_options(${PROJECT_NAME} PRIVATE
+            $<$<CONFIG:MinSizeRel>:
+                /Zc:__cplusplus
+            >
             $<$<CONFIG:Release>:
                 /Zc:__cplusplus
             >
+            $<$<CONFIG:RelWithDebInfo>:
+                /Zc:__cplusplus
+            >
+            /permissive-;
             /MP;
             /W4;
             /Zi;
@@ -439,9 +497,16 @@ if(MSVC)
         )
     elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
         target_compile_options(${PROJECT_NAME} PRIVATE
+            $<$<CONFIG:MinSizeRel>:
+                /Zc:__cplusplus
+            >
             $<$<CONFIG:Release>:
                 /Zc:__cplusplus
             >
+            $<$<CONFIG:RelWithDebInfo>:
+                /Zc:__cplusplus
+            >
+            /permissive-;
             /MP;
             /W4;
             /Zi;
@@ -454,7 +519,15 @@ if(MSVC)
             $<$<CONFIG:Debug>:
                 /INCREMENTAL
             >
+            $<$<CONFIG:MinSizeRel>:
+                /INCREMENTAL:NO;
+                /LTCG
+            >
             $<$<CONFIG:Release>:
+                /INCREMENTAL:NO;
+                /LTCG
+            >
+            $<$<CONFIG:RelWithDebInfo>:
                 /INCREMENTAL:NO;
                 /LTCG
             >
@@ -467,7 +540,15 @@ if(MSVC)
             $<$<CONFIG:Debug>:
                 /INCREMENTAL
             >
+            $<$<CONFIG:MinSizeRel>:
+                /INCREMENTAL:NO;
+                /LTCG
+            >
             $<$<CONFIG:Release>:
+                /INCREMENTAL:NO;
+                /LTCG
+            >
+            $<$<CONFIG:RelWithDebInfo>:
                 /INCREMENTAL:NO;
                 /LTCG
             >
@@ -485,13 +566,19 @@ if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
     set(ADDITIONAL_LIBRARY_DEPENDENCIES
         "opengl32;"
         "SDL2;"
-        "Vendor"
+        "Vendor;"
+        "Luau.Ast;"
+        "Luau.Compiler;"
+        "Luau.VM"
     )
 elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
     set(ADDITIONAL_LIBRARY_DEPENDENCIES
         "opengl32;"
         "SDL2;"
-        "Vendor"
+        "Vendor;"
+        "Luau.Ast;"
+        "Luau.Compiler;"
+        "Luau.VM"
     )
 endif()
 target_link_libraries(${PROJECT_NAME} PRIVATE "${ADDITIONAL_LIBRARY_DEPENDENCIES}")
@@ -508,4 +595,3 @@ elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
     )
 endif()
 
-set_property(GLOBAL PROPERTY VS_STARTUP_PROJECT PhoenixEngine)

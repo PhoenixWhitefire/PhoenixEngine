@@ -444,7 +444,7 @@ void Renderer::m_SetTextureUniforms(const RenderItem& RenderData, ShaderProgram*
 		}
 
 	Shaders->SetUniformInt("NumDiffuseTextures", 1);
-	Shaders->SetUniformInt("NumSpecularTextures", 1);
+	Shaders->SetUniformInt("NumSpecularTextures", material->HasSpecular);
 
 	//glUniform1i(
 	//	glGetUniformLocation(Shaders->ID, "NumDiffuseTextures"),

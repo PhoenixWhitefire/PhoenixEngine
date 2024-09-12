@@ -1,8 +1,4 @@
-set(PROJECT_NAME Vendor)
-
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_C_STANDARD 17)
-set(CMAKE_VS_PLATFORM_TOOLSET v143)
+set(PROJECT_NAME Misc)
 
 ################################################################################
 # Source groups
@@ -590,6 +586,7 @@ source_group("Source Files\\glm\\detail" FILES ${Source_Files__glm__detail})
 
 set(Source_Files__imgui
     "imgui/imgui.cpp"
+    "imgui/imgui_demo.cpp"
     "imgui/imgui_draw.cpp"
     "imgui/imgui_tables.cpp"
     "imgui/imgui_widgets.cpp"
@@ -626,6 +623,7 @@ set(ALL_FILES
 # Target
 ################################################################################
 add_library(${PROJECT_NAME} STATIC ${ALL_FILES})
+set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER "Vendor")
 
 target_precompile_headers(${PROJECT_NAME} PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/pch.h>"
@@ -638,21 +636,38 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     VS_GLOBAL_KEYWORD "Win32Proj"
 )
 ################################################################################
+# Target name
+################################################################################
+if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        TARGET_NAME_DEBUG          "Vendor"
+        TARGET_NAME_MINSIZEREL     "Vendor"
+        TARGET_NAME_RELEASE        "Vendor"
+        TARGET_NAME_RELWITHDEBINFO "Vendor"
+    )
+endif()
+################################################################################
 # Output directory
 ################################################################################
 if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
     set_target_properties(${PROJECT_NAME} PROPERTIES
-        OUTPUT_DIRECTORY_DEBUG   "${CMAKE_SOURCE_DIR}/lib/"
-        OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}/lib/"
+        OUTPUT_DIRECTORY_DEBUG          "${CMAKE_SOURCE_DIR}/lib/"
+        OUTPUT_DIRECTORY_MINSIZEREL     "${CMAKE_SOURCE_DIR}/lib/"
+        OUTPUT_DIRECTORY_RELEASE        "${CMAKE_SOURCE_DIR}/lib/"
+        OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_SOURCE_DIR}/lib/"
     )
 endif()
 if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
     set_target_properties(${PROJECT_NAME} PROPERTIES
-        INTERPROCEDURAL_OPTIMIZATION_RELEASE "TRUE"
+        INTERPROCEDURAL_OPTIMIZATION_MINSIZEREL     "TRUE"
+        INTERPROCEDURAL_OPTIMIZATION_RELEASE        "TRUE"
+        INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO "TRUE"
     )
 elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
     set_target_properties(${PROJECT_NAME} PROPERTIES
-        INTERPROCEDURAL_OPTIMIZATION_RELEASE "TRUE"
+        INTERPROCEDURAL_OPTIMIZATION_MINSIZEREL     "TRUE"
+        INTERPROCEDURAL_OPTIMIZATION_RELEASE        "TRUE"
+        INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO "TRUE"
     )
 endif()
 ################################################################################
@@ -661,7 +676,8 @@ endif()
 if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
     target_include_directories(${PROJECT_NAME} PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/.;"
-        "${CMAKE_CURRENT_SOURCE_DIR}/imgui"
+        "${CMAKE_CURRENT_SOURCE_DIR}/imgui;"
+        "${CMAKE_CURRENT_SOURCE_DIR}/SDL2"
     )
 endif()
 
@@ -673,7 +689,13 @@ if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
         "$<$<CONFIG:Debug>:"
             "_DEBUG"
         ">"
+        "$<$<CONFIG:MinSizeRel>:"
+            "NDEBUG"
+        ">"
         "$<$<CONFIG:Release>:"
+            "NDEBUG"
+        ">"
+        "$<$<CONFIG:RelWithDebInfo>:"
             "NDEBUG"
         ">"
         "WIN32;"
@@ -686,7 +708,13 @@ elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
         "$<$<CONFIG:Debug>:"
             "_DEBUG"
         ">"
+        "$<$<CONFIG:MinSizeRel>:"
+            "NDEBUG"
+        ">"
         "$<$<CONFIG:Release>:"
+            "NDEBUG"
+        ">"
+        "$<$<CONFIG:RelWithDebInfo>:"
             "NDEBUG"
         ">"
         "_LIB;"
@@ -701,7 +729,15 @@ endif()
 if(MSVC)
     if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
         target_compile_options(${PROJECT_NAME} PRIVATE
+            $<$<CONFIG:MinSizeRel>:
+                /Oi;
+                /Gy
+            >
             $<$<CONFIG:Release>:
+                /Oi;
+                /Gy
+            >
+            $<$<CONFIG:RelWithDebInfo>:
                 /Oi;
                 /Gy
             >
@@ -713,7 +749,17 @@ if(MSVC)
         )
     elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
         target_compile_options(${PROJECT_NAME} PRIVATE
+            $<$<CONFIG:MinSizeRel>:
+                /Oi;
+                /Gy;
+                /Zc:__cplusplus
+            >
             $<$<CONFIG:Release>:
+                /Oi;
+                /Gy;
+                /Zc:__cplusplus
+            >
+            $<$<CONFIG:RelWithDebInfo>:
                 /Oi;
                 /Gy;
                 /Zc:__cplusplus
@@ -729,14 +775,30 @@ if(MSVC)
     endif()
     if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
         target_link_options(${PROJECT_NAME} PRIVATE
+            $<$<CONFIG:MinSizeRel>:
+                /OPT:REF;
+                /OPT:ICF
+            >
             $<$<CONFIG:Release>:
+                /OPT:REF;
+                /OPT:ICF
+            >
+            $<$<CONFIG:RelWithDebInfo>:
                 /OPT:REF;
                 /OPT:ICF
             >
         )
     elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
         target_link_options(${PROJECT_NAME} PRIVATE
+            $<$<CONFIG:MinSizeRel>:
+                /OPT:REF;
+                /OPT:ICF
+            >
             $<$<CONFIG:Release>:
+                /OPT:REF;
+                /OPT:ICF
+            >
+            $<$<CONFIG:RelWithDebInfo>:
                 /OPT:REF;
                 /OPT:ICF
             >

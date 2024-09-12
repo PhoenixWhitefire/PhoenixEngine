@@ -511,7 +511,10 @@ void EngineObject::Start()
 
 		// Wait the appropriate amount of time between frames
 		if (!VSync && (frameDelta < fpsCapDelta))
+		{
 			SDL_Delay(static_cast<uint32_t>((fpsCapDelta - frameDelta) * 1000));
+			continue;
+		}
 
 		double deltaTime = RunningTime - LastTime;
 		LastTime = RunningTime;
