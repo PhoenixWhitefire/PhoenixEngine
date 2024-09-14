@@ -11,7 +11,7 @@
 
 #include<luau/Compiler/include/luacode.h>
 #include<luau/VM/include/lualib.h>
-#include<Luau/Common.h>
+#include<luau/Common/include/Luau/Common.h>
 
 #include"gameobject/Script.hpp"
 #include"datatype/GameObject.hpp"
@@ -19,7 +19,7 @@
 #include"FileRW.hpp"
 #include"Debug.hpp"
 
-#define LUA_THROW(err) lua_pushstring(L, err); lua_error(L)
+#define LUA_THROW(err) throw(std::runtime_error(err))
 #define LUA_ASSERT(res, err) if (!res) { LUA_THROW(err); }
 
 static RegisterDerivedObject<Object_Script> RegisterClassAs("Script");
@@ -29,7 +29,7 @@ static lua_State* DefaultState = nullptr;
 
 static const std::unordered_map<Reflection::ValueType, lua_Type> ReflectionTypeToLuaType =
 {
-	{ Reflection::ValueType::None, lua_Type::LUA_TNIL },
+	{ Reflection::ValueType::Null, lua_Type::LUA_TNIL },
 	{ Reflection::ValueType::Bool, lua_Type::LUA_TBOOLEAN },
 	{ Reflection::ValueType::Double, lua_Type::LUA_TNUMBER },
 	{ Reflection::ValueType::Integer, lua_Type::LUA_TNUMBER },
@@ -50,7 +50,7 @@ static Reflection::GenericValue luaTypeToGeneric(lua_State* L, int luaT, bool* s
 	{
 	case (lua_Type::LUA_TNIL):
 	{
-		gv.Type = Reflection::ValueType::None;
+		gv.Type = Reflection::ValueType::Null;
 		break;
 	}
 	case (lua_Type::LUA_TBOOLEAN):
@@ -137,7 +137,7 @@ static void pushGenericValue(lua_State* L, Reflection::GenericValue& gv)
 {
 	switch (gv.Type)
 	{
-	case (Reflection::ValueType::None):
+	case (Reflection::ValueType::Null):
 	{
 		lua_pushnil(L);
 		break;
@@ -234,6 +234,7 @@ static void pushFunction(lua_State* L, const char* name)
 
 		[](lua_State* L)
 		{
+			luaL_checkudata(L, 1, "GameObject");
 			GameObject* refl = GameObject::GetObjectById(*(uint32_t*)lua_touserdata(L, -1));
 			const char* fname = lua_tostring(L, lua_upvalueindex(1));
 			std::string fnamestr = fname;
@@ -369,30 +370,29 @@ static auto api_newobject = [](lua_State* L)
 
 static auto api_gameobjindex = [](lua_State* L)
 	{
-		/*LUA_ASSERT(lua_isuserdata(L, -2)
-			&& strcmp(luaTypeToString(L, lua_type(L, -2)), "GameObject") == 0,
-			"Expected GameObject",
-			return 0
-		);*/
-		LUA_ASSERT(lua_isstring(L, -1), "Expected index of type string");
-
-		//lua_pushstring(L, "__type");
-		//lua_gettable(L, -3);
-		//printf("api_gameobjindex: arg mtt __type: %s\n", lua_tostring(L, -1));
+		luaL_checkudata(L, 1, "GameObject");
+		luaL_checkstring(L, 2);
 
 		uint32_t objId = *(uint32_t*)lua_touserdata(L, -2);
 		GameObject* obj = GameObject::GetObjectById(objId);
 		const char* key = lua_tostring(L, -1);
 
-		std::string keystr = key;
-
-		//lua_getglobal(L, "GameObject");
-		//lua_pushstring(L, key);
-		//lua_rawget(L, -2);
-
-		//// Pass-through to GameObject.new
-		//if (!lua_isnil(L, -1))
-		//	return 1;
+		if (!obj)
+		{
+			/*
+				TODO 14/09/2024
+				Back in Roblox, the Engine seems to preserve the state of the Instance upon it's destruction
+				Attempting to assign to a `:Destroy`'d object still works, but it's
+				`Parent` cannot be changed.
+				This is what I'd like to have, but right now I'll just make every member
+				be `nil` so it's easy for scripts to recognize an invalid/invalidated GameObject
+				(I separated those two, because either the Object may not have been valid
+				in the first place, or it was valid, but got deleted. But that's pedantic and pointless to
+				differentiate for a proper API.)
+			*/
+			lua_pushnil(L);
+			return 1;
+		}
 
 		if (obj->HasProperty(key))
 		{
@@ -405,7 +405,7 @@ static auto api_gameobjindex = [](lua_State* L)
 		}
 		else
 		{
-			GameObject* child = obj->GetChild(keystr);
+			GameObject* child = obj->GetChild(key);
 
 			if (child)
 				pushGameObject(L, child);
@@ -415,7 +415,7 @@ static auto api_gameobjindex = [](lua_State* L)
 
 				LUA_THROW(std::vformat(
 					"'{}' was neither a Member nor Child of {}",
-					std::make_format_args(keystr, fullname)).c_str()
+					std::make_format_args(key, fullname)).c_str()
 				);
 
 				return 0;
@@ -427,29 +427,46 @@ static auto api_gameobjindex = [](lua_State* L)
 
 static auto api_gameobjnewindex = [](lua_State* L)
 	{
-		/*LUA_ASSERT(lua_isuserdata(L, -3)
-			&& strcmp(luaTypeToString(L, lua_type(L, -3)), "GameObject") == 0,
-			"Expected GameObject",
-			return 0
-		);*/
-		LUA_ASSERT(lua_isstring(L, -2), "Expected index of type string");
+		luaL_checkudata(L, 1, "GameObject");
+		luaL_checkstring(L, 2);
 
 		uint32_t objId = *(uint32_t*)lua_touserdata(L, -3);
 		GameObject* obj = GameObject::GetObjectById(objId);
 		const char* key = lua_tostring(L, -2);
 
-		std::string keystr = key;
+		// Refer the `!obj` clause in `api_gameobjindex`
+		if (!obj)
+		{
+			// Uh
+			// Idk
+			// Just give an `attempt to index nil`
+			lua_pushnil(L);
+			lua_setfield(L, -1, key);
+		}
 
 		if (obj->HasProperty(key))
 		{
 			auto& prop = obj->GetProperty(key);
 
-			int iArgType = lua_type(L, -1);
-			lua_Type argType = (lua_Type)iArgType;
+			const char* argAsString = luaL_tolstring(L, -1, NULL);
+			const char* argTypeName = luaL_typename(L, -1);
+			// 14/09/2024
+			// Lua what the fuck
+			// Please stop flip-flopping between negative and positive indexes for
+			// stack offsets! What is the point! Why?!
+			lua_Type argType = (lua_Type)lua_type(L, 3);
+			
+			if (!prop.Set)
+			{
+				throw(std::runtime_error(std::vformat(
+					"Cannot set Property {}::{} to {} because it is read-only",
+					std::make_format_args(obj->ClassName, key, argAsString)
+				).c_str()));
+			}
 
-			auto it = ReflectionTypeToLuaType.find(prop.Type);
+			auto reflToLuaIt = ReflectionTypeToLuaType.find(prop.Type);
 
-			if (it == ReflectionTypeToLuaType.end())
+			if (reflToLuaIt == ReflectionTypeToLuaType.end())
 			{
 				const std::string& typeName = Reflection::TypeAsString(prop.Type);
 				throw(std::vformat(
@@ -458,26 +475,25 @@ static auto api_gameobjnewindex = [](lua_State* L)
 				));
 			}
 
-			lua_Type desiredType = it->second;
+			lua_Type desiredType = reflToLuaIt->second;
 
 			if (desiredType != argType && (desiredType != LUA_TUSERDATA && argType != LUA_TNIL))
 			{
-				const char* argTName = luaL_tolstring(L, -1, NULL);
-				const char* desiredTName = luaL_typename(L, (int)desiredType);
+				const char* desiredTypeName = lua_typename(L, (int)desiredType);
 				LUA_THROW(std::vformat(
-					"Expected type {} for member {}, got {} instead",
-					std::make_format_args(desiredTName, key, argTName)
+					"Expected type {} for member {}::{}, got {} instead",
+					std::make_format_args(desiredTypeName, obj->ClassName, key, argTypeName)
 				).c_str());
-
-				return 0;
 			}
 			else
 			{
+				lua_pushvalue(L, 3);
+
 				bool wasSuccessful = true;
-				Reflection::GenericValue newvalue = luaTypeToGeneric(L, desiredType, &wasSuccessful);
+				Reflection::GenericValue newValue = luaTypeToGeneric(L, desiredType, &wasSuccessful);
 
 				if (wasSuccessful)
-					obj->SetPropertyValue(key, newvalue);
+					obj->SetPropertyValue(key, newValue);
 			}
 		}
 		else
@@ -535,8 +551,6 @@ static auto api_vec3index = [](lua_State* L)
 		if (!lua_isnil(L, -1))
 			return 1;
 
-		std::string keystr = key;
-
 		if (vec->HasProperty(key))
 		{
 			Reflection::GenericValue value = vec->GetPropertyValue(key);
@@ -558,11 +572,10 @@ static auto api_vec3index = [](lua_State* L)
 				"{} is not a valid member of Vector3",
 				std::make_format_args(key)
 			).c_str());
-			return 0;
 		}
 	};
 
-static auto api_vec3newindex = [](lua_State* L)
+static auto api_vec3newindex = [](lua_State*)
 	{
 		LUA_THROW("Vector3s are immutable");
 	};
@@ -761,11 +774,14 @@ Object_Script::Object_Script()
 
 void Object_Script::Initialize()
 {
-	this->Reload();
+	//this->Reload();
 }
 
 void Object_Script::Update(double dt)
 {
+	if (!m_L)
+		this->Reload();
+
 	if (m_HasUpdate)
 	{
 		lua_getglobal(m_L, "Update");
@@ -806,6 +822,14 @@ bool Object_Script::LoadScript(std::string const& scriptFile)
 
 bool Object_Script::Reload()
 {
+	// TODO 14/09/2024
+	// Don't want the script to run and the `script` global to
+	// report it is parented to `nil`. Only want it to run when
+	// parented under the `DataModel`. A `::IsDescendantOf` would be
+	// ideal, but it seems unnecessary for now
+	if (!this->GetParent())
+		return false;
+
 	bool fileExists = true;
 	m_Source = FileRW::ReadFile(SourceFile, &fileExists);
 
@@ -825,9 +849,10 @@ bool Object_Script::Reload()
 	if (m_L)
 		lua_resetthread(m_L);
 	else
-	{
 		m_L = lua_newthread(DefaultState);
-	}
+
+	pushGameObject(m_L, this);
+	lua_setglobal(m_L, "script");
 
 	std::string FullName = this->GetFullName();
 	std::string chunkname = std::vformat("{}", std::make_format_args(FullName));

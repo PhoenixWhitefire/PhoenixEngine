@@ -18,7 +18,7 @@ struct _particle
 	float Size = 1.f;
 	float Transparency = 0.f;
 
-	Texture* Image = nullptr;
+	uint32_t Image;
 
 	Vector3 Position{};
 };
@@ -39,7 +39,7 @@ public:
 	Vector2 Lifetime = Vector2(1.5f, 2.f); // Randomly chosen between the range X - Y;
 	Vector3 Offset; // If parent is a valid Base3D, position will be Parent.Position + Offset, else just Offset
 
-	std::vector<Texture*> PossibleImages; //A random one is chosen every time a particle needs to be spawned
+	std::vector<uint32_t> PossibleImages; //A random one is chosen every time a particle needs to be spawned
 
 	ValueSequence<float> TransparencyOverTime;
 	ValueSequence<float> SizeOverTime;

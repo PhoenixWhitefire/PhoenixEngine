@@ -12,12 +12,6 @@
 static std::string const& DiffuseStr = "Diffuse";
 static std::string const& SpecularStr = "Specular";
 
-static std::vector<const char*> RequiredOpenGLExtensions =
-{
-	"GL_ARB_debug_output",
-	"GL_KHR_debug"
-};
-
 static GLenum ObjectTypes[] =
 {
 	GL_BUFFER,
@@ -146,24 +140,18 @@ Renderer::Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window)
 	bool gladStatus = gladLoadGL((GLADloadfunc)SDL_GL_GetProcAddress);
 
 	if (!gladStatus)
-		throw("GLAD could not load OpenGL. Please update your drivers (min OGL ver: 4.6).");
-
-	for (const char* extName : RequiredOpenGLExtensions)
-	{
-		bool available = SDL_GL_ExtensionSupported(extName);
-
-		if (!available)
-			throw(std::vformat(
-				"Required extension '{}' not available. Please ensure your drivers are updated.",
-				std::make_format_args(extName)
-			));
-	}
+		throw("GLAD could not load OpenGL. Please update your drivers.");
 
 	glEnable(GL_DEBUG_OUTPUT);
 	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 
-	glDebugMessageCallback(GLDebugCallback, 0);
-
+	// `glDebugMessageCallback` will be NULL if the user
+	// does not have the `GL_ARB_debug_output`/`GL_KHR_debug` OpenGL extensions
+	// I just want this to work on a specific machine
+	// 13/09/2024
+	if (glDebugMessageCallback)
+		glDebugMessageCallback(GLDebugCallback, nullptr);
+	
 	glEnable(GL_MULTISAMPLE);
 	glEnable(GL_DEPTH_TEST);
 
@@ -341,9 +329,6 @@ void Renderer::m_SetTextureUniforms(const RenderItem& RenderData, ShaderProgram*
 	RenderMaterial* material = RenderData.Material;
 	Shaders->Activate();
 
-	int numDiffuse = 0;
-	int numSpecular = 0;
-	
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	if (RenderData.Transparency > 0.f || RenderData.Material->HasTranslucency)
@@ -351,8 +336,6 @@ void Renderer::m_SetTextureUniforms(const RenderItem& RenderData, ShaderProgram*
 	else // the gosh darn grass model is practically 50% transparent
 		glDisable(GL_BLEND);
 	
-	//glDisable(GL_BLEND);
-
 	Shaders->SetUniformFloat("SpecularMultiplier", material->SpecMultiply);
 	Shaders->SetUniformFloat("SpecularPower", material->SpecExponent);
 
@@ -366,22 +349,7 @@ void Renderer::m_SetTextureUniforms(const RenderItem& RenderData, ShaderProgram*
 		RenderData.TintColor.B
 	);
 
-	//glUniform1i(glGetUniformLocation(Shaders->ID, "HasSpecular"), 0);
-	
-
-	/*glUniform1i(glGetUniformLocation(Shaders->ID, "HasDiffuse"), 1);
-
-	glActiveTexture(GL_TEXTURE0);
-
-	glBindTexture(GL_TEXTURE_2D, Material->DiffuseTextures[0]->Identifier);
-
-	glUniform1i(glGetUniformLocation(Shaders->ID, "DiffuseTextures[0]"), 0);
-
-	glUniform1i(glGetUniformLocation(Shaders->ID, "ActiveDiffuseTextures"), 1);
-
-	return;*/
-
-	uint32_t texUnitOffset = 5;
+	TextureManager* texManager = TextureManager::Get();
 
 	/*
 		TODO 05/09/2024:
@@ -394,67 +362,27 @@ void Renderer::m_SetTextureUniforms(const RenderItem& RenderData, ShaderProgram*
 		
 		CONS:
 		* Extra machinery and boilerplate, and it's overall more effort
-		
-		I'll leave this here just in case
 	*/
 
-	for (Texture* image : { material->DiffuseTexture })
+	Texture* colorMap = texManager->GetTextureResource(material->ColorMap);
+
+	glActiveTexture(GL_TEXTURE4);
+	glBindTexture(GL_TEXTURE_2D, colorMap->GpuId);
+	
+	Shaders->SetUniformInt((DiffuseStr + "Textures[0]").c_str(), 4);
+
+	Texture* metallicRoughnessMap = texManager->GetTextureResource(material->MetallicRoughnessMap);
+
+	if (metallicRoughnessMap)
 	{
-		std::string numberOf = std::to_string(numDiffuse);;
+		glActiveTexture(GL_TEXTURE5);
+		glBindTexture(GL_TEXTURE_2D, metallicRoughnessMap->GpuId);
 
-		texUnitOffset++;
-
-		if (numDiffuse > 6)
-		{
-			Debug::Log("DIFFUSE TEX LIMIT REACHED!");
-			continue;
-		}
-
-		glActiveTexture(GL_TEXTURE0 + texUnitOffset);
-
-		Shaders->Activate();
-
-		glBindTexture(GL_TEXTURE_2D, image->Identifier);
-
-		std::string shaderTextureVar = (DiffuseStr + "Textures[0]");
-		Shaders->SetUniformInt(shaderTextureVar.c_str(), texUnitOffset);
+		Shaders->SetUniformInt((SpecularStr + "Textures[0]").c_str(), 5);
 	}
 
-	if (material->HasSpecular)
-		for (Texture* image : { material->SpecularTexture })
-		{
-			std::string numberOf = std::to_string(numSpecular);;
-
-			texUnitOffset++;
-
-			if (numSpecular > 6)
-			{
-				Debug::Log("SPECULAR TEX LIMIT REACHED!");
-				continue;
-			}
-
-			glActiveTexture(GL_TEXTURE0 + texUnitOffset);
-
-			Shaders->Activate();
-
-			glBindTexture(GL_TEXTURE_2D, image->Identifier);
-
-			std::string shaderTextureVar = (SpecularStr + "Textures[0]");
-			Shaders->SetUniformInt(shaderTextureVar.c_str(), texUnitOffset);
-		}
-
 	Shaders->SetUniformInt("NumDiffuseTextures", 1);
-	Shaders->SetUniformInt("NumSpecularTextures", material->HasSpecular);
-
-	//glUniform1i(
-	//	glGetUniformLocation(Shaders->ID, "NumDiffuseTextures"),
-	//	1 //static_cast<int32_t>(Material->DiffuseTextures.size())
-	//);
-	//glUniform1i(
-	//	glGetUniformLocation(Shaders->ID, "NumSpecularTextures"),
-	//	//Material->HasSpecular ? static_cast<int32_t>(Material->SpecularTextures.size()) : 0
-	//	material->HasSpecular ? 1 : 0
-	//);
+	Shaders->SetUniformInt("NumSpecularTextures", metallicRoughnessMap ? 1 : 0);
 }
 
 void Renderer::SwapBuffers()

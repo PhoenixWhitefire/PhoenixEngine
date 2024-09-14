@@ -105,7 +105,7 @@ namespace Reflection
 {
 	enum class ValueType
 	{
-		None = 0,
+		Null = 0,
 
 		Bool,
 		Integer,
@@ -131,7 +131,7 @@ namespace Reflection
 
 	struct GenericValue
 	{
-		Reflection::ValueType Type = Reflection::ValueType::None;
+		Reflection::ValueType Type = Reflection::ValueType::Null;
 		std::string String;
 		bool Bool = true;
 		double Double = 0.f;

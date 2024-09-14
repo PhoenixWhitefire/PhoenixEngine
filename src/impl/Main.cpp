@@ -57,47 +57,10 @@ static int PrevMouseX, PrevMouseY = 0;
 static glm::tvec3<double, glm::highp> CamForward = glm::vec3(0.f, 0.f, -1.f);
 
 static const char* ImGuiErrLn1 =
-"Dear ImGui has detected a version mis-match between the compiled headers{}{}{}{}{}";
+"Dear ImGui has detected a version mis-match between the compiled headers{} {} {}";
 static const char* ImGuiErrLn2 =
 " and the linked library. Please ensure version";
-static const char* ImGuiErrLn3 =
-" (#";
-static const char* ImGuiErrLn4 = ") is linked.";
-
-static void logSdlVersion()
-{
-	SDL_version sdlCompiledVersion{};
-	SDL_version sdlDynamicVersion{};
-
-	SDL_VERSION(&sdlCompiledVersion);
-	SDL_GetVersion(&sdlDynamicVersion);
-
-	std::string sdlCompiledVersionStr = std::vformat(
-		"{}.{}.{}",
-		std::make_format_args(
-			sdlCompiledVersion.major,
-			sdlCompiledVersion.minor,
-			sdlCompiledVersion.patch
-		)
-	);
-
-	std::string sdlDynamicVersionStr = std::vformat(
-		"{}.{}.{}",
-		std::make_format_args(
-			sdlDynamicVersion.major,
-			sdlDynamicVersion.minor,
-			sdlDynamicVersion.patch
-		)
-	);
-
-	Debug::Log(std::vformat(
-		"SDL version:\n\tCompiled with: {}\n\tCurrent: {}",
-		std::make_format_args(
-			sdlCompiledVersionStr,
-			sdlDynamicVersionStr
-		)
-	));
-}
+static const char* ImGuiErrLn3 = "is linked.";
 
 static int findArgumentInCliArgs(
 	int ArgCount,
@@ -509,11 +472,10 @@ static void drawUI(Reflection::GenericValue Data)
 static void Application(int argc, char** argv)
 {
 	const char* imGuiVersion = IMGUI_VERSION;
-	int imGuiVersionNum = IMGUI_VERSION_NUM;
 
 	Debug::Log(std::vformat(
-		"Initializing our Dearest ImGui {} (#{})...",
-		std::make_format_args(imGuiVersion, imGuiVersionNum)
+		"Initializing Dear ImGui {}...",
+		std::make_format_args(imGuiVersion)
 	));
 
 	bool imGuiVersionCorrect = IMGUI_CHECKVERSION();
@@ -525,9 +487,7 @@ static void Application(int argc, char** argv)
 			std::make_format_args(
 				ImGuiErrLn2,
 				imGuiVersion,
-				ImGuiErrLn3,
-				imGuiVersionNum,
-				ImGuiErrLn4
+				ImGuiErrLn3
 			)
 		));
 	}
@@ -547,7 +507,7 @@ static void Application(int argc, char** argv)
 	if (!ImGui_ImplOpenGL3_Init("#version 460"))
 		throw("ImGui initialization failure on ImGui_ImplOpenGL3_Init");
 
-	EditorContext = EngineJsonConfig.value("Developer", false) ? new Editor() : nullptr;
+	EditorContext = EngineJsonConfig.value("Developer", false) ? new Editor : nullptr;
 	
 	LevelLoadPathBuf = (char*)malloc(64);
 	LevelSavePathBuf = (char*)malloc(64);
@@ -634,9 +594,7 @@ static void handleCrash(std::string Error, std::string ExceptionType)
 
 int main(int argc, char** argv)
 {
-	Debug::Log("Application initializing...");
-
-	logSdlVersion();
+	Debug::Log("Application startup...");
 
 	SDL_Window* window = nullptr;
 
@@ -665,7 +623,7 @@ int main(int argc, char** argv)
 		handleCrash(Error.what(), "std::filesystem::filesystem_error");
 	}
 
-	Debug::Log("Application closing...");
+	Debug::Log("Application shutting down...");
 
 	Debug::Save();
 }

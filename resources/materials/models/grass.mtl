@@ -1,5 +1,6 @@
 {
   "albedo": "models/grass/diffuse.png",
+  "originalPath": "models/grassmaterial.mtl",
   "specExponent": 0.5,
   "specMultiply": 0.5,
   "specular": "models/grass/specular.png",

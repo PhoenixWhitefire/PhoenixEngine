@@ -12,14 +12,22 @@ local function updateCubes(DeltaTime)
     if input_keypressed("t") then
         NumCubes += 1
         local newCube = GameObject.new("Primitive")
-        newCube.Name = `Cube{#Cubes}`
-        newCube.Parent = game.Workspace
+        newCube.Name = `Cube{NumCubes}`
+        newCube.Parent = workspace.Level
         newCube.Size = Vector3.new(5, 5, 5)
         
         Cubes[TotalTime] = newCube
     end
     
     for spawnTime, cube in Cubes do
+        -- 14/09/2024
+        -- Indexing a `Destroy`'d GameObject will return `nil`,
+        -- I'll just use `ClassName` because it's static and will never be falsy
+        if not cube.ClassName then
+            Cubes[spawnTime] = nil
+            --continue
+        end
+        cube.Transform = cube.Transform
         local mat = cube.Transform
         matrix_setv(mat, 3, 0, math.sin(TotalTime - spawnTime) * 15)
         matrix_setv(mat, 3, 1, 5)

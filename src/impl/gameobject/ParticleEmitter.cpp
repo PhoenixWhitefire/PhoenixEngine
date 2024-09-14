@@ -122,7 +122,7 @@ Object_ParticleEmitter::Object_ParticleEmitter()
 	m_ElementBuffer.Bind();
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(quadinds), &quadinds, GL_STREAM_DRAW);
 
-	Texture* DefaultImage = TextureManager::Get()->LoadTextureFromPath(MissingTexPath);
+	uint32_t DefaultImage = TextureManager::Get()->LoadTextureFromPath(MissingTexPath);
 
 	this->PossibleImages = { DefaultImage };
 
@@ -273,7 +273,7 @@ void Object_ParticleEmitter::Render(glm::mat4 CameraMatrix)
 		s_ParticleShaders->SetUniformMatrix("CameraMatrix", CameraMatrix);
 
 		glActiveTexture(GL_TEXTURE4);
-		glBindTexture(GL_TEXTURE_2D, particle.Image->Identifier);
+		glBindTexture(GL_TEXTURE_2D, TextureManager::Get()->GetTextureResource(particle.Image)->GpuId);
 
 		s_ParticleShaders->SetUniformInt("Image", 4);
 

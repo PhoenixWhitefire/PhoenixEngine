@@ -16,13 +16,15 @@ public:
 	std::string Name{};
 	ShaderProgram* Shader{};
 
-	Texture* DiffuseTexture{};
-	Texture* SpecularTexture{};
+	// Resource IDs for the `TextureManager` to resolve into a 
+	// Graphics Texture ID
+	uint32_t ColorMap{};
+	uint32_t MetallicRoughnessMap{};
+	uint32_t NormalMap{};
 
 	bool HasTranslucency = false;
-	bool HasSpecular = false;
-	float SpecExponent = 16.f;
-	float SpecMultiply = .5f;
+	float SpecExponent{};
+	float SpecMultiply{};
 
 private:
 	RenderMaterial();

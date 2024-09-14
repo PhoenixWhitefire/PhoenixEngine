@@ -9,7 +9,7 @@
       "computePhysics": 0
     },
     {
-      "name": "g",
+      "name": "grass",
       "path": "models/grass",
       "position":[100,0,15],
       "orient": [0,0,0],
@@ -17,7 +17,7 @@
       "facecull": "none"
     },
     {
-      "name": "gr",
+      "name": "ground",
       "path": "models/ground",
       "position":[100,0,15],
       "orient": [0,0,0],
@@ -30,6 +30,14 @@
       "position":[100,5,15],
       "orient": [0,0,0],
       "size": [1,1,1],
+      "facecull": "none"
+    },
+    {
+      "name": "sushi",
+      "path": "models/stylized_sushi",
+      "position":[0, 0, -15],
+      "orient": [0,0,0],
+      "size": [0.1, 0.1, 0.1],
       "facecull": "none"
     }
   ],

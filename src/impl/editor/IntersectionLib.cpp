@@ -21,9 +21,9 @@ static std::vector<IntersectionLib::Triangle> GetTrianglesFromHittableObject(Int
 		{
 			IntersectionLib::Triangle NewTri = IntersectionLib::Triangle();
 
-			Vector3 Vertex1 = TargetMesh->Vertices[TargetMesh->Indices[Indice * 3]].position;
-			Vector3 Vertex2 = TargetMesh->Vertices[TargetMesh->Indices[Indice * 3 + 1]].position;
-			Vector3 Vertex3 = TargetMesh->Vertices[TargetMesh->Indices[Indice * 3 + 2]].position;
+			Vector3 Vertex1 = TargetMesh->Vertices[TargetMesh->Indices[Indice * 3]].Position;
+			Vector3 Vertex2 = TargetMesh->Vertices[TargetMesh->Indices[Indice * 3 + 1]].Position;
+			Vector3 Vertex3 = TargetMesh->Vertices[TargetMesh->Indices[Indice * 3 + 2]].Position;
 
 			Vertex1 = glm::vec3(glm::vec4((glm::vec3)Vertex1, 1.0f) * HittableObject->Transform);
 			Vertex2 = glm::vec3(glm::vec4((glm::vec3)Vertex2, 1.0f) * HittableObject->Transform);

@@ -18,6 +18,22 @@ static Reflection::GenericValue destroyObject(GameObject* obj, const Reflection:
 	return Reflection::GenericValue();
 }
 
+static std::string getFullName(GameObject* object)
+{
+	std::string fullName = object->Name;
+	auto curObject = object;
+
+	while (GameObject* parent = curObject->GetParent())
+	{
+		if (parent == GameObject::s_DataModel)
+			break;
+		fullName = parent->Name + "." + fullName;
+		curObject = parent;
+	}
+
+	return fullName;
+}
+
 void GameObject::s_DeclareReflections()
 {
 	if (s_DidInitReflection)
@@ -80,6 +96,15 @@ void GameObject::s_DeclareReflections()
 	);
 	
 	REFLECTION_DECLAREPROC("Destroy", destroyObject);
+	REFLECTION_DECLAREFUNC(
+		"GetFullName",
+		{},
+		{ Reflection::ValueType::String },
+		[](GameObject* object, const Reflection::GenericValue&)
+		{
+			return getFullName(object);
+		}
+	);
 
 	//REFLECTION_INHERITAPI(Reflection::Reflectable);
 }
@@ -142,16 +167,7 @@ void GameObject::Destroy()
 
 std::string GameObject::GetFullName()
 {
-	std::string FullName = this->Name;
-	auto curInst = this;
-
-	while (GameObject* parent = curInst->GetParent())
-	{
-		FullName = parent->Name + "." + FullName;
-		curInst = parent;
-	}
-
-	return FullName;
+	return getFullName(this);
 }
 
 void GameObject::SetParent(GameObject* newParent)

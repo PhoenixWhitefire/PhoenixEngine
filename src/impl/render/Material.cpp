@@ -11,14 +11,13 @@ RenderMaterial::RenderMaterial()
 {
 	this->Name = "*ERROR*";
 	this->HasTranslucency = false;
-	this->HasSpecular = false;
 
 	this->Shader = ShaderProgram::GetShaderProgram("worldUber");
 
 	TextureManager* texManager = TextureManager::Get();
 
-	this->DiffuseTexture = texManager->LoadTextureFromPath(MissingTexPath);
-	this->SpecularTexture = this->DiffuseTexture;
+	this->ColorMap = texManager->LoadTextureFromPath(MissingTexPath);
+	this->MetallicRoughnessMap = 0;
 }
 
 RenderMaterial::RenderMaterial(std::string const& MaterialName)
@@ -56,22 +55,21 @@ RenderMaterial::RenderMaterial(std::string const& MaterialName)
 	std::string desiredShp = jsonMaterialData.value("shaderprogram", "worldUber");
 	this->Shader = ShaderProgram::GetShaderProgram(desiredShp);
 
-	this->DiffuseTexture = texManager->LoadTextureFromPath(jsonMaterialData.value(
+	this->ColorMap = texManager->LoadTextureFromPath(jsonMaterialData.value(
 		"albedo",
 		MissingTexPath
 	));
 
 	bool hasSpecularTexture = jsonMaterialData.find("specular") != jsonMaterialData.end();
 	this->HasTranslucency = jsonMaterialData.value("translucency", false);
-	this->HasSpecular = hasSpecularTexture;
 
-	if (HasSpecular)
-		this->SpecularTexture = texManager->LoadTextureFromPath(jsonMaterialData.value(
+	if (hasSpecularTexture)
+		this->MetallicRoughnessMap = texManager->LoadTextureFromPath(jsonMaterialData.value(
 			"specular",
 			MissingTexPath
 		));
 	else
-		this->SpecularTexture = texManager->LoadTextureFromPath(MissingTexPath);
+		this->MetallicRoughnessMap = 0;
 
 	this->SpecExponent = jsonMaterialData.value("specExponent", this->SpecExponent);
 	this->SpecMultiply = jsonMaterialData.value("specMultiply", this->SpecMultiply);

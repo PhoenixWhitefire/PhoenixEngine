@@ -6,37 +6,37 @@
 //Reflection::Reflectable* Reflection::Reflectable::ApiReflection = new Reflection::Reflectable();
 
 Reflection::GenericValue::GenericValue()
-	: Type(ValueType::None), Pointer(nullptr)
+	: Type(ValueType::Null)
 {
 }
 
 Reflection::GenericValue::GenericValue(std::string const& str)
-	: Type(ValueType::String), String(str), Pointer(nullptr)
+	: Type(ValueType::String), String(str)
 {
 }
 
 Reflection::GenericValue::GenericValue(bool b)
-	: Type(ValueType::Bool), Bool(b), Pointer(nullptr)
+	: Type(ValueType::Bool), Bool(b)
 {
 }
 
 Reflection::GenericValue::GenericValue(double d)
-	: Type(ValueType::Double), Double(d), Pointer(nullptr)
+	: Type(ValueType::Double), Double(d)
 {
 }
 
 Reflection::GenericValue::GenericValue(int i)
-	: Type(ValueType::Integer), Integer(i), Pointer(nullptr)
+	: Type(ValueType::Integer), Integer(i)
 {
 }
 
 Reflection::GenericValue::GenericValue(int64_t i)
-	: Type(ValueType::Integer), Integer(i), Pointer(nullptr)
+	: Type(ValueType::Integer), Integer(i)
 {
 }
 
 Reflection::GenericValue::GenericValue(uint32_t i)
-	: Type(ValueType::Integer), Integer(i), Pointer(nullptr)
+	: Type(ValueType::Integer), Integer(i)
 {
 }
 
@@ -53,23 +53,77 @@ std::string Reflection::GenericValue::ToString() const
 {
 	switch (this->Type)
 	{
-	case (ValueType::String):
-		return this->String;
+	case (ValueType::Null):
+		return "Null";
 
 	case (ValueType::Bool):
 		return this->Bool ? "true" : "false";
 
-	case (ValueType::Double):
-		return std::to_string(this->Double);
-
 	case (ValueType::Integer):
 		return std::to_string(this->Integer);
 
+	case (ValueType::Double):
+		return std::to_string(this->Double);
+
+	case (ValueType::String):
+		return this->String;
+	
 	case (ValueType::Color):
 		return Color(*this).ToString();
 
 	case (ValueType::Vector3):
-		return Vector3().ToString();
+		return Vector3(*this).ToString();
+
+	case (ValueType::GameObject):
+	{
+		GameObject* object = GameObject::GetObjectById(static_cast<uint32_t>(this->Integer));
+		return object ? object->GetFullName() : "NULL GameObject";
+	}
+	
+	case (ValueType::Array):
+	{
+		if (this->Array.size() > 0)
+		{
+			uint32_t numTypes = 0;
+			std::string typesString = "";
+
+			for (const Reflection::GenericValue& element : this->Array)
+			{
+				numTypes++;
+				if (numTypes > 4)
+				{
+					typesString += "...|";
+					break;
+				}
+				else
+					typesString += Reflection::TypeAsString(element.Type) + "|";
+			}
+
+			typesString = typesString.substr(0, typesString.size() - 1);
+
+			return std::vformat("Array<{}>", std::make_format_args(typesString));
+		}
+		else
+			return "Empty Array";
+
+	case (ValueType::Map):
+	{
+		if (this->Array.size() > 0)
+		{
+			if (this->Array.size() % 2 != 0)
+				return "Invalid Map (Odd number of Array elements)";
+
+			return std::vformat(
+				"Map<{}:{}>",
+				std::make_format_args(
+					Reflection::TypeAsString(this->Array[0].Type),
+					Reflection::TypeAsString(this->Array[1].Type)
+				));
+		}
+		else
+			return "Empty Map";
+	}
+	}
 
 	default:
 	{
@@ -190,7 +244,7 @@ Reflection::Reflectable::Reflectable()
 
 static std::string valueTypeNames[] =
 {
-		"None",
+		"Null",
 
 		"Bool",
 		"Integer",

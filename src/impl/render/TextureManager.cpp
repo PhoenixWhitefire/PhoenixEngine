@@ -13,47 +13,56 @@ static const std::string MissingTexPath = "textures/MISSING2_MaximumADHD_status_
 static const std::string TexLoadErr =
 "Attempted to load texture '{}', but it failed. Additionally, the replacement Missing Texture could not be loaded.";
 
-typedef std::function<Texture*(TextureManager*, Texture*, std::string)> AsyncTexLoader_t;
+typedef std::function<uint8_t* (const char*, int*, int*, int*)> ImageLoader_t;
+typedef std::function<Texture*(ImageLoader_t, Texture*, std::string, uint32_t)> AsyncTexLoader_t;
 
-static void registerTexture(Texture* texture)
+static void registerTexture(Texture& texture)
 {
-	if (texture->TMP_ImageByteData == nullptr)
+	if (texture.Status == TextureLoadStatus::Failed)
 	{
-		auto FormattedArgs = std::make_format_args(texture->ImagePath);
+		auto FormattedArgs = std::make_format_args(texture.ImagePath);
 		Debug::Log(std::vformat("Failed to load texture '{}'", FormattedArgs));
 
-		if (texture->ImagePath != MissingTexPath)
+		if (texture.ImagePath != MissingTexPath)
 		{
-			Texture* replacement = TextureManager::Get()->LoadTextureFromPath(MissingTexPath, false);
-			texture->Identifier = replacement->Identifier;
-			texture->AttemptedLoad = true;
-			texture->Height = replacement->Height;
-			texture->Width = replacement->Width;
-			texture->NumColorChannels = replacement->NumColorChannels;
+			TextureManager* texManager = TextureManager::Get();
+			uint32_t replacementId = texManager->LoadTextureFromPath(MissingTexPath, false);
+
+			Texture* replacement = texManager->GetTextureResource(replacementId);
+			texture.Height = replacement->Height;
+			texture.Width = replacement->Width;
+			texture.NumColorChannels = replacement->NumColorChannels;
+			texture.TMP_ImageByteData = replacement->TMP_ImageByteData;
+
+			glBindTexture(GL_TEXTURE_2D, texture.GpuId);
+
+			glTexImage2D
+			(
+				GL_TEXTURE_2D,
+				0,
+				GL_RGBA,
+				texture.Width,
+				texture.Height,
+				0,
+				replacement->NumColorChannels == 1 ? GL_RED
+					: (replacement->NumColorChannels == 3 ? GL_RGB : GL_RGBA),
+				GL_UNSIGNED_BYTE,
+				texture.TMP_ImageByteData
+			);
+
+			glGenerateMipmap(GL_TEXTURE_2D);
+
+			glBindTexture(GL_TEXTURE_2D, 0);
 
 			return;
 		}
 		else
-			throw(std::vformat(TexLoadErr, std::make_format_args(texture->ImagePath)));
+			throw(std::vformat(TexLoadErr, std::make_format_args(texture.ImagePath)));
 	}
 
-	glGenTextures(1, &texture->Identifier);
-	glBindTexture(GL_TEXTURE_2D, texture->Identifier);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-	//printf("%s %i\n", texture->ImagePath.c_str(), texture->Identifier);
-
-	// Specular textures may be in the form of PNGs, which have 4 color channels.
-	// Manually set format if TexturePtr->Usage is specified
-	// Set Format to 0 to make code try and identify usage through available color channels
-	// TODO: recheck logic?
 	GLenum Format = 0;
 
-	switch (texture->NumColorChannels)
+	switch (texture.NumColorChannels)
 	{
 
 	case (4):
@@ -78,7 +87,7 @@ static void registerTexture(Texture* texture)
 	{
 		throw(std::vformat(
 			std::string("Invalid ImageNumColorChannels (was '{}') for '{}'!"),
-			std::make_format_args(texture->NumColorChannels, texture->ImagePath)
+			std::make_format_args(texture.NumColorChannels, texture.ImagePath)
 		));
 		break;
 	}
@@ -91,17 +100,19 @@ static void registerTexture(Texture* texture)
 	// TODO: texture mipmaps, 4 is the number of mipmaps
 	//glTexStorage2D(GL_TEXTURE_2D, 1, MipMapsInternalFormat, TexturePtr->ImageWidth, TexturePtr->ImageHeight);
 
+	glBindTexture(GL_TEXTURE_2D, texture.GpuId);
+
 	glTexImage2D
 	(
 		GL_TEXTURE_2D,
 		0,
 		GL_RGBA,
-		texture->Width,
-		texture->Height,
+		texture.Width,
+		texture.Height,
 		0,
 		Format,
 		GL_UNSIGNED_BYTE,
-		texture->TMP_ImageByteData
+		texture.TMP_ImageByteData
 	);
 
 	glGenerateMipmap(GL_TEXTURE_2D);
@@ -125,47 +136,82 @@ TextureManager* TextureManager::Get()
 	return &instance;
 }
 
-uint8_t* TextureManager::LoadImageData(const char* ImagePath, int* ImageWidth, int* ImageHeight, int* ImageColorChannels)
+static uint8_t* loadImageData(const char* ImagePath, int* ImageWidth, int* ImageHeight, int* ImageColorChannels)
 {
 	stbi_set_flip_vertically_on_load(true);
 
-	uint8_t* ImageData = stbi_load(ImagePath, ImageWidth, ImageHeight, ImageColorChannels, 0);
+	uint8_t* imageData = stbi_load(ImagePath, ImageWidth, ImageHeight, ImageColorChannels, 0);
 	
-	return ImageData;
+	return imageData;
 }
 
-static Texture* asyncTextureLoader(TextureManager* Manager, Texture* Image, std::string ActualPath)
+static Texture* asyncTextureLoader(
+	ImageLoader_t ImageLoader,
+	Texture* AsyncTexture,
+	std::string ActualPath,
+	uint32_t ResourceId
+)
 {
-	uint8_t* Data = Manager->LoadImageData(
+	uint8_t* data = ImageLoader(
 		ActualPath.c_str(),
-		&Image->Width,
-		&Image->Height,
-		&Image->NumColorChannels
+		&AsyncTexture->Width,
+		&AsyncTexture->Height,
+		&AsyncTexture->NumColorChannels
 	);
 
-	Image->AttemptedLoad = true;
+	AsyncTexture->Status = data ? TextureLoadStatus::Succeeded : TextureLoadStatus::Failed;
 
-	Image->TMP_ImageByteData = Data;
+	AsyncTexture->TMP_ImageByteData = data;
+	AsyncTexture->ResourceId = ResourceId;
+	AsyncTexture->ImagePath = ActualPath;
 
-	return Image;
+	return AsyncTexture;
 }
 
-Texture* TextureManager::LoadTextureFromPath(const std::string& Path, bool ShouldLoadAsync)
+uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool ShouldLoadAsync)
 {
 	std::string ResDir = EngineJsonConfig["ResourcesDirectory"];
 	std::string ActualPath = ResDir + Path;
 
-	auto it = m_Textures.find(Path);
+	auto it = m_StringToTextureId.find(Path);
 	
-	if (it == m_Textures.end())
+	if (it == m_StringToTextureId.end())
 	{
-		Texture* texture = new Texture();
-		texture->ImagePath = Path;
+		static uint32_t CurrentResourceId = 1;
 
-		if (Path != MissingTexPath)
-			texture->Identifier = this->LoadTextureFromPath(MissingTexPath, false)->Identifier;
+		uint32_t newResourceId = CurrentResourceId;
+		CurrentResourceId += 1;
 
-		m_Textures.insert(std::pair(Path, texture));
+		m_StringToTextureId.insert(std::pair(Path, newResourceId));
+
+		uint32_t newGpuId;
+		glGenTextures(1, &newGpuId);
+
+		Texture newTexture{ Path, newResourceId, newGpuId };
+
+		glBindTexture(GL_TEXTURE_2D, newTexture.GpuId);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+		static const uint8_t FullByte = 0xFF;
+
+		glTexImage2D
+		(
+			GL_TEXTURE_2D,
+			0,
+			GL_RGBA,
+			1,
+			1,
+			0,
+			GL_RED,
+			GL_UNSIGNED_BYTE,
+			&FullByte
+		);
+
+		glGenerateMipmap(GL_TEXTURE_2D);
 
 		//ShouldLoadAsync = false;
 
@@ -178,37 +224,52 @@ Texture* TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 
 			ThreadManager::Get()->DispatchJob(*LoadTextureTask);*/
 
+			Texture* asyncTexture = new Texture;
+
 			std::promise<Texture*>* promise = new std::promise<Texture*>();
 
 			std::thread(
-				[promise, this, texture, ActualPath](AsyncTexLoader_t loader)
+				[promise, asyncTexture, ActualPath, newResourceId](auto asyncFunc, auto imageLoader)
 				{
-					promise->set_value_at_thread_exit(loader(this, texture, ActualPath));
+					promise->set_value_at_thread_exit(asyncFunc(imageLoader, asyncTexture, ActualPath, newResourceId));
 				}
-			, asyncTextureLoader).detach();
+			, asyncTextureLoader, loadImageData).detach();
+
+			newTexture.Status = TextureLoadStatus::InProgress;
 
 			m_TexPromises.push_back(promise);
 			m_TexFutures.push_back(promise->get_future().share());
 		}
 		else
 		{
-			uint8_t* Data = this->LoadImageData(
+			uint8_t* data = loadImageData(
 				ActualPath.c_str(),
-				&texture->Width,
-				&texture->Height,
-				&texture->NumColorChannels
+				&newTexture.Width,
+				&newTexture.Height,
+				&newTexture.NumColorChannels
 			);
 
-			texture->TMP_ImageByteData = Data;
-			texture->AttemptedLoad = true;
+			newTexture.TMP_ImageByteData = data;
+			newTexture.Status = data ? TextureLoadStatus::Succeeded : TextureLoadStatus::Failed;
 
-			registerTexture(texture);
+			registerTexture(newTexture);
 		}
 
-		return texture;
+		m_Textures.insert(std::pair(newResourceId, newTexture));
+
+		return newResourceId;
 	}
 	else
 		return it->second;
+}
+
+Texture* TextureManager::GetTextureResource(uint32_t ResourceId)
+{
+	auto textureIt = m_Textures.find(ResourceId);
+	if (textureIt != m_Textures.end())
+		return &textureIt->second;
+	else
+		return nullptr;
 }
 
 void TextureManager::FinalizeAsyncLoadedTextures()
@@ -227,22 +288,54 @@ void TextureManager::FinalizeAsyncLoadedTextures()
 		if (!f.valid() || (f.wait_for(std::chrono::seconds(0)) != std::future_status::ready))
 			continue;
 
-		Texture* image = f.get();
+		Texture* loadedImage = f.get();
+
+		auto imageIt = m_Textures.find(loadedImage->ResourceId);
+
+		if (imageIt == m_Textures.end())
+		{
+			Debug::Log(std::vformat(
+				"Got async loaded texture with invalid Resource ID {}",
+				std::make_format_args(loadedImage->ResourceId)
+			));
+			continue;
+		}
+		
+		Texture& image = imageIt->second;
+
+		if (image.Status != TextureLoadStatus::InProgress)
+			continue;
+
+		image.Width = loadedImage->Width;
+		image.Height = loadedImage->Height;
+		image.NumColorChannels = loadedImage->NumColorChannels;
+		image.Status = loadedImage->Status;
+
+		size_t bufSize = (size_t)image.Width * (size_t)image.Height * (size_t)image.NumColorChannels;
+
+		image.TMP_ImageByteData = (uint8_t*)malloc(bufSize);
+
+		if (!image.TMP_ImageByteData)
+		{
+			Debug::Log(std::vformat(
+				"`malloc` failed in ::FinalizeAsyncLoadedTextures (Requested amount was {} bytes)",
+				std::make_format_args(bufSize)
+			));
+			Debug::Save();
+
+			throw("Could not allocate a buffer to copy image from async thread");
+		}
+		
+		memcpy(image.TMP_ImageByteData, loadedImage->TMP_ImageByteData, bufSize);
+		
+		//stbi_image_free(loadedImage->TMP_ImageByteData);
+
+		//delete loadedImage;
+
 		registerTexture(image);
 		
-		// remove element (ugly)
-		// 10/09/2024
-		auto lastPromise = m_TexPromises[m_TexPromises.size() - 1];
-		m_TexPromises[m_TexPromises.size() - 1] = promise;
-		m_TexPromises[promiseIndex] = lastPromise;
-
-		m_TexPromises.pop_back();
-
-		auto& lastFuture = m_TexFutures[m_TexFutures.size() - 1];
-		m_TexFutures[m_TexFutures.size() - 1] = f;
-		m_TexFutures[promiseIndex] = lastFuture;
-
-		m_TexFutures.pop_back();
+		m_TexPromises.erase(m_TexPromises.begin() + promiseIndex);
+		m_TexFutures.erase(m_TexFutures.begin() + promiseIndex);
 
 		delete promise;
 	}

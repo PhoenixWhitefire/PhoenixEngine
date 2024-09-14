@@ -4,17 +4,24 @@
 #include<future>
 #include<stdint.h>
 
-#define TEXTUREMANAGER_INVALID_ID UINT32_MAX
+enum class TextureLoadStatus
+{
+	NotAttempted,
+	InProgress,
+	Succeeded,
+	Failed
+};
 
 struct Texture
 {
-	uint32_t Identifier = TEXTUREMANAGER_INVALID_ID;
-
 	std::string ImagePath{};
+
+	uint32_t ResourceId = UINT32_MAX;
+	uint32_t GpuId = UINT32_MAX;
 	int Width, Height = -1;
 	int NumColorChannels = -1;
 
-	bool AttemptedLoad = false;
+	TextureLoadStatus Status = TextureLoadStatus::NotAttempted;
 
 	// De-allocated after the Texture is uploaded to the GPU
 	uint8_t* TMP_ImageByteData{};
@@ -33,21 +40,21 @@ public:
 	/*
 	Load texture data from an image file and upload it to the GPU as a GL_TEXTURE_2D
 	@param The image path
-	@param Should it be loaded in a separate thread without freezing the game
-	If ShouldLoadAsync is true, then Texture->Identifier will be TEXTUREMANAGER_INVALID_ID until
-	the Texture is ready to use.
+	@param Should it be loaded in a separate thread without freezing the game (default `true`)
+	@return The Texture Resource ID (texture can be queried with `::GetTextureResource`)
 	*/
-	Texture* LoadTextureFromPath(const std::string& Path, bool ShouldLoadAsync = true);
+	uint32_t LoadTextureFromPath(const std::string& Path, bool ShouldLoadAsync = true);
 
 	/*
-	Load an image's data, used internally by TextureManager::CreateTexture2D and is a separate function for asynchronous loading
+	Get a Texture by it's Resource ID
 	*/
-	uint8_t* LoadImageData(const char* ImagePath, int* ImageWidth, int* ImageHeight, int* ImageColorChannels);
+	Texture* GetTextureResource(uint32_t);
 
 private:
 	TextureManager();
 
 	std::vector<std::promise<Texture*>*> m_TexPromises;
 	std::vector<std::shared_future<Texture*>> m_TexFutures;
-	std::unordered_map<std::string, Texture*> m_Textures;
+	std::unordered_map<std::string, uint32_t> m_StringToTextureId;
+	std::unordered_map<uint32_t, Texture> m_Textures;
 };

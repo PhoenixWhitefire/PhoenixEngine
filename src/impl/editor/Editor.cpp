@@ -45,8 +45,6 @@ Editor::Editor()
 	m_MtlSpecBuf = bufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
 
 	DefaultNewMaterial["albedo"] = "textures/plastic.png";
-
-	Debug::Log("Editor object was created");
 }
 
 static std::vector<IntersectionLib::HittableObject*> Objects;
@@ -141,13 +139,20 @@ static bool objectsIterator(void* Root, int Index, const char** OutText)
 {
 	//GameObject* Parent = (GameObject*)Data;
 
+	size_t negativeOffset = 1;
+
 	if (Index == 0)
 	{
-		*OutText = ParentString;
-		return true;
+		if (Root)
+		{
+			*OutText = ParentString;
+			return true;
+		}
+		else
+			negativeOffset = 0;
 	}
 
-	GameObject* selected = getVisibleChildren((GameObject*)Root).at((size_t)Index - 1);
+	GameObject* selected = getVisibleChildren((GameObject*)Root).at((size_t)Index - negativeOffset);
 	*OutText = selected->Name.c_str();
 
 	return true;
@@ -200,17 +205,22 @@ void Editor::m_RenderMaterialEditor()
 
 	RenderMaterial* curItem = RenderMaterial::GetLoadedMaterials().at(m_MtlCurItem);
 
+	TextureManager* texManager = TextureManager::Get();
+
+	Texture* colorMap = texManager->GetTextureResource(curItem->ColorMap);
+	Texture* metallicRoughnessMap = texManager->GetTextureResource(curItem->MetallicRoughnessMap);
+
 	if (m_MtlCurItem != m_MtlPrevItem)
 	{
 		for (uint32_t i = 0; i < MATERIAL_TEXTUREPATH_BUFSIZE; i++)
-			m_MtlDiffuseBuf[i] = i < curItem->DiffuseTexture->ImagePath.size()
-									? curItem->DiffuseTexture->ImagePath.at(i)
+			m_MtlDiffuseBuf[i] = i < colorMap->ImagePath.size()
+									? colorMap->ImagePath.at(i)
 									: 0;
 
-		if (curItem->HasSpecular)
+		if (metallicRoughnessMap)
 			for (uint32_t i = 0; i < MATERIAL_TEXTUREPATH_BUFSIZE; i++)
-				m_MtlSpecBuf[i] = i < curItem->SpecularTexture->ImagePath.size()
-									? curItem->SpecularTexture->ImagePath.at(i)
+				m_MtlSpecBuf[i] = i < metallicRoughnessMap->ImagePath.size()
+									? metallicRoughnessMap->ImagePath.at(i)
 									: 0;
 		else
 			for (int i = 0; i < 64; i++)
@@ -219,17 +229,13 @@ void Editor::m_RenderMaterialEditor()
 
 	m_MtlPrevItem = m_MtlCurItem;
 
-	TextureManager* texManager = TextureManager::Get();
-
 	ImGui::InputText("Diffuse", m_MtlDiffuseBuf, 64);
 	
-	Texture* curDiffuse = curItem->DiffuseTexture;
-
 	ImGui::Image(
 		// first cast to uint64_t to get rid of the
 		// "'type cast': conversion from 'uint32_t' to 'void *' of greater size"
 		// warning
-		(void*)((uint64_t)curDiffuse->Identifier),
+		(void*)((uint64_t)colorMap->GpuId),
 		ImVec2(256, 256),
 		// Flip the Y axis. Either OpenGL or Dear ImGui is bottom-up
 		ImVec2(0, 1),
@@ -238,26 +244,23 @@ void Editor::m_RenderMaterialEditor()
 
 	ImGui::Text(std::vformat(
 		"Resolution: {}x{}",
-		std::make_format_args(curDiffuse->Width, curDiffuse->Height)
+		std::make_format_args(colorMap->Width, colorMap->Height)
 	).c_str());
+
 	ImGui::Text(std::vformat(
 		"# Color channels: {}",
-		std::make_format_args(curDiffuse->NumColorChannels)
+		std::make_format_args(colorMap->NumColorChannels)
 	).c_str());
 
 	ImGui::InputText("Specular", m_MtlSpecBuf, 64);
 
-	Texture* curSpecular = curItem->HasSpecular
-							? curItem->SpecularTexture
-							: nullptr;
-
-	if (curSpecular)
+	if (metallicRoughnessMap)
 	{
 		ImGui::Image(
 			// first cast to uint64_t to get rid of the
 			// "'type cast': conversion from 'uint32_t' to 'void *' of greater size"
 			// warning
-			(void*)((uint64_t)curSpecular->Identifier),
+			(void*)((uint64_t)metallicRoughnessMap->GpuId),
 			ImVec2(256, 256),
 			// Flip the Y axis. Either OpenGL or Dear ImGui is bottom-up
 			ImVec2(0, 1),
@@ -266,35 +269,35 @@ void Editor::m_RenderMaterialEditor()
 
 		ImGui::Text(std::vformat(
 			"Resolution: {}x{}",
-			std::make_format_args(curSpecular->Width, curSpecular->Height)
+			std::make_format_args(metallicRoughnessMap->Width, metallicRoughnessMap->Height)
 		).c_str());
+
 		ImGui::Text(std::vformat(
 			"# Color channels: {}",
-			std::make_format_args(curSpecular->NumColorChannels)
+			std::make_format_args(metallicRoughnessMap->NumColorChannels)
 		).c_str());
 	}
 
 	if (ImGui::Button("Update textures"))
 	{
-		curItem->DiffuseTexture = texManager->LoadTextureFromPath(m_MtlDiffuseBuf);
+		curItem->ColorMap = texManager->LoadTextureFromPath(m_MtlDiffuseBuf);
 
-		if (curItem->HasSpecular)
-			curItem->SpecularTexture = texManager->LoadTextureFromPath(m_MtlSpecBuf);
+		if (strlen(m_MtlSpecBuf) > 0)
+			curItem->MetallicRoughnessMap = texManager->LoadTextureFromPath(m_MtlSpecBuf);
 	}
 
 	ImGui::Checkbox("Has translucency", &curItem->HasTranslucency);
 	ImGui::InputFloat("Spec pow", &curItem->SpecExponent);
 	ImGui::InputFloat("Spec mul", &curItem->SpecMultiply);
-	ImGui::Checkbox("Has spec map", &curItem->HasSpecular);
 
 	if (ImGui::Button("Save"))
 	{
 		nlohmann::json newMtlConfig{};
 
-		newMtlConfig["albedo"] = curItem->DiffuseTexture->ImagePath;
+		newMtlConfig["albedo"] = colorMap->ImagePath;
 
-		if (curItem->HasSpecular && curItem->SpecularTexture)
-			newMtlConfig["specular"] = curItem->SpecularTexture->ImagePath;
+		if (metallicRoughnessMap)
+			newMtlConfig["specular"] = metallicRoughnessMap->ImagePath;
 
 		newMtlConfig["specExponent"] = curItem->SpecExponent;
 		newMtlConfig["specMultiply"] = curItem->SpecMultiply;
@@ -336,8 +339,15 @@ void Editor::RenderUI()
 
 		if (ascendHierarchy)
 		{
+			GameObject* prevRoot = m_CurrentUIHierarchyRoot;
 			m_CurrentUIHierarchyRoot = m_CurrentUIHierarchyRoot->GetParent();
-			m_HierarchyCurItem = 0;
+
+			std::vector<GameObject*> newChildren = getVisibleChildren(m_CurrentUIHierarchyRoot);
+
+			auto prevRootInCurRootIt = std::find(newChildren.begin(), newChildren.end(), prevRoot);
+			// try to select the object that we were just inside
+			if (prevRootInCurRootIt != newChildren.end())
+				m_HierarchyCurItem = static_cast<int>(prevRootInCurRootIt - newChildren.begin() + 1);
 		}
 	}
 
@@ -360,16 +370,21 @@ void Editor::RenderUI()
 		&m_HierarchyCurItem,
 		&objectsIterator,
 		m_CurrentUIHierarchyRoot,
-		static_cast<int>(children.size()) + 1
+		static_cast<int>(children.size()) + (m_CurrentUIHierarchyRoot ? 1 : 0)
 	);
 
 	GameObject* selected = nullptr;
 
-	if (m_HierarchyCurItem > 0)
-		if (children.size() >= m_HierarchyCurItem)
-			selected = children[(size_t)m_HierarchyCurItem - 1];
+	int32_t startOffset = m_CurrentUIHierarchyRoot ? 1 : 0;
+
+	if (m_HierarchyCurItem > startOffset - 1)
+		if (children.size() > m_HierarchyCurItem - startOffset)
+			selected = children[(size_t)m_HierarchyCurItem - startOffset];
 		else
 			m_HierarchyCurItem = -1;
+
+	else if (m_HierarchyCurItem == 0) // index 0 is the `[Parent]` item
+		selected = m_CurrentUIHierarchyRoot;
 
 	if (selected)
 	{

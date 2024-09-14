@@ -49,6 +49,4 @@ void Object_DataModel::Initialize()
 {
 	auto workspace = GameObject::CreateGameObject("Workspace");
 	workspace->SetParent(this);
-
-	Debug::Log("DataModel initialized");
 }

@@ -78,81 +78,45 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 	for (int MeshIndex = 0; MeshIndex < m_Meshes.size(); MeshIndex++)
 	{
 		// TODO: cleanup code
-		GameObject* M;
-		Object_Base3D* m3d;
-		Object_Mesh* mo;
+		Object_Mesh* mesh = dynamic_cast<Object_Mesh*>(GameObject::CreateGameObject("Mesh"));
 		
-		M = GameObject::CreateGameObject("Mesh");
-		LoadedObjs.push_back(M);
+		LoadedObjs.push_back(mesh);
 
-		m3d = dynamic_cast<Object_Base3D*>(M);
-		mo = dynamic_cast<Object_Mesh*>(M);
-
-		mo->SetRenderMesh(m_Meshes[MeshIndex]);
+		mesh->SetRenderMesh(m_Meshes[MeshIndex]);
+		mesh->Transform = m_MeshMatrices[MeshIndex];
 
 		//mo->Orientation = this->MeshRotations[MeshIndex];
 
-		m3d->Size = m_MeshScales[MeshIndex];
+		mesh->Size = m_MeshScales[MeshIndex];
 
 		if (hasMaterialOverride)
 			// `materials/{models/[MODEL NAME]}.mtl`
-			m3d->Material = RenderMaterial::GetMaterial(AssetPath);
+			mesh->Material = RenderMaterial::GetMaterial(AssetPath);
 		else
 		{
 			nlohmann::json materialJson{};
 
 			for (auto& it : m_MeshTextures)
 			{
-				Texture* tex = it.second;
+				Texture* tex = TextureManager::Get()->GetTextureResource(it.second);
 
-				switch (it.first)
-				{
+				std::string key = it.first == MaterialTextureType::Diffuse ? "albedo" : "specular";
 
-				case (MaterialTextureType::Diffuse):
-				{
-					//m3d->Material->DiffuseTextures.push_back(tex);
-
-					materialJson["albedo"] = tex->ImagePath;
-
-					break;
-				}
-
-				case (MaterialTextureType::Specular):
-				{
-					//m3d->Material->SpecularTextures.push_back(tex);
-
-					materialJson["specular"] = tex->ImagePath;
-
-					break;
-				}
-
-				default:
-				{
-					int texTypeId = (int)it.first;
-
-					Debug::Log(std::vformat(
-						"Don't know how to assign a texture of type ID {} to a material",
-						std::make_format_args(texTypeId)
-					));
-
-					break;
-
-				}
-				}
+				materialJson[key] = tex->ImagePath;
 			}
 
 			FileRW::WriteFile("materials/" + AssetPath + ".mtl", materialJson.dump(2), true);
 
-			mo->Material = RenderMaterial::GetMaterial(AssetPath);
+			mesh->Material = RenderMaterial::GetMaterial(AssetPath);
 		}
 
-		mo->Transform = m_MeshMatrices[MeshIndex];
-		mo->Size = m_MeshScales[MeshIndex];
+		mesh->Transform = m_MeshMatrices[MeshIndex];
+		mesh->Size = m_MeshScales[MeshIndex];
 		
 		//mo->Textures = this->MeshTextures[MeshIndex];
 
 		if (Parent != nullptr)
-			M->SetParent(Parent);
+			mesh->SetParent(Parent);
 	}
 
 	// TODO: fix matrices
@@ -166,15 +130,9 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 	*/
 }
 
-void ModelLoader::m_LoadMesh(
-	uint32_t indMesh,
-	glm::vec3 Translation,
-	glm::quat Rotation,
-	glm::vec3 Scale,
-	glm::mat4 matrix
-)
+void ModelLoader::m_LoadMesh(uint32_t MeshIndex)
 {
-	nlohmann::json mainPrims = m_JsonData["meshes"][indMesh]["primitives"][0];
+	nlohmann::json mainPrims = m_JsonData["meshes"][MeshIndex]["primitives"][0];
 
 	// Get all accessor indices
 	uint32_t posAccInd = mainPrims["attributes"]["POSITION"];
@@ -196,19 +154,10 @@ void ModelLoader::m_LoadMesh(
 	
 	m_MeshTextures = m_GetTextures();
 
-	Mesh NewMesh = Mesh(vertices, indices);
-
-	// TODO 30/08/2024 (also in Mesh.hpp)
-	// Yes, this,
-	// All of it
-	// Kill it with hammers
-	NewMesh.Matrix = matrix;
-	NewMesh.Translation = Translation;
-	NewMesh.Rotation = Rotation;
-	NewMesh.Scale = Scale;
+	Mesh newMesh{ vertices, indices };
 
 	// Combine the vertices, indices, and textures into a mesh
-	m_Meshes.push_back(NewMesh);
+	m_Meshes.push_back(newMesh);
 }
 
 void ModelLoader::m_TraverseNode(uint32_t nextNode, glm::mat4 matrix)
@@ -258,7 +207,7 @@ void ModelLoader::m_TraverseNode(uint32_t nextNode, glm::mat4 matrix)
 	}
 
 	// Initialize matrices
-	glm::mat4 trans = glm::mat4(1.0f);
+	glm::mat4 trans = glm::mat4(1.0f); // 14/09/2024 har har
 	glm::mat4 rot = glm::mat4(1.0f);
 	glm::mat4 sca = glm::mat4(1.0f);
 
@@ -273,20 +222,19 @@ void ModelLoader::m_TraverseNode(uint32_t nextNode, glm::mat4 matrix)
 	// Check if the node contains a mesh and if it does load it
 	if (node.find("mesh") != node.end())
 	{
-		m_MeshTranslations.push_back(translation);
-		m_MeshRotations.push_back(rotation);
+		//m_MeshTranslations.push_back(translation);
+		//m_MeshRotations.push_back(rotation);
 		m_MeshScales.push_back(scale);
 		m_MeshMatrices.push_back(matNextNode);
 
-		m_LoadMesh(node["mesh"], translation, rotation, scale, matNextNode);
+		m_LoadMesh(node["mesh"]);
 	}
 
 	// Check if the node has children, and if it does, apply this function to them with the matNextNode
 	if (node.find("children") != node.end())
 	{
-		for (uint32_t i = 0; i < node["children"].size(); i++) {
-			m_TraverseNode(node["children"][i], matNextNode);
-		}
+		for (nlohmann::json subnode : node["children"])
+			m_TraverseNode(subnode, matNextNode);
 	}
 }
 
@@ -397,19 +345,19 @@ std::vector<uint32_t> ModelLoader::m_GetIndices(nlohmann::json accessor)
 	return indices;
 }
 
-std::unordered_map<ModelLoader::MaterialTextureType, Texture*> ModelLoader::m_GetTextures()
+std::unordered_map<ModelLoader::MaterialTextureType, uint32_t> ModelLoader::m_GetTextures()
 {
 	TextureManager* texManager = TextureManager::Get();
 
-	std::unordered_map<MaterialTextureType, Texture*> textures;
+	std::unordered_map<MaterialTextureType, uint32_t> textures;
 
 	std::string fileDirectory = m_File.substr(0, m_File.find_last_of('/') + 1);
 
 	// Go over all images
-	for (uint32_t i = 0; i < m_JsonData["images"].size(); i++)
+	for (nlohmann::json image : m_JsonData["images"])
 	{
 		// uri of current texture
-		std::string texPath = m_JsonData["images"][i]["uri"];
+		std::string texPath = image["uri"];
 		std::string fullTexturePath = fileDirectory + texPath;
 
 		MaterialTextureType texType{};
@@ -417,8 +365,10 @@ std::unordered_map<ModelLoader::MaterialTextureType, Texture*> ModelLoader::m_Ge
 		// TODO: set usage based on how it's defined in the file itself
 		if (texPath.find("baseColor") != std::string::npos || texPath.find("diffuse") != std::string::npos)
 			texType = MaterialTextureType::Diffuse;
+
 		else if (texPath.find("metallicRoughness") != std::string::npos || texPath.find("specular") != std::string::npos)
 			texType = MaterialTextureType::Specular;
+
 		else
 		{
 			Debug::Log(std::vformat(
@@ -429,7 +379,7 @@ std::unordered_map<ModelLoader::MaterialTextureType, Texture*> ModelLoader::m_Ge
 			continue;
 		}
 
-		Texture* texture = texManager->LoadTextureFromPath(fullTexturePath);
+		uint32_t texture = texManager->LoadTextureFromPath(fullTexturePath);
 
 		textures.insert(std::pair(texType, texture));
 	}

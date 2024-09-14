@@ -201,11 +201,25 @@ static std::vector<GameObject*> LoadMapVersion1(
 			);
 		else
 		{
-			for (uint32_t index = 0; index < Model.size(); index++)
+			if (Model.size() > 1)
 			{
-				GameObject* mesh = Model[index];
-				mesh->Name = std::vformat("{}_{}", std::make_format_args(modelName, index));
-				Objects.push_back(mesh);
+				GameObject* container = GameObject::CreateGameObject("Model");
+
+				for (uint32_t index = 0; index < Model.size(); index++)
+				{
+					GameObject* mesh = Model[index];
+					mesh->Name = std::vformat("{}_{}", std::make_format_args(modelName, index));
+					mesh->SetParent(container);
+				}
+
+				container->Name = modelName;
+
+				Objects.push_back(container);
+			}
+			else
+			{
+				Model[0]->Name = modelName;
+				Objects.push_back(Model[0]);
 			}
 		}
 

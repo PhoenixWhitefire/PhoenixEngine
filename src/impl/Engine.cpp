@@ -75,10 +75,13 @@ static void updateDescendants(GameObject* Root, double DeltaTime)
 {
 	for (GameObject* object : Root->GetChildren())
 	{
-		object->Update(DeltaTime);
+		if (object->Enabled)
+		{
+			object->Update(DeltaTime);
 
-		if (object->GetChildren().size() > 0)
-			updateDescendants(object, DeltaTime);
+			if (object->GetChildren().size() > 0)
+				updateDescendants(object, DeltaTime);
+		}
 	}
 }
 
@@ -172,29 +175,56 @@ EngineObject::EngineObject()
 
 	PHX_SDL_CALL(SDL_Init, SDL_INIT_VIDEO);
 
-	Debug::Log("Initialized SDL Video subsystem");
-
 	// This is easily the worst complaint I've had about this library,
 	// the log function *does not called even when an error retrievable by SDL_GetError occurs*!
 	// It's complete RUBBISH, USELESS, TRASH, BULLSHIT
 	// 09/09/2024
 	SDL_LogSetOutputFunction(sdlLog, nullptr);
 
+	nlohmann::json::array_t requestedGLVersion = EngineJsonConfig.value("OpenGLVersion", nlohmann::json{ 4, 6 });
+	int requestedGLVersionMajor = requestedGLVersion[0];
+	int requestedGLVersionMinor = requestedGLVersion[1];
+
+	const static std::unordered_map<std::string, SDL_GLprofile> StringToGLProfile =
+	{
+		{ "Core", SDL_GL_CONTEXT_PROFILE_CORE },
+		{ "Compatibility", SDL_GL_CONTEXT_PROFILE_COMPATIBILITY },
+		{ "ES", SDL_GL_CONTEXT_PROFILE_ES }
+	};
+
+	std::string requestedProfileString = EngineJsonConfig.value("OpenGLProfile", "Core");
+
+	auto requestedProfileIt = StringToGLProfile.find(requestedProfileString);
+	SDL_GLprofile requestedProfile = SDL_GL_CONTEXT_PROFILE_CORE;
+
+	if (requestedProfileIt == StringToGLProfile.end())
+		Debug::Log(std::vformat(
+			"Invalid/unsupported OpenGL profile '{}' requested, defaulting to the Core profile",
+			std::make_format_args(requestedProfileString)
+		));
+	else
+		requestedProfile = requestedProfileIt->second;
+
+	Debug::Log(std::vformat(
+		"Requesting a {} OpenGL context with version {}.{}",
+		std::make_format_args(requestedProfileString, requestedGLVersionMajor, requestedGLVersionMinor)
+	));
+
 	// Must be set *before* window creation
 	PHX_SDL_CALL(
 		SDL_GL_SetAttribute,
 		SDL_GL_CONTEXT_PROFILE_MASK, 
-		SDL_GL_CONTEXT_PROFILE_CORE
+		requestedProfile
 	);
 	PHX_SDL_CALL(
 		SDL_GL_SetAttribute,
 		SDL_GL_CONTEXT_MAJOR_VERSION, 
-		EngineJsonConfig.value("SDL_GL_VersionMajor", 4)
+		requestedGLVersionMajor
 	);
 	PHX_SDL_CALL(
 		SDL_GL_SetAttribute,
 		SDL_GL_CONTEXT_MINOR_VERSION, 
-		EngineJsonConfig.value("SDL_GL_VersionMinor", 6)
+		requestedGLVersionMinor
 	);
 
 	PHX_SDL_CALL(SDL_GL_SetAttribute, SDL_GL_DOUBLEBUFFER, 1);
@@ -202,7 +232,7 @@ EngineObject::EngineObject()
 	PHX_SDL_CALL(SDL_GL_SetAttribute, SDL_GL_STENCIL_SIZE, 8);
 
 	this->Window = SDL_CreateWindow(
-		"Waiting on configuration...",
+		EngineJsonConfig.value("GameTitle", "PhoenixEngine").c_str(),
 		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		this->WindowSizeX, this->WindowSizeY,
 		m_SDLWindowFlags
@@ -216,15 +246,11 @@ EngineObject::EngineObject()
 
 	Debug::Log("Window created");
 
-	SDL_SetWindowTitle(this->Window, EngineJsonConfig.value("GameTitle", "PhoenixEngine").c_str());
-
-	Debug::Log("Window configured");
-
 	// TODO: Engine->MSAASamples does nothing, attempting to specify via below ctor's argument leads to
 	// OpenGL error "Target doesn't match the texture's target"
 	this->RendererContext = new Renderer(this->WindowSizeX, this->WindowSizeY, this->Window);
 
-	Debug::Log("Creating datamodel...");
+	Debug::Log("Creating initial DataModel...");
 
 	GameObject* newDataModel = GameObject::CreateGameObject("DataModel");
 
@@ -232,22 +258,9 @@ EngineObject::EngineObject()
 	GameObject::s_DataModel = newDataModel;
 
 	GameObject* workspace = DataModel->GetChild("Workspace");
-
 	this->Workspace = dynamic_cast<Object_Workspace*>(workspace);
 
-	// Post-processing framebuffer
-
-	glGenVertexArrays(1, &RectangleVAO);
-	glGenBuffers(1, &RectangleVBO);
-	glBindVertexArray(RectangleVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, RectangleVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(RectangleVertices), &RectangleVertices, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-
-	ThreadManager::Get()->CreateWorkers(4, WorkerType::DefaultTaskWorker);
+	//ThreadManager::Get()->CreateWorkers(4, WorkerType::DefaultTaskWorker);
 
 	Debug::Log("Engine constructed");
 }
@@ -363,6 +376,18 @@ void EngineObject::Start()
 {
 	Debug::Log("Final initializations...");
 
+	// Post-processing framebuffer quad
+	glGenVertexArrays(1, &RectangleVAO);
+	glGenBuffers(1, &RectangleVBO);
+	glBindVertexArray(RectangleVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, RectangleVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(RectangleVertices), &RectangleVertices, GL_STATIC_DRAW);
+
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+
 	// TODO:
 	// wtf are these
 	// 13/07/2024
@@ -371,9 +396,7 @@ void EngineObject::Start()
 	double FrameStart = 0.0f;
 	double LastSecond = LastFrame;
 
-	this->Exit = false;
-
-	const std::string SkyPath = "textures/Sky1/";
+	static const std::string SkyPath = "textures/Sky1/";
 
 	static const std::string SkyboxCubemapImages[6] =
 	{
@@ -385,7 +408,7 @@ void EngineObject::Start()
 		"back"
 	};
 
-	std::vector<Texture*> skyboxFacesLoading;
+	std::vector<uint32_t> skyboxFacesLoading;
 
 	GLuint skyboxCubemap = 0;
 
@@ -398,13 +421,15 @@ void EngineObject::Start()
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 	//glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_LOD_BIAS, 15.f);
 
-	for (const std::string skyboxFace : SkyboxCubemapImages)
+	TextureManager* texManager = TextureManager::Get();
+
+	for (const std::string& skyboxFace : SkyboxCubemapImages)
 	{
-		Texture* tex = TextureManager::Get()->LoadTextureFromPath(SkyPath + skyboxFace + ".jpg");
+		uint32_t tex = texManager->LoadTextureFromPath(SkyPath + skyboxFace + ".jpg");
 		skyboxFacesLoading.push_back(tex);
 	}
 
-	GLubyte whitePixel = 0xFF;
+	static const GLubyte FullByte = 0xFF;
 
 	for (int imageIndex = 0; imageIndex < 6; imageIndex++)
 	{
@@ -417,7 +442,7 @@ void EngineObject::Start()
 			0,
 			GL_RED,
 			GL_UNSIGNED_BYTE,
-			(void*)&whitePixel
+			&FullByte
 		);
 
 		glGenerateMipmap(GL_TEXTURE_2D);
@@ -438,12 +463,12 @@ void EngineObject::Start()
 	Scene scene = Scene();
 
 	RendererContext->Framebuffer->Unbind();
-
-	Texture* distortionTexture = TextureManager::Get()->LoadTextureFromPath("textures/screendistort.jpg");
+	
+	uint32_t distortionTexture = texManager->LoadTextureFromPath("textures/screendistort.jpg", false);
 
 	SDL_Event pollingEvent;
 
-	Debug::Log("Main program loop start...");
+	Debug::Log("Main engine loop start");
 
 	while (!this->Exit)
 	{
@@ -455,7 +480,7 @@ void EngineObject::Start()
 
 		if (!DataModel->GetChildOfClass("Workspace"))
 		{
-			Debug::Log("Workspace was Destroyed, shutting down");
+			Debug::Log("Workspace was removed, shutting down");
 			break;
 		}
 
@@ -470,9 +495,10 @@ void EngineObject::Start()
 
 		for (int index = 0; index < skyboxFacesLoading.size(); index++)
 		{
-			Texture* face = skyboxFacesLoading[index];
+			uint32_t face = skyboxFacesLoading[index];
+			Texture* texture = texManager->GetTextureResource(face);
 
-			if (face->AttemptedLoad && face->Identifier != TEXTUREMANAGER_INVALID_ID)
+			if (texture->Status == TextureLoadStatus::Succeeded)
 			{
 				//glDeleteTextures(1, &face->Identifier);
 
@@ -483,12 +509,12 @@ void EngineObject::Start()
 					GL_TEXTURE_CUBE_MAP_POSITIVE_X + index,
 					0,
 					GL_RGB,
-					face->Width,
-					face->Height,
+					texture->Width,
+					texture->Height,
 					0,
 					GL_RGB,
 					GL_UNSIGNED_BYTE,
-					face->TMP_ImageByteData
+					texture->TMP_ImageByteData
 				);
 			}
 			else
@@ -604,7 +630,10 @@ void EngineObject::Start()
 		// We make the mat4 into a mat3 and then a mat4 again in order to get rid of the last row and column
 		// The last row and column affect the translation of the skybox (which we don't want to affect)
 
-		view = glm::mat4(glm::mat3(glm::lookAt(camPos, camPos + camForward, glm::vec3(0.f, 1.f, 0.f))));
+		view = glm::lookAt(camPos, camPos + camForward, glm::vec3(0.f, 1.f, 0.f));
+		view[3][0] = 0.f;
+		view[3][1] = 0.f;
+		view[3][2] = 0.f;
 
 		projection = glm::perspective(
 			glm::radians(sceneCamera->FieldOfView),
@@ -699,7 +728,7 @@ void EngineObject::Start()
 			postFxShaders->SetUniformFloat("Time", static_cast<float>(this->RunningTime));
 
 			glActiveTexture(GL_TEXTURE2);
-			glBindTexture(GL_TEXTURE_2D, distortionTexture->Identifier);
+			glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(distortionTexture)->GpuId);
 		}
 		else
 			postFxShaders->SetUniformInt("PostFxEnabled", 0);

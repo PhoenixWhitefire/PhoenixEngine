@@ -14,7 +14,7 @@ private:
 
 	ModelLoader() = delete;
 
-	void m_LoadMesh(uint32_t indMesh, glm::vec3 Translation, glm::quat Rotation, glm::vec3 Scale, glm::mat4 Transform);
+	void m_LoadMesh(uint32_t MeshIndex);
 
 	void m_TraverseNode(uint32_t NextNode, glm::mat4 Transform = glm::mat4(1.0f));
 
@@ -22,7 +22,7 @@ private:
 
 	std::vector<float> m_GetFloats(nlohmann::json Accessor);
 	std::vector<uint32_t> m_GetIndices(nlohmann::json Accessor);
-	std::unordered_map<MaterialTextureType, Texture*> m_GetTextures();
+	std::unordered_map<MaterialTextureType, uint32_t> m_GetTextures();
 
 	std::vector<Vertex> m_AssembleVertices(
 		std::vector<glm::vec3> Positions,
@@ -38,13 +38,10 @@ private:
 	nlohmann::json m_JsonData;
 
 	std::vector<Mesh> m_Meshes;
-
-	std::vector<glm::vec3> m_MeshTranslations;
-	std::vector<glm::quat> m_MeshRotations;
-	std::vector<glm::vec3> m_MeshScales;
 	std::vector<glm::mat4> m_MeshMatrices;
+	std::vector<glm::vec3> m_MeshScales;
 
-	std::unordered_map<MaterialTextureType, Texture*> m_MeshTextures;
+	std::unordered_map<MaterialTextureType, uint32_t> m_MeshTextures;
 
 	std::vector<uint8_t> m_Data;
 };
