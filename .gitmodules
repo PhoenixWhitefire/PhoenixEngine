@@ -5,6 +5,3 @@
 	path = imgui
 	url = https://github.com/ocornut/imgui
 	branch = docking
-[submodule "microprofile"]
-	path = microprofile
-	url = https://github.com/jonasmr/microprofile
