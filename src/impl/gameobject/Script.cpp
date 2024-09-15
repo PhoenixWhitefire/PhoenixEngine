@@ -12,7 +12,6 @@
 #include<luau/Compiler/include/luacode.h>
 #include<luau/VM/include/lualib.h>
 #include<luau/Common/include/Luau/Common.h>
-#include<microprofile/microprofile.h>
 
 #include"gameobject/Script.hpp"
 #include"datatype/GameObject.hpp"
@@ -134,8 +133,6 @@ static void pushGameObject(lua_State* L, GameObject* obj)
 
 static void pushGenericValue(lua_State* L, Reflection::GenericValue& gv)
 {
-	MICROPROFILE_SCOPEI("Scripting", "Push GenericValue", MP_YELLOW);
-
 	switch (gv.Type)
 	{
 	case (Reflection::ValueType::Null):
@@ -371,8 +368,6 @@ static auto api_newobject = [](lua_State* L)
 
 static auto api_gameobjindex = [](lua_State* L)
 	{
-		MICROPROFILE_SCOPEI("Scripting", "GameObject.__index", MP_YELLOW);
-
 		luaL_checkudata(L, 1, "GameObject");
 		luaL_checkstring(L, 2);
 
@@ -430,8 +425,6 @@ static auto api_gameobjindex = [](lua_State* L)
 
 static auto api_gameobjnewindex = [](lua_State* L)
 	{
-		MICROPROFILE_SCOPEI("Scripting", "GameObject.__newindex", MP_YELLOW);
-
 		luaL_checkudata(L, 1, "GameObject");
 		luaL_checkstring(L, 2);
 
@@ -790,8 +783,6 @@ void Object_Script::Update(double dt)
 
 	if (m_HasUpdate)
 	{
-		MICROPROFILE_SCOPEI("Scripting", "Run Update callback", MP_YELLOW);
-
 		lua_getglobal(m_L, "Update");
 
 		if (!lua_isfunction(m_L, -1))
@@ -854,8 +845,6 @@ bool Object_Script::Reload()
 		return false;
 	}
 
-	MICROPROFILE_SCOPEI("Scripting", "Reload script", MP_YELLOW);
-
 	if (m_L)
 		lua_resetthread(m_L);
 	else
@@ -883,8 +872,6 @@ bool Object_Script::Reload()
 	if (result == 0)
 	{
 		// Run the script
-
-		MICROPROFILE_SCOPEI("Scripting", "Initial run", MP_YELLOW);
 
 		int resumeResult = lua_resume(m_L, nullptr, 0);
 

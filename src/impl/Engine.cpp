@@ -7,7 +7,6 @@
 #include<glm/gtc/type_ptr.hpp>
 #include<glm/gtc/matrix_transform.hpp>
 #include<imgui/backends/imgui_impl_sdl2.h>
-#include<microprofile/microprofile.h>
 
 #include"Engine.hpp"
 
@@ -502,8 +501,6 @@ void EngineObject::Start()
 			{
 				//glDeleteTextures(1, &face->Identifier);
 
-				MICROPROFILE_SCOPEI("Engine", "Skybox texture upload", MP_YELLOW);
-
 				glActiveTexture(GL_TEXTURE3);
 				glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemap);
 
@@ -548,56 +545,46 @@ void EngineObject::Start()
 		LastTime = RunningTime;
 		FrameStart = RunningTime;
 
-		{
-			MICROPROFILE_SCOPEI("Engine", "Fire FrameStart event", MP_YELLOW);
-			this->OnFrameStart.Fire(deltaTime);
-		}
+		this->OnFrameStart.Fire(deltaTime);
 
+		while (SDL_PollEvent(&pollingEvent) != 0)
 		{
-			MICROPROFILE_SCOPEI("Engine", "Poll events", MP_YELLOW);
+			ImGui_ImplSDL2_ProcessEvent(&pollingEvent);
 
-			while (SDL_PollEvent(&pollingEvent) != 0)
+			switch (pollingEvent.type)
 			{
-				ImGui_ImplSDL2_ProcessEvent(&pollingEvent);
 
-				switch (pollingEvent.type)
+			case (SDL_QUIT):
+			{
+				this->Exit = true;
+				break;
+			}
+
+			case (SDL_WINDOWEVENT):
+			{
+				switch (pollingEvent.window.event)
 				{
 
-				case (SDL_QUIT):
+				case (SDL_WINDOWEVENT_RESIZED):
 				{
-					this->Exit = true;
+					int NewSizeX = pollingEvent.window.data1;
+					int NewSizeY = pollingEvent.window.data2;
+
+					// Only call ChangeResolution if the new resolution is actually different
+					if (NewSizeX != this->WindowSizeX || NewSizeY != this->WindowSizeY)
+						this->OnWindowResized(NewSizeX, NewSizeY);
+
 					break;
-				}
-
-				case (SDL_WINDOWEVENT):
-				{
-					switch (pollingEvent.window.event)
-					{
-
-					case (SDL_WINDOWEVENT_RESIZED):
-					{
-						int NewSizeX = pollingEvent.window.data1;
-						int NewSizeY = pollingEvent.window.data2;
-
-						// Only call ChangeResolution if the new resolution is actually different
-						if (NewSizeX != this->WindowSizeX || NewSizeY != this->WindowSizeY)
-							this->OnWindowResized(NewSizeX, NewSizeY);
-
-						break;
-					}
-
-					}
 				}
 
 				}
 			}
+
+			}
 		}
 
-		{
-			MICROPROFILE_SCOPEI("Engine", "Update GameObjects", MP_YELLOW);
-			DataModel->Update(deltaTime);
-			updateDescendants(dynamic_cast<GameObject*>(DataModel), deltaTime);
-		}
+		DataModel->Update(deltaTime);
+		updateDescendants(dynamic_cast<GameObject*>(DataModel), deltaTime);
 
 		double aspectRatio = (double)this->WindowSizeX / (double)this->WindowSizeY;
 
@@ -606,44 +593,32 @@ void EngineObject::Start()
 
 		glm::mat4 cameraMatrix = sceneCamera->GetMatrixForAspectRatio(aspectRatio);
 
+		
+		// Aggregate mesh and light data into a list
+		scene.RenderList = createRenderList(workspace, sceneCamera);
+			scene.LightingList = createLightingList(workspace);
+		
+		// TODO 15/09/2024
+		// Move into the Renderer. Can't right now because it isn't aware of the `CameraMatrix`
+		// or `Time`.
+		
+		// Hashmap better than linaer serch
+		std::unordered_map<ShaderProgram*, ShaderProgram*> uniqueShaderMap;
+
+		for (RenderItem md : scene.RenderList)
 		{
-			MICROPROFILE_SCOPEI("Rendering", "Prepare", MP_YELLOW);
+			if (uniqueShaderMap.find(md.Material->Shader) == uniqueShaderMap.end())
+				uniqueShaderMap.insert(std::pair(md.Material->Shader, md.Material->Shader));
+		}
 
-			// Aggregate mesh and light data into a list
-			{
-				MICROPROFILE_SCOPEI("Rendering", "Create renderlist", MP_YELLOW);
-				scene.RenderList = createRenderList(workspace, sceneCamera);
-			}
-			{
-				MICROPROFILE_SCOPEI("Rendering", "Create lightlist", MP_YELLOW);
-				scene.LightingList = createLightingList(workspace);
-			}
-			
-			// TODO 15/09/2024
-			// Move into the Renderer. Can't right now because it isn't aware of the `CameraMatrix`
-			// or `Time`.
-			{
-				MICROPROFILE_SCOPEI("Rendering", "Engine-side Shader variables", MP_YELLOW);
+		for (auto& it : uniqueShaderMap)
+		{
+			ShaderProgram* shp = it.second;
 
-				// Hashmap better than linaer serch
-				std::unordered_map<ShaderProgram*, ShaderProgram*> uniqueShaderMap;
+			shp->SetUniformMatrix("CameraMatrix", cameraMatrix);
+			shp->SetUniformFloat("Time", static_cast<float>(this->RunningTime));
 
-				for (RenderItem md : scene.RenderList)
-				{
-					if (uniqueShaderMap.find(md.Material->Shader) == uniqueShaderMap.end())
-						uniqueShaderMap.insert(std::pair(md.Material->Shader, md.Material->Shader));
-				}
-
-				for (auto& it : uniqueShaderMap)
-				{
-					ShaderProgram* shp = it.second;
-
-					shp->SetUniformMatrix("CameraMatrix", cameraMatrix);
-					shp->SetUniformFloat("Time", static_cast<float>(this->RunningTime));
-
-					scene.UniqueShaders.push_back(shp);
-				}
-			}
+			scene.UniqueShaders.push_back(shp);
 		}
 
 		glActiveTexture(GL_TEXTURE3);
@@ -708,10 +683,7 @@ void EngineObject::Start()
 
 		uint32_t dataModelId = this->DataModel->ObjectId;
 
-		{
-			MICROPROFILE_SCOPEI("Engine", "Fire FrameRenderGui event", MP_YELLOW);
-			this->OnFrameRenderGui.Fire(deltaTime);
-		}
+		this->OnFrameRenderGui.Fire(deltaTime);
 
 		if (!GameObject::GetObjectById(dataModelId))
 		{
@@ -730,8 +702,6 @@ void EngineObject::Start()
 
 		if (EngineJsonConfig.value("postfx_enabled", false))
 		{
-			MICROPROFILE_SCOPEI("Rendering", "Apply Post FX options", MP_YELLOW);
-
 			postFxShaders->SetUniformInt("PostFxEnabled", 1);
 			postFxShaders->SetUniformInt(
 				"ScreenEdgeBlurEnabled",
@@ -796,10 +766,7 @@ void EngineObject::Start()
 
 		m_DrawnFramesInSecond++;
 
-		{
-			MICROPROFILE_SCOPEI("Engine", "Fire FrameEnd event", MP_YELLOW);
-			this->OnFrameEnd.Fire(deltaTime);
-		}
+		this->OnFrameEnd.Fire(deltaTime);
 
 		if (RunningTime - LastSecond > 1.0f)
 		{

@@ -3,7 +3,6 @@
 #include<glad/gl.h>
 #include<glm/gtc/type_ptr.hpp>
 #include<glm/gtx/transform.hpp>
-#include<microprofile/microprofile.h>
 
 #include"render/GraphicsAbstractionLayer.hpp"
 #include"render/Renderer.hpp"
@@ -229,44 +228,38 @@ void Renderer::ChangeResolution(uint32_t Width, uint32_t Height)
 
 void Renderer::DrawScene(const Scene& Scene)
 {
-	MICROPROFILE_SCOPEI("Rendering", "Draw Scene", MP_YELLOW);
-
+	for (ShaderProgram* shader : Scene.UniqueShaders)
 	{
-		MICROPROFILE_SCOPEI("Rendering", "Set lighting data", MP_YELLOW);
-
-		for (ShaderProgram* shader : Scene.UniqueShaders)
+		// TODO 05/09/2024
+		// Branching in shader VS separate array uniforms?
+		// Oh and uniform locations should probably be cached
+		for (uint32_t lightIndex = 0; lightIndex < Scene.LightingList.size(); lightIndex++)
 		{
-			// TODO 05/09/2024
-			// Branching in shader VS separate array uniforms?
-			// Oh and uniform locations should probably be cached
-			for (uint32_t lightIndex = 0; lightIndex < Scene.LightingList.size(); lightIndex++)
-			{
-				LightItem lightData = Scene.LightingList.at(lightIndex);
+			LightItem lightData = Scene.LightingList.at(lightIndex);
 
-				std::string lightIdxString = std::to_string(lightIndex);
-				std::string shaderLightLoc = "Lights[" + lightIdxString + "]";
+			std::string lightIdxString = std::to_string(lightIndex);
+			std::string shaderLightLoc = "Lights[" + lightIdxString + "]";
 
-				shader->SetUniformFloat3(
-					(shaderLightLoc + ".Position").c_str(),
-					static_cast<float>(lightData.Position.X),
-					static_cast<float>(lightData.Position.Y),
-					static_cast<float>(lightData.Position.Z)
-				);
+			shader->SetUniformFloat3(
+				(shaderLightLoc + ".Position").c_str(),
+				static_cast<float>(lightData.Position.X),
+				static_cast<float>(lightData.Position.Y),
+				static_cast<float>(lightData.Position.Z)
+			);
 
-				shader->SetUniformFloat3(
-					(shaderLightLoc + ".Color").c_str(),
-					static_cast<float>(lightData.LightColor.R),
-					static_cast<float>(lightData.LightColor.G),
-					static_cast<float>(lightData.LightColor.B)
-				);
+			shader->SetUniformFloat3(
+				(shaderLightLoc + ".Color").c_str(),
+				static_cast<float>(lightData.LightColor.R),
+				static_cast<float>(lightData.LightColor.G),
+				static_cast<float>(lightData.LightColor.B)
+			);
 
-				shader->SetUniformInt((shaderLightLoc + ".Type").c_str(), (int)lightData.Type);
+			shader->SetUniformInt((shaderLightLoc + ".Type").c_str(), (int)lightData.Type);
 
-				shader->SetUniformFloat((shaderLightLoc + ".Range").c_str(), lightData.Range);
-			}
-
-			shader->SetUniformInt("NumLights", static_cast<int32_t>(Scene.LightingList.size()));
+			shader->SetUniformFloat((shaderLightLoc + ".Range").c_str(), lightData.Range);
 		}
+
+		shader->SetUniformInt("NumLights", static_cast<int32_t>(Scene.LightingList.size()));
 	}
 
 	for (RenderItem RenderData : Scene.RenderList)
@@ -291,8 +284,6 @@ void Renderer::DrawMesh(
 	FaceCullingMode FaceCulling
 )
 {
-	MICROPROFILE_SCOPEI("Rendering", "Draw Mesh", MP_YELLOW);
-
 	switch (FaceCulling)
 	{
 
@@ -335,8 +326,6 @@ void Renderer::DrawMesh(
 
 void Renderer::m_SetMaterialData(const RenderItem& RenderData, ShaderProgram* Shader)
 {
-	MICROPROFILE_SCOPEI("Rendering", "Set material data", MP_YELLOW);
-
 	RenderMaterial* material = RenderData.Material;
 	Shader->Activate();
 

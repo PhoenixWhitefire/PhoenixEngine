@@ -31,15 +31,15 @@
       "orient": [0,0,0],
       "size": [1,1,1],
       "facecull": "none"
-    },
-    {
-      "name": "sushi",
-      "path": "models/stylized_sushi",
-      "position":[0, 0, -15],
-      "orient": [0,0,0],
-      "size": [0.1, 0.1, 0.1],
-      "facecull": "none"
-    }
+    } //,
+    //{
+    //  "name": "sushi",
+    //  "path": "models/stylized_sushi",
+    //  "position":[0, 0, -15],
+    //  "orient": [0,0,0],
+    //  "size": [0.1, 0.1, 0.1],
+    //  "facecull": "none"
+    //}
   ],
   "parts": [
     {
