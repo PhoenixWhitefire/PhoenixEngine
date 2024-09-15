@@ -3,11 +3,11 @@
 #include<format>
 #include<SDL2/SDL.h>
 #include<glad/gl.h>
-#include<stb_image.h>
 #include<glm/matrix.hpp>
 #include<glm/gtc/type_ptr.hpp>
 #include<glm/gtc/matrix_transform.hpp>
 #include<imgui/backends/imgui_impl_sdl2.h>
+#include<microprofile/microprofile.h>
 
 #include"Engine.hpp"
 
@@ -502,6 +502,8 @@ void EngineObject::Start()
 			{
 				//glDeleteTextures(1, &face->Identifier);
 
+				MICROPROFILE_SCOPEI("Engine", "Skybox texture upload", MP_YELLOW);
+
 				glActiveTexture(GL_TEXTURE3);
 				glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemap);
 
@@ -546,46 +548,56 @@ void EngineObject::Start()
 		LastTime = RunningTime;
 		FrameStart = RunningTime;
 
-		this->OnFrameStart.Fire(deltaTime);
-
-		while (SDL_PollEvent(&pollingEvent) != 0)
 		{
-			ImGui_ImplSDL2_ProcessEvent(&pollingEvent);
+			MICROPROFILE_SCOPEI("Engine", "Fire FrameStart event", MP_YELLOW);
+			this->OnFrameStart.Fire(deltaTime);
+		}
 
-			switch (pollingEvent.type) 
-			{
+		{
+			MICROPROFILE_SCOPEI("Engine", "Poll events", MP_YELLOW);
 
-			case (SDL_QUIT):
+			while (SDL_PollEvent(&pollingEvent) != 0)
 			{
-				this->Exit = true;
-				break;
-			}
+				ImGui_ImplSDL2_ProcessEvent(&pollingEvent);
 
-			case (SDL_WINDOWEVENT):
-			{
-				switch (pollingEvent.window.event)
+				switch (pollingEvent.type)
 				{
 
-				case (SDL_WINDOWEVENT_RESIZED):
+				case (SDL_QUIT):
 				{
-					int NewSizeX = pollingEvent.window.data1;
-					int NewSizeY = pollingEvent.window.data2;
-
-					// Only call ChangeResolution if the new resolution is actually different
-					if (NewSizeX != this->WindowSizeX || NewSizeY != this->WindowSizeY)
-						this->OnWindowResized(NewSizeX, NewSizeY);
-
+					this->Exit = true;
 					break;
 				}
 
-				}
-			}
+				case (SDL_WINDOWEVENT):
+				{
+					switch (pollingEvent.window.event)
+					{
 
+					case (SDL_WINDOWEVENT_RESIZED):
+					{
+						int NewSizeX = pollingEvent.window.data1;
+						int NewSizeY = pollingEvent.window.data2;
+
+						// Only call ChangeResolution if the new resolution is actually different
+						if (NewSizeX != this->WindowSizeX || NewSizeY != this->WindowSizeY)
+							this->OnWindowResized(NewSizeX, NewSizeY);
+
+						break;
+					}
+
+					}
+				}
+
+				}
 			}
 		}
 
-		DataModel->Update(deltaTime);
-		updateDescendants(dynamic_cast<GameObject*>(DataModel), deltaTime);
+		{
+			MICROPROFILE_SCOPEI("Engine", "Update GameObjects", MP_YELLOW);
+			DataModel->Update(deltaTime);
+			updateDescendants(dynamic_cast<GameObject*>(DataModel), deltaTime);
+		}
 
 		double aspectRatio = (double)this->WindowSizeX / (double)this->WindowSizeY;
 
@@ -594,27 +606,44 @@ void EngineObject::Start()
 
 		glm::mat4 cameraMatrix = sceneCamera->GetMatrixForAspectRatio(aspectRatio);
 
-		// Aggregate mesh and light data into a list
-		scene.RenderList = createRenderList(workspace, sceneCamera);
-		scene.LightingList = createLightingList(workspace);
-
-		// Hashmap better than linaer serch
-		std::unordered_map<ShaderProgram*, ShaderProgram*> uniqueShaderMap;
-
-		for (RenderItem md : scene.RenderList)
 		{
-			if (uniqueShaderMap.find(md.Material->Shader) == uniqueShaderMap.end())
-				uniqueShaderMap.insert(std::pair(md.Material->Shader, md.Material->Shader));
-		}
+			MICROPROFILE_SCOPEI("Rendering", "Prepare", MP_YELLOW);
 
-		for (auto& it : uniqueShaderMap)
-		{
-			ShaderProgram* shp = it.second;
+			// Aggregate mesh and light data into a list
+			{
+				MICROPROFILE_SCOPEI("Rendering", "Create renderlist", MP_YELLOW);
+				scene.RenderList = createRenderList(workspace, sceneCamera);
+			}
+			{
+				MICROPROFILE_SCOPEI("Rendering", "Create lightlist", MP_YELLOW);
+				scene.LightingList = createLightingList(workspace);
+			}
+			
+			// TODO 15/09/2024
+			// Move into the Renderer. Can't right now because it isn't aware of the `CameraMatrix`
+			// or `Time`.
+			{
+				MICROPROFILE_SCOPEI("Rendering", "Engine-side Shader variables", MP_YELLOW);
 
-			shp->SetUniformMatrix("CameraMatrix", cameraMatrix);
-			shp->SetUniformFloat("Time", static_cast<float>(this->RunningTime));
+				// Hashmap better than linaer serch
+				std::unordered_map<ShaderProgram*, ShaderProgram*> uniqueShaderMap;
 
-			scene.UniqueShaders.push_back(shp);
+				for (RenderItem md : scene.RenderList)
+				{
+					if (uniqueShaderMap.find(md.Material->Shader) == uniqueShaderMap.end())
+						uniqueShaderMap.insert(std::pair(md.Material->Shader, md.Material->Shader));
+				}
+
+				for (auto& it : uniqueShaderMap)
+				{
+					ShaderProgram* shp = it.second;
+
+					shp->SetUniformMatrix("CameraMatrix", cameraMatrix);
+					shp->SetUniformFloat("Time", static_cast<float>(this->RunningTime));
+
+					scene.UniqueShaders.push_back(shp);
+				}
+			}
 		}
 
 		glActiveTexture(GL_TEXTURE3);
@@ -624,23 +653,26 @@ void EngineObject::Start()
 		glm::vec3 camPos = glm::vec3(sceneCamera->Transform[3]);
 		glm::vec3 camForward = glm::vec3(sceneCamera->Transform[2]);
 
-		glm::mat4 view = glm::mat4(1.f);
-		glm::mat4 projection = glm::mat4(1.0f);
-
-		// We make the mat4 into a mat3 and then a mat4 again in order to get rid of the last row and column
-		// The last row and column affect the translation of the skybox (which we don't want to affect)
-
-		view = glm::lookAt(camPos, camPos + camForward, glm::vec3(0.f, 1.f, 0.f));
-		view[3][0] = 0.f;
-		view[3][1] = 0.f;
-		view[3][2] = 0.f;
-
-		projection = glm::perspective(
+		glm::mat4 view = view = glm::lookAt(camPos, camPos + camForward, glm::vec3(0.f, 1.f, 0.f));;
+		glm::mat4 projection = glm::perspective(
 			glm::radians(sceneCamera->FieldOfView),
 			aspectRatio,
 			sceneCamera->NearPlane,
 			sceneCamera->FarPlane
-		);
+		);;
+
+		// "We make the mat4 into a mat3 and then a mat4 again in order to get rid of the last row and column
+		// The last row and column affect the translation of the skybox (which we don't want to affect)"
+		//view = glm::mat4(glm::mat3(glm::lookAt(camPos, camPos + camForward, glm::vec3(0.f, 1.f, 0.f))));
+		// ...
+		// ...
+		// ...
+		// Wow Mr Victor Gordan sir, that sounds incredibly overcomplicated.
+		// It's really too bad there isn't a way simpler, 300x more understandable way
+		// of zeroing-out the first 3 values of the last column of what is literally a 4x4 2D array of floats...
+		view[3][0] = 0.f;
+		view[3][1] = 0.f;
+		view[3][2] = 0.f;
 
 		skyboxShaders->SetUniformMatrix("CameraMatrix", projection * view);
 
@@ -676,7 +708,10 @@ void EngineObject::Start()
 
 		uint32_t dataModelId = this->DataModel->ObjectId;
 
-		this->OnFrameRenderGui.Fire(deltaTime);
+		{
+			MICROPROFILE_SCOPEI("Engine", "Fire FrameRenderGui event", MP_YELLOW);
+			this->OnFrameRenderGui.Fire(deltaTime);
+		}
 
 		if (!GameObject::GetObjectById(dataModelId))
 		{
@@ -695,6 +730,8 @@ void EngineObject::Start()
 
 		if (EngineJsonConfig.value("postfx_enabled", false))
 		{
+			MICROPROFILE_SCOPEI("Rendering", "Apply Post FX options", MP_YELLOW);
+
 			postFxShaders->SetUniformInt("PostFxEnabled", 1);
 			postFxShaders->SetUniformInt(
 				"ScreenEdgeBlurEnabled",
@@ -759,7 +796,10 @@ void EngineObject::Start()
 
 		m_DrawnFramesInSecond++;
 
-		this->OnFrameEnd.Fire(deltaTime);
+		{
+			MICROPROFILE_SCOPEI("Engine", "Fire FrameEnd event", MP_YELLOW);
+			this->OnFrameEnd.Fire(deltaTime);
+		}
 
 		if (RunningTime - LastSecond > 1.0f)
 		{

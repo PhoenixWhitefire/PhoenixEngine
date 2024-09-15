@@ -93,7 +93,7 @@ public:
 	SDL_GLContext GLContext = nullptr;
 
 private:
-	void m_SetTextureUniforms(const RenderItem& Mesh, ShaderProgram* Shaders);
+	void m_SetMaterialData(const RenderItem& Mesh, ShaderProgram* Shader);
 
 	VAO* m_VertexArray = nullptr;
 	VBO* m_VertexBuffer = nullptr;

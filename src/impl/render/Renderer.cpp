@@ -3,6 +3,7 @@
 #include<glad/gl.h>
 #include<glm/gtc/type_ptr.hpp>
 #include<glm/gtx/transform.hpp>
+#include<microprofile/microprofile.h>
 
 #include"render/GraphicsAbstractionLayer.hpp"
 #include"render/Renderer.hpp"
@@ -228,43 +229,49 @@ void Renderer::ChangeResolution(uint32_t Width, uint32_t Height)
 
 void Renderer::DrawScene(const Scene& Scene)
 {
-	for (ShaderProgram* shader : Scene.UniqueShaders)
+	MICROPROFILE_SCOPEI("Rendering", "Draw Scene", MP_YELLOW);
+
 	{
-		// TODO 05/09/2024
-		// Branching in shader VS separate array uniforms?
-		// Oh and uniform locations should probably be cached
-		for (uint32_t lightIndex = 0; lightIndex < Scene.LightingList.size(); lightIndex++)
+		MICROPROFILE_SCOPEI("Rendering", "Set lighting data", MP_YELLOW);
+
+		for (ShaderProgram* shader : Scene.UniqueShaders)
 		{
-			LightItem lightData = Scene.LightingList.at(lightIndex);
+			// TODO 05/09/2024
+			// Branching in shader VS separate array uniforms?
+			// Oh and uniform locations should probably be cached
+			for (uint32_t lightIndex = 0; lightIndex < Scene.LightingList.size(); lightIndex++)
+			{
+				LightItem lightData = Scene.LightingList.at(lightIndex);
 
-			std::string lightIdxString = std::to_string(lightIndex);
-			std::string shaderLightLoc = "Lights[" + lightIdxString + "]";
+				std::string lightIdxString = std::to_string(lightIndex);
+				std::string shaderLightLoc = "Lights[" + lightIdxString + "]";
 
-			shader->SetUniformFloat3(
-				(shaderLightLoc + ".Position").c_str(),
-				static_cast<float>(lightData.Position.X),
-				static_cast<float>(lightData.Position.Y),
-				static_cast<float>(lightData.Position.Z)
-			);
+				shader->SetUniformFloat3(
+					(shaderLightLoc + ".Position").c_str(),
+					static_cast<float>(lightData.Position.X),
+					static_cast<float>(lightData.Position.Y),
+					static_cast<float>(lightData.Position.Z)
+				);
 
-			shader->SetUniformFloat3(
-				(shaderLightLoc + ".Color").c_str(),
-				static_cast<float>(lightData.LightColor.R),
-				static_cast<float>(lightData.LightColor.G),
-				static_cast<float>(lightData.LightColor.B)
-			);
+				shader->SetUniformFloat3(
+					(shaderLightLoc + ".Color").c_str(),
+					static_cast<float>(lightData.LightColor.R),
+					static_cast<float>(lightData.LightColor.G),
+					static_cast<float>(lightData.LightColor.B)
+				);
 
-			shader->SetUniformInt((shaderLightLoc + ".Type").c_str(), (int)lightData.Type);
+				shader->SetUniformInt((shaderLightLoc + ".Type").c_str(), (int)lightData.Type);
 
-			shader->SetUniformFloat((shaderLightLoc + ".Range").c_str(), lightData.Range);
+				shader->SetUniformFloat((shaderLightLoc + ".Range").c_str(), lightData.Range);
+			}
+
+			shader->SetUniformInt("NumLights", static_cast<int32_t>(Scene.LightingList.size()));
 		}
-
-		shader->SetUniformInt("NumLights", static_cast<int32_t>(Scene.LightingList.size()));
 	}
 
 	for (RenderItem RenderData : Scene.RenderList)
 	{
-		m_SetTextureUniforms(RenderData, RenderData.Material->Shader);
+		m_SetMaterialData(RenderData, RenderData.Material->Shader);
 
 		this->DrawMesh(
 			RenderData.RenderMesh,
@@ -284,6 +291,8 @@ void Renderer::DrawMesh(
 	FaceCullingMode FaceCulling
 )
 {
+	MICROPROFILE_SCOPEI("Rendering", "Draw Mesh", MP_YELLOW);
+
 	switch (FaceCulling)
 	{
 
@@ -324,10 +333,12 @@ void Renderer::DrawMesh(
 	glDrawElements(GL_TRIANGLES, static_cast<int>(Object->Indices.size()), GL_UNSIGNED_INT, 0);
 }
 
-void Renderer::m_SetTextureUniforms(const RenderItem& RenderData, ShaderProgram* Shaders)
+void Renderer::m_SetMaterialData(const RenderItem& RenderData, ShaderProgram* Shader)
 {
+	MICROPROFILE_SCOPEI("Rendering", "Set material data", MP_YELLOW);
+
 	RenderMaterial* material = RenderData.Material;
-	Shaders->Activate();
+	Shader->Activate();
 
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -336,13 +347,13 @@ void Renderer::m_SetTextureUniforms(const RenderItem& RenderData, ShaderProgram*
 	else // the gosh darn grass model is practically 50% transparent
 		glDisable(GL_BLEND);
 	
-	Shaders->SetUniformFloat("SpecularMultiplier", material->SpecMultiply);
-	Shaders->SetUniformFloat("SpecularPower", material->SpecExponent);
+	Shader->SetUniformFloat("SpecularMultiplier", material->SpecMultiply);
+	Shader->SetUniformFloat("SpecularPower", material->SpecExponent);
 
-	Shaders->SetUniformFloat("Reflectivity", RenderData.Reflectivity);
-	Shaders->SetUniformFloat("Transparency", RenderData.Transparency);
+	Shader->SetUniformFloat("Reflectivity", RenderData.Reflectivity);
+	Shader->SetUniformFloat("Transparency", RenderData.Transparency);
 
-	Shaders->SetUniformFloat3(
+	Shader->SetUniformFloat3(
 		"ColorTint",
 		RenderData.TintColor.R,
 		RenderData.TintColor.G,
@@ -369,7 +380,7 @@ void Renderer::m_SetTextureUniforms(const RenderItem& RenderData, ShaderProgram*
 	glActiveTexture(GL_TEXTURE4);
 	glBindTexture(GL_TEXTURE_2D, colorMap->GpuId);
 	
-	Shaders->SetUniformInt((DiffuseStr + "Textures[0]").c_str(), 4);
+	Shader->SetUniformInt((DiffuseStr + "Textures[0]").c_str(), 4);
 
 	Texture* metallicRoughnessMap = texManager->GetTextureResource(material->MetallicRoughnessMap);
 
@@ -378,11 +389,11 @@ void Renderer::m_SetTextureUniforms(const RenderItem& RenderData, ShaderProgram*
 		glActiveTexture(GL_TEXTURE5);
 		glBindTexture(GL_TEXTURE_2D, metallicRoughnessMap->GpuId);
 
-		Shaders->SetUniformInt((SpecularStr + "Textures[0]").c_str(), 5);
+		Shader->SetUniformInt((SpecularStr + "Textures[0]").c_str(), 5);
 	}
 
-	Shaders->SetUniformInt("NumDiffuseTextures", 1);
-	Shaders->SetUniformInt("NumSpecularTextures", metallicRoughnessMap ? 1 : 0);
+	Shader->SetUniformInt("NumDiffuseTextures", 1);
+	Shader->SetUniformInt("NumSpecularTextures", metallicRoughnessMap ? 1 : 0);
 }
 
 void Renderer::SwapBuffers()

@@ -12,6 +12,7 @@
 #include<luau/Compiler/include/luacode.h>
 #include<luau/VM/include/lualib.h>
 #include<luau/Common/include/Luau/Common.h>
+#include<microprofile/microprofile.h>
 
 #include"gameobject/Script.hpp"
 #include"datatype/GameObject.hpp"
@@ -55,14 +56,12 @@ static Reflection::GenericValue luaTypeToGeneric(lua_State* L, int luaT, bool* s
 	}
 	case (lua_Type::LUA_TBOOLEAN):
 	{
-		gv.Bool = lua_toboolean(L, -1);
-		gv.Type = Reflection::ValueType::Bool;
+		gv = (bool)lua_toboolean(L, -1);
 		break;
 	}
 	case (lua_Type::LUA_TNUMBER):
 	{
-		gv.Double = lua_tonumber(L, -1);
-		gv.Type = Reflection::ValueType::Double;
+		gv = lua_tonumber(L, -1);
 		break;
 	}
 	case (lua_Type::LUA_TSTRING):
@@ -89,8 +88,8 @@ static Reflection::GenericValue luaTypeToGeneric(lua_State* L, int luaT, bool* s
 		}
 		else if (strcmp(tname, "GameObject") == 0)
 		{
+			gv = *(uint32_t*)lua_touserdata(L, -1);
 			gv.Type = Reflection::ValueType::GameObject;
-			gv.Integer = *(uint32_t*)lua_touserdata(L, -1);
 		}
 
 		break;
@@ -135,6 +134,8 @@ static void pushGameObject(lua_State* L, GameObject* obj)
 
 static void pushGenericValue(lua_State* L, Reflection::GenericValue& gv)
 {
+	MICROPROFILE_SCOPEI("Scripting", "Push GenericValue", MP_YELLOW);
+
 	switch (gv.Type)
 	{
 	case (Reflection::ValueType::Null):
@@ -144,17 +145,17 @@ static void pushGenericValue(lua_State* L, Reflection::GenericValue& gv)
 	}
 	case (Reflection::ValueType::Bool):
 	{
-		lua_pushboolean(L, gv.Bool);
+		lua_pushboolean(L, gv.AsBool());
 		break;
 	}
 	case (Reflection::ValueType::Integer):
 	{
-		lua_pushinteger(L, static_cast<int32_t>(gv.Integer));
+		lua_pushinteger(L, static_cast<int32_t>(gv.AsInteger()));
 		break;
 	}
 	case (Reflection::ValueType::Double):
 	{
-		lua_pushnumber(L, gv.Double);
+		lua_pushnumber(L, gv.AsDouble());
 		break;
 	}
 	case (Reflection::ValueType::String):
@@ -178,7 +179,7 @@ static void pushGenericValue(lua_State* L, Reflection::GenericValue& gv)
 	}
 	case (Reflection::ValueType::GameObject):
 	{
-		pushGameObject(L, GameObject::GetObjectById(static_cast<uint32_t>(gv.Integer)));
+		pushGameObject(L, GameObject::GetObjectById(static_cast<uint32_t>(gv.AsInteger())));
 		break;
 	}
 	case (Reflection::ValueType::Array):
@@ -370,6 +371,8 @@ static auto api_newobject = [](lua_State* L)
 
 static auto api_gameobjindex = [](lua_State* L)
 	{
+		MICROPROFILE_SCOPEI("Scripting", "GameObject.__index", MP_YELLOW);
+
 		luaL_checkudata(L, 1, "GameObject");
 		luaL_checkstring(L, 2);
 
@@ -427,6 +430,8 @@ static auto api_gameobjindex = [](lua_State* L)
 
 static auto api_gameobjnewindex = [](lua_State* L)
 	{
+		MICROPROFILE_SCOPEI("Scripting", "GameObject.__newindex", MP_YELLOW);
+
 		luaL_checkudata(L, 1, "GameObject");
 		luaL_checkstring(L, 2);
 
@@ -442,6 +447,8 @@ static auto api_gameobjnewindex = [](lua_State* L)
 			// Just give an `attempt to index nil`
 			lua_pushnil(L);
 			lua_setfield(L, -1, key);
+
+			return 0;
 		}
 
 		if (obj->HasProperty(key))
@@ -588,9 +595,8 @@ static auto api_vec3tostring = [](lua_State* L)
 		return 1;
 	};
 
-static void* l_alloc(void* ud, void* ptr, size_t osize,
-	size_t nsize) {
-	(void)ud;  (void)osize;  /* not used */
+static void* l_alloc(void*, void* ptr, size_t, size_t nsize)
+{
 	if (nsize == 0) {
 		free(ptr);
 		return NULL;
@@ -784,6 +790,8 @@ void Object_Script::Update(double dt)
 
 	if (m_HasUpdate)
 	{
+		MICROPROFILE_SCOPEI("Scripting", "Run Update callback", MP_YELLOW);
+
 		lua_getglobal(m_L, "Update");
 
 		if (!lua_isfunction(m_L, -1))
@@ -846,6 +854,8 @@ bool Object_Script::Reload()
 		return false;
 	}
 
+	MICROPROFILE_SCOPEI("Scripting", "Reload script", MP_YELLOW);
+
 	if (m_L)
 		lua_resetthread(m_L);
 	else
@@ -873,6 +883,8 @@ bool Object_Script::Reload()
 	if (result == 0)
 	{
 		// Run the script
+
+		MICROPROFILE_SCOPEI("Scripting", "Initial run", MP_YELLOW);
 
 		int resumeResult = lua_resume(m_L, nullptr, 0);
 

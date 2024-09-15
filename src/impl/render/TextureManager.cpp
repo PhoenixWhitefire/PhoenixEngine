@@ -1,7 +1,8 @@
-#include<stb_image.h>
 #include<format>
 #include<functional>
 #include<glad/gl.h>
+#include<microprofile/microprofile.h>
+#include<stb/stb_image.h>
 
 #include"render/TextureManager.hpp"
 #include"render/ShaderProgram.hpp"
@@ -18,6 +19,8 @@ typedef std::function<Texture*(ImageLoader_t, Texture*, std::string, uint32_t)> 
 
 static void registerTexture(Texture& texture)
 {
+	MICROPROFILE_SCOPEI("TextureManager", "Upload texture to GPU", MP_YELLOW);
+
 	if (texture.Status == TextureLoadStatus::Failed)
 	{
 		auto FormattedArgs = std::make_format_args(texture.ImagePath);
@@ -242,6 +245,8 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 		}
 		else
 		{
+			MICROPROFILE_SCOPEI("TextureManager", "Load texture synchronous", MP_RED);
+
 			uint8_t* data = loadImageData(
 				ActualPath.c_str(),
 				&newTexture.Width,
@@ -276,6 +281,8 @@ void TextureManager::FinalizeAsyncLoadedTextures()
 {
 	if (m_TexPromises.size() == 0)
 		return;
+
+	MICROPROFILE_SCOPEI("TextureManager", "Finalize async textures", MP_YELLOW);
 
 	for (size_t promiseIndex = 0; promiseIndex < m_TexPromises.size(); promiseIndex++)
 	{

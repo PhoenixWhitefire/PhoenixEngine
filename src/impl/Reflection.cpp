@@ -16,27 +16,27 @@ Reflection::GenericValue::GenericValue(std::string const& str)
 }
 
 Reflection::GenericValue::GenericValue(bool b)
-	: Type(ValueType::Bool), Bool(b)
+	: Type(ValueType::Bool), Pointer((void*)b)
 {
 }
 
 Reflection::GenericValue::GenericValue(double d)
-	: Type(ValueType::Double), Double(d)
+	: Type(ValueType::Double), Pointer(*(void**)&d)
 {
 }
 
 Reflection::GenericValue::GenericValue(int i)
-	: Type(ValueType::Integer), Integer(i)
+	: Type(ValueType::Integer), Pointer((void*)i)
 {
 }
 
 Reflection::GenericValue::GenericValue(int64_t i)
-	: Type(ValueType::Integer), Integer(i)
+	: Type(ValueType::Integer), Pointer((void*)i)
 {
 }
 
 Reflection::GenericValue::GenericValue(uint32_t i)
-	: Type(ValueType::Integer), Integer(i)
+	: Type(ValueType::Integer), Pointer((void*)i)
 {
 }
 
@@ -57,13 +57,13 @@ std::string Reflection::GenericValue::ToString() const
 		return "Null";
 
 	case (ValueType::Bool):
-		return this->Bool ? "true" : "false";
+		return (bool)this->Pointer ? "true" : "false";
 
 	case (ValueType::Integer):
-		return std::to_string(this->Integer);
+		return std::to_string((int64_t)this->Pointer);
 
 	case (ValueType::Double):
-		return std::to_string(this->Double);
+		return std::to_string(*(double*)&this->Pointer);
 
 	case (ValueType::String):
 		return this->String;
@@ -76,7 +76,7 @@ std::string Reflection::GenericValue::ToString() const
 
 	case (ValueType::GameObject):
 	{
-		GameObject* object = GameObject::GetObjectById(static_cast<uint32_t>(this->Integer));
+		GameObject* object = GameObject::GetObjectById(*(uint32_t*)&this->Pointer);
 		return object ? object->GetFullName() : "NULL GameObject";
 	}
 	
@@ -144,19 +144,20 @@ std::string Reflection::GenericValue::AsString() const
 bool Reflection::GenericValue::AsBool() const
 {
 	return Type == ValueType::Bool
-		? Bool
+		? (bool)this->Pointer
 		: throw("GenericValue was not a Bool, but was a " + Reflection::TypeAsString(Type));
 }
 double Reflection::GenericValue::AsDouble() const
 {
 	return Type == ValueType::Double
-		? Double
+		? *(double*)&this->Pointer
 		: throw("GenericValue was not a Double, but was a " + Reflection::TypeAsString(Type));
 }
-int64_t Reflection::GenericValue::AsInt() const
+int64_t Reflection::GenericValue::AsInteger() const
 {
-	return Type == ValueType::Integer
-		? Integer
+	// `|| ValueType::GameObject` because it's easier 14/09/2024
+	return (Type == ValueType::Integer || Type == ValueType::GameObject)
+		? (int64_t)this->Pointer
 		: throw("GenericValue was not an Integer, but was a " + Reflection::TypeAsString(Type));
 }
 glm::mat4 Reflection::GenericValue::AsMatrix() const

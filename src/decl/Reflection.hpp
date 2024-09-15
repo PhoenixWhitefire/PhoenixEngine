@@ -43,7 +43,7 @@ s_Api.Functions.insert(                               \
 	},                                                                         \
 	[](GameObject* p, Reflection::GenericValue gv)                \
 	{                                                                          \
-		dynamic_cast<c*>(p)->name = gv.type;                                   \
+		dynamic_cast<c*>(p)->name = gv.As##type();                                   \
 	}                                                                          \
 )                                                                              \
 
@@ -57,7 +57,7 @@ s_Api.Functions.insert(                               \
 	},                                                                         \
 	[](GameObject* p, Reflection::GenericValue gv)                \
 	{                                                                          \
-		dynamic_cast<c*>(p)->name = static_cast<cast>(gv.type);                \
+		dynamic_cast<c*>(p)->name = static_cast<cast>(gv.As##type());                \
 	}                                                                          \
 )  
 
@@ -133,9 +133,9 @@ namespace Reflection
 	{
 		Reflection::ValueType Type = Reflection::ValueType::Null;
 		std::string String;
-		bool Bool = true;
-		double Double = 0.f;
-		int64_t Integer = 0;
+		//bool Bool = true;
+		//double Double = 0.f;
+		//int64_t Integer = 0;
 		void* Pointer = nullptr;
 		std::vector<GenericValue> Array;
 
@@ -154,7 +154,7 @@ namespace Reflection
 		std::string AsString() const;
 		bool AsBool() const;
 		double AsDouble() const;
-		int64_t AsInt() const;
+		int64_t AsInteger() const;
 		glm::mat4 AsMatrix() const;
 	};
 

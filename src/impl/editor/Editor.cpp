@@ -481,14 +481,20 @@ void Editor::RenderUI()
 
 			case (Reflection::ValueType::Bool):
 			{
-				ImGui::Checkbox(propName, &newVal.Bool);
-				
+				bool b = newVal.AsBool();
+
+				ImGui::Checkbox(propName, &b);
+				newVal = b;
+
 				break;
 			}
 
 			case (Reflection::ValueType::Double):
 			{
-				ImGui::InputDouble(propName, &newVal.Double);
+				double d = newVal.AsDouble();
+
+				ImGui::InputDouble(propName, &d);
+				newVal = d;
 
 				break;
 			}
@@ -499,11 +505,11 @@ void Editor::RenderUI()
 				// stoobid Dear ImGui :'(
 				// only allows 32-bit integer input
 				// 01/09/2024
-				int32_t valAs32Bit = static_cast<int32_t>(curVal.Integer);
+				int32_t valAs32Bit = static_cast<int32_t>(curVal.AsInteger());
 
 				ImGui::InputInt(propName, &valAs32Bit);
 
-				newVal.Integer = valAs32Bit;
+				newVal = valAs32Bit;
 
 				break;
 			}
@@ -514,11 +520,11 @@ void Editor::RenderUI()
 				// stoobid Dear ImGui :'(
 				// only allows 32-bit integer input
 				// 01/09/2024
-				int32_t id = static_cast<int32_t>(curVal.Integer);
+				int32_t id = static_cast<int32_t>(curVal.AsInteger());
 
 				ImGui::InputInt(propName, &id);
 
-				newVal.Integer = id;
+				newVal = id;
 
 				break;
 			}

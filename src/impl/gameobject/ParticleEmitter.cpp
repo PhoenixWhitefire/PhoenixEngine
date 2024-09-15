@@ -24,16 +24,6 @@ float Quad[] =
 	 0.5f,  0.5f,
 };
 
-template <class T> static void removeElement(std::vector<T> vec, size_t elem)
-{
-	_particle prevLast = vec[vec.size() - 1];
-
-	vec[vec.size() - 1] = vec[elem];
-	vec[elem] = prevLast;
-
-	vec.pop_back();
-}
-
 void Object_ParticleEmitter::s_DeclareReflections()
 {
 	if (s_DidInitReflection)
@@ -53,7 +43,7 @@ void Object_ParticleEmitter::s_DeclareReflections()
 		},
 		[](GameObject* g, Reflection::GenericValue gv)
 		{
-			int64_t newRate = gv.Integer;
+			int64_t newRate = gv.AsInteger();
 			if (newRate < 0 || newRate > UINT32_MAX)
 				throw("ParticleEmitter.Rate must be within uint32_t bounds (0 <= Rate <= 0xFFFFFFFFu)");
 			dynamic_cast<Object_ParticleEmitter*>(g)->Rate = static_cast<uint32_t>(newRate);
@@ -70,7 +60,7 @@ void Object_ParticleEmitter::s_DeclareReflections()
 		},
 		[](GameObject* g, Reflection::GenericValue gv)
 		{
-			int64_t newMax = gv.Integer;
+			int64_t newMax = gv.AsInteger();
 			if (newMax < 0 || newMax > UINT32_MAX)
 				throw("ParticleEmitter.MaxParticles must be within uint32_t bounds (0 < MaxParticles <= 0xFFFFFFFFu)");
 			dynamic_cast<Object_ParticleEmitter*>(g)->MaxParticles = static_cast<uint32_t>(newMax);
@@ -161,7 +151,7 @@ size_t Object_ParticleEmitter::m_GetUsableParticleIndex()
 			if (particle.TimeAliveFor > particle.Lifetime)
 			{ //Get first inactive particle
 
-				removeElement(m_Particles, index);
+				m_Particles.erase(index + m_Particles.begin());
 
 				return index;
 			}
@@ -248,7 +238,7 @@ void Object_ParticleEmitter::Render(glm::mat4 CameraMatrix)
 
 		if (particle.TimeAliveFor > particle.Lifetime)
 		{
-			removeElement(m_Particles, index);
+			m_Particles.erase(m_Particles.begin() + index);
 
 			//delete particle;
 

@@ -18,7 +18,7 @@ struct _particle
 	float Size = 1.f;
 	float Transparency = 0.f;
 
-	uint32_t Image;
+	uint32_t Image{};
 
 	Vector3 Position{};
 };

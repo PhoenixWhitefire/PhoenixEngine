@@ -49,17 +49,16 @@ void GameObject::s_DeclareReflections()
 		GameObject,
 		[](GameObject* p)
 		{
-			Reflection::GenericValue gv;
+			Reflection::GenericValue gv = p->GetParent() ? p->GetParent()->ObjectId : PHX_GAMEOBJECT_NULL_ID;
 			gv.Type = Reflection::ValueType::GameObject;
-			gv.Integer = p->GetParent() ? p->GetParent()->ObjectId : PHX_GAMEOBJECT_NULL_ID;
 			return gv;
 		},
 		[](GameObject* p, const Reflection::GenericValue& gv)
 		{
-			if (p->Parent == gv.Integer)
+			if (p->Parent == gv.AsInteger())
 				return;
 
-			GameObject* newParent = GameObject::GetObjectById(static_cast<uint32_t>(gv.Integer));
+			GameObject* newParent = GameObject::GetObjectById(static_cast<uint32_t>(gv.AsInteger()));
 
 			if (!newParent)
 				p->SetParent(nullptr);

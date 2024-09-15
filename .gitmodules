@@ -2,7 +2,7 @@
 	path = luau
 	url = https://github.com/Luau-lang/luau/
 [submodule "imgui"]
-	path = "imgui"
+	path = imgui
 	url = https://github.com/ocornut/imgui
 	branch = docking
 [submodule "microprofile"]

@@ -82,7 +82,7 @@ static int findArgumentInCliArgs(
 
 static void handleInputs(Reflection::GenericValue Data)
 {
-	double deltaTime = Data.Double;
+	double deltaTime = Data.AsDouble();
 
 	if (EngineJsonConfig.value("Developer", false))
 		EditorContext->Update(deltaTime, EngineInstance->Workspace->GetSceneCamera()->Transform);

@@ -180,17 +180,17 @@ void ShaderProgram::SetUniform(const char* UniformName, const Reflection::Generi
 	{
 	case (Reflection::ValueType::Bool):
 	{
-		glUniform1i(location, Value.Bool);
+		glUniform1i(location, Value.AsBool());
 		break;
 	}
 	case (Reflection::ValueType::Integer):
 	{
-		glUniform1i(location, static_cast<int32_t>(Value.Integer));
+		glUniform1i(location, static_cast<int32_t>(Value.AsInteger()));
 		break;
 	}
 	case (Reflection::ValueType::Double):
 	{
-		glUniform1f(location, static_cast<float>(Value.Double));
+		glUniform1f(location, static_cast<float>(Value.AsDouble()));
 		break;
 	}
 	case (Reflection::ValueType::Vector3):

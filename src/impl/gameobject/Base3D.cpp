@@ -58,7 +58,7 @@ void Object_Base3D::s_DeclareReflections()
 		[](GameObject* g, Reflection::GenericValue gv)
 		{
 			Object_Base3D* p = dynamic_cast<Object_Base3D*>(g);
-			p->FaceCulling = (FaceCullingMode)gv.Integer;
+			p->FaceCulling = (FaceCullingMode)gv.AsInteger();
 		}
 	);
 }

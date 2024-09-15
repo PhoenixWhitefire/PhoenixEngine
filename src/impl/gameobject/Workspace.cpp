@@ -27,19 +27,18 @@ void Object_Workspace::s_DeclareReflections()
 		{
 			Object_Workspace* workspace = dynamic_cast<Object_Workspace*>(p);
 
-			Reflection::GenericValue gv;
-			gv.Type = Reflection::ValueType::GameObject;
-
-			gv.Integer = workspace->GetSceneCamera()
+			Reflection::GenericValue gv = workspace->GetSceneCamera()
 						? workspace->GetSceneCamera()->ObjectId
 						: PHX_GAMEOBJECT_NULL_ID;
+
+			gv.Type = Reflection::ValueType::GameObject;
 
 			return gv;
 		},
 		[](GameObject* p, const Reflection::GenericValue& gv)
 		{
 			dynamic_cast<Object_Workspace*>(p)->SetSceneCamera(
-				dynamic_cast<Object_Camera*>(GameObject::GetObjectById(static_cast<uint32_t>(gv.Integer)))
+				dynamic_cast<Object_Camera*>(GameObject::GetObjectById(static_cast<uint32_t>(gv.AsInteger())))
 			);
 		}
 	);

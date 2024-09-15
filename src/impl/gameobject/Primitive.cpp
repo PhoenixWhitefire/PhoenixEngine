@@ -46,7 +46,7 @@ void Object_Primitive::s_DeclareReflections()
 		},
 		[](GameObject* g, Reflection::GenericValue gv)
 		{
-			dynamic_cast<Object_Primitive*>(g)->SetShape((PrimitiveShape)gv.Integer);
+			dynamic_cast<Object_Primitive*>(g)->SetShape((PrimitiveShape)gv.AsInteger());
 		}
 	);
 }

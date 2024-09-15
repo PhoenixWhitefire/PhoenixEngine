@@ -605,9 +605,8 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 
 			if (target != objectsMap.end())
 			{
-				Reflection::GenericValue gv;
+				Reflection::GenericValue gv = target->second->ObjectId;
 				gv.Type = Reflection::ValueType::GameObject;
-				gv.Integer = target->second->ObjectId;
 
 				object->SetPropertyValue(propName, gv);
 			}
@@ -623,9 +622,8 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 					)
 				));
 
-				Reflection::GenericValue gv;
+				Reflection::GenericValue gv = 0;
 				gv.Type = Reflection::ValueType::GameObject;
-				gv.Integer = 0;
 
 				object->SetPropertyValue(propName, gv);
 			}
@@ -697,7 +695,7 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 		}
 		case (Reflection::ValueType::Integer):
 		{
-			item[propName] = value.AsInt();
+			item[propName] = value.AsInteger();
 			break;
 		}
 		case (Reflection::ValueType::Double):
@@ -741,10 +739,10 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 
 		case (Reflection::ValueType::GameObject):
 		{
-			auto target = GameObject::s_WorldArray.find(static_cast<uint32_t>(value.Integer));
+			auto target = GameObject::s_WorldArray.find(static_cast<uint32_t>(value.AsInteger()));
 
 			if (target != GameObject::s_WorldArray.end())
-				item[propName] = value.Integer;
+				item[propName] = value.AsInteger();
 			else
 				item[propName] = PHX_GAMEOBJECT_NULL_ID;
 		}
