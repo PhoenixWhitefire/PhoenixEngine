@@ -3,9 +3,9 @@
 #include<glm/matrix.hpp>
 
 #include"render/ShaderProgram.hpp"
-#include"render/Material.hpp"
+#include"asset/Material.hpp"
 #include"datatype/Mesh.hpp"
-#include"datatype/Buffer.hpp"
+#include"render/Buffer.hpp"
 #include"datatype/Color.hpp"
 #include"datatype/Vector3.hpp"
 #include"gameobject/Base3D.hpp"
@@ -32,7 +32,7 @@
 
 struct RenderItem
 {
-	Mesh* RenderMesh{};
+	uint32_t RenderMeshId{};
 	glm::mat4 Transform{};
 	Vector3 Size;
 	RenderMaterial* Material{};

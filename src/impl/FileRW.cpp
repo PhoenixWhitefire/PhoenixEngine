@@ -1,3 +1,4 @@
+#include<filesystem>
 #include<fstream>
 #include<format>
 
@@ -5,9 +6,30 @@
 #include"GlobalJsonConfig.hpp"
 #include"Debug.hpp"
 
-static std::string GetLocalizedFilePath(std::string const& NonLocalizedPath)
+// 16/09/2024 PWK2K
+// https://stackoverflow.com/a/71658518
+// Returns:
+//   true upon success.
+//   false upon failure, and set the std::error_code & err accordingly.
+static bool createDirectoryRecursive(std::string const& dirName, std::error_code& err)
 {
-	std::string Path = NonLocalizedPath;
+	err.clear();
+	if (!std::filesystem::create_directories(dirName, err))
+	{
+		if (std::filesystem::exists(dirName))
+		{
+			// The folder already exists:
+			err.clear();
+			return true;
+		}
+		return false;
+	}
+	return true;
+}
+
+static std::string getLocalizedFilePath(const std::string& NonLocalizedPath)
+{
+	std::string path = NonLocalizedPath;
 
 	// TODO: allow paths specified in resource files (eg materials and levels etc) to not have to start from the root
 	// and start from resources/ automatically
@@ -15,8 +37,8 @@ static std::string GetLocalizedFilePath(std::string const& NonLocalizedPath)
 	// find a better method?
 	try
 	{
-		if (Path[0] != '.')
-			Path.insert(0, EngineJsonConfig.value("ResourcesDirectory", "resources/"));
+		if (path[0] != '.')
+			path.insert(0, EngineJsonConfig.value("ResourcesDirectory", "resources/"));
 	}
 	catch (nlohmann::json::type_error e)
 	{
@@ -24,32 +46,32 @@ static std::string GetLocalizedFilePath(std::string const& NonLocalizedPath)
 		Debug::Log(std::vformat("Error localizing file path: '{}'", std::make_format_args(whatStr)));
 	}
 
-	return Path;
+	return path;
 }
 
 std::string FileRW::ReadFile(std::string const& ShortPath, bool* DoesFileExist)
 {
-	std::string actualPath = GetLocalizedFilePath(ShortPath);
+	std::string actualPath = getLocalizedFilePath(ShortPath);
 
-	std::ifstream File(actualPath, std::ios::binary);
+	std::ifstream file(actualPath, std::ios::binary);
 
-	std::string Contents = *new std::string();
+	std::string contents = *new std::string();
 
-	if (File && File.is_open())
+	if (file && file.is_open())
 	{
 		if (DoesFileExist != nullptr)
 			*DoesFileExist = true;
 
-		File.seekg(0, std::ios::end);
+		file.seekg(0, std::ios::end);
 
-		Contents.resize(File.tellg());
-		File.seekg(0, std::ios::beg);
+		contents.resize(file.tellg());
+		file.seekg(0, std::ios::beg);
 
-		File.read(&Contents[0], Contents.size());
+		file.read(&contents[0], contents.size());
 
-		File.close();
+		file.close();
 
-		return Contents;
+		return contents;
 	}
 	else
 	{
@@ -58,20 +80,20 @@ std::string FileRW::ReadFile(std::string const& ShortPath, bool* DoesFileExist)
 		else
 			*DoesFileExist = false;
 
-		return Contents;
+		return contents;
 	}
 }
 
 void FileRW::WriteFile(const std::string& ShortPath, const std::string& FileContents, bool InResourcesDirectory)
 {
-	std::string path = InResourcesDirectory ? GetLocalizedFilePath(ShortPath) : ShortPath;
+	std::string path = InResourcesDirectory ? getLocalizedFilePath(ShortPath) : ShortPath;
 
-	std::ofstream File(path.c_str());
+	std::ofstream file(path.c_str());
 
-	if (File && File.is_open())
+	if (file && file.is_open())
 	{
-		File << FileContents;
-		File.close();
+		file << FileContents;
+		file.close();
 	}
 	else
 		throw(std::vformat(
@@ -79,3 +101,23 @@ void FileRW::WriteFile(const std::string& ShortPath, const std::string& FileCont
 			std::make_format_args(path)
 		));
 }
+
+void FileRW::WriteFileCreateDirectories(
+	const std::string& ShortPath,
+	const std::string& FileContents,
+	bool InResourcesDirectory
+)
+{
+	std::string path = InResourcesDirectory ? getLocalizedFilePath(ShortPath) : ShortPath;
+
+	size_t containingDirLoc = path.find_last_of("/");
+	std::string dirPath = path.substr(0, containingDirLoc);
+
+	std::error_code ec;
+	
+	if (!createDirectoryRecursive(dirPath, ec))
+		throw("`createDirectoryRecursive` failed: " + ec.message());
+
+	FileRW::WriteFile(path, FileContents, false);
+}
+

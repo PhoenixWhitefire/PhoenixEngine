@@ -76,7 +76,7 @@ Object_Base3D::Object_Base3D()
 	s_DeclareReflections();
 }
 
-Mesh* Object_Base3D::GetRenderMesh()
+uint32_t Object_Base3D::GetRenderMeshId()
 {
-	return &this->RenderMesh;
+	return m_RenderMeshId;
 }

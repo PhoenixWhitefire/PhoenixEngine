@@ -1,10 +1,11 @@
 #include<glm/gtc/matrix_transform.hpp>
+#include<glm/gtx/euler_angles.hpp>
 #include<imgui/imgui.h>
 
 #include"editor/Editor.hpp"
 #include"editor/IntersectionLib.hpp"
 #include"gameobject/GameObjects.hpp"
-#include"render/TextureManager.hpp"
+#include"asset/TextureManager.hpp"
 #include"UserInput.hpp"
 #include"FileRW.hpp"
 #include"Debug.hpp"

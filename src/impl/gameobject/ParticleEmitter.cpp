@@ -5,7 +5,6 @@
 #include"gameobject/ParticleEmitter.hpp"
 #include"gameobject/Base3D.hpp"
 #include"datatype/Vector2.hpp"
-#include"datatype/Buffer.hpp"
 
 RegisterDerivedObject<Object_ParticleEmitter> Object_ParticleEmitter::RegisterClassAs("ParticleEmitter");
 

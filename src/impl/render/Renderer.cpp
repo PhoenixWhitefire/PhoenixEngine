@@ -6,6 +6,8 @@
 
 #include"render/GraphicsAbstractionLayer.hpp"
 #include"render/Renderer.hpp"
+#include"asset/TextureManager.hpp"
+#include"asset/MeshProvider.hpp"
 #include"datatype/Vector3.hpp"
 #include"Debug.hpp"
 
@@ -262,12 +264,14 @@ void Renderer::DrawScene(const Scene& Scene)
 		shader->SetUniformInt("NumLights", static_cast<int32_t>(Scene.LightingList.size()));
 	}
 
+	MeshProvider* mp = MeshProvider::Get();
+
 	for (RenderItem RenderData : Scene.RenderList)
 	{
 		m_SetMaterialData(RenderData, RenderData.Material->Shader);
 
 		this->DrawMesh(
-			RenderData.RenderMesh,
+			mp->GetMeshResource(RenderData.RenderMeshId),
 			RenderData.Material->Shader,
 			RenderData.Size,
 			RenderData.Transform,

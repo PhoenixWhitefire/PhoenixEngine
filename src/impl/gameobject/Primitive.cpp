@@ -1,31 +1,25 @@
 #include"gameobject/Primitive.hpp"
-#include"BaseMeshes.hpp"
+#include"asset/MeshProvider.hpp"
 
 RegisterDerivedObject<Object_Primitive> Object_Primitive::RegisterClassAs("Primitive");
 static bool s_DidInitReflection = false;
 
-static Mesh* GetPrimitiveMesh(PrimitiveShape Type)
+static std::string getPrimitiveMesh(PrimitiveShape Type)
 {
-	Mesh* PrimitiveMesh;
-
 	switch (Type)
 	{
 
 		case PrimitiveShape::Cube:
 		{
-			PrimitiveMesh = BaseMeshes::Cube();
-			break;
+			return "!Cube";
 		}
 
 		default:
 		{
-			PrimitiveMesh = BaseMeshes::Cube();
-			break;
+			return "!Cube";
 		}
 
 	}
-
-	return PrimitiveMesh;
 }
 
 void Object_Primitive::s_DeclareReflections()
@@ -56,9 +50,8 @@ Object_Primitive::Object_Primitive()
 	this->Name = "Primitive";
 	this->ClassName = "Primitive";
 
-	this->RenderMesh = *GetPrimitiveMesh(this->Shape);
-
 	this->Material = RenderMaterial::GetMaterial("plastic");
+	this->SetShape(PrimitiveShape::Cube);
 
 	s_DeclareReflections();
 }
@@ -66,5 +59,5 @@ Object_Primitive::Object_Primitive()
 void Object_Primitive::SetShape(PrimitiveShape shape)
 {
 	this->Shape = shape;
-	this->RenderMesh = *GetPrimitiveMesh(shape);
+	m_RenderMeshId = MeshProvider::Get()->LoadFromPath(getPrimitiveMesh(shape));
 }

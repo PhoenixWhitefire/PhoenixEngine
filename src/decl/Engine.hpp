@@ -2,6 +2,7 @@
 
 #include<filesystem>
 #include<nljson.hpp>
+#include<SDL2/SDL_video.h>
 
 #include"gameobject/GameObjects.hpp"
 
@@ -11,7 +12,6 @@
 #include"datatype/Vector2.hpp"
 
 #include"PhysicsEngine.hpp"
-#include"ModelLoader.hpp"
 
 // TODO: cleanup structure of public vs private
 class EngineObject

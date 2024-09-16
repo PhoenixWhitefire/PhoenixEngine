@@ -1,6 +1,8 @@
 #include"gameobject/MeshObject.hpp"
+#include"asset/MeshProvider.hpp"
 
-RegisterDerivedObject<Object_Mesh> Object_Mesh::RegisterClassAs("Mesh");
+static RegisterDerivedObject<Object_Mesh> RegisterClassAs("Mesh");
+
 static bool s_DidInitReflection = false;
 
 void Object_Mesh::s_DeclareReflections()
@@ -12,8 +14,18 @@ void Object_Mesh::s_DeclareReflections()
 	REFLECTION_INHERITAPI(GameObject);
 	REFLECTION_INHERITAPI(Object_Base3D);
 
-	// TODO: asset reloading
-	REFLECTION_DECLAREPROP_SIMPLE(Object_Mesh, Asset, String);
+	REFLECTION_DECLAREPROP(
+		"Asset",
+		String,
+		[](GameObject* p)
+		{
+			return dynamic_cast<Object_Mesh*>(p)->GetRenderMeshPath();
+		},
+		[](GameObject* p, const Reflection::GenericValue& gv)
+		{
+			dynamic_cast<Object_Mesh*>(p)->SetRenderMesh(gv.AsString());
+		}
+	);
 }
 
 Object_Mesh::Object_Mesh()
@@ -24,7 +36,13 @@ Object_Mesh::Object_Mesh()
 	s_DeclareReflections();
 }
 
-void Object_Mesh::SetRenderMesh(Mesh NewRenderMesh)
+void Object_Mesh::SetRenderMesh(const std::string& NewRenderMesh)
 {
-	this->RenderMesh = NewRenderMesh;
+	m_RenderMeshId = MeshProvider::Get()->LoadFromPath(NewRenderMesh);
+	m_MeshPath = NewRenderMesh;
+}
+
+std::string Object_Mesh::GetRenderMeshPath()
+{
+	return m_MeshPath;
 }

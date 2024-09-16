@@ -3,10 +3,10 @@
 #include<random>
 
 #include"datatype/ValueSequence.hpp"
-#include"datatype/Buffer.hpp"
+#include"render/Buffer.hpp"
 #include"datatype/GameObject.hpp"
 #include"render/ShaderProgram.hpp"
-#include"render/TextureManager.hpp"
+#include"asset/TextureManager.hpp"
 #include"datatype/Vector3.hpp"
 #include"datatype/Vector2.hpp"
 

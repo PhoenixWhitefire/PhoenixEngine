@@ -1,11 +1,16 @@
 #pragma once
 
 #include<vector>
+#include<glm/vec3.hpp>
+#include<glm/vec2.hpp>
 
-#include<glm/glm.hpp>
-#include<glm/gtc/quaternion.hpp>
-
-#include"Buffer.hpp"
+struct Vertex
+{
+	glm::vec3 Position;
+	glm::vec3 Normal;
+	glm::vec3 Color;
+	glm::vec2 TextureUV;
+};
 
 struct Mesh
 {

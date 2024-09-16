@@ -11,12 +11,13 @@
 #include"Engine.hpp"
 
 #include"gameobject/GameObjects.hpp"
+#include"asset/TextureManager.hpp"
+#include"asset/MeshProvider.hpp"
 #include"GlobalJsonConfig.hpp"
 #include"ThreadManager.hpp"
 #include"UserInput.hpp"
 #include"FileRW.hpp"
 #include"Debug.hpp"
-#include"BaseMeshes.hpp"
 
 static uint32_t RectangleVAO, RectangleVBO;
 static auto ChronoStartTime = std::chrono::high_resolution_clock::now();
@@ -340,7 +341,7 @@ static std::vector<RenderItem> createRenderList(GameObject* RootObject, Object_C
 
 				RenderItem data
 				{
-					object3D->GetRenderMesh(),
+					object3D->GetRenderMeshId(),
 					object3D->Transform,
 					object3D->Size,
 					object3D->Material,
@@ -658,8 +659,10 @@ void EngineObject::Start()
 		glClearColor(0.086f, 0.105f, 0.21f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
+		MeshProvider* mp = MeshProvider::Get();
+
 		RendererContext->DrawMesh(
-			BaseMeshes::Cube(),
+			mp->GetMeshResource(mp->LoadFromPath("!Cube")),
 			skyboxShaders,
 			Vector3::one,
 			projection * view,

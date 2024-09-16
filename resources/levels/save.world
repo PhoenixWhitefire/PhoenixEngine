@@ -4,7 +4,7 @@
 {
   "GameObjects": [
     {
-      "Asset": "",
+      "Asset": "meshes/models/crow/0.mesh",
       "ClassName": "Mesh",
       "ColorRGB": [
         1.0,
@@ -14,54 +14,7 @@
       "Enabled": true,
       "FaceCulling": 1,
       "Material": "models/crow",
-      "Name": "crow_0",
-      "ObjectId": 14,
-      "Reflectivity": 0.0,
-      "Size": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "Transform": [
-        [
-          1.0,
-          0.0,
-          0.0,
-          0.0
-        ],
-        [
-          0.0,
-          1.0,
-          0.0,
-          0.0
-        ],
-        [
-          0.0,
-          0.0,
-          1.0,
-          0.0
-        ],
-        [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ]
-      ],
-      "Transparency": 0.0
-    },
-    {
-      "Asset": "",
-      "ClassName": "Mesh",
-      "ColorRGB": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "Enabled": true,
-      "FaceCulling": 0,
-      "Material": "models/grass",
-      "Name": "g_0",
+      "Name": "crow",
       "ObjectId": 15,
       "Reflectivity": 0.0,
       "Size": [
@@ -89,16 +42,16 @@
           0.0
         ],
         [
-          15.0,
           0.0,
-          100.0,
+          0.0,
+          0.0,
           1.0
         ]
       ],
       "Transparency": 0.0
     },
     {
-      "Asset": "",
+      "Asset": "meshes/models/grass/0.mesh",
       "ClassName": "Mesh",
       "ColorRGB": [
         1.0,
@@ -107,8 +60,8 @@
       ],
       "Enabled": true,
       "FaceCulling": 0,
-      "Material": "models/ground",
-      "Name": "gr_0",
+      "Material": "models/grass",
+      "Name": "grass",
       "ObjectId": 16,
       "Reflectivity": 0.0,
       "Size": [
@@ -145,7 +98,54 @@
       "Transparency": 0.0
     },
     {
-      "Asset": "",
+      "Asset": "meshes/models/ground/0.mesh",
+      "ClassName": "Mesh",
+      "ColorRGB": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Enabled": true,
+      "FaceCulling": 0,
+      "Material": "models/ground",
+      "Name": "ground",
+      "ObjectId": 17,
+      "Reflectivity": 0.0,
+      "Size": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          15.0,
+          0.0,
+          100.0,
+          1.0
+        ]
+      ],
+      "Transparency": 0.0
+    },
+    {
+      "Asset": "meshes/models/windows/0.mesh",
       "ClassName": "Mesh",
       "ColorRGB": [
         1.0,
@@ -155,8 +155,8 @@
       "Enabled": true,
       "FaceCulling": 0,
       "Material": "models/windows",
-      "Name": "windows10_0",
-      "ObjectId": 17,
+      "Name": "windows10",
+      "ObjectId": 18,
       "Reflectivity": 0.0,
       "Size": [
         1.0,
@@ -202,7 +202,7 @@
       "FaceCulling": 1,
       "Material": "floortiles",
       "Name": "Primitive",
-      "ObjectId": 18,
+      "ObjectId": 19,
       "Reflectivity": 0.0,
       "Shape": 0,
       "Size": [
@@ -249,7 +249,7 @@
       "FaceCulling": 1,
       "Material": "wood",
       "Name": "Primitive",
-      "ObjectId": 19,
+      "ObjectId": 20,
       "Reflectivity": 0.0,
       "Shape": 0,
       "Size": [
@@ -300,15 +300,8 @@
         1.0
       ],
       "Name": "DirectionalLight",
-      "ObjectId": 20,
-      "Shadows": false
-    },
-    {
-      "ClassName": "Script",
-      "Enabled": true,
-      "Name": "MainScript",
       "ObjectId": 21,
-      "SourceFile": "scripts/empty.luau"
+      "Shadows": false
     }
   ],
   "SceneName": "levels/save.world"
