@@ -8,6 +8,10 @@ local TotalTime = 0
 local Camera = workspace.SceneCamera
 Camera.GenericMovement = false
 
+local Example = GameObject.new("Example")
+local name, message = Example:Greet({"Ford", "Stan", "'Bel", "last but not least, Dipper"}, true)
+print(`{name}: {message}`) -- 16/09/2024
+
 local function updateCubes(DeltaTime)
     if input_keypressed("t") then
         NumCubes += 1
@@ -57,4 +61,8 @@ function Update(DeltaTime)
     
     updateCubes(DeltaTime)
     handleCameraMovement(DeltaTime)
+    
+    if input_keypressed("y") then
+        Example:GiveUp()
+    end
 end

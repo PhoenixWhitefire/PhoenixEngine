@@ -152,7 +152,7 @@ EngineObject::EngineObject()
 	// 15/08/2024:
 	// Hmm, this single commented-out line look like the remnants
 	//  of my first attempt trying to get behavior like we have
-	// `GameObject::CreateGameObject` today.
+	// `GameObject::Create` today.
 	// My idea was, "Since constructors return objects, why don't I
 	// just have a list of constructors"?
 	// I didn't really think it would work initially, because it wouldn't
@@ -251,7 +251,7 @@ EngineObject::EngineObject()
 
 	Debug::Log("Creating initial DataModel...");
 
-	GameObject* newDataModel = GameObject::CreateGameObject("DataModel");
+	GameObject* newDataModel = GameObject::Create("DataModel");
 
 	this->DataModel = dynamic_cast<Object_DataModel*>(newDataModel);
 	GameObject::s_DataModel = newDataModel;

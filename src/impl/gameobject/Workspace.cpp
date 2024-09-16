@@ -7,7 +7,7 @@ static Object_Camera* s_FallbackCamera = nullptr;
 
 static void createDefaultCamera()
 {
-	s_FallbackCamera = dynamic_cast<Object_Camera*>(GameObject::CreateGameObject("Camera"));
+	s_FallbackCamera = dynamic_cast<Object_Camera*>(GameObject::Create("Camera"));
 	s_FallbackCamera->GenericMovement = true;
 }
 

@@ -9,7 +9,7 @@ class Object_Camera : public GameObject
 public:
 	Object_Camera();
 
-	void Update(double);
+	void Update(double) override;
 	// Given the camera's current position and rotation,
 	// get it's Matrix accounting for Projection (FoV, AspectRatio, NearPlane and FarPlane)
 	// @param The Aspect Ratio

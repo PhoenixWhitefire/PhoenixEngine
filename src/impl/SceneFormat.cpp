@@ -203,7 +203,7 @@ static std::vector<GameObject*> LoadMapVersion1(
 		{
 			if (Model.size() > 1)
 			{
-				GameObject* container = GameObject::CreateGameObject("Model");
+				GameObject* container = GameObject::Create("Model");
 
 				for (uint32_t index = 0; index < Model.size(); index++)
 				{
@@ -268,7 +268,7 @@ static std::vector<GameObject*> LoadMapVersion1(
 			// Yeah, "MeshPart" as the type and `Primitive`s as the result.
 			// Like just use V2 bro why the hell you botherin' this musty-ahh
 			// format?
-			GameObject* NewObject = GameObject::CreateGameObject("Primitive");
+			GameObject* NewObject = GameObject::Create("Primitive");
 			Objects.push_back(NewObject);
 
 			Object_Base3D* Object3D = dynamic_cast<Object_Base3D*>(NewObject);
@@ -354,7 +354,7 @@ static std::vector<GameObject*> LoadMapVersion1(
 
 		std::string LightType = LightObject["type"];
 
-		GameObject* Object = (GameObject::CreateGameObject(LightType));
+		GameObject* Object = (GameObject::Create(LightType));
 		Objects.push_back(Object);
 
 		Object_Light* Light = dynamic_cast<Object_Light*>(Object);
@@ -445,7 +445,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 
 		std::string Name = item["Name"];
 
-		GameObject* NewObject = GameObject::CreateGameObject(Class);
+		GameObject* NewObject = GameObject::Create(Class);
 
 		objectsMap.insert(std::pair(item.value("ObjectId", PHX_GAMEOBJECT_NULL_ID), NewObject));
 		realIdToSceneId.insert(std::pair(NewObject->ObjectId, item.value("ObjectId", PHX_GAMEOBJECT_NULL_ID)));

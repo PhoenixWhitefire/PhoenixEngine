@@ -9,7 +9,7 @@ class Object_Workspace : public Object_Model
 public:
 	Object_Workspace();
 
-	void Initialize();
+	void Initialize() override;
 
 	Object_Camera* GetSceneCamera();
 	void SetSceneCamera(Object_Camera*);

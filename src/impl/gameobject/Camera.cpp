@@ -3,6 +3,7 @@
 #include<glm/gtx/vector_angle.hpp>
 
 #include"gameobject/Camera.hpp"
+#include"datatype/Vector3.hpp"
 #include"UserInput.hpp"
 
 RegisterDerivedObject<Object_Camera> Object_Camera::RegisterClassAs("Camera");

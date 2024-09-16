@@ -78,7 +78,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 	for (int MeshIndex = 0; MeshIndex < m_Meshes.size(); MeshIndex++)
 	{
 		// TODO: cleanup code
-		Object_Mesh* mesh = dynamic_cast<Object_Mesh*>(GameObject::CreateGameObject("Mesh"));
+		Object_Mesh* mesh = dynamic_cast<Object_Mesh*>(GameObject::Create("Mesh"));
 		
 		LoadedObjs.push_back(mesh);
 

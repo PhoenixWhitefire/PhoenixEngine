@@ -10,7 +10,7 @@ Reflection::GenericValue::GenericValue()
 {
 }
 
-Reflection::GenericValue::GenericValue(std::string const& str)
+Reflection::GenericValue::GenericValue(const std::string& str)
 	: Type(ValueType::String), String(str)
 {
 }
@@ -25,18 +25,18 @@ Reflection::GenericValue::GenericValue(double d)
 {
 }
 
-Reflection::GenericValue::GenericValue(int i)
-	: Type(ValueType::Integer), Pointer((void*)i)
-{
-}
-
 Reflection::GenericValue::GenericValue(int64_t i)
 	: Type(ValueType::Integer), Pointer((void*)i)
 {
 }
 
 Reflection::GenericValue::GenericValue(uint32_t i)
-	: Type(ValueType::Integer), Pointer((void*)i)
+	: Type(ValueType::Integer), Pointer((void*)static_cast<int64_t>(i))
+{
+}
+
+Reflection::GenericValue::GenericValue(int i)
+	: Type(ValueType::Integer), Pointer((void*)static_cast<int64_t>(i))
 {
 }
 
@@ -47,6 +47,21 @@ Reflection::GenericValue::GenericValue(const glm::mat4& m)
 		throw("Allocation error while constructing GenericValue from glm::mat4");
 
 	memcpy(Pointer, &m, sizeof(m));
+}
+
+Reflection::GenericValue::GenericValue(const std::vector<GenericValue>& array)
+	: Type(ValueType::Array), Array(array)
+{
+}
+
+Reflection::GenericValue::GenericValue(const std::unordered_map<GenericValue, GenericValue>& map)
+	: Type(ValueType::Array)
+{
+	for (auto& it : map)
+	{
+		this->Array.push_back(it.first);
+		this->Array.push_back(it.second);
+	}
 }
 
 std::string Reflection::GenericValue::ToString() const
@@ -167,6 +182,69 @@ glm::mat4 Reflection::GenericValue::AsMatrix() const
 	return Type == ValueType::Matrix
 		? *mptr
 		: throw("GenericValue was not a Matrix, but was a " + Reflection::TypeAsString(Type));
+}
+std::vector<Reflection::GenericValue> Reflection::GenericValue::AsArray()
+{
+	if (Type == ValueType::Map)
+	{
+		if (Array.size() % 2 != 0)
+			throw("Tried to convert a Map GenericValue to an Array, but it wasn't valid and had an odd number of Array elements");
+
+		std::vector<GenericValue> array;
+
+		for (size_t index = 1; index < array.size(); index++)
+		{
+			array.push_back(this->Array.at(index));
+			index++;
+		}
+
+		return array;
+	}
+
+	return Type == ValueType::Array
+		? Array
+		: throw("GenericValue was not an Array, but was a " + Reflection::TypeAsString(Type));
+}
+std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> Reflection::GenericValue::AsMap() const
+{
+	if (Type != ValueType::Map)
+		throw("GenericValue was not a Map, but was a " + Reflection::TypeAsString(Type));
+
+	if (Array.size() % 2 != 0)
+		throw("GenericValue was not a valid Map (odd number of Array elements)");
+
+	/*
+	std::unordered_map<GenericValue, GenericValue> map;
+
+	for (size_t index = 0; index < Array.size(); index++)
+	{
+		map.insert(Array.at(index), Array.at(index + 1));
+		index++;
+	}
+
+	return map;
+	*/
+
+	// 16/09/2024
+	/*
+	* 
+	Severity	Code	Description	Project	File	Line	Suppression State	Details
+	Error	C2280	'std::_Umap_traits<_Kty,_Ty,std::_Uhash_compare<_Kty,_Hasher,_Keyeq>,_Alloc,false>
+	::_Umap_traits(const std::_Umap_traits<_Kty,_Ty,std::_Uhash_compare<_Kty,_Hasher,_Keyeq>,_Alloc,false> &)'
+	: attempting to reference a deleted function
+        with
+        [
+            _Kty=Reflection::GenericValue,
+            _Ty=Reflection::GenericValue,
+            _Hasher=std::hash<Reflection::GenericValue>,
+            _Keyeq=std::equal_to<Reflection::GenericValue>,
+            _Alloc=std::allocator<std::pair<const Reflection::GenericValue,Reflection::GenericValue>>
+        ]	PhoenixEngine	C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.41.34120\include\xhash	396		
+
+
+	What is blud yapping about?? :skull:
+	*/
+	throw("GenericValue::AsMap not implemented");
 }
 
 Reflection::PropertyMap& Reflection::Reflectable::GetProperties()

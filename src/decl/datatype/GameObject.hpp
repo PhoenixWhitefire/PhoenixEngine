@@ -66,7 +66,7 @@ virtual void SetPropertyValue(const std::string & MemberName, const Reflection::
 		throw(std::string("Invalid Property in SetPropertyValue ") + MemberName); \
 } \
  \
-virtual Reflection::GenericValue CallFunction(const std::string & MemberName, const Reflection::GenericValue & Param) \
+virtual Reflection::GenericValue CallFunction(const std::string& MemberName, const std::vector<Reflection::GenericValue>& Param) \
 { \
 	if (HasFunction(MemberName)) \
 		return s_Api.Functions[MemberName].Func(this, Param); \
@@ -81,8 +81,6 @@ virtual Reflection::GenericValue CallFunction(const std::string & MemberName, co
 #include<nljson.hpp>
 
 #include"Reflection.hpp"
-#include"datatype/Vector3.hpp"
-#include"datatype/Color.hpp"
 #include"datatype/Event.hpp"
 
 class GameObject;
@@ -100,7 +98,7 @@ struct IFunction
 	std::vector<Reflection::ValueType> Inputs;
 	std::vector<Reflection::ValueType> Outputs;
 
-	std::function<Reflection::GenericValue(GameObject*, const Reflection::GenericValue&)> Func;
+	std::function<std::vector<Reflection::GenericValue>(GameObject*, const std::vector<Reflection::GenericValue>&)> Func;
 };
 
 typedef std::unordered_map<std::string, IProperty> PropertyMap;
@@ -123,7 +121,7 @@ public:
 	PHX_GAMEOBJECT_API_REFLECTION;
 
 	static bool IsValidObjectClass(std::string const&);
-	static GameObject* CreateGameObject(std::string const&);
+	static GameObject* Create(std::string const&);
 	static GameObject* GetObjectById(uint32_t);
 
 	static GameObject* s_DataModel;
@@ -172,8 +170,7 @@ protected:
 
 	// Needs to be in `protected` because `RegisterDerivedObject`
 	typedef std::unordered_map<std::string, GameObject* (*)()> GameObjectMapType;
-	static GameObjectMapType* m_getGameObjectMap();
-	static GameObjectMapType* m_gameObjectMap;
+	static inline GameObjectMapType* s_GameObjectMap = new GameObjectMapType;
 
 private:
 	static void s_DeclareReflections();
@@ -190,6 +187,6 @@ struct RegisterDerivedObject : GameObject
 {
 	RegisterDerivedObject(std::string const& ObjectClass)
 	{
-		m_getGameObjectMap()->insert(std::make_pair(ObjectClass, &createT_baseGameObject<T>));
+		s_GameObjectMap->insert(std::make_pair(ObjectClass, &createT_baseGameObject<T>));
 	}
 };

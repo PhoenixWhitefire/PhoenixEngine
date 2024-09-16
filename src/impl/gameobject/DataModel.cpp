@@ -7,10 +7,9 @@
 RegisterDerivedObject<Object_DataModel> Object_DataModel::RegisterObjectAs("DataModel");
 static bool s_DidInitReflection = false;
 
-static Reflection::GenericValue closeDataModel(GameObject* g, const Reflection::GenericValue&)
+static void closeDataModel(GameObject* g)
 {
 	dynamic_cast<Object_DataModel*>(g)->WantExit = true;
-	return Reflection::GenericValue();
 }
 
 void Object_DataModel::s_DeclareReflections()
@@ -21,10 +20,10 @@ void Object_DataModel::s_DeclareReflections()
 
 	REFLECTION_INHERITAPI(GameObject);
 
-	REFLECTION_DECLAREPROC("Close", closeDataModel);
-	REFLECTION_DECLAREPROC(
-		"Destroy",
-		[](GameObject*, const Reflection::GenericValue&) -> Reflection::GenericValue
+	REFLECTION_DECLAREPROC_INPUTLESS(Close, closeDataModel);
+	REFLECTION_DECLAREPROC_INPUTLESS(
+		Destroy,
+		[](GameObject*)
 		{
 			throw("Cannot Destroy a DataModel");
 		}
@@ -47,6 +46,6 @@ Object_DataModel::~Object_DataModel()
 
 void Object_DataModel::Initialize()
 {
-	auto workspace = GameObject::CreateGameObject("Workspace");
+	auto workspace = GameObject::Create("Workspace");
 	workspace->SetParent(this);
 }

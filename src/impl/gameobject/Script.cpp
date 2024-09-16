@@ -8,19 +8,18 @@
 
 */
 
-
 #include<luau/Compiler/include/luacode.h>
 #include<luau/VM/include/lualib.h>
 #include<luau/Common/include/Luau/Common.h>
 
 #include"gameobject/Script.hpp"
 #include"datatype/GameObject.hpp"
+#include"datatype/Vector3.hpp"
 #include"UserInput.hpp"
 #include"FileRW.hpp"
 #include"Debug.hpp"
 
-#define LUA_THROW(err) throw(std::runtime_error(err))
-#define LUA_ASSERT(res, err) if (!res) { LUA_THROW(err); }
+#define LUA_ASSERT(res, err) if (!res) { luaL_error(L, err); }
 
 static RegisterDerivedObject<Object_Script> RegisterClassAs("Script");
 
@@ -37,14 +36,14 @@ static const std::unordered_map<Reflection::ValueType, lua_Type> ReflectionTypeT
 	{ Reflection::ValueType::Vector3, lua_Type::LUA_TUSERDATA },
 	{ Reflection::ValueType::Matrix, lua_Type::LUA_TUSERDATA },
 	{ Reflection::ValueType::GameObject, lua_Type::LUA_TUSERDATA },
+	{ Reflection::ValueType::Array, lua_Type::LUA_TTABLE },
+	{ Reflection::ValueType::Map, lua_Type::LUA_TTABLE }
 };
 
 // Returns a `Reflection::GenericValue` of the topmost value of the Luau stack
-static Reflection::GenericValue luaTypeToGeneric(lua_State* L, int luaT, bool* successful)
+static Reflection::GenericValue luaTypeToGeneric(lua_State* L, int luaT, int stackIndex = -1)
 {
 	Reflection::GenericValue gv;
-
-	*successful = true;
 
 	switch (luaT)
 	{
@@ -55,17 +54,17 @@ static Reflection::GenericValue luaTypeToGeneric(lua_State* L, int luaT, bool* s
 	}
 	case (lua_Type::LUA_TBOOLEAN):
 	{
-		gv = (bool)lua_toboolean(L, -1);
+		gv = (bool)lua_toboolean(L, stackIndex);
 		break;
 	}
 	case (lua_Type::LUA_TNUMBER):
 	{
-		gv = lua_tonumber(L, -1);
+		gv = lua_tonumber(L, stackIndex);
 		break;
 	}
 	case (lua_Type::LUA_TSTRING):
 	{
-		gv.String = lua_tostring(L, -1);
+		gv.String = lua_tostring(L, stackIndex);
 		gv.Type = Reflection::ValueType::String;
 		break;
 	}
@@ -74,29 +73,50 @@ static Reflection::GenericValue luaTypeToGeneric(lua_State* L, int luaT, bool* s
 		// IMPORTANT!!
 		// Requires `LuauPreserveLudataRenaming` to be enabled in `Luau/VM/src/ltm.cpp`
 		// 11/09/2024
-		const char* tname = luaL_typename(L, -1);
+		const char* tname = luaL_typename(L, stackIndex);
 		
 		if (strcmp(tname, "Vector3") == 0)
 		{
-			Vector3 vec = *(Vector3*)lua_touserdata(L, -1);
+			Vector3 vec = *(Vector3*)lua_touserdata(L, stackIndex);
 			gv = vec.ToGenericValue();
 		}
 		else if (strcmp(tname, "Matrix") == 0)
 		{
-			gv = Reflection::GenericValue(*(glm::mat4*)lua_touserdata(L, -1));
+			gv = Reflection::GenericValue(*(glm::mat4*)lua_touserdata(L, stackIndex));
 		}
 		else if (strcmp(tname, "GameObject") == 0)
 		{
-			gv = *(uint32_t*)lua_touserdata(L, -1);
+			gv = *(uint32_t*)lua_touserdata(L, stackIndex);
 			gv.Type = Reflection::ValueType::GameObject;
 		}
+
+		break;
+	}
+	case (lua_Type::LUA_TTABLE):
+	{
+		// 15/09/2024
+		// TODO
+		// Maps
+
+		std::vector<Reflection::GenericValue> items;
+
+		// https://www.lua.org/manual/5.1/manual.html#lua_next
+		lua_pushnil(L);
+
+		while (lua_next(L, stackIndex - 1) != 0)
+		{
+			items.push_back(luaTypeToGeneric(L, lua_type(L, -1), -1));
+			lua_pop(L, 1);
+		}
+
+		gv = items;
 
 		break;
 	}
 	default:
 	{
 		const char* tname = luaL_typename(L, luaT);
-		LUA_THROW(std::vformat(
+		luaL_error(L, std::vformat(
 			"Could not convert type {} to a GenericValue (no conversion case)",
 			std::make_format_args(tname)).c_str()
 		);
@@ -131,7 +151,7 @@ static void pushGameObject(lua_State* L, GameObject* obj)
 	lua_setmetatable(L, -2);
 }
 
-static void pushGenericValue(lua_State* L, Reflection::GenericValue& gv)
+static void pushGenericValue(lua_State* L, const Reflection::GenericValue& gv)
 {
 	switch (gv.Type)
 	{
@@ -212,7 +232,7 @@ static void pushGenericValue(lua_State* L, Reflection::GenericValue& gv)
 	default:
 	{
 		std::string typeName = Reflection::TypeAsString(gv.Type);
-		LUA_THROW(std::vformat(
+		luaL_error(L, std::vformat(
 			"Could not provide Luau the GenericValue with type {}",
 			std::make_format_args(typeName)).c_str()
 		);
@@ -232,19 +252,19 @@ static void pushFunction(lua_State* L, const char* name)
 
 		[](lua_State* L)
 		{
-			luaL_checkudata(L, 1, "GameObject");
-			GameObject* refl = GameObject::GetObjectById(*(uint32_t*)lua_touserdata(L, -1));
-			const char* fname = lua_tostring(L, lua_upvalueindex(1));
-			std::string fnamestr = fname;
-
-			auto& func = refl->GetFunction(fnamestr);
-			const std::vector<Reflection::ValueType>& paramTypes = func.Inputs;
-
-			int numParams = static_cast<int32_t>(paramTypes.size());
 			// -1 because the object is passed in as the first argument
 			// (also means we don't need to add the object as an upvalue)
 			// 11/09/2024
 			int numArgs = lua_gettop(L) - 1;
+
+			luaL_checkudata(L, 1, "GameObject");
+			GameObject* refl = GameObject::GetObjectById(*(uint32_t*)lua_touserdata(L, -numArgs - 1));
+			const char* fname = lua_tostring(L, lua_upvalueindex(1));
+
+			auto& func = refl->GetFunction(fname);
+			const std::vector<Reflection::ValueType>& paramTypes = func.Inputs;
+
+			int numParams = static_cast<int32_t>(paramTypes.size());
 
 			if (numArgs != numParams)
 			{
@@ -253,17 +273,17 @@ static void pushFunction(lua_State* L, const char* name)
 				for (int arg = 1; arg <= numArgs; arg++)
 					argsString += std::string(luaL_typename(L, 0 - (numArgs - arg))) + ", ";
 
-				argsString = argsString.substr(0, argsString.size() - 3);
+				argsString = argsString.substr(0, argsString.size() - 2);
 
-				LUA_THROW(std::vformat(
-					"Function '{}' expected {} arguments, got {} instead: {}",
+				luaL_error(L, std::vformat(
+					"Function '{}' expected {} arguments, got {} instead: ({})",
 					std::make_format_args(fname, numParams, numArgs, argsString)
 				).c_str());
 
 				return 0;
 			}
 
-			std::vector<Reflection::GenericValue> inputsList;
+			std::vector<Reflection::GenericValue> inputs;
 
 			// This *entire* for-loop is just for handling input arguments
 			for (int index = 0; index < paramTypes.size(); index++)
@@ -277,61 +297,62 @@ static void pushFunction(lua_State* L, const char* name)
 				// Simpler than I thought actually
 				int argStackIndex = index - numParams;
 
-				int expectedLuaType = (int)ReflectionTypeToLuaType.find(paramType)->second;
-				int actualLuaType = lua_type(L, argStackIndex);
+				auto expectedLuaTypeIt = ReflectionTypeToLuaType.find(paramType);
 
-				printf("pt: %i, exp lua type: %i\n", (int)paramType, expectedLuaType);
+				if (expectedLuaTypeIt == ReflectionTypeToLuaType.end())
+					throw(std::vformat(
+						"Couldn't find the equivalent of a Reflection::ValueType::{} in Lua",
+						std::make_format_args(Reflection::TypeAsString(paramType))
+					));
+
+				int expectedLuaType = (int)expectedLuaTypeIt->second;
+				int actualLuaType = lua_type(L, argStackIndex);
 
 				if (actualLuaType != expectedLuaType)
 				{
-					const char* expectedName = luaL_typename(L, expectedLuaType);
-					const char* actualName = luaL_tolstring(L, argStackIndex, NULL);
+					const char* expectedName = lua_typename(L, expectedLuaType);
+					const char* actualTypeName = luaL_typename(L, argStackIndex);
+					const char* providedValue = luaL_tolstring(L, argStackIndex, NULL);
 
 					// I get that shitty fucking ::vformat can't handle
 					// a SINGULAR fucking parameter that isn't an lvalue,
 					// but an `int`?? A literal fucking scalar??? What is this bullshit????
 					int indexAsLuaIndex = index + 1;
 
-					LUA_THROW(std::vformat(
-						"Argument {} expected to be of type {}, but was {} instead (stack index {})",
+					luaL_error(L, std::vformat(
+						"Argument {} expected to be of type {}, but was {} ({}) instead",
 						std::make_format_args(
 							indexAsLuaIndex,
 							expectedName,
-							actualName,
-							argStackIndex
+							providedValue,
+							actualTypeName
 						)
 					).c_str());
 
 					return 0;
 				}
 				else
-				{
-					bool conversionSuccessful = true;
-					inputsList.push_back(luaTypeToGeneric(L, expectedLuaType, &conversionSuccessful));
-				}
+					inputs.push_back(luaTypeToGeneric(L, expectedLuaType, argStackIndex));
 			}
 
 			// Now, onto the *REAL* business...
-			Reflection::GenericValue input;
-			input.Type = Reflection::ValueType::Array;
-			input.Array = inputsList;
-
-			Reflection::GenericValue output;
+			std::vector<Reflection::GenericValue> outputs;
 
 			try
 			{
-				output = func.Func(refl, input);
+				outputs = func.Func(refl, inputs);
 			}
 			catch (std::string err)
 			{
-				LUA_THROW(err.c_str());
+				luaL_error(L, err.c_str());
 			}
 			catch (const char* err)
 			{
-				LUA_THROW(err);
+				luaL_error(L, err);
 			}
 
-			pushGenericValue(L, output);
+			for (const Reflection::GenericValue& output : outputs)
+				pushGenericValue(L, output);
 
 			return (int)func.Outputs.size();
 
@@ -345,7 +366,7 @@ static void pushFunction(lua_State* L, const char* name)
 		},
 
 		name,
-		2
+		1
 	);
 }
 
@@ -356,10 +377,10 @@ static auto api_newobject = [](lua_State* L)
 			std::string t = luaL_tolstring(L, -1, NULL);
 			const std::string fmtstr = "newobject called with arg of type {}, but should be string!";
 
-			LUA_THROW(std::vformat(fmtstr, std::make_format_args(t)).c_str());
+			luaL_error(L, std::vformat(fmtstr, std::make_format_args(t)).c_str());
 		}
 
-		GameObject* newObject = GameObject::CreateGameObject(lua_tostring(L, -1));
+		GameObject* newObject = GameObject::Create(lua_tostring(L, -1));
 
 		pushGameObject(L, newObject);
 
@@ -411,7 +432,7 @@ static auto api_gameobjindex = [](lua_State* L)
 			{
 				std::string fullname = obj->GetFullName();
 
-				LUA_THROW(std::vformat(
+				luaL_error(L, std::vformat(
 					"'{}' was neither a Member nor Child of {}",
 					std::make_format_args(key, fullname)).c_str()
 				);
@@ -457,22 +478,20 @@ static auto api_gameobjnewindex = [](lua_State* L)
 			lua_Type argType = (lua_Type)lua_type(L, 3);
 			
 			if (!prop.Set)
-			{
-				throw(std::runtime_error(std::vformat(
+				luaL_error(L, std::vformat(
 					"Cannot set Property {}::{} to {} because it is read-only",
 					std::make_format_args(obj->ClassName, key, argAsString)
-				).c_str()));
-			}
+				).c_str());
 
 			auto reflToLuaIt = ReflectionTypeToLuaType.find(prop.Type);
 
 			if (reflToLuaIt == ReflectionTypeToLuaType.end())
 			{
 				const std::string& typeName = Reflection::TypeAsString(prop.Type);
-				throw(std::vformat(
+				luaL_error(L, std::vformat(
 					"No defined mapping between Reflection::ValueType::{} and a Lua type",
 					std::make_format_args(typeName)
-				));
+				).c_str());
 			}
 
 			lua_Type desiredType = reflToLuaIt->second;
@@ -480,7 +499,7 @@ static auto api_gameobjnewindex = [](lua_State* L)
 			if (desiredType != argType && (desiredType != LUA_TUSERDATA && argType != LUA_TNIL))
 			{
 				const char* desiredTypeName = lua_typename(L, (int)desiredType);
-				LUA_THROW(std::vformat(
+				luaL_error(L, std::vformat(
 					"Expected type {} for member {}::{}, got {} instead",
 					std::make_format_args(desiredTypeName, obj->ClassName, key, argTypeName)
 				).c_str());
@@ -490,7 +509,7 @@ static auto api_gameobjnewindex = [](lua_State* L)
 				lua_pushvalue(L, 3);
 
 				bool wasSuccessful = true;
-				Reflection::GenericValue newValue = luaTypeToGeneric(L, desiredType, &wasSuccessful);
+				Reflection::GenericValue newValue = luaTypeToGeneric(L, desiredType);
 
 				if (wasSuccessful)
 					obj->SetPropertyValue(key, newValue);
@@ -498,7 +517,7 @@ static auto api_gameobjnewindex = [](lua_State* L)
 		}
 		else
 		{
-			LUA_THROW((std::vformat(
+			luaL_error(L, (std::vformat(
 				"Attempt to set invalid Member '{}' of GameObject",
 				std::make_format_args(key)
 			)).c_str());
@@ -568,16 +587,16 @@ static auto api_vec3index = [](lua_State* L)
 		}
 		else
 		{
-			LUA_THROW(std::vformat(
+			luaL_error(L, std::vformat(
 				"{} is not a valid member of Vector3",
 				std::make_format_args(key)
 			).c_str());
 		}
 	};
 
-static auto api_vec3newindex = [](lua_State*)
+static auto api_vec3newindex = [](lua_State* L)
 	{
-		LUA_THROW("Vector3s are immutable");
+		luaL_error(L, "Vector3s are immutable");
 	};
 
 static auto api_vec3tostring = [](lua_State* L)
@@ -725,19 +744,14 @@ void Object_Script::s_DeclareReflections()
 	REFLECTION_DECLAREPROP(
 		"SourceFile",
 		String,
-		[](GameObject* refl)
+		[](GameObject* p)
 		{
-			return Reflection::GenericValue(dynamic_cast<Object_Script*>(refl)->SourceFile);
+			return Reflection::GenericValue(dynamic_cast<Object_Script*>(p)->SourceFile);
 		},
-		[](GameObject* refl, Reflection::GenericValue newval)
+		[](GameObject* p, Reflection::GenericValue newval)
 		{
-			Object_Script* scr = dynamic_cast<Object_Script*>(refl);
-
-			if (scr->SourceFile != newval.AsString())
-			{
-				scr->SourceFile = newval.AsString();
-				scr->Reload();
-			}
+			Object_Script* scr = dynamic_cast<Object_Script*>(p);
+			scr->LoadScript(newval.AsString());
 		}
 	);
 
@@ -746,10 +760,13 @@ void Object_Script::s_DeclareReflections()
 		"Reload",
 		{},
 		{ Reflection::ValueType::Bool },
-		[](GameObject* scr, Reflection::GenericValue)
+		[](GameObject* p, const Reflection::GenericValue&)
+		-> std::vector<Reflection::GenericValue>
 		{
-			bool reloadSuccess = dynamic_cast<Object_Script*>(scr)->Reload();
-			return Reflection::GenericValue(reloadSuccess);
+			Object_Script* scr = dynamic_cast<Object_Script*>(p);
+
+			bool reloadSuccess = scr->Reload();
+			return { reloadSuccess };
 		}
 	);
 
@@ -778,7 +795,7 @@ void Object_Script::Initialize()
 
 void Object_Script::Update(double dt)
 {
-	if (!m_L)
+	if (!m_L || m_StaleSource)
 		this->Reload();
 
 	if (m_HasUpdate)
@@ -796,13 +813,12 @@ void Object_Script::Update(double dt)
 			{
 				m_HasUpdate = false;
 
-				int topidx = lua_gettop(m_L);
-				const char* errstr = lua_tostring(m_L, topidx);
+				const char* errstr = lua_tostring(m_L, -1);
 				std::string fullname = this->GetFullName();
 
 				Debug::Log(std::vformat(
-					"Luau runtime error: {}: {}",
-					std::make_format_args(fullname, errstr)
+					"Luau runtime error: {}",
+					std::make_format_args(errstr)
 				));
 			}
 		}
@@ -815,22 +831,30 @@ bool Object_Script::LoadScript(std::string const& scriptFile)
 		return true;
 
 	this->SourceFile = scriptFile;
+	m_StaleSource = true;
 
-	return this->Reload();
+	// TODO 14/09/2024
+	// Don't want the script to run before SceneFormat has fully
+	// deserialized the scene and the `script` global to
+	// report it is parented to `nil`. Only want it to run when
+	// parented under the `DataModel`. An `::IsDescendantOf` would be
+	// ideal, but it's not needed right now as this value will always
+	// be set before Script get's its GameObject properties assigned
+	// (i.e. it's Parent)
+	// This is in this property setter so that the Script can be
+	// manually loaded if the need every arises
+	if (!this->GetParent())
+		return false;
+	else
+		return this->Reload();
 }
 
 bool Object_Script::Reload()
 {
-	// TODO 14/09/2024
-	// Don't want the script to run and the `script` global to
-	// report it is parented to `nil`. Only want it to run when
-	// parented under the `DataModel`. A `::IsDescendantOf` would be
-	// ideal, but it seems unnecessary for now
-	if (!this->GetParent())
-		return false;
-
 	bool fileExists = true;
 	m_Source = FileRW::ReadFile(SourceFile, &fileExists);
+
+	m_StaleSource = false;
 
 	if (!fileExists)
 	{
@@ -887,8 +911,8 @@ bool Object_Script::Reload()
 			const char* errstr = lua_tostring(m_L, -1);
 
 			Debug::Log(std::vformat(
-				"Luau script init error: {}: {}",
-				std::make_format_args(FullName, errstr)
+				"Luau script init error: {}",
+				std::make_format_args(errstr)
 			));
 		}
 

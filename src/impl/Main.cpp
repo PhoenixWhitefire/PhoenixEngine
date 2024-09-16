@@ -256,7 +256,7 @@ static void LoadLevel(const std::string& LevelPath)
 	if (prevModel)
 		prevModel->Destroy();
 
-	GameObject* levelModel = GameObject::CreateGameObject("Model");
+	GameObject* levelModel = GameObject::Create("Model");
 	levelModel->Name = "Level";
 	levelModel->SetParent(workspace);
 

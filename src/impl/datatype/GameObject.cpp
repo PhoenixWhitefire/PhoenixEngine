@@ -8,14 +8,11 @@ static bool s_DidInitReflection = false;
 GameObject* GameObject::s_DataModel = nullptr;
 std::unordered_map<uint32_t, GameObject*> GameObject::s_WorldArray = {};
 
-GameObject::GameObjectMapType* GameObject::m_gameObjectMap = new GameObjectMapType();
-
 static RegisterDerivedObject<GameObject> RegisterClassAs("GameObject");
 
-static Reflection::GenericValue destroyObject(GameObject* obj, const Reflection::GenericValue gv)
+static void destroyObject(GameObject* obj)
 {
 	dynamic_cast<GameObject*>(obj)->Destroy();
-	return Reflection::GenericValue();
 }
 
 static std::string getFullName(GameObject* object)
@@ -94,14 +91,15 @@ void GameObject::s_DeclareReflections()
 		}
 	);
 	
-	REFLECTION_DECLAREPROC("Destroy", destroyObject);
+	REFLECTION_DECLAREPROC_INPUTLESS(Destroy, destroyObject);
 	REFLECTION_DECLAREFUNC(
 		"GetFullName",
 		{},
 		{ Reflection::ValueType::String },
-		[](GameObject* object, const Reflection::GenericValue&)
+		[](GameObject* object, const std::vector<Reflection::GenericValue>&)
+		-> std::vector<Reflection::GenericValue>
 		{
-			return getFullName(object);
+			return { getFullName(object) };
 		}
 	);
 
@@ -134,9 +132,9 @@ GameObject::~GameObject()
 
 bool GameObject::IsValidObjectClass(std::string const& ObjectClass)
 {
-	GameObjectMapType::iterator it = m_getGameObjectMap()->find(ObjectClass);
+	GameObjectMapType::iterator it = s_GameObjectMap->find(ObjectClass);
 
-	if (it == m_getGameObjectMap()->end())
+	if (it == s_GameObjectMap->end())
 		return false;
 	else
 		return true;
@@ -308,11 +306,11 @@ GameObject* GameObject::GetChildOfClass(std::string const& Class)
 	return nullptr;
 }
 
-GameObject* GameObject::CreateGameObject(std::string const& ObjectClass)
+GameObject* GameObject::Create(std::string const& ObjectClass)
 {
-	GameObjectMapType::iterator it = m_getGameObjectMap()->find(ObjectClass);
+	GameObjectMapType::iterator it = s_GameObjectMap->find(ObjectClass);
 
-	if (it == m_getGameObjectMap()->end())
+	if (it == s_GameObjectMap->end())
 		throw(std::vformat(
 			"Attempted to create invalid GameObject '{}'!",
 			std::make_format_args(ObjectClass)
@@ -334,25 +332,13 @@ GameObject* GameObject::CreateGameObject(std::string const& ObjectClass)
 	return CreatedObject;
 }
 
-GameObject::GameObjectMapType* GameObject::m_getGameObjectMap()
-{
-	// Copied from StackOverflow post:
-	// 
-	// never delete'ed. (exist until program termination)
-	// because we can't guarantee correct destruction order 
-	if (!m_gameObjectMap)
-		m_gameObjectMap = new GameObjectMapType;
-
-	return m_gameObjectMap;
-}
-
 nlohmann::json GameObject::DumpApiToJson()
 {
 	nlohmann::json dump{};
 	
 	dump["GameObject"] = nlohmann::json();
 
-	for (auto& g : *GameObject::m_getGameObjectMap())
+	for (auto& g : *s_GameObjectMap)
 	{
 		auto newobj = g.second();
 		dump[g.first] = nlohmann::json();

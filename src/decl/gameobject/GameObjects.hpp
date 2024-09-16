@@ -12,3 +12,4 @@
 #include"gameobject/Workspace.hpp"
 #include"gameobject/Script.hpp"
 #include"gameobject/DataModel.hpp"
+#include"gameobject/Example.hpp"

@@ -649,7 +649,7 @@ void Editor::RenderUI()
 			m_InvalidObjectErrTimeRemaining = 2.f;
 		else
 		{
-			GameObject* newObj = GameObject::CreateGameObject(m_NewObjectClass);
+			GameObject* newObj = GameObject::Create(m_NewObjectClass);
 
 			if (m_CurrentUIHierarchyRoot)
 				newObj->SetParent(m_CurrentUIHierarchyRoot);

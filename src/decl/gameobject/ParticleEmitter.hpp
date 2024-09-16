@@ -7,6 +7,7 @@
 #include"datatype/GameObject.hpp"
 #include"render/ShaderProgram.hpp"
 #include"render/TextureManager.hpp"
+#include"datatype/Vector3.hpp"
 #include"datatype/Vector2.hpp"
 
 float Quad[];
@@ -28,7 +29,7 @@ class Object_ParticleEmitter : public GameObject
 public:
 	Object_ParticleEmitter();
 
-	void Update(double Delta);
+	void Update(double Delta) override;
 	void Render(glm::mat4 CameraTransform);
 
 	bool EmitterEnabled = true;

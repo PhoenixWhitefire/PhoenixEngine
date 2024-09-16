@@ -9,13 +9,12 @@
 class Object_Script : public GameObject
 {
 public:
-
 	Object_Script();
 
-	void Initialize();
-	void Update(double);
+	void Initialize() override;
+	void Update(double) override;
 
-	bool LoadScript(std::string const& scriptFile);
+	bool LoadScript(std::string const&);
 	bool Reload();
 
 	std::string SourceFile = "scripts/empty.luau";
@@ -26,6 +25,7 @@ private:
 	std::string m_Source;
 	char* m_Bytecode;
 	lua_State* m_L;
+	bool m_StaleSource = false;
 
 	bool m_HasUpdate = false;
 

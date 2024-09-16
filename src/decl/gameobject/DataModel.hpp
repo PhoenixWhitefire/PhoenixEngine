@@ -11,7 +11,7 @@ public:
 	Object_DataModel();
 	~Object_DataModel() override;
 	
-	void Initialize();
+	void Initialize() override;
 
 	bool WantExit = false;
 
