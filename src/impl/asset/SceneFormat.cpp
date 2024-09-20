@@ -246,17 +246,7 @@ static std::vector<GameObject*> LoadMapVersion1(
 		if (PropObject.find("has_transparency") != PropObject.end())
 			dynamic_cast<Object_Mesh*>(Model[0])->HasTransparency = true;
 
-		prop_3d->ComputePhysics = PropObject.value("computePhysics", 0) == 1 ? true : false;
-
-		if (prop_3d->ComputePhysics)
-		{
-			Debug::Log(
-				std::vformat(
-					"'{}' has physics! (computePhysics set to 1 in the .WORLD file)",
-					std::make_format_args(prop_3d->Name)
-				)
-			);
-		}
+		prop_3d->PhysicsDynamics = PropObject.value("computePhysics", 0) == 1 ? true : false;
 	}
 
 	for (uint32_t Index = 0; Index < PartsNode.size(); Index++)
@@ -326,17 +316,7 @@ static std::vector<GameObject*> LoadMapVersion1(
 
 			}
 
-			Object3D->ComputePhysics = Object.value("computePhysics", 0) == 1 ? true : false;
-
-			if (Object3D->ComputePhysics)
-			{
-				Debug::Log(
-					std::vformat(
-						"'{}' has physics! (computePhysics set to 1 in the .WORLD file)",
-						std::make_format_args(Object3D->Name)
-					)
-				);
-			}
+			Object3D->PhysicsDynamics = Object.value("computePhysics", 0) == 1 ? true : false;
 		}
 		else
 			throw("Item " + std::to_string(Index) + " of `parts` node doesn't have a `type = 'MeshPart'` key");

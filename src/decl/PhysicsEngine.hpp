@@ -1,12 +1,8 @@
 #pragma once
 
 #include"gameobject/Base3D.hpp"
-#include"datatype/Vector3.hpp"
 
-class PhysicsEngine
+namespace Physics
 {
-public:
-	void ComputePhysicsForObject(Object_Base3D* Object, double Delta);
-
-	Vector3 WorldGravity = Vector3(0.0f, -0.1f, 0.0f);
-};
+	void Step(std::vector<Object_Base3D*>& World, double DeltaTime);
+}

@@ -542,7 +542,7 @@ void EngineObject::Start()
 			continue;
 		}
 
-		double deltaTime = RunningTime - LastTime;
+		double deltaTime = GetRunningTime() - LastTime;
 		LastTime = RunningTime;
 		FrameStart = RunningTime;
 
@@ -584,8 +584,20 @@ void EngineObject::Start()
 			}
 		}
 
+		std::vector<GameObject*> physCandidates = Workspace->GetDescendants();
+		std::vector<Object_Base3D*> physList;
+
+		for (GameObject* cand : physCandidates)
+		{
+			Object_Base3D* physObject = dynamic_cast<Object_Base3D*>(cand);
+			if (physObject)
+				physList.push_back(physObject);
+		}
+
+		Physics::Step(physList, deltaTime);
+
 		DataModel->Update(deltaTime);
-		updateDescendants(dynamic_cast<GameObject*>(DataModel), deltaTime);
+		updateDescendants(DataModel, deltaTime);
 
 		double aspectRatio = (double)this->WindowSizeX / (double)this->WindowSizeY;
 
@@ -593,11 +605,10 @@ void EngineObject::Start()
 		Object_Camera* sceneCamera = this->Workspace->GetSceneCamera();
 
 		glm::mat4 cameraMatrix = sceneCamera->GetMatrixForAspectRatio(aspectRatio);
-
 		
 		// Aggregate mesh and light data into a list
 		scene.RenderList = createRenderList(workspace, sceneCamera);
-			scene.LightingList = createLightingList(workspace);
+		scene.LightingList = createLightingList(workspace);
 		
 		// TODO 15/09/2024
 		// Move into the Renderer. Can't right now because it isn't aware of the `CameraMatrix`
@@ -606,7 +617,7 @@ void EngineObject::Start()
 		// Hashmap better than linaer serch
 		std::unordered_map<ShaderProgram*, ShaderProgram*> uniqueShaderMap;
 
-		for (RenderItem md : scene.RenderList)
+		for (const RenderItem& md : scene.RenderList)
 		{
 			if (uniqueShaderMap.find(md.Material->Shader) == uniqueShaderMap.end())
 				uniqueShaderMap.insert(std::pair(md.Material->Shader, md.Material->Shader));

@@ -1,4 +1,5 @@
 {
     "Vertex": "skybox.vert",
-    "Fragment": "skybox.frag"
+    "Fragment": "skybox.frag",
+    "UsedUniforms": ["CameraMatrix", "SkyCubemap"]
 }

@@ -95,15 +95,13 @@ uniform float FarZ = 1000.0f;
 uniform int Fog = 0;
 uniform vec3 FogColor = vec3(0.85f, 0.85f, 0.90f);
 
-uniform vec3 CameraPosition;
-
 in vec3 Frag_VertexColor;
 in vec2 Frag_UV;
 
 in vec3 Frag_VertexNormal;
 in vec3 Frag_CurrentPosition;
 
-in mat4 Frag_ModelMatrix;
+in mat4 Frag_Transform;
 
 in mat4 Frag_CamMatrix;
 
@@ -286,12 +284,16 @@ void main()
 	*/
 
 	// Convert mesh normals to world-space
-	mat3 NormalMatrix = transpose(inverse(mat3(Frag_ModelMatrix)));
+	mat3 NormalMatrix = transpose(inverse(mat3(Frag_Transform)));
 	vec3 Normal = normalize(NormalMatrix * Frag_VertexNormal);
+
+	FragColor = vec4(Normal.x + .5f, Normal.y + .5f, Normal.z + .5f, 1.f);
+
+	//return;
 
 	vec2 UV = Frag_UV;
 
-	vec3 ViewDirection = CameraPosition - Frag_CurrentPosition;
+	vec3 ViewDirection = vec3(Frag_CamMatrix) - Frag_CurrentPosition;
 
 	float SpecMapValue = 1.0f;
 	vec4 Albedo = vec4(0.0f, 0.0f, 0.0f, 1.0f);

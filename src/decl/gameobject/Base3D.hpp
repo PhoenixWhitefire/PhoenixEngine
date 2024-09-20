@@ -31,7 +31,8 @@ public:
 
 	RenderMaterial* Material;
 
-	bool ComputePhysics = false;
+	bool PhysicsDynamics = false;
+	bool PhysicsCollisions = true;
 
 	FaceCullingMode FaceCulling = FaceCullingMode::BackFace;
 

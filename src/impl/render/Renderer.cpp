@@ -322,7 +322,7 @@ void Renderer::DrawMesh(
 
 	glm::mat4 scale = glm::scale(glm::mat4(1.f), glm::vec3(Size));
 
-	Shaders->SetUniformMatrix("Matrix", Transform);
+	Shaders->SetUniformMatrix("Transform", Transform);
 	Shaders->SetUniformMatrix("Scale", scale);
 
 	glDrawElements(GL_TRIANGLES, static_cast<int>(Object->Indices.size()), GL_UNSIGNED_INT, 0);

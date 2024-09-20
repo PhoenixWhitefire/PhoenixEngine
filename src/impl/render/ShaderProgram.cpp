@@ -9,6 +9,97 @@
 #include"Debug.hpp"
 
 static const std::string BaseShaderPath = "shaders/";
+static std::unordered_map<uint32_t, std::string> IdToShaderName;
+
+static GLint getUniformLocationUnCached(uint32_t Program, const char* Name)
+{
+	GLint uniformLocation = glGetUniformLocation(Program, Name);
+
+	if (uniformLocation < 0)
+	{
+		std::string& programName = IdToShaderName.at(Program);
+		Debug::Log(std::vformat(
+			"Tried to get the location of invalid uniform '{}' in shader program {} (ID:{})",
+			std::make_format_args(Name, programName, Program)
+		));
+		return -1;
+	}
+	else
+		return uniformLocation;
+}
+
+static GLint getUniformLocation(uint32_t Program, const std::string& Name)
+{
+	static std::unordered_map<uint32_t, std::unordered_map<std::string, GLint>> LocationCaches;
+
+	auto shaderLocationCacheIt = LocationCaches.find(Program);
+
+	if (shaderLocationCacheIt != LocationCaches.end())
+	{
+		auto cachedLocationIt = shaderLocationCacheIt->second.find(Name);
+
+		if (cachedLocationIt != shaderLocationCacheIt->second.end())
+			return cachedLocationIt->second;
+		else
+		{
+			shaderLocationCacheIt->second[Name] = getUniformLocationUnCached(Program, Name.c_str());
+			return getUniformLocation(Program, Name);
+		}
+	}
+	else
+	{
+		LocationCaches[Program] = {};
+		return getUniformLocation(Program, Name);
+	}
+
+	/*
+	18/09/2024
+
+	// This is what it used to look like:
+
+	auto shaderLocationCacheIt = LocationCaches.find(Program);
+	std::unordered_map<std::string, GLint> shaderLocationCache;
+
+	// But, for some reason, this single line,
+	// `shaderLocationCache = shaderLocationIt->second`,
+	// Took `1 MILLISECOND`
+	// EACH. CALL.
+	// TO THIS FUNTION
+	// WHY THE HELL IS THE COPY SO EXPENSIVE??
+	// IT LITERALLY REDUCES THE FRAMERATE FROM 200 -> 20
+	// 1000% REDUCTION
+	// WHAT. IN. THE. HELL.
+
+	if (shaderLocationCacheIt != LocationCaches.end())
+		shaderLocationCache = shaderLocationCacheIt->second;
+
+	auto cachedUniformLocationIt = shaderLocationCache.find(Name);
+	GLint uniformLocation{};
+
+	if (cachedUniformLocationIt != shaderLocationCache.end())
+		uniformLocation = cachedUniformLocationIt->second;
+	else
+	{
+		uniformLocation = glGetUniformLocation(Program, Name.c_str());
+		if (uniformLocation < 0)
+		{
+			std::string& programName = IdToShaderName.at(Program);
+			Debug::Log(std::vformat(
+				"Tried to get the location of invalid uniform '{}' in shader program {} (ID:{})",
+				std::make_format_args(Name, programName, Program)
+			));
+			return -1;
+		}
+
+		shaderLocationCache.insert(std::pair(Name, uniformLocation));
+	}
+
+	LocationCaches[Program] = shaderLocationCache;
+
+	return uniformLocation;
+
+	*/
+}
 
 ShaderProgram::ShaderProgram(std::string const& ProgramName)
 {
@@ -136,89 +227,107 @@ void ShaderProgram::Reload()
 
 	if (hasGeometryShader)
 		glDeleteShader(geometryShader);
+
+	for (std::string usedUniform : shpJson["UsedUniforms"])
+		m_UsedUniforms.insert(std::pair(usedUniform, true));
 }
 
-void ShaderProgram::SetUniformInt(const char* UniformName, int Value) const
+int32_t ShaderProgram::m_GetUniformLocation(const char* Uniform)
+{
+	// 18/09/2024
+	// ok so indexing just one hashmap seems to be slower than
+	// literally just calling `glGetUniformLocation`
+	return glGetUniformLocation(ID, Uniform);
+
+	//auto usedIt = m_UsedUniforms.find(Uniform);
+	//if (usedIt != m_UsedUniforms.end() && usedIt->second)
+	//	return getUniformLocationUnCached(this->ID, Uniform); //getUniformLocation(this->ID, Uniform);
+	//else
+	//	return -1;
+}
+
+void ShaderProgram::SetUniformInt(const char* UniformName, int Value)
 {
 	this->Activate();
 
-	GLint location = glGetUniformLocation(this->ID, UniformName);
-	glUniform1i(location, Value);
+	if (int32_t uniformLoc = m_GetUniformLocation(UniformName); uniformLoc > -1)
+		glUniform1i(uniformLoc, Value);
 }
 
-void ShaderProgram::SetUniformFloat(const char* UniformName, float Value) const
+void ShaderProgram::SetUniformFloat(const char* UniformName, float Value)
 {
 	this->Activate();
 
-	GLint location = glGetUniformLocation(this->ID, UniformName);
-	glUniform1f(location, Value);
+	if (int32_t uniformLoc = m_GetUniformLocation(UniformName); uniformLoc > -1)
+		glUniform1f(uniformLoc, Value);
 }
 
-void ShaderProgram::SetUniformFloat3(const char* UniformName, float X, float Y, float Z) const
+void ShaderProgram::SetUniformFloat3(const char* UniformName, float X, float Y, float Z)
 {
 	this->Activate();
 
-	GLint location = glGetUniformLocation(this->ID, UniformName);
-	glUniform3f(location, X, Y, Z);
+	if (int32_t uniformLoc = m_GetUniformLocation(UniformName); uniformLoc > -1)
+		glUniform3f(uniformLoc, X, Y, Z);
 }
 
-void ShaderProgram::SetUniformMatrix(const char* UniformName, const glm::mat4& Matrix) const
+void ShaderProgram::SetUniformMatrix(const char* UniformName, const glm::mat4& Matrix)
 {
 	this->Activate();
 
-	GLint location = glGetUniformLocation(this->ID, UniformName);
-	glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(Matrix));
+	if (int32_t uniformLoc = m_GetUniformLocation(UniformName); uniformLoc > -1)
+		glUniformMatrix4fv(uniformLoc, 1, GL_FALSE, glm::value_ptr(Matrix));
 }
 
-void ShaderProgram::SetUniform(const char* UniformName, const Reflection::GenericValue& Value) const
+void ShaderProgram::SetUniform(const char* UniformName, const Reflection::GenericValue& Value)
 {
 	this->Activate();
 
-	GLint location = glGetUniformLocation(this->ID, UniformName);
+	if (int32_t uniformLoc = m_GetUniformLocation(UniformName); uniformLoc > -1)
+	{
+		switch (Value.Type)
+		{
+		case (Reflection::ValueType::Bool):
+		{
+			glUniform1i(uniformLoc, Value.AsBool());
+			break;
+		}
+		case (Reflection::ValueType::Integer):
+		{
+			glUniform1i(uniformLoc, static_cast<int32_t>(Value.AsInteger()));
+			break;
+		}
+		case (Reflection::ValueType::Double):
+		{
+			glUniform1f(uniformLoc, static_cast<float>(Value.AsDouble()));
+			break;
+		}
+		case (Reflection::ValueType::Vector3):
+		{
+			Vector3 vec = Vector3(Value);
+			glUniform3f(
+				uniformLoc,
+				static_cast<float>(vec.X),
+				static_cast<float>(vec.Y),
+				static_cast<float>(vec.Z)
+			);
+			break;
+		}
+		case (Reflection::ValueType::Matrix):
+		{
+			glm::mat4 mat = Value.AsMatrix();
+			glUniform4fv(uniformLoc, 1, glm::value_ptr(mat));
+			break;
+		}
 
-	switch (Value.Type)
-	{
-	case (Reflection::ValueType::Bool):
-	{
-		glUniform1i(location, Value.AsBool());
-		break;
-	}
-	case (Reflection::ValueType::Integer):
-	{
-		glUniform1i(location, static_cast<int32_t>(Value.AsInteger()));
-		break;
-	}
-	case (Reflection::ValueType::Double):
-	{
-		glUniform1f(location, static_cast<float>(Value.AsDouble()));
-		break;
-	}
-	case (Reflection::ValueType::Vector3):
-	{
-		Vector3 vec = Vector3(Value);
-		glUniform3f(
-			location,
-			static_cast<float>(vec.X),
-			static_cast<float>(vec.Y),
-			static_cast<float>(vec.Z)
-		);
-		break;
-	}
-	case (Reflection::ValueType::Matrix):
-	{
-		glm::mat4 mat = Value.AsMatrix();
-		glUniform4fv(location, 1, glm::value_ptr(mat));
-		break;
-	}
-
-	default:
-	{
-		const std::string typeName = Reflection::TypeAsString(Value.Type);
-		throw(std::vformat(
-			"Unrecognized uniform type '{}' trying to set '{}' for program '{}'",
-			std::make_format_args(typeName, UniformName, this->Name)
-		));
-	}
+		default:
+		{
+			const std::string typeName = Reflection::TypeAsString(Value.Type);
+			throw(std::vformat(
+				"Unrecognized uniform type '{}' trying to set '{}' for program '{}'",
+				std::make_format_args(typeName, UniformName, this->Name)
+			));
+		}
+		}
 	}
 }
 
@@ -293,6 +402,7 @@ ShaderProgram* ShaderProgram::GetShaderProgram(std::string const& ProgramName)
 	{
 		ShaderProgram* newProgram = new ShaderProgram(ProgramName);
 		s_Programs.insert(std::pair(ProgramName, newProgram));
+		IdToShaderName[newProgram->ID] = ProgramName;
 
 		return newProgram;
 	}

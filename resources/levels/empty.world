@@ -1,4 +1,4 @@
-#version 02.00
+#Version 2.00
 
 {
   GameObjects = {}

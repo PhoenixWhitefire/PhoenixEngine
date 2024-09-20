@@ -1,10 +1,10 @@
 // Automatically generated as levels/dev_fmtv2.world
-#Version 02.00
+#Version 2.00
 
 {
   "GameObjects": [
     {
-      "Asset": "",
+      "Asset": "meshes/models/crow/0.mesh",
       "ClassName": "Mesh",
       "ColorRGB": [
         1.0,
@@ -14,8 +14,8 @@
       "Enabled": true,
       "FaceCulling": 1,
       "Material": "models/crow",
-      "Name": "crow_0",
-      "ObjectId": 14,
+      "Name": "crow",
+      "ObjectId": 5,
       "Reflectivity": 0.0,
       "Size": [
         1.0,
@@ -51,7 +51,7 @@
       "Transparency": 0.0
     },
     {
-      "Asset": "",
+      "Asset": "meshes/models/grass/0.mesh",
       "ClassName": "Mesh",
       "ColorRGB": [
         1.0,
@@ -61,8 +61,8 @@
       "Enabled": true,
       "FaceCulling": 0,
       "Material": "models/grass",
-      "Name": "g_0",
-      "ObjectId": 15,
+      "Name": "grass",
+      "ObjectId": 6,
       "Reflectivity": 0.0,
       "Size": [
         1.0,
@@ -98,7 +98,7 @@
       "Transparency": 0.0
     },
     {
-      "Asset": "",
+      "Asset": "meshes/models/ground/0.mesh",
       "ClassName": "Mesh",
       "ColorRGB": [
         1.0,
@@ -108,8 +108,8 @@
       "Enabled": true,
       "FaceCulling": 0,
       "Material": "models/ground",
-      "Name": "gr_0",
-      "ObjectId": 16,
+      "Name": "ground",
+      "ObjectId": 7,
       "Reflectivity": 0.0,
       "Size": [
         1.0,
@@ -145,7 +145,7 @@
       "Transparency": 0.0
     },
     {
-      "Asset": "",
+      "Asset": "meshes/models/windows/0.mesh",
       "ClassName": "Mesh",
       "ColorRGB": [
         1.0,
@@ -155,8 +155,8 @@
       "Enabled": true,
       "FaceCulling": 0,
       "Material": "models/windows",
-      "Name": "windows10_0",
-      "ObjectId": 17,
+      "Name": "windows10",
+      "ObjectId": 8,
       "Reflectivity": 0.0,
       "Size": [
         1.0,
@@ -202,7 +202,7 @@
       "FaceCulling": 1,
       "Material": "floortiles",
       "Name": "Primitive",
-      "ObjectId": 18,
+      "ObjectId": 9,
       "Reflectivity": 0.0,
       "Shape": 0,
       "Size": [
@@ -249,13 +249,13 @@
       "FaceCulling": 1,
       "Material": "wood",
       "Name": "Primitive",
-      "ObjectId": 19,
+      "ObjectId": 10,
       "Reflectivity": 0.0,
       "Shape": 0,
       "Size": [
-        2.0,
+        20.0,
         17.0,
-        20.0
+        2.0
       ],
       "Transform": [
         [
@@ -300,14 +300,14 @@
         1.0
       ],
       "Name": "DirectionalLight",
-      "ObjectId": 20,
+      "ObjectId": 11,
       "Shadows": false
     },
     {
       "ClassName": "Script",
       "Enabled": true,
       "Name": "MainScript",
-      "ObjectId": 21,
+      "ObjectId": 12,
       "SourceFile": "scripts/devmap.luau"
     }
   ],
