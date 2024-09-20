@@ -1,18 +1,16 @@
 -- devmap.luau, 10/07/2024
 
-local PLAYER_MOVE_SPEED = 3
+local PLAYER_MOVE_SPEED = 2
 local PLAYER_JUMP_IMPULSE = 150
 
-local Cubes = {}
-local NumCubes = 0
-
 local TotalTime = 0
-local PlayerFreezeTimeLeft = 5
+local PlayerFreezeTimeLeft = 3
 
 local Camera = workspace.SceneCamera
 local GetMoveDirection = require("scripts/modules/GetMoveDirection.luau")
 
 local Player = GameObject.new("Primitive")
+local LastCubeFired = 0
 local LastJumped = 0
 
 Player.Name = "Player"
@@ -22,37 +20,22 @@ Player.Parent = workspace
 
 Camera.GenericMovement = false
 
-local function rotateY(mtx, degrees)
-    matrix_setv(mtx, 0, 0, math.cos(degrees))
-    matrix_setv(mtx, 2, 0, math.sin(degrees))
-    matrix_setv(mtx, 0, 2, -math.sin(degrees))
-    matrix_setv(mtx, 2, 2, math.cos(degrees))
-    
-    return mtx
-end
-
-local function updateCubes(DeltaTime)
-    if input_keypressed("t") then
-        NumCubes += 1
-        local newCube = GameObject.new("Primitive")
-        newCube.Name = `Cube{NumCubes}`
-        newCube.Parent = workspace.Level
-        newCube.Size = Vector3.new(5, 5, 5)
-        
-        Cubes[TotalTime] = newCube
+local function fireCube()
+    if not input_keypressed("e") or TotalTime - LastCubeFired < 0.5 then
+        return
     end
+    LastCubeFired = TotalTime
     
-    for spawnTime, cube in Cubes do
-        -- 14/09/2024
-        -- Indexing a `Destroy`'d GameObject will return `nil`,
-        -- I'll just use `ClassName` because it's static and will never be falsy
-        if not cube.ClassName then
-            Cubes[spawnTime] = nil
-            --continue
-        end
-        
-        cube.Transform = Matrix.fromTranslation(math.sin(TotalTime - spawnTime) * 15, 5, math.cos(TotalTime - spawnTime) * 15)
-    end
+    local lx = matrix_getv(Camera.Transform, 2, 0)
+    local ly = matrix_getv(Camera.Transform, 2, 1)
+    local lz = matrix_getv(Camera.Transform, 2, 2)
+    
+    local newCube = GameObject.new("Primitive")
+    newCube.Transform = Camera.Transform * Matrix.fromTranslation(lx, ly, lz)
+    newCube.PhysicsCollisions = false
+    newCube.PhysicsDynamics = true
+    newCube.LinearVelocity = Vector3.new(lx * 50, ly * 50, lz * 50)
+    newCube.Parent = workspace
 end
 
 function Update(DeltaTime)
@@ -65,7 +48,7 @@ function Update(DeltaTime)
     
     TotalTime += DeltaTime
     
-    updateCubes(DeltaTime)
+    fireCube()
     
     local moveDirection = GetMoveDirection()
     local y = if input_keypressed(" ") then PLAYER_JUMP_IMPULSE else 0
@@ -76,11 +59,7 @@ function Update(DeltaTime)
         y = 0
     end
 
-    moveDirection = Vector3.new(
-        if Player.LinearVelocity.X < PLAYER_MOVE_SPEED then moveDirection.X else 0,
-        0,
-        if Player.LinearVelocity.Z < PLAYER_MOVE_SPEED then moveDirection.Z else 0
-    )
+    local currentVelocity = Player.LinearVelocity
     
     Player.LinearVelocity = Vector3.new(
         Player.LinearVelocity.X + moveDirection.X * PLAYER_MOVE_SPEED,

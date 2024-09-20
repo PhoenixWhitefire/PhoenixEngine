@@ -355,7 +355,7 @@ static void drawUI(Reflection::GenericValue Data)
 				bool alreadyExists = false;
 				std::string prevFile = FileRW::ReadFile(levelSavePath, &alreadyExists);
 
-				if (alreadyExists && prevFile.find("#Version 02.00") == std::string::npos)
+				if (alreadyExists && prevFile.find("#Version 2.00") == std::string::npos)
 				{
 					// V2 does not have full parity with V1 as of 02/09/2024
 					// (models)
