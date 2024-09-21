@@ -1,41 +1,48 @@
 -- devmap.luau, 10/07/2024
 
-local PLAYER_MOVE_SPEED = 2
+local PLAYER_MOVE_SPEED = 10
 local PLAYER_JUMP_IMPULSE = 150
+local PLAYER_ROTATE_SPEED = math.rad(60)
 
 local TotalTime = 0
-local PlayerFreezeTimeLeft = 3
+local PlayerFreezeTimeLeft = 5
 
 local Camera = workspace.SceneCamera
 local GetMoveDirection = require("scripts/modules/GetMoveDirection.luau")
 
 local Player = GameObject.new("Primitive")
-local LastCubeFired = 0
 local LastJumped = 0
+local CameraPitch = 0
+local PrevMouseX, PrevMouseY = 0, 0
+local IsMouseLocked = false
 
-Player.Name = "Player"
+Player.Name = `Player_ID{Player.ObjectId}`
 Player.Size = Vector3.new(5, 15, 5)
-Player.Transform = Matrix.fromTranslation(0, 25, 0)
+Player.Transform = Matrix.fromTranslation(8, 8, 0)
+Player.Friction = 5
 Player.Parent = workspace
 
 Camera.GenericMovement = false
 
-local function fireCube()
-    if not input_keypressed("e") or TotalTime - LastCubeFired < 0.5 then
-        return
+local function getRotationVector(DeltaTime)
+    if input_mouse_bdown(true) then
+        IsMouseLocked = true -- lock mouse with left-click
+        
+    elseif input_mouse_bdown(false) then
+        IsMouseLocked = false -- unlock mouse with right-click
     end
-    LastCubeFired = TotalTime
+    input_mouse_setlocked(IsMouseLocked)
     
-    local lx = matrix_getv(Camera.Transform, 2, 0)
-    local ly = matrix_getv(Camera.Transform, 2, 1)
-    local lz = matrix_getv(Camera.Transform, 2, 2)
+    local rx, ry = 0, 0
+    local mouseX, mouseY = input_mouse_getpos()
     
-    local newCube = GameObject.new("Primitive")
-    newCube.Transform = Camera.Transform * Matrix.fromTranslation(lx, ly, lz)
-    newCube.PhysicsCollisions = false
-    newCube.PhysicsDynamics = true
-    newCube.LinearVelocity = Vector3.new(lx * 50, ly * 50, lz * 50)
-    newCube.Parent = workspace
+    if IsMouseLocked then
+        rx, ry = (mouseY - PrevMouseY) / 400, (PrevMouseX - mouseX) / 400
+    end
+    
+    PrevMouseX, PrevMouseY = mouseX, mouseY
+    
+    return rx, ry
 end
 
 function Update(DeltaTime)
@@ -48,8 +55,6 @@ function Update(DeltaTime)
     
     TotalTime += DeltaTime
     
-    fireCube()
-    
     local moveDirection = GetMoveDirection()
     local y = if input_keypressed(" ") then PLAYER_JUMP_IMPULSE else 0
     
@@ -60,12 +65,20 @@ function Update(DeltaTime)
     end
 
     local currentVelocity = Player.LinearVelocity
+    local rx, ry = getRotationVector(DeltaTime)
     
-    Player.LinearVelocity = Vector3.new(
-        Player.LinearVelocity.X + moveDirection.X * PLAYER_MOVE_SPEED,
-        Player.LinearVelocity.Y + y,
-        Player.LinearVelocity.Z + moveDirection.Z * PLAYER_MOVE_SPEED
+    local velMtx = Player.Transform * Matrix.fromTranslation(
+        moveDirection.X * PLAYER_MOVE_SPEED,
+        y,
+        moveDirection.Z * PLAYER_MOVE_SPEED
     )
+    Player.LinearVelocity = Vector3.new(
+        Player.LinearVelocity.X + (matrix_getv(velMtx, 3, 0) - matrix_getv(Player.Transform, 3, 0)),
+        Player.LinearVelocity.Y + (matrix_getv(velMtx, 3, 1) - matrix_getv(Player.Transform, 3, 1)),
+        Player.LinearVelocity.Z + (matrix_getv(velMtx, 3, 2) - matrix_getv(Player.Transform, 3, 2))
+    )
+    Player.Transform *= Matrix.fromEulerAnglesXYZ(0, ry, 0)
     
-    Camera.Transform = Player.Transform * Matrix.fromTranslation(0, 5, -20) * Matrix.fromEulerAnglesXYZ(math.rad(15), 0, 0)
+    CameraPitch += rx
+    Camera.Transform = Player.Transform * Matrix.fromTranslation(0, 5, 0) * Matrix.fromEulerAnglesXYZ(CameraPitch, 0, 0)
 end

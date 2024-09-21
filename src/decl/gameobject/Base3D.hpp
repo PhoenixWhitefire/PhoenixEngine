@@ -17,22 +17,24 @@ public:
 
 	virtual uint32_t GetRenderMeshId();
 
-	glm::mat4 Transform = glm::mat4(1.0f);
-	Vector3 Size = Vector3(1.0f, 1.0f, 1.0f);
-
-	Vector3 LinearVelocity;
-	Vector3 AngularVelocity;
-	double Mass = 1.0f;
-
-	float Transparency = 0.0f;
-	float Reflectivity = 0.0f;
-
-	Color ColorRGB = Color(1.0f, 1.0f, 1.0f);
-
-	RenderMaterial* Material;
+	glm::mat4 Transform = glm::mat4(1.f);
+	Vector3 Size = Vector3(1.f, 1.f, 1.f);
 
 	bool PhysicsDynamics = false;
 	bool PhysicsCollisions = true;
+
+	Vector3 LinearVelocity;
+	Vector3 AngularVelocity;
+	double Mass = 1.f;
+	double Density = 1.f;
+	double Friction = 0.3f;
+
+	float Transparency = 0.f;
+	float Reflectivity = 0.f;
+
+	Color ColorRGB = Color(1.f, 1.f, 1.f);
+
+	RenderMaterial* Material;
 
 	FaceCullingMode FaceCulling = FaceCullingMode::BackFace;
 

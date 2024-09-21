@@ -100,31 +100,34 @@ static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTi
 	{
 		CollisionPoints& points = collision.Points;
 
+		// this much velocity is lost completely, pushing on neither objects
+		static const float Elasticity = 0.8f;
+
+		Vector3 reactionForce = points.A * points.Depth * 4.f;
+
 		if (collision.A->PhysicsDynamics && !collision.B->PhysicsDynamics)
 		{
-			// "Friction" of a whopping 30%
-			collision.A->LinearVelocity = collision.A->LinearVelocity - (collision.A->LinearVelocity * 0.3f * DeltaTime);
-			collision.A->LinearVelocity = collision.A->LinearVelocity + points.A * points.Depth;
+			// "Friction"
+			collision.A->LinearVelocity = collision.A->LinearVelocity - (collision.A->LinearVelocity * collision.A->Friction * DeltaTime);
 
-			glm::vec3 newpos = glm::vec3(collision.A->Transform[3]) + (glm::vec3)points.A * points.Depth;
-			collision.A->Transform[3] = glm::vec4(newpos, collision.A->Transform[3][3]);
+			collision.A->LinearVelocity = collision.A->LinearVelocity * (Vector3::one - points.Normal) + reactionForce;
 		}
 		else if (collision.B->PhysicsDynamics && !collision.A->PhysicsDynamics)
 		{
-			collision.B->LinearVelocity = collision.B->LinearVelocity - (collision.B->LinearVelocity * 0.3f * DeltaTime);
-			collision.B->LinearVelocity = collision.B->LinearVelocity + points.A * points.Depth;
+			collision.B->LinearVelocity = collision.B->LinearVelocity - (collision.B->LinearVelocity * collision.B->Friction * DeltaTime);
 
-			glm::vec3 newpos = glm::vec3(collision.B->Transform[3]) + (glm::vec3)points.B * points.Depth;
-			collision.B->Transform[3] = glm::vec4(newpos, collision.B->Transform[3][3]);
+			collision.B->LinearVelocity = collision.B->LinearVelocity * (Vector3::one - points.Normal) + reactionForce;
 		}
 		else
 		{
-			collision.A->LinearVelocity = collision.A->LinearVelocity - (collision.A->LinearVelocity * 0.3f * DeltaTime);
-			collision.B->LinearVelocity = collision.B->LinearVelocity - (collision.B->LinearVelocity * 0.3f * DeltaTime);
+			// Transfer of velocity
+			collision.A->LinearVelocity += collision.B->LinearVelocity / 2.f;
+			collision.B->LinearVelocity += collision.A->LinearVelocity / 2.f;
+			collision.A->LinearVelocity = collision.A->LinearVelocity / 2.f;
+			collision.B->LinearVelocity = collision.B->LinearVelocity / 2.f;
 
-			Vector3 velHalf = points.A * points.Depth;
-			collision.A->LinearVelocity += velHalf;
-			collision.B->LinearVelocity -= velHalf;
+			collision.A->LinearVelocity += reactionForce / 2.f;
+			collision.B->LinearVelocity -= reactionForce / 2.f;
 		}
 	}
 }
@@ -133,6 +136,8 @@ void Physics::Step(std::vector<Object_Base3D*>& World, double DeltaTime)
 {
 	for (Object_Base3D* object : World)
 	{
+		object->Mass = object->Density * object->Size.X * object->Size.Y * object->Size.Z;
+
 		if (object->PhysicsDynamics)
 		{
 			static Vector3 GravityStrength{ 0.f, -50.f, 0.f };

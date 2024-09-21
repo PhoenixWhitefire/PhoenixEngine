@@ -48,6 +48,8 @@ void Object_Base3D::s_DeclareReflections()
 	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_Base3D, Reflectivity, Double, float);
 	REFLECTION_DECLAREPROP_SIMPLE(Object_Base3D, PhysicsDynamics, Bool);
 	REFLECTION_DECLAREPROP_SIMPLE(Object_Base3D, PhysicsCollisions, Bool);
+	REFLECTION_DECLAREPROP_SIMPLE(Object_Base3D, Density, Double);
+	REFLECTION_DECLAREPROP_SIMPLE(Object_Base3D, Friction, Double);
 
 	REFLECTION_DECLAREPROP_SIMPLE_TYPECAST(Object_Base3D, LinearVelocity, Vector3);
 

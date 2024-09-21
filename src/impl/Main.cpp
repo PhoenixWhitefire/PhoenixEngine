@@ -88,6 +88,7 @@ static void handleInputs(Reflection::GenericValue Data)
 		EditorContext->Update(deltaTime, EngineInstance->Workspace->GetSceneCamera()->Transform);
 
 	Object_Camera* camera = EngineInstance->Workspace->GetSceneCamera();
+	SDL_Window* window = EngineInstance->Window;
 
 	if (camera->GenericMovement)
 	{
@@ -127,8 +128,6 @@ static void handleInputs(Reflection::GenericValue Data)
 
 		int mouseX;
 		int mouseY;
-
-		SDL_Window* window = EngineInstance->Window;
 
 		uint32_t activeMouseButton = SDL_GetMouseState(&mouseX, &mouseY);
 
@@ -231,6 +230,51 @@ static void handleInputs(Reflection::GenericValue Data)
 		PrevMouseX = mouseX;
 		PrevMouseY = mouseY;
 	}
+	else
+	{
+		// `input_mouse_setlocked` Luau API 21/09/2024
+		if (SDL_GetWindowMouseGrab(window))
+		{
+			PHX_SDL_CALL(SDL_ShowCursor, SDL_DISABLE);
+			ImGui::SetMouseCursor(ImGuiMouseCursor_None);
+
+			int mouseX = 0, mouseY = 0;
+
+			SDL_GetMouseState(&mouseX, &mouseY);
+
+			// Keep the mouse in the window.
+			// Teleport it to the other side if it hits the edge.
+
+			int newMouseX = mouseX, newMouseY = mouseY;
+
+			if (mouseX <= 10)
+				newMouseX = EngineInstance->WindowSizeX - 20;
+
+			if (mouseX >= EngineInstance->WindowSizeX - 10)
+				newMouseX = 20;
+
+			if (mouseY <= 10)
+				newMouseY = EngineInstance->WindowSizeY - 20;
+
+			if (mouseY >= EngineInstance->WindowSizeY - 10)
+				newMouseY = 20;
+
+			if (UserInput::InputBeingSunk)
+				newMouseX, newMouseY = EngineInstance->WindowSizeX / 2, EngineInstance->WindowSizeY / 2;
+
+			if (newMouseX != mouseX || newMouseY != mouseY)
+			{
+				SDL_WarpMouseInWindow(window, newMouseX, newMouseY);
+				mouseX = newMouseX;
+				mouseY = newMouseY;
+			}
+		}
+		else
+		{
+			PHX_SDL_CALL(SDL_ShowCursor, SDL_ENABLE);
+			ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
+		}
+	}
 
 	if (UserInput::IsKeyDown(SDLK_F11))
 		if (!PreviouslyPressingF11)
@@ -270,6 +314,10 @@ static void LoadLevel(const std::string& LevelPath)
 	// (cause I still want to look around :3)
 	// (without having to go to the Camera in the Hierarchy and manually re-enable it :3)
 	workspace->GetSceneCamera()->GenericMovement = true;
+	// 21/09/2024
+	// Also reset the cam back to the origin because !!PHYSICS!! yay
+	// so if we fall down into the *VOID* we get sent back up
+	workspace->GetSceneCamera()->Transform = glm::mat4(1.f);
 
 	std::vector<GameObject*> objects = SceneFormat::Deserialize(FileRW::ReadFile(LevelPath), &loadSuccess);
 

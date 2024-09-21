@@ -120,12 +120,16 @@ void Editor::Update(double DeltaTime, glm::mat4 CameraTransform)
 	//	this->MyCube3D->Matrix = glm::translate(glm::mat4(1.0f), glm::vec3(Result.HitPosition));
 }
 
-static std::vector<GameObject*> getVisibleChildren(GameObject* CurrentUIHierarchyRoot)
+static std::vector<GameObject*> getVisibleChildren(GameObject** CurrentUIHierarchyRoot)
 {
 	std::vector<GameObject*> children;
 
-	if (CurrentUIHierarchyRoot)
-		children = CurrentUIHierarchyRoot->GetChildren();
+	if (*CurrentUIHierarchyRoot)
+		if (GameObject::s_WorldArray.find((*CurrentUIHierarchyRoot)->ObjectId) == GameObject::s_WorldArray.end())
+			*CurrentUIHierarchyRoot = nullptr;
+
+	if (*CurrentUIHierarchyRoot)
+		children = (*CurrentUIHierarchyRoot)->GetChildren();
 	else
 		for (auto& it : GameObject::s_WorldArray)
 		{
@@ -153,7 +157,7 @@ static bool objectsIterator(void* Root, int Index, const char** OutText)
 			negativeOffset = 0;
 	}
 
-	GameObject* selected = getVisibleChildren((GameObject*)Root).at((size_t)Index - negativeOffset);
+	GameObject* selected = getVisibleChildren((GameObject**)Root).at((size_t)Index - negativeOffset);
 	*OutText = selected->Name.c_str();
 
 	return true;
@@ -343,7 +347,7 @@ void Editor::RenderUI()
 			GameObject* prevRoot = m_CurrentUIHierarchyRoot;
 			m_CurrentUIHierarchyRoot = m_CurrentUIHierarchyRoot->GetParent();
 
-			std::vector<GameObject*> newChildren = getVisibleChildren(m_CurrentUIHierarchyRoot);
+			std::vector<GameObject*> newChildren = getVisibleChildren(&m_CurrentUIHierarchyRoot);
 
 			auto prevRootInCurRootIt = std::find(newChildren.begin(), newChildren.end(), prevRoot);
 			// try to select the object that we were just inside
@@ -352,7 +356,7 @@ void Editor::RenderUI()
 		}
 	}
 
-	std::vector<GameObject*> children = getVisibleChildren(m_CurrentUIHierarchyRoot);
+	std::vector<GameObject*> children = getVisibleChildren(&m_CurrentUIHierarchyRoot);
 
 	std::string parentText;
 
@@ -370,7 +374,7 @@ void Editor::RenderUI()
 		parentText.c_str(),
 		&m_HierarchyCurItem,
 		&objectsIterator,
-		m_CurrentUIHierarchyRoot,
+		&m_CurrentUIHierarchyRoot,
 		static_cast<int>(children.size()) + (m_CurrentUIHierarchyRoot ? 1 : 0)
 	);
 
@@ -584,39 +588,33 @@ void Editor::RenderUI()
 					mat[3][2]
 				};
 
-				glm::vec3 radians = glm::eulerAngles(glm::quat(mat));
+				// PLEASE GOD JUST WORK ALREADY
+				// 21/09/2024
+				glm::vec3 rotrads{};
+				
+				glm::extractEulerAngleXYZ(mat, rotrads.x, rotrads.y, rotrads.z);
 
-				float rot[3] =
+				//mat = glm::rotate(mat, -rotrads[0], glm::vec3(1.f, 0.f, 0.f));
+				//mat = glm::rotate(mat, -rotrads[1], glm::vec3(0.f, 1.f, 0.f));
+				//mat = glm::rotate(mat, -rotrads[2], glm::vec3(0.f, 0.f, 1.f));
+				
+				float rotdegs[3] =
 				{
-					glm::degrees(radians.x),
-					glm::degrees(radians.y),
-					glm::degrees(radians.z)
+					glm::degrees(rotrads.x),
+					glm::degrees(rotrads.y),
+					glm::degrees(rotrads.z)
 				};
 
-				mat = glm::rotate(mat, -radians.x, glm::vec3(1.f, 0.f, 0.f));
-				mat = glm::rotate(mat, -radians.y, glm::vec3(0.f, 1.f, 0.f));
-				mat = glm::rotate(mat, -radians.z, glm::vec3(0.f, 0.f, 1.f));
-				
 				ImGui::InputFloat3("Position", pos);
-				ImGui::InputFloat3("Rotation", rot);
+				ImGui::InputFloat3("Rotation", rotdegs);
+
+				mat = glm::mat4(1.f);
 
 				mat[3][0] = pos[0];
 				mat[3][1] = pos[1];
 				mat[3][2] = pos[2];
 
-				radians.x = glm::radians(rot[0]);
-				radians.y = glm::radians(rot[1]);
-				radians.z = glm::radians(rot[2]);
-
-				// TODO 08/09/2024 NOTE
-				// XYZ vs YXZ rotation order?
-				// I think YXZ makes more sense for end users as
-				// rotating on the X axis won't cause the object to pivot,
-				// if I'm thinking about this correctly
-				
-				mat = glm::rotate(mat, radians.x, glm::vec3(1.f, 0.f, 0.f));
-				mat = glm::rotate(mat, radians.y, glm::vec3(0.f, 1.f, 0.f));
-				mat = glm::rotate(mat, radians.z, glm::vec3(0.f, 0.f, 1.f));
+				mat *= glm::eulerAngleXYZ(glm::radians(rotdegs[0]), glm::radians(rotdegs[1]), glm::radians(rotdegs[2]));
 
 				newVal = Reflection::GenericValue(mat);
 
