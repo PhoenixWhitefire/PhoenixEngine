@@ -349,9 +349,9 @@ static void initDefaultState()
 			DefaultState,
 			[](lua_State* L)
 			{
-				float x = luaL_checknumber(L, 1);
-				float y = luaL_checknumber(L, 2);
-				float z = luaL_checknumber(L, 3);
+				float x = static_cast<float>(luaL_checknumber(L, 1));
+				float y = static_cast<float>(luaL_checknumber(L, 2));
+				float z = static_cast<float>(luaL_checknumber(L, 3));
 
 				glm::mat4 t(1.f);
 				t = glm::rotate(t, x, glm::vec3(1.f, 0.f, 0.f));
@@ -438,7 +438,33 @@ static void initDefaultState()
 
 	for (auto& pair : GlobalScriptFunctions)
 	{
-		lua_pushcfunction(DefaultState, pair.second, pair.first.c_str());
+		lua_CFunction func = pair.second;
+
+		lua_pushlightuserdata(DefaultState, func);
+
+		lua_pushcclosure(
+			DefaultState,
+			[](lua_State* L)
+			{
+				lua_CFunction func = (lua_CFunction)lua_touserdata(L, lua_upvalueindex(1));
+
+				try
+				{
+					return func(L);
+				}
+				catch (std::string e)
+				{
+					luaL_error(L, e.c_str());
+				}
+				catch (const char* e)
+				{
+					luaL_error(L, e);
+				}
+
+			},
+			pair.first.c_str(),
+			1
+		);
 		lua_setglobal(DefaultState, pair.first.c_str());
 	}
 }
@@ -503,32 +529,75 @@ void Object_Script::Initialize()
 
 void Object_Script::Update(double dt)
 {
-	if (!m_L || m_StaleSource)
-		this->Reload();
-
-	if (m_HasUpdate)
+	// The first Script to be updated in the current frame will
+	// need to handle resuming scheduled (i.e. yielded-but-now-hopefully-finished)
+	// coroutines, the poor bastard
+	// 23/09/2024
+	for (auto & pair : s_ScheduledCoroutines)
 	{
-		lua_getglobal(m_L, "Update");
+		lua_State* coroutine = pair.first;
+		std::shared_future<Reflection::GenericValue>& future = pair.second;
 
-		if (!lua_isfunction(m_L, -1))
-			m_HasUpdate = false;
-		else
+		if (future.valid())
 		{
-			lua_pushnumber(m_L, dt);
-			int succ = lua_pcall(m_L, 1, 0, 0);
+			// 23/09/2024 TODO This is just sad
+			std::future_status status = pair.second.wait_for(std::chrono::seconds(0));
+			if (status != std::future_status::ready)
+				continue;
 
-			if (succ != 0)
+			// what the function returned
+			const Reflection::GenericValue& retval = future.get();
+
+			pushGenericValue(coroutine, retval);
+
+			lua_Status resumeStatus = (lua_Status)lua_resume(coroutine, coroutine, 1);
+
+			if (resumeStatus != LUA_OK && resumeStatus != LUA_YIELD)
 			{
-				m_HasUpdate = false;
-
-				const char* errstr = lua_tostring(m_L, -1);
+				const char* errstr = lua_tostring(coroutine, -1);
 				std::string fullname = this->GetFullName();
 
 				Debug::Log(std::vformat(
-					"Luau runtime error: {}",
+					"Luau yielded-then-resumed error: {}",
 					std::make_format_args(errstr)
 				));
 			}
+
+
+			s_ScheduledCoroutines.erase(coroutine);
+		}
+	}
+
+	if (s_ScheduledCoroutines.find(m_L) != s_ScheduledCoroutines.end())
+		return;
+	// We don't `::Reload` when the Script is being yielded,
+	// because, what the hell will happen when it's resumed by the `for`-loop
+	// above? Will it create a "ghost" Script? Not good. 23/09/2024
+	if (!m_L || m_StaleSource)
+		this->Reload();
+
+	lua_getglobal(m_L, "Update");
+
+	if (!lua_isfunction(m_L, -1))
+		m_HasUpdate = false;
+	else
+	{
+		lua_pushnumber(m_L, dt);
+		// why do all of these functions say they return `int` and not
+		// `lua_Status` like they actually do?? 23/09/2024
+		lua_Status updateStatus = (lua_Status)lua_pcall(m_L, 1, 0, 0);
+
+		if (updateStatus != LUA_OK && updateStatus != LUA_YIELD)
+		{
+			m_HasUpdate = false;
+
+			const char* errstr = lua_tostring(m_L, -1);
+			std::string fullname = this->GetFullName();
+
+			Debug::Log(std::vformat(
+				"Luau runtime error: {}",
+				std::make_format_args(errstr)
+			));
 		}
 	}
 }
@@ -605,16 +674,17 @@ bool Object_Script::Reload()
 	{
 		// Run the script
 
-		int resumeResult = lua_resume(m_L, nullptr, 0);
+		lua_Status resumeResult = (lua_Status)lua_resume(m_L, nullptr, 0);
 
-		if (resumeResult == 0)
+		if (resumeResult == lua_Status::LUA_OK)
 		{
 			lua_getglobal(m_L, "Update");
 
 			if (lua_isfunction(m_L, -1))
 				m_HasUpdate = true;
 		}
-		else
+
+		else if (resumeResult != lua_Status::LUA_YIELD)
 		{
 			const char* errstr = lua_tostring(m_L, -1);
 

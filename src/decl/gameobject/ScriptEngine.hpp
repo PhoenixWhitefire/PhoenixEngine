@@ -3,6 +3,8 @@
 #pragma once
 
 #include<unordered_map>
+#include<future>
+#include<thread>
 #include<luau/Compiler/include/luacode.h>
 #include<luau/VM/include/lualib.h>
 #include<luau/Common/include/Luau/Common.h>
@@ -13,6 +15,109 @@
 #include"UserInput.hpp"
 #include"Reflection.hpp"
 #include"FileRW.hpp"
+
+#ifdef _WIN32
+#pragma comment(lib, "Ws2_32.lib")
+
+#include<WinSock2.h>
+#include<WS2tcpip.h>
+#endif
+
+static std::vector<uint64_t> s_ConnectedSockets;
+
+template <class T> void throwWrapped(T exc)
+{
+	throw(exc);
+}
+
+// Calls both `shutdown` and `closesocket` on the provider socket descriptor
+// `errCallback` is a function that intakes a string and returns void, eg
+// `Debug::Log` or `throwWrapped`
+static void closeNetSocket(size_t sockindex, std::function<void(std::string)> errCallback)
+{
+	uint64_t sock = s_ConnectedSockets.at(sockindex);
+
+	s_ConnectedSockets.erase(s_ConnectedSockets.begin() + sockindex);
+
+	int shutdownStatus = shutdown(sock, SD_BOTH);
+	if (shutdownStatus == SOCKET_ERROR)
+	{
+		int errCode = WSAGetLastError();
+		errCallback(std::vformat(
+			"Failed to `shutdown` on socket {}, error code: {}",
+			std::make_format_args(sock, errCode)
+		));
+	}
+
+	int closeStatus = closesocket(sock);
+	if (closeStatus != SOCKET_ERROR)
+	{
+		int errCode = WSAGetLastError();
+		errCallback(std::vformat(
+			"Failed to `closesocket` on socket {}, error code: {}",
+			std::make_format_args(sock, errCode)
+		));
+	}
+}
+
+static void net_init()
+{
+#ifdef _WIN32
+	static bool s_DidInit = false;
+
+	struct AppShutdownNotifier
+	{
+		~AppShutdownNotifier()
+		{
+			if (s_DidInit)
+			{
+				Debug::Log("Shutting down WSA");
+
+				size_t numSocks = s_ConnectedSockets.size();
+
+				if (numSocks > 0)
+				{
+					Debug::Log(std::vformat(
+						"Closing {} sockets...",
+						std::make_format_args(numSocks)
+					));
+
+					for (size_t index = 0; index < s_ConnectedSockets.size(); index++)
+						closeNetSocket(index, Debug::Log);
+				}
+
+				WSACleanup();
+			}
+		}
+	};
+
+	// call `WSACleanup` on shutdown
+	// (specically static object destruction point)
+	static AppShutdownNotifier shutdownNotifier;
+
+	if (s_DidInit)
+		return;
+
+	WSADATA data{};
+	int result = WSAStartup(MAKEWORD(2, 2), &data);
+
+	if (result != 0)
+		throw(std::vformat(
+			"`WSAStartup` failed: {}",
+			std::make_format_args(result)
+		));
+
+	s_DidInit = true;
+#else
+	throw("Networking is only available on Windows distributions of Phoenix Engine - 21/09/2024")
+#endif
+}
+
+// "Scheduled Coroutines"
+// The `lua_State*` should be `lua_resume`'d upon the `std::shared_future` becoming valid
+// 22/09/2024
+// I think this is possible?
+static std::unordered_map<lua_State*, std::shared_future<Reflection::GenericValue>> s_ScheduledCoroutines{};
 
 static const std::unordered_map<Reflection::ValueType, lua_Type> ReflectionTypeToLuaType =
 {
@@ -454,6 +559,27 @@ extern std::unordered_map<std::string, lua_CFunction> GlobalScriptFunctions =
 	},
 
 	{
+		"sleep",
+		[](lua_State* L)
+		{
+			int sleepTime = luaL_checkinteger(L, 1);
+
+			auto a = std::async(
+				std::launch::async,
+				[](int st)
+				{
+					std::this_thread::sleep_for(std::chrono::seconds(st));
+					return Reflection::GenericValue(st);
+				},
+				sleepTime
+			);
+			s_ScheduledCoroutines.insert(std::pair(L, a.share()));
+
+			return lua_yield(L, 1);
+		}
+	},
+
+	{
 	"require",
 	// `lua_require` from `Luau/CLI/Repl.cpp` 18/09/2024
 	[](lua_State* L)
@@ -509,5 +635,249 @@ extern std::unordered_map<std::string, lua_CFunction> GlobalScriptFunctions =
 
 		return 1;
 	}
+	},
+
+	{
+		"net_host",
+		[](lua_State* L)
+		{
+			net_init();
+
+			struct addrinfo* addrInfo = NULL, hints;
+
+			ZeroMemory(&hints, sizeof(hints));
+			hints.ai_family = AF_INET;
+			hints.ai_socktype = SOCK_STREAM;
+			hints.ai_protocol = IPPROTO_TCP;
+			hints.ai_flags = AI_PASSIVE;
+			
+			// Resolve the local address and port to be used by the server
+			int addrInfoResult = getaddrinfo(NULL, luaL_checkstring(L, 1), &hints, &addrInfo);
+			if (addrInfoResult != 0)
+				throw(std::vformat(
+					"`getaddrinfo` failed for `net_host`, error code: {}",
+					std::make_format_args(addrInfoResult)
+				));
+
+			SOCKET listenSock = INVALID_SOCKET;
+			listenSock = socket(addrInfo->ai_family, addrInfo->ai_socktype, addrInfo->ai_protocol);
+
+			if (listenSock == INVALID_SOCKET)
+			{
+				int errCode = WSAGetLastError();
+				throw(std::vformat(
+					"`socket` failed in `net_host`, error code: {}",
+					std::make_format_args(errCode)
+				));
+			}
+
+			s_ConnectedSockets.push_back(listenSock);
+
+			int bindingResult = bind(listenSock, addrInfo->ai_addr, (int)addrInfo->ai_addrlen);
+			if (bindingResult == SOCKET_ERROR)
+			{
+				int errCode = WSAGetLastError();
+				
+				throw(std::vformat(
+					"`bind` failed in `net_host`, error code: {}",
+					std::make_format_args(errCode)
+				));
+			}
+
+			int makeListener = listen(listenSock, SOMAXCONN);
+			if (makeListener == SOCKET_ERROR)
+			{
+				int errCode = WSAGetLastError();
+				throw(std::vformat(
+					"`listen` failed in `net_host`, error code: {}",
+					std::make_format_args(errCode)
+				));
+			}
+
+			freeaddrinfo(addrInfo);
+
+			lua_pushinteger(L, static_cast<int>(listenSock));
+			
+			return 1;
+		}
+	},
+
+	{
+		"net_accept",
+		[](lua_State* L)
+		{
+			net_init();
+
+			SOCKET listenSock = luaL_checkinteger(L, 1);
+
+			auto a = std::async(
+				std::launch::async,
+				[](SOCKET lsock)
+				{
+					SOCKET acceptSocket = accept(lsock, NULL, NULL);
+					if (acceptSocket == INVALID_SOCKET)
+					{
+						int errCode = WSAGetLastError();
+						throw(std::vformat(
+							"`accept` failed in `net_accept`, error code: {}",
+							std::make_format_args(errCode)
+						));
+					}
+
+					return Reflection::GenericValue(static_cast<uint32_t>(acceptSocket));
+				},
+				listenSock
+			);
+			s_ScheduledCoroutines.insert(std::pair(L, a.share()));
+
+			return lua_yield(L, 1);
+		}
+	},
+
+	{
+		"net_connect",
+		[](lua_State* L)
+		{
+			net_init();
+
+			const char* targetname = luaL_checkstring(L, 1);
+			const char* targetport = luaL_checkstring(L, 2);
+
+			// https://learn.microsoft.com/en-us/windows/win32/winsock/creating-a-socket-for-the-client
+					// 21/09/2024
+			struct addrinfo* addrInfo = NULL,
+				* ptr = NULL,
+				hints;
+
+			ZeroMemory(&hints, sizeof(hints));
+			hints.ai_family = AF_INET;
+			hints.ai_socktype = SOCK_STREAM;
+			hints.ai_protocol = IPPROTO_TCP;
+
+			int getInfoResult = getaddrinfo(targetname, targetport, &hints, &addrInfo);
+			if (getInfoResult != 0)
+				throw(std::vformat(
+					"`getaddrinfo` failed in `net_connect`, error code: {}",
+					std::make_format_args(getInfoResult)
+				));
+
+			SOCKET connectSocket = INVALID_SOCKET;
+
+			ptr = addrInfo;
+
+			connectSocket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
+			if (connectSocket == INVALID_SOCKET)
+			{
+				int errCode = WSAGetLastError();
+				throw(std::vformat(
+					"`socket` failed in `net_connect`, error code: {}",
+					std::make_format_args(errCode)
+				));
+			}
+
+			s_ConnectedSockets.push_back(connectSocket);
+
+			int connectResult = connect(connectSocket, ptr->ai_addr, (int)ptr->ai_addrlen);
+			if (connectResult == SOCKET_ERROR)
+				throw("Unable to connect to server!");
+
+			uint32_t truncatedSocketId = static_cast<uint32_t>(connectSocket);
+
+			lua_pushinteger(L, truncatedSocketId);
+
+			return 1;
+		}
+	},
+
+	{
+		"net_send",
+		[](lua_State* L)
+		{
+			net_init();
+
+			SOCKET sock = luaL_checkinteger(L, 1);
+			const char* data = luaL_checkstring(L, 2);
+			
+			auto a = std::async(
+				std::launch::async,
+				[](SOCKET s, std::string d)
+				{
+					int sendResult = send(s, d.c_str(), static_cast<int>(d.size()), 0);
+					if (sendResult == SOCKET_ERROR)
+					{
+						int errCode = WSAGetLastError();
+						throw(std::vformat(
+							"`send` failed in `net_send`. Please ensure you are using the correct socket. Error code: {}",
+							std::make_format_args(errCode)
+						));
+					}
+
+					return Reflection::GenericValue(sendResult);
+				},
+				sock,
+				std::string(data) // 22/09/2024 Copy the data...? idrk if it's necessary TODO
+			);
+			s_ScheduledCoroutines.insert(std::pair(L, a.share()));
+
+			return lua_yield(L, 1);
+		}
+	},
+	
+	{
+		"net_receive",
+		[](lua_State* L)
+		{
+			net_init();
+
+			SOCKET sock = luaL_checkinteger(L, 1);
+			int recvBufCapacity = luaL_checkinteger(L, 2);
+
+			if (recvBufCapacity <= 0)
+				throw("Receive buffer size (argument #2) must be > 0");
+
+			char* recvBuf = (char*)malloc(recvBufCapacity);
+
+			if (recvBuf == NULL)
+				throw(std::vformat(
+					"Could not allocate a buffer of {} bytes",
+					std::make_format_args(recvBufCapacity)
+				));
+
+			auto a = std::async(
+				std::launch::async,
+				[](SOCKET s, char* buf, int bufCap)
+				{
+					int recvResult = recv(s, buf, bufCap, 0);
+
+					std::vector<Reflection::GenericValue> returnVal;
+					returnVal.push_back(recvResult);
+
+					if (recvResult >= 0)
+						returnVal.push_back(buf);
+
+					return Reflection::GenericValue(recvResult);
+				},
+				sock,
+				recvBuf,
+				recvBufCapacity
+			);
+			s_ScheduledCoroutines.insert(std::pair(L, a.share()));
+
+			return lua_yield(L, 1);
+		}
+	},
+
+	{
+		"net_close",
+		[](lua_State* L)
+		{
+			net_init();
+
+			int sock = luaL_checkinteger(L, 1);
+
+			closeNetSocket(sock, throwWrapped<std::string>);
+
+			return 0;
+		}
 	}
 };

@@ -7,7 +7,7 @@ struct CollisionPoints
 	Vector3 A; // Furthest point of A into B
 	Vector3 B; // Furthest point of B into A
 	Vector3 Normal; // B - A normalized
-	float Depth; // Length of B - A
+	double Depth; // Length of B - A
 	bool HasCollision;
 };
 

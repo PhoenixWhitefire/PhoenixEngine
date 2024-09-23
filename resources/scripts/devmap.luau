@@ -45,6 +45,44 @@ local function getRotationVector(DeltaTime)
     return rx, ry
 end
 
+local didNetInitClient = false
+local didNetInitServer = false
+
+local function doNetTest()
+    if input_keypressed("t") and not didNetInitServer then
+        didNetInitServer = true
+        local numClients = 0
+        
+        local listenSock = net_host("27015") -- the socket clients will send connection REQUESTS to
+        print("hosted. listening for connection requests on", listenSock)
+        
+        while true do
+              local sock = net_accept(listenSock) -- accept pending connection request
+              numClients += 1
+              print(`client connection request accepted. client #{numClients}, communicating through socket {sock}`)
+              
+              net_send(sock, "Welcome to Server!")
+              
+              print("Client says:", table.concat({net_receive(sock, 128)}, "/"))
+        
+              net_send(sock, "Hello! - From Server")
+              net_close(sock)
+        end
+        
+    elseif input_keypressed("y") and not didNetInitClient then
+        didNetInitClient = true
+        
+        local sock = net_connect("localhost", "27015")
+        print("connected to", sock)
+        
+        net_send(sock, "Client says hi!")
+        print("sent, waiting for server message...")
+        
+        print("Server says:", table.concat({net_receive(sock, 128)}, "/"))
+        net_close(sock)
+    end
+end
+
 function Update(DeltaTime)
     if PlayerFreezeTimeLeft > 0 then
         PlayerFreezeTimeLeft -= DeltaTime
@@ -54,6 +92,8 @@ function Update(DeltaTime)
     end
     
     TotalTime += DeltaTime
+    
+    coroutine.wrap(doNetTest)()
     
     local moveDirection = GetMoveDirection()
     local y = if input_keypressed(" ") then PLAYER_JUMP_IMPULSE else 0
@@ -82,3 +122,5 @@ function Update(DeltaTime)
     CameraPitch += rx
     Camera.Transform = Player.Transform * Matrix.fromTranslation(0, 5, 0) * Matrix.fromEulerAnglesXYZ(CameraPitch, 0, 0)
 end
+
+print("done init")
