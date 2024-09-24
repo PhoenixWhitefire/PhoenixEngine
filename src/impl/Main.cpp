@@ -90,11 +90,11 @@ static void handleInputs(Reflection::GenericValue Data)
 	Object_Camera* camera = EngineInstance->Workspace->GetSceneCamera();
 	SDL_Window* window = EngineInstance->Window;
 
+	UserInput::InputBeingSunk = GuiIO->WantCaptureKeyboard || GuiIO->WantCaptureMouse;
+
 	if (camera->GenericMovement)
 	{
 		static const glm::tvec3<double, glm::highp> UpVec = Vector3::yAxis;
-
-		UserInput::InputBeingSunk = GuiIO->WantCaptureKeyboard || GuiIO->WantCaptureMouse;
 
 		if (!UserInput::InputBeingSunk)
 		{
@@ -233,8 +233,10 @@ static void handleInputs(Reflection::GenericValue Data)
 	else
 	{
 		// `input_mouse_setlocked` Luau API 21/09/2024
-		if (SDL_GetWindowMouseGrab(window))
+		if (Object_Script::s_WindowGrabMouse && !UserInput::InputBeingSunk)
 		{
+			SDL_SetWindowMouseGrab(window, SDL_TRUE);
+
 			PHX_SDL_CALL(SDL_ShowCursor, SDL_DISABLE);
 			ImGui::SetMouseCursor(ImGuiMouseCursor_None);
 
@@ -271,6 +273,8 @@ static void handleInputs(Reflection::GenericValue Data)
 		}
 		else
 		{
+			SDL_SetWindowMouseGrab(window, SDL_FALSE);
+
 			PHX_SDL_CALL(SDL_ShowCursor, SDL_ENABLE);
 			ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
 		}

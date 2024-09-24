@@ -23,6 +23,17 @@ static int sign(double v)
 	return v < 0 ? -1 : (v > 0 ? 1 : 0);
 }
 
+static void moveDynamics(std::vector<Object_Base3D*>& World, double DeltaTime)
+{
+	for (Object_Base3D* object : World)
+		if (object->PhysicsDynamics)
+		{
+			const glm::vec3& curPos = object->Transform[3];
+			glm::vec3 newPos = curPos + (glm::vec3)(object->LinearVelocity * DeltaTime);
+			object->Transform[3] = glm::vec4(newPos, object->Transform[3][3]);
+		}
+}
+
 static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTime)
 {
 	std::vector<Collision> collisions;
@@ -98,12 +109,18 @@ static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTi
 
 	for (Collision& collision : collisions)
 	{
+		// 24/09/2024
+		// ugly
+		// (another ugly at the end of this cycle)
+		std::vector<Object_Base3D*> us = { collision.A, collision.B };
+		moveDynamics(us, -DeltaTime);
+
 		CollisionPoints& points = collision.Points;
 
 		// this much velocity is lost completely, pushing on neither objects
 		static const float Elasticity = 0.8f;
 
-		Vector3 reactionForce = points.A * points.Depth * 4.f;
+		Vector3 reactionForce = points.A * points.Depth;
 
 		if (collision.A->PhysicsDynamics && !collision.B->PhysicsDynamics)
 		{
@@ -129,6 +146,11 @@ static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTi
 			collision.A->LinearVelocity += reactionForce / 2.f;
 			collision.B->LinearVelocity -= reactionForce / 2.f;
 		}
+
+		// 24/09/2024
+		// ugly
+		
+		moveDynamics(us, DeltaTime);
 	}
 }
 
@@ -145,16 +167,14 @@ void Physics::Step(std::vector<Object_Base3D*>& World, double DeltaTime)
 			// 19/09/2024 https://www.youtube.com/watch?v=-_IspRG548E
 			Vector3 force = GravityStrength * object->Mass;
 
+			static const double GlobalResistance = 0.15f;
+
+			object->LinearVelocity = object->LinearVelocity - (object->LinearVelocity * GlobalResistance * DeltaTime);
 			object->LinearVelocity += force / object->Mass * DeltaTime;
 		}
 	}
 
-	resolveCollisions(World, DeltaTime);
+	moveDynamics(World, DeltaTime);
 
-	for (Object_Base3D* object : World)
-		if (object->PhysicsDynamics)
-		{
-			glm::vec3 newpos = glm::vec3(object->Transform[3]) + (glm::vec3)object->LinearVelocity * static_cast<float>(DeltaTime);
-			object->Transform[3] = glm::vec4(newpos, object->Transform[3][3]);
-		}
+	resolveCollisions(World, DeltaTime);
 }

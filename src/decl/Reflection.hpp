@@ -149,6 +149,7 @@ namespace Reflection
 
 		GenericValue();
 		GenericValue(const std::string&);
+		GenericValue(const char*);
 		GenericValue(bool);
 		GenericValue(double);
 		GenericValue(int64_t);

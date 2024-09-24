@@ -15,6 +15,11 @@ Reflection::GenericValue::GenericValue(const std::string& str)
 {
 }
 
+Reflection::GenericValue::GenericValue(const char* cstr)
+	: Type(ValueType::String), String(cstr)
+{
+}
+
 Reflection::GenericValue::GenericValue(bool b)
 	: Type(ValueType::Bool), Pointer((void*)b)
 {

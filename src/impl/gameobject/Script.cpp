@@ -9,6 +9,7 @@
 */
 
 #include<glm/gtc/matrix_transform.hpp>
+#include<luau/VM/include/lualib.h>
 
 #include"gameobject/Script.hpp"
 #include"datatype/GameObject.hpp"
@@ -28,7 +29,7 @@ static lua_State* DefaultState = nullptr;
 static auto api_newobject = [](lua_State* L)
 	{
 		GameObject* newObject = GameObject::Create(luaL_checkstring(L, 1));
-		pushGameObject(L, newObject);
+		ScriptEngine::L::PushGameObject(L, newObject);
 
 		return 1;
 	};
@@ -61,20 +62,15 @@ static auto api_gameobjindex = [](lua_State* L)
 		}
 
 		if (obj->HasProperty(key))
-		{
-			Reflection::GenericValue value = obj->GetPropertyValue(key);
-			pushGenericValue(L, value);
-		}
+			ScriptEngine::L::PushGenericValue(L, obj->GetPropertyValue(key));
 		else if (obj->HasFunction(key))
-		{
-			pushFunction(L, key);
-		}
+			ScriptEngine::L::PushFunction(L, key);
 		else
 		{
 			GameObject* child = obj->GetChild(key);
 
 			if (child)
-				pushGameObject(L, child);
+				ScriptEngine::L::PushGameObject(L, child);
 			else
 			{
 				std::string fullname = obj->GetFullName();
@@ -127,9 +123,9 @@ static auto api_gameobjnewindex = [](lua_State* L)
 					std::make_format_args(obj->ClassName, key, argAsString)
 				).c_str());
 
-			auto reflToLuaIt = ReflectionTypeToLuaType.find(prop.Type);
+			auto reflToLuaIt = ScriptEngine::ReflectedTypeLuaEquivalent.find(prop.Type);
 
-			if (reflToLuaIt == ReflectionTypeToLuaType.end())
+			if (reflToLuaIt == ScriptEngine::ReflectedTypeLuaEquivalent.end())
 			{
 				const std::string& typeName = Reflection::TypeAsString(prop.Type);
 				luaL_error(L, std::vformat(
@@ -153,7 +149,7 @@ static auto api_gameobjnewindex = [](lua_State* L)
 				lua_pushvalue(L, 3);
 
 				bool wasSuccessful = true;
-				Reflection::GenericValue newValue = luaTypeToGeneric(L, desiredType);
+				Reflection::GenericValue newValue = ScriptEngine::L::LuaValueToGeneric(L);
 
 				if (wasSuccessful)
 					obj->SetPropertyValue(key, newValue);
@@ -189,7 +185,7 @@ static auto api_newvec3 = [](lua_State* L)
 		double y = luaL_checknumber(L, 2);
 		double z = luaL_checknumber(L, 3);
 
-		pushVector3(L, Vector3(x, y, z));
+		ScriptEngine::L::PushGenericValue(L, Vector3(x, y, z).ToGenericValue());
 
 		return 1;
 	};
@@ -317,7 +313,7 @@ static void initDefaultState()
 			DefaultState,
 			[](lua_State* L)
 			{
-				pushMatrix(L, glm::mat4(1.f));
+				ScriptEngine::L::PushGenericValue(L, glm::mat4(1.f));
 				return 1;
 			},
 			"Matrix.new"
@@ -337,7 +333,7 @@ static void initDefaultState()
 				t[3][1] = y;
 				t[3][2] = z;
 
-				pushMatrix(L, t);
+				ScriptEngine::L::PushGenericValue(L, t);
 
 				return 1;
 			},
@@ -358,7 +354,7 @@ static void initDefaultState()
 				t = glm::rotate(t, y, glm::vec3(0.f, 1.f, 0.f));
 				t = glm::rotate(t, z, glm::vec3(0.f, 0.f, 1.f));
 
-				pushMatrix(L, t);
+				ScriptEngine::L::PushGenericValue(L, t);
 
 				return 1;
 			},
@@ -373,7 +369,10 @@ static void initDefaultState()
 				Vector3& a = *(Vector3*)luaL_checkudata(L, 1, "Vector3");
 				Vector3& b = *(Vector3*)luaL_checkudata(L, 2, "Vector3");
 
-				pushMatrix(L, glm::lookAt((glm::vec3)a, (glm::vec3)b, glm::vec3(0.f, 1.f, 0.f)));
+				ScriptEngine::L::PushGenericValue(
+					L,
+					glm::lookAt((glm::vec3)a, (glm::vec3)b, glm::vec3(0.f, 1.f, 0.f))
+				);
 
 				return 1;
 			},
@@ -397,7 +396,7 @@ static void initDefaultState()
 
 				glm::mat4 result = a * b;
 
-				pushMatrix(L, result);
+				ScriptEngine::L::PushGenericValue(L, result);
 
 				return 1;
 			},
@@ -430,13 +429,13 @@ static void initDefaultState()
 		lua_setfield(DefaultState, -2, "__type");
 	}
 
-	pushGameObject(DefaultState, GameObject::s_DataModel);
+	ScriptEngine::L::PushGameObject(DefaultState, GameObject::s_DataModel);
 	lua_setglobal(DefaultState, "game");
 
-	pushGameObject(DefaultState, GameObject::s_DataModel->GetChild("Workspace"));
+	ScriptEngine::L::PushGameObject(DefaultState, GameObject::s_DataModel->GetChild("Workspace"));
 	lua_setglobal(DefaultState, "workspace");
 
-	for (auto& pair : GlobalScriptFunctions)
+	for (auto& pair : ScriptEngine::L::GlobalFunctions)
 	{
 		lua_CFunction func = pair.second;
 
@@ -529,11 +528,13 @@ void Object_Script::Initialize()
 
 void Object_Script::Update(double dt)
 {
+	s_WindowGrabMouse = ScriptEngine::s_BackendScriptWantGrabMouse;
+
 	// The first Script to be updated in the current frame will
 	// need to handle resuming scheduled (i.e. yielded-but-now-hopefully-finished)
 	// coroutines, the poor bastard
 	// 23/09/2024
-	for (auto & pair : s_ScheduledCoroutines)
+	for (auto & pair : ScriptEngine::s_YieldedCoroutines)
 	{
 		lua_State* coroutine = pair.first;
 		std::shared_future<Reflection::GenericValue>& future = pair.second;
@@ -548,7 +549,7 @@ void Object_Script::Update(double dt)
 			// what the function returned
 			const Reflection::GenericValue& retval = future.get();
 
-			pushGenericValue(coroutine, retval);
+			ScriptEngine::L::PushGenericValue(coroutine, retval);
 
 			lua_Status resumeStatus = (lua_Status)lua_resume(coroutine, coroutine, 1);
 
@@ -564,11 +565,11 @@ void Object_Script::Update(double dt)
 			}
 
 
-			s_ScheduledCoroutines.erase(coroutine);
+			ScriptEngine::s_YieldedCoroutines.erase(coroutine);
 		}
 	}
 
-	if (s_ScheduledCoroutines.find(m_L) != s_ScheduledCoroutines.end())
+	if (ScriptEngine::s_YieldedCoroutines.find(m_L) != ScriptEngine::s_YieldedCoroutines.end())
 		return;
 	// We don't `::Reload` when the Script is being yielded,
 	// because, what the hell will happen when it's resumed by the `for`-loop
@@ -651,7 +652,7 @@ bool Object_Script::Reload()
 	else
 		m_L = lua_newthread(DefaultState);
 
-	pushGameObject(m_L, this);
+	ScriptEngine::L::PushGameObject(m_L, this);
 	lua_setglobal(m_L, "script");
 
 	std::string FullName = this->GetFullName();

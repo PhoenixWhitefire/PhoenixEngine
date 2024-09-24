@@ -21,6 +21,8 @@ public:
 
 	PHX_GAMEOBJECT_API_REFLECTION;
 
+	static inline bool s_WindowGrabMouse = false;
+
 private:
 	std::string m_Source;
 	char* m_Bytecode;

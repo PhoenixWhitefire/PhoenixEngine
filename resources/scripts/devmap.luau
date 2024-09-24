@@ -1,49 +1,22 @@
 -- devmap.luau, 10/07/2024
 
-local PLAYER_MOVE_SPEED = 10
-local PLAYER_JUMP_IMPULSE = 150
-local PLAYER_ROTATE_SPEED = math.rad(60)
-
 local TotalTime = 0
 local PlayerFreezeTimeLeft = 5
 
 local Camera = workspace.SceneCamera
-local GetMoveDirection = require("scripts/modules/GetMoveDirection.luau")
+local CharacterControllerCreator = require("scripts/modules/character-controller.luau")
 
-local Player = GameObject.new("Primitive")
-local LastJumped = 0
-local CameraPitch = 0
-local PrevMouseX, PrevMouseY = 0, 0
-local IsMouseLocked = false
+local CharacterController = CharacterControllerCreator.new(Camera)
+CharacterController:InitDefault()
 
-Player.Name = `Player_ID{Player.ObjectId}`
-Player.Size = Vector3.new(5, 15, 5)
-Player.Transform = Matrix.fromTranslation(8, 8, 0)
-Player.Friction = 5
-Player.Parent = workspace
+local DefaultCameraOffset = CharacterController.CameraOffset
 
-Camera.GenericMovement = false
+local Character = CharacterController.Character
 
-local function getRotationVector(DeltaTime)
-    if input_mouse_bdown(true) then
-        IsMouseLocked = true -- lock mouse with left-click
-        
-    elseif input_mouse_bdown(false) then
-        IsMouseLocked = false -- unlock mouse with right-click
-    end
-    input_mouse_setlocked(IsMouseLocked)
-    
-    local rx, ry = 0, 0
-    local mouseX, mouseY = input_mouse_getpos()
-    
-    if IsMouseLocked then
-        rx, ry = (mouseY - PrevMouseY) / 400, (PrevMouseX - mouseX) / 400
-    end
-    
-    PrevMouseX, PrevMouseY = mouseX, mouseY
-    
-    return rx, ry
-end
+Character.Name = `Player_ID{Character.ObjectId}`
+Character.Transform = Matrix.fromTranslation(8, 8, 0)
+
+local lastSwitchedPerspectives = 0
 
 local didNetInitClient = false
 local didNetInitServer = false
@@ -85,42 +58,29 @@ end
 
 function Update(DeltaTime)
     if PlayerFreezeTimeLeft > 0 then
+        Character.PhysicsDynamics = false
+        
         PlayerFreezeTimeLeft -= DeltaTime
         if PlayerFreezeTimeLeft <= 0 then
-            Player.PhysicsDynamics = true
+            Character.PhysicsDynamics = true
         end
     end
     
     TotalTime += DeltaTime
     
+    if input_keypressed("p") and TotalTime - lastSwitchedPerspectives > 0.5 then
+        CharacterController.FirstPerson = not CharacterController.FirstPerson
+        lastSwitchedPerspectives = TotalTime
+        
+        if CharacterController.FirstPerson then
+            CharacterController.CameraOffset = DefaultCameraOffset
+        else
+            CharacterController.CameraOffset = DefaultCameraOffset * Matrix.fromTranslation(0, -5, -15)
+            CharacterController.CameraTargetOffset = DefaultCameraOffset
+        end
+    end
+    
     coroutine.wrap(doNetTest)()
     
-    local moveDirection = GetMoveDirection()
-    local y = if input_keypressed(" ") then PLAYER_JUMP_IMPULSE else 0
-    
-    if TotalTime - LastJumped > 0.5 then
-        LastJumped = TotalTime
-    else
-        y = 0
-    end
-
-    local currentVelocity = Player.LinearVelocity
-    local rx, ry = getRotationVector(DeltaTime)
-    
-    local velMtx = Player.Transform * Matrix.fromTranslation(
-        moveDirection.X * PLAYER_MOVE_SPEED,
-        y,
-        moveDirection.Z * PLAYER_MOVE_SPEED
-    )
-    Player.LinearVelocity = Vector3.new(
-        Player.LinearVelocity.X + (matrix_getv(velMtx, 3, 0) - matrix_getv(Player.Transform, 3, 0)),
-        Player.LinearVelocity.Y + (matrix_getv(velMtx, 3, 1) - matrix_getv(Player.Transform, 3, 1)),
-        Player.LinearVelocity.Z + (matrix_getv(velMtx, 3, 2) - matrix_getv(Player.Transform, 3, 2))
-    )
-    Player.Transform *= Matrix.fromEulerAnglesXYZ(0, ry, 0)
-    
-    CameraPitch += rx
-    Camera.Transform = Player.Transform * Matrix.fromTranslation(0, 5, 0) * Matrix.fromEulerAnglesXYZ(CameraPitch, 0, 0)
+    CharacterController:Update(DeltaTime)
 end
-
-print("done init")
