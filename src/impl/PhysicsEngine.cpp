@@ -154,7 +154,7 @@ static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTi
 	}
 }
 
-void Physics::Step(std::vector<Object_Base3D*>& World, double DeltaTime)
+static void step(std::vector<Object_Base3D*>& World, double DeltaTime)
 {
 	for (Object_Base3D* object : World)
 	{
@@ -177,4 +177,36 @@ void Physics::Step(std::vector<Object_Base3D*>& World, double DeltaTime)
 	moveDynamics(World, DeltaTime);
 
 	resolveCollisions(World, DeltaTime);
+}
+
+void Physics::Step(std::vector<Object_Base3D*>& World, double DeltaTime)
+{
+	step(World, std::clamp(DeltaTime, (double)0.f, (double)1.f/30.f));
+
+	/*
+	static double MaximumDeltaTime = 1.f / 240.f;
+
+	if (DeltaTime <= MaximumDeltaTime)
+		step(World, DeltaTime);
+	else
+	{
+		double timeRemaining = DeltaTime;
+
+		uint32_t numMiniSteps = 0;
+
+		static uint32_t MaxMiniSteps = 32;
+
+		while (timeRemaining > MaximumDeltaTime && numMiniSteps < MaxMiniSteps)
+		{
+			numMiniSteps++;
+
+			double miniStep = timeRemaining - MaximumDeltaTime;
+			timeRemaining -= miniStep;
+
+			step(World, miniStep);
+		}
+
+		step(World, MaximumDeltaTime);
+	}
+	*/
 }

@@ -25,7 +25,6 @@ public:
 
 private:
 	std::string m_Source;
-	char* m_Bytecode;
 	lua_State* m_L;
 	bool m_StaleSource = false;
 

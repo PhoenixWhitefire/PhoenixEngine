@@ -354,8 +354,8 @@ void ScriptEngine::L::PushFunction(lua_State* L, const char* Name)
 			{
 				std::string argsString;
 
-				for (int arg = 1; arg <= numArgs; arg++)
-					argsString += std::string(luaL_typename(L, 0 - (numArgs - arg))) + ", ";
+				for (int arg = 1; arg < numArgs + 1; arg++)
+					argsString += std::string(luaL_typename(L, -(numArgs + 1 - arg))) + ", ";
 
 				argsString = argsString.substr(0, argsString.size() - 2);
 

@@ -162,6 +162,29 @@ void ModelLoader::m_LoadMesh(uint32_t MeshIndex)
 	std::vector<float> texVec = m_GetFloats(m_JsonData["accessors"][texAccInd]);
 	std::vector<glm::vec2> texUVs = m_GroupFloatsVec2(texVec);
 
+	glm::vec3 extMax{};
+	glm::vec3 extMin{};
+
+	for (const glm::vec3& position : positions)
+	{
+		extMax.x = std::max(extMax.x, position.x);
+		extMax.y = std::max(extMax.y, position.y);
+		extMax.z = std::max(extMax.z, position.z);
+
+		extMin.x = std::min(extMin.x, position.x);
+		extMin.y = std::min(extMin.y, position.y);
+		extMin.z = std::min(extMin.z, position.z);
+	}
+
+	glm::vec3 size = extMax - extMin / 2.f;
+
+	for (size_t index = 0; index < positions.size(); index++)
+	{
+		positions[index].x /= size.x;
+		positions[index].y /= size.y;
+		positions[index].z /= size.z;
+	}
+
 	// Combine all the vertex components and also get the indices and textures
 	std::vector<Vertex> vertices = m_AssembleVertices(positions, normals, texUVs);
 	std::vector<uint32_t> indices = m_GetIndices(m_JsonData["accessors"][indAccInd]);
@@ -169,6 +192,8 @@ void ModelLoader::m_LoadMesh(uint32_t MeshIndex)
 	m_MeshTextures = m_GetTextures();
 
 	Mesh newMesh{ vertices, indices };
+
+	m_MeshScales[m_Meshes.size()] = size;
 
 	// Combine the vertices, indices, and textures into a mesh
 	m_Meshes.push_back(newMesh);

@@ -42,16 +42,14 @@ static auto LoadModelAsMeshes(
 
 static Vector3 GetVector3FromJson(const nlohmann::json& Json)
 {
-	int Index = -1;
-
 	Vector3 Vec3;
 
 	try
 	{
 		Vec3 = Vector3(
-			Json[++Index],
-			Json[++Index],
-			Json[++Index]
+			Json[0],
+			Json[1],
+			Json[2]
 		);
 	}
 	catch (nlohmann::json::type_error TErr)
@@ -765,6 +763,7 @@ std::string SceneFormat::Serialize(std::vector<GameObject*> Objects, const std::
 							+ "#Version 2.00\n"
 							+ "#Asset Scene\n"
 							+ "#DateTime " + dateTimeStr + "\n"
+							+ "#SceneName " + SceneName + "\n"
 							+ "\n"
 							+ json.dump(2);
 

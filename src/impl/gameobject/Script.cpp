@@ -510,7 +510,6 @@ Object_Script::Object_Script()
 {
 	this->Name = "Script";
 	this->ClassName = "Script";
-	m_Bytecode = NULL;
 
 	if (!DefaultState)
 		initDefaultState();
@@ -664,13 +663,10 @@ bool Object_Script::Reload()
 	size_t bytecodeSize = 0;
 	// Keeps crashing upon reloading the script twice, maybe
 	// `malloc` some so it isn't a nullptr (due to the `free`)
-	m_Bytecode = (char*)malloc(4);
-	m_Bytecode = luau_compile(m_Source.c_str(), m_Source.length(), NULL, &bytecodeSize);
+	char* bytecode = luau_compile(m_Source.c_str(), m_Source.length(), NULL, &bytecodeSize);
 
-	int result = luau_load(m_L, chunkname.c_str(), m_Bytecode, bytecodeSize, 0);
+	int result = luau_load(m_L, chunkname.c_str(), bytecode, bytecodeSize, 0);
 	
-	free(m_Bytecode);
-
 	if (result == 0)
 	{
 		// Run the script
@@ -684,15 +680,19 @@ bool Object_Script::Reload()
 			if (lua_isfunction(m_L, -1))
 				m_HasUpdate = true;
 		}
-
 		else if (resumeResult != lua_Status::LUA_YIELD)
 		{
-			const char* errstr = lua_tostring(m_L, -1);
+			// 25/09/2024 TODO
+			// loading a script at runtime causes LUA_ERRRUN
+			// without an error string?!
+			const char* errstr = lua_isstring(m_L, -1) ? lua_tostring(m_L, -1) : "<NULL>";
 
 			Debug::Log(std::vformat(
 				"Luau script init error: {}",
 				std::make_format_args(errstr)
 			));
+
+			return false;
 		}
 
 		return true; /* return chunk main function */

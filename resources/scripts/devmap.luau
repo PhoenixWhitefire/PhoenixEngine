@@ -13,6 +13,11 @@ local DefaultCameraOffset = CharacterController.CameraOffset
 
 local Character = CharacterController.Character
 
+local InFreecam = false
+
+local Light = GameObject.new("PointLight")
+Light.Parent = Character
+
 Character.Name = `Player_ID{Character.ObjectId}`
 Character.Transform = Matrix.fromTranslation(8, 8, 0)
 
@@ -68,6 +73,15 @@ function Update(DeltaTime)
     
     TotalTime += DeltaTime
     
+    if input_keypressed("f") and TotalTime - lastSwitchedPerspectives > 0.5 then
+        InFreecam = not InFreecam
+        if InFreecam then
+            Camera.GenericMovement = true
+        else
+            Camera.GenericMovement = false
+        end
+    end
+    
     if input_keypressed("p") and TotalTime - lastSwitchedPerspectives > 0.5 then
         CharacterController.FirstPerson = not CharacterController.FirstPerson
         lastSwitchedPerspectives = TotalTime
@@ -82,5 +96,13 @@ function Update(DeltaTime)
     
     coroutine.wrap(doNetTest)()
     
-    CharacterController:Update(DeltaTime)
+    Light.Position = Vector3.new(
+        matrix_getv(Character.Transform, 3, 0),
+        matrix_getv(Character.Transform, 3, 1),
+        matrix_getv(Character.Transform, 3, 2)
+    )
+    
+    if not InFreecam then
+        CharacterController:Update(DeltaTime)
+    end
 end

@@ -11,9 +11,6 @@
 #include"datatype/Vector3.hpp"
 #include"Debug.hpp"
 
-static std::string const& DiffuseStr = "Diffuse";
-static std::string const& SpecularStr = "Specular";
-
 static GLenum ObjectTypes[] =
 {
 	GL_BUFFER,
@@ -373,20 +370,22 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData, ShaderProgram* Sh
 	glActiveTexture(GL_TEXTURE4);
 	glBindTexture(GL_TEXTURE_2D, colorMap->GpuId);
 	
-	Shader->SetUniformInt((DiffuseStr + "Textures[0]").c_str(), 4);
+	static const char* DiffuseStr = "ColorMap";
+	static const char* SpecularStr = "MetallicRoughnessMap";
 
 	Texture* metallicRoughnessMap = texManager->GetTextureResource(material->MetallicRoughnessMap);
 
+	static uint32_t WhiteTextureId = texManager->LoadTextureFromPath("textures/white.png");
+
+	glActiveTexture(GL_TEXTURE5);
+
 	if (metallicRoughnessMap)
-	{
-		glActiveTexture(GL_TEXTURE5);
 		glBindTexture(GL_TEXTURE_2D, metallicRoughnessMap->GpuId);
+	else
+		glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(WhiteTextureId)->GpuId);
 
-		Shader->SetUniformInt((SpecularStr + "Textures[0]").c_str(), 5);
-	}
-
-	Shader->SetUniformInt("NumDiffuseTextures", 1);
-	Shader->SetUniformInt("NumSpecularTextures", metallicRoughnessMap ? 1 : 0);
+	Shader->SetUniformInt(DiffuseStr, 4);
+	Shader->SetUniformInt(SpecularStr, 5);
 }
 
 void Renderer::SwapBuffers()
