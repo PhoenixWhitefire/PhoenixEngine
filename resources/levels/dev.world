@@ -53,7 +53,7 @@
     {
       "type":"MeshPart",
       "position":[0,9,-5],
-      "name" : "wood",
+      "name" : "woodplanks",
       "material":"wood",
       "size":[20,17,2],
       "dmesh":"Cube"

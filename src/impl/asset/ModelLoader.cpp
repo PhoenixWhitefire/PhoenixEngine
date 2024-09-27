@@ -12,8 +12,6 @@ enum class MaterialTextureType { Diffuse, Specular };
 
 ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 {
-	m_File = "";
-
 	std::string gltfFilePath = AssetPath + "/scene.gltf";
 
 	m_File = gltfFilePath;
@@ -165,6 +163,8 @@ void ModelLoader::m_LoadMesh(uint32_t MeshIndex)
 	glm::vec3 extMax{};
 	glm::vec3 extMin{};
 
+	glm::vec3 center = positions.at(0);
+
 	for (const glm::vec3& position : positions)
 	{
 		extMax.x = std::max(extMax.x, position.x);
@@ -174,7 +174,14 @@ void ModelLoader::m_LoadMesh(uint32_t MeshIndex)
 		extMin.x = std::min(extMin.x, position.x);
 		extMin.y = std::min(extMin.y, position.y);
 		extMin.z = std::min(extMin.z, position.z);
+
+		center += position;
 	}
+
+	center /= positions.size();
+
+	for (size_t index = 0; index < positions.size(); index++)
+		positions[index] -= center;
 
 	glm::vec3 size = extMax - extMin / 2.f;
 
@@ -194,6 +201,7 @@ void ModelLoader::m_LoadMesh(uint32_t MeshIndex)
 	Mesh newMesh{ vertices, indices };
 
 	m_MeshScales[m_Meshes.size()] = size;
+	m_MeshMatrices[m_Meshes.size()] = glm::translate(glm::mat4(1.f), center);
 
 	// Combine the vertices, indices, and textures into a mesh
 	m_Meshes.push_back(newMesh);

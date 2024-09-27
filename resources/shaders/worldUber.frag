@@ -92,9 +92,12 @@ float PointLight(vec3 Direction, float Range)
 	float Intensity = 1.0f / (a * Distance * Distance + b * Distance + 1.0f);
 	*/
 
-	//return 1-clamp(Distance/Range, 0.0f, 1.0f);
-
-	return 1.f / (pow(Distance, 2.f));
+	// Range >= 0, linear attenuation
+	// Range < 0, realistic attenuation
+	if (Range >= 0.f)
+		return 1 - clamp(Distance/Range, 0.0f, 1.0f);
+	else
+		return 1.f / (pow(Distance, 2.f));
 }
 
 float SpotLight(vec3 Direction, float OuterCone, float InnerCone)
@@ -139,7 +142,7 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 		{
 			vec3 reflectDir = reflect(-Incoming, Normal);
 			float specAmt = pow(max(dot(Outgoing, reflectDir), 0.f), SpecularPower) * SpecularMultiplier;
-			//Specular = specAmt * SpecularMultiplier;
+			Specular = clamp(specAmt, 0.f, 1.f);
 		}
 
 		FinalColor = (Diffuse + (SpecMapValue * Specular)) * LightColor;
@@ -213,7 +216,7 @@ void main()
 	float FresnelFactor = 0.0f;//1.f - clamp(0.0f + 1.f * pow(1.0f + dot(vec3(Frag_CamMatrix[3]), ViewDirection), 1.f), 0.f, 1.f);
 	float ReflectivityFactor = Reflectivity + FresnelFactor;
 
-	vec3 ReflectedTint = texture(SkyboxCubemap, reflect(normalize(Frag_CurrentPosition - vec3(Frag_CamMatrix)), Normal)).xyz;
+	vec3 ReflectedTint = texture(SkyboxCubemap, ViewDirection).xyz;
 
 	vec3 Albedo3 = mix(Albedo.xyz * Frag_VertexColor * ColorTint, ReflectedTint, ReflectivityFactor);
 
@@ -227,7 +230,7 @@ void main()
 		);
 	}
 
-	vec3 FragCol3 = LightInfluence * Albedo3;
+	vec3 FragCol3 = (LightInfluence + LightAmbient) * Albedo3;
 	
 	if (Fog)
 	{

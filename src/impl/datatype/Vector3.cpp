@@ -10,11 +10,6 @@ Vector3 Vector3::one = Vector3(1.f, 1.f, 1.f);
 
 static bool s_DidInitReflection = false;
 
-struct IVector3
-{
-	double X = 0.f, Y = 0.f, Z = 0.f;
-};
-
 void Vector3::s_DeclareReflections()
 {
 	if (s_DidInitReflection)
@@ -114,9 +109,9 @@ Vector3::Vector3(Reflection::GenericValue gv)
 	this->Z = vec.Z;
 	this->Magnitude = vec.Magnitude;*/
 
-	IVector3* simplevec = static_cast<IVector3*>(gv.Pointer);
+	Vector3* gvec = static_cast<Vector3*>(gv.Pointer);
 
-	Vector3 vec(simplevec->X, simplevec->Y, simplevec->Z);
+	Vector3 vec(gvec->X, gvec->Y, gvec->Z);
 
 	this->X = vec.X;
 	this->Y = vec.Y;
@@ -130,16 +125,9 @@ Reflection::GenericValue Vector3::ToGenericValue()
 {
 	//REFLECTION_OPERATORGENERICTOCOMPLEX(Vector3);
 
-	IVector3 simplevec{ X, Y, Z };
-
 	Reflection::GenericValue gv;
 	gv.Type = Reflection::ValueType::Vector3;
-	gv.Pointer = malloc(sizeof(IVector3));
-
-	if (!gv.Pointer)
-		throw("Allocation error on Vector3::ToGenericValue");
-
-	memcpy(gv.Pointer, &simplevec, sizeof(simplevec));
+	gv.Pointer = new Vector3(*this);
 
 	return gv;
 }

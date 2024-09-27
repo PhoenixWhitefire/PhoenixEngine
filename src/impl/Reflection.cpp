@@ -15,8 +15,8 @@ Reflection::GenericValue::GenericValue(const std::string& str)
 {
 }
 
-Reflection::GenericValue::GenericValue(const char* cstr)
-	: Type(ValueType::String), String(cstr)
+Reflection::GenericValue::GenericValue(const char* data)
+	: Type(ValueType::String), String(data)
 {
 }
 
@@ -250,6 +250,11 @@ std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> Reflectio
 	What is blud yapping about?? :skull:
 	*/
 	throw("GenericValue::AsMap not implemented");
+}
+
+Reflection::GenericValue::~GenericValue()
+{
+	
 }
 
 Reflection::PropertyMap& Reflection::Reflectable::GetProperties()

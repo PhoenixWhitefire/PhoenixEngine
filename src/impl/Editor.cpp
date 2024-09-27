@@ -2,8 +2,7 @@
 #include<glm/gtx/euler_angles.hpp>
 #include<imgui/imgui.h>
 
-#include"editor/Editor.hpp"
-#include"editor/IntersectionLib.hpp"
+#include"Editor.hpp"
 #include"gameobject/GameObjects.hpp"
 #include"asset/TextureManager.hpp"
 #include"UserInput.hpp"
@@ -47,8 +46,6 @@ Editor::Editor()
 
 	DefaultNewMaterial["albedo"] = "textures/plastic.png";
 }
-
-static std::vector<IntersectionLib::HittableObject*> Objects;
 
 static void AddChildrenToObjects(GameObject* Parent)
 {
@@ -113,9 +110,6 @@ void Editor::Update(double DeltaTime, glm::mat4 CameraTransform)
 
 	Vector3 RayDir = RayTargetPos - CamPos;
 
-	// TODO
-	IntersectionLib::IntersectionResult Result = IntersectionLib::Traceline(CamPos, RayDir, Objects);
-	
 	//if (Result.DidHit)
 	//	this->MyCube3D->Matrix = glm::translate(glm::mat4(1.0f), glm::vec3(Result.HitPosition));
 }
@@ -463,7 +457,9 @@ void Editor::RenderUI()
 
 			case (Reflection::ValueType::String):
 			{
-				uint8_t allocSize = uint8_t(fmax(64, curVal.String.length()));
+				std::string str = curVal.AsString();
+
+				uint8_t allocSize = uint8_t(fmax(64, str.length()));
 
 				char* buf = (char*)malloc(allocSize);
 
@@ -473,11 +469,11 @@ void Editor::RenderUI()
 					return;
 				}
 
-				memcpy(buf, curVal.String.c_str(), allocSize);
+				memcpy(buf, str.c_str(), allocSize);
 
 				ImGui::InputText(propName, buf, 64);
 
-				newVal.String = std::string(buf);
+				str = std::string(buf);
 
 				free(buf);
 

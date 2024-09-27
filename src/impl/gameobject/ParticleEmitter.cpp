@@ -244,27 +244,25 @@ void Object_ParticleEmitter::Render(glm::mat4 CameraMatrix)
 			continue;
 		}
 
-		s_ParticleShaders->Activate();
-
-		s_ParticleShaders->SetUniformFloat3(
+		s_ParticleShaders->SetUniform(
 			"Position",
-			static_cast<float>(particle.Position.X),
-			static_cast<float>(particle.Position.Y),
-			static_cast<float>(particle.Position.Z)
+			particle.Position.ToGenericValue()
 		);
 
-		s_ParticleShaders->SetUniformFloat("Transparency", particle.Transparency);
+		s_ParticleShaders->SetUniform("Transparency", particle.Transparency);
 
 		glm::mat4 scale = glm::scale(glm::mat4(1.f), glm::vec3(particle.Size, particle.Size, particle.Size));
 
-		s_ParticleShaders->SetUniformMatrix("Scale", scale);
+		s_ParticleShaders->SetUniform("Scale", scale);
 
-		s_ParticleShaders->SetUniformMatrix("CameraMatrix", CameraMatrix);
+		s_ParticleShaders->SetUniform("CameraMatrix", CameraMatrix);
 
 		glActiveTexture(GL_TEXTURE4);
 		glBindTexture(GL_TEXTURE_2D, TextureManager::Get()->GetTextureResource(particle.Image)->GpuId);
 
-		s_ParticleShaders->SetUniformInt("Image", 4);
+		s_ParticleShaders->SetUniform("Image", 4);
+
+		s_ParticleShaders->Activate();
 
 		glDrawElements(GL_TRIANGLES, 7, GL_UNSIGNED_INT, 0);
 	}

@@ -5,6 +5,7 @@
 
 #include"render/ShaderProgram.hpp"
 #include"datatype/Vector3.hpp"
+#include"datatype/Color.hpp"
 #include"FileRW.hpp"
 #include"Debug.hpp"
 
@@ -108,9 +109,76 @@ ShaderProgram::ShaderProgram(std::string const& ProgramName)
 	this->Reload();
 }
 
-void ShaderProgram::Activate() const
+void ShaderProgram::Activate()
 {
 	glUseProgram(this->ID);
+
+	for (auto& pair : m_PendingUniforms)
+	{
+		const std::string& uniformName = pair.first;
+		const Reflection::GenericValue& value = pair.second;
+
+		if (int32_t uniformLoc = m_GetUniformLocation(uniformName.c_str()); uniformLoc > -1)
+		{
+			switch (value.Type)
+			{
+			case (Reflection::ValueType::Bool):
+			{
+				glUniform1i(uniformLoc, value.AsBool());
+				break;
+			}
+			case (Reflection::ValueType::Integer):
+			{
+				glUniform1i(uniformLoc, static_cast<int32_t>(value.AsInteger()));
+				break;
+			}
+			case (Reflection::ValueType::Double):
+			{
+				glUniform1f(uniformLoc, static_cast<float>(value.AsDouble()));
+				break;
+			}
+			case (Reflection::ValueType::Vector3):
+			{
+				Vector3 vec = Vector3(value);
+				glUniform3f(
+					uniformLoc,
+					static_cast<float>(vec.X),
+					static_cast<float>(vec.Y),
+					static_cast<float>(vec.Z)
+				);
+				break;
+			}
+			case (Reflection::ValueType::Color):
+			{
+				Color vec = Color(value);
+				glUniform3f(
+					uniformLoc,
+					vec.R,
+					vec.G,
+					vec.B
+				);
+				break;
+			}
+			case (Reflection::ValueType::Matrix):
+			{
+				glm::mat4 mat = value.AsMatrix();
+				glUniformMatrix4fv(uniformLoc, 1, GL_FALSE, glm::value_ptr(mat));
+				break;
+			}
+
+			default:
+			{
+				const std::string typeName = Reflection::TypeAsString(value.Type);
+				throw(std::vformat(
+					"Unrecognized uniform type '{}' trying to set '{}' for program '{}'",
+					std::make_format_args(typeName, uniformName, this->Name)
+				));
+			}
+			}
+		}
+	}
+
+	m_PendingUniforms.clear();
 }
 
 void ShaderProgram::Reload()
@@ -245,7 +313,7 @@ int32_t ShaderProgram::m_GetUniformLocation(const char* Uniform)
 	//else
 	//	return -1;
 }
-
+/*
 void ShaderProgram::SetUniformInt(const char* UniformName, int Value)
 {
 	this->Activate();
@@ -277,58 +345,11 @@ void ShaderProgram::SetUniformMatrix(const char* UniformName, const glm::mat4& M
 	if (int32_t uniformLoc = m_GetUniformLocation(UniformName); uniformLoc > -1)
 		glUniformMatrix4fv(uniformLoc, 1, GL_FALSE, glm::value_ptr(Matrix));
 }
+*/
 
 void ShaderProgram::SetUniform(const char* UniformName, const Reflection::GenericValue& Value)
 {
-	this->Activate();
-
-	if (int32_t uniformLoc = m_GetUniformLocation(UniformName); uniformLoc > -1)
-	{
-		switch (Value.Type)
-		{
-		case (Reflection::ValueType::Bool):
-		{
-			glUniform1i(uniformLoc, Value.AsBool());
-			break;
-		}
-		case (Reflection::ValueType::Integer):
-		{
-			glUniform1i(uniformLoc, static_cast<int32_t>(Value.AsInteger()));
-			break;
-		}
-		case (Reflection::ValueType::Double):
-		{
-			glUniform1f(uniformLoc, static_cast<float>(Value.AsDouble()));
-			break;
-		}
-		case (Reflection::ValueType::Vector3):
-		{
-			Vector3 vec = Vector3(Value);
-			glUniform3f(
-				uniformLoc,
-				static_cast<float>(vec.X),
-				static_cast<float>(vec.Y),
-				static_cast<float>(vec.Z)
-			);
-			break;
-		}
-		case (Reflection::ValueType::Matrix):
-		{
-			glm::mat4 mat = Value.AsMatrix();
-			glUniform4fv(uniformLoc, 1, glm::value_ptr(mat));
-			break;
-		}
-
-		default:
-		{
-			const std::string typeName = Reflection::TypeAsString(Value.Type);
-			throw(std::vformat(
-				"Unrecognized uniform type '{}' trying to set '{}' for program '{}'",
-				std::make_format_args(typeName, UniformName, this->Name)
-			));
-		}
-		}
-	}
+	m_PendingUniforms[UniformName] = Value;
 }
 
 void ShaderProgram::m_PrintErrors(uint32_t Object, const char* Type) const

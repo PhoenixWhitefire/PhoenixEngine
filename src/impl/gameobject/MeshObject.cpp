@@ -34,6 +34,8 @@ Object_Mesh::Object_Mesh()
 	this->ClassName = "Mesh";
 
 	s_DeclareReflections();
+
+	this->SetRenderMesh("!Cube");
 }
 
 void Object_Mesh::SetRenderMesh(const std::string& NewRenderMesh)

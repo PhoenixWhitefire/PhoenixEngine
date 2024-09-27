@@ -39,12 +39,7 @@ Reflection::GenericValue Color::ToGenericValue()
 {
 	Reflection::GenericValue gv;
 	gv.Type = Reflection::ValueType::Color;
-	gv.Pointer = malloc(sizeof(Color));
-
-	if (!gv.Pointer)
-		throw("Allocation error on Color::ToGenericValue");
-
-	memcpy(gv.Pointer, this, sizeof(Color));
+	gv.Pointer = new Color(*this);
 
 	return gv;
 }

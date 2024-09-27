@@ -30,7 +30,7 @@ static float getVersion(std::string const& MapFileContents)
 
 MeshProvider::MeshProvider()
 {
-	this->Load(PrimitiveMeshes::Cube(), "!Cube");
+	this->Assign(PrimitiveMeshes::Cube(), "!Cube");
 }
 
 MeshProvider* MeshProvider::Get()
@@ -91,6 +91,12 @@ Mesh MeshProvider::Deserialize(const std::string& Contents, bool* SuccessPtr)
 {
 	*SuccessPtr = true;
 
+	if (Contents.size() == 0)
+	{
+		MESHPROVIDER_ERROR("Mesh file is empty");
+		return Mesh{};
+	}
+
 	float version = getVersion(Contents);
 
 	if (version == 0.f)
@@ -150,17 +156,28 @@ void MeshProvider::Save(uint32_t Id, const std::string& Path)
 		this->Save(meshIt->second, Path);
 }
 
-uint32_t MeshProvider::Load(const Mesh& mesh, const std::string& InternalName)
+uint32_t MeshProvider::Assign(const Mesh& mesh, const std::string& InternalName)
 {
 	static uint32_t CurrentResourceId = 1;
+	uint32_t assignedId = CurrentResourceId;
 
-	uint32_t newResourceId = CurrentResourceId;
-	CurrentResourceId += 1;
+	auto prevPair = m_StringToMeshId.find(InternalName);
 
-	m_Meshes.insert(std::pair(newResourceId, mesh));
-	m_StringToMeshId[InternalName] = newResourceId;
+	if (prevPair != m_StringToMeshId.end())
+	{
+		// overwrite the pre-existing mesh
+		m_Meshes[prevPair->second] = mesh;
+		assignedId = prevPair->second;
+	}
+	else
+	{
+		CurrentResourceId += 1;
 
-	return newResourceId;
+		m_Meshes.insert(std::pair(assignedId, mesh));
+		m_StringToMeshId.insert(std::pair(InternalName, assignedId));
+	}
+
+	return assignedId;
 }
 
 uint32_t MeshProvider::LoadFromPath(const std::string& Path, bool ShouldLoadAsync)
@@ -171,14 +188,28 @@ uint32_t MeshProvider::LoadFromPath(const std::string& Path, bool ShouldLoadAsyn
 	{
 		bool success = true;
 
-		Mesh mesh = this->Deserialize(FileRW::ReadFile(Path, &success), &success);
+		std::string contents = FileRW::ReadFile(Path, &success);
+
 		if (!success)
+		{
 			Debug::Log(std::vformat(
-				"MeshProvider Failed to load mesh '{}': {}",
-				std::make_format_args(Path, s_ErrorString)
+				"MeshProvider Failed to load mesh '{}': Invalid path/File could not be opened",
+				std::make_format_args(Path)
 			));
 
-		return this->Load(mesh, Path);
+			return this->Assign(Mesh{}, "blank");
+		}
+		else
+		{
+			Mesh mesh = this->Deserialize(contents, &success);
+			if (!success)
+				Debug::Log(std::vformat(
+					"MeshProvider Failed to load mesh '{}': {}",
+					std::make_format_args(Path, s_ErrorString)
+				));
+
+			return this->Assign(mesh, Path);
+		}
 	}
 	else
 		return meshIt->second;

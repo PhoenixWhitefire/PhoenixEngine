@@ -141,9 +141,6 @@ namespace Reflection
 	{
 		Reflection::ValueType Type = Reflection::ValueType::Null;
 		std::string String;
-		//bool Bool = true;
-		//double Double = 0.f;
-		//int64_t Integer = 0;
 		void* Pointer = nullptr;
 		std::vector<GenericValue> Array;
 
@@ -158,6 +155,8 @@ namespace Reflection
 		GenericValue(const glm::mat4&);
 		GenericValue(const std::vector<GenericValue>&);
 		GenericValue(const std::unordered_map<GenericValue, GenericValue>&);
+
+		~GenericValue();
 
 		std::string ToString() const;
 

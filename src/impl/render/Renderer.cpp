@@ -232,33 +232,39 @@ void Renderer::DrawScene(const Scene& Scene)
 		// TODO 05/09/2024
 		// Branching in shader VS separate array uniforms?
 		// Oh and uniform locations should probably be cached
-		for (uint32_t lightIndex = 0; lightIndex < Scene.LightingList.size(); lightIndex++)
+		for (size_t lightIndex = 0; lightIndex < SHADER_MAX_LIGHTS; lightIndex++)
 		{
+			if (lightIndex + 1 > Scene.LightingList.size())
+				break;
+
 			LightItem lightData = Scene.LightingList.at(lightIndex);
 
 			std::string lightIdxString = std::to_string(lightIndex);
 			std::string shaderLightLoc = "Lights[" + lightIdxString + "]";
 
-			shader->SetUniformFloat3(
+			shader->SetUniform(
 				(shaderLightLoc + ".Position").c_str(),
-				static_cast<float>(lightData.Position.X),
-				static_cast<float>(lightData.Position.Y),
-				static_cast<float>(lightData.Position.Z)
+				lightData.Position.ToGenericValue()
 			);
 
-			shader->SetUniformFloat3(
+			shader->SetUniform(
 				(shaderLightLoc + ".Color").c_str(),
-				static_cast<float>(lightData.LightColor.R),
-				static_cast<float>(lightData.LightColor.G),
-				static_cast<float>(lightData.LightColor.B)
+				lightData.LightColor.ToGenericValue()
 			);
 
-			shader->SetUniformInt((shaderLightLoc + ".Type").c_str(), (int)lightData.Type);
+			shader->SetUniform((shaderLightLoc + ".Type").c_str(), (int)lightData.Type);
 
-			shader->SetUniformFloat((shaderLightLoc + ".Range").c_str(), lightData.Range);
+			shader->SetUniform((shaderLightLoc + ".Range").c_str(), lightData.Range);
 		}
 
-		shader->SetUniformInt("NumLights", static_cast<int32_t>(Scene.LightingList.size()));
+		shader->SetUniform(
+			"NumLights",
+			std::clamp(
+				static_cast<int32_t>(Scene.LightingList.size()),
+				0,
+				SHADER_MAX_LIGHTS
+			)
+		);
 	}
 
 	MeshProvider* mp = MeshProvider::Get();
@@ -310,8 +316,6 @@ void Renderer::DrawMesh(
 
 	}
 
-	Shaders->Activate();
-
 	m_VertexArray->Bind();
 
 	m_VertexBuffer->SetBufferData(Object->Vertices);
@@ -319,8 +323,10 @@ void Renderer::DrawMesh(
 
 	glm::mat4 scale = glm::scale(glm::mat4(1.f), glm::vec3(Size));
 
-	Shaders->SetUniformMatrix("Transform", Transform);
-	Shaders->SetUniformMatrix("Scale", scale);
+	Shaders->SetUniform("Transform", Transform);
+	Shaders->SetUniform("Scale", scale);
+
+	Shaders->Activate();
 
 	glDrawElements(GL_TRIANGLES, static_cast<int>(Object->Indices.size()), GL_UNSIGNED_INT, 0);
 }
@@ -328,7 +334,6 @@ void Renderer::DrawMesh(
 void Renderer::m_SetMaterialData(const RenderItem& RenderData, ShaderProgram* Shader)
 {
 	RenderMaterial* material = RenderData.Material;
-	Shader->Activate();
 
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -337,17 +342,18 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData, ShaderProgram* Sh
 	else // the gosh darn grass model is practically 50% transparent
 		glDisable(GL_BLEND);
 	
-	Shader->SetUniformFloat("SpecularMultiplier", material->SpecMultiply);
-	Shader->SetUniformFloat("SpecularPower", material->SpecExponent);
+	Shader->SetUniform("SpecularMultiplier", material->SpecMultiply);
+	Shader->SetUniform("SpecularPower", material->SpecExponent);
 
-	Shader->SetUniformFloat("Reflectivity", RenderData.Reflectivity);
-	Shader->SetUniformFloat("Transparency", RenderData.Transparency);
+	Shader->SetUniform("Reflectivity", RenderData.Reflectivity);
+	Shader->SetUniform("Transparency", RenderData.Transparency);
 
-	Shader->SetUniformFloat3(
+	// 27/09/2024 TODO wtf??
+	Reflection::GenericValue colGeneric = const_cast<Color*>(&RenderData.TintColor)->ToGenericValue();
+
+	Shader->SetUniform(
 		"ColorTint",
-		RenderData.TintColor.R,
-		RenderData.TintColor.G,
-		RenderData.TintColor.B
+		colGeneric
 	);
 
 	TextureManager* texManager = TextureManager::Get();
@@ -384,8 +390,8 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData, ShaderProgram* Sh
 	else
 		glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(WhiteTextureId)->GpuId);
 
-	Shader->SetUniformInt(DiffuseStr, 4);
-	Shader->SetUniformInt(SpecularStr, 5);
+	Shader->SetUniform(DiffuseStr, 4);
+	Shader->SetUniform(SpecularStr, 5);
 }
 
 void Renderer::SwapBuffers()

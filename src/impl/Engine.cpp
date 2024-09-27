@@ -455,10 +455,10 @@ void EngineObject::Start()
 	ShaderProgram* postFxShaders = ShaderProgram::GetShaderProgram("postprocessing");
 	ShaderProgram* skyboxShaders = ShaderProgram::GetShaderProgram("skybox");
 
-	postFxShaders->SetUniformInt("Texture", 1);
-	postFxShaders->SetUniformInt("DistortionTexture", 2);
+	postFxShaders->SetUniform("Texture", 1);
+	postFxShaders->SetUniform("DistortionTexture", 2);
 
-	skyboxShaders->SetUniformInt("SkyCubemap", 3);
+	skyboxShaders->SetUniform("SkyboxCubemap", 3);
 
 	Scene scene = Scene();
 
@@ -627,8 +627,8 @@ void EngineObject::Start()
 		{
 			ShaderProgram* shp = it.second;
 
-			shp->SetUniformMatrix("CameraMatrix", cameraMatrix);
-			shp->SetUniformFloat("Time", static_cast<float>(this->RunningTime));
+			shp->SetUniform("CameraMatrix", cameraMatrix);
+			shp->SetUniform("Time", static_cast<float>(this->RunningTime));
 
 			scene.UniqueShaders.push_back(shp);
 		}
@@ -661,7 +661,7 @@ void EngineObject::Start()
 		view[3][1] = 0.f;
 		view[3][2] = 0.f;
 
-		skyboxShaders->SetUniformMatrix("CameraMatrix", projection * view);
+		skyboxShaders->SetUniform("CameraMatrix", projection * view);
 
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemap);
 		
@@ -716,49 +716,51 @@ void EngineObject::Start()
 
 		if (EngineJsonConfig.value("postfx_enabled", false))
 		{
-			postFxShaders->SetUniformInt("PostFxEnabled", 1);
-			postFxShaders->SetUniformInt(
+			postFxShaders->SetUniform("PostFxEnabled", 1);
+			postFxShaders->SetUniform(
 				"ScreenEdgeBlurEnabled",
 				EngineJsonConfig.value("postfx_blurvignette", false)
 			);
-			postFxShaders->SetUniformInt(
+			postFxShaders->SetUniform(
 				"DistortionEnabled",
 				EngineJsonConfig.value("postfx_distortion", false)
 			);
 
 			if (EngineJsonConfig.find("postfx_blurvignette_blurstrength") != EngineJsonConfig.end())
 			{
-				postFxShaders->SetUniformFloat(
+				postFxShaders->SetUniform(
 					"BlurVignetteStrength",
-					EngineJsonConfig["postfx_blurvignette_blurstrength"]
+					(float)EngineJsonConfig["postfx_blurvignette_blurstrength"]
 				);
-				postFxShaders->SetUniformFloat(
+				postFxShaders->SetUniform(
 					"BlurVignetteDistMul",
-					EngineJsonConfig["postfx_blurvignette_weightmul"]
+					(float)EngineJsonConfig["postfx_blurvignette_weightmul"]
 				);
-				postFxShaders->SetUniformFloat(
+				postFxShaders->SetUniform(
 					"BlurVignetteDistExp",
-					EngineJsonConfig["postfx_blurvignette_weightexp"]
+					(float)EngineJsonConfig["postfx_blurvignette_weightexp"]
 				);
-				postFxShaders->SetUniformInt(
+				postFxShaders->SetUniform(
 					"BlurVignetteSampleRadius",
-					EngineJsonConfig["postfx_blurvignette_sampleradius"]
+					(int)EngineJsonConfig["postfx_blurvignette_sampleradius"]
 				);
 			}
 
-			postFxShaders->SetUniformFloat("Time", static_cast<float>(this->RunningTime));
+			postFxShaders->SetUniform("Time", static_cast<float>(this->RunningTime));
 
 			glActiveTexture(GL_TEXTURE2);
 			glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(distortionTexture)->GpuId);
 		}
 		else
-			postFxShaders->SetUniformInt("PostFxEnabled", 0);
+			postFxShaders->SetUniform("PostFxEnabled", 0);
 
 		glActiveTexture(GL_TEXTURE1);
 		RendererContext->Framebuffer->BindTexture();
 
 		glBindVertexArray(RectangleVAO);
 		glDisable(GL_DEPTH_TEST);
+
+		postFxShaders->Activate();
 
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 

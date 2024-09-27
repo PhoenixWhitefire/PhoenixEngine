@@ -15,9 +15,11 @@ public:
 
 	std::string Serialize(const Mesh&);
 	Mesh Deserialize(const std::string&, bool*);
+	uint32_t Assign(const Mesh&, const std::string& InternalName);
+
 	void Save(const Mesh&, const std::string& Path);
 	void Save(uint32_t, const std::string& Path);
-	uint32_t Load(const Mesh&, const std::string& InternalName);
+	
 	uint32_t LoadFromPath(const std::string& Path, bool ShouldLoadAsync = true);
 
 	Mesh* GetMeshResource(uint32_t);

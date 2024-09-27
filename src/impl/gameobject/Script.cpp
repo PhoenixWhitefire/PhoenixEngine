@@ -14,6 +14,7 @@
 #include"gameobject/Script.hpp"
 #include"datatype/GameObject.hpp"
 #include"datatype/Vector3.hpp"
+#include"datatype/Color.hpp"
 #include"UserInput.hpp"
 #include"FileRW.hpp"
 #include"Debug.hpp"
@@ -263,6 +264,64 @@ static auto api_vec3tostring = [](lua_State* L)
 		return 1;
 	};
 
+static auto api_newcol = [](lua_State* L)
+	{
+		float x = static_cast<float>(luaL_checknumber(L, 1));
+		float y = static_cast<float>(luaL_checknumber(L, 2));
+		float z = static_cast<float>(luaL_checknumber(L, 3));
+
+		ScriptEngine::L::PushGenericValue(L, Color(x, y, z).ToGenericValue());
+
+		return 1;
+	};
+
+static auto api_colindex = [](lua_State* L)
+	{
+		Color* vec = (Color*)luaL_checkudata(L, 1, "Color");
+		const char* key = luaL_checkstring(L, 2);
+
+		lua_getglobal(L, "Color");
+		lua_pushstring(L, key);
+		lua_rawget(L, -2);
+
+		// Pass-through to Vector3.new
+		if (!lua_isnil(L, -1))
+			return 1;
+
+		if (strcmp(key, "R") == 0)
+		{
+			lua_pushnumber(L, vec->R);
+			return 1;
+		}
+		else if (strcmp(key, "G") == 0)
+		{
+			lua_pushnumber(L, vec->G);
+			return 1;
+		}
+		else if (strcmp(key, "B") == 0)
+		{
+			lua_pushnumber(L, vec->B);
+			return 1;
+		}
+		else
+			luaL_error(L, "Invalid key %s", key);
+	};
+
+static auto api_coltostring = [](lua_State* L)
+	{
+		Color* col = (Color*)luaL_checkudata(L, 1, "Color");
+
+		lua_pushstring(
+			L,
+			std::vformat(
+				"{}, {}, {}",
+				std::make_format_args(col->R, col->G, col->B)
+			).c_str()
+		);
+
+		return 1;
+	};
+
 static void* l_alloc(void*, void* ptr, size_t, size_t nsize)
 {
 	if (nsize == 0) {
@@ -301,7 +360,76 @@ static void initDefaultState()
 		lua_pushcfunction(DefaultState, api_vec3tostring, "Vector3.__tostring");
 		lua_setfield(DefaultState, -2, "__tostring");
 
+		lua_pushcfunction(
+			DefaultState,
+			[](lua_State* L)
+			{
+				Vector3 a = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -2));
+				Vector3 b = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -1));
+
+				ScriptEngine::L::PushGenericValue(L, (a + b).ToGenericValue());
+
+				return 1;
+			},
+			"Vector3.__add"
+		);
+		lua_setfield(DefaultState, -2, "__add");
+
+		lua_pushcfunction(
+			DefaultState,
+			[](lua_State* L)
+			{
+				Vector3 a = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -2));
+				Vector3 b = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -1));
+
+				ScriptEngine::L::PushGenericValue(L, (a - b).ToGenericValue());
+
+				return 1;
+			},
+			"Vector3.__sub"
+		);
+		lua_setfield(DefaultState, -2, "__sub");
+
+		lua_pushcfunction(
+			DefaultState,
+			[](lua_State* L)
+			{
+				Vector3 a = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -2));
+				double b = luaL_checknumber(L, 2);
+
+				ScriptEngine::L::PushGenericValue(L, (a * b).ToGenericValue());
+
+				return 1;
+			},
+			"Vector3.__mul"
+		);
+		lua_setfield(DefaultState, -2, "__mul");
+
 		lua_pushstring(DefaultState, "Vector3");
+		lua_setfield(DefaultState, -2, "__type");
+	}
+
+	// Color
+	{
+		lua_newtable(DefaultState);
+
+		lua_pushcfunction(DefaultState, api_newcol, "Color.new");
+		lua_setfield(DefaultState, -2, "new");
+
+		lua_setglobal(DefaultState, "Color");
+
+		luaL_newmetatable(DefaultState, "Color");
+
+		lua_pushcfunction(DefaultState, api_colindex, "Color.__index");
+		lua_setfield(DefaultState, -2, "__index");
+
+		//lua_pushcfunction(DefaultState, api_vec3newindex, "Vector3.__newindex");
+		//lua_setfield(DefaultState, -2, "__newindex");
+
+		lua_pushcfunction(DefaultState, api_coltostring, "Color.__tostring");
+		lua_setfield(DefaultState, -2, "__tostring");
+
+		lua_pushstring(DefaultState, "Color");
 		lua_setfield(DefaultState, -2, "__type");
 	}
 
@@ -386,6 +514,32 @@ static void initDefaultState()
 
 		lua_pushstring(DefaultState, "Matrix");
 		lua_setfield(DefaultState, -2, "__type");
+
+		lua_pushcfunction(
+			DefaultState,
+			[](lua_State* L)
+			{
+				glm::mat4& m = *(glm::mat4*)luaL_checkudata(L, 1, "Matrix");
+				const char* k = luaL_checkstring(L, 2);
+
+				if (strcmp(k, "Position") == 0)
+					ScriptEngine::L::PushGenericValue(
+						L,
+						Vector3(glm::vec3(m[3])).ToGenericValue()
+					);
+				else if (strcmp(k, "Forward") == 0)
+					ScriptEngine::L::PushGenericValue(
+						L,
+						Vector3(glm::normalize(glm::vec3(m[2]))).ToGenericValue()
+					);
+				else
+					luaL_errorL(L, "Invalid member %s", k);
+
+				return 1;
+			},
+			"Matrix.__index"
+		);
+		lua_setfield(DefaultState, -2, "__index");
 
 		lua_pushcfunction(
 			DefaultState,
@@ -576,28 +730,31 @@ void Object_Script::Update(double dt)
 	if (!m_L || m_StaleSource)
 		this->Reload();
 
-	lua_getglobal(m_L, "Update");
-
-	if (!lua_isfunction(m_L, -1))
-		m_HasUpdate = false;
-	else
+	if (m_HasUpdate)
 	{
-		lua_pushnumber(m_L, dt);
-		// why do all of these functions say they return `int` and not
-		// `lua_Status` like they actually do?? 23/09/2024
-		lua_Status updateStatus = (lua_Status)lua_pcall(m_L, 1, 0, 0);
+		lua_getglobal(m_L, "Update");
 
-		if (updateStatus != LUA_OK && updateStatus != LUA_YIELD)
-		{
+		if (!lua_isfunction(m_L, -1))
 			m_HasUpdate = false;
+		else
+		{
+			lua_pushnumber(m_L, dt);
+			// why do all of these functions say they return `int` and not
+			// `lua_Status` like they actually do?? 23/09/2024
+			lua_Status updateStatus = (lua_Status)lua_pcall(m_L, 1, 0, 0);
 
-			const char* errstr = lua_tostring(m_L, -1);
-			std::string fullname = this->GetFullName();
+			if (updateStatus != LUA_OK && updateStatus != LUA_YIELD)
+			{
+				m_HasUpdate = false;
 
-			Debug::Log(std::vformat(
-				"Luau runtime error: {}",
-				std::make_format_args(errstr)
-			));
+				const char* errstr = lua_tostring(m_L, -1);
+				std::string fullname = this->GetFullName();
+
+				Debug::Log(std::vformat(
+					"Luau runtime error: {}",
+					std::make_format_args(errstr)
+				));
+			}
 		}
 	}
 }
@@ -671,7 +828,7 @@ bool Object_Script::Reload()
 	{
 		// Run the script
 
-		lua_Status resumeResult = (lua_Status)lua_resume(m_L, nullptr, 0);
+		lua_Status resumeResult = (lua_Status)lua_resume(m_L, m_L, 0);
 
 		if (resumeResult == lua_Status::LUA_OK)
 		{

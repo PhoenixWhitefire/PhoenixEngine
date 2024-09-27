@@ -37,7 +37,7 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 #include"UserInput.hpp"
 #include"FileRW.hpp"
 #include"Debug.hpp"
-#include"editor/Editor.hpp"
+#include"Editor.hpp"
 
 static bool FirstDragFrame = false;
 
