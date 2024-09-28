@@ -10,5 +10,6 @@ uniform samplerCube SkyCubemap;
 
 void main()
 {
-	FragColor = texture(SkyCubemap, FragIn_Direction);
+	//FragColor = vec4(FragIn_Direction, 1.f);
+	FragColor = texture(SkyCubemap, vec3(FragIn_Direction.x, -FragIn_Direction.y, FragIn_Direction.z));
 }

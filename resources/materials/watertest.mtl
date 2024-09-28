@@ -1,0 +1,6 @@
+{
+  "albedo": "textures/slate.jpg",
+  "specular": "textures/waterdistort.png",
+  "shaderprogram": "watertest",
+  "translucency": true
+}

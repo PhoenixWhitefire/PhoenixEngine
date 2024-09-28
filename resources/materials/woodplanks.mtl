@@ -1,4 +1,7 @@
 {
   "albedo": "textures/planks.png",
-  "specular": "textures/planksSpec.png"
+  "specExponent": 0.5,
+  "specMultiply": 0.0,
+  "specular": "textures/planksSpec.png",
+  "translucency": false
 }

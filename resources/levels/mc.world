@@ -1,0 +1,11 @@
+#Version 2.00
+
+{
+  "GameObjects": [
+    {
+      "ClassName": "Script",
+      "Name": "Minceraft",
+      "SourceFile": "scripts/mc.luau"
+    }
+  ]
+}

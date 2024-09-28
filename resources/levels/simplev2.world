@@ -1,0 +1,12 @@
+#Version 2.00
+
+{
+  "GameObjects": [
+    {
+      "Name": "ReflTestName",
+      "ClassName": "Primitive",
+      "Material": "plastic",
+      "Size": [15, 1, 15]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+SDL 2.0.22 (SDL_VERSION()) -> 2.26.4 (Previous SDL2.dll metadata) (Date unknown)
+SDL 2.26.4 -> 2.30.6 (Today, 26/08/2024)
+
+ImGui 1.89 WIP -> 1.91.1 WIP (27/08/2024)
+
+@nlohmann/json (nljson.h) 3.9.1 -> 3.11.3 (now nljson.hpp) (29/08/2024)
+stb_image 2.27 -> 2.30 (29/08/2024)
+@g-truc/glm 0.9.9 -> 1.0.1 (29/08/2024)
+glad 2.0.0-beta GL CORE 4.6 + GL_KHR_debug -> glad 2.0.6

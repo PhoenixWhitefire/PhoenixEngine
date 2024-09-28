@@ -1,3 +1,8 @@
+// This is used to shade the screen just before presenting it
+// You can write post-processing effects here - if you're that rampantly homosexual :3c
+// ...
+// Wait...
+
 #version 460 core
 
 in vec2 FragIn_UV;
@@ -5,8 +10,9 @@ in vec2 FragIn_UV;
 out vec4 FragColor;
 
 uniform sampler2D Texture;
+
+uniform bool PostFxEnabled = false;
 uniform sampler2D DistortionTexture;
-uniform bool PostProcessingEnabled = false;
 uniform bool ScreenEdgeBlurEnabled = false;
 uniform bool DistortionEnabled = false;
 
@@ -21,26 +27,14 @@ const vec2 Center = vec2(0.5f, 0.5f);
 
 const vec3 White = vec3(1.0f, 1.0f, 1.0f);
 
-// the offsets of the pixels we are using to get the color of the current pixel (0, 0)
-
-vec2 offsets[9] = vec2[]
-(
-    vec2(-1,  1), vec2( 0.0f,    1), vec2( 1,  1),
-    vec2(-1,  0.0f),     vec2( 0.0f,    0.0f),     vec2( 1,  0.0f),
-    vec2(-1, -1), vec2( 0.0f,   -1), vec2( 1, -1) 
-);
-
-float ninth = .1;
-
-float kernel[9] = float[]
-(
-	ninth, ninth, ninth,
-	ninth, ninth, ninth,
-	ninth, ninth, ninth
-);
-
 void main()
 {
+	if (!PostFxEnabled)
+	{
+		FragColor = texture(Texture, FragIn_UV);
+		return;
+	}
+
 	ivec2 TextureSize = textureSize(Texture, 0);
 
 	// the size of the pixel relative to the screen
@@ -57,7 +51,7 @@ void main()
 
 	if (DistortionEnabled)
 	{
-		UVOffset = texture(DistortionTexture, FragIn_UV).xy - Center + vec2(Time * 0.5f, Time * 0.25f);
+		UVOffset = (texture(DistortionTexture, FragIn_UV).xy - Center) * (sin(Time) * 5);
 	}
 
 	//FragColor = vec4(texture(DistortionTexture, FragIn_UV).xyz, 1.0f);
@@ -94,7 +88,7 @@ void main()
 				float DistFactor = 1.f - Dist;
 				float SampleWeight = pow(DistFactor * 1.f, 1.f) * BlurSampleBaseWeight;
 
-				vec3 SampleCol = texture(Texture, FragIn_UV + (vec2(x, y) * PixelScale)).xyz;
+				vec3 SampleCol = texture(Texture, FragIn_UV + (vec2(x, y) * PixelScale) + UVOffset).xyz;
 				BlurredColor += SampleCol * SampleWeight;
 			}
 		}

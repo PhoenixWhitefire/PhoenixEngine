@@ -1,0 +1,17 @@
+#Version 2.00
+
+{
+  "SceneName": "hierarchyTest",
+  "GameObjects": [
+     {
+       "Name": "Parent",
+       "ClassName": "Model",
+       "ObjectId": 1
+     },
+     {
+       "Name": "Child",
+       "ClassName": "Primitive",
+       "Parent": 1
+     }
+  ]
+}

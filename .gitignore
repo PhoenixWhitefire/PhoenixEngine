@@ -4,19 +4,17 @@
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
 # Phoenix Engine
-[Rr]esources/
-[Vv]endor/
-[Ll]ib/
-[Vv]endor/
+dll/
+resources/models/
+resources/textures/
+resources/meshes/
 
 # Shortcuts
 *.lnk
 
 *.exe
-*.dll
 
-[Dd]esktop.ini
-[Ii]mgui.ini
+desktop.ini
 
 # User-specific files
 *.rsuser
@@ -376,3 +374,12 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/PhoenixEngine.sln
+/PhoenixEngine.vcxproj
+/PhoenixEngine.vcxproj.filters
+/Vendor/Vendor.vcxproj
+/Vendor/Vendor.vcxproj.filters
+/Vendor/imgui/docs
+/Vendor/imgui/.github
+/Vendor/imgui/examples
+/vendor/imgui/misc/debuggers/imgui.natvis
