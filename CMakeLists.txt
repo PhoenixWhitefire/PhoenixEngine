@@ -4,6 +4,10 @@ set(CMAKE_SYSTEM_VERSION 10.0.22621.0 CACHE STRING "" FORCE)
 
 project(PhoenixEngine C CXX)
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_C_STANDARD 17)
+set(CMAKE_VS_PLATFORM_TOOLSET v143)
+
 ################################################################################
 # Set target arch type if empty. Visual studio solution generator provides it.
 ################################################################################
@@ -135,23 +139,31 @@ set(PROJECT_NAME PhoenixEngine)
 ################################################################################
 set(Header_Files
     "src/decl/AnimationService.hpp"
-    "src/decl/BaseMeshes.hpp"
     "src/decl/Debug.hpp"
+    "src/decl/Editor.hpp"
     "src/decl/Engine.hpp"
     "src/decl/EntityComponent.hpp"
     "src/decl/FileRW.hpp"
     "src/decl/GlobalJsonConfig.hpp"
-    "src/decl/ModelLoader.hpp"
+    "src/decl/IntersectionLib.hpp"
     "src/decl/PhysicsEngine.hpp"
     "src/decl/Reflection.hpp"
-    "src/decl/SceneFormat.hpp"
     "src/decl/ThreadManager.hpp"
     "src/decl/UserInput.hpp"
 )
 source_group("Header Files" FILES ${Header_Files})
 
+set(Header_Files__asset
+    "src/decl/asset/Material.hpp"
+    "src/decl/asset/MeshProvider.hpp"
+    "src/decl/asset/ModelLoader.hpp"
+    "src/decl/asset/PrimitiveMeshes.hpp"
+    "src/decl/asset/SceneFormat.hpp"
+    "src/decl/asset/TextureManager.hpp"
+)
+source_group("Header Files\\asset" FILES ${Header_Files__asset})
+
 set(Header_Files__datatype
-    "src/decl/datatype/Buffer.hpp"
     "src/decl/datatype/Color.hpp"
     "src/decl/datatype/Event.hpp"
     "src/decl/datatype/GameObject.hpp"
@@ -162,16 +174,11 @@ set(Header_Files__datatype
 )
 source_group("Header Files\\datatype" FILES ${Header_Files__datatype})
 
-set(Header_Files__editor
-    "src/decl/editor/Editor.hpp"
-    "src/decl/editor/IntersectionLib.hpp"
-)
-source_group("Header Files\\editor" FILES ${Header_Files__editor})
-
 set(Header_Files__gameobject
     "src/decl/gameobject/Base3D.hpp"
     "src/decl/gameobject/Camera.hpp"
     "src/decl/gameobject/DataModel.hpp"
+    "src/decl/gameobject/Example.hpp"
     "src/decl/gameobject/GameObjects.hpp"
     "src/decl/gameobject/Light.hpp"
     "src/decl/gameobject/MeshObject.hpp"
@@ -179,16 +186,16 @@ set(Header_Files__gameobject
     "src/decl/gameobject/ParticleEmitter.hpp"
     "src/decl/gameobject/Primitive.hpp"
     "src/decl/gameobject/Script.hpp"
+    "src/decl/gameobject/ScriptEngine.hpp"
     "src/decl/gameobject/Workspace.hpp"
 )
 source_group("Header Files\\gameobject" FILES ${Header_Files__gameobject})
 
 set(Header_Files__render
+    "src/decl/render/Buffer.hpp"
     "src/decl/render/GraphicsAbstractionLayer.hpp"
-    "src/decl/render/Material.hpp"
     "src/decl/render/Renderer.hpp"
     "src/decl/render/ShaderProgram.hpp"
-    "src/decl/render/TextureManager.hpp"
 )
 source_group("Header Files\\render" FILES ${Header_Files__render})
 
@@ -229,42 +236,46 @@ source_group("Resource Files\\shaders" FILES ${Resource_Files__shaders})
 
 set(Source_Files
     "src/impl/AnimationService.cpp"
-    "src/impl/BaseMeshes.cpp"
     "src/impl/Debug.cpp"
+    "src/impl/Editor.cpp"
     "src/impl/Engine.cpp"
     "src/impl/EntityComponent.cpp"
     "src/impl/FileRW.cpp"
     "src/impl/GlobalJsonConfig.cpp"
+    "src/impl/IntersectionLib.cpp"
     "src/impl/Main.cpp"
-    "src/impl/ModelLoader.cpp"
     "src/impl/PhysicsEngine.cpp"
     "src/impl/Reflection.cpp"
-    "src/impl/SceneFormat.cpp"
     "src/impl/ThreadManager.cpp"
     "src/impl/UserInput.cpp"
 )
 source_group("Source Files" FILES ${Source_Files})
 
+set(Source_Files__asset
+    "src/impl/asset/Material.cpp"
+    "src/impl/asset/MeshProvider.cpp"
+    "src/impl/asset/ModelLoader.cpp"
+    "src/impl/asset/PrimitiveMeshes.cpp"
+    "src/impl/asset/SceneFormat.cpp"
+    "src/impl/asset/TextureManager.cpp"
+)
+source_group("Source Files\\asset" FILES ${Source_Files__asset})
+
 set(Source_Files__datatype
-    "src/impl/datatype/Buffer.cpp"
     "src/impl/datatype/Color.cpp"
     "src/impl/datatype/GameObject.cpp"
     "src/impl/datatype/Mesh.cpp"
     "src/impl/datatype/Vector2.cpp"
     "src/impl/datatype/Vector3.cpp"
+    "src/impl/render/Buffer.cpp"
 )
 source_group("Source Files\\datatype" FILES ${Source_Files__datatype})
-
-set(Source_Files__editor
-    "src/impl/editor/Editor.cpp"
-    "src/impl/editor/IntersectionLib.cpp"
-)
-source_group("Source Files\\editor" FILES ${Source_Files__editor})
 
 set(Source_Files__gameobject
     "src/impl/gameobject/Base3D.cpp"
     "src/impl/gameobject/Camera.cpp"
     "src/impl/gameobject/DataModel.cpp"
+    "src/impl/gameobject/Example.cpp"
     "src/impl/gameobject/Light.cpp"
     "src/impl/gameobject/MeshObject.cpp"
     "src/impl/gameobject/Model.cpp"
@@ -272,29 +283,28 @@ set(Source_Files__gameobject
     "src/impl/gameobject/Primitive.cpp"
     "src/impl/gameobject/Script.cpp"
     "src/impl/gameobject/Workspace.cpp"
+    "src/impl/ScriptEngine.cpp"
 )
 source_group("Source Files\\gameobject" FILES ${Source_Files__gameobject})
 
 set(Source_Files__render
     "src/impl/render/GraphicsAbstractionLayer.cpp"
-    "src/impl/render/Material.cpp"
     "src/impl/render/Renderer.cpp"
     "src/impl/render/ShaderProgram.cpp"
-    "src/impl/render/TextureManager.cpp"
 )
 source_group("Source Files\\render" FILES ${Source_Files__render})
 
 set(ALL_FILES
     ${Header_Files}
+    ${Header_Files__asset}
     ${Header_Files__datatype}
-    ${Header_Files__editor}
     ${Header_Files__gameobject}
     ${Header_Files__render}
     ${Resource_Files}
     ${Resource_Files__shaders}
     ${Source_Files}
+    ${Source_Files__asset}
     ${Source_Files__datatype}
-    ${Source_Files__editor}
     ${Source_Files__gameobject}
     ${Source_Files__render}
 )
@@ -421,18 +431,18 @@ if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
         "${CMAKE_CURRENT_SOURCE_DIR}/.;"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/decl;"
         "${CMAKE_CURRENT_SOURCE_DIR}/Vendor;"
-        "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/imgui;"
         "${CMAKE_CURRENT_SOURCE_DIR}/luau/Common/include;"
-        "${CMAKE_CURRENT_SOURCE_DIR}/luau/VM/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/luau/VM/include;"
+        "${CMAKE_CURRENT_SOURCE_DIR}/imgui"
     )
 elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
     target_include_directories(${PROJECT_NAME} PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/.;"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/decl;"
         "${CMAKE_CURRENT_SOURCE_DIR}/Vendor;"
-        "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/imgui;"
         "${CMAKE_CURRENT_SOURCE_DIR}/luau/Common/include;"
-        "${CMAKE_CURRENT_SOURCE_DIR}/luau/VM/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/luau/VM/include;"
+        "${CMAKE_CURRENT_SOURCE_DIR}/imgui"
     )
 endif()
 
@@ -517,42 +527,16 @@ if(MSVC)
     if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
         target_link_options(${PROJECT_NAME} PRIVATE
             $<$<CONFIG:Debug>:
-                /INCREMENTAL
+                /NODEFAULTLIB:msvcrtd.lib
             >
-            $<$<CONFIG:MinSizeRel>:
-                /INCREMENTAL:NO;
-                /LTCG
-            >
-            $<$<CONFIG:Release>:
-                /INCREMENTAL:NO;
-                /LTCG
-            >
-            $<$<CONFIG:RelWithDebInfo>:
-                /INCREMENTAL:NO;
-                /LTCG
-            >
-            /MANIFEST;
             /DEBUG:FULL;
             /SUBSYSTEM:CONSOLE
         )
     elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
         target_link_options(${PROJECT_NAME} PRIVATE
             $<$<CONFIG:Debug>:
-                /INCREMENTAL
+                /NODEFAULTLIB:msvcrtd.lib
             >
-            $<$<CONFIG:MinSizeRel>:
-                /INCREMENTAL:NO;
-                /LTCG
-            >
-            $<$<CONFIG:Release>:
-                /INCREMENTAL:NO;
-                /LTCG
-            >
-            $<$<CONFIG:RelWithDebInfo>:
-                /INCREMENTAL:NO;
-                /LTCG
-            >
-            /MANIFEST;
             /DEBUG:FULL;
             /SUBSYSTEM:CONSOLE
         )
@@ -595,3 +579,4 @@ elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
     )
 endif()
 
+set_property(GLOBAL PROPERTY VS_STARTUP_PROJECT PhoenixEngine)

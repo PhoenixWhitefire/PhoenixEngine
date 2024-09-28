@@ -1,11 +1,14 @@
-set(PROJECT_NAME Misc)
+set(PROJECT_NAME Vendor)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_C_STANDARD 17)
+set(CMAKE_VS_PLATFORM_TOOLSET v143)
 
 ################################################################################
 # Source groups
 ################################################################################
 set(Header_Files
     "nljson.hpp"
-    "stb_image.h"
 )
 source_group("Header Files" FILES ${Header_Files})
 
@@ -552,21 +555,27 @@ set(Header_Files__glm__simd
 source_group("Header Files\\glm\\simd" FILES ${Header_Files__glm__simd})
 
 set(Header_Files__imgui
-    "imgui/imconfig.h"
-    "imgui/imgui.h"
-    "imgui/imgui_internal.h"
-    "imgui/imstb_rectpack.h"
-    "imgui/imstb_textedit.h"
-    "imgui/imstb_truetype.h"
+    "../imgui/imconfig.h"
+    "../imgui/imgui.h"
+    "../imgui/imgui_internal.h"
+    "../imgui/imstb_rectpack.h"
+    "../imgui/imstb_textedit.h"
+    "../imgui/imstb_truetype.h"
 )
 source_group("Header Files\\imgui" FILES ${Header_Files__imgui})
 
 set(Header_Files__imgui__backends
-    "imgui/backends/imgui_impl_opengl3.h"
-    "imgui/backends/imgui_impl_opengl3_loader.h"
-    "imgui/backends/imgui_impl_sdl2.h"
+    "../imgui/backends/imgui_impl_opengl3.h"
+    "../imgui/backends/imgui_impl_opengl3_loader.h"
+    "../imgui/backends/imgui_impl_sdl2.h"
 )
 source_group("Header Files\\imgui\\backends" FILES ${Header_Files__imgui__backends})
+
+set(Header_Files__stb
+    "stb/stb_image.h"
+    "stb/stb_sprintf.h"
+)
+source_group("Header Files\\stb" FILES ${Header_Files__stb})
 
 set(Source_Files
     "glad/gl.c"
@@ -585,17 +594,17 @@ set(Source_Files__glm__detail
 source_group("Source Files\\glm\\detail" FILES ${Source_Files__glm__detail})
 
 set(Source_Files__imgui
-    "imgui/imgui.cpp"
-    "imgui/imgui_demo.cpp"
-    "imgui/imgui_draw.cpp"
-    "imgui/imgui_tables.cpp"
-    "imgui/imgui_widgets.cpp"
+    "../imgui/imgui.cpp"
+    "../imgui/imgui_demo.cpp"
+    "../imgui/imgui_draw.cpp"
+    "../imgui/imgui_tables.cpp"
+    "../imgui/imgui_widgets.cpp"
 )
 source_group("Source Files\\imgui" FILES ${Source_Files__imgui})
 
 set(Source_Files__imgui__backends
-    "imgui/backends/imgui_impl_opengl3.cpp"
-    "imgui/backends/imgui_impl_sdl2.cpp"
+    "../imgui/backends/imgui_impl_opengl3.cpp"
+    "../imgui/backends/imgui_impl_sdl2.cpp"
 )
 source_group("Source Files\\imgui\\backends" FILES ${Source_Files__imgui__backends})
 
@@ -612,6 +621,7 @@ set(ALL_FILES
     ${Header_Files__glm__simd}
     ${Header_Files__imgui}
     ${Header_Files__imgui__backends}
+    ${Header_Files__stb}
     ${Source_Files}
     ${Source_Files__glm}
     ${Source_Files__glm__detail}
@@ -635,17 +645,6 @@ set(ROOT_NAMESPACE Vendor)
 set_target_properties(${PROJECT_NAME} PROPERTIES
     VS_GLOBAL_KEYWORD "Win32Proj"
 )
-################################################################################
-# Target name
-################################################################################
-if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
-    set_target_properties(${PROJECT_NAME} PROPERTIES
-        TARGET_NAME_DEBUG          "Vendor"
-        TARGET_NAME_MINSIZEREL     "Vendor"
-        TARGET_NAME_RELEASE        "Vendor"
-        TARGET_NAME_RELWITHDEBINFO "Vendor"
-    )
-endif()
 ################################################################################
 # Output directory
 ################################################################################
@@ -676,7 +675,7 @@ endif()
 if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
     target_include_directories(${PROJECT_NAME} PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/.;"
-        "${CMAKE_CURRENT_SOURCE_DIR}/imgui;"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../imgui;"
         "${CMAKE_CURRENT_SOURCE_DIR}/SDL2"
     )
 endif()

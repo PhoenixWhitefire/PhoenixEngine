@@ -629,6 +629,7 @@ void EngineObject::Start()
 
 			shp->SetUniform("CameraMatrix", cameraMatrix);
 			shp->SetUniform("Time", static_cast<float>(this->RunningTime));
+			shp->SetUniform("SkyboxCubemap", 3);
 
 			scene.UniqueShaders.push_back(shp);
 		}
