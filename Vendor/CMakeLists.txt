@@ -573,7 +573,6 @@ source_group("Header Files\\imgui\\backends" FILES ${Header_Files__imgui__backen
 
 set(Header_Files__stb
     "stb/stb_image.h"
-    "stb/stb_sprintf.h"
 )
 source_group("Header Files\\stb" FILES ${Header_Files__stb})
 

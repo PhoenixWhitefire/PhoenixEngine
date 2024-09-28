@@ -14,8 +14,14 @@ garbaj spaghett
 * Windows SDK `10.0`
 * MSVC
 
+**NOTICE**
+*(28/09/2024)*
+Don't try to use CMake. It won't work.
+Manually setting up the project in Visual Studio will probably take less time than debugging the `CMakeList`s.
+
 1. `git clone https://github.com/PhoenixWhitefire/PhoenixEngine --recursive`
 	* `git clone https://github.com/PhoenixWhitefire/PhoenixEngine --recursive -b dev` for the `dev` branch	
+	* (Or use the handy-dandy, big, green, `<> Code` button to download a `.ZIP` and extract it)
 2. `cmake -S "./" -B "./"`
 3. Open the resulting `.sln`, and you should have
 	* `PhoenixEngine` as the startup project
