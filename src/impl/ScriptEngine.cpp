@@ -10,6 +10,8 @@
 #include"datatype/Color.hpp"
 #include"datatype/GameObject.hpp"
 #include"asset/MeshProvider.hpp"
+#include"asset/ModelLoader.hpp"
+#include"asset/SceneFormat.hpp"
 #include"UserInput.hpp"
 #include"FileRW.hpp"
 
@@ -736,6 +738,78 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 			}
 			else
 				lua_pushnil(L);
+
+			return 1;
+		}
+	},
+
+	{
+		"model_import",
+		[](lua_State* L)
+		{
+			const char* path = luaL_checkstring(L, 1);
+
+			std::vector<GameObject*> loadedRoots = ModelLoader(path, nullptr).LoadedObjs;
+			
+			lua_newtable(L);
+
+			for (int index = 0; index < loadedRoots.size(); index++)
+			{
+				GameObject* object = loadedRoots[index];
+
+				lua_pushinteger(L, index);
+				ScriptEngine::L::PushGenericValue(L, object->ToGenericValue());
+
+				lua_settable(L, -3);
+			}
+
+			return 1;
+		}
+	},
+
+	{
+		"scene_save",
+		[](lua_State* L)
+		{
+			Reflection::GenericValue rootNodesGv = ScriptEngine::L::LuaValueToGeneric(L, -2);
+			const char* path = luaL_checkstring(L, 2);
+
+			std::vector<Reflection::GenericValue> rootNodesArray = rootNodesGv.AsArray();
+			std::vector<GameObject*> rootNodes;
+
+			for (Reflection::GenericValue& gv : rootNodesArray)
+				rootNodes.push_back(GameObject::FromGenericValue(gv));
+
+			std::string fileContents = SceneFormat::Serialize(rootNodes, path);
+			FileRW::WriteFileCreateDirectories(path, fileContents, true);
+
+			lua_pushboolean(L, 1);
+			lua_pushstring(L, "No errors occurred");
+
+			return 2;
+		}
+	},
+
+	{
+		"scene_load",
+		[](lua_State* L)
+		{
+			const char* path = luaL_checkstring(L, 1);
+
+			std::string fileContents = FileRW::ReadFile(path);
+
+			bool deserializeSuccess = true;
+			std::vector<GameObject*> rootNodes = SceneFormat::Deserialize(fileContents, &deserializeSuccess);
+
+			if (!deserializeSuccess)
+				luaL_errorL(L, SceneFormat::GetLastErrorString().c_str());
+
+			std::vector<Reflection::GenericValue> convertedArray;
+
+			for (GameObject* node : rootNodes)
+				convertedArray.push_back(node->ToGenericValue());
+
+			ScriptEngine::L::PushGenericValue(L, convertedArray);
 
 			return 1;
 		}

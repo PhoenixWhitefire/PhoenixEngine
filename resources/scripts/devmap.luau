@@ -129,11 +129,7 @@ function Update(DeltaTime)
         
         if hit then
             RaycastTest.ColorRGB = hit.Object.ColorRGB
-            RaycastTest.Transform = Matrix.fromTranslation(
-                hit.Position.X + hit.Normal.X,
-                hit.Position.Y + hit.Normal.Y,
-                hit.Position.Z + hit.Normal.Z
-            )
+            RaycastTest.Transform = Matrix.fromTranslation(hit.Position + hit.Normal * 2.5)
         end
     end
     

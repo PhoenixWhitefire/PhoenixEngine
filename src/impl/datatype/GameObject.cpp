@@ -113,6 +113,24 @@ GameObject::GameObject()
 	GameObject::s_DeclareReflections();
 }
 
+GameObject* GameObject::FromGenericValue(const Reflection::GenericValue& gv)
+{
+	if (gv.Type == Reflection::ValueType::Null)
+		return nullptr;
+
+	if (gv.Type != Reflection::ValueType::GameObject)
+	{
+		const std::string& typeName = Reflection::TypeAsString(gv.Type);
+
+		throw(std::vformat(
+			"Tried to GameObject::FromGenericValue, but GenericValue had Type '{}' instead",
+			std::make_format_args(typeName)
+		));
+	}
+
+	return GameObject::GetObjectById(static_cast<uint32_t>((int64_t)gv.Pointer));
+}
+
 GameObject::~GameObject()
 {
 	if (GameObject* parent = this->GetParent())
@@ -199,6 +217,14 @@ void GameObject::RemoveChild(uint32_t id)
 		m_Children.erase(it);
 	else
 		throw(std::vformat("ID:{} is _not my ({}) sonnn~_", std::make_format_args(ObjectId, id)));
+}
+
+Reflection::GenericValue GameObject::ToGenericValue()
+{
+	Reflection::GenericValue gv{ this->ObjectId };
+	gv.Type = Reflection::ValueType::GameObject;
+
+	return gv;
 }
 
 GameObject* GameObject::GetParent()

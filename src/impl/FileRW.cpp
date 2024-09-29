@@ -75,8 +75,11 @@ std::string FileRW::ReadFile(std::string const& ShortPath, bool* DoesFileExist)
 	}
 	else
 	{
-		if (DoesFileExist == nullptr)
-			Debug::Log(std::vformat("Could not load file: '{}'", std::make_format_args(actualPath)));
+		if (!DoesFileExist)
+			throw(std::vformat(
+				"FileRW::ReadFile: Could not load file: '{}'",
+				std::make_format_args(actualPath)
+			));
 		else
 			*DoesFileExist = false;
 
@@ -97,7 +100,7 @@ void FileRW::WriteFile(const std::string& ShortPath, const std::string& FileCont
 	}
 	else
 		throw(std::vformat(
-			"FileRW::WriteFile could not open the handle to '{}'",
+			"FileRW::WriteFile: Could not open the handle to '{}'",
 			std::make_format_args(path)
 		));
 }
@@ -116,7 +119,7 @@ void FileRW::WriteFileCreateDirectories(
 	std::error_code ec;
 	
 	if (!createDirectoryRecursive(dirPath, ec))
-		throw("`createDirectoryRecursive` failed: " + ec.message());
+		throw("FileRW::WriteFileCreateDirectories: `createDirectoryRecursive` failed: " + ec.message());
 
 	FileRW::WriteFile(path, FileContents, false);
 }

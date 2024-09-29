@@ -15,6 +15,8 @@ void Object_Camera::s_DeclareReflections()
 		return;
 	s_DidInitReflection = true;
 
+	REFLECTION_INHERITAPI(GameObject);
+
 	REFLECTION_DECLAREPROP_SIMPLE(Object_Camera, GenericMovement, Bool);
 	REFLECTION_DECLAREPROP_SIMPLE(Object_Camera, FieldOfView, Double);
 
@@ -30,8 +32,6 @@ void Object_Camera::s_DeclareReflections()
 			dynamic_cast<Object_Camera*>(p)->Transform = gv.AsMatrix();
 		}
 	);
-
-	REFLECTION_INHERITAPI(GameObject);
 }
 
 Object_Camera::Object_Camera()

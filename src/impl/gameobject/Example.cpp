@@ -29,7 +29,7 @@ void Object_Example::s_DeclareReflections()
 
 	REFLECTION_DECLAREPROP(
 		"Value1",
-		String,
+		Bool,
 		[](GameObject* p)
 		{
 			// Implicitly calls the `::GenericValue(bool)` constructor

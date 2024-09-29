@@ -11,6 +11,7 @@ function Controller.new(Camera)
         JumpImpulse = 25,
         JumpCooldown = 0.5,
         MouseSensitivity = 60,
+        JumpRayDistance = 8,
         
         FirstPerson = true,
         CameraOffset = Matrix.fromTranslation(0, 0, 0),
@@ -38,6 +39,7 @@ function Controller:InitDefault(CharacterHeight)
     self.Character = character
     self.Camera.GenericMovement = false
     self.CameraOffset = Matrix.fromTranslation(0, CharacterHeight * 0.4, 0)
+    self.JumpRayDistance = CharacterHeight * 0.6
 end
 
 function Controller:Update(DeltaTime)
@@ -46,23 +48,30 @@ function Controller:Update(DeltaTime)
     local moveDirection = self:getMoveDirection()
     local rotationX, rotationY = self:getRotationVector()
     
-    if input_keypressed(" ") and (self.totalTime - self.lastJumped) > self.JumpCooldown then
-        moveDirection = Vector3.new(moveDirection.X, 1, moveDirection.Z)
-        self.lastJumped = self.totalTime
-    end
+    local floorRayHit = world_raycast(
+        self.Character.Transform.Position,
+        Vector3.new(0, -self.JumpRayDistance, 0),
+        { self.Character }
+    )
     
     local impulse = Vector3.new(
         moveDirection.X * self.Acceleration * DeltaTime,
-        moveDirection.Y * self.JumpImpulse,
+        0,
         moveDirection.Z * self.Acceleration * DeltaTime
     )
     
+    if floorRayHit then
+        if input_keypressed(" ") and (self.totalTime - self.lastJumped) > self.JumpCooldown then
+            impulse += Vector3.new(0, self.JumpImpulse, 0)
+            self.Character.LinearVelocity = Vector3.new(self.Character.LinearVelocity.X, 0, self.Character.LinearVelocity.Y)
+            self.lastJumped = self.totalTime
+        end
+    else
+        impulse *= 0.3
+    end
+    
     local currentVelocity = self.Character.LinearVelocity
-    self.Character.LinearVelocity = Vector3.new(
-        currentVelocity.X + impulse.X,
-        currentVelocity.Y + impulse.Y,
-        currentVelocity.Z + impulse.Z
-    )
+    self.Character.LinearVelocity = currentVelocity + impulse
     
     self.Character.Transform *= Matrix.fromEulerAnglesXYZ(0, rotationY, 0)
     

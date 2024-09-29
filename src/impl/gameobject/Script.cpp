@@ -452,16 +452,39 @@ static void initDefaultState()
 			DefaultState,
 			[](lua_State* L)
 			{
-				float x = static_cast<float>(luaL_checknumber(L, 1));
-				float y = static_cast<float>(luaL_checknumber(L, 2));
-				float z = static_cast<float>(luaL_checknumber(L, 3));
+				glm::mat4 m(1.f);
 
-				glm::mat4 t(1.f);
-				t[3][0] = x;
-				t[3][1] = y;
-				t[3][2] = z;
+				int numArgs = lua_gettop(L);
 
-				ScriptEngine::L::PushGenericValue(L, t);
+				switch (numArgs)
+				{
+				case (1):
+				{
+					Vector3& vec = *(Vector3*)luaL_checkudata(L, -1, "Vector3");
+					m[3] = glm::vec4((glm::vec3)vec, 1.f);
+
+					break;
+				}
+				case (3):
+				{
+					float x = static_cast<float>(luaL_checknumber(L, 1));
+					float y = static_cast<float>(luaL_checknumber(L, 2));
+					float z = static_cast<float>(luaL_checknumber(L, 3));
+
+					m[3] = glm::vec4(glm::vec3(x, y, z), 1.f);
+
+					break;
+				}
+
+				default:
+					luaL_errorL(
+						L,
+						"`Matrix.fromTranslation` expected 1 or 3 arguments, got %i",
+						numArgs
+					);
+				}
+				
+				ScriptEngine::L::PushGenericValue(L, m);
 
 				return 1;
 			},

@@ -526,6 +526,7 @@ void Editor::RenderUI()
 				ImGui::InputInt(propName, &id);
 
 				newVal = id;
+				newVal.Type = Reflection::ValueType::GameObject;
 
 				break;
 			}

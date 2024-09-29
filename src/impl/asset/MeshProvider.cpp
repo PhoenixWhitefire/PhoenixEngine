@@ -50,7 +50,7 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 	oss << std::put_time(&tm, "%d-%m-%Y");
 	std::string dateTimeStr = oss.str();
 
-	contents += "#DateTime " + dateTimeStr + "\n\n";
+	contents += "#Date " + dateTimeStr + "\n\n";
 
 	nlohmann::json json;
 	nlohmann::json vertSon;

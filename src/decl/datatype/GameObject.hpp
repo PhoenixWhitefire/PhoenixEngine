@@ -120,6 +120,8 @@ public:
 
 	PHX_GAMEOBJECT_API_REFLECTION;
 
+	static GameObject* FromGenericValue(const Reflection::GenericValue&);
+
 	static bool IsValidObjectClass(std::string const&);
 	static GameObject* Create(std::string const&);
 	static GameObject* GetObjectById(uint32_t);
@@ -146,6 +148,8 @@ public:
 	void SetParent(GameObject*);
 	void AddChild(GameObject*);
 	void RemoveChild(uint32_t);
+
+	Reflection::GenericValue ToGenericValue();
 
 	uint32_t ObjectId = 0;
 
