@@ -302,11 +302,6 @@ void Editor::m_RenderMaterialEditor()
 		newMtlConfig["specMultiply"] = curItem->SpecMultiply;
 		newMtlConfig["translucency"] = curItem->HasTranslucency;
 
-		// overwrite the model material override
-		auto start = curItem->Name.find("models/");
-		if (start != std::string::npos)
-			FileRW::WriteFile(curItem->Name + "/material.mtl", newMtlConfig.dump(2), true);
-
 		FileRW::WriteFile(
 			"materials/" + curItem->Name + ".mtl",
 			newMtlConfig.dump(2),
@@ -459,21 +454,18 @@ void Editor::RenderUI()
 			{
 				std::string str = curVal.AsString();
 
-				uint8_t allocSize = uint8_t(fmax(64, str.length()));
+				size_t allocSize = (size_t)std::max((uint64_t)64, str.length());
 
-				char* buf = (char*)malloc(allocSize);
+				char* buf = (char*)malloc(allocSize + 1);
 
 				if (buf == 0)
-				{
 					throw("editor.cpp: Text entry buffer was NULL (allocation error).");
-					return;
-				}
 
 				memcpy(buf, str.c_str(), allocSize);
 
-				ImGui::InputText(propName, buf, 64);
+				ImGui::InputText(propName, buf, allocSize);
 
-				str = std::string(buf);
+				newVal = std::string(buf);
 
 				free(buf);
 

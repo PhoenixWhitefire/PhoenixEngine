@@ -1,0 +1,8 @@
+{
+  "albedo": "models/windows/diffuse.png",
+  "alphaCutoff": 0,
+  "alphaMode": 2,
+  "roughnessFactor": 0.5,
+  "specMultiply": 0.0,
+  "translucency": true
+}

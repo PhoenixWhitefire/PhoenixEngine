@@ -207,10 +207,9 @@ static std::vector<GameObject*> LoadMapVersion1(
 			{
 				GameObject* container = GameObject::Create("Model");
 
-				for (uint32_t index = 0; index < Model.size(); index++)
+				for (size_t index = 0; index < Model.size(); index++)
 				{
 					GameObject* mesh = Model[index];
-					mesh->Name = std::vformat("{}_{}", std::make_format_args(modelName, index));
 					mesh->SetParent(container);
 				}
 

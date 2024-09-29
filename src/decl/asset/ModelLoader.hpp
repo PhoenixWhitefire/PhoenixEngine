@@ -10,7 +10,25 @@ public:
 	std::vector<GameObject*> LoadedObjs;
 
 private:
-	enum class MaterialTextureType { Diffuse, Specular };
+	struct MeshMaterial
+	{
+		enum class MaterialAlphaMode { Opaque, Mask, Blend };
+
+		std::string Name{};
+
+		glm::vec4 BaseColorFactor{ 1.f, 1.f, 1.f, 1.f };
+		uint32_t BaseColorTexture{};
+
+		float MetallicFactor{ 1.f };
+		float RoughnessFactor{ 1.f };
+
+		uint32_t MetallicRoughnessTexture{};
+
+		bool DoubleSided = false;
+
+		MaterialAlphaMode AlphaMode = MaterialAlphaMode::Opaque;
+		float AlphaCutoff = .5f;
+	};
 
 	ModelLoader() = delete;
 
@@ -22,7 +40,7 @@ private:
 
 	std::vector<float> m_GetFloats(nlohmann::json Accessor);
 	std::vector<uint32_t> m_GetIndices(nlohmann::json Accessor);
-	std::unordered_map<MaterialTextureType, uint32_t> m_GetTextures();
+	MeshMaterial m_GetMaterial(const nlohmann::json&);
 
 	std::vector<Vertex> m_AssembleVertices(
 		std::vector<glm::vec3> Positions,
@@ -38,10 +56,11 @@ private:
 	nlohmann::json m_JsonData;
 
 	std::vector<Mesh> m_Meshes;
+	std::vector<std::string> m_MeshNames;
 	std::vector<glm::mat4> m_MeshMatrices;
 	std::vector<glm::vec3> m_MeshScales;
 
-	std::unordered_map<MaterialTextureType, uint32_t> m_MeshTextures;
+	std::vector<MeshMaterial> m_MeshMaterials;
 
 	std::vector<uint8_t> m_Data;
 };

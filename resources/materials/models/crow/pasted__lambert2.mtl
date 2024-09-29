@@ -1,0 +1,8 @@
+{
+  "albedo": "models/crow/diffuse.png",
+  "alphaCutoff": 0,
+  "alphaMode": 0,
+  "roughnessFactor": 1.0,
+  "specMultiply": 0.0,
+  "translucency": false
+}

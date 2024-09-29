@@ -25,59 +25,26 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		return;
 	}
 
-	bool hasMaterialOverride = true;
-	std::string overrideMaterial = FileRW::ReadFile(
-		AssetPath + "/material.mtl",
-		&hasMaterialOverride
-	);
-	std::string overrideMaterialPath = "";
-
-	if (hasMaterialOverride)
-	{
-		// TODO
-		// HACK HACK HACK
-		// Copy the `material.mtl` into `resources/materials/`,
-		// so that we can do `RenderMaterial::GetMaterial` instead of weird
-		// file path `../` etc nonsense
-
-		std::string resDir = EngineJsonConfig.value("ResourcesDirectory", "resources/");
-
-		// MKDIR `resources/materials/models/`
-		std::string modelsSubDirectory = resDir + "materials/models";
-		bool createDirectorySuccess = !std::filesystem::is_directory(modelsSubDirectory)
-						? std::filesystem::create_directory(modelsSubDirectory)
-						: true;
-
-		if (!createDirectorySuccess)
-			throw(std::vformat(
-				"Failed to `std::filesystem::create_directory` with path '{}'",
-				std::make_format_args(modelsSubDirectory)
-			));
-
-		// resources/materials/models/crow.mtl
-		overrideMaterialPath = "materials/"
-								+ AssetPath
-								+ ".mtl";
-
-		std::string originPath = resDir + AssetPath + "/material.mtl";
-
-		nlohmann::json overrideMaterialJson = nlohmann::json::parse(overrideMaterial);
-		// 05/09/2024
-		// For the Material Editor to know what file to save to
-		overrideMaterialJson["originalPath"] = AssetPath + "material.mtl";
-		overrideMaterial = overrideMaterialJson.dump(2);
-
-		FileRW::WriteFile(overrideMaterialPath, overrideMaterial, true);
-	}
-
 	m_JsonData = nlohmann::json::parse(textData);
 
 	m_Data = m_GetData();
-	m_TraverseNode(0);
+
+	try
+	{
+		m_TraverseNode(0);
+	}
+	catch (nlohmann::json::type_error e)
+	{
+		std::string errMessage = e.what();
+		throw(std::vformat(
+			"Failed to import model '{}': JSON Type Error: {}",
+			std::make_format_args(gltfFilePath, errMessage)
+		));
+	}
 
 	MeshProvider* mp = MeshProvider::Get();
 
-	for (int MeshIndex = 0; MeshIndex < m_Meshes.size(); MeshIndex++)
+	for (size_t MeshIndex = 0; MeshIndex < m_Meshes.size(); MeshIndex++)
 	{
 		// TODO: cleanup code
 		Object_Mesh* mesh = dynamic_cast<Object_Mesh*>(GameObject::Create("Mesh"));
@@ -101,26 +68,56 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 
 		mesh->Size = m_MeshScales[MeshIndex];
 
-		if (hasMaterialOverride)
-			// `materials/{models/[MODEL NAME]}.mtl`
-			mesh->Material = RenderMaterial::GetMaterial(AssetPath);
-		else
-		{
-			nlohmann::json materialJson{};
+		TextureManager* texManager = TextureManager::Get();
 
-			for (auto& it : m_MeshTextures)
-			{
-				Texture* tex = TextureManager::Get()->GetTextureResource(it.second);
+		nlohmann::json materialJson{};
 
-				std::string key = it.first == MaterialTextureType::Diffuse ? "albedo" : "specular";
+		ModelLoader::MeshMaterial& material = m_MeshMaterials.at(MeshIndex);
 
-				materialJson[key] = tex->ImagePath;
-			}
+		mesh->ColorRGB = Color(
+			material.BaseColorFactor.r,
+			material.BaseColorFactor.g,
+			material.BaseColorFactor.b
+		);
+		mesh->Transparency = 1.f - material.BaseColorFactor.a;
+		mesh->FaceCulling = material.DoubleSided ? FaceCullingMode::None : FaceCullingMode::BackFace;
 
-			FileRW::WriteFile("materials/" + AssetPath + ".mtl", materialJson.dump(2), true);
+		mesh->Name = m_MeshNames[MeshIndex];
 
-			mesh->Material = RenderMaterial::GetMaterial(AssetPath);
-		}
+		Texture* colorTex = texManager->GetTextureResource(material.BaseColorTexture);
+		Texture* metallicRoughnessTex = texManager->GetTextureResource(material.MetallicRoughnessTexture);
+
+		materialJson["albedo"] = colorTex->ImagePath;
+
+		materialJson["specMultiply"] = material.MetallicFactor;
+		materialJson["roughnessFactor"] = material.RoughnessFactor;
+
+		if (material.MetallicRoughnessTexture != 0)
+			materialJson["specular"] = metallicRoughnessTex->ImagePath;
+
+		// TODO: Alpha cutoff
+		// 29/09/2024
+		// `AlphaMode` can be `Opaque`, `Mask` or `Blend`
+		// Technically, the Engine only truly supports `Opaque` and `Blend`...
+		materialJson["translucency"] = (material.AlphaMode != MeshMaterial::MaterialAlphaMode::Opaque)
+			? true
+			: false;
+		// ... Just in case
+		materialJson["alphaMode"] = (int)material.AlphaMode;
+		materialJson["alphaCutoff"] = (int)material.AlphaCutoff;
+
+		// `materials/models/crow/feathers.mtl`
+		std::string materialName = AssetPath
+			+ "/"
+			+ material.Name;
+
+		FileRW::WriteFileCreateDirectories(
+			"materials/" + materialName + ".mtl",
+			materialJson.dump(2),
+			true
+		);
+
+		mesh->Material = RenderMaterial::GetMaterial(materialName);
 
 		mesh->Transform = m_MeshMatrices[MeshIndex];
 		mesh->Size = m_MeshScales[MeshIndex];
@@ -144,7 +141,8 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 
 void ModelLoader::m_LoadMesh(uint32_t MeshIndex)
 {
-	nlohmann::json mainPrims = m_JsonData["meshes"][MeshIndex]["primitives"][0];
+	nlohmann::json& mesh = m_JsonData["meshes"][MeshIndex];
+	nlohmann::json& mainPrims = mesh["primitives"][0];
 
 	// Get all accessor indices
 	uint32_t posAccInd = mainPrims["attributes"]["POSITION"];
@@ -196,15 +194,25 @@ void ModelLoader::m_LoadMesh(uint32_t MeshIndex)
 	std::vector<Vertex> vertices = m_AssembleVertices(positions, normals, texUVs);
 	std::vector<uint32_t> indices = m_GetIndices(m_JsonData["accessors"][indAccInd]);
 	
-	m_MeshTextures = m_GetTextures();
+	m_MeshMaterials.push_back(m_GetMaterial(mainPrims));
 
 	Mesh newMesh{ vertices, indices };
 
-	m_MeshScales[m_Meshes.size()] = size;
-	m_MeshMatrices[m_Meshes.size()] = glm::translate(glm::mat4(1.f), center);
+	size_t meshIndex = m_Meshes.size();
+
+	m_MeshScales[meshIndex] = size;
+	m_MeshMatrices[meshIndex] = glm::translate(glm::mat4(1.f), center);
 
 	// Combine the vertices, indices, and textures into a mesh
 	m_Meshes.push_back(newMesh);
+
+	m_MeshNames.push_back(mesh.value(
+		"name",
+		std::vformat(
+			"{}_{}",
+			std::make_format_args(m_File, meshIndex)
+		)
+	));
 }
 
 void ModelLoader::m_TraverseNode(uint32_t nextNode, glm::mat4 matrix)
@@ -392,46 +400,76 @@ std::vector<uint32_t> ModelLoader::m_GetIndices(nlohmann::json accessor)
 	return indices;
 }
 
-std::unordered_map<ModelLoader::MaterialTextureType, uint32_t> ModelLoader::m_GetTextures()
+ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primitive)
 {
 	TextureManager* texManager = TextureManager::Get();
 
-	std::unordered_map<MaterialTextureType, uint32_t> textures;
+	ModelLoader::MeshMaterial material;
+
+	auto materialIdIt = Primitive.find("material");
+
+	if (materialIdIt == Primitive.end())
+		return material;
+
+	int materialId = materialIdIt.value();
+
+	nlohmann::json materialDescription = m_JsonData["materials"][materialId];
+
+	static std::unordered_map<std::string, MeshMaterial::MaterialAlphaMode> NameToAlphaMode =
+	{
+		{ "OPAQUE", MeshMaterial::MaterialAlphaMode::Opaque },
+		{ "MASK", MeshMaterial::MaterialAlphaMode::Mask },
+		{ "BLEND", MeshMaterial::MaterialAlphaMode::Blend }
+	};
+
+	material.Name = materialDescription.value("name", "PHX_UNNAMED_MATERIAL");
+	material.AlphaCutoff = materialDescription.value("alphaCutoff", .5f);
+	material.AlphaMode = NameToAlphaMode.find(materialDescription.value("alphaMode", "OPAQUE"))->second;
+	material.DoubleSided = materialDescription.value("doubleSided", false);
+
+	nlohmann::json& pbrDescription = materialDescription["pbrMetallicRoughness"];
+
+	nlohmann::json baseColorFactor = pbrDescription.value(
+		"baseColorFactor",
+		nlohmann::json{ 1.f, 1.f, 1.f, 1.f }
+	);
+
+	material.BaseColorFactor = glm::vec4
+	{
+		baseColorFactor[0],
+		baseColorFactor[1],
+		baseColorFactor[2],
+		baseColorFactor[3]
+	};
+
+	material.MetallicFactor = pbrDescription.value("metallicFactor", 1.f);
+	material.RoughnessFactor = pbrDescription.value("roughnessFactor", 1.f);
+
+	nlohmann::json baseColDesc = pbrDescription.value(
+		"baseColorTexture",
+		nlohmann::json{ {"index", 0 } }
+	);
+	nlohmann::json metallicRoughnessDesc = pbrDescription.value(
+		"metallicRoughnessTexture",
+		nlohmann::json{ {"index", 0 } }
+	);
+
+	nlohmann::json& baseColTex = m_JsonData["textures"][(int)baseColDesc["index"]];
+	nlohmann::json& metallicRoughnessTex = m_JsonData["textures"][(int)metallicRoughnessDesc["index"]];
+
+	std::string baseColPath = m_JsonData["images"][(int)baseColTex["source"]]["uri"];
 
 	std::string fileDirectory = m_File.substr(0, m_File.find_last_of('/') + 1);
 
-	// Go over all images
-	for (nlohmann::json image : m_JsonData["images"])
+	material.BaseColorTexture = texManager->LoadTextureFromPath(fileDirectory + baseColPath);
+
+	if (pbrDescription.find("metallicRoughnessTexture") != pbrDescription.end())
 	{
-		// uri of current texture
-		std::string texPath = image["uri"];
-		std::string fullTexturePath = fileDirectory + texPath;
-
-		MaterialTextureType texType{};
-
-		// TODO: set usage based on how it's defined in the file itself
-		if (texPath.find("baseColor") != std::string::npos || texPath.find("diffuse") != std::string::npos)
-			texType = MaterialTextureType::Diffuse;
-
-		else if (texPath.find("metallicRoughness") != std::string::npos || texPath.find("specular") != std::string::npos)
-			texType = MaterialTextureType::Specular;
-
-		else
-		{
-			Debug::Log(std::vformat(
-				"Could not determine how texture '{}' is meant to be used!",
-				std::make_format_args(texPath)
-			));
-
-			continue;
-		}
-
-		uint32_t texture = texManager->LoadTextureFromPath(fullTexturePath);
-
-		textures.insert(std::pair(texType, texture));
+		std::string metallicRoughnessPath = m_JsonData["images"][(int)metallicRoughnessTex["source"]]["uri"];
+		material.MetallicRoughnessTexture = texManager->LoadTextureFromPath(fileDirectory + metallicRoughnessPath);
 	}
 
-	return textures;
+	return material;
 }
 
 std::vector<Vertex> ModelLoader::m_AssembleVertices

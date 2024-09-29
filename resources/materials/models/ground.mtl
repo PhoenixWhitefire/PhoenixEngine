@@ -1,8 +1,0 @@
-{
-  "albedo": "models/ground/diffuse.png",
-  "originalPath": "models/groundmaterial.mtl",
-  "specExponent": 0.5,
-  "specMultiply": 0.5,
-  "specular": "models/ground/specular.png",
-  "translucency": false
-}
