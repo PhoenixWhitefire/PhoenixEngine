@@ -1,7 +1,17 @@
 # PhoenixEngine
 garbaj spaghett
 
-"Game Engine" that can load models (GLTF), materials (albedo+specular), textures, scripts (DISABLED RN), scenes, and can also do some color-only post-processing stuff.
+Personal "Game Engine" written in C++, that can:
+* Import simple Models (`.gltf`)
+* Execute Scripts (in [*Luau*](https://github.com/luau-lang/luau/))
+* Render simple materials (Color + Metalness maps)
+* Load/Save Scenes without losing data
+* Do simple physics (dynamics and collisions w/ friction with AABBs, also has Raycasting for Scripts)
+* Do some simple, color-only post-processing
+
+# Branches
+* `main` and `dev`, certified classics
+* I'll commit to `dev` every once in a while and pull into `main` once in a Blue Moon
 
 # Building
 **Certain files are not present in the Git source tree! These are primarily non-essential game assets, but may include third-party library files and DLLs.**
