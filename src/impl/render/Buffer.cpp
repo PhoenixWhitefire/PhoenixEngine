@@ -3,37 +3,14 @@
 
 #include"render/Buffer.hpp"
 
-VBO::VBO()
-{
-	glGenBuffers(1, &this->ID);
-	this->Bind();
-	glBufferData(GL_ARRAY_BUFFER, 0, {}, GL_STREAM_DRAW);
-}
-
-void VBO::SetBufferData(const std::vector<Vertex>& vertices) const
-{
-	this->Bind();
-	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STREAM_DRAW);
-}
-
-void VBO::Bind() const
-{
-	glBindBuffer(GL_ARRAY_BUFFER, this->ID);
-}
-
-void VBO::Unbind()
-{
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-}
-
-void VBO::Delete() const
-{
-	glDeleteBuffers(1, &this->ID);
-}
-
 VAO::VAO()
 {
 	glGenVertexArrays(1, &this->ID);
+}
+
+VAO::~VAO()
+{
+	glDeleteVertexArrays(1, &this->ID);
 }
 
 void VAO::LinkAttrib(
@@ -61,9 +38,37 @@ void VAO::Unbind()
 	glBindVertexArray(0);
 }
 
-void VAO::Delete() const
+VBO::VBO()
 {
-	glDeleteVertexArrays(1, &this->ID);
+	glGenBuffers(1, &this->ID);
+	this->Bind();
+	glBufferData(GL_ARRAY_BUFFER, 0, {}, GL_STREAM_DRAW);
+}
+
+VBO::~VBO()
+{
+	glDeleteBuffers(1, &this->ID);
+}
+
+void VBO::SetBufferData(const std::vector<Vertex>& Vertices, BufferUsageHint UsageHint) const
+{
+	this->Bind();
+	glBufferData(
+		GL_ARRAY_BUFFER,
+		Vertices.size() * sizeof(Vertex),
+		Vertices.data(),
+		UsageHint == BufferUsageHint::Dynamic ? GL_STREAM_DRAW : GL_STATIC_DRAW
+	);
+}
+
+void VBO::Bind() const
+{
+	glBindBuffer(GL_ARRAY_BUFFER, this->ID);
+}
+
+void VBO::Unbind()
+{
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 EBO::EBO()
@@ -73,10 +78,20 @@ EBO::EBO()
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 0, {}, GL_STREAM_DRAW);
 }
 
-void EBO::SetBufferData(const std::vector<GLuint>& indices) const
+EBO::~EBO()
+{
+	glDeleteBuffers(1, &this->ID);
+}
+
+void EBO::SetBufferData(const std::vector<GLuint>& Indices, BufferUsageHint UsageHint) const
 {
 	this->Bind();
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLuint), indices.data(), GL_STREAM_DRAW);
+	glBufferData(
+		GL_ELEMENT_ARRAY_BUFFER,
+		Indices.size() * sizeof(GLuint),
+		Indices.data(),
+		UsageHint == BufferUsageHint::Dynamic ? GL_STREAM_DRAW : GL_STATIC_DRAW
+	);
 }
 
 void EBO::Bind() const
@@ -87,11 +102,6 @@ void EBO::Bind() const
 void EBO::Unbind()
 {
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-}
-
-void EBO::Delete() const
-{
-	glDeleteBuffers(1, &this->ID);
 }
 
 FBO::FBO(int Width, int Height, int MSSamples, bool AttachRenderBuffer)
@@ -166,6 +176,16 @@ FBO::FBO(int Width, int Height, int MSSamples, bool AttachRenderBuffer)
 		throw(std::vformat("Could not create a framebuffer, error ID: {}", std::make_format_args(fboStatus)));
 }
 
+FBO::~FBO()
+{
+	glDeleteTextures(1, &this->TextureID);
+	
+	if (this->RenderBufferID)
+		glDeleteRenderbuffers(1, &this->RenderBufferID);
+
+	glDeleteFramebuffers(1, &this->ID);
+}
+
 void FBO::Bind() const
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, this->ID);
@@ -184,11 +204,4 @@ void FBO::BindTexture() const
 void FBO::UnbindTexture()
 {
 	glBindTexture(/*this->MSAASamples > 0 ? GL_TEXTURE_2D_MULTISAMPLE : */ GL_TEXTURE_2D, 0);
-}
-
-void FBO::Delete() const
-{
-	glDeleteFramebuffers(1, &this->ID);
-	glDeleteRenderbuffers(1, &this->ID);
-	glDeleteTextures(1, &this->ID);
 }

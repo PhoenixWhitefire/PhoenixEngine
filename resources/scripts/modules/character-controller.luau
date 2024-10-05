@@ -37,7 +37,7 @@ function Controller:InitDefault(CharacterHeight)
     character.Parent = workspace
     
     self.Character = character
-    self.Camera.GenericMovement = false
+    self.Camera.UseSimpleController = false
     self.CameraOffset = Matrix.fromTranslation(0, CharacterHeight * 0.4, 0)
     self.JumpRayDistance = CharacterHeight * 0.6
 end
@@ -63,7 +63,7 @@ function Controller:Update(DeltaTime)
     if floorRayHit then
         if input_keypressed(" ") and (self.totalTime - self.lastJumped) > self.JumpCooldown then
             impulse += Vector3.new(0, self.JumpImpulse, 0)
-            self.Character.LinearVelocity = Vector3.new(self.Character.LinearVelocity.X, 0, self.Character.LinearVelocity.Y)
+            self.Character.LinearVelocity = Vector3.new(self.Character.LinearVelocity.X, 0, self.Character.LinearVelocity.Z)
             self.lastJumped = self.totalTime
         end
     else

@@ -25,12 +25,12 @@
     "Destroy": "() -> ()",
     "Enabled": "Bool",
     "FieldOfView": "Double",
-    "GenericMovement": "Bool",
     "GetFullName": "() -> (String,)",
     "Name": "String",
     "ObjectId": "Integer",
     "Parent": "GameObject",
-    "Transform": "Matrix"
+    "Transform": "Matrix",
+    "UseSimpleController": "Bool"
   },
   "DataModel": {
     "ClassName": "String",
@@ -67,7 +67,7 @@
     "Parent": "GameObject",
     "Reload": "() -> (Bool,)",
     "SourceFile": "String",
-    "Value1": "String",
+    "Value1": "Bool",
     "Value2": "Integer",
     "Value3": "Double",
     "Value4": "String",

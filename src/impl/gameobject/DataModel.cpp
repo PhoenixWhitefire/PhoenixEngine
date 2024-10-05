@@ -21,13 +21,6 @@ void Object_DataModel::s_DeclareReflections()
 	REFLECTION_INHERITAPI(GameObject);
 
 	REFLECTION_DECLAREPROC_INPUTLESS(Close, closeDataModel);
-	REFLECTION_DECLAREPROC_INPUTLESS(
-		Destroy,
-		[](GameObject*)
-		{
-			throw("Cannot Destroy a DataModel");
-		}
-	);
 }
 
 Object_DataModel::Object_DataModel()
@@ -41,7 +34,6 @@ Object_DataModel::Object_DataModel()
 Object_DataModel::~Object_DataModel()
 {
 	// TODO: :BindToClose 15/08/2024
-	Debug::Log("DataModel destructing...");
 }
 
 void Object_DataModel::Initialize()

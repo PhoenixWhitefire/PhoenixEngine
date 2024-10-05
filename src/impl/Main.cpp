@@ -92,7 +92,7 @@ static void handleInputs(Reflection::GenericValue Data)
 
 	UserInput::InputBeingSunk = GuiIO->WantCaptureKeyboard || GuiIO->WantCaptureMouse;
 
-	if (camera->GenericMovement)
+	if (camera->UseSimpleController)
 	{
 		static const glm::tvec3<double, glm::highp> UpVec = Vector3::yAxis;
 
@@ -141,13 +141,13 @@ static void handleInputs(Reflection::GenericValue Data)
 
 			int windowSizeX, windowSizeY;
 
-			SDL_GetWindowSize(window, &windowSizeX, &windowSizeY);
+			SDL_GetWindowSize(nullptr, &windowSizeX, &windowSizeY);
 
 			if (FirstDragFrame)
 			{
 				SDL_SetWindowMouseGrab(window, SDL_TRUE);
 
-				SDL_WarpMouseInWindow(window, windowSizeX / 2, windowSizeY / 2);
+				SDL_WarpMouseInWindow(nullptr, windowSizeX / 2, windowSizeY / 2);
 
 				mouseX, mouseY = windowSizeX / 2, windowSizeY / 2;
 				PrevMouseX, PrevMouseY = mouseX, mouseY;
@@ -200,7 +200,7 @@ static void handleInputs(Reflection::GenericValue Data)
 
 			if (newMouseX != mouseX || newMouseY != mouseY)
 			{
-				SDL_WarpMouseInWindow(window, newMouseX, newMouseY);
+				SDL_WarpMouseInWindow(nullptr, newMouseX, newMouseY);
 				mouseX = newMouseX;
 				mouseY = newMouseY;
 			}
@@ -208,7 +208,7 @@ static void handleInputs(Reflection::GenericValue Data)
 			if (activeMouseButton & SDL_BUTTON_RMASK)
 			{
 				MouseCaptured = false;
-				SDL_WarpMouseInWindow(window, windowSizeX / 2, windowSizeY / 2);
+				SDL_WarpMouseInWindow(nullptr, windowSizeX / 2, windowSizeY / 2);
 			}
 		}
 		else
@@ -317,7 +317,7 @@ static void LoadLevel(const std::string& LevelPath)
 	// We set it to true here in case the next level does not have a Camera Control Script
 	// (cause I still want to look around :3)
 	// (without having to go to the Camera in the Hierarchy and manually re-enable it :3)
-	workspace->GetSceneCamera()->GenericMovement = true;
+	workspace->GetSceneCamera()->UseSimpleController = true;
 	// 21/09/2024
 	// Also reset the cam back to the origin because !!PHYSICS!! yay
 	// so if we fall down into the *VOID* we get sent back up

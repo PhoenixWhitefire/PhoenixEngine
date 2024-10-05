@@ -53,6 +53,7 @@ std::vector<Worker*> ThreadManager::GetWorkers()
 std::vector<Worker*> ThreadManager::CreateWorkers(int NumWorkers, WorkerType Type)
 {
 	std::vector<Worker*> newWorkers;
+	newWorkers.reserve(NumWorkers);
 
 	for (int index = 0; index < NumWorkers; index++)
 	{

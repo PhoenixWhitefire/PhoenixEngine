@@ -3,6 +3,7 @@
 #include<ctime>
 #include<sstream>
 #include<nljson.hpp>
+#include<glad/gl.h>
 
 #include"asset/MeshProvider.hpp"
 #include"asset/PrimitiveMeshes.hpp"
@@ -33,10 +34,47 @@ MeshProvider::MeshProvider()
 	this->Assign(PrimitiveMeshes::Cube(), "!Cube");
 }
 
+MeshProvider::~MeshProvider()
+{
+	for (size_t promIndex = 0; promIndex < m_MeshPromises.size(); promIndex++)
+	{
+		std::promise<Mesh>* prom = m_MeshPromises[promIndex];
+		std::shared_future<Mesh>& future = m_MeshFutures[promIndex];
+
+		// we don't want our async threads accessing deleted promises
+		future.wait();
+
+		delete prom;
+	}
+
+	for (MeshProvider::GpuMesh& gpuMesh : m_GpuMeshes)
+	{
+		delete gpuMesh.VertexBuffer;
+		delete gpuMesh.ElementBuffer;
+		delete gpuMesh.VertexArray;
+	}
+
+	m_Meshes.clear();
+	m_StringToMeshId.clear();
+	m_MeshFutures.clear();
+	m_MeshPromises.clear();
+	m_MeshPromiseResourceIds.clear();
+	m_GpuMeshes.clear();
+}
+
+static MeshProvider* instance = nullptr;
+
 MeshProvider* MeshProvider::Get()
 {
-	static MeshProvider instance;
-	return &instance;
+	if (!instance)
+		instance = new MeshProvider();
+	return instance;
+}
+
+void MeshProvider::Shutdown()
+{
+	delete instance;
+	instance = nullptr;
 }
 
 std::string MeshProvider::Serialize(const Mesh& mesh)
@@ -110,6 +148,8 @@ Mesh MeshProvider::Deserialize(const std::string& Contents, bool* SuccessPtr)
 	nlohmann::json json = nlohmann::json::parse(jsonFileContents);
 
 	Mesh mesh;
+	mesh.Vertices.reserve(json["Vertices"].size());
+	mesh.Indices.reserve(json["Indices"].size());
 
 	size_t vertexIndex = 0;
 
@@ -129,7 +169,12 @@ Mesh MeshProvider::Deserialize(const std::string& Contents, bool* SuccessPtr)
 			glm::vec2(vertexDesc[9], vertexDesc[10])
 		};
 
-		mesh.Vertices.push_back(vertex);
+		mesh.Vertices.emplace_back(
+			glm::vec3(vertexDesc[0], vertexDesc[1], vertexDesc[2]),
+			glm::vec3(vertexDesc[3], vertexDesc[4], vertexDesc[5]),
+			glm::vec3(vertexDesc[6], vertexDesc[7], vertexDesc[8]),
+			glm::vec2(vertexDesc[9], vertexDesc[10])
+		);
 
 		vertexIndex += 1;
 	}
@@ -148,18 +193,12 @@ void MeshProvider::Save(const Mesh& mesh, const std::string& Path)
 
 void MeshProvider::Save(uint32_t Id, const std::string& Path)
 {
-	auto meshIt = m_Meshes.find(Id);
-
-	if (meshIt == m_Meshes.end())
-		throw("Attempt to save a mesh of invalid ID " + std::to_string(Id) + " to " + Path);
-	else
-		this->Save(meshIt->second, Path);
+	this->Save(m_Meshes.at(Id), Path);
 }
 
 uint32_t MeshProvider::Assign(const Mesh& mesh, const std::string& InternalName)
 {
-	static uint32_t CurrentResourceId = 1;
-	uint32_t assignedId = CurrentResourceId;
+	uint32_t assignedId = static_cast<uint32_t>(m_Meshes.size());
 
 	auto prevPair = m_StringToMeshId.find(InternalName);
 
@@ -171,9 +210,7 @@ uint32_t MeshProvider::Assign(const Mesh& mesh, const std::string& InternalName)
 	}
 	else
 	{
-		CurrentResourceId += 1;
-
-		m_Meshes.insert(std::pair(assignedId, mesh));
+		m_Meshes.push_back(mesh);
 		m_StringToMeshId.insert(std::pair(InternalName, assignedId));
 	}
 
@@ -201,14 +238,45 @@ uint32_t MeshProvider::LoadFromPath(const std::string& Path, bool ShouldLoadAsyn
 		}
 		else
 		{
-			Mesh mesh = this->Deserialize(contents, &success);
-			if (!success)
-				Debug::Log(std::vformat(
-					"MeshProvider Failed to load mesh '{}': {}",
-					std::make_format_args(Path, s_ErrorString)
-				));
+			if (ShouldLoadAsync)
+			{
+				std::promise<Mesh>* promise = new std::promise<Mesh>;
 
-			return this->Assign(mesh, Path);
+				uint32_t resourceId = this->Assign(Mesh{}, Path);
+
+				std::thread(
+					[promise, resourceId, this, Path, contents]()
+					{
+						bool deserialized = true;
+						Mesh loadedMesh = this->Deserialize(contents, &deserialized);
+
+						if (!deserialized)
+							Debug::Log(std::vformat(
+								"MeshProvider Failed to load mesh '{}' asynchronously: {}",
+								std::make_format_args(Path, s_ErrorString)
+							));
+
+						promise->set_value_at_thread_exit(loadedMesh);
+					}
+				).detach();
+
+				m_MeshPromises.push_back(promise);
+				m_MeshFutures.push_back(promise->get_future().share());
+				m_MeshPromiseResourceIds.push_back(resourceId);
+
+				return resourceId;
+			}
+			else
+			{
+				Mesh mesh = this->Deserialize(contents, &success);
+				if (!success)
+					Debug::Log(std::vformat(
+						"MeshProvider Failed to load mesh '{}': {}",
+						std::make_format_args(Path, s_ErrorString)
+					));
+
+				return this->Assign(mesh, Path);
+			}
 		}
 	}
 	else
@@ -217,19 +285,84 @@ uint32_t MeshProvider::LoadFromPath(const std::string& Path, bool ShouldLoadAsyn
 
 Mesh* MeshProvider::GetMeshResource(uint32_t Id)
 {
-	auto meshIt = m_Meshes.find(Id);
+	return &m_Meshes.at(Id);
+}
 
-	if (meshIt == m_Meshes.end())
-		throw("Invalid mesh ID " + std::to_string(Id));
-	else
-		return &meshIt->second;
+MeshProvider::GpuMesh& MeshProvider::GetGpuMesh(uint32_t Id)
+{
+	return m_GpuMeshes.at(Id);
 }
 
 void MeshProvider::FinalizeAsyncLoadedMeshes()
 {
+	size_t numMeshPromises = m_MeshPromises.size();
+	size_t numMeshFutures = m_MeshFutures.size();
+	size_t numMeshResourceIds = m_MeshPromiseResourceIds.size();
+
+	if (numMeshPromises != numMeshFutures || numMeshFutures != numMeshResourceIds)
+	{
+		Debug::Log(std::vformat(
+			"FinalizeAsyncLoadedMeshes had {} promises, {} futures and {} resource IDs, cannot proceed safely",
+			std::make_format_args(numMeshPromises, numMeshFutures, numMeshResourceIds)
+		));
+		return;
+	}
+
+	for (size_t promiseIndex = 0; promiseIndex < m_MeshPromises.size(); promiseIndex++)
+	{
+		std::promise<Mesh>* promise = m_MeshPromises[promiseIndex];
+		std::shared_future<Mesh>& f = m_MeshFutures[promiseIndex];
+
+		if (!f.valid() || f.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+			continue;
+
+		const Mesh& loadedMesh = f.get();
+		uint32_t resourceId = m_MeshPromiseResourceIds[promiseIndex];
+
+		Mesh& mesh = m_Meshes.at(resourceId);
+
+		mesh.Vertices = loadedMesh.Vertices;
+		mesh.Indices = loadedMesh.Indices;
+
+		mesh.GpuId = static_cast<uint32_t>(m_GpuMeshes.size());
+		m_CreateAndUploadGpuMesh(mesh);
+
+		m_MeshPromises.erase(m_MeshPromises.begin() + promiseIndex);
+		m_MeshFutures.erase(m_MeshFutures.begin() + promiseIndex);
+		m_MeshPromiseResourceIds.erase(m_MeshPromiseResourceIds.begin() + promiseIndex);
+
+		delete promise;
+
+		return;
+	}
 }
 
 const std::string& MeshProvider::GetLastErrorString()
 {
 	return s_ErrorString;
+}
+
+void MeshProvider::m_CreateAndUploadGpuMesh(const Mesh& mesh)
+{
+	m_GpuMeshes.emplace_back();
+
+	MeshProvider::GpuMesh& gpuMesh = m_GpuMeshes[m_GpuMeshes.size() - 1];
+
+	VAO* vao = new VAO;
+	VBO* vbo = new VBO;
+	EBO* ebo = new EBO;
+
+	gpuMesh.VertexArray = vao;
+	gpuMesh.VertexBuffer = vbo;
+	gpuMesh.ElementBuffer = ebo;
+
+	vao->Bind();
+
+	vao->LinkAttrib(*vbo, 0, 3, GL_FLOAT, sizeof(Vertex), (void*)0);
+	vao->LinkAttrib(*vbo, 1, 3, GL_FLOAT, sizeof(Vertex), (void*)(3 * sizeof(float)));
+	vao->LinkAttrib(*vbo, 2, 3, GL_FLOAT, sizeof(Vertex), (void*)(6 * sizeof(float)));
+	vao->LinkAttrib(*vbo, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)(9 * sizeof(float)));
+
+	vbo->SetBufferData(mesh.Vertices, BufferUsageHint::Static);
+	ebo->SetBufferData(mesh.Indices, BufferUsageHint::Static);
 }

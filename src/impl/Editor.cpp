@@ -20,7 +20,7 @@ static std::string ErrorTexture = "textures/MISSING2_MaximumADHD_status_16657763
 
 static nlohmann::json DefaultNewMaterial{};
 
-static char* bufferInitialize(uint32_t capacity, const std::string& initializeValue = "")
+static char* bufferInitialize(size_t capacity, const std::string& initializeValue = "")
 {
 	char* buf = (char*)malloc(capacity);
 
@@ -28,11 +28,11 @@ static char* bufferInitialize(uint32_t capacity, const std::string& initializeVa
 		throw("There are bigger problems at hand.");
 
 	if (initializeValue != "")
-		for (uint32_t i = 0; i < capacity; i++)
-			buf[i] = 0;
-	else
-		for (uint32_t i = 0; i < capacity; i++)
+		for (size_t i = 0; i < capacity; i++)
 			buf[i] = i < initializeValue.size() ? initializeValue.at(i) : 0;
+	else
+		for (size_t i = 0; i < capacity; i++)
+			buf[i] = 0;
 
 	return buf;
 }
@@ -43,6 +43,7 @@ Editor::Editor()
 	m_MtlCreateNameBuf = bufferInitialize(MATERIAL_NEW_NAME_BUFSIZE, MATERIAL_NEW_NAME_DEFAULT);
 	m_MtlDiffuseBuf = bufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
 	m_MtlSpecBuf = bufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
+	m_MtlShpBuf = bufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
 
 	DefaultNewMaterial["albedo"] = "textures/plastic.png";
 }
@@ -95,8 +96,6 @@ void Editor::Init()
 	//GameWorkspace->OnChildAdded.Connect(ResetAndAddObjects);
 
 	m_CurrentUIHierarchyRoot = GameObject::s_DataModel;
-
-	Debug::Log("Editor init done");
 }
 
 void Editor::Update(double DeltaTime, glm::mat4 CameraTransform)
@@ -125,12 +124,16 @@ static std::vector<GameObject*> getVisibleChildren(GameObject** CurrentUIHierarc
 	if (*CurrentUIHierarchyRoot)
 		children = (*CurrentUIHierarchyRoot)->GetChildren();
 	else
+	{
+		children.reserve(GameObject::s_WorldArray.size());
+
 		for (auto& it : GameObject::s_WorldArray)
 		{
 			if (!it.second->GetParent())
 				children.push_back(it.second);
 		}
-			
+	}
+
 	return children;
 }
 
@@ -212,6 +215,11 @@ void Editor::m_RenderMaterialEditor()
 	if (m_MtlCurItem != m_MtlPrevItem)
 	{
 		for (uint32_t i = 0; i < MATERIAL_TEXTUREPATH_BUFSIZE; i++)
+			m_MtlShpBuf[i] = i < curItem->Shader->Name.size()
+									? curItem->Shader->Name.at(i)
+									: 0;
+		
+		for (uint32_t i = 0; i < MATERIAL_TEXTUREPATH_BUFSIZE; i++)
 			m_MtlDiffuseBuf[i] = i < colorMap->ImagePath.size()
 									? colorMap->ImagePath.at(i)
 									: 0;
@@ -228,7 +236,9 @@ void Editor::m_RenderMaterialEditor()
 
 	m_MtlPrevItem = m_MtlCurItem;
 
-	ImGui::InputText("Diffuse", m_MtlDiffuseBuf, 64);
+	ImGui::InputText("Shader", m_MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
+
+	ImGui::InputText("Diffuse", m_MtlDiffuseBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
 	
 	ImGui::Image(
 		// first cast to uint64_t to get rid of the
@@ -277,12 +287,14 @@ void Editor::m_RenderMaterialEditor()
 		).c_str());
 	}
 
-	if (ImGui::Button("Update textures"))
+	if (ImGui::Button("Update"))
 	{
 		curItem->ColorMap = texManager->LoadTextureFromPath(m_MtlDiffuseBuf);
 
 		if (strlen(m_MtlSpecBuf) > 0)
 			curItem->MetallicRoughnessMap = texManager->LoadTextureFromPath(m_MtlSpecBuf);
+
+		curItem->Shader = ShaderProgram::GetShaderProgram(m_MtlShpBuf);
 	}
 
 	ImGui::Checkbox("Has translucency", &curItem->HasTranslucency);
@@ -301,6 +313,18 @@ void Editor::m_RenderMaterialEditor()
 		newMtlConfig["specExponent"] = curItem->SpecExponent;
 		newMtlConfig["specMultiply"] = curItem->SpecMultiply;
 		newMtlConfig["translucency"] = curItem->HasTranslucency;
+		newMtlConfig["shaderprogram"] = curItem->Shader->Name;
+		
+		std::string filePath = "materials/" + curItem->Name + ".mtl";
+
+		bool alreadyExists = false;
+		std::string prevFile = FileRW::ReadFile(filePath, &alreadyExists);
+
+		if (alreadyExists)
+		{
+			nlohmann::json prevJson = nlohmann::json::parse(prevFile);
+			newMtlConfig["uniforms"] = prevJson["uniforms"];
+		}
 
 		FileRW::WriteFile(
 			"materials/" + curItem->Name + ".mtl",
@@ -372,10 +396,14 @@ void Editor::RenderUI()
 	int32_t startOffset = m_CurrentUIHierarchyRoot ? 1 : 0;
 
 	if (m_HierarchyCurItem > startOffset - 1)
-		if (children.size() > m_HierarchyCurItem - startOffset)
-			selected = children[(size_t)m_HierarchyCurItem - startOffset];
+	{
+		size_t actualItemIndex = m_HierarchyCurItem - startOffset;
+
+		if (children.size() > actualItemIndex)
+			selected = children[actualItemIndex];
 		else
 			m_HierarchyCurItem = -1;
+	}
 
 	else if (m_HierarchyCurItem == 0) // index 0 is the `[Parent]` item
 		selected = m_CurrentUIHierarchyRoot;
@@ -408,7 +436,7 @@ void Editor::RenderUI()
 			if (selected && selected == m_CurrentUIHierarchyRoot && m_CurrentUIHierarchyRoot->GetParent())
 				m_CurrentUIHierarchyRoot = m_CurrentUIHierarchyRoot->GetParent();
 
-			delete selected;
+			selected->Destroy();
 			selected = nullptr;
 
 			m_HierarchyCurItem = -1;
@@ -454,17 +482,27 @@ void Editor::RenderUI()
 			{
 				std::string str = curVal.AsString();
 
-				size_t allocSize = (size_t)std::max((uint64_t)64, str.length());
+				// TODO 30/09/2024
+				// so this is kind of BS
+				// this is how many more characters the user can
+				// enter before they need to re-focus the textbox,
+				// because we don't know how much buffer space we'll
+				// need until ImGui gives us the updated string,
+				// which only happens when the user loses focus of the textbox
+				const size_t INPUT_TEXT_BUFFER_ADDITIONAL = 16;
 
-				char* buf = (char*)malloc(allocSize + 1);
+				size_t allocSize = str.size() + INPUT_TEXT_BUFFER_ADDITIONAL;
 
-				if (buf == 0)
-					throw("editor.cpp: Text entry buffer was NULL (allocation error).");
+				char* buf = bufferInitialize(
+					allocSize,
+					"<Initial Value 29/09/2024 Hey guys How we doing today>"
+				);
 
-				memcpy(buf, str.c_str(), allocSize);
+				strncpy(buf, str.data(), str.size());
+
+				buf[str.size()] = 0;
 
 				ImGui::InputText(propName, buf, allocSize);
-
 				newVal = std::string(buf);
 
 				free(buf);

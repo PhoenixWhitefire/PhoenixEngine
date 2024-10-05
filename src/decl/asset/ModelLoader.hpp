@@ -38,19 +38,19 @@ private:
 
 	std::vector<uint8_t> m_GetData();
 
-	std::vector<float> m_GetFloats(nlohmann::json Accessor);
-	std::vector<uint32_t> m_GetIndices(nlohmann::json Accessor);
+	std::vector<float> m_GetFloats(const nlohmann::json& Accessor);
+	std::vector<uint32_t> m_GetIndices(const nlohmann::json& Accessor);
 	MeshMaterial m_GetMaterial(const nlohmann::json&);
 
 	std::vector<Vertex> m_AssembleVertices(
-		std::vector<glm::vec3> Positions,
-		std::vector<glm::vec3> Normals,
-		std::vector<glm::vec2> TextureUVs
+		const std::vector<glm::vec3>& Positions,
+		const std::vector<glm::vec3>& Normals,
+		const std::vector<glm::vec2>& TextureUVs
 	);
 
-	std::vector<glm::vec2> m_GroupFloatsVec2(std::vector<float> Floats);
-	std::vector<glm::vec3> m_GroupFloatsVec3(std::vector<float> Floats);
-	std::vector<glm::vec4> m_GroupFloatsVec4(std::vector<float> Floats);
+	std::vector<glm::vec2> m_GroupFloatsVec2(const std::vector<float>& Floats);
+	std::vector<glm::vec3> m_GroupFloatsVec3(const std::vector<float>& Floats);
+	std::vector<glm::vec4> m_GroupFloatsVec4(const std::vector<float>& Floats);
 
 	std::string m_File;
 	nlohmann::json m_JsonData;

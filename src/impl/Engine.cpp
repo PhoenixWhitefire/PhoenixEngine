@@ -269,6 +269,7 @@ static std::vector<LightItem> createLightingList(GameObject* RootObject)
 {
 	std::vector<GameObject*> objects = RootObject->GetChildren();
 	std::vector<LightItem> dataList;
+	dataList.reserve(objects.size());
 
 	for (GameObject* object : objects)
 	{
@@ -282,24 +283,20 @@ static std::vector<LightItem> createLightingList(GameObject* RootObject)
 			Object_DirectionalLight* directional = dynamic_cast<Object_DirectionalLight*>(light);
 			Object_PointLight* point = dynamic_cast<Object_PointLight*>(light);
 
-			LightItem data;
-
 			if (directional)
-			{
-				data.Position = light->Position;
-				data.LightColor = light->LightColor * light->Brightness;
-				data.Type = LightType::Directional;
-			}
+				dataList.emplace_back(
+					LightType::Directional,
+					light->Position,
+					light->LightColor * light->Brightness
+				);
 
 			if (point)
-			{
-				data.Position = light->Position;
-				data.LightColor = light->LightColor * light->Brightness;
-				data.Type = LightType::Point;
-				data.Range = point->Range;
-			}
-
-			dataList.push_back(data);
+				dataList.emplace_back(
+					LightType::Point,
+					light->Position,
+					light->LightColor * light->Brightness,
+					point->Range
+				);
 		}
 
 		if (object->GetChildren().size() > 0)
@@ -316,6 +313,8 @@ static std::vector<RenderItem> createRenderList(GameObject* RootObject, Object_C
 {
 	std::vector<GameObject*> objects = RootObject->GetChildren();
 	std::vector<RenderItem> dataList;
+	
+	dataList.reserve(objects.size());
 
 	for (GameObject* object : objects)
 	{
@@ -339,8 +338,7 @@ static std::vector<RenderItem> createRenderList(GameObject* RootObject, Object_C
 				// if (MeshObject->HasTransparency)
 					//continue;
 
-				RenderItem data
-				{
+				dataList.emplace_back(
 					object3D->GetRenderMeshId(),
 					object3D->Transform,
 					object3D->Size,
@@ -349,9 +347,7 @@ static std::vector<RenderItem> createRenderList(GameObject* RootObject, Object_C
 					object3D->Transparency,
 					object3D->Reflectivity,
 					object3D->FaceCulling
-				};
-
-				dataList.push_back(data);
+				);
 			}
 
 			if (object->GetChildren().size() > 0)
@@ -408,7 +404,7 @@ void EngineObject::Start()
 		"back"
 	};
 
-	std::vector<uint32_t> skyboxFacesLoading;
+	std::vector<uint32_t> skyboxFacesBeingLoaded;
 
 	GLuint skyboxCubemap = 0;
 
@@ -423,32 +419,11 @@ void EngineObject::Start()
 
 	TextureManager* texManager = TextureManager::Get();
 
-	for (const std::string& skyboxFace : SkyboxCubemapImages)
+	for (const std::string& skyboxImage : SkyboxCubemapImages)
 	{
-		uint32_t tex = texManager->LoadTextureFromPath(SkyPath + skyboxFace + ".jpg");
-		skyboxFacesLoading.push_back(tex);
+		uint32_t tex = texManager->LoadTextureFromPath(SkyPath + skyboxImage + ".jpg");
+		skyboxFacesBeingLoaded.push_back(tex);
 	}
-
-	static const GLubyte FullByte = 0xFF;
-
-	for (int imageIndex = 0; imageIndex < 6; imageIndex++)
-	{
-		glTexImage2D(
-			GL_TEXTURE_CUBE_MAP_POSITIVE_X + imageIndex,
-			0,
-			GL_RED,
-			1,
-			1,
-			0,
-			GL_RED,
-			GL_UNSIGNED_BYTE,
-			&FullByte
-		);
-
-		glGenerateMipmap(GL_TEXTURE_2D);
-	}
-
-	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
 	//Texture HDRISkyboxTexture("Assets/Textures/hdri_sky_1.jpeg", "Diffuse", 0);
 
@@ -490,23 +465,31 @@ void EngineObject::Start()
 		scene.LightingList.clear();
 
 		TextureManager::Get()->FinalizeAsyncLoadedTextures();
+		MeshProvider::Get()->FinalizeAsyncLoadedMeshes();
 
 		bool skyboxLoaded = true;
 
-		for (int index = 0; index < skyboxFacesLoading.size(); index++)
+		for (uint32_t skyboxFace : skyboxFacesBeingLoaded)
 		{
-			uint32_t face = skyboxFacesLoading[index];
-			Texture* texture = texManager->GetTextureResource(face);
+			Texture* texture = texManager->GetTextureResource(skyboxFace);
 
-			if (texture->Status == TextureLoadStatus::Succeeded)
+			if (texture->Status != TextureLoadStatus::Succeeded)
 			{
-				//glDeleteTextures(1, &face->Identifier);
+				skyboxLoaded = false;
+				break;
+			}
+		}
 
-				glActiveTexture(GL_TEXTURE3);
-				glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemap);
+		if (skyboxLoaded && skyboxFacesBeingLoaded.size() == 6)
+		{
+			glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemap);
+
+			for (int skyboxFaceIndex = 0; skyboxFaceIndex < 6; skyboxFaceIndex++)
+			{
+				Texture* texture = texManager->GetTextureResource(skyboxFacesBeingLoaded.at(skyboxFaceIndex));
 
 				glTexImage2D(
-					GL_TEXTURE_CUBE_MAP_POSITIVE_X + index,
+					GL_TEXTURE_CUBE_MAP_POSITIVE_X + skyboxFaceIndex,
 					0,
 					GL_RGB,
 					texture->Width,
@@ -516,18 +499,16 @@ void EngineObject::Start()
 					GL_UNSIGNED_BYTE,
 					texture->TMP_ImageByteData
 				);
-			}
-			else
-			{
-				skyboxLoaded = false;
-				break;
-			}
-		}
 
-		if (skyboxLoaded && skyboxFacesLoading.size() > 0)
-		{
-			skyboxFacesLoading.clear();
+				glGenerateMipmap(GL_TEXTURE_2D);
+
+				free(texture->TMP_ImageByteData);
+				texture->TMP_ImageByteData = nullptr;
+			}
+
 			glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
+			skyboxFacesBeingLoaded.clear();
 		}
 
 		this->FpsCap = std::clamp(this->FpsCap, 1, 600);
@@ -586,6 +567,7 @@ void EngineObject::Start()
 
 		std::vector<GameObject*> physCandidates = Workspace->GetDescendants();
 		std::vector<Object_Base3D*> physList;
+		physList.reserve(std::min(static_cast<uint32_t>(physCandidates.size() / 3), 1024u));
 
 		for (GameObject* cand : physCandidates)
 		{
@@ -599,7 +581,7 @@ void EngineObject::Start()
 		DataModel->Update(deltaTime);
 		updateDescendants(DataModel, deltaTime);
 
-		double aspectRatio = (double)this->WindowSizeX / (double)this->WindowSizeY;
+		float aspectRatio = (float)this->WindowSizeX / (float)this->WindowSizeY;
 
 		GameObject* workspace = dynamic_cast<GameObject*>(Workspace);
 		Object_Camera* sceneCamera = this->Workspace->GetSceneCamera();
@@ -615,23 +597,17 @@ void EngineObject::Start()
 		// or `Time`.
 		
 		// Hashmap better than linaer serch
-		std::unordered_map<ShaderProgram*, ShaderProgram*> uniqueShaderMap;
+		
+		scene.UsedShaders = {};
 
 		for (const RenderItem& md : scene.RenderList)
-		{
-			if (uniqueShaderMap.find(md.Material->Shader) == uniqueShaderMap.end())
-				uniqueShaderMap.insert(std::pair(md.Material->Shader, md.Material->Shader));
-		}
+			scene.UsedShaders.insert(md.Material->Shader);
 
-		for (auto& it : uniqueShaderMap)
+		for (ShaderProgram* shp : scene.UsedShaders)
 		{
-			ShaderProgram* shp = it.second;
-
 			shp->SetUniform("CameraMatrix", cameraMatrix);
 			shp->SetUniform("Time", static_cast<float>(this->RunningTime));
 			shp->SetUniform("SkyboxCubemap", 3);
-
-			scene.UniqueShaders.push_back(shp);
 		}
 
 		glActiveTexture(GL_TEXTURE3);
@@ -806,6 +782,8 @@ EngineObject::~EngineObject()
 
 	ShaderProgram::ClearAll();
 
+	MeshProvider::Shutdown();
+	TextureManager::Shutdown();
 	delete this->RendererContext;
 
 	// TODO:

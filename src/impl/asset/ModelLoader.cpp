@@ -44,6 +44,8 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 
 	MeshProvider* mp = MeshProvider::Get();
 
+	LoadedObjs.reserve(m_Meshes.size());
+
 	for (size_t MeshIndex = 0; MeshIndex < m_Meshes.size(); MeshIndex++)
 	{
 		// TODO: cleanup code
@@ -56,7 +58,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 								+ AssetPath
 								+ "/"
 								+
-								std::to_string(MeshIndex)
+								m_MeshNames[MeshIndex]
 								+ ".mesh";
 
 		mp->Save(m_Meshes[MeshIndex], meshPath);
@@ -196,22 +198,17 @@ void ModelLoader::m_LoadMesh(uint32_t MeshIndex)
 	
 	m_MeshMaterials.push_back(m_GetMaterial(mainPrims));
 
-	Mesh newMesh{ vertices, indices };
-
 	size_t meshIndex = m_Meshes.size();
 
 	m_MeshScales[meshIndex] = size;
 	m_MeshMatrices[meshIndex] = glm::translate(glm::mat4(1.f), center);
 
 	// Combine the vertices, indices, and textures into a mesh
-	m_Meshes.push_back(newMesh);
+	m_Meshes.emplace_back(vertices, indices);
 
 	m_MeshNames.push_back(mesh.value(
 		"name",
-		std::vformat(
-			"{}_{}",
-			std::make_format_args(m_File, meshIndex)
-		)
+		std::to_string(MeshIndex)
 	));
 }
 
@@ -309,7 +306,7 @@ std::vector<uint8_t> ModelLoader::m_GetData()
 	return data;
 }
 
-std::vector<float> ModelLoader::m_GetFloats(nlohmann::json accessor)
+std::vector<float> ModelLoader::m_GetFloats(const nlohmann::json& accessor)
 {
 	std::vector<float> floatVec;
 
@@ -350,7 +347,7 @@ std::vector<float> ModelLoader::m_GetFloats(nlohmann::json accessor)
 	return floatVec;
 }
 
-std::vector<uint32_t> ModelLoader::m_GetIndices(nlohmann::json accessor)
+std::vector<uint32_t> ModelLoader::m_GetIndices(const nlohmann::json& accessor)
 {
 	std::vector<uint32_t> indices;
 
@@ -474,69 +471,66 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 
 std::vector<Vertex> ModelLoader::m_AssembleVertices
 (
-	std::vector<glm::vec3> positions,
-	std::vector<glm::vec3> normals,
-	std::vector<glm::vec2> texUVs
+	const std::vector<glm::vec3>& positions,
+	const std::vector<glm::vec3>& normals,
+	const std::vector<glm::vec2>& texUVs
 )
 {
 	std::vector<Vertex> vertices;
+	vertices.reserve(positions.size());
 
 	for (int i = 0; i < positions.size(); i++)
 	{
-		vertices.push_back
-		(
-			Vertex
-			{
-				positions[i],
-				normals[i],
-				glm::vec3(1.0f, 1.0f, 1.0f),
-				texUVs[i]
-			}
+		vertices.emplace_back(
+			positions[i],
+			normals[i],
+			glm::vec3(1.0f, 1.0f, 1.0f),
+			texUVs[i]
 		);
 	}
 	return vertices;
 }
 
-std::vector<glm::vec2> ModelLoader::m_GroupFloatsVec2(std::vector<float> floatVec)
+std::vector<glm::vec2> ModelLoader::m_GroupFloatsVec2(const std::vector<float>& floatVec)
 {
 	std::vector<glm::vec2> vectors;
+	vectors.reserve(static_cast<size_t>(floatVec.size() / 2));
 
 	for (int i = 0; i < floatVec.size(); i)
 	{
-		vectors.push_back(
-			glm::vec2(
-				floatVec[i++],
-				floatVec[i++])
+		vectors.emplace_back(
+			floatVec[i++],
+			floatVec[i++]
 		);
 	}
 	return vectors;
 }
 
-std::vector<glm::vec3> ModelLoader::m_GroupFloatsVec3(std::vector<float> floatVec)
+std::vector<glm::vec3> ModelLoader::m_GroupFloatsVec3(const std::vector<float>& floatVec)
 {
 	std::vector<glm::vec3> vectors;
+	vectors.reserve(static_cast<size_t>(floatVec.size() / 3));
 
 	for (int i = 0; i < floatVec.size(); i)
-		vectors.push_back(
-			glm::vec3(
-				floatVec[i++],
-				floatVec[i++],
-				floatVec[i++])
+		vectors.emplace_back(
+			floatVec[i++],
+			floatVec[i++],
+			floatVec[i++]
 		);
 
 	return vectors;
 }
-std::vector<glm::vec4> ModelLoader::m_GroupFloatsVec4(std::vector<float> floatVec)
+std::vector<glm::vec4> ModelLoader::m_GroupFloatsVec4(const std::vector<float>& floatVec)
 {
 	std::vector<glm::vec4> vectors;
+	vectors.reserve(static_cast<size_t>(floatVec.size() / 4));
 
 	for (int i = 0; i < floatVec.size(); i)
-		vectors.push_back(
-			glm::vec4(
-				floatVec[i++],
-				floatVec[i++],
-				floatVec[i++],
-				floatVec[i++])
+		vectors.emplace_back(
+			floatVec[i++],
+			floatVec[i++],
+			floatVec[i++],
+			floatVec[i++]
 		);
 
 	return vectors;

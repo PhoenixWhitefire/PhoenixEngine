@@ -62,6 +62,8 @@ Reflection::GenericValue::GenericValue(const std::vector<GenericValue>& array)
 Reflection::GenericValue::GenericValue(const std::unordered_map<GenericValue, GenericValue>& map)
 	: Type(ValueType::Array)
 {
+	this->Array.reserve(map.size() * 2);
+
 	for (auto& it : map)
 	{
 		this->Array.push_back(it.first);
@@ -196,6 +198,7 @@ std::vector<Reflection::GenericValue> Reflection::GenericValue::AsArray()
 			throw("Tried to convert a Map GenericValue to an Array, but it wasn't valid and had an odd number of Array elements");
 
 		std::vector<GenericValue> array;
+		array.reserve(static_cast<size_t>(this->Array.size() / 2));
 
 		for (size_t index = 1; index < array.size(); index++)
 		{

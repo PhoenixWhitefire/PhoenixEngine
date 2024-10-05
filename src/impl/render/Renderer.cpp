@@ -11,6 +11,8 @@
 #include"datatype/Vector3.hpp"
 #include"Debug.hpp"
 
+constexpr uint32_t SHADER_MAX_LIGHTS = 6;
+
 static GLenum ObjectTypes[] =
 {
 	GL_BUFFER,
@@ -172,20 +174,31 @@ Renderer::Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window)
 
 	Debug::Log(glVersionStr);
 
-	m_VertexArray = new VAO();
-	m_VertexArray->Bind();
+	m_VertexArray.emplace();
+	m_VertexBuffer.emplace();
+	m_ElementBuffer.emplace();
 
-	m_VertexBuffer = new VBO();
-	m_ElementBuffer = new EBO();
+	VAO& vao = m_VertexArray.value();
+	VBO& vbo = m_VertexBuffer.value();
 
-	m_VertexArray->LinkAttrib(*m_VertexBuffer, 0, 3, GL_FLOAT, sizeof(Vertex), (void*)0);
-	m_VertexArray->LinkAttrib(*m_VertexBuffer, 1, 3, GL_FLOAT, sizeof(Vertex), (void*)(3 * sizeof(float)));
-	m_VertexArray->LinkAttrib(*m_VertexBuffer, 2, 3, GL_FLOAT, sizeof(Vertex), (void*)(6 * sizeof(float)));
-	m_VertexArray->LinkAttrib(*m_VertexBuffer, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)(9 * sizeof(float)));
+	vao.Bind();
+
+	vao.LinkAttrib(vbo, 0, 3, GL_FLOAT, sizeof(Vertex), (void*)0);
+	vao.LinkAttrib(vbo, 1, 3, GL_FLOAT, sizeof(Vertex), (void*)(3 * sizeof(float)));
+	vao.LinkAttrib(vbo, 2, 3, GL_FLOAT, sizeof(Vertex), (void*)(6 * sizeof(float)));
+	vao.LinkAttrib(vbo, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)(9 * sizeof(float)));
 
 	this->Framebuffer = new FBO(m_Width, m_Height, m_MsaaSamples);
 
 	Debug::Log("Renderer initialized");
+}
+
+Renderer::~Renderer()
+{
+	delete this->Framebuffer;
+
+	this->GLContext = nullptr;
+	m_Window = nullptr;
 }
 
 void Renderer::ChangeResolution(uint32_t Width, uint32_t Height)
@@ -227,7 +240,7 @@ void Renderer::ChangeResolution(uint32_t Width, uint32_t Height)
 
 void Renderer::DrawScene(const Scene& Scene)
 {
-	for (ShaderProgram* shader : Scene.UniqueShaders)
+	for (ShaderProgram* shader : Scene.UsedShaders)
 	{
 		// TODO 05/09/2024
 		// Branching in shader VS separate array uniforms?
@@ -260,8 +273,8 @@ void Renderer::DrawScene(const Scene& Scene)
 		shader->SetUniform(
 			"NumLights",
 			std::clamp(
-				static_cast<int32_t>(Scene.LightingList.size()),
-				0,
+				static_cast<uint32_t>(Scene.LightingList.size()),
+				0u,
 				SHADER_MAX_LIGHTS
 			)
 		);
@@ -316,10 +329,24 @@ void Renderer::DrawMesh(
 
 	}
 
-	m_VertexArray->Bind();
+	uint32_t gpuMeshId = Object->GpuId;
 
-	m_VertexBuffer->SetBufferData(Object->Vertices);
-	m_ElementBuffer->SetBufferData(Object->Indices);
+	if (gpuMeshId == UINT32_MAX)
+	{
+		VAO& vao = m_VertexArray.value();
+		VBO& vbo = m_VertexBuffer.value();
+		EBO& ebo = m_ElementBuffer.value();
+
+		vao.Bind();
+
+		vbo.SetBufferData(Object->Vertices);
+		ebo.SetBufferData(Object->Indices);
+	}
+	else
+	{
+		MeshProvider::GpuMesh& gpuMesh = MeshProvider::Get()->GetGpuMesh(gpuMeshId);
+		gpuMesh.VertexArray->Bind();
+	}
 
 	glm::mat4 scale = glm::scale(glm::mat4(1.f), glm::vec3(Size));
 
@@ -392,6 +419,8 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData, ShaderProgram* Sh
 
 	Shader->SetUniform(DiffuseStr, 4);
 	Shader->SetUniform(SpecularStr, 5);
+
+	RenderData.Material->ApplyUniformOverrides();
 }
 
 void Renderer::SwapBuffers()

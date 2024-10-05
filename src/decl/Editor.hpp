@@ -25,6 +25,7 @@ private:
 	char* m_MtlCreateNameBuf{};
 	char* m_MtlDiffuseBuf{};
 	char* m_MtlSpecBuf{};
+	char* m_MtlShpBuf{};
 
 	int m_MtlCurItem = -1;
 	int m_MtlPrevItem = -1;

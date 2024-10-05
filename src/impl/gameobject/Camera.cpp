@@ -6,7 +6,7 @@
 #include"datatype/Vector3.hpp"
 #include"UserInput.hpp"
 
-RegisterDerivedObject<Object_Camera> Object_Camera::RegisterClassAs("Camera");
+static RegisterDerivedObject<Object_Camera> RegisterClassAs("Camera");
 static bool s_DidInitReflection = false;
 
 void Object_Camera::s_DeclareReflections()
@@ -17,8 +17,8 @@ void Object_Camera::s_DeclareReflections()
 
 	REFLECTION_INHERITAPI(GameObject);
 
-	REFLECTION_DECLAREPROP_SIMPLE(Object_Camera, GenericMovement, Bool);
-	REFLECTION_DECLAREPROP_SIMPLE(Object_Camera, FieldOfView, Double);
+	REFLECTION_DECLAREPROP_SIMPLE(Object_Camera, UseSimpleController, Bool);
+	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_Camera, FieldOfView, Double, float);
 
 	REFLECTION_DECLAREPROP(
 		"Transform",
@@ -52,22 +52,28 @@ void Object_Camera::Update(double)
 	if (!this->IsSceneCamera)
 		return;
 
-	if (!this->GenericMovement)
+	if (!this->UseSimpleController)
 		return;
 
 	// Camera movement code
 }
 
-glm::mat4 Object_Camera::GetMatrixForAspectRatio(double AspectRatio) const
+glm::mat4 Object_Camera::GetMatrixForAspectRatio(float AspectRatio) const
 {
-	glm::mat4 ViewMatrix = glm::mat4(1.0f);
-	glm::mat4 ProjectionMatrix = glm::mat4(1.0f);
+	glm::vec3 position = glm::vec3(this->Transform[3]);
+	glm::vec3 forwardVec = glm::vec3(this->Transform[2]);
 
-	glm::vec3 Position = glm::vec3(this->Transform[3]);
-	glm::vec3 ForwardVec = glm::vec3(this->Transform[2]);
+	glm::mat4 projectionMatrix = glm::perspective(
+		glm::radians(this->FieldOfView),
+		AspectRatio,
+		this->NearPlane,
+		this->FarPlane
+	);
+	glm::mat4 viewMatrix = glm::lookAt(
+		position,
+		position + forwardVec,
+		(glm::vec3)Vector3::yAxis
+	);
 
-	ViewMatrix = glm::lookAt(Position, Position + ForwardVec, (glm::vec3)Vector3::yAxis);
-	ProjectionMatrix = glm::perspective(glm::radians(this->FieldOfView), AspectRatio, this->NearPlane, this->FarPlane);
-
-	return ProjectionMatrix * ViewMatrix;
+	return projectionMatrix * viewMatrix;
 }

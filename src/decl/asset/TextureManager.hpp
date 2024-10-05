@@ -17,7 +17,7 @@ struct Texture
 
 	uint32_t ResourceId = UINT32_MAX;
 	uint32_t GpuId = UINT32_MAX;
-	int Width, Height = -1;
+	int Width = -1, Height = -1;
 	int NumColorChannels = -1;
 
 	TextureLoadStatus Status = TextureLoadStatus::NotAttempted;
@@ -30,6 +30,7 @@ class TextureManager
 {
 public:
 	static TextureManager* Get();
+	static void Shutdown();
 
 	/*
 	Goes through all images which are done loading asynchronously and instantiates their texture objects with the ID.
@@ -51,9 +52,11 @@ public:
 
 private:
 	TextureManager();
+	~TextureManager();
 
-	std::vector<std::promise<Texture*>*> m_TexPromises;
-	std::vector<std::shared_future<Texture*>> m_TexFutures;
+	std::vector<Texture> m_Textures;
 	std::unordered_map<std::string, uint32_t> m_StringToTextureId;
-	std::unordered_map<uint32_t, Texture> m_Textures;
+
+	std::vector<std::promise<Texture>*> m_TexPromises;
+	std::vector<std::shared_future<Texture>> m_TexFutures;
 };

@@ -16,4 +16,6 @@ struct Mesh
 {
 	std::vector<Vertex> Vertices;
 	std::vector<uint32_t> Indices;
+
+	uint32_t GpuId = UINT32_MAX;
 };

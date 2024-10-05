@@ -16,7 +16,7 @@ static const std::string TexLoadErr =
 typedef std::function<uint8_t* (const char*, int*, int*, int*)> ImageLoader_t;
 typedef std::function<Texture*(ImageLoader_t, Texture*, std::string, uint32_t)> AsyncTexLoader_t;
 
-static void registerTexture(Texture& texture)
+static void uploadTextureToGpu(Texture& texture)
 {
 	if (texture.Status == TextureLoadStatus::Failed)
 	{
@@ -119,8 +119,15 @@ static void registerTexture(Texture& texture)
 
 	// Can't free this now bcuz Engine.cpp needs it for skybox images
 	// 23/08/2024
-	//stbi_image_free(texture->TMP_ImageByteData);
-	//texture->TMP_ImageByteData = nullptr;
+	// 03/10/2024:
+	// little hack to `free` textures `Engine.cpp` doesn't
+	// manage (most of them)
+	if (texture.ImagePath.find("Sky") == std::string::npos)
+	{
+		free(texture.TMP_ImageByteData);
+		texture.TMP_ImageByteData = nullptr;
+	}
+
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -130,10 +137,46 @@ TextureManager::TextureManager()
 	this->LoadTextureFromPath(MissingTexPath, false);
 }
 
+TextureManager::~TextureManager()
+{
+	std::vector<uint32_t> textureGpuIds;
+	textureGpuIds.reserve(m_Textures.size());
+
+	for (const Texture& texture : m_Textures)
+		textureGpuIds.push_back(texture.GpuId);
+	
+	glDeleteTextures(static_cast<int32_t>(m_Textures.size()), textureGpuIds.data());
+
+	for (size_t promIndex = 0; promIndex < m_TexPromises.size(); promIndex++)
+	{
+		std::promise<Texture>* prom = m_TexPromises[promIndex];
+		std::shared_future<Texture>& future = m_TexFutures[promIndex];
+
+		// we don't want our async threads accessing deleted promises
+		future.wait();
+
+		delete prom;
+	}
+
+	m_Textures.clear();
+	m_StringToTextureId.clear();
+	m_TexFutures.clear();
+	m_TexPromises.clear();
+}
+
+static TextureManager* instance = nullptr;
+
 TextureManager* TextureManager::Get()
 {
-	static TextureManager instance;
-	return &instance;
+	if (!instance)
+		instance = new TextureManager();
+	return instance;
+}
+
+void TextureManager::Shutdown()
+{
+	delete instance;
+	instance = nullptr;
 }
 
 static uint8_t* loadImageData(const char* ImagePath, int* ImageWidth, int* ImageHeight, int* ImageColorChannels)
@@ -145,11 +188,10 @@ static uint8_t* loadImageData(const char* ImagePath, int* ImageWidth, int* Image
 	return imageData;
 }
 
-static Texture* asyncTextureLoader(
+static void asyncTextureLoader(
 	ImageLoader_t ImageLoader,
 	Texture* AsyncTexture,
-	std::string ActualPath,
-	uint32_t ResourceId
+	std::string ActualPath
 )
 {
 	uint8_t* data = ImageLoader(
@@ -162,10 +204,6 @@ static Texture* asyncTextureLoader(
 	AsyncTexture->Status = data ? TextureLoadStatus::Succeeded : TextureLoadStatus::Failed;
 
 	AsyncTexture->TMP_ImageByteData = data;
-	AsyncTexture->ResourceId = ResourceId;
-	AsyncTexture->ImagePath = ActualPath;
-
-	return AsyncTexture;
 }
 
 uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool ShouldLoadAsync)
@@ -177,17 +215,16 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 	
 	if (it == m_StringToTextureId.end())
 	{
-		static uint32_t CurrentResourceId = 1;
-
-		uint32_t newResourceId = CurrentResourceId;
-		CurrentResourceId += 1;
+		uint32_t newResourceId = static_cast<uint32_t>(m_Textures.size());
 
 		m_StringToTextureId.insert(std::pair(Path, newResourceId));
 
 		uint32_t newGpuId;
 		glGenTextures(1, &newGpuId);
 
-		Texture newTexture{ Path, newResourceId, newGpuId };
+		m_Textures.emplace_back(Path, newResourceId, newGpuId);
+
+		Texture& newTexture = m_Textures.at(newResourceId);
 
 		glBindTexture(GL_TEXTURE_2D, newTexture.GpuId);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -224,16 +261,21 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 
 			ThreadManager::Get()->DispatchJob(*LoadTextureTask);*/
 
-			Texture* asyncTexture = new Texture;
-
-			std::promise<Texture*>* promise = new std::promise<Texture*>();
+			std::promise<Texture>* promise = new std::promise<Texture>;
 
 			std::thread(
-				[promise, asyncTexture, ActualPath, newResourceId](auto asyncFunc, auto imageLoader)
+				[promise, ActualPath, newResourceId](auto asyncFunc, auto imageLoader)
 				{
-					promise->set_value_at_thread_exit(asyncFunc(imageLoader, asyncTexture, ActualPath, newResourceId));
-				}
-			, asyncTextureLoader, loadImageData).detach();
+					Texture asyncTexture{};
+					asyncTexture.ResourceId = newResourceId;
+
+					asyncFunc(imageLoader, &asyncTexture, ActualPath);
+
+					promise->set_value_at_thread_exit(asyncTexture);
+				},
+				asyncTextureLoader,
+				loadImageData
+			).detach();
 
 			newTexture.Status = TextureLoadStatus::InProgress;
 
@@ -252,10 +294,8 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 			newTexture.TMP_ImageByteData = data;
 			newTexture.Status = data ? TextureLoadStatus::Succeeded : TextureLoadStatus::Failed;
 
-			registerTexture(newTexture);
+			uploadTextureToGpu(newTexture);
 		}
-
-		m_Textures.insert(std::pair(newResourceId, newTexture));
 
 		return newResourceId;
 	}
@@ -265,22 +305,27 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 
 Texture* TextureManager::GetTextureResource(uint32_t ResourceId)
 {
-	auto textureIt = m_Textures.find(ResourceId);
-	if (textureIt != m_Textures.end())
-		return &textureIt->second;
-	else
-		return nullptr;
+	return &m_Textures.at(ResourceId);
 }
 
 void TextureManager::FinalizeAsyncLoadedTextures()
 {
-	if (m_TexPromises.size() == 0)
-		return;
+	size_t numTexPromises = m_TexPromises.size();
+	size_t numTexFutures = m_TexFutures.size();
 
-	for (size_t promiseIndex = 0; promiseIndex < m_TexPromises.size(); promiseIndex++)
+	if (numTexPromises != numTexFutures)
 	{
-		std::promise<Texture*>* promise = m_TexPromises[promiseIndex];
-		auto& f = m_TexFutures[promiseIndex];
+		Debug::Log(std::vformat(
+			"FinalizeAsyncLoadedTextures had {} promises but {} futures, cannot proceed safely",
+			std::make_format_args(numTexPromises, numTexFutures)
+		));
+		return;
+	}
+
+	for (size_t promiseIndex = 0; promiseIndex < numTexPromises; promiseIndex++)
+	{
+		std::promise<Texture>* promise = m_TexPromises[promiseIndex];
+		std::shared_future<Texture>& f = m_TexFutures[promiseIndex];
 
 		// https://stackoverflow.com/a/10917945/16875161
 		// TODO 10/09/2024
@@ -288,56 +333,46 @@ void TextureManager::FinalizeAsyncLoadedTextures()
 		if (!f.valid() || (f.wait_for(std::chrono::seconds(0)) != std::future_status::ready))
 			continue;
 
-		Texture* loadedImage = f.get();
+		const Texture& loadedImage = f.get();
 
-		auto imageIt = m_Textures.find(loadedImage->ResourceId);
-
-		if (imageIt == m_Textures.end())
-		{
-			Debug::Log(std::vformat(
-				"Got async loaded texture with invalid Resource ID {}",
-				std::make_format_args(loadedImage->ResourceId)
-			));
-			continue;
-		}
-		
-		Texture& image = imageIt->second;
+		Texture& image = m_Textures.at(loadedImage.ResourceId);
 
 		if (image.Status != TextureLoadStatus::InProgress)
 			continue;
 
-		image.Width = loadedImage->Width;
-		image.Height = loadedImage->Height;
-		image.NumColorChannels = loadedImage->NumColorChannels;
-		image.Status = loadedImage->Status;
+		image.Status = loadedImage.Status;
 
-		size_t bufSize = (size_t)image.Width * (size_t)image.Height * (size_t)image.NumColorChannels;
-
-		image.TMP_ImageByteData = (uint8_t*)malloc(bufSize);
-
-		if (!image.TMP_ImageByteData)
+		if (image.Status == TextureLoadStatus::Succeeded)
 		{
-			Debug::Log(std::vformat(
-				"`malloc` failed in ::FinalizeAsyncLoadedTextures (Requested amount was {} bytes)",
-				std::make_format_args(bufSize)
-			));
-			Debug::Save();
+			image.Width = loadedImage.Width;
+			image.Height = loadedImage.Height;
+			image.NumColorChannels = loadedImage.NumColorChannels;
 
-			throw("Could not allocate a buffer to copy image from async thread");
+			size_t bufSize = (size_t)image.Width * (size_t)image.Height * (size_t)image.NumColorChannels;
+
+			image.TMP_ImageByteData = (uint8_t*)malloc(bufSize);
+
+			if (!image.TMP_ImageByteData)
+				throw(std::vformat(
+					"`malloc` failed in ::FinalizeAsyncLoadedTextures (Requested amount was {} bytes)",
+					std::make_format_args(bufSize)
+				));
+
+			// if image fails to load this will be NULL
+			if (loadedImage.TMP_ImageByteData)
+				memcpy(image.TMP_ImageByteData, loadedImage.TMP_ImageByteData, bufSize);
+
+			stbi_image_free(loadedImage.TMP_ImageByteData);
 		}
-		
-		memcpy(image.TMP_ImageByteData, loadedImage->TMP_ImageByteData, bufSize);
-		
-		//stbi_image_free(loadedImage->TMP_ImageByteData);
 
-		//delete loadedImage;
-
-		registerTexture(image);
+		uploadTextureToGpu(image);
 		
 		m_TexPromises.erase(m_TexPromises.begin() + promiseIndex);
 		m_TexFutures.erase(m_TexFutures.begin() + promiseIndex);
 
 		delete promise;
+
+		return;
 	}
 }
 

@@ -166,6 +166,7 @@ static std::vector<GameObject*> LoadMapVersion1(
 	nlohmann::json LightsNode = JsonData["lights"];
 
 	std::vector<GameObject*> Objects;
+	Objects.reserve(PartsNode.size() + ModelsNode.size() + LightsNode.size());
 
 	for (uint32_t Index = 0; Index < ModelsNode.size(); Index++)
 	{
@@ -264,7 +265,7 @@ static std::vector<GameObject*> LoadMapVersion1(
 
 			Object_Base3D* Object3D = dynamic_cast<Object_Base3D*>(NewObject);
 
-			NewObject->Name = Object.value("Name", NewObject->Name);
+			NewObject->Name = Object.value("name", NewObject->Name);
 
 			Vector3 Position = GetVector3FromJson(Object["position"]);
 			Vector3 Orientation;
@@ -395,6 +396,9 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 	std::unordered_map<int64_t, GameObject*> objectsMap;
 	std::unordered_map<int64_t, int64_t> realIdToSceneId;
 	std::unordered_map<GameObject*, std::unordered_map<std::string, uint32_t>> objectProps;
+
+	objectsMap.reserve(GameObjectsNode.size());
+	realIdToSceneId.reserve(GameObjectsNode.size());
 
 	for (uint32_t itemIndex = 0; itemIndex < GameObjectsNode.size(); itemIndex++)
 	{
@@ -565,6 +569,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 	}
 
 	std::vector<GameObject*> Objects;
+	Objects.reserve(objectsMap.size());
 
 	for (auto& it : objectsMap)
 	{

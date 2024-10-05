@@ -143,7 +143,7 @@ public:
 
 	std::string GetFullName();
 
-	void Destroy();
+	virtual void Destroy();
 
 	void SetParent(GameObject*);
 	void AddChild(GameObject*);

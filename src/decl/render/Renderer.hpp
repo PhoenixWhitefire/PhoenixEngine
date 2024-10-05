@@ -1,5 +1,7 @@
 #pragma once
 
+#include<set>
+#include<optional>
 #include<glm/matrix.hpp>
 
 #include"render/ShaderProgram.hpp"
@@ -10,25 +12,24 @@
 #include"datatype/Vector3.hpp"
 #include"gameobject/Base3D.hpp"
 
-#define SHADER_MAX_LIGHTS 6
-
 /*
 	09/09/2024
 	Why can't SDL have something like OpenGL's Debug Log?
 	They have their own logging stuff, but it doesn't seem to do anything with errors
 */
-#define PHX_SDL_CALL(func, ...) \
-{ \
-	int status = func(__VA_ARGS__); \
-	if (status < 0) \
-	{ \
-		const char* errMessage = SDL_GetError(); \
-		throw(std::vformat( \
-			std::string("Error in ") + std::string(#func) + std::string(":\nCode: {}\nMessage: {}"), \
-			std::make_format_args(status, errMessage) \
-		)); \
-	} \
-} \
+#define PHX_SDL_CALL(func, ...)                                  \
+{                                                                \
+	int status = func(__VA_ARGS__);                              \
+	std::string funcName = #func;                                \
+	if (status < 0)                                              \
+	{                                                            \
+		const char* errMessage = SDL_GetError();                 \
+		throw(std::vformat(                                      \
+			"Error in {}:\nCode: {}\nMessage: {}",               \
+			std::make_format_args(funcName, status, errMessage)  \
+		));                                                      \
+	}                                                            \
+}                                                                \
 
 struct RenderItem
 {
@@ -64,13 +65,14 @@ struct Scene
 	std::vector<RenderItem> RenderList;
 	std::vector<LightItem> LightingList;
 
-	std::vector<ShaderProgram*> UniqueShaders;
+	std::set<ShaderProgram*> UsedShaders;
 };
 
 class Renderer
 {
 public:
 	Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window);
+	~Renderer();
 
 	// Changes the rendering resolution
 	void ChangeResolution(uint32_t newWidth, uint32_t newHeight);
@@ -95,9 +97,12 @@ public:
 private:
 	void m_SetMaterialData(const RenderItem& Mesh, ShaderProgram* Shader);
 
-	VAO* m_VertexArray = nullptr;
-	VBO* m_VertexBuffer = nullptr;
-	EBO* m_ElementBuffer = nullptr;
+	// `std::optional` so we can delay initialization
+	// until OpenGL is actually loaded
+	// 04/10/2024
+	std::optional<VAO> m_VertexArray;
+	std::optional<VBO> m_VertexBuffer;
+	std::optional<EBO> m_ElementBuffer;
 
 	SDL_Window* m_Window = nullptr;
 	

@@ -1,0 +1,9 @@
+{
+  "albedo": "models/stylized_sushi/textures/Sushi_baseColor.png",
+  "alphaCutoff": 0,
+  "alphaMode": 0,
+  "roughnessFactor": 1.0,
+  "specMultiply": 1.0,
+  "specular": "models/stylized_sushi/textures/Sushi_metallicRoughness.png",
+  "translucency": false
+}

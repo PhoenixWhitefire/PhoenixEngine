@@ -29,7 +29,6 @@ void main()
 {
 	Frag_CurrentPosition = vec3(Matrix * Scale * vec4(VertexPosition, 1.f));
 
-
 	Frag_VertexNormal = VertexNormal;
 	Frag_VertexColor = VertexColor;
 	Frag_CamMatrix = CameraMatrix;

@@ -71,7 +71,7 @@ static void pushMatrix(lua_State* L, const glm::mat4& Matrix)
 static void pushGameObject(lua_State* L, GameObject* obj)
 {
 	uint32_t* ptrToObj = (uint32_t*)lua_newuserdata(L, sizeof(uint32_t));
-	*ptrToObj = obj->ObjectId;
+	*ptrToObj = obj ? obj->ObjectId : 0;
 
 	luaL_getmetatable(L, "GameObject");
 	lua_setmetatable(L, -2);
@@ -682,6 +682,11 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 		"world_raycast",
 		[](lua_State* L)
 		{
+			GameObject* workspace = GameObject::s_DataModel->GetChildOfClass("Workspace");
+
+			if (!workspace)
+				luaL_error(L, "A Workspace was not found within the DataModel");
+
 			glm::vec3 origin = Vector3(LuaValueToGeneric(L, -3));
 			glm::vec3 vector = Vector3(LuaValueToGeneric(L, -2));
 			std::vector<Reflection::GenericValue> providedIgnoreList = LuaValueToGeneric(L, -1).AsArray();
@@ -694,7 +699,7 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 			GameObject* hitObject = nullptr;
 			double closestHit = INFINITY;
 
-			for (GameObject* p : GameObject::s_DataModel->GetChild("Workspace")->GetDescendants())
+			for (GameObject* p : workspace->GetDescendants())
 			{
 				if (std::find(ignoreList.begin(), ignoreList.end(), p) != ignoreList.end())
 					continue;

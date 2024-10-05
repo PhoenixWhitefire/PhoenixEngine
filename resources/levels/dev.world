@@ -11,7 +11,7 @@
     {
       "name": "grass",
       "path": "models/grass",
-      "position":[100,0,15],
+      "position":[15,0,100],
       "orient": [0,0,0],
       "size": [1,1,1],
       "facecull": "none"
@@ -19,7 +19,7 @@
     {
       "name": "ground",
       "path": "models/ground",
-      "position":[100,0,15],
+      "position":[15,0,100],
       "orient": [0,0,0],
       "size": [1,1,1],
       "facecull": "none"
@@ -27,7 +27,7 @@
     {
       "name": "windows10",
       "path": "models/windows",
-      "position":[100,5,15],
+      "position":[15,5,100],
       "orient": [0,0,0],
       "size": [1,1,1],
       "facecull": "none"

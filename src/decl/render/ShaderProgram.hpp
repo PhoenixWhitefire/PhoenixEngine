@@ -43,7 +43,6 @@ private:
 	uint32_t m_FragmentShader{};
 	uint32_t m_GeometryShader{};
 
-	std::unordered_map<std::string, bool> m_UsedUniforms;
 	std::unordered_map<std::string, Reflection::GenericValue> m_PendingUniforms;
 
 	static inline std::unordered_map<std::string, ShaderProgram*> s_Programs;

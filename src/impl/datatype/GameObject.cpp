@@ -246,6 +246,7 @@ GameObject* GameObject::GetParent()
 std::vector<GameObject*> GameObject::GetChildren()
 {
 	std::vector<GameObject*> children;
+	children.reserve(m_Children.size());
 
 	for (auto& childEntry : m_Children)
 	{
@@ -265,6 +266,7 @@ std::vector<GameObject*> GameObject::GetChildren()
 std::vector<GameObject*> GameObject::GetDescendants()
 {
 	std::vector<GameObject*> descendants;
+	descendants.reserve(m_Children.size());
 
 	for (auto& childEntry : m_Children)
 	{

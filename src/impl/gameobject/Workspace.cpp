@@ -8,7 +8,7 @@ static Object_Camera* s_FallbackCamera = nullptr;
 static Object_Camera* createCamera()
 {
 	Object_Camera* camera = dynamic_cast<Object_Camera*>(GameObject::Create("Camera"));
-	camera->GenericMovement = true;
+	camera->UseSimpleController = true;
 
 	return camera;
 }
@@ -63,10 +63,7 @@ void Object_Workspace::Initialize()
 Object_Camera* Object_Workspace::GetSceneCamera()
 {
 	if (!s_FallbackCamera)
-	{
 		s_FallbackCamera = createCamera();
-		s_FallbackCamera->GenericMovement = false;
-	}
 
 	return m_SceneCamera ? m_SceneCamera : s_FallbackCamera;
 }

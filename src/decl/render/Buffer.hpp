@@ -4,24 +4,28 @@
 
 #include"datatype/Mesh.hpp"
 
-class VBO
-{
-public:
-	VBO();
+enum class BufferUsageHint { Static, Dynamic };
 
-	void SetBufferData(const std::vector<Vertex>& Vertices) const;
+struct VBO
+{
+	VBO();
+	~VBO();
+
+	void SetBufferData(
+		const std::vector<Vertex>& Vertices,
+		BufferUsageHint UsageHint = BufferUsageHint::Dynamic
+	) const;
 
 	void Bind() const;
 	void Unbind();
-	void Delete() const;
 
 	uint32_t ID = 0;
 };
 
-class VAO
+struct VAO
 {
-public:
 	VAO();
+	~VAO();
 
 	void LinkAttrib(
 		VBO& VertexBuffer,
@@ -34,33 +38,33 @@ public:
 
 	void Bind() const;
 	void Unbind();
-	void Delete() const;
 
 	uint32_t ID = 0;
 };
 
-class EBO
+struct EBO
 {
-public:
 	EBO();
+	~EBO();
 
-	void SetBufferData(const std::vector<uint32_t>& Indices) const;
+	void SetBufferData(
+		const std::vector<uint32_t>& Indices,
+		BufferUsageHint UsageHint = BufferUsageHint::Dynamic
+	) const;
 
 	void Bind() const;
 	void Unbind();
-	void Delete() const;
 
 	uint32_t ID = 0;
 };
 
-class FBO
+struct FBO
 {
-public:
 	FBO(int Width, int Height, int MSSamples = 0, bool AttachRenderBuffer = true);
+	~FBO();
 
 	void Bind() const;
 	void Unbind();
-	void Delete() const;
 
 	void BindTexture() const;
 	void UnbindTexture();

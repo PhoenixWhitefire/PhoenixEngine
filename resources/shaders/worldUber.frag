@@ -69,6 +69,9 @@ uniform float FarZ = 1000.0f;
 uniform bool Fog = false;
 uniform vec3 FogColor = vec3(0.85f, 0.85f, 0.90f);
 
+uniform bool UseProjectedMaterial = false;
+uniform float MaterialProjectionFactor = 0.05f;
+
 in vec3 Frag_VertexColor;
 in vec2 Frag_UV;
 
@@ -179,6 +182,17 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 	return FinalColor;
 }
 
+// from: https://gist.github.com/patriciogonzalezvivo/20263fe85d52705e4530
+vec3 getTriPlanarBlending(vec3 _wNorm)
+{
+	// in wNorm is the world-space normal of the fragment
+	vec3 blending = abs( _wNorm );
+	blending = normalize(max(blending, 0.00001)); // Force weights to sum to 1.0
+	float b = (blending.x + blending.y + blending.z);
+	blending /= vec3(b, b, b);
+	return blending;
+}
+
 void main()
 {
 	/*
@@ -199,8 +213,29 @@ void main()
 
 	float mipLevel = textureQueryLod(ColorMap, UV).x;
 
-	vec4 Albedo = textureLod(ColorMap, UV, mipLevel);
+	vec4 Albedo = vec4(0.f, 0.f, 0.f, 1.f); //textureLod(ColorMap, UV, mipLevel);
 	float SpecMapValue = textureLod(MetallicRoughnessMap, UV, mipLevel).r;
+
+	if (!UseProjectedMaterial)
+		Albedo = textureLod(ColorMap, UV, mipLevel);
+	else
+	{
+		vec3 blending = getTriPlanarBlending(Normal);
+
+		vec4 localPosition = vec4(Frag_CurrentPosition, 1.f) * transpose(inverse(Frag_Transform));
+
+		vec4 xAxis = textureLod(ColorMap, localPosition.yz * MaterialProjectionFactor, mipLevel);
+		vec4 yAxis = textureLod(ColorMap, localPosition.xz * MaterialProjectionFactor, mipLevel);
+		vec4 zAxis = textureLod(ColorMap, localPosition.xy * MaterialProjectionFactor, mipLevel);
+
+		Albedo = xAxis * blending.x + yAxis * blending.y + zAxis * blending.z;
+
+		float specXAxis = textureLod(MetallicRoughnessMap, localPosition.yz * MaterialProjectionFactor, mipLevel).r;
+		float specYAxis = textureLod(MetallicRoughnessMap, localPosition.yz * MaterialProjectionFactor, mipLevel).r;
+		float specZAxis = textureLod(MetallicRoughnessMap, localPosition.yz * MaterialProjectionFactor, mipLevel).r;
+
+		SpecMapValue = specXAxis * blending.x + specYAxis * blending.y + specZAxis * blending.z;
+	}
 
 	FragColor = Albedo;
 

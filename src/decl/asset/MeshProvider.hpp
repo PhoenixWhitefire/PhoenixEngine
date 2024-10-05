@@ -5,11 +5,20 @@
 
 #include<future>
 #include"datatype/Mesh.hpp"
+#include"render/Buffer.hpp"
 
 class MeshProvider
 {
 public:
+	struct GpuMesh
+	{
+		VAO* VertexArray;
+		VBO* VertexBuffer;
+		EBO* ElementBuffer;
+	};
+
 	static MeshProvider* Get();
+	static void Shutdown();
 
 	void FinalizeAsyncLoadedMeshes();
 
@@ -23,14 +32,22 @@ public:
 	uint32_t LoadFromPath(const std::string& Path, bool ShouldLoadAsync = true);
 
 	Mesh* GetMeshResource(uint32_t);
+	GpuMesh& GetGpuMesh(uint32_t);
 
 	const std::string& GetLastErrorString();
 
 private:
 	MeshProvider();
+	~MeshProvider();
 
-	std::vector<std::promise<Mesh*>*> m_MeshPromises;
-	std::vector<std::shared_future<Mesh*>> m_MeshFutures;
+	void m_CreateAndUploadGpuMesh(const Mesh&);
+
+	std::vector<Mesh> m_Meshes;
 	std::unordered_map<std::string, uint32_t> m_StringToMeshId;
-	std::unordered_map<uint32_t, Mesh> m_Meshes;
+
+	std::vector<std::promise<Mesh>*> m_MeshPromises;
+	std::vector<std::shared_future<Mesh>> m_MeshFutures;
+	std::vector<uint32_t> m_MeshPromiseResourceIds;
+
+	std::vector<GpuMesh> m_GpuMeshes;
 };

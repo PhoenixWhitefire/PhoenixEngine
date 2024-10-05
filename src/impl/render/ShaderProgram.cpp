@@ -296,8 +296,46 @@ void ShaderProgram::Reload()
 	if (hasGeometryShader)
 		glDeleteShader(geometryShader);
 
-	for (std::string usedUniform : shpJson["UsedUniforms"])
-		m_UsedUniforms.insert(std::pair(usedUniform, true));
+	for (auto memberIt = shpJson["Uniforms"].begin(); memberIt != shpJson["Uniforms"].end(); ++memberIt)
+	{
+		const char* uniformName = memberIt.key().c_str();
+		const nlohmann::json& value = memberIt.value();
+
+		switch (value.type())
+		{
+		case (nlohmann::detail::value_t::boolean):
+		{
+			this->SetUniform(uniformName, (bool)value);
+			break;
+		}
+		case (nlohmann::detail::value_t::number_float):
+		{
+			this->SetUniform(uniformName, (float)value);
+			break;
+		}
+		case (nlohmann::detail::value_t::number_integer):
+		{
+			this->SetUniform(uniformName, (int32_t)value);
+			break;
+		}
+		case (nlohmann::detail::value_t::number_unsigned):
+		{
+			this->SetUniform(uniformName, (uint32_t)value);
+			break;
+		}
+
+		default:
+		{
+			const char* typeName = value.type_name();
+
+			throw(std::vformat(
+				"Shader Program '{}' tried to specify Uniform '{}', but it had unsupported type '{}'",
+				std::make_format_args(this->Name, uniformName, typeName)
+			));
+			break;
+		}
+		}
+	}
 }
 
 int32_t ShaderProgram::m_GetUniformLocation(const char* Uniform)
