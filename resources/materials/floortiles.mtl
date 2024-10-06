@@ -6,6 +6,6 @@
   "specular": "textures/floortilesSpecular.jpg",
   "translucency": false,
   "uniforms": {
-    "MaterialProjectionFactor": 0.020
+    "MaterialProjectionFactor": 0.02500000037252903
   }
 }

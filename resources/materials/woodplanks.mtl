@@ -1,10 +1,10 @@
 {
   "albedo": "textures/planks.png",
-  "specExponent": 0.5,
-  "specMultiply": 0.0,
+  "shaderprogram": "worldUberMaterial",
+  "specExponent": 8.0,
+  "specMultiply": 0.5,
   "specular": "textures/planksSpec.png",
   "translucency": false,
-  "shaderprogram": "worldUberMaterial",
   "uniforms": {
     "MaterialProjectionFactor": 0.05
   }

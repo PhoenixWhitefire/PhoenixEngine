@@ -10,9 +10,10 @@
 #include"Debug.hpp"
 
 constexpr uint32_t OBJECT_NEW_CLASSNAME_BUFSIZE = 16;
-constexpr uint32_t MATERIAL_NEW_NAME_BUFSIZE = 16;
+constexpr uint32_t MATERIAL_NEW_NAME_BUFSIZE = 32;
 constexpr uint32_t MATERIAL_TEXTUREPATH_BUFSIZE = 64;
 constexpr const char* MATERIAL_NEW_NAME_DEFAULT = "newmaterial";
+constexpr const char* MATERIAL_NEW_UNIFORM_DEFAULT = "UniformName";
 
 static const char* ParentString = "[Parent]";
 
@@ -20,19 +21,20 @@ static std::string ErrorTexture = "textures/MISSING2_MaximumADHD_status_16657763
 
 static nlohmann::json DefaultNewMaterial{};
 
-static char* bufferInitialize(size_t capacity, const std::string& initializeValue = "")
+static void copyStringToBuffer(char* buf, size_t capacity, const std::string& string = "")
+{
+	for (size_t i = 0; i < capacity; i++)
+		buf[i] = i < string.size() ? string[i] : 0;
+}
+
+static char* bufferInitialize(size_t capacity, const std::string& value = "")
 {
 	char* buf = (char*)malloc(capacity);
 
 	if (!buf)
 		throw("There are bigger problems at hand.");
 
-	if (initializeValue != "")
-		for (size_t i = 0; i < capacity; i++)
-			buf[i] = i < initializeValue.size() ? initializeValue.at(i) : 0;
-	else
-		for (size_t i = 0; i < capacity; i++)
-			buf[i] = 0;
+	copyStringToBuffer(buf, capacity, value);
 
 	return buf;
 }
@@ -44,6 +46,8 @@ Editor::Editor()
 	m_MtlDiffuseBuf = bufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
 	m_MtlSpecBuf = bufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
 	m_MtlShpBuf = bufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
+	m_MtlNewUniformNameBuf = bufferInitialize(MATERIAL_NEW_NAME_BUFSIZE, MATERIAL_NEW_UNIFORM_DEFAULT);
+	m_MtlUniformNameEditBuf = bufferInitialize(MATERIAL_NEW_NAME_BUFSIZE);
 
 	DefaultNewMaterial["albedo"] = "textures/plastic.png";
 }
@@ -94,8 +98,6 @@ void Editor::Init()
 	//AddChildrenToObjects(Root);
 
 	//GameWorkspace->OnChildAdded.Connect(ResetAndAddObjects);
-
-	m_CurrentUIHierarchyRoot = GameObject::s_DataModel;
 }
 
 void Editor::Update(double DeltaTime, glm::mat4 CameraTransform)
@@ -113,58 +115,18 @@ void Editor::Update(double DeltaTime, glm::mat4 CameraTransform)
 	//	this->MyCube3D->Matrix = glm::translate(glm::mat4(1.0f), glm::vec3(Result.HitPosition));
 }
 
-static std::vector<GameObject*> getVisibleChildren(GameObject** CurrentUIHierarchyRoot)
-{
-	std::vector<GameObject*> children;
-
-	if (*CurrentUIHierarchyRoot)
-		if (GameObject::s_WorldArray.find((*CurrentUIHierarchyRoot)->ObjectId) == GameObject::s_WorldArray.end())
-			*CurrentUIHierarchyRoot = nullptr;
-
-	if (*CurrentUIHierarchyRoot)
-		children = (*CurrentUIHierarchyRoot)->GetChildren();
-	else
-	{
-		children.reserve(GameObject::s_WorldArray.size());
-
-		for (auto& it : GameObject::s_WorldArray)
-		{
-			if (!it.second->GetParent())
-				children.push_back(it.second);
-		}
-	}
-
-	return children;
-}
-
-static bool objectsIterator(void* Root, int Index, const char** OutText)
-{
-	//GameObject* Parent = (GameObject*)Data;
-
-	size_t negativeOffset = 1;
-
-	if (Index == 0)
-	{
-		if (Root)
-		{
-			*OutText = ParentString;
-			return true;
-		}
-		else
-			negativeOffset = 0;
-	}
-
-	GameObject* selected = getVisibleChildren((GameObject**)Root).at((size_t)Index - negativeOffset);
-	*OutText = selected->Name.c_str();
-
-	return true;
-}
-
 static bool mtlIterator(void*, int index, const char** outText)
 {
 	RenderMaterial* selected = RenderMaterial::GetLoadedMaterials()[index];
 
 	*outText = selected->Name.c_str();
+
+	return true;
+}
+
+static bool mtlUniformIterator(void* array, int index, const char** outText)
+{
+	*outText = ((std::vector<std::string>*)array)->at(index).c_str();
 
 	return true;
 }
@@ -287,6 +249,93 @@ void Editor::m_RenderMaterialEditor()
 		).c_str());
 	}
 
+	ImGui::Text("Uniforms");
+
+	static int TypeId = 0;
+
+	ImGui::InputText("Uniform Name", m_MtlNewUniformNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
+	ImGui::InputInt("Uniform Type (0=Bool, 1=Int, 2=Float)", &TypeId);
+
+	TypeId = std::clamp(TypeId, 0, 2);
+
+	if (ImGui::Button("Add"))
+	{
+		Reflection::GenericValue initialValue = TypeId == 0 ? true : (TypeId == 1 ? 0 : 0.f);
+		curItem->Uniforms[m_MtlNewUniformNameBuf] = initialValue;
+	}
+
+	static int SelectedUniformIdx = -1;
+
+	std::vector<std::string> uniformsArray;
+	uniformsArray.reserve(curItem->Uniforms.size());
+
+	for (auto& it : curItem->Uniforms)
+		uniformsArray.push_back(it.first);
+
+	ImGui::ListBox(
+		"hi",
+		&SelectedUniformIdx,
+		&mtlUniformIterator,
+		&uniformsArray,
+		static_cast<int>(curItem->Uniforms.size())
+	);
+
+	if (SelectedUniformIdx != -1)
+	{
+		const std::string& name = uniformsArray.at(SelectedUniformIdx);
+		Reflection::GenericValue& value = curItem->Uniforms.at(name);
+
+		copyStringToBuffer(m_MtlUniformNameEditBuf, MATERIAL_NEW_NAME_BUFSIZE, name);
+
+		ImGui::InputText("Name", m_MtlUniformNameEditBuf, MATERIAL_NEW_NAME_BUFSIZE);
+
+		Reflection::GenericValue newValue = value;
+
+		switch (value.Type)
+		{
+		case (Reflection::ValueType::Bool):
+		{
+			bool curVal = value.AsBool();
+			ImGui::Checkbox("Value", &curVal);
+
+			newValue = curVal;
+			break;
+		}
+		case (Reflection::ValueType::Integer):
+		{
+			int32_t curVal = static_cast<int32_t>(value.AsInteger());
+			ImGui::InputInt("Value", &curVal);
+
+			newValue = curVal;
+			break;
+		}
+		case (Reflection::ValueType::Double):
+		{
+			float curVal = static_cast<float>(value.AsDouble());
+			ImGui::InputFloat("Value", &curVal);
+
+			newValue = curVal;
+			break;
+		}
+		default:
+		{
+			ImGui::Text(
+				"<Type ID:%i ('%s') editing not supported>",
+				(int)value.Type,
+				Reflection::TypeAsString(value.Type).c_str()
+			);
+			break;
+		}
+		}
+
+		std::string newName = m_MtlUniformNameEditBuf;
+
+		if (name != newName)
+			curItem->Uniforms.erase(name);
+
+		curItem->Uniforms[newName] = newValue;
+	}
+
 	if (ImGui::Button("Update"))
 	{
 		curItem->ColorMap = texManager->LoadTextureFromPath(m_MtlDiffuseBuf);
@@ -315,16 +364,33 @@ void Editor::m_RenderMaterialEditor()
 		newMtlConfig["translucency"] = curItem->HasTranslucency;
 		newMtlConfig["shaderprogram"] = curItem->Shader->Name;
 		
-		std::string filePath = "materials/" + curItem->Name + ".mtl";
+		newMtlConfig["uniforms"] = {};
 
-		bool alreadyExists = false;
-		std::string prevFile = FileRW::ReadFile(filePath, &alreadyExists);
-
-		if (alreadyExists)
+		for (auto& it : curItem->Uniforms)
 		{
-			nlohmann::json prevJson = nlohmann::json::parse(prevFile);
-			newMtlConfig["uniforms"] = prevJson["uniforms"];
+			const Reflection::GenericValue& value = it.second;
+
+			switch (value.Type)
+			{
+			case (Reflection::ValueType::Bool):
+			{
+				newMtlConfig["uniforms"][it.first] = value.AsBool();
+				break;
+			}
+			case (Reflection::ValueType::Integer):
+			{
+				newMtlConfig["uniforms"][it.first] = value.AsInteger();
+				break;
+			}
+			case (Reflection::ValueType::Double):
+			{
+				newMtlConfig["uniforms"][it.first] = static_cast<float>(value.AsDouble());
+				break;
+			}
+			}
 		}
+
+		std::string filePath = "materials/" + curItem->Name + ".mtl";
 
 		FileRW::WriteFile(
 			"materials/" + curItem->Name + ".mtl",
@@ -334,6 +400,25 @@ void Editor::m_RenderMaterialEditor()
 	}
 
 	ImGui::End();
+}
+
+static GameObject* recursiveIterateTree(GameObject* current)
+{
+	GameObject* selected = nullptr;
+
+	for (GameObject* g : current->GetChildren())
+	{
+		bool nodeSelected = ImGui::TreeNode(g->Name.c_str());
+
+		if (nodeSelected)
+		{
+			GameObject* desc = recursiveIterateTree(g);
+			ImGui::TreePop();
+			selected = desc ? desc : g;
+		}
+	}
+
+	return selected;
 }
 
 void Editor::RenderUI()
@@ -348,102 +433,22 @@ void Editor::RenderUI()
 	if (m_InvalidObjectErrTimeRemaining > 0.f)
 		ImGui::Text("Invalid GameObject!");
 
-	if (m_CurrentUIHierarchyRoot)
-	{
-		bool ascendHierarchy = ImGui::Button(std::vformat(
-			"Ascend to parent {}",
-			std::make_format_args(m_CurrentUIHierarchyRoot->Name)
-		).c_str());
+	ImGui::TreePush("GameObject Hierarchy UI");
 
-		if (ascendHierarchy)
-		{
-			GameObject* prevRoot = m_CurrentUIHierarchyRoot;
-			m_CurrentUIHierarchyRoot = m_CurrentUIHierarchyRoot->GetParent();
+	GameObject* selected = recursiveIterateTree(GameObject::s_DataModel);
 
-			std::vector<GameObject*> newChildren = getVisibleChildren(&m_CurrentUIHierarchyRoot);
-
-			auto prevRootInCurRootIt = std::find(newChildren.begin(), newChildren.end(), prevRoot);
-			// try to select the object that we were just inside
-			if (prevRootInCurRootIt != newChildren.end())
-				m_HierarchyCurItem = static_cast<int>(prevRootInCurRootIt - newChildren.begin() + 1);
-		}
-	}
-
-	std::vector<GameObject*> children = getVisibleChildren(&m_CurrentUIHierarchyRoot);
-
-	std::string parentText;
-
-	if (m_CurrentUIHierarchyRoot)
-	{
-		parentText = std::vformat(
-			"Children of {}",
-			std::make_format_args(m_CurrentUIHierarchyRoot->Name)
-		).c_str();
-	}
-	else
-		parentText = "Root objects";
-
-	ImGui::ListBox(
-		parentText.c_str(),
-		&m_HierarchyCurItem,
-		&objectsIterator,
-		&m_CurrentUIHierarchyRoot,
-		static_cast<int>(children.size()) + (m_CurrentUIHierarchyRoot ? 1 : 0)
-	);
-
-	GameObject* selected = nullptr;
-
-	int32_t startOffset = m_CurrentUIHierarchyRoot ? 1 : 0;
-
-	if (m_HierarchyCurItem > startOffset - 1)
-	{
-		size_t actualItemIndex = m_HierarchyCurItem - startOffset;
-
-		if (children.size() > actualItemIndex)
-			selected = children[actualItemIndex];
-		else
-			m_HierarchyCurItem = -1;
-	}
-
-	else if (m_HierarchyCurItem == 0) // index 0 is the `[Parent]` item
-		selected = m_CurrentUIHierarchyRoot;
+	ImGui::TreePop();
 
 	if (selected)
 	{
-		size_t numChildren = selected->GetChildren().size();
+		// can't delete datamodel
+		if (selected != GameObject::s_DataModel)
+			if (ImGui::Button("Destroy"))
+			{
+				selected->Destroy();
+				selected = nullptr;
+			}
 
-		bool stepInto = false;
-		
-		if (numChildren > 0)
-			stepInto = ImGui::Button(std::vformat(
-				"View {} children",
-				std::make_format_args(numChildren)
-			).c_str());
-		else
-			stepInto = ImGui::Button("Step into");
-
-		if (stepInto)
-		{
-			m_CurrentUIHierarchyRoot = selected;
-			m_HierarchyCurItem = -1;
-		}
-	}
-
-	// can't delete datamodel
-	if (selected != GameObject::s_DataModel)
-		if (ImGui::Button("Destroy"))
-		{
-			if (selected && selected == m_CurrentUIHierarchyRoot && m_CurrentUIHierarchyRoot->GetParent())
-				m_CurrentUIHierarchyRoot = m_CurrentUIHierarchyRoot->GetParent();
-
-			selected->Destroy();
-			selected = nullptr;
-
-			m_HierarchyCurItem = -1;
-		}
-
-	if (selected)
-	{
 		Object_Script* script = dynamic_cast<Object_Script*>(selected);
 
 		if (script)
@@ -677,8 +682,8 @@ void Editor::RenderUI()
 		{
 			GameObject* newObj = GameObject::Create(m_NewObjectClass);
 
-			if (m_CurrentUIHierarchyRoot)
-				newObj->SetParent(m_CurrentUIHierarchyRoot);
+			if (selected)
+				newObj->SetParent(selected);
 		}
 	}
 }

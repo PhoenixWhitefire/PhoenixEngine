@@ -137,18 +137,20 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 	if (LightType == 0)
 	{
 		vec3 Incoming = normalize(LightPosition);
-		float Diffuse = max(dot(Normal, Incoming), 0.0f);
+		float Intensity = max(dot(Normal, Incoming), 0.f);
+		float Diffuse = Intensity;
 
 		float Specular = 0.f;
 
 		if (Diffuse > 0.0f)
 		{
 			vec3 reflectDir = reflect(-Incoming, Normal);
-			float specAmt = pow(max(dot(Outgoing, reflectDir), 0.f), SpecularPower) * SpecularMultiplier;
-			Specular = clamp(specAmt, 0.f, 1.f);
+			Specular = pow(max(dot(Outgoing, reflectDir), 0.f), SpecularPower);
 		}
 
-		FinalColor = (Diffuse + (SpecMapValue * Specular)) * LightColor;
+		float SpecularTerm = SpecMapValue * Specular * SpecularMultiplier;
+
+		FinalColor = (Diffuse + SpecularTerm * Intensity) * LightColor;
 		//FinalColor = Albedo * SpecMapValue;
 	}
 	else if (LightType == 1)
@@ -166,13 +168,18 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 
 			vec3 reflectionVector = reflect(-Incoming, Normal);
 
-			//Specular = pow(max(dot(Outgoing, reflectionVector), 0.f), SpecularPower);
+			Specular = dot(Outgoing, reflectionVector) + 0.5f;
+
+			FinalColor = vec3(Specular, Specular, Specular);
+
+			Specular = pow(max(dot(Outgoing, reflectionVector), 0.f), SpecularPower);
 		}
 
 		float Intensity = PointLight(LightToPosition, Light.Range);
-		float SpecularTerm = (SpecMapValue * Specular);
+		float SpecularTerm = SpecMapValue * Specular * SpecularMultiplier;
 
-		FinalColor = ((Diffuse * Intensity) + SpecularTerm * Intensity) * LightColor;
+		//FinalColor = ((Diffuse * Intensity) + SpecularTerm * Intensity) * LightColor;
+		FinalColor = SpecularTerm * Intensity * LightColor;
 	}
 	else
 	{
@@ -209,7 +216,7 @@ void main()
 
 	vec2 UV = Frag_UV;
 
-	vec3 ViewDirection = vec3(Frag_CamMatrix) - Frag_CurrentPosition;
+	vec3 ViewDirection = normalize(vec3(Frag_CamMatrix) - Frag_CurrentPosition);
 
 	float mipLevel = textureQueryLod(ColorMap, UV).x;
 
@@ -231,8 +238,8 @@ void main()
 		Albedo = xAxis * blending.x + yAxis * blending.y + zAxis * blending.z;
 
 		float specXAxis = textureLod(MetallicRoughnessMap, localPosition.yz * MaterialProjectionFactor, mipLevel).r;
-		float specYAxis = textureLod(MetallicRoughnessMap, localPosition.yz * MaterialProjectionFactor, mipLevel).r;
-		float specZAxis = textureLod(MetallicRoughnessMap, localPosition.yz * MaterialProjectionFactor, mipLevel).r;
+		float specYAxis = textureLod(MetallicRoughnessMap, localPosition.xz * MaterialProjectionFactor, mipLevel).r;
+		float specZAxis = textureLod(MetallicRoughnessMap, localPosition.xy * MaterialProjectionFactor, mipLevel).r;
 
 		SpecMapValue = specXAxis * blending.x + specYAxis * blending.y + specZAxis * blending.z;
 	}
@@ -251,7 +258,7 @@ void main()
 	float FresnelFactor = 0.0f;//1.f - clamp(0.0f + 1.f * pow(1.0f + dot(vec3(Frag_CamMatrix[3]), ViewDirection), 1.f), 0.f, 1.f);
 	float ReflectivityFactor = Reflectivity + FresnelFactor;
 
-	vec3 ReflectedTint = texture(SkyboxCubemap, ViewDirection).xyz;
+	vec3 ReflectedTint = texture(SkyboxCubemap, reflect(ViewDirection, Normal)).xyz;
 
 	vec3 Albedo3 = mix(Albedo.xyz * Frag_VertexColor * ColorTint, ReflectedTint, ReflectivityFactor);
 
@@ -272,7 +279,7 @@ void main()
 		//float Depth = LogisticDepth(0.01f, 100.0f);
 
 		float FogStart = 200;
-		float FogEnd = 5000;
+		float FogEnd = 50000;
 
 		float FogDensity = FogStart / FogEnd;
 

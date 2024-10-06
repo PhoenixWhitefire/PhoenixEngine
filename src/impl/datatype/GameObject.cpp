@@ -46,9 +46,15 @@ void GameObject::s_DeclareReflections()
 		GameObject,
 		[](GameObject* p)
 		{
+			// This is OK even if `->GetParent()` returns `nullptr`,
+			// because `::ToGenericValue` accounts for when `this` is `nullptr`
+			// 06/10/2024
+			return p->GetParent()->ToGenericValue();
+			/*
 			Reflection::GenericValue gv = p->GetParent() ? p->GetParent()->ObjectId : PHX_GAMEOBJECT_NULL_ID;
 			gv.Type = Reflection::ValueType::GameObject;
 			return gv;
+			*/
 		},
 		[](GameObject* p, const Reflection::GenericValue& gv)
 		{
@@ -221,7 +227,12 @@ void GameObject::RemoveChild(uint32_t id)
 
 Reflection::GenericValue GameObject::ToGenericValue()
 {
-	Reflection::GenericValue gv{ this->ObjectId };
+	uint32_t targetObjectId = PHX_GAMEOBJECT_NULL_ID;
+
+	if (this)
+		targetObjectId = this->ObjectId;
+
+	Reflection::GenericValue gv{ targetObjectId };
 	gv.Type = Reflection::ValueType::GameObject;
 
 	return gv;

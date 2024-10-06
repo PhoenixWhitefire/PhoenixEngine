@@ -3,8 +3,8 @@
 #include<glad/gl.h>
 #include<glm/gtc/type_ptr.hpp>
 #include<glm/gtx/transform.hpp>
+#include<SDL2/SDL_video.h>
 
-#include"render/GraphicsAbstractionLayer.hpp"
 #include"render/Renderer.hpp"
 #include"asset/TextureManager.hpp"
 #include"asset/MeshProvider.hpp"
@@ -12,21 +12,6 @@
 #include"Debug.hpp"
 
 constexpr uint32_t SHADER_MAX_LIGHTS = 6;
-
-static GLenum ObjectTypes[] =
-{
-	GL_BUFFER,
-	GL_SHADER,
-	GL_PROGRAM,
-	GL_VERTEX_ARRAY,
-	GL_QUERY,
-	GL_PROGRAM_PIPELINE,
-//	GL_TRANSFORM_FEEDBACK,
-	GL_SAMPLER,
-	GL_TEXTURE,
-	GL_RENDERBUFFER,
-	GL_FRAMEBUFFER
-};
 
 static std::unordered_map<GLenum, std::string> GLEnumToStringMap =
 {
@@ -157,8 +142,6 @@ Renderer::Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window)
 	glEnable(GL_DEPTH_TEST);
 
 	glEnable(GL_CULL_FACE);
-	glCullFace(GL_FRONT);
-	glFrontFace(GL_CCW);
 	
 	glViewport(0, 0, m_Width, m_Height);
 
@@ -420,7 +403,7 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData, ShaderProgram* Sh
 	Shader->SetUniform(DiffuseStr, 4);
 	Shader->SetUniform(SpecularStr, 5);
 
-	RenderData.Material->ApplyUniformOverrides();
+	RenderData.Material->ApplyUniforms();
 }
 
 void Renderer::SwapBuffers()

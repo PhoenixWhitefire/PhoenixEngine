@@ -25,6 +25,7 @@ out mat4 Frag_Transform;
 void main()
 {
 	Frag_CurrentPosition = vec3(Transform * Scale * vec4(VertexPosition, 1.0f));
+
 	Frag_VertexNormal = VertexNormal;
 	Frag_VertexColor = VertexColor;
 	Frag_CamMatrix = CameraMatrix;

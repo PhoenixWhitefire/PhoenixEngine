@@ -12,7 +12,7 @@ public:
 	static RenderMaterial* GetMaterial(std::string const& Name);
 	static std::vector<RenderMaterial*> GetLoadedMaterials();
 
-	void ApplyUniformOverrides();
+	void ApplyUniforms();
 
 	std::string Name{};
 	ShaderProgram* Shader{};
@@ -27,11 +27,11 @@ public:
 	float SpecExponent{};
 	float SpecMultiply{};
 
+	std::unordered_map<std::string, Reflection::GenericValue> Uniforms;
+
 private:
 	RenderMaterial();
 	RenderMaterial(std::string const&);
-
-	std::unordered_map<std::string, Reflection::GenericValue> m_UniformOverrides;
 
 	static inline std::unordered_map<std::string, RenderMaterial*> s_LoadedMaterials;
 };

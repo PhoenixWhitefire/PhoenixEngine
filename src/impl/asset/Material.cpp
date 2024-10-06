@@ -67,22 +67,22 @@ RenderMaterial::RenderMaterial(std::string const& MaterialName)
 		{
 		case (nlohmann::detail::value_t::boolean):
 		{
-			m_UniformOverrides.insert(std::pair(uniformName, (bool)value));
+			Uniforms.insert(std::pair(uniformName, (bool)value));
 			break;
 		}
 		case (nlohmann::detail::value_t::number_float):
 		{
-			m_UniformOverrides.insert(std::pair(uniformName, (float)value));
+			Uniforms.insert(std::pair(uniformName, (float)value));
 			break;
 		}
 		case (nlohmann::detail::value_t::number_integer):
 		{
-			m_UniformOverrides.insert(std::pair(uniformName, (int32_t)value));
+			Uniforms.insert(std::pair(uniformName, (int32_t)value));
 			break;
 		}
 		case (nlohmann::detail::value_t::number_unsigned):
 		{
-			m_UniformOverrides.insert(std::pair(uniformName, (uint32_t)value));
+			Uniforms.insert(std::pair(uniformName, (uint32_t)value));
 			break;
 		}
 
@@ -119,9 +119,9 @@ RenderMaterial::RenderMaterial(std::string const& MaterialName)
 	this->SpecMultiply = jsonMaterialData.value("specMultiply", this->SpecMultiply);
 }
 
-void RenderMaterial::ApplyUniformOverrides()
+void RenderMaterial::ApplyUniforms()
 {
-	for (auto& it : m_UniformOverrides)
+	for (auto& it : Uniforms)
 		this->Shader->SetUniform(it.first.c_str(), it.second);
 }
 

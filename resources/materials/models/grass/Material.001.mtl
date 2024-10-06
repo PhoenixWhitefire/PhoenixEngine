@@ -1,6 +1,9 @@
 {
   "albedo": "models/grass/diffuse.png",
+  "shaderprogram": "worldUber",
   "specExponent": 0.0,
   "specMultiply": 0.0,
-  "translucency": false
+  "specular": "textures/MISSING2_MaximumADHD_status_1665776378145304579.png",
+  "translucency": false,
+  "uniforms": null
 }

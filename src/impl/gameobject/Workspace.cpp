@@ -30,7 +30,7 @@ void Object_Workspace::s_DeclareReflections()
 			Object_Workspace* workspace = dynamic_cast<Object_Workspace*>(p);
 
 			if (workspace->GetSceneCamera() == s_FallbackCamera)
-				return Reflection::GenericValue();
+				return ((GameObject*)nullptr)->ToGenericValue();
 			else
 				return workspace->GetSceneCamera()->ToGenericValue();
 		},
