@@ -145,7 +145,7 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 		if (Diffuse > 0.0f)
 		{
 			vec3 reflectDir = reflect(-Incoming, Normal);
-			Specular = pow(max(dot(Outgoing, reflectDir), 0.f), SpecularPower);
+			//Specular = pow(max(dot(Outgoing, reflectDir), 0.f), SpecularPower);
 		}
 
 		float SpecularTerm = SpecMapValue * Specular * SpecularMultiplier;
@@ -172,7 +172,7 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 
 			FinalColor = vec3(Specular, Specular, Specular);
 
-			Specular = pow(max(dot(Outgoing, reflectionVector), 0.f), SpecularPower);
+			//Specular = pow(max(dot(Outgoing, reflectionVector), 0.f), SpecularPower);
 		}
 
 		float Intensity = PointLight(LightToPosition, Light.Range);

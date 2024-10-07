@@ -404,21 +404,45 @@ void Editor::m_RenderMaterialEditor()
 
 static GameObject* recursiveIterateTree(GameObject* current)
 {
-	GameObject* selected = nullptr;
+	static GameObject* Selected = nullptr;
+	
+	if (Selected)
+		if (GameObject::s_WorldArray.find(Selected->ObjectId) == GameObject::s_WorldArray.end())
+			Selected = nullptr;
 
-	for (GameObject* g : current->GetChildren())
+	// https://github.com/ocornut/imgui/issues/581#issuecomment-216054349
+	// 07/10/2024
+	GameObject* nodeClicked = nullptr;
+
+	for (GameObject* object : current->GetChildren())
 	{
-		bool nodeSelected = ImGui::TreeNode(g->Name.c_str());
+		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow;
 
-		if (nodeSelected)
+		if (Selected && object == Selected)
+			flags |= ImGuiTreeNodeFlags_Selected;
+
+		if (object->GetChildren().size() == 0)
+			flags |= ImGuiTreeNodeFlags_Leaf;
+
+		bool open = ImGui::TreeNodeEx(&object->ObjectId, flags, object->Name.c_str());
+
+		if (ImGui::IsItemClicked())
+			nodeClicked = object;
+			
+		if (open)
 		{
-			GameObject* desc = recursiveIterateTree(g);
+			recursiveIterateTree(object);
 			ImGui::TreePop();
-			selected = desc ? desc : g;
 		}
 	}
 
-	return selected;
+	if (nodeClicked)
+		if (ImGui::GetIO().KeyCtrl)
+			Selected = nullptr;
+		else
+			Selected = nodeClicked;
+
+	return Selected;
 }
 
 void Editor::RenderUI()
@@ -441,234 +465,234 @@ void Editor::RenderUI()
 
 	if (selected)
 	{
-		// can't delete datamodel
-		if (selected != GameObject::s_DataModel)
-			if (ImGui::Button("Destroy"))
-			{
-				selected->Destroy();
-				selected = nullptr;
-			}
-
-		Object_Script* script = dynamic_cast<Object_Script*>(selected);
-
-		if (script)
-			if (ImGui::Button("Reload"))
-				script->Reload();
-
-		ImGui::Text("Properties:");
-
-		auto& props = selected->GetProperties();
-
-		for (auto& propListItem : props)
+		if (ImGui::Button("Destroy"))
 		{
-			const char* propName = propListItem.first.c_str();
-			const IProperty& prop = propListItem.second;
+			selected->Destroy();
+			selected = nullptr;
+		}
+		else
+		{
+			Object_Script* script = dynamic_cast<Object_Script*>(selected);
 
-			const Reflection::GenericValue curVal = selected->GetPropertyValue(propName);
+			if (script)
+				if (ImGui::Button("Reload"))
+					script->Reload();
 
-			if (!prop.Set)
+			ImGui::Text("Properties:");
+
+			auto& props = selected->GetProperties();
+
+			for (auto& propListItem : props)
 			{
-				// no setter (locked property, such as ClassName or ObjectId)
-				// 07/07/2024
+				const char* propName = propListItem.first.c_str();
+				const IProperty& prop = propListItem.second;
 
-				std::string curValStr = curVal.ToString();
+				const Reflection::GenericValue curVal = selected->GetPropertyValue(propName);
 
-				ImGui::Text(std::vformat("{}: {}", std::make_format_args(propName, curValStr)).c_str());
-
-				continue;
-			}
-
-			Reflection::GenericValue newVal = curVal;
-
-			switch (curVal.Type)
-			{
-
-			case (Reflection::ValueType::String):
-			{
-				std::string str = curVal.AsString();
-
-				// TODO 30/09/2024
-				// so this is kind of BS
-				// this is how many more characters the user can
-				// enter before they need to re-focus the textbox,
-				// because we don't know how much buffer space we'll
-				// need until ImGui gives us the updated string,
-				// which only happens when the user loses focus of the textbox
-				const size_t INPUT_TEXT_BUFFER_ADDITIONAL = 16;
-
-				size_t allocSize = str.size() + INPUT_TEXT_BUFFER_ADDITIONAL;
-
-				char* buf = bufferInitialize(
-					allocSize,
-					"<Initial Value 29/09/2024 Hey guys How we doing today>"
-				);
-
-				strncpy(buf, str.data(), str.size());
-
-				buf[str.size()] = 0;
-
-				ImGui::InputText(propName, buf, allocSize);
-				newVal = std::string(buf);
-
-				free(buf);
-
-				break;
-			}
-
-			case (Reflection::ValueType::Bool):
-			{
-				bool b = newVal.AsBool();
-
-				ImGui::Checkbox(propName, &b);
-				newVal = b;
-
-				break;
-			}
-
-			case (Reflection::ValueType::Double):
-			{
-				double d = newVal.AsDouble();
-
-				ImGui::InputDouble(propName, &d);
-				newVal = d;
-
-				break;
-			}
-
-			case (Reflection::ValueType::Integer):
-			{
-				// TODO BIG BAD HACK HACK HACK
-				// stoobid Dear ImGui :'(
-				// only allows 32-bit integer input
-				// 01/09/2024
-				int32_t valAs32Bit = static_cast<int32_t>(curVal.AsInteger());
-
-				ImGui::InputInt(propName, &valAs32Bit);
-
-				newVal = valAs32Bit;
-
-				break;
-			}
-
-			case (Reflection::ValueType::GameObject):
-			{
-				// TODO BIG BAD HACK HACK HACK
-				// stoobid Dear ImGui :'(
-				// only allows 32-bit integer input
-				// 01/09/2024
-				int32_t id = static_cast<int32_t>(curVal.AsInteger());
-
-				ImGui::InputInt(propName, &id);
-
-				newVal = id;
-				newVal.Type = Reflection::ValueType::GameObject;
-
-				break;
-			}
-
-			case (Reflection::ValueType::Color):
-			{
-				Color col = curVal;
-
-				float entry[3] = { col.R, col.G, col.B };
-
-				ImGui::ColorEdit3(propName, entry, ImGuiColorEditFlags_None);
-
-				//ImGui::InputFloat3(propName, entry);
-
-				col.R = entry[0];
-				col.G = entry[1];
-				col.B = entry[2];
-
-				newVal = col.ToGenericValue();
-
-				break;
-			}
-
-			case (Reflection::ValueType::Vector3):
-			{
-				Vector3 vec = curVal;
-
-				float entry[3] =
+				if (!prop.Set)
 				{
-					static_cast<float>(vec.X),
-					static_cast<float>(vec.Y),
-					static_cast<float>(vec.Z)
-				};
+					// no setter (locked property, such as ClassName or ObjectId)
+					// 07/07/2024
 
-				ImGui::InputFloat3(propName, entry);
+					std::string curValStr = curVal.ToString();
 
-				vec.X = entry[0];
-				vec.Y = entry[1];
-				vec.Z = entry[2];
+					ImGui::Text(std::vformat("{}: {}", std::make_format_args(propName, curValStr)).c_str());
 
-				newVal = vec.ToGenericValue();
+					continue;
+				}
 
-				break;
-			}
+				Reflection::GenericValue newVal = curVal;
 
-			case (Reflection::ValueType::Matrix):
-			{
-				glm::mat4 mat = curVal.AsMatrix();
-
-				ImGui::Text("Transform:");
-
-				float pos[3] =
+				switch (curVal.Type)
 				{
-					mat[3][0],
-					mat[3][1],
-					mat[3][2]
-				};
 
-				// PLEASE GOD JUST WORK ALREADY
-				// 21/09/2024
-				glm::vec3 rotrads{};
-				
-				glm::extractEulerAngleXYZ(mat, rotrads.x, rotrads.y, rotrads.z);
-
-				//mat = glm::rotate(mat, -rotrads[0], glm::vec3(1.f, 0.f, 0.f));
-				//mat = glm::rotate(mat, -rotrads[1], glm::vec3(0.f, 1.f, 0.f));
-				//mat = glm::rotate(mat, -rotrads[2], glm::vec3(0.f, 0.f, 1.f));
-				
-				float rotdegs[3] =
+				case (Reflection::ValueType::String):
 				{
-					glm::degrees(rotrads.x),
-					glm::degrees(rotrads.y),
-					glm::degrees(rotrads.z)
-				};
+					std::string str = curVal.AsString();
 
-				ImGui::InputFloat3("Position", pos);
-				ImGui::InputFloat3("Rotation", rotdegs);
+					// TODO 30/09/2024
+					// so this is kind of BS
+					// this is how many more characters the user can
+					// enter before they need to re-focus the textbox,
+					// because we don't know how much buffer space we'll
+					// need until ImGui gives us the updated string,
+					// which only happens when the user loses focus of the textbox
+					const size_t INPUT_TEXT_BUFFER_ADDITIONAL = 16;
 
-				mat = glm::mat4(1.f);
+					size_t allocSize = str.size() + INPUT_TEXT_BUFFER_ADDITIONAL;
 
-				mat[3][0] = pos[0];
-				mat[3][1] = pos[1];
-				mat[3][2] = pos[2];
+					char* buf = bufferInitialize(
+						allocSize,
+						"<Initial Value 29/09/2024 Hey guys How we doing today>"
+					);
 
-				mat *= glm::eulerAngleXYZ(glm::radians(rotdegs[0]), glm::radians(rotdegs[1]), glm::radians(rotdegs[2]));
+					strncpy(buf, str.data(), str.size());
 
-				newVal = Reflection::GenericValue(mat);
+					buf[str.size()] = 0;
 
-				break;
+					ImGui::InputText(propName, buf, allocSize);
+					newVal = std::string(buf);
+
+					free(buf);
+
+					break;
+				}
+
+				case (Reflection::ValueType::Bool):
+				{
+					bool b = newVal.AsBool();
+
+					ImGui::Checkbox(propName, &b);
+					newVal = b;
+
+					break;
+				}
+
+				case (Reflection::ValueType::Double):
+				{
+					double d = newVal.AsDouble();
+
+					ImGui::InputDouble(propName, &d);
+					newVal = d;
+
+					break;
+				}
+
+				case (Reflection::ValueType::Integer):
+				{
+					// TODO BIG BAD HACK HACK HACK
+					// stoobid Dear ImGui :'(
+					// only allows 32-bit integer input
+					// 01/09/2024
+					int32_t valAs32Bit = static_cast<int32_t>(curVal.AsInteger());
+
+					ImGui::InputInt(propName, &valAs32Bit);
+
+					newVal = valAs32Bit;
+
+					break;
+				}
+
+				case (Reflection::ValueType::GameObject):
+				{
+					// TODO BIG BAD HACK HACK HACK
+					// stoobid Dear ImGui :'(
+					// only allows 32-bit integer input
+					// 01/09/2024
+					int32_t id = static_cast<int32_t>(curVal.AsInteger());
+
+					ImGui::InputInt(propName, &id);
+
+					newVal = id;
+					newVal.Type = Reflection::ValueType::GameObject;
+
+					break;
+				}
+
+				case (Reflection::ValueType::Color):
+				{
+					Color col = curVal;
+
+					float entry[3] = { col.R, col.G, col.B };
+
+					ImGui::ColorEdit3(propName, entry, ImGuiColorEditFlags_None);
+
+					//ImGui::InputFloat3(propName, entry);
+
+					col.R = entry[0];
+					col.G = entry[1];
+					col.B = entry[2];
+
+					newVal = col.ToGenericValue();
+
+					break;
+				}
+
+				case (Reflection::ValueType::Vector3):
+				{
+					Vector3 vec = curVal;
+
+					float entry[3] =
+					{
+						static_cast<float>(vec.X),
+						static_cast<float>(vec.Y),
+						static_cast<float>(vec.Z)
+					};
+
+					ImGui::InputFloat3(propName, entry);
+
+					vec.X = entry[0];
+					vec.Y = entry[1];
+					vec.Z = entry[2];
+
+					newVal = vec.ToGenericValue();
+
+					break;
+				}
+
+				case (Reflection::ValueType::Matrix):
+				{
+					glm::mat4 mat = curVal.AsMatrix();
+
+					ImGui::Text("Transform:");
+
+					float pos[3] =
+					{
+						mat[3][0],
+						mat[3][1],
+						mat[3][2]
+					};
+
+					// PLEASE GOD JUST WORK ALREADY
+					// 21/09/2024
+					glm::vec3 rotrads{};
+
+					glm::extractEulerAngleXYZ(mat, rotrads.x, rotrads.y, rotrads.z);
+
+					//mat = glm::rotate(mat, -rotrads[0], glm::vec3(1.f, 0.f, 0.f));
+					//mat = glm::rotate(mat, -rotrads[1], glm::vec3(0.f, 1.f, 0.f));
+					//mat = glm::rotate(mat, -rotrads[2], glm::vec3(0.f, 0.f, 1.f));
+
+					float rotdegs[3] =
+					{
+						glm::degrees(rotrads.x),
+						glm::degrees(rotrads.y),
+						glm::degrees(rotrads.z)
+					};
+
+					ImGui::InputFloat3("Position", pos);
+					ImGui::InputFloat3("Rotation", rotdegs);
+
+					mat = glm::mat4(1.f);
+
+					mat[3][0] = pos[0];
+					mat[3][1] = pos[1];
+					mat[3][2] = pos[2];
+
+					mat *= glm::eulerAngleXYZ(glm::radians(rotdegs[0]), glm::radians(rotdegs[1]), glm::radians(rotdegs[2]));
+
+					newVal = Reflection::GenericValue(mat);
+
+					break;
+				}
+
+				default:
+				{
+					int typeId = static_cast<int>(curVal.Type);
+					const std::string& typeName = Reflection::TypeAsString(curVal.Type);
+
+					ImGui::Text(std::vformat(
+						"{}: <Display of ID:{} ('{}') types not unavailable>",
+						std::make_format_args(propName, typeId, typeName)
+					).c_str());
+
+					break;
+				}
+
+				}
+
+				selected->SetPropertyValue(propName, newVal);
 			}
-
-			default:
-			{
-				int typeId = static_cast<int>(curVal.Type);
-				const std::string& typeName = Reflection::TypeAsString(curVal.Type);
-
-				ImGui::Text(std::vformat(
-					"{}: <Display of ID:{} ('{}') types not unavailable>",
-					std::make_format_args(propName, typeId, typeName)
-				).c_str());
-
-				break;
-			}
-
-			}
-
-			selected->SetPropertyValue(propName, newVal);
 		}
 	}
 
@@ -682,8 +706,7 @@ void Editor::RenderUI()
 		{
 			GameObject* newObj = GameObject::Create(m_NewObjectClass);
 
-			if (selected)
-				newObj->SetParent(selected);
+			newObj->SetParent(selected ? selected : GameObject::s_DataModel);
 		}
 	}
 }

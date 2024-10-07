@@ -750,8 +750,12 @@ void Object_Script::Update(double dt)
 	// We don't `::Reload` when the Script is being yielded,
 	// because, what the hell will happen when it's resumed by the `for`-loop
 	// above? Will it create a "ghost" Script? Not good. 23/09/2024
-	if (!m_L || m_StaleSource)
+	if (m_StaleSource)
 		this->Reload();
+
+	// script has failed to load (compilation error) 07/101/2024
+	if (!m_L)
+		return;
 
 	if (m_HasUpdate)
 	{
@@ -812,30 +816,31 @@ bool Object_Script::Reload()
 	m_Source = FileRW::ReadFile(SourceFile, &fileExists);
 
 	m_StaleSource = false;
+	
+	if (m_L)
+		lua_close(m_L);
+	m_L = nullptr;
+
+	std::string fullName = this->GetFullName();
 
 	if (!fileExists)
 	{
 		Debug::Log(
 			std::vformat(
 				"Script '{}' references invalid Source File '{}'!",
-				std::make_format_args(this->Name, this->SourceFile
-				)
+				std::make_format_args(fullName, this->SourceFile)
 			)
 		);
 
 		return false;
 	}
 
-	if (m_L)
-		lua_resetthread(m_L);
-	else
-		m_L = lua_newthread(DefaultState);
+	m_L = lua_newthread(DefaultState);
 
 	ScriptEngine::L::PushGameObject(m_L, this);
 	lua_setglobal(m_L, "script");
 
-	std::string FullName = this->GetFullName();
-	std::string chunkname = std::vformat("{}", std::make_format_args(FullName));
+	std::string chunkname = std::vformat("{}", std::make_format_args(fullName));
 
 	// FROM: https://github.com/luau-lang/luau/ README
 
@@ -862,15 +867,14 @@ bool Object_Script::Reload()
 		}
 		else if (resumeResult != lua_Status::LUA_YIELD)
 		{
-			// 25/09/2024 TODO
-			// loading a script at runtime causes LUA_ERRRUN
-			// without an error string?!
-			const char* errstr = lua_isstring(m_L, -1) ? lua_tostring(m_L, -1) : "<NULL>";
+			const char* errstr = lua_tostring(m_L, -1);
 
 			Debug::Log(std::vformat(
 				"Luau script init error: {}",
 				std::make_format_args(errstr)
 			));
+
+			m_L = nullptr;
 
 			return false;
 		}
@@ -883,6 +887,9 @@ bool Object_Script::Reload()
 		const char* errstr = lua_tostring(m_L, topidx);
 
 		Debug::Log(std::vformat("Luau compile error {}: {}: '{}'", std::make_format_args(result, this->Name, errstr)));
+
+		m_L = nullptr;
+
 		return false;
 	}
 }
