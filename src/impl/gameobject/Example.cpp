@@ -77,7 +77,7 @@ void Object_Example::s_DeclareReflections()
 			Reflection::GenericValue gv = args.at(0);
 			std::vector<Reflection::GenericValue> names = gv.AsArray();
 
-			if (names.size() == 0)
+			if (names.empty())
 				return { p->Name + ": He- Oh... There's no one here... :(" };
 
 			else if (gv.Array.size() == 1)

@@ -1,6 +1,6 @@
 #include "CameraController.hpp"
 
-void ControlCamera(double DeltaTime)
+void ControlCamera(double)
 {
 	//EngineObject* engine = EngineObject::;
 }

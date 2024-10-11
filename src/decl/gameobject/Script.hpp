@@ -28,8 +28,6 @@ private:
 	lua_State* m_L;
 	bool m_StaleSource = false;
 
-	bool m_HasUpdate = false;
-
 	static void s_DeclareReflections();
 	static inline Api s_Api{};
 };

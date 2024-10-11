@@ -56,7 +56,7 @@ template <typename T> bool m_compare(ValueSequenceKeypoint<T> A, ValueSequenceKe
 
 template <class T> T ValueSequence<T>::GetValue(float Time)
 {
-	if (m_Keys.size() == 0)
+	if (m_Keys.empty())
 		return T();
 
 	if (m_Keys.size() == 1)

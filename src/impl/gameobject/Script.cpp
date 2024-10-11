@@ -727,7 +727,7 @@ void Object_Script::Update(double dt)
 
 			ScriptEngine::L::PushGenericValue(coroutine, retval);
 
-			lua_Status resumeStatus = (lua_Status)lua_resume(coroutine, coroutine, 1);
+			lua_Status resumeStatus = (lua_Status)lua_resume(coroutine, nullptr, 1);
 
 			if (resumeStatus != LUA_OK && resumeStatus != LUA_YIELD)
 			{
@@ -740,48 +740,38 @@ void Object_Script::Update(double dt)
 				));
 			}
 
-
 			ScriptEngine::s_YieldedCoroutines.erase(coroutine);
 		}
 	}
 
-	if (ScriptEngine::s_YieldedCoroutines.find(m_L) != ScriptEngine::s_YieldedCoroutines.end())
-		return;
 	// We don't `::Reload` when the Script is being yielded,
 	// because, what the hell will happen when it's resumed by the `for`-loop
 	// above? Will it create a "ghost" Script? Not good. 23/09/2024
 	if (m_StaleSource)
 		this->Reload();
 
-	// script has failed to load (compilation error) 07/101/2024
+	// script has failed to load (compilation error) 07/11/2024
 	if (!m_L)
 		return;
 
-	if (m_HasUpdate)
+	lua_getglobal(m_L, "Update");
+
+	if (lua_isfunction(m_L, -1))
 	{
-		lua_getglobal(m_L, "Update");
+		lua_pushnumber(m_L, dt);
+		// why do all of these functions say they return `int` and not
+		// `lua_Status` like they actually do?? 23/09/2024
+		lua_Status updateStatus = (lua_Status)lua_pcall(m_L, 1, 0, 0);
 
-		if (!lua_isfunction(m_L, -1))
-			m_HasUpdate = false;
-		else
+		if (updateStatus != LUA_OK && updateStatus != LUA_YIELD)
 		{
-			lua_pushnumber(m_L, dt);
-			// why do all of these functions say they return `int` and not
-			// `lua_Status` like they actually do?? 23/09/2024
-			lua_Status updateStatus = (lua_Status)lua_pcall(m_L, 1, 0, 0);
+			const char* errstr = lua_tostring(m_L, -1);
+			std::string fullname = this->GetFullName();
 
-			if (updateStatus != LUA_OK && updateStatus != LUA_YIELD)
-			{
-				m_HasUpdate = false;
-
-				const char* errstr = lua_tostring(m_L, -1);
-				std::string fullname = this->GetFullName();
-
-				Debug::Log(std::vformat(
-					"Luau runtime error: {}",
-					std::make_format_args(errstr)
-				));
-			}
+			Debug::Log(std::vformat(
+				"Luau runtime error: {}",
+				std::make_format_args(errstr)
+			));
 		}
 	}
 }
@@ -858,14 +848,7 @@ bool Object_Script::Reload()
 
 		lua_Status resumeResult = (lua_Status)lua_resume(m_L, m_L, 0);
 
-		if (resumeResult == lua_Status::LUA_OK)
-		{
-			lua_getglobal(m_L, "Update");
-
-			if (lua_isfunction(m_L, -1))
-				m_HasUpdate = true;
-		}
-		else if (resumeResult != lua_Status::LUA_YIELD)
+		if (resumeResult != lua_Status::LUA_OK && resumeResult != lua_Status::LUA_YIELD)
 		{
 			const char* errstr = lua_tostring(m_L, -1);
 

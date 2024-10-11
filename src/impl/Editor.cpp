@@ -81,7 +81,7 @@ static void AddChildrenToObjects(GameObject* Parent)
 			//Objects.push_back(NewObject);
 		}
 
-		if (Obj->GetChildren().size() > 0)
+		if (!Obj->GetChildren().empty())
 			AddChildrenToObjects(Obj);
 	}
 }
@@ -421,7 +421,7 @@ static GameObject* recursiveIterateTree(GameObject* current)
 		if (Selected && object == Selected)
 			flags |= ImGuiTreeNodeFlags_Selected;
 
-		if (object->GetChildren().size() == 0)
+		if (object->GetChildren().empty())
 			flags |= ImGuiTreeNodeFlags_Leaf;
 
 		bool open = ImGui::TreeNodeEx(&object->ObjectId, flags, object->Name.c_str());

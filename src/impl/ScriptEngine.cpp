@@ -482,6 +482,8 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 		{
 			int sleepTime = luaL_checkinteger(L, 1);
 
+			lua_pushnil(L);
+
 			auto a = std::async(
 				std::launch::async,
 				[](int st)

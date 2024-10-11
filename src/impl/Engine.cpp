@@ -28,7 +28,8 @@ static int WindowSizeYBeforeFullscreen = 800;
 static int WindowPosXBeforeFullscreen = SDL_WINDOWPOS_CENTERED;
 static int WindowPosYBeforeFullscreen = SDL_WINDOWPOS_CENTERED;
 
-static float RectangleVertices[24] = {
+static float RectangleVertices[24] =
+{
 		 1.0f, -1.0f,    1.0f, 0.0f,
 		-1.0f, -1.0f,    0.0f, 0.0f,
 		-1.0f,  1.0f,    0.0f, 1.0f,
@@ -79,7 +80,7 @@ static void updateDescendants(GameObject* Root, double DeltaTime)
 		{
 			object->Update(DeltaTime);
 
-			if (object->GetChildren().size() > 0)
+			if (!object->GetChildren().empty())
 				updateDescendants(object, DeltaTime);
 		}
 	}
@@ -299,7 +300,7 @@ static std::vector<LightItem> createLightingList(GameObject* RootObject)
 				);
 		}
 
-		if (object->GetChildren().size() > 0)
+		if (!object->GetChildren().empty())
 		{
 			std::vector<LightItem> childData = createLightingList(object);
 			std::copy(childData.begin(), childData.end(), std::back_inserter(dataList));
@@ -350,7 +351,7 @@ static std::vector<RenderItem> createRenderList(GameObject* RootObject, Object_C
 				);
 			}
 
-			if (object->GetChildren().size() > 0)
+			if (!object->GetChildren().empty())
 			{
 				std::vector<RenderItem> childData = createRenderList(object, SceneCamera);
 				std::copy(childData.begin(), childData.end(), std::back_inserter(dataList));

@@ -8,7 +8,7 @@ static void _workerTaskRunner(Worker* ThisWorker)
 {
 	while (true)
 	{
-		if (ThisWorker->TaskQueue.size() == 0)
+		if (ThisWorker->TaskQueue.empty())
 		{
 			ThisWorker->Status = WorkerStatus::WaitingForTask;
 

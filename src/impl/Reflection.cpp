@@ -104,7 +104,7 @@ std::string Reflection::GenericValue::ToString() const
 	
 	case (ValueType::Array):
 	{
-		if (this->Array.size() > 0)
+		if (!this->Array.empty())
 		{
 			uint32_t numTypes = 0;
 			std::string typesString = "";
@@ -130,7 +130,7 @@ std::string Reflection::GenericValue::ToString() const
 
 	case (ValueType::Map):
 	{
-		if (this->Array.size() > 0)
+		if (!this->Array.empty())
 		{
 			if (this->Array.size() % 2 != 0)
 				return "Invalid Map (Odd number of Array elements)";
@@ -272,7 +272,7 @@ Reflection::FunctionMap& Reflection::Reflectable::GetFunctions()
 
 bool Reflection::Reflectable::HasProperty(const std::string& name)
 {
-	if ( s_Properties.size() == 0)
+	if (s_Properties.empty())
 		return false;
 	return  s_Properties.find(name) !=  s_Properties.end();
 }

@@ -135,7 +135,7 @@ Object_ParticleEmitter::Object_ParticleEmitter()
 
 size_t Object_ParticleEmitter::m_GetUsableParticleIndex()
 {
-	if (m_Particles.size() == 0) //Are there any particles at all?
+	if (m_Particles.empty()) //Are there any particles at all?
 	{
 		m_Particles.resize(1); //Resize array to length 1
 
@@ -177,7 +177,7 @@ void Object_ParticleEmitter::Update(double DeltaTime)
 
 	size_t newParticleIndex = UINT32_MAX;
 
-	if (m_TimeSinceLastSpawn >= timeBetweenSpawn && this->PossibleImages.size() > 0 && this->EmitterEnabled)
+	if (m_TimeSinceLastSpawn >= timeBetweenSpawn && !this->PossibleImages.empty() && this->EmitterEnabled)
 	{
 		m_TimeSinceLastSpawn = 0.0f;
 
@@ -218,7 +218,7 @@ void Object_ParticleEmitter::Update(double DeltaTime)
 
 void Object_ParticleEmitter::Render(glm::mat4 CameraMatrix)
 {
-	if (m_Particles.size() == 0)
+	if (m_Particles.empty())
 		return;
 
 	m_VertArray.Bind();
