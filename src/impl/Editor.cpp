@@ -13,7 +13,6 @@ constexpr uint32_t OBJECT_NEW_CLASSNAME_BUFSIZE = 16;
 constexpr uint32_t MATERIAL_NEW_NAME_BUFSIZE = 32;
 constexpr uint32_t MATERIAL_TEXTUREPATH_BUFSIZE = 64;
 constexpr const char* MATERIAL_NEW_NAME_DEFAULT = "newmaterial";
-constexpr const char* MATERIAL_NEW_UNIFORM_DEFAULT = "UniformName";
 
 static const char* ParentString = "[Parent]";
 
@@ -46,7 +45,7 @@ Editor::Editor()
 	m_MtlDiffuseBuf = bufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
 	m_MtlSpecBuf = bufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
 	m_MtlShpBuf = bufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
-	m_MtlNewUniformNameBuf = bufferInitialize(MATERIAL_NEW_NAME_BUFSIZE, MATERIAL_NEW_UNIFORM_DEFAULT);
+	m_MtlNewUniformNameBuf = bufferInitialize(MATERIAL_NEW_NAME_BUFSIZE);
 	m_MtlUniformNameEditBuf = bufferInitialize(MATERIAL_NEW_NAME_BUFSIZE);
 
 	DefaultNewMaterial["albedo"] = "textures/plastic.png";
@@ -254,13 +253,34 @@ void Editor::m_RenderMaterialEditor()
 	static int TypeId = 0;
 
 	ImGui::InputText("Uniform Name", m_MtlNewUniformNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
-	ImGui::InputInt("Uniform Type (0=Bool, 1=Int, 2=Float)", &TypeId);
+	ImGui::InputInt("Uniform Type", &TypeId);
+	ImGui::SetItemTooltip("0=Bool, 1=Int, 2=Float");
 
 	TypeId = std::clamp(TypeId, 0, 2);
 
 	if (ImGui::Button("Add"))
 	{
-		Reflection::GenericValue initialValue = TypeId == 0 ? true : (TypeId == 1 ? 0 : 0.f);
+		Reflection::GenericValue initialValue;
+
+		switch (TypeId)
+		{
+		case (0):
+		{
+			initialValue = true;
+			break;
+		}
+		case (1):
+		{
+			initialValue = 0;
+			break;
+		}
+		case (2):
+		{
+			initialValue = 0.f;
+			break;
+		}
+		}
+
 		curItem->Uniforms[m_MtlNewUniformNameBuf] = initialValue;
 	}
 
@@ -273,7 +293,7 @@ void Editor::m_RenderMaterialEditor()
 		uniformsArray.push_back(it.first);
 
 	ImGui::ListBox(
-		"hi",
+		"",
 		&SelectedUniformIdx,
 		&mtlUniformIterator,
 		&uniformsArray,
@@ -526,7 +546,7 @@ void Editor::RenderUI()
 						"<Initial Value 29/09/2024 Hey guys How we doing today>"
 					);
 
-					strncpy(buf, str.data(), str.size());
+					memcpy(buf, str.data(), str.size());
 
 					buf[str.size()] = 0;
 

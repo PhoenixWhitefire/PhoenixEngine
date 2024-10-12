@@ -18,16 +18,13 @@ public:
 	void Activate();
 	void Reload();
 
-	/*
-	void SetUniformInt(const char*, int);
-	void SetUniformFloat(const char*, float);
-	void SetUniformFloat3(const char*, float, float, float);
-	void SetUniformMatrix(const char*, const glm::mat4&);
-	*/
-
 	// Mark a uniform to be updated upon `::Activate` being called,
 	// to be set with the provided value
 	void SetUniform(const char*, const Reflection::GenericValue&);
+	// THIS DOES NOT FLUSH THE UNIFORMS!
+	// it acts just like `SetUniform`, but it's intended to reset the state
+	// back to the default
+	void ApplyDefaultUniforms();
 
 	std::string Name;
 	uint32_t ID = UINT32_MAX;
@@ -37,13 +34,14 @@ private:
 	ShaderProgram(std::string const&);
 
 	void m_PrintErrors(uint32_t Object, const char* Type) const;
-	int32_t m_GetUniformLocation(const char*);
+	int32_t m_GetUniformLocation(const char*) const;
 
 	uint32_t m_VertexShader{};
 	uint32_t m_FragmentShader{};
 	uint32_t m_GeometryShader{};
 
 	std::unordered_map<std::string, Reflection::GenericValue> m_PendingUniforms;
+	std::unordered_map<std::string, Reflection::GenericValue> m_DefaultUniforms;
 
 	static inline std::unordered_map<std::string, ShaderProgram*> s_Programs;
 };

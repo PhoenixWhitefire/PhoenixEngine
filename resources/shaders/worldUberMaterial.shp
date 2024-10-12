@@ -3,6 +3,7 @@
     "Fragment": "worldUber.frag",
     
     "Uniforms": {
+      "Fog": false,
       "UseProjectedMaterial": true
     }
 }

@@ -305,22 +305,22 @@ void ShaderProgram::Reload()
 		{
 		case (nlohmann::detail::value_t::boolean):
 		{
-			this->SetUniform(uniformName, (bool)value);
+			m_DefaultUniforms[uniformName] = (bool)value;
 			break;
 		}
 		case (nlohmann::detail::value_t::number_float):
 		{
-			this->SetUniform(uniformName, (float)value);
+			m_DefaultUniforms[uniformName] = (float)value;
 			break;
 		}
 		case (nlohmann::detail::value_t::number_integer):
 		{
-			this->SetUniform(uniformName, (int32_t)value);
+			m_DefaultUniforms[uniformName] = (int32_t)value;
 			break;
 		}
 		case (nlohmann::detail::value_t::number_unsigned):
 		{
-			this->SetUniform(uniformName, (uint32_t)value);
+			m_DefaultUniforms[uniformName] = (uint32_t)value;
 			break;
 		}
 
@@ -336,9 +336,17 @@ void ShaderProgram::Reload()
 		}
 		}
 	}
+
+	this->ApplyDefaultUniforms();
 }
 
-int32_t ShaderProgram::m_GetUniformLocation(const char* Uniform)
+void ShaderProgram::ApplyDefaultUniforms()
+{
+	for (auto& it : m_DefaultUniforms)
+		this->SetUniform(it.first.c_str(), it.second);
+}
+
+int32_t ShaderProgram::m_GetUniformLocation(const char* Uniform) const
 {
 	// 18/09/2024
 	// ok so indexing just one hashmap seems to be slower than

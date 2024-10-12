@@ -403,7 +403,11 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData, ShaderProgram* Sh
 	Shader->SetUniform(DiffuseStr, 4);
 	Shader->SetUniform(SpecularStr, 5);
 
+	// apply the uniforms for the shader program...
+	RenderData.Material->Shader->ApplyDefaultUniforms();
+	// ... then the material uniforms...
 	RenderData.Material->ApplyUniforms();
+	// ... so that the material can override uniforms in the SP
 }
 
 void Renderer::SwapBuffers()
