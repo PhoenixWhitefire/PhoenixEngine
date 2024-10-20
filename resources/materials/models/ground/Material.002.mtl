@@ -1,8 +1,9 @@
 {
   "albedo": "models/ground/diffuse.png",
-  "alphaCutoff": 0,
-  "alphaMode": 0,
-  "roughnessFactor": 0.5,
-  "specMultiply": 0.0,
-  "translucency": false
+  "shaderprogram": "worldUber",
+  "specExponent": 8.0,
+  "specMultiply": 0.5,
+  "specular": "models/ground/specular.png",
+  "translucency": false,
+  "uniforms": null
 }
