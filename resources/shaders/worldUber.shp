@@ -3,6 +3,7 @@
     "Fragment": "worldUber.frag",
     
     "Uniforms": {
-        "Fog": false
+        "Fog": false,
+        "EmissionStrength": 0.0
     }
 }

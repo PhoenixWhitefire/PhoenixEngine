@@ -6,6 +6,6 @@
   "specular": "textures/planksSpec.png",
   "translucency": false,
   "uniforms": {
-    "MaterialProjectionFactor": 0.05
+    "MaterialProjectionFactor": 0.05000000074505806
   }
 }

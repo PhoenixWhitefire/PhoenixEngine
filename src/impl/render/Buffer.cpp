@@ -123,17 +123,17 @@ FBO::FBO(int Width, int Height, int MSSamples, bool AttachRenderBuffer)
 		glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, MSSamples, GL_RGB, Width, Height, GL_TRUE);
 	else
 	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Width, Height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, Width, Height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 		glGenerateMipmap(GL_TEXTURE_2D);
 	}
 
 	if (binding != GL_TEXTURE_2D_MULTISAMPLE)
 	{
-		glTexParameteri(binding, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(binding, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glTexParameteri(binding, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-		glTexParameteri(binding, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(binding, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(binding, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(binding, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	}
 
 	this->Bind();

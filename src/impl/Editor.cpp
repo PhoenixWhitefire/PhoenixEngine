@@ -175,24 +175,11 @@ void Editor::m_RenderMaterialEditor()
 
 	if (m_MtlCurItem != m_MtlPrevItem)
 	{
-		for (uint32_t i = 0; i < MATERIAL_TEXTUREPATH_BUFSIZE; i++)
-			m_MtlShpBuf[i] = i < curItem->Shader->Name.size()
-									? curItem->Shader->Name.at(i)
-									: 0;
-		
-		for (uint32_t i = 0; i < MATERIAL_TEXTUREPATH_BUFSIZE; i++)
-			m_MtlDiffuseBuf[i] = i < colorMap->ImagePath.size()
-									? colorMap->ImagePath.at(i)
-									: 0;
+		copyStringToBuffer(m_MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE, curItem->Shader->Name);
+		copyStringToBuffer(m_MtlDiffuseBuf, MATERIAL_TEXTUREPATH_BUFSIZE, colorMap->ImagePath);
 
-		if (metallicRoughnessMap)
-			for (uint32_t i = 0; i < MATERIAL_TEXTUREPATH_BUFSIZE; i++)
-				m_MtlSpecBuf[i] = i < metallicRoughnessMap->ImagePath.size()
-									? metallicRoughnessMap->ImagePath.at(i)
-									: 0;
-		else
-			for (int i = 0; i < 64; i++)
-				m_MtlSpecBuf[i] = 0;
+		if (curItem->MetallicRoughnessMap != 0)
+			copyStringToBuffer(m_MtlSpecBuf, MATERIAL_TEXTUREPATH_BUFSIZE, metallicRoughnessMap->ImagePath);
 	}
 
 	m_MtlPrevItem = m_MtlCurItem;
@@ -222,10 +209,17 @@ void Editor::m_RenderMaterialEditor()
 		std::make_format_args(colorMap->NumColorChannels)
 	).c_str());
 
-	ImGui::InputText("Specular", m_MtlSpecBuf, 64);
+	bool hasSpecularTexture = curItem->MetallicRoughnessMap != 0;
+	ImGui::Checkbox("Has Specular", &hasSpecularTexture);
 
-	if (metallicRoughnessMap)
+	if (hasSpecularTexture)
 	{
+		curItem->MetallicRoughnessMap = curItem->MetallicRoughnessMap != 0 ? curItem->MetallicRoughnessMap : 1;
+		// in case the texture is updated by the above ternary to be ID 1
+		metallicRoughnessMap = texManager->GetTextureResource(curItem->MetallicRoughnessMap);
+
+		ImGui::InputText("Specular", m_MtlSpecBuf, 64);
+
 		ImGui::Image(
 			// first cast to uint64_t to get rid of the
 			// "'type cast': conversion from 'uint32_t' to 'void *' of greater size"
@@ -247,6 +241,8 @@ void Editor::m_RenderMaterialEditor()
 			std::make_format_args(metallicRoughnessMap->NumColorChannels)
 		).c_str());
 	}
+	else
+		curItem->MetallicRoughnessMap = 0;
 
 	ImGui::Text("Uniforms");
 
@@ -376,7 +372,7 @@ void Editor::m_RenderMaterialEditor()
 
 		newMtlConfig["albedo"] = colorMap->ImagePath;
 
-		if (metallicRoughnessMap)
+		if (curItem->MetallicRoughnessMap != 0)
 			newMtlConfig["specular"] = metallicRoughnessMap->ImagePath;
 
 		newMtlConfig["specExponent"] = curItem->SpecExponent;

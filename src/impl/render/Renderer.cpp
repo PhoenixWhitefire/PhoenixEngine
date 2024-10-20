@@ -153,7 +153,7 @@ Renderer::Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window)
 	std::string glVersionStr = std::vformat(
 		"Running OpenGL version {}.{}",
 		std::make_format_args(glVersionMajor, glVersionMinor)
-	).c_str();
+	);
 
 	Debug::Log(glVersionStr);
 
@@ -395,7 +395,7 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData, ShaderProgram* Sh
 
 	glActiveTexture(GL_TEXTURE5);
 
-	if (metallicRoughnessMap)
+	if (material->MetallicRoughnessMap != 0)
 		glBindTexture(GL_TEXTURE_2D, metallicRoughnessMap->GpuId);
 	else
 		glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(WhiteTextureId)->GpuId);

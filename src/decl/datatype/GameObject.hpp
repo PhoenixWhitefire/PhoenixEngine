@@ -181,9 +181,9 @@ private:
 	static inline Api s_Api{};
 };
 
-template<typename T> GameObject* createT_baseGameObject()
+template<typename T> GameObject* constructGameObjectHeir()
 {
-	return dynamic_cast<GameObject*>(new T);
+	return new T;
 }
 
 template <typename T>
@@ -191,6 +191,6 @@ struct RegisterDerivedObject : GameObject
 {
 	RegisterDerivedObject(std::string const& ObjectClass)
 	{
-		s_GameObjectMap->insert(std::make_pair(ObjectClass, &createT_baseGameObject<T>));
+		s_GameObjectMap->insert(std::make_pair(ObjectClass, &constructGameObjectHeir<T>));
 	}
 };

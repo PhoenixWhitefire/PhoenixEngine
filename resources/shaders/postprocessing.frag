@@ -27,6 +27,11 @@ const vec2 Center = vec2(0.5f, 0.5f);
 
 const vec3 White = vec3(1.0f, 1.0f, 1.0f);
 
+float roundTo(float n, float to)
+{
+	return floor((n / to) + 0.5f) * to;
+}
+
 void main()
 {
 	if (!PostFxEnabled)
@@ -39,29 +44,37 @@ void main()
 
 	// the size of the pixel relative to the screen
 	vec2 PixelScale = vec2(1.0f / TextureSize.x, 1.0f / TextureSize.y);
-/*
-	vec3 Color = vec3(texelFetch(
-		Texture,
-		ivec2(FragIn_UV.st * TextureSize),// + texture(DistortionTexture, FragIn_UV).xy),
-		0
-	));
-	*/
 
 	vec2 UVOffset = vec2(0.f, 0.f);
 
 	if (DistortionEnabled)
-	{
 		UVOffset = (texture(DistortionTexture, FragIn_UV).xy - Center) * (sin(Time) * 5);
+
+	vec2 sampleUV = FragIn_UV + UVOffset;
+	vec2 actualSamplePixel = ivec2(sampleUV * TextureSize);
+	vec3 Color = texture(Texture, sampleUV).xyz;
+	
+	vec3 avgColor = textureLod(Texture, vec2(0.5f, 0.5f), 16).xyz;
+	float avgBrightness = avgColor.x*0.2126f + avgColor.y*0.7152f + avgColor.z*0.0722f;
+	
+	for (int i = 1; i < 7; i++)
+	{
+		vec3 colDownscaled = textureLod(Texture, sampleUV, i).xyz;
+		float brightness = colDownscaled.x*0.2126f + colDownscaled.y*0.7152f + colDownscaled.z*0.0722f;
+
+		if (brightness > 0.9f)
+		{
+			//vec2 mipPixelScale = PixelScale * (i * 2);
+			//vec2 mipSamplePoint = vec2(roundTo(sampleUV.x, mipPixelScale.x), roundTo(sampleUV.y, mipPixelScale.y));
+			//vec2 offset = mipSamplePoint - sampleUV;
+			//Color = vec3(pow(length(offset), .9f) * 50.f, 0.f, 0.f);
+			//Color += colDownscaled / (pow(length(offset), .9f) * 500.f);
+			Color += colDownscaled / i;
+		}
 	}
-
-	//FragColor = vec4(texture(DistortionTexture, FragIn_UV).xyz, 1.0f);
-
-	//return;
-
-	vec3 Color = texture(Texture, FragIn_UV + UVOffset).xyz;
-
-	//Color = vec3(1.0f, 0.0f, 0.0f);
-
+	
+	Color /= clamp(avgBrightness * 2.f, 0.75f, 5.f);
+	
 	if (ScreenEdgeBlurEnabled)
 	{
 		vec3 BlurredColor;
@@ -70,10 +83,6 @@ void main()
 		// then exponent to widen the 0% and make the 
 		// transition steeper
 		float RadialBlurWeight = clamp(pow(length(FragIn_UV - Center), BlurVignetteDistExp) * BlurVignetteDistMul, 0.f, 1.f);
-
-		//FragColor = vec4(RadialBlurWeight, RadialBlurWeight, RadialBlurWeight, 1.f);
-
-		//return;
 
 		int BlurSampleRadius = BlurVignetteSampleRadius;
 
@@ -96,6 +105,6 @@ void main()
 		// Linear interpolation
 		Color = Color + (BlurredColor - Color) * RadialBlurWeight;
 	}
-	
-	FragColor = vec4(Color * 1.25f, 1.0f);
+
+	FragColor = vec4(Color, 1.0f);
 }

@@ -1,11 +1,10 @@
 {
   "albedo": "textures/plastic.png",
   "shaderprogram": "worldUberMaterial",
-  "specExponent": 0.0,
-  "specMultiply": 0.0,
-  "specular": "textures/MISSING2_MaximumADHD_status_1665776378145304579.png",
+  "specExponent": 16.0,
+  "specMultiply": 0.5,
   "translucency": false,
   "uniforms": {
-    "MaterialProjectionFactor": 0.05
+    "MaterialProjectionFactor": 0.05000000074505806
   }
 }

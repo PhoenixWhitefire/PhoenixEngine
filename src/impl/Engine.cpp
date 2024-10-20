@@ -156,12 +156,11 @@ EngineObject::EngineObject()
 	//  of my first attempt trying to get behavior like we have
 	// `GameObject::Create` today.
 	// My idea was, "Since constructors return objects, why don't I
-	// just have a list of constructors"?
-	// I didn't really think it would work initially, because it wouldn't
-	// even be returning the base class and thus there couldn't be an assignable
-	// type, but I didn't expect the _actual_ error to be:
-	// :cloud_with_lightning: "The pointer to a constructor shalt never be taken" :high_voltage:
-	// ... or something along those lines.
+	// just have a list of pointers to constructors"?
+	// And, that's actually pretty similar to what I ended up going through
+	// with. It works because they all share the same baseclass and thus
+	// are implicitly downcasted. The current version just has an additional
+	// layer with a templated function.
 	// 
 	//GameObject::GameObjectTable["Model"] = &Object_Model()
 
@@ -607,6 +606,7 @@ void EngineObject::Start()
 		for (ShaderProgram* shp : scene.UsedShaders)
 		{
 			shp->SetUniform("CameraMatrix", cameraMatrix);
+			shp->SetUniform("CameraPosition", Vector3(glm::vec3(sceneCamera->Transform[3])).ToGenericValue());
 			shp->SetUniform("Time", static_cast<float>(this->RunningTime));
 			shp->SetUniform("SkyboxCubemap", 3);
 		}
@@ -734,6 +734,8 @@ void EngineObject::Start()
 
 		glActiveTexture(GL_TEXTURE1);
 		RendererContext->Framebuffer->BindTexture();
+
+		glGenerateMipmap(GL_TEXTURE_2D);
 
 		glBindVertexArray(RectangleVAO);
 		glDisable(GL_DEPTH_TEST);

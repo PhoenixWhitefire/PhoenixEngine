@@ -58,6 +58,9 @@ uniform float SpecularPower = 16.0f;
 
 uniform float Reflectivity = 0.f;
 uniform float Transparency = 0.f;
+uniform float EmissionStrength = 0.f;
+
+uniform vec3 CameraPosition = vec3(0.f, 0.f, 0.f);
 
 uniform vec3 ColorTint = vec3(1.f, 1.f, 1.f);
 
@@ -72,15 +75,12 @@ uniform vec3 FogColor = vec3(0.85f, 0.85f, 0.90f);
 uniform bool UseProjectedMaterial = false;
 uniform float MaterialProjectionFactor = 0.05f;
 
+in vec3 Frag_CurrentPosition;
+in vec3 Frag_VertexNormal;
 in vec3 Frag_VertexColor;
 in vec2 Frag_UV;
-
-in vec3 Frag_VertexNormal;
-in vec3 Frag_CurrentPosition;
-
-in mat4 Frag_Transform;
-
 in mat4 Frag_CamMatrix;
+in mat4 Frag_Transform;
 
 out vec4 FragColor;
 
@@ -145,7 +145,7 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 		if (Diffuse > 0.0f)
 		{
 			vec3 reflectDir = reflect(-Incoming, Normal);
-			//Specular = pow(max(dot(Outgoing, reflectDir), 0.f), SpecularPower);
+			Specular = pow(max(dot(Outgoing, reflectDir), 0.f), SpecularPower);
 		}
 
 		float SpecularTerm = SpecMapValue * Specular * SpecularMultiplier;
@@ -168,18 +168,13 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 
 			vec3 reflectionVector = reflect(-Incoming, Normal);
 
-			Specular = dot(Outgoing, reflectionVector) + 0.5f;
-
-			FinalColor = vec3(Specular, Specular, Specular);
-
-			//Specular = pow(max(dot(Outgoing, reflectionVector), 0.f), SpecularPower);
+			Specular = pow(max(dot(Outgoing, reflectionVector), 0.f), SpecularPower);
 		}
 
 		float Intensity = PointLight(LightToPosition, Light.Range);
 		float SpecularTerm = SpecMapValue * Specular * SpecularMultiplier;
 
-		//FinalColor = ((Diffuse * Intensity) + SpecularTerm * Intensity) * LightColor;
-		FinalColor = SpecularTerm * Intensity * LightColor;
+		FinalColor = ((Diffuse * Intensity) + SpecularTerm * Intensity) * LightColor;
 	}
 	else
 	{
@@ -202,22 +197,14 @@ vec3 getTriPlanarBlending(vec3 _wNorm)
 
 void main()
 {
-	/*
-	float l = length(texture(ShadowMaps[0], gl_FragCoord.xy));
-	
-	FragColor = vec4(l, l, l, 1.0f);
-
-	return;
-	*/
-
 	// Convert mesh normals to world-space
 	mat3 NormalMatrix = transpose(inverse(mat3(Frag_Transform)));
 	vec3 Normal = normalize(NormalMatrix * Frag_VertexNormal);
 
 	vec2 UV = Frag_UV;
-
-	vec3 ViewDirection = normalize(vec3(Frag_CamMatrix) - Frag_CurrentPosition);
-
+	
+	vec3 ViewDirection = normalize(CameraPosition - Frag_CurrentPosition);
+	
 	float mipLevel = textureQueryLod(ColorMap, UV).x;
 
 	vec4 Albedo = vec4(0.f, 0.f, 0.f, 1.f); //textureLod(ColorMap, UV, mipLevel);
@@ -243,9 +230,7 @@ void main()
 
 		SpecMapValue = specXAxis * blending.x + specYAxis * blending.y + specZAxis * blending.z;
 	}
-
-	FragColor = Albedo;
-
+	
 	Albedo -= vec4(0.f, 0.f, 0.f, Transparency);
 
 	// completely transparent region
@@ -255,23 +240,25 @@ void main()
 	
 	vec3 LightInfluence = vec3(0.f, 0.f, 0.f);
 
-	float FresnelFactor = 0.0f;//1.f - clamp(0.0f + 1.f * pow(1.0f + dot(vec3(Frag_CamMatrix[3]), ViewDirection), 1.f), 0.f, 1.f);
-	float ReflectivityFactor = Reflectivity + FresnelFactor;
+	float ReflectivityFactor = (Reflectivity * SpecMapValue);
 
-	vec3 ReflectedTint = texture(SkyboxCubemap, reflect(ViewDirection, Normal)).xyz;
-
+	vec3 reflectDir = reflect(-ViewDirection, Normal);
+	reflectDir.y = -reflectDir.y;
+	vec3 ReflectedTint = texture(SkyboxCubemap, reflectDir).xyz;
+	
 	vec3 Albedo3 = mix(Albedo.xyz * Frag_VertexColor * ColorTint, ReflectedTint, ReflectivityFactor);
-
-	for (int LightIndex = 0; LightIndex < NumLights; LightIndex++)
-	{
-		LightInfluence = LightInfluence + CalculateLight(
-			LightIndex,
-			Normal,
-			ViewDirection,
-			SpecMapValue
-		);
-	}
-
+	
+	if (EmissionStrength <= 0)
+		for (int LightIndex = 0; LightIndex < NumLights; LightIndex++)
+			LightInfluence = LightInfluence + CalculateLight(
+				LightIndex,
+				Normal,
+				ViewDirection,
+				SpecMapValue
+			);
+	else
+		LightInfluence = vec3(EmissionStrength, EmissionStrength, EmissionStrength);
+	
 	vec3 FragCol3 = (LightInfluence + LightAmbient) * Albedo3;
 	
 	if (Fog)

@@ -1,0 +1,10 @@
+{
+  "albedo": "textures/white.png",
+  "shaderprogram": "worldUber",
+  "specExponent": 0.0,
+  "specMultiply": 0.0,
+  "translucency": false,
+  "uniforms": {
+   "EmissionStrength": 2.0
+  }
+}

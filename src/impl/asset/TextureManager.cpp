@@ -102,8 +102,7 @@ static void uploadTextureToGpu(Texture& texture)
 
 	glBindTexture(GL_TEXTURE_2D, texture.GpuId);
 
-	glTexImage2D
-	(
+	glTexImage2D(
 		GL_TEXTURE_2D,
 		0,
 		GL_RGBA,
@@ -134,6 +133,9 @@ static void uploadTextureToGpu(Texture& texture)
 TextureManager::TextureManager()
 	: m_Textures{}, m_TexPromises{}
 {
+	// ID 0 means no texture
+	m_Textures.emplace_back();
+	// missing tex is ID 1
 	this->LoadTextureFromPath(MissingTexPath, false);
 }
 
