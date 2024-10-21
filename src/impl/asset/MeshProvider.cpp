@@ -5,6 +5,7 @@
 
 #include "asset/MeshProvider.hpp"
 #include "asset/PrimitiveMeshes.hpp"
+#include "render/GpuBuffers.hpp"
 #include "FileRW.hpp"
 #include "Debug.hpp"
 
@@ -345,9 +346,9 @@ void MeshProvider::m_CreateAndUploadGpuMesh(const Mesh& mesh)
 
 	MeshProvider::GpuMesh& gpuMesh = m_GpuMeshes[m_GpuMeshes.size() - 1];
 
-	VAO* vao = new VAO;
-	VBO* vbo = new VBO;
-	EBO* ebo = new EBO;
+	GpuVertexArray* vao = new GpuVertexArray;
+	GpuVertexBuffer* vbo = new GpuVertexBuffer;
+	GpuElementBuffer* ebo = new GpuElementBuffer;
 
 	gpuMesh.VertexArray = vao;
 	gpuMesh.VertexBuffer = vbo;

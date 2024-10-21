@@ -63,7 +63,10 @@ static auto api_gameobjindex = [](lua_State* L)
 		}
 
 		if (obj->HasProperty(key))
-			ScriptEngine::L::PushGenericValue(L, obj->GetPropertyValue(key));
+		{
+			Reflection::GenericValue gv = obj->GetPropertyValue(key);
+			ScriptEngine::L::PushGenericValue(L, gv);
+		}
 		else if (obj->HasFunction(key))
 			ScriptEngine::L::PushFunction(L, key);
 		else
@@ -186,7 +189,9 @@ static auto api_newvec3 = [](lua_State* L)
 		double y = luaL_checknumber(L, 2);
 		double z = luaL_checknumber(L, 3);
 
-		ScriptEngine::L::PushGenericValue(L, Vector3(x, y, z).ToGenericValue());
+		Reflection::GenericValue gv = Vector3(x, y, z).ToGenericValue();
+
+		ScriptEngine::L::PushGenericValue(L, gv);
 
 		return 1;
 	};
@@ -270,7 +275,9 @@ static auto api_newcol = [](lua_State* L)
 		float y = static_cast<float>(luaL_checknumber(L, 2));
 		float z = static_cast<float>(luaL_checknumber(L, 3));
 
-		ScriptEngine::L::PushGenericValue(L, Color(x, y, z).ToGenericValue());
+		Reflection::GenericValue gv = Color(x, y, z).ToGenericValue();
+
+		ScriptEngine::L::PushGenericValue(L, gv);
 
 		return 1;
 	};
@@ -367,7 +374,9 @@ static void initDefaultState()
 				Vector3 a = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -2));
 				Vector3 b = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -1));
 
-				ScriptEngine::L::PushGenericValue(L, (a + b).ToGenericValue());
+				Reflection::GenericValue gv = (a + b).ToGenericValue();
+
+				ScriptEngine::L::PushGenericValue(L, gv);
 
 				return 1;
 			},
@@ -382,7 +391,9 @@ static void initDefaultState()
 				Vector3 a = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -2));
 				Vector3 b = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -1));
 
-				ScriptEngine::L::PushGenericValue(L, (a - b).ToGenericValue());
+				Reflection::GenericValue gv = (a - b).ToGenericValue();
+
+				ScriptEngine::L::PushGenericValue(L, gv);
 
 				return 1;
 			},
@@ -397,7 +408,9 @@ static void initDefaultState()
 				Vector3 a = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -2));
 				double b = luaL_checknumber(L, 2);
 
-				ScriptEngine::L::PushGenericValue(L, (a * b).ToGenericValue());
+				Reflection::GenericValue gv = (a * b).ToGenericValue();
+
+				ScriptEngine::L::PushGenericValue(L, gv);
 
 				return 1;
 			},
@@ -441,7 +454,9 @@ static void initDefaultState()
 			DefaultState,
 			[](lua_State* L)
 			{
-				ScriptEngine::L::PushGenericValue(L, glm::mat4(1.f));
+				Reflection::GenericValue gv{ glm::mat4(1.f) };
+				ScriptEngine::L::PushGenericValue(L, gv);
+
 				return 1;
 			},
 			"Matrix.new"
@@ -484,7 +499,9 @@ static void initDefaultState()
 					);
 				}
 				
-				ScriptEngine::L::PushGenericValue(L, m);
+				Reflection::GenericValue gv = m;
+
+				ScriptEngine::L::PushGenericValue(L, gv);
 
 				return 1;
 			},
@@ -505,7 +522,9 @@ static void initDefaultState()
 				t = glm::rotate(t, y, glm::vec3(0.f, 1.f, 0.f));
 				t = glm::rotate(t, z, glm::vec3(0.f, 0.f, 1.f));
 
-				ScriptEngine::L::PushGenericValue(L, t);
+				Reflection::GenericValue gv = t;
+
+				ScriptEngine::L::PushGenericValue(L, gv);
 
 				return 1;
 			},
@@ -520,9 +539,11 @@ static void initDefaultState()
 				Vector3& a = *(Vector3*)luaL_checkudata(L, 1, "Vector3");
 				Vector3& b = *(Vector3*)luaL_checkudata(L, 2, "Vector3");
 
+				Reflection::GenericValue gv = glm::lookAt((glm::vec3)a, (glm::vec3)b, glm::vec3(0.f, 1.f, 0.f));
+
 				ScriptEngine::L::PushGenericValue(
 					L,
-					glm::lookAt((glm::vec3)a, (glm::vec3)b, glm::vec3(0.f, 1.f, 0.f))
+					gv
 				);
 
 				return 1;
@@ -546,15 +567,23 @@ static void initDefaultState()
 				const char* k = luaL_checkstring(L, 2);
 
 				if (strcmp(k, "Position") == 0)
+				{
+					Reflection::GenericValue gv = Vector3(glm::vec3(m[3])).ToGenericValue();
+
 					ScriptEngine::L::PushGenericValue(
 						L,
-						Vector3(glm::vec3(m[3])).ToGenericValue()
+						gv
 					);
+				}
 				else if (strcmp(k, "Forward") == 0)
+				{
+					Reflection::GenericValue gv = Vector3(glm::normalize(glm::vec3(m[2]))).ToGenericValue();
+
 					ScriptEngine::L::PushGenericValue(
 						L,
-						Vector3(glm::normalize(glm::vec3(m[2]))).ToGenericValue()
+						gv
 					);
+				}
 				else
 					luaL_errorL(L, "Invalid member %s", k);
 
@@ -572,8 +601,9 @@ static void initDefaultState()
 				glm::mat4& b = *(glm::mat4*)luaL_checkudata(L, 2, "Matrix");
 
 				glm::mat4 result = a * b;
+				Reflection::GenericValue gv = result;
 
-				ScriptEngine::L::PushGenericValue(L, result);
+				ScriptEngine::L::PushGenericValue(L, gv);
 
 				return 1;
 			},
@@ -723,7 +753,7 @@ void Object_Script::Update(double dt)
 				continue;
 
 			// what the function returned
-			const Reflection::GenericValue& retval = future.get();
+			Reflection::GenericValue retval = future.get();
 
 			ScriptEngine::L::PushGenericValue(coroutine, retval);
 

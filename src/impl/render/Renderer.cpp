@@ -1,15 +1,15 @@
-#include<string>
-#include<format>
-#include<glad/gl.h>
-#include<glm/gtc/type_ptr.hpp>
-#include<glm/gtx/transform.hpp>
-#include<SDL2/SDL_video.h>
+#include <string>
+#include <format>
+#include <glad/gl.h>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/transform.hpp>
+#include <SDL2/SDL_video.h>
 
-#include"render/Renderer.hpp"
-#include"asset/TextureManager.hpp"
-#include"asset/MeshProvider.hpp"
-#include"datatype/Vector3.hpp"
-#include"Debug.hpp"
+#include "render/Renderer.hpp"
+#include "asset/TextureManager.hpp"
+#include "asset/MeshProvider.hpp"
+#include "datatype/Vector3.hpp"
+#include "Debug.hpp"
 
 constexpr uint32_t SHADER_MAX_LIGHTS = 6;
 
@@ -157,21 +157,18 @@ Renderer::Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window)
 
 	Debug::Log(glVersionStr);
 
-	m_VertexArray.emplace();
-	m_VertexBuffer.emplace();
-	m_ElementBuffer.emplace();
+	m_VertexArray = new GpuVertexArray;
+	m_VertexBuffer = new GpuVertexBuffer;
+	m_ElementBuffer = new GpuElementBuffer;
 
-	VAO& vao = m_VertexArray.value();
-	VBO& vbo = m_VertexBuffer.value();
+	m_VertexArray->Bind();
 
-	vao.Bind();
+	m_VertexArray->LinkAttrib(*m_VertexBuffer, 0, 3, GL_FLOAT, sizeof(Vertex), (void*)0);
+	m_VertexArray->LinkAttrib(*m_VertexBuffer, 1, 3, GL_FLOAT, sizeof(Vertex), (void*)(3 * sizeof(float)));
+	m_VertexArray->LinkAttrib(*m_VertexBuffer, 2, 3, GL_FLOAT, sizeof(Vertex), (void*)(6 * sizeof(float)));
+	m_VertexArray->LinkAttrib(*m_VertexBuffer, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)(9 * sizeof(float)));
 
-	vao.LinkAttrib(vbo, 0, 3, GL_FLOAT, sizeof(Vertex), (void*)0);
-	vao.LinkAttrib(vbo, 1, 3, GL_FLOAT, sizeof(Vertex), (void*)(3 * sizeof(float)));
-	vao.LinkAttrib(vbo, 2, 3, GL_FLOAT, sizeof(Vertex), (void*)(6 * sizeof(float)));
-	vao.LinkAttrib(vbo, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)(9 * sizeof(float)));
-
-	this->Framebuffer = new FBO(m_Width, m_Height, m_MsaaSamples);
+	this->Framebuffer = new GpuFrameBuffer(m_Width, m_Height, m_MsaaSamples);
 
 	Debug::Log("Renderer initialized");
 }
@@ -203,22 +200,7 @@ void Renderer::ChangeResolution(uint32_t Width, uint32_t Height)
 
 	glViewport(0, 0, m_Width, m_Height);
 
-	// TODO fix msaa
-
-	//this->m_framebuffer->Bind();
-	this->Framebuffer->BindTexture();
-
-	if (this->Framebuffer->MSAASamples > 0)
-		glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, m_MsaaSamples, GL_RGB, m_Width, m_Height, GL_TRUE);
-	else
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_Width, m_Height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-
-	glBindRenderbuffer(GL_RENDERBUFFER, this->Framebuffer->RenderBufferID);
-
-	if (this->Framebuffer->MSAASamples > 0)
-		glRenderbufferStorageMultisample(GL_RENDERBUFFER, m_MsaaSamples, GL_DEPTH32F_STENCIL8, m_Width, m_Height);
-	else
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH32F_STENCIL8, m_Width, m_Height);
+	this->Framebuffer->UpdateResolution(m_Width, m_Height);
 }
 
 void Renderer::DrawScene(const Scene& Scene)
@@ -314,16 +296,13 @@ void Renderer::DrawMesh(
 
 	uint32_t gpuMeshId = Object->GpuId;
 
+	// textures not managed by MeshProvider
 	if (gpuMeshId == UINT32_MAX)
 	{
-		VAO& vao = m_VertexArray.value();
-		VBO& vbo = m_VertexBuffer.value();
-		EBO& ebo = m_ElementBuffer.value();
+		m_VertexArray->Bind();
 
-		vao.Bind();
-
-		vbo.SetBufferData(Object->Vertices);
-		ebo.SetBufferData(Object->Indices);
+		m_VertexBuffer->SetBufferData(Object->Vertices);
+		m_ElementBuffer->SetBufferData(Object->Indices);
 	}
 	else
 	{

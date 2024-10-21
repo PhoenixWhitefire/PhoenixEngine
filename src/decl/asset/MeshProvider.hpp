@@ -3,18 +3,19 @@
 
 #pragma once
 
-#include<future>
-#include"datatype/Mesh.hpp"
-#include"render/Buffer.hpp"
+#include <future>
+
+#include "datatype/Mesh.hpp"
+#include "render/GpuBuffers.hpp"
 
 class MeshProvider
 {
 public:
 	struct GpuMesh
 	{
-		VAO* VertexArray;
-		VBO* VertexBuffer;
-		EBO* ElementBuffer;
+		GpuVertexArray* VertexArray;
+		GpuVertexBuffer* VertexBuffer;
+		GpuElementBuffer* ElementBuffer;
 	};
 
 	static MeshProvider* Get();

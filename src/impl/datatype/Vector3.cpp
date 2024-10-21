@@ -100,7 +100,7 @@ Vector3::Vector3(Reflection::GenericValue gv)
 		));
 	}
 
-	if (!gv.Pointer)
+	if (!gv.Value)
 		throw("Attempted to construct Vector3, but GenericValue.Pointer was NULL");
 
 	/*Vector3 vec = *(Vector3*)gv.Pointer;
@@ -109,7 +109,7 @@ Vector3::Vector3(Reflection::GenericValue gv)
 	this->Z = vec.Z;
 	this->Magnitude = vec.Magnitude;*/
 
-	Vector3* gvec = static_cast<Vector3*>(gv.Pointer);
+	Vector3* gvec = static_cast<Vector3*>(gv.Value);
 
 	Vector3 vec(gvec->X, gvec->Y, gvec->Z);
 
@@ -127,7 +127,7 @@ Reflection::GenericValue Vector3::ToGenericValue()
 
 	Reflection::GenericValue gv;
 	gv.Type = Reflection::ValueType::Vector3;
-	gv.Pointer = new Vector3(*this);
+	gv.Value = new Vector3(*this);
 
 	return gv;
 }

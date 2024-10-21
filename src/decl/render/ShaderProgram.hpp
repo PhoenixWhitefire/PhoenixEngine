@@ -1,8 +1,8 @@
 #pragma once
 
-#include<unordered_map>
+#include <unordered_map>
 
-#include"Reflection.hpp"
+#include "Reflection.hpp"
 
 class ShaderProgram
 {
@@ -27,7 +27,6 @@ public:
 	void ApplyDefaultUniforms();
 
 	std::string Name;
-	uint32_t ID = UINT32_MAX;
 
 private:
 	ShaderProgram() = delete;
@@ -35,6 +34,8 @@ private:
 
 	void m_PrintErrors(uint32_t Object, const char* Type) const;
 	int32_t m_GetUniformLocation(const char*) const;
+
+	uint32_t m_GpuId = UINT32_MAX;
 
 	uint32_t m_VertexShader{};
 	uint32_t m_FragmentShader{};

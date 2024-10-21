@@ -2,12 +2,12 @@
 
 #pragma once
 
-#include<unordered_map>
-#include<functional>
-#include<string>
-#include<vector>
-#include<format>
-#include<glm/mat4x4.hpp>
+#include <unordered_map>
+#include <functional>
+#include <string>
+#include <vector>
+#include <format>
+#include <glm/mat4x4.hpp>
 
 #define REFLECTION_INHERITAPI(base) {                 \
 const PropertyMap& props = base::s_GetProperties();   \
@@ -111,7 +111,7 @@ REFLECTION_DECLAREFUNC(                                               \
 
 namespace Reflection
 {
-	enum class ValueType
+	enum class ValueType : uint8_t
 	{
 		Null = 0,
 
@@ -140,9 +140,10 @@ namespace Reflection
 	struct GenericValue
 	{
 		Reflection::ValueType Type = Reflection::ValueType::Null;
-		std::string String;
-		void* Pointer = nullptr;
-		std::vector<GenericValue> Array;
+		void* Value = nullptr;
+		uint32_t ArrayLength = 0;
+
+		//std::vector<GenericValue> Array;
 
 		GenericValue();
 		GenericValue(const std::string&);
@@ -158,12 +159,12 @@ namespace Reflection
 
 		~GenericValue();
 
-		std::string ToString() const;
+		std::string ToString();
 
 		// Throws errors if the type does not match
 		std::string AsString() const;
 		bool AsBool() const;
-		double AsDouble() const;
+		double AsDouble();
 		int64_t AsInteger() const;
 		glm::mat4 AsMatrix() const;
 		std::vector<GenericValue> AsArray();

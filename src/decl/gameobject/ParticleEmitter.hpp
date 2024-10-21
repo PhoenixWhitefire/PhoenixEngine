@@ -1,14 +1,14 @@
 #pragma once
 
-#include<random>
+#include <random>
 
-#include"datatype/ValueSequence.hpp"
-#include"render/Buffer.hpp"
-#include"datatype/GameObject.hpp"
-#include"render/ShaderProgram.hpp"
-#include"asset/TextureManager.hpp"
-#include"datatype/Vector3.hpp"
-#include"datatype/Vector2.hpp"
+#include "datatype/ValueSequence.hpp"
+#include "render/GpuBuffers.hpp"
+#include "datatype/GameObject.hpp"
+#include "render/ShaderProgram.hpp"
+#include "asset/TextureManager.hpp"
+#include "datatype/Vector3.hpp"
+#include "datatype/Vector2.hpp"
 
 float Quad[];
 
@@ -55,14 +55,10 @@ private:
 
 	double m_TimeSinceLastSpawn = 0.f;
 
-	VAO m_VertArray;
-	VBO m_VertBuffer;
-	EBO m_ElementBuffer;
+	GpuVertexArray m_VertArray;
+	GpuVertexBuffer m_VertBuffer;
+	GpuElementBuffer m_ElementBuffer;
 
-	static std::default_random_engine s_RandGenerator;
-	static ShaderProgram* s_ParticleShaders;
-
-	static RegisterDerivedObject<Object_ParticleEmitter> RegisterClassAs;
 	static void s_DeclareReflections();
 	static inline Api s_Api{};
 };

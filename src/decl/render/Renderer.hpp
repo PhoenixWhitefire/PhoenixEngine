@@ -1,16 +1,16 @@
 #pragma once
 
-#include<set>
-#include<optional>
-#include<glm/matrix.hpp>
+#include <set>
+#include <optional>
+#include <glm/matrix.hpp>
 
-#include"render/ShaderProgram.hpp"
-#include"asset/Material.hpp"
-#include"datatype/Mesh.hpp"
-#include"render/Buffer.hpp"
-#include"datatype/Color.hpp"
-#include"datatype/Vector3.hpp"
-#include"gameobject/Base3D.hpp"
+#include "render/ShaderProgram.hpp"
+#include "asset/Material.hpp"
+#include "datatype/Mesh.hpp"
+#include "render/GpuBuffers.hpp"
+#include "datatype/Color.hpp"
+#include "datatype/Vector3.hpp"
+#include "gameobject/Base3D.hpp"
 
 /*
 	09/09/2024
@@ -90,19 +90,16 @@ public:
 
 	void SwapBuffers();
 
-	FBO* Framebuffer = nullptr;
+	GpuFrameBuffer* Framebuffer = nullptr;
 
 	SDL_GLContext GLContext = nullptr;
 
 private:
 	void m_SetMaterialData(const RenderItem& Mesh, ShaderProgram* Shader);
 
-	// `std::optional` so we can delay initialization
-	// until OpenGL is actually loaded
-	// 04/10/2024
-	std::optional<VAO> m_VertexArray;
-	std::optional<VBO> m_VertexBuffer;
-	std::optional<EBO> m_ElementBuffer;
+	GpuVertexArray* m_VertexArray = nullptr;
+	GpuVertexBuffer* m_VertexBuffer = nullptr;
+	GpuElementBuffer* m_ElementBuffer = nullptr;
 
 	SDL_Window* m_Window = nullptr;
 	

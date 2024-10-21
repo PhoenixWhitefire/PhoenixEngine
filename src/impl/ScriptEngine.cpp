@@ -161,7 +161,7 @@ Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int St
 	}
 }
 
-void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericValue& gv)
+void ScriptEngine::L::PushGenericValue(lua_State* L, Reflection::GenericValue& gv)
 {
 	switch (gv.Type)
 	{
@@ -214,10 +214,12 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 	{
 		lua_newtable(L);
 
-		for (int index = 0; index < gv.Array.size(); index++)
+		std::vector<Reflection::GenericValue> array = gv.AsArray();
+
+		for (int index = 0; index < array.size(); index++)
 		{
 			lua_pushinteger(L, index);
-			L::PushGenericValue(L, gv.Array[index]);
+			L::PushGenericValue(L, array[index]);
 			lua_settable(L, -3);
 		}
 
@@ -225,14 +227,16 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 	}
 	case (Reflection::ValueType::Map):
 	{
-		if (!(gv.Array.size() % 2 == 0))
+		std::vector<Reflection::GenericValue> array = gv.AsArray();
+
+		if (array.size() % 2 != 0)
 			throw("GenericValue type was Map, but it does not have an even number of elements!");
 
 		lua_newtable(L);
 
-		for (int index = 0; index < gv.Array.size(); index++)
+		for (int index = 0; index < array.size(); index++)
 		{
-			L::PushGenericValue(L, gv.Array[index]);
+			L::PushGenericValue(L, array[index]);
 
 			if ((index + 1) % 2 == 0)
 				lua_settable(L, -3);
@@ -367,7 +371,7 @@ void ScriptEngine::L::PushFunction(lua_State* L, const char* Name)
 				luaL_error(L, err);
 			}
 
-			for (const Reflection::GenericValue& output : outputs)
+			for (Reflection::GenericValue& output : outputs)
 				L::PushGenericValue(L, output);
 
 			return (int)func.Outputs.size();
@@ -413,7 +417,9 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 
 		mtx[r][c] = v;
 
-		L::PushGenericValue(L, mtx);
+		Reflection::GenericValue gv{ mtx };
+
+		L::PushGenericValue(L, gv);
 
 		return 1;
 	}
@@ -695,7 +701,7 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 
 			std::vector<GameObject*> ignoreList;
 			for (const Reflection::GenericValue& gv : providedIgnoreList)
-				ignoreList.push_back(GameObject::GetObjectById(static_cast<uint32_t>((uint64_t)gv.Pointer)));
+				ignoreList.push_back(GameObject::GetObjectById(static_cast<uint32_t>((uint64_t)gv.Value)));
 
 			IntersectionLib::Intersection result;
 			GameObject* hitObject = nullptr;
@@ -737,10 +743,14 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 				ScriptEngine::L::PushGameObject(L, hitObject);
 				lua_setfield(L, -2, "Object");
 
-				ScriptEngine::L::PushGenericValue(L, Vector3(result.Vector).ToGenericValue());
+				Reflection::GenericValue posg = Vector3(result.Vector).ToGenericValue();
+
+				ScriptEngine::L::PushGenericValue(L, posg);
 				lua_setfield(L, -2, "Position");
 
-				ScriptEngine::L::PushGenericValue(L, Vector3(result.Normal).ToGenericValue());
+				Reflection::GenericValue normalg = Vector3(result.Normal).ToGenericValue();
+
+				ScriptEngine::L::PushGenericValue(L, normalg);
 				lua_setfield(L, -2, "Normal");
 			}
 			else
@@ -763,9 +773,10 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 			for (int index = 0; index < loadedRoots.size(); index++)
 			{
 				GameObject* object = loadedRoots[index];
+				Reflection::GenericValue gv = object->ToGenericValue();
 
 				lua_pushinteger(L, index);
-				ScriptEngine::L::PushGenericValue(L, object->ToGenericValue());
+				ScriptEngine::L::PushGenericValue(L, gv);
 
 				lua_settable(L, -3);
 			}
@@ -816,7 +827,9 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 			for (GameObject* node : rootNodes)
 				convertedArray.push_back(node->ToGenericValue());
 
-			ScriptEngine::L::PushGenericValue(L, convertedArray);
+			Reflection::GenericValue gv = convertedArray;
+
+			ScriptEngine::L::PushGenericValue(L, gv);
 
 			return 1;
 		}

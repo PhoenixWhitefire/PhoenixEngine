@@ -1,13 +1,13 @@
-#include<format>
-#include<glad/gl.h>
-#include<nljson.hpp>
-#include<glm/gtc/type_ptr.hpp>
+#include <format>
+#include <glad/gl.h>
+#include <nljson.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
-#include"render/ShaderProgram.hpp"
-#include"datatype/Vector3.hpp"
-#include"datatype/Color.hpp"
-#include"FileRW.hpp"
-#include"Debug.hpp"
+#include "render/ShaderProgram.hpp"
+#include "datatype/Vector3.hpp"
+#include "datatype/Color.hpp"
+#include "FileRW.hpp"
+#include "Debug.hpp"
 
 static const std::string BaseShaderPath = "shaders/";
 static std::unordered_map<uint32_t, std::string> IdToShaderName;
@@ -111,12 +111,12 @@ ShaderProgram::ShaderProgram(std::string const& ProgramName)
 
 void ShaderProgram::Activate()
 {
-	glUseProgram(this->ID);
+	glUseProgram(m_GpuId);
 
 	for (auto& pair : m_PendingUniforms)
 	{
 		const std::string& uniformName = pair.first;
-		const Reflection::GenericValue& value = pair.second;
+		Reflection::GenericValue& value = pair.second;
 
 		if (int32_t uniformLoc = m_GetUniformLocation(uniformName.c_str()); uniformLoc > -1)
 		{
@@ -183,10 +183,10 @@ void ShaderProgram::Activate()
 
 void ShaderProgram::Reload()
 {
-	if (this->ID != UINT32_MAX)
-		glDeleteProgram(this->ID);
+	if (m_GpuId != UINT32_MAX)
+		glDeleteProgram(m_GpuId);
 
-	this->ID = glCreateProgram();
+	m_GpuId = glCreateProgram();
 
 	bool shpExists = true;
 	std::string shpContents = FileRW::ReadFile(BaseShaderPath + Name + ".shp", &shpExists);
@@ -206,7 +206,7 @@ void ShaderProgram::Reload()
 
 		ShaderProgram* fallback = ShaderProgram::GetShaderProgram("error");
 
-		this->ID = fallback->ID;
+		m_GpuId = fallback->m_GpuId;
 
 		return;
 	}
@@ -277,17 +277,17 @@ void ShaderProgram::Reload()
 	m_PrintErrors(vertexShader, "vertex shader");
 	m_PrintErrors(fragmentShader, "fragment shader");
 
-	glAttachShader(this->ID, vertexShader);
-	glAttachShader(this->ID, fragmentShader);
+	glAttachShader(m_GpuId, vertexShader);
+	glAttachShader(m_GpuId, fragmentShader);
 
 	if (hasGeometryShader)
-		glAttachShader(this->ID, geometryShader);
+		glAttachShader(m_GpuId, geometryShader);
 
 	glEnableVertexAttribArray(0);
 
-	glLinkProgram(this->ID);
+	glLinkProgram(m_GpuId);
 
-	m_PrintErrors(this->ID, "shader program");
+	m_PrintErrors(m_GpuId, "shader program");
 
 	//free shader code from memory, they've already been compiled so aren't needed anymore
 	glDeleteShader(vertexShader);
@@ -351,7 +351,7 @@ int32_t ShaderProgram::m_GetUniformLocation(const char* Uniform) const
 	// 18/09/2024
 	// ok so indexing just one hashmap seems to be slower than
 	// literally just calling `glGetUniformLocation`
-	return glGetUniformLocation(ID, Uniform);
+	return glGetUniformLocation(m_GpuId, Uniform);
 
 	//auto usedIt = m_UsedUniforms.find(Uniform);
 	//if (usedIt != m_UsedUniforms.end() && usedIt->second)
@@ -402,7 +402,7 @@ void ShaderProgram::m_PrintErrors(uint32_t Object, const char* Type) const
 {
 	char infoLog[1024];
 
-	if (Object != this->ID)
+	if (Object != m_GpuId)
 	{
 		GLint hasCompiled;
 		glGetShaderiv(Object, GL_COMPILE_STATUS, &hasCompiled);
@@ -447,16 +447,16 @@ ShaderProgram::~ShaderProgram()
 
 	if (it != s_Programs.end())
 	{
-		glDeleteProgram(ID);
+		glDeleteProgram(m_GpuId);
 		s_Programs.erase(it->first);
 	}
 	else
 		Debug::Log(std::vformat(
 			"Program (ID:{}) does not exist in the registry, not deleting.",
-			std::make_format_args(ID)
+			std::make_format_args(m_GpuId)
 		));
 	
-	ID = UINT32_MAX;
+	m_GpuId = UINT32_MAX;
 }
 
 ShaderProgram* ShaderProgram::GetShaderProgram(std::string const& ProgramName)
@@ -469,7 +469,7 @@ ShaderProgram* ShaderProgram::GetShaderProgram(std::string const& ProgramName)
 	{
 		ShaderProgram* newProgram = new ShaderProgram(ProgramName);
 		s_Programs.insert(std::pair(ProgramName, newProgram));
-		IdToShaderName[newProgram->ID] = ProgramName;
+		IdToShaderName[newProgram->m_GpuId] = ProgramName;
 
 		return newProgram;
 	}

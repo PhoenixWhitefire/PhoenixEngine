@@ -80,7 +80,7 @@ void Object_Example::s_DeclareReflections()
 			if (names.empty())
 				return { p->Name + ": He- Oh... There's no one here... :(" };
 
-			else if (gv.Array.size() == 1)
+			else if (names.size() == 1)
 				return { p->Name + ": Hello, " + names[0].AsString() + "!" };
 
 			// Even though you *could* do

@@ -1,8 +1,8 @@
 {
   "albedo": "models/windows/diffuse.png",
-  "alphaCutoff": 0,
-  "alphaMode": 2,
-  "roughnessFactor": 0.5,
-  "specMultiply": 0.0,
-  "translucency": true
+  "shaderprogram": "worldUber",
+  "specExponent": 16.0,
+  "specMultiply": 0.5,
+  "translucency": true,
+  "uniforms": null
 }

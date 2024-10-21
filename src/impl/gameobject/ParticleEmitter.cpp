@@ -6,10 +6,10 @@
 #include"gameobject/Base3D.hpp"
 #include"datatype/Vector2.hpp"
 
-RegisterDerivedObject<Object_ParticleEmitter> Object_ParticleEmitter::RegisterClassAs("ParticleEmitter");
+static RegisterDerivedObject<Object_ParticleEmitter> RegisterClassAs("ParticleEmitter");
 
-ShaderProgram* Object_ParticleEmitter::s_ParticleShaders = nullptr;
-std::default_random_engine Object_ParticleEmitter::s_RandGenerator = std::default_random_engine(static_cast<uint32_t>(time(NULL)));
+static ShaderProgram* s_ParticleShaders = nullptr;
+static std::default_random_engine s_RandGenerator = std::default_random_engine(static_cast<uint32_t>(time(NULL)));
 static bool s_DidInitReflection = false;
 
 static const std::string MissingTexPath = "textures/MISSING2_MaximumADHD_status_1665776378145304579.png";
@@ -92,8 +92,8 @@ Object_ParticleEmitter::Object_ParticleEmitter()
 	this->Name = "ParticleEmitter";
 	this->ClassName = "ParticleEmitter";
 
-	if (!Object_ParticleEmitter::s_ParticleShaders)
-		Object_ParticleEmitter::s_ParticleShaders = ShaderProgram::GetShaderProgram("particle");
+	if (!s_ParticleShaders)
+		s_ParticleShaders = ShaderProgram::GetShaderProgram("particle");
 
 	m_VertArray.Bind();
 

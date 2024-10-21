@@ -134,7 +134,7 @@ GameObject* GameObject::FromGenericValue(const Reflection::GenericValue& gv)
 		));
 	}
 
-	return GameObject::GetObjectById(static_cast<uint32_t>((int64_t)gv.Pointer));
+	return GameObject::GetObjectById(static_cast<uint32_t>((int64_t)gv.Value));
 }
 
 GameObject::~GameObject()

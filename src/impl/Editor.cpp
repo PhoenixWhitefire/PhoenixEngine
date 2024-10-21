@@ -384,7 +384,7 @@ void Editor::m_RenderMaterialEditor()
 
 		for (auto& it : curItem->Uniforms)
 		{
-			const Reflection::GenericValue& value = it.second;
+			Reflection::GenericValue& value = it.second;
 
 			switch (value.Type)
 			{
@@ -503,7 +503,7 @@ void Editor::RenderUI()
 				const char* propName = propListItem.first.c_str();
 				const IProperty& prop = propListItem.second;
 
-				const Reflection::GenericValue curVal = selected->GetPropertyValue(propName);
+				Reflection::GenericValue curVal = selected->GetPropertyValue(propName);
 
 				if (!prop.Set)
 				{
