@@ -1,6 +1,6 @@
 {
   "Base3D": {
-    "ClassName": "String",
+    "Class": "String",
     "ColorRGB": "Color",
     "Density": "Double",
     "Destroy": "() -> ()",
@@ -21,7 +21,7 @@
     "Transparency": "Double"
   },
   "Camera": {
-    "ClassName": "String",
+    "Class": "String",
     "Destroy": "() -> ()",
     "Enabled": "Bool",
     "FieldOfView": "Double",
@@ -33,7 +33,7 @@
     "UseSimpleController": "Bool"
   },
   "DataModel": {
-    "ClassName": "String",
+    "Class": "String",
     "Close": "() -> ()",
     "Destroy": "() -> ()",
     "Enabled": "Bool",
@@ -44,7 +44,7 @@
   },
   "DirectionalLight": {
     "Brightness": "Double",
-    "ClassName": "String",
+    "Class": "String",
     "Destroy": "() -> ()",
     "Direction": "Vector3",
     "Enabled": "Bool",
@@ -56,7 +56,7 @@
     "Shadows": "Bool"
   },
   "Example": {
-    "ClassName": "String",
+    "Class": "String",
     "Destroy": "() -> ()",
     "Enabled": "Bool",
     "GetFullName": "() -> (String,)",
@@ -74,7 +74,7 @@
     "Value5": "Vector3"
   },
   "GameObject": {
-    "ClassName": "String",
+    "Class": "String",
     "Destroy": "() -> ()",
     "Enabled": "Bool",
     "GetFullName": "() -> (String,)",
@@ -84,7 +84,7 @@
   },
   "Light": {
     "Brightness": "Double",
-    "ClassName": "String",
+    "Class": "String",
     "Destroy": "() -> ()",
     "Enabled": "Bool",
     "GetFullName": "() -> (String,)",
@@ -97,7 +97,7 @@
   },
   "Mesh": {
     "Asset": "String",
-    "ClassName": "String",
+    "Class": "String",
     "ColorRGB": "Color",
     "Density": "Double",
     "Destroy": "() -> ()",
@@ -118,7 +118,7 @@
     "Transparency": "Double"
   },
   "Model": {
-    "ClassName": "String",
+    "Class": "String",
     "Destroy": "() -> ()",
     "Enabled": "Bool",
     "GetFullName": "() -> (String,)",
@@ -127,7 +127,7 @@
     "Parent": "GameObject"
   },
   "ParticleEmitter": {
-    "ClassName": "String",
+    "Class": "String",
     "Destroy": "() -> ()",
     "EmitterEnabled": "Bool",
     "Enabled": "Bool",
@@ -142,7 +142,7 @@
   },
   "PointLight": {
     "Brightness": "Double",
-    "ClassName": "String",
+    "Class": "String",
     "Destroy": "() -> ()",
     "Enabled": "Bool",
     "GetFullName": "() -> (String,)",
@@ -155,7 +155,7 @@
     "Shadows": "Bool"
   },
   "Primitive": {
-    "ClassName": "String",
+    "Class": "String",
     "ColorRGB": "Color",
     "Density": "Double",
     "Destroy": "() -> ()",
@@ -177,7 +177,7 @@
     "Transparency": "Double"
   },
   "Script": {
-    "ClassName": "String",
+    "Class": "String",
     "Destroy": "() -> ()",
     "Enabled": "Bool",
     "GetFullName": "() -> (String,)",
@@ -189,7 +189,7 @@
   },
   "SpotLight": {
     "Brightness": "Double",
-    "ClassName": "String",
+    "Class": "String",
     "Destroy": "() -> ()",
     "Enabled": "Bool",
     "GetFullName": "() -> (String,)",
@@ -204,7 +204,7 @@
     "Shadows": "Bool"
   },
   "Workspace": {
-    "ClassName": "String",
+    "Class": "String",
     "Destroy": "() -> ()",
     "Enabled": "Bool",
     "GetFullName": "() -> (String,)",

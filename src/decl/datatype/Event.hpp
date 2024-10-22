@@ -3,8 +3,8 @@
 
 #pragma once
 
-#include<functional>
-#include<vector>
+#include <functional>
+#include <vector>
 
 template <class T> class EventConnection
 {

@@ -2,13 +2,13 @@
 
 #pragma once
 
-#include<unordered_map>
-#include<future>
-#include<thread>
-#include<luau/Compiler/include/luacode.h>
+#include <unordered_map>
+#include <future>
+#include <thread>
+#include <luau/Compiler/include/luacode.h>
 
-#include"Reflection.hpp"
-#include"datatype/GameObject.hpp"
+#include "Reflection.hpp"
+#include "datatype/GameObject.hpp"
 
 namespace ScriptEngine
 {
@@ -31,7 +31,7 @@ namespace ScriptEngine::L
 		int StackIndex = -1
 	);
 
-	void PushGenericValue(lua_State*, Reflection::GenericValue&);
+	void PushGenericValue(lua_State*, const Reflection::GenericValue&);
 	void PushGameObject(lua_State*, GameObject*);
 	void PushFunction(lua_State* L, const char*);
 

@@ -12,7 +12,7 @@ public:
 private:
 	struct MeshMaterial
 	{
-		enum class MaterialAlphaMode { Opaque, Mask, Blend };
+		enum class MaterialAlphaMode : uint8_t { Opaque, Mask, Blend };
 
 		std::string Name{};
 

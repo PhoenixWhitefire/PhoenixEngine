@@ -1,10 +1,9 @@
 #pragma once
 
+#include <vector>
+#include <luau/VM/src/lstate.h>
 
-#include<vector>
-#include<luau/VM/src/lstate.h>
-
-#include"datatype/GameObject.hpp"
+#include "datatype/GameObject.hpp"
 
 class Object_Script : public GameObject
 {

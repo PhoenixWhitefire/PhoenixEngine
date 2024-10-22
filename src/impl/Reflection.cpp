@@ -111,7 +111,7 @@ Reflection::GenericValue::GenericValue(const std::unordered_map<GenericValue, Ge
 
 	memcpy(this->Value, arr.data(), allocSize);
 
-	this->ArrayLength = arr.size() * 2;
+	this->ArrayLength = arr.size();
 }
 
 std::string Reflection::GenericValue::ToString()
@@ -182,17 +182,13 @@ std::string Reflection::GenericValue::ToString()
 		{
 			if (arr.size() % 2 != 0)
 				return "Invalid Map (Odd number of Array elements)";
-
-			/*
+			
 			return std::vformat(
 				"Map<{}:{}>",
 				std::make_format_args(
-					Reflection::TypeAsString((this->Value[0]).Type),
-					Reflection::TypeAsString(this->Array[1].Type)
+					Reflection::TypeAsString(arr[0].Type),
+					Reflection::TypeAsString(arr[1].Type)
 				));
-			*/
-
-			return "NOT IMPLEMENTED! 21/10/2024";
 		}
 		else
 			return "Empty Map";
@@ -220,7 +216,7 @@ bool Reflection::GenericValue::AsBool() const
 		? (bool)this->Value
 		: throw("GenericValue was not a Bool, but was a " + Reflection::TypeAsString(Type));
 }
-double Reflection::GenericValue::AsDouble()
+double Reflection::GenericValue::AsDouble() const
 {
 	return Type == ValueType::Double
 		? *(double*)&this->Value
@@ -241,31 +237,29 @@ glm::mat4 Reflection::GenericValue::AsMatrix() const
 		? *mptr
 		: throw("GenericValue was not a Matrix, but was a " + Reflection::TypeAsString(Type));
 }
-std::vector<Reflection::GenericValue> Reflection::GenericValue::AsArray()
+std::vector<Reflection::GenericValue> Reflection::GenericValue::AsArray() const
 {
 	std::vector<GenericValue> array;
 	array.reserve(this->ArrayLength);
+
+	Reflection::GenericValue* first = (Reflection::GenericValue*)this->Value;
 
 	if (Type == ValueType::Map)
 	{
 		if (this->ArrayLength % 2 != 0)
 			throw("Tried to convert a Map GenericValue to an Array, but it wasn't valid and had an odd number of Array elements");
 
-		for (size_t index = 1; index < array.size(); index++)
+		for (size_t index = 1; index < this->ArrayLength; index++)
 		{
-			//array.push_back((Reflection::GenericValue*)(this->Value[index]));
-			throw("NOT IMPLEMENTED YET! 21/10/2024");
-			//index++;
+			array.push_back(first[index]);
+			index++;
 		}
 
 		return array;
 	}
 	else
 		for (uint32_t i = 0; i < this->ArrayLength; i++)
-		{
-			auto ptr = ((Reflection::GenericValue*)this->Value)[i];
-			array.push_back(ptr);
-		}
+			array.push_back(first[i]);
 
 	return this->Type == ValueType::Array
 		? array

@@ -1,9 +1,9 @@
 #pragma once
 
-#include<format>
-#include<glm/vec3.hpp>
+#include <format>
+#include <glm/vec3.hpp>
 
-#include"Reflection.hpp"
+#include "Reflection.hpp"
 
 class Vector3 : public Reflection::Reflectable
 {
@@ -19,12 +19,11 @@ public:
 	// Returns formatted `X, Y, Z`
 	std::string ToString();
 
-	Vector3 Cross(Vector3 OtherVec);
-	double Dot(Vector3 OtherVec);
+	Vector3 Cross(Vector3 OtherVec) const;
+	double Dot(Vector3 OtherVec) const;
+	double Magnitude() const;
 
 	double X, Y, Z;
-
-	double Magnitude; //Calculated when vector is created (vectors are meant to be immutable)
 
 	static Vector3 zero;
 	static Vector3 xAxis;

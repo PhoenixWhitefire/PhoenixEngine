@@ -3,7 +3,7 @@
 #include<vector>
 #include<future>
 
-enum class TextureLoadStatus
+enum class TextureLoadStatus : uint8_t
 {
 	NotAttempted,
 	InProgress,

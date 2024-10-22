@@ -1,8 +1,8 @@
 #pragma once
 
-#include<glm/matrix.hpp>
+#include <glm/matrix.hpp>
 
-#include"datatype/GameObject.hpp"
+#include "datatype/GameObject.hpp"
 
 class Object_Camera : public GameObject
 {
@@ -34,9 +34,4 @@ public:
 private:
 	static void s_DeclareReflections();
 	static inline Api s_Api{};
-
-	// When in GenericMovement mode
-	bool FirstDragFrame = false;
-	int PrevMouseX;
-	int PrevMouseY;
 };

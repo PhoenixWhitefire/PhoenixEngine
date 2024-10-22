@@ -1,8 +1,8 @@
 // 15/09/2024 PHOENIXWHITEFIRE2000
 // A template/example GameObject.
 
-#include"gameobject/Example.hpp"
-#include"gameobject/DataModel.hpp"
+#include "gameobject/Example.hpp"
+#include "gameobject/DataModel.hpp"
 
 static bool s_DidInitReflection = false;
 

@@ -1,6 +1,6 @@
-#include"gameobject/Model.hpp"
+#include "gameobject/Model.hpp"
 
-RegisterDerivedObject<Object_Model> Object_Model::RegisterClassAs("Model");
+static RegisterDerivedObject<Object_Model> RegisterClassAs("Model");
 
 static bool s_DidInitReflection = false;
 

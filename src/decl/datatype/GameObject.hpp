@@ -1,6 +1,6 @@
 #pragma once
 
-#include<stdint.h>
+#include <stdint.h>
 
 #define PHX_ASSERT(res, err) if (!res) throw(err)
 #define PHX_GAMEOBJECT_NULL_ID UINT32_MAX
@@ -159,15 +159,12 @@ public:
 	bool Enabled = true;
 	bool ParentLocked = false;
 
-	uint32_t Parent;
-
-	EventSignal<GameObject*> OnChildAdded;
-	EventSignal<GameObject*> OnChildRemoving;
+	uint32_t Parent = PHX_GAMEOBJECT_NULL_ID;
 
 	static nlohmann::json DumpApiToJson();
 
 protected:
-	std::unordered_map<uint32_t, uint32_t> m_Children;
+	std::vector<uint32_t> m_Children;
 
 	// I followed this StackOverflow post:
 	// https://stackoverflow.com/a/582456/16875161

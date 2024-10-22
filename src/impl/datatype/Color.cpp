@@ -1,4 +1,6 @@
-#include"datatype/Color.hpp"
+#include <format>
+
+#include "datatype/Color.hpp"
 
 Color::Color()
 {

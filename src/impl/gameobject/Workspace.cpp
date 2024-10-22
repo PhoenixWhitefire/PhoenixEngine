@@ -1,4 +1,4 @@
-#include"gameobject/Workspace.hpp"
+#include "gameobject/Workspace.hpp"
 
 RegisterDerivedObject<Object_Workspace> Object_Workspace::RegisterClassAs("Workspace");
 static bool s_DidInitReflection = false;

@@ -1,8 +1,8 @@
 #pragma once
 
-#include"gameobject/Model.hpp"
-#include"gameobject/Camera.hpp"
-#include"datatype/Vector2.hpp"
+#include "gameobject/Model.hpp"
+#include "gameobject/Camera.hpp"
+#include "datatype/Vector2.hpp"
 
 class Object_Workspace : public Object_Model
 {

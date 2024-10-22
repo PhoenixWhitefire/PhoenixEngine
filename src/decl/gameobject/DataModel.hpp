@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include"datatype/GameObject.hpp"
+#include "datatype/GameObject.hpp"
 
 class Object_DataModel : public GameObject
 {

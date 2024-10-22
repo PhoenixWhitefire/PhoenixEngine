@@ -1,19 +1,19 @@
-#include<glm/mat4x4.hpp>
-#include<luau/VM/src/lstate.h>
-#include<luau/VM/include/lualib.h>
+#include <glm/mat4x4.hpp>
+#include <luau/VM/src/lstate.h>
+#include <luau/VM/include/lualib.h>
 
-#include"gameobject/ScriptEngine.hpp"
-#include"Debug.hpp"
+#include "gameobject/ScriptEngine.hpp"
+#include "Debug.hpp"
 
-#include"IntersectionLib.hpp"
-#include"datatype/Vector3.hpp"
-#include"datatype/Color.hpp"
-#include"datatype/GameObject.hpp"
-#include"asset/MeshProvider.hpp"
-#include"asset/ModelLoader.hpp"
-#include"asset/SceneFormat.hpp"
-#include"UserInput.hpp"
-#include"FileRW.hpp"
+#include "IntersectionLib.hpp"
+#include "datatype/Vector3.hpp"
+#include "datatype/Color.hpp"
+#include "datatype/GameObject.hpp"
+#include "asset/MeshProvider.hpp"
+#include "asset/ModelLoader.hpp"
+#include "asset/SceneFormat.hpp"
+#include "UserInput.hpp"
+#include "FileRW.hpp"
 
 template <class T> static void throwWrapped(T exc)
 {
@@ -161,7 +161,7 @@ Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int St
 	}
 }
 
-void ScriptEngine::L::PushGenericValue(lua_State* L, Reflection::GenericValue& gv)
+void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericValue& gv)
 {
 	switch (gv.Type)
 	{
@@ -371,7 +371,7 @@ void ScriptEngine::L::PushFunction(lua_State* L, const char* Name)
 				luaL_error(L, err);
 			}
 
-			for (Reflection::GenericValue& output : outputs)
+			for (const Reflection::GenericValue& output : outputs)
 				L::PushGenericValue(L, output);
 
 			return (int)func.Outputs.size();
@@ -795,7 +795,7 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 			std::vector<Reflection::GenericValue> rootNodesArray = rootNodesGv.AsArray();
 			std::vector<GameObject*> rootNodes;
 
-			for (Reflection::GenericValue& gv : rootNodesArray)
+			for (const Reflection::GenericValue& gv : rootNodesArray)
 				rootNodes.push_back(GameObject::FromGenericValue(gv));
 
 			std::string fileContents = SceneFormat::Serialize(rootNodes, path);

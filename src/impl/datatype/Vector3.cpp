@@ -50,8 +50,6 @@ Vector3::Vector3()
 	this->Y = 0.f;
 	this->Z = 0.f;
 
-	this->Magnitude = 0.f;
-
 	s_DeclareReflections();
 }
 
@@ -60,8 +58,6 @@ Vector3::Vector3(double x, double y, double z)
 	this->X = x;
 	this->Y = y;
 	this->Z = z;
-
-	this->Magnitude = sqrt((this->X * this->X) + (this->Y * this->Y) + (this->Z * this->Z));
 
 	s_DeclareReflections();
 }
@@ -72,8 +68,6 @@ Vector3::Vector3(glm::tvec3<double, glm::highp> GLMVector)
 	this->Y = GLMVector.y;
 	this->Z = GLMVector.z;
 
-	this->Magnitude = sqrt((this->X * this->X) + (this->Y * this->Y) + (this->Z * this->Z));
-
 	s_DeclareReflections();
 }
 
@@ -83,13 +77,10 @@ Vector3::Vector3(glm::vec3 GLMVector)
 	this->Y = GLMVector.y;
 	this->Z = GLMVector.z;
 
-	this->Magnitude = sqrt((this->X * this->X) + (this->Y * this->Y) + (this->Z * this->Z));
-
 	s_DeclareReflections();
 }
 
 Vector3::Vector3(Reflection::GenericValue gv)
-	: X(0.f), Y(0.f), Z(0.f), Magnitude(0.f)
 {
 	if (gv.Type != Reflection::ValueType::Vector3)
 	{
@@ -116,7 +107,6 @@ Vector3::Vector3(Reflection::GenericValue gv)
 	this->X = vec.X;
 	this->Y = vec.Y;
 	this->Z = vec.Z;
-	this->Magnitude = vec.Magnitude;
 
 	s_DeclareReflections();
 }
@@ -137,23 +127,7 @@ std::string Vector3::ToString()
 	return std::vformat("{}, {}, {}", std::make_format_args(X, Y, Z));
 }
 
-double Vector3::Dot(Vector3 OtherVec)
-{
-	/*double Product = 0.f;
-
-	Product += this->X * OtherVec.X;
-	Product += this->Y * OtherVec.Y;
-	Product += this->Z * OtherVec.Z;
-
-	return Product;*/
-
-	// Gave up
-	auto me = glm::tvec3<double, glm::highp>(*this);
-	auto them = glm::tvec3<double, glm::highp>(OtherVec);
-	return glm::dot(me, them);
-}
-
-Vector3 Vector3::Cross(Vector3 OtherVec)
+Vector3 Vector3::Cross(Vector3 OtherVec) const
 {
 	/*Vector3 CrossVec;
 
@@ -164,9 +138,30 @@ Vector3 Vector3::Cross(Vector3 OtherVec)
 	return CrossVec;*/
 
 	// Gave up
-	auto me = glm::tvec3<double, glm::highp>(*this);
+	auto me = glm::tvec3<double, glm::highp>(Vector3(*this));
 	auto them = glm::tvec3<double, glm::highp>(OtherVec);
 	return glm::cross(me, them);
+}
+
+double Vector3::Dot(Vector3 OtherVec) const
+{
+	/*double Product = 0.f;
+
+	Product += this->X * OtherVec.X;
+	Product += this->Y * OtherVec.Y;
+	Product += this->Z * OtherVec.Z;
+
+	return Product;*/
+
+	// Gave up
+	auto me = glm::tvec3<double, glm::highp>(Vector3(*this));
+	auto them = glm::tvec3<double, glm::highp>(OtherVec);
+	return glm::dot(me, them);
+}
+
+double Vector3::Magnitude() const
+{
+	return sqrt((this->X * this->X) + (this->Y * this->Y) + (this->Z * this->Z));
 }
 
 Vector3 Vector3::operator+(Vector3 Other)
@@ -181,7 +176,6 @@ Vector3& Vector3::operator+=(const Vector3 Right)
 	this->X = NewVec.X;
 	this->Y = NewVec.Y;
 	this->Z = NewVec.Z;
-	this->Magnitude = NewVec.Magnitude;
 
 	return *this;
 }
@@ -193,7 +187,6 @@ Vector3& Vector3::operator-=(const Vector3 Right)
 	this->X = NewVec.X;
 	this->Y = NewVec.Y;
 	this->Z = NewVec.Z;
-	this->Magnitude = NewVec.Magnitude;
 
 	return *this;
 }

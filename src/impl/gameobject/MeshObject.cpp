@@ -1,5 +1,5 @@
-#include"gameobject/MeshObject.hpp"
-#include"asset/MeshProvider.hpp"
+#include "gameobject/MeshObject.hpp"
+#include "asset/MeshProvider.hpp"
 
 static RegisterDerivedObject<Object_Mesh> RegisterClassAs("Mesh");
 

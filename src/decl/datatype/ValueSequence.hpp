@@ -3,8 +3,8 @@
 
 #pragma once
 
-#include<vector>
-#include<random>
+#include <vector>
+#include <random>
 
 template <class T> class ValueSequenceKeypoint
 {

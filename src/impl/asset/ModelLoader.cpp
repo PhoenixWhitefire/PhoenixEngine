@@ -8,8 +8,6 @@
 #include"FileRW.hpp"
 #include"Debug.hpp"
 
-enum class MaterialTextureType { Diffuse, Specular };
-
 ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 {
 	std::string gltfFilePath = AssetPath + "/scene.gltf";

@@ -1,19 +1,19 @@
 // TODO: cleanup code!
 
-#include<iostream>
-#include<nljson.hpp>
-#include<SDL2/SDL_messagebox.h>
-#include<SDL2/SDL_video.h>
-#include<glm/gtc/matrix_transform.hpp>
+#include <iostream>
+#include <nljson.hpp>
+#include <SDL2/SDL_messagebox.h>
+#include <SDL2/SDL_video.h>
+#include <glm/gtc/matrix_transform.hpp>
 
-#include"asset/SceneFormat.hpp"
+#include "asset/SceneFormat.hpp"
 
-#include"gameobject/GameObjects.hpp"
-#include"asset/Material.hpp"
-#include"asset/ModelLoader.hpp"
-#include"asset/PrimitiveMeshes.hpp"
-#include"FileRW.hpp"
-#include"Debug.hpp"
+#include "gameobject/GameObjects.hpp"
+#include "asset/Material.hpp"
+#include "asset/ModelLoader.hpp"
+#include "asset/PrimitiveMeshes.hpp"
+#include "FileRW.hpp"
+#include "Debug.hpp"
 
 static std::string errorString = "No error";
 

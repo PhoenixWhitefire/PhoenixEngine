@@ -1,10 +1,10 @@
-#include<glad/gl.h>
-#include<glm/gtc/type_ptr.hpp>
-#include<glm/gtc/matrix_transform.hpp>
+#include <glad/gl.h>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
-#include"gameobject/ParticleEmitter.hpp"
-#include"gameobject/Base3D.hpp"
-#include"datatype/Vector2.hpp"
+#include "gameobject/ParticleEmitter.hpp"
+#include "gameobject/Base3D.hpp"
+#include "datatype/Vector2.hpp"
 
 static RegisterDerivedObject<Object_ParticleEmitter> RegisterClassAs("ParticleEmitter");
 

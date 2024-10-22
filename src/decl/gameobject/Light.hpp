@@ -1,14 +1,13 @@
 #pragma once
 
-#include"datatype/GameObject.hpp"
+#include "datatype/GameObject.hpp"
 
-#include"datatype/Color.hpp"
-#include"datatype/Vector3.hpp"
+#include "datatype/Color.hpp"
+#include "datatype/Vector3.hpp"
 
 class Object_Light : public GameObject
 {
 public:
-
 	Object_Light();
 
 	Color LightColor = Color(1.0f, 1.0f, 1.0f);
@@ -20,7 +19,6 @@ public:
 	PHX_GAMEOBJECT_API_REFLECTION;
 
 private:
-	
 	static void s_DeclareReflections();
 	static inline Api s_Api{};
 };
@@ -36,7 +34,6 @@ public:
 	PHX_GAMEOBJECT_API_REFLECTION;
 
 private:
-	static RegisterDerivedObject<Object_PointLight> RegisterClassAs;
 	static void s_DeclareReflections();
 	static inline Api s_Api{};
 };
@@ -49,7 +46,6 @@ public:
 	PHX_GAMEOBJECT_API_REFLECTION;
 
 private:
-	static RegisterDerivedObject<Object_DirectionalLight> RegisterClassAs;
 	static void s_DeclareReflections();
 	static inline Api s_Api{};
 };
@@ -67,7 +63,6 @@ public:
 	PHX_GAMEOBJECT_API_REFLECTION;
 
 private:
-	static RegisterDerivedObject<Object_SpotLight> RegisterClassAs;
 	static void s_DeclareReflections();
 	static inline Api s_Api{};
 };

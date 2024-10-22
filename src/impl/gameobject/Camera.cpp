@@ -1,10 +1,10 @@
-#include<glm/gtc/type_ptr.hpp>
-#include<glm/gtx/rotate_vector.hpp>
-#include<glm/gtx/vector_angle.hpp>
-
-#include"gameobject/Camera.hpp"
-#include"datatype/Vector3.hpp"
-#include"UserInput.hpp"
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/rotate_vector.hpp>
+#include <glm/gtx/vector_angle.hpp>
+ 
+#include "gameobject/Camera.hpp"
+#include "datatype/Vector3.hpp"
+#include "UserInput.hpp"
 
 static RegisterDerivedObject<Object_Camera> RegisterClassAs("Camera");
 static bool s_DidInitReflection = false;
@@ -20,27 +20,13 @@ void Object_Camera::s_DeclareReflections()
 	REFLECTION_DECLAREPROP_SIMPLE(Object_Camera, UseSimpleController, Bool);
 	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_Camera, FieldOfView, Double, float);
 
-	REFLECTION_DECLAREPROP(
-		"Transform",
-		Matrix,
-		[](GameObject* p)
-		{
-			return Reflection::GenericValue(dynamic_cast<Object_Camera*>(p)->Transform);
-		},
-		[](GameObject* p, const Reflection::GenericValue& gv)
-		{
-			dynamic_cast<Object_Camera*>(p)->Transform = gv.AsMatrix();
-		}
-	);
+	REFLECTION_DECLAREPROP_SIMPLE(Object_Camera, Transform, Matrix);
 }
 
 Object_Camera::Object_Camera()
 {
 	this->Name = "Camera";
 	this->ClassName = "Camera";
-
-	PrevMouseX = 0;
-	PrevMouseY = 0;
 
 	this->Transform = glm::lookAt(glm::vec3(), glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f, 1.f, 0.f));
 

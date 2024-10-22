@@ -164,10 +164,10 @@ namespace Reflection
 		// Throws errors if the type does not match
 		std::string AsString() const;
 		bool AsBool() const;
-		double AsDouble();
+		double AsDouble() const;
 		int64_t AsInteger() const;
 		glm::mat4 AsMatrix() const;
-		std::vector<GenericValue> AsArray();
+		std::vector<GenericValue> AsArray() const;
 		std::unordered_map<GenericValue, GenericValue> AsMap() const;
 	};
 

@@ -4,10 +4,10 @@
 #include<string>
 #include<thread>
 
-enum class WorkerStatus { WaitingForTask, RunningTask };
+enum class WorkerStatus : uint8_t { WaitingForTask, RunningTask };
 
 // SpecialWorkers will not get assigned tasks by DispatchJob
-enum class WorkerType { DefaultTaskWorker, SpecialWorker };
+enum class WorkerType : uint8_t { DefaultTaskWorker, SpecialWorker };
 
 struct Task
 {

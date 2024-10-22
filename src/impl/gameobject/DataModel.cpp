@@ -1,8 +1,8 @@
 // The Hierarchy Root
 // 13/08/2024
 
-#include"gameobject/DataModel.hpp"
-#include"Debug.hpp"
+#include "gameobject/DataModel.hpp"
+#include "Debug.hpp"
 
 RegisterDerivedObject<Object_DataModel> Object_DataModel::RegisterObjectAs("DataModel");
 static bool s_DidInitReflection = false;

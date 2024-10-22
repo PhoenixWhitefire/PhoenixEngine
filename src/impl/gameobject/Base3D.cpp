@@ -1,4 +1,4 @@
-#include"gameobject/Base3D.hpp"
+#include "gameobject/Base3D.hpp"
 
 static bool s_DidInitReflection = false;
 static RenderMaterial* DefaultRenderMat = nullptr;

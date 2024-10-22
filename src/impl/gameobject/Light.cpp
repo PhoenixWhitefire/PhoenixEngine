@@ -1,9 +1,9 @@
-#include"gameobject/Light.hpp"
+#include "gameobject/Light.hpp"
 
-static RegisterDerivedObject<Object_Light> RegisterClassAs("Light");
-RegisterDerivedObject<Object_PointLight> Object_PointLight::RegisterClassAs("PointLight");
-RegisterDerivedObject<Object_SpotLight> Object_SpotLight::RegisterClassAs("SpotLight");
-RegisterDerivedObject<Object_DirectionalLight> Object_DirectionalLight::RegisterClassAs("DirectionalLight");
+static RegisterDerivedObject<Object_Light> RegisterLightAs("Light");
+static RegisterDerivedObject<Object_PointLight> RegisterPointLightAs("PointLight");
+static RegisterDerivedObject<Object_SpotLight> RegisterSpotLightAs("SpotLight");
+static RegisterDerivedObject<Object_DirectionalLight> RegisterDirectionalLigthAs("DirectionalLight");
 
 static bool s_BaseDidInitReflection = false;
 static bool s_DirectionalDidInitReflection = false;
@@ -49,8 +49,8 @@ void Object_DirectionalLight::s_DeclareReflections()
 			Object_DirectionalLight* p = dynamic_cast<Object_DirectionalLight*>(g);
 			p->Position = gv;
 			// Normalize
-			if (p->Position.Magnitude > 1.f)
-				p->Position = p->Position / p->Position.Magnitude;
+			if (p->Position.Magnitude() > 1.f)
+				p->Position = p->Position / p->Position.Magnitude();
 		}
 	);
 }

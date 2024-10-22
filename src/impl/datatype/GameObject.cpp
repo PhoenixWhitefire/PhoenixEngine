@@ -38,6 +38,12 @@ void GameObject::s_DeclareReflections()
 	s_DidInitReflection = true;
 
 	REFLECTION_DECLAREPROP_SIMPLE_READONLY(GameObject, ClassName, String);
+
+	// "Class" better
+	// 22/10/2024
+	s_Api.Properties["Class"] = s_Api.Properties["ClassName"];
+	s_Api.Properties.erase("ClassName");
+
 	REFLECTION_DECLAREPROP_SIMPLE(GameObject, Name, String);
 	REFLECTION_DECLAREPROP_SIMPLE(GameObject, Enabled, Bool);
 	REFLECTION_DECLAREPROP_SIMPLE_READONLY(GameObject, ObjectId, Integer);
@@ -114,8 +120,6 @@ void GameObject::s_DeclareReflections()
 
 GameObject::GameObject()
 {
-	this->Parent = PHX_GAMEOBJECT_NULL_ID;
-
 	GameObject::s_DeclareReflections();
 }
 
@@ -212,12 +216,15 @@ void GameObject::SetParent(GameObject* newParent)
 
 void GameObject::AddChild(GameObject* c)
 {
-	m_Children.insert(std::pair(c->ObjectId, c->ObjectId));
+	auto it = std::find(m_Children.begin(), m_Children.end(), c->ObjectId);
+
+	if (it == m_Children.end())
+		m_Children.push_back(c->ObjectId);
 }
 
 void GameObject::RemoveChild(uint32_t id)
 {
-	auto it = m_Children.find(id);
+	auto it = std::find(m_Children.begin(), m_Children.end(), id);
 
 	if (it != m_Children.end())
 		m_Children.erase(it);
@@ -259,16 +266,14 @@ std::vector<GameObject*> GameObject::GetChildren()
 	std::vector<GameObject*> children;
 	children.reserve(m_Children.size());
 
-	for (auto& childEntry : m_Children)
+	for (uint32_t index = 0; index < m_Children.size(); index++)
 	{
-		uint32_t childId = childEntry.second;
-
-		GameObject* child = GameObject::GetObjectById(childId);
+		GameObject* child = GameObject::GetObjectById(m_Children[index]);
 
 		if (child)
 			children.push_back(child);
 		else
-			m_Children.erase(childEntry.first);
+			m_Children.erase(m_Children.begin() + index);
 	}
 
 	return children;
@@ -279,11 +284,9 @@ std::vector<GameObject*> GameObject::GetDescendants()
 	std::vector<GameObject*> descendants;
 	descendants.reserve(m_Children.size());
 
-	for (auto& childEntry : m_Children)
+	for (uint32_t index = 0; index < m_Children.size(); index++)
 	{
-		uint32_t childId = childEntry.second;
-
-		GameObject* child = GameObject::GetObjectById(childId);
+		GameObject* child = GameObject::GetObjectById(m_Children[index]);
 
 		if (child)
 		{
@@ -293,7 +296,7 @@ std::vector<GameObject*> GameObject::GetDescendants()
 			std::copy(childrenDescendants.begin(), childrenDescendants.end(), std::back_inserter(descendants));
 		}
 		else
-			m_Children.erase(childEntry.first);
+			m_Children.erase(m_Children.begin() + index);
 	}
 
 	return descendants;
@@ -301,20 +304,20 @@ std::vector<GameObject*> GameObject::GetDescendants()
 
 GameObject* GameObject::GetChildById(uint32_t id)
 {
-	auto it = m_Children.find(id);
+	auto it = std::find(m_Children.begin(), m_Children.end(), id);
 
-	return it != m_Children.end() ? s_WorldArray[id] : nullptr;
+	return it != m_Children.end() ? GameObject::GetObjectById(id) : nullptr;
 }
 
 GameObject* GameObject::GetChild(std::string const& ChildName)
 {
-	for (auto& it : m_Children)
+	for (uint32_t index = 0; index < m_Children.size(); index++)
 	{
-		GameObject* child = GameObject::GetObjectById(it.second);
+		GameObject* child = GameObject::GetObjectById(m_Children[index]);
 
 		if (!child)
 		{
-			m_Children.erase(it.first);
+			m_Children.erase(m_Children.begin() + index);
 			continue;
 		}
 
@@ -328,13 +331,13 @@ GameObject* GameObject::GetChild(std::string const& ChildName)
 
 GameObject* GameObject::GetChildOfClass(std::string const& Class)
 {
-	for (auto& it : m_Children)
+	for (uint32_t index = 0; index < m_Children.size(); index++)
 	{
-		GameObject* child = this->GetChildById(m_Children[it.second]);
+		GameObject* child = GameObject::GetObjectById(m_Children[index]);
 
 		if (!child)
 		{
-			m_Children.erase(it.first);
+			m_Children.erase(m_Children.begin() + index);
 			continue;
 		}
 

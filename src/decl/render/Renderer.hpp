@@ -44,7 +44,7 @@ struct RenderItem
 	FaceCullingMode FaceCulling = FaceCullingMode::BackFace;
 };
 
-enum class LightType { Directional, Point, Spot };
+enum class LightType : uint8_t { Directional, Point, Spot };
 
 struct LightItem
 {

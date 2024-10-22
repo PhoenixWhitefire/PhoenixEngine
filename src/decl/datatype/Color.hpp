@@ -1,9 +1,8 @@
 #pragma once
 
-#include<string>
-#include<format>
+#include <string>
 
-#include"Reflection.hpp"
+#include "Reflection.hpp"
 
 class Color
 {

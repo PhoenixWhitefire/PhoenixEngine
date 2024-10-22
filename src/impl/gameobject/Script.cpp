@@ -8,17 +8,17 @@
 
 */
 
-#include<glm/gtc/matrix_transform.hpp>
-#include<luau/VM/include/lualib.h>
+#include <glm/gtc/matrix_transform.hpp>
+#include <luau/VM/include/lualib.h>
 
-#include"gameobject/Script.hpp"
-#include"datatype/GameObject.hpp"
-#include"datatype/Vector3.hpp"
-#include"datatype/Color.hpp"
-#include"UserInput.hpp"
-#include"FileRW.hpp"
-#include"Debug.hpp"
-#include"gameobject/ScriptEngine.hpp"
+#include "gameobject/Script.hpp"
+#include "datatype/GameObject.hpp"
+#include "datatype/Vector3.hpp"
+#include "datatype/Color.hpp"
+#include "UserInput.hpp"
+#include "FileRW.hpp"
+#include "Debug.hpp"
+#include "gameobject/ScriptEngine.hpp"
 
 #define LUA_ASSERT(res, err) if (!res) { luaL_error(L, err); }
 
@@ -63,12 +63,11 @@ static auto api_gameobjindex = [](lua_State* L)
 		}
 
 		if (obj->HasProperty(key))
-		{
-			Reflection::GenericValue gv = obj->GetPropertyValue(key);
-			ScriptEngine::L::PushGenericValue(L, gv);
-		}
+			ScriptEngine::L::PushGenericValue(L, obj->GetPropertyValue(key));
+
 		else if (obj->HasFunction(key))
 			ScriptEngine::L::PushFunction(L, key);
+
 		else
 		{
 			GameObject* child = obj->GetChild(key);
@@ -189,9 +188,7 @@ static auto api_newvec3 = [](lua_State* L)
 		double y = luaL_checknumber(L, 2);
 		double z = luaL_checknumber(L, 3);
 
-		Reflection::GenericValue gv = Vector3(x, y, z).ToGenericValue();
-
-		ScriptEngine::L::PushGenericValue(L, gv);
+		ScriptEngine::L::PushGenericValue(L, Vector3(x, y, z).ToGenericValue());
 
 		return 1;
 	};
@@ -226,7 +223,7 @@ static auto api_vec3index = [](lua_State* L)
 		}
 		else if (strcmp(key, "Magnitude") == 0)
 		{
-			lua_pushnumber(L, vec->Magnitude);
+			lua_pushnumber(L, vec->Magnitude());
 			return 1;
 		}
 		else
@@ -275,9 +272,7 @@ static auto api_newcol = [](lua_State* L)
 		float y = static_cast<float>(luaL_checknumber(L, 2));
 		float z = static_cast<float>(luaL_checknumber(L, 3));
 
-		Reflection::GenericValue gv = Color(x, y, z).ToGenericValue();
-
-		ScriptEngine::L::PushGenericValue(L, gv);
+		ScriptEngine::L::PushGenericValue(L, Color(x, y, z).ToGenericValue());
 
 		return 1;
 	};
@@ -374,9 +369,7 @@ static void initDefaultState()
 				Vector3 a = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -2));
 				Vector3 b = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -1));
 
-				Reflection::GenericValue gv = (a + b).ToGenericValue();
-
-				ScriptEngine::L::PushGenericValue(L, gv);
+				ScriptEngine::L::PushGenericValue(L, (a + b).ToGenericValue());
 
 				return 1;
 			},
@@ -391,9 +384,7 @@ static void initDefaultState()
 				Vector3 a = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -2));
 				Vector3 b = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -1));
 
-				Reflection::GenericValue gv = (a - b).ToGenericValue();
-
-				ScriptEngine::L::PushGenericValue(L, gv);
+				ScriptEngine::L::PushGenericValue(L, (a - b).ToGenericValue());
 
 				return 1;
 			},
@@ -408,9 +399,7 @@ static void initDefaultState()
 				Vector3 a = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -2));
 				double b = luaL_checknumber(L, 2);
 
-				Reflection::GenericValue gv = (a * b).ToGenericValue();
-
-				ScriptEngine::L::PushGenericValue(L, gv);
+				ScriptEngine::L::PushGenericValue(L, (a * b).ToGenericValue());
 
 				return 1;
 			},
@@ -499,9 +488,7 @@ static void initDefaultState()
 					);
 				}
 				
-				Reflection::GenericValue gv = m;
-
-				ScriptEngine::L::PushGenericValue(L, gv);
+				ScriptEngine::L::PushGenericValue(L, m);
 
 				return 1;
 			},
@@ -522,9 +509,7 @@ static void initDefaultState()
 				t = glm::rotate(t, y, glm::vec3(0.f, 1.f, 0.f));
 				t = glm::rotate(t, z, glm::vec3(0.f, 0.f, 1.f));
 
-				Reflection::GenericValue gv = t;
-
-				ScriptEngine::L::PushGenericValue(L, gv);
+				ScriptEngine::L::PushGenericValue(L, t);
 
 				return 1;
 			},
@@ -539,11 +524,9 @@ static void initDefaultState()
 				Vector3& a = *(Vector3*)luaL_checkudata(L, 1, "Vector3");
 				Vector3& b = *(Vector3*)luaL_checkudata(L, 2, "Vector3");
 
-				Reflection::GenericValue gv = glm::lookAt((glm::vec3)a, (glm::vec3)b, glm::vec3(0.f, 1.f, 0.f));
-
 				ScriptEngine::L::PushGenericValue(
 					L,
-					gv
+					glm::lookAt((glm::vec3)a, (glm::vec3)b, glm::vec3(0.f, 1.f, 0.f))
 				);
 
 				return 1;
@@ -567,23 +550,15 @@ static void initDefaultState()
 				const char* k = luaL_checkstring(L, 2);
 
 				if (strcmp(k, "Position") == 0)
-				{
-					Reflection::GenericValue gv = Vector3(glm::vec3(m[3])).ToGenericValue();
-
 					ScriptEngine::L::PushGenericValue(
 						L,
-						gv
+						Vector3(glm::vec3(m[3])).ToGenericValue()
 					);
-				}
 				else if (strcmp(k, "Forward") == 0)
-				{
-					Reflection::GenericValue gv = Vector3(glm::normalize(glm::vec3(m[2]))).ToGenericValue();
-
 					ScriptEngine::L::PushGenericValue(
 						L,
-						gv
+						Vector3(glm::normalize(glm::vec3(m[2]))).ToGenericValue()
 					);
-				}
 				else
 					luaL_errorL(L, "Invalid member %s", k);
 
@@ -600,10 +575,7 @@ static void initDefaultState()
 				glm::mat4& a = *(glm::mat4*)luaL_checkudata(L, 1, "Matrix");
 				glm::mat4& b = *(glm::mat4*)luaL_checkudata(L, 2, "Matrix");
 
-				glm::mat4 result = a * b;
-				Reflection::GenericValue gv = result;
-
-				ScriptEngine::L::PushGenericValue(L, gv);
+				ScriptEngine::L::PushGenericValue(L, a * b);
 
 				return 1;
 			},

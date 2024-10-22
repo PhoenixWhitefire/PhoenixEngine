@@ -1,7 +1,7 @@
-#include"gameobject/Primitive.hpp"
-#include"asset/MeshProvider.hpp"
+#include "gameobject/Primitive.hpp"
+#include "asset/MeshProvider.hpp"
 
-RegisterDerivedObject<Object_Primitive> Object_Primitive::RegisterClassAs("Primitive");
+static RegisterDerivedObject<Object_Primitive> RegisterClassAs("Primitive");
 static bool s_DidInitReflection = false;
 
 static std::string getPrimitiveMesh(PrimitiveShape Type)

@@ -175,7 +175,15 @@ Renderer::Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window)
 
 Renderer::~Renderer()
 {
+	delete m_VertexArray;
+	delete m_VertexBuffer;
+	delete m_ElementBuffer;
 	delete this->Framebuffer;
+
+	m_VertexArray = nullptr;
+	m_VertexBuffer = nullptr;
+	m_ElementBuffer = nullptr;
+	this->Framebuffer = nullptr;
 
 	this->GLContext = nullptr;
 	m_Window = nullptr;

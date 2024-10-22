@@ -1,23 +1,23 @@
-#include<chrono>
-#include<string>
-#include<format>
-#include<SDL2/SDL.h>
-#include<glad/gl.h>
-#include<glm/matrix.hpp>
-#include<glm/gtc/type_ptr.hpp>
-#include<glm/gtc/matrix_transform.hpp>
-#include<imgui/backends/imgui_impl_sdl2.h>
+#include <chrono>
+#include <string>
+#include <format>
+#include <SDL2/SDL.h>
+#include <glad/gl.h>
+#include <glm/matrix.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <imgui/backends/imgui_impl_sdl2.h>
 
-#include"Engine.hpp"
+#include "Engine.hpp"
 
-#include"gameobject/GameObjects.hpp"
-#include"asset/TextureManager.hpp"
-#include"asset/MeshProvider.hpp"
-#include"GlobalJsonConfig.hpp"
-#include"ThreadManager.hpp"
-#include"UserInput.hpp"
-#include"FileRW.hpp"
-#include"Debug.hpp"
+#include "gameobject/GameObjects.hpp"
+#include "asset/TextureManager.hpp"
+#include "asset/MeshProvider.hpp"
+#include "GlobalJsonConfig.hpp"
+#include "ThreadManager.hpp"
+#include "UserInput.hpp"
+#include "FileRW.hpp"
+#include "Debug.hpp"
 
 static uint32_t RectangleVAO, RectangleVBO;
 static auto ChronoStartTime = std::chrono::high_resolution_clock::now();

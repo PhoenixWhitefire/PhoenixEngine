@@ -8,8 +8,8 @@
 #include <SDL2/SDL_video.h>
 #include <SDL2/SDL_opengl.h>
 
-enum class GraphicsApi { Auto, None, OpenGL }; //None for saying that graphics has not been initialized.
-enum class GraphicsFeature { DepthTesting, TransparencyBlending };
+enum class GraphicsApi : uint8_t { Auto, None, OpenGL }; //None for saying that graphics has not been initialized.
+enum class GraphicsFeature : uint8_t { DepthTesting, TransparencyBlending };
 
 class GraphicsLayer
 {
