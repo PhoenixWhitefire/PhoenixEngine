@@ -1,9 +1,9 @@
 #pragma once
 
-#include<vector>
-#include<unordered_map>
+#include <vector>
+#include <unordered_map>
 
-#include"render/ShaderProgram.hpp"
+#include "render/ShaderProgram.hpp"
 
 class RenderMaterial
 {

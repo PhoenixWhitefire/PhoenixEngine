@@ -6,7 +6,8 @@
 #include "datatype/Vector3.hpp"
 #include "UserInput.hpp"
 
-static RegisterDerivedObject<Object_Camera> RegisterClassAs("Camera");
+PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(Camera);
+
 static bool s_DidInitReflection = false;
 
 void Object_Camera::s_DeclareReflections()

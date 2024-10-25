@@ -21,15 +21,31 @@ uniform float BlurVignetteDistMul = 2.5f;
 uniform float BlurVignetteDistExp = 16.f;
 uniform int BlurVignetteSampleRadius = 4;
 
+uniform float Gamma = 1.f;
+
 uniform float Time = 0.f;
 
 const vec2 Center = vec2(0.5f, 0.5f);
 
 const vec3 White = vec3(1.0f, 1.0f, 1.0f);
 
+const float LdMax = .5f;
+const float ContrastMax = .9f;
+
 float roundTo(float n, float to)
 {
 	return floor((n / to) + 0.5f) * to;
+}
+
+// https://stackoverflow.com/a/14081377/16875161
+float log10(float x)
+{
+	return (1 / log(10)) * log(x);
+}
+
+float getBrightness(vec3 Value)
+{
+	return dot(Value, vec3(0.299f, 0.587f, 0.114f));
 }
 
 void main()
@@ -53,27 +69,30 @@ void main()
 	vec2 sampleUV = FragIn_UV + UVOffset;
 	vec2 actualSamplePixel = ivec2(sampleUV * TextureSize);
 	vec3 Color = texture(Texture, sampleUV).xyz;
-	
-	vec3 avgColor = textureLod(Texture, vec2(0.5f, 0.5f), 16).xyz;
-	float avgBrightness = avgColor.x*0.2126f + avgColor.y*0.7152f + avgColor.z*0.0722f;
-	
+
 	for (int i = 1; i < 7; i++)
 	{
 		vec3 colDownscaled = textureLod(Texture, sampleUV, i).xyz;
-		float brightness = colDownscaled.x*0.2126f + colDownscaled.y*0.7152f + colDownscaled.z*0.0722f;
+		float brightness = getBrightness(colDownscaled);
 
-		if (brightness > 0.9f)
-		{
-			//vec2 mipPixelScale = PixelScale * (i * 2);
-			//vec2 mipSamplePoint = vec2(roundTo(sampleUV.x, mipPixelScale.x), roundTo(sampleUV.y, mipPixelScale.y));
-			//vec2 offset = mipSamplePoint - sampleUV;
-			//Color = vec3(pow(length(offset), .9f) * 50.f, 0.f, 0.f);
-			//Color += colDownscaled / (pow(length(offset), .9f) * 500.f);
-			Color += colDownscaled / i;
-		}
+		if (brightness > 1.2f)
+			Color += colDownscaled / pow(i, 2);
 	}
-	
-	Color /= clamp(avgBrightness * 2.f, 0.75f, 5.f);
+
+	// https://youtu.be/wbn5ULLtkHs?t=271
+	float Lin = getBrightness(Color);
+	float Lavg = getBrightness(textureLod(Texture, sampleUV, 10).xyz);
+
+	float logLrw = log10(Lavg) + 0.84f;
+	float alphaRw = 0.4f * logLrw + 2.92f;
+	float betaRw = -0.4f * logLrw * logLrw - 2.584f * logLrw + 2.0208f;
+	float Lwd = LdMax / sqrt(ContrastMax);
+	float logLd = log10(Lwd) + 0.84f;
+	float alphaD = 0.4f * logLd + 2.92f;
+	float betaD = -0.4f * logLd * logLd - 2.584f * logLd + 2.0208f;
+	float Lout = pow(Lin, alphaRw / alphaD) / LdMax * pow(10.f, (betaRw - betaD) / alphaD) - (1.f - ContrastMax);
+
+	Color = Color / Lin * Lout;
 	
 	if (ScreenEdgeBlurEnabled)
 	{
@@ -101,10 +120,11 @@ void main()
 				BlurredColor += SampleCol * SampleWeight;
 			}
 		}
-
-		// Linear interpolation
-		Color = Color + (BlurredColor - Color) * RadialBlurWeight;
+		
+		Color = mix(Color, BlurredColor, RadialBlurWeight);
 	}
 
+	Color = pow(Color, vec3(Gamma, Gamma, Gamma));
+	
 	FragColor = vec4(Color, 1.0f);
 }

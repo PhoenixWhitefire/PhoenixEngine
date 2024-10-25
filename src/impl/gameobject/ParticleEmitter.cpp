@@ -6,13 +6,13 @@
 #include "gameobject/Base3D.hpp"
 #include "datatype/Vector2.hpp"
 
-static RegisterDerivedObject<Object_ParticleEmitter> RegisterClassAs("ParticleEmitter");
+PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(ParticleEmitter);
 
 static ShaderProgram* s_ParticleShaders = nullptr;
 static std::default_random_engine s_RandGenerator = std::default_random_engine(static_cast<uint32_t>(time(NULL)));
 static bool s_DidInitReflection = false;
 
-static const std::string MissingTexPath = "textures/MISSING2_MaximumADHD_status_1665776378145304579.png";
+static const std::string MissingTexPath = "textures/missing.png";
 
 float Quad[] =
 {

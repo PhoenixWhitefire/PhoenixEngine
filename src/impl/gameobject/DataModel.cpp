@@ -4,7 +4,8 @@
 #include "gameobject/DataModel.hpp"
 #include "Debug.hpp"
 
-RegisterDerivedObject<Object_DataModel> Object_DataModel::RegisterObjectAs("DataModel");
+PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(DataModel);
+
 static bool s_DidInitReflection = false;
 
 static void closeDataModel(GameObject* g)

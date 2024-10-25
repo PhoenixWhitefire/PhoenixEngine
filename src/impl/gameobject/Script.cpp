@@ -22,7 +22,7 @@
 
 #define LUA_ASSERT(res, err) if (!res) { luaL_error(L, err); }
 
-static RegisterDerivedObject<Object_Script> RegisterClassAs("Script");
+PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(Script);
 
 static bool s_DidInitReflection = false;
 static lua_State* DefaultState = nullptr;
@@ -160,9 +160,10 @@ static auto api_gameobjnewindex = [](lua_State* L)
 		}
 		else
 		{
+			std::string fullname = obj->GetFullName();
 			luaL_error(L, (std::vformat(
-				"Attempt to set invalid Member '{}' of GameObject",
-				std::make_format_args(key)
+				"Attempt to set invalid Member '{}' of {} '{}'",
+				std::make_format_args(key, obj->ClassName, fullname)
 			)).c_str());
 		}
 
@@ -653,6 +654,8 @@ void Object_Script::s_DeclareReflections()
 		return;
 	s_DidInitReflection = true;
 
+	REFLECTION_INHERITAPI(GameObject);
+
 	REFLECTION_DECLAREPROP(
 		"SourceFile",
 		String,
@@ -681,8 +684,6 @@ void Object_Script::s_DeclareReflections()
 			return { reloadSuccess };
 		}
 	);
-
-	REFLECTION_INHERITAPI(GameObject);
 }
 
 Object_Script::Object_Script()

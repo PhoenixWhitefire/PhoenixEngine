@@ -1,11 +1,9 @@
 #pragma once
 
-#include "datatype/GameObject.hpp"
-
+#include "gameobject/Attachment.hpp"
 #include "datatype/Color.hpp"
-#include "datatype/Vector3.hpp"
 
-class Object_Light : public GameObject
+class Object_Light : public Object_Attachment
 {
 public:
 	Object_Light();
@@ -13,8 +11,6 @@ public:
 	Color LightColor = Color(1.0f, 1.0f, 1.0f);
 	float Brightness = 1.0f;
 	bool Shadows = false;
-
-	Vector3 Position;
 
 	PHX_GAMEOBJECT_API_REFLECTION;
 
@@ -26,7 +22,6 @@ private:
 class Object_PointLight : public Object_Light
 {
 public:
-
 	Object_PointLight();
 
 	float Range = 16.f;

@@ -54,8 +54,6 @@ function Update(DeltaTime)
     if not InFreecam then
         CharacterController:Update(DeltaTime)
         
-        Light.Position = Camera.Transform.Position
-        
         if input_keypressed("e") and TotalTime - lastSwitchedPerspectives > 0.25 then
             lastSwitchedPerspectives = TotalTime
             local bruh = GameObject.new("Primitive")

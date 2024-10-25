@@ -14,8 +14,6 @@ public:
 	std::string GetRenderMeshPath();
 	void SetRenderMesh(const std::string&);
 
-	bool HasTransparency = false;
-
 	PHX_GAMEOBJECT_API_REFLECTION;
 
 private:

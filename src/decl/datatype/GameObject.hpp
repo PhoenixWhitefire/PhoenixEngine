@@ -5,6 +5,12 @@
 #define PHX_ASSERT(res, err) if (!res) throw(err)
 #define PHX_GAMEOBJECT_NULL_ID UINT32_MAX
 
+// link a class name to a C++ GameObject-deriving class
+#define PHX_GAMEOBJECT_LINKTOCLASS(strclassname, cclass) static RegisterDerivedObject<cclass> Register##cclass(strclassname);
+// shorthand for `PHX_GAMEOBJECT_LINKTOCLASS`. the resulting class name is the same as passed in,
+// and the C++ class is `Object_<Class>`
+#define PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(classname) PHX_GAMEOBJECT_LINKTOCLASS(#classname, Object_##classname)
+
 // 01/09/2024:
 // MUST be added to the `public` section of *all* objects so
 // any APIs they declare can be found
@@ -17,6 +23,10 @@ static const FunctionMap& s_GetFunctions() \
 { \
 	return s_Api.Functions; \
 } \
+static const std::vector<std::string>& s_GetLineage() \
+{ \
+	return s_Api.Lineage; \
+} \
 virtual const PropertyMap& GetProperties()  \
 { \
 	return s_Api.Properties; \
@@ -26,7 +36,10 @@ virtual const FunctionMap& GetFunctions() \
 { \
 	return s_Api.Functions; \
 } \
- \
+virtual const std::vector<std::string>& GetLineage() \
+{ \
+	return s_Api.Lineage; \
+} \
 virtual bool HasProperty(const std::string & MemberName) \
 { \
 	return s_Api.Properties.find(MemberName) != s_Api.Properties.end(); \
@@ -108,6 +121,7 @@ struct Api
 {
 	PropertyMap Properties;
 	FunctionMap Functions;
+	std::vector<std::string> Lineage;
 };
 
 class GameObject
@@ -137,13 +151,15 @@ public:
 
 	GameObject* GetParent();
 	GameObject* GetChild(std::string const&);
-	// EXACT match, does not account for inheritance
+	// accounts for inheritance
 	GameObject* GetChildOfClass(std::string const&);
 	GameObject* GetChildById(uint32_t);
 
 	std::string GetFullName();
+	// whether this object inherits from or is the given class
+	bool IsA(const std::string&);
 
-	virtual void Destroy();
+	void Destroy();
 
 	void SetParent(GameObject*);
 	void AddChild(GameObject*);
@@ -191,3 +207,5 @@ struct RegisterDerivedObject : GameObject
 		s_GameObjectMap->insert(std::make_pair(ObjectClass, &constructGameObjectHeir<T>));
 	}
 };
+
+typedef GameObject Object_GameObject;

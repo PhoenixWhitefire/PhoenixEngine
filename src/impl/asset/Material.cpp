@@ -1,12 +1,12 @@
-#include<format>
-#include<nljson.hpp>
+#include <format>
+#include <nljson.hpp>
 
-#include"asset/Material.hpp"
-#include"asset/TextureManager.hpp"
-#include"FileRW.hpp"
-#include"Debug.hpp"
+#include "asset/Material.hpp"
+#include "asset/TextureManager.hpp"
+#include "FileRW.hpp"
+#include "Debug.hpp"
 
-static const std::string MissingTexPath = "textures/MISSING2_MaximumADHD_status_1665776378145304579.png";
+static const std::string MissingTexPath = "textures/missing.png";
 
 RenderMaterial::RenderMaterial()
 {

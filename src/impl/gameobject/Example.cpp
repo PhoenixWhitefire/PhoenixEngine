@@ -4,12 +4,12 @@
 #include "gameobject/Example.hpp"
 #include "gameobject/DataModel.hpp"
 
-static bool s_DidInitReflection = false;
-
-// This inserts a pointer to the template function `createT_baseGameObject<Object_Example>`
+// This inserts a pointer to the template function `createGameObjectHeir<Object_Example>`
 // into the `unordered_map` `GameObject::s_GameObjectMap`, which is then
 // called by `GameObject::Create`
-static RegisterDerivedObject<Object_Example> RegisterClassAs("Example");
+PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(Example);
+
+static bool s_DidInitReflection = false;
 
 void Object_Example::s_DeclareReflections()
 {
@@ -19,7 +19,7 @@ void Object_Example::s_DeclareReflections()
 
 	// Inherit first, ordered base-to-derived
 	REFLECTION_INHERITAPI(GameObject);
-	REFLECTION_INHERITAPI(Object_Script);
+	REFLECTION_INHERITAPI(Script);
 
 	// We go base-to-derived so members declared in the ancestral classes
 	// can be overriden by any inheriting descendants for their own

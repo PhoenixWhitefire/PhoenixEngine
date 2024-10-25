@@ -31,6 +31,7 @@ static float getVersion(std::string const& MapFileContents)
 MeshProvider::MeshProvider()
 {
 	this->Assign(PrimitiveMeshes::Cube(), "!Cube");
+	m_CreateAndUploadGpuMesh(m_Meshes[0]);
 }
 
 MeshProvider::~MeshProvider()
@@ -273,6 +274,8 @@ uint32_t MeshProvider::LoadFromPath(const std::string& Path, bool ShouldLoadAsyn
 						std::make_format_args(Path, s_ErrorString)
 					));
 
+				m_CreateAndUploadGpuMesh(mesh);
+
 				return this->Assign(mesh, Path);
 			}
 		}
@@ -322,7 +325,6 @@ void MeshProvider::FinalizeAsyncLoadedMeshes()
 		mesh.Vertices = loadedMesh.Vertices;
 		mesh.Indices = loadedMesh.Indices;
 
-		mesh.GpuId = static_cast<uint32_t>(m_GpuMeshes.size());
 		m_CreateAndUploadGpuMesh(mesh);
 
 		m_MeshPromises.erase(m_MeshPromises.begin() + promiseIndex);
@@ -340,7 +342,7 @@ const std::string& MeshProvider::GetLastErrorString()
 	return s_ErrorString;
 }
 
-void MeshProvider::m_CreateAndUploadGpuMesh(const Mesh& mesh)
+void MeshProvider::m_CreateAndUploadGpuMesh(Mesh& mesh)
 {
 	m_GpuMeshes.emplace_back();
 
@@ -363,4 +365,11 @@ void MeshProvider::m_CreateAndUploadGpuMesh(const Mesh& mesh)
 
 	vbo->SetBufferData(mesh.Vertices, BufferUsageHint::Static);
 	ebo->SetBufferData(mesh.Indices, BufferUsageHint::Static);
+
+	gpuMesh.NumIndices = static_cast<uint32_t>(mesh.Indices.size());
+
+	mesh.Vertices.clear();
+	mesh.Indices.clear();
+
+	mesh.GpuId = m_GpuMeshes.size() - 1;
 }

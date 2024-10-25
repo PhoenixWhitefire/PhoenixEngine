@@ -17,7 +17,6 @@ public:
 	PHX_GAMEOBJECT_API_REFLECTION;
 
 private:
-	static RegisterDerivedObject<Object_Workspace> RegisterClassAs;
 	static void s_DeclareReflections();
 	static inline Api s_Api{};
 

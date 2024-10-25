@@ -1,7 +1,7 @@
 #pragma once
 
-#include<vector>
-#include<future>
+#include <vector>
+#include <future>
 
 enum class TextureLoadStatus : uint8_t
 {
@@ -53,6 +53,8 @@ public:
 private:
 	TextureManager();
 	~TextureManager();
+
+	void m_UploadTextureToGpu(Texture&);
 
 	std::vector<Texture> m_Textures;
 	std::unordered_map<std::string, uint32_t> m_StringToTextureId;

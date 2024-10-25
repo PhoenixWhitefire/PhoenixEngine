@@ -9,18 +9,19 @@
 #include <format>
 #include <glm/mat4x4.hpp>
 
-#define REFLECTION_INHERITAPI(base) {                 \
-const PropertyMap& props = base::s_GetProperties();   \
-const FunctionMap& funcs = base::s_GetFunctions();    \
-s_Api.Properties.insert(                              \
-	props.begin(),                                    \
-	props.end()                                       \
-);                                                    \
-s_Api.Functions.insert(                               \
-		funcs.begin(),                                \
-		funcs.end()                                   \
-);                                                    \
-}                                                     \
+#define REFLECTION_INHERITAPI(base) {                          \
+const PropertyMap& props = Object_##base::s_GetProperties();   \
+const FunctionMap& funcs = Object_##base::s_GetFunctions();    \
+s_Api.Properties.insert(                                       \
+	props.begin(),                                             \
+	props.end()                                                \
+);                                                             \
+s_Api.Functions.insert(                                        \
+		funcs.begin(),                                         \
+		funcs.end()                                            \
+);                                                             \
+s_Api.Lineage.push_back(#base);                                \
+}                                                              \
 // The following macros (REFLECTION_DECLAREPROP, _DECLAREPROP_SIMPLE and _SIMPLE_READONLY)
 // are meant to be called in member functions of Reflection::ReflectionInfo-deriving classes,
 // as they use the `s_Api.Properties` member.
@@ -166,7 +167,7 @@ namespace Reflection
 		bool AsBool() const;
 		double AsDouble() const;
 		int64_t AsInteger() const;
-		glm::mat4 AsMatrix() const;
+		glm::mat4& AsMatrix() const;
 		std::vector<GenericValue> AsArray() const;
 		std::unordered_map<GenericValue, GenericValue> AsMap() const;
 	};

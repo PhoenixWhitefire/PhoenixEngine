@@ -303,8 +303,9 @@ void Renderer::DrawMesh(
 	}
 
 	uint32_t gpuMeshId = Object->GpuId;
+	MeshProvider::GpuMesh* gpuMesh = nullptr;
 
-	// textures not managed by MeshProvider
+	// mesh not managed by MeshProvider
 	if (gpuMeshId == UINT32_MAX)
 	{
 		m_VertexArray->Bind();
@@ -314,9 +315,11 @@ void Renderer::DrawMesh(
 	}
 	else
 	{
-		MeshProvider::GpuMesh& gpuMesh = MeshProvider::Get()->GetGpuMesh(gpuMeshId);
-		gpuMesh.VertexArray->Bind();
+		gpuMesh = &MeshProvider::Get()->GetGpuMesh(gpuMeshId);
+		gpuMesh->VertexArray->Bind();
 	}
+
+	uint32_t numIndices = gpuMesh ? gpuMesh->NumIndices : static_cast<uint32_t>(Object->Indices.size());
 
 	glm::mat4 scale = glm::scale(glm::mat4(1.f), glm::vec3(Size));
 
@@ -325,7 +328,7 @@ void Renderer::DrawMesh(
 
 	Shaders->Activate();
 
-	glDrawElements(GL_TRIANGLES, static_cast<int>(Object->Indices.size()), GL_UNSIGNED_INT, 0);
+	glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, 0);
 }
 
 void Renderer::m_SetMaterialData(const RenderItem& RenderData, ShaderProgram* Shader)

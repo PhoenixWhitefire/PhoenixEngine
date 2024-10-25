@@ -286,14 +286,14 @@ static std::vector<LightItem> createLightingList(GameObject* RootObject)
 			if (directional)
 				dataList.emplace_back(
 					LightType::Directional,
-					light->Position,
+					(glm::vec3)light->LocalTransform[3],
 					light->LightColor * light->Brightness
 				);
 
 			if (point)
 				dataList.emplace_back(
 					LightType::Point,
-					light->Position,
+					(glm::vec3)light->GetWorldTransform()[3],
 					light->LightColor * light->Brightness,
 					point->Range
 				);
@@ -324,6 +324,9 @@ static std::vector<RenderItem> createRenderList(GameObject* RootObject, Object_C
 
 			if (object3D)
 			{
+				if (object3D->Transparency > .95f)
+					continue;
+
 				// TODO: frustum culling
 				// Hold R to disable distance culling
 				if (glm::distance(
@@ -702,6 +705,11 @@ void EngineObject::Start()
 			postFxShaders->SetUniform(
 				"DistortionEnabled",
 				EngineJsonConfig.value("postfx_distortion", false)
+			);
+
+			postFxShaders->SetUniform(
+				"Gamma",
+				EngineJsonConfig.value("postfx_gamma", 1.f)
 			);
 
 			if (EngineJsonConfig.find("postfx_blurvignette_blurstrength") != EngineJsonConfig.end())

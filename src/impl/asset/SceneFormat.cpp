@@ -242,9 +242,6 @@ static std::vector<GameObject*> LoadMapVersion1(
 				prop_3d->FaceCulling = FaceCullingMode::BackFace;
 		}
 
-		if (PropObject.find("has_transparency") != PropObject.end())
-			dynamic_cast<Object_Mesh*>(Model[0])->HasTransparency = true;
-
 		prop_3d->PhysicsDynamics = PropObject.value("computePhysics", 0) == 1 ? true : false;
 	}
 
@@ -338,7 +335,10 @@ static std::vector<GameObject*> LoadMapVersion1(
 
 		Object_Light* Light = dynamic_cast<Object_Light*>(Object);
 
-		Light->Position = GetVector3FromJson(LightObject["position"]);
+		Light->LocalTransform = glm::translate(
+			glm::mat4(1.f),
+			(glm::vec3)GetVector3FromJson(LightObject["position"])
+		);
 
 		Light->LightColor = GetColorFromJson(LightObject["color"]);
 

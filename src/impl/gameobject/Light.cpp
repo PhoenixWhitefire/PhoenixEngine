@@ -1,9 +1,12 @@
-#include "gameobject/Light.hpp"
+#include <glm/gtc/matrix_transform.hpp>
 
-static RegisterDerivedObject<Object_Light> RegisterLightAs("Light");
-static RegisterDerivedObject<Object_PointLight> RegisterPointLightAs("PointLight");
-static RegisterDerivedObject<Object_SpotLight> RegisterSpotLightAs("SpotLight");
-static RegisterDerivedObject<Object_DirectionalLight> RegisterDirectionalLigthAs("DirectionalLight");
+#include "gameobject/Light.hpp"
+#include "datatype/Vector3.hpp"
+
+PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(Light);
+PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(DirectionalLight);
+PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(PointLight);
+PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(SpotLight);
 
 static bool s_BaseDidInitReflection = false;
 static bool s_DirectionalDidInitReflection = false;
@@ -17,11 +20,11 @@ void Object_Light::s_DeclareReflections()
 	s_BaseDidInitReflection = true;
 
 	REFLECTION_INHERITAPI(GameObject);
+	REFLECTION_INHERITAPI(Attachment);
 
 	REFLECTION_DECLAREPROP_SIMPLE_TYPECAST(Object_Light, LightColor, Color);
 	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_Light, Brightness, Double, float);
 	REFLECTION_DECLAREPROP_SIMPLE(Object_Light, Shadows, Bool);
-	REFLECTION_DECLAREPROP_SIMPLE_TYPECAST(Object_Light, Position, Vector3);
 }
 
 void Object_DirectionalLight::s_DeclareReflections()
@@ -31,28 +34,32 @@ void Object_DirectionalLight::s_DeclareReflections()
 	s_DirectionalDidInitReflection = true;
 
 	REFLECTION_INHERITAPI(GameObject);
-	REFLECTION_INHERITAPI(Object_Light);
+	// no point inheriting from `Attachment` like w/ the other Lights
+	// 25/10/2024
+	REFLECTION_INHERITAPI(Light);
 
-	// Direction is just Position under-the-hood. Remove the duplicate
-	s_Api.Properties.erase("Position");
+	s_Api.Properties.erase("LocalTransform");
 
-	// Redirect it to the Position member
 	REFLECTION_DECLAREPROP(
 		"Direction",
 		Vector3,
 		[](GameObject* g)
 		{
-			return dynamic_cast<Object_DirectionalLight*>(g)->Position.ToGenericValue();
+			Object_DirectionalLight* dl = dynamic_cast<Object_DirectionalLight*>(g);
+			glm::vec3 forward = dl->LocalTransform[3];
+			return Vector3(forward).ToGenericValue();
 		},
 		[](GameObject* g, const Reflection::GenericValue& gv)
 		{
 			Object_DirectionalLight* p = dynamic_cast<Object_DirectionalLight*>(g);
-			p->Position = gv;
-			// Normalize
-			if (p->Position.Magnitude() > 1.f)
-				p->Position = p->Position / p->Position.Magnitude();
+
+			Vector3 newDirection{ gv };
+			newDirection = newDirection / newDirection.Magnitude();
+
+			p->LocalTransform = glm::translate(glm::mat4(1.f), (glm::vec3)newDirection);
 		}
 	);
+	
 }
 
 void Object_PointLight::s_DeclareReflections()
@@ -62,7 +69,8 @@ void Object_PointLight::s_DeclareReflections()
 	s_PointDidInitReflection = true;
 
 	REFLECTION_INHERITAPI(GameObject);
-	REFLECTION_INHERITAPI(Object_Light);
+	REFLECTION_INHERITAPI(Attachment);
+	REFLECTION_INHERITAPI(Light);
 
 	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_PointLight, Range, Double, float);
 }
@@ -74,7 +82,8 @@ void Object_SpotLight::s_DeclareReflections()
 	s_SpotDidInitReflection = true;
 
 	REFLECTION_INHERITAPI(GameObject);
-	REFLECTION_INHERITAPI(Object_Light);
+	REFLECTION_INHERITAPI(Attachment);
+	REFLECTION_INHERITAPI(Light);
 
 	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_SpotLight, Range, Double, float);
 	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_SpotLight, OuterCone, Double, float);

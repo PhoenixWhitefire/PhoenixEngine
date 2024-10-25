@@ -1,63 +1,67 @@
-#include<format>
-#include<functional>
-#include<glad/gl.h>
-#include<stb/stb_image.h>
+#include <format>
+#include <functional>
+#include <glad/gl.h>
+#include <stb/stb_image.h>
 
-#include"asset/TextureManager.hpp"
-#include"render/ShaderProgram.hpp"
-#include"GlobalJsonConfig.hpp"
-#include"ThreadManager.hpp"
-#include"Debug.hpp"
+#include "asset/TextureManager.hpp"
+#include "render/ShaderProgram.hpp"
+#include "GlobalJsonConfig.hpp"
+#include "ThreadManager.hpp"
+#include "Debug.hpp"
 
-static const std::string MissingTexPath = "textures/MISSING2_MaximumADHD_status_1665776378145304579.png";
-static const std::string TexLoadErr =
-"Attempted to load texture '{}', but it failed. Additionally, the replacement Missing Texture could not be loaded.";
+static const std::string MissingTexPath = "textures/missing.png";
 
 typedef std::function<uint8_t* (const char*, int*, int*, int*)> ImageLoader_t;
 typedef std::function<Texture*(ImageLoader_t, Texture*, std::string, uint32_t)> AsyncTexLoader_t;
 
-static void uploadTextureToGpu(Texture& texture)
+// a 2x2 purple-and-black checkerboard
+// 23/10/2024
+static uint8_t MissingTextureBytes[12] = 
+{
+	static_cast<uint8_t>(0xFFFFFFu),
+	static_cast<uint8_t>(0x000000u),
+	static_cast<uint8_t>(0xFFFFFFu),
+
+	static_cast<uint8_t>(0x000000u),
+	static_cast<uint8_t>(0x000000u),
+	static_cast<uint8_t>(0x000000u),
+
+	static_cast<uint8_t>(0x000000u),
+	static_cast<uint8_t>(0x000000u),
+	static_cast<uint8_t>(0x000000u),
+
+	static_cast<uint8_t>(0xFFFFFFu),
+	static_cast<uint8_t>(0x000000u),
+	static_cast<uint8_t>(0xFFFFFFu),
+};
+
+void TextureManager::m_UploadTextureToGpu(Texture& texture)
 {
 	if (texture.Status == TextureLoadStatus::Failed)
 	{
-		auto FormattedArgs = std::make_format_args(texture.ImagePath);
-		Debug::Log(std::vformat("Failed to load texture '{}'", FormattedArgs));
+		std::string fallbackPath = MissingTexPath;
 
 		if (texture.ImagePath != MissingTexPath)
 		{
-			TextureManager* texManager = TextureManager::Get();
-			uint32_t replacementId = texManager->LoadTextureFromPath(MissingTexPath, false);
-
-			Texture* replacement = texManager->GetTextureResource(replacementId);
-			texture.Height = replacement->Height;
-			texture.Width = replacement->Width;
-			texture.NumColorChannels = replacement->NumColorChannels;
-			texture.TMP_ImageByteData = replacement->TMP_ImageByteData;
-
-			glBindTexture(GL_TEXTURE_2D, texture.GpuId);
-
-			glTexImage2D
-			(
-				GL_TEXTURE_2D,
-				0,
-				GL_RGBA,
-				texture.Width,
-				texture.Height,
-				0,
-				replacement->NumColorChannels == 1 ? GL_RED
-					: (replacement->NumColorChannels == 3 ? GL_RGB : GL_RGBA),
-				GL_UNSIGNED_BYTE,
-				texture.TMP_ImageByteData
-			);
-
-			glGenerateMipmap(GL_TEXTURE_2D);
-
-			glBindTexture(GL_TEXTURE_2D, 0);
-
-			return;
+			auto FormattedArgs = std::make_format_args(texture.ImagePath);
+			Debug::Log(std::vformat("Failed to load texture '{}'", FormattedArgs));
 		}
 		else
-			throw(std::vformat(TexLoadErr, std::make_format_args(texture.ImagePath)));
+			fallbackPath = "!Missing";
+
+		uint32_t replacementId = this->LoadTextureFromPath(
+			fallbackPath,
+			false
+		);
+
+		Texture* replacement = this->GetTextureResource(replacementId);
+		texture.Height = replacement->Height;
+		texture.Width = replacement->Width;
+		texture.NumColorChannels = replacement->NumColorChannels;
+		texture.TMP_ImageByteData = replacement->TMP_ImageByteData;
+		texture.GpuId = replacement->GpuId;
+
+		return;
 	}
 
 	GLenum Format = 0;
@@ -121,7 +125,7 @@ static void uploadTextureToGpu(Texture& texture)
 	// 03/10/2024:
 	// little hack to `free` textures `Engine.cpp` doesn't
 	// manage (most of them)
-	if (texture.ImagePath.find("Sky") == std::string::npos)
+	if (texture.ImagePath.find("Sky") == std::string::npos && texture.ImagePath != "!Missing")
 	{
 		free(texture.TMP_ImageByteData);
 		texture.TMP_ImageByteData = nullptr;
@@ -135,7 +139,32 @@ TextureManager::TextureManager()
 {
 	// ID 0 means no texture
 	m_Textures.emplace_back();
-	// missing tex is ID 1
+
+	// checkboard missing texture is id 1
+	m_StringToTextureId.insert(std::pair("!Missing", 1));
+
+	uint32_t newGpuId;
+	glGenTextures(1, &newGpuId);
+
+	m_Textures.emplace_back("!Missing", 1, newGpuId);
+
+	Texture& missingTexture = m_Textures.at(1);
+	missingTexture.Width = 2;
+	missingTexture.Height = 2;
+	missingTexture.NumColorChannels = 3;
+	missingTexture.TMP_ImageByteData = MissingTextureBytes;
+	missingTexture.Status = TextureLoadStatus::Succeeded;
+
+	glBindTexture(GL_TEXTURE_2D, missingTexture.GpuId);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	m_UploadTextureToGpu(missingTexture);
+
+	// dev-specified missing texture is id 2
 	this->LoadTextureFromPath(MissingTexPath, false);
 }
 
@@ -296,7 +325,7 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 			newTexture.TMP_ImageByteData = data;
 			newTexture.Status = data ? TextureLoadStatus::Succeeded : TextureLoadStatus::Failed;
 
-			uploadTextureToGpu(newTexture);
+			m_UploadTextureToGpu(newTexture);
 		}
 
 		return newResourceId;
@@ -367,7 +396,7 @@ void TextureManager::FinalizeAsyncLoadedTextures()
 			stbi_image_free(loadedImage.TMP_ImageByteData);
 		}
 
-		uploadTextureToGpu(image);
+		m_UploadTextureToGpu(image);
 		
 		m_TexPromises.erase(m_TexPromises.begin() + promiseIndex);
 		m_TexFutures.erase(m_TexFutures.begin() + promiseIndex);

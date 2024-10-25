@@ -16,7 +16,7 @@ constexpr const char* MATERIAL_NEW_NAME_DEFAULT = "newmaterial";
 
 static const char* ParentString = "[Parent]";
 
-static std::string ErrorTexture = "textures/MISSING2_MaximumADHD_status_1665776378145304579.png";
+static std::string ErrorTexture = "textures/missing.png";
 
 static nlohmann::json DefaultNewMaterial{};
 
@@ -650,7 +650,7 @@ void Editor::RenderUI()
 				{
 					glm::mat4 mat = curVal.AsMatrix();
 
-					ImGui::Text("Transform:");
+					ImGui::Text("%s:", propName);
 
 					float pos[3] =
 					{

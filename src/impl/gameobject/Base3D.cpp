@@ -1,9 +1,9 @@
 #include "gameobject/Base3D.hpp"
 
+PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(Base3D);
+
 static bool s_DidInitReflection = false;
 static RenderMaterial* DefaultRenderMat = nullptr;
-
-RegisterDerivedObject<Object_Base3D> RegisterClassAs("Base3D");
 
 void Object_Base3D::s_DeclareReflections()
 {

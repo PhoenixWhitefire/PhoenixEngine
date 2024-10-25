@@ -1,7 +1,8 @@
 #include "gameobject/Primitive.hpp"
 #include "asset/MeshProvider.hpp"
 
-static RegisterDerivedObject<Object_Primitive> RegisterClassAs("Primitive");
+PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(Primitive);
+
 static bool s_DidInitReflection = false;
 
 static std::string getPrimitiveMesh(PrimitiveShape Type)
@@ -29,7 +30,7 @@ void Object_Primitive::s_DeclareReflections()
 	s_DidInitReflection = true;
 
 	REFLECTION_INHERITAPI(GameObject);
-	REFLECTION_INHERITAPI(Object_Base3D);
+	REFLECTION_INHERITAPI(Base3D);
 
 	REFLECTION_DECLAREPROP(
 		"Shape",

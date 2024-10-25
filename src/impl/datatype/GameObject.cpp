@@ -3,12 +3,12 @@
 #include"datatype/GameObject.hpp"
 #include"Debug.hpp"
 
+PHX_GAMEOBJECT_LINKTOCLASS("GameObject", GameObject);
+
 static uint32_t NumGameObjects = 0;
 static bool s_DidInitReflection = false;
 GameObject* GameObject::s_DataModel = nullptr;
 std::unordered_map<uint32_t, GameObject*> GameObject::s_WorldArray = {};
-
-static RegisterDerivedObject<GameObject> RegisterClassAs("GameObject");
 
 static void destroyObject(GameObject* obj)
 {
@@ -115,6 +115,18 @@ void GameObject::s_DeclareReflections()
 		}
 	);
 
+	REFLECTION_DECLAREFUNC(
+		"IsA",
+		{ Reflection::ValueType::String },
+		{ Reflection::ValueType::Bool },
+		[](GameObject* object, const std::vector<Reflection::GenericValue>& gv)
+		-> std::vector<Reflection::GenericValue>
+		{
+			std::string ancestor = gv[0].AsString();
+			return { object->IsA(ancestor) };
+		}
+	);
+
 	//REFLECTION_INHERITAPI(Reflection::Reflectable);
 }
 
@@ -151,7 +163,13 @@ GameObject::~GameObject()
 
 	m_Children.clear();
 
-	s_WorldArray.erase(this->ObjectId);
+	if (this->ObjectId != 0 && this->ObjectId != PHX_GAMEOBJECT_NULL_ID)
+	{
+		auto it = s_WorldArray.find(this->ObjectId);
+
+		if (it != s_WorldArray.end())
+			s_WorldArray.erase(this->ObjectId);
+	}
 
 	this->Parent = PHX_GAMEOBJECT_NULL_ID;
 	//this->ObjectId = PHX_GAMEOBJECT_NULL_ID;
@@ -193,6 +211,20 @@ void GameObject::Destroy()
 std::string GameObject::GetFullName()
 {
 	return getFullName(this);
+}
+
+bool GameObject::IsA(const std::string& AncestorClass)
+{
+	if (this->ClassName == AncestorClass)
+		return true;
+
+	// we do `GetLineage` instead of `s_Api.Lineage` because
+	// the latter refers to the lineage of `GameObject` (nothing as of 25/10/2024),
+	// whereas the former is a virtual function of the class we actually are
+	for (const std::string& ancestor : GetLineage())
+		if (ancestor == AncestorClass)
+			return true;
+	return false;
 }
 
 void GameObject::SetParent(GameObject* newParent)
@@ -341,7 +373,7 @@ GameObject* GameObject::GetChildOfClass(std::string const& Class)
 			continue;
 		}
 
-		if (child->ClassName == Class)
+		if (child->IsA(Class))
 			return child;
 	}
 
@@ -382,8 +414,18 @@ nlohmann::json GameObject::DumpApiToJson()
 
 	for (auto& g : *s_GameObjectMap)
 	{
-		auto newobj = g.second();
+		GameObject* newobj = g.second();
 		dump[g.first] = nlohmann::json();
+
+		const std::vector<std::string>& lineage = newobj->GetLineage();
+
+		dump[g.first]["Lineage"] = "";
+
+		for (size_t index = 0; index < lineage.size(); index++)
+			if (index < lineage.size() - 1)
+				dump[g.first]["Lineage"] = dump[g.first].value("Lineage", "") + lineage[index] + " -> ";
+			else
+				dump[g.first]["Lineage"] = dump[g.first].value("Lineage", "") + lineage[index];
 
 		for (auto& p : newobj->GetProperties())
 			dump[g.first][p.first] = Reflection::TypeAsString(p.second.Type);

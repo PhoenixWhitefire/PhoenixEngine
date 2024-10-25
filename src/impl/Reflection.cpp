@@ -87,7 +87,7 @@ Reflection::GenericValue::GenericValue(const std::vector<GenericValue>& array)
 
 	memcpy(this->Value, array.data(), allocSize);
 
-	this->ArrayLength = array.size();
+	this->ArrayLength = static_cast<uint32_t>(array.size());
 }
 
 Reflection::GenericValue::GenericValue(const std::unordered_map<GenericValue, GenericValue>& map)
@@ -111,7 +111,7 @@ Reflection::GenericValue::GenericValue(const std::unordered_map<GenericValue, Ge
 
 	memcpy(this->Value, arr.data(), allocSize);
 
-	this->ArrayLength = arr.size();
+	this->ArrayLength = static_cast<uint32_t>(arr.size());
 }
 
 std::string Reflection::GenericValue::ToString()
@@ -229,7 +229,7 @@ int64_t Reflection::GenericValue::AsInteger() const
 		? (int64_t)this->Value
 		: throw("GenericValue was not an Integer, but was a " + Reflection::TypeAsString(Type));
 }
-glm::mat4 Reflection::GenericValue::AsMatrix() const
+glm::mat4& Reflection::GenericValue::AsMatrix() const
 {
 	glm::mat4* mptr = (glm::mat4*)this->Value;
 

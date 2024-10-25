@@ -25,19 +25,19 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 
 #define SDL_MAIN_HANDLED
 
-#include<filesystem>
-#include<imgui/backends/imgui_impl_opengl3.h>
-#include<imgui/backends/imgui_impl_sdl2.h>
-#include<glm/gtx/rotate_vector.hpp>
-#include<glm/gtx/vector_angle.hpp>
+#include <filesystem>
+#include <imgui/backends/imgui_impl_opengl3.h>
+#include <imgui/backends/imgui_impl_sdl2.h>
+#include <glm/gtx/rotate_vector.hpp>
+#include <glm/gtx/vector_angle.hpp>
 
-#include"Engine.hpp"
-#include"GlobalJsonConfig.hpp"
-#include"asset/SceneFormat.hpp"
-#include"UserInput.hpp"
-#include"FileRW.hpp"
-#include"Debug.hpp"
-#include"Editor.hpp"
+#include "Engine.hpp"
+#include "GlobalJsonConfig.hpp"
+#include "asset/SceneFormat.hpp"
+#include "UserInput.hpp"
+#include "FileRW.hpp"
+#include "Debug.hpp"
+#include "Editor.hpp"
 
 static bool FirstDragFrame = false;
 
@@ -478,6 +478,12 @@ static void drawUI(Reflection::GenericValue Data)
 
 		if (postFxEnabled)
 		{
+			float gammaCorrection = EngineJsonConfig.value("postfx_gamma", 1.f);
+
+			ImGui::InputFloat("Gamma", &gammaCorrection);
+
+			EngineJsonConfig["postfx_gamma"] = gammaCorrection;
+
 			bool blurVignette = EngineJsonConfig.value("postfx_blurvignette", false);
 			bool distortion = EngineJsonConfig.value("postfx_distortion", false);
 

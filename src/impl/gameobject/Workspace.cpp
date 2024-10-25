@@ -1,6 +1,7 @@
 #include "gameobject/Workspace.hpp"
 
-RegisterDerivedObject<Object_Workspace> Object_Workspace::RegisterClassAs("Workspace");
+PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(Workspace);
+
 static bool s_DidInitReflection = false;
 
 static Object_Camera* s_FallbackCamera = nullptr;
@@ -20,7 +21,7 @@ void Object_Workspace::s_DeclareReflections()
 	s_DidInitReflection = true;
 
 	REFLECTION_INHERITAPI(GameObject);
-	REFLECTION_INHERITAPI(Object_Model);
+	REFLECTION_INHERITAPI(Model);
 
 	REFLECTION_DECLAREPROP(
 		"SceneCamera",

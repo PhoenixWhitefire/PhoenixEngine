@@ -16,6 +16,7 @@ public:
 		GpuVertexArray* VertexArray;
 		GpuVertexBuffer* VertexBuffer;
 		GpuElementBuffer* ElementBuffer;
+		uint32_t NumIndices{};
 	};
 
 	static MeshProvider* Get();
@@ -41,7 +42,7 @@ private:
 	MeshProvider();
 	~MeshProvider();
 
-	void m_CreateAndUploadGpuMesh(const Mesh&);
+	void m_CreateAndUploadGpuMesh(Mesh&);
 
 	std::vector<Mesh> m_Meshes;
 	std::unordered_map<std::string, uint32_t> m_StringToMeshId;
