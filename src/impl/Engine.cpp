@@ -711,6 +711,18 @@ void EngineObject::Start()
 				"Gamma",
 				EngineJsonConfig.value("postfx_gamma", 1.f)
 			);
+			postFxShaders->SetUniform(
+				"LdMax",
+				EngineJsonConfig.value("postfx_ldmax", 1.f)
+			);
+			postFxShaders->SetUniform(
+				"ContrastMax",
+				EngineJsonConfig.value("postfx_cmax", 1.f)
+			);
+			skyboxShaders->SetUniform(
+				"HdrEnabled",
+				true
+			);
 
 			if (EngineJsonConfig.find("postfx_blurvignette_blurstrength") != EngineJsonConfig.end())
 			{
@@ -738,7 +750,13 @@ void EngineObject::Start()
 			glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(distortionTexture)->GpuId);
 		}
 		else
+		{
 			postFxShaders->SetUniform("PostFxEnabled", 0);
+			skyboxShaders->SetUniform(
+				"HdrEnabled",
+				false
+			);
+		}
 
 		glActiveTexture(GL_TEXTURE1);
 		RendererContext->Framebuffer->BindTexture();

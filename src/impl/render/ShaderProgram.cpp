@@ -447,7 +447,8 @@ ShaderProgram::~ShaderProgram()
 
 	if (it != s_Programs.end())
 	{
-		glDeleteProgram(m_GpuId);
+		if (glIsProgram(m_GpuId))
+			glDeleteProgram(m_GpuId);
 		s_Programs.erase(it->first);
 	}
 	else

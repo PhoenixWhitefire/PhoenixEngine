@@ -348,12 +348,9 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData, ShaderProgram* Sh
 	Shader->SetUniform("Reflectivity", RenderData.Reflectivity);
 	Shader->SetUniform("Transparency", RenderData.Transparency);
 
-	// 27/09/2024 TODO wtf??
-	Reflection::GenericValue colGeneric = const_cast<Color*>(&RenderData.TintColor)->ToGenericValue();
-
 	Shader->SetUniform(
 		"ColorTint",
-		colGeneric
+		RenderData.TintColor.ToGenericValue()
 	);
 
 	TextureManager* texManager = TextureManager::Get();

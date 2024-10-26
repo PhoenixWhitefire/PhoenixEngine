@@ -479,10 +479,16 @@ static void drawUI(Reflection::GenericValue Data)
 		if (postFxEnabled)
 		{
 			float gammaCorrection = EngineJsonConfig.value("postfx_gamma", 1.f);
+			float trldmax = EngineJsonConfig.value("postfx_ldmax", 1.f);
+			float trcmax = EngineJsonConfig.value("postfx_cmax", 1.f);
 
 			ImGui::InputFloat("Gamma", &gammaCorrection);
+			ImGui::InputFloat("Tonemapper LdMax", &trldmax);
+			ImGui::InputFloat("Tonemapper CMax", &trcmax);
 
 			EngineJsonConfig["postfx_gamma"] = gammaCorrection;
+			EngineJsonConfig["postfx_ldmax"] = trldmax;
+			EngineJsonConfig["postfx_cmax"] = trcmax;
 
 			bool blurVignette = EngineJsonConfig.value("postfx_blurvignette", false);
 			bool distortion = EngineJsonConfig.value("postfx_distortion", false);

@@ -1,9 +1,0 @@
-{
-  "albedo": "models/grindstone/textures/Main_baseColor.jpeg",
-  "alphaCutoff": 0,
-  "alphaMode": 0,
-  "roughnessFactor": 1.0,
-  "specMultiply": 1.0,
-  "specular": "models/grindstone/textures/Main_metallicRoughness.png",
-  "translucency": false
-}

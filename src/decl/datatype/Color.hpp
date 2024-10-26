@@ -22,7 +22,7 @@ public:
 	Color(float R, float G, float B);
 	Color(Reflection::GenericValue);
 
-	Reflection::GenericValue ToGenericValue();
+	Reflection::GenericValue ToGenericValue() const;
 	// Returns formatted `R, G, B`
 	std::string ToString();
 

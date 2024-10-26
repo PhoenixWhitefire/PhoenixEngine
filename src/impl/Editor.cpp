@@ -173,6 +173,8 @@ void Editor::m_RenderMaterialEditor()
 	Texture* colorMap = texManager->GetTextureResource(curItem->ColorMap);
 	Texture* metallicRoughnessMap = texManager->GetTextureResource(curItem->MetallicRoughnessMap);
 
+	static int SelectedUniformIdx = -1;
+
 	if (m_MtlCurItem != m_MtlPrevItem)
 	{
 		copyStringToBuffer(m_MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE, curItem->Shader->Name);
@@ -180,6 +182,8 @@ void Editor::m_RenderMaterialEditor()
 
 		if (curItem->MetallicRoughnessMap != 0)
 			copyStringToBuffer(m_MtlSpecBuf, MATERIAL_TEXTUREPATH_BUFSIZE, metallicRoughnessMap->ImagePath);
+
+		SelectedUniformIdx = -1;
 	}
 
 	m_MtlPrevItem = m_MtlCurItem;
@@ -280,8 +284,6 @@ void Editor::m_RenderMaterialEditor()
 		curItem->Uniforms[m_MtlNewUniformNameBuf] = initialValue;
 	}
 
-	static int SelectedUniformIdx = -1;
-
 	std::vector<std::string> uniformsArray;
 	uniformsArray.reserve(curItem->Uniforms.size());
 
@@ -296,7 +298,7 @@ void Editor::m_RenderMaterialEditor()
 		static_cast<int>(curItem->Uniforms.size())
 	);
 
-	if (SelectedUniformIdx != -1)
+	if (SelectedUniformIdx != -1 && uniformsArray.size() >= 1)
 	{
 		const std::string& name = uniformsArray.at(SelectedUniformIdx);
 		Reflection::GenericValue& value = curItem->Uniforms.at(name);

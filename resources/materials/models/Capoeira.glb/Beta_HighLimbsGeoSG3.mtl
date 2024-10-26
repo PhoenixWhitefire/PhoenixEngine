@@ -1,0 +1,9 @@
+{
+  "albedo": "textures/white.png",
+  "alphaCutoff": 0,
+  "alphaMode": 0,
+  "roughnessFactor": 0.5527864098548889,
+  "specExponent": 16.0,
+  "specMultiply": 0.0,
+  "translucency": false
+}

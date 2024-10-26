@@ -57,9 +57,9 @@ private:
 
 	std::vector<Mesh> m_Meshes;
 	std::vector<std::string> m_MeshNames;
+	std::vector<uint32_t> m_MeshParents;
 	std::vector<glm::mat4> m_MeshMatrices;
 	std::vector<glm::vec3> m_MeshScales;
-
 	std::vector<MeshMaterial> m_MeshMaterials;
 
 	std::vector<uint8_t> m_Data;

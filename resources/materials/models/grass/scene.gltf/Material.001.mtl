@@ -1,8 +1,8 @@
 {
-  "albedo": "models/windows/diffuse.png",
+  "albedo": "models/grass/diffuse.png",
   "shaderprogram": "worldUber",
   "specExponent": 16.0,
   "specMultiply": 0.5,
-  "translucency": true,
+  "translucency": false,
   "uniforms": null
 }

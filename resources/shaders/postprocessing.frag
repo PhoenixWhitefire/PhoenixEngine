@@ -22,15 +22,14 @@ uniform float BlurVignetteDistExp = 16.f;
 uniform int BlurVignetteSampleRadius = 4;
 
 uniform float Gamma = 1.f;
+uniform float LdMax = .5f;
+uniform float ContrastMax = .9f;
 
 uniform float Time = 0.f;
 
 const vec2 Center = vec2(0.5f, 0.5f);
 
 const vec3 White = vec3(1.0f, 1.0f, 1.0f);
-
-const float LdMax = .5f;
-const float ContrastMax = .9f;
 
 float roundTo(float n, float to)
 {
@@ -93,7 +92,8 @@ void main()
 	float Lout = pow(Lin, alphaRw / alphaD) / LdMax * pow(10.f, (betaRw - betaD) / alphaD) - (1.f - ContrastMax);
 
 	Color = Color / Lin * Lout;
-	
+	Color *= 0.5f;
+
 	if (ScreenEdgeBlurEnabled)
 	{
 		vec3 BlurredColor;

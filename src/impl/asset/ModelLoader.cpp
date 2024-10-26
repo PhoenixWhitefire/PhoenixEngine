@@ -1,16 +1,28 @@
-#include<filesystem>
-#include<glm/gtc/type_ptr.hpp>
+#include <filesystem>
+#include <glm/gtc/type_ptr.hpp>
 
-#include"asset/ModelLoader.hpp"
-#include"asset/TextureManager.hpp"
-#include"asset/MeshProvider.hpp"
-#include"GlobalJsonConfig.hpp"
-#include"FileRW.hpp"
-#include"Debug.hpp"
+#include "asset/ModelLoader.hpp"
+#include "asset/TextureManager.hpp"
+#include "asset/MeshProvider.hpp"
+#include "GlobalJsonConfig.hpp"
+#include "FileRW.hpp"
+#include "Debug.hpp"
+
+static uint32_t readU32(const std::string& str, size_t offset)
+{
+	std::string substr = str.substr(offset, 4);
+
+	std::vector<uint8_t> bytes(substr.begin(), substr.end());
+	uint32_t u32{};
+
+	std::memcpy(&u32, bytes.data(), sizeof(uint32_t));
+
+	return u32;
+}
 
 ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 {
-	std::string gltfFilePath = AssetPath + "/scene.gltf";
+	std::string gltfFilePath = AssetPath;
 
 	m_File = gltfFilePath;
 
@@ -19,17 +31,61 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 
 	if (!fileExists)
 	{
-		Debug::Log("Failed to load model '" + AssetPath + "', `scene.gltf` not found.");
+		Debug::Log("Failed to load Model, file '" + AssetPath + "' not found.");
 		return;
 	}
 
-	m_JsonData = nlohmann::json::parse(textData);
+	// Binary files start with magic number that corresponds to "glTF"
+	// https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#binary-header
+	if (textData.substr(0, 4) == "glTF")
+	{
+		// skip 12-byte header
+		textData = textData.substr(12);
 
-	m_Data = m_GetData();
+		uint32_t jsonChLength = readU32(textData, 0);
+		uint32_t jsonChType = readU32(textData, 4);
+
+		if (jsonChType != 0x4E4F534A)
+		{
+			Debug::Log(std::vformat(
+				"Failed to load Model '{}', first Chunk in binary file was not of type JSON",
+				std::make_format_args(AssetPath)
+			));
+			return;
+		}
+
+		std::string jsonString = textData.substr(8, jsonChLength);
+		m_JsonData = nlohmann::json::parse(jsonString);
+
+		std::string binaryChunk = textData.substr(8ULL + jsonChLength);
+
+		uint32_t binaryChLength = readU32(binaryChunk, 0);
+		uint32_t binaryChType = readU32(binaryChunk, 4);
+
+		if (binaryChType != 0x004E4942)
+		{
+			Debug::Log(std::vformat(
+				"Failed to load Model '{}', second Chunk in binary file was not of type BIN",
+				std::make_format_args(AssetPath)
+			));
+			return;
+		}
+
+		std::string binaryString = binaryChunk.substr(8, binaryChLength);
+
+		m_Data = std::vector<uint8_t>(binaryString.begin(), binaryString.end());
+	}
+	else
+	{
+		m_JsonData = nlohmann::json::parse(textData);
+		m_Data = m_GetData();
+	}
 
 	try
 	{
-		m_TraverseNode(0);
+		for (const nlohmann::json& scene : m_JsonData["scenes"])
+			for (uint32_t node : scene["nodes"])
+				m_TraverseNode(node);
 	}
 	catch (nlohmann::json::type_error e)
 	{
@@ -89,6 +145,11 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 
 		materialJson["albedo"] = colorTex->ImagePath;
 
+		// TODO: glTF assumes proper PBR, with factors from 0 - 1 instead
+		// of specular exponents and multipliers etc
+		// update this when PBR is added
+		// 26/10/2024
+		materialJson["specExponent"] = 16.f;
 		materialJson["specMultiply"] = material.MetallicFactor;
 		materialJson["roughnessFactor"] = material.RoughnessFactor;
 
@@ -124,8 +185,11 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		
 		//mo->Textures = this->MeshTextures[MeshIndex];
 
-		if (Parent != nullptr)
+		uint32_t parentMesh = m_MeshParents[MeshIndex];
+		if (parentMesh == UINT32_MAX)
 			mesh->SetParent(Parent);
+		else
+			mesh->SetParent(this->LoadedObjs.at(parentMesh));
 	}
 
 	// TODO: fix matrices
@@ -158,10 +222,9 @@ void ModelLoader::m_LoadMesh(uint32_t MeshIndex)
 	std::vector<float> texVec = m_GetFloats(m_JsonData["accessors"][texAccInd]);
 	std::vector<glm::vec2> texUVs = m_GroupFloatsVec2(texVec);
 
+	// resize the mesh to 1x1x1 and center it after
 	glm::vec3 extMax{};
 	glm::vec3 extMin{};
-
-	glm::vec3 center = positions.at(0);
 
 	for (const glm::vec3& position : positions)
 	{
@@ -172,14 +235,7 @@ void ModelLoader::m_LoadMesh(uint32_t MeshIndex)
 		extMin.x = std::min(extMin.x, position.x);
 		extMin.y = std::min(extMin.y, position.y);
 		extMin.z = std::min(extMin.z, position.z);
-
-		center += position;
 	}
-
-	center /= positions.size();
-
-	for (size_t index = 0; index < positions.size(); index++)
-		positions[index] -= center;
 
 	glm::vec3 size = extMax - extMin / 2.f;
 
@@ -189,6 +245,16 @@ void ModelLoader::m_LoadMesh(uint32_t MeshIndex)
 		positions[index].y /= size.y;
 		positions[index].z /= size.z;
 	}
+
+	glm::vec3 center = positions.at(0);
+
+	for (const glm::vec3& position : positions)
+		center += position;
+
+	center /= positions.size();
+
+	for (size_t index = 0; index < positions.size(); index++)
+		positions[index] -= center;
 
 	// Combine all the vertex components and also get the indices and textures
 	std::vector<Vertex> vertices = m_AssembleVertices(positions, normals, texUVs);
@@ -219,9 +285,13 @@ void ModelLoader::m_TraverseNode(uint32_t nextNode, glm::mat4 matrix)
 	glm::vec3 translation = glm::vec3(0.0f, 0.0f, 0.0f);
 	if (node.find("translation") != node.end())
 	{
-		float transValues[3]{};
-		for (uint32_t i = 0; i < node["translation"].size(); i++)
-			transValues[i] = (node["translation"][i]);
+		float transValues[3] = 
+		{
+			node["translation"][0],
+			node["translation"][1],
+			node["translation"][2]
+		};
+
 		translation = glm::make_vec3(transValues);
 	}
 	// Get quaternion if it exists
@@ -241,9 +311,13 @@ void ModelLoader::m_TraverseNode(uint32_t nextNode, glm::mat4 matrix)
 	glm::vec3 scale = glm::vec3(1.0f, 1.0f, 1.0f);
 	if (node.find("scale") != node.end())
 	{
-		float scaleValues[3]{};
-		for (uint32_t i = 0; i < node["scale"].size(); i++)
-			scaleValues[i] = (node["scale"][i]);
+		float scaleValues[3] = 
+		{
+			node["scale"][0],
+			node["scale"][1],
+			node["scale"][2]
+		};
+
 		scale = glm::make_vec3(scaleValues);
 	}
 	// Get matrix if it exists
@@ -253,6 +327,7 @@ void ModelLoader::m_TraverseNode(uint32_t nextNode, glm::mat4 matrix)
 		float matValues[16]{};
 		for (uint32_t i = 0; i < node["matrix"].size(); i++)
 			matValues[i] = (node["matrix"][i]);
+
 		matNode = glm::make_mat4(matValues);
 	}
 
@@ -272,6 +347,8 @@ void ModelLoader::m_TraverseNode(uint32_t nextNode, glm::mat4 matrix)
 	// Check if the node contains a mesh and if it does load it
 	if (node.find("mesh") != node.end())
 	{
+		m_MeshParents.push_back(static_cast<uint32_t>(m_Meshes.size()));
+
 		//m_MeshTranslations.push_back(translation);
 		//m_MeshRotations.push_back(rotation);
 		m_MeshScales.push_back(scale);
@@ -279,6 +356,8 @@ void ModelLoader::m_TraverseNode(uint32_t nextNode, glm::mat4 matrix)
 
 		m_LoadMesh(node["mesh"]);
 	}
+	else
+		m_MeshParents.push_back(UINT32_MAX);
 
 	// Check if the node has children, and if it does, apply this function to them with the matNextNode
 	if (node.find("children") != node.end())
@@ -400,6 +479,7 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 	TextureManager* texManager = TextureManager::Get();
 
 	ModelLoader::MeshMaterial material;
+	material.BaseColorTexture = texManager->LoadTextureFromPath("textures/white.png");
 
 	auto materialIdIt = Primitive.find("material");
 
@@ -452,7 +532,14 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 	nlohmann::json& baseColTex = m_JsonData["textures"][(int)baseColDesc["index"]];
 	nlohmann::json& metallicRoughnessTex = m_JsonData["textures"][(int)metallicRoughnessDesc["index"]];
 
-	std::string baseColPath = m_JsonData["images"][(int)baseColTex["source"]]["uri"];
+	nlohmann::json& baseColSource = baseColTex["source"];
+	int baseColSourceIndex = baseColSource.type() == nlohmann::json::value_t::number_unsigned ?
+									(int)baseColSource : -1;
+
+	if (baseColSourceIndex < 0)
+		return material;
+
+	std::string baseColPath = m_JsonData["images"][baseColSourceIndex]["uri"];
 
 	std::string fileDirectory = m_File.substr(0, m_File.find_last_of('/') + 1);
 

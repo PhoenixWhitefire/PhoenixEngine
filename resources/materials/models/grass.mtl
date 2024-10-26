@@ -1,7 +1,0 @@
-{
-  "albedo": "models/grass/diffuse.png",
-  "originalPath": "models/grassmaterial.mtl",
-  "specExponent": 0.0,
-  "specMultiply": 0.0,
-  "translucency": false
-}

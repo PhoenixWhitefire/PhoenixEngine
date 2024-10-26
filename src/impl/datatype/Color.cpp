@@ -37,7 +37,7 @@ Color::Color(Reflection::GenericValue gv)
 	this->B = col.B;
 }
 
-Reflection::GenericValue Color::ToGenericValue()
+Reflection::GenericValue Color::ToGenericValue() const
 {
 	Reflection::GenericValue gv;
 	gv.Type = Reflection::ValueType::Color;
