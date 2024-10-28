@@ -25,4 +25,6 @@ namespace FileRW
 		const std::string& FileContents,
 		bool InResourcesDirectory
 	);
+
+	std::string GetAbsolutePath(const std::string&);
 };

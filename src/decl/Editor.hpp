@@ -1,15 +1,12 @@
 #pragma once
 
-#include<datatype/GameObject.hpp>
-#include<gameobject/Primitive.hpp>
-
 class Editor
 {
 public:
 	Editor();
 
 	void Init();
-	void Update(double DeltaTime, glm::mat4 CameraTransform);
+	void Update(double DeltaTime);
 	void RenderUI();
 
 private:

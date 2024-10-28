@@ -1,8 +1,10 @@
 {
   "albedo": "models/grass/diffuse.png",
-  "shaderprogram": "worldUber",
+  "roughnessFactor": 0.5,
   "specExponent": 16.0,
-  "specMultiply": 0.5,
+  "specMultiply": 0.0,
   "translucency": false,
-  "uniforms": null
+  "uniforms": {
+    "AlphaCutoff": 0.5
+  }
 }

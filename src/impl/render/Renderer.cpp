@@ -213,8 +213,13 @@ void Renderer::ChangeResolution(uint32_t Width, uint32_t Height)
 
 void Renderer::DrawScene(const Scene& Scene)
 {
+	glActiveTexture(GL_TEXTURE0);
+	this->Framebuffer->BindTexture();
+
 	for (ShaderProgram* shader : Scene.UsedShaders)
 	{
+		shader->SetUniform("FrameBuffer", 0);
+
 		// TODO 05/09/2024
 		// Branching in shader VS separate array uniforms?
 		// Oh and uniform locations should probably be cached

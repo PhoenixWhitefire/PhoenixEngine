@@ -371,5 +371,5 @@ void MeshProvider::m_CreateAndUploadGpuMesh(Mesh& mesh)
 	mesh.Vertices.clear();
 	mesh.Indices.clear();
 
-	mesh.GpuId = m_GpuMeshes.size() - 1;
+	mesh.GpuId = static_cast<uint32_t>(m_GpuMeshes.size() - 1);
 }

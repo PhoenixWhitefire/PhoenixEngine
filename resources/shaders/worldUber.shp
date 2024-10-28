@@ -4,6 +4,8 @@
     
     "Uniforms": {
         "Fog": false,
-        "EmissionStrength": 0.0
+        "EmissionStrength": 0.0,
+	"AlphaCutoff": 0.5
+	//"DebugOverdraw": false
     }
 }

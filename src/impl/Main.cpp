@@ -85,7 +85,7 @@ static void handleInputs(Reflection::GenericValue Data)
 	double deltaTime = Data.AsDouble();
 
 	if (EngineJsonConfig.value("Developer", false))
-		EditorContext->Update(deltaTime, EngineInstance->Workspace->GetSceneCamera()->Transform);
+		EditorContext->Update(deltaTime);
 
 	Object_Camera* camera = EngineInstance->Workspace->GetSceneCamera();
 	SDL_Window* window = EngineInstance->Window;

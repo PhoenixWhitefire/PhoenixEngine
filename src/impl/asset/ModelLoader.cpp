@@ -156,16 +156,12 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		if (material.MetallicRoughnessTexture != 0)
 			materialJson["specular"] = metallicRoughnessTex->ImagePath;
 
-		// TODO: Alpha cutoff
-		// 29/09/2024
-		// `AlphaMode` can be `Opaque`, `Mask` or `Blend`
-		// Technically, the Engine only truly supports `Opaque` and `Blend`...
-		materialJson["translucency"] = (material.AlphaMode != MeshMaterial::MaterialAlphaMode::Opaque)
-			? true
-			: false;
-		// ... Just in case
-		materialJson["alphaMode"] = (int)material.AlphaMode;
-		materialJson["alphaCutoff"] = (int)material.AlphaCutoff;
+		materialJson["translucency"] = (material.AlphaMode == MeshMaterial::MaterialAlphaMode::Blend);
+
+		materialJson["uniforms"] = nlohmann::json::object();
+
+		if (material.AlphaMode == MeshMaterial::MaterialAlphaMode::Mask)
+			materialJson["uniforms"]["AlphaCutoff"] = material.AlphaCutoff;
 
 		// `materials/models/crow/feathers.mtl`
 		std::string materialName = AssetPath

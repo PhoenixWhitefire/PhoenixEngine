@@ -637,10 +637,8 @@ void EngineObject::Start()
 		// ...
 		// Wow Mr Victor Gordan sir, that sounds incredibly overcomplicated.
 		// It's really too bad there isn't a way simpler, 300x more understandable way
-		// of zeroing-out the first 3 values of the last column of what is literally a 4x4 2D array of floats...
-		view[3][0] = 0.f;
-		view[3][1] = 0.f;
-		view[3][2] = 0.f;
+		// of zeroing-out the first 3 values of the last column of what is in essence a 4x4 2D array of floats...
+		view[3] = glm::vec4(0.f, 0.f, 0.f, 1.f);
 
 		skyboxShaders->SetUniform("CameraMatrix", projection * view);
 

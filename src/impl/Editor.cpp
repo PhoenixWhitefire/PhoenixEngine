@@ -1,13 +1,13 @@
-#include<glm/gtc/matrix_transform.hpp>
-#include<glm/gtx/euler_angles.hpp>
-#include<imgui/imgui.h>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/euler_angles.hpp>
+#include <imgui/imgui.h>
 
-#include"Editor.hpp"
-#include"gameobject/GameObjects.hpp"
-#include"asset/TextureManager.hpp"
-#include"UserInput.hpp"
-#include"FileRW.hpp"
-#include"Debug.hpp"
+#include "Editor.hpp"
+#include "gameobject/GameObjects.hpp"
+#include "asset/TextureManager.hpp"
+#include "UserInput.hpp"
+#include "FileRW.hpp"
+#include "Debug.hpp"
 
 constexpr uint32_t OBJECT_NEW_CLASSNAME_BUFSIZE = 16;
 constexpr uint32_t MATERIAL_NEW_NAME_BUFSIZE = 32;
@@ -17,6 +17,9 @@ constexpr const char* MATERIAL_NEW_NAME_DEFAULT = "newmaterial";
 static const char* ParentString = "[Parent]";
 
 static std::string ErrorTexture = "textures/missing.png";
+
+static bool ScriptEditorEnabled = false;
+static uint32_t ScriptEditorFocus = PHX_GAMEOBJECT_NULL_ID;
 
 static nlohmann::json DefaultNewMaterial{};
 
@@ -99,19 +102,9 @@ void Editor::Init()
 	//GameWorkspace->OnChildAdded.Connect(ResetAndAddObjects);
 }
 
-void Editor::Update(double DeltaTime, glm::mat4 CameraTransform)
+void Editor::Update(double DeltaTime)
 {
 	m_InvalidObjectErrTimeRemaining -= DeltaTime;
-
-	Vector3 CamPos = Vector3(CameraTransform[3].x, CameraTransform[3].y, CameraTransform[3].z);
-
-	glm::mat4 ForwardMat = glm::translate(CameraTransform, glm::vec3(0.0f, 0.0f, -50.0f));
-	Vector3 RayTargetPos = Vector3(ForwardMat[3].x, ForwardMat[3].y, ForwardMat[3].z);
-
-	Vector3 RayDir = RayTargetPos - CamPos;
-
-	//if (Result.DidHit)
-	//	this->MyCube3D->Matrix = glm::translate(glm::mat4(1.0f), glm::vec3(Result.HitPosition));
 }
 
 static bool mtlIterator(void*, int index, const char** outText)
@@ -128,6 +121,72 @@ static bool mtlUniformIterator(void* array, int index, const char** outText)
 	*outText = ((std::vector<std::string>*)array)->at(index).c_str();
 
 	return true;
+}
+
+static void renderScriptEditor()
+{
+	static char* TextEntryBuffer = nullptr;
+	static size_t TextEntryBufferCapacity = 0;
+
+	Object_Script* targetScript = dynamic_cast<Object_Script*>(GameObject::GetObjectById(ScriptEditorFocus));
+
+	if (!ScriptEditorEnabled)
+	{
+		if (targetScript && TextEntryBuffer)
+			FileRW::WriteFile(targetScript->SourceFile, TextEntryBuffer, true);
+
+		free(TextEntryBuffer);
+		TextEntryBuffer = nullptr;
+
+		return;
+	}
+
+	if (!targetScript)
+	{
+		ScriptEditorEnabled = false;
+		ScriptEditorFocus = PHX_GAMEOBJECT_NULL_ID;
+
+		return;
+	}
+
+	ImGui::Begin("Script Editor");
+
+	ImGui::Text("%s", targetScript->Name.c_str());
+
+	if (ImGui::Button("Save"))
+	{
+		FileRW::WriteFile(targetScript->SourceFile, TextEntryBuffer, true);
+
+		free(TextEntryBuffer);
+		TextEntryBuffer = nullptr;
+	}
+
+	if (ImGui::Button("Close"))
+	{
+		// 28/10/2024 TODO
+		// hooo boy do i love intentionally dirty state
+		// so i don't have to go through the effort of making ONE extra function
+		ScriptEditorEnabled = false;
+		return;
+	}
+
+	if (!TextEntryBuffer)
+	{
+		bool scriptFileExists = true;
+		std::string scriptContents = FileRW::ReadFile(targetScript->SourceFile, &scriptFileExists);
+
+		if (!scriptFileExists)
+			scriptContents = "-- Source file '" + targetScript->SourceFile + "' could not be opened";
+
+		TextEntryBufferCapacity = scriptContents.size() + 256;
+		TextEntryBuffer = (char*)malloc(TextEntryBufferCapacity);
+
+		copyStringToBuffer(TextEntryBuffer, TextEntryBufferCapacity, scriptContents);
+	}
+
+	ImGui::InputTextMultiline("Script", TextEntryBuffer, TextEntryBufferCapacity);
+
+	ImGui::End();
 }
 
 // 02/09/2024
@@ -465,6 +524,7 @@ static GameObject* recursiveIterateTree(GameObject* current)
 
 void Editor::RenderUI()
 {
+	renderScriptEditor();
 	m_RenderMaterialEditor();
 
 	ImGui::Begin("Editor");
@@ -493,8 +553,16 @@ void Editor::RenderUI()
 			Object_Script* script = dynamic_cast<Object_Script*>(selected);
 
 			if (script)
+			{
 				if (ImGui::Button("Reload"))
 					script->Reload();
+
+				if (ImGui::Button("Edit"))
+				{
+					ScriptEditorEnabled = true;
+					ScriptEditorFocus = script->ObjectId;
+				}
+			}
 
 			ImGui::Text("Properties:");
 
@@ -528,14 +596,7 @@ void Editor::RenderUI()
 				{
 					std::string str = curVal.AsString();
 
-					// TODO 30/09/2024
-					// so this is kind of BS
-					// this is how many more characters the user can
-					// enter before they need to re-focus the textbox,
-					// because we don't know how much buffer space we'll
-					// need until ImGui gives us the updated string,
-					// which only happens when the user loses focus of the textbox
-					const size_t INPUT_TEXT_BUFFER_ADDITIONAL = 16;
+					const size_t INPUT_TEXT_BUFFER_ADDITIONAL = 64;
 
 					size_t allocSize = str.size() + INPUT_TEXT_BUFFER_ADDITIONAL;
 

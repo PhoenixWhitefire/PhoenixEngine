@@ -3,7 +3,7 @@
     {
       "name": "crow",
       "path": "models/crow/scene.gltf",
-      "position":[0,0,0],
+      "position":[0,8,0],
       "orient": [0,0,0],
       "size": [1,1,1],
       "computePhysics": 0
@@ -52,10 +52,10 @@
     },
     {
       "type":"MeshPart",
-      "position":[0,9,-5],
+      "position":[-8,9,0],
       "name" : "woodplanks",
-      "material":"wood",
-      "size":[20,17,2],
+      "material":"woodplanks",
+      "size":[2,17,20],
       "dmesh":"Cube"
     }
   ],

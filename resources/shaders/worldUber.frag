@@ -49,6 +49,8 @@ uniform int NumLights = 0;
 //uniform sampler2D ShadowMaps[MAX_SHADOWCASTING_LIGHTS]; <-- Replaced with shadow atlas!
 uniform LightObject Lights[MAX_LIGHTS];
 
+uniform sampler2D FrameBuffer;
+
 uniform sampler2D ColorMap;
 uniform sampler2D MetallicRoughnessMap;
 
@@ -74,6 +76,10 @@ uniform vec3 FogColor = vec3(0.85f, 0.85f, 0.90f);
 
 uniform bool UseProjectedMaterial = false;
 uniform float MaterialProjectionFactor = 0.05f;
+
+uniform float AlphaCutoff = 0.5f;
+
+uniform bool DebugOverdraw = false;
 
 in vec3 Frag_CurrentPosition;
 in vec3 Frag_VertexNormal;
@@ -233,11 +239,22 @@ void main()
 	
 	Albedo -= vec4(0.f, 0.f, 0.f, Transparency);
 
-	// completely transparent region
-	// alpha is for some reason never 0?? <--- Specifically on the dev.world grass mesh
-	if (Albedo.a < 0.1f)
+	if (Albedo.a < AlphaCutoff)
 		discard;
 	
+	if (DebugOverdraw)
+	{
+		// accumulate a red color with overdraw
+		// 27/10/2024 i rlly thought this would work but nah not really
+		float prevValue = texture(FrameBuffer, gl_FragCoord.xy).r;
+		prevValue += 1.f/4.f;
+		//gl_FragDepth = 0.f;
+		
+		FragColor = vec4(prevValue, 0.f, 0.f, 1.f);
+		
+		return;
+	}
+
 	vec3 LightInfluence = vec3(0.f, 0.f, 0.f);
 
 	float ReflectivityFactor = (Reflectivity * SpecMapValue);

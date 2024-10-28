@@ -1,6 +1,7 @@
 #pragma once
 
-// Includes all game objects in order to add them to the list of game objects in the GameObjectFactory class
+// Includes all game objects in order to add them to the list of game objects,
+// `GameObject::s_GameObjectMap`
 
 #include "gameobject/Light.hpp"
 #include "gameobject/Model.hpp"
@@ -13,3 +14,4 @@
 #include "gameobject/Script.hpp"
 #include "gameobject/DataModel.hpp"
 #include "gameobject/Example.hpp"
+#include "gameobject/Sound.hpp"
