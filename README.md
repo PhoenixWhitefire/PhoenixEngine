@@ -2,12 +2,12 @@
 garbaj spaghett
 
 Personal "Game Engine" written in C++, that can:
-* Import simple Models (`.gltf`)
-* Execute Scripts (in [*Luau*](https://github.com/luau-lang/luau/))
-* Render simple materials (Color + Metalness maps)
-* Load/Save Scenes without losing data
+* Render scenes, i.e. multiple objects with different materials (Color + Metalness only), up to 6 lights are sampled per pixel, and no GPU instancing or batching
+* Import simple Models (`.gltf`/`.glb`)
+* Execute [*Luau*](https://github.com/luau-lang/luau/) scripts w/ per-frame callbacks
+* Load/Save Scenes
 * Do simple physics (dynamics and collisions w/ friction with AABBs, also has Raycasting for Scripts)
-* Do some simple, color-only post-processing
+* Do some simple, color-only post-processing (HDR, Tonemapping, and really weird Bloom, but a somewhat nice blur vignette)
 
 # Branches
 * `main` and `dev`, certified classics
@@ -52,10 +52,10 @@ The following libraries are used:
 * SDL2, window interface, OpenGL interface - [libsdl.org](https://libsdl.org/)
 * Glad, OpenGL API - [glad.dav1d.de/](https://glad.dav1d.de/)
 * GLM, matrix math - [@g-truc/glm](https://github.com/g-truc/glm/)
-* `nlohmann::json`, JSON decoding/encoding for materials and scenes - [@nlohmann/json](https://github.com/nlohmann/json/)
+* `nlohmann::json`, JSON decoding/encoding for materials, scenes, meshes, and shader programs - [@nlohmann/json](https://github.com/nlohmann/json/)
 * Dear ImGui, User Interface - [@ocornut/ImGui](https://github.com/ocornut/imgui/)
 * STB Image, image loading - [@nothings/stb](https://github.com/nothings/stb)
 * OpenGL, Graphics API - [Khronos Group](https://khronos.org/)
 
-The [OpenGL YouTube tutorials](https://youtube.com/watch?v=XpBGwZNyUh0&list=PLPaoO-vpZnumdcb4tZc4x5Q-v7CkrQ6M-) of [Victor Gordan](https://github.com/VictorGordan/) were referenced heavily during the creation of the rendering systems of this engine.
+The [OpenGL YouTube tutorials](https://youtube.com/watch?v=XpBGwZNyUh0&list=PLPaoO-vpZnumdcb4tZc4x5Q-v7CkrQ6M-) of [Victor Gordan](https://github.com/VictorGordan/) (who I occasionally make fun of in the code comments) were referenced heavily during the creation of the rendering systems of this engine.
 Initially, this started out as a 1-to-1 follow-along of what he did, but I rewrote the entire thing to work in a better "Game Engine"-style architecture, as the tutorial had a simpler Model Viewer architecture that was not suitable for a Game Engine.
