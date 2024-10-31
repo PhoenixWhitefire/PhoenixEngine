@@ -2,13 +2,13 @@
 
 #pragma once
 
-#include<unordered_map>
-#include<future>
-#include<thread>
-#include<luau/Compiler/include/luacode.h>
+#include <unordered_map>
+#include <future>
+#include <thread>
+#include <luau/Compiler/include/luacode.h>
 
-#include"Reflection.hpp"
-#include"datatype/GameObject.hpp"
+#include "Reflection.hpp"
+#include "datatype/GameObject.hpp"
 
 namespace ScriptEngine
 {

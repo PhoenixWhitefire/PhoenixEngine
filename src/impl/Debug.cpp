@@ -1,5 +1,5 @@
-#include"Debug.hpp"
-#include"FileRW.hpp"
+#include "Debug.hpp"
+#include "FileRW.hpp"
 
 static std::string ProgramLog = "";
 

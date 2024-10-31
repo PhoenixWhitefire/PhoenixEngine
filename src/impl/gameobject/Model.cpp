@@ -1,6 +1,6 @@
-#include"gameobject/Model.hpp"
+#include "gameobject/Model.hpp"
 
-RegisterDerivedObject<Object_Model> Object_Model::RegisterClassAs("Model");
+PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(Model);
 
 static bool s_DidInitReflection = false;
 

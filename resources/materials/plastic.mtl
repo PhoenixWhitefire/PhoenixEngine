@@ -1,3 +1,10 @@
 {
-  "albedo": "textures/plastic.png"
+  "albedo": "textures/plastic.png",
+  "shaderprogram": "worldUberMaterial",
+  "specExponent": 32.0,
+  "specMultiply": 0.5,
+  "translucency": false,
+  "uniforms": {
+    "MaterialProjectionFactor": 0.05000000074505806
+  }
 }

@@ -1,7 +1,7 @@
-#include"Reflection.hpp"
-#include"datatype/Vector3.hpp"
-#include"datatype/Color.hpp"
-#include"datatype/GameObject.hpp"
+#include "Reflection.hpp"
+#include "datatype/Vector3.hpp"
+#include "datatype/Color.hpp"
+#include "datatype/GameObject.hpp"
 
 //Reflection::Reflectable* Reflection::Reflectable::ApiReflection = new Reflection::Reflectable();
 
@@ -11,65 +11,110 @@ Reflection::GenericValue::GenericValue()
 }
 
 Reflection::GenericValue::GenericValue(const std::string& str)
-	: Type(ValueType::String), String(str)
+	: Type(ValueType::String)
 {
+	const char* cstr = str.c_str();
+	size_t allocSize = strlen(cstr) + 1;
+
+	this->Value = malloc(allocSize);
+
+	if (!this->Value)
+		throw(std::vformat(
+			"Could not allocate {} bytes for ::GenericValue(string)", std::make_format_args(allocSize)
+		));
+
+	memcpy(this->Value, cstr, allocSize);
 }
 
 Reflection::GenericValue::GenericValue(const char* data)
-	: Type(ValueType::String), String(data)
+	: Type(ValueType::String)
 {
+	size_t allocSize = strlen(data) + 1;
+
+	this->Value = malloc(allocSize);
+
+	if (!this->Value)
+		throw(std::vformat(
+			"Could not allocate {} bytes for ::GenericValue(const char*)", std::make_format_args(allocSize)
+		));
+
+	memcpy(this->Value, data, allocSize);
 }
 
 Reflection::GenericValue::GenericValue(bool b)
-	: Type(ValueType::Bool), Pointer((void*)b)
+	: Type(ValueType::Bool), Value((void*)b)
 {
 }
 
 Reflection::GenericValue::GenericValue(double d)
-	: Type(ValueType::Double), Pointer(*(void**)&d)
+	: Type(ValueType::Double), Value(*(void**)&d)
 {
 }
 
 Reflection::GenericValue::GenericValue(int64_t i)
-	: Type(ValueType::Integer), Pointer((void*)i)
+	: Type(ValueType::Integer), Value((void*)i)
 {
 }
 
 Reflection::GenericValue::GenericValue(uint32_t i)
-	: Type(ValueType::Integer), Pointer((void*)static_cast<int64_t>(i))
+	: Type(ValueType::Integer), Value((void*)static_cast<int64_t>(i))
 {
 }
 
 Reflection::GenericValue::GenericValue(int i)
-	: Type(ValueType::Integer), Pointer((void*)static_cast<int64_t>(i))
+	: Type(ValueType::Integer), Value((void*)static_cast<int64_t>(i))
 {
 }
 
 Reflection::GenericValue::GenericValue(const glm::mat4& m)
-	: Type(ValueType::Matrix), Pointer(malloc(sizeof(m)))
+	: Type(ValueType::Matrix), Value(malloc(sizeof(m)))
 {
-	if (!Pointer)
+	if (!this->Value)
 		throw("Allocation error while constructing GenericValue from glm::mat4");
 
-	memcpy(Pointer, &m, sizeof(m));
+	memcpy(this->Value, &m, sizeof(m));
 }
 
 Reflection::GenericValue::GenericValue(const std::vector<GenericValue>& array)
-	: Type(ValueType::Array), Array(array)
+	: Type(ValueType::Array)
 {
+	size_t allocSize = array.size() * sizeof(GenericValue);
+
+	this->Value = malloc(allocSize);
+
+	if (!this->Value)
+		throw("Allocation error while constructing GenericValue from std::vector<GenericValue>");
+
+	memcpy(this->Value, array.data(), allocSize);
+
+	this->ArrayLength = static_cast<uint32_t>(array.size());
 }
 
 Reflection::GenericValue::GenericValue(const std::unordered_map<GenericValue, GenericValue>& map)
-	: Type(ValueType::Array)
+	: Type(ValueType::Map)
 {
+	std::vector<GenericValue> arr;
+	arr.reserve(map.size() * 2);
+
 	for (auto& it : map)
 	{
-		this->Array.push_back(it.first);
-		this->Array.push_back(it.second);
+		arr.push_back(it.first);
+		arr.push_back(it.second);
 	}
+
+	size_t allocSize = arr.size() * sizeof(GenericValue);
+
+	this->Value = (GenericValue*)malloc(allocSize);
+
+	if (!this->Value)
+		throw("Allocation error while constructing GenericValue from std::map<GenericValue, GenericValue>");
+
+	memcpy(this->Value, arr.data(), allocSize);
+
+	this->ArrayLength = static_cast<uint32_t>(arr.size());
 }
 
-std::string Reflection::GenericValue::ToString() const
+std::string Reflection::GenericValue::ToString()
 {
 	switch (this->Type)
 	{
@@ -77,16 +122,16 @@ std::string Reflection::GenericValue::ToString() const
 		return "Null";
 
 	case (ValueType::Bool):
-		return (bool)this->Pointer ? "true" : "false";
+		return (bool)this->Value ? "true" : "false";
 
 	case (ValueType::Integer):
-		return std::to_string((int64_t)this->Pointer);
+		return std::to_string((int64_t)this->Value);
 
 	case (ValueType::Double):
-		return std::to_string(*(double*)&this->Pointer);
+		return std::to_string(*(double*)&this->Value);
 
 	case (ValueType::String):
-		return this->String;
+		return (const char*)this->Value;
 	
 	case (ValueType::Color):
 		return Color(*this).ToString();
@@ -96,18 +141,20 @@ std::string Reflection::GenericValue::ToString() const
 
 	case (ValueType::GameObject):
 	{
-		GameObject* object = GameObject::GetObjectById(*(uint32_t*)&this->Pointer);
+		GameObject* object = GameObject::GetObjectById(*(uint32_t*)&this->Value);
 		return object ? object->GetFullName() : "NULL GameObject";
 	}
 	
 	case (ValueType::Array):
 	{
-		if (this->Array.size() > 0)
+		std::vector<GenericValue> arr = this->AsArray();
+
+		if (!arr.empty())
 		{
 			uint32_t numTypes = 0;
 			std::string typesString = "";
 
-			for (const Reflection::GenericValue& element : this->Array)
+			for (const Reflection::GenericValue& element : arr)
 			{
 				numTypes++;
 				if (numTypes > 4)
@@ -125,24 +172,26 @@ std::string Reflection::GenericValue::ToString() const
 		}
 		else
 			return "Empty Array";
+	}
 
 	case (ValueType::Map):
 	{
-		if (this->Array.size() > 0)
-		{
-			if (this->Array.size() % 2 != 0)
-				return "Invalid Map (Odd number of Array elements)";
+		std::vector<GenericValue> arr = this->AsArray();
 
+		if (!arr.empty())
+		{
+			if (arr.size() % 2 != 0)
+				return "Invalid Map (Odd number of Array elements)";
+			
 			return std::vformat(
 				"Map<{}:{}>",
 				std::make_format_args(
-					Reflection::TypeAsString(this->Array[0].Type),
-					Reflection::TypeAsString(this->Array[1].Type)
+					Reflection::TypeAsString(arr[0].Type),
+					Reflection::TypeAsString(arr[1].Type)
 				));
 		}
 		else
 			return "Empty Map";
-	}
 	}
 
 	default:
@@ -159,64 +208,73 @@ std::string Reflection::GenericValue::ToString() const
 std::string Reflection::GenericValue::AsString() const
 {
 	return Type == ValueType::String
-		? String : throw("GenericValue was not a String, but was a " + Reflection::TypeAsString(Type));
+		? (const char*)this->Value : throw("GenericValue was not a String, but was a " + Reflection::TypeAsString(Type));
 }
 bool Reflection::GenericValue::AsBool() const
 {
 	return Type == ValueType::Bool
-		? (bool)this->Pointer
+		? (bool)this->Value
 		: throw("GenericValue was not a Bool, but was a " + Reflection::TypeAsString(Type));
 }
 double Reflection::GenericValue::AsDouble() const
 {
 	return Type == ValueType::Double
-		? *(double*)&this->Pointer
+		? *(double*)&this->Value
 		: throw("GenericValue was not a Double, but was a " + Reflection::TypeAsString(Type));
 }
 int64_t Reflection::GenericValue::AsInteger() const
 {
 	// `|| ValueType::GameObject` because it's easier 14/09/2024
 	return (Type == ValueType::Integer || Type == ValueType::GameObject)
-		? (int64_t)this->Pointer
+		? (int64_t)this->Value
 		: throw("GenericValue was not an Integer, but was a " + Reflection::TypeAsString(Type));
 }
-glm::mat4 Reflection::GenericValue::AsMatrix() const
+glm::mat4& Reflection::GenericValue::AsMatrix() const
 {
-	glm::mat4* mptr = (glm::mat4*)Pointer;
+	glm::mat4* mptr = (glm::mat4*)this->Value;
 
 	return Type == ValueType::Matrix
 		? *mptr
 		: throw("GenericValue was not a Matrix, but was a " + Reflection::TypeAsString(Type));
 }
-std::vector<Reflection::GenericValue> Reflection::GenericValue::AsArray()
+std::vector<Reflection::GenericValue> Reflection::GenericValue::AsArray() const
 {
+	std::vector<GenericValue> array;
+	array.reserve(this->ArrayLength);
+
+	Reflection::GenericValue* first = (Reflection::GenericValue*)this->Value;
+
 	if (Type == ValueType::Map)
 	{
-		if (Array.size() % 2 != 0)
+		if (this->ArrayLength % 2 != 0)
 			throw("Tried to convert a Map GenericValue to an Array, but it wasn't valid and had an odd number of Array elements");
 
-		std::vector<GenericValue> array;
-
-		for (size_t index = 1; index < array.size(); index++)
+		for (size_t index = 1; index < this->ArrayLength; index++)
 		{
-			array.push_back(this->Array.at(index));
+			array.push_back(first[index]);
 			index++;
 		}
 
 		return array;
 	}
+	else
+		for (uint32_t i = 0; i < this->ArrayLength; i++)
+			array.push_back(first[i]);
 
-	return Type == ValueType::Array
-		? Array
+	return this->Type == ValueType::Array
+		? array
 		: throw("GenericValue was not an Array, but was a " + Reflection::TypeAsString(Type));
 }
 std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> Reflection::GenericValue::AsMap() const
 {
+	throw("GenericValue::AsMap not implemented");
+
+	/*
 	if (Type != ValueType::Map)
 		throw("GenericValue was not a Map, but was a " + Reflection::TypeAsString(Type));
 
-	if (Array.size() % 2 != 0)
-		throw("GenericValue was not a valid Map (odd number of Array elements)");
+	//if (Array.size() % 2 != 0)
+	//	throw("GenericValue was not a valid Map (odd number of Array elements)");
 
 	/*
 	std::unordered_map<GenericValue, GenericValue> map;
@@ -248,13 +306,16 @@ std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> Reflectio
 
 
 	What is blud yapping about?? :skull:
-	*/
+	
 	throw("GenericValue::AsMap not implemented");
+	*/
 }
 
 Reflection::GenericValue::~GenericValue()
 {
-	
+	// "A breakpoint instruction (__debugbreak() or similar) was hit"
+	//if (this->Type == Reflection::ValueType::String)
+		//free(this->Value);
 }
 
 Reflection::PropertyMap& Reflection::Reflectable::GetProperties()
@@ -269,7 +330,7 @@ Reflection::FunctionMap& Reflection::Reflectable::GetFunctions()
 
 bool Reflection::Reflectable::HasProperty(const std::string& name)
 {
-	if ( s_Properties.size() == 0)
+	if (s_Properties.empty())
 		return false;
 	return  s_Properties.find(name) !=  s_Properties.end();
 }

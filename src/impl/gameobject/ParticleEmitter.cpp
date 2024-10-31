@@ -1,18 +1,18 @@
-#include<glad/gl.h>
-#include<glm/gtc/type_ptr.hpp>
-#include<glm/gtc/matrix_transform.hpp>
+#include <glad/gl.h>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
-#include"gameobject/ParticleEmitter.hpp"
-#include"gameobject/Base3D.hpp"
-#include"datatype/Vector2.hpp"
+#include "gameobject/ParticleEmitter.hpp"
+#include "gameobject/Base3D.hpp"
+#include "datatype/Vector2.hpp"
 
-RegisterDerivedObject<Object_ParticleEmitter> Object_ParticleEmitter::RegisterClassAs("ParticleEmitter");
+PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(ParticleEmitter);
 
-ShaderProgram* Object_ParticleEmitter::s_ParticleShaders = nullptr;
-std::default_random_engine Object_ParticleEmitter::s_RandGenerator = std::default_random_engine(static_cast<uint32_t>(time(NULL)));
+static ShaderProgram* s_ParticleShaders = nullptr;
+static std::default_random_engine s_RandGenerator = std::default_random_engine(static_cast<uint32_t>(time(NULL)));
 static bool s_DidInitReflection = false;
 
-static const std::string MissingTexPath = "textures/MISSING2_MaximumADHD_status_1665776378145304579.png";
+static const std::string MissingTexPath = "textures/missing.png";
 
 float Quad[] =
 {
@@ -92,8 +92,8 @@ Object_ParticleEmitter::Object_ParticleEmitter()
 	this->Name = "ParticleEmitter";
 	this->ClassName = "ParticleEmitter";
 
-	if (!Object_ParticleEmitter::s_ParticleShaders)
-		Object_ParticleEmitter::s_ParticleShaders = ShaderProgram::GetShaderProgram("particle");
+	if (!s_ParticleShaders)
+		s_ParticleShaders = ShaderProgram::GetShaderProgram("particle");
 
 	m_VertArray.Bind();
 
@@ -135,7 +135,7 @@ Object_ParticleEmitter::Object_ParticleEmitter()
 
 size_t Object_ParticleEmitter::m_GetUsableParticleIndex()
 {
-	if (m_Particles.size() == 0) //Are there any particles at all?
+	if (m_Particles.empty()) //Are there any particles at all?
 	{
 		m_Particles.resize(1); //Resize array to length 1
 
@@ -177,7 +177,7 @@ void Object_ParticleEmitter::Update(double DeltaTime)
 
 	size_t newParticleIndex = UINT32_MAX;
 
-	if (m_TimeSinceLastSpawn >= timeBetweenSpawn && this->PossibleImages.size() > 0 && this->EmitterEnabled)
+	if (m_TimeSinceLastSpawn >= timeBetweenSpawn && !this->PossibleImages.empty() && this->EmitterEnabled)
 	{
 		m_TimeSinceLastSpawn = 0.0f;
 
@@ -218,7 +218,7 @@ void Object_ParticleEmitter::Update(double DeltaTime)
 
 void Object_ParticleEmitter::Render(glm::mat4 CameraMatrix)
 {
-	if (m_Particles.size() == 0)
+	if (m_Particles.empty())
 		return;
 
 	m_VertArray.Bind();

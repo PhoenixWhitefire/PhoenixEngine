@@ -1,4 +1,4 @@
-#include"UserInput.hpp"
+#include "UserInput.hpp"
 
 const uint8_t* KeyboardState = SDL_GetKeyboardState(NULL);
 

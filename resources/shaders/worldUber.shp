@@ -2,54 +2,10 @@
     "Vertex": "worldUber.vert",
     "Fragment": "worldUber.frag",
     
-    // 17/09/2024 TODO this is ass
-    // Maybe some kind of pre-processor that scans the shader code
-    // for `uniform [X] [Y]` and adds automatically?
-    "UsedUniforms": [
-        "CameraMatrix",
-        "Transform",
-        "Scale",
-        "NumLights",
-        "SpecularMultiplier",
-        "SpecularPower",
-        "Reflectivity",
-        "Transparency",
-        "ColorTint",
-        
-        "DiffuseTextures[0]",
-        "NumDiffuseTextures",
-        "SpecularTextures[0]",
-        "NumSpecularTextures",
-        
-        // Oooh boy, here we go...
-        "Lights[0].Position",
-        "Lights[0].Color",
-        "Lights[0].Type",
-        "Lights[0].Range",
-        
-        "Lights[1].Position",
-        "Lights[1].Color",
-        "Lights[1].Type",
-        "Lights[1].Range",
-        
-        "Lights[2].Position",
-        "Lights[2].Color",
-        "Lights[2].Type",
-        "Lights[2].Range",
-        
-        "Lights[3].Position",
-        "Lights[3].Color",
-        "Lights[3].Type",
-        "Lights[3].Range",
-        
-        "Lights[4].Position",
-        "Lights[4].Color",
-        "Lights[4].Type",
-        "Lights[4].Range",
-        
-        "Lights[5].Position",
-        "Lights[5].Color",
-        "Lights[5].Type",
-        "Lights[5].Range"
-    ]
+    "Uniforms": {
+        "Fog": false,
+        "EmissionStrength": 0.0,
+	"AlphaCutoff": 0.5
+	//"DebugOverdraw": false
+    }
 }

@@ -3,8 +3,8 @@
 
 #pragma once
 
-#include<vector>
-#include<random>
+#include <vector>
+#include <random>
 
 template <class T> class ValueSequenceKeypoint
 {
@@ -19,11 +19,11 @@ public:
 template <class T> class ValueSequence
 { //IMPORTANT: ValueSequence<type>: 'type' should support math operations - '-', '*', '+'
 public:
-	ValueSequence(std::vector<ValueSequenceKeypoint<T>> InitKeys);
+	ValueSequence(const std::vector<ValueSequenceKeypoint<T>>& InitKeys);
 	ValueSequence();
 
 	T GetValue(float Time);
-	void InsertKey(ValueSequenceKeypoint<T> Key);
+	void InsertKey(const ValueSequenceKeypoint<T>& Key);
 
 	std::vector<ValueSequenceKeypoint<T>> GetKeys();
 	std::vector<T> GetKeysValues();
@@ -40,7 +40,7 @@ template <class T> ValueSequenceKeypoint<T>::ValueSequenceKeypoint(float time, T
 {
 }
 
-template <class T> ValueSequence<T>::ValueSequence(std::vector<ValueSequenceKeypoint<T>> initialKeys)
+template <class T> ValueSequence<T>::ValueSequence(const std::vector<ValueSequenceKeypoint<T>>& initialKeys)
 	: m_Keys(initialKeys)
 {
 }
@@ -56,7 +56,7 @@ template <typename T> bool m_compare(ValueSequenceKeypoint<T> A, ValueSequenceKe
 
 template <class T> T ValueSequence<T>::GetValue(float Time)
 {
-	if (m_Keys.size() == 0)
+	if (m_Keys.empty())
 		return T();
 
 	if (m_Keys.size() == 1)
@@ -96,14 +96,15 @@ template <class T> std::vector<ValueSequenceKeypoint<T>> ValueSequence<T>::GetKe
 template <class T> std::vector<T> ValueSequence<T>::GetKeysValues()
 {
 	std::vector<T> values;
+	values.reserve(m_Keys.size());
 
-	for (int Index = 0; Index < m_Keys.size(); Index++)
-		values.push_back(m_Keys[Index].Value);
+	for (const ValueSequenceKeypoint<T> key : m_Keys)
+		values.push_back(key.Value);
 
 	return values;
 }
 
-template <class T> void ValueSequence<T>::InsertKey(ValueSequenceKeypoint<T> Key)
+template <class T> void ValueSequence<T>::InsertKey(const ValueSequenceKeypoint<T>& Key)
 {
 	m_Keys.push_back(Key);
 

@@ -1,7 +1,7 @@
-#include<glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
-#include"PhysicsEngine.hpp"
-#include"IntersectionLib.hpp"
+#include "PhysicsEngine.hpp"
+#include "IntersectionLib.hpp"
 
 struct Collision
 {
@@ -64,6 +64,8 @@ static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTi
 		// 24/09/2024
 		// ugly
 		// (another ugly at the end of this cycle)
+		// Do this because otherwise, objects colliding will
+		// move twice as fast
 		std::vector<Object_Base3D*> us = { collision.A, collision.B };
 		moveDynamics(us, -DeltaTime);
 
@@ -95,8 +97,8 @@ static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTi
 			collision.A->LinearVelocity = collision.A->LinearVelocity / 2.f;
 			collision.B->LinearVelocity = collision.B->LinearVelocity / 2.f;
 
-			collision.A->LinearVelocity += reactionForce / 2.f;
-			collision.B->LinearVelocity -= reactionForce / 2.f;
+			collision.A->LinearVelocity -= reactionForce;
+			collision.B->LinearVelocity += reactionForce;
 		}
 
 		// 24/09/2024

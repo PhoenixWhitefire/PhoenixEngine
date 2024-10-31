@@ -1,9 +1,9 @@
 #pragma once
 
-#include<vector>
-#include<unordered_map>
+#include <vector>
+#include <unordered_map>
 
-#include"render/ShaderProgram.hpp"
+#include "render/ShaderProgram.hpp"
 
 class RenderMaterial
 {
@@ -11,6 +11,11 @@ public:
 	// Fetches a material. Caches materials.
 	static RenderMaterial* GetMaterial(std::string const& Name);
 	static std::vector<RenderMaterial*> GetLoadedMaterials();
+
+	// THIS DOES NOT FLUSH THE UNIFORMS!
+	// It just does `SetUniform` for the uniforms in the Material's
+	// JSON (like with `ShaderProgram::ApplyDefaultUniforms`)
+	void ApplyUniforms();
 
 	std::string Name{};
 	ShaderProgram* Shader{};
@@ -24,6 +29,8 @@ public:
 	bool HasTranslucency = false;
 	float SpecExponent{};
 	float SpecMultiply{};
+
+	std::unordered_map<std::string, Reflection::GenericValue> Uniforms;
 
 private:
 	RenderMaterial();

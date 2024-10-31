@@ -1,17 +1,19 @@
-#include<glm/mat4x4.hpp>
-#include<luau/VM/src/lstate.h>
-#include<luau/VM/include/lualib.h>
+#include <glm/mat4x4.hpp>
+#include <luau/VM/src/lstate.h>
+#include <luau/VM/include/lualib.h>
 
-#include"gameobject/ScriptEngine.hpp"
-#include"Debug.hpp"
+#include "gameobject/ScriptEngine.hpp"
+#include "Debug.hpp"
 
-#include"IntersectionLib.hpp"
-#include"datatype/Vector3.hpp"
-#include"datatype/Color.hpp"
-#include"datatype/GameObject.hpp"
-#include"asset/MeshProvider.hpp"
-#include"UserInput.hpp"
-#include"FileRW.hpp"
+#include "IntersectionLib.hpp"
+#include "datatype/Vector3.hpp"
+#include "datatype/Color.hpp"
+#include "datatype/GameObject.hpp"
+#include "asset/MeshProvider.hpp"
+#include "asset/ModelLoader.hpp"
+#include "asset/SceneFormat.hpp"
+#include "UserInput.hpp"
+#include "FileRW.hpp"
 
 template <class T> static void throwWrapped(T exc)
 {
@@ -69,7 +71,7 @@ static void pushMatrix(lua_State* L, const glm::mat4& Matrix)
 static void pushGameObject(lua_State* L, GameObject* obj)
 {
 	uint32_t* ptrToObj = (uint32_t*)lua_newuserdata(L, sizeof(uint32_t));
-	*ptrToObj = obj->ObjectId;
+	*ptrToObj = obj ? obj->ObjectId : 0;
 
 	luaL_getmetatable(L, "GameObject");
 	lua_setmetatable(L, -2);
@@ -212,10 +214,12 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 	{
 		lua_newtable(L);
 
-		for (int index = 0; index < gv.Array.size(); index++)
+		std::vector<Reflection::GenericValue> array = gv.AsArray();
+
+		for (int index = 0; index < array.size(); index++)
 		{
 			lua_pushinteger(L, index);
-			L::PushGenericValue(L, gv.Array[index]);
+			L::PushGenericValue(L, array[index]);
 			lua_settable(L, -3);
 		}
 
@@ -223,14 +227,16 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 	}
 	case (Reflection::ValueType::Map):
 	{
-		if (!(gv.Array.size() % 2 == 0))
+		std::vector<Reflection::GenericValue> array = gv.AsArray();
+
+		if (array.size() % 2 != 0)
 			throw("GenericValue type was Map, but it does not have an even number of elements!");
 
 		lua_newtable(L);
 
-		for (int index = 0; index < gv.Array.size(); index++)
+		for (int index = 0; index < array.size(); index++)
 		{
-			L::PushGenericValue(L, gv.Array[index]);
+			L::PushGenericValue(L, array[index]);
 
 			if ((index + 1) % 2 == 0)
 				lua_settable(L, -3);
@@ -411,7 +417,9 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 
 		mtx[r][c] = v;
 
-		L::PushGenericValue(L, mtx);
+		Reflection::GenericValue gv{ mtx };
+
+		L::PushGenericValue(L, gv);
 
 		return 1;
 	}
@@ -479,6 +487,8 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 		[](lua_State* L)
 		{
 			int sleepTime = luaL_checkinteger(L, 1);
+
+			lua_pushnil(L);
 
 			auto a = std::async(
 				std::launch::async,
@@ -672,6 +682,10 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 			MeshProvider* meshProvider = MeshProvider::Get();
 			meshProvider->Assign(mesh, meshName);
 
+			// Informs the Renderer the mesh doesn't exist on the GPU on it's own
+			// and must be uploaded when it's rendered
+			meshProvider->GetMeshResource(meshProvider->LoadFromPath(meshName))->GpuId = UINT32_MAX;
+
 			return 0;
 		}
 	},
@@ -680,19 +694,24 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 		"world_raycast",
 		[](lua_State* L)
 		{
+			GameObject* workspace = GameObject::s_DataModel->GetChildOfClass("Workspace");
+
+			if (!workspace)
+				luaL_error(L, "A Workspace was not found within the DataModel");
+
 			glm::vec3 origin = Vector3(LuaValueToGeneric(L, -3));
 			glm::vec3 vector = Vector3(LuaValueToGeneric(L, -2));
 			std::vector<Reflection::GenericValue> providedIgnoreList = LuaValueToGeneric(L, -1).AsArray();
 
 			std::vector<GameObject*> ignoreList;
 			for (const Reflection::GenericValue& gv : providedIgnoreList)
-				ignoreList.push_back(GameObject::GetObjectById(static_cast<uint32_t>((uint64_t)gv.Pointer)));
+				ignoreList.push_back(GameObject::GetObjectById(static_cast<uint32_t>((uint64_t)gv.Value)));
 
 			IntersectionLib::Intersection result;
 			GameObject* hitObject = nullptr;
 			double closestHit = INFINITY;
 
-			for (GameObject* p : GameObject::s_DataModel->GetChild("Workspace")->GetDescendants())
+			for (GameObject* p : workspace->GetDescendants())
 			{
 				if (std::find(ignoreList.begin(), ignoreList.end(), p) != ignoreList.end())
 					continue;
@@ -728,14 +747,93 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 				ScriptEngine::L::PushGameObject(L, hitObject);
 				lua_setfield(L, -2, "Object");
 
-				ScriptEngine::L::PushGenericValue(L, Vector3(result.Vector).ToGenericValue());
+				Reflection::GenericValue posg = Vector3(result.Vector).ToGenericValue();
+
+				ScriptEngine::L::PushGenericValue(L, posg);
 				lua_setfield(L, -2, "Position");
 
-				ScriptEngine::L::PushGenericValue(L, Vector3(result.Normal).ToGenericValue());
+				Reflection::GenericValue normalg = Vector3(result.Normal).ToGenericValue();
+
+				ScriptEngine::L::PushGenericValue(L, normalg);
 				lua_setfield(L, -2, "Normal");
 			}
 			else
 				lua_pushnil(L);
+
+			return 1;
+		}
+	},
+
+	{
+		"model_import",
+		[](lua_State* L)
+		{
+			const char* path = luaL_checkstring(L, 1);
+
+			const std::vector<GameObject*>& loadedRoots = ModelLoader(path, nullptr).LoadedObjs;
+			
+			lua_newtable(L);
+
+			for (int index = 0; index < loadedRoots.size(); index++)
+			{
+				GameObject* object = loadedRoots[index];
+				Reflection::GenericValue gv = object->ToGenericValue();
+
+				lua_pushinteger(L, index);
+				ScriptEngine::L::PushGenericValue(L, gv);
+
+				lua_settable(L, -3);
+			}
+
+			return 1;
+		}
+	},
+
+	{
+		"scene_save",
+		[](lua_State* L)
+		{
+			Reflection::GenericValue rootNodesGv = ScriptEngine::L::LuaValueToGeneric(L, -2);
+			const char* path = luaL_checkstring(L, 2);
+
+			std::vector<Reflection::GenericValue> rootNodesArray = rootNodesGv.AsArray();
+			std::vector<GameObject*> rootNodes;
+
+			for (const Reflection::GenericValue& gv : rootNodesArray)
+				rootNodes.push_back(GameObject::FromGenericValue(gv));
+
+			std::string fileContents = SceneFormat::Serialize(rootNodes, path);
+			FileRW::WriteFileCreateDirectories(path, fileContents, true);
+
+			lua_pushboolean(L, 1);
+			lua_pushstring(L, "No errors occurred");
+
+			return 2;
+		}
+	},
+
+	{
+		"scene_load",
+		[](lua_State* L)
+		{
+			const char* path = luaL_checkstring(L, 1);
+
+			std::string fileContents = FileRW::ReadFile(path);
+
+			bool deserializeSuccess = true;
+			std::vector<GameObject*> rootNodes = SceneFormat::Deserialize(fileContents, &deserializeSuccess);
+
+			if (!deserializeSuccess)
+				luaL_errorL(L, SceneFormat::GetLastErrorString().c_str());
+
+			std::vector<Reflection::GenericValue> convertedArray;
+
+			for (GameObject* node : rootNodes)
+				convertedArray.push_back(node->ToGenericValue());
+
+			Reflection::GenericValue gv = convertedArray;
+
+			ScriptEngine::L::PushGenericValue(L, gv);
 
 			return 1;
 		}

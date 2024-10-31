@@ -1,10 +1,9 @@
 #pragma once
 
+#include <vector>
+#include <luau/VM/src/lstate.h>
 
-#include<vector>
-#include<luau/VM/src/lstate.h>
-
-#include"datatype/GameObject.hpp"
+#include "datatype/GameObject.hpp"
 
 class Object_Script : public GameObject
 {
@@ -27,8 +26,6 @@ private:
 	std::string m_Source;
 	lua_State* m_L;
 	bool m_StaleSource = false;
-
-	bool m_HasUpdate = false;
 
 	static void s_DeclareReflections();
 	static inline Api s_Api{};

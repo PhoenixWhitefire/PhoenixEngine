@@ -1,14 +1,14 @@
 #pragma once
 
-#include<glm/matrix.hpp>
+#include <glm/matrix.hpp>
 
-#include"datatype/GameObject.hpp"
+#include "datatype/GameObject.hpp"
 
-#include"datatype/Color.hpp"
-#include"datatype/Vector3.hpp"
-#include"asset/Material.hpp"
+#include "datatype/Color.hpp"
+#include "datatype/Vector3.hpp"
+#include "asset/Material.hpp"
 
-enum class FaceCullingMode { None, BackFace, FrontFace };
+enum class FaceCullingMode : uint8_t { None, BackFace, FrontFace };
 
 class Object_Base3D : public GameObject
 {

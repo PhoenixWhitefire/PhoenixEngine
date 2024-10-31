@@ -1,12 +1,13 @@
-#include<glm/gtc/type_ptr.hpp>
-#include<glm/gtx/rotate_vector.hpp>
-#include<glm/gtx/vector_angle.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/rotate_vector.hpp>
+#include <glm/gtx/vector_angle.hpp>
+ 
+#include "gameobject/Camera.hpp"
+#include "datatype/Vector3.hpp"
+#include "UserInput.hpp"
 
-#include"gameobject/Camera.hpp"
-#include"datatype/Vector3.hpp"
-#include"UserInput.hpp"
+PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(Camera);
 
-RegisterDerivedObject<Object_Camera> Object_Camera::RegisterClassAs("Camera");
 static bool s_DidInitReflection = false;
 
 void Object_Camera::s_DeclareReflections()
@@ -15,32 +16,18 @@ void Object_Camera::s_DeclareReflections()
 		return;
 	s_DidInitReflection = true;
 
-	REFLECTION_DECLAREPROP_SIMPLE(Object_Camera, GenericMovement, Bool);
-	REFLECTION_DECLAREPROP_SIMPLE(Object_Camera, FieldOfView, Double);
-
-	REFLECTION_DECLAREPROP(
-		"Transform",
-		Matrix,
-		[](GameObject* p)
-		{
-			return Reflection::GenericValue(dynamic_cast<Object_Camera*>(p)->Transform);
-		},
-		[](GameObject* p, const Reflection::GenericValue& gv)
-		{
-			dynamic_cast<Object_Camera*>(p)->Transform = gv.AsMatrix();
-		}
-	);
-
 	REFLECTION_INHERITAPI(GameObject);
+
+	REFLECTION_DECLAREPROP_SIMPLE(Object_Camera, UseSimpleController, Bool);
+	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_Camera, FieldOfView, Double, float);
+
+	REFLECTION_DECLAREPROP_SIMPLE(Object_Camera, Transform, Matrix);
 }
 
 Object_Camera::Object_Camera()
 {
 	this->Name = "Camera";
 	this->ClassName = "Camera";
-
-	PrevMouseX = 0;
-	PrevMouseY = 0;
 
 	this->Transform = glm::lookAt(glm::vec3(), glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f, 1.f, 0.f));
 
@@ -52,22 +39,28 @@ void Object_Camera::Update(double)
 	if (!this->IsSceneCamera)
 		return;
 
-	if (!this->GenericMovement)
+	if (!this->UseSimpleController)
 		return;
 
 	// Camera movement code
 }
 
-glm::mat4 Object_Camera::GetMatrixForAspectRatio(double AspectRatio) const
+glm::mat4 Object_Camera::GetMatrixForAspectRatio(float AspectRatio) const
 {
-	glm::mat4 ViewMatrix = glm::mat4(1.0f);
-	glm::mat4 ProjectionMatrix = glm::mat4(1.0f);
+	glm::vec3 position = glm::vec3(this->Transform[3]);
+	glm::vec3 forwardVec = glm::vec3(this->Transform[2]);
 
-	glm::vec3 Position = glm::vec3(this->Transform[3]);
-	glm::vec3 ForwardVec = glm::vec3(this->Transform[2]);
+	glm::mat4 projectionMatrix = glm::perspective(
+		glm::radians(this->FieldOfView),
+		AspectRatio,
+		this->NearPlane,
+		this->FarPlane
+	);
+	glm::mat4 viewMatrix = glm::lookAt(
+		position,
+		position + forwardVec,
+		(glm::vec3)Vector3::yAxis
+	);
 
-	ViewMatrix = glm::lookAt(Position, Position + ForwardVec, (glm::vec3)Vector3::yAxis);
-	ProjectionMatrix = glm::perspective(glm::radians(this->FieldOfView), AspectRatio, this->NearPlane, this->FarPlane);
-
-	return ProjectionMatrix * ViewMatrix;
+	return projectionMatrix * viewMatrix;
 }

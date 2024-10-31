@@ -1,9 +1,15 @@
 #pragma once
 
-#include<stdint.h>
+#include <stdint.h>
 
 #define PHX_ASSERT(res, err) if (!res) throw(err)
 #define PHX_GAMEOBJECT_NULL_ID UINT32_MAX
+
+// link a class name to a C++ GameObject-deriving class
+#define PHX_GAMEOBJECT_LINKTOCLASS(strclassname, cclass) static RegisterDerivedObject<cclass> Register##cclass(strclassname);
+// shorthand for `PHX_GAMEOBJECT_LINKTOCLASS`. the resulting class name is the same as passed in,
+// and the C++ class is `Object_<Class>`
+#define PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(classname) PHX_GAMEOBJECT_LINKTOCLASS(#classname, Object_##classname)
 
 // 01/09/2024:
 // MUST be added to the `public` section of *all* objects so
@@ -17,6 +23,10 @@ static const FunctionMap& s_GetFunctions() \
 { \
 	return s_Api.Functions; \
 } \
+static const std::vector<std::string>& s_GetLineage() \
+{ \
+	return s_Api.Lineage; \
+} \
 virtual const PropertyMap& GetProperties()  \
 { \
 	return s_Api.Properties; \
@@ -26,7 +36,10 @@ virtual const FunctionMap& GetFunctions() \
 { \
 	return s_Api.Functions; \
 } \
- \
+virtual const std::vector<std::string>& GetLineage() \
+{ \
+	return s_Api.Lineage; \
+} \
 virtual bool HasProperty(const std::string & MemberName) \
 { \
 	return s_Api.Properties.find(MemberName) != s_Api.Properties.end(); \
@@ -74,14 +87,13 @@ virtual Reflection::GenericValue CallFunction(const std::string& MemberName, con
 		throw(std::string("InvalidFunction in CallFunction " + MemberName)); \
 } \
 
-#include<functional>
-#include<vector>
-#include<string>
-#include<unordered_map>
-#include<nljson.hpp>
+#include <unordered_map>
+#include <functional>
+#include <vector>
+#include <string>
+#include <nljson.hpp>
 
-#include"Reflection.hpp"
-#include"datatype/Event.hpp"
+#include "Reflection.hpp"
 
 class GameObject;
 
@@ -108,6 +120,7 @@ struct Api
 {
 	PropertyMap Properties;
 	FunctionMap Functions;
+	std::vector<std::string> Lineage;
 };
 
 class GameObject
@@ -119,6 +132,8 @@ public:
 	GameObject(GameObject&) = delete;
 
 	PHX_GAMEOBJECT_API_REFLECTION;
+
+	static GameObject* FromGenericValue(const Reflection::GenericValue&);
 
 	static bool IsValidObjectClass(std::string const&);
 	static GameObject* Create(std::string const&);
@@ -135,17 +150,21 @@ public:
 
 	GameObject* GetParent();
 	GameObject* GetChild(std::string const&);
-	// EXACT match, does not account for inheritance
+	// accounts for inheritance
 	GameObject* GetChildOfClass(std::string const&);
 	GameObject* GetChildById(uint32_t);
 
 	std::string GetFullName();
+	// whether this object inherits from or is the given class
+	bool IsA(const std::string&);
 
 	void Destroy();
 
 	void SetParent(GameObject*);
 	void AddChild(GameObject*);
 	void RemoveChild(uint32_t);
+
+	Reflection::GenericValue ToGenericValue();
 
 	uint32_t ObjectId = 0;
 
@@ -155,20 +174,18 @@ public:
 	bool Enabled = true;
 	bool ParentLocked = false;
 
-	uint32_t Parent;
-
-	EventSignal<GameObject*> OnChildAdded;
-	EventSignal<GameObject*> OnChildRemoving;
+	uint32_t Parent = PHX_GAMEOBJECT_NULL_ID;
 
 	static nlohmann::json DumpApiToJson();
 
 protected:
-	std::unordered_map<uint32_t, uint32_t> m_Children;
+	std::vector<uint32_t> m_Children;
 
 	// I followed this StackOverflow post:
 	// https://stackoverflow.com/a/582456/16875161
 
 	// Needs to be in `protected` because `RegisterDerivedObject`
+	// So sub-classes can access it and register themselves
 	typedef std::unordered_map<std::string, GameObject* (*)()> GameObjectMapType;
 	static inline GameObjectMapType* s_GameObjectMap = new GameObjectMapType;
 
@@ -177,9 +194,9 @@ private:
 	static inline Api s_Api{};
 };
 
-template<typename T> GameObject* createT_baseGameObject()
+template<typename T> GameObject* constructGameObjectHeir()
 {
-	return dynamic_cast<GameObject*>(new T);
+	return new T;
 }
 
 template <typename T>
@@ -187,6 +204,8 @@ struct RegisterDerivedObject : GameObject
 {
 	RegisterDerivedObject(std::string const& ObjectClass)
 	{
-		s_GameObjectMap->insert(std::make_pair(ObjectClass, &createT_baseGameObject<T>));
+		s_GameObjectMap->insert(std::make_pair(ObjectClass, &constructGameObjectHeir<T>));
 	}
 };
+
+typedef GameObject Object_GameObject;

@@ -1,7 +1,7 @@
-#include"gameobject/MeshObject.hpp"
-#include"asset/MeshProvider.hpp"
+#include "gameobject/MeshObject.hpp"
+#include "asset/MeshProvider.hpp"
 
-static RegisterDerivedObject<Object_Mesh> RegisterClassAs("Mesh");
+PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(Mesh);
 
 static bool s_DidInitReflection = false;
 
@@ -12,7 +12,7 @@ void Object_Mesh::s_DeclareReflections()
 	s_DidInitReflection = true;
 
 	REFLECTION_INHERITAPI(GameObject);
-	REFLECTION_INHERITAPI(Object_Base3D);
+	REFLECTION_INHERITAPI(Base3D);
 
 	REFLECTION_DECLAREPROP(
 		"Asset",

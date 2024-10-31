@@ -1,0 +1,8 @@
+{
+  "albedo": "models/ground/diffuse.png",
+  "roughnessFactor": 0.5,
+  "specExponent": 16.0,
+  "specMultiply": 0.0,
+  "translucency": false,
+  "uniforms": {}
+}

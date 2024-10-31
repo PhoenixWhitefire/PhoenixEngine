@@ -1,9 +1,9 @@
 #pragma once
 
-#include<datatype/GameObject.hpp>
-#include<gameobject/Base3D.hpp>
+#include <datatype/GameObject.hpp>
+#include <gameobject/Base3D.hpp>
 
-enum class PrimitiveShape { Cube };
+enum class PrimitiveShape : uint8_t { Cube };
 
 class Object_Primitive : public Object_Base3D
 {
@@ -17,7 +17,6 @@ public:
 	PHX_GAMEOBJECT_API_REFLECTION;
 
 private:
-	static RegisterDerivedObject<Object_Primitive> RegisterClassAs;
 	static void s_DeclareReflections();
 	static inline Api s_Api{};
 };

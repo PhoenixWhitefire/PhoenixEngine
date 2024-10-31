@@ -1,6 +1,6 @@
-#include<SDL2/SDL_timer.h>
+#include <SDL2/SDL_timer.h>
 
-#include"ThreadManager.hpp"
+#include "ThreadManager.hpp"
 
 ThreadManager* ThreadManager::Singleton = new ThreadManager();
 
@@ -8,7 +8,7 @@ static void _workerTaskRunner(Worker* ThisWorker)
 {
 	while (true)
 	{
-		if (ThisWorker->TaskQueue.size() == 0)
+		if (ThisWorker->TaskQueue.empty())
 		{
 			ThisWorker->Status = WorkerStatus::WaitingForTask;
 
@@ -36,13 +36,13 @@ void Worker::WaitForCurrentTaskFinish() const
 	uint32_t lastTask = this->TaskIdx;
 
 	while ((lastTask == this->TaskIdx) || (this->Status != WorkerStatus::RunningTask))
-		SDL_Delay(25);
+		SDL_Delay(2);
 }
 
 void Worker::WaitForAllTasksFinish() const
 {
 	while (this->Status != WorkerStatus::WaitingForTask)
-		SDL_Delay(25);
+		SDL_Delay(2);
 }
 
 std::vector<Worker*> ThreadManager::GetWorkers()
@@ -53,6 +53,7 @@ std::vector<Worker*> ThreadManager::GetWorkers()
 std::vector<Worker*> ThreadManager::CreateWorkers(int NumWorkers, WorkerType Type)
 {
 	std::vector<Worker*> newWorkers;
+	newWorkers.reserve(NumWorkers);
 
 	for (int index = 0; index < NumWorkers; index++)
 	{

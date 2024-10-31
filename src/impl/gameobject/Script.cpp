@@ -8,21 +8,21 @@
 
 */
 
-#include<glm/gtc/matrix_transform.hpp>
-#include<luau/VM/include/lualib.h>
+#include <glm/gtc/matrix_transform.hpp>
+#include <luau/VM/include/lualib.h>
 
-#include"gameobject/Script.hpp"
-#include"datatype/GameObject.hpp"
-#include"datatype/Vector3.hpp"
-#include"datatype/Color.hpp"
-#include"UserInput.hpp"
-#include"FileRW.hpp"
-#include"Debug.hpp"
-#include"gameobject/ScriptEngine.hpp"
+#include "gameobject/Script.hpp"
+#include "datatype/GameObject.hpp"
+#include "datatype/Vector3.hpp"
+#include "datatype/Color.hpp"
+#include "UserInput.hpp"
+#include "FileRW.hpp"
+#include "Debug.hpp"
+#include "gameobject/ScriptEngine.hpp"
 
 #define LUA_ASSERT(res, err) if (!res) { luaL_error(L, err); }
 
-static RegisterDerivedObject<Object_Script> RegisterClassAs("Script");
+PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(Script);
 
 static bool s_DidInitReflection = false;
 static lua_State* DefaultState = nullptr;
@@ -64,8 +64,10 @@ static auto api_gameobjindex = [](lua_State* L)
 
 		if (obj->HasProperty(key))
 			ScriptEngine::L::PushGenericValue(L, obj->GetPropertyValue(key));
+
 		else if (obj->HasFunction(key))
 			ScriptEngine::L::PushFunction(L, key);
+
 		else
 		{
 			GameObject* child = obj->GetChild(key);
@@ -158,9 +160,10 @@ static auto api_gameobjnewindex = [](lua_State* L)
 		}
 		else
 		{
+			std::string fullname = obj->GetFullName();
 			luaL_error(L, (std::vformat(
-				"Attempt to set invalid Member '{}' of GameObject",
-				std::make_format_args(key)
+				"Attempt to set invalid Member '{}' of {} '{}'",
+				std::make_format_args(key, obj->ClassName, fullname)
 			)).c_str());
 		}
 
@@ -221,7 +224,7 @@ static auto api_vec3index = [](lua_State* L)
 		}
 		else if (strcmp(key, "Magnitude") == 0)
 		{
-			lua_pushnumber(L, vec->Magnitude);
+			lua_pushnumber(L, vec->Magnitude());
 			return 1;
 		}
 		else
@@ -441,7 +444,9 @@ static void initDefaultState()
 			DefaultState,
 			[](lua_State* L)
 			{
-				ScriptEngine::L::PushGenericValue(L, glm::mat4(1.f));
+				Reflection::GenericValue gv{ glm::mat4(1.f) };
+				ScriptEngine::L::PushGenericValue(L, gv);
+
 				return 1;
 			},
 			"Matrix.new"
@@ -452,16 +457,39 @@ static void initDefaultState()
 			DefaultState,
 			[](lua_State* L)
 			{
-				float x = static_cast<float>(luaL_checknumber(L, 1));
-				float y = static_cast<float>(luaL_checknumber(L, 2));
-				float z = static_cast<float>(luaL_checknumber(L, 3));
+				glm::mat4 m(1.f);
 
-				glm::mat4 t(1.f);
-				t[3][0] = x;
-				t[3][1] = y;
-				t[3][2] = z;
+				int numArgs = lua_gettop(L);
 
-				ScriptEngine::L::PushGenericValue(L, t);
+				switch (numArgs)
+				{
+				case (1):
+				{
+					Vector3& vec = *(Vector3*)luaL_checkudata(L, -1, "Vector3");
+					m[3] = glm::vec4((glm::vec3)vec, 1.f);
+
+					break;
+				}
+				case (3):
+				{
+					float x = static_cast<float>(luaL_checknumber(L, 1));
+					float y = static_cast<float>(luaL_checknumber(L, 2));
+					float z = static_cast<float>(luaL_checknumber(L, 3));
+
+					m[3] = glm::vec4(glm::vec3(x, y, z), 1.f);
+
+					break;
+				}
+
+				default:
+					luaL_errorL(
+						L,
+						"`Matrix.fromTranslation` expected 1 or 3 arguments, got %i",
+						numArgs
+					);
+				}
+				
+				ScriptEngine::L::PushGenericValue(L, m);
 
 				return 1;
 			},
@@ -548,9 +576,7 @@ static void initDefaultState()
 				glm::mat4& a = *(glm::mat4*)luaL_checkudata(L, 1, "Matrix");
 				glm::mat4& b = *(glm::mat4*)luaL_checkudata(L, 2, "Matrix");
 
-				glm::mat4 result = a * b;
-
-				ScriptEngine::L::PushGenericValue(L, result);
+				ScriptEngine::L::PushGenericValue(L, a * b);
 
 				return 1;
 			},
@@ -628,6 +654,8 @@ void Object_Script::s_DeclareReflections()
 		return;
 	s_DidInitReflection = true;
 
+	REFLECTION_INHERITAPI(GameObject);
+
 	REFLECTION_DECLAREPROP(
 		"SourceFile",
 		String,
@@ -656,8 +684,6 @@ void Object_Script::s_DeclareReflections()
 			return { reloadSuccess };
 		}
 	);
-
-	REFLECTION_INHERITAPI(GameObject);
 }
 
 Object_Script::Object_Script()
@@ -700,11 +726,11 @@ void Object_Script::Update(double dt)
 				continue;
 
 			// what the function returned
-			const Reflection::GenericValue& retval = future.get();
+			Reflection::GenericValue retval = future.get();
 
 			ScriptEngine::L::PushGenericValue(coroutine, retval);
 
-			lua_Status resumeStatus = (lua_Status)lua_resume(coroutine, coroutine, 1);
+			lua_Status resumeStatus = (lua_Status)lua_resume(coroutine, nullptr, 1);
 
 			if (resumeStatus != LUA_OK && resumeStatus != LUA_YIELD)
 			{
@@ -717,44 +743,38 @@ void Object_Script::Update(double dt)
 				));
 			}
 
-
 			ScriptEngine::s_YieldedCoroutines.erase(coroutine);
 		}
 	}
 
-	if (ScriptEngine::s_YieldedCoroutines.find(m_L) != ScriptEngine::s_YieldedCoroutines.end())
-		return;
 	// We don't `::Reload` when the Script is being yielded,
 	// because, what the hell will happen when it's resumed by the `for`-loop
 	// above? Will it create a "ghost" Script? Not good. 23/09/2024
-	if (!m_L || m_StaleSource)
+	if (m_StaleSource)
 		this->Reload();
 
-	if (m_HasUpdate)
+	// script has failed to load (compilation error) 07/11/2024
+	if (!m_L)
+		return;
+
+	lua_getglobal(m_L, "Update");
+
+	if (lua_isfunction(m_L, -1))
 	{
-		lua_getglobal(m_L, "Update");
+		lua_pushnumber(m_L, dt);
+		// why do all of these functions say they return `int` and not
+		// `lua_Status` like they actually do?? 23/09/2024
+		lua_Status updateStatus = (lua_Status)lua_pcall(m_L, 1, 0, 0);
 
-		if (!lua_isfunction(m_L, -1))
-			m_HasUpdate = false;
-		else
+		if (updateStatus != LUA_OK && updateStatus != LUA_YIELD)
 		{
-			lua_pushnumber(m_L, dt);
-			// why do all of these functions say they return `int` and not
-			// `lua_Status` like they actually do?? 23/09/2024
-			lua_Status updateStatus = (lua_Status)lua_pcall(m_L, 1, 0, 0);
+			const char* errstr = lua_tostring(m_L, -1);
+			std::string fullname = this->GetFullName();
 
-			if (updateStatus != LUA_OK && updateStatus != LUA_YIELD)
-			{
-				m_HasUpdate = false;
-
-				const char* errstr = lua_tostring(m_L, -1);
-				std::string fullname = this->GetFullName();
-
-				Debug::Log(std::vformat(
-					"Luau runtime error: {}",
-					std::make_format_args(errstr)
-				));
-			}
+			Debug::Log(std::vformat(
+				"Luau runtime error: {}",
+				std::make_format_args(errstr)
+			));
 		}
 	}
 }
@@ -789,30 +809,31 @@ bool Object_Script::Reload()
 	m_Source = FileRW::ReadFile(SourceFile, &fileExists);
 
 	m_StaleSource = false;
+	
+	if (m_L)
+		lua_close(m_L);
+	m_L = nullptr;
+
+	std::string fullName = this->GetFullName();
 
 	if (!fileExists)
 	{
 		Debug::Log(
 			std::vformat(
 				"Script '{}' references invalid Source File '{}'!",
-				std::make_format_args(this->Name, this->SourceFile
-				)
+				std::make_format_args(fullName, this->SourceFile)
 			)
 		);
 
 		return false;
 	}
 
-	if (m_L)
-		lua_resetthread(m_L);
-	else
-		m_L = lua_newthread(DefaultState);
+	m_L = lua_newthread(DefaultState);
 
 	ScriptEngine::L::PushGameObject(m_L, this);
 	lua_setglobal(m_L, "script");
 
-	std::string FullName = this->GetFullName();
-	std::string chunkname = std::vformat("{}", std::make_format_args(FullName));
+	std::string chunkname = std::vformat("{}", std::make_format_args(fullName));
 
 	// FROM: https://github.com/luau-lang/luau/ README
 
@@ -830,24 +851,16 @@ bool Object_Script::Reload()
 
 		lua_Status resumeResult = (lua_Status)lua_resume(m_L, m_L, 0);
 
-		if (resumeResult == lua_Status::LUA_OK)
+		if (resumeResult != lua_Status::LUA_OK && resumeResult != lua_Status::LUA_YIELD)
 		{
-			lua_getglobal(m_L, "Update");
-
-			if (lua_isfunction(m_L, -1))
-				m_HasUpdate = true;
-		}
-		else if (resumeResult != lua_Status::LUA_YIELD)
-		{
-			// 25/09/2024 TODO
-			// loading a script at runtime causes LUA_ERRRUN
-			// without an error string?!
-			const char* errstr = lua_isstring(m_L, -1) ? lua_tostring(m_L, -1) : "<NULL>";
+			const char* errstr = lua_tostring(m_L, -1);
 
 			Debug::Log(std::vformat(
 				"Luau script init error: {}",
 				std::make_format_args(errstr)
 			));
+
+			m_L = nullptr;
 
 			return false;
 		}
@@ -860,6 +873,9 @@ bool Object_Script::Reload()
 		const char* errstr = lua_tostring(m_L, topidx);
 
 		Debug::Log(std::vformat("Luau compile error {}: {}: '{}'", std::make_format_args(result, this->Name, errstr)));
+
+		m_L = nullptr;
+
 		return false;
 	}
 }

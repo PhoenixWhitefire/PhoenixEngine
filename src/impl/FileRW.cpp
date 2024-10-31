@@ -1,10 +1,10 @@
-#include<filesystem>
-#include<fstream>
-#include<format>
+#include <filesystem>
+#include <fstream>
+#include <format>
 
-#include"FileRW.hpp"
-#include"GlobalJsonConfig.hpp"
-#include"Debug.hpp"
+#include "FileRW.hpp"
+#include "GlobalJsonConfig.hpp"
+#include "Debug.hpp"
 
 // 16/09/2024 PWK2K
 // https://stackoverflow.com/a/71658518
@@ -27,35 +27,13 @@ static bool createDirectoryRecursive(std::string const& dirName, std::error_code
 	return true;
 }
 
-static std::string getLocalizedFilePath(const std::string& NonLocalizedPath)
-{
-	std::string path = NonLocalizedPath;
-
-	// TODO: allow paths specified in resource files (eg materials and levels etc) to not have to start from the root
-	// and start from resources/ automatically
-	// currently, files that *are* from the root are specified by beginning the path with '/'
-	// find a better method?
-	try
-	{
-		if (path[0] != '.')
-			path.insert(0, EngineJsonConfig.value("ResourcesDirectory", "resources/"));
-	}
-	catch (nlohmann::json::type_error e)
-	{
-		const char* whatStr = e.what();
-		Debug::Log(std::vformat("Error localizing file path: '{}'", std::make_format_args(whatStr)));
-	}
-
-	return path;
-}
-
 std::string FileRW::ReadFile(std::string const& ShortPath, bool* DoesFileExist)
 {
-	std::string actualPath = getLocalizedFilePath(ShortPath);
+	std::string actualPath = FileRW::GetAbsolutePath(ShortPath);
 
 	std::ifstream file(actualPath, std::ios::binary);
 
-	std::string contents = *new std::string();
+	std::string contents = "";
 
 	if (file && file.is_open())
 	{
@@ -75,8 +53,11 @@ std::string FileRW::ReadFile(std::string const& ShortPath, bool* DoesFileExist)
 	}
 	else
 	{
-		if (DoesFileExist == nullptr)
-			Debug::Log(std::vformat("Could not load file: '{}'", std::make_format_args(actualPath)));
+		if (!DoesFileExist)
+			throw(std::vformat(
+				"FileRW::ReadFile: Could not load file: '{}'",
+				std::make_format_args(actualPath)
+			));
 		else
 			*DoesFileExist = false;
 
@@ -86,7 +67,7 @@ std::string FileRW::ReadFile(std::string const& ShortPath, bool* DoesFileExist)
 
 void FileRW::WriteFile(const std::string& ShortPath, const std::string& FileContents, bool InResourcesDirectory)
 {
-	std::string path = InResourcesDirectory ? getLocalizedFilePath(ShortPath) : ShortPath;
+	std::string path = InResourcesDirectory ? FileRW::GetAbsolutePath(ShortPath) : ShortPath;
 
 	std::ofstream file(path.c_str());
 
@@ -97,7 +78,7 @@ void FileRW::WriteFile(const std::string& ShortPath, const std::string& FileCont
 	}
 	else
 		throw(std::vformat(
-			"FileRW::WriteFile could not open the handle to '{}'",
+			"FileRW::WriteFile: Could not open the handle to '{}'",
 			std::make_format_args(path)
 		));
 }
@@ -108,7 +89,7 @@ void FileRW::WriteFileCreateDirectories(
 	bool InResourcesDirectory
 )
 {
-	std::string path = InResourcesDirectory ? getLocalizedFilePath(ShortPath) : ShortPath;
+	std::string path = InResourcesDirectory ? FileRW::GetAbsolutePath(ShortPath) : ShortPath;
 
 	size_t containingDirLoc = path.find_last_of("/");
 	std::string dirPath = path.substr(0, containingDirLoc);
@@ -116,8 +97,29 @@ void FileRW::WriteFileCreateDirectories(
 	std::error_code ec;
 	
 	if (!createDirectoryRecursive(dirPath, ec))
-		throw("`createDirectoryRecursive` failed: " + ec.message());
+		throw("FileRW::WriteFileCreateDirectories: `createDirectoryRecursive` failed: " + ec.message());
 
 	FileRW::WriteFile(path, FileContents, false);
 }
 
+std::string FileRW::GetAbsolutePath(const std::string& LocalPath)
+{
+	std::string path = LocalPath;
+
+	// TODO: allow paths specified in resource files (eg materials and levels etc) to not have to start from the root
+	// and start from resources/ automatically
+	// currently, files that *are* from the root are specified by beginning the path with '/'
+	// find a better method?
+	try
+	{
+		if (path[0] != '.')
+			path.insert(0, EngineJsonConfig.value("ResourcesDirectory", "resources/"));
+	}
+	catch (nlohmann::json::type_error e)
+	{
+		const char* whatStr = e.what();
+		Debug::Log(std::vformat("Error localizing file path: '{}'", std::make_format_args(whatStr)));
+	}
+
+	return path;
+}

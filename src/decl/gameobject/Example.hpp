@@ -5,9 +5,9 @@
 
 #pragma once
 
-#include"datatype/GameObject.hpp"
-#include"datatype/Vector3.hpp"
-#include"gameobject/Script.hpp"
+#include "datatype/GameObject.hpp"
+#include "datatype/Vector3.hpp"
+#include "gameobject/Script.hpp"
 
 class Object_Example : public Object_Script
 {

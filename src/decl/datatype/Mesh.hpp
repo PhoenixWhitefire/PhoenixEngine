@@ -1,8 +1,8 @@
 #pragma once
 
-#include<vector>
-#include<glm/vec3.hpp>
-#include<glm/vec2.hpp>
+#include <vector>
+#include <glm/vec3.hpp>
+#include <glm/vec2.hpp>
 
 struct Vertex
 {
@@ -16,4 +16,6 @@ struct Mesh
 {
 	std::vector<Vertex> Vertices;
 	std::vector<uint32_t> Indices;
+
+	uint32_t GpuId = UINT32_MAX;
 };

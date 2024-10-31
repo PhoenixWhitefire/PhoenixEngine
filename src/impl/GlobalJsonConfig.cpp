@@ -1,3 +1,3 @@
-#include"GlobalJsonConfig.hpp"
+#include "GlobalJsonConfig.hpp"
 
-nlohmann::json EngineJsonConfig = "";
+nlohmann::json EngineJsonConfig = {};

@@ -1,14 +1,12 @@
-#include<algorithm>
+#include "datatype/GameObject.hpp"
+#include "Debug.hpp"
 
-#include"datatype/GameObject.hpp"
-#include"Debug.hpp"
+PHX_GAMEOBJECT_LINKTOCLASS("GameObject", GameObject);
 
 static uint32_t NumGameObjects = 0;
 static bool s_DidInitReflection = false;
 GameObject* GameObject::s_DataModel = nullptr;
 std::unordered_map<uint32_t, GameObject*> GameObject::s_WorldArray = {};
-
-static RegisterDerivedObject<GameObject> RegisterClassAs("GameObject");
 
 static void destroyObject(GameObject* obj)
 {
@@ -38,6 +36,12 @@ void GameObject::s_DeclareReflections()
 	s_DidInitReflection = true;
 
 	REFLECTION_DECLAREPROP_SIMPLE_READONLY(GameObject, ClassName, String);
+
+	// "Class" better
+	// 22/10/2024
+	s_Api.Properties["Class"] = s_Api.Properties["ClassName"];
+	s_Api.Properties.erase("ClassName");
+
 	REFLECTION_DECLAREPROP_SIMPLE(GameObject, Name, String);
 	REFLECTION_DECLAREPROP_SIMPLE(GameObject, Enabled, Bool);
 	REFLECTION_DECLAREPROP_SIMPLE_READONLY(GameObject, ObjectId, Integer);
@@ -46,9 +50,15 @@ void GameObject::s_DeclareReflections()
 		GameObject,
 		[](GameObject* p)
 		{
+			// This is OK even if `->GetParent()` returns `nullptr`,
+			// because `::ToGenericValue` accounts for when `this` is `nullptr`
+			// 06/10/2024
+			return p->GetParent()->ToGenericValue();
+			/*
 			Reflection::GenericValue gv = p->GetParent() ? p->GetParent()->ObjectId : PHX_GAMEOBJECT_NULL_ID;
 			gv.Type = Reflection::ValueType::GameObject;
 			return gv;
+			*/
 		},
 		[](GameObject* p, const Reflection::GenericValue& gv)
 		{
@@ -103,14 +113,42 @@ void GameObject::s_DeclareReflections()
 		}
 	);
 
+	REFLECTION_DECLAREFUNC(
+		"IsA",
+		{ Reflection::ValueType::String },
+		{ Reflection::ValueType::Bool },
+		[](GameObject* object, const std::vector<Reflection::GenericValue>& gv)
+		-> std::vector<Reflection::GenericValue>
+		{
+			std::string ancestor = gv[0].AsString();
+			return { object->IsA(ancestor) };
+		}
+	);
+
 	//REFLECTION_INHERITAPI(Reflection::Reflectable);
 }
 
 GameObject::GameObject()
 {
-	this->Parent = PHX_GAMEOBJECT_NULL_ID;
-
 	GameObject::s_DeclareReflections();
+}
+
+GameObject* GameObject::FromGenericValue(const Reflection::GenericValue& gv)
+{
+	if (gv.Type == Reflection::ValueType::Null)
+		return nullptr;
+
+	if (gv.Type != Reflection::ValueType::GameObject)
+	{
+		const std::string& typeName = Reflection::TypeAsString(gv.Type);
+
+		throw(std::vformat(
+			"Tried to GameObject::FromGenericValue, but GenericValue had Type '{}' instead",
+			std::make_format_args(typeName)
+		));
+	}
+
+	return GameObject::GetObjectById(static_cast<uint32_t>((int64_t)gv.Value));
 }
 
 GameObject::~GameObject()
@@ -123,7 +161,13 @@ GameObject::~GameObject()
 
 	m_Children.clear();
 
-	s_WorldArray.erase(this->ObjectId);
+	if (this->ObjectId != 0 && this->ObjectId != PHX_GAMEOBJECT_NULL_ID)
+	{
+		auto it = s_WorldArray.find(this->ObjectId);
+
+		if (it != s_WorldArray.end())
+			s_WorldArray.erase(this->ObjectId);
+	}
 
 	this->Parent = PHX_GAMEOBJECT_NULL_ID;
 	//this->ObjectId = PHX_GAMEOBJECT_NULL_ID;
@@ -167,6 +211,20 @@ std::string GameObject::GetFullName()
 	return getFullName(this);
 }
 
+bool GameObject::IsA(const std::string& AncestorClass)
+{
+	if (this->ClassName == AncestorClass)
+		return true;
+
+	// we do `GetLineage` instead of `s_Api.Lineage` because
+	// the latter refers to the lineage of `GameObject` (nothing as of 25/10/2024),
+	// whereas the former is a virtual function of the class we actually are
+	for (const std::string& ancestor : GetLineage())
+		if (ancestor == AncestorClass)
+			return true;
+	return false;
+}
+
 void GameObject::SetParent(GameObject* newParent)
 {
 	GameObject* oldParent = GameObject::GetObjectById(Parent);
@@ -188,17 +246,33 @@ void GameObject::SetParent(GameObject* newParent)
 
 void GameObject::AddChild(GameObject* c)
 {
-	m_Children.insert(std::pair(c->ObjectId, c->ObjectId));
+	auto it = std::find(m_Children.begin(), m_Children.end(), c->ObjectId);
+
+	if (it == m_Children.end())
+		m_Children.push_back(c->ObjectId);
 }
 
 void GameObject::RemoveChild(uint32_t id)
 {
-	auto it = m_Children.find(id);
+	auto it = std::find(m_Children.begin(), m_Children.end(), id);
 
 	if (it != m_Children.end())
 		m_Children.erase(it);
 	else
 		throw(std::vformat("ID:{} is _not my ({}) sonnn~_", std::make_format_args(ObjectId, id)));
+}
+
+Reflection::GenericValue GameObject::ToGenericValue()
+{
+	uint32_t targetObjectId = PHX_GAMEOBJECT_NULL_ID;
+
+	if (this)
+		targetObjectId = this->ObjectId;
+
+	Reflection::GenericValue gv{ targetObjectId };
+	gv.Type = Reflection::ValueType::GameObject;
+
+	return gv;
 }
 
 GameObject* GameObject::GetParent()
@@ -220,17 +294,16 @@ GameObject* GameObject::GetParent()
 std::vector<GameObject*> GameObject::GetChildren()
 {
 	std::vector<GameObject*> children;
+	children.reserve(m_Children.size());
 
-	for (auto& childEntry : m_Children)
+	for (uint32_t index = 0; index < m_Children.size(); index++)
 	{
-		uint32_t childId = childEntry.second;
-
-		GameObject* child = GameObject::GetObjectById(childId);
+		GameObject* child = GameObject::GetObjectById(m_Children[index]);
 
 		if (child)
 			children.push_back(child);
 		else
-			m_Children.erase(childEntry.first);
+			m_Children.erase(m_Children.begin() + index);
 	}
 
 	return children;
@@ -239,12 +312,11 @@ std::vector<GameObject*> GameObject::GetChildren()
 std::vector<GameObject*> GameObject::GetDescendants()
 {
 	std::vector<GameObject*> descendants;
+	descendants.reserve(m_Children.size());
 
-	for (auto& childEntry : m_Children)
+	for (uint32_t index = 0; index < m_Children.size(); index++)
 	{
-		uint32_t childId = childEntry.second;
-
-		GameObject* child = GameObject::GetObjectById(childId);
+		GameObject* child = GameObject::GetObjectById(m_Children[index]);
 
 		if (child)
 		{
@@ -254,7 +326,7 @@ std::vector<GameObject*> GameObject::GetDescendants()
 			std::copy(childrenDescendants.begin(), childrenDescendants.end(), std::back_inserter(descendants));
 		}
 		else
-			m_Children.erase(childEntry.first);
+			m_Children.erase(m_Children.begin() + index);
 	}
 
 	return descendants;
@@ -262,20 +334,20 @@ std::vector<GameObject*> GameObject::GetDescendants()
 
 GameObject* GameObject::GetChildById(uint32_t id)
 {
-	auto it = m_Children.find(id);
+	auto it = std::find(m_Children.begin(), m_Children.end(), id);
 
-	return it != m_Children.end() ? s_WorldArray[id] : nullptr;
+	return it != m_Children.end() ? GameObject::GetObjectById(id) : nullptr;
 }
 
 GameObject* GameObject::GetChild(std::string const& ChildName)
 {
-	for (auto& it : m_Children)
+	for (uint32_t index = 0; index < m_Children.size(); index++)
 	{
-		GameObject* child = GameObject::GetObjectById(it.second);
+		GameObject* child = GameObject::GetObjectById(m_Children[index]);
 
 		if (!child)
 		{
-			m_Children.erase(it.first);
+			m_Children.erase(m_Children.begin() + index);
 			continue;
 		}
 
@@ -289,17 +361,17 @@ GameObject* GameObject::GetChild(std::string const& ChildName)
 
 GameObject* GameObject::GetChildOfClass(std::string const& Class)
 {
-	for (auto& it : m_Children)
+	for (uint32_t index = 0; index < m_Children.size(); index++)
 	{
-		GameObject* child = this->GetChildById(m_Children[it.second]);
+		GameObject* child = GameObject::GetObjectById(m_Children[index]);
 
 		if (!child)
 		{
-			m_Children.erase(it.first);
+			m_Children.erase(m_Children.begin() + index);
 			continue;
 		}
 
-		if (child->ClassName == Class)
+		if (child->IsA(Class))
 			return child;
 	}
 
@@ -340,8 +412,18 @@ nlohmann::json GameObject::DumpApiToJson()
 
 	for (auto& g : *s_GameObjectMap)
 	{
-		auto newobj = g.second();
+		GameObject* newobj = g.second();
 		dump[g.first] = nlohmann::json();
+
+		const std::vector<std::string>& lineage = newobj->GetLineage();
+
+		dump[g.first]["Lineage"] = "";
+
+		for (size_t index = 0; index < lineage.size(); index++)
+			if (index < lineage.size() - 1)
+				dump[g.first]["Lineage"] = dump[g.first].value("Lineage", "") + lineage[index] + " -> ";
+			else
+				dump[g.first]["Lineage"] = dump[g.first].value("Lineage", "") + lineage[index];
 
 		for (auto& p : newobj->GetProperties())
 			dump[g.first][p.first] = Reflection::TypeAsString(p.second.Type);

@@ -1,8 +1,9 @@
 #pragma once
 
-#include<unordered_map>
+#include <unordered_map>
 
-#include"Reflection.hpp"
+#include "asset/TextureManager.hpp"
+#include "Reflection.hpp"
 
 class ShaderProgram
 {
@@ -18,33 +19,33 @@ public:
 	void Activate();
 	void Reload();
 
-	/*
-	void SetUniformInt(const char*, int);
-	void SetUniformFloat(const char*, float);
-	void SetUniformFloat3(const char*, float, float, float);
-	void SetUniformMatrix(const char*, const glm::mat4&);
-	*/
-
 	// Mark a uniform to be updated upon `::Activate` being called,
 	// to be set with the provided value
 	void SetUniform(const char*, const Reflection::GenericValue&);
+	// Sets a Texture Uniform to the Texture residing at the *GPU* ID provided
+	void SetTextureUniform(const char*, uint32_t, Texture::DimensionType Type = Texture::DimensionType::Texture2D);
+	// THIS DOES NOT FLUSH THE UNIFORMS!
+	// it acts just like `SetUniform`, but it's intended to reset the state
+	// back to the default
+	void ApplyDefaultUniforms();
 
 	std::string Name;
-	uint32_t ID = UINT32_MAX;
 
 private:
 	ShaderProgram() = delete;
 	ShaderProgram(std::string const&);
 
 	void m_PrintErrors(uint32_t Object, const char* Type) const;
-	int32_t m_GetUniformLocation(const char*);
+	int32_t m_GetUniformLocation(const char*) const;
+
+	uint32_t m_GpuId = UINT32_MAX;
 
 	uint32_t m_VertexShader{};
 	uint32_t m_FragmentShader{};
 	uint32_t m_GeometryShader{};
 
-	std::unordered_map<std::string, bool> m_UsedUniforms;
 	std::unordered_map<std::string, Reflection::GenericValue> m_PendingUniforms;
+	std::unordered_map<std::string, Reflection::GenericValue> m_DefaultUniforms;
 
 	static inline std::unordered_map<std::string, ShaderProgram*> s_Programs;
 };

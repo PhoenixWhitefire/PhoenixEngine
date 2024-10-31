@@ -1,5 +1,5 @@
-#include"asset/PrimitiveMeshes.hpp"
-#include"datatype/Vector3.hpp"
+#include "asset/PrimitiveMeshes.hpp"
+#include "datatype/Vector3.hpp"
 
 Mesh PrimitiveMeshes::Cube()
 {

@@ -1,23 +1,23 @@
-#include<chrono>
-#include<string>
-#include<format>
-#include<SDL2/SDL.h>
-#include<glad/gl.h>
-#include<glm/matrix.hpp>
-#include<glm/gtc/type_ptr.hpp>
-#include<glm/gtc/matrix_transform.hpp>
-#include<imgui/backends/imgui_impl_sdl2.h>
+#include <chrono>
+#include <string>
+#include <format>
+#include <SDL2/SDL.h>
+#include <glad/gl.h>
+#include <glm/matrix.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <imgui/backends/imgui_impl_sdl2.h>
 
-#include"Engine.hpp"
+#include "Engine.hpp"
 
-#include"gameobject/GameObjects.hpp"
-#include"asset/TextureManager.hpp"
-#include"asset/MeshProvider.hpp"
-#include"GlobalJsonConfig.hpp"
-#include"ThreadManager.hpp"
-#include"UserInput.hpp"
-#include"FileRW.hpp"
-#include"Debug.hpp"
+#include "gameobject/GameObjects.hpp"
+#include "asset/TextureManager.hpp"
+#include "asset/MeshProvider.hpp"
+#include "GlobalJsonConfig.hpp"
+#include "ThreadManager.hpp"
+#include "UserInput.hpp"
+#include "FileRW.hpp"
+#include "Debug.hpp"
 
 static uint32_t RectangleVAO, RectangleVBO;
 static auto ChronoStartTime = std::chrono::high_resolution_clock::now();
@@ -28,7 +28,8 @@ static int WindowSizeYBeforeFullscreen = 800;
 static int WindowPosXBeforeFullscreen = SDL_WINDOWPOS_CENTERED;
 static int WindowPosYBeforeFullscreen = SDL_WINDOWPOS_CENTERED;
 
-static float RectangleVertices[24] = {
+static float RectangleVertices[24] =
+{
 		 1.0f, -1.0f,    1.0f, 0.0f,
 		-1.0f, -1.0f,    0.0f, 0.0f,
 		-1.0f,  1.0f,    0.0f, 1.0f,
@@ -79,7 +80,7 @@ static void updateDescendants(GameObject* Root, double DeltaTime)
 		{
 			object->Update(DeltaTime);
 
-			if (object->GetChildren().size() > 0)
+			if (!object->GetChildren().empty())
 				updateDescendants(object, DeltaTime);
 		}
 	}
@@ -155,12 +156,11 @@ EngineObject::EngineObject()
 	//  of my first attempt trying to get behavior like we have
 	// `GameObject::Create` today.
 	// My idea was, "Since constructors return objects, why don't I
-	// just have a list of constructors"?
-	// I didn't really think it would work initially, because it wouldn't
-	// even be returning the base class and thus there couldn't be an assignable
-	// type, but I didn't expect the _actual_ error to be:
-	// :cloud_with_lightning: "The pointer to a constructor shalt never be taken" :high_voltage:
-	// ... or something along those lines.
+	// just have a list of pointers to constructors"?
+	// And, that's actually pretty similar to what I ended up going through
+	// with. It works because they all share the same baseclass and thus
+	// are implicitly downcasted. The current version just has an additional
+	// layer with a templated function.
 	// 
 	//GameObject::GameObjectTable["Model"] = &Object_Model()
 
@@ -265,104 +265,93 @@ EngineObject::EngineObject()
 	Debug::Log("Engine constructed");
 }
 
-static std::vector<LightItem> createLightingList(GameObject* RootObject)
+static void recursivelyTravelHierarchy(
+	std::vector<RenderItem>& RenderList,
+	std::vector<LightItem>& LightList,
+	std::vector<Object_Base3D*>& PhysicsList,
+	GameObject* Root,
+	Object_Camera* SceneCamera
+)
 {
-	std::vector<GameObject*> objects = RootObject->GetChildren();
-	std::vector<LightItem> dataList;
+	std::vector<GameObject*> objects = Root->GetChildren();
+
+	RenderList.reserve(RenderList.capacity() + static_cast<size_t>(objects.size() / 2));
+	LightList.reserve(LightList.capacity() + static_cast<size_t>(objects.size() / 4));
+	PhysicsList.reserve(PhysicsList.capacity() + std::min(static_cast<size_t>(objects.size() / 8), 512ULL));
 
 	for (GameObject* object : objects)
 	{
 		if (!object->Enabled)
 			continue;
 
-		Object_Light* light = dynamic_cast<Object_Light*>(object);
+		Object_Base3D* object3D = dynamic_cast<Object_Base3D*>(object);
+
+		if (object3D)
+		{
+			if (object3D->PhysicsDynamics || object3D->PhysicsCollisions)
+				PhysicsList.emplace_back(object3D);
+
+			if (object3D->Transparency > .95f)
+				continue;
+
+			// TODO: frustum culling
+			// Hold R to disable distance culling
+			if (glm::distance(
+				glm::vec3(object3D->Transform[3]),
+				glm::vec3(SceneCamera->Transform[3])
+				) > 100.0f
+				&& !UserInput::IsKeyDown(SDLK_r)
+			)
+				continue;
+
+			//TODO: recheck whether we need this
+			// if (MeshObject->HasTransparency)
+				//continue;
+
+			RenderList.emplace_back(
+				object3D->GetRenderMeshId(),
+				object3D->Transform,
+				object3D->Size,
+				object3D->Material,
+				object3D->ColorRGB,
+				object3D->Transparency,
+				object3D->Reflectivity,
+				object3D->FaceCulling
+			);
+		}
+
+		Object_Light* light = !object3D ? dynamic_cast<Object_Light*>(object) : nullptr;
 
 		if (light)
 		{
 			Object_DirectionalLight* directional = dynamic_cast<Object_DirectionalLight*>(light);
 			Object_PointLight* point = dynamic_cast<Object_PointLight*>(light);
 
-			LightItem data;
-
 			if (directional)
-			{
-				data.Position = light->Position;
-				data.LightColor = light->LightColor * light->Brightness;
-				data.Type = LightType::Directional;
-			}
+				LightList.emplace_back(
+					LightType::Directional,
+					(glm::vec3)light->LocalTransform[3],
+					light->LightColor * light->Brightness
+				);
 
 			if (point)
-			{
-				data.Position = light->Position;
-				data.LightColor = light->LightColor * light->Brightness;
-				data.Type = LightType::Point;
-				data.Range = point->Range;
-			}
-
-			dataList.push_back(data);
+				LightList.emplace_back(
+					LightType::Point,
+					(glm::vec3)light->GetWorldTransform()[3],
+					light->LightColor * light->Brightness,
+					point->Range
+				);
 		}
 
-		if (object->GetChildren().size() > 0)
-		{
-			std::vector<LightItem> childData = createLightingList(object);
-			std::copy(childData.begin(), childData.end(), std::back_inserter(dataList));
-		}
+		if (!object->GetChildren().empty())
+			recursivelyTravelHierarchy(
+				RenderList,
+				LightList,
+				PhysicsList,
+				object,
+				SceneCamera
+			);
 	}
-
-	return dataList;
-}
-
-static std::vector<RenderItem> createRenderList(GameObject* RootObject, Object_Camera* SceneCamera)
-{
-	std::vector<GameObject*> objects = RootObject->GetChildren();
-	std::vector<RenderItem> dataList;
-
-	for (GameObject* object : objects)
-	{
-		if (object->Enabled)
-		{
-			Object_Base3D* object3D = dynamic_cast<Object_Base3D*>(object);
-
-			if (object3D)
-			{
-				// TODO: frustum culling
-				// Hold R to disable distance culling
-				if (glm::distance(
-						glm::vec3(object3D->Transform[3]),
-						glm::vec3(SceneCamera->Transform[3])
-					) > 100.0f
-					&& !UserInput::IsKeyDown(SDLK_r)
-				)
-					continue;
-
-				//TODO: recheck whether we need this
-				// if (MeshObject->HasTransparency)
-					//continue;
-
-				RenderItem data
-				{
-					object3D->GetRenderMeshId(),
-					object3D->Transform,
-					object3D->Size,
-					object3D->Material,
-					object3D->ColorRGB,
-					object3D->Transparency,
-					object3D->Reflectivity,
-					object3D->FaceCulling
-				};
-
-				dataList.push_back(data);
-			}
-
-			if (object->GetChildren().size() > 0)
-			{
-				std::vector<RenderItem> childData = createRenderList(object, SceneCamera);
-				std::copy(childData.begin(), childData.end(), std::back_inserter(dataList));
-			}
-		}
-	}
-
-	return dataList;
 }
 
 static double GetRunningTime()
@@ -408,7 +397,7 @@ void EngineObject::Start()
 		"back"
 	};
 
-	std::vector<uint32_t> skyboxFacesLoading;
+	std::vector<uint32_t> skyboxFacesBeingLoaded;
 
 	GLuint skyboxCubemap = 0;
 
@@ -423,32 +412,11 @@ void EngineObject::Start()
 
 	TextureManager* texManager = TextureManager::Get();
 
-	for (const std::string& skyboxFace : SkyboxCubemapImages)
+	for (const std::string& skyboxImage : SkyboxCubemapImages)
 	{
-		uint32_t tex = texManager->LoadTextureFromPath(SkyPath + skyboxFace + ".jpg");
-		skyboxFacesLoading.push_back(tex);
+		uint32_t tex = texManager->LoadTextureFromPath(SkyPath + skyboxImage + ".jpg");
+		skyboxFacesBeingLoaded.push_back(tex);
 	}
-
-	static const GLubyte FullByte = 0xFF;
-
-	for (int imageIndex = 0; imageIndex < 6; imageIndex++)
-	{
-		glTexImage2D(
-			GL_TEXTURE_CUBE_MAP_POSITIVE_X + imageIndex,
-			0,
-			GL_RED,
-			1,
-			1,
-			0,
-			GL_RED,
-			GL_UNSIGNED_BYTE,
-			&FullByte
-		);
-
-		glGenerateMipmap(GL_TEXTURE_2D);
-	}
-
-	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
 	//Texture HDRISkyboxTexture("Assets/Textures/hdri_sky_1.jpeg", "Diffuse", 0);
 
@@ -490,23 +458,31 @@ void EngineObject::Start()
 		scene.LightingList.clear();
 
 		TextureManager::Get()->FinalizeAsyncLoadedTextures();
+		MeshProvider::Get()->FinalizeAsyncLoadedMeshes();
 
 		bool skyboxLoaded = true;
 
-		for (int index = 0; index < skyboxFacesLoading.size(); index++)
+		for (uint32_t skyboxFace : skyboxFacesBeingLoaded)
 		{
-			uint32_t face = skyboxFacesLoading[index];
-			Texture* texture = texManager->GetTextureResource(face);
+			Texture* texture = texManager->GetTextureResource(skyboxFace);
 
-			if (texture->Status == TextureLoadStatus::Succeeded)
+			if (texture->Status != Texture::LoadStatus::Succeeded)
 			{
-				//glDeleteTextures(1, &face->Identifier);
+				skyboxLoaded = false;
+				break;
+			}
+		}
 
-				glActiveTexture(GL_TEXTURE3);
-				glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemap);
+		if (skyboxLoaded && skyboxFacesBeingLoaded.size() == 6)
+		{
+			glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemap);
+
+			for (int skyboxFaceIndex = 0; skyboxFaceIndex < 6; skyboxFaceIndex++)
+			{
+				Texture* texture = texManager->GetTextureResource(skyboxFacesBeingLoaded.at(skyboxFaceIndex));
 
 				glTexImage2D(
-					GL_TEXTURE_CUBE_MAP_POSITIVE_X + index,
+					GL_TEXTURE_CUBE_MAP_POSITIVE_X + skyboxFaceIndex,
 					0,
 					GL_RGB,
 					texture->Width,
@@ -516,18 +492,16 @@ void EngineObject::Start()
 					GL_UNSIGNED_BYTE,
 					texture->TMP_ImageByteData
 				);
-			}
-			else
-			{
-				skyboxLoaded = false;
-				break;
-			}
-		}
 
-		if (skyboxLoaded && skyboxFacesLoading.size() > 0)
-		{
-			skyboxFacesLoading.clear();
+				glGenerateMipmap(GL_TEXTURE_2D);
+
+				free(texture->TMP_ImageByteData);
+				texture->TMP_ImageByteData = nullptr;
+			}
+
 			glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
+			skyboxFacesBeingLoaded.clear();
 		}
 
 		this->FpsCap = std::clamp(this->FpsCap, 1, 600);
@@ -584,54 +558,56 @@ void EngineObject::Start()
 			}
 		}
 
-		std::vector<GameObject*> physCandidates = Workspace->GetDescendants();
-		std::vector<Object_Base3D*> physList;
-
-		for (GameObject* cand : physCandidates)
-		{
-			Object_Base3D* physObject = dynamic_cast<Object_Base3D*>(cand);
-			if (physObject)
-				physList.push_back(physObject);
-		}
-
-		Physics::Step(physList, deltaTime);
-
 		DataModel->Update(deltaTime);
 		updateDescendants(DataModel, deltaTime);
 
-		double aspectRatio = (double)this->WindowSizeX / (double)this->WindowSizeY;
+		float aspectRatio = (float)this->WindowSizeX / (float)this->WindowSizeY;
 
 		GameObject* workspace = dynamic_cast<GameObject*>(Workspace);
 		Object_Camera* sceneCamera = this->Workspace->GetSceneCamera();
 
 		glm::mat4 cameraMatrix = sceneCamera->GetMatrixForAspectRatio(aspectRatio);
 		
-		// Aggregate mesh and light data into a list
-		scene.RenderList = createRenderList(workspace, sceneCamera);
-		scene.LightingList = createLightingList(workspace);
+		std::vector<Object_Base3D*> physicsList;
+
+		// Aggregate mesh and light data into lists
+		recursivelyTravelHierarchy(
+			scene.RenderList,
+			scene.LightingList,
+			physicsList,
+			workspace,
+			sceneCamera
+		);
 		
+		bool hasPhysics = false;
+
+		for (Object_Base3D* object : physicsList)
+			if (object->PhysicsDynamics)
+			{
+				hasPhysics = true;
+				break;
+			}
+
+		if (hasPhysics)
+			Physics::Step(physicsList, deltaTime);
+
 		// TODO 15/09/2024
 		// Move into the Renderer. Can't right now because it isn't aware of the `CameraMatrix`
 		// or `Time`.
 		
 		// Hashmap better than linaer serch
-		std::unordered_map<ShaderProgram*, ShaderProgram*> uniqueShaderMap;
+		
+		scene.UsedShaders = {};
 
 		for (const RenderItem& md : scene.RenderList)
-		{
-			if (uniqueShaderMap.find(md.Material->Shader) == uniqueShaderMap.end())
-				uniqueShaderMap.insert(std::pair(md.Material->Shader, md.Material->Shader));
-		}
+			scene.UsedShaders.insert(md.Material->Shader);
 
-		for (auto& it : uniqueShaderMap)
+		for (ShaderProgram* shp : scene.UsedShaders)
 		{
-			ShaderProgram* shp = it.second;
-
 			shp->SetUniform("CameraMatrix", cameraMatrix);
+			shp->SetUniform("CameraPosition", Vector3(glm::vec3(sceneCamera->Transform[3])).ToGenericValue());
 			shp->SetUniform("Time", static_cast<float>(this->RunningTime));
 			shp->SetUniform("SkyboxCubemap", 3);
-
-			scene.UniqueShaders.push_back(shp);
 		}
 
 		glActiveTexture(GL_TEXTURE3);
@@ -657,10 +633,8 @@ void EngineObject::Start()
 		// ...
 		// Wow Mr Victor Gordan sir, that sounds incredibly overcomplicated.
 		// It's really too bad there isn't a way simpler, 300x more understandable way
-		// of zeroing-out the first 3 values of the last column of what is literally a 4x4 2D array of floats...
-		view[3][0] = 0.f;
-		view[3][1] = 0.f;
-		view[3][2] = 0.f;
+		// of zeroing-out the first 3 values of the last column of what is in essence a 4x4 2D array of floats...
+		view[3] = glm::vec4(0.f, 0.f, 0.f, 1.f);
 
 		skyboxShaders->SetUniform("CameraMatrix", projection * view);
 
@@ -685,14 +659,6 @@ void EngineObject::Start()
 
 		//Main render pass
 		RendererContext->DrawScene(scene);
-
-		for (GameObject* object : this->Workspace->GetDescendants())
-		{
-			Object_ParticleEmitter* particleEmitter = dynamic_cast<Object_ParticleEmitter*>(object);
-
-			if (particleEmitter)
-				particleEmitter->Render(sceneCamera->Transform);
-		}
 
 		glDisable(GL_DEPTH_TEST);
 
@@ -727,6 +693,23 @@ void EngineObject::Start()
 				EngineJsonConfig.value("postfx_distortion", false)
 			);
 
+			postFxShaders->SetUniform(
+				"Gamma",
+				EngineJsonConfig.value("postfx_gamma", 1.f)
+			);
+			postFxShaders->SetUniform(
+				"LdMax",
+				EngineJsonConfig.value("postfx_ldmax", 1.f)
+			);
+			postFxShaders->SetUniform(
+				"ContrastMax",
+				EngineJsonConfig.value("postfx_cmax", 1.f)
+			);
+			skyboxShaders->SetUniform(
+				"HdrEnabled",
+				true
+			);
+
 			if (EngineJsonConfig.find("postfx_blurvignette_blurstrength") != EngineJsonConfig.end())
 			{
 				postFxShaders->SetUniform(
@@ -753,10 +736,18 @@ void EngineObject::Start()
 			glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(distortionTexture)->GpuId);
 		}
 		else
+		{
 			postFxShaders->SetUniform("PostFxEnabled", 0);
+			skyboxShaders->SetUniform(
+				"HdrEnabled",
+				false
+			);
+		}
 
 		glActiveTexture(GL_TEXTURE1);
 		RendererContext->Framebuffer->BindTexture();
+
+		glGenerateMipmap(GL_TEXTURE_2D);
 
 		glBindVertexArray(RectangleVAO);
 		glDisable(GL_DEPTH_TEST);
@@ -806,6 +797,8 @@ EngineObject::~EngineObject()
 
 	ShaderProgram::ClearAll();
 
+	MeshProvider::Shutdown();
+	TextureManager::Shutdown();
 	delete this->RendererContext;
 
 	// TODO:

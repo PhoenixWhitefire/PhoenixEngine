@@ -1,0 +1,2 @@
+Could not load file: ./game.ini
+CRASH: Could not find game.ini configuration file!

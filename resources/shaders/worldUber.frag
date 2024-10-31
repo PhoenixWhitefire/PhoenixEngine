@@ -49,6 +49,8 @@ uniform int NumLights = 0;
 //uniform sampler2D ShadowMaps[MAX_SHADOWCASTING_LIGHTS]; <-- Replaced with shadow atlas!
 uniform LightObject Lights[MAX_LIGHTS];
 
+uniform sampler2D FrameBuffer;
+
 uniform sampler2D ColorMap;
 uniform sampler2D MetallicRoughnessMap;
 
@@ -58,6 +60,9 @@ uniform float SpecularPower = 16.0f;
 
 uniform float Reflectivity = 0.f;
 uniform float Transparency = 0.f;
+uniform float EmissionStrength = 0.f;
+
+uniform vec3 CameraPosition = vec3(0.f, 0.f, 0.f);
 
 uniform vec3 ColorTint = vec3(1.f, 1.f, 1.f);
 
@@ -69,15 +74,19 @@ uniform float FarZ = 1000.0f;
 uniform bool Fog = false;
 uniform vec3 FogColor = vec3(0.85f, 0.85f, 0.90f);
 
+uniform bool UseProjectedMaterial = false;
+uniform float MaterialProjectionFactor = 0.05f;
+
+uniform float AlphaCutoff = 0.5f;
+
+uniform bool DebugOverdraw = false;
+
+in vec3 Frag_CurrentPosition;
+in vec3 Frag_VertexNormal;
 in vec3 Frag_VertexColor;
 in vec2 Frag_UV;
-
-in vec3 Frag_VertexNormal;
-in vec3 Frag_CurrentPosition;
-
-in mat4 Frag_Transform;
-
 in mat4 Frag_CamMatrix;
+in mat4 Frag_Transform;
 
 out vec4 FragColor;
 
@@ -134,18 +143,20 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 	if (LightType == 0)
 	{
 		vec3 Incoming = normalize(LightPosition);
-		float Diffuse = max(dot(Normal, Incoming), 0.0f);
+		float Intensity = max(dot(Normal, Incoming), 0.f);
+		float Diffuse = Intensity;
 
 		float Specular = 0.f;
 
 		if (Diffuse > 0.0f)
 		{
 			vec3 reflectDir = reflect(-Incoming, Normal);
-			float specAmt = pow(max(dot(Outgoing, reflectDir), 0.f), SpecularPower) * SpecularMultiplier;
-			Specular = clamp(specAmt, 0.f, 1.f);
+			Specular = pow(max(dot(Outgoing, reflectDir), 0.f), SpecularPower);
 		}
 
-		FinalColor = (Diffuse + (SpecMapValue * Specular)) * LightColor;
+		float SpecularTerm = SpecMapValue * Specular * SpecularMultiplier;
+
+		FinalColor = (Diffuse + SpecularTerm * Intensity) * LightColor;
 		//FinalColor = Albedo * SpecMapValue;
 	}
 	else if (LightType == 1)
@@ -163,11 +174,11 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 
 			vec3 reflectionVector = reflect(-Incoming, Normal);
 
-			//Specular = pow(max(dot(Outgoing, reflectionVector), 0.f), SpecularPower);
+			Specular = pow(max(dot(Outgoing, reflectionVector), 0.f), SpecularPower);
 		}
 
 		float Intensity = PointLight(LightToPosition, Light.Range);
-		float SpecularTerm = (SpecMapValue * Specular);
+		float SpecularTerm = SpecMapValue * Specular * SpecularMultiplier;
 
 		FinalColor = ((Diffuse * Intensity) + SpecularTerm * Intensity) * LightColor;
 	}
@@ -179,57 +190,92 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 	return FinalColor;
 }
 
+// from: https://gist.github.com/patriciogonzalezvivo/20263fe85d52705e4530
+vec3 getTriPlanarBlending(vec3 _wNorm)
+{
+	// in wNorm is the world-space normal of the fragment
+	vec3 blending = abs( _wNorm );
+	blending = normalize(max(blending, 0.00001)); // Force weights to sum to 1.0
+	float b = (blending.x + blending.y + blending.z);
+	blending /= vec3(b, b, b);
+	return blending;
+}
+
 void main()
 {
-	/*
-	float l = length(texture(ShadowMaps[0], gl_FragCoord.xy));
-	
-	FragColor = vec4(l, l, l, 1.0f);
-
-	return;
-	*/
-
 	// Convert mesh normals to world-space
 	mat3 NormalMatrix = transpose(inverse(mat3(Frag_Transform)));
 	vec3 Normal = normalize(NormalMatrix * Frag_VertexNormal);
 
 	vec2 UV = Frag_UV;
-
-	vec3 ViewDirection = vec3(Frag_CamMatrix) - Frag_CurrentPosition;
-
+	
+	vec3 ViewDirection = normalize(CameraPosition - Frag_CurrentPosition);
+	
 	float mipLevel = textureQueryLod(ColorMap, UV).x;
 
-	vec4 Albedo = textureLod(ColorMap, UV, mipLevel);
+	vec4 Albedo = vec4(0.f, 0.f, 0.f, 1.f); //textureLod(ColorMap, UV, mipLevel);
 	float SpecMapValue = textureLod(MetallicRoughnessMap, UV, mipLevel).r;
 
-	FragColor = Albedo;
+	if (!UseProjectedMaterial)
+		Albedo = textureLod(ColorMap, UV, mipLevel);
+	else
+	{
+		vec3 blending = getTriPlanarBlending(Normal);
 
+		vec4 localPosition = vec4(Frag_CurrentPosition, 1.f) * transpose(inverse(Frag_Transform));
+
+		vec4 xAxis = textureLod(ColorMap, localPosition.yz * MaterialProjectionFactor, mipLevel);
+		vec4 yAxis = textureLod(ColorMap, localPosition.xz * MaterialProjectionFactor, mipLevel);
+		vec4 zAxis = textureLod(ColorMap, localPosition.xy * MaterialProjectionFactor, mipLevel);
+
+		Albedo = xAxis * blending.x + yAxis * blending.y + zAxis * blending.z;
+
+		float specXAxis = textureLod(MetallicRoughnessMap, localPosition.yz * MaterialProjectionFactor, mipLevel).r;
+		float specYAxis = textureLod(MetallicRoughnessMap, localPosition.xz * MaterialProjectionFactor, mipLevel).r;
+		float specZAxis = textureLod(MetallicRoughnessMap, localPosition.xy * MaterialProjectionFactor, mipLevel).r;
+
+		SpecMapValue = specXAxis * blending.x + specYAxis * blending.y + specZAxis * blending.z;
+	}
+	
 	Albedo -= vec4(0.f, 0.f, 0.f, Transparency);
 
-	// completely transparent region
-	// alpha is for some reason never 0?? <--- Specifically on the dev.world grass mesh
-	if (Albedo.a < 0.1f)
+	if (Albedo.a < AlphaCutoff)
 		discard;
 	
-	vec3 LightInfluence = vec3(0.f, 0.f, 0.f);
-
-	float FresnelFactor = 0.0f;//1.f - clamp(0.0f + 1.f * pow(1.0f + dot(vec3(Frag_CamMatrix[3]), ViewDirection), 1.f), 0.f, 1.f);
-	float ReflectivityFactor = Reflectivity + FresnelFactor;
-
-	vec3 ReflectedTint = texture(SkyboxCubemap, ViewDirection).xyz;
-
-	vec3 Albedo3 = mix(Albedo.xyz * Frag_VertexColor * ColorTint, ReflectedTint, ReflectivityFactor);
-
-	for (int LightIndex = 0; LightIndex < NumLights; LightIndex++)
+	if (DebugOverdraw)
 	{
-		LightInfluence = LightInfluence + CalculateLight(
-			LightIndex,
-			Normal,
-			ViewDirection,
-			SpecMapValue
-		);
+		// accumulate a red color with overdraw
+		// 27/10/2024 i rlly thought this would work but nah not really
+		float prevValue = texture(FrameBuffer, gl_FragCoord.xy).r;
+		prevValue += 1.f/4.f;
+		//gl_FragDepth = 0.f;
+		
+		FragColor = vec4(prevValue, 0.f, 0.f, 1.f);
+		
+		return;
 	}
 
+	vec3 LightInfluence = vec3(0.f, 0.f, 0.f);
+
+	float ReflectivityFactor = (Reflectivity * SpecMapValue);
+
+	vec3 reflectDir = reflect(-ViewDirection, Normal);
+	reflectDir.y = -reflectDir.y;
+	vec3 ReflectedTint = texture(SkyboxCubemap, reflectDir).xyz;
+	
+	vec3 Albedo3 = mix(Albedo.xyz * Frag_VertexColor * ColorTint, ReflectedTint, ReflectivityFactor);
+	
+	if (EmissionStrength <= 0)
+		for (int LightIndex = 0; LightIndex < NumLights; LightIndex++)
+			LightInfluence = LightInfluence + CalculateLight(
+				LightIndex,
+				Normal,
+				ViewDirection,
+				SpecMapValue
+			);
+	else
+		LightInfluence = vec3(EmissionStrength, EmissionStrength, EmissionStrength);
+	
 	vec3 FragCol3 = (LightInfluence + LightAmbient) * Albedo3;
 	
 	if (Fog)
@@ -237,7 +283,7 @@ void main()
 		//float Depth = LogisticDepth(0.01f, 100.0f);
 
 		float FogStart = 200;
-		float FogEnd = 5000;
+		float FogEnd = 50000;
 
 		float FogDensity = FogStart / FogEnd;
 

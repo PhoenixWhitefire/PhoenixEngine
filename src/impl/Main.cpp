@@ -25,19 +25,19 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 
 #define SDL_MAIN_HANDLED
 
-#include<filesystem>
-#include<imgui/backends/imgui_impl_opengl3.h>
-#include<imgui/backends/imgui_impl_sdl2.h>
-#include<glm/gtx/rotate_vector.hpp>
-#include<glm/gtx/vector_angle.hpp>
+#include <filesystem>
+#include <imgui/backends/imgui_impl_opengl3.h>
+#include <imgui/backends/imgui_impl_sdl2.h>
+#include <glm/gtx/rotate_vector.hpp>
+#include <glm/gtx/vector_angle.hpp>
 
-#include"Engine.hpp"
-#include"GlobalJsonConfig.hpp"
-#include"asset/SceneFormat.hpp"
-#include"UserInput.hpp"
-#include"FileRW.hpp"
-#include"Debug.hpp"
-#include"Editor.hpp"
+#include "Engine.hpp"
+#include "GlobalJsonConfig.hpp"
+#include "asset/SceneFormat.hpp"
+#include "UserInput.hpp"
+#include "FileRW.hpp"
+#include "Debug.hpp"
+#include "Editor.hpp"
 
 static bool FirstDragFrame = false;
 
@@ -85,14 +85,14 @@ static void handleInputs(Reflection::GenericValue Data)
 	double deltaTime = Data.AsDouble();
 
 	if (EngineJsonConfig.value("Developer", false))
-		EditorContext->Update(deltaTime, EngineInstance->Workspace->GetSceneCamera()->Transform);
+		EditorContext->Update(deltaTime);
 
 	Object_Camera* camera = EngineInstance->Workspace->GetSceneCamera();
 	SDL_Window* window = EngineInstance->Window;
 
 	UserInput::InputBeingSunk = GuiIO->WantCaptureKeyboard || GuiIO->WantCaptureMouse;
 
-	if (camera->GenericMovement)
+	if (camera->UseSimpleController)
 	{
 		static const glm::tvec3<double, glm::highp> UpVec = Vector3::yAxis;
 
@@ -141,13 +141,13 @@ static void handleInputs(Reflection::GenericValue Data)
 
 			int windowSizeX, windowSizeY;
 
-			SDL_GetWindowSize(window, &windowSizeX, &windowSizeY);
+			SDL_GetWindowSize(nullptr, &windowSizeX, &windowSizeY);
 
 			if (FirstDragFrame)
 			{
 				SDL_SetWindowMouseGrab(window, SDL_TRUE);
 
-				SDL_WarpMouseInWindow(window, windowSizeX / 2, windowSizeY / 2);
+				SDL_WarpMouseInWindow(nullptr, windowSizeX / 2, windowSizeY / 2);
 
 				mouseX, mouseY = windowSizeX / 2, windowSizeY / 2;
 				PrevMouseX, PrevMouseY = mouseX, mouseY;
@@ -200,7 +200,7 @@ static void handleInputs(Reflection::GenericValue Data)
 
 			if (newMouseX != mouseX || newMouseY != mouseY)
 			{
-				SDL_WarpMouseInWindow(window, newMouseX, newMouseY);
+				SDL_WarpMouseInWindow(nullptr, newMouseX, newMouseY);
 				mouseX = newMouseX;
 				mouseY = newMouseY;
 			}
@@ -208,7 +208,7 @@ static void handleInputs(Reflection::GenericValue Data)
 			if (activeMouseButton & SDL_BUTTON_RMASK)
 			{
 				MouseCaptured = false;
-				SDL_WarpMouseInWindow(window, windowSizeX / 2, windowSizeY / 2);
+				SDL_WarpMouseInWindow(nullptr, windowSizeX / 2, windowSizeY / 2);
 			}
 		}
 		else
@@ -312,12 +312,12 @@ static void LoadLevel(const std::string& LevelPath)
 
 	// 11/09/2024
 	// Today marks the day a Luau script can move the Camera
-	// It''ll set `GenericMovement` to false so that `HandleInputs` doesn't
-	//  mess with it
+	// It'll set `UseSimpleController` to false so that `handleInputs` doesn't
+	// mess with it
 	// We set it to true here in case the next level does not have a Camera Control Script
 	// (cause I still want to look around :3)
 	// (without having to go to the Camera in the Hierarchy and manually re-enable it :3)
-	workspace->GetSceneCamera()->GenericMovement = true;
+	workspace->GetSceneCamera()->UseSimpleController = true;
 	// 21/09/2024
 	// Also reset the cam back to the origin because !!PHYSICS!! yay
 	// so if we fall down into the *VOID* we get sent back up
@@ -447,6 +447,7 @@ static void drawUI(Reflection::GenericValue Data)
 
 		ImGui::Text("FPS: %d", EngineInstance->FramesPerSecond);
 		ImGui::Text("Frame time: %dms", (int)ceil(EngineInstance->FrameTime * 1000));
+		ImGui::Text("Draw calls: %zi", EngineJsonConfig.value("renderer_drawcallcount", 0ULL));
 
 		ImGui::End();
 
@@ -478,6 +479,18 @@ static void drawUI(Reflection::GenericValue Data)
 
 		if (postFxEnabled)
 		{
+			float gammaCorrection = EngineJsonConfig.value("postfx_gamma", 1.f);
+			float trldmax = EngineJsonConfig.value("postfx_ldmax", 1.f);
+			float trcmax = EngineJsonConfig.value("postfx_cmax", 1.f);
+
+			ImGui::InputFloat("Gamma", &gammaCorrection);
+			ImGui::InputFloat("Tonemapper LdMax", &trldmax);
+			ImGui::InputFloat("Tonemapper CMax", &trcmax);
+
+			EngineJsonConfig["postfx_gamma"] = gammaCorrection;
+			EngineJsonConfig["postfx_ldmax"] = trldmax;
+			EngineJsonConfig["postfx_cmax"] = trcmax;
+
 			bool blurVignette = EngineJsonConfig.value("postfx_blurvignette", false);
 			bool distortion = EngineJsonConfig.value("postfx_distortion", false);
 

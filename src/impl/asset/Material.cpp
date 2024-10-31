@@ -1,12 +1,12 @@
-#include<format>
-#include<nljson.hpp>
+#include <format>
+#include <nljson.hpp>
 
-#include"asset/Material.hpp"
-#include"asset/TextureManager.hpp"
-#include"FileRW.hpp"
-#include"Debug.hpp"
+#include "asset/Material.hpp"
+#include "asset/TextureManager.hpp"
+#include "FileRW.hpp"
+#include "Debug.hpp"
 
-static const std::string MissingTexPath = "textures/MISSING2_MaximumADHD_status_1665776378145304579.png";
+static const std::string MissingTexPath = "textures/missing.png";
 
 RenderMaterial::RenderMaterial()
 {
@@ -56,6 +56,49 @@ RenderMaterial::RenderMaterial(std::string const& MaterialName)
 	std::string desiredShp = jsonMaterialData.value("shaderprogram", "worldUber");
 	this->Shader = ShaderProgram::GetShaderProgram(desiredShp);
 
+	nlohmann::json& uniforms = jsonMaterialData["uniforms"];
+
+	for (auto memberIt = uniforms.begin(); memberIt != uniforms.end(); ++memberIt)
+	{
+		std::string uniformName = memberIt.key();
+		const nlohmann::json& value = memberIt.value();
+
+		switch (value.type())
+		{
+		case (nlohmann::detail::value_t::boolean):
+		{
+			Uniforms.insert(std::pair(uniformName, (bool)value));
+			break;
+		}
+		case (nlohmann::detail::value_t::number_float):
+		{
+			Uniforms.insert(std::pair(uniformName, (float)value));
+			break;
+		}
+		case (nlohmann::detail::value_t::number_integer):
+		{
+			Uniforms.insert(std::pair(uniformName, (int32_t)value));
+			break;
+		}
+		case (nlohmann::detail::value_t::number_unsigned):
+		{
+			Uniforms.insert(std::pair(uniformName, (uint32_t)value));
+			break;
+		}
+
+		default:
+		{
+			const char* typeName = value.type_name();
+
+			throw(std::vformat(
+				"Material '{}' tried to specify Uniform '{}', but it had unsupported type '{}'",
+				std::make_format_args(this->Name, uniformName, typeName)
+			));
+			break;
+		}
+		}
+	}
+
 	this->ColorMap = texManager->LoadTextureFromPath(jsonMaterialData.value(
 		"albedo",
 		MissingTexPath
@@ -74,6 +117,12 @@ RenderMaterial::RenderMaterial(std::string const& MaterialName)
 
 	this->SpecExponent = jsonMaterialData.value("specExponent", this->SpecExponent);
 	this->SpecMultiply = jsonMaterialData.value("specMultiply", this->SpecMultiply);
+}
+
+void RenderMaterial::ApplyUniforms()
+{
+	for (auto& it : Uniforms)
+		this->Shader->SetUniform(it.first.c_str(), it.second);
 }
 
 RenderMaterial* RenderMaterial::GetMaterial(std::string const& Name)
@@ -110,6 +159,7 @@ RenderMaterial* RenderMaterial::GetMaterial(std::string const& Name)
 std::vector<RenderMaterial*> RenderMaterial::GetLoadedMaterials()
 {
 	std::vector<RenderMaterial*> mats;
+	mats.reserve(s_LoadedMaterials.size());
 
 	for (auto& it : s_LoadedMaterials)
 		mats.push_back(it.second);

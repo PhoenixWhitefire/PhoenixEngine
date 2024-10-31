@@ -1,34 +1,33 @@
 #pragma once
 
-#include<glm/matrix.hpp>
+#include <unordered_set>
+#include <optional>
+#include <glm/mat4x4.hpp>
 
-#include"render/ShaderProgram.hpp"
-#include"asset/Material.hpp"
-#include"datatype/Mesh.hpp"
-#include"render/Buffer.hpp"
-#include"datatype/Color.hpp"
-#include"datatype/Vector3.hpp"
-#include"gameobject/Base3D.hpp"
+#include "render/ShaderProgram.hpp"
+#include "render/GpuBuffers.hpp"
+#include "asset/Material.hpp"
 
-#define SHADER_MAX_LIGHTS 6
+#include "gameobject/Base3D.hpp"
 
 /*
 	09/09/2024
 	Why can't SDL have something like OpenGL's Debug Log?
 	They have their own logging stuff, but it doesn't seem to do anything with errors
 */
-#define PHX_SDL_CALL(func, ...) \
-{ \
-	int status = func(__VA_ARGS__); \
-	if (status < 0) \
-	{ \
-		const char* errMessage = SDL_GetError(); \
-		throw(std::vformat( \
-			std::string("Error in ") + std::string(#func) + std::string(":\nCode: {}\nMessage: {}"), \
-			std::make_format_args(status, errMessage) \
-		)); \
-	} \
-} \
+#define PHX_SDL_CALL(func, ...)                                  \
+{                                                                \
+	int status = func(__VA_ARGS__);                              \
+	std::string funcName = #func;                                \
+	if (status < 0)                                              \
+	{                                                            \
+		const char* errMessage = SDL_GetError();                 \
+		throw(std::vformat(                                      \
+			"Error in {}:\nCode: {}\nMessage: {}",               \
+			std::make_format_args(funcName, status, errMessage)  \
+		));                                                      \
+	}                                                            \
+}                                                                \
 
 struct RenderItem
 {
@@ -43,7 +42,7 @@ struct RenderItem
 	FaceCullingMode FaceCulling = FaceCullingMode::BackFace;
 };
 
-enum class LightType { Directional, Point, Spot };
+enum class LightType : uint8_t { Directional, Point, Spot };
 
 struct LightItem
 {
@@ -64,13 +63,14 @@ struct Scene
 	std::vector<RenderItem> RenderList;
 	std::vector<LightItem> LightingList;
 
-	std::vector<ShaderProgram*> UniqueShaders;
+	std::unordered_set<ShaderProgram*> UsedShaders;
 };
 
 class Renderer
 {
 public:
 	Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window);
+	~Renderer();
 
 	// Changes the rendering resolution
 	void ChangeResolution(uint32_t newWidth, uint32_t newHeight);
@@ -78,26 +78,30 @@ public:
 	void DrawScene(const Scene& Scene);
 
 	// Submits a single draw call
+	// `NumInstances` made under the assumption the caller
+	// has bound the Instanced Array prior to calling this function
 	void DrawMesh(
 		Mesh* Object,
 		ShaderProgram* Shaders,
 		Vector3 Size,
 		glm::mat4 Transform = glm::mat4(1.0f),
-		FaceCullingMode Culling = FaceCullingMode::BackFace
+		FaceCullingMode Culling = FaceCullingMode::BackFace,
+		int32_t NumInstances = 1
 	);
 
 	void SwapBuffers();
 
-	FBO* Framebuffer = nullptr;
+	GpuFrameBuffer* Framebuffer = nullptr;
 
 	SDL_GLContext GLContext = nullptr;
 
 private:
-	void m_SetMaterialData(const RenderItem& Mesh, ShaderProgram* Shader);
+	void m_SetMaterialData(const RenderItem&);
 
-	VAO* m_VertexArray = nullptr;
-	VBO* m_VertexBuffer = nullptr;
-	EBO* m_ElementBuffer = nullptr;
+	GpuVertexArray* m_VertexArray = nullptr;
+	GpuVertexBuffer* m_VertexBuffer = nullptr;
+	GpuElementBuffer* m_ElementBuffer = nullptr;
+	uint32_t m_InstancingBuffer{};
 
 	SDL_Window* m_Window = nullptr;
 	

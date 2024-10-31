@@ -1,8 +1,8 @@
 #pragma once
 
-#include"gameobject/Model.hpp"
-#include"gameobject/Camera.hpp"
-#include"datatype/Vector2.hpp"
+#include "gameobject/Model.hpp"
+#include "gameobject/Camera.hpp"
+#include "datatype/Vector2.hpp"
 
 class Object_Workspace : public Object_Model
 {
@@ -17,7 +17,6 @@ public:
 	PHX_GAMEOBJECT_API_REFLECTION;
 
 private:
-	static RegisterDerivedObject<Object_Workspace> RegisterClassAs;
 	static void s_DeclareReflections();
 	static inline Api s_Api{};
 

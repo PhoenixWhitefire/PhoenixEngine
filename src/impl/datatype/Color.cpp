@@ -1,4 +1,6 @@
-#include"datatype/Color.hpp"
+#include <format>
+
+#include "datatype/Color.hpp"
 
 Color::Color()
 {
@@ -26,20 +28,20 @@ Color::Color(Reflection::GenericValue gv)
 		));
 	}
 
-	if (!gv.Pointer)
-		throw("Attempted to construct Color, but GenericValue.Pointer was NULL");
+	if (!gv.Value)
+		throw("Attempted to construct Color, but GenericValue.Value was NULL");
 
-	Color col = *(Color*)gv.Pointer;
+	Color col = *(Color*)gv.Value;
 	this->R = col.R;
 	this->G = col.G;
 	this->B = col.B;
 }
 
-Reflection::GenericValue Color::ToGenericValue()
+Reflection::GenericValue Color::ToGenericValue() const
 {
 	Reflection::GenericValue gv;
 	gv.Type = Reflection::ValueType::Color;
-	gv.Pointer = new Color(*this);
+	gv.Value = new Color(*this);
 
 	return gv;
 }

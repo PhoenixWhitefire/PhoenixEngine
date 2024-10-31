@@ -1,3 +1,8 @@
 {
-  "albedo": "textures/diamondplate.jpg"
+  "albedo": "textures/diamondplate.jpg",
+  "shaderprogram": "worldUber",
+  "specExponent": 16.0,
+  "specMultiply": 0.5,
+  "translucency": false,
+  "uniforms": null
 }

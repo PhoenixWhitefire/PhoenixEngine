@@ -1,6 +1,11 @@
 {
   "albedo": "textures/floortiles.jpg",
-  "specExponent": 0.5,
+  "shaderprogram": "worldUberMaterial",
+  "specExponent": 16.0,
   "specMultiply": 0.5,
-  "specular": "textures/floortilesSpecular.jpg"
+  "specular": "textures/floortilesSpecular.jpg",
+  "translucency": false,
+  "uniforms": {
+    "MaterialProjectionFactor": 0.02500000037252903
+  }
 }

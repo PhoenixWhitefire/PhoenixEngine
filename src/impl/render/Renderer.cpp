@@ -1,30 +1,17 @@
-#include<string>
-#include<format>
-#include<glad/gl.h>
-#include<glm/gtc/type_ptr.hpp>
-#include<glm/gtx/transform.hpp>
+#include <string>
+#include <format>
+#include <glad/gl.h>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/transform.hpp>
+#include <SDL2/SDL_video.h>
 
-#include"render/GraphicsAbstractionLayer.hpp"
-#include"render/Renderer.hpp"
-#include"asset/TextureManager.hpp"
-#include"asset/MeshProvider.hpp"
-#include"datatype/Vector3.hpp"
-#include"Debug.hpp"
+#include "render/Renderer.hpp"
+#include "asset/TextureManager.hpp"
+#include "asset/MeshProvider.hpp"
+#include "GlobalJsonConfig.hpp"
+#include "Debug.hpp"
 
-static GLenum ObjectTypes[] =
-{
-	GL_BUFFER,
-	GL_SHADER,
-	GL_PROGRAM,
-	GL_VERTEX_ARRAY,
-	GL_QUERY,
-	GL_PROGRAM_PIPELINE,
-//	GL_TRANSFORM_FEEDBACK,
-	GL_SAMPLER,
-	GL_TEXTURE,
-	GL_RENDERBUFFER,
-	GL_FRAMEBUFFER
-};
+constexpr uint32_t SHADER_MAX_LIGHTS = 6;
 
 static std::unordered_map<GLenum, std::string> GLEnumToStringMap =
 {
@@ -155,8 +142,6 @@ Renderer::Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window)
 	glEnable(GL_DEPTH_TEST);
 
 	glEnable(GL_CULL_FACE);
-	glCullFace(GL_FRONT);
-	glFrontFace(GL_CCW);
 	
 	glViewport(0, 0, m_Width, m_Height);
 
@@ -168,24 +153,43 @@ Renderer::Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window)
 	std::string glVersionStr = std::vformat(
 		"Running OpenGL version {}.{}",
 		std::make_format_args(glVersionMajor, glVersionMinor)
-	).c_str();
+	);
 
 	Debug::Log(glVersionStr);
 
-	m_VertexArray = new VAO();
-	m_VertexArray->Bind();
+	m_VertexArray = new GpuVertexArray;
+	m_VertexBuffer = new GpuVertexBuffer;
+	m_ElementBuffer = new GpuElementBuffer;
 
-	m_VertexBuffer = new VBO();
-	m_ElementBuffer = new EBO();
+	m_VertexArray->Bind();
 
 	m_VertexArray->LinkAttrib(*m_VertexBuffer, 0, 3, GL_FLOAT, sizeof(Vertex), (void*)0);
 	m_VertexArray->LinkAttrib(*m_VertexBuffer, 1, 3, GL_FLOAT, sizeof(Vertex), (void*)(3 * sizeof(float)));
 	m_VertexArray->LinkAttrib(*m_VertexBuffer, 2, 3, GL_FLOAT, sizeof(Vertex), (void*)(6 * sizeof(float)));
 	m_VertexArray->LinkAttrib(*m_VertexBuffer, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)(9 * sizeof(float)));
 
-	this->Framebuffer = new FBO(m_Width, m_Height, m_MsaaSamples);
+	this->Framebuffer = new GpuFrameBuffer(m_Width, m_Height, m_MsaaSamples);
+
+	glGenBuffers(1, &m_InstancingBuffer);
 
 	Debug::Log("Renderer initialized");
+}
+
+Renderer::~Renderer()
+{
+	delete m_VertexArray;
+	delete m_VertexBuffer;
+	delete m_ElementBuffer;
+	glDeleteBuffers(1, &m_InstancingBuffer);
+	delete this->Framebuffer;
+
+	m_VertexArray = nullptr;
+	m_VertexBuffer = nullptr;
+	m_ElementBuffer = nullptr;
+	this->Framebuffer = nullptr;
+
+	this->GLContext = nullptr;
+	m_Window = nullptr;
 }
 
 void Renderer::ChangeResolution(uint32_t Width, uint32_t Height)
@@ -207,28 +211,18 @@ void Renderer::ChangeResolution(uint32_t Width, uint32_t Height)
 
 	glViewport(0, 0, m_Width, m_Height);
 
-	// TODO fix msaa
-
-	//this->m_framebuffer->Bind();
-	this->Framebuffer->BindTexture();
-
-	if (this->Framebuffer->MSAASamples > 0)
-		glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, m_MsaaSamples, GL_RGB, m_Width, m_Height, GL_TRUE);
-	else
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_Width, m_Height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-
-	glBindRenderbuffer(GL_RENDERBUFFER, this->Framebuffer->RenderBufferID);
-
-	if (this->Framebuffer->MSAASamples > 0)
-		glRenderbufferStorageMultisample(GL_RENDERBUFFER, m_MsaaSamples, GL_DEPTH32F_STENCIL8, m_Width, m_Height);
-	else
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH32F_STENCIL8, m_Width, m_Height);
+	this->Framebuffer->UpdateResolution(m_Width, m_Height);
 }
 
 void Renderer::DrawScene(const Scene& Scene)
 {
-	for (ShaderProgram* shader : Scene.UniqueShaders)
+	glActiveTexture(GL_TEXTURE0);
+	this->Framebuffer->BindTexture();
+
+	for (ShaderProgram* shader : Scene.UsedShaders)
 	{
+		shader->SetUniform("FrameBuffer", 0);
+
 		// TODO 05/09/2024
 		// Branching in shader VS separate array uniforms?
 		// Oh and uniform locations should probably be cached
@@ -237,7 +231,7 @@ void Renderer::DrawScene(const Scene& Scene)
 			if (lightIndex + 1 > Scene.LightingList.size())
 				break;
 
-			LightItem lightData = Scene.LightingList.at(lightIndex);
+			const LightItem& lightData = Scene.LightingList.at(lightIndex);
 
 			std::string lightIdxString = std::to_string(lightIndex);
 			std::string shaderLightLoc = "Lights[" + lightIdxString + "]";
@@ -260,27 +254,104 @@ void Renderer::DrawScene(const Scene& Scene)
 		shader->SetUniform(
 			"NumLights",
 			std::clamp(
-				static_cast<int32_t>(Scene.LightingList.size()),
-				0,
+				static_cast<uint32_t>(Scene.LightingList.size()),
+				0u,
 				SHADER_MAX_LIGHTS
 			)
 		);
 	}
 
 	MeshProvider* mp = MeshProvider::Get();
+	size_t numDrawCalls = 0;
 
-	for (RenderItem RenderData : Scene.RenderList)
+	// render checksum to pair<render item index, vector of transforms>
+	std::unordered_map<uint64_t, std::pair<size_t, std::vector<glm::mat4>>> instancingList;
+
+	for (size_t renderItemIndex = 0; renderItemIndex < Scene.RenderList.size(); renderItemIndex++)
 	{
-		m_SetMaterialData(RenderData, RenderData.Material->Shader);
+		const RenderItem& renderData = Scene.RenderList[renderItemIndex];
+
+		/*
+		// 31/10/2024 bullshit so that we don't try to instance things
+		// that can't have their differences represented rn
+		// (currently only the Transform can be differentiated)
+		uint64_t renderMeshChecksum = renderData.RenderMeshId
+			+ static_cast<uint64_t>(renderData.Size.Magnitude() * 100.f)
+			+ static_cast<uint64_t>(renderData.TintColor.R * 5.f + renderData.TintColor.G * 15.f + renderData.TintColor.B)
+			+ renderData.Material->Name.size();
+
+		auto it = instancingList.find(renderMeshChecksum);
+		if (it == instancingList.end())
+			instancingList[renderMeshChecksum] = std::pair(renderItemIndex, std::vector<glm::mat4>());
+
+		instancingList[renderMeshChecksum].second.push_back(renderData.Transform);
+		*/
+
+		m_SetMaterialData(renderData);
 
 		this->DrawMesh(
-			mp->GetMeshResource(RenderData.RenderMeshId),
-			RenderData.Material->Shader,
-			RenderData.Size,
-			RenderData.Transform,
-			RenderData.FaceCulling
+			mp->GetMeshResource(renderData.RenderMeshId),
+			renderData.Material->Shader,
+			renderData.Size,
+			renderData.Transform,
+			renderData.FaceCulling,
+			1
 		);
+
+		numDrawCalls++;
 	}
+
+	/*
+	for (auto& iter : instancingList)
+	{
+		const RenderItem& renderData = Scene.RenderList[iter.second.first];
+
+		Mesh* mesh = mp->GetMeshResource(renderData.RenderMeshId);
+
+		if (mesh->GpuId != UINT32_MAX)
+		{
+			MeshProvider::GpuMesh& gpuMesh = mp->GetGpuMesh(mesh->GpuId);
+			gpuMesh.VertexArray->Bind();
+
+			glBindBuffer(GL_ARRAY_BUFFER, m_InstancingBuffer);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(glm::mat4), iter.second.second.data(), GL_STATIC_DRAW);
+
+			static int32_t Vec4Size = static_cast<int32_t>(sizeof(glm::vec4));
+
+			// `Transform` matrix
+			glEnableVertexAttribArray(4);
+			glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 4 * Vec4Size, (void*)0);
+			glEnableVertexAttribArray(5);
+			glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 4 * Vec4Size, (void*)(1 * (size_t)Vec4Size));
+			glEnableVertexAttribArray(6);
+			glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, 4 * Vec4Size, (void*)(2 * (size_t)Vec4Size));
+			glEnableVertexAttribArray(7);
+			glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, 4 * Vec4Size, (void*)(3 * (size_t)Vec4Size));
+
+			glVertexAttribDivisor(4, 1);
+			glVertexAttribDivisor(5, 1);
+			glVertexAttribDivisor(6, 1);
+			glVertexAttribDivisor(7, 1);
+		}
+		else
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+		m_SetMaterialData(renderData);
+
+		this->DrawMesh(
+			mesh,
+			renderData.Material->Shader,
+			renderData.Size,
+			renderData.Transform,
+			renderData.FaceCulling,
+			static_cast<int32_t>(iter.second.second.size())
+		);
+
+		numDrawCalls++;
+	}
+	*/
+
+	EngineJsonConfig["renderer_drawcallcount"] = numDrawCalls;
 }
 
 void Renderer::DrawMesh(
@@ -288,7 +359,8 @@ void Renderer::DrawMesh(
 	ShaderProgram* Shaders,
 	Vector3 Size,
 	glm::mat4 Transform,
-	FaceCullingMode FaceCulling
+	FaceCullingMode FaceCulling,
+	int32_t NumInstances
 )
 {
 	switch (FaceCulling)
@@ -316,10 +388,24 @@ void Renderer::DrawMesh(
 
 	}
 
-	m_VertexArray->Bind();
+	uint32_t gpuMeshId = Object->GpuId;
+	MeshProvider::GpuMesh* gpuMesh = nullptr;
 
-	m_VertexBuffer->SetBufferData(Object->Vertices);
-	m_ElementBuffer->SetBufferData(Object->Indices);
+	// mesh not uploaded to the GPU by MeshProvider
+	if (gpuMeshId == UINT32_MAX)
+	{
+		m_VertexArray->Bind();
+
+		m_VertexBuffer->SetBufferData(Object->Vertices);
+		m_ElementBuffer->SetBufferData(Object->Indices);
+	}
+	else
+	{
+		gpuMesh = &MeshProvider::Get()->GetGpuMesh(gpuMeshId);
+		gpuMesh->VertexArray->Bind();
+	}
+
+	uint32_t numIndices = gpuMesh ? gpuMesh->NumIndices : static_cast<uint32_t>(Object->Indices.size());
 
 	glm::mat4 scale = glm::scale(glm::mat4(1.f), glm::vec3(Size));
 
@@ -327,13 +413,15 @@ void Renderer::DrawMesh(
 	Shaders->SetUniform("Scale", scale);
 
 	Shaders->Activate();
-
-	glDrawElements(GL_TRIANGLES, static_cast<int>(Object->Indices.size()), GL_UNSIGNED_INT, 0);
+	
+	//glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, 0);
+	glDrawElementsInstanced(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, 0, NumInstances);
 }
 
-void Renderer::m_SetMaterialData(const RenderItem& RenderData, ShaderProgram* Shader)
+void Renderer::m_SetMaterialData(const RenderItem& RenderData)
 {
 	RenderMaterial* material = RenderData.Material;
+	ShaderProgram* shader = material->Shader;
 
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -342,18 +430,15 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData, ShaderProgram* Sh
 	else // the gosh darn grass model is practically 50% transparent
 		glDisable(GL_BLEND);
 	
-	Shader->SetUniform("SpecularMultiplier", material->SpecMultiply);
-	Shader->SetUniform("SpecularPower", material->SpecExponent);
+	shader->SetUniform("SpecularMultiplier", material->SpecMultiply);
+	shader->SetUniform("SpecularPower", material->SpecExponent);
 
-	Shader->SetUniform("Reflectivity", RenderData.Reflectivity);
-	Shader->SetUniform("Transparency", RenderData.Transparency);
+	shader->SetUniform("Reflectivity", RenderData.Reflectivity);
+	shader->SetUniform("Transparency", RenderData.Transparency);
 
-	// 27/09/2024 TODO wtf??
-	Reflection::GenericValue colGeneric = const_cast<Color*>(&RenderData.TintColor)->ToGenericValue();
-
-	Shader->SetUniform(
+	shader->SetUniform(
 		"ColorTint",
-		colGeneric
+		RenderData.TintColor.ToGenericValue()
 	);
 
 	TextureManager* texManager = TextureManager::Get();
@@ -372,26 +457,16 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData, ShaderProgram* Sh
 	*/
 
 	Texture* colorMap = texManager->GetTextureResource(material->ColorMap);
-
-	glActiveTexture(GL_TEXTURE4);
-	glBindTexture(GL_TEXTURE_2D, colorMap->GpuId);
-	
-	static const char* DiffuseStr = "ColorMap";
-	static const char* SpecularStr = "MetallicRoughnessMap";
-
 	Texture* metallicRoughnessMap = texManager->GetTextureResource(material->MetallicRoughnessMap);
 
-	static uint32_t WhiteTextureId = texManager->LoadTextureFromPath("textures/white.png");
+	shader->SetTextureUniform("ColorMap", colorMap->GpuId);
+	shader->SetTextureUniform("MetallicRoughnessMap", metallicRoughnessMap->GpuId);
 
-	glActiveTexture(GL_TEXTURE5);
-
-	if (metallicRoughnessMap)
-		glBindTexture(GL_TEXTURE_2D, metallicRoughnessMap->GpuId);
-	else
-		glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(WhiteTextureId)->GpuId);
-
-	Shader->SetUniform(DiffuseStr, 4);
-	Shader->SetUniform(SpecularStr, 5);
+	// apply the uniforms for the shader program...
+	shader->ApplyDefaultUniforms();
+	// ... then the material uniforms...
+	material->ApplyUniforms();
+	// ... so that the material can override uniforms in the SP
 }
 
 void Renderer::SwapBuffers()

@@ -1,38 +1,42 @@
-#include<glm/gtc/matrix_transform.hpp>
-#include<glm/gtx/euler_angles.hpp>
-#include<imgui/imgui.h>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/euler_angles.hpp>
+#include <imgui/imgui.h>
 
-#include"Editor.hpp"
-#include"gameobject/GameObjects.hpp"
-#include"asset/TextureManager.hpp"
-#include"UserInput.hpp"
-#include"FileRW.hpp"
-#include"Debug.hpp"
+#include "Editor.hpp"
+#include "gameobject/GameObjects.hpp"
+#include "asset/TextureManager.hpp"
+#include "UserInput.hpp"
+#include "FileRW.hpp"
+#include "Debug.hpp"
 
 constexpr uint32_t OBJECT_NEW_CLASSNAME_BUFSIZE = 16;
-constexpr uint32_t MATERIAL_NEW_NAME_BUFSIZE = 16;
+constexpr uint32_t MATERIAL_NEW_NAME_BUFSIZE = 32;
 constexpr uint32_t MATERIAL_TEXTUREPATH_BUFSIZE = 64;
 constexpr const char* MATERIAL_NEW_NAME_DEFAULT = "newmaterial";
 
 static const char* ParentString = "[Parent]";
 
-static std::string ErrorTexture = "textures/MISSING2_MaximumADHD_status_1665776378145304579.png";
+static std::string ErrorTexture = "textures/missing.png";
+
+static bool ScriptEditorEnabled = false;
+static uint32_t ScriptEditorFocus = PHX_GAMEOBJECT_NULL_ID;
 
 static nlohmann::json DefaultNewMaterial{};
 
-static char* bufferInitialize(uint32_t capacity, const std::string& initializeValue = "")
+static void copyStringToBuffer(char* buf, size_t capacity, const std::string& string = "")
+{
+	for (size_t i = 0; i < capacity; i++)
+		buf[i] = i < string.size() ? string[i] : 0;
+}
+
+static char* bufferInitialize(size_t capacity, const std::string& value = "")
 {
 	char* buf = (char*)malloc(capacity);
 
 	if (!buf)
 		throw("There are bigger problems at hand.");
 
-	if (initializeValue != "")
-		for (uint32_t i = 0; i < capacity; i++)
-			buf[i] = 0;
-	else
-		for (uint32_t i = 0; i < capacity; i++)
-			buf[i] = i < initializeValue.size() ? initializeValue.at(i) : 0;
+	copyStringToBuffer(buf, capacity, value);
 
 	return buf;
 }
@@ -43,6 +47,9 @@ Editor::Editor()
 	m_MtlCreateNameBuf = bufferInitialize(MATERIAL_NEW_NAME_BUFSIZE, MATERIAL_NEW_NAME_DEFAULT);
 	m_MtlDiffuseBuf = bufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
 	m_MtlSpecBuf = bufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
+	m_MtlShpBuf = bufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
+	m_MtlNewUniformNameBuf = bufferInitialize(MATERIAL_NEW_NAME_BUFSIZE);
+	m_MtlUniformNameEditBuf = bufferInitialize(MATERIAL_NEW_NAME_BUFSIZE);
 
 	DefaultNewMaterial["albedo"] = "textures/plastic.png";
 }
@@ -76,7 +83,7 @@ static void AddChildrenToObjects(GameObject* Parent)
 			//Objects.push_back(NewObject);
 		}
 
-		if (Obj->GetChildren().size() > 0)
+		if (!Obj->GetChildren().empty())
 			AddChildrenToObjects(Obj);
 	}
 }
@@ -93,68 +100,11 @@ void Editor::Init()
 	//AddChildrenToObjects(Root);
 
 	//GameWorkspace->OnChildAdded.Connect(ResetAndAddObjects);
-
-	m_CurrentUIHierarchyRoot = GameObject::s_DataModel;
-
-	Debug::Log("Editor init done");
 }
 
-void Editor::Update(double DeltaTime, glm::mat4 CameraTransform)
+void Editor::Update(double DeltaTime)
 {
 	m_InvalidObjectErrTimeRemaining -= DeltaTime;
-
-	Vector3 CamPos = Vector3(CameraTransform[3].x, CameraTransform[3].y, CameraTransform[3].z);
-
-	glm::mat4 ForwardMat = glm::translate(CameraTransform, glm::vec3(0.0f, 0.0f, -50.0f));
-	Vector3 RayTargetPos = Vector3(ForwardMat[3].x, ForwardMat[3].y, ForwardMat[3].z);
-
-	Vector3 RayDir = RayTargetPos - CamPos;
-
-	//if (Result.DidHit)
-	//	this->MyCube3D->Matrix = glm::translate(glm::mat4(1.0f), glm::vec3(Result.HitPosition));
-}
-
-static std::vector<GameObject*> getVisibleChildren(GameObject** CurrentUIHierarchyRoot)
-{
-	std::vector<GameObject*> children;
-
-	if (*CurrentUIHierarchyRoot)
-		if (GameObject::s_WorldArray.find((*CurrentUIHierarchyRoot)->ObjectId) == GameObject::s_WorldArray.end())
-			*CurrentUIHierarchyRoot = nullptr;
-
-	if (*CurrentUIHierarchyRoot)
-		children = (*CurrentUIHierarchyRoot)->GetChildren();
-	else
-		for (auto& it : GameObject::s_WorldArray)
-		{
-			if (!it.second->GetParent())
-				children.push_back(it.second);
-		}
-			
-	return children;
-}
-
-static bool objectsIterator(void* Root, int Index, const char** OutText)
-{
-	//GameObject* Parent = (GameObject*)Data;
-
-	size_t negativeOffset = 1;
-
-	if (Index == 0)
-	{
-		if (Root)
-		{
-			*OutText = ParentString;
-			return true;
-		}
-		else
-			negativeOffset = 0;
-	}
-
-	GameObject* selected = getVisibleChildren((GameObject**)Root).at((size_t)Index - negativeOffset);
-	*OutText = selected->Name.c_str();
-
-	return true;
 }
 
 static bool mtlIterator(void*, int index, const char** outText)
@@ -164,6 +114,79 @@ static bool mtlIterator(void*, int index, const char** outText)
 	*outText = selected->Name.c_str();
 
 	return true;
+}
+
+static bool mtlUniformIterator(void* array, int index, const char** outText)
+{
+	*outText = ((std::vector<std::string>*)array)->at(index).c_str();
+
+	return true;
+}
+
+static void renderScriptEditor()
+{
+	static char* TextEntryBuffer = nullptr;
+	static size_t TextEntryBufferCapacity = 0;
+
+	Object_Script* targetScript = dynamic_cast<Object_Script*>(GameObject::GetObjectById(ScriptEditorFocus));
+
+	if (!ScriptEditorEnabled)
+	{
+		if (targetScript && TextEntryBuffer)
+			FileRW::WriteFile(targetScript->SourceFile, TextEntryBuffer, true);
+
+		free(TextEntryBuffer);
+		TextEntryBuffer = nullptr;
+
+		return;
+	}
+
+	if (!targetScript)
+	{
+		ScriptEditorEnabled = false;
+		ScriptEditorFocus = PHX_GAMEOBJECT_NULL_ID;
+
+		return;
+	}
+
+	ImGui::Begin("Script Editor");
+
+	ImGui::Text("%s", targetScript->Name.c_str());
+
+	if (ImGui::Button("Save"))
+	{
+		FileRW::WriteFile(targetScript->SourceFile, TextEntryBuffer, true);
+
+		free(TextEntryBuffer);
+		TextEntryBuffer = nullptr;
+	}
+
+	if (ImGui::Button("Close"))
+	{
+		// 28/10/2024 TODO
+		// hooo boy do i love intentionally dirty state
+		// so i don't have to go through the effort of making ONE extra function
+		ScriptEditorEnabled = false;
+		return;
+	}
+
+	if (!TextEntryBuffer)
+	{
+		bool scriptFileExists = true;
+		std::string scriptContents = FileRW::ReadFile(targetScript->SourceFile, &scriptFileExists);
+
+		if (!scriptFileExists)
+			scriptContents = "-- Source file '" + targetScript->SourceFile + "' could not be opened";
+
+		TextEntryBufferCapacity = scriptContents.size() + 256;
+		TextEntryBuffer = (char*)malloc(TextEntryBufferCapacity);
+
+		copyStringToBuffer(TextEntryBuffer, TextEntryBufferCapacity, scriptContents);
+	}
+
+	ImGui::InputTextMultiline("Script", TextEntryBuffer, TextEntryBufferCapacity);
+
+	ImGui::End();
 }
 
 // 02/09/2024
@@ -209,26 +232,24 @@ void Editor::m_RenderMaterialEditor()
 	Texture* colorMap = texManager->GetTextureResource(curItem->ColorMap);
 	Texture* metallicRoughnessMap = texManager->GetTextureResource(curItem->MetallicRoughnessMap);
 
+	static int SelectedUniformIdx = -1;
+
 	if (m_MtlCurItem != m_MtlPrevItem)
 	{
-		for (uint32_t i = 0; i < MATERIAL_TEXTUREPATH_BUFSIZE; i++)
-			m_MtlDiffuseBuf[i] = i < colorMap->ImagePath.size()
-									? colorMap->ImagePath.at(i)
-									: 0;
+		copyStringToBuffer(m_MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE, curItem->Shader->Name);
+		copyStringToBuffer(m_MtlDiffuseBuf, MATERIAL_TEXTUREPATH_BUFSIZE, colorMap->ImagePath);
 
-		if (metallicRoughnessMap)
-			for (uint32_t i = 0; i < MATERIAL_TEXTUREPATH_BUFSIZE; i++)
-				m_MtlSpecBuf[i] = i < metallicRoughnessMap->ImagePath.size()
-									? metallicRoughnessMap->ImagePath.at(i)
-									: 0;
-		else
-			for (int i = 0; i < 64; i++)
-				m_MtlSpecBuf[i] = 0;
+		if (curItem->MetallicRoughnessMap != 0)
+			copyStringToBuffer(m_MtlSpecBuf, MATERIAL_TEXTUREPATH_BUFSIZE, metallicRoughnessMap->ImagePath);
+
+		SelectedUniformIdx = -1;
 	}
 
 	m_MtlPrevItem = m_MtlCurItem;
 
-	ImGui::InputText("Diffuse", m_MtlDiffuseBuf, 64);
+	ImGui::InputText("Shader", m_MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
+
+	ImGui::InputText("Diffuse", m_MtlDiffuseBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
 	
 	ImGui::Image(
 		// first cast to uint64_t to get rid of the
@@ -251,10 +272,17 @@ void Editor::m_RenderMaterialEditor()
 		std::make_format_args(colorMap->NumColorChannels)
 	).c_str());
 
-	ImGui::InputText("Specular", m_MtlSpecBuf, 64);
+	bool hasSpecularTexture = curItem->MetallicRoughnessMap != 0;
+	ImGui::Checkbox("Has Specular", &hasSpecularTexture);
 
-	if (metallicRoughnessMap)
+	if (hasSpecularTexture)
 	{
+		curItem->MetallicRoughnessMap = curItem->MetallicRoughnessMap != 0 ? curItem->MetallicRoughnessMap : 1;
+		// in case the texture is updated by the above ternary to be ID 1
+		metallicRoughnessMap = texManager->GetTextureResource(curItem->MetallicRoughnessMap);
+
+		ImGui::InputText("Specular", m_MtlSpecBuf, 64);
+
 		ImGui::Image(
 			// first cast to uint64_t to get rid of the
 			// "'type cast': conversion from 'uint32_t' to 'void *' of greater size"
@@ -276,13 +304,123 @@ void Editor::m_RenderMaterialEditor()
 			std::make_format_args(metallicRoughnessMap->NumColorChannels)
 		).c_str());
 	}
+	else
+		curItem->MetallicRoughnessMap = 0;
 
-	if (ImGui::Button("Update textures"))
+	ImGui::Text("Uniforms");
+
+	static int TypeId = 0;
+
+	ImGui::InputText("Uniform Name", m_MtlNewUniformNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
+	ImGui::InputInt("Uniform Type", &TypeId);
+	ImGui::SetItemTooltip("0=Bool, 1=Int, 2=Float");
+
+	TypeId = std::clamp(TypeId, 0, 2);
+
+	if (ImGui::Button("Add"))
+	{
+		Reflection::GenericValue initialValue;
+
+		switch (TypeId)
+		{
+		case (0):
+		{
+			initialValue = true;
+			break;
+		}
+		case (1):
+		{
+			initialValue = 0;
+			break;
+		}
+		case (2):
+		{
+			initialValue = 0.f;
+			break;
+		}
+		}
+
+		curItem->Uniforms[m_MtlNewUniformNameBuf] = initialValue;
+	}
+
+	std::vector<std::string> uniformsArray;
+	uniformsArray.reserve(curItem->Uniforms.size());
+
+	for (auto& it : curItem->Uniforms)
+		uniformsArray.push_back(it.first);
+
+	ImGui::ListBox(
+		"",
+		&SelectedUniformIdx,
+		&mtlUniformIterator,
+		&uniformsArray,
+		static_cast<int>(curItem->Uniforms.size())
+	);
+
+	if (SelectedUniformIdx != -1 && uniformsArray.size() >= 1)
+	{
+		const std::string& name = uniformsArray.at(SelectedUniformIdx);
+		Reflection::GenericValue& value = curItem->Uniforms.at(name);
+
+		copyStringToBuffer(m_MtlUniformNameEditBuf, MATERIAL_NEW_NAME_BUFSIZE, name);
+
+		ImGui::InputText("Name", m_MtlUniformNameEditBuf, MATERIAL_NEW_NAME_BUFSIZE);
+
+		Reflection::GenericValue newValue = value;
+
+		switch (value.Type)
+		{
+		case (Reflection::ValueType::Bool):
+		{
+			bool curVal = value.AsBool();
+			ImGui::Checkbox("Value", &curVal);
+
+			newValue = curVal;
+			break;
+		}
+		case (Reflection::ValueType::Integer):
+		{
+			int32_t curVal = static_cast<int32_t>(value.AsInteger());
+			ImGui::InputInt("Value", &curVal);
+
+			newValue = curVal;
+			break;
+		}
+		case (Reflection::ValueType::Double):
+		{
+			float curVal = static_cast<float>(value.AsDouble());
+			ImGui::InputFloat("Value", &curVal);
+
+			newValue = curVal;
+			break;
+		}
+		default:
+		{
+			ImGui::Text(
+				"<Type ID:%i ('%s') editing not supported>",
+				(int)value.Type,
+				Reflection::TypeAsString(value.Type).c_str()
+			);
+			break;
+		}
+		}
+
+		std::string newName = m_MtlUniformNameEditBuf;
+
+		if (name != newName)
+			curItem->Uniforms.erase(name);
+
+		curItem->Uniforms[newName] = newValue;
+	}
+
+	if (ImGui::Button("Update"))
 	{
 		curItem->ColorMap = texManager->LoadTextureFromPath(m_MtlDiffuseBuf);
 
 		if (strlen(m_MtlSpecBuf) > 0)
 			curItem->MetallicRoughnessMap = texManager->LoadTextureFromPath(m_MtlSpecBuf);
+
+		curItem->Shader = ShaderProgram::GetShaderProgram(m_MtlShpBuf);
 	}
 
 	ImGui::Checkbox("Has translucency", &curItem->HasTranslucency);
@@ -295,17 +433,41 @@ void Editor::m_RenderMaterialEditor()
 
 		newMtlConfig["albedo"] = colorMap->ImagePath;
 
-		if (metallicRoughnessMap)
+		if (curItem->MetallicRoughnessMap != 0)
 			newMtlConfig["specular"] = metallicRoughnessMap->ImagePath;
 
 		newMtlConfig["specExponent"] = curItem->SpecExponent;
 		newMtlConfig["specMultiply"] = curItem->SpecMultiply;
 		newMtlConfig["translucency"] = curItem->HasTranslucency;
+		newMtlConfig["shaderprogram"] = curItem->Shader->Name;
+		
+		newMtlConfig["uniforms"] = {};
 
-		// overwrite the model material override
-		auto start = curItem->Name.find("models/");
-		if (start != std::string::npos)
-			FileRW::WriteFile(curItem->Name + "/material.mtl", newMtlConfig.dump(2), true);
+		for (auto& it : curItem->Uniforms)
+		{
+			Reflection::GenericValue& value = it.second;
+
+			switch (value.Type)
+			{
+			case (Reflection::ValueType::Bool):
+			{
+				newMtlConfig["uniforms"][it.first] = value.AsBool();
+				break;
+			}
+			case (Reflection::ValueType::Integer):
+			{
+				newMtlConfig["uniforms"][it.first] = value.AsInteger();
+				break;
+			}
+			case (Reflection::ValueType::Double):
+			{
+				newMtlConfig["uniforms"][it.first] = static_cast<float>(value.AsDouble());
+				break;
+			}
+			}
+		}
+
+		std::string filePath = "materials/" + curItem->Name + ".mtl";
 
 		FileRW::WriteFile(
 			"materials/" + curItem->Name + ".mtl",
@@ -317,8 +479,52 @@ void Editor::m_RenderMaterialEditor()
 	ImGui::End();
 }
 
+static GameObject* recursiveIterateTree(GameObject* current)
+{
+	static GameObject* Selected = nullptr;
+	
+	if (Selected)
+		if (GameObject::s_WorldArray.find(Selected->ObjectId) == GameObject::s_WorldArray.end())
+			Selected = nullptr;
+
+	// https://github.com/ocornut/imgui/issues/581#issuecomment-216054349
+	// 07/10/2024
+	GameObject* nodeClicked = nullptr;
+
+	for (GameObject* object : current->GetChildren())
+	{
+		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow;
+
+		if (Selected && object == Selected)
+			flags |= ImGuiTreeNodeFlags_Selected;
+
+		if (object->GetChildren().empty())
+			flags |= ImGuiTreeNodeFlags_Leaf;
+
+		bool open = ImGui::TreeNodeEx(&object->ObjectId, flags, object->Name.c_str());
+
+		if (ImGui::IsItemClicked())
+			nodeClicked = object;
+			
+		if (open)
+		{
+			recursiveIterateTree(object);
+			ImGui::TreePop();
+		}
+	}
+
+	if (nodeClicked)
+		if (ImGui::GetIO().KeyCtrl)
+			Selected = nullptr;
+		else
+			Selected = nodeClicked;
+
+	return Selected;
+}
+
 void Editor::RenderUI()
 {
+	renderScriptEditor();
 	m_RenderMaterialEditor();
 
 	ImGui::Begin("Editor");
@@ -329,310 +535,243 @@ void Editor::RenderUI()
 	if (m_InvalidObjectErrTimeRemaining > 0.f)
 		ImGui::Text("Invalid GameObject!");
 
-	if (m_CurrentUIHierarchyRoot)
-	{
-		bool ascendHierarchy = ImGui::Button(std::vformat(
-			"Ascend to parent {}",
-			std::make_format_args(m_CurrentUIHierarchyRoot->Name)
-		).c_str());
+	ImGui::TreePush("GameObject Hierarchy UI");
 
-		if (ascendHierarchy)
-		{
-			GameObject* prevRoot = m_CurrentUIHierarchyRoot;
-			m_CurrentUIHierarchyRoot = m_CurrentUIHierarchyRoot->GetParent();
+	GameObject* selected = recursiveIterateTree(GameObject::s_DataModel);
 
-			std::vector<GameObject*> newChildren = getVisibleChildren(&m_CurrentUIHierarchyRoot);
-
-			auto prevRootInCurRootIt = std::find(newChildren.begin(), newChildren.end(), prevRoot);
-			// try to select the object that we were just inside
-			if (prevRootInCurRootIt != newChildren.end())
-				m_HierarchyCurItem = static_cast<int>(prevRootInCurRootIt - newChildren.begin() + 1);
-		}
-	}
-
-	std::vector<GameObject*> children = getVisibleChildren(&m_CurrentUIHierarchyRoot);
-
-	std::string parentText;
-
-	if (m_CurrentUIHierarchyRoot)
-	{
-		parentText = std::vformat(
-			"Children of {}",
-			std::make_format_args(m_CurrentUIHierarchyRoot->Name)
-		).c_str();
-	}
-	else
-		parentText = "Root objects";
-
-	ImGui::ListBox(
-		parentText.c_str(),
-		&m_HierarchyCurItem,
-		&objectsIterator,
-		&m_CurrentUIHierarchyRoot,
-		static_cast<int>(children.size()) + (m_CurrentUIHierarchyRoot ? 1 : 0)
-	);
-
-	GameObject* selected = nullptr;
-
-	int32_t startOffset = m_CurrentUIHierarchyRoot ? 1 : 0;
-
-	if (m_HierarchyCurItem > startOffset - 1)
-		if (children.size() > m_HierarchyCurItem - startOffset)
-			selected = children[(size_t)m_HierarchyCurItem - startOffset];
-		else
-			m_HierarchyCurItem = -1;
-
-	else if (m_HierarchyCurItem == 0) // index 0 is the `[Parent]` item
-		selected = m_CurrentUIHierarchyRoot;
+	ImGui::TreePop();
 
 	if (selected)
 	{
-		size_t numChildren = selected->GetChildren().size();
-
-		bool stepInto = false;
-		
-		if (numChildren > 0)
-			stepInto = ImGui::Button(std::vformat(
-				"View {} children",
-				std::make_format_args(numChildren)
-			).c_str());
-		else
-			stepInto = ImGui::Button("Step into");
-
-		if (stepInto)
-		{
-			m_CurrentUIHierarchyRoot = selected;
-			m_HierarchyCurItem = -1;
-		}
-	}
-
-	// can't delete datamodel
-	if (selected != GameObject::s_DataModel)
 		if (ImGui::Button("Destroy"))
 		{
-			if (selected && selected == m_CurrentUIHierarchyRoot && m_CurrentUIHierarchyRoot->GetParent())
-				m_CurrentUIHierarchyRoot = m_CurrentUIHierarchyRoot->GetParent();
-
-			delete selected;
+			selected->Destroy();
 			selected = nullptr;
-
-			m_HierarchyCurItem = -1;
 		}
-
-	if (selected)
-	{
-		Object_Script* script = dynamic_cast<Object_Script*>(selected);
-
-		if (script)
-			if (ImGui::Button("Reload"))
-				script->Reload();
-
-		ImGui::Text("Properties:");
-
-		auto& props = selected->GetProperties();
-
-		for (auto& propListItem : props)
+		else
 		{
-			const char* propName = propListItem.first.c_str();
-			const IProperty& prop = propListItem.second;
+			Object_Script* script = dynamic_cast<Object_Script*>(selected);
 
-			const Reflection::GenericValue curVal = selected->GetPropertyValue(propName);
-
-			if (!prop.Set)
+			if (script)
 			{
-				// no setter (locked property, such as ClassName or ObjectId)
-				// 07/07/2024
+				if (ImGui::Button("Reload"))
+					script->Reload();
 
-				std::string curValStr = curVal.ToString();
-
-				ImGui::Text(std::vformat("{}: {}", std::make_format_args(propName, curValStr)).c_str());
-
-				continue;
+				if (ImGui::Button("Edit"))
+				{
+					ScriptEditorEnabled = true;
+					ScriptEditorFocus = script->ObjectId;
+				}
 			}
 
-			Reflection::GenericValue newVal = curVal;
+			ImGui::Text("Properties:");
 
-			switch (curVal.Type)
+			auto& props = selected->GetProperties();
+
+			for (auto& propListItem : props)
 			{
+				const char* propName = propListItem.first.c_str();
+				const IProperty& prop = propListItem.second;
 
-			case (Reflection::ValueType::String):
-			{
-				std::string str = curVal.AsString();
+				Reflection::GenericValue curVal = selected->GetPropertyValue(propName);
 
-				uint8_t allocSize = uint8_t(fmax(64, str.length()));
-
-				char* buf = (char*)malloc(allocSize);
-
-				if (buf == 0)
+				if (!prop.Set)
 				{
-					throw("editor.cpp: Text entry buffer was NULL (allocation error).");
-					return;
+					// no setter (locked property, such as ClassName or ObjectId)
+					// 07/07/2024
+
+					std::string curValStr = curVal.ToString();
+
+					ImGui::Text(std::vformat("{}: {}", std::make_format_args(propName, curValStr)).c_str());
+
+					continue;
 				}
 
-				memcpy(buf, str.c_str(), allocSize);
+				Reflection::GenericValue newVal = curVal;
 
-				ImGui::InputText(propName, buf, 64);
-
-				str = std::string(buf);
-
-				free(buf);
-
-				break;
-			}
-
-			case (Reflection::ValueType::Bool):
-			{
-				bool b = newVal.AsBool();
-
-				ImGui::Checkbox(propName, &b);
-				newVal = b;
-
-				break;
-			}
-
-			case (Reflection::ValueType::Double):
-			{
-				double d = newVal.AsDouble();
-
-				ImGui::InputDouble(propName, &d);
-				newVal = d;
-
-				break;
-			}
-
-			case (Reflection::ValueType::Integer):
-			{
-				// TODO BIG BAD HACK HACK HACK
-				// stoobid Dear ImGui :'(
-				// only allows 32-bit integer input
-				// 01/09/2024
-				int32_t valAs32Bit = static_cast<int32_t>(curVal.AsInteger());
-
-				ImGui::InputInt(propName, &valAs32Bit);
-
-				newVal = valAs32Bit;
-
-				break;
-			}
-
-			case (Reflection::ValueType::GameObject):
-			{
-				// TODO BIG BAD HACK HACK HACK
-				// stoobid Dear ImGui :'(
-				// only allows 32-bit integer input
-				// 01/09/2024
-				int32_t id = static_cast<int32_t>(curVal.AsInteger());
-
-				ImGui::InputInt(propName, &id);
-
-				newVal = id;
-
-				break;
-			}
-
-			case (Reflection::ValueType::Color):
-			{
-				Color col = curVal;
-
-				float entry[3] = { col.R, col.G, col.B };
-
-				ImGui::ColorEdit3(propName, entry, ImGuiColorEditFlags_None);
-
-				//ImGui::InputFloat3(propName, entry);
-
-				col.R = entry[0];
-				col.G = entry[1];
-				col.B = entry[2];
-
-				newVal = col.ToGenericValue();
-
-				break;
-			}
-
-			case (Reflection::ValueType::Vector3):
-			{
-				Vector3 vec = curVal;
-
-				float entry[3] =
+				switch (curVal.Type)
 				{
-					static_cast<float>(vec.X),
-					static_cast<float>(vec.Y),
-					static_cast<float>(vec.Z)
-				};
 
-				ImGui::InputFloat3(propName, entry);
-
-				vec.X = entry[0];
-				vec.Y = entry[1];
-				vec.Z = entry[2];
-
-				newVal = vec.ToGenericValue();
-
-				break;
-			}
-
-			case (Reflection::ValueType::Matrix):
-			{
-				glm::mat4 mat = curVal.AsMatrix();
-
-				ImGui::Text("Transform:");
-
-				float pos[3] =
+				case (Reflection::ValueType::String):
 				{
-					mat[3][0],
-					mat[3][1],
-					mat[3][2]
-				};
+					std::string str = curVal.AsString();
 
-				// PLEASE GOD JUST WORK ALREADY
-				// 21/09/2024
-				glm::vec3 rotrads{};
-				
-				glm::extractEulerAngleXYZ(mat, rotrads.x, rotrads.y, rotrads.z);
+					const size_t INPUT_TEXT_BUFFER_ADDITIONAL = 64;
 
-				//mat = glm::rotate(mat, -rotrads[0], glm::vec3(1.f, 0.f, 0.f));
-				//mat = glm::rotate(mat, -rotrads[1], glm::vec3(0.f, 1.f, 0.f));
-				//mat = glm::rotate(mat, -rotrads[2], glm::vec3(0.f, 0.f, 1.f));
-				
-				float rotdegs[3] =
+					size_t allocSize = str.size() + INPUT_TEXT_BUFFER_ADDITIONAL;
+
+					char* buf = bufferInitialize(
+						allocSize,
+						"<Initial Value 29/09/2024 Hey guys How we doing today>"
+					);
+
+					memcpy(buf, str.data(), str.size());
+
+					buf[str.size()] = 0;
+
+					ImGui::InputText(propName, buf, allocSize);
+					newVal = std::string(buf);
+
+					free(buf);
+
+					break;
+				}
+
+				case (Reflection::ValueType::Bool):
 				{
-					glm::degrees(rotrads.x),
-					glm::degrees(rotrads.y),
-					glm::degrees(rotrads.z)
-				};
+					bool b = newVal.AsBool();
 
-				ImGui::InputFloat3("Position", pos);
-				ImGui::InputFloat3("Rotation", rotdegs);
+					ImGui::Checkbox(propName, &b);
+					newVal = b;
 
-				mat = glm::mat4(1.f);
+					break;
+				}
 
-				mat[3][0] = pos[0];
-				mat[3][1] = pos[1];
-				mat[3][2] = pos[2];
+				case (Reflection::ValueType::Double):
+				{
+					double d = newVal.AsDouble();
 
-				mat *= glm::eulerAngleXYZ(glm::radians(rotdegs[0]), glm::radians(rotdegs[1]), glm::radians(rotdegs[2]));
+					ImGui::InputDouble(propName, &d);
+					newVal = d;
 
-				newVal = Reflection::GenericValue(mat);
+					break;
+				}
 
-				break;
+				case (Reflection::ValueType::Integer):
+				{
+					// TODO BIG BAD HACK HACK HACK
+					// stoobid Dear ImGui :'(
+					// only allows 32-bit integer input
+					// 01/09/2024
+					int32_t valAs32Bit = static_cast<int32_t>(curVal.AsInteger());
+
+					ImGui::InputInt(propName, &valAs32Bit);
+
+					newVal = valAs32Bit;
+
+					break;
+				}
+
+				case (Reflection::ValueType::GameObject):
+				{
+					// TODO BIG BAD HACK HACK HACK
+					// stoobid Dear ImGui :'(
+					// only allows 32-bit integer input
+					// 01/09/2024
+					int32_t id = static_cast<int32_t>(curVal.AsInteger());
+
+					ImGui::InputInt(propName, &id);
+
+					newVal = id;
+					newVal.Type = Reflection::ValueType::GameObject;
+
+					break;
+				}
+
+				case (Reflection::ValueType::Color):
+				{
+					Color col = curVal;
+
+					float entry[3] = { col.R, col.G, col.B };
+
+					ImGui::ColorEdit3(propName, entry, ImGuiColorEditFlags_None);
+
+					//ImGui::InputFloat3(propName, entry);
+
+					col.R = entry[0];
+					col.G = entry[1];
+					col.B = entry[2];
+
+					newVal = col.ToGenericValue();
+
+					break;
+				}
+
+				case (Reflection::ValueType::Vector3):
+				{
+					Vector3 vec = curVal;
+
+					float entry[3] =
+					{
+						static_cast<float>(vec.X),
+						static_cast<float>(vec.Y),
+						static_cast<float>(vec.Z)
+					};
+
+					ImGui::InputFloat3(propName, entry);
+
+					vec.X = entry[0];
+					vec.Y = entry[1];
+					vec.Z = entry[2];
+
+					newVal = vec.ToGenericValue();
+
+					break;
+				}
+
+				case (Reflection::ValueType::Matrix):
+				{
+					glm::mat4 mat = curVal.AsMatrix();
+
+					ImGui::Text("%s:", propName);
+
+					float pos[3] =
+					{
+						mat[3][0],
+						mat[3][1],
+						mat[3][2]
+					};
+
+					// PLEASE GOD JUST WORK ALREADY
+					// 21/09/2024
+					glm::vec3 rotrads{};
+
+					glm::extractEulerAngleXYZ(mat, rotrads.x, rotrads.y, rotrads.z);
+
+					//mat = glm::rotate(mat, -rotrads[0], glm::vec3(1.f, 0.f, 0.f));
+					//mat = glm::rotate(mat, -rotrads[1], glm::vec3(0.f, 1.f, 0.f));
+					//mat = glm::rotate(mat, -rotrads[2], glm::vec3(0.f, 0.f, 1.f));
+
+					float rotdegs[3] =
+					{
+						glm::degrees(rotrads.x),
+						glm::degrees(rotrads.y),
+						glm::degrees(rotrads.z)
+					};
+
+					ImGui::InputFloat3("Position", pos);
+					ImGui::InputFloat3("Rotation", rotdegs);
+
+					mat = glm::mat4(1.f);
+
+					mat[3][0] = pos[0];
+					mat[3][1] = pos[1];
+					mat[3][2] = pos[2];
+
+					mat *= glm::eulerAngleXYZ(glm::radians(rotdegs[0]), glm::radians(rotdegs[1]), glm::radians(rotdegs[2]));
+
+					newVal = Reflection::GenericValue(mat);
+
+					break;
+				}
+
+				default:
+				{
+					int typeId = static_cast<int>(curVal.Type);
+					const std::string& typeName = Reflection::TypeAsString(curVal.Type);
+
+					ImGui::Text(std::vformat(
+						"{}: <Display of ID:{} ('{}') types not unavailable>",
+						std::make_format_args(propName, typeId, typeName)
+					).c_str());
+
+					break;
+				}
+
+				}
+
+				selected->SetPropertyValue(propName, newVal);
 			}
-
-			default:
-			{
-				int typeId = static_cast<int>(curVal.Type);
-				const std::string& typeName = Reflection::TypeAsString(curVal.Type);
-
-				ImGui::Text(std::vformat(
-					"{}: <Display of ID:{} ('{}') types not unavailable>",
-					std::make_format_args(propName, typeId, typeName)
-				).c_str());
-
-				break;
-			}
-
-			}
-
-			selected->SetPropertyValue(propName, newVal);
 		}
 	}
 
@@ -646,8 +785,7 @@ void Editor::RenderUI()
 		{
 			GameObject* newObj = GameObject::Create(m_NewObjectClass);
 
-			if (m_CurrentUIHierarchyRoot)
-				newObj->SetParent(m_CurrentUIHierarchyRoot);
+			newObj->SetParent(selected ? selected : GameObject::s_DataModel);
 		}
 	}
 }

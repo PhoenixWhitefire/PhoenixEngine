@@ -1,24 +1,33 @@
 // TODO: cleanup code!
 
-#include<iostream>
-#include<iomanip>
-#include<ctime>
-#include<sstream>
-#include<nljson.hpp>
-#include<SDL2/SDL_messagebox.h>
-#include<SDL2/SDL_video.h>
-#include<glm/gtc/matrix_transform.hpp>
+#include <iostream>
+#include <nljson.hpp>
+#include <SDL2/SDL_messagebox.h>
+#include <SDL2/SDL_video.h>
+#include <glm/gtc/matrix_transform.hpp>
 
-#include"asset/SceneFormat.hpp"
+#include "asset/SceneFormat.hpp"
 
-#include"gameobject/GameObjects.hpp"
-#include"asset/Material.hpp"
-#include"asset/ModelLoader.hpp"
-#include"asset/PrimitiveMeshes.hpp"
-#include"FileRW.hpp"
-#include"Debug.hpp"
+#include "gameobject/GameObjects.hpp"
+#include "asset/Material.hpp"
+#include "asset/ModelLoader.hpp"
+#include "asset/PrimitiveMeshes.hpp"
+#include "FileRW.hpp"
+#include "Debug.hpp"
 
 static std::string errorString = "No error";
+
+static std::unordered_map<std::string, std::string> SpecialPropertyToSerializedName =
+{
+	{ "ObjectId", "$_objectId" },
+	{ "Class", "$_class" }
+};
+
+static std::vector<std::string> SpecialSerializedNames =
+{
+	"$_objectId",
+	"$_class"
+};
 
 static auto LoadModelAsMeshes(
 	const char* ModelFilePath,
@@ -66,16 +75,14 @@ static Vector3 GetVector3FromJson(const nlohmann::json& Json)
 
 static Color GetColorFromJson(const nlohmann::json& Json)
 {
-	int Index = -1;
-
 	Color col;
 
 	try
 	{
 		col = Color(
-			Json[++Index],
-			Json[++Index],
-			Json[++Index]
+			Json[0],
+			Json[1],
+			Json[2]
 		);
 	}
 	catch (nlohmann::json::type_error TErr)
@@ -166,6 +173,7 @@ static std::vector<GameObject*> LoadMapVersion1(
 	nlohmann::json LightsNode = JsonData["lights"];
 
 	std::vector<GameObject*> Objects;
+	Objects.reserve(PartsNode.size() + ModelsNode.size() + LightsNode.size());
 
 	for (uint32_t Index = 0; Index < ModelsNode.size(); Index++)
 	{
@@ -191,7 +199,7 @@ static std::vector<GameObject*> LoadMapVersion1(
 
 		std::string modelName = PropObject.value("name", "<UN-NAMED>");
 
-		if (Model.size() == 0)
+		if (Model.empty())
 			Debug::Log(
 				std::vformat(
 					"Model '{}' in map file '{}' has no meshes!",
@@ -207,10 +215,9 @@ static std::vector<GameObject*> LoadMapVersion1(
 			{
 				GameObject* container = GameObject::Create("Model");
 
-				for (uint32_t index = 0; index < Model.size(); index++)
+				for (size_t index = 0; index < Model.size(); index++)
 				{
 					GameObject* mesh = Model[index];
-					mesh->Name = std::vformat("{}_{}", std::make_format_args(modelName, index));
 					mesh->SetParent(container);
 				}
 
@@ -225,30 +232,30 @@ static std::vector<GameObject*> LoadMapVersion1(
 			}
 		}
 
-		auto prop_3d = dynamic_cast<Object_Base3D*>(Model[0]);
-
-		if (PropObject.find("facecull") != PropObject.end())
+		if (Model.size() >= 1)
 		{
-			std::string facecullNameStr = std::string(PropObject["facecull"]);
-			const char* facecullName = facecullNameStr.c_str();
+			auto prop_3d = dynamic_cast<Object_Base3D*>(Model[0]);
 
-			if (strcmp(facecullName, "none") == 0)
-				prop_3d->FaceCulling = FaceCullingMode::None;
+			if (PropObject.find("facecull") != PropObject.end())
+			{
+				std::string facecullNameStr = std::string(PropObject["facecull"]);
+				const char* facecullName = facecullNameStr.c_str();
 
-			else if (strcmp(facecullName, "front") == 0)
-				prop_3d->FaceCulling = FaceCullingMode::FrontFace;
+				if (strcmp(facecullName, "none") == 0)
+					prop_3d->FaceCulling = FaceCullingMode::None;
 
-			else if (strcmp(facecullName, "back") == 0)
-				prop_3d->FaceCulling = FaceCullingMode::BackFace;
+				else if (strcmp(facecullName, "front") == 0)
+					prop_3d->FaceCulling = FaceCullingMode::FrontFace;
 
-			else
-				prop_3d->FaceCulling = FaceCullingMode::BackFace;
+				else if (strcmp(facecullName, "back") == 0)
+					prop_3d->FaceCulling = FaceCullingMode::BackFace;
+
+				else
+					prop_3d->FaceCulling = FaceCullingMode::BackFace;
+			}
+
+			prop_3d->PhysicsDynamics = PropObject.value("computePhysics", 0) == 1 ? true : false;
 		}
-
-		if (PropObject.find("has_transparency") != PropObject.end())
-			dynamic_cast<Object_Mesh*>(Model[0])->HasTransparency = true;
-
-		prop_3d->PhysicsDynamics = PropObject.value("computePhysics", 0) == 1 ? true : false;
 	}
 
 	for (uint32_t Index = 0; Index < PartsNode.size(); Index++)
@@ -265,7 +272,7 @@ static std::vector<GameObject*> LoadMapVersion1(
 
 			Object_Base3D* Object3D = dynamic_cast<Object_Base3D*>(NewObject);
 
-			NewObject->Name = Object.value("Name", NewObject->Name);
+			NewObject->Name = Object.value("name", NewObject->Name);
 
 			Vector3 Position = GetVector3FromJson(Object["position"]);
 			Vector3 Orientation;
@@ -341,7 +348,10 @@ static std::vector<GameObject*> LoadMapVersion1(
 
 		Object_Light* Light = dynamic_cast<Object_Light*>(Object);
 
-		Light->Position = GetVector3FromJson(LightObject["position"]);
+		Light->LocalTransform = glm::translate(
+			glm::mat4(1.f),
+			(glm::vec3)GetVector3FromJson(LightObject["position"])
+		);
 
 		Light->LightColor = GetColorFromJson(LightObject["color"]);
 
@@ -397,167 +407,160 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 	std::unordered_map<int64_t, int64_t> realIdToSceneId;
 	std::unordered_map<GameObject*, std::unordered_map<std::string, uint32_t>> objectProps;
 
+	objectsMap.reserve(GameObjectsNode.size());
+	realIdToSceneId.reserve(GameObjectsNode.size());
+
 	for (uint32_t itemIndex = 0; itemIndex < GameObjectsNode.size(); itemIndex++)
 	{
-		nlohmann::json item = GameObjectsNode[itemIndex];
+		const nlohmann::json& item = GameObjectsNode[itemIndex];
 
-		if (item.find("ClassName") == item.end())
+		if (item.find("$_class") == item.end())
 		{
-			*Success = false;
-			errorString = std::vformat(
-				"Object #{} is missing it's `ClassName` key",
-				std::make_format_args(itemIndex)
-			);
+			const char* fmtStr = "Deserialization warning: Object #{} was missing it's '$_class' key";
+			auto fmtArgs = std::make_format_args(itemIndex);
+			Debug::Log(std::vformat(fmtStr, fmtArgs));
 
 			continue;
 		}
 
-		std::string Class = item["ClassName"];
+		std::string className = item["$_class"];
+		std::string name = item.find("Name") != item.end() ? (std::string)item["Name"] : className;
 
-		if (item.find("Name") == item.end())
-		{
-			*Success = false;
-			errorString = std::vformat(
-				"Object #{} (a {}) was missing it's `Name` key.",
-				std::make_format_args(itemIndex, Class)
-			);
+		GameObject* newObject = GameObject::Create(className);
 
-			continue;
-		}
+		uint32_t itemObjectId = item["$_objectId"];
 
-		std::string Name = item["Name"];
+		objectsMap.insert(std::pair(itemObjectId, newObject));
+		realIdToSceneId.insert(std::pair(newObject->ObjectId, itemObjectId));
 
-		GameObject* NewObject = GameObject::Create(Class);
-
-		objectsMap.insert(std::pair(item.value("ObjectId", PHX_GAMEOBJECT_NULL_ID), NewObject));
-		realIdToSceneId.insert(std::pair(NewObject->ObjectId, item.value("ObjectId", PHX_GAMEOBJECT_NULL_ID)));
-
-		objectProps.insert(std::pair(NewObject, std::unordered_map<std::string, uint32_t>{}));
+		objectProps.insert(std::pair(newObject, std::unordered_map<std::string, uint32_t>{}));
 
 		// https://json.nlohmann.me/features/iterators/#access-object-key-during-iteration
 		for (auto memberIt = item.begin(); memberIt != item.end(); ++memberIt)
 		{
-			std::string MemberName = memberIt.key();
+			std::string memberName = memberIt.key();
 
-			if (MemberName == "ClassName" || MemberName == "ObjectId")
+			if (std::find(
+					SpecialSerializedNames.begin(),
+					SpecialSerializedNames.end(),
+					memberName
+				) != SpecialSerializedNames.end()
+			)
 				continue;
 			
-			nlohmann::json MemberValue = memberIt.value();
+			nlohmann::json memberValue = memberIt.value();
 
-			bool HasProp = NewObject->HasProperty(MemberName);
+			bool hasProp = newObject->HasProperty(memberName);
 
-			if (!HasProp)
+			if (!hasProp)
 			{
-				const char* FmtStr = "Deserialization warning: Member '{}' is not defined in the API for the Class {} (Name: '{}')!";
-				auto FmtArgs = std::make_format_args(
-					MemberName,
-					Class,
-					Name
+				const char* fmtStr = "Deserialization warning: Member '{}' is not defined in the API for the Class {} (Name: '{}')!";
+				auto fmtArgs = std::make_format_args(
+					memberName,
+					className,
+					name
 				);
-				Debug::Log(std::vformat(FmtStr, FmtArgs));
+				Debug::Log(std::vformat(fmtStr, fmtArgs));
 
 				continue;
 			}
 
-			auto& Member = NewObject->GetProperty(MemberName);
+			auto& member = newObject->GetProperty(memberName);
 
-			Reflection::ValueType MemberType = Member.Type;
-			
-			auto& PropSetter = Member.Set;
+			Reflection::ValueType memberType = member.Type;
+			auto& setProperty = member.Set;
 
-			if (!PropSetter)
+			if (!setProperty)
 			{
-				const char* FmtStr = "Deserialization warning: Member '{}' of {} '{}' is read-only!";
-				auto FmtArgs = std::make_format_args(
-					MemberName,
-					Class,
-					Name
+				const char* fmtStr = "Deserialization warning: Member '{}' of {} '{}' is read-only!";
+				auto fmtArgs = std::make_format_args(
+					memberName,
+					className,
+					name
 				);
-				Debug::Log(std::vformat(FmtStr, FmtArgs));
+				Debug::Log(std::vformat(fmtStr, fmtArgs));
 
 				continue;
 			}
 
-			switch (MemberType)
+			switch (memberType)
 			{
 
 			case (Reflection::ValueType::String):
 			{
-				std::string PropValue = MemberValue;
-				auto gv = Reflection::GenericValue(PropValue);
-				PropSetter(NewObject, gv);
+				std::string string = memberValue;
+				setProperty(newObject, string);
+
 				break;
 			}
 
 			case (Reflection::ValueType::Bool):
 			{
-				bool PropValue = MemberValue;
-				auto gv = Reflection::GenericValue(PropValue);
-				PropSetter(NewObject, gv);
+				bool boolean = memberValue;
+				setProperty(newObject, boolean);
+
 				break;
 			}
 
 			case (Reflection::ValueType::Double):
 			{
-				double PropValue = MemberValue;
-				auto gv = Reflection::GenericValue(PropValue);
-				PropSetter(NewObject, gv);
+				double number = memberValue;
+				setProperty(newObject, number);
+
 				break;
 			}
 
 			case (Reflection::ValueType::Integer):
 			{
-				int PropValue = MemberValue;
-				auto gv = Reflection::GenericValue(PropValue);
-				PropSetter(NewObject, gv);
+				int integer = memberValue;
+				setProperty(newObject, integer);
+
 				break;
 			}
 
 			case (Reflection::ValueType::Color):
 			{
-				Vector3 PropVec3 = GetVector3FromJson(MemberValue);
-				Color PropValue = Color(
-					static_cast<float>(PropVec3.X),
-					static_cast<float>(PropVec3.Y),
-					static_cast<float>(PropVec3.Z)
-				);
-				Reflection::GenericValue gv = PropValue.ToGenericValue();
-				PropSetter(NewObject, gv);
+				Color color = GetColorFromJson(memberValue);
+				setProperty(newObject, color.ToGenericValue());
+
 				break;
 			}
 
 			case (Reflection::ValueType::Vector3):
 			{
-				Vector3 PropValue = GetVector3FromJson(MemberValue);
-				Reflection::GenericValue gv = PropValue.ToGenericValue();
-				PropSetter(NewObject, gv);
+				Vector3 vector = GetVector3FromJson(memberValue);
+				setProperty(newObject, vector.ToGenericValue());
+
 				break;
 			}
 
 			case (Reflection::ValueType::Matrix):
 			{
-				glm::mat4 PropValue = GetMatrixFromJson(MemberValue);
-				Reflection::GenericValue gv(PropValue);
-				PropSetter(NewObject, gv);
+				glm::mat4 matrix = GetMatrixFromJson(memberValue);
+				setProperty(newObject, matrix);
+
 				break;
 			}
 
 			case (Reflection::ValueType::GameObject):
 			{
-				objectProps[NewObject].insert(std::pair(MemberName, MemberValue));
+				objectProps[newObject].insert(std::pair(memberName, memberValue));
 				break;
 			}
 
 			default:
 			{
-				const char* FmtStr = "Deserialization warning: Not reading prop '{}' of class {} because it's type ({}) is unknown";
-				std::string MemberTypeName = Reflection::TypeAsString(MemberType);
-				auto FmtArgs = std::make_format_args(
-					MemberName,
-					Class,
-					MemberTypeName
+				const char* fmtStr = "Deserialization warning: Not reading prop '{}' of class {} because it's type ({}) is unknown";
+				const std::string& memberTypeName = Reflection::TypeAsString(memberType);
+
+				auto fmtArgs = std::make_format_args(
+					memberName,
+					className,
+					memberTypeName
 				);
-				Debug::Log(std::vformat(FmtStr, FmtArgs));
+
+				Debug::Log(std::vformat(fmtStr, fmtArgs));
+
 				break;
 			}
 
@@ -565,7 +568,8 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 		}
 	}
 
-	std::vector<GameObject*> Objects;
+	std::vector<GameObject*> objects;
+	objects.reserve(objectsMap.size());
 
 	for (auto& it : objectsMap)
 	{
@@ -576,7 +580,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 		// *is not part of the scene!*
 		// 04/09/2024
 		if (objectProps[object].find("Parent") == objectProps[object].end())
-			Objects.push_back(object);
+			objects.push_back(object);
 
 		for (auto& objectProp : objectProps[object])
 		{
@@ -612,7 +616,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 		}
 	}
 
-	return Objects;
+	return objects;
 }
 
 std::vector<GameObject*> SceneFormat::Deserialize(
@@ -656,7 +660,7 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 		const std::string& propName = prop.first;
 		const IProperty& propInfo = prop.second;
 
-		if (!propInfo.Set && propName != "ObjectId" && propName != "ClassName")
+		if (!propInfo.Set && propName != "ObjectId" && propName != "Class")
 			continue;
 
 		// !! IMPORTANT !!
@@ -666,54 +670,61 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 		if (IsRootNode && propName == "Parent")
 			continue;
 
+		std::string serializedAs = propName;
+
+		auto specialNamesIt = SpecialPropertyToSerializedName.find(propName);
+
+		if (specialNamesIt != SpecialPropertyToSerializedName.end())
+			serializedAs = specialNamesIt->second;
+
 		Reflection::GenericValue value = propInfo.Get(Object);
 
 		switch (prop.second.Type)
 		{
 		case (Reflection::ValueType::Bool):
 		{
-			item[propName] = value.AsBool();
+			item[serializedAs] = value.AsBool();
 			break;
 		}
 		case (Reflection::ValueType::Integer):
 		{
-			item[propName] = value.AsInteger();
+			item[serializedAs] = value.AsInteger();
 			break;
 		}
 		case (Reflection::ValueType::Double):
 		{
-			item[propName] = value.AsDouble();
+			item[serializedAs] = value.AsDouble();
 			break;
 		}
 		case (Reflection::ValueType::String):
 		{
-			item[propName] = value.AsString();
+			item[serializedAs] = value.AsString();
 			break;
 		}
 		
 		case (Reflection::ValueType::Color):
 		{
 			Color col(value);
-			item[propName] = { col.R, col.G, col.B };
+			item[serializedAs] = { col.R, col.G, col.B };
 			break;
 		}
 		case (Reflection::ValueType::Vector3):
 		{
 			Vector3 vec(value);
-			item[propName] = { vec.X, vec.Y, vec.Z };
+			item[serializedAs] = { vec.X, vec.Y, vec.Z };
 			break;
 		}
 		case (Reflection::ValueType::Matrix):
 		{
 			glm::mat4 mat = value.AsMatrix();
-			item[propName] = nlohmann::json::array();
+			item[serializedAs] = nlohmann::json::array();
 
 			for (int col = 0; col < 4; col++)
 			{
-				item[propName][col] = nlohmann::json::array();
+				item[serializedAs][col] = nlohmann::json::array();
 
 				for (int row = 0; row < 4; row++)
-					item[propName][col][row] = mat[col][row];
+					item[serializedAs][col][row] = mat[col][row];
 			}
 				
 			break;
@@ -721,12 +732,12 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 
 		case (Reflection::ValueType::GameObject):
 		{
-			auto target = GameObject::s_WorldArray.find(static_cast<uint32_t>(value.AsInteger()));
+			auto target = GameObject::FromGenericValue(value);
 
-			if (target != GameObject::s_WorldArray.end())
-				item[propName] = value.AsInteger();
+			if (target)
+				item[serializedAs] = value.AsInteger();
 			else
-				item[propName] = PHX_GAMEOBJECT_NULL_ID;
+				item[serializedAs] = PHX_GAMEOBJECT_NULL_ID;
 		}
 		}
 	}
@@ -752,17 +763,17 @@ std::string SceneFormat::Serialize(std::vector<GameObject*> Objects, const std::
 
 	json["GameObjects"] = objectsArray;
 
-	time_t t = std::time(nullptr);
-	tm tm = *std::localtime(&t);
+	std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+	std::chrono::year_month_day ymd = std::chrono::floor<std::chrono::days>(now);
 
-	std::ostringstream oss;
-	oss << std::put_time(&tm, "%d-%m-%Y");
-	std::string dateTimeStr = oss.str();
+	std::string dateStr = std::to_string((uint32_t)ymd.day()) + "-"
+							+ std::to_string((uint32_t)ymd.month()) + "-"
+							+ std::to_string((int32_t)ymd.year()) + "\n";
 
 	std::string contents = "Generated by Phoenix Engine as " + SceneName + "\n"
 							+ "#Version 2.00\n"
 							+ "#Asset Scene\n"
-							+ "#DateTime " + dateTimeStr + "\n"
+							+ "#Date " + dateStr + "\n"
 							+ "#SceneName " + SceneName + "\n"
 							+ "\n"
 							+ json.dump(2);

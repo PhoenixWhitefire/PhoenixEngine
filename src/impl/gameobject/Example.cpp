@@ -1,15 +1,15 @@
 // 15/09/2024 PHOENIXWHITEFIRE2000
 // A template/example GameObject.
 
-#include"gameobject/Example.hpp"
-#include"gameobject/DataModel.hpp"
+#include "gameobject/Example.hpp"
+#include "gameobject/DataModel.hpp"
 
-static bool s_DidInitReflection = false;
-
-// This inserts a pointer to the template function `createT_baseGameObject<Object_Example>`
+// This inserts a pointer to the template function `createGameObjectHeir<Object_Example>`
 // into the `unordered_map` `GameObject::s_GameObjectMap`, which is then
 // called by `GameObject::Create`
-static RegisterDerivedObject<Object_Example> RegisterClassAs("Example");
+PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(Example);
+
+static bool s_DidInitReflection = false;
 
 void Object_Example::s_DeclareReflections()
 {
@@ -19,7 +19,7 @@ void Object_Example::s_DeclareReflections()
 
 	// Inherit first, ordered base-to-derived
 	REFLECTION_INHERITAPI(GameObject);
-	REFLECTION_INHERITAPI(Object_Script);
+	REFLECTION_INHERITAPI(Script);
 
 	// We go base-to-derived so members declared in the ancestral classes
 	// can be overriden by any inheriting descendants for their own
@@ -29,7 +29,7 @@ void Object_Example::s_DeclareReflections()
 
 	REFLECTION_DECLAREPROP(
 		"Value1",
-		String,
+		Bool,
 		[](GameObject* p)
 		{
 			// Implicitly calls the `::GenericValue(bool)` constructor
@@ -77,10 +77,10 @@ void Object_Example::s_DeclareReflections()
 			Reflection::GenericValue gv = args.at(0);
 			std::vector<Reflection::GenericValue> names = gv.AsArray();
 
-			if (names.size() == 0)
+			if (names.empty())
 				return { p->Name + ": He- Oh... There's no one here... :(" };
 
-			else if (gv.Array.size() == 1)
+			else if (names.size() == 1)
 				return { p->Name + ": Hello, " + names[0].AsString() + "!" };
 
 			// Even though you *could* do

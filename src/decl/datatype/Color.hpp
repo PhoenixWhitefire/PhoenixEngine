@@ -1,9 +1,8 @@
 #pragma once
 
-#include<string>
-#include<format>
+#include <string>
 
-#include"Reflection.hpp"
+#include "Reflection.hpp"
 
 class Color
 {
@@ -23,7 +22,7 @@ public:
 	Color(float R, float G, float B);
 	Color(Reflection::GenericValue);
 
-	Reflection::GenericValue ToGenericValue();
+	Reflection::GenericValue ToGenericValue() const;
 	// Returns formatted `R, G, B`
 	std::string ToString();
 
