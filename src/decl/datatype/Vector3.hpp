@@ -15,7 +15,7 @@ public:
 	Vector3(glm::vec3);
 	Vector3(Reflection::GenericValue);
 
-	Reflection::GenericValue ToGenericValue();
+	Reflection::GenericValue ToGenericValue() const;
 	// Returns formatted `X, Y, Z`
 	std::string ToString();
 
@@ -42,8 +42,8 @@ public:
 	Vector3 operator - (Vector3 Other);
 	Vector3 operator - ();
 	bool operator == (Vector3 Other);
-	operator glm::tvec3<double, glm::highp>();
-	operator glm::tvec3<float, glm::highp>();
+	operator glm::tvec3<double, glm::highp>() const;
+	operator glm::tvec3<float, glm::highp>() const;
 
 private:
 	static void s_DeclareReflections();

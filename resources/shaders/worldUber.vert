@@ -6,11 +6,13 @@ layout (location = 0) in vec3 VertexPosition;
 layout (location = 1) in vec3 VertexNormal;
 layout (location = 2) in vec3 VertexColor;
 layout (location = 3) in vec2 TexUV;
+// from Instanced Array
+//layout (location = 4) in mat4 InstanceTransform;
 
 uniform mat4 CameraMatrix;
 
-uniform mat4 Transform = mat4(1.0f);
-uniform mat4 Scale = mat4(1.0f);
+uniform mat4 Transform;
+uniform mat4 Scale;
 
 uniform float Time;
 

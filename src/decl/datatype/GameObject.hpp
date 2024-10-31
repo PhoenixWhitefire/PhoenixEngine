@@ -87,14 +87,13 @@ virtual Reflection::GenericValue CallFunction(const std::string& MemberName, con
 		throw(std::string("InvalidFunction in CallFunction " + MemberName)); \
 } \
 
-#include<functional>
-#include<vector>
-#include<string>
-#include<unordered_map>
-#include<nljson.hpp>
+#include <unordered_map>
+#include <functional>
+#include <vector>
+#include <string>
+#include <nljson.hpp>
 
-#include"Reflection.hpp"
-#include"datatype/Event.hpp"
+#include "Reflection.hpp"
 
 class GameObject;
 

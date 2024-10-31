@@ -1,17 +1,16 @@
 #pragma once
 
-#include<filesystem>
-#include<nljson.hpp>
-#include<SDL2/SDL_video.h>
+#include <filesystem>
+#include <nljson.hpp>
+#include <SDL2/SDL_video.h>
 
-#include"gameobject/GameObjects.hpp"
+#include "gameobject/GameObjects.hpp"
+#include "render/ShaderProgram.hpp"
+#include "render/Renderer.hpp"
 
-#include"render/ShaderProgram.hpp"
-#include"render/Renderer.hpp"
-
-#include"datatype/Vector2.hpp"
-
-#include"PhysicsEngine.hpp"
+#include "datatype/Vector2.hpp"
+#include "datatype/Event.hpp"
+#include "PhysicsEngine.hpp"
 
 // TODO: cleanup structure of public vs private
 class EngineObject

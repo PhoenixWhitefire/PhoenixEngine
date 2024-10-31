@@ -37,7 +37,7 @@ static uint8_t MissingTextureBytes[12] =
 
 void TextureManager::m_UploadTextureToGpu(Texture& texture)
 {
-	if (texture.Status == TextureLoadStatus::Failed)
+	if (texture.Status == Texture::LoadStatus::Failed)
 	{
 		std::string fallbackPath = MissingTexPath;
 
@@ -153,7 +153,7 @@ TextureManager::TextureManager()
 	missingTexture.Height = 2;
 	missingTexture.NumColorChannels = 3;
 	missingTexture.TMP_ImageByteData = MissingTextureBytes;
-	missingTexture.Status = TextureLoadStatus::Succeeded;
+	missingTexture.Status = Texture::LoadStatus::Succeeded;
 
 	glBindTexture(GL_TEXTURE_2D, missingTexture.GpuId);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -232,7 +232,7 @@ static void asyncTextureLoader(
 		&AsyncTexture->NumColorChannels
 	);
 
-	AsyncTexture->Status = data ? TextureLoadStatus::Succeeded : TextureLoadStatus::Failed;
+	AsyncTexture->Status = data ? Texture::LoadStatus::Succeeded : Texture::LoadStatus::Failed;
 
 	AsyncTexture->TMP_ImageByteData = data;
 }
@@ -308,7 +308,7 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 				loadImageData
 			).detach();
 
-			newTexture.Status = TextureLoadStatus::InProgress;
+			newTexture.Status = Texture::LoadStatus::InProgress;
 
 			m_TexPromises.push_back(promise);
 			m_TexFutures.push_back(promise->get_future().share());
@@ -323,7 +323,7 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 			);
 
 			newTexture.TMP_ImageByteData = data;
-			newTexture.Status = data ? TextureLoadStatus::Succeeded : TextureLoadStatus::Failed;
+			newTexture.Status = data ? Texture::LoadStatus::Succeeded : Texture::LoadStatus::Failed;
 
 			m_UploadTextureToGpu(newTexture);
 		}
@@ -368,12 +368,12 @@ void TextureManager::FinalizeAsyncLoadedTextures()
 
 		Texture& image = m_Textures.at(loadedImage.ResourceId);
 
-		if (image.Status != TextureLoadStatus::InProgress)
+		if (image.Status != Texture::LoadStatus::InProgress)
 			continue;
 
 		image.Status = loadedImage.Status;
 
-		if (image.Status == TextureLoadStatus::Succeeded)
+		if (image.Status == Texture::LoadStatus::Succeeded)
 		{
 			image.Width = loadedImage.Width;
 			image.Height = loadedImage.Height;

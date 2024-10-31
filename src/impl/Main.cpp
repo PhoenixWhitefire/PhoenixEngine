@@ -312,8 +312,8 @@ static void LoadLevel(const std::string& LevelPath)
 
 	// 11/09/2024
 	// Today marks the day a Luau script can move the Camera
-	// It''ll set `GenericMovement` to false so that `HandleInputs` doesn't
-	//  mess with it
+	// It'll set `UseSimpleController` to false so that `handleInputs` doesn't
+	// mess with it
 	// We set it to true here in case the next level does not have a Camera Control Script
 	// (cause I still want to look around :3)
 	// (without having to go to the Camera in the Hierarchy and manually re-enable it :3)
@@ -447,6 +447,7 @@ static void drawUI(Reflection::GenericValue Data)
 
 		ImGui::Text("FPS: %d", EngineInstance->FramesPerSecond);
 		ImGui::Text("Frame time: %dms", (int)ceil(EngineInstance->FrameTime * 1000));
+		ImGui::Text("Draw calls: %zi", EngineJsonConfig.value("renderer_drawcallcount", 0ULL));
 
 		ImGui::End();
 

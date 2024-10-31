@@ -1,9 +1,9 @@
 #pragma once
 
-#include<glm/matrix.hpp>
-#include<vector>
+#include <glm/matrix.hpp>
+#include <vector>
 
-#include"gameobject/Base3D.hpp"
+#include "gameobject/Base3D.hpp"
 
 namespace IntersectionLib
 {

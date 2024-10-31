@@ -1,4 +1,4 @@
-#include"datatype/Vector2.hpp"
+#include "datatype/Vector2.hpp"
 
 Vector2::Vector2()
 {

@@ -1,8 +1,8 @@
 #pragma once
 
-#include<functional>
-#include<string>
-#include<thread>
+#include <functional>
+#include <string>
+#include <thread>
 
 enum class WorkerStatus : uint8_t { WaitingForTask, RunningTask };
 

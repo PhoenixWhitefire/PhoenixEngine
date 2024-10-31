@@ -398,6 +398,31 @@ void ShaderProgram::SetUniform(const char* UniformName, const Reflection::Generi
 	m_PendingUniforms[UniformName] = Value;
 }
 
+void ShaderProgram::SetTextureUniform(const char* UniformName, uint32_t TextureId, Texture::DimensionType Type)
+{
+	static std::unordered_map<Texture::DimensionType, GLenum> DimensionTypeToGLDimension =
+	{
+		{ Texture::DimensionType::Texture2D, GL_TEXTURE_2D },
+		{ Texture::DimensionType::Texture3D, GL_TEXTURE_3D },
+		{ Texture::DimensionType::TextureCube, GL_TEXTURE_CUBE_MAP }
+	};
+
+	static TextureManager* texManager = TextureManager::Get();
+	static uint32_t WhiteTextureId = texManager->LoadTextureFromPath("textures/white.png");
+	static uint32_t WhiteTextureGpuId = texManager->GetTextureResource(WhiteTextureId)->GpuId;
+
+	if (TextureId == UINT32_MAX)
+		TextureId = WhiteTextureGpuId;
+
+	glActiveTexture(GL_TEXTURE0 + TextureId);
+	glBindTexture(
+		DimensionTypeToGLDimension.at(Type),
+		TextureId
+	);
+
+	m_PendingUniforms[UniformName] = TextureId;
+}
+
 void ShaderProgram::m_PrintErrors(uint32_t Object, const char* Type) const
 {
 	char infoLog[1024];

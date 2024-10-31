@@ -1,4 +1,4 @@
-#include<AnimationService.hpp>
+#include <AnimationService.hpp>
 
 AnimationService* AnimationService::Inst = nullptr;
 

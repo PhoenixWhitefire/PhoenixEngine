@@ -1,15 +1,13 @@
 #pragma once
 
-#include <set>
+#include <unordered_set>
 #include <optional>
-#include <glm/matrix.hpp>
+#include <glm/mat4x4.hpp>
 
 #include "render/ShaderProgram.hpp"
-#include "asset/Material.hpp"
-#include "datatype/Mesh.hpp"
 #include "render/GpuBuffers.hpp"
-#include "datatype/Color.hpp"
-#include "datatype/Vector3.hpp"
+#include "asset/Material.hpp"
+
 #include "gameobject/Base3D.hpp"
 
 /*
@@ -65,7 +63,7 @@ struct Scene
 	std::vector<RenderItem> RenderList;
 	std::vector<LightItem> LightingList;
 
-	std::set<ShaderProgram*> UsedShaders;
+	std::unordered_set<ShaderProgram*> UsedShaders;
 };
 
 class Renderer
@@ -80,12 +78,15 @@ public:
 	void DrawScene(const Scene& Scene);
 
 	// Submits a single draw call
+	// `NumInstances` made under the assumption the caller
+	// has bound the Instanced Array prior to calling this function
 	void DrawMesh(
 		Mesh* Object,
 		ShaderProgram* Shaders,
 		Vector3 Size,
 		glm::mat4 Transform = glm::mat4(1.0f),
-		FaceCullingMode Culling = FaceCullingMode::BackFace
+		FaceCullingMode Culling = FaceCullingMode::BackFace,
+		int32_t NumInstances = 1
 	);
 
 	void SwapBuffers();
@@ -95,11 +96,12 @@ public:
 	SDL_GLContext GLContext = nullptr;
 
 private:
-	void m_SetMaterialData(const RenderItem& Mesh, ShaderProgram* Shader);
+	void m_SetMaterialData(const RenderItem&);
 
 	GpuVertexArray* m_VertexArray = nullptr;
 	GpuVertexBuffer* m_VertexBuffer = nullptr;
 	GpuElementBuffer* m_ElementBuffer = nullptr;
+	uint32_t m_InstancingBuffer{};
 
 	SDL_Window* m_Window = nullptr;
 	

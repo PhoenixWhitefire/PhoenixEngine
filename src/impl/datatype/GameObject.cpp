@@ -1,7 +1,5 @@
-#include<algorithm>
-
-#include"datatype/GameObject.hpp"
-#include"Debug.hpp"
+#include "datatype/GameObject.hpp"
+#include "Debug.hpp"
 
 PHX_GAMEOBJECT_LINKTOCLASS("GameObject", GameObject);
 

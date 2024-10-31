@@ -1,10 +1,10 @@
-#include<filesystem>
-#include<fstream>
-#include<format>
+#include <filesystem>
+#include <fstream>
+#include <format>
 
-#include"FileRW.hpp"
-#include"GlobalJsonConfig.hpp"
-#include"Debug.hpp"
+#include "FileRW.hpp"
+#include "GlobalJsonConfig.hpp"
+#include "Debug.hpp"
 
 // 16/09/2024 PWK2K
 // https://stackoverflow.com/a/71658518

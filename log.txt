@@ -12,4 +12,9 @@ Scene version is 2
 Scene loaded
 Final initializations...
 Main engine loop start
-Luau script init error: [string "Workspace.Level.MainScript"]:5: attempt to index nil with 'SceneCamera'
+Loading scene: 'levels/de_dust2.world'
+Scene version is 1
+Scene loaded
+Main loop exited
+Engine destructing...
+Application shutting down...

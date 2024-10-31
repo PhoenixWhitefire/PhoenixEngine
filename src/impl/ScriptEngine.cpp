@@ -682,6 +682,10 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 			MeshProvider* meshProvider = MeshProvider::Get();
 			meshProvider->Assign(mesh, meshName);
 
+			// Informs the Renderer the mesh doesn't exist on the GPU on it's own
+			// and must be uploaded when it's rendered
+			meshProvider->GetMeshResource(meshProvider->LoadFromPath(meshName))->GpuId = UINT32_MAX;
+
 			return 0;
 		}
 	},
@@ -766,7 +770,7 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 		{
 			const char* path = luaL_checkstring(L, 1);
 
-			std::vector<GameObject*> loadedRoots = ModelLoader(path, nullptr).LoadedObjs;
+			const std::vector<GameObject*>& loadedRoots = ModelLoader(path, nullptr).LoadedObjs;
 			
 			lua_newtable(L);
 

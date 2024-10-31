@@ -265,18 +265,62 @@ EngineObject::EngineObject()
 	Debug::Log("Engine constructed");
 }
 
-static std::vector<LightItem> createLightingList(GameObject* RootObject)
+static void recursivelyTravelHierarchy(
+	std::vector<RenderItem>& RenderList,
+	std::vector<LightItem>& LightList,
+	std::vector<Object_Base3D*>& PhysicsList,
+	GameObject* Root,
+	Object_Camera* SceneCamera
+)
 {
-	std::vector<GameObject*> objects = RootObject->GetChildren();
-	std::vector<LightItem> dataList;
-	dataList.reserve(objects.size());
+	std::vector<GameObject*> objects = Root->GetChildren();
+
+	RenderList.reserve(RenderList.capacity() + static_cast<size_t>(objects.size() / 2));
+	LightList.reserve(LightList.capacity() + static_cast<size_t>(objects.size() / 4));
+	PhysicsList.reserve(PhysicsList.capacity() + std::min(static_cast<size_t>(objects.size() / 8), 512ULL));
 
 	for (GameObject* object : objects)
 	{
 		if (!object->Enabled)
 			continue;
 
-		Object_Light* light = dynamic_cast<Object_Light*>(object);
+		Object_Base3D* object3D = dynamic_cast<Object_Base3D*>(object);
+
+		if (object3D)
+		{
+			if (object3D->PhysicsDynamics || object3D->PhysicsCollisions)
+				PhysicsList.emplace_back(object3D);
+
+			if (object3D->Transparency > .95f)
+				continue;
+
+			// TODO: frustum culling
+			// Hold R to disable distance culling
+			if (glm::distance(
+				glm::vec3(object3D->Transform[3]),
+				glm::vec3(SceneCamera->Transform[3])
+				) > 100.0f
+				&& !UserInput::IsKeyDown(SDLK_r)
+			)
+				continue;
+
+			//TODO: recheck whether we need this
+			// if (MeshObject->HasTransparency)
+				//continue;
+
+			RenderList.emplace_back(
+				object3D->GetRenderMeshId(),
+				object3D->Transform,
+				object3D->Size,
+				object3D->Material,
+				object3D->ColorRGB,
+				object3D->Transparency,
+				object3D->Reflectivity,
+				object3D->FaceCulling
+			);
+		}
+
+		Object_Light* light = !object3D ? dynamic_cast<Object_Light*>(object) : nullptr;
 
 		if (light)
 		{
@@ -284,14 +328,14 @@ static std::vector<LightItem> createLightingList(GameObject* RootObject)
 			Object_PointLight* point = dynamic_cast<Object_PointLight*>(light);
 
 			if (directional)
-				dataList.emplace_back(
+				LightList.emplace_back(
 					LightType::Directional,
 					(glm::vec3)light->LocalTransform[3],
 					light->LightColor * light->Brightness
 				);
 
 			if (point)
-				dataList.emplace_back(
+				LightList.emplace_back(
 					LightType::Point,
 					(glm::vec3)light->GetWorldTransform()[3],
 					light->LightColor * light->Brightness,
@@ -300,68 +344,14 @@ static std::vector<LightItem> createLightingList(GameObject* RootObject)
 		}
 
 		if (!object->GetChildren().empty())
-		{
-			std::vector<LightItem> childData = createLightingList(object);
-			std::copy(childData.begin(), childData.end(), std::back_inserter(dataList));
-		}
+			recursivelyTravelHierarchy(
+				RenderList,
+				LightList,
+				PhysicsList,
+				object,
+				SceneCamera
+			);
 	}
-
-	return dataList;
-}
-
-static std::vector<RenderItem> createRenderList(GameObject* RootObject, Object_Camera* SceneCamera)
-{
-	std::vector<GameObject*> objects = RootObject->GetChildren();
-	std::vector<RenderItem> dataList;
-	
-	dataList.reserve(objects.size());
-
-	for (GameObject* object : objects)
-	{
-		if (object->Enabled)
-		{
-			Object_Base3D* object3D = dynamic_cast<Object_Base3D*>(object);
-
-			if (object3D)
-			{
-				if (object3D->Transparency > .95f)
-					continue;
-
-				// TODO: frustum culling
-				// Hold R to disable distance culling
-				if (glm::distance(
-						glm::vec3(object3D->Transform[3]),
-						glm::vec3(SceneCamera->Transform[3])
-					) > 100.0f
-					&& !UserInput::IsKeyDown(SDLK_r)
-				)
-					continue;
-
-				//TODO: recheck whether we need this
-				// if (MeshObject->HasTransparency)
-					//continue;
-
-				dataList.emplace_back(
-					object3D->GetRenderMeshId(),
-					object3D->Transform,
-					object3D->Size,
-					object3D->Material,
-					object3D->ColorRGB,
-					object3D->Transparency,
-					object3D->Reflectivity,
-					object3D->FaceCulling
-				);
-			}
-
-			if (!object->GetChildren().empty())
-			{
-				std::vector<RenderItem> childData = createRenderList(object, SceneCamera);
-				std::copy(childData.begin(), childData.end(), std::back_inserter(dataList));
-			}
-		}
-	}
-
-	return dataList;
 }
 
 static double GetRunningTime()
@@ -476,7 +466,7 @@ void EngineObject::Start()
 		{
 			Texture* texture = texManager->GetTextureResource(skyboxFace);
 
-			if (texture->Status != TextureLoadStatus::Succeeded)
+			if (texture->Status != Texture::LoadStatus::Succeeded)
 			{
 				skyboxLoaded = false;
 				break;
@@ -568,19 +558,6 @@ void EngineObject::Start()
 			}
 		}
 
-		std::vector<GameObject*> physCandidates = Workspace->GetDescendants();
-		std::vector<Object_Base3D*> physList;
-		physList.reserve(std::min(static_cast<uint32_t>(physCandidates.size() / 3), 1024u));
-
-		for (GameObject* cand : physCandidates)
-		{
-			Object_Base3D* physObject = dynamic_cast<Object_Base3D*>(cand);
-			if (physObject)
-				physList.push_back(physObject);
-		}
-
-		Physics::Step(physList, deltaTime);
-
 		DataModel->Update(deltaTime);
 		updateDescendants(DataModel, deltaTime);
 
@@ -591,10 +568,29 @@ void EngineObject::Start()
 
 		glm::mat4 cameraMatrix = sceneCamera->GetMatrixForAspectRatio(aspectRatio);
 		
-		// Aggregate mesh and light data into a list
-		scene.RenderList = createRenderList(workspace, sceneCamera);
-		scene.LightingList = createLightingList(workspace);
+		std::vector<Object_Base3D*> physicsList;
+
+		// Aggregate mesh and light data into lists
+		recursivelyTravelHierarchy(
+			scene.RenderList,
+			scene.LightingList,
+			physicsList,
+			workspace,
+			sceneCamera
+		);
 		
+		bool hasPhysics = false;
+
+		for (Object_Base3D* object : physicsList)
+			if (object->PhysicsDynamics)
+			{
+				hasPhysics = true;
+				break;
+			}
+
+		if (hasPhysics)
+			Physics::Step(physicsList, deltaTime);
+
 		// TODO 15/09/2024
 		// Move into the Renderer. Can't right now because it isn't aware of the `CameraMatrix`
 		// or `Time`.
@@ -663,14 +659,6 @@ void EngineObject::Start()
 
 		//Main render pass
 		RendererContext->DrawScene(scene);
-
-		for (GameObject* object : this->Workspace->GetDescendants())
-		{
-			Object_ParticleEmitter* particleEmitter = dynamic_cast<Object_ParticleEmitter*>(object);
-
-			if (particleEmitter)
-				particleEmitter->Render(sceneCamera->Transform);
-		}
 
 		glDisable(GL_DEPTH_TEST);
 

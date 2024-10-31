@@ -12,6 +12,9 @@ public:
 	static RenderMaterial* GetMaterial(std::string const& Name);
 	static std::vector<RenderMaterial*> GetLoadedMaterials();
 
+	// THIS DOES NOT FLUSH THE UNIFORMS!
+	// It just does `SetUniform` for the uniforms in the Material's
+	// JSON (like with `ShaderProgram::ApplyDefaultUniforms`)
 	void ApplyUniforms();
 
 	std::string Name{};

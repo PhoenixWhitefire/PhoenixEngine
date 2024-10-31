@@ -3,16 +3,23 @@
 #include <vector>
 #include <future>
 
-enum class TextureLoadStatus : uint8_t
-{
-	NotAttempted,
-	InProgress,
-	Succeeded,
-	Failed
-};
-
 struct Texture
 {
+	enum class DimensionType : uint8_t
+	{
+		Texture2D,
+		Texture3D,
+		TextureCube
+	};
+
+	enum class LoadStatus : uint8_t
+	{
+		NotAttempted,
+		InProgress,
+		Succeeded,
+		Failed
+	};
+
 	std::string ImagePath{};
 
 	uint32_t ResourceId = UINT32_MAX;
@@ -20,7 +27,8 @@ struct Texture
 	int Width = -1, Height = -1;
 	int NumColorChannels = -1;
 
-	TextureLoadStatus Status = TextureLoadStatus::NotAttempted;
+	DimensionType Type = DimensionType::Texture2D;
+	LoadStatus Status = LoadStatus::NotAttempted;
 
 	// De-allocated after the Texture is uploaded to the GPU
 	uint8_t* TMP_ImageByteData{};

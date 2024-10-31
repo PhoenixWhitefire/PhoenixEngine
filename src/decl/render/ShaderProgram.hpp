@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 
+#include "asset/TextureManager.hpp"
 #include "Reflection.hpp"
 
 class ShaderProgram
@@ -21,6 +22,8 @@ public:
 	// Mark a uniform to be updated upon `::Activate` being called,
 	// to be set with the provided value
 	void SetUniform(const char*, const Reflection::GenericValue&);
+	// Sets a Texture Uniform to the Texture residing at the *GPU* ID provided
+	void SetTextureUniform(const char*, uint32_t, Texture::DimensionType Type = Texture::DimensionType::Texture2D);
 	// THIS DOES NOT FLUSH THE UNIFORMS!
 	// it acts just like `SetUniform`, but it's intended to reset the state
 	// back to the default

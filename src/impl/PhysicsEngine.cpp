@@ -1,7 +1,7 @@
-#include<glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
-#include"PhysicsEngine.hpp"
-#include"IntersectionLib.hpp"
+#include "PhysicsEngine.hpp"
+#include "IntersectionLib.hpp"
 
 struct Collision
 {

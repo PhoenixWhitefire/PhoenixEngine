@@ -1,6 +1,4 @@
-#include<glm/geometric.hpp>
-
-#include"datatype/Vector3.hpp"
+#include "datatype/Vector3.hpp"
 
 Vector3 Vector3::zero = Vector3(0.f, 0.f, 0.f);
 Vector3 Vector3::xAxis = Vector3(-1.f, 0.f, 0.f);
@@ -111,7 +109,7 @@ Vector3::Vector3(Reflection::GenericValue gv)
 	s_DeclareReflections();
 }
 
-Reflection::GenericValue Vector3::ToGenericValue()
+Reflection::GenericValue Vector3::ToGenericValue() const
 {
 	//REFLECTION_OPERATORGENERICTOCOMPLEX(Vector3);
 
@@ -259,12 +257,12 @@ bool Vector3::operator==(Vector3 Other)
 		return false;
 }
 
-Vector3::operator glm::tvec3<float, glm::highp>()
+Vector3::operator glm::tvec3<float, glm::highp>() const
 {
 	return glm::vec3(this->X, this->Y, this->Z);
 }
 
-Vector3::operator glm::tvec3<double, glm::highp>()
+Vector3::operator glm::tvec3<double, glm::highp>() const
 {
 	return glm::vec3(this->X, this->Y, this->Z);
 }

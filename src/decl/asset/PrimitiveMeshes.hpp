@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include"datatype/Mesh.hpp"
+#include "datatype/Mesh.hpp"
 
 namespace PrimitiveMeshes
 {

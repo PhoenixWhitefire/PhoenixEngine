@@ -1,4 +1,4 @@
-#include"IntersectionLib.hpp"
+#include "IntersectionLib.hpp"
 
 template<class T> static int sign(T v)
 {

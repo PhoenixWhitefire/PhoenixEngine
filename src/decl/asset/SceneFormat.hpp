@@ -1,6 +1,6 @@
 #pragma once
 
-#include"datatype/GameObject.hpp"
+#include "datatype/GameObject.hpp"
 
 namespace SceneFormat
 {

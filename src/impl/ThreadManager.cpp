@@ -1,6 +1,6 @@
-#include<SDL2/SDL_timer.h>
+#include <SDL2/SDL_timer.h>
 
-#include"ThreadManager.hpp"
+#include "ThreadManager.hpp"
 
 ThreadManager* ThreadManager::Singleton = new ThreadManager();
 
@@ -36,13 +36,13 @@ void Worker::WaitForCurrentTaskFinish() const
 	uint32_t lastTask = this->TaskIdx;
 
 	while ((lastTask == this->TaskIdx) || (this->Status != WorkerStatus::RunningTask))
-		SDL_Delay(25);
+		SDL_Delay(2);
 }
 
 void Worker::WaitForAllTasksFinish() const
 {
 	while (this->Status != WorkerStatus::WaitingForTask)
-		SDL_Delay(25);
+		SDL_Delay(2);
 }
 
 std::vector<Worker*> ThreadManager::GetWorkers()
