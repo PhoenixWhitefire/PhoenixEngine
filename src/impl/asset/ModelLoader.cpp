@@ -2,6 +2,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "asset/ModelLoader.hpp"
+#include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
 #include "asset/MeshProvider.hpp"
 #include "GlobalJsonConfig.hpp"
@@ -96,7 +97,8 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		));
 	}
 
-	MeshProvider* mp = MeshProvider::Get();
+	MaterialManager* mtlManager = MaterialManager::Get();
+	MeshProvider* meshProvider = MeshProvider::Get();
 
 	LoadedObjs.reserve(m_Meshes.size());
 
@@ -115,7 +117,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 								m_MeshNames[MeshIndex]
 								+ ".mesh";
 
-		mp->Save(m_Meshes[MeshIndex], meshPath);
+		meshProvider->Save(m_Meshes[MeshIndex], meshPath);
 
 		mesh->SetRenderMesh(meshPath);
 		mesh->Transform = m_MeshMatrices[MeshIndex];
@@ -140,10 +142,10 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 
 		mesh->Name = m_MeshNames[MeshIndex];
 
-		Texture* colorTex = texManager->GetTextureResource(material.BaseColorTexture);
-		Texture* metallicRoughnessTex = texManager->GetTextureResource(material.MetallicRoughnessTexture);
+		Texture& colorTex = texManager->GetTextureResource(material.BaseColorTexture);
+		Texture& metallicRoughnessTex = texManager->GetTextureResource(material.MetallicRoughnessTexture);
 
-		materialJson["albedo"] = colorTex->ImagePath;
+		materialJson["albedo"] = colorTex.ImagePath;
 
 		// TODO: glTF assumes proper PBR, with factors from 0 - 1 instead
 		// of specular exponents and multipliers etc
@@ -154,7 +156,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		materialJson["roughnessFactor"] = material.RoughnessFactor;
 
 		if (material.MetallicRoughnessTexture != 0)
-			materialJson["specular"] = metallicRoughnessTex->ImagePath;
+			materialJson["specular"] = metallicRoughnessTex.ImagePath;
 
 		materialJson["translucency"] = (material.AlphaMode == MeshMaterial::MaterialAlphaMode::Blend);
 
@@ -174,7 +176,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 			true
 		);
 
-		mesh->Material = RenderMaterial::GetMaterial(materialName);
+		mesh->MaterialId = mtlManager->LoadMaterialFromPath(materialName);
 
 		mesh->Transform = m_MeshMatrices[MeshIndex];
 		mesh->Size = m_MeshScales[MeshIndex];

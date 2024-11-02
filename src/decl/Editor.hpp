@@ -5,7 +5,6 @@ class Editor
 public:
 	Editor();
 
-	void Init();
 	void Update(double DeltaTime);
 	void RenderUI();
 

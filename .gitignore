@@ -6,8 +6,7 @@
 # Phoenix Engine
 dll/
 resources/models/
-resources/textures/
-resources/meshes/
+*.zip
 
 # Shortcuts
 *.lnk

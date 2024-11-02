@@ -209,16 +209,48 @@ uint32_t MeshProvider::Assign(const Mesh& mesh, const std::string& InternalName)
 	}
 	else
 	{
-		m_Meshes.push_back(mesh);
 		m_StringToMeshId.insert(std::pair(InternalName, assignedId));
+		m_Meshes.push_back(mesh);
 	}
 
 	return assignedId;
 }
 
-uint32_t MeshProvider::LoadFromPath(const std::string& Path, bool ShouldLoadAsync)
+uint32_t MeshProvider::LoadFromPath(const std::string& Path, bool ShouldLoadAsync, bool PreserveMeshData)
 {
 	auto meshIt = m_StringToMeshId.find(Path);
+
+	if (meshIt != m_StringToMeshId.end())
+	{
+		Mesh& mesh = this->GetMeshResource(meshIt->second);
+
+		// reload the mesh to keep the mesh data CPU side
+		// primarily for `mesh_get` for Luau
+		// 02/11/2024
+		// no i don't feel like actually testing this to make sure it works
+		if (PreserveMeshData && !mesh.MeshDataPreserved)
+		{
+			bool meshLoaded = false;
+
+			for (uint32_t asyncMeshIndex = 0; asyncMeshIndex < m_MeshPromiseResourceIds.size(); asyncMeshIndex++)
+			{
+				if (m_MeshPromiseResourceIds[asyncMeshIndex] != meshIt->second)
+					continue;
+
+				m_Meshes[meshIt->second].MeshDataPreserved = true;
+
+				m_MeshFutures[asyncMeshIndex].wait();
+				this->FinalizeAsyncLoadedMeshes();
+				meshLoaded = true;
+			}
+
+			if (!meshLoaded)
+			{
+				meshIt = m_StringToMeshId.end();
+				ShouldLoadAsync = false;
+			}
+		}
+	}
 
 	if (meshIt == m_StringToMeshId.end())
 	{
@@ -242,6 +274,7 @@ uint32_t MeshProvider::LoadFromPath(const std::string& Path, bool ShouldLoadAsyn
 				std::promise<Mesh>* promise = new std::promise<Mesh>;
 
 				uint32_t resourceId = this->Assign(Mesh{}, Path);
+				m_Meshes.at(resourceId).MeshDataPreserved = PreserveMeshData;
 
 				std::thread(
 					[promise, resourceId, this, Path, contents]()
@@ -268,6 +301,8 @@ uint32_t MeshProvider::LoadFromPath(const std::string& Path, bool ShouldLoadAsyn
 			else
 			{
 				Mesh mesh = this->Deserialize(contents, &success);
+				mesh.MeshDataPreserved = PreserveMeshData;
+
 				if (!success)
 					Debug::Log(std::vformat(
 						"MeshProvider Failed to load mesh '{}': {}",
@@ -284,9 +319,9 @@ uint32_t MeshProvider::LoadFromPath(const std::string& Path, bool ShouldLoadAsyn
 		return meshIt->second;
 }
 
-Mesh* MeshProvider::GetMeshResource(uint32_t Id)
+Mesh& MeshProvider::GetMeshResource(uint32_t Id)
 {
-	return &m_Meshes.at(Id);
+	return m_Meshes.at(Id);
 }
 
 MeshProvider::GpuMesh& MeshProvider::GetGpuMesh(uint32_t Id)
@@ -332,8 +367,6 @@ void MeshProvider::FinalizeAsyncLoadedMeshes()
 		m_MeshPromiseResourceIds.erase(m_MeshPromiseResourceIds.begin() + promiseIndex);
 
 		delete promise;
-
-		return;
 	}
 }
 
@@ -346,7 +379,7 @@ void MeshProvider::m_CreateAndUploadGpuMesh(Mesh& mesh)
 {
 	m_GpuMeshes.emplace_back();
 
-	MeshProvider::GpuMesh& gpuMesh = m_GpuMeshes[m_GpuMeshes.size() - 1];
+	MeshProvider::GpuMesh& gpuMesh = m_GpuMeshes.back();
 
 	GpuVertexArray* vao = new GpuVertexArray;
 	GpuVertexBuffer* vbo = new GpuVertexBuffer;
@@ -368,8 +401,11 @@ void MeshProvider::m_CreateAndUploadGpuMesh(Mesh& mesh)
 
 	gpuMesh.NumIndices = static_cast<uint32_t>(mesh.Indices.size());
 
-	mesh.Vertices.clear();
-	mesh.Indices.clear();
+	if (!mesh.MeshDataPreserved)
+	{
+		mesh.Vertices.clear();
+		mesh.Indices.clear();
+	}
 
 	mesh.GpuId = static_cast<uint32_t>(m_GpuMeshes.size() - 1);
 }

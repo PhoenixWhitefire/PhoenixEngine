@@ -12,9 +12,6 @@ Scene version is 2
 Scene loaded
 Final initializations...
 Main engine loop start
-Loading scene: 'levels/de_dust2.world'
-Scene version is 1
-Scene loaded
 Main loop exited
 Engine destructing...
 Application shutting down...

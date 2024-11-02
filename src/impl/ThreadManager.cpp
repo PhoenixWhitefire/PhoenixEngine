@@ -17,7 +17,7 @@ static void _workerTaskRunner(Worker* ThisWorker)
 			continue;
 		}
 
-		Task* currentTask = ThisWorker->TaskQueue[ThisWorker->TaskQueue.size() - 1];
+		Task* currentTask = ThisWorker->TaskQueue.back();
 
 		ThisWorker->Status = WorkerStatus::RunningTask;
 

@@ -1,4 +1,5 @@
 #include "gameobject/Base3D.hpp"
+#include "asset/MaterialManager.hpp"
 
 PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(Base3D);
 
@@ -33,12 +34,16 @@ void Object_Base3D::s_DeclareReflections()
 		[](GameObject* g)
 		{
 			Object_Base3D* p = dynamic_cast<Object_Base3D*>(g);
-			return p->Material->Name;
+			MaterialManager* mtlManager = MaterialManager::Get();
+
+			return mtlManager->GetMaterialResource(p->MaterialId).Name;
 		},
 		[](GameObject* g, Reflection::GenericValue gv)
 		{
 			Object_Base3D* p = dynamic_cast<Object_Base3D*>(g);
-			p->Material = RenderMaterial::GetMaterial(gv.AsString());
+			MaterialManager* mtlManager = MaterialManager::Get();
+
+			p->MaterialId = mtlManager->LoadMaterialFromPath(gv.AsString());
 		}
 	);
 
@@ -73,7 +78,7 @@ Object_Base3D::Object_Base3D()
 	this->Name = "Base3D";
 	this->ClassName = "Base3D";
 
-	this->Material = RenderMaterial::GetMaterial("plastic");
+	this->MaterialId = MaterialManager::Get()->LoadMaterialFromPath("plastic");
 
 	s_DeclareReflections();
 }

@@ -4,9 +4,8 @@
 
 #include "datatype/GameObject.hpp"
 
-#include "datatype/Color.hpp"
 #include "datatype/Vector3.hpp"
-#include "asset/Material.hpp"
+#include "datatype/Color.hpp"
 
 enum class FaceCullingMode : uint8_t { None, BackFace, FrontFace };
 
@@ -23,20 +22,20 @@ public:
 	bool PhysicsDynamics = false;
 	bool PhysicsCollisions = true;
 
-	Vector3 LinearVelocity;
-	Vector3 AngularVelocity;
-	double Mass = 1.f;
-	double Density = 1.f;
-	double Friction = 0.3f;
+	FaceCullingMode FaceCulling = FaceCullingMode::BackFace;
 
 	float Transparency = 0.f;
 	float Reflectivity = 0.f;
 
 	Color ColorRGB = Color(1.f, 1.f, 1.f);
 
-	RenderMaterial* Material;
+	uint32_t MaterialId{};
 
-	FaceCullingMode FaceCulling = FaceCullingMode::BackFace;
+	Vector3 LinearVelocity;
+	Vector3 AngularVelocity;
+	double Mass = 1.f;
+	double Density = 1.f;
+	double Friction = 0.3f;
 
 	PHX_GAMEOBJECT_API_REFLECTION;
 

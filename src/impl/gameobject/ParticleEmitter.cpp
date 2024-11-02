@@ -8,7 +8,7 @@
 
 PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(ParticleEmitter);
 
-static ShaderProgram* s_ParticleShaders = nullptr;
+static uint32_t s_ParticleShaders = 0;
 static std::default_random_engine s_RandGenerator = std::default_random_engine(static_cast<uint32_t>(time(NULL)));
 static bool s_DidInitReflection = false;
 
@@ -93,14 +93,14 @@ Object_ParticleEmitter::Object_ParticleEmitter()
 	this->ClassName = "ParticleEmitter";
 
 	if (!s_ParticleShaders)
-		s_ParticleShaders = ShaderProgram::GetShaderProgram("particle");
+		s_ParticleShaders = ShaderManager::Get()->LoadFromPath("particle");
 
 	m_VertArray.Bind();
 
 	m_VertArray.LinkAttrib(m_VertBuffer, 0, 2, GL_FLOAT, 2 * sizeof(float), (void*)0);
 
 	m_VertBuffer.Bind();
-	glBufferData(GL_ARRAY_BUFFER, sizeof(Quad), &Quad, GL_STREAM_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(Quad), &Quad[0], GL_STATIC_DRAW);
 
 	GLuint quadinds[] =
 	{
@@ -109,7 +109,7 @@ Object_ParticleEmitter::Object_ParticleEmitter()
 	};
 
 	m_ElementBuffer.Bind();
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(quadinds), &quadinds, GL_STREAM_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6, &quadinds[0], GL_STATIC_DRAW);
 
 	uint32_t DefaultImage = TextureManager::Get()->LoadTextureFromPath(MissingTexPath);
 
@@ -222,10 +222,11 @@ void Object_ParticleEmitter::Render(glm::mat4 CameraMatrix)
 		return;
 
 	m_VertArray.Bind();
-	m_VertBuffer.Bind();
-	m_ElementBuffer.Bind();
 
-	s_ParticleShaders->Activate();
+	ShaderManager* shdManager = ShaderManager::Get();
+	ShaderProgram& particleShaders = shdManager->GetShaderResource(s_ParticleShaders);
+
+	particleShaders.Activate();
 
 	glEnable(GL_BLEND);
 
@@ -244,27 +245,28 @@ void Object_ParticleEmitter::Render(glm::mat4 CameraMatrix)
 			continue;
 		}
 
-		s_ParticleShaders->SetUniform(
+		particleShaders.SetUniform(
 			"Position",
 			particle.Position.ToGenericValue()
 		);
 
-		s_ParticleShaders->SetUniform("Transparency", particle.Transparency);
+		particleShaders.SetUniform("Transparency", particle.Transparency);
 
 		glm::mat4 scale = glm::scale(glm::mat4(1.f), glm::vec3(particle.Size, particle.Size, particle.Size));
 
-		s_ParticleShaders->SetUniform("Scale", scale);
+		particleShaders.SetUniform("Scale", scale);
 
-		s_ParticleShaders->SetUniform("CameraMatrix", CameraMatrix);
+		particleShaders.SetUniform("CameraMatrix", CameraMatrix);
 
-		glActiveTexture(GL_TEXTURE4);
-		glBindTexture(GL_TEXTURE_2D, TextureManager::Get()->GetTextureResource(particle.Image)->GpuId);
+		particleShaders.SetTextureUniform(
+			"Image",
+			TextureManager::Get()->GetTextureResource(particle.Image).GpuId,
+			Texture::DimensionType::Texture2D
+		);
 
-		s_ParticleShaders->SetUniform("Image", 4);
+		particleShaders.Activate();
 
-		s_ParticleShaders->Activate();
-
-		glDrawElements(GL_TRIANGLES, 7, GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 	}
 
 	m_VertArray.Unbind();

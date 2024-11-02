@@ -4,7 +4,6 @@
 #include <stb/stb_image.h>
 
 #include "asset/TextureManager.hpp"
-#include "render/ShaderProgram.hpp"
 #include "GlobalJsonConfig.hpp"
 #include "ThreadManager.hpp"
 #include "Debug.hpp"
@@ -54,12 +53,12 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 			false
 		);
 
-		Texture* replacement = this->GetTextureResource(replacementId);
-		texture.Height = replacement->Height;
-		texture.Width = replacement->Width;
-		texture.NumColorChannels = replacement->NumColorChannels;
-		texture.TMP_ImageByteData = replacement->TMP_ImageByteData;
-		texture.GpuId = replacement->GpuId;
+		Texture& replacement = this->GetTextureResource(replacementId);
+		texture.Height = replacement.Height;
+		texture.Width = replacement.Width;
+		texture.NumColorChannels = replacement.NumColorChannels;
+		texture.TMP_ImageByteData = replacement.TMP_ImageByteData;
+		texture.GpuId = replacement.GpuId;
 
 		return;
 	}
@@ -247,15 +246,14 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 	if (it == m_StringToTextureId.end())
 	{
 		uint32_t newResourceId = static_cast<uint32_t>(m_Textures.size());
-
-		m_StringToTextureId.insert(std::pair(Path, newResourceId));
-
+		
 		uint32_t newGpuId;
 		glGenTextures(1, &newGpuId);
 
 		m_Textures.emplace_back(Path, newResourceId, newGpuId);
+		m_StringToTextureId.emplace(Path, newResourceId);
 
-		Texture& newTexture = m_Textures.at(newResourceId);
+		Texture& newTexture = m_Textures.back();
 
 		glBindTexture(GL_TEXTURE_2D, newTexture.GpuId);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -334,9 +332,9 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 		return it->second;
 }
 
-Texture* TextureManager::GetTextureResource(uint32_t ResourceId)
+Texture& TextureManager::GetTextureResource(uint32_t ResourceId)
 {
-	return &m_Textures.at(ResourceId);
+	return m_Textures.at(ResourceId);
 }
 
 void TextureManager::FinalizeAsyncLoadedTextures()

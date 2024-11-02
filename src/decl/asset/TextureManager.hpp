@@ -56,7 +56,7 @@ public:
 	/*
 	Get a Texture by it's Resource ID
 	*/
-	Texture* GetTextureResource(uint32_t);
+	Texture& GetTextureResource(uint32_t);
 
 private:
 	TextureManager();

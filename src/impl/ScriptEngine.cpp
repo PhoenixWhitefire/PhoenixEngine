@@ -571,16 +571,16 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 
 			MeshProvider* meshProvider = MeshProvider::Get();
 
-			uint32_t meshId = meshProvider->LoadFromPath(meshPath, false);
-			Mesh* mesh = meshProvider->GetMeshResource(meshId);
+			uint32_t meshId = meshProvider->LoadFromPath(meshPath, false, true);
+			Mesh& mesh = meshProvider->GetMeshResource(meshId);
 
 			lua_newtable(L);
 
 			lua_newtable(L);
 
-			for (size_t vi = 0; vi < mesh->Vertices.size(); vi++)
+			for (size_t vi = 0; vi < mesh.Vertices.size(); vi++)
 			{
-				const Vertex& v = mesh->Vertices.at(vi);
+				const Vertex& v = mesh.Vertices.at(vi);
 
 				lua_pushinteger(L, static_cast<int32_t>(vi + 1));
 				lua_newtable(L);
@@ -613,10 +613,10 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 
 			lua_newtable(L);
 
-			for (uint32_t indexIndex = 0; indexIndex < mesh->Indices.size(); indexIndex++)
+			for (uint32_t indexIndex = 0; indexIndex < mesh.Indices.size(); indexIndex++)
 			{
 				lua_pushinteger(L, indexIndex + 1);
-				lua_pushinteger(L, static_cast<int32_t>(mesh->Indices.at(indexIndex)));
+				lua_pushinteger(L, static_cast<int32_t>(mesh.Indices.at(indexIndex)));
 				lua_settable(L, -3);
 			}
 
@@ -684,7 +684,7 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 
 			// Informs the Renderer the mesh doesn't exist on the GPU on it's own
 			// and must be uploaded when it's rendered
-			meshProvider->GetMeshResource(meshProvider->LoadFromPath(meshName))->GpuId = UINT32_MAX;
+			meshProvider->GetMeshResource(meshProvider->LoadFromPath(meshName)).GpuId = UINT32_MAX;
 
 			return 0;
 		}

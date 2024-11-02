@@ -6,6 +6,7 @@
 #include <SDL2/SDL_video.h>
 
 #include "render/Renderer.hpp"
+#include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
 #include "asset/MeshProvider.hpp"
 #include "GlobalJsonConfig.hpp"
@@ -219,9 +220,13 @@ void Renderer::DrawScene(const Scene& Scene)
 	glActiveTexture(GL_TEXTURE0);
 	this->Framebuffer->BindTexture();
 
-	for (ShaderProgram* shader : Scene.UsedShaders)
+	ShaderManager* shdManager = ShaderManager::Get();
+
+	for (uint32_t shaderId : Scene.UsedShaders)
 	{
-		shader->SetUniform("FrameBuffer", 0);
+		ShaderProgram& shader = shdManager->GetShaderResource(shaderId);
+
+		shader.SetUniform("FrameBuffer", 0);
 
 		// TODO 05/09/2024
 		// Branching in shader VS separate array uniforms?
@@ -236,22 +241,22 @@ void Renderer::DrawScene(const Scene& Scene)
 			std::string lightIdxString = std::to_string(lightIndex);
 			std::string shaderLightLoc = "Lights[" + lightIdxString + "]";
 
-			shader->SetUniform(
+			shader.SetUniform(
 				(shaderLightLoc + ".Position").c_str(),
 				lightData.Position.ToGenericValue()
 			);
 
-			shader->SetUniform(
+			shader.SetUniform(
 				(shaderLightLoc + ".Color").c_str(),
 				lightData.LightColor.ToGenericValue()
 			);
 
-			shader->SetUniform((shaderLightLoc + ".Type").c_str(), (int)lightData.Type);
+			shader.SetUniform((shaderLightLoc + ".Type").c_str(), (int)lightData.Type);
 
-			shader->SetUniform((shaderLightLoc + ".Range").c_str(), lightData.Range);
+			shader.SetUniform((shaderLightLoc + ".Range").c_str(), lightData.Range);
 		}
 
-		shader->SetUniform(
+		shader.SetUniform(
 			"NumLights",
 			std::clamp(
 				static_cast<uint32_t>(Scene.LightingList.size()),
@@ -261,7 +266,9 @@ void Renderer::DrawScene(const Scene& Scene)
 		);
 	}
 
-	MeshProvider* mp = MeshProvider::Get();
+	MeshProvider* meshProvider = MeshProvider::Get();
+	MaterialManager* mtlManager = MaterialManager::Get();
+
 	size_t numDrawCalls = 0;
 
 	// render checksum to pair<render item index, vector of transforms>
@@ -290,8 +297,8 @@ void Renderer::DrawScene(const Scene& Scene)
 		m_SetMaterialData(renderData);
 
 		this->DrawMesh(
-			mp->GetMeshResource(renderData.RenderMeshId),
-			renderData.Material->Shader,
+			meshProvider->GetMeshResource(renderData.RenderMeshId),
+			mtlManager->GetMaterialResource(renderData.MaterialId).GetShader(),
 			renderData.Size,
 			renderData.Transform,
 			renderData.FaceCulling,
@@ -355,10 +362,10 @@ void Renderer::DrawScene(const Scene& Scene)
 }
 
 void Renderer::DrawMesh(
-	Mesh* Object,
-	ShaderProgram* Shaders,
-	Vector3 Size,
-	glm::mat4 Transform,
+	const Mesh& Object,
+	ShaderProgram& Shader,
+	const Vector3& Size,
+	const glm::mat4& Transform,
 	FaceCullingMode FaceCulling,
 	int32_t NumInstances
 )
@@ -388,7 +395,7 @@ void Renderer::DrawMesh(
 
 	}
 
-	uint32_t gpuMeshId = Object->GpuId;
+	uint32_t gpuMeshId = Object.GpuId;
 	MeshProvider::GpuMesh* gpuMesh = nullptr;
 
 	// mesh not uploaded to the GPU by MeshProvider
@@ -396,8 +403,8 @@ void Renderer::DrawMesh(
 	{
 		m_VertexArray->Bind();
 
-		m_VertexBuffer->SetBufferData(Object->Vertices);
-		m_ElementBuffer->SetBufferData(Object->Indices);
+		m_VertexBuffer->SetBufferData(Object.Vertices);
+		m_ElementBuffer->SetBufferData(Object.Indices);
 	}
 	else
 	{
@@ -405,14 +412,14 @@ void Renderer::DrawMesh(
 		gpuMesh->VertexArray->Bind();
 	}
 
-	uint32_t numIndices = gpuMesh ? gpuMesh->NumIndices : static_cast<uint32_t>(Object->Indices.size());
+	uint32_t numIndices = gpuMesh ? gpuMesh->NumIndices : static_cast<uint32_t>(Object.Indices.size());
 
 	glm::mat4 scale = glm::scale(glm::mat4(1.f), glm::vec3(Size));
 
-	Shaders->SetUniform("Transform", Transform);
-	Shaders->SetUniform("Scale", scale);
+	Shader.SetUniform("Transform", Transform);
+	Shader.SetUniform("Scale", scale);
 
-	Shaders->Activate();
+	Shader.Activate();
 	
 	//glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, 0);
 	glDrawElementsInstanced(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, 0, NumInstances);
@@ -420,28 +427,29 @@ void Renderer::DrawMesh(
 
 void Renderer::m_SetMaterialData(const RenderItem& RenderData)
 {
-	RenderMaterial* material = RenderData.Material;
-	ShaderProgram* shader = material->Shader;
+	MaterialManager* mtlManager = MaterialManager::Get();
+	TextureManager* texManager = TextureManager::Get();
+
+	RenderMaterial& material = mtlManager->GetMaterialResource(RenderData.MaterialId);
+	ShaderProgram& shader = material.GetShader();
 
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	if (RenderData.Transparency > 0.f || RenderData.Material->HasTranslucency)
+	if (RenderData.Transparency > 0.f || material.HasTranslucency)
 		glEnable(GL_BLEND);
 	else // the gosh darn grass model is practically 50% transparent
 		glDisable(GL_BLEND);
 	
-	shader->SetUniform("SpecularMultiplier", material->SpecMultiply);
-	shader->SetUniform("SpecularPower", material->SpecExponent);
+	shader.SetUniform("SpecularMultiplier", material.SpecMultiply);
+	shader.SetUniform("SpecularPower", material.SpecExponent);
 
-	shader->SetUniform("Reflectivity", RenderData.Reflectivity);
-	shader->SetUniform("Transparency", RenderData.Transparency);
+	shader.SetUniform("Reflectivity", RenderData.Reflectivity);
+	shader.SetUniform("Transparency", RenderData.Transparency);
 
-	shader->SetUniform(
+	shader.SetUniform(
 		"ColorTint",
 		RenderData.TintColor.ToGenericValue()
 	);
-
-	TextureManager* texManager = TextureManager::Get();
 
 	/*
 		TODO 05/09/2024:
@@ -456,16 +464,16 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData)
 		* Extra machinery and boilerplate, and it's overall more effort
 	*/
 
-	Texture* colorMap = texManager->GetTextureResource(material->ColorMap);
-	Texture* metallicRoughnessMap = texManager->GetTextureResource(material->MetallicRoughnessMap);
+	Texture& colorMap = texManager->GetTextureResource(material.ColorMap);
+	Texture& metallicRoughnessMap = texManager->GetTextureResource(material.MetallicRoughnessMap);
 
-	shader->SetTextureUniform("ColorMap", colorMap->GpuId);
-	shader->SetTextureUniform("MetallicRoughnessMap", metallicRoughnessMap->GpuId);
+	shader.SetTextureUniform("ColorMap", colorMap.GpuId);
+	shader.SetTextureUniform("MetallicRoughnessMap", metallicRoughnessMap.GpuId);
 
 	// apply the uniforms for the shader program...
-	shader->ApplyDefaultUniforms();
+	shader.ApplyDefaultUniforms();
 	// ... then the material uniforms...
-	material->ApplyUniforms();
+	material.ApplyUniforms();
 	// ... so that the material can override uniforms in the SP
 }
 

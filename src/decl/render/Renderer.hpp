@@ -4,9 +4,8 @@
 #include <optional>
 #include <glm/mat4x4.hpp>
 
-#include "render/ShaderProgram.hpp"
+#include "render/ShaderManager.hpp"
 #include "render/GpuBuffers.hpp"
-#include "asset/Material.hpp"
 
 #include "gameobject/Base3D.hpp"
 
@@ -34,7 +33,7 @@ struct RenderItem
 	uint32_t RenderMeshId{};
 	glm::mat4 Transform{};
 	Vector3 Size;
-	RenderMaterial* Material{};
+	uint32_t MaterialId{};
 	Color TintColor;
 	float Transparency{};
 	float Reflectivity{};
@@ -63,7 +62,7 @@ struct Scene
 	std::vector<RenderItem> RenderList;
 	std::vector<LightItem> LightingList;
 
-	std::unordered_set<ShaderProgram*> UsedShaders;
+	std::unordered_set<uint32_t> UsedShaders;
 };
 
 class Renderer
@@ -81,10 +80,10 @@ public:
 	// `NumInstances` made under the assumption the caller
 	// has bound the Instanced Array prior to calling this function
 	void DrawMesh(
-		Mesh* Object,
-		ShaderProgram* Shaders,
-		Vector3 Size,
-		glm::mat4 Transform = glm::mat4(1.0f),
+		const Mesh& Object,
+		ShaderProgram& Shader,
+		const Vector3& Size,
+		const glm::mat4& Transform = glm::mat4(1.0f),
 		FaceCullingMode Culling = FaceCullingMode::BackFace,
 		int32_t NumInstances = 1
 	);

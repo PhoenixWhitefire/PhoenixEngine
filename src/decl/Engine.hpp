@@ -5,7 +5,6 @@
 #include <SDL2/SDL_video.h>
 
 #include "gameobject/GameObjects.hpp"
-#include "render/ShaderProgram.hpp"
 #include "render/Renderer.hpp"
 
 #include "datatype/Vector2.hpp"

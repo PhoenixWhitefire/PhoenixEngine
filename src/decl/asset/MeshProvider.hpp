@@ -13,9 +13,9 @@ class MeshProvider
 public:
 	struct GpuMesh
 	{
-		GpuVertexArray* VertexArray;
-		GpuVertexBuffer* VertexBuffer;
-		GpuElementBuffer* ElementBuffer;
+		GpuVertexArray* VertexArray = nullptr;
+		GpuVertexBuffer* VertexBuffer = nullptr;
+		GpuElementBuffer* ElementBuffer = nullptr;
 		uint32_t NumIndices{};
 	};
 
@@ -31,9 +31,9 @@ public:
 	void Save(const Mesh&, const std::string& Path);
 	void Save(uint32_t, const std::string& Path);
 	
-	uint32_t LoadFromPath(const std::string& Path, bool ShouldLoadAsync = true);
+	uint32_t LoadFromPath(const std::string& Path, bool ShouldLoadAsync = true, bool PreserveMeshData = false);
 
-	Mesh* GetMeshResource(uint32_t);
+	Mesh& GetMeshResource(uint32_t);
 	GpuMesh& GetGpuMesh(uint32_t);
 
 	const std::string& GetLastErrorString();

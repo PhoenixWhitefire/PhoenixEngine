@@ -11,6 +11,7 @@
 #include "Engine.hpp"
 
 #include "gameobject/GameObjects.hpp"
+#include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
 #include "asset/MeshProvider.hpp"
 #include "GlobalJsonConfig.hpp"
@@ -312,7 +313,7 @@ static void recursivelyTravelHierarchy(
 				object3D->GetRenderMeshId(),
 				object3D->Transform,
 				object3D->Size,
-				object3D->Material,
+				object3D->MaterialId,
 				object3D->ColorRGB,
 				object3D->Transparency,
 				object3D->Reflectivity,
@@ -420,13 +421,21 @@ void EngineObject::Start()
 
 	//Texture HDRISkyboxTexture("Assets/Textures/hdri_sky_1.jpeg", "Diffuse", 0);
 
-	ShaderProgram* postFxShaders = ShaderProgram::GetShaderProgram("postprocessing");
-	ShaderProgram* skyboxShaders = ShaderProgram::GetShaderProgram("skybox");
+	ShaderManager* shdManager = ShaderManager::Get();
 
-	postFxShaders->SetUniform("Texture", 1);
-	postFxShaders->SetUniform("DistortionTexture", 2);
+	uint32_t postFxShaderId = shdManager->LoadFromPath("postprocessing");
+	uint32_t skyboxShaderId = shdManager->LoadFromPath("skybox");
 
-	skyboxShaders->SetUniform("SkyboxCubemap", 3);
+	// we intentionally perform a copy here, because if another shader gets loaded,
+	// the entire list can get re-allocated, and the references will break and just be
+	// garbage data.
+	ShaderProgram postFxShaders = shdManager->GetShaderResource(postFxShaderId);
+	ShaderProgram skyboxShaders = shdManager->GetShaderResource(skyboxShaderId);
+
+	postFxShaders.SetUniform("Texture", 1);
+	postFxShaders.SetUniform("DistortionTexture", 2);
+
+	skyboxShaders.SetUniform("SkyboxCubemap", 3);
 
 	Scene scene = Scene();
 
@@ -464,9 +473,9 @@ void EngineObject::Start()
 
 		for (uint32_t skyboxFace : skyboxFacesBeingLoaded)
 		{
-			Texture* texture = texManager->GetTextureResource(skyboxFace);
+			Texture& texture = texManager->GetTextureResource(skyboxFace);
 
-			if (texture->Status != Texture::LoadStatus::Succeeded)
+			if (texture.Status != Texture::LoadStatus::Succeeded)
 			{
 				skyboxLoaded = false;
 				break;
@@ -479,24 +488,24 @@ void EngineObject::Start()
 
 			for (int skyboxFaceIndex = 0; skyboxFaceIndex < 6; skyboxFaceIndex++)
 			{
-				Texture* texture = texManager->GetTextureResource(skyboxFacesBeingLoaded.at(skyboxFaceIndex));
+				Texture& texture = texManager->GetTextureResource(skyboxFacesBeingLoaded.at(skyboxFaceIndex));
 
 				glTexImage2D(
 					GL_TEXTURE_CUBE_MAP_POSITIVE_X + skyboxFaceIndex,
 					0,
 					GL_RGB,
-					texture->Width,
-					texture->Height,
+					texture.Width,
+					texture.Height,
 					0,
 					GL_RGB,
 					GL_UNSIGNED_BYTE,
-					texture->TMP_ImageByteData
+					texture.TMP_ImageByteData
 				);
 
 				glGenerateMipmap(GL_TEXTURE_2D);
 
-				free(texture->TMP_ImageByteData);
-				texture->TMP_ImageByteData = nullptr;
+				free(texture.TMP_ImageByteData);
+				texture.TMP_ImageByteData = nullptr;
 			}
 
 			glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
@@ -599,15 +608,19 @@ void EngineObject::Start()
 		
 		scene.UsedShaders = {};
 
-		for (const RenderItem& md : scene.RenderList)
-			scene.UsedShaders.insert(md.Material->Shader);
+		MaterialManager* mtlManager = MaterialManager::Get();
 
-		for (ShaderProgram* shp : scene.UsedShaders)
+		for (const RenderItem& ri : scene.RenderList)
+			scene.UsedShaders.insert(mtlManager->GetMaterialResource(ri.MaterialId).ShaderId);
+
+		for (uint32_t shpId : scene.UsedShaders)
 		{
-			shp->SetUniform("CameraMatrix", cameraMatrix);
-			shp->SetUniform("CameraPosition", Vector3(glm::vec3(sceneCamera->Transform[3])).ToGenericValue());
-			shp->SetUniform("Time", static_cast<float>(this->RunningTime));
-			shp->SetUniform("SkyboxCubemap", 3);
+			ShaderProgram& shp = shdManager->GetShaderResource(shpId);
+
+			shp.SetUniform("CameraMatrix", cameraMatrix);
+			shp.SetUniform("CameraPosition", Vector3(glm::vec3(sceneCamera->Transform[3])).ToGenericValue());
+			shp.SetUniform("Time", static_cast<float>(this->RunningTime));
+			shp.SetUniform("SkyboxCubemap", 3);
 		}
 
 		glActiveTexture(GL_TEXTURE3);
@@ -636,7 +649,7 @@ void EngineObject::Start()
 		// of zeroing-out the first 3 values of the last column of what is in essence a 4x4 2D array of floats...
 		view[3] = glm::vec4(0.f, 0.f, 0.f, 1.f);
 
-		skyboxShaders->SetUniform("CameraMatrix", projection * view);
+		skyboxShaders.SetUniform("CameraMatrix", projection * view);
 
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemap);
 		
@@ -683,62 +696,62 @@ void EngineObject::Start()
 
 		if (EngineJsonConfig.value("postfx_enabled", false))
 		{
-			postFxShaders->SetUniform("PostFxEnabled", 1);
-			postFxShaders->SetUniform(
+			postFxShaders.SetUniform("PostFxEnabled", 1);
+			postFxShaders.SetUniform(
 				"ScreenEdgeBlurEnabled",
 				EngineJsonConfig.value("postfx_blurvignette", false)
 			);
-			postFxShaders->SetUniform(
+			postFxShaders.SetUniform(
 				"DistortionEnabled",
 				EngineJsonConfig.value("postfx_distortion", false)
 			);
 
-			postFxShaders->SetUniform(
+			postFxShaders.SetUniform(
 				"Gamma",
 				EngineJsonConfig.value("postfx_gamma", 1.f)
 			);
-			postFxShaders->SetUniform(
+			postFxShaders.SetUniform(
 				"LdMax",
 				EngineJsonConfig.value("postfx_ldmax", 1.f)
 			);
-			postFxShaders->SetUniform(
+			postFxShaders.SetUniform(
 				"ContrastMax",
 				EngineJsonConfig.value("postfx_cmax", 1.f)
 			);
-			skyboxShaders->SetUniform(
+			skyboxShaders.SetUniform(
 				"HdrEnabled",
 				true
 			);
 
 			if (EngineJsonConfig.find("postfx_blurvignette_blurstrength") != EngineJsonConfig.end())
 			{
-				postFxShaders->SetUniform(
+				postFxShaders.SetUniform(
 					"BlurVignetteStrength",
 					(float)EngineJsonConfig["postfx_blurvignette_blurstrength"]
 				);
-				postFxShaders->SetUniform(
+				postFxShaders.SetUniform(
 					"BlurVignetteDistMul",
 					(float)EngineJsonConfig["postfx_blurvignette_weightmul"]
 				);
-				postFxShaders->SetUniform(
+				postFxShaders.SetUniform(
 					"BlurVignetteDistExp",
 					(float)EngineJsonConfig["postfx_blurvignette_weightexp"]
 				);
-				postFxShaders->SetUniform(
+				postFxShaders.SetUniform(
 					"BlurVignetteSampleRadius",
 					(int)EngineJsonConfig["postfx_blurvignette_sampleradius"]
 				);
 			}
 
-			postFxShaders->SetUniform("Time", static_cast<float>(this->RunningTime));
+			postFxShaders.SetUniform("Time", static_cast<float>(this->RunningTime));
 
 			glActiveTexture(GL_TEXTURE2);
-			glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(distortionTexture)->GpuId);
+			glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(distortionTexture).GpuId);
 		}
 		else
 		{
-			postFxShaders->SetUniform("PostFxEnabled", 0);
-			skyboxShaders->SetUniform(
+			postFxShaders.SetUniform("PostFxEnabled", 0);
+			skyboxShaders.SetUniform(
 				"HdrEnabled",
 				false
 			);
@@ -752,7 +765,7 @@ void EngineObject::Start()
 		glBindVertexArray(RectangleVAO);
 		glDisable(GL_DEPTH_TEST);
 
-		postFxShaders->Activate();
+		postFxShaders.Activate();
 
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 
@@ -795,10 +808,10 @@ EngineObject::~EngineObject()
 {
 	Debug::Log("Engine destructing...");
 
-	ShaderProgram::ClearAll();
-
-	MeshProvider::Shutdown();
+	MaterialManager::Shutdown();
 	TextureManager::Shutdown();
+	ShaderManager::Shutdown();
+	MeshProvider::Shutdown();
 	delete this->RendererContext;
 
 	// TODO:

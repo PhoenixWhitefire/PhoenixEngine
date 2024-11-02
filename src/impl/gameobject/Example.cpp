@@ -99,7 +99,7 @@ void Object_Example::s_DeclareReflections()
 				result += names[index].AsString() + ", ";
 
 			result = result.substr(0, result.size() - 2);
-			result += " and " + names[names.size() - 1].AsString() + "!";
+			result += " and " + names.back().AsString() + "!";
 
 			if (args[1].AsBool())
 				result += " (MANIACAL CACKLING) HAHAHAHAHAHAHA";

@@ -74,5 +74,5 @@ Mesh PrimitiveMeshes::Cube()
 		22, 21, 20
 	};
 
-	return Mesh{ vertices, indices };
+	return Mesh{ vertices, indices, UINT32_MAX, true };
 }

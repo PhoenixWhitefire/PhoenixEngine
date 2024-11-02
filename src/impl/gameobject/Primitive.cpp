@@ -51,7 +51,6 @@ Object_Primitive::Object_Primitive()
 	this->Name = "Primitive";
 	this->ClassName = "Primitive";
 
-	this->Material = RenderMaterial::GetMaterial("plastic");
 	this->SetShape(PrimitiveShape::Cube);
 
 	s_DeclareReflections();

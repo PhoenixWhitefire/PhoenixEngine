@@ -46,6 +46,15 @@ void Object_Attachment::s_DeclareReflections()
 	REFLECTION_INHERITAPI(GameObject);
 
 	REFLECTION_DECLAREPROP_SIMPLE(Object_Attachment, LocalTransform, Matrix);
+	REFLECTION_DECLAREPROP(
+		"WorldTransform",
+		Matrix,
+		[](GameObject* p)
+		{
+			return dynamic_cast<Object_Attachment*>(p)->GetWorldTransform();
+		},
+		nullptr
+	);
 
 	/*
 	REFLECTION_DECLAREPROP(

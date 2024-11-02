@@ -8,10 +8,10 @@
 
 #include "asset/SceneFormat.hpp"
 
-#include "gameobject/GameObjects.hpp"
-#include "asset/Material.hpp"
-#include "asset/ModelLoader.hpp"
 #include "asset/PrimitiveMeshes.hpp"
+#include "asset/MaterialManager.hpp"
+#include "asset/ModelLoader.hpp"
+#include "gameobject/Light.hpp"
 #include "FileRW.hpp"
 #include "Debug.hpp"
 
@@ -258,6 +258,8 @@ static std::vector<GameObject*> LoadMapVersion1(
 		}
 	}
 
+	MaterialManager* mtlManager = MaterialManager::Get();
+
 	for (uint32_t Index = 0; Index < PartsNode.size(); Index++)
 	{
 		nlohmann::json Object = PartsNode[Index];
@@ -315,9 +317,9 @@ static std::vector<GameObject*> LoadMapVersion1(
 
 			if (Object.find("material") != Object.end())
 			{
-				RenderMaterial* MeshMaterial = RenderMaterial::GetMaterial(Object["material"]);
+				uint32_t MeshMaterial = mtlManager->LoadMaterialFromPath(Object["material"]);
 
-				Object3D->Material = MeshMaterial;
+				Object3D->MaterialId = MeshMaterial;
 
 			}
 			else if (Object.find("textures") != Object.end())

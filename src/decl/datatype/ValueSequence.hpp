@@ -68,7 +68,7 @@ template <class T> T ValueSequence<T>::GetValue(float Time)
 		return m_Keys[0].Value;// + (m_Keys[0].Envelope * deviation);
 
 	if (Time == 1.f)
-		return m_Keys[m_Keys.size() - 1].Value;// + (m_Keys[m_Keys.size() - 1].Envelope * deviation);
+		return m_Keys.back().Value;// + (m_Keys[m_Keys.size() - 1].Envelope * deviation);
 
 	for (size_t keyIndex = 0; keyIndex < (m_Keys.size() - 1); keyIndex++)
 	{

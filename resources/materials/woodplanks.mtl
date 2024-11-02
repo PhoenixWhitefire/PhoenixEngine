@@ -1,6 +1,6 @@
 {
   "albedo": "textures/planks.png",
-  "shaderprogram": "worldUberMaterial",
+  "shaderprogram": "worldUberTriProjected",
   "specExponent": 8.0,
   "specMultiply": 0.5,
   "specular": "textures/planksSpec.png",

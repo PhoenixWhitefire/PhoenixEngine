@@ -9,7 +9,8 @@
     "LocalTransform": "Matrix",
     "Name": "String",
     "ObjectId": "Integer",
-    "Parent": "GameObject"
+    "Parent": "GameObject",
+    "WorldTransform": "Matrix"
   },
   "Base3D": {
     "Class": "String",
@@ -73,7 +74,8 @@
     "Name": "String",
     "ObjectId": "Integer",
     "Parent": "GameObject",
-    "Shadows": "Bool"
+    "Shadows": "Bool",
+    "WorldTransform": "Matrix"
   },
   "Example": {
     "Class": "String",
@@ -119,7 +121,8 @@
     "Name": "String",
     "ObjectId": "Integer",
     "Parent": "GameObject",
-    "Shadows": "Bool"
+    "Shadows": "Bool",
+    "WorldTransform": "Matrix"
   },
   "Mesh": {
     "Asset": "String",
@@ -186,7 +189,8 @@
     "ObjectId": "Integer",
     "Parent": "GameObject",
     "Range": "Double",
-    "Shadows": "Bool"
+    "Shadows": "Bool",
+    "WorldTransform": "Matrix"
   },
   "Primitive": {
     "Class": "String",
@@ -225,6 +229,20 @@
     "Reload": "() -> (Bool,)",
     "SourceFile": "String"
   },
+  "Sound": {
+    "Class": "String",
+    "Destroy": "() -> ()",
+    "Enabled": "Bool",
+    "GetFullName": "() -> (String,)",
+    "IsA": "(String,) -> (Bool,)",
+    "Lineage": "GameObject -> Attachment",
+    "LocalTransform": "Matrix",
+    "Name": "String",
+    "ObjectId": "Integer",
+    "Parent": "GameObject",
+    "SoundFile": "String",
+    "WorldTransform": "Matrix"
+  },
   "SpotLight": {
     "Brightness": "Double",
     "Class": "String",
@@ -241,7 +259,8 @@
     "OuterCone": "Double",
     "Parent": "GameObject",
     "Range": "Double",
-    "Shadows": "Bool"
+    "Shadows": "Bool",
+    "WorldTransform": "Matrix"
   },
   "Workspace": {
     "Class": "String",

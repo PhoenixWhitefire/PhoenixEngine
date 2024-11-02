@@ -1,6 +1,6 @@
 {
   "albedo": "textures/plastic.png",
-  "shaderprogram": "worldUberMaterial",
+  "shaderprogram": "worldUberTriProjected",
   "specExponent": 32.0,
   "specMultiply": 0.5,
   "translucency": false,

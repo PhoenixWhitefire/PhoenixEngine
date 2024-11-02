@@ -376,7 +376,7 @@ static void drawUI(Reflection::GenericValue Data)
 	{
 		Debug::Log("Reloading shaders...");
 
-		ShaderProgram::ReloadAll();
+		ShaderManager::Get()->ReloadAll();
 
 		Debug::Log("Shaders reloaded");
 	}
@@ -617,9 +617,6 @@ static void Application(int argc, char** argv)
 							: EngineJsonConfig.value("RootScene", "levels/empty.world");
 
 	LoadLevel(mapFile);
-
-	if (EditorContext)
-		EditorContext->Init();
 
 	EngineInstance->OnFrameStart.Connect(handleInputs);
 	EngineInstance->OnFrameRenderGui.Connect(drawUI);

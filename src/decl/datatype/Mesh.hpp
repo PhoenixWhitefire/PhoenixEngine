@@ -18,4 +18,5 @@ struct Mesh
 	std::vector<uint32_t> Indices;
 
 	uint32_t GpuId = UINT32_MAX;
+	bool MeshDataPreserved = false;
 };

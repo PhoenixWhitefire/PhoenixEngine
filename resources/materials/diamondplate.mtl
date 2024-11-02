@@ -1,8 +1,10 @@
 {
   "albedo": "textures/diamondplate.jpg",
-  "shaderprogram": "worldUber",
+  "shaderprogram": "worldUberTriProjected",
   "specExponent": 16.0,
   "specMultiply": 0.5,
   "translucency": false,
-  "uniforms": null
+  "uniforms": {
+    "MaterialProjectionFactor": 0.10000000149011612
+  }
 }

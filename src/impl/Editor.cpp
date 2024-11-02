@@ -4,6 +4,7 @@
 
 #include "Editor.hpp"
 #include "gameobject/GameObjects.hpp"
+#include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
 #include "UserInput.hpp"
 #include "FileRW.hpp"
@@ -54,54 +55,6 @@ Editor::Editor()
 	DefaultNewMaterial["albedo"] = "textures/plastic.png";
 }
 
-static void AddChildrenToObjects(GameObject* Parent)
-{
-	for (GameObject* Obj : Parent->GetChildren())
-	{
-		Object_Base3D* Obj3D = dynamic_cast<Object_Base3D*>(Obj);
-
-		if (Obj3D)
-		{
-			/*IntersectionLib::HittableObject* NewObject = new IntersectionLib::HittableObject();
-			NewObject->CollisionMesh = Obj3D->GetRenderMesh();
-			NewObject->Id = Objects.size();
-
-			glm::mat4 ModelMatrix = glm::mat4(1.0f);
-
-			Object_Model* ParentModel = dynamic_cast<Object_Model*>(Obj->Parent);*/
-
-			//if (ParentModel)
-			//	ModelMatrix = ParentModel->Matrix;
-
-			//NewObject->Matrix = ModelMatrix * Obj3D->Matrix;
-			
-			//glm::mat4 Scale = glm::mat4(1.0f);
-			//Scale = glm::scale(Scale, (glm::vec3)Obj3D->Size);
-
-			//NewObject->Matrix = NewObject->Matrix * Scale;
-
-			//Objects.push_back(NewObject);
-		}
-
-		if (!Obj->GetChildren().empty())
-			AddChildrenToObjects(Obj);
-	}
-}
-
-//static void ResetAndAddObjects()
-//{
-//	Objects.clear();
-//
-//	AddChildrenToObjects(GameObject::s_DataModel);
-//}
-
-void Editor::Init()
-{
-	//AddChildrenToObjects(Root);
-
-	//GameWorkspace->OnChildAdded.Connect(ResetAndAddObjects);
-}
-
 void Editor::Update(double DeltaTime)
 {
 	m_InvalidObjectErrTimeRemaining -= DeltaTime;
@@ -109,9 +62,11 @@ void Editor::Update(double DeltaTime)
 
 static bool mtlIterator(void*, int index, const char** outText)
 {
-	RenderMaterial* selected = RenderMaterial::GetLoadedMaterials()[index];
+	MaterialManager* mtlManager = MaterialManager::Get();
 
-	*outText = selected->Name.c_str();
+	RenderMaterial& selected = mtlManager->GetLoadedMaterials()[index];
+
+	*outText = selected.Name.c_str();
 
 	return true;
 }
@@ -200,6 +155,9 @@ void Editor::m_RenderMaterialEditor()
 
 	ImGui::InputText("New material", m_MtlCreateNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
 
+	MaterialManager* mtlManager = MaterialManager::Get();
+	TextureManager* texManager = TextureManager::Get();
+
 	if (ImGui::Button("Create"))
 	{
 		FileRW::WriteFile(
@@ -207,15 +165,17 @@ void Editor::m_RenderMaterialEditor()
 			DefaultNewMaterial.dump(2), true
 		);
 
-		RenderMaterial::GetMaterial(m_MtlCreateNameBuf);
+		mtlManager->LoadMaterialFromPath(m_MtlCreateNameBuf);
 	}
+
+	std::vector<RenderMaterial>& loadedMaterials = mtlManager->GetLoadedMaterials();
 
 	ImGui::ListBox(
 		"Active materials",
 		&m_MtlCurItem,
 		&mtlIterator,
 		nullptr,
-		static_cast<int>(RenderMaterial::GetLoadedMaterials().size())
+		static_cast<int>(loadedMaterials.size())
 	);
 
 	if (m_MtlCurItem == -1)
@@ -225,22 +185,20 @@ void Editor::m_RenderMaterialEditor()
 		return;
 	}
 
-	RenderMaterial* curItem = RenderMaterial::GetLoadedMaterials().at(m_MtlCurItem);
+	RenderMaterial& curItem = loadedMaterials.at(m_MtlCurItem);
 
-	TextureManager* texManager = TextureManager::Get();
-
-	Texture* colorMap = texManager->GetTextureResource(curItem->ColorMap);
-	Texture* metallicRoughnessMap = texManager->GetTextureResource(curItem->MetallicRoughnessMap);
+	Texture& colorMap = texManager->GetTextureResource(curItem.ColorMap);
+	Texture& metallicRoughnessMap = texManager->GetTextureResource(curItem.MetallicRoughnessMap);
 
 	static int SelectedUniformIdx = -1;
 
 	if (m_MtlCurItem != m_MtlPrevItem)
 	{
-		copyStringToBuffer(m_MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE, curItem->Shader->Name);
-		copyStringToBuffer(m_MtlDiffuseBuf, MATERIAL_TEXTUREPATH_BUFSIZE, colorMap->ImagePath);
+		copyStringToBuffer(m_MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE, curItem.GetShader().Name);
+		copyStringToBuffer(m_MtlDiffuseBuf, MATERIAL_TEXTUREPATH_BUFSIZE, colorMap.ImagePath);
 
-		if (curItem->MetallicRoughnessMap != 0)
-			copyStringToBuffer(m_MtlSpecBuf, MATERIAL_TEXTUREPATH_BUFSIZE, metallicRoughnessMap->ImagePath);
+		if (curItem.MetallicRoughnessMap != 0)
+			copyStringToBuffer(m_MtlSpecBuf, MATERIAL_TEXTUREPATH_BUFSIZE, metallicRoughnessMap.ImagePath);
 
 		SelectedUniformIdx = -1;
 	}
@@ -255,7 +213,7 @@ void Editor::m_RenderMaterialEditor()
 		// first cast to uint64_t to get rid of the
 		// "'type cast': conversion from 'uint32_t' to 'void *' of greater size"
 		// warning
-		(void*)((uint64_t)colorMap->GpuId),
+		(void*)((uint64_t)colorMap.GpuId),
 		ImVec2(256, 256),
 		// Flip the Y axis. Either OpenGL or Dear ImGui is bottom-up
 		ImVec2(0, 1),
@@ -264,22 +222,22 @@ void Editor::m_RenderMaterialEditor()
 
 	ImGui::Text(std::vformat(
 		"Resolution: {}x{}",
-		std::make_format_args(colorMap->Width, colorMap->Height)
+		std::make_format_args(colorMap.Width, colorMap.Height)
 	).c_str());
 
 	ImGui::Text(std::vformat(
 		"# Color channels: {}",
-		std::make_format_args(colorMap->NumColorChannels)
+		std::make_format_args(colorMap.NumColorChannels)
 	).c_str());
 
-	bool hasSpecularTexture = curItem->MetallicRoughnessMap != 0;
+	bool hasSpecularTexture = curItem.MetallicRoughnessMap != 0;
 	ImGui::Checkbox("Has Specular", &hasSpecularTexture);
 
 	if (hasSpecularTexture)
 	{
-		curItem->MetallicRoughnessMap = curItem->MetallicRoughnessMap != 0 ? curItem->MetallicRoughnessMap : 1;
+		curItem.MetallicRoughnessMap = curItem.MetallicRoughnessMap != 0 ? curItem.MetallicRoughnessMap : 1;
 		// in case the texture is updated by the above ternary to be ID 1
-		metallicRoughnessMap = texManager->GetTextureResource(curItem->MetallicRoughnessMap);
+		metallicRoughnessMap = texManager->GetTextureResource(curItem.MetallicRoughnessMap);
 
 		ImGui::InputText("Specular", m_MtlSpecBuf, 64);
 
@@ -287,7 +245,7 @@ void Editor::m_RenderMaterialEditor()
 			// first cast to uint64_t to get rid of the
 			// "'type cast': conversion from 'uint32_t' to 'void *' of greater size"
 			// warning
-			(void*)((uint64_t)metallicRoughnessMap->GpuId),
+			(void*)((uint64_t)metallicRoughnessMap.GpuId),
 			ImVec2(256, 256),
 			// Flip the Y axis. Either OpenGL or Dear ImGui is bottom-up
 			ImVec2(0, 1),
@@ -296,16 +254,16 @@ void Editor::m_RenderMaterialEditor()
 
 		ImGui::Text(std::vformat(
 			"Resolution: {}x{}",
-			std::make_format_args(metallicRoughnessMap->Width, metallicRoughnessMap->Height)
+			std::make_format_args(metallicRoughnessMap.Width, metallicRoughnessMap.Height)
 		).c_str());
 
 		ImGui::Text(std::vformat(
 			"# Color channels: {}",
-			std::make_format_args(metallicRoughnessMap->NumColorChannels)
+			std::make_format_args(metallicRoughnessMap.NumColorChannels)
 		).c_str());
 	}
 	else
-		curItem->MetallicRoughnessMap = 0;
+		curItem.MetallicRoughnessMap = 0;
 
 	ImGui::Text("Uniforms");
 
@@ -340,13 +298,13 @@ void Editor::m_RenderMaterialEditor()
 		}
 		}
 
-		curItem->Uniforms[m_MtlNewUniformNameBuf] = initialValue;
+		curItem.Uniforms[m_MtlNewUniformNameBuf] = initialValue;
 	}
 
 	std::vector<std::string> uniformsArray;
-	uniformsArray.reserve(curItem->Uniforms.size());
+	uniformsArray.reserve(curItem.Uniforms.size());
 
-	for (auto& it : curItem->Uniforms)
+	for (auto& it : curItem.Uniforms)
 		uniformsArray.push_back(it.first);
 
 	ImGui::ListBox(
@@ -354,13 +312,13 @@ void Editor::m_RenderMaterialEditor()
 		&SelectedUniformIdx,
 		&mtlUniformIterator,
 		&uniformsArray,
-		static_cast<int>(curItem->Uniforms.size())
+		static_cast<int>(curItem.Uniforms.size())
 	);
 
 	if (SelectedUniformIdx != -1 && uniformsArray.size() >= 1)
 	{
 		const std::string& name = uniformsArray.at(SelectedUniformIdx);
-		Reflection::GenericValue& value = curItem->Uniforms.at(name);
+		Reflection::GenericValue& value = curItem.Uniforms.at(name);
 
 		copyStringToBuffer(m_MtlUniformNameEditBuf, MATERIAL_NEW_NAME_BUFSIZE, name);
 
@@ -408,42 +366,42 @@ void Editor::m_RenderMaterialEditor()
 		std::string newName = m_MtlUniformNameEditBuf;
 
 		if (name != newName)
-			curItem->Uniforms.erase(name);
+			curItem.Uniforms.erase(name);
 
-		curItem->Uniforms[newName] = newValue;
+		curItem.Uniforms[newName] = newValue;
 	}
 
 	if (ImGui::Button("Update"))
 	{
-		curItem->ColorMap = texManager->LoadTextureFromPath(m_MtlDiffuseBuf);
+		curItem.ColorMap = texManager->LoadTextureFromPath(m_MtlDiffuseBuf);
 
 		if (strlen(m_MtlSpecBuf) > 0)
-			curItem->MetallicRoughnessMap = texManager->LoadTextureFromPath(m_MtlSpecBuf);
+			curItem.MetallicRoughnessMap = texManager->LoadTextureFromPath(m_MtlSpecBuf);
 
-		curItem->Shader = ShaderProgram::GetShaderProgram(m_MtlShpBuf);
+		curItem.ShaderId = ShaderManager::Get()->LoadFromPath(m_MtlShpBuf);
 	}
 
-	ImGui::Checkbox("Has translucency", &curItem->HasTranslucency);
-	ImGui::InputFloat("Spec pow", &curItem->SpecExponent);
-	ImGui::InputFloat("Spec mul", &curItem->SpecMultiply);
+	ImGui::Checkbox("Has translucency", &curItem.HasTranslucency);
+	ImGui::InputFloat("Spec pow", &curItem.SpecExponent);
+	ImGui::InputFloat("Spec mul", &curItem.SpecMultiply);
 
 	if (ImGui::Button("Save"))
 	{
 		nlohmann::json newMtlConfig{};
 
-		newMtlConfig["albedo"] = colorMap->ImagePath;
+		newMtlConfig["albedo"] = colorMap.ImagePath;
 
-		if (curItem->MetallicRoughnessMap != 0)
-			newMtlConfig["specular"] = metallicRoughnessMap->ImagePath;
+		if (curItem.MetallicRoughnessMap != 0)
+			newMtlConfig["specular"] = metallicRoughnessMap.ImagePath;
 
-		newMtlConfig["specExponent"] = curItem->SpecExponent;
-		newMtlConfig["specMultiply"] = curItem->SpecMultiply;
-		newMtlConfig["translucency"] = curItem->HasTranslucency;
-		newMtlConfig["shaderprogram"] = curItem->Shader->Name;
+		newMtlConfig["specExponent"] = curItem.SpecExponent;
+		newMtlConfig["specMultiply"] = curItem.SpecMultiply;
+		newMtlConfig["translucency"] = curItem.HasTranslucency;
+		newMtlConfig["shaderprogram"] = curItem.GetShader().Name;
 		
 		newMtlConfig["uniforms"] = {};
 
-		for (auto& it : curItem->Uniforms)
+		for (auto& it : curItem.Uniforms)
 		{
 			Reflection::GenericValue& value = it.second;
 
@@ -467,10 +425,10 @@ void Editor::m_RenderMaterialEditor()
 			}
 		}
 
-		std::string filePath = "materials/" + curItem->Name + ".mtl";
+		std::string filePath = "materials/" + curItem.Name + ".mtl";
 
 		FileRW::WriteFile(
-			"materials/" + curItem->Name + ".mtl",
+			"materials/" + curItem.Name + ".mtl",
 			newMtlConfig.dump(2),
 			true
 		);

@@ -5,7 +5,7 @@
 #include "datatype/ValueSequence.hpp"
 #include "render/GpuBuffers.hpp"
 #include "datatype/GameObject.hpp"
-#include "render/ShaderProgram.hpp"
+#include "render/ShaderManager.hpp"
 #include "asset/TextureManager.hpp"
 #include "datatype/Vector3.hpp"
 #include "datatype/Vector2.hpp"
