@@ -1,5 +1,6 @@
 #include <filesystem>
 #include <glm/gtc/type_ptr.hpp>
+#include <stb/stb_image.h>
 
 #include "asset/ModelLoader.hpp"
 #include "asset/MaterialManager.hpp"
@@ -13,12 +14,68 @@ static uint32_t readU32(const std::string& str, size_t offset)
 {
 	std::string substr = str.substr(offset, 4);
 
-	std::vector<uint8_t> bytes(substr.begin(), substr.end());
+	std::vector<int8_t> bytes(substr.begin(), substr.end());
 	uint32_t u32{};
 
 	std::memcpy(&u32, bytes.data(), sizeof(uint32_t));
 
 	return u32;
+}
+
+static std::string getTexturePath(
+	const std::string& ModelName,
+	const nlohmann::json& JsonData,
+	const nlohmann::json& ImageJson,
+	const std::vector<int8_t> BufferData
+)
+{
+	if (ImageJson.find("uri") == ImageJson.end())
+	{
+		return "!Missing";
+
+		/*
+		std::string mimeType = ImageJson["mimeType"];
+		int32_t bufferViewIndex = ImageJson["bufferView"];
+
+		const nlohmann::json& bufferView = JsonData["bufferViews"][bufferViewIndex];
+
+		uint32_t bufferIndex = bufferView["buffer"];
+		uint32_t byteOffset = bufferView.value("byteOffset", 0);
+		uint32_t byteLength = bufferView["byteLength"];
+
+		std::vector<int8_t> imageData(
+			BufferData.begin() + byteOffset,
+			BufferData.begin() + byteOffset + byteLength
+		);
+
+		std::string fileExtension;
+
+		if (mimeType == "image/jpeg")
+			fileExtension = ".jpeg";
+		else
+			fileExtension = ".png";
+
+		std::string filePath = "textures/"
+								+ ModelName
+								+ "/"
+								+ ImageJson.value("name", "UNNAMED")
+								+ fileExtension;
+
+		std::string fileContents;
+		fileContents.resize(imageData.size());
+		fileContents.copy((char*)imageData.data(), imageData.size(), 0ULL);
+
+		FileRW::WriteFileCreateDirectories(
+			filePath,
+			fileContents,
+			true
+		);
+
+		return filePath;
+		*/
+	}
+	else
+		return ImageJson["uri"];
 }
 
 ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
@@ -74,7 +131,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 
 		std::string binaryString = binaryChunk.substr(8, binaryChLength);
 
-		m_Data = std::vector<uint8_t>(binaryString.begin(), binaryString.end());
+		m_Data = std::vector<int8_t>(binaryString.begin(), binaryString.end());
 	}
 	else
 	{
@@ -82,20 +139,20 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		m_Data = m_GetData();
 	}
 
-	try
-	{
+	//try
+	//{
 		for (const nlohmann::json& scene : m_JsonData["scenes"])
 			for (uint32_t node : scene["nodes"])
 				m_TraverseNode(node);
-	}
-	catch (nlohmann::json::type_error e)
-	{
-		std::string errMessage = e.what();
-		throw(std::vformat(
-			"Failed to import model '{}': JSON Type Error: {}",
-			std::make_format_args(gltfFilePath, errMessage)
-		));
-	}
+	//}
+	//catch (nlohmann::json::type_error e)
+	//{
+	//	std::string errMessage = e.what();
+	//	throw(std::vformat(
+	//		"Failed to import model '{}': JSON Type Error: {}",
+	//		std::make_format_args(gltfFilePath, errMessage)
+	//	));
+	//}
 
 	MaterialManager* mtlManager = MaterialManager::Get();
 	MeshProvider* meshProvider = MeshProvider::Get();
@@ -203,8 +260,8 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 
 void ModelLoader::m_LoadMesh(uint32_t MeshIndex)
 {
-	nlohmann::json& mesh = m_JsonData["meshes"][MeshIndex];
-	nlohmann::json& mainPrims = mesh["primitives"][0];
+	const nlohmann::json& mesh = m_JsonData["meshes"][MeshIndex];
+	const nlohmann::json& mainPrims = mesh["primitives"][0];
 
 	// Get all accessor indices
 	uint32_t posAccInd = mainPrims["attributes"]["POSITION"];
@@ -365,7 +422,7 @@ void ModelLoader::m_TraverseNode(uint32_t nextNode, glm::mat4 matrix)
 	}
 }
 
-std::vector<uint8_t> ModelLoader::m_GetData()
+std::vector<int8_t> ModelLoader::m_GetData()
 {
 	// Create a place to store the raw text, and get the uri of the .bin file
 	std::string bytesText;
@@ -377,7 +434,7 @@ std::vector<uint8_t> ModelLoader::m_GetData()
 	bytesText = FileRW::ReadFile((fileDirectory + uri));
 
 	// Transform the raw text data into bytes and put them in a vector
-	std::vector<uint8_t> data(bytesText.begin(), bytesText.end());
+	std::vector<int8_t> data(bytesText.begin(), bytesText.end());
 	return data;
 }
 
@@ -392,19 +449,23 @@ std::vector<float> ModelLoader::m_GetFloats(const nlohmann::json& accessor)
 	std::string type = accessor["type"];
 
 	// Get properties from the bufferView
-	nlohmann::json bufferView = m_JsonData["bufferViews"][buffViewInd];
+	const nlohmann::json& bufferView = m_JsonData["bufferViews"][buffViewInd];
 	uint32_t byteOffset = bufferView["byteOffset"];
 
 	// Interpret the type and store it into numPerVert
 	uint32_t numPerVert;
 	if (type == "SCALAR")
 		numPerVert = 1;
+
 	else if (type == "VEC2")
 		numPerVert = 2;
+
 	else if (type == "VEC3")
 		numPerVert = 3;
+
 	else if (type == "VEC4")
 		numPerVert = 4;
+
 	else
 		throw("Could not decode GLTF model: Type is not handled (not SCALAR, VEC2, VEC3, or VEC4)");
 
@@ -413,7 +474,7 @@ std::vector<float> ModelLoader::m_GetFloats(const nlohmann::json& accessor)
 	uint32_t lengthOfData = count * 4 * numPerVert;
 	for (uint32_t i = beginningOfData; i < beginningOfData + lengthOfData; i)
 	{
-		uint8_t bytes[] = { m_Data[i++], m_Data[i++], m_Data[i++], m_Data[i++] };
+		int8_t bytes[] = { m_Data[i++], m_Data[i++], m_Data[i++], m_Data[i++] };
 		float value;
 		std::memcpy(&value, bytes, sizeof(float));
 		floatVec.push_back(value);
@@ -433,7 +494,7 @@ std::vector<uint32_t> ModelLoader::m_GetIndices(const nlohmann::json& accessor)
 	uint32_t componentType = accessor["componentType"];
 
 	// Get properties from the bufferView
-	nlohmann::json bufferView = m_JsonData["bufferViews"][buffViewInd];
+	const nlohmann::json& bufferView = m_JsonData["bufferViews"][buffViewInd];
 	uint32_t byteOffset = bufferView.value("byteOffset", 0);
 
 	// Get indices with regards to their type: uint32_t, uint16_t, or short
@@ -442,7 +503,7 @@ std::vector<uint32_t> ModelLoader::m_GetIndices(const nlohmann::json& accessor)
 	{
 		for (uint32_t i = beginningOfData; i < byteOffset + accByteOffset + count * 4; i)
 		{
-			uint8_t bytes[] = { m_Data[i++], m_Data[i++], m_Data[i++], m_Data[i++] };
+			int8_t bytes[] = { m_Data[i++], m_Data[i++], m_Data[i++], m_Data[i++] };
 			uint32_t value;
 			std::memcpy(&value, bytes, sizeof(uint32_t));
 			indices.push_back(value);
@@ -452,7 +513,7 @@ std::vector<uint32_t> ModelLoader::m_GetIndices(const nlohmann::json& accessor)
 	{
 		for (uint32_t i = beginningOfData; i < byteOffset + accByteOffset + count * 2; i)
 		{
-			uint8_t bytes[] = { m_Data[i++], m_Data[i++] };
+			int8_t bytes[] = { m_Data[i++], m_Data[i++] };
 			uint16_t value;
 			std::memcpy(&value, bytes, sizeof(uint16_t));
 			indices.push_back(value);
@@ -462,7 +523,7 @@ std::vector<uint32_t> ModelLoader::m_GetIndices(const nlohmann::json& accessor)
 	{
 		for (uint32_t i = beginningOfData; i < byteOffset + accByteOffset + count * 2; i)
 		{
-			uint8_t bytes[] = { m_Data[i++], m_Data[i++] };
+			int8_t bytes[] = { m_Data[i++], m_Data[i++] };
 			short value;
 			std::memcpy(&value, bytes, sizeof(uint16_t));
 			indices.push_back(value);
@@ -520,11 +581,11 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 
 	nlohmann::json baseColDesc = pbrDescription.value(
 		"baseColorTexture",
-		nlohmann::json{ {"index", 0 } }
+		nlohmann::json{ { "index", 0 } }
 	);
 	nlohmann::json metallicRoughnessDesc = pbrDescription.value(
 		"metallicRoughnessTexture",
-		nlohmann::json{ {"index", 0 } }
+		nlohmann::json{ { "index", 0 } }
 	);
 
 	nlohmann::json& baseColTex = m_JsonData["textures"][(int)baseColDesc["index"]];
@@ -537,16 +598,40 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 	if (baseColSourceIndex < 0)
 		return material;
 
-	std::string baseColPath = m_JsonData["images"][baseColSourceIndex]["uri"];
+	bool baseColFilterBilinear = true;
+
+	if (baseColTex.find("sampler") != baseColTex.end())
+		// 9729 == LINEAR 
+		// https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#schema-reference-sampler
+		baseColFilterBilinear = m_JsonData["samplers"][(int)baseColTex["sampler"]] == 9729;
 
 	std::string fileDirectory = m_File.substr(0, m_File.find_last_of('/') + 1);
 
-	material.BaseColorTexture = texManager->LoadTextureFromPath(fileDirectory + baseColPath);
+	std::string baseColPath = getTexturePath(
+		m_File,
+		m_JsonData,
+		m_JsonData["images"][baseColSourceIndex],
+		m_Data
+	);
+
+	material.BaseColorTexture = texManager->LoadTextureFromPath(
+		baseColPath != "!Missing" ? fileDirectory + baseColPath : baseColPath,
+		baseColFilterBilinear
+	);
 
 	if (pbrDescription.find("metallicRoughnessTexture") != pbrDescription.end())
 	{
-		std::string metallicRoughnessPath = m_JsonData["images"][(int)metallicRoughnessTex["source"]]["uri"];
-		material.MetallicRoughnessTexture = texManager->LoadTextureFromPath(fileDirectory + metallicRoughnessPath);
+		std::string metallicRoughnessPath = getTexturePath(
+			m_File,
+			m_JsonData,
+			m_JsonData["images"][(int)metallicRoughnessTex["source"]],
+			m_Data
+		);
+
+		material.MetallicRoughnessTexture = texManager->LoadTextureFromPath(
+			metallicRoughnessPath != "!Missing" ? fileDirectory + metallicRoughnessPath : metallicRoughnessPath,
+			baseColFilterBilinear
+		);
 	}
 
 	return material;

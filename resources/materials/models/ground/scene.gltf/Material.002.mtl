@@ -3,7 +3,6 @@
   "shaderprogram": "worldUber",
   "specExponent": 16.0,
   "specMultiply": 0.5,
-  "specular": "models/ground/specular.png",
   "translucency": false,
   "uniforms": null
 }

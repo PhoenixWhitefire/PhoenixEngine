@@ -236,13 +236,27 @@ static void asyncTextureLoader(
 	AsyncTexture->TMP_ImageByteData = data;
 }
 
-uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool ShouldLoadAsync)
+uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool ShouldLoadAsync, bool DoBilinearSmoothing)
 {
 	std::string ResDir = EngineJsonConfig["ResourcesDirectory"];
 	std::string ActualPath = ResDir + Path;
 
 	auto it = m_StringToTextureId.find(Path);
 	
+	if (it != m_StringToTextureId.end())
+	{
+		const Texture& texture = m_Textures.at(it->second);
+
+		if (texture.DoBilinearSmoothing != DoBilinearSmoothing)
+		{
+			for (size_t index = 0; index < m_Textures.size(); index++)
+				if (m_Textures[index].DoBilinearSmoothing == DoBilinearSmoothing)
+					return m_Textures[index].ResourceId;
+
+			it = m_StringToTextureId.end();
+		}
+	}
+
 	if (it == m_StringToTextureId.end())
 	{
 		uint32_t newResourceId = static_cast<uint32_t>(m_Textures.size());

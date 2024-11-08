@@ -633,6 +633,7 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 			const char* meshName = luaL_checkstring(L, 1);
 
 			Mesh mesh;
+			mesh.MeshDataPreserved = true;
 
 			lua_getfield(L, -1, "Vertices");
 

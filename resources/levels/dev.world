@@ -34,7 +34,7 @@
     } ,
     {
       "name": "Capoeira",
-      "path": "models/Capoeira.glb",
+      "path": "models/glamfredward.glb",
       "position":[0, 0, -15],
       "orient": [0,0,0],
       "size": [10, 10, 10],

@@ -30,7 +30,7 @@ static glm::mat4 getNearestParentTransform(Object_Attachment* att)
 				break;
 			}
 			else
-				curParent = att->GetParent();
+				curParent = curParent->GetParent();
 		}
 	}
 

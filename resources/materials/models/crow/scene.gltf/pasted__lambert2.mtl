@@ -1,8 +1,8 @@
 {
   "albedo": "models/crow/diffuse.png",
-  "roughnessFactor": 1.0,
-  "specExponent": 16.0,
-  "specMultiply": 0.0,
+  "shaderprogram": "worldUber",
+  "specExponent": 8.0,
+  "specMultiply": 0.5,
   "translucency": false,
-  "uniforms": {}
+  "uniforms": null
 }

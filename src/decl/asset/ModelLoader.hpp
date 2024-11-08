@@ -36,7 +36,7 @@ private:
 
 	void m_TraverseNode(uint32_t NextNode, glm::mat4 Transform = glm::mat4(1.0f));
 
-	std::vector<uint8_t> m_GetData();
+	std::vector<int8_t> m_GetData();
 
 	std::vector<float> m_GetFloats(const nlohmann::json& Accessor);
 	std::vector<uint32_t> m_GetIndices(const nlohmann::json& Accessor);
@@ -62,5 +62,5 @@ private:
 	std::vector<glm::vec3> m_MeshScales;
 	std::vector<MeshMaterial> m_MeshMaterials;
 
-	std::vector<uint8_t> m_Data;
+	std::vector<int8_t> m_Data;
 };

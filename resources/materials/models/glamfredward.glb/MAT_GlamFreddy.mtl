@@ -1,0 +1,9 @@
+{
+  "albedo": "!Missing",
+  "roughnessFactor": 1.0,
+  "specExponent": 16.0,
+  "specMultiply": 0.0,
+  "specular": "!Missing",
+  "translucency": false,
+  "uniforms": {}
+}

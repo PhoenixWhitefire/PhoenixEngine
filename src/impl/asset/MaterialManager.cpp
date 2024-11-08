@@ -90,10 +90,12 @@ void RenderMaterial::Reload()
 		}
 	}
 
+	bool doBilinearFiltering = jsonMaterialData.value("bilinearFiltering", true);
+
 	this->ColorMap = texManager->LoadTextureFromPath(jsonMaterialData.value(
 		"albedo",
 		MissingTexPath
-	));
+	), true, doBilinearFiltering);
 
 	bool hasSpecularTexture = jsonMaterialData.find("specular") != jsonMaterialData.end();
 	this->HasTranslucency = jsonMaterialData.value("translucency", false);
@@ -102,7 +104,7 @@ void RenderMaterial::Reload()
 		this->MetallicRoughnessMap = texManager->LoadTextureFromPath(jsonMaterialData.value(
 			"specular",
 			MissingTexPath
-		));
+		), true, doBilinearFiltering);
 	else
 		this->MetallicRoughnessMap = 0;
 

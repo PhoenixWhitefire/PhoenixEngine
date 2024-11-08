@@ -261,7 +261,7 @@ void main()
 
 	vec3 reflectDir = reflect(-ViewDirection, Normal);
 	reflectDir.y = -reflectDir.y;
-	vec3 ReflectedTint = texture(SkyboxCubemap, reflectDir).xyz;
+	vec3 ReflectedTint = textureLod(SkyboxCubemap, reflectDir, 8.f / (ReflectivityFactor * 6.f)).xyz;
 	
 	vec3 Albedo3 = mix(Albedo.xyz * Frag_VertexColor * ColorTint, ReflectedTint, ReflectivityFactor);
 	
@@ -274,7 +274,7 @@ void main()
 				SpecMapValue
 			);
 	else
-		LightInfluence = vec3(EmissionStrength, EmissionStrength, EmissionStrength);
+		LightInfluence = vec3(EmissionStrength, EmissionStrength, EmissionStrength) + LightAmbient;
 	
 	vec3 FragCol3 = (LightInfluence + LightAmbient) * Albedo3;
 	
