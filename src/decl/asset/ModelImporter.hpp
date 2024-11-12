@@ -34,7 +34,7 @@ private:
 
 	void m_LoadMesh(uint32_t MeshIndex);
 
-	void m_TraverseNode(uint32_t NextNode, glm::mat4 Transform = glm::mat4(1.0f));
+	void m_TraverseNode(uint32_t NextNode, const glm::mat4& Transform = glm::mat4(1.0f));
 
 	std::vector<int8_t> m_GetData();
 

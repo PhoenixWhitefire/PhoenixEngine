@@ -16,6 +16,11 @@ local InFreecam = false
 
 local lastSwitchedPerspectives = 0
 
+local ModelImporterPath = "models/EmbeddedTexture.glb"
+local ModelImporterScale = 0.1
+
+local SwitchToFreecamNextFrame = 0
+
 local Light = GameObject.new("PointLight")
 Light.Brightness = 5
 Light.Range = 1.5
@@ -28,12 +33,20 @@ function Update(DeltaTime)
     DeltaTime = math.clamp(DeltaTime, 0, 1/30)
     TotalTime += DeltaTime
     
+    if SwitchToFreecamNextFrame > 0 then
+        SwitchToFreecamNextFrame -= 1
+        if SwitchToFreecamNextFrame <= 0 then
+            Camera.UseSimpleController = true
+        end
+    end
+    
     if input_keypressed("f") and TotalTime - lastSwitchedPerspectives > 0.5 then
         lastSwitchedPerspectives = TotalTime
         
         InFreecam = not InFreecam
         if InFreecam then
-            Camera.UseSimpleController = true
+            input_mouse_setlocked(false)
+            SwitchToFreecamNextFrame = 2
         else
             Camera.UseSimpleController = false
         end
@@ -64,4 +77,25 @@ function Update(DeltaTime)
             bruh.Parent = workspace
         end
     end
+    
+    imgui_begin("Model Importer")
+    
+    ModelImporterPath = imgui_input_text("Path", ModelImporterPath)
+    ModelImporterScale = imgui_input_float("Scale", ModelImporterScale)
+    
+    if imgui_button("Import") then
+        local pathSplit = string.split(ModelImporterPath, "/")
+        
+        local parts = model_import(ModelImporterPath)
+        local model = GameObject.new("Model")
+        model.Name = pathSplit[#pathSplit]
+        model.Parent = workspace
+        
+        for _, part in parts do
+            part.Size *= ModelImporterScale
+            part.Parent = model
+        end
+    end
+    
+    imgui_end()
 end

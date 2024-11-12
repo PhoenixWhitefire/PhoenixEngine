@@ -2,7 +2,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <stb/stb_image.h>
 
-#include "asset/ModelLoader.hpp"
+#include "asset/ModelImporter.hpp"
 #include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
 #include "asset/MeshProvider.hpp"
@@ -10,30 +10,29 @@
 #include "FileRW.hpp"
 #include "Debug.hpp"
 
-static uint32_t readU32(const std::string& str, size_t offset)
+static uint32_t readU32(const std::vector<int8_t>& vec, size_t offset)
 {
-	std::string substr = str.substr(offset, 4);
-
-	std::vector<int8_t> bytes(substr.begin(), substr.end());
 	uint32_t u32{};
-
-	std::memcpy(&u32, bytes.data(), sizeof(uint32_t));
+	std::memcpy(&u32, vec.data() + offset, 4);
 
 	return u32;
+}
+
+static uint32_t readU32(const std::string& str, size_t offset)
+{
+	std::vector<int8_t> bytes(str.begin() + offset, str.begin() + offset + 4);
+	return readU32(bytes, 0);
 }
 
 static std::string getTexturePath(
 	const std::string& ModelName,
 	const nlohmann::json& JsonData,
 	const nlohmann::json& ImageJson,
-	const std::vector<int8_t> BufferData
+	const std::vector<int8_t>& BufferData
 )
 {
 	if (ImageJson.find("uri") == ImageJson.end())
 	{
-		return "!Missing";
-
-		/*
 		std::string mimeType = ImageJson["mimeType"];
 		int32_t bufferViewIndex = ImageJson["bufferView"];
 
@@ -43,9 +42,12 @@ static std::string getTexturePath(
 		uint32_t byteOffset = bufferView.value("byteOffset", 0);
 		uint32_t byteLength = bufferView["byteLength"];
 
+		if (bufferIndex != 0)
+			throw("ModelImporter::getTexturePath got non-zero buffer index " + std::to_string(bufferIndex));
+
 		std::vector<int8_t> imageData(
 			BufferData.begin() + byteOffset,
-			BufferData.begin() + byteOffset + byteLength
+			BufferData.begin() + byteOffset + byteLength + 1ull
 		);
 
 		std::string fileExtension;
@@ -61,21 +63,16 @@ static std::string getTexturePath(
 								+ ImageJson.value("name", "UNNAMED")
 								+ fileExtension;
 
-		std::string fileContents;
-		fileContents.resize(imageData.size());
-		fileContents.copy((char*)imageData.data(), imageData.size(), 0ULL);
-
 		FileRW::WriteFileCreateDirectories(
 			filePath,
-			fileContents,
+			imageData,
 			true
 		);
 
 		return filePath;
-		*/
 	}
 	else
-		return ImageJson["uri"];
+		return ModelName + (std::string)ImageJson["uri"];
 }
 
 ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
@@ -97,11 +94,17 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 	// https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#binary-header
 	if (textData.substr(0, 4) == "glTF")
 	{
-		// skip 12-byte header
-		textData = textData.substr(12);
+		uint32_t glbVersion = readU32(textData, 4);
+		if (glbVersion != 2)
+			Debug::Log(std::vformat(
+				"GLB header declares version as '{}', when only `2` is supported. Unexpected behavior may occur.",
+				std::make_format_args(glbVersion)
+			));
 
-		uint32_t jsonChLength = readU32(textData, 0);
-		uint32_t jsonChType = readU32(textData, 4);
+		// header is 12 bytes
+		// chunks begin past it
+		uint32_t jsonChLength = readU32(textData, 12);
+		uint32_t jsonChType = readU32(textData, 16);
 
 		if (jsonChType != 0x4E4F534A)
 		{
@@ -112,10 +115,15 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 			return;
 		}
 
-		std::string jsonString = textData.substr(8, jsonChLength);
+		std::string jsonString = textData.substr(20, jsonChLength);
 		m_JsonData = nlohmann::json::parse(jsonString);
 
-		std::string binaryChunk = textData.substr(8ULL + jsonChLength);
+		// 20ull because
+		// 12 byte header + 4 byte chunk length + 4 byte chunk type
+		std::vector<int8_t> binaryChunk(
+			textData.begin() + 20ull + jsonChLength,
+			textData.end()
+		);
 
 		uint32_t binaryChLength = readU32(binaryChunk, 0);
 		uint32_t binaryChType = readU32(binaryChunk, 4);
@@ -129,30 +137,83 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 			return;
 		}
 
-		std::string binaryString = binaryChunk.substr(8, binaryChLength);
-
-		m_Data = std::vector<int8_t>(binaryString.begin(), binaryString.end());
+		// + 8 because 8 byte header
+		m_Data = std::vector<int8_t>(binaryChunk.begin() + 8, binaryChunk.begin() + binaryChLength + 8);
 	}
 	else
 	{
-		m_JsonData = nlohmann::json::parse(textData);
+		try
+		{
+			m_JsonData = nlohmann::json::parse(textData);
+		}
+		catch (nlohmann::json::parse_error e)
+		{
+			// really need some `PHX_CATCH_AND_RETHROW` macro
+			std::string errMsg = e.what();
+			throw(std::vformat(
+				"Failed to import model '{}': JSON Type Error: {}",
+				std::make_format_args(gltfFilePath, errMsg)
+			));
+		}
+
 		m_Data = m_GetData();
 	}
 
-	//try
-	//{
+	try
+	{
+		const nlohmann::json& assetInfoJson = m_JsonData["asset"];
+
+		if (assetInfoJson.find("minVersion") != assetInfoJson.end())
+		{
+			float gltfMinVersion = std::stof(assetInfoJson.value("minVersion", "2.0"));
+
+			Debug::Log(std::vformat(
+				"glTF file specifies `asset.minVersion` as '{}'. Unexpected behavior may occur.",
+				std::make_format_args(gltfMinVersion)
+			));
+		}
+		else
+		{
+			float gltfVersion = std::stof(assetInfoJson.value("version", "2.0"));
+
+			if (gltfVersion < 2.f || gltfVersion >= 3.f)
+				Debug::Log(std::vformat(
+					"Expected glTF version >= 2.0 and < 3.0, got {}. Unexpected behavior may occur.",
+					std::make_format_args(gltfVersion)
+				));
+		}
+
+		const nlohmann::json& requiredExtensionsJson = m_JsonData["extensionsRequired"];
+		const nlohmann::json& usedExtensionsJson = m_JsonData["extensionsUsed"];
+
+		for (std::string v : requiredExtensionsJson)
+			Debug::Log(std::vformat(
+				"glTF file specifies 'required' extension '{}'. That's too bad, because no extensions are supported.",
+				std::make_format_args(v)
+			));
+
+		for (std::string v : usedExtensionsJson)
+			Debug::Log(std::vformat(
+				"glTF file specifies extension '{}' is used. That's too bad, because no extensions are supported.",
+				std::make_format_args(v)
+			));
+
 		for (const nlohmann::json& scene : m_JsonData["scenes"])
+			// root nodes
 			for (uint32_t node : scene["nodes"])
+			{
+				m_MeshParents.push_back(UINT32_MAX);
 				m_TraverseNode(node);
-	//}
-	//catch (nlohmann::json::type_error e)
-	//{
-	//	std::string errMessage = e.what();
-	//	throw(std::vformat(
-	//		"Failed to import model '{}': JSON Type Error: {}",
-	//		std::make_format_args(gltfFilePath, errMessage)
-	//	));
-	//}
+			}
+	}
+	catch (nlohmann::json::type_error e)
+	{
+		std::string errMessage = e.what();
+		throw(std::vformat(
+			"Failed to import model '{}': JSON Type Error: {}",
+			std::make_format_args(gltfFilePath, errMessage)
+		));
+	}
 
 	MaterialManager* mtlManager = MaterialManager::Get();
 	MeshProvider* meshProvider = MeshProvider::Get();
@@ -319,8 +380,8 @@ void ModelLoader::m_LoadMesh(uint32_t MeshIndex)
 
 	size_t meshIndex = m_Meshes.size();
 
-	m_MeshScales[meshIndex] = size;
-	m_MeshMatrices[meshIndex] = glm::translate(glm::mat4(1.f), center);
+	m_MeshScales[meshIndex] = m_MeshScales[MeshIndex] * size;
+	m_MeshMatrices[meshIndex] = m_MeshMatrices[meshIndex] * glm::translate(glm::mat4(1.f), center);
 
 	// Combine the vertices, indices, and textures into a mesh
 	m_Meshes.emplace_back(vertices, indices);
@@ -331,13 +392,13 @@ void ModelLoader::m_LoadMesh(uint32_t MeshIndex)
 	));
 }
 
-void ModelLoader::m_TraverseNode(uint32_t nextNode, glm::mat4 matrix)
+void ModelLoader::m_TraverseNode(uint32_t nodeIndex, const glm::mat4& matrix)
 {
 	// Current node
-	nlohmann::json node = m_JsonData["nodes"][nextNode];
+	const nlohmann::json& node = m_JsonData["nodes"][nodeIndex];
 
 	// Get translation if it exists
-	glm::vec3 translation = glm::vec3(0.0f, 0.0f, 0.0f);
+	glm::vec3 translation{};
 	if (node.find("translation") != node.end())
 	{
 		float transValues[3] = 
@@ -363,7 +424,7 @@ void ModelLoader::m_TraverseNode(uint32_t nextNode, glm::mat4 matrix)
 		rotation = glm::make_quat(rotValues);
 	}
 	// Get scale if it exists
-	glm::vec3 scale = glm::vec3(1.0f, 1.0f, 1.0f);
+	glm::vec3 scale{ 1.f, 1.f, 1.f };
 	if (node.find("scale") != node.end())
 	{
 		float scaleValues[3] = 
@@ -397,13 +458,11 @@ void ModelLoader::m_TraverseNode(uint32_t nextNode, glm::mat4 matrix)
 	sca = glm::scale(sca, scale);
 
 	// Multiply all matrices together
-	glm::mat4 matNextNode = matrix * matNode * trans * rot * sca;
+	glm::mat4 matNextNode = matrix * matNode * trans * rot;
 
 	// Check if the node contains a mesh and if it does load it
 	if (node.find("mesh") != node.end())
 	{
-		m_MeshParents.push_back(static_cast<uint32_t>(m_Meshes.size()));
-
 		//m_MeshTranslations.push_back(translation);
 		//m_MeshRotations.push_back(rotation);
 		m_MeshScales.push_back(scale);
@@ -411,15 +470,21 @@ void ModelLoader::m_TraverseNode(uint32_t nextNode, glm::mat4 matrix)
 
 		m_LoadMesh(node["mesh"]);
 	}
-	else
-		m_MeshParents.push_back(UINT32_MAX);
 
 	// Check if the node has children, and if it does, apply this function to them with the matNextNode
 	if (node.find("children") != node.end())
-	{
-		for (nlohmann::json subnode : node["children"])
+		for (const nlohmann::json& subnode : node["children"])
+		{
+			if (node.find("mesh") != node.end())
+				m_MeshParents.push_back(nodeIndex);
+			else
+				if (m_MeshParents.size() > 0)
+					m_MeshParents.push_back(m_MeshParents.back());
+				else
+					m_MeshParents.push_back(UINT32_MAX);
+
 			m_TraverseNode(subnode, matNextNode);
-	}
+		}
 }
 
 std::vector<int8_t> ModelLoader::m_GetData()
@@ -525,10 +590,12 @@ std::vector<uint32_t> ModelLoader::m_GetIndices(const nlohmann::json& accessor)
 		{
 			int8_t bytes[] = { m_Data[i++], m_Data[i++] };
 			short value;
-			std::memcpy(&value, bytes, sizeof(uint16_t));
+			std::memcpy(&value, bytes, sizeof(short));
 			indices.push_back(value);
 		}
 	}
+	else
+		Debug::Log("Unrecognized mesh index type: " + std::to_string(componentType));
 
 	return indices;
 }
@@ -605,7 +672,7 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 		// https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#schema-reference-sampler
 		baseColFilterBilinear = m_JsonData["samplers"][(int)baseColTex["sampler"]] == 9729;
 
-	std::string fileDirectory = m_File.substr(0, m_File.find_last_of('/') + 1);
+	//std::string fileDirectory = m_File.substr(0, m_File.find_last_of('/') + 1);
 
 	std::string baseColPath = getTexturePath(
 		m_File,
@@ -615,7 +682,8 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 	);
 
 	material.BaseColorTexture = texManager->LoadTextureFromPath(
-		baseColPath != "!Missing" ? fileDirectory + baseColPath : baseColPath,
+		baseColPath,
+		true,
 		baseColFilterBilinear
 	);
 
@@ -629,7 +697,8 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 		);
 
 		material.MetallicRoughnessTexture = texManager->LoadTextureFromPath(
-			metallicRoughnessPath != "!Missing" ? fileDirectory + metallicRoughnessPath : metallicRoughnessPath,
+			metallicRoughnessPath,
+			true,
 			baseColFilterBilinear
 		);
 	}
@@ -664,13 +733,12 @@ std::vector<glm::vec2> ModelLoader::m_GroupFloatsVec2(const std::vector<float>& 
 	std::vector<glm::vec2> vectors;
 	vectors.reserve(static_cast<size_t>(floatVec.size() / 2));
 
-	for (int i = 0; i < floatVec.size(); i)
-	{
+	for (int i = 0; i < floatVec.size(); i += 2)
 		vectors.emplace_back(
-			floatVec[i++],
-			floatVec[i++]
+			floatVec[i+1ull],
+			floatVec[i+0ull]
 		);
-	}
+
 	return vectors;
 }
 
@@ -679,11 +747,11 @@ std::vector<glm::vec3> ModelLoader::m_GroupFloatsVec3(const std::vector<float>& 
 	std::vector<glm::vec3> vectors;
 	vectors.reserve(static_cast<size_t>(floatVec.size() / 3));
 
-	for (int i = 0; i < floatVec.size(); i)
+	for (int i = 0; i < floatVec.size(); i += 3)
 		vectors.emplace_back(
-			floatVec[i++],
-			floatVec[i++],
-			floatVec[i++]
+			floatVec[i+2ull],
+			floatVec[i+1ull],
+			floatVec[i+0ull]
 		);
 
 	return vectors;
@@ -693,12 +761,12 @@ std::vector<glm::vec4> ModelLoader::m_GroupFloatsVec4(const std::vector<float>& 
 	std::vector<glm::vec4> vectors;
 	vectors.reserve(static_cast<size_t>(floatVec.size() / 4));
 
-	for (int i = 0; i < floatVec.size(); i)
+	for (int i = 0; i < floatVec.size(); i += 4)
 		vectors.emplace_back(
-			floatVec[i++],
-			floatVec[i++],
-			floatVec[i++],
-			floatVec[i++]
+			floatVec[i+3ull],
+			floatVec[i+2ull],
+			floatVec[i+1ull],
+			floatVec[i+0ull]
 		);
 
 	return vectors;

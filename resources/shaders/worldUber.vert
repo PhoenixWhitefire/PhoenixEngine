@@ -29,8 +29,11 @@ void main()
 	Frag_VertexNormal = VertexNormal;
 	Frag_VertexColor = VertexColor;
 	Frag_CamMatrix = CameraMatrix;
-	// i cant remember WHAT causes this to be necessary, but it is.
-	Frag_UV = mat2(0.0f, -1.0f, 1.0f, 0.0f) * TexUV;
+	// the UVs need to be flipped 90 degrees because of some
+	// undefined-behavior with how Mr Victor Gordan's excellent Model Importing
+	// code groups floats
+	// 10/11/2024
+	Frag_UV = mat2(0.0, -1.0, 1.0, 0.0) * TexUV;
 	Frag_Transform = Transform;
 	
 	gl_Position = Frag_CamMatrix * vec4(Frag_CurrentPosition, 1.f);

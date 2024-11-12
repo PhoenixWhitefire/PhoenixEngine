@@ -1,0 +1,8 @@
+{
+  "albedo": "textures/models/EmbeddedTexture.glb/cupid-ref.jpeg",
+  "roughnessFactor": 0.5,
+  "specExponent": 16.0,
+  "specMultiply": 0.0,
+  "translucency": false,
+  "uniforms": {}
+}

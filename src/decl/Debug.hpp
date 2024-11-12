@@ -4,6 +4,6 @@
 
 namespace Debug
 {
-	void Log(std::string const&);
+	void Log(const std::string&);
 	void Save();
 };

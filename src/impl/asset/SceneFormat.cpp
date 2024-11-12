@@ -10,7 +10,7 @@
 
 #include "asset/PrimitiveMeshes.hpp"
 #include "asset/MaterialManager.hpp"
-#include "asset/ModelLoader.hpp"
+#include "asset/ModelImporter.hpp"
 #include "gameobject/Light.hpp"
 #include "FileRW.hpp"
 #include "Debug.hpp"

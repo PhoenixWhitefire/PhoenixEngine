@@ -220,7 +220,11 @@ void main()
 		Albedo = textureLod(ColorMap, UV, mipLevel);
 	else
 	{
-		vec3 blending = getTriPlanarBlending(Normal);
+		vec3 blending = getTriPlanarBlending(Frag_VertexNormal);
+
+		FragColor = vec4(blending, 1.f);
+
+		//return;
 
 		vec4 localPosition = vec4(Frag_CurrentPosition, 1.f) * transpose(inverse(Frag_Transform));
 

@@ -62,42 +62,8 @@ void GameObject::s_DeclareReflections()
 		},
 		[](GameObject* p, const Reflection::GenericValue& gv)
 		{
-			if (p->Parent == gv.AsInteger())
-				return;
-
 			GameObject* newParent = GameObject::GetObjectById(static_cast<uint32_t>(gv.AsInteger()));
-
-			if (!newParent)
-				p->SetParent(nullptr);
-			else
-			{
-				if (newParent != p)
-				{
-					std::vector<GameObject*> descendants = p->GetDescendants();
-
-					bool isOwnDescendant = false;
-
-					for (GameObject* d : descendants)
-						if (d == newParent)
-						{
-							isOwnDescendant = true;
-							break;
-						}
-
-					if (!isOwnDescendant)
-						p->SetParent(newParent);
-					else
-						Debug::Log(std::vformat(
-							"Tried to make object ID:{} a descendant of itself",
-							std::make_format_args(p->ObjectId)
-						));
-				}
-				else
-					Debug::Log(std::vformat(
-						"Tried to make object ID:{} it's own parent",
-						std::make_format_args(p->ObjectId)
-					));
-			}
+			p->SetParent(newParent);
 		}
 	);
 	
@@ -236,6 +202,33 @@ void GameObject::SetParent(GameObject* newParent)
 		this->Parent = PHX_GAMEOBJECT_NULL_ID;
 	else
 	{
+		if (newParent != this)
+		{
+			std::vector<GameObject*> descendants = this->GetDescendants();
+
+			bool isOwnDescendant = false;
+
+			for (GameObject* d : descendants)
+				if (d == newParent)
+				{
+					isOwnDescendant = true;
+					break;
+				}
+
+			if (!isOwnDescendant)
+				this->Parent = newParent->ObjectId;
+			else
+				throw(std::vformat(
+					"Tried to make object ID:{} a descendant of itself",
+					std::make_format_args(this->ObjectId)
+				));
+		}
+		else
+			throw(std::vformat(
+				"Tried to make object ID:{} it's own parent",
+				std::make_format_args(this->ObjectId)
+			));
+
 		this->Parent = newParent->ObjectId;
 		newParent->AddChild(this);
 	}
@@ -246,6 +239,16 @@ void GameObject::SetParent(GameObject* newParent)
 
 void GameObject::AddChild(GameObject* c)
 {
+	if (c->ObjectId == this->ObjectId)
+	{
+		std::string fullName = this->GetFullName();
+
+		throw(std::vformat(
+			"::AddChild called on Object ID:{} (`{}`) with itself as the adopt'ed",
+			std::make_format_args(this->ObjectId, fullName)
+		));
+	}
+
 	auto it = std::find(m_Children.begin(), m_Children.end(), c->ObjectId);
 
 	if (it == m_Children.end())

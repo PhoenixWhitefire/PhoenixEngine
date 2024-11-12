@@ -65,15 +65,19 @@ std::string FileRW::ReadFile(std::string const& ShortPath, bool* DoesFileExist)
 	}
 }
 
-void FileRW::WriteFile(const std::string& ShortPath, const std::string& FileContents, bool InResourcesDirectory)
+void FileRW::WriteFile(
+	const std::string& ShortPath,
+	const std::vector<int8_t>& BinaryContents,
+	bool InResourcesDirectory
+)
 {
 	std::string path = InResourcesDirectory ? FileRW::GetAbsolutePath(ShortPath) : ShortPath;
 
-	std::ofstream file(path.c_str());
+	std::ofstream file(path.c_str(), std::ios::binary);
 
 	if (file && file.is_open())
 	{
-		file << FileContents;
+		file.write((char*)BinaryContents.data(), BinaryContents.size());
 		file.close();
 	}
 	else
@@ -85,7 +89,7 @@ void FileRW::WriteFile(const std::string& ShortPath, const std::string& FileCont
 
 void FileRW::WriteFileCreateDirectories(
 	const std::string& ShortPath,
-	const std::string& FileContents,
+	const std::vector<int8_t>& BinaryContents,
 	bool InResourcesDirectory
 )
 {
@@ -99,7 +103,33 @@ void FileRW::WriteFileCreateDirectories(
 	if (!createDirectoryRecursive(dirPath, ec))
 		throw("FileRW::WriteFileCreateDirectories: `createDirectoryRecursive` failed: " + ec.message());
 
-	FileRW::WriteFile(path, FileContents, false);
+	FileRW::WriteFile(path, BinaryContents, false);
+}
+
+void FileRW::WriteFile(
+	const std::string& ShortPath,
+	const std::string& StringContents,
+	bool InResourcesDirectory
+)
+{
+	std::vector<int8_t> data(
+		StringContents.begin(),
+		StringContents.end()
+	);
+	FileRW::WriteFile(ShortPath, data, InResourcesDirectory);
+}
+
+void FileRW::WriteFileCreateDirectories(
+	const std::string& ShortPath,
+	const std::string& StringContents,
+	bool InResourcesDirectory
+)
+{
+	std::vector<int8_t> data(
+		StringContents.begin(),
+		StringContents.end()
+	);
+	FileRW::WriteFileCreateDirectories(ShortPath, data, InResourcesDirectory);
 }
 
 std::string FileRW::GetAbsolutePath(const std::string& LocalPath)

@@ -1,9 +1,9 @@
 {
-  "albedo": "!Missing",
+  "albedo": "textures/models/glamfredward.glb/Image_5.png",
   "roughnessFactor": 1.0,
   "specExponent": 16.0,
   "specMultiply": 0.0,
-  "specular": "!Missing",
+  "specular": "textures/models/glamfredward.glb/Image_6.png",
   "translucency": false,
   "uniforms": {}
 }

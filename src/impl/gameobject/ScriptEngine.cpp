@@ -1,19 +1,19 @@
-#include <glm/mat4x4.hpp>
-#include <luau/VM/src/lstate.h>
 #include <luau/VM/include/lualib.h>
+#include <luau/VM/src/lstate.h>
+#include <glm/mat4x4.hpp>
+#include <imgui.h>
+#include <misc/cpp/imgui_stdlib.h>
 
 #include "gameobject/ScriptEngine.hpp"
-#include "Debug.hpp"
 
-#include "IntersectionLib.hpp"
-#include "datatype/Vector3.hpp"
-#include "datatype/Color.hpp"
 #include "datatype/GameObject.hpp"
 #include "asset/MeshProvider.hpp"
-#include "asset/ModelLoader.hpp"
+#include "asset/ModelImporter.hpp"
 #include "asset/SceneFormat.hpp"
+#include "IntersectionLib.hpp"
 #include "UserInput.hpp"
 #include "FileRW.hpp"
+#include "Debug.hpp"
 
 template <class T> static void throwWrapped(T exc)
 {
@@ -21,6 +21,7 @@ template <class T> static void throwWrapped(T exc)
 }
 
 bool ScriptEngine::s_BackendScriptWantGrabMouse = false;
+
 std::unordered_map<lua_State*, std::shared_future<Reflection::GenericValue>> ScriptEngine::s_YieldedCoroutines{};
 const std::unordered_map<Reflection::ValueType, lua_Type> ScriptEngine::ReflectedTypeLuaEquivalent =
 {
@@ -835,6 +836,66 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 			Reflection::GenericValue gv = convertedArray;
 
 			ScriptEngine::L::PushGenericValue(L, gv);
+
+			return 1;
+		}
+	},
+
+	{
+		"imgui_begin",
+		[](lua_State* L)
+		{
+			const char* title = luaL_checkstring(L, 1);
+			lua_pushboolean(L, ImGui::Begin(title));
+
+			return 1;
+		}
+	},
+
+	{
+		"imgui_end",
+		[](lua_State*)
+		{
+			ImGui::End();
+
+			return 0;
+		}
+	},
+
+	{
+		"imgui_input_text",
+		[](lua_State* L)
+		{
+			const char* name = luaL_checkstring(L, 1);
+			std::string value = luaL_checkstring(L, 2);
+			ImGui::InputText(name, &value);
+
+			lua_pushstring(L, value.c_str());
+
+			return 1;
+		}
+	},
+
+	{
+		"imgui_input_float",
+		[](lua_State* L)
+		{
+			const char* title = luaL_checkstring(L, 1);
+			float value = static_cast<float>(luaL_checknumber(L, 2));
+			ImGui::InputFloat(title, &value);
+
+			lua_pushnumber(L, value);
+
+			return 1;
+		}
+	},
+
+	{
+		"imgui_button",
+		[](lua_State* L)
+		{
+			const char* title = luaL_checkstring(L, 1);
+			lua_pushboolean(L, ImGui::Button(title));
 
 			return 1;
 		}

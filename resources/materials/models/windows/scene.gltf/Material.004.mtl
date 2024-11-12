@@ -1,10 +1,8 @@
 {
   "albedo": "models/windows/diffuse.png",
-  "shaderprogram": "worldUber",
+  "roughnessFactor": 0.5,
   "specExponent": 16.0,
-  "specMultiply": 0.5,
+  "specMultiply": 0.0,
   "translucency": true,
-  "uniforms": {
-    "EmissionStrength": 0.5
-  }
+  "uniforms": {}
 }

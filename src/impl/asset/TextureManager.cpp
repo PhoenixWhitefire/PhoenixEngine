@@ -15,23 +15,23 @@ typedef std::function<Texture*(ImageLoader_t, Texture*, std::string, uint32_t)> 
 
 // a 2x2 purple-and-black checkerboard
 // 23/10/2024
-static uint8_t MissingTextureBytes[12] = 
+static uint8_t MissingTextureBytes[] = 
 {
-	static_cast<uint8_t>(0xFFFFFFu),
-	static_cast<uint8_t>(0x000000u),
-	static_cast<uint8_t>(0xFFFFFFu),
+	static_cast<uint8_t>(0xFFu),
+	static_cast<uint8_t>(0x00u),
+	static_cast<uint8_t>(0xFFu),
 
-	static_cast<uint8_t>(0x000000u),
-	static_cast<uint8_t>(0x000000u),
-	static_cast<uint8_t>(0x000000u),
+	static_cast<uint8_t>(0x00u),
+	static_cast<uint8_t>(0x00u),
+	static_cast<uint8_t>(0x00u),
 
-	static_cast<uint8_t>(0x000000u),
-	static_cast<uint8_t>(0x000000u),
-	static_cast<uint8_t>(0x000000u),
+	static_cast<uint8_t>(0x00u),
+	static_cast<uint8_t>(0x00u),
+	static_cast<uint8_t>(0x00u),
 
-	static_cast<uint8_t>(0xFFFFFFu),
-	static_cast<uint8_t>(0x000000u),
-	static_cast<uint8_t>(0xFFFFFFu),
+	static_cast<uint8_t>(0xFFu),
+	static_cast<uint8_t>(0x00u),
+	static_cast<uint8_t>(0xFFu),
 };
 
 void TextureManager::m_UploadTextureToGpu(Texture& texture)
@@ -52,6 +52,8 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 			fallbackPath,
 			false
 		);
+
+		glDeleteTextures(1, &texture.GpuId);
 
 		Texture& replacement = this->GetTextureResource(replacementId);
 		texture.Height = replacement.Height;
@@ -105,6 +107,15 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 
 	glBindTexture(GL_TEXTURE_2D, texture.GpuId);
 
+	if (texture.ImagePath.find("EmbeddedTexture") != std::string::npos)
+		for (size_t i = 0; i < texture.Width * texture.Height * texture.NumColorChannels; i++)
+		{
+			//printf("%i\n", texture.TMP_ImageByteData[i]);
+			uint8_t b = texture.TMP_ImageByteData[i];
+			if (b == 0)
+				printf("hi\n");
+		}
+
 	glTexImage2D(
 		GL_TEXTURE_2D,
 		0,
@@ -151,7 +162,7 @@ TextureManager::TextureManager()
 	missingTexture.Width = 2;
 	missingTexture.Height = 2;
 	missingTexture.NumColorChannels = 3;
-	missingTexture.TMP_ImageByteData = MissingTextureBytes;
+	missingTexture.TMP_ImageByteData = &MissingTextureBytes[0];
 	missingTexture.Status = Texture::LoadStatus::Succeeded;
 
 	glBindTexture(GL_TEXTURE_2D, missingTexture.GpuId);

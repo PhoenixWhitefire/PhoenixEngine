@@ -7,6 +7,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <imgui/backends/imgui_impl_sdl2.h>
+#include <imgui/backends/imgui_impl_opengl3.h>
 
 #include "Engine.hpp"
 
@@ -568,6 +569,13 @@ void EngineObject::Start()
 		}
 
 		DataModel->Update(deltaTime);
+
+		// so scripts can use the `imgui_*` APIs
+		// 09/11/2024
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplSDL2_NewFrame();
+		ImGui::NewFrame();
+
 		updateDescendants(DataModel, deltaTime);
 
 		float aspectRatio = (float)this->WindowSizeX / (float)this->WindowSizeY;

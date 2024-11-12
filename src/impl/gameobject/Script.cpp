@@ -343,6 +343,35 @@ static void initDefaultState()
 	// it from Luau REPL (`lua_require`)
 	luaL_openlibs(DefaultState);
 
+	lua_pushcfunction(
+		DefaultState,
+		[](lua_State* L)
+		{
+			// FROM:
+			// `luaB_print`
+			// `Luau/VM/src/lbaselib.cpp`
+			// 11/11/2024
+
+			int n = lua_gettop(L); // number of arguments
+			for (int i = 1; i <= n; i++)
+			{
+				size_t l;
+				const char* s = luaL_tolstring(L, i, &l); // convert to string using __tostring et al
+
+				if (i > 1)
+					Debug::Log("\t&&");
+
+				Debug::Log(std::string(s) + "&&");
+				lua_pop(L, 1); // pop result
+			}
+			Debug::Log("\n&&");
+
+			return 0;
+		},
+		"PhxPrintOverride"
+	);
+	lua_setglobal(DefaultState, "print");
+
 	// Vector3
 	{
 		lua_newtable(DefaultState);

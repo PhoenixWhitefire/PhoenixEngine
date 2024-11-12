@@ -383,9 +383,9 @@ static void drawUI(Reflection::GenericValue Data)
 
 	if (EditorContext)
 	{
-		ImGui_ImplOpenGL3_NewFrame();
-		ImGui_ImplSDL2_NewFrame();
-		ImGui::NewFrame();
+		//ImGui_ImplOpenGL3_NewFrame();
+		//ImGui_ImplSDL2_NewFrame();
+		//ImGui::NewFrame();
 
 		//ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
 
@@ -631,7 +631,7 @@ static void Application(int argc, char** argv)
 	// Engine destructor is called as the `EngineObject`'s scope terminates in `main`.
 }
 
-static void handleCrash(std::string Error, std::string ExceptionType)
+static void handleCrash(const std::string& Error, const std::string& ExceptionType)
 {
 	auto fmtArgs = std::make_format_args(
 		ExceptionType,
@@ -639,7 +639,9 @@ static void handleCrash(std::string Error, std::string ExceptionType)
 		"If this is the first time this has happened, please re-try. Otherwise, contact the developers."
 	);
 
-	Debug::Log(std::vformat("CRASH - {}: {}", fmtArgs));
+	// Log Size Limit Exceeded Throwing Exception
+	if (!Error.starts_with("LSLETE"))
+		Debug::Log(std::vformat("CRASH - {}: {}", fmtArgs));
 
 	std::string errMessage = std::vformat(
 		"An unexpected error occurred, and the application will now close. Details:\n\nType: {}\nError: {}\n\n{}",
@@ -671,6 +673,10 @@ int main(int argc, char** argv)
 		Application(argc, argv);
 
 		Debug::Save(); // in case FileRW::WriteFile throws an exception
+
+		Debug::Log("Application shutting down...");
+
+		Debug::Save();
 	}
 	catch (std::string Error)
 	{
@@ -684,8 +690,11 @@ int main(int argc, char** argv)
 	{
 		handleCrash(Error.what(), "std::filesystem::filesystem_error");
 	}
-
-	Debug::Log("Application shutting down...");
-
-	Debug::Save();
+	catch (std::bad_alloc Error)
+	{
+		handleCrash(
+			std::string("Allocation error, system may have run Out Of Memory: ") + Error.what(),
+			"std::bad_alloc"
+		);
+	}
 }

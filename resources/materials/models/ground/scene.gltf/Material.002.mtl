@@ -1,7 +1,7 @@
 {
   "albedo": "models/ground/diffuse.png",
   "shaderprogram": "worldUber",
-  "specExponent": 16.0,
+  "specExponent": 8.0,
   "specMultiply": 0.5,
   "translucency": false,
   "uniforms": null

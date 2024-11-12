@@ -1,0 +1,9 @@
+{
+  "albedo": "models/grindstone/textures/Main_baseColor.jpeg",
+  "roughnessFactor": 1.0,
+  "specExponent": 16.0,
+  "specMultiply": 1.0,
+  "specular": "models/grindstone/textures/Main_metallicRoughness.png",
+  "translucency": false,
+  "uniforms": {}
+}
