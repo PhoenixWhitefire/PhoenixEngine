@@ -213,7 +213,7 @@ void Editor::m_RenderMaterialEditor()
 		// first cast to uint64_t to get rid of the
 		// "'type cast': conversion from 'uint32_t' to 'void *' of greater size"
 		// warning
-		(void*)((uint64_t)colorMap.GpuId),
+		(uint64_t)colorMap.GpuId,
 		ImVec2(256, 256),
 		// Flip the Y axis. Either OpenGL or Dear ImGui is bottom-up
 		ImVec2(0, 1),
@@ -245,7 +245,7 @@ void Editor::m_RenderMaterialEditor()
 			// first cast to uint64_t to get rid of the
 			// "'type cast': conversion from 'uint32_t' to 'void *' of greater size"
 			// warning
-			(void*)((uint64_t)metallicRoughnessMap.GpuId),
+			(uint64_t)metallicRoughnessMap.GpuId,
 			ImVec2(256, 256),
 			// Flip the Y axis. Either OpenGL or Dear ImGui is bottom-up
 			ImVec2(0, 1),
