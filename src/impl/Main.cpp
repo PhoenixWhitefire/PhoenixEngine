@@ -223,8 +223,8 @@ static void handleInputs(Reflection::GenericValue Data)
 				FirstDragFrame = true;
 			}
 
-			if (activeMouseButton & SDL_BUTTON_LMASK && !UserInput::InputBeingSunk)
-				MouseCaptured = true;
+			//if (activeMouseButton & SDL_BUTTON_LMASK && !UserInput::InputBeingSunk)
+				//MouseCaptured = true;
 		}
 
 		PrevMouseX = mouseX;

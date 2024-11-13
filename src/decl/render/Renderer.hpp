@@ -32,7 +32,7 @@ struct RenderItem
 {
 	uint32_t RenderMeshId{};
 	glm::mat4 Transform{};
-	Vector3 Size;
+	glm::vec3 Size;
 	uint32_t MaterialId{};
 	Color TintColor;
 	float Transparency{};

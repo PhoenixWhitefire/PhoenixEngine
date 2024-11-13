@@ -64,8 +64,6 @@ uniform float EmissionStrength = 0.f;
 
 uniform vec3 CameraPosition = vec3(0.f, 0.f, 0.f);
 
-uniform vec3 ColorTint = vec3(1.f, 1.f, 1.f);
-
 uniform samplerCube SkyboxCubemap;
 
 uniform float NearZ = 0.1f;
@@ -83,7 +81,7 @@ uniform bool DebugOverdraw = false;
 
 in vec3 Frag_CurrentPosition;
 in vec3 Frag_VertexNormal;
-in vec3 Frag_VertexColor;
+in vec3 Frag_ColorTint;
 in vec2 Frag_UV;
 in mat4 Frag_CamMatrix;
 in mat4 Frag_Transform;
@@ -267,7 +265,7 @@ void main()
 	reflectDir.y = -reflectDir.y;
 	vec3 ReflectedTint = textureLod(SkyboxCubemap, reflectDir, 8.f / (ReflectivityFactor * 6.f)).xyz;
 	
-	vec3 Albedo3 = mix(Albedo.xyz * Frag_VertexColor * ColorTint, ReflectedTint, ReflectivityFactor);
+	vec3 Albedo3 = mix(Albedo.xyz * Frag_ColorTint, ReflectedTint, ReflectivityFactor);
 	
 	if (EmissionStrength <= 0)
 		for (int LightIndex = 0; LightIndex < NumLights; LightIndex++)

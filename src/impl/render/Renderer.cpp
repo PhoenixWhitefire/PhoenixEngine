@@ -271,92 +271,140 @@ void Renderer::DrawScene(const Scene& Scene)
 
 	size_t numDrawCalls = 0;
 
-	// render checksum to pair<render item index, vector of transforms>
-	std::unordered_map<uint64_t, std::pair<size_t, std::vector<glm::mat4>>> instancingList;
+	static const bool DoInstancing = true;
+
+	//struct InstancedDrawInfo
+	//{
+	//	const float* Transform = nullptr;
+	//	const float* Size = nullptr;
+	//};
+	// render checksum to pair<render item index, draw info>
+	std::unordered_map<uint64_t, std::pair<size_t, std::vector<float>>> instancingList;
 
 	for (size_t renderItemIndex = 0; renderItemIndex < Scene.RenderList.size(); renderItemIndex++)
 	{
 		const RenderItem& renderData = Scene.RenderList[renderItemIndex];
 
-		/*
-		// 31/10/2024 bullshit so that we don't try to instance things
-		// that can't have their differences represented rn
-		// (currently only the Transform can be differentiated)
-		uint64_t renderMeshChecksum = renderData.RenderMeshId
-			+ static_cast<uint64_t>(renderData.Size.Magnitude() * 100.f)
-			+ static_cast<uint64_t>(renderData.TintColor.R * 5.f + renderData.TintColor.G * 15.f + renderData.TintColor.B)
-			+ renderData.Material->Name.size();
-
-		auto it = instancingList.find(renderMeshChecksum);
-		if (it == instancingList.end())
-			instancingList[renderMeshChecksum] = std::pair(renderItemIndex, std::vector<glm::mat4>());
-
-		instancingList[renderMeshChecksum].second.push_back(renderData.Transform);
-		*/
-
-		m_SetMaterialData(renderData);
-
-		this->DrawMesh(
-			meshProvider->GetMeshResource(renderData.RenderMeshId),
-			mtlManager->GetMaterialResource(renderData.MaterialId).GetShader(),
-			renderData.Size,
-			renderData.Transform,
-			renderData.FaceCulling,
-			1
-		);
-
-		numDrawCalls++;
-	}
-
-	/*
-	for (auto& iter : instancingList)
-	{
-		const RenderItem& renderData = Scene.RenderList[iter.second.first];
-
-		Mesh* mesh = mp->GetMeshResource(renderData.RenderMeshId);
-
-		if (mesh->GpuId != UINT32_MAX)
+		if (DoInstancing)
 		{
-			MeshProvider::GpuMesh& gpuMesh = mp->GetGpuMesh(mesh->GpuId);
-			gpuMesh.VertexArray->Bind();
+			// 31/10/2024 bullshit so that we don't try to instance things
+			// that can't have their differences represented rn
+			// (currently only the Transform can be differentiated)
+			RenderMaterial& material = mtlManager->GetMaterialResource(renderData.MaterialId);
 
-			glBindBuffer(GL_ARRAY_BUFFER, m_InstancingBuffer);
-			glBufferData(GL_ARRAY_BUFFER, sizeof(glm::mat4), iter.second.second.data(), GL_STATIC_DRAW);
+			uint64_t renderMeshChecksum = renderData.RenderMeshId
+				+ static_cast<uint64_t>(renderData.MaterialId * 500u)
+				+ static_cast<uint64_t>(renderData.Transparency * 250)
+				+ static_cast<uint64_t>(renderData.Reflectivity * 115);
 
-			static int32_t Vec4Size = static_cast<int32_t>(sizeof(glm::vec4));
+			auto it = instancingList.find(renderMeshChecksum);
+			if (it == instancingList.end())
+				instancingList[renderMeshChecksum] = std::pair(renderItemIndex, std::vector<float>{});
 
-			// `Transform` matrix
-			glEnableVertexAttribArray(4);
-			glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 4 * Vec4Size, (void*)0);
-			glEnableVertexAttribArray(5);
-			glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 4 * Vec4Size, (void*)(1 * (size_t)Vec4Size));
-			glEnableVertexAttribArray(6);
-			glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, 4 * Vec4Size, (void*)(2 * (size_t)Vec4Size));
-			glEnableVertexAttribArray(7);
-			glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, 4 * Vec4Size, (void*)(3 * (size_t)Vec4Size));
+			for (int8_t col = 0; col < 4; col++)
+				for (int8_t row = 0; row < 4; row++)
+					instancingList[renderMeshChecksum].second.push_back(renderData.Transform[col][row]);
 
-			glVertexAttribDivisor(4, 1);
-			glVertexAttribDivisor(5, 1);
-			glVertexAttribDivisor(6, 1);
-			glVertexAttribDivisor(7, 1);
+			instancingList[renderMeshChecksum].second.push_back(renderData.Size.x);
+			instancingList[renderMeshChecksum].second.push_back(renderData.Size.y);
+			instancingList[renderMeshChecksum].second.push_back(renderData.Size.z);
+
+			instancingList[renderMeshChecksum].second.push_back(renderData.TintColor.R);
+			instancingList[renderMeshChecksum].second.push_back(renderData.TintColor.G);
+			instancingList[renderMeshChecksum].second.push_back(renderData.TintColor.B);
 		}
 		else
-			glBindBuffer(GL_ARRAY_BUFFER, 0);
+		{
+			m_SetMaterialData(renderData);
 
-		m_SetMaterialData(renderData);
+			this->DrawMesh(
+				meshProvider->GetMeshResource(renderData.RenderMeshId),
+				mtlManager->GetMaterialResource(renderData.MaterialId).GetShader(),
+				renderData.Size,
+				renderData.Transform,
+				renderData.FaceCulling,
+				0
+			);
 
-		this->DrawMesh(
-			mesh,
-			renderData.Material->Shader,
-			renderData.Size,
-			renderData.Transform,
-			renderData.FaceCulling,
-			static_cast<int32_t>(iter.second.second.size())
-		);
-
-		numDrawCalls++;
+			numDrawCalls++;
+		}
 	}
-	*/
+
+	if (DoInstancing)
+	{
+		for (auto& iter : instancingList)
+		{
+			const RenderItem& renderData = Scene.RenderList[iter.second.first];
+			const Mesh& mesh = meshProvider->GetMeshResource(renderData.RenderMeshId);
+			const std::vector<float>& drawInfos = iter.second.second;
+
+			if (mesh.GpuId != UINT32_MAX)
+			{
+				MeshProvider::GpuMesh& gpuMesh = meshProvider->GetGpuMesh(mesh.GpuId);
+				gpuMesh.VertexArray->Bind();
+
+				glBindBuffer(GL_ARRAY_BUFFER, m_InstancingBuffer);
+
+				int32_t vec4Size = static_cast<int32_t>(sizeof(glm::vec4));
+				int32_t vec3Size = static_cast<int32_t>(sizeof(glm::vec3));
+
+				// `Transform` matrix
+				glEnableVertexAttribArray(4);
+				glEnableVertexAttribArray(5);
+				glEnableVertexAttribArray(6);
+				glEnableVertexAttribArray(7);
+
+				glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size*2, (void*)0);
+				glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size*2, (void*)(1 * (size_t)vec4Size));
+				glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size*2, (void*)(2 * (size_t)vec4Size));
+				glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size*2, (void*)(3 * (size_t)vec4Size));
+
+				glVertexAttribDivisor(4, 1);
+				glVertexAttribDivisor(5, 1);
+				glVertexAttribDivisor(6, 1);
+				glVertexAttribDivisor(7, 1);
+
+				// vec3s
+				// scale
+				glEnableVertexAttribArray(8);
+				// color
+				glEnableVertexAttribArray(9);
+
+				// it's still `4 * (size_t)` because that's the offset from everything else
+				glVertexAttribPointer(8, 3, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size*2, (void*)(4 * (size_t)vec4Size));
+				glVertexAttribPointer(9, 3, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size*2, (void*)((4 * (size_t)vec4Size) + vec3Size));
+
+				glVertexAttribDivisor(8, 1);
+				glVertexAttribDivisor(9, 1);
+
+				glBufferData(
+					GL_ARRAY_BUFFER,
+					drawInfos.size() * sizeof(float),
+					drawInfos.data(),
+					GL_STREAM_DRAW
+				);
+			}
+			else
+				glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+			RenderMaterial& material = mtlManager->GetMaterialResource(renderData.MaterialId);
+
+			m_SetMaterialData(renderData);
+
+			int32_t numInstances = static_cast<int32_t>(drawInfos.size() / 22ull);
+
+			this->DrawMesh(
+				mesh,
+				material.GetShader(),
+				renderData.Size,
+				renderData.Transform,
+				renderData.FaceCulling,
+				numInstances > 1 ? numInstances : 0
+			);
+
+			numDrawCalls++;
+		}
+	}
 
 	EngineJsonConfig["renderer_drawcallcount"] = numDrawCalls;
 }
@@ -414,15 +462,22 @@ void Renderer::DrawMesh(
 
 	uint32_t numIndices = gpuMesh ? gpuMesh->NumIndices : static_cast<uint32_t>(Object.Indices.size());
 
-	glm::mat4 scale = glm::scale(glm::mat4(1.f), glm::vec3(Size));
+	if (NumInstances > 0)
+	{
+		Shader.SetUniform("IsInstanced", true);
+		Shader.Activate();
 
-	Shader.SetUniform("Transform", Transform);
-	Shader.SetUniform("Scale", scale);
+		glDrawElementsInstanced(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, 0, NumInstances);
+	}
+	else
+	{
+		Shader.SetUniform("IsInstanced", false);
+		Shader.SetUniform("Transform", Transform);
+		Shader.SetUniform("Scale", Size.ToGenericValue());
+		Shader.Activate();
 
-	Shader.Activate();
-	
-	//glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, 0);
-	glDrawElementsInstanced(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, 0, NumInstances);
+		glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, 0);
+	}
 }
 
 void Renderer::m_SetMaterialData(const RenderItem& RenderData)
