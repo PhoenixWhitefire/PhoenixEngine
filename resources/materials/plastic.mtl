@@ -1,5 +1,5 @@
 {
-  "albedo": "textures/plastic.png",
+  "albedo": "textures/materials/plastic.png",
   "shaderprogram": "worldUberTriProjected",
   "specExponent": 32.0,
   "specMultiply": 0.5,

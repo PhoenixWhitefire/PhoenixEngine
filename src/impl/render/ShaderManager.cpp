@@ -215,6 +215,27 @@ void ShaderProgram::Reload()
 	if (hasGeometryShader)
 		glDeleteShader(geometryShader);
 
+	/*
+		Certain SP's may just be another SP, but with a specific uniform
+		(such as `worldUberTriProjected` really just being `worldUber` with
+		the `UseTriPlanarProjection` uniform)
+
+		Reduce duplicate configuration by allowing for "inheritance" of uniforms
+		Do this *before* loading the SP-specific uniforms, so that inherited ones
+		may be overriden
+		Even means you can have lineages
+	*/
+	if (shpJson.find("InheritUniformsOf") != shpJson.end())
+	{
+		ShaderManager* shdManager = ShaderManager::Get();
+
+		const std::string& ancestorName = shpJson["InheritUniformsOf"];
+		uint32_t ancestorId = shdManager->LoadFromPath(ancestorName);
+		ShaderProgram& ancestor = shdManager->GetShaderResource(ancestorId);
+
+		m_DefaultUniforms.insert(ancestor.m_DefaultUniforms.begin(), ancestor.m_DefaultUniforms.end());
+	}
+
 	for (auto memberIt = shpJson["Uniforms"].begin(); memberIt != shpJson["Uniforms"].end(); ++memberIt)
 	{
 		const char* uniformName = memberIt.key().c_str();
@@ -364,7 +385,7 @@ void ShaderManager::Shutdown()
 	instance = nullptr;
 }
 
-uint32_t ShaderManager::LoadFromPath(std::string const& ProgramName)
+uint32_t ShaderManager::LoadFromPath(const std::string& ProgramName)
 {
 	auto it = s_StringToShaderId.find(ProgramName);
 

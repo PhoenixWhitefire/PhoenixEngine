@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#define PHX_ASSERT(res, err) if (!res) throw(err)
+
 #define PHX_GAMEOBJECT_NULL_ID UINT32_MAX
 
 // link a class name to a C++ GameObject-deriving class
@@ -135,8 +135,8 @@ public:
 
 	static GameObject* FromGenericValue(const Reflection::GenericValue&);
 
-	static bool IsValidObjectClass(std::string const&);
-	static GameObject* Create(std::string const&);
+	static bool IsValidObjectClass(const std::string&);
+	static GameObject* Create(const std::string&);
 	static GameObject* GetObjectById(uint32_t);
 
 	static GameObject* s_DataModel;
@@ -149,9 +149,9 @@ public:
 	std::vector<GameObject*> GetDescendants();
 
 	GameObject* GetParent();
-	GameObject* GetChild(std::string const&);
+	GameObject* GetChild(const std::string&);
 	// accounts for inheritance
-	GameObject* GetChildOfClass(std::string const&);
+	GameObject* GetChildOfClass(const std::string&);
 	GameObject* GetChildById(uint32_t);
 
 	std::string GetFullName();
@@ -202,7 +202,7 @@ template<typename T> GameObject* constructGameObjectHeir()
 template <typename T>
 struct RegisterDerivedObject : GameObject
 {
-	RegisterDerivedObject(std::string const& ObjectClass)
+	RegisterDerivedObject(const std::string& ObjectClass)
 	{
 		s_GameObjectMap->insert(std::make_pair(ObjectClass, &constructGameObjectHeir<T>));
 	}

@@ -215,7 +215,12 @@ void Renderer::ChangeResolution(uint32_t Width, uint32_t Height)
 	this->Framebuffer->UpdateResolution(m_Width, m_Height);
 }
 
-void Renderer::DrawScene(const Scene& Scene)
+void Renderer::DrawScene(
+	const Scene& Scene,
+	const glm::mat4& RenderMatrix,
+	const glm::mat4& CameraTransform,
+	double RunningTime
+)
 {
 	glActiveTexture(GL_TEXTURE0);
 	this->Framebuffer->BindTexture();
@@ -225,6 +230,11 @@ void Renderer::DrawScene(const Scene& Scene)
 	for (uint32_t shaderId : Scene.UsedShaders)
 	{
 		ShaderProgram& shader = shdManager->GetShaderResource(shaderId);
+
+		shader.SetUniform("RenderMatrix", RenderMatrix);
+		shader.SetUniform("CameraPosition", Vector3(glm::vec3(CameraTransform[3])).ToGenericValue());
+		shader.SetUniform("Time", static_cast<float>(RunningTime));
+		shader.SetUniform("SkyboxCubemap", 3);
 
 		shader.SetUniform("FrameBuffer", 0);
 
@@ -273,13 +283,8 @@ void Renderer::DrawScene(const Scene& Scene)
 
 	static const bool DoInstancing = true;
 
-	//struct InstancedDrawInfo
-	//{
-	//	const float* Transform = nullptr;
-	//	const float* Size = nullptr;
-	//};
-	// render checksum to pair<render item index, draw info>
-	std::unordered_map<uint64_t, std::pair<size_t, std::vector<float>>> instancingList;
+	// map< instance checksum, pair< base RenderItem, vector< array buffer data >>>
+	std::map<uint64_t, std::pair<size_t, std::vector<float>>> instancingList;
 
 	for (size_t renderItemIndex = 0; renderItemIndex < Scene.RenderList.size(); renderItemIndex++)
 	{
@@ -287,31 +292,59 @@ void Renderer::DrawScene(const Scene& Scene)
 
 		if (DoInstancing)
 		{
-			// 31/10/2024 bullshit so that we don't try to instance things
-			// that can't have their differences represented rn
-			// (currently only the Transform can be differentiated)
-			RenderMaterial& material = mtlManager->GetMaterialResource(renderData.MaterialId);
+			// the MESH, MATERIAL, TRANSPARENCY and REFLECTIVITY must be the same
+			// for a set of objects to be instanced together
+			// And it needs to be on the GPU
+			Mesh& mesh = meshProvider->GetMeshResource(renderData.RenderMeshId);
 
-			uint64_t renderMeshChecksum = renderData.RenderMeshId
-				+ static_cast<uint64_t>(renderData.MaterialId * 500u)
-				+ static_cast<uint64_t>(renderData.Transparency * 250)
-				+ static_cast<uint64_t>(renderData.Reflectivity * 115);
+			uint64_t checksum = 0;
 
-			auto it = instancingList.find(renderMeshChecksum);
+			if (mesh.GpuId == UINT32_MAX)
+			{
+				// make sure meshes that aren't on the gpu don't get
+				// instanced
+				checksum = instancingList.size();
+
+				while (instancingList.find(checksum) != instancingList.end())
+					checksum += 1;
+			}
+			else
+				checksum = renderData.RenderMeshId
+					+ static_cast<uint64_t>(renderData.MaterialId * 500u)
+					+ static_cast<uint64_t>(renderData.Transparency * 250)
+					+ static_cast<uint64_t>(renderData.Reflectivity * 115);
+
+			// 14/11/2024
+			// disabled for now because it causes a bunch of weird flickering
+			/*
+			if (renderData.Transparency > 0.f)
+				// hacky way to get transparents closer to the camera drawn
+				// later.
+				checksum += static_cast<uint64_t>(1.f / (glm::distance(
+					CameraTransform[3],
+					renderData.Transform[3]
+				)) * 5000.f);
+			*/
+
+			auto it = instancingList.find(checksum);
 			if (it == instancingList.end())
-				instancingList[renderMeshChecksum] = std::pair(renderItemIndex, std::vector<float>{});
+				instancingList[checksum] = std::pair(renderItemIndex, std::vector<float>{});
 
+			// Set buffer data
+			// Transform
 			for (int8_t col = 0; col < 4; col++)
 				for (int8_t row = 0; row < 4; row++)
-					instancingList[renderMeshChecksum].second.push_back(renderData.Transform[col][row]);
+					instancingList[checksum].second.push_back(renderData.Transform[col][row]);
 
-			instancingList[renderMeshChecksum].second.push_back(renderData.Size.x);
-			instancingList[renderMeshChecksum].second.push_back(renderData.Size.y);
-			instancingList[renderMeshChecksum].second.push_back(renderData.Size.z);
+			// Size
+			instancingList[checksum].second.push_back(renderData.Size.x);
+			instancingList[checksum].second.push_back(renderData.Size.y);
+			instancingList[checksum].second.push_back(renderData.Size.z);
 
-			instancingList[renderMeshChecksum].second.push_back(renderData.TintColor.R);
-			instancingList[renderMeshChecksum].second.push_back(renderData.TintColor.G);
-			instancingList[renderMeshChecksum].second.push_back(renderData.TintColor.B);
+			// Color
+			instancingList[checksum].second.push_back(renderData.TintColor.R);
+			instancingList[checksum].second.push_back(renderData.TintColor.G);
+			instancingList[checksum].second.push_back(renderData.TintColor.B);
 		}
 		else
 		{
@@ -345,10 +378,15 @@ void Renderer::DrawScene(const Scene& Scene)
 
 				glBindBuffer(GL_ARRAY_BUFFER, m_InstancingBuffer);
 
-				int32_t vec4Size = static_cast<int32_t>(sizeof(glm::vec4));
-				int32_t vec3Size = static_cast<int32_t>(sizeof(glm::vec3));
+				constexpr int32_t vec4Size = static_cast<int32_t>(sizeof(glm::vec4));
+				constexpr int32_t vec3Size = static_cast<int32_t>(sizeof(glm::vec3));
+
+				// TODO 14/11/2024
+				// I don't like having these here, but it looks like both the Vertex Array
+				// and the Instancing Buffer need to be bound for it to function
 
 				// `Transform` matrix
+				// 4 vec4's
 				glEnableVertexAttribArray(4);
 				glEnableVertexAttribArray(5);
 				glEnableVertexAttribArray(6);
@@ -391,7 +429,12 @@ void Renderer::DrawScene(const Scene& Scene)
 
 			m_SetMaterialData(renderData);
 
-			int32_t numInstances = static_cast<int32_t>(drawInfos.size() / 22ull);
+			constexpr size_t ElementsPerInstance = 22ull;
+
+			if (drawInfos.size() % ElementsPerInstance != 0)
+				throw("`drawInfos` was not divisible by `ElementsPerInstance`");
+
+			int32_t numInstances = static_cast<int32_t>(drawInfos.size() / ElementsPerInstance);
 
 			this->DrawMesh(
 				mesh,
@@ -453,11 +496,16 @@ void Renderer::DrawMesh(
 
 		m_VertexBuffer->SetBufferData(Object.Vertices);
 		m_ElementBuffer->SetBufferData(Object.Indices);
+
+		m_VertexBuffer->Bind();
+		m_ElementBuffer->Bind();
 	}
 	else
 	{
 		gpuMesh = &MeshProvider::Get()->GetGpuMesh(gpuMeshId);
 		gpuMesh->VertexArray->Bind();
+		gpuMesh->VertexBuffer->Bind();
+		gpuMesh->ElementBuffer->Bind();
 	}
 
 	uint32_t numIndices = gpuMesh ? gpuMesh->NumIndices : static_cast<uint32_t>(Object.Indices.size());

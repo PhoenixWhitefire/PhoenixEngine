@@ -143,7 +143,7 @@ void MaterialManager::Shutdown()
 	instance = nullptr;
 }
 
-uint32_t MaterialManager::LoadMaterialFromPath(std::string const& Name)
+uint32_t MaterialManager::LoadMaterialFromPath(const std::string& Name)
 {
 	auto it = m_StringToMaterialId.find(Name);
 

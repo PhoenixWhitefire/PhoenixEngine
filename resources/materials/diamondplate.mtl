@@ -1,5 +1,5 @@
 {
-  "albedo": "textures/diamondplate.jpg",
+  "albedo": "textures/materials/diamondplate.jpg",
   "shaderprogram": "worldUberTriProjected",
   "specExponent": 16.0,
   "specMultiply": 0.5,

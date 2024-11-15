@@ -76,3 +76,24 @@ Mesh PrimitiveMeshes::Cube()
 
 	return Mesh{ vertices, indices, UINT32_MAX, true };
 }
+
+Mesh PrimitiveMeshes::Quad()
+{
+	glm::vec3 white{ 1.f, 1.f, 1.f };
+
+	std::vector<Vertex> vertices =
+	{
+		Vertex{ glm::vec3(  .5f, -.5f,  0.f ), -Vector3::zAxis, white, glm::vec2(1.f, 0.f) },
+		Vertex{ glm::vec3( -.5f, -.5f,  0.f ), -Vector3::zAxis, white, glm::vec2(0.f, 0.f) },
+		Vertex{ glm::vec3( -.5f,  .5f,  0.f ), -Vector3::zAxis, white, glm::vec2(0.f, 1.f) },
+		Vertex{ glm::vec3(  .5f,  .5f,  0.f ), -Vector3::zAxis, white, glm::vec2(1.f, 1.f) }
+	};
+
+	std::vector<uint32_t> indices =
+	{
+		0, 1, 2,
+		3, 0, 2
+	};
+
+	return Mesh{ vertices, indices, UINT32_MAX, true };
+}

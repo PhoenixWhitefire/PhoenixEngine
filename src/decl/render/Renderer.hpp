@@ -74,7 +74,12 @@ public:
 	// Changes the rendering resolution
 	void ChangeResolution(uint32_t newWidth, uint32_t newHeight);
 
-	void DrawScene(const Scene& Scene);
+	void DrawScene(
+		const Scene& Scene,
+		const glm::mat4& RenderMatrix,
+		const glm::mat4& CameraTransform,
+		double RunningTime
+	);
 
 	// Submits a single draw call
 	// `NumInstances` made under the assumption the caller

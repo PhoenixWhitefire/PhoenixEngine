@@ -6,6 +6,7 @@
 #include "gameobject/GameObjects.hpp"
 #include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
+#include "Utilities.hpp"
 #include "UserInput.hpp"
 #include "FileRW.hpp"
 #include "Debug.hpp"
@@ -24,33 +25,15 @@ static uint32_t ScriptEditorFocus = PHX_GAMEOBJECT_NULL_ID;
 
 static nlohmann::json DefaultNewMaterial{};
 
-static void copyStringToBuffer(char* buf, size_t capacity, const std::string& string = "")
-{
-	for (size_t i = 0; i < capacity; i++)
-		buf[i] = i < string.size() ? string[i] : 0;
-}
-
-static char* bufferInitialize(size_t capacity, const std::string& value = "")
-{
-	char* buf = (char*)malloc(capacity);
-
-	if (!buf)
-		throw("There are bigger problems at hand.");
-
-	copyStringToBuffer(buf, capacity, value);
-
-	return buf;
-}
-
 Editor::Editor()
 {
-	m_NewObjectClass = bufferInitialize(OBJECT_NEW_CLASSNAME_BUFSIZE);
-	m_MtlCreateNameBuf = bufferInitialize(MATERIAL_NEW_NAME_BUFSIZE, MATERIAL_NEW_NAME_DEFAULT);
-	m_MtlDiffuseBuf = bufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
-	m_MtlSpecBuf = bufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
-	m_MtlShpBuf = bufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
-	m_MtlNewUniformNameBuf = bufferInitialize(MATERIAL_NEW_NAME_BUFSIZE);
-	m_MtlUniformNameEditBuf = bufferInitialize(MATERIAL_NEW_NAME_BUFSIZE);
+	m_NewObjectClass = BufferInitialize(OBJECT_NEW_CLASSNAME_BUFSIZE);
+	m_MtlCreateNameBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE, MATERIAL_NEW_NAME_DEFAULT);
+	m_MtlDiffuseBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
+	m_MtlSpecBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
+	m_MtlShpBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
+	m_MtlNewUniformNameBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE);
+	m_MtlUniformNameEditBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE);
 
 	DefaultNewMaterial["albedo"] = "textures/plastic.png";
 }
@@ -136,7 +119,7 @@ static void renderScriptEditor()
 		TextEntryBufferCapacity = scriptContents.size() + 256;
 		TextEntryBuffer = (char*)malloc(TextEntryBufferCapacity);
 
-		copyStringToBuffer(TextEntryBuffer, TextEntryBufferCapacity, scriptContents);
+		CopyStringToBuffer(TextEntryBuffer, TextEntryBufferCapacity, scriptContents);
 	}
 
 	ImGui::InputTextMultiline("Script", TextEntryBuffer, TextEntryBufferCapacity);
@@ -194,11 +177,11 @@ void Editor::m_RenderMaterialEditor()
 
 	if (m_MtlCurItem != m_MtlPrevItem)
 	{
-		copyStringToBuffer(m_MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE, curItem.GetShader().Name);
-		copyStringToBuffer(m_MtlDiffuseBuf, MATERIAL_TEXTUREPATH_BUFSIZE, colorMap.ImagePath);
+		CopyStringToBuffer(m_MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE, curItem.GetShader().Name);
+		CopyStringToBuffer(m_MtlDiffuseBuf, MATERIAL_TEXTUREPATH_BUFSIZE, colorMap.ImagePath);
 
 		if (curItem.MetallicRoughnessMap != 0)
-			copyStringToBuffer(m_MtlSpecBuf, MATERIAL_TEXTUREPATH_BUFSIZE, metallicRoughnessMap.ImagePath);
+			CopyStringToBuffer(m_MtlSpecBuf, MATERIAL_TEXTUREPATH_BUFSIZE, metallicRoughnessMap.ImagePath);
 
 		SelectedUniformIdx = -1;
 	}
@@ -320,7 +303,7 @@ void Editor::m_RenderMaterialEditor()
 		const std::string& name = uniformsArray.at(SelectedUniformIdx);
 		Reflection::GenericValue& value = curItem.Uniforms.at(name);
 
-		copyStringToBuffer(m_MtlUniformNameEditBuf, MATERIAL_NEW_NAME_BUFSIZE, name);
+		CopyStringToBuffer(m_MtlUniformNameEditBuf, MATERIAL_NEW_NAME_BUFSIZE, name);
 
 		ImGui::InputText("Name", m_MtlUniformNameEditBuf, MATERIAL_NEW_NAME_BUFSIZE);
 
@@ -558,7 +541,7 @@ void Editor::RenderUI()
 
 					size_t allocSize = str.size() + INPUT_TEXT_BUFFER_ADDITIONAL;
 
-					char* buf = bufferInitialize(
+					char* buf = BufferInitialize(
 						allocSize,
 						"<Initial Value 29/09/2024 Hey guys How we doing today>"
 					);

@@ -126,19 +126,19 @@ static glm::mat4 GetMatrixFromJson(const nlohmann::json& Json)
 	return mat;
 }
 
-static float GetVersion(std::string const& MapFileContents)
+static float getVersion(const std::string& MapFileContents)
 {
-	size_t MatchLocation = MapFileContents.find("#Version");
+	size_t matchLocation = MapFileContents.find("#Version");
 
-	float Version = 1.f;
+	float version = 1.f;
 
-	if (MatchLocation != std::string::npos)
+	if (matchLocation != std::string::npos)
 	{
-		std::string SubStr = MapFileContents.substr(MatchLocation + 9, 4);
-		Version = std::stof(SubStr);
+		std::string subStr = MapFileContents.substr(matchLocation + 9, 4);
+		version = std::stof(subStr);
 	}
 	
-	return Version;
+	return version;
 }
 
 static std::vector<GameObject*> LoadMapVersion1(
@@ -634,7 +634,7 @@ std::vector<GameObject*> SceneFormat::Deserialize(
 		return {};
 	}
 
-	float version = GetVersion(Contents);
+	float version = getVersion(Contents);
 	Debug::Log(std::vformat("Scene version is {}", std::make_format_args(version)));
 
 	size_t jsonStartLoc = Contents.find("{");

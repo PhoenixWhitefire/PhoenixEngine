@@ -7,8 +7,8 @@
     "Vertex": "worldUber.vert",
     "Fragment": "worldUber.frag",
     
+    "InheritUniformsOf":  "worldUber",
     "Uniforms": {
-      "Fog": false,
-      "UseProjectedMaterial": true
+      "UseTriPlanarProjection": true
     }
 }

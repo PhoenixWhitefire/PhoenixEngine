@@ -22,12 +22,14 @@ void GpuVertexArray::LinkAttrib(
 	void* Offset
 )
 {
+	this->Bind();
 	VertexBuffer.Bind();
 
 	glVertexAttribPointer(Layout, Components, Type, GL_FALSE, Stride, Offset);
 	glEnableVertexAttribArray(Layout);
 
 	VertexBuffer.Unbind();
+	this->Unbind();
 }
 
 void GpuVertexArray::Bind()
@@ -63,6 +65,8 @@ void GpuVertexBuffer::SetBufferData(const std::vector<Vertex>& Vertices, BufferU
 		Vertices.data(),
 		UsageHint == BufferUsageHint::Dynamic ? GL_STREAM_DRAW : GL_STATIC_DRAW
 	);
+
+	this->Unbind();
 }
 
 void GpuVertexBuffer::Bind()
@@ -81,6 +85,8 @@ GpuElementBuffer::GpuElementBuffer()
 	this->Bind();
 
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 0, {}, GL_STREAM_DRAW);
+
+	this->Unbind();
 }
 
 GpuElementBuffer::~GpuElementBuffer()
@@ -98,6 +104,8 @@ void GpuElementBuffer::SetBufferData(const std::vector<GLuint>& Indices, BufferU
 		Indices.data(),
 		UsageHint == BufferUsageHint::Dynamic ? GL_STREAM_DRAW : GL_STATIC_DRAW
 	);
+
+	this->Unbind();
 }
 
 void GpuElementBuffer::Bind()

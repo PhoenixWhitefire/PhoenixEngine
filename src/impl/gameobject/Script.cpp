@@ -808,7 +808,7 @@ void Object_Script::Update(double dt)
 	}
 }
 
-bool Object_Script::LoadScript(std::string const& scriptFile)
+bool Object_Script::LoadScript(const std::string& scriptFile)
 {
 	if (SourceFile == scriptFile)
 		return true;

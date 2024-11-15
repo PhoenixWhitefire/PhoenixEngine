@@ -72,7 +72,7 @@ uniform float FarZ = 1000.0f;
 uniform bool Fog = false;
 uniform vec3 FogColor = vec3(0.85f, 0.85f, 0.90f);
 
-uniform bool UseProjectedMaterial = false;
+uniform bool UseTriPlanarProjection = false;
 uniform float MaterialProjectionFactor = 0.05f;
 
 uniform float AlphaCutoff = 0.5f;
@@ -83,7 +83,6 @@ in vec3 Frag_CurrentPosition;
 in vec3 Frag_VertexNormal;
 in vec3 Frag_ColorTint;
 in vec2 Frag_UV;
-in mat4 Frag_CamMatrix;
 in mat4 Frag_Transform;
 
 out vec4 FragColor;
@@ -214,7 +213,7 @@ void main()
 	vec4 Albedo = vec4(0.f, 0.f, 0.f, 1.f); //textureLod(ColorMap, UV, mipLevel);
 	float SpecMapValue = textureLod(MetallicRoughnessMap, UV, mipLevel).r;
 
-	if (!UseProjectedMaterial)
+	if (!UseTriPlanarProjection)
 		Albedo = textureLod(ColorMap, UV, mipLevel);
 	else
 	{
@@ -249,10 +248,11 @@ void main()
 		// accumulate a red color with overdraw
 		// 27/10/2024 i rlly thought this would work but nah not really
 		float prevValue = texture(FrameBuffer, gl_FragCoord.xy).r;
-		prevValue += 1.f/4.f;
+		if (prevValue > 0.f)
+			FragColor = vec4(1.f, 0.f, 0.f, 1.f);
 		//gl_FragDepth = 0.f;
 		
-		FragColor = vec4(prevValue, 0.f, 0.f, 1.f);
+		//FragColor = vec4(prevValue, 0.f, 0.f, 1.f);
 		
 		return;
 	}

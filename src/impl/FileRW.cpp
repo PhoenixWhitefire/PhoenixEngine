@@ -11,7 +11,7 @@
 // Returns:
 //   true upon success.
 //   false upon failure, and set the std::error_code & err accordingly.
-static bool createDirectoryRecursive(std::string const& dirName, std::error_code& err)
+static bool createDirectoryRecursive(const std::string& dirName, std::error_code& err)
 {
 	err.clear();
 	if (!std::filesystem::create_directories(dirName, err))
@@ -27,7 +27,7 @@ static bool createDirectoryRecursive(std::string const& dirName, std::error_code
 	return true;
 }
 
-std::string FileRW::ReadFile(std::string const& ShortPath, bool* DoesFileExist)
+std::string FileRW::ReadFile(const std::string& ShortPath, bool* DoesFileExist)
 {
 	std::string actualPath = FileRW::GetAbsolutePath(ShortPath);
 

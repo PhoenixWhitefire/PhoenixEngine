@@ -140,7 +140,7 @@ GameObject::~GameObject()
 	this->ParentLocked = true;
 }
 
-bool GameObject::IsValidObjectClass(std::string const& ObjectClass)
+bool GameObject::IsValidObjectClass(const std::string& ObjectClass)
 {
 	GameObjectMapType::iterator it = s_GameObjectMap->find(ObjectClass);
 
@@ -342,7 +342,7 @@ GameObject* GameObject::GetChildById(uint32_t id)
 	return it != m_Children.end() ? GameObject::GetObjectById(id) : nullptr;
 }
 
-GameObject* GameObject::GetChild(std::string const& ChildName)
+GameObject* GameObject::GetChild(const std::string& ChildName)
 {
 	for (uint32_t index = 0; index < m_Children.size(); index++)
 	{
@@ -362,7 +362,7 @@ GameObject* GameObject::GetChild(std::string const& ChildName)
 }
 
 
-GameObject* GameObject::GetChildOfClass(std::string const& Class)
+GameObject* GameObject::GetChildOfClass(const std::string& Class)
 {
 	for (uint32_t index = 0; index < m_Children.size(); index++)
 	{
@@ -381,7 +381,7 @@ GameObject* GameObject::GetChildOfClass(std::string const& Class)
 	return nullptr;
 }
 
-GameObject* GameObject::Create(std::string const& ObjectClass)
+GameObject* GameObject::Create(const std::string& ObjectClass)
 {
 	GameObjectMapType::iterator it = s_GameObjectMap->find(ObjectClass);
 

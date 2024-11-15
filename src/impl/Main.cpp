@@ -23,7 +23,18 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 
 */
 
+/*
+	
+	14/11/2024
+
+	This Main file is in the "Player" or "Application" layer in my head, so I don't really care
+	that's it's messy.
+
+*/
+
 #define SDL_MAIN_HANDLED
+
+#define PHX_MAIN_HANDLECRASH(c, expr) catch (c Error) { handleCrash(Error##expr, #c); }
 
 #include <filesystem>
 #include <imgui/backends/imgui_impl_opengl3.h>
@@ -32,12 +43,14 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 #include <glm/gtx/vector_angle.hpp>
 
 #include "Engine.hpp"
+
 #include "GlobalJsonConfig.hpp"
-#include "asset/SceneFormat.hpp"
 #include "UserInput.hpp"
+#include "Utilities.hpp"
 #include "FileRW.hpp"
-#include "Debug.hpp"
 #include "Editor.hpp"
+#include "Debug.hpp"
+#include "asset/SceneFormat.hpp"
 
 static bool FirstDragFrame = false;
 
@@ -55,12 +68,6 @@ static EngineObject* EngineInstance = nullptr;
 static int PrevMouseX, PrevMouseY = 0;
 
 static glm::tvec3<double, glm::highp> CamForward = glm::vec3(0.f, 0.f, -1.f);
-
-static const char* ImGuiErrLn1 =
-"Dear ImGui has detected a version mis-match between the compiled headers{} {} {}";
-static const char* ImGuiErrLn2 =
-" and the linked library. Please ensure version";
-static const char* ImGuiErrLn3 = "is linked.";
 
 static int findArgumentInCliArgs(
 	int ArgCount,
@@ -546,16 +553,7 @@ static void Application(int argc, char** argv)
 	bool imGuiVersionCorrect = IMGUI_CHECKVERSION();
 
 	if (!imGuiVersionCorrect)
-	{
-		throw(std::vformat(
-			ImGuiErrLn1,
-			std::make_format_args(
-				ImGuiErrLn2,
-				imGuiVersion,
-				ImGuiErrLn3
-			)
-		));
-	}
+		throw("Dear ImGui detected a version mismatch");
 
 	ImGui::CreateContext();
 
@@ -566,35 +564,16 @@ static void Application(int argc, char** argv)
 	if (!ImGui_ImplSDL2_InitForOpenGL(
 			EngineInstance->Window,
 			EngineInstance->RendererContext->GLContext
-		))
-		throw("ImGui intialization failure on ImGui_ImplSDL2_InitForOpenGL");
+	))
+		throw("ImGui intialization failure on `ImGui_ImplSDL2_InitForOpenGL`");
 
 	if (!ImGui_ImplOpenGL3_Init("#version 460"))
-		throw("ImGui initialization failure on ImGui_ImplOpenGL3_Init");
+		throw("ImGui initialization failure on `ImGui_ImplOpenGL3_Init`");
 
 	EditorContext = EngineJsonConfig.value("Developer", false) ? new Editor : nullptr;
 	
-	LevelLoadPathBuf = (char*)malloc(64);
-	LevelSavePathBuf = (char*)malloc(64);
-
-	if (!LevelLoadPathBuf)
-		throw("Could not allocate buffer for Level load path");
-
-	if (!LevelSavePathBuf)
-		throw("Could not allocate buffer for Level save path");
-
-	static const char* defaultLoadLevel = "levels/dev.world";
-	static const char* defaultSaveLevel = "levels/save.world";
-
-	for (int i = 0; i < 64; i++)
-		LevelLoadPathBuf[i] = i < strlen(defaultLoadLevel)
-								? defaultLoadLevel[i]
-								: '\0';
-
-	for (int i = 0; i < 64; i++)
-		LevelSavePathBuf[i] = i < strlen(defaultSaveLevel)
-								? defaultSaveLevel[i]
-								: '\0';
+	LevelLoadPathBuf = BufferInitialize(64, "levels/de_dust2.world");
+	LevelSavePathBuf = BufferInitialize(64, "levels/save.world");
 
 	const char* mapFileFromArgs{};
 	bool hasMapFromArgs = false;
@@ -633,24 +612,25 @@ static void Application(int argc, char** argv)
 
 static void handleCrash(const std::string& Error, const std::string& ExceptionType)
 {
-	auto fmtArgs = std::make_format_args(
-		ExceptionType,
-		Error,
-		"If this is the first time this has happened, please re-try. Otherwise, contact the developers."
-	);
 
 	// Log Size Limit Exceeded Throwing Exception
 	if (!Error.starts_with("LSLETE"))
-		Debug::Log(std::vformat("CRASH - {}: {}", fmtArgs));
+		Debug::Log(std::vformat(
+			"CRASH - {}: {}",
+			std::make_format_args(ExceptionType, Error)
+		));
 
 	std::string errMessage = std::vformat(
-		"An unexpected error occurred, and the application will now close. Details:\n\nType: {}\nError: {}\n\n{}",
-		fmtArgs
+		"An unexpected error occurred, and the application will now close. Details: {}\n\n{}",
+		std::make_format_args(
+			Error,
+			"If this is the first time this has happened, please re-try. Otherwise, contact the developers."
+		)
 	);
 
 	SDL_ShowSimpleMessageBox(
 		SDL_MESSAGEBOX_ERROR,
-		"Engine error",
+		"Fatal Engine Error",
 		errMessage.c_str(),
 		nullptr
 	);
@@ -678,23 +658,8 @@ int main(int argc, char** argv)
 
 		Debug::Save();
 	}
-	catch (std::string Error)
-	{
-		handleCrash(Error, "std::string");
-	}
-	catch (const char* Error)
-	{
-		handleCrash(Error, "const char*");
-	}
-	catch (std::filesystem::filesystem_error Error)
-	{
-		handleCrash(Error.what(), "std::filesystem::filesystem_error");
-	}
-	catch (std::bad_alloc Error)
-	{
-		handleCrash(
-			std::string("Allocation error, system may have run Out Of Memory: ") + Error.what(),
-			"std::bad_alloc"
-		);
-	}
+	PHX_MAIN_HANDLECRASH(std::string,)
+	PHX_MAIN_HANDLECRASH(const char*,)
+	PHX_MAIN_HANDLECRASH(std::bad_alloc, .what() + std::string(": System may have run out of memory"))
+	PHX_MAIN_HANDLECRASH(std::exception, .what());
 }

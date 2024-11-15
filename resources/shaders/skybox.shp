@@ -1,7 +1,4 @@
 {
     "Vertex": "skybox.vert",
-    "Fragment": "skybox.frag",
-    "Uniforms": {
-	//"DebugOverdraw": false
-    }
+    "Fragment": "skybox.frag"
 }

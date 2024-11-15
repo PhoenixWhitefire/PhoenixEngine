@@ -7,4 +7,5 @@
 namespace PrimitiveMeshes
 {
 	Mesh Cube();
+	Mesh Quad();
 }

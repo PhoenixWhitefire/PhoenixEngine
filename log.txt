@@ -12,6 +12,19 @@ Scene version is 2
 Scene loaded
 Final initializations...
 Main engine loop start
-Loading scene: 'levels/de_dust2.world'
-Scene version is 1
-Scene loaded
+GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Program/shader state performance warning: Vertex shader in program 10 is being recompiled based on GL state.
+	Source: OpenGL
+	Error ID: 131218
+
+GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Program/shader state performance warning: Vertex shader in program 4 is being recompiled based on GL state.
+	Source: OpenGL
+	Error ID: 131218
+
+Main loop exited
+Application shutting down...

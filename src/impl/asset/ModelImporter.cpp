@@ -7,6 +7,7 @@
 #include "asset/TextureManager.hpp"
 #include "asset/MeshProvider.hpp"
 #include "GlobalJsonConfig.hpp"
+#include "Utilities.hpp"
 #include "FileRW.hpp"
 #include "Debug.hpp"
 
@@ -146,15 +147,11 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		{
 			m_JsonData = nlohmann::json::parse(textData);
 		}
-		catch (nlohmann::json::parse_error e)
-		{
-			// really need some `PHX_CATCH_AND_RETHROW` macro
-			std::string errMsg = e.what();
-			throw(std::vformat(
-				"Failed to import model '{}': JSON Type Error: {}",
-				std::make_format_args(gltfFilePath, errMsg)
-			));
-		}
+		PHX_CATCH_AND_RETHROW(
+			nlohmann::json::parse_error,
+			std::string("Failed to import model (parse error): ") + gltfFilePath +,
+			.what()
+		);
 
 		m_Data = m_GetData();
 	}
@@ -206,14 +203,11 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 				m_TraverseNode(node);
 			}
 	}
-	catch (nlohmann::json::type_error e)
-	{
-		std::string errMessage = e.what();
-		throw(std::vformat(
-			"Failed to import model '{}': JSON Type Error: {}",
-			std::make_format_args(gltfFilePath, errMessage)
-		));
-	}
+	PHX_CATCH_AND_RETHROW(
+		nlohmann::json::type_error,
+		std::string("Failed to import model (type error): ") + gltfFilePath +,
+		.what()
+	);
 
 	MaterialManager* mtlManager = MaterialManager::Get();
 	MeshProvider* meshProvider = MeshProvider::Get();

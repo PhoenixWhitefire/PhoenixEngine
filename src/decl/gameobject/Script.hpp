@@ -13,7 +13,7 @@ public:
 	void Initialize() override;
 	void Update(double) override;
 
-	bool LoadScript(std::string const&);
+	bool LoadScript(const std::string&);
 	bool Reload();
 
 	std::string SourceFile = "scripts/empty.luau";

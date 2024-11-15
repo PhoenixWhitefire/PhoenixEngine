@@ -13,7 +13,7 @@
 
 static std::string s_ErrorString = "No error";
 
-static float getVersion(std::string const& MapFileContents)
+static float getVersion(const std::string& MapFileContents)
 {
 	size_t matchLocation = MapFileContents.find("#Version");
 
@@ -30,8 +30,8 @@ static float getVersion(std::string const& MapFileContents)
 
 MeshProvider::MeshProvider()
 {
-	this->Assign(PrimitiveMeshes::Cube(), "!Cube");
-	m_CreateAndUploadGpuMesh(m_Meshes[0]);
+	m_CreateAndUploadGpuMesh(this->Assign(PrimitiveMeshes::Cube(), "!Cube"));
+	m_CreateAndUploadGpuMesh(this->Assign(PrimitiveMeshes::Quad(), "!Quad"));
 }
 
 MeshProvider::~MeshProvider()
@@ -265,7 +265,7 @@ uint32_t MeshProvider::LoadFromPath(const std::string& Path, bool ShouldLoadAsyn
 				std::make_format_args(Path)
 			));
 
-			return this->Assign(Mesh{}, "blank");
+			return this->Assign(Mesh{}, Path);
 		}
 		else
 		{
@@ -379,7 +379,7 @@ void MeshProvider::m_CreateAndUploadGpuMesh(Mesh& mesh)
 {
 	m_GpuMeshes.emplace_back();
 
-	MeshProvider::GpuMesh& gpuMesh = m_GpuMeshes.back();
+	MeshProvider::GpuMesh& gpuMesh = m_GpuMeshes[m_GpuMeshes.size() - 1];
 
 	GpuVertexArray* vao = new GpuVertexArray;
 	GpuVertexBuffer* vbo = new GpuVertexBuffer;
@@ -408,4 +408,9 @@ void MeshProvider::m_CreateAndUploadGpuMesh(Mesh& mesh)
 	}
 
 	mesh.GpuId = static_cast<uint32_t>(m_GpuMeshes.size() - 1);
+}
+
+void MeshProvider::m_CreateAndUploadGpuMesh(uint32_t MeshId)
+{
+	m_CreateAndUploadGpuMesh(m_Meshes.at(MeshId));
 }

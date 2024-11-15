@@ -43,6 +43,7 @@ private:
 	~MeshProvider();
 
 	void m_CreateAndUploadGpuMesh(Mesh&);
+	void m_CreateAndUploadGpuMesh(uint32_t);
 
 	std::vector<Mesh> m_Meshes;
 	std::unordered_map<std::string, uint32_t> m_StringToMeshId;

@@ -21,7 +21,6 @@
 #include "FileRW.hpp"
 #include "Debug.hpp"
 
-static uint32_t RectangleVAO, RectangleVBO;
 static auto ChronoStartTime = std::chrono::high_resolution_clock::now();
 
 // TODO: move 13/08/2024
@@ -29,17 +28,6 @@ static int WindowSizeXBeforeFullscreen = 800;
 static int WindowSizeYBeforeFullscreen = 800;
 static int WindowPosXBeforeFullscreen = SDL_WINDOWPOS_CENTERED;
 static int WindowPosYBeforeFullscreen = SDL_WINDOWPOS_CENTERED;
-
-static float RectangleVertices[24] =
-{
-		 1.0f, -1.0f,    1.0f, 0.0f,
-		-1.0f, -1.0f,    0.0f, 0.0f,
-		-1.0f,  1.0f,    0.0f, 1.0f,
-
-		 1.0f,  1.0f,    1.0f, 1.0f,
-		 1.0f, -1.0f,    1.0f, 0.0f,
-		-1.0f,  1.0f,    0.0f, 1.0f
-};
 
 static const std::unordered_map<SDL_LogPriority, const std::string> LogPriorityStringMap =
 {
@@ -367,18 +355,6 @@ void EngineObject::Start()
 {
 	Debug::Log("Final initializations...");
 
-	// Post-processing framebuffer quad
-	glGenVertexArrays(1, &RectangleVAO);
-	glGenBuffers(1, &RectangleVBO);
-	glBindVertexArray(RectangleVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, RectangleVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(RectangleVertices), &RectangleVertices, GL_STATIC_DRAW);
-
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-
 	// TODO:
 	// wtf are these
 	// 13/07/2024
@@ -583,7 +559,7 @@ void EngineObject::Start()
 		GameObject* workspace = dynamic_cast<GameObject*>(Workspace);
 		Object_Camera* sceneCamera = this->Workspace->GetSceneCamera();
 
-		glm::mat4 cameraMatrix = sceneCamera->GetMatrixForAspectRatio(aspectRatio);
+		glm::mat4 renderMatrix = sceneCamera->GetMatrixForAspectRatio(aspectRatio);
 		
 		std::vector<Object_Base3D*> physicsList;
 
@@ -621,16 +597,6 @@ void EngineObject::Start()
 		for (const RenderItem& ri : scene.RenderList)
 			scene.UsedShaders.insert(mtlManager->GetMaterialResource(ri.MaterialId).ShaderId);
 
-		for (uint32_t shpId : scene.UsedShaders)
-		{
-			ShaderProgram& shp = shdManager->GetShaderResource(shpId);
-
-			shp.SetUniform("CameraMatrix", cameraMatrix);
-			shp.SetUniform("CameraPosition", Vector3(glm::vec3(sceneCamera->Transform[3])).ToGenericValue());
-			shp.SetUniform("Time", static_cast<float>(this->RunningTime));
-			shp.SetUniform("SkyboxCubemap", 3);
-		}
-
 		glActiveTexture(GL_TEXTURE3);
 
 		glDepthFunc(GL_LEQUAL);
@@ -657,7 +623,7 @@ void EngineObject::Start()
 		// of zeroing-out the first 3 values of the last column of what is in essence a 4x4 2D array of floats...
 		view[3] = glm::vec4(0.f, 0.f, 0.f, 1.f);
 
-		skyboxShaders.SetUniform("CameraMatrix", projection * view);
+		skyboxShaders.SetUniform("RenderMatrix", projection * view);
 
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemap);
 		
@@ -679,7 +645,7 @@ void EngineObject::Start()
 		glDepthFunc(GL_LESS);
 
 		//Main render pass
-		RendererContext->DrawScene(scene);
+		RendererContext->DrawScene(scene, renderMatrix, sceneCamera->Transform, this->RunningTime);
 
 		glDisable(GL_DEPTH_TEST);
 
@@ -770,12 +736,16 @@ void EngineObject::Start()
 
 		glGenerateMipmap(GL_TEXTURE_2D);
 
-		glBindVertexArray(RectangleVAO);
 		glDisable(GL_DEPTH_TEST);
 
-		postFxShaders.Activate();
-
-		glDrawArrays(GL_TRIANGLES, 0, 6);
+		RendererContext->DrawMesh(
+			mp->GetMeshResource(mp->LoadFromPath("!Quad")),
+			postFxShaders,
+			Vector3::one*2.f,
+			glm::mat4(1.f),
+			FaceCullingMode::None,
+			0
+		);
 
 		glEnable(GL_DEPTH_TEST);
 

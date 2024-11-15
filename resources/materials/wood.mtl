@@ -1,5 +1,10 @@
 {
-  "albedo": "textures/wood.png",
-  "specExponent": 0.5,
-  "specMultiply": 0.5
+  "albedo": "textures/materials/wood.png",
+  "shaderprogram": "worldUberTriProjected",
+  "specExponent": 8.0,
+  "specMultiply": 0.5,
+  "translucency": false,
+  "uniforms": {
+    "MaterialProjectionFactor": 0.10000000149011612
+  }
 }
