@@ -569,9 +569,18 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData)
 
 	Texture& colorMap = texManager->GetTextureResource(material.ColorMap);
 	Texture& metallicRoughnessMap = texManager->GetTextureResource(material.MetallicRoughnessMap);
+	Texture& normalMap = texManager->GetTextureResource(material.NormalMap);
 
 	shader.SetTextureUniform("ColorMap", colorMap.GpuId);
 	shader.SetTextureUniform("MetallicRoughnessMap", metallicRoughnessMap.GpuId);
+
+	if (material.NormalMap != 0)
+	{
+		shader.SetUniform("HasNormalMap", true);
+		shader.SetTextureUniform("NormalMap", normalMap.GpuId);
+	}
+	else
+		shader.SetUniform("HasNormalMap", false);
 
 	// apply the uniforms for the shader program...
 	shader.ApplyDefaultUniforms();

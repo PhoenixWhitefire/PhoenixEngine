@@ -43,10 +43,10 @@ void RenderMaterial::Reload()
 
 	TextureManager* texManager = TextureManager::Get();
 
-	std::string desiredShp = jsonMaterialData.value("shaderprogram", "worldUber");
+	std::string desiredShp = jsonMaterialData.value("Shader", jsonMaterialData.value("shaderprogram", "worldUber"));
 	this->ShaderId = shdManager->LoadFromPath(desiredShp);
 
-	nlohmann::json& uniforms = jsonMaterialData["uniforms"];
+	nlohmann::json uniforms = jsonMaterialData.value("Uniforms", jsonMaterialData.value("uniforms", nlohmann::json::object()));
 
 	for (auto memberIt = uniforms.begin(); memberIt != uniforms.end(); ++memberIt)
 	{
@@ -90,23 +90,27 @@ void RenderMaterial::Reload()
 		}
 	}
 
-	bool doBilinearFiltering = jsonMaterialData.value("bilinearFiltering", true);
+	bool doBilinearFiltering = jsonMaterialData.value("BilinearFiltering", jsonMaterialData.value("bilinearFiltering", true));
 
 	this->ColorMap = texManager->LoadTextureFromPath(jsonMaterialData.value(
-		"albedo",
-		MissingTexPath
+		"ColorMap",
+		jsonMaterialData.value("albedo", MissingTexPath)
 	), true, doBilinearFiltering);
 
-	bool hasSpecularTexture = jsonMaterialData.find("specular") != jsonMaterialData.end();
-	this->HasTranslucency = jsonMaterialData.value("translucency", false);
+	std::string metallicRoughnessPath = jsonMaterialData.value("MetallicRoughnessMap", jsonMaterialData.value("specular", ""));
+	std::string normalPath = jsonMaterialData.value("NormalMap", "");
 
-	if (hasSpecularTexture)
-		this->MetallicRoughnessMap = texManager->LoadTextureFromPath(jsonMaterialData.value(
-			"specular",
-			MissingTexPath
-		), true, doBilinearFiltering);
+	if (metallicRoughnessPath != "")
+		this->MetallicRoughnessMap = texManager->LoadTextureFromPath(metallicRoughnessPath, true, doBilinearFiltering);
 	else
 		this->MetallicRoughnessMap = 0;
+
+	if (normalPath != "")
+		this->NormalMap = texManager->LoadTextureFromPath(normalPath, true, doBilinearFiltering);
+	else
+		this->NormalMap = 0;
+
+	this->HasTranslucency = jsonMaterialData.value("HasTranslucency", jsonMaterialData.value("translucency", false));
 
 	this->SpecExponent = jsonMaterialData.value("specExponent", this->SpecExponent);
 	this->SpecMultiply = jsonMaterialData.value("specMultiply", this->SpecMultiply);

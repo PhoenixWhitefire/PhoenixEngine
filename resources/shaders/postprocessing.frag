@@ -92,7 +92,7 @@ void main()
 	float Lout = pow(Lin, alphaRw / alphaD) / LdMax * pow(10.f, (betaRw - betaD) / alphaD) - (1.f - ContrastMax);
 
 	Color = Color / Lin * Lout;
-	Color *= 0.75f;
+	Color *= 0.6f;
 
 	if (ScreenEdgeBlurEnabled)
 	{

@@ -1,8 +1,8 @@
 {
-  "albedo": "textures/missing.png",
-  "shaderprogram": "worldUber",
+  "ColorMap": "textures/missing.png",
+  "HasTranslucency": false,
+  "Shader": "worldUber",
+  "Uniforms": null,
   "specExponent": 1.0,
-  "specMultiply": 0.5,
-  "translucency": false,
-  "uniforms": null
+  "specMultiply": 0.5
 }

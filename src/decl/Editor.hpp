@@ -17,6 +17,7 @@ private:
 	char* m_MtlCreateNameBuf{};
 	char* m_MtlDiffuseBuf{};
 	char* m_MtlSpecBuf{};
+	char* m_MtlNormalBuf{};
 	char* m_MtlShpBuf{};
 	char* m_MtlNewUniformNameBuf{};
 	char* m_MtlUniformNameEditBuf{};

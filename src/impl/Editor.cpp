@@ -31,6 +31,7 @@ Editor::Editor()
 	m_MtlCreateNameBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE, MATERIAL_NEW_NAME_DEFAULT);
 	m_MtlDiffuseBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
 	m_MtlSpecBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
+	m_MtlNormalBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
 	m_MtlShpBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
 	m_MtlNewUniformNameBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE);
 	m_MtlUniformNameEditBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE);
@@ -127,6 +128,30 @@ static void renderScriptEditor()
 	ImGui::End();
 }
 
+static void mtlEditorTexture(uint32_t TextureId)
+{
+	const Texture& tx = TextureManager::Get()->GetTextureResource(TextureId);
+
+	ImGui::Image(
+		tx.GpuId,
+		// Scale to 256 pixels high, while maintaining aspect ratio
+		ImVec2(tx.Width * (256.f / tx.Height), 256.f),
+		// Flip the Y axis. Either OpenGL or Dear ImGui is bottom-up
+		ImVec2(0, 1),
+		ImVec2(1, 0)
+	);
+
+	ImGui::Text(std::vformat(
+		"Resolution: {}x{}",
+		std::make_format_args(tx.Width, tx.Height)
+	).c_str());
+
+	ImGui::Text(std::vformat(
+		"# Color channels: {}",
+		std::make_format_args(tx.NumColorChannels)
+	).c_str());
+}
+
 // 02/09/2024
 // That one Gianni Matragrano shitpost where it's a
 // baguette with a doge face on a white background low-res
@@ -172,16 +197,17 @@ void Editor::m_RenderMaterialEditor()
 
 	Texture& colorMap = texManager->GetTextureResource(curItem.ColorMap);
 	Texture& metallicRoughnessMap = texManager->GetTextureResource(curItem.MetallicRoughnessMap);
+	Texture& normalMap = texManager->GetTextureResource(curItem.NormalMap);
 
 	static int SelectedUniformIdx = -1;
 
 	if (m_MtlCurItem != m_MtlPrevItem)
 	{
 		CopyStringToBuffer(m_MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE, curItem.GetShader().Name);
-		CopyStringToBuffer(m_MtlDiffuseBuf, MATERIAL_TEXTUREPATH_BUFSIZE, colorMap.ImagePath);
 
-		if (curItem.MetallicRoughnessMap != 0)
-			CopyStringToBuffer(m_MtlSpecBuf, MATERIAL_TEXTUREPATH_BUFSIZE, metallicRoughnessMap.ImagePath);
+		CopyStringToBuffer(m_MtlDiffuseBuf, MATERIAL_TEXTUREPATH_BUFSIZE, colorMap.ImagePath);
+		CopyStringToBuffer(m_MtlSpecBuf, MATERIAL_TEXTUREPATH_BUFSIZE, metallicRoughnessMap.ImagePath);
+		CopyStringToBuffer(m_MtlNormalBuf, MATERIAL_TEXTUREPATH_BUFSIZE, normalMap.ImagePath);
 
 		SelectedUniformIdx = -1;
 	}
@@ -190,63 +216,43 @@ void Editor::m_RenderMaterialEditor()
 
 	ImGui::InputText("Shader", m_MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
 
-	ImGui::InputText("Diffuse", m_MtlDiffuseBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
-	
-	ImGui::Image(
-		// first cast to uint64_t to get rid of the
-		// "'type cast': conversion from 'uint32_t' to 'void *' of greater size"
-		// warning
-		(uint64_t)colorMap.GpuId,
-		ImVec2(256, 256),
-		// Flip the Y axis. Either OpenGL or Dear ImGui is bottom-up
-		ImVec2(0, 1),
-		ImVec2(1, 0)
-	);
+	ImGui::InputText("Color Map", m_MtlDiffuseBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
+	mtlEditorTexture(curItem.ColorMap);
 
-	ImGui::Text(std::vformat(
-		"Resolution: {}x{}",
-		std::make_format_args(colorMap.Width, colorMap.Height)
-	).c_str());
+	bool hadSpecularTexture = curItem.MetallicRoughnessMap != 0;
+	bool metallicRoughnessEnabled = hadSpecularTexture;
+	ImGui::Checkbox("Has MR Map", &metallicRoughnessEnabled);
 
-	ImGui::Text(std::vformat(
-		"# Color channels: {}",
-		std::make_format_args(colorMap.NumColorChannels)
-	).c_str());
-
-	bool hasSpecularTexture = curItem.MetallicRoughnessMap != 0;
-	ImGui::Checkbox("Has Specular", &hasSpecularTexture);
-
-	if (hasSpecularTexture)
+	if (metallicRoughnessEnabled)
 	{
-		curItem.MetallicRoughnessMap = curItem.MetallicRoughnessMap != 0 ? curItem.MetallicRoughnessMap : 1;
-		// in case the texture is updated by the above ternary to be ID 1
-		metallicRoughnessMap = texManager->GetTextureResource(curItem.MetallicRoughnessMap);
+		if (!hadSpecularTexture)
+			curItem.MetallicRoughnessMap = texManager->LoadTextureFromPath("textures/white.png");
 
-		ImGui::InputText("Specular", m_MtlSpecBuf, 64);
-
-		ImGui::Image(
-			// first cast to uint64_t to get rid of the
-			// "'type cast': conversion from 'uint32_t' to 'void *' of greater size"
-			// warning
-			(uint64_t)metallicRoughnessMap.GpuId,
-			ImVec2(256, 256),
-			// Flip the Y axis. Either OpenGL or Dear ImGui is bottom-up
-			ImVec2(0, 1),
-			ImVec2(1, 0)
-		);
-
-		ImGui::Text(std::vformat(
-			"Resolution: {}x{}",
-			std::make_format_args(metallicRoughnessMap.Width, metallicRoughnessMap.Height)
-		).c_str());
-
-		ImGui::Text(std::vformat(
-			"# Color channels: {}",
-			std::make_format_args(metallicRoughnessMap.NumColorChannels)
-		).c_str());
+		ImGui::InputText("Metallic Roughness Map", m_MtlSpecBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
+		mtlEditorTexture(curItem.MetallicRoughnessMap);
 	}
 	else
+		// the ID is the only thing the Renderer uses to determine
+		// if a material has a certain non-required texture,
+		// as well as being what this very Editor uses to determine if it
+		// should be displayed
+		// 15/11/2024
 		curItem.MetallicRoughnessMap = 0;
+
+	bool hadNormalMap = curItem.NormalMap != 0;
+	bool normalMapEnabled = hadNormalMap;
+	ImGui::Checkbox("Has Normal Map", &normalMapEnabled);
+
+	if (normalMapEnabled)
+	{
+		if (!hadNormalMap)
+			curItem.NormalMap = texManager->LoadTextureFromPath("textures/violet.png");
+
+		ImGui::InputText("Normal Map", m_MtlNormalBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
+		mtlEditorTexture(curItem.NormalMap);
+	}
+	else
+		curItem.NormalMap = 0;
 
 	ImGui::Text("Uniforms");
 
@@ -358,8 +364,11 @@ void Editor::m_RenderMaterialEditor()
 	{
 		curItem.ColorMap = texManager->LoadTextureFromPath(m_MtlDiffuseBuf);
 
-		if (strlen(m_MtlSpecBuf) > 0)
+		if (curItem.MetallicRoughnessMap != 0)
 			curItem.MetallicRoughnessMap = texManager->LoadTextureFromPath(m_MtlSpecBuf);
+
+		if (curItem.NormalMap != 0)
+			curItem.NormalMap = texManager->LoadTextureFromPath(m_MtlNormalBuf);
 
 		curItem.ShaderId = ShaderManager::Get()->LoadFromPath(m_MtlShpBuf);
 	}
@@ -372,17 +381,20 @@ void Editor::m_RenderMaterialEditor()
 	{
 		nlohmann::json newMtlConfig{};
 
-		newMtlConfig["albedo"] = colorMap.ImagePath;
+		newMtlConfig["ColorMap"] = colorMap.ImagePath;
 
 		if (curItem.MetallicRoughnessMap != 0)
-			newMtlConfig["specular"] = metallicRoughnessMap.ImagePath;
+			newMtlConfig["MetallicRoughnessMap"] = metallicRoughnessMap.ImagePath;
+
+		if (curItem.NormalMap != 0)
+			newMtlConfig["NormalMap"] = normalMap.ImagePath;
 
 		newMtlConfig["specExponent"] = curItem.SpecExponent;
 		newMtlConfig["specMultiply"] = curItem.SpecMultiply;
-		newMtlConfig["translucency"] = curItem.HasTranslucency;
-		newMtlConfig["shaderprogram"] = curItem.GetShader().Name;
+		newMtlConfig["HasTranslucency"] = curItem.HasTranslucency;
+		newMtlConfig["Shader"] = curItem.GetShader().Name;
 		
-		newMtlConfig["uniforms"] = {};
+		newMtlConfig["Uniforms"] = {};
 
 		for (auto& it : curItem.Uniforms)
 		{
@@ -392,17 +404,17 @@ void Editor::m_RenderMaterialEditor()
 			{
 			case (Reflection::ValueType::Bool):
 			{
-				newMtlConfig["uniforms"][it.first] = value.AsBool();
+				newMtlConfig["Uniforms"][it.first] = value.AsBool();
 				break;
 			}
 			case (Reflection::ValueType::Integer):
 			{
-				newMtlConfig["uniforms"][it.first] = value.AsInteger();
+				newMtlConfig["Uniforms"][it.first] = value.AsInteger();
 				break;
 			}
 			case (Reflection::ValueType::Double):
 			{
-				newMtlConfig["uniforms"][it.first] = static_cast<float>(value.AsDouble());
+				newMtlConfig["Uniforms"][it.first] = static_cast<float>(value.AsDouble());
 				break;
 			}
 			}

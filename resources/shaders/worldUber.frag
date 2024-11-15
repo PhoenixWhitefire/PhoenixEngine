@@ -53,6 +53,8 @@ uniform sampler2D FrameBuffer;
 
 uniform sampler2D ColorMap;
 uniform sampler2D MetallicRoughnessMap;
+uniform bool HasNormalMap;
+uniform sampler2D NormalMap;
 
 uniform vec3 LightAmbient = vec3(.2f,.2f,.2f);
 uniform float SpecularMultiplier = 0.5f;
@@ -202,26 +204,27 @@ void main()
 {
 	// Convert mesh normals to world-space
 	mat3 NormalMatrix = transpose(inverse(mat3(Frag_Transform)));
-	vec3 Normal = normalize(NormalMatrix * Frag_VertexNormal);
 
-	vec2 UV = Frag_UV;
-	
+	float mipLevel = textureQueryLod(ColorMap, Frag_UV).x;
+
+	vec3 vertexNormal = Frag_VertexNormal;
+
 	vec3 ViewDirection = normalize(CameraPosition - Frag_CurrentPosition);
-	
-	float mipLevel = textureQueryLod(ColorMap, UV).x;
 
 	vec4 Albedo = vec4(0.f, 0.f, 0.f, 1.f); //textureLod(ColorMap, UV, mipLevel);
-	float SpecMapValue = textureLod(MetallicRoughnessMap, UV, mipLevel).r;
+	float SpecMapValue = 1.f;
 
 	if (!UseTriPlanarProjection)
-		Albedo = textureLod(ColorMap, UV, mipLevel);
+	{
+		SpecMapValue = textureLod(MetallicRoughnessMap, Frag_UV, mipLevel).r;
+		Albedo = textureLod(ColorMap, Frag_UV, mipLevel);
+
+		if (HasNormalMap)
+			vertexNormal += (textureLod(NormalMap, Frag_UV, mipLevel).xyz - vec3(0.f, 0.f, 1.f)) * 2.f - 1.f;
+	}
 	else
 	{
 		vec3 blending = getTriPlanarBlending(Frag_VertexNormal);
-
-		FragColor = vec4(blending, 1.f);
-
-		//return;
 
 		vec4 localPosition = vec4(Frag_CurrentPosition, 1.f) * transpose(inverse(Frag_Transform));
 
@@ -236,8 +239,20 @@ void main()
 		float specZAxis = textureLod(MetallicRoughnessMap, localPosition.xy * MaterialProjectionFactor, mipLevel).r;
 
 		SpecMapValue = specXAxis * blending.x + specYAxis * blending.y + specZAxis * blending.z;
+
+		if (HasNormalMap)
+		{
+			vec3 normXAxis = textureLod(NormalMap, localPosition.yz * MaterialProjectionFactor, mipLevel).rgb;
+			vec3 normYAxis = textureLod(NormalMap, localPosition.xz * MaterialProjectionFactor, mipLevel).rgb;
+			vec3 normZAxis = textureLod(NormalMap, localPosition.xy * MaterialProjectionFactor, mipLevel).rgb;
+
+			vec3 normSample = normXAxis * blending.x + normYAxis * blending.y + normZAxis * blending.z;
+			vertexNormal += (normSample - vec3(0.f, 0.f, 1.f)) * 2.f - 1.f;
+		}
 	}
 	
+	vec3 Normal = normalize(NormalMatrix * vertexNormal);
+
 	Albedo -= vec4(0.f, 0.f, 0.f, Transparency);
 
 	if (Albedo.a < AlphaCutoff)
@@ -269,7 +284,7 @@ void main()
 	
 	if (EmissionStrength <= 0)
 		for (int LightIndex = 0; LightIndex < NumLights; LightIndex++)
-			LightInfluence = LightInfluence + CalculateLight(
+			LightInfluence += CalculateLight(
 				LightIndex,
 				Normal,
 				ViewDirection,
