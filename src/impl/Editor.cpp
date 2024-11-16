@@ -134,8 +134,8 @@ static void mtlEditorTexture(uint32_t TextureId)
 
 	ImGui::Image(
 		tx.GpuId,
-		// Scale to 256 pixels high, while maintaining aspect ratio
-		ImVec2(tx.Width * (256.f / tx.Height), 256.f),
+		// Scale to 256 pixels wide, while maintaining aspect ratio
+		ImVec2(256.f, tx.Height * (256.f / tx.Width)),
 		// Flip the Y axis. Either OpenGL or Dear ImGui is bottom-up
 		ImVec2(0, 1),
 		ImVec2(1, 0)

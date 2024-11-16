@@ -2,6 +2,7 @@
 
 #include "PhysicsEngine.hpp"
 #include "IntersectionLib.hpp"
+#include "Profiler.hpp"
 
 struct Collision
 {
@@ -12,6 +13,8 @@ struct Collision
 
 static void moveDynamics(std::vector<Object_Base3D*>& World, double DeltaTime)
 {
+	PROFILER_PROFILE_SCOPE("MoveDynamics");
+
 	for (Object_Base3D* object : World)
 		if (object->PhysicsDynamics)
 		{
@@ -23,6 +26,8 @@ static void moveDynamics(std::vector<Object_Base3D*>& World, double DeltaTime)
 
 static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTime)
 {
+	PROFILER_PROFILE_SCOPE("ResolveCollisions");
+
 	std::vector<Collision> collisions;
 
 	for (Object_Base3D* a : World)
@@ -66,11 +71,11 @@ static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTi
 		// (another ugly at the end of this cycle)
 		// Do this because otherwise, objects colliding will
 		// move twice as fast
-		std::vector<Object_Base3D*> us = { collision.A, collision.B };
-		moveDynamics(us, -DeltaTime);
+		//std::vector<Object_Base3D*> us = { collision.A, collision.B };
+		//moveDynamics(us, -DeltaTime);
 
 		// this much velocity is lost completely, pushing on neither objects
-		static const float Elasticity = 0.8f;
+		static const float Elasticity = 0.5f;
 
 		IntersectionLib::Intersection& hit = collision.Hit;
 
@@ -81,13 +86,27 @@ static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTi
 			// "Friction"
 			collision.A->LinearVelocity = collision.A->LinearVelocity - (collision.A->LinearVelocity * collision.A->Friction * DeltaTime);
 
-			collision.A->LinearVelocity = collision.A->LinearVelocity * (Vector3::one - hit.Normal) + reactionForce;
+			double dot = collision.A->LinearVelocity.Dot(hit.Normal);
+			Vector3 velCoefficient = Vector3::one;
+
+			if (dot < 0.f)
+				velCoefficient = Vector3::one - hit.Normal.Abs() * (2.f * Elasticity);
+
+			collision.A->LinearVelocity = collision.A->LinearVelocity * velCoefficient + reactionForce;
+			collision.A->Transform[3] += glm::vec4(glm::vec3(hit.Vector * hit.Depth), 1.f);
 		}
 		else if (collision.B->PhysicsDynamics && !collision.A->PhysicsDynamics)
 		{
 			collision.B->LinearVelocity = collision.B->LinearVelocity - (collision.B->LinearVelocity * collision.B->Friction * DeltaTime);
 
-			collision.B->LinearVelocity = collision.B->LinearVelocity * (Vector3::one - hit.Normal) + reactionForce;
+			double dot = collision.A->LinearVelocity.Dot(hit.Normal);
+			Vector3 velCoefficient = Vector3::one;
+
+			if (dot < 0.f)
+				velCoefficient = Vector3::one - hit.Normal.Abs() * (2.f * Elasticity);
+
+			collision.B->LinearVelocity = collision.B->LinearVelocity * velCoefficient + reactionForce;
+			collision.B->Transform[3] += glm::vec4(glm::vec3(hit.Vector * hit.Depth), 1.f);
 		}
 		else
 		{
@@ -104,12 +123,15 @@ static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTi
 		// 24/09/2024
 		// ugly
 		
-		moveDynamics(us, DeltaTime);
+		//moveDynamics(us, DeltaTime);
 	}
 }
 
 static void step(std::vector<Object_Base3D*>& World, double DeltaTime)
 {
+	PROFILER_PROFILE_SCOPE("PhysicsStep");
+
+	Profiler::Start("ApplyGlobalForces");
 	for (Object_Base3D* object : World)
 	{
 		object->Mass = object->Density * object->Size.X * object->Size.Y * object->Size.Z;
@@ -127,6 +149,7 @@ static void step(std::vector<Object_Base3D*>& World, double DeltaTime)
 			object->LinearVelocity += force / object->Mass * DeltaTime;
 		}
 	}
+	Profiler::Stop();
 
 	moveDynamics(World, DeltaTime);
 

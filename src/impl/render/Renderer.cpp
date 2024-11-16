@@ -10,6 +10,7 @@
 #include "asset/TextureManager.hpp"
 #include "asset/MeshProvider.hpp"
 #include "GlobalJsonConfig.hpp"
+#include "Profiler.hpp"
 #include "Debug.hpp"
 
 constexpr uint32_t SHADER_MAX_LIGHTS = 6;
@@ -222,10 +223,14 @@ void Renderer::DrawScene(
 	double RunningTime
 )
 {
+	PROFILER_PROFILE_SCOPE("DrawScene");
+
 	glActiveTexture(GL_TEXTURE0);
 	this->Framebuffer->BindTexture();
 
 	ShaderManager* shdManager = ShaderManager::Get();
+
+	Profiler::Start("UploadUniforms");
 
 	for (uint32_t shaderId : Scene.UsedShaders)
 	{
@@ -276,6 +281,8 @@ void Renderer::DrawScene(
 		);
 	}
 
+	Profiler::Stop();
+
 	MeshProvider* meshProvider = MeshProvider::Get();
 	MaterialManager* mtlManager = MaterialManager::Get();
 
@@ -286,6 +293,7 @@ void Renderer::DrawScene(
 	// map< instance checksum, pair< base RenderItem, vector< array buffer data >>>
 	std::map<uint64_t, std::pair<size_t, std::vector<float>>> instancingList;
 
+	Profiler::Start("CreateInstancingBuffer");
 	for (size_t renderItemIndex = 0; renderItemIndex < Scene.RenderList.size(); renderItemIndex++)
 	{
 		const RenderItem& renderData = Scene.RenderList[renderItemIndex];
@@ -362,9 +370,12 @@ void Renderer::DrawScene(
 			numDrawCalls++;
 		}
 	}
+	Profiler::Stop();
 
 	if (DoInstancing)
 	{
+		PROFILER_PROFILE_SCOPE("DrawInstanced");
+
 		for (auto& iter : instancingList)
 		{
 			const RenderItem& renderData = Scene.RenderList[iter.second.first];
@@ -373,6 +384,8 @@ void Renderer::DrawScene(
 
 			if (mesh.GpuId != UINT32_MAX)
 			{
+				PROFILER_PROFILE_SCOPE("UploadInstancedData");
+
 				MeshProvider::GpuMesh& gpuMesh = meshProvider->GetGpuMesh(mesh.GpuId);
 				gpuMesh.VertexArray->Bind();
 
@@ -461,6 +474,8 @@ void Renderer::DrawMesh(
 	int32_t NumInstances
 )
 {
+	PROFILER_PROFILE_SCOPE("DrawMesh");
+
 	switch (FaceCulling)
 	{
 
@@ -530,6 +545,8 @@ void Renderer::DrawMesh(
 
 void Renderer::m_SetMaterialData(const RenderItem& RenderData)
 {
+	PROFILER_PROFILE_SCOPE("UploadMaterialData");
+
 	MaterialManager* mtlManager = MaterialManager::Get();
 	TextureManager* texManager = TextureManager::Get();
 

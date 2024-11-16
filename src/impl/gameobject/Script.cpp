@@ -16,6 +16,7 @@
 #include "datatype/Vector3.hpp"
 #include "datatype/Color.hpp"
 #include "UserInput.hpp"
+#include "Profiler.hpp"
 #include "FileRW.hpp"
 #include "Debug.hpp"
 #include "gameobject/ScriptEngine.hpp"
@@ -736,6 +737,8 @@ void Object_Script::Initialize()
 
 void Object_Script::Update(double dt)
 {
+	PROFILER_PROFILE_SCOPE("Scripts");
+
 	s_WindowGrabMouse = ScriptEngine::s_BackendScriptWantGrabMouse;
 
 	// The first Script to be updated in the current frame will

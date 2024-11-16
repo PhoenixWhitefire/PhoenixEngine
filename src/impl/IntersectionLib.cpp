@@ -41,21 +41,21 @@ IntersectionLib::Intersection IntersectionLib::AabbAabb
 	{
 		int sx = sign(dx);
 		result.Depth = px * sx;
-		result.Normal = Vector3(sx, 0.f, 0.f);
+		result.Normal = Vector3(-sx, 0.f, 0.f);
 		result.Vector = Vector3(APosition.x + (aSizeHalf.x * sx), 0.f, 0.f);
 	}
 	else if (py < px && py < pz)
 	{
 		int sy = sign(dy);
 		result.Depth = py * sy;
-		result.Normal = Vector3(0.f, sy, 0.f);
+		result.Normal = Vector3(0.f, -sy, 0.f);
 		result.Vector = Vector3(0.f, APosition.y + (aSizeHalf.y * sy), 0.f);
 	}
 	else if (pz < py)
 	{
 		int sz = sign(dz);
 		result.Depth = pz * sz;
-		result.Normal = Vector3(0.f, 0.f, sz);
+		result.Normal = Vector3(0.f, 0.f, -sz);
 		result.Vector = Vector3(0.f, 0.f, APosition.z + (aSizeHalf.z * sz));
 	}
 

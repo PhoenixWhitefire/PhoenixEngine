@@ -47,6 +47,7 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 #include "GlobalJsonConfig.hpp"
 #include "UserInput.hpp"
 #include "Utilities.hpp"
+#include "Profiler.hpp"
 #include "FileRW.hpp"
 #include "Editor.hpp"
 #include "Debug.hpp"
@@ -68,6 +69,31 @@ static EngineObject* EngineInstance = nullptr;
 static int PrevMouseX, PrevMouseY = 0;
 
 static glm::tvec3<double, glm::highp> CamForward = glm::vec3(0.f, 0.f, -1.f);
+
+// 16/11/2024
+// https://stackoverflow.com/a/5167641/16875161
+static std::vector<std::string> stringSplit(const std::string& s, const std::string& seperator)
+{
+	if (s.find(seperator) == std::string::npos)
+		return { s };
+
+	std::vector<std::string> output;
+
+	std::string::size_type prev_pos = 0, pos = 0;
+
+	while ((pos = s.find(seperator, pos)) != std::string::npos)
+	{
+		std::string substring(s.substr(prev_pos, pos - prev_pos));
+
+		output.push_back(substring);
+
+		prev_pos = ++pos;
+	}
+
+	output.push_back(s.substr(prev_pos, pos - prev_pos)); // Last word
+
+	return output;
+}
 
 static int findArgumentInCliArgs(
 	int ArgCount,
@@ -343,6 +369,39 @@ static void LoadLevel(const std::string& LevelPath)
 	//MapLoader::LoadMapIntoObject(LevelPath, levelModel);
 }
 
+static void recurseProfilerUI(const nlohmann::json& tree)
+{
+	for (auto it = tree.begin(); it != tree.end(); ++it)
+	{
+		if (it.value().type() != nlohmann::json::value_t::object)
+			continue;
+
+		double t = it.value()["_t"];
+		uint32_t tMS = static_cast<uint32_t>(std::floor(t * 100000.f));
+		float tMSHundreds = tMS / 100.f;
+
+		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow;
+
+		if (it.value().size() == 1)
+			flags |= ImGuiTreeNodeFlags_Leaf;
+
+		bool open = ImGui::TreeNodeEx(
+			it.key().c_str(),
+			flags,
+			(std::vformat(
+				"{}: {}ms",
+				std::make_format_args(it.key(), tMSHundreds)
+			)).c_str()
+		);
+
+		if (open)
+		{
+			recurseProfilerUI(it.value());
+			ImGui::TreePop();
+		}
+	}
+}
+
 static void drawUI(Reflection::GenericValue Data)
 {
 	if (UserInput::IsKeyDown(SDLK_j) && !UserInput::InputBeingSunk)
@@ -454,7 +513,37 @@ static void drawUI(Reflection::GenericValue Data)
 
 		ImGui::Text("FPS: %d", EngineInstance->FramesPerSecond);
 		ImGui::Text("Frame time: %dms", (int)ceil(EngineInstance->FrameTime * 1000));
-		ImGui::Text("Draw calls: %zi", EngineJsonConfig.value("renderer_drawcallcount", 0ULL));
+		ImGui::Text("Draw calls: %zi", EngineJsonConfig.value("renderer_drawcallcount", 0ull));
+
+		ImGui::Text("--- PROFILING ---");
+
+		std::unordered_map<std::string, double> snapshot = Profiler::PopSnapshot();
+		nlohmann::json profilerTimingsTree{};
+
+		for (auto& it : snapshot)
+		{
+			nlohmann::json* last = &profilerTimingsTree;
+
+			std::vector<std::string> split = stringSplit(it.first, "/");
+
+			for (size_t catIndex = 0; catIndex < split.size(); catIndex++)
+				if (catIndex < split.size() - 1)
+				{
+					last = &((*last)[split[catIndex]]);
+					//(*last)["_t"] = it.second;
+				}
+				else
+					(*last)[split[catIndex]]["_t"] = it.second;
+		}
+
+		ImGui::TreePush("Profiler Tree UI");
+
+		recurseProfilerUI(profilerTimingsTree);
+
+		ImGui::TreePop();
+
+		for (auto& it : Profiler::PopSnapshot())
+			ImGui::Text("%s: %f", it.first.c_str(), it.second);
 
 		ImGui::End();
 
@@ -661,5 +750,5 @@ int main(int argc, char** argv)
 	PHX_MAIN_HANDLECRASH(std::string,)
 	PHX_MAIN_HANDLECRASH(const char*,)
 	PHX_MAIN_HANDLECRASH(std::bad_alloc, .what() + std::string(": System may have run out of memory"))
-	PHX_MAIN_HANDLECRASH(std::exception, .what());
+	//PHX_MAIN_HANDLECRASH(std::exception, .what());
 }

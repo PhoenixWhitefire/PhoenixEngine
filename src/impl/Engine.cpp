@@ -18,10 +18,10 @@
 #include "GlobalJsonConfig.hpp"
 #include "ThreadManager.hpp"
 #include "UserInput.hpp"
+#include "Utilities.hpp"
+#include "Profiler.hpp"
 #include "FileRW.hpp"
 #include "Debug.hpp"
-
-static auto ChronoStartTime = std::chrono::high_resolution_clock::now();
 
 // TODO: move 13/08/2024
 static int WindowSizeXBeforeFullscreen = 800;
@@ -344,13 +344,6 @@ static void recursivelyTravelHierarchy(
 	}
 }
 
-static double GetRunningTime()
-{
-	auto chronoTime = std::chrono::high_resolution_clock::now();
-
-	return std::chrono::duration_cast<std::chrono::nanoseconds>(chronoTime - ChronoStartTime).count() / 1e+9;
-}
-
 void EngineObject::Start()
 {
 	Debug::Log("Final initializations...");
@@ -440,6 +433,22 @@ void EngineObject::Start()
 
 		this->RunningTime = GetRunningTime();
 
+		this->FpsCap = std::clamp(this->FpsCap, 1, 600);
+
+		double frameDelta = RunningTime - LastFrame;
+		double fpsCapDelta = 1.f / this->FpsCap;
+
+		// Wait the appropriate amount of time between frames
+		if (!VSync && (frameDelta < fpsCapDelta))
+		{
+			SDL_Delay(static_cast<uint32_t>((fpsCapDelta - frameDelta) * 1000));
+			continue;
+		}
+
+		Profiler::ResetAll();
+
+		Profiler::Start("Frame");
+
 		scene.RenderList.clear();
 		scene.LightingList.clear();
 
@@ -490,23 +499,13 @@ void EngineObject::Start()
 			skyboxFacesBeingLoaded.clear();
 		}
 
-		this->FpsCap = std::clamp(this->FpsCap, 1, 600);
-
-		double frameDelta = RunningTime - LastFrame;
-		double fpsCapDelta = 1.f / this->FpsCap;
-
-		// Wait the appropriate amount of time between frames
-		if (!VSync && (frameDelta < fpsCapDelta))
-		{
-			SDL_Delay(static_cast<uint32_t>((fpsCapDelta - frameDelta) * 1000));
-			continue;
-		}
-
 		double deltaTime = GetRunningTime() - LastTime;
 		LastTime = RunningTime;
 		FrameStart = RunningTime;
 
 		this->OnFrameStart.Fire(deltaTime);
+
+		Profiler::Start("PollEvents");
 
 		while (SDL_PollEvent(&pollingEvent) != 0)
 		{
@@ -544,6 +543,8 @@ void EngineObject::Start()
 			}
 		}
 
+		Profiler::Stop();
+
 		DataModel->Update(deltaTime);
 
 		// so scripts can use the `imgui_*` APIs
@@ -552,7 +553,9 @@ void EngineObject::Start()
 		ImGui_ImplSDL2_NewFrame();
 		ImGui::NewFrame();
 
+		Profiler::Start("UpdateDescendants");
 		updateDescendants(DataModel, deltaTime);
+		Profiler::Stop();
 
 		float aspectRatio = (float)this->WindowSizeX / (float)this->WindowSizeY;
 
@@ -563,6 +566,7 @@ void EngineObject::Start()
 		
 		std::vector<Object_Base3D*> physicsList;
 
+		Profiler::Start("RecurseDataModel");
 		// Aggregate mesh and light data into lists
 		recursivelyTravelHierarchy(
 			scene.RenderList,
@@ -571,7 +575,8 @@ void EngineObject::Start()
 			workspace,
 			sceneCamera
 		);
-		
+		Profiler::Stop();
+
 		bool hasPhysics = false;
 
 		for (Object_Base3D* object : physicsList)
@@ -777,6 +782,10 @@ void EngineObject::Start()
 
 			Debug::Save();
 		}
+
+		Profiler::Stop();
+
+		Profiler::PushSnapshot();
 	}
 
 	Debug::Log("Main loop exited");
