@@ -2,7 +2,7 @@
 garbaj spaghett
 
 Personal "Game Engine" written in C++, that can:
-* Render scenes, i.e. multiple objects with different materials (Color + Metalness only), up to 6 lights are sampled per pixel, and no GPU instancing or batching
+* Render scenes, i.e. multiple objects with different materials (Color + Metalness only), with GPU instancing (13/11/2024)
 * Import simple Models (`.gltf`/`.glb`)
 * Execute [*Luau*](https://github.com/luau-lang/luau/) scripts w/ per-frame callbacks
 * Load/Save Scenes
