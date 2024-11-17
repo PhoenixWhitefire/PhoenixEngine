@@ -26,7 +26,5 @@ GL Debug callback:
 	Source: OpenGL
 	Error ID: 131218
 
-Changing window resolution: (1280, 720) -> (1536, 793)
-Changing window resolution: (1536, 793) -> (1280, 720)
 Main loop exited
 Application shutting down...

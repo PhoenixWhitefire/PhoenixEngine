@@ -1,6 +1,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/euler_angles.hpp>
 #include <imgui/imgui.h>
+#include <fstream>
 
 #include "Editor.hpp"
 #include "gameobject/GameObjects.hpp"
@@ -69,10 +70,21 @@ static void renderScriptEditor()
 
 	Object_Script* targetScript = dynamic_cast<Object_Script*>(GameObject::GetObjectById(ScriptEditorFocus));
 
+	static std::fstream* ScriptFileStream = nullptr;
+
 	if (!ScriptEditorEnabled)
 	{
 		if (targetScript && TextEntryBuffer)
-			FileRW::WriteFile(targetScript->SourceFile, TextEntryBuffer, true);
+		{
+			if (ScriptFileStream)
+			{
+				(*ScriptFileStream) << TextEntryBuffer;
+				ScriptFileStream->close();
+
+				delete ScriptFileStream;
+				ScriptFileStream = nullptr;
+			}
+		}
 
 		free(TextEntryBuffer);
 		TextEntryBuffer = nullptr;
@@ -94,7 +106,14 @@ static void renderScriptEditor()
 
 	if (ImGui::Button("Save"))
 	{
-		FileRW::WriteFile(targetScript->SourceFile, TextEntryBuffer, true);
+		if (ScriptFileStream)
+		{
+			(*ScriptFileStream) << TextEntryBuffer;
+			ScriptFileStream->close();
+
+			delete ScriptFileStream;
+			ScriptFileStream = nullptr;
+		}
 
 		free(TextEntryBuffer);
 		TextEntryBuffer = nullptr;
@@ -106,16 +125,28 @@ static void renderScriptEditor()
 		// hooo boy do i love intentionally dirty state
 		// so i don't have to go through the effort of making ONE extra function
 		ScriptEditorEnabled = false;
+		ImGui::End();
+
 		return;
 	}
 
 	if (!TextEntryBuffer)
 	{
-		bool scriptFileExists = true;
-		std::string scriptContents = FileRW::ReadFile(targetScript->SourceFile, &scriptFileExists);
+		ScriptFileStream = new std::fstream(FileRW::GetAbsolutePath(targetScript->SourceFile));
+		
+		std::string scriptContents = "";
 
-		if (!scriptFileExists)
+		if (!(*ScriptFileStream) || !ScriptFileStream->is_open())
 			scriptContents = "-- Source file '" + targetScript->SourceFile + "' could not be opened";
+		else
+		{
+			ScriptFileStream->seekg(0, std::ios::end);
+
+			scriptContents.resize(ScriptFileStream->tellg());
+			ScriptFileStream->seekg(0, std::ios::beg);
+
+			ScriptFileStream->read(&scriptContents[0], scriptContents.size());
+		}
 
 		TextEntryBufferCapacity = scriptContents.size() + 256;
 		TextEntryBuffer = (char*)malloc(TextEntryBufferCapacity);

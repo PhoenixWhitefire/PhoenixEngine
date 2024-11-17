@@ -6,14 +6,9 @@ local NumCubes = 0
 local TotalTime = 0
 
 local Camera = workspace.SceneCamera
-local MoveCamera = require("scripts/modules/camera.luau")
-
-Camera.GenericMovement = false
 
 function Update(DeltaTime)
     TotalTime += DeltaTime
-    
-    MoveCamera(Camera, DeltaTime)
 end
 
 local seed = math.random(1, 1000)
