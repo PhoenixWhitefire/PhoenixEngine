@@ -1,9 +1,11 @@
 {
-  "albedo": "textures/models/glamfredward.glb/Image_5.png",
+  "BilinearFiltering": true,
+  "ColorMap": "textures/models/glamfredward.glb/Image_5.png",
+  "HasTranslucency": false,
+  "MetallicRoughnessMap": "textures/models/glamfredward.glb/Image_6.png",
+  "NormalMap": "textures/models/glamfredward.glb/Image_7.png",
+  "Uniforms": {},
   "roughnessFactor": 1.0,
   "specExponent": 16.0,
-  "specMultiply": 0.0,
-  "specular": "textures/models/glamfredward.glb/Image_6.png",
-  "translucency": false,
-  "uniforms": {}
+  "specMultiply": 0.0
 }

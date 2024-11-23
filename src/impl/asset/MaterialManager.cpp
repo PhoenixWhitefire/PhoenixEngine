@@ -99,6 +99,7 @@ void RenderMaterial::Reload()
 
 	std::string metallicRoughnessPath = jsonMaterialData.value("MetallicRoughnessMap", jsonMaterialData.value("specular", ""));
 	std::string normalPath = jsonMaterialData.value("NormalMap", "");
+	std::string emissionPath = jsonMaterialData.value("EmissionMap", "");
 
 	if (metallicRoughnessPath != "")
 		this->MetallicRoughnessMap = texManager->LoadTextureFromPath(metallicRoughnessPath, true, doBilinearFiltering);
@@ -109,6 +110,11 @@ void RenderMaterial::Reload()
 		this->NormalMap = texManager->LoadTextureFromPath(normalPath, true, doBilinearFiltering);
 	else
 		this->NormalMap = 0;
+
+	if (emissionPath != "")
+		this->EmissionMap = texManager->LoadTextureFromPath(emissionPath, true, doBilinearFiltering);
+	else
+		this->EmissionMap = 0;
 
 	this->HasTranslucency = jsonMaterialData.value("HasTranslucency", jsonMaterialData.value("translucency", false));
 

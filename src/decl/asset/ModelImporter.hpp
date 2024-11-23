@@ -23,6 +23,10 @@ private:
 		float RoughnessFactor{ 1.f };
 
 		uint32_t MetallicRoughnessTexture{};
+		uint32_t NormalTexture{};
+		uint32_t EmissiveTexture{};
+
+		glm::vec3 EmissiveFactor{ 0.f, 0.f, 0.f };
 
 		bool DoubleSided = false;
 

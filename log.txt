@@ -15,14 +15,14 @@ Main engine loop start
 GL Debug callback:
 	Type: Performance
 	Severity: Medium
-	Message: Program/shader state performance warning: Vertex shader in program 10 is being recompiled based on GL state.
+	Message: Program/shader state performance warning: Vertex shader in program 4 is being recompiled based on GL state.
 	Source: OpenGL
 	Error ID: 131218
 
 GL Debug callback:
 	Type: Performance
 	Severity: Medium
-	Message: Program/shader state performance warning: Vertex shader in program 4 is being recompiled based on GL state.
+	Message: Program/shader state performance warning: Vertex shader in program 10 is being recompiled based on GL state.
 	Source: OpenGL
 	Error ID: 131218
 

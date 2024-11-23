@@ -650,11 +650,14 @@ static void initDefaultState()
 		lua_CFunction func = pair.second;
 
 		lua_pushlightuserdata(DefaultState, func);
+		lua_pushstring(DefaultState, pair.first.c_str());
 
 		lua_pushcclosure(
 			DefaultState,
 			[](lua_State* L)
 			{
+				PROFILER_PROFILE_SCOPE(lua_tostring(L, lua_upvalueindex(2)));
+
 				lua_CFunction func = (lua_CFunction)lua_touserdata(L, lua_upvalueindex(1));
 
 				try
@@ -672,7 +675,7 @@ static void initDefaultState()
 
 			},
 			pair.first.c_str(),
-			1
+			2
 		);
 		lua_setglobal(DefaultState, pair.first.c_str());
 	}

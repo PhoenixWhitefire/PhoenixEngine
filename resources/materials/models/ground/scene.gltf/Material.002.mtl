@@ -1,8 +1,8 @@
 {
-  "albedo": "models/ground/diffuse.png",
-  "shaderprogram": "worldUber",
+  "ColorMap": "models/ground/diffuse.png",
+  "HasTranslucency": false,
+  "Shader": "worldUber",
+  "Uniforms": null,
   "specExponent": 8.0,
-  "specMultiply": 0.5,
-  "translucency": false,
-  "uniforms": null
+  "specMultiply": 0.5
 }

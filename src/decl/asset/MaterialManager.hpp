@@ -23,6 +23,7 @@ struct RenderMaterial
 	uint32_t ColorMap{};
 	uint32_t MetallicRoughnessMap{};
 	uint32_t NormalMap{};
+	uint32_t EmissionMap{};
 
 	bool HasTranslucency = false;
 	float SpecExponent{};

@@ -5,6 +5,6 @@
   "Uniforms": {
     "AlphaCutoff": 0.5
   },
-  "specExponent": 16.0,
+  "specExponent": 8.0,
   "specMultiply": 0.5
 }

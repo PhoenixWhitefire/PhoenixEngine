@@ -1,4 +1,5 @@
 #include "IntersectionLib.hpp"
+#include "Profiler.hpp"
 
 template<class T> static int sign(T v)
 {
@@ -13,6 +14,8 @@ IntersectionLib::Intersection IntersectionLib::AabbAabb
 	glm::vec3& BSize
 )
 {
+	PROFILER_PROFILE_SCOPE("Intersection::AabbAabb");
+
 	Intersection result{};
 	result.Occurred = false;
 
@@ -72,6 +75,8 @@ IntersectionLib::Intersection IntersectionLib::LineAabb(
 	float PaddingZ
 )
 {
+	PROFILER_PROFILE_SCOPE("Intersection::LineAabb");
+
 	Intersection result{};
 	result.Occurred = false;
 

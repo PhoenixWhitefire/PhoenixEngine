@@ -2,6 +2,8 @@
 #include <chrono>
 #include <nljson.hpp>
 #include <glad/gl.h>
+#include <glm/vec4.hpp>
+#include <iostream>
 
 #include "asset/MeshProvider.hpp"
 #include "asset/PrimitiveMeshes.hpp"
@@ -12,6 +14,61 @@
 #define MESHPROVIDER_ERROR(err) s_ErrorString = err; *SuccessPtr = false
 
 static std::string s_ErrorString = "No error";
+
+static uint32_t readU32(const std::vector<int8_t>& vec, size_t offset)
+{
+	uint32_t u32{};
+	std::memcpy(&u32, vec.data() + offset, 4);
+
+	return u32;
+}
+
+static uint32_t readU32(const std::vector<int8_t>& vec, size_t* offset)
+{
+	uint32_t u32{};
+	std::memcpy(&u32, vec.data() + *offset, 4);
+	*offset += 4ull;
+
+	return u32;
+}
+
+static float readF32(const std::vector<int8_t>& vec, size_t offset)
+{
+	float f32{};
+	std::memcpy(&f32, vec.data() + offset, 4);
+
+	return f32;
+}
+
+static float readF32(const std::vector<int8_t>& vec, size_t* pointer)
+{
+	float f32{};
+	std::memcpy(&f32, vec.data() + *pointer, 4);
+	*pointer += 4ull;
+
+	return f32;
+}
+
+static uint32_t readU32(const std::string& str, size_t offset)
+{
+	std::vector<int8_t> bytes(str.begin() + offset, str.begin() + offset + 4);
+	return readU32(bytes, 0ull);
+}
+
+static void writeU32(std::string& vec, uint32_t v)
+{
+	vec.push_back(*(int8_t*)&v);
+	vec.push_back(*((int8_t*)&v + 1ull));
+	vec.push_back(*((int8_t*)&v + 2ull));
+	vec.push_back(*((int8_t*)&v + 3ull));
+}
+
+static void writeF32(std::string& vec, float v)
+{
+	uint32_t u{};
+	std::memcpy(&u, &v, 4ull);
+	writeU32(vec, u);
+}
 
 static float getVersion(const std::string& MapFileContents)
 {
@@ -26,6 +83,132 @@ static float getVersion(const std::string& MapFileContents)
 	}
 
 	return version;
+}
+
+static Mesh loadMeshVersion1(const std::string& FileContents, bool* SuccessPtr)
+{
+	size_t jsonStartLoc = FileContents.find_first_of("{");
+	std::string jsonFileContents = FileContents.substr(jsonStartLoc);
+	nlohmann::json json = nlohmann::json::parse(jsonFileContents);
+
+	Mesh mesh;
+	mesh.Vertices.reserve(json["Vertices"].size());
+	mesh.Indices.reserve(json["Indices"].size());
+
+	size_t vertexIndex = 0;
+
+	for (nlohmann::json vertexDesc : json["Vertices"])
+	{
+		if (vertexDesc.size() % 11 != 0)
+		{
+			MESHPROVIDER_ERROR("(V1) Vertex #" + std::to_string(vertexIndex) + " does not have 11 elements");
+			return Mesh{};
+		}
+
+		Vertex vertex =
+		{
+			glm::vec3(vertexDesc[0], vertexDesc[1], vertexDesc[2]),
+			glm::vec3(vertexDesc[3], vertexDesc[4], vertexDesc[5]),
+			glm::vec3(vertexDesc[6], vertexDesc[7], vertexDesc[8]),
+			glm::vec2(vertexDesc[9], vertexDesc[10])
+		};
+
+		mesh.Vertices.emplace_back(
+			glm::vec3(vertexDesc[0], vertexDesc[1], vertexDesc[2]),
+			glm::vec3(vertexDesc[3], vertexDesc[4], vertexDesc[5]),
+			glm::vec3(vertexDesc[6], vertexDesc[7], vertexDesc[8]),
+			glm::vec2(vertexDesc[9], vertexDesc[10])
+		);
+
+		vertexIndex += 1;
+	}
+
+	for (uint32_t index : json["Indices"])
+		mesh.Indices.push_back(index);
+
+	return mesh;
+}
+
+static Mesh loadMeshVersion2(const std::string& FileContents, bool* SuccessPtr)
+{
+	size_t binaryStartLoc = FileContents.find_first_of('$');
+	std::string binaryContents = FileContents.substr(binaryStartLoc + 1);
+
+	std::vector<int8_t> data( binaryContents.begin(), binaryContents.end() );
+
+	size_t headerPtr{};
+
+	uint32_t vertexMeta = readU32(data, &headerPtr);
+	uint32_t numVerts = readU32(data, &headerPtr);
+	uint32_t numIndices = readU32(data, &headerPtr);
+
+	bool hasVertexOpacity = vertexMeta & 0b00000001;
+	bool hasVertexColor   = vertexMeta & 0b00000010;
+	bool hasVertexNormal  = vertexMeta & 0b00000100;
+
+	glm::vec3 uniformVertexNormal{};
+	glm::vec4 uniformVertexRGBA{ 1.f, 1.f, 1.f, 1.f };
+
+	if (!hasVertexNormal)
+		uniformVertexNormal = glm::vec3
+		{
+			readF32(data, &headerPtr),
+			readF32(data, &headerPtr),
+			readF32(data, &headerPtr)
+		};
+
+	if (!hasVertexColor)
+		uniformVertexRGBA = glm::vec4
+		{
+			readF32(data, &headerPtr),
+			readF32(data, &headerPtr),
+			readF32(data, &headerPtr),
+			1.f
+		};
+
+	if (!hasVertexOpacity)
+		uniformVertexRGBA.w = readF32(data, &headerPtr);
+
+	// position + (normal) + (rgb)(a) + UV
+	// * 4 because that's in floats and we need to convert to bytes (4 bytes per float)
+	size_t bytesPerVertex = (3ull + (hasVertexNormal ? 3 : 0) + ((hasVertexColor ? 3ull : 0) + (hasVertexOpacity ? 1 : 0)) + 2) * 4;
+
+	Mesh mesh{};
+	mesh.Vertices.reserve(numVerts);
+	mesh.Indices.reserve(numIndices);
+
+	for (uint32_t vertexIndex = 0; vertexIndex < numVerts; vertexIndex++)
+	{
+		size_t vertBytePtr = vertexIndex * bytesPerVertex + headerPtr;
+
+		float px = readF32(data, &vertBytePtr);
+		float py = readF32(data, &vertBytePtr);
+		float pz = readF32(data, &vertBytePtr);
+
+		float nx = hasVertexNormal ? readF32(data, &vertBytePtr) : uniformVertexNormal.x;
+		float ny = hasVertexNormal ? readF32(data, &vertBytePtr) : uniformVertexNormal.y;
+		float nz = hasVertexNormal ? readF32(data, &vertBytePtr) : uniformVertexNormal.z;
+
+		float r = hasVertexColor ? readF32(data, &vertBytePtr) : uniformVertexRGBA.x;
+		float g = hasVertexColor ? readF32(data, &vertBytePtr) : uniformVertexRGBA.y;
+		float b = hasVertexColor ? readF32(data, &vertBytePtr) : uniformVertexRGBA.z;
+		float a = hasVertexOpacity ? readF32(data, &vertBytePtr) : uniformVertexRGBA.w;
+
+		float u = readF32(data, &vertBytePtr);
+		float v = readF32(data, &vertBytePtr);
+
+		mesh.Vertices.emplace_back(
+			glm::vec3{ px, py, pz },
+			glm::vec3{ nx, ny, nz },
+			glm::vec3{ r, g, b },
+			glm::vec2{ u, v }
+		);
+	}
+
+	for (uint32_t indexIndex = 0; indexIndex < numIndices; indexIndex++)
+		mesh.Indices.push_back(readU32(data, numVerts * bytesPerVertex + (indexIndex * 4ull) + headerPtr));
+
+	return mesh;
 }
 
 MeshProvider::MeshProvider()
@@ -79,7 +262,7 @@ void MeshProvider::Shutdown()
 
 std::string MeshProvider::Serialize(const Mesh& mesh)
 {
-	std::string contents = "Generated by Phoenix Engine\n#Version 1.00\n#Asset Mesh\n";
+	std::string contents = "Generated by Phoenix Engine\n#Version 2.00\n#Asset Mesh\n";
 
 	std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
 	std::chrono::year_month_day ymd = std::chrono::floor<std::chrono::days>(now);
@@ -87,8 +270,10 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 	contents += "#Date "
 				+ std::to_string((uint32_t)ymd.day()) + "-"
 				+ std::to_string((uint32_t)ymd.month()) + "-"
-				+ std::to_string((int32_t)ymd.year()) + "\n\n";
+				+ std::to_string((int32_t)ymd.year()) + "\n\n"
+				+ "$";
 
+	/*
 	nlohmann::json json;
 	nlohmann::json vertSon;
 	nlohmann::json indSon;
@@ -120,6 +305,36 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 	json["Indices"] = indSon;
 
 	contents += json.dump();
+	*/
+
+	contents.reserve(12ull + mesh.Vertices.size() * (12ull * 4ull) + mesh.Indices.size() * 4ull + 4ull + contents.size());
+
+	// per-vertex normal, color and opacity flags
+	writeU32(contents, 0b00000111);
+	writeU32(contents, static_cast<uint32_t>(mesh.Vertices.size()));
+	writeU32(contents, static_cast<uint32_t>(mesh.Indices.size()));
+
+	for (const Vertex& v : mesh.Vertices)
+	{
+		writeF32(contents, v.Position.x);
+		writeF32(contents, v.Position.y);
+		writeF32(contents, v.Position.z);
+
+		writeF32(contents, v.Normal.x);
+		writeF32(contents, v.Normal.y);
+		writeF32(contents, v.Normal.z);
+
+		writeF32(contents, v.Color.x);
+		writeF32(contents, v.Color.y);
+		writeF32(contents, v.Color.z);
+		writeF32(contents, 1.f);
+
+		writeF32(contents, v.TextureUV.x);
+		writeF32(contents, v.TextureUV.y);
+	}
+
+	for (uint32_t i : mesh.Indices)
+		writeU32(contents, i);
 
 	return contents;
 }
@@ -142,46 +357,15 @@ Mesh MeshProvider::Deserialize(const std::string& Contents, bool* SuccessPtr)
 		return Mesh{};
 	}
 
-	size_t jsonStartLoc = Contents.find("{");
-	std::string jsonFileContents = Contents.substr(jsonStartLoc);
-	nlohmann::json json = nlohmann::json::parse(jsonFileContents);
+	if (version >= 1.f && version < 2.f)
+		return loadMeshVersion1(Contents, SuccessPtr);
 
-	Mesh mesh;
-	mesh.Vertices.reserve(json["Vertices"].size());
-	mesh.Indices.reserve(json["Indices"].size());
+	if (version >= 2.f && version < 3.f)
+		return loadMeshVersion2(Contents, SuccessPtr);
 
-	size_t vertexIndex = 0;
+	MESHPROVIDER_ERROR(std::string("Unrecognized mesh version - ") + std::to_string(version));
 
-	for (nlohmann::json vertexDesc : json["Vertices"])
-	{
-		if (vertexDesc.size() % 11 != 0)
-		{
-			MESHPROVIDER_ERROR("Vertex #" + std::to_string(vertexIndex) + " does not have 11 elements");
-			return Mesh{};
-		}
-
-		Vertex vertex =
-		{
-			glm::vec3(vertexDesc[0], vertexDesc[1], vertexDesc[2]),
-			glm::vec3(vertexDesc[3], vertexDesc[4], vertexDesc[5]),
-			glm::vec3(vertexDesc[6], vertexDesc[7], vertexDesc[8]),
-			glm::vec2(vertexDesc[9], vertexDesc[10])
-		};
-
-		mesh.Vertices.emplace_back(
-			glm::vec3(vertexDesc[0], vertexDesc[1], vertexDesc[2]),
-			glm::vec3(vertexDesc[3], vertexDesc[4], vertexDesc[5]),
-			glm::vec3(vertexDesc[6], vertexDesc[7], vertexDesc[8]),
-			glm::vec2(vertexDesc[9], vertexDesc[10])
-		);
-
-		vertexIndex += 1;
-	}
-
-	for (uint32_t index : json["Indices"])
-		mesh.Indices.push_back(index);
-
-	return mesh;
+	return Mesh{};
 }
 
 void MeshProvider::Save(const Mesh& mesh, const std::string& Path)

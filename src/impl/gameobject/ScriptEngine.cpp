@@ -693,6 +693,20 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 	},
 
 	{
+		"mesh_save",
+		[](lua_State* L)
+		{
+			const char* internalName = luaL_checkstring(L, 1);
+			const char* savePath = luaL_checkstring(L, 2);
+
+			MeshProvider* meshProv = MeshProvider::Get();
+			meshProv->Save(meshProv->LoadFromPath(internalName), savePath);
+
+			return 0;
+		}
+	},
+
+	{
 		"world_raycast",
 		[](lua_State* L)
 		{

@@ -33,6 +33,7 @@ Editor::Editor()
 	m_MtlDiffuseBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
 	m_MtlSpecBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
 	m_MtlNormalBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
+	m_MtlEmissionBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
 	m_MtlShpBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
 	m_MtlNewUniformNameBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE);
 	m_MtlUniformNameEditBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE);
@@ -229,6 +230,7 @@ void Editor::m_RenderMaterialEditor()
 	Texture& colorMap = texManager->GetTextureResource(curItem.ColorMap);
 	Texture& metallicRoughnessMap = texManager->GetTextureResource(curItem.MetallicRoughnessMap);
 	Texture& normalMap = texManager->GetTextureResource(curItem.NormalMap);
+	Texture& emissionMap = texManager->GetTextureResource(curItem.EmissionMap);
 
 	static int SelectedUniformIdx = -1;
 
@@ -239,6 +241,7 @@ void Editor::m_RenderMaterialEditor()
 		CopyStringToBuffer(m_MtlDiffuseBuf, MATERIAL_TEXTUREPATH_BUFSIZE, colorMap.ImagePath);
 		CopyStringToBuffer(m_MtlSpecBuf, MATERIAL_TEXTUREPATH_BUFSIZE, metallicRoughnessMap.ImagePath);
 		CopyStringToBuffer(m_MtlNormalBuf, MATERIAL_TEXTUREPATH_BUFSIZE, normalMap.ImagePath);
+		CopyStringToBuffer(m_MtlEmissionBuf, MATERIAL_TEXTUREPATH_BUFSIZE, emissionMap.ImagePath);
 
 		SelectedUniformIdx = -1;
 	}
@@ -284,6 +287,21 @@ void Editor::m_RenderMaterialEditor()
 	}
 	else
 		curItem.NormalMap = 0;
+
+	bool hadEmissiveMap = curItem.EmissionMap != 0;
+	bool emissiveMapEnabled = hadEmissiveMap;
+	ImGui::Checkbox("Has Emission Map", &emissiveMapEnabled);
+
+	if (emissiveMapEnabled)
+	{
+		if (!hadEmissiveMap)
+			curItem.EmissionMap = texManager->LoadTextureFromPath("textures/white.png");
+
+		ImGui::InputText("Emission Map", m_MtlNormalBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
+		mtlEditorTexture(curItem.EmissionMap);
+	}
+	else
+		curItem.EmissionMap = 0;
 
 	ImGui::Text("Uniforms");
 
@@ -401,6 +419,9 @@ void Editor::m_RenderMaterialEditor()
 		if (curItem.NormalMap != 0)
 			curItem.NormalMap = texManager->LoadTextureFromPath(m_MtlNormalBuf);
 
+		if (curItem.EmissionMap != 0)
+			curItem.EmissionMap = texManager->LoadTextureFromPath(m_MtlEmissionBuf);
+
 		curItem.ShaderId = ShaderManager::Get()->LoadFromPath(m_MtlShpBuf);
 	}
 
@@ -419,6 +440,9 @@ void Editor::m_RenderMaterialEditor()
 
 		if (curItem.NormalMap != 0)
 			newMtlConfig["NormalMap"] = normalMap.ImagePath;
+
+		if (curItem.EmissionMap != 0)
+			newMtlConfig["EmissionMap"] = emissionMap.ImagePath;
 
 		newMtlConfig["specExponent"] = curItem.SpecExponent;
 		newMtlConfig["specMultiply"] = curItem.SpecMultiply;

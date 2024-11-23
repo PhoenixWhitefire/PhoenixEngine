@@ -1,0 +1,9 @@
+{
+  "BilinearFiltering": true,
+  "ColorMap": "models/bunny/baseColor.png",
+  "HasTranslucency": false,
+  "Uniforms": {},
+  "roughnessFactor": 0.0,
+  "specExponent": 16.0,
+  "specMultiply": 0.0
+}

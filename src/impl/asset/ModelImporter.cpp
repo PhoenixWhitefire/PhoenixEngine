@@ -73,7 +73,10 @@ static std::string getTexturePath(
 		return filePath;
 	}
 	else
-		return ModelName + (std::string)ImageJson["uri"];
+	{
+		std::string fileDirectory = ModelName.substr(0, ModelName.find_last_of('/') + 1);
+		return fileDirectory + (std::string)ImageJson["uri"];
+	}
 }
 
 ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
@@ -256,8 +259,10 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 
 		Texture& colorTex = texManager->GetTextureResource(material.BaseColorTexture);
 		Texture& metallicRoughnessTex = texManager->GetTextureResource(material.MetallicRoughnessTexture);
+		Texture& normalTex = texManager->GetTextureResource(material.NormalTexture);
+		Texture& emissiveTex = texManager->GetTextureResource(material.EmissiveTexture);
 
-		materialJson["albedo"] = colorTex.ImagePath;
+		materialJson["ColorMap"] = colorTex.ImagePath;
 
 		// TODO: glTF assumes proper PBR, with factors from 0 - 1 instead
 		// of specular exponents and multipliers etc
@@ -268,14 +273,22 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		materialJson["roughnessFactor"] = material.RoughnessFactor;
 
 		if (material.MetallicRoughnessTexture != 0)
-			materialJson["specular"] = metallicRoughnessTex.ImagePath;
+			materialJson["MetallicRoughnessMap"] = metallicRoughnessTex.ImagePath;
 
-		materialJson["translucency"] = (material.AlphaMode == MeshMaterial::MaterialAlphaMode::Blend);
+		if (material.NormalTexture != 0)
+			materialJson["NormalMap"] = normalTex.ImagePath;
 
-		materialJson["uniforms"] = nlohmann::json::object();
+		if (material.EmissiveTexture != 0)
+			materialJson["EmissionMap"] = emissiveTex.ImagePath;
+
+		materialJson["HasTranslucency"] = (material.AlphaMode == MeshMaterial::MaterialAlphaMode::Blend);
+
+		materialJson["Uniforms"] = nlohmann::json::object();
 
 		if (material.AlphaMode == MeshMaterial::MaterialAlphaMode::Mask)
-			materialJson["uniforms"]["AlphaCutoff"] = material.AlphaCutoff;
+			materialJson["Uniforms"]["AlphaCutoff"] = material.AlphaCutoff;
+
+		materialJson["BilinearFiltering"] = colorTex.DoBilinearSmoothing;
 
 		// `materials/models/crow/feathers.mtl`
 		std::string materialName = AssetPath
@@ -648,9 +661,19 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 		"metallicRoughnessTexture",
 		nlohmann::json{ { "index", 0 } }
 	);
+	nlohmann::json normalDesc = materialDescription.value(
+		"normalTexture",
+		nlohmann::json{ { "index", 0 } }
+	);
+	nlohmann::json emissiveDesc = materialDescription.value(
+		"emissiveTexture",
+		nlohmann::json{ { "index", 0 } }
+	);
 
 	nlohmann::json& baseColTex = m_JsonData["textures"][(int)baseColDesc["index"]];
 	nlohmann::json& metallicRoughnessTex = m_JsonData["textures"][(int)metallicRoughnessDesc["index"]];
+	nlohmann::json& normalTex = m_JsonData["textures"][(int)normalDesc["index"]];
+	nlohmann::json& emissiveTex = m_JsonData["textures"][(int)emissiveDesc["index"]];
 
 	nlohmann::json& baseColSource = baseColTex["source"];
 	int baseColSourceIndex = baseColSource.type() == nlohmann::json::value_t::number_unsigned ?
@@ -665,9 +688,7 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 		// 9729 == LINEAR 
 		// https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#schema-reference-sampler
 		baseColFilterBilinear = m_JsonData["samplers"][(int)baseColTex["sampler"]] == 9729;
-
-	//std::string fileDirectory = m_File.substr(0, m_File.find_last_of('/') + 1);
-
+	
 	std::string baseColPath = getTexturePath(
 		m_File,
 		m_JsonData,
@@ -692,6 +713,38 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 
 		material.MetallicRoughnessTexture = texManager->LoadTextureFromPath(
 			metallicRoughnessPath,
+			true,
+			baseColFilterBilinear
+		);
+	}
+
+	if (materialDescription.find("normalTexture") != materialDescription.end())
+	{
+		std::string normalPath = getTexturePath(
+			m_File,
+			m_JsonData,
+			m_JsonData["images"][(int)normalTex["source"]],
+			m_Data
+		);
+
+		material.NormalTexture = texManager->LoadTextureFromPath(
+			normalPath,
+			true,
+			baseColFilterBilinear
+		);
+	}
+
+	if (materialDescription.find("emissiveTexture") != materialDescription.end())
+	{
+		std::string emissivePath = getTexturePath(
+			m_File,
+			m_JsonData,
+			m_JsonData["images"][(int)emissiveTex["source"]],
+			m_Data
+		);
+
+		material.EmissiveTexture = texManager->LoadTextureFromPath(
+			emissivePath,
 			true,
 			baseColFilterBilinear
 		);
