@@ -343,6 +343,7 @@ static void initDefaultState()
 	// TODO: `require` is NOT part of the STL, copy
 	// it from Luau REPL (`lua_require`)
 	luaL_openlibs(DefaultState);
+	luaopen_vector(DefaultState);
 
 	lua_pushcfunction(
 		DefaultState,

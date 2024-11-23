@@ -10,6 +10,7 @@
 #include "asset/MeshProvider.hpp"
 #include "asset/ModelImporter.hpp"
 #include "asset/SceneFormat.hpp"
+#include "GlobalJsonConfig.hpp"
 #include "IntersectionLib.hpp"
 #include "UserInput.hpp"
 #include "FileRW.hpp"
@@ -76,6 +77,134 @@ static void pushGameObject(lua_State* L, GameObject* obj)
 
 	luaL_getmetatable(L, "GameObject");
 	lua_setmetatable(L, -2);
+}
+
+static void pushJson(lua_State* L, const nlohmann::json& v)
+{
+	switch (v.type())
+	{
+	case (nlohmann::json::value_t::null):
+	{
+		lua_pushnil(L);
+		break;
+	}
+
+	case (nlohmann::json::value_t::boolean):
+	{
+		lua_pushboolean(L, (bool)v);
+		break;
+	}
+	case (nlohmann::json::value_t::number_integer):
+	{
+		lua_pushinteger(L, (int)v);
+		break;
+	}
+	case (nlohmann::json::value_t::number_unsigned):
+	{
+		lua_pushinteger(L, static_cast<int>((uint32_t)v));
+		break;
+	}
+	case (nlohmann::json::value_t::number_float):
+	{
+		lua_pushnumber(L, (float)v);
+		break;
+	}
+	case (nlohmann::json::value_t::string):
+	{
+		lua_pushstring(L, ((std::string)v).c_str());
+		break;
+	}
+	case (nlohmann::json::value_t::array):
+	{
+		lua_newtable(L);
+
+		for (int i = 0; i < v.size(); i++)
+		{
+			lua_pushinteger(L, i);
+			pushJson(L, v[i]);
+			lua_settable(L, -3);
+		}
+		
+		break;
+	}
+	case (nlohmann::json::value_t::object):
+	{
+		lua_newtable(L);
+
+		for (auto it = v.begin(); it != v.end(); ++it)
+		{
+			pushJson(L, it.value());
+			lua_setfield(L, -2, it.key().c_str());
+		}
+
+		break;
+	}
+	default:
+	{
+		lua_pushstring(L, (std::string("< JSON Value : ") + v.type_name() + " >").c_str());
+	}
+	}
+}
+
+static void luaTableToJson(lua_State* L, nlohmann::json& json)
+{
+	lua_pushnil(L);
+	while (lua_next(L, -2) != 0)
+	{
+		nlohmann::json v{};
+
+		switch (lua_type(L, -1))
+		{
+		case (LUA_TNIL):
+		{
+			lua_pop(L, 1);
+			continue;
+		}
+		case (LUA_TBOOLEAN):
+		{
+			v = (bool)lua_toboolean(L, -1);
+			break;
+		}
+		case (LUA_TNUMBER):
+		{
+			v = lua_tonumber(L, -1);
+			break;
+		}
+		case (LUA_TSTRING):
+		{
+			v = lua_tostring(L, -1);
+			break;
+		}
+		case (LUA_TTABLE):
+		{
+			luaTableToJson(L, v);
+			break;
+		}
+		default:
+		{
+			const char* vtname = luaL_typename(L, -1);
+			std::string k;
+
+			if (lua_type(L, -2) == LUA_TNUMBER)
+				k = std::to_string(lua_tonumber(L, -2));
+			else
+				k = lua_tostring(L, -2);
+
+			throw(std::vformat(
+				"Key '{}' is of non-JSON type {}!",
+				std::make_format_args(k, vtname)
+			));
+		}
+		}
+
+		if (lua_type(L, -2) == LUA_TNUMBER)
+			json[lua_tonumber(L, -2)] = v;
+		else
+			json[lua_tostring(L, -2)] = v;
+
+		lua_pop(L, 1);
+	}
+
 }
 
 Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int StackIndex)
@@ -910,6 +1039,86 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 		{
 			const char* title = luaL_checkstring(L, 1);
 			lua_pushboolean(L, ImGui::Button(title));
+
+			return 1;
+		}
+	},
+
+	{
+		"file_read",
+		[](lua_State* L)
+		{
+			const char* path = luaL_checkstring(L, 1);
+
+			lua_pushstring(L, FileRW::ReadFile(path).c_str());
+
+			return 1;
+		}
+	},
+
+	{
+		"file_write",
+		[](lua_State* L)
+		{
+			const char* path = luaL_checkstring(L, 1);
+			const char* contents = luaL_checkstring(L, 2);
+			bool prependResDir = luaL_checkboolean(L, 3);
+
+			FileRW::WriteFile(path, contents, prependResDir);
+
+			return 0;
+		}
+	},
+
+	{
+		"file_write_rcd",
+		[](lua_State* L)
+		{
+			const char* path = luaL_checkstring(L, 1);
+			const char* contents = luaL_checkstring(L, 2);
+			bool prependResDir = luaL_checkboolean(L, 3);
+
+			FileRW::WriteFileCreateDirectories(path, contents, prependResDir);
+
+			return 0;
+		}
+	},
+
+	{
+		"conf_get",
+		[](lua_State* L)
+		{
+			const char* k = luaL_checkstring(L, 1);
+			nlohmann::json v = EngineJsonConfig[k];
+			pushJson(L, v);
+
+			return 1;
+		}
+	},
+
+	{
+		"json_parse",
+		[](lua_State* L)
+		{
+			const char* jsonStr = luaL_checkstring(L, 1);
+			nlohmann::json json = nlohmann::json::parse(jsonStr);
+			pushJson(L, json);
+
+			return 1;
+		}
+	},
+
+	{
+		"json_dump",
+		[](lua_State* L)
+		{
+			luaL_checktype(L, 1, LUA_TTABLE);
+			int indent = luaL_optinteger(L, 2, 2);
+
+			nlohmann::json json{};
+			luaTableToJson(L, json);
+
+			lua_pushstring(L, json.dump(indent).c_str());
 
 			return 1;
 		}
