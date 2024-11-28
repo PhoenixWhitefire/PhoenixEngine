@@ -84,6 +84,7 @@ function Controller:Update(DeltaTime)
         camTransform = self.Character.Transform
                         * self.CameraOffset
                         * Matrix.fromEulerAnglesXYZ(self.cameraPitch, 0, 0)
+			--* Matrix.fromTranslation(self.Character.LinearVelocity * DeltaTime)
     else
         camTransform = self.Character.Transform
                         * Matrix.fromEulerAnglesXYZ(self.cameraPitch, 0, 0)

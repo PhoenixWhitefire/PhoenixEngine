@@ -319,21 +319,17 @@ void Renderer::DrawScene(
 			else
 				checksum = renderData.RenderMeshId
 					+ static_cast<uint64_t>(renderData.MaterialId * 500u)
-					+ static_cast<uint64_t>(renderData.Transparency * 250)
+					+ (renderData.Transparency > 0.f ? 5000000ull : 0ull)
 					+ static_cast<uint64_t>(renderData.Reflectivity * 115);
 
-			// 14/11/2024
-			// disabled for now because it causes a bunch of weird flickering
-			/*
 			if (renderData.Transparency > 0.f)
 				// hacky way to get transparents closer to the camera drawn
 				// later.
 				checksum += static_cast<uint64_t>(1.f / (glm::distance(
 					CameraTransform[3],
 					renderData.Transform[3]
-				)) * 5000.f);
-			*/
-
+				)) * 500000.f);
+			
 			auto it = instancingList.find(checksum);
 			if (it == instancingList.end())
 				instancingList[checksum] = std::pair(renderItemIndex, std::vector<float>{});

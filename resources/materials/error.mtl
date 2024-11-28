@@ -1,5 +1,5 @@
 {
-  "ColorMap": "textures/missing.png",
+  "ColorMap": "!Missing",
   "HasTranslucency": false,
   "Shader": "worldUber",
   "Uniforms": null,

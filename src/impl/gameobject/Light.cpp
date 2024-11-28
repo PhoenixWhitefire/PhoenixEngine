@@ -33,12 +33,19 @@ void Object_DirectionalLight::s_DeclareReflections()
 		return;
 	s_DirectionalDidInitReflection = true;
 
-	REFLECTION_INHERITAPI(GameObject);
-	// no point inheriting from `Attachment` like w/ the other Lights
-	// 25/10/2024
+	// 27/11/2024 It's... PERFECT
 	REFLECTION_INHERITAPI(Light);
 
-	s_Api.Properties.erase("LocalTransform");
+	// we remove all the smelly `Attachment` properties we inherit from daddy `Light` 
+	for (auto& propIt : Object_Attachment::s_GetProperties())
+		s_Api.Properties.erase(propIt.first);
+	for (auto& funcIt : Object_Attachment::s_GetFunctions())
+		s_Api.Properties.erase(funcIt.first);
+
+
+	// , before RE-INHERITING Father `GameObject` so we have the Base APIs
+	// ( Name, ClassName, Enabled etc )
+	REFLECTION_INHERITAPI(GameObject);
 
 	REFLECTION_DECLAREPROP(
 		"Direction",
@@ -47,7 +54,7 @@ void Object_DirectionalLight::s_DeclareReflections()
 		{
 			Object_DirectionalLight* dl = dynamic_cast<Object_DirectionalLight*>(g);
 			glm::vec3 forward = dl->LocalTransform[3];
-			return Vector3(forward).ToGenericValue();
+			return Vector3(forward / glm::length(forward)).ToGenericValue();
 		},
 		[](GameObject* g, const Reflection::GenericValue& gv)
 		{

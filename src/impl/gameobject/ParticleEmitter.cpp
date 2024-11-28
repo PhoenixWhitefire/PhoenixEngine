@@ -3,8 +3,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "gameobject/ParticleEmitter.hpp"
-#include "gameobject/Base3D.hpp"
-#include "datatype/Vector2.hpp"
+
+#include "asset/MaterialManager.hpp"
+#include "asset/MeshProvider.hpp"
 
 PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(ParticleEmitter);
 
@@ -12,16 +13,7 @@ static uint32_t s_ParticleShaders = 0;
 static std::default_random_engine s_RandGenerator = std::default_random_engine(static_cast<uint32_t>(time(NULL)));
 static bool s_DidInitReflection = false;
 
-static const std::string MissingTexPath = "textures/missing.png";
-
-float Quad[] =
-{
-	//Triangle 1 - left
-	-0.5f,  0.5f,
-	-0.5f, -0.5f,
-	 0.5f, -0.5f,
-	 0.5f,  0.5f,
-};
+static uint32_t QuadMeshId = 0;
 
 void Object_ParticleEmitter::s_DeclareReflections()
 {
@@ -30,6 +22,7 @@ void Object_ParticleEmitter::s_DeclareReflections()
 	s_DidInitReflection = true;
 
 	REFLECTION_INHERITAPI(GameObject);
+	REFLECTION_INHERITAPI(Attachment);
 
 	REFLECTION_DECLAREPROP_SIMPLE(Object_ParticleEmitter, EmitterEnabled, Bool);
 
@@ -50,6 +43,7 @@ void Object_ParticleEmitter::s_DeclareReflections()
 		}
 	);
 
+	/*
 	REFLECTION_DECLAREPROP(
 		"MaxParticles",
 		Integer,
@@ -65,6 +59,7 @@ void Object_ParticleEmitter::s_DeclareReflections()
 			dynamic_cast<Object_ParticleEmitter*>(g)->MaxParticles = static_cast<uint32_t>(newMax);
 		}
 	);
+	*/
 
 	REFLECTION_DECLAREPROP(
 		"Lifetime",
@@ -83,8 +78,6 @@ void Object_ParticleEmitter::s_DeclareReflections()
 			);
 		}
 	);
-
-	REFLECTION_DECLAREPROP_SIMPLE_TYPECAST(Object_ParticleEmitter, Offset, Vector3);
 }
 
 Object_ParticleEmitter::Object_ParticleEmitter()
@@ -92,32 +85,10 @@ Object_ParticleEmitter::Object_ParticleEmitter()
 	this->Name = "ParticleEmitter";
 	this->ClassName = "ParticleEmitter";
 
-	if (!s_ParticleShaders)
+	if (s_ParticleShaders == 0)
 		s_ParticleShaders = ShaderManager::Get()->LoadFromPath("particle");
 
-	m_VertArray.Bind();
-
-	m_VertArray.LinkAttrib(m_VertBuffer, 0, 2, GL_FLOAT, 2 * sizeof(float), (void*)0);
-
-	m_VertBuffer.Bind();
-	glBufferData(GL_ARRAY_BUFFER, sizeof(Quad), &Quad[0], GL_STATIC_DRAW);
-
-	GLuint quadinds[] =
-	{
-		0, 1, 2,
-		2, 3, 0
-	};
-
-	m_ElementBuffer.Bind();
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6, &quadinds[0], GL_STATIC_DRAW);
-
-	uint32_t DefaultImage = TextureManager::Get()->LoadTextureFromPath(MissingTexPath);
-
-	this->PossibleImages = { DefaultImage };
-
-	m_VertArray.Unbind();
-	m_VertBuffer.Unbind();
-	m_ElementBuffer.Unbind();
+	this->PossibleImages = { 1 };
 
 	this->VelocityOverTime.InsertKey(ValueSequenceKeypoint<Vector3>(0, Vector3(0, 5, 0)));
 	this->VelocityOverTime.InsertKey(ValueSequenceKeypoint<Vector3>(0.75, Vector3(0, 2.5, 0)));
@@ -128,7 +99,7 @@ Object_ParticleEmitter::Object_ParticleEmitter()
 	this->TransparencyOverTime.InsertKey(ValueSequenceKeypoint<float>(1.f, 1.f));
 
 	this->SizeOverTime.InsertKey(ValueSequenceKeypoint<float>(0.f, 1.f));
-	this->SizeOverTime.InsertKey(ValueSequenceKeypoint<float>(1.f, 1.f));
+	this->SizeOverTime.InsertKey(ValueSequenceKeypoint<float>(1.f, 15.f));
 
 	s_DeclareReflections();
 }
@@ -145,35 +116,26 @@ size_t Object_ParticleEmitter::m_GetUsableParticleIndex()
 	{
 		for (size_t index = 0; index < m_Particles.size(); index++)
 		{
-			_particle& particle = m_Particles[index];
+			Particle& particle = m_Particles[index];
 
 			if (particle.TimeAliveFor > particle.Lifetime)
 			{ //Get first inactive particle
 
-				m_Particles.erase(index + m_Particles.begin());
+				//m_Particles.erase(index + m_Particles.begin());
 
 				return index;
 			}
 		}
 	}
 
-	if (m_Particles.size() < this->MaxParticles)
-	{
-		m_Particles.resize(m_Particles.size() + 1);
+	m_Particles.resize(m_Particles.size() + 1);
 
-		return m_Particles.size() - 1;
-	}
-
-	return 0;
+	return m_Particles.size() - 1;
 }
 
 void Object_ParticleEmitter::Update(double DeltaTime)
 {
 	float timeBetweenSpawn = 1.0f / this->Rate;
-
-	Object_Base3D* parent3D = dynamic_cast<Object_Base3D*>(this->GetParent());
-
-	Vector3 worldPosition = parent3D ? Vector3(glm::vec3(parent3D->Transform[3])) + this->Offset : this->Offset;
 
 	size_t newParticleIndex = UINT32_MAX;
 
@@ -188,7 +150,7 @@ void Object_ParticleEmitter::Update(double DeltaTime)
 		std::uniform_real_distribution<double> randIndex(0, numimages);
 		std::uniform_real_distribution<float> lifetimeDist(this->Lifetime.X, this->Lifetime.Y);
 
-		_particle newParticle
+		Particle newParticle
 		{
 			lifetimeDist(s_RandGenerator),
 			0.f,
@@ -203,7 +165,7 @@ void Object_ParticleEmitter::Update(double DeltaTime)
 	else
 		m_TimeSinceLastSpawn += DeltaTime;
 
-	for (_particle& particle : m_Particles)
+	for (Particle& particle : m_Particles)
 	{
 		particle.TimeAliveFor += static_cast<float>(DeltaTime);
 
@@ -216,62 +178,55 @@ void Object_ParticleEmitter::Update(double DeltaTime)
 	}
 }
 
-void Object_ParticleEmitter::Render(glm::mat4 CameraMatrix)
+std::vector<RenderItem> Object_ParticleEmitter::GetRenderList()
 {
 	if (m_Particles.empty())
-		return;
+		return {};
 
-	m_VertArray.Bind();
+	std::vector<RenderItem> rlist;
+	rlist.reserve(m_Particles.size());
 
 	ShaderManager* shdManager = ShaderManager::Get();
 	ShaderProgram& particleShaders = shdManager->GetShaderResource(s_ParticleShaders);
 
-	particleShaders.Activate();
-
-	glEnable(GL_BLEND);
-
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+	if (QuadMeshId == 0)
+	{
+		MeshProvider* mp = MeshProvider::Get();
+		QuadMeshId = mp->LoadFromPath("!Quad");
+	}
 
 	for (size_t index = 0; index < m_Particles.size(); index++)
 	{
-		_particle& particle = m_Particles[index];
+		Particle& particle = m_Particles[index];
 
 		if (particle.TimeAliveFor > particle.Lifetime)
 		{
-			m_Particles.erase(m_Particles.begin() + index);
+			//m_Particles.erase(m_Particles.begin() + index);
 
 			//delete particle;
 
 			continue;
 		}
 
-		particleShaders.SetUniform(
-			"Position",
-			particle.Position.ToGenericValue()
-		);
-
-		particleShaders.SetUniform("Transparency", particle.Transparency);
-
-		glm::mat4 scale = glm::scale(glm::mat4(1.f), glm::vec3(particle.Size, particle.Size, particle.Size));
-
-		particleShaders.SetUniform("Scale", scale);
-
-		particleShaders.SetUniform("CameraMatrix", CameraMatrix);
-
+		/*
 		particleShaders.SetTextureUniform(
 			"Image",
 			TextureManager::Get()->GetTextureResource(particle.Image).GpuId,
 			Texture::DimensionType::Texture2D
 		);
+		*/
 
-		particleShaders.Activate();
-
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		rlist.emplace_back(
+			QuadMeshId,
+			glm::translate(this->GetWorldTransform(), (glm::vec3)particle.Position),
+			Vector3::one * particle.Size,
+			MaterialManager::Get()->LoadMaterialFromPath("error"),
+			Color(1.f, 1.f, 1.f),
+			particle.Transparency,
+			0.f,
+			FaceCullingMode::None
+		);
 	}
 
-	m_VertArray.Unbind();
-	m_VertBuffer.Unbind();
-	m_ElementBuffer.Unbind();
-
-	glDisable(GL_BLEND);
+	return rlist;
 }

@@ -62,20 +62,6 @@ static void sdlLog(void*, int Type, SDL_LogPriority Priority, const char* Messag
 		throw(logString);
 }
 
-static void updateDescendants(GameObject* Root, double DeltaTime)
-{
-	for (GameObject* object : Root->GetChildren())
-	{
-		if (object->Enabled)
-		{
-			object->Update(DeltaTime);
-
-			if (!object->GetChildren().empty())
-				updateDescendants(object, DeltaTime);
-		}
-	}
-}
-
 void EngineObject::ResizeWindow(int NewSizeX, int NewSizeY)
 {
 	SDL_SetWindowSize(this->Window, NewSizeX, NewSizeY);
@@ -260,7 +246,8 @@ static void recursivelyTravelHierarchy(
 	std::vector<LightItem>& LightList,
 	std::vector<Object_Base3D*>& PhysicsList,
 	GameObject* Root,
-	Object_Camera* SceneCamera
+	Object_Camera* SceneCamera,
+	double DeltaTime
 )
 {
 	std::vector<GameObject*> objects = Root->GetChildren();
@@ -273,6 +260,8 @@ static void recursivelyTravelHierarchy(
 	{
 		if (!object->Enabled)
 			continue;
+
+		object->Update(DeltaTime);
 
 		Object_Base3D* object3D = dynamic_cast<Object_Base3D*>(object);
 
@@ -339,8 +328,17 @@ static void recursivelyTravelHierarchy(
 				LightList,
 				PhysicsList,
 				object,
-				SceneCamera
+				SceneCamera,
+				DeltaTime
 			);
+
+		Object_ParticleEmitter* emitter = (!light && !object3D) ? dynamic_cast<Object_ParticleEmitter*>(object) : nullptr;
+
+		if (emitter)
+		{
+			auto pdrawlist = emitter->GetRenderList();
+			std::copy(pdrawlist.begin(), pdrawlist.end(), std::back_inserter(RenderList));
+		}
 	}
 }
 
@@ -407,7 +405,7 @@ void EngineObject::Start()
 
 	skyboxShaders.SetUniform("SkyboxCubemap", 3);
 
-	Scene scene = Scene();
+	Scene scene{};
 
 	RendererContext->Framebuffer->Unbind();
 	
@@ -553,16 +551,10 @@ void EngineObject::Start()
 		ImGui_ImplSDL2_NewFrame();
 		ImGui::NewFrame();
 
-		Profiler::Start("UpdateDescendants");
-		updateDescendants(DataModel, deltaTime);
-		Profiler::Stop();
-
 		float aspectRatio = (float)this->WindowSizeX / (float)this->WindowSizeY;
 
 		GameObject* workspace = dynamic_cast<GameObject*>(Workspace);
 		Object_Camera* sceneCamera = this->Workspace->GetSceneCamera();
-
-		glm::mat4 renderMatrix = sceneCamera->GetMatrixForAspectRatio(aspectRatio);
 		
 		std::vector<Object_Base3D*> physicsList;
 
@@ -573,7 +565,8 @@ void EngineObject::Start()
 			scene.LightingList,
 			physicsList,
 			workspace,
-			sceneCamera
+			sceneCamera,
+			deltaTime
 		);
 		Profiler::Stop();
 
@@ -588,13 +581,11 @@ void EngineObject::Start()
 
 		if (hasPhysics)
 			Physics::Step(physicsList, deltaTime);
+		
+		// we do this AFTER  `recursivelyTravelHierarchy` in case any Scripts
+		// update the camera transform
+		glm::mat4 renderMatrix = sceneCamera->GetMatrixForAspectRatio(aspectRatio);
 
-		// TODO 15/09/2024
-		// Move into the Renderer. Can't right now because it isn't aware of the `CameraMatrix`
-		// or `Time`.
-		
-		// Hashmap better than linaer serch
-		
 		scene.UsedShaders = {};
 
 		MaterialManager* mtlManager = MaterialManager::Get();
@@ -748,7 +739,7 @@ void EngineObject::Start()
 			postFxShaders,
 			Vector3::one*2.f,
 			glm::mat4(1.f),
-			FaceCullingMode::None,
+			FaceCullingMode::BackFace,
 			0
 		);
 

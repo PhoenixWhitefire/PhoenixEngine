@@ -5,6 +5,6 @@
     "Uniforms": {
         "Fog": false,
         "EmissionStrength": 0.0,
-	      "AlphaCutoff": 0.5
+	      "AlphaCutoff": 0.05
     }
 }

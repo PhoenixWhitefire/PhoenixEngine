@@ -18,7 +18,7 @@ static std::string s_ErrorString = "No error";
 static uint32_t readU32(const std::vector<int8_t>& vec, size_t offset)
 {
 	uint32_t u32{};
-	std::memcpy(&u32, vec.data() + offset, 4);
+	std::memcpy(&u32, &vec.at(offset), 4);
 
 	return u32;
 }
@@ -26,7 +26,7 @@ static uint32_t readU32(const std::vector<int8_t>& vec, size_t offset)
 static uint32_t readU32(const std::vector<int8_t>& vec, size_t* offset)
 {
 	uint32_t u32{};
-	std::memcpy(&u32, vec.data() + *offset, 4);
+	std::memcpy(&u32, &vec.at(*offset), 4);
 	*offset += 4ull;
 
 	return u32;
@@ -35,16 +35,16 @@ static uint32_t readU32(const std::vector<int8_t>& vec, size_t* offset)
 static float readF32(const std::vector<int8_t>& vec, size_t offset)
 {
 	float f32{};
-	std::memcpy(&f32, vec.data() + offset, 4);
+	std::memcpy(&f32, &vec.at(offset), 4);
 
 	return f32;
 }
 
-static float readF32(const std::vector<int8_t>& vec, size_t* pointer)
+static float readF32(const std::vector<int8_t>& vec, size_t* offset)
 {
 	float f32{};
-	std::memcpy(&f32, vec.data() + *pointer, 4);
-	*pointer += 4ull;
+	std::memcpy(&f32, &vec.at(*offset), 4);
+	*offset += 4ull;
 
 	return f32;
 }
@@ -169,9 +169,9 @@ static Mesh loadMeshVersion2(const std::string& FileContents, bool* SuccessPtr)
 	if (!hasVertexOpacity)
 		uniformVertexRGBA.w = readF32(data, &headerPtr);
 
-	// position + (normal) + (rgb)(a) + UV
-	// * 4 because that's in floats and we need to convert to bytes (4 bytes per float)
-	size_t bytesPerVertex = (3ull + (hasVertexNormal ? 3 : 0) + ((hasVertexColor ? 3ull : 0) + (hasVertexOpacity ? 1 : 0)) + 2) * 4;
+	// Px, Py, Pz, (Nx, Ny, Nz), (R, G, B), (A), Tu, Tv
+	size_t floatsPerVertex = 3ull + (hasVertexNormal ? 3 : 0) + (hasVertexColor ? 3 : 0) + (hasVertexOpacity ? 1 : 0) + 2;
+	size_t bytesPerVertex = floatsPerVertex * 4ull;
 
 	Mesh mesh{};
 	mesh.Vertices.reserve(numVerts);
@@ -273,46 +273,35 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 				+ std::to_string((int32_t)ymd.year()) + "\n\n"
 				+ "$";
 
-	/*
-	nlohmann::json json;
-	nlohmann::json vertSon;
-	nlohmann::json indSon;
+	bool hasPerVertexColor = false;
+	glm::vec3 uniformVertexCol = mesh.Vertices.at(0).Color;
 
-	for (size_t index = 0; index < mesh.Vertices.size(); index++)
-	{
-		const Vertex& vert = mesh.Vertices[index];
-
-		vertSon[index] =
+	for (const Vertex& v : mesh.Vertices)
+		if (v.Color != uniformVertexCol)
 		{
-			vert.Position.x,
-			vert.Position.y,
-			vert.Position.z,
-			vert.Normal.x,
-			vert.Normal.y,
-			vert.Normal.z,
-			vert.Color.x,
-			vert.Color.y,
-			vert.Color.z,
-			vert.TextureUV.x,
-			vert.TextureUV.y
-		};
-	}
+			hasPerVertexColor = true;
+			break;
+		}
 
-	for (uint32_t ind : mesh.Indices)
-		indSon.push_back(ind);
+	// w/ PVC: Px, Py, Pz, Nx, Ny, Nz, R, G, B, A, Tu, Tv
+	// w/o PV: Px, Py, Pz, Nx, Ny, Nz, Tu, Tv
+	size_t floatsPerVertex = hasPerVertexColor ? 12ull : 8ull;
 
-	json["Vertices"] = vertSon;
-	json["Indices"] = indSon;
-
-	contents += json.dump();
-	*/
-
-	contents.reserve(12ull + mesh.Vertices.size() * (12ull * 4ull) + mesh.Indices.size() * 4ull + 4ull + contents.size());
+	// 12b header + 4b padding
+	contents.reserve(16ull + mesh.Vertices.size() * (floatsPerVertex * 4ull) + mesh.Indices.size() * 4ull + contents.size());
 
 	// per-vertex normal, color and opacity flags
-	writeU32(contents, 0b00000111);
+	writeU32(contents, 0b00000100 + (hasPerVertexColor ? 0b00000011 : 0));
 	writeU32(contents, static_cast<uint32_t>(mesh.Vertices.size()));
 	writeU32(contents, static_cast<uint32_t>(mesh.Indices.size()));
+
+	if (!hasPerVertexColor)
+	{
+		writeF32(contents, uniformVertexCol.x);
+		writeF32(contents, uniformVertexCol.y);
+		writeF32(contents, uniformVertexCol.z);
+		writeF32(contents, 1.f);
+	}
 
 	for (const Vertex& v : mesh.Vertices)
 	{
@@ -324,10 +313,13 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 		writeF32(contents, v.Normal.y);
 		writeF32(contents, v.Normal.z);
 
-		writeF32(contents, v.Color.x);
-		writeF32(contents, v.Color.y);
-		writeF32(contents, v.Color.z);
-		writeF32(contents, 1.f);
+		if (hasPerVertexColor)
+		{
+			writeF32(contents, v.Color.x);
+			writeF32(contents, v.Color.y);
+			writeF32(contents, v.Color.z);
+			writeF32(contents, 1.f);
+		}
 
 		writeF32(contents, v.TextureUV.x);
 		writeF32(contents, v.TextureUV.y);

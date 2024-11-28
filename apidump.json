@@ -70,12 +70,11 @@
     "GetFullName": "() -> (String,)",
     "IsA": "(String,) -> (Bool,)",
     "LightColor": "Color",
-    "Lineage": "GameObject -> Light",
+    "Lineage": "Light -> GameObject",
     "Name": "String",
     "ObjectId": "Integer",
     "Parent": "GameObject",
-    "Shadows": "Bool",
-    "WorldTransform": "Matrix"
+    "Shadows": "Bool"
   },
   "Example": {
     "Class": "String",
@@ -167,13 +166,13 @@
     "GetFullName": "() -> (String,)",
     "IsA": "(String,) -> (Bool,)",
     "Lifetime": "Vector3",
-    "Lineage": "GameObject",
-    "MaxParticles": "Integer",
+    "Lineage": "GameObject -> Attachment",
+    "LocalTransform": "Matrix",
     "Name": "String",
     "ObjectId": "Integer",
-    "Offset": "Vector3",
     "Parent": "GameObject",
-    "Rate": "Integer"
+    "Rate": "Integer",
+    "WorldTransform": "Matrix"
   },
   "PointLight": {
     "Brightness": "Double",

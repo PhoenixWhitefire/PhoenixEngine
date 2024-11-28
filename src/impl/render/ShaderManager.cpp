@@ -398,9 +398,14 @@ uint32_t ShaderManager::LoadFromPath(const std::string& ProgramName)
 		s_StringToShaderId.emplace(ProgramName, resourceId);
 		m_Shaders.emplace_back();
 
-		ShaderProgram& shader = m_Shaders.back();
+		// DON'T DO `m_Shaders.back` because `::Reload` could cause
+		// `m_Shaders` to get re-allocated, causing it to be garbage data
+		// 28/11/2024
+		ShaderProgram shader{};
 		shader.Name = ProgramName;
 		shader.Reload();
+
+		m_Shaders[resourceId] = shader;
 
 		return resourceId;
 	}
