@@ -31,7 +31,7 @@ public:
 	ValueSequence<float> SizeOverTime;
 	ValueSequence<Vector3> VelocityOverTime;
 	
-	PHX_GAMEOBJECT_API_REFLECTION;
+	REFLECTION_DECLAREAPI;
 
 private:
 	struct Particle
@@ -53,5 +53,5 @@ private:
 	double m_TimeSinceLastSpawn = 0.f;
 
 	static void s_DeclareReflections();
-	static inline Api s_Api{};
+	static inline Reflection::Api s_Api{};;
 };

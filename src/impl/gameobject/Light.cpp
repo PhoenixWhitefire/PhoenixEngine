@@ -19,7 +19,6 @@ void Object_Light::s_DeclareReflections()
 		return;
 	s_BaseDidInitReflection = true;
 
-	REFLECTION_INHERITAPI(GameObject);
 	REFLECTION_INHERITAPI(Attachment);
 
 	REFLECTION_DECLAREPROP_SIMPLE_TYPECAST(Object_Light, LightColor, Color);
@@ -50,13 +49,13 @@ void Object_DirectionalLight::s_DeclareReflections()
 	REFLECTION_DECLAREPROP(
 		"Direction",
 		Vector3,
-		[](GameObject* g)
+		[](Reflection::Reflectable* g)
 		{
 			Object_DirectionalLight* dl = dynamic_cast<Object_DirectionalLight*>(g);
 			glm::vec3 forward = dl->LocalTransform[3];
 			return Vector3(forward / glm::length(forward)).ToGenericValue();
 		},
-		[](GameObject* g, const Reflection::GenericValue& gv)
+		[](Reflection::Reflectable* g, const Reflection::GenericValue& gv)
 		{
 			Object_DirectionalLight* p = dynamic_cast<Object_DirectionalLight*>(g);
 
@@ -75,8 +74,6 @@ void Object_PointLight::s_DeclareReflections()
 		return;
 	s_PointDidInitReflection = true;
 
-	REFLECTION_INHERITAPI(GameObject);
-	REFLECTION_INHERITAPI(Attachment);
 	REFLECTION_INHERITAPI(Light);
 
 	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_PointLight, Range, Double, float);
@@ -88,8 +85,6 @@ void Object_SpotLight::s_DeclareReflections()
 		return;
 	s_SpotDidInitReflection = true;
 
-	REFLECTION_INHERITAPI(GameObject);
-	REFLECTION_INHERITAPI(Attachment);
 	REFLECTION_INHERITAPI(Light);
 
 	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_SpotLight, Range, Double, float);
@@ -103,6 +98,7 @@ Object_Light::Object_Light()
 	this->ClassName = "Light";
 
 	s_DeclareReflections();
+	ApiPointer = &s_Api;
 }
 
 Object_DirectionalLight::Object_DirectionalLight()
@@ -111,6 +107,7 @@ Object_DirectionalLight::Object_DirectionalLight()
 	this->ClassName = "DirectionalLight";
 
 	s_DeclareReflections();
+	ApiPointer = &s_Api;
 }
 
 Object_PointLight::Object_PointLight()
@@ -119,6 +116,7 @@ Object_PointLight::Object_PointLight()
 	this->ClassName = "PointLight";
 
 	s_DeclareReflections();
+	ApiPointer = &s_Api;
 }
 
 Object_SpotLight::Object_SpotLight()
@@ -127,4 +125,5 @@ Object_SpotLight::Object_SpotLight()
 	this->ClassName = "SpotLight";
 
 	s_DeclareReflections();
+	ApiPointer = &s_Api;
 }

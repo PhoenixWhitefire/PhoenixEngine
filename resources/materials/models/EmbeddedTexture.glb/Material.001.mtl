@@ -1,8 +1,9 @@
 {
-  "albedo": "textures/models/EmbeddedTexture.glb/cupid-ref.jpeg",
+  "BilinearFiltering": true,
+  "ColorMap": "textures/models/EmbeddedTexture.glb/cupid-ref.jpeg",
+  "HasTranslucency": false,
+  "Uniforms": {},
   "roughnessFactor": 0.5,
   "specExponent": 16.0,
-  "specMultiply": 0.0,
-  "translucency": false,
-  "uniforms": {}
+  "specMultiply": 0.0
 }

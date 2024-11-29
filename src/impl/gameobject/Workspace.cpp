@@ -20,13 +20,12 @@ void Object_Workspace::s_DeclareReflections()
 		return;
 	s_DidInitReflection = true;
 
-	REFLECTION_INHERITAPI(GameObject);
 	REFLECTION_INHERITAPI(Model);
 
 	REFLECTION_DECLAREPROP(
 		"SceneCamera",
 		GameObject,
-		[](GameObject* p)
+		[](Reflection::Reflectable* p)
 		{
 			Object_Workspace* workspace = dynamic_cast<Object_Workspace*>(p);
 
@@ -35,7 +34,7 @@ void Object_Workspace::s_DeclareReflections()
 			else
 				return workspace->GetSceneCamera()->ToGenericValue();
 		},
-		[](GameObject* p, const Reflection::GenericValue& gv)
+		[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)
 		{
 			dynamic_cast<Object_Workspace*>(p)->SetSceneCamera(
 				dynamic_cast<Object_Camera*>(GameObject::FromGenericValue(gv))
@@ -51,6 +50,7 @@ Object_Workspace::Object_Workspace()
 	m_SceneCamera = nullptr;
 
 	s_DeclareReflections();
+	ApiPointer = &s_Api;
 }
 
 void Object_Workspace::Initialize()

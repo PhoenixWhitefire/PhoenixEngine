@@ -49,7 +49,7 @@ void Object_Attachment::s_DeclareReflections()
 	REFLECTION_DECLAREPROP(
 		"WorldTransform",
 		Matrix,
-		[](GameObject* p)
+		[](Reflection::Reflectable* p)
 		{
 			return dynamic_cast<Object_Attachment*>(p)->GetWorldTransform();
 		},
@@ -60,12 +60,12 @@ void Object_Attachment::s_DeclareReflections()
 	REFLECTION_DECLAREPROP(
 		"WorldTransform",
 		Matrix,
-		[](GameObject* p)
+		[](Reflection::Reflectable* p)
 		-> Reflection::GenericValue
 		{
 			return dynamic_cast<Object_Attachment*>(p)->GetWorldTransform();
 		},
-		[](GameObject* p, const Reflection::GenericValue& gv)
+		[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)
 		{
 			const glm::mat4& targetWorldTransform = gv.AsMatrix();
 			Object_Attachment* att = dynamic_cast<Object_Attachment*>(p);
@@ -83,6 +83,7 @@ Object_Attachment::Object_Attachment()
 	this->ClassName = "Attachment";
 
 	s_DeclareReflections();
+	ApiPointer = &s_Api;
 }
 
 glm::mat4 Object_Attachment::GetWorldTransform()

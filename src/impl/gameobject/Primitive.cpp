@@ -29,17 +29,16 @@ void Object_Primitive::s_DeclareReflections()
 		return;
 	s_DidInitReflection = true;
 
-	REFLECTION_INHERITAPI(GameObject);
 	REFLECTION_INHERITAPI(Base3D);
 
 	REFLECTION_DECLAREPROP(
 		"Shape",
 		Integer,
-		[](GameObject* g)
+		[](Reflection::Reflectable* g)
 		{
 			return (int)dynamic_cast<Object_Primitive*>(g)->Shape;
 		},
-		[](GameObject* g, Reflection::GenericValue gv)
+		[](Reflection::Reflectable* g, Reflection::GenericValue gv)
 		{
 			dynamic_cast<Object_Primitive*>(g)->SetShape((PrimitiveShape)gv.AsInteger());
 		}
@@ -54,6 +53,7 @@ Object_Primitive::Object_Primitive()
 	this->SetShape(PrimitiveShape::Cube);
 
 	s_DeclareReflections();
+	ApiPointer = &s_Api;
 }
 
 void Object_Primitive::SetShape(PrimitiveShape shape)

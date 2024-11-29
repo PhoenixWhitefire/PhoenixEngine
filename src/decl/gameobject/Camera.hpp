@@ -29,9 +29,9 @@ public:
 	float MovementSpeed = 0.5f;
 	float MouseSensitivity = 100.f;
 
-	PHX_GAMEOBJECT_API_REFLECTION;
+	REFLECTION_DECLAREAPI;
 	
 private:
 	static void s_DeclareReflections();
-	static inline Api s_Api{};
+	static inline Reflection::Api s_Api{};;
 };

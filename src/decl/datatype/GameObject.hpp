@@ -11,82 +11,6 @@
 // and the C++ class is `Object_<Class>`
 #define PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(classname) PHX_GAMEOBJECT_LINKTOCLASS(#classname, Object_##classname)
 
-// 01/09/2024:
-// MUST be added to the `public` section of *all* objects so
-// any APIs they declare can be found
-#define PHX_GAMEOBJECT_API_REFLECTION static const PropertyMap& s_GetProperties()  \
-{ \
-	return s_Api.Properties; \
-} \
- \
-static const FunctionMap& s_GetFunctions() \
-{ \
-	return s_Api.Functions; \
-} \
-static const std::vector<std::string>& s_GetLineage() \
-{ \
-	return s_Api.Lineage; \
-} \
-virtual const PropertyMap& GetProperties()  \
-{ \
-	return s_Api.Properties; \
-} \
- \
-virtual const FunctionMap& GetFunctions() \
-{ \
-	return s_Api.Functions; \
-} \
-virtual const std::vector<std::string>& GetLineage() \
-{ \
-	return s_Api.Lineage; \
-} \
-virtual bool HasProperty(const std::string & MemberName) \
-{ \
-	return s_Api.Properties.find(MemberName) != s_Api.Properties.end(); \
-} \
- \
-virtual bool HasFunction(const std::string & MemberName) \
-{ \
-	return s_Api.Functions.find(MemberName) != s_Api.Functions.end(); \
-} \
- \
-virtual const IProperty& GetProperty(const std::string & MemberName) \
-{ \
-	return HasProperty(MemberName) \
-		? s_Api.Properties[MemberName] \
-		: throw(std::string("Invalid Property in GetProperty ") + MemberName); \
-} \
- \
-virtual const IFunction& GetFunction(const std::string & MemberName) \
-{ \
-	return HasFunction(MemberName) \
-		? s_Api.Functions[MemberName] \
-		: throw(std::string("Invalid Function in GetFunction ") + MemberName); \
-} \
- \
-virtual Reflection::GenericValue GetPropertyValue(const std::string & MemberName) \
-{ \
-	return HasProperty(MemberName) \
-		? s_Api.Properties[MemberName].Get(this) \
-		: throw(std::string("Invalid Property in GetPropertyValue ") + MemberName); \
-} \
- \
-virtual void SetPropertyValue(const std::string & MemberName, const Reflection::GenericValue & NewValue) \
-{ \
-	if (HasProperty(MemberName)) \
-		s_Api.Properties[MemberName].Set(this, NewValue); \
-	else \
-		throw(std::string("Invalid Property in SetPropertyValue ") + MemberName); \
-} \
- \
-virtual Reflection::GenericValue CallFunction(const std::string& MemberName, const std::vector<Reflection::GenericValue>& Param) \
-{ \
-	if (HasFunction(MemberName)) \
-		return s_Api.Functions[MemberName].Func(this, Param); \
-	else \
-		throw(std::string("InvalidFunction in CallFunction " + MemberName)); \
-} \
-
 #include <unordered_map>
 #include <functional>
 #include <vector>
@@ -95,43 +19,13 @@ virtual Reflection::GenericValue CallFunction(const std::string& MemberName, con
 
 #include "Reflection.hpp"
 
-class GameObject;
-
-struct IProperty
-{
-	Reflection::ValueType Type{};
-
-	std::function<Reflection::GenericValue(GameObject*)> Get;
-	std::function<void(GameObject*, const Reflection::GenericValue&)> Set;
-};
-
-struct IFunction
-{
-	std::vector<Reflection::ValueType> Inputs;
-	std::vector<Reflection::ValueType> Outputs;
-
-	std::function<std::vector<Reflection::GenericValue>(GameObject*, const std::vector<Reflection::GenericValue>&)> Func;
-};
-
-typedef std::unordered_map<std::string, IProperty> PropertyMap;
-typedef std::unordered_map<std::string, IFunction> FunctionMap;
-
-struct Api
-{
-	PropertyMap Properties;
-	FunctionMap Functions;
-	std::vector<std::string> Lineage;
-};
-
-class GameObject
+class GameObject : public Reflection::Reflectable
 {
 public:
 	GameObject();
 	virtual ~GameObject();
 
 	GameObject(GameObject&) = delete;
-
-	PHX_GAMEOBJECT_API_REFLECTION;
 
 	static GameObject* FromGenericValue(const Reflection::GenericValue&);
 
@@ -178,6 +72,8 @@ public:
 
 	static nlohmann::json DumpApiToJson();
 
+	REFLECTION_DECLAREAPI;
+
 protected:
 	std::vector<uint32_t> m_Children;
 
@@ -191,7 +87,7 @@ protected:
 
 private:
 	static void s_DeclareReflections();
-	static inline Api s_Api{};
+	static inline Reflection::Api s_Api{};
 };
 
 template<typename T> GameObject* constructGameObjectHeir()

@@ -27,18 +27,17 @@ void Object_Sound::s_DeclareReflections()
 	if (SDL_Init(SDL_INIT_AUDIO) < 0)
 		throw("Unabled to init SDL Audio subsystem: " + std::string(SDL_GetError()));
 
-	REFLECTION_INHERITAPI(GameObject);
 	REFLECTION_INHERITAPI(Attachment);
 
 	REFLECTION_DECLAREPROP(
 		"SoundFile",
 		String,
-		[](GameObject* p)
+		[](Reflection::Reflectable* p)
 		-> Reflection::GenericValue
 		{
 			return dynamic_cast<Object_Sound*>(p)->SoundFile;
 		},
-		[](GameObject* p, const Reflection::GenericValue& gv)
+		[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)
 		{
 			Object_Sound* sound = dynamic_cast<Object_Sound*>(p);
 			std::string newFile = gv.AsString();
@@ -118,4 +117,5 @@ Object_Sound::Object_Sound()
 	this->ClassName = "Sound";
 
 	s_DeclareReflections();
+	ApiPointer = &s_Api;
 }

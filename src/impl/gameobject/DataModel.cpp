@@ -8,7 +8,7 @@ PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(DataModel);
 
 static bool s_DidInitReflection = false;
 
-static void closeDataModel(GameObject* g)
+static void closeDataModel(Reflection::Reflectable* g)
 {
 	dynamic_cast<Object_DataModel*>(g)->WantExit = true;
 }
@@ -30,6 +30,7 @@ Object_DataModel::Object_DataModel()
 	this->ClassName = "DataModel";
 
 	s_DeclareReflections();
+	ApiPointer = &s_Api;
 }
 
 Object_DataModel::~Object_DataModel()

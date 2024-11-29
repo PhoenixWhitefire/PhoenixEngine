@@ -579,7 +579,7 @@ void Editor::RenderUI()
 			for (auto& propListItem : props)
 			{
 				const char* propName = propListItem.first.c_str();
-				const IProperty& prop = propListItem.second;
+				const Reflection::Property& prop = propListItem.second;
 
 				Reflection::GenericValue curVal = selected->GetPropertyValue(propName);
 

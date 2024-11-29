@@ -1,8 +1,9 @@
 {
-  "albedo": "textures/white.png",
+  "BilinearFiltering": true,
+  "ColorMap": "textures/white.png",
+  "HasTranslucency": false,
+  "Uniforms": {},
   "roughnessFactor": 0.5,
   "specExponent": 16.0,
-  "specMultiply": 0.0,
-  "translucency": false,
-  "uniforms": {}
+  "specMultiply": 0.0
 }

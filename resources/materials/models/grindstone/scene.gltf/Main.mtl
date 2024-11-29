@@ -1,9 +1,11 @@
 {
-  "albedo": "models/grindstone/textures/Main_baseColor.jpeg",
+  "BilinearFiltering": true,
+  "ColorMap": "models/grindstone/textures/Main_baseColor.jpeg",
+  "HasTranslucency": false,
+  "MetallicRoughnessMap": "models/grindstone/textures/Main_metallicRoughness.png",
+  "NormalMap": "models/grindstone/textures/Main_normal.png",
+  "Uniforms": {},
   "roughnessFactor": 1.0,
   "specExponent": 16.0,
-  "specMultiply": 1.0,
-  "specular": "models/grindstone/textures/Main_metallicRoughness.png",
-  "translucency": false,
-  "uniforms": {}
+  "specMultiply": 1.0
 }

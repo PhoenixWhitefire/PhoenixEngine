@@ -1,14 +1,4 @@
-﻿/*
-	
-	11/09/2024:
-	This is a mess. If you see any references to `Reflection::Reflectable`,
-	`Reflection::IProperty` or `Reflection::IFunction`, just translate them
-	in your head to `GameObject`, `IProperty` and `IFunction`. They are different,
-	and I have taken the approach of trying to reduce any pre-emptive abstractions
-
-*/
-
-#include <glm/gtc/matrix_transform.hpp>
+﻿#include <glm/gtc/matrix_transform.hpp>
 #include <luau/VM/include/lualib.h>
 
 #include "gameobject/Script.hpp"
@@ -693,11 +683,11 @@ void Object_Script::s_DeclareReflections()
 	REFLECTION_DECLAREPROP(
 		"SourceFile",
 		String,
-		[](GameObject* p)
+		[](Reflection::Reflectable* p)
 		{
 			return Reflection::GenericValue(dynamic_cast<Object_Script*>(p)->SourceFile);
 		},
-		[](GameObject* p, Reflection::GenericValue newval)
+		[](Reflection::Reflectable* p, Reflection::GenericValue newval)
 		{
 			Object_Script* scr = dynamic_cast<Object_Script*>(p);
 			scr->LoadScript(newval.AsString());
@@ -709,7 +699,7 @@ void Object_Script::s_DeclareReflections()
 		"Reload",
 		{},
 		{ Reflection::ValueType::Bool },
-		[](GameObject* p, const Reflection::GenericValue&)
+		[](Reflection::Reflectable* p, const Reflection::GenericValue&)
 		-> std::vector<Reflection::GenericValue>
 		{
 			Object_Script* scr = dynamic_cast<Object_Script*>(p);
@@ -732,6 +722,7 @@ Object_Script::Object_Script()
 	m_L = nullptr;
 
 	s_DeclareReflections();
+	ApiPointer = &s_Api;
 }
 
 void Object_Script::Initialize()

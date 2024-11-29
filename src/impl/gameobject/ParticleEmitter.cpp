@@ -21,7 +21,6 @@ void Object_ParticleEmitter::s_DeclareReflections()
 		return;
 	s_DidInitReflection = true;
 
-	REFLECTION_INHERITAPI(GameObject);
 	REFLECTION_INHERITAPI(Attachment);
 
 	REFLECTION_DECLAREPROP_SIMPLE(Object_ParticleEmitter, EmitterEnabled, Bool);
@@ -29,11 +28,11 @@ void Object_ParticleEmitter::s_DeclareReflections()
 	REFLECTION_DECLAREPROP(
 		"Rate",
 		Integer,
-		[](GameObject* g)
+		[](Reflection::Reflectable* g)
 		{
 			return dynamic_cast<Object_ParticleEmitter*>(g)->Rate;
 		},
-		[](GameObject* g, Reflection::GenericValue gv)
+		[](Reflection::Reflectable* g, Reflection::GenericValue gv)
 		{
 			int64_t newRate = gv.AsInteger();
 			if (newRate < 0 || newRate > UINT32_MAX)
@@ -47,11 +46,11 @@ void Object_ParticleEmitter::s_DeclareReflections()
 	REFLECTION_DECLAREPROP(
 		"MaxParticles",
 		Integer,
-		[](GameObject* g)
+		[](Reflection::Reflectable* g)
 		{
 			return dynamic_cast<Object_ParticleEmitter*>(g)->MaxParticles;
 		},
-		[](GameObject* g, Reflection::GenericValue gv)
+		[](Reflection::Reflectable* g, Reflection::GenericValue gv)
 		{
 			int64_t newMax = gv.AsInteger();
 			if (newMax < 0 || newMax > UINT32_MAX)
@@ -64,12 +63,12 @@ void Object_ParticleEmitter::s_DeclareReflections()
 	REFLECTION_DECLAREPROP(
 		"Lifetime",
 		Vector3,
-		[](GameObject* g)
+		[](Reflection::Reflectable* g)
 		{
 			Object_ParticleEmitter* p = dynamic_cast<Object_ParticleEmitter*>(g);
 			return Vector3(p->Lifetime.X, p->Lifetime.Y, 0.f).ToGenericValue();
 		},
-		[](GameObject* g, Reflection::GenericValue gv)
+		[](Reflection::Reflectable* g, Reflection::GenericValue gv)
 		{
 			Vector3 newLifetime = gv;
 			dynamic_cast<Object_ParticleEmitter*>(g)->Lifetime = Vector2(
@@ -102,6 +101,7 @@ Object_ParticleEmitter::Object_ParticleEmitter()
 	this->SizeOverTime.InsertKey(ValueSequenceKeypoint<float>(1.f, 15.f));
 
 	s_DeclareReflections();
+	ApiPointer = &s_Api;
 }
 
 size_t Object_ParticleEmitter::m_GetUsableParticleIndex()
@@ -185,9 +185,6 @@ std::vector<RenderItem> Object_ParticleEmitter::GetRenderList()
 
 	std::vector<RenderItem> rlist;
 	rlist.reserve(m_Particles.size());
-
-	ShaderManager* shdManager = ShaderManager::Get();
-	ShaderProgram& particleShaders = shdManager->GetShaderResource(s_ParticleShaders);
 
 	if (QuadMeshId == 0)
 	{

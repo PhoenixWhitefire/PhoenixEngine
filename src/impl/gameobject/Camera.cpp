@@ -32,6 +32,7 @@ Object_Camera::Object_Camera()
 	this->Transform = glm::lookAt(glm::vec3(), glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f, 1.f, 0.f));
 
 	s_DeclareReflections();
+	ApiPointer = &s_Api;
 }
 
 void Object_Camera::Update(double)

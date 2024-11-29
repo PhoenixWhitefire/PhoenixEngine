@@ -16,11 +16,11 @@ void Object_Base3D::s_DeclareReflections()
 	REFLECTION_DECLAREPROP(
 		"Transform",
 		Matrix,
-		[](GameObject* p)
+		[](Reflection::Reflectable* p)
 		{
 			return Reflection::GenericValue(dynamic_cast<Object_Base3D*>(p)->Transform);
 		},
-		[](GameObject* p, const Reflection::GenericValue& gv)
+		[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)
 		{
 			dynamic_cast<Object_Base3D*>(p)->Transform = gv.AsMatrix();
 		}
@@ -31,14 +31,14 @@ void Object_Base3D::s_DeclareReflections()
 	REFLECTION_DECLAREPROP(
 		"Material",
 		String,
-		[](GameObject* g)
+		[](Reflection::Reflectable* g)
 		{
 			Object_Base3D* p = dynamic_cast<Object_Base3D*>(g);
 			MaterialManager* mtlManager = MaterialManager::Get();
 
 			return mtlManager->GetMaterialResource(p->MaterialId).Name;
 		},
-		[](GameObject* g, Reflection::GenericValue gv)
+		[](Reflection::Reflectable* g, Reflection::GenericValue gv)
 		{
 			Object_Base3D* p = dynamic_cast<Object_Base3D*>(g);
 			MaterialManager* mtlManager = MaterialManager::Get();
@@ -60,12 +60,12 @@ void Object_Base3D::s_DeclareReflections()
 	REFLECTION_DECLAREPROP(
 		"FaceCulling",
 		Integer,
-		[](GameObject* g)
+		[](Reflection::Reflectable* g)
 		{
 			Object_Base3D* p = dynamic_cast<Object_Base3D*>(g);
 			return (int)p->FaceCulling;
 		},
-		[](GameObject* g, Reflection::GenericValue gv)
+		[](Reflection::Reflectable* g, Reflection::GenericValue gv)
 		{
 			Object_Base3D* p = dynamic_cast<Object_Base3D*>(g);
 			p->FaceCulling = (FaceCullingMode)gv.AsInteger();
@@ -81,6 +81,7 @@ Object_Base3D::Object_Base3D()
 	this->MaterialId = MaterialManager::Get()->LoadMaterialFromPath("plastic");
 
 	s_DeclareReflections();
+	ApiPointer = &s_Api;
 }
 
 uint32_t Object_Base3D::GetRenderMeshId()

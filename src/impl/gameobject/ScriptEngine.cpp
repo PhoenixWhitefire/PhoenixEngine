@@ -198,7 +198,7 @@ static void luaTableToJson(lua_State* L, nlohmann::json& json)
 		}
 
 		if (lua_type(L, -2) == LUA_TNUMBER)
-			json[lua_tonumber(L, -2)] = v;
+			json[static_cast<size_t>(lua_tonumber(L, -2))] = v;
 		else
 			json[lua_tostring(L, -2)] = v;
 

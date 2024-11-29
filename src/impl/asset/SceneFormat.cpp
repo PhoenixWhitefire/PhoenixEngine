@@ -660,7 +660,7 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 	for (auto& prop : Object->GetProperties())
 	{
 		const std::string& propName = prop.first;
-		const IProperty& propInfo = prop.second;
+		const Reflection::Property& propInfo = prop.second;
 
 		if (!propInfo.Set && propName != "ObjectId" && propName != "Class")
 			continue;

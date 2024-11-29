@@ -37,12 +37,12 @@ public:
 	double Density = 1.f;
 	double Friction = 0.3f;
 
-	PHX_GAMEOBJECT_API_REFLECTION;
+	REFLECTION_DECLAREAPI;
 
 protected:
 	uint32_t m_RenderMeshId{};
 
 private:
 	static void s_DeclareReflections();
-	static inline Api s_Api{};
+	static inline Reflection::Api s_Api{};;
 };

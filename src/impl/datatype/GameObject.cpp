@@ -8,15 +8,17 @@ static bool s_DidInitReflection = false;
 GameObject* GameObject::s_DataModel = nullptr;
 std::unordered_map<uint32_t, GameObject*> GameObject::s_WorldArray = {};
 
-static void destroyObject(GameObject* obj)
+static void destroyObject(Reflection::Reflectable* obj)
 {
 	dynamic_cast<GameObject*>(obj)->Destroy();
 }
 
-static std::string getFullName(GameObject* object)
+static std::string getFullName(Reflection::Reflectable* r)
 {
+	GameObject* object = dynamic_cast<GameObject*>(r);
+
 	std::string fullName = object->Name;
-	auto curObject = object;
+	GameObject* curObject = object;
 
 	while (GameObject* parent = curObject->GetParent())
 	{
@@ -48,22 +50,22 @@ void GameObject::s_DeclareReflections()
 	REFLECTION_DECLAREPROP(
 		"Parent",
 		GameObject,
-		[](GameObject* p)
+		[](Reflection::Reflectable* p)
 		{
 			// This is OK even if `->GetParent()` returns `nullptr`,
 			// because `::ToGenericValue` accounts for when `this` is `nullptr`
 			// 06/10/2024
-			return p->GetParent()->ToGenericValue();
+			return dynamic_cast<GameObject*>(p)->GetParent()->ToGenericValue();
 			/*
 			Reflection::GenericValue gv = p->GetParent() ? p->GetParent()->ObjectId : PHX_GAMEOBJECT_NULL_ID;
 			gv.Type = Reflection::ValueType::GameObject;
 			return gv;
 			*/
 		},
-		[](GameObject* p, const Reflection::GenericValue& gv)
+		[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)
 		{
 			GameObject* newParent = GameObject::GetObjectById(static_cast<uint32_t>(gv.AsInteger()));
-			p->SetParent(newParent);
+			dynamic_cast<GameObject*>(p)->SetParent(newParent);
 		}
 	);
 	
@@ -72,10 +74,10 @@ void GameObject::s_DeclareReflections()
 		"GetFullName",
 		{},
 		{ Reflection::ValueType::String },
-		[](GameObject* object, const std::vector<Reflection::GenericValue>&)
+		[](Reflection::Reflectable* p, const std::vector<Reflection::GenericValue>&)
 		-> std::vector<Reflection::GenericValue>
 		{
-			return { getFullName(object) };
+			return { getFullName(p) };
 		}
 	);
 
@@ -83,11 +85,11 @@ void GameObject::s_DeclareReflections()
 		"IsA",
 		{ Reflection::ValueType::String },
 		{ Reflection::ValueType::Bool },
-		[](GameObject* object, const std::vector<Reflection::GenericValue>& gv)
+		[](Reflection::Reflectable* p, const std::vector<Reflection::GenericValue>& gv)
 		-> std::vector<Reflection::GenericValue>
 		{
 			std::string ancestor = gv[0].AsString();
-			return { object->IsA(ancestor) };
+			return { dynamic_cast<GameObject*>(p)->IsA(ancestor) };
 		}
 	);
 
@@ -96,7 +98,8 @@ void GameObject::s_DeclareReflections()
 
 GameObject::GameObject()
 {
-	GameObject::s_DeclareReflections();
+	s_DeclareReflections();
+	ApiPointer = &s_Api;
 }
 
 GameObject* GameObject::FromGenericValue(const Reflection::GenericValue& gv)

@@ -26,5 +26,7 @@ GL Debug callback:
 	Source: OpenGL
 	Error ID: 131218
 
+Dumping GameObject API...
+API dump finished
 Main loop exited
 Application shutting down...

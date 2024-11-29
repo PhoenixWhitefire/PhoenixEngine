@@ -70,7 +70,7 @@
     "GetFullName": "() -> (String,)",
     "IsA": "(String,) -> (Bool,)",
     "LightColor": "Color",
-    "Lineage": "Light -> GameObject",
+    "Lineage": "GameObject -> Attachment -> Light -> GameObject",
     "Name": "String",
     "ObjectId": "Integer",
     "Parent": "GameObject",
