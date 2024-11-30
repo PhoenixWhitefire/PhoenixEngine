@@ -1,5 +1,6 @@
 {
   "ColorMap": "models/crow/diffuse.png",
+  "EmissionMap": "models/crow/diffuse.png",
   "HasTranslucency": false,
   "Shader": "worldUber",
   "Uniforms": null,

@@ -1,3 +1,10 @@
 {
-  "albedo": "textures/materials/metal.png"
+  "ColorMap": "textures/materials/metal.png",
+  "HasTranslucency": false,
+  "Shader": "worldUberTriProjected",
+  "Uniforms": {
+    "MaterialProjectionFactor": 0.05000000074505806
+  },
+  "specExponent": 64.0,
+  "specMultiply": 0.8999999761581421
 }

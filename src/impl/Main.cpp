@@ -455,172 +455,176 @@ static void drawUI(Reflection::GenericValue Data)
 
 		//ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
 
-		ImGui::Begin("Level");
-
-		static std::string saveMessage;
-		static double saveMessageTimeLeft;
-
-		ImGui::InputText("Save target", LevelSavePathBuf, 64);
-
-		if (ImGui::Button("Save"))
+		if (ImGui::Begin("Level"))
 		{
-			GameObject* levelModel = EngineInstance->Workspace->GetChild("Level");
+			static std::string saveMessage;
+			static double saveMessageTimeLeft;
 
-			if (levelModel)
+			ImGui::InputText("Save target", LevelSavePathBuf, 64);
+
+			if (ImGui::Button("Save"))
 			{
-				std::string levelSavePath(LevelSavePathBuf);
+				GameObject* levelModel = EngineInstance->Workspace->GetChild("Level");
 
-				bool alreadyExists = false;
-				std::string prevFile = FileRW::ReadFile(levelSavePath, &alreadyExists);
-
-				if (alreadyExists && prevFile.find("#Version 2.00") == std::string::npos)
+				if (levelModel)
 				{
-					// V2 does not have full parity with V1 as of 02/09/2024
-					// (models)
-					saveMessage = "Not saving as that file already exists as a V1";
-					saveMessageTimeLeft = 1.5;
+					std::string levelSavePath(LevelSavePathBuf);
+
+					bool alreadyExists = false;
+					std::string prevFile = FileRW::ReadFile(levelSavePath, &alreadyExists);
+
+					if (alreadyExists && prevFile.find("#Version 2.00") == std::string::npos)
+					{
+						// V2 does not have full parity with V1 as of 02/09/2024
+						// (models)
+						saveMessage = "Not saving as that file already exists as a V1";
+						saveMessageTimeLeft = 1.5;
+					}
+					else
+					{
+						std::string serialized = SceneFormat::Serialize(levelModel->GetChildren(), levelSavePath);
+						FileRW::WriteFile(levelSavePath, serialized, true);
+
+						saveMessage = std::vformat("Saved as '{}'", std::make_format_args(levelSavePath));
+						saveMessageTimeLeft = 1.f;
+					}
 				}
 				else
 				{
-					std::string serialized = SceneFormat::Serialize(levelModel->GetChildren(), levelSavePath);
-					FileRW::WriteFile(levelSavePath, serialized, true);
-
-					saveMessage = std::vformat("Saved as '{}'", std::make_format_args(levelSavePath));
+					saveMessage = "Save failed as Workspace had no `Level` child";
 					saveMessageTimeLeft = 1.f;
 				}
 			}
-			else
+
+			if (saveMessageTimeLeft > 0.f)
 			{
-				saveMessage = "Save failed as Workspace had no `Level` child";
-				saveMessageTimeLeft = 1.f;
+				ImGui::Text(saveMessage.c_str());
+				saveMessageTimeLeft -= Data.AsDouble();
 			}
+
+			ImGui::InputText("Load target", LevelLoadPathBuf, 64);
+
+			if (ImGui::Button("Load"))
+				LoadLevel(LevelLoadPathBuf);
+
 		}
-
-		if (saveMessageTimeLeft > 0.f)
-		{
-			ImGui::Text(saveMessage.c_str());
-			saveMessageTimeLeft -= Data.AsDouble();
-		}
-
-		ImGui::InputText("Load target", LevelLoadPathBuf, 64);
-
-		if (ImGui::Button("Load"))
-			LoadLevel(LevelLoadPathBuf);
-
 		ImGui::End();
 
-		ImGui::Begin("Info");
-
-		ImGui::Text("FPS: %d", EngineInstance->FramesPerSecond);
-		ImGui::Text("Frame time: %dms", (int)ceil(EngineInstance->FrameTime * 1000));
-		ImGui::Text("Draw calls: %zi", EngineJsonConfig.value("renderer_drawcallcount", 0ull));
-
-		ImGui::Text("--- PROFILING ---");
-
+		// always pop the snapshot, otherwise they'll build-up
 		std::unordered_map<std::string, double> snapshot = Profiler::PopSnapshot();
-		nlohmann::json profilerTimingsTree{};
 
-		for (auto& it : snapshot)
+		if (ImGui::Begin("Info"))
 		{
-			nlohmann::json* last = &profilerTimingsTree;
+			ImGui::Text("FPS: %d", EngineInstance->FramesPerSecond);
+			ImGui::Text("Frame time: %dms", (int)ceil(EngineInstance->FrameTime * 1000));
+			ImGui::Text("Draw calls: %zi", EngineJsonConfig.value("renderer_drawcallcount", 0ull));
 
-			std::vector<std::string> split = stringSplit(it.first, "/");
+			ImGui::Text("--- PROFILING ---");
 
-			for (size_t catIndex = 0; catIndex < split.size(); catIndex++)
-				if (catIndex < split.size() - 1)
-				{
-					last = &((*last)[split[catIndex]]);
-					//(*last)["_t"] = it.second;
-				}
-				else
-					(*last)[split[catIndex]]["_t"] = it.second;
+			nlohmann::json profilerTimingsTree{};
+
+			for (auto& it : snapshot)
+			{
+				nlohmann::json* last = &profilerTimingsTree;
+
+				std::vector<std::string> split = stringSplit(it.first, "/");
+
+				for (size_t catIndex = 0; catIndex < split.size(); catIndex++)
+					if (catIndex < split.size() - 1)
+					{
+						last = &((*last)[split[catIndex]]);
+						//(*last)["_t"] = it.second;
+					}
+					else
+						(*last)[split[catIndex]]["_t"] = it.second;
+			}
+
+			ImGui::TreePush("Profiler Tree UI");
+
+			recurseProfilerUI(profilerTimingsTree);
+
+			ImGui::TreePop();
+
+			for (auto& it : Profiler::PopSnapshot())
+				ImGui::Text("%s: %f", it.first.c_str(), it.second);
+
 		}
-
-		ImGui::TreePush("Profiler Tree UI");
-
-		recurseProfilerUI(profilerTimingsTree);
-
-		ImGui::TreePop();
-
-		for (auto& it : Profiler::PopSnapshot())
-			ImGui::Text("%s: %f", it.first.c_str(), it.second);
-
 		ImGui::End();
 
-		ImGui::Begin("Settings");
-
-		ImGui::Checkbox("VSync", &EngineInstance->VSync);
-
-		bool wasFullscreen = EngineInstance->IsFullscreen;
-
-		ImGui::Checkbox("Fullscreen", &EngineInstance->IsFullscreen);
-
-		if (EngineInstance->IsFullscreen != wasFullscreen)
-			EngineInstance->SetIsFullscreen(EngineInstance->IsFullscreen);
-
-		if (EngineInstance->VSync)
-			SDL_GL_SetSwapInterval(1);
-		else
+		if (ImGui::Begin("Settings"))
 		{
-			SDL_GL_SetSwapInterval(0);
+			ImGui::Checkbox("VSync", &EngineInstance->VSync);
 
-			ImGui::InputInt("FPS max", &EngineInstance->FpsCap, 1, 30);
-		}
+			bool wasFullscreen = EngineInstance->IsFullscreen;
 
-		bool postFxEnabled = EngineJsonConfig.value("postfx_enabled", false);
+			ImGui::Checkbox("Fullscreen", &EngineInstance->IsFullscreen);
 
-		ImGui::Checkbox("Post-Processing", &postFxEnabled);
+			if (EngineInstance->IsFullscreen != wasFullscreen)
+				EngineInstance->SetIsFullscreen(EngineInstance->IsFullscreen);
 
-		EngineJsonConfig["postfx_enabled"] = postFxEnabled;
+				if (EngineInstance->VSync)
+					SDL_GL_SetSwapInterval(1);
+				else
+				{
+					SDL_GL_SetSwapInterval(0);
 
-		if (postFxEnabled)
-		{
-			float gammaCorrection = EngineJsonConfig.value("postfx_gamma", 1.f);
-			float trldmax = EngineJsonConfig.value("postfx_ldmax", 1.f);
-			float trcmax = EngineJsonConfig.value("postfx_cmax", 1.f);
+					ImGui::InputInt("FPS max", &EngineInstance->FpsCap, 1, 30);
+				}
 
-			ImGui::InputFloat("Gamma", &gammaCorrection);
-			ImGui::InputFloat("Tonemapper LdMax", &trldmax);
-			ImGui::InputFloat("Tonemapper CMax", &trcmax);
+			bool postFxEnabled = EngineJsonConfig.value("postfx_enabled", false);
 
-			EngineJsonConfig["postfx_gamma"] = gammaCorrection;
-			EngineJsonConfig["postfx_ldmax"] = trldmax;
-			EngineJsonConfig["postfx_cmax"] = trcmax;
+			ImGui::Checkbox("Post-Processing", &postFxEnabled);
 
-			bool blurVignette = EngineJsonConfig.value("postfx_blurvignette", false);
-			bool distortion = EngineJsonConfig.value("postfx_distortion", false);
+			EngineJsonConfig["postfx_enabled"] = postFxEnabled;
 
-			ImGui::Checkbox("Blur vignette", &blurVignette);
-			ImGui::Checkbox("Distortion", &distortion);
-
-			EngineJsonConfig["postfx_blurvignette"] = blurVignette;
-			EngineJsonConfig["postfx_distortion"] = distortion;
-
-			if (EngineJsonConfig["postfx_blurvignette"])
+			if (postFxEnabled)
 			{
-				float distFactorMultiplier = EngineJsonConfig.value("postfx_blurvignette_blurstrength", 2.f);
-				float weightExponent = EngineJsonConfig.value("postfx_blurvignette_weightexp", 2.f);
-				float weightMultiplier = EngineJsonConfig.value("postfx_blurvignette_weightmul", 2.5f);
-				float sampleRadius = EngineJsonConfig.value("postfx_blurvignette_sampleradius", 4.f);
+				float gammaCorrection = EngineJsonConfig.value("postfx_gamma", 1.f);
+				float trldmax = EngineJsonConfig.value("postfx_ldmax", 1.f);
+				float trcmax = EngineJsonConfig.value("postfx_cmax", 1.f);
 
-				ImGui::InputFloat("Vignette dist weight factor", &distFactorMultiplier);
-				ImGui::InputFloat("Vignette weight exponent", &weightExponent);
-				ImGui::InputFloat("Vignette weight multiplier", &weightMultiplier);
-				ImGui::InputFloat("Vignette sample radius", &sampleRadius);
+				ImGui::InputFloat("Gamma", &gammaCorrection);
+				ImGui::InputFloat("Tonemapper LdMax", &trldmax);
+				ImGui::InputFloat("Tonemapper CMax", &trcmax);
 
-				EngineJsonConfig["postfx_blurvignette_blurstrength"] = distFactorMultiplier;
-				EngineJsonConfig["postfx_blurvignette_weightexp"] = weightExponent;
-				EngineJsonConfig["postfx_blurvignette_weightmul"] = weightMultiplier;
-				EngineJsonConfig["postfx_blurvignette_sampleradius"] = sampleRadius;
+				EngineJsonConfig["postfx_gamma"] = gammaCorrection;
+				EngineJsonConfig["postfx_ldmax"] = trldmax;
+				EngineJsonConfig["postfx_cmax"] = trcmax;
+
+				bool blurVignette = EngineJsonConfig.value("postfx_blurvignette", false);
+				bool distortion = EngineJsonConfig.value("postfx_distortion", false);
+
+				ImGui::Checkbox("Blur vignette", &blurVignette);
+				ImGui::Checkbox("Distortion", &distortion);
+
+				EngineJsonConfig["postfx_blurvignette"] = blurVignette;
+				EngineJsonConfig["postfx_distortion"] = distortion;
+
+				if (EngineJsonConfig["postfx_blurvignette"])
+				{
+					float distFactorMultiplier = EngineJsonConfig.value("postfx_blurvignette_blurstrength", 2.f);
+					float weightExponent = EngineJsonConfig.value("postfx_blurvignette_weightexp", 2.f);
+					float weightMultiplier = EngineJsonConfig.value("postfx_blurvignette_weightmul", 2.5f);
+					float sampleRadius = EngineJsonConfig.value("postfx_blurvignette_sampleradius", 4.f);
+
+					ImGui::InputFloat("Vignette dist weight factor", &distFactorMultiplier);
+					ImGui::InputFloat("Vignette weight exponent", &weightExponent);
+					ImGui::InputFloat("Vignette weight multiplier", &weightMultiplier);
+					ImGui::InputFloat("Vignette sample radius", &sampleRadius);
+
+					EngineJsonConfig["postfx_blurvignette_blurstrength"] = distFactorMultiplier;
+					EngineJsonConfig["postfx_blurvignette_weightexp"] = weightExponent;
+					EngineJsonConfig["postfx_blurvignette_weightmul"] = weightMultiplier;
+					EngineJsonConfig["postfx_blurvignette_sampleradius"] = sampleRadius;
+				}
+			}
+
+			if (ImGui::Button("Save Post FX settings"))
+			{
+				FileRW::WriteFile("phoenix.conf", EngineJsonConfig.dump(2), false);
+				Debug::Log("The JSON Config overwrote the pre-existing 'phoenix.conf'.");
 			}
 		}
-
-		if (ImGui::Button("Save Post FX settings"))
-		{
-			FileRW::WriteFile("phoenix.conf", EngineJsonConfig.dump(2), false);
-			Debug::Log("The JSON Config overwrote the pre-existing 'phoenix.conf'.");
-		}
-
 		ImGui::End();
 
 		EditorContext->RenderUI();

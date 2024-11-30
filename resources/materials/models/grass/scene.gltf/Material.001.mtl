@@ -1,10 +1,11 @@
 {
+  "BilinearFiltering": true,
   "ColorMap": "models/grass/diffuse.png",
   "HasTranslucency": false,
-  "Shader": "worldUber",
   "Uniforms": {
     "AlphaCutoff": 0.5
   },
-  "specExponent": 8.0,
-  "specMultiply": 0.5
+  "roughnessFactor": 0.5,
+  "specExponent": 16.0,
+  "specMultiply": 0.0
 }

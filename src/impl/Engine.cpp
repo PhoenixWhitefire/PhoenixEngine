@@ -360,8 +360,8 @@ void EngineObject::Start()
 	{
 		"right",
 		"left",
-		"bottom",
 		"top",
+		"bottom",
 		"front",
 		"back"
 	};
@@ -614,9 +614,10 @@ void EngineObject::Start()
 		// ...
 		// ...
 		// ...
-		// Wow Mr Victor Gordan sir, that sounds incredibly overcomplicated.
+		// Wow Mr Victor Gordan sir, that sounds really complicated.
 		// It's really too bad there isn't a way simpler, 300x more understandable way
-		// of zeroing-out the first 3 values of the last column of what is in essence a 4x4 2D array of floats...
+		// of zeroing-out the first 3 values of the last column of what is literally 4 `vec4`s that represent
+		// a 4x4 matrix...
 		view[3] = glm::vec4(0.f, 0.f, 0.f, 1.f);
 
 		skyboxShaders.SetUniform("RenderMatrix", projection * view);

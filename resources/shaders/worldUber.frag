@@ -81,7 +81,8 @@ uniform float AlphaCutoff = 0.5f;
 
 uniform bool DebugOverdraw = false;
 
-in vec3 Frag_CurrentPosition;
+in vec3 Frag_ModelPosition;
+in vec3 Frag_WorldPosition;
 in vec3 Frag_VertexNormal;
 in vec3 Frag_ColorTint;
 in vec2 Frag_UV;
@@ -160,7 +161,7 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 	}
 	else if (LightType == 1)
 	{
-		vec3 LightToPosition = LightPosition - Frag_CurrentPosition;
+		vec3 LightToPosition = LightPosition - Frag_WorldPosition;
 		vec3 Incoming = normalize(LightToPosition);
 
 		float Diffuse = max(dot(Normal, Incoming), 0.0f);
@@ -209,7 +210,7 @@ void main()
 
 	vec3 vertexNormal = Frag_VertexNormal;
 
-	vec3 ViewDirection = normalize(CameraPosition - Frag_CurrentPosition);
+	vec3 ViewDirection = normalize(CameraPosition - Frag_WorldPosition);
 
 	vec4 Albedo = vec4(0.f, 0.f, 0.f, 1.f); //textureLod(ColorMap, UV, mipLevel);
 	float SpecMapValue = 1.f;
@@ -226,25 +227,23 @@ void main()
 	{
 		vec3 blending = getTriPlanarBlending(Frag_VertexNormal);
 
-		vec4 localPosition = vec4(Frag_CurrentPosition, 1.f) * transpose(inverse(Frag_Transform));
-
-		vec4 xAxis = textureLod(ColorMap, localPosition.yz * MaterialProjectionFactor, mipLevel);
-		vec4 yAxis = textureLod(ColorMap, localPosition.xz * MaterialProjectionFactor, mipLevel);
-		vec4 zAxis = textureLod(ColorMap, localPosition.xy * MaterialProjectionFactor, mipLevel);
+		vec4 xAxis = textureLod(ColorMap, Frag_ModelPosition.yz * MaterialProjectionFactor, mipLevel);
+		vec4 yAxis = textureLod(ColorMap, Frag_ModelPosition.xz * MaterialProjectionFactor, mipLevel);
+		vec4 zAxis = textureLod(ColorMap, Frag_ModelPosition.xy * MaterialProjectionFactor, mipLevel);
 
 		Albedo = xAxis * blending.x + yAxis * blending.y + zAxis * blending.z;
 
-		float specXAxis = textureLod(MetallicRoughnessMap, localPosition.yz * MaterialProjectionFactor, mipLevel).r;
-		float specYAxis = textureLod(MetallicRoughnessMap, localPosition.xz * MaterialProjectionFactor, mipLevel).r;
-		float specZAxis = textureLod(MetallicRoughnessMap, localPosition.xy * MaterialProjectionFactor, mipLevel).r;
+		float specXAxis = textureLod(MetallicRoughnessMap, Frag_ModelPosition.yz * MaterialProjectionFactor, mipLevel).r;
+		float specYAxis = textureLod(MetallicRoughnessMap, Frag_ModelPosition.xz * MaterialProjectionFactor, mipLevel).r;
+		float specZAxis = textureLod(MetallicRoughnessMap, Frag_ModelPosition.xy * MaterialProjectionFactor, mipLevel).r;
 
 		SpecMapValue = specXAxis * blending.x + specYAxis * blending.y + specZAxis * blending.z;
 
 		if (HasNormalMap)
 		{
-			vec3 normXAxis = textureLod(NormalMap, localPosition.yz * MaterialProjectionFactor, mipLevel).rgb;
-			vec3 normYAxis = textureLod(NormalMap, localPosition.xz * MaterialProjectionFactor, mipLevel).rgb;
-			vec3 normZAxis = textureLod(NormalMap, localPosition.xy * MaterialProjectionFactor, mipLevel).rgb;
+			vec3 normXAxis = textureLod(NormalMap, Frag_ModelPosition.yz * MaterialProjectionFactor, mipLevel).rgb;
+			vec3 normYAxis = textureLod(NormalMap, Frag_ModelPosition.xz * MaterialProjectionFactor, mipLevel).rgb;
+			vec3 normZAxis = textureLod(NormalMap, Frag_ModelPosition.xy * MaterialProjectionFactor, mipLevel).rgb;
 
 			vec3 normSample = normXAxis * blending.x + normYAxis * blending.y + normZAxis * blending.z;
 			vertexNormal += (normSample - vec3(0.f, 0.f, 1.f)) * 2.f - 1.f;

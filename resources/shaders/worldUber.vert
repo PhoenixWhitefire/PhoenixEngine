@@ -20,7 +20,8 @@ uniform bool IsInstanced;
 
 uniform float Time;
 
-out vec3 Frag_CurrentPosition;
+out vec3 Frag_ModelPosition;
+out vec3 Frag_WorldPosition;
 out vec3 Frag_VertexNormal;
 out vec3 Frag_ColorTint;
 out vec2 Frag_UV;
@@ -38,17 +39,13 @@ void main()
 		sca = InstanceScale;
 		col = InstanceColor * VertexColor;
 	}
-	
-	Frag_CurrentPosition = vec3(trans * vec4(VertexPosition * sca, 1.0f));
+
+	Frag_ModelPosition = VertexPosition * sca;
+	Frag_WorldPosition = vec3(trans * vec4(Frag_ModelPosition, 1.0f));
 	Frag_VertexNormal = VertexNormal;
 	Frag_ColorTint = col;
-	// the UVs need to be flipped 90 degrees because of some
-	// undefined-behavior with how Mr Victor Gordan's excellent Model Importing
-	// code groups floats that I've had to ratify cause I couldn't give less of a
-	// damn
-	// 10/11/2024
-	Frag_UV = mat2(0.0, -1.0, 1.0, 0.0) * TexUV;
+	Frag_UV = TexUV;
 	Frag_Transform = trans;
 	
-	gl_Position = RenderMatrix * vec4(Frag_CurrentPosition, 1.f);
+	gl_Position = RenderMatrix * vec4(Frag_WorldPosition, 1.f);
 }

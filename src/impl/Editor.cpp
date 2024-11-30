@@ -19,8 +19,6 @@ constexpr const char* MATERIAL_NEW_NAME_DEFAULT = "newmaterial";
 
 static const char* ParentString = "[Parent]";
 
-static std::string ErrorTexture = "textures/missing.png";
-
 static bool ScriptEditorEnabled = false;
 static uint32_t ScriptEditorFocus = PHX_GAMEOBJECT_NULL_ID;
 
@@ -101,7 +99,13 @@ static void renderScriptEditor()
 		return;
 	}
 
-	ImGui::Begin("Script Editor");
+	if (!ImGui::Begin("Script Editor"))
+	{
+		ImGui::End();
+		ScriptEditorEnabled = false;
+
+		return;
+	}
 
 	ImGui::Text("%s", targetScript->Name.c_str());
 
@@ -167,10 +171,7 @@ static void mtlEditorTexture(uint32_t TextureId)
 	ImGui::Image(
 		tx.GpuId,
 		// Scale to 256 pixels wide, while maintaining aspect ratio
-		ImVec2(256.f, tx.Height * (256.f / tx.Width)),
-		// Flip the Y axis. Either OpenGL or Dear ImGui is bottom-up
-		ImVec2(0, 1),
-		ImVec2(1, 0)
+		ImVec2(256.f, tx.Height * (256.f / tx.Width))
 	);
 
 	ImGui::Text(std::vformat(
@@ -191,7 +192,11 @@ static void mtlEditorTexture(uint32_t TextureId)
 // and it's just him screaming into the mic
 void Editor::m_RenderMaterialEditor()
 {
-	ImGui::Begin("Materials");
+	if (!ImGui::Begin("Materials"))
+	{
+		ImGui::End();
+		return;
+	}
 
 	ImGui::InputText("New material", m_MtlCreateNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
 
@@ -535,7 +540,11 @@ void Editor::RenderUI()
 	renderScriptEditor();
 	m_RenderMaterialEditor();
 
-	ImGui::Begin("Editor");
+	if (!ImGui::Begin("Editor"))
+	{
+		ImGui::End();
+		return;
+	}
 
 	ImGui::InputText("New object", m_NewObjectClass, 32);
 	bool createObject = ImGui::Button("Create");

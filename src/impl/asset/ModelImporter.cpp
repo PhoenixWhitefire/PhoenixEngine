@@ -782,8 +782,8 @@ std::vector<glm::vec2> ModelLoader::m_GroupFloatsVec2(const std::vector<float>& 
 
 	for (int i = 0; i < floatVec.size(); i += 2)
 		vectors.emplace_back(
-			floatVec[i+1ull],
-			floatVec[i+0ull]
+			floatVec[i+0ull],
+			floatVec[i+1ull]
 		);
 
 	return vectors;

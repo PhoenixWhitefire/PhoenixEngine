@@ -6,7 +6,7 @@
 #include "FileRW.hpp"
 #include "Debug.hpp"
 
-static const std::string MissingTexPath = "textures/missing.png";
+static const std::string MissingTexPath = "!Missing";
 
 void RenderMaterial::Reload()
 {
