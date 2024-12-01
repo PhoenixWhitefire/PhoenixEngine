@@ -12,5 +12,5 @@ out vec2 FragIn_UV;
 void main()
 {
 	gl_Position = vec4(VertexPosition.x * Scale.x, VertexPosition.y * Scale.y, 0.f, 1.0f);
-	FragIn_UV = TexUV;
+	FragIn_UV = vec2(TexUV.x, 1.f - TexUV.y);
 }

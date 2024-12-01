@@ -83,10 +83,10 @@ Mesh PrimitiveMeshes::Quad()
 
 	std::vector<Vertex> vertices =
 	{
-		Vertex{ glm::vec3(  .5f, -.5f,  0.f ), -Vector3::zAxis, white, glm::vec2(1.f, 0.f) },
-		Vertex{ glm::vec3( -.5f, -.5f,  0.f ), -Vector3::zAxis, white, glm::vec2(0.f, 0.f) },
-		Vertex{ glm::vec3( -.5f,  .5f,  0.f ), -Vector3::zAxis, white, glm::vec2(0.f, 1.f) },
-		Vertex{ glm::vec3(  .5f,  .5f,  0.f ), -Vector3::zAxis, white, glm::vec2(1.f, 1.f) }
+		Vertex{ glm::vec3(  .5f, -.5f,  0.f ), -Vector3::zAxis, white, glm::vec2(1.f, 1.f) },
+		Vertex{ glm::vec3( -.5f, -.5f,  0.f ), -Vector3::zAxis, white, glm::vec2(0.f, 1.f) },
+		Vertex{ glm::vec3( -.5f,  .5f,  0.f ), -Vector3::zAxis, white, glm::vec2(0.f, 0.f) },
+		Vertex{ glm::vec3(  .5f,  .5f,  0.f ), -Vector3::zAxis, white, glm::vec2(1.f, 0.f) }
 	};
 
 	std::vector<uint32_t> indices =
