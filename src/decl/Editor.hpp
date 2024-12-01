@@ -15,6 +15,8 @@ private:
 	double m_InvalidObjectErrTimeRemaining{};
 
 	char* m_MtlCreateNameBuf{};
+	char* m_MtlLoadNameBuf{};
+	char* m_MtlSaveNameBuf{};
 	char* m_MtlDiffuseBuf{};
 	char* m_MtlSpecBuf{};
 	char* m_MtlNormalBuf{};

@@ -226,24 +226,27 @@ void main()
 	else
 	{
 		vec3 blending = getTriPlanarBlending(Frag_VertexNormal);
-
-		vec4 xAxis = textureLod(ColorMap, Frag_ModelPosition.yz * MaterialProjectionFactor, mipLevel);
-		vec4 yAxis = textureLod(ColorMap, Frag_ModelPosition.xz * MaterialProjectionFactor, mipLevel);
-		vec4 zAxis = textureLod(ColorMap, Frag_ModelPosition.xy * MaterialProjectionFactor, mipLevel);
+		vec2 uvXAxis = Frag_ModelPosition.zy * vec2(1.f, -1.f) * MaterialProjectionFactor;
+		vec2 uvYAxis = Frag_ModelPosition.xz * vec2(-1.f, 1.f) * MaterialProjectionFactor;
+		vec2 uvZAxis = -Frag_ModelPosition.xy * MaterialProjectionFactor;
+		
+		vec4 xAxis = textureLod(ColorMap, uvXAxis, mipLevel);
+		vec4 yAxis = textureLod(ColorMap, uvYAxis, mipLevel);
+		vec4 zAxis = textureLod(ColorMap, uvZAxis, mipLevel);
 
 		Albedo = xAxis * blending.x + yAxis * blending.y + zAxis * blending.z;
 
-		float specXAxis = textureLod(MetallicRoughnessMap, Frag_ModelPosition.yz * MaterialProjectionFactor, mipLevel).r;
-		float specYAxis = textureLod(MetallicRoughnessMap, Frag_ModelPosition.xz * MaterialProjectionFactor, mipLevel).r;
-		float specZAxis = textureLod(MetallicRoughnessMap, Frag_ModelPosition.xy * MaterialProjectionFactor, mipLevel).r;
+		float specXAxis = textureLod(MetallicRoughnessMap, uvXAxis, mipLevel).r;
+		float specYAxis = textureLod(MetallicRoughnessMap, uvYAxis, mipLevel).r;
+		float specZAxis = textureLod(MetallicRoughnessMap, uvZAxis, mipLevel).r;
 
 		SpecMapValue = specXAxis * blending.x + specYAxis * blending.y + specZAxis * blending.z;
 
 		if (HasNormalMap)
 		{
-			vec3 normXAxis = textureLod(NormalMap, Frag_ModelPosition.yz * MaterialProjectionFactor, mipLevel).rgb;
-			vec3 normYAxis = textureLod(NormalMap, Frag_ModelPosition.xz * MaterialProjectionFactor, mipLevel).rgb;
-			vec3 normZAxis = textureLod(NormalMap, Frag_ModelPosition.xy * MaterialProjectionFactor, mipLevel).rgb;
+			vec3 normXAxis = textureLod(NormalMap, uvXAxis, mipLevel).rgb;
+			vec3 normYAxis = textureLod(NormalMap, uvYAxis, mipLevel).rgb;
+			vec3 normZAxis = textureLod(NormalMap, uvZAxis, mipLevel).rgb;
 
 			vec3 normSample = normXAxis * blending.x + normYAxis * blending.y + normZAxis * blending.z;
 			vertexNormal += (normSample - vec3(0.f, 0.f, 1.f)) * 2.f - 1.f;

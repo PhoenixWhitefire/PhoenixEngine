@@ -22,12 +22,19 @@ static const char* ParentString = "[Parent]";
 static bool ScriptEditorEnabled = false;
 static uint32_t ScriptEditorFocus = PHX_GAMEOBJECT_NULL_ID;
 
-static nlohmann::json DefaultNewMaterial{};
+static nlohmann::json DefaultNewMaterial = 
+{
+	{ "ColorMap", "textures/materials/plastic.png" },
+	{ "specExponent", 32.f },
+	{ "specMultiply", 0.5f }
+};
 
 Editor::Editor()
 {
 	m_NewObjectClass = BufferInitialize(OBJECT_NEW_CLASSNAME_BUFSIZE);
 	m_MtlCreateNameBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE, MATERIAL_NEW_NAME_DEFAULT);
+	m_MtlLoadNameBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE, MATERIAL_NEW_NAME_DEFAULT);
+	m_MtlSaveNameBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE, MATERIAL_NEW_NAME_DEFAULT);
 	m_MtlDiffuseBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
 	m_MtlSpecBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
 	m_MtlNormalBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
@@ -35,8 +42,6 @@ Editor::Editor()
 	m_MtlShpBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
 	m_MtlNewUniformNameBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE);
 	m_MtlUniformNameEditBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE);
-
-	DefaultNewMaterial["albedo"] = "textures/plastic.png";
 }
 
 void Editor::Update(double DeltaTime)
@@ -198,10 +203,17 @@ void Editor::m_RenderMaterialEditor()
 		return;
 	}
 
-	ImGui::InputText("New material", m_MtlCreateNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
-
 	MaterialManager* mtlManager = MaterialManager::Get();
 	TextureManager* texManager = TextureManager::Get();
+
+	ImGui::InputText("Load material", m_MtlLoadNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
+	ImGui::SetItemTooltip("The name of the material to load in, NOT the file path");
+
+	if (ImGui::Button("Load"))
+		mtlManager->LoadMaterialFromPath(m_MtlLoadNameBuf);
+
+	ImGui::InputText("New blank material", m_MtlCreateNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
+	ImGui::SetItemTooltip("The name of the new blank material");
 
 	if (ImGui::Button("Create"))
 	{
@@ -216,12 +228,13 @@ void Editor::m_RenderMaterialEditor()
 	std::vector<RenderMaterial>& loadedMaterials = mtlManager->GetLoadedMaterials();
 
 	ImGui::ListBox(
-		"Active materials",
+		"Loaded materials",
 		&m_MtlCurItem,
 		&mtlIterator,
 		nullptr,
 		static_cast<int>(loadedMaterials.size())
 	);
+	ImGui::SetItemTooltip("Use the 'Load' button to load a material if it isn't already loaded");
 
 	if (m_MtlCurItem == -1)
 	{
@@ -242,6 +255,7 @@ void Editor::m_RenderMaterialEditor()
 	if (m_MtlCurItem != m_MtlPrevItem)
 	{
 		CopyStringToBuffer(m_MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE, curItem.GetShader().Name);
+		CopyStringToBuffer(m_MtlSaveNameBuf, MATERIAL_TEXTUREPATH_BUFSIZE, curItem.Name);
 
 		CopyStringToBuffer(m_MtlDiffuseBuf, MATERIAL_TEXTUREPATH_BUFSIZE, colorMap.ImagePath);
 		CopyStringToBuffer(m_MtlSpecBuf, MATERIAL_TEXTUREPATH_BUFSIZE, metallicRoughnessMap.ImagePath);
@@ -260,7 +274,7 @@ void Editor::m_RenderMaterialEditor()
 
 	bool hadSpecularTexture = curItem.MetallicRoughnessMap != 0;
 	bool metallicRoughnessEnabled = hadSpecularTexture;
-	ImGui::Checkbox("Has MR Map", &metallicRoughnessEnabled);
+	ImGui::Checkbox("Has Metallic-Roughness Map", &metallicRoughnessEnabled);
 
 	if (metallicRoughnessEnabled)
 	{
@@ -308,12 +322,12 @@ void Editor::m_RenderMaterialEditor()
 	else
 		curItem.EmissionMap = 0;
 
-	ImGui::Text("Uniforms");
+	ImGui::Text("Shader Variable Overrides");
 
 	static int TypeId = 0;
 
-	ImGui::InputText("Uniform Name", m_MtlNewUniformNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
-	ImGui::InputInt("Uniform Type", &TypeId);
+	ImGui::InputText("Variable Name", m_MtlNewUniformNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
+	ImGui::InputInt("Variable Type", &TypeId);
 	ImGui::SetItemTooltip("0=Bool, 1=Int, 2=Float");
 
 	TypeId = std::clamp(TypeId, 0, 2);
@@ -414,7 +428,7 @@ void Editor::m_RenderMaterialEditor()
 		curItem.Uniforms[newName] = newValue;
 	}
 
-	if (ImGui::Button("Update"))
+	if (ImGui::Button("Load texture and shader"))
 	{
 		curItem.ColorMap = texManager->LoadTextureFromPath(m_MtlDiffuseBuf);
 
@@ -433,6 +447,9 @@ void Editor::m_RenderMaterialEditor()
 	ImGui::Checkbox("Has translucency", &curItem.HasTranslucency);
 	ImGui::InputFloat("Spec pow", &curItem.SpecExponent);
 	ImGui::InputFloat("Spec mul", &curItem.SpecMultiply);
+
+	ImGui::InputText("Save As", m_MtlSaveNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
+	ImGui::SetItemTooltip("By default, this will be the name of the material you are editing, thus overwriting it");
 
 	if (ImGui::Button("Save"))
 	{
@@ -480,10 +497,10 @@ void Editor::m_RenderMaterialEditor()
 			}
 		}
 
-		std::string filePath = "materials/" + curItem.Name + ".mtl";
+		std::string filePath = "materials/" + std::string(m_MtlSaveNameBuf) + ".mtl";
 
 		FileRW::WriteFile(
-			"materials/" + curItem.Name + ".mtl",
+			filePath,
 			newMtlConfig.dump(2),
 			true
 		);

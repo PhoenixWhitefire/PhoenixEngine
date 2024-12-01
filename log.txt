@@ -7,7 +7,7 @@ Renderer initialized
 Creating initial DataModel...
 Engine constructed
 Initializing Dear ImGui 1.91.6 WIP...
-Loading scene: 'levels/dev_fmtv2.world'
+Loading scene: 'levels/save.world'
 Scene version is 2
 Scene loaded
 Final initializations...
@@ -26,6 +26,5 @@ GL Debug callback:
 	Source: OpenGL
 	Error ID: 131218
 
-Failed to load texture 'textures/materials/plastic.pn': Unable to open file
 Main loop exited
 Application shutting down...
