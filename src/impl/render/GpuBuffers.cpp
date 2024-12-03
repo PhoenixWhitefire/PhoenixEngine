@@ -118,16 +118,18 @@ void GpuElementBuffer::Unbind()
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
-GpuFrameBuffer::GpuFrameBuffer(int Width, int Height, int MSSamples, bool AttachRenderBuffer)
+GpuFrameBuffer::GpuFrameBuffer(int TargetWidth, int TargetHeight, int MSSamples, bool AttachRenderBuffer)
 {
+	this->Width = TargetWidth, this->Height = TargetHeight;
+
 	glGenFramebuffers(1, &m_GpuId);
 	
 	GLenum binding = MSSamples > 0 ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D;
 
 	glActiveTexture(GL_TEXTURE0);
 
-	glGenTextures(1, &m_TextureId);
-	glBindTexture(binding, m_TextureId);
+	glGenTextures(1, &GpuTextureId);
+	glBindTexture(binding, GpuTextureId);
 	
 	if (MSSamples > 0)
 		glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, MSSamples, GL_RGB, Width, Height, GL_TRUE);
@@ -167,7 +169,7 @@ GpuFrameBuffer::GpuFrameBuffer(int Width, int Height, int MSSamples, bool Attach
 
 	if (AttachRenderBuffer)
 	{
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_TextureId, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, GpuTextureId, 0);
 
 		glGenRenderbuffers(1, &m_RenderBufferId);
 		glBindRenderbuffer(GL_RENDERBUFFER, m_RenderBufferId);
@@ -188,7 +190,7 @@ GpuFrameBuffer::GpuFrameBuffer(int Width, int Height, int MSSamples, bool Attach
 
 GpuFrameBuffer::~GpuFrameBuffer()
 {
-	glDeleteTextures(1, &m_TextureId);
+	glDeleteTextures(1, &GpuTextureId);
 	
 	if (m_RenderBufferId)
 		glDeleteRenderbuffers(1, &m_RenderBufferId);
@@ -196,7 +198,7 @@ GpuFrameBuffer::~GpuFrameBuffer()
 	glDeleteFramebuffers(1, &m_GpuId);
 }
 
-void GpuFrameBuffer::UpdateResolution(int Width, int Height)
+void GpuFrameBuffer::UpdateResolution(int NewWidth, int NewHeight)
 {
 	this->Bind();
 	this->BindTexture();
@@ -218,6 +220,8 @@ void GpuFrameBuffer::UpdateResolution(int Width, int Height)
 	//	glRenderbufferStorageMultisample(GL_RENDERBUFFER, m_MsaaSamples, GL_DEPTH32F_STENCIL8, m_Width, m_Height);
 	//else
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH32F_STENCIL8, Width, Height);
+
+	this->Width = NewWidth, this->Height = NewHeight;
 }
 
 void GpuFrameBuffer::Bind()
@@ -232,7 +236,7 @@ void GpuFrameBuffer::Unbind()
 
 void GpuFrameBuffer::BindTexture()
 {
-	glBindTexture(/*this->MSAASamples > 0 ? GL_TEXTURE_2D_MULTISAMPLE : */ GL_TEXTURE_2D, m_TextureId);
+	glBindTexture(/*this->MSAASamples > 0 ? GL_TEXTURE_2D_MULTISAMPLE : */ GL_TEXTURE_2D, GpuTextureId);
 }
 
 void GpuFrameBuffer::UnbindTexture()

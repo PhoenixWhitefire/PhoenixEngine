@@ -1,12 +1,14 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/euler_angles.hpp>
 #include <imgui/imgui.h>
+#include <glad/gl.h>
 #include <fstream>
 
 #include "Editor.hpp"
 #include "gameobject/GameObjects.hpp"
 #include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
+#include "asset/MeshProvider.hpp"
 #include "Utilities.hpp"
 #include "UserInput.hpp"
 #include "FileRW.hpp"
@@ -29,7 +31,42 @@ static nlohmann::json DefaultNewMaterial =
 	{ "specMultiply", 0.5f }
 };
 
-Editor::Editor()
+static GpuFrameBuffer* MtlEditorPreview{};
+static Scene MtlPreviewScene =
+{
+	// cube
+	{
+		RenderItem
+		{
+			0u,
+			glm::mat4(1.f),
+			glm::vec3(1.f, 1.f, 1.f),
+			0u,
+			Color(1.f, 1.f, 1.f),
+			0.f,
+			0.f,
+			FaceCullingMode::BackFace
+		}
+	},
+	// light source
+	{
+		{
+			LightType::Directional,
+			Vector3(0.57f, 0.57f, 0.57f) * 3.f,
+			Color(1.f, 1.f, 1.f)
+		}
+	},
+	{} // used shaders
+};
+static Renderer* MtlPreviewRenderer = nullptr;
+static Object_Camera* MtlPreviewCamera = nullptr;
+static glm::mat4 MtlPreviewCamOffset = glm::translate(glm::mat4(1.f), glm::vec3(0.f, 0.f, -2.f));
+static glm::mat4 MtlPreviewCamDefaultRotation = glm::eulerAngleYXZ(glm::radians(168.f), glm::radians(12.f), 0.f);
+
+static std::string ErrorTooltipMessage = "No Error Dummy";
+static double ErrorTooltipTimeRemaining = 0.f;
+
+Editor::Editor(Renderer* renderer)
 {
 	m_NewObjectClass = BufferInitialize(OBJECT_NEW_CLASSNAME_BUFSIZE);
 	m_MtlCreateNameBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE, MATERIAL_NEW_NAME_DEFAULT);
@@ -42,11 +79,17 @@ Editor::Editor()
 	m_MtlShpBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
 	m_MtlNewUniformNameBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE);
 	m_MtlUniformNameEditBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE);
+
+	MtlEditorPreview = new GpuFrameBuffer{ 256, 256 };
+	MtlPreviewRenderer = renderer;
+	MtlPreviewCamera = (Object_Camera*)GameObject::Create("Camera");
+	MtlPreviewCamera->Transform = MtlPreviewCamDefaultRotation * MtlPreviewCamOffset;
+	MtlPreviewCamera->FieldOfView = 50.f;
 }
 
 void Editor::Update(double DeltaTime)
 {
-	m_InvalidObjectErrTimeRemaining -= DeltaTime;
+	ErrorTooltipTimeRemaining -= DeltaTime;
 }
 
 static bool mtlIterator(void*, int index, const char** outText)
@@ -266,6 +309,59 @@ void Editor::m_RenderMaterialEditor()
 	}
 
 	m_MtlPrevItem = m_MtlCurItem;
+
+	ImGui::Image(
+		MtlEditorPreview->GpuTextureId,
+		ImVec2(256.f, 256.f),
+		ImVec2(0.f, 1.f),
+		ImVec2(1.f, 0.f)
+	);
+
+	static double PreviewRotStart = 0.f;
+
+	if (ImGui::IsItemHovered())
+	{
+		if (PreviewRotStart == 0.f)
+			PreviewRotStart = GetRunningTime();
+
+		glm::mat4 transform = MtlPreviewCamDefaultRotation * glm::rotate(
+			glm::mat4(1.f),
+			glm::radians(static_cast<float>((GetRunningTime() - PreviewRotStart) * 45.f)),
+			glm::vec3(0.f, 1.f, 0.f)
+		);
+		MtlPreviewCamera->Transform = transform * MtlPreviewCamOffset;
+	}
+	else
+	{
+		MtlPreviewCamera->Transform = MtlPreviewCamDefaultRotation * MtlPreviewCamOffset;
+		PreviewRotStart = 0.f;
+	}
+
+	GpuFrameBuffer* prevFbo = MtlPreviewRenderer->Framebuffer;
+	MtlPreviewRenderer->Framebuffer = MtlEditorPreview;
+
+	MtlEditorPreview->Bind();
+	glViewport(0, 0, 256, 256);
+	glClearColor(0.3f, 0.78f, 1.f, 1.f);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+
+	static uint32_t CubeMeshId = MeshProvider::Get()->LoadFromPath("!Cube");
+
+	MtlPreviewScene.RenderList[0].MaterialId = static_cast<uint32_t>(m_MtlCurItem);
+	MtlPreviewScene.RenderList[0].RenderMeshId = CubeMeshId;
+	MtlPreviewScene.UsedShaders = { curItem.ShaderId };
+
+	MtlPreviewRenderer->DrawScene(
+		MtlPreviewScene,
+		MtlPreviewCamera->GetMatrixForAspectRatio(1.f),
+		MtlPreviewCamera->Transform,
+		GetRunningTime()
+	);
+
+	MtlEditorPreview->Unbind();
+	MtlPreviewRenderer->Framebuffer = prevFbo;
+	MtlPreviewRenderer->Framebuffer->Bind();
+	glViewport(0, 0, prevFbo->Width, prevFbo->Height);
 
 	ImGui::InputText("Shader", m_MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
 
@@ -509,27 +605,41 @@ void Editor::m_RenderMaterialEditor()
 	ImGui::End();
 }
 
-static GameObject* recursiveIterateTree(GameObject* current)
+static GameObject* HierarchyTreeSelection = nullptr;
+
+static GameObject* recursiveIterateTree(GameObject* current, bool didVisitCurSelection = false)
 {
-	static GameObject* Selected = nullptr;
-	
-	if (Selected)
-		if (GameObject::s_WorldArray.find(Selected->ObjectId) == GameObject::s_WorldArray.end())
-			Selected = nullptr;
+	if (HierarchyTreeSelection)
+		if (GameObject::s_WorldArray.find(HierarchyTreeSelection->ObjectId) == GameObject::s_WorldArray.end())
+			HierarchyTreeSelection = nullptr;
 
 	// https://github.com/ocornut/imgui/issues/581#issuecomment-216054349
 	// 07/10/2024
 	GameObject* nodeClicked = nullptr;
 
+	if (current == HierarchyTreeSelection)
+		didVisitCurSelection = true;
+
 	for (GameObject* object : current->GetChildren())
 	{
+		if (object == nullptr)
+			throw("stoopid compiler is giving me a warning for something that will probably not happen");
+
 		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow;
 
-		if (Selected && object == Selected)
+		if (HierarchyTreeSelection && object == HierarchyTreeSelection)
 			flags |= ImGuiTreeNodeFlags_Selected;
 
 		if (object->GetChildren().empty())
 			flags |= ImGuiTreeNodeFlags_Leaf;
+
+		else if (object != HierarchyTreeSelection && !didVisitCurSelection)
+		{
+			std::vector<GameObject*> descs = object->GetDescendants();
+
+			if (std::find(descs.begin(), descs.end(), HierarchyTreeSelection) != descs.end())
+				flags |= ImGuiTreeNodeFlags_DefaultOpen;
+		}
 
 		bool open = ImGui::TreeNodeEx(&object->ObjectId, flags, object->Name.c_str());
 
@@ -538,19 +648,21 @@ static GameObject* recursiveIterateTree(GameObject* current)
 			
 		if (open)
 		{
-			recursiveIterateTree(object);
+			recursiveIterateTree(object, didVisitCurSelection);
 			ImGui::TreePop();
 		}
 	}
 
 	if (nodeClicked)
 		if (ImGui::GetIO().KeyCtrl)
-			Selected = nullptr;
+			HierarchyTreeSelection = nullptr;
 		else
-			Selected = nodeClicked;
+			HierarchyTreeSelection = nodeClicked;
 
-	return Selected;
+	return HierarchyTreeSelection;
 }
+
+static GameObject* ForceSelectObjectNextFrame = nullptr;
 
 void Editor::RenderUI()
 {
@@ -563,11 +675,23 @@ void Editor::RenderUI()
 		return;
 	}
 
+	if (ForceSelectObjectNextFrame)
+	{
+		// ensure we force Dear ImGui to lose focus of the GameObject input box that was
+		// CTRL+Clicked the previous frame so it's value doesn't carry over to the hyperlinked
+		// object
+
+		HierarchyTreeSelection = ForceSelectObjectNextFrame;
+		ForceSelectObjectNextFrame = nullptr;
+
+		ImGui::Text("Nothing this frame!");
+		ImGui::End();
+
+		return;
+	}
+
 	ImGui::InputText("New object", m_NewObjectClass, 32);
 	bool createObject = ImGui::Button("Create");
-
-	if (m_InvalidObjectErrTimeRemaining > 0.f)
-		ImGui::Text("Invalid GameObject!");
 
 	ImGui::TreePush("GameObject Hierarchy UI");
 
@@ -695,6 +819,11 @@ void Editor::RenderUI()
 					int32_t id = static_cast<int32_t>(curVal.AsInteger());
 
 					ImGui::InputInt(propName, &id);
+					ImGui::SetItemTooltip("CTRL+Click to select referenced GameObject 03/12/2024");
+
+					if (ImGui::IsItemClicked())
+						if (ImGui::GetIO().KeyCtrl)
+							ForceSelectObjectNextFrame = GameObject::FromGenericValue(curVal);
 
 					newVal = id;
 					newVal.Type = Reflection::ValueType::GameObject;
@@ -804,17 +933,26 @@ void Editor::RenderUI()
 
 				}
 
-				selected->SetPropertyValue(propName, newVal);
+				try
+				{
+					selected->SetPropertyValue(propName, newVal);
+				}
+				catch (std::string e)
+				{
+					ErrorTooltipMessage = e;
+					ErrorTooltipTimeRemaining = 5.f;
+				}
 			}
 		}
 	}
 
-	ImGui::End();
-
 	if (createObject)
 	{
 		if (!GameObject::IsValidObjectClass(m_NewObjectClass))
-			m_InvalidObjectErrTimeRemaining = 2.f;
+		{
+			ErrorTooltipTimeRemaining = 2.f;
+			ErrorTooltipMessage = "That wasn't a valid GameObject!";
+		}
 		else
 		{
 			GameObject* newObj = GameObject::Create(m_NewObjectClass);
@@ -822,4 +960,9 @@ void Editor::RenderUI()
 			newObj->SetParent(selected ? selected : GameObject::s_DataModel);
 		}
 	}
+
+	if (ErrorTooltipTimeRemaining > 0.f)
+		ImGui::SetTooltip(ErrorTooltipMessage.c_str());
+
+	ImGui::End();
 }

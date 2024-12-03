@@ -4,6 +4,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "render/ShaderManager.hpp"
+#include "asset/TextureManager.hpp"
 #include "datatype/Vector3.hpp"
 #include "datatype/Color.hpp"
 #include "FileRW.hpp"
@@ -315,21 +316,23 @@ void ShaderProgram::SetTextureUniform(const std::string& UniformName, uint32_t T
 
 	static TextureManager* texManager = TextureManager::Get();
 	static uint32_t WhiteTextureId = texManager->LoadTextureFromPath("textures/white.png");
-	static uint32_t WhiteTextureGpuId = texManager->GetTextureResource(WhiteTextureId).GpuId;
 
-	if (TextureId == UINT32_MAX)
-		TextureId = WhiteTextureGpuId;
+	if (TextureId == 0)
+		TextureId = WhiteTextureId;
 
-	glActiveTexture(GL_TEXTURE0 + TextureId);
+	uint32_t gpuId = texManager->GetTextureResource(TextureId).GpuId;
+	uint32_t slot = gpuId + 15; // the first 15 units are "reserved"
+
+	glActiveTexture(GL_TEXTURE0 + slot);
 	glBindTexture(
 		DimensionTypeToGLDimension.at(Type),
-		TextureId
+		gpuId
 	);
 
-	m_PendingUniforms[UniformName] = TextureId;
+	m_PendingUniforms[UniformName] = slot;
 }
 
-void ShaderProgram::m_PrintErrors(uint32_t Object, const char* Type) const
+void ShaderProgram::m_PrintErrors(uint32_t Object, const char* Type)
 {
 	char infoLog[1024];
 
@@ -347,7 +350,11 @@ void ShaderProgram::m_PrintErrors(uint32_t Object, const char* Type) const
 				std::make_format_args(Type, this->Name, infoLog)
 			);
 
-			throw(errorString);
+			Debug::Log(errorString);
+
+			ShaderManager* shdManager = ShaderManager::Get();
+
+			m_GpuId = shdManager->GetShaderResource(shdManager->LoadFromPath("error")).m_GpuId;
 		}
 	}
 	else
@@ -360,7 +367,11 @@ void ShaderProgram::m_PrintErrors(uint32_t Object, const char* Type) const
 		{
 			glGetProgramInfoLog(Object, 1024, NULL, infoLog);
 
-			throw(std::vformat("Error while linking shader program:\n{}", std::make_format_args(infoLog)));
+			Debug::Log(std::vformat("Error while linking shader program:\n{}", std::make_format_args(infoLog)));
+
+			ShaderManager* shdManager = ShaderManager::Get();
+
+			m_GpuId = shdManager->GetShaderResource(shdManager->LoadFromPath("error")).m_GpuId;
 		}
 	}
 }

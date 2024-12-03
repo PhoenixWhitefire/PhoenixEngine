@@ -27,7 +27,7 @@ void Object_Workspace::s_DeclareReflections()
 		GameObject,
 		[](Reflection::Reflectable* p)
 		{
-			Object_Workspace* workspace = dynamic_cast<Object_Workspace*>(p);
+			Object_Workspace* workspace = (Object_Workspace*)p;
 
 			if (workspace->GetSceneCamera() == s_FallbackCamera)
 				return ((GameObject*)nullptr)->ToGenericValue();
@@ -36,8 +36,8 @@ void Object_Workspace::s_DeclareReflections()
 		},
 		[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)
 		{
-			dynamic_cast<Object_Workspace*>(p)->SetSceneCamera(
-				dynamic_cast<Object_Camera*>(GameObject::FromGenericValue(gv))
+			((Object_Workspace*)p)->SetSceneCamera(
+				(Object_Camera*)GameObject::FromGenericValue(gv)
 			);
 		}
 	);

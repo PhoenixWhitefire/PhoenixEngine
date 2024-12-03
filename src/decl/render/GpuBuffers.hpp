@@ -78,9 +78,11 @@ public:
 
 	void UpdateResolution(int Width, int Height);
 
+	int Width = -1, Height = -1;
+	uint32_t GpuTextureId = UINT32_MAX;
+
 private:
 	uint32_t m_GpuId = UINT32_MAX;
 
 	uint32_t m_RenderBufferId = UINT32_MAX;
-	uint32_t m_TextureId = UINT32_MAX;
 };

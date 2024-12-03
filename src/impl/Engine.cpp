@@ -228,13 +228,11 @@ EngineObject::EngineObject()
 
 	Debug::Log("Creating initial DataModel...");
 
-	GameObject* newDataModel = GameObject::Create("DataModel");
-
-	this->DataModel = dynamic_cast<Object_DataModel*>(newDataModel);
-	GameObject::s_DataModel = newDataModel;
+	this->DataModel = (Object_DataModel*)GameObject::Create("DataModel");
+	GameObject::s_DataModel = this->DataModel;
 
 	GameObject* workspace = DataModel->GetChild("Workspace");
-	this->Workspace = dynamic_cast<Object_Workspace*>(workspace);
+	this->Workspace = (Object_Workspace*)workspace;
 
 	//ThreadManager::Get()->CreateWorkers(4, WorkerType::DefaultTaskWorker);
 
@@ -413,6 +411,9 @@ void EngineObject::Start()
 
 	SDL_Event pollingEvent;
 
+	const int32_t SunShadowMapResolutionSq = 512;
+	GpuFrameBuffer sunShadowMap{ SunShadowMapResolutionSq, SunShadowMapResolutionSq };
+
 	Debug::Log("Main engine loop start");
 
 	while (!this->Exit)
@@ -541,6 +542,8 @@ void EngineObject::Start()
 			}
 		}
 
+		RendererContext->Framebuffer->UpdateResolution(WindowSizeX, WindowSizeY);
+
 		Profiler::Stop();
 
 		DataModel->Update(deltaTime);
@@ -553,7 +556,6 @@ void EngineObject::Start()
 
 		float aspectRatio = (float)this->WindowSizeX / (float)this->WindowSizeY;
 
-		GameObject* workspace = dynamic_cast<GameObject*>(Workspace);
 		Object_Camera* sceneCamera = this->Workspace->GetSceneCamera();
 		
 		std::vector<Object_Base3D*> physicsList;
@@ -564,7 +566,7 @@ void EngineObject::Start()
 			scene.RenderList,
 			scene.LightingList,
 			physicsList,
-			workspace,
+			this->Workspace,
 			sceneCamera,
 			deltaTime
 		);
@@ -582,6 +584,31 @@ void EngineObject::Start()
 		if (hasPhysics)
 			Physics::Step(physicsList, deltaTime);
 		
+		glm::vec3 sunDirection{ .57f, .57f, .57f };
+
+		for (const LightItem& light : scene.LightingList)
+			if (light.Type == LightType::Directional)
+				sunDirection = light.Position;
+
+		//glm::vec3 sunCamPosition = glm::vec3(sceneCamera->Transform[3]) - sunDirection * 100.f;
+
+		/*
+		sunCamera->Transform = glm::translate(glm::lookAt(
+			sunDirection,
+			glm::vec3(0.f, 0.f, 0.f),
+			glm::vec3(0.f, 1.f, 0.f)
+		), glm::vec3(0.f, 0.f, -150.f));
+		
+		sunCamera->Transform[3] = glm::vec4(
+			glm::vec3(sunCamera->Transform[3] + sceneCamera->Transform[3]),
+			1.f
+		);
+		*/
+
+		glm::mat4 sunOrtho = glm::ortho(-35.0f, 35.0f, -35.0f, 35.0f, 0.1f, 75.0f);
+		glm::mat4 sunView = glm::lookAt(50.f * sunDirection, glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
+		glm::mat4 sunRenderMatrix = sunOrtho * sunView;
+
 		// we do this AFTER  `recursivelyTravelHierarchy` in case any Scripts
 		// update the camera transform
 		glm::mat4 renderMatrix = sceneCamera->GetMatrixForAspectRatio(aspectRatio);
@@ -592,8 +619,30 @@ void EngineObject::Start()
 
 		for (const RenderItem& ri : scene.RenderList)
 			scene.UsedShaders.insert(mtlManager->GetMaterialResource(ri.MaterialId).ShaderId);
+		
+		sunShadowMap.Bind();
+		glViewport(0, 0, SunShadowMapResolutionSq, SunShadowMapResolutionSq);
+		glClearColor(1.f, 1.f, 1.f, 1.f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glActiveTexture(GL_TEXTURE3);
+		for (uint32_t shdId : scene.UsedShaders)
+		{
+			ShaderProgram& shd = shdManager->GetShaderResource(shdId);
+			shd.SetUniform("IsShadowMap", true);
+
+			glActiveTexture(GL_TEXTURE0 + 101);
+			sunShadowMap.BindTexture();
+			shd.SetUniform("ShadowAtlas", 101);
+
+			shd.SetUniform("DirecLightProjection", sunRenderMatrix);
+		}
+
+		RendererContext->DrawScene(scene, sunRenderMatrix, glm::mat4(1.f), RunningTime);
+
+		for (uint32_t shdId : scene.UsedShaders)
+			shdManager->GetShaderResource(shdId).SetUniform("IsShadowMap", false);
+
+		glViewport(0, 0, WindowSizeX, WindowSizeY);
 
 		glDepthFunc(GL_LEQUAL);
 
@@ -622,11 +671,12 @@ void EngineObject::Start()
 
 		skyboxShaders.SetUniform("RenderMatrix", projection * view);
 
+		glActiveTexture(GL_TEXTURE3);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemap);
-		
+
 		RendererContext->Framebuffer->Bind();
 
-		glClearColor(0.086f, 0.105f, 0.21f, 1.0f);
+		glClearColor(0.086f, 0.105f, 0.21f, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
 		MeshProvider* mp = MeshProvider::Get();

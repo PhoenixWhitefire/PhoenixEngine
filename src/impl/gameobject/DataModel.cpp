@@ -40,6 +40,6 @@ Object_DataModel::~Object_DataModel()
 
 void Object_DataModel::Initialize()
 {
-	auto workspace = GameObject::Create("Workspace");
+	GameObject* workspace = GameObject::Create("Workspace");
 	workspace->SetParent(this);
 }

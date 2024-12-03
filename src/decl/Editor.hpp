@@ -1,9 +1,13 @@
 #pragma once
 
+#include <SDL2/SDL_video.h>
+
+#include "render/Renderer.hpp"
+
 class Editor
 {
 public:
-	Editor();
+	Editor(Renderer*);
 
 	void Update(double DeltaTime);
 	void RenderUI();
@@ -12,7 +16,6 @@ private:
 	void m_RenderMaterialEditor();
 
 	char* m_NewObjectClass{};
-	double m_InvalidObjectErrTimeRemaining{};
 
 	char* m_MtlCreateNameBuf{};
 	char* m_MtlLoadNameBuf{};

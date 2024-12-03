@@ -55,8 +55,10 @@ uniform sampler2D ColorMap;
 uniform sampler2D MetallicRoughnessMap;
 uniform bool HasNormalMap;
 uniform sampler2D NormalMap;
+uniform bool HasEmissionMap;
+uniform sampler2D EmissionMap;
 
-uniform vec3 LightAmbient = vec3(.2f,.2f,.2f);
+uniform vec3 LightAmbient = vec3(0.3f);
 uniform float SpecularMultiplier = 0.5f;
 uniform float SpecularPower = 16.0f;
 
@@ -79,7 +81,9 @@ uniform float MaterialProjectionFactor = 0.05f;
 
 uniform float AlphaCutoff = 0.5f;
 
+uniform bool IsShadowMap = false;
 uniform bool DebugOverdraw = false;
+uniform bool DebugLightInfluence = false;
 
 in vec3 Frag_ModelPosition;
 in vec3 Frag_WorldPosition;
@@ -87,6 +91,7 @@ in vec3 Frag_VertexNormal;
 in vec3 Frag_ColorTint;
 in vec2 Frag_UV;
 in mat4 Frag_Transform;
+in vec4 Frag_RelativeToDirecLight;
 
 out vec4 FragColor;
 
@@ -116,14 +121,14 @@ float SpotLight(vec3 Direction, float OuterCone, float InnerCone)
 	return clamp(Angle + (OuterCone / InnerCone) * (Angle * OuterCone), 0.0f, 1.0f);
 }
 
-float LinearizeDepth()
+float LinearizeDepth(float d)
 {
-	return (2.0f * NearZ * FarZ) / (FarZ + NearZ - (gl_FragCoord.z * 2.0f - 1.0f) * (FarZ - NearZ));
+	return (2.0f * NearZ * FarZ) / (FarZ + NearZ - (d * 2.0f - 1.0f) * (FarZ - NearZ));
 }
 
 float LogisticDepth(float Steepness, float Offset)
 {
-	float ZVal = LinearizeDepth();
+	float ZVal = LinearizeDepth(gl_FragCoord.z);
 
 	return (1 / (1 + exp(-Steepness * (ZVal - Offset))));
 }
@@ -137,18 +142,45 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 	vec3 LightColor = Light.Color;
 
 	int LightType = Light.Type;
-
-	vec3 FinalColor;
-
+	
 	if (LightType == 0)
 	{
 		vec3 Incoming = normalize(LightPosition);
+		
+		vec3 lightCoords = Frag_RelativeToDirecLight.xyz / Frag_RelativeToDirecLight.w;
+		float shadow = 0.f;
+		
+		if (lightCoords.z <= 1.f)
+		{
+			lightCoords = (lightCoords + 1.f) / 2.f;
+			float currentDepth = lightCoords.z;
+
+			//float curDepthL = LinearizeDepth(curDepth);
+			float bias = max(0.025f * (1.f - dot(Normal, Incoming)), 0.65f);
+			
+			const int SampleRadius = 1;
+			vec2 pixelSize = 1.f / textureSize(ShadowAtlas, 0);
+			for (int y = -SampleRadius; y <= SampleRadius; y++)
+				for (int x = -SampleRadius; x <= SampleRadius; x++)
+				{
+					float closestDepth = texture(ShadowAtlas, lightCoords.xy + vec2(x, y) * pixelSize).r;
+					if (currentDepth > closestDepth + bias)
+						shadow += 1.f;
+				}
+
+			shadow /= pow((SampleRadius * 2 + 1), 2);
+		}
+		
+		//shadow = 0.f;
+
+		//return vec3(1.f - shadow);
+
 		float Intensity = max(dot(Normal, Incoming), 0.f);
 		float Diffuse = Intensity;
 
 		float Specular = 0.f;
 
-		if (Diffuse > 0.0f)
+		if (Diffuse > 0.f && shadow == 0.f)
 		{
 			vec3 reflectDir = reflect(-Incoming, Normal);
 			Specular = pow(max(dot(Outgoing, reflectDir), 0.f), SpecularPower);
@@ -156,7 +188,7 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 
 		float SpecularTerm = SpecMapValue * Specular * SpecularMultiplier;
 
-		FinalColor = (Diffuse + SpecularTerm * Intensity) * LightColor;
+		return (Diffuse * (1.f - shadow) + SpecularTerm * (1.f - shadow) * Intensity) * LightColor;
 		//FinalColor = Albedo * SpecMapValue;
 	}
 	else if (LightType == 1)
@@ -180,14 +212,12 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 		float Intensity = PointLight(LightToPosition, Light.Range);
 		float SpecularTerm = SpecMapValue * Specular * SpecularMultiplier;
 
-		FinalColor = ((Diffuse * Intensity) + SpecularTerm * Intensity) * LightColor;
+		return ((Diffuse * Intensity) + SpecularTerm * Intensity) * LightColor;
 	}
 	else
 	{
-		FinalColor = vec3(1.0f, 0.0f, 1.0f);
+		return vec3(1.0f, 0.0f, 1.0f);
 	}
-
-	return FinalColor;
 }
 
 // from: https://gist.github.com/patriciogonzalezvivo/20263fe85d52705e4530
@@ -203,10 +233,20 @@ vec3 getTriPlanarBlending(vec3 _wNorm)
 
 void main()
 {
+	float mipLevel = textureQueryLod(ColorMap, Frag_UV).x;
+
+	if (IsShadowMap)
+	{
+		if (textureLod(ColorMap, Frag_UV, mipLevel).w < AlphaCutoff)
+			discard;
+
+		FragColor = vec4(gl_FragCoord.z * 0.25f, gl_FragCoord.z * 0.25f, gl_FragCoord.z * 0.25f, 1.f);
+
+		return;
+	}
+
 	// Convert mesh normals to world-space
 	mat3 NormalMatrix = transpose(inverse(mat3(Frag_Transform)));
-
-	float mipLevel = textureQueryLod(ColorMap, Frag_UV).x;
 
 	vec3 vertexNormal = Frag_VertexNormal;
 
@@ -214,6 +254,7 @@ void main()
 
 	vec4 Albedo = vec4(0.f, 0.f, 0.f, 1.f); //textureLod(ColorMap, UV, mipLevel);
 	float SpecMapValue = 1.f;
+	vec3 EmissionSample = vec3(1.f, 1.f, 1.f);
 
 	if (!UseTriPlanarProjection)
 	{
@@ -222,9 +263,14 @@ void main()
 
 		if (HasNormalMap)
 			vertexNormal += (textureLod(NormalMap, Frag_UV, mipLevel).xyz - vec3(0.f, 0.f, 1.f)) * 2.f - 1.f;
+
+		if (HasEmissionMap)
+			EmissionSample = textureLod(EmissionMap, Frag_UV, mipLevel).xyz;
 	}
 	else
 	{
+		mipLevel *= 0.1f;
+
 		vec3 blending = getTriPlanarBlending(Frag_VertexNormal);
 		vec2 uvXAxis = Frag_ModelPosition.zy * vec2(1.f, -1.f) * MaterialProjectionFactor;
 		vec2 uvYAxis = Frag_ModelPosition.xz * vec2(-1.f, 1.f) * MaterialProjectionFactor;
@@ -250,6 +296,15 @@ void main()
 
 			vec3 normSample = normXAxis * blending.x + normYAxis * blending.y + normZAxis * blending.z;
 			vertexNormal += (normSample - vec3(0.f, 0.f, 1.f)) * 2.f - 1.f;
+		}
+
+		if (HasEmissionMap)
+		{
+			vec3 emissionXAxis = textureLod(EmissionMap, uvXAxis, mipLevel).rgb;
+			vec3 emissionYAxis = textureLod(EmissionMap, uvYAxis, mipLevel).rgb;
+			vec3 emissionZAxis = textureLod(EmissionMap, uvZAxis, mipLevel).rgb;
+
+			EmissionSample = emissionXAxis * blending.x + emissionYAxis * blending.y + emissionZAxis * blending.z;
 		}
 	}
 	
@@ -279,10 +334,10 @@ void main()
 	float ReflectivityFactor = (Reflectivity * SpecMapValue);
 
 	vec3 reflectDir = reflect(-ViewDirection, Normal);
-	reflectDir.y = -reflectDir.y;
-	vec3 ReflectedTint = textureLod(SkyboxCubemap, reflectDir, 8.f / (ReflectivityFactor * 6.f)).xyz;
-	
-	vec3 Albedo3 = mix(Albedo.xyz * Frag_ColorTint, ReflectedTint, ReflectivityFactor);
+	//reflectDir.y = -reflectDir.y;
+	vec3 ReflectedTint = textureLod(SkyboxCubemap, reflectDir, 12.f / (ReflectivityFactor * 6.f)).xyz;
+
+	Albedo = vec4(mix(Albedo.xyz * Frag_ColorTint, ReflectedTint, ReflectivityFactor), Albedo.w);
 	
 	if (EmissionStrength <= 0)
 		for (int LightIndex = 0; LightIndex < NumLights; LightIndex++)
@@ -293,10 +348,13 @@ void main()
 				SpecMapValue
 			);
 	else
-		LightInfluence = vec3(EmissionStrength, EmissionStrength, EmissionStrength) + LightAmbient;
+		LightInfluence = EmissionSample * EmissionStrength + LightAmbient;
 	
-	vec3 FragCol3 = (LightInfluence + LightAmbient) * Albedo3;
-	
+	vec3 FragCol3 = (LightInfluence + LightAmbient);
+
+	if (!DebugLightInfluence)
+		FragCol3 *= Albedo.xyz;
+
 	if (Fog)
 	{
 		//float Depth = LogisticDepth(0.01f, 100.0f);
@@ -306,7 +364,7 @@ void main()
 
 		float FogDensity = FogStart / FogEnd;
 
-		float Distance = LinearizeDepth() * FarZ;
+		float Distance = LinearizeDepth(gl_FragCoord.z) * FarZ;
 		float FogFactor = clamp((FogEnd - Distance) / (FogEnd - FogStart), 0.0, 1.0); //Linear fog
 
 		//float FogFactor = pow(2.0f, -pow(Distance * FogDensity, 2));

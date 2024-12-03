@@ -104,8 +104,8 @@ static void GLDebugCallback(
 
 	// ID 131218:
 	// "Vertex shader in program is being recompiled based on GL state"
-	//if (Id != 131218 && SeverityId > GL_DEBUG_SEVERITY_NOTIFICATION)
-		//throw(debugString);
+	if (Id != 131218 && SeverityId > GL_DEBUG_SEVERITY_NOTIFICATION)
+		throw(debugString);
 }
 
 Renderer::Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window)
@@ -544,7 +544,6 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData)
 	PROFILER_PROFILE_SCOPE("UploadMaterialData");
 
 	MaterialManager* mtlManager = MaterialManager::Get();
-	TextureManager* texManager = TextureManager::Get();
 
 	RenderMaterial& material = mtlManager->GetMaterialResource(RenderData.MaterialId);
 	ShaderProgram& shader = material.GetShader();
@@ -580,20 +579,24 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData)
 		* Extra machinery and boilerplate, and it's overall more effort
 	*/
 
-	Texture& colorMap = texManager->GetTextureResource(material.ColorMap);
-	Texture& metallicRoughnessMap = texManager->GetTextureResource(material.MetallicRoughnessMap);
-	Texture& normalMap = texManager->GetTextureResource(material.NormalMap);
-
-	shader.SetTextureUniform("ColorMap", colorMap.GpuId);
-	shader.SetTextureUniform("MetallicRoughnessMap", metallicRoughnessMap.GpuId);
+	shader.SetTextureUniform("ColorMap", material.ColorMap);
+	shader.SetTextureUniform("MetallicRoughnessMap", material.MetallicRoughnessMap);
 
 	if (material.NormalMap != 0)
 	{
 		shader.SetUniform("HasNormalMap", true);
-		shader.SetTextureUniform("NormalMap", normalMap.GpuId);
+		shader.SetTextureUniform("NormalMap", material.NormalMap);
 	}
 	else
 		shader.SetUniform("HasNormalMap", false);
+
+	if (material.EmissionMap != 0)
+	{
+		shader.SetUniform("HasEmissionMap", true);
+		shader.SetTextureUniform("EmissionMap", material.EmissionMap);
+	}
+	else
+		shader.SetUniform("HasEmissionMap", false);
 
 	// apply the uniforms for the shader program...
 	shader.ApplyDefaultUniforms();

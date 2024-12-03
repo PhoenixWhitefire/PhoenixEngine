@@ -663,7 +663,7 @@ static void Application(int argc, char** argv)
 	if (!ImGui_ImplOpenGL3_Init("#version 460"))
 		throw("ImGui initialization failure on `ImGui_ImplOpenGL3_Init`");
 
-	EditorContext = EngineJsonConfig.value("Developer", false) ? new Editor : nullptr;
+	EditorContext = EngineJsonConfig.value("Developer", false) ? new Editor(EngineInstance->RendererContext) : nullptr;
 	
 	LevelLoadPathBuf = BufferInitialize(64, "levels/de_dust2.world");
 	LevelSavePathBuf = BufferInitialize(64, "levels/save.world");
@@ -754,5 +754,6 @@ int main(int argc, char** argv)
 	PHX_MAIN_HANDLECRASH(std::string,)
 	PHX_MAIN_HANDLECRASH(const char*,)
 	PHX_MAIN_HANDLECRASH(std::bad_alloc, .what() + std::string(": System may have run out of memory"))
+	PHX_MAIN_HANDLECRASH(std::exception, .what())
 	//PHX_MAIN_HANDLECRASH(std::exception, .what());
 }

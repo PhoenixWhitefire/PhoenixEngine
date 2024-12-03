@@ -19,6 +19,7 @@ uniform vec3 ColorTint;
 uniform bool IsInstanced;
 
 uniform float Time;
+uniform mat4 DirecLightProjection;
 
 out vec3 Frag_ModelPosition;
 out vec3 Frag_WorldPosition;
@@ -26,6 +27,7 @@ out vec3 Frag_VertexNormal;
 out vec3 Frag_ColorTint;
 out vec2 Frag_UV;
 out mat4 Frag_Transform;
+out vec4 Frag_RelativeToDirecLight;
 
 void main()
 {
@@ -46,6 +48,7 @@ void main()
 	Frag_ColorTint = col;
 	Frag_UV = TexUV;
 	Frag_Transform = trans;
+	Frag_RelativeToDirecLight = DirecLightProjection * vec4(Frag_WorldPosition, 1.f);
 	
 	gl_Position = RenderMatrix * vec4(Frag_WorldPosition, 1.f);
 }

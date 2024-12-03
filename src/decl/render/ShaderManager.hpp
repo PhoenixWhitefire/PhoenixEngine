@@ -17,7 +17,7 @@ public:
 	// Mark a uniform to be updated upon `::Activate` being called,
 	// to be set with the provided value
 	void SetUniform(const std::string&, const Reflection::GenericValue&);
-	// Sets a Texture Uniform to the Texture residing at the *GPU* ID provided
+	// Sets a Texture Uniform to the Texture residing at the Resource ID Provided
 	void SetTextureUniform(
 		const std::string&,
 		uint32_t,
@@ -31,7 +31,7 @@ public:
 	std::string Name;
 
 private:
-	void m_PrintErrors(uint32_t Object, const char* Type) const;
+	void m_PrintErrors(uint32_t Object, const char* Type);
 	int32_t m_GetUniformLocation(const char*) const;
 
 	uint32_t m_GpuId = UINT32_MAX;

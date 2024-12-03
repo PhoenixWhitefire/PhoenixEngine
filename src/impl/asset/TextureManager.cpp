@@ -247,6 +247,41 @@ static void enloadTexture(
 		AsyncTexture->FailureReason = stbi_failure_reason();
 }
 
+uint32_t TextureManager::Assign(const Texture& texture, const std::string& name)
+{
+	if (texture.TMP_ImageByteData != nullptr)
+		Debug::Log(std::vformat(
+			"The Texture being assigned to '{}' has non-NULL byte data and may create UB",
+			std::make_format_args(name)
+		));
+
+	if (texture.ResourceId != UINT32_MAX)
+	{
+		m_Textures.at(texture.ResourceId) = texture;
+		m_StringToTextureId[name] = texture.ResourceId;
+	}
+
+	uint32_t assignedId = static_cast<uint32_t>(m_Textures.size());
+
+	auto prevPair = m_StringToTextureId.find(name);
+
+	if (prevPair != m_StringToTextureId.end())
+	{
+		// overwrite the pre-existing texture
+		m_Textures[prevPair->second] = texture;
+		assignedId = prevPair->second;
+	}
+	else
+	{
+		m_StringToTextureId.insert(std::pair(name, assignedId));
+		m_Textures.push_back(texture);
+	}
+
+	m_Textures[assignedId].ResourceId = assignedId;
+
+	return assignedId;
+}
+
 uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool ShouldLoadAsync, bool DoBilinearSmoothing)
 {
 	std::string ResDir = EngineJsonConfig["ResourcesDirectory"];
@@ -270,15 +305,11 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 
 	if (it == m_StringToTextureId.end())
 	{
-		uint32_t newResourceId = static_cast<uint32_t>(m_Textures.size());
-		
 		uint32_t newGpuId;
 		glGenTextures(1, &newGpuId);
 
-		m_Textures.emplace_back(Path, newResourceId, newGpuId);
-		m_StringToTextureId.emplace(Path, newResourceId);
-
-		Texture& newTexture = m_Textures.back();
+		uint32_t newResourceId = this->Assign({ Path, UINT32_MAX, newGpuId }, Path);
+		Texture& newTexture = this->GetTextureResource(newResourceId);
 
 		glBindTexture(GL_TEXTURE_2D, newTexture.GpuId);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);

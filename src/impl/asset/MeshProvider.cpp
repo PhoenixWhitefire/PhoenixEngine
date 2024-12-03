@@ -11,20 +11,32 @@
 #include "FileRW.hpp"
 #include "Debug.hpp"
 
-#define MESHPROVIDER_ERROR(err) s_ErrorString = err; *SuccessPtr = false
+#define MESHPROVIDER_ERROR(err) { s_ErrorString = err; *SuccessPtr = false; return {}; }
 
 static std::string s_ErrorString = "No error";
 
-static uint32_t readU32(const std::vector<int8_t>& vec, size_t offset)
+static uint32_t readU32(const std::vector<int8_t>& vec, size_t offset, bool* fileTooSmallPtr)
 {
+	if (*fileTooSmallPtr || vec.size() - 1 < offset + 3)
+	{
+		*fileTooSmallPtr = true;
+		return 0;
+	}
+
 	uint32_t u32{};
 	std::memcpy(&u32, &vec.at(offset), 4);
 
 	return u32;
 }
 
-static uint32_t readU32(const std::vector<int8_t>& vec, size_t* offset)
+static uint32_t readU32(const std::vector<int8_t>& vec, size_t* offset, bool* fileTooSmallPtr)
 {
+	if (*fileTooSmallPtr || vec.size() - 1 < *offset + 4)
+	{
+		*fileTooSmallPtr = true;
+		return 0;
+	}
+
 	uint32_t u32{};
 	std::memcpy(&u32, &vec.at(*offset), 4);
 	*offset += 4ull;
@@ -32,27 +44,19 @@ static uint32_t readU32(const std::vector<int8_t>& vec, size_t* offset)
 	return u32;
 }
 
-static float readF32(const std::vector<int8_t>& vec, size_t offset)
+static float readF32(const std::vector<int8_t>& vec, size_t* offset, bool* fileTooSmallPtr)
 {
-	float f32{};
-	std::memcpy(&f32, &vec.at(offset), 4);
+	if (*fileTooSmallPtr || vec.size() - 1 < *offset + 4)
+	{
+		*fileTooSmallPtr = true;
+		return 0.f;
+	}
 
-	return f32;
-}
-
-static float readF32(const std::vector<int8_t>& vec, size_t* offset)
-{
 	float f32{};
 	std::memcpy(&f32, &vec.at(*offset), 4);
 	*offset += 4ull;
 
 	return f32;
-}
-
-static uint32_t readU32(const std::string& str, size_t offset)
-{
-	std::vector<int8_t> bytes(str.begin() + offset, str.begin() + offset + 4);
-	return readU32(bytes, 0ull);
 }
 
 static void writeU32(std::string& vec, uint32_t v)
@@ -100,10 +104,7 @@ static Mesh loadMeshVersion1(const std::string& FileContents, bool* SuccessPtr)
 	for (nlohmann::json vertexDesc : json["Vertices"])
 	{
 		if (vertexDesc.size() % 11 != 0)
-		{
 			MESHPROVIDER_ERROR("(V1) Vertex #" + std::to_string(vertexIndex) + " does not have 11 elements");
-			return Mesh{};
-		}
 
 		Vertex vertex =
 		{
@@ -132,15 +133,26 @@ static Mesh loadMeshVersion1(const std::string& FileContents, bool* SuccessPtr)
 static Mesh loadMeshVersion2(const std::string& FileContents, bool* SuccessPtr)
 {
 	size_t binaryStartLoc = FileContents.find_first_of('$');
+
+	if (binaryStartLoc == std::string::npos)
+		MESHPROVIDER_ERROR("File did not contain a binary data begin symbol ('$')");
+
 	std::string binaryContents = FileContents.substr(binaryStartLoc + 1);
 
 	std::vector<int8_t> data( binaryContents.begin(), binaryContents.end() );
 
-	size_t headerPtr{};
+	if (data.size() < 12)
+		MESHPROVIDER_ERROR("File cannot contain header as binary data is smaller than 12 bytes");
 
-	uint32_t vertexMeta = readU32(data, &headerPtr);
-	uint32_t numVerts = readU32(data, &headerPtr);
-	uint32_t numIndices = readU32(data, &headerPtr);
+	size_t headerPtr{};
+	bool fileTooSmallError = false;
+
+	uint32_t vertexMeta = readU32(data, &headerPtr, &fileTooSmallError);
+	uint32_t numVerts = readU32(data, &headerPtr, &fileTooSmallError);
+	uint32_t numIndices = readU32(data, &headerPtr, &fileTooSmallError);
+
+	if (fileTooSmallError)
+		MESHPROVIDER_ERROR("This should have been caught earlier, but header was smaller than 12 bytes");
 
 	bool hasVertexOpacity = vertexMeta & 0b00000001;
 	bool hasVertexColor   = vertexMeta & 0b00000010;
@@ -152,26 +164,38 @@ static Mesh loadMeshVersion2(const std::string& FileContents, bool* SuccessPtr)
 	if (!hasVertexNormal)
 		uniformVertexNormal = glm::vec3
 		{
-			readF32(data, &headerPtr),
-			readF32(data, &headerPtr),
-			readF32(data, &headerPtr)
+			readF32(data, &headerPtr, &fileTooSmallError),
+			readF32(data, &headerPtr, &fileTooSmallError),
+			readF32(data, &headerPtr, &fileTooSmallError)
 		};
 
 	if (!hasVertexColor)
 		uniformVertexRGBA = glm::vec4
 		{
-			readF32(data, &headerPtr),
-			readF32(data, &headerPtr),
-			readF32(data, &headerPtr),
+			readF32(data, &headerPtr, &fileTooSmallError),
+			readF32(data, &headerPtr, &fileTooSmallError),
+			readF32(data, &headerPtr, &fileTooSmallError),
 			1.f
 		};
 
 	if (!hasVertexOpacity)
-		uniformVertexRGBA.w = readF32(data, &headerPtr);
+		uniformVertexRGBA.w = readF32(data, &headerPtr, &fileTooSmallError);
+
+	if (fileTooSmallError)
+		MESHPROVIDER_ERROR("File ended during preamble");
 
 	// Px, Py, Pz, (Nx, Ny, Nz), (R, G, B), (A), Tu, Tv
 	size_t floatsPerVertex = 3ull + (hasVertexNormal ? 3 : 0) + (hasVertexColor ? 3 : 0) + (hasVertexOpacity ? 1 : 0) + 2;
 	size_t bytesPerVertex = floatsPerVertex * 4ull;
+
+	size_t totalExpectedDataSize = bytesPerVertex * numVerts + numIndices * 4ull;
+	size_t actualDataSize = data.size() - headerPtr;
+
+	if (actualDataSize < totalExpectedDataSize)
+		MESHPROVIDER_ERROR(std::vformat(
+			"Binary section of File was expected to be {} bytes, but was {} instead (smaller)",
+			std::make_format_args(totalExpectedDataSize, actualDataSize)
+		));
 
 	Mesh mesh{};
 	mesh.Vertices.reserve(numVerts);
@@ -181,21 +205,21 @@ static Mesh loadMeshVersion2(const std::string& FileContents, bool* SuccessPtr)
 	{
 		size_t vertBytePtr = vertexIndex * bytesPerVertex + headerPtr;
 
-		float px = readF32(data, &vertBytePtr);
-		float py = readF32(data, &vertBytePtr);
-		float pz = readF32(data, &vertBytePtr);
+		float px = readF32(data, &vertBytePtr, &fileTooSmallError);
+		float py = readF32(data, &vertBytePtr, &fileTooSmallError);
+		float pz = readF32(data, &vertBytePtr, &fileTooSmallError);
 
-		float nx = hasVertexNormal ? readF32(data, &vertBytePtr) : uniformVertexNormal.x;
-		float ny = hasVertexNormal ? readF32(data, &vertBytePtr) : uniformVertexNormal.y;
-		float nz = hasVertexNormal ? readF32(data, &vertBytePtr) : uniformVertexNormal.z;
+		float nx = hasVertexNormal ? readF32(data, &vertBytePtr, &fileTooSmallError) : uniformVertexNormal.x;
+		float ny = hasVertexNormal ? readF32(data, &vertBytePtr, &fileTooSmallError) : uniformVertexNormal.y;
+		float nz = hasVertexNormal ? readF32(data, &vertBytePtr, &fileTooSmallError) : uniformVertexNormal.z;
 
-		float r = hasVertexColor ? readF32(data, &vertBytePtr) : uniformVertexRGBA.x;
-		float g = hasVertexColor ? readF32(data, &vertBytePtr) : uniformVertexRGBA.y;
-		float b = hasVertexColor ? readF32(data, &vertBytePtr) : uniformVertexRGBA.z;
-		float a = hasVertexOpacity ? readF32(data, &vertBytePtr) : uniformVertexRGBA.w;
+		float r = hasVertexColor ? readF32(data, &vertBytePtr, &fileTooSmallError) : uniformVertexRGBA.x;
+		float g = hasVertexColor ? readF32(data, &vertBytePtr, &fileTooSmallError) : uniformVertexRGBA.y;
+		float b = hasVertexColor ? readF32(data, &vertBytePtr, &fileTooSmallError) : uniformVertexRGBA.z;
+		float a = hasVertexOpacity ? readF32(data, &vertBytePtr, &fileTooSmallError) : uniformVertexRGBA.w;
 
-		float u = readF32(data, &vertBytePtr);
-		float v = readF32(data, &vertBytePtr);
+		float u = readF32(data, &vertBytePtr, &fileTooSmallError);
+		float v = readF32(data, &vertBytePtr, &fileTooSmallError);
 
 		mesh.Vertices.emplace_back(
 			glm::vec3{ px, py, pz },
@@ -206,7 +230,14 @@ static Mesh loadMeshVersion2(const std::string& FileContents, bool* SuccessPtr)
 	}
 
 	for (uint32_t indexIndex = 0; indexIndex < numIndices; indexIndex++)
-		mesh.Indices.push_back(readU32(data, numVerts * bytesPerVertex + (indexIndex * 4ull) + headerPtr));
+		mesh.Indices.push_back(readU32(data, numVerts * bytesPerVertex + (indexIndex * 4ull) + headerPtr, &fileTooSmallError));
+
+	if (fileTooSmallError)
+	{
+		*SuccessPtr = false;
+		s_ErrorString = "Binary section of File was too small, and the loader reached the end of it while reading some data";
+		// return the mesh because whatever bro
+	}
 
 	return mesh;
 }
@@ -336,18 +367,12 @@ Mesh MeshProvider::Deserialize(const std::string& Contents, bool* SuccessPtr)
 	*SuccessPtr = true;
 
 	if (Contents.empty())
-	{
 		MESHPROVIDER_ERROR("Mesh file is empty");
-		return Mesh{};
-	}
 
 	float version = getVersion(Contents);
 
 	if (version == 0.f)
-	{
 		MESHPROVIDER_ERROR("No Version header");
-		return Mesh{};
-	}
 
 	if (version >= 1.f && version < 2.f)
 		return loadMeshVersion1(Contents, SuccessPtr);
@@ -356,8 +381,6 @@ Mesh MeshProvider::Deserialize(const std::string& Contents, bool* SuccessPtr)
 		return loadMeshVersion2(Contents, SuccessPtr);
 
 	MESHPROVIDER_ERROR(std::string("Unrecognized mesh version - ") + std::to_string(version));
-
-	return Mesh{};
 }
 
 void MeshProvider::Save(const Mesh& mesh, const std::string& Path)
@@ -460,7 +483,7 @@ uint32_t MeshProvider::LoadFromPath(const std::string& Path, bool ShouldLoadAsyn
 
 						if (!deserialized)
 							Debug::Log(std::vformat(
-								"MeshProvider Failed to load mesh '{}' asynchronously: {}",
+								"MeshProvider failed to load mesh '{}' asynchronously: {}",
 								std::make_format_args(Path, s_ErrorString)
 							));
 
@@ -481,7 +504,7 @@ uint32_t MeshProvider::LoadFromPath(const std::string& Path, bool ShouldLoadAsyn
 
 				if (!success)
 					Debug::Log(std::vformat(
-						"MeshProvider Failed to load mesh '{}': {}",
+						"MeshProvider failed to load mesh '{}': {}",
 						std::make_format_args(Path, s_ErrorString)
 					));
 
