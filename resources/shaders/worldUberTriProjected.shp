@@ -6,6 +6,7 @@
 {
     "Vertex": "worldUber.vert",
     "Fragment": "worldUber.frag",
+    "Geometry": "worldUber.geom",
     
     "InheritUniformsOf":  "worldUber",
     "Uniforms": {

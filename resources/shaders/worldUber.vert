@@ -5,7 +5,7 @@
 layout (location = 0) in vec3 VertexPosition;
 layout (location = 1) in vec3 VertexNormal;
 layout (location = 2) in vec3 VertexColor;
-layout (location = 3) in vec2 TexUV;
+layout (location = 3) in vec2 VertexUV;
 // from Instanced Array
 layout (location = 4) in mat4 InstanceTransform;
 layout (location = 8) in vec3 InstanceScale;
@@ -23,11 +23,21 @@ uniform mat4 DirecLightProjection;
 
 out vec3 Frag_ModelPosition;
 out vec3 Frag_WorldPosition;
-out vec3 Frag_VertexNormal;
-out vec3 Frag_ColorTint;
-out vec2 Frag_UV;
 out mat4 Frag_Transform;
 out vec4 Frag_RelativeToDirecLight;
+
+out DATA
+{
+	vec3 VertexNormal;
+	vec2 TextureUV;
+	vec3 ColorTint;
+	mat4 RenderMatrix;
+
+	vec3 ModelPosition;
+	vec3 WorldPosition;
+	mat4 Transform;
+	vec4 RelativeToDirecLight;
+} data_out;
 
 void main()
 {
@@ -42,13 +52,15 @@ void main()
 		col = InstanceColor * VertexColor;
 	}
 
-	Frag_ModelPosition = VertexPosition * sca;
-	Frag_WorldPosition = vec3(trans * vec4(Frag_ModelPosition, 1.0f));
-	Frag_VertexNormal = VertexNormal;
-	Frag_ColorTint = col;
-	Frag_UV = TexUV;
-	Frag_Transform = trans;
-	Frag_RelativeToDirecLight = DirecLightProjection * vec4(Frag_WorldPosition, 1.f);
-	
-	gl_Position = RenderMatrix * vec4(Frag_WorldPosition, 1.f);
+	data_out.VertexNormal = VertexNormal;
+	data_out.ColorTint = col;
+	data_out.TextureUV = VertexUV;
+	data_out.RenderMatrix = RenderMatrix;
+
+	data_out.ModelPosition = VertexPosition * sca;
+	data_out.WorldPosition = vec3(trans * vec4(data_out.ModelPosition, 1.0f));
+	data_out.Transform = trans;
+	data_out.RelativeToDirecLight = DirecLightProjection * vec4(data_out.WorldPosition, 1.f);
+
+	gl_Position = vec4(data_out.WorldPosition, 1.f);
 }

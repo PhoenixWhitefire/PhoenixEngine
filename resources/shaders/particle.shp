@@ -1,4 +1,4 @@
 {
-    "Vertex": "worldUber.vert",
+    "Vertex": "particle.vert",
     "Fragment": "particle.frag"
 }

@@ -6,13 +6,13 @@ uniform sampler2D Image;
 
 uniform float Transparency = 0.5f;
 
-in vec2 Frag_UV;
+in vec2 Frag_TextureUV;
 
 out vec4 FragColor;
 
 void main()
 {
-	vec4 Color = texture(Image, Frag_UV);
+	vec4 Color = texture(Image, Frag_TextureUV);
 
 	if (Color.a == 0.1f)
 		//discard;

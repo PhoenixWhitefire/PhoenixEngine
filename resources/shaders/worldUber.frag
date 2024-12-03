@@ -89,7 +89,7 @@ in vec3 Frag_ModelPosition;
 in vec3 Frag_WorldPosition;
 in vec3 Frag_VertexNormal;
 in vec3 Frag_ColorTint;
-in vec2 Frag_UV;
+in vec2 Frag_TextureUV;
 in mat4 Frag_Transform;
 in vec4 Frag_RelativeToDirecLight;
 
@@ -233,11 +233,11 @@ vec3 getTriPlanarBlending(vec3 _wNorm)
 
 void main()
 {
-	float mipLevel = textureQueryLod(ColorMap, Frag_UV).x;
+	float mipLevel = textureQueryLod(ColorMap, Frag_TextureUV).x;
 
 	if (IsShadowMap)
 	{
-		if (textureLod(ColorMap, Frag_UV, mipLevel).w < AlphaCutoff)
+		if (textureLod(ColorMap, Frag_TextureUV, mipLevel).w < AlphaCutoff)
 			discard;
 
 		FragColor = vec4(gl_FragCoord.z * 0.25f, gl_FragCoord.z * 0.25f, gl_FragCoord.z * 0.25f, 1.f);
@@ -258,14 +258,14 @@ void main()
 
 	if (!UseTriPlanarProjection)
 	{
-		SpecMapValue = textureLod(MetallicRoughnessMap, Frag_UV, mipLevel).r;
-		Albedo = textureLod(ColorMap, Frag_UV, mipLevel);
+		SpecMapValue = textureLod(MetallicRoughnessMap, Frag_TextureUV, mipLevel).r;
+		Albedo = textureLod(ColorMap, Frag_TextureUV, mipLevel);
 
 		if (HasNormalMap)
-			vertexNormal += (textureLod(NormalMap, Frag_UV, mipLevel).xyz - vec3(0.f, 0.f, 1.f)) * 2.f - 1.f;
+			vertexNormal += (textureLod(NormalMap, Frag_TextureUV, mipLevel).xyz - vec3(0.f, 0.f, 1.f)) * 2.f - 1.f;
 
 		if (HasEmissionMap)
-			EmissionSample = textureLod(EmissionMap, Frag_UV, mipLevel).xyz;
+			EmissionSample = textureLod(EmissionMap, Frag_TextureUV, mipLevel).xyz;
 	}
 	else
 	{

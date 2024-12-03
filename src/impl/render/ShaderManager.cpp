@@ -367,7 +367,10 @@ void ShaderProgram::m_PrintErrors(uint32_t Object, const char* Type)
 		{
 			glGetProgramInfoLog(Object, 1024, NULL, infoLog);
 
-			Debug::Log(std::vformat("Error while linking shader program:\n{}", std::make_format_args(infoLog)));
+			Debug::Log(std::vformat(
+				"Error while linking shader program '{}':\n{}",
+				std::make_format_args(this->Name, infoLog)
+			));
 
 			ShaderManager* shdManager = ShaderManager::Get();
 

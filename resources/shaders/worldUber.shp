@@ -1,6 +1,7 @@
 {
     "Vertex": "worldUber.vert",
     "Fragment": "worldUber.frag",
+    "Geometry": "worldUber.geom",
     
     "Uniforms": {
         "Fog": false,

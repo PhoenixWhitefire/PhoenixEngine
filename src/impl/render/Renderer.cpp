@@ -458,7 +458,7 @@ void Renderer::DrawScene(
 		}
 	}
 
-	EngineJsonConfig["renderer_drawcallcount"] = numDrawCalls;
+	EngineJsonConfig["renderer_drawcallcount"] = EngineJsonConfig.value("renderer_drawcallcount", 0) + numDrawCalls;
 }
 
 void Renderer::DrawMesh(

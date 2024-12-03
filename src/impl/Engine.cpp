@@ -431,6 +431,7 @@ void EngineObject::Start()
 		}
 
 		this->RunningTime = GetRunningTime();
+		EngineJsonConfig["renderer_drawcallcount"] = 0;
 
 		this->FpsCap = std::clamp(this->FpsCap, 1, 600);
 
