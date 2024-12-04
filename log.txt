@@ -26,11 +26,5 @@ GL Debug callback:
 	Source: OpenGL
 	Error ID: 131218
 
-Reloading shaders...
-Shaders reloaded
-Reloading shaders...
-Shaders reloaded
-Changing window resolution: (1280, 720) -> (1294, 720)
-Changing window resolution: (1294, 720) -> (1282, 720)
 Main loop exited
 Application shutting down...

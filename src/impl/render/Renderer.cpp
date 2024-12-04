@@ -142,8 +142,8 @@ Renderer::Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window)
 	
 	glEnable(GL_MULTISAMPLE);
 	glEnable(GL_DEPTH_TEST);
-
 	glEnable(GL_CULL_FACE);
+	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 	
 	glViewport(0, 0, m_Width, m_Height);
 

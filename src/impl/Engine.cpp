@@ -543,7 +543,7 @@ void EngineObject::Start()
 			}
 		}
 
-		RendererContext->Framebuffer->UpdateResolution(WindowSizeX, WindowSizeY);
+		//RendererContext->Framebuffer->UpdateResolution(WindowSizeX, WindowSizeY);
 
 		Profiler::Stop();
 

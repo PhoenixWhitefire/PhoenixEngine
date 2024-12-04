@@ -350,7 +350,7 @@ void main()
 	else
 		LightInfluence = EmissionSample * EmissionStrength + LightAmbient;
 	
-	vec3 FragCol3 = (LightInfluence + LightAmbient);
+	vec3 FragCol3 = (LightInfluence + textureLod(SkyboxCubemap, reflectDir, 11).xyz);
 
 	if (!DebugLightInfluence)
 		FragCol3 *= Albedo.xyz;

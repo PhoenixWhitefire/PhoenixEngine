@@ -412,7 +412,7 @@ void Editor::m_RenderMaterialEditor()
 		if (!hadEmissiveMap)
 			curItem.EmissionMap = texManager->LoadTextureFromPath("textures/white.png");
 
-		ImGui::InputText("Emission Map", m_MtlNormalBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
+		ImGui::InputText("Emission Map", m_MtlEmissionBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
 		mtlEditorTexture(curItem.EmissionMap);
 	}
 	else

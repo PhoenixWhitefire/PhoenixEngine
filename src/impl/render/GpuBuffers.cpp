@@ -142,7 +142,7 @@ GpuFrameBuffer::GpuFrameBuffer(int TargetWidth, int TargetHeight, int MSSamples,
 	if (binding != GL_TEXTURE_2D_MULTISAMPLE)
 	{
 		glTexParameteri(binding, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glTexParameteri(binding, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(binding, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 		glTexParameteri(binding, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(binding, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
