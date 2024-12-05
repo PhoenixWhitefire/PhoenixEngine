@@ -221,6 +221,7 @@ std::vector<RenderItem> Object_ParticleEmitter::GetRenderList()
 			Color(1.f, 1.f, 1.f),
 			particle.Transparency,
 			0.f,
+			0.f,
 			FaceCullingMode::None
 		);
 	}

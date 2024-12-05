@@ -1,8 +1,8 @@
 {
-  "ColorMap": "textures/materials/floortiles.jpg",
+  "ColorMap": "textures/materials/Tiles075_4K-JPG_Color.jpg",
   "HasTranslucency": false,
-  "MetallicRoughnessMap": "textures/materials/floortilesSpecular.jpg",
-  "Shader": "worldUberTriProjected",
+  "MetallicRoughnessMap": "textures/materials/Tiles075_4K-JPG_Roughness.jpg",
+  "Shader": "worldUber",
   "Uniforms": {
     "MaterialProjectionFactor": 0.02500000037252903
   },

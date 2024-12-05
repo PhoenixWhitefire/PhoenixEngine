@@ -62,8 +62,9 @@ uniform vec3 LightAmbient = vec3(0.3f);
 uniform float SpecularMultiplier = 0.5f;
 uniform float SpecularPower = 16.0f;
 
-uniform float Reflectivity = 0.f;
 uniform float Transparency = 0.f;
+uniform float MetallnessFactor = 0.f;
+uniform float RoughnessFactor = 0.f;
 uniform float EmissionStrength = 0.f;
 
 uniform vec3 CameraPosition = vec3(0.f, 0.f, 0.f);
@@ -253,12 +254,12 @@ void main()
 	vec3 ViewDirection = normalize(CameraPosition - Frag_WorldPosition);
 
 	vec4 Albedo = vec4(0.f, 0.f, 0.f, 1.f); //textureLod(ColorMap, UV, mipLevel);
-	float SpecMapValue = 1.f;
+	vec2 MetallicRoughnessSample = vec2(0.f, 1.f);
 	vec3 EmissionSample = vec3(1.f, 1.f, 1.f);
 
 	if (!UseTriPlanarProjection)
 	{
-		SpecMapValue = textureLod(MetallicRoughnessMap, Frag_TextureUV, mipLevel).r;
+		MetallicRoughnessSample = textureLod(MetallicRoughnessMap, Frag_TextureUV, mipLevel).rg;
 		Albedo = textureLod(ColorMap, Frag_TextureUV, mipLevel);
 
 		if (HasNormalMap)
@@ -282,11 +283,11 @@ void main()
 
 		Albedo = xAxis * blending.x + yAxis * blending.y + zAxis * blending.z;
 
-		float specXAxis = textureLod(MetallicRoughnessMap, uvXAxis, mipLevel).r;
-		float specYAxis = textureLod(MetallicRoughnessMap, uvYAxis, mipLevel).r;
-		float specZAxis = textureLod(MetallicRoughnessMap, uvZAxis, mipLevel).r;
+		vec2 specXAxis = textureLod(MetallicRoughnessMap, uvXAxis, mipLevel).rg;
+		vec2 specYAxis = textureLod(MetallicRoughnessMap, uvYAxis, mipLevel).rg;
+		vec2 specZAxis = textureLod(MetallicRoughnessMap, uvZAxis, mipLevel).rg;
 
-		SpecMapValue = specXAxis * blending.x + specYAxis * blending.y + specZAxis * blending.z;
+		MetallicRoughnessSample = specXAxis * blending.x + specYAxis * blending.y + specZAxis * blending.z;
 
 		if (HasNormalMap)
 		{
@@ -331,13 +332,16 @@ void main()
 
 	vec3 LightInfluence = vec3(0.f, 0.f, 0.f);
 
-	float ReflectivityFactor = (Reflectivity * SpecMapValue);
+	Albedo = vec4(Albedo.xyz * Frag_ColorTint, Albedo.w);
 
 	vec3 reflectDir = reflect(-ViewDirection, Normal);
 	//reflectDir.y = -reflectDir.y;
-	vec3 ReflectedTint = textureLod(SkyboxCubemap, reflectDir, 12.f / (ReflectivityFactor * 6.f)).xyz;
+	//vec3 ReflectedTint = textureLod(SkyboxCubemap, reflectDir, MetallicRoughnessSample.x * MetallnessFactor * 6.f).xyz;
+	//ReflectedTint *= mix(vec3(1.f, 1.f, 1.f), Frag_ColorTint, MetallicRoughnessSample.x * MetallnessFactor);
 
-	Albedo = vec4(mix(Albedo.xyz * Frag_ColorTint, ReflectedTint, ReflectivityFactor), Albedo.w);
+	//Albedo = vec4(Albedo.xyz * Frag_ColorTint + ReflectedTint * MetallicRoughnessSample.y, Albedo.w);
+
+	//Albedo = vec4(mix(ReflectedTint, Albedo.xyz * Frag_ColorTint, MetallicRoughnessSample.y * RoughnessFactor), Albedo.w);
 	
 	if (EmissionStrength <= 0)
 		for (int LightIndex = 0; LightIndex < NumLights; LightIndex++)
@@ -345,7 +349,7 @@ void main()
 				LightIndex,
 				Normal,
 				ViewDirection,
-				SpecMapValue
+				MetallicRoughnessSample.y
 			);
 	else
 		LightInfluence = EmissionSample * EmissionStrength + LightAmbient;

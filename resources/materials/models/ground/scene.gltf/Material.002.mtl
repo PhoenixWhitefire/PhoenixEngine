@@ -3,7 +3,5 @@
   "ColorMap": "models/ground/diffuse.png",
   "HasTranslucency": false,
   "Uniforms": {},
-  "roughnessFactor": 0.5,
-  "specExponent": 16.0,
-  "specMultiply": 0.0
+  "specExponent": 16.0
 }

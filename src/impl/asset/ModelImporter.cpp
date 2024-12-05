@@ -269,8 +269,6 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		// update this when PBR is added
 		// 26/10/2024
 		materialJson["specExponent"] = 16.f;
-		materialJson["specMultiply"] = material.MetallicFactor;
-		materialJson["roughnessFactor"] = material.RoughnessFactor;
 
 		if (material.MetallicRoughnessTexture != 0)
 			materialJson["MetallicRoughnessMap"] = metallicRoughnessTex.ImagePath;
@@ -302,6 +300,9 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		);
 
 		mesh->MaterialId = mtlManager->LoadMaterialFromPath(materialName);
+
+		mesh->MetallnessFactor = material.MetallicFactor;
+		mesh->RoughnessFactor = material.RoughnessFactor;
 
 		mesh->Transform = m_MeshMatrices[MeshIndex];
 		mesh->Size = m_MeshScales[MeshIndex];

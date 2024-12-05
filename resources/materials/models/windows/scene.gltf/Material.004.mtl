@@ -1,11 +1,7 @@
 {
+  "BilinearFiltering": true,
   "ColorMap": "models/windows/diffuse.png",
   "HasTranslucency": true,
-  "Shader": "worldUber",
-  "Uniforms": {
-    "AlphaCutoff": 0.5,
-    "EmissionStrength": 1.2000000476837158
-  },
-  "specExponent": 16.0,
-  "specMultiply": 0.5
+  "Uniforms": {},
+  "specExponent": 16.0
 }

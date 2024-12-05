@@ -104,7 +104,7 @@ void RenderMaterial::Reload()
 	if (metallicRoughnessPath != "")
 		this->MetallicRoughnessMap = texManager->LoadTextureFromPath(metallicRoughnessPath, true, doBilinearFiltering);
 	else
-		this->MetallicRoughnessMap = 0;
+		this->MetallicRoughnessMap = texManager->LoadTextureFromPath("textures/black.png", true, doBilinearFiltering);
 
 	if (normalPath != "")
 		this->NormalMap = texManager->LoadTextureFromPath(normalPath, true, doBilinearFiltering);
@@ -120,6 +120,13 @@ void RenderMaterial::Reload()
 
 	this->SpecExponent = jsonMaterialData.value("specExponent", this->SpecExponent);
 	this->SpecMultiply = jsonMaterialData.value("specMultiply", this->SpecMultiply);
+
+	ShaderProgram& shader = GetShader();
+	// reserved slots for material textures
+	shader.SetUniform("ColorMap", 10);
+	shader.SetUniform("MetallicRoughnessMap", 11);
+	shader.SetUniform("NormalMap", 12);
+	shader.SetUniform("EmissionMap", 13);
 }
 
 ShaderProgram& RenderMaterial::GetShader() const

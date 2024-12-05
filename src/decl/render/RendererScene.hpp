@@ -14,7 +14,8 @@ struct RenderItem
 	uint32_t MaterialId{};
 	Color TintColor;
 	float Transparency{};
-	float Reflectivity{};
+	float MetallnessFactor{};
+	float RoughnessFactor{};
 
 	FaceCullingMode FaceCulling = FaceCullingMode::BackFace;
 };

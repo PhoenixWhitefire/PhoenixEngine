@@ -203,6 +203,8 @@ void GpuFrameBuffer::UpdateResolution(int NewWidth, int NewHeight)
 	this->Bind();
 	this->BindTexture();
 
+	this->Width = NewWidth, this->Height = NewHeight;
+
 	// "TODO fix msaa"
 	// 21/10/2024:
 	// just comment it out for now
@@ -220,8 +222,6 @@ void GpuFrameBuffer::UpdateResolution(int NewWidth, int NewHeight)
 	//	glRenderbufferStorageMultisample(GL_RENDERBUFFER, m_MsaaSamples, GL_DEPTH32F_STENCIL8, m_Width, m_Height);
 	//else
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH32F_STENCIL8, Width, Height);
-
-	this->Width = NewWidth, this->Height = NewHeight;
 }
 
 void GpuFrameBuffer::Bind()

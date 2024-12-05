@@ -1,5 +1,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/euler_angles.hpp>
+#include <ImGuiFD/ImGuiFD.h>
 #include <imgui/imgui.h>
 #include <glad/gl.h>
 #include <fstream>
@@ -43,6 +44,7 @@ static Scene MtlPreviewScene =
 			glm::vec3(1.f, 1.f, 1.f),
 			0u,
 			Color(1.f, 1.f, 1.f),
+			0.f,
 			0.f,
 			0.f,
 			FaceCullingMode::BackFace
@@ -212,25 +214,92 @@ static void renderScriptEditor()
 	ImGui::End();
 }
 
-static void mtlEditorTexture(uint32_t TextureId)
+static char* MtlEditorTextureSelectDialogBuffer = nullptr;
+
+static void mtlEditorTexture(uint32_t& TextureId, const char* Label, char* Buffer)
 {
-	const Texture& tx = TextureManager::Get()->GetTextureResource(TextureId);
+	TextureManager* texManager = TextureManager::Get();
 
-	ImGui::Image(
-		tx.GpuId,
-		// Scale to 256 pixels wide, while maintaining aspect ratio
-		ImVec2(256.f, tx.Height * (256.f / tx.Width))
-	);
+	if (MtlEditorTextureSelectDialogBuffer != nullptr)
+	{
+		if (ImGuiFD::BeginDialog("Select Texture"))
+		{
+			if (ImGuiFD::ActionDone())
+			{
+				if (ImGuiFD::SelectionMade())
+				{
+					std::string fullpath = ImGuiFD::GetSelectionPathString(0);
+					size_t resDirOffset = fullpath.find("resources/");
 
-	ImGui::Text(std::vformat(
-		"Resolution: {}x{}",
-		std::make_format_args(tx.Width, tx.Height)
-	).c_str());
+					if (resDirOffset == std::string::npos)
+					{
+						ErrorTooltipMessage = "Selection must be within the Project's `resources/` directory!";
+						ErrorTooltipTimeRemaining = 5.f;
+						MtlEditorTextureSelectDialogBuffer = nullptr;
+					}
+					else
+					{
+						std::string shortpath = fullpath.substr(resDirOffset + 10);
+						CopyStringToBuffer(MtlEditorTextureSelectDialogBuffer, MATERIAL_TEXTUREPATH_BUFSIZE, shortpath);
+						MtlEditorTextureSelectDialogBuffer = nullptr;
 
-	ImGui::Text(std::vformat(
-		"# Color channels: {}",
-		std::make_format_args(tx.NumColorChannels)
-	).c_str());
+						uint32_t newtexid = texManager->LoadTextureFromPath(shortpath);
+						// i'm so silly 04/12/2024
+						TextureId = newtexid;
+					}
+				}
+				
+				ImGuiFD::CloseCurrentDialog();
+				MtlEditorTextureSelectDialogBuffer = nullptr;
+			}
+
+			ImGuiFD::EndDialog();
+		}
+	}
+	else
+	{
+		const Texture& tx = texManager->GetTextureResource(TextureId);
+
+		ImGui::Text(Label);
+		bool fileDialogRequested = ImGui::TextLink(Buffer);
+		ImGui::SetItemTooltip("Open file dialog");
+
+		if (fileDialogRequested)
+		{
+			std::string bufAsStr = std::string(Buffer);
+			std::string texdir = "resources/" + bufAsStr.substr(0ull, bufAsStr.find_last_of("/"));
+
+			ImGuiFD::OpenDialog(
+				"Select Texture",
+				ImGuiFDMode_LoadFile,
+				texdir.c_str(),
+				"*.png,*.jpg,*.jpeg",
+				0,
+				1
+			);
+
+			MtlEditorTextureSelectDialogBuffer = Buffer;
+		}
+
+		ImGui::InputText(Label, Buffer, MATERIAL_TEXTUREPATH_BUFSIZE);
+		ImGui::SetItemTooltip("Enter path to texture directly");
+
+		ImGui::Image(
+			tx.GpuId,
+			// Scale to 256 pixels wide, while maintaining aspect ratio
+			ImVec2(256.f, tx.Height * (256.f / tx.Width))
+		);
+
+		ImGui::Text(std::vformat(
+			"Resolution: {}x{}",
+			std::make_format_args(tx.Width, tx.Height)
+		).c_str());
+
+		ImGui::Text(std::vformat(
+			"# Color channels: {}",
+			std::make_format_args(tx.NumColorChannels)
+		).c_str());
+	}
 }
 
 // 02/09/2024
@@ -365,8 +434,7 @@ void Editor::m_RenderMaterialEditor()
 
 	ImGui::InputText("Shader", m_MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
 
-	ImGui::InputText("Color Map", m_MtlDiffuseBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
-	mtlEditorTexture(curItem.ColorMap);
+	mtlEditorTexture(curItem.ColorMap, "Color Map:", m_MtlDiffuseBuf);
 
 	bool hadSpecularTexture = curItem.MetallicRoughnessMap != 0;
 	bool metallicRoughnessEnabled = hadSpecularTexture;
@@ -377,8 +445,7 @@ void Editor::m_RenderMaterialEditor()
 		if (!hadSpecularTexture)
 			curItem.MetallicRoughnessMap = texManager->LoadTextureFromPath("textures/white.png");
 
-		ImGui::InputText("Metallic Roughness Map", m_MtlSpecBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
-		mtlEditorTexture(curItem.MetallicRoughnessMap);
+		mtlEditorTexture(curItem.MetallicRoughnessMap, "Metallic Roughness Map:", m_MtlSpecBuf);
 	}
 	else
 		// the ID is the only thing the Renderer uses to determine
@@ -397,8 +464,7 @@ void Editor::m_RenderMaterialEditor()
 		if (!hadNormalMap)
 			curItem.NormalMap = texManager->LoadTextureFromPath("textures/violet.png");
 
-		ImGui::InputText("Normal Map", m_MtlNormalBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
-		mtlEditorTexture(curItem.NormalMap);
+		mtlEditorTexture(curItem.NormalMap, "Normal Map:", m_MtlNormalBuf);
 	}
 	else
 		curItem.NormalMap = 0;
@@ -412,8 +478,7 @@ void Editor::m_RenderMaterialEditor()
 		if (!hadEmissiveMap)
 			curItem.EmissionMap = texManager->LoadTextureFromPath("textures/white.png");
 
-		ImGui::InputText("Emission Map", m_MtlEmissionBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
-		mtlEditorTexture(curItem.EmissionMap);
+		mtlEditorTexture(curItem.EmissionMap, "Emission Map:", m_MtlEmissionBuf);
 	}
 	else
 		curItem.EmissionMap = 0;
@@ -666,6 +731,9 @@ static GameObject* ForceSelectObjectNextFrame = nullptr;
 
 void Editor::RenderUI()
 {
+	if (ErrorTooltipTimeRemaining > 0.f)
+		ImGui::SetTooltip(ErrorTooltipMessage.c_str());
+
 	renderScriptEditor();
 	m_RenderMaterialEditor();
 
@@ -960,9 +1028,6 @@ void Editor::RenderUI()
 			newObj->SetParent(selected ? selected : GameObject::s_DataModel);
 		}
 	}
-
-	if (ErrorTooltipTimeRemaining > 0.f)
-		ImGui::SetTooltip(ErrorTooltipMessage.c_str());
 
 	ImGui::End();
 }

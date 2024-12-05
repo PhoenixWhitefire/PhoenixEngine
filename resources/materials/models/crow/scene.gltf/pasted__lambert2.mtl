@@ -1,9 +1,8 @@
 {
+  "BilinearFiltering": true,
   "ColorMap": "models/crow/diffuse.png",
   "EmissionMap": "models/crow/diffuse.png",
   "HasTranslucency": false,
-  "Shader": "worldUber",
-  "Uniforms": null,
-  "specExponent": 8.0,
-  "specMultiply": 0.5
+  "Uniforms": {},
+  "specExponent": 16.0
 }

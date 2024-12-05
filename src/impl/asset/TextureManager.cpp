@@ -227,7 +227,10 @@ void TextureManager::Shutdown()
 	instance = nullptr;
 }
 
-static void enloadTexture(
+// like emplace, for "put in place", but "emload" for "load in place"
+// i think that's how english works maybe
+// 05/12/2024
+static void emloadTexture(
 	Texture* AsyncTexture,
 	std::string ActualPath
 )
@@ -354,7 +357,7 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 					Texture asyncTexture{};
 					asyncTexture.ResourceId = newResourceId;
 
-					enloadTexture(&asyncTexture, ActualPath);
+					emloadTexture(&asyncTexture, ActualPath);
 
 					promise->set_value_at_thread_exit(asyncTexture);
 				}
@@ -367,7 +370,7 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 		}
 		else
 		{
-			enloadTexture(&newTexture, ActualPath);
+			emloadTexture(&newTexture, ActualPath);
 			m_UploadTextureToGpu(newTexture);
 		}
 

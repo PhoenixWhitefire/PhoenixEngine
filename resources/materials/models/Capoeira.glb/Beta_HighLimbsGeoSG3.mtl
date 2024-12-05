@@ -1,8 +1,7 @@
 {
+  "BilinearFiltering": true,
   "ColorMap": "textures/white.png",
   "HasTranslucency": false,
-  "Shader": "worldUber",
-  "Uniforms": null,
-  "specExponent": 8.0,
-  "specMultiply": 0.5
+  "Uniforms": {},
+  "specExponent": 16.0
 }

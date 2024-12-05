@@ -292,7 +292,8 @@ static void recursivelyTravelHierarchy(
 				object3D->MaterialId,
 				object3D->ColorRGB,
 				object3D->Transparency,
-				object3D->Reflectivity,
+				object3D->MetallnessFactor,
+				object3D->RoughnessFactor,
 				object3D->FaceCulling
 			);
 		}

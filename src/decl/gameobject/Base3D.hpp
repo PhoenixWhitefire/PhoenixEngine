@@ -25,7 +25,8 @@ public:
 	FaceCullingMode FaceCulling = FaceCullingMode::BackFace;
 
 	float Transparency = 0.f;
-	float Reflectivity = 0.f;
+	float MetallnessFactor = 1.f;
+	float RoughnessFactor = 1.f;
 
 	Color ColorRGB = Color(1.f, 1.f, 1.f);
 

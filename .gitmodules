@@ -10,3 +10,9 @@
 	path = SFML
 	url = https://github.com/SFML/SFML
 	branch = master
+[submodule "ImGuiFD"]
+	path = ImGuiFD
+	url = https://github.com/Julianiolo/ImGuiFD
+[submodule "ImFileDialog"]
+	path = ImFileDialog
+	url = https://github.com/dfranx/ImFileDialog

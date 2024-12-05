@@ -320,7 +320,8 @@ void Renderer::DrawScene(
 				checksum = renderData.RenderMeshId
 					+ static_cast<uint64_t>(renderData.MaterialId * 500u)
 					+ (renderData.Transparency > 0.f ? 5000000ull : 0ull)
-					+ static_cast<uint64_t>(renderData.Reflectivity * 115);
+					+ static_cast<uint64_t>(renderData.MetallnessFactor * 115)
+					+ static_cast<uint64_t>(renderData.RoughnessFactor * 115);
 
 			if (renderData.Transparency > 0.f)
 				// hacky way to get transparents closer to the camera drawn
@@ -558,8 +559,9 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData)
 	shader.SetUniform("SpecularMultiplier", material.SpecMultiply);
 	shader.SetUniform("SpecularPower", material.SpecExponent);
 
-	shader.SetUniform("Reflectivity", RenderData.Reflectivity);
 	shader.SetUniform("Transparency", RenderData.Transparency);
+	shader.SetUniform("MetallnessFactor", RenderData.MetallnessFactor);
+	shader.SetUniform("RoughnessFactor", RenderData.RoughnessFactor);
 
 	shader.SetUniform(
 		"ColorTint",
@@ -579,13 +581,22 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData)
 		* Extra machinery and boilerplate, and it's overall more effort
 	*/
 
-	shader.SetTextureUniform("ColorMap", material.ColorMap);
-	shader.SetTextureUniform("MetallicRoughnessMap", material.MetallicRoughnessMap);
+	//shader.SetTextureUniform("ColorMap", material.ColorMap);
+	//shader.SetTextureUniform("MetallicRoughnessMap", material.MetallicRoughnessMap);
+
+	TextureManager* texManager = TextureManager::Get();
+
+	glActiveTexture(GL_TEXTURE10);
+	glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(material.ColorMap).GpuId);
+
+	glActiveTexture(GL_TEXTURE11);
+	glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(material.MetallicRoughnessMap).GpuId);
 
 	if (material.NormalMap != 0)
 	{
 		shader.SetUniform("HasNormalMap", true);
-		shader.SetTextureUniform("NormalMap", material.NormalMap);
+		glActiveTexture(GL_TEXTURE12);
+		glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(material.NormalMap).GpuId);
 	}
 	else
 		shader.SetUniform("HasNormalMap", false);
@@ -593,7 +604,8 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData)
 	if (material.EmissionMap != 0)
 	{
 		shader.SetUniform("HasEmissionMap", true);
-		shader.SetTextureUniform("EmissionMap", material.EmissionMap);
+		glActiveTexture(GL_TEXTURE13);
+		glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(material.EmissionMap).GpuId);
 	}
 	else
 		shader.SetUniform("HasEmissionMap", false);
