@@ -1,6 +1,7 @@
 {
-  "ColorMap": "textures/materials/plastic.png",
+  "ColorMap": "textures/materials/plastic.jpg",
   "HasTranslucency": false,
+  "MetallicRoughnessMap": "textures/black.png",
   "Shader": "worldUberTriProjected",
   "Uniforms": {
     "MaterialProjectionFactor": 0.05000000074505806

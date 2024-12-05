@@ -215,9 +215,64 @@ static void renderScriptEditor()
 }
 
 static char* MtlEditorTextureSelectDialogBuffer = nullptr;
+static uint32_t* MtlEditorTextureSelectTarget = nullptr;
 
-static void mtlEditorTexture(uint32_t& TextureId, const char* Label, char* Buffer)
+static void mtlEditorTexture(uint32_t* TextureIdPtr, const char* Label, char* Buffer)
 {
+	TextureManager* texManager = TextureManager::Get();
+
+	const Texture& tx = texManager->GetTextureResource(*TextureIdPtr);
+
+	ImGui::Text(Label);
+	bool fileDialogRequested = ImGui::TextLink(Buffer);
+	ImGui::SetItemTooltip("Open file dialog");
+
+	if (fileDialogRequested)
+	{
+		std::string bufAsStr = std::string(Buffer);
+		std::string texdir = "resources/" + bufAsStr.substr(0ull, bufAsStr.find_last_of("/"));
+
+		ImGuiFD::OpenDialog(
+			"Select Texture",
+			ImGuiFDMode_LoadFile,
+			texdir.c_str(),
+			"*.png,*.jpg,*.jpeg",
+			0,
+			1
+		);
+
+		MtlEditorTextureSelectDialogBuffer = Buffer;
+		MtlEditorTextureSelectTarget = TextureIdPtr;
+	}
+
+	ImGui::InputText(Label, Buffer, MATERIAL_TEXTUREPATH_BUFSIZE);
+	ImGui::SetItemTooltip("Enter path to texture directly");
+
+	ImGui::Image(
+		tx.GpuId,
+		// Scale to 256 pixels wide, while maintaining aspect ratio
+		ImVec2(256.f, tx.Height * (256.f / tx.Width))
+	);
+
+	ImGui::Text(std::vformat(
+		"Resolution: {}x{}",
+		std::make_format_args(tx.Width, tx.Height)
+	).c_str());
+
+	ImGui::Text(std::vformat(
+		"# Color channels: {}",
+		std::make_format_args(tx.NumColorChannels)
+	).c_str());
+}
+
+// 02/09/2024
+// That one Gianni Matragrano shitpost where it's a
+// baguette with a doge face on a white background low-res
+// with the caption "pain"
+// and it's just him screaming into the mic
+void Editor::m_RenderMaterialEditor()
+{
+	MaterialManager* mtlManager = MaterialManager::Get();
 	TextureManager* texManager = TextureManager::Get();
 
 	if (MtlEditorTextureSelectDialogBuffer != nullptr)
@@ -245,10 +300,10 @@ static void mtlEditorTexture(uint32_t& TextureId, const char* Label, char* Buffe
 
 						uint32_t newtexid = texManager->LoadTextureFromPath(shortpath);
 						// i'm so silly 04/12/2024
-						TextureId = newtexid;
+						*MtlEditorTextureSelectTarget = newtexid;
 					}
 				}
-				
+
 				ImGuiFD::CloseCurrentDialog();
 				MtlEditorTextureSelectDialogBuffer = nullptr;
 			}
@@ -256,67 +311,12 @@ static void mtlEditorTexture(uint32_t& TextureId, const char* Label, char* Buffe
 			ImGuiFD::EndDialog();
 		}
 	}
-	else
-	{
-		const Texture& tx = texManager->GetTextureResource(TextureId);
 
-		ImGui::Text(Label);
-		bool fileDialogRequested = ImGui::TextLink(Buffer);
-		ImGui::SetItemTooltip("Open file dialog");
-
-		if (fileDialogRequested)
-		{
-			std::string bufAsStr = std::string(Buffer);
-			std::string texdir = "resources/" + bufAsStr.substr(0ull, bufAsStr.find_last_of("/"));
-
-			ImGuiFD::OpenDialog(
-				"Select Texture",
-				ImGuiFDMode_LoadFile,
-				texdir.c_str(),
-				"*.png,*.jpg,*.jpeg",
-				0,
-				1
-			);
-
-			MtlEditorTextureSelectDialogBuffer = Buffer;
-		}
-
-		ImGui::InputText(Label, Buffer, MATERIAL_TEXTUREPATH_BUFSIZE);
-		ImGui::SetItemTooltip("Enter path to texture directly");
-
-		ImGui::Image(
-			tx.GpuId,
-			// Scale to 256 pixels wide, while maintaining aspect ratio
-			ImVec2(256.f, tx.Height * (256.f / tx.Width))
-		);
-
-		ImGui::Text(std::vformat(
-			"Resolution: {}x{}",
-			std::make_format_args(tx.Width, tx.Height)
-		).c_str());
-
-		ImGui::Text(std::vformat(
-			"# Color channels: {}",
-			std::make_format_args(tx.NumColorChannels)
-		).c_str());
-	}
-}
-
-// 02/09/2024
-// That one Gianni Matragrano shitpost where it's a
-// baguette with a doge face on a white background low-res
-// with the caption "pain"
-// and it's just him screaming into the mic
-void Editor::m_RenderMaterialEditor()
-{
 	if (!ImGui::Begin("Materials"))
 	{
 		ImGui::End();
 		return;
 	}
-
-	MaterialManager* mtlManager = MaterialManager::Get();
-	TextureManager* texManager = TextureManager::Get();
 
 	ImGui::InputText("Load material", m_MtlLoadNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
 	ImGui::SetItemTooltip("The name of the material to load in, NOT the file path");
@@ -434,7 +434,7 @@ void Editor::m_RenderMaterialEditor()
 
 	ImGui::InputText("Shader", m_MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
 
-	mtlEditorTexture(curItem.ColorMap, "Color Map:", m_MtlDiffuseBuf);
+	mtlEditorTexture(&curItem.ColorMap, "Color Map:", m_MtlDiffuseBuf);
 
 	bool hadSpecularTexture = curItem.MetallicRoughnessMap != 0;
 	bool metallicRoughnessEnabled = hadSpecularTexture;
@@ -445,7 +445,7 @@ void Editor::m_RenderMaterialEditor()
 		if (!hadSpecularTexture)
 			curItem.MetallicRoughnessMap = texManager->LoadTextureFromPath("textures/white.png");
 
-		mtlEditorTexture(curItem.MetallicRoughnessMap, "Metallic Roughness Map:", m_MtlSpecBuf);
+		mtlEditorTexture(&curItem.MetallicRoughnessMap, "Metallic Roughness Map:", m_MtlSpecBuf);
 	}
 	else
 		// the ID is the only thing the Renderer uses to determine
@@ -464,7 +464,7 @@ void Editor::m_RenderMaterialEditor()
 		if (!hadNormalMap)
 			curItem.NormalMap = texManager->LoadTextureFromPath("textures/violet.png");
 
-		mtlEditorTexture(curItem.NormalMap, "Normal Map:", m_MtlNormalBuf);
+		mtlEditorTexture(&curItem.NormalMap, "Normal Map:", m_MtlNormalBuf);
 	}
 	else
 		curItem.NormalMap = 0;
@@ -478,7 +478,7 @@ void Editor::m_RenderMaterialEditor()
 		if (!hadEmissiveMap)
 			curItem.EmissionMap = texManager->LoadTextureFromPath("textures/white.png");
 
-		mtlEditorTexture(curItem.EmissionMap, "Emission Map:", m_MtlEmissionBuf);
+		mtlEditorTexture(&curItem.EmissionMap, "Emission Map:", m_MtlEmissionBuf);
 	}
 	else
 		curItem.EmissionMap = 0;

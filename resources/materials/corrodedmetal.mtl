@@ -1,3 +1,9 @@
 {
-  "albedo": "textures/materials/corrodedmetal.png"
+  "ColorMap": "textures/materials/corrodedmetal.jpg",
+  "HasTranslucency": false,
+  "MetallicRoughnessMap": "textures/black.png",
+  "Shader": "worldUber",
+  "Uniforms": null,
+  "specExponent": 0.0,
+  "specMultiply": 0.0
 }
