@@ -59,5 +59,5 @@ Object_Primitive::Object_Primitive()
 void Object_Primitive::SetShape(PrimitiveShape shape)
 {
 	this->Shape = shape;
-	m_RenderMeshId = MeshProvider::Get()->LoadFromPath(getPrimitiveMesh(shape));
+	this->RenderMeshId = MeshProvider::Get()->LoadFromPath(getPrimitiveMesh(shape));
 }

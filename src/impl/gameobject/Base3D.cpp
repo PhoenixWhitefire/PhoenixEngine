@@ -1,5 +1,6 @@
 #include "gameobject/Base3D.hpp"
 #include "asset/MaterialManager.hpp"
+#include "asset/MeshProvider.hpp"
 
 PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(Base3D);
 
@@ -47,7 +48,8 @@ void Object_Base3D::s_DeclareReflections()
 		}
 	);
 
-	REFLECTION_DECLAREPROP_SIMPLE_TYPECAST(Object_Base3D, ColorRGB, Color);
+	REFLECTION_DECLAREPROP_SIMPLE_TYPECAST(Object_Base3D, Tint, Color);
+	REFLECTION_DECLAREPROP_SIMPLE(Object_Base3D, CastsShadows, Bool);
 	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_Base3D, Transparency, Double, float);
 	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_Base3D, MetallnessFactor, Double, float);
 	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_Base3D, RoughnessFactor, Double, float);
@@ -79,13 +81,9 @@ Object_Base3D::Object_Base3D()
 	this->Name = "Base3D";
 	this->ClassName = "Base3D";
 
+	this->RenderMeshId = MeshProvider::Get()->LoadFromPath("!Cube");
 	this->MaterialId = MaterialManager::Get()->LoadMaterialFromPath("plastic");
 
 	s_DeclareReflections();
 	ApiPointer = &s_Api;
-}
-
-uint32_t Object_Base3D::GetRenderMeshId()
-{
-	return m_RenderMeshId;
 }

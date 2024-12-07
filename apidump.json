@@ -13,8 +13,8 @@
     "WorldTransform": "Matrix"
   },
   "Base3D": {
+    "CastsShadows": "Bool",
     "Class": "String",
-    "ColorRGB": "Color",
     "Density": "Double",
     "Destroy": "() -> ()",
     "Enabled": "Bool",
@@ -33,6 +33,7 @@
     "PhysicsDynamics": "Bool",
     "RoughnessFactor": "Double",
     "Size": "Vector3",
+    "Tint": "Color",
     "Transform": "Matrix",
     "Transparency": "Double"
   },
@@ -126,8 +127,8 @@
   },
   "Mesh": {
     "Asset": "String",
+    "CastsShadows": "Bool",
     "Class": "String",
-    "ColorRGB": "Color",
     "Density": "Double",
     "Destroy": "() -> ()",
     "Enabled": "Bool",
@@ -146,6 +147,7 @@
     "PhysicsDynamics": "Bool",
     "RoughnessFactor": "Double",
     "Size": "Vector3",
+    "Tint": "Color",
     "Transform": "Matrix",
     "Transparency": "Double"
   },
@@ -194,8 +196,8 @@
     "WorldTransform": "Matrix"
   },
   "Primitive": {
+    "CastsShadows": "Bool",
     "Class": "String",
-    "ColorRGB": "Color",
     "Density": "Double",
     "Destroy": "() -> ()",
     "Enabled": "Bool",
@@ -215,6 +217,7 @@
     "RoughnessFactor": "Double",
     "Shape": "Integer",
     "Size": "Vector3",
+    "Tint": "Color",
     "Transform": "Matrix",
     "Transparency": "Double"
   },

@@ -14,13 +14,12 @@ class Object_Base3D : public GameObject
 public:
 	Object_Base3D();
 
-	virtual uint32_t GetRenderMeshId();
-
 	glm::mat4 Transform = glm::mat4(1.f);
 	Vector3 Size = Vector3(1.f, 1.f, 1.f);
 
 	bool PhysicsDynamics = false;
 	bool PhysicsCollisions = true;
+	bool CastsShadows = true;
 
 	FaceCullingMode FaceCulling = FaceCullingMode::BackFace;
 
@@ -28,8 +27,9 @@ public:
 	float MetallnessFactor = 1.f;
 	float RoughnessFactor = 1.f;
 
-	Color ColorRGB = Color(1.f, 1.f, 1.f);
+	Color Tint = Color(1.f, 1.f, 1.f);
 
+	uint32_t RenderMeshId{};
 	uint32_t MaterialId{};
 
 	Vector3 LinearVelocity;
@@ -39,9 +39,6 @@ public:
 	double Friction = 0.3f;
 
 	REFLECTION_DECLAREAPI;
-
-protected:
-	uint32_t m_RenderMeshId{};
 
 private:
 	static void s_DeclareReflections();

@@ -18,6 +18,7 @@ struct RenderItem
 	float RoughnessFactor{};
 
 	FaceCullingMode FaceCulling = FaceCullingMode::BackFace;
+	bool CastsShadows = false;
 };
 
 enum class LightType : uint8_t { Directional, Point, Spot };
@@ -25,14 +26,16 @@ enum class LightType : uint8_t { Directional, Point, Spot };
 struct LightItem
 {
 	LightType Type = LightType::Point;
+	bool Shadows = false;
 
+	// acts as the direction for Directional Lights
 	Vector3 Position;
 	Color LightColor;
-	float Range = 60.f;
 
-	glm::mat4 ShadowMapProjection{};
-	bool HasShadowMap = false;
-	int ShadowMapIndex{};
+	// spot & pointlights
+	float Range = 60.f;
+	// spotlights
+	float Angle = 60.f;
 };
 
 struct Scene

@@ -18,28 +18,16 @@ When Directional light, Position = Direction
 struct LightObject
 {
 	int Type;
-	
+	bool Shadows;
+
 	// generic, applies to all light types (i.e., directional, point, spot lights)
 	vec3 Position;
 	vec3 Color;
 
 	// point lights and spotlights
 	float Range;
-	
-	// spotlights only, controls the interpolation between light and dark to prevent a hard cut-off
-	float Spot_OuterCone;
-	float Spot_InnerCone;
-
-	// shadows
-	// NOTE: not functional :( too lazy lol
-	//bool HasShadowMap;
-	//int ShadowMapIndex;
-	//mat4 ShadowMapProjection;
-	// 21/06/2024 When did I write this??? Some stuff for a shadow atlas system...
-	bool HasShadow;
-	vec2 ShadowTexelPosition;
-	vec2 ShadowTexelSize;
-	mat4 ShadowProjection;
+	// spotlights
+	float Angle;
 };
 
 uniform sampler2D ShadowAtlas;
@@ -148,30 +136,32 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 	{
 		vec3 Incoming = normalize(LightPosition);
 		
-		vec3 lightCoords = Frag_RelativeToDirecLight.xyz / Frag_RelativeToDirecLight.w;
 		float shadow = 0.f;
 		
-		if (lightCoords.z <= 1.f)
+		if (Light.Shadows)
 		{
-			lightCoords = (lightCoords + 1.f) / 2.f;
-			float currentDepth = lightCoords.z;
+			vec3 lightCoords = Frag_RelativeToDirecLight.xyz / Frag_RelativeToDirecLight.w;
+			if (lightCoords.z <= 1.f)
+			{
+				lightCoords = (lightCoords + 1.f) / 2.f;
+				float currentDepth = lightCoords.z;
 
-			//float curDepthL = LinearizeDepth(curDepth);
-			float bias = max(0.025f * (1.f - dot(Normal, Incoming)), 0.65f);
-			
-			const int SampleRadius = 1;
-			vec2 pixelSize = 1.f / textureSize(ShadowAtlas, 0);
-			for (int y = -SampleRadius; y <= SampleRadius; y++)
-				for (int x = -SampleRadius; x <= SampleRadius; x++)
-				{
-					float closestDepth = texture(ShadowAtlas, lightCoords.xy + vec2(x, y) * pixelSize).r;
-					if (currentDepth > closestDepth + bias)
-						shadow += 1.f;
-				}
+				//float curDepthL = LinearizeDepth(curDepth);
+				float bias = max(0.025f * (1.f - dot(Normal, Incoming)), 0.4f);
+				
+				const int SampleRadius = 1;
+				vec2 pixelSize = 1.f / textureSize(ShadowAtlas, 0);
+				for (int y = -SampleRadius; y <= SampleRadius; y++)
+					for (int x = -SampleRadius; x <= SampleRadius; x++)
+					{
+						float closestDepth = texture(ShadowAtlas, lightCoords.xy + vec2(x, y) * pixelSize).r;
+						if (currentDepth > closestDepth + bias)
+							shadow += 1.f;
+					}
 
-			shadow /= pow((SampleRadius * 2 + 1), 2);
+				shadow /= pow((SampleRadius * 2 + 1), 2);
+			}
 		}
-		
 		//shadow = 0.f;
 
 		//return vec3(1.f - shadow);

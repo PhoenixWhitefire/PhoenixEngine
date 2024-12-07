@@ -311,7 +311,7 @@ static std::vector<GameObject*> LoadMapVersion1(
 			);
 
 			if (Object.find("color") != Object.end())
-				Object3D->ColorRGB = GetColorFromJson(Object["color"]);
+				Object3D->Tint = GetColorFromJson(Object["color"]);
 
 			Object3D->Size = GetVector3FromJson(Object["size"]);
 

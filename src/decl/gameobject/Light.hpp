@@ -51,9 +51,7 @@ public:
 	Object_SpotLight();
 
 	float Range = 16.f;
-
-	float OuterCone = 90.f;
-	float InnerCone = 95.f;
+	float Angle = 45.f;
 
 	REFLECTION_DECLAREAPI;
 

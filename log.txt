@@ -26,8 +26,5 @@ GL Debug callback:
 	Source: OpenGL
 	Error ID: 131218
 
-Loading scene: 'levels/de_dust2.world'
-Scene version is 1
-Scene loaded
 Main loop exited
 Application shutting down...

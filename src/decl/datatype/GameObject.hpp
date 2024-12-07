@@ -61,14 +61,13 @@ public:
 	Reflection::GenericValue ToGenericValue();
 
 	uint32_t ObjectId = 0;
+	uint32_t Parent = PHX_GAMEOBJECT_NULL_ID;
 
 	std::string Name = "GameObject";
 	std::string ClassName = "GameObject";
 
 	bool Enabled = true;
 	bool ParentLocked = false;
-
-	uint32_t Parent = PHX_GAMEOBJECT_NULL_ID;
 
 	static nlohmann::json DumpApiToJson();
 

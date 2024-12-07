@@ -40,7 +40,7 @@ Object_Mesh::Object_Mesh()
 
 void Object_Mesh::SetRenderMesh(const std::string& NewRenderMesh)
 {
-	m_RenderMeshId = MeshProvider::Get()->LoadFromPath(NewRenderMesh);
+	this->RenderMeshId = MeshProvider::Get()->LoadFromPath(NewRenderMesh);
 	m_MeshPath = NewRenderMesh;
 }
 

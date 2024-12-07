@@ -247,7 +247,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 
 		ModelLoader::MeshMaterial& material = m_MeshMaterials.at(MeshIndex);
 
-		mesh->ColorRGB = Color(
+		mesh->Tint = Color(
 			material.BaseColorFactor.r,
 			material.BaseColorFactor.g,
 			material.BaseColorFactor.b

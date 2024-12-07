@@ -286,15 +286,16 @@ static void recursivelyTravelHierarchy(
 				//continue;
 
 			RenderList.emplace_back(
-				object3D->GetRenderMeshId(),
+				object3D->RenderMeshId,
 				object3D->Transform,
 				object3D->Size,
 				object3D->MaterialId,
-				object3D->ColorRGB,
+				object3D->Tint,
 				object3D->Transparency,
 				object3D->MetallnessFactor,
 				object3D->RoughnessFactor,
-				object3D->FaceCulling
+				object3D->FaceCulling,
+				object3D->CastsShadows
 			);
 		}
 
@@ -304,10 +305,12 @@ static void recursivelyTravelHierarchy(
 		{
 			Object_DirectionalLight* directional = dynamic_cast<Object_DirectionalLight*>(light);
 			Object_PointLight* point = dynamic_cast<Object_PointLight*>(light);
+			Object_SpotLight* spot = dynamic_cast<Object_SpotLight*>(light);
 
 			if (directional)
 				LightList.emplace_back(
 					LightType::Directional,
+					light->Shadows,
 					(glm::vec3)light->LocalTransform[3],
 					light->LightColor * light->Brightness
 				);
@@ -315,9 +318,20 @@ static void recursivelyTravelHierarchy(
 			if (point)
 				LightList.emplace_back(
 					LightType::Point,
+					light->Shadows,
 					(glm::vec3)light->GetWorldTransform()[3],
 					light->LightColor * light->Brightness,
 					point->Range
+				);
+
+			if (spot)
+				LightList.emplace_back(
+					LightType::Spot,
+					light->Shadows,
+					(glm::vec3)light->GetWorldTransform()[3],
+					light->LightColor * light->Brightness,
+					spot->Range,
+					spot->Angle
 				);
 		}
 
@@ -559,7 +573,7 @@ void EngineObject::Start()
 		float aspectRatio = (float)this->WindowSizeX / (float)this->WindowSizeY;
 
 		Object_Camera* sceneCamera = this->Workspace->GetSceneCamera();
-		
+
 		std::vector<Object_Base3D*> physicsList;
 
 		Profiler::Start("RecurseDataModel");
@@ -585,31 +599,17 @@ void EngineObject::Start()
 
 		if (hasPhysics)
 			Physics::Step(physicsList, deltaTime);
-		
-		glm::vec3 sunDirection{ .57f, .57f, .57f };
+
+		bool hasSun = false;
+		glm::vec3 sunDirection{ .5f, .5f, .5f };
 
 		for (const LightItem& light : scene.LightingList)
-			if (light.Type == LightType::Directional)
+			if (light.Type == LightType::Directional && light.Shadows)
+			{
+				hasSun = true;
 				sunDirection = light.Position;
-
-		//glm::vec3 sunCamPosition = glm::vec3(sceneCamera->Transform[3]) - sunDirection * 100.f;
-
-		/*
-		sunCamera->Transform = glm::translate(glm::lookAt(
-			sunDirection,
-			glm::vec3(0.f, 0.f, 0.f),
-			glm::vec3(0.f, 1.f, 0.f)
-		), glm::vec3(0.f, 0.f, -150.f));
-		
-		sunCamera->Transform[3] = glm::vec4(
-			glm::vec3(sunCamera->Transform[3] + sceneCamera->Transform[3]),
-			1.f
-		);
-		*/
-
-		glm::mat4 sunOrtho = glm::ortho(-35.0f, 35.0f, -35.0f, 35.0f, 0.1f, 75.0f);
-		glm::mat4 sunView = glm::lookAt(50.f * sunDirection, glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
-		glm::mat4 sunRenderMatrix = sunOrtho * sunView;
+				break;
+			}
 
 		// we do this AFTER  `recursivelyTravelHierarchy` in case any Scripts
 		// update the camera transform
@@ -621,25 +621,40 @@ void EngineObject::Start()
 
 		for (const RenderItem& ri : scene.RenderList)
 			scene.UsedShaders.insert(mtlManager->GetMaterialResource(ri.MaterialId).ShaderId);
-		
-		sunShadowMap.Bind();
-		glViewport(0, 0, SunShadowMapResolutionSq, SunShadowMapResolutionSq);
-		glClearColor(1.f, 1.f, 1.f, 1.f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		for (uint32_t shdId : scene.UsedShaders)
+		if (hasSun)
 		{
-			ShaderProgram& shd = shdManager->GetShaderResource(shdId);
-			shd.SetUniform("IsShadowMap", true);
+			Scene sunScene{};
+			sunScene.RenderList.reserve(scene.RenderList.size());
+			sunScene.UsedShaders = scene.UsedShaders;
 
-			glActiveTexture(GL_TEXTURE0 + 101);
-			sunShadowMap.BindTexture();
-			shd.SetUniform("ShadowAtlas", 101);
+			for (const RenderItem& ri : scene.RenderList)
+				if (ri.CastsShadows)
+					sunScene.RenderList.push_back(ri);
 
-			shd.SetUniform("DirecLightProjection", sunRenderMatrix);
+			glm::mat4 sunOrtho = glm::ortho(-35.0f, 35.0f, -35.0f, 35.0f, 0.1f, 75.0f);
+			glm::mat4 sunView = glm::lookAt(50.f * sunDirection, glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
+			glm::mat4 sunRenderMatrix = sunOrtho * sunView;
+
+			sunShadowMap.Bind();
+			glViewport(0, 0, SunShadowMapResolutionSq, SunShadowMapResolutionSq);
+			glClearColor(1.f, 1.f, 1.f, 1.f);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+			for (uint32_t shdId : scene.UsedShaders)
+			{
+				ShaderProgram& shd = shdManager->GetShaderResource(shdId);
+				shd.SetUniform("IsShadowMap", true);
+
+				glActiveTexture(GL_TEXTURE0 + 101);
+				sunShadowMap.BindTexture();
+				shd.SetUniform("ShadowAtlas", 101);
+
+				shd.SetUniform("DirecLightProjection", sunRenderMatrix);
+			}
+
+			RendererContext->DrawScene(sunScene, sunRenderMatrix, glm::mat4(1.f), RunningTime);
 		}
-
-		RendererContext->DrawScene(scene, sunRenderMatrix, glm::mat4(1.f), RunningTime);
 
 		for (uint32_t shdId : scene.UsedShaders)
 			shdManager->GetShaderResource(shdId).SetUniform("IsShadowMap", false);

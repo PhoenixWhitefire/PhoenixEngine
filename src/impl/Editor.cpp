@@ -54,7 +54,8 @@ static Scene MtlPreviewScene =
 	{
 		{
 			LightType::Directional,
-			Vector3(0.57f, 0.57f, 0.57f) * 3.f,
+			false,
+			Vector3(0.57f, 0.57f, 0.57f),
 			Color(1.f, 1.f, 1.f)
 		}
 	},
@@ -149,30 +150,12 @@ static void renderScriptEditor()
 		return;
 	}
 
-	if (!ImGui::Begin("Script Editor"))
-	{
-		ImGui::End();
-		ScriptEditorEnabled = false;
-
-		return;
-	}
+	ImGui::Begin("Script Editor", 0, ImGuiWindowFlags_NoCollapse);
 
 	ImGui::Text("%s", targetScript->Name.c_str());
 
 	if (ImGui::Button("Save"))
-	{
-		if (ScriptFileStream)
-		{
-			(*ScriptFileStream) << TextEntryBuffer;
-			ScriptFileStream->close();
-
-			delete ScriptFileStream;
-			ScriptFileStream = nullptr;
-		}
-
-		free(TextEntryBuffer);
-		TextEntryBuffer = nullptr;
-	}
+		(*ScriptFileStream) << TextEntryBuffer;
 
 	if (ImGui::Button("Close"))
 	{
@@ -728,6 +711,9 @@ static GameObject* recursiveIterateTree(GameObject* current, bool didVisitCurSel
 }
 
 static GameObject* ForceSelectObjectNextFrame = nullptr;
+static Reflection::GenericValue DelayedPropValue{};
+static GameObject* DelayedModifiedObject{};
+static std::string DelayedPropName{};
 
 void Editor::RenderUI()
 {
@@ -1005,10 +991,10 @@ void Editor::RenderUI()
 				{
 					selected->SetPropertyValue(propName, newVal);
 				}
-				catch (std::string e)
+				catch (std::string err)
 				{
-					ErrorTooltipMessage = e;
-					ErrorTooltipTimeRemaining = 5.f;
+					ErrorTooltipMessage = err;
+					ErrorTooltipTimeRemaining = 2.f;
 				}
 			}
 		}

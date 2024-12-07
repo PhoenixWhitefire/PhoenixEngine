@@ -1,3 +1,5 @@
+#include <glm/gtx/euler_angles.hpp>
+
 #include "Reflection.hpp"
 #include "datatype/Vector3.hpp"
 #include "datatype/Color.hpp"
@@ -192,6 +194,34 @@ std::string Reflection::GenericValue::ToString()
 		}
 		else
 			return "Empty Map";
+	}
+
+	case (ValueType::Matrix):
+	{
+		glm::mat4 mat = this->AsMatrix();
+
+		float pos[3] =
+		{
+			mat[3][0],
+			mat[3][1],
+			mat[3][2]
+		};
+
+		glm::vec3 rotrads{};
+
+		glm::extractEulerAngleXYZ(mat, rotrads.x, rotrads.y, rotrads.z);
+
+		float rotdegs[3] =
+		{
+			glm::degrees(rotrads.x),
+			glm::degrees(rotrads.y),
+			glm::degrees(rotrads.z)
+		};
+
+		return std::vformat(
+			"Pos: ( {}, {}, {} ), Ang: ( {}, {}, {} )",
+			std::make_format_args(pos[0], pos[1], pos[2], rotdegs[0], rotdegs[1], rotdegs[2])
+		);
 	}
 
 	default:

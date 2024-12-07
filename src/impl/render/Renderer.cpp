@@ -269,6 +269,8 @@ void Renderer::DrawScene(
 			shader.SetUniform((shaderLightLoc + ".Type").c_str(), (int)lightData.Type);
 
 			shader.SetUniform((shaderLightLoc + ".Range").c_str(), lightData.Range);
+			shader.SetUniform((shaderLightLoc + ".Angle").c_str(), lightData.Angle);
+			shader.SetUniform((shaderLightLoc + ".Shadows").c_str(), lightData.Shadows);
 		}
 
 		shader.SetUniform(

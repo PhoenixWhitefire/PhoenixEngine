@@ -41,7 +41,6 @@ void Object_DirectionalLight::s_DeclareReflections()
 	for (auto& funcIt : Object_Attachment::s_GetFunctions())
 		s_Api.Properties.erase(funcIt.first);
 
-
 	// , before RE-INHERITING Father `GameObject` so we have the Base APIs
 	// ( Name, ClassName, Enabled etc )
 	REFLECTION_INHERITAPI(GameObject);
@@ -53,16 +52,16 @@ void Object_DirectionalLight::s_DeclareReflections()
 		{
 			Object_DirectionalLight* dl = dynamic_cast<Object_DirectionalLight*>(g);
 			glm::vec3 forward = dl->LocalTransform[3];
-			return Vector3(forward / glm::length(forward)).ToGenericValue();
+			return Vector3(forward).ToGenericValue(); //Vector3(forward / glm::length(forward)).ToGenericValue();
 		},
 		[](Reflection::Reflectable* g, const Reflection::GenericValue& gv)
 		{
 			Object_DirectionalLight* p = dynamic_cast<Object_DirectionalLight*>(g);
 
-			Vector3 newDirection{ gv };
-			newDirection = newDirection / newDirection.Magnitude();
+			//Vector3 newDirection{ gv };
+			//newDirection = newDirection / newDirection.Magnitude();
 
-			p->LocalTransform = glm::translate(glm::mat4(1.f), (glm::vec3)newDirection);
+			p->LocalTransform = glm::translate(glm::mat4(1.f), (glm::vec3)Vector3(gv));
 		}
 	);
 	
@@ -88,8 +87,7 @@ void Object_SpotLight::s_DeclareReflections()
 	REFLECTION_INHERITAPI(Light);
 
 	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_SpotLight, Range, Double, float);
-	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_SpotLight, OuterCone, Double, float);
-	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_SpotLight, InnerCone, Double, float);
+	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_SpotLight, Angle, Double, float);
 }
 
 Object_Light::Object_Light()
