@@ -11,6 +11,8 @@ layout (location = 4) in mat4 InstanceTransform;
 layout (location = 8) in vec3 InstanceScale;
 layout (location = 9) in vec3 InstanceColor;
 
+const int MAX_LIGHTS = 6;
+
 uniform mat4 RenderMatrix;
 
 uniform mat4 Transform;
@@ -21,10 +23,7 @@ uniform bool IsInstanced;
 uniform float Time;
 uniform mat4 DirecLightProjection;
 
-out vec3 Frag_ModelPosition;
-out vec3 Frag_WorldPosition;
-out mat4 Frag_Transform;
-out vec4 Frag_RelativeToDirecLight;
+uniform vec3 CameraPosition;
 
 out DATA
 {
@@ -37,6 +36,7 @@ out DATA
 	vec3 WorldPosition;
 	mat4 Transform;
 	vec4 RelativeToDirecLight;
+	vec3 CameraPosition;
 } data_out;
 
 void main()
@@ -44,23 +44,30 @@ void main()
 	mat4 trans = Transform;
 	vec3 sca = Scale;
 	vec3 col = ColorTint * VertexColor;
-
+	
 	if (IsInstanced)
 	{
 		trans = InstanceTransform;
 		sca = InstanceScale;
 		col = InstanceColor * VertexColor;
 	}
-
+	
+	mat4 scaleMatrix;
+	scaleMatrix[0] = vec4(sca.x, 0.f, 0.f, 0.f);
+	scaleMatrix[1] = vec4(0.f, sca.y, 0.f, 0.f);
+	scaleMatrix[2] = vec4(0.f, 0.f, sca.z, 0.f);
+	scaleMatrix[3] = vec4(0.f, 0.f, 0.f, 1.f);
+	
 	data_out.VertexNormal = VertexNormal;
 	data_out.ColorTint = col;
 	data_out.TextureUV = VertexUV;
 	data_out.RenderMatrix = RenderMatrix;
-
+	
 	data_out.ModelPosition = VertexPosition * sca;
 	data_out.WorldPosition = vec3(trans * vec4(data_out.ModelPosition, 1.0f));
-	data_out.Transform = trans;
+	data_out.Transform = trans * scaleMatrix;
 	data_out.RelativeToDirecLight = DirecLightProjection * vec4(data_out.WorldPosition, 1.f);
-
+	data_out.CameraPosition = CameraPosition;
+	
 	gl_Position = vec4(data_out.WorldPosition, 1.f);
 }

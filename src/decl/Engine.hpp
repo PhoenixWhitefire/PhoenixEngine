@@ -51,7 +51,7 @@ public:
 	Object_DataModel* DataModel;
 	Object_Workspace* Workspace;
 
-	Renderer* RendererContext;
+	Renderer RendererContext;
 	SDL_Window* Window;
 
 	bool Exit = false;

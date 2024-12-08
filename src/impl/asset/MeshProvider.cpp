@@ -3,7 +3,6 @@
 #include <nljson.hpp>
 #include <glad/gl.h>
 #include <glm/vec4.hpp>
-#include <iostream>
 
 #include "asset/MeshProvider.hpp"
 #include "asset/PrimitiveMeshes.hpp"
@@ -261,12 +260,8 @@ MeshProvider::~MeshProvider()
 		delete prom;
 	}
 
-	for (MeshProvider::GpuMesh& gpuMesh : m_GpuMeshes)
-	{
-		delete gpuMesh.VertexBuffer;
-		delete gpuMesh.ElementBuffer;
-		delete gpuMesh.VertexArray;
-	}
+	for (GpuMesh& gpuMesh : m_GpuMeshes)
+		gpuMesh.Delete();
 
 	m_Meshes.clear();
 	m_StringToMeshId.clear();
@@ -276,19 +271,21 @@ MeshProvider::~MeshProvider()
 	m_GpuMeshes.clear();
 }
 
-static MeshProvider* instance = nullptr;
+static bool s_DidShutdown = false;
 
 MeshProvider* MeshProvider::Get()
 {
-	if (!instance)
-		instance = new MeshProvider();
-	return instance;
+	if (s_DidShutdown)
+		throw("Tried to ::Get MeshProvider after it was ::Shutdown");
+
+	static MeshProvider inst;
+	return &inst;
 }
 
 void MeshProvider::Shutdown()
 {
-	delete instance;
-	instance = nullptr;
+	//delete Get();
+	s_DidShutdown = true;
 }
 
 std::string MeshProvider::Serialize(const Mesh& mesh)
@@ -578,25 +575,29 @@ void MeshProvider::m_CreateAndUploadGpuMesh(Mesh& mesh)
 {
 	m_GpuMeshes.emplace_back();
 
-	MeshProvider::GpuMesh& gpuMesh = m_GpuMeshes[m_GpuMeshes.size() - 1];
+	MeshProvider::GpuMesh& gpuMesh = m_GpuMeshes.back();
 
-	GpuVertexArray* vao = new GpuVertexArray;
-	GpuVertexBuffer* vbo = new GpuVertexBuffer;
-	GpuElementBuffer* ebo = new GpuElementBuffer;
+	gpuMesh.VertexArray.Initialize();
+	gpuMesh.VertexBuffer.Initialize();
+	gpuMesh.ElementBuffer.Initialize();
 
-	gpuMesh.VertexArray = vao;
-	gpuMesh.VertexBuffer = vbo;
-	gpuMesh.ElementBuffer = ebo;
+	GpuVertexArray& vao = gpuMesh.VertexArray;
+	GpuVertexBuffer& vbo = gpuMesh.VertexBuffer;
+	GpuElementBuffer& ebo = gpuMesh.ElementBuffer;
 
-	vao->Bind();
+	vao.Bind();
 
-	vao->LinkAttrib(*vbo, 0, 3, GL_FLOAT, sizeof(Vertex), (void*)0);
-	vao->LinkAttrib(*vbo, 1, 3, GL_FLOAT, sizeof(Vertex), (void*)(3 * sizeof(float)));
-	vao->LinkAttrib(*vbo, 2, 3, GL_FLOAT, sizeof(Vertex), (void*)(6 * sizeof(float)));
-	vao->LinkAttrib(*vbo, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)(9 * sizeof(float)));
+	vao.LinkAttrib(vbo, 0, 3, GL_FLOAT, sizeof(Vertex), (void*)0);
+	vao.LinkAttrib(vbo, 1, 3, GL_FLOAT, sizeof(Vertex), (void*)(3 * sizeof(float)));
+	vao.LinkAttrib(vbo, 2, 3, GL_FLOAT, sizeof(Vertex), (void*)(6 * sizeof(float)));
+	vao.LinkAttrib(vbo, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)(9 * sizeof(float)));
 
-	vbo->SetBufferData(mesh.Vertices, BufferUsageHint::Static);
-	ebo->SetBufferData(mesh.Indices, BufferUsageHint::Static);
+	vbo.SetBufferData(mesh.Vertices, BufferUsageHint::Static);
+	ebo.SetBufferData(mesh.Indices, BufferUsageHint::Static);
+
+	vbo.Unbind();
+	ebo.Unbind();
+	vao.Unbind();
 
 	gpuMesh.NumIndices = static_cast<uint32_t>(mesh.Indices.size());
 

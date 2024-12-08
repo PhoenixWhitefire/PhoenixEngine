@@ -74,7 +74,7 @@ void EngineObject::OnWindowResized(int NewSizeX, int NewSizeY)
 	this->WindowSizeX = NewSizeX;
 	this->WindowSizeY = NewSizeY;
 
-	RendererContext->ChangeResolution(WindowSizeX, WindowSizeY);
+	RendererContext.ChangeResolution(WindowSizeX, WindowSizeY);
 }
 
 void EngineObject::SetIsFullscreen(bool Fullscreen)
@@ -224,7 +224,7 @@ EngineObject::EngineObject()
 
 	// TODO: Engine->MSAASamples does nothing, attempting to specify via below ctor's argument leads to
 	// OpenGL error "Target doesn't match the texture's target"
-	this->RendererContext = new Renderer(this->WindowSizeX, this->WindowSizeY, this->Window);
+	this->RendererContext.Initialize(this->WindowSizeX, this->WindowSizeY, this->Window);
 
 	Debug::Log("Creating initial DataModel...");
 
@@ -394,11 +394,29 @@ void EngineObject::Start()
 
 	TextureManager* texManager = TextureManager::Get();
 
-	for (const std::string& skyboxImage : SkyboxCubemapImages)
+	for (uint8_t faceIndex = 0; faceIndex < 6; faceIndex++)
 	{
+		const std::string& skyboxImage = SkyboxCubemapImages[faceIndex];
+
 		uint32_t tex = texManager->LoadTextureFromPath(SkyPath + skyboxImage + ".jpg");
 		skyboxFacesBeingLoaded.push_back(tex);
+
+		glTexImage2D(
+			GL_TEXTURE_CUBE_MAP_POSITIVE_X + faceIndex,
+			0,
+			GL_RGB,
+			1,
+			1,
+			0,
+			GL_RED,
+			GL_UNSIGNED_BYTE,
+			texManager->GetTextureResource(tex).TMP_ImageByteData
+		);
+
+		glGenerateMipmap(GL_TEXTURE_2D);
 	}
+
+	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
 	//Texture HDRISkyboxTexture("Assets/Textures/hdri_sky_1.jpeg", "Diffuse", 0);
 
@@ -420,7 +438,7 @@ void EngineObject::Start()
 
 	Scene scene{};
 
-	RendererContext->Framebuffer->Unbind();
+	RendererContext.FrameBuffer.Unbind();
 	
 	uint32_t distortionTexture = texManager->LoadTextureFromPath("textures/screendistort.jpg", false);
 
@@ -518,12 +536,14 @@ void EngineObject::Start()
 		LastTime = RunningTime;
 		FrameStart = RunningTime;
 
+		Profiler::Start("EventCallbacks/OnFrameStart");
 		this->OnFrameStart.Fire(deltaTime);
-
-		Profiler::Start("PollEvents");
+		Profiler::Stop();
 
 		while (SDL_PollEvent(&pollingEvent) != 0)
 		{
+			PROFILER_PROFILE_SCOPE("PollEvents");
+
 			ImGui_ImplSDL2_ProcessEvent(&pollingEvent);
 
 			switch (pollingEvent.type)
@@ -558,18 +578,14 @@ void EngineObject::Start()
 			}
 		}
 
-		//RendererContext->Framebuffer->UpdateResolution(WindowSizeX, WindowSizeY);
-
-		Profiler::Stop();
-
-		DataModel->Update(deltaTime);
-
 		// so scripts can use the `imgui_*` APIs
 		// 09/11/2024
-		ImGui_ImplOpenGL3_NewFrame();
-		ImGui_ImplSDL2_NewFrame();
-		ImGui::NewFrame();
-
+		{
+			PROFILER_PROFILE_SCOPE("DearImGuiNewFrame");
+			ImGui_ImplOpenGL3_NewFrame();
+			ImGui_ImplSDL2_NewFrame();
+			ImGui::NewFrame();
+		}
 		float aspectRatio = (float)this->WindowSizeX / (float)this->WindowSizeY;
 
 		Object_Camera* sceneCamera = this->Workspace->GetSceneCamera();
@@ -624,6 +640,8 @@ void EngineObject::Start()
 
 		if (hasSun)
 		{
+			PROFILER_PROFILE_SCOPE("Shadows");
+
 			Scene sunScene{};
 			sunScene.RenderList.reserve(scene.RenderList.size());
 			sunScene.UsedShaders = scene.UsedShaders;
@@ -653,15 +671,13 @@ void EngineObject::Start()
 				shd.SetUniform("DirecLightProjection", sunRenderMatrix);
 			}
 
-			RendererContext->DrawScene(sunScene, sunRenderMatrix, glm::mat4(1.f), RunningTime);
+			RendererContext.DrawScene(sunScene, sunRenderMatrix, glm::mat4(1.f), RunningTime);
+
+			for (uint32_t shdId : scene.UsedShaders)
+				shdManager->GetShaderResource(shdId).SetUniform("IsShadowMap", false);
+
+			glViewport(0, 0, WindowSizeX, WindowSizeY);
 		}
-
-		for (uint32_t shdId : scene.UsedShaders)
-			shdManager->GetShaderResource(shdId).SetUniform("IsShadowMap", false);
-
-		glViewport(0, 0, WindowSizeX, WindowSizeY);
-
-		glDepthFunc(GL_LEQUAL);
 
 		glm::vec3 camPos = glm::vec3(sceneCamera->Transform[3]);
 		glm::vec3 camForward = glm::vec3(sceneCamera->Transform[2]);
@@ -691,14 +707,16 @@ void EngineObject::Start()
 		glActiveTexture(GL_TEXTURE3);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemap);
 
-		RendererContext->Framebuffer->Bind();
+		RendererContext.FrameBuffer.Bind();
 
 		glClearColor(0.086f, 0.105f, 0.21f, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
 		MeshProvider* mp = MeshProvider::Get();
 
-		RendererContext->DrawMesh(
+		glDepthFunc(GL_LEQUAL);
+
+		RendererContext.DrawMesh(
 			mp->GetMeshResource(mp->LoadFromPath("!Cube")),
 			skyboxShaders,
 			Vector3::one,
@@ -709,13 +727,15 @@ void EngineObject::Start()
 		glDepthFunc(GL_LESS);
 
 		//Main render pass
-		RendererContext->DrawScene(scene, renderMatrix, sceneCamera->Transform, this->RunningTime);
+		RendererContext.DrawScene(scene, renderMatrix, sceneCamera->Transform, this->RunningTime);
 
 		glDisable(GL_DEPTH_TEST);
 
 		uint32_t dataModelId = this->DataModel->ObjectId;
 
+		Profiler::Start("EventCallbacks/OnFrameRenderGui");
 		this->OnFrameRenderGui.Fire(deltaTime);
+		Profiler::Stop();
 
 		if (!GameObject::GetObjectById(dataModelId))
 		{
@@ -730,7 +750,7 @@ void EngineObject::Start()
 
 		//Do framebuffer stuff after everything is drawn
 
-		RendererContext->Framebuffer->Unbind();
+		RendererContext.FrameBuffer.Unbind();
 
 		if (EngineJsonConfig.value("postfx_enabled", false))
 		{
@@ -796,13 +816,15 @@ void EngineObject::Start()
 		}
 
 		glActiveTexture(GL_TEXTURE1);
-		RendererContext->Framebuffer->BindTexture();
+		RendererContext.FrameBuffer.BindTexture();
 
 		glGenerateMipmap(GL_TEXTURE_2D);
 
 		glDisable(GL_DEPTH_TEST);
 
-		RendererContext->DrawMesh(
+		Profiler::Start("PostProcessing");
+
+		RendererContext.DrawMesh(
 			mp->GetMeshResource(mp->LoadFromPath("!Quad")),
 			postFxShaders,
 			Vector3::one*2.f,
@@ -810,6 +832,8 @@ void EngineObject::Start()
 			FaceCullingMode::BackFace,
 			0
 		);
+
+		Profiler::Stop();
 
 		glEnable(GL_DEPTH_TEST);
 
@@ -819,7 +843,9 @@ void EngineObject::Start()
 
 		double curTimePrevSwap = RunningTime;
 
-		RendererContext->SwapBuffers();
+		Profiler::Start("SwapBuffers");
+		RendererContext.SwapBuffers();
+		Profiler::Stop();
 
 		this->RunningTime = GetRunningTime();
 
@@ -829,7 +855,9 @@ void EngineObject::Start()
 
 		m_DrawnFramesInSecond++;
 
+		Profiler::Start("EventCallbacks/OnFrameEnd");
 		this->OnFrameEnd.Fire(deltaTime);
+		Profiler::Stop();
 
 		if (RunningTime - LastSecond > 1.0f)
 		{
@@ -858,7 +886,6 @@ EngineObject::~EngineObject()
 	TextureManager::Shutdown();
 	ShaderManager::Shutdown();
 	MeshProvider::Shutdown();
-	delete this->RendererContext;
 
 	// TODO:
 	// 27/08/2024:
@@ -869,7 +896,4 @@ EngineObject::~EngineObject()
 	GameObject::s_DataModel = nullptr;
 	this->Workspace = nullptr;
 	this->DataModel = nullptr;
-
-	SDL_DestroyWindow(this->Window);
-	SDL_Quit();
 }

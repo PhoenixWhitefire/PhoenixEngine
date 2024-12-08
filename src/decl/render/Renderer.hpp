@@ -32,8 +32,11 @@
 class Renderer
 {
 public:
+	Renderer() = default;
 	Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window);
 	~Renderer();
+
+	void Initialize(uint32_t Width, uint32_t Height, SDL_Window* Window);
 
 	// Changes the rendering resolution
 	void ChangeResolution(uint32_t newWidth, uint32_t newHeight);
@@ -59,21 +62,21 @@ public:
 
 	void SwapBuffers();
 
-	GpuFrameBuffer* Framebuffer = nullptr;
+	GpuFrameBuffer FrameBuffer;
 
 	SDL_GLContext GLContext = nullptr;
 
 private:
 	void m_SetMaterialData(const RenderItem&);
 
-	GpuVertexArray* m_VertexArray = nullptr;
-	GpuVertexBuffer* m_VertexBuffer = nullptr;
-	GpuElementBuffer* m_ElementBuffer = nullptr;
+	GpuVertexArray m_VertexArray;
+	GpuVertexBuffer m_VertexBuffer;
+	GpuElementBuffer m_ElementBuffer;
 	uint32_t m_InstancingBuffer{};
 
 	SDL_Window* m_Window = nullptr;
 	
-	uint32_t m_Width, m_Height = 0;
+	uint32_t m_Width = 0, m_Height = 0;
 
 	int m_MsaaSamples = 0;
 };

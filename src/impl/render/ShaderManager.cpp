@@ -384,19 +384,21 @@ ShaderManager::ShaderManager()
 	this->LoadFromPath("error");
 }
 
-ShaderManager* instance = nullptr;
+bool s_DidShutdown = false;
 
 ShaderManager* ShaderManager::Get()
 {
-	if (!instance)
-		instance = new ShaderManager;
-	return instance;
+	if (s_DidShutdown)
+		throw("Tried to ::Get ShaderManager after it was ::Shutdown");
+
+	static ShaderManager inst;
+	return &inst;
 }
 
 void ShaderManager::Shutdown()
 {
-	delete instance;
-	instance = nullptr;
+	//delete Get();
+	s_DidShutdown = true;
 }
 
 uint32_t ShaderManager::LoadFromPath(const std::string& ProgramName)

@@ -4,9 +4,9 @@
 #include <string>
 
 // bullshit macro expansion semantics
-#define PROFILER_PROFILE_SCOPE_ACTUAL(label, paste) Profiler::TimeScope __profileScopeTimer##paste { label }
-#define PROFILER_PROFILE_SCOPE_2(label, paste) PROFILER_PROFILE_SCOPE_ACTUAL(label, paste)
-#define PROFILER_PROFILE_SCOPE(label) PROFILER_PROFILE_SCOPE_2(label, __LINE__)
+#define PROFILER_PROFILE_SCOPE_INTERNAL2(label, paste) Profiler::TimeScope __profileScopeTimer##paste { label }
+#define PROFILER_PROFILE_SCOPE_INTERNAL(label, paste) PROFILER_PROFILE_SCOPE_INTERNAL2(label, paste)
+#define PROFILER_PROFILE_SCOPE(label) PROFILER_PROFILE_SCOPE_INTERNAL(label, __LINE__)
 
 namespace Profiler
 {

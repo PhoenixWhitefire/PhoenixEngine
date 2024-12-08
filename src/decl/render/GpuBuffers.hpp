@@ -9,16 +9,18 @@ enum class BufferUsageHint : uint8_t { Static, Dynamic };
 class GpuVertexBuffer
 {
 public:
-	GpuVertexBuffer();
-	~GpuVertexBuffer();
+	GpuVertexBuffer() = default;
+
+	void Initialize();
+	void Delete();
 
 	void SetBufferData(
 		const std::vector<Vertex>& Vertices,
 		BufferUsageHint UsageHint = BufferUsageHint::Dynamic
-	);
+	) const;
 
-	void Bind();
-	void Unbind();
+	void Bind() const;
+	void Unbind() const;
 
 private:
 	uint32_t m_GpuId = UINT32_MAX;
@@ -27,8 +29,10 @@ private:
 class GpuVertexArray
 {
 public:
-	GpuVertexArray();
-	~GpuVertexArray();
+	GpuVertexArray() = default;
+
+	void Initialize();
+	void Delete();
 
 	void LinkAttrib(
 		GpuVertexBuffer& VertexBuffer,
@@ -37,10 +41,10 @@ public:
 		uint32_t Type,
 		int32_t Stride,
 		void* Offset
-	);
+	) const;
 
-	void Bind();
-	void Unbind();
+	void Bind() const;
+	void Unbind() const;
 
 private:
 	uint32_t m_GpuId = UINT32_MAX;
@@ -49,16 +53,18 @@ private:
 class GpuElementBuffer
 {
 public:
-	GpuElementBuffer();
-	~GpuElementBuffer();
+	GpuElementBuffer() = default;
+
+	void Initialize();
+	void Delete();
 
 	void SetBufferData(
 		const std::vector<uint32_t>& Indices,
 		BufferUsageHint UsageHint = BufferUsageHint::Dynamic
-	);
+	) const;
 
-	void Bind();
-	void Unbind();
+	void Bind() const;
+	void Unbind() const;
 
 private:
 	uint32_t m_GpuId = UINT32_MAX;
@@ -67,14 +73,17 @@ private:
 class GpuFrameBuffer
 {
 public:
+	GpuFrameBuffer() = default;
 	GpuFrameBuffer(int Width, int Height, int MSSamples = 0, bool AttachRenderBuffer = true);
-	~GpuFrameBuffer();
 
-	void Bind();
-	void Unbind();
+	void Initialize(int Width, int Height, int MSSamples = 0, bool AttachRenderBuffer = true);
+	void Delete();
 
-	void BindTexture();
-	void UnbindTexture();
+	void Bind() const;
+	void Unbind() const;
+
+	void BindTexture() const;
+	void UnbindTexture() const;
 
 	void UpdateResolution(int Width, int Height);
 

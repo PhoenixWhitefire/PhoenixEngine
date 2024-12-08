@@ -82,7 +82,7 @@ protected:
 	// Needs to be in `protected` because `RegisterDerivedObject`
 	// So sub-classes can access it and register themselves
 	typedef std::unordered_map<std::string, GameObject* (*)()> GameObjectMapType;
-	static inline GameObjectMapType* s_GameObjectMap = new GameObjectMapType;
+	static inline GameObjectMapType s_GameObjectMap{};
 
 private:
 	static void s_DeclareReflections();
@@ -99,7 +99,7 @@ struct RegisterDerivedObject : GameObject
 {
 	RegisterDerivedObject(const std::string& ObjectClass)
 	{
-		s_GameObjectMap->insert(std::make_pair(ObjectClass, &constructGameObjectHeir<T>));
+		s_GameObjectMap.insert(std::make_pair(ObjectClass, &constructGameObjectHeir<T>));
 	}
 };
 

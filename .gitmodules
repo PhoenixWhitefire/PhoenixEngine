@@ -16,3 +16,6 @@
 [submodule "ImFileDialog"]
 	path = ImFileDialog
 	url = https://github.com/dfranx/ImFileDialog
+[submodule "glm"]
+	path = glm
+	url = https://github.com/g-truc/glm

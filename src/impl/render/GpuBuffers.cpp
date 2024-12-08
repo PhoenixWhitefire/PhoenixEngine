@@ -3,14 +3,15 @@
 
 #include "render/GpuBuffers.hpp"
 
-GpuVertexArray::GpuVertexArray()
+void GpuVertexArray::Initialize()
 {
 	glGenVertexArrays(1, &m_GpuId);
 }
 
-GpuVertexArray::~GpuVertexArray()
+void GpuVertexArray::Delete()
 {
 	glDeleteVertexArrays(1, &m_GpuId);
+	m_GpuId = UINT32_MAX;
 }
 
 void GpuVertexArray::LinkAttrib(
@@ -20,7 +21,7 @@ void GpuVertexArray::LinkAttrib(
 	uint32_t Type,
 	int32_t Stride,
 	void* Offset
-)
+) const
 {
 	this->Bind();
 	VertexBuffer.Bind();
@@ -32,17 +33,17 @@ void GpuVertexArray::LinkAttrib(
 	this->Unbind();
 }
 
-void GpuVertexArray::Bind()
+void GpuVertexArray::Bind() const
 {
 	glBindVertexArray(m_GpuId);
 }
 
-void GpuVertexArray::Unbind()
+void GpuVertexArray::Unbind() const
 {
 	glBindVertexArray(0);
 }
 
-GpuVertexBuffer::GpuVertexBuffer()
+void GpuVertexBuffer::Initialize()
 {
 	glGenBuffers(1, &m_GpuId);
 	this->Bind();
@@ -50,12 +51,13 @@ GpuVertexBuffer::GpuVertexBuffer()
 	glBufferData(GL_ARRAY_BUFFER, 0, {}, GL_STREAM_DRAW);
 }
 
-GpuVertexBuffer::~GpuVertexBuffer()
+void GpuVertexBuffer::Delete()
 {
 	glDeleteBuffers(1, &m_GpuId);
+	m_GpuId = UINT32_MAX;
 }
 
-void GpuVertexBuffer::SetBufferData(const std::vector<Vertex>& Vertices, BufferUsageHint UsageHint)
+void GpuVertexBuffer::SetBufferData(const std::vector<Vertex>& Vertices, BufferUsageHint UsageHint) const
 {
 	this->Bind();
 
@@ -69,17 +71,17 @@ void GpuVertexBuffer::SetBufferData(const std::vector<Vertex>& Vertices, BufferU
 	this->Unbind();
 }
 
-void GpuVertexBuffer::Bind()
+void GpuVertexBuffer::Bind() const
 {
 	glBindBuffer(GL_ARRAY_BUFFER, m_GpuId);
 }
 
-void GpuVertexBuffer::Unbind()
+void GpuVertexBuffer::Unbind() const
 {
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-GpuElementBuffer::GpuElementBuffer()
+void GpuElementBuffer::Initialize()
 {
 	glGenBuffers(1, &m_GpuId);
 	this->Bind();
@@ -89,12 +91,13 @@ GpuElementBuffer::GpuElementBuffer()
 	this->Unbind();
 }
 
-GpuElementBuffer::~GpuElementBuffer()
+void GpuElementBuffer::Delete()
 {
 	glDeleteBuffers(1, &m_GpuId);
+	m_GpuId = UINT32_MAX;
 }
 
-void GpuElementBuffer::SetBufferData(const std::vector<GLuint>& Indices, BufferUsageHint UsageHint)
+void GpuElementBuffer::SetBufferData(const std::vector<GLuint>& Indices, BufferUsageHint UsageHint) const
 {
 	this->Bind();
 
@@ -108,17 +111,22 @@ void GpuElementBuffer::SetBufferData(const std::vector<GLuint>& Indices, BufferU
 	this->Unbind();
 }
 
-void GpuElementBuffer::Bind()
+void GpuElementBuffer::Bind() const
 {
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_GpuId);
 }
 
-void GpuElementBuffer::Unbind()
+void GpuElementBuffer::Unbind() const
 {
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
 GpuFrameBuffer::GpuFrameBuffer(int TargetWidth, int TargetHeight, int MSSamples, bool AttachRenderBuffer)
+{
+	this->Initialize(TargetWidth, TargetHeight, MSSamples, AttachRenderBuffer);
+}
+
+void GpuFrameBuffer::Initialize(int TargetWidth, int TargetHeight, int MSSamples, bool AttachRenderBuffer)
 {
 	this->Width = TargetWidth, this->Height = TargetHeight;
 
@@ -188,7 +196,7 @@ GpuFrameBuffer::GpuFrameBuffer(int TargetWidth, int TargetHeight, int MSSamples,
 		throw(std::vformat("Could not create a framebuffer, error ID: {}", std::make_format_args(FrameBufferStatus)));
 }
 
-GpuFrameBuffer::~GpuFrameBuffer()
+void GpuFrameBuffer::Delete()
 {
 	glDeleteTextures(1, &GpuTextureId);
 	
@@ -196,6 +204,10 @@ GpuFrameBuffer::~GpuFrameBuffer()
 		glDeleteRenderbuffers(1, &m_RenderBufferId);
 
 	glDeleteFramebuffers(1, &m_GpuId);
+
+	this->GpuTextureId = UINT32_MAX;
+	m_RenderBufferId = UINT32_MAX;
+	m_GpuId = UINT32_MAX;
 }
 
 void GpuFrameBuffer::UpdateResolution(int NewWidth, int NewHeight)
@@ -224,22 +236,22 @@ void GpuFrameBuffer::UpdateResolution(int NewWidth, int NewHeight)
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH32F_STENCIL8, Width, Height);
 }
 
-void GpuFrameBuffer::Bind()
+void GpuFrameBuffer::Bind() const
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, m_GpuId);
 }
 
-void GpuFrameBuffer::Unbind()
+void GpuFrameBuffer::Unbind() const
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void GpuFrameBuffer::BindTexture()
+void GpuFrameBuffer::BindTexture() const
 {
 	glBindTexture(/*this->MSAASamples > 0 ? GL_TEXTURE_2D_MULTISAMPLE : */ GL_TEXTURE_2D, GpuTextureId);
 }
 
-void GpuFrameBuffer::UnbindTexture()
+void GpuFrameBuffer::UnbindTexture() const
 {
 	glBindTexture(/*this->MSAASamples > 0 ? GL_TEXTURE_2D_MULTISAMPLE : */ GL_TEXTURE_2D, 0);
 }

@@ -5,7 +5,5 @@
   "MetallicRoughnessMap": "textures/models/glamfredward.glb/Image_9.png",
   "NormalMap": "textures/models/glamfredward.glb/Image_10.png",
   "Uniforms": {},
-  "roughnessFactor": 1.0,
-  "specExponent": 16.0,
-  "specMultiply": 0.0
+  "specExponent": 16.0
 }

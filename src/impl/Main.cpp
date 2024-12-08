@@ -32,6 +32,7 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 
 */
 
+#define GLM_ENABLE_EXPERIMENTAL
 #define SDL_MAIN_HANDLED
 
 #define PHX_MAIN_HANDLECRASH(c, expr) catch (c Error) { handleCrash(Error##expr, #c); }
@@ -369,14 +370,33 @@ static void LoadLevel(const std::string& LevelPath)
 	//MapLoader::LoadMapIntoObject(LevelPath, levelModel);
 }
 
+static double recurseGetTime(const nlohmann::json& root)
+{
+	if (root.find("_t") != root.end())
+		return root["_t"];
+
+	double t{};
+
+	for (auto ch = root.begin(); ch != root.end(); ++ch)
+		t += recurseGetTime(ch.value());
+
+	return t;
+}
+
 static void recurseProfilerUI(const nlohmann::json& tree)
 {
 	for (auto it = tree.begin(); it != tree.end(); ++it)
 	{
-		if (it.value().type() != nlohmann::json::value_t::object)
+		auto& v = it.value();
+
+		if (v.type() != nlohmann::json::value_t::object)
 			continue;
 
-		double t = it.value()["_t"];
+		// "EventCallbacks" doesn't have an `_t`, accumulate the timings of
+		// it's children
+		// 08/12/2024
+		double t = recurseGetTime(v);
+
 		uint32_t tMS = static_cast<uint32_t>(std::floor(t * 100000.f));
 		float tMSHundreds = tMS / 100.f;
 
@@ -656,14 +676,14 @@ static void Application(int argc, char** argv)
 
 	if (!ImGui_ImplSDL2_InitForOpenGL(
 			EngineInstance->Window,
-			EngineInstance->RendererContext->GLContext
+			EngineInstance->RendererContext.GLContext
 	))
 		throw("ImGui intialization failure on `ImGui_ImplSDL2_InitForOpenGL`");
 
 	if (!ImGui_ImplOpenGL3_Init("#version 460"))
 		throw("ImGui initialization failure on `ImGui_ImplOpenGL3_Init`");
 
-	EditorContext = EngineJsonConfig.value("Developer", false) ? new Editor(EngineInstance->RendererContext) : nullptr;
+	EditorContext = EngineJsonConfig.value("Developer", false) ? new Editor(&EngineInstance->RendererContext) : nullptr;
 	
 	LevelLoadPathBuf = BufferInitialize(64, "levels/de_dust2.world");
 	LevelSavePathBuf = BufferInitialize(64, "levels/save.world");
@@ -700,6 +720,8 @@ static void Application(int argc, char** argv)
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplSDL2_Shutdown();
 
+	SDL_Quit();
+
 	// Engine destructor is called as the `EngineObject`'s scope terminates in `main`.
 }
 
@@ -708,10 +730,13 @@ static void handleCrash(const std::string& Error, const std::string& ExceptionTy
 
 	// Log Size Limit Exceeded Throwing Exception
 	if (!Error.starts_with("LSLETE"))
+	{
 		Debug::Log(std::vformat(
 			"CRASH - {}: {}",
 			std::make_format_args(ExceptionType, Error)
 		));
+		Debug::Save();
+	}
 
 	std::string errMessage = std::vformat(
 		"An unexpected error occurred, and the application will now close. Details: {}\n\n{}",
@@ -755,5 +780,4 @@ int main(int argc, char** argv)
 	PHX_MAIN_HANDLECRASH(const char*,)
 	PHX_MAIN_HANDLECRASH(std::bad_alloc, .what() + std::string(": System may have run out of memory"))
 	PHX_MAIN_HANDLECRASH(std::exception, .what())
-	//PHX_MAIN_HANDLECRASH(std::exception, .what());
 }

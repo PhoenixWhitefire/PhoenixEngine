@@ -13,9 +13,16 @@ class MeshProvider
 public:
 	struct GpuMesh
 	{
-		GpuVertexArray* VertexArray = nullptr;
-		GpuVertexBuffer* VertexBuffer = nullptr;
-		GpuElementBuffer* ElementBuffer = nullptr;
+		void Delete()
+		{
+			this->VertexArray.Delete();
+			this->VertexBuffer.Delete();
+			this->ElementBuffer.Delete();
+		}
+
+		GpuVertexArray VertexArray;
+		GpuVertexBuffer VertexBuffer;
+		GpuElementBuffer ElementBuffer;
 		uint32_t NumIndices{};
 	};
 

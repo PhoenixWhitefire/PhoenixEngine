@@ -1,3 +1,5 @@
+#define GLM_ENABLE_EXPERIMENTAL
+
 #include <string>
 #include <format>
 #include <glad/gl.h>
@@ -110,6 +112,11 @@ static void GLDebugCallback(
 
 Renderer::Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window)
 {
+	this->Initialize(Width, Height, Window);
+}
+
+void Renderer::Initialize(uint32_t Width, uint32_t Height, SDL_Window* Window)
+{
 	m_Window = Window;
 
 	m_Width = Width;
@@ -159,18 +166,18 @@ Renderer::Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window)
 
 	Debug::Log(glVersionStr);
 
-	m_VertexArray = new GpuVertexArray;
-	m_VertexBuffer = new GpuVertexBuffer;
-	m_ElementBuffer = new GpuElementBuffer;
+	m_VertexArray.Initialize();
+	m_VertexBuffer.Initialize();
+	m_ElementBuffer.Initialize();
 
-	m_VertexArray->Bind();
+	m_VertexArray.Bind();
 
-	m_VertexArray->LinkAttrib(*m_VertexBuffer, 0, 3, GL_FLOAT, sizeof(Vertex), (void*)0);
-	m_VertexArray->LinkAttrib(*m_VertexBuffer, 1, 3, GL_FLOAT, sizeof(Vertex), (void*)(3 * sizeof(float)));
-	m_VertexArray->LinkAttrib(*m_VertexBuffer, 2, 3, GL_FLOAT, sizeof(Vertex), (void*)(6 * sizeof(float)));
-	m_VertexArray->LinkAttrib(*m_VertexBuffer, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)(9 * sizeof(float)));
+	m_VertexArray.LinkAttrib(m_VertexBuffer, 0, 3, GL_FLOAT, sizeof(Vertex), (void*)0);
+	m_VertexArray.LinkAttrib(m_VertexBuffer, 1, 3, GL_FLOAT, sizeof(Vertex), (void*)(3 * sizeof(float)));
+	m_VertexArray.LinkAttrib(m_VertexBuffer, 2, 3, GL_FLOAT, sizeof(Vertex), (void*)(6 * sizeof(float)));
+	m_VertexArray.LinkAttrib(m_VertexBuffer, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)(9 * sizeof(float)));
 
-	this->Framebuffer = new GpuFrameBuffer(m_Width, m_Height, m_MsaaSamples);
+	this->FrameBuffer.Initialize(m_Width, m_Height, m_MsaaSamples);
 
 	glGenBuffers(1, &m_InstancingBuffer);
 
@@ -179,16 +186,12 @@ Renderer::Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window)
 
 Renderer::~Renderer()
 {
-	delete m_VertexArray;
-	delete m_VertexBuffer;
-	delete m_ElementBuffer;
 	glDeleteBuffers(1, &m_InstancingBuffer);
-	delete this->Framebuffer;
 
-	m_VertexArray = nullptr;
-	m_VertexBuffer = nullptr;
-	m_ElementBuffer = nullptr;
-	this->Framebuffer = nullptr;
+	m_VertexArray.Delete();
+	m_ElementBuffer.Delete();
+	m_VertexBuffer.Delete();
+	this->FrameBuffer.Delete();
 
 	this->GLContext = nullptr;
 	m_Window = nullptr;
@@ -213,7 +216,7 @@ void Renderer::ChangeResolution(uint32_t Width, uint32_t Height)
 
 	glViewport(0, 0, m_Width, m_Height);
 
-	this->Framebuffer->UpdateResolution(m_Width, m_Height);
+	this->FrameBuffer.UpdateResolution(m_Width, m_Height);
 }
 
 void Renderer::DrawScene(
@@ -226,7 +229,7 @@ void Renderer::DrawScene(
 	PROFILER_PROFILE_SCOPE("DrawScene");
 
 	glActiveTexture(GL_TEXTURE0);
-	this->Framebuffer->BindTexture();
+	this->FrameBuffer.BindTexture();
 
 	ShaderManager* shdManager = ShaderManager::Get();
 
@@ -386,7 +389,7 @@ void Renderer::DrawScene(
 				PROFILER_PROFILE_SCOPE("UploadInstancedData");
 
 				MeshProvider::GpuMesh& gpuMesh = meshProvider->GetGpuMesh(mesh.GpuId);
-				gpuMesh.VertexArray->Bind();
+				gpuMesh.VertexArray.Bind();
 
 				glBindBuffer(GL_ARRAY_BUFFER, m_InstancingBuffer);
 
@@ -506,20 +509,20 @@ void Renderer::DrawMesh(
 	// mesh not uploaded to the GPU by MeshProvider
 	if (gpuMeshId == UINT32_MAX)
 	{
-		m_VertexArray->Bind();
+		m_VertexArray.Bind();
 
-		m_VertexBuffer->SetBufferData(Object.Vertices);
-		m_ElementBuffer->SetBufferData(Object.Indices);
+		m_VertexBuffer.SetBufferData(Object.Vertices);
+		m_ElementBuffer.SetBufferData(Object.Indices);
 
-		m_VertexBuffer->Bind();
-		m_ElementBuffer->Bind();
+		m_VertexBuffer.Bind();
+		m_ElementBuffer.Bind();
 	}
 	else
 	{
 		gpuMesh = &MeshProvider::Get()->GetGpuMesh(gpuMeshId);
-		gpuMesh->VertexArray->Bind();
-		gpuMesh->VertexBuffer->Bind();
-		gpuMesh->ElementBuffer->Bind();
+		gpuMesh->VertexArray.Bind();
+		gpuMesh->VertexBuffer.Bind();
+		gpuMesh->ElementBuffer.Bind();
 	}
 
 	uint32_t numIndices = gpuMesh ? gpuMesh->NumIndices : static_cast<uint32_t>(Object.Indices.size());

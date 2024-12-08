@@ -145,9 +145,9 @@ GameObject::~GameObject()
 
 bool GameObject::IsValidObjectClass(const std::string& ObjectClass)
 {
-	GameObjectMapType::iterator it = s_GameObjectMap->find(ObjectClass);
+	GameObjectMapType::iterator it = s_GameObjectMap.find(ObjectClass);
 
-	if (it == s_GameObjectMap->end())
+	if (it == s_GameObjectMap.end())
 		return false;
 	else
 		return true;
@@ -386,9 +386,9 @@ GameObject* GameObject::GetChildOfClass(const std::string& Class)
 
 GameObject* GameObject::Create(const std::string& ObjectClass)
 {
-	GameObjectMapType::iterator it = s_GameObjectMap->find(ObjectClass);
+	GameObjectMapType::iterator it = s_GameObjectMap.find(ObjectClass);
 
-	if (it == s_GameObjectMap->end())
+	if (it == s_GameObjectMap.end())
 		throw(std::vformat(
 			"Attempted to create invalid GameObject '{}'!",
 			std::make_format_args(ObjectClass)
@@ -416,7 +416,7 @@ nlohmann::json GameObject::DumpApiToJson()
 	
 	dump["GameObject"] = nlohmann::json();
 
-	for (auto& g : *s_GameObjectMap)
+	for (auto& g : s_GameObjectMap)
 	{
 		GameObject* newobj = g.second();
 		dump[g.first] = nlohmann::json();

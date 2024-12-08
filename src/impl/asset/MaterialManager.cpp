@@ -145,19 +145,21 @@ MaterialManager::MaterialManager()
 	this->LoadMaterialFromPath("error");
 }
 
-MaterialManager* instance = nullptr;
+static bool s_DidShutdown = false;
 
 MaterialManager* MaterialManager::Get()
 {
-	if (!instance)
-		instance = new MaterialManager;
-	return instance;
+	if (s_DidShutdown)
+		throw("Tried to ::Get MaterialManager after it was ::Shutdown");
+
+	static MaterialManager inst;
+	return &inst;
 }
 
 void MaterialManager::Shutdown()
 {
-	delete instance;
-	instance = nullptr;
+	//delete Get();
+	s_DidShutdown = true;
 }
 
 uint32_t MaterialManager::LoadMaterialFromPath(const std::string& Name)

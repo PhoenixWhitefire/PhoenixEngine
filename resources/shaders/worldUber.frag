@@ -30,12 +30,11 @@ struct LightObject
 	float Angle;
 };
 
+uniform LightObject Lights[MAX_LIGHTS];
+
 uniform sampler2D ShadowAtlas;
 
 uniform int NumLights = 0;
-
-//uniform sampler2D ShadowMaps[MAX_SHADOWCASTING_LIGHTS]; <-- Replaced with shadow atlas!
-uniform LightObject Lights[MAX_LIGHTS];
 
 uniform sampler2D FrameBuffer;
 
@@ -54,8 +53,6 @@ uniform float Transparency = 0.f;
 uniform float MetallnessFactor = 0.f;
 uniform float RoughnessFactor = 0.f;
 uniform float EmissionStrength = 0.f;
-
-uniform vec3 CameraPosition = vec3(0.f, 0.f, 0.f);
 
 uniform samplerCube SkyboxCubemap;
 
@@ -81,6 +78,8 @@ in vec3 Frag_ColorTint;
 in vec2 Frag_TextureUV;
 in mat4 Frag_Transform;
 in vec4 Frag_RelativeToDirecLight;
+//in mat3 Frag_TBN;
+in vec3 Frag_CameraPosition;
 
 out vec4 FragColor;
 
@@ -241,11 +240,12 @@ void main()
 
 	vec3 vertexNormal = Frag_VertexNormal;
 
-	vec3 ViewDirection = normalize(CameraPosition - Frag_WorldPosition);
+	vec3 ViewDirection = normalize(Frag_CameraPosition - Frag_WorldPosition);
 
 	vec4 Albedo = vec4(0.f, 0.f, 0.f, 1.f); //textureLod(ColorMap, UV, mipLevel);
 	vec2 MetallicRoughnessSample = vec2(0.f, 1.f);
 	vec3 EmissionSample = vec3(1.f, 1.f, 1.f);
+	vec3 NormalSample;
 
 	if (!UseTriPlanarProjection)
 	{
@@ -253,7 +253,7 @@ void main()
 		Albedo = textureLod(ColorMap, Frag_TextureUV, mipLevel);
 
 		if (HasNormalMap)
-			vertexNormal += (textureLod(NormalMap, Frag_TextureUV, mipLevel).xyz - vec3(0.f, 0.f, 1.f)) * 2.f - 1.f;
+			NormalSample = (textureLod(NormalMap, Frag_TextureUV, mipLevel).xyz - vec3(0.f, 0.f, 1.f)) * 2.f - 1.f;
 
 		if (HasEmissionMap)
 			EmissionSample = textureLod(EmissionMap, Frag_TextureUV, mipLevel).xyz;
@@ -285,8 +285,8 @@ void main()
 			vec3 normYAxis = textureLod(NormalMap, uvYAxis, mipLevel).rgb;
 			vec3 normZAxis = textureLod(NormalMap, uvZAxis, mipLevel).rgb;
 
-			vec3 normSample = normXAxis * blending.x + normYAxis * blending.y + normZAxis * blending.z;
-			vertexNormal += (normSample - vec3(0.f, 0.f, 1.f)) * 2.f - 1.f;
+			NormalSample = normXAxis * blending.x + normYAxis * blending.y + normZAxis * blending.z;
+			//vertexNormal += (normSample - vec3(0.f, 0.f, 1.f)) * 2.f - 1.f;
 		}
 
 		if (HasEmissionMap)
@@ -300,7 +300,10 @@ void main()
 	}
 	
 	vec3 Normal = normalize(NormalMatrix * vertexNormal);
-
+	//vec3 Normal = NormalSample * 2.f - 1.f;
+	//Normal = normalize(Frag_TBN * Normal);
+	//Normal = normalize(Normal + (NormalSample * 2.f - 1.f));
+	
 	Albedo -= vec4(0.f, 0.f, 0.f, Transparency);
 
 	if (Albedo.a < AlphaCutoff)

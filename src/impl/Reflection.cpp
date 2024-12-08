@@ -1,3 +1,5 @@
+#define GLM_ENABLE_EXPERIMENTAL
+
 #include <glm/gtx/euler_angles.hpp>
 
 #include "Reflection.hpp"

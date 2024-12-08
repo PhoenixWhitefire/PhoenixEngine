@@ -4,7 +4,5 @@
   "HasTranslucency": false,
   "NormalMap": "textures/models/glamfredward.glb/Image_1.png",
   "Uniforms": {},
-  "roughnessFactor": 0.8211145401000977,
-  "specExponent": 16.0,
-  "specMultiply": 0.0
+  "specExponent": 16.0
 }

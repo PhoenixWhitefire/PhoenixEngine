@@ -1,3 +1,5 @@
+#define GLM_ENABLE_EXPERIMENTAL
+
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/euler_angles.hpp>
 #include <ImGuiFD/ImGuiFD.h>
@@ -32,7 +34,7 @@ static nlohmann::json DefaultNewMaterial =
 	{ "specMultiply", 0.5f }
 };
 
-static GpuFrameBuffer* MtlEditorPreview{};
+static GpuFrameBuffer MtlEditorPreview;
 static Scene MtlPreviewScene =
 {
 	// cube
@@ -83,7 +85,7 @@ Editor::Editor(Renderer* renderer)
 	m_MtlNewUniformNameBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE);
 	m_MtlUniformNameEditBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE);
 
-	MtlEditorPreview = new GpuFrameBuffer{ 256, 256 };
+	MtlEditorPreview.Initialize(256, 256);
 	MtlPreviewRenderer = renderer;
 	MtlPreviewCamera = (Object_Camera*)GameObject::Create("Camera");
 	MtlPreviewCamera->Transform = MtlPreviewCamDefaultRotation * MtlPreviewCamOffset;
@@ -363,7 +365,7 @@ void Editor::m_RenderMaterialEditor()
 	m_MtlPrevItem = m_MtlCurItem;
 
 	ImGui::Image(
-		MtlEditorPreview->GpuTextureId,
+		MtlEditorPreview.GpuTextureId,
 		ImVec2(256.f, 256.f),
 		ImVec2(0.f, 1.f),
 		ImVec2(1.f, 0.f)
@@ -389,10 +391,10 @@ void Editor::m_RenderMaterialEditor()
 		PreviewRotStart = 0.f;
 	}
 
-	GpuFrameBuffer* prevFbo = MtlPreviewRenderer->Framebuffer;
-	MtlPreviewRenderer->Framebuffer = MtlEditorPreview;
+	const GpuFrameBuffer& prevFbo = MtlPreviewRenderer->FrameBuffer;
+	//MtlPreviewRenderer->FrameBuffer = MtlEditorPreview;
 
-	MtlEditorPreview->Bind();
+	MtlEditorPreview.Bind();
 	glViewport(0, 0, 256, 256);
 	glClearColor(0.3f, 0.78f, 1.f, 1.f);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
@@ -410,10 +412,10 @@ void Editor::m_RenderMaterialEditor()
 		GetRunningTime()
 	);
 
-	MtlEditorPreview->Unbind();
-	MtlPreviewRenderer->Framebuffer = prevFbo;
-	MtlPreviewRenderer->Framebuffer->Bind();
-	glViewport(0, 0, prevFbo->Width, prevFbo->Height);
+	MtlEditorPreview.Unbind();
+	MtlPreviewRenderer->FrameBuffer = prevFbo;
+	MtlPreviewRenderer->FrameBuffer.Bind();
+	glViewport(0, 0, prevFbo.Width, prevFbo.Height);
 
 	ImGui::InputText("Shader", m_MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
 

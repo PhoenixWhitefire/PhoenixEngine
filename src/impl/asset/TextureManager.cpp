@@ -212,19 +212,21 @@ TextureManager::~TextureManager()
 	m_TexPromises.clear();
 }
 
-static TextureManager* instance = nullptr;
+static bool s_DidShutdown = false;
 
 TextureManager* TextureManager::Get()
 {
-	if (!instance)
-		instance = new TextureManager();
-	return instance;
+	if (s_DidShutdown)
+		throw("Tried to ::Get TextureManager after it was ::Shutdown");
+
+	static TextureManager inst;
+	return &inst;
 }
 
 void TextureManager::Shutdown()
 {
-	delete instance;
-	instance = nullptr;
+	//delete Get();
+	s_DidShutdown = true;
 }
 
 // like emplace, for "put in place", but "emload" for "load in place"

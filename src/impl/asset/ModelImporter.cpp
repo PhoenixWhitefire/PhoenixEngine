@@ -375,7 +375,7 @@ void ModelLoader::m_LoadMesh(uint32_t MeshIndex)
 	for (const glm::vec3& position : positions)
 		center += position;
 
-	center /= positions.size();
+	center /= static_cast<float>(positions.size());
 
 	for (size_t index = 0; index < positions.size(); index++)
 		positions[index] -= center;
