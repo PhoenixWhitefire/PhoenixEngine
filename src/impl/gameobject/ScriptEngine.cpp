@@ -496,10 +496,6 @@ void ScriptEngine::L::PushFunction(lua_State* L, const char* Name)
 			{
 				luaL_error(L, err.c_str());
 			}
-			catch (const char* err)
-			{
-				luaL_error(L, err);
-			}
 
 			for (const Reflection::GenericValue& output : outputs)
 				L::PushGenericValue(L, output);
@@ -850,7 +846,7 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 
 			std::vector<GameObject*> ignoreList;
 			for (const Reflection::GenericValue& gv : providedIgnoreList)
-				ignoreList.push_back(GameObject::GetObjectById(static_cast<uint32_t>((uint64_t)gv.Value)));
+				ignoreList.push_back(GameObject::FromGenericValue(gv));
 
 			IntersectionLib::Intersection result;
 			GameObject* hitObject = nullptr;

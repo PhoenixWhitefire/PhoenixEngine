@@ -15,7 +15,7 @@ Anyway, here is a small tour:
 - "phoenix.conf" contains some configuration. Set "Developer" to "false" to disable the debug UIs.
 - WASD to move horizontally, Q/E to move down/up. Left-click to look around. Right-click to stop. LShift to move slower.
 - Hold `R` to disable distance culling
-- Press `J` to dump object hierarchy. `L` to dump GameObject API.
+- Press `L` to dump GameObject API.
 - `K` to reload all shaders, `I` to reload configuration
 - F11 to toggle fullscreen.
 
@@ -424,23 +424,6 @@ static void recurseProfilerUI(const nlohmann::json& tree)
 
 static void drawUI(Reflection::GenericValue Data)
 {
-	if (UserInput::IsKeyDown(SDLK_j) && !UserInput::InputBeingSunk)
-	{
-		printf("BEGIN DUMP WORLD ARRAY\n");
-		printf("%zi OBJECTS: \n", GameObject::s_WorldArray.size());
-
-		for (auto& pair : GameObject::s_WorldArray)
-			printf(
-				"%i: %s '%s', Parent %i\n",
-				pair.first,
-				pair.second->ClassName.c_str(),
-				pair.second->Name.c_str(),
-				pair.second->Parent
-			);
-
-		printf("END DUMP WORLD ARRAY\n");
-	}
-
 	if (UserInput::IsKeyDown(SDLK_l) && !UserInput::InputBeingSunk)
 	{
 		Debug::Log("Dumping GameObject API...");
@@ -739,7 +722,7 @@ static void handleCrash(const std::string& Error, const std::string& ExceptionTy
 	}
 
 	std::string errMessage = std::vformat(
-		"An unexpected error occurred, and the application will now close. Details: {}\n\n{}",
+		"An unexpected error occurred, and the application will now close. Details: \n\n{}\n\n{}",
 		std::make_format_args(
 			Error,
 			"If this is the first time this has happened, please re-try. Otherwise, contact the developers."

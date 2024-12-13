@@ -10,6 +10,13 @@
 #include "FileRW.hpp"
 #include "Debug.hpp"
 
+#define SP_TRYFALLBACK() { if (this->Name == "error")               \
+	throw("Fallback Shader failed to load");                        \
+else                                                                \
+	m_GpuId = ShaderManager::Get()->GetShaderResource(0).m_GpuId; } \
+
+#define SP_LOADERROR(str) { Debug::Log(str); SP_TRYFALLBACK(); return; }
+
 static const std::string BaseShaderPath = "shaders/";
 
 void ShaderProgram::Activate()
@@ -88,7 +95,7 @@ void ShaderProgram::Activate()
 			default:
 			{
 				const std::string typeName = Reflection::TypeAsString(value.Type);
-				throw(std::vformat(
+				Debug::Log(std::vformat(
 					"Unrecognized uniform type '{}' trying to set '{}' for program '{}'",
 					std::make_format_args(typeName, uniformName, this->Name)
 				));
@@ -150,19 +157,19 @@ void ShaderProgram::Reload()
 											: "";
 
 	if (!vertexShdExists)
-		throw(std::vformat(
+		SP_LOADERROR(std::vformat(
 			"Could not load Vertex shader for program {}! File specified: {}",
 			std::make_format_args(this->Name, vertexShaderPath)
 		));
 
 	if (!fragmentShdExists)
-		throw(std::vformat(
+		SP_LOADERROR(std::vformat(
 			"Could not load Fragment shader for program {}! File specified: {}",
 			std::make_format_args(this->Name, fragmentShaderPath)
 		));
 
 	if (!geometryShdExists)
-		throw(std::vformat(
+		SP_LOADERROR(std::vformat(
 			"Could not load Geometry shader for program {}! File specified: {}",
 			std::make_format_args(this->Name, geoShaderPath)
 		));
@@ -188,14 +195,18 @@ void ShaderProgram::Reload()
 		glShaderSource(geometryShader, 1, &geometrySource, NULL);
 		glCompileShader(geometryShader);
 
-		m_PrintErrors(geometryShader, "geometry shader");
+		if (m_PrintErrors(geometryShader, "geometry shader"))
+			return;
 	}
 
 	glCompileShader(vertexShader);
 	glCompileShader(fragmentShader);
 
-	m_PrintErrors(vertexShader, "vertex shader");
-	m_PrintErrors(fragmentShader, "fragment shader");
+	if (m_PrintErrors(vertexShader, "vertex shader"))
+		return;
+
+	if (m_PrintErrors(fragmentShader, "fragment shader"))
+		return;
 
 	glAttachShader(m_GpuId, vertexShader);
 	glAttachShader(m_GpuId, fragmentShader);
@@ -207,7 +218,8 @@ void ShaderProgram::Reload()
 
 	glLinkProgram(m_GpuId);
 
-	m_PrintErrors(m_GpuId, "shader program");
+	if (m_PrintErrors(m_GpuId, "shader program"))
+		return;
 
 	//free shader code from memory, they've already been compiled so aren't needed anymore
 	glDeleteShader(vertexShader);
@@ -269,7 +281,7 @@ void ShaderProgram::Reload()
 		{
 			const char* typeName = value.type_name();
 
-			throw(std::vformat(
+			Debug::Log(std::vformat(
 				"Shader Program '{}' tried to specify Uniform '{}', but it had unsupported type '{}'",
 				std::make_format_args(this->Name, uniformName, typeName)
 			));
@@ -332,9 +344,9 @@ void ShaderProgram::SetTextureUniform(const std::string& UniformName, uint32_t T
 	m_PendingUniforms[UniformName] = slot;
 }
 
-void ShaderProgram::m_PrintErrors(uint32_t Object, const char* Type)
+bool ShaderProgram::m_PrintErrors(uint32_t Object, const char* Type)
 {
-	char infoLog[1024];
+	char infoLog[2048];
 
 	if (Object != m_GpuId)
 	{
@@ -343,7 +355,7 @@ void ShaderProgram::m_PrintErrors(uint32_t Object, const char* Type)
 
 		if (hasCompiled == GL_FALSE)
 		{
-			glGetShaderInfoLog(Object, 1024, NULL, infoLog);
+			glGetShaderInfoLog(Object, 2048, NULL, infoLog);
 
 			std::string errorString = std::vformat(
 				"Error while compiling {} for program '{}':\n{}",
@@ -355,6 +367,8 @@ void ShaderProgram::m_PrintErrors(uint32_t Object, const char* Type)
 			ShaderManager* shdManager = ShaderManager::Get();
 
 			m_GpuId = shdManager->GetShaderResource(shdManager->LoadFromPath("error")).m_GpuId;
+
+			return true;
 		}
 	}
 	else
@@ -365,7 +379,7 @@ void ShaderProgram::m_PrintErrors(uint32_t Object, const char* Type)
 
 		if (hasLinked == GL_FALSE)
 		{
-			glGetProgramInfoLog(Object, 1024, NULL, infoLog);
+			glGetProgramInfoLog(Object, 2048, NULL, infoLog);
 
 			Debug::Log(std::vformat(
 				"Error while linking shader program '{}':\n{}",
@@ -375,8 +389,12 @@ void ShaderProgram::m_PrintErrors(uint32_t Object, const char* Type)
 			ShaderManager* shdManager = ShaderManager::Get();
 
 			m_GpuId = shdManager->GetShaderResource(shdManager->LoadFromPath("error")).m_GpuId;
+
+			return true;
 		}
 	}
+
+	return false;
 }
 
 ShaderManager::ShaderManager()

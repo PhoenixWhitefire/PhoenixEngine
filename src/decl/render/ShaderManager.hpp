@@ -31,7 +31,7 @@ public:
 	std::string Name;
 
 private:
-	void m_PrintErrors(uint32_t Object, const char* Type);
+	bool m_PrintErrors(uint32_t Object, const char* Type);
 	int32_t m_GetUniformLocation(const char*) const;
 
 	uint32_t m_GpuId = UINT32_MAX;

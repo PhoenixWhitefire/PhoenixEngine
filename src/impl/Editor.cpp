@@ -655,19 +655,20 @@ void Editor::m_RenderMaterialEditor()
 	ImGui::End();
 }
 
-static GameObject* HierarchyTreeSelection = nullptr;
+static uint32_t HierarchyTreeSelectionId = PHX_GAMEOBJECT_NULL_ID;
 
 static GameObject* recursiveIterateTree(GameObject* current, bool didVisitCurSelection = false)
 {
-	if (HierarchyTreeSelection)
-		if (GameObject::s_WorldArray.find(HierarchyTreeSelection->ObjectId) == GameObject::s_WorldArray.end())
-			HierarchyTreeSelection = nullptr;
+	GameObject* hrchSelection = GameObject::GetObjectById(HierarchyTreeSelectionId);
+
+	if (hrchSelection == nullptr)
+		HierarchyTreeSelectionId = PHX_GAMEOBJECT_NULL_ID;
 
 	// https://github.com/ocornut/imgui/issues/581#issuecomment-216054349
 	// 07/10/2024
 	GameObject* nodeClicked = nullptr;
 
-	if (current == HierarchyTreeSelection)
+	if (current->ObjectId == HierarchyTreeSelectionId)
 		didVisitCurSelection = true;
 
 	for (GameObject* object : current->GetChildren())
@@ -677,17 +678,17 @@ static GameObject* recursiveIterateTree(GameObject* current, bool didVisitCurSel
 
 		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow;
 
-		if (HierarchyTreeSelection && object == HierarchyTreeSelection)
+		if (hrchSelection && object == hrchSelection)
 			flags |= ImGuiTreeNodeFlags_Selected;
 
 		if (object->GetChildren().empty())
 			flags |= ImGuiTreeNodeFlags_Leaf;
 
-		else if (object != HierarchyTreeSelection && !didVisitCurSelection)
+		else if (object != hrchSelection && !didVisitCurSelection)
 		{
 			std::vector<GameObject*> descs = object->GetDescendants();
 
-			if (std::find(descs.begin(), descs.end(), HierarchyTreeSelection) != descs.end())
+			if (std::find(descs.begin(), descs.end(), hrchSelection) != descs.end())
 				flags |= ImGuiTreeNodeFlags_DefaultOpen;
 		}
 
@@ -705,11 +706,11 @@ static GameObject* recursiveIterateTree(GameObject* current, bool didVisitCurSel
 
 	if (nodeClicked)
 		if (ImGui::GetIO().KeyCtrl)
-			HierarchyTreeSelection = nullptr;
+			HierarchyTreeSelectionId = PHX_GAMEOBJECT_NULL_ID;
 		else
-			HierarchyTreeSelection = nodeClicked;
+			HierarchyTreeSelectionId = nodeClicked->ObjectId;
 
-	return HierarchyTreeSelection;
+	return GameObject::GetObjectById(HierarchyTreeSelectionId);
 }
 
 static GameObject* ForceSelectObjectNextFrame = nullptr;
@@ -737,7 +738,7 @@ void Editor::RenderUI()
 		// CTRL+Clicked the previous frame so it's value doesn't carry over to the hyperlinked
 		// object
 
-		HierarchyTreeSelection = ForceSelectObjectNextFrame;
+		HierarchyTreeSelectionId = ForceSelectObjectNextFrame->ObjectId;
 		ForceSelectObjectNextFrame = nullptr;
 
 		ImGui::Text("Nothing this frame!");

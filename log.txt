@@ -6,7 +6,7 @@ Running OpenGL version 4.6
 Renderer initialized
 Creating initial DataModel...
 Engine constructed
-Initializing Dear ImGui 1.91.6 WIP...
+Initializing Dear ImGui 1.91.7 WIP...
 Loading scene: 'levels/dev_fmtv2.world'
 Scene version is 2
 Scene loaded
@@ -26,8 +26,5 @@ GL Debug callback:
 	Source: OpenGL
 	Error ID: 131218
 
-Loading scene: 'levels/de_dust2.world'
-Scene version is 1
-Scene loaded
 Main loop exited
 Application shutting down...

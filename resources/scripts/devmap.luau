@@ -19,6 +19,8 @@ local lastSwitchedPerspectives = 0
 local ModelImporterPath = "models/EmbeddedTexture.glb"
 local ModelImporterScale = 0.1
 
+local ScriptExecutionFile = "scripts/shdgraphtest.luau"
+
 local SwitchToFreecamNextFrame = 0
 
 local Light = GameObject.new("PointLight")
@@ -83,24 +85,38 @@ function Update(DeltaTime)
 		end
 	end
 	
-	imgui_begin("Model Importer")
-	
-	ModelImporterPath = imgui_input_text("Path", ModelImporterPath)
-	ModelImporterScale = imgui_input_float("Scale", ModelImporterScale)
-	
-	if imgui_button("Import") then
-		local pathSplit = string.split(ModelImporterPath, "/")
+	if imgui_begin("Model Importer") then
+		ModelImporterPath = imgui_input_text("Path", ModelImporterPath)
+		ModelImporterScale = imgui_input_float("Scale", ModelImporterScale)
 		
-		local parts = model_import(ModelImporterPath)
-		local model = GameObject.new("Model")
-		model.Name = pathSplit[#pathSplit]
-		model.Parent = workspace
-		
-		for _, part in parts do
-			part.Size *= ModelImporterScale
-			part.Parent = model
+		if imgui_button("Import") then
+			local pathSplit = string.split(ModelImporterPath, "/")
+			
+			local parts = model_import(ModelImporterPath)
+			local model = GameObject.new("Model")
+			model.Name = pathSplit[#pathSplit]
+			model.Parent = workspace
+			
+			for _, part in parts do
+				part.Size *= ModelImporterScale
+				part.Parent = model
+			end
 		end
 	end
+	imgui_end()
 	
+	if imgui_begin("Run Script") then
+		ScriptRunnerTarget = imgui_input_text("Path", ScriptExecutionFile)
+		
+		if imgui_button("Execute") then
+			if scriptHost then
+				scriptHost:Destroy()
+			end
+			scriptHost = GameObject.new("Script")
+			scriptHost.Name = "TempScriptHost"
+			scriptHost.SourceFile = ScriptExecutionFile
+			scriptHost.Parent = script
+		end
+	end
 	imgui_end()
 end

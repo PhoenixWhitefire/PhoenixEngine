@@ -33,8 +33,8 @@ public:
 	static GameObject* Create(const std::string&);
 	static GameObject* GetObjectById(uint32_t);
 
-	static GameObject* s_DataModel;
-	static std::unordered_map<uint32_t, GameObject*> s_WorldArray;
+	static inline GameObject* s_DataModel{};
+	static inline std::vector<GameObject*> s_WorldArray{};
 
 	virtual void Initialize();
 	virtual void Update(double DeltaTime);
@@ -42,7 +42,7 @@ public:
 	std::vector<GameObject*> GetChildren();
 	std::vector<GameObject*> GetDescendants();
 
-	GameObject* GetParent();
+	GameObject* GetParent() const;
 	GameObject* GetChild(const std::string&);
 	// accounts for inheritance
 	GameObject* GetChildOfClass(const std::string&);

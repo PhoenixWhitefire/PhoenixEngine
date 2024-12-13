@@ -383,3 +383,4 @@ FodyWeavers.xsd
 /Vendor/imgui/examples
 /vendor/imgui/misc/debuggers/imgui.natvis
 /Build
+*.lnk

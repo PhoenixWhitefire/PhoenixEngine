@@ -142,11 +142,16 @@ static auto api_gameobjnewindex = [](lua_State* L)
 			{
 				lua_pushvalue(L, 3);
 
-				bool wasSuccessful = true;
 				Reflection::GenericValue newValue = ScriptEngine::L::LuaValueToGeneric(L);
 
-				if (wasSuccessful)
+				try
+				{
 					obj->SetPropertyValue(key, newValue);
+				}
+				catch (std::string err)
+				{
+					luaL_errorL(L, err.c_str());
+				}
 			}
 		}
 		else
@@ -740,7 +745,7 @@ void Object_Script::Update(double dt)
 	// need to handle resuming scheduled (i.e. yielded-but-now-hopefully-finished)
 	// coroutines, the poor bastard
 	// 23/09/2024
-	for (auto & pair : ScriptEngine::s_YieldedCoroutines)
+	for (auto& pair : ScriptEngine::s_YieldedCoroutines)
 	{
 		lua_State* coroutine = pair.first;
 		std::shared_future<Reflection::GenericValue>& future = pair.second;
@@ -757,7 +762,7 @@ void Object_Script::Update(double dt)
 
 			ScriptEngine::L::PushGenericValue(coroutine, retval);
 
-			lua_Status resumeStatus = (lua_Status)lua_resume(coroutine, nullptr, 1);
+			lua_Status resumeStatus = (lua_Status)lua_resume(coroutine, nullptr, 0);
 
 			if (resumeStatus != LUA_OK && resumeStatus != LUA_YIELD)
 			{
@@ -887,8 +892,6 @@ bool Object_Script::Reload()
 				std::make_format_args(errstr)
 			));
 
-			m_L = nullptr;
-
 			return false;
 		}
 
@@ -900,8 +903,6 @@ bool Object_Script::Reload()
 		const char* errstr = lua_tostring(m_L, topidx);
 
 		Debug::Log(std::vformat("Luau compile error {}: {}: '{}'", std::make_format_args(result, this->Name, errstr)));
-
-		m_L = nullptr;
 
 		return false;
 	}

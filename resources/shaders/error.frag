@@ -1,15 +1,11 @@
-// error.frag - Error shader used when a Shader or Shader Program cannot be loaded
+// Uber shader for world geometry
+
+// TODO: Remove unnecessary variables
+// - 21/06/2024
 
 #version 460 core
 
-// ALL of the worldUber.frag uniforms need to be here to not get
-// "location is invalid" crashes.
-
-// for static array size
-const int MAX_DIFFUSE_TEXTURES = 6;
-const int MAX_SPECULAR_TEXTURES = 6;
-const int MAX_LIGHTS = 32;
-const int MAX_LIGHTS_SHADOWCASTING = 16;
+const int MAX_LIGHTS = 6;
 
 /*
 LIGHT TYPE IDS:
@@ -22,85 +18,73 @@ When Directional light, Position = Direction
 struct LightObject
 {
 	int Type;
-	
+	bool Shadows;
+
 	// generic, applies to all light types (i.e., directional, point, spot lights)
 	vec3 Position;
 	vec3 Color;
 
 	// point lights and spotlights
 	float Range;
-	
-	// spotlights only, controls the interpolation between light and dark to prevent a hard cut-off
-	float Spot_OuterCone;
-	float Spot_InnerCone;
-
-	// shadows
-	// NOTE: not functional :( too lazy lol
-	//bool HasShadowMap;
-	//int ShadowMapIndex;
-	//mat4 ShadowMapProjection;
-	// 21/06/2024 When did I write this??? Some stuff for a shadow atlas system...
-	bool HasShadow;
-	vec2 ShadowTexelPosition;
-	vec2 ShadowTexelSize;
-	mat4 ShadowProjection;
+	// spotlights
+	float Angle;
 };
 
-// Cubemaps for reflections
-struct Cubemap
-{
-	// position in the scene
-	vec3 Position;
-	
-	// cubemap itself
-	samplerCube Texture;
-
-	// for projection
-	float NearPlane;
-	float FarPlane;
-};
+uniform LightObject Lights[MAX_LIGHTS];
 
 uniform sampler2D ShadowAtlas;
 
-// the actual number of textures the mesh has/lights in the scene
-uniform int NumDiffuseTextures = 1;
-uniform int NumSpecularTextures = 1;
 uniform int NumLights = 0;
 
-// uniform arrays
-uniform sampler2D DiffuseTextures[MAX_DIFFUSE_TEXTURES];
-uniform sampler2D SpecularTextures[MAX_SPECULAR_TEXTURES];
-//uniform sampler2D ShadowMaps[MAX_SHADOWCASTING_LIGHTS]; <-- Replaced with shadow atlas!
-uniform LightObject Lights[MAX_LIGHTS];
+uniform sampler2D FrameBuffer;
 
+uniform sampler2D ColorMap;
+uniform sampler2D MetallicRoughnessMap;
+uniform bool HasNormalMap;
+uniform sampler2D NormalMap;
+uniform bool HasEmissionMap;
+uniform sampler2D EmissionMap;
 
-uniform vec3 LightAmbient = vec3(.05f,.05f,.05f);
-uniform float SpecularMultiplier = 1.f;
-uniform float SpecularPower = 32.0f;
+uniform vec3 LightAmbient = vec3(0.3f);
+uniform float SpecularMultiplier = 0.5f;
+uniform float SpecularPower = 16.0f;
 
-uniform float Reflectivity = 0.f;
 uniform float Transparency = 0.f;
-
-uniform vec3 ColorTint = vec3(1.f, 1.f, 1.f);
-
-// cubemap used for reflections
-// 21/06/2024: Not quite yet, though!
-uniform Cubemap ReflectionCubemap;
+uniform float MetallnessFactor = 0.f;
+uniform float RoughnessFactor = 0.f;
+uniform float EmissionStrength = 0.f;
 
 uniform samplerCube SkyboxCubemap;
 
 uniform float NearZ = 0.1f;
 uniform float FarZ = 1000.0f;
 
-uniform int Fog = 0;
+uniform bool Fog = false;
 uniform vec3 FogColor = vec3(0.85f, 0.85f, 0.90f);
 
-uniform vec3 CameraPosition;
+uniform bool UseTriPlanarProjection = false;
+uniform float MaterialProjectionFactor = 0.05f;
+
+uniform float AlphaCutoff = 0.5f;
+
+uniform bool IsShadowMap = false;
+uniform bool DebugOverdraw = false;
+uniform bool DebugLightInfluence = false;
+
+in vec3 Frag_ModelPosition;
+in vec3 Frag_WorldPosition;
+in vec3 Frag_VertexNormal;
+in vec3 Frag_ColorTint;
+in vec2 Frag_TextureUV;
+in mat4 Frag_Transform;
+in vec4 Frag_RelativeToDirecLight;
+//in mat3 Frag_TBN;
+in vec3 Frag_CameraPosition;
 
 out vec4 FragColor;
 
 void main()
 {
 	// Bright magenta
-	FragColor = vec4(1.0f, 0.0f, 1.0f, 1.0f);
+	FragColor = vec4(1.f, 0.f, 1.f, 1.f);
 }

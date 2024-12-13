@@ -3,10 +3,7 @@
 
 PHX_GAMEOBJECT_LINKTOCLASS("GameObject", GameObject);
 
-static uint32_t NumGameObjects = 0;
 static bool s_DidInitReflection = false;
-GameObject* GameObject::s_DataModel = nullptr;
-std::unordered_map<uint32_t, GameObject*> GameObject::s_WorldArray = {};
 
 static void destroyObject(Reflection::Reflectable* obj)
 {
@@ -130,13 +127,8 @@ GameObject::~GameObject()
 
 	m_Children.clear();
 
-	if (this->ObjectId != 0 && this->ObjectId != PHX_GAMEOBJECT_NULL_ID)
-	{
-		auto it = s_WorldArray.find(this->ObjectId);
-
-		if (it != s_WorldArray.end())
-			s_WorldArray.erase(this->ObjectId);
-	}
+	if (this->ObjectId != PHX_GAMEOBJECT_NULL_ID)
+		s_WorldArray.at(this->ObjectId) = nullptr;
 
 	this->Parent = PHX_GAMEOBJECT_NULL_ID;
 	//this->ObjectId = PHX_GAMEOBJECT_NULL_ID;
@@ -155,11 +147,10 @@ bool GameObject::IsValidObjectClass(const std::string& ObjectClass)
 
 GameObject* GameObject::GetObjectById(uint32_t Id)
 {
-	if (Id == PHX_GAMEOBJECT_NULL_ID)
+	if (Id == PHX_GAMEOBJECT_NULL_ID || s_WorldArray.size() - 1 < Id)
 		return nullptr;
 
-	auto it = s_WorldArray.find(Id);
-	return it != s_WorldArray.end() ? it->second : nullptr;
+	return s_WorldArray.at(Id);
 }
 
 void GameObject::Initialize()
@@ -205,6 +196,8 @@ void GameObject::SetParent(GameObject* newParent)
 		this->Parent = PHX_GAMEOBJECT_NULL_ID;
 	else
 	{
+		std::string fullname = this->GetFullName();
+
 		if (newParent != this)
 		{
 			std::vector<GameObject*> descendants = this->GetDescendants();
@@ -222,14 +215,14 @@ void GameObject::SetParent(GameObject* newParent)
 				this->Parent = newParent->ObjectId;
 			else
 				throw(std::vformat(
-					"Tried to make object ID:{} a descendant of itself",
-					std::make_format_args(this->ObjectId)
+					"Tried to make object ID:{} ('{}') a descendant of itself",
+					std::make_format_args(this->ObjectId, fullname)
 				));
 		}
 		else
 			throw(std::vformat(
-				"Tried to make object ID:{} it's own parent",
-				std::make_format_args(this->ObjectId)
+				"Tried to make object ID:{} ('{}') it's own parent",
+				std::make_format_args(this->ObjectId, fullname)
 			));
 
 		this->Parent = newParent->ObjectId;
@@ -281,20 +274,9 @@ Reflection::GenericValue GameObject::ToGenericValue()
 	return gv;
 }
 
-GameObject* GameObject::GetParent()
+GameObject* GameObject::GetParent() const
 {
-	if (this->Parent == PHX_GAMEOBJECT_NULL_ID)
-		return nullptr;
-
-	auto it = s_WorldArray.find(this->Parent);
-
-	if (it == s_WorldArray.end())
-	{
-		this->Parent = PHX_GAMEOBJECT_NULL_ID;
-		return nullptr;
-	}
-	else
-		return it->second;
+	return GameObject::GetObjectById(this->Parent);
 }
 
 std::vector<GameObject*> GameObject::GetChildren()
@@ -394,16 +376,11 @@ GameObject* GameObject::Create(const std::string& ObjectClass)
 			std::make_format_args(ObjectClass)
 		));
 
+	// `it->second` is a function that constructs the object, so we
+	// call it
 	GameObject* CreatedObject = it->second();
-	// ID:0 is a reserved ID
-	// Whenever anyone tries to use it, we know that an uninitialized
-	// Object was involved.
-	// To indicate a NULL Object, use `PHX_GAMEOBJECT_NULL_ID`.
-	// Thus, add 1 so that the first create Object has ID 1 and not 0.
-	CreatedObject->ObjectId = NumGameObjects + 1;
-	NumGameObjects++;
-
-	s_WorldArray.insert(std::pair(CreatedObject->ObjectId, CreatedObject));
+	CreatedObject->ObjectId = static_cast<uint32_t>(s_WorldArray.size());
+	s_WorldArray.push_back(CreatedObject);
 
 	CreatedObject->Initialize();
 
