@@ -29,9 +29,9 @@ static glm::mat4 getNearestParentTransform(Object_Attachment* att)
 				trans *= transformableParent->Transform;
 				break;
 			}
-			else
-				curParent = curParent->GetParent();
 		}
+
+		curParent = curParent->GetParent();
 	}
 
 	return trans;

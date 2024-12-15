@@ -1,5 +1,7 @@
 --!strict
 
+-- This is definitely something 13/12/2024
+
 local ShaderBuilder = {}
 
 type Variable = {
@@ -60,9 +62,9 @@ local NodeClassHandlers: { [string]: (Node) -> (string) } = {
     -- set all Os to N
     Variable =  function(Node)
         assert(#Node.Outputs > 0, "Node must have atleast 1 Output")
-
+	
         local source = ""
-
+	
         for _, out in Node.Outputs do
             if out.Class == Node.Class then
                 source ..= `{out.Name} = {Node.Name};\n`

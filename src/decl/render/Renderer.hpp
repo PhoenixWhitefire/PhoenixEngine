@@ -8,8 +8,6 @@
 #include "render/ShaderManager.hpp"
 #include "render/GpuBuffers.hpp"
 
-#include "gameobject/Base3D.hpp"
-
 /*
 	09/09/2024
 	Why can't SDL have something like OpenGL's Debug Log?

@@ -89,7 +89,7 @@ void main()
 
 // NODES
 
-FinalOutput = vec4(Frag_ColorTin, 1.f);
+FinalOutput = vec4(Frag_ColorTint, 1.f);
 
 
 //END SHADER GRAPH TRANSPILATION

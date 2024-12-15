@@ -73,7 +73,6 @@ static double ErrorTooltipTimeRemaining = 0.f;
 
 Editor::Editor(Renderer* renderer)
 {
-	m_NewObjectClass = BufferInitialize(OBJECT_NEW_CLASSNAME_BUFSIZE);
 	m_MtlCreateNameBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE, MATERIAL_NEW_NAME_DEFAULT);
 	m_MtlLoadNameBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE, MATERIAL_NEW_NAME_DEFAULT);
 	m_MtlSaveNameBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE, MATERIAL_NEW_NAME_DEFAULT);
@@ -209,29 +208,35 @@ static void mtlEditorTexture(uint32_t* TextureIdPtr, const char* Label, char* Bu
 	const Texture& tx = texManager->GetTextureResource(*TextureIdPtr);
 
 	ImGui::Text(Label);
-	bool fileDialogRequested = ImGui::TextLink(Buffer);
-	ImGui::SetItemTooltip("Open file dialog");
 
-	if (fileDialogRequested)
+	if (ImGui::GetIO().KeyCtrl)
 	{
-		std::string bufAsStr = std::string(Buffer);
-		std::string texdir = "resources/" + bufAsStr.substr(0ull, bufAsStr.find_last_of("/"));
+		bool fileDialogRequested = ImGui::TextLink(Buffer);
+		ImGui::SetItemTooltip("Open file dialog");
 
-		ImGuiFD::OpenDialog(
-			"Select Texture",
-			ImGuiFDMode_LoadFile,
-			texdir.c_str(),
-			"*.png,*.jpg,*.jpeg",
-			0,
-			1
-		);
+		if (fileDialogRequested)
+		{
+			std::string bufAsStr = std::string(Buffer);
+			std::string texdir = "resources/" + bufAsStr.substr(0ull, bufAsStr.find_last_of("/"));
 
-		MtlEditorTextureSelectDialogBuffer = Buffer;
-		MtlEditorTextureSelectTarget = TextureIdPtr;
+			ImGuiFD::OpenDialog(
+				"Select Texture",
+				ImGuiFDMode_LoadFile,
+				texdir.c_str(),
+				"*.png,*.jpg,*.jpeg",
+				0,
+				1
+			);
+
+			MtlEditorTextureSelectDialogBuffer = Buffer;
+			MtlEditorTextureSelectTarget = TextureIdPtr;
+		}
 	}
-
-	ImGui::InputText(Label, Buffer, MATERIAL_TEXTUREPATH_BUFSIZE);
-	ImGui::SetItemTooltip("Enter path to texture directly");
+	else
+	{
+		ImGui::InputText("", Buffer, MATERIAL_TEXTUREPATH_BUFSIZE);
+		ImGui::SetItemTooltip("Enter path directly, or hold CTRL to use a file dialog");
+	}
 
 	ImGui::Image(
 		tx.GpuId,
@@ -656,6 +661,7 @@ void Editor::m_RenderMaterialEditor()
 }
 
 static uint32_t HierarchyTreeSelectionId = PHX_GAMEOBJECT_NULL_ID;
+static GameObject* ObjectInsertionTarget = nullptr;
 
 static GameObject* recursiveIterateTree(GameObject* current, bool didVisitCurSelection = false)
 {
@@ -671,14 +677,18 @@ static GameObject* recursiveIterateTree(GameObject* current, bool didVisitCurSel
 	if (current->ObjectId == HierarchyTreeSelectionId)
 		didVisitCurSelection = true;
 
+	static GameObject* InsertObjectButtonHoveredOver = nullptr;
+	InsertObjectButtonHoveredOver = nullptr;
+
 	for (GameObject* object : current->GetChildren())
 	{
 		if (object == nullptr)
 			throw("stoopid compiler is giving me a warning for something that will probably not happen");
 
-		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow;
+		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanAvailWidth;
 
-		if (hrchSelection && object == hrchSelection)
+		// make the insert button have better contrast
+		if (hrchSelection && object == hrchSelection && object != InsertObjectButtonHoveredOver)
 			flags |= ImGuiTreeNodeFlags_Selected;
 
 		if (object->GetChildren().empty())
@@ -689,13 +699,57 @@ static GameObject* recursiveIterateTree(GameObject* current, bool didVisitCurSel
 			std::vector<GameObject*> descs = object->GetDescendants();
 
 			if (std::find(descs.begin(), descs.end(), hrchSelection) != descs.end())
-				flags |= ImGuiTreeNodeFlags_DefaultOpen;
+				ImGui::SetNextItemOpen(true);
 		}
 
+		ImGui::AlignTextToFramePadding();
 		bool open = ImGui::TreeNodeEx(&object->ObjectId, flags, object->Name.c_str());
 
 		if (ImGui::IsItemClicked())
 			nodeClicked = object;
+
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SameLine();
+			ImGui::Button("+");
+
+			// the above call to `::Button` will always
+			// return false, ig this does something different
+			// with the ordering 15/12/2024
+			if (ImGui::IsItemClicked())
+			{
+				ObjectInsertionTarget = object;
+				ImGui::OpenPopup("Object Insertion Window");
+			}
+
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetItemTooltip("Insert new Object");
+				InsertObjectButtonHoveredOver = object;
+			}
+		}
+
+		if (object == ObjectInsertionTarget)
+		{
+			if (ImGui::BeginPopup("Object Insertion Window"))
+			{
+				ImGui::SeparatorText("Insert");
+
+				for (auto& it : GameObject::s_GameObjectMap)
+					if (ImGui::MenuItem(it.first.c_str()))
+					{
+						GameObject* newObject = GameObject::Create(it.first);
+						newObject->SetParent(ObjectInsertionTarget);
+						HierarchyTreeSelectionId = newObject->ObjectId;
+						 
+						ObjectInsertionTarget = nullptr;
+					}
+
+				InsertObjectButtonHoveredOver = nullptr;
+
+				ImGui::EndPopup();
+			}
+		}
 			
 		if (open)
 		{
@@ -713,10 +767,7 @@ static GameObject* recursiveIterateTree(GameObject* current, bool didVisitCurSel
 	return GameObject::GetObjectById(HierarchyTreeSelectionId);
 }
 
-static GameObject* ForceSelectObjectNextFrame = nullptr;
-static Reflection::GenericValue DelayedPropValue{};
-static GameObject* DelayedModifiedObject{};
-static std::string DelayedPropName{};
+static std::string DoNotShowPropThisFrame = "";
 
 void Editor::RenderUI()
 {
@@ -732,32 +783,18 @@ void Editor::RenderUI()
 		return;
 	}
 
-	if (ForceSelectObjectNextFrame)
-	{
-		// ensure we force Dear ImGui to lose focus of the GameObject input box that was
-		// CTRL+Clicked the previous frame so it's value doesn't carry over to the hyperlinked
-		// object
+	ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(227, 227, 227, 255));
+	ImGui::Text("Compiled: %s", __DATE__);
+	ImGui::PopStyleColor();
 
-		HierarchyTreeSelectionId = ForceSelectObjectNextFrame->ObjectId;
-		ForceSelectObjectNextFrame = nullptr;
-
-		ImGui::Text("Nothing this frame!");
-		ImGui::End();
-
-		return;
-	}
-
-	ImGui::InputText("New object", m_NewObjectClass, 32);
-	bool createObject = ImGui::Button("Create");
-
-	ImGui::TreePush("GameObject Hierarchy UI");
+	ImGui::Separator();
 
 	GameObject* selected = recursiveIterateTree(GameObject::s_DataModel);
 
-	ImGui::TreePop();
-
 	if (selected)
 	{
+		ImGui::SeparatorText(selected->ClassName.c_str());
+
 		if (ImGui::Button("Destroy"))
 		{
 			selected->Destroy();
@@ -779,7 +816,7 @@ void Editor::RenderUI()
 				}
 			}
 
-			ImGui::Text("Properties:");
+			ImGui::SeparatorText("Properties");
 
 			auto& props = selected->GetProperties();
 
@@ -787,6 +824,16 @@ void Editor::RenderUI()
 			{
 				const char* propName = propListItem.first.c_str();
 				const Reflection::Property& prop = propListItem.second;
+
+				if (propName == DoNotShowPropThisFrame)
+				{
+					// force Dear ImGui to lose focus of this specific property
+					// this is for CTRL+Click'ing `.Parent` so the value in the input
+					// box doesn't get carried over to the Object we jump to, forcing
+					// it's `.Parent` to change 15/12/2024
+					DoNotShowPropThisFrame = "";
+					continue;
+				}
 
 				Reflection::GenericValue curVal = selected->GetPropertyValue(propName);
 
@@ -880,7 +927,10 @@ void Editor::RenderUI()
 
 					if (ImGui::IsItemClicked())
 						if (ImGui::GetIO().KeyCtrl)
-							ForceSelectObjectNextFrame = GameObject::FromGenericValue(curVal);
+						{
+							HierarchyTreeSelectionId = static_cast<uint32_t>(curVal.AsInteger());
+							DoNotShowPropThisFrame = propName;
+						}
 
 					newVal = id;
 					newVal.Type = Reflection::ValueType::GameObject;
@@ -1000,21 +1050,6 @@ void Editor::RenderUI()
 					ErrorTooltipTimeRemaining = 2.f;
 				}
 			}
-		}
-	}
-
-	if (createObject)
-	{
-		if (!GameObject::IsValidObjectClass(m_NewObjectClass))
-		{
-			ErrorTooltipTimeRemaining = 2.f;
-			ErrorTooltipMessage = "That wasn't a valid GameObject!";
-		}
-		else
-		{
-			GameObject* newObj = GameObject::Create(m_NewObjectClass);
-
-			newObj->SetParent(selected ? selected : GameObject::s_DataModel);
 		}
 	}
 

@@ -710,7 +710,6 @@ static void Application(int argc, char** argv)
 
 static void handleCrash(const std::string& Error, const std::string& ExceptionType)
 {
-
 	// Log Size Limit Exceeded Throwing Exception
 	if (!Error.starts_with("LSLETE"))
 	{
@@ -741,6 +740,8 @@ int main(int argc, char** argv)
 {
 	Debug::Log("Application startup...");
 
+	Debug::Log(std::format("Phoenix Engine, build date: {}", __DATE__));
+
 	SDL_Window* window = nullptr;
 
 	try
@@ -754,13 +755,15 @@ int main(int argc, char** argv)
 		Application(argc, argv);
 
 		Debug::Save(); // in case FileRW::WriteFile throws an exception
-
-		Debug::Log("Application shutting down...");
-
-		Debug::Save();
 	}
-	PHX_MAIN_HANDLECRASH(std::string,)
-	PHX_MAIN_HANDLECRASH(const char*,)
-	PHX_MAIN_HANDLECRASH(std::bad_alloc, .what() + std::string(": System may have run out of memory"))
-	PHX_MAIN_HANDLECRASH(std::exception, .what())
+	PHX_MAIN_HANDLECRASH(std::string, )
+		PHX_MAIN_HANDLECRASH(const char*, )
+		PHX_MAIN_HANDLECRASH(std::bad_alloc, .what() + std::string(": System may have run out of memory"))
+		PHX_MAIN_HANDLECRASH(std::exception, .what());
+
+	// this occurs AFTER engine destructor is called
+	// 15/12/2024
+	Debug::Log("Application shutting down...");
+
+	Debug::Save();
 }

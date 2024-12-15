@@ -15,8 +15,6 @@ public:
 private:
 	void m_RenderMaterialEditor();
 
-	char* m_NewObjectClass{};
-
 	char* m_MtlCreateNameBuf{};
 	char* m_MtlLoadNameBuf{};
 	char* m_MtlSaveNameBuf{};

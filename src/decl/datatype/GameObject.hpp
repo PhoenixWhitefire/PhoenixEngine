@@ -73,16 +73,16 @@ public:
 
 	REFLECTION_DECLAREAPI;
 
-protected:
-	std::vector<uint32_t> m_Children;
-
 	// I followed this StackOverflow post:
 	// https://stackoverflow.com/a/582456/16875161
 
-	// Needs to be in `protected` because `RegisterDerivedObject`
+	// Needs to be in at-most `protected` because `RegisterDerivedObject`
 	// So sub-classes can access it and register themselves
 	typedef std::unordered_map<std::string, GameObject* (*)()> GameObjectMapType;
 	static inline GameObjectMapType s_GameObjectMap{};
+
+protected:
+	std::vector<uint32_t> m_Children;
 
 private:
 	static void s_DeclareReflections();

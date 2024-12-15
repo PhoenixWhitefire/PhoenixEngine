@@ -3,10 +3,13 @@
 #include <glm/mat4x4.hpp>
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
+#include <imnodes/imnodes.h>
+#include <ImGuiFD/ImGuiFD.h>
 
 #include "gameobject/ScriptEngine.hpp"
 
 #include "datatype/GameObject.hpp"
+#include "asset/TextureManager.hpp"
 #include "asset/MeshProvider.hpp"
 #include "asset/ModelImporter.hpp"
 #include "asset/SceneFormat.hpp"
@@ -1002,6 +1005,81 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 	},
 
 	{
+		"imgui_setitemtooltip",
+		[](lua_State* L)
+		{
+			ImGui::SetItemTooltip(luaL_checkstring(L, 1));
+
+			return 0;
+		}
+	},
+
+	{
+		"imgui_item_hovered",
+		[](lua_State* L)
+		{
+			lua_pushboolean(L, ImGui::IsItemHovered());
+			return 1;
+		}
+	},
+
+	{
+		"imgui_item_clicked",
+		[](lua_State* L)
+		{
+			lua_pushboolean(L, ImGui::IsItemClicked());
+			return 1;
+		}
+	},
+
+	{
+		"imgui_text",
+		[](lua_State* L)
+		{
+			ImGui::Text(luaL_checkstring(L, 1));
+			return 0;
+		}
+	},
+
+	{
+		"imgui_text_unformatted",
+		[](lua_State* L)
+		{
+			ImGui::TextUnformatted(luaL_checkstring(L, 1));
+			return 0;
+		}
+	},
+
+	{
+		"imgui_image",
+		[](lua_State* L)
+		{
+			TextureManager* texManager = TextureManager::Get();
+			uint32_t resId = texManager->LoadTextureFromPath(luaL_checkstring(L, 1));
+			const Texture& texture = texManager->GetTextureResource(resId);
+
+			ImGui::Image(
+				texture.GpuId,
+				ImVec2(
+					static_cast<float>(luaL_optnumber(L, 2, texture.Width)),
+					static_cast<float>(luaL_optnumber(L, 3, texture.Height))
+				)
+			);
+
+			return 0;
+		}
+	},
+
+	{
+		"imgui_indent",
+		[](lua_State* L)
+		{
+			ImGui::Indent(static_cast<float>(luaL_checknumber(L, 1)));
+			return 0;
+		}
+	},
+
+	{
 		"imgui_input_text",
 		[](lua_State* L)
 		{
@@ -1033,10 +1111,261 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 		"imgui_button",
 		[](lua_State* L)
 		{
-			const char* title = luaL_checkstring(L, 1);
-			lua_pushboolean(L, ImGui::Button(title));
+			lua_pushboolean(L, ImGui::Button(luaL_checkstring(L, 1)));
 
 			return 1;
+		}
+	},
+
+	{
+		"imgui_textlink",
+		[](lua_State* L)
+		{
+			lua_pushboolean(L, ImGui::TextLink(luaL_checkstring(L, 1)));
+
+			return 1;
+		}
+	},
+
+	{
+		"imgui_checkbox",
+		[](lua_State* L)
+		{
+			const char* title = luaL_checkstring(L, 1);
+			bool curval = luaL_checkboolean(L, 2);
+			bool pressed = ImGui::Checkbox(title, &curval);
+
+			lua_pushboolean(L, curval);
+			lua_pushboolean(L, pressed);
+
+			return 2;
+		}
+	},
+
+	{
+		"imnodes_editor_begin",
+		[](lua_State*)
+		{
+			if (!ImNodes::GetCurrentContext())
+				ImNodes::CreateContext();
+
+			ImNodes::BeginNodeEditor();
+
+			return 0;
+		}
+	},
+
+	{
+		"imnodes_editor_end",
+		[](lua_State*)
+		{
+			ImNodes::EndNodeEditor();
+
+			return 0;
+		}
+	},
+
+	{
+		"imnodes_node_begin",
+		[](lua_State* L)
+		{
+			ImNodes::BeginNode(luaL_checkinteger(L, 1));
+
+			return 0;
+		}
+	},
+
+	{
+		"imnodes_node_end",
+		[](lua_State*)
+		{
+			ImNodes::EndNode();
+
+			return 0;
+		}
+	},
+
+	{
+		"imnodes_node_input_begin",
+		[](lua_State* L)
+		{
+			ImNodes::BeginInputAttribute(luaL_checkinteger(L, 1), luaL_optinteger(L, 2, 1));
+
+			return 0;
+		}
+	},
+
+	{
+		"imnodes_node_input_end",
+		[](lua_State*)
+		{
+			ImNodes::EndInputAttribute();
+
+			return 0;
+		}
+	},
+
+	{
+		"imnodes_node_output_begin",
+		[](lua_State* L)
+		{
+			ImNodes::BeginOutputAttribute(luaL_checkinteger(L, 1), luaL_optinteger(L, 2, 1));
+
+			return 0;
+		}
+	},
+
+	{
+		"imnodes_node_output_end",
+		[](lua_State*)
+		{
+			ImNodes::EndOutputAttribute();
+
+			return 0;
+		}
+	},
+
+	{
+		"imnodes_drawlink",
+		[](lua_State* L)
+		{
+			ImNodes::Link(luaL_checkinteger(L, 1), luaL_checkinteger(L, 2), luaL_checkinteger(L, 3));
+
+			return 0;
+		}
+	},
+
+	{
+		"imnodes_userlinked",
+		[](lua_State* L)
+		{
+			int startattr{}, endattr{};
+			ImNodes::IsLinkCreated(&startattr, &endattr);
+
+			lua_pushinteger(L, startattr);
+			lua_pushinteger(L, endattr);
+
+			return 2;
+		}
+	},
+
+	{
+		"imnodes_node_titlebar_begin",
+		[](lua_State*)
+		{
+			ImNodes::BeginNodeTitleBar();
+
+			return 0;
+		}
+	},
+
+	{
+		"imnodes_node_titlebar_end",
+		[](lua_State*)
+		{
+			ImNodes::EndNodeTitleBar();
+
+			return 0;
+		}
+	},
+
+	{
+		"imnodes_colorstyle_push",
+		[](lua_State* L)
+		-> int
+		{
+			const Color& col = *(Color*)luaL_checkudata(L, 2, "Color");
+			ImNodes::PushColorStyle(luaL_checkinteger(L, 1), IM_COL32(col.R * 255, col.G * 255, col.B * 255, 255));
+			return 0;
+		}
+	},
+
+	{
+		"imnodes_colorstyle_pop",
+		[](lua_State*)
+		-> int
+		{
+			ImNodes::PopColorStyle();
+			return 0;
+		}
+	},
+
+	{
+		"imfd_begin",
+		[](lua_State* L)
+		{
+			lua_pushboolean(L, ImGuiFD::BeginDialog(luaL_checkstring(L, 1)));
+			return 1;
+		}
+	},
+
+	{
+		"imfd_end",
+		[](lua_State*)
+		{
+			ImGuiFD::EndDialog();
+			return 0;
+		}
+	},
+
+	{
+		"imfd_actiondone",
+		[](lua_State* L)
+		{
+			lua_pushboolean(L, ImGuiFD::ActionDone());
+			return 1;
+		}
+	},
+
+	{
+		"imfd_selectionmade",
+		[](lua_State* L)
+		{
+			lua_pushboolean(L, ImGuiFD::SelectionMade());
+			return 1;
+		}
+	},
+
+	{
+		"imfd_getselections",
+		[](lua_State* L)
+		{
+			lua_newtable(L);
+
+			for (int ind = 0; ind < ImGuiFD::GetSelectionStringsAmt(); ind++)
+			{
+				lua_pushinteger(L, ind + 1);
+				lua_pushstring(L, ImGuiFD::GetSelectionPathString(ind));
+				lua_settable(L, -3);
+			}
+
+			return 1;
+		}
+	},
+
+	{
+		"imfd_open",
+		[](lua_State* L)
+		{
+			ImGuiFD::OpenDialog(
+				luaL_checkstring(L, 1),
+				static_cast<ImGuiFDMode>(luaL_optinteger(L, 2, 0)),
+				luaL_optstring(L, 3, "resources/"),
+				luaL_optstring(L, 4, "*.*"),
+				luaL_optinteger(L, 5, 0),
+				luaL_optinteger(L, 6, 1)
+			);
+
+			return 0;
+		}
+	},
+
+	{
+		"imfd_close",
+		[](lua_State*)
+		{
+			ImGuiFD::CloseCurrentDialog();
+			return 0;
 		}
 	},
 

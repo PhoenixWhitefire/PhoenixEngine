@@ -4,6 +4,7 @@ local TotalTime = 0
 
 local Camera = workspace.SceneCamera
 local CharacterControllerCreator = require("scripts/modules/character-controller.luau")
+local NodeEditor = require("scripts/modules/NodeEditor.luau")
 
 local CharacterController = CharacterControllerCreator.new(Camera)
 CharacterController:InitDefault()
@@ -86,7 +87,10 @@ function Update(DeltaTime)
 	end
 	
 	if imgui_begin("Model Importer") then
-		ModelImporterPath = imgui_input_text("Path", ModelImporterPath)
+		if imgui_textlink("Model: " .. ModelImporterPath) then
+			imfd_open("Select Model", 0, "resources/models", "*.gltf,*.glb")
+		end
+		
 		ModelImporterScale = imgui_input_float("Scale", ModelImporterScale)
 		
 		if imgui_button("Import") then
@@ -105,8 +109,28 @@ function Update(DeltaTime)
 	end
 	imgui_end()
 	
+	if imfd_begin("Select Model") then
+		if imfd_actiondone() then
+			if imfd_selectionmade() then
+				local selection = imfd_getselections()[1]
+				local resDirOff = selection:find("resources/")
+				if not resDirOff then
+					error("Must be within resources directory!")
+				else
+					ModelImporterPath = selection:sub(resDirOff + 10, resDirOff + (#selection - resDirOff))
+				end
+			end
+			
+			imfd_close()
+		end
+		
+		imfd_end()
+	end
+	
 	if imgui_begin("Run Script") then
-		ScriptRunnerTarget = imgui_input_text("Path", ScriptExecutionFile)
+		if imgui_textlink("Path: " .. ScriptExecutionFile) then
+			imfd_open("Run Script Dialog", 0, "resources/scripts", "*.luau")
+		end
 		
 		if imgui_button("Execute") then
 			if scriptHost then
@@ -119,4 +143,24 @@ function Update(DeltaTime)
 		end
 	end
 	imgui_end()
+	
+	if imfd_begin("Run Script Dialog") then
+		if imfd_actiondone() then
+			if imfd_selectionmade() then
+				local selection = imfd_getselections()[1]
+				local resDirOff = selection:find("resources/")
+				if not resDirOff then
+					error("Must be within resources directory!")
+				else
+					ScriptExecutionFile = selection:sub(resDirOff + 10, resDirOff + (#selection - resDirOff))
+				end
+			end
+			
+			imfd_close()
+		end
+		
+		imfd_end()
+	end
+	
+	--NodeEditor()
 end

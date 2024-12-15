@@ -3,7 +3,7 @@
 #include <glm/matrix.hpp>
 #include <vector>
 
-#include "gameobject/Base3D.hpp"
+#include "datatype/Vector3.hpp"
 
 namespace IntersectionLib
 {
@@ -17,17 +17,17 @@ namespace IntersectionLib
 	};
 
 	IntersectionLib::Intersection AabbAabb(
-		glm::vec3& APosition,
-		glm::vec3& ASize,
-		glm::vec3& BPosition,
-		glm::vec3& BSize
+		const glm::vec3& APosition,
+		const glm::vec3& ASize,
+		const glm::vec3& BPosition,
+		const glm::vec3& BSize
 	);
 
 	IntersectionLib::Intersection LineAabb(
-		glm::vec3& Origin,
-		glm::vec3& Vector,
-		glm::vec3& BbPosition,
-		glm::vec3& BbSize,
+		const glm::vec3& Origin,
+		const glm::vec3& Vector,
+		const glm::vec3& BbPosition,
+		const glm::vec3& BbSize,
 		float PaddingX = 0.f,
 		float PaddingY = 0.f,
 		float PaddingZ = 0.f

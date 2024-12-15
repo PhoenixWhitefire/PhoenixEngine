@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "IntersectionLib.hpp"
 #include "Profiler.hpp"
 
@@ -8,10 +10,10 @@ template<class T> static int sign(T v)
 
 IntersectionLib::Intersection IntersectionLib::AabbAabb
 (
-	glm::vec3& APosition,
-	glm::vec3& ASize,
-	glm::vec3& BPosition,
-	glm::vec3& BSize
+	const glm::vec3& APosition,
+	const glm::vec3& ASize,
+	const glm::vec3& BPosition,
+	const glm::vec3& BSize
 )
 {
 	PROFILER_PROFILE_SCOPE("Intersection::AabbAabb");
@@ -66,10 +68,10 @@ IntersectionLib::Intersection IntersectionLib::AabbAabb
 }
 
 IntersectionLib::Intersection IntersectionLib::LineAabb(
-	glm::vec3& Origin,
-	glm::vec3& Vector,
-	glm::vec3& BbPosition,
-	glm::vec3& BbSize,
+	const glm::vec3& Origin,
+	const glm::vec3& Vector,
+	const glm::vec3& BbPosition,
+	const glm::vec3& BbSize,
 	float PaddingX,
 	float PaddingY,
 	float PaddingZ
