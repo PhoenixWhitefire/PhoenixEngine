@@ -156,7 +156,16 @@ static void renderScriptEditor()
 	ImGui::Text("%s", targetScript->Name.c_str());
 
 	if (ImGui::Button("Save"))
-		(*ScriptFileStream) << TextEntryBuffer;
+	{
+		ScriptFileStream->write(TextEntryBuffer, strlen(TextEntryBuffer));
+		ScriptFileStream->flush();
+		ScriptFileStream->close();
+		delete ScriptFileStream;
+		ScriptFileStream = nullptr;
+
+		free(TextEntryBuffer);
+		TextEntryBuffer = nullptr;
+	}
 
 	if (ImGui::Button("Close"))
 	{
@@ -192,8 +201,8 @@ static void renderScriptEditor()
 
 		CopyStringToBuffer(TextEntryBuffer, TextEntryBufferCapacity, scriptContents);
 	}
-
-	ImGui::InputTextMultiline("Script", TextEntryBuffer, TextEntryBufferCapacity);
+	
+	ImGui::InputTextMultiline("", TextEntryBuffer, TextEntryBufferCapacity, ImGui::GetContentRegionAvail());
 
 	ImGui::End();
 }
