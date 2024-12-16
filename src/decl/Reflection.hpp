@@ -42,11 +42,11 @@ s_Api.Lineage.push_back(#base);                                            \
 	type,                                                                      \
 	[](Reflection::Reflectable* p)                                             \
 	{                                                                          \
-		return (Reflection::GenericValue)dynamic_cast<c*>(p)->name;            \
+		return (Reflection::GenericValue)static_cast<c*>(p)->name;             \
 	},                                                                         \
 	[](Reflection::Reflectable* p, Reflection::GenericValue gv)                \
 	{                                                                          \
-		dynamic_cast<c*>(p)->name = gv.As##type();                             \
+		static_cast<c*>(p)->name = gv.As##type();                              \
 	}                                                                          \
 )                                                                              \
 
@@ -58,11 +58,11 @@ s_Api.Lineage.push_back(#base);                                            \
 	type,                                                                                       \
 	[](Reflection::Reflectable* p)                                                              \
 	{                                                                                           \
-		return (Reflection::GenericValue)dynamic_cast<c*>(p)->name;                             \
+		return (Reflection::GenericValue)static_cast<c*>(p)->name;                              \
 	},                                                                                          \
 	[](Reflection::Reflectable* p, Reflection::GenericValue gv)                                 \
 	{                                                                                           \
-		dynamic_cast<c*>(p)->name = static_cast<cast>(gv.As##type());                           \
+		static_cast<c*>(p)->name = static_cast<cast>(gv.As##type());                            \
 	}                                                                                           \
 )  
 
@@ -73,11 +73,11 @@ s_Api.Lineage.push_back(#base);                                            \
 	type,                                                                               \
 	[](Reflection::Reflectable* p)                                                      \
 	{                                                                                   \
-		return dynamic_cast<c*>(p)->name.ToGenericValue();                              \
+		return static_cast<c*>(p)->name.ToGenericValue();                               \
 	},                                                                                  \
 	[](Reflection::Reflectable* p, Reflection::GenericValue gv)                         \
 	{                                                                                   \
-		dynamic_cast<c*>(p)->name = type(gv);                                           \
+		static_cast<c*>(p)->name = type(gv);                                            \
 	}                                                                                   \
 )                                                                                       \
 
@@ -87,7 +87,7 @@ s_Api.Lineage.push_back(#base);                                            \
 	type,                                                                               \
 	[](Reflection::Reflectable* p)                                                      \
 	{                                                                                   \
-		return Reflection::GenericValue(dynamic_cast<c*>(p)->name);                     \
+		return Reflection::GenericValue(static_cast<c*>(p)->name);                      \
 	},                                                                                  \
 	nullptr                                                                             \
 )                                                                                       \

@@ -18,11 +18,11 @@ void Object_Mesh::s_DeclareReflections()
 		String,
 		[](Reflection::Reflectable* p)
 		{
-			return dynamic_cast<Object_Mesh*>(p)->GetRenderMeshPath();
+			return static_cast<Object_Mesh*>(p)->GetRenderMeshPath();
 		},
 		[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)
 		{
-			dynamic_cast<Object_Mesh*>(p)->SetRenderMesh(gv.AsString());
+			static_cast<Object_Mesh*>(p)->SetRenderMesh(gv.AsString());
 		}
 	);
 }

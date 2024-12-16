@@ -10,7 +10,7 @@ static bool s_DidInitReflection = false;
 
 static void closeDataModel(Reflection::Reflectable* g)
 {
-	dynamic_cast<Object_DataModel*>(g)->WantExit = true;
+	static_cast<Object_DataModel*>(g)->WantExit = true;
 }
 
 void Object_DataModel::s_DeclareReflections()

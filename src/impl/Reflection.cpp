@@ -3,9 +3,9 @@
 #include <glm/gtx/euler_angles.hpp>
 
 #include "Reflection.hpp"
+#include "datatype/GameObject.hpp"
 #include "datatype/Vector3.hpp"
 #include "datatype/Color.hpp"
-#include "datatype/GameObject.hpp"
 
 //Reflection::Reflectable* Reflection::Reflectable::ApiReflection = new Reflection::Reflectable();
 

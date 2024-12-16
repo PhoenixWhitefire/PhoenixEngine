@@ -36,11 +36,11 @@ void Object_Primitive::s_DeclareReflections()
 		Integer,
 		[](Reflection::Reflectable* g)
 		{
-			return (int)dynamic_cast<Object_Primitive*>(g)->Shape;
+			return (int)static_cast<Object_Primitive*>(g)->Shape;
 		},
 		[](Reflection::Reflectable* g, Reflection::GenericValue gv)
 		{
-			dynamic_cast<Object_Primitive*>(g)->SetShape((PrimitiveShape)gv.AsInteger());
+			static_cast<Object_Primitive*>(g)->SetShape((PrimitiveShape)gv.AsInteger());
 		}
 	);
 }

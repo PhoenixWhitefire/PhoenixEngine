@@ -51,7 +51,7 @@ void Object_Attachment::s_DeclareReflections()
 		Matrix,
 		[](Reflection::Reflectable* p)
 		{
-			return dynamic_cast<Object_Attachment*>(p)->GetWorldTransform();
+			return static_cast<Object_Attachment*>(p)->GetWorldTransform();
 		},
 		nullptr
 	);

@@ -36,11 +36,11 @@ static auto LoadModelAsMeshes(
 	bool AutoParent = true
 )
 {
-	ModelLoader Loader(ModelFilePath, AutoParent ? dynamic_cast<GameObject*>(GameObject::s_DataModel) : nullptr);
+	ModelLoader Loader(ModelFilePath, AutoParent ? static_cast<GameObject*>(GameObject::s_DataModel) : nullptr);
 
 	for (GameObject* object : Loader.LoadedObjs)
 	{
-		Object_Mesh* mesh = dynamic_cast<Object_Mesh*>(object);
+		Object_Mesh* mesh = static_cast<Object_Mesh*>(object);
 
 		mesh->Transform = glm::translate(mesh->Transform, (glm::vec3)Position);
 		mesh->Size = mesh->Size * Size;
@@ -234,7 +234,7 @@ static std::vector<GameObject*> LoadMapVersion1(
 
 		if (Model.size() >= 1)
 		{
-			auto prop_3d = dynamic_cast<Object_Base3D*>(Model[0]);
+			auto prop_3d = static_cast<Object_Base3D*>(Model[0]);
 
 			if (PropObject.find("facecull") != PropObject.end())
 			{
@@ -272,7 +272,7 @@ static std::vector<GameObject*> LoadMapVersion1(
 			GameObject* NewObject = GameObject::Create("Primitive");
 			Objects.push_back(NewObject);
 
-			Object_Base3D* Object3D = dynamic_cast<Object_Base3D*>(NewObject);
+			Object_Base3D* Object3D = static_cast<Object_Base3D*>(NewObject);
 
 			NewObject->Name = Object.value("name", NewObject->Name);
 
@@ -348,7 +348,7 @@ static std::vector<GameObject*> LoadMapVersion1(
 		GameObject* Object = (GameObject::Create(LightType));
 		Objects.push_back(Object);
 
-		Object_Light* Light = dynamic_cast<Object_Light*>(Object);
+		Object_Light* Light = static_cast<Object_Light*>(Object);
 
 		Light->LocalTransform = glm::translate(
 			glm::mat4(1.f),
@@ -359,7 +359,7 @@ static std::vector<GameObject*> LoadMapVersion1(
 
 		if (LightType == "PointLight")
 		{
-			Object_PointLight* Pointlight = dynamic_cast<Object_PointLight*>(Object);
+			Object_PointLight* Pointlight = static_cast<Object_PointLight*>(Object);
 			Pointlight->Range = LightObject["range"];
 		}
 	}
@@ -430,6 +430,16 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 
 		GameObject* newObject = GameObject::Create(className);
 
+		if (item.find("$_objectId") == item.end())
+		{
+			Debug::Log(std::vformat(
+				"Deserialization warning: Object #{} ({}) was missing it's '$_objectId' key",
+				std::make_format_args(itemIndex, className)
+			));
+
+			continue;
+		}
+
 		uint32_t itemObjectId = item["$_objectId"];
 
 		objectsMap.insert(std::pair(itemObjectId, newObject));
@@ -443,13 +453,13 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 			std::string memberName = memberIt.key();
 
 			if (std::find(
-					SpecialSerializedNames.begin(),
-					SpecialSerializedNames.end(),
-					memberName
-				) != SpecialSerializedNames.end()
-			)
+				SpecialSerializedNames.begin(),
+				SpecialSerializedNames.end(),
+				memberName
+			) != SpecialSerializedNames.end()
+				)
 				continue;
-			
+
 			nlohmann::json memberValue = memberIt.value();
 
 			bool hasProp = newObject->HasProperty(memberName);
@@ -485,61 +495,56 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 				continue;
 			}
 
+			Reflection::GenericValue assignment;
+
 			switch (memberType)
 			{
 
 			case (Reflection::ValueType::String):
 			{
-				std::string string = memberValue;
-				setProperty(newObject, string);
+				assignment = (std::string)memberValue;
 
 				break;
 			}
 
 			case (Reflection::ValueType::Bool):
 			{
-				bool boolean = memberValue;
-				setProperty(newObject, boolean);
+				assignment = (bool)memberValue;
 
 				break;
 			}
 
 			case (Reflection::ValueType::Double):
 			{
-				double number = memberValue;
-				setProperty(newObject, number);
+				assignment = (double)memberValue;
 
 				break;
 			}
 
 			case (Reflection::ValueType::Integer):
 			{
-				int integer = memberValue;
-				setProperty(newObject, integer);
+				assignment = (int)memberValue;
 
 				break;
 			}
 
 			case (Reflection::ValueType::Color):
 			{
-				Color color = GetColorFromJson(memberValue);
-				setProperty(newObject, color.ToGenericValue());
+				assignment = GetColorFromJson(memberValue).ToGenericValue();
 
 				break;
 			}
 
 			case (Reflection::ValueType::Vector3):
 			{
-				Vector3 vector = GetVector3FromJson(memberValue);
-				setProperty(newObject, vector.ToGenericValue());
+				assignment = GetVector3FromJson(memberValue).ToGenericValue();
 
 				break;
 			}
 
 			case (Reflection::ValueType::Matrix):
 			{
-				glm::mat4 matrix = GetMatrixFromJson(memberValue);
-				setProperty(newObject, matrix);
+				assignment = GetMatrixFromJson(memberValue);
 
 				break;
 			}
@@ -547,6 +552,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 			case (Reflection::ValueType::GameObject):
 			{
 				objectProps[newObject].insert(std::pair(memberName, memberValue));
+
 				break;
 			}
 
@@ -566,6 +572,24 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 				break;
 			}
 
+			}
+
+			if (assignment.Type != Reflection::ValueType::Null)
+			{
+				try
+				{
+					setProperty(newObject, assignment);
+				}
+				catch (std::string err)
+				{
+					std::string mtname = Reflection::TypeAsString(memberType);
+					std::string valueStr = assignment.ToString();
+
+					Debug::Log(std::vformat(
+						"Deserialization warning: Failed to set {} Property '{}' of '{}' ({}) to '{}': {}",
+						std::make_format_args(mtname, memberName, name, className, valueStr, err)
+					));
+				}
 			}
 		}
 	}
@@ -596,12 +620,24 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 				Reflection::GenericValue gv = target->second->ObjectId;
 				gv.Type = Reflection::ValueType::GameObject;
 
-				object->SetPropertyValue(propName, gv);
+				try
+				{
+					object->SetPropertyValue(propName, gv);
+				}
+				catch (std::string err)
+				{
+					std::string valueStr = gv.ToString();
+
+					Debug::Log(std::vformat(
+						"Deserialization warning: Failed to set GameObject property of '{}' ({}) to '{}': {}",
+						std::make_format_args(object->Name, object->ClassName, valueStr, err)
+					));
+				}
 			}
 			else
 			{
 				Debug::Log(std::vformat(
-					"{} '{}' refers to invalid scene-relative Object ID {} for prop {}. To avoid UB, it will be NULL'd.",
+					"Deserialization warning: {} '{}' refers to invalid scene-relative Object ID {} for prop {}. To avoid UB, it will be NULL'd.",
 					std::make_format_args(
 						object->ClassName,
 						object->Name,
@@ -610,10 +646,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 					)
 				));
 
-				Reflection::GenericValue gv = 0;
-				gv.Type = Reflection::ValueType::GameObject;
-
-				object->SetPropertyValue(propName, gv);
+				object->SetPropertyValue(propName, ((GameObject*)nullptr)->ToGenericValue());
 			}
 		}
 	}

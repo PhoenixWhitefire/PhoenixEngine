@@ -48,9 +48,9 @@ function Controller:Update(DeltaTime)
     local moveDirection = self:getMoveDirection()
     local rotationX, rotationY = self:getRotationVector()
     
-    local floorRayHit = world_raycast(
-        self.Character.Transform.Position,
-        Vector3.new(0, -self.JumpRayDistance, 0),
+    local floorRayHit = world_aabbcast(
+        self.Character.Transform.Position - Vector3.new(0, 2, 0),
+        self.Character.Size * 0.8,
         { self.Character }
     )
     

@@ -50,13 +50,13 @@ void Object_DirectionalLight::s_DeclareReflections()
 		Vector3,
 		[](Reflection::Reflectable* g)
 		{
-			Object_DirectionalLight* dl = dynamic_cast<Object_DirectionalLight*>(g);
+			Object_DirectionalLight* dl = static_cast<Object_DirectionalLight*>(g);
 			glm::vec3 forward = dl->LocalTransform[3];
 			return Vector3(forward).ToGenericValue(); //Vector3(forward / glm::length(forward)).ToGenericValue();
 		},
 		[](Reflection::Reflectable* g, const Reflection::GenericValue& gv)
 		{
-			Object_DirectionalLight* p = dynamic_cast<Object_DirectionalLight*>(g);
+			Object_DirectionalLight* p = static_cast<Object_DirectionalLight*>(g);
 
 			//Vector3 newDirection{ gv };
 			//newDirection = newDirection / newDirection.Magnitude();

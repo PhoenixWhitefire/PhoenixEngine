@@ -162,5 +162,7 @@ function Update(DeltaTime)
 		imfd_end()
 	end
 	
+	workspace.Level.woodplanks.Transform *= Matrix.fromEulerAnglesXYZ(0, math.rad(DeltaTime * 15), 0)
+	
 	--NodeEditor()
 end

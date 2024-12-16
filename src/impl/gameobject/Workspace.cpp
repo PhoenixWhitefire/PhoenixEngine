@@ -8,7 +8,7 @@ static Object_Camera* s_FallbackCamera = nullptr;
 
 static Object_Camera* createCamera()
 {
-	Object_Camera* camera = dynamic_cast<Object_Camera*>(GameObject::Create("Camera"));
+	Object_Camera* camera = static_cast<Object_Camera*>(GameObject::Create("Camera"));
 	camera->UseSimpleController = true;
 
 	return camera;

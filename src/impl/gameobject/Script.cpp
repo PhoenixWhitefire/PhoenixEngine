@@ -690,11 +690,11 @@ void Object_Script::s_DeclareReflections()
 		String,
 		[](Reflection::Reflectable* p)
 		{
-			return Reflection::GenericValue(dynamic_cast<Object_Script*>(p)->SourceFile);
+			return Reflection::GenericValue(static_cast<Object_Script*>(p)->SourceFile);
 		},
 		[](Reflection::Reflectable* p, Reflection::GenericValue newval)
 		{
-			Object_Script* scr = dynamic_cast<Object_Script*>(p);
+			Object_Script* scr = static_cast<Object_Script*>(p);
 			scr->LoadScript(newval.AsString());
 		}
 	);
@@ -707,7 +707,7 @@ void Object_Script::s_DeclareReflections()
 		[](Reflection::Reflectable* p, const Reflection::GenericValue&)
 		-> std::vector<Reflection::GenericValue>
 		{
-			Object_Script* scr = dynamic_cast<Object_Script*>(p);
+			Object_Script* scr = static_cast<Object_Script*>(p);
 
 			bool reloadSuccess = scr->Reload();
 			return { reloadSuccess };

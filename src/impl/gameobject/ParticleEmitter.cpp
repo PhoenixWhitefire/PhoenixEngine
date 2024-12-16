@@ -30,14 +30,14 @@ void Object_ParticleEmitter::s_DeclareReflections()
 		Integer,
 		[](Reflection::Reflectable* g)
 		{
-			return dynamic_cast<Object_ParticleEmitter*>(g)->Rate;
+			return static_cast<Object_ParticleEmitter*>(g)->Rate;
 		},
 		[](Reflection::Reflectable* g, Reflection::GenericValue gv)
 		{
 			int64_t newRate = gv.AsInteger();
 			if (newRate < 0 || newRate > UINT32_MAX)
 				throw("ParticleEmitter.Rate must be within uint32_t bounds (0 <= Rate <= 0xFFFFFFFFu)");
-			dynamic_cast<Object_ParticleEmitter*>(g)->Rate = static_cast<uint32_t>(newRate);
+			static_cast<Object_ParticleEmitter*>(g)->Rate = static_cast<uint32_t>(newRate);
 				
 		}
 	);
@@ -65,13 +65,13 @@ void Object_ParticleEmitter::s_DeclareReflections()
 		Vector3,
 		[](Reflection::Reflectable* g)
 		{
-			Object_ParticleEmitter* p = dynamic_cast<Object_ParticleEmitter*>(g);
+			Object_ParticleEmitter* p = static_cast<Object_ParticleEmitter*>(g);
 			return Vector3(p->Lifetime.X, p->Lifetime.Y, 0.f).ToGenericValue();
 		},
 		[](Reflection::Reflectable* g, Reflection::GenericValue gv)
 		{
 			Vector3 newLifetime = gv;
-			dynamic_cast<Object_ParticleEmitter*>(g)->Lifetime = Vector2(
+			static_cast<Object_ParticleEmitter*>(g)->Lifetime = Vector2(
 				static_cast<float>(newLifetime.X),
 				static_cast<float>(newLifetime.Y)
 			);

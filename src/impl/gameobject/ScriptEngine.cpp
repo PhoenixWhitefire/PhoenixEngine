@@ -909,6 +909,80 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 	},
 
 	{
+		"world_aabbcast",
+		[](lua_State* L)
+		{
+			GameObject* workspace = GameObject::s_DataModel->GetChildOfClass("Workspace");
+
+			if (!workspace)
+				luaL_error(L, "A Workspace was not found within the DataModel");
+
+			glm::vec3 apos = Vector3(LuaValueToGeneric(L, -3));
+			glm::vec3 asize = Vector3(LuaValueToGeneric(L, -2));
+			std::vector<Reflection::GenericValue> providedIgnoreList = LuaValueToGeneric(L, -1).AsArray();
+
+			std::vector<GameObject*> ignoreList;
+			for (const Reflection::GenericValue& gv : providedIgnoreList)
+				ignoreList.push_back(GameObject::FromGenericValue(gv));
+
+			IntersectionLib::Intersection result;
+			GameObject* hitObject = nullptr;
+			double closestHit = INFINITY;
+
+			for (GameObject* p : workspace->GetDescendants())
+			{
+				if (std::find(ignoreList.begin(), ignoreList.end(), p) != ignoreList.end())
+					continue;
+
+				Object_Base3D* object = dynamic_cast<Object_Base3D*>(p);
+
+				if (object)
+				{
+					glm::vec3 bpos = object->Transform[3];
+					glm::vec3 bsize = object->Size;
+
+					IntersectionLib::Intersection hit = IntersectionLib::AabbAabb(
+						apos,
+						asize,
+						bpos,
+						bsize
+					);
+
+					if (hit.Occurred)
+						if (hit.Depth < closestHit)
+						{
+							result = hit;
+							closestHit = hit.Depth;
+							hitObject = object;
+						}
+				}
+			}
+
+			if (hitObject)
+			{
+				lua_newtable(L);
+
+				ScriptEngine::L::PushGameObject(L, hitObject);
+				lua_setfield(L, -2, "Object");
+
+				Reflection::GenericValue posg = Vector3(result.Vector).ToGenericValue();
+
+				ScriptEngine::L::PushGenericValue(L, posg);
+				lua_setfield(L, -2, "Position");
+
+				Reflection::GenericValue normalg = Vector3(result.Normal).ToGenericValue();
+
+				ScriptEngine::L::PushGenericValue(L, normalg);
+				lua_setfield(L, -2, "Normal");
+			}
+			else
+				lua_pushnil(L);
+
+			return 1;
+		}
+	},
+
+	{
 		"model_import",
 		[](lua_State* L)
 		{

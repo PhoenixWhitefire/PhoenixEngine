@@ -33,7 +33,7 @@ void Object_Example::s_DeclareReflections()
 		{
 			// Implicitly calls the `::GenericValue(bool)` constructor
 			// This is not voodoo. It really is returning a `Reflection::GenericValue`
-			return dynamic_cast<Object_Example*>(p)->Value1;
+			return static_cast<Object_Example*>(p)->Value1;
 		},
 		// Making this read-only is as simple as replacing the setter
 		// with `nullptr`, which is what `REFLECTION_DECLAREPROP_SIMPLE_READONLY` does
@@ -41,7 +41,7 @@ void Object_Example::s_DeclareReflections()
 		{
 			// Always use the `::As[X]` methods, even if it's a String for
 			// forward-compatibility and built-in sanity-checking
-			dynamic_cast<Object_Example*>(p)->Value1 = gv.AsBool();
+			static_cast<Object_Example*>(p)->Value1 = gv.AsBool();
 		}
 	);
 
@@ -73,7 +73,7 @@ void Object_Example::s_DeclareReflections()
 		[](Reflection::Reflectable* r, const std::vector<Reflection::GenericValue>& args)
 		-> std::vector<Reflection::GenericValue>
 		{
-			GameObject* p = dynamic_cast<GameObject*>(r);
+			GameObject* p = static_cast<GameObject*>(r);
 
 			Reflection::GenericValue gv = args.at(0);
 			std::vector<Reflection::GenericValue> names = gv.AsArray();
@@ -121,12 +121,12 @@ void Object_Example::s_DeclareReflections()
 		GiveUp,
 		[](Reflection::Reflectable* p)
 		{
-			dynamic_cast<GameObject*>(p)->Destroy();
+			static_cast<GameObject*>(p)->Destroy();
 
 			// It is not enough for just me to cease. Everything else must also.
 			if (GameObject::s_DataModel)
 				// Coerce. Convince. Force.
-				dynamic_cast<Object_DataModel*>(GameObject::s_DataModel)->WantExit = true;
+				static_cast<Object_DataModel*>(GameObject::s_DataModel)->WantExit = true;
 
 			throw("Gave up. Gave in. Ending it all. The world swallows itself up, or, at the very least, I will no longer exist.");
 		}

@@ -7,12 +7,12 @@ static bool s_DidInitReflection = false;
 
 static void destroyObject(Reflection::Reflectable* obj)
 {
-	dynamic_cast<GameObject*>(obj)->Destroy();
+	static_cast<GameObject*>(obj)->Destroy();
 }
 
 static std::string getFullName(Reflection::Reflectable* r)
 {
-	GameObject* object = dynamic_cast<GameObject*>(r);
+	GameObject* object = static_cast<GameObject*>(r);
 
 	std::string fullName = object->Name;
 	GameObject* curObject = object;
@@ -52,7 +52,7 @@ void GameObject::s_DeclareReflections()
 			// This is OK even if `->GetParent()` returns `nullptr`,
 			// because `::ToGenericValue` accounts for when `this` is `nullptr`
 			// 06/10/2024
-			return dynamic_cast<GameObject*>(p)->GetParent()->ToGenericValue();
+			return static_cast<GameObject*>(p)->GetParent()->ToGenericValue();
 			/*
 			Reflection::GenericValue gv = p->GetParent() ? p->GetParent()->ObjectId : PHX_GAMEOBJECT_NULL_ID;
 			gv.Type = Reflection::ValueType::GameObject;
@@ -62,7 +62,7 @@ void GameObject::s_DeclareReflections()
 		[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)
 		{
 			GameObject* newParent = GameObject::GetObjectById(static_cast<uint32_t>(gv.AsInteger()));
-			dynamic_cast<GameObject*>(p)->SetParent(newParent);
+			static_cast<GameObject*>(p)->SetParent(newParent);
 		}
 	);
 	
@@ -86,7 +86,7 @@ void GameObject::s_DeclareReflections()
 		-> std::vector<Reflection::GenericValue>
 		{
 			std::string ancestor = gv[0].AsString();
-			return { dynamic_cast<GameObject*>(p)->IsA(ancestor) };
+			return { static_cast<GameObject*>(p)->IsA(ancestor) };
 		}
 	);
 

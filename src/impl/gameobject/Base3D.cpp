@@ -19,29 +19,46 @@ void Object_Base3D::s_DeclareReflections()
 		Matrix,
 		[](Reflection::Reflectable* p)
 		{
-			return Reflection::GenericValue(dynamic_cast<Object_Base3D*>(p)->Transform);
+			return Reflection::GenericValue(static_cast<Object_Base3D*>(p)->Transform);
 		},
 		[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)
 		{
-			dynamic_cast<Object_Base3D*>(p)->Transform = gv.AsMatrix();
+			Object_Base3D* obj = static_cast<Object_Base3D*>(p);
+			obj->Transform = gv.AsMatrix();
+
+			obj->RecomputeAabb();
 		}
 	);
 
-	REFLECTION_DECLAREPROP_SIMPLE_TYPECAST(Object_Base3D, Size, Vector3);
+	REFLECTION_DECLAREPROP(
+		"Size",
+		Vector3,
+		[](Reflection::Reflectable* p)
+		{
+			return static_cast<Object_Base3D*>(p)->Size.ToGenericValue();
+		},
+		[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)
+		{
+			Object_Base3D* obj = static_cast<Object_Base3D*>(p);
+			obj->Size = gv;
+
+			obj->RecomputeAabb();
+		}
+	);
 
 	REFLECTION_DECLAREPROP(
 		"Material",
 		String,
 		[](Reflection::Reflectable* g)
 		{
-			Object_Base3D* p = dynamic_cast<Object_Base3D*>(g);
+			Object_Base3D* p = static_cast<Object_Base3D*>(g);
 			MaterialManager* mtlManager = MaterialManager::Get();
 
 			return mtlManager->GetMaterialResource(p->MaterialId).Name;
 		},
 		[](Reflection::Reflectable* g, Reflection::GenericValue gv)
 		{
-			Object_Base3D* p = dynamic_cast<Object_Base3D*>(g);
+			Object_Base3D* p = static_cast<Object_Base3D*>(g);
 			MaterialManager* mtlManager = MaterialManager::Get();
 
 			p->MaterialId = mtlManager->LoadMaterialFromPath(gv.AsString());
@@ -65,12 +82,12 @@ void Object_Base3D::s_DeclareReflections()
 		Integer,
 		[](Reflection::Reflectable* g)
 		{
-			Object_Base3D* p = dynamic_cast<Object_Base3D*>(g);
+			Object_Base3D* p = static_cast<Object_Base3D*>(g);
 			return (int)p->FaceCulling;
 		},
 		[](Reflection::Reflectable* g, Reflection::GenericValue gv)
 		{
-			Object_Base3D* p = dynamic_cast<Object_Base3D*>(g);
+			Object_Base3D* p = static_cast<Object_Base3D*>(g);
 			p->FaceCulling = (FaceCullingMode)gv.AsInteger();
 		}
 	);
@@ -86,4 +103,18 @@ Object_Base3D::Object_Base3D()
 
 	s_DeclareReflections();
 	ApiPointer = &s_Api;
+}
+
+void Object_Base3D::RecomputeAabb()
+{
+	glm::vec3 glmsize = (glm::vec3)this->Size;
+
+	glm::vec3 max = this->Transform * glm::vec4(glmsize, 1.f);
+	glm::vec3 min = this->Transform * glm::vec4(-glmsize, 1.f);
+
+	glm::vec3 size = Vector3((max - min) / 2.f).Abs();
+	glm::vec3 center = (max + min) / 2.f;
+
+	this->CollisionAabb.Position = center;
+	this->CollisionAabb.Size = size;
 }

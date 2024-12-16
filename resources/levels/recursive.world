@@ -1,20 +1,19 @@
 #Version 2.00
 
-hai hai hai hai hai hai haia haih a hiaha hiah ahiha hai hai
-
 {
   "SceneName": "hierarchyTest",
   "GameObjects": [
      {
        "Name": "Parent",
        "$_class": "Model",
-       "$_objectId": 1
+       "$_objectId": 1,
+       "Parent": 2
      },
      {
        "Name": "Child",
        "$_class": "Primitive",
-       "$_objectId": 2,
-       "Parent": 1
+       "Parent": 1,
+       "$_objectId": 2
      }
   ]
 }

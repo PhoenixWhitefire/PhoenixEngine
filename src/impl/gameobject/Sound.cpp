@@ -35,11 +35,11 @@ void Object_Sound::s_DeclareReflections()
 		[](Reflection::Reflectable* p)
 		-> Reflection::GenericValue
 		{
-			return dynamic_cast<Object_Sound*>(p)->SoundFile;
+			return static_cast<Object_Sound*>(p)->SoundFile;
 		},
 		[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)
 		{
-			Object_Sound* sound = dynamic_cast<Object_Sound*>(p);
+			Object_Sound* sound = static_cast<Object_Sound*>(p);
 			std::string newFile = gv.AsString();
 
 			if (newFile == sound->SoundFile)

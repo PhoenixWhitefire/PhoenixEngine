@@ -21,6 +21,8 @@ static void moveDynamics(std::vector<Object_Base3D*>& World, double DeltaTime)
 			const glm::vec3& curPos = object->Transform[3];
 			glm::vec3 newPos = curPos + (glm::vec3)(object->LinearVelocity * DeltaTime);
 			object->Transform[3] = glm::vec4(newPos, object->Transform[3][3]);
+
+			object->RecomputeAabb();
 		}
 }
 
@@ -35,8 +37,8 @@ static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTi
 		if (!a->PhysicsCollisions)
 			continue;
 
-		glm::vec3 aPos = glm::vec3(a->Transform[3]);
-		glm::vec3 aSize = a->Size;
+		const glm::vec3& aPos = a->CollisionAabb.Position;
+		const glm::vec3& aSize = a->CollisionAabb.Size;
 
 		for (Object_Base3D* b : World)
 		{
@@ -49,8 +51,8 @@ static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTi
 			if (!a->PhysicsDynamics && !b->PhysicsDynamics)
 				continue;
 
-			glm::vec3 bPos = glm::vec3(b->Transform[3]);
-			glm::vec3 bSize = b->Size;
+			const glm::vec3& bPos = b->CollisionAabb.Position;
+			const glm::vec3& bSize = b->CollisionAabb.Size;
 
 			IntersectionLib::Intersection intersection = IntersectionLib::AabbAabb(
 				aPos,
@@ -94,6 +96,8 @@ static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTi
 
 			collision.A->LinearVelocity = collision.A->LinearVelocity * velCoefficient + reactionForce;
 			collision.A->Transform[3] += glm::vec4(glm::vec3(hit.Vector * hit.Depth), 1.f);
+
+			collision.A->RecomputeAabb();
 		}
 		else if (collision.B->PhysicsDynamics && !collision.A->PhysicsDynamics)
 		{
@@ -107,6 +111,8 @@ static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTi
 
 			collision.B->LinearVelocity = collision.B->LinearVelocity * velCoefficient + reactionForce;
 			collision.B->Transform[3] += glm::vec4(glm::vec3(hit.Vector * hit.Depth), 1.f);
+
+			collision.B->RecomputeAabb();
 		}
 		else
 		{
@@ -118,6 +124,9 @@ static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTi
 
 			collision.A->LinearVelocity -= reactionForce;
 			collision.B->LinearVelocity += reactionForce;
+
+			collision.A->RecomputeAabb();
+			collision.B->RecomputeAabb();
 		}
 
 		// 24/09/2024
