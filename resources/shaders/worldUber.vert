@@ -4,7 +4,7 @@
 
 layout (location = 0) in vec3 VertexPosition;
 layout (location = 1) in vec3 VertexNormal;
-layout (location = 2) in vec3 VertexColor;
+layout (location = 2) in vec4 VertexPaint;
 layout (location = 3) in vec2 VertexUV;
 // from Instanced Array
 layout (location = 4) in mat4 InstanceTransform;
@@ -29,7 +29,7 @@ out DATA
 {
 	vec3 VertexNormal;
 	vec2 TextureUV;
-	vec3 ColorTint;
+	vec4 Paint;
 	mat4 RenderMatrix;
 
 	vec3 ModelPosition;
@@ -43,13 +43,13 @@ void main()
 {
 	mat4 trans = Transform;
 	vec3 sca = Scale;
-	vec3 col = ColorTint * VertexColor;
+	vec4 pain = vec4(ColorTint, 1.f) * VertexPaint;
 	
 	if (IsInstanced)
 	{
 		trans = InstanceTransform;
 		sca = InstanceScale;
-		col = InstanceColor * VertexColor;
+		pain = vec4(InstanceColor, 1.f) * VertexPaint;
 	}
 	
 	mat4 scaleMatrix;
@@ -59,7 +59,7 @@ void main()
 	scaleMatrix[3] = vec4(0.f, 0.f, 0.f, 1.f);
 	
 	data_out.VertexNormal = VertexNormal;
-	data_out.ColorTint = col;
+	data_out.Paint = pain;
 	data_out.TextureUV = VertexUV;
 	data_out.RenderMatrix = RenderMatrix;
 	

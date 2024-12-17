@@ -419,7 +419,7 @@ void ModelLoader::m_TraverseNode(uint32_t nodeIndex, const glm::mat4& matrix)
 		translation = glm::make_vec3(transValues);
 	}
 	// Get quaternion if it exists
-	glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+	glm::quat rotation = glm::quat(1.f, 0.f, 0.f, 0.f);
 	if (node.find("rotation") != node.end())
 	{
 		float rotValues[4] =
@@ -445,7 +445,7 @@ void ModelLoader::m_TraverseNode(uint32_t nodeIndex, const glm::mat4& matrix)
 		scale = glm::make_vec3(scaleValues);
 	}
 	// Get matrix if it exists
-	glm::mat4 matNode = glm::mat4(1.0f);
+	glm::mat4 matNode = glm::mat4(1.f);
 	if (node.find("matrix") != node.end())
 	{
 		float matValues[16]{};
@@ -456,9 +456,9 @@ void ModelLoader::m_TraverseNode(uint32_t nodeIndex, const glm::mat4& matrix)
 	}
 
 	// Initialize matrices
-	glm::mat4 trans = glm::mat4(1.0f); // 14/09/2024 har har
-	glm::mat4 rot = glm::mat4(1.0f);
-	glm::mat4 sca = glm::mat4(1.0f);
+	glm::mat4 trans = glm::mat4(1.f); // 14/09/2024 har har
+	glm::mat4 rot = glm::mat4(1.f);
+	glm::mat4 sca = glm::mat4(1.f);
 
 	// Use translation, rotation, and scale to change the initialized matrices
 	trans = glm::translate(trans, translation);
@@ -769,7 +769,7 @@ std::vector<Vertex> ModelLoader::m_AssembleVertices
 		vertices.emplace_back(
 			positions[i],
 			normals[i],
-			glm::vec3(1.0f, 1.0f, 1.0f),
+			glm::vec4(1.f, 1.f, 1.f, 1.f),
 			texUVs[i]
 		);
 	}

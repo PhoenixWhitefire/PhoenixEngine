@@ -1,50 +1,53 @@
 #include "asset/PrimitiveMeshes.hpp"
-#include "datatype/Vector3.hpp"
+
+constexpr glm::vec3 VecXAxis{ 1.f, 0.f, 0.f };
+constexpr glm::vec3 VecYAxis{ 0.f, 1.f, 0.f };
+constexpr glm::vec3 VecZAxis{ 0.f, 0.f, 1.f };
+
+// white vertex color
+constexpr glm::vec4 White(1.f, 1.f, 1.f, 1.f);
 
 Mesh PrimitiveMeshes::Cube()
 {
-	// white vertex color
-	glm::vec3 white(1.0f, 1.0f, 1.0f);
-
 	std::vector<Vertex> vertices =
 	{
 		// front face
-		Vertex{ glm::vec3(-0.5f,  0.5f, -0.5f), -Vector3::zAxis, white, glm::vec2(1.0f, 0.0f) },
-		Vertex{ glm::vec3(-0.5f, -0.5f, -0.5f), -Vector3::zAxis, white, glm::vec2(1.0f, 1.0f) },
-		Vertex{ glm::vec3( 0.5f, -0.5f, -0.5f), -Vector3::zAxis, white, glm::vec2(0.0f, 1.0f) },
-		Vertex{ glm::vec3( 0.5f,  0.5f, -0.5f), -Vector3::zAxis, white, glm::vec2(0.0f, 0.0f) },
+		Vertex{ glm::vec3(-.5f,  .5f, -.5f), -VecZAxis, White, glm::vec2(1.f, 0.f) },
+		Vertex{ glm::vec3(-.5f, -.5f, -.5f), -VecZAxis, White, glm::vec2(1.f, 1.f) },
+		Vertex{ glm::vec3( .5f, -.5f, -.5f), -VecZAxis, White, glm::vec2(0.f, 1.f) },
+		Vertex{ glm::vec3( .5f,  .5f, -.5f), -VecZAxis, White, glm::vec2(0.f, 0.f) },
 
 		// back face
-		Vertex{ glm::vec3(-0.5f,  0.5f,  0.5f),  Vector3::zAxis, white, glm::vec2(0.0f, 0.0f) },
-		Vertex{ glm::vec3(-0.5f, -0.5f,  0.5f),  Vector3::zAxis, white, glm::vec2(0.0f, 1.0f) },
-		Vertex{ glm::vec3( 0.5f, -0.5f,  0.5f),  Vector3::zAxis, white, glm::vec2(1.0f, 1.0f) },
-		Vertex{ glm::vec3( 0.5f,  0.5f,  0.5f),  Vector3::zAxis, white, glm::vec2(1.0f, 0.0f) },
+		Vertex{ glm::vec3(-.5f,  .5f,  .5f),  VecZAxis, White, glm::vec2(0.f, 0.f) },
+		Vertex{ glm::vec3(-.5f, -.5f,  .5f),  VecZAxis, White, glm::vec2(0.f, 1.f) },
+		Vertex{ glm::vec3( .5f, -.5f,  .5f),  VecZAxis, White, glm::vec2(1.f, 1.f) },
+		Vertex{ glm::vec3( .5f,  .5f,  .5f),  VecZAxis, White, glm::vec2(1.f, 0.f) },
 
 		// right face
 		// it is at this point that i am wondering if i can just read a .obj cube from blender or smthing
 		// instead of doing this by hand and by struggling to imaging where the vertices are in my head
-		Vertex{ glm::vec3( 0.5f,  0.5f, -0.5f), -Vector3::xAxis, white, glm::vec2(1.0f, 0.0f) },
-		Vertex{ glm::vec3( 0.5f, -0.5f, -0.5f), -Vector3::xAxis, white, glm::vec2(1.0f, 1.0f) },
-		Vertex{ glm::vec3( 0.5f, -0.5f,  0.5f), -Vector3::xAxis, white, glm::vec2(0.0f, 1.0f) },
-		Vertex{ glm::vec3( 0.5f,  0.5f,  0.5f), -Vector3::xAxis, white, glm::vec2(0.0f, 0.0f) },
+		Vertex{ glm::vec3( .5f,  .5f, -.5f), VecXAxis, White, glm::vec2(1.f, 0.f) },
+		Vertex{ glm::vec3( .5f, -.5f, -.5f), VecXAxis, White, glm::vec2(1.f, 1.f) },
+		Vertex{ glm::vec3( .5f, -.5f,  .5f), VecXAxis, White, glm::vec2(0.f, 1.f) },
+		Vertex{ glm::vec3( .5f,  .5f,  .5f), VecXAxis, White, glm::vec2(0.f, 0.f) },
 
 		// left face
-		Vertex{ glm::vec3(-0.5f,  0.5f, -0.5f),  Vector3::xAxis, white, glm::vec2(0.0f, 0.0f) },
-		Vertex{ glm::vec3(-0.5f, -0.5f, -0.5f),  Vector3::xAxis, white, glm::vec2(0.0f, 1.0f) },
-		Vertex{ glm::vec3(-0.5f, -0.5f,  0.5f),  Vector3::xAxis, white, glm::vec2(1.0f, 1.0f) },
-		Vertex{ glm::vec3(-0.5f,  0.5f,  0.5f),  Vector3::xAxis, white, glm::vec2(1.0f, 0.0f) },
+		Vertex{ glm::vec3(-.5f,  .5f, -.5f), -VecXAxis, White, glm::vec2(0.f, 0.f) },
+		Vertex{ glm::vec3(-.5f, -.5f, -.5f), -VecXAxis, White, glm::vec2(0.f, 1.f) },
+		Vertex{ glm::vec3(-.5f, -.5f,  .5f), -VecXAxis, White, glm::vec2(1.f, 1.f) },
+		Vertex{ glm::vec3(-.5f,  .5f,  .5f), -VecXAxis, White, glm::vec2(1.f, 0.f) },
 
 		// bottom face
-		Vertex{ glm::vec3( 0.5f, -0.5f, -0.5f), -Vector3::yAxis, white, glm::vec2(0.0f, 0.0f) },
-		Vertex{ glm::vec3(-0.5f, -0.5f, -0.5f), -Vector3::yAxis, white, glm::vec2(1.0f, 0.0f) },
-		Vertex{ glm::vec3(-0.5f, -0.5f,  0.5f), -Vector3::yAxis, white, glm::vec2(1.0f, 1.0f) },
-		Vertex{ glm::vec3( 0.5f, -0.5f,  0.5f), -Vector3::yAxis, white, glm::vec2(0.0f, 1.0f) },
+		Vertex{ glm::vec3( .5f, -.5f, -.5f), -VecYAxis, White, glm::vec2(0.f, 0.f) },
+		Vertex{ glm::vec3(-.5f, -.5f, -.5f), -VecYAxis, White, glm::vec2(1.f, 0.f) },
+		Vertex{ glm::vec3(-.5f, -.5f,  .5f), -VecYAxis, White, glm::vec2(1.f, 1.f) },
+		Vertex{ glm::vec3( .5f, -.5f,  .5f), -VecYAxis, White, glm::vec2(0.f, 1.f) },
 
 		// top face
-		Vertex{ glm::vec3( 0.5f,  0.5f, -0.5f),  Vector3::yAxis, white, glm::vec2(0.0f, 1.0f) },
-		Vertex{ glm::vec3(-0.5f,  0.5f, -0.5f),  Vector3::yAxis, white, glm::vec2(1.0f, 1.0f) },
-		Vertex{ glm::vec3(-0.5f,  0.5f,  0.5f),  Vector3::yAxis, white, glm::vec2(1.0f, 0.0f) },
-		Vertex{ glm::vec3( 0.5f,  0.5f,  0.5f),  Vector3::yAxis, white, glm::vec2(0.0f, 0.0f) }
+		Vertex{ glm::vec3( .5f,  .5f, -.5f),  VecYAxis, White, glm::vec2(0.f, 1.f) },
+		Vertex{ glm::vec3(-.5f,  .5f, -.5f),  VecYAxis, White, glm::vec2(1.f, 1.f) },
+		Vertex{ glm::vec3(-.5f,  .5f,  .5f),  VecYAxis, White, glm::vec2(1.f, 0.f) },
+		Vertex{ glm::vec3( .5f,  .5f,  .5f),  VecYAxis, White, glm::vec2(0.f, 0.f) }
 	};
 
 	// counter-clockwise order
@@ -79,14 +82,12 @@ Mesh PrimitiveMeshes::Cube()
 
 Mesh PrimitiveMeshes::Quad()
 {
-	glm::vec3 white{ 1.f, 1.f, 1.f };
-
 	std::vector<Vertex> vertices =
 	{
-		Vertex{ glm::vec3(  .5f, -.5f,  0.f ), -Vector3::zAxis, white, glm::vec2(1.f, 1.f) },
-		Vertex{ glm::vec3( -.5f, -.5f,  0.f ), -Vector3::zAxis, white, glm::vec2(0.f, 1.f) },
-		Vertex{ glm::vec3( -.5f,  .5f,  0.f ), -Vector3::zAxis, white, glm::vec2(0.f, 0.f) },
-		Vertex{ glm::vec3(  .5f,  .5f,  0.f ), -Vector3::zAxis, white, glm::vec2(1.f, 0.f) }
+		Vertex{ glm::vec3(  .5f, -.5f,  0.f ), -VecZAxis, White, glm::vec2(1.f, 1.f) },
+		Vertex{ glm::vec3( -.5f, -.5f,  0.f ), -VecZAxis, White, glm::vec2(0.f, 1.f) },
+		Vertex{ glm::vec3( -.5f,  .5f,  0.f ), -VecZAxis, White, glm::vec2(0.f, 0.f) },
+		Vertex{ glm::vec3(  .5f,  .5f,  0.f ), -VecZAxis, White, glm::vec2(1.f, 0.f) }
 	};
 
 	std::vector<uint32_t> indices =

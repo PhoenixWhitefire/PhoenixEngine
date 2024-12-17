@@ -264,7 +264,13 @@ namespace Reflection
 		virtual void SetPropertyValue(const std::string& MemberName, const Reflection::GenericValue& NewValue)
 		{
 			if (HasProperty(MemberName))
-				ApiPointer->Properties[MemberName].Set(this, NewValue);
+				if (ApiPointer->Properties[MemberName].Set)
+					ApiPointer->Properties[MemberName].Set(this, NewValue);
+				else
+					throw(std::vformat(
+						"Tried to set read-only property '{}' via `::SetPropertyValue`",
+						std::make_format_args(MemberName)
+					));
 			else
 				throw(std::string("Invalid Property in SetPropertyValue ") + MemberName);
 		}
@@ -273,7 +279,7 @@ namespace Reflection
 			if (HasFunction(MemberName))
 				return ApiPointer->Functions[MemberName].Func(this, Param);
 			else
-				throw(std::string("InvalidFunction in CallFunction " + MemberName)); \
+				throw(std::string("Invalid Function in CallFunction " + MemberName)); \
 		}
 
 		REFLECTION_DECLAREAPI;

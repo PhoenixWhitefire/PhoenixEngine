@@ -1,9 +1,6 @@
 #pragma once
 
 #include <glm/matrix.hpp>
-#include <vector>
-
-#include "datatype/Vector3.hpp"
 
 namespace IntersectionLib
 {
@@ -11,9 +8,9 @@ namespace IntersectionLib
 	{
 		bool Occurred = false;
 
-		Vector3 Vector{};
-		Vector3 Normal{};
-		double Depth{};
+		glm::vec3 Vector{};
+		glm::vec3 Normal{};
+		float Depth{};
 	};
 
 	IntersectionLib::Intersection AabbAabb(

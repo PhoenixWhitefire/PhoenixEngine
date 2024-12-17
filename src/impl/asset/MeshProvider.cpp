@@ -105,18 +105,10 @@ static Mesh loadMeshVersion1(const std::string& FileContents, bool* SuccessPtr)
 		if (vertexDesc.size() % 11 != 0)
 			MESHPROVIDER_ERROR("(V1) Vertex #" + std::to_string(vertexIndex) + " does not have 11 elements");
 
-		Vertex vertex =
-		{
-			glm::vec3(vertexDesc[0], vertexDesc[1], vertexDesc[2]),
-			glm::vec3(vertexDesc[3], vertexDesc[4], vertexDesc[5]),
-			glm::vec3(vertexDesc[6], vertexDesc[7], vertexDesc[8]),
-			glm::vec2(vertexDesc[9], vertexDesc[10])
-		};
-
 		mesh.Vertices.emplace_back(
 			glm::vec3(vertexDesc[0], vertexDesc[1], vertexDesc[2]),
 			glm::vec3(vertexDesc[3], vertexDesc[4], vertexDesc[5]),
-			glm::vec3(vertexDesc[6], vertexDesc[7], vertexDesc[8]),
+			glm::vec4(vertexDesc[6], vertexDesc[7], vertexDesc[8], 1.f),
 			glm::vec2(vertexDesc[9], vertexDesc[10])
 		);
 
@@ -223,7 +215,7 @@ static Mesh loadMeshVersion2(const std::string& FileContents, bool* SuccessPtr)
 		mesh.Vertices.emplace_back(
 			glm::vec3{ px, py, pz },
 			glm::vec3{ nx, ny, nz },
-			glm::vec3{ r, g, b },
+			glm::vec4{ r, g, b, a },
 			glm::vec2{ u, v }
 		);
 	}
@@ -302,24 +294,34 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 				+ "$";
 
 	bool hasPerVertexColor = false;
-	glm::vec3 uniformVertexCol = mesh.Vertices.at(0).Color;
+	bool hasPerVertexAlpha = false;
+	glm::vec3 uniformVertexCol = glm::vec3(mesh.Vertices.at(0).Paint);
+	float uniformVertexAlpha = mesh.Vertices.at(0).Paint.w;
 
+	// two separate loops in case one early-exits
 	for (const Vertex& v : mesh.Vertices)
-		if (v.Color != uniformVertexCol)
+		if (glm::vec3(v.Paint) != uniformVertexCol)
 		{
 			hasPerVertexColor = true;
 			break;
 		}
 
-	// w/ PVC: Px, Py, Pz, Nx, Ny, Nz, R, G, B, A, Tu, Tv
-	// w/o PV: Px, Py, Pz, Nx, Ny, Nz, Tu, Tv
-	size_t floatsPerVertex = hasPerVertexColor ? 12ull : 8ull;
+	for (const Vertex& v : mesh.Vertices)
+		if (v.Paint.w != uniformVertexAlpha)
+		{
+			hasPerVertexAlpha = true;
+			break;
+		}
+
+	// minimum: Px, Py, Pz, Nx, Ny, Nz, Tu, Tv
+	// Optional: (R, G, B), (A)
+	size_t floatsPerVertex = 8ull + (hasPerVertexColor * 3ull) + (hasPerVertexAlpha);
 
 	// 12b header + 4b padding
 	contents.reserve(16ull + mesh.Vertices.size() * (floatsPerVertex * 4ull) + mesh.Indices.size() * 4ull + contents.size());
 
 	// per-vertex normal, color and opacity flags
-	writeU32(contents, 0b00000100 + (hasPerVertexColor ? 0b00000011 : 0));
+	writeU32(contents, 0b00000100 + (hasPerVertexAlpha ? 0b00000001 : 0) + (hasPerVertexColor ? 0b00000010 : 0));
 	writeU32(contents, static_cast<uint32_t>(mesh.Vertices.size()));
 	writeU32(contents, static_cast<uint32_t>(mesh.Indices.size()));
 
@@ -328,8 +330,10 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 		writeF32(contents, uniformVertexCol.x);
 		writeF32(contents, uniformVertexCol.y);
 		writeF32(contents, uniformVertexCol.z);
-		writeF32(contents, 1.f);
 	}
+
+	if (!hasPerVertexAlpha)
+		writeF32(contents, uniformVertexAlpha);
 
 	for (const Vertex& v : mesh.Vertices)
 	{
@@ -343,11 +347,13 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 
 		if (hasPerVertexColor)
 		{
-			writeF32(contents, v.Color.x);
-			writeF32(contents, v.Color.y);
-			writeF32(contents, v.Color.z);
-			writeF32(contents, 1.f);
+			writeF32(contents, v.Paint.x);
+			writeF32(contents, v.Paint.y);
+			writeF32(contents, v.Paint.z);
 		}
+
+		if (hasPerVertexAlpha)
+			writeF32(contents, v.Paint.w);
 
 		writeF32(contents, v.TextureUV.x);
 		writeF32(contents, v.TextureUV.y);
@@ -589,8 +595,8 @@ void MeshProvider::m_CreateAndUploadGpuMesh(Mesh& mesh)
 
 	vao.LinkAttrib(vbo, 0, 3, GL_FLOAT, sizeof(Vertex), (void*)0);
 	vao.LinkAttrib(vbo, 1, 3, GL_FLOAT, sizeof(Vertex), (void*)(3 * sizeof(float)));
-	vao.LinkAttrib(vbo, 2, 3, GL_FLOAT, sizeof(Vertex), (void*)(6 * sizeof(float)));
-	vao.LinkAttrib(vbo, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)(9 * sizeof(float)));
+	vao.LinkAttrib(vbo, 2, 4, GL_FLOAT, sizeof(Vertex), (void*)(6 * sizeof(float)));
+	vao.LinkAttrib(vbo, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)(10 * sizeof(float)));
 
 	vbo.SetBufferData(mesh.Vertices, BufferUsageHint::Static);
 	ebo.SetBufferData(mesh.Indices, BufferUsageHint::Static);

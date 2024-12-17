@@ -1,7 +1,7 @@
 #include "datatype/GameObject.hpp"
 #include "Debug.hpp"
 
-PHX_GAMEOBJECT_LINKTOCLASS("GameObject", GameObject);
+PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(GameObject);
 
 static bool s_DidInitReflection = false;
 
@@ -28,10 +28,62 @@ static std::string getFullName(Reflection::Reflectable* r)
 	return fullName;
 }
 
+static GameObject* cloneRecursive(
+	GameObject* Root,
+	// u_m < og-child, vector < pair < clone-object-referencing-ogchild, property-referencing-ogchild > > >
+	std::unordered_map<GameObject*, std::vector<std::pair<GameObject*, std::string>>> OverwritesMap = {},
+	std::unordered_map<GameObject*, GameObject*> OriginalToCloneMap = {}
+)
+{
+	GameObject* newObj = GameObject::Create(Root->ClassName);
+
+	auto overwritesIt = OverwritesMap.find(Root);
+
+	if (overwritesIt != OverwritesMap.end())
+	{
+		for (const std::pair<GameObject*, std::string>& overwrite : overwritesIt->second)
+			// change the reference to the OG object to it's clone
+			overwrite.first->SetPropertyValue(overwrite.second, newObj->ToGenericValue());
+
+		overwritesIt->second.clear();
+	}
+
+	const std::vector<GameObject*> rootDescs = Root->GetDescendants();
+
+	for (auto& it : Root->GetProperties())
+	{
+		if (!it.second.Set)
+			continue; // read-only
+
+		Reflection::GenericValue rootVal = it.second.Get(Root);
+
+		if (rootVal.Type == Reflection::ValueType::GameObject)
+		{
+			GameObject* ref = GameObject::FromGenericValue(rootVal);
+
+			auto otcit = OriginalToCloneMap.find(ref);
+
+			if (otcit != OriginalToCloneMap.end())
+				newObj->SetPropertyValue(it.first, otcit->second->ToGenericValue());
+
+			else
+				if (ref && std::find(rootDescs.begin(), rootDescs.end(), ref) != rootDescs.end())
+					OverwritesMap[ref].push_back(std::pair(newObj, it.first));
+		}
+
+		newObj->SetPropertyValue(it.first, rootVal);
+	}
+
+	for (GameObject* ch : Root->GetChildren())
+		cloneRecursive(ch, OverwritesMap, OriginalToCloneMap)->SetParent(newObj);
+
+	return newObj;
+}
+
 void GameObject::s_DeclareReflections()
 {
 	if (s_DidInitReflection)
-			return;
+		return;
 	s_DidInitReflection = true;
 
 	REFLECTION_DECLAREPROP_SIMPLE_READONLY(GameObject, ClassName, String);
@@ -65,7 +117,7 @@ void GameObject::s_DeclareReflections()
 			static_cast<GameObject*>(p)->SetParent(newParent);
 		}
 	);
-	
+
 	REFLECTION_DECLAREPROC_INPUTLESS(Destroy, destroyObject);
 	REFLECTION_DECLAREFUNC(
 		"GetFullName",
@@ -87,6 +139,20 @@ void GameObject::s_DeclareReflections()
 		{
 			std::string ancestor = gv[0].AsString();
 			return { static_cast<GameObject*>(p)->IsA(ancestor) };
+		}
+	);
+
+	REFLECTION_DECLAREFUNC(
+		"Clone",
+		{},
+		{ Reflection::ValueType::GameObject },
+		[](Reflection::Reflectable* p, const std::vector<Reflection::GenericValue>&)
+		-> std::vector<Reflection::GenericValue>
+		{
+			GameObject* g = static_cast<GameObject*>(p);
+			GameObject* newObj = cloneRecursive(g);
+
+			return { newObj->ToGenericValue() };
 		}
 	);
 
@@ -368,6 +434,11 @@ GameObject* GameObject::GetChildOfClass(const std::string& Class)
 
 GameObject* GameObject::Create(const std::string& ObjectClass)
 {
+	uint32_t numObjects = static_cast<uint32_t>(s_WorldArray.size());
+
+	if (numObjects >= UINT32_MAX - 1)
+		throw("Reached end of GameObject ID space (UINT32_MAX - 1)");
+
 	GameObjectMapType::iterator it = s_GameObjectMap.find(ObjectClass);
 
 	if (it == s_GameObjectMap.end())
@@ -379,7 +450,7 @@ GameObject* GameObject::Create(const std::string& ObjectClass)
 	// `it->second` is a function that constructs the object, so we
 	// call it
 	GameObject* CreatedObject = it->second();
-	CreatedObject->ObjectId = static_cast<uint32_t>(s_WorldArray.size());
+	CreatedObject->ObjectId = numObjects;
 	s_WorldArray.push_back(CreatedObject);
 
 	CreatedObject->Initialize();

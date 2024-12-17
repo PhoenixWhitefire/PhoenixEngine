@@ -804,7 +804,14 @@ void Editor::RenderUI()
 	{
 		ImGui::SeparatorText(selected->ClassName.c_str());
 
-		if (ImGui::Button("Destroy"))
+		if (ImGui::Button("Duplicate"))
+		{
+			GameObject* clone = GameObject::FromGenericValue(selected->CallFunction("Clone", {}).AsArray()[0]);
+			clone->Parent = selected->Parent;
+			HierarchyTreeSelectionId = clone->ObjectId;
+			selected = clone;
+		}
+		else if (ImGui::Button("Destroy"))
 		{
 			selected->Destroy();
 			selected = nullptr;

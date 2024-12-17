@@ -25,18 +25,18 @@ IntersectionLib::Intersection IntersectionLib::AabbAabb
 	glm::vec3 bSizeHalf = BSize * .5f;
 
 	// https://noonat.github.io/intersect/
-	double dx = BPosition.x - APosition.x;
-	double px = (bSizeHalf.x + aSizeHalf.x) - std::abs(dx);
+	float dx = BPosition.x - APosition.x;
+	float px = (bSizeHalf.x + aSizeHalf.x) - std::abs(dx);
 	if (px <= 0.f)
 		return result;
 
-	double dy = BPosition.y - APosition.y;
-	double py = (bSizeHalf.y + aSizeHalf.y) - std::abs(dy);
+	float dy = BPosition.y - APosition.y;
+	float py = (bSizeHalf.y + aSizeHalf.y) - std::abs(dy);
 	if (py <= 0.f)
 		return result;
 
-	double dz = BPosition.z - APosition.z;
-	double pz = (bSizeHalf.z + aSizeHalf.z) - std::abs(dz);
+	float dz = BPosition.z - APosition.z;
+	float pz = (bSizeHalf.z + aSizeHalf.z) - std::abs(dz);
 	if (pz <= 0.f)
 		return result;
 
@@ -46,22 +46,22 @@ IntersectionLib::Intersection IntersectionLib::AabbAabb
 	{
 		int sx = sign(dx);
 		result.Depth = px * sx;
-		result.Normal = Vector3(-sx, 0.f, 0.f);
-		result.Vector = Vector3(APosition.x + (aSizeHalf.x * sx), 0.f, 0.f);
+		result.Normal = glm::vec3(-sx, 0.f, 0.f);
+		result.Vector = glm::vec3(APosition.x + (aSizeHalf.x * sx), 0.f, 0.f);
 	}
 	else if (py < px && py < pz)
 	{
 		int sy = sign(dy);
 		result.Depth = py * sy;
-		result.Normal = Vector3(0.f, -sy, 0.f);
-		result.Vector = Vector3(0.f, APosition.y + (aSizeHalf.y * sy), 0.f);
+		result.Normal = glm::vec3(0.f, -sy, 0.f);
+		result.Vector = glm::vec3(0.f, APosition.y + (aSizeHalf.y * sy), 0.f);
 	}
 	else if (pz < py)
 	{
 		int sz = sign(dz);
 		result.Depth = pz * sz;
-		result.Normal = Vector3(0.f, 0.f, -sz);
-		result.Vector = Vector3(0.f, 0.f, APosition.z + (aSizeHalf.z * sz));
+		result.Normal = glm::vec3(0.f, 0.f, -sz);
+		result.Vector = glm::vec3(0.f, 0.f, APosition.z + (aSizeHalf.z * sz));
 	}
 
 	return result;
@@ -122,14 +122,14 @@ IntersectionLib::Intersection IntersectionLib::LineAabb(
 
 	if (nearTimeX > nearTimeY)
 		if (nearTimeY > nearTimeZ)
-			result.Normal = Vector3::xAxis;
+			result.Normal = glm::vec3(1.f, 0.f, 0.f);
 		else
-			result.Normal = Vector3::zAxis;
+			result.Normal = glm::vec3(0.f, 0.f, 1.f);
 	else
 		if (nearTimeY > nearTimeZ)
-			result.Normal = Vector3::yAxis;
+			result.Normal = glm::vec3(0.f, 1.f, 0.f);
 		else
-			result.Normal = Vector3::zAxis;
+			result.Normal = glm::vec3(0.f, 0.f, 1.f);
 
 	return result;
 }

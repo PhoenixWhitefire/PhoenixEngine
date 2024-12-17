@@ -2,7 +2,6 @@
 
 #include <stdint.h>
 
-
 #define PHX_GAMEOBJECT_NULL_ID UINT32_MAX
 
 // link a class name to a C++ GameObject-deriving class

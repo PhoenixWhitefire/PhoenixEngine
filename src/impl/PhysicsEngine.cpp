@@ -81,7 +81,7 @@ static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTi
 
 		IntersectionLib::Intersection& hit = collision.Hit;
 
-		Vector3 reactionForce = hit.Vector * hit.Depth;
+		glm::vec3 reactionForce = hit.Vector * hit.Depth;
 
 		if (collision.A->PhysicsDynamics && !collision.B->PhysicsDynamics)
 		{
@@ -92,7 +92,7 @@ static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTi
 			Vector3 velCoefficient = Vector3::one;
 
 			if (dot < 0.f)
-				velCoefficient = Vector3::one - hit.Normal.Abs() * (2.f * Elasticity);
+				velCoefficient = Vector3::one - Vector3(hit.Normal).Abs() * (2.f * Elasticity);
 
 			collision.A->LinearVelocity = collision.A->LinearVelocity * velCoefficient + reactionForce;
 			collision.A->Transform[3] += glm::vec4(glm::vec3(hit.Vector * hit.Depth), 1.f);
@@ -107,7 +107,7 @@ static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTi
 			Vector3 velCoefficient = Vector3::one;
 
 			if (dot < 0.f)
-				velCoefficient = Vector3::one - hit.Normal.Abs() * (2.f * Elasticity);
+				velCoefficient = Vector3::one - Vector3(hit.Normal).Abs() * (2.f * Elasticity);
 
 			collision.B->LinearVelocity = collision.B->LinearVelocity * velCoefficient + reactionForce;
 			collision.B->Transform[3] += glm::vec4(glm::vec3(hit.Vector * hit.Depth), 1.f);
@@ -117,12 +117,12 @@ static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTi
 		else
 		{
 			// Transfer of velocity
-			collision.A->LinearVelocity += collision.B->LinearVelocity / 2.f;
-			collision.B->LinearVelocity += collision.A->LinearVelocity / 2.f;
-			collision.A->LinearVelocity = collision.A->LinearVelocity / 2.f;
-			collision.B->LinearVelocity = collision.B->LinearVelocity / 2.f;
+			//collision.A->LinearVelocity += collision.B->LinearVelocity / 2.f;
+			//collision.B->LinearVelocity += collision.A->LinearVelocity / 2.f;
+			//collision.A->LinearVelocity = collision.A->LinearVelocity / 2.f;
+			//collision.B->LinearVelocity = collision.B->LinearVelocity / 2.f;
 
-			collision.A->LinearVelocity -= reactionForce;
+			collision.A->LinearVelocity += reactionForce;
 			collision.B->LinearVelocity += reactionForce;
 
 			collision.A->RecomputeAabb();

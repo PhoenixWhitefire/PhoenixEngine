@@ -720,8 +720,20 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 				pushVector3(L, v.Normal);
 				lua_setfield(L, -2, "Normal");
 
-				pushVector3(L, v.Color);
-				lua_setfield(L, -2, "Color");
+				lua_newtable(L);
+				lua_pushnumber(L, v.Paint.x);
+				lua_setfield(L, -2, "R");
+
+				lua_pushnumber(L, v.Paint.y);
+				lua_setfield(L, -2, "G");
+
+				lua_pushnumber(L, v.Paint.z);
+				lua_setfield(L, -2, "B");
+
+				lua_pushnumber(L, v.Paint.w);
+				lua_setfield(L, -2, "A");
+
+				lua_setfield(L, -3, "Paint");
 
 				lua_newtable(L);
 
@@ -775,8 +787,9 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 				lua_getfield(L, -2, "Normal");
 				glm::vec3 normal = Vector3(ScriptEngine::L::LuaValueToGeneric(L));
 
-				lua_getfield(L, -3, "Color");
-				glm::vec3 color = Vector3(ScriptEngine::L::LuaValueToGeneric(L));
+				lua_getfield(L, -3, "Paint");
+				std::vector<Reflection::GenericValue> paintgv = ScriptEngine::L::LuaValueToGeneric(L).AsArray();
+				glm::vec4 paint{ paintgv[0].AsDouble(), paintgv[1].AsDouble(), paintgv[2].AsDouble(), paintgv[3].AsDouble() };
 				
 				lua_getfield(L, -4, "UV");
 
@@ -795,7 +808,7 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 					uvlist.at(1)
 				};
 
-				mesh.Vertices.emplace_back(Vertex{ position, normal, color, uv });
+				mesh.Vertices.emplace_back(Vertex{ position, normal, paint, uv });
 
 				lua_pop(L, 5);
 			}

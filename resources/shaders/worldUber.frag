@@ -74,7 +74,7 @@ uniform bool DebugLightInfluence = false;
 in vec3 Frag_ModelPosition;
 in vec3 Frag_WorldPosition;
 in vec3 Frag_VertexNormal;
-in vec3 Frag_ColorTint;
+in vec4 Frag_Paint;
 in vec2 Frag_TextureUV;
 in mat4 Frag_Transform;
 in vec4 Frag_RelativeToDirecLight;
@@ -306,6 +306,8 @@ void main()
 	
 	Albedo -= vec4(0.f, 0.f, 0.f, Transparency);
 
+	Albedo = vec4(Albedo.xyz * Frag_Paint.xyz, Albedo.w * Frag_Paint.w);
+
 	if (Albedo.a < AlphaCutoff)
 		discard;
 	
@@ -324,8 +326,6 @@ void main()
 	}
 
 	vec3 LightInfluence = vec3(0.f, 0.f, 0.f);
-
-	Albedo = vec4(Albedo.xyz * Frag_ColorTint, Albedo.w);
 
 	vec3 reflectDir = reflect(-ViewDirection, Normal);
 	//reflectDir.y = -reflectDir.y;
