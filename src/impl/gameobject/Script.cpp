@@ -11,7 +11,7 @@
 #include "Debug.hpp"
 #include "gameobject/ScriptEngine.hpp"
 
-#define LUA_ASSERT(res, err) if (!res) { luaL_error(L, err); }
+#define LUA_ASSERT(res, err, ...) if (!res) { luaL_error(L, err, __VA_ARGS__); }
 
 PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(Script);
 
@@ -28,30 +28,17 @@ static auto api_newobject = [](lua_State* L)
 
 static auto api_gameobjindex = [](lua_State* L)
 	{
-		uint32_t objId = *(uint32_t*)luaL_checkudata(L, 1, "GameObject");
-		GameObject* obj = GameObject::GetObjectById(objId);
+		GameObject* obj = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
 		const char* key = luaL_checkstring(L, 2);
 
-		if (!obj)
+		if (strcmp(key, "Exists") == 0)
 		{
-			/*
-				TODO 14/09/2024
-				Back in Roblox, the Engine seems to preserve the state of the Instance upon it's destruction
-				Attempting to assign to a `:Destroy`'d object still works, but it's
-				`Parent` cannot be changed.
-				This is what I'd like to have, but right now I'll just make every member
-				be `nil` so it's easy for scripts to recognize an invalid/invalidated GameObject
-				(I separated those two, because either the Object may not have been valid
-				in the first place, or it was valid, but got deleted. But that's pedantic and pointless to
-				differentiate for a proper API.)
-
-				20/09/2024:
-				It looks like `lua_newuserdatadtor` exists, refcount should be track-able with it
-				so Objects are not de-alloc'd until refcount == 0
-			*/
-			lua_pushnil(L);
+			// whether or not it exists
+			lua_pushboolean(L, obj ? 1 : 0);
 			return 1;
 		}
+
+		LUA_ASSERT(obj, "Tried to index '%s' of a deleted Game Object", key);
 
 		if (obj->HasProperty(key))
 			ScriptEngine::L::PushGenericValue(L, obj->GetPropertyValue(key));
@@ -83,21 +70,12 @@ static auto api_gameobjindex = [](lua_State* L)
 
 static auto api_gameobjnewindex = [](lua_State* L)
 	{
-		uint32_t objId = *(uint32_t*)luaL_checkudata(L, 1, "GameObject");
-		GameObject* obj = GameObject::GetObjectById(objId);
+		GameObject* obj = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
 		const char* key = luaL_checkstring(L, 2);
 
-		// Refer the `!obj` clause in `api_gameobjindex`
-		if (!obj)
-		{
-			// Uh
-			// Idk
-			// Just give an `attempt to index nil`
-			lua_pushnil(L);
-			lua_setfield(L, -1, key);
+		LUA_ASSERT(strcmp(key, "Exists") != 0, "'Exists' is read-only! - 21/12/2024");
 
-			return 0;
-		}
+		LUA_ASSERT(obj, "Tried to assign to the '%s' of a deleted Game Object", key);
 
 		if (obj->HasProperty(key))
 		{
@@ -168,8 +146,7 @@ static auto api_gameobjnewindex = [](lua_State* L)
 
 static auto api_gameobjecttostring = [](lua_State* L)
 	{
-		uint32_t objId = *(uint32_t*)luaL_checkudata(L, 1, "GameObject");
-		GameObject* object = GameObject::GetObjectById(objId);
+		GameObject* object = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
 		
 		if (object)
 			lua_pushstring(L, object->GetFullName().c_str());

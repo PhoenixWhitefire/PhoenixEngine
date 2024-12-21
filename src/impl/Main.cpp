@@ -689,9 +689,31 @@ static void Application(int argc, char** argv)
 
 	std::string mapFile = hasMapFromArgs ?
 							mapFileFromArgs
-							: EngineJsonConfig.value("RootScene", "levels/empty.world");
+							: EngineJsonConfig.value("RootScene", "scenes/root.world");
 
-	LoadLevel(mapFile);
+	bool worldLoadSuccess = true;
+	std::vector<GameObject*> roots = SceneFormat::Deserialize(FileRW::ReadFile(mapFile), &worldLoadSuccess);
+
+	if (!worldLoadSuccess)
+	{
+		std::string errStr = SceneFormat::GetLastErrorString();
+		throw(std::vformat(
+			"World failed to load: {}",
+			std::make_format_args(errStr)
+		));
+	}
+
+	if (roots.size() > 1)
+		Debug::Log("More than 1 root object in the World, anything other than the first will be ignored");
+
+	if (roots.empty())
+		throw("No root objects in World!");
+	if (roots[0]->ClassName != "DataModel")
+		throw("Root object was not a DataModel!");
+
+	GameObject::s_DataModel->CallFunction("Merge", { roots[0]->ToGenericValue() });
+
+	//LoadLevel(mapFile);
 
 	EngineInstance->OnFrameStart.Connect(handleInputs);
 	EngineInstance->OnFrameRenderGui.Connect(drawUI);
@@ -740,7 +762,7 @@ int main(int argc, char** argv)
 {
 	Debug::Log("Application startup...");
 
-	Debug::Log(std::format("Phoenix Engine, build date: {}", __DATE__));
+	Debug::Log(std::format("Phoenix Engine, Main.cpp last compiled: {}", __DATE__));
 
 	SDL_Window* window = nullptr;
 

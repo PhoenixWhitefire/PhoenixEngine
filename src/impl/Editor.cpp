@@ -34,6 +34,8 @@ static nlohmann::json DefaultNewMaterial =
 	{ "specMultiply", 0.5f }
 };
 
+static std::unordered_map<std::string, std::string> ClassIcons{};
+
 static GpuFrameBuffer MtlEditorPreview;
 static Scene MtlPreviewScene =
 {
@@ -89,6 +91,11 @@ Editor::Editor(Renderer* renderer)
 	MtlPreviewCamera = (Object_Camera*)GameObject::Create("Camera");
 	MtlPreviewCamera->Transform = MtlPreviewCamDefaultRotation * MtlPreviewCamOffset;
 	MtlPreviewCamera->FieldOfView = 50.f;
+
+	nlohmann::json iconsJson = nlohmann::json::parse(FileRW::ReadFile("textures/editor-icons/icons.json"));
+
+	for (auto it = iconsJson.begin(); it != iconsJson.end(); ++it)
+		ClassIcons[it.key()] = (std::string)it.value();
 }
 
 void Editor::Update(double DeltaTime)
@@ -262,6 +269,17 @@ static void mtlEditorTexture(uint32_t* TextureIdPtr, const char* Label, char* Bu
 		"# Color channels: {}",
 		std::make_format_args(tx.NumColorChannels)
 	).c_str());
+}
+
+static uint32_t getClassIconId(const std::string& ClassName)
+{
+	std::string iconPath = ClassIcons["FallbackIcon"];
+	auto wantedIconIt = ClassIcons.find(ClassName);
+
+	if (wantedIconIt != ClassIcons.end())
+		iconPath = wantedIconIt->second;
+
+	return TextureManager::Get()->LoadTextureFromPath(iconPath);
 }
 
 // 02/09/2024
@@ -674,6 +692,8 @@ static GameObject* ObjectInsertionTarget = nullptr;
 
 static GameObject* recursiveIterateTree(GameObject* current, bool didVisitCurSelection = false)
 {
+	static TextureManager* texManager = TextureManager::Get();
+
 	GameObject* hrchSelection = GameObject::GetObjectById(HierarchyTreeSelectionId);
 
 	if (hrchSelection == nullptr)
@@ -703,7 +723,15 @@ static GameObject* recursiveIterateTree(GameObject* current, bool didVisitCurSel
 		if (object->GetChildren().empty())
 			flags |= ImGuiTreeNodeFlags_Leaf;
 
-		else if (object != hrchSelection && !didVisitCurSelection)
+		ImGui::AlignTextToFramePadding();
+
+		ImGui::Image(
+			texManager->GetTextureResource(getClassIconId(object->ClassName)).GpuId,
+			ImVec2(16.f, 16.f)
+		);
+		ImGui::SameLine();
+
+		if (!didVisitCurSelection)
 		{
 			std::vector<GameObject*> descs = object->GetDescendants();
 
@@ -711,7 +739,6 @@ static GameObject* recursiveIterateTree(GameObject* current, bool didVisitCurSel
 				ImGui::SetNextItemOpen(true);
 		}
 
-		ImGui::AlignTextToFramePadding();
 		bool open = ImGui::TreeNodeEx(&object->ObjectId, flags, object->Name.c_str());
 
 		if (ImGui::IsItemClicked())
@@ -750,7 +777,7 @@ static GameObject* recursiveIterateTree(GameObject* current, bool didVisitCurSel
 						GameObject* newObject = GameObject::Create(it.first);
 						newObject->SetParent(ObjectInsertionTarget);
 						HierarchyTreeSelectionId = newObject->ObjectId;
-						 
+						
 						ObjectInsertionTarget = nullptr;
 					}
 
@@ -860,7 +887,21 @@ void Editor::RenderUI()
 
 					std::string curValStr = curVal.ToString();
 
-					ImGui::Text(std::vformat("{}: {}", std::make_format_args(propName, curValStr)).c_str());
+					if (strcmp(propName, "Class") == 0)
+					{
+						ImGui::Text("Class: ");
+						ImGui::SameLine();
+
+						ImGui::Image(
+							TextureManager::Get()->GetTextureResource(getClassIconId(selected->ClassName)).GpuId,
+							ImVec2(16, 16)
+						);
+						ImGui::SameLine();
+
+						ImGui::Text(curValStr.c_str());
+					}
+					else
+						ImGui::Text(std::vformat("{}: {}", std::make_format_args(propName, curValStr)).c_str());
 
 					continue;
 				}

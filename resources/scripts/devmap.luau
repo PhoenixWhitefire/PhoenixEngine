@@ -5,6 +5,7 @@ local TotalTime = 0
 local Camera = workspace.SceneCamera
 local CharacterControllerCreator = require("scripts/modules/character-controller.luau")
 local NodeEditor = require("scripts/modules/NodeEditor.luau")
+local RoomGen = require("scripts/roomsgen.luau")
 
 local CharacterController = CharacterControllerCreator.new(Camera)
 CharacterController:InitDefault()
@@ -17,11 +18,6 @@ local InFreecam = false
 
 local lastSwitchedPerspectives = 0
 
-local ModelImporterPath = "models/EmbeddedTexture.glb"
-local ModelImporterScale = 0.1
-
-local ScriptExecutionFile = "scripts/shdgraphtest.luau"
-
 local SwitchToFreecamNextFrame = 0
 
 local Light = GameObject.new("PointLight")
@@ -29,8 +25,8 @@ Light.Brightness = 5
 Light.Range = 1.5
 Light.Parent = Character
 
-Character.Name = `Player_ID{Character.ObjectId}`
-Character.Transform = Matrix.fromTranslation(8, 8, 0)
+Character.Name = `Player`
+Character.Transform = Matrix.fromTranslation(0, 10, 0)
 
 local function vecMul(v1, v2)
 	return Vector3.new(v1.X * v2.X, v1.Y * v2.Y, v1.Z * v2.Z)
@@ -85,83 +81,8 @@ function Update(DeltaTime)
 		end
 	end
 	
-	if imgui_begin("Model Importer") then
-		if imgui_textlink("Model: " .. ModelImporterPath) then
-			imfd_open("Select Model", 0, "resources/models", "*.gltf,*.glb")
-		end
-		
-		ModelImporterScale = imgui_input_float("Scale", ModelImporterScale)
-		
-		if imgui_button("Import") then
-			local pathSplit = string.split(ModelImporterPath, "/")
-			
-			local parts = model_import(ModelImporterPath)
-			local model = GameObject.new("Model")
-			model.Name = pathSplit[#pathSplit]
-			model.Parent = workspace
-			
-			for _, part in parts do
-				part.Size *= ModelImporterScale
-				part.Parent = model
-			end
-		end
-	end
-	imgui_end()
-	
-	if imfd_begin("Select Model") then
-		if imfd_actiondone() then
-			if imfd_selectionmade() then
-				local selection = imfd_getselections()[1]
-				local resDirOff = selection:find("resources/")
-				if not resDirOff then
-					error("Must be within resources directory!")
-				else
-					ModelImporterPath = selection:sub(resDirOff + 10, resDirOff + (#selection - resDirOff))
-				end
-			end
-			
-			imfd_close()
-		end
-		
-		imfd_end()
-	end
-	
-	if imgui_begin("Run Script") then
-		if imgui_textlink("Path: " .. ScriptExecutionFile) then
-			imfd_open("Run Script Dialog", 0, "resources/scripts", "*.luau")
-		end
-		
-		if imgui_button("Execute") then
-			if scriptHost then
-				scriptHost:Destroy()
-			end
-			scriptHost = GameObject.new("Script")
-			scriptHost.Name = "TempScriptHost"
-			scriptHost.SourceFile = ScriptExecutionFile
-			scriptHost.Parent = script
-		end
-	end
-	imgui_end()
-	
-	if imfd_begin("Run Script Dialog") then
-		if imfd_actiondone() then
-			if imfd_selectionmade() then
-				local selection = imfd_getselections()[1]
-				local resDirOff = selection:find("resources/")
-				if not resDirOff then
-					error("Must be within resources directory!")
-				else
-					ScriptExecutionFile = selection:sub(resDirOff + 10, resDirOff + (#selection - resDirOff))
-				end
-			end
-			
-			imfd_close()
-		end
-		
-		imfd_end()
-	end
-	
 	workspace.Level.woodplanks.Transform *= Matrix.fromEulerAnglesXYZ(0, math.rad(DeltaTime * 15), 0)
 	
+	RoomGen()
 	--NodeEditor()
 end

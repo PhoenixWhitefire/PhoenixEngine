@@ -20,5 +20,5 @@ private:
 	static void s_DeclareReflections();
 	static inline Reflection::Api s_Api{};;
 
-	Object_Camera* m_SceneCamera;
+	uint32_t m_SceneCameraId = UINT32_MAX;
 };

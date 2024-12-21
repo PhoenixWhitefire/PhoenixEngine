@@ -80,6 +80,39 @@ static GameObject* cloneRecursive(
 	return newObj;
 }
 
+static void mergeCopyProps(GameObject* me, GameObject* other)
+{
+	for (auto& it : other->GetProperties())
+		if (it.second.Set && it.first != "Parent")
+			me->SetPropertyValue(it.first, it.second.Get(other));
+}
+
+static void mergeRecursive(GameObject* me, GameObject* other)
+{
+	if (me->ClassName != other->ClassName)
+		throw(std::vformat(
+			"Tried to `:Merge` a {} with a {}",
+			std::make_format_args(me->ClassName, other->ClassName)
+		));
+
+	mergeCopyProps(me, other);
+
+	for (GameObject* ch : other->GetChildren())
+		if (GameObject* og = me->GetChild(ch->Name))
+			mergeRecursive(og, ch);
+		else
+			ch->SetParent(me);
+
+	for (GameObject* d : me->GetDescendants())
+		for (auto& it : d->GetProperties())
+		{
+			Reflection::GenericValue v = d->GetPropertyValue(it.first);
+
+			if (v.Type == Reflection::ValueType::GameObject && GameObject::FromGenericValue(v) == other)
+				d->SetPropertyValue(it.first, me->ToGenericValue());
+		}
+}
+
 void GameObject::s_DeclareReflections()
 {
 	if (s_DidInitReflection)
@@ -131,6 +164,38 @@ void GameObject::s_DeclareReflections()
 	);
 
 	REFLECTION_DECLAREFUNC(
+		"GetChildren",
+		{},
+		{ Reflection::ValueType::Array },
+		[](Reflection::Reflectable* p, const std::vector<Reflection::GenericValue>&)
+		-> std::vector<Reflection::GenericValue>
+		{
+			std::vector<Reflection::GenericValue> retval;
+			for (GameObject* g : static_cast<GameObject*>(p)->GetChildren())
+				retval.push_back(g->ToGenericValue());
+
+			// ctor for ValueType::Array
+			return { Reflection::GenericValue::GenericValue(retval) };
+		}
+	);
+
+	REFLECTION_DECLAREFUNC(
+		"GetDescendants",
+		{},
+		{ Reflection::ValueType::Array },
+		[](Reflection::Reflectable* p, const std::vector<Reflection::GenericValue>&)
+		-> std::vector<Reflection::GenericValue>
+		{
+			std::vector<Reflection::GenericValue> retval;
+			for (GameObject* g : static_cast<GameObject*>(p)->GetDescendants())
+				retval.push_back(g->ToGenericValue());
+
+			// ctor for ValueType::Array
+			return { Reflection::GenericValue::GenericValue(retval) };
+		}
+	);
+
+	REFLECTION_DECLAREFUNC(
 		"IsA",
 		{ Reflection::ValueType::String },
 		{ Reflection::ValueType::Bool },
@@ -153,6 +218,34 @@ void GameObject::s_DeclareReflections()
 			GameObject* newObj = cloneRecursive(g);
 
 			return { newObj->ToGenericValue() };
+		}
+	);
+
+	REFLECTION_DECLAREFUNC(
+		"Merge",
+		{ Reflection::ValueType::GameObject },
+		{},
+		[](Reflection::Reflectable* p, const std::vector<Reflection::GenericValue>& inputs)
+		-> std::vector<Reflection::GenericValue>
+		{
+			// copy everything over from the input object
+			// objects with the same name will have their properties
+			// copied over
+
+			GameObject* inputObject = GameObject::FromGenericValue(inputs.at(0));
+			GameObject* me = static_cast<GameObject*>(p);
+
+			if (inputObject->ClassName != me->ClassName)
+				throw(std::vformat(
+					"Tried to `:Merge` a {} with a {}",
+					std::make_format_args(me->ClassName, inputObject->ClassName)
+				));
+
+			mergeRecursive(me, inputObject);
+
+			//inputObject->Destroy();
+
+			return {};
 		}
 	);
 

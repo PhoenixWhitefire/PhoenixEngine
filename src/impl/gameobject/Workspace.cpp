@@ -47,7 +47,6 @@ Object_Workspace::Object_Workspace()
 {
 	this->Name = "Workspace";
 	this->ClassName = "Workspace";
-	m_SceneCamera = nullptr;
 
 	s_DeclareReflections();
 	ApiPointer = &s_Api;
@@ -66,15 +65,18 @@ Object_Camera* Object_Workspace::GetSceneCamera()
 	if (!s_FallbackCamera)
 		s_FallbackCamera = createCamera();
 
-	return m_SceneCamera ? m_SceneCamera : s_FallbackCamera;
+	Object_Camera* sceneCam = dynamic_cast<Object_Camera*>(GameObject::GetObjectById(m_SceneCameraId));
+
+	return sceneCam ? sceneCam : s_FallbackCamera;
 }
 
 void Object_Workspace::SetSceneCamera(Object_Camera* NewCam)
 {
-	if (m_SceneCamera && m_SceneCamera != NewCam)
-		m_SceneCamera->IsSceneCamera = false;
+	if (Object_Camera* prevCam = dynamic_cast<Object_Camera*>(GameObject::GetObjectById(m_SceneCameraId)))
+		if (prevCam != NewCam)
+			prevCam->IsSceneCamera = false;
 
-	m_SceneCamera = NewCam;
+	m_SceneCameraId = NewCam ? NewCam->ObjectId : UINT32_MAX;
 
 	if (NewCam)
 		NewCam->IsSceneCamera = true;

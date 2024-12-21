@@ -1,0 +1,69 @@
+{
+  "props": [
+    {
+      "name": "crow",
+      "path": "models/crow/scene.gltf",
+      "position":[0,8,0],
+      "orient": [0,0,0],
+      "size": [1,1,1],
+      "computePhysics": 0
+    },
+    {
+      "name": "grass",
+      "path": "models/grass/scene.gltf",
+      "position":[15,1.2,100],
+      "orient": [0,0,0],
+      "size": [1.5,1.5,1.5],
+      "facecull": "none"
+    },
+    {
+      "name": "ground",
+      "path": "models/ground/scene.gltf",
+      "position":[15,0,100],
+      "orient": [0,0,0],
+      "size": [1.5,1.5,1.5],
+      "facecull": "none"
+    },
+    {
+      "name": "windows10",
+      "path": "models/windows/scene.gltf",
+      "position":[15,5,100],
+      "orient": [0,0,0],
+      "size": [1,1,1],
+      "facecull": "none"
+    } ,
+    {
+      "name": "Capoeira",
+      "path": "models/Capoeira.glb",
+      "position":[0, 0, -15],
+      "orient": [0,0,0],
+      "size": [10, 10, 10],
+      "facecull": "none"
+    }
+  ],
+  "parts": [
+    {
+      "type":"MeshPart",
+      "position":[0,0,0],
+      "material":"floortiles",
+      "size":[50,1,50],
+      "dmesh":"Cube",
+      "name": "shinyfloor"
+    },
+    {
+      "type":"MeshPart",
+      "position":[-8,9,0],
+      "name" : "woodplanks",
+      "material":"woodplanks",
+      "size":[2,17,20],
+      "dmesh":"Cube"
+    }
+  ],
+  "lights": [
+      {
+        "type":"DirectionalLight",
+        "position":[0.5,0.5,0.5],
+        "color":[1,1,1]
+      }
+    ]
+  }

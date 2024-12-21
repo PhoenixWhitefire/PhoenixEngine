@@ -351,7 +351,7 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 
 		for (int index = 0; index < array.size(); index++)
 		{
-			lua_pushinteger(L, index);
+			lua_pushinteger(L, index + 1);
 			L::PushGenericValue(L, array[index]);
 			lua_settable(L, -3);
 		}
@@ -990,6 +990,63 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 			}
 			else
 				lua_pushnil(L);
+
+			return 1;
+		}
+	},
+
+	{
+		"world_aabbquery",
+		[](lua_State* L)
+		{
+			GameObject* workspace = GameObject::s_DataModel->GetChildOfClass("Workspace");
+
+			if (!workspace)
+				luaL_error(L, "A Workspace was not found within the DataModel");
+
+			glm::vec3 apos = Vector3(LuaValueToGeneric(L, -3));
+			glm::vec3 asize = Vector3(LuaValueToGeneric(L, -2));
+			std::vector<Reflection::GenericValue> providedIgnoreList = LuaValueToGeneric(L, -1).AsArray();
+
+			std::vector<GameObject*> ignoreList;
+			for (const Reflection::GenericValue& gv : providedIgnoreList)
+				ignoreList.push_back(GameObject::FromGenericValue(gv));
+
+			IntersectionLib::Intersection result;
+			std::vector<GameObject*> hits;
+
+			for (GameObject* p : workspace->GetDescendants())
+			{
+				if (std::find(ignoreList.begin(), ignoreList.end(), p) != ignoreList.end())
+					continue;
+
+				Object_Base3D* object = dynamic_cast<Object_Base3D*>(p);
+
+				if (object)
+				{
+					glm::vec3 bpos = object->Transform[3];
+					glm::vec3 bsize = object->Size;
+
+					IntersectionLib::Intersection hit = IntersectionLib::AabbAabb(
+						apos,
+						asize,
+						bpos,
+						bsize
+					);
+
+					if (hit.Occurred)
+						hits.push_back(p);
+				}
+			}
+
+			lua_newtable(L);
+
+			for (int index = 0; index < hits.size(); index++)
+			{
+				lua_pushinteger(L, index);
+				ScriptEngine::L::PushGameObject(L, hits[index]);
+				lua_settable(L, -3);
+			}
 
 			return 1;
 		}
