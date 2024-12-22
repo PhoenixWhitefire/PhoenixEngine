@@ -7,7 +7,7 @@
 #include "GlobalJsonConfig.hpp"
 #include "ThreadManager.hpp"
 #include "Utilities.hpp"
-#include "Debug.hpp"
+#include "Log.hpp"
 
 static const std::string MissingTexPath = "!Missing";
 
@@ -42,7 +42,7 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 		std::string fallbackPath = MissingTexPath;
 
 		if (texture.ImagePath != MissingTexPath)
-			Debug::Log(std::vformat(
+			Log::Error(std::vformat(
 				"Failed to load texture '{}': {}",
 				std::make_format_args(texture.ImagePath, texture.FailureReason)
 			));
@@ -255,7 +255,7 @@ static void emloadTexture(
 uint32_t TextureManager::Assign(const Texture& texture, const std::string& name)
 {
 	if (texture.TMP_ImageByteData != nullptr)
-		Debug::Log(std::vformat(
+		Log::Warning(std::vformat(
 			"The Texture being assigned to '{}' has non-NULL byte data and may create UB",
 			std::make_format_args(name)
 		));
@@ -394,7 +394,7 @@ void TextureManager::FinalizeAsyncLoadedTextures()
 
 	if (numTexPromises != numTexFutures)
 	{
-		Debug::Log(std::vformat(
+		Log::Error(std::vformat(
 			"FinalizeAsyncLoadedTextures had {} promises but {} futures, cannot proceed safely",
 			std::make_format_args(numTexPromises, numTexFutures)
 		));

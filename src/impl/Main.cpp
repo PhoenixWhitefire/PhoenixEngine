@@ -51,7 +51,7 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 #include "Profiler.hpp"
 #include "FileRW.hpp"
 #include "Editor.hpp"
-#include "Debug.hpp"
+#include "Log.hpp"
 #include "asset/SceneFormat.hpp"
 
 static bool FirstDragFrame = false;
@@ -329,7 +329,7 @@ static char* LevelSavePathBuf;
 
 static void LoadLevel(const std::string& LevelPath)
 {
-	Debug::Log(std::vformat("Loading scene: '{}'", std::make_format_args(LevelPath)));
+	Log::Info(std::vformat("Loading scene: '{}'", std::make_format_args(LevelPath)));
 
 	Object_Workspace* workspace = EngineInstance->Workspace;
 
@@ -426,28 +426,28 @@ static void drawUI(Reflection::GenericValue Data)
 {
 	if (UserInput::IsKeyDown(SDLK_l) && !UserInput::InputBeingSunk)
 	{
-		Debug::Log("Dumping GameObject API...");
+		Log::Info("Dumping GameObject API...");
 
 		auto dump = GameObject::DumpApiToJson();
 		FileRW::WriteFile("apidump.json", dump.dump(2), false);
 
-		Debug::Log("API dump finished");
+		Log::Info("API dump finished");
 	}
 
 	if (UserInput::IsKeyDown(SDLK_i) && !UserInput::InputBeingSunk)
 	{
-		Debug::Log("Reloading configuration...");
+		Log::Info("Reloading configuration...");
 
 		EngineInstance->LoadConfiguration();
 	}
 
 	if (UserInput::IsKeyDown(SDLK_k) && !UserInput::InputBeingSunk)
 	{
-		Debug::Log("Reloading shaders...");
+		Log::Info("Reloading shaders...");
 
 		ShaderManager::Get()->ReloadAll();
 
-		Debug::Log("Shaders reloaded");
+		Log::Info("Shaders reloaded");
 	}
 
 	if (EditorContext)
@@ -625,7 +625,7 @@ static void drawUI(Reflection::GenericValue Data)
 			if (ImGui::Button("Save Post FX settings"))
 			{
 				FileRW::WriteFile("phoenix.conf", EngineJsonConfig.dump(2), false);
-				Debug::Log("The JSON Config overwrote the pre-existing 'phoenix.conf'.");
+				Log::Info("The JSON Config overwrote the pre-existing 'phoenix.conf'.");
 			}
 		}
 		ImGui::End();
@@ -641,7 +641,7 @@ static void Application(int argc, char** argv)
 {
 	const char* imGuiVersion = IMGUI_VERSION;
 
-	Debug::Log(std::vformat(
+	Log::Info(std::vformat(
 		"Initializing Dear ImGui {}...",
 		std::make_format_args(imGuiVersion)
 	));
@@ -678,7 +678,7 @@ static void Application(int argc, char** argv)
 
 	if (mapFileArgIdx > 0)
 	{
-		Debug::Log(std::vformat(
+		Log::Info(std::vformat(
 			"Map to load specified from launch argument. Map was: {}",
 			std::make_format_args(argv[mapFileArgIdx + 1])
 		));
@@ -704,7 +704,7 @@ static void Application(int argc, char** argv)
 	}
 
 	if (roots.size() > 1)
-		Debug::Log("More than 1 root object in the World, anything other than the first will be ignored");
+		Log::Warning("More than 1 root object in the World, anything other than the first will be ignored");
 
 	if (roots.empty())
 		throw("No root objects in World!");
@@ -735,11 +735,11 @@ static void handleCrash(const std::string& Error, const std::string& ExceptionTy
 	// Log Size Limit Exceeded Throwing Exception
 	if (!Error.starts_with("LSLETE"))
 	{
-		Debug::Log(std::vformat(
+		Log::Append(std::vformat(
 			"CRASH - {}: {}",
 			std::make_format_args(ExceptionType, Error)
 		));
-		Debug::Save();
+		Log::Save();
 	}
 
 	std::string errMessage = std::vformat(
@@ -760,9 +760,9 @@ static void handleCrash(const std::string& Error, const std::string& ExceptionTy
 
 int main(int argc, char** argv)
 {
-	Debug::Log("Application startup...");
+	Log::Info("Application startup...");
 
-	Debug::Log(std::format("Phoenix Engine, Main.cpp last compiled: {}", __DATE__));
+	Log::Info(std::format("Phoenix Engine, Main.cpp last compiled: {}", __DATE__));
 
 	SDL_Window* window = nullptr;
 
@@ -776,7 +776,7 @@ int main(int argc, char** argv)
 
 		Application(argc, argv);
 
-		Debug::Save(); // in case FileRW::WriteFile throws an exception
+		Log::Save(); // in case FileRW::WriteFile throws an exception
 	}
 	PHX_MAIN_HANDLECRASH(std::string, )
 		PHX_MAIN_HANDLECRASH(const char*, )
@@ -785,7 +785,7 @@ int main(int argc, char** argv)
 
 	// this occurs AFTER engine destructor is called
 	// 15/12/2024
-	Debug::Log("Application shutting down...");
+	Log::Info("Application shutting down...");
 
-	Debug::Save();
+	Log::Save();
 }

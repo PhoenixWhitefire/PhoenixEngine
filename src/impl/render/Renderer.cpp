@@ -13,7 +13,7 @@
 #include "asset/MeshProvider.hpp"
 #include "GlobalJsonConfig.hpp"
 #include "Profiler.hpp"
-#include "Debug.hpp"
+#include "Log.hpp"
 
 constexpr uint32_t SHADER_MAX_LIGHTS = 6;
 
@@ -83,7 +83,7 @@ static void GLDebugCallback(
 	// maybe some drivers do not NULL-terminate their strings correctly?
 	if (actualMessageLength != MessageLength)
 	{
-		Debug::Log(std::vformat(
+		Log::Warning(std::vformat(
 			"Renderer::GLDebugCallback: `strlen` differs from message length: {} vs {}",
 			std::make_format_args(actualMessageLength, MessageLength)
 		));
@@ -102,7 +102,7 @@ static void GLDebugCallback(
 		)
 	);
 
-	Debug::Log(debugString);
+	Log::Warning(debugString);
 
 	// ID 131218:
 	// "Vertex shader in program is being recompiled based on GL state"
@@ -164,7 +164,7 @@ void Renderer::Initialize(uint32_t Width, uint32_t Height, SDL_Window* Window)
 		std::make_format_args(glVersionMajor, glVersionMinor)
 	);
 
-	Debug::Log(glVersionStr);
+	Log::Info(glVersionStr);
 
 	m_VertexArray.Initialize();
 	m_VertexBuffer.Initialize();
@@ -181,7 +181,7 @@ void Renderer::Initialize(uint32_t Width, uint32_t Height, SDL_Window* Window)
 
 	glGenBuffers(1, &m_InstancingBuffer);
 
-	Debug::Log("Renderer initialized");
+	Log::Info("Renderer initialized");
 }
 
 Renderer::~Renderer()
@@ -209,7 +209,7 @@ void Renderer::ChangeResolution(uint32_t Width, uint32_t Height)
 		)
 	);
 
-	Debug::Log(resChangedStr);
+	Log::Info(resChangedStr);
 
 	m_Width = Width;
 	m_Height = Height;

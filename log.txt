@@ -1,31 +1,31 @@
-Application startup...
-Phoenix Engine, Main.cpp last compiled: Dec 21 2024
-Configuration loaded
-Requesting a Core OpenGL context with version 4.6
-Window created
-Running OpenGL version 4.6
-Renderer initialized
-Creating initial DataModel...
-Engine constructed
-Initializing Dear ImGui 1.91.7 WIP...
-Scene version is 2
-Scene loaded
-Final initializations...
-Main engine loop start
-GL Debug callback:
+[INFO]: Application startup...
+[INFO]: Phoenix Engine, Main.cpp last compiled: Dec 22 2024
+[INFO]: Configuration loaded
+[INFO]: Requesting a Core OpenGL context with version 4.6
+[INFO]: Window created
+[INFO]: Running OpenGL version 4.6
+[INFO]: Renderer initialized
+[INFO]: Creating initial DataModel...
+[INFO]: Engine constructed
+[INFO]: Initializing Dear ImGui 1.91.7 WIP...
+[INFO]: Scene version is 2
+[INFO]: Scene loaded
+[INFO]: Final initializations...
+[INFO]: Main engine loop start
+[WARN]: GL Debug callback:
 	Type: Performance
 	Severity: Medium
 	Message: Program/shader state performance warning: Vertex shader in program 4 is being recompiled based on GL state.
 	Source: OpenGL
 	Error ID: 131218
 
-GL Debug callback:
+[WARN]: GL Debug callback:
 	Type: Performance
 	Severity: Medium
 	Message: Program/shader state performance warning: Vertex shader in program 12 is being recompiled based on GL state.
 	Source: OpenGL
 	Error ID: 131218
 
-Main loop exited
-Engine destructing...
-Application shutting down...
+[INFO]: Main loop exited
+[INFO]: Engine destructing...
+[INFO]: Application shutting down...

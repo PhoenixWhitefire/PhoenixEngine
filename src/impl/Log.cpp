@@ -1,9 +1,9 @@
-#include "Debug.hpp"
+#include "Log.hpp"
 #include "FileRW.hpp"
 
 static std::string ProgramLog = "";
 
-void Debug::Save()
+void Log::Save()
 {
 	FileRW::WriteFile("log.txt", ProgramLog, false);
 }
@@ -12,7 +12,7 @@ void Debug::Save()
 // and when app shuts down
 // If the Message ends with `&&`, won't insert a newline automatically
 // 11/11/2024
-void Debug::Log(const std::string& Message)
+void Log::Append(const std::string& Message)
 {
 	static bool ThrewLogCapacityExceededException = false;
 
@@ -39,8 +39,23 @@ void Debug::Log(const std::string& Message)
 
 		// Log Size Limit Exceeded Throwing Exception
 		ProgramLog.append("\nLSLETE: Log size limit exceeded, throwing exception\n");
-		Debug::Save();
+		Log::Save();
 
 		throw("Program log exceeds maximum size of 2e6 bytes (2 megabytes)");
 	}
+}
+
+void Log::Info(const std::string& Message)
+{
+	Log::Append("[INFO]: " + Message);
+}
+
+void Log::Warning(const std::string& Message)
+{
+	Log::Append("[WARN]: " + Message);
+}
+
+void Log::Error(const std::string& Message)
+{
+	Log::Append("[ERRR]: " + Message);
 }

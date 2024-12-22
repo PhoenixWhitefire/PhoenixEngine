@@ -9,7 +9,7 @@
 #include "GlobalJsonConfig.hpp"
 #include "Utilities.hpp"
 #include "FileRW.hpp"
-#include "Debug.hpp"
+#include "Log.hpp"
 
 static uint32_t readU32(const std::vector<int8_t>& vec, size_t offset)
 {
@@ -89,10 +89,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 	std::string textData = FileRW::ReadFile(gltfFilePath, &fileExists);
 
 	if (!fileExists)
-	{
-		Debug::Log("Failed to load Model, file '" + AssetPath + "' not found.");
-		return;
-	}
+		throw("Failed to load Model, file '" + AssetPath + "' not found.");
 
 	// Binary files start with magic number that corresponds to "glTF"
 	// https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#binary-header
@@ -100,7 +97,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 	{
 		uint32_t glbVersion = readU32(textData, 4);
 		if (glbVersion != 2)
-			Debug::Log(std::vformat(
+			Log::Warning(std::vformat(
 				"GLB header declares version as '{}', when only `2` is supported. Unexpected behavior may occur.",
 				std::make_format_args(glbVersion)
 			));
@@ -111,13 +108,10 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		uint32_t jsonChType = readU32(textData, 16);
 
 		if (jsonChType != 0x4E4F534A)
-		{
-			Debug::Log(std::vformat(
+			throw(std::vformat(
 				"Failed to load Model '{}', first Chunk in binary file was not of type JSON",
 				std::make_format_args(AssetPath)
 			));
-			return;
-		}
 
 		std::string jsonString = textData.substr(20, jsonChLength);
 		m_JsonData = nlohmann::json::parse(jsonString);
@@ -133,13 +127,10 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		uint32_t binaryChType = readU32(binaryChunk, 4);
 
 		if (binaryChType != 0x004E4942)
-		{
-			Debug::Log(std::vformat(
+			throw(std::vformat(
 				"Failed to load Model '{}', second Chunk in binary file was not of type BIN",
 				std::make_format_args(AssetPath)
 			));
-			return;
-		}
 
 		// + 8 because 8 byte header
 		m_Data = std::vector<int8_t>(binaryChunk.begin() + 8, binaryChunk.begin() + binaryChLength + 8);
@@ -167,7 +158,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		{
 			float gltfMinVersion = std::stof(assetInfoJson.value("minVersion", "2.0"));
 
-			Debug::Log(std::vformat(
+			Log::Warning(std::vformat(
 				"glTF file specifies `asset.minVersion` as '{}'. Unexpected behavior may occur.",
 				std::make_format_args(gltfMinVersion)
 			));
@@ -177,7 +168,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 			float gltfVersion = std::stof(assetInfoJson.value("version", "2.0"));
 
 			if (gltfVersion < 2.f || gltfVersion >= 3.f)
-				Debug::Log(std::vformat(
+				Log::Warning(std::vformat(
 					"Expected glTF version >= 2.0 and < 3.0, got {}. Unexpected behavior may occur.",
 					std::make_format_args(gltfVersion)
 				));
@@ -187,13 +178,13 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		const nlohmann::json& usedExtensionsJson = m_JsonData["extensionsUsed"];
 
 		for (std::string v : requiredExtensionsJson)
-			Debug::Log(std::vformat(
+			Log::Warning(std::vformat(
 				"glTF file specifies 'required' extension '{}'. That's too bad, because no extensions are supported.",
 				std::make_format_args(v)
 			));
 
 		for (std::string v : usedExtensionsJson)
-			Debug::Log(std::vformat(
+			Log::Warning(std::vformat(
 				"glTF file specifies extension '{}' is used. That's too bad, because no extensions are supported.",
 				std::make_format_args(v)
 			));
@@ -224,13 +215,22 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		
 		LoadedObjs.push_back(mesh);
 
-		// "meshes/models/crow/0.mesh"
+		/*
+			When;
+				AssetPath = "models/crow/scene.gltf"
+				MeshName = "main.001"
+
+			Then:
+				meshPath = "meshes/models/crow/scene.gltf/main.001.hxmesh"
+
+			Could be cleaner, but it doesn't matter
+			22/12/2024
+		*/
 		std::string meshPath = "meshes/"
 								+ AssetPath
 								+ "/"
-								+
-								m_MeshNames[MeshIndex]
-								+ ".mesh";
+								+ m_MeshNames[MeshIndex]
+								+ ".hxmesh";
 
 		meshProvider->Save(m_Meshes[MeshIndex], meshPath);
 
@@ -603,7 +603,7 @@ std::vector<uint32_t> ModelLoader::m_GetIndices(const nlohmann::json& accessor)
 		}
 	}
 	else
-		Debug::Log("Unrecognized mesh index type: " + std::to_string(componentType));
+		Log::Warning("Unrecognized mesh index type: " + std::to_string(componentType));
 
 	return indices;
 }

@@ -4,7 +4,7 @@
 #include "gameobject/Sound.hpp"
 #include "GlobalJsonConfig.hpp"
 #include "FileRW.hpp"
-#include "Debug.hpp"
+#include "Log.hpp"
 
 PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(Sound);
 
@@ -45,7 +45,7 @@ void Object_Sound::s_DeclareReflections()
 			if (newFile == sound->SoundFile)
 				return;
 
-			Debug::Log("soundupdate");
+			Log::Info("soundupdate");
 
 			if (sound->AudioDeviceId != UINT32_MAX)
 			{
@@ -63,7 +63,7 @@ void Object_Sound::s_DeclareReflections()
 
 			if (!fileFound)
 			{
-				Debug::Log(std::vformat(
+				Log::Error(std::vformat(
 					"Cannot find Sound File '{}'",
 					std::make_format_args(newFile)
 				));

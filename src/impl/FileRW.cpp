@@ -4,7 +4,7 @@
 
 #include "FileRW.hpp"
 #include "GlobalJsonConfig.hpp"
-#include "Debug.hpp"
+#include "Log.hpp"
 
 // 16/09/2024 PWK2K
 // https://stackoverflow.com/a/71658518
@@ -140,16 +140,8 @@ std::string FileRW::GetAbsolutePath(const std::string& LocalPath)
 	// and start from resources/ automatically
 	// currently, files that *are* from the root are specified by beginning the path with '/'
 	// find a better method?
-	try
-	{
-		if (path[0] != '.')
-			path.insert(0, EngineJsonConfig.value("ResourcesDirectory", "resources/"));
-	}
-	catch (nlohmann::json::type_error e)
-	{
-		const char* whatStr = e.what();
-		Debug::Log(std::vformat("Error localizing file path: '{}'", std::make_format_args(whatStr)));
-	}
+	if (path[0] != '.')
+		path.insert(0, EngineJsonConfig.value("ResourcesDirectory", "resources/"));
 
 	return path;
 }

@@ -8,7 +8,7 @@
 #include "asset/PrimitiveMeshes.hpp"
 #include "render/GpuBuffers.hpp"
 #include "FileRW.hpp"
-#include "Debug.hpp"
+#include "Log.hpp"
 
 #define MESHPROVIDER_ERROR(err) { s_ErrorString = err; *SuccessPtr = false; return {}; }
 
@@ -462,7 +462,7 @@ uint32_t MeshProvider::LoadFromPath(const std::string& Path, bool ShouldLoadAsyn
 
 		if (!success)
 		{
-			Debug::Log(std::vformat(
+			Log::Error(std::vformat(
 				"MeshProvider Failed to load mesh '{}': Invalid path/File could not be opened",
 				std::make_format_args(Path)
 			));
@@ -485,7 +485,7 @@ uint32_t MeshProvider::LoadFromPath(const std::string& Path, bool ShouldLoadAsyn
 						Mesh loadedMesh = this->Deserialize(contents, &deserialized);
 
 						if (!deserialized)
-							Debug::Log(std::vformat(
+							Log::Error(std::vformat(
 								"MeshProvider failed to load mesh '{}' asynchronously: {}",
 								std::make_format_args(Path, s_ErrorString)
 							));
@@ -506,7 +506,7 @@ uint32_t MeshProvider::LoadFromPath(const std::string& Path, bool ShouldLoadAsyn
 				mesh.MeshDataPreserved = PreserveMeshData;
 
 				if (!success)
-					Debug::Log(std::vformat(
+					Log::Error(std::vformat(
 						"MeshProvider failed to load mesh '{}': {}",
 						std::make_format_args(Path, s_ErrorString)
 					));
@@ -539,7 +539,7 @@ void MeshProvider::FinalizeAsyncLoadedMeshes()
 
 	if (numMeshPromises != numMeshFutures || numMeshFutures != numMeshResourceIds)
 	{
-		Debug::Log(std::vformat(
+		Log::Error(std::vformat(
 			"FinalizeAsyncLoadedMeshes had {} promises, {} futures and {} resource IDs, cannot proceed safely",
 			std::make_format_args(numMeshPromises, numMeshFutures, numMeshResourceIds)
 		));

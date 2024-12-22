@@ -5,7 +5,7 @@
 #include <glad/gl.h>
 
 #include "render/GraphicsAbstractionLayer.hpp"
-#include "Debug.hpp"
+#include "Log.hpp"
 
 GraphicsLayer::GraphicsLayer(
 	bool* WasSuccess,

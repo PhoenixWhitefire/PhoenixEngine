@@ -17,7 +17,7 @@
 #include "IntersectionLib.hpp"
 #include "UserInput.hpp"
 #include "FileRW.hpp"
-#include "Debug.hpp"
+#include "Log.hpp"
 
 template <class T> static void throwWrapped(T exc)
 {

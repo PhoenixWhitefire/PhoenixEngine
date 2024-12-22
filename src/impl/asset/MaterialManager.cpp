@@ -4,7 +4,7 @@
 #include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
 #include "FileRW.hpp"
-#include "Debug.hpp"
+#include "Log.hpp"
 
 static const std::string MissingTexPath = "!Missing";
 
@@ -13,7 +13,7 @@ void RenderMaterial::Reload()
 	bool matExists = true;
 	std::string fileData = FileRW::ReadFile("materials/" + this->Name + ".mtl", &matExists);
 
-	nlohmann::json jsonMaterialData;
+	nlohmann::json jsonMaterialData = {};
 
 	ShaderManager* shdManager = ShaderManager::Get();
 
@@ -26,7 +26,7 @@ void RenderMaterial::Reload()
 		catch (nlohmann::json::parse_error e)
 		{
 			std::string errmsg = e.what();
-			throw(std::vformat(
+			Log::Error(std::vformat(
 				"Parse error trying to load material {}: {}",
 				std::make_format_args(this->Name, errmsg)
 			));
@@ -36,7 +36,7 @@ void RenderMaterial::Reload()
 	{
 		this->ShaderId = shdManager->LoadFromPath("error");
 
-		Debug::Log("Unknown material: '" + this->Name + "'");
+		Log::Error("Unknown material: '" + this->Name + "'");
 
 		return;
 	}
@@ -186,7 +186,7 @@ uint32_t MaterialManager::LoadMaterialFromPath(const std::string& Name)
 		}
 		else
 		{
-			Debug::Log("Failed to load material '" + fullPath + "'");
+			Log::Error("Failed to load material '" + fullPath + "'");
 
 			if (Name == "error")
 				throw("Failed to load the 'error' material. It is required due to technical reasons (I'm lazy)");

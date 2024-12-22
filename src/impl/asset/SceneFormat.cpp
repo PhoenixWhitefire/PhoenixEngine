@@ -13,7 +13,7 @@
 #include "asset/ModelImporter.hpp"
 #include "gameobject/Light.hpp"
 #include "FileRW.hpp"
-#include "Debug.hpp"
+#include "Log.hpp"
 
 static std::string errorString = "No error";
 
@@ -63,7 +63,7 @@ static Vector3 GetVector3FromJson(const nlohmann::json& Json)
 	}
 	catch (nlohmann::json::type_error TErr)
 	{
-		Debug::Log(
+		Log::Warning(
 			"Could not read Vector3: '"
 			+ std::string(TErr.what())
 			+ "'"
@@ -87,7 +87,7 @@ static Color GetColorFromJson(const nlohmann::json& Json)
 	}
 	catch (nlohmann::json::type_error TErr)
 	{
-		Debug::Log(
+		Log::Warning(
 			"Could not read Color: '"
 			+ std::string(TErr.what())
 			+ "'"
@@ -116,7 +116,7 @@ static glm::mat4 GetMatrixFromJson(const nlohmann::json& Json)
 	}
 	catch (nlohmann::json::type_error TErr)
 	{
-		Debug::Log(
+		Log::Warning(
 			"Could not read Matrix: '"
 			+ std::string(TErr.what())
 			+ "'"
@@ -200,7 +200,7 @@ static std::vector<GameObject*> LoadMapVersion1(
 		std::string modelName = PropObject.value("name", "<UN-NAMED>");
 
 		if (Model.empty())
-			Debug::Log(
+			Log::Warning(
 				std::vformat(
 					"Model '{}' in map file '{}' has no meshes!",
 					std::make_format_args(
@@ -420,7 +420,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 		{
 			const char* fmtStr = "Deserialization warning: Object #{} was missing it's '$_class' key";
 			auto fmtArgs = std::make_format_args(itemIndex);
-			Debug::Log(std::vformat(fmtStr, fmtArgs));
+			Log::Warning(std::vformat(fmtStr, fmtArgs));
 
 			continue;
 		}
@@ -432,7 +432,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 
 		if (item.find("$_objectId") == item.end())
 		{
-			Debug::Log(std::vformat(
+			Log::Warning(std::vformat(
 				"Deserialization warning: Object #{} ({}) was missing it's '$_objectId' key",
 				std::make_format_args(itemIndex, className)
 			));
@@ -472,7 +472,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 					className,
 					name
 				);
-				Debug::Log(std::vformat(fmtStr, fmtArgs));
+				Log::Warning(std::vformat(fmtStr, fmtArgs));
 
 				continue;
 			}
@@ -490,7 +490,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 					className,
 					name
 				);
-				Debug::Log(std::vformat(fmtStr, fmtArgs));
+				Log::Warning(std::vformat(fmtStr, fmtArgs));
 
 				continue;
 			}
@@ -567,7 +567,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 					memberTypeName
 				);
 
-				Debug::Log(std::vformat(fmtStr, fmtArgs));
+				Log::Warning(std::vformat(fmtStr, fmtArgs));
 
 				break;
 			}
@@ -585,7 +585,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 					std::string mtname = Reflection::TypeAsString(memberType);
 					std::string valueStr = assignment.ToString();
 
-					Debug::Log(std::vformat(
+					Log::Warning(std::vformat(
 						"Deserialization warning: Failed to set {} Property '{}' of '{}' ({}) to '{}': {}",
 						std::make_format_args(mtname, memberName, name, className, valueStr, err)
 					));
@@ -628,7 +628,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 				{
 					std::string valueStr = gv.ToString();
 
-					Debug::Log(std::vformat(
+					Log::Warning(std::vformat(
 						"Deserialization warning: Failed to set GameObject property of '{}' ({}) to '{}': {}",
 						std::make_format_args(object->Name, object->ClassName, valueStr, err)
 					));
@@ -636,7 +636,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 			}
 			else
 			{
-				Debug::Log(std::vformat(
+				Log::Warning(std::vformat(
 					"Deserialization warning: {} '{}' refers to invalid scene-relative Object ID {} for prop {}. To avoid UB, it will be NULL'd.",
 					std::make_format_args(
 						object->ClassName,
@@ -668,7 +668,7 @@ std::vector<GameObject*> SceneFormat::Deserialize(
 	}
 
 	float version = getVersion(Contents);
-	Debug::Log(std::vformat("Scene version is {}", std::make_format_args(version)));
+	Log::Info(std::vformat("Scene version is {}", std::make_format_args(version)));
 
 	size_t jsonStartLoc = Contents.find("{");
 	std::string jsonFileContents = Contents.substr(jsonStartLoc);
@@ -681,7 +681,7 @@ std::vector<GameObject*> SceneFormat::Deserialize(
 		if (version == 2.f)
 			objects = LoadMapVersion2(jsonFileContents, SuccessPtr);
 
-	Debug::Log("Scene loaded");
+	Log::Info("Scene loaded");
 
 	return objects;
 }

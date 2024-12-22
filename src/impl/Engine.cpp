@@ -21,7 +21,7 @@
 #include "Utilities.hpp"
 #include "Profiler.hpp"
 #include "FileRW.hpp"
-#include "Debug.hpp"
+#include "Log.hpp"
 
 // TODO: move 13/08/2024
 static int WindowSizeXBeforeFullscreen = 800;
@@ -57,7 +57,7 @@ static void sdlLog(void*, int Type, SDL_LogPriority Priority, const char* Messag
 	);
 
 	if (Priority < SDL_LOG_PRIORITY_ERROR)
-		Debug::Log(logString);
+		Log::Warning(logString);
 	else
 		throw(logString);
 }
@@ -122,7 +122,7 @@ void EngineObject::LoadConfiguration()
 	if (ConfigAscii == "")
 		throw("Configuration file is empty");
 
-	Debug::Log("Configuration loaded");
+	Log::Info("Configuration loaded");
 }
 
 EngineObject::EngineObject()
@@ -174,14 +174,14 @@ EngineObject::EngineObject()
 	SDL_GLprofile requestedProfile = SDL_GL_CONTEXT_PROFILE_CORE;
 
 	if (requestedProfileIt == StringToGLProfile.end())
-		Debug::Log(std::vformat(
+		Log::Warning(std::vformat(
 			"Invalid/unsupported OpenGL profile '{}' requested, defaulting to the Core profile",
 			std::make_format_args(requestedProfileString)
 		));
 	else
 		requestedProfile = requestedProfileIt->second;
 
-	Debug::Log(std::vformat(
+	Log::Info(std::vformat(
 		"Requesting a {} OpenGL context with version {}.{}",
 		std::make_format_args(requestedProfileString, requestedGLVersionMajor, requestedGLVersionMinor)
 	));
@@ -220,13 +220,13 @@ EngineObject::EngineObject()
 		throw(std::vformat("SDL could not create the window: {}\n", std::make_format_args(errStr)));
 	}
 
-	Debug::Log("Window created");
+	Log::Info("Window created");
 
 	// TODO: Engine->MSAASamples does nothing, attempting to specify via below ctor's argument leads to
 	// OpenGL error "Target doesn't match the texture's target"
 	this->RendererContext.Initialize(this->WindowSizeX, this->WindowSizeY, this->Window);
 
-	Debug::Log("Creating initial DataModel...");
+	Log::Info("Creating initial DataModel...");
 
 	this->DataModel = (Object_DataModel*)GameObject::Create("DataModel");
 	GameObject::s_DataModel = this->DataModel;
@@ -236,7 +236,7 @@ EngineObject::EngineObject()
 
 	//ThreadManager::Get()->CreateWorkers(4, WorkerType::DefaultTaskWorker);
 
-	Debug::Log("Engine constructed");
+	Log::Info("Engine constructed");
 }
 
 static void recursivelyTravelHierarchy(
@@ -357,7 +357,7 @@ static void recursivelyTravelHierarchy(
 
 void EngineObject::Start()
 {
-	Debug::Log("Final initializations...");
+	Log::Info("Final initializations...");
 
 	// TODO:
 	// wtf are these
@@ -447,19 +447,19 @@ void EngineObject::Start()
 	const int32_t SunShadowMapResolutionSq = 512;
 	GpuFrameBuffer sunShadowMap{ SunShadowMapResolutionSq, SunShadowMapResolutionSq };
 
-	Debug::Log("Main engine loop start");
+	Log::Info("Main engine loop start");
 
 	while (!this->Exit)
 	{
 		if (this->DataModel->WantExit)
 		{
-			Debug::Log("DataModel requested shutdown");
+			Log::Info("DataModel requested shutdown");
 			break;
 		}
 
 		if (!DataModel->GetChildOfClass("Workspace"))
 		{
-			Debug::Log("Workspace was removed, shutting down");
+			Log::Warning("Workspace was removed, shutting down");
 			break;
 		}
 
@@ -739,7 +739,7 @@ void EngineObject::Start()
 
 		if (!GameObject::GetObjectById(dataModelId))
 		{
-			Debug::Log("DataModel was Destroy'd, shutting down...");
+			Log::Error("DataModel was Destroy'd, shutting down...");
 			this->DataModel = nullptr;
 			GameObject::s_DataModel = nullptr;
 
@@ -867,7 +867,7 @@ void EngineObject::Start()
 
 			m_DrawnFramesInSecond = -1;
 
-			Debug::Save();
+			Log::Save();
 		}
 
 		Profiler::Stop();
@@ -875,12 +875,12 @@ void EngineObject::Start()
 		Profiler::PushSnapshot();
 	}
 
-	Debug::Log("Main loop exited");
+	Log::Info("Main loop exited");
 }
 
 EngineObject::~EngineObject()
 {
-	Debug::Log("Engine destructing...");
+	Log::Info("Engine destructing...");
 
 	MaterialManager::Shutdown();
 	TextureManager::Shutdown();

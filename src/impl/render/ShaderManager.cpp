@@ -8,14 +8,14 @@
 #include "datatype/Vector3.hpp"
 #include "datatype/Color.hpp"
 #include "FileRW.hpp"
-#include "Debug.hpp"
+#include "Log.hpp"
 
 #define SP_TRYFALLBACK() { if (this->Name == "error")               \
 	throw("Fallback Shader failed to load");                        \
 else                                                                \
 	m_GpuId = ShaderManager::Get()->GetShaderResource(0).m_GpuId; } \
 
-#define SP_LOADERROR(str) { Debug::Log(str); SP_TRYFALLBACK(); return; }
+#define SP_LOADERROR(str) { Log::Error(str); SP_TRYFALLBACK(); return; }
 
 static const std::string BaseShaderPath = "shaders/";
 
@@ -28,7 +28,7 @@ void ShaderProgram::Activate()
 
 		if (!glIsProgram(m_GpuId))
 		{
-			Debug::Log(std::vformat(
+			Log::Error(std::vformat(
 				"Tried to ::Activate shader '{}', but it was (likely) deleted, and the fallback shader 'error' was also invalid.",
 				std::make_format_args(this->Name)
 			));
@@ -95,7 +95,7 @@ void ShaderProgram::Activate()
 			default:
 			{
 				const std::string typeName = Reflection::TypeAsString(value.Type);
-				Debug::Log(std::vformat(
+				Log::Warning(std::vformat(
 					"Unrecognized uniform type '{}' trying to set '{}' for program '{}'",
 					std::make_format_args(typeName, uniformName, this->Name)
 				));
@@ -125,7 +125,7 @@ void ShaderProgram::Reload()
 		// TODO: a different function for error logging
 		// Should also fire a callback so that an Output can be implemented
 		// 13/07/2024
-		Debug::Log(std::vformat(
+		Log::Error(std::vformat(
 			"**ERR** Shader program '{}' does not exist! Geometry will appear magenta",
 			std::make_format_args(this->Name))
 		);
@@ -281,7 +281,7 @@ void ShaderProgram::Reload()
 		{
 			const char* typeName = value.type_name();
 
-			Debug::Log(std::vformat(
+			Log::Warning(std::vformat(
 				"Shader Program '{}' tried to specify Uniform '{}', but it had unsupported type '{}'",
 				std::make_format_args(this->Name, uniformName, typeName)
 			));
@@ -362,7 +362,7 @@ bool ShaderProgram::m_PrintErrors(uint32_t Object, const char* Type)
 				std::make_format_args(Type, this->Name, infoLog)
 			);
 
-			Debug::Log(errorString);
+			Log::Error(errorString);
 
 			ShaderManager* shdManager = ShaderManager::Get();
 
@@ -381,7 +381,7 @@ bool ShaderProgram::m_PrintErrors(uint32_t Object, const char* Type)
 		{
 			glGetProgramInfoLog(Object, 2048, NULL, infoLog);
 
-			Debug::Log(std::vformat(
+			Log::Error(std::vformat(
 				"Error while linking shader program '{}':\n{}",
 				std::make_format_args(this->Name, infoLog)
 			));

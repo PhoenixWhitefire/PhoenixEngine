@@ -8,7 +8,7 @@
 #include "UserInput.hpp"
 #include "Profiler.hpp"
 #include "FileRW.hpp"
-#include "Debug.hpp"
+#include "Log.hpp"
 #include "gameobject/ScriptEngine.hpp"
 
 #define LUA_ASSERT(res, err, ...) if (!res) { luaL_error(L, err, __VA_ARGS__); }
@@ -333,12 +333,14 @@ static void initDefaultState()
 				const char* s = luaL_tolstring(L, i, &l); // convert to string using __tostring et al
 
 				if (i > 1)
-					Debug::Log("\t&&");
+					Log::Append(" &&");
+				else
+					Log::Info("&&");
 
-				Debug::Log(std::string(s) + "&&");
+				Log::Append(std::string(s) + "&&");
 				lua_pop(L, 1); // pop result
 			}
-			Debug::Log("\n&&");
+			Log::Append("\n&&");
 
 			return 0;
 		},
@@ -746,7 +748,7 @@ void Object_Script::Update(double dt)
 				const char* errstr = lua_tostring(coroutine, -1);
 				std::string fullname = this->GetFullName();
 
-				Debug::Log(std::vformat(
+				Log::Error(std::vformat(
 					"Luau yielded-then-resumed error: {}",
 					std::make_format_args(errstr)
 				));
@@ -780,7 +782,7 @@ void Object_Script::Update(double dt)
 			const char* errstr = lua_tostring(m_L, -1);
 			std::string fullname = this->GetFullName();
 
-			Debug::Log(std::vformat(
+			Log::Error(std::vformat(
 				"Luau runtime error: {}",
 				std::make_format_args(errstr)
 			));
@@ -827,7 +829,7 @@ bool Object_Script::Reload()
 
 	if (!fileExists)
 	{
-		Debug::Log(
+		Log::Error(
 			std::vformat(
 				"Script '{}' references invalid Source File '{}'!",
 				std::make_format_args(fullName, this->SourceFile)
@@ -864,7 +866,7 @@ bool Object_Script::Reload()
 		{
 			const char* errstr = lua_tostring(m_L, -1);
 
-			Debug::Log(std::vformat(
+			Log::Error(std::vformat(
 				"Luau script init error: {}",
 				std::make_format_args(errstr)
 			));
@@ -879,7 +881,7 @@ bool Object_Script::Reload()
 		int topidx = lua_gettop(m_L);
 		const char* errstr = lua_tostring(m_L, topidx);
 
-		Debug::Log(std::vformat("Luau compile error {}: {}: '{}'", std::make_format_args(result, this->Name, errstr)));
+		Log::Error(std::vformat("Luau compile error {}: {}: '{}'", std::make_format_args(result, this->Name, errstr)));
 
 		return false;
 	}

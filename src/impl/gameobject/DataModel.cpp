@@ -2,7 +2,7 @@
 // 13/08/2024
 
 #include "gameobject/DataModel.hpp"
-#include "Debug.hpp"
+#include "Log.hpp"
 
 PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(DataModel);
 

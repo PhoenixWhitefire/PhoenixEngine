@@ -1,5 +1,5 @@
 #include "datatype/GameObject.hpp"
-#include "Debug.hpp"
+#include "Log.hpp"
 
 PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(GameObject);
 
