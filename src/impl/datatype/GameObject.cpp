@@ -284,8 +284,6 @@ GameObject::~GameObject()
 	for (GameObject* child : this->GetChildren())
 		child->Destroy();
 
-	m_Children.clear();
-
 	if (this->ObjectId != PHX_GAMEOBJECT_NULL_ID)
 		s_WorldArray.at(this->ObjectId) = nullptr;
 

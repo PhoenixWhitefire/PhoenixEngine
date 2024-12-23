@@ -19,7 +19,7 @@ namespace ScriptEngine
 	// (I mean upon it becoming ready)
 	// 22/09/2024
 	// I think this is possible?
-	extern std::unordered_map<lua_State*, std::shared_future<Reflection::GenericValue>> s_YieldedCoroutines;
+	extern std::vector<std::pair<lua_State*, std::shared_future<Reflection::GenericValue>>> s_YieldedCoroutines;
 
 	extern const std::unordered_map<Reflection::ValueType, lua_Type> ReflectedTypeLuaEquivalent;
 };

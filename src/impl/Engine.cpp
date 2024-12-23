@@ -239,6 +239,48 @@ EngineObject::EngineObject()
 	Log::Info("Engine constructed");
 }
 
+/*
+	TODO 23/12/2024
+	
+	We need to update all the scripts FIRST, as they may delete Objects
+	that we want to keep track of (i.e. that were collected in the `PhysicsList`
+	before they were deleted).
+
+	This can be superseded by a proper (deferred) Event System, as we'd have better
+	control over WHEN Scripts are resumed, instead of just resuming them
+	as we stumble upon them.
+*/
+
+static void updateScripts(double DeltaTime)
+{
+	static std::vector<Object_Script*> ScriptsResumedThisFrame = {};
+
+	for (GameObject* ch : GameObject::s_DataModel->GetDescendants())
+		if (ch->Enabled)
+			if (Object_Script* script = dynamic_cast<Object_Script*>(ch))
+			{
+				if (std::find(
+					ScriptsResumedThisFrame.begin(),
+					ScriptsResumedThisFrame.end(),
+					script
+				) == ScriptsResumedThisFrame.end())
+				{
+					script->Update(DeltaTime);
+
+					ScriptsResumedThisFrame.push_back(script);
+
+					// we need to do this in case a script deletes another script,
+					// causing their to potentially be state pointers in the list
+					// of descendants we are iterating
+					updateScripts(DeltaTime);
+
+					break;
+				}
+			}
+
+	ScriptsResumedThisFrame.clear();
+}
+
 static void recursivelyTravelHierarchy(
 	std::vector<RenderItem>& RenderList,
 	std::vector<LightItem>& LightList,
@@ -259,7 +301,9 @@ static void recursivelyTravelHierarchy(
 		if (!object->Enabled)
 			continue;
 
-		object->Update(DeltaTime);
+		// scripts would have already been `::Update`'d by `updateScripts`
+		if (!dynamic_cast<Object_Script*>(object))
+			object->Update(DeltaTime);
 
 		Object_Base3D* object3D = dynamic_cast<Object_Base3D*>(object);
 
@@ -536,13 +580,11 @@ void EngineObject::Start()
 		LastTime = RunningTime;
 		FrameStart = RunningTime;
 
-		Profiler::Start("EventCallbacks/OnFrameStart");
-		this->OnFrameStart.Fire(deltaTime);
-		Profiler::Stop();
+		PROFILE_EXPRESSION("EventCallbacks/OnFrameStart", this->OnFrameStart.Fire(deltaTime));
 
 		while (SDL_PollEvent(&pollingEvent) != 0)
 		{
-			PROFILER_PROFILE_SCOPE("PollEvents");
+			PROFILE_SCOPE("PollEvents");
 
 			ImGui_ImplSDL2_ProcessEvent(&pollingEvent);
 
@@ -581,7 +623,7 @@ void EngineObject::Start()
 		// so scripts can use the `imgui_*` APIs
 		// 09/11/2024
 		{
-			PROFILER_PROFILE_SCOPE("DearImGuiNewFrame");
+			PROFILE_SCOPE("DearImGuiNewFrame");
 			ImGui_ImplOpenGL3_NewFrame();
 			ImGui_ImplSDL2_NewFrame();
 			ImGui::NewFrame();
@@ -592,17 +634,20 @@ void EngineObject::Start()
 
 		std::vector<Object_Base3D*> physicsList;
 
-		Profiler::Start("RecurseDataModel");
+		PROFILE_EXPRESSION("UpdateScripts", updateScripts(deltaTime));
+
 		// Aggregate mesh and light data into lists
-		recursivelyTravelHierarchy(
-			scene.RenderList,
-			scene.LightingList,
-			physicsList,
-			this->Workspace,
-			sceneCamera,
-			deltaTime
+		PROFILE_EXPRESSION(
+			"RecurseDataModel",
+			recursivelyTravelHierarchy(
+				scene.RenderList,
+				scene.LightingList,
+				physicsList,
+				this->Workspace,
+				sceneCamera,
+				deltaTime
+			)
 		);
-		Profiler::Stop();
 
 		bool hasPhysics = false;
 
@@ -640,7 +685,7 @@ void EngineObject::Start()
 
 		if (hasSun)
 		{
-			PROFILER_PROFILE_SCOPE("Shadows");
+			PROFILE_SCOPE("Shadows");
 
 			Scene sunScene{};
 			sunScene.RenderList.reserve(scene.RenderList.size());
@@ -733,9 +778,7 @@ void EngineObject::Start()
 
 		uint32_t dataModelId = this->DataModel->ObjectId;
 
-		Profiler::Start("EventCallbacks/OnFrameRenderGui");
-		this->OnFrameRenderGui.Fire(deltaTime);
-		Profiler::Stop();
+		PROFILE_EXPRESSION("EventCallbacks/OnFrameRenderGui", this->OnFrameRenderGui.Fire(deltaTime));
 
 		if (!GameObject::GetObjectById(dataModelId))
 		{
@@ -843,9 +886,7 @@ void EngineObject::Start()
 
 		double curTimePrevSwap = RunningTime;
 
-		Profiler::Start("SwapBuffers");
-		RendererContext.SwapBuffers();
-		Profiler::Stop();
+		PROFILE_PROCEDURE("SwapBuffers", RendererContext.SwapBuffers);
 
 		this->RunningTime = GetRunningTime();
 
@@ -855,9 +896,7 @@ void EngineObject::Start()
 
 		m_DrawnFramesInSecond++;
 
-		Profiler::Start("EventCallbacks/OnFrameEnd");
-		this->OnFrameEnd.Fire(deltaTime);
-		Profiler::Stop();
+		PROFILE_EXPRESSION("EventCallbacks/OnFrameEnd", OnFrameEnd.Fire(deltaTime));
 
 		if (RunningTime - LastSecond > 1.0f)
 		{

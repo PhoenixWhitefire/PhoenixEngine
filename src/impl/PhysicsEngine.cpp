@@ -13,7 +13,7 @@ struct Collision
 
 static void moveDynamics(std::vector<Object_Base3D*>& World, double DeltaTime)
 {
-	PROFILER_PROFILE_SCOPE("MoveDynamics");
+	PROFILE_SCOPE("MoveDynamics");
 
 	for (Object_Base3D* object : World)
 		if (object->PhysicsDynamics)
@@ -28,7 +28,7 @@ static void moveDynamics(std::vector<Object_Base3D*>& World, double DeltaTime)
 
 static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTime)
 {
-	PROFILER_PROFILE_SCOPE("ResolveCollisions");
+	PROFILE_SCOPE("ResolveCollisions");
 
 	std::vector<Collision> collisions;
 
@@ -138,7 +138,7 @@ static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTi
 
 static void step(std::vector<Object_Base3D*>& World, double DeltaTime)
 {
-	PROFILER_PROFILE_SCOPE("PhysicsStep");
+	PROFILE_SCOPE("PhysicsStep");
 
 	Profiler::Start("ApplyGlobalForces");
 	for (Object_Base3D* object : World)

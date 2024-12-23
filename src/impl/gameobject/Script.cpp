@@ -631,7 +631,7 @@ static void initDefaultState()
 			DefaultState,
 			[](lua_State* L)
 			{
-				PROFILER_PROFILE_SCOPE(lua_tostring(L, lua_upvalueindex(2)));
+				PROFILE_SCOPE(lua_tostring(L, lua_upvalueindex(2)));
 
 				lua_CFunction func = (lua_CFunction)lua_touserdata(L, lua_upvalueindex(1));
 
@@ -716,7 +716,7 @@ void Object_Script::Initialize()
 
 void Object_Script::Update(double dt)
 {
-	PROFILER_PROFILE_SCOPE("Scripts");
+	PROFILE_SCOPE("Scripts");
 
 	s_WindowGrabMouse = ScriptEngine::s_BackendScriptWantGrabMouse;
 
@@ -724,10 +724,11 @@ void Object_Script::Update(double dt)
 	// need to handle resuming scheduled (i.e. yielded-but-now-hopefully-finished)
 	// coroutines, the poor bastard
 	// 23/09/2024
-	for (auto& pair : ScriptEngine::s_YieldedCoroutines)
+	for (size_t corIdx = 0; corIdx < ScriptEngine::s_YieldedCoroutines.size(); corIdx++)
 	{
+		const auto& pair = ScriptEngine::s_YieldedCoroutines.at(corIdx);
 		lua_State* coroutine = pair.first;
-		std::shared_future<Reflection::GenericValue>& future = pair.second;
+		const std::shared_future<Reflection::GenericValue>& future = pair.second;
 
 		if (future.valid())
 		{
@@ -741,7 +742,7 @@ void Object_Script::Update(double dt)
 
 			ScriptEngine::L::PushGenericValue(coroutine, retval);
 
-			lua_Status resumeStatus = (lua_Status)lua_resume(coroutine, nullptr, 0);
+			lua_Status resumeStatus = (lua_Status)lua_resume(coroutine, nullptr, 1);
 
 			if (resumeStatus != LUA_OK && resumeStatus != LUA_YIELD)
 			{
@@ -754,13 +755,10 @@ void Object_Script::Update(double dt)
 				));
 			}
 
-			ScriptEngine::s_YieldedCoroutines.erase(coroutine);
+			ScriptEngine::s_YieldedCoroutines.erase(ScriptEngine::s_YieldedCoroutines.begin() + corIdx);
 		}
 	}
 
-	// We don't `::Reload` when the Script is being yielded,
-	// because, what the hell will happen when it's resumed by the `for`-loop
-	// above? Will it create a "ghost" Script? Not good. 23/09/2024
 	if (m_StaleSource)
 		this->Reload();
 
@@ -768,18 +766,26 @@ void Object_Script::Update(double dt)
 	if (!m_L)
 		return;
 
+	// script is currently yielded 23/12/2024
+	if (lua_status(m_L) == LUA_YIELD)
+		return;
+
 	lua_getglobal(m_L, "Update");
 
 	if (lua_isfunction(m_L, -1))
 	{
-		lua_pushnumber(m_L, dt);
+		lua_State* cor = lua_newthread(m_L);
+		lua_getglobal(cor, "Update");
+
+		lua_pushnumber(cor, dt);
+
 		// why do all of these functions say they return `int` and not
 		// `lua_Status` like they actually do?? 23/09/2024
-		lua_Status updateStatus = (lua_Status)lua_pcall(m_L, 1, 0, 0);
+		lua_Status updateStatus = (lua_Status)lua_pcall(cor, 1, 0, 0);
 
 		if (updateStatus != LUA_OK && updateStatus != LUA_YIELD)
 		{
-			const char* errstr = lua_tostring(m_L, -1);
+			const char* errstr = lua_tostring(cor, -1);
 			std::string fullname = this->GetFullName();
 
 			Log::Error(std::vformat(
@@ -787,7 +793,16 @@ void Object_Script::Update(double dt)
 				std::make_format_args(errstr)
 			));
 		}
+		else if (updateStatus == LUA_OK)
+		{
+			lua_resetthread(cor);
+			// They aren't allocated, idk if this leaks memory
+			// 23/12/2024
+			//delete cor;
+		}
 	}
+
+	lua_pop(m_L, 2);
 }
 
 bool Object_Script::LoadScript(const std::string& scriptFile)
@@ -822,8 +837,9 @@ bool Object_Script::Reload()
 	m_StaleSource = false;
 	
 	if (m_L)
-		lua_close(m_L);
-	m_L = nullptr;
+		lua_resetthread(m_L);
+	else
+		m_L = lua_newthread(DefaultState);
 
 	std::string fullName = this->GetFullName();
 
@@ -838,8 +854,6 @@ bool Object_Script::Reload()
 
 		return false;
 	}
-
-	m_L = lua_newthread(DefaultState);
 
 	ScriptEngine::L::PushGameObject(m_L, this);
 	lua_setglobal(m_L, "script");

@@ -79,8 +79,7 @@ static void GLDebugCallback(
 	// `GLsizei` is a smelly `int`
 	int actualMessageLength = static_cast<int>(strlen(Message));
 
-	// It feels important that a `MessageLength` is provided,
-	// maybe some drivers do not NULL-terminate their strings correctly?
+	// We love being pedantic around here 23/12/2024
 	if (actualMessageLength != MessageLength)
 	{
 		Log::Warning(std::vformat(
@@ -107,7 +106,8 @@ static void GLDebugCallback(
 	// ID 131218:
 	// "Vertex shader in program is being recompiled based on GL state"
 	if (Id != 131218 && SeverityId > GL_DEBUG_SEVERITY_NOTIFICATION)
-		throw(debugString);
+		if (EngineJsonConfig.value("render_glerrorsarefatal", true))
+			throw(debugString);
 }
 
 Renderer::Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window)
@@ -226,7 +226,7 @@ void Renderer::DrawScene(
 	double RunningTime
 )
 {
-	PROFILER_PROFILE_SCOPE("DrawScene");
+	PROFILE_SCOPE("DrawScene");
 
 	glActiveTexture(GL_TEXTURE0);
 	this->FrameBuffer.BindTexture();
@@ -376,7 +376,7 @@ void Renderer::DrawScene(
 
 	if (DoInstancing)
 	{
-		PROFILER_PROFILE_SCOPE("DrawInstanced");
+		PROFILE_SCOPE("DrawInstanced");
 
 		for (auto& iter : instancingList)
 		{
@@ -386,7 +386,7 @@ void Renderer::DrawScene(
 
 			if (mesh.GpuId != UINT32_MAX)
 			{
-				PROFILER_PROFILE_SCOPE("UploadInstancedData");
+				PROFILE_SCOPE("UploadInstancedData");
 
 				MeshProvider::GpuMesh& gpuMesh = meshProvider->GetGpuMesh(mesh.GpuId);
 				gpuMesh.VertexArray.Bind();
@@ -476,7 +476,7 @@ void Renderer::DrawMesh(
 	int32_t NumInstances
 )
 {
-	PROFILER_PROFILE_SCOPE("DrawMesh");
+	PROFILE_SCOPE("DrawMesh");
 
 	switch (FaceCulling)
 	{
@@ -547,7 +547,7 @@ void Renderer::DrawMesh(
 
 void Renderer::m_SetMaterialData(const RenderItem& RenderData)
 {
-	PROFILER_PROFILE_SCOPE("UploadMaterialData");
+	PROFILE_SCOPE("UploadMaterialData");
 
 	MaterialManager* mtlManager = MaterialManager::Get();
 

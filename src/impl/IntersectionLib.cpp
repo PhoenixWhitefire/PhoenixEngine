@@ -16,7 +16,7 @@ IntersectionLib::Intersection IntersectionLib::AabbAabb
 	const glm::vec3& BSize
 )
 {
-	PROFILER_PROFILE_SCOPE("Intersection::AabbAabb");
+	PROFILE_SCOPE("Intersection::AabbAabb");
 
 	Intersection result{};
 	result.Occurred = false;
@@ -77,7 +77,7 @@ IntersectionLib::Intersection IntersectionLib::LineAabb(
 	float PaddingZ
 )
 {
-	PROFILER_PROFILE_SCOPE("Intersection::LineAabb");
+	PROFILE_SCOPE("Intersection::LineAabb");
 
 	Intersection result{};
 	result.Occurred = false;

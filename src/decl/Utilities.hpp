@@ -6,6 +6,6 @@
 
 #include <string>
 
-void CopyStringToBuffer(char* buf, size_t capacity, const std::string& string = "");
+void CopyStringToBuffer(char* buf, size_t capacity, std::string string = "");
 char* BufferInitialize(size_t capacity, const std::string& value = "");
 double GetRunningTime();

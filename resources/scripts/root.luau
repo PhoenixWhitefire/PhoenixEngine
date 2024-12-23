@@ -49,7 +49,7 @@ function Update()
 	
 	if imgui_begin("Run Script") then
 		if imgui_textlink("Path: " .. ScriptExecutionFile) then
-			imfd_open("Run Script Dialog", 0, "resources/scripts", "*.luau")
+			imfd_open("Script Select Dialog", 0, "resources/scripts", "*.luau")
 		end
 		
 		if imgui_button("Execute") then
@@ -64,7 +64,7 @@ function Update()
 	end
 	imgui_end()
 	
-	if imfd_begin("Run Script Dialog") then
+	if imfd_begin("Script Select Dialog") then
 		if imfd_actiondone() then
 			if imfd_selectionmade() then
 				local selection = imfd_getselections()[1]
@@ -88,7 +88,7 @@ function Update()
 		scene_save({ game }, "scenes/root.world")
 	end
 	
-	FileSaveSubLevel = imgui_input_text("Save Sub-Level Target", FileSaveAs or "scenes/rooms.hxscene")
+	FileSaveSubLevel = imgui_input_text("Save Sub-Level Target", FileSaveSubLevel or "scenes/rooms.hxscene")
 	
 	if imgui_button("Save Sub-Level") then
 		scene_save({ workspace.Level }, FileSaveSubLevel)

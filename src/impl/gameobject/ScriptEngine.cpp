@@ -26,7 +26,7 @@ template <class T> static void throwWrapped(T exc)
 
 bool ScriptEngine::s_BackendScriptWantGrabMouse = false;
 
-std::unordered_map<lua_State*, std::shared_future<Reflection::GenericValue>> ScriptEngine::s_YieldedCoroutines{};
+std::vector<std::pair<lua_State*, std::shared_future<Reflection::GenericValue>>> ScriptEngine::s_YieldedCoroutines{};
 const std::unordered_map<Reflection::ValueType, lua_Type> ScriptEngine::ReflectedTypeLuaEquivalent =
 {
 		{ Reflection::ValueType::Null,        lua_Type::LUA_TNIL       },
@@ -617,20 +617,26 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 		{
 			int sleepTime = luaL_checkinteger(L, 1);
 
-			lua_pushnil(L);
+			lua_yield(L, 1);
 
-			auto a = std::async(
-				std::launch::async,
-				[](int st)
-				{
-					std::this_thread::sleep_for(std::chrono::seconds(st));
-					return Reflection::GenericValue(st);
-				},
-				sleepTime
-			);
-			ScriptEngine::s_YieldedCoroutines.insert(std::pair(L, a.share()));
+			// `lua_yield` may fail with the "attempt to yield across metamethod/C-call boundary"
+			// only run the code if we've successfully yielded
+			if (lua_status(L) == LUA_YIELD)
+			{
+				auto a = std::async(
+					std::launch::async,
+					[](int st)
+					{
+						std::this_thread::sleep_for(std::chrono::seconds(st));
+						return Reflection::GenericValue(st);
+					},
+					sleepTime
+				);
 
-			return lua_yield(L, 1);
+				ScriptEngine::s_YieldedCoroutines.push_back(std::pair(L, a.share()));
+			}
+
+			return -1;
 		}
 	},
 

@@ -34,7 +34,7 @@ uniform LightObject Lights[MAX_LIGHTS];
 
 uniform sampler2D ShadowAtlas;
 
-uniform int NumLights = 0;
+uniform int NumLights;
 
 uniform sampler2D FrameBuffer;
 
@@ -46,28 +46,28 @@ uniform bool HasEmissionMap;
 uniform sampler2D EmissionMap;
 
 uniform vec3 LightAmbient = vec3(0.3f);
-uniform float SpecularMultiplier = 0.5f;
-uniform float SpecularPower = 16.0f;
+uniform float SpecularMultiplier;
+uniform float SpecularPower;
 
-uniform float Transparency = 0.f;
-uniform float MetallnessFactor = 0.f;
-uniform float RoughnessFactor = 0.f;
-uniform float EmissionStrength = 0.f;
+uniform float Transparency;
+uniform float MetallnessFactor;
+uniform float RoughnessFactor;
+uniform float EmissionStrength;
 
 uniform samplerCube SkyboxCubemap;
 
 uniform float NearZ = 0.1f;
 uniform float FarZ = 1000.0f;
 
-uniform bool Fog = false;
+uniform bool Fog;
 uniform vec3 FogColor = vec3(0.85f, 0.85f, 0.90f);
 
-uniform bool UseTriPlanarProjection = false;
-uniform float MaterialProjectionFactor = 0.05f;
+uniform bool UseTriPlanarProjection;
+uniform float MaterialProjectionFactor;
 
 uniform float AlphaCutoff = 0.5f;
 
-uniform bool IsShadowMap = false;
+uniform bool IsShadowMap;
 uniform bool DebugOverdraw = false;
 uniform bool DebugLightInfluence = false;
 

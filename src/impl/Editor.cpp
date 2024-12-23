@@ -126,29 +126,28 @@ static void renderScriptEditor()
 	static char* TextEntryBuffer = nullptr;
 	static size_t TextEntryBufferCapacity = 0;
 
-	Object_Script* targetScript = dynamic_cast<Object_Script*>(GameObject::GetObjectById(ScriptEditorFocus));
-
 	static std::fstream* ScriptFileStream = nullptr;
 
 	if (!ScriptEditorEnabled)
 	{
-		if (targetScript && TextEntryBuffer)
+		if (ScriptFileStream)
 		{
-			if (ScriptFileStream)
-			{
-				(*ScriptFileStream) << TextEntryBuffer;
-				ScriptFileStream->close();
-
-				delete ScriptFileStream;
-				ScriptFileStream = nullptr;
-			}
+			ScriptFileStream->close();
+			ScriptFileStream = nullptr; // crashes when i try to `delete` it 22/12/2024
 		}
 
-		free(TextEntryBuffer);
-		TextEntryBuffer = nullptr;
+		if (TextEntryBuffer)
+		{
+			free(TextEntryBuffer);
+			TextEntryBuffer = nullptr;
+		}
+
+		ScriptEditorFocus = PHX_GAMEOBJECT_NULL_ID;
 
 		return;
 	}
+
+	Object_Script* targetScript = dynamic_cast<Object_Script*>(GameObject::GetObjectById(ScriptEditorFocus));
 
 	if (!targetScript)
 	{
@@ -160,29 +159,35 @@ static void renderScriptEditor()
 
 	ImGui::Begin("Script Editor", 0, ImGuiWindowFlags_NoCollapse);
 
-	ImGui::Text("%s", targetScript->Name.c_str());
+	ImGui::Text("%s: %s", targetScript->GetFullName().c_str(), targetScript->SourceFile.c_str());
 
-	if (ImGui::Button("Save"))
+	bool save = ImGui::Button("Save");
+
+	if (ImGui::Button("Save and Close"))
 	{
-		ScriptFileStream->write(TextEntryBuffer, strlen(TextEntryBuffer));
-		ScriptFileStream->flush();
-		ScriptFileStream->close();
-		delete ScriptFileStream;
-		ScriptFileStream = nullptr;
+		ScriptEditorEnabled = false;
 
-		free(TextEntryBuffer);
-		TextEntryBuffer = nullptr;
+		save = true;
 	}
 
-	if (ImGui::Button("Close"))
+	if (ImGui::Button("Close without saving"))
 	{
-		// 28/10/2024 TODO
-		// hooo boy do i love intentionally dirty state
-		// so i don't have to go through the effort of making ONE extra function
 		ScriptEditorEnabled = false;
 		ImGui::End();
 
 		return;
+	}
+
+	if (save)
+	{
+		ScriptFileStream->close();
+		delete ScriptFileStream;
+		ScriptFileStream = nullptr;
+
+		FileRW::WriteFile(targetScript->SourceFile, TextEntryBuffer, true);
+
+		free(TextEntryBuffer);
+		TextEntryBuffer = nullptr;
 	}
 
 	if (!TextEntryBuffer)
@@ -209,7 +214,7 @@ static void renderScriptEditor()
 		CopyStringToBuffer(TextEntryBuffer, TextEntryBufferCapacity, scriptContents);
 	}
 	
-	ImGui::InputTextMultiline("", TextEntryBuffer, TextEntryBufferCapacity, ImGui::GetContentRegionAvail());
+	ImGui::InputTextMultiline("##", TextEntryBuffer, TextEntryBufferCapacity, ImGui::GetContentRegionAvail());
 
 	ImGui::End();
 }
