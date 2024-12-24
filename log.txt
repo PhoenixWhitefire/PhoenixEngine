@@ -1,5 +1,5 @@
 [INFO]: Application startup...
-[INFO]: Phoenix Engine, Main.cpp last compiled: Dec 23 2024
+[INFO]: Phoenix Engine, Main.cpp last compiled: Dec 24 2024
 [INFO]: Configuration loaded
 [INFO]: Requesting a Core OpenGL context with version 4.6
 [INFO]: Window created
@@ -9,23 +9,78 @@
 [INFO]: Engine constructed
 [INFO]: Initializing Dear ImGui 1.91.7 WIP...
 [INFO]: Scene version is 2
+[WARN]: GL Debug callback:
+	Type: Error
+	Severity: High
+	Message: Error has been generated. GL error GL_INVALID_OPERATION in (null): (ID: 173538523) Generic error
+	Source: OpenGL
+	Error ID: 1282
+
+[WARN]: GL Debug callback:
+	Type: Error
+	Severity: High
+	Message: Error has been generated. GL error GL_INVALID_OPERATION in (null): (ID: 173538523) Generic error
+	Source: OpenGL
+	Error ID: 1282
+
+[WARN]: GL Debug callback:
+	Type: Error
+	Severity: High
+	Message: Error has been generated. GL error GL_INVALID_OPERATION in (null): (ID: 173538523) Generic error
+	Source: OpenGL
+	Error ID: 1282
+
 [INFO]: Scene loaded
 [INFO]: Final initializations...
+[WARN]: GL Debug callback:
+	Type: Error
+	Severity: High
+	Message: Error has been generated. GL error GL_INVALID_OPERATION in (null): (ID: 173538523) Generic error
+	Source: OpenGL
+	Error ID: 1282
+
+[WARN]: GL Debug callback:
+	Type: Error
+	Severity: High
+	Message: Error has been generated. GL error GL_INVALID_OPERATION in (null): (ID: 173538523) Generic error
+	Source: OpenGL
+	Error ID: 1282
+
 [INFO]: Main engine loop start
-[WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Program/shader state performance warning: Vertex shader in program 4 is being recompiled based on GL state.
-	Source: OpenGL
-	Error ID: 131218
-
-[WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Program/shader state performance warning: Vertex shader in program 12 is being recompiled based on GL state.
-	Source: OpenGL
-	Error ID: 131218
-
-[INFO]: Main loop exited
-[INFO]: Engine destructing...
-[INFO]: Application shutting down...
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: rootupdate
+[INFO]: Scene version is 2
+[INFO]: Scene loaded

@@ -80,14 +80,11 @@ static GameObject* cloneRecursive(
 	return newObj;
 }
 
-static void mergeCopyProps(GameObject* me, GameObject* other)
-{
-	for (auto& it : other->GetProperties())
-		if (it.second.Set && it.first != "Parent")
-			me->SetPropertyValue(it.first, it.second.Get(other));
-}
-
-static void mergeRecursive(GameObject* me, GameObject* other)
+static void mergeRecursive(
+	GameObject* me,
+	GameObject* other,
+	std::unordered_map<GameObject*, GameObject*>& MergedOverrides
+)
 {
 	if (me->ClassName != other->ClassName)
 		throw(std::vformat(
@@ -95,13 +92,28 @@ static void mergeRecursive(GameObject* me, GameObject* other)
 			std::make_format_args(me->ClassName, other->ClassName)
 		));
 
-	mergeCopyProps(me, other);
+	MergedOverrides[other] = me;
 
 	for (GameObject* ch : other->GetChildren())
 		if (GameObject* og = me->GetChild(ch->Name))
-			mergeRecursive(og, ch);
+			mergeRecursive(og, ch, MergedOverrides);
 		else
 			ch->SetParent(me);
+
+	for (auto& it : other->GetProperties())
+		if (it.second.Set && it.first != "Parent")
+		{
+			Reflection::GenericValue v = it.second.Get(other);
+
+			if (v.Type == Reflection::ValueType::GameObject)
+			{
+				auto moit = MergedOverrides.find(GameObject::FromGenericValue(v));
+				if (moit != MergedOverrides.end())
+					v = moit->second->ToGenericValue();
+			}
+
+			me->SetPropertyValue(it.first, v);
+		}
 
 	for (GameObject* d : me->GetDescendants())
 		for (auto& it : d->GetProperties())
@@ -241,9 +253,13 @@ void GameObject::s_DeclareReflections()
 					std::make_format_args(me->ClassName, inputObject->ClassName)
 				));
 
-			mergeRecursive(me, inputObject);
+			// not sure if i actually need to do this
+			// 24/12/2024
+			std::unordered_map<GameObject*, GameObject*> mergedOverridesDummy;
 
-			//inputObject->Destroy();
+			mergeRecursive(me, inputObject, mergedOverridesDummy);
+
+			inputObject->Destroy();
 
 			return {};
 		}
@@ -278,6 +294,10 @@ GameObject* GameObject::FromGenericValue(const Reflection::GenericValue& gv)
 
 GameObject::~GameObject()
 {
+	if (m_HardRefCount != 0)
+		// use `::Destroy` or something maybe 24/12/2024
+		throw("I can't be killed right now, someone still needs me!");
+
 	if (GameObject* parent = this->GetParent())
 		parent->RemoveChild(ObjectId);
 
@@ -289,7 +309,6 @@ GameObject::~GameObject()
 
 	this->Parent = PHX_GAMEOBJECT_NULL_ID;
 	//this->ObjectId = PHX_GAMEOBJECT_NULL_ID;
-	this->ParentLocked = true;
 }
 
 bool GameObject::IsValidObjectClass(const std::string& ObjectClass)
@@ -318,9 +337,50 @@ void GameObject::Update(double)
 {
 }
 
+static void validateRefCount(GameObject* Object, uint32_t RefCount)
+{
+	if (RefCount > 254)
+	{
+		std::string fullName = Object->GetFullName();
+		throw(std::vformat(
+			"Engine has reached Reference Count limit of 255 for Object '{}' (ID:{})",
+			std::make_format_args(fullName, Object->ObjectId)
+		));
+	}
+	// only kill ourselves if nobody cares about us (i'm so edgy) 24/12/2024
+	else if (RefCount == 0)
+		delete Object;
+}
+
+void GameObject::IncrementHardRefs()
+{
+	m_HardRefCount++;
+
+	validateRefCount(this, m_HardRefCount);
+}
+
+void GameObject::DecrementHardRefs()
+{
+	if (m_HardRefCount == 0)
+		// use `delete` directly instead maybe
+		throw("Tried to decrement hard refs, with no hard references!");
+
+	m_HardRefCount--;
+
+	validateRefCount(this, m_HardRefCount);
+}
+
 void GameObject::Destroy()
 {
-	delete this;
+	bool wasDestructionPending = this->IsDestructionPending;
+
+	this->IsDestructionPending = true;
+	this->Parent = PHX_GAMEOBJECT_NULL_ID;
+
+	if (!wasDestructionPending)
+		DecrementHardRefs(); // removes the first ref in `GameObject::Create`
+	else
+		validateRefCount(this, m_HardRefCount);
 }
 
 std::string GameObject::GetFullName()
@@ -344,6 +404,19 @@ bool GameObject::IsA(const std::string& AncestorClass)
 
 void GameObject::SetParent(GameObject* newParent)
 {
+	if (this->IsDestructionPending)
+	{
+		std::string fullname = this->GetFullName();
+		std::string parentFullName = newParent->GetFullName();
+
+		Log::Warning(std::vformat(
+			"Tried to re-parent '{}' (ID:{}) to '{}' (ID:{}), but destruction for it was pending",
+			std::make_format_args(fullname, this->ObjectId, parentFullName, newParent->ObjectId)
+		));
+
+		return;
+	}
+
 	GameObject* oldParent = GameObject::GetObjectById(Parent);
 
 	if (newParent == oldParent)
@@ -541,8 +614,10 @@ GameObject* GameObject::Create(const std::string& ObjectClass)
 	// `it->second` is a function that constructs the object, so we
 	// call it
 	GameObject* CreatedObject = it->second();
-	CreatedObject->ObjectId = numObjects;
+
 	s_WorldArray.push_back(CreatedObject);
+	CreatedObject->IncrementHardRefs();
+	CreatedObject->ObjectId = numObjects;
 
 	CreatedObject->Initialize();
 

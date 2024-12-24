@@ -4,7 +4,6 @@ local TotalTime = 0
 
 local Camera = workspace.SceneCamera
 local CharacterControllerCreator = require("scripts/modules/character-controller.luau")
-local NodeEditor = require("scripts/modules/NodeEditor.luau")
 local RoomGen = require("scripts/roomsgen.luau")
 
 local CharacterController = CharacterControllerCreator.new(Camera)

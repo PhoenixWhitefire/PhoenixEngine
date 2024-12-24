@@ -38,6 +38,15 @@ public:
 	virtual void Initialize();
 	virtual void Update(double DeltaTime);
 
+	// the engine will NEED some objects to continue existing without being
+	// de-alloc'd, if only for a loop (`updateScripts`)
+	void IncrementHardRefs();
+	void DecrementHardRefs(); // de-alloc here when refcount drops to 0
+
+	// won't necessarily de-alloc the object if the engine has any
+	// refs to it 24/12/2024
+	void Destroy();
+
 	std::vector<GameObject*> GetChildren();
 	std::vector<GameObject*> GetDescendants();
 
@@ -50,8 +59,6 @@ public:
 	std::string GetFullName();
 	// whether this object inherits from or is the given class
 	bool IsA(const std::string&);
-
-	void Destroy();
 
 	void SetParent(GameObject*);
 	void AddChild(GameObject*);
@@ -66,7 +73,7 @@ public:
 	std::string ClassName = "GameObject";
 
 	bool Enabled = true;
-	bool ParentLocked = false;
+	bool IsDestructionPending = false;
 
 	static nlohmann::json DumpApiToJson();
 
@@ -86,6 +93,11 @@ protected:
 private:
 	static void s_DeclareReflections();
 	static inline Reflection::Api s_Api{};
+
+	// i think something fishy would have to be going on
+	// for the refcount to be >255
+	// 24/12/2024
+	uint8_t m_HardRefCount = 0;
 };
 
 template<typename T> GameObject* constructGameObjectHeir()
@@ -103,3 +115,40 @@ struct RegisterDerivedObject : GameObject
 };
 
 typedef GameObject Object_GameObject;
+
+template <class T> class GameObjectRef
+{
+public:
+	GameObjectRef(T* Object)
+	: m_TargetId(Object->ObjectId)
+	{
+		Object->IncrementHardRefs();
+	}
+
+	~GameObjectRef()
+	{
+		this->Contained()->DecrementHardRefs();
+		m_TargetId = PHX_GAMEOBJECT_NULL_ID;
+	}
+
+	T* Contained()
+	{
+		if (m_TargetId == PHX_GAMEOBJECT_NULL_ID)
+			throw("Double-free'd or `::Contained` called on default-constructed GameObjectRef");
+
+		GameObject* g = GameObject::GetObjectById(m_TargetId);
+
+		if (!g)
+			throw("Referenced GameObject was de-alloc'd while we wanted to keep it :(");
+		else
+			return static_cast<T*>(g);
+	}
+
+	bool operator == (GameObject* them)
+	{
+		return static_cast<GameObject*>(Contained()) == them;
+	}
+
+private:
+	uint32_t m_TargetId = PHX_GAMEOBJECT_NULL_ID;
+};

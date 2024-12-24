@@ -26,7 +26,7 @@ template <class T> static void throwWrapped(T exc)
 
 bool ScriptEngine::s_BackendScriptWantGrabMouse = false;
 
-std::vector<std::pair<lua_State*, std::shared_future<Reflection::GenericValue>>> ScriptEngine::s_YieldedCoroutines{};
+std::vector<ScriptEngine::YieldedCoroutine> ScriptEngine::s_YieldedCoroutines{};
 const std::unordered_map<Reflection::ValueType, lua_Type> ScriptEngine::ReflectedTypeLuaEquivalent =
 {
 		{ Reflection::ValueType::Null,        lua_Type::LUA_TNIL       },
@@ -633,7 +633,14 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 					sleepTime
 				);
 
-				ScriptEngine::s_YieldedCoroutines.push_back(std::pair(L, a.share()));
+				lua_pushthread(L);
+
+				ScriptEngine::s_YieldedCoroutines.emplace_back(
+					L,
+					// make sure the coroutine doesn't get de-alloc'd before we resume it
+					lua_ref(lua_mainthread(L), -1),
+					a.share()
+				);
 			}
 
 			return -1;

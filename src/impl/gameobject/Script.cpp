@@ -714,26 +714,18 @@ void Object_Script::Initialize()
 	//this->Reload();
 }
 
-void Object_Script::Update(double dt)
+static void resumeScheduledCoroutines()
 {
-	PROFILE_SCOPE("Scripts");
-
-	s_WindowGrabMouse = ScriptEngine::s_BackendScriptWantGrabMouse;
-
-	// The first Script to be updated in the current frame will
-	// need to handle resuming scheduled (i.e. yielded-but-now-hopefully-finished)
-	// coroutines, the poor bastard
-	// 23/09/2024
 	for (size_t corIdx = 0; corIdx < ScriptEngine::s_YieldedCoroutines.size(); corIdx++)
 	{
-		const auto& pair = ScriptEngine::s_YieldedCoroutines.at(corIdx);
-		lua_State* coroutine = pair.first;
-		const std::shared_future<Reflection::GenericValue>& future = pair.second;
+		const ScriptEngine::YieldedCoroutine& corInfo = ScriptEngine::s_YieldedCoroutines.at(corIdx);
+		lua_State* coroutine = corInfo.Coroutine;
+		const std::shared_future<Reflection::GenericValue>& future = corInfo.Future;
 
 		if (future.valid())
 		{
 			// 23/09/2024 TODO This is just sad
-			std::future_status status = pair.second.wait_for(std::chrono::seconds(0));
+			std::future_status status = future.wait_for(std::chrono::seconds(0));
 			if (status != std::future_status::ready)
 				continue;
 
@@ -747,7 +739,6 @@ void Object_Script::Update(double dt)
 			if (resumeStatus != LUA_OK && resumeStatus != LUA_YIELD)
 			{
 				const char* errstr = lua_tostring(coroutine, -1);
-				std::string fullname = this->GetFullName();
 
 				Log::Error(std::vformat(
 					"Luau yielded-then-resumed error: {}",
@@ -756,8 +747,27 @@ void Object_Script::Update(double dt)
 			}
 
 			ScriptEngine::s_YieldedCoroutines.erase(ScriptEngine::s_YieldedCoroutines.begin() + corIdx);
+			//lua_unref(lua_mainthread(coroutine), corInfo.CoroutineReference);
+
+			// the indexes of the coroutines will have changed, and `corIdx` will point
+			// out-of-bounds. this is a lazy workaround. 24/12/2024
+			// just fucking give up
+			return;
 		}
 	}
+}
+
+void Object_Script::Update(double dt)
+{
+	PROFILE_SCOPE("Scripts");
+
+	s_WindowGrabMouse = ScriptEngine::s_BackendScriptWantGrabMouse;
+
+	// The first Script to be updated in the current frame will
+	// need to handle resuming scheduled (i.e. yielded-but-now-hopefully-finished)
+	// coroutines, the poor bastard
+	// 23/09/2024
+	resumeScheduledCoroutines();
 
 	if (m_StaleSource)
 		this->Reload();
@@ -766,26 +776,22 @@ void Object_Script::Update(double dt)
 	if (!m_L)
 		return;
 
-	// script is currently yielded 23/12/2024
-	if (lua_status(m_L) == LUA_YIELD)
+	if (lua_status(m_L) != LUA_OK)
 		return;
 
 	lua_getglobal(m_L, "Update");
 
 	if (lua_isfunction(m_L, -1))
 	{
-		lua_State* cor = lua_newthread(m_L);
-		lua_getglobal(cor, "Update");
-
-		lua_pushnumber(cor, dt);
+		lua_pushnumber(m_L, dt);
 
 		// why do all of these functions say they return `int` and not
 		// `lua_Status` like they actually do?? 23/09/2024
-		lua_Status updateStatus = (lua_Status)lua_pcall(cor, 1, 0, 0);
+		lua_Status updateStatus = (lua_Status)lua_pcall(m_L, 1, 0, 0);
 
 		if (updateStatus != LUA_OK && updateStatus != LUA_YIELD)
 		{
-			const char* errstr = lua_tostring(cor, -1);
+			const char* errstr = lua_tostring(m_L, -1);
 			std::string fullname = this->GetFullName();
 
 			Log::Error(std::vformat(
@@ -793,16 +799,7 @@ void Object_Script::Update(double dt)
 				std::make_format_args(errstr)
 			));
 		}
-		else if (updateStatus == LUA_OK)
-		{
-			lua_resetthread(cor);
-			// They aren't allocated, idk if this leaks memory
-			// 23/12/2024
-			//delete cor;
-		}
 	}
-
-	lua_pop(m_L, 2);
 }
 
 bool Object_Script::LoadScript(const std::string& scriptFile)
@@ -836,10 +833,7 @@ bool Object_Script::Reload()
 
 	m_StaleSource = false;
 	
-	if (m_L)
-		lua_resetthread(m_L);
-	else
-		m_L = lua_newthread(DefaultState);
+	m_L = lua_newthread(DefaultState);
 
 	std::string fullName = this->GetFullName();
 
@@ -872,17 +866,21 @@ bool Object_Script::Reload()
 	
 	if (result == 0)
 	{
-		// Run the script
+		// prevent ourselves from being deleted by the code we run.
+		// if that code errors, it'll be a use-after-free as we try
+		// to access `m_L` to get the error message
+		// 24/12/2024
+		GameObjectRef<Object_Script> dontKillMePlease = this;
 
 		lua_Status resumeResult = (lua_Status)lua_resume(m_L, m_L, 0);
 
 		if (resumeResult != lua_Status::LUA_OK && resumeResult != lua_Status::LUA_YIELD)
 		{
-			const char* errstr = lua_tostring(m_L, -1);
+			const char* errStr = lua_tostring(m_L, -1);
 
 			Log::Error(std::vformat(
 				"Luau script init error: {}",
-				std::make_format_args(errstr)
+				std::make_format_args(errStr)
 			));
 
 			return false;

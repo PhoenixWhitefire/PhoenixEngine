@@ -253,7 +253,8 @@ EngineObject::EngineObject()
 
 static void updateScripts(double DeltaTime)
 {
-	static std::vector<Object_Script*> ScriptsResumedThisFrame = {};
+	static std::vector<GameObjectRef<Object_Script>> ScriptsResumedThisFrame = {};
+	ScriptsResumedThisFrame.reserve(2);
 
 	for (GameObject* ch : GameObject::s_DataModel->GetDescendants())
 		if (ch->Enabled)
@@ -265,16 +266,18 @@ static void updateScripts(double DeltaTime)
 					script
 				) == ScriptsResumedThisFrame.end())
 				{
+					// ensure we keep a reference to it
+					ScriptsResumedThisFrame.emplace_back(script);
+
 					script->Update(DeltaTime);
 
-					ScriptsResumedThisFrame.push_back(script);
-
 					// we need to do this in case a script deletes another script,
-					// causing their to potentially be state pointers in the list
-					// of descendants we are iterating
+					// causing their to potentially be stale pointers in the list
+					// of descendants we are iterating, or if it just deletes
+					// parts of the datamodel we are about to iterate
 					updateScripts(DeltaTime);
 
-					break;
+					return;
 				}
 			}
 
@@ -931,7 +934,7 @@ EngineObject::~EngineObject()
 	// Even if I call the destructors here and clear the vector as well,
 	// C++ *still* calls them again at program exit as the scope terminates.
 	// It doesn't cause a use-after-free, YET
-	delete this->DataModel;
+	this->DataModel->Destroy();
 	GameObject::s_DataModel = nullptr;
 	this->Workspace = nullptr;
 	this->DataModel = nullptr;

@@ -1,11 +1,15 @@
 -- root.luau, 21/12/2024
 
+local NodeEditor = require("scripts/modules/NodeEditor.luau")
+
 local ModelImporterPath = "models/EmbeddedTexture.glb"
 local ModelImporterScale = 0.1
 
 local ScriptExecutionFile = "scripts/shdgraphtest.luau"
 
 function Update()
+	print("rootupdate")
+	
 	if imgui_begin("Model Importer") then
 		if imgui_textlink("Model: " .. ModelImporterPath) then
 			imfd_open("Select Model", 0, "resources/models", "*.gltf,*.glb")
@@ -109,4 +113,6 @@ function Update()
 	end
 	
 	imgui_end()
+	
+	--NodeEditor()
 end
