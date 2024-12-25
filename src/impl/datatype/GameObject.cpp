@@ -291,7 +291,7 @@ GameObject* GameObject::FromGenericValue(const Reflection::GenericValue& gv)
 	return GameObject::GetObjectById(static_cast<uint32_t>((int64_t)gv.Value));
 }
 
-GameObject::~GameObject()
+GameObject::~GameObject() noexcept(false)
 {
 	if (m_HardRefCount != 0)
 		// use `::Destroy` or something maybe 24/12/2024

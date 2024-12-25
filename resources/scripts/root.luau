@@ -99,9 +99,9 @@ function Update()
 	end)
 	
 	local loadWorld = imgui_button("Load World (!)")
-	imgui_setitemtooltip("doesn't work 25/12/2024")
+	imgui_setitemtooltip("doesn't work right 25/12/2024")
 
-	if imgui_button("Load World") then
+	if loadWorld then
 		imfd_open("LoadWorld", 0, "resources/scenes/", "*.world")
 	end
 	

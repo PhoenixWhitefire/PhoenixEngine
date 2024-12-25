@@ -37,6 +37,11 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 
 #define PHX_MAIN_HANDLECRASH(c, expr) catch (c Error) { handleCrash(Error##expr, #c); }
 
+#define PHX_MAIN_CRASHHANDLERS PHX_MAIN_HANDLECRASH(std::string, ) \
+PHX_MAIN_HANDLECRASH(const char*, ) \
+PHX_MAIN_HANDLECRASH(std::bad_alloc, .what() + std::string(": System may have run out of memory")) \
+PHX_MAIN_HANDLECRASH(std::exception, .what()); \
+
 #include <filesystem>
 #include <imgui/backends/imgui_impl_opengl3.h>
 #include <imgui/backends/imgui_impl_sdl2.h>
@@ -789,19 +794,22 @@ int main(int argc, char** argv)
 	try
 	{
 		EngineObject engine{};
-		EngineInstance = &engine;
-		window = engine.Window;
 
-		//Engine->MSAASamples = 2;
+		try
+		{
+			engine.Initialize();
+			EngineInstance = &engine;
+			window = engine.Window;
 
-		Application(argc, argv);
+			//Engine->MSAASamples = 2;
 
-		Log::Save(); // in case FileRW::WriteFile throws an exception
-	}
-	PHX_MAIN_HANDLECRASH(std::string, )
-		PHX_MAIN_HANDLECRASH(const char*, )
-		PHX_MAIN_HANDLECRASH(std::bad_alloc, .what() + std::string(": System may have run out of memory"))
-		PHX_MAIN_HANDLECRASH(std::exception, .what());
+			Application(argc, argv);
+
+			Log::Save(); // in case FileRW::WriteFile throws an exception
+		}
+		PHX_MAIN_CRASHHANDLERS;
+	} // 25/12/2024 in case Engine's Destructor throws an exception
+	PHX_MAIN_CRASHHANDLERS;
 
 	// this occurs AFTER engine destructor is called
 	// 15/12/2024

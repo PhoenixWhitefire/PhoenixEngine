@@ -22,7 +22,7 @@ class GameObject : public Reflection::Reflectable
 {
 public:
 	GameObject();
-	virtual ~GameObject();
+	virtual ~GameObject() noexcept(false);
 
 	GameObject(GameObject&) = delete;
 

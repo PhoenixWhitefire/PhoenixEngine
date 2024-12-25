@@ -125,7 +125,7 @@ void EngineObject::LoadConfiguration()
 	Log::Info("Configuration loaded");
 }
 
-EngineObject::EngineObject()
+void EngineObject::Initialize()
 {
 	// 15/08/2024:
 	// Hmm, this single commented-out line look like the remnants
