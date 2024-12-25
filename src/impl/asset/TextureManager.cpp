@@ -1,4 +1,5 @@
 #include <format>
+#include <mutex>
 #include <functional>
 #include <glad/gl.h>
 #include <stb/stb_image.h>
@@ -7,6 +8,7 @@
 #include "GlobalJsonConfig.hpp"
 #include "ThreadManager.hpp"
 #include "Utilities.hpp"
+#include "Profiler.hpp"
 #include "Log.hpp"
 
 static const std::string MissingTexPath = "!Missing";
@@ -35,8 +37,21 @@ static uint8_t MissingTextureBytes[] =
 	static_cast<uint8_t>(0xFFu),
 };
 
+static uint32_t s_Pbo = UINT32_MAX;
+static void* s_PboMapping = nullptr;
+
+static std::mutex s_PboWriteAvailable;
+static bool s_PboWriteGlobal = true;
+
+static bool isValidPboCandidate(const Texture* t)
+{
+	return (t->LoadedAsynchronously && t->NumColorChannels == 3 && t->Width <= 4096 && t->Height <= 4096);
+}
+
 void TextureManager::m_UploadTextureToGpu(Texture& texture)
 {
+	PROFILE_SCOPE("Texture/UploadToGpu");
+
 	if (texture.Status == Texture::LoadStatus::Failed)
 	{
 		std::string fallbackPath = MissingTexPath;
@@ -109,9 +124,6 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 	//if ((Format == GL_RGB) && TexturePtr->Usage == TextureType::SPECULAR)
 	//	Format = GL_RED;
 
-	// TODO: texture mipmaps, 4 is the number of mipmaps
-	//glTexStorage2D(GL_TEXTURE_2D, 1, MipMapsInternalFormat, TexturePtr->ImageWidth, TexturePtr->ImageHeight);
-
 	glBindTexture(GL_TEXTURE_2D, texture.GpuId);
 
 	// "cupid-ref.jpg" some weird bullshit, doesn't happen when it's
@@ -121,19 +133,42 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 	// 30/11/2024
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-	glTexImage2D(
-		GL_TEXTURE_2D,
-		0,
-		GL_RGBA,
-		texture.Width,
-		texture.Height,
-		0,
-		Format,
-		GL_UNSIGNED_BYTE,
-		texture.TMP_ImageByteData
-	);
+	if (isValidPboCandidate(&texture))
+	{
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, s_Pbo);
+		glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
 
-	glGenerateMipmap(GL_TEXTURE_2D);
+		glTexImage2D(
+			GL_TEXTURE_2D,
+			0,
+			GL_RGBA,
+			texture.Width,
+			texture.Height,
+			0,
+			Format,
+			GL_UNSIGNED_BYTE,
+			0
+		);
+
+		s_PboMapping = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+
+		s_PboWriteGlobal = true;
+	}
+	else
+		glTexImage2D(
+			GL_TEXTURE_2D,
+			0,
+			GL_RGBA,
+			texture.Width,
+			texture.Height,
+			0,
+			Format,
+			GL_UNSIGNED_BYTE,
+			texture.TMP_ImageByteData
+		);
+
+	//glGenerateMipmap(GL_TEXTURE_2D);
 
 	// Can't free this now bcuz Engine.cpp needs it for skybox images
 	// 23/08/2024
@@ -152,6 +187,17 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 TextureManager::TextureManager()
 	: m_Textures{}, m_TexPromises{}
 {
+	glGenBuffers(1, &s_Pbo);
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, s_Pbo);
+	// 25/12/2024
+	// 4K PBO, 3 color channels
+	// 50 megs... oof
+	// you gotta do what you gotta do
+	glBufferData(GL_PIXEL_UNPACK_BUFFER, 4096ull * 4096ull * 3ull, NULL, GL_STREAM_DRAW);
+	s_PboMapping = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
+	
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+
 	// ID 0 means no texture
 	m_Textures.emplace_back();
 
@@ -195,17 +241,6 @@ TextureManager::~TextureManager()
 	
 	glDeleteTextures(static_cast<int32_t>(m_Textures.size()), textureGpuIds.data());
 
-	for (size_t promIndex = 0; promIndex < m_TexPromises.size(); promIndex++)
-	{
-		std::promise<Texture>* prom = m_TexPromises[promIndex];
-		std::shared_future<Texture>& future = m_TexFutures[promIndex];
-
-		// we don't want our async threads accessing deleted promises
-		future.wait();
-
-		delete prom;
-	}
-
 	m_Textures.clear();
 	m_StringToTextureId.clear();
 	m_TexFutures.clear();
@@ -237,6 +272,8 @@ static void emloadTexture(
 	std::string ActualPath
 )
 {
+	AsyncTexture->NumColorChannels = 4;
+
 	uint8_t* data = stbi_load(
 		ActualPath.c_str(),
 		&AsyncTexture->Width,
@@ -250,6 +287,24 @@ static void emloadTexture(
 
 	if (!data)
 		AsyncTexture->FailureReason = stbi_failure_reason();
+
+	else if (isValidPboCandidate(AsyncTexture))
+	{
+		s_PboWriteAvailable.lock();
+
+		while (!s_PboWriteGlobal)
+			std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+		s_PboWriteGlobal = false;
+
+		memcpy(
+			s_PboMapping,
+			AsyncTexture->TMP_ImageByteData,
+			static_cast<size_t>(AsyncTexture->Width) * AsyncTexture->Height * AsyncTexture->NumColorChannels
+		);
+
+		s_PboWriteAvailable.unlock();
+	}
 }
 
 uint32_t TextureManager::Assign(const Texture& texture, const std::string& name)
@@ -317,8 +372,17 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 		Texture& newTexture = this->GetTextureResource(newResourceId);
 
 		glBindTexture(GL_TEXTURE_2D, newTexture.GpuId);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		if (DoBilinearSmoothing)
+		{
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		}
+		else
+		{
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		}
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -357,6 +421,7 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 				[promise, ActualPath, newResourceId]()
 				{
 					Texture asyncTexture{};
+					asyncTexture.LoadedAsynchronously = true;
 					asyncTexture.ResourceId = newResourceId;
 
 					emloadTexture(&asyncTexture, ActualPath);
@@ -372,6 +437,8 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 		}
 		else
 		{
+			PROFILE_SCOPE("Texture/LoadSynchronous");
+
 			emloadTexture(&newTexture, ActualPath);
 			m_UploadTextureToGpu(newTexture);
 		}
@@ -389,6 +456,8 @@ Texture& TextureManager::GetTextureResource(uint32_t ResourceId)
 
 void TextureManager::FinalizeAsyncLoadedTextures()
 {
+	PROFILE_SCOPE("Texture/FinalizeAsyncs");
+
 	size_t numTexPromises = m_TexPromises.size();
 	size_t numTexFutures = m_TexFutures.size();
 
@@ -424,6 +493,7 @@ void TextureManager::FinalizeAsyncLoadedTextures()
 		image.Height = loadedImage.Height;
 		image.NumColorChannels = loadedImage.NumColorChannels;
 		image.FailureReason = loadedImage.FailureReason;
+		image.LoadedAsynchronously = loadedImage.LoadedAsynchronously;
 
 		if (image.Status == Texture::LoadStatus::Succeeded)
 		{

@@ -1501,6 +1501,15 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 	},
 
 	{
+		"imfd_getrawresult",
+		[](lua_State* L)
+		{
+			lua_pushstring(L, ImGuiFD::GetResultStringRaw());
+			return 1;
+		}
+	},
+
+	{
 		"imfd_open",
 		[](lua_State* L)
 		{

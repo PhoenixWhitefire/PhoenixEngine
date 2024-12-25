@@ -4,6 +4,7 @@
 #include <glm/gtx/euler_angles.hpp>
 #include <ImGuiFD/ImGuiFD.h>
 #include <imgui/imgui.h>
+#include <imgui/misc/cpp/imgui_stdlib.h>
 #include <glad/gl.h>
 #include <fstream>
 
@@ -18,7 +19,7 @@
 #include "Log.hpp"
 
 constexpr uint32_t OBJECT_NEW_CLASSNAME_BUFSIZE = 16;
-constexpr uint32_t MATERIAL_NEW_NAME_BUFSIZE = 32;
+constexpr uint32_t MATERIAL_NEW_NAME_BUFSIZE = 64;
 constexpr uint32_t MATERIAL_TEXTUREPATH_BUFSIZE = 64;
 constexpr const char* MATERIAL_NEW_NAME_DEFAULT = "newmaterial";
 
@@ -77,7 +78,6 @@ Editor::Editor(Renderer* renderer)
 {
 	m_MtlCreateNameBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE, MATERIAL_NEW_NAME_DEFAULT);
 	m_MtlLoadNameBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE, MATERIAL_NEW_NAME_DEFAULT);
-	m_MtlSaveNameBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE, MATERIAL_NEW_NAME_DEFAULT);
 	m_MtlDiffuseBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
 	m_MtlSpecBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
 	m_MtlNormalBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
@@ -255,7 +255,7 @@ static void mtlEditorTexture(uint32_t* TextureIdPtr, const char* Label, char* Bu
 	}
 	else
 	{
-		ImGui::InputText("", Buffer, MATERIAL_TEXTUREPATH_BUFSIZE);
+		ImGui::InputText("##", Buffer, MATERIAL_TEXTUREPATH_BUFSIZE);
 		ImGui::SetItemTooltip("Enter path directly, or hold CTRL to use a file dialog");
 	}
 
@@ -386,10 +386,12 @@ void Editor::m_RenderMaterialEditor()
 
 	static int SelectedUniformIdx = -1;
 
+	static std::string s_SaveNameBuf = "";
+
 	if (m_MtlCurItem != m_MtlPrevItem)
 	{
 		CopyStringToBuffer(m_MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE, curItem.GetShader().Name);
-		CopyStringToBuffer(m_MtlSaveNameBuf, MATERIAL_TEXTUREPATH_BUFSIZE, curItem.Name);
+		s_SaveNameBuf = curItem.Name;
 
 		CopyStringToBuffer(m_MtlDiffuseBuf, MATERIAL_TEXTUREPATH_BUFSIZE, colorMap.ImagePath);
 		CopyStringToBuffer(m_MtlSpecBuf, MATERIAL_TEXTUREPATH_BUFSIZE, metallicRoughnessMap.ImagePath);
@@ -548,7 +550,7 @@ void Editor::m_RenderMaterialEditor()
 		uniformsArray.push_back(it.first);
 
 	ImGui::ListBox(
-		"",
+		"##",
 		&SelectedUniformIdx,
 		&mtlUniformIterator,
 		&uniformsArray,
@@ -631,7 +633,7 @@ void Editor::m_RenderMaterialEditor()
 	ImGui::InputFloat("Spec pow", &curItem.SpecExponent);
 	ImGui::InputFloat("Spec mul", &curItem.SpecMultiply);
 
-	ImGui::InputText("Save As", m_MtlSaveNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
+	ImGui::InputText("Save As", &s_SaveNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
 	ImGui::SetItemTooltip("By default, this will be the name of the material you are editing, thus overwriting it");
 
 	if (ImGui::Button("Save"))
@@ -680,7 +682,7 @@ void Editor::m_RenderMaterialEditor()
 			}
 		}
 
-		std::string filePath = "materials/" + std::string(m_MtlSaveNameBuf) + ".mtl";
+		std::string filePath = "materials/" + s_SaveNameBuf + ".mtl";
 
 		FileRW::WriteFile(
 			filePath,

@@ -2,7 +2,7 @@
   "ColorMap": "textures/materials/Tiles075_4K-JPG_Color.jpg",
   "HasTranslucency": false,
   "MetallicRoughnessMap": "textures/materials/Tiles075_4K-JPG_Roughness.jpg",
-  "Shader": "worldUber",
+  "Shader": "worldUberTriProjected",
   "Uniforms": {
     "MaterialProjectionFactor": 0.02500000037252903
   },

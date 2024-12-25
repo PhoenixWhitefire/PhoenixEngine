@@ -1,5 +1,5 @@
 [INFO]: Application startup...
-[INFO]: Phoenix Engine, Main.cpp last compiled: Dec 24 2024
+[INFO]: Phoenix Engine, Main.cpp last compiled: Dec 25 2024
 [INFO]: Configuration loaded
 [INFO]: Requesting a Core OpenGL context with version 4.6
 [INFO]: Window created
@@ -9,78 +9,205 @@
 [INFO]: Engine constructed
 [INFO]: Initializing Dear ImGui 1.91.7 WIP...
 [INFO]: Scene version is 2
-[WARN]: GL Debug callback:
-	Type: Error
-	Severity: High
-	Message: Error has been generated. GL error GL_INVALID_OPERATION in (null): (ID: 173538523) Generic error
-	Source: OpenGL
-	Error ID: 1282
-
-[WARN]: GL Debug callback:
-	Type: Error
-	Severity: High
-	Message: Error has been generated. GL error GL_INVALID_OPERATION in (null): (ID: 173538523) Generic error
-	Source: OpenGL
-	Error ID: 1282
-
-[WARN]: GL Debug callback:
-	Type: Error
-	Severity: High
-	Message: Error has been generated. GL error GL_INVALID_OPERATION in (null): (ID: 173538523) Generic error
-	Source: OpenGL
-	Error ID: 1282
-
 [INFO]: Scene loaded
 [INFO]: Final initializations...
-[WARN]: GL Debug callback:
-	Type: Error
-	Severity: High
-	Message: Error has been generated. GL error GL_INVALID_OPERATION in (null): (ID: 173538523) Generic error
-	Source: OpenGL
-	Error ID: 1282
-
-[WARN]: GL Debug callback:
-	Type: Error
-	Severity: High
-	Message: Error has been generated. GL error GL_INVALID_OPERATION in (null): (ID: 173538523) Generic error
-	Source: OpenGL
-	Error ID: 1282
-
 [INFO]: Main engine loop start
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: rootupdate
-[INFO]: Scene version is 2
-[INFO]: Scene loaded
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Program/shader state performance warning: Vertex shader in program 4 is being recompiled based on GL state.
+	Source: OpenGL
+	Error ID: 131218
+
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Program/shader state performance warning: Vertex shader in program 12 is being recompiled based on GL state.
+	Source: OpenGL
+	Error ID: 131218
+
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Source: OpenGL
+	Error ID: 131154
+
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Source: OpenGL
+	Error ID: 131154
+
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Source: OpenGL
+	Error ID: 131154
+
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Source: OpenGL
+	Error ID: 131154
+
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Source: OpenGL
+	Error ID: 131154
+
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Source: OpenGL
+	Error ID: 131154
+
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Source: OpenGL
+	Error ID: 131154
+
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Source: OpenGL
+	Error ID: 131154
+
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Source: OpenGL
+	Error ID: 131154
+
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Source: OpenGL
+	Error ID: 131154
+
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Source: OpenGL
+	Error ID: 131154
+
+[ERRR]: Luau script init error: [string "Workspace.RootScript.TempScriptHost"]:4: attempt to perform arithmetic (add) on number and nil
+[ERRR]: Luau script init error: [string "Workspace.RootScript.TempScriptHost"]:4: attempt to perform arithmetic (add) on number and nil
+[INFO]: Reloading shaders...
+[INFO]: Shaders reloaded
+[INFO]: Reloading shaders...
+[INFO]: Shaders reloaded
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Program/shader state performance warning: Vertex shader in program 4 is being recompiled based on GL state.
+	Source: OpenGL
+	Error ID: 131218
+
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Program/shader state performance warning: Vertex shader in program 12 is being recompiled based on GL state.
+	Source: OpenGL
+	Error ID: 131218
+
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Source: OpenGL
+	Error ID: 131154
+
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Source: OpenGL
+	Error ID: 131154
+
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Source: OpenGL
+	Error ID: 131154
+
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Source: OpenGL
+	Error ID: 131154
+
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Source: OpenGL
+	Error ID: 131154
+
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Source: OpenGL
+	Error ID: 131154
+
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Source: OpenGL
+	Error ID: 131154
+
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Source: OpenGL
+	Error ID: 131154
+
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Source: OpenGL
+	Error ID: 131154
+
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Source: OpenGL
+	Error ID: 131154
+
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Source: OpenGL
+	Error ID: 131154
+
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Source: OpenGL
+	Error ID: 131154
+
+[WARN]: Workspace was removed, shutting down
+[INFO]: Main loop exited
+[INFO]: Engine destructing...
+[INFO]: Application shutting down...

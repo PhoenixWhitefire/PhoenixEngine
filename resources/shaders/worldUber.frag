@@ -221,9 +221,19 @@ vec3 getTriPlanarBlending(vec3 _wNorm)
 	return blending;
 }
 
+vec4 textureLod(sampler2D tex, vec2 uv, float miplvl)
+{
+	return texture(tex, uv); // 25/12/2024
+}
+
+vec4 textureLod(samplerCube tex, vec3 uv, float miplvl)
+{
+	return texture(tex, uv); // 25/12/2024
+}
+
 void main()
 {
-	float mipLevel = textureQueryLod(ColorMap, Frag_TextureUV).x;
+	float mipLevel = 0;//textureQueryLod(ColorMap, Frag_TextureUV).x;
 
 	if (IsShadowMap)
 	{
@@ -347,7 +357,8 @@ void main()
 	else
 		LightInfluence = EmissionSample * EmissionStrength + LightAmbient;
 	
-	vec3 FragCol3 = (LightInfluence + textureLod(SkyboxCubemap, reflectDir, 11).xyz);
+	LightInfluence += LightAmbient;
+	vec3 FragCol3 = (LightInfluence/* + textureLod(SkyboxCubemap, reflectDir, 11).xyz*/);
 
 	if (!DebugLightInfluence)
 		FragCol3 *= Albedo.xyz;

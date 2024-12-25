@@ -4,14 +4,14 @@ local TotalTime = 0
 
 local Camera = workspace.SceneCamera
 local CharacterControllerCreator = require("scripts/modules/character-controller.luau")
-local RoomGen = require("scripts/roomsgen.luau")
+--local RoomGen = require("scripts/roomsgen.luau")
 
 local CharacterController = CharacterControllerCreator.new(Camera)
 CharacterController:InitDefault()
 
 local DefaultCameraOffset = CharacterController.CameraOffset
 
-local Character = CharacterController.Character
+Character = CharacterController.Character
 
 local InFreecam = false
 
@@ -25,7 +25,7 @@ Light.Range = 1.5
 Light.Parent = Character
 
 Character.Name = `Player`
-Character.Transform = Matrix.fromTranslation(0, 10, 0)
+Character.Transform = Matrix.fromTranslation(8, 10, 0)
 
 local function vecMul(v1, v2)
 	return Vector3.new(v1.X * v2.X, v1.Y * v2.Y, v1.Z * v2.Z)
@@ -82,6 +82,6 @@ function Update(DeltaTime)
 	
 	workspace.Level.woodplanks.Transform *= Matrix.fromEulerAnglesXYZ(0, math.rad(DeltaTime * 15), 0)
 	
-	RoomGen()
+	--RoomGen()
 	--NodeEditor()
 end

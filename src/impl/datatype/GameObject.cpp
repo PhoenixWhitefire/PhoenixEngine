@@ -158,8 +158,7 @@ void GameObject::s_DeclareReflections()
 		},
 		[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)
 		{
-			GameObject* newParent = GameObject::GetObjectById(static_cast<uint32_t>(gv.AsInteger()));
-			static_cast<GameObject*>(p)->SetParent(newParent);
+			static_cast<GameObject*>(p)->SetParent(GameObject::FromGenericValue(gv));
 		}
 	);
 

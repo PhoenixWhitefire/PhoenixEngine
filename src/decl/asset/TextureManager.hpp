@@ -30,6 +30,8 @@ struct Texture
 	DimensionType Type = DimensionType::Texture2D;
 	LoadStatus Status = LoadStatus::NotAttempted;
 	bool DoBilinearSmoothing = true;
+	
+	bool LoadedAsynchronously = false;
 
 	// De-allocated after the Texture is uploaded to the GPU
 	uint8_t* TMP_ImageByteData{};

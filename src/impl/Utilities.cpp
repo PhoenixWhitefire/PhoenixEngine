@@ -6,10 +6,8 @@ static auto s_ChronoStartTime = std::chrono::high_resolution_clock::now();
 
 void CopyStringToBuffer(char* buf, size_t capacity, std::string string)
 {
-	string.resize(capacity - 2);
-	memcpy(buf, string.c_str(), capacity - 2);
-
-	//buf[std::min(capacity, string.length())] = 0;
+	for (size_t i = 0; i < capacity; i++)
+		buf[i] = i < string.length() ? string.at(i) : 0;
 }
 
 char* BufferInitialize(size_t capacity, const std::string& value)

@@ -16,7 +16,6 @@
 PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(Script);
 
 static bool s_DidInitReflection = false;
-static lua_State* DefaultState = nullptr;
 
 static auto api_newobject = [](lua_State* L)
 	{
@@ -151,7 +150,7 @@ static auto api_gameobjecttostring = [](lua_State* L)
 		if (object)
 			lua_pushstring(L, object->GetFullName().c_str());
 		else
-			lua_pushnil(L);
+			lua_pushstring(L, "<!Deleted GameObject!>");
 
 		return 1;
 	};
@@ -308,17 +307,17 @@ static void* l_alloc(void*, void* ptr, size_t, size_t nsize)
 		return realloc(ptr, nsize);
 }
 
-static void initDefaultState()
+static lua_State* createState()
 {
-	DefaultState = lua_newstate(l_alloc, nullptr);
+	lua_State* state = lua_newstate(l_alloc, nullptr);
 	// Load Standard Library ('print' etc)
 	// TODO: `require` is NOT part of the STL, copy
 	// it from Luau REPL (`lua_require`)
-	luaL_openlibs(DefaultState);
-	luaopen_vector(DefaultState);
+	luaL_openlibs(state);
+	luaopen_vector(state);
 
 	lua_pushcfunction(
-		DefaultState,
+		state,
 		[](lua_State* L)
 		{
 			// FROM:
@@ -346,30 +345,30 @@ static void initDefaultState()
 		},
 		"PhxPrintOverride"
 	);
-	lua_setglobal(DefaultState, "print");
+	lua_setglobal(state, "print");
 
 	// Vector3
 	{
-		lua_newtable(DefaultState);
+		lua_newtable(state);
 
-		lua_pushcfunction(DefaultState, api_newvec3, "Vector3.new");
-		lua_setfield(DefaultState, -2, "new");
+		lua_pushcfunction(state, api_newvec3, "Vector3.new");
+		lua_setfield(state, -2, "new");
 
-		lua_setglobal(DefaultState, "Vector3");
+		lua_setglobal(state, "Vector3");
 
-		luaL_newmetatable(DefaultState, "Vector3");
+		luaL_newmetatable(state, "Vector3");
 
-		lua_pushcfunction(DefaultState, api_vec3index, "Vector3.__index");
-		lua_setfield(DefaultState, -2, "__index");
+		lua_pushcfunction(state, api_vec3index, "Vector3.__index");
+		lua_setfield(state, -2, "__index");
 
-		//lua_pushcfunction(DefaultState, api_vec3newindex, "Vector3.__newindex");
-		//lua_setfield(DefaultState, -2, "__newindex");
+		//lua_pushcfunction(state, api_vec3newindex, "Vector3.__newindex");
+		//lua_setfield(state, -2, "__newindex");
 
-		lua_pushcfunction(DefaultState, api_vec3tostring, "Vector3.__tostring");
-		lua_setfield(DefaultState, -2, "__tostring");
+		lua_pushcfunction(state, api_vec3tostring, "Vector3.__tostring");
+		lua_setfield(state, -2, "__tostring");
 
 		lua_pushcfunction(
-			DefaultState,
+			state,
 			[](lua_State* L)
 			{
 				Vector3 a = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -2));
@@ -381,10 +380,10 @@ static void initDefaultState()
 			},
 			"Vector3.__add"
 		);
-		lua_setfield(DefaultState, -2, "__add");
+		lua_setfield(state, -2, "__add");
 
 		lua_pushcfunction(
-			DefaultState,
+			state,
 			[](lua_State* L)
 			{
 				Vector3 a = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -2));
@@ -396,10 +395,10 @@ static void initDefaultState()
 			},
 			"Vector3.__sub"
 		);
-		lua_setfield(DefaultState, -2, "__sub");
+		lua_setfield(state, -2, "__sub");
 
 		lua_pushcfunction(
-			DefaultState,
+			state,
 			[](lua_State* L)
 			{
 				Vector3 a = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -2));
@@ -411,42 +410,42 @@ static void initDefaultState()
 			},
 			"Vector3.__mul"
 		);
-		lua_setfield(DefaultState, -2, "__mul");
+		lua_setfield(state, -2, "__mul");
 
-		lua_pushstring(DefaultState, "Vector3");
-		lua_setfield(DefaultState, -2, "__type");
+		lua_pushstring(state, "Vector3");
+		lua_setfield(state, -2, "__type");
 	}
 
 	// Color
 	{
-		lua_newtable(DefaultState);
+		lua_newtable(state);
 
-		lua_pushcfunction(DefaultState, api_newcol, "Color.new");
-		lua_setfield(DefaultState, -2, "new");
+		lua_pushcfunction(state, api_newcol, "Color.new");
+		lua_setfield(state, -2, "new");
 
-		lua_setglobal(DefaultState, "Color");
+		lua_setglobal(state, "Color");
 
-		luaL_newmetatable(DefaultState, "Color");
+		luaL_newmetatable(state, "Color");
 
-		lua_pushcfunction(DefaultState, api_colindex, "Color.__index");
-		lua_setfield(DefaultState, -2, "__index");
+		lua_pushcfunction(state, api_colindex, "Color.__index");
+		lua_setfield(state, -2, "__index");
 
-		//lua_pushcfunction(DefaultState, api_vec3newindex, "Vector3.__newindex");
-		//lua_setfield(DefaultState, -2, "__newindex");
+		//lua_pushcfunction(state, api_vec3newindex, "Vector3.__newindex");
+		//lua_setfield(state, -2, "__newindex");
 
-		lua_pushcfunction(DefaultState, api_coltostring, "Color.__tostring");
-		lua_setfield(DefaultState, -2, "__tostring");
+		lua_pushcfunction(state, api_coltostring, "Color.__tostring");
+		lua_setfield(state, -2, "__tostring");
 
-		lua_pushstring(DefaultState, "Color");
-		lua_setfield(DefaultState, -2, "__type");
+		lua_pushstring(state, "Color");
+		lua_setfield(state, -2, "__type");
 	}
 
 	// Matrix 
 	{
-		lua_newtable(DefaultState);
+		lua_newtable(state);
 
 		lua_pushcfunction(
-			DefaultState,
+			state,
 			[](lua_State* L)
 			{
 				Reflection::GenericValue gv{ glm::mat4(1.f) };
@@ -456,10 +455,10 @@ static void initDefaultState()
 			},
 			"Matrix.new"
 		);
-		lua_setfield(DefaultState, -2, "new");
+		lua_setfield(state, -2, "new");
 
 		lua_pushcfunction(
-			DefaultState,
+			state,
 			[](lua_State* L)
 			{
 				glm::mat4 m(1.f);
@@ -500,10 +499,10 @@ static void initDefaultState()
 			},
 			"Matrix.fromTranslation"
 		);
-		lua_setfield(DefaultState, -2, "fromTranslation");
+		lua_setfield(state, -2, "fromTranslation");
 
 		lua_pushcfunction(
-			DefaultState,
+			state,
 			[](lua_State* L)
 			{
 				float x = static_cast<float>(luaL_checknumber(L, 1));
@@ -521,10 +520,10 @@ static void initDefaultState()
 			},
 			"Matrix.fromEulerAnglesXYZ"
 		);
-		lua_setfield(DefaultState, -2, "fromEulerAnglesXYZ");
+		lua_setfield(state, -2, "fromEulerAnglesXYZ");
 
 		lua_pushcfunction(
-			DefaultState,
+			state,
 			[](lua_State* L)
 			{
 				Vector3& a = *(Vector3*)luaL_checkudata(L, 1, "Vector3");
@@ -539,17 +538,17 @@ static void initDefaultState()
 			},
 			"Matrix.lookAt"
 		);
-		lua_setfield(DefaultState, -2, "lookAt");
+		lua_setfield(state, -2, "lookAt");
 
-		lua_setglobal(DefaultState, "Matrix");
+		lua_setglobal(state, "Matrix");
 
-		luaL_newmetatable(DefaultState, "Matrix");
+		luaL_newmetatable(state, "Matrix");
 
-		lua_pushstring(DefaultState, "Matrix");
-		lua_setfield(DefaultState, -2, "__type");
+		lua_pushstring(state, "Matrix");
+		lua_setfield(state, -2, "__type");
 
 		lua_pushcfunction(
-			DefaultState,
+			state,
 			[](lua_State* L)
 			{
 				glm::mat4& m = *(glm::mat4*)luaL_checkudata(L, 1, "Matrix");
@@ -572,10 +571,10 @@ static void initDefaultState()
 			},
 			"Matrix.__index"
 		);
-		lua_setfield(DefaultState, -2, "__index");
+		lua_setfield(state, -2, "__index");
 
 		lua_pushcfunction(
-			DefaultState,
+			state,
 			[](lua_State* L)
 			{
 				glm::mat4& a = *(glm::mat4*)luaL_checkudata(L, 1, "Matrix");
@@ -587,48 +586,48 @@ static void initDefaultState()
 			},
 			"Matrix.__mul"
 		);
-		lua_setfield(DefaultState, -2, "__mul");
+		lua_setfield(state, -2, "__mul");
 	}
 
 	// GameObject
 	{
-		lua_newtable(DefaultState);
+		lua_newtable(state);
 
-		lua_pushcfunction(DefaultState, api_newobject, "GameObject.new");
-		lua_setfield(DefaultState, -2, "new");
+		lua_pushcfunction(state, api_newobject, "GameObject.new");
+		lua_setfield(state, -2, "new");
 
-		lua_setglobal(DefaultState, "GameObject");
+		lua_setglobal(state, "GameObject");
 
-		luaL_newmetatable(DefaultState, "GameObject");
+		luaL_newmetatable(state, "GameObject");
 
-		lua_pushcfunction(DefaultState, api_gameobjindex, "GameObject.__index");
-		lua_setfield(DefaultState, -2, "__index");
+		lua_pushcfunction(state, api_gameobjindex, "GameObject.__index");
+		lua_setfield(state, -2, "__index");
 
-		lua_pushcfunction(DefaultState, api_gameobjnewindex, "GameObject.__newindex");
-		lua_setfield(DefaultState, -2, "__newindex");
+		lua_pushcfunction(state, api_gameobjnewindex, "GameObject.__newindex");
+		lua_setfield(state, -2, "__newindex");
 
-		lua_pushcfunction(DefaultState, api_gameobjecttostring, "GameObject.__tostring");
-		lua_setfield(DefaultState, -2, "__tostring");
+		lua_pushcfunction(state, api_gameobjecttostring, "GameObject.__tostring");
+		lua_setfield(state, -2, "__tostring");
 
-		lua_pushstring(DefaultState, "GameObject");
-		lua_setfield(DefaultState, -2, "__type");
+		lua_pushstring(state, "GameObject");
+		lua_setfield(state, -2, "__type");
 	}
 
-	ScriptEngine::L::PushGameObject(DefaultState, GameObject::s_DataModel);
-	lua_setglobal(DefaultState, "game");
+	ScriptEngine::L::PushGameObject(state, GameObject::s_DataModel);
+	lua_setglobal(state, "game");
 
-	ScriptEngine::L::PushGameObject(DefaultState, GameObject::s_DataModel->GetChild("Workspace"));
-	lua_setglobal(DefaultState, "workspace");
+	ScriptEngine::L::PushGameObject(state, GameObject::s_DataModel->GetChild("Workspace"));
+	lua_setglobal(state, "workspace");
 
 	for (auto& pair : ScriptEngine::L::GlobalFunctions)
 	{
 		lua_CFunction func = pair.second;
 
-		lua_pushlightuserdata(DefaultState, func);
-		lua_pushstring(DefaultState, pair.first.c_str());
+		lua_pushlightuserdata(state, func);
+		lua_pushstring(state, pair.first.c_str());
 
 		lua_pushcclosure(
-			DefaultState,
+			state,
 			[](lua_State* L)
 			{
 				PROFILE_SCOPE(lua_tostring(L, lua_upvalueindex(2)));
@@ -652,8 +651,10 @@ static void initDefaultState()
 			pair.first.c_str(),
 			2
 		);
-		lua_setglobal(DefaultState, pair.first.c_str());
+		lua_setglobal(state, pair.first.c_str());
 	}
+
+	return state;
 }
 
 void Object_Script::s_DeclareReflections()
@@ -698,9 +699,6 @@ Object_Script::Object_Script()
 {
 	this->Name = "Script";
 	this->ClassName = "Script";
-
-	if (!DefaultState)
-		initDefaultState();
 
 	// `L` is initialized in Object_Script::Reload
 	m_L = nullptr;
@@ -833,7 +831,12 @@ bool Object_Script::Reload()
 
 	m_StaleSource = false;
 	
-	m_L = lua_newthread(DefaultState);
+	// `resetthread` doesn't get rid of globals btw
+	// new things learned every day
+	// 24/12/2024
+	if (m_L)
+		lua_close(m_L);
+	m_L = createState();
 
 	std::string fullName = this->GetFullName();
 

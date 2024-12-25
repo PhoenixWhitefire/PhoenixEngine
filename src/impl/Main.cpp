@@ -516,11 +516,31 @@ static void drawUI(Reflection::GenericValue Data)
 		// always pop the snapshot, otherwise they'll build-up
 		std::unordered_map<std::string, double> snapshot = Profiler::PopSnapshot();
 
-		if (ImGui::Begin("Info"))
+		if (ImGui::Begin("Info") && snapshot.size() > 0)
 		{
 			ImGui::Text("FPS: %d", EngineInstance->FramesPerSecond);
 			ImGui::Text("Frame time: %dms", (int)ceil(EngineInstance->FrameTime * 1000));
 			ImGui::Text("Draw calls: %zi", EngineJsonConfig.value("renderer_drawcallcount", 0ull));
+
+			static float FrameTimesHisto[100] = { 0 };
+
+			float minv = FLT_MAX;
+
+			for (size_t i = 0; i < 99; i++)
+			{
+				minv = std::min(minv, std::min(FrameTimesHisto[i], FrameTimesHisto[i + 1]));
+				FrameTimesHisto[i] = FrameTimesHisto[i + 1];
+			}
+
+			FrameTimesHisto[99] = static_cast<float>(snapshot.at("Frame"));
+
+			static auto FrameTimeHistoPeeker = [](void* data, int idx)
+				-> float
+				{
+					return ((float*)data)[idx];
+				};
+
+			ImGui::PlotHistogram("##", FrameTimeHistoPeeker, FrameTimesHisto, 100, 0, 0, minv, 1/30.f);
 
 			ImGui::Text("--- PROFILING ---");
 
