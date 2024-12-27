@@ -23,7 +23,8 @@ function Controller.new(Camera)
         isMouseLocked = false,
         totalTime = 0,
         lastJumped = 0,
-        cameraPitch = 0
+        cameraPitch = 0,
+        roll = 0
     }, Controller)
 end
 
@@ -45,7 +46,7 @@ end
 function Controller:Update(DeltaTime)
     self.totalTime += DeltaTime
     
-    local moveDirection = self:getMoveDirection()
+    local moveDirection, inputDirection = self:getMoveDirection()
     local rotationX, rotationY = self:getRotationVector()
     
     local floorRayHit = world_aabbcast(
@@ -80,15 +81,23 @@ function Controller:Update(DeltaTime)
     
     local camTransform
     
+    local rollAdd = -moveDirection.Normalized:Dot(self.Camera.Transform.Right) * 0.005 * inputDirection.X
+    --rollAdd = moveDirection.X * 0.05
+    if rollAdd == rollAdd then
+        self.roll += rollAdd
+    end
+
+    self.roll -= DeltaTime * self.roll
+
     if self.FirstPerson then
         camTransform = self.Character.Transform
                         * self.CameraOffset
-                        * Matrix.fromEulerAnglesXYZ(self.cameraPitch, 0, 0)
-			--* Matrix.fromTranslation(self.Character.LinearVelocity * DeltaTime)
+                        * Matrix.fromEulerAnglesXYZ(self.cameraPitch, 0, self.roll)
     else
         camTransform = self.Character.Transform
                         * Matrix.fromEulerAnglesXYZ(self.cameraPitch, 0, 0)
                         * self.CameraOffset
+                        * Matrix.fromEulerAnglesXYZ(0, 0, self.roll)
     end
     
     self.Camera.Transform = camTransform
@@ -104,7 +113,7 @@ function Controller:getMoveDirection()
         matrix_getv(trans, 3, 0) - matrix_getv(self.Camera.Transform, 3, 0),
         0,
         matrix_getv(trans, 3, 2) - matrix_getv(self.Camera.Transform, 3, 2)
-    )
+    ), Vector3.new(moveX, 0, moveZ)
     
     --[[
     local transrights = Camera.Transform

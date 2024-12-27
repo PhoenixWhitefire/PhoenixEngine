@@ -17,6 +17,8 @@ class EngineObject
 public:
 	~EngineObject();
 
+	static EngineObject* Get();
+
 	// Initialize Engine systems, can throw exceptions
 	void Initialize();
 

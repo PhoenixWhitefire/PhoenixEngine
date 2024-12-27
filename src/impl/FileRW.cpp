@@ -27,9 +27,9 @@ static bool createDirectoryRecursive(const std::string& dirName, std::error_code
 	return true;
 }
 
-std::string FileRW::ReadFile(const std::string& ShortPath, bool* DoesFileExist)
+std::string FileRW::ReadFile(const std::string& ShortPath, bool* DoesFileExist, bool PrependResDir)
 {
-	std::string actualPath = FileRW::GetAbsolutePath(ShortPath);
+	std::string actualPath = PrependResDir ? FileRW::GetAbsolutePath(ShortPath) : ShortPath;
 
 	std::ifstream file(actualPath, std::ios::binary);
 

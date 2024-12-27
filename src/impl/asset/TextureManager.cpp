@@ -481,6 +481,8 @@ void TextureManager::FinalizeAsyncLoadedTextures()
 		if (!f.valid() || (f.wait_for(std::chrono::seconds(0)) != std::future_status::ready))
 			continue;
 
+		PROFILE_PROCEDURE("WaitForFuture_ShouldntTakeTooLong", f.wait);
+
 		const Texture& loadedImage = f.get();
 
 		Texture& image = m_Textures.at(loadedImage.ResourceId);

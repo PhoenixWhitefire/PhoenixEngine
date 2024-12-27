@@ -7,11 +7,9 @@ local CharacterControllerCreator = require("scripts/modules/character-controller
 --local RoomGen = require("scripts/roomsgen.luau")
 
 local CharacterController = CharacterControllerCreator.new(Camera)
-CharacterController:InitDefault()
+local Character = CharacterController.Character
 
 local DefaultCameraOffset = CharacterController.CameraOffset
-
-Character = CharacterController.Character
 
 local InFreecam = false
 
@@ -19,13 +17,16 @@ local lastSwitchedPerspectives = 0
 
 local SwitchToFreecamNextFrame = 0
 
-local Light = GameObject.new("PointLight")
-Light.Brightness = 5
-Light.Range = 1.5
-Light.Parent = Character
-
-Character.Name = `Player`
-Character.Transform = Matrix.fromTranslation(8, 10, 0)
+local function reset()
+	CharacterController:InitDefault()
+	Character = CharacterController.Character
+	
+	Character.Parent = workspace
+	Character.Name = `Player`
+	Character.Transform = Matrix.fromTranslation(8, 10, 0)
+	
+	DefaultCameraOffset = CharacterController.CameraOffset
+end
 
 local function vecMul(v1, v2)
 	return Vector3.new(v1.X * v2.X, v1.Y * v2.Y, v1.Z * v2.Z)
@@ -40,6 +41,11 @@ function Update(DeltaTime)
 		if SwitchToFreecamNextFrame <= 0 then
 			Camera.UseSimpleController = true
 		end
+	end
+	
+	if input_keypressed("t") and TotalTime - lastSwitchedPerspectives > 0.5 then
+		reset()
+		lastSwitchedPerspectives = TotalTime
 	end
 	
 	if input_keypressed("f") and TotalTime - lastSwitchedPerspectives > 0.5 then
@@ -61,8 +67,8 @@ function Update(DeltaTime)
 		if CharacterController.FirstPerson then
 			CharacterController.CameraOffset = DefaultCameraOffset
 		else
-			CharacterController.CameraOffset = DefaultCameraOffset * Matrix.fromTranslation(0, -5, -15)
-			CharacterController.CameraTargetOffset = DefaultCameraOffset
+			CharacterController.CameraOffset = DefaultCameraOffset * Matrix.fromTranslation(0, 2, -20)
+			--CharacterController.CameraTargetOffset = DefaultCameraOffset
 		end
 	end
 	
@@ -80,8 +86,10 @@ function Update(DeltaTime)
 		end
 	end
 	
-	workspace.Level.woodplanks.Transform *= Matrix.fromEulerAnglesXYZ(0, math.rad(DeltaTime * 15), 0)
+	--workspace.Level.woodplanks.Transform *= Matrix.fromEulerAnglesXYZ(0, math.rad(DeltaTime * 15), 0)
 	
 	--RoomGen()
 	--NodeEditor()
 end
+
+reset()

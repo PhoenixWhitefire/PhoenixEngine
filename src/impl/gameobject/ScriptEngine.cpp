@@ -558,7 +558,7 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 	"input_keypressed",
 	[](lua_State* L)
 	{
-		if (UserInput::InputBeingSunk)
+		if (ImGui::GetIO().WantCaptureKeyboard)
 			lua_pushboolean(L, false);
 		else
 		{
@@ -574,7 +574,7 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 	"input_mouse_bdown",
 	[](lua_State* L)
 	{
-		if (UserInput::InputBeingSunk)
+		if (ImGui::GetIO().WantCaptureMouse)
 			lua_pushboolean(L, false);
 		else
 		{

@@ -125,6 +125,17 @@ public:
 		Object->IncrementHardRefs();
 	}
 
+	GameObjectRef(GameObjectRef& Other)
+		: m_TargetId(Other.Contained()->ObjectId)
+	{
+		this->Contained()->IncrementHardRefs();
+	}
+	GameObjectRef(GameObjectRef&& Other)
+		: m_TargetId(Other.Contained()->ObjectId)
+	{
+		this->Contained()->IncrementHardRefs();
+	}
+
 	~GameObjectRef()
 	{
 		this->Contained()->DecrementHardRefs();
@@ -148,6 +159,9 @@ public:
 	{
 		return static_cast<GameObject*>(Contained()) == them;
 	}
+
+	GameObjectRef& operator = (GameObjectRef&&) = delete;
+	GameObjectRef& operator = (GameObjectRef&) = delete;
 
 private:
 	uint32_t m_TargetId = PHX_GAMEOBJECT_NULL_ID;

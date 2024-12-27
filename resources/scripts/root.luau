@@ -1,10 +1,13 @@
 -- root.luau, 21/12/2024
 
 local NodeEditor = require("scripts/modules/NodeEditor.luau")
+local Editor = require("scripts/modules/Editor.luau")
 
 local ModelImporterScale = 0.1
 
 local ScriptExecutionFile = "scripts/shdgraphtest.luau"
+
+local DefaultSubLevel = "scenes/dev_fmtv2.hxscene"
 
 local function imfdOnSelectedCallback(DialogName, Callback)
 	if imfd_begin(DialogName) then
@@ -38,6 +41,16 @@ local function imfdOnSelectedPathOverride(DialogName, CurrentPath)
 	end)
 	
 	return path
+end
+
+local function loadSubLevel(Path)
+	for _, v in workspace.Level:GetChildren() do
+		v:Destroy()
+	end
+	
+	for _, root in scene_load(Path) do
+		root.Parent = workspace.Level
+	end
 end
 
 function Update()
@@ -136,19 +149,12 @@ function Update()
 		imfd_open("LoadSubLevel", 0, "resources/scenes/", "*.hxscene")
 	end
 	
-	imfdOnSelectedCallback("LoadSubLevel", function(Path)
-		workspace.Level:Destroy()
-		
-		local subLevelContainer = GameObject.new("Model")
-		subLevelContainer.Name = "Level"
-		subLevelContainer.Parent = workspace
-		
-		for _, root in scene_load(Path) do
-			root.Parent = subLevelContainer
-		end
-	end)
+	imfdOnSelectedCallback("LoadSubLevel", loadSubLevel)
 	
 	imgui_end()
 	
+	Editor(DeltaTime)
 	--NodeEditor()
 end
+
+loadSubLevel(DefaultSubLevel)

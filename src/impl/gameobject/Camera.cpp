@@ -62,7 +62,7 @@ glm::mat4 Object_Camera::GetMatrixForAspectRatio(float AspectRatio) const
 	glm::mat4 viewMatrix = glm::lookAt(
 		position,
 		position + forwardVec,
-		(glm::vec3)Vector3::yAxis
+		glm::vec3(this->Transform[1])
 	);
 
 	return projectionMatrix * viewMatrix;

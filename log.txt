@@ -1,5 +1,5 @@
 [INFO]: Application startup...
-[INFO]: Phoenix Engine, Main.cpp last compiled: Dec 25 2024
+[INFO]: Phoenix Engine, Main.cpp last compiled: Dec 27 2024
 [INFO]: Configuration loaded
 [INFO]: Requesting a Core OpenGL context with version 4.6
 [INFO]: Window created
@@ -12,6 +12,8 @@
 [INFO]: Scene loaded
 [INFO]: Final initializations...
 [INFO]: Main engine loop start
+[INFO]: Scene version is 2
+[INFO]: Scene loaded
 [WARN]: GL Debug callback:
 	Type: Performance
 	Severity: Medium
@@ -22,7 +24,7 @@
 [WARN]: GL Debug callback:
 	Type: Performance
 	Severity: Medium
-	Message: Program/shader state performance warning: Vertex shader in program 12 is being recompiled based on GL state.
+	Message: Program/shader state performance warning: Vertex shader in program 10 is being recompiled based on GL state.
 	Source: OpenGL
 	Error ID: 131218
 
@@ -103,8 +105,6 @@
 	Source: OpenGL
 	Error ID: 131154
 
-[INFO]: Scene version is 2
-[INFO]: Scene loaded
 [INFO]: Main loop exited
 [INFO]: Engine destructing...
 [INFO]: Application shutting down...

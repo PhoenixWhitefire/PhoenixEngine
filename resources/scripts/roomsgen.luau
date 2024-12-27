@@ -34,8 +34,8 @@ local function genNextRoom()
 	CurDoor.PhysicsCollisions = false
 end
 
-return function()
-	Player = workspace.Player
+function Update()
+	Player = workspace.Level.Player
 	
 	local inDoor = world_aabbquery(CurDoor.Transform.Position, CurDoor.Size, {})
 	local generateNextRoom = false

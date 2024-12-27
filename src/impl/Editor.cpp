@@ -255,7 +255,7 @@ static void mtlEditorTexture(uint32_t* TextureIdPtr, const char* Label, char* Bu
 	}
 	else
 	{
-		ImGui::InputText("##", Buffer, MATERIAL_TEXTUREPATH_BUFSIZE);
+		ImGui::InputText(Label, Buffer, MATERIAL_TEXTUREPATH_BUFSIZE);
 		ImGui::SetItemTooltip("Enter path directly, or hold CTRL to use a file dialog");
 	}
 

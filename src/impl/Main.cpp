@@ -40,7 +40,11 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 #define PHX_MAIN_CRASHHANDLERS PHX_MAIN_HANDLECRASH(std::string, ) \
 PHX_MAIN_HANDLECRASH(const char*, ) \
 PHX_MAIN_HANDLECRASH(std::bad_alloc, .what() + std::string(": System may have run out of memory")) \
+PHX_MAIN_HANDLECRASH(nlohmann::json::type_error, .what()) \
+PHX_MAIN_HANDLECRASH(nlohmann::json::parse_error, .what()) \
 PHX_MAIN_HANDLECRASH(std::exception, .what()); \
+
+#include <ImGuiFD/ImGuiFD.h>
 
 #include <filesystem>
 #include <imgui/backends/imgui_impl_opengl3.h>
@@ -521,23 +525,58 @@ static void drawUI(Reflection::GenericValue Data)
 		// always pop the snapshot, otherwise they'll build-up
 		std::unordered_map<std::string, double> snapshot = Profiler::PopSnapshot();
 
+		static nlohmann::json ProfileInfoHisto[100] = {};
+		static float FrameTimesHisto[100] = { 0 };
+
 		if (ImGui::Begin("Info") && snapshot.size() > 0)
 		{
 			ImGui::Text("FPS: %d", EngineInstance->FramesPerSecond);
-			ImGui::Text("Frame time: %dms", (int)ceil(EngineInstance->FrameTime * 1000));
+			ImGui::Text("Frame time: %dms", (int)std::ceil(EngineInstance->FrameTime * 1000));
 			ImGui::Text("Draw calls: %zi", EngineJsonConfig.value("renderer_drawcallcount", 0ull));
 
-			static float FrameTimesHisto[100] = { 0 };
+			ImGui::Text("--- PROFILING ---");
 
-			float minv = FLT_MAX;
+			static bool InfoCollectionPaused = true;
 
-			for (size_t i = 0; i < 99; i++)
+			nlohmann::json profilerTimingsTree{};
+
+			if (!InfoCollectionPaused)
+				for (auto& it : snapshot)
+				{
+					nlohmann::json* last = &profilerTimingsTree;
+
+					std::vector<std::string> split = stringSplit(it.first, "/");
+
+					for (size_t catIndex = 0; catIndex < split.size(); catIndex++)
+						if (catIndex < split.size() - 1)
+						{
+							last = &((*last)[split[catIndex]]);
+							//(*last)["_t"] = it.second;
+						}
+						else
+							(*last)[split[catIndex]]["_t"] = it.second;
+				}
+
+			if (ProfileInfoHisto->size() == 0)
+				for (int i = 0; i < 100; i++)
+				{
+					ProfileInfoHisto[i] = nlohmann::json::object();
+					ProfileInfoHisto[i]["Frame"] = nlohmann::json::object();
+					ProfileInfoHisto[i]["Frame"]["_t"] = 0.f;
+				}
+
+			if (!InfoCollectionPaused)
 			{
-				minv = std::min(minv, std::min(FrameTimesHisto[i], FrameTimesHisto[i + 1]));
-				FrameTimesHisto[i] = FrameTimesHisto[i + 1];
+				ProfileInfoHisto[99] = profilerTimingsTree;
+				FrameTimesHisto[99] = profilerTimingsTree["Frame"]["_t"];
 			}
 
-			FrameTimesHisto[99] = static_cast<float>(snapshot.at("Frame"));
+			if (!InfoCollectionPaused)
+				for (int i = 0; i < 99; i++)
+				{
+					ProfileInfoHisto[i] = ProfileInfoHisto[i + 1];
+					FrameTimesHisto[i] = FrameTimesHisto[i + 1];
+				}
 
 			static auto FrameTimeHistoPeeker = [](void* data, int idx)
 				-> float
@@ -545,39 +584,102 @@ static void drawUI(Reflection::GenericValue Data)
 					return ((float*)data)[idx];
 				};
 
-			ImGui::PlotHistogram("##", FrameTimeHistoPeeker, FrameTimesHisto, 100, 0, 0, minv, 1/30.f);
+			ImGui::PlotHistogram("MS", FrameTimeHistoPeeker, FrameTimesHisto, 100, 0, 0, 1/120.f, 1/30.f);
 
-			ImGui::Text("--- PROFILING ---");
+			static int FocusedProfilingInfoIdx = 99;
 
-			nlohmann::json profilerTimingsTree{};
-
-			for (auto& it : snapshot)
+			if (ImGui::IsItemClicked())
 			{
-				nlohmann::json* last = &profilerTimingsTree;
+				int mouseX = 0;
+				SDL_GetMouseState(&mouseX, NULL);
 
-				std::vector<std::string> split = stringSplit(it.first, "/");
+				ImVec2 min = ImGui::GetItemRectMin() + ImGui::GetStyle().FramePadding;
+				ImVec2 max = ImGui::GetItemRectMax() - ImGui::GetStyle().FramePadding;
 
-				for (size_t catIndex = 0; catIndex < split.size(); catIndex++)
-					if (catIndex < split.size() - 1)
-					{
-						last = &((*last)[split[catIndex]]);
-						//(*last)["_t"] = it.second;
-					}
-					else
-						(*last)[split[catIndex]]["_t"] = it.second;
+				const float t = std::clamp((ImGui::GetIO().MousePos.x - min.x) / (max.x - min.x), 0.0f, 0.9999f);
+				FocusedProfilingInfoIdx = (int)(t * 100);
 			}
 
-			ImGui::TreePush("Profiler Tree UI");
+			if (InfoCollectionPaused && ImGui::Button("Unpause"))
+				InfoCollectionPaused = false;
 
-			recurseProfilerUI(profilerTimingsTree);
+			else if (!InfoCollectionPaused && ImGui::Button("Pause"))
+				InfoCollectionPaused = true;
 
-			ImGui::TreePop();
+			recurseProfilerUI(ProfileInfoHisto[FocusedProfilingInfoIdx]);
 
-			for (auto& it : Profiler::PopSnapshot())
-				ImGui::Text("%s: %f", it.first.c_str(), it.second);
+			if (ImGui::Button("Save"))
+				ImGuiFD::OpenDialog("SaveProfilingData", ImGuiFDMode_SaveFile, "", "*.json");
+
+			if (ImGui::Button("Load"))
+				ImGuiFD::OpenDialog("LoadProfilingData", ImGuiFDMode_LoadFile, "", "*.json");
 
 		}
 		ImGui::End();
+
+		if (ImGuiFD::BeginDialog("SaveProfilingData"))
+		{
+			if (ImGuiFD::ActionDone())
+			{
+				if (ImGuiFD::SelectionMade())
+				{
+					std::string result = ImGuiFD::GetResultStringRaw();
+					std::string contents = "";
+
+					if (result.find(".json") == std::string::npos)
+						result += ".json";
+
+					result = ("./" + result).c_str();
+
+					for (int i = 0; i < 100; i++)
+						contents += ProfileInfoHisto[i].dump(-1) + '\n';
+
+					try
+					{
+						FileRW::WriteFile(result, contents, false);
+					}
+					catch (std::string err)
+					{
+						Log::Error("While trying to save profiling data: " + err);
+					}
+				}
+
+				ImGuiFD::CloseCurrentDialog();
+			}
+
+			ImGuiFD::EndDialog();
+		}
+
+		if (ImGuiFD::BeginDialog("LoadProfilingData"))
+		{
+			if (ImGuiFD::ActionDone())
+			{
+				if (ImGuiFD::SelectionMade())
+				{
+					std::string result = ImGuiFD::GetSelectionPathString(0);
+					bool exists = false;
+					std::string contents = FileRW::ReadFile(result, &exists, false);
+
+					if (exists)
+						for (int i = 0; i < 100; i++)
+						{
+							size_t nextLine = contents.find_first_of('\n');
+
+							std::string substr = contents.substr(0, nextLine);
+
+							ProfileInfoHisto[i] = nlohmann::json::parse(substr);
+
+							contents = contents.substr(nextLine + 1);
+						}
+					else
+						Log::Error("Couldn't load profiling data from file " + result);
+				}
+
+				ImGuiFD::CloseCurrentDialog();
+			}
+
+			ImGuiFD::EndDialog();
+		}
 
 		if (ImGui::Begin("Settings"))
 		{

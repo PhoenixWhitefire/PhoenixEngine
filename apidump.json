@@ -344,6 +344,7 @@
     "Name": "String",
     "ObjectId": "Integer",
     "Parent": "GameObject",
-    "SceneCamera": "GameObject"
+    "SceneCamera": "GameObject",
+    "ScreenPointToRay": "(Array,Double,) -> (Map,)"
   }
 }

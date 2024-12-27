@@ -62,6 +62,13 @@ static void sdlLog(void*, int Type, SDL_LogPriority Priority, const char* Messag
 		throw(logString);
 }
 
+static EngineObject* EngineInstance = nullptr;
+
+EngineObject* EngineObject::Get()
+{
+	return EngineInstance;
+}
+
 void EngineObject::ResizeWindow(int NewSizeX, int NewSizeY)
 {
 	SDL_SetWindowSize(this->Window, NewSizeX, NewSizeY);
@@ -127,6 +134,8 @@ void EngineObject::LoadConfiguration()
 
 void EngineObject::Initialize()
 {
+	EngineInstance = this;
+
 	// 15/08/2024:
 	// Hmm, this single commented-out line look like the remnants
 	//  of my first attempt trying to get behavior like we have
@@ -254,7 +263,7 @@ void EngineObject::Initialize()
 static void updateScripts(double DeltaTime)
 {
 	static std::vector<GameObjectRef<Object_Script>> ScriptsResumedThisFrame = {};
-	ScriptsResumedThisFrame.reserve(2);
+	//ScriptsResumedThisFrame.reserve(2);
 
 	for (GameObject* ch : GameObject::s_DataModel->GetDescendants())
 		if (ch->Enabled)
@@ -729,8 +738,9 @@ void EngineObject::Start()
 
 		glm::vec3 camPos = glm::vec3(sceneCamera->Transform[3]);
 		glm::vec3 camForward = glm::vec3(sceneCamera->Transform[2]);
+		glm::vec3 camUp = glm::vec3(sceneCamera->Transform[1]);
 
-		glm::mat4 view = view = glm::lookAt(camPos, camPos + camForward, glm::vec3(0.f, 1.f, 0.f));;
+		glm::mat4 view = view = glm::lookAt(camPos, camPos + camForward, camUp);
 		glm::mat4 projection = glm::perspective(
 			glm::radians(sceneCamera->FieldOfView),
 			aspectRatio,
@@ -938,4 +948,6 @@ EngineObject::~EngineObject()
 	GameObject::s_DataModel = nullptr;
 	this->Workspace = nullptr;
 	this->DataModel = nullptr;
+
+	EngineInstance = nullptr;
 }

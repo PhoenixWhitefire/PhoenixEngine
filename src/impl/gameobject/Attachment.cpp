@@ -65,7 +65,7 @@ void Object_Attachment::s_DeclareReflections()
 		{
 			return dynamic_cast<Object_Attachment*>(p)->GetWorldTransform();
 		},
-		[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)
+		[](Reflection::Reflectable* p, const std::vector<Reflection::GenericValue>& gv)
 		{
 			const glm::mat4& targetWorldTransform = gv.AsMatrix();
 			Object_Attachment* att = dynamic_cast<Object_Attachment*>(p);

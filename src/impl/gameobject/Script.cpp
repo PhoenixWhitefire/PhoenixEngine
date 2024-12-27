@@ -199,6 +199,55 @@ static auto api_vec3index = [](lua_State* L)
 			lua_pushnumber(L, vec->Magnitude());
 			return 1;
 		}
+		else if (strcmp(key, "Normalized") == 0)
+		{
+			ScriptEngine::L::PushGenericValue(L, (*vec / vec->Magnitude()).ToGenericValue());
+			return 1;
+		}
+		else if (strcmp(key, "Dot") == 0)
+		{
+			ScriptEngine::L::PushGenericValue(L, vec->ToGenericValue());
+
+			lua_pushcclosure(
+				L,
+				[](lua_State* L)
+				-> int
+				{
+					Vector3* v1 = (Vector3*)luaL_checkudata(L, lua_upvalueindex(1), "Vector3");
+					Vector3* v2 = (Vector3*)luaL_checkudata(L, 1, "Vector3");
+
+					ScriptEngine::L::PushGenericValue(L, v1->Dot(*v2));
+					
+					return 1;
+				},
+				"Vector3::Dot",
+				1
+			);
+
+			return 1;
+		}
+		else if (strcmp(key, "Cross") == 0)
+		{
+			ScriptEngine::L::PushGenericValue(L, vec->ToGenericValue());
+
+			lua_pushcclosure(
+				L,
+				[](lua_State* L)
+				-> int
+				{
+					Vector3* v1 = (Vector3*)luaL_checkudata(L, lua_upvalueindex(1), "Vector3");
+					Vector3* v2 = (Vector3*)luaL_checkudata(L, 1, "Vector3");
+
+					ScriptEngine::L::PushGenericValue(L, v1->Cross(*v2).ToGenericValue());
+
+					return 1;
+				},
+				"Vector3::Cross",
+				1
+			);
+
+			return 1;
+		}
 		else
 			luaL_error(L, "Invalid key %s", key);
 
@@ -402,15 +451,46 @@ static lua_State* createState()
 			[](lua_State* L)
 			{
 				Vector3 a = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -2));
-				double b = luaL_checknumber(L, 2);
 
-				ScriptEngine::L::PushGenericValue(L, (a * b).ToGenericValue());
+				int bt = lua_type(L, 2);
 
-				return 1;
+				if (bt == LUA_TNUMBER)
+				{
+					double b = luaL_checknumber(L, 2);
+
+					ScriptEngine::L::PushGenericValue(L, (a * b).ToGenericValue());
+
+					return 1;
+				}
+				else if (bt == LUA_TUSERDATA)
+				{
+					Vector3 b = ScriptEngine::L::LuaValueToGeneric(L, -1);
+
+					ScriptEngine::L::PushGenericValue(L, (a * b).ToGenericValue());
+
+					return 1;
+				}
+
+				luaL_errorL(L, "Expected multiplication against Vector3 or number");
 			},
 			"Vector3.__mul"
 		);
 		lua_setfield(state, -2, "__mul");
+
+		lua_pushcfunction(
+			state,
+			[](lua_State* L)
+			{
+				Vector3 a = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -2));
+				double b = luaL_checknumber(L, 2);
+
+				ScriptEngine::L::PushGenericValue(L, (a / b).ToGenericValue());
+				
+				return 1;
+			},
+			"Vector3.__div"
+		);
+		lua_setfield(state, -2, "__div");
 
 		lua_pushstring(state, "Vector3");
 		lua_setfield(state, -2, "__type");
@@ -563,6 +643,16 @@ static lua_State* createState()
 					ScriptEngine::L::PushGenericValue(
 						L,
 						Vector3(glm::normalize(glm::vec3(m[2]))).ToGenericValue()
+					);
+				else if (strcmp(k, "Up") == 0)
+					ScriptEngine::L::PushGenericValue(
+						L,
+						Vector3(glm::normalize(glm::vec3(m[1]))).ToGenericValue()
+					);
+				else if (strcmp(k, "Right") == 0)
+					ScriptEngine::L::PushGenericValue(
+						L,
+						Vector3(glm::normalize(glm::vec3(m[0]))).ToGenericValue()
 					);
 				else
 					luaL_errorL(L, "Invalid member %s", k);
@@ -796,6 +886,9 @@ void Object_Script::Update(double dt)
 				"Luau runtime error: {}",
 				std::make_format_args(errstr)
 			));
+
+			lua_close(m_L);
+			m_L = nullptr;
 		}
 	}
 }
