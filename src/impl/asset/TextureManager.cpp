@@ -1,51 +1,66 @@
 #include <format>
+#include <mutex>
 #include <functional>
 #include <glad/gl.h>
 #include <stb/stb_image.h>
 
 #include "asset/TextureManager.hpp"
-#include "render/ShaderProgram.hpp"
 #include "GlobalJsonConfig.hpp"
 #include "ThreadManager.hpp"
-#include "Debug.hpp"
+#include "Utilities.hpp"
+#include "Profiler.hpp"
+#include "Log.hpp"
 
-static const std::string MissingTexPath = "textures/missing.png";
+static const std::string MissingTexPath = "!Missing";
 
 typedef std::function<uint8_t* (const char*, int*, int*, int*)> ImageLoader_t;
 typedef std::function<Texture*(ImageLoader_t, Texture*, std::string, uint32_t)> AsyncTexLoader_t;
 
 // a 2x2 purple-and-black checkerboard
 // 23/10/2024
-static uint8_t MissingTextureBytes[12] = 
+static uint8_t MissingTextureBytes[] = 
 {
-	static_cast<uint8_t>(0xFFFFFFu),
-	static_cast<uint8_t>(0x000000u),
-	static_cast<uint8_t>(0xFFFFFFu),
+	static_cast<uint8_t>(0xFFu),
+	static_cast<uint8_t>(0x00u),
+	static_cast<uint8_t>(0xFFu),
 
-	static_cast<uint8_t>(0x000000u),
-	static_cast<uint8_t>(0x000000u),
-	static_cast<uint8_t>(0x000000u),
+	static_cast<uint8_t>(0x00u),
+	static_cast<uint8_t>(0x00u),
+	static_cast<uint8_t>(0x00u),
 
-	static_cast<uint8_t>(0x000000u),
-	static_cast<uint8_t>(0x000000u),
-	static_cast<uint8_t>(0x000000u),
+	static_cast<uint8_t>(0x00u),
+	static_cast<uint8_t>(0x00u),
+	static_cast<uint8_t>(0x00u),
 
-	static_cast<uint8_t>(0xFFFFFFu),
-	static_cast<uint8_t>(0x000000u),
-	static_cast<uint8_t>(0xFFFFFFu),
+	static_cast<uint8_t>(0xFFu),
+	static_cast<uint8_t>(0x00u),
+	static_cast<uint8_t>(0xFFu),
 };
+
+static uint32_t s_Pbo = UINT32_MAX;
+static void* s_PboMapping = nullptr;
+
+static std::mutex s_PboWriteAvailable;
+static bool s_PboWriteGlobal = true;
+
+static bool isValidPboCandidate(const Texture* t)
+{
+	return (t->LoadedAsynchronously && t->NumColorChannels == 3 && t->Width <= 4096 && t->Height <= 4096);
+}
 
 void TextureManager::m_UploadTextureToGpu(Texture& texture)
 {
+	PROFILE_SCOPE("Texture/UploadToGpu");
+
 	if (texture.Status == Texture::LoadStatus::Failed)
 	{
 		std::string fallbackPath = MissingTexPath;
 
 		if (texture.ImagePath != MissingTexPath)
-		{
-			auto FormattedArgs = std::make_format_args(texture.ImagePath);
-			Debug::Log(std::vformat("Failed to load texture '{}'", FormattedArgs));
-		}
+			Log::Error(std::vformat(
+				"Failed to load texture '{}': {}",
+				std::make_format_args(texture.ImagePath, texture.FailureReason)
+			));
 		else
 			fallbackPath = "!Missing";
 
@@ -54,12 +69,14 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 			false
 		);
 
-		Texture* replacement = this->GetTextureResource(replacementId);
-		texture.Height = replacement->Height;
-		texture.Width = replacement->Width;
-		texture.NumColorChannels = replacement->NumColorChannels;
-		texture.TMP_ImageByteData = replacement->TMP_ImageByteData;
-		texture.GpuId = replacement->GpuId;
+		glDeleteTextures(1, &texture.GpuId);
+
+		Texture& replacement = this->GetTextureResource(replacementId);
+		texture.Height = replacement.Height;
+		texture.Width = replacement.Width;
+		texture.NumColorChannels = replacement.NumColorChannels;
+		texture.TMP_ImageByteData = replacement.TMP_ImageByteData;
+		texture.GpuId = replacement.GpuId;
 
 		return;
 	}
@@ -78,6 +95,12 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 	case (3):
 	{
 		Format = GL_RGB;
+		break;
+	}
+
+	case (2):
+	{
+		Format = GL_RG;
 		break;
 	}
 
@@ -101,24 +124,51 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 	//if ((Format == GL_RGB) && TexturePtr->Usage == TextureType::SPECULAR)
 	//	Format = GL_RED;
 
-	// TODO: texture mipmaps, 4 is the number of mipmaps
-	//glTexStorage2D(GL_TEXTURE_2D, 1, MipMapsInternalFormat, TexturePtr->ImageWidth, TexturePtr->ImageHeight);
-
 	glBindTexture(GL_TEXTURE_2D, texture.GpuId);
 
-	glTexImage2D(
-		GL_TEXTURE_2D,
-		0,
-		GL_RGBA,
-		texture.Width,
-		texture.Height,
-		0,
-		Format,
-		GL_UNSIGNED_BYTE,
-		texture.TMP_ImageByteData
-	);
+	// "cupid-ref.jpg" some weird bullshit, doesn't happen when it's
+	// saved as PNG, but persists after re-saving as JPG
+	// what the what
+	// also fixes the Missing Texture?? damn khr what the fuck
+	// 30/11/2024
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-	glGenerateMipmap(GL_TEXTURE_2D);
+	if (isValidPboCandidate(&texture))
+	{
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, s_Pbo);
+		glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
+
+		glTexImage2D(
+			GL_TEXTURE_2D,
+			0,
+			GL_RGBA,
+			texture.Width,
+			texture.Height,
+			0,
+			Format,
+			GL_UNSIGNED_BYTE,
+			0
+		);
+
+		s_PboMapping = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+
+		s_PboWriteGlobal = true;
+	}
+	else
+		glTexImage2D(
+			GL_TEXTURE_2D,
+			0,
+			GL_RGBA,
+			texture.Width,
+			texture.Height,
+			0,
+			Format,
+			GL_UNSIGNED_BYTE,
+			texture.TMP_ImageByteData
+		);
+
+	//glGenerateMipmap(GL_TEXTURE_2D);
 
 	// Can't free this now bcuz Engine.cpp needs it for skybox images
 	// 23/08/2024
@@ -137,6 +187,17 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 TextureManager::TextureManager()
 	: m_Textures{}, m_TexPromises{}
 {
+	glGenBuffers(1, &s_Pbo);
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, s_Pbo);
+	// 25/12/2024
+	// 4K PBO, 3 color channels
+	// 50 megs... oof
+	// you gotta do what you gotta do
+	glBufferData(GL_PIXEL_UNPACK_BUFFER, 4096ull * 4096ull * 3ull, NULL, GL_STREAM_DRAW);
+	s_PboMapping = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
+	
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+
 	// ID 0 means no texture
 	m_Textures.emplace_back();
 
@@ -164,8 +225,10 @@ TextureManager::TextureManager()
 
 	m_UploadTextureToGpu(missingTexture);
 
-	// dev-specified missing texture is id 2
-	this->LoadTextureFromPath(MissingTexPath, false);
+	// First texture loaded will not work properly and using it in a
+	// material will spam "Invalid program texture usage" errors
+	// 30/11/2024
+	this->LoadTextureFromPath("textures/DONOTUSE.png", false);
 }
 
 TextureManager::~TextureManager()
@@ -178,113 +241,173 @@ TextureManager::~TextureManager()
 	
 	glDeleteTextures(static_cast<int32_t>(m_Textures.size()), textureGpuIds.data());
 
-	for (size_t promIndex = 0; promIndex < m_TexPromises.size(); promIndex++)
-	{
-		std::promise<Texture>* prom = m_TexPromises[promIndex];
-		std::shared_future<Texture>& future = m_TexFutures[promIndex];
-
-		// we don't want our async threads accessing deleted promises
-		future.wait();
-
-		delete prom;
-	}
-
 	m_Textures.clear();
 	m_StringToTextureId.clear();
 	m_TexFutures.clear();
 	m_TexPromises.clear();
 }
 
-static TextureManager* instance = nullptr;
+static bool s_DidShutdown = false;
 
 TextureManager* TextureManager::Get()
 {
-	if (!instance)
-		instance = new TextureManager();
-	return instance;
+	if (s_DidShutdown)
+		throw("Tried to ::Get TextureManager after it was ::Shutdown");
+
+	static TextureManager inst;
+	return &inst;
 }
 
 void TextureManager::Shutdown()
 {
-	delete instance;
-	instance = nullptr;
+	//delete Get();
+	s_DidShutdown = true;
 }
 
-static uint8_t* loadImageData(const char* ImagePath, int* ImageWidth, int* ImageHeight, int* ImageColorChannels)
-{
-	stbi_set_flip_vertically_on_load(true);
-
-	uint8_t* imageData = stbi_load(ImagePath, ImageWidth, ImageHeight, ImageColorChannels, 0);
-	
-	return imageData;
-}
-
-static void asyncTextureLoader(
-	ImageLoader_t ImageLoader,
+// like emplace, for "put in place", but "emload" for "load in place"
+// i think that's how english works maybe
+// 05/12/2024
+static void emloadTexture(
 	Texture* AsyncTexture,
 	std::string ActualPath
 )
 {
-	uint8_t* data = ImageLoader(
+	AsyncTexture->NumColorChannels = 4;
+
+	uint8_t* data = stbi_load(
 		ActualPath.c_str(),
 		&AsyncTexture->Width,
 		&AsyncTexture->Height,
-		&AsyncTexture->NumColorChannels
+		&AsyncTexture->NumColorChannels,
+		0
 	);
 
 	AsyncTexture->Status = data ? Texture::LoadStatus::Succeeded : Texture::LoadStatus::Failed;
-
 	AsyncTexture->TMP_ImageByteData = data;
+
+	if (!data)
+		AsyncTexture->FailureReason = stbi_failure_reason();
+
+	else if (isValidPboCandidate(AsyncTexture))
+	{
+		s_PboWriteAvailable.lock();
+
+		while (!s_PboWriteGlobal)
+			std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+		s_PboWriteGlobal = false;
+
+		memcpy(
+			s_PboMapping,
+			AsyncTexture->TMP_ImageByteData,
+			static_cast<size_t>(AsyncTexture->Width) * AsyncTexture->Height * AsyncTexture->NumColorChannels
+		);
+
+		s_PboWriteAvailable.unlock();
+	}
 }
 
-uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool ShouldLoadAsync)
+uint32_t TextureManager::Assign(const Texture& texture, const std::string& name)
+{
+	if (texture.TMP_ImageByteData != nullptr)
+		Log::Warning(std::vformat(
+			"The Texture being assigned to '{}' has non-NULL byte data and may create UB",
+			std::make_format_args(name)
+		));
+
+	if (texture.ResourceId != UINT32_MAX)
+	{
+		m_Textures.at(texture.ResourceId) = texture;
+		m_StringToTextureId[name] = texture.ResourceId;
+	}
+
+	uint32_t assignedId = static_cast<uint32_t>(m_Textures.size());
+
+	auto prevPair = m_StringToTextureId.find(name);
+
+	if (prevPair != m_StringToTextureId.end())
+	{
+		// overwrite the pre-existing texture
+		m_Textures[prevPair->second] = texture;
+		assignedId = prevPair->second;
+	}
+	else
+	{
+		m_StringToTextureId.insert(std::pair(name, assignedId));
+		m_Textures.push_back(texture);
+	}
+
+	m_Textures[assignedId].ResourceId = assignedId;
+
+	return assignedId;
+}
+
+uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool ShouldLoadAsync, bool DoBilinearSmoothing)
 {
 	std::string ResDir = EngineJsonConfig["ResourcesDirectory"];
 	std::string ActualPath = ResDir + Path;
 
 	auto it = m_StringToTextureId.find(Path);
 	
+	if (it != m_StringToTextureId.end())
+	{
+		const Texture& texture = m_Textures.at(it->second);
+
+		if (texture.DoBilinearSmoothing != DoBilinearSmoothing)
+		{
+			for (size_t index = 0; index < m_Textures.size(); index++)
+				if (m_Textures[index].DoBilinearSmoothing == DoBilinearSmoothing)
+					return m_Textures[index].ResourceId;
+
+			it = m_StringToTextureId.end();
+		}
+	}
+
 	if (it == m_StringToTextureId.end())
 	{
-		uint32_t newResourceId = static_cast<uint32_t>(m_Textures.size());
-
-		m_StringToTextureId.insert(std::pair(Path, newResourceId));
-
 		uint32_t newGpuId;
 		glGenTextures(1, &newGpuId);
 
-		m_Textures.emplace_back(Path, newResourceId, newGpuId);
-
-		Texture& newTexture = m_Textures.at(newResourceId);
+		uint32_t newResourceId = this->Assign({ Path, UINT32_MAX, newGpuId }, Path);
+		Texture& newTexture = this->GetTextureResource(newResourceId);
 
 		glBindTexture(GL_TEXTURE_2D, newTexture.GpuId);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		if (DoBilinearSmoothing)
+		{
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		}
+		else
+		{
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		}
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-		static const uint8_t FullByte = 0xFF;
-
-		glTexImage2D
-		(
-			GL_TEXTURE_2D,
-			0,
-			GL_RGBA,
-			1,
-			1,
-			0,
-			GL_RED,
-			GL_UNSIGNED_BYTE,
-			&FullByte
-		);
-
-		glGenerateMipmap(GL_TEXTURE_2D);
 
 		//ShouldLoadAsync = false;
 
 		if (ShouldLoadAsync)
 		{
+			static const uint8_t FullByte = 0xFF;
+
+			glTexImage2D
+			(
+				GL_TEXTURE_2D,
+				0,
+				GL_RGBA,
+				1,
+				1,
+				0,
+				GL_RED,
+				GL_UNSIGNED_BYTE,
+				&FullByte
+			);
+
+			glGenerateMipmap(GL_TEXTURE_2D);
+
 			/*Task* LoadTextureTask = new Task();
 			LoadTextureTask->FuncArgument = (void*)this;
 			LoadTextureTask->Function = asyncTextureLoader;
@@ -295,17 +418,16 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 			std::promise<Texture>* promise = new std::promise<Texture>;
 
 			std::thread(
-				[promise, ActualPath, newResourceId](auto asyncFunc, auto imageLoader)
+				[promise, ActualPath, newResourceId]()
 				{
 					Texture asyncTexture{};
+					asyncTexture.LoadedAsynchronously = true;
 					asyncTexture.ResourceId = newResourceId;
 
-					asyncFunc(imageLoader, &asyncTexture, ActualPath);
+					emloadTexture(&asyncTexture, ActualPath);
 
 					promise->set_value_at_thread_exit(asyncTexture);
-				},
-				asyncTextureLoader,
-				loadImageData
+				}
 			).detach();
 
 			newTexture.Status = Texture::LoadStatus::InProgress;
@@ -315,16 +437,9 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 		}
 		else
 		{
-			uint8_t* data = loadImageData(
-				ActualPath.c_str(),
-				&newTexture.Width,
-				&newTexture.Height,
-				&newTexture.NumColorChannels
-			);
+			PROFILE_SCOPE("Texture/LoadSynchronous");
 
-			newTexture.TMP_ImageByteData = data;
-			newTexture.Status = data ? Texture::LoadStatus::Succeeded : Texture::LoadStatus::Failed;
-
+			emloadTexture(&newTexture, ActualPath);
 			m_UploadTextureToGpu(newTexture);
 		}
 
@@ -334,19 +449,21 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 		return it->second;
 }
 
-Texture* TextureManager::GetTextureResource(uint32_t ResourceId)
+Texture& TextureManager::GetTextureResource(uint32_t ResourceId)
 {
-	return &m_Textures.at(ResourceId);
+	return m_Textures.at(ResourceId);
 }
 
 void TextureManager::FinalizeAsyncLoadedTextures()
 {
+	PROFILE_SCOPE("Texture/FinalizeAsyncs");
+
 	size_t numTexPromises = m_TexPromises.size();
 	size_t numTexFutures = m_TexFutures.size();
 
 	if (numTexPromises != numTexFutures)
 	{
-		Debug::Log(std::vformat(
+		Log::Error(std::vformat(
 			"FinalizeAsyncLoadedTextures had {} promises but {} futures, cannot proceed safely",
 			std::make_format_args(numTexPromises, numTexFutures)
 		));
@@ -364,6 +481,8 @@ void TextureManager::FinalizeAsyncLoadedTextures()
 		if (!f.valid() || (f.wait_for(std::chrono::seconds(0)) != std::future_status::ready))
 			continue;
 
+		PROFILE_PROCEDURE("WaitForFuture_ShouldntTakeTooLong", f.wait);
+
 		const Texture& loadedImage = f.get();
 
 		Texture& image = m_Textures.at(loadedImage.ResourceId);
@@ -372,13 +491,14 @@ void TextureManager::FinalizeAsyncLoadedTextures()
 			continue;
 
 		image.Status = loadedImage.Status;
+		image.Width = loadedImage.Width;
+		image.Height = loadedImage.Height;
+		image.NumColorChannels = loadedImage.NumColorChannels;
+		image.FailureReason = loadedImage.FailureReason;
+		image.LoadedAsynchronously = loadedImage.LoadedAsynchronously;
 
 		if (image.Status == Texture::LoadStatus::Succeeded)
 		{
-			image.Width = loadedImage.Width;
-			image.Height = loadedImage.Height;
-			image.NumColorChannels = loadedImage.NumColorChannels;
-
 			size_t bufSize = (size_t)image.Width * (size_t)image.Height * (size_t)image.NumColorChannels;
 
 			image.TMP_ImageByteData = (uint8_t*)malloc(bufSize);

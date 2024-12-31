@@ -1,2 +1,0 @@
-C:/Users/phoen/Documents/PhoenixEngine/vendor/glm/CMakeFiles/ALL_BUILD.dir
-C:/Users/phoen/Documents/PhoenixEngine/vendor/glm/CMakeFiles/ZERO_CHECK.dir

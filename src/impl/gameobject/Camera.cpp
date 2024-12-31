@@ -1,3 +1,5 @@
+#define GLM_ENABLE_EXPERIMENTAL
+
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtx/vector_angle.hpp>
@@ -32,6 +34,7 @@ Object_Camera::Object_Camera()
 	this->Transform = glm::lookAt(glm::vec3(), glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f, 1.f, 0.f));
 
 	s_DeclareReflections();
+	ApiPointer = &s_Api;
 }
 
 void Object_Camera::Update(double)
@@ -59,7 +62,7 @@ glm::mat4 Object_Camera::GetMatrixForAspectRatio(float AspectRatio) const
 	glm::mat4 viewMatrix = glm::lookAt(
 		position,
 		position + forwardVec,
-		(glm::vec3)Vector3::yAxis
+		glm::vec3(this->Transform[1])
 	);
 
 	return projectionMatrix * viewMatrix;

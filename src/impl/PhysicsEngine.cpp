@@ -2,6 +2,7 @@
 
 #include "PhysicsEngine.hpp"
 #include "IntersectionLib.hpp"
+#include "Profiler.hpp"
 
 struct Collision
 {
@@ -12,17 +13,23 @@ struct Collision
 
 static void moveDynamics(std::vector<Object_Base3D*>& World, double DeltaTime)
 {
+	PROFILE_SCOPE("MoveDynamics");
+
 	for (Object_Base3D* object : World)
 		if (object->PhysicsDynamics)
 		{
 			const glm::vec3& curPos = object->Transform[3];
 			glm::vec3 newPos = curPos + (glm::vec3)(object->LinearVelocity * DeltaTime);
 			object->Transform[3] = glm::vec4(newPos, object->Transform[3][3]);
+
+			object->RecomputeAabb();
 		}
 }
 
 static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTime)
 {
+	PROFILE_SCOPE("ResolveCollisions");
+
 	std::vector<Collision> collisions;
 
 	for (Object_Base3D* a : World)
@@ -30,8 +37,8 @@ static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTi
 		if (!a->PhysicsCollisions)
 			continue;
 
-		glm::vec3 aPos = glm::vec3(a->Transform[3]);
-		glm::vec3 aSize = a->Size;
+		const glm::vec3& aPos = a->CollisionAabb.Position;
+		const glm::vec3& aSize = a->CollisionAabb.Size;
 
 		for (Object_Base3D* b : World)
 		{
@@ -44,8 +51,8 @@ static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTi
 			if (!a->PhysicsDynamics && !b->PhysicsDynamics)
 				continue;
 
-			glm::vec3 bPos = glm::vec3(b->Transform[3]);
-			glm::vec3 bSize = b->Size;
+			const glm::vec3& bPos = b->CollisionAabb.Position;
+			const glm::vec3& bSize = b->CollisionAabb.Size;
 
 			IntersectionLib::Intersection intersection = IntersectionLib::AabbAabb(
 				aPos,
@@ -66,50 +73,74 @@ static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTi
 		// (another ugly at the end of this cycle)
 		// Do this because otherwise, objects colliding will
 		// move twice as fast
-		std::vector<Object_Base3D*> us = { collision.A, collision.B };
-		moveDynamics(us, -DeltaTime);
+		//std::vector<Object_Base3D*> us = { collision.A, collision.B };
+		//moveDynamics(us, -DeltaTime);
 
 		// this much velocity is lost completely, pushing on neither objects
-		static const float Elasticity = 0.8f;
+		static const float Elasticity = 0.5f;
 
 		IntersectionLib::Intersection& hit = collision.Hit;
 
-		Vector3 reactionForce = hit.Vector * hit.Depth;
+		glm::vec3 reactionForce = hit.Vector * hit.Depth;
 
 		if (collision.A->PhysicsDynamics && !collision.B->PhysicsDynamics)
 		{
 			// "Friction"
 			collision.A->LinearVelocity = collision.A->LinearVelocity - (collision.A->LinearVelocity * collision.A->Friction * DeltaTime);
 
-			collision.A->LinearVelocity = collision.A->LinearVelocity * (Vector3::one - hit.Normal) + reactionForce;
+			double dot = collision.A->LinearVelocity.Dot(hit.Normal);
+			Vector3 velCoefficient = Vector3::one;
+
+			if (dot < 0.f)
+				velCoefficient = Vector3::one - Vector3(hit.Normal).Abs() * (2.f * Elasticity);
+
+			collision.A->LinearVelocity = collision.A->LinearVelocity * velCoefficient + reactionForce;
+			collision.A->Transform[3] += glm::vec4(glm::vec3(hit.Vector * hit.Depth), 1.f);
+
+			collision.A->RecomputeAabb();
 		}
 		else if (collision.B->PhysicsDynamics && !collision.A->PhysicsDynamics)
 		{
 			collision.B->LinearVelocity = collision.B->LinearVelocity - (collision.B->LinearVelocity * collision.B->Friction * DeltaTime);
 
-			collision.B->LinearVelocity = collision.B->LinearVelocity * (Vector3::one - hit.Normal) + reactionForce;
+			double dot = collision.A->LinearVelocity.Dot(hit.Normal);
+			Vector3 velCoefficient = Vector3::one;
+
+			if (dot < 0.f)
+				velCoefficient = Vector3::one - Vector3(hit.Normal).Abs() * (2.f * Elasticity);
+
+			collision.B->LinearVelocity = collision.B->LinearVelocity * velCoefficient + reactionForce;
+			collision.B->Transform[3] += glm::vec4(glm::vec3(hit.Vector * hit.Depth), 1.f);
+
+			collision.B->RecomputeAabb();
 		}
 		else
 		{
 			// Transfer of velocity
-			collision.A->LinearVelocity += collision.B->LinearVelocity / 2.f;
-			collision.B->LinearVelocity += collision.A->LinearVelocity / 2.f;
-			collision.A->LinearVelocity = collision.A->LinearVelocity / 2.f;
-			collision.B->LinearVelocity = collision.B->LinearVelocity / 2.f;
+			//collision.A->LinearVelocity += collision.B->LinearVelocity / 2.f;
+			//collision.B->LinearVelocity += collision.A->LinearVelocity / 2.f;
+			//collision.A->LinearVelocity = collision.A->LinearVelocity / 2.f;
+			//collision.B->LinearVelocity = collision.B->LinearVelocity / 2.f;
 
-			collision.A->LinearVelocity -= reactionForce;
+			collision.A->LinearVelocity += reactionForce;
 			collision.B->LinearVelocity += reactionForce;
+
+			collision.A->RecomputeAabb();
+			collision.B->RecomputeAabb();
 		}
 
 		// 24/09/2024
 		// ugly
 		
-		moveDynamics(us, DeltaTime);
+		//moveDynamics(us, DeltaTime);
 	}
 }
 
 static void step(std::vector<Object_Base3D*>& World, double DeltaTime)
 {
+	PROFILE_SCOPE("PhysicsStep");
+
+	Profiler::Start("ApplyGlobalForces");
 	for (Object_Base3D* object : World)
 	{
 		object->Mass = object->Density * object->Size.X * object->Size.Y * object->Size.Z;
@@ -127,6 +158,7 @@ static void step(std::vector<Object_Base3D*>& World, double DeltaTime)
 			object->LinearVelocity += force / object->Mass * DeltaTime;
 		}
 	}
+	Profiler::Stop();
 
 	moveDynamics(World, DeltaTime);
 

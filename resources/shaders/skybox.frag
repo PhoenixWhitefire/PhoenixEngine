@@ -20,7 +20,7 @@ void main()
 	
 	//FragColor = vec4(FragIn_Direction, 1.f);
 
-	FragColor = texture(SkyboxCubemap, vec3(FragIn_Direction.x, -FragIn_Direction.y, FragIn_Direction.z));
+	FragColor = texture(SkyboxCubemap, FragIn_Direction);
 
 	//if (HdrEnabled)
 	//	FragColor = vec4(FragColor.xyz * 2.f, 1.f);

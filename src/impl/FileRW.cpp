@@ -4,14 +4,14 @@
 
 #include "FileRW.hpp"
 #include "GlobalJsonConfig.hpp"
-#include "Debug.hpp"
+#include "Log.hpp"
 
 // 16/09/2024 PWK2K
 // https://stackoverflow.com/a/71658518
 // Returns:
 //   true upon success.
 //   false upon failure, and set the std::error_code & err accordingly.
-static bool createDirectoryRecursive(std::string const& dirName, std::error_code& err)
+static bool createDirectoryRecursive(const std::string& dirName, std::error_code& err)
 {
 	err.clear();
 	if (!std::filesystem::create_directories(dirName, err))
@@ -27,9 +27,9 @@ static bool createDirectoryRecursive(std::string const& dirName, std::error_code
 	return true;
 }
 
-std::string FileRW::ReadFile(std::string const& ShortPath, bool* DoesFileExist)
+std::string FileRW::ReadFile(const std::string& ShortPath, bool* DoesFileExist, bool PrependResDir)
 {
-	std::string actualPath = FileRW::GetAbsolutePath(ShortPath);
+	std::string actualPath = PrependResDir ? FileRW::GetAbsolutePath(ShortPath) : ShortPath;
 
 	std::ifstream file(actualPath, std::ios::binary);
 
@@ -65,15 +65,19 @@ std::string FileRW::ReadFile(std::string const& ShortPath, bool* DoesFileExist)
 	}
 }
 
-void FileRW::WriteFile(const std::string& ShortPath, const std::string& FileContents, bool InResourcesDirectory)
+void FileRW::WriteFile(
+	const std::string& ShortPath,
+	const std::vector<int8_t>& BinaryContents,
+	bool InResourcesDirectory
+)
 {
 	std::string path = InResourcesDirectory ? FileRW::GetAbsolutePath(ShortPath) : ShortPath;
 
-	std::ofstream file(path.c_str());
+	std::ofstream file(path.c_str(), std::ios::binary);
 
 	if (file && file.is_open())
 	{
-		file << FileContents;
+		file.write((char*)BinaryContents.data(), BinaryContents.size());
 		file.close();
 	}
 	else
@@ -85,7 +89,7 @@ void FileRW::WriteFile(const std::string& ShortPath, const std::string& FileCont
 
 void FileRW::WriteFileCreateDirectories(
 	const std::string& ShortPath,
-	const std::string& FileContents,
+	const std::vector<int8_t>& BinaryContents,
 	bool InResourcesDirectory
 )
 {
@@ -99,7 +103,33 @@ void FileRW::WriteFileCreateDirectories(
 	if (!createDirectoryRecursive(dirPath, ec))
 		throw("FileRW::WriteFileCreateDirectories: `createDirectoryRecursive` failed: " + ec.message());
 
-	FileRW::WriteFile(path, FileContents, false);
+	FileRW::WriteFile(path, BinaryContents, false);
+}
+
+void FileRW::WriteFile(
+	const std::string& ShortPath,
+	const std::string& StringContents,
+	bool InResourcesDirectory
+)
+{
+	std::vector<int8_t> data(
+		StringContents.begin(),
+		StringContents.end()
+	);
+	FileRW::WriteFile(ShortPath, data, InResourcesDirectory);
+}
+
+void FileRW::WriteFileCreateDirectories(
+	const std::string& ShortPath,
+	const std::string& StringContents,
+	bool InResourcesDirectory
+)
+{
+	std::vector<int8_t> data(
+		StringContents.begin(),
+		StringContents.end()
+	);
+	FileRW::WriteFileCreateDirectories(ShortPath, data, InResourcesDirectory);
 }
 
 std::string FileRW::GetAbsolutePath(const std::string& LocalPath)
@@ -110,16 +140,8 @@ std::string FileRW::GetAbsolutePath(const std::string& LocalPath)
 	// and start from resources/ automatically
 	// currently, files that *are* from the root are specified by beginning the path with '/'
 	// find a better method?
-	try
-	{
-		if (path[0] != '.')
-			path.insert(0, EngineJsonConfig.value("ResourcesDirectory", "resources/"));
-	}
-	catch (nlohmann::json::type_error e)
-	{
-		const char* whatStr = e.what();
-		Debug::Log(std::vformat("Error localizing file path: '{}'", std::make_format_args(whatStr)));
-	}
+	if (path[0] != '.')
+		path.insert(0, EngineJsonConfig.value("ResourcesDirectory", "resources/"));
 
 	return path;
 }

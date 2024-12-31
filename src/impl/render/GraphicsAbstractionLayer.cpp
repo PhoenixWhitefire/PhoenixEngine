@@ -1,12 +1,11 @@
 #include <format>
 #include <imgui/backends/imgui_impl_sdl2.h>
 #include <imgui/backends/imgui_impl_opengl3.h>
-#include <datatype/Vector3.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glad/gl.h>
 
 #include "render/GraphicsAbstractionLayer.hpp"
-#include "Debug.hpp"
+#include "Log.hpp"
 
 GraphicsLayer::GraphicsLayer(
 	bool* WasSuccess,

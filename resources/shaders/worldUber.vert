@@ -4,34 +4,70 @@
 
 layout (location = 0) in vec3 VertexPosition;
 layout (location = 1) in vec3 VertexNormal;
-layout (location = 2) in vec3 VertexColor;
-layout (location = 3) in vec2 TexUV;
+layout (location = 2) in vec4 VertexPaint;
+layout (location = 3) in vec2 VertexUV;
 // from Instanced Array
-//layout (location = 4) in mat4 InstanceTransform;
+layout (location = 4) in mat4 InstanceTransform;
+layout (location = 8) in vec3 InstanceScale;
+layout (location = 9) in vec3 InstanceColor;
 
-uniform mat4 CameraMatrix;
+const int MAX_LIGHTS = 6;
+
+uniform mat4 RenderMatrix;
 
 uniform mat4 Transform;
-uniform mat4 Scale;
+uniform vec3 Scale;
+uniform vec3 ColorTint;
+uniform bool IsInstanced;
 
 uniform float Time;
+uniform mat4 DirecLightProjection;
 
-out vec3 Frag_CurrentPosition;
-out vec3 Frag_VertexNormal;
-out vec3 Frag_VertexColor;
-out vec2 Frag_UV;
-out mat4 Frag_CamMatrix;
-out mat4 Frag_Transform;
+uniform vec3 CameraPosition;
+
+out DATA
+{
+	vec3 VertexNormal;
+	vec2 TextureUV;
+	vec4 Paint;
+	mat4 RenderMatrix;
+
+	vec3 ModelPosition;
+	vec3 WorldPosition;
+	mat4 Transform;
+	vec4 RelativeToDirecLight;
+	vec3 CameraPosition;
+} data_out;
 
 void main()
 {
-	Frag_CurrentPosition = vec3(Transform * Scale * vec4(VertexPosition, 1.0f));
-	Frag_VertexNormal = VertexNormal;
-	Frag_VertexColor = VertexColor;
-	Frag_CamMatrix = CameraMatrix;
-	// i cant remember WHAT causes this to be necessary, but it is.
-	Frag_UV = mat2(0.0f, -1.0f, 1.0f, 0.0f) * TexUV;
-	Frag_Transform = Transform;
+	mat4 trans = Transform;
+	vec3 sca = Scale;
+	vec4 pain = vec4(ColorTint, 1.f) * VertexPaint;
 	
-	gl_Position = Frag_CamMatrix * vec4(Frag_CurrentPosition, 1.f);
+	if (IsInstanced)
+	{
+		trans = InstanceTransform;
+		sca = InstanceScale;
+		pain = vec4(InstanceColor, 1.f) * VertexPaint;
+	}
+	
+	mat4 scaleMatrix;
+	scaleMatrix[0] = vec4(sca.x, 0.f, 0.f, 0.f);
+	scaleMatrix[1] = vec4(0.f, sca.y, 0.f, 0.f);
+	scaleMatrix[2] = vec4(0.f, 0.f, sca.z, 0.f);
+	scaleMatrix[3] = vec4(0.f, 0.f, 0.f, 1.f);
+	
+	data_out.VertexNormal = VertexNormal;
+	data_out.Paint = pain;
+	data_out.TextureUV = VertexUV;
+	data_out.RenderMatrix = RenderMatrix;
+	
+	data_out.ModelPosition = VertexPosition * sca;
+	data_out.WorldPosition = vec3(trans * vec4(data_out.ModelPosition, 1.0f));
+	data_out.Transform = trans * scaleMatrix;
+	data_out.RelativeToDirecLight = DirecLightProjection * vec4(data_out.WorldPosition, 1.f);
+	data_out.CameraPosition = CameraPosition;
+	
+	gl_Position = vec4(data_out.WorldPosition, 1.f);
 }

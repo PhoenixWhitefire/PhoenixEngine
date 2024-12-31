@@ -2,12 +2,12 @@
 garbaj spaghett
 
 Personal "Game Engine" written in C++, that can:
-* Render scenes, i.e. multiple objects with different materials (Color + Metalness only), up to 6 lights are sampled per pixel, and no GPU instancing or batching
+* Render scenes, i.e. multiple objects with different materials (Color, Metallic-Roughness, Emission and Normal maps), with GPU instancing
 * Import simple Models (`.gltf`/`.glb`)
 * Execute [*Luau*](https://github.com/luau-lang/luau/) scripts w/ per-frame callbacks
 * Load/Save Scenes
 * Do simple physics (dynamics and collisions w/ friction with AABBs, also has Raycasting for Scripts)
-* Do some simple, color-only post-processing (HDR, Tonemapping, and really weird Bloom, but a somewhat nice blur vignette)
+* Do some simple, color-only post-processing (HDR, Tonemapping, and really weird Bloom, but a kinda nice blur vignette)
 
 # Branches
 * `main` and `dev`, certified classics
@@ -54,6 +54,7 @@ The following libraries are used:
 * GLM, matrix math - [@g-truc/glm](https://github.com/g-truc/glm/)
 * `nlohmann::json`, JSON decoding/encoding for materials, scenes, meshes, and shader programs - [@nlohmann/json](https://github.com/nlohmann/json/)
 * Dear ImGui, User Interface - [@ocornut/ImGui](https://github.com/ocornut/imgui/)
+* `ImGuiFD`, File Dialogs - [@Julianiolo/ImGuiFD](https://github.com/Julianiolo/ImGuiFD)
 * STB Image, image loading - [@nothings/stb](https://github.com/nothings/stb)
 * OpenGL, Graphics API - [Khronos Group](https://khronos.org/)
 

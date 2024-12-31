@@ -4,11 +4,9 @@
 #include <optional>
 #include <glm/mat4x4.hpp>
 
-#include "render/ShaderProgram.hpp"
+#include "render/RendererScene.hpp"
+#include "render/ShaderManager.hpp"
 #include "render/GpuBuffers.hpp"
-#include "asset/Material.hpp"
-
-#include "gameobject/Base3D.hpp"
 
 /*
 	09/09/2024
@@ -29,83 +27,54 @@
 	}                                                            \
 }                                                                \
 
-struct RenderItem
-{
-	uint32_t RenderMeshId{};
-	glm::mat4 Transform{};
-	Vector3 Size;
-	RenderMaterial* Material{};
-	Color TintColor;
-	float Transparency{};
-	float Reflectivity{};
-	
-	FaceCullingMode FaceCulling = FaceCullingMode::BackFace;
-};
-
-enum class LightType : uint8_t { Directional, Point, Spot };
-
-struct LightItem
-{
-	LightType Type = LightType::Point;
-
-	Vector3 Position;
-	Color LightColor;
-	float Range = 60.f;
-
-	glm::mat4 ShadowMapProjection{};
-	bool HasShadowMap = false;
-	int ShadowMapIndex{};
-	int ShadowMapTextureId{};
-};
-
-struct Scene
-{
-	std::vector<RenderItem> RenderList;
-	std::vector<LightItem> LightingList;
-
-	std::unordered_set<ShaderProgram*> UsedShaders;
-};
-
 class Renderer
 {
 public:
+	Renderer() = default;
 	Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window);
 	~Renderer();
+
+	void Initialize(uint32_t Width, uint32_t Height, SDL_Window* Window);
 
 	// Changes the rendering resolution
 	void ChangeResolution(uint32_t newWidth, uint32_t newHeight);
 
-	void DrawScene(const Scene& Scene);
+	void DrawScene(
+		const Scene& Scene,
+		const glm::mat4& RenderMatrix,
+		const glm::mat4& CameraTransform,
+		double RunningTime
+	);
 
 	// Submits a single draw call
 	// `NumInstances` made under the assumption the caller
 	// has bound the Instanced Array prior to calling this function
 	void DrawMesh(
-		Mesh* Object,
-		ShaderProgram* Shaders,
-		Vector3 Size,
-		glm::mat4 Transform = glm::mat4(1.0f),
+		const Mesh& Object,
+		ShaderProgram& Shader,
+		const Vector3& Size,
+		const glm::mat4& Transform = glm::mat4(1.0f),
 		FaceCullingMode Culling = FaceCullingMode::BackFace,
 		int32_t NumInstances = 1
 	);
 
 	void SwapBuffers();
 
-	GpuFrameBuffer* Framebuffer = nullptr;
+	GpuFrameBuffer FrameBuffer;
 
 	SDL_GLContext GLContext = nullptr;
 
 private:
 	void m_SetMaterialData(const RenderItem&);
 
-	GpuVertexArray* m_VertexArray = nullptr;
-	GpuVertexBuffer* m_VertexBuffer = nullptr;
-	GpuElementBuffer* m_ElementBuffer = nullptr;
+	GpuVertexArray m_VertexArray;
+	GpuVertexBuffer m_VertexBuffer;
+	GpuElementBuffer m_ElementBuffer;
 	uint32_t m_InstancingBuffer{};
 
 	SDL_Window* m_Window = nullptr;
 	
-	uint32_t m_Width, m_Height = 0;
+	uint32_t m_Width = 0, m_Height = 0;
 
 	int m_MsaaSamples = 0;
 };

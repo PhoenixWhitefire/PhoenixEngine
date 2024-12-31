@@ -1,0 +1,15 @@
+PHNXENGI
+#Asset Material
+#Date 31-12-2024
+
+
+{
+  "ColorMap": "textures/models/glamfredward.glb/Image_0.png",
+  "HasTranslucency": false,
+  "MetallicRoughnessMap": "textures/black.png",
+  "NormalMap": "textures/models/glamfredward.glb/Image_1.png",
+  "Shader": "worldUber",
+  "Uniforms": null,
+  "specExponent": 16.0,
+  "specMultiply": 0.0
+}

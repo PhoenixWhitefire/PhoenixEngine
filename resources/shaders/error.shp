@@ -1,4 +1,5 @@
 {
     "Vertex": "worldUber.vert",
     "Fragment": "error.frag"
+    //"InheritUniformsOf": "worldUber"
 }

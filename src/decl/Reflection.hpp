@@ -9,42 +9,44 @@
 #include <format>
 #include <glm/mat4x4.hpp>
 
-#define REFLECTION_INHERITAPI(base) {                          \
-const PropertyMap& props = Object_##base::s_GetProperties();   \
-const FunctionMap& funcs = Object_##base::s_GetFunctions();    \
-s_Api.Properties.insert(                                       \
-	props.begin(),                                             \
-	props.end()                                                \
-);                                                             \
-s_Api.Functions.insert(                                        \
-		funcs.begin(),                                         \
-		funcs.end()                                            \
-);                                                             \
-s_Api.Lineage.push_back(#base);                                \
-}                                                              \
+#define REFLECTION_INHERITAPI(base) {                                      \
+const Reflection::PropertyMap& props = Object_##base::s_GetProperties();   \
+const Reflection::FunctionMap& funcs = Object_##base::s_GetFunctions();    \
+s_Api.Properties.insert(                                                   \
+	props.begin(),                                                         \
+	props.end()                                                            \
+);                                                                         \
+s_Api.Functions.insert(                                                    \
+		funcs.begin(),                                                     \
+		funcs.end()                                                        \
+);                                                                         \
+auto& lin = Object_##base::s_GetLineage();                                 \
+std::copy(lin.begin(), lin.end(), std::back_inserter(s_Api.Lineage));      \
+s_Api.Lineage.push_back(#base);                                            \
+}                                                                          \
 // The following macros (REFLECTION_DECLAREPROP, _DECLAREPROP_SIMPLE and _SIMPLE_READONLY)
 // are meant to be called in member functions of Reflection::ReflectionInfo-deriving classes,
 // as they use the `s_Api.Properties` member.
 
 // Declare a property with a custom Getter and Setter
-#define REFLECTION_DECLAREPROP(strname, type, get, set) s_Api.Properties[strname] = IProperty \
-	{	                                                                                      \
-		Reflection::ValueType::type,                                                          \
-		get,                                                                                  \
-		set                                                                                   \
-	}                                                                                         \
+#define REFLECTION_DECLAREPROP(strname, type, get, set) s_Api.Properties[strname] = Reflection::Property \
+	{	                                                                                                 \
+		Reflection::ValueType::type,                                                                     \
+		get,                                                                                             \
+		set                                                                                              \
+	}                                                                                                    \
 
 // Declare a property with the preset Getter (return x) and Setter (x = y)
 #define REFLECTION_DECLAREPROP_SIMPLE(c, name, type) REFLECTION_DECLAREPROP(   \
 	#name,                                                                     \
 	type,                                                                      \
-	[](GameObject* p)                                                          \
+	[](Reflection::Reflectable* p)                                             \
 	{                                                                          \
-		return (Reflection::GenericValue)dynamic_cast<c*>(p)->name;            \
+		return (Reflection::GenericValue)static_cast<c*>(p)->name;             \
 	},                                                                         \
-	[](GameObject* p, Reflection::GenericValue gv)                             \
+	[](Reflection::Reflectable* p, Reflection::GenericValue gv)                \
 	{                                                                          \
-		dynamic_cast<c*>(p)->name = gv.As##type();                             \
+		static_cast<c*>(p)->name = gv.As##type();                              \
 	}                                                                          \
 )                                                                              \
 
@@ -54,13 +56,13 @@ s_Api.Lineage.push_back(#base);                                \
 #define REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(c, name, type, cast) REFLECTION_DECLAREPROP(   \
 	#name,                                                                                      \
 	type,                                                                                       \
-	[](GameObject* p)                                                                           \
+	[](Reflection::Reflectable* p)                                                              \
 	{                                                                                           \
-		return (Reflection::GenericValue)dynamic_cast<c*>(p)->name;                             \
+		return (Reflection::GenericValue)static_cast<c*>(p)->name;                              \
 	},                                                                                          \
-	[](GameObject* p, Reflection::GenericValue gv)                                              \
+	[](Reflection::Reflectable* p, Reflection::GenericValue gv)                                 \
 	{                                                                                           \
-		dynamic_cast<c*>(p)->name = static_cast<cast>(gv.As##type());                           \
+		static_cast<c*>(p)->name = static_cast<cast>(gv.As##type());                            \
 	}                                                                                           \
 )  
 
@@ -69,13 +71,13 @@ s_Api.Lineage.push_back(#base);                                \
 #define REFLECTION_DECLAREPROP_SIMPLE_TYPECAST(c, name, type) REFLECTION_DECLAREPROP(   \
 	#name,                                                                              \
 	type,                                                                               \
-	[](GameObject* p)                                                                   \
+	[](Reflection::Reflectable* p)                                                      \
 	{                                                                                   \
-		return dynamic_cast<c*>(p)->name.ToGenericValue();                              \
+		return static_cast<c*>(p)->name.ToGenericValue();                               \
 	},                                                                                  \
-	[](GameObject* p, Reflection::GenericValue gv)                                      \
+	[](Reflection::Reflectable* p, Reflection::GenericValue gv)                         \
 	{                                                                                   \
-		dynamic_cast<c*>(p)->name = type(gv);                                           \
+		static_cast<c*>(p)->name = type(gv);                                            \
 	}                                                                                   \
 )                                                                                       \
 
@@ -83,32 +85,50 @@ s_Api.Lineage.push_back(#base);                                \
 #define REFLECTION_DECLAREPROP_SIMPLE_READONLY(c, name, type) REFLECTION_DECLAREPROP(   \
 	#name,                                                                              \
 	type,                                                                               \
-	[](GameObject* p)                                                                   \
+	[](Reflection::Reflectable* p)                                                      \
 	{                                                                                   \
-		return Reflection::GenericValue(dynamic_cast<c*>(p)->name);                     \
+		return Reflection::GenericValue(static_cast<c*>(p)->name);                      \
 	},                                                                                  \
 	nullptr                                                                             \
 )                                                                                       \
 
-#define REFLECTION_DECLAREFUNC(strname, ...) s_Api.Functions[strname] = IFunction \
-	{                                                                             \
-		__VA_ARGS__                                                               \
-	}                                                                             \
+#define REFLECTION_DECLAREFUNC(strname, ...) s_Api.Functions[strname] = Reflection::Function \
+	{                                                                                        \
+		__VA_ARGS__                                                                          \
+	}                                                                                        \
 
-#define REFLECTION_DECLAREPROC_INPUTLESS(name, func) {                \
-auto name##Lambda = func;                                             \
-REFLECTION_DECLAREFUNC(                                               \
-	#name,                                                            \
-	{},                                                               \
-	{},                                                               \
-	[name##Lambda](GameObject* p, const Reflection::GenericValue&)    \
-    -> std::vector<Reflection::GenericValue>                          \
-    {                                                                 \
-		name##Lambda(p);                                              \
-		return {};                                                    \
-	}                                                                 \
-);                                                                    \
-}                                                                     \
+#define REFLECTION_DECLAREPROC_INPUTLESS(name, func) {                                       \
+auto name##Lambda = func;                                                                    \
+REFLECTION_DECLAREFUNC(                                                                      \
+	#name,                                                                                   \
+	{},                                                                                      \
+	{},                                                                                      \
+	[name##Lambda](Reflection::Reflectable* p, const Reflection::GenericValue&)              \
+    -> std::vector<Reflection::GenericValue>                                                 \
+    {                                                                                        \
+		name##Lambda(p);                                                                     \
+		return {};                                                                           \
+	}                                                                                        \
+);                                                                                           \
+}                                                                                            \
+
+// 01/09/2024:
+// MUST be added to the `public` section of *all* objects so
+// any APIs they declare can be found
+// 29/11/2024: moved into `Reflection.hpp` from `GameObject.hpp`
+#define REFLECTION_DECLAREAPI static const Reflection::PropertyMap& s_GetProperties()  \
+{                                                                                      \
+	return s_Api.Properties;                                                           \
+}                                                                                      \
+                                                                                       \
+static const Reflection::FunctionMap& s_GetFunctions()                                 \
+{                                                                                      \
+	return s_Api.Functions;                                                            \
+}                                                                                      \
+static const std::vector<std::string>& s_GetLineage()                                  \
+{                                                                                      \
+	return s_Api.Lineage;                                                              \
+}                                                                                      \
 
 namespace Reflection
 {
@@ -174,48 +194,100 @@ namespace Reflection
 
 	class Reflectable;
 
-	struct IProperty
+	struct Property
 	{
-		Reflection::ValueType Type;
+		Reflection::ValueType Type{};
 
 		std::function<Reflection::GenericValue(Reflection::Reflectable*)> Get;
-		std::function<void(Reflection::Reflectable*, Reflection::GenericValue&)> Set;
+		std::function<void(Reflection::Reflectable*, const Reflection::GenericValue&)> Set;
 	};
 
-	struct IFunction
+	struct Function
 	{
 		std::vector<ValueType> Inputs;
 		std::vector<ValueType> Outputs;
 
-		std::function<GenericValue(Reflection::Reflectable*, GenericValue&)> Func;
+		std::function<std::vector<Reflection::GenericValue>(Reflection::Reflectable*, const std::vector<Reflection::GenericValue>&)> Func;
 	};
 
-	typedef std::unordered_map<std::string, Reflection::IProperty> PropertyMap;
-	typedef std::unordered_map<std::string, Reflection::IFunction> FunctionMap;
+	typedef std::unordered_map<std::string, Reflection::Property> PropertyMap;
+	typedef std::unordered_map<std::string, Reflection::Function> FunctionMap;
+
+	struct Api
+	{
+		PropertyMap Properties;
+		FunctionMap Functions;
+		std::vector<std::string> Lineage;
+	};
 
 	class Reflectable
 	{
 	public:
-		Reflectable();
-		virtual ~Reflectable() = default;
+		virtual const Reflection::PropertyMap& GetProperties()
+		{
+			return ApiPointer->Properties;
+		}
+		virtual const Reflection::FunctionMap& GetFunctions()
+		{
+			return ApiPointer->Functions;
+		}
+		virtual const std::vector<std::string>& GetLineage()
+		{
+			return ApiPointer->Lineage;
+		}
+		virtual bool HasProperty(const std::string& MemberName)
+		{
+			return ApiPointer->Properties.find(MemberName) != ApiPointer->Properties.end();
+		}
+		virtual bool HasFunction(const std::string& MemberName)
+		{
+			return ApiPointer->Functions.find(MemberName) != ApiPointer->Functions.end();
+		}
+		virtual const Reflection::Property& GetProperty(const std::string& MemberName)
+		{
+			return HasProperty(MemberName)
+			? ApiPointer->Properties[MemberName]
+			: throw(std::string("Invalid Property in GetProperty ") + MemberName);
+		}
+		virtual const Reflection::Function& GetFunction(const std::string& MemberName)
+		{
+			return HasFunction(MemberName)
+			? ApiPointer->Functions[MemberName]
+			: throw(std::string("Invalid Function in GetFunction ") + MemberName);
+		}
+		virtual Reflection::GenericValue GetPropertyValue(const std::string& MemberName)
+		{
+			return HasProperty(MemberName)
+			? ApiPointer->Properties[MemberName].Get(this)
+			: throw(std::string("Invalid Property in GetPropertyValue ") + MemberName);
+		}
+		virtual void SetPropertyValue(const std::string& MemberName, const Reflection::GenericValue& NewValue)
+		{
+			if (HasProperty(MemberName))
+				if (ApiPointer->Properties[MemberName].Set)
+					ApiPointer->Properties[MemberName].Set(this, NewValue);
+				else
+					throw(std::vformat(
+						"Tried to set read-only property '{}' via `::SetPropertyValue`",
+						std::make_format_args(MemberName)
+					));
+			else
+				throw(std::string("Invalid Property in SetPropertyValue ") + MemberName);
+		}
+		virtual Reflection::GenericValue CallFunction(const std::string& MemberName, const std::vector<Reflection::GenericValue>& Param)
+		{
+			if (HasFunction(MemberName))
+				return ApiPointer->Functions[MemberName].Func(this, Param);
+			else
+				throw(std::string("Invalid Function in CallFunction " + MemberName)); \
+		}
 
-		static PropertyMap& GetProperties();
-		static FunctionMap& GetFunctions();
-
-		static bool HasProperty(const std::string&);
-		static bool HasFunction(const std::string&);
-
-		static Reflection::IProperty& GetProperty(const std::string&);
-		static Reflection::IFunction& GetFunction(const std::string&);
-
-		GenericValue GetPropertyValue(const std::string&);
-
-		void SetPropertyValue(const std::string&, GenericValue&);
-		GenericValue CallFunction(const std::string&, GenericValue);
-
+		REFLECTION_DECLAREAPI;
+	
 	protected:
-		static inline PropertyMap s_Properties{};
-		static inline FunctionMap s_Functions{};
-		static inline std::vector<std::string> s_InheritanceTree{ "Reflectable" };
+		Reflection::Api* ApiPointer = &s_Api;
+
+	private:
+		static inline Reflection::Api s_Api{};;
 	};
 }

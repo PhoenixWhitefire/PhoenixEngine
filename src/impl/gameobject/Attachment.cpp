@@ -29,9 +29,9 @@ static glm::mat4 getNearestParentTransform(Object_Attachment* att)
 				trans *= transformableParent->Transform;
 				break;
 			}
-			else
-				curParent = att->GetParent();
 		}
+
+		curParent = curParent->GetParent();
 	}
 
 	return trans;
@@ -46,17 +46,26 @@ void Object_Attachment::s_DeclareReflections()
 	REFLECTION_INHERITAPI(GameObject);
 
 	REFLECTION_DECLAREPROP_SIMPLE(Object_Attachment, LocalTransform, Matrix);
+	REFLECTION_DECLAREPROP(
+		"WorldTransform",
+		Matrix,
+		[](Reflection::Reflectable* p)
+		{
+			return static_cast<Object_Attachment*>(p)->GetWorldTransform();
+		},
+		nullptr
+	);
 
 	/*
 	REFLECTION_DECLAREPROP(
 		"WorldTransform",
 		Matrix,
-		[](GameObject* p)
+		[](Reflection::Reflectable* p)
 		-> Reflection::GenericValue
 		{
 			return dynamic_cast<Object_Attachment*>(p)->GetWorldTransform();
 		},
-		[](GameObject* p, const Reflection::GenericValue& gv)
+		[](Reflection::Reflectable* p, const std::vector<Reflection::GenericValue>& gv)
 		{
 			const glm::mat4& targetWorldTransform = gv.AsMatrix();
 			Object_Attachment* att = dynamic_cast<Object_Attachment*>(p);
@@ -74,6 +83,7 @@ Object_Attachment::Object_Attachment()
 	this->ClassName = "Attachment";
 
 	s_DeclareReflections();
+	ApiPointer = &s_Api;
 }
 
 glm::mat4 Object_Attachment::GetWorldTransform()

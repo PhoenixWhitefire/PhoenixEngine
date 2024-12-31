@@ -16,7 +16,7 @@ Vector3 GetVector3FromJSON(nlohmann::json JSON) {
 		);
 	}
 	catch (nlohmann::json::type_error TErr) {
-		Debug::Log("Could not read Vector3!\nError: '" + std::string(TErr.what()) + "'");
+		Log::Info("Could not read Vector3!\nError: '" + std::string(TErr.what()) + "'");
 	}
 
 	return Vec3;

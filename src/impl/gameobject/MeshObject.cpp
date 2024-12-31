@@ -11,19 +11,18 @@ void Object_Mesh::s_DeclareReflections()
 		return;
 	s_DidInitReflection = true;
 
-	REFLECTION_INHERITAPI(GameObject);
 	REFLECTION_INHERITAPI(Base3D);
 
 	REFLECTION_DECLAREPROP(
 		"Asset",
 		String,
-		[](GameObject* p)
+		[](Reflection::Reflectable* p)
 		{
-			return dynamic_cast<Object_Mesh*>(p)->GetRenderMeshPath();
+			return static_cast<Object_Mesh*>(p)->GetRenderMeshPath();
 		},
-		[](GameObject* p, const Reflection::GenericValue& gv)
+		[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)
 		{
-			dynamic_cast<Object_Mesh*>(p)->SetRenderMesh(gv.AsString());
+			static_cast<Object_Mesh*>(p)->SetRenderMesh(gv.AsString());
 		}
 	);
 }
@@ -33,14 +32,15 @@ Object_Mesh::Object_Mesh()
 	this->Name = "Mesh";
 	this->ClassName = "Mesh";
 
-	s_DeclareReflections();
-
 	this->SetRenderMesh("!Cube");
+
+	s_DeclareReflections();
+	ApiPointer = &s_Api;
 }
 
 void Object_Mesh::SetRenderMesh(const std::string& NewRenderMesh)
 {
-	m_RenderMeshId = MeshProvider::Get()->LoadFromPath(NewRenderMesh);
+	this->RenderMeshId = MeshProvider::Get()->LoadFromPath(NewRenderMesh);
 	m_MeshPath = NewRenderMesh;
 }
 

@@ -1,10 +1,9 @@
 {
-  "albedo": "models/grass/diffuse.png",
-  "roughnessFactor": 0.5,
-  "specExponent": 16.0,
-  "specMultiply": 0.0,
-  "translucency": false,
-  "uniforms": {
+  "BilinearFiltering": true,
+  "ColorMap": "models/grass/diffuse.png",
+  "HasTranslucency": false,
+  "Uniforms": {
     "AlphaCutoff": 0.5
-  }
+  },
+  "specExponent": 16.0
 }

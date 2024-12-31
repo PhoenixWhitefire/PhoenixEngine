@@ -29,19 +29,18 @@ void Object_Primitive::s_DeclareReflections()
 		return;
 	s_DidInitReflection = true;
 
-	REFLECTION_INHERITAPI(GameObject);
 	REFLECTION_INHERITAPI(Base3D);
 
 	REFLECTION_DECLAREPROP(
 		"Shape",
 		Integer,
-		[](GameObject* g)
+		[](Reflection::Reflectable* g)
 		{
-			return (int)dynamic_cast<Object_Primitive*>(g)->Shape;
+			return (int)static_cast<Object_Primitive*>(g)->Shape;
 		},
-		[](GameObject* g, Reflection::GenericValue gv)
+		[](Reflection::Reflectable* g, Reflection::GenericValue gv)
 		{
-			dynamic_cast<Object_Primitive*>(g)->SetShape((PrimitiveShape)gv.AsInteger());
+			static_cast<Object_Primitive*>(g)->SetShape((PrimitiveShape)gv.AsInteger());
 		}
 	);
 }
@@ -51,14 +50,14 @@ Object_Primitive::Object_Primitive()
 	this->Name = "Primitive";
 	this->ClassName = "Primitive";
 
-	this->Material = RenderMaterial::GetMaterial("plastic");
 	this->SetShape(PrimitiveShape::Cube);
 
 	s_DeclareReflections();
+	ApiPointer = &s_Api;
 }
 
 void Object_Primitive::SetShape(PrimitiveShape shape)
 {
 	this->Shape = shape;
-	m_RenderMeshId = MeshProvider::Get()->LoadFromPath(getPrimitiveMesh(shape));
+	this->RenderMeshId = MeshProvider::Get()->LoadFromPath(getPrimitiveMesh(shape));
 }

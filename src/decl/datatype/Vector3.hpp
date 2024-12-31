@@ -22,6 +22,7 @@ public:
 	Vector3 Cross(Vector3 OtherVec) const;
 	double Dot(Vector3 OtherVec) const;
 	double Magnitude() const;
+	Vector3 Abs() const;
 
 	double X, Y, Z;
 

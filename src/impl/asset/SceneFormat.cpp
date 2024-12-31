@@ -1,19 +1,16 @@
 // TODO: cleanup code!
 
-#include <iostream>
 #include <nljson.hpp>
-#include <SDL2/SDL_messagebox.h>
-#include <SDL2/SDL_video.h>
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "asset/SceneFormat.hpp"
 
-#include "gameobject/GameObjects.hpp"
-#include "asset/Material.hpp"
-#include "asset/ModelLoader.hpp"
 #include "asset/PrimitiveMeshes.hpp"
+#include "asset/MaterialManager.hpp"
+#include "asset/ModelImporter.hpp"
+#include "gameobject/Light.hpp"
 #include "FileRW.hpp"
-#include "Debug.hpp"
+#include "Log.hpp"
 
 static std::string errorString = "No error";
 
@@ -36,11 +33,11 @@ static auto LoadModelAsMeshes(
 	bool AutoParent = true
 )
 {
-	ModelLoader Loader(ModelFilePath, AutoParent ? dynamic_cast<GameObject*>(GameObject::s_DataModel) : nullptr);
+	ModelLoader Loader(ModelFilePath, AutoParent ? static_cast<GameObject*>(GameObject::s_DataModel) : nullptr);
 
 	for (GameObject* object : Loader.LoadedObjs)
 	{
-		Object_Mesh* mesh = dynamic_cast<Object_Mesh*>(object);
+		Object_Mesh* mesh = static_cast<Object_Mesh*>(object);
 
 		mesh->Transform = glm::translate(mesh->Transform, (glm::vec3)Position);
 		mesh->Size = mesh->Size * Size;
@@ -63,7 +60,7 @@ static Vector3 GetVector3FromJson(const nlohmann::json& Json)
 	}
 	catch (nlohmann::json::type_error TErr)
 	{
-		Debug::Log(
+		Log::Warning(
 			"Could not read Vector3: '"
 			+ std::string(TErr.what())
 			+ "'"
@@ -87,7 +84,7 @@ static Color GetColorFromJson(const nlohmann::json& Json)
 	}
 	catch (nlohmann::json::type_error TErr)
 	{
-		Debug::Log(
+		Log::Warning(
 			"Could not read Color: '"
 			+ std::string(TErr.what())
 			+ "'"
@@ -116,7 +113,7 @@ static glm::mat4 GetMatrixFromJson(const nlohmann::json& Json)
 	}
 	catch (nlohmann::json::type_error TErr)
 	{
-		Debug::Log(
+		Log::Warning(
 			"Could not read Matrix: '"
 			+ std::string(TErr.what())
 			+ "'"
@@ -126,19 +123,19 @@ static glm::mat4 GetMatrixFromJson(const nlohmann::json& Json)
 	return mat;
 }
 
-static float GetVersion(std::string const& MapFileContents)
+static float getVersion(const std::string& MapFileContents)
 {
-	size_t MatchLocation = MapFileContents.find("#Version");
+	size_t matchLocation = MapFileContents.find("#Version");
 
-	float Version = 1.f;
+	float version = 1.f;
 
-	if (MatchLocation != std::string::npos)
+	if (matchLocation != std::string::npos)
 	{
-		std::string SubStr = MapFileContents.substr(MatchLocation + 9, 4);
-		Version = std::stof(SubStr);
+		std::string subStr = MapFileContents.substr(matchLocation + 9, 4);
+		version = std::stof(subStr);
 	}
 	
-	return Version;
+	return version;
 }
 
 static std::vector<GameObject*> LoadMapVersion1(
@@ -200,7 +197,7 @@ static std::vector<GameObject*> LoadMapVersion1(
 		std::string modelName = PropObject.value("name", "<UN-NAMED>");
 
 		if (Model.empty())
-			Debug::Log(
+			Log::Warning(
 				std::vformat(
 					"Model '{}' in map file '{}' has no meshes!",
 					std::make_format_args(
@@ -234,7 +231,7 @@ static std::vector<GameObject*> LoadMapVersion1(
 
 		if (Model.size() >= 1)
 		{
-			auto prop_3d = dynamic_cast<Object_Base3D*>(Model[0]);
+			auto prop_3d = static_cast<Object_Base3D*>(Model[0]);
 
 			if (PropObject.find("facecull") != PropObject.end())
 			{
@@ -258,6 +255,8 @@ static std::vector<GameObject*> LoadMapVersion1(
 		}
 	}
 
+	MaterialManager* mtlManager = MaterialManager::Get();
+
 	for (uint32_t Index = 0; Index < PartsNode.size(); Index++)
 	{
 		nlohmann::json Object = PartsNode[Index];
@@ -270,7 +269,7 @@ static std::vector<GameObject*> LoadMapVersion1(
 			GameObject* NewObject = GameObject::Create("Primitive");
 			Objects.push_back(NewObject);
 
-			Object_Base3D* Object3D = dynamic_cast<Object_Base3D*>(NewObject);
+			Object_Base3D* Object3D = static_cast<Object_Base3D*>(NewObject);
 
 			NewObject->Name = Object.value("name", NewObject->Name);
 
@@ -309,15 +308,15 @@ static std::vector<GameObject*> LoadMapVersion1(
 			);
 
 			if (Object.find("color") != Object.end())
-				Object3D->ColorRGB = GetColorFromJson(Object["color"]);
+				Object3D->Tint = GetColorFromJson(Object["color"]);
 
 			Object3D->Size = GetVector3FromJson(Object["size"]);
 
 			if (Object.find("material") != Object.end())
 			{
-				RenderMaterial* MeshMaterial = RenderMaterial::GetMaterial(Object["material"]);
+				uint32_t MeshMaterial = mtlManager->LoadMaterialFromPath(Object["material"]);
 
-				Object3D->Material = MeshMaterial;
+				Object3D->MaterialId = MeshMaterial;
 
 			}
 			else if (Object.find("textures") != Object.end())
@@ -346,7 +345,7 @@ static std::vector<GameObject*> LoadMapVersion1(
 		GameObject* Object = (GameObject::Create(LightType));
 		Objects.push_back(Object);
 
-		Object_Light* Light = dynamic_cast<Object_Light*>(Object);
+		Object_Light* Light = static_cast<Object_Light*>(Object);
 
 		Light->LocalTransform = glm::translate(
 			glm::mat4(1.f),
@@ -357,7 +356,7 @@ static std::vector<GameObject*> LoadMapVersion1(
 
 		if (LightType == "PointLight")
 		{
-			Object_PointLight* Pointlight = dynamic_cast<Object_PointLight*>(Object);
+			Object_PointLight* Pointlight = static_cast<Object_PointLight*>(Object);
 			Pointlight->Range = LightObject["range"];
 		}
 	}
@@ -418,7 +417,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 		{
 			const char* fmtStr = "Deserialization warning: Object #{} was missing it's '$_class' key";
 			auto fmtArgs = std::make_format_args(itemIndex);
-			Debug::Log(std::vformat(fmtStr, fmtArgs));
+			Log::Warning(std::vformat(fmtStr, fmtArgs));
 
 			continue;
 		}
@@ -427,6 +426,16 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 		std::string name = item.find("Name") != item.end() ? (std::string)item["Name"] : className;
 
 		GameObject* newObject = GameObject::Create(className);
+
+		if (item.find("$_objectId") == item.end())
+		{
+			Log::Warning(std::vformat(
+				"Deserialization warning: Object #{} ({}) was missing it's '$_objectId' key",
+				std::make_format_args(itemIndex, className)
+			));
+
+			continue;
+		}
 
 		uint32_t itemObjectId = item["$_objectId"];
 
@@ -441,13 +450,13 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 			std::string memberName = memberIt.key();
 
 			if (std::find(
-					SpecialSerializedNames.begin(),
-					SpecialSerializedNames.end(),
-					memberName
-				) != SpecialSerializedNames.end()
-			)
+				SpecialSerializedNames.begin(),
+				SpecialSerializedNames.end(),
+				memberName
+			) != SpecialSerializedNames.end()
+				)
 				continue;
-			
+
 			nlohmann::json memberValue = memberIt.value();
 
 			bool hasProp = newObject->HasProperty(memberName);
@@ -460,7 +469,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 					className,
 					name
 				);
-				Debug::Log(std::vformat(fmtStr, fmtArgs));
+				Log::Warning(std::vformat(fmtStr, fmtArgs));
 
 				continue;
 			}
@@ -478,66 +487,61 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 					className,
 					name
 				);
-				Debug::Log(std::vformat(fmtStr, fmtArgs));
+				Log::Warning(std::vformat(fmtStr, fmtArgs));
 
 				continue;
 			}
+
+			Reflection::GenericValue assignment;
 
 			switch (memberType)
 			{
 
 			case (Reflection::ValueType::String):
 			{
-				std::string string = memberValue;
-				setProperty(newObject, string);
+				assignment = (std::string)memberValue;
 
 				break;
 			}
 
 			case (Reflection::ValueType::Bool):
 			{
-				bool boolean = memberValue;
-				setProperty(newObject, boolean);
+				assignment = (bool)memberValue;
 
 				break;
 			}
 
 			case (Reflection::ValueType::Double):
 			{
-				double number = memberValue;
-				setProperty(newObject, number);
+				assignment = (double)memberValue;
 
 				break;
 			}
 
 			case (Reflection::ValueType::Integer):
 			{
-				int integer = memberValue;
-				setProperty(newObject, integer);
+				assignment = (int)memberValue;
 
 				break;
 			}
 
 			case (Reflection::ValueType::Color):
 			{
-				Color color = GetColorFromJson(memberValue);
-				setProperty(newObject, color.ToGenericValue());
+				assignment = GetColorFromJson(memberValue).ToGenericValue();
 
 				break;
 			}
 
 			case (Reflection::ValueType::Vector3):
 			{
-				Vector3 vector = GetVector3FromJson(memberValue);
-				setProperty(newObject, vector.ToGenericValue());
+				assignment = GetVector3FromJson(memberValue).ToGenericValue();
 
 				break;
 			}
 
 			case (Reflection::ValueType::Matrix):
 			{
-				glm::mat4 matrix = GetMatrixFromJson(memberValue);
-				setProperty(newObject, matrix);
+				assignment = GetMatrixFromJson(memberValue);
 
 				break;
 			}
@@ -545,6 +549,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 			case (Reflection::ValueType::GameObject):
 			{
 				objectProps[newObject].insert(std::pair(memberName, memberValue));
+
 				break;
 			}
 
@@ -559,11 +564,29 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 					memberTypeName
 				);
 
-				Debug::Log(std::vformat(fmtStr, fmtArgs));
+				Log::Warning(std::vformat(fmtStr, fmtArgs));
 
 				break;
 			}
 
+			}
+
+			if (assignment.Type != Reflection::ValueType::Null)
+			{
+				try
+				{
+					setProperty(newObject, assignment);
+				}
+				catch (std::string err)
+				{
+					std::string mtname = Reflection::TypeAsString(memberType);
+					std::string valueStr = assignment.ToString();
+
+					Log::Warning(std::vformat(
+						"Deserialization warning: Failed to set {} Property '{}' of '{}' ({}) to '{}': {}",
+						std::make_format_args(mtname, memberName, name, className, valueStr, err)
+					));
+				}
 			}
 		}
 	}
@@ -594,12 +617,24 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 				Reflection::GenericValue gv = target->second->ObjectId;
 				gv.Type = Reflection::ValueType::GameObject;
 
-				object->SetPropertyValue(propName, gv);
+				try
+				{
+					object->SetPropertyValue(propName, gv);
+				}
+				catch (std::string err)
+				{
+					std::string valueStr = gv.ToString();
+
+					Log::Warning(std::vformat(
+						"Deserialization warning: Failed to set GameObject property of '{}' ({}) to '{}': {}",
+						std::make_format_args(object->Name, object->ClassName, valueStr, err)
+					));
+				}
 			}
 			else
 			{
-				Debug::Log(std::vformat(
-					"{} '{}' refers to invalid scene-relative Object ID {} for prop {}. To avoid UB, it will be NULL'd.",
+				Log::Warning(std::vformat(
+					"Deserialization warning: {} '{}' refers to invalid scene-relative Object ID {} for prop {}. To avoid UB, it will be NULL'd.",
 					std::make_format_args(
 						object->ClassName,
 						object->Name,
@@ -608,10 +643,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 					)
 				));
 
-				Reflection::GenericValue gv = 0;
-				gv.Type = Reflection::ValueType::GameObject;
-
-				object->SetPropertyValue(propName, gv);
+				object->SetPropertyValue(propName, ((GameObject*)nullptr)->ToGenericValue());
 			}
 		}
 	}
@@ -632,8 +664,8 @@ std::vector<GameObject*> SceneFormat::Deserialize(
 		return {};
 	}
 
-	float version = GetVersion(Contents);
-	Debug::Log(std::vformat("Scene version is {}", std::make_format_args(version)));
+	float version = getVersion(Contents);
+	Log::Info(std::vformat("Scene version is {}", std::make_format_args(version)));
 
 	size_t jsonStartLoc = Contents.find("{");
 	std::string jsonFileContents = Contents.substr(jsonStartLoc);
@@ -646,7 +678,7 @@ std::vector<GameObject*> SceneFormat::Deserialize(
 		if (version == 2.f)
 			objects = LoadMapVersion2(jsonFileContents, SuccessPtr);
 
-	Debug::Log("Scene loaded");
+	Log::Info("Scene loaded");
 
 	return objects;
 }
@@ -658,7 +690,7 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 	for (auto& prop : Object->GetProperties())
 	{
 		const std::string& propName = prop.first;
-		const IProperty& propInfo = prop.second;
+		const Reflection::Property& propInfo = prop.second;
 
 		if (!propInfo.Set && propName != "ObjectId" && propName != "Class")
 			continue;
@@ -770,7 +802,7 @@ std::string SceneFormat::Serialize(std::vector<GameObject*> Objects, const std::
 							+ std::to_string((uint32_t)ymd.month()) + "-"
 							+ std::to_string((int32_t)ymd.year()) + "\n";
 
-	std::string contents = "Generated by Phoenix Engine as " + SceneName + "\n"
+	std::string contents = std::string("PHNXENGI\n")
 							+ "#Version 2.00\n"
 							+ "#Asset Scene\n"
 							+ "#Date " + dateStr + "\n"

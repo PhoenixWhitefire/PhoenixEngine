@@ -15,7 +15,7 @@ Anyway, here is a small tour:
 - "phoenix.conf" contains some configuration. Set "Developer" to "false" to disable the debug UIs.
 - WASD to move horizontally, Q/E to move down/up. Left-click to look around. Right-click to stop. LShift to move slower.
 - Hold `R` to disable distance culling
-- Press `J` to dump object hierarchy. `L` to dump GameObject API.
+- Press `L` to dump GameObject API.
 - `K` to reload all shaders, `I` to reload configuration
 - F11 to toggle fullscreen.
 
@@ -23,7 +23,28 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 
 */
 
+/*
+	
+	14/11/2024
+
+	This Main file is in the "Player" or "Application" layer in my head, so I don't really care
+	that's it's messy.
+
+*/
+
+#define GLM_ENABLE_EXPERIMENTAL
 #define SDL_MAIN_HANDLED
+
+#define PHX_MAIN_HANDLECRASH(c, expr) catch (c Error) { handleCrash(Error##expr, #c); }
+
+#define PHX_MAIN_CRASHHANDLERS PHX_MAIN_HANDLECRASH(std::string, ) \
+PHX_MAIN_HANDLECRASH(const char*, ) \
+PHX_MAIN_HANDLECRASH(std::bad_alloc, .what() + std::string(": System may have run out of memory")) \
+PHX_MAIN_HANDLECRASH(nlohmann::json::type_error, .what()) \
+PHX_MAIN_HANDLECRASH(nlohmann::json::parse_error, .what()) \
+PHX_MAIN_HANDLECRASH(std::exception, .what()); \
+
+#include <ImGuiFD/ImGuiFD.h>
 
 #include <filesystem>
 #include <imgui/backends/imgui_impl_opengl3.h>
@@ -32,12 +53,15 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 #include <glm/gtx/vector_angle.hpp>
 
 #include "Engine.hpp"
+
 #include "GlobalJsonConfig.hpp"
-#include "asset/SceneFormat.hpp"
 #include "UserInput.hpp"
+#include "Utilities.hpp"
+#include "Profiler.hpp"
 #include "FileRW.hpp"
-#include "Debug.hpp"
 #include "Editor.hpp"
+#include "Log.hpp"
+#include "asset/SceneFormat.hpp"
 
 static bool FirstDragFrame = false;
 
@@ -56,11 +80,30 @@ static int PrevMouseX, PrevMouseY = 0;
 
 static glm::tvec3<double, glm::highp> CamForward = glm::vec3(0.f, 0.f, -1.f);
 
-static const char* ImGuiErrLn1 =
-"Dear ImGui has detected a version mis-match between the compiled headers{} {} {}";
-static const char* ImGuiErrLn2 =
-" and the linked library. Please ensure version";
-static const char* ImGuiErrLn3 = "is linked.";
+// 16/11/2024
+// https://stackoverflow.com/a/5167641/16875161
+static std::vector<std::string> stringSplit(const std::string& s, const std::string& seperator)
+{
+	if (s.find(seperator) == std::string::npos)
+		return { s };
+
+	std::vector<std::string> output;
+
+	std::string::size_type prev_pos = 0, pos = 0;
+
+	while ((pos = s.find(seperator, pos)) != std::string::npos)
+	{
+		std::string substring(s.substr(prev_pos, pos - prev_pos));
+
+		output.push_back(substring);
+
+		prev_pos = ++pos;
+	}
+
+	output.push_back(s.substr(prev_pos, pos - prev_pos)); // Last word
+
+	return output;
+}
 
 static int findArgumentInCliArgs(
 	int ArgCount,
@@ -223,8 +266,8 @@ static void handleInputs(Reflection::GenericValue Data)
 				FirstDragFrame = true;
 			}
 
-			if (activeMouseButton & SDL_BUTTON_LMASK && !UserInput::InputBeingSunk)
-				MouseCaptured = true;
+			//if (activeMouseButton & SDL_BUTTON_LMASK && !UserInput::InputBeingSunk)
+				//MouseCaptured = true;
 		}
 
 		PrevMouseX = mouseX;
@@ -295,7 +338,7 @@ static char* LevelSavePathBuf;
 
 static void LoadLevel(const std::string& LevelPath)
 {
-	Debug::Log(std::vformat("Loading scene: '{}'", std::make_format_args(LevelPath)));
+	Log::Info(std::vformat("Loading scene: '{}'", std::make_format_args(LevelPath)));
 
 	Object_Workspace* workspace = EngineInstance->Workspace;
 
@@ -336,201 +379,385 @@ static void LoadLevel(const std::string& LevelPath)
 	//MapLoader::LoadMapIntoObject(LevelPath, levelModel);
 }
 
+static double recurseGetTime(const nlohmann::json& root)
+{
+	if (root.find("_t") != root.end())
+		return root["_t"];
+
+	double t{};
+
+	for (auto ch = root.begin(); ch != root.end(); ++ch)
+		t += recurseGetTime(ch.value());
+
+	return t;
+}
+
+static void recurseProfilerUI(const nlohmann::json& tree)
+{
+	for (auto it = tree.begin(); it != tree.end(); ++it)
+	{
+		auto& v = it.value();
+
+		if (v.type() != nlohmann::json::value_t::object)
+			continue;
+
+		// "EventCallbacks" doesn't have an `_t`, accumulate the timings of
+		// it's children
+		// 08/12/2024
+		double t = recurseGetTime(v);
+
+		uint32_t tMS = static_cast<uint32_t>(std::floor(t * 100000.f));
+		float tMSHundreds = tMS / 100.f;
+
+		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow;
+
+		if (it.value().size() == 1)
+			flags |= ImGuiTreeNodeFlags_Leaf;
+
+		bool open = ImGui::TreeNodeEx(
+			it.key().c_str(),
+			flags,
+			(std::vformat(
+				"{}: {}ms",
+				std::make_format_args(it.key(), tMSHundreds)
+			)).c_str()
+		);
+
+		if (open)
+		{
+			recurseProfilerUI(it.value());
+			ImGui::TreePop();
+		}
+	}
+}
+
 static void drawUI(Reflection::GenericValue Data)
 {
-	if (UserInput::IsKeyDown(SDLK_j) && !UserInput::InputBeingSunk)
-	{
-		printf("BEGIN DUMP WORLD ARRAY\n");
-		printf("%zi OBJECTS: \n", GameObject::s_WorldArray.size());
-
-		for (auto& pair : GameObject::s_WorldArray)
-			printf(
-				"%i: %s '%s', Parent %i\n",
-				pair.first,
-				pair.second->ClassName.c_str(),
-				pair.second->Name.c_str(),
-				pair.second->Parent
-			);
-
-		printf("END DUMP WORLD ARRAY\n");
-	}
-
 	if (UserInput::IsKeyDown(SDLK_l) && !UserInput::InputBeingSunk)
 	{
-		Debug::Log("Dumping GameObject API...");
+		Log::Info("Dumping GameObject API...");
 
 		auto dump = GameObject::DumpApiToJson();
 		FileRW::WriteFile("apidump.json", dump.dump(2), false);
 
-		Debug::Log("API dump finished");
+		Log::Info("API dump finished");
 	}
 
 	if (UserInput::IsKeyDown(SDLK_i) && !UserInput::InputBeingSunk)
 	{
-		Debug::Log("Reloading configuration...");
+		Log::Info("Reloading configuration...");
 
 		EngineInstance->LoadConfiguration();
 	}
 
 	if (UserInput::IsKeyDown(SDLK_k) && !UserInput::InputBeingSunk)
 	{
-		Debug::Log("Reloading shaders...");
+		Log::Info("Reloading shaders...");
 
-		ShaderProgram::ReloadAll();
+		ShaderManager::Get()->ReloadAll();
 
-		Debug::Log("Shaders reloaded");
+		Log::Info("Shaders reloaded");
 	}
 
 	if (EditorContext)
 	{
-		ImGui_ImplOpenGL3_NewFrame();
-		ImGui_ImplSDL2_NewFrame();
-		ImGui::NewFrame();
+		//ImGui_ImplOpenGL3_NewFrame();
+		//ImGui_ImplSDL2_NewFrame();
+		//ImGui::NewFrame();
 
 		//ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
 
-		ImGui::Begin("Level");
-
-		static std::string saveMessage;
-		static double saveMessageTimeLeft;
-
-		ImGui::InputText("Save target", LevelSavePathBuf, 64);
-
-		if (ImGui::Button("Save"))
+		if (ImGui::Begin("Level"))
 		{
-			GameObject* levelModel = EngineInstance->Workspace->GetChild("Level");
+			static std::string saveMessage;
+			static double saveMessageTimeLeft;
 
-			if (levelModel)
+			ImGui::InputText("Save target", LevelSavePathBuf, 64);
+
+			if (ImGui::Button("Save"))
 			{
-				std::string levelSavePath(LevelSavePathBuf);
+				GameObject* levelModel = EngineInstance->Workspace->GetChild("Level");
 
-				bool alreadyExists = false;
-				std::string prevFile = FileRW::ReadFile(levelSavePath, &alreadyExists);
-
-				if (alreadyExists && prevFile.find("#Version 2.00") == std::string::npos)
+				if (levelModel)
 				{
-					// V2 does not have full parity with V1 as of 02/09/2024
-					// (models)
-					saveMessage = "Not saving as that file already exists as a V1";
-					saveMessageTimeLeft = 1.5;
+					std::string levelSavePath(LevelSavePathBuf);
+
+					bool alreadyExists = false;
+					std::string prevFile = FileRW::ReadFile(levelSavePath, &alreadyExists);
+
+					if (alreadyExists && prevFile.find("#Version 2.00") == std::string::npos)
+					{
+						// V2 does not have full parity with V1 as of 02/09/2024
+						// (models)
+						saveMessage = "Not saving as that file already exists as a V1";
+						saveMessageTimeLeft = 1.5;
+					}
+					else
+					{
+						std::string serialized = SceneFormat::Serialize(levelModel->GetChildren(), levelSavePath);
+						FileRW::WriteFile(levelSavePath, serialized, true);
+
+						saveMessage = std::vformat("Saved as '{}'", std::make_format_args(levelSavePath));
+						saveMessageTimeLeft = 1.f;
+					}
 				}
 				else
 				{
-					std::string serialized = SceneFormat::Serialize(levelModel->GetChildren(), levelSavePath);
-					FileRW::WriteFile(levelSavePath, serialized, true);
-
-					saveMessage = std::vformat("Saved as '{}'", std::make_format_args(levelSavePath));
+					saveMessage = "Save failed as Workspace had no `Level` child";
 					saveMessageTimeLeft = 1.f;
 				}
 			}
-			else
+
+			if (saveMessageTimeLeft > 0.f)
 			{
-				saveMessage = "Save failed as Workspace had no `Level` child";
-				saveMessageTimeLeft = 1.f;
+				ImGui::Text(saveMessage.c_str());
+				saveMessageTimeLeft -= Data.AsDouble();
 			}
+
+			ImGui::InputText("Load target", LevelLoadPathBuf, 64);
+
+			if (ImGui::Button("Load"))
+				LoadLevel(LevelLoadPathBuf);
+
 		}
-
-		if (saveMessageTimeLeft > 0.f)
-		{
-			ImGui::Text(saveMessage.c_str());
-			saveMessageTimeLeft -= Data.AsDouble();
-		}
-
-		ImGui::InputText("Load target", LevelLoadPathBuf, 64);
-
-		if (ImGui::Button("Load"))
-			LoadLevel(LevelLoadPathBuf);
-
 		ImGui::End();
 
-		ImGui::Begin("Info");
+		// always pop the snapshot, otherwise they'll build-up
+		std::unordered_map<std::string, double> snapshot = Profiler::PopSnapshot();
 
-		ImGui::Text("FPS: %d", EngineInstance->FramesPerSecond);
-		ImGui::Text("Frame time: %dms", (int)ceil(EngineInstance->FrameTime * 1000));
-		ImGui::Text("Draw calls: %zi", EngineJsonConfig.value("renderer_drawcallcount", 0ULL));
+		static nlohmann::json ProfileInfoHisto[100] = {};
+		static float FrameTimesHisto[100] = { 0 };
 
+		if (ImGui::Begin("Info") && snapshot.size() > 0)
+		{
+			ImGui::Text("FPS: %d", EngineInstance->FramesPerSecond);
+			ImGui::Text("Frame time: %dms", (int)std::ceil(EngineInstance->FrameTime * 1000));
+			ImGui::Text("Draw calls: %zi", EngineJsonConfig.value("renderer_drawcallcount", 0ull));
+
+			ImGui::Text("--- PROFILING ---");
+
+			static bool InfoCollectionPaused = true;
+
+			nlohmann::json profilerTimingsTree{};
+
+			if (!InfoCollectionPaused)
+				for (auto& it : snapshot)
+				{
+					nlohmann::json* last = &profilerTimingsTree;
+
+					std::vector<std::string> split = stringSplit(it.first, "/");
+
+					for (size_t catIndex = 0; catIndex < split.size(); catIndex++)
+						if (catIndex < split.size() - 1)
+						{
+							last = &((*last)[split[catIndex]]);
+							//(*last)["_t"] = it.second;
+						}
+						else
+							(*last)[split[catIndex]]["_t"] = it.second;
+				}
+
+			if (ProfileInfoHisto->size() == 0)
+				for (int i = 0; i < 100; i++)
+				{
+					ProfileInfoHisto[i] = nlohmann::json::object();
+					ProfileInfoHisto[i]["Frame"] = nlohmann::json::object();
+					ProfileInfoHisto[i]["Frame"]["_t"] = 0.f;
+				}
+
+			if (!InfoCollectionPaused)
+			{
+				ProfileInfoHisto[99] = profilerTimingsTree;
+				FrameTimesHisto[99] = profilerTimingsTree["Frame"]["_t"];
+			}
+
+			if (!InfoCollectionPaused)
+				for (int i = 0; i < 99; i++)
+				{
+					ProfileInfoHisto[i] = ProfileInfoHisto[i + 1];
+					FrameTimesHisto[i] = FrameTimesHisto[i + 1];
+				}
+
+			static auto FrameTimeHistoPeeker = [](void* data, int idx)
+				-> float
+				{
+					return ((float*)data)[idx];
+				};
+
+			ImGui::PlotHistogram("MS", FrameTimeHistoPeeker, FrameTimesHisto, 100, 0, 0, 1/120.f, 1/30.f);
+
+			static int FocusedProfilingInfoIdx = 99;
+
+			if (ImGui::IsItemClicked())
+			{
+				int mouseX = 0;
+				SDL_GetMouseState(&mouseX, NULL);
+
+				ImVec2 min = ImGui::GetItemRectMin() + ImGui::GetStyle().FramePadding;
+				ImVec2 max = ImGui::GetItemRectMax() - ImGui::GetStyle().FramePadding;
+
+				const float t = std::clamp((ImGui::GetIO().MousePos.x - min.x) / (max.x - min.x), 0.0f, 0.9999f);
+				FocusedProfilingInfoIdx = (int)(t * 100);
+			}
+
+			if (InfoCollectionPaused && ImGui::Button("Unpause"))
+				InfoCollectionPaused = false;
+
+			else if (!InfoCollectionPaused && ImGui::Button("Pause"))
+				InfoCollectionPaused = true;
+
+			recurseProfilerUI(ProfileInfoHisto[FocusedProfilingInfoIdx]);
+
+			if (ImGui::Button("Save"))
+				ImGuiFD::OpenDialog("SaveProfilingData", ImGuiFDMode_SaveFile, "", "*.json");
+
+			if (ImGui::Button("Load"))
+				ImGuiFD::OpenDialog("LoadProfilingData", ImGuiFDMode_LoadFile, "", "*.json");
+
+		}
 		ImGui::End();
 
-		ImGui::Begin("Settings");
-
-		ImGui::Checkbox("VSync", &EngineInstance->VSync);
-
-		bool wasFullscreen = EngineInstance->IsFullscreen;
-
-		ImGui::Checkbox("Fullscreen", &EngineInstance->IsFullscreen);
-
-		if (EngineInstance->IsFullscreen != wasFullscreen)
-			EngineInstance->SetIsFullscreen(EngineInstance->IsFullscreen);
-
-		if (EngineInstance->VSync)
-			SDL_GL_SetSwapInterval(1);
-		else
+		if (ImGuiFD::BeginDialog("SaveProfilingData"))
 		{
-			SDL_GL_SetSwapInterval(0);
+			if (ImGuiFD::ActionDone())
+			{
+				if (ImGuiFD::SelectionMade())
+				{
+					std::string result = ImGuiFD::GetResultStringRaw();
+					std::string contents = "";
 
-			ImGui::InputInt("FPS max", &EngineInstance->FpsCap, 1, 30);
+					if (result.find(".json") == std::string::npos)
+						result += ".json";
+
+					result = ("./" + result).c_str();
+
+					for (int i = 0; i < 100; i++)
+						contents += ProfileInfoHisto[i].dump(-1) + '\n';
+
+					try
+					{
+						FileRW::WriteFile(result, contents, false);
+					}
+					catch (std::string err)
+					{
+						Log::Error("While trying to save profiling data: " + err);
+					}
+				}
+
+				ImGuiFD::CloseCurrentDialog();
+			}
+
+			ImGuiFD::EndDialog();
 		}
 
-		bool postFxEnabled = EngineJsonConfig.value("postfx_enabled", false);
-
-		ImGui::Checkbox("Post-Processing", &postFxEnabled);
-
-		EngineJsonConfig["postfx_enabled"] = postFxEnabled;
-
-		if (postFxEnabled)
+		if (ImGuiFD::BeginDialog("LoadProfilingData"))
 		{
-			float gammaCorrection = EngineJsonConfig.value("postfx_gamma", 1.f);
-			float trldmax = EngineJsonConfig.value("postfx_ldmax", 1.f);
-			float trcmax = EngineJsonConfig.value("postfx_cmax", 1.f);
-
-			ImGui::InputFloat("Gamma", &gammaCorrection);
-			ImGui::InputFloat("Tonemapper LdMax", &trldmax);
-			ImGui::InputFloat("Tonemapper CMax", &trcmax);
-
-			EngineJsonConfig["postfx_gamma"] = gammaCorrection;
-			EngineJsonConfig["postfx_ldmax"] = trldmax;
-			EngineJsonConfig["postfx_cmax"] = trcmax;
-
-			bool blurVignette = EngineJsonConfig.value("postfx_blurvignette", false);
-			bool distortion = EngineJsonConfig.value("postfx_distortion", false);
-
-			ImGui::Checkbox("Blur vignette", &blurVignette);
-			ImGui::Checkbox("Distortion", &distortion);
-
-			EngineJsonConfig["postfx_blurvignette"] = blurVignette;
-			EngineJsonConfig["postfx_distortion"] = distortion;
-
-			if (EngineJsonConfig["postfx_blurvignette"])
+			if (ImGuiFD::ActionDone())
 			{
-				float distFactorMultiplier = EngineJsonConfig.value("postfx_blurvignette_blurstrength", 2.f);
-				float weightExponent = EngineJsonConfig.value("postfx_blurvignette_weightexp", 2.f);
-				float weightMultiplier = EngineJsonConfig.value("postfx_blurvignette_weightmul", 2.5f);
-				float sampleRadius = EngineJsonConfig.value("postfx_blurvignette_sampleradius", 4.f);
+				if (ImGuiFD::SelectionMade())
+				{
+					std::string result = ImGuiFD::GetSelectionPathString(0);
+					bool exists = false;
+					std::string contents = FileRW::ReadFile(result, &exists, false);
 
-				ImGui::InputFloat("Vignette dist weight factor", &distFactorMultiplier);
-				ImGui::InputFloat("Vignette weight exponent", &weightExponent);
-				ImGui::InputFloat("Vignette weight multiplier", &weightMultiplier);
-				ImGui::InputFloat("Vignette sample radius", &sampleRadius);
+					if (exists)
+						for (int i = 0; i < 100; i++)
+						{
+							size_t nextLine = contents.find_first_of('\n');
 
-				EngineJsonConfig["postfx_blurvignette_blurstrength"] = distFactorMultiplier;
-				EngineJsonConfig["postfx_blurvignette_weightexp"] = weightExponent;
-				EngineJsonConfig["postfx_blurvignette_weightmul"] = weightMultiplier;
-				EngineJsonConfig["postfx_blurvignette_sampleradius"] = sampleRadius;
+							std::string substr = contents.substr(0, nextLine);
+
+							ProfileInfoHisto[i] = nlohmann::json::parse(substr);
+
+							contents = contents.substr(nextLine + 1);
+						}
+					else
+						Log::Error("Couldn't load profiling data from file " + result);
+				}
+
+				ImGuiFD::CloseCurrentDialog();
+			}
+
+			ImGuiFD::EndDialog();
+		}
+
+		if (ImGui::Begin("Settings"))
+		{
+			ImGui::Checkbox("VSync", &EngineInstance->VSync);
+
+			bool wasFullscreen = EngineInstance->IsFullscreen;
+
+			ImGui::Checkbox("Fullscreen", &EngineInstance->IsFullscreen);
+
+			if (EngineInstance->IsFullscreen != wasFullscreen)
+				EngineInstance->SetIsFullscreen(EngineInstance->IsFullscreen);
+
+				if (EngineInstance->VSync)
+					SDL_GL_SetSwapInterval(1);
+				else
+				{
+					SDL_GL_SetSwapInterval(0);
+
+					ImGui::InputInt("FPS max", &EngineInstance->FpsCap, 1, 30);
+				}
+
+			bool postFxEnabled = EngineJsonConfig.value("postfx_enabled", false);
+
+			ImGui::Checkbox("Post-Processing", &postFxEnabled);
+
+			EngineJsonConfig["postfx_enabled"] = postFxEnabled;
+
+			if (postFxEnabled)
+			{
+				float gammaCorrection = EngineJsonConfig.value("postfx_gamma", 1.f);
+				float trldmax = EngineJsonConfig.value("postfx_ldmax", 1.f);
+				float trcmax = EngineJsonConfig.value("postfx_cmax", 1.f);
+
+				ImGui::InputFloat("Gamma", &gammaCorrection);
+				ImGui::InputFloat("Tonemapper LdMax", &trldmax);
+				ImGui::InputFloat("Tonemapper CMax", &trcmax);
+
+				EngineJsonConfig["postfx_gamma"] = gammaCorrection;
+				EngineJsonConfig["postfx_ldmax"] = trldmax;
+				EngineJsonConfig["postfx_cmax"] = trcmax;
+
+				bool blurVignette = EngineJsonConfig.value("postfx_blurvignette", false);
+				bool distortion = EngineJsonConfig.value("postfx_distortion", false);
+
+				ImGui::Checkbox("Blur vignette", &blurVignette);
+				ImGui::Checkbox("Distortion", &distortion);
+
+				EngineJsonConfig["postfx_blurvignette"] = blurVignette;
+				EngineJsonConfig["postfx_distortion"] = distortion;
+
+				if (EngineJsonConfig["postfx_blurvignette"])
+				{
+					float distFactorMultiplier = EngineJsonConfig.value("postfx_blurvignette_blurstrength", 2.f);
+					float weightExponent = EngineJsonConfig.value("postfx_blurvignette_weightexp", 2.f);
+					float weightMultiplier = EngineJsonConfig.value("postfx_blurvignette_weightmul", 2.5f);
+					float sampleRadius = EngineJsonConfig.value("postfx_blurvignette_sampleradius", 4.f);
+
+					ImGui::InputFloat("Vignette dist weight factor", &distFactorMultiplier);
+					ImGui::InputFloat("Vignette weight exponent", &weightExponent);
+					ImGui::InputFloat("Vignette weight multiplier", &weightMultiplier);
+					ImGui::InputFloat("Vignette sample radius", &sampleRadius);
+
+					EngineJsonConfig["postfx_blurvignette_blurstrength"] = distFactorMultiplier;
+					EngineJsonConfig["postfx_blurvignette_weightexp"] = weightExponent;
+					EngineJsonConfig["postfx_blurvignette_weightmul"] = weightMultiplier;
+					EngineJsonConfig["postfx_blurvignette_sampleradius"] = sampleRadius;
+				}
+			}
+
+			if (ImGui::Button("Save Post FX settings"))
+			{
+				FileRW::WriteFile("phoenix.conf", EngineJsonConfig.dump(2), false);
+				Log::Info("The JSON Config overwrote the pre-existing 'phoenix.conf'.");
 			}
 		}
-
-		if (ImGui::Button("Save Post FX settings"))
-		{
-			FileRW::WriteFile("phoenix.conf", EngineJsonConfig.dump(2), false);
-			Debug::Log("The JSON Config overwrote the pre-existing 'phoenix.conf'.");
-		}
-
 		ImGui::End();
 
 		EditorContext->RenderUI();
-
-		ImGui::Render();
-		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	}
 }
 
@@ -538,7 +765,7 @@ static void Application(int argc, char** argv)
 {
 	const char* imGuiVersion = IMGUI_VERSION;
 
-	Debug::Log(std::vformat(
+	Log::Info(std::vformat(
 		"Initializing Dear ImGui {}...",
 		std::make_format_args(imGuiVersion)
 	));
@@ -546,16 +773,7 @@ static void Application(int argc, char** argv)
 	bool imGuiVersionCorrect = IMGUI_CHECKVERSION();
 
 	if (!imGuiVersionCorrect)
-	{
-		throw(std::vformat(
-			ImGuiErrLn1,
-			std::make_format_args(
-				ImGuiErrLn2,
-				imGuiVersion,
-				ImGuiErrLn3
-			)
-		));
-	}
+		throw("Dear ImGui detected a version mismatch");
 
 	ImGui::CreateContext();
 
@@ -565,36 +783,17 @@ static void Application(int argc, char** argv)
 
 	if (!ImGui_ImplSDL2_InitForOpenGL(
 			EngineInstance->Window,
-			EngineInstance->RendererContext->GLContext
-		))
-		throw("ImGui intialization failure on ImGui_ImplSDL2_InitForOpenGL");
+			EngineInstance->RendererContext.GLContext
+	))
+		throw("ImGui intialization failure on `ImGui_ImplSDL2_InitForOpenGL`");
 
 	if (!ImGui_ImplOpenGL3_Init("#version 460"))
-		throw("ImGui initialization failure on ImGui_ImplOpenGL3_Init");
+		throw("ImGui initialization failure on `ImGui_ImplOpenGL3_Init`");
 
-	EditorContext = EngineJsonConfig.value("Developer", false) ? new Editor : nullptr;
+	EditorContext = EngineJsonConfig.value("Developer", false) ? new Editor(&EngineInstance->RendererContext) : nullptr;
 	
-	LevelLoadPathBuf = (char*)malloc(64);
-	LevelSavePathBuf = (char*)malloc(64);
-
-	if (!LevelLoadPathBuf)
-		throw("Could not allocate buffer for Level load path");
-
-	if (!LevelSavePathBuf)
-		throw("Could not allocate buffer for Level save path");
-
-	static const char* defaultLoadLevel = "levels/dev.world";
-	static const char* defaultSaveLevel = "levels/save.world";
-
-	for (int i = 0; i < 64; i++)
-		LevelLoadPathBuf[i] = i < strlen(defaultLoadLevel)
-								? defaultLoadLevel[i]
-								: '\0';
-
-	for (int i = 0; i < 64; i++)
-		LevelSavePathBuf[i] = i < strlen(defaultSaveLevel)
-								? defaultSaveLevel[i]
-								: '\0';
+	LevelLoadPathBuf = BufferInitialize(64, "levels/de_dust2.world");
+	LevelSavePathBuf = BufferInitialize(64, "levels/save.world");
 
 	const char* mapFileFromArgs{};
 	bool hasMapFromArgs = false;
@@ -603,7 +802,7 @@ static void Application(int argc, char** argv)
 
 	if (mapFileArgIdx > 0)
 	{
-		Debug::Log(std::vformat(
+		Log::Info(std::vformat(
 			"Map to load specified from launch argument. Map was: {}",
 			std::make_format_args(argv[mapFileArgIdx + 1])
 		));
@@ -614,12 +813,31 @@ static void Application(int argc, char** argv)
 
 	std::string mapFile = hasMapFromArgs ?
 							mapFileFromArgs
-							: EngineJsonConfig.value("RootScene", "levels/empty.world");
+							: EngineJsonConfig.value("RootScene", "scenes/root.world");
 
-	LoadLevel(mapFile);
+	bool worldLoadSuccess = true;
+	std::vector<GameObject*> roots = SceneFormat::Deserialize(FileRW::ReadFile(mapFile), &worldLoadSuccess);
 
-	if (EditorContext)
-		EditorContext->Init();
+	if (!worldLoadSuccess)
+	{
+		std::string errStr = SceneFormat::GetLastErrorString();
+		throw(std::vformat(
+			"World failed to load: {}",
+			std::make_format_args(errStr)
+		));
+	}
+
+	if (roots.size() > 1)
+		Log::Warning("More than 1 root object in the World, anything other than the first will be ignored");
+
+	if (roots.empty())
+		throw("No root objects in World!");
+	if (roots[0]->ClassName != "DataModel")
+		throw("Root object was not a DataModel!");
+
+	GameObject::s_DataModel->CallFunction("Merge", { roots[0]->ToGenericValue() });
+
+	//LoadLevel(mapFile);
 
 	EngineInstance->OnFrameStart.Connect(handleInputs);
 	EngineInstance->OnFrameRenderGui.Connect(drawUI);
@@ -631,27 +849,34 @@ static void Application(int argc, char** argv)
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplSDL2_Shutdown();
 
+	SDL_Quit();
+
 	// Engine destructor is called as the `EngineObject`'s scope terminates in `main`.
 }
 
-static void handleCrash(std::string Error, std::string ExceptionType)
+static void handleCrash(const std::string& Error, const std::string& ExceptionType)
 {
-	auto fmtArgs = std::make_format_args(
-		ExceptionType,
-		Error,
-		"If this is the first time this has happened, please re-try. Otherwise, contact the developers."
-	);
-
-	Debug::Log(std::vformat("CRASH - {}: {}", fmtArgs));
+	// Log Size Limit Exceeded Throwing Exception
+	if (!Error.starts_with("LSLETE"))
+	{
+		Log::Append(std::vformat(
+			"CRASH - {}: {}",
+			std::make_format_args(ExceptionType, Error)
+		));
+		Log::Save();
+	}
 
 	std::string errMessage = std::vformat(
-		"An unexpected error occurred, and the application will now close. Details:\n\nType: {}\nError: {}\n\n{}",
-		fmtArgs
+		"An unexpected error occurred, and the application will now close. Details: \n\n{}\n\n{}",
+		std::make_format_args(
+			Error,
+			"If this is the first time this has happened, please re-try. Otherwise, contact the developers."
+		)
 	);
 
 	SDL_ShowSimpleMessageBox(
 		SDL_MESSAGEBOX_ERROR,
-		"Engine error",
+		"Fatal Engine Error",
 		errMessage.c_str(),
 		nullptr
 	);
@@ -659,36 +884,35 @@ static void handleCrash(std::string Error, std::string ExceptionType)
 
 int main(int argc, char** argv)
 {
-	Debug::Log("Application startup...");
+	Log::Info("Application startup...");
+
+	Log::Info(std::format("Phoenix Engine, Main.cpp last compiled: {}", __DATE__));
 
 	SDL_Window* window = nullptr;
 
 	try
 	{
 		EngineObject engine{};
-		EngineInstance = &engine;
-		window = engine.Window;
 
-		//Engine->MSAASamples = 2;
+		try
+		{
+			engine.Initialize();
+			EngineInstance = &engine;
+			window = engine.Window;
 
-		Application(argc, argv);
+			//Engine->MSAASamples = 2;
 
-		Debug::Save(); // in case FileRW::WriteFile throws an exception
-	}
-	catch (std::string Error)
-	{
-		handleCrash(Error, "std::string");
-	}
-	catch (const char* Error)
-	{
-		handleCrash(Error, "const char*");
-	}
-	catch (std::filesystem::filesystem_error Error)
-	{
-		handleCrash(Error.what(), "std::filesystem::filesystem_error");
-	}
+			Application(argc, argv);
 
-	Debug::Log("Application shutting down...");
+			Log::Save(); // in case FileRW::WriteFile throws an exception
+		}
+		PHX_MAIN_CRASHHANDLERS;
+	} // 25/12/2024 in case Engine's Destructor throws an exception
+	PHX_MAIN_CRASHHANDLERS;
 
-	Debug::Save();
+	// this occurs AFTER engine destructor is called
+	// 15/12/2024
+	Log::Info("Application shutting down...");
+
+	Log::Save();
 }

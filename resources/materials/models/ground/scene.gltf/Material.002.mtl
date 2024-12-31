@@ -1,8 +1,7 @@
 {
-  "albedo": "models/ground/diffuse.png",
-  "roughnessFactor": 0.5,
-  "specExponent": 16.0,
-  "specMultiply": 0.0,
-  "translucency": false,
-  "uniforms": {}
+  "BilinearFiltering": true,
+  "ColorMap": "models/ground/diffuse.png",
+  "HasTranslucency": false,
+  "Uniforms": {},
+  "specExponent": 16.0
 }

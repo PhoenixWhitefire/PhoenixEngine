@@ -41,7 +41,6 @@ public:
 class ThreadManager
 {
 public:
-
 	std::vector<Worker*> CreateWorkers(int NumWorkers, WorkerType Type);
 	std::vector<Worker*> GetWorkers();
 
@@ -51,7 +50,5 @@ public:
 	static ThreadManager* Get();
 
 private:
-	static ThreadManager* Singleton;
-
 	std::vector<Worker*> m_Workers;
 };

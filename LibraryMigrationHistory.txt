@@ -7,3 +7,9 @@ ImGui 1.89 WIP -> 1.91.1 WIP (27/08/2024)
 stb_image 2.27 -> 2.30 (29/08/2024)
 @g-truc/glm 0.9.9 -> 1.0.1 (29/08/2024)
 glad 2.0.0-beta GL CORE 4.6 + GL_KHR_debug -> glad 2.0.6
+
+14/11/2024:
+why did i write this
+
+anyway i'm moving everything over to git submodules instead of
+manually updating all the libraries

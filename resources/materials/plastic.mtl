@@ -1,10 +1,11 @@
 {
-  "albedo": "textures/plastic.png",
-  "shaderprogram": "worldUberMaterial",
-  "specExponent": 32.0,
-  "specMultiply": 0.5,
-  "translucency": false,
-  "uniforms": {
+  "ColorMap": "textures/materials/plastic.jpg",
+  "HasTranslucency": false,
+  "MetallicRoughnessMap": "textures/black.png",
+  "Shader": "worldUberTriProjected",
+  "Uniforms": {
     "MaterialProjectionFactor": 0.05000000074505806
-  }
+  },
+  "specExponent": 32.0,
+  "specMultiply": 0.5
 }

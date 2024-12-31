@@ -19,7 +19,6 @@ void Object_Light::s_DeclareReflections()
 		return;
 	s_BaseDidInitReflection = true;
 
-	REFLECTION_INHERITAPI(GameObject);
 	REFLECTION_INHERITAPI(Attachment);
 
 	REFLECTION_DECLAREPROP_SIMPLE_TYPECAST(Object_Light, LightColor, Color);
@@ -33,30 +32,36 @@ void Object_DirectionalLight::s_DeclareReflections()
 		return;
 	s_DirectionalDidInitReflection = true;
 
-	REFLECTION_INHERITAPI(GameObject);
-	// no point inheriting from `Attachment` like w/ the other Lights
-	// 25/10/2024
+	// 27/11/2024 It's... PERFECT
 	REFLECTION_INHERITAPI(Light);
 
-	s_Api.Properties.erase("LocalTransform");
+	// we remove all the smelly `Attachment` properties we inherit from daddy `Light` 
+	for (auto& propIt : Object_Attachment::s_GetProperties())
+		s_Api.Properties.erase(propIt.first);
+	for (auto& funcIt : Object_Attachment::s_GetFunctions())
+		s_Api.Properties.erase(funcIt.first);
+
+	// , before RE-INHERITING Father `GameObject` so we have the Base APIs
+	// ( Name, ClassName, Enabled etc )
+	REFLECTION_INHERITAPI(GameObject);
 
 	REFLECTION_DECLAREPROP(
 		"Direction",
 		Vector3,
-		[](GameObject* g)
+		[](Reflection::Reflectable* g)
 		{
-			Object_DirectionalLight* dl = dynamic_cast<Object_DirectionalLight*>(g);
+			Object_DirectionalLight* dl = static_cast<Object_DirectionalLight*>(g);
 			glm::vec3 forward = dl->LocalTransform[3];
-			return Vector3(forward).ToGenericValue();
+			return Vector3(forward).ToGenericValue(); //Vector3(forward / glm::length(forward)).ToGenericValue();
 		},
-		[](GameObject* g, const Reflection::GenericValue& gv)
+		[](Reflection::Reflectable* g, const Reflection::GenericValue& gv)
 		{
-			Object_DirectionalLight* p = dynamic_cast<Object_DirectionalLight*>(g);
+			Object_DirectionalLight* p = static_cast<Object_DirectionalLight*>(g);
 
-			Vector3 newDirection{ gv };
-			newDirection = newDirection / newDirection.Magnitude();
+			//Vector3 newDirection{ gv };
+			//newDirection = newDirection / newDirection.Magnitude();
 
-			p->LocalTransform = glm::translate(glm::mat4(1.f), (glm::vec3)newDirection);
+			p->LocalTransform = glm::translate(glm::mat4(1.f), (glm::vec3)Vector3(gv));
 		}
 	);
 	
@@ -68,8 +73,6 @@ void Object_PointLight::s_DeclareReflections()
 		return;
 	s_PointDidInitReflection = true;
 
-	REFLECTION_INHERITAPI(GameObject);
-	REFLECTION_INHERITAPI(Attachment);
 	REFLECTION_INHERITAPI(Light);
 
 	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_PointLight, Range, Double, float);
@@ -81,13 +84,10 @@ void Object_SpotLight::s_DeclareReflections()
 		return;
 	s_SpotDidInitReflection = true;
 
-	REFLECTION_INHERITAPI(GameObject);
-	REFLECTION_INHERITAPI(Attachment);
 	REFLECTION_INHERITAPI(Light);
 
 	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_SpotLight, Range, Double, float);
-	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_SpotLight, OuterCone, Double, float);
-	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_SpotLight, InnerCone, Double, float);
+	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_SpotLight, Angle, Double, float);
 }
 
 Object_Light::Object_Light()
@@ -96,6 +96,7 @@ Object_Light::Object_Light()
 	this->ClassName = "Light";
 
 	s_DeclareReflections();
+	ApiPointer = &s_Api;
 }
 
 Object_DirectionalLight::Object_DirectionalLight()
@@ -104,6 +105,7 @@ Object_DirectionalLight::Object_DirectionalLight()
 	this->ClassName = "DirectionalLight";
 
 	s_DeclareReflections();
+	ApiPointer = &s_Api;
 }
 
 Object_PointLight::Object_PointLight()
@@ -112,6 +114,7 @@ Object_PointLight::Object_PointLight()
 	this->ClassName = "PointLight";
 
 	s_DeclareReflections();
+	ApiPointer = &s_Api;
 }
 
 Object_SpotLight::Object_SpotLight()
@@ -120,4 +123,5 @@ Object_SpotLight::Object_SpotLight()
 	this->ClassName = "SpotLight";
 
 	s_DeclareReflections();
+	ApiPointer = &s_Api;
 }

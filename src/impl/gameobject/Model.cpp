@@ -17,5 +17,7 @@ Object_Model::Object_Model()
 {
 	this->Name = "Model";
 	this->ClassName = "Model";
+
 	s_DeclareReflections();
+	ApiPointer = &s_Api;
 }

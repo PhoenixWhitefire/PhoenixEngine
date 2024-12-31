@@ -29,9 +29,15 @@ struct Texture
 
 	DimensionType Type = DimensionType::Texture2D;
 	LoadStatus Status = LoadStatus::NotAttempted;
+	bool DoBilinearSmoothing = true;
+	
+	bool LoadedAsynchronously = false;
 
 	// De-allocated after the Texture is uploaded to the GPU
 	uint8_t* TMP_ImageByteData{};
+	// If image loading fails, set to the `const char*` returned by
+	// `stbi_failure_reason`
+	const char* FailureReason{};
 };
 
 class TextureManager
@@ -51,12 +57,21 @@ public:
 	@param Should it be loaded in a separate thread without freezing the game (default `true`)
 	@return The Texture Resource ID (texture can be queried with `::GetTextureResource`)
 	*/
-	uint32_t LoadTextureFromPath(const std::string& Path, bool ShouldLoadAsync = true);
+	uint32_t LoadTextureFromPath(const std::string& Path, bool ShouldLoadAsync = true, bool DoBilinearSmoothing = true);
+
+	/*
+	Assign the Texture to the given Name, it's Resource ID will be returned when queried with `::LoadTextureFromPath`
+	IMPORTANT: If the `ResourceId` of the Texture is NOT `UINT32_MAX`, it will replace the Texture at that ID
+	@param The Texture
+	@param It's Internal Name
+	@return It's Texture Resource ID
+	*/
+	uint32_t Assign(const Texture& Texture, const std::string& Name);
 
 	/*
 	Get a Texture by it's Resource ID
 	*/
-	Texture* GetTextureResource(uint32_t);
+	Texture& GetTextureResource(uint32_t);
 
 private:
 	TextureManager();

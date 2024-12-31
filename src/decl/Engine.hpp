@@ -5,7 +5,6 @@
 #include <SDL2/SDL_video.h>
 
 #include "gameobject/GameObjects.hpp"
-#include "render/ShaderProgram.hpp"
 #include "render/Renderer.hpp"
 
 #include "datatype/Vector2.hpp"
@@ -16,19 +15,14 @@
 class EngineObject
 {
 public:
-	/*
-	Creates an Engine object
-	*/
-	EngineObject();
-
-	/*
-	Terminates the current engine thread, and calls destructors on internally-used engine objects
-	*/
 	~EngineObject();
 
-	/*
-	Initializes main engine loop
-	*/
+	static EngineObject* Get();
+
+	// Initialize Engine systems, can throw exceptions
+	void Initialize();
+
+	// Initializes main engine loop
 	void Start();
 
 	void SetIsFullscreen(bool IsFullscreen);
@@ -46,14 +40,14 @@ public:
 
 	bool IsFullscreen = false;
 
-	int WindowSizeX;
-	int WindowSizeY;
+	int WindowSizeX{};
+	int WindowSizeY{};
 
-	Object_DataModel* DataModel;
-	Object_Workspace* Workspace;
+	Object_DataModel* DataModel{};
+	Object_Workspace* Workspace{};
 
-	Renderer* RendererContext;
-	SDL_Window* Window;
+	Renderer RendererContext;
+	SDL_Window* Window{};
 
 	bool Exit = false;
 	

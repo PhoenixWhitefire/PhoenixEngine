@@ -2,15 +2,15 @@
 // 13/08/2024
 
 #include "gameobject/DataModel.hpp"
-#include "Debug.hpp"
+#include "Log.hpp"
 
 PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(DataModel);
 
 static bool s_DidInitReflection = false;
 
-static void closeDataModel(GameObject* g)
+static void closeDataModel(Reflection::Reflectable* g)
 {
-	dynamic_cast<Object_DataModel*>(g)->WantExit = true;
+	static_cast<Object_DataModel*>(g)->WantExit = true;
 }
 
 void Object_DataModel::s_DeclareReflections()
@@ -30,6 +30,7 @@ Object_DataModel::Object_DataModel()
 	this->ClassName = "DataModel";
 
 	s_DeclareReflections();
+	ApiPointer = &s_Api;
 }
 
 Object_DataModel::~Object_DataModel()
@@ -39,6 +40,6 @@ Object_DataModel::~Object_DataModel()
 
 void Object_DataModel::Initialize()
 {
-	auto workspace = GameObject::Create("Workspace");
+	GameObject* workspace = GameObject::Create("Workspace");
 	workspace->SetParent(this);
 }

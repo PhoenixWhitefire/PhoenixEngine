@@ -1,14 +1,4 @@
-﻿/*
-	
-	11/09/2024:
-	This is a mess. If you see any references to `Reflection::Reflectable`,
-	`Reflection::IProperty` or `Reflection::IFunction`, just translate them
-	in your head to `GameObject`, `IProperty` and `IFunction`. They are different,
-	and I have taken the approach of trying to reduce any pre-emptive abstractions
-
-*/
-
-#include <glm/gtc/matrix_transform.hpp>
+﻿#include <glm/gtc/matrix_transform.hpp>
 #include <luau/VM/include/lualib.h>
 
 #include "gameobject/Script.hpp"
@@ -16,16 +6,16 @@
 #include "datatype/Vector3.hpp"
 #include "datatype/Color.hpp"
 #include "UserInput.hpp"
+#include "Profiler.hpp"
 #include "FileRW.hpp"
-#include "Debug.hpp"
+#include "Log.hpp"
 #include "gameobject/ScriptEngine.hpp"
 
-#define LUA_ASSERT(res, err) if (!res) { luaL_error(L, err); }
+#define LUA_ASSERT(res, err, ...) if (!res) { luaL_error(L, err, __VA_ARGS__); }
 
 PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(Script);
 
 static bool s_DidInitReflection = false;
-static lua_State* DefaultState = nullptr;
 
 static auto api_newobject = [](lua_State* L)
 	{
@@ -37,30 +27,17 @@ static auto api_newobject = [](lua_State* L)
 
 static auto api_gameobjindex = [](lua_State* L)
 	{
-		uint32_t objId = *(uint32_t*)luaL_checkudata(L, 1, "GameObject");
-		GameObject* obj = GameObject::GetObjectById(objId);
+		GameObject* obj = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
 		const char* key = luaL_checkstring(L, 2);
 
-		if (!obj)
+		if (strcmp(key, "Exists") == 0)
 		{
-			/*
-				TODO 14/09/2024
-				Back in Roblox, the Engine seems to preserve the state of the Instance upon it's destruction
-				Attempting to assign to a `:Destroy`'d object still works, but it's
-				`Parent` cannot be changed.
-				This is what I'd like to have, but right now I'll just make every member
-				be `nil` so it's easy for scripts to recognize an invalid/invalidated GameObject
-				(I separated those two, because either the Object may not have been valid
-				in the first place, or it was valid, but got deleted. But that's pedantic and pointless to
-				differentiate for a proper API.)
-
-				20/09/2024:
-				It looks like `lua_newuserdatadtor` exists, refcount should be track-able with it
-				so Objects are not de-alloc'd until refcount == 0
-			*/
-			lua_pushnil(L);
+			// whether or not it exists
+			lua_pushboolean(L, obj ? 1 : 0);
 			return 1;
 		}
+
+		LUA_ASSERT(obj, "Tried to index '%s' of a deleted Game Object", key);
 
 		if (obj->HasProperty(key))
 			ScriptEngine::L::PushGenericValue(L, obj->GetPropertyValue(key));
@@ -92,21 +69,12 @@ static auto api_gameobjindex = [](lua_State* L)
 
 static auto api_gameobjnewindex = [](lua_State* L)
 	{
-		uint32_t objId = *(uint32_t*)luaL_checkudata(L, 1, "GameObject");
-		GameObject* obj = GameObject::GetObjectById(objId);
+		GameObject* obj = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
 		const char* key = luaL_checkstring(L, 2);
 
-		// Refer the `!obj` clause in `api_gameobjindex`
-		if (!obj)
-		{
-			// Uh
-			// Idk
-			// Just give an `attempt to index nil`
-			lua_pushnil(L);
-			lua_setfield(L, -1, key);
+		LUA_ASSERT(strcmp(key, "Exists") != 0, "'Exists' is read-only! - 21/12/2024");
 
-			return 0;
-		}
+		LUA_ASSERT(obj, "Tried to assign to the '%s' of a deleted Game Object", key);
 
 		if (obj->HasProperty(key))
 		{
@@ -151,11 +119,16 @@ static auto api_gameobjnewindex = [](lua_State* L)
 			{
 				lua_pushvalue(L, 3);
 
-				bool wasSuccessful = true;
 				Reflection::GenericValue newValue = ScriptEngine::L::LuaValueToGeneric(L);
 
-				if (wasSuccessful)
+				try
+				{
 					obj->SetPropertyValue(key, newValue);
+				}
+				catch (std::string err)
+				{
+					luaL_errorL(L, err.c_str());
+				}
 			}
 		}
 		else
@@ -172,13 +145,12 @@ static auto api_gameobjnewindex = [](lua_State* L)
 
 static auto api_gameobjecttostring = [](lua_State* L)
 	{
-		uint32_t objId = *(uint32_t*)luaL_checkudata(L, 1, "GameObject");
-		GameObject* object = GameObject::GetObjectById(objId);
+		GameObject* object = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
 		
 		if (object)
 			lua_pushstring(L, object->GetFullName().c_str());
 		else
-			lua_pushnil(L);
+			lua_pushstring(L, "<!Deleted GameObject!>");
 
 		return 1;
 	};
@@ -225,6 +197,55 @@ static auto api_vec3index = [](lua_State* L)
 		else if (strcmp(key, "Magnitude") == 0)
 		{
 			lua_pushnumber(L, vec->Magnitude());
+			return 1;
+		}
+		else if (strcmp(key, "Normalized") == 0)
+		{
+			ScriptEngine::L::PushGenericValue(L, (*vec / vec->Magnitude()).ToGenericValue());
+			return 1;
+		}
+		else if (strcmp(key, "Dot") == 0)
+		{
+			ScriptEngine::L::PushGenericValue(L, vec->ToGenericValue());
+
+			lua_pushcclosure(
+				L,
+				[](lua_State* L)
+				-> int
+				{
+					Vector3* v1 = (Vector3*)luaL_checkudata(L, lua_upvalueindex(1), "Vector3");
+					Vector3* v2 = (Vector3*)luaL_checkudata(L, 1, "Vector3");
+
+					ScriptEngine::L::PushGenericValue(L, v1->Dot(*v2));
+					
+					return 1;
+				},
+				"Vector3::Dot",
+				1
+			);
+
+			return 1;
+		}
+		else if (strcmp(key, "Cross") == 0)
+		{
+			ScriptEngine::L::PushGenericValue(L, vec->ToGenericValue());
+
+			lua_pushcclosure(
+				L,
+				[](lua_State* L)
+				-> int
+				{
+					Vector3* v1 = (Vector3*)luaL_checkudata(L, lua_upvalueindex(1), "Vector3");
+					Vector3* v2 = (Vector3*)luaL_checkudata(L, 1, "Vector3");
+
+					ScriptEngine::L::PushGenericValue(L, v1->Cross(*v2).ToGenericValue());
+
+					return 1;
+				},
+				"Vector3::Cross",
+				1
+			);
+
 			return 1;
 		}
 		else
@@ -335,36 +356,68 @@ static void* l_alloc(void*, void* ptr, size_t, size_t nsize)
 		return realloc(ptr, nsize);
 }
 
-static void initDefaultState()
+static lua_State* createState()
 {
-	DefaultState = lua_newstate(l_alloc, nullptr);
+	lua_State* state = lua_newstate(l_alloc, nullptr);
 	// Load Standard Library ('print' etc)
 	// TODO: `require` is NOT part of the STL, copy
 	// it from Luau REPL (`lua_require`)
-	luaL_openlibs(DefaultState);
+	luaL_openlibs(state);
+	luaopen_vector(state);
+
+	lua_pushcfunction(
+		state,
+		[](lua_State* L)
+		{
+			// FROM:
+			// `luaB_print`
+			// `Luau/VM/src/lbaselib.cpp`
+			// 11/11/2024
+
+			int n = lua_gettop(L); // number of arguments
+			for (int i = 1; i <= n; i++)
+			{
+				size_t l;
+				const char* s = luaL_tolstring(L, i, &l); // convert to string using __tostring et al
+
+				if (i > 1)
+					Log::Append(" &&");
+				else
+					Log::Info("&&");
+
+				Log::Append(std::string(s) + "&&");
+				lua_pop(L, 1); // pop result
+			}
+			Log::Append("\n&&");
+
+			return 0;
+		},
+		"PhxPrintOverride"
+	);
+	lua_setglobal(state, "print");
 
 	// Vector3
 	{
-		lua_newtable(DefaultState);
+		lua_newtable(state);
 
-		lua_pushcfunction(DefaultState, api_newvec3, "Vector3.new");
-		lua_setfield(DefaultState, -2, "new");
+		lua_pushcfunction(state, api_newvec3, "Vector3.new");
+		lua_setfield(state, -2, "new");
 
-		lua_setglobal(DefaultState, "Vector3");
+		lua_setglobal(state, "Vector3");
 
-		luaL_newmetatable(DefaultState, "Vector3");
+		luaL_newmetatable(state, "Vector3");
 
-		lua_pushcfunction(DefaultState, api_vec3index, "Vector3.__index");
-		lua_setfield(DefaultState, -2, "__index");
+		lua_pushcfunction(state, api_vec3index, "Vector3.__index");
+		lua_setfield(state, -2, "__index");
 
-		//lua_pushcfunction(DefaultState, api_vec3newindex, "Vector3.__newindex");
-		//lua_setfield(DefaultState, -2, "__newindex");
+		//lua_pushcfunction(state, api_vec3newindex, "Vector3.__newindex");
+		//lua_setfield(state, -2, "__newindex");
 
-		lua_pushcfunction(DefaultState, api_vec3tostring, "Vector3.__tostring");
-		lua_setfield(DefaultState, -2, "__tostring");
+		lua_pushcfunction(state, api_vec3tostring, "Vector3.__tostring");
+		lua_setfield(state, -2, "__tostring");
 
 		lua_pushcfunction(
-			DefaultState,
+			state,
 			[](lua_State* L)
 			{
 				Vector3 a = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -2));
@@ -376,10 +429,10 @@ static void initDefaultState()
 			},
 			"Vector3.__add"
 		);
-		lua_setfield(DefaultState, -2, "__add");
+		lua_setfield(state, -2, "__add");
 
 		lua_pushcfunction(
-			DefaultState,
+			state,
 			[](lua_State* L)
 			{
 				Vector3 a = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -2));
@@ -391,57 +444,88 @@ static void initDefaultState()
 			},
 			"Vector3.__sub"
 		);
-		lua_setfield(DefaultState, -2, "__sub");
+		lua_setfield(state, -2, "__sub");
 
 		lua_pushcfunction(
-			DefaultState,
+			state,
+			[](lua_State* L)
+			{
+				Vector3 a = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -2));
+
+				int bt = lua_type(L, 2);
+
+				if (bt == LUA_TNUMBER)
+				{
+					double b = luaL_checknumber(L, 2);
+
+					ScriptEngine::L::PushGenericValue(L, (a * b).ToGenericValue());
+
+					return 1;
+				}
+				else if (bt == LUA_TUSERDATA)
+				{
+					Vector3 b = ScriptEngine::L::LuaValueToGeneric(L, -1);
+
+					ScriptEngine::L::PushGenericValue(L, (a * b).ToGenericValue());
+
+					return 1;
+				}
+
+				luaL_errorL(L, "Expected multiplication against Vector3 or number");
+			},
+			"Vector3.__mul"
+		);
+		lua_setfield(state, -2, "__mul");
+
+		lua_pushcfunction(
+			state,
 			[](lua_State* L)
 			{
 				Vector3 a = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -2));
 				double b = luaL_checknumber(L, 2);
 
-				ScriptEngine::L::PushGenericValue(L, (a * b).ToGenericValue());
-
+				ScriptEngine::L::PushGenericValue(L, (a / b).ToGenericValue());
+				
 				return 1;
 			},
-			"Vector3.__mul"
+			"Vector3.__div"
 		);
-		lua_setfield(DefaultState, -2, "__mul");
+		lua_setfield(state, -2, "__div");
 
-		lua_pushstring(DefaultState, "Vector3");
-		lua_setfield(DefaultState, -2, "__type");
+		lua_pushstring(state, "Vector3");
+		lua_setfield(state, -2, "__type");
 	}
 
 	// Color
 	{
-		lua_newtable(DefaultState);
+		lua_newtable(state);
 
-		lua_pushcfunction(DefaultState, api_newcol, "Color.new");
-		lua_setfield(DefaultState, -2, "new");
+		lua_pushcfunction(state, api_newcol, "Color.new");
+		lua_setfield(state, -2, "new");
 
-		lua_setglobal(DefaultState, "Color");
+		lua_setglobal(state, "Color");
 
-		luaL_newmetatable(DefaultState, "Color");
+		luaL_newmetatable(state, "Color");
 
-		lua_pushcfunction(DefaultState, api_colindex, "Color.__index");
-		lua_setfield(DefaultState, -2, "__index");
+		lua_pushcfunction(state, api_colindex, "Color.__index");
+		lua_setfield(state, -2, "__index");
 
-		//lua_pushcfunction(DefaultState, api_vec3newindex, "Vector3.__newindex");
-		//lua_setfield(DefaultState, -2, "__newindex");
+		//lua_pushcfunction(state, api_vec3newindex, "Vector3.__newindex");
+		//lua_setfield(state, -2, "__newindex");
 
-		lua_pushcfunction(DefaultState, api_coltostring, "Color.__tostring");
-		lua_setfield(DefaultState, -2, "__tostring");
+		lua_pushcfunction(state, api_coltostring, "Color.__tostring");
+		lua_setfield(state, -2, "__tostring");
 
-		lua_pushstring(DefaultState, "Color");
-		lua_setfield(DefaultState, -2, "__type");
+		lua_pushstring(state, "Color");
+		lua_setfield(state, -2, "__type");
 	}
 
 	// Matrix 
 	{
-		lua_newtable(DefaultState);
+		lua_newtable(state);
 
 		lua_pushcfunction(
-			DefaultState,
+			state,
 			[](lua_State* L)
 			{
 				Reflection::GenericValue gv{ glm::mat4(1.f) };
@@ -451,10 +535,10 @@ static void initDefaultState()
 			},
 			"Matrix.new"
 		);
-		lua_setfield(DefaultState, -2, "new");
+		lua_setfield(state, -2, "new");
 
 		lua_pushcfunction(
-			DefaultState,
+			state,
 			[](lua_State* L)
 			{
 				glm::mat4 m(1.f);
@@ -495,10 +579,10 @@ static void initDefaultState()
 			},
 			"Matrix.fromTranslation"
 		);
-		lua_setfield(DefaultState, -2, "fromTranslation");
+		lua_setfield(state, -2, "fromTranslation");
 
 		lua_pushcfunction(
-			DefaultState,
+			state,
 			[](lua_State* L)
 			{
 				float x = static_cast<float>(luaL_checknumber(L, 1));
@@ -516,10 +600,10 @@ static void initDefaultState()
 			},
 			"Matrix.fromEulerAnglesXYZ"
 		);
-		lua_setfield(DefaultState, -2, "fromEulerAnglesXYZ");
+		lua_setfield(state, -2, "fromEulerAnglesXYZ");
 
 		lua_pushcfunction(
-			DefaultState,
+			state,
 			[](lua_State* L)
 			{
 				Vector3& a = *(Vector3*)luaL_checkudata(L, 1, "Vector3");
@@ -534,17 +618,17 @@ static void initDefaultState()
 			},
 			"Matrix.lookAt"
 		);
-		lua_setfield(DefaultState, -2, "lookAt");
+		lua_setfield(state, -2, "lookAt");
 
-		lua_setglobal(DefaultState, "Matrix");
+		lua_setglobal(state, "Matrix");
 
-		luaL_newmetatable(DefaultState, "Matrix");
+		luaL_newmetatable(state, "Matrix");
 
-		lua_pushstring(DefaultState, "Matrix");
-		lua_setfield(DefaultState, -2, "__type");
+		lua_pushstring(state, "Matrix");
+		lua_setfield(state, -2, "__type");
 
 		lua_pushcfunction(
-			DefaultState,
+			state,
 			[](lua_State* L)
 			{
 				glm::mat4& m = *(glm::mat4*)luaL_checkudata(L, 1, "Matrix");
@@ -560,6 +644,16 @@ static void initDefaultState()
 						L,
 						Vector3(glm::normalize(glm::vec3(m[2]))).ToGenericValue()
 					);
+				else if (strcmp(k, "Up") == 0)
+					ScriptEngine::L::PushGenericValue(
+						L,
+						Vector3(glm::normalize(glm::vec3(m[1]))).ToGenericValue()
+					);
+				else if (strcmp(k, "Right") == 0)
+					ScriptEngine::L::PushGenericValue(
+						L,
+						Vector3(glm::normalize(glm::vec3(m[0]))).ToGenericValue()
+					);
 				else
 					luaL_errorL(L, "Invalid member %s", k);
 
@@ -567,10 +661,10 @@ static void initDefaultState()
 			},
 			"Matrix.__index"
 		);
-		lua_setfield(DefaultState, -2, "__index");
+		lua_setfield(state, -2, "__index");
 
 		lua_pushcfunction(
-			DefaultState,
+			state,
 			[](lua_State* L)
 			{
 				glm::mat4& a = *(glm::mat4*)luaL_checkudata(L, 1, "Matrix");
@@ -582,49 +676,52 @@ static void initDefaultState()
 			},
 			"Matrix.__mul"
 		);
-		lua_setfield(DefaultState, -2, "__mul");
+		lua_setfield(state, -2, "__mul");
 	}
 
 	// GameObject
 	{
-		lua_newtable(DefaultState);
+		lua_newtable(state);
 
-		lua_pushcfunction(DefaultState, api_newobject, "GameObject.new");
-		lua_setfield(DefaultState, -2, "new");
+		lua_pushcfunction(state, api_newobject, "GameObject.new");
+		lua_setfield(state, -2, "new");
 
-		lua_setglobal(DefaultState, "GameObject");
+		lua_setglobal(state, "GameObject");
 
-		luaL_newmetatable(DefaultState, "GameObject");
+		luaL_newmetatable(state, "GameObject");
 
-		lua_pushcfunction(DefaultState, api_gameobjindex, "GameObject.__index");
-		lua_setfield(DefaultState, -2, "__index");
+		lua_pushcfunction(state, api_gameobjindex, "GameObject.__index");
+		lua_setfield(state, -2, "__index");
 
-		lua_pushcfunction(DefaultState, api_gameobjnewindex, "GameObject.__newindex");
-		lua_setfield(DefaultState, -2, "__newindex");
+		lua_pushcfunction(state, api_gameobjnewindex, "GameObject.__newindex");
+		lua_setfield(state, -2, "__newindex");
 
-		lua_pushcfunction(DefaultState, api_gameobjecttostring, "GameObject.__tostring");
-		lua_setfield(DefaultState, -2, "__tostring");
+		lua_pushcfunction(state, api_gameobjecttostring, "GameObject.__tostring");
+		lua_setfield(state, -2, "__tostring");
 
-		lua_pushstring(DefaultState, "GameObject");
-		lua_setfield(DefaultState, -2, "__type");
+		lua_pushstring(state, "GameObject");
+		lua_setfield(state, -2, "__type");
 	}
 
-	ScriptEngine::L::PushGameObject(DefaultState, GameObject::s_DataModel);
-	lua_setglobal(DefaultState, "game");
+	ScriptEngine::L::PushGameObject(state, GameObject::s_DataModel);
+	lua_setglobal(state, "game");
 
-	ScriptEngine::L::PushGameObject(DefaultState, GameObject::s_DataModel->GetChild("Workspace"));
-	lua_setglobal(DefaultState, "workspace");
+	ScriptEngine::L::PushGameObject(state, GameObject::s_DataModel->GetChild("Workspace"));
+	lua_setglobal(state, "workspace");
 
 	for (auto& pair : ScriptEngine::L::GlobalFunctions)
 	{
 		lua_CFunction func = pair.second;
 
-		lua_pushlightuserdata(DefaultState, func);
+		lua_pushlightuserdata(state, func);
+		lua_pushstring(state, pair.first.c_str());
 
 		lua_pushcclosure(
-			DefaultState,
+			state,
 			[](lua_State* L)
 			{
+				PROFILE_SCOPE(lua_tostring(L, lua_upvalueindex(2)));
+
 				lua_CFunction func = (lua_CFunction)lua_touserdata(L, lua_upvalueindex(1));
 
 				try
@@ -642,10 +739,12 @@ static void initDefaultState()
 
 			},
 			pair.first.c_str(),
-			1
+			2
 		);
-		lua_setglobal(DefaultState, pair.first.c_str());
+		lua_setglobal(state, pair.first.c_str());
 	}
+
+	return state;
 }
 
 void Object_Script::s_DeclareReflections()
@@ -659,13 +758,13 @@ void Object_Script::s_DeclareReflections()
 	REFLECTION_DECLAREPROP(
 		"SourceFile",
 		String,
-		[](GameObject* p)
+		[](Reflection::Reflectable* p)
 		{
-			return Reflection::GenericValue(dynamic_cast<Object_Script*>(p)->SourceFile);
+			return Reflection::GenericValue(static_cast<Object_Script*>(p)->SourceFile);
 		},
-		[](GameObject* p, Reflection::GenericValue newval)
+		[](Reflection::Reflectable* p, Reflection::GenericValue newval)
 		{
-			Object_Script* scr = dynamic_cast<Object_Script*>(p);
+			Object_Script* scr = static_cast<Object_Script*>(p);
 			scr->LoadScript(newval.AsString());
 		}
 	);
@@ -675,10 +774,10 @@ void Object_Script::s_DeclareReflections()
 		"Reload",
 		{},
 		{ Reflection::ValueType::Bool },
-		[](GameObject* p, const Reflection::GenericValue&)
+		[](Reflection::Reflectable* p, const Reflection::GenericValue&)
 		-> std::vector<Reflection::GenericValue>
 		{
-			Object_Script* scr = dynamic_cast<Object_Script*>(p);
+			Object_Script* scr = static_cast<Object_Script*>(p);
 
 			bool reloadSuccess = scr->Reload();
 			return { reloadSuccess };
@@ -691,13 +790,11 @@ Object_Script::Object_Script()
 	this->Name = "Script";
 	this->ClassName = "Script";
 
-	if (!DefaultState)
-		initDefaultState();
-
 	// `L` is initialized in Object_Script::Reload
 	m_L = nullptr;
 
 	s_DeclareReflections();
+	ApiPointer = &s_Api;
 }
 
 void Object_Script::Initialize()
@@ -705,23 +802,18 @@ void Object_Script::Initialize()
 	//this->Reload();
 }
 
-void Object_Script::Update(double dt)
+static void resumeScheduledCoroutines()
 {
-	s_WindowGrabMouse = ScriptEngine::s_BackendScriptWantGrabMouse;
-
-	// The first Script to be updated in the current frame will
-	// need to handle resuming scheduled (i.e. yielded-but-now-hopefully-finished)
-	// coroutines, the poor bastard
-	// 23/09/2024
-	for (auto & pair : ScriptEngine::s_YieldedCoroutines)
+	for (size_t corIdx = 0; corIdx < ScriptEngine::s_YieldedCoroutines.size(); corIdx++)
 	{
-		lua_State* coroutine = pair.first;
-		std::shared_future<Reflection::GenericValue>& future = pair.second;
+		const ScriptEngine::YieldedCoroutine& corInfo = ScriptEngine::s_YieldedCoroutines.at(corIdx);
+		lua_State* coroutine = corInfo.Coroutine;
+		const std::shared_future<Reflection::GenericValue>& future = corInfo.Future;
 
 		if (future.valid())
 		{
 			// 23/09/2024 TODO This is just sad
-			std::future_status status = pair.second.wait_for(std::chrono::seconds(0));
+			std::future_status status = future.wait_for(std::chrono::seconds(0));
 			if (status != std::future_status::ready)
 				continue;
 
@@ -735,21 +827,36 @@ void Object_Script::Update(double dt)
 			if (resumeStatus != LUA_OK && resumeStatus != LUA_YIELD)
 			{
 				const char* errstr = lua_tostring(coroutine, -1);
-				std::string fullname = this->GetFullName();
 
-				Debug::Log(std::vformat(
+				Log::Error(std::vformat(
 					"Luau yielded-then-resumed error: {}",
 					std::make_format_args(errstr)
 				));
 			}
 
-			ScriptEngine::s_YieldedCoroutines.erase(coroutine);
+			ScriptEngine::s_YieldedCoroutines.erase(ScriptEngine::s_YieldedCoroutines.begin() + corIdx);
+			//lua_unref(lua_mainthread(coroutine), corInfo.CoroutineReference);
+
+			// the indexes of the coroutines will have changed, and `corIdx` will point
+			// out-of-bounds. this is a lazy workaround. 24/12/2024
+			// just fucking give up
+			return;
 		}
 	}
+}
 
-	// We don't `::Reload` when the Script is being yielded,
-	// because, what the hell will happen when it's resumed by the `for`-loop
-	// above? Will it create a "ghost" Script? Not good. 23/09/2024
+void Object_Script::Update(double dt)
+{
+	PROFILE_SCOPE("Scripts");
+
+	s_WindowGrabMouse = ScriptEngine::s_BackendScriptWantGrabMouse;
+
+	// The first Script to be updated in the current frame will
+	// need to handle resuming scheduled (i.e. yielded-but-now-hopefully-finished)
+	// coroutines, the poor bastard
+	// 23/09/2024
+	resumeScheduledCoroutines();
+
 	if (m_StaleSource)
 		this->Reload();
 
@@ -757,11 +864,15 @@ void Object_Script::Update(double dt)
 	if (!m_L)
 		return;
 
+	if (lua_status(m_L) != LUA_OK)
+		return;
+
 	lua_getglobal(m_L, "Update");
 
 	if (lua_isfunction(m_L, -1))
 	{
 		lua_pushnumber(m_L, dt);
+
 		// why do all of these functions say they return `int` and not
 		// `lua_Status` like they actually do?? 23/09/2024
 		lua_Status updateStatus = (lua_Status)lua_pcall(m_L, 1, 0, 0);
@@ -771,15 +882,20 @@ void Object_Script::Update(double dt)
 			const char* errstr = lua_tostring(m_L, -1);
 			std::string fullname = this->GetFullName();
 
-			Debug::Log(std::vformat(
+			Log::Error(std::vformat(
 				"Luau runtime error: {}",
 				std::make_format_args(errstr)
 			));
+
+			lua_close(m_L);
+			m_L = nullptr;
 		}
 	}
+	else
+		lua_pop(m_L, 1);
 }
 
-bool Object_Script::LoadScript(std::string const& scriptFile)
+bool Object_Script::LoadScript(const std::string& scriptFile)
 {
 	if (SourceFile == scriptFile)
 		return true;
@@ -810,15 +926,18 @@ bool Object_Script::Reload()
 
 	m_StaleSource = false;
 	
+	// `resetthread` doesn't get rid of globals btw
+	// new things learned every day
+	// 24/12/2024
 	if (m_L)
 		lua_close(m_L);
-	m_L = nullptr;
+	m_L = createState();
 
 	std::string fullName = this->GetFullName();
 
 	if (!fileExists)
 	{
-		Debug::Log(
+		Log::Error(
 			std::vformat(
 				"Script '{}' references invalid Source File '{}'!",
 				std::make_format_args(fullName, this->SourceFile)
@@ -827,8 +946,6 @@ bool Object_Script::Reload()
 
 		return false;
 	}
-
-	m_L = lua_newthread(DefaultState);
 
 	ScriptEngine::L::PushGameObject(m_L, this);
 	lua_setglobal(m_L, "script");
@@ -847,20 +964,22 @@ bool Object_Script::Reload()
 	
 	if (result == 0)
 	{
-		// Run the script
+		// prevent ourselves from being deleted by the code we run.
+		// if that code errors, it'll be a use-after-free as we try
+		// to access `m_L` to get the error message
+		// 24/12/2024
+		GameObjectRef<Object_Script> dontKillMePlease = this;
 
 		lua_Status resumeResult = (lua_Status)lua_resume(m_L, m_L, 0);
 
 		if (resumeResult != lua_Status::LUA_OK && resumeResult != lua_Status::LUA_YIELD)
 		{
-			const char* errstr = lua_tostring(m_L, -1);
+			const char* errStr = lua_tostring(m_L, -1);
 
-			Debug::Log(std::vformat(
+			Log::Error(std::vformat(
 				"Luau script init error: {}",
-				std::make_format_args(errstr)
+				std::make_format_args(errStr)
 			));
-
-			m_L = nullptr;
 
 			return false;
 		}
@@ -872,9 +991,7 @@ bool Object_Script::Reload()
 		int topidx = lua_gettop(m_L);
 		const char* errstr = lua_tostring(m_L, topidx);
 
-		Debug::Log(std::vformat("Luau compile error {}: {}: '{}'", std::make_format_args(result, this->Name, errstr)));
-
-		m_L = nullptr;
+		Log::Error(std::vformat("Luau compile error {}: {}: '{}'", std::make_format_args(result, this->Name, errstr)));
 
 		return false;
 	}

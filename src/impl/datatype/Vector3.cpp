@@ -162,6 +162,11 @@ double Vector3::Magnitude() const
 	return sqrt((this->X * this->X) + (this->Y * this->Y) + (this->Z * this->Z));
 }
 
+Vector3 Vector3::Abs() const
+{
+	return Vector3(std::abs(X), std::abs(Y), std::abs(Z));
+}
+
 Vector3 Vector3::operator+(Vector3 Other)
 {
 	return Vector3(Other.X + this->X, Other.Y + this->Y, Other.Z + this->Z);

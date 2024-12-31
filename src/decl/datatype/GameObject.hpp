@@ -2,7 +2,6 @@
 
 #include <stdint.h>
 
-#define PHX_ASSERT(res, err) if (!res) throw(err)
 #define PHX_GAMEOBJECT_NULL_ID UINT32_MAX
 
 // link a class name to a C++ GameObject-deriving class
@@ -10,82 +9,6 @@
 // shorthand for `PHX_GAMEOBJECT_LINKTOCLASS`. the resulting class name is the same as passed in,
 // and the C++ class is `Object_<Class>`
 #define PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(classname) PHX_GAMEOBJECT_LINKTOCLASS(#classname, Object_##classname)
-
-// 01/09/2024:
-// MUST be added to the `public` section of *all* objects so
-// any APIs they declare can be found
-#define PHX_GAMEOBJECT_API_REFLECTION static const PropertyMap& s_GetProperties()  \
-{ \
-	return s_Api.Properties; \
-} \
- \
-static const FunctionMap& s_GetFunctions() \
-{ \
-	return s_Api.Functions; \
-} \
-static const std::vector<std::string>& s_GetLineage() \
-{ \
-	return s_Api.Lineage; \
-} \
-virtual const PropertyMap& GetProperties()  \
-{ \
-	return s_Api.Properties; \
-} \
- \
-virtual const FunctionMap& GetFunctions() \
-{ \
-	return s_Api.Functions; \
-} \
-virtual const std::vector<std::string>& GetLineage() \
-{ \
-	return s_Api.Lineage; \
-} \
-virtual bool HasProperty(const std::string & MemberName) \
-{ \
-	return s_Api.Properties.find(MemberName) != s_Api.Properties.end(); \
-} \
- \
-virtual bool HasFunction(const std::string & MemberName) \
-{ \
-	return s_Api.Functions.find(MemberName) != s_Api.Functions.end(); \
-} \
- \
-virtual const IProperty& GetProperty(const std::string & MemberName) \
-{ \
-	return HasProperty(MemberName) \
-		? s_Api.Properties[MemberName] \
-		: throw(std::string("Invalid Property in GetProperty ") + MemberName); \
-} \
- \
-virtual const IFunction& GetFunction(const std::string & MemberName) \
-{ \
-	return HasFunction(MemberName) \
-		? s_Api.Functions[MemberName] \
-		: throw(std::string("Invalid Function in GetFunction ") + MemberName); \
-} \
- \
-virtual Reflection::GenericValue GetPropertyValue(const std::string & MemberName) \
-{ \
-	return HasProperty(MemberName) \
-		? s_Api.Properties[MemberName].Get(this) \
-		: throw(std::string("Invalid Property in GetPropertyValue ") + MemberName); \
-} \
- \
-virtual void SetPropertyValue(const std::string & MemberName, const Reflection::GenericValue & NewValue) \
-{ \
-	if (HasProperty(MemberName)) \
-		s_Api.Properties[MemberName].Set(this, NewValue); \
-	else \
-		throw(std::string("Invalid Property in SetPropertyValue ") + MemberName); \
-} \
- \
-virtual Reflection::GenericValue CallFunction(const std::string& MemberName, const std::vector<Reflection::GenericValue>& Param) \
-{ \
-	if (HasFunction(MemberName)) \
-		return s_Api.Functions[MemberName].Func(this, Param); \
-	else \
-		throw(std::string("InvalidFunction in CallFunction " + MemberName)); \
-} \
 
 #include <unordered_map>
 #include <functional>
@@ -95,70 +18,47 @@ virtual Reflection::GenericValue CallFunction(const std::string& MemberName, con
 
 #include "Reflection.hpp"
 
-class GameObject;
-
-struct IProperty
-{
-	Reflection::ValueType Type{};
-
-	std::function<Reflection::GenericValue(GameObject*)> Get;
-	std::function<void(GameObject*, const Reflection::GenericValue&)> Set;
-};
-
-struct IFunction
-{
-	std::vector<Reflection::ValueType> Inputs;
-	std::vector<Reflection::ValueType> Outputs;
-
-	std::function<std::vector<Reflection::GenericValue>(GameObject*, const std::vector<Reflection::GenericValue>&)> Func;
-};
-
-typedef std::unordered_map<std::string, IProperty> PropertyMap;
-typedef std::unordered_map<std::string, IFunction> FunctionMap;
-
-struct Api
-{
-	PropertyMap Properties;
-	FunctionMap Functions;
-	std::vector<std::string> Lineage;
-};
-
-class GameObject
+class GameObject : public Reflection::Reflectable
 {
 public:
 	GameObject();
-	virtual ~GameObject();
+	virtual ~GameObject() noexcept(false);
 
 	GameObject(GameObject&) = delete;
 
-	PHX_GAMEOBJECT_API_REFLECTION;
-
 	static GameObject* FromGenericValue(const Reflection::GenericValue&);
 
-	static bool IsValidObjectClass(std::string const&);
-	static GameObject* Create(std::string const&);
+	static bool IsValidObjectClass(const std::string&);
+	static GameObject* Create(const std::string&);
 	static GameObject* GetObjectById(uint32_t);
 
-	static GameObject* s_DataModel;
-	static std::unordered_map<uint32_t, GameObject*> s_WorldArray;
+	static inline GameObject* s_DataModel{};
+	static inline std::vector<GameObject*> s_WorldArray{};
 
 	virtual void Initialize();
 	virtual void Update(double DeltaTime);
 
+	// the engine will NEED some objects to continue existing without being
+	// de-alloc'd, if only for a loop (`updateScripts`)
+	void IncrementHardRefs();
+	void DecrementHardRefs(); // de-alloc here when refcount drops to 0
+
+	// won't necessarily de-alloc the object if the engine has any
+	// refs to it 24/12/2024
+	void Destroy();
+
 	std::vector<GameObject*> GetChildren();
 	std::vector<GameObject*> GetDescendants();
 
-	GameObject* GetParent();
-	GameObject* GetChild(std::string const&);
+	GameObject* GetParent() const;
+	GameObject* GetChild(const std::string&);
 	// accounts for inheritance
-	GameObject* GetChildOfClass(std::string const&);
+	GameObject* GetChildOfClass(const std::string&);
 	GameObject* GetChildById(uint32_t);
 
 	std::string GetFullName();
 	// whether this object inherits from or is the given class
 	bool IsA(const std::string&);
-
-	void Destroy();
 
 	void SetParent(GameObject*);
 	void AddChild(GameObject*);
@@ -167,31 +67,37 @@ public:
 	Reflection::GenericValue ToGenericValue();
 
 	uint32_t ObjectId = 0;
+	uint32_t Parent = PHX_GAMEOBJECT_NULL_ID;
 
 	std::string Name = "GameObject";
 	std::string ClassName = "GameObject";
 
 	bool Enabled = true;
-	bool ParentLocked = false;
-
-	uint32_t Parent = PHX_GAMEOBJECT_NULL_ID;
+	bool IsDestructionPending = false;
 
 	static nlohmann::json DumpApiToJson();
 
-protected:
-	std::vector<uint32_t> m_Children;
+	REFLECTION_DECLAREAPI;
 
 	// I followed this StackOverflow post:
 	// https://stackoverflow.com/a/582456/16875161
 
-	// Needs to be in `protected` because `RegisterDerivedObject`
+	// Needs to be in at-most `protected` because `RegisterDerivedObject`
 	// So sub-classes can access it and register themselves
 	typedef std::unordered_map<std::string, GameObject* (*)()> GameObjectMapType;
-	static inline GameObjectMapType* s_GameObjectMap = new GameObjectMapType;
+	static inline GameObjectMapType s_GameObjectMap{};
+
+protected:
+	std::vector<uint32_t> m_Children;
 
 private:
 	static void s_DeclareReflections();
-	static inline Api s_Api{};
+	static inline Reflection::Api s_Api{};
+
+	// i think something fishy would have to be going on
+	// for the refcount to be >255
+	// 24/12/2024
+	uint8_t m_HardRefCount = 0;
 };
 
 template<typename T> GameObject* constructGameObjectHeir()
@@ -202,10 +108,61 @@ template<typename T> GameObject* constructGameObjectHeir()
 template <typename T>
 struct RegisterDerivedObject : GameObject
 {
-	RegisterDerivedObject(std::string const& ObjectClass)
+	RegisterDerivedObject(const std::string& ObjectClass)
 	{
-		s_GameObjectMap->insert(std::make_pair(ObjectClass, &constructGameObjectHeir<T>));
+		s_GameObjectMap.insert(std::make_pair(ObjectClass, &constructGameObjectHeir<T>));
 	}
 };
 
 typedef GameObject Object_GameObject;
+
+template <class T> class GameObjectRef
+{
+public:
+	GameObjectRef(T* Object)
+	: m_TargetId(Object->ObjectId)
+	{
+		Object->IncrementHardRefs();
+	}
+
+	GameObjectRef(GameObjectRef& Other)
+		: m_TargetId(Other.Contained()->ObjectId)
+	{
+		this->Contained()->IncrementHardRefs();
+	}
+	GameObjectRef(GameObjectRef&& Other)
+		: m_TargetId(Other.Contained()->ObjectId)
+	{
+		this->Contained()->IncrementHardRefs();
+	}
+
+	~GameObjectRef()
+	{
+		this->Contained()->DecrementHardRefs();
+		m_TargetId = PHX_GAMEOBJECT_NULL_ID;
+	}
+
+	T* Contained()
+	{
+		if (m_TargetId == PHX_GAMEOBJECT_NULL_ID)
+			throw("Double-free'd or `::Contained` called on default-constructed GameObjectRef");
+
+		GameObject* g = GameObject::GetObjectById(m_TargetId);
+
+		if (!g)
+			throw("Referenced GameObject was de-alloc'd while we wanted to keep it :(");
+		else
+			return static_cast<T*>(g);
+	}
+
+	bool operator == (GameObject* them)
+	{
+		return static_cast<GameObject*>(Contained()) == them;
+	}
+
+	GameObjectRef& operator = (GameObjectRef&&) = delete;
+	GameObjectRef& operator = (GameObjectRef&) = delete;
+
+private:
+	uint32_t m_TargetId = PHX_GAMEOBJECT_NULL_ID;
+};

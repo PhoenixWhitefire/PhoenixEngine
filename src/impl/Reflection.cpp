@@ -1,7 +1,11 @@
+#define GLM_ENABLE_EXPERIMENTAL
+
+#include <glm/gtx/euler_angles.hpp>
+
 #include "Reflection.hpp"
+#include "datatype/GameObject.hpp"
 #include "datatype/Vector3.hpp"
 #include "datatype/Color.hpp"
-#include "datatype/GameObject.hpp"
 
 //Reflection::Reflectable* Reflection::Reflectable::ApiReflection = new Reflection::Reflectable();
 
@@ -194,6 +198,34 @@ std::string Reflection::GenericValue::ToString()
 			return "Empty Map";
 	}
 
+	case (ValueType::Matrix):
+	{
+		glm::mat4 mat = this->AsMatrix();
+
+		float pos[3] =
+		{
+			mat[3][0],
+			mat[3][1],
+			mat[3][2]
+		};
+
+		glm::vec3 rotrads{};
+
+		glm::extractEulerAngleXYZ(mat, rotrads.x, rotrads.y, rotrads.z);
+
+		float rotdegs[3] =
+		{
+			glm::degrees(rotrads.x),
+			glm::degrees(rotrads.y),
+			glm::degrees(rotrads.z)
+		};
+
+		return std::vformat(
+			"Pos: ( {}, {}, {} ), Ang: ( {}, {}, {} )",
+			std::make_format_args(pos[0], pos[1], pos[2], rotdegs[0], rotdegs[1], rotdegs[2])
+		);
+	}
+
 	default:
 	{
 		std::string tName = TypeAsString(Type);
@@ -316,80 +348,6 @@ Reflection::GenericValue::~GenericValue()
 	// "A breakpoint instruction (__debugbreak() or similar) was hit"
 	//if (this->Type == Reflection::ValueType::String)
 		//free(this->Value);
-}
-
-Reflection::PropertyMap& Reflection::Reflectable::GetProperties()
-{
-	return  s_Properties;
-}
-
-Reflection::FunctionMap& Reflection::Reflectable::GetFunctions()
-{
-	return  s_Functions;
-}
-
-bool Reflection::Reflectable::HasProperty(const std::string& name)
-{
-	if (s_Properties.empty())
-		return false;
-	return  s_Properties.find(name) !=  s_Properties.end();
-}
-
-bool Reflection::Reflectable::HasFunction(const std::string& name)
-{
-	return  s_Functions.find(name) !=  s_Functions.end();
-}
-
-Reflection::IProperty& Reflection::Reflectable::GetProperty(const std::string& name)
-{
-	if (!HasProperty(name))
-		throw(std::vformat("(GetProperty) No Property named {}", std::make_format_args(name)));
-	else
-		return  s_Properties.find(name)->second;
-}
-
-Reflection::IFunction& Reflection::Reflectable::GetFunction(const std::string& name)
-{
-	if (!HasFunction(name))
-		throw(std::vformat("(GetFunction) No Function named {}", std::make_format_args(name)));
-	else
-		return  s_Functions.find(name)->second;
-}
-
-Reflection::GenericValue Reflection::Reflectable::GetPropertyValue(const std::string& name)
-{
-	if (!HasProperty(name))
-		throw(std::vformat("(GetPropertyValue) No Property named {}", std::make_format_args(name)));
-	else
-		return  s_Properties.find(name)->second.Get(dynamic_cast<Reflection::Reflectable*>(this));
-}
-
-void Reflection::Reflectable::SetPropertyValue(const std::string& name, GenericValue& value)
-{
-	if (!HasProperty(name))
-		throw(std::vformat("(SetPropertyValue) No Property named {}", std::make_format_args(name)));
-	else
-		 s_Properties.find(name)->second.Set((Reflection::Reflectable*)this, value);
-}
-
-Reflection::GenericValue Reflection::Reflectable::CallFunction(const std::string& name, GenericValue input)
-{
-	if (!HasFunction(name))
-		throw(std::vformat("(CallFunction) No Function named {}", std::make_format_args(name)));
-	else
-		return  s_Functions.find(name)->second.Func((Reflection::Reflectable*)this, input);
-}
-
-static bool s_DidInitReflection = false;
-
-Reflection::Reflectable::Reflectable()
-{
-	if (s_DidInitReflection)
-		return;
-	s_DidInitReflection = true;
-
-	//Reflectable::ApiReflection = new Reflection::Reflectable();
-	
 }
 
 static std::string valueTypeNames[] =

@@ -18,75 +18,68 @@ When Directional light, Position = Direction
 struct LightObject
 {
 	int Type;
-	
+	bool Shadows;
+
 	// generic, applies to all light types (i.e., directional, point, spot lights)
 	vec3 Position;
 	vec3 Color;
 
 	// point lights and spotlights
 	float Range;
-	
-	// spotlights only, controls the interpolation between light and dark to prevent a hard cut-off
-	float Spot_OuterCone;
-	float Spot_InnerCone;
-
-	// shadows
-	// NOTE: not functional :( too lazy lol
-	//bool HasShadowMap;
-	//int ShadowMapIndex;
-	//mat4 ShadowMapProjection;
-	// 21/06/2024 When did I write this??? Some stuff for a shadow atlas system...
-	bool HasShadow;
-	vec2 ShadowTexelPosition;
-	vec2 ShadowTexelSize;
-	mat4 ShadowProjection;
+	// spotlights
+	float Angle;
 };
+
+uniform LightObject Lights[MAX_LIGHTS];
 
 uniform sampler2D ShadowAtlas;
 
-uniform int NumLights = 0;
-
-//uniform sampler2D ShadowMaps[MAX_SHADOWCASTING_LIGHTS]; <-- Replaced with shadow atlas!
-uniform LightObject Lights[MAX_LIGHTS];
+uniform int NumLights;
 
 uniform sampler2D FrameBuffer;
 
 uniform sampler2D ColorMap;
 uniform sampler2D MetallicRoughnessMap;
+uniform bool HasNormalMap;
+uniform sampler2D NormalMap;
+uniform bool HasEmissionMap;
+uniform sampler2D EmissionMap;
 
-uniform vec3 LightAmbient = vec3(.2f,.2f,.2f);
-uniform float SpecularMultiplier = 0.5f;
-uniform float SpecularPower = 16.0f;
+uniform vec3 LightAmbient = vec3(0.3f);
+uniform float SpecularMultiplier;
+uniform float SpecularPower;
 
-uniform float Reflectivity = 0.f;
-uniform float Transparency = 0.f;
-uniform float EmissionStrength = 0.f;
-
-uniform vec3 CameraPosition = vec3(0.f, 0.f, 0.f);
-
-uniform vec3 ColorTint = vec3(1.f, 1.f, 1.f);
+uniform float Transparency;
+uniform float MetallnessFactor;
+uniform float RoughnessFactor;
+uniform float EmissionStrength;
 
 uniform samplerCube SkyboxCubemap;
 
 uniform float NearZ = 0.1f;
 uniform float FarZ = 1000.0f;
 
-uniform bool Fog = false;
+uniform bool Fog;
 uniform vec3 FogColor = vec3(0.85f, 0.85f, 0.90f);
 
-uniform bool UseProjectedMaterial = false;
-uniform float MaterialProjectionFactor = 0.05f;
+uniform bool UseTriPlanarProjection;
+uniform float MaterialProjectionFactor;
 
 uniform float AlphaCutoff = 0.5f;
 
+uniform bool IsShadowMap;
 uniform bool DebugOverdraw = false;
+uniform bool DebugLightInfluence = false;
 
-in vec3 Frag_CurrentPosition;
+in vec3 Frag_ModelPosition;
+in vec3 Frag_WorldPosition;
 in vec3 Frag_VertexNormal;
-in vec3 Frag_VertexColor;
-in vec2 Frag_UV;
-in mat4 Frag_CamMatrix;
+in vec4 Frag_Paint;
+in vec2 Frag_TextureUV;
 in mat4 Frag_Transform;
+in vec4 Frag_RelativeToDirecLight;
+//in mat3 Frag_TBN;
+in vec3 Frag_CameraPosition;
 
 out vec4 FragColor;
 
@@ -116,14 +109,14 @@ float SpotLight(vec3 Direction, float OuterCone, float InnerCone)
 	return clamp(Angle + (OuterCone / InnerCone) * (Angle * OuterCone), 0.0f, 1.0f);
 }
 
-float LinearizeDepth()
+float LinearizeDepth(float d)
 {
-	return (2.0f * NearZ * FarZ) / (FarZ + NearZ - (gl_FragCoord.z * 2.0f - 1.0f) * (FarZ - NearZ));
+	return (2.0f * NearZ * FarZ) / (FarZ + NearZ - (d * 2.0f - 1.0f) * (FarZ - NearZ));
 }
 
 float LogisticDepth(float Steepness, float Offset)
 {
-	float ZVal = LinearizeDepth();
+	float ZVal = LinearizeDepth(gl_FragCoord.z);
 
 	return (1 / (1 + exp(-Steepness * (ZVal - Offset))));
 }
@@ -137,18 +130,47 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 	vec3 LightColor = Light.Color;
 
 	int LightType = Light.Type;
-
-	vec3 FinalColor;
-
+	
 	if (LightType == 0)
 	{
 		vec3 Incoming = normalize(LightPosition);
+		
+		float shadow = 0.f;
+		
+		if (Light.Shadows)
+		{
+			vec3 lightCoords = Frag_RelativeToDirecLight.xyz / Frag_RelativeToDirecLight.w;
+			if (lightCoords.z <= 1.f)
+			{
+				lightCoords = (lightCoords + 1.f) / 2.f;
+				float currentDepth = lightCoords.z;
+
+				//float curDepthL = LinearizeDepth(curDepth);
+				float bias = max(0.025f * (1.f - dot(Normal, Incoming)), 0.4f);
+				
+				const int SampleRadius = 1;
+				vec2 pixelSize = 1.f / textureSize(ShadowAtlas, 0);
+				for (int y = -SampleRadius; y <= SampleRadius; y++)
+					for (int x = -SampleRadius; x <= SampleRadius; x++)
+					{
+						float closestDepth = texture(ShadowAtlas, lightCoords.xy + vec2(x, y) * pixelSize).r;
+						if (currentDepth > closestDepth + bias)
+							shadow += 1.f;
+					}
+
+				shadow /= pow((SampleRadius * 2 + 1), 2);
+			}
+		}
+		//shadow = 0.f;
+
+		//return vec3(1.f - shadow);
+
 		float Intensity = max(dot(Normal, Incoming), 0.f);
 		float Diffuse = Intensity;
 
 		float Specular = 0.f;
 
-		if (Diffuse > 0.0f)
+		if (Diffuse > 0.f && shadow == 0.f)
 		{
 			vec3 reflectDir = reflect(-Incoming, Normal);
 			Specular = pow(max(dot(Outgoing, reflectDir), 0.f), SpecularPower);
@@ -156,12 +178,12 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 
 		float SpecularTerm = SpecMapValue * Specular * SpecularMultiplier;
 
-		FinalColor = (Diffuse + SpecularTerm * Intensity) * LightColor;
+		return (Diffuse * (1.f - shadow) + SpecularTerm * (1.f - shadow) * Intensity) * LightColor;
 		//FinalColor = Albedo * SpecMapValue;
 	}
 	else if (LightType == 1)
 	{
-		vec3 LightToPosition = LightPosition - Frag_CurrentPosition;
+		vec3 LightToPosition = LightPosition - Frag_WorldPosition;
 		vec3 Incoming = normalize(LightToPosition);
 
 		float Diffuse = max(dot(Normal, Incoming), 0.0f);
@@ -180,14 +202,12 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 		float Intensity = PointLight(LightToPosition, Light.Range);
 		float SpecularTerm = SpecMapValue * Specular * SpecularMultiplier;
 
-		FinalColor = ((Diffuse * Intensity) + SpecularTerm * Intensity) * LightColor;
+		return ((Diffuse * Intensity) + SpecularTerm * Intensity) * LightColor;
 	}
 	else
 	{
-		FinalColor = vec3(1.0f, 0.0f, 1.0f);
+		return vec3(1.0f, 0.0f, 1.0f);
 	}
-
-	return FinalColor;
 }
 
 // from: https://gist.github.com/patriciogonzalezvivo/20263fe85d52705e4530
@@ -201,43 +221,102 @@ vec3 getTriPlanarBlending(vec3 _wNorm)
 	return blending;
 }
 
+vec4 textureLod(sampler2D tex, vec2 uv, float miplvl)
+{
+	return texture(tex, uv); // 25/12/2024
+}
+
+vec4 textureLod(samplerCube tex, vec3 uv, float miplvl)
+{
+	return texture(tex, uv); // 25/12/2024
+}
+
 void main()
 {
+	float mipLevel = 0;//textureQueryLod(ColorMap, Frag_TextureUV).x;
+
+	if (IsShadowMap)
+	{
+		if (textureLod(ColorMap, Frag_TextureUV, mipLevel).w < AlphaCutoff)
+			discard;
+
+		FragColor = vec4(gl_FragCoord.z * 0.25f, gl_FragCoord.z * 0.25f, gl_FragCoord.z * 0.25f, 1.f);
+
+		return;
+	}
+
 	// Convert mesh normals to world-space
 	mat3 NormalMatrix = transpose(inverse(mat3(Frag_Transform)));
-	vec3 Normal = normalize(NormalMatrix * Frag_VertexNormal);
 
-	vec2 UV = Frag_UV;
-	
-	vec3 ViewDirection = normalize(CameraPosition - Frag_CurrentPosition);
-	
-	float mipLevel = textureQueryLod(ColorMap, UV).x;
+	vec3 vertexNormal = Frag_VertexNormal;
+
+	vec3 ViewDirection = normalize(Frag_CameraPosition - Frag_WorldPosition);
 
 	vec4 Albedo = vec4(0.f, 0.f, 0.f, 1.f); //textureLod(ColorMap, UV, mipLevel);
-	float SpecMapValue = textureLod(MetallicRoughnessMap, UV, mipLevel).r;
+	vec2 MetallicRoughnessSample = vec2(0.f, 1.f);
+	vec3 EmissionSample = vec3(1.f, 1.f, 1.f);
+	vec3 NormalSample;
 
-	if (!UseProjectedMaterial)
-		Albedo = textureLod(ColorMap, UV, mipLevel);
+	if (!UseTriPlanarProjection)
+	{
+		MetallicRoughnessSample = textureLod(MetallicRoughnessMap, Frag_TextureUV, mipLevel).rg;
+		Albedo = textureLod(ColorMap, Frag_TextureUV, mipLevel);
+
+		if (HasNormalMap)
+			NormalSample = (textureLod(NormalMap, Frag_TextureUV, mipLevel).xyz - vec3(0.f, 0.f, 1.f)) * 2.f - 1.f;
+
+		if (HasEmissionMap)
+			EmissionSample = textureLod(EmissionMap, Frag_TextureUV, mipLevel).xyz;
+	}
 	else
 	{
-		vec3 blending = getTriPlanarBlending(Normal);
+		mipLevel *= 0.1f;
 
-		vec4 localPosition = vec4(Frag_CurrentPosition, 1.f) * transpose(inverse(Frag_Transform));
-
-		vec4 xAxis = textureLod(ColorMap, localPosition.yz * MaterialProjectionFactor, mipLevel);
-		vec4 yAxis = textureLod(ColorMap, localPosition.xz * MaterialProjectionFactor, mipLevel);
-		vec4 zAxis = textureLod(ColorMap, localPosition.xy * MaterialProjectionFactor, mipLevel);
+		vec3 blending = getTriPlanarBlending(Frag_VertexNormal);
+		vec2 uvXAxis = Frag_ModelPosition.zy * vec2(1.f, -1.f) * MaterialProjectionFactor;
+		vec2 uvYAxis = Frag_ModelPosition.xz * vec2(-1.f, 1.f) * MaterialProjectionFactor;
+		vec2 uvZAxis = -Frag_ModelPosition.xy * MaterialProjectionFactor;
+		
+		vec4 xAxis = textureLod(ColorMap, uvXAxis, mipLevel);
+		vec4 yAxis = textureLod(ColorMap, uvYAxis, mipLevel);
+		vec4 zAxis = textureLod(ColorMap, uvZAxis, mipLevel);
 
 		Albedo = xAxis * blending.x + yAxis * blending.y + zAxis * blending.z;
 
-		float specXAxis = textureLod(MetallicRoughnessMap, localPosition.yz * MaterialProjectionFactor, mipLevel).r;
-		float specYAxis = textureLod(MetallicRoughnessMap, localPosition.xz * MaterialProjectionFactor, mipLevel).r;
-		float specZAxis = textureLod(MetallicRoughnessMap, localPosition.xy * MaterialProjectionFactor, mipLevel).r;
+		vec2 specXAxis = textureLod(MetallicRoughnessMap, uvXAxis, mipLevel).rg;
+		vec2 specYAxis = textureLod(MetallicRoughnessMap, uvYAxis, mipLevel).rg;
+		vec2 specZAxis = textureLod(MetallicRoughnessMap, uvZAxis, mipLevel).rg;
 
-		SpecMapValue = specXAxis * blending.x + specYAxis * blending.y + specZAxis * blending.z;
+		MetallicRoughnessSample = specXAxis * blending.x + specYAxis * blending.y + specZAxis * blending.z;
+
+		if (HasNormalMap)
+		{
+			vec3 normXAxis = textureLod(NormalMap, uvXAxis, mipLevel).rgb;
+			vec3 normYAxis = textureLod(NormalMap, uvYAxis, mipLevel).rgb;
+			vec3 normZAxis = textureLod(NormalMap, uvZAxis, mipLevel).rgb;
+
+			NormalSample = normXAxis * blending.x + normYAxis * blending.y + normZAxis * blending.z;
+			//vertexNormal += (normSample - vec3(0.f, 0.f, 1.f)) * 2.f - 1.f;
+		}
+
+		if (HasEmissionMap)
+		{
+			vec3 emissionXAxis = textureLod(EmissionMap, uvXAxis, mipLevel).rgb;
+			vec3 emissionYAxis = textureLod(EmissionMap, uvYAxis, mipLevel).rgb;
+			vec3 emissionZAxis = textureLod(EmissionMap, uvZAxis, mipLevel).rgb;
+
+			EmissionSample = emissionXAxis * blending.x + emissionYAxis * blending.y + emissionZAxis * blending.z;
+		}
 	}
 	
+	vec3 Normal = normalize(NormalMatrix * vertexNormal);
+	//vec3 Normal = NormalSample * 2.f - 1.f;
+	//Normal = normalize(Frag_TBN * Normal);
+	//Normal = normalize(Normal + (NormalSample * 2.f - 1.f));
+	
 	Albedo -= vec4(0.f, 0.f, 0.f, Transparency);
+
+	Albedo = vec4(Albedo.xyz * Frag_Paint.xyz, Albedo.w * Frag_Paint.w);
 
 	if (Albedo.a < AlphaCutoff)
 		discard;
@@ -247,37 +326,43 @@ void main()
 		// accumulate a red color with overdraw
 		// 27/10/2024 i rlly thought this would work but nah not really
 		float prevValue = texture(FrameBuffer, gl_FragCoord.xy).r;
-		prevValue += 1.f/4.f;
+		if (prevValue > 0.f)
+			FragColor = vec4(1.f, 0.f, 0.f, 1.f);
 		//gl_FragDepth = 0.f;
 		
-		FragColor = vec4(prevValue, 0.f, 0.f, 1.f);
+		//FragColor = vec4(prevValue, 0.f, 0.f, 1.f);
 		
 		return;
 	}
 
 	vec3 LightInfluence = vec3(0.f, 0.f, 0.f);
 
-	float ReflectivityFactor = (Reflectivity * SpecMapValue);
-
 	vec3 reflectDir = reflect(-ViewDirection, Normal);
-	reflectDir.y = -reflectDir.y;
-	vec3 ReflectedTint = texture(SkyboxCubemap, reflectDir).xyz;
-	
-	vec3 Albedo3 = mix(Albedo.xyz * Frag_VertexColor * ColorTint, ReflectedTint, ReflectivityFactor);
+	//reflectDir.y = -reflectDir.y;
+	//vec3 ReflectedTint = textureLod(SkyboxCubemap, reflectDir, MetallicRoughnessSample.x * MetallnessFactor * 6.f).xyz;
+	//ReflectedTint *= mix(vec3(1.f, 1.f, 1.f), Frag_ColorTint, MetallicRoughnessSample.x * MetallnessFactor);
+
+	//Albedo = vec4(Albedo.xyz * Frag_ColorTint + ReflectedTint * MetallicRoughnessSample.y, Albedo.w);
+
+	//Albedo = vec4(mix(ReflectedTint, Albedo.xyz * Frag_ColorTint, MetallicRoughnessSample.y * RoughnessFactor), Albedo.w);
 	
 	if (EmissionStrength <= 0)
 		for (int LightIndex = 0; LightIndex < NumLights; LightIndex++)
-			LightInfluence = LightInfluence + CalculateLight(
+			LightInfluence += CalculateLight(
 				LightIndex,
 				Normal,
 				ViewDirection,
-				SpecMapValue
+				MetallicRoughnessSample.y
 			);
 	else
-		LightInfluence = vec3(EmissionStrength, EmissionStrength, EmissionStrength);
+		LightInfluence = EmissionSample * EmissionStrength + LightAmbient;
 	
-	vec3 FragCol3 = (LightInfluence + LightAmbient) * Albedo3;
-	
+	LightInfluence += LightAmbient;
+	vec3 FragCol3 = (LightInfluence/* + textureLod(SkyboxCubemap, reflectDir, 11).xyz*/);
+
+	if (!DebugLightInfluence)
+		FragCol3 *= Albedo.xyz;
+
 	if (Fog)
 	{
 		//float Depth = LogisticDepth(0.01f, 100.0f);
@@ -287,7 +372,7 @@ void main()
 
 		float FogDensity = FogStart / FogEnd;
 
-		float Distance = LinearizeDepth() * FarZ;
+		float Distance = LinearizeDepth(gl_FragCoord.z) * FarZ;
 		float FogFactor = clamp((FogEnd - Distance) / (FogEnd - FogStart), 0.0, 1.0); //Linear fog
 
 		//float FogFactor = pow(2.0f, -pow(Distance * FogDensity, 2));

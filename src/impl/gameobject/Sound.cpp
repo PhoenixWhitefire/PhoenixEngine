@@ -4,7 +4,7 @@
 #include "gameobject/Sound.hpp"
 #include "GlobalJsonConfig.hpp"
 #include "FileRW.hpp"
-#include "Debug.hpp"
+#include "Log.hpp"
 
 PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(Sound);
 
@@ -27,26 +27,25 @@ void Object_Sound::s_DeclareReflections()
 	if (SDL_Init(SDL_INIT_AUDIO) < 0)
 		throw("Unabled to init SDL Audio subsystem: " + std::string(SDL_GetError()));
 
-	REFLECTION_INHERITAPI(GameObject);
 	REFLECTION_INHERITAPI(Attachment);
 
 	REFLECTION_DECLAREPROP(
 		"SoundFile",
 		String,
-		[](GameObject* p)
+		[](Reflection::Reflectable* p)
 		-> Reflection::GenericValue
 		{
-			return dynamic_cast<Object_Sound*>(p)->SoundFile;
+			return static_cast<Object_Sound*>(p)->SoundFile;
 		},
-		[](GameObject* p, const Reflection::GenericValue& gv)
+		[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)
 		{
-			Object_Sound* sound = dynamic_cast<Object_Sound*>(p);
+			Object_Sound* sound = static_cast<Object_Sound*>(p);
 			std::string newFile = gv.AsString();
 
 			if (newFile == sound->SoundFile)
 				return;
 
-			Debug::Log("soundupdate");
+			Log::Info("soundupdate");
 
 			if (sound->AudioDeviceId != UINT32_MAX)
 			{
@@ -64,7 +63,7 @@ void Object_Sound::s_DeclareReflections()
 
 			if (!fileFound)
 			{
-				Debug::Log(std::vformat(
+				Log::Error(std::vformat(
 					"Cannot find Sound File '{}'",
 					std::make_format_args(newFile)
 				));
@@ -118,4 +117,5 @@ Object_Sound::Object_Sound()
 	this->ClassName = "Sound";
 
 	s_DeclareReflections();
+	ApiPointer = &s_Api;
 }

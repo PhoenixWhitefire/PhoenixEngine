@@ -17,8 +17,7 @@ void Object_Example::s_DeclareReflections()
 		return;
 	s_DidInitReflection = true;
 
-	// Inherit first, ordered base-to-derived
-	REFLECTION_INHERITAPI(GameObject);
+	// Inherits the properties of all base classes as well
 	REFLECTION_INHERITAPI(Script);
 
 	// We go base-to-derived so members declared in the ancestral classes
@@ -30,19 +29,19 @@ void Object_Example::s_DeclareReflections()
 	REFLECTION_DECLAREPROP(
 		"Value1",
 		Bool,
-		[](GameObject* p)
+		[](Reflection::Reflectable* p)
 		{
 			// Implicitly calls the `::GenericValue(bool)` constructor
 			// This is not voodoo. It really is returning a `Reflection::GenericValue`
-			return dynamic_cast<Object_Example*>(p)->Value1;
+			return static_cast<Object_Example*>(p)->Value1;
 		},
 		// Making this read-only is as simple as replacing the setter
 		// with `nullptr`, which is what `REFLECTION_DECLAREPROP_SIMPLE_READONLY` does
-		[](GameObject* p, const Reflection::GenericValue& gv)
+		[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)
 		{
 			// Always use the `::As[X]` methods, even if it's a String for
 			// forward-compatibility and built-in sanity-checking
-			dynamic_cast<Object_Example*>(p)->Value1 = gv.AsBool();
+			static_cast<Object_Example*>(p)->Value1 = gv.AsBool();
 		}
 	);
 
@@ -71,9 +70,11 @@ void Object_Example::s_DeclareReflections()
 		"Greet",
 		{ Reflection::ValueType::Array, Reflection::ValueType::Bool },
 		{ Reflection::ValueType::String, Reflection::ValueType::String },
-		[](GameObject* p, const std::vector<Reflection::GenericValue>& args)
+		[](Reflection::Reflectable* r, const std::vector<Reflection::GenericValue>& args)
 		-> std::vector<Reflection::GenericValue>
 		{
+			GameObject* p = static_cast<GameObject*>(r);
+
 			Reflection::GenericValue gv = args.at(0);
 			std::vector<Reflection::GenericValue> names = gv.AsArray();
 
@@ -99,7 +100,7 @@ void Object_Example::s_DeclareReflections()
 				result += names[index].AsString() + ", ";
 
 			result = result.substr(0, result.size() - 2);
-			result += " and " + names[names.size() - 1].AsString() + "!";
+			result += " and " + names.back().AsString() + "!";
 
 			if (args[1].AsBool())
 				result += " (MANIACAL CACKLING) HAHAHAHAHAHAHA";
@@ -118,14 +119,14 @@ void Object_Example::s_DeclareReflections()
 	// `REFLECTION_DECLAREPROC` because of some macro expansion problems.
 	REFLECTION_DECLAREPROC_INPUTLESS(
 		GiveUp,
-		[](GameObject* p)
+		[](Reflection::Reflectable* p)
 		{
-			p->Destroy();
+			static_cast<GameObject*>(p)->Destroy();
 
 			// It is not enough for just me to cease. Everything else must also.
 			if (GameObject::s_DataModel)
 				// Coerce. Convince. Force.
-				dynamic_cast<Object_DataModel*>(GameObject::s_DataModel)->WantExit = true;
+				static_cast<Object_DataModel*>(GameObject::s_DataModel)->WantExit = true;
 
 			throw("Gave up. Gave in. Ending it all. The world swallows itself up, or, at the very least, I will no longer exist.");
 		}
@@ -141,6 +142,7 @@ Object_Example::Object_Example()
 	this->ClassName = "Example";
 	
 	s_DeclareReflections();
+	ApiPointer = &s_Api;
 
 	// Returns whether it succeeded, but this class isn't
 	// very important so we don't care

@@ -11,8 +11,8 @@ uniform mat4 LightProjection;
 
 out vec2 UVCoords;
 
-uniform mat4 Matrix = mat4(1.0f);
-uniform mat4 Scale = mat4(1.0f);
+uniform mat4 Matrix;
+uniform mat4 Scale;
 
 void main()
 {

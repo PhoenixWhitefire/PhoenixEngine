@@ -14,11 +14,11 @@ public:
 	std::string GetRenderMeshPath();
 	void SetRenderMesh(const std::string&);
 
-	PHX_GAMEOBJECT_API_REFLECTION;
+	REFLECTION_DECLAREAPI;
 
 private:
 	static void s_DeclareReflections();
-	static inline Api s_Api{};
+	static inline Reflection::Api s_Api{};;
 
 	std::string m_MeshPath{};
 };

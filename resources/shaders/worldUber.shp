@@ -1,11 +1,11 @@
 {
-    "Vertex": "worldUber.vert",
-    "Fragment": "worldUber.frag",
-    
-    "Uniforms": {
-        "Fog": false,
-        "EmissionStrength": 0.0,
-	"AlphaCutoff": 0.5
-	//"DebugOverdraw": false
-    }
+  "Fragment": "shaders/worldUber.frag",
+  "Geometry": "shaders/worldUber.geom",
+  "InheritUniformsOf": "",
+  "Uniforms": {
+    "AlphaCutoff": 0.05000000074505806,
+    "EmissionStrength": 0.0,
+    "Fog": false
+  },
+  "Vertex": "shaders/worldUber.vert"
 }

@@ -1,8 +1,15 @@
+PHNXENGI
+#Asset Material
+#Date 31-12-2024
+
+
 {
-  "albedo": "models/crow/diffuse.png",
-  "roughnessFactor": 1.0,
+  "ColorMap": "models/crow/diffuse.png",
+  "EmissionMap": "models/crow/diffuse.png",
+  "HasTranslucency": false,
+  "MetallicRoughnessMap": "textures/black.png",
+  "Shader": "worldUber",
+  "Uniforms": null,
   "specExponent": 16.0,
-  "specMultiply": 0.0,
-  "translucency": false,
-  "uniforms": {}
+  "specMultiply": 0.0
 }

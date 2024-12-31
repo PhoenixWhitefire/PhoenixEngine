@@ -1,0 +1,5 @@
+{
+  "ColorMap": "textures/materials/plastic.png",
+  "specExponent": 32.0,
+  "specMultiply": 0.5
+}

@@ -74,10 +74,10 @@ void main()
 		vec3 colDownscaled = textureLod(Texture, sampleUV, i).xyz;
 		float brightness = getBrightness(colDownscaled);
 
-		if (brightness > 1.2f)
-			Color += colDownscaled / pow(i, 2);
+		if (brightness > 1.f)
+			Color += colDownscaled / (i*2);
 	}
-
+	/*
 	// https://youtu.be/wbn5ULLtkHs?t=271
 	float Lin = getBrightness(Color);
 	float Lavg = getBrightness(textureLod(Texture, sampleUV, 10).xyz);
@@ -92,8 +92,8 @@ void main()
 	float Lout = pow(Lin, alphaRw / alphaD) / LdMax * pow(10.f, (betaRw - betaD) / alphaD) - (1.f - ContrastMax);
 
 	Color = Color / Lin * Lout;
-	Color *= 0.5f;
-
+	Color *= 0.6f;
+	*/
 	if (ScreenEdgeBlurEnabled)
 	{
 		vec3 BlurredColor;

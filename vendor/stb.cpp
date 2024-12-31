@@ -1,2 +1,3 @@
 #define STB_IMAGE_IMPLEMENTATION
-#include <stb/stb_image.h>
+#define STBI_FAILURE_USERMSG
+#include <../stb/stb_image.h>

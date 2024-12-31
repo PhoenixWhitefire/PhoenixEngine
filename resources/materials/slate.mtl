@@ -1,3 +1,8 @@
 {
-  "albedo": "textures/slate.jpg"
+  "albedo": "textures/materials/slate.jpg",
+  "shaderprogram": "worldUberTriProjected",
+  "specExponent": 16.0,
+  "specMultiply": 1.0,
+  "translucency": false,
+  "uniforms": null
 }

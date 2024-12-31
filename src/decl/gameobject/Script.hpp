@@ -13,12 +13,12 @@ public:
 	void Initialize() override;
 	void Update(double) override;
 
-	bool LoadScript(std::string const&);
+	bool LoadScript(const std::string&);
 	bool Reload();
 
-	std::string SourceFile = "scripts/empty.luau";
+	std::string SourceFile = "scripts/default.luau";
 
-	PHX_GAMEOBJECT_API_REFLECTION;
+	REFLECTION_DECLAREAPI;
 
 	static inline bool s_WindowGrabMouse = false;
 
@@ -28,5 +28,5 @@ private:
 	bool m_StaleSource = false;
 
 	static void s_DeclareReflections();
-	static inline Api s_Api{};
+	static inline Reflection::Api s_Api{};;
 };

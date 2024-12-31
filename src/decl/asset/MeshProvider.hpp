@@ -13,9 +13,16 @@ class MeshProvider
 public:
 	struct GpuMesh
 	{
-		GpuVertexArray* VertexArray;
-		GpuVertexBuffer* VertexBuffer;
-		GpuElementBuffer* ElementBuffer;
+		void Delete()
+		{
+			this->VertexArray.Delete();
+			this->VertexBuffer.Delete();
+			this->ElementBuffer.Delete();
+		}
+
+		GpuVertexArray VertexArray;
+		GpuVertexBuffer VertexBuffer;
+		GpuElementBuffer ElementBuffer;
 		uint32_t NumIndices{};
 	};
 
@@ -31,9 +38,9 @@ public:
 	void Save(const Mesh&, const std::string& Path);
 	void Save(uint32_t, const std::string& Path);
 	
-	uint32_t LoadFromPath(const std::string& Path, bool ShouldLoadAsync = true);
+	uint32_t LoadFromPath(const std::string& Path, bool ShouldLoadAsync = true, bool PreserveMeshData = false);
 
-	Mesh* GetMeshResource(uint32_t);
+	Mesh& GetMeshResource(uint32_t);
 	GpuMesh& GetGpuMesh(uint32_t);
 
 	const std::string& GetLastErrorString();
@@ -43,6 +50,7 @@ private:
 	~MeshProvider();
 
 	void m_CreateAndUploadGpuMesh(Mesh&);
+	void m_CreateAndUploadGpuMesh(uint32_t);
 
 	std::vector<Mesh> m_Meshes;
 	std::unordered_map<std::string, uint32_t> m_StringToMeshId;

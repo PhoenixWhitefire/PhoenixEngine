@@ -1,117 +1,113 @@
+#define GLM_ENABLE_EXPERIMENTAL
+
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/euler_angles.hpp>
+#include <ImGuiFD/ImGuiFD.h>
 #include <imgui/imgui.h>
+#include <imgui/misc/cpp/imgui_stdlib.h>
+#include <glad/gl.h>
+#include <fstream>
 
 #include "Editor.hpp"
 #include "gameobject/GameObjects.hpp"
+#include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
+#include "asset/MeshProvider.hpp"
+#include "Utilities.hpp"
 #include "UserInput.hpp"
 #include "FileRW.hpp"
-#include "Debug.hpp"
+#include "Log.hpp"
 
 constexpr uint32_t OBJECT_NEW_CLASSNAME_BUFSIZE = 16;
-constexpr uint32_t MATERIAL_NEW_NAME_BUFSIZE = 32;
+constexpr uint32_t MATERIAL_NEW_NAME_BUFSIZE = 64;
 constexpr uint32_t MATERIAL_TEXTUREPATH_BUFSIZE = 64;
 constexpr const char* MATERIAL_NEW_NAME_DEFAULT = "newmaterial";
 
 static const char* ParentString = "[Parent]";
 
-static std::string ErrorTexture = "textures/missing.png";
-
 static bool ScriptEditorEnabled = false;
 static uint32_t ScriptEditorFocus = PHX_GAMEOBJECT_NULL_ID;
 
-static nlohmann::json DefaultNewMaterial{};
-
-static void copyStringToBuffer(char* buf, size_t capacity, const std::string& string = "")
+static nlohmann::json DefaultNewMaterial = 
 {
-	for (size_t i = 0; i < capacity; i++)
-		buf[i] = i < string.size() ? string[i] : 0;
-}
+	{ "ColorMap", "textures/materials/plastic.png" },
+	{ "specExponent", 32.f },
+	{ "specMultiply", 0.5f }
+};
 
-static char* bufferInitialize(size_t capacity, const std::string& value = "")
+static std::unordered_map<std::string, std::string> ClassIcons{};
+
+static GpuFrameBuffer MtlEditorPreview;
+static Scene MtlPreviewScene =
 {
-	char* buf = (char*)malloc(capacity);
-
-	if (!buf)
-		throw("There are bigger problems at hand.");
-
-	copyStringToBuffer(buf, capacity, value);
-
-	return buf;
-}
-
-Editor::Editor()
-{
-	m_NewObjectClass = bufferInitialize(OBJECT_NEW_CLASSNAME_BUFSIZE);
-	m_MtlCreateNameBuf = bufferInitialize(MATERIAL_NEW_NAME_BUFSIZE, MATERIAL_NEW_NAME_DEFAULT);
-	m_MtlDiffuseBuf = bufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
-	m_MtlSpecBuf = bufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
-	m_MtlShpBuf = bufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
-	m_MtlNewUniformNameBuf = bufferInitialize(MATERIAL_NEW_NAME_BUFSIZE);
-	m_MtlUniformNameEditBuf = bufferInitialize(MATERIAL_NEW_NAME_BUFSIZE);
-
-	DefaultNewMaterial["albedo"] = "textures/plastic.png";
-}
-
-static void AddChildrenToObjects(GameObject* Parent)
-{
-	for (GameObject* Obj : Parent->GetChildren())
+	// cube
 	{
-		Object_Base3D* Obj3D = dynamic_cast<Object_Base3D*>(Obj);
-
-		if (Obj3D)
+		RenderItem
 		{
-			/*IntersectionLib::HittableObject* NewObject = new IntersectionLib::HittableObject();
-			NewObject->CollisionMesh = Obj3D->GetRenderMesh();
-			NewObject->Id = Objects.size();
-
-			glm::mat4 ModelMatrix = glm::mat4(1.0f);
-
-			Object_Model* ParentModel = dynamic_cast<Object_Model*>(Obj->Parent);*/
-
-			//if (ParentModel)
-			//	ModelMatrix = ParentModel->Matrix;
-
-			//NewObject->Matrix = ModelMatrix * Obj3D->Matrix;
-			
-			//glm::mat4 Scale = glm::mat4(1.0f);
-			//Scale = glm::scale(Scale, (glm::vec3)Obj3D->Size);
-
-			//NewObject->Matrix = NewObject->Matrix * Scale;
-
-			//Objects.push_back(NewObject);
+			0u,
+			glm::mat4(1.f),
+			glm::vec3(1.f, 1.f, 1.f),
+			0u,
+			Color(1.f, 1.f, 1.f),
+			0.f,
+			0.f,
+			0.f,
+			FaceCullingMode::BackFace
 		}
+	},
+	// light source
+	{
+		{
+			LightType::Directional,
+			false,
+			Vector3(0.57f, 0.57f, 0.57f),
+			Color(1.f, 1.f, 1.f)
+		}
+	},
+	{} // used shaders
+};
+static Renderer* MtlPreviewRenderer = nullptr;
+static Object_Camera* MtlPreviewCamera = nullptr;
+static glm::mat4 MtlPreviewCamOffset = glm::translate(glm::mat4(1.f), glm::vec3(0.f, 0.f, -2.f));
+static glm::mat4 MtlPreviewCamDefaultRotation = glm::eulerAngleYXZ(glm::radians(168.f), glm::radians(12.f), 0.f);
 
-		if (!Obj->GetChildren().empty())
-			AddChildrenToObjects(Obj);
-	}
-}
+static std::string ErrorTooltipMessage = "No Error Dummy";
+static double ErrorTooltipTimeRemaining = 0.f;
 
-//static void ResetAndAddObjects()
-//{
-//	Objects.clear();
-//
-//	AddChildrenToObjects(GameObject::s_DataModel);
-//}
-
-void Editor::Init()
+Editor::Editor(Renderer* renderer)
 {
-	//AddChildrenToObjects(Root);
+	m_MtlCreateNameBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE, MATERIAL_NEW_NAME_DEFAULT);
+	m_MtlLoadNameBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE, MATERIAL_NEW_NAME_DEFAULT);
+	m_MtlDiffuseBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
+	m_MtlSpecBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
+	m_MtlNormalBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
+	m_MtlEmissionBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
+	m_MtlShpBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
 
-	//GameWorkspace->OnChildAdded.Connect(ResetAndAddObjects);
+	MtlEditorPreview.Initialize(256, 256);
+	MtlPreviewRenderer = renderer;
+	MtlPreviewCamera = (Object_Camera*)GameObject::Create("Camera");
+	MtlPreviewCamera->Transform = MtlPreviewCamDefaultRotation * MtlPreviewCamOffset;
+	MtlPreviewCamera->FieldOfView = 50.f;
+
+	nlohmann::json iconsJson = nlohmann::json::parse(FileRW::ReadFile("textures/editor-icons/icons.json"));
+
+	for (auto it = iconsJson.begin(); it != iconsJson.end(); ++it)
+		ClassIcons[it.key()] = (std::string)it.value();
 }
 
 void Editor::Update(double DeltaTime)
 {
-	m_InvalidObjectErrTimeRemaining -= DeltaTime;
+	ErrorTooltipTimeRemaining -= DeltaTime;
 }
 
 static bool mtlIterator(void*, int index, const char** outText)
 {
-	RenderMaterial* selected = RenderMaterial::GetLoadedMaterials()[index];
+	MaterialManager* mtlManager = MaterialManager::Get();
 
-	*outText = selected->Name.c_str();
+	RenderMaterial& selected = mtlManager->GetLoadedMaterials()[index];
+
+	*outText = selected.Name.c_str();
 
 	return true;
 }
@@ -128,18 +124,28 @@ static void renderScriptEditor()
 	static char* TextEntryBuffer = nullptr;
 	static size_t TextEntryBufferCapacity = 0;
 
-	Object_Script* targetScript = dynamic_cast<Object_Script*>(GameObject::GetObjectById(ScriptEditorFocus));
+	static std::fstream* ScriptFileStream = nullptr;
 
 	if (!ScriptEditorEnabled)
 	{
-		if (targetScript && TextEntryBuffer)
-			FileRW::WriteFile(targetScript->SourceFile, TextEntryBuffer, true);
+		if (ScriptFileStream)
+		{
+			ScriptFileStream->close();
+			ScriptFileStream = nullptr; // crashes when i try to `delete` it 22/12/2024
+		}
 
-		free(TextEntryBuffer);
-		TextEntryBuffer = nullptr;
+		if (TextEntryBuffer)
+		{
+			free(TextEntryBuffer);
+			TextEntryBuffer = nullptr;
+		}
+
+		ScriptEditorFocus = PHX_GAMEOBJECT_NULL_ID;
 
 		return;
 	}
+
+	Object_Script* targetScript = dynamic_cast<Object_Script*>(GameObject::GetObjectById(ScriptEditorFocus));
 
 	if (!targetScript)
 	{
@@ -149,170 +155,80 @@ static void renderScriptEditor()
 		return;
 	}
 
-	ImGui::Begin("Script Editor");
+	ImGui::Begin("Script Editor", 0, ImGuiWindowFlags_NoCollapse);
 
-	ImGui::Text("%s", targetScript->Name.c_str());
+	ImGui::Text("%s: %s", targetScript->GetFullName().c_str(), targetScript->SourceFile.c_str());
 
-	if (ImGui::Button("Save"))
+	bool save = ImGui::Button("Save");
+
+	if (ImGui::Button("Save and Close"))
 	{
+		ScriptEditorEnabled = false;
+
+		save = true;
+	}
+
+	if (ImGui::Button("Close without saving"))
+	{
+		ScriptEditorEnabled = false;
+		ImGui::End();
+
+		return;
+	}
+
+	if (save)
+	{
+		ScriptFileStream->close();
+		delete ScriptFileStream;
+		ScriptFileStream = nullptr;
+
 		FileRW::WriteFile(targetScript->SourceFile, TextEntryBuffer, true);
 
 		free(TextEntryBuffer);
 		TextEntryBuffer = nullptr;
 	}
 
-	if (ImGui::Button("Close"))
-	{
-		// 28/10/2024 TODO
-		// hooo boy do i love intentionally dirty state
-		// so i don't have to go through the effort of making ONE extra function
-		ScriptEditorEnabled = false;
-		return;
-	}
-
 	if (!TextEntryBuffer)
 	{
-		bool scriptFileExists = true;
-		std::string scriptContents = FileRW::ReadFile(targetScript->SourceFile, &scriptFileExists);
+		ScriptFileStream = new std::fstream(FileRW::GetAbsolutePath(targetScript->SourceFile));
+		
+		std::string scriptContents = "";
 
-		if (!scriptFileExists)
+		if (!(*ScriptFileStream) || !ScriptFileStream->is_open())
 			scriptContents = "-- Source file '" + targetScript->SourceFile + "' could not be opened";
+		else
+		{
+			ScriptFileStream->seekg(0, std::ios::end);
+
+			scriptContents.resize(ScriptFileStream->tellg());
+			ScriptFileStream->seekg(0, std::ios::beg);
+
+			ScriptFileStream->read(&scriptContents[0], scriptContents.size());
+		}
 
 		TextEntryBufferCapacity = scriptContents.size() + 256;
 		TextEntryBuffer = (char*)malloc(TextEntryBufferCapacity);
 
-		copyStringToBuffer(TextEntryBuffer, TextEntryBufferCapacity, scriptContents);
+		CopyStringToBuffer(TextEntryBuffer, TextEntryBufferCapacity, scriptContents);
 	}
-
-	ImGui::InputTextMultiline("Script", TextEntryBuffer, TextEntryBufferCapacity);
+	
+	ImGui::InputTextMultiline("##", TextEntryBuffer, TextEntryBufferCapacity, ImGui::GetContentRegionAvail());
 
 	ImGui::End();
 }
 
-// 02/09/2024
-// That one Gianni Matragrano shitpost where it's a
-// baguette with a doge face on a white background low-res
-// with the caption "pain"
-// and it's just him screaming into the mic
-void Editor::m_RenderMaterialEditor()
+static void uniformsEditor(std::unordered_map<std::string, Reflection::GenericValue>& Uniforms, int* Selection)
 {
-	ImGui::Begin("Materials");
-
-	ImGui::InputText("New material", m_MtlCreateNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
-
-	if (ImGui::Button("Create"))
-	{
-		FileRW::WriteFile(
-			"materials/" + std::string(m_MtlCreateNameBuf) + ".mtl",
-			DefaultNewMaterial.dump(2), true
-		);
-
-		RenderMaterial::GetMaterial(m_MtlCreateNameBuf);
-	}
-
-	ImGui::ListBox(
-		"Active materials",
-		&m_MtlCurItem,
-		&mtlIterator,
-		nullptr,
-		static_cast<int>(RenderMaterial::GetLoadedMaterials().size())
-	);
-
-	if (m_MtlCurItem == -1)
-	{
-		ImGui::End();
-
-		return;
-	}
-
-	RenderMaterial* curItem = RenderMaterial::GetLoadedMaterials().at(m_MtlCurItem);
-
-	TextureManager* texManager = TextureManager::Get();
-
-	Texture* colorMap = texManager->GetTextureResource(curItem->ColorMap);
-	Texture* metallicRoughnessMap = texManager->GetTextureResource(curItem->MetallicRoughnessMap);
-
-	static int SelectedUniformIdx = -1;
-
-	if (m_MtlCurItem != m_MtlPrevItem)
-	{
-		copyStringToBuffer(m_MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE, curItem->Shader->Name);
-		copyStringToBuffer(m_MtlDiffuseBuf, MATERIAL_TEXTUREPATH_BUFSIZE, colorMap->ImagePath);
-
-		if (curItem->MetallicRoughnessMap != 0)
-			copyStringToBuffer(m_MtlSpecBuf, MATERIAL_TEXTUREPATH_BUFSIZE, metallicRoughnessMap->ImagePath);
-
-		SelectedUniformIdx = -1;
-	}
-
-	m_MtlPrevItem = m_MtlCurItem;
-
-	ImGui::InputText("Shader", m_MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
-
-	ImGui::InputText("Diffuse", m_MtlDiffuseBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
-	
-	ImGui::Image(
-		// first cast to uint64_t to get rid of the
-		// "'type cast': conversion from 'uint32_t' to 'void *' of greater size"
-		// warning
-		(void*)((uint64_t)colorMap->GpuId),
-		ImVec2(256, 256),
-		// Flip the Y axis. Either OpenGL or Dear ImGui is bottom-up
-		ImVec2(0, 1),
-		ImVec2(1, 0)
-	);
-
-	ImGui::Text(std::vformat(
-		"Resolution: {}x{}",
-		std::make_format_args(colorMap->Width, colorMap->Height)
-	).c_str());
-
-	ImGui::Text(std::vformat(
-		"# Color channels: {}",
-		std::make_format_args(colorMap->NumColorChannels)
-	).c_str());
-
-	bool hasSpecularTexture = curItem->MetallicRoughnessMap != 0;
-	ImGui::Checkbox("Has Specular", &hasSpecularTexture);
-
-	if (hasSpecularTexture)
-	{
-		curItem->MetallicRoughnessMap = curItem->MetallicRoughnessMap != 0 ? curItem->MetallicRoughnessMap : 1;
-		// in case the texture is updated by the above ternary to be ID 1
-		metallicRoughnessMap = texManager->GetTextureResource(curItem->MetallicRoughnessMap);
-
-		ImGui::InputText("Specular", m_MtlSpecBuf, 64);
-
-		ImGui::Image(
-			// first cast to uint64_t to get rid of the
-			// "'type cast': conversion from 'uint32_t' to 'void *' of greater size"
-			// warning
-			(void*)((uint64_t)metallicRoughnessMap->GpuId),
-			ImVec2(256, 256),
-			// Flip the Y axis. Either OpenGL or Dear ImGui is bottom-up
-			ImVec2(0, 1),
-			ImVec2(1, 0)
-		);
-
-		ImGui::Text(std::vformat(
-			"Resolution: {}x{}",
-			std::make_format_args(metallicRoughnessMap->Width, metallicRoughnessMap->Height)
-		).c_str());
-
-		ImGui::Text(std::vformat(
-			"# Color channels: {}",
-			std::make_format_args(metallicRoughnessMap->NumColorChannels)
-		).c_str());
-	}
-	else
-		curItem->MetallicRoughnessMap = 0;
-
-	ImGui::Text("Uniforms");
+	if ((*Selection) + 1 > Uniforms.size())
+		*Selection = -1;
 
 	static int TypeId = 0;
 
-	ImGui::InputText("Uniform Name", m_MtlNewUniformNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
-	ImGui::InputInt("Uniform Type", &TypeId);
+	static std::string NewUniformNameBuf;
+	NewUniformNameBuf.resize(32);
+
+	ImGui::InputText("Variable Name", &NewUniformNameBuf);
+	ImGui::InputInt("Variable Type", &TypeId);
 	ImGui::SetItemTooltip("0=Bool, 1=Int, 2=Float");
 
 	TypeId = std::clamp(TypeId, 0, 2);
@@ -340,31 +256,32 @@ void Editor::m_RenderMaterialEditor()
 		}
 		}
 
-		curItem->Uniforms[m_MtlNewUniformNameBuf] = initialValue;
+		Uniforms[NewUniformNameBuf] = initialValue;
 	}
 
 	std::vector<std::string> uniformsArray;
-	uniformsArray.reserve(curItem->Uniforms.size());
+	uniformsArray.reserve(Uniforms.size());
 
-	for (auto& it : curItem->Uniforms)
+	for (auto& it : Uniforms)
 		uniformsArray.push_back(it.first);
 
 	ImGui::ListBox(
-		"",
-		&SelectedUniformIdx,
+		"Uniforms",
+		Selection,
 		&mtlUniformIterator,
 		&uniformsArray,
-		static_cast<int>(curItem->Uniforms.size())
+		static_cast<int>(Uniforms.size())
 	);
 
-	if (SelectedUniformIdx != -1 && uniformsArray.size() >= 1)
+	if (*Selection != -1 && uniformsArray.size() >= 1)
 	{
-		const std::string& name = uniformsArray.at(SelectedUniformIdx);
-		Reflection::GenericValue& value = curItem->Uniforms.at(name);
+		const std::string& name = uniformsArray.at(*Selection);
+		Reflection::GenericValue& value = Uniforms.at(name);
 
-		copyStringToBuffer(m_MtlUniformNameEditBuf, MATERIAL_NEW_NAME_BUFSIZE, name);
+		static std::string NameEditBuf;
+		NameEditBuf = name;
 
-		ImGui::InputText("Name", m_MtlUniformNameEditBuf, MATERIAL_NEW_NAME_BUFSIZE);
+		ImGui::InputText("Name", &NameEditBuf);
 
 		Reflection::GenericValue newValue = value;
 
@@ -405,145 +322,597 @@ void Editor::m_RenderMaterialEditor()
 		}
 		}
 
-		std::string newName = m_MtlUniformNameEditBuf;
+		if (name != NameEditBuf)
+			Uniforms.erase(name);
 
-		if (name != newName)
-			curItem->Uniforms.erase(name);
-
-		curItem->Uniforms[newName] = newValue;
+		Uniforms[NameEditBuf] = newValue;
 	}
+}
 
-	if (ImGui::Button("Update"))
+static std::string* PipelineShaderSelectTarget = nullptr;
+
+static void shaderPipelineShaderSelect(const std::string& Label, std::string* Target)
+{
+	ImGui::Text(Label.c_str());
+	ImGui::SameLine();
+
+	if (ImGui::TextLink(Target->c_str()))
 	{
-		curItem->ColorMap = texManager->LoadTextureFromPath(m_MtlDiffuseBuf);
+		std::string shddir = "resources/" + Target->substr(0ull, Target->find_last_of("/"));
 
-		if (strlen(m_MtlSpecBuf) > 0)
-			curItem->MetallicRoughnessMap = texManager->LoadTextureFromPath(m_MtlSpecBuf);
+		ImGuiFD::OpenDialog(
+			"Select Pipeline Shader",
+			ImGuiFDMode_LoadFile,
+			shddir.c_str(),
+			"*.vert,*.frag,*.geom",
+			0,
+			1
+		);
 
-		curItem->Shader = ShaderProgram::GetShaderProgram(m_MtlShpBuf);
+		PipelineShaderSelectTarget = Target;
 	}
+}
 
-	ImGui::Checkbox("Has translucency", &curItem->HasTranslucency);
-	ImGui::InputFloat("Spec pow", &curItem->SpecExponent);
-	ImGui::InputFloat("Spec mul", &curItem->SpecMultiply);
-
-	if (ImGui::Button("Save"))
+static void renderShaderPipelinesEditor()
+{
+	if (ImGuiFD::BeginDialog("Select Pipeline Shader"))
 	{
-		nlohmann::json newMtlConfig{};
+		if (!PipelineShaderSelectTarget)
+			throw("yada yada");
 
-		newMtlConfig["albedo"] = colorMap->ImagePath;
-
-		if (curItem->MetallicRoughnessMap != 0)
-			newMtlConfig["specular"] = metallicRoughnessMap->ImagePath;
-
-		newMtlConfig["specExponent"] = curItem->SpecExponent;
-		newMtlConfig["specMultiply"] = curItem->SpecMultiply;
-		newMtlConfig["translucency"] = curItem->HasTranslucency;
-		newMtlConfig["shaderprogram"] = curItem->Shader->Name;
-		
-		newMtlConfig["uniforms"] = {};
-
-		for (auto& it : curItem->Uniforms)
+		if (ImGuiFD::ActionDone())
 		{
-			Reflection::GenericValue& value = it.second;
+			if (ImGuiFD::SelectionMade())
+			{
+				std::string fullpath = ImGuiFD::GetSelectionPathString(0);
+				size_t resDirOffset = fullpath.find("resources/");
 
-			switch (value.Type)
-			{
-			case (Reflection::ValueType::Bool):
-			{
-				newMtlConfig["uniforms"][it.first] = value.AsBool();
-				break;
+				if (resDirOffset == std::string::npos)
+				{
+					ErrorTooltipMessage = "Selection must be within the Project's `resources/` directory!";
+					ErrorTooltipTimeRemaining = 5.f;
+				}
+				else
+				{
+					std::string shortpath = fullpath.substr(resDirOffset + 10);
+					*PipelineShaderSelectTarget = shortpath;
+					// maybe `*PipelineShaderSelectTarget = shortpath` can also be done but idk
+					// if that calls the copy constructor
+					//PipelineShaderSelectTarget->swap(shortpath);
+
+					PipelineShaderSelectTarget = nullptr;
+				}
 			}
-			case (Reflection::ValueType::Integer):
-			{
-				newMtlConfig["uniforms"][it.first] = value.AsInteger();
-				break;
-			}
-			case (Reflection::ValueType::Double):
-			{
-				newMtlConfig["uniforms"][it.first] = static_cast<float>(value.AsDouble());
-				break;
-			}
-			}
+
+			ImGuiFD::CloseCurrentDialog();
 		}
 
-		std::string filePath = "materials/" + curItem->Name + ".mtl";
+		ImGuiFD::EndDialog();
+	}
 
-		FileRW::WriteFile(
-			"materials/" + curItem->Name + ".mtl",
-			newMtlConfig.dump(2),
-			true
-		);
+	ShaderManager* shdManager = ShaderManager::Get();
+
+	std::vector<ShaderProgram>& shaders = shdManager->GetLoadedShaders();
+
+	if (!ImGui::Begin("Shader Pipelines"))
+	{
+		ImGui::End();
+
+		return;
+	}
+
+	static int curItemIdx = -1;
+
+	ImGui::ListBox(
+		"##",
+		&curItemIdx,
+		[](void* udat, int idx)
+		-> const char*
+		{
+			return ((std::vector<ShaderProgram>*)udat)->at(idx).Name.c_str();
+		},
+		&shaders,
+		static_cast<int>(shaders.size())
+	);
+
+	if (curItemIdx != -1)
+	{
+		ShaderProgram& curItem = shaders[curItemIdx];
+
+		shaderPipelineShaderSelect("Vertex Shader: ", &curItem.VertexShader);
+		shaderPipelineShaderSelect("Fragment Shader: ", &curItem.FragmentShader);
+		shaderPipelineShaderSelect("Geometry Shader: ", &curItem.GeometryShader);
+
+		static int UniformSelectionIdx = -1;
+
+		ImGui::InputText("Inherit variables of: ", &curItem.UniformsAncestor);
+
+		uniformsEditor(curItem.DefaultUniforms, &UniformSelectionIdx);
+
+		if (ImGui::Button("Save & Reload"))
+		{
+			curItem.Save();
+			curItem.Reload();
+		}
 	}
 
 	ImGui::End();
 }
 
-static GameObject* recursiveIterateTree(GameObject* current)
+static char* MtlEditorTextureSelectDialogBuffer = nullptr;
+static uint32_t* MtlEditorTextureSelectTarget = nullptr;
+
+static void mtlEditorTexture(uint32_t* TextureIdPtr, const char* Label, char* Buffer)
 {
-	static GameObject* Selected = nullptr;
-	
-	if (Selected)
-		if (GameObject::s_WorldArray.find(Selected->ObjectId) == GameObject::s_WorldArray.end())
-			Selected = nullptr;
+	TextureManager* texManager = TextureManager::Get();
+
+	const Texture& tx = texManager->GetTextureResource(*TextureIdPtr);
+
+	ImGui::Text(Label);
+
+	if (ImGui::GetIO().KeyCtrl)
+	{
+		bool fileDialogRequested = ImGui::TextLink(Buffer);
+		ImGui::SetItemTooltip("Open file dialog");
+
+		if (fileDialogRequested)
+		{
+			std::string bufAsStr = std::string(Buffer);
+			std::string texdir = "resources/" + bufAsStr.substr(0ull, bufAsStr.find_last_of("/"));
+
+			ImGuiFD::OpenDialog(
+				"Select Texture",
+				ImGuiFDMode_LoadFile,
+				texdir.c_str(),
+				"*.png,*.jpg,*.jpeg",
+				0,
+				1
+			);
+
+			MtlEditorTextureSelectDialogBuffer = Buffer;
+			MtlEditorTextureSelectTarget = TextureIdPtr;
+		}
+	}
+	else
+	{
+		ImGui::InputText(Label, Buffer, MATERIAL_TEXTUREPATH_BUFSIZE);
+		ImGui::SetItemTooltip("Enter path directly, or hold CTRL to use a file dialog");
+	}
+
+	ImGui::Image(
+		tx.GpuId,
+		// Scale to 256 pixels wide, while maintaining aspect ratio
+		ImVec2(256.f, tx.Height * (256.f / tx.Width))
+	);
+
+	ImGui::Text(std::vformat(
+		"Resolution: {}x{}",
+		std::make_format_args(tx.Width, tx.Height)
+	).c_str());
+
+	ImGui::Text(std::vformat(
+		"# Color channels: {}",
+		std::make_format_args(tx.NumColorChannels)
+	).c_str());
+}
+
+static uint32_t getClassIconId(const std::string& ClassName)
+{
+	std::string iconPath = ClassIcons["FallbackIcon"];
+	auto wantedIconIt = ClassIcons.find(ClassName);
+
+	if (wantedIconIt != ClassIcons.end())
+		iconPath = wantedIconIt->second;
+
+	return TextureManager::Get()->LoadTextureFromPath(iconPath);
+}
+
+// 02/09/2024
+// That one Gianni Matragrano shitpost where it's a
+// baguette with a doge face on a white background low-res
+// with the caption "pain"
+// and it's just him screaming into the mic
+void Editor::m_RenderMaterialEditor()
+{
+	MaterialManager* mtlManager = MaterialManager::Get();
+	TextureManager* texManager = TextureManager::Get();
+
+	if (MtlEditorTextureSelectDialogBuffer != nullptr)
+	{
+		if (ImGuiFD::BeginDialog("Select Texture"))
+		{
+			if (ImGuiFD::ActionDone())
+			{
+				if (ImGuiFD::SelectionMade())
+				{
+					std::string fullpath = ImGuiFD::GetSelectionPathString(0);
+					size_t resDirOffset = fullpath.find("resources/");
+
+					if (resDirOffset == std::string::npos)
+					{
+						ErrorTooltipMessage = "Selection must be within the Project's `resources/` directory!";
+						ErrorTooltipTimeRemaining = 5.f;
+						MtlEditorTextureSelectDialogBuffer = nullptr;
+					}
+					else
+					{
+						std::string shortpath = fullpath.substr(resDirOffset + 10);
+						CopyStringToBuffer(MtlEditorTextureSelectDialogBuffer, MATERIAL_TEXTUREPATH_BUFSIZE, shortpath);
+						MtlEditorTextureSelectDialogBuffer = nullptr;
+
+						uint32_t newtexid = texManager->LoadTextureFromPath(shortpath);
+						// i'm so silly 04/12/2024
+						*MtlEditorTextureSelectTarget = newtexid;
+					}
+				}
+
+				ImGuiFD::CloseCurrentDialog();
+				MtlEditorTextureSelectDialogBuffer = nullptr;
+			}
+
+			ImGuiFD::EndDialog();
+		}
+	}
+
+	if (!ImGui::Begin("Materials"))
+	{
+		ImGui::End();
+		return;
+	}
+
+	ImGui::InputText("Load material", m_MtlLoadNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
+	ImGui::SetItemTooltip("The name of the material to load in, NOT the file path");
+
+	if (ImGui::Button("Load"))
+		mtlManager->LoadMaterialFromPath(m_MtlLoadNameBuf);
+
+	ImGui::InputText("New blank material", m_MtlCreateNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
+	ImGui::SetItemTooltip("The name of the new blank material");
+
+	if (ImGui::Button("Create"))
+	{
+		FileRW::WriteFile(
+			"materials/" + std::string(m_MtlCreateNameBuf) + ".mtl",
+			DefaultNewMaterial.dump(2), true
+		);
+
+		mtlManager->LoadMaterialFromPath(m_MtlCreateNameBuf);
+	}
+
+	std::vector<RenderMaterial>& loadedMaterials = mtlManager->GetLoadedMaterials();
+
+	ImGui::ListBox(
+		"Loaded materials",
+		&m_MtlCurItem,
+		&mtlIterator,
+		nullptr,
+		static_cast<int>(loadedMaterials.size())
+	);
+	ImGui::SetItemTooltip("Use the 'Load' button to load a material if it isn't already loaded");
+
+	if (m_MtlCurItem == -1)
+	{
+		ImGui::End();
+
+		return;
+	}
+
+	RenderMaterial& curItem = loadedMaterials.at(m_MtlCurItem);
+
+	Texture& colorMap = texManager->GetTextureResource(curItem.ColorMap);
+	Texture& metallicRoughnessMap = texManager->GetTextureResource(curItem.MetallicRoughnessMap);
+	Texture& normalMap = texManager->GetTextureResource(curItem.NormalMap);
+	Texture& emissionMap = texManager->GetTextureResource(curItem.EmissionMap);
+
+	static int SelectedUniformIdx = -1;
+
+	static std::string s_SaveNameBuf = "";
+
+	if (m_MtlCurItem != m_MtlPrevItem)
+	{
+		CopyStringToBuffer(m_MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE, curItem.GetShader().Name);
+		s_SaveNameBuf = curItem.Name;
+
+		CopyStringToBuffer(m_MtlDiffuseBuf, MATERIAL_TEXTUREPATH_BUFSIZE, colorMap.ImagePath);
+		CopyStringToBuffer(m_MtlSpecBuf, MATERIAL_TEXTUREPATH_BUFSIZE, metallicRoughnessMap.ImagePath);
+		CopyStringToBuffer(m_MtlNormalBuf, MATERIAL_TEXTUREPATH_BUFSIZE, normalMap.ImagePath);
+		CopyStringToBuffer(m_MtlEmissionBuf, MATERIAL_TEXTUREPATH_BUFSIZE, emissionMap.ImagePath);
+
+		SelectedUniformIdx = -1;
+	}
+
+	m_MtlPrevItem = m_MtlCurItem;
+
+	ImGui::Image(
+		MtlEditorPreview.GpuTextureId,
+		ImVec2(256.f, 256.f),
+		ImVec2(0.f, 1.f),
+		ImVec2(1.f, 0.f)
+	);
+
+	static double PreviewRotStart = 0.f;
+
+	if (ImGui::IsItemHovered())
+	{
+		if (PreviewRotStart == 0.f)
+			PreviewRotStart = GetRunningTime();
+
+		glm::mat4 transform = MtlPreviewCamDefaultRotation * glm::rotate(
+			glm::mat4(1.f),
+			glm::radians(static_cast<float>((GetRunningTime() - PreviewRotStart) * 45.f)),
+			glm::vec3(0.f, 1.f, 0.f)
+		);
+		MtlPreviewCamera->Transform = transform * MtlPreviewCamOffset;
+	}
+	else
+	{
+		MtlPreviewCamera->Transform = MtlPreviewCamDefaultRotation * MtlPreviewCamOffset;
+		PreviewRotStart = 0.f;
+	}
+
+	const GpuFrameBuffer& prevFbo = MtlPreviewRenderer->FrameBuffer;
+	//MtlPreviewRenderer->FrameBuffer = MtlEditorPreview;
+
+	MtlEditorPreview.Bind();
+	glViewport(0, 0, 256, 256);
+	glClearColor(0.3f, 0.78f, 1.f, 1.f);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+
+	static uint32_t CubeMeshId = MeshProvider::Get()->LoadFromPath("!Cube");
+
+	MtlPreviewScene.RenderList[0].MaterialId = static_cast<uint32_t>(m_MtlCurItem);
+	MtlPreviewScene.RenderList[0].RenderMeshId = CubeMeshId;
+	MtlPreviewScene.UsedShaders = { curItem.ShaderId };
+
+	MtlPreviewRenderer->DrawScene(
+		MtlPreviewScene,
+		MtlPreviewCamera->GetMatrixForAspectRatio(1.f),
+		MtlPreviewCamera->Transform,
+		GetRunningTime()
+	);
+
+	MtlEditorPreview.Unbind();
+	MtlPreviewRenderer->FrameBuffer = prevFbo;
+	MtlPreviewRenderer->FrameBuffer.Bind();
+	glViewport(0, 0, prevFbo.Width, prevFbo.Height);
+
+	ImGui::InputText("Shader", m_MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
+
+	mtlEditorTexture(&curItem.ColorMap, "Color Map:", m_MtlDiffuseBuf);
+
+	bool hadSpecularTexture = curItem.MetallicRoughnessMap != 0;
+	bool metallicRoughnessEnabled = hadSpecularTexture;
+	ImGui::Checkbox("Has Metallic-Roughness Map", &metallicRoughnessEnabled);
+
+	if (metallicRoughnessEnabled)
+	{
+		if (!hadSpecularTexture)
+			curItem.MetallicRoughnessMap = texManager->LoadTextureFromPath("textures/white.png");
+
+		mtlEditorTexture(&curItem.MetallicRoughnessMap, "Metallic Roughness Map:", m_MtlSpecBuf);
+	}
+	else
+		// the ID is the only thing the Renderer uses to determine
+		// if a material has a certain non-required texture,
+		// as well as being what this very Editor uses to determine if it
+		// should be displayed
+		// 15/11/2024
+		curItem.MetallicRoughnessMap = 0;
+
+	bool hadNormalMap = curItem.NormalMap != 0;
+	bool normalMapEnabled = hadNormalMap;
+	ImGui::Checkbox("Has Normal Map", &normalMapEnabled);
+
+	if (normalMapEnabled)
+	{
+		if (!hadNormalMap)
+			curItem.NormalMap = texManager->LoadTextureFromPath("textures/violet.png");
+
+		mtlEditorTexture(&curItem.NormalMap, "Normal Map:", m_MtlNormalBuf);
+	}
+	else
+		curItem.NormalMap = 0;
+
+	bool hadEmissiveMap = curItem.EmissionMap != 0;
+	bool emissiveMapEnabled = hadEmissiveMap;
+	ImGui::Checkbox("Has Emission Map", &emissiveMapEnabled);
+
+	if (emissiveMapEnabled)
+	{
+		if (!hadEmissiveMap)
+			curItem.EmissionMap = texManager->LoadTextureFromPath("textures/white.png");
+
+		mtlEditorTexture(&curItem.EmissionMap, "Emission Map:", m_MtlEmissionBuf);
+	}
+	else
+		curItem.EmissionMap = 0;
+
+	ImGui::Text("Shader Variable Overrides");
+
+	uniformsEditor(curItem.Uniforms, &SelectedUniformIdx);
+
+	if (ImGui::Button("Load texture and shader"))
+	{
+		curItem.ColorMap = texManager->LoadTextureFromPath(m_MtlDiffuseBuf);
+
+		if (curItem.MetallicRoughnessMap != 0)
+			curItem.MetallicRoughnessMap = texManager->LoadTextureFromPath(m_MtlSpecBuf);
+
+		if (curItem.NormalMap != 0)
+			curItem.NormalMap = texManager->LoadTextureFromPath(m_MtlNormalBuf);
+
+		if (curItem.EmissionMap != 0)
+			curItem.EmissionMap = texManager->LoadTextureFromPath(m_MtlEmissionBuf);
+
+		curItem.ShaderId = ShaderManager::Get()->LoadFromPath(m_MtlShpBuf);
+	}
+
+	ImGui::Checkbox("Has translucency", &curItem.HasTranslucency);
+	ImGui::InputFloat("Spec pow", &curItem.SpecExponent);
+	ImGui::InputFloat("Spec mul", &curItem.SpecMultiply);
+
+	ImGui::InputText("Save As", &s_SaveNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
+	ImGui::SetItemTooltip("By default, this will be the name of the material you are editing, thus overwriting it");
+
+	if (ImGui::Button("Save"))
+		mtlManager->SaveToPath(curItem, s_SaveNameBuf);
+
+	ImGui::End();
+}
+
+static uint32_t HierarchyTreeSelectionId = PHX_GAMEOBJECT_NULL_ID;
+static GameObject* ObjectInsertionTarget = nullptr;
+
+static GameObject* recursiveIterateTree(GameObject* current, bool didVisitCurSelection = false)
+{
+	static TextureManager* texManager = TextureManager::Get();
+
+	GameObject* hrchSelection = GameObject::GetObjectById(HierarchyTreeSelectionId);
+
+	if (hrchSelection == nullptr)
+		HierarchyTreeSelectionId = PHX_GAMEOBJECT_NULL_ID;
 
 	// https://github.com/ocornut/imgui/issues/581#issuecomment-216054349
 	// 07/10/2024
 	GameObject* nodeClicked = nullptr;
 
+	if (current->ObjectId == HierarchyTreeSelectionId)
+		didVisitCurSelection = true;
+
+	static GameObject* InsertObjectButtonHoveredOver = nullptr;
+	InsertObjectButtonHoveredOver = nullptr;
+
 	for (GameObject* object : current->GetChildren())
 	{
-		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow;
+		if (object == nullptr)
+			throw("stoopid compiler is giving me a warning for something that will probably not happen");
 
-		if (Selected && object == Selected)
+		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanAvailWidth;
+
+		// make the insert button have better contrast
+		if (hrchSelection && object == hrchSelection && object != InsertObjectButtonHoveredOver)
 			flags |= ImGuiTreeNodeFlags_Selected;
 
 		if (object->GetChildren().empty())
 			flags |= ImGuiTreeNodeFlags_Leaf;
 
+		ImGui::AlignTextToFramePadding();
+
+		ImGui::Image(
+			texManager->GetTextureResource(getClassIconId(object->ClassName)).GpuId,
+			ImVec2(16.f, 16.f)
+		);
+		ImGui::SameLine();
+
+		if (!didVisitCurSelection)
+		{
+			std::vector<GameObject*> descs = object->GetDescendants();
+
+			if (std::find(descs.begin(), descs.end(), hrchSelection) != descs.end())
+				ImGui::SetNextItemOpen(true);
+		}
+
 		bool open = ImGui::TreeNodeEx(&object->ObjectId, flags, object->Name.c_str());
 
 		if (ImGui::IsItemClicked())
 			nodeClicked = object;
+
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SameLine();
+			ImGui::Button("+");
+
+			// the above call to `::Button` will always
+			// return false, ig this does something different
+			// with the ordering 15/12/2024
+			if (ImGui::IsItemClicked())
+			{
+				ObjectInsertionTarget = object;
+				ImGui::OpenPopup("Object Insertion Window");
+			}
+
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetItemTooltip("Insert new Object");
+				InsertObjectButtonHoveredOver = object;
+			}
+		}
+
+		if (object == ObjectInsertionTarget)
+		{
+			if (ImGui::BeginPopup("Object Insertion Window"))
+			{
+				ImGui::SeparatorText("Insert");
+
+				for (auto& it : GameObject::s_GameObjectMap)
+					if (ImGui::MenuItem(it.first.c_str()))
+					{
+						GameObject* newObject = GameObject::Create(it.first);
+						newObject->SetParent(ObjectInsertionTarget);
+						HierarchyTreeSelectionId = newObject->ObjectId;
+						
+						ObjectInsertionTarget = nullptr;
+					}
+
+				InsertObjectButtonHoveredOver = nullptr;
+
+				ImGui::EndPopup();
+			}
+		}
 			
 		if (open)
 		{
-			recursiveIterateTree(object);
+			recursiveIterateTree(object, didVisitCurSelection);
 			ImGui::TreePop();
 		}
 	}
 
 	if (nodeClicked)
 		if (ImGui::GetIO().KeyCtrl)
-			Selected = nullptr;
+			HierarchyTreeSelectionId = PHX_GAMEOBJECT_NULL_ID;
 		else
-			Selected = nodeClicked;
+			HierarchyTreeSelectionId = nodeClicked->ObjectId;
 
-	return Selected;
+	return GameObject::GetObjectById(HierarchyTreeSelectionId);
 }
+
+static std::string DoNotShowPropThisFrame = "";
 
 void Editor::RenderUI()
 {
+	if (ErrorTooltipTimeRemaining > 0.f)
+		ImGui::SetTooltip(ErrorTooltipMessage.c_str());
+
 	renderScriptEditor();
+	renderShaderPipelinesEditor();
 	m_RenderMaterialEditor();
 
-	ImGui::Begin("Editor");
+	if (!ImGui::Begin("Editor"))
+	{
+		ImGui::End();
+		return;
+	}
 
-	ImGui::InputText("New object", m_NewObjectClass, 32);
-	bool createObject = ImGui::Button("Create");
+	ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(227, 227, 227, 255));
+	ImGui::Text("Compiled: %s", __DATE__);
+	ImGui::PopStyleColor();
 
-	if (m_InvalidObjectErrTimeRemaining > 0.f)
-		ImGui::Text("Invalid GameObject!");
-
-	ImGui::TreePush("GameObject Hierarchy UI");
+	ImGui::Separator();
 
 	GameObject* selected = recursiveIterateTree(GameObject::s_DataModel);
 
-	ImGui::TreePop();
-
 	if (selected)
 	{
-		if (ImGui::Button("Destroy"))
+		ImGui::SeparatorText(selected->ClassName.c_str());
+
+		if (ImGui::Button("Duplicate"))
+		{
+			GameObject* clone = GameObject::FromGenericValue(selected->CallFunction("Clone", {}).AsArray()[0]);
+			clone->Parent = selected->Parent;
+			HierarchyTreeSelectionId = clone->ObjectId;
+			selected = clone;
+		}
+		else if (ImGui::Button("Destroy"))
 		{
 			selected->Destroy();
 			selected = nullptr;
@@ -564,14 +933,24 @@ void Editor::RenderUI()
 				}
 			}
 
-			ImGui::Text("Properties:");
+			ImGui::SeparatorText("Properties");
 
 			auto& props = selected->GetProperties();
 
 			for (auto& propListItem : props)
 			{
 				const char* propName = propListItem.first.c_str();
-				const IProperty& prop = propListItem.second;
+				const Reflection::Property& prop = propListItem.second;
+
+				if (propName == DoNotShowPropThisFrame)
+				{
+					// force Dear ImGui to lose focus of this specific property
+					// this is for CTRL+Click'ing `.Parent` so the value in the input
+					// box doesn't get carried over to the Object we jump to, forcing
+					// it's `.Parent` to change 15/12/2024
+					DoNotShowPropThisFrame = "";
+					continue;
+				}
 
 				Reflection::GenericValue curVal = selected->GetPropertyValue(propName);
 
@@ -582,7 +961,21 @@ void Editor::RenderUI()
 
 					std::string curValStr = curVal.ToString();
 
-					ImGui::Text(std::vformat("{}: {}", std::make_format_args(propName, curValStr)).c_str());
+					if (strcmp(propName, "Class") == 0)
+					{
+						ImGui::Text("Class: ");
+						ImGui::SameLine();
+
+						ImGui::Image(
+							TextureManager::Get()->GetTextureResource(getClassIconId(selected->ClassName)).GpuId,
+							ImVec2(16, 16)
+						);
+						ImGui::SameLine();
+
+						ImGui::Text(curValStr.c_str());
+					}
+					else
+						ImGui::Text(std::vformat("{}: {}", std::make_format_args(propName, curValStr)).c_str());
 
 					continue;
 				}
@@ -600,7 +993,7 @@ void Editor::RenderUI()
 
 					size_t allocSize = str.size() + INPUT_TEXT_BUFFER_ADDITIONAL;
 
-					char* buf = bufferInitialize(
+					char* buf = BufferInitialize(
 						allocSize,
 						"<Initial Value 29/09/2024 Hey guys How we doing today>"
 					);
@@ -661,6 +1054,14 @@ void Editor::RenderUI()
 					int32_t id = static_cast<int32_t>(curVal.AsInteger());
 
 					ImGui::InputInt(propName, &id);
+					ImGui::SetItemTooltip("CTRL+Click to select referenced GameObject 03/12/2024");
+
+					if (ImGui::IsItemClicked())
+						if (ImGui::GetIO().KeyCtrl)
+						{
+							HierarchyTreeSelectionId = static_cast<uint32_t>(curVal.AsInteger());
+							DoNotShowPropThisFrame = propName;
+						}
 
 					newVal = id;
 					newVal.Type = Reflection::ValueType::GameObject;
@@ -770,22 +1171,18 @@ void Editor::RenderUI()
 
 				}
 
-				selected->SetPropertyValue(propName, newVal);
+				try
+				{
+					selected->SetPropertyValue(propName, newVal);
+				}
+				catch (std::string err)
+				{
+					ErrorTooltipMessage = err;
+					ErrorTooltipTimeRemaining = 2.f;
+				}
 			}
 		}
 	}
 
 	ImGui::End();
-
-	if (createObject)
-	{
-		if (!GameObject::IsValidObjectClass(m_NewObjectClass))
-			m_InvalidObjectErrTimeRemaining = 2.f;
-		else
-		{
-			GameObject* newObj = GameObject::Create(m_NewObjectClass);
-
-			newObj->SetParent(selected ? selected : GameObject::s_DataModel);
-		}
-	}
 }

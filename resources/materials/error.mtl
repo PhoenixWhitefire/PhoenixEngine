@@ -1,0 +1,11 @@
+{
+  "ColorMap": "!Missing",
+  "EmissionMap": "",
+  "HasTranslucency": false,
+  "Shader": "worldUber",
+  "Uniforms": {
+    "EmissionStrength": 5.0
+  },
+  "specExponent": 1.0,
+  "specMultiply": 0.5
+}

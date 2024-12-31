@@ -24,9 +24,9 @@ public:
 	Vector3 Value5{};
 
 	// Redirects API getters to point to the `s_Api` defined in *this* class
-	PHX_GAMEOBJECT_API_REFLECTION;
+	REFLECTION_DECLAREAPI;
 	
 private: // Not shared between inheritors
 	static void s_DeclareReflections();
-	static inline Api s_Api{};
+	static inline Reflection::Api s_Api{};;
 };

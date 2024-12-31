@@ -1,4 +1,6 @@
 #include "gameobject/Base3D.hpp"
+#include "asset/MaterialManager.hpp"
+#include "asset/MeshProvider.hpp"
 
 PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(Base3D);
 
@@ -15,36 +17,59 @@ void Object_Base3D::s_DeclareReflections()
 	REFLECTION_DECLAREPROP(
 		"Transform",
 		Matrix,
-		[](GameObject* p)
+		[](Reflection::Reflectable* p)
 		{
-			return Reflection::GenericValue(dynamic_cast<Object_Base3D*>(p)->Transform);
+			return Reflection::GenericValue(static_cast<Object_Base3D*>(p)->Transform);
 		},
-		[](GameObject* p, const Reflection::GenericValue& gv)
+		[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)
 		{
-			dynamic_cast<Object_Base3D*>(p)->Transform = gv.AsMatrix();
+			Object_Base3D* obj = static_cast<Object_Base3D*>(p);
+			obj->Transform = gv.AsMatrix();
+
+			obj->RecomputeAabb();
 		}
 	);
 
-	REFLECTION_DECLAREPROP_SIMPLE_TYPECAST(Object_Base3D, Size, Vector3);
+	REFLECTION_DECLAREPROP(
+		"Size",
+		Vector3,
+		[](Reflection::Reflectable* p)
+		{
+			return static_cast<Object_Base3D*>(p)->Size.ToGenericValue();
+		},
+		[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)
+		{
+			Object_Base3D* obj = static_cast<Object_Base3D*>(p);
+			obj->Size = gv;
+
+			obj->RecomputeAabb();
+		}
+	);
 
 	REFLECTION_DECLAREPROP(
 		"Material",
 		String,
-		[](GameObject* g)
+		[](Reflection::Reflectable* g)
 		{
-			Object_Base3D* p = dynamic_cast<Object_Base3D*>(g);
-			return p->Material->Name;
+			Object_Base3D* p = static_cast<Object_Base3D*>(g);
+			MaterialManager* mtlManager = MaterialManager::Get();
+
+			return mtlManager->GetMaterialResource(p->MaterialId).Name;
 		},
-		[](GameObject* g, Reflection::GenericValue gv)
+		[](Reflection::Reflectable* g, Reflection::GenericValue gv)
 		{
-			Object_Base3D* p = dynamic_cast<Object_Base3D*>(g);
-			p->Material = RenderMaterial::GetMaterial(gv.AsString());
+			Object_Base3D* p = static_cast<Object_Base3D*>(g);
+			MaterialManager* mtlManager = MaterialManager::Get();
+
+			p->MaterialId = mtlManager->LoadMaterialFromPath(gv.AsString());
 		}
 	);
 
-	REFLECTION_DECLAREPROP_SIMPLE_TYPECAST(Object_Base3D, ColorRGB, Color);
+	REFLECTION_DECLAREPROP_SIMPLE_TYPECAST(Object_Base3D, Tint, Color);
+	REFLECTION_DECLAREPROP_SIMPLE(Object_Base3D, CastsShadows, Bool);
 	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_Base3D, Transparency, Double, float);
-	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_Base3D, Reflectivity, Double, float);
+	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_Base3D, MetallnessFactor, Double, float);
+	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_Base3D, RoughnessFactor, Double, float);
 	REFLECTION_DECLAREPROP_SIMPLE(Object_Base3D, PhysicsDynamics, Bool);
 	REFLECTION_DECLAREPROP_SIMPLE(Object_Base3D, PhysicsCollisions, Bool);
 	REFLECTION_DECLAREPROP_SIMPLE(Object_Base3D, Density, Double);
@@ -55,14 +80,14 @@ void Object_Base3D::s_DeclareReflections()
 	REFLECTION_DECLAREPROP(
 		"FaceCulling",
 		Integer,
-		[](GameObject* g)
+		[](Reflection::Reflectable* g)
 		{
-			Object_Base3D* p = dynamic_cast<Object_Base3D*>(g);
+			Object_Base3D* p = static_cast<Object_Base3D*>(g);
 			return (int)p->FaceCulling;
 		},
-		[](GameObject* g, Reflection::GenericValue gv)
+		[](Reflection::Reflectable* g, Reflection::GenericValue gv)
 		{
-			Object_Base3D* p = dynamic_cast<Object_Base3D*>(g);
+			Object_Base3D* p = static_cast<Object_Base3D*>(g);
 			p->FaceCulling = (FaceCullingMode)gv.AsInteger();
 		}
 	);
@@ -73,12 +98,23 @@ Object_Base3D::Object_Base3D()
 	this->Name = "Base3D";
 	this->ClassName = "Base3D";
 
-	this->Material = RenderMaterial::GetMaterial("plastic");
+	this->RenderMeshId = MeshProvider::Get()->LoadFromPath("!Cube");
+	this->MaterialId = MaterialManager::Get()->LoadMaterialFromPath("plastic");
 
 	s_DeclareReflections();
+	ApiPointer = &s_Api;
 }
 
-uint32_t Object_Base3D::GetRenderMeshId()
+void Object_Base3D::RecomputeAabb()
 {
-	return m_RenderMeshId;
+	glm::vec3 glmsize = (glm::vec3)this->Size;
+
+	glm::vec3 max = this->Transform * glm::vec4(glmsize, 1.f);
+	glm::vec3 min = this->Transform * glm::vec4(-glmsize, 1.f);
+
+	glm::vec3 size = Vector3((max - min) / 2.f).Abs();
+	glm::vec3 center = (max + min) / 2.f;
+
+	this->CollisionAabb.Position = center;
+	this->CollisionAabb.Size = size;
 }

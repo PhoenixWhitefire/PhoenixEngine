@@ -1,11 +1,11 @@
 {
-  "albedo": "textures/planks.png",
-  "shaderprogram": "worldUberMaterial",
-  "specExponent": 8.0,
-  "specMultiply": 0.5,
-  "specular": "textures/planksSpec.png",
-  "translucency": false,
-  "uniforms": {
+  "ColorMap": "textures/materials/planks.jpg",
+  "HasTranslucency": false,
+  "MetallicRoughnessMap": "textures/materials/planksSpec.jpg",
+  "Shader": "worldUberTriProjected",
+  "Uniforms": {
     "MaterialProjectionFactor": 0.05000000074505806
-  }
+  },
+  "specExponent": 8.0,
+  "specMultiply": 0.5
 }

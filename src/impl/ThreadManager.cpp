@@ -2,8 +2,6 @@
 
 #include "ThreadManager.hpp"
 
-ThreadManager* ThreadManager::Singleton = new ThreadManager();
-
 static void _workerTaskRunner(Worker* ThisWorker)
 {
 	while (true)
@@ -17,7 +15,7 @@ static void _workerTaskRunner(Worker* ThisWorker)
 			continue;
 		}
 
-		Task* currentTask = ThisWorker->TaskQueue[ThisWorker->TaskQueue.size() - 1];
+		Task* currentTask = ThisWorker->TaskQueue.back();
 
 		ThisWorker->Status = WorkerStatus::RunningTask;
 
@@ -103,8 +101,6 @@ void ThreadManager::DispatchJob(Task& Job)
 
 ThreadManager* ThreadManager::Get()
 {
-	if (!ThreadManager::Singleton)
-		throw("ThreadManager::Get was called before Engine was initialized.");
-
-	return ThreadManager::Singleton;
+	static ThreadManager inst;
+	return &inst;
 }
