@@ -6,10 +6,6 @@
 	path = imgui
 	url = https://github.com/ocornut/imgui
 	branch = master
-[submodule "SFML"]
-	path = SFML
-	url = https://github.com/SFML/SFML
-	branch = master
 [submodule "ImGuiFD"]
 	path = ImGuiFD
 	url = https://github.com/Julianiolo/ImGuiFD
@@ -25,3 +21,6 @@
 [submodule "imgui-sfml"]
 	path = imgui-sfml
 	url = https://github.com/SFML/imgui-sfml
+[submodule "stb"]
+	path = stb
+	url = https://www.github.com/nothings/stb
