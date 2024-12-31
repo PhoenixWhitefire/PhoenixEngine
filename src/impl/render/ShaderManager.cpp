@@ -115,7 +115,10 @@ void ShaderProgram::Reload()
 	m_GpuId = glCreateProgram();
 
 	bool shpExists = true;
-	std::string shpContents = FileRW::ReadFile(BaseShaderPath + Name + ".shp", &shpExists);
+	std::string shpContents = FileRW::ReadFile(
+		(Name.find("shaders/") == std::string::npos ? BaseShaderPath : "") + Name + ".shp",
+		&shpExists
+	);
 
 	if (!shpExists)
 	{
@@ -140,44 +143,49 @@ void ShaderProgram::Reload()
 
 	nlohmann::json shpJson = nlohmann::json::parse(shpContents);
 
-	bool hasGeometryShader = shpJson.find("Geometry") != shpJson.end();
-
 	bool vertexShdExists = true;
 	bool fragmentShdExists = true;
 	bool geometryShdExists = true;
 
-	std::string vertexShaderPath = shpJson.value("Vertex", "worldUber.vert");
-	std::string fragmentShaderPath = shpJson.value("Fragment", "worldUber.frag");
-	std::string geoShaderPath = shpJson.value("Geometry", "");
+	VertexShader = shpJson.value("Vertex", "worldUber.vert");
+	FragmentShader = shpJson.value("Fragment", "worldUber.frag");
+	GeometryShader = shpJson.value("Geometry", "<NOT_SPECIFIED>");
 
-	std::string vertexShaderStrSource = FileRW::ReadFile(BaseShaderPath + vertexShaderPath, &vertexShdExists);
-	std::string fragmentShaderStrSource = FileRW::ReadFile(BaseShaderPath + fragmentShaderPath, &fragmentShdExists);
-	std::string geometryShaderStrSource = hasGeometryShader
-											? FileRW::ReadFile(BaseShaderPath + geoShaderPath, &geometryShdExists)
-											: "";
+	VertexShader = (VertexShader.find("shaders/") == std::string::npos ? BaseShaderPath : "") + VertexShader;
+	FragmentShader = (FragmentShader.find("shaders/") == std::string::npos ? BaseShaderPath : "") + FragmentShader;
+	
+	bool hasGeometryShader = GeometryShader != "<NOT_SPECIFIED>";
+
+	if (hasGeometryShader)
+		GeometryShader = (GeometryShader.find("shaders/") == std::string::npos ? BaseShaderPath : "") + GeometryShader;
+
+	std::string vertexStrSource = FileRW::ReadFile(VertexShader, &vertexShdExists);
+	std::string fragmentStrSource = FileRW::ReadFile(FragmentShader, &fragmentShdExists);
+	std::string geometryStrSource = hasGeometryShader
+									? FileRW::ReadFile(GeometryShader, &geometryShdExists)
+									: "";
 
 	if (!vertexShdExists)
 		SP_LOADERROR(std::vformat(
 			"Could not load Vertex shader for program {}! File specified: {}",
-			std::make_format_args(this->Name, vertexShaderPath)
+			std::make_format_args(this->Name, VertexShader)
 		));
 
 	if (!fragmentShdExists)
 		SP_LOADERROR(std::vformat(
 			"Could not load Fragment shader for program {}! File specified: {}",
-			std::make_format_args(this->Name, fragmentShaderPath)
+			std::make_format_args(this->Name, FragmentShader)
 		));
 
 	if (!geometryShdExists)
 		SP_LOADERROR(std::vformat(
 			"Could not load Geometry shader for program {}! File specified: {}",
-			std::make_format_args(this->Name, geoShaderPath)
+			std::make_format_args(this->Name, GeometryShader)
 		));
 
-	const char* vertexSource = vertexShaderStrSource.c_str();
-	const char* fragmentSource = fragmentShaderStrSource.c_str();
-
-	const char* geometrySource = geometryShaderStrSource.c_str();
+	const char* vertexSource = vertexStrSource.c_str();
+	const char* fragmentSource = fragmentStrSource.c_str();
+	const char* geometrySource = geometryStrSource.c_str();
 
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
@@ -238,15 +246,19 @@ void ShaderProgram::Reload()
 		may be overriden
 		Even means you can have lineages
 	*/
-	if (shpJson.find("InheritUniformsOf") != shpJson.end())
+	if (const auto uancestorIt = shpJson.find("InheritUniformsOf"); uancestorIt != shpJson.end())
 	{
-		ShaderManager* shdManager = ShaderManager::Get();
+		UniformsAncestor = uancestorIt.value();
 
-		const std::string& ancestorName = shpJson["InheritUniformsOf"];
-		uint32_t ancestorId = shdManager->LoadFromPath(ancestorName);
-		ShaderProgram& ancestor = shdManager->GetShaderResource(ancestorId);
+		if (UniformsAncestor != "")
+		{
+			ShaderManager* shdManager = ShaderManager::Get();
 
-		m_DefaultUniforms.insert(ancestor.m_DefaultUniforms.begin(), ancestor.m_DefaultUniforms.end());
+			uint32_t ancestorId = shdManager->LoadFromPath(UniformsAncestor);
+			ShaderProgram& ancestor = shdManager->GetShaderResource(ancestorId);
+
+			DefaultUniforms.insert(ancestor.DefaultUniforms.begin(), ancestor.DefaultUniforms.end());
+		}
 	}
 
 	for (auto memberIt = shpJson["Uniforms"].begin(); memberIt != shpJson["Uniforms"].end(); ++memberIt)
@@ -258,22 +270,22 @@ void ShaderProgram::Reload()
 		{
 		case (nlohmann::detail::value_t::boolean):
 		{
-			m_DefaultUniforms[uniformName] = (bool)value;
+			DefaultUniforms[uniformName] = (bool)value;
 			break;
 		}
 		case (nlohmann::detail::value_t::number_float):
 		{
-			m_DefaultUniforms[uniformName] = (float)value;
+			DefaultUniforms[uniformName] = (float)value;
 			break;
 		}
 		case (nlohmann::detail::value_t::number_integer):
 		{
-			m_DefaultUniforms[uniformName] = (int32_t)value;
+			DefaultUniforms[uniformName] = (int32_t)value;
 			break;
 		}
 		case (nlohmann::detail::value_t::number_unsigned):
 		{
-			m_DefaultUniforms[uniformName] = (uint32_t)value;
+			DefaultUniforms[uniformName] = (uint32_t)value;
 			break;
 		}
 
@@ -301,9 +313,46 @@ void ShaderProgram::Delete()
 	m_GpuId = UINT32_MAX;
 }
 
+void ShaderProgram::Save()
+{
+	nlohmann::json fileJson{};
+
+	fileJson["Vertex"] = VertexShader;
+	fileJson["Fragment"] = FragmentShader;
+	fileJson["Geometry"] = GeometryShader;
+
+	fileJson["InheritUniformsOf"] = UniformsAncestor;
+
+	for (auto& it : this->DefaultUniforms)
+	{
+		const Reflection::GenericValue& value = it.second;
+
+		switch (value.Type)
+		{
+		case (Reflection::ValueType::Bool):
+		{
+			fileJson["Uniforms"][it.first] = value.AsBool();
+			break;
+		}
+		case (Reflection::ValueType::Integer):
+		{
+			fileJson["Uniforms"][it.first] = value.AsInteger();
+			break;
+		}
+		case (Reflection::ValueType::Double):
+		{
+			fileJson["Uniforms"][it.first] = static_cast<float>(value.AsDouble());
+			break;
+		}
+		}
+	}
+
+	FileRW::WriteFile(BaseShaderPath + Name + ".shp", fileJson.dump(2), true);
+}
+
 void ShaderProgram::ApplyDefaultUniforms()
 {
-	for (auto& it : m_DefaultUniforms)
+	for (auto& it : DefaultUniforms)
 		this->SetUniform(it.first.c_str(), it.second);
 }
 
@@ -417,6 +466,11 @@ void ShaderManager::Shutdown()
 {
 	//delete Get();
 	s_DidShutdown = true;
+}
+
+std::vector<ShaderProgram>& ShaderManager::GetLoadedShaders()
+{
+	return m_Shaders;
 }
 
 uint32_t ShaderManager::LoadFromPath(const std::string& ProgramName)

@@ -34,11 +34,28 @@ private:
 		float AlphaCutoff = .5f;
 	};
 
+	struct ModelNode
+	{
+		std::string Name;
+		uint32_t Parent;
+		bool IsContainerOnlyWithoutGeo = false; // nodes w/o meshes that just offset transformations
+
+		Mesh Data;
+		MeshMaterial Material;
+		glm::mat4 Transform;
+		glm::vec3 Scale{ 1.f, 1.f, 1.f };
+	};
+
 	ModelLoader() = delete;
 
-	void m_LoadMesh(uint32_t MeshIndex);
+	ModelNode m_LoadPrimitive(
+		const nlohmann::json& MeshData,
+		uint32_t PrimitiveIndex,
+		const glm::mat4& Transform,
+		const glm::vec3& Scale
+	);
 
-	void m_TraverseNode(uint32_t NextNode, const glm::mat4& Transform = glm::mat4(1.0f));
+	void m_TraverseNode(uint32_t NextNode, uint32_t From, const glm::mat4& Transform = glm::mat4(1.0f));
 
 	std::vector<int8_t> m_GetData();
 
@@ -59,12 +76,16 @@ private:
 	std::string m_File;
 	nlohmann::json m_JsonData;
 
+	std::vector<ModelNode> m_Nodes;
+
+	/*
 	std::vector<Mesh> m_Meshes;
 	std::vector<std::string> m_MeshNames;
 	std::vector<uint32_t> m_MeshParents;
 	std::vector<glm::mat4> m_MeshMatrices;
 	std::vector<glm::vec3> m_MeshScales;
 	std::vector<MeshMaterial> m_MeshMaterials;
+	*/
 
 	std::vector<int8_t> m_Data;
 };

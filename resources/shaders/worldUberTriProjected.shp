@@ -1,15 +1,6 @@
-// This one needs **9** textures taps instead of `worldUber.shp`'s 3
-// due to tri-planar mapping
-// 3 for diffuse, 3 for specular, 3 for normal map (15/11/2024)
-// 20/10/2024
-
 {
-    "Vertex": "worldUber.vert",
-    "Fragment": "worldUber.frag",
-    "Geometry": "worldUber.geom",
-    
-    "InheritUniformsOf":  "worldUber",
-    "Uniforms": {
-      "UseTriPlanarProjection": true
-    }
+  "Fragment": "shaders/worldUber.frag",
+  "Geometry": "shaders/worldUber.geom",
+  "InheritUniformsOf": "worldUber",
+  "Vertex": "shaders/worldUber.vert"
 }

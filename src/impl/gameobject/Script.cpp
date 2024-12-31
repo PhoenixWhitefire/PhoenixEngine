@@ -891,6 +891,8 @@ void Object_Script::Update(double dt)
 			m_L = nullptr;
 		}
 	}
+	else
+		lua_pop(m_L, 1);
 }
 
 bool Object_Script::LoadScript(const std::string& scriptFile)

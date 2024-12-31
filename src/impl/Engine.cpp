@@ -328,18 +328,6 @@ static void recursivelyTravelHierarchy(
 				continue;
 
 			// TODO: frustum culling
-			// Hold R to disable distance culling
-			if (glm::distance(
-				glm::vec3(object3D->Transform[3]),
-				glm::vec3(SceneCamera->Transform[3])
-				) > 100.0f
-				&& !UserInput::IsKeyDown(SDLK_r)
-			)
-				continue;
-
-			//TODO: recheck whether we need this
-			// if (MeshObject->HasTransparency)
-				//continue;
 
 			RenderList.emplace_back(
 				object3D->RenderMeshId,
@@ -792,6 +780,9 @@ void EngineObject::Start()
 		uint32_t dataModelId = this->DataModel->ObjectId;
 
 		PROFILE_EXPRESSION("EventCallbacks/OnFrameRenderGui", this->OnFrameRenderGui.Fire(deltaTime));
+
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 		if (!GameObject::GetObjectById(dataModelId))
 		{

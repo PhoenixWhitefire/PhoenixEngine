@@ -13,6 +13,7 @@ public:
 	void Activate();
 	void Reload();
 	void Delete();
+	void Save();
 
 	// Mark a uniform to be updated upon `::Activate` being called,
 	// to be set with the provided value
@@ -29,6 +30,12 @@ public:
 	void ApplyDefaultUniforms();
 
 	std::string Name;
+	std::string VertexShader;
+	std::string FragmentShader;
+	std::string GeometryShader = "<NOT_SPECIFIED>";
+
+	std::unordered_map<std::string, Reflection::GenericValue> DefaultUniforms;
+	std::string UniformsAncestor;
 
 private:
 	bool m_PrintErrors(uint32_t Object, const char* Type);
@@ -37,7 +44,6 @@ private:
 	uint32_t m_GpuId = UINT32_MAX;
 
 	std::unordered_map<std::string, Reflection::GenericValue> m_PendingUniforms{};
-	std::unordered_map<std::string, Reflection::GenericValue> m_DefaultUniforms{};
 };
 
 class ShaderManager
@@ -45,6 +51,8 @@ class ShaderManager
 public:
 	static ShaderManager* Get();
 	static void Shutdown();
+
+	std::vector<ShaderProgram>& GetLoadedShaders();
 
 	uint32_t LoadFromPath(const std::string&);
 

@@ -83,8 +83,6 @@ Editor::Editor(Renderer* renderer)
 	m_MtlNormalBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
 	m_MtlEmissionBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
 	m_MtlShpBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
-	m_MtlNewUniformNameBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE);
-	m_MtlUniformNameEditBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE);
 
 	MtlEditorPreview.Initialize(256, 256);
 	MtlPreviewRenderer = renderer;
@@ -215,6 +213,228 @@ static void renderScriptEditor()
 	}
 	
 	ImGui::InputTextMultiline("##", TextEntryBuffer, TextEntryBufferCapacity, ImGui::GetContentRegionAvail());
+
+	ImGui::End();
+}
+
+static void uniformsEditor(std::unordered_map<std::string, Reflection::GenericValue>& Uniforms, int* Selection)
+{
+	if ((*Selection) + 1 > Uniforms.size())
+		*Selection = -1;
+
+	static int TypeId = 0;
+
+	static std::string NewUniformNameBuf;
+	NewUniformNameBuf.resize(32);
+
+	ImGui::InputText("Variable Name", &NewUniformNameBuf);
+	ImGui::InputInt("Variable Type", &TypeId);
+	ImGui::SetItemTooltip("0=Bool, 1=Int, 2=Float");
+
+	TypeId = std::clamp(TypeId, 0, 2);
+
+	if (ImGui::Button("Add"))
+	{
+		Reflection::GenericValue initialValue;
+
+		switch (TypeId)
+		{
+		case (0):
+		{
+			initialValue = true;
+			break;
+		}
+		case (1):
+		{
+			initialValue = 0;
+			break;
+		}
+		case (2):
+		{
+			initialValue = 0.f;
+			break;
+		}
+		}
+
+		Uniforms[NewUniformNameBuf] = initialValue;
+	}
+
+	std::vector<std::string> uniformsArray;
+	uniformsArray.reserve(Uniforms.size());
+
+	for (auto& it : Uniforms)
+		uniformsArray.push_back(it.first);
+
+	ImGui::ListBox(
+		"Uniforms",
+		Selection,
+		&mtlUniformIterator,
+		&uniformsArray,
+		static_cast<int>(Uniforms.size())
+	);
+
+	if (*Selection != -1 && uniformsArray.size() >= 1)
+	{
+		const std::string& name = uniformsArray.at(*Selection);
+		Reflection::GenericValue& value = Uniforms.at(name);
+
+		static std::string NameEditBuf;
+		NameEditBuf = name;
+
+		ImGui::InputText("Name", &NameEditBuf);
+
+		Reflection::GenericValue newValue = value;
+
+		switch (value.Type)
+		{
+		case (Reflection::ValueType::Bool):
+		{
+			bool curVal = value.AsBool();
+			ImGui::Checkbox("Value", &curVal);
+
+			newValue = curVal;
+			break;
+		}
+		case (Reflection::ValueType::Integer):
+		{
+			int32_t curVal = static_cast<int32_t>(value.AsInteger());
+			ImGui::InputInt("Value", &curVal);
+
+			newValue = curVal;
+			break;
+		}
+		case (Reflection::ValueType::Double):
+		{
+			float curVal = static_cast<float>(value.AsDouble());
+			ImGui::InputFloat("Value", &curVal);
+
+			newValue = curVal;
+			break;
+		}
+		default:
+		{
+			ImGui::Text(
+				"<Type ID:%i ('%s') editing not supported>",
+				(int)value.Type,
+				Reflection::TypeAsString(value.Type).c_str()
+			);
+			break;
+		}
+		}
+
+		if (name != NameEditBuf)
+			Uniforms.erase(name);
+
+		Uniforms[NameEditBuf] = newValue;
+	}
+}
+
+static std::string* PipelineShaderSelectTarget = nullptr;
+
+static void shaderPipelineShaderSelect(const std::string& Label, std::string* Target)
+{
+	ImGui::Text(Label.c_str());
+	ImGui::SameLine();
+
+	if (ImGui::TextLink(Target->c_str()))
+	{
+		std::string shddir = "resources/" + Target->substr(0ull, Target->find_last_of("/"));
+
+		ImGuiFD::OpenDialog(
+			"Select Pipeline Shader",
+			ImGuiFDMode_LoadFile,
+			shddir.c_str(),
+			"*.vert,*.frag,*.geom",
+			0,
+			1
+		);
+
+		PipelineShaderSelectTarget = Target;
+	}
+}
+
+static void renderShaderPipelinesEditor()
+{
+	if (ImGuiFD::BeginDialog("Select Pipeline Shader"))
+	{
+		if (!PipelineShaderSelectTarget)
+			throw("yada yada");
+
+		if (ImGuiFD::ActionDone())
+		{
+			if (ImGuiFD::SelectionMade())
+			{
+				std::string fullpath = ImGuiFD::GetSelectionPathString(0);
+				size_t resDirOffset = fullpath.find("resources/");
+
+				if (resDirOffset == std::string::npos)
+				{
+					ErrorTooltipMessage = "Selection must be within the Project's `resources/` directory!";
+					ErrorTooltipTimeRemaining = 5.f;
+				}
+				else
+				{
+					std::string shortpath = fullpath.substr(resDirOffset + 10);
+					*PipelineShaderSelectTarget = shortpath;
+					// maybe `*PipelineShaderSelectTarget = shortpath` can also be done but idk
+					// if that calls the copy constructor
+					//PipelineShaderSelectTarget->swap(shortpath);
+
+					PipelineShaderSelectTarget = nullptr;
+				}
+			}
+
+			ImGuiFD::CloseCurrentDialog();
+		}
+
+		ImGuiFD::EndDialog();
+	}
+
+	ShaderManager* shdManager = ShaderManager::Get();
+
+	std::vector<ShaderProgram>& shaders = shdManager->GetLoadedShaders();
+
+	if (!ImGui::Begin("Shader Pipelines"))
+	{
+		ImGui::End();
+
+		return;
+	}
+
+	static int curItemIdx = -1;
+
+	ImGui::ListBox(
+		"##",
+		&curItemIdx,
+		[](void* udat, int idx)
+		-> const char*
+		{
+			return ((std::vector<ShaderProgram>*)udat)->at(idx).Name.c_str();
+		},
+		&shaders,
+		static_cast<int>(shaders.size())
+	);
+
+	if (curItemIdx != -1)
+	{
+		ShaderProgram& curItem = shaders[curItemIdx];
+
+		shaderPipelineShaderSelect("Vertex Shader: ", &curItem.VertexShader);
+		shaderPipelineShaderSelect("Fragment Shader: ", &curItem.FragmentShader);
+		shaderPipelineShaderSelect("Geometry Shader: ", &curItem.GeometryShader);
+
+		static int UniformSelectionIdx = -1;
+
+		ImGui::InputText("Inherit variables of: ", &curItem.UniformsAncestor);
+
+		uniformsEditor(curItem.DefaultUniforms, &UniformSelectionIdx);
+
+		if (ImGui::Button("Save & Reload"))
+		{
+			curItem.Save();
+			curItem.Reload();
+		}
+	}
 
 	ImGui::End();
 }
@@ -509,109 +729,7 @@ void Editor::m_RenderMaterialEditor()
 
 	ImGui::Text("Shader Variable Overrides");
 
-	static int TypeId = 0;
-
-	ImGui::InputText("Variable Name", m_MtlNewUniformNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
-	ImGui::InputInt("Variable Type", &TypeId);
-	ImGui::SetItemTooltip("0=Bool, 1=Int, 2=Float");
-
-	TypeId = std::clamp(TypeId, 0, 2);
-
-	if (ImGui::Button("Add"))
-	{
-		Reflection::GenericValue initialValue;
-
-		switch (TypeId)
-		{
-		case (0):
-		{
-			initialValue = true;
-			break;
-		}
-		case (1):
-		{
-			initialValue = 0;
-			break;
-		}
-		case (2):
-		{
-			initialValue = 0.f;
-			break;
-		}
-		}
-
-		curItem.Uniforms[m_MtlNewUniformNameBuf] = initialValue;
-	}
-
-	std::vector<std::string> uniformsArray;
-	uniformsArray.reserve(curItem.Uniforms.size());
-
-	for (auto& it : curItem.Uniforms)
-		uniformsArray.push_back(it.first);
-
-	ImGui::ListBox(
-		"##",
-		&SelectedUniformIdx,
-		&mtlUniformIterator,
-		&uniformsArray,
-		static_cast<int>(curItem.Uniforms.size())
-	);
-
-	if (SelectedUniformIdx != -1 && uniformsArray.size() >= 1)
-	{
-		const std::string& name = uniformsArray.at(SelectedUniformIdx);
-		Reflection::GenericValue& value = curItem.Uniforms.at(name);
-
-		CopyStringToBuffer(m_MtlUniformNameEditBuf, MATERIAL_NEW_NAME_BUFSIZE, name);
-
-		ImGui::InputText("Name", m_MtlUniformNameEditBuf, MATERIAL_NEW_NAME_BUFSIZE);
-
-		Reflection::GenericValue newValue = value;
-
-		switch (value.Type)
-		{
-		case (Reflection::ValueType::Bool):
-		{
-			bool curVal = value.AsBool();
-			ImGui::Checkbox("Value", &curVal);
-
-			newValue = curVal;
-			break;
-		}
-		case (Reflection::ValueType::Integer):
-		{
-			int32_t curVal = static_cast<int32_t>(value.AsInteger());
-			ImGui::InputInt("Value", &curVal);
-
-			newValue = curVal;
-			break;
-		}
-		case (Reflection::ValueType::Double):
-		{
-			float curVal = static_cast<float>(value.AsDouble());
-			ImGui::InputFloat("Value", &curVal);
-
-			newValue = curVal;
-			break;
-		}
-		default:
-		{
-			ImGui::Text(
-				"<Type ID:%i ('%s') editing not supported>",
-				(int)value.Type,
-				Reflection::TypeAsString(value.Type).c_str()
-			);
-			break;
-		}
-		}
-
-		std::string newName = m_MtlUniformNameEditBuf;
-
-		if (name != newName)
-			curItem.Uniforms.erase(name);
-
-		curItem.Uniforms[newName] = newValue;
-	}
+	uniformsEditor(curItem.Uniforms, &SelectedUniformIdx);
 
 	if (ImGui::Button("Load texture and shader"))
 	{
@@ -637,59 +755,7 @@ void Editor::m_RenderMaterialEditor()
 	ImGui::SetItemTooltip("By default, this will be the name of the material you are editing, thus overwriting it");
 
 	if (ImGui::Button("Save"))
-	{
-		nlohmann::json newMtlConfig{};
-
-		newMtlConfig["ColorMap"] = colorMap.ImagePath;
-
-		if (curItem.MetallicRoughnessMap != 0)
-			newMtlConfig["MetallicRoughnessMap"] = metallicRoughnessMap.ImagePath;
-
-		if (curItem.NormalMap != 0)
-			newMtlConfig["NormalMap"] = normalMap.ImagePath;
-
-		if (curItem.EmissionMap != 0)
-			newMtlConfig["EmissionMap"] = emissionMap.ImagePath;
-
-		newMtlConfig["specExponent"] = curItem.SpecExponent;
-		newMtlConfig["specMultiply"] = curItem.SpecMultiply;
-		newMtlConfig["HasTranslucency"] = curItem.HasTranslucency;
-		newMtlConfig["Shader"] = curItem.GetShader().Name;
-		
-		newMtlConfig["Uniforms"] = {};
-
-		for (auto& it : curItem.Uniforms)
-		{
-			Reflection::GenericValue& value = it.second;
-
-			switch (value.Type)
-			{
-			case (Reflection::ValueType::Bool):
-			{
-				newMtlConfig["Uniforms"][it.first] = value.AsBool();
-				break;
-			}
-			case (Reflection::ValueType::Integer):
-			{
-				newMtlConfig["Uniforms"][it.first] = value.AsInteger();
-				break;
-			}
-			case (Reflection::ValueType::Double):
-			{
-				newMtlConfig["Uniforms"][it.first] = static_cast<float>(value.AsDouble());
-				break;
-			}
-			}
-		}
-
-		std::string filePath = "materials/" + s_SaveNameBuf + ".mtl";
-
-		FileRW::WriteFile(
-			filePath,
-			newMtlConfig.dump(2),
-			true
-		);
-	}
+		mtlManager->SaveToPath(curItem, s_SaveNameBuf);
 
 	ImGui::End();
 }
@@ -818,6 +884,7 @@ void Editor::RenderUI()
 		ImGui::SetTooltip(ErrorTooltipMessage.c_str());
 
 	renderScriptEditor();
+	renderShaderPipelinesEditor();
 	m_RenderMaterialEditor();
 
 	if (!ImGui::Begin("Editor"))

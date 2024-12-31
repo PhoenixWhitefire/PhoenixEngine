@@ -758,9 +758,6 @@ static void drawUI(Reflection::GenericValue Data)
 		ImGui::End();
 
 		EditorContext->RenderUI();
-
-		ImGui::Render();
-		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	}
 }
 

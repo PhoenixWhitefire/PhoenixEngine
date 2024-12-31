@@ -13,6 +13,9 @@ void RenderMaterial::Reload()
 	bool matExists = true;
 	std::string fileData = FileRW::ReadFile("materials/" + this->Name + ".mtl", &matExists);
 
+	size_t jsonStartLoc = fileData.find("{");
+	std::string jsonFileContents = fileData.substr(jsonStartLoc);
+
 	nlohmann::json jsonMaterialData = {};
 
 	ShaderManager* shdManager = ShaderManager::Get();
@@ -21,7 +24,7 @@ void RenderMaterial::Reload()
 	{
 		try
 		{
-			jsonMaterialData = nlohmann::json::parse(fileData);
+			jsonMaterialData = nlohmann::json::parse(jsonFileContents);
 		}
 		catch (nlohmann::json::parse_error e)
 		{
@@ -196,6 +199,77 @@ uint32_t MaterialManager::LoadMaterialFromPath(const std::string& Name)
 	}
 	else
 		return it->second;
+}
+
+void MaterialManager::SaveToPath(const RenderMaterial& material, const std::string& Name)
+{
+	TextureManager* texManager = TextureManager::Get();
+
+	const Texture& colorMap = texManager->GetTextureResource(material.ColorMap);
+	const Texture& mrMap = texManager->GetTextureResource(material.MetallicRoughnessMap);
+	const Texture& emissionMap = texManager->GetTextureResource(material.EmissionMap);
+	const Texture& normalMap = texManager->GetTextureResource(material.NormalMap);
+
+	nlohmann::json newMtlConfig{};
+
+	newMtlConfig["ColorMap"] = colorMap.ImagePath;
+
+	if (material.MetallicRoughnessMap != 0)
+		newMtlConfig["MetallicRoughnessMap"] = mrMap.ImagePath;
+
+	if (material.NormalMap != 0)
+		newMtlConfig["NormalMap"] = normalMap.ImagePath;
+
+	if (material.EmissionMap != 0)
+		newMtlConfig["EmissionMap"] = emissionMap.ImagePath;
+
+	newMtlConfig["specExponent"] = material.SpecExponent;
+	newMtlConfig["specMultiply"] = material.SpecMultiply;
+	newMtlConfig["HasTranslucency"] = material.HasTranslucency;
+	newMtlConfig["Shader"] = material.GetShader().Name;
+
+	newMtlConfig["Uniforms"] = {};
+
+	for (auto& it : material.Uniforms)
+	{
+		const Reflection::GenericValue& value = it.second;
+
+		switch (value.Type)
+		{
+		case (Reflection::ValueType::Bool):
+		{
+			newMtlConfig["Uniforms"][it.first] = value.AsBool();
+			break;
+		}
+		case (Reflection::ValueType::Integer):
+		{
+			newMtlConfig["Uniforms"][it.first] = value.AsInteger();
+			break;
+		}
+		case (Reflection::ValueType::Double):
+		{
+			newMtlConfig["Uniforms"][it.first] = static_cast<float>(value.AsDouble());
+			break;
+		}
+		}
+	}
+
+	std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+	std::chrono::year_month_day ymd = std::chrono::floor<std::chrono::days>(now);
+
+	std::string dateStr = std::to_string((uint32_t)ymd.day()) + "-"
+		+ std::to_string((uint32_t)ymd.month()) + "-"
+		+ std::to_string((int32_t)ymd.year()) + "\n";
+
+	std::string filePath = "materials/" + Name + ".mtl";
+
+	std::string fileContents = "PHNXENGI\n#Asset Material\n#Date " + dateStr + "\n\n" + newMtlConfig.dump(2);
+
+	FileRW::WriteFile(
+		filePath,
+		fileContents,
+		true
+	);
 }
 
 RenderMaterial& MaterialManager::GetMaterialResource(uint32_t ResourceId)

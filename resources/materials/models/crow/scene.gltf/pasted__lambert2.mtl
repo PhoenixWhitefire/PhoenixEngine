@@ -1,8 +1,15 @@
+PHNXENGI
+#Asset Material
+#Date 31-12-2024
+
+
 {
-  "BilinearFiltering": true,
   "ColorMap": "models/crow/diffuse.png",
   "EmissionMap": "models/crow/diffuse.png",
   "HasTranslucency": false,
-  "Uniforms": {},
-  "specExponent": 16.0
+  "MetallicRoughnessMap": "textures/black.png",
+  "Shader": "worldUber",
+  "Uniforms": null,
+  "specExponent": 16.0,
+  "specMultiply": 0.0
 }

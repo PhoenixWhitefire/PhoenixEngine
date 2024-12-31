@@ -1071,8 +1071,11 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 		{
 			const char* path = luaL_checkstring(L, 1);
 
-			const std::vector<GameObject*>& loadedRoots = ModelLoader(path, nullptr).LoadedObjs;
+			const std::vector<GameObject*>& loaded = ModelLoader(path, nullptr).LoadedObjs;
 			
+			ScriptEngine::L::PushGenericValue(L, loaded.at(0)->ToGenericValue());
+
+			/*
 			lua_newtable(L);
 
 			for (int index = 0; index < loadedRoots.size(); index++)
@@ -1085,6 +1088,7 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 
 				lua_settable(L, -3);
 			}
+			*/
 
 			return 1;
 		}

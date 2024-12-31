@@ -48,15 +48,19 @@ static std::string getTexturePath(
 
 		std::vector<int8_t> imageData(
 			BufferData.begin() + byteOffset,
-			BufferData.begin() + byteOffset + byteLength + 1ull
+			BufferData.begin() + byteOffset + byteLength
 		);
 
 		std::string fileExtension;
 
 		if (mimeType == "image/jpeg")
 			fileExtension = ".jpeg";
-		else
+
+		else if (mimeType == "image/png")
 			fileExtension = ".png";
+
+		else
+			fileExtension = ".hxunknownimage";
 
 		std::string filePath = "textures/"
 								+ ModelName
@@ -189,13 +193,18 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 				std::make_format_args(v)
 			));
 
+		// actually load the model
+
+		m_Nodes.emplace_back(
+			AssetPath,
+			UINT32_MAX,
+			true
+		);
+
 		for (const nlohmann::json& scene : m_JsonData["scenes"])
 			// root nodes
 			for (uint32_t node : scene["nodes"])
-			{
-				m_MeshParents.push_back(UINT32_MAX);
-				m_TraverseNode(node);
-			}
+				m_TraverseNode(node, 0);
 	}
 	PHX_CATCH_AND_RETHROW(
 		nlohmann::json::type_error,
@@ -206,114 +215,121 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 	MaterialManager* mtlManager = MaterialManager::Get();
 	MeshProvider* meshProvider = MeshProvider::Get();
 
-	LoadedObjs.reserve(m_Meshes.size());
+	LoadedObjs.reserve(m_Nodes.size() + 1);
 
-	for (size_t MeshIndex = 0; MeshIndex < m_Meshes.size(); MeshIndex++)
+	for (const ModelLoader::ModelNode& node : m_Nodes)
 	{
-		// TODO: cleanup code
-		Object_Mesh* mesh = static_cast<Object_Mesh*>(GameObject::Create("Mesh"));
-		
-		LoadedObjs.push_back(mesh);
+		GameObject* object{};
 
-		/*
-			When;
-				AssetPath = "models/crow/scene.gltf"
-				MeshName = "main.001"
+		if (node.IsContainerOnlyWithoutGeo)
+			object = GameObject::Create("Model");
+		else
+		{
+			// TODO: cleanup code
+			object = GameObject::Create("Mesh");
+			Object_Mesh* meshObject = static_cast<Object_Mesh*>(object);
 
-			Then:
-				meshPath = "meshes/models/crow/scene.gltf/main.001.hxmesh"
+			/*
+				When;
+					AssetPath = "models/crow/scene.gltf"
+					MeshName = "main.001"
 
-			Could be cleaner, but it doesn't matter
-			22/12/2024
-		*/
-		std::string meshPath = "meshes/"
-								+ AssetPath
-								+ "/"
-								+ m_MeshNames[MeshIndex]
-								+ ".hxmesh";
+				Then:
+					meshPath = "meshes/models/crow/scene.gltf/main.001.hxmesh"
 
-		meshProvider->Save(m_Meshes[MeshIndex], meshPath);
+				Could be cleaner, but it doesn't matter
+				22/12/2024
+			*/
+			std::string meshPath = "meshes/"
+				+ AssetPath
+				+ "/"
+				+ node.Name
+				+ ".hxmesh";
 
-		mesh->SetRenderMesh(meshPath);
-		mesh->Transform = m_MeshMatrices[MeshIndex];
+			meshProvider->Save(node.Data, meshPath);
 
-		//mo->Orientation = this->MeshRotations[MeshIndex];
+			meshObject->SetRenderMesh(meshPath);
+			meshObject->Transform = node.Transform;
 
-		mesh->Size = m_MeshScales[MeshIndex];
+			//mo->Orientation = this->MeshRotations[MeshIndex];
 
-		TextureManager* texManager = TextureManager::Get();
+			meshObject->Size = node.Scale;
 
-		nlohmann::json materialJson{};
+			TextureManager* texManager = TextureManager::Get();
 
-		ModelLoader::MeshMaterial& material = m_MeshMaterials.at(MeshIndex);
+			nlohmann::json materialJson{};
 
-		mesh->Tint = Color(
-			material.BaseColorFactor.r,
-			material.BaseColorFactor.g,
-			material.BaseColorFactor.b
-		);
-		mesh->Transparency = 1.f - material.BaseColorFactor.a;
-		mesh->FaceCulling = material.DoubleSided ? FaceCullingMode::None : FaceCullingMode::BackFace;
+			const ModelLoader::MeshMaterial& material = node.Material;
 
-		mesh->Name = m_MeshNames[MeshIndex];
+			meshObject->Tint = Color(
+				material.BaseColorFactor.r,
+				material.BaseColorFactor.g,
+				material.BaseColorFactor.b
+			);
+			meshObject->Transparency = 1.f - material.BaseColorFactor.a;
+			meshObject->FaceCulling = material.DoubleSided ? FaceCullingMode::None : FaceCullingMode::BackFace;
 
-		Texture& colorTex = texManager->GetTextureResource(material.BaseColorTexture);
-		Texture& metallicRoughnessTex = texManager->GetTextureResource(material.MetallicRoughnessTexture);
-		Texture& normalTex = texManager->GetTextureResource(material.NormalTexture);
-		Texture& emissiveTex = texManager->GetTextureResource(material.EmissiveTexture);
+			Texture& colorTex = texManager->GetTextureResource(material.BaseColorTexture);
+			Texture& metallicRoughnessTex = texManager->GetTextureResource(material.MetallicRoughnessTexture);
+			Texture& normalTex = texManager->GetTextureResource(material.NormalTexture);
+			Texture& emissiveTex = texManager->GetTextureResource(material.EmissiveTexture);
 
-		materialJson["ColorMap"] = colorTex.ImagePath;
+			materialJson["ColorMap"] = colorTex.ImagePath;
 
-		// TODO: glTF assumes proper PBR, with factors from 0 - 1 instead
-		// of specular exponents and multipliers etc
-		// update this when PBR is added
-		// 26/10/2024
-		materialJson["specExponent"] = 16.f;
+			// TODO: glTF assumes proper PBR, with factors from 0 - 1 instead
+			// of specular exponents and multipliers etc
+			// update this when PBR is added
+			// 26/10/2024
+			materialJson["specExponent"] = 16.f;
 
-		if (material.MetallicRoughnessTexture != 0)
-			materialJson["MetallicRoughnessMap"] = metallicRoughnessTex.ImagePath;
+			if (material.MetallicRoughnessTexture != 0)
+				materialJson["MetallicRoughnessMap"] = metallicRoughnessTex.ImagePath;
 
-		if (material.NormalTexture != 0)
-			materialJson["NormalMap"] = normalTex.ImagePath;
+			if (material.NormalTexture != 0)
+				materialJson["NormalMap"] = normalTex.ImagePath;
 
-		if (material.EmissiveTexture != 0)
-			materialJson["EmissionMap"] = emissiveTex.ImagePath;
+			if (material.EmissiveTexture != 0)
+				materialJson["EmissionMap"] = emissiveTex.ImagePath;
 
-		materialJson["HasTranslucency"] = (material.AlphaMode == MeshMaterial::MaterialAlphaMode::Blend);
+			materialJson["HasTranslucency"] = (material.AlphaMode == MeshMaterial::MaterialAlphaMode::Blend);
 
-		materialJson["Uniforms"] = nlohmann::json::object();
+			materialJson["Uniforms"] = nlohmann::json::object();
 
-		if (material.AlphaMode == MeshMaterial::MaterialAlphaMode::Mask)
-			materialJson["Uniforms"]["AlphaCutoff"] = material.AlphaCutoff;
+			if (material.AlphaMode == MeshMaterial::MaterialAlphaMode::Mask)
+				materialJson["Uniforms"]["AlphaCutoff"] = material.AlphaCutoff;
 
-		materialJson["BilinearFiltering"] = colorTex.DoBilinearSmoothing;
+			materialJson["BilinearFiltering"] = colorTex.DoBilinearSmoothing;
 
-		// `materials/models/crow/feathers.mtl`
-		std::string materialName = AssetPath
-			+ "/"
-			+ material.Name;
+			// `models/crow/feathers`
+			// `models/EmbeddedTexture.glb/Material.001`
+			std::string materialName = AssetPath
+				+ "/"
+				+ material.Name;
 
-		FileRW::WriteFileCreateDirectories(
-			"materials/" + materialName + ".mtl",
-			materialJson.dump(2),
-			true
-		);
+			FileRW::WriteFileCreateDirectories(
+				"materials/" + materialName + ".mtl",
+				materialJson.dump(2),
+				true
+			);
 
-		mesh->MaterialId = mtlManager->LoadMaterialFromPath(materialName);
+			meshObject->MaterialId = mtlManager->LoadMaterialFromPath(materialName);
+			mtlManager->SaveToPath(mtlManager->GetMaterialResource(meshObject->MaterialId), materialName);
 
-		mesh->MetallnessFactor = material.MetallicFactor;
-		mesh->RoughnessFactor = material.RoughnessFactor;
+			meshObject->MetallnessFactor = material.MetallicFactor;
+			meshObject->RoughnessFactor = material.RoughnessFactor;
+		}
 
-		mesh->Transform = m_MeshMatrices[MeshIndex];
-		mesh->Size = m_MeshScales[MeshIndex];
-		
+		object->Name = node.Name;
+
+		LoadedObjs.push_back(object);
+
 		//mo->Textures = this->MeshTextures[MeshIndex];
 
-		uint32_t parentMesh = m_MeshParents[MeshIndex];
-		if (parentMesh == UINT32_MAX)
-			mesh->SetParent(Parent);
+		uint32_t parentIndex = node.Parent;
+		if (parentIndex == UINT32_MAX) // root node
+			object->SetParent(Parent);
 		else
-			mesh->SetParent(this->LoadedObjs.at(parentMesh));
+			object->SetParent(this->LoadedObjs.at(parentIndex) != object ? LoadedObjs[parentIndex] : Parent);
 	}
 
 	// TODO: fix matrices
@@ -327,16 +343,20 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 	*/
 }
 
-void ModelLoader::m_LoadMesh(uint32_t MeshIndex)
+ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(
+	const nlohmann::json& MeshData,
+	uint32_t PrimitiveIndex,
+	const glm::mat4& Transform,
+	const glm::vec3& Scale
+)
 {
-	const nlohmann::json& mesh = m_JsonData["meshes"][MeshIndex];
-	const nlohmann::json& mainPrims = mesh["primitives"][0];
+	const nlohmann::json& primitive = MeshData["primitives"][PrimitiveIndex];
 
 	// Get all accessor indices
-	uint32_t posAccInd = mainPrims["attributes"]["POSITION"];
-	uint32_t normalAccInd = mainPrims["attributes"]["NORMAL"];
-	uint32_t texAccInd = mainPrims["attributes"]["TEXCOORD_0"];
-	uint32_t indAccInd = mainPrims["indices"];
+	uint32_t posAccInd = primitive["attributes"]["POSITION"];
+	uint32_t normalAccInd = primitive["attributes"]["NORMAL"];
+	uint32_t texAccInd = primitive["attributes"]["TEXCOORD_0"];
+	uint32_t indAccInd = primitive["indices"];
 
 	// Use accessor indices to get all vertices components
 	std::vector<float> posVec = m_GetFloats(m_JsonData["accessors"][posAccInd]);
@@ -384,115 +404,148 @@ void ModelLoader::m_LoadMesh(uint32_t MeshIndex)
 	std::vector<Vertex> vertices = m_AssembleVertices(positions, normals, texUVs);
 	std::vector<uint32_t> indices = m_GetIndices(m_JsonData["accessors"][indAccInd]);
 	
-	m_MeshMaterials.push_back(m_GetMaterial(mainPrims));
+	return
+	{
+		// e.g. "Cube", "Cube2" on 2nd prim, "_UNNAMED-0_" w/o name and 1st prim
+		MeshData.value(
+			"name",
+			"_UNNAMED-" + std::to_string(PrimitiveIndex) + "_"
+		) + (PrimitiveIndex > 0 ? std::to_string(PrimitiveIndex + 1) : ""),
+		0u,
+		false,
 
-	size_t meshIndex = m_Meshes.size();
-
-	m_MeshScales[meshIndex] = m_MeshScales[MeshIndex] * size;
-	m_MeshMatrices[meshIndex] = m_MeshMatrices[meshIndex] * glm::translate(glm::mat4(1.f), center);
-
-	// Combine the vertices, indices, and textures into a mesh
-	m_Meshes.emplace_back(vertices, indices);
-
-	m_MeshNames.push_back(mesh.value(
-		"name",
-		std::to_string(MeshIndex)
-	));
+		Mesh{ vertices, indices },
+		m_GetMaterial(primitive),
+		Transform * glm::translate(glm::mat4(1.f), center),
+		Scale * size
+	};
 }
 
-void ModelLoader::m_TraverseNode(uint32_t nodeIndex, const glm::mat4& matrix)
+void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From, const glm::mat4& Transform)
 {
 	// Current node
-	const nlohmann::json& node = m_JsonData["nodes"][nodeIndex];
+	const nlohmann::json& nodeJson = m_JsonData["nodes"][NodeIndex];
 
 	// Get translation if it exists
 	glm::vec3 translation{};
-	if (node.find("translation") != node.end())
+	if (const auto transIt = nodeJson.find("translation"); transIt != nodeJson.end())
 	{
+		const nlohmann::json& trans = transIt.value();
+
 		float transValues[3] = 
 		{
-			node["translation"][0],
-			node["translation"][1],
-			node["translation"][2]
+			trans[0],
+			trans[1],
+			trans[2]
 		};
 
 		translation = glm::make_vec3(transValues);
 	}
 	// Get quaternion if it exists
 	glm::quat rotation = glm::quat(1.f, 0.f, 0.f, 0.f);
-	if (node.find("rotation") != node.end())
+	if (const auto rotIt = nodeJson.find("rotation"); rotIt != nodeJson.end())
 	{
+		const nlohmann::json& rot = rotIt.value();
+
 		float rotValues[4] =
 		{
-			node["rotation"][3],
-			node["rotation"][0],
-			node["rotation"][1],
-			node["rotation"][2]
+			rot[3],
+			rot[0],
+			rot[1],
+			rot[2]
 		};
 		rotation = glm::make_quat(rotValues);
 	}
 	// Get scale if it exists
 	glm::vec3 scale{ 1.f, 1.f, 1.f };
-	if (node.find("scale") != node.end())
+	if (const auto scaleIt = nodeJson.find("scale"); scaleIt != nodeJson.end())
 	{
+		const nlohmann::json& sca = scaleIt.value();
+
 		float scaleValues[3] = 
 		{
-			node["scale"][0],
-			node["scale"][1],
-			node["scale"][2]
+			sca[0],
+			sca[1],
+			sca[2]
 		};
 
 		scale = glm::make_vec3(scaleValues);
 	}
 	// Get matrix if it exists
 	glm::mat4 matNode = glm::mat4(1.f);
-	if (node.find("matrix") != node.end())
+	if (const auto matIt = nodeJson.find("matrix"); matIt != nodeJson.end())
 	{
+		const nlohmann::json& mat = matIt.value();
+
 		float matValues[16]{};
-		for (uint32_t i = 0; i < node["matrix"].size(); i++)
-			matValues[i] = (node["matrix"][i]);
+		for (uint32_t i = 0; i < std::min(mat.size(), 16ull); i++)
+			matValues[i] = mat[i];
 
 		matNode = glm::make_mat4(matValues);
 	}
 
-	// Initialize matrices
-	glm::mat4 trans = glm::mat4(1.f); // 14/09/2024 har har
-	glm::mat4 rot = glm::mat4(1.f);
-	glm::mat4 sca = glm::mat4(1.f);
-
-	// Use translation, rotation, and scale to change the initialized matrices
-	trans = glm::translate(trans, translation);
-	rot = glm::mat4_cast(rotation);
-	sca = glm::scale(sca, scale);
+	glm::mat4 trans = glm::translate(glm::mat4(1.f), translation); // 14/09/2024 har har har
+	glm::mat4 rot = glm::mat4_cast(rotation);
 
 	// Multiply all matrices together
-	glm::mat4 matNextNode = matrix * matNode * trans * rot;
+	glm::mat4 matNextNode = Transform * matNode * trans * rot;
+
+	uint32_t myIndex = static_cast<uint32_t>(m_Nodes.size());
 
 	// Check if the node contains a mesh and if it does load it
-	if (node.find("mesh") != node.end())
+	if (const auto meshDataIt = nodeJson.find("mesh"); meshDataIt != nodeJson.end())
 	{
+		uint32_t meshId = meshDataIt.value();
+
+		const nlohmann::json& meshData = m_JsonData["meshes"][meshId];
+
 		//m_MeshTranslations.push_back(translation);
 		//m_MeshRotations.push_back(rotation);
-		m_MeshScales.push_back(scale);
-		m_MeshMatrices.push_back(matNextNode);
 
-		m_LoadMesh(node["mesh"]);
+		// 30/12/2024
+		// https://math.stackexchange.com/a/1463487
+		glm::vec3 embeddedScale
+		{
+			glm::length(glm::vec3(matNextNode[0][0], matNextNode[1][0], matNextNode[2][0])),
+			glm::length(glm::vec3(matNextNode[0][1], matNextNode[1][1], matNextNode[2][1])),
+			glm::length(glm::vec3(matNextNode[0][2], matNextNode[1][2], matNextNode[2][2]))
+		};
+
+		scale *= embeddedScale;
+
+		glm::mat4 thisNodeTransform = matNextNode * glm::scale(glm::mat4(1.f), 1.f / embeddedScale);
+
+		for (uint32_t i = 0; i < meshData["primitives"].size(); i++)
+		{
+			ModelNode node = m_LoadPrimitive(meshData, i, thisNodeTransform, scale);
+			node.Parent = From;
+
+			m_Nodes.push_back(node);
+		}
 	}
+	else
+		m_Nodes.emplace_back(
+			nodeJson.value("name", "_UNNAMED_CONTAINER-" + std::to_string(NodeIndex) + "_"),
+			From,
+			true
+		);
 
 	// Check if the node has children, and if it does, apply this function to them with the matNextNode
-	if (node.find("children") != node.end())
-		for (const nlohmann::json& subnode : node["children"])
-		{
-			if (node.find("mesh") != node.end())
-				m_MeshParents.push_back(nodeIndex);
-			else
-				if (m_MeshParents.size() > 0)
-					m_MeshParents.push_back(m_MeshParents.back());
-				else
-					m_MeshParents.push_back(UINT32_MAX);
+	if (const auto chIt = nodeJson.find("children"); chIt != nodeJson.end())
+	{
+		const nlohmann::json& children = chIt.value();
 
-			m_TraverseNode(subnode, matNextNode);
+		if (children.size() == 1)
+			// there's no point having a container that houses just 1 node
+			// 31/12/2024
+		{
+			m_Nodes.erase(m_Nodes.end() - 1);
+			m_TraverseNode(children[0], From, matNextNode);
 		}
+		else
+			for (const nlohmann::json& subnode : children)
+				m_TraverseNode(subnode, myIndex, matNextNode);
+	}
 }
 
 std::vector<int8_t> ModelLoader::m_GetData()
@@ -622,7 +675,7 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 
 	int materialId = materialIdIt.value();
 
-	nlohmann::json materialDescription = m_JsonData["materials"][materialId];
+	const nlohmann::json& materialDescription = m_JsonData["materials"][materialId];
 
 	static std::unordered_map<std::string, MeshMaterial::MaterialAlphaMode> NameToAlphaMode =
 	{
@@ -636,9 +689,9 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 	material.AlphaMode = NameToAlphaMode.find(materialDescription.value("alphaMode", "OPAQUE"))->second;
 	material.DoubleSided = materialDescription.value("doubleSided", false);
 
-	nlohmann::json& pbrDescription = materialDescription["pbrMetallicRoughness"];
+	const nlohmann::json& pbrDescription = materialDescription["pbrMetallicRoughness"];
 
-	nlohmann::json baseColorFactor = pbrDescription.value(
+	const nlohmann::json& baseColorFactor = pbrDescription.value(
 		"baseColorFactor",
 		nlohmann::json{ 1.f, 1.f, 1.f, 1.f }
 	);
@@ -654,19 +707,19 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 	material.MetallicFactor = pbrDescription.value("metallicFactor", 1.f);
 	material.RoughnessFactor = pbrDescription.value("roughnessFactor", 1.f);
 
-	nlohmann::json baseColDesc = pbrDescription.value(
+	const nlohmann::json& baseColDesc = pbrDescription.value(
 		"baseColorTexture",
 		nlohmann::json{ { "index", 0 } }
 	);
-	nlohmann::json metallicRoughnessDesc = pbrDescription.value(
+	const nlohmann::json& metallicRoughnessDesc = pbrDescription.value(
 		"metallicRoughnessTexture",
 		nlohmann::json{ { "index", 0 } }
 	);
-	nlohmann::json normalDesc = materialDescription.value(
+	const nlohmann::json& normalDesc = materialDescription.value(
 		"normalTexture",
 		nlohmann::json{ { "index", 0 } }
 	);
-	nlohmann::json emissiveDesc = materialDescription.value(
+	const nlohmann::json& emissiveDesc = materialDescription.value(
 		"emissiveTexture",
 		nlohmann::json{ { "index", 0 } }
 	);
@@ -688,7 +741,7 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 	if (baseColTex.find("sampler") != baseColTex.end())
 		// 9729 == LINEAR 
 		// https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#schema-reference-sampler
-		baseColFilterBilinear = m_JsonData["samplers"][(int)baseColTex["sampler"]] == 9729;
+		baseColFilterBilinear = m_JsonData["samplers"][(int)baseColTex["sampler"]]["magFilter"] == 9729;
 	
 	std::string baseColPath = getTexturePath(
 		m_File,
@@ -702,6 +755,8 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 		true,
 		baseColFilterBilinear
 	);
+
+	texManager->GetTextureResource(material.BaseColorTexture).DoBilinearSmoothing = baseColFilterBilinear;
 
 	if (pbrDescription.find("metallicRoughnessTexture") != pbrDescription.end())
 	{

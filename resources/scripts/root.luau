@@ -1,9 +1,9 @@
 -- root.luau, 21/12/2024
 
 local NodeEditor = require("scripts/modules/NodeEditor.luau")
-local Editor = require("scripts/modules/Editor.luau")
+local Editor = function() end--require("scripts/modules/Editor.luau")
 
-local ModelImporterScale = 0.1
+local ModelImporterScale = 1
 
 local ScriptExecutionFile = "scripts/shdgraphtest.luau"
 
@@ -57,7 +57,7 @@ function Update()
 	if imgui_begin("Model Importer") then
 		ModelImporterScale = imgui_input_float("Scale", ModelImporterScale)
 
-		if imgui_button("ImportModel") then
+		if imgui_button("Select & Import Model") then
 			imfd_open("ImportModel", 0, "resources/models", "*.gltf,*.glb")
 		end
 	end
@@ -67,14 +67,16 @@ function Update()
 		local pathSplit = string.split(Path, "/")
 		
 		local parts = model_import(Path)
-		local model = GameObject.new("Model")
-		model.Name = pathSplit[#pathSplit]
-		model.Parent = workspace
+		--local model = GameObject.new("Model")
+		--model.Name = pathSplit[#pathSplit]
+		--model.Parent = workspace
 		
-		for _, part in parts do
-			part.Size *= ModelImporterScale
-			part.Parent = model
-		end
+		--for _, part in parts do
+			--part.Size *= ModelImporterScale
+		--	part.Parent = workspace
+		--end
+		
+		parts.Parent = workspace
 	end)
 	
 	if imgui_begin("Run Script") then
@@ -158,3 +160,7 @@ function Update()
 end
 
 loadSubLevel(DefaultSubLevel)
+
+if not conf_get("Developer") then
+	Update = nil
+end

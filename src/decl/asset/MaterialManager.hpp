@@ -43,6 +43,8 @@ public:
 	//void FinalizeAsyncLoadedMaterials();
 
 	uint32_t LoadMaterialFromPath(const std::string&);
+	// uses material NAME, not file path!
+	void SaveToPath(const RenderMaterial&, const std::string& Name);
 
 	RenderMaterial& GetMaterialResource(uint32_t);
 

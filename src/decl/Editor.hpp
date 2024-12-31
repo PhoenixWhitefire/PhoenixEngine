@@ -22,8 +22,6 @@ private:
 	char* m_MtlNormalBuf{};
 	char* m_MtlEmissionBuf{};
 	char* m_MtlShpBuf{};
-	char* m_MtlNewUniformNameBuf{};
-	char* m_MtlUniformNameEditBuf{};
 
 	int m_MtlCurItem = -1;
 	int m_MtlPrevItem = -1;
