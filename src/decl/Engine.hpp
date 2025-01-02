@@ -2,7 +2,7 @@
 
 #include <filesystem>
 #include <nljson.hpp>
-#include <SDL2/SDL_video.h>
+#include <SDL3/SDL_video.h>
 
 #include "gameobject/GameObjects.hpp"
 #include "render/Renderer.hpp"
@@ -63,5 +63,5 @@ public:
 private:
 	int m_DrawnFramesInSecond = -1;
 
-	uint32_t m_SDLWindowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
+	uint32_t m_SDLWindowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY;
 };

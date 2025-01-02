@@ -5,6 +5,7 @@
 #include <misc/cpp/imgui_stdlib.h>
 #include <imnodes/imnodes.h>
 #include <ImGuiFD/ImGuiFD.h>
+#include <SDL3/SDL_mouse.h>
 
 #include "gameobject/ScriptEngine.hpp"
 
@@ -563,7 +564,7 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 		else
 		{
 			const char* kname = luaL_checkstring(L, 1);
-			lua_pushboolean(L, UserInput::IsKeyDown(SDL_KeyCode(kname[0])));
+			lua_pushboolean(L, UserInput::IsKeyDown(SDL_Keycode(kname[0])));
 		}
 
 		return 1;
@@ -590,13 +591,13 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 	"input_mouse_getpos",
 	[](lua_State* L)
 	{
-		int mx = 0;
-		int my = 0;
+		float mx = 0;
+		float my = 0;
 
 		SDL_GetMouseState(&mx, &my);
 
-		lua_pushinteger(L, mx);
-		lua_pushinteger(L, my);
+		lua_pushnumber(L, mx);
+		lua_pushnumber(L, my);
 
 		return 2;
 	}

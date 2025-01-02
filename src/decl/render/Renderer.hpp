@@ -3,6 +3,7 @@
 #include <unordered_set>
 #include <optional>
 #include <glm/mat4x4.hpp>
+#include <SDL3/SDL_video.h>
 
 #include "render/RendererScene.hpp"
 #include "render/ShaderManager.hpp"
@@ -15,14 +16,14 @@
 */
 #define PHX_SDL_CALL(func, ...)                                  \
 {                                                                \
-	int status = func(__VA_ARGS__);                              \
+	int success = func(__VA_ARGS__);                             \
 	std::string funcName = #func;                                \
-	if (status < 0)                                              \
+	if (!success)                                                \
 	{                                                            \
 		const char* errMessage = SDL_GetError();                 \
 		throw(std::vformat(                                      \
-			"Error in {}:\nCode: {}\nMessage: {}",               \
-			std::make_format_args(funcName, status, errMessage)  \
+			"Error in {}:\nMessage: {}",               \
+			std::make_format_args(funcName, errMessage)          \
 		));                                                      \
 	}                                                            \
 }                                                                \

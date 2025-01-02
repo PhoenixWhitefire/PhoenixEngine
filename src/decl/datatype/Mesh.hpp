@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <array>
 #include <glm/vec4.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec2.hpp>
@@ -12,6 +13,9 @@ struct Vertex
 	// RGBA
 	glm::vec4 Paint;
 	glm::vec2 TextureUV;
+	// skinned mesh animation, 4 bones max per vert
+	std::array<uint8_t, 4> InfluencingJoints{};
+	std::array<float, 4> JointWeights{};
 };
 
 struct Mesh

@@ -24,3 +24,6 @@
 [submodule "stb"]
 	path = stb
 	url = https://www.github.com/nothings/stb
+[submodule "SDL"]
+	path = SDL
+	url = https://github.com/libsdl-org/SDL

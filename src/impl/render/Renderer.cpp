@@ -12,10 +12,13 @@ extern "C"
 
 #include <string>
 #include <format>
-#include <glad/gl.h>
+
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/transform.hpp>
-#include <SDL2/SDL_video.h>
+
+#include <SDL3/SDL_video.h>
+
+#include <glad/gl.h>
 
 #include "render/Renderer.hpp"
 #include "asset/MaterialManager.hpp"

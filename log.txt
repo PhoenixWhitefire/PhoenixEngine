@@ -1,7 +1,11 @@
 [INFO]: Application startup...
-[INFO]: Phoenix Engine, Main.cpp last compiled: Dec 31 2024
+[INFO]: Phoenix Engine, Main.cpp last compiled: Jan  2 2025
 [INFO]: Configuration loaded
 [INFO]: Requesting a Core OpenGL context with version 4.6
+[WARN]: SDL log -
+Type: 0
+Priority: Info
+Message: Create at: 160,60 (152,29)
 [INFO]: Window created
 [INFO]: Running OpenGL version 4.6
 [INFO]: Renderer initialized

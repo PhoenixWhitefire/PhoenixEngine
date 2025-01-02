@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gameobject/MeshObject.hpp"
+#include "gameobject/Animation.hpp"
 
 class ModelLoader
 {
@@ -38,7 +39,12 @@ private:
 	{
 		std::string Name;
 		uint32_t Parent;
-		bool IsContainerOnlyWithoutGeo = false; // nodes w/o meshes that just offset transformations
+		enum class NodeType : uint8_t
+		{
+			Primitive,
+			Container,
+			Bone
+		} Type = NodeType::Primitive;
 
 		Mesh Data;
 		MeshMaterial Material;
@@ -57,6 +63,8 @@ private:
 
 	void m_TraverseNode(uint32_t NextNode, uint32_t From, const glm::mat4& Transform = glm::mat4(1.0f));
 
+	void m_BuildRig();
+
 	std::vector<int8_t> m_GetData();
 
 	std::vector<float> m_GetFloats(const nlohmann::json& Accessor);
@@ -66,7 +74,8 @@ private:
 	std::vector<Vertex> m_AssembleVertices(
 		const std::vector<glm::vec3>& Positions,
 		const std::vector<glm::vec3>& Normals,
-		const std::vector<glm::vec2>& TextureUVs
+		const std::vector<glm::vec2>& TextureUVs,
+		const std::vector<glm::vec4>& Colors
 	);
 
 	std::vector<glm::vec2> m_GroupFloatsVec2(const std::vector<float>& Floats);
@@ -77,6 +86,8 @@ private:
 	nlohmann::json m_JsonData;
 
 	std::vector<ModelNode> m_Nodes;
+	std::unordered_map<uint32_t, uint32_t> m_NodeIdToIndex;
+	std::vector<Object_Animation*> m_Animations;
 
 	/*
 	std::vector<Mesh> m_Meshes;

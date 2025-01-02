@@ -147,7 +147,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		}
 		PHX_CATCH_AND_RETHROW(
 			nlohmann::json::parse_error,
-			std::string("Failed to import model (parse error): ") + gltfFilePath +,
+			std::string("Failed to import model (parse error): ") + gltfFilePath + ,
 			.what()
 		);
 
@@ -198,17 +198,19 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		m_Nodes.emplace_back(
 			AssetPath,
 			UINT32_MAX,
-			true
+			ModelNode::NodeType::Container
 		);
 
 		for (const nlohmann::json& scene : m_JsonData["scenes"])
 			// root nodes
 			for (uint32_t node : scene["nodes"])
 				m_TraverseNode(node, 0);
+
+		m_BuildRig();
 	}
 	PHX_CATCH_AND_RETHROW(
 		nlohmann::json::type_error,
-		std::string("Failed to import model (type error): ") + gltfFilePath +,
+		std::string("Failed to import model (type error): ") + gltfFilePath + ,
 		.what()
 	);
 
@@ -221,8 +223,12 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 	{
 		GameObject* object{};
 
-		if (node.IsContainerOnlyWithoutGeo)
+		if (node.Type == ModelNode::NodeType::Container)
 			object = GameObject::Create("Model");
+
+		else if (node.Type == ModelNode::NodeType::Bone)
+			object = GameObject::Create("Attachment");
+
 		else
 		{
 			// TODO: cleanup code
@@ -332,6 +338,9 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 			object->SetParent(this->LoadedObjs.at(parentIndex) != object ? LoadedObjs[parentIndex] : Parent);
 	}
 
+	for (Object_Animation* anim : m_Animations)
+		anim->SetParent(LoadedObjs.at(0));
+
 	// TODO: fix matrices
 	// hm, actually we already set the matrices in the for-loop above
 	// something is breaking them the further they are from 0,0...
@@ -358,13 +367,39 @@ ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(
 	uint32_t texAccInd = primitive["attributes"]["TEXCOORD_0"];
 	uint32_t indAccInd = primitive["indices"];
 
+	auto colAccIt = primitive["attributes"].find("COLOR_0");
+	nlohmann::json colAcc = {};
+
 	// Use accessor indices to get all vertices components
 	std::vector<float> posVec = m_GetFloats(m_JsonData["accessors"][posAccInd]);
-	std::vector<glm::vec3> positions = m_GroupFloatsVec3(posVec);
 	std::vector<float> normalVec = m_GetFloats(m_JsonData["accessors"][normalAccInd]);
-	std::vector<glm::vec3> normals = m_GroupFloatsVec3(normalVec);
 	std::vector<float> texVec = m_GetFloats(m_JsonData["accessors"][texAccInd]);
+	
+	std::vector<glm::vec3> positions = m_GroupFloatsVec3(posVec);
+	std::vector<glm::vec3> normals = m_GroupFloatsVec3(normalVec);
 	std::vector<glm::vec2> texUVs = m_GroupFloatsVec2(texVec);
+	std::vector<glm::vec4> cols{};
+
+	if (colAccIt != primitive["attributes"].end())
+	{
+		colAcc = colAccIt.value();
+		std::vector<float> colVec = m_GetFloats(colAcc);
+
+		if (colAcc["type"] == "VEC3")
+		{
+			cols.reserve(static_cast<size_t>(colVec.size() / 3));
+
+			std::vector<glm::vec3> col3 = m_GroupFloatsVec3(colVec);
+
+			for (const glm::vec3& v : col3)
+				cols.emplace_back(v.x, v.y, v.z, 1.f);
+		}
+		else
+			cols = m_GroupFloatsVec4(colVec);
+	}
+	else
+		for (size_t i = 0; i < positions.size(); i++)
+			cols.emplace_back(1.f, 1.f, 1.f, 1.f);
 
 	// resize the mesh to 1x1x1 and center it after
 	glm::vec3 extMax{};
@@ -401,7 +436,7 @@ ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(
 		positions[index] -= center;
 
 	// Combine all the vertex components and also get the indices and textures
-	std::vector<Vertex> vertices = m_AssembleVertices(positions, normals, texUVs);
+	std::vector<Vertex> vertices = m_AssembleVertices(positions, normals, texUVs, cols);
 	std::vector<uint32_t> indices = m_GetIndices(m_JsonData["accessors"][indAccInd]);
 	
 	return
@@ -412,7 +447,7 @@ ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(
 			"_UNNAMED-" + std::to_string(PrimitiveIndex) + "_"
 		) + (PrimitiveIndex > 0 ? std::to_string(PrimitiveIndex + 1) : ""),
 		0u,
-		false,
+		ModelNode::NodeType::Primitive,
 
 		Mesh{ vertices, indices },
 		m_GetMaterial(primitive),
@@ -524,11 +559,15 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From, const glm::m
 		}
 	}
 	else
+	{
+		m_NodeIdToIndex[NodeIndex] = static_cast<uint32_t>(m_Nodes.size());
+
 		m_Nodes.emplace_back(
 			nodeJson.value("name", "_UNNAMED_CONTAINER-" + std::to_string(NodeIndex) + "_"),
 			From,
-			true
+			ModelNode::NodeType::Container
 		);
+	}
 
 	// Check if the node has children, and if it does, apply this function to them with the matNextNode
 	if (const auto chIt = nodeJson.find("children"); chIt != nodeJson.end())
@@ -545,6 +584,23 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From, const glm::m
 		else
 			for (const nlohmann::json& subnode : children)
 				m_TraverseNode(subnode, myIndex, matNextNode);
+	}
+}
+
+void ModelLoader::m_BuildRig()
+{
+	for (const nlohmann::json& animationJson : m_JsonData.value("animations", nlohmann::json::array()))
+	{
+		Object_Animation* anim = static_cast<Object_Animation*>(GameObject::Create("Animation"));
+		anim->Name = animationJson["name"];
+
+		for (const nlohmann::json& channelJson : animationJson["channels"])
+		{
+			ModelNode& target = m_Nodes[m_NodeIdToIndex[channelJson["target"]["node"]]];
+			target.Type = ModelNode::NodeType::Bone;
+		}
+
+		m_Animations.push_back(anim);
 	}
 }
 
@@ -813,7 +869,8 @@ std::vector<Vertex> ModelLoader::m_AssembleVertices
 (
 	const std::vector<glm::vec3>& positions,
 	const std::vector<glm::vec3>& normals,
-	const std::vector<glm::vec2>& texUVs
+	const std::vector<glm::vec2>& texUVs,
+	const std::vector<glm::vec4>& colors
 )
 {
 	std::vector<Vertex> vertices;
@@ -824,7 +881,7 @@ std::vector<Vertex> ModelLoader::m_AssembleVertices
 		vertices.emplace_back(
 			positions[i],
 			normals[i],
-			glm::vec4(1.f, 1.f, 1.f, 1.f),
+			colors[i],
 			texUVs[i]
 		);
 	}

@@ -11,5 +11,7 @@
   "PointLight": "textures/editor-icons/PointLight.png",
   "SpotLight": "textures/editor-icons/SpotLight.png",
   "Sound": "textures/editor-icons/Sound.png",
-  "Script": "textures/editor-icons/Script.png"
+  "Script": "textures/editor-icons/Script.png",
+  "Attachment": "textures/editor-icons/Attachment.png",
+  "Animation": "textures/editor-icons/Animation.png"
 }

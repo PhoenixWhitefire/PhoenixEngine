@@ -33,7 +33,6 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 */
 
 #define GLM_ENABLE_EXPERIMENTAL
-#define SDL_MAIN_HANDLED
 
 #define PHX_MAIN_HANDLECRASH(c, expr) catch (c Error) { handleCrash(Error##expr, #c); }
 
@@ -47,10 +46,17 @@ PHX_MAIN_HANDLECRASH(std::exception, .what()); \
 #include <ImGuiFD/ImGuiFD.h>
 
 #include <filesystem>
+
 #include <imgui/backends/imgui_impl_opengl3.h>
-#include <imgui/backends/imgui_impl_sdl2.h>
+#include <imgui/backends/imgui_impl_sdl3.h>
+
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtx/vector_angle.hpp>
+
+#include <SDL3/SDL_messagebox.h>
+#include <SDL3/SDL_keyboard.h>
+#include <SDL3/SDL_mouse.h>
+#include <SDL3/SDL_init.h>
 
 #include "Engine.hpp"
 
@@ -76,9 +82,9 @@ static const float MovementSpeed = 15.f;
 static Editor* EditorContext = nullptr;
 static EngineObject* EngineInstance = nullptr;
 
-static int PrevMouseX, PrevMouseY = 0;
+static float PrevMouseX, PrevMouseY = 0;
 
-static glm::tvec3<double, glm::highp> CamForward = glm::vec3(0.f, 0.f, -1.f);
+static glm::vec3 CamForward = glm::vec3(0.f, 0.f, -1.f);
 
 // 16/11/2024
 // https://stackoverflow.com/a/5167641/16875161
@@ -137,7 +143,7 @@ static void handleInputs(Reflection::GenericValue Data)
 
 	if (camera->UseSimpleController)
 	{
-		static const glm::tvec3<double, glm::highp> UpVec = Vector3::yAxis;
+		static const glm::vec3 UpVec = Vector3::yAxis;
 
 		if (!UserInput::InputBeingSunk)
 		{
@@ -148,29 +154,29 @@ static void handleInputs(Reflection::GenericValue Data)
 
 			Vector3 displacement{};
 
-			if (UserInput::IsKeyDown(SDLK_w))
+			if (UserInput::IsKeyDown(SDLK_W))
 				displacement += Vector3(0, 0, displacementSpeed);
 
-			if (UserInput::IsKeyDown(SDLK_a))
+			if (UserInput::IsKeyDown(SDLK_A))
 				displacement += Vector3(displacementSpeed, 0, 0);
 
-			if (UserInput::IsKeyDown(SDLK_s))
+			if (UserInput::IsKeyDown(SDLK_S))
 				displacement += Vector3(0, 0, -displacementSpeed);
 
-			if (UserInput::IsKeyDown(SDLK_d))
+			if (UserInput::IsKeyDown(SDLK_D))
 				displacement += Vector3(-displacementSpeed, 0, 0);
 
-			if (UserInput::IsKeyDown(SDLK_q))
+			if (UserInput::IsKeyDown(SDLK_Q))
 				displacement += Vector3(0, -displacementSpeed, 0);
 
-			if (UserInput::IsKeyDown(SDLK_e))
+			if (UserInput::IsKeyDown(SDLK_E))
 				displacement += Vector3(0, displacementSpeed, 0);
 
 			camera->Transform = glm::translate(camera->Transform, (glm::vec3)displacement);
 		}
 
-		int mouseX;
-		int mouseY;
+		float mouseX;
+		float mouseY;
 
 		uint32_t activeMouseButton = SDL_GetMouseState(&mouseX, &mouseY);
 
@@ -180,7 +186,7 @@ static void handleInputs(Reflection::GenericValue Data)
 			// (Otherwise it flickers)
 			// 22/08/2024
 			ImGui::SetMouseCursor(ImGuiMouseCursor_None);
-			PHX_SDL_CALL(SDL_ShowCursor, SDL_DISABLE);
+			PHX_SDL_CALL(SDL_HideCursor);
 
 			int windowSizeX, windowSizeY;
 
@@ -188,25 +194,25 @@ static void handleInputs(Reflection::GenericValue Data)
 
 			if (FirstDragFrame)
 			{
-				SDL_SetWindowMouseGrab(window, SDL_TRUE);
+				SDL_SetWindowMouseGrab(window, true);
 
-				SDL_WarpMouseInWindow(nullptr, windowSizeX / 2, windowSizeY / 2);
+				SDL_WarpMouseInWindow(nullptr, windowSizeX / 2.f, windowSizeY / 2.f);
 
-				mouseX, mouseY = windowSizeX / 2, windowSizeY / 2;
+				mouseX, mouseY = windowSizeX / 2.f, windowSizeY / 2.f;
 				PrevMouseX, PrevMouseY = mouseX, mouseY;
 
 				FirstDragFrame = false;
 			}
 
-			int deltaMouseX = PrevMouseX - mouseX;
-			int deltaMouseY = PrevMouseY - mouseY;
+			float deltaMouseX = PrevMouseX - mouseX;
+			float deltaMouseY = PrevMouseY - mouseY;
 
-			double rotationX = MouseSensitivity * ((double)deltaMouseY - (windowSizeY / 2.0f)) / windowSizeY;
-			double rotationY = MouseSensitivity * ((double)deltaMouseX - (windowSizeX / 2.0f)) / windowSizeX;
+			float rotationX = MouseSensitivity * (deltaMouseY - (windowSizeY / 2.0f)) / windowSizeY;
+			float rotationY = MouseSensitivity * (deltaMouseX - (windowSizeX / 2.0f)) / windowSizeX;
 			rotationX += 50.f; // TODO 22/08/2024: Why??
 			rotationY += 50.f;
 
-			glm::tvec3<double, glm::highp> newForward = glm::rotate(
+			glm::vec3 newForward = glm::rotate(
 				CamForward,
 				glm::radians(rotationX),
 				glm::normalize(glm::cross(CamForward, UpVec))
@@ -217,29 +223,29 @@ static void handleInputs(Reflection::GenericValue Data)
 
 			CamForward = glm::rotate(CamForward, glm::radians(-rotationY), UpVec);
 
-			glm::tvec3<double, glm::highp> position{ camera->Transform[3] };
+			glm::vec3 position{ camera->Transform[3] };
 
 			camera->Transform = glm::lookAt(position, position + CamForward, UpVec);
 
 			// Keep the mouse in the window.
 			// Teleport it to the other side if it hits the edge.
 
-			int newMouseX = mouseX, newMouseY = mouseY;
+			float newMouseX = mouseX, newMouseY = mouseY;
 
 			if (mouseX <= 10)
-				newMouseX = windowSizeX - 20;
+				newMouseX = static_cast<float>(windowSizeX - 20);
 
 			if (mouseX >= windowSizeX - 10)
 				newMouseX = 20;
 
 			if (mouseY <= 10)
-				newMouseY = windowSizeY - 20;
+				newMouseY = static_cast<float>(windowSizeY - 20);
 
 			if (mouseY >= windowSizeY - 10)
 				newMouseY = 20;
 
 			if (UserInput::InputBeingSunk)
-				newMouseX, newMouseY = windowSizeX / 2, windowSizeY / 2;
+				newMouseX, newMouseY = windowSizeX / 2.f, windowSizeY / 2.f;
 
 			if (newMouseX != mouseX || newMouseY != mouseY)
 			{
@@ -251,15 +257,15 @@ static void handleInputs(Reflection::GenericValue Data)
 			if (activeMouseButton & SDL_BUTTON_RMASK)
 			{
 				MouseCaptured = false;
-				SDL_WarpMouseInWindow(nullptr, windowSizeX / 2, windowSizeY / 2);
+				SDL_WarpMouseInWindow(nullptr, windowSizeX / 2.f, windowSizeY / 2.f);
 			}
 		}
 		else
 		{
 			if (!FirstDragFrame)
 			{
-				PHX_SDL_CALL(SDL_ShowCursor, SDL_ENABLE);
-				SDL_SetWindowMouseGrab(window, SDL_FALSE);
+				PHX_SDL_CALL(SDL_ShowCursor);
+				SDL_SetWindowMouseGrab(window, false);
 
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
 
@@ -278,34 +284,34 @@ static void handleInputs(Reflection::GenericValue Data)
 		// `input_mouse_setlocked` Luau API 21/09/2024
 		if (Object_Script::s_WindowGrabMouse && !UserInput::InputBeingSunk)
 		{
-			SDL_SetWindowMouseGrab(window, SDL_TRUE);
+			SDL_SetWindowMouseGrab(window, true);
 
-			PHX_SDL_CALL(SDL_ShowCursor, SDL_DISABLE);
+			PHX_SDL_CALL(SDL_ShowCursor);
 			ImGui::SetMouseCursor(ImGuiMouseCursor_None);
 
-			int mouseX = 0, mouseY = 0;
+			float mouseX = 0, mouseY = 0;
 
 			SDL_GetMouseState(&mouseX, &mouseY);
 
 			// Keep the mouse in the window.
 			// Teleport it to the other side if it hits the edge.
 
-			int newMouseX = mouseX, newMouseY = mouseY;
+			float newMouseX = mouseX, newMouseY = mouseY;
 
 			if (mouseX <= 10)
-				newMouseX = EngineInstance->WindowSizeX - 20;
+				newMouseX = static_cast<float>(EngineInstance->WindowSizeX - 20);
 
 			if (mouseX >= EngineInstance->WindowSizeX - 10)
 				newMouseX = 20;
 
 			if (mouseY <= 10)
-				newMouseY = EngineInstance->WindowSizeY - 20;
+				newMouseY = static_cast<float>(EngineInstance->WindowSizeY - 20);
 
 			if (mouseY >= EngineInstance->WindowSizeY - 10)
 				newMouseY = 20;
 
 			if (UserInput::InputBeingSunk)
-				newMouseX, newMouseY = EngineInstance->WindowSizeX / 2, EngineInstance->WindowSizeY / 2;
+				newMouseX, newMouseY = EngineInstance->WindowSizeX / 2.f, EngineInstance->WindowSizeY / 2.f;
 
 			if (newMouseX != mouseX || newMouseY != mouseY)
 			{
@@ -316,9 +322,9 @@ static void handleInputs(Reflection::GenericValue Data)
 		}
 		else
 		{
-			SDL_SetWindowMouseGrab(window, SDL_FALSE);
+			SDL_SetWindowMouseGrab(window, false);
 
-			PHX_SDL_CALL(SDL_ShowCursor, SDL_ENABLE);
+			PHX_SDL_CALL(SDL_ShowCursor);
 			ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
 		}
 	}
@@ -433,7 +439,7 @@ static void recurseProfilerUI(const nlohmann::json& tree)
 
 static void drawUI(Reflection::GenericValue Data)
 {
-	if (UserInput::IsKeyDown(SDLK_l) && !UserInput::InputBeingSunk)
+	if (UserInput::IsKeyDown(SDLK_L) && !UserInput::InputBeingSunk)
 	{
 		Log::Info("Dumping GameObject API...");
 
@@ -443,14 +449,14 @@ static void drawUI(Reflection::GenericValue Data)
 		Log::Info("API dump finished");
 	}
 
-	if (UserInput::IsKeyDown(SDLK_i) && !UserInput::InputBeingSunk)
+	if (UserInput::IsKeyDown(SDLK_I) && !UserInput::InputBeingSunk)
 	{
 		Log::Info("Reloading configuration...");
 
 		EngineInstance->LoadConfiguration();
 	}
 
-	if (UserInput::IsKeyDown(SDLK_k) && !UserInput::InputBeingSunk)
+	if (UserInput::IsKeyDown(SDLK_K) && !UserInput::InputBeingSunk)
 	{
 		Log::Info("Reloading shaders...");
 
@@ -590,7 +596,7 @@ static void drawUI(Reflection::GenericValue Data)
 
 			if (ImGui::IsItemClicked())
 			{
-				int mouseX = 0;
+				float mouseX = 0;
 				SDL_GetMouseState(&mouseX, NULL);
 
 				ImVec2 min = ImGui::GetItemRectMin() + ImGui::GetStyle().FramePadding;
@@ -781,7 +787,7 @@ static void Application(int argc, char** argv)
 	//GuiIO->ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	ImGui::StyleColorsDark();
 
-	if (!ImGui_ImplSDL2_InitForOpenGL(
+	if (!ImGui_ImplSDL3_InitForOpenGL(
 			EngineInstance->Window,
 			EngineInstance->RendererContext.GLContext
 	))
@@ -847,7 +853,7 @@ static void Application(int argc, char** argv)
 	// After the Main Loop exits
 
 	ImGui_ImplOpenGL3_Shutdown();
-	ImGui_ImplSDL2_Shutdown();
+	ImGui_ImplSDL3_Shutdown();
 
 	SDL_Quit();
 
@@ -888,8 +894,6 @@ int main(int argc, char** argv)
 
 	Log::Info(std::format("Phoenix Engine, Main.cpp last compiled: {}", __DATE__));
 
-	SDL_Window* window = nullptr;
-
 	try
 	{
 		EngineObject engine{};
@@ -898,7 +902,6 @@ int main(int argc, char** argv)
 		{
 			engine.Initialize();
 			EngineInstance = &engine;
-			window = engine.Window;
 
 			//Engine->MSAASamples = 2;
 

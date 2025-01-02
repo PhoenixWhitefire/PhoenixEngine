@@ -219,7 +219,7 @@ static void renderScriptEditor()
 
 static void uniformsEditor(std::unordered_map<std::string, Reflection::GenericValue>& Uniforms, int* Selection)
 {
-	if ((*Selection) + 1 > Uniforms.size())
+	if ((*Selection) + 1ull > Uniforms.size())
 		*Selection = -1;
 
 	static int TypeId = 0;

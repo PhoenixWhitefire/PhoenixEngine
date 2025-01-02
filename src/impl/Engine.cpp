@@ -1,13 +1,19 @@
 #include <chrono>
 #include <string>
 #include <format>
-#include <SDL2/SDL.h>
+
 #include <glad/gl.h>
 #include <glm/matrix.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <imgui/backends/imgui_impl_sdl2.h>
+
 #include <imgui/backends/imgui_impl_opengl3.h>
+#include <imgui/backends/imgui_impl_sdl3.h>
+
+#include <SDL3/SDL_video.h>
+#include <SDL3/SDL_timer.h>
+#include <SDL3/SDL_init.h>
+#include <SDL3/SDL_log.h>
 
 #include "Engine.hpp"
 
@@ -37,7 +43,7 @@ static const std::unordered_map<SDL_LogPriority, const std::string> LogPriorityS
 	{ SDL_LOG_PRIORITY_WARN, "Warning" },
 	{ SDL_LOG_PRIORITY_ERROR, "Error" },
 	{ SDL_LOG_PRIORITY_CRITICAL, "Critical" },
-	{ SDL_NUM_LOG_PRIORITIES, "[This string should never be displayed]" }
+	{ SDL_LOG_PRIORITY_COUNT, "[This string should never be displayed]" }
 };
 
 static void sdlLog(void*, int Type, SDL_LogPriority Priority, const char* Message)
@@ -82,6 +88,18 @@ void EngineObject::OnWindowResized(int NewSizeX, int NewSizeY)
 	this->WindowSizeY = NewSizeY;
 
 	RendererContext.ChangeResolution(WindowSizeX, WindowSizeY);
+
+	float displayScale = SDL_GetDisplayContentScale(SDL_GetDisplayForWindow(Window));
+	if (displayScale == 0.f)
+		throw("`SDL_GetDisplayContentScale` returned invalid result, error: " + std::string(SDL_GetError()));
+
+	static ImGuiStyle DefaultStyle = ImGui::GetStyle();
+	ImGuiStyle scaledStyle = DefaultStyle;
+	scaledStyle.ScaleAllSizes(displayScale);
+	scaledStyle.DisplayWindowPadding = ImVec2(19.f, 19.f);
+
+	// this looks weird 02/01/2024
+	ImGui::GetStyle() = scaledStyle;
 }
 
 void EngineObject::SetIsFullscreen(bool Fullscreen)
@@ -103,7 +121,8 @@ void EngineObject::SetIsFullscreen(bool Fullscreen)
 		this->ResizeWindow(WindowSizeXBeforeFullscreen, WindowSizeYBeforeFullscreen);
 	}
 
-	SDL_SetWindowFullscreen(this->Window, this->IsFullscreen ? SDL_WINDOW_FULLSCREEN : m_SDLWindowFlags);
+	if (!SDL_SetWindowFullscreen(this->Window, this->IsFullscreen))
+		throw("`SDL_SetWindowFullscreen` failed, error: " + std::string(SDL_GetError()));
 }
 
 void EngineObject::LoadConfiguration()
@@ -156,21 +175,26 @@ void EngineObject::Initialize()
 		nlohmann::json::array({ 1280, 720 })
 	);
 
-	this->WindowSizeX = defaultWindowSize[0], this->WindowSizeY = defaultWindowSize[1];
-
 	PHX_SDL_CALL(SDL_Init, SDL_INIT_VIDEO);
+
+	float displayScale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
+	if (displayScale == 0.f)
+		throw("Invalid `SDL_GetWindowDisplayScale` result, error: " + std::string(SDL_GetError()));
+
+	this->WindowSizeX = static_cast<int>(defaultWindowSize[0] * displayScale);
+	this->WindowSizeY = static_cast<int>(defaultWindowSize[1] * displayScale);
 
 	// This is easily the worst complaint I've had about this library,
 	// the log function *does not called even when an error retrievable by SDL_GetError occurs*!
 	// It's complete RUBBISH, USELESS, TRASH, BULLSHIT
 	// 09/09/2024
-	SDL_LogSetOutputFunction(sdlLog, nullptr);
+	SDL_SetLogOutputFunction(sdlLog, nullptr);
 
 	nlohmann::json::array_t requestedGLVersion = EngineJsonConfig.value("OpenGLVersion", nlohmann::json{ 4, 6 });
 	int requestedGLVersionMajor = requestedGLVersion[0];
 	int requestedGLVersionMinor = requestedGLVersion[1];
 
-	const static std::unordered_map<std::string, SDL_GLprofile> StringToGLProfile =
+	const static std::unordered_map<std::string, SDL_GLProfile> StringToGLProfile =
 	{
 		{ "Core", SDL_GL_CONTEXT_PROFILE_CORE },
 		{ "Compatibility", SDL_GL_CONTEXT_PROFILE_COMPATIBILITY },
@@ -180,7 +204,7 @@ void EngineObject::Initialize()
 	std::string requestedProfileString = EngineJsonConfig.value("OpenGLProfile", "Core");
 
 	auto requestedProfileIt = StringToGLProfile.find(requestedProfileString);
-	SDL_GLprofile requestedProfile = SDL_GL_CONTEXT_PROFILE_CORE;
+	SDL_GLProfile requestedProfile = SDL_GL_CONTEXT_PROFILE_CORE;
 
 	if (requestedProfileIt == StringToGLProfile.end())
 		Log::Warning(std::vformat(
@@ -218,7 +242,6 @@ void EngineObject::Initialize()
 
 	this->Window = SDL_CreateWindow(
 		EngineJsonConfig.value("GameTitle", "PhoenixEngine").c_str(),
-		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		this->WindowSizeX, this->WindowSizeY,
 		m_SDLWindowFlags
 	);
@@ -586,35 +609,27 @@ void EngineObject::Start()
 		{
 			PROFILE_SCOPE("PollEvents");
 
-			ImGui_ImplSDL2_ProcessEvent(&pollingEvent);
+			ImGui_ImplSDL3_ProcessEvent(&pollingEvent);
 
 			switch (pollingEvent.type)
 			{
 
-			case (SDL_QUIT):
+			case (SDL_EVENT_QUIT):
 			{
 				this->Exit = true;
 				break;
 			}
 
-			case (SDL_WINDOWEVENT):
+			case (SDL_EVENT_WINDOW_RESIZED):
 			{
-				switch (pollingEvent.window.event)
-				{
+				int NewSizeX = pollingEvent.window.data1;
+				int NewSizeY = pollingEvent.window.data2;
 
-				case (SDL_WINDOWEVENT_RESIZED):
-				{
-					int NewSizeX = pollingEvent.window.data1;
-					int NewSizeY = pollingEvent.window.data2;
+				// Only call ChangeResolution if the new resolution is actually different
+				if (NewSizeX != this->WindowSizeX || NewSizeY != this->WindowSizeY)
+					this->OnWindowResized(NewSizeX, NewSizeY);
 
-					// Only call ChangeResolution if the new resolution is actually different
-					if (NewSizeX != this->WindowSizeX || NewSizeY != this->WindowSizeY)
-						this->OnWindowResized(NewSizeX, NewSizeY);
-
-					break;
-				}
-
-				}
+				break;
 			}
 
 			}
@@ -625,7 +640,7 @@ void EngineObject::Start()
 		{
 			PROFILE_SCOPE("DearImGuiNewFrame");
 			ImGui_ImplOpenGL3_NewFrame();
-			ImGui_ImplSDL2_NewFrame();
+			ImGui_ImplSDL3_NewFrame();
 			ImGui::NewFrame();
 		}
 		float aspectRatio = (float)this->WindowSizeX / (float)this->WindowSizeY;

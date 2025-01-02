@@ -2,6 +2,8 @@
 
 #pragma once
 
+#if 0
+
 #include <string>
 #include <vector>
 #include <imgui/imgui.h>
@@ -52,3 +54,4 @@ private:
 	ImGuiIO* GuiIO;
 };
 
+#endif
