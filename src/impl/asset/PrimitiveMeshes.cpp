@@ -77,7 +77,7 @@ Mesh PrimitiveMeshes::Cube()
 		22, 21, 20
 	};
 
-	return Mesh{ vertices, indices, UINT32_MAX, true };
+	return Mesh{ vertices, indices, {}, UINT32_MAX, true };
 }
 
 Mesh PrimitiveMeshes::Quad()
@@ -96,5 +96,5 @@ Mesh PrimitiveMeshes::Quad()
 		3, 0, 2
 	};
 
-	return Mesh{ vertices, indices, UINT32_MAX, true };
+	return Mesh{ vertices, indices, {}, UINT32_MAX, true };
 }

@@ -6,6 +6,7 @@
 #include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
 #include "asset/MeshProvider.hpp"
+#include "gameobject/Attachment.hpp"
 #include "GlobalJsonConfig.hpp"
 #include "Utilities.hpp"
 #include "FileRW.hpp"
@@ -198,6 +199,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		m_Nodes.emplace_back(
 			AssetPath,
 			UINT32_MAX,
+			UINT32_MAX,
 			ModelNode::NodeType::Container
 		);
 
@@ -219,7 +221,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 
 	LoadedObjs.reserve(m_Nodes.size() + 1);
 
-	for (const ModelLoader::ModelNode& node : m_Nodes)
+	for (ModelLoader::ModelNode& node : m_Nodes)
 	{
 		GameObject* object{};
 
@@ -227,7 +229,12 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 			object = GameObject::Create("Model");
 
 		else if (node.Type == ModelNode::NodeType::Bone)
+		{
 			object = GameObject::Create("Attachment");
+
+			Object_Attachment* att = static_cast<Object_Attachment*>(object);
+			att->LocalTransform = node.Transform;
+		}
 
 		else
 		{
@@ -251,6 +258,22 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 				+ "/"
 				+ node.Name
 				+ ".hxmesh";
+
+			for (uint32_t boneNodeIdx : node.Bones)
+			{
+				const ModelNode& boneNode = m_Nodes[boneNodeIdx];
+				uint8_t actualId = static_cast<uint8_t>(node.Data.Bones.size());
+
+				node.Data.Bones.emplace_back(
+					boneNode.Transform,
+					boneNode.Scale
+				);
+
+				for (Vertex& v : node.Data.Vertices)
+					for (uint8_t& b : v.InfluencingJoints)
+						if (b == boneNode.NodeId)
+							b = actualId;
+			}
 
 			meshProvider->Save(node.Data, meshPath);
 
@@ -360,29 +383,35 @@ ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(
 )
 {
 	const nlohmann::json& primitive = MeshData["primitives"][PrimitiveIndex];
+	const nlohmann::json& attributes = primitive["attributes"];
+	const nlohmann::json& accessors = m_JsonData["accessors"];
 
 	// Get all accessor indices
-	uint32_t posAccInd = primitive["attributes"]["POSITION"];
-	uint32_t normalAccInd = primitive["attributes"]["NORMAL"];
-	uint32_t texAccInd = primitive["attributes"]["TEXCOORD_0"];
+	uint32_t posAccInd = attributes["POSITION"];
+	uint32_t normalAccInd = attributes["NORMAL"];
+	uint32_t texAccInd = attributes["TEXCOORD_0"];
 	uint32_t indAccInd = primitive["indices"];
 
-	auto colAccIt = primitive["attributes"].find("COLOR_0");
-	nlohmann::json colAcc = {};
+	auto colAccIt = attributes.find("COLOR_0");
+	auto jointsAccIt = attributes.find("JOINTS_0");
+	auto weightsAccIt = attributes.find("WEIGHTS_0");
 
 	// Use accessor indices to get all vertices components
-	std::vector<float> posVec = m_GetFloats(m_JsonData["accessors"][posAccInd]);
-	std::vector<float> normalVec = m_GetFloats(m_JsonData["accessors"][normalAccInd]);
-	std::vector<float> texVec = m_GetFloats(m_JsonData["accessors"][texAccInd]);
+	std::vector<float> posVec = m_GetFloats(accessors[posAccInd]);
+	std::vector<float> normalVec = m_GetFloats(accessors[normalAccInd]);
+	std::vector<float> texVec = m_GetFloats(accessors[texAccInd]);
 	
 	std::vector<glm::vec3> positions = m_GroupFloatsVec3(posVec);
 	std::vector<glm::vec3> normals = m_GroupFloatsVec3(normalVec);
 	std::vector<glm::vec2> texUVs = m_GroupFloatsVec2(texVec);
-	std::vector<glm::vec4> cols{};
 
-	if (colAccIt != primitive["attributes"].end())
+	std::vector<glm::vec4> cols{};
+	std::vector<glm::tvec4<uint8_t>> joints{};
+	std::vector<glm::vec4> weights{};
+
+	if (colAccIt != attributes.end())
 	{
-		colAcc = colAccIt.value();
+		const nlohmann::json& colAcc = colAccIt.value();
 		std::vector<float> colVec = m_GetFloats(colAcc);
 
 		if (colAcc["type"] == "VEC3")
@@ -400,6 +429,18 @@ ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(
 	else
 		for (size_t i = 0; i < positions.size(); i++)
 			cols.emplace_back(1.f, 1.f, 1.f, 1.f);
+
+	if (jointsAccIt != attributes.end() && weightsAccIt != attributes.end())
+	{
+		uint32_t jointsAcc = jointsAccIt.value();
+		uint32_t weightsAcc = weightsAccIt.value();
+
+		std::vector<uint8_t> jointsVec = m_GetUBytes(accessors[jointsAcc]);
+		std::vector<float> weightsVec = m_GetFloats(accessors[weightsAcc]);
+
+		joints = m_GroupUBytesVec4(jointsVec);
+		weights = m_GroupFloatsVec4(weightsVec);
+	}
 
 	// resize the mesh to 1x1x1 and center it after
 	glm::vec3 extMax{};
@@ -436,7 +477,7 @@ ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(
 		positions[index] -= center;
 
 	// Combine all the vertex components and also get the indices and textures
-	std::vector<Vertex> vertices = m_AssembleVertices(positions, normals, texUVs, cols);
+	std::vector<Vertex> vertices = m_AssembleVertices(positions, normals, texUVs, cols, joints, weights);
 	std::vector<uint32_t> indices = m_GetIndices(m_JsonData["accessors"][indAccInd]);
 	
 	return
@@ -446,6 +487,7 @@ ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(
 			"name",
 			"_UNNAMED-" + std::to_string(PrimitiveIndex) + "_"
 		) + (PrimitiveIndex > 0 ? std::to_string(PrimitiveIndex + 1) : ""),
+		UINT32_MAX,
 		0u,
 		ModelNode::NodeType::Primitive,
 
@@ -553,6 +595,7 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From, const glm::m
 		for (uint32_t i = 0; i < meshData["primitives"].size(); i++)
 		{
 			ModelNode node = m_LoadPrimitive(meshData, i, thisNodeTransform, scale);
+			node.NodeId = NodeIndex;
 			node.Parent = From;
 
 			m_Nodes.push_back(node);
@@ -564,6 +607,7 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From, const glm::m
 
 		m_Nodes.emplace_back(
 			nodeJson.value("name", "_UNNAMED_CONTAINER-" + std::to_string(NodeIndex) + "_"),
+			NodeIndex,
 			From,
 			ModelNode::NodeType::Container
 		);
@@ -589,6 +633,17 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From, const glm::m
 
 void ModelLoader::m_BuildRig()
 {
+	for (ModelNode& node : m_Nodes)
+	{
+		uint32_t parentId = node.Parent;
+		if (parentId == 0 || parentId == UINT32_MAX)
+			continue;
+
+		//ModelNode& parent = m_Nodes[parentId];
+
+
+	}
+
 	for (const nlohmann::json& animationJson : m_JsonData.value("animations", nlohmann::json::array()))
 	{
 		Object_Animation* anim = static_cast<Object_Animation*>(GameObject::Create("Animation"));
@@ -596,8 +651,24 @@ void ModelLoader::m_BuildRig()
 
 		for (const nlohmann::json& channelJson : animationJson["channels"])
 		{
-			ModelNode& target = m_Nodes[m_NodeIdToIndex[channelJson["target"]["node"]]];
+			uint32_t targetId = m_NodeIdToIndex[channelJson["target"]["node"]];
+			ModelNode& target = m_Nodes[targetId];
+
 			target.Type = ModelNode::NodeType::Bone;
+
+			uint32_t meshId = target.Parent;
+
+			while (meshId != 0 && meshId != UINT32_MAX)
+			{
+				ModelNode& meshMaybe = m_Nodes[meshId];
+				if (meshMaybe.Type == ModelNode::NodeType::Primitive)
+				{
+					meshMaybe.Bones.push_back(targetId);
+					break;
+				}
+				else
+					meshId = meshMaybe.Parent;
+			}
 		}
 
 		m_Animations.push_back(anim);
@@ -715,6 +786,46 @@ std::vector<uint32_t> ModelLoader::m_GetIndices(const nlohmann::json& accessor)
 		Log::Warning("Unrecognized mesh index type: " + std::to_string(componentType));
 
 	return indices;
+}
+
+std::vector<uint8_t> ModelLoader::m_GetUBytes(const nlohmann::json& accessor)
+{
+	std::vector<uint8_t> ubytesVec;
+
+	// Get properties from the accessor
+	uint32_t buffViewInd = accessor.value("bufferView", 1);
+	uint32_t count = accessor["count"];
+	uint32_t accByteOffset = accessor.value("byteOffset", 0);
+	std::string type = accessor["type"];
+
+	// Get properties from the bufferView
+	const nlohmann::json& bufferView = m_JsonData["bufferViews"][buffViewInd];
+	uint32_t byteOffset = bufferView["byteOffset"];
+
+	// Interpret the type and store it into numPerVert
+	uint32_t numPerVert;
+	if (type == "SCALAR")
+		numPerVert = 1;
+
+	else if (type == "VEC2")
+		numPerVert = 2;
+
+	else if (type == "VEC3")
+		numPerVert = 3;
+
+	else if (type == "VEC4")
+		numPerVert = 4;
+
+	else
+		throw("Could not decode GLTF model: Type is not handled (not SCALAR, VEC2, VEC3, or VEC4)");
+
+	// Go over all the bytes in the data at the correct place using the properties from above
+	uint32_t beginningOfData = byteOffset + accByteOffset;
+	uint32_t lengthOfData = count * 4 * numPerVert;
+	for (uint32_t i = beginningOfData; i < beginningOfData + lengthOfData; i)
+		ubytesVec.push_back(*(uint8_t*)&m_Data[i++]);
+
+	return ubytesVec;
 }
 
 ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primitive)
@@ -867,24 +978,39 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 
 std::vector<Vertex> ModelLoader::m_AssembleVertices
 (
-	const std::vector<glm::vec3>& positions,
-	const std::vector<glm::vec3>& normals,
-	const std::vector<glm::vec2>& texUVs,
-	const std::vector<glm::vec4>& colors
+	const std::vector<glm::vec3>& Positions,
+	const std::vector<glm::vec3>& Normals,
+	const std::vector<glm::vec2>& TexUVs,
+	const std::vector<glm::vec4>& Colors,
+	const std::vector<glm::tvec4<uint8_t>>& Joints,
+	const std::vector<glm::vec4>& Weights
 )
 {
 	std::vector<Vertex> vertices;
-	vertices.reserve(positions.size());
+	vertices.reserve(Positions.size());
 
-	for (int i = 0; i < positions.size(); i++)
-	{
-		vertices.emplace_back(
-			positions[i],
-			normals[i],
-			colors[i],
-			texUVs[i]
-		);
-	}
+	if (Joints.size() == Positions.size())
+		for (int i = 0; i < Positions.size(); i++)
+			vertices.emplace_back(
+				Positions[i],
+				Normals[i],
+				Colors[i],
+				TexUVs[i],
+				std::array<uint8_t, 4>{ Joints[i].x, Joints[i].y, Joints[i].z, Joints[i].w },
+				std::array<float, 4>{ Weights[i].x, Weights[i].y, Weights[i].z, Weights[i].w }
+			);
+
+	else
+		for (int i = 0; i < Positions.size(); i++)
+			vertices.emplace_back(
+				Positions[i],
+				Normals[i],
+				Colors[i],
+				TexUVs[i],
+				std::array<uint8_t, 4>{ UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX },
+				std::array<float, 4>{ FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX }
+			);
+
 	return vertices;
 }
 
@@ -927,6 +1053,21 @@ std::vector<glm::vec4> ModelLoader::m_GroupFloatsVec4(const std::vector<float>& 
 			floatVec[i+2ull],
 			floatVec[i+1ull],
 			floatVec[i+0ull]
+		);
+
+	return vectors;
+}
+std::vector<glm::tvec4<uint8_t>> ModelLoader::m_GroupUBytesVec4(const std::vector<uint8_t>& Bytes)
+{
+	std::vector<glm::tvec4<uint8_t>> vectors;
+	vectors.reserve(static_cast<size_t>(Bytes.size() / 4));
+
+	for (int i = 0; i < Bytes.size(); i += 4)
+		vectors.emplace_back(
+			Bytes[i + 3ull],
+			Bytes[i + 2ull],
+			Bytes[i + 1ull],
+			Bytes[i + 0ull]
 		);
 
 	return vectors;

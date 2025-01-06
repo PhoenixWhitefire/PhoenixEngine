@@ -38,7 +38,9 @@ private:
 	struct ModelNode
 	{
 		std::string Name;
+		uint32_t NodeId{ UINT32_MAX };
 		uint32_t Parent;
+
 		enum class NodeType : uint8_t
 		{
 			Primitive,
@@ -50,6 +52,7 @@ private:
 		MeshMaterial Material;
 		glm::mat4 Transform;
 		glm::vec3 Scale{ 1.f, 1.f, 1.f };
+		std::vector<uint32_t> Bones;
 	};
 
 	ModelLoader() = delete;
@@ -69,18 +72,22 @@ private:
 
 	std::vector<float> m_GetFloats(const nlohmann::json& Accessor);
 	std::vector<uint32_t> m_GetIndices(const nlohmann::json& Accessor);
+	std::vector<uint8_t> m_GetUBytes(const nlohmann::json& Accessor);
 	MeshMaterial m_GetMaterial(const nlohmann::json&);
 
 	std::vector<Vertex> m_AssembleVertices(
 		const std::vector<glm::vec3>& Positions,
 		const std::vector<glm::vec3>& Normals,
 		const std::vector<glm::vec2>& TextureUVs,
-		const std::vector<glm::vec4>& Colors
+		const std::vector<glm::vec4>& Colors,
+		const std::vector<glm::tvec4<uint8_t>>& Joints,
+		const std::vector<glm::vec4>& Weights
 	);
 
 	std::vector<glm::vec2> m_GroupFloatsVec2(const std::vector<float>& Floats);
 	std::vector<glm::vec3> m_GroupFloatsVec3(const std::vector<float>& Floats);
 	std::vector<glm::vec4> m_GroupFloatsVec4(const std::vector<float>& Floats);
+	std::vector<glm::tvec4<uint8_t>> m_GroupUBytesVec4(const std::vector<uint8_t>& UBytes);
 
 	std::string m_File;
 	nlohmann::json m_JsonData;

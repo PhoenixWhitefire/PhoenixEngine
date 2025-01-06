@@ -12,14 +12,17 @@
 
 #define MESHPROVIDER_ERROR(err) { s_ErrorString = err; *SuccessPtr = false; return {}; }
 
+// is this even correct??
+constexpr uint32_t BoneChId = ('B' << 24) | ('O' << 16) | ('N' << 8) | 'E';
+
 static std::string s_ErrorString = "No error";
 
-static uint32_t readU32(const std::vector<int8_t>& vec, size_t offset, bool* fileTooSmallPtr)
+static uint32_t readU32(const std::string& vec, size_t offset, bool* fileTooSmallPtr)
 {
 	if (*fileTooSmallPtr || vec.size() - 1 < offset + 3)
 	{
 		*fileTooSmallPtr = true;
-		return 0;
+		return UINT32_MAX;
 	}
 
 	uint32_t u32{};
@@ -28,27 +31,20 @@ static uint32_t readU32(const std::vector<int8_t>& vec, size_t offset, bool* fil
 	return u32;
 }
 
-static uint32_t readU32(const std::vector<int8_t>& vec, size_t* offset, bool* fileTooSmallPtr)
+static uint32_t readU32(const std::string& vec, size_t* offset, bool* fileTooSmallPtr)
 {
-	if (*fileTooSmallPtr || vec.size() - 1 < *offset + 4)
-	{
-		*fileTooSmallPtr = true;
-		return 0;
-	}
-
-	uint32_t u32{};
-	std::memcpy(&u32, &vec.at(*offset), 4);
+	uint32_t u32 = readU32(vec, *offset, fileTooSmallPtr);
 	*offset += 4ull;
 
 	return u32;
 }
 
-static float readF32(const std::vector<int8_t>& vec, size_t* offset, bool* fileTooSmallPtr)
+static float readF32(const std::string& vec, size_t* offset, bool* fileTooSmallPtr)
 {
 	if (*fileTooSmallPtr || vec.size() - 1 < *offset + 4)
 	{
 		*fileTooSmallPtr = true;
-		return 0.f;
+		return FLT_MAX;
 	}
 
 	float f32{};
@@ -56,6 +52,20 @@ static float readF32(const std::vector<int8_t>& vec, size_t* offset, bool* fileT
 	*offset += 4ull;
 
 	return f32;
+}
+
+static uint8_t readU8(const std::string& str, size_t* offset, bool* fileTooSmallPtr)
+{
+	if (*fileTooSmallPtr || str.size() - 1 < *offset + 1)
+	{
+		*fileTooSmallPtr = true;
+		return UINT8_MAX;
+	}
+
+	uint8_t u8 = *(uint8_t*)&str.at(*offset);
+	(*offset)++;
+
+	return u8;
 }
 
 static void writeU32(std::string& vec, uint32_t v)
@@ -109,7 +119,9 @@ static Mesh loadMeshVersion1(const std::string& FileContents, bool* SuccessPtr)
 			glm::vec3(vertexDesc[0], vertexDesc[1], vertexDesc[2]),
 			glm::vec3(vertexDesc[3], vertexDesc[4], vertexDesc[5]),
 			glm::vec4(vertexDesc[6], vertexDesc[7], vertexDesc[8], 1.f),
-			glm::vec2(vertexDesc[9], vertexDesc[10])
+			glm::vec2(vertexDesc[9], vertexDesc[10]),
+			std::array<uint8_t, 4>{ UINT8_MAX, UINT8_MAX, UINT8_MAX },
+			std::array<float, 4>{ FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX }
 		);
 
 		vertexIndex += 1;
@@ -130,17 +142,16 @@ static Mesh loadMeshVersion2(const std::string& FileContents, bool* SuccessPtr)
 
 	std::string binaryContents = FileContents.substr(binaryStartLoc + 1);
 
-	std::vector<int8_t> data( binaryContents.begin(), binaryContents.end() );
-
-	if (data.size() < 12)
+	if (binaryContents.size() < 12)
 		MESHPROVIDER_ERROR("File cannot contain header as binary data is smaller than 12 bytes");
 
 	size_t headerPtr{};
 	bool fileTooSmallError = false;
 
-	uint32_t vertexMeta = readU32(data, &headerPtr, &fileTooSmallError);
-	uint32_t numVerts = readU32(data, &headerPtr, &fileTooSmallError);
-	uint32_t numIndices = readU32(data, &headerPtr, &fileTooSmallError);
+	// vertex metadata
+	uint32_t vertexMeta = readU32(binaryContents, &headerPtr, &fileTooSmallError);
+	uint32_t numVerts = readU32(binaryContents, &headerPtr, &fileTooSmallError);
+	uint32_t numIndices = readU32(binaryContents, &headerPtr, &fileTooSmallError);
 
 	if (fileTooSmallError)
 		MESHPROVIDER_ERROR("This should have been caught earlier, but header was smaller than 12 bytes");
@@ -148,6 +159,7 @@ static Mesh loadMeshVersion2(const std::string& FileContents, bool* SuccessPtr)
 	bool hasVertexOpacity = vertexMeta & 0b00000001;
 	bool hasVertexColor   = vertexMeta & 0b00000010;
 	bool hasVertexNormal  = vertexMeta & 0b00000100;
+	bool isRigged         = vertexMeta & 0b00001000;
 
 	glm::vec3 uniformVertexNormal{};
 	glm::vec4 uniformVertexRGBA{ 1.f, 1.f, 1.f, 1.f };
@@ -155,32 +167,36 @@ static Mesh loadMeshVersion2(const std::string& FileContents, bool* SuccessPtr)
 	if (!hasVertexNormal)
 		uniformVertexNormal = glm::vec3
 		{
-			readF32(data, &headerPtr, &fileTooSmallError),
-			readF32(data, &headerPtr, &fileTooSmallError),
-			readF32(data, &headerPtr, &fileTooSmallError)
+			readF32(binaryContents, &headerPtr, &fileTooSmallError),
+			readF32(binaryContents, &headerPtr, &fileTooSmallError),
+			readF32(binaryContents, &headerPtr, &fileTooSmallError)
 		};
 
 	if (!hasVertexColor)
 		uniformVertexRGBA = glm::vec4
 		{
-			readF32(data, &headerPtr, &fileTooSmallError),
-			readF32(data, &headerPtr, &fileTooSmallError),
-			readF32(data, &headerPtr, &fileTooSmallError),
+			readF32(binaryContents, &headerPtr, &fileTooSmallError),
+			readF32(binaryContents, &headerPtr, &fileTooSmallError),
+			readF32(binaryContents, &headerPtr, &fileTooSmallError),
 			1.f
 		};
 
 	if (!hasVertexOpacity)
-		uniformVertexRGBA.w = readF32(data, &headerPtr, &fileTooSmallError);
+		uniformVertexRGBA.w = readF32(binaryContents, &headerPtr, &fileTooSmallError);
 
 	if (fileTooSmallError)
 		MESHPROVIDER_ERROR("File ended during preamble");
 
-	// Px, Py, Pz, (Nx, Ny, Nz), (R, G, B), (A), Tu, Tv
-	size_t floatsPerVertex = 3ull + (hasVertexNormal ? 3 : 0) + (hasVertexColor ? 3 : 0) + (hasVertexOpacity ? 1 : 0) + 2;
-	size_t bytesPerVertex = floatsPerVertex * 4ull;
+	// Px, Py, Pz, (Nx, Ny, Nz), (R, G, B), (A), Tu, Tv, (Bu8, Wf32)
+	size_t bytesPerVertex = 12ull
+		+ (hasVertexNormal ? 12 : 0)
+		+ (hasVertexColor ? 12 : 0)
+		+ (hasVertexOpacity ? 4 : 0)
+		+ 8
+		+ (isRigged ? 5 : 0);
 
 	size_t totalExpectedDataSize = bytesPerVertex * numVerts + numIndices * 4ull;
-	size_t actualDataSize = data.size() - headerPtr;
+	size_t actualDataSize = binaryContents.size() - headerPtr;
 
 	if (actualDataSize < totalExpectedDataSize)
 		MESHPROVIDER_ERROR(std::vformat(
@@ -192,36 +208,120 @@ static Mesh loadMeshVersion2(const std::string& FileContents, bool* SuccessPtr)
 	mesh.Vertices.reserve(numVerts);
 	mesh.Indices.reserve(numIndices);
 
+	size_t cursor = headerPtr;
+
 	for (uint32_t vertexIndex = 0; vertexIndex < numVerts; vertexIndex++)
 	{
-		size_t vertBytePtr = vertexIndex * bytesPerVertex + headerPtr;
+		float px = readF32(binaryContents, &cursor, &fileTooSmallError);
+		float py = readF32(binaryContents, &cursor, &fileTooSmallError);
+		float pz = readF32(binaryContents, &cursor, &fileTooSmallError);
 
-		float px = readF32(data, &vertBytePtr, &fileTooSmallError);
-		float py = readF32(data, &vertBytePtr, &fileTooSmallError);
-		float pz = readF32(data, &vertBytePtr, &fileTooSmallError);
+		float nx = hasVertexNormal ? readF32(binaryContents, &cursor, &fileTooSmallError) : uniformVertexNormal.x;
+		float ny = hasVertexNormal ? readF32(binaryContents, &cursor, &fileTooSmallError) : uniformVertexNormal.y;
+		float nz = hasVertexNormal ? readF32(binaryContents, &cursor, &fileTooSmallError) : uniformVertexNormal.z;
 
-		float nx = hasVertexNormal ? readF32(data, &vertBytePtr, &fileTooSmallError) : uniformVertexNormal.x;
-		float ny = hasVertexNormal ? readF32(data, &vertBytePtr, &fileTooSmallError) : uniformVertexNormal.y;
-		float nz = hasVertexNormal ? readF32(data, &vertBytePtr, &fileTooSmallError) : uniformVertexNormal.z;
+		float r = hasVertexColor ? readF32(binaryContents, &cursor, &fileTooSmallError) : uniformVertexRGBA.x;
+		float g = hasVertexColor ? readF32(binaryContents, &cursor, &fileTooSmallError) : uniformVertexRGBA.y;
+		float b = hasVertexColor ? readF32(binaryContents, &cursor, &fileTooSmallError) : uniformVertexRGBA.z;
+		float a = hasVertexOpacity ? readF32(binaryContents, &cursor, &fileTooSmallError) : uniformVertexRGBA.w;
 
-		float r = hasVertexColor ? readF32(data, &vertBytePtr, &fileTooSmallError) : uniformVertexRGBA.x;
-		float g = hasVertexColor ? readF32(data, &vertBytePtr, &fileTooSmallError) : uniformVertexRGBA.y;
-		float b = hasVertexColor ? readF32(data, &vertBytePtr, &fileTooSmallError) : uniformVertexRGBA.z;
-		float a = hasVertexOpacity ? readF32(data, &vertBytePtr, &fileTooSmallError) : uniformVertexRGBA.w;
+		float u = readF32(binaryContents, &cursor, &fileTooSmallError);
+		float v = readF32(binaryContents, &cursor, &fileTooSmallError);
 
-		float u = readF32(data, &vertBytePtr, &fileTooSmallError);
-		float v = readF32(data, &vertBytePtr, &fileTooSmallError);
+		std::array<uint8_t, 4> bones{ UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX };
+		std::array<float, 4> weights{ FLT_MAX, FLT_MAX, FLT_MAX };
+
+		if (isRigged)
+		{
+			uint8_t numJoints = readU8(binaryContents, &cursor, &fileTooSmallError);
+
+			if (numJoints > 4)
+			{
+				Log::Warning(std::vformat(
+					"Vertex #{} specified {} joints, but only up to 4 are supported, clamping.",
+					std::make_format_args(vertexIndex, numJoints)
+				));
+
+				numJoints = 4;
+			}
+
+			
+
+			for (uint8_t i = 0; i < numJoints; i++)
+			{
+				uint8_t boneId = readU8(binaryContents, &cursor, &fileTooSmallError);
+				float boneWeight = readF32(binaryContents, &cursor, &fileTooSmallError);
+
+				bones[i] = boneId;
+				weights[i] = boneWeight;
+			}
+		}
 
 		mesh.Vertices.emplace_back(
 			glm::vec3{ px, py, pz },
 			glm::vec3{ nx, ny, nz },
 			glm::vec4{ r, g, b, a },
-			glm::vec2{ u, v }
+			glm::vec2{ u, v },
+			bones,
+			weights
 		);
 	}
 
 	for (uint32_t indexIndex = 0; indexIndex < numIndices; indexIndex++)
-		mesh.Indices.push_back(readU32(data, numVerts * bytesPerVertex + (indexIndex * 4ull) + headerPtr, &fileTooSmallError));
+		mesh.Indices.push_back(readU32(binaryContents, &cursor, &fileTooSmallError));
+
+	if (isRigged)
+	{
+		uint32_t chId = readU32(binaryContents, &cursor, &fileTooSmallError);
+
+		if (chId != BoneChId)
+			Log::Error(std::vformat(
+				"Invalid BONE chunk, expected ID {}, got {}. Skipping",
+				std::make_format_args(BoneChId, chId)
+			));
+		else
+		{
+			uint8_t numBones = readU8(binaryContents, &cursor, &fileTooSmallError);
+
+			if (numBones == 0)
+				Log::Warning("Mesh had a BONE chunk and the IsRigged bit, but bone count is 0");
+
+			for (uint8_t boneIdx = 0; boneIdx < numBones; boneIdx++)
+			{
+				glm::mat4 trans =
+				{
+					readF32(binaryContents, &cursor, &fileTooSmallError),
+					readF32(binaryContents, &cursor, &fileTooSmallError),
+					readF32(binaryContents, &cursor, &fileTooSmallError),
+					readF32(binaryContents, &cursor, &fileTooSmallError),
+
+					readF32(binaryContents, &cursor, &fileTooSmallError),
+					readF32(binaryContents, &cursor, &fileTooSmallError),
+					readF32(binaryContents, &cursor, &fileTooSmallError),
+					readF32(binaryContents, &cursor, &fileTooSmallError),
+
+					readF32(binaryContents, &cursor, &fileTooSmallError),
+					readF32(binaryContents, &cursor, &fileTooSmallError),
+					readF32(binaryContents, &cursor, &fileTooSmallError),
+					readF32(binaryContents, &cursor, &fileTooSmallError),
+
+					readF32(binaryContents, &cursor, &fileTooSmallError),
+					readF32(binaryContents, &cursor, &fileTooSmallError),
+					readF32(binaryContents, &cursor, &fileTooSmallError),
+					readF32(binaryContents, &cursor, &fileTooSmallError)
+				};
+
+				glm::vec3 scale =
+				{
+					readF32(binaryContents, &cursor, &fileTooSmallError),
+					readF32(binaryContents, &cursor, &fileTooSmallError),
+					readF32(binaryContents, &cursor, &fileTooSmallError)
+				};
+
+				mesh.Bones.emplace_back(trans, scale);
+			}
+		}
+	}
 
 	if (fileTooSmallError)
 	{
@@ -237,6 +337,8 @@ MeshProvider::MeshProvider()
 {
 	m_CreateAndUploadGpuMesh(this->Assign(PrimitiveMeshes::Cube(), "!Cube"));
 	m_CreateAndUploadGpuMesh(this->Assign(PrimitiveMeshes::Quad(), "!Quad"));
+
+	std::cout << BoneChId << std::endl;
 }
 
 MeshProvider::~MeshProvider()
@@ -295,6 +397,8 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 
 	bool hasPerVertexColor = false;
 	bool hasPerVertexAlpha = false;
+	bool isRigged = !mesh.Bones.empty();
+
 	glm::vec3 uniformVertexCol = glm::vec3(mesh.Vertices.at(0).Paint);
 	float uniformVertexAlpha = mesh.Vertices.at(0).Paint.w;
 
@@ -321,7 +425,20 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 	contents.reserve(16ull + mesh.Vertices.size() * (floatsPerVertex * 4ull) + mesh.Indices.size() * 4ull + contents.size());
 
 	// per-vertex normal, color and opacity flags
-	writeU32(contents, 0b00000100 + (hasPerVertexAlpha ? 0b00000001 : 0) + (hasPerVertexColor ? 0b00000010 : 0));
+	// 02/01/2024: Rigged flag added
+	// ... also forgot to implement the Normal flag
+	// not going to make a difference unless you have a
+	// flat quad anyway
+	writeU32(
+		contents,
+		0b00000100
+			+ (hasPerVertexAlpha ? 0b00000001 : 0)
+			+ (hasPerVertexColor ? 0b00000010 : 0)
+			// ruh roh, just realized, the deserialization code
+			// already checks the 3rd LSB as per-vertex normal
+			// idrc abt actually serializing it tho
+			+ (isRigged          ? 0b00001000 : 0)
+	);
 	writeU32(contents, static_cast<uint32_t>(mesh.Vertices.size()));
 	writeU32(contents, static_cast<uint32_t>(mesh.Indices.size()));
 
@@ -357,10 +474,68 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 
 		writeF32(contents, v.TextureUV.x);
 		writeF32(contents, v.TextureUV.y);
+
+		if (isRigged)
+		{
+			// number of bone slots specified
+			// max 4 rn 02/01/2024
+			// invalid bones (UINT8_MAX i.e. 255) are still specified
+			// to reduce serialization/deserialization complexity
+			contents.push_back(4);
+
+			// bone id, then weight
+			// felt easier
+			contents.push_back(*(int8_t*)&v.InfluencingJoints[0]);
+			writeF32(contents, v.JointWeights[0]);
+
+			contents.push_back(*(int8_t*)&v.InfluencingJoints[1]);
+			writeF32(contents, v.JointWeights[1]);
+
+			contents.push_back(*(int8_t*)&v.InfluencingJoints[2]);
+			writeF32(contents, v.JointWeights[2]);
+
+			contents.push_back(*(int8_t*)&v.InfluencingJoints[3]);
+			writeF32(contents, v.JointWeights[3]);
+		}
 	}
 
 	for (uint32_t i : mesh.Indices)
 		writeU32(contents, i);
+
+	// why'd i do that... idk
+	writeU32(contents, BoneChId);
+
+	uint8_t numBones = static_cast<uint8_t>(mesh.Bones.size());
+	contents.push_back(*(int8_t*)&numBones);
+
+	for (const Bone& b : mesh.Bones)
+	{
+		// 4x4 transform matrix
+		writeF32(contents, b.Transform[0][0]);
+		writeF32(contents, b.Transform[0][1]);
+		writeF32(contents, b.Transform[0][2]);
+		writeF32(contents, b.Transform[0][3]);
+
+		writeF32(contents, b.Transform[1][0]);
+		writeF32(contents, b.Transform[1][1]);
+		writeF32(contents, b.Transform[1][2]);
+		writeF32(contents, b.Transform[1][3]);
+
+		writeF32(contents, b.Transform[2][0]);
+		writeF32(contents, b.Transform[2][1]);
+		writeF32(contents, b.Transform[2][2]);
+		writeF32(contents, b.Transform[2][3]);
+
+		writeF32(contents, b.Transform[3][0]);
+		writeF32(contents, b.Transform[3][1]);
+		writeF32(contents, b.Transform[3][2]);
+		writeF32(contents, b.Transform[3][3]);
+
+		// vec3 scale
+		writeF32(contents, b.Scale.x);
+		writeF32(contents, b.Scale.y);
+		writeF32(contents, b.Scale.z);
+	}
 
 	return contents;
 }

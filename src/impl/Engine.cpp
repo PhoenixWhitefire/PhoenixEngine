@@ -11,7 +11,6 @@
 #include <imgui/backends/imgui_impl_sdl3.h>
 
 #include <SDL3/SDL_video.h>
-#include <SDL3/SDL_timer.h>
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_log.h>
 
@@ -539,9 +538,9 @@ void EngineObject::Start()
 		double fpsCapDelta = 1.f / this->FpsCap;
 
 		// Wait the appropriate amount of time between frames
-		if (!VSync && (frameDelta < fpsCapDelta))
+		if (!VSync && (frameDelta + .005f < fpsCapDelta))
 		{
-			SDL_Delay(static_cast<uint32_t>((fpsCapDelta - frameDelta) * 1000));
+			std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<size_t>((fpsCapDelta - frameDelta) * 1000)));
 			continue;
 		}
 
