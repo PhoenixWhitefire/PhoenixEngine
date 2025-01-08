@@ -143,26 +143,24 @@ void RenderMaterial::ApplyUniforms()
 		this->GetShader().SetUniform(it.first.c_str(), it.second);
 }
 
-MaterialManager::MaterialManager()
+static MaterialManager* s_Instance = nullptr;
+
+MaterialManager::~MaterialManager()
 {
-	this->LoadMaterialFromPath("error");
+	if (s_Instance == this)
+		s_Instance = nullptr;
 }
 
-static bool s_DidShutdown = false;
+void MaterialManager::Initialize()
+{
+	this->LoadMaterialFromPath("error");
+
+	s_Instance = this;
+}
 
 MaterialManager* MaterialManager::Get()
 {
-	if (s_DidShutdown)
-		throw("Tried to ::Get MaterialManager after it was ::Shutdown");
-
-	static MaterialManager inst;
-	return &inst;
-}
-
-void MaterialManager::Shutdown()
-{
-	//delete Get();
-	s_DidShutdown = true;
+	return s_Instance;
 }
 
 uint32_t MaterialManager::LoadMaterialFromPath(const std::string& Name)

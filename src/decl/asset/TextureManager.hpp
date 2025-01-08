@@ -43,8 +43,11 @@ struct Texture
 class TextureManager
 {
 public:
+	~TextureManager();
+
+	void Initialize();
+
 	static TextureManager* Get();
-	static void Shutdown();
 
 	/*
 	Goes through all images which are done loading asynchronously and instantiates their texture objects with the ID.
@@ -74,9 +77,6 @@ public:
 	Texture& GetTextureResource(uint32_t);
 
 private:
-	TextureManager();
-	~TextureManager();
-
 	void m_UploadTextureToGpu(Texture&);
 
 	std::vector<Texture> m_Textures;

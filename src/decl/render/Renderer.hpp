@@ -54,7 +54,7 @@ public:
 		const Mesh& Object,
 		ShaderProgram& Shader,
 		const Vector3& Size,
-		const glm::mat4& Transform = glm::mat4(1.0f),
+		const glm::mat4& Transform = glm::mat4(1.f),
 		FaceCullingMode Culling = FaceCullingMode::BackFace,
 		int32_t NumInstances = 1
 	);

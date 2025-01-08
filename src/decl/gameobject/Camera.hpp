@@ -20,7 +20,7 @@ public:
 	bool UseSimpleController = true;
 	bool IsSceneCamera = false;
 
-	glm::mat4 Transform = glm::mat4(1.0f);
+	glm::mat4 Transform = glm::mat4(1.f);
 	float FieldOfView = 70.f;
 	float NearPlane = 0.1f;
 	float FarPlane = 1000.f;

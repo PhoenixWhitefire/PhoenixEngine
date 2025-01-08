@@ -333,16 +333,21 @@ static Mesh loadMeshVersion2(const std::string& FileContents, bool* SuccessPtr)
 	return mesh;
 }
 
-MeshProvider::MeshProvider()
+static MeshProvider* s_Instance = nullptr;
+
+void MeshProvider::Initialize()
 {
 	m_CreateAndUploadGpuMesh(this->Assign(PrimitiveMeshes::Cube(), "!Cube"));
 	m_CreateAndUploadGpuMesh(this->Assign(PrimitiveMeshes::Quad(), "!Quad"));
 
-	std::cout << BoneChId << std::endl;
+	s_Instance = this;
 }
 
 MeshProvider::~MeshProvider()
 {
+	if (s_Instance == this)
+		s_Instance = nullptr;
+
 	for (size_t promIndex = 0; promIndex < m_MeshPromises.size(); promIndex++)
 	{
 		std::promise<Mesh>* prom = m_MeshPromises[promIndex];
@@ -365,21 +370,9 @@ MeshProvider::~MeshProvider()
 	m_GpuMeshes.clear();
 }
 
-static bool s_DidShutdown = false;
-
 MeshProvider* MeshProvider::Get()
 {
-	if (s_DidShutdown)
-		throw("Tried to ::Get MeshProvider after it was ::Shutdown");
-
-	static MeshProvider inst;
-	return &inst;
-}
-
-void MeshProvider::Shutdown()
-{
-	//delete Get();
-	s_DidShutdown = true;
+	return s_Instance;
 }
 
 std::string MeshProvider::Serialize(const Mesh& mesh)

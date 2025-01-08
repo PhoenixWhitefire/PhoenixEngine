@@ -64,7 +64,7 @@ void Object_Workspace::s_DeclareReflections()
 			if (inputs.size() > 2)
 				length = static_cast<float>(inputs.at(2).AsDouble());
 
-			EngineObject* engine = EngineObject::Get();
+			Engine* engine = Engine::Get();
 			int winSizeX = 0, winSizeY = 0;
 			SDL_GetWindowSize(engine->Window, &winSizeX, &winSizeY);
 

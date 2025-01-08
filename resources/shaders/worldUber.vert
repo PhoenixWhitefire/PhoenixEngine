@@ -52,12 +52,6 @@ void main()
 		pain = vec4(InstanceColor, 1.f) * VertexPaint;
 	}
 	
-	mat4 scaleMatrix;
-	scaleMatrix[0] = vec4(sca.x, 0.f, 0.f, 0.f);
-	scaleMatrix[1] = vec4(0.f, sca.y, 0.f, 0.f);
-	scaleMatrix[2] = vec4(0.f, 0.f, sca.z, 0.f);
-	scaleMatrix[3] = vec4(0.f, 0.f, 0.f, 1.f);
-	
 	data_out.VertexNormal = VertexNormal;
 	data_out.Paint = pain;
 	data_out.TextureUV = VertexUV;
@@ -65,7 +59,7 @@ void main()
 	
 	data_out.ModelPosition = VertexPosition * sca;
 	data_out.WorldPosition = vec3(trans * vec4(data_out.ModelPosition, 1.0f));
-	data_out.Transform = trans * scaleMatrix;
+	data_out.Transform = trans;
 	data_out.RelativeToDirecLight = DirecLightProjection * vec4(data_out.WorldPosition, 1.f);
 	data_out.CameraPosition = CameraPosition;
 	

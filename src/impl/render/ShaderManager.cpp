@@ -203,17 +203,17 @@ void ShaderProgram::Reload()
 		glShaderSource(geometryShader, 1, &geometrySource, NULL);
 		glCompileShader(geometryShader);
 
-		if (m_PrintErrors(geometryShader, "geometry shader"))
+		if (m_CheckForErrors(geometryShader, "geometry shader"))
 			return;
 	}
 
 	glCompileShader(vertexShader);
 	glCompileShader(fragmentShader);
 
-	if (m_PrintErrors(vertexShader, "vertex shader"))
+	if (m_CheckForErrors(vertexShader, "vertex shader"))
 		return;
 
-	if (m_PrintErrors(fragmentShader, "fragment shader"))
+	if (m_CheckForErrors(fragmentShader, "fragment shader"))
 		return;
 
 	glAttachShader(m_GpuId, vertexShader);
@@ -226,7 +226,7 @@ void ShaderProgram::Reload()
 
 	glLinkProgram(m_GpuId);
 
-	if (m_PrintErrors(m_GpuId, "shader program"))
+	if (m_CheckForErrors(m_GpuId, "shader program"))
 		return;
 
 	//free shader code from memory, they've already been compiled so aren't needed anymore
@@ -393,7 +393,7 @@ void ShaderProgram::SetTextureUniform(const std::string& UniformName, uint32_t T
 	m_PendingUniforms[UniformName] = slot;
 }
 
-bool ShaderProgram::m_PrintErrors(uint32_t Object, const char* Type)
+bool ShaderProgram::m_CheckForErrors(uint32_t Object, const char* Type)
 {
 	char infoLog[2048];
 
@@ -412,6 +412,9 @@ bool ShaderProgram::m_PrintErrors(uint32_t Object, const char* Type)
 			);
 
 			Log::Error(errorString);
+
+			if (this->Name == "error")
+				throw("Failed to compile the required `error` Shader Pipeline");
 
 			ShaderManager* shdManager = ShaderManager::Get();
 
@@ -435,6 +438,9 @@ bool ShaderProgram::m_PrintErrors(uint32_t Object, const char* Type)
 				std::make_format_args(this->Name, infoLog)
 			));
 
+			if (this->Name == "error")
+				throw("Failed to link the required `error` Shader Pipeline");
+
 			ShaderManager* shdManager = ShaderManager::Get();
 
 			m_GpuId = shdManager->GetShaderResource(shdManager->LoadFromPath("error")).m_GpuId;
@@ -446,26 +452,26 @@ bool ShaderProgram::m_PrintErrors(uint32_t Object, const char* Type)
 	return false;
 }
 
-ShaderManager::ShaderManager()
+static ShaderManager* s_Instance = nullptr;
+
+ShaderManager::~ShaderManager()
 {
+	if (s_Instance == this)
+		s_Instance = nullptr;
+}
+
+void ShaderManager::Initialize()
+{
+	// putting this before calling `->LoadFromPath`
+	// as it may call itself
+	s_Instance = this;
+
 	this->LoadFromPath("error");
 }
 
-bool s_DidShutdown = false;
-
 ShaderManager* ShaderManager::Get()
 {
-	if (s_DidShutdown)
-		throw("Tried to ::Get ShaderManager after it was ::Shutdown");
-
-	static ShaderManager inst;
-	return &inst;
-}
-
-void ShaderManager::Shutdown()
-{
-	//delete Get();
-	s_DidShutdown = true;
+	return s_Instance;
 }
 
 std::vector<ShaderProgram>& ShaderManager::GetLoadedShaders()

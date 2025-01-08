@@ -38,7 +38,7 @@ public:
 	std::string UniformsAncestor;
 
 private:
-	bool m_PrintErrors(uint32_t Object, const char* Type);
+	bool m_CheckForErrors(uint32_t Object, const char* Type);
 	int32_t m_GetUniformLocation(const char*) const;
 
 	uint32_t m_GpuId = UINT32_MAX;
@@ -49,8 +49,11 @@ private:
 class ShaderManager
 {
 public:
+	~ShaderManager();
+
+	void Initialize();
+
 	static ShaderManager* Get();
-	static void Shutdown();
 
 	std::vector<ShaderProgram>& GetLoadedShaders();
 
@@ -62,8 +65,6 @@ public:
 	void ReloadAll();
 
 private:
-	ShaderManager();
-
 	std::vector<ShaderProgram> m_Shaders;
 	std::unordered_map<std::string, uint32_t> s_StringToShaderId;
 };

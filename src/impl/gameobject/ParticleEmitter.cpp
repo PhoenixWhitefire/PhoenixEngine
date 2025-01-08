@@ -135,13 +135,13 @@ size_t Object_ParticleEmitter::m_GetUsableParticleIndex()
 
 void Object_ParticleEmitter::Update(double DeltaTime)
 {
-	float timeBetweenSpawn = 1.0f / this->Rate;
+	float timeBetweenSpawn = 1.f / this->Rate;
 
 	size_t newParticleIndex = UINT32_MAX;
 
 	if (m_TimeSinceLastSpawn >= timeBetweenSpawn && !this->PossibleImages.empty() && this->EmitterEnabled)
 	{
-		m_TimeSinceLastSpawn = 0.0f;
+		m_TimeSinceLastSpawn = 0.f;
 
 		//Spawn a new particle
 

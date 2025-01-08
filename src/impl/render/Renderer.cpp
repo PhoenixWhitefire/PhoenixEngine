@@ -87,21 +87,7 @@ static void GLDebugCallback(
 	std::string severityName = glEnumToString(SeverityId);
 	std::string typeName = glEnumToString(TypeId);
 
-	std::string messageStr = Message;
-
-	// `GLsizei` is a smelly `int`
-	int actualMessageLength = static_cast<int>(strlen(Message));
-
-	// We love being pedantic around here 23/12/2024
-	if (actualMessageLength != MessageLength)
-	{
-		Log::Warning(std::vformat(
-			"Renderer::GLDebugCallback: `strlen` differs from message length: {} vs {}",
-			std::make_format_args(actualMessageLength, MessageLength)
-		));
-
-		messageStr = messageStr.substr(0, MessageLength);
-	}
+	std::string messageStr = std::string(Message, MessageLength);
 
 	std::string debugString = std::vformat(
 		std::string("GL Debug callback:\n\tType: {}\n\tSeverity: {}\n\tMessage: {}\n\tSource: {}\n\tError ID: {}\n"),

@@ -168,7 +168,7 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 			texture.TMP_ImageByteData
 		);
 
-	//glGenerateMipmap(GL_TEXTURE_2D);
+	glGenerateMipmap(GL_TEXTURE_2D);
 
 	// Can't free this now bcuz Engine.cpp needs it for skybox images
 	// 23/08/2024
@@ -184,8 +184,9 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-TextureManager::TextureManager()
-	: m_Textures{}, m_TexPromises{}
+static TextureManager* s_Instance = nullptr;
+
+void TextureManager::Initialize()
 {
 	glGenBuffers(1, &s_Pbo);
 	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, s_Pbo);
@@ -229,10 +230,15 @@ TextureManager::TextureManager()
 	// material will spam "Invalid program texture usage" errors
 	// 30/11/2024
 	this->LoadTextureFromPath("textures/DONOTUSE.png", false);
+
+	s_Instance = this;
 }
 
 TextureManager::~TextureManager()
 {
+	if (s_Instance == this)
+		s_Instance = nullptr;
+
 	std::vector<uint32_t> textureGpuIds;
 	textureGpuIds.reserve(m_Textures.size());
 
@@ -247,21 +253,9 @@ TextureManager::~TextureManager()
 	m_TexPromises.clear();
 }
 
-static bool s_DidShutdown = false;
-
 TextureManager* TextureManager::Get()
 {
-	if (s_DidShutdown)
-		throw("Tried to ::Get TextureManager after it was ::Shutdown");
-
-	static TextureManager inst;
-	return &inst;
-}
-
-void TextureManager::Shutdown()
-{
-	//delete Get();
-	s_DidShutdown = true;
+	return s_Instance;
 }
 
 // like emplace, for "put in place", but "emload" for "load in place"
@@ -375,7 +369,7 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 
 		if (DoBilinearSmoothing)
 		{
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		}
 		else
@@ -391,7 +385,7 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 
 		if (ShouldLoadAsync)
 		{
-			static const uint8_t FullByte = 0xFF;
+			static const uint32_t BlackAndTransparent = 0u;
 
 			glTexImage2D
 			(
@@ -401,9 +395,9 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 				1,
 				1,
 				0,
-				GL_RED,
+				GL_RGBA,
 				GL_UNSIGNED_BYTE,
-				&FullByte
+				&BlackAndTransparent
 			);
 
 			glGenerateMipmap(GL_TEXTURE_2D);

@@ -9,10 +9,14 @@
 #include <fstream>
 
 #include "Editor.hpp"
-#include "gameobject/GameObjects.hpp"
+
 #include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
 #include "asset/MeshProvider.hpp"
+
+#include "gameobject/Camera.hpp"
+#include "gameobject/Script.hpp"
+
 #include "Utilities.hpp"
 #include "UserInput.hpp"
 #include "FileRW.hpp"
@@ -86,7 +90,7 @@ Editor::Editor(Renderer* renderer)
 
 	MtlEditorPreview.Initialize(256, 256);
 	MtlPreviewRenderer = renderer;
-	MtlPreviewCamera = (Object_Camera*)GameObject::Create("Camera");
+	MtlPreviewCamera = static_cast<Object_Camera*>(GameObject::Create("Camera"));
 	MtlPreviewCamera->Transform = MtlPreviewCamDefaultRotation * MtlPreviewCamOffset;
 	MtlPreviewCamera->FieldOfView = 50.f;
 

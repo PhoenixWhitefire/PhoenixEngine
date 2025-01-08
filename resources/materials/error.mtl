@@ -1,10 +1,15 @@
+PHNXENGI
+#Asset Material
+#Date 8-1-2025
+
+
 {
   "ColorMap": "!Missing",
-  "EmissionMap": "",
   "HasTranslucency": false,
+  "MetallicRoughnessMap": "textures/black.png",
   "Shader": "worldUber",
   "Uniforms": {
-    "EmissionStrength": 5.0
+    "EmissionStrength": 1.0
   },
   "specExponent": 1.0,
   "specMultiply": 0.5

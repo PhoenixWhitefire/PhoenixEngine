@@ -294,17 +294,17 @@ static std::vector<GameObject*> LoadMapVersion1(
 			Object3D->Transform = glm::rotate(
 				Object3D->Transform,
 				glm::radians(static_cast<float>(Orientation.Y)),
-				glm::vec3(0.0f, 1.0f, 0.0f)
+				glm::vec3(0.f, 1.f, 0.f)
 			);
 			Object3D->Transform = glm::rotate(
 				Object3D->Transform,
 				glm::radians(static_cast<float>(Orientation.X)),
-				glm::vec3(1.0f, 0.0f, 0.0f)
+				glm::vec3(1.f, 0.f, 0.f)
 			);
 			Object3D->Transform = glm::rotate(
 				Object3D->Transform,
 				glm::radians(static_cast<float>(Orientation.Z)),
-				glm::vec3(0.0f, 0.0f, 1.0f)
+				glm::vec3(0.f, 0.f, 1.f)
 			);
 
 			if (Object.find("color") != Object.end())

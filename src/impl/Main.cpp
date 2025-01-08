@@ -10,11 +10,8 @@ that SOMEHOW works without crashing atleast 50 times a frame.
 
 Anyway, here is a small tour:
 
-- All shader files have a file extension of one of the following: .vert, .frag
-- The "main" shaders are the two worldUber.vert and worldUber.frag ones
 - "phoenix.conf" contains some configuration. Set "Developer" to "false" to disable the debug UIs.
 - WASD to move horizontally, Q/E to move down/up. Left-click to look around. Right-click to stop. LShift to move slower.
-- Hold `R` to disable distance culling
 - Press `L` to dump GameObject API.
 - `K` to reload all shaders, `I` to reload configuration
 - F11 to toggle fullscreen.
@@ -28,13 +25,29 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 	14/11/2024
 
 	This Main file is in the "Player" or "Application" layer in my head, so I don't really care
-	that's it's messy.
+	that it's messy.
 
+*/
+
+/*
+	
+	07/01/2024
+
+	When an exception is thrown, generally it is either always fatal, or fatal contextually.
+	For example, Luau APIs may throw exceptions, which are caught by Luau exception handlers,
+	terminating the Script thread without killing the Engine. APIs such as `GameObject.Parent`
+	from the Luau side, i.e. `GameObject::SetParent` from the Engine side, are fatal only to the
+	Engine, intentionally. `Log::Error` is not fatal.
+	
 */
 
 #define GLM_ENABLE_EXPERIMENTAL
 
-#define PHX_MAIN_HANDLECRASH(c, expr) catch (c Error) { handleCrash(Error##expr, #c); }
+// `return 1` to indicate exit failure
+// technically we should never fail to exit gracefully though, we are
+// just indicating a fatal error occurred that forced the engine to
+// quit
+#define PHX_MAIN_HANDLECRASH(c, expr) catch (c Error) { handleCrash(Error##expr, #c); return 1; }
 
 #define PHX_MAIN_CRASHHANDLERS PHX_MAIN_HANDLECRASH(std::string, ) \
 PHX_MAIN_HANDLECRASH(const char*, ) \
@@ -60,6 +73,9 @@ PHX_MAIN_HANDLECRASH(std::exception, .what()); \
 
 #include "Engine.hpp"
 
+#include "asset/SceneFormat.hpp"
+#include "gameobject/Script.hpp"
+
 #include "GlobalJsonConfig.hpp"
 #include "UserInput.hpp"
 #include "Utilities.hpp"
@@ -67,7 +83,6 @@ PHX_MAIN_HANDLECRASH(std::exception, .what()); \
 #include "FileRW.hpp"
 #include "Editor.hpp"
 #include "Log.hpp"
-#include "asset/SceneFormat.hpp"
 
 static bool FirstDragFrame = false;
 
@@ -76,11 +91,10 @@ static bool MouseCaptured = false;
 
 static ImGuiIO* GuiIO = nullptr;
 
-static const float MouseSensitivity = 100.0f;
+static const float MouseSensitivity = 100.f;
 static const float MovementSpeed = 15.f;
 
 static Editor* EditorContext = nullptr;
-static EngineObject* EngineInstance = nullptr;
 
 static float PrevMouseX, PrevMouseY = 0;
 
@@ -111,7 +125,7 @@ static std::vector<std::string> stringSplit(const std::string& s, const std::str
 	return output;
 }
 
-static int findArgumentInCliArgs(
+static int findCmdLineArgument(
 	int ArgCount,
 	char** Arguments,
 	const char* SeekingArgument
@@ -135,6 +149,8 @@ static void handleInputs(Reflection::GenericValue Data)
 
 	if (EngineJsonConfig.value("Developer", false))
 		EditorContext->Update(deltaTime);
+
+	Engine* EngineInstance = Engine::Get();
 
 	Object_Camera* camera = EngineInstance->Workspace->GetSceneCamera();
 	SDL_Window* window = EngineInstance->Window;
@@ -207,8 +223,8 @@ static void handleInputs(Reflection::GenericValue Data)
 			float deltaMouseX = PrevMouseX - mouseX;
 			float deltaMouseY = PrevMouseY - mouseY;
 
-			float rotationX = MouseSensitivity * (deltaMouseY - (windowSizeY / 2.0f)) / windowSizeY;
-			float rotationY = MouseSensitivity * (deltaMouseX - (windowSizeX / 2.0f)) / windowSizeX;
+			float rotationX = MouseSensitivity * (deltaMouseY - (windowSizeY / 2.f)) / windowSizeY;
+			float rotationY = MouseSensitivity * (deltaMouseX - (windowSizeX / 2.f)) / windowSizeX;
 			rotationX += 50.f; // TODO 22/08/2024: Why??
 			rotationY += 50.f;
 
@@ -218,7 +234,7 @@ static void handleInputs(Reflection::GenericValue Data)
 				glm::normalize(glm::cross(CamForward, UpVec))
 			);
 
-			if (abs(glm::angle(newForward, UpVec) - glm::radians(90.0f)) <= glm::radians(85.0f))
+			if (abs(glm::angle(newForward, UpVec) - glm::radians(90.f)) <= glm::radians(85.f))
 				CamForward = newForward;
 
 			CamForward = glm::rotate(CamForward, glm::radians(-rotationY), UpVec);
@@ -339,52 +355,6 @@ static void handleInputs(Reflection::GenericValue Data)
 		PreviouslyPressingF11 = false;
 }
 
-static char* LevelLoadPathBuf;
-static char* LevelSavePathBuf;
-
-static void LoadLevel(const std::string& LevelPath)
-{
-	Log::Info(std::vformat("Loading scene: '{}'", std::make_format_args(LevelPath)));
-
-	Object_Workspace* workspace = EngineInstance->Workspace;
-
-	GameObject* prevModel = workspace->GetChild("Level");
-
-	if (prevModel)
-		prevModel->Destroy();
-
-	GameObject* levelModel = GameObject::Create("Model");
-	levelModel->Name = "Level";
-	levelModel->SetParent(workspace);
-
-	bool loadSuccess = true;
-
-	// 11/09/2024
-	// Today marks the day a Luau script can move the Camera
-	// It'll set `UseSimpleController` to false so that `handleInputs` doesn't
-	// mess with it
-	// We set it to true here in case the next level does not have a Camera Control Script
-	// (cause I still want to look around :3)
-	// (without having to go to the Camera in the Hierarchy and manually re-enable it :3)
-	workspace->GetSceneCamera()->UseSimpleController = true;
-	// 21/09/2024
-	// Also reset the cam back to the origin because !!PHYSICS!! yay
-	// so if we fall down into the *VOID* we get sent back up
-	workspace->GetSceneCamera()->Transform = glm::mat4(1.f);
-
-	std::vector<GameObject*> objects = SceneFormat::Deserialize(FileRW::ReadFile(LevelPath), &loadSuccess);
-
-	if (loadSuccess)
-	{
-		for (GameObject* object : objects)
-			object->SetParent(levelModel);
-	}
-	else
-		throw("Failed to load level: " + SceneFormat::GetLastErrorString());
-
-	//MapLoader::LoadMapIntoObject(LevelPath, levelModel);
-}
-
 static double recurseGetTime(const nlohmann::json& root)
 {
 	if (root.find("_t") != root.end())
@@ -439,6 +409,8 @@ static void recurseProfilerUI(const nlohmann::json& tree)
 
 static void drawUI(Reflection::GenericValue Data)
 {
+	Engine* EngineInstance = Engine::Get();
+
 	if (UserInput::IsKeyDown(SDLK_L) && !UserInput::InputBeingSunk)
 	{
 		Log::Info("Dumping GameObject API...");
@@ -467,67 +439,6 @@ static void drawUI(Reflection::GenericValue Data)
 
 	if (EditorContext)
 	{
-		//ImGui_ImplOpenGL3_NewFrame();
-		//ImGui_ImplSDL2_NewFrame();
-		//ImGui::NewFrame();
-
-		//ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
-
-		if (ImGui::Begin("Level"))
-		{
-			static std::string saveMessage;
-			static double saveMessageTimeLeft;
-
-			ImGui::InputText("Save target", LevelSavePathBuf, 64);
-
-			if (ImGui::Button("Save"))
-			{
-				GameObject* levelModel = EngineInstance->Workspace->GetChild("Level");
-
-				if (levelModel)
-				{
-					std::string levelSavePath(LevelSavePathBuf);
-
-					bool alreadyExists = false;
-					std::string prevFile = FileRW::ReadFile(levelSavePath, &alreadyExists);
-
-					if (alreadyExists && prevFile.find("#Version 2.00") == std::string::npos)
-					{
-						// V2 does not have full parity with V1 as of 02/09/2024
-						// (models)
-						saveMessage = "Not saving as that file already exists as a V1";
-						saveMessageTimeLeft = 1.5;
-					}
-					else
-					{
-						std::string serialized = SceneFormat::Serialize(levelModel->GetChildren(), levelSavePath);
-						FileRW::WriteFile(levelSavePath, serialized, true);
-
-						saveMessage = std::vformat("Saved as '{}'", std::make_format_args(levelSavePath));
-						saveMessageTimeLeft = 1.f;
-					}
-				}
-				else
-				{
-					saveMessage = "Save failed as Workspace had no `Level` child";
-					saveMessageTimeLeft = 1.f;
-				}
-			}
-
-			if (saveMessageTimeLeft > 0.f)
-			{
-				ImGui::Text(saveMessage.c_str());
-				saveMessageTimeLeft -= Data.AsDouble();
-			}
-
-			ImGui::InputText("Load target", LevelLoadPathBuf, 64);
-
-			if (ImGui::Button("Load"))
-				LoadLevel(LevelLoadPathBuf);
-
-		}
-		ImGui::End();
-
 		// always pop the snapshot, otherwise they'll build-up
 		std::unordered_map<std::string, double> snapshot = Profiler::PopSnapshot();
 
@@ -602,7 +513,7 @@ static void drawUI(Reflection::GenericValue Data)
 				ImVec2 min = ImGui::GetItemRectMin() + ImGui::GetStyle().FramePadding;
 				ImVec2 max = ImGui::GetItemRectMax() - ImGui::GetStyle().FramePadding;
 
-				const float t = std::clamp((ImGui::GetIO().MousePos.x - min.x) / (max.x - min.x), 0.0f, 0.9999f);
+				const float t = std::clamp((ImGui::GetIO().MousePos.x - min.x) / (max.x - min.x), 0.f, 0.9999f);
 				FocusedProfilingInfoIdx = (int)(t * 100);
 			}
 
@@ -767,8 +678,38 @@ static void drawUI(Reflection::GenericValue Data)
 	}
 }
 
-static void Application(int argc, char** argv)
+static void handleCrash(const std::string& Error, const std::string& ExceptionType)
 {
+	// Log Size Limit Exceeded Throwing Exception
+	if (!Error.starts_with("LSLETE"))
+	{
+		Log::Append(std::vformat(
+			"CRASH - {}: {}",
+			std::make_format_args(ExceptionType, Error)
+		));
+		Log::Save();
+	}
+
+	std::string errMessage = std::vformat(
+		"An unexpected error occurred, and the application will now close. Details: \n\n{}\n\n{}",
+		std::make_format_args(
+			Error,
+			"If this is the first time this has happened, please re-try. Otherwise, contact the developers."
+		)
+	);
+
+	SDL_ShowSimpleMessageBox(
+		SDL_MESSAGEBOX_ERROR,
+		"Fatal Error",
+		errMessage.c_str(),
+		nullptr
+	);
+}
+
+static void begin(int argc, char** argv)
+{
+	Engine* EngineInstance = Engine::Get();
+
 	const char* imGuiVersion = IMGUI_VERSION;
 
 	Log::Info(std::vformat(
@@ -784,7 +725,6 @@ static void Application(int argc, char** argv)
 	ImGui::CreateContext();
 
 	GuiIO = &ImGui::GetIO();
-	//GuiIO->ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	ImGui::StyleColorsDark();
 
 	if (!ImGui_ImplSDL3_InitForOpenGL(
@@ -798,13 +738,10 @@ static void Application(int argc, char** argv)
 
 	EditorContext = EngineJsonConfig.value("Developer", false) ? new Editor(&EngineInstance->RendererContext) : nullptr;
 	
-	LevelLoadPathBuf = BufferInitialize(64, "levels/de_dust2.world");
-	LevelSavePathBuf = BufferInitialize(64, "levels/save.world");
-
 	const char* mapFileFromArgs{};
 	bool hasMapFromArgs = false;
 
-	int mapFileArgIdx = findArgumentInCliArgs(argc, argv, "-loadmap");
+	int mapFileArgIdx = findCmdLineArgument(argc, argv, "-loadmap");
 
 	if (mapFileArgIdx > 0)
 	{
@@ -843,79 +780,34 @@ static void Application(int argc, char** argv)
 
 	GameObject::s_DataModel->CallFunction("Merge", { roots[0]->ToGenericValue() });
 
-	//LoadLevel(mapFile);
-
 	EngineInstance->OnFrameStart.Connect(handleInputs);
 	EngineInstance->OnFrameRenderGui.Connect(drawUI);
 
 	EngineInstance->Start();
-
-	// After the Main Loop exits
-
-	ImGui_ImplOpenGL3_Shutdown();
-	ImGui_ImplSDL3_Shutdown();
-
-	SDL_Quit();
-
-	// Engine destructor is called as the `EngineObject`'s scope terminates in `main`.
-}
-
-static void handleCrash(const std::string& Error, const std::string& ExceptionType)
-{
-	// Log Size Limit Exceeded Throwing Exception
-	if (!Error.starts_with("LSLETE"))
-	{
-		Log::Append(std::vformat(
-			"CRASH - {}: {}",
-			std::make_format_args(ExceptionType, Error)
-		));
-		Log::Save();
-	}
-
-	std::string errMessage = std::vformat(
-		"An unexpected error occurred, and the application will now close. Details: \n\n{}\n\n{}",
-		std::make_format_args(
-			Error,
-			"If this is the first time this has happened, please re-try. Otherwise, contact the developers."
-		)
-	);
-
-	SDL_ShowSimpleMessageBox(
-		SDL_MESSAGEBOX_ERROR,
-		"Fatal Engine Error",
-		errMessage.c_str(),
-		nullptr
-	);
 }
 
 int main(int argc, char** argv)
 {
-	Log::Info("Application startup...");
+	Log::Info("Application startup");
 
 	Log::Info(std::format("Phoenix Engine, Main.cpp last compiled: {}", __DATE__));
 
 	try
 	{
-		EngineObject engine{};
-
-		try
+		// 25/12/2024 in case Engine's Destructor throws an exception
 		{
+			Engine engine{};
+
 			engine.Initialize();
-			EngineInstance = &engine;
 
-			//Engine->MSAASamples = 2;
-
-			Application(argc, argv);
+			begin(argc, argv);
 
 			Log::Save(); // in case FileRW::WriteFile throws an exception
 		}
-		PHX_MAIN_CRASHHANDLERS;
-	} // 25/12/2024 in case Engine's Destructor throws an exception
+	}
 	PHX_MAIN_CRASHHANDLERS;
 
-	// this occurs AFTER engine destructor is called
-	// 15/12/2024
-	Log::Info("Application shutting down...");
+	Log::Info("Application shutdown");
 
 	Log::Save();
 }

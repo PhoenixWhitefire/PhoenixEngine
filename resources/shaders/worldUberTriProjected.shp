@@ -2,5 +2,8 @@
   "Fragment": "shaders/worldUber.frag",
   "Geometry": "shaders/worldUber.geom",
   "InheritUniformsOf": "worldUber",
+  "Uniforms": {
+    "UseTriPlanarProjection": true
+  },
   "Vertex": "shaders/worldUber.vert"
 }

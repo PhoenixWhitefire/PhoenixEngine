@@ -221,19 +221,9 @@ vec3 getTriPlanarBlending(vec3 _wNorm)
 	return blending;
 }
 
-vec4 textureLod(sampler2D tex, vec2 uv, float miplvl)
-{
-	return texture(tex, uv); // 25/12/2024
-}
-
-vec4 textureLod(samplerCube tex, vec3 uv, float miplvl)
-{
-	return texture(tex, uv); // 25/12/2024
-}
-
 void main()
 {
-	float mipLevel = 0;//textureQueryLod(ColorMap, Frag_TextureUV).x;
+	float mipLevel = textureQueryLod(ColorMap, Frag_TextureUV).x;
 
 	if (IsShadowMap)
 	{
@@ -270,8 +260,6 @@ void main()
 	}
 	else
 	{
-		mipLevel *= 0.1f;
-
 		vec3 blending = getTriPlanarBlending(Frag_VertexNormal);
 		vec2 uvXAxis = Frag_ModelPosition.zy * vec2(1.f, -1.f) * MaterialProjectionFactor;
 		vec2 uvYAxis = Frag_ModelPosition.xz * vec2(-1.f, 1.f) * MaterialProjectionFactor;

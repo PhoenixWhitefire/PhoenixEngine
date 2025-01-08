@@ -17,9 +17,6 @@
 #include "Engine.hpp"
 
 #include "gameobject/GameObjects.hpp"
-#include "asset/MaterialManager.hpp"
-#include "asset/TextureManager.hpp"
-#include "asset/MeshProvider.hpp"
 #include "GlobalJsonConfig.hpp"
 #include "ThreadManager.hpp"
 #include "UserInput.hpp"
@@ -67,28 +64,32 @@ static void sdlLog(void*, int Type, SDL_LogPriority Priority, const char* Messag
 		throw(logString);
 }
 
-static EngineObject* EngineInstance = nullptr;
+static Engine* EngineInstance = nullptr;
 
-EngineObject* EngineObject::Get()
+Engine* Engine::Get()
 {
 	return EngineInstance;
 }
 
-void EngineObject::ResizeWindow(int NewSizeX, int NewSizeY)
+void Engine::ResizeWindow(int NewSizeX, int NewSizeY)
 {
 	SDL_SetWindowSize(this->Window, NewSizeX, NewSizeY);
 
 	this->OnWindowResized(NewSizeX, NewSizeY);
 }
 
-void EngineObject::OnWindowResized(int NewSizeX, int NewSizeY)
+void Engine::OnWindowResized(int NewSizeX, int NewSizeY)
 {
 	this->WindowSizeX = NewSizeX;
 	this->WindowSizeY = NewSizeY;
 
 	RendererContext.ChangeResolution(WindowSizeX, WindowSizeY);
 
-	float displayScale = SDL_GetDisplayContentScale(SDL_GetDisplayForWindow(Window));
+	SDL_DisplayID currentDisplay = SDL_GetDisplayForWindow(Window);
+	if (currentDisplay == 0)
+		throw("`SDL_GetDisplayForWindow` failed with error: " + std::string(SDL_GetError()));
+
+	float displayScale = SDL_GetDisplayContentScale(currentDisplay);
 	if (displayScale == 0.f)
 		throw("`SDL_GetDisplayContentScale` returned invalid result, error: " + std::string(SDL_GetError()));
 
@@ -101,7 +102,7 @@ void EngineObject::OnWindowResized(int NewSizeX, int NewSizeY)
 	ImGui::GetStyle() = scaledStyle;
 }
 
-void EngineObject::SetIsFullscreen(bool Fullscreen)
+void Engine::SetIsFullscreen(bool Fullscreen)
 {
 	this->IsFullscreen = Fullscreen;
 
@@ -124,7 +125,7 @@ void EngineObject::SetIsFullscreen(bool Fullscreen)
 		throw("`SDL_SetWindowFullscreen` failed, error: " + std::string(SDL_GetError()));
 }
 
-void EngineObject::LoadConfiguration()
+void Engine::LoadConfiguration()
 {
 	bool ConfigFileFound = true;
 	std::string ConfigAscii = FileRW::ReadFile("./phoenix.conf", &ConfigFileFound);
@@ -150,7 +151,7 @@ void EngineObject::LoadConfiguration()
 	Log::Info("Configuration loaded");
 }
 
-void EngineObject::Initialize()
+void Engine::Initialize()
 {
 	EngineInstance = this;
 
@@ -176,12 +177,23 @@ void EngineObject::Initialize()
 
 	PHX_SDL_CALL(SDL_Init, SDL_INIT_VIDEO);
 
-	float displayScale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
+	SDL_DisplayID primaryDisplay = SDL_GetPrimaryDisplay();
+
+	if (primaryDisplay == 0)
+		throw("`SDL_GetPrimaryDisplay` failed with error: " + std::string(SDL_GetError()));
+
+	float displayScale = SDL_GetDisplayContentScale(primaryDisplay);
 	if (displayScale == 0.f)
-		throw("Invalid `SDL_GetWindowDisplayScale` result, error: " + std::string(SDL_GetError()));
+		throw("Invalid `SDL_GetDisplayContentScale` result, error: " + std::string(SDL_GetError()));
 
 	this->WindowSizeX = static_cast<int>(defaultWindowSize[0] * displayScale);
 	this->WindowSizeY = static_cast<int>(defaultWindowSize[1] * displayScale);
+
+	SDL_Rect displayBounds{};
+	PHX_SDL_CALL(SDL_GetDisplayBounds, primaryDisplay, &displayBounds);
+
+	this->WindowSizeX = std::clamp(this->WindowSizeX, 1, displayBounds.w);
+	this->WindowSizeY = std::clamp(this->WindowSizeY, 1, displayBounds.h);
 
 	// This is easily the worst complaint I've had about this library,
 	// the log function *does not called even when an error retrievable by SDL_GetError occurs*!
@@ -253,21 +265,27 @@ void EngineObject::Initialize()
 
 	Log::Info("Window created");
 
-	// TODO: Engine->MSAASamples does nothing, attempting to specify via below ctor's argument leads to
-	// OpenGL error "Target doesn't match the texture's target"
+	Log::Info("Initializing systems...");
+
 	this->RendererContext.Initialize(this->WindowSizeX, this->WindowSizeY, this->Window);
 
-	Log::Info("Creating initial DataModel...");
+	m_TextureManager.Initialize();
+	m_ShaderManager.Initialize();
+	m_MaterialManager.Initialize(); // mm after tm and sm as it may attempt to load a texture and shader
 
-	this->DataModel = (Object_DataModel*)GameObject::Create("DataModel");
+	m_MeshProvider.Initialize();
+
+	Log::Info("Initializing DataModel...");
+
+	this->DataModel = static_cast<Object_DataModel*>(GameObject::Create("DataModel"));
 	GameObject::s_DataModel = this->DataModel;
 
 	GameObject* workspace = DataModel->GetChild("Workspace");
-	this->Workspace = (Object_Workspace*)workspace;
+	this->Workspace = static_cast<Object_Workspace*>(workspace);
 
 	//ThreadManager::Get()->CreateWorkers(4, WorkerType::DefaultTaskWorker);
 
-	Log::Info("Engine constructed");
+	Log::Info("Engine initialized");
 }
 
 /*
@@ -281,11 +299,9 @@ void EngineObject::Initialize()
 	control over WHEN Scripts are resumed, instead of just resuming them
 	as we stumble upon them.
 */
-
 static void updateScripts(double DeltaTime)
 {
 	static std::vector<GameObjectRef<Object_Script>> ScriptsResumedThisFrame = {};
-	//ScriptsResumedThisFrame.reserve(2);
 
 	for (GameObject* ch : GameObject::s_DataModel->GetDescendants())
 		if (ch->Enabled)
@@ -326,9 +342,10 @@ static void recursivelyTravelHierarchy(
 {
 	std::vector<GameObject*> objects = Root->GetChildren();
 
+	// fresh from the ash of my cremated grandmother
 	RenderList.reserve(RenderList.capacity() + static_cast<size_t>(objects.size() / 2));
 	LightList.reserve(LightList.capacity() + static_cast<size_t>(objects.size() / 4));
-	PhysicsList.reserve(PhysicsList.capacity() + std::min(static_cast<size_t>(objects.size() / 8), 512ULL));
+	PhysicsList.reserve(PhysicsList.capacity() + std::min(static_cast<size_t>(objects.size() / 8), 512ull));
 
 	for (GameObject* object : objects)
 	{
@@ -421,16 +438,23 @@ static void recursivelyTravelHierarchy(
 	}
 }
 
-void EngineObject::Start()
+void Engine::Start()
 {
 	Log::Info("Final initializations...");
+
+	MaterialManager* mtlManager = MaterialManager::Get();
+	TextureManager* texManager = TextureManager::Get();
+	MeshProvider* meshProvider = MeshProvider::Get();
+
+	const Mesh cubeMesh = meshProvider->GetMeshResource(meshProvider->LoadFromPath("!Cube"));
+	const Mesh quadMesh = meshProvider->GetMeshResource(meshProvider->LoadFromPath("!Quad"));
 
 	// TODO:
 	// wtf are these
 	// 13/07/2024
 	double LastTime = this->RunningTime;
 	double LastFrame = GetRunningTime();
-	double FrameStart = 0.0f;
+	double FrameStart = 0.f;
 	double LastSecond = LastFrame;
 
 	static const std::string SkyPath = "textures/Sky1/";
@@ -457,8 +481,6 @@ void EngineObject::Start()
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 	//glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_LOD_BIAS, 15.f);
-
-	TextureManager* texManager = TextureManager::Get();
 
 	for (uint8_t faceIndex = 0; faceIndex < 6; faceIndex++)
 	{
@@ -506,7 +528,7 @@ void EngineObject::Start()
 
 	RendererContext.FrameBuffer.Unbind();
 	
-	uint32_t distortionTexture = texManager->LoadTextureFromPath("textures/screendistort.jpg", false);
+	uint32_t distortionTexture = texManager->LoadTextureFromPath("textures/screendistort.jpg");
 
 	SDL_Event pollingEvent;
 
@@ -551,8 +573,8 @@ void EngineObject::Start()
 		scene.RenderList.clear();
 		scene.LightingList.clear();
 
-		TextureManager::Get()->FinalizeAsyncLoadedTextures();
-		MeshProvider::Get()->FinalizeAsyncLoadedMeshes();
+		texManager->FinalizeAsyncLoadedTextures();
+		meshProvider->FinalizeAsyncLoadedMeshes();
 
 		bool skyboxLoaded = true;
 
@@ -692,8 +714,6 @@ void EngineObject::Start()
 
 		scene.UsedShaders = {};
 
-		MaterialManager* mtlManager = MaterialManager::Get();
-
 		for (const RenderItem& ri : scene.RenderList)
 			scene.UsedShaders.insert(mtlManager->GetMaterialResource(ri.MaterialId).ShaderId);
 
@@ -709,7 +729,7 @@ void EngineObject::Start()
 				if (ri.CastsShadows)
 					sunScene.RenderList.push_back(ri);
 
-			glm::mat4 sunOrtho = glm::ortho(-35.0f, 35.0f, -35.0f, 35.0f, 0.1f, 75.0f);
+			glm::mat4 sunOrtho = glm::ortho(-35.f, 35.f, -35.f, 35.f, 0.1f, 75.f);
 			glm::mat4 sunView = glm::lookAt(50.f * sunDirection, glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
 			glm::mat4 sunRenderMatrix = sunOrtho * sunView;
 
@@ -772,12 +792,10 @@ void EngineObject::Start()
 		glClearColor(0.086f, 0.105f, 0.21f, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
-		MeshProvider* mp = MeshProvider::Get();
-
 		glDepthFunc(GL_LEQUAL);
 
 		RendererContext.DrawMesh(
-			mp->GetMeshResource(mp->LoadFromPath("!Cube")),
+			cubeMesh,
 			skyboxShaders,
 			Vector3::one,
 			projection * view,
@@ -886,7 +904,7 @@ void EngineObject::Start()
 		Profiler::Start("PostProcessing");
 
 		RendererContext.DrawMesh(
-			mp->GetMeshResource(mp->LoadFromPath("!Quad")),
+			quadMesh,
 			postFxShaders,
 			Vector3::one*2.f,
 			glm::mat4(1.f),
@@ -916,7 +934,7 @@ void EngineObject::Start()
 
 		PROFILE_EXPRESSION("EventCallbacks/OnFrameEnd", OnFrameEnd.Fire(deltaTime));
 
-		if (RunningTime - LastSecond > 1.0f)
+		if (RunningTime - LastSecond > 1.f)
 		{
 			LastSecond = RunningTime;
 
@@ -935,14 +953,11 @@ void EngineObject::Start()
 	Log::Info("Main loop exited");
 }
 
-EngineObject::~EngineObject()
+Engine::~Engine()
 {
 	Log::Info("Engine destructing...");
 
-	MaterialManager::Shutdown();
-	TextureManager::Shutdown();
-	ShaderManager::Shutdown();
-	MeshProvider::Shutdown();
+	Log::Info("Destroying DataModel...");
 
 	// TODO:
 	// 27/08/2024:
@@ -955,4 +970,9 @@ EngineObject::~EngineObject()
 	this->DataModel = nullptr;
 
 	EngineInstance = nullptr;
+
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplSDL3_Shutdown();
+
+	SDL_Quit();
 }

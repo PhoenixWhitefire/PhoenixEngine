@@ -26,8 +26,11 @@ public:
 		uint32_t NumIndices{};
 	};
 
+	~MeshProvider();
+
+	void Initialize();
+
 	static MeshProvider* Get();
-	static void Shutdown();
 
 	void FinalizeAsyncLoadedMeshes();
 
@@ -46,9 +49,6 @@ public:
 	const std::string& GetLastErrorString();
 
 private:
-	MeshProvider();
-	~MeshProvider();
-
 	void m_CreateAndUploadGpuMesh(Mesh&);
 	void m_CreateAndUploadGpuMesh(uint32_t);
 
