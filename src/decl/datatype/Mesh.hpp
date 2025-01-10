@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <string>
 #include <array>
 #include <glm/mat4x4.hpp>
 #include <glm/vec4.hpp>
@@ -21,6 +22,7 @@ struct Vertex
 
 struct Bone
 {
+	std::string Name = "<UNNAMED_BONE>";
 	glm::mat4 Transform{ 1.f };
 	glm::vec3 Scale{ 1.f };
 };

@@ -911,8 +911,7 @@ void Editor::RenderUI()
 
 		if (ImGui::Button("Duplicate"))
 		{
-			GameObject* clone = GameObject::FromGenericValue(selected->CallFunction("Clone", {}).AsArray()[0]);
-			clone->Parent = selected->Parent;
+			GameObject* clone = selected->Duplicate();
 			HierarchyTreeSelectionId = clone->ObjectId;
 			selected = clone;
 		}

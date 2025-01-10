@@ -10,6 +10,7 @@ class Object_Mesh : public Object_Base3D
 {
 public:
 	Object_Mesh();
+	void Update(double) override;
 
 	std::string GetRenderMeshPath();
 	void SetRenderMesh(const std::string&);
@@ -21,4 +22,5 @@ private:
 	static inline Reflection::Api s_Api{};;
 
 	std::string m_MeshPath{};
+	bool m_WaitingForMeshToLoad = false;
 };

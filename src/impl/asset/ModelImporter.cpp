@@ -6,7 +6,7 @@
 #include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
 #include "asset/MeshProvider.hpp"
-#include "gameobject/Attachment.hpp"
+#include "gameobject/Bone.hpp"
 #include "GlobalJsonConfig.hpp"
 #include "Utilities.hpp"
 #include "FileRW.hpp"
@@ -228,15 +228,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		if (node.Type == ModelNode::NodeType::Container)
 			object = GameObject::Create("Model");
 
-		else if (node.Type == ModelNode::NodeType::Bone)
-		{
-			object = GameObject::Create("Attachment");
-
-			Object_Attachment* att = static_cast<Object_Attachment*>(object);
-			att->LocalTransform = node.Transform;
-		}
-
-		else
+		else if (node.Type == ModelNode::NodeType::Primitive)
 		{
 			// TODO: cleanup code
 			object = GameObject::Create("Mesh");
@@ -254,28 +246,13 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 				22/12/2024
 			*/
 			std::string meshPath = "meshes/"
-				+ AssetPath
-				+ "/"
-				+ node.Name
-				+ ".hxmesh";
-
-			for (uint32_t boneNodeIdx : node.Bones)
-			{
-				const ModelNode& boneNode = m_Nodes[boneNodeIdx];
-				uint8_t actualId = static_cast<uint8_t>(node.Data.Bones.size());
-
-				node.Data.Bones.emplace_back(
-					boneNode.Transform,
-					boneNode.Scale
-				);
-
-				for (Vertex& v : node.Data.Vertices)
-					for (uint8_t& b : v.InfluencingJoints)
-						if (b == boneNode.NodeId)
-							b = actualId;
-			}
+									+ AssetPath
+									+ "/"
+									+ node.Name
+									+ ".hxmesh";
 
 			meshProvider->Save(node.Data, meshPath);
+			meshProvider->Assign(node.Data, meshPath);
 
 			meshObject->SetRenderMesh(meshPath);
 			meshObject->Transform = node.Transform;
@@ -283,6 +260,8 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 			//mo->Orientation = this->MeshRotations[MeshIndex];
 
 			meshObject->Size = node.Scale;
+
+			meshObject->RecomputeAabb();
 
 			TextureManager* texManager = TextureManager::Get();
 
@@ -329,7 +308,6 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 
 			materialJson["BilinearFiltering"] = colorTex.DoBilinearSmoothing;
 
-			// `models/crow/feathers`
 			// `models/EmbeddedTexture.glb/Material.001`
 			std::string materialName = AssetPath
 				+ "/"
@@ -347,12 +325,17 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 			meshObject->MetallnessFactor = material.MetallicFactor;
 			meshObject->RoughnessFactor = material.RoughnessFactor;
 		}
+		else
+		{
+			object = GameObject::Create("Primitive");
+			Object_Base3D* prim = static_cast<Object_Base3D*>(object);
+			prim->Transform = node.Transform;
+			prim->Size = node.Scale;
+		}
 
 		object->Name = node.Name;
 
 		LoadedObjs.push_back(object);
-
-		//mo->Textures = this->MeshTextures[MeshIndex];
 
 		uint32_t parentIndex = node.Parent;
 		if (parentIndex == UINT32_MAX) // root node
@@ -363,16 +346,6 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 
 	for (Object_Animation* anim : m_Animations)
 		anim->SetParent(LoadedObjs.at(0));
-
-	// TODO: fix matrices
-	// hm, actually we already set the matrices in the for-loop above
-	// something is breaking them the further they are from 0,0...
-	/*
-	momodel->MeshMatrices = std::vector(this->MeshMatrices);
-	momodel->MeshRotations = std::vector(this->MeshRotations);
-	momodel->MeshScales = std::vector(this->MeshScales);
-	momodel->MeshTranslations = std::vector(this->MeshTranslations);
-	*/
 }
 
 ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(
@@ -568,6 +541,7 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From, const glm::m
 	glm::mat4 matNextNode = Transform * matNode * trans * rot;
 
 	uint32_t myIndex = static_cast<uint32_t>(m_Nodes.size());
+	m_NodeIdToIndex[NodeIndex] = myIndex;
 
 	// Check if the node contains a mesh and if it does load it
 	if (const auto meshDataIt = nodeJson.find("mesh"); meshDataIt != nodeJson.end())
@@ -575,9 +549,6 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From, const glm::m
 		uint32_t meshId = meshDataIt.value();
 
 		const nlohmann::json& meshData = m_JsonData["meshes"][meshId];
-
-		//m_MeshTranslations.push_back(translation);
-		//m_MeshRotations.push_back(rotation);
 
 		// 30/12/2024
 		// https://math.stackexchange.com/a/1463487
@@ -592,26 +563,35 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From, const glm::m
 
 		glm::mat4 thisNodeTransform = matNextNode * glm::scale(glm::mat4(1.f), 1.f / embeddedScale);
 
+		nlohmann::json skinJson{};
+		bool isSkinned = false;
+
+		if (const auto skinIt = nodeJson.find("skin"); skinIt != nodeJson.end())
+		{
+			skinJson = m_JsonData["skins"][(int32_t)skinIt.value()];
+			isSkinned = true;
+		}
+
 		for (uint32_t i = 0; i < meshData["primitives"].size(); i++)
 		{
 			ModelNode node = m_LoadPrimitive(meshData, i, thisNodeTransform, scale);
 			node.NodeId = NodeIndex;
 			node.Parent = From;
 
+			if (isSkinned)
+				for (int32_t jointNodeId : skinJson["joints"])
+					node.Bones.push_back(jointNodeId);
+
 			m_Nodes.push_back(node);
 		}
 	}
 	else
-	{
-		m_NodeIdToIndex[NodeIndex] = static_cast<uint32_t>(m_Nodes.size());
-
 		m_Nodes.emplace_back(
 			nodeJson.value("name", "_UNNAMED_CONTAINER-" + std::to_string(NodeIndex) + "_"),
 			NodeIndex,
 			From,
 			ModelNode::NodeType::Container
 		);
-	}
 
 	// Check if the node has children, and if it does, apply this function to them with the matNextNode
 	if (const auto chIt = nodeJson.find("children"); chIt != nodeJson.end())
@@ -634,15 +614,13 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From, const glm::m
 void ModelLoader::m_BuildRig()
 {
 	for (ModelNode& node : m_Nodes)
-	{
-		uint32_t parentId = node.Parent;
-		if (parentId == 0 || parentId == UINT32_MAX)
-			continue;
+		for (int32_t jointId : node.Bones)
+		{
+			uint32_t jointNodeIndex = m_NodeIdToIndex.at(jointId);
+			const ModelNode& joint = m_Nodes.at(jointNodeIndex);
 
-		//ModelNode& parent = m_Nodes[parentId];
-
-
-	}
+			node.Data.Bones.emplace_back(joint.Name, joint.Transform, joint.Scale);
+		}
 
 	for (const nlohmann::json& animationJson : m_JsonData.value("animations", nlohmann::json::array()))
 	{
@@ -655,20 +633,6 @@ void ModelLoader::m_BuildRig()
 			ModelNode& target = m_Nodes[targetId];
 
 			target.Type = ModelNode::NodeType::Bone;
-
-			uint32_t meshId = target.Parent;
-
-			while (meshId != 0 && meshId != UINT32_MAX)
-			{
-				ModelNode& meshMaybe = m_Nodes[meshId];
-				if (meshMaybe.Type == ModelNode::NodeType::Primitive)
-				{
-					meshMaybe.Bones.push_back(targetId);
-					break;
-				}
-				else
-					meshId = meshMaybe.Parent;
-			}
 		}
 
 		m_Animations.push_back(anim);
@@ -821,7 +785,7 @@ std::vector<uint8_t> ModelLoader::m_GetUBytes(const nlohmann::json& accessor)
 
 	// Go over all the bytes in the data at the correct place using the properties from above
 	uint32_t beginningOfData = byteOffset + accByteOffset;
-	uint32_t lengthOfData = count * 4 * numPerVert;
+	uint32_t lengthOfData = count * numPerVert;
 	for (uint32_t i = beginningOfData; i < beginningOfData + lengthOfData; i)
 		ubytesVec.push_back(*(uint8_t*)&m_Data[i++]);
 

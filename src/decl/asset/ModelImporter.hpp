@@ -52,7 +52,7 @@ private:
 		MeshMaterial Material;
 		glm::mat4 Transform;
 		glm::vec3 Scale{ 1.f, 1.f, 1.f };
-		std::vector<uint32_t> Bones;
+		std::vector<int32_t> Bones;
 	};
 
 	ModelLoader() = delete;
@@ -93,17 +93,8 @@ private:
 	nlohmann::json m_JsonData;
 
 	std::vector<ModelNode> m_Nodes;
-	std::unordered_map<uint32_t, uint32_t> m_NodeIdToIndex;
+	std::unordered_map<int32_t, uint32_t> m_NodeIdToIndex;
 	std::vector<Object_Animation*> m_Animations;
-
-	/*
-	std::vector<Mesh> m_Meshes;
-	std::vector<std::string> m_MeshNames;
-	std::vector<uint32_t> m_MeshParents;
-	std::vector<glm::mat4> m_MeshMatrices;
-	std::vector<glm::vec3> m_MeshScales;
-	std::vector<MeshMaterial> m_MeshMaterials;
-	*/
 
 	std::vector<int8_t> m_Data;
 };

@@ -130,11 +130,11 @@ function Update()
 			v:Destroy()
 		end
 		
-		game:Merge(dm)
+		game:MergeWith(dm)
 	end)
 	
 	if imgui_button("Save Sub-Level") then
-		IntendedLevelState = workspace.Level:Clone()
+		IntendedLevelState = workspace.Level:Duplicate()
 		IntendedLevelState.Parent = nil
 		imfd_open("SaveSubLevel", 1, "resources/scenes/", "*.hxscene")
 	end

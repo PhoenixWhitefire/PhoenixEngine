@@ -23,7 +23,7 @@ public:
 		GpuVertexArray VertexArray;
 		GpuVertexBuffer VertexBuffer;
 		GpuElementBuffer ElementBuffer;
-		uint32_t NumIndices{};
+		uint32_t NumIndices = UINT32_MAX;
 	};
 
 	~MeshProvider();
@@ -36,7 +36,10 @@ public:
 
 	std::string Serialize(const Mesh&);
 	Mesh Deserialize(const std::string&, bool*);
-	uint32_t Assign(const Mesh&, const std::string& InternalName);
+	// mesh is intentionally copied here, because it must be copied into
+	// an internal array (`m_Meshes`) anyway, and may need to be modified,
+	// depending on `UploadToGpu`
+	uint32_t Assign(Mesh, const std::string& InternalName, bool UploadToGpu = true);
 
 	void Save(const Mesh&, const std::string& Path);
 	void Save(uint32_t, const std::string& Path);

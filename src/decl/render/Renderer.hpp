@@ -6,8 +6,8 @@
 #include <SDL3/SDL_video.h>
 
 #include "render/RendererScene.hpp"
-#include "render/ShaderManager.hpp"
 #include "render/GpuBuffers.hpp"
+#include "asset/ShaderManager.hpp"
 
 /*
 	09/09/2024

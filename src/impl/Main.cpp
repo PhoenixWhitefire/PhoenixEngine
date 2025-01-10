@@ -778,7 +778,7 @@ static void begin(int argc, char** argv)
 	if (roots[0]->ClassName != "DataModel")
 		throw("Root object was not a DataModel!");
 
-	GameObject::s_DataModel->CallFunction("Merge", { roots[0]->ToGenericValue() });
+	GameObject::s_DataModel->MergeWith(roots[0]);
 
 	EngineInstance->OnFrameStart.Connect(handleInputs);
 	EngineInstance->OnFrameRenderGui.Connect(drawUI);
@@ -794,16 +794,16 @@ int main(int argc, char** argv)
 
 	try
 	{
-		// 25/12/2024 in case Engine's Destructor throws an exception
-		{
-			Engine engine{};
+		// i thought about wrapping this in 2 scopes in case Engine's dtor
+		// throws an exception, but it can't seem to catch it regardless?
+		// 10/01/2024
+		Engine engine{};
 
-			engine.Initialize();
+		engine.Initialize();
 
-			begin(argc, argv);
+		begin(argc, argv);
 
-			Log::Save(); // in case FileRW::WriteFile throws an exception
-		}
+		Log::Save(); // in case FileRW::WriteFile throws an exception
 	}
 	PHX_MAIN_CRASHHANDLERS;
 

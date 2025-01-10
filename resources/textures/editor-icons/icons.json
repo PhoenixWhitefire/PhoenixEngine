@@ -13,5 +13,8 @@
   "Sound": "textures/editor-icons/Sound.png",
   "Script": "textures/editor-icons/Script.png",
   "Attachment": "textures/editor-icons/Attachment.png",
-  "Animation": "textures/editor-icons/Animation.png"
+  "Animation": "textures/editor-icons/Animation.png",
+  "Bone": "textures/editor-icons/Bone.png",
+  "ParticleEmitter": "textures/editor-icons/ParticleEmitter.png",
+  "Example": "textures/pop_cat.png"
 }

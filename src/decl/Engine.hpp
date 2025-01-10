@@ -8,7 +8,7 @@
 
 #include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
-#include "render/ShaderManager.hpp"
+#include "asset/ShaderManager.hpp"
 #include "asset/MeshProvider.hpp"
 
 #include "gameobject/DataModel.hpp"

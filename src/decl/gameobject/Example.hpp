@@ -14,7 +14,10 @@ class Object_Example : public Object_Script
 public:
 	Object_Example();
 
-	//void Initialize() override;
+	// `Initialize` is called *after* the `ObjectId` has been set,
+	// and after the Object has been added to the World Array
+	// 10/01/2025
+	void Initialize() override;
 	//void Update(double) override;
 
 	bool Value1 = true;

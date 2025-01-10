@@ -10,12 +10,12 @@ static void destroyObject(Reflection::Reflectable* obj)
 	static_cast<GameObject*>(obj)->Destroy();
 }
 
-static std::string getFullName(Reflection::Reflectable* r)
+static std::string getFullName(const Reflection::Reflectable* r)
 {
-	GameObject* object = static_cast<GameObject*>(r);
+	const GameObject* object = static_cast<const GameObject*>(r);
 
 	std::string fullName = object->Name;
-	GameObject* curObject = object;
+	const GameObject* curObject = object;
 
 	while (GameObject* parent = curObject->GetParent())
 	{
@@ -95,7 +95,7 @@ static void mergeRecursive(
 	MergedOverrides[other] = me;
 
 	for (GameObject* ch : other->GetChildren())
-		if (GameObject* og = me->GetChild(ch->Name))
+		if (GameObject* og = me->FindChild(ch->Name))
 			mergeRecursive(og, ch, MergedOverrides);
 		else
 			ch->SetParent(me);
@@ -140,6 +140,7 @@ void GameObject::s_DeclareReflections()
 
 	REFLECTION_DECLAREPROP_SIMPLE(GameObject, Name, String);
 	REFLECTION_DECLAREPROP_SIMPLE(GameObject, Enabled, Bool);
+	REFLECTION_DECLAREPROP_SIMPLE(GameObject, Serializes, Bool);
 	REFLECTION_DECLAREPROP_SIMPLE_READONLY(GameObject, ObjectId, Integer);
 	REFLECTION_DECLAREPROP(
 		"Parent",
@@ -150,11 +151,6 @@ void GameObject::s_DeclareReflections()
 			// because `::ToGenericValue` accounts for when `this` is `nullptr`
 			// 06/10/2024
 			return static_cast<GameObject*>(p)->GetParent()->ToGenericValue();
-			/*
-			Reflection::GenericValue gv = p->GetParent() ? p->GetParent()->ObjectId : PHX_GAMEOBJECT_NULL_ID;
-			gv.Type = Reflection::ValueType::GameObject;
-			return gv;
-			*/
 		},
 		[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)
 		{
@@ -219,21 +215,20 @@ void GameObject::s_DeclareReflections()
 	);
 
 	REFLECTION_DECLAREFUNC(
-		"Clone",
+		"Duplicate",
 		{},
 		{ Reflection::ValueType::GameObject },
 		[](Reflection::Reflectable* p, const std::vector<Reflection::GenericValue>&)
 		-> std::vector<Reflection::GenericValue>
 		{
 			GameObject* g = static_cast<GameObject*>(p);
-			GameObject* newObj = cloneRecursive(g);
 
-			return { newObj->ToGenericValue() };
+			return { g->Duplicate()->ToGenericValue() };
 		}
 	);
 
 	REFLECTION_DECLAREFUNC(
-		"Merge",
+		"MergeWith",
 		{ Reflection::ValueType::GameObject },
 		{},
 		[](Reflection::Reflectable* p, const std::vector<Reflection::GenericValue>& inputs)
@@ -246,31 +241,39 @@ void GameObject::s_DeclareReflections()
 			GameObject* inputObject = GameObject::FromGenericValue(inputs.at(0));
 			GameObject* me = static_cast<GameObject*>(p);
 
-			if (inputObject->ClassName != me->ClassName)
-				throw(std::vformat(
-					"Tried to `:Merge` a {} with a {}",
-					std::make_format_args(me->ClassName, inputObject->ClassName)
-				));
-
-			// not sure if i actually need to do this
-			// 24/12/2024
-			std::unordered_map<GameObject*, GameObject*> mergedOverridesDummy;
-
-			mergeRecursive(me, inputObject, mergedOverridesDummy);
-
-			inputObject->Destroy();
+			me->MergeWith(inputObject);
 
 			return {};
 		}
 	);
-
-	//REFLECTION_INHERITAPI(Reflection::Reflectable);
 }
 
 GameObject::GameObject()
 {
 	s_DeclareReflections();
 	ApiPointer = &s_Api;
+}
+
+GameObject* GameObject::Duplicate()
+{
+	return cloneRecursive(this);
+}
+
+void GameObject::MergeWith(GameObject* Other)
+{
+	if (Other->ClassName != this->ClassName)
+		throw(std::vformat(
+			"Tried to `:MergeWith` a {} with a {}",
+			std::make_format_args(this->ClassName, Other->ClassName)
+		));
+
+	// not sure if i actually need to do this
+	// 24/12/2024
+	std::unordered_map<GameObject*, GameObject*> mergedOverridesDummy;
+
+	mergeRecursive(this, Other, mergedOverridesDummy);
+
+	Other->Destroy();
 }
 
 GameObject* GameObject::FromGenericValue(const Reflection::GenericValue& gv)
@@ -307,7 +310,6 @@ GameObject::~GameObject() noexcept(false)
 		s_WorldArray.at(this->ObjectId) = nullptr;
 
 	this->Parent = PHX_GAMEOBJECT_NULL_ID;
-	//this->ObjectId = PHX_GAMEOBJECT_NULL_ID;
 }
 
 bool GameObject::IsValidObjectClass(const std::string& ObjectClass)
@@ -382,12 +384,12 @@ void GameObject::Destroy()
 		validateRefCount(this, m_HardRefCount);
 }
 
-std::string GameObject::GetFullName()
+std::string GameObject::GetFullName() const
 {
 	return getFullName(this);
 }
 
-bool GameObject::IsA(const std::string& AncestorClass)
+bool GameObject::IsA(const std::string& AncestorClass) const
 {
 	if (this->ClassName == AncestorClass)
 		return true;
@@ -490,7 +492,7 @@ void GameObject::RemoveChild(uint32_t id)
 		throw(std::vformat("ID:{} is _not my ({}) sonnn~_", std::make_format_args(ObjectId, id)));
 }
 
-Reflection::GenericValue GameObject::ToGenericValue()
+Reflection::GenericValue GameObject::ToGenericValue() const
 {
 	uint32_t targetObjectId = PHX_GAMEOBJECT_NULL_ID;
 
@@ -549,14 +551,7 @@ std::vector<GameObject*> GameObject::GetDescendants()
 	return descendants;
 }
 
-GameObject* GameObject::GetChildById(uint32_t id)
-{
-	auto it = std::find(m_Children.begin(), m_Children.end(), id);
-
-	return it != m_Children.end() ? GameObject::GetObjectById(id) : nullptr;
-}
-
-GameObject* GameObject::GetChild(const std::string& ChildName)
+GameObject* GameObject::FindChild(const std::string& ChildName)
 {
 	for (uint32_t index = 0; index < m_Children.size(); index++)
 	{
@@ -576,7 +571,7 @@ GameObject* GameObject::GetChild(const std::string& ChildName)
 }
 
 
-GameObject* GameObject::GetChildOfClass(const std::string& Class)
+GameObject* GameObject::FindChildWhichIsA(const std::string& Class)
 {
 	for (uint32_t index = 0; index < m_Children.size(); index++)
 	{
@@ -602,7 +597,7 @@ GameObject* GameObject::Create(const std::string& ObjectClass)
 	if (numObjects >= UINT32_MAX - 1)
 		throw("Reached end of GameObject ID space (UINT32_MAX - 1)");
 
-	GameObjectMapType::iterator it = s_GameObjectMap.find(ObjectClass);
+	const GameObjectMapType::iterator& it = s_GameObjectMap.find(ObjectClass);
 
 	if (it == s_GameObjectMap.end())
 		throw(std::vformat(
@@ -615,7 +610,7 @@ GameObject* GameObject::Create(const std::string& ObjectClass)
 	GameObject* CreatedObject = it->second();
 
 	s_WorldArray.push_back(CreatedObject);
-	CreatedObject->IncrementHardRefs();
+	CreatedObject->IncrementHardRefs(); // make it hard
 	CreatedObject->ObjectId = numObjects;
 
 	CreatedObject->Initialize();
@@ -634,18 +629,26 @@ nlohmann::json GameObject::DumpApiToJson()
 		GameObject* newobj = g.second();
 		dump[g.first] = nlohmann::json();
 
+		nlohmann::json& gapi = dump[g.first];
+
 		const std::vector<std::string>& lineage = newobj->GetLineage();
 
-		dump[g.first]["Lineage"] = "";
+		gapi["Lineage"] = "";
 
 		for (size_t index = 0; index < lineage.size(); index++)
 			if (index < lineage.size() - 1)
-				dump[g.first]["Lineage"] = dump[g.first].value("Lineage", "") + lineage[index] + " -> ";
+				gapi["Lineage"] = (std::string)gapi["Lineage"] + lineage[index] + " -> ";
 			else
-				dump[g.first]["Lineage"] = dump[g.first].value("Lineage", "") + lineage[index];
+				gapi["Lineage"] = (std::string)gapi["Lineage"] + lineage[index];
+
+		gapi["Properties"] = {};
+		gapi["Functions"] = {};
+
+		nlohmann::json& props = gapi["Properties"];
+		nlohmann::json& funcs = gapi["Functions"];
 
 		for (auto& p : newobj->GetProperties())
-			dump[g.first][p.first] = Reflection::TypeAsString(p.second.Type);
+			props[p.first] = Reflection::TypeAsString(p.second.Type);
 
 		for (auto& f : newobj->GetFunctions())
 		{
@@ -653,15 +656,18 @@ nlohmann::json GameObject::DumpApiToJson()
 			std::string ostring = "";
 
 			for (Reflection::ValueType i : f.second.Inputs)
-				istring += Reflection::TypeAsString(i) + ",";
+				istring += Reflection::TypeAsString(i) + ", ";
 
 			for (Reflection::ValueType o : f.second.Outputs)
-				ostring += Reflection::TypeAsString(o) + ",";
+				ostring += Reflection::TypeAsString(o) + ", ";
 
-			dump[g.first][f.first] = std::vformat("({}) -> ({})", std::make_format_args(istring, ostring));
+			istring = istring.substr(0, istring.size() - 2);
+			ostring = ostring.substr(0, ostring.size() - 2);
+
+			funcs[f.first] = std::vformat("({}) -> ({})", std::make_format_args(istring, ostring));
 		}
 
-		//delete newobj;
+		delete newobj;
 	}
 
 	return dump;

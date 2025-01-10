@@ -385,7 +385,7 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 
 		if (ShouldLoadAsync)
 		{
-			static const uint32_t BlackAndTransparent = 0u;
+			static const uint32_t BlackPixel = 0u;
 
 			glTexImage2D
 			(
@@ -395,9 +395,9 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 				1,
 				1,
 				0,
-				GL_RGBA,
+				GL_RED,
 				GL_UNSIGNED_BYTE,
-				&BlackAndTransparent
+				&BlackPixel
 			);
 
 			glGenerateMipmap(GL_TEXTURE_2D);

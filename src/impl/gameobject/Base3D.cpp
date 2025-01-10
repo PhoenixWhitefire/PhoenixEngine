@@ -109,8 +109,39 @@ void Object_Base3D::RecomputeAabb()
 {
 	glm::vec3 glmsize = (glm::vec3)this->Size;
 
-	glm::vec3 max = this->Transform * glm::vec4(glmsize, 1.f);
-	glm::vec3 min = this->Transform * glm::vec4(-glmsize, 1.f);
+	glm::vec3 a = this->Transform * glm::vec4(glmsize * glm::vec3( 1.f,  1.f,  1.f), 1.f);
+	glm::vec3 b = this->Transform * glm::vec4(glmsize * glm::vec3(-1.f, -1.f, -1.f), 1.f);
+
+	glm::vec3 c = this->Transform * glm::vec4(glmsize * glm::vec3(-1.f,  1.f,  1.f), 1.f);
+	glm::vec3 d = this->Transform * glm::vec4(glmsize * glm::vec3( 1.f, -1.f,  1.f), 1.f);
+	glm::vec3 e = this->Transform * glm::vec4(glmsize * glm::vec3( 1.f,  1.f, -1.f), 1.f);
+
+	glm::vec3 f = this->Transform * glm::vec4(glmsize * glm::vec3(-1.f, -1.f,  1.f), 1.f);
+	glm::vec3 g = this->Transform * glm::vec4(glmsize * glm::vec3( 1.f, -1.f, -1.f), 1.f);
+
+	glm::vec3 h = this->Transform * glm::vec4(glmsize * glm::vec3(-1.f,  1.f, -1.f), 1.f);
+
+	std::array<glm::vec3, 8> verts = { a, b, c, d, e, f, g, h };
+
+	glm::vec3 max{ FLT_MIN, FLT_MIN, FLT_MIN };
+	glm::vec3 min{ FLT_MAX, FLT_MAX, FLT_MAX };
+
+	for (const glm::vec3& v : verts)
+	{
+		if (v.x > max.x)
+			max.x = v.x;
+		if (v.y > max.y)
+			max.y = v.y;
+		if (v.z > max.z)
+			max.z = v.z;
+
+		if (v.x < min.x)
+			min.x = v.x;
+		if (v.y < min.y)
+			min.y = v.y;
+		if (v.z < min.z)
+			min.z = v.z;
+	}
 
 	glm::vec3 size = Vector3((max - min) / 2.f).Abs();
 	glm::vec3 center = (max + min) / 2.f;

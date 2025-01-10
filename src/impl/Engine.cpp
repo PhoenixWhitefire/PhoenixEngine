@@ -280,7 +280,7 @@ void Engine::Initialize()
 	this->DataModel = static_cast<Object_DataModel*>(GameObject::Create("DataModel"));
 	GameObject::s_DataModel = this->DataModel;
 
-	GameObject* workspace = DataModel->GetChild("Workspace");
+	GameObject* workspace = DataModel->FindChild("Workspace");
 	this->Workspace = static_cast<Object_Workspace*>(workspace);
 
 	//ThreadManager::Get()->CreateWorkers(4, WorkerType::DefaultTaskWorker);
@@ -331,6 +331,8 @@ static void updateScripts(double DeltaTime)
 	ScriptsResumedThisFrame.clear();
 }
 
+static bool s_DebugCollisionAabbs = false;
+
 static void recursivelyTravelHierarchy(
 	std::vector<RenderItem>& RenderList,
 	std::vector<LightItem>& LightList,
@@ -340,6 +342,9 @@ static void recursivelyTravelHierarchy(
 	double DeltaTime
 )
 {
+	static uint32_t wireframeMaterial = MaterialManager::Get()->LoadMaterialFromPath("wireframe");
+	static uint32_t cubeMesh = MeshProvider::Get()->LoadFromPath("!Cube");
+
 	std::vector<GameObject*> objects = Root->GetChildren();
 
 	// fresh from the ash of my cremated grandmother
@@ -380,6 +385,20 @@ static void recursivelyTravelHierarchy(
 				object3D->FaceCulling,
 				object3D->CastsShadows
 			);
+
+			if (s_DebugCollisionAabbs && object3D->PhysicsCollisions)
+				RenderList.emplace_back(
+					cubeMesh,
+					glm::translate(glm::mat4(1.f), (glm::vec3)object3D->CollisionAabb.Position),
+					object3D->CollisionAabb.Size,
+					wireframeMaterial,
+					object3D->Tint,
+					0.f,
+					0.f,
+					0.f,
+					FaceCullingMode::None,
+					false
+				);
 		}
 
 		Object_Light* light = !object3D ? dynamic_cast<Object_Light*>(object) : nullptr;
@@ -545,7 +564,7 @@ void Engine::Start()
 			break;
 		}
 
-		if (!DataModel->GetChildOfClass("Workspace"))
+		if (!DataModel->FindChildWhichIsA("Workspace"))
 		{
 			Log::Warning("Workspace was removed, shutting down");
 			break;
@@ -671,6 +690,8 @@ void Engine::Start()
 		std::vector<Object_Base3D*> physicsList;
 
 		PROFILE_EXPRESSION("UpdateScripts", updateScripts(deltaTime));
+
+		s_DebugCollisionAabbs = EngineJsonConfig.value("d_aabbs", false);
 
 		// Aggregate mesh and light data into lists
 		PROFILE_EXPRESSION(
@@ -956,6 +977,8 @@ void Engine::Start()
 Engine::~Engine()
 {
 	Log::Info("Engine destructing...");
+
+	Log::Save();
 
 	Log::Info("Destroying DataModel...");
 

@@ -390,10 +390,114 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 
 void ScriptEngine::L::PushGameObject(lua_State* L, GameObject* Object)
 {
-	auto gv = Reflection::GenericValue(Object->ObjectId);
-	gv.Type = Reflection::ValueType::GameObject;
+	PushGenericValue(L, Object->ToGenericValue());
+}
 
-	PushGenericValue(L, gv);
+int ScriptEngine::L::HandleFunctionCall(
+	lua_State* L,
+	GameObject* refl,
+	const char* fname,
+	int numArgs
+)
+{
+	auto& func = refl->GetFunction(fname);
+	const std::vector<Reflection::ValueType>& paramTypes = func.Inputs;
+
+	int numParams = static_cast<int32_t>(paramTypes.size());
+
+	if (numArgs != numParams)
+	{
+		std::string argsString;
+
+		for (int arg = 1; arg < numArgs + 1; arg++)
+			argsString += std::string(luaL_typename(L, -(numArgs + 1 - arg))) + ", ";
+
+		argsString = argsString.substr(0, argsString.size() - 2);
+
+		luaL_error(L, std::vformat(
+			"Function '{}' expected {} arguments, got {} instead: ({})",
+			std::make_format_args(fname, numParams, numArgs, argsString)
+		).c_str());
+
+		return 0;
+	}
+
+	std::vector<Reflection::GenericValue> inputs;
+
+	// This *entire* for-loop is just for handling input arguments
+	for (int index = 0; index < paramTypes.size(); index++)
+	{
+		Reflection::ValueType paramType = paramTypes[index];
+
+		// Ex: W/ 3 args:
+		// 0 = -3
+		// 1 = -2
+		// 2 = -1
+		// Simpler than I thought actually
+		int argStackIndex = index - numParams;
+
+		auto expectedLuaTypeIt = ScriptEngine::ReflectedTypeLuaEquivalent.find(paramType);
+
+		if (expectedLuaTypeIt == ScriptEngine::ReflectedTypeLuaEquivalent.end())
+			throw(std::vformat(
+				"Couldn't find the equivalent of a Reflection::ValueType::{} in Lua",
+				std::make_format_args(Reflection::TypeAsString(paramType))
+			));
+
+		int expectedLuaType = (int)expectedLuaTypeIt->second;
+		int actualLuaType = lua_type(L, argStackIndex);
+
+		if (actualLuaType != expectedLuaType)
+		{
+			const char* expectedName = lua_typename(L, expectedLuaType);
+			const char* actualTypeName = luaL_typename(L, argStackIndex);
+			const char* providedValue = luaL_tolstring(L, argStackIndex, NULL);
+
+			// I get that shitty fucking ::vformat can't handle
+			// a SINGULAR fucking parameter that isn't an lvalue,
+			// but an `int`?? A literal fucking scalar??? What is this bullshit????
+			int indexAsLuaIndex = index + 1;
+
+			luaL_error(L, std::vformat(
+				"Argument {} expected to be of type {}, but was '{}' ({}) instead",
+				std::make_format_args(
+					indexAsLuaIndex,
+					expectedName,
+					providedValue,
+					actualTypeName
+				)
+			).c_str());
+
+			return 0;
+		}
+		else
+			inputs.push_back(L::LuaValueToGeneric(L, argStackIndex));
+	}
+
+	// Now, onto the *REAL* business...
+	std::vector<Reflection::GenericValue> outputs;
+
+	try
+	{
+		outputs = func.Func(refl, inputs);
+	}
+	catch (std::string err)
+	{
+		luaL_error(L, err.c_str());
+	}
+
+	for (const Reflection::GenericValue& output : outputs)
+		L::PushGenericValue(L, output);
+
+	return (int)func.Outputs.size();
+
+	// ... kinda expected more, but ngl i feel SOOOO gigabrain for
+	// giving ::GenericValue an Array, like, it all just clicks in now!
+	// And then Maps just being Arrays, except odd elements are the keys
+	// and even elements are the values?! Call me Einstein already on god-
+	// (Me writing this as Rendering is completely busted and I have no clue
+	// why oh no
+	// 15/08/2024
 }
 
 void ScriptEngine::L::PushFunction(lua_State* L, const char* Name)
@@ -414,104 +518,12 @@ void ScriptEngine::L::PushFunction(lua_State* L, const char* Name)
 			GameObject* refl = GameObject::GetObjectById(*(uint32_t*)luaL_checkudata(L, 1, "GameObject"));
 			const char* fname = lua_tostring(L, lua_upvalueindex(1));
 
-			auto& func = refl->GetFunction(fname);
-			const std::vector<Reflection::ValueType>& paramTypes = func.Inputs;
-
-			int numParams = static_cast<int32_t>(paramTypes.size());
-
-			if (numArgs != numParams)
-			{
-				std::string argsString;
-
-				for (int arg = 1; arg < numArgs + 1; arg++)
-					argsString += std::string(luaL_typename(L, -(numArgs + 1 - arg))) + ", ";
-
-				argsString = argsString.substr(0, argsString.size() - 2);
-
-				luaL_error(L, std::vformat(
-					"Function '{}' expected {} arguments, got {} instead: ({})",
-					std::make_format_args(fname, numParams, numArgs, argsString)
-				).c_str());
-
-				return 0;
-			}
-
-			std::vector<Reflection::GenericValue> inputs;
-
-			// This *entire* for-loop is just for handling input arguments
-			for (int index = 0; index < paramTypes.size(); index++)
-			{
-				Reflection::ValueType paramType = paramTypes[index];
-
-				// Ex: W/ 3 args:
-				// 0 = -3
-				// 1 = -2
-				// 2 = -1
-				// Simpler than I thought actually
-				int argStackIndex = index - numParams;
-
-				auto expectedLuaTypeIt = ScriptEngine::ReflectedTypeLuaEquivalent.find(paramType);
-
-				if (expectedLuaTypeIt == ScriptEngine::ReflectedTypeLuaEquivalent.end())
-					throw(std::vformat(
-						"Couldn't find the equivalent of a Reflection::ValueType::{} in Lua",
-						std::make_format_args(Reflection::TypeAsString(paramType))
-					));
-
-				int expectedLuaType = (int)expectedLuaTypeIt->second;
-				int actualLuaType = lua_type(L, argStackIndex);
-
-				if (actualLuaType != expectedLuaType)
-				{
-					const char* expectedName = lua_typename(L, expectedLuaType);
-					const char* actualTypeName = luaL_typename(L, argStackIndex);
-					const char* providedValue = luaL_tolstring(L, argStackIndex, NULL);
-
-					// I get that shitty fucking ::vformat can't handle
-					// a SINGULAR fucking parameter that isn't an lvalue,
-					// but an `int`?? A literal fucking scalar??? What is this bullshit????
-					int indexAsLuaIndex = index + 1;
-
-					luaL_error(L, std::vformat(
-						"Argument {} expected to be of type {}, but was {} ({}) instead",
-						std::make_format_args(
-							indexAsLuaIndex,
-							expectedName,
-							providedValue,
-							actualTypeName
-						)
-					).c_str());
-
-					return 0;
-				}
-				else
-					inputs.push_back(L::LuaValueToGeneric(L, argStackIndex));
-			}
-
-			// Now, onto the *REAL* business...
-			std::vector<Reflection::GenericValue> outputs;
-
-			try
-			{
-				outputs = func.Func(refl, inputs);
-			}
-			catch (std::string err)
-			{
-				luaL_error(L, err.c_str());
-			}
-
-			for (const Reflection::GenericValue& output : outputs)
-				L::PushGenericValue(L, output);
-
-			return (int)func.Outputs.size();
-
-			// ... kinda expected more, but ngl i feel SOOOO gigabrain for
-			// giving ::GenericValue an Array, like, it all just clicks in now!
-			// And then Maps just being Arrays, except odd elements are the keys
-			// and even elements are the values?! Call me Einstein already on god-
-			// (Me writing this as Rendering is completely busted and I have no clue
-			// why oh no
-			// 15/08/2024
+			return ScriptEngine::L::HandleFunctionCall(
+				L,
+				refl,
+				fname,
+				numArgs
+			);
 		},
 
 		Name,
@@ -864,7 +876,7 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 		"world_raycast",
 		[](lua_State* L)
 		{
-			GameObject* workspace = GameObject::s_DataModel->GetChildOfClass("Workspace");
+			GameObject* workspace = GameObject::s_DataModel->FindChildWhichIsA("Workspace");
 
 			if (!workspace)
 				luaL_error(L, "A Workspace was not found within the DataModel");
@@ -938,7 +950,7 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 		"world_aabbcast",
 		[](lua_State* L)
 		{
-			GameObject* workspace = GameObject::s_DataModel->GetChildOfClass("Workspace");
+			GameObject* workspace = GameObject::s_DataModel->FindChildWhichIsA("Workspace");
 
 			if (!workspace)
 				luaL_error(L, "A Workspace was not found within the DataModel");
@@ -1012,7 +1024,7 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 		"world_aabbquery",
 		[](lua_State* L)
 		{
-			GameObject* workspace = GameObject::s_DataModel->GetChildOfClass("Workspace");
+			GameObject* workspace = GameObject::s_DataModel->FindChildWhichIsA("Workspace");
 
 			if (!workspace)
 				luaL_error(L, "A Workspace was not found within the DataModel");

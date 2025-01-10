@@ -790,7 +790,8 @@ std::string SceneFormat::Serialize(std::vector<GameObject*> Objects, const std::
 		objectsArray.push_back(serializeObject(rootObject, true));
 		
 		for (GameObject* desc : rootObject->GetDescendants())
-			objectsArray.push_back(serializeObject(desc));
+			if (desc->Serializes)
+				objectsArray.push_back(serializeObject(desc));
 	}
 
 	json["GameObjects"] = objectsArray;

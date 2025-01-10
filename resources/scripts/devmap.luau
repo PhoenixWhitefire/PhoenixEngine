@@ -78,7 +78,8 @@ function Update(DeltaTime)
 		
 		if input_keypressed("e") and TotalTime - lastSwitchedPerspectives > 0.25 then
 			lastSwitchedPerspectives = TotalTime
-			local bruh = Character:Clone()
+			local bruh = Character:Duplicate()
+			bruh.Name = "bruh"
 			bruh.Transform = Matrix.fromTranslation((Character.Transform * Matrix.fromTranslation(0, 0, 7)).Position)
 			bruh.LinearVelocity = Character.Transform.Forward * 100
 			bruh.PhysicsDynamics = true

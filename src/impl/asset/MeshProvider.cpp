@@ -41,7 +41,7 @@ static uint32_t readU32(const std::string& vec, size_t* offset, bool* fileTooSma
 
 static float readF32(const std::string& vec, size_t* offset, bool* fileTooSmallPtr)
 {
-	if (*fileTooSmallPtr || vec.size() - 1 < *offset + 4)
+	if (*fileTooSmallPtr || vec.size() - 1 < (*offset) + 3)
 	{
 		*fileTooSmallPtr = true;
 		return FLT_MAX;
@@ -140,18 +140,18 @@ static Mesh loadMeshVersion2(const std::string& FileContents, bool* SuccessPtr)
 	if (binaryStartLoc == std::string::npos)
 		MESHPROVIDER_ERROR("File did not contain a binary data begin symbol ('$')");
 
-	std::string binaryContents = FileContents.substr(binaryStartLoc + 1);
+	std::string contents = FileContents.substr(binaryStartLoc + 1);
 
-	if (binaryContents.size() < 12)
+	if (contents.size() < 12)
 		MESHPROVIDER_ERROR("File cannot contain header as binary data is smaller than 12 bytes");
 
 	size_t headerPtr{};
 	bool fileTooSmallError = false;
 
 	// vertex metadata
-	uint32_t vertexMeta = readU32(binaryContents, &headerPtr, &fileTooSmallError);
-	uint32_t numVerts = readU32(binaryContents, &headerPtr, &fileTooSmallError);
-	uint32_t numIndices = readU32(binaryContents, &headerPtr, &fileTooSmallError);
+	uint32_t vertexMeta = readU32(contents, &headerPtr, &fileTooSmallError);
+	uint32_t numVerts = readU32(contents, &headerPtr, &fileTooSmallError);
+	uint32_t numIndices = readU32(contents, &headerPtr, &fileTooSmallError);
 
 	if (fileTooSmallError)
 		MESHPROVIDER_ERROR("This should have been caught earlier, but header was smaller than 12 bytes");
@@ -167,22 +167,22 @@ static Mesh loadMeshVersion2(const std::string& FileContents, bool* SuccessPtr)
 	if (!hasVertexNormal)
 		uniformVertexNormal = glm::vec3
 		{
-			readF32(binaryContents, &headerPtr, &fileTooSmallError),
-			readF32(binaryContents, &headerPtr, &fileTooSmallError),
-			readF32(binaryContents, &headerPtr, &fileTooSmallError)
+			readF32(contents, &headerPtr, &fileTooSmallError),
+			readF32(contents, &headerPtr, &fileTooSmallError),
+			readF32(contents, &headerPtr, &fileTooSmallError)
 		};
 
 	if (!hasVertexColor)
 		uniformVertexRGBA = glm::vec4
 		{
-			readF32(binaryContents, &headerPtr, &fileTooSmallError),
-			readF32(binaryContents, &headerPtr, &fileTooSmallError),
-			readF32(binaryContents, &headerPtr, &fileTooSmallError),
+			readF32(contents, &headerPtr, &fileTooSmallError),
+			readF32(contents, &headerPtr, &fileTooSmallError),
+			readF32(contents, &headerPtr, &fileTooSmallError),
 			1.f
 		};
 
 	if (!hasVertexOpacity)
-		uniformVertexRGBA.w = readF32(binaryContents, &headerPtr, &fileTooSmallError);
+		uniformVertexRGBA.w = readF32(contents, &headerPtr, &fileTooSmallError);
 
 	if (fileTooSmallError)
 		MESHPROVIDER_ERROR("File ended during preamble");
@@ -196,7 +196,7 @@ static Mesh loadMeshVersion2(const std::string& FileContents, bool* SuccessPtr)
 		+ (isRigged ? 5 : 0);
 
 	size_t totalExpectedDataSize = bytesPerVertex * numVerts + numIndices * 4ull;
-	size_t actualDataSize = binaryContents.size() - headerPtr;
+	size_t actualDataSize = contents.size() - headerPtr;
 
 	if (actualDataSize < totalExpectedDataSize)
 		MESHPROVIDER_ERROR(std::vformat(
@@ -212,28 +212,28 @@ static Mesh loadMeshVersion2(const std::string& FileContents, bool* SuccessPtr)
 
 	for (uint32_t vertexIndex = 0; vertexIndex < numVerts; vertexIndex++)
 	{
-		float px = readF32(binaryContents, &cursor, &fileTooSmallError);
-		float py = readF32(binaryContents, &cursor, &fileTooSmallError);
-		float pz = readF32(binaryContents, &cursor, &fileTooSmallError);
+		float px = readF32(contents, &cursor, &fileTooSmallError);
+		float py = readF32(contents, &cursor, &fileTooSmallError);
+		float pz = readF32(contents, &cursor, &fileTooSmallError);
 
-		float nx = hasVertexNormal ? readF32(binaryContents, &cursor, &fileTooSmallError) : uniformVertexNormal.x;
-		float ny = hasVertexNormal ? readF32(binaryContents, &cursor, &fileTooSmallError) : uniformVertexNormal.y;
-		float nz = hasVertexNormal ? readF32(binaryContents, &cursor, &fileTooSmallError) : uniformVertexNormal.z;
+		float nx = hasVertexNormal ? readF32(contents, &cursor, &fileTooSmallError) : uniformVertexNormal.x;
+		float ny = hasVertexNormal ? readF32(contents, &cursor, &fileTooSmallError) : uniformVertexNormal.y;
+		float nz = hasVertexNormal ? readF32(contents, &cursor, &fileTooSmallError) : uniformVertexNormal.z;
 
-		float r = hasVertexColor ? readF32(binaryContents, &cursor, &fileTooSmallError) : uniformVertexRGBA.x;
-		float g = hasVertexColor ? readF32(binaryContents, &cursor, &fileTooSmallError) : uniformVertexRGBA.y;
-		float b = hasVertexColor ? readF32(binaryContents, &cursor, &fileTooSmallError) : uniformVertexRGBA.z;
-		float a = hasVertexOpacity ? readF32(binaryContents, &cursor, &fileTooSmallError) : uniformVertexRGBA.w;
+		float r = hasVertexColor ? readF32(contents, &cursor, &fileTooSmallError) : uniformVertexRGBA.x;
+		float g = hasVertexColor ? readF32(contents, &cursor, &fileTooSmallError) : uniformVertexRGBA.y;
+		float b = hasVertexColor ? readF32(contents, &cursor, &fileTooSmallError) : uniformVertexRGBA.z;
+		float a = hasVertexOpacity ? readF32(contents, &cursor, &fileTooSmallError) : uniformVertexRGBA.w;
 
-		float u = readF32(binaryContents, &cursor, &fileTooSmallError);
-		float v = readF32(binaryContents, &cursor, &fileTooSmallError);
+		float u = readF32(contents, &cursor, &fileTooSmallError);
+		float v = readF32(contents, &cursor, &fileTooSmallError);
 
 		std::array<uint8_t, 4> bones{ UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX };
 		std::array<float, 4> weights{ FLT_MAX, FLT_MAX, FLT_MAX };
 
 		if (isRigged)
 		{
-			uint8_t numJoints = readU8(binaryContents, &cursor, &fileTooSmallError);
+			uint8_t numJoints = readU8(contents, &cursor, &fileTooSmallError);
 
 			if (numJoints > 4)
 			{
@@ -245,12 +245,10 @@ static Mesh loadMeshVersion2(const std::string& FileContents, bool* SuccessPtr)
 				numJoints = 4;
 			}
 
-			
-
 			for (uint8_t i = 0; i < numJoints; i++)
 			{
-				uint8_t boneId = readU8(binaryContents, &cursor, &fileTooSmallError);
-				float boneWeight = readF32(binaryContents, &cursor, &fileTooSmallError);
+				uint8_t boneId = readU8(contents, &cursor, &fileTooSmallError);
+				float boneWeight = readF32(contents, &cursor, &fileTooSmallError);
 
 				bones[i] = boneId;
 				weights[i] = boneWeight;
@@ -268,11 +266,11 @@ static Mesh loadMeshVersion2(const std::string& FileContents, bool* SuccessPtr)
 	}
 
 	for (uint32_t indexIndex = 0; indexIndex < numIndices; indexIndex++)
-		mesh.Indices.push_back(readU32(binaryContents, &cursor, &fileTooSmallError));
+		mesh.Indices.push_back(readU32(contents, &cursor, &fileTooSmallError));
 
 	if (isRigged)
 	{
-		uint32_t chId = readU32(binaryContents, &cursor, &fileTooSmallError);
+		uint32_t chId = readU32(contents, &cursor, &fileTooSmallError);
 
 		if (chId != BoneChId)
 			Log::Error(std::vformat(
@@ -281,44 +279,58 @@ static Mesh loadMeshVersion2(const std::string& FileContents, bool* SuccessPtr)
 			));
 		else
 		{
-			uint8_t numBones = readU8(binaryContents, &cursor, &fileTooSmallError);
+			uint8_t numBones = readU8(contents, &cursor, &fileTooSmallError);
 
 			if (numBones == 0)
 				Log::Warning("Mesh had a BONE chunk and the IsRigged bit, but bone count is 0");
 
 			for (uint8_t boneIdx = 0; boneIdx < numBones; boneIdx++)
 			{
+				uint8_t nameLen = readU8(contents, &cursor, &fileTooSmallError);
+				std::string name = std::string(contents, cursor, nameLen);
+				cursor += nameLen;
+
 				glm::mat4 trans =
 				{
-					readF32(binaryContents, &cursor, &fileTooSmallError),
-					readF32(binaryContents, &cursor, &fileTooSmallError),
-					readF32(binaryContents, &cursor, &fileTooSmallError),
-					readF32(binaryContents, &cursor, &fileTooSmallError),
+					readF32(contents, &cursor, &fileTooSmallError),
+					readF32(contents, &cursor, &fileTooSmallError),
+					readF32(contents, &cursor, &fileTooSmallError),
+					readF32(contents, &cursor, &fileTooSmallError),
 
-					readF32(binaryContents, &cursor, &fileTooSmallError),
-					readF32(binaryContents, &cursor, &fileTooSmallError),
-					readF32(binaryContents, &cursor, &fileTooSmallError),
-					readF32(binaryContents, &cursor, &fileTooSmallError),
+					readF32(contents, &cursor, &fileTooSmallError),
+					readF32(contents, &cursor, &fileTooSmallError),
+					readF32(contents, &cursor, &fileTooSmallError),
+					readF32(contents, &cursor, &fileTooSmallError),
 
-					readF32(binaryContents, &cursor, &fileTooSmallError),
-					readF32(binaryContents, &cursor, &fileTooSmallError),
-					readF32(binaryContents, &cursor, &fileTooSmallError),
-					readF32(binaryContents, &cursor, &fileTooSmallError),
+					readF32(contents, &cursor, &fileTooSmallError),
+					readF32(contents, &cursor, &fileTooSmallError),
+					readF32(contents, &cursor, &fileTooSmallError),
+					readF32(contents, &cursor, &fileTooSmallError),
 
-					readF32(binaryContents, &cursor, &fileTooSmallError),
-					readF32(binaryContents, &cursor, &fileTooSmallError),
-					readF32(binaryContents, &cursor, &fileTooSmallError),
-					readF32(binaryContents, &cursor, &fileTooSmallError)
+					readF32(contents, &cursor, &fileTooSmallError),
+					readF32(contents, &cursor, &fileTooSmallError),
+					readF32(contents, &cursor, &fileTooSmallError),
+					readF32(contents, &cursor, &fileTooSmallError)
 				};
 
 				glm::vec3 scale =
 				{
-					readF32(binaryContents, &cursor, &fileTooSmallError),
-					readF32(binaryContents, &cursor, &fileTooSmallError),
-					readF32(binaryContents, &cursor, &fileTooSmallError)
+					readF32(contents, &cursor, &fileTooSmallError),
+					readF32(contents, &cursor, &fileTooSmallError),
+					readF32(contents, &cursor, &fileTooSmallError)
 				};
 
-				mesh.Bones.emplace_back(trans, scale);
+				if (fileTooSmallError)
+				{
+					Log::Error(std::vformat(
+						"Reached EoF trying to read Bone ID {}",
+						std::make_format_args(boneIdx)
+					));
+
+					break;
+				}
+
+				mesh.Bones.emplace_back(name, trans, scale);
 			}
 		}
 	}
@@ -337,8 +349,8 @@ static MeshProvider* s_Instance = nullptr;
 
 void MeshProvider::Initialize()
 {
-	m_CreateAndUploadGpuMesh(this->Assign(PrimitiveMeshes::Cube(), "!Cube"));
-	m_CreateAndUploadGpuMesh(this->Assign(PrimitiveMeshes::Quad(), "!Quad"));
+	this->Assign(PrimitiveMeshes::Cube(), "!Cube", true);
+	this->Assign(PrimitiveMeshes::Quad(), "!Quad", true);
 
 	s_Instance = this;
 }
@@ -377,20 +389,25 @@ MeshProvider* MeshProvider::Get()
 
 std::string MeshProvider::Serialize(const Mesh& mesh)
 {
-	std::string contents = "PHNXENGI\n#Version 2.00\n#Asset Mesh\n";
+	std::string contents = "PHNXENGI\n#Asset Mesh\n";
+
+	bool hasPerVertexColor = false;
+	bool hasPerVertexAlpha = false;
+	bool isRigged = !mesh.Bones.empty();
+
+	if (isRigged)
+		contents += "#Version 2.10\n";
+	else
+		contents += "#Version 2.00\n";
 
 	std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
 	std::chrono::year_month_day ymd = std::chrono::floor<std::chrono::days>(now);
 
 	contents += "#Date "
-				+ std::to_string((uint32_t)ymd.day()) + "-"
-				+ std::to_string((uint32_t)ymd.month()) + "-"
-				+ std::to_string((int32_t)ymd.year()) + "\n\n"
-				+ "$";
-
-	bool hasPerVertexColor = false;
-	bool hasPerVertexAlpha = false;
-	bool isRigged = !mesh.Bones.empty();
+		+ std::to_string((uint32_t)ymd.day()) + "-"
+		+ std::to_string((uint32_t)ymd.month()) + "-"
+		+ std::to_string((int32_t)ymd.year()) + "\n\n"
+		+ "$";
 
 	glm::vec3 uniformVertexCol = glm::vec3(mesh.Vertices.at(0).Paint);
 	float uniformVertexAlpha = mesh.Vertices.at(0).Paint.w;
@@ -474,7 +491,7 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 			// max 4 rn 02/01/2024
 			// invalid bones (UINT8_MAX i.e. 255) are still specified
 			// to reduce serialization/deserialization complexity
-			contents.push_back(4);
+			contents.push_back(4i8);
 
 			// bone id, then weight
 			// felt easier
@@ -503,6 +520,10 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 
 	for (const Bone& b : mesh.Bones)
 	{
+		uint8_t nameLen = static_cast<uint8_t>(b.Name.size());
+		contents.push_back(*(int8_t*)&nameLen);
+		contents += b.Name;
+
 		// 4x4 transform matrix
 		writeF32(contents, b.Transform[0][0]);
 		writeF32(contents, b.Transform[0][1]);
@@ -565,7 +586,36 @@ void MeshProvider::Save(uint32_t Id, const std::string& Path)
 	this->Save(m_Meshes.at(Id), Path);
 }
 
-uint32_t MeshProvider::Assign(const Mesh& mesh, const std::string& InternalName)
+static void uploadMeshDataToGpuMesh(Mesh& mesh, MeshProvider::GpuMesh& gpuMesh)
+{
+	GpuVertexArray& vao = gpuMesh.VertexArray;
+	GpuVertexBuffer& vbo = gpuMesh.VertexBuffer;
+	GpuElementBuffer& ebo = gpuMesh.ElementBuffer;
+
+	vao.Bind();
+
+	vao.LinkAttrib(vbo, 0, 3, GL_FLOAT, sizeof(Vertex), (void*)0);
+	vao.LinkAttrib(vbo, 1, 3, GL_FLOAT, sizeof(Vertex), (void*)(3 * sizeof(float)));
+	vao.LinkAttrib(vbo, 2, 4, GL_FLOAT, sizeof(Vertex), (void*)(6 * sizeof(float)));
+	vao.LinkAttrib(vbo, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)(10 * sizeof(float)));
+
+	vbo.SetBufferData(mesh.Vertices, BufferUsageHint::Static);
+	ebo.SetBufferData(mesh.Indices, BufferUsageHint::Static);
+
+	vbo.Unbind();
+	ebo.Unbind();
+	vao.Unbind();
+
+	gpuMesh.NumIndices = static_cast<uint32_t>(mesh.Indices.size());
+
+	if (!mesh.MeshDataPreserved)
+	{
+		mesh.Vertices.clear();
+		mesh.Indices.clear();
+	}
+}
+
+uint32_t MeshProvider::Assign(Mesh mesh, const std::string& InternalName, bool UploadToGpu)
 {
 	uint32_t assignedId = static_cast<uint32_t>(m_Meshes.size());
 
@@ -574,13 +624,30 @@ uint32_t MeshProvider::Assign(const Mesh& mesh, const std::string& InternalName)
 	if (prevPair != m_StringToMeshId.end())
 	{
 		// overwrite the pre-existing mesh
+		Mesh preExisting = m_Meshes[prevPair->second];
 		m_Meshes[prevPair->second] = mesh;
 		assignedId = prevPair->second;
+
+		if (preExisting.GpuId != UINT32_MAX)
+		{
+			GpuMesh& gpuMesh = m_GpuMeshes.at(preExisting.GpuId);
+
+			if (UploadToGpu)
+			{
+				uploadMeshDataToGpuMesh(m_Meshes[prevPair->second], gpuMesh);
+				m_Meshes[prevPair->second].GpuId = preExisting.GpuId;
+			}
+			else
+				gpuMesh.Delete();
+		}
 	}
 	else
 	{
 		m_StringToMeshId.insert(std::pair(InternalName, assignedId));
 		m_Meshes.push_back(mesh);
+
+		if (UploadToGpu)
+			m_CreateAndUploadGpuMesh(assignedId);
 	}
 
 	return assignedId;
@@ -729,6 +796,7 @@ void MeshProvider::FinalizeAsyncLoadedMeshes()
 
 		mesh.Vertices = loadedMesh.Vertices;
 		mesh.Indices = loadedMesh.Indices;
+		mesh.Bones = loadedMesh.Bones;
 
 		m_CreateAndUploadGpuMesh(mesh);
 
@@ -755,31 +823,7 @@ void MeshProvider::m_CreateAndUploadGpuMesh(Mesh& mesh)
 	gpuMesh.VertexBuffer.Initialize();
 	gpuMesh.ElementBuffer.Initialize();
 
-	GpuVertexArray& vao = gpuMesh.VertexArray;
-	GpuVertexBuffer& vbo = gpuMesh.VertexBuffer;
-	GpuElementBuffer& ebo = gpuMesh.ElementBuffer;
-
-	vao.Bind();
-
-	vao.LinkAttrib(vbo, 0, 3, GL_FLOAT, sizeof(Vertex), (void*)0);
-	vao.LinkAttrib(vbo, 1, 3, GL_FLOAT, sizeof(Vertex), (void*)(3 * sizeof(float)));
-	vao.LinkAttrib(vbo, 2, 4, GL_FLOAT, sizeof(Vertex), (void*)(6 * sizeof(float)));
-	vao.LinkAttrib(vbo, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)(10 * sizeof(float)));
-
-	vbo.SetBufferData(mesh.Vertices, BufferUsageHint::Static);
-	ebo.SetBufferData(mesh.Indices, BufferUsageHint::Static);
-
-	vbo.Unbind();
-	ebo.Unbind();
-	vao.Unbind();
-
-	gpuMesh.NumIndices = static_cast<uint32_t>(mesh.Indices.size());
-
-	if (!mesh.MeshDataPreserved)
-	{
-		mesh.Vertices.clear();
-		mesh.Indices.clear();
-	}
+	uploadMeshDataToGpuMesh(mesh, gpuMesh);
 
 	mesh.GpuId = static_cast<uint32_t>(m_GpuMeshes.size() - 1);
 }

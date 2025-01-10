@@ -143,7 +143,10 @@ Object_Example::Object_Example()
 	
 	s_DeclareReflections();
 	ApiPointer = &s_Api;
+}
 
+void Object_Example::Initialize()
+{
 	// Returns whether it succeeded, but this class isn't
 	// very important so we don't care
 	this->LoadScript("scripts/safe-space.luau");

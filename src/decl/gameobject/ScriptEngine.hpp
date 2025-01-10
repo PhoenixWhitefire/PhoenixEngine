@@ -42,5 +42,12 @@ namespace ScriptEngine::L
 	void PushGameObject(lua_State*, GameObject*);
 	void PushFunction(lua_State* L, const char*);
 
+	int HandleFunctionCall(
+		lua_State* L,
+		GameObject* g,
+		const char* fnaf,
+		int nargs
+	);
+
 	extern std::unordered_map<std::string, lua_CFunction> GlobalFunctions;
 };

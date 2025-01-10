@@ -223,33 +223,33 @@ namespace Reflection
 	class Reflectable
 	{
 	public:
-		virtual const Reflection::PropertyMap& GetProperties()
+		virtual const Reflection::PropertyMap& GetProperties() const
 		{
 			return ApiPointer->Properties;
 		}
-		virtual const Reflection::FunctionMap& GetFunctions()
+		virtual const Reflection::FunctionMap& GetFunctions() const
 		{
 			return ApiPointer->Functions;
 		}
-		virtual const std::vector<std::string>& GetLineage()
+		virtual const std::vector<std::string>& GetLineage() const
 		{
 			return ApiPointer->Lineage;
 		}
-		virtual bool HasProperty(const std::string& MemberName)
+		virtual bool HasProperty(const std::string& MemberName) const
 		{
 			return ApiPointer->Properties.find(MemberName) != ApiPointer->Properties.end();
 		}
-		virtual bool HasFunction(const std::string& MemberName)
+		virtual bool HasFunction(const std::string& MemberName) const
 		{
 			return ApiPointer->Functions.find(MemberName) != ApiPointer->Functions.end();
 		}
-		virtual const Reflection::Property& GetProperty(const std::string& MemberName)
+		virtual const Reflection::Property& GetProperty(const std::string& MemberName) const
 		{
 			return HasProperty(MemberName)
 			? ApiPointer->Properties[MemberName]
 			: throw(std::string("Invalid Property in GetProperty ") + MemberName);
 		}
-		virtual const Reflection::Function& GetFunction(const std::string& MemberName)
+		virtual const Reflection::Function& GetFunction(const std::string& MemberName) const
 		{
 			return HasFunction(MemberName)
 			? ApiPointer->Functions[MemberName]

@@ -47,21 +47,15 @@ static auto api_gameobjindex = [](lua_State* L)
 
 		else
 		{
-			GameObject* child = obj->GetChild(key);
+			GameObject* child = obj->FindChild(key);
 
 			if (child)
 				ScriptEngine::L::PushGameObject(L, child);
 			else
-			{
-				std::string fullname = obj->GetFullName();
-
-				luaL_error(L, std::vformat(
-					"'{}' was neither a Member nor Child of {}",
-					std::make_format_args(key, fullname)).c_str()
-				);
-
-				return 0;
-			}
+				// explicitly pushnil so the error message doesn't say
+				// "attempt to call a GameObject value"
+				// 10/01/2024
+				lua_pushnil(L);
 		}
 
 		return 1;
@@ -696,6 +690,37 @@ static lua_State* createState()
 		lua_pushcfunction(state, api_gameobjnewindex, "GameObject.__newindex");
 		lua_setfield(state, -2, "__newindex");
 
+		lua_pushcfunction(
+			state,
+			[](lua_State* L)
+			{
+				int nargs = lua_gettop(L) - 1;
+
+				GameObject* g = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
+				const char* k = L->namecall->data; // this is weird 10/01/2025
+
+				int numresults = 0;
+
+				try
+				{
+					numresults = ScriptEngine::L::HandleFunctionCall(
+						L,
+						g,
+						k,
+						nargs
+					);
+				}
+				catch (std::string err)
+				{
+					luaL_errorL(L, err.c_str());
+				}
+
+				return numresults;
+			},
+			"GameObject.__namecall"
+		);
+		lua_setfield(state, -2, "__namecall");
+
 		lua_pushcfunction(state, api_gameobjecttostring, "GameObject.__tostring");
 		lua_setfield(state, -2, "__tostring");
 
@@ -706,7 +731,7 @@ static lua_State* createState()
 	ScriptEngine::L::PushGameObject(state, GameObject::s_DataModel);
 	lua_setglobal(state, "game");
 
-	ScriptEngine::L::PushGameObject(state, GameObject::s_DataModel->GetChild("Workspace"));
+	ScriptEngine::L::PushGameObject(state, GameObject::s_DataModel->FindChild("Workspace"));
 	lua_setglobal(state, "workspace");
 
 	for (auto& pair : ScriptEngine::L::GlobalFunctions)
@@ -988,10 +1013,12 @@ bool Object_Script::Reload()
 	}
 	else
 	{
-		int topidx = lua_gettop(m_L);
-		const char* errstr = lua_tostring(m_L, topidx);
+		const char* errstr = lua_tostring(m_L, -1);
 
-		Log::Error(std::vformat("Luau compile error {}: {}: '{}'", std::make_format_args(result, this->Name, errstr)));
+		Log::Error(std::vformat(
+			"Luau compile error {}: {}: '{}'",
+			std::make_format_args(result, this->Name, errstr))
+		);
 
 		return false;
 	}
