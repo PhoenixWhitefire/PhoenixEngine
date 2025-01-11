@@ -4,6 +4,7 @@
 #pragma once
 
 #include "datatype/GameObject.hpp"
+#include "gameobject/Workspace.hpp"
 
 class Object_DataModel : public GameObject
 {
@@ -12,6 +13,8 @@ public:
 	~Object_DataModel() override;
 	
 	void Initialize() override;
+
+	Object_Workspace* GetWorkspace();
 
 	bool WantExit = false;
 

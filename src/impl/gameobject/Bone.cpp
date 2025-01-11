@@ -56,7 +56,7 @@ void Object_Bone::s_DeclareReflections()
 			if (realBone)
 				realBone->Transform = gv.AsMatrix();
 			else
-				return boneObj->LocalTransform;
+				boneObj->LocalTransform = gv.AsMatrix();
 		}
 	);
 

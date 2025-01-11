@@ -20,6 +20,7 @@ local SwitchToFreecamNextFrame = 0
 local function reset()
 	CharacterController:InitDefault()
 	Character = CharacterController.Character
+	Character.Serializes = false
 	
 	Character.Parent = workspace
 	Character.Name = `Player`
@@ -87,7 +88,7 @@ function Update(DeltaTime)
 		end
 	end
 	
-	--workspace.Level.woodplanks.Transform *= Matrix.fromEulerAnglesXYZ(0, math.rad(DeltaTime * 15), 0)
+	workspace.Level.woodplanks.Transform *= Matrix.fromEulerAnglesXYZ(0, math.rad(DeltaTime * 15), 0)
 	
 	--RoomGen()
 	--NodeEditor()

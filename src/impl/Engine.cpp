@@ -280,10 +280,9 @@ void Engine::Initialize()
 	this->DataModel = static_cast<Object_DataModel*>(GameObject::Create("DataModel"));
 	GameObject::s_DataModel = this->DataModel;
 
-	GameObject* workspace = DataModel->FindChild("Workspace");
-	this->Workspace = static_cast<Object_Workspace*>(workspace);
-
 	//ThreadManager::Get()->CreateWorkers(4, WorkerType::DefaultTaskWorker);
+
+	m_DataModelRef = new GameObjectRef<Object_DataModel>( this->DataModel );
 
 	Log::Info("Engine initialized");
 }
@@ -346,11 +345,6 @@ static void recursivelyTravelHierarchy(
 	static uint32_t cubeMesh = MeshProvider::Get()->LoadFromPath("!Cube");
 
 	std::vector<GameObject*> objects = Root->GetChildren();
-
-	// fresh from the ash of my cremated grandmother
-	RenderList.reserve(RenderList.capacity() + static_cast<size_t>(objects.size() / 2));
-	LightList.reserve(LightList.capacity() + static_cast<size_t>(objects.size() / 4));
-	PhysicsList.reserve(PhysicsList.capacity() + std::min(static_cast<size_t>(objects.size() / 8), 512ull));
 
 	for (GameObject* object : objects)
 	{
@@ -558,17 +552,30 @@ void Engine::Start()
 
 	while (!this->Exit)
 	{
+		if (DataModel->IsDestructionPending)
+		{
+			Log::Warning("`::Destroy` called on DataModel, shutting down");
+			break;
+		}
+
+		Object_Workspace* workspace = DataModel->GetWorkspace();
+
+		if (!workspace)
+		{
+			Log::Warning("Workspace was removed, shutting down");
+			break;
+		}
+
+		this->Workspace = workspace;
+
 		if (this->DataModel->WantExit)
 		{
 			Log::Info("DataModel requested shutdown");
 			break;
 		}
 
-		if (!DataModel->FindChildWhichIsA("Workspace"))
-		{
-			Log::Warning("Workspace was removed, shutting down");
-			break;
-		}
+		// so we don't need to do additional checks past this point in the scope 11/01/2025
+		GameObjectRef<Object_Workspace> keepWorkspace{ workspace };
 
 		this->RunningTime = GetRunningTime();
 		EngineJsonConfig["renderer_drawcallcount"] = 0;
@@ -579,7 +586,7 @@ void Engine::Start()
 		double fpsCapDelta = 1.f / this->FpsCap;
 
 		// Wait the appropriate amount of time between frames
-		if (!VSync && (frameDelta + .005f < fpsCapDelta))
+		if (!VSync && (frameDelta + .0005f < fpsCapDelta))
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<size_t>((fpsCapDelta - frameDelta) * 1000)));
 			continue;
@@ -685,7 +692,7 @@ void Engine::Start()
 		}
 		float aspectRatio = (float)this->WindowSizeX / (float)this->WindowSizeY;
 
-		Object_Camera* sceneCamera = this->Workspace->GetSceneCamera();
+		Object_Camera* sceneCamera = workspace->GetSceneCamera();
 
 		std::vector<Object_Base3D*> physicsList;
 
@@ -700,7 +707,7 @@ void Engine::Start()
 				scene.RenderList,
 				scene.LightingList,
 				physicsList,
-				this->Workspace,
+				workspace,
 				sceneCamera,
 				deltaTime
 			)
@@ -830,21 +837,10 @@ void Engine::Start()
 
 		glDisable(GL_DEPTH_TEST);
 
-		uint32_t dataModelId = this->DataModel->ObjectId;
-
 		PROFILE_EXPRESSION("EventCallbacks/OnFrameRenderGui", this->OnFrameRenderGui.Fire(deltaTime));
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-		if (!GameObject::GetObjectById(dataModelId))
-		{
-			Log::Error("DataModel was Destroy'd, shutting down...");
-			this->DataModel = nullptr;
-			GameObject::s_DataModel = nullptr;
-
-			break;
-		}
 
 		glEnable(GL_DEPTH_TEST);
 
@@ -989,8 +985,9 @@ Engine::~Engine()
 	// It doesn't cause a use-after-free, YET
 	this->DataModel->Destroy();
 	GameObject::s_DataModel = nullptr;
-	this->Workspace = nullptr;
 	this->DataModel = nullptr;
+
+	delete m_DataModelRef;
 
 	EngineInstance = nullptr;
 

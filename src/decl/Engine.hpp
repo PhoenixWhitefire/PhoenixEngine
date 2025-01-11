@@ -76,4 +76,6 @@ private:
 	TextureManager m_TextureManager;
 	ShaderManager m_ShaderManager;
 	MeshProvider m_MeshProvider;
+
+	GameObjectRef<Object_DataModel>* m_DataModelRef = nullptr;
 };

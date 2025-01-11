@@ -143,8 +143,8 @@ void Object_Base3D::RecomputeAabb()
 			min.z = v.z;
 	}
 
-	glm::vec3 size = Vector3((max - min) / 2.f).Abs();
-	glm::vec3 center = (max + min) / 2.f;
+	glm::vec3 size = (max - min) / 2.f;
+	glm::vec3 center = (min + max) / 2.f;
 
 	this->CollisionAabb.Position = center;
 	this->CollisionAabb.Size = size;

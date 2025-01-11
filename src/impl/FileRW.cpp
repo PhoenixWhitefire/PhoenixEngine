@@ -67,8 +67,9 @@ std::string FileRW::ReadFile(const std::string& ShortPath, bool* DoesFileExist, 
 
 void FileRW::WriteFile(
 	const std::string& ShortPath,
-	const std::vector<int8_t>& BinaryContents,
-	bool InResourcesDirectory
+	const std::string& Contents,
+	bool InResourcesDirectory,
+	bool* SuccessPtr
 )
 {
 	std::string path = InResourcesDirectory ? FileRW::GetAbsolutePath(ShortPath) : ShortPath;
@@ -77,20 +78,26 @@ void FileRW::WriteFile(
 
 	if (file && file.is_open())
 	{
-		file.write((char*)BinaryContents.data(), BinaryContents.size());
+		file.write((char*)Contents.data(), Contents.size());
 		file.close();
 	}
 	else
-		throw(std::vformat(
-			"FileRW::WriteFile: Could not open the handle to '{}'",
-			std::make_format_args(path)
-		));
+	{
+		if (!SuccessPtr)
+			throw(std::vformat(
+				"FileRW::WriteFile: Could not open the handle to '{}'",
+				std::make_format_args(path)
+			));
+		else
+			*SuccessPtr = false;
+	}
 }
 
 void FileRW::WriteFileCreateDirectories(
 	const std::string& ShortPath,
-	const std::vector<int8_t>& BinaryContents,
-	bool InResourcesDirectory
+	const std::string& Contents,
+	bool InResourcesDirectory,
+	bool* SuccessPtr
 )
 {
 	std::string path = InResourcesDirectory ? FileRW::GetAbsolutePath(ShortPath) : ShortPath;
@@ -103,33 +110,7 @@ void FileRW::WriteFileCreateDirectories(
 	if (!createDirectoryRecursive(dirPath, ec))
 		throw("FileRW::WriteFileCreateDirectories: `createDirectoryRecursive` failed: " + ec.message());
 
-	FileRW::WriteFile(path, BinaryContents, false);
-}
-
-void FileRW::WriteFile(
-	const std::string& ShortPath,
-	const std::string& StringContents,
-	bool InResourcesDirectory
-)
-{
-	std::vector<int8_t> data(
-		StringContents.begin(),
-		StringContents.end()
-	);
-	FileRW::WriteFile(ShortPath, data, InResourcesDirectory);
-}
-
-void FileRW::WriteFileCreateDirectories(
-	const std::string& ShortPath,
-	const std::string& StringContents,
-	bool InResourcesDirectory
-)
-{
-	std::vector<int8_t> data(
-		StringContents.begin(),
-		StringContents.end()
-	);
-	FileRW::WriteFileCreateDirectories(ShortPath, data, InResourcesDirectory);
+	FileRW::WriteFile(path, Contents, false, SuccessPtr);
 }
 
 std::string FileRW::GetAbsolutePath(const std::string& LocalPath)

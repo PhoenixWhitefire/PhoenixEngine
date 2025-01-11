@@ -3,7 +3,8 @@ PHNXENGI
 #Date 11-1-2025
 
 {
-  "ColorMap": "models/ground/diffuse.png",
+  "ColorMap": "textures/models/crow-b.glb/diffuse.png",
+  "EmissionMap": "textures/models/crow-b.glb/diffuse.png",
   "HasTranslucency": false,
   "MetallicRoughnessMap": "textures/black.png",
   "Shader": "worldUber",

@@ -978,7 +978,19 @@ void Editor::RenderUI()
 						ImGui::Text(curValStr.c_str());
 					}
 					else
-						ImGui::Text(std::vformat("{}: {}", std::make_format_args(propName, curValStr)).c_str());
+						if (curVal.Type == Reflection::ValueType::Matrix)
+						{
+							ImGui::Text("%s: ", propName);
+
+							ImGui::Indent();
+
+							curValStr.insert(curValStr.begin() + curValStr.find_first_of("Ang"), '\n');
+							ImGui::Text(curValStr.c_str());
+
+							ImGui::Unindent();
+						}
+						else
+							ImGui::Text("%s: %s", propName, curValStr.c_str());
 
 					continue;
 				}
@@ -1143,8 +1155,12 @@ void Editor::RenderUI()
 						glm::degrees(rotrads.z)
 					};
 
+					ImGui::Indent();
+
 					ImGui::InputFloat3("Position", pos);
 					ImGui::InputFloat3("Rotation", rotdegs);
+
+					ImGui::Unindent();
 
 					mat = glm::mat4(1.f);
 

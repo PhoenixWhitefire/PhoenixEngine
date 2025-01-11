@@ -71,7 +71,7 @@ private:
 	std::vector<int8_t> m_GetData();
 
 	std::vector<float> m_GetFloats(const nlohmann::json& Accessor);
-	std::vector<uint32_t> m_GetIndices(const nlohmann::json& Accessor);
+	std::vector<uint32_t> m_GetUnsigned32s(const nlohmann::json& Accessor);
 	std::vector<uint8_t> m_GetUBytes(const nlohmann::json& Accessor);
 	MeshMaterial m_GetMaterial(const nlohmann::json&);
 
@@ -84,10 +84,10 @@ private:
 		const std::vector<glm::vec4>& Weights
 	);
 
-	std::vector<glm::vec2> m_GroupFloatsVec2(const std::vector<float>& Floats);
-	std::vector<glm::vec3> m_GroupFloatsVec3(const std::vector<float>& Floats);
-	std::vector<glm::vec4> m_GroupFloatsVec4(const std::vector<float>& Floats);
-	std::vector<glm::tvec4<uint8_t>> m_GroupUBytesVec4(const std::vector<uint8_t>& UBytes);
+	std::vector<glm::vec2> m_GetAndGroupFloatsVec2(const nlohmann::json& Accessor);
+	std::vector<glm::vec3> m_GetAndGroupFloatsVec3(const nlohmann::json& Accessor);
+	std::vector<glm::vec4> m_GetAndGroupFloatsVec4(const nlohmann::json& Accessor);
+	std::vector<glm::tvec4<uint8_t>> m_GetAndGroupUBytesVec4(const nlohmann::json& Accessor);
 
 	std::string m_File;
 	nlohmann::json m_JsonData;

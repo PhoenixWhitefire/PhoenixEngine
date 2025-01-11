@@ -376,7 +376,7 @@ void GameObject::Destroy()
 	bool wasDestructionPending = this->IsDestructionPending;
 
 	this->IsDestructionPending = true;
-	this->Parent = PHX_GAMEOBJECT_NULL_ID;
+	this->SetParent(nullptr);
 
 	if (!wasDestructionPending)
 		DecrementHardRefs(); // removes the first ref in `GameObject::Create`
@@ -403,65 +403,68 @@ bool GameObject::IsA(const std::string& AncestorClass) const
 	return false;
 }
 
+static uint32_t NullGameObjectIdValue = PHX_GAMEOBJECT_NULL_ID;
+
 void GameObject::SetParent(GameObject* newParent)
 {
-	if (this->IsDestructionPending)
-	{
-		std::string fullname = this->GetFullName();
-		std::string parentFullName = newParent->GetFullName();
-
-		Log::Warning(std::vformat(
-			"Tried to re-parent '{}' (ID:{}) to '{}' (ID:{}), but destruction for it was pending",
-			std::make_format_args(fullname, this->ObjectId, parentFullName, newParent->ObjectId)
-		));
-
-		return;
-	}
-
 	GameObject* oldParent = GameObject::GetObjectById(Parent);
 
 	if (newParent == oldParent)
 		return;
 
-	if (!newParent)
-		this->Parent = PHX_GAMEOBJECT_NULL_ID;
-	else
-	{
-		std::string fullname = this->GetFullName();
-
-		if (newParent != this)
-		{
-			std::vector<GameObject*> descendants = this->GetDescendants();
-
-			bool isOwnDescendant = false;
-
-			for (GameObject* d : descendants)
-				if (d == newParent)
-				{
-					isOwnDescendant = true;
-					break;
-				}
-
-			if (!isOwnDescendant)
-				this->Parent = newParent->ObjectId;
-			else
-				throw(std::vformat(
-					"Tried to make object ID:{} ('{}') a descendant of itself",
-					std::make_format_args(this->ObjectId, fullname)
-				));
-		}
-		else
-			throw(std::vformat(
-				"Tried to make object ID:{} ('{}') it's own parent",
-				std::make_format_args(this->ObjectId, fullname)
-			));
-
-		this->Parent = newParent->ObjectId;
-		newParent->AddChild(this);
-	}
-
 	if (oldParent)
 		oldParent->RemoveChild(this->ObjectId);
+
+	if (!newParent)
+	{
+		this->Parent = PHX_GAMEOBJECT_NULL_ID;
+		return;
+	}
+
+	std::string fullname = this->GetFullName();
+
+	if (this->IsDestructionPending)
+	{
+		std::string parentFullName = newParent ? newParent->GetFullName() : "<NULL>";
+
+		throw(std::vformat(
+			"Tried to re-parent '{}' (ID:{}) to '{}' (ID:{}), but it's Parent has been locked due to `::Destroy`",
+			std::make_format_args(
+				fullname,
+				this->ObjectId,
+				parentFullName,
+				newParent ? newParent->ObjectId : NullGameObjectIdValue
+			)
+		));
+	}
+
+	if (newParent != this)
+	{
+		std::vector<GameObject*> descendants = this->GetDescendants();
+
+		bool isOwnDescendant = false;
+
+		for (GameObject* d : descendants)
+			if (d == newParent)
+			{
+				isOwnDescendant = true;
+				break;
+			}
+
+		if (isOwnDescendant)
+			throw(std::vformat(
+				"Tried to make object ID:{} ('{}') a descendant of itself",
+				std::make_format_args(this->ObjectId, fullname)
+			));
+	}
+	else
+		throw(std::vformat(
+			"Tried to make object ID:{} ('{}') it's own parent",
+			std::make_format_args(this->ObjectId, fullname)
+		));
+
+	this->Parent = newParent->ObjectId;
+	newParent->AddChild(this);
 }
 
 void GameObject::AddChild(GameObject* c)
@@ -648,7 +651,10 @@ nlohmann::json GameObject::DumpApiToJson()
 		nlohmann::json& funcs = gapi["Functions"];
 
 		for (auto& p : newobj->GetProperties())
-			props[p.first] = Reflection::TypeAsString(p.second.Type);
+			props[p.first] = Reflection::TypeAsString(p.second.Type)
+								+ ": "
+								+ (p.second.Get ? "Read" : "")
+								+ (p.second.Set ? " | Write" : "");
 
 		for (auto& f : newobj->GetFunctions())
 		{

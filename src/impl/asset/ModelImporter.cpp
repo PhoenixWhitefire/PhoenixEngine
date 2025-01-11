@@ -47,7 +47,7 @@ static std::string getTexturePath(
 		if (bufferIndex != 0)
 			throw("ModelImporter::getTexturePath got non-zero buffer index " + std::to_string(bufferIndex));
 
-		std::vector<int8_t> imageData(
+		std::string imageData(
 			BufferData.begin() + byteOffset,
 			BufferData.begin() + byteOffset + byteLength
 		);
@@ -69,11 +69,20 @@ static std::string getTexturePath(
 								+ ImageJson.value("name", "UNNAMED")
 								+ fileExtension;
 
+		bool writeSucceeded = true;
+
 		FileRW::WriteFileCreateDirectories(
 			filePath,
 			imageData,
-			true
+			true,
+			&writeSucceeded
 		);
+
+		if (!writeSucceeded)
+			Log::Warning(std::vformat(
+				"Failed to extract image from Model '{}' to path: {}",
+				std::make_format_args(ModelName, filePath)
+			));
 
 		return filePath;
 	}
@@ -370,35 +379,16 @@ ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(
 	auto weightsAccIt = attributes.find("WEIGHTS_0");
 
 	// Use accessor indices to get all vertices components
-	std::vector<float> posVec = m_GetFloats(accessors[posAccInd]);
-	std::vector<float> normalVec = m_GetFloats(accessors[normalAccInd]);
-	std::vector<float> texVec = m_GetFloats(accessors[texAccInd]);
-	
-	std::vector<glm::vec3> positions = m_GroupFloatsVec3(posVec);
-	std::vector<glm::vec3> normals = m_GroupFloatsVec3(normalVec);
-	std::vector<glm::vec2> texUVs = m_GroupFloatsVec2(texVec);
+	std::vector<glm::vec3> positions = m_GetAndGroupFloatsVec3(accessors[posAccInd]);
+	std::vector<glm::vec3> normals = m_GetAndGroupFloatsVec3(accessors[normalAccInd]);
+	std::vector<glm::vec2> texUVs = m_GetAndGroupFloatsVec2(accessors[texAccInd]);
 
 	std::vector<glm::vec4> cols{};
 	std::vector<glm::tvec4<uint8_t>> joints{};
 	std::vector<glm::vec4> weights{};
 
 	if (colAccIt != attributes.end())
-	{
-		const nlohmann::json& colAcc = colAccIt.value();
-		std::vector<float> colVec = m_GetFloats(colAcc);
-
-		if (colAcc["type"] == "VEC3")
-		{
-			cols.reserve(static_cast<size_t>(colVec.size() / 3));
-
-			std::vector<glm::vec3> col3 = m_GroupFloatsVec3(colVec);
-
-			for (const glm::vec3& v : col3)
-				cols.emplace_back(v.x, v.y, v.z, 1.f);
-		}
-		else
-			cols = m_GroupFloatsVec4(colVec);
-	}
+		cols = m_GetAndGroupFloatsVec4(accessors[(uint32_t)colAccIt.value()]);
 	else
 		for (size_t i = 0; i < positions.size(); i++)
 			cols.emplace_back(1.f, 1.f, 1.f, 1.f);
@@ -408,14 +398,11 @@ ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(
 		uint32_t jointsAcc = jointsAccIt.value();
 		uint32_t weightsAcc = weightsAccIt.value();
 
-		std::vector<uint8_t> jointsVec = m_GetUBytes(accessors[jointsAcc]);
-		std::vector<float> weightsVec = m_GetFloats(accessors[weightsAcc]);
-
-		joints = m_GroupUBytesVec4(jointsVec);
-		weights = m_GroupFloatsVec4(weightsVec);
+		joints = m_GetAndGroupUBytesVec4(accessors[jointsAcc]);
+		weights = m_GetAndGroupFloatsVec4(accessors[weightsAcc]);
 	}
 
-	// resize the mesh to 1x1x1 and center it after
+	// normalize and center the mesh 11/01/2024
 	glm::vec3 extMax{};
 	glm::vec3 extMin{};
 
@@ -430,28 +417,26 @@ ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(
 		extMin.z = std::min(extMin.z, position.z);
 	}
 
-	glm::vec3 size = extMax - extMin / 2.f;
+	glm::vec3 size = (extMax - extMin);
+	glm::vec3 center = (extMin + extMax) * .5f;
 
-	for (size_t index = 0; index < positions.size(); index++)
-	{
-		positions[index].x /= size.x;
-		positions[index].y /= size.y;
-		positions[index].z /= size.z;
-	}
+	glm::vec3 sizeInv = glm::vec3(
+		size.x > 0.f ? (1.f/size.x) : 1.f,
+		size.y > 0.f ? (1.f/size.y) : 1.f,
+		size.z > 0.f ? (1.f/size.z) : 1.f
+	);
 
-	glm::vec3 center = positions.at(0);
+	//https://stackoverflow.com/a/69808766
+	glm::mat4 matS = glm::scale(glm::mat4(1.f), sizeInv);
+	glm::mat4 matT = glm::translate(glm::mat4(1.f), -center);
+	glm::mat4 matM = matS * matT;
 
-	for (const glm::vec3& position : positions)
-		center += position;
-
-	center /= static_cast<float>(positions.size());
-
-	for (size_t index = 0; index < positions.size(); index++)
-		positions[index] -= center;
+	for (glm::vec3& position : positions)
+		position = glm::vec3(matM * glm::vec4(position, 1.f));
 
 	// Combine all the vertex components and also get the indices and textures
 	std::vector<Vertex> vertices = m_AssembleVertices(positions, normals, texUVs, cols, joints, weights);
-	std::vector<uint32_t> indices = m_GetIndices(m_JsonData["accessors"][indAccInd]);
+	std::vector<uint32_t> indices = m_GetUnsigned32s(accessors[indAccInd]);
 	
 	return
 	{
@@ -664,13 +649,14 @@ std::vector<float> ModelLoader::m_GetFloats(const nlohmann::json& accessor)
 	uint32_t count = accessor["count"];
 	uint32_t accByteOffset = accessor.value("byteOffset", 0);
 	std::string type = accessor["type"];
+	uint32_t componentType = accessor["componentType"];
 
 	// Get properties from the bufferView
 	const nlohmann::json& bufferView = m_JsonData["bufferViews"][buffViewInd];
 	uint32_t byteOffset = bufferView["byteOffset"];
 
 	// Interpret the type and store it into numPerVert
-	uint32_t numPerVert;
+	uint32_t numPerVert{};
 	if (type == "SCALAR")
 		numPerVert = 1;
 
@@ -686,21 +672,51 @@ std::vector<float> ModelLoader::m_GetFloats(const nlohmann::json& accessor)
 	else
 		throw("Could not decode GLTF model: Type is not handled (not SCALAR, VEC2, VEC3, or VEC4)");
 
+	uint32_t componentSize{};
+	switch (componentType)
+	{
+	case (5123):
+	{
+		componentSize = 2;
+		break;
+	}
+	case (5126):
+	{
+		componentSize = 4;
+		break;
+	}
+	default:
+		throw("Unsupported `componentType` of " + std::to_string(componentType));
+	}
+
 	// Go over all the bytes in the data at the correct place using the properties from above
 	uint32_t beginningOfData = byteOffset + accByteOffset;
-	uint32_t lengthOfData = count * 4 * numPerVert;
+	uint32_t lengthOfData = count * componentSize * numPerVert;
 	for (uint32_t i = beginningOfData; i < beginningOfData + lengthOfData; i)
 	{
-		int8_t bytes[] = { m_Data[i++], m_Data[i++], m_Data[i++], m_Data[i++] };
-		float value;
-		std::memcpy(&value, bytes, sizeof(float));
-		floatVec.push_back(value);
+		if (componentType == 5126)
+		{
+			int8_t bytes[] = { m_Data[i++], m_Data[i++], m_Data[i++], m_Data[i++] };
+			float value;
+			std::memcpy(&value, bytes, sizeof(float));
+			floatVec.push_back(value);
+		}
+		else if (componentType == 5123)
+		{
+			int8_t bytes[] = { m_Data[i++], m_Data[i++] };
+			uint16_t us;
+			std::memcpy(&us, bytes, sizeof(uint16_t));
+
+			floatVec.push_back(us / 65535.f);
+		}
+		else
+			throw("huh??");
 	}
 
 	return floatVec;
 }
 
-std::vector<uint32_t> ModelLoader::m_GetIndices(const nlohmann::json& accessor)
+std::vector<uint32_t> ModelLoader::m_GetUnsigned32s(const nlohmann::json& accessor)
 {
 	std::vector<uint32_t> indices;
 
@@ -978,60 +994,77 @@ std::vector<Vertex> ModelLoader::m_AssembleVertices
 	return vertices;
 }
 
-std::vector<glm::vec2> ModelLoader::m_GroupFloatsVec2(const std::vector<float>& floatVec)
+std::vector<glm::vec2> ModelLoader::m_GetAndGroupFloatsVec2(const nlohmann::json& Accessor)
 {
+	std::vector<float> floats = m_GetFloats(Accessor);
+
 	std::vector<glm::vec2> vectors;
-	vectors.reserve(static_cast<size_t>(floatVec.size() / 2));
+	vectors.reserve(static_cast<size_t>(floats.size() / 2));
 
-	for (int i = 0; i < floatVec.size(); i += 2)
+	for (int i = 0; i < floats.size(); i += 2)
 		vectors.emplace_back(
-			floatVec[i+0ull],
-			floatVec[i+1ull]
+			floats[i+0ull],
+			floats[i+1ull]
 		);
 
 	return vectors;
 }
 
-std::vector<glm::vec3> ModelLoader::m_GroupFloatsVec3(const std::vector<float>& floatVec)
+std::vector<glm::vec3> ModelLoader::m_GetAndGroupFloatsVec3(const nlohmann::json& Accessor)
 {
+	std::vector<float> floats = m_GetFloats(Accessor);
+
 	std::vector<glm::vec3> vectors;
-	vectors.reserve(static_cast<size_t>(floatVec.size() / 3));
+	vectors.reserve(static_cast<size_t>(floats.size() / 3));
 
-	for (int i = 0; i < floatVec.size(); i += 3)
+	for (int i = 0; i < floats.size(); i += 3)
 		vectors.emplace_back(
-			floatVec[i+2ull],
-			floatVec[i+1ull],
-			floatVec[i+0ull]
+			floats[i+2ull],
+			floats[i+1ull],
+			floats[i+0ull]
 		);
 
 	return vectors;
 }
-std::vector<glm::vec4> ModelLoader::m_GroupFloatsVec4(const std::vector<float>& floatVec)
+std::vector<glm::vec4> ModelLoader::m_GetAndGroupFloatsVec4(const nlohmann::json& Accessor)
 {
+	std::vector<float> floats = m_GetFloats(Accessor);
+
 	std::vector<glm::vec4> vectors;
-	vectors.reserve(static_cast<size_t>(floatVec.size() / 4));
+	vectors.reserve(static_cast<size_t>(floats.size() / 4));
 
-	for (int i = 0; i < floatVec.size(); i += 4)
-		vectors.emplace_back(
-			floatVec[i+3ull],
-			floatVec[i+2ull],
-			floatVec[i+1ull],
-			floatVec[i+0ull]
-		);
+	if (Accessor["type"] == "VEC4")
+		for (int i = 0; i < floats.size(); i += 4)
+			vectors.emplace_back(
+				floats[i + 3ull],
+				floats[i + 2ull],
+				floats[i + 1ull],
+				floats[i + 0ull]
+			);
+	else if (Accessor["type"] == "VEC3")
+		for (int i = 0; i < floats.size(); i += 3)
+			vectors.emplace_back(
+				floats[i + 2ull],
+				floats[i + 1ull],
+				floats[i + 0ull],
+				1.f
+			);
 
 	return vectors;
 }
-std::vector<glm::tvec4<uint8_t>> ModelLoader::m_GroupUBytesVec4(const std::vector<uint8_t>& Bytes)
+std::vector<glm::tvec4<uint8_t>> ModelLoader::m_GetAndGroupUBytesVec4(const nlohmann::json& Accessor)
 {
-	std::vector<glm::tvec4<uint8_t>> vectors;
-	vectors.reserve(static_cast<size_t>(Bytes.size() / 4));
+	std::vector<uint8_t> ubytes = m_GetUBytes(Accessor);
 
-	for (int i = 0; i < Bytes.size(); i += 4)
+	std::vector<glm::tvec4<uint8_t>> vectors;
+	vectors.reserve(static_cast<size_t>(ubytes.size() / 4));
+
+	for (int i = 0; i < ubytes.size(); i += 4)
 		vectors.emplace_back(
-			Bytes[i + 3ull],
-			Bytes[i + 2ull],
-			Bytes[i + 1ull],
-			Bytes[i + 0ull]
+			ubytes[i + 3ull],
+			ubytes[i + 2ull],
+			ubytes[i + 1ull],
+			ubytes[i + 0ull]
 		);
 
 	return vectors;

@@ -12,6 +12,11 @@
 #include "FileRW.hpp"
 #include "Log.hpp"
 
+#define SF_EMIT_WARNING(err, ...) Log::Warning(std::vformat( \
+	std::string("Deserialization warning: ") + err,                    \
+	std::make_format_args(__VA_ARGS__)                               \
+))                                                                     \
+
 static std::string errorString = "No error";
 
 static std::unordered_map<std::string, std::string> SpecialPropertyToSerializedName =
@@ -37,10 +42,13 @@ static auto LoadModelAsMeshes(
 
 	for (GameObject* object : Loader.LoadedObjs)
 	{
-		Object_Mesh* mesh = static_cast<Object_Mesh*>(object);
+		Object_Mesh* mesh = dynamic_cast<Object_Mesh*>(object);
 
-		mesh->Transform = glm::translate(mesh->Transform, (glm::vec3)Position);
-		mesh->Size = mesh->Size * Size;
+		if (mesh)
+		{
+			mesh->Transform = glm::translate(mesh->Transform, (glm::vec3)Position);
+			mesh->Size = mesh->Size * Size;
+		}
 	}
 
 	return Loader.LoadedObjs;
@@ -229,9 +237,12 @@ static std::vector<GameObject*> LoadMapVersion1(
 			}
 		}
 
-		if (Model.size() >= 1)
+		for (GameObject* obj : Model)
 		{
-			auto prop_3d = static_cast<Object_Base3D*>(Model[0]);
+			auto prop_3d = dynamic_cast<Object_Base3D*>(obj);
+
+			if (!prop_3d)
+				continue;
 
 			if (PropObject.find("facecull") != PropObject.end())
 			{
@@ -261,73 +272,65 @@ static std::vector<GameObject*> LoadMapVersion1(
 	{
 		nlohmann::json Object = PartsNode[Index];
 
-		if (Object["type"] == "MeshPart")
+		GameObject* NewObject = GameObject::Create("Primitive");
+		Objects.push_back(NewObject);
+
+		Object_Base3D* Object3D = static_cast<Object_Base3D*>(NewObject);
+
+		NewObject->Name = Object.value("name", NewObject->Name);
+
+		Vector3 Position = GetVector3FromJson(Object["position"]);
+		Vector3 Orientation;
+
+		if (Object.find("orient") != Object.end())
 		{
-			// Yeah, "MeshPart" as the type and `Primitive`s as the result.
-			// Like just use V2 bro why the hell you botherin' this musty-ahh
-			// format?
-			GameObject* NewObject = GameObject::Create("Primitive");
-			Objects.push_back(NewObject);
-
-			Object_Base3D* Object3D = static_cast<Object_Base3D*>(NewObject);
-
-			NewObject->Name = Object.value("name", NewObject->Name);
-
-			Vector3 Position = GetVector3FromJson(Object["position"]);
-			Vector3 Orientation;
-
-			if (Object.find("orient") != Object.end())
-			{
-				Orientation = GetVector3FromJson(Object["orient"]);
-				/*
-				Orientation = Vector3(
-					Orientation.Y,
-					Orientation.Z,
-					Orientation.X
-				);
-				*/
-			}
-
-			Object3D->Transform = glm::translate(Object3D->Transform, (glm::vec3)Position);
-
-			// YXZ Rotation order
-			Object3D->Transform = glm::rotate(
-				Object3D->Transform,
-				glm::radians(static_cast<float>(Orientation.Y)),
-				glm::vec3(0.f, 1.f, 0.f)
+			Orientation = GetVector3FromJson(Object["orient"]);
+			/*
+			Orientation = Vector3(
+				Orientation.Y,
+				Orientation.Z,
+				Orientation.X
 			);
-			Object3D->Transform = glm::rotate(
-				Object3D->Transform,
-				glm::radians(static_cast<float>(Orientation.X)),
-				glm::vec3(1.f, 0.f, 0.f)
-			);
-			Object3D->Transform = glm::rotate(
-				Object3D->Transform,
-				glm::radians(static_cast<float>(Orientation.Z)),
-				glm::vec3(0.f, 0.f, 1.f)
-			);
-
-			if (Object.find("color") != Object.end())
-				Object3D->Tint = GetColorFromJson(Object["color"]);
-
-			Object3D->Size = GetVector3FromJson(Object["size"]);
-
-			if (Object.find("material") != Object.end())
-			{
-				uint32_t MeshMaterial = mtlManager->LoadMaterialFromPath(Object["material"]);
-
-				Object3D->MaterialId = MeshMaterial;
-
-			}
-			else if (Object.find("textures") != Object.end())
-			{
-
-			}
-
-			Object3D->PhysicsDynamics = Object.value("computePhysics", 0) == 1 ? true : false;
+			*/
 		}
-		else
-			throw("Item " + std::to_string(Index) + " of `parts` node doesn't have a `type = 'MeshPart'` key");
+
+		Object3D->Transform = glm::translate(Object3D->Transform, (glm::vec3)Position);
+
+		// YXZ Rotation order
+		Object3D->Transform = glm::rotate(
+			Object3D->Transform,
+			glm::radians(static_cast<float>(Orientation.Y)),
+			glm::vec3(0.f, 1.f, 0.f)
+		);
+		Object3D->Transform = glm::rotate(
+			Object3D->Transform,
+			glm::radians(static_cast<float>(Orientation.X)),
+			glm::vec3(1.f, 0.f, 0.f)
+		);
+		Object3D->Transform = glm::rotate(
+			Object3D->Transform,
+			glm::radians(static_cast<float>(Orientation.Z)),
+			glm::vec3(0.f, 0.f, 1.f)
+		);
+
+		if (Object.find("color") != Object.end())
+			Object3D->Tint = GetColorFromJson(Object["color"]);
+
+		Object3D->Size = GetVector3FromJson(Object["size"]);
+
+		if (Object.find("material") != Object.end())
+		{
+			uint32_t MeshMaterial = mtlManager->LoadMaterialFromPath(Object["material"]);
+
+			Object3D->MaterialId = MeshMaterial;
+
+		}
+		else if (Object.find("textures") != Object.end())
+		{
+
+		}
+
+		Object3D->PhysicsDynamics = Object.value("computePhysics", 0) == 1 ? true : false;
 
 		std::string NewTitle = std::to_string(Index)
 								+ "/"
@@ -366,11 +369,11 @@ static std::vector<GameObject*> LoadMapVersion1(
 
 static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, bool* Success)
 {
-	nlohmann::json JsonData;
+	nlohmann::json jsonData;
 
 	try
 	{
-		JsonData = nlohmann::json::parse(Contents);
+		jsonData = nlohmann::json::parse(Contents);
 	}
 	catch (nlohmann::json::exception e)
 	{
@@ -386,9 +389,9 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 		return {};
 	}
 
-	std::string sceneName = JsonData.value("SceneName", "<UNNAMED SCENE>");
+	std::string sceneName = jsonData.value("SceneName", "<UNNAMED SCENE>");
 
-	if (JsonData.find("GameObjects") == JsonData.end())
+	if (jsonData.find("GameObjects") == jsonData.end())
 	{
 		errorString = std::vformat(
 			"The `GameObjects` key is not present in scene '{}'",
@@ -400,24 +403,22 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 		return {};
 	}
 
-	nlohmann::json GameObjectsNode = JsonData["GameObjects"];
+	nlohmann::json gameObjectsNode = jsonData["GameObjects"];
 
 	std::unordered_map<int64_t, GameObject*> objectsMap;
 	std::unordered_map<int64_t, int64_t> realIdToSceneId;
 	std::unordered_map<GameObject*, std::unordered_map<std::string, uint32_t>> objectProps;
 
-	objectsMap.reserve(GameObjectsNode.size());
-	realIdToSceneId.reserve(GameObjectsNode.size());
+	objectsMap.reserve(gameObjectsNode.size());
+	realIdToSceneId.reserve(gameObjectsNode.size());
 
-	for (uint32_t itemIndex = 0; itemIndex < GameObjectsNode.size(); itemIndex++)
+	for (uint32_t itemIndex = 0; itemIndex < gameObjectsNode.size(); itemIndex++)
 	{
-		const nlohmann::json& item = GameObjectsNode[itemIndex];
+		const nlohmann::json& item = gameObjectsNode[itemIndex];
 
 		if (item.find("$_class") == item.end())
 		{
-			const char* fmtStr = "Deserialization warning: Object #{} was missing it's '$_class' key";
-			auto fmtArgs = std::make_format_args(itemIndex);
-			Log::Warning(std::vformat(fmtStr, fmtArgs));
+			SF_EMIT_WARNING("Object #{} was it's '$_class' key, skipping", itemIndex);
 
 			continue;
 		}
@@ -428,19 +429,14 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 		GameObject* newObject = GameObject::Create(className);
 
 		if (item.find("$_objectId") == item.end())
+			SF_EMIT_WARNING("Object #{} ({}) was missing it's '$_objectId' key", itemIndex, className);
+		else
 		{
-			Log::Warning(std::vformat(
-				"Deserialization warning: Object #{} ({}) was missing it's '$_objectId' key",
-				std::make_format_args(itemIndex, className)
-			));
+			uint32_t itemObjectId = item["$_objectId"];
 
-			continue;
+			objectsMap.insert(std::pair(itemObjectId, newObject));
+			realIdToSceneId.insert(std::pair(newObject->ObjectId, itemObjectId));
 		}
-
-		uint32_t itemObjectId = item["$_objectId"];
-
-		objectsMap.insert(std::pair(itemObjectId, newObject));
-		realIdToSceneId.insert(std::pair(newObject->ObjectId, itemObjectId));
 
 		objectProps.insert(std::pair(newObject, std::unordered_map<std::string, uint32_t>{}));
 
@@ -463,14 +459,12 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 
 			if (!hasProp)
 			{
-				const char* fmtStr = "Deserialization warning: Member '{}' is not defined in the API for the Class {} (Name: '{}')!";
-				auto fmtArgs = std::make_format_args(
+				SF_EMIT_WARNING(
+					"Member '{}' is not defined in the API for Class {} (Name: '{}')!",
 					memberName,
 					className,
 					name
 				);
-				Log::Warning(std::vformat(fmtStr, fmtArgs));
-
 				continue;
 			}
 
@@ -481,14 +475,12 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 
 			if (!setProperty)
 			{
-				const char* fmtStr = "Deserialization warning: Member '{}' of {} '{}' is read-only!";
-				auto fmtArgs = std::make_format_args(
+				SF_EMIT_WARNING(
+					"Member '{}' of {} '{}' is read-only!",
 					memberName,
 					className,
 					name
 				);
-				Log::Warning(std::vformat(fmtStr, fmtArgs));
-
 				continue;
 			}
 
@@ -555,16 +547,14 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 
 			default:
 			{
-				const char* fmtStr = "Deserialization warning: Not reading prop '{}' of class {} because it's type ({}) is unknown";
 				const std::string& memberTypeName = Reflection::TypeAsString(memberType);
 
-				auto fmtArgs = std::make_format_args(
+				SF_EMIT_WARNING(
+					"Not reading prop '{}' of class {} because it's type ({}) is unknown",
 					memberName,
 					className,
 					memberTypeName
 				);
-
-				Log::Warning(std::vformat(fmtStr, fmtArgs));
 
 				break;
 			}
@@ -582,10 +572,10 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 					std::string mtname = Reflection::TypeAsString(memberType);
 					std::string valueStr = assignment.ToString();
 
-					Log::Warning(std::vformat(
-						"Deserialization warning: Failed to set {} Property '{}' of '{}' ({}) to '{}': {}",
-						std::make_format_args(mtname, memberName, name, className, valueStr, err)
-					));
+					SF_EMIT_WARNING(
+						"Failed to set {} Property '{}' of '{}' ({}) to '{}': {}",
+						mtname, memberName, name, className, valueStr, err
+					);
 				}
 			}
 		}
@@ -625,23 +615,21 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 				{
 					std::string valueStr = gv.ToString();
 
-					Log::Warning(std::vformat(
-						"Deserialization warning: Failed to set GameObject property of '{}' ({}) to '{}': {}",
-						std::make_format_args(object->Name, object->ClassName, valueStr, err)
-					));
+					SF_EMIT_WARNING(
+						"Failed to set GameObject property of '{}' ({}) to '{}': {}",
+						object->Name, object->ClassName, valueStr, err
+					);
 				}
 			}
 			else
 			{
-				Log::Warning(std::vformat(
-					"Deserialization warning: {} '{}' refers to invalid scene-relative Object ID {} for prop {}. To avoid UB, it will be NULL'd.",
-					std::make_format_args(
-						object->ClassName,
-						object->Name,
-						sceneRelativeId,
-						propName
-					)
-				));
+				SF_EMIT_WARNING(
+					"{} '{}' refers to invalid scene-relative Object ID {} for prop {}. To avoid UB, it will be NULL'd.",
+					object->ClassName,
+					object->Name,
+					sceneRelativeId,
+					propName
+				);
 
 				object->SetPropertyValue(propName, ((GameObject*)nullptr)->ToGenericValue());
 			}
@@ -656,29 +644,41 @@ std::vector<GameObject*> SceneFormat::Deserialize(
 	bool* SuccessPtr
 )
 {
-	if (Contents == "")
+	float version = getVersion(Contents);
+
+	size_t jsonStartLoc = Contents.find_first_of("{");
+
+	if (jsonStartLoc == std::string::npos)
 	{
-		errorString = std::vformat("Empty scene file: '{}'", std::make_format_args(Contents));
+		errorString = std::vformat(
+			"Unable to find JSON section of file. Format version retrieved was {}",
+			std::make_format_args(version)
+		);
 		*SuccessPtr = false;
 
 		return {};
 	}
 
-	float version = getVersion(Contents);
-	Log::Info(std::vformat("Scene version is {}", std::make_format_args(version)));
-
-	size_t jsonStartLoc = Contents.find("{");
 	std::string jsonFileContents = Contents.substr(jsonStartLoc);
 
 	std::vector<GameObject*> objects{};
 
-	if (version == 1.f)
+	if (version >= 1.f && version < 2.f)
 		objects = LoadMapVersion1(jsonFileContents, SuccessPtr);
-	else
-		if (version == 2.f)
+
+	else if (version >= 2.f && version < 3.f)
 			objects = LoadMapVersion2(jsonFileContents, SuccessPtr);
 
-	Log::Info("Scene loaded");
+	else
+	{
+		errorString = std::vformat(
+			"Format version '{}' not recognized",
+			std::make_format_args(version)
+		);
+		*SuccessPtr = false;
+
+		return {};
+	}
 
 	return objects;
 }
@@ -764,7 +764,7 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 
 		case (Reflection::ValueType::GameObject):
 		{
-			auto target = GameObject::FromGenericValue(value);
+			GameObject* target = GameObject::FromGenericValue(value);
 
 			if (target)
 				item[serializedAs] = value.AsInteger();
@@ -801,7 +801,7 @@ std::string SceneFormat::Serialize(std::vector<GameObject*> Objects, const std::
 
 	std::string dateStr = std::to_string((uint32_t)ymd.day()) + "-"
 							+ std::to_string((uint32_t)ymd.month()) + "-"
-							+ std::to_string((int32_t)ymd.year()) + "\n";
+							+ std::to_string((int32_t)ymd.year());
 
 	std::string contents = std::string("PHNXENGI\n")
 							+ "#Version 2.00\n"

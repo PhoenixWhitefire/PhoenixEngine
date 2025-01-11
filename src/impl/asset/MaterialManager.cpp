@@ -257,7 +257,7 @@ void MaterialManager::SaveToPath(const RenderMaterial& material, const std::stri
 
 	std::string dateStr = std::to_string((uint32_t)ymd.day()) + "-"
 		+ std::to_string((uint32_t)ymd.month()) + "-"
-		+ std::to_string((int32_t)ymd.year()) + "\n";
+		+ std::to_string((int32_t)ymd.year());
 
 	std::string filePath = "materials/" + Name + ".mtl";
 

@@ -1,5 +1,5 @@
 [INFO]: Application startup
-[INFO]: Phoenix Engine, Main.cpp last compiled: Jan 10 2025
+[INFO]: Phoenix Engine, Main.cpp last compiled: Jan 11 2025
 [INFO]: Configuration loaded
 [INFO]: Requesting a Core OpenGL context with version 4.6
 [INFO]: Window created
@@ -9,12 +9,8 @@
 [INFO]: Initializing DataModel...
 [INFO]: Engine initialized
 [INFO]: Initializing Dear ImGui 1.91.7 WIP...
-[INFO]: Scene version is 2
-[INFO]: Scene loaded
 [INFO]: Final initializations...
 [INFO]: Main engine loop start
-[INFO]: Scene version is 2
-[INFO]: Scene loaded
 [WARN]: GL Debug callback:
 	Type: Performance
 	Severity: Medium
