@@ -5,6 +5,7 @@
 #include <ImGuiFD/ImGuiFD.h>
 #include <imgui/imgui.h>
 #include <imgui/misc/cpp/imgui_stdlib.h>
+#include <imgui_internal.h>
 #include <glad/gl.h>
 #include <fstream>
 
@@ -821,6 +822,14 @@ static GameObject* recursiveIterateTree(GameObject* current, bool didVisitCurSel
 		if (ImGui::IsItemClicked())
 			nodeClicked = object;
 
+		if (ImGui::IsMouseClicked(ImGuiMouseButton_Right)
+			&& ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)
+		)
+		{
+			ImGui::OpenPopup(1979);
+			HierarchyTreeSelectionId = object->ObjectId;
+		}
+
 		if (ImGui::IsItemHovered())
 		{
 			ImGui::SameLine();
@@ -901,307 +910,337 @@ void Editor::RenderUI()
 	ImGui::Text("Compiled: %s", __DATE__);
 	ImGui::PopStyleColor();
 
-	ImGui::Separator();
+	ImVec2 hrchChildWinSzOverride{};
+
+	if (HierarchyTreeSelectionId != PHX_GAMEOBJECT_NULL_ID)
+		hrchChildWinSzOverride = ImGui::GetContentRegionAvail() * ImVec2(1.f, .4f);
+
+	ImGui::BeginChild("HierarchyChildWindow", hrchChildWinSzOverride, ImGuiChildFlags_Border);
 
 	GameObject* selected = recursiveIterateTree(GameObject::s_DataModel);
+	
+	GameObjectRef<GameObject>* selRef = nullptr;
 
 	if (selected)
-	{
-		ImGui::SeparatorText(selected->ClassName.c_str());
+		selRef = new GameObjectRef<GameObject>(selected);
 
-		if (ImGui::Button("Duplicate"))
+	if (ImGui::BeginPopupEx(1979, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings))
+	{
+		ImGui::SeparatorText("Actions");
+
+		GameObject* target = GameObject::GetObjectById(HierarchyTreeSelectionId);
+
+		if (!target)
 		{
-			GameObject* clone = selected->Duplicate();
-			HierarchyTreeSelectionId = clone->ObjectId;
-			selected = clone;
-		}
-		else if (ImGui::Button("Destroy"))
-		{
-			selected->Destroy();
-			selected = nullptr;
+			HierarchyTreeSelectionId = PHX_GAMEOBJECT_NULL_ID;
+			ImGui::CloseCurrentPopup();
 		}
 		else
 		{
-			Object_Script* script = dynamic_cast<Object_Script*>(selected);
-
-			if (script)
+			if (Object_Script* scr = dynamic_cast<Object_Script*>(target))
 			{
-				if (ImGui::Button("Reload"))
-					script->Reload();
-
-				if (ImGui::Button("Edit"))
+				if (ImGui::MenuItem("Edit"))
 				{
 					ScriptEditorEnabled = true;
-					ScriptEditorFocus = script->ObjectId;
+					ScriptEditorFocus = scr->ObjectId;
 				}
+
+				if (ImGui::MenuItem("Reload"))
+					scr->Reload();
 			}
 
-			ImGui::SeparatorText("Properties");
-
-			auto& props = selected->GetProperties();
-
-			for (auto& propListItem : props)
+			if (ImGui::MenuItem("Duplicate"))
 			{
-				const char* propName = propListItem.first.c_str();
-				const Reflection::Property& prop = propListItem.second;
+				GameObject* dup = target->Duplicate();
+				HierarchyTreeSelectionId = dup->ObjectId;
+			}
 
-				if (propName == DoNotShowPropThisFrame)
+			if (ImGui::MenuItem("Delete"))
+				target->Destroy();
+		}
+
+		ImGui::EndPopup();
+	}
+
+	ImGui::EndChild();
+
+	if (selected)
+	{
+		ImGui::BeginChild("PropertiesEditor", ImVec2(), ImGuiChildFlags_Border);
+
+		std::string sepStr = std::vformat(
+			"Properties of {} '{}'",
+			std::make_format_args(selected->ClassName, selected->Name)
+		);
+		ImGui::SeparatorText(sepStr.c_str());
+
+		auto& props = selected->GetProperties();
+
+		for (auto& propListItem : props)
+		{
+			const char* propName = propListItem.first.c_str();
+			const Reflection::Property& prop = propListItem.second;
+
+			if (propName == DoNotShowPropThisFrame)
+			{
+				// force Dear ImGui to lose focus of this specific property
+				// this is for CTRL+Click'ing `.Parent` so the value in the input
+				// box doesn't get carried over to the Object we jump to, forcing
+				// it's `.Parent` to change 15/12/2024
+				DoNotShowPropThisFrame = "";
+				continue;
+			}
+
+			Reflection::GenericValue curVal = selected->GetPropertyValue(propName);
+
+			if (!prop.Set)
+			{
+				// no setter (locked property, such as ClassName or ObjectId)
+				// 07/07/2024
+
+				std::string curValStr = curVal.ToString();
+
+				if (strcmp(propName, "Class") == 0)
 				{
-					// force Dear ImGui to lose focus of this specific property
-					// this is for CTRL+Click'ing `.Parent` so the value in the input
-					// box doesn't get carried over to the Object we jump to, forcing
-					// it's `.Parent` to change 15/12/2024
-					DoNotShowPropThisFrame = "";
-					continue;
+					ImGui::Text("Class: ");
+					ImGui::SameLine();
+
+					ImGui::Image(
+						TextureManager::Get()->GetTextureResource(getClassIconId(selected->ClassName)).GpuId,
+						ImVec2(16, 16)
+					);
+					ImGui::SameLine();
+
+					ImGui::Text(curValStr.c_str());
 				}
-
-				Reflection::GenericValue curVal = selected->GetPropertyValue(propName);
-
-				if (!prop.Set)
-				{
-					// no setter (locked property, such as ClassName or ObjectId)
-					// 07/07/2024
-
-					std::string curValStr = curVal.ToString();
-
-					if (strcmp(propName, "Class") == 0)
+				else
+					if (curVal.Type == Reflection::ValueType::Matrix)
 					{
-						ImGui::Text("Class: ");
-						ImGui::SameLine();
+						ImGui::Text("%s: ", propName);
 
-						ImGui::Image(
-							TextureManager::Get()->GetTextureResource(getClassIconId(selected->ClassName)).GpuId,
-							ImVec2(16, 16)
-						);
-						ImGui::SameLine();
+						ImGui::Indent();
 
+						curValStr.insert(curValStr.begin() + curValStr.find_first_of("Ang"), '\n');
 						ImGui::Text(curValStr.c_str());
+
+						ImGui::Unindent();
 					}
 					else
-						if (curVal.Type == Reflection::ValueType::Matrix)
-						{
-							ImGui::Text("%s: ", propName);
+						ImGui::Text("%s: %s", propName, curValStr.c_str());
 
-							ImGui::Indent();
+				continue;
+			}
 
-							curValStr.insert(curValStr.begin() + curValStr.find_first_of("Ang"), '\n');
-							ImGui::Text(curValStr.c_str());
+			Reflection::GenericValue newVal = curVal;
 
-							ImGui::Unindent();
-						}
-						else
-							ImGui::Text("%s: %s", propName, curValStr.c_str());
+			switch (curVal.Type)
+			{
 
-					continue;
-				}
+			case (Reflection::ValueType::String):
+			{
+				std::string str = curVal.AsString();
 
-				Reflection::GenericValue newVal = curVal;
+				const size_t INPUT_TEXT_BUFFER_ADDITIONAL = 64;
 
-				switch (curVal.Type)
-				{
+				size_t allocSize = str.size() + INPUT_TEXT_BUFFER_ADDITIONAL;
 
-				case (Reflection::ValueType::String):
-				{
-					std::string str = curVal.AsString();
+				char* buf = BufferInitialize(
+					allocSize,
+					"<Initial Value 29/09/2024 Hey guys How we doing today>"
+				);
 
-					const size_t INPUT_TEXT_BUFFER_ADDITIONAL = 64;
+				memcpy(buf, str.data(), str.size());
 
-					size_t allocSize = str.size() + INPUT_TEXT_BUFFER_ADDITIONAL;
+				buf[str.size()] = 0;
 
-					char* buf = BufferInitialize(
-						allocSize,
-						"<Initial Value 29/09/2024 Hey guys How we doing today>"
-					);
+				ImGui::InputText(propName, buf, allocSize);
+				newVal = std::string(buf);
 
-					memcpy(buf, str.data(), str.size());
+				free(buf);
 
-					buf[str.size()] = 0;
+				break;
+			}
 
-					ImGui::InputText(propName, buf, allocSize);
-					newVal = std::string(buf);
+			case (Reflection::ValueType::Bool):
+			{
+				bool b = newVal.AsBool();
 
-					free(buf);
+				ImGui::Checkbox(propName, &b);
+				newVal = b;
 
-					break;
-				}
+				break;
+			}
 
-				case (Reflection::ValueType::Bool):
-				{
-					bool b = newVal.AsBool();
+			case (Reflection::ValueType::Double):
+			{
+				double d = newVal.AsDouble();
 
-					ImGui::Checkbox(propName, &b);
-					newVal = b;
+				ImGui::InputDouble(propName, &d);
+				newVal = d;
 
-					break;
-				}
+				break;
+			}
 
-				case (Reflection::ValueType::Double):
-				{
-					double d = newVal.AsDouble();
+			case (Reflection::ValueType::Integer):
+			{
+				// TODO BIG BAD HACK HACK HACK
+				// stoobid Dear ImGui :'(
+				// only allows 32-bit integer input
+				// 01/09/2024
+				int32_t valAs32Bit = static_cast<int32_t>(curVal.AsInteger());
 
-					ImGui::InputDouble(propName, &d);
-					newVal = d;
+				ImGui::InputInt(propName, &valAs32Bit);
 
-					break;
-				}
+				newVal = valAs32Bit;
 
-				case (Reflection::ValueType::Integer):
-				{
-					// TODO BIG BAD HACK HACK HACK
-					// stoobid Dear ImGui :'(
-					// only allows 32-bit integer input
-					// 01/09/2024
-					int32_t valAs32Bit = static_cast<int32_t>(curVal.AsInteger());
+				break;
+			}
 
-					ImGui::InputInt(propName, &valAs32Bit);
+			case (Reflection::ValueType::GameObject):
+			{
+				// TODO BIG BAD HACK HACK HACK
+				// stoobid Dear ImGui :'(
+				// only allows 32-bit integer input
+				// 01/09/2024
+				int32_t id = static_cast<int32_t>(curVal.AsInteger());
 
-					newVal = valAs32Bit;
+				ImGui::InputInt(propName, &id);
+				ImGui::SetItemTooltip("CTRL+Click to select referenced GameObject 03/12/2024");
 
-					break;
-				}
-
-				case (Reflection::ValueType::GameObject):
-				{
-					// TODO BIG BAD HACK HACK HACK
-					// stoobid Dear ImGui :'(
-					// only allows 32-bit integer input
-					// 01/09/2024
-					int32_t id = static_cast<int32_t>(curVal.AsInteger());
-
-					ImGui::InputInt(propName, &id);
-					ImGui::SetItemTooltip("CTRL+Click to select referenced GameObject 03/12/2024");
-
-					if (ImGui::IsItemClicked())
-						if (ImGui::GetIO().KeyCtrl)
-						{
-							HierarchyTreeSelectionId = static_cast<uint32_t>(curVal.AsInteger());
-							DoNotShowPropThisFrame = propName;
-						}
-
-					newVal = id;
-					newVal.Type = Reflection::ValueType::GameObject;
-
-					break;
-				}
-
-				case (Reflection::ValueType::Color):
-				{
-					Color col = curVal;
-
-					float entry[3] = { col.R, col.G, col.B };
-
-					ImGui::ColorEdit3(propName, entry, ImGuiColorEditFlags_None);
-
-					//ImGui::InputFloat3(propName, entry);
-
-					col.R = entry[0];
-					col.G = entry[1];
-					col.B = entry[2];
-
-					newVal = col.ToGenericValue();
-
-					break;
-				}
-
-				case (Reflection::ValueType::Vector3):
-				{
-					Vector3 vec = curVal;
-
-					float entry[3] =
+				if (ImGui::IsItemClicked())
+					if (ImGui::GetIO().KeyCtrl)
 					{
-						static_cast<float>(vec.X),
-						static_cast<float>(vec.Y),
-						static_cast<float>(vec.Z)
-					};
+						HierarchyTreeSelectionId = static_cast<uint32_t>(curVal.AsInteger());
+						DoNotShowPropThisFrame = propName;
+					}
 
-					ImGui::InputFloat3(propName, entry);
+				newVal = id;
+				newVal.Type = Reflection::ValueType::GameObject;
 
-					vec.X = entry[0];
-					vec.Y = entry[1];
-					vec.Z = entry[2];
+				break;
+			}
 
-					newVal = vec.ToGenericValue();
+			case (Reflection::ValueType::Color):
+			{
+				Color col = curVal;
 
-					break;
-				}
+				float entry[3] = { col.R, col.G, col.B };
 
-				case (Reflection::ValueType::Matrix):
+				ImGui::ColorEdit3(propName, entry, ImGuiColorEditFlags_None);
+
+				//ImGui::InputFloat3(propName, entry);
+
+				col.R = entry[0];
+				col.G = entry[1];
+				col.B = entry[2];
+
+				newVal = col.ToGenericValue();
+
+				break;
+			}
+
+			case (Reflection::ValueType::Vector3):
+			{
+				Vector3 vec = curVal;
+
+				float entry[3] =
 				{
-					glm::mat4 mat = curVal.AsMatrix();
+					static_cast<float>(vec.X),
+					static_cast<float>(vec.Y),
+					static_cast<float>(vec.Z)
+				};
 
-					ImGui::Text("%s:", propName);
+				ImGui::InputFloat3(propName, entry);
 
-					float pos[3] =
-					{
-						mat[3][0],
-						mat[3][1],
-						mat[3][2]
-					};
+				vec.X = entry[0];
+				vec.Y = entry[1];
+				vec.Z = entry[2];
 
-					// PLEASE GOD JUST WORK ALREADY
-					// 21/09/2024
-					glm::vec3 rotrads{};
+				newVal = vec.ToGenericValue();
 
-					glm::extractEulerAngleXYZ(mat, rotrads.x, rotrads.y, rotrads.z);
+				break;
+			}
 
-					//mat = glm::rotate(mat, -rotrads[0], glm::vec3(1.f, 0.f, 0.f));
-					//mat = glm::rotate(mat, -rotrads[1], glm::vec3(0.f, 1.f, 0.f));
-					//mat = glm::rotate(mat, -rotrads[2], glm::vec3(0.f, 0.f, 1.f));
+			case (Reflection::ValueType::Matrix):
+			{
+				glm::mat4 mat = curVal.AsMatrix();
 
-					float rotdegs[3] =
-					{
-						glm::degrees(rotrads.x),
-						glm::degrees(rotrads.y),
-						glm::degrees(rotrads.z)
-					};
+				ImGui::Text("%s:", propName);
 
-					ImGui::Indent();
-
-					ImGui::InputFloat3("Position", pos);
-					ImGui::InputFloat3("Rotation", rotdegs);
-
-					ImGui::Unindent();
-
-					mat = glm::mat4(1.f);
-
-					mat[3][0] = pos[0];
-					mat[3][1] = pos[1];
-					mat[3][2] = pos[2];
-
-					mat *= glm::eulerAngleXYZ(glm::radians(rotdegs[0]), glm::radians(rotdegs[1]), glm::radians(rotdegs[2]));
-
-					newVal = Reflection::GenericValue(mat);
-
-					break;
-				}
-
-				default:
+				float pos[3] =
 				{
-					int typeId = static_cast<int>(curVal.Type);
-					const std::string& typeName = Reflection::TypeAsString(curVal.Type);
+					mat[3][0],
+					mat[3][1],
+					mat[3][2]
+				};
 
-					ImGui::Text(std::vformat(
-						"{}: <Display of ID:{} ('{}') types not unavailable>",
-						std::make_format_args(propName, typeId, typeName)
-					).c_str());
+				// PLEASE GOD JUST WORK ALREADY
+				// 21/09/2024
+				glm::vec3 rotrads{};
 
-					break;
-				}
+				glm::extractEulerAngleXYZ(mat, rotrads.x, rotrads.y, rotrads.z);
 
-				}
+				//mat = glm::rotate(mat, -rotrads[0], glm::vec3(1.f, 0.f, 0.f));
+				//mat = glm::rotate(mat, -rotrads[1], glm::vec3(0.f, 1.f, 0.f));
+				//mat = glm::rotate(mat, -rotrads[2], glm::vec3(0.f, 0.f, 1.f));
 
-				try
+				float rotdegs[3] =
 				{
-					selected->SetPropertyValue(propName, newVal);
-				}
-				catch (std::string err)
-				{
-					ErrorTooltipMessage = err;
-					ErrorTooltipTimeRemaining = 2.f;
-				}
+					glm::degrees(rotrads.x),
+					glm::degrees(rotrads.y),
+					glm::degrees(rotrads.z)
+				};
+
+				ImGui::Indent();
+
+				ImGui::InputFloat3("Position", pos);
+				ImGui::InputFloat3("Rotation", rotdegs);
+
+				ImGui::Unindent();
+
+				mat = glm::mat4(1.f);
+
+				mat[3][0] = pos[0];
+				mat[3][1] = pos[1];
+				mat[3][2] = pos[2];
+
+				mat *= glm::eulerAngleXYZ(glm::radians(rotdegs[0]), glm::radians(rotdegs[1]), glm::radians(rotdegs[2]));
+
+				newVal = Reflection::GenericValue(mat);
+
+				break;
+			}
+
+			default:
+			{
+				int typeId = static_cast<int>(curVal.Type);
+				const std::string& typeName = Reflection::TypeAsString(curVal.Type);
+
+				ImGui::Text(std::vformat(
+					"{}: <Display of ID:{} ('{}') types not unavailable>",
+					std::make_format_args(propName, typeId, typeName)
+				).c_str());
+
+				break;
+			}
+
+			}
+
+			try
+			{
+				selected->SetPropertyValue(propName, newVal);
+			}
+			catch (std::string err)
+			{
+				ErrorTooltipMessage = err;
+				ErrorTooltipTimeRemaining = 2.f;
 			}
 		}
+
+		ImGui::EndChild();
 	}
 
 	ImGui::End();
+
+	delete selRef;
 }
