@@ -9,6 +9,7 @@
 #include "asset/MaterialManager.hpp"
 #include "asset/ModelImporter.hpp"
 #include "gameobject/Light.hpp"
+#include "Profiler.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
@@ -151,10 +152,13 @@ static std::vector<GameObject*> LoadMapVersion1(
 	bool* SuccessPtr
 )
 {
+	PROFILE_SCOPE("LoadMapVersion1");
+
 	nlohmann::json JsonData;
 
 	try
 	{
+		PROFILE_SCOPE("ParseJson");
 		JsonData = nlohmann::json::parse(Contents);
 	}
 	catch (nlohmann::json::exception e)
@@ -369,10 +373,13 @@ static std::vector<GameObject*> LoadMapVersion1(
 
 static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, bool* Success)
 {
+	PROFILE_SCOPE("LoadMapVersion2");
+
 	nlohmann::json jsonData;
 
 	try
 	{
+		PROFILE_SCOPE("ParseJson");
 		jsonData = nlohmann::json::parse(Contents);
 	}
 	catch (nlohmann::json::exception e)
@@ -414,6 +421,8 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 
 	for (uint32_t itemIndex = 0; itemIndex < gameObjectsNode.size(); itemIndex++)
 	{
+		PROFILE_SCOPE("DeserializeObject");
+
 		const nlohmann::json& item = gameObjectsNode[itemIndex];
 
 		if (item.find("$_class") == item.end())
@@ -439,6 +448,8 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 		}
 
 		objectProps.insert(std::pair(newObject, std::unordered_map<std::string, uint32_t>{}));
+
+		PROFILE_SCOPE("DeserializeProperties");
 
 		// https://json.nlohmann.me/features/iterators/#access-object-key-during-iteration
 		for (auto memberIt = item.begin(); memberIt != item.end(); ++memberIt)
@@ -586,6 +597,8 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 
 	for (auto& it : objectsMap)
 	{
+		PROFILE_SCOPE("FixupObjectIdProperties");
+
 		GameObject* object = it.second;
 
 		// !! IMPORTANT !!
@@ -644,6 +657,8 @@ std::vector<GameObject*> SceneFormat::Deserialize(
 	bool* SuccessPtr
 )
 {
+	PROFILE_SCOPE("SceneFormat/Deserialize");
+
 	float version = getVersion(Contents);
 
 	size_t jsonStartLoc = Contents.find_first_of("{");
@@ -685,6 +700,8 @@ std::vector<GameObject*> SceneFormat::Deserialize(
 
 static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = false)
 {
+	PROFILE_SCOPE("serializeObject");
+
 	nlohmann::json item{};
 
 	for (auto& prop : Object->GetProperties())
@@ -701,6 +718,8 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 		// 04/09/2024
 		if (IsRootNode && propName == "Parent")
 			continue;
+
+		PROFILE_SCOPE("serializeProperty");
 
 		std::string serializedAs = propName;
 
@@ -779,6 +798,8 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 
 std::string SceneFormat::Serialize(std::vector<GameObject*> Objects, const std::string& SceneName)
 {
+	PROFILE_SCOPE("SceneFormat/Serialize");
+
 	nlohmann::json json;
 
 	json["SceneName"] = SceneName;

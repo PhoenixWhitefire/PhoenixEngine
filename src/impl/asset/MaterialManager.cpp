@@ -3,6 +3,7 @@
 
 #include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
+#include "Profiler.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
@@ -10,6 +11,8 @@ static const std::string MissingTexPath = "!Missing";
 
 void RenderMaterial::Reload()
 {
+	PROFILE_SCOPE("Material::Reload");
+
 	bool matExists = true;
 	std::string fileData = FileRW::ReadFile("materials/" + this->Name + ".mtl", &matExists);
 
@@ -165,6 +168,8 @@ MaterialManager* MaterialManager::Get()
 
 uint32_t MaterialManager::LoadMaterialFromPath(const std::string& Name)
 {
+	PROFILE_SCOPE("MaterialManager/LoadMaterialFromPath");
+
 	auto it = m_StringToMaterialId.find(Name);
 
 	if (it == m_StringToMaterialId.end())
@@ -201,6 +206,8 @@ uint32_t MaterialManager::LoadMaterialFromPath(const std::string& Name)
 
 void MaterialManager::SaveToPath(const RenderMaterial& material, const std::string& Name)
 {
+	PROFILE_SCOPE("MaterialManager/SaveToPath");
+
 	TextureManager* texManager = TextureManager::Get();
 
 	const Texture& colorMap = texManager->GetTextureResource(material.ColorMap);

@@ -62,6 +62,7 @@ PHX_MAIN_HANDLECRASH(std::exception, .what()); \
 
 #include <imgui/backends/imgui_impl_opengl3.h>
 #include <imgui/backends/imgui_impl_sdl3.h>
+#include <imgui_internal.h>
 
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtx/vector_angle.hpp>
@@ -500,6 +501,14 @@ static void drawUI(Reflection::GenericValue Data)
 				{
 					return ((float*)data)[idx];
 				};
+			
+			ImGuiStyle style = ImGui::GetStyle();
+
+			ImVec2 label_size = ImGui::CalcTextSize("MS", NULL, true);
+			ImVec2 frame_size = ImGui::CalcItemSize(ImVec2(), ImGui::CalcItemWidth(), label_size.y + style.FramePadding.y * 2.0f);
+
+			ImVec2 histogramPos = ImGui::GetCursorPos();
+			ImVec2 mousePos = ImGui::GetMousePos();
 
 			ImGui::PlotHistogram("MS", FrameTimeHistoPeeker, FrameTimesHisto, 100, 0, 0, 1/120.f, 1/30.f);
 
@@ -507,13 +516,10 @@ static void drawUI(Reflection::GenericValue Data)
 
 			if (ImGui::IsItemClicked())
 			{
-				float mouseX = 0;
-				SDL_GetMouseState(&mouseX, NULL);
+				ImRect frame_bb(histogramPos, histogramPos + frame_size);
+				ImRect inner_bb(frame_bb.Min + style.FramePadding, frame_bb.Max - style.FramePadding);
 
-				ImVec2 min = ImGui::GetItemRectMin() + ImGui::GetStyle().FramePadding;
-				ImVec2 max = ImGui::GetItemRectMax() - ImGui::GetStyle().FramePadding;
-
-				const float t = std::clamp((ImGui::GetIO().MousePos.x - min.x) / (max.x - min.x), 0.f, 0.9999f);
+				const float t = std::clamp((mousePos.x - inner_bb.Min.x) / (inner_bb.Max.x - inner_bb.Min.x), 0.0f, 0.9999f);
 				FocusedProfilingInfoIdx = (int)(t * 100);
 			}
 

@@ -1,4 +1,5 @@
 #include "datatype/GameObject.hpp"
+#include "Profiler.hpp"
 #include "Log.hpp"
 
 PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(GameObject);
@@ -256,6 +257,7 @@ GameObject::GameObject()
 
 GameObject* GameObject::Duplicate()
 {
+	PROFILE_SCOPE("GameObject::Duplicate");
 	return cloneRecursive(this);
 }
 
@@ -266,6 +268,8 @@ void GameObject::MergeWith(GameObject* Other)
 			"Tried to `:MergeWith` a {} with a {}",
 			std::make_format_args(this->ClassName, Other->ClassName)
 		));
+
+	PROFILE_SCOPE("GameObject::MergeWith");
 
 	// not sure if i actually need to do this
 	// 24/12/2024
@@ -595,6 +599,8 @@ GameObject* GameObject::FindChildWhichIsA(const std::string& Class)
 
 GameObject* GameObject::Create(const std::string& ObjectClass)
 {
+	
+
 	uint32_t numObjects = static_cast<uint32_t>(s_WorldArray.size());
 
 	if (numObjects >= UINT32_MAX - 1)

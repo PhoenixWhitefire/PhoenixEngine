@@ -73,6 +73,8 @@ Engine* Engine::Get()
 
 void Engine::ResizeWindow(int NewSizeX, int NewSizeY)
 {
+	PROFILE_SCOPE("ResizeWindow");
+
 	SDL_SetWindowSize(this->Window, NewSizeX, NewSizeY);
 
 	this->OnWindowResized(NewSizeX, NewSizeY);
@@ -80,6 +82,8 @@ void Engine::ResizeWindow(int NewSizeX, int NewSizeY)
 
 void Engine::OnWindowResized(int NewSizeX, int NewSizeY)
 {
+	PROFILE_SCOPE("OnWindowResized");
+
 	this->WindowSizeX = NewSizeX;
 	this->WindowSizeY = NewSizeY;
 

@@ -9,6 +9,7 @@
 #include "gameobject/Bone.hpp"
 #include "GlobalJsonConfig.hpp"
 #include "Utilities.hpp"
+#include "Profiler.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
@@ -35,6 +36,8 @@ static std::string getTexturePath(
 {
 	if (ImageJson.find("uri") == ImageJson.end())
 	{
+		PROFILE_SCOPE("ExtractTexture");
+
 		std::string mimeType = ImageJson["mimeType"];
 		int32_t bufferViewIndex = ImageJson["bufferView"];
 
@@ -95,6 +98,8 @@ static std::string getTexturePath(
 
 ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 {
+	PROFILE_SCOPE("Import Model");
+
 	std::string gltfFilePath = AssetPath;
 
 	m_File = gltfFilePath;
@@ -127,6 +132,8 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 				std::make_format_args(AssetPath)
 			));
 
+		PROFILE_SCOPE("ParseJsonGLB");
+
 		std::string jsonString = textData.substr(20, jsonChLength);
 		m_JsonData = nlohmann::json::parse(jsonString);
 
@@ -153,6 +160,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 	{
 		try
 		{
+			PROFILE_SCOPE("ParseJsonGLTF");
 			m_JsonData = nlohmann::json::parse(textData);
 		}
 		PHX_CATCH_AND_RETHROW(
@@ -166,6 +174,8 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 
 	try
 	{
+		PROFILE_SCOPE("ParseNodes");
+
 		const nlohmann::json& assetInfoJson = m_JsonData["asset"];
 
 		if (assetInfoJson.find("minVersion") != assetInfoJson.end())
@@ -224,6 +234,8 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		std::string("Failed to import model (type error): ") + gltfFilePath + ,
 		.what()
 	);
+
+	PROFILE_SCOPE("ImportNodes");
 
 	MaterialManager* mtlManager = MaterialManager::Get();
 	MeshProvider* meshProvider = MeshProvider::Get();
@@ -364,6 +376,8 @@ ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(
 	const glm::vec3& Scale
 )
 {
+	PROFILE_SCOPE("LoadPrimitive");
+
 	const nlohmann::json& primitive = MeshData["primitives"][PrimitiveIndex];
 	const nlohmann::json& attributes = primitive["attributes"];
 	const nlohmann::json& accessors = m_JsonData["accessors"];
@@ -458,6 +472,8 @@ ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(
 
 void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From, const glm::mat4& Transform)
 {
+	PROFILE_SCOPE("TraverseNode");
+
 	// Current node
 	const nlohmann::json& nodeJson = m_JsonData["nodes"][NodeIndex];
 
@@ -598,6 +614,8 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From, const glm::m
 
 void ModelLoader::m_BuildRig()
 {
+	PROFILE_SCOPE("BuildRig");
+
 	for (ModelNode& node : m_Nodes)
 		for (int32_t jointId : node.Bones)
 		{
@@ -642,6 +660,8 @@ std::vector<int8_t> ModelLoader::m_GetData()
 
 std::vector<float> ModelLoader::m_GetFloats(const nlohmann::json& accessor)
 {
+	PROFILE_SCOPE("GetFloats");
+
 	std::vector<float> floatVec;
 
 	// Get properties from the accessor
@@ -718,6 +738,8 @@ std::vector<float> ModelLoader::m_GetFloats(const nlohmann::json& accessor)
 
 std::vector<uint32_t> ModelLoader::m_GetUnsigned32s(const nlohmann::json& accessor)
 {
+	PROFILE_SCOPE("GetUnsigned32s");
+
 	std::vector<uint32_t> indices;
 
 	// Get properties from the accessor
@@ -770,6 +792,8 @@ std::vector<uint32_t> ModelLoader::m_GetUnsigned32s(const nlohmann::json& access
 
 std::vector<uint8_t> ModelLoader::m_GetUBytes(const nlohmann::json& accessor)
 {
+	PROFILE_SCOPE("GetUBytes");
+
 	std::vector<uint8_t> ubytesVec;
 
 	// Get properties from the accessor
@@ -810,6 +834,8 @@ std::vector<uint8_t> ModelLoader::m_GetUBytes(const nlohmann::json& accessor)
 
 ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primitive)
 {
+	PROFILE_SCOPE("GetMaterial");
+
 	TextureManager* texManager = TextureManager::Get();
 
 	ModelLoader::MeshMaterial material;
@@ -966,6 +992,8 @@ std::vector<Vertex> ModelLoader::m_AssembleVertices
 	const std::vector<glm::vec4>& Weights
 )
 {
+	PROFILE_SCOPE("AssembleVertices");
+
 	std::vector<Vertex> vertices;
 	vertices.reserve(Positions.size());
 
@@ -996,7 +1024,11 @@ std::vector<Vertex> ModelLoader::m_AssembleVertices
 
 std::vector<glm::vec2> ModelLoader::m_GetAndGroupFloatsVec2(const nlohmann::json& Accessor)
 {
+	PROFILE_SCOPE("GetAndGroupFloatsVec2");
+
 	std::vector<float> floats = m_GetFloats(Accessor);
+
+	PROFILE_SCOPE("GroupFloatsVec2");
 
 	std::vector<glm::vec2> vectors;
 	vectors.reserve(static_cast<size_t>(floats.size() / 2));
@@ -1012,7 +1044,11 @@ std::vector<glm::vec2> ModelLoader::m_GetAndGroupFloatsVec2(const nlohmann::json
 
 std::vector<glm::vec3> ModelLoader::m_GetAndGroupFloatsVec3(const nlohmann::json& Accessor)
 {
+	PROFILE_SCOPE("GetAndGroupFloatsVec3");
+
 	std::vector<float> floats = m_GetFloats(Accessor);
+
+	PROFILE_SCOPE("GroupFloatsVec3");
 
 	std::vector<glm::vec3> vectors;
 	vectors.reserve(static_cast<size_t>(floats.size() / 3));
@@ -1028,7 +1064,11 @@ std::vector<glm::vec3> ModelLoader::m_GetAndGroupFloatsVec3(const nlohmann::json
 }
 std::vector<glm::vec4> ModelLoader::m_GetAndGroupFloatsVec4(const nlohmann::json& Accessor)
 {
+	PROFILE_SCOPE("GetAndGroupFloatsVec4");
+
 	std::vector<float> floats = m_GetFloats(Accessor);
+
+	PROFILE_SCOPE("GroupFloatsVec4");
 
 	std::vector<glm::vec4> vectors;
 	vectors.reserve(static_cast<size_t>(floats.size() / 4));
@@ -1054,7 +1094,11 @@ std::vector<glm::vec4> ModelLoader::m_GetAndGroupFloatsVec4(const nlohmann::json
 }
 std::vector<glm::tvec4<uint8_t>> ModelLoader::m_GetAndGroupUBytesVec4(const nlohmann::json& Accessor)
 {
+	PROFILE_SCOPE("GetAndGroupUBytesVec4");
+
 	std::vector<uint8_t> ubytes = m_GetUBytes(Accessor);
+
+	PROFILE_SCOPE("GroupUBytesVec4");
 
 	std::vector<glm::tvec4<uint8_t>> vectors;
 	vectors.reserve(static_cast<size_t>(ubytes.size() / 4));

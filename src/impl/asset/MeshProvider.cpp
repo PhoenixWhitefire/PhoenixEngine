@@ -7,6 +7,7 @@
 #include "asset/MeshProvider.hpp"
 #include "asset/PrimitiveMeshes.hpp"
 #include "render/GpuBuffers.hpp"
+#include "Profiler.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
@@ -577,6 +578,8 @@ Mesh MeshProvider::Deserialize(const std::string& Contents, bool* SuccessPtr)
 
 void MeshProvider::Save(const Mesh& mesh, const std::string& Path)
 {
+	PROFILE_SCOPE("MeshProvider/Save");
+
 	std::string contents = this->Serialize(mesh);
 	FileRW::WriteFileCreateDirectories(Path, contents, true);
 }
@@ -588,6 +591,8 @@ void MeshProvider::Save(uint32_t Id, const std::string& Path)
 
 static void uploadMeshDataToGpuMesh(Mesh& mesh, MeshProvider::GpuMesh& gpuMesh)
 {
+	PROFILE_SCOPE("uploadMeshDataToGpuMesh");
+
 	GpuVertexArray& vao = gpuMesh.VertexArray;
 	GpuVertexBuffer& vbo = gpuMesh.VertexBuffer;
 	GpuElementBuffer& ebo = gpuMesh.ElementBuffer;
@@ -655,6 +660,8 @@ uint32_t MeshProvider::Assign(Mesh mesh, const std::string& InternalName, bool U
 
 uint32_t MeshProvider::LoadFromPath(const std::string& Path, bool ShouldLoadAsync, bool PreserveMeshData)
 {
+	PROFILE_SCOPE("MeshProvider/LoadFromPath");
+
 	auto meshIt = m_StringToMeshId.find(Path);
 
 	if (meshIt != m_StringToMeshId.end())
@@ -768,6 +775,8 @@ MeshProvider::GpuMesh& MeshProvider::GetGpuMesh(uint32_t Id)
 
 void MeshProvider::FinalizeAsyncLoadedMeshes()
 {
+	PROFILE_SCOPE("MeshProvider/FinalizeAsyncLoadedMeshes");
+
 	size_t numMeshPromises = m_MeshPromises.size();
 	size_t numMeshFutures = m_MeshFutures.size();
 	size_t numMeshResourceIds = m_MeshPromiseResourceIds.size();
@@ -815,6 +824,8 @@ const std::string& MeshProvider::GetLastErrorString()
 
 void MeshProvider::m_CreateAndUploadGpuMesh(Mesh& mesh)
 {
+	PROFILE_SCOPE("CreateAndUploadGpuMesh");
+
 	m_GpuMeshes.emplace_back();
 
 	MeshProvider::GpuMesh& gpuMesh = m_GpuMeshes.back();

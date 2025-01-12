@@ -8,6 +8,7 @@
 #include "asset/TextureManager.hpp"
 #include "datatype/Vector3.hpp"
 #include "datatype/Color.hpp"
+#include "Profiler.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
@@ -22,6 +23,8 @@ static const std::string BaseShaderPath = "shaders/";
 
 void ShaderProgram::Activate()
 {
+	PROFILE_SCOPE("ShaderProgram::Activate");
+
 	if (!glIsProgram(m_GpuId))
 	{
 		ShaderManager* shdManager = ShaderManager::Get();
@@ -110,6 +113,8 @@ void ShaderProgram::Activate()
 
 void ShaderProgram::Reload()
 {
+	PROFILE_SCOPE("ShaderProgram::Reload");
+
 	if (m_GpuId != UINT32_MAX)
 		glDeleteProgram(m_GpuId);
 
@@ -316,6 +321,8 @@ void ShaderProgram::Delete()
 
 void ShaderProgram::Save()
 {
+	PROFILE_SCOPE("ShaderProgram::Save");
+
 	nlohmann::json fileJson{};
 
 	fileJson["Vertex"] = VertexShader;
@@ -482,6 +489,8 @@ std::vector<ShaderProgram>& ShaderManager::GetLoadedShaders()
 
 uint32_t ShaderManager::LoadFromPath(const std::string& ProgramName)
 {
+	PROFILE_SCOPE("ShaderManager/LoadFromPath");
+
 	auto it = s_StringToShaderId.find(ProgramName);
 
 	if (it != s_StringToShaderId.end())
@@ -522,6 +531,8 @@ void ShaderManager::ClearAll()
 
 void ShaderManager::ReloadAll()
 {
+	PROFILE_SCOPE("ShaderManager/ReloadAll");
+
 	for (ShaderProgram& shader : m_Shaders)
 		shader.Reload();
 }
