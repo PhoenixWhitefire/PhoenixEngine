@@ -8,6 +8,7 @@
 #include <imgui_internal.h>
 #include <glad/gl.h>
 #include <fstream>
+#include <set>
 
 #include "Editor.hpp"
 
@@ -30,8 +31,8 @@ constexpr const char* MATERIAL_NEW_NAME_DEFAULT = "newmaterial";
 
 static const char* ParentString = "[Parent]";
 
-static bool ScriptEditorEnabled = false;
-static uint32_t ScriptEditorFocus = PHX_GAMEOBJECT_NULL_ID;
+static bool TextEditorEnabled = false;
+static std::string TextEditorFile = "<NOT_SELECTED>";
 
 static nlohmann::json DefaultNewMaterial = 
 {
@@ -124,100 +125,259 @@ static bool mtlUniformIterator(void* array, int index, const char** outText)
 	return true;
 }
 
-static void renderScriptEditor()
+static std::string getFileDirectory(const std::string& FilePath)
 {
-	static char* TextEntryBuffer = nullptr;
-	static size_t TextEntryBufferCapacity = 0;
+	size_t lastFwdSlash = FilePath.find_last_of("/");
 
-	static std::fstream* ScriptFileStream = nullptr;
-
-	if (!ScriptEditorEnabled)
+	if (lastFwdSlash == std::string::npos)
+		return "resources/";
+	else
 	{
-		if (ScriptFileStream)
+		std::string fileDir = FilePath.substr(0, lastFwdSlash);
+
+		if (fileDir.find("resources/") == std::string::npos)
+			fileDir = "resources/" + fileDir;
+
+		return fileDir;
+	}
+}
+
+static char* TextEditorEntryBuffer = nullptr;
+static size_t TextEditorEntryBufferCapacity = 0;
+static std::fstream* TextEditorFileStream = nullptr;
+static std::set<std::string> TextEditorQuickSelectFiles;
+
+static void textEditorSaveFile()
+{
+	if (!TextEditorEntryBuffer)
+	{
+		ErrorTooltipMessage = "Text Editor tried to save file, but had no text buffer";
+		ErrorTooltipTimeRemaining = 3.f;
+		return;
+	}
+
+	std::string contents = TextEditorEntryBuffer;
+
+	// always flush the buffer. if a new file is created (i.e. "<NOT_SELECTED>"), and the
+	// `contents.empty` early-out triggers as the user opens another file, the new file
+	// will be overwritten with the empty contents
+	// 12/02/2024
+	free(TextEditorEntryBuffer);
+	TextEditorEntryBuffer = nullptr;
+
+	if (TextEditorFile == "" || TextEditorFile == "<NOT_SELECTED>")
+	{
+		if (contents.empty())
+			return;
+
+		static uint32_t ErrCount = 0;
+		ErrCount++;
+
+		TextEditorFile = "texteditor_default_" + std::to_string(ErrCount) + ".txt";
+
+		ErrorTooltipMessage = "Text Editor tried to save a file with no path. Will be saved to " + TextEditorFile;
+		ErrorTooltipTimeRemaining = 5.f;
+	}
+
+	if (TextEditorFileStream && TextEditorFileStream->is_open())
+	{
+		TextEditorFileStream->close();
+		delete TextEditorFileStream;
+		TextEditorFileStream = nullptr;
+	}
+
+	if (TextEditorFile.find("scripts/") != std::string::npos
+		&& TextEditorFile.find("resources/scripts/") == std::string::npos
+	)
+		TextEditorFile = "resources/" + TextEditorFile;
+
+	size_t lastPeriod = TextEditorFile.find_last_of(".");
+	size_t lastFwdSlash = TextEditorFile.find_last_of("/");
+
+	if (lastPeriod == std::string::npos || (lastFwdSlash != std::string::npos && lastFwdSlash > lastPeriod))
+	{
+		TextEditorFile += ".txt";
+		ErrorTooltipMessage = "File will be saved as " + TextEditorFile;
+		ErrorTooltipTimeRemaining = 2.f;
+	}
+
+	FileRW::WriteFile(TextEditorFile, contents, true);
+}
+
+static void invokeTextEditor(const std::string& File)
+{
+	if (TextEditorEntryBuffer)
+		textEditorSaveFile();
+
+	TextEditorEnabled = true;
+	TextEditorFile = File;
+	TextEditorQuickSelectFiles.insert(File);
+}
+
+static void renderTextEditor()
+{
+	if (!TextEditorEnabled)
+	{
+		if (TextEditorEntryBuffer)
+			textEditorSaveFile();
+		TextEditorFile = "<NOT_SELECTED>";
+
+		return;
+	}
+
+	ImGui::Begin("Text Editor", 0, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_MenuBar);
+
+	ImGui::BeginMenuBar();
+
+	if (ImGui::BeginMenu("File"))
+	{
+		if (ImGui::MenuItem("New"))
 		{
-			ScriptFileStream->close();
-			ScriptFileStream = nullptr; // crashes when i try to `delete` it 22/12/2024
+			textEditorSaveFile();
+			TextEditorFile = "<NOT_SELECTED>";
+
+			TextEditorEntryBuffer = BufferInitialize(512);
+			TextEditorEntryBufferCapacity = 512;
 		}
 
-		if (TextEntryBuffer)
+		if (ImGui::MenuItem("Open"))
 		{
-			free(TextEntryBuffer);
-			TextEntryBuffer = nullptr;
+			TextEditorQuickSelectFiles.insert(TextEditorFile);
+
+			textEditorSaveFile();
+
+			std::string curDir = getFileDirectory(TextEditorFile);
+			ImGuiFD::OpenDialog("Text Editor Open File", ImGuiFDMode_LoadFile, curDir.c_str());
 		}
 
-		ScriptEditorFocus = PHX_GAMEOBJECT_NULL_ID;
+		if (ImGui::MenuItem("Save", NULL, nullptr, TextEditorFile != "" && TextEditorFile != "<NOT_SELECTED>"))
+			textEditorSaveFile();
 
-		return;
+		if (ImGui::MenuItem("Save As"))
+		{
+			std::string curDir = getFileDirectory(TextEditorFile);
+			ImGuiFD::OpenDialog(
+				"Text Editor Save File As",
+				ImGuiFDMode_LoadFile,
+				curDir.c_str()
+			);
+		}
+
+		if (ImGui::MenuItem("Close"))
+		{
+			TextEditorEnabled = false;
+			textEditorSaveFile();
+		}
+
+		ImGui::EndMenu();
 	}
 
-	Object_Script* targetScript = dynamic_cast<Object_Script*>(GameObject::GetObjectById(ScriptEditorFocus));
+	std::string selectorMenuText = "Active: " + TextEditorFile;
+	bool quickSelectOpen = ImGui::BeginMenu(selectorMenuText.c_str());
+	ImGui::SetItemTooltip("Quick Select from recent files");
 
-	if (!targetScript)
+	if (quickSelectOpen)
 	{
-		ScriptEditorEnabled = false;
-		ScriptEditorFocus = PHX_GAMEOBJECT_NULL_ID;
+		std::set<std::string>::reverse_iterator rit;
 
-		return;
+		for (rit = TextEditorQuickSelectFiles.rbegin(); rit != TextEditorQuickSelectFiles.rend(); rit++)
+			if (ImGui::MenuItem(rit->data()))
+			{
+				textEditorSaveFile();
+				TextEditorFile = rit->data();
+			}
+
+		ImGui::EndMenu();
 	}
 
-	ImGui::Begin("Script Editor", 0, ImGuiWindowFlags_NoCollapse);
+	ImGui::EndMenuBar();
 
-	ImGui::Text("%s: %s", targetScript->GetFullName().c_str(), targetScript->SourceFile.c_str());
-
-	bool save = ImGui::Button("Save");
-
-	if (ImGui::Button("Save and Close"))
+	if (ImGuiFD::BeginDialog("Text Editor Open File"))
 	{
-		ScriptEditorEnabled = false;
+		if (ImGuiFD::ActionDone())
+		{
+			if (ImGuiFD::SelectionMade())
+			{
+				textEditorSaveFile();
+				TextEditorFile = ImGuiFD::GetSelectionPathString(0);
 
-		save = true;
+				if (!TextEditorFile.find("resources/"))
+					TextEditorFile.insert(0, "./"); // for `FileRW::GetAbsolutePath`
+
+				TextEditorQuickSelectFiles.insert(TextEditorFile);
+			}
+
+			ImGuiFD::CloseCurrentDialog();
+		}
+
+		ImGuiFD::EndDialog();
 	}
 
-	if (ImGui::Button("Close without saving"))
+	if (ImGuiFD::BeginDialog("Text Editor Save File As"))
 	{
-		ScriptEditorEnabled = false;
-		ImGui::End();
+		if (ImGuiFD::ActionDone())
+		{
+			if (ImGuiFD::SelectionMade())
+			{
+				TextEditorFile = ImGuiFD::GetSelectionPathString(0);
+				if (!TextEditorFile.find("resources/"))
+					TextEditorFile.insert(0, "./"); // for `FileRW::GetAbsolutePath`
 
-		return;
+				textEditorSaveFile();
+
+				TextEditorQuickSelectFiles.insert(TextEditorFile);
+			}
+
+			ImGuiFD::CloseCurrentDialog();
+		}
+
+		ImGuiFD::EndDialog();
 	}
 
-	if (save)
+	if (!TextEditorEntryBuffer)
 	{
-		ScriptFileStream->close();
-		delete ScriptFileStream;
-		ScriptFileStream = nullptr;
+		if (TextEditorFileStream)
+		{
+			TextEditorFileStream->close();
+			delete TextEditorFileStream;
+		}
 
-		FileRW::WriteFile(targetScript->SourceFile, TextEntryBuffer, true);
-
-		free(TextEntryBuffer);
-		TextEntryBuffer = nullptr;
-	}
-
-	if (!TextEntryBuffer)
-	{
-		ScriptFileStream = new std::fstream(FileRW::GetAbsolutePath(targetScript->SourceFile));
+		TextEditorFileStream = new std::fstream(FileRW::GetAbsolutePath(TextEditorFile));
 		
 		std::string scriptContents = "";
 
-		if (!(*ScriptFileStream) || !ScriptFileStream->is_open())
-			scriptContents = "-- Source file '" + targetScript->SourceFile + "' could not be opened";
+		if (!(*TextEditorFileStream) || !TextEditorFileStream->is_open())
+		{
+			ErrorTooltipMessage = "File couldn't be opened";
+			ErrorTooltipTimeRemaining = 5.f;
+			TextEditorFile = "<NOT_SELECTED>";
+
+			TextEditorEntryBuffer = BufferInitialize(512);
+			TextEditorEntryBufferCapacity = 512;
+		}
 		else
 		{
-			ScriptFileStream->seekg(0, std::ios::end);
+			TextEditorFileStream->seekg(0, std::ios::end);
 
-			scriptContents.resize(ScriptFileStream->tellg());
-			ScriptFileStream->seekg(0, std::ios::beg);
+			scriptContents.resize(TextEditorFileStream->tellg());
+			TextEditorFileStream->seekg(0, std::ios::beg);
 
-			ScriptFileStream->read(&scriptContents[0], scriptContents.size());
+			TextEditorFileStream->read(&scriptContents[0], scriptContents.size());
+
+			TextEditorEntryBufferCapacity = scriptContents.size() + 256;
+			TextEditorEntryBuffer = (char*)malloc(TextEditorEntryBufferCapacity);
+
+			CopyStringToBuffer(TextEditorEntryBuffer, TextEditorEntryBufferCapacity, scriptContents);
 		}
-
-		TextEntryBufferCapacity = scriptContents.size() + 256;
-		TextEntryBuffer = (char*)malloc(TextEntryBufferCapacity);
-
-		CopyStringToBuffer(TextEntryBuffer, TextEntryBufferCapacity, scriptContents);
 	}
 	
-	ImGui::InputTextMultiline("##", TextEntryBuffer, TextEntryBufferCapacity, ImGui::GetContentRegionAvail());
+	if (TextEditorEntryBuffer)
+		ImGui::InputTextMultiline(
+			"##",
+			TextEditorEntryBuffer,
+			TextEditorEntryBufferCapacity,
+			ImGui::GetContentRegionAvail()
+		);
 
 	ImGui::End();
 }
@@ -341,9 +501,24 @@ static void shaderPipelineShaderSelect(const std::string& Label, std::string* Ta
 	ImGui::Text(Label.c_str());
 	ImGui::SameLine();
 
-	if (ImGui::TextLink(Target->c_str()))
+	bool editFile = ImGui::TextLink(Target->c_str());
+	ImGui::SetItemTooltip("View file");
+
+	if (editFile)
+		invokeTextEditor(*Target);
+
+	ImGui::SameLine();
+
+	ImGui::PushID(Label.c_str());
+
+	bool changeFile = ImGui::Button("...");
+	ImGui::SetItemTooltip("Select file");
+
+	ImGui::PopID();
+
+	if (changeFile)
 	{
-		std::string shddir = "resources/" + Target->substr(0ull, Target->find_last_of("/"));
+		std::string shddir = getFileDirectory(*Target);
 
 		ImGuiFD::OpenDialog(
 			"Select Pipeline Shader",
@@ -462,8 +637,7 @@ static void mtlEditorTexture(uint32_t* TextureIdPtr, const char* Label, char* Bu
 
 		if (fileDialogRequested)
 		{
-			std::string bufAsStr = std::string(Buffer);
-			std::string texdir = "resources/" + bufAsStr.substr(0ull, bufAsStr.find_last_of("/"));
+			std::string texdir = getFileDirectory(Buffer);
 
 			ImGuiFD::OpenDialog(
 				"Select Texture",
@@ -896,7 +1070,7 @@ void Editor::RenderUI()
 	if (ErrorTooltipTimeRemaining > 0.f)
 		ImGui::SetTooltip(ErrorTooltipMessage.c_str());
 
-	renderScriptEditor();
+	renderTextEditor();
 	renderShaderPipelinesEditor();
 	m_RenderMaterialEditor();
 
@@ -940,10 +1114,7 @@ void Editor::RenderUI()
 			if (Object_Script* scr = dynamic_cast<Object_Script*>(target))
 			{
 				if (ImGui::MenuItem("Edit"))
-				{
-					ScriptEditorEnabled = true;
-					ScriptEditorFocus = scr->ObjectId;
-				}
+					invokeTextEditor(scr->SourceFile);
 
 				if (ImGui::MenuItem("Reload"))
 					scr->Reload();
