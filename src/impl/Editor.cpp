@@ -6,6 +6,7 @@
 #include <imgui/imgui.h>
 #include <imgui/misc/cpp/imgui_stdlib.h>
 #include <imgui_internal.h>
+#include <tracy/Tracy.hpp>
 #include <glad/gl.h>
 #include <fstream>
 #include <set>
@@ -216,6 +217,8 @@ static void invokeTextEditor(const std::string& File)
 
 static void renderTextEditor()
 {
+	ZoneScopedC(tracy::Color::DarkSeaGreen);
+
 	if (!TextEditorEnabled)
 	{
 		if (TextEditorEntryBuffer)
@@ -384,6 +387,8 @@ static void renderTextEditor()
 
 static void uniformsEditor(std::unordered_map<std::string, Reflection::GenericValue>& Uniforms, int* Selection)
 {
+	ZoneScopedC(tracy::Color::DarkSeaGreen);
+
 	if ((*Selection) + 1ull > Uniforms.size())
 		*Selection = -1;
 
@@ -535,6 +540,8 @@ static void shaderPipelineShaderSelect(const std::string& Label, std::string* Ta
 
 static void renderShaderPipelinesEditor()
 {
+	ZoneScopedC(tracy::Color::DarkSeaGreen);
+
 	if (ImGuiFD::BeginDialog("Select Pipeline Shader"))
 	{
 		if (!PipelineShaderSelectTarget)
@@ -581,10 +588,27 @@ static void renderShaderPipelinesEditor()
 		return;
 	}
 
+	static std::string NewShdName = "";
+	NewShdName.reserve(64);
+
+	ImGui::InputText("New Blank Pipeline", &NewShdName);
+
+	if (ImGui::Button("Create"))
+	{
+		ShaderProgram np;
+		np.Name = NewShdName;
+		np.VertexShader = "worldUber.vert";
+		np.FragmentShader = "worldUber.frag";
+		
+		np.Save();
+
+		shdManager->LoadFromPath(NewShdName);
+	}
+
 	static int curItemIdx = -1;
 
 	ImGui::ListBox(
-		"##",
+		"Loaded Pipelines",
 		&curItemIdx,
 		[](void* udat, int idx)
 		-> const char*
@@ -605,7 +629,12 @@ static void renderShaderPipelinesEditor()
 
 		static int UniformSelectionIdx = -1;
 
-		ImGui::InputText("Inherit variables of: ", &curItem.UniformsAncestor);
+		ImGui::Text("Inherit variables of: ");
+		ImGui::SameLine();
+
+		curItem.UniformsAncestor.reserve(64);
+
+		ImGui::InputText("##", &curItem.UniformsAncestor);
 
 		uniformsEditor(curItem.DefaultUniforms, &UniformSelectionIdx);
 
@@ -693,6 +722,8 @@ static uint32_t getClassIconId(const std::string& ClassName)
 // and it's just him screaming into the mic
 void Editor::m_RenderMaterialEditor()
 {
+	ZoneScopedC(tracy::Color::DarkSeaGreen);
+
 	MaterialManager* mtlManager = MaterialManager::Get();
 	TextureManager* texManager = TextureManager::Get();
 
@@ -910,7 +941,14 @@ void Editor::m_RenderMaterialEditor()
 
 	uniformsEditor(curItem.Uniforms, &SelectedUniformIdx);
 
-	if (ImGui::Button("Load texture and shader"))
+	ImGui::Checkbox("Has translucency", &curItem.HasTranslucency);
+	ImGui::InputFloat("Spec pow", &curItem.SpecExponent);
+	ImGui::InputFloat("Spec mul", &curItem.SpecMultiply);
+
+	ImGui::InputText("Save As", &s_SaveNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
+	ImGui::SetItemTooltip("By default, this will be the name of the material you are editing, thus overwriting it");
+
+	if (ImGui::Button("Save changes"))
 	{
 		curItem.ColorMap = texManager->LoadTextureFromPath(m_MtlDiffuseBuf);
 
@@ -924,17 +962,9 @@ void Editor::m_RenderMaterialEditor()
 			curItem.EmissionMap = texManager->LoadTextureFromPath(m_MtlEmissionBuf);
 
 		curItem.ShaderId = ShaderManager::Get()->LoadFromPath(m_MtlShpBuf);
-	}
 
-	ImGui::Checkbox("Has translucency", &curItem.HasTranslucency);
-	ImGui::InputFloat("Spec pow", &curItem.SpecExponent);
-	ImGui::InputFloat("Spec mul", &curItem.SpecMultiply);
-
-	ImGui::InputText("Save As", &s_SaveNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
-	ImGui::SetItemTooltip("By default, this will be the name of the material you are editing, thus overwriting it");
-
-	if (ImGui::Button("Save"))
 		mtlManager->SaveToPath(curItem, s_SaveNameBuf);
+	}
 
 	ImGui::End();
 }
@@ -944,6 +974,8 @@ static GameObject* ObjectInsertionTarget = nullptr;
 
 static GameObject* recursiveIterateTree(GameObject* current, bool didVisitCurSelection = false)
 {
+	ZoneScopedC(tracy::Color::DarkSeaGreen);
+
 	static TextureManager* texManager = TextureManager::Get();
 
 	GameObject* hrchSelection = GameObject::GetObjectById(HierarchyTreeSelectionId);
@@ -1067,6 +1099,8 @@ static std::string DoNotShowPropThisFrame = "";
 
 void Editor::RenderUI()
 {
+	ZoneScopedC(tracy::Color::DarkSeaGreen);
+
 	if (ErrorTooltipTimeRemaining > 0.f)
 		ImGui::SetTooltip(ErrorTooltipMessage.c_str());
 

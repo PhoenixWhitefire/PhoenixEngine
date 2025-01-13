@@ -2,13 +2,13 @@
 #include <glad/gl.h>
 #include <nljson.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <tracy/Tracy.hpp>
 
 #include "asset/ShaderManager.hpp"
 
 #include "asset/TextureManager.hpp"
 #include "datatype/Vector3.hpp"
 #include "datatype/Color.hpp"
-#include "Profiler.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
@@ -23,7 +23,7 @@ static const std::string BaseShaderPath = "shaders/";
 
 void ShaderProgram::Activate()
 {
-	PROFILE_SCOPE("ShaderProgram::Activate");
+	ZoneScoped;
 
 	if (!glIsProgram(m_GpuId))
 	{
@@ -113,7 +113,8 @@ void ShaderProgram::Activate()
 
 void ShaderProgram::Reload()
 {
-	PROFILE_SCOPE("ShaderProgram::Reload");
+	ZoneScoped;
+	ZoneTextF("%s", this->Name.c_str());
 
 	if (m_GpuId != UINT32_MAX)
 		glDeleteProgram(m_GpuId);
@@ -321,7 +322,7 @@ void ShaderProgram::Delete()
 
 void ShaderProgram::Save()
 {
-	PROFILE_SCOPE("ShaderProgram::Save");
+	ZoneScoped;
 
 	nlohmann::json fileJson{};
 
@@ -489,7 +490,8 @@ std::vector<ShaderProgram>& ShaderManager::GetLoadedShaders()
 
 uint32_t ShaderManager::LoadFromPath(const std::string& ProgramName)
 {
-	PROFILE_SCOPE("ShaderManager/LoadFromPath");
+	ZoneScoped;
+	ZoneTextF("%s", ProgramName.c_str());
 
 	auto it = s_StringToShaderId.find(ProgramName);
 
@@ -531,8 +533,6 @@ void ShaderManager::ClearAll()
 
 void ShaderManager::ReloadAll()
 {
-	PROFILE_SCOPE("ShaderManager/ReloadAll");
-
 	for (ShaderProgram& shader : m_Shaders)
 		shader.Reload();
 }

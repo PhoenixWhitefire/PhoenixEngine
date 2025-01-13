@@ -1,33 +1,11 @@
+#include <tracy/Tracy.hpp>
+
 #include "datatype/GameObject.hpp"
-#include "Profiler.hpp"
 #include "Log.hpp"
 
 PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(GameObject);
 
 static bool s_DidInitReflection = false;
-
-static void destroyObject(Reflection::Reflectable* obj)
-{
-	static_cast<GameObject*>(obj)->Destroy();
-}
-
-static std::string getFullName(const Reflection::Reflectable* r)
-{
-	const GameObject* object = static_cast<const GameObject*>(r);
-
-	std::string fullName = object->Name;
-	const GameObject* curObject = object;
-
-	while (GameObject* parent = curObject->GetParent())
-	{
-		if (parent == GameObject::s_DataModel)
-			break;
-		fullName = parent->Name + "." + fullName;
-		curObject = parent;
-	}
-
-	return fullName;
-}
 
 static GameObject* cloneRecursive(
 	GameObject* Root,
@@ -159,7 +137,13 @@ void GameObject::s_DeclareReflections()
 		}
 	);
 
-	REFLECTION_DECLAREPROC_INPUTLESS(Destroy, destroyObject);
+	REFLECTION_DECLAREPROC_INPUTLESS(
+		Destroy,
+		[](Reflection::Reflectable* p)
+		{
+			static_cast<GameObject*>(p)->Destroy();
+		}
+	);
 	REFLECTION_DECLAREFUNC(
 		"GetFullName",
 		{},
@@ -167,7 +151,7 @@ void GameObject::s_DeclareReflections()
 		[](Reflection::Reflectable* p, const std::vector<Reflection::GenericValue>&)
 		-> std::vector<Reflection::GenericValue>
 		{
-			return { getFullName(p) };
+			return { static_cast<GameObject*>(p)->GetFullName() };
 		}
 	);
 
@@ -257,19 +241,19 @@ GameObject::GameObject()
 
 GameObject* GameObject::Duplicate()
 {
-	PROFILE_SCOPE("GameObject::Duplicate");
+	ZoneScoped;
 	return cloneRecursive(this);
 }
 
 void GameObject::MergeWith(GameObject* Other)
 {
+	ZoneScoped;
+
 	if (Other->ClassName != this->ClassName)
 		throw(std::vformat(
 			"Tried to `:MergeWith` a {} with a {}",
 			std::make_format_args(this->ClassName, Other->ClassName)
 		));
-
-	PROFILE_SCOPE("GameObject::MergeWith");
 
 	// not sure if i actually need to do this
 	// 24/12/2024
@@ -282,6 +266,8 @@ void GameObject::MergeWith(GameObject* Other)
 
 GameObject* GameObject::FromGenericValue(const Reflection::GenericValue& gv)
 {
+	ZoneScoped;
+
 	if (gv.Type == Reflection::ValueType::Null)
 		return nullptr;
 
@@ -304,16 +290,13 @@ GameObject::~GameObject() noexcept(false)
 		// use `::Destroy` or something maybe 24/12/2024
 		throw("I can't be killed right now, someone still needs me!");
 
-	if (GameObject* parent = this->GetParent())
-		parent->RemoveChild(ObjectId);
+	this->SetParent(nullptr);
 
 	for (GameObject* child : this->GetChildren())
 		child->Destroy();
 
 	if (this->ObjectId != PHX_GAMEOBJECT_NULL_ID)
 		s_WorldArray.at(this->ObjectId) = nullptr;
-
-	this->Parent = PHX_GAMEOBJECT_NULL_ID;
 }
 
 bool GameObject::IsValidObjectClass(const std::string& ObjectClass)
@@ -390,7 +373,18 @@ void GameObject::Destroy()
 
 std::string GameObject::GetFullName() const
 {
-	return getFullName(this);
+	std::string fullName = this->Name;
+	const GameObject* curObject = this;
+
+	while (GameObject* parent = curObject->GetParent())
+	{
+		if (parent == GameObject::s_DataModel)
+			break;
+		fullName = parent->Name + "." + fullName;
+		curObject = parent;
+	}
+
+	return fullName;
 }
 
 bool GameObject::IsA(const std::string& AncestorClass) const
@@ -404,6 +398,7 @@ bool GameObject::IsA(const std::string& AncestorClass) const
 	for (const std::string& ancestor : GetLineage())
 		if (ancestor == AncestorClass)
 			return true;
+
 	return false;
 }
 
@@ -519,6 +514,8 @@ GameObject* GameObject::GetParent() const
 
 std::vector<GameObject*> GameObject::GetChildren()
 {
+	ZoneScoped;
+
 	std::vector<GameObject*> children;
 	children.reserve(m_Children.size());
 
@@ -537,6 +534,8 @@ std::vector<GameObject*> GameObject::GetChildren()
 
 std::vector<GameObject*> GameObject::GetDescendants()
 {
+	ZoneScoped;
+
 	std::vector<GameObject*> descendants;
 	descendants.reserve(m_Children.size());
 

@@ -2,6 +2,7 @@
 
 #include <nljson.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <tracy/Tracy.hpp>
 
 #include "asset/SceneFormat.hpp"
 
@@ -9,14 +10,13 @@
 #include "asset/MaterialManager.hpp"
 #include "asset/ModelImporter.hpp"
 #include "gameobject/Light.hpp"
-#include "Profiler.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
-#define SF_EMIT_WARNING(err, ...) Log::Warning(std::vformat( \
-	std::string("Deserialization warning: ") + err,                    \
-	std::make_format_args(__VA_ARGS__)                               \
-))                                                                     \
+#define SF_EMIT_WARNING(err, ...) Log::Warning(std::vformat(    \
+	std::string("Deserialization warning: ") + err,             \
+	std::make_format_args(__VA_ARGS__)                          \
+))                                                              \
 
 static std::string errorString = "No error";
 
@@ -152,13 +152,13 @@ static std::vector<GameObject*> LoadMapVersion1(
 	bool* SuccessPtr
 )
 {
-	PROFILE_SCOPE("LoadMapVersion1");
+	ZoneScoped;
 
 	nlohmann::json JsonData;
 
 	try
 	{
-		PROFILE_SCOPE("ParseJson");
+		ZoneScopedN("ParseJson");
 		JsonData = nlohmann::json::parse(Contents);
 	}
 	catch (nlohmann::json::exception e)
@@ -373,13 +373,13 @@ static std::vector<GameObject*> LoadMapVersion1(
 
 static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, bool* Success)
 {
-	PROFILE_SCOPE("LoadMapVersion2");
+	ZoneScoped;
 
 	nlohmann::json jsonData;
 
 	try
 	{
-		PROFILE_SCOPE("ParseJson");
+		ZoneScopedN("ParseJson");
 		jsonData = nlohmann::json::parse(Contents);
 	}
 	catch (nlohmann::json::exception e)
@@ -421,7 +421,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 
 	for (uint32_t itemIndex = 0; itemIndex < gameObjectsNode.size(); itemIndex++)
 	{
-		PROFILE_SCOPE("DeserializeObject");
+		ZoneScopedN("DeserializeItem");
 
 		const nlohmann::json& item = gameObjectsNode[itemIndex];
 
@@ -449,7 +449,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 
 		objectProps.insert(std::pair(newObject, std::unordered_map<std::string, uint32_t>{}));
 
-		PROFILE_SCOPE("DeserializeProperties");
+		ZoneName("DeserializeProperties", 21);
 
 		// https://json.nlohmann.me/features/iterators/#access-object-key-during-iteration
 		for (auto memberIt = item.begin(); memberIt != item.end(); ++memberIt)
@@ -595,10 +595,10 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 	std::vector<GameObject*> objects;
 	objects.reserve(objectsMap.size());
 
+	ZoneNamedN(fixupzone, "FixupObjectReferentProperties", true);
+
 	for (auto& it : objectsMap)
 	{
-		PROFILE_SCOPE("FixupObjectIdProperties");
-
 		GameObject* object = it.second;
 
 		// !! IMPORTANT !!
@@ -657,7 +657,7 @@ std::vector<GameObject*> SceneFormat::Deserialize(
 	bool* SuccessPtr
 )
 {
-	PROFILE_SCOPE("SceneFormat/Deserialize");
+	ZoneScoped;
 
 	float version = getVersion(Contents);
 
@@ -700,7 +700,7 @@ std::vector<GameObject*> SceneFormat::Deserialize(
 
 static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = false)
 {
-	PROFILE_SCOPE("serializeObject");
+	ZoneScoped;
 
 	nlohmann::json item{};
 
@@ -718,8 +718,6 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 		// 04/09/2024
 		if (IsRootNode && propName == "Parent")
 			continue;
-
-		PROFILE_SCOPE("serializeProperty");
 
 		std::string serializedAs = propName;
 
@@ -798,7 +796,7 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 
 std::string SceneFormat::Serialize(std::vector<GameObject*> Objects, const std::string& SceneName)
 {
-	PROFILE_SCOPE("SceneFormat/Serialize");
+	ZoneScoped;
 
 	nlohmann::json json;
 

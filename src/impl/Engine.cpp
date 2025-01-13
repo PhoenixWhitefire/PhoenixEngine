@@ -14,6 +14,8 @@
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_log.h>
 
+#include <tracy/Tracy.hpp>
+
 #include "Engine.hpp"
 
 #include "gameobject/GameObjects.hpp"
@@ -21,7 +23,6 @@
 #include "ThreadManager.hpp"
 #include "UserInput.hpp"
 #include "Utilities.hpp"
-#include "Profiler.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
@@ -73,7 +74,7 @@ Engine* Engine::Get()
 
 void Engine::ResizeWindow(int NewSizeX, int NewSizeY)
 {
-	PROFILE_SCOPE("ResizeWindow");
+	ZoneScoped;
 
 	SDL_SetWindowSize(this->Window, NewSizeX, NewSizeY);
 
@@ -82,7 +83,7 @@ void Engine::ResizeWindow(int NewSizeX, int NewSizeY)
 
 void Engine::OnWindowResized(int NewSizeX, int NewSizeY)
 {
-	PROFILE_SCOPE("OnWindowResized");
+	ZoneScoped;
 
 	this->WindowSizeX = NewSizeX;
 	this->WindowSizeY = NewSizeY;
@@ -304,6 +305,8 @@ void Engine::Initialize()
 */
 static void updateScripts(double DeltaTime)
 {
+	ZoneScopedC(tracy::Color::LightSkyBlue);
+
 	static std::vector<GameObjectRef<Object_Script>> ScriptsResumedThisFrame = {};
 
 	for (GameObject* ch : GameObject::s_DataModel->GetDescendants())
@@ -345,6 +348,8 @@ static void recursivelyTravelHierarchy(
 	double DeltaTime
 )
 {
+	ZoneScopedC(tracy::Color::LightGoldenrod);
+
 	static uint32_t wireframeMaterial = MaterialManager::Get()->LoadMaterialFromPath("wireframe");
 	static uint32_t cubeMesh = MeshProvider::Get()->LoadFromPath("!Cube");
 
@@ -556,6 +561,8 @@ void Engine::Start()
 
 	while (!this->Exit)
 	{
+		ZoneScopedN("Frame");
+
 		if (DataModel->IsDestructionPending)
 		{
 			Log::Warning("`::Destroy` called on DataModel, shutting down");
@@ -592,13 +599,9 @@ void Engine::Start()
 		// Wait the appropriate amount of time between frames
 		if (!VSync && (frameDelta + .0005f < fpsCapDelta))
 		{
+			ZoneScopedNC("SleepForFpsCap", tracy::Color::Wheat);
 			std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<size_t>((fpsCapDelta - frameDelta) * 1000)));
-			continue;
 		}
-
-		Profiler::ResetAll();
-
-		Profiler::Start("Frame");
 
 		scene.RenderList.clear();
 		scene.LightingList.clear();
@@ -606,59 +609,63 @@ void Engine::Start()
 		texManager->FinalizeAsyncLoadedTextures();
 		meshProvider->FinalizeAsyncLoadedMeshes();
 
-		bool skyboxLoaded = true;
-
-		for (uint32_t skyboxFace : skyboxFacesBeingLoaded)
+		if (skyboxFacesBeingLoaded.size() == 6)
 		{
-			Texture& texture = texManager->GetTextureResource(skyboxFace);
+			bool skyboxLoaded = true;
 
-			if (texture.Status != Texture::LoadStatus::Succeeded)
+			for (uint32_t skyboxFace : skyboxFacesBeingLoaded)
 			{
-				skyboxLoaded = false;
-				break;
-			}
-		}
+				Texture& texture = texManager->GetTextureResource(skyboxFace);
 
-		if (skyboxLoaded && skyboxFacesBeingLoaded.size() == 6)
-		{
-			glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemap);
-
-			for (int skyboxFaceIndex = 0; skyboxFaceIndex < 6; skyboxFaceIndex++)
-			{
-				Texture& texture = texManager->GetTextureResource(skyboxFacesBeingLoaded.at(skyboxFaceIndex));
-
-				glTexImage2D(
-					GL_TEXTURE_CUBE_MAP_POSITIVE_X + skyboxFaceIndex,
-					0,
-					GL_RGB,
-					texture.Width,
-					texture.Height,
-					0,
-					GL_RGB,
-					GL_UNSIGNED_BYTE,
-					texture.TMP_ImageByteData
-				);
-
-				glGenerateMipmap(GL_TEXTURE_2D);
-
-				free(texture.TMP_ImageByteData);
-				texture.TMP_ImageByteData = nullptr;
+				if (texture.Status != Texture::LoadStatus::Succeeded)
+				{
+					skyboxLoaded = false;
+					break;
+				}
 			}
 
-			glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+			if (skyboxLoaded)
+			{
+				glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemap);
 
-			skyboxFacesBeingLoaded.clear();
+				for (int skyboxFaceIndex = 0; skyboxFaceIndex < 6; skyboxFaceIndex++)
+				{
+					Texture& texture = texManager->GetTextureResource(skyboxFacesBeingLoaded.at(skyboxFaceIndex));
+
+					glTexImage2D(
+						GL_TEXTURE_CUBE_MAP_POSITIVE_X + skyboxFaceIndex,
+						0,
+						GL_RGB,
+						texture.Width,
+						texture.Height,
+						0,
+						GL_RGB,
+						GL_UNSIGNED_BYTE,
+						texture.TMP_ImageByteData
+					);
+
+					glGenerateMipmap(GL_TEXTURE_2D);
+
+					free(texture.TMP_ImageByteData);
+					texture.TMP_ImageByteData = nullptr;
+				}
+
+				glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
+				skyboxFacesBeingLoaded.clear();
+			}
 		}
 
 		double deltaTime = GetRunningTime() - LastTime;
 		LastTime = RunningTime;
 		FrameStart = RunningTime;
 
-		PROFILE_EXPRESSION("EventCallbacks/OnFrameStart", this->OnFrameStart.Fire(deltaTime));
+		this->OnFrameStart.Fire(deltaTime);
 
 		while (SDL_PollEvent(&pollingEvent) != 0)
 		{
-			PROFILE_SCOPE("PollEvents");
+			ZoneScopedN("PollEvent");
+			ZoneTextF("Type: %d", pollingEvent.common.type);
 
 			ImGui_ImplSDL3_ProcessEvent(&pollingEvent);
 
@@ -688,33 +695,31 @@ void Engine::Start()
 
 		// so scripts can use the `imgui_*` APIs
 		// 09/11/2024
-		{
-			PROFILE_SCOPE("DearImGuiNewFrame");
-			ImGui_ImplOpenGL3_NewFrame();
-			ImGui_ImplSDL3_NewFrame();
-			ImGui::NewFrame();
-		}
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplSDL3_NewFrame();
+		ImGui::NewFrame();
+
 		float aspectRatio = (float)this->WindowSizeX / (float)this->WindowSizeY;
 
 		Object_Camera* sceneCamera = workspace->GetSceneCamera();
 
 		std::vector<Object_Base3D*> physicsList;
 
-		PROFILE_EXPRESSION("UpdateScripts", updateScripts(deltaTime));
+		updateScripts(deltaTime);
 
-		s_DebugCollisionAabbs = EngineJsonConfig.value("d_aabbs", false);
+		{
+			ZoneScopedN("ThisShouldntTakeSoLong");
+			s_DebugCollisionAabbs = EngineJsonConfig.value("d_aabbs", false);
+		}
 
 		// Aggregate mesh and light data into lists
-		PROFILE_EXPRESSION(
-			"RecurseDataModel",
-			recursivelyTravelHierarchy(
-				scene.RenderList,
-				scene.LightingList,
-				physicsList,
-				workspace,
-				sceneCamera,
-				deltaTime
-			)
+		recursivelyTravelHierarchy(
+			scene.RenderList,
+			scene.LightingList,
+			physicsList,
+			workspace,
+			sceneCamera,
+			deltaTime
 		);
 
 		bool hasPhysics = false;
@@ -744,14 +749,14 @@ void Engine::Start()
 		// update the camera transform
 		glm::mat4 renderMatrix = sceneCamera->GetMatrixForAspectRatio(aspectRatio);
 
-		scene.UsedShaders = {};
+		scene.UsedShaders.clear();
 
 		for (const RenderItem& ri : scene.RenderList)
 			scene.UsedShaders.insert(mtlManager->GetMaterialResource(ri.MaterialId).ShaderId);
 
 		if (hasSun)
 		{
-			PROFILE_SCOPE("Shadows");
+			ZoneScopedN("Shadows");
 
 			Scene sunScene{};
 			sunScene.RenderList.reserve(scene.RenderList.size());
@@ -768,7 +773,7 @@ void Engine::Start()
 			sunShadowMap.Bind();
 			glViewport(0, 0, SunShadowMapResolutionSq, SunShadowMapResolutionSq);
 			glClearColor(1.f, 1.f, 1.f, 1.f);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			glClear(/*GL_COLOR_BUFFER_BIT |*/ GL_DEPTH_BUFFER_BIT);
 
 			for (uint32_t shdId : scene.UsedShaders)
 			{
@@ -790,47 +795,58 @@ void Engine::Start()
 			glViewport(0, 0, WindowSizeX, WindowSizeY);
 		}
 
-		glm::vec3 camPos = glm::vec3(sceneCamera->Transform[3]);
-		glm::vec3 camForward = glm::vec3(sceneCamera->Transform[2]);
-		glm::vec3 camUp = glm::vec3(sceneCamera->Transform[1]);
+		glm::mat4 skyRenderMatrix{ 1.f };
 
-		glm::mat4 view = view = glm::lookAt(camPos, camPos + camForward, camUp);
-		glm::mat4 projection = glm::perspective(
-			glm::radians(sceneCamera->FieldOfView),
-			aspectRatio,
-			sceneCamera->NearPlane,
-			sceneCamera->FarPlane
-		);;
+		{
+			ZoneScopedN("SkyboxRenderMatrix");
 
-		// "We make the mat4 into a mat3 and then a mat4 again in order to get rid of the last row and column
-		// The last row and column affect the translation of the skybox (which we don't want to affect)"
-		//view = glm::mat4(glm::mat3(glm::lookAt(camPos, camPos + camForward, glm::vec3(0.f, 1.f, 0.f))));
-		// ...
-		// ...
-		// ...
-		// Wow Mr Victor Gordan sir, that sounds really complicated.
-		// It's really too bad there isn't a way simpler, 300x more understandable way
-		// of zeroing-out the first 3 values of the last column of what is literally 4 `vec4`s that represent
-		// a 4x4 matrix...
-		view[3] = glm::vec4(0.f, 0.f, 0.f, 1.f);
+			glm::vec3 camPos = glm::vec3(sceneCamera->Transform[3]);
+			glm::vec3 camForward = glm::vec3(sceneCamera->Transform[2]);
+			glm::vec3 camUp = glm::vec3(sceneCamera->Transform[1]);
 
-		skyboxShaders.SetUniform("RenderMatrix", projection * view);
+			glm::mat4 view = glm::lookAt(camPos, camPos + camForward, camUp);
+			glm::mat4 projection = glm::perspective(
+				glm::radians(sceneCamera->FieldOfView),
+				aspectRatio,
+				sceneCamera->NearPlane,
+				sceneCamera->FarPlane
+			);;
+
+			// "We make the mat4 into a mat3 and then a mat4 again in order to get rid of the last row and column
+			// The last row and column affect the translation of the skybox (which we don't want to affect)"
+			//view = glm::mat4(glm::mat3(glm::lookAt(camPos, camPos + camForward, glm::vec3(0.f, 1.f, 0.f))));
+			// ...
+			// ...
+			// ...
+			// Wow Mr Victor Gordan sir, that sounds really complicated.
+			// It's really too bad there isn't a way simpler, 300x more understandable way
+			// of zeroing-out the first 3 values of the last column of what is literally 4 `vec4`s that represent
+			// a 4x4 matrix...
+			view[3] = glm::vec4(0.f, 0.f, 0.f, 1.f);
+
+			skyRenderMatrix = projection * view;
+
+			skyboxShaders.SetUniform("RenderMatrix", skyRenderMatrix);
+		}
 
 		glActiveTexture(GL_TEXTURE3);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemap);
 
 		RendererContext.FrameBuffer.Bind();
 
-		glClearColor(0.086f, 0.105f, 0.21f, 1.f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		
+		{
+			ZoneScopedN("ClearFrameBuffer");
+			glClearColor(0.086f, 0.105f, 0.21f, 1.f);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		}
+
 		glDepthFunc(GL_LEQUAL);
 
 		RendererContext.DrawMesh(
 			cubeMesh,
 			skyboxShaders,
 			Vector3::one,
-			projection * view,
+			skyRenderMatrix,
 			FaceCullingMode::FrontFace // Cull the Outside, not the Inside
 		);
 
@@ -841,10 +857,13 @@ void Engine::Start()
 
 		glDisable(GL_DEPTH_TEST);
 
-		PROFILE_EXPRESSION("EventCallbacks/OnFrameRenderGui", this->OnFrameRenderGui.Fire(deltaTime));
+		this->OnFrameRenderGui.Fire(deltaTime);
 
-		ImGui::Render();
-		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+		{
+			ZoneScopedN("DearImGuiRender");
+			ImGui::Render();
+			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+		}
 
 		glEnable(GL_DEPTH_TEST);
 
@@ -854,6 +873,8 @@ void Engine::Start()
 
 		if (EngineJsonConfig.value("postfx_enabled", false))
 		{
+			ZoneScopedN("ApplyPostFxSettings");
+
 			postFxShaders.SetUniform("PostFxEnabled", 1);
 			postFxShaders.SetUniform(
 				"ScreenEdgeBlurEnabled",
@@ -918,22 +939,24 @@ void Engine::Start()
 		glActiveTexture(GL_TEXTURE1);
 		RendererContext.FrameBuffer.BindTexture();
 
-		glGenerateMipmap(GL_TEXTURE_2D);
+		{
+			ZoneScopedN("GenerateFrameMipMap");
+			glGenerateMipmap(GL_TEXTURE_2D);
+		}
 
 		glDisable(GL_DEPTH_TEST);
 
-		Profiler::Start("PostProcessing");
-
-		RendererContext.DrawMesh(
-			quadMesh,
-			postFxShaders,
-			Vector3::one*2.f,
-			glm::mat4(1.f),
-			FaceCullingMode::BackFace,
-			0
-		);
-
-		Profiler::Stop();
+		{
+			ZoneScopedN("PostProcessing");
+			RendererContext.DrawMesh(
+				quadMesh,
+				postFxShaders,
+				Vector3::one * 2.f,
+				glm::mat4(1.f),
+				FaceCullingMode::BackFace,
+				0
+			);
+		}
 
 		glEnable(GL_DEPTH_TEST);
 
@@ -943,7 +966,7 @@ void Engine::Start()
 
 		double curTimePrevSwap = RunningTime;
 
-		PROFILE_PROCEDURE("SwapBuffers", RendererContext.SwapBuffers);
+		RendererContext.SwapBuffers();
 
 		this->RunningTime = GetRunningTime();
 
@@ -953,7 +976,7 @@ void Engine::Start()
 
 		m_DrawnFramesInSecond++;
 
-		PROFILE_EXPRESSION("EventCallbacks/OnFrameEnd", OnFrameEnd.Fire(deltaTime));
+		OnFrameEnd.Fire(deltaTime);
 
 		if (RunningTime - LastSecond > 1.f)
 		{
@@ -966,9 +989,7 @@ void Engine::Start()
 			Log::Save();
 		}
 
-		Profiler::Stop();
-
-		Profiler::PushSnapshot();
+		FrameMark;
 	}
 
 	Log::Info("Main loop exited");

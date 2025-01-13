@@ -3,12 +3,12 @@
 #include <functional>
 #include <glad/gl.h>
 #include <stb/stb_image.h>
+#include <tracy/Tracy.hpp>
 
 #include "asset/TextureManager.hpp"
 #include "GlobalJsonConfig.hpp"
 #include "ThreadManager.hpp"
 #include "Utilities.hpp"
-#include "Profiler.hpp"
 #include "Log.hpp"
 
 static const std::string MissingTexPath = "!Missing";
@@ -50,7 +50,7 @@ static bool isValidPboCandidate(const Texture* t)
 
 void TextureManager::m_UploadTextureToGpu(Texture& texture)
 {
-	PROFILE_SCOPE("Texture/UploadToGpu");
+	ZoneScoped;
 
 	if (texture.Status == Texture::LoadStatus::Failed)
 	{
@@ -156,6 +156,9 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 		s_PboWriteGlobal = true;
 	}
 	else
+	{
+		ZoneScopedN("UnmappedPixelUpload");
+
 		glTexImage2D(
 			GL_TEXTURE_2D,
 			0,
@@ -167,8 +170,12 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 			GL_UNSIGNED_BYTE,
 			texture.TMP_ImageByteData
 		);
+	}
 
-	glGenerateMipmap(GL_TEXTURE_2D);
+	{
+		ZoneScopedN("GenerateMipMaps");
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
 
 	// Can't free this now bcuz Engine.cpp needs it for skybox images
 	// 23/08/2024
@@ -338,6 +345,9 @@ uint32_t TextureManager::Assign(const Texture& texture, const std::string& name)
 
 uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool ShouldLoadAsync, bool DoBilinearSmoothing)
 {
+	ZoneScoped;
+	ZoneTextF("%s", Path.c_str());
+
 	std::string ResDir = EngineJsonConfig["ResourcesDirectory"];
 	std::string ActualPath = ResDir + Path;
 
@@ -360,31 +370,40 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 	if (it == m_StringToTextureId.end())
 	{
 		uint32_t newGpuId;
-		glGenTextures(1, &newGpuId);
+		uint32_t newResourceId = UINT32_MAX;
+		Texture* newTexture = nullptr;
 
-		uint32_t newResourceId = this->Assign({ Path, UINT32_MAX, newGpuId }, Path);
-		Texture& newTexture = this->GetTextureResource(newResourceId);
-
-		glBindTexture(GL_TEXTURE_2D, newTexture.GpuId);
-
-		if (DoBilinearSmoothing)
 		{
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		}
-		else
-		{
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		}
+			ZoneScopedN("CreateResource");
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+			glGenTextures(1, &newGpuId);
+
+			newResourceId = this->Assign({ Path, UINT32_MAX, newGpuId }, Path);
+			newTexture = &this->GetTextureResource(newResourceId);
+
+			glBindTexture(GL_TEXTURE_2D, newTexture->GpuId);
+
+			if (DoBilinearSmoothing)
+			{
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			}
+			else
+			{
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			}
+
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		}
 
 		//ShouldLoadAsync = false;
 
 		if (ShouldLoadAsync)
 		{
+			ZoneScopedN("CreateAsyncJob");
+
 			static const uint32_t BlackPixel = 0u;
 
 			glTexImage2D
@@ -424,17 +443,17 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 				}
 			).detach();
 
-			newTexture.Status = Texture::LoadStatus::InProgress;
+			newTexture->Status = Texture::LoadStatus::InProgress;
 
 			m_TexPromises.push_back(promise);
 			m_TexFutures.push_back(promise->get_future().share());
 		}
 		else
 		{
-			PROFILE_SCOPE("Texture/LoadSynchronous");
+			ZoneScopedN("LoadSynchronous");
 
-			emloadTexture(&newTexture, ActualPath);
-			m_UploadTextureToGpu(newTexture);
+			emloadTexture(newTexture, ActualPath);
+			m_UploadTextureToGpu(*newTexture);
 		}
 
 		return newResourceId;
@@ -450,7 +469,7 @@ Texture& TextureManager::GetTextureResource(uint32_t ResourceId)
 
 void TextureManager::FinalizeAsyncLoadedTextures()
 {
-	PROFILE_SCOPE("Texture/FinalizeAsyncs");
+	ZoneScoped;
 
 	size_t numTexPromises = m_TexPromises.size();
 	size_t numTexFutures = m_TexFutures.size();
@@ -475,7 +494,7 @@ void TextureManager::FinalizeAsyncLoadedTextures()
 		if (!f.valid() || (f.wait_for(std::chrono::seconds(0)) != std::future_status::ready))
 			continue;
 
-		PROFILE_PROCEDURE("WaitForFuture_ShouldntTakeTooLong", f.wait);
+		f.wait();
 
 		const Texture& loadedImage = f.get();
 

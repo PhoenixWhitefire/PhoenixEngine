@@ -3,11 +3,11 @@
 #include <nljson.hpp>
 #include <glad/gl.h>
 #include <glm/vec4.hpp>
+#include <tracy/Tracy.hpp>
 
 #include "asset/MeshProvider.hpp"
 #include "asset/PrimitiveMeshes.hpp"
 #include "render/GpuBuffers.hpp"
-#include "Profiler.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
@@ -578,7 +578,7 @@ Mesh MeshProvider::Deserialize(const std::string& Contents, bool* SuccessPtr)
 
 void MeshProvider::Save(const Mesh& mesh, const std::string& Path)
 {
-	PROFILE_SCOPE("MeshProvider/Save");
+	ZoneScoped;
 
 	std::string contents = this->Serialize(mesh);
 	FileRW::WriteFileCreateDirectories(Path, contents, true);
@@ -591,7 +591,7 @@ void MeshProvider::Save(uint32_t Id, const std::string& Path)
 
 static void uploadMeshDataToGpuMesh(Mesh& mesh, MeshProvider::GpuMesh& gpuMesh)
 {
-	PROFILE_SCOPE("uploadMeshDataToGpuMesh");
+	ZoneScoped;
 
 	GpuVertexArray& vao = gpuMesh.VertexArray;
 	GpuVertexBuffer& vbo = gpuMesh.VertexBuffer;
@@ -660,7 +660,8 @@ uint32_t MeshProvider::Assign(Mesh mesh, const std::string& InternalName, bool U
 
 uint32_t MeshProvider::LoadFromPath(const std::string& Path, bool ShouldLoadAsync, bool PreserveMeshData)
 {
-	PROFILE_SCOPE("MeshProvider/LoadFromPath");
+	ZoneScoped;
+	ZoneTextF("%s", Path.c_str());
 
 	auto meshIt = m_StringToMeshId.find(Path);
 
@@ -744,6 +745,8 @@ uint32_t MeshProvider::LoadFromPath(const std::string& Path, bool ShouldLoadAsyn
 			}
 			else
 			{
+				ZoneScopedN("LoadSynchronous");
+
 				Mesh mesh = this->Deserialize(contents, &success);
 				mesh.MeshDataPreserved = PreserveMeshData;
 
@@ -775,7 +778,7 @@ MeshProvider::GpuMesh& MeshProvider::GetGpuMesh(uint32_t Id)
 
 void MeshProvider::FinalizeAsyncLoadedMeshes()
 {
-	PROFILE_SCOPE("MeshProvider/FinalizeAsyncLoadedMeshes");
+	ZoneScoped;
 
 	size_t numMeshPromises = m_MeshPromises.size();
 	size_t numMeshFutures = m_MeshFutures.size();
@@ -824,7 +827,7 @@ const std::string& MeshProvider::GetLastErrorString()
 
 void MeshProvider::m_CreateAndUploadGpuMesh(Mesh& mesh)
 {
-	PROFILE_SCOPE("CreateAndUploadGpuMesh");
+	ZoneScoped;
 
 	m_GpuMeshes.emplace_back();
 

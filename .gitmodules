@@ -24,3 +24,6 @@
 [submodule "SDL"]
 	path = Vendor/SDL
 	url = https://github.com/libsdl-org/SDL
+[submodule "tracy"]
+	path = Vendor/tracy
+	url = https://github.com/wolfpld/tracy

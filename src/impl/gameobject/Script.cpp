@@ -1,12 +1,12 @@
 ﻿#include <glm/gtc/matrix_transform.hpp>
 #include <luau/VM/include/lualib.h>
+#include <tracy/Tracy.hpp>
 
 #include "gameobject/Script.hpp"
 #include "datatype/GameObject.hpp"
 #include "datatype/Vector3.hpp"
 #include "datatype/Color.hpp"
 #include "UserInput.hpp"
-#include "Profiler.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 #include "gameobject/ScriptEngine.hpp"
@@ -27,8 +27,12 @@ static auto api_newobject = [](lua_State* L)
 
 static auto api_gameobjindex = [](lua_State* L)
 	{
+		ZoneScopedNC("GameObject.__index", tracy::Color::LightSkyBlue);
+
 		GameObject* obj = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
 		const char* key = luaL_checkstring(L, 2);
+
+		ZoneText(key, strlen(key));
 
 		if (strcmp(key, "Exists") == 0)
 		{
@@ -63,8 +67,12 @@ static auto api_gameobjindex = [](lua_State* L)
 
 static auto api_gameobjnewindex = [](lua_State* L)
 	{
+		ZoneScopedNC("GameObject.__newindex", tracy::Color::LightSkyBlue);
+
 		GameObject* obj = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
 		const char* key = luaL_checkstring(L, 2);
+
+		ZoneText(key, strlen(key));
 
 		LUA_ASSERT(strcmp(key, "Exists") != 0, "'Exists' is read-only! - 21/12/2024");
 
@@ -162,8 +170,12 @@ static auto api_newvec3 = [](lua_State* L)
 
 static auto api_vec3index = [](lua_State* L)
 	{
+		ZoneScopedNC("Vector3.__index", tracy::Color::LightSkyBlue);
+
 		Vector3* vec = (Vector3*)luaL_checkudata(L, 1, "Vector3");
 		const char* key = luaL_checkstring(L, 2);
+
+		ZoneText(key, strlen(key));
 
 		lua_getglobal(L, "Vector3");
 		lua_pushstring(L, key);
@@ -352,6 +364,8 @@ static void* l_alloc(void*, void* ptr, size_t, size_t nsize)
 
 static lua_State* createState()
 {
+	ZoneScopedC(tracy::Color::LightSkyBlue);
+
 	lua_State* state = lua_newstate(l_alloc, nullptr);
 	// Load Standard Library ('print' etc)
 	// TODO: `require` is NOT part of the STL, copy
@@ -414,6 +428,8 @@ static lua_State* createState()
 			state,
 			[](lua_State* L)
 			{
+				ZoneScopedNC("Vector3.__add", tracy::Color::LightSkyBlue);
+
 				Vector3 a = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -2));
 				Vector3 b = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -1));
 
@@ -429,6 +445,8 @@ static lua_State* createState()
 			state,
 			[](lua_State* L)
 			{
+				ZoneScopedNC("Vector3.__sub", tracy::Color::LightSkyBlue);
+
 				Vector3 a = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -2));
 				Vector3 b = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -1));
 
@@ -444,6 +462,8 @@ static lua_State* createState()
 			state,
 			[](lua_State* L)
 			{
+				ZoneScopedNC("Vector3.__mul", tracy::Color::LightSkyBlue);
+
 				Vector3 a = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -2));
 
 				int bt = lua_type(L, 2);
@@ -475,12 +495,30 @@ static lua_State* createState()
 			state,
 			[](lua_State* L)
 			{
-				Vector3 a = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -2));
-				double b = luaL_checknumber(L, 2);
+				ZoneScopedNC("Vector3.__div", tracy::Color::LightSkyBlue);
 
-				ScriptEngine::L::PushGenericValue(L, (a / b).ToGenericValue());
-				
-				return 1;
+				Vector3 a = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -2));
+
+				int bt = lua_type(L, 2);
+
+				if (bt == LUA_TNUMBER)
+				{
+					double b = luaL_checknumber(L, 2);
+
+					ScriptEngine::L::PushGenericValue(L, (a / b).ToGenericValue());
+
+					return 1;
+				}
+				else if (bt == LUA_TUSERDATA)
+				{
+					Vector3 b = ScriptEngine::L::LuaValueToGeneric(L, -1);
+
+					ScriptEngine::L::PushGenericValue(L, Vector3(a.X / b.X, a.Y / b.Y, a.Z / b.Z).ToGenericValue());
+
+					return 1;
+				}
+
+				luaL_errorL(L, "Expected division against Vector3 or number");
 			},
 			"Vector3.__div"
 		);
@@ -535,6 +573,8 @@ static lua_State* createState()
 			state,
 			[](lua_State* L)
 			{
+				ZoneScopedNC("Matrix.fromTranslation", tracy::Color::LightSkyBlue);
+
 				glm::mat4 m(1.f);
 
 				int numArgs = lua_gettop(L);
@@ -579,6 +619,8 @@ static lua_State* createState()
 			state,
 			[](lua_State* L)
 			{
+				ZoneScopedNC("Matrix.fromEulerAnglesXYZ", tracy::Color::LightSkyBlue);
+
 				float x = static_cast<float>(luaL_checknumber(L, 1));
 				float y = static_cast<float>(luaL_checknumber(L, 2));
 				float z = static_cast<float>(luaL_checknumber(L, 3));
@@ -625,8 +667,12 @@ static lua_State* createState()
 			state,
 			[](lua_State* L)
 			{
+				ZoneScopedNC("Matrix.__index", tracy::Color::LightSkyBlue);
+
 				glm::mat4& m = *(glm::mat4*)luaL_checkudata(L, 1, "Matrix");
 				const char* k = luaL_checkstring(L, 2);
+
+				ZoneText(k, strlen(k));
 
 				if (strcmp(k, "Position") == 0)
 					ScriptEngine::L::PushGenericValue(
@@ -694,10 +740,14 @@ static lua_State* createState()
 			state,
 			[](lua_State* L)
 			{
+				ZoneScopedNC("GameObject.__namecall", tracy::Color::LightSkyBlue);
+
 				int nargs = lua_gettop(L) - 1;
 
 				GameObject* g = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
 				const char* k = L->namecall->data; // this is weird 10/01/2025
+
+				ZoneText(k, strlen(k));
 
 				int numresults = 0;
 
@@ -745,7 +795,11 @@ static lua_State* createState()
 			state,
 			[](lua_State* L)
 			{
-				PROFILE_SCOPE(lua_tostring(L, lua_upvalueindex(2)));
+				ZoneScopedNC("xStandardLibrary", tracy::Color::LightSkyBlue);
+
+				const char* fnName = lua_tostring(L, lua_upvalueindex(2));
+
+				ZoneText(fnName, strlen(fnName));
 
 				lua_CFunction func = (lua_CFunction)lua_touserdata(L, lua_upvalueindex(1));
 
@@ -829,6 +883,8 @@ void Object_Script::Initialize()
 
 static void resumeScheduledCoroutines()
 {
+	ZoneScopedC(tracy::Color::LightSkyBlue);
+
 	for (size_t corIdx = 0; corIdx < ScriptEngine::s_YieldedCoroutines.size(); corIdx++)
 	{
 		const ScriptEngine::YieldedCoroutine& corInfo = ScriptEngine::s_YieldedCoroutines.at(corIdx);
@@ -872,8 +928,6 @@ static void resumeScheduledCoroutines()
 
 void Object_Script::Update(double dt)
 {
-	PROFILE_SCOPE("Scripts");
-
 	s_WindowGrabMouse = ScriptEngine::s_BackendScriptWantGrabMouse;
 
 	// The first Script to be updated in the current frame will
@@ -881,6 +935,11 @@ void Object_Script::Update(double dt)
 	// coroutines, the poor bastard
 	// 23/09/2024
 	resumeScheduledCoroutines();
+
+	ZoneScopedC(tracy::Color::LightSkyBlue);
+
+	std::string fullname = this->GetFullName();
+	ZoneTextF("Script: %s\nFile: %s", fullname.c_str(), this->SourceFile.c_str());
 
 	if (m_StaleSource)
 		this->Reload();
@@ -905,7 +964,6 @@ void Object_Script::Update(double dt)
 		if (updateStatus != LUA_OK && updateStatus != LUA_YIELD)
 		{
 			const char* errstr = lua_tostring(m_L, -1);
-			std::string fullname = this->GetFullName();
 
 			Log::Error(std::vformat(
 				"Luau runtime error: {}",
@@ -922,6 +980,8 @@ void Object_Script::Update(double dt)
 
 bool Object_Script::LoadScript(const std::string& scriptFile)
 {
+	ZoneScopedC(tracy::Color::LightSkyBlue);
+
 	if (SourceFile == scriptFile)
 		return true;
 
@@ -946,6 +1006,12 @@ bool Object_Script::LoadScript(const std::string& scriptFile)
 
 bool Object_Script::Reload()
 {
+	ZoneScopedC(tracy::Color::LightSkyBlue);
+
+	std::string fullName = this->GetFullName();
+
+	ZoneTextF("Script: %s\nFile: %s", fullName.c_str(), this->SourceFile.c_str());
+
 	bool fileExists = true;
 	m_Source = FileRW::ReadFile(SourceFile, &fileExists);
 
@@ -957,8 +1023,6 @@ bool Object_Script::Reload()
 	if (m_L)
 		lua_close(m_L);
 	m_L = createState();
-
-	std::string fullName = this->GetFullName();
 
 	if (!fileExists)
 	{

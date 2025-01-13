@@ -1,7 +1,7 @@
 #include <algorithm>
+#include <tracy/Tracy.hpp>
 
 #include "IntersectionLib.hpp"
-#include "Profiler.hpp"
 
 template<class T> static int sign(T v)
 {
@@ -16,7 +16,7 @@ IntersectionLib::Intersection IntersectionLib::AabbAabb
 	const glm::vec3& BSize
 )
 {
-	PROFILE_SCOPE("Intersection::AabbAabb");
+	ZoneScoped;
 
 	Intersection result{};
 	result.Occurred = false;
@@ -77,7 +77,7 @@ IntersectionLib::Intersection IntersectionLib::LineAabb(
 	float PaddingZ
 )
 {
-	PROFILE_SCOPE("Intersection::LineAabb");
+	ZoneScoped;
 
 	Intersection result{};
 	result.Occurred = false;

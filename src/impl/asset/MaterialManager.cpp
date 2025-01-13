@@ -1,9 +1,9 @@
 #include <format>
 #include <nljson.hpp>
+#include <tracy/Tracy.hpp>
 
 #include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
-#include "Profiler.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
@@ -11,7 +11,8 @@ static const std::string MissingTexPath = "!Missing";
 
 void RenderMaterial::Reload()
 {
-	PROFILE_SCOPE("Material::Reload");
+	ZoneScoped;
+	ZoneTextF("%s", this->Name.c_str());
 
 	bool matExists = true;
 	std::string fileData = FileRW::ReadFile("materials/" + this->Name + ".mtl", &matExists);
@@ -168,7 +169,8 @@ MaterialManager* MaterialManager::Get()
 
 uint32_t MaterialManager::LoadMaterialFromPath(const std::string& Name)
 {
-	PROFILE_SCOPE("MaterialManager/LoadMaterialFromPath");
+	ZoneScoped;
+	ZoneTextF("%s", Name.c_str());
 
 	auto it = m_StringToMaterialId.find(Name);
 
@@ -206,7 +208,7 @@ uint32_t MaterialManager::LoadMaterialFromPath(const std::string& Name)
 
 void MaterialManager::SaveToPath(const RenderMaterial& material, const std::string& Name)
 {
-	PROFILE_SCOPE("MaterialManager/SaveToPath");
+	ZoneScoped;
 
 	TextureManager* texManager = TextureManager::Get();
 

@@ -56,9 +56,9 @@ PHX_MAIN_HANDLECRASH(nlohmann::json::type_error, .what()) \
 PHX_MAIN_HANDLECRASH(nlohmann::json::parse_error, .what()) \
 PHX_MAIN_HANDLECRASH(std::exception, .what()); \
 
-#include <ImGuiFD/ImGuiFD.h>
-
 #include <filesystem>
+
+#include <ImGuiFD/ImGuiFD.h>
 
 #include <imgui/backends/imgui_impl_opengl3.h>
 #include <imgui/backends/imgui_impl_sdl3.h>
@@ -72,6 +72,8 @@ PHX_MAIN_HANDLECRASH(std::exception, .what()); \
 #include <SDL3/SDL_mouse.h>
 #include <SDL3/SDL_init.h>
 
+#include <tracy/Tracy.hpp>
+
 #include "Engine.hpp"
 
 #include "asset/SceneFormat.hpp"
@@ -80,7 +82,6 @@ PHX_MAIN_HANDLECRASH(std::exception, .what()); \
 #include "GlobalJsonConfig.hpp"
 #include "UserInput.hpp"
 #include "Utilities.hpp"
-#include "Profiler.hpp"
 #include "FileRW.hpp"
 #include "Editor.hpp"
 #include "Log.hpp"
@@ -100,31 +101,6 @@ static Editor* EditorContext = nullptr;
 static float PrevMouseX, PrevMouseY = 0;
 
 static glm::vec3 CamForward = glm::vec3(0.f, 0.f, -1.f);
-
-// 16/11/2024
-// https://stackoverflow.com/a/5167641/16875161
-static std::vector<std::string> stringSplit(const std::string& s, const std::string& seperator)
-{
-	if (s.find(seperator) == std::string::npos)
-		return { s };
-
-	std::vector<std::string> output;
-
-	std::string::size_type prev_pos = 0, pos = 0;
-
-	while ((pos = s.find(seperator, pos)) != std::string::npos)
-	{
-		std::string substring(s.substr(prev_pos, pos - prev_pos));
-
-		output.push_back(substring);
-
-		prev_pos = ++pos;
-	}
-
-	output.push_back(s.substr(prev_pos, pos - prev_pos)); // Last word
-
-	return output;
-}
 
 static int findCmdLineArgument(
 	int ArgCount,
@@ -146,6 +122,8 @@ static int findCmdLineArgument(
 
 static void handleInputs(Reflection::GenericValue Data)
 {
+	ZoneScoped;
+
 	double deltaTime = Data.AsDouble();
 
 	if (EngineJsonConfig.value("Developer", false))
@@ -410,6 +388,8 @@ static void recurseProfilerUI(const nlohmann::json& tree)
 
 static void drawUI(Reflection::GenericValue Data)
 {
+	ZoneScopedC(tracy::Color::DarkOliveGreen);
+
 	Engine* EngineInstance = Engine::Get();
 
 	if (UserInput::IsKeyDown(SDLK_L) && !UserInput::InputBeingSunk)
@@ -440,169 +420,13 @@ static void drawUI(Reflection::GenericValue Data)
 
 	if (EditorContext)
 	{
-		// always pop the snapshot, otherwise they'll build-up
-		std::unordered_map<std::string, double> snapshot = Profiler::PopSnapshot();
-
-		static nlohmann::json ProfileInfoHisto[100] = {};
-		static float FrameTimesHisto[100] = { 0 };
-
-		if (ImGui::Begin("Info") && snapshot.size() > 0)
+		if (ImGui::Begin("Info"))
 		{
 			ImGui::Text("FPS: %d", EngineInstance->FramesPerSecond);
 			ImGui::Text("Frame time: %dms", (int)std::ceil(EngineInstance->FrameTime * 1000));
 			ImGui::Text("Draw calls: %zi", EngineJsonConfig.value("renderer_drawcallcount", 0ull));
-
-			ImGui::Text("--- PROFILING ---");
-
-			static bool InfoCollectionPaused = true;
-
-			nlohmann::json profilerTimingsTree{};
-
-			if (!InfoCollectionPaused)
-				for (auto& it : snapshot)
-				{
-					nlohmann::json* last = &profilerTimingsTree;
-
-					std::vector<std::string> split = stringSplit(it.first, "/");
-
-					for (size_t catIndex = 0; catIndex < split.size(); catIndex++)
-						if (catIndex < split.size() - 1)
-						{
-							last = &((*last)[split[catIndex]]);
-							//(*last)["_t"] = it.second;
-						}
-						else
-							(*last)[split[catIndex]]["_t"] = it.second;
-				}
-
-			if (ProfileInfoHisto->size() == 0)
-				for (int i = 0; i < 100; i++)
-				{
-					ProfileInfoHisto[i] = nlohmann::json::object();
-					ProfileInfoHisto[i]["Frame"] = nlohmann::json::object();
-					ProfileInfoHisto[i]["Frame"]["_t"] = 0.f;
-				}
-
-			if (!InfoCollectionPaused)
-			{
-				ProfileInfoHisto[99] = profilerTimingsTree;
-				FrameTimesHisto[99] = profilerTimingsTree["Frame"]["_t"];
-			}
-
-			if (!InfoCollectionPaused)
-				for (int i = 0; i < 99; i++)
-				{
-					ProfileInfoHisto[i] = ProfileInfoHisto[i + 1];
-					FrameTimesHisto[i] = FrameTimesHisto[i + 1];
-				}
-
-			static auto FrameTimeHistoPeeker = [](void* data, int idx)
-				-> float
-				{
-					return ((float*)data)[idx];
-				};
-			
-			ImGuiStyle style = ImGui::GetStyle();
-
-			ImVec2 label_size = ImGui::CalcTextSize("MS", NULL, true);
-			ImVec2 frame_size = ImGui::CalcItemSize(ImVec2(), ImGui::CalcItemWidth(), label_size.y + style.FramePadding.y * 2.0f);
-
-			ImVec2 histogramPos = ImGui::GetCursorPos();
-			ImVec2 mousePos = ImGui::GetMousePos();
-
-			ImGui::PlotHistogram("MS", FrameTimeHistoPeeker, FrameTimesHisto, 100, 0, 0, 1/120.f, 1/30.f);
-
-			static int FocusedProfilingInfoIdx = 99;
-
-			if (ImGui::IsItemClicked())
-			{
-				ImRect frame_bb(histogramPos, histogramPos + frame_size);
-				ImRect inner_bb(frame_bb.Min + style.FramePadding, frame_bb.Max - style.FramePadding);
-
-				const float t = std::clamp((mousePos.x - inner_bb.Min.x) / (inner_bb.Max.x - inner_bb.Min.x), 0.0f, 0.9999f);
-				FocusedProfilingInfoIdx = (int)(t * 100);
-			}
-
-			if (InfoCollectionPaused && ImGui::Button("Unpause"))
-				InfoCollectionPaused = false;
-
-			else if (!InfoCollectionPaused && ImGui::Button("Pause"))
-				InfoCollectionPaused = true;
-
-			recurseProfilerUI(ProfileInfoHisto[FocusedProfilingInfoIdx]);
-
-			if (ImGui::Button("Save"))
-				ImGuiFD::OpenDialog("SaveProfilingData", ImGuiFDMode_SaveFile, "", "*.json");
-
-			if (ImGui::Button("Load"))
-				ImGuiFD::OpenDialog("LoadProfilingData", ImGuiFDMode_LoadFile, "", "*.json");
-
 		}
 		ImGui::End();
-
-		if (ImGuiFD::BeginDialog("SaveProfilingData"))
-		{
-			if (ImGuiFD::ActionDone())
-			{
-				if (ImGuiFD::SelectionMade())
-				{
-					std::string result = ImGuiFD::GetResultStringRaw();
-					std::string contents = "";
-
-					if (result.find(".json") == std::string::npos)
-						result += ".json";
-
-					result = ("./" + result).c_str();
-
-					for (int i = 0; i < 100; i++)
-						contents += ProfileInfoHisto[i].dump(-1) + '\n';
-
-					try
-					{
-						FileRW::WriteFile(result, contents, false);
-					}
-					catch (std::string err)
-					{
-						Log::Error("While trying to save profiling data: " + err);
-					}
-				}
-
-				ImGuiFD::CloseCurrentDialog();
-			}
-
-			ImGuiFD::EndDialog();
-		}
-
-		if (ImGuiFD::BeginDialog("LoadProfilingData"))
-		{
-			if (ImGuiFD::ActionDone())
-			{
-				if (ImGuiFD::SelectionMade())
-				{
-					std::string result = ImGuiFD::GetSelectionPathString(0);
-					bool exists = false;
-					std::string contents = FileRW::ReadFile(result, &exists, false);
-
-					if (exists)
-						for (int i = 0; i < 100; i++)
-						{
-							size_t nextLine = contents.find_first_of('\n');
-
-							std::string substr = contents.substr(0, nextLine);
-
-							ProfileInfoHisto[i] = nlohmann::json::parse(substr);
-
-							contents = contents.substr(nextLine + 1);
-						}
-					else
-						Log::Error("Couldn't load profiling data from file " + result);
-				}
-
-				ImGuiFD::CloseCurrentDialog();
-			}
-
-			ImGuiFD::EndDialog();
-		}
 
 		if (ImGui::Begin("Settings"))
 		{

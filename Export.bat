@@ -19,7 +19,9 @@ copy "phoenix.conf" "Build/phoenix.conf"
 echo Copying executable
 copy "x64\Release\PhoenixEngine.exe" "Build/Demo.exe"
 echo Copying DLLs
-copy "SDL2.dll" "Build\SDL2.dll"
+copy "x64\Release\SDL3.dll" "Build\SDL3.dll"
+echo Copying Dear ImGui configuration
+copy "imgui.ini" "Build\imgui.ini"
 
 echo Deleting non-cooked models
 del "Build\resources\models"
