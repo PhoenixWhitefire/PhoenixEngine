@@ -102,6 +102,8 @@ static float PrevMouseX, PrevMouseY = 0;
 
 static glm::vec3 CamForward = glm::vec3(0.f, 0.f, -1.f);
 
+static bool WasTracyLaunched = false;
+
 #ifdef _WIN32
 
 #define popen _popen
@@ -132,6 +134,20 @@ static std::string exec(const char* cmd)
 	return result;
 }
 
+static void launchTracy()
+{
+	if (WasTracyLaunched)
+		throw("Tried to launch Tracy twice in one session");
+	WasTracyLaunched = true;
+
+	std::thread(
+		[]()
+		{
+			exec(LAUNCH_TRACY_CMD);
+		}
+	).detach();
+}
+
 static int findCmdLineArgument(
 	int ArgCount,
 	char** Arguments,
@@ -147,7 +163,7 @@ static int findCmdLineArgument(
 	}
 
 	// argument not found
-	return 0;
+	return -1;
 }
 
 static void handleInputs(Reflection::GenericValue Data)
@@ -456,18 +472,9 @@ static void drawUI(Reflection::GenericValue Data)
 			ImGui::Text("Frame time: %dms", (int)std::ceil(EngineInstance->FrameTime * 1000));
 			ImGui::Text("Draw calls: %zi", EngineJsonConfig.value("renderer_drawcallcount", 0ull));
 
-			static bool TracyLaunched = false;
-
 			// 13/01/2025 hi hihihi hihiihii
-			if (!TracyLaunched && ImGui::Button("Start Profiling"))
-			{
-				TracyLaunched = true;
-
-				std::thread([]()
-					{
-						exec(LAUNCH_TRACY_CMD);
-					}).detach();
-			}
+			if (!WasTracyLaunched && ImGui::Button("Start Profiling"))
+				launchTracy();
 		}
 		ImGui::End();
 
@@ -667,6 +674,15 @@ int main(int argc, char** argv)
 
 	try
 	{
+		if (findCmdLineArgument(argc, argv, "-tracyim") > 0)
+		{
+			launchTracy();
+
+			// took ~220ms on my machine for tracy to launch, double it and give it to the next person
+			// 13/01/2025
+			std::this_thread::sleep_for(std::chrono::milliseconds(400));
+		}
+
 		// i thought about wrapping this in 2 scopes in case Engine's dtor
 		// throws an exception, but it can't seem to catch it regardless?
 		// 10/01/2025
