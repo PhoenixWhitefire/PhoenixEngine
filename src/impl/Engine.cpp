@@ -103,7 +103,7 @@ void Engine::OnWindowResized(int NewSizeX, int NewSizeY)
 	scaledStyle.ScaleAllSizes(displayScale);
 	scaledStyle.DisplayWindowPadding = ImVec2(19.f, 19.f);
 
-	// this looks weird 02/01/2024
+	// this looks weird 02/01/2025
 	ImGui::GetStyle() = scaledStyle;
 }
 

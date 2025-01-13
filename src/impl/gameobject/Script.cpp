@@ -58,7 +58,7 @@ static auto api_gameobjindex = [](lua_State* L)
 			else
 				// explicitly pushnil so the error message doesn't say
 				// "attempt to call a GameObject value"
-				// 10/01/2024
+				// 10/01/2025
 				lua_pushnil(L);
 		}
 

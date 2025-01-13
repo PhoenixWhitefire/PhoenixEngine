@@ -436,7 +436,7 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 	contents.reserve(16ull + mesh.Vertices.size() * (floatsPerVertex * 4ull) + mesh.Indices.size() * 4ull + contents.size());
 
 	// per-vertex normal, color and opacity flags
-	// 02/01/2024: Rigged flag added
+	// 02/01/2025: Rigged flag added
 	// ... also forgot to implement the Normal flag
 	// not going to make a difference unless you have a
 	// flat quad anyway
@@ -489,7 +489,7 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 		if (isRigged)
 		{
 			// number of bone slots specified
-			// max 4 rn 02/01/2024
+			// max 4 rn 02/01/2025
 			// invalid bones (UINT8_MAX i.e. 255) are still specified
 			// to reduce serialization/deserialization complexity
 			contents.push_back(4i8);

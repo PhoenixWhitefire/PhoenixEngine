@@ -121,7 +121,7 @@ std::string FileRW::GetAbsolutePath(const std::string& LocalPath)
 	// and start from resources/ automatically
 	// currently, files that *are* from the root are specified by beginning the path with '/'
 	// find a better method?
-	// 12/01/2024: `.` is for preceding `./`, `:` is for drive letters, such as
+	// 12/01/2025: `.` is for preceding `./`, `:` is for drive letters, such as
 	// `C:`, where we don't need to do anything
 	if (path[0] != '.' && path[1] != ':' && path.find("resources/") == std::string::npos)
 		path.insert(0, EngineJsonConfig.value("ResourcesDirectory", "resources/"));

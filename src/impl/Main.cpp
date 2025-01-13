@@ -31,7 +31,7 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 
 /*
 	
-	07/01/2024
+	07/01/2025
 
 	When an exception is thrown, generally it is either always fatal, or fatal contextually.
 	For example, Luau APIs may throw exceptions, which are caught by Luau exception handlers,
@@ -54,7 +54,7 @@ PHX_MAIN_HANDLECRASH(const char*, ) \
 PHX_MAIN_HANDLECRASH(std::bad_alloc, .what() + std::string(": System may have run out of memory")) \
 PHX_MAIN_HANDLECRASH(nlohmann::json::type_error, .what()) \
 PHX_MAIN_HANDLECRASH(nlohmann::json::parse_error, .what()) \
-PHX_MAIN_HANDLECRASH(std::exception, .what()); \
+//PHX_MAIN_HANDLECRASH(std::exception, .what()); \
 
 #include <filesystem>
 
@@ -101,6 +101,36 @@ static Editor* EditorContext = nullptr;
 static float PrevMouseX, PrevMouseY = 0;
 
 static glm::vec3 CamForward = glm::vec3(0.f, 0.f, -1.f);
+
+#ifdef _WIN32
+
+#define popen _popen
+#define pclose _pclose
+
+// 13/01/2025 windows and it's quirkyness
+#define LAUNCH_TRACY_CMD "\"Vendor\\tracy\\profiler\\build\\Release\\tracy-profiler.exe\" -a 127.0.0.1"
+
+#else
+
+#define LAUNCH_TRACY_CMD "\"Vendor/tracy/profiler/build/Release/tracy-profiler.exe\" -a 127.0.0.1"
+
+#endif
+
+// 13/01/2025: https://stackoverflow.com/a/478960
+static std::string exec(const char* cmd)
+{
+	std::array<char, 128> buffer{ 0 };
+	std::string result;
+	std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
+
+	if (!pipe)
+		throw std::runtime_error("popen() failed!");
+
+	while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe.get()) != nullptr)
+		result += buffer.data();
+
+	return result;
+}
 
 static int findCmdLineArgument(
 	int ArgCount,
@@ -425,6 +455,19 @@ static void drawUI(Reflection::GenericValue Data)
 			ImGui::Text("FPS: %d", EngineInstance->FramesPerSecond);
 			ImGui::Text("Frame time: %dms", (int)std::ceil(EngineInstance->FrameTime * 1000));
 			ImGui::Text("Draw calls: %zi", EngineJsonConfig.value("renderer_drawcallcount", 0ull));
+
+			static bool TracyLaunched = false;
+
+			// 13/01/2025 hi hihihi hihiihii
+			if (!TracyLaunched && ImGui::Button("Start Profiling"))
+			{
+				TracyLaunched = true;
+
+				std::thread([]()
+					{
+						exec(LAUNCH_TRACY_CMD);
+					}).detach();
+			}
 		}
 		ImGui::End();
 
@@ -626,7 +669,7 @@ int main(int argc, char** argv)
 	{
 		// i thought about wrapping this in 2 scopes in case Engine's dtor
 		// throws an exception, but it can't seem to catch it regardless?
-		// 10/01/2024
+		// 10/01/2025
 		Engine engine{};
 
 		engine.Initialize();
