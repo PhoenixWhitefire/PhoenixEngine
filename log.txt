@@ -1,5 +1,5 @@
 [INFO]: Application startup
-[INFO]: Phoenix Engine, Main.cpp last compiled: Jan 13 2025
+[INFO]: Phoenix Engine, Main.cpp last compiled: Jan 14 2025
 [INFO]: Configuration loaded
 [INFO]: Requesting a Core OpenGL context with version 4.6
 [INFO]: Window created
@@ -109,6 +109,8 @@
 	Source: OpenGL
 	Error ID: 131154
 
+[INFO]: Changing window resolution: (1600, 900) -> (1920, 1080)
+[INFO]: Changing window resolution: (1920, 1080) -> (1600, 900)
 [INFO]: Main loop exited
 [INFO]: Engine destructing...
 [INFO]: Destroying DataModel...

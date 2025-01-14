@@ -1,5 +1,7 @@
 # PhoenixEngine
-garbaj spaghett
+*garbaj spaghett*
+
+<hr>
 
 Personal "Game Engine" written in C++, that can:
 * Render scenes, i.e. multiple objects with different materials (Color, Metallic-Roughness, Emission and Normal maps), with GPU instancing
@@ -9,41 +11,39 @@ Personal "Game Engine" written in C++, that can:
 * Do simple physics (dynamics and collisions w/ friction with AABBs, also has Raycasting for Scripts)
 * Do some simple, color-only post-processing (HDR, Tonemapping, and really weird Bloom, but a kinda nice blur vignette)
 
-# Branches
-* `main` and `dev`, certified classics
-* I'll commit to `dev` every once in a while and pull into `main` once in a Blue Moon
+Developed on Windows with Visual Studio Community 2022. Not tested on other platforms, however there shouldn't be anything *too* incompatible, all libraries used are explicitly cross-platform.
 
 # Building
-**Certain files are not present in the Git source tree! These are primarily non-essential game assets, but may include third-party library files and DLLs.**
 
 * CMake
-	* Minimum enforced version is `3.16.0`
-	* I personally only tested with `3.30.2` (latest right now is `3.30.3`)
+	* Minimum enforced version is `3.29`
+	* I personally only tested with `3.30.2`
 * C++ Standard `20` and C Standard `17`
 * Visual Studio Platform Toolset `v143`
 * Windows SDK `10.0`
 * MSVC
 
-**NOTICE**
-*(28/09/2024)*
-Don't try to use CMake. It won't work.
-Manually setting up the project in Visual Studio will probably take less time than debugging the `CMakeList`s.
-
-1. `git clone https://github.com/PhoenixWhitefire/PhoenixEngine --recursive`
-	* `git clone https://github.com/PhoenixWhitefire/PhoenixEngine --recursive -b dev` for the `dev` branch	
-	* (Or use the handy-dandy, big, green, `<> Code` button to download a `.ZIP` and extract it)
-2. `cmake -S "./" -B "./"`
-3. Open the resulting `.sln`, and you should have
+1. `git clone https://github.com/PhoenixWhitefire/PhoenixEngine --recursive`, or just use the `Code <>` button
+2. `cmake -B "./"` in the root directory
+3. Open the resulting `PhoenixEngine.sln`, and you should have:
 	* `PhoenixEngine` as the startup project
-	* A Solution Folder called "Vendor", containing:
+	* A Solution Folder called "Vendor", containing the following subprojects:
+		* `glm`
 		* `Luau.Ast`
 		* `Luau.Common`
 		* `Luau.Compiler`
 		* `Luau.VM`
+		* `SDL_uclibc`
+		* `SDL3-shared`
+		* `TracyClient`
 		* `Vendor`
-4. Build the Solution. `Debug` does not work because of conflicts with Luau. Use `Release`.
+	* A Solution Folder called "NotRequired". Just right-click and `Remove`
+4. Build the Solution. Only `Debug` is supported because I don't feel like touching CMake with a ten-foot pole for the rest of my life
+5. Copy `SDL3.dll` from `Vendor/SDL/Debug` to `Debug` in the Root directory, next to your fresh `PhoenixEngine` executable
+6. Run.
 
 # Attributions
+
 All 3rd-party code and submodules are located in the `Vendor` directory.
 
 The following libraries are used:

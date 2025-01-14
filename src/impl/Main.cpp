@@ -54,7 +54,7 @@ PHX_MAIN_HANDLECRASH(const char*, ) \
 PHX_MAIN_HANDLECRASH(std::bad_alloc, .what() + std::string(": System may have run out of memory")) \
 PHX_MAIN_HANDLECRASH(nlohmann::json::type_error, .what()) \
 PHX_MAIN_HANDLECRASH(nlohmann::json::parse_error, .what()) \
-//PHX_MAIN_HANDLECRASH(std::exception, .what()); \
+PHX_MAIN_HANDLECRASH(std::exception, .what()); \
 
 #include <filesystem>
 

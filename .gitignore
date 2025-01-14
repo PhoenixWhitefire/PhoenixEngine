@@ -4,9 +4,13 @@
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
 # Phoenix Engine
-dll/
-resources/models/
 *.zip
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.cmake
+CMakeCache.txt
+CMakeFiles
 
 # Shortcuts
 *.lnk
