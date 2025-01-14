@@ -102,6 +102,13 @@
 	Source: OpenGL
 	Error ID: 131154
 
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Source: OpenGL
+	Error ID: 131154
+
 [INFO]: Main loop exited
 [INFO]: Engine destructing...
 [INFO]: Destroying DataModel...
