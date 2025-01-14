@@ -1,9 +1,14 @@
+PHNXENGI
+#Asset Material
+#Date 10-1-2025
+
+
 {
-  "BilinearFiltering": true,
   "ColorMap": "textures/white.png",
   "HasTranslucency": false,
-  "Uniforms": {},
-  "roughnessFactor": 0.5,
+  "MetallicRoughnessMap": "textures/black.png",
+  "Shader": "worldUber",
+  "Uniforms": null,
   "specExponent": 16.0,
   "specMultiply": 0.0
 }

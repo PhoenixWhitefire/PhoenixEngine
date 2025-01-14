@@ -25,7 +25,7 @@ public:
 private:
 	std::string m_Source;
 	lua_State* m_L;
-	bool m_StaleSource = false;
+	bool m_StaleSource = true;
 
 	static void s_DeclareReflections();
 	static inline Reflection::Api s_Api{};;

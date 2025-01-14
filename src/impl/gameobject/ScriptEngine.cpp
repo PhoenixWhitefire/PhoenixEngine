@@ -3,8 +3,10 @@
 #include <glm/mat4x4.hpp>
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
-#include <imnodes/imnodes.h>
 #include <ImGuiFD/ImGuiFD.h>
+#include <SDL3/SDL_mouse.h>
+
+#include <tracy/Tracy.hpp>
 
 #include "gameobject/ScriptEngine.hpp"
 
@@ -212,6 +214,8 @@ static void luaTableToJson(lua_State* L, nlohmann::json& json)
 
 Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int StackIndex)
 {
+	ZoneScoped;
+
 	switch (lua_type(L, StackIndex))
 	{
 	case (lua_Type::LUA_TNIL):
@@ -296,6 +300,8 @@ Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int St
 
 void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericValue& gv)
 {
+	ZoneScoped;
+
 	switch (gv.Type)
 	{
 	case (Reflection::ValueType::Null):
@@ -390,10 +396,114 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 
 void ScriptEngine::L::PushGameObject(lua_State* L, GameObject* Object)
 {
-	auto gv = Reflection::GenericValue(Object->ObjectId);
-	gv.Type = Reflection::ValueType::GameObject;
+	PushGenericValue(L, Object->ToGenericValue());
+}
 
-	PushGenericValue(L, gv);
+int ScriptEngine::L::HandleFunctionCall(
+	lua_State* L,
+	GameObject* refl,
+	const char* fname,
+	int numArgs
+)
+{
+	auto& func = refl->GetFunction(fname);
+	const std::vector<Reflection::ValueType>& paramTypes = func.Inputs;
+
+	int numParams = static_cast<int32_t>(paramTypes.size());
+
+	if (numArgs != numParams)
+	{
+		std::string argsString;
+
+		for (int arg = 1; arg < numArgs + 1; arg++)
+			argsString += std::string(luaL_typename(L, -(numArgs + 1 - arg))) + ", ";
+
+		argsString = argsString.substr(0, argsString.size() - 2);
+
+		luaL_error(L, std::vformat(
+			"Function '{}' expected {} arguments, got {} instead: ({})",
+			std::make_format_args(fname, numParams, numArgs, argsString)
+		).c_str());
+
+		return 0;
+	}
+
+	std::vector<Reflection::GenericValue> inputs;
+
+	// This *entire* for-loop is just for handling input arguments
+	for (int index = 0; index < paramTypes.size(); index++)
+	{
+		Reflection::ValueType paramType = paramTypes[index];
+
+		// Ex: W/ 3 args:
+		// 0 = -3
+		// 1 = -2
+		// 2 = -1
+		// Simpler than I thought actually
+		int argStackIndex = index - numParams;
+
+		auto expectedLuaTypeIt = ScriptEngine::ReflectedTypeLuaEquivalent.find(paramType);
+
+		if (expectedLuaTypeIt == ScriptEngine::ReflectedTypeLuaEquivalent.end())
+			throw(std::vformat(
+				"Couldn't find the equivalent of a Reflection::ValueType::{} in Lua",
+				std::make_format_args(Reflection::TypeAsString(paramType))
+			));
+
+		int expectedLuaType = (int)expectedLuaTypeIt->second;
+		int actualLuaType = lua_type(L, argStackIndex);
+
+		if (actualLuaType != expectedLuaType)
+		{
+			const char* expectedName = lua_typename(L, expectedLuaType);
+			const char* actualTypeName = luaL_typename(L, argStackIndex);
+			const char* providedValue = luaL_tolstring(L, argStackIndex, NULL);
+
+			// I get that shitty fucking ::vformat can't handle
+			// a SINGULAR fucking parameter that isn't an lvalue,
+			// but an `int`?? A literal fucking scalar??? What is this bullshit????
+			int indexAsLuaIndex = index + 1;
+
+			luaL_error(L, std::vformat(
+				"Argument {} expected to be of type {}, but was '{}' ({}) instead",
+				std::make_format_args(
+					indexAsLuaIndex,
+					expectedName,
+					providedValue,
+					actualTypeName
+				)
+			).c_str());
+
+			return 0;
+		}
+		else
+			inputs.push_back(L::LuaValueToGeneric(L, argStackIndex));
+	}
+
+	// Now, onto the *REAL* business...
+	std::vector<Reflection::GenericValue> outputs;
+
+	try
+	{
+		outputs = func.Func(refl, inputs);
+	}
+	catch (std::string err)
+	{
+		luaL_error(L, err.c_str());
+	}
+
+	for (const Reflection::GenericValue& output : outputs)
+		L::PushGenericValue(L, output);
+
+	return (int)func.Outputs.size();
+
+	// ... kinda expected more, but ngl i feel SOOOO gigabrain for
+	// giving ::GenericValue an Array, like, it all just clicks in now!
+	// And then Maps just being Arrays, except odd elements are the keys
+	// and even elements are the values?! Call me Einstein already on god-
+	// (Me writing this as Rendering is completely busted and I have no clue
+	// why oh no
+	// 15/08/2024
 }
 
 void ScriptEngine::L::PushFunction(lua_State* L, const char* Name)
@@ -414,104 +524,12 @@ void ScriptEngine::L::PushFunction(lua_State* L, const char* Name)
 			GameObject* refl = GameObject::GetObjectById(*(uint32_t*)luaL_checkudata(L, 1, "GameObject"));
 			const char* fname = lua_tostring(L, lua_upvalueindex(1));
 
-			auto& func = refl->GetFunction(fname);
-			const std::vector<Reflection::ValueType>& paramTypes = func.Inputs;
-
-			int numParams = static_cast<int32_t>(paramTypes.size());
-
-			if (numArgs != numParams)
-			{
-				std::string argsString;
-
-				for (int arg = 1; arg < numArgs + 1; arg++)
-					argsString += std::string(luaL_typename(L, -(numArgs + 1 - arg))) + ", ";
-
-				argsString = argsString.substr(0, argsString.size() - 2);
-
-				luaL_error(L, std::vformat(
-					"Function '{}' expected {} arguments, got {} instead: ({})",
-					std::make_format_args(fname, numParams, numArgs, argsString)
-				).c_str());
-
-				return 0;
-			}
-
-			std::vector<Reflection::GenericValue> inputs;
-
-			// This *entire* for-loop is just for handling input arguments
-			for (int index = 0; index < paramTypes.size(); index++)
-			{
-				Reflection::ValueType paramType = paramTypes[index];
-
-				// Ex: W/ 3 args:
-				// 0 = -3
-				// 1 = -2
-				// 2 = -1
-				// Simpler than I thought actually
-				int argStackIndex = index - numParams;
-
-				auto expectedLuaTypeIt = ScriptEngine::ReflectedTypeLuaEquivalent.find(paramType);
-
-				if (expectedLuaTypeIt == ScriptEngine::ReflectedTypeLuaEquivalent.end())
-					throw(std::vformat(
-						"Couldn't find the equivalent of a Reflection::ValueType::{} in Lua",
-						std::make_format_args(Reflection::TypeAsString(paramType))
-					));
-
-				int expectedLuaType = (int)expectedLuaTypeIt->second;
-				int actualLuaType = lua_type(L, argStackIndex);
-
-				if (actualLuaType != expectedLuaType)
-				{
-					const char* expectedName = lua_typename(L, expectedLuaType);
-					const char* actualTypeName = luaL_typename(L, argStackIndex);
-					const char* providedValue = luaL_tolstring(L, argStackIndex, NULL);
-
-					// I get that shitty fucking ::vformat can't handle
-					// a SINGULAR fucking parameter that isn't an lvalue,
-					// but an `int`?? A literal fucking scalar??? What is this bullshit????
-					int indexAsLuaIndex = index + 1;
-
-					luaL_error(L, std::vformat(
-						"Argument {} expected to be of type {}, but was {} ({}) instead",
-						std::make_format_args(
-							indexAsLuaIndex,
-							expectedName,
-							providedValue,
-							actualTypeName
-						)
-					).c_str());
-
-					return 0;
-				}
-				else
-					inputs.push_back(L::LuaValueToGeneric(L, argStackIndex));
-			}
-
-			// Now, onto the *REAL* business...
-			std::vector<Reflection::GenericValue> outputs;
-
-			try
-			{
-				outputs = func.Func(refl, inputs);
-			}
-			catch (std::string err)
-			{
-				luaL_error(L, err.c_str());
-			}
-
-			for (const Reflection::GenericValue& output : outputs)
-				L::PushGenericValue(L, output);
-
-			return (int)func.Outputs.size();
-
-			// ... kinda expected more, but ngl i feel SOOOO gigabrain for
-			// giving ::GenericValue an Array, like, it all just clicks in now!
-			// And then Maps just being Arrays, except odd elements are the keys
-			// and even elements are the values?! Call me Einstein already on god-
-			// (Me writing this as Rendering is completely busted and I have no clue
-			// why oh no
-			// 15/08/2024
+			return ScriptEngine::L::HandleFunctionCall(
+				L,
+				refl,
+				fname,
+				numArgs
+			);
 		},
 
 		Name,
@@ -563,7 +581,7 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 		else
 		{
 			const char* kname = luaL_checkstring(L, 1);
-			lua_pushboolean(L, UserInput::IsKeyDown(SDL_KeyCode(kname[0])));
+			lua_pushboolean(L, UserInput::IsKeyDown(SDL_Keycode(kname[0])));
 		}
 
 		return 1;
@@ -590,13 +608,13 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 	"input_mouse_getpos",
 	[](lua_State* L)
 	{
-		int mx = 0;
-		int my = 0;
+		float mx = 0;
+		float my = 0;
 
 		SDL_GetMouseState(&mx, &my);
 
-		lua_pushinteger(L, mx);
-		lua_pushinteger(L, my);
+		lua_pushnumber(L, mx);
+		lua_pushnumber(L, my);
 
 		return 2;
 	}
@@ -864,7 +882,7 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 		"world_raycast",
 		[](lua_State* L)
 		{
-			GameObject* workspace = GameObject::s_DataModel->GetChildOfClass("Workspace");
+			GameObject* workspace = GameObject::s_DataModel->FindChildWhichIsA("Workspace");
 
 			if (!workspace)
 				luaL_error(L, "A Workspace was not found within the DataModel");
@@ -938,7 +956,7 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 		"world_aabbcast",
 		[](lua_State* L)
 		{
-			GameObject* workspace = GameObject::s_DataModel->GetChildOfClass("Workspace");
+			GameObject* workspace = GameObject::s_DataModel->FindChildWhichIsA("Workspace");
 
 			if (!workspace)
 				luaL_error(L, "A Workspace was not found within the DataModel");
@@ -1012,7 +1030,7 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 		"world_aabbquery",
 		[](lua_State* L)
 		{
-			GameObject* workspace = GameObject::s_DataModel->GetChildOfClass("Workspace");
+			GameObject* workspace = GameObject::s_DataModel->FindChildWhichIsA("Workspace");
 
 			if (!workspace)
 				luaL_error(L, "A Workspace was not found within the DataModel");
@@ -1300,154 +1318,6 @@ std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions 
 			lua_pushboolean(L, pressed);
 
 			return 2;
-		}
-	},
-
-	{
-		"imnodes_editor_begin",
-		[](lua_State*)
-		{
-			if (!ImNodes::GetCurrentContext())
-				ImNodes::CreateContext();
-
-			ImNodes::BeginNodeEditor();
-
-			return 0;
-		}
-	},
-
-	{
-		"imnodes_editor_end",
-		[](lua_State*)
-		{
-			ImNodes::EndNodeEditor();
-
-			return 0;
-		}
-	},
-
-	{
-		"imnodes_node_begin",
-		[](lua_State* L)
-		{
-			ImNodes::BeginNode(luaL_checkinteger(L, 1));
-
-			return 0;
-		}
-	},
-
-	{
-		"imnodes_node_end",
-		[](lua_State*)
-		{
-			ImNodes::EndNode();
-
-			return 0;
-		}
-	},
-
-	{
-		"imnodes_node_input_begin",
-		[](lua_State* L)
-		{
-			ImNodes::BeginInputAttribute(luaL_checkinteger(L, 1), luaL_optinteger(L, 2, 1));
-
-			return 0;
-		}
-	},
-
-	{
-		"imnodes_node_input_end",
-		[](lua_State*)
-		{
-			ImNodes::EndInputAttribute();
-
-			return 0;
-		}
-	},
-
-	{
-		"imnodes_node_output_begin",
-		[](lua_State* L)
-		{
-			ImNodes::BeginOutputAttribute(luaL_checkinteger(L, 1), luaL_optinteger(L, 2, 1));
-
-			return 0;
-		}
-	},
-
-	{
-		"imnodes_node_output_end",
-		[](lua_State*)
-		{
-			ImNodes::EndOutputAttribute();
-
-			return 0;
-		}
-	},
-
-	{
-		"imnodes_drawlink",
-		[](lua_State* L)
-		{
-			ImNodes::Link(luaL_checkinteger(L, 1), luaL_checkinteger(L, 2), luaL_checkinteger(L, 3));
-
-			return 0;
-		}
-	},
-
-	{
-		"imnodes_userlinked",
-		[](lua_State* L)
-		{
-			int startattr{}, endattr{};
-			ImNodes::IsLinkCreated(&startattr, &endattr);
-
-			lua_pushinteger(L, startattr);
-			lua_pushinteger(L, endattr);
-
-			return 2;
-		}
-	},
-
-	{
-		"imnodes_node_titlebar_begin",
-		[](lua_State*)
-		{
-			ImNodes::BeginNodeTitleBar();
-
-			return 0;
-		}
-	},
-
-	{
-		"imnodes_node_titlebar_end",
-		[](lua_State*)
-		{
-			ImNodes::EndNodeTitleBar();
-
-			return 0;
-		}
-	},
-
-	{
-		"imnodes_colorstyle_push",
-		[](lua_State* L)
-		-> int
-		{
-			const Color& col = *(Color*)luaL_checkudata(L, 2, "Color");
-			ImNodes::PushColorStyle(luaL_checkinteger(L, 1), IM_COL32(col.R * 255, col.G * 255, col.B * 255, 255));
-			return 0;
-		}
-	},
-
-	{
-		"imnodes_colorstyle_pop",
-		[](lua_State*)
-		-> int
-		{
-			ImNodes::PopColorStyle();
-			return 0;
 		}
 	},
 

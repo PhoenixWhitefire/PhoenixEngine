@@ -44,19 +44,20 @@ Manually setting up the project in Visual Studio will probably take less time th
 4. Build the Solution. `Debug` does not work because of conflicts with Luau. Use `Release`.
 
 # Attributions
-3rd-party code is located in the `Vendor` directory and compiled into `lib/Vendor.lib` and statically linked with the Engine.
+All 3rd-party code and submodules are located in the `Vendor` directory.
 
 The following libraries are used:
 
 * Luau, scripting - [@Roblox/Luau](https://github.com/Roblox/Luau/)
-* SDL2, window interface, OpenGL interface - [libsdl.org](https://libsdl.org/)
+* SDL3, window interface, OpenGL interface - [libsdl.org](https://libsdl.org/)
 * Glad, OpenGL API - [glad.dav1d.de/](https://glad.dav1d.de/)
 * GLM, matrix math - [@g-truc/glm](https://github.com/g-truc/glm/)
-* `nlohmann::json`, JSON decoding/encoding for materials, scenes, meshes, and shader programs - [@nlohmann/json](https://github.com/nlohmann/json/)
-* Dear ImGui, User Interface - [@ocornut/ImGui](https://github.com/ocornut/imgui/)
-* `ImGuiFD`, File Dialogs - [@Julianiolo/ImGuiFD](https://github.com/Julianiolo/ImGuiFD)
+* `nlohmann::json`, JSON decoding/encoding for various asset types - [@nlohmann/json](https://github.com/nlohmann/json/)
+* Dear ImGui, user interface - [@ocornut/ImGui](https://github.com/ocornut/imgui/)
+* `ImGuiFD`, file dialogs - [@Julianiolo/ImGuiFD](https://github.com/Julianiolo/ImGuiFD)
 * STB Image, image loading - [@nothings/stb](https://github.com/nothings/stb)
-* OpenGL, Graphics API - [Khronos Group](https://khronos.org/)
+* OpenGL, graphics API - [Khronos Group](https://khronos.org/)
+* Tracy, profiling - [@wolfpld/Tracy](https://github.com/wolfpld/tracy)
 
 The [OpenGL YouTube tutorials](https://youtube.com/watch?v=XpBGwZNyUh0&list=PLPaoO-vpZnumdcb4tZc4x5Q-v7CkrQ6M-) of [Victor Gordan](https://github.com/VictorGordan/) (who I occasionally make fun of in the code comments) were referenced heavily during the creation of the rendering systems of this engine.
 Initially, this started out as a 1-to-1 follow-along of what he did, but I rewrote the entire thing to work in a better "Game Engine"-style architecture, as the tutorial had a simpler Model Viewer architecture that was not suitable for a Game Engine.

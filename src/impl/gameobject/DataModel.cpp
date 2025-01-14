@@ -43,3 +43,8 @@ void Object_DataModel::Initialize()
 	GameObject* workspace = GameObject::Create("Workspace");
 	workspace->SetParent(this);
 }
+
+Object_Workspace* Object_DataModel::GetWorkspace()
+{
+	return dynamic_cast<Object_Workspace*>(this->FindChild("Workspace"));
+}

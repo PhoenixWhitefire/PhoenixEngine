@@ -8,8 +8,8 @@ class Object_Light : public Object_Attachment
 public:
 	Object_Light();
 
-	Color LightColor = Color(1.0f, 1.0f, 1.0f);
-	float Brightness = 1.0f;
+	Color LightColor{ 1.f, 1.f, 1.f };
+	float Brightness = 1.f;
 	bool Shadows = false;
 
 	REFLECTION_DECLAREAPI;

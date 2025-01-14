@@ -1,6 +1,0 @@
-{
-  "albedo": "textures/loadingscreen_origianl.png",
-  "specExponent": 1.0,
-  "specMultiply": 0.05000000074505806,
-  "specular": "textures/loadingscreen.png"
-}

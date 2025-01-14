@@ -12,17 +12,21 @@ extern "C"
 
 #include <string>
 #include <format>
-#include <glad/gl.h>
+
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/transform.hpp>
-#include <SDL2/SDL_video.h>
+
+#include <SDL3/SDL_video.h>
+
+#include <tracy/Tracy.hpp>
+
+#include <glad/gl.h>
 
 #include "render/Renderer.hpp"
 #include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
 #include "asset/MeshProvider.hpp"
 #include "GlobalJsonConfig.hpp"
-#include "Profiler.hpp"
 #include "Log.hpp"
 
 constexpr uint32_t SHADER_MAX_LIGHTS = 6;
@@ -84,21 +88,7 @@ static void GLDebugCallback(
 	std::string severityName = glEnumToString(SeverityId);
 	std::string typeName = glEnumToString(TypeId);
 
-	std::string messageStr = Message;
-
-	// `GLsizei` is a smelly `int`
-	int actualMessageLength = static_cast<int>(strlen(Message));
-
-	// We love being pedantic around here 23/12/2024
-	if (actualMessageLength != MessageLength)
-	{
-		Log::Warning(std::vformat(
-			"Renderer::GLDebugCallback: `strlen` differs from message length: {} vs {}",
-			std::make_format_args(actualMessageLength, MessageLength)
-		));
-
-		messageStr = messageStr.substr(0, MessageLength);
-	}
+	std::string messageStr = std::string(Message, MessageLength);
 
 	std::string debugString = std::vformat(
 		std::string("GL Debug callback:\n\tType: {}\n\tSeverity: {}\n\tMessage: {}\n\tSource: {}\n\tError ID: {}\n"),
@@ -236,88 +226,84 @@ void Renderer::DrawScene(
 	double RunningTime
 )
 {
-	PROFILE_SCOPE("DrawScene");
-
-	glActiveTexture(GL_TEXTURE0);
-	this->FrameBuffer.BindTexture();
-
-	ShaderManager* shdManager = ShaderManager::Get();
-
-	Profiler::Start("UploadUniforms");
-
-	for (uint32_t shaderId : Scene.UsedShaders)
-	{
-		ShaderProgram& shader = shdManager->GetShaderResource(shaderId);
-
-		shader.SetUniform("RenderMatrix", RenderMatrix);
-		shader.SetUniform("CameraPosition", Vector3(glm::vec3(CameraTransform[3])).ToGenericValue());
-		shader.SetUniform("Time", static_cast<float>(RunningTime));
-		shader.SetUniform("SkyboxCubemap", 3);
-
-		shader.SetUniform("FrameBuffer", 0);
-
-		// TODO 05/09/2024
-		// Branching in shader VS separate array uniforms?
-		// Oh and uniform locations should probably be cached
-		for (size_t lightIndex = 0; lightIndex < SHADER_MAX_LIGHTS; lightIndex++)
-		{
-			if (lightIndex + 1 > Scene.LightingList.size())
-				break;
-
-			const LightItem& lightData = Scene.LightingList.at(lightIndex);
-
-			std::string lightIdxString = std::to_string(lightIndex);
-			std::string shaderLightLoc = "Lights[" + lightIdxString + "]";
-
-			shader.SetUniform(
-				(shaderLightLoc + ".Position").c_str(),
-				lightData.Position.ToGenericValue()
-			);
-
-			shader.SetUniform(
-				(shaderLightLoc + ".Color").c_str(),
-				lightData.LightColor.ToGenericValue()
-			);
-
-			shader.SetUniform((shaderLightLoc + ".Type").c_str(), (int)lightData.Type);
-
-			shader.SetUniform((shaderLightLoc + ".Range").c_str(), lightData.Range);
-			shader.SetUniform((shaderLightLoc + ".Angle").c_str(), lightData.Angle);
-			shader.SetUniform((shaderLightLoc + ".Shadows").c_str(), lightData.Shadows);
-		}
-
-		shader.SetUniform(
-			"NumLights",
-			std::clamp(
-				static_cast<uint32_t>(Scene.LightingList.size()),
-				0u,
-				SHADER_MAX_LIGHTS
-			)
-		);
-	}
-
-	Profiler::Stop();
+	ZoneScopedC(tracy::Color::HotPink);
 
 	MeshProvider* meshProvider = MeshProvider::Get();
 	MaterialManager* mtlManager = MaterialManager::Get();
 
 	size_t numDrawCalls = 0;
 
-	static const bool DoInstancing = true;
-
 	// map< instance checksum, pair< base RenderItem, vector< array buffer data >>>
 	std::map<uint64_t, std::pair<size_t, std::vector<float>>> instancingList;
 
-	Profiler::Start("CreateInstancingBuffer");
-	for (size_t renderItemIndex = 0; renderItemIndex < Scene.RenderList.size(); renderItemIndex++)
 	{
-		const RenderItem& renderData = Scene.RenderList[renderItemIndex];
+		ZoneNamedNC(prepzone, "Prepare", tracy::Color::AliceBlue, true);
 
-		if (DoInstancing)
+		glActiveTexture(GL_TEXTURE0);
+		this->FrameBuffer.BindTexture();
+
+		ShaderManager* shdManager = ShaderManager::Get();
+
+		for (uint32_t shaderId : Scene.UsedShaders)
 		{
+			ShaderProgram& shader = shdManager->GetShaderResource(shaderId);
+
+			shader.SetUniform("RenderMatrix", RenderMatrix);
+			shader.SetUniform("CameraPosition", Vector3(glm::vec3(CameraTransform[3])).ToGenericValue());
+			shader.SetUniform("Time", static_cast<float>(RunningTime));
+			shader.SetUniform("SkyboxCubemap", 3);
+
+			shader.SetUniform("FrameBuffer", 0);
+
+			// TODO 05/09/2024
+			// Branching in shader VS separate array uniforms?
+			// Oh and uniform locations should probably be cached
+			for (size_t lightIndex = 0; lightIndex < SHADER_MAX_LIGHTS; lightIndex++)
+			{
+				if (lightIndex + 1 > Scene.LightingList.size())
+					break;
+
+				const LightItem& lightData = Scene.LightingList.at(lightIndex);
+
+				std::string lightIdxString = std::to_string(lightIndex);
+				std::string shaderLightLoc = "Lights[" + lightIdxString + "]";
+
+				shader.SetUniform(
+					(shaderLightLoc + ".Position").c_str(),
+					lightData.Position.ToGenericValue()
+				);
+
+				shader.SetUniform(
+					(shaderLightLoc + ".Color").c_str(),
+					lightData.LightColor.ToGenericValue()
+				);
+
+				shader.SetUniform((shaderLightLoc + ".Type").c_str(), (int)lightData.Type);
+
+				shader.SetUniform((shaderLightLoc + ".Range").c_str(), lightData.Range);
+				shader.SetUniform((shaderLightLoc + ".Angle").c_str(), lightData.Angle);
+				shader.SetUniform((shaderLightLoc + ".Shadows").c_str(), lightData.Shadows);
+			}
+
+			shader.SetUniform(
+				"NumLights",
+				std::clamp(
+					static_cast<uint32_t>(Scene.LightingList.size()),
+					0u,
+					SHADER_MAX_LIGHTS
+				)
+			);
+		}
+
+		ZoneNamedN(bubzone, "BuildInstancingBuffer", true);
+
+		for (size_t renderItemIndex = 0; renderItemIndex < Scene.RenderList.size(); renderItemIndex++)
+		{
+			const RenderItem& renderData = Scene.RenderList[renderItemIndex];
+
 			// the MESH, MATERIAL, TRANSPARENCY and REFLECTIVITY must be the same
-			// for a set of objects to be instanced together
-			// And it needs to be on the GPU
+				// for a set of objects to be instanced together
+				// And it needs to be on the GPU
 			Mesh& mesh = meshProvider->GetMeshResource(renderData.RenderMeshId);
 
 			uint64_t checksum = 0;
@@ -333,10 +319,10 @@ void Renderer::DrawScene(
 			}
 			else
 				checksum = renderData.RenderMeshId
-					+ static_cast<uint64_t>(renderData.MaterialId * 500u)
-					+ (renderData.Transparency > 0.f ? 5000000ull : 0ull)
-					+ static_cast<uint64_t>(renderData.MetallnessFactor * 115)
-					+ static_cast<uint64_t>(renderData.RoughnessFactor * 115);
+				+ static_cast<uint64_t>(renderData.MaterialId * 500u)
+				+ (renderData.Transparency > 0.f ? 5000000ull : 0ull)
+				+ static_cast<uint64_t>(renderData.MetallnessFactor * 115)
+				+ static_cast<uint64_t>(renderData.RoughnessFactor * 115);
 
 			if (renderData.Transparency > 0.f)
 				// hacky way to get transparents closer to the camera drawn
@@ -345,7 +331,7 @@ void Renderer::DrawScene(
 					CameraTransform[3],
 					renderData.Transform[3]
 				)) * 500000.f);
-			
+
 			auto it = instancingList.find(checksum);
 			if (it == instancingList.end())
 				instancingList[checksum] = std::pair(renderItemIndex, std::vector<float>{});
@@ -366,112 +352,96 @@ void Renderer::DrawScene(
 			instancingList[checksum].second.push_back(renderData.TintColor.G);
 			instancingList[checksum].second.push_back(renderData.TintColor.B);
 		}
-		else
-		{
-			m_SetMaterialData(renderData);
-
-			this->DrawMesh(
-				meshProvider->GetMeshResource(renderData.RenderMeshId),
-				mtlManager->GetMaterialResource(renderData.MaterialId).GetShader(),
-				renderData.Size,
-				renderData.Transform,
-				renderData.FaceCulling,
-				0
-			);
-
-			numDrawCalls++;
-		}
 	}
-	Profiler::Stop();
 
-	if (DoInstancing)
+	// 13/01/2025 `tracy::Color::Indigo`?? Indigo?? Park??
+	ZoneNamedNC(perfzone, "Perform", tracy::Color::Indigo, true);
+
+	for (auto& iter : instancingList)
 	{
-		PROFILE_SCOPE("DrawInstanced");
+		ZoneNamedN(drawzone, "Draw", true);
 
-		for (auto& iter : instancingList)
+		const RenderItem& renderData = Scene.RenderList[iter.second.first];
+		const Mesh& mesh = meshProvider->GetMeshResource(renderData.RenderMeshId);
+		const std::vector<float>& drawInfos = iter.second.second;
+
+		if (mesh.GpuId != UINT32_MAX)
 		{
-			const RenderItem& renderData = Scene.RenderList[iter.second.first];
-			const Mesh& mesh = meshProvider->GetMeshResource(renderData.RenderMeshId);
-			const std::vector<float>& drawInfos = iter.second.second;
+			ZoneNamedNC(uploadzone, "UploadInstancingData", tracy::Color::Khaki, true);
 
-			if (mesh.GpuId != UINT32_MAX)
-			{
-				PROFILE_SCOPE("UploadInstancedData");
+			MeshProvider::GpuMesh& gpuMesh = meshProvider->GetGpuMesh(mesh.GpuId);
+			gpuMesh.VertexArray.Bind();
 
-				MeshProvider::GpuMesh& gpuMesh = meshProvider->GetGpuMesh(mesh.GpuId);
-				gpuMesh.VertexArray.Bind();
+			glBindBuffer(GL_ARRAY_BUFFER, m_InstancingBuffer);
 
-				glBindBuffer(GL_ARRAY_BUFFER, m_InstancingBuffer);
+			constexpr int32_t vec4Size = static_cast<int32_t>(sizeof(glm::vec4));
+			constexpr int32_t vec3Size = static_cast<int32_t>(sizeof(glm::vec3));
 
-				constexpr int32_t vec4Size = static_cast<int32_t>(sizeof(glm::vec4));
-				constexpr int32_t vec3Size = static_cast<int32_t>(sizeof(glm::vec3));
+			// TODO 14/11/2024
+			// I don't like having these here, but it looks like both the Vertex Array
+			// and the Instancing Buffer need to be bound for it to function
 
-				// TODO 14/11/2024
-				// I don't like having these here, but it looks like both the Vertex Array
-				// and the Instancing Buffer need to be bound for it to function
+			// `Transform` matrix
+			// 4 vec4's
+			glEnableVertexAttribArray(4);
+			glEnableVertexAttribArray(5);
+			glEnableVertexAttribArray(6);
+			glEnableVertexAttribArray(7);
 
-				// `Transform` matrix
-				// 4 vec4's
-				glEnableVertexAttribArray(4);
-				glEnableVertexAttribArray(5);
-				glEnableVertexAttribArray(6);
-				glEnableVertexAttribArray(7);
+			glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size * 2, (void*)0);
+			glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size * 2, (void*)(1 * (size_t)vec4Size));
+			glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size * 2, (void*)(2 * (size_t)vec4Size));
+			glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size * 2, (void*)(3 * (size_t)vec4Size));
 
-				glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size*2, (void*)0);
-				glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size*2, (void*)(1 * (size_t)vec4Size));
-				glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size*2, (void*)(2 * (size_t)vec4Size));
-				glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size*2, (void*)(3 * (size_t)vec4Size));
+			glVertexAttribDivisor(4, 1);
+			glVertexAttribDivisor(5, 1);
+			glVertexAttribDivisor(6, 1);
+			glVertexAttribDivisor(7, 1);
 
-				glVertexAttribDivisor(4, 1);
-				glVertexAttribDivisor(5, 1);
-				glVertexAttribDivisor(6, 1);
-				glVertexAttribDivisor(7, 1);
+			// vec3s
+			// scale
+			glEnableVertexAttribArray(8);
+			// color
+			glEnableVertexAttribArray(9);
 
-				// vec3s
-				// scale
-				glEnableVertexAttribArray(8);
-				// color
-				glEnableVertexAttribArray(9);
+			// it's still `4 * (size_t)` because that's the offset from everything else
+			glVertexAttribPointer(8, 3, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size * 2, (void*)(4 * (size_t)vec4Size));
+			glVertexAttribPointer(9, 3, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size * 2, (void*)((4 * (size_t)vec4Size) + vec3Size));
 
-				// it's still `4 * (size_t)` because that's the offset from everything else
-				glVertexAttribPointer(8, 3, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size*2, (void*)(4 * (size_t)vec4Size));
-				glVertexAttribPointer(9, 3, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size*2, (void*)((4 * (size_t)vec4Size) + vec3Size));
+			glVertexAttribDivisor(8, 1);
+			glVertexAttribDivisor(9, 1);
 
-				glVertexAttribDivisor(8, 1);
-				glVertexAttribDivisor(9, 1);
-
-				glBufferData(
-					GL_ARRAY_BUFFER,
-					drawInfos.size() * sizeof(float),
-					drawInfos.data(),
-					GL_STREAM_DRAW
-				);
-			}
-			else
-				glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-			RenderMaterial& material = mtlManager->GetMaterialResource(renderData.MaterialId);
-
-			m_SetMaterialData(renderData);
-
-			constexpr size_t ElementsPerInstance = 22ull;
-
-			if (drawInfos.size() % ElementsPerInstance != 0)
-				throw("`drawInfos` was not divisible by `ElementsPerInstance`");
-
-			int32_t numInstances = static_cast<int32_t>(drawInfos.size() / ElementsPerInstance);
-
-			this->DrawMesh(
-				mesh,
-				material.GetShader(),
-				renderData.Size,
-				renderData.Transform,
-				renderData.FaceCulling,
-				numInstances > 1 ? numInstances : 0
+			glBufferData(
+				GL_ARRAY_BUFFER,
+				drawInfos.size() * sizeof(float),
+				drawInfos.data(),
+				GL_STREAM_DRAW
 			);
-
-			numDrawCalls++;
 		}
+		else
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+		RenderMaterial& material = mtlManager->GetMaterialResource(renderData.MaterialId);
+
+		m_SetMaterialData(renderData);
+
+		constexpr size_t ElementsPerInstance = 22ull;
+
+		if (drawInfos.size() % ElementsPerInstance != 0)
+			throw("`drawInfos` was not divisible by `ElementsPerInstance`");
+
+		int32_t numInstances = static_cast<int32_t>(drawInfos.size() / ElementsPerInstance);
+
+		this->DrawMesh(
+			mesh,
+			material.GetShader(),
+			renderData.Size,
+			renderData.Transform,
+			renderData.FaceCulling,
+			numInstances > 1 ? numInstances : 0
+		);
+
+		numDrawCalls++;
 	}
 
 	EngineJsonConfig["renderer_drawcallcount"] = EngineJsonConfig.value("renderer_drawcallcount", 0) + numDrawCalls;
@@ -486,7 +456,7 @@ void Renderer::DrawMesh(
 	int32_t NumInstances
 )
 {
-	PROFILE_SCOPE("DrawMesh");
+	ZoneScopedC(tracy::Color::HotPink);
 
 	switch (FaceCulling)
 	{
@@ -557,7 +527,7 @@ void Renderer::DrawMesh(
 
 void Renderer::m_SetMaterialData(const RenderItem& RenderData)
 {
-	PROFILE_SCOPE("UploadMaterialData");
+	ZoneScopedC(tracy::Color::HotPink);
 
 	MaterialManager* mtlManager = MaterialManager::Get();
 
@@ -634,5 +604,7 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData)
 
 void Renderer::SwapBuffers()
 {
+	ZoneScopedC(tracy::Color::HotPink);
+
 	SDL_GL_SwapWindow(m_Window);
 }

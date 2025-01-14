@@ -51,28 +51,34 @@ public:
 	std::vector<GameObject*> GetDescendants();
 
 	GameObject* GetParent() const;
-	GameObject* GetChild(const std::string&);
+	GameObject* FindChild(const std::string&);
 	// accounts for inheritance
-	GameObject* GetChildOfClass(const std::string&);
-	GameObject* GetChildById(uint32_t);
+	GameObject* FindChildWhichIsA(const std::string&);
 
-	std::string GetFullName();
+	std::string GetFullName() const;
 	// whether this object inherits from or is the given class
-	bool IsA(const std::string&);
+	bool IsA(const std::string&) const;
 
 	void SetParent(GameObject*);
 	void AddChild(GameObject*);
 	void RemoveChild(uint32_t);
 
-	Reflection::GenericValue ToGenericValue();
+	// performs a 1-1 copy, including copying the `Parent` property
+	GameObject* Duplicate();
+	// destructively combines the passed object with the current object
+	// passed object will be deleted
+	void MergeWith(GameObject*);
 
-	uint32_t ObjectId = 0;
+	Reflection::GenericValue ToGenericValue() const;
+
+	uint32_t ObjectId = PHX_GAMEOBJECT_NULL_ID;
 	uint32_t Parent = PHX_GAMEOBJECT_NULL_ID;
 
 	std::string Name = "GameObject";
 	std::string ClassName = "GameObject";
 
 	bool Enabled = true;
+	bool Serializes = true;
 	bool IsDestructionPending = false;
 
 	static nlohmann::json DumpApiToJson();
@@ -122,7 +128,10 @@ public:
 	GameObjectRef(T* Object)
 	: m_TargetId(Object->ObjectId)
 	{
-		Object->IncrementHardRefs();
+		if (m_TargetId == PHX_GAMEOBJECT_NULL_ID)
+			throw("Tried to create a Hard Reference to a GameObject prior to it being `::Initialize`'d");
+		else
+			Object->IncrementHardRefs();
 	}
 
 	GameObjectRef(GameObjectRef& Other)

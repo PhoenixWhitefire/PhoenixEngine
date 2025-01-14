@@ -7,7 +7,7 @@ local PossibleRoomsArr = RoomsContainer:GetChildren()
 
 local Player
 
-local StartClone = Rooms.Start:Clone()
+local StartClone = Rooms.Start:Duplicate()
 Rooms.Start.Enabled = false
 StartClone.Parent = Rooms.Generated
 StartClone.Enabled = true

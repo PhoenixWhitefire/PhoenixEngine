@@ -1,8 +1,8 @@
 #include <glm/gtc/matrix_transform.hpp>
+#include <tracy/Tracy.hpp>
 
 #include "PhysicsEngine.hpp"
 #include "IntersectionLib.hpp"
-#include "Profiler.hpp"
 
 struct Collision
 {
@@ -11,9 +11,32 @@ struct Collision
 	IntersectionLib::Intersection Hit;
 };
 
+static void applyGlobalForces(std::vector<Object_Base3D*>& World, double DeltaTime)
+{
+	ZoneScopedC(tracy::Color::AntiqueWhite);
+
+	for (Object_Base3D* object : World)
+	{
+		object->Mass = object->Density * object->Size.X * object->Size.Y * object->Size.Z;
+
+		if (object->PhysicsDynamics)
+		{
+			static Vector3 GravityStrength{ 0.f, -50.f, 0.f };
+
+			// 19/09/2024 https://www.youtube.com/watch?v=-_IspRG548E
+			Vector3 force = GravityStrength * object->Mass;
+
+			static const double AirResistance = 0.15f;
+
+			object->LinearVelocity = object->LinearVelocity - (object->LinearVelocity * AirResistance * DeltaTime);
+			object->LinearVelocity += force / object->Mass * DeltaTime;
+		}
+	}
+}
+
 static void moveDynamics(std::vector<Object_Base3D*>& World, double DeltaTime)
 {
-	PROFILE_SCOPE("MoveDynamics");
+	ZoneScopedC(tracy::Color::AntiqueWhite);
 
 	for (Object_Base3D* object : World)
 		if (object->PhysicsDynamics)
@@ -28,7 +51,7 @@ static void moveDynamics(std::vector<Object_Base3D*>& World, double DeltaTime)
 
 static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTime)
 {
-	PROFILE_SCOPE("ResolveCollisions");
+	ZoneScopedC(tracy::Color::AntiqueWhite);
 
 	std::vector<Collision> collisions;
 
@@ -138,27 +161,9 @@ static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTi
 
 static void step(std::vector<Object_Base3D*>& World, double DeltaTime)
 {
-	PROFILE_SCOPE("PhysicsStep");
+	ZoneScopedC(tracy::Color::AntiqueWhite);
 
-	Profiler::Start("ApplyGlobalForces");
-	for (Object_Base3D* object : World)
-	{
-		object->Mass = object->Density * object->Size.X * object->Size.Y * object->Size.Z;
-
-		if (object->PhysicsDynamics)
-		{
-			static Vector3 GravityStrength{ 0.f, -50.f, 0.f };
-
-			// 19/09/2024 https://www.youtube.com/watch?v=-_IspRG548E
-			Vector3 force = GravityStrength * object->Mass;
-
-			static const double AirResistance = 0.15f;
-
-			object->LinearVelocity = object->LinearVelocity - (object->LinearVelocity * AirResistance * DeltaTime);
-			object->LinearVelocity += force / object->Mass * DeltaTime;
-		}
-	}
-	Profiler::Stop();
+	applyGlobalForces(World, DeltaTime);
 
 	moveDynamics(World, DeltaTime);
 

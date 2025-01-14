@@ -3,7 +3,8 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtx/vector_angle.hpp>
- 
+#include <tracy/Tracy.hpp> 
+
 #include "gameobject/Camera.hpp"
 #include "datatype/Vector3.hpp"
 #include "UserInput.hpp"
@@ -50,6 +51,8 @@ void Object_Camera::Update(double)
 
 glm::mat4 Object_Camera::GetMatrixForAspectRatio(float AspectRatio) const
 {
+	ZoneScoped;
+
 	glm::vec3 position = glm::vec3(this->Transform[3]);
 	glm::vec3 forwardVec = glm::vec3(this->Transform[2]);
 

@@ -10,11 +10,8 @@ that SOMEHOW works without crashing atleast 50 times a frame.
 
 Anyway, here is a small tour:
 
-- All shader files have a file extension of one of the following: .vert, .frag
-- The "main" shaders are the two worldUber.vert and worldUber.frag ones
 - "phoenix.conf" contains some configuration. Set "Developer" to "false" to disable the debug UIs.
 - WASD to move horizontally, Q/E to move down/up. Left-click to look around. Right-click to stop. LShift to move slower.
-- Hold `R` to disable distance culling
 - Press `L` to dump GameObject API.
 - `K` to reload all shaders, `I` to reload configuration
 - F11 to toggle fullscreen.
@@ -28,40 +25,66 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 	14/11/2024
 
 	This Main file is in the "Player" or "Application" layer in my head, so I don't really care
-	that's it's messy.
+	that it's messy.
 
 */
 
-#define GLM_ENABLE_EXPERIMENTAL
-#define SDL_MAIN_HANDLED
+/*
+	
+	07/01/2025
 
-#define PHX_MAIN_HANDLECRASH(c, expr) catch (c Error) { handleCrash(Error##expr, #c); }
+	When an exception is thrown, generally it is either always fatal, or fatal contextually.
+	For example, Luau APIs may throw exceptions, which are caught by Luau exception handlers,
+	terminating the Script thread without killing the Engine. APIs such as `GameObject.Parent`
+	from the Luau side, i.e. `GameObject::SetParent` from the Engine side, are fatal only to the
+	Engine, intentionally. `Log::Error` is not fatal.
+	
+*/
+
+#define GLM_ENABLE_EXPERIMENTAL
+
+// `return 1` to indicate exit failure
+// technically we should never fail to exit gracefully though, we are
+// just indicating a fatal error occurred that forced the engine to
+// quit
+#define PHX_MAIN_HANDLECRASH(c, expr) catch (c Error) { handleCrash(Error##expr, #c); return 1; }
 
 #define PHX_MAIN_CRASHHANDLERS PHX_MAIN_HANDLECRASH(std::string, ) \
 PHX_MAIN_HANDLECRASH(const char*, ) \
 PHX_MAIN_HANDLECRASH(std::bad_alloc, .what() + std::string(": System may have run out of memory")) \
 PHX_MAIN_HANDLECRASH(nlohmann::json::type_error, .what()) \
 PHX_MAIN_HANDLECRASH(nlohmann::json::parse_error, .what()) \
-PHX_MAIN_HANDLECRASH(std::exception, .what()); \
+//PHX_MAIN_HANDLECRASH(std::exception, .what()); \
+
+#include <filesystem>
 
 #include <ImGuiFD/ImGuiFD.h>
 
-#include <filesystem>
 #include <imgui/backends/imgui_impl_opengl3.h>
-#include <imgui/backends/imgui_impl_sdl2.h>
+#include <imgui/backends/imgui_impl_sdl3.h>
+#include <imgui_internal.h>
+
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtx/vector_angle.hpp>
 
+#include <SDL3/SDL_messagebox.h>
+#include <SDL3/SDL_keyboard.h>
+#include <SDL3/SDL_mouse.h>
+#include <SDL3/SDL_init.h>
+
+#include <tracy/Tracy.hpp>
+
 #include "Engine.hpp"
+
+#include "asset/SceneFormat.hpp"
+#include "gameobject/Script.hpp"
 
 #include "GlobalJsonConfig.hpp"
 #include "UserInput.hpp"
 #include "Utilities.hpp"
-#include "Profiler.hpp"
 #include "FileRW.hpp"
 #include "Editor.hpp"
 #include "Log.hpp"
-#include "asset/SceneFormat.hpp"
 
 static bool FirstDragFrame = false;
 
@@ -70,42 +93,62 @@ static bool MouseCaptured = false;
 
 static ImGuiIO* GuiIO = nullptr;
 
-static const float MouseSensitivity = 100.0f;
+static const float MouseSensitivity = 100.f;
 static const float MovementSpeed = 15.f;
 
 static Editor* EditorContext = nullptr;
-static EngineObject* EngineInstance = nullptr;
 
-static int PrevMouseX, PrevMouseY = 0;
+static float PrevMouseX, PrevMouseY = 0;
 
-static glm::tvec3<double, glm::highp> CamForward = glm::vec3(0.f, 0.f, -1.f);
+static glm::vec3 CamForward = glm::vec3(0.f, 0.f, -1.f);
 
-// 16/11/2024
-// https://stackoverflow.com/a/5167641/16875161
-static std::vector<std::string> stringSplit(const std::string& s, const std::string& seperator)
+static bool WasTracyLaunched = false;
+
+#ifdef _WIN32
+
+#define popen _popen
+#define pclose _pclose
+
+// 13/01/2025 windows and it's quirkyness
+#define LAUNCH_TRACY_CMD "\"Vendor\\tracy\\profiler\\build\\Release\\tracy-profiler.exe\" -a 127.0.0.1"
+
+#else
+
+#define LAUNCH_TRACY_CMD "\"Vendor/tracy/profiler/build/Release/tracy-profiler.exe\" -a 127.0.0.1"
+
+#endif
+
+// 13/01/2025: https://stackoverflow.com/a/478960
+static std::string exec(const char* cmd)
 {
-	if (s.find(seperator) == std::string::npos)
-		return { s };
+	std::array<char, 128> buffer{ 0 };
+	std::string result;
+	std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
 
-	std::vector<std::string> output;
+	if (!pipe)
+		throw std::runtime_error("popen() failed!");
 
-	std::string::size_type prev_pos = 0, pos = 0;
+	while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe.get()) != nullptr)
+		result += buffer.data();
 
-	while ((pos = s.find(seperator, pos)) != std::string::npos)
-	{
-		std::string substring(s.substr(prev_pos, pos - prev_pos));
-
-		output.push_back(substring);
-
-		prev_pos = ++pos;
-	}
-
-	output.push_back(s.substr(prev_pos, pos - prev_pos)); // Last word
-
-	return output;
+	return result;
 }
 
-static int findArgumentInCliArgs(
+static void launchTracy()
+{
+	if (WasTracyLaunched)
+		throw("Tried to launch Tracy twice in one session");
+	WasTracyLaunched = true;
+
+	std::thread(
+		[]()
+		{
+			exec(LAUNCH_TRACY_CMD);
+		}
+	).detach();
+}
+
+static int findCmdLineArgument(
 	int ArgCount,
 	char** Arguments,
 	const char* SeekingArgument
@@ -120,15 +163,19 @@ static int findArgumentInCliArgs(
 	}
 
 	// argument not found
-	return 0;
+	return -1;
 }
 
 static void handleInputs(Reflection::GenericValue Data)
 {
+	ZoneScoped;
+
 	double deltaTime = Data.AsDouble();
 
 	if (EngineJsonConfig.value("Developer", false))
 		EditorContext->Update(deltaTime);
+
+	Engine* EngineInstance = Engine::Get();
 
 	Object_Camera* camera = EngineInstance->Workspace->GetSceneCamera();
 	SDL_Window* window = EngineInstance->Window;
@@ -137,7 +184,7 @@ static void handleInputs(Reflection::GenericValue Data)
 
 	if (camera->UseSimpleController)
 	{
-		static const glm::tvec3<double, glm::highp> UpVec = Vector3::yAxis;
+		static const glm::vec3 UpVec = Vector3::yAxis;
 
 		if (!UserInput::InputBeingSunk)
 		{
@@ -148,29 +195,29 @@ static void handleInputs(Reflection::GenericValue Data)
 
 			Vector3 displacement{};
 
-			if (UserInput::IsKeyDown(SDLK_w))
+			if (UserInput::IsKeyDown(SDLK_W))
 				displacement += Vector3(0, 0, displacementSpeed);
 
-			if (UserInput::IsKeyDown(SDLK_a))
+			if (UserInput::IsKeyDown(SDLK_A))
 				displacement += Vector3(displacementSpeed, 0, 0);
 
-			if (UserInput::IsKeyDown(SDLK_s))
+			if (UserInput::IsKeyDown(SDLK_S))
 				displacement += Vector3(0, 0, -displacementSpeed);
 
-			if (UserInput::IsKeyDown(SDLK_d))
+			if (UserInput::IsKeyDown(SDLK_D))
 				displacement += Vector3(-displacementSpeed, 0, 0);
 
-			if (UserInput::IsKeyDown(SDLK_q))
+			if (UserInput::IsKeyDown(SDLK_Q))
 				displacement += Vector3(0, -displacementSpeed, 0);
 
-			if (UserInput::IsKeyDown(SDLK_e))
+			if (UserInput::IsKeyDown(SDLK_E))
 				displacement += Vector3(0, displacementSpeed, 0);
 
 			camera->Transform = glm::translate(camera->Transform, (glm::vec3)displacement);
 		}
 
-		int mouseX;
-		int mouseY;
+		float mouseX;
+		float mouseY;
 
 		uint32_t activeMouseButton = SDL_GetMouseState(&mouseX, &mouseY);
 
@@ -180,7 +227,7 @@ static void handleInputs(Reflection::GenericValue Data)
 			// (Otherwise it flickers)
 			// 22/08/2024
 			ImGui::SetMouseCursor(ImGuiMouseCursor_None);
-			PHX_SDL_CALL(SDL_ShowCursor, SDL_DISABLE);
+			PHX_SDL_CALL(SDL_HideCursor);
 
 			int windowSizeX, windowSizeY;
 
@@ -188,58 +235,58 @@ static void handleInputs(Reflection::GenericValue Data)
 
 			if (FirstDragFrame)
 			{
-				SDL_SetWindowMouseGrab(window, SDL_TRUE);
+				SDL_SetWindowMouseGrab(window, true);
 
-				SDL_WarpMouseInWindow(nullptr, windowSizeX / 2, windowSizeY / 2);
+				SDL_WarpMouseInWindow(nullptr, windowSizeX / 2.f, windowSizeY / 2.f);
 
-				mouseX, mouseY = windowSizeX / 2, windowSizeY / 2;
+				mouseX, mouseY = windowSizeX / 2.f, windowSizeY / 2.f;
 				PrevMouseX, PrevMouseY = mouseX, mouseY;
 
 				FirstDragFrame = false;
 			}
 
-			int deltaMouseX = PrevMouseX - mouseX;
-			int deltaMouseY = PrevMouseY - mouseY;
+			float deltaMouseX = PrevMouseX - mouseX;
+			float deltaMouseY = PrevMouseY - mouseY;
 
-			double rotationX = MouseSensitivity * ((double)deltaMouseY - (windowSizeY / 2.0f)) / windowSizeY;
-			double rotationY = MouseSensitivity * ((double)deltaMouseX - (windowSizeX / 2.0f)) / windowSizeX;
+			float rotationX = MouseSensitivity * (deltaMouseY - (windowSizeY / 2.f)) / windowSizeY;
+			float rotationY = MouseSensitivity * (deltaMouseX - (windowSizeX / 2.f)) / windowSizeX;
 			rotationX += 50.f; // TODO 22/08/2024: Why??
 			rotationY += 50.f;
 
-			glm::tvec3<double, glm::highp> newForward = glm::rotate(
+			glm::vec3 newForward = glm::rotate(
 				CamForward,
 				glm::radians(rotationX),
 				glm::normalize(glm::cross(CamForward, UpVec))
 			);
 
-			if (abs(glm::angle(newForward, UpVec) - glm::radians(90.0f)) <= glm::radians(85.0f))
+			if (abs(glm::angle(newForward, UpVec) - glm::radians(90.f)) <= glm::radians(85.f))
 				CamForward = newForward;
 
 			CamForward = glm::rotate(CamForward, glm::radians(-rotationY), UpVec);
 
-			glm::tvec3<double, glm::highp> position{ camera->Transform[3] };
+			glm::vec3 position{ camera->Transform[3] };
 
 			camera->Transform = glm::lookAt(position, position + CamForward, UpVec);
 
 			// Keep the mouse in the window.
 			// Teleport it to the other side if it hits the edge.
 
-			int newMouseX = mouseX, newMouseY = mouseY;
+			float newMouseX = mouseX, newMouseY = mouseY;
 
 			if (mouseX <= 10)
-				newMouseX = windowSizeX - 20;
+				newMouseX = static_cast<float>(windowSizeX - 20);
 
 			if (mouseX >= windowSizeX - 10)
 				newMouseX = 20;
 
 			if (mouseY <= 10)
-				newMouseY = windowSizeY - 20;
+				newMouseY = static_cast<float>(windowSizeY - 20);
 
 			if (mouseY >= windowSizeY - 10)
 				newMouseY = 20;
 
 			if (UserInput::InputBeingSunk)
-				newMouseX, newMouseY = windowSizeX / 2, windowSizeY / 2;
+				newMouseX, newMouseY = windowSizeX / 2.f, windowSizeY / 2.f;
 
 			if (newMouseX != mouseX || newMouseY != mouseY)
 			{
@@ -251,15 +298,15 @@ static void handleInputs(Reflection::GenericValue Data)
 			if (activeMouseButton & SDL_BUTTON_RMASK)
 			{
 				MouseCaptured = false;
-				SDL_WarpMouseInWindow(nullptr, windowSizeX / 2, windowSizeY / 2);
+				SDL_WarpMouseInWindow(nullptr, windowSizeX / 2.f, windowSizeY / 2.f);
 			}
 		}
 		else
 		{
 			if (!FirstDragFrame)
 			{
-				PHX_SDL_CALL(SDL_ShowCursor, SDL_ENABLE);
-				SDL_SetWindowMouseGrab(window, SDL_FALSE);
+				PHX_SDL_CALL(SDL_ShowCursor);
+				SDL_SetWindowMouseGrab(window, false);
 
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
 
@@ -278,34 +325,34 @@ static void handleInputs(Reflection::GenericValue Data)
 		// `input_mouse_setlocked` Luau API 21/09/2024
 		if (Object_Script::s_WindowGrabMouse && !UserInput::InputBeingSunk)
 		{
-			SDL_SetWindowMouseGrab(window, SDL_TRUE);
+			SDL_SetWindowMouseGrab(window, true);
 
-			PHX_SDL_CALL(SDL_ShowCursor, SDL_DISABLE);
+			PHX_SDL_CALL(SDL_ShowCursor);
 			ImGui::SetMouseCursor(ImGuiMouseCursor_None);
 
-			int mouseX = 0, mouseY = 0;
+			float mouseX = 0, mouseY = 0;
 
 			SDL_GetMouseState(&mouseX, &mouseY);
 
 			// Keep the mouse in the window.
 			// Teleport it to the other side if it hits the edge.
 
-			int newMouseX = mouseX, newMouseY = mouseY;
+			float newMouseX = mouseX, newMouseY = mouseY;
 
 			if (mouseX <= 10)
-				newMouseX = EngineInstance->WindowSizeX - 20;
+				newMouseX = static_cast<float>(EngineInstance->WindowSizeX - 20);
 
 			if (mouseX >= EngineInstance->WindowSizeX - 10)
 				newMouseX = 20;
 
 			if (mouseY <= 10)
-				newMouseY = EngineInstance->WindowSizeY - 20;
+				newMouseY = static_cast<float>(EngineInstance->WindowSizeY - 20);
 
 			if (mouseY >= EngineInstance->WindowSizeY - 10)
 				newMouseY = 20;
 
 			if (UserInput::InputBeingSunk)
-				newMouseX, newMouseY = EngineInstance->WindowSizeX / 2, EngineInstance->WindowSizeY / 2;
+				newMouseX, newMouseY = EngineInstance->WindowSizeX / 2.f, EngineInstance->WindowSizeY / 2.f;
 
 			if (newMouseX != mouseX || newMouseY != mouseY)
 			{
@@ -316,9 +363,9 @@ static void handleInputs(Reflection::GenericValue Data)
 		}
 		else
 		{
-			SDL_SetWindowMouseGrab(window, SDL_FALSE);
+			SDL_SetWindowMouseGrab(window, false);
 
-			PHX_SDL_CALL(SDL_ShowCursor, SDL_ENABLE);
+			PHX_SDL_CALL(SDL_ShowCursor);
 			ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
 		}
 	}
@@ -331,52 +378,6 @@ static void handleInputs(Reflection::GenericValue Data)
 		}
 	else
 		PreviouslyPressingF11 = false;
-}
-
-static char* LevelLoadPathBuf;
-static char* LevelSavePathBuf;
-
-static void LoadLevel(const std::string& LevelPath)
-{
-	Log::Info(std::vformat("Loading scene: '{}'", std::make_format_args(LevelPath)));
-
-	Object_Workspace* workspace = EngineInstance->Workspace;
-
-	GameObject* prevModel = workspace->GetChild("Level");
-
-	if (prevModel)
-		prevModel->Destroy();
-
-	GameObject* levelModel = GameObject::Create("Model");
-	levelModel->Name = "Level";
-	levelModel->SetParent(workspace);
-
-	bool loadSuccess = true;
-
-	// 11/09/2024
-	// Today marks the day a Luau script can move the Camera
-	// It'll set `UseSimpleController` to false so that `handleInputs` doesn't
-	// mess with it
-	// We set it to true here in case the next level does not have a Camera Control Script
-	// (cause I still want to look around :3)
-	// (without having to go to the Camera in the Hierarchy and manually re-enable it :3)
-	workspace->GetSceneCamera()->UseSimpleController = true;
-	// 21/09/2024
-	// Also reset the cam back to the origin because !!PHYSICS!! yay
-	// so if we fall down into the *VOID* we get sent back up
-	workspace->GetSceneCamera()->Transform = glm::mat4(1.f);
-
-	std::vector<GameObject*> objects = SceneFormat::Deserialize(FileRW::ReadFile(LevelPath), &loadSuccess);
-
-	if (loadSuccess)
-	{
-		for (GameObject* object : objects)
-			object->SetParent(levelModel);
-	}
-	else
-		throw("Failed to load level: " + SceneFormat::GetLastErrorString());
-
-	//MapLoader::LoadMapIntoObject(LevelPath, levelModel);
 }
 
 static double recurseGetTime(const nlohmann::json& root)
@@ -433,7 +434,11 @@ static void recurseProfilerUI(const nlohmann::json& tree)
 
 static void drawUI(Reflection::GenericValue Data)
 {
-	if (UserInput::IsKeyDown(SDLK_l) && !UserInput::InputBeingSunk)
+	ZoneScopedC(tracy::Color::DarkOliveGreen);
+
+	Engine* EngineInstance = Engine::Get();
+
+	if (UserInput::IsKeyDown(SDLK_L) && !UserInput::InputBeingSunk)
 	{
 		Log::Info("Dumping GameObject API...");
 
@@ -443,14 +448,14 @@ static void drawUI(Reflection::GenericValue Data)
 		Log::Info("API dump finished");
 	}
 
-	if (UserInput::IsKeyDown(SDLK_i) && !UserInput::InputBeingSunk)
+	if (UserInput::IsKeyDown(SDLK_I) && !UserInput::InputBeingSunk)
 	{
 		Log::Info("Reloading configuration...");
 
 		EngineInstance->LoadConfiguration();
 	}
 
-	if (UserInput::IsKeyDown(SDLK_k) && !UserInput::InputBeingSunk)
+	if (UserInput::IsKeyDown(SDLK_K) && !UserInput::InputBeingSunk)
 	{
 		Log::Info("Reloading shaders...");
 
@@ -461,225 +466,17 @@ static void drawUI(Reflection::GenericValue Data)
 
 	if (EditorContext)
 	{
-		//ImGui_ImplOpenGL3_NewFrame();
-		//ImGui_ImplSDL2_NewFrame();
-		//ImGui::NewFrame();
-
-		//ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
-
-		if (ImGui::Begin("Level"))
-		{
-			static std::string saveMessage;
-			static double saveMessageTimeLeft;
-
-			ImGui::InputText("Save target", LevelSavePathBuf, 64);
-
-			if (ImGui::Button("Save"))
-			{
-				GameObject* levelModel = EngineInstance->Workspace->GetChild("Level");
-
-				if (levelModel)
-				{
-					std::string levelSavePath(LevelSavePathBuf);
-
-					bool alreadyExists = false;
-					std::string prevFile = FileRW::ReadFile(levelSavePath, &alreadyExists);
-
-					if (alreadyExists && prevFile.find("#Version 2.00") == std::string::npos)
-					{
-						// V2 does not have full parity with V1 as of 02/09/2024
-						// (models)
-						saveMessage = "Not saving as that file already exists as a V1";
-						saveMessageTimeLeft = 1.5;
-					}
-					else
-					{
-						std::string serialized = SceneFormat::Serialize(levelModel->GetChildren(), levelSavePath);
-						FileRW::WriteFile(levelSavePath, serialized, true);
-
-						saveMessage = std::vformat("Saved as '{}'", std::make_format_args(levelSavePath));
-						saveMessageTimeLeft = 1.f;
-					}
-				}
-				else
-				{
-					saveMessage = "Save failed as Workspace had no `Level` child";
-					saveMessageTimeLeft = 1.f;
-				}
-			}
-
-			if (saveMessageTimeLeft > 0.f)
-			{
-				ImGui::Text(saveMessage.c_str());
-				saveMessageTimeLeft -= Data.AsDouble();
-			}
-
-			ImGui::InputText("Load target", LevelLoadPathBuf, 64);
-
-			if (ImGui::Button("Load"))
-				LoadLevel(LevelLoadPathBuf);
-
-		}
-		ImGui::End();
-
-		// always pop the snapshot, otherwise they'll build-up
-		std::unordered_map<std::string, double> snapshot = Profiler::PopSnapshot();
-
-		static nlohmann::json ProfileInfoHisto[100] = {};
-		static float FrameTimesHisto[100] = { 0 };
-
-		if (ImGui::Begin("Info") && snapshot.size() > 0)
+		if (ImGui::Begin("Info"))
 		{
 			ImGui::Text("FPS: %d", EngineInstance->FramesPerSecond);
 			ImGui::Text("Frame time: %dms", (int)std::ceil(EngineInstance->FrameTime * 1000));
 			ImGui::Text("Draw calls: %zi", EngineJsonConfig.value("renderer_drawcallcount", 0ull));
 
-			ImGui::Text("--- PROFILING ---");
-
-			static bool InfoCollectionPaused = true;
-
-			nlohmann::json profilerTimingsTree{};
-
-			if (!InfoCollectionPaused)
-				for (auto& it : snapshot)
-				{
-					nlohmann::json* last = &profilerTimingsTree;
-
-					std::vector<std::string> split = stringSplit(it.first, "/");
-
-					for (size_t catIndex = 0; catIndex < split.size(); catIndex++)
-						if (catIndex < split.size() - 1)
-						{
-							last = &((*last)[split[catIndex]]);
-							//(*last)["_t"] = it.second;
-						}
-						else
-							(*last)[split[catIndex]]["_t"] = it.second;
-				}
-
-			if (ProfileInfoHisto->size() == 0)
-				for (int i = 0; i < 100; i++)
-				{
-					ProfileInfoHisto[i] = nlohmann::json::object();
-					ProfileInfoHisto[i]["Frame"] = nlohmann::json::object();
-					ProfileInfoHisto[i]["Frame"]["_t"] = 0.f;
-				}
-
-			if (!InfoCollectionPaused)
-			{
-				ProfileInfoHisto[99] = profilerTimingsTree;
-				FrameTimesHisto[99] = profilerTimingsTree["Frame"]["_t"];
-			}
-
-			if (!InfoCollectionPaused)
-				for (int i = 0; i < 99; i++)
-				{
-					ProfileInfoHisto[i] = ProfileInfoHisto[i + 1];
-					FrameTimesHisto[i] = FrameTimesHisto[i + 1];
-				}
-
-			static auto FrameTimeHistoPeeker = [](void* data, int idx)
-				-> float
-				{
-					return ((float*)data)[idx];
-				};
-
-			ImGui::PlotHistogram("MS", FrameTimeHistoPeeker, FrameTimesHisto, 100, 0, 0, 1/120.f, 1/30.f);
-
-			static int FocusedProfilingInfoIdx = 99;
-
-			if (ImGui::IsItemClicked())
-			{
-				int mouseX = 0;
-				SDL_GetMouseState(&mouseX, NULL);
-
-				ImVec2 min = ImGui::GetItemRectMin() + ImGui::GetStyle().FramePadding;
-				ImVec2 max = ImGui::GetItemRectMax() - ImGui::GetStyle().FramePadding;
-
-				const float t = std::clamp((ImGui::GetIO().MousePos.x - min.x) / (max.x - min.x), 0.0f, 0.9999f);
-				FocusedProfilingInfoIdx = (int)(t * 100);
-			}
-
-			if (InfoCollectionPaused && ImGui::Button("Unpause"))
-				InfoCollectionPaused = false;
-
-			else if (!InfoCollectionPaused && ImGui::Button("Pause"))
-				InfoCollectionPaused = true;
-
-			recurseProfilerUI(ProfileInfoHisto[FocusedProfilingInfoIdx]);
-
-			if (ImGui::Button("Save"))
-				ImGuiFD::OpenDialog("SaveProfilingData", ImGuiFDMode_SaveFile, "", "*.json");
-
-			if (ImGui::Button("Load"))
-				ImGuiFD::OpenDialog("LoadProfilingData", ImGuiFDMode_LoadFile, "", "*.json");
-
+			// 13/01/2025 hi hihihi hihiihii
+			if (!WasTracyLaunched && ImGui::Button("Start Profiling"))
+				launchTracy();
 		}
 		ImGui::End();
-
-		if (ImGuiFD::BeginDialog("SaveProfilingData"))
-		{
-			if (ImGuiFD::ActionDone())
-			{
-				if (ImGuiFD::SelectionMade())
-				{
-					std::string result = ImGuiFD::GetResultStringRaw();
-					std::string contents = "";
-
-					if (result.find(".json") == std::string::npos)
-						result += ".json";
-
-					result = ("./" + result).c_str();
-
-					for (int i = 0; i < 100; i++)
-						contents += ProfileInfoHisto[i].dump(-1) + '\n';
-
-					try
-					{
-						FileRW::WriteFile(result, contents, false);
-					}
-					catch (std::string err)
-					{
-						Log::Error("While trying to save profiling data: " + err);
-					}
-				}
-
-				ImGuiFD::CloseCurrentDialog();
-			}
-
-			ImGuiFD::EndDialog();
-		}
-
-		if (ImGuiFD::BeginDialog("LoadProfilingData"))
-		{
-			if (ImGuiFD::ActionDone())
-			{
-				if (ImGuiFD::SelectionMade())
-				{
-					std::string result = ImGuiFD::GetSelectionPathString(0);
-					bool exists = false;
-					std::string contents = FileRW::ReadFile(result, &exists, false);
-
-					if (exists)
-						for (int i = 0; i < 100; i++)
-						{
-							size_t nextLine = contents.find_first_of('\n');
-
-							std::string substr = contents.substr(0, nextLine);
-
-							ProfileInfoHisto[i] = nlohmann::json::parse(substr);
-
-							contents = contents.substr(nextLine + 1);
-						}
-					else
-						Log::Error("Couldn't load profiling data from file " + result);
-				}
-
-				ImGuiFD::CloseCurrentDialog();
-			}
-
-			ImGuiFD::EndDialog();
-		}
 
 		if (ImGui::Begin("Settings"))
 		{
@@ -761,8 +558,38 @@ static void drawUI(Reflection::GenericValue Data)
 	}
 }
 
-static void Application(int argc, char** argv)
+static void handleCrash(const std::string& Error, const std::string& ExceptionType)
 {
+	// Log Size Limit Exceeded Throwing Exception
+	if (!Error.starts_with("LSLETE"))
+	{
+		Log::Append(std::vformat(
+			"CRASH - {}: {}",
+			std::make_format_args(ExceptionType, Error)
+		));
+		Log::Save();
+	}
+
+	std::string errMessage = std::vformat(
+		"An unexpected error occurred, and the application will now close. Details: \n\n{}\n\n{}",
+		std::make_format_args(
+			Error,
+			"If this is the first time this has happened, please re-try. Otherwise, contact the developers."
+		)
+	);
+
+	SDL_ShowSimpleMessageBox(
+		SDL_MESSAGEBOX_ERROR,
+		"Fatal Error",
+		errMessage.c_str(),
+		nullptr
+	);
+}
+
+static void begin(int argc, char** argv)
+{
+	Engine* EngineInstance = Engine::Get();
+
 	const char* imGuiVersion = IMGUI_VERSION;
 
 	Log::Info(std::vformat(
@@ -778,10 +605,9 @@ static void Application(int argc, char** argv)
 	ImGui::CreateContext();
 
 	GuiIO = &ImGui::GetIO();
-	//GuiIO->ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	ImGui::StyleColorsDark();
 
-	if (!ImGui_ImplSDL2_InitForOpenGL(
+	if (!ImGui_ImplSDL3_InitForOpenGL(
 			EngineInstance->Window,
 			EngineInstance->RendererContext.GLContext
 	))
@@ -792,13 +618,10 @@ static void Application(int argc, char** argv)
 
 	EditorContext = EngineJsonConfig.value("Developer", false) ? new Editor(&EngineInstance->RendererContext) : nullptr;
 	
-	LevelLoadPathBuf = BufferInitialize(64, "levels/de_dust2.world");
-	LevelSavePathBuf = BufferInitialize(64, "levels/save.world");
-
 	const char* mapFileFromArgs{};
 	bool hasMapFromArgs = false;
 
-	int mapFileArgIdx = findArgumentInCliArgs(argc, argv, "-loadmap");
+	int mapFileArgIdx = findCmdLineArgument(argc, argv, "-loadmap");
 
 	if (mapFileArgIdx > 0)
 	{
@@ -835,84 +658,45 @@ static void Application(int argc, char** argv)
 	if (roots[0]->ClassName != "DataModel")
 		throw("Root object was not a DataModel!");
 
-	GameObject::s_DataModel->CallFunction("Merge", { roots[0]->ToGenericValue() });
-
-	//LoadLevel(mapFile);
+	GameObject::s_DataModel->MergeWith(roots[0]);
 
 	EngineInstance->OnFrameStart.Connect(handleInputs);
 	EngineInstance->OnFrameRenderGui.Connect(drawUI);
 
 	EngineInstance->Start();
-
-	// After the Main Loop exits
-
-	ImGui_ImplOpenGL3_Shutdown();
-	ImGui_ImplSDL2_Shutdown();
-
-	SDL_Quit();
-
-	// Engine destructor is called as the `EngineObject`'s scope terminates in `main`.
-}
-
-static void handleCrash(const std::string& Error, const std::string& ExceptionType)
-{
-	// Log Size Limit Exceeded Throwing Exception
-	if (!Error.starts_with("LSLETE"))
-	{
-		Log::Append(std::vformat(
-			"CRASH - {}: {}",
-			std::make_format_args(ExceptionType, Error)
-		));
-		Log::Save();
-	}
-
-	std::string errMessage = std::vformat(
-		"An unexpected error occurred, and the application will now close. Details: \n\n{}\n\n{}",
-		std::make_format_args(
-			Error,
-			"If this is the first time this has happened, please re-try. Otherwise, contact the developers."
-		)
-	);
-
-	SDL_ShowSimpleMessageBox(
-		SDL_MESSAGEBOX_ERROR,
-		"Fatal Engine Error",
-		errMessage.c_str(),
-		nullptr
-	);
 }
 
 int main(int argc, char** argv)
 {
-	Log::Info("Application startup...");
+	Log::Info("Application startup");
 
 	Log::Info(std::format("Phoenix Engine, Main.cpp last compiled: {}", __DATE__));
 
-	SDL_Window* window = nullptr;
-
 	try
 	{
-		EngineObject engine{};
-
-		try
+		if (findCmdLineArgument(argc, argv, "-tracyim") > 0)
 		{
-			engine.Initialize();
-			EngineInstance = &engine;
-			window = engine.Window;
+			launchTracy();
 
-			//Engine->MSAASamples = 2;
-
-			Application(argc, argv);
-
-			Log::Save(); // in case FileRW::WriteFile throws an exception
+			// took ~220ms on my machine for tracy to launch, double it and give it to the next person
+			// 13/01/2025
+			std::this_thread::sleep_for(std::chrono::milliseconds(400));
 		}
-		PHX_MAIN_CRASHHANDLERS;
-	} // 25/12/2024 in case Engine's Destructor throws an exception
+
+		// i thought about wrapping this in 2 scopes in case Engine's dtor
+		// throws an exception, but it can't seem to catch it regardless?
+		// 10/01/2025
+		Engine engine{};
+
+		engine.Initialize();
+
+		begin(argc, argv);
+
+		Log::Save(); // in case FileRW::WriteFile throws an exception
+	}
 	PHX_MAIN_CRASHHANDLERS;
 
-	// this occurs AFTER engine destructor is called
-	// 15/12/2024
-	Log::Info("Application shutting down...");
+	Log::Info("Application shutdown");
 
 	Log::Save();
 }

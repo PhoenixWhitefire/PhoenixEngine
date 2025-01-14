@@ -378,9 +378,5 @@ FodyWeavers.xsd
 /PhoenixEngine.vcxproj.filters
 /Vendor/Vendor.vcxproj
 /Vendor/Vendor.vcxproj.filters
-/Vendor/imgui/docs
-/Vendor/imgui/.github
-/Vendor/imgui/examples
-/vendor/imgui/misc/debuggers/imgui.natvis
 /Build
 *.lnk

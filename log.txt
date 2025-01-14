@@ -1,25 +1,22 @@
-[INFO]: Application startup...
-[INFO]: Phoenix Engine, Main.cpp last compiled: Dec 31 2024
+[INFO]: Application startup
+[INFO]: Phoenix Engine, Main.cpp last compiled: Jan 13 2025
 [INFO]: Configuration loaded
 [INFO]: Requesting a Core OpenGL context with version 4.6
 [INFO]: Window created
+[INFO]: Initializing systems...
 [INFO]: Running OpenGL version 4.6
 [INFO]: Renderer initialized
-[INFO]: Creating initial DataModel...
-[INFO]: Engine constructed
+[INFO]: Initializing DataModel...
+[INFO]: Engine initialized
 [INFO]: Initializing Dear ImGui 1.91.7 WIP...
-[INFO]: Scene version is 2
-[INFO]: Scene loaded
 [INFO]: Final initializations...
 [INFO]: Main engine loop start
-[INFO]: Scene version is 2
-[INFO]: Scene loaded
 [WARN]: GL Debug callback:
 	Type: Performance
 	Severity: Medium
-	Message: Program/shader state performance warning: Vertex shader in program 4 is being recompiled based on GL state.
+	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
 	Source: OpenGL
-	Error ID: 131218
+	Error ID: 131154
 
 [WARN]: GL Debug callback:
 	Type: Performance
@@ -105,6 +102,14 @@
 	Source: OpenGL
 	Error ID: 131154
 
+[WARN]: GL Debug callback:
+	Type: Performance
+	Severity: Medium
+	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Source: OpenGL
+	Error ID: 131154
+
 [INFO]: Main loop exited
 [INFO]: Engine destructing...
-[INFO]: Application shutting down...
+[INFO]: Destroying DataModel...
+[INFO]: Application shutdown

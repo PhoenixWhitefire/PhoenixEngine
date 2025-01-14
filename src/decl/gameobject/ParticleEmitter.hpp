@@ -2,8 +2,6 @@
 
 #include "gameobject/Attachment.hpp"
 
-#include "render/ShaderManager.hpp"
-#include "render/GpuBuffers.hpp"
 #include "render/RendererScene.hpp"
 
 #include "datatype/ValueSequence.hpp"
@@ -19,6 +17,7 @@ public:
 	std::vector<RenderItem> GetRenderList();
 
 	bool EmitterEnabled = true;
+	bool ParticlesRelativeToEmitter = false;
 
 	uint32_t Rate = 50; //Particles to be spawned every second
 	//uint32_t MaxParticles = 500;
@@ -29,7 +28,7 @@ public:
 
 	ValueSequence<float> TransparencyOverTime;
 	ValueSequence<float> SizeOverTime;
-	ValueSequence<Vector3> VelocityOverTime;
+	ValueSequence<glm::vec3> VelocityOverTime;
 	
 	REFLECTION_DECLAREAPI;
 
@@ -43,7 +42,7 @@ private:
 
 		uint32_t Image{};
 
-		Vector3 Position{};
+		glm::vec3 Position{};
 	};
 
 	size_t m_GetUsableParticleIndex();

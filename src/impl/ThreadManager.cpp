@@ -1,5 +1,3 @@
-#include <SDL2/SDL_timer.h>
-
 #include "ThreadManager.hpp"
 
 static void _workerTaskRunner(Worker* ThisWorker)
@@ -10,7 +8,7 @@ static void _workerTaskRunner(Worker* ThisWorker)
 		{
 			ThisWorker->Status = WorkerStatus::WaitingForTask;
 
-			SDL_Delay(50); // TODO could probably have a better method for giving the CPU time to do other stuff
+			std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
 			continue;
 		}
@@ -34,13 +32,13 @@ void Worker::WaitForCurrentTaskFinish() const
 	uint32_t lastTask = this->TaskIdx;
 
 	while ((lastTask == this->TaskIdx) || (this->Status != WorkerStatus::RunningTask))
-		SDL_Delay(2);
+		std::this_thread::sleep_for(std::chrono::milliseconds(5));
 }
 
 void Worker::WaitForAllTasksFinish() const
 {
 	while (this->Status != WorkerStatus::WaitingForTask)
-		SDL_Delay(2);
+		std::this_thread::sleep_for(std::chrono::milliseconds(5));
 }
 
 std::vector<Worker*> ThreadManager::GetWorkers()

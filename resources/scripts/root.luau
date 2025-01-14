@@ -102,7 +102,8 @@ function Update()
 	
 	if imgui_button("Save World") then
 		imfd_open("SaveWorld", 1, "resources/scenes/", "*.world")
-		IntendedSaveWorldState = game:Clone()
+		IntendedSaveWorldState = game:Duplicate()
+		IntendedSaveWorldState.Parent = nil
 	end
 	
 	imfdOnSelectedCallback("SaveWorld", function(Path)
@@ -113,8 +114,7 @@ function Update()
 		IntendedSaveWorldState:Destroy()
 	end)
 	
-	local loadWorld = imgui_button("Load World (!)")
-	imgui_setitemtooltip("doesn't work right 25/12/2024")
+	local loadWorld = imgui_button("Load World")
 
 	if loadWorld then
 		imfd_open("LoadWorld", 0, "resources/scenes/", "*.world")
@@ -130,11 +130,11 @@ function Update()
 			v:Destroy()
 		end
 		
-		game:Merge(dm)
+		game:MergeWith(dm)
 	end)
 	
 	if imgui_button("Save Sub-Level") then
-		IntendedLevelState = workspace.Level:Clone()
+		IntendedLevelState = workspace.Level:Duplicate()
 		IntendedLevelState.Parent = nil
 		imfd_open("SaveSubLevel", 1, "resources/scenes/", "*.hxscene")
 	end

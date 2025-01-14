@@ -1,15 +1,20 @@
 #include <format>
 #include <glad/gl.h>
+#include <tracy/Tracy.hpp>
 
 #include "render/GpuBuffers.hpp"
 
 void GpuVertexArray::Initialize()
 {
+	ZoneScoped;
+
 	glGenVertexArrays(1, &m_GpuId);
 }
 
 void GpuVertexArray::Delete()
 {
+	ZoneScoped;
+
 	glDeleteVertexArrays(1, &m_GpuId);
 	m_GpuId = UINT32_MAX;
 }
@@ -23,6 +28,8 @@ void GpuVertexArray::LinkAttrib(
 	void* Offset
 ) const
 {
+	ZoneScoped;
+
 	this->Bind();
 	VertexBuffer.Bind();
 
@@ -35,16 +42,22 @@ void GpuVertexArray::LinkAttrib(
 
 void GpuVertexArray::Bind() const
 {
+	ZoneScoped;
+
 	glBindVertexArray(m_GpuId);
 }
 
 void GpuVertexArray::Unbind() const
 {
+	ZoneScoped;
+
 	glBindVertexArray(0);
 }
 
 void GpuVertexBuffer::Initialize()
 {
+	ZoneScoped;
+
 	glGenBuffers(1, &m_GpuId);
 	this->Bind();
 
@@ -53,12 +66,16 @@ void GpuVertexBuffer::Initialize()
 
 void GpuVertexBuffer::Delete()
 {
+	ZoneScoped;
+
 	glDeleteBuffers(1, &m_GpuId);
 	m_GpuId = UINT32_MAX;
 }
 
 void GpuVertexBuffer::SetBufferData(const std::vector<Vertex>& Vertices, BufferUsageHint UsageHint) const
 {
+	ZoneScoped;
+
 	this->Bind();
 
 	glBufferData(
@@ -73,16 +90,22 @@ void GpuVertexBuffer::SetBufferData(const std::vector<Vertex>& Vertices, BufferU
 
 void GpuVertexBuffer::Bind() const
 {
+	ZoneScoped;
+
 	glBindBuffer(GL_ARRAY_BUFFER, m_GpuId);
 }
 
 void GpuVertexBuffer::Unbind() const
 {
+	ZoneScoped;
+
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void GpuElementBuffer::Initialize()
 {
+	ZoneScoped;
+
 	glGenBuffers(1, &m_GpuId);
 	this->Bind();
 
@@ -93,12 +116,16 @@ void GpuElementBuffer::Initialize()
 
 void GpuElementBuffer::Delete()
 {
+	ZoneScoped;
+
 	glDeleteBuffers(1, &m_GpuId);
 	m_GpuId = UINT32_MAX;
 }
 
 void GpuElementBuffer::SetBufferData(const std::vector<GLuint>& Indices, BufferUsageHint UsageHint) const
 {
+	ZoneScoped;
+
 	this->Bind();
 
 	glBufferData(
@@ -113,21 +140,29 @@ void GpuElementBuffer::SetBufferData(const std::vector<GLuint>& Indices, BufferU
 
 void GpuElementBuffer::Bind() const
 {
+	ZoneScoped;
+
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_GpuId);
 }
 
 void GpuElementBuffer::Unbind() const
 {
+	ZoneScoped;
+
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
 GpuFrameBuffer::GpuFrameBuffer(int TargetWidth, int TargetHeight, int MSSamples, bool AttachRenderBuffer)
 {
+	ZoneScoped;
+
 	this->Initialize(TargetWidth, TargetHeight, MSSamples, AttachRenderBuffer);
 }
 
 void GpuFrameBuffer::Initialize(int TargetWidth, int TargetHeight, int MSSamples, bool AttachRenderBuffer)
 {
+	ZoneScoped;
+
 	this->Width = TargetWidth, this->Height = TargetHeight;
 
 	glGenFramebuffers(1, &m_GpuId);
@@ -198,6 +233,8 @@ void GpuFrameBuffer::Initialize(int TargetWidth, int TargetHeight, int MSSamples
 
 void GpuFrameBuffer::Delete()
 {
+	ZoneScoped;
+
 	glDeleteTextures(1, &GpuTextureId);
 	
 	if (m_RenderBufferId)
@@ -212,6 +249,8 @@ void GpuFrameBuffer::Delete()
 
 void GpuFrameBuffer::UpdateResolution(int NewWidth, int NewHeight)
 {
+	ZoneScoped;
+
 	this->Bind();
 	this->BindTexture();
 
@@ -238,20 +277,28 @@ void GpuFrameBuffer::UpdateResolution(int NewWidth, int NewHeight)
 
 void GpuFrameBuffer::Bind() const
 {
+	ZoneScoped;
+
 	glBindFramebuffer(GL_FRAMEBUFFER, m_GpuId);
 }
 
 void GpuFrameBuffer::Unbind() const
 {
+	ZoneScoped;
+
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void GpuFrameBuffer::BindTexture() const
 {
+	ZoneScoped;
+
 	glBindTexture(/*this->MSAASamples > 0 ? GL_TEXTURE_2D_MULTISAMPLE : */ GL_TEXTURE_2D, GpuTextureId);
 }
 
 void GpuFrameBuffer::UnbindTexture() const
 {
+	ZoneScoped;
+
 	glBindTexture(/*this->MSAASamples > 0 ? GL_TEXTURE_2D_MULTISAMPLE : */ GL_TEXTURE_2D, 0);
 }

@@ -1,17 +1,19 @@
+#include <SDL3/SDL_mouse.h>
+
 #include "UserInput.hpp"
 
-const uint8_t* KeyboardState = SDL_GetKeyboardState(NULL);
+const bool* KeyboardState = SDL_GetKeyboardState(NULL);
 
 bool UserInput::InputBeingSunk = false;
 
-bool UserInput::IsKeyDown(SDL_KeyCode Key)
+bool UserInput::IsKeyDown(SDL_Keycode Key)
 {
-	return KeyboardState[SDL_GetScancodeFromKey(Key)] == 1;
+	return KeyboardState[SDL_GetScancodeFromKey(Key, SDL_KMOD_NONE)] == 1;
 }
 
 bool UserInput::IsMouseButtonDown(bool Left)
 {
-	int x, y;
+	float x, y;
 	uint32_t buttons;
 
 	buttons = SDL_GetMouseState(&x, &y);

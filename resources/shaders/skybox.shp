@@ -1,4 +1,6 @@
 {
-    "Vertex": "skybox.vert",
-    "Fragment": "skybox.frag"
+  "Fragment": "shaders/skybox.frag",
+  "Geometry": "<NOT_SPECIFIED>",
+  "InheritUniformsOf": "",
+  "Vertex": "shaders/skybox.vert"
 }

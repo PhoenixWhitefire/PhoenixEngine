@@ -1,6 +1,6 @@
 #include <chrono>
 
-#include "src/decl/Utilities.hpp"
+#include "Utilities.hpp"
 
 static auto s_ChronoStartTime = std::chrono::high_resolution_clock::now();
 

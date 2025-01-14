@@ -1,5 +1,6 @@
 #include <format>
 #include <nljson.hpp>
+#include <tracy/Tracy.hpp>
 
 #include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
@@ -10,6 +11,9 @@ static const std::string MissingTexPath = "!Missing";
 
 void RenderMaterial::Reload()
 {
+	ZoneScoped;
+	ZoneTextF("%s", this->Name.c_str());
+
 	bool matExists = true;
 	std::string fileData = FileRW::ReadFile("materials/" + this->Name + ".mtl", &matExists);
 
@@ -143,30 +147,31 @@ void RenderMaterial::ApplyUniforms()
 		this->GetShader().SetUniform(it.first.c_str(), it.second);
 }
 
-MaterialManager::MaterialManager()
+static MaterialManager* s_Instance = nullptr;
+
+MaterialManager::~MaterialManager()
 {
-	this->LoadMaterialFromPath("error");
+	if (s_Instance == this)
+		s_Instance = nullptr;
 }
 
-static bool s_DidShutdown = false;
+void MaterialManager::Initialize()
+{
+	this->LoadMaterialFromPath("error");
+
+	s_Instance = this;
+}
 
 MaterialManager* MaterialManager::Get()
 {
-	if (s_DidShutdown)
-		throw("Tried to ::Get MaterialManager after it was ::Shutdown");
-
-	static MaterialManager inst;
-	return &inst;
-}
-
-void MaterialManager::Shutdown()
-{
-	//delete Get();
-	s_DidShutdown = true;
+	return s_Instance;
 }
 
 uint32_t MaterialManager::LoadMaterialFromPath(const std::string& Name)
 {
+	ZoneScoped;
+	ZoneTextF("%s", Name.c_str());
+
 	auto it = m_StringToMaterialId.find(Name);
 
 	if (it == m_StringToMaterialId.end())
@@ -203,6 +208,8 @@ uint32_t MaterialManager::LoadMaterialFromPath(const std::string& Name)
 
 void MaterialManager::SaveToPath(const RenderMaterial& material, const std::string& Name)
 {
+	ZoneScoped;
+
 	TextureManager* texManager = TextureManager::Get();
 
 	const Texture& colorMap = texManager->GetTextureResource(material.ColorMap);
@@ -259,7 +266,7 @@ void MaterialManager::SaveToPath(const RenderMaterial& material, const std::stri
 
 	std::string dateStr = std::to_string((uint32_t)ymd.day()) + "-"
 		+ std::to_string((uint32_t)ymd.month()) + "-"
-		+ std::to_string((int32_t)ymd.year()) + "\n";
+		+ std::to_string((int32_t)ymd.year());
 
 	std::string filePath = "materials/" + Name + ".mtl";
 

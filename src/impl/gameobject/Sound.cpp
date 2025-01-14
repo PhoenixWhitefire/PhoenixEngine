@@ -1,5 +1,5 @@
-#include <SDL2/SDL_audio.h>
-#include <SDL2/SDL.h>
+#include <SDL3/SDL_audio.h>
+#include <SDL3/SDL_init.h>
 
 #include "gameobject/Sound.hpp"
 #include "GlobalJsonConfig.hpp"
@@ -24,7 +24,7 @@ void Object_Sound::s_DeclareReflections()
 		return;
 	s_DidInitReflection = true;
 
-	if (SDL_Init(SDL_INIT_AUDIO) < 0)
+	if (!SDL_Init(SDL_INIT_AUDIO))
 		throw("Unabled to init SDL Audio subsystem: " + std::string(SDL_GetError()));
 
 	REFLECTION_INHERITAPI(Attachment);
@@ -49,7 +49,7 @@ void Object_Sound::s_DeclareReflections()
 
 			if (sound->AudioDeviceId != UINT32_MAX)
 			{
-				SDL_PauseAudioDevice(sound->AudioDeviceId, 1);
+				SDL_PauseAudioDevice(sound->AudioDeviceId);
 				SDL_CloseAudioDevice(sound->AudioDeviceId);
 			}
 
@@ -90,13 +90,14 @@ void Object_Sound::s_DeclareReflections()
 
 			//SDL_OpenAudio(&asset.Spec, NULL);
 
-			SDL_AudioSpec obtained{};
+			//SDL_AudioSpec obtained{};
 
-			sound->AudioDeviceId = SDL_OpenAudioDevice(NULL, 0, &asset->Spec, &obtained, SDL_AUDIO_ALLOW_ANY_CHANGE);
+			//sound->AudioDeviceId = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &asset->Spec, NULL, NULL);
 
-			if (sound->AudioDeviceId == 0)
-				throw("Could not `SDL_OpenAudioDevice`: " + std::string(SDL_GetError()));
+			//if (sound->AudioDeviceId == 0)
+			//	throw("Could not `SDL_OpenAudioDevice`: " + std::string(SDL_GetError()));
 
+			/*
 			//SDL_QueueAudio(1, asset.Data, asset.DataSize);
 			int qResult = SDL_QueueAudio(sound->AudioDeviceId, asset->Data, asset->DataSize);
 
@@ -107,6 +108,7 @@ void Object_Sound::s_DeclareReflections()
 			//SDL_PauseAudio(0);
 
 			//__debugbreak();
+			*/
 		}
 	);
 }

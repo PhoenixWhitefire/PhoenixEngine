@@ -20,6 +20,7 @@ local SwitchToFreecamNextFrame = 0
 local function reset()
 	CharacterController:InitDefault()
 	Character = CharacterController.Character
+	Character.Serializes = false
 	
 	Character.Parent = workspace
 	Character.Name = `Player`
@@ -78,7 +79,8 @@ function Update(DeltaTime)
 		
 		if input_keypressed("e") and TotalTime - lastSwitchedPerspectives > 0.25 then
 			lastSwitchedPerspectives = TotalTime
-			local bruh = Character:Clone()
+			local bruh = Character:Duplicate()
+			bruh.Name = "bruh"
 			bruh.Transform = Matrix.fromTranslation((Character.Transform * Matrix.fromTranslation(0, 0, 7)).Position)
 			bruh.LinearVelocity = Character.Transform.Forward * 100
 			bruh.PhysicsDynamics = true
@@ -86,7 +88,7 @@ function Update(DeltaTime)
 		end
 	end
 	
-	--workspace.Level.woodplanks.Transform *= Matrix.fromEulerAnglesXYZ(0, math.rad(DeltaTime * 15), 0)
+	workspace.Level.woodplanks.Transform *= Matrix.fromEulerAnglesXYZ(0, math.rad(DeltaTime * 15), 0)
 	
 	--RoomGen()
 	--NodeEditor()

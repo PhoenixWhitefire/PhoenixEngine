@@ -2,22 +2,29 @@
 
 #include <filesystem>
 #include <nljson.hpp>
-#include <SDL2/SDL_video.h>
+#include <SDL3/SDL_video.h>
 
-#include "gameobject/GameObjects.hpp"
 #include "render/Renderer.hpp"
+
+#include "asset/MaterialManager.hpp"
+#include "asset/TextureManager.hpp"
+#include "asset/ShaderManager.hpp"
+#include "asset/MeshProvider.hpp"
+
+#include "gameobject/DataModel.hpp"
+#include "gameobject/Workspace.hpp"
 
 #include "datatype/Vector2.hpp"
 #include "datatype/Event.hpp"
 #include "PhysicsEngine.hpp"
 
 // TODO: cleanup structure of public vs private
-class EngineObject
+class Engine
 {
 public:
-	~EngineObject();
+	~Engine();
 
-	static EngineObject* Get();
+	static Engine* Get();
 
 	// Initialize Engine systems, can throw exceptions
 	void Initialize();
@@ -54,14 +61,21 @@ public:
 	int FpsCap = 60;
 
 	int FramesPerSecond = 0;
-	double FrameTime = 0.0f;
+	double FrameTime = 0.f;
 
 	bool VSync = false;
 
-	double RunningTime = 0.0f;
+	double RunningTime = 0.f;
 
 private:
 	int m_DrawnFramesInSecond = -1;
 
-	uint32_t m_SDLWindowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
+	uint32_t m_SDLWindowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY;
+
+	MaterialManager m_MaterialManager;
+	TextureManager m_TextureManager;
+	ShaderManager m_ShaderManager;
+	MeshProvider m_MeshProvider;
+
+	GameObjectRef<Object_DataModel>* m_DataModelRef = nullptr;
 };

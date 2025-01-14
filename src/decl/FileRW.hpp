@@ -17,27 +17,16 @@ namespace FileRW
 
 	void WriteFile(
 		const std::string& FilePath,
-		const std::vector<int8_t>& BinaryContents,
-		bool InResourcesDirectory
+		const std::string& Contents,
+		bool InResourcesDirectory,
+		bool* SuccessPtr = nullptr
 	);
 	// Writes to a path, creating directories along the way if they do not exist
 	void WriteFileCreateDirectories(
 		const std::string& FilePath,
-		const std::vector<int8_t>& BinaryContents,
-		bool InResourcesDirectory
-	);
-
-	// Helper functions - Convert `std::string` to binary data
-	// (i.e. `std::vector<int8_t>`)
-	void WriteFile(
-		const std::string& FilePath,
-		const std::string& FileContents,
-		bool InResourcesDirectory
-	);
-	void WriteFileCreateDirectories(
-		const std::string& FilePath,
-		const std::string& FileContents,
-		bool InResourcesDirectory
+		const std::string& Contents,
+		bool InResourcesDirectory,
+		bool* SuccessPtr = nullptr
 	);
 
 	std::string GetAbsolutePath(const std::string&);

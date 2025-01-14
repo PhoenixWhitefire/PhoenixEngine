@@ -24,6 +24,7 @@ void Object_ParticleEmitter::s_DeclareReflections()
 	REFLECTION_INHERITAPI(Attachment);
 
 	REFLECTION_DECLAREPROP_SIMPLE(Object_ParticleEmitter, EmitterEnabled, Bool);
+	REFLECTION_DECLAREPROP_SIMPLE(Object_ParticleEmitter, ParticlesRelativeToEmitter, Bool);
 
 	REFLECTION_DECLAREPROP(
 		"Rate",
@@ -89,9 +90,9 @@ Object_ParticleEmitter::Object_ParticleEmitter()
 
 	this->PossibleImages = { 1 };
 
-	this->VelocityOverTime.InsertKey(ValueSequenceKeypoint<Vector3>(0, Vector3(0, 5, 0)));
-	this->VelocityOverTime.InsertKey(ValueSequenceKeypoint<Vector3>(0.75, Vector3(0, 2.5, 0)));
-	this->VelocityOverTime.InsertKey(ValueSequenceKeypoint<Vector3>(1, Vector3(0, 0, 0)));
+	this->VelocityOverTime.InsertKey(ValueSequenceKeypoint<glm::vec3>(0.00f, glm::vec3(0.f, 5.0f, 0.f)));
+	this->VelocityOverTime.InsertKey(ValueSequenceKeypoint<glm::vec3>(0.75f, glm::vec3(0.f, 2.5f, 0.f)));
+	this->VelocityOverTime.InsertKey(ValueSequenceKeypoint<glm::vec3>(1.00f, glm::vec3(0.f, 0.0f, 0.f)));
 
 	this->TransparencyOverTime.InsertKey(ValueSequenceKeypoint<float>(0.f, 0.f));
 	this->TransparencyOverTime.InsertKey(ValueSequenceKeypoint<float>(.8f, .5f));
@@ -135,13 +136,14 @@ size_t Object_ParticleEmitter::m_GetUsableParticleIndex()
 
 void Object_ParticleEmitter::Update(double DeltaTime)
 {
-	float timeBetweenSpawn = 1.0f / this->Rate;
+	float deltaTimeForGLM = static_cast<float>(DeltaTime);
+	float timeBetweenSpawn = 1.f / this->Rate;
 
 	size_t newParticleIndex = UINT32_MAX;
 
 	if (m_TimeSinceLastSpawn >= timeBetweenSpawn && !this->PossibleImages.empty() && this->EmitterEnabled)
 	{
-		m_TimeSinceLastSpawn = 0.0f;
+		m_TimeSinceLastSpawn = 0.f;
 
 		//Spawn a new particle
 
@@ -156,7 +158,8 @@ void Object_ParticleEmitter::Update(double DeltaTime)
 			0.f,
 			1.f,
 			0.f,
-			this->PossibleImages[(uint32_t)randIndex(s_RandGenerator)]
+			this->PossibleImages[(uint32_t)randIndex(s_RandGenerator)],
+			this->ParticlesRelativeToEmitter ? glm::vec3{} : glm::vec3(this->GetWorldTransform()[3])
 		};
 
 		newParticleIndex = m_GetUsableParticleIndex();
@@ -171,7 +174,7 @@ void Object_ParticleEmitter::Update(double DeltaTime)
 
 		float LifeProgress = particle.TimeAliveFor / particle.Lifetime;
 
-		particle.Position = particle.Position + (this->VelocityOverTime.GetValue(LifeProgress) * DeltaTime);
+		particle.Position = particle.Position + (this->VelocityOverTime.GetValue(LifeProgress) * deltaTimeForGLM);
 		particle.Size = this->SizeOverTime.GetValue(LifeProgress);
 
 		particle.Transparency = this->TransparencyOverTime.GetValue(LifeProgress);
@@ -213,9 +216,14 @@ std::vector<RenderItem> Object_ParticleEmitter::GetRenderList()
 		);
 		*/
 
+		glm::mat4 transform = glm::translate(glm::mat4(1.f), particle.Position);
+
+		if (ParticlesRelativeToEmitter)
+			transform *= this->GetWorldTransform();
+
 		rlist.emplace_back(
 			QuadMeshId,
-			glm::translate(this->GetWorldTransform(), (glm::vec3)particle.Position),
+			transform,
 			Vector3::one * particle.Size,
 			MaterialManager::Get()->LoadMaterialFromPath("error"),
 			Color(1.f, 1.f, 1.f),

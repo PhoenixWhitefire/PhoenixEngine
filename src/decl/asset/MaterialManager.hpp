@@ -3,7 +3,7 @@
 #include <vector>
 #include <unordered_map>
 
-#include "render/ShaderManager.hpp"
+#include "asset/ShaderManager.hpp"
 
 struct RenderMaterial
 {
@@ -35,8 +35,11 @@ struct RenderMaterial
 class MaterialManager
 {
 public:
+	~MaterialManager();
+
+	void Initialize();
+
 	static MaterialManager* Get();
-	static void Shutdown();
 
 	std::vector<RenderMaterial>& GetLoadedMaterials();
 
@@ -49,8 +52,6 @@ public:
 	RenderMaterial& GetMaterialResource(uint32_t);
 
 private:
-	MaterialManager();
-
 	std::vector<RenderMaterial> m_Materials;
 	std::unordered_map<std::string, uint32_t> m_StringToMaterialId;
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gameobject/MeshObject.hpp"
+#include "gameobject/Animation.hpp"
 
 class ModelLoader
 {
@@ -37,13 +38,21 @@ private:
 	struct ModelNode
 	{
 		std::string Name;
+		uint32_t NodeId{ UINT32_MAX };
 		uint32_t Parent;
-		bool IsContainerOnlyWithoutGeo = false; // nodes w/o meshes that just offset transformations
+
+		enum class NodeType : uint8_t
+		{
+			Primitive,
+			Container,
+			Bone
+		} Type = NodeType::Primitive;
 
 		Mesh Data;
 		MeshMaterial Material;
 		glm::mat4 Transform;
 		glm::vec3 Scale{ 1.f, 1.f, 1.f };
+		std::vector<int32_t> Bones;
 	};
 
 	ModelLoader() = delete;
@@ -55,37 +64,37 @@ private:
 		const glm::vec3& Scale
 	);
 
-	void m_TraverseNode(uint32_t NextNode, uint32_t From, const glm::mat4& Transform = glm::mat4(1.0f));
+	void m_TraverseNode(uint32_t NextNode, uint32_t From, const glm::mat4& Transform = glm::mat4(1.f));
+
+	void m_BuildRig();
 
 	std::vector<int8_t> m_GetData();
 
 	std::vector<float> m_GetFloats(const nlohmann::json& Accessor);
-	std::vector<uint32_t> m_GetIndices(const nlohmann::json& Accessor);
+	std::vector<uint32_t> m_GetUnsigned32s(const nlohmann::json& Accessor);
+	std::vector<uint8_t> m_GetUBytes(const nlohmann::json& Accessor);
 	MeshMaterial m_GetMaterial(const nlohmann::json&);
 
 	std::vector<Vertex> m_AssembleVertices(
 		const std::vector<glm::vec3>& Positions,
 		const std::vector<glm::vec3>& Normals,
-		const std::vector<glm::vec2>& TextureUVs
+		const std::vector<glm::vec2>& TextureUVs,
+		const std::vector<glm::vec4>& Colors,
+		const std::vector<glm::tvec4<uint8_t>>& Joints,
+		const std::vector<glm::vec4>& Weights
 	);
 
-	std::vector<glm::vec2> m_GroupFloatsVec2(const std::vector<float>& Floats);
-	std::vector<glm::vec3> m_GroupFloatsVec3(const std::vector<float>& Floats);
-	std::vector<glm::vec4> m_GroupFloatsVec4(const std::vector<float>& Floats);
+	std::vector<glm::vec2> m_GetAndGroupFloatsVec2(const nlohmann::json& Accessor);
+	std::vector<glm::vec3> m_GetAndGroupFloatsVec3(const nlohmann::json& Accessor);
+	std::vector<glm::vec4> m_GetAndGroupFloatsVec4(const nlohmann::json& Accessor);
+	std::vector<glm::tvec4<uint8_t>> m_GetAndGroupUBytesVec4(const nlohmann::json& Accessor);
 
 	std::string m_File;
 	nlohmann::json m_JsonData;
 
 	std::vector<ModelNode> m_Nodes;
-
-	/*
-	std::vector<Mesh> m_Meshes;
-	std::vector<std::string> m_MeshNames;
-	std::vector<uint32_t> m_MeshParents;
-	std::vector<glm::mat4> m_MeshMatrices;
-	std::vector<glm::vec3> m_MeshScales;
-	std::vector<MeshMaterial> m_MeshMaterials;
-	*/
+	std::unordered_map<int32_t, uint32_t> m_NodeIdToIndex;
+	std::vector<Object_Animation*> m_Animations;
 
 	std::vector<int8_t> m_Data;
 };
