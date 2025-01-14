@@ -1,29 +1,21 @@
-[submodule "luau"]
-	path = Vendor/luau
-	url = https://github.com/Luau-lang/luau/
-	branch = master
-[submodule "imgui"]
+[submodule "Vendor/glm"]
+	path = Vendor/glm
+	url = https://www.github.com/g-truc/glm
+[submodule "Vendor/imgui"]
 	path = Vendor/imgui
-	url = https://github.com/ocornut/imgui
-	branch = master
-[submodule "ImGuiFD"]
+	url = https://www.github.com/ocornut/imgui
+[submodule "Vendor/luau"]
+	path = Vendor/luau
+	url = https://www.github.com/luau-lang/luau
+[submodule "Vendor/ImGuiFD"]
 	path = Vendor/ImGuiFD
 	url = https://github.com/Julianiolo/ImGuiFD
-[submodule "ImFileDialog"]
-	path = ImFileDialog
-	url = https://github.com/dfranx/ImFileDialog
-[submodule "glm"]
-	path = Vendor/glm
-	url = https://github.com/g-truc/glm
-[submodule "imgui-sfml"]
-	path = imgui-sfml
-	url = https://github.com/SFML/imgui-sfml
-[submodule "stb"]
+[submodule "Vendor/stb"]
 	path = Vendor/stb
-	url = https://www.github.com/nothings/stb
-[submodule "SDL"]
+	url = https://github.com/nothings/stb
+[submodule "Vendor/SDL"]
 	path = Vendor/SDL
-	url = https://github.com/libsdl-org/SDL
-[submodule "tracy"]
+	url = https://github.com/libsdl/SDL
+[submodule "Vendor/tracy"]
 	path = Vendor/tracy
 	url = https://github.com/wolfpld/tracy
