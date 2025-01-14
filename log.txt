@@ -109,8 +109,6 @@
 	Source: OpenGL
 	Error ID: 131154
 
-[INFO]: Changing window resolution: (1600, 900) -> (1920, 1080)
-[INFO]: Changing window resolution: (1920, 1080) -> (1600, 900)
 [INFO]: Main loop exited
 [INFO]: Engine destructing...
 [INFO]: Destroying DataModel...
