@@ -472,9 +472,11 @@ static void drawUI(Reflection::GenericValue Data)
 			ImGui::Text("Frame time: %dms", (int)std::ceil(EngineInstance->FrameTime * 1000));
 			ImGui::Text("Draw calls: %zi", EngineJsonConfig.value("renderer_drawcallcount", 0ull));
 
+#ifdef TRACY_ENABLE
 			// 13/01/2025 hi hihihi hihiihii
 			if (!WasTracyLaunched && ImGui::Button("Start Profiling"))
 				launchTracy();
+#endif
 		}
 		ImGui::End();
 

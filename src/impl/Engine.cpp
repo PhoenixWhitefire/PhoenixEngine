@@ -590,11 +590,14 @@ void Engine::Start()
 
 		this->RunningTime = GetRunningTime();
 		EngineJsonConfig["renderer_drawcallcount"] = 0;
+		
+		static bool IsWindowFocused = true;
 
 		this->FpsCap = std::clamp(this->FpsCap, 1, 600);
+		int throttledFpsCap = IsWindowFocused ? FpsCap : 5;
 
 		double frameDelta = RunningTime - LastFrame;
-		double fpsCapDelta = 1.f / this->FpsCap;
+		double fpsCapDelta = 1.f / throttledFpsCap;
 
 		// Wait the appropriate amount of time between frames
 		if (!VSync && (frameDelta + .0005f < fpsCapDelta))
@@ -656,40 +659,58 @@ void Engine::Start()
 			}
 		}
 
-		double deltaTime = GetRunningTime() - LastTime;
+		RunningTime = GetRunningTime();
+
+		double deltaTime = RunningTime - LastTime;
 		LastTime = RunningTime;
 		FrameStart = RunningTime;
 
 		this->OnFrameStart.Fire(deltaTime);
 
-		while (SDL_PollEvent(&pollingEvent) != 0)
 		{
-			ZoneScopedN("PollEvent");
-			ZoneTextF("Type: %d", pollingEvent.common.type);
+			ZoneScopedN("PollEvents");
 
-			ImGui_ImplSDL3_ProcessEvent(&pollingEvent);
-
-			switch (pollingEvent.type)
+			while (SDL_PollEvent(&pollingEvent) != 0)
 			{
+				ZoneScopedN("Event");
+				ZoneTextF("Type: %d", pollingEvent.common.type);
 
-			case (SDL_EVENT_QUIT):
-			{
-				this->Exit = true;
-				break;
-			}
+				ImGui_ImplSDL3_ProcessEvent(&pollingEvent);
 
-			case (SDL_EVENT_WINDOW_RESIZED):
-			{
-				int NewSizeX = pollingEvent.window.data1;
-				int NewSizeY = pollingEvent.window.data2;
+				switch (pollingEvent.type)
+				{
 
-				// Only call ChangeResolution if the new resolution is actually different
-				if (NewSizeX != this->WindowSizeX || NewSizeY != this->WindowSizeY)
-					this->OnWindowResized(NewSizeX, NewSizeY);
+				case (SDL_EVENT_QUIT):
+				{
+					this->Exit = true;
+					break;
+				}
 
-				break;
-			}
+				case (SDL_EVENT_WINDOW_RESIZED):
+				{
+					int NewSizeX = pollingEvent.window.data1;
+					int NewSizeY = pollingEvent.window.data2;
 
+					// Only call ChangeResolution if the new resolution is actually different
+					if (NewSizeX != this->WindowSizeX || NewSizeY != this->WindowSizeY)
+						this->OnWindowResized(NewSizeX, NewSizeY);
+
+					break;
+				}
+
+				case (SDL_EVENT_WINDOW_FOCUS_LOST):
+				{
+					IsWindowFocused = false;
+					break;
+				}
+
+				case (SDL_EVENT_WINDOW_FOCUS_GAINED):
+				{
+					IsWindowFocused = true;
+					break;
+				}
+
+				}
 			}
 		}
 
@@ -797,37 +818,33 @@ void Engine::Start()
 
 		glm::mat4 skyRenderMatrix{ 1.f };
 
-		{
-			ZoneScopedN("SkyboxRenderMatrix");
+		glm::vec3 camPos = glm::vec3(sceneCamera->Transform[3]);
+		glm::vec3 camForward = glm::vec3(sceneCamera->Transform[2]);
+		glm::vec3 camUp = glm::vec3(sceneCamera->Transform[1]);
 
-			glm::vec3 camPos = glm::vec3(sceneCamera->Transform[3]);
-			glm::vec3 camForward = glm::vec3(sceneCamera->Transform[2]);
-			glm::vec3 camUp = glm::vec3(sceneCamera->Transform[1]);
+		glm::mat4 view = glm::lookAt(camPos, camPos + camForward, camUp);
+		glm::mat4 projection = glm::perspective(
+			glm::radians(sceneCamera->FieldOfView),
+			aspectRatio,
+			sceneCamera->NearPlane,
+			sceneCamera->FarPlane
+		);;
 
-			glm::mat4 view = glm::lookAt(camPos, camPos + camForward, camUp);
-			glm::mat4 projection = glm::perspective(
-				glm::radians(sceneCamera->FieldOfView),
-				aspectRatio,
-				sceneCamera->NearPlane,
-				sceneCamera->FarPlane
-			);;
+		// "We make the mat4 into a mat3 and then a mat4 again in order to get rid of the last row and column
+		// The last row and column affect the translation of the skybox (which we don't want to affect)"
+		//view = glm::mat4(glm::mat3(glm::lookAt(camPos, camPos + camForward, glm::vec3(0.f, 1.f, 0.f))));
+		// ...
+		// ...
+		// ...
+		// Wow Mr Victor Gordan sir, that sounds really complicated.
+		// It's really too bad there isn't a way simpler, 300x more understandable way
+		// of zeroing-out the first 3 values of the last column of what is literally 4 `vec4`s that represent
+		// a 4x4 matrix...
+		view[3] = glm::vec4(0.f, 0.f, 0.f, 1.f);
 
-			// "We make the mat4 into a mat3 and then a mat4 again in order to get rid of the last row and column
-			// The last row and column affect the translation of the skybox (which we don't want to affect)"
-			//view = glm::mat4(glm::mat3(glm::lookAt(camPos, camPos + camForward, glm::vec3(0.f, 1.f, 0.f))));
-			// ...
-			// ...
-			// ...
-			// Wow Mr Victor Gordan sir, that sounds really complicated.
-			// It's really too bad there isn't a way simpler, 300x more understandable way
-			// of zeroing-out the first 3 values of the last column of what is literally 4 `vec4`s that represent
-			// a 4x4 matrix...
-			view[3] = glm::vec4(0.f, 0.f, 0.f, 1.f);
+		skyRenderMatrix = projection * view;
 
-			skyRenderMatrix = projection * view;
-
-			skyboxShaders.SetUniform("RenderMatrix", skyRenderMatrix);
-		}
+		skyboxShaders.SetUniform("RenderMatrix", skyRenderMatrix);
 
 		glActiveTexture(GL_TEXTURE3);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemap);

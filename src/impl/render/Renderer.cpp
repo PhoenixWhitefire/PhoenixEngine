@@ -237,62 +237,66 @@ void Renderer::DrawScene(
 	std::map<uint64_t, std::pair<size_t, std::vector<float>>> instancingList;
 
 	{
-		ZoneNamedNC(prepzone, "Prepare", tracy::Color::AliceBlue, true);
+		ZoneScopedNC("Prepare", tracy::Color::AliceBlue);
 
 		glActiveTexture(GL_TEXTURE0);
 		this->FrameBuffer.BindTexture();
 
 		ShaderManager* shdManager = ShaderManager::Get();
 
-		for (uint32_t shaderId : Scene.UsedShaders)
 		{
-			ShaderProgram& shader = shdManager->GetShaderResource(shaderId);
+			ZoneScopedN("SetUpInitialUniforms");
 
-			shader.SetUniform("RenderMatrix", RenderMatrix);
-			shader.SetUniform("CameraPosition", Vector3(glm::vec3(CameraTransform[3])).ToGenericValue());
-			shader.SetUniform("Time", static_cast<float>(RunningTime));
-			shader.SetUniform("SkyboxCubemap", 3);
-
-			shader.SetUniform("FrameBuffer", 0);
-
-			// TODO 05/09/2024
-			// Branching in shader VS separate array uniforms?
-			// Oh and uniform locations should probably be cached
-			for (size_t lightIndex = 0; lightIndex < SHADER_MAX_LIGHTS; lightIndex++)
+			for (uint32_t shaderId : Scene.UsedShaders)
 			{
-				if (lightIndex + 1 > Scene.LightingList.size())
-					break;
+				ShaderProgram& shader = shdManager->GetShaderResource(shaderId);
 
-				const LightItem& lightData = Scene.LightingList.at(lightIndex);
+				shader.SetUniform("RenderMatrix", RenderMatrix);
+				shader.SetUniform("CameraPosition", Vector3(glm::vec3(CameraTransform[3])).ToGenericValue());
+				shader.SetUniform("Time", static_cast<float>(RunningTime));
+				shader.SetUniform("SkyboxCubemap", 3);
 
-				std::string lightIdxString = std::to_string(lightIndex);
-				std::string shaderLightLoc = "Lights[" + lightIdxString + "]";
+				shader.SetUniform("FrameBuffer", 0);
+
+				// TODO 05/09/2024
+				// Branching in shader VS separate array uniforms?
+				// Oh and uniform locations should probably be cached
+				for (size_t lightIndex = 0; lightIndex < SHADER_MAX_LIGHTS; lightIndex++)
+				{
+					if (lightIndex + 1 > Scene.LightingList.size())
+						break;
+
+					const LightItem& lightData = Scene.LightingList.at(lightIndex);
+
+					std::string lightIdxString = std::to_string(lightIndex);
+					std::string shaderLightLoc = "Lights[" + lightIdxString + "]";
+
+					shader.SetUniform(
+						(shaderLightLoc + ".Position").c_str(),
+						lightData.Position.ToGenericValue()
+					);
+
+					shader.SetUniform(
+						(shaderLightLoc + ".Color").c_str(),
+						lightData.LightColor.ToGenericValue()
+					);
+
+					shader.SetUniform((shaderLightLoc + ".Type").c_str(), (int)lightData.Type);
+
+					shader.SetUniform((shaderLightLoc + ".Range").c_str(), lightData.Range);
+					shader.SetUniform((shaderLightLoc + ".Angle").c_str(), lightData.Angle);
+					shader.SetUniform((shaderLightLoc + ".Shadows").c_str(), lightData.Shadows);
+				}
 
 				shader.SetUniform(
-					(shaderLightLoc + ".Position").c_str(),
-					lightData.Position.ToGenericValue()
+					"NumLights",
+					std::clamp(
+						static_cast<uint32_t>(Scene.LightingList.size()),
+						0u,
+						SHADER_MAX_LIGHTS
+					)
 				);
-
-				shader.SetUniform(
-					(shaderLightLoc + ".Color").c_str(),
-					lightData.LightColor.ToGenericValue()
-				);
-
-				shader.SetUniform((shaderLightLoc + ".Type").c_str(), (int)lightData.Type);
-
-				shader.SetUniform((shaderLightLoc + ".Range").c_str(), lightData.Range);
-				shader.SetUniform((shaderLightLoc + ".Angle").c_str(), lightData.Angle);
-				shader.SetUniform((shaderLightLoc + ".Shadows").c_str(), lightData.Shadows);
 			}
-
-			shader.SetUniform(
-				"NumLights",
-				std::clamp(
-					static_cast<uint32_t>(Scene.LightingList.size()),
-					0u,
-					SHADER_MAX_LIGHTS
-				)
-			);
 		}
 
 		ZoneNamedN(bubzone, "BuildInstancingBuffer", true);

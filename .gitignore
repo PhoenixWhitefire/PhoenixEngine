@@ -386,3 +386,7 @@ FodyWeavers.xsd
 /Vendor/Vendor.vcxproj.filters
 /Build
 *.lnk
+/PhoenixEngine.dir/RelInstru
+/RelInstru
+/Vendor/RelInstru
+/Vendor/Vendor.dir/RelInstru

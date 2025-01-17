@@ -1,5 +1,5 @@
 [INFO]: Application startup
-[INFO]: Phoenix Engine, Main.cpp last compiled: Jan 14 2025
+[INFO]: Phoenix Engine, Main.cpp last compiled: Jan 17 2025
 [INFO]: Configuration loaded
 [INFO]: Requesting a Core OpenGL context with version 4.6
 [INFO]: Window created

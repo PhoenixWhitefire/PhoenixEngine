@@ -42,15 +42,11 @@ void GpuVertexArray::LinkAttrib(
 
 void GpuVertexArray::Bind() const
 {
-	ZoneScoped;
-
 	glBindVertexArray(m_GpuId);
 }
 
 void GpuVertexArray::Unbind() const
 {
-	ZoneScoped;
-
 	glBindVertexArray(0);
 }
 
@@ -90,15 +86,11 @@ void GpuVertexBuffer::SetBufferData(const std::vector<Vertex>& Vertices, BufferU
 
 void GpuVertexBuffer::Bind() const
 {
-	ZoneScoped;
-
 	glBindBuffer(GL_ARRAY_BUFFER, m_GpuId);
 }
 
 void GpuVertexBuffer::Unbind() const
 {
-	ZoneScoped;
-
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
@@ -140,15 +132,11 @@ void GpuElementBuffer::SetBufferData(const std::vector<GLuint>& Indices, BufferU
 
 void GpuElementBuffer::Bind() const
 {
-	ZoneScoped;
-
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_GpuId);
 }
 
 void GpuElementBuffer::Unbind() const
 {
-	ZoneScoped;
-
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
@@ -277,28 +265,20 @@ void GpuFrameBuffer::UpdateResolution(int NewWidth, int NewHeight)
 
 void GpuFrameBuffer::Bind() const
 {
-	ZoneScoped;
-
 	glBindFramebuffer(GL_FRAMEBUFFER, m_GpuId);
 }
 
 void GpuFrameBuffer::Unbind() const
 {
-	ZoneScoped;
-
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void GpuFrameBuffer::BindTexture() const
 {
-	ZoneScoped;
-
 	glBindTexture(/*this->MSAASamples > 0 ? GL_TEXTURE_2D_MULTISAMPLE : */ GL_TEXTURE_2D, GpuTextureId);
 }
 
 void GpuFrameBuffer::UnbindTexture() const
 {
-	ZoneScoped;
-
 	glBindTexture(/*this->MSAASamples > 0 ? GL_TEXTURE_2D_MULTISAMPLE : */ GL_TEXTURE_2D, 0);
 }

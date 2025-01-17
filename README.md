@@ -37,9 +37,12 @@ Developed on Windows with Visual Studio Community 2022. Not tested on other plat
 		* `SDL3-shared`
 		* `TracyClient`
 		* `Vendor`
-	* A Solution Folder called "NotRequired". Just right-click and `Remove`
-4. Build the Solution. Only `Debug` is supported because I don't feel like touching CMake with a ten-foot pole for the rest of my life
-5. Copy `SDL3.dll` from `Vendor/SDL/Debug` to `Debug` in the Root directory, next to your fresh `PhoenixEngine` executable
+	* A Solution Folder called "NotRequired". Just right-click and `Remove` to avoid unnecessary compilation
+4. Build the Solution in either:
+	* `Debug`: Standard Debug build, no optimizations, Address Sanitizer and Tracy
+	* `RelInstru`: Debug with compiler optimizations, Address Sanitizer and Tracy
+	* `Release`: All optimizations, no Address Sanitizer or Tracy
+5. Copy `SDL3.dll` from `Vendor/SDL/<Your selected build configuration>` into the corresponding directory in the root directory
 6. Run.
 
 # Attributions

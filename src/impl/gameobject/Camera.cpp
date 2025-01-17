@@ -51,8 +51,6 @@ void Object_Camera::Update(double)
 
 glm::mat4 Object_Camera::GetMatrixForAspectRatio(float AspectRatio) const
 {
-	ZoneScoped;
-
 	glm::vec3 position = glm::vec3(this->Transform[3]);
 	glm::vec3 forwardVec = glm::vec3(this->Transform[2]);
 
