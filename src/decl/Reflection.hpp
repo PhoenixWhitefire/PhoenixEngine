@@ -44,7 +44,7 @@ s_Api.Lineage.push_back(#base);                                            \
 	{                                                                          \
 		return (Reflection::GenericValue)static_cast<c*>(p)->name;             \
 	},                                                                         \
-	[](Reflection::Reflectable* p, Reflection::GenericValue gv)                \
+	[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)         \
 	{                                                                          \
 		static_cast<c*>(p)->name = gv.As##type();                              \
 	}                                                                          \
@@ -60,7 +60,7 @@ s_Api.Lineage.push_back(#base);                                            \
 	{                                                                                           \
 		return (Reflection::GenericValue)static_cast<c*>(p)->name;                              \
 	},                                                                                          \
-	[](Reflection::Reflectable* p, Reflection::GenericValue gv)                                 \
+	[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)                          \
 	{                                                                                           \
 		static_cast<c*>(p)->name = static_cast<cast>(gv.As##type());                            \
 	}                                                                                           \
@@ -75,7 +75,7 @@ s_Api.Lineage.push_back(#base);                                            \
 	{                                                                                   \
 		return static_cast<c*>(p)->name.ToGenericValue();                               \
 	},                                                                                  \
-	[](Reflection::Reflectable* p, Reflection::GenericValue gv)                         \
+	[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)                  \
 	{                                                                                   \
 		static_cast<c*>(p)->name = type(gv);                                            \
 	}                                                                                   \
@@ -162,7 +162,8 @@ namespace Reflection
 	{
 		Reflection::ValueType Type = Reflection::ValueType::Null;
 		void* Value = nullptr;
-		uint32_t ArrayLength = 0;
+		// Array length or allocated memory for `Value`
+		size_t Size = 0;
 
 		//std::vector<GenericValue> Array;
 
@@ -177,6 +178,17 @@ namespace Reflection
 		GenericValue(const glm::mat4&);
 		GenericValue(const std::vector<GenericValue>&);
 		GenericValue(const std::unordered_map<GenericValue, GenericValue>&);
+
+		GenericValue(GenericValue&&);
+		GenericValue(const GenericValue&);
+		
+		GenericValue& operator = (const Reflection::GenericValue& Other)
+		{
+			CopyInto(*this, Other);
+			return *this;
+		}
+
+		static void CopyInto(GenericValue&, const GenericValue&);
 
 		~GenericValue();
 

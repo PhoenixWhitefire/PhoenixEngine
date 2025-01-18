@@ -16,7 +16,7 @@ Color::Color(float R, float G, float B)
 	this->B = B;
 }
 
-Color::Color(Reflection::GenericValue gv)
+Color::Color(const Reflection::GenericValue& gv)
 	: R(0.f), G(0.f), B(0.f)
 {
 	if (gv.Type != Reflection::ValueType::Color)

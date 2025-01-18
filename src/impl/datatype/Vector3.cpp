@@ -78,7 +78,7 @@ Vector3::Vector3(glm::vec3 GLMVector)
 	s_DeclareReflections();
 }
 
-Vector3::Vector3(Reflection::GenericValue gv)
+Vector3::Vector3(const Reflection::GenericValue& gv)
 {
 	if (gv.Type != Reflection::ValueType::Vector3)
 	{

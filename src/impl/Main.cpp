@@ -104,6 +104,48 @@ static glm::vec3 CamForward = glm::vec3(0.f, 0.f, -1.f);
 
 static bool WasTracyLaunched = false;
 
+#ifdef TRACY_ENABLE
+
+void* operator new(size_t sz)
+{
+	if (sz == 0)
+		++sz; // avoid std::malloc(0) which may return nullptr on success
+
+	if (void* ptr = malloc(sz))
+	{
+		TracyAlloc(ptr, sz);
+		return ptr;
+	}
+
+	throw std::bad_alloc{}; // required by [new.delete.single]/3
+}
+
+void operator delete(void* ptr) noexcept
+{
+	TracyFree(ptr);
+	free(ptr);
+}
+
+void operator delete(void* ptr, size_t /* size */) noexcept
+{
+	TracyFree(ptr);
+	free(ptr);
+}
+
+void operator delete[](void* ptr) noexcept
+{
+	TracyFree(ptr);
+	free(ptr);
+}
+
+void operator delete[](void* ptr, size_t /* size */) noexcept
+{
+	TracyFree(ptr);
+	free(ptr);
+}
+
+#endif
+
 #ifdef _WIN32
 
 #define popen _popen
@@ -136,6 +178,7 @@ static std::string exec(const char* cmd)
 
 static void launchTracy()
 {
+#ifdef TRACY_ENABLE
 	if (WasTracyLaunched)
 		throw("Tried to launch Tracy twice in one session");
 	WasTracyLaunched = true;
@@ -146,6 +189,17 @@ static void launchTracy()
 			exec(LAUNCH_TRACY_CMD);
 		}
 	).detach();
+
+#else
+
+	SDL_ShowSimpleMessageBox(
+		SDL_MESSAGEBOX_INFORMATION,
+		"Tracy Integration",
+		"Instrumentation was disabled for this build. You need to use a build with the `TRACY_ENABLE` macro defintion.",
+		nullptr
+	);
+
+#endif
 }
 
 static int findCmdLineArgument(
@@ -580,12 +634,20 @@ static void handleCrash(const std::string& Error, const std::string& ExceptionTy
 		)
 	);
 
-	SDL_ShowSimpleMessageBox(
+	// can fail, write to stderr if so 18/01/2025
+	bool showSuccess = SDL_ShowSimpleMessageBox(
 		SDL_MESSAGEBOX_ERROR,
 		"Fatal Error",
 		errMessage.c_str(),
 		nullptr
 	);
+
+	if (!showSuccess)
+		fprintf(
+			stderr,
+			"Failed to show message box: %s.\n\nI'm not sure how you've done this. Check `log.txt` for the original crash reason.",
+			SDL_GetError()
+		);
 }
 
 static void begin(int argc, char** argv)
@@ -672,7 +734,18 @@ int main(int argc, char** argv)
 {
 	Log::Info("Application startup");
 
-	Log::Info(std::format("Phoenix Engine, Main.cpp last compiled: {}", __DATE__));
+	Log::Info(std::vformat(
+		"Phoenix Engine:\n\tBuild type: {}\n\tMain.cpp last compiled: {} @ {}",
+		std::make_format_args(PHX_BUILD_TYPE, __DATE__, __TIME__)
+	));
+
+	Log::Info("Command line: &&");
+
+	for (int i = 0; i < argc; i++)
+		if (i < argc - 1)
+			Log::Append(" " + std::string(argv[i]) + "&&");
+		else
+			Log::Append(" " + std::string(argv[i]));
 
 	try
 	{

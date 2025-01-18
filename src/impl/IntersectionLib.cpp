@@ -16,8 +16,6 @@ IntersectionLib::Intersection IntersectionLib::AabbAabb
 	const glm::vec3& BSize
 )
 {
-	ZoneScoped;
-
 	Intersection result{};
 	result.Occurred = false;
 
@@ -77,8 +75,6 @@ IntersectionLib::Intersection IntersectionLib::LineAabb(
 	float PaddingZ
 )
 {
-	ZoneScoped;
-
 	Intersection result{};
 	result.Occurred = false;
 

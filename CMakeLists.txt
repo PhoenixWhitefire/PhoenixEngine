@@ -41,6 +41,19 @@ target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:RelInstru>:/O2 /Ob2>)
 target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Release>:/GL>)
 target_compile_options(PhoenixEngine PRIVATE /MP /W4)
 
+target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:/fsanitize=address /Od>)
+target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:RelInstru>:/fsanitize=address /O2 /Ob2 /Zi>)
+
+target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Release>:/GL>)
+
+add_compile_options($<$<CONFIG:RelInstru>:/Zi>)
+add_compile_options($<$<CONFIG:Release>:/GL>)
+add_link_options($<$<CONFIG:RelInstru>:/DEBUG>)
+add_link_options($<$<CONFIG:RelInstru>:/INCREMENTAL:NO>)
+add_link_options($<$<CONFIG:Debug>:/INCREMENTAL:NO>)
+
+target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:/INCREMENTAL:NO>)
+target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:RelInstru>:/INCREMENTAL:NO /DEBUG>)
 target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:Release>:/LTCG>)
 
 target_include_directories(PhoenixEngine PUBLIC
@@ -57,6 +70,8 @@ target_include_directories(PhoenixEngine PUBLIC
 
 set(PHX_BUILD_TYPE $<IF:$<CONFIG:Debug>,Debug,$<IF:$<CONFIG:Release>,Release,RelInstru>>)
 set(PHX_TRACY_LIB_PATH Vendor/tracy/${PHX_BUILD_TYPE}/TracyClient)
+
+target_compile_options(PhoenixEngine PRIVATE /DPHX_BUILD_TYPE="${PHX_BUILD_TYPE}")
 
 target_link_libraries(PhoenixEngine
 	opengl32.lib
@@ -75,17 +90,20 @@ target_link_libraries(PhoenixEngine
 
 target_sources(PhoenixEngine PRIVATE README.md)
 
+# /INCREMENTAL warning with ASan
+add_compile_options($<$<CONFIG:Debug>:/fsanitize=address>)
+add_compile_options($<$<CONFIG:Debug>:/Od>)
+add_compile_options($<$<CONFIG:RelInstru>:/fsanitize=address>)
+add_compile_options($<$<CONFIG:RelInstru>:/O2>)
+add_compile_options($<$<CONFIG:RelInstru>:/Ob2>)
+
+add_compile_options($<$<CONFIG:Release>:/GL>)
+
 add_subdirectory(Vendor)
 add_subdirectory(Vendor/luau)
 add_subdirectory(Vendor/glm)
 add_subdirectory(Vendor/SDL)
 add_subdirectory(Vendor/tracy)
-
-# /INCREMENTAL warning with ASan
-add_compile_options($<$<CONFIG:Debug>:/fsanitize=address /INCREMENTAL:NO /Od>)
-add_compile_options($<$<CONFIG:RelInstru>:/fsanitize=address /INCREMENTAL:NO /O2 /Ob2>)
-
-add_compile_options($<$<CONFIG:Release>:/GL>)
 
 set_property(TARGET Vendor PROPERTY FOLDER "Vendor")
 set_property(TARGET Luau.VM PROPERTY FOLDER "Vendor")
@@ -116,4 +134,8 @@ set_property(TARGET SDL3_test PROPERTY FOLDER "NotRequired")
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT PhoenixEngine)
 
-set(PHX_BINARY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Debug/")
+# couldn't be bothered to get $<TARGET_RUNTIME_DLLS:PhoenixEngine> to work
+add_custom_command(TARGET PhoenixEngine POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:PhoenixEngine> "Vendor/SDL/${PHX_BUILD_TYPE}/SDL3.dll"
+  COMMAND_EXPAND_LISTS
+)

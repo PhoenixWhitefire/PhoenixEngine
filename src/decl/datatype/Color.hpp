@@ -20,7 +20,7 @@ public:
 	@return A color made from the specified RGB values
 	*/
 	Color(float R, float G, float B);
-	Color(Reflection::GenericValue);
+	Color(const Reflection::GenericValue&);
 
 	Reflection::GenericValue ToGenericValue() const;
 	// Returns formatted `R, G, B`

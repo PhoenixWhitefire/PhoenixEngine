@@ -13,7 +13,7 @@ public:
 	Vector3(double X, double Y, double Z);
 	Vector3(glm::tvec3<double, glm::highp>);
 	Vector3(glm::vec3);
-	Vector3(Reflection::GenericValue);
+	Vector3(const Reflection::GenericValue&);
 
 	Reflection::GenericValue ToGenericValue() const;
 	// Returns formatted `X, Y, Z`

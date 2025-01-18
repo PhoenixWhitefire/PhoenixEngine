@@ -9,7 +9,7 @@ Personal "Game Engine" written in C++, that can:
 * Execute [*Luau*](https://github.com/luau-lang/luau/) scripts w/ per-frame callbacks
 * Load/Save Scenes
 * Do simple physics (dynamics and collisions w/ friction with AABBs, also has Raycasting for Scripts)
-* Do some simple, color-only post-processing (HDR, Tonemapping, and really weird Bloom, but a kinda nice blur vignette)
+* Do some simple, color-only post-processing (really weird Bloom, but a kinda nice blur vignette)
 
 Developed on Windows with Visual Studio Community 2022. Not tested on other platforms, however there shouldn't be anything *too* incompatible, all libraries used are explicitly cross-platform.
 
@@ -37,12 +37,11 @@ Developed on Windows with Visual Studio Community 2022. Not tested on other plat
 		* `SDL3-shared`
 		* `TracyClient`
 		* `Vendor`
-	* A Solution Folder called "NotRequired". Just right-click and `Remove` to avoid unnecessary compilation
+	* A Solution Folder called "NotRequired". Right-click and `Remove` to avoid unnecessary compilation
 4. Build the Solution in either:
 	* `Debug`: Standard Debug build, no optimizations, Address Sanitizer and Tracy
 	* `RelInstru`: Debug with compiler optimizations, Address Sanitizer and Tracy
-	* `Release`: All optimizations, no Address Sanitizer or Tracy
-5. Copy `SDL3.dll` from `Vendor/SDL/<Your selected build configuration>` into the corresponding directory in the root directory
+	* `Release`: All optimizations, including Linker ones, no Address Sanitizer or Tracy
 6. Run.
 
 # Attributions

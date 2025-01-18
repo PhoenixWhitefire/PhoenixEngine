@@ -14,35 +14,29 @@ Reflection::GenericValue::GenericValue()
 {
 }
 
+static void fromString(Reflection::GenericValue& G, const char* CStr)
+{
+	G.Value = malloc(G.Size + 1);
+
+	if (!G.Value)
+		throw("Failed to allocate enough space for string in fromString");
+
+	memcpy(G.Value, CStr, G.Size);
+	((char*)G.Value)[G.Size] = 0;
+}
+
 Reflection::GenericValue::GenericValue(const std::string& str)
 	: Type(ValueType::String)
 {
-	const char* cstr = str.c_str();
-	size_t allocSize = strlen(cstr) + 1;
-
-	this->Value = malloc(allocSize);
-
-	if (!this->Value)
-		throw(std::vformat(
-			"Could not allocate {} bytes for ::GenericValue(string)", std::make_format_args(allocSize)
-		));
-
-	memcpy(this->Value, cstr, allocSize);
+	this->Size = str.size();
+	fromString(*this, str.data());
 }
 
 Reflection::GenericValue::GenericValue(const char* data)
 	: Type(ValueType::String)
 {
-	size_t allocSize = strlen(data) + 1;
-
-	this->Value = malloc(allocSize);
-
-	if (!this->Value)
-		throw(std::vformat(
-			"Could not allocate {} bytes for ::GenericValue(const char*)", std::make_format_args(allocSize)
-		));
-
-	memcpy(this->Value, data, allocSize);
+	this->Size = strlen(data) + 1;
+	fromString(*this, data);
 }
 
 Reflection::GenericValue::GenericValue(bool b)
@@ -70,28 +64,41 @@ Reflection::GenericValue::GenericValue(int i)
 {
 }
 
-Reflection::GenericValue::GenericValue(const glm::mat4& m)
-	: Type(ValueType::Matrix), Value(malloc(sizeof(m)))
+static void fromMatrix(Reflection::GenericValue& G, const glm::mat4& M)
 {
-	if (!this->Value)
+	G.Value = malloc(sizeof(M));
+	G.Size = sizeof(M);
+
+	if (!G.Value)
 		throw("Allocation error while constructing GenericValue from glm::mat4");
 
-	memcpy(this->Value, &m, sizeof(m));
+	memcpy(G.Value, &M, sizeof(M));
+}
+
+Reflection::GenericValue::GenericValue(const glm::mat4& m)
+	: Type(ValueType::Matrix)
+{
+	fromMatrix(*this, m);
+}
+
+static void fromArray(Reflection::GenericValue& G, const std::vector<Reflection::GenericValue>& Array)
+{
+	size_t allocSize = Array.size() * sizeof(G);
+
+	G.Value = malloc(allocSize);
+
+	if (!G.Value)
+		throw("Allocation error while constructing GenericValue from std::vector<GenericValue>");
+
+	memcpy(G.Value, Array.data(), allocSize);
+
+	G.Size = Array.size();
 }
 
 Reflection::GenericValue::GenericValue(const std::vector<GenericValue>& array)
 	: Type(ValueType::Array)
 {
-	size_t allocSize = array.size() * sizeof(GenericValue);
-
-	this->Value = malloc(allocSize);
-
-	if (!this->Value)
-		throw("Allocation error while constructing GenericValue from std::vector<GenericValue>");
-
-	memcpy(this->Value, array.data(), allocSize);
-
-	this->ArrayLength = static_cast<uint32_t>(array.size());
+	fromArray(*this, array);
 }
 
 Reflection::GenericValue::GenericValue(const std::unordered_map<GenericValue, GenericValue>& map)
@@ -115,8 +122,64 @@ Reflection::GenericValue::GenericValue(const std::unordered_map<GenericValue, Ge
 
 	memcpy(this->Value, arr.data(), allocSize);
 
-	this->ArrayLength = static_cast<uint32_t>(arr.size());
+	this->Size = static_cast<uint32_t>(arr.size());
 }
+
+void Reflection::GenericValue::CopyInto(GenericValue& Target, const GenericValue& Source)
+{
+	Target.Type = Source.Type;
+
+	switch (Target.Type)
+	{
+	case (ValueType::String):
+	{
+		std::string str = Source.AsString();
+		Target.Size = str.size();
+		fromString(Target, str.data());
+		break;
+	}
+	case (ValueType::Color):
+	{
+		Target.Value = new Color(Source);
+		break;
+	}
+	case (ValueType::Vector3):
+	{
+		Target.Value = new Vector3(Source);
+		break;
+	}
+	case (ValueType::Matrix):
+	{
+		fromMatrix(Target, Source.AsMatrix());
+		break;
+	}
+	case (ValueType::Array):
+	{
+		fromArray(Target, Source.AsArray());
+		break;
+	}
+
+	default:
+		Target.Value = Source.Value;
+	}
+}
+
+Reflection::GenericValue::GenericValue(GenericValue&& Other)
+{
+	CopyInto(*this, Other);
+}
+
+Reflection::GenericValue::GenericValue(const GenericValue& Other)
+{
+	CopyInto(*this, Other);
+}
+
+/*
+Reflection::GenericValue::GenericValue(GenericValue&& Other)
+{
+	CopyInto(*this, Other);
+}
+*/
 
 std::string Reflection::GenericValue::ToString()
 {
@@ -272,16 +335,16 @@ glm::mat4& Reflection::GenericValue::AsMatrix() const
 std::vector<Reflection::GenericValue> Reflection::GenericValue::AsArray() const
 {
 	std::vector<GenericValue> array;
-	array.reserve(this->ArrayLength);
+	array.reserve(this->Size);
 
 	Reflection::GenericValue* first = (Reflection::GenericValue*)this->Value;
 
 	if (Type == ValueType::Map)
 	{
-		if (this->ArrayLength % 2 != 0)
+		if (this->Size % 2 != 0)
 			throw("Tried to convert a Map GenericValue to an Array, but it wasn't valid and had an odd number of Array elements");
 
-		for (size_t index = 1; index < this->ArrayLength; index++)
+		for (size_t index = 1; index < this->Size; index++)
 		{
 			array.push_back(first[index]);
 			index++;
@@ -290,7 +353,7 @@ std::vector<Reflection::GenericValue> Reflection::GenericValue::AsArray() const
 		return array;
 	}
 	else
-		for (uint32_t i = 0; i < this->ArrayLength; i++)
+		for (uint32_t i = 0; i < this->Size; i++)
 			array.push_back(first[i]);
 
 	return this->Type == ValueType::Array
@@ -345,12 +408,32 @@ std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> Reflectio
 
 Reflection::GenericValue::~GenericValue()
 {
-	// "A breakpoint instruction (__debugbreak() or similar) was hit"
-	//if (this->Type == Reflection::ValueType::String)
-		//free(this->Value);
+	switch (this->Type)
+	{
+	case (Reflection::ValueType::String):
+	{
+		free(this->Value);
+		break;
+	}
+	case (Reflection::ValueType::Matrix):
+	{
+		free(this->Value);
+		break;
+	}
+	case (Reflection::ValueType::Color):
+	{
+		delete (Color*)this->Value;
+		break;
+	}
+	case (Reflection::ValueType::Vector3):
+	{
+		delete (Vector3*)this->Value;
+		break;
+	}
+	}
 }
 
-static std::string valueTypeNames[] =
+static std::string ValueTypeNames[] =
 {
 		"Null",
 
@@ -370,11 +453,11 @@ static std::string valueTypeNames[] =
 };
 
 static_assert(
-	std::size(valueTypeNames) == (static_cast<uint32_t>(Reflection::ValueType::_count)),
-	"`ValueTypeNames` does not have the same number of elements as `ValueType`"
+	std::size(ValueTypeNames) == (size_t)Reflection::ValueType::_count,
+	"'ValueTypeNames' does not have the same number of elements as 'ValueType'"
 );
 
 const std::string& Reflection::TypeAsString(ValueType t)
 {
-	return valueTypeNames[(int)t];
+	return ValueTypeNames[(int)t];
 }
