@@ -390,3 +390,6 @@ FodyWeavers.xsd
 /RelInstru
 /Vendor/RelInstru
 /Vendor/Vendor.dir/RelInstru
+/PhoenixEngine.dir/RelTracy
+/Vendor/Vendor.dir/RelTracy
+/Vendor/RelTracy

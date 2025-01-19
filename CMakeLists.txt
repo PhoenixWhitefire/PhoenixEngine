@@ -9,8 +9,11 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # Debug: Standard debug mode. Incremental linking. Tracy and ASan enabled
 # Release: Optimizations, LTCG, no Incremental linking, Tracy and ASan disabled
-# RelInstru: Optimizations, no LTCG, Incremental linking, Tracy and ASan enabled
-set(CMAKE_CONFIGURATION_TYPES "Debug;RelInstru;Release")
+# RelTracy: Exact same as `Release`, but with Tracy instrumentation enabled
+# My plan is for the standalone Editor to use `RelTracy` for easy performance debugging,
+# but for distribution binaries to be `Release` for best performance (because Tracy introduces it's own overhead)
+# 19/01/2025
+set(CMAKE_CONFIGURATION_TYPES "Debug;RelTracy;Release")
 
 project(PhoenixEngine)
 
@@ -35,25 +38,17 @@ source_group(TREE src FILES ${PHX_SRCS})
 set_target_properties(PhoenixEngine PROPERTIES OUTPUT_NAME PhoenixEngine)
 
 target_compile_definitions(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:TRACY_ENABLE>)
-target_compile_definitions(PhoenixEngine PRIVATE $<$<CONFIG:RelInstru>:TRACY_ENABLE>)
+target_compile_definitions(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:TRACY_ENABLE NDEBUG>)
 
-target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:RelInstru>:/O2 /Ob2>)
-target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Release>:/GL>)
+target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:/O2 /Ob2 /GL>)
+target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Release>:/O2 /Ob2 /GL>)
+target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:/Od /Ob0>)
 target_compile_options(PhoenixEngine PRIVATE /MP /W4)
 
 target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:/fsanitize=address /Od>)
-target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:RelInstru>:/fsanitize=address /O2 /Ob2 /Zi>)
-
-target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Release>:/GL>)
-
-add_compile_options($<$<CONFIG:RelInstru>:/Zi>)
-add_compile_options($<$<CONFIG:Release>:/GL>)
-add_link_options($<$<CONFIG:RelInstru>:/DEBUG>)
-add_link_options($<$<CONFIG:RelInstru>:/INCREMENTAL:NO>)
-add_link_options($<$<CONFIG:Debug>:/INCREMENTAL:NO>)
 
 target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:/INCREMENTAL:NO>)
-target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:RelInstru>:/INCREMENTAL:NO /DEBUG>)
+target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:/LTCG>)
 target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:Release>:/LTCG>)
 
 target_include_directories(PhoenixEngine PUBLIC
@@ -68,7 +63,7 @@ target_include_directories(PhoenixEngine PUBLIC
 	"Vendor/luau/VM/include"
 )
 
-set(PHX_BUILD_TYPE $<IF:$<CONFIG:Debug>,Debug,$<IF:$<CONFIG:Release>,Release,RelInstru>>)
+set(PHX_BUILD_TYPE $<IF:$<CONFIG:Debug>,Debug,$<IF:$<CONFIG:Release>,Release,RelTracy>>)
 set(PHX_TRACY_LIB_PATH Vendor/tracy/${PHX_BUILD_TYPE}/TracyClient)
 
 target_compile_options(PhoenixEngine PRIVATE /DPHX_BUILD_TYPE="${PHX_BUILD_TYPE}")
@@ -83,21 +78,35 @@ target_link_libraries(PhoenixEngine
 	Vendor/SDL/${PHX_BUILD_TYPE}/SDL_uclibc
 	Vendor/SDL/${PHX_BUILD_TYPE}/SDL3
 	
-	# too much work
+	# too much of a waste of my time to get the `IF` expression to work, link regardless
 	${PHX_TRACY_LIB_PATH}
-	# IF:$<$<CONFIG:Debug> ${PHX_TRACY_LIB_PATH} $<$<CONFIG:RelInstru>:${PHX_TRACY_LIB_PATH}>
+	
+	# IF:$<$<CONFIG:Debug> ${PHX_TRACY_LIB_PATH} $<$<CONFIG:RelTracy>:${PHX_TRACY_LIB_PATH}>
 )
 
-target_sources(PhoenixEngine PRIVATE README.md)
+target_sources(PhoenixEngine PRIVATE README.md WindowsExeMetadata.rct)
 
-# /INCREMENTAL warning with ASan
+add_compile_definitions($<$<CONFIG:RelTracy>:NDEBUG>)
+
+add_compile_options($<$<CONFIG:RelTracy>:/GL>)
+add_compile_options($<$<CONFIG:RelTracy>:/O2>)
+add_compile_options($<$<CONFIG:RelTracy>:/Ob2>)
+add_compile_options($<$<CONFIG:Release>:/GL>)
+add_compile_options($<$<CONFIG:Release>:/O2>)
+add_compile_options($<$<CONFIG:Release>:/Ob2>)
 add_compile_options($<$<CONFIG:Debug>:/fsanitize=address>)
 add_compile_options($<$<CONFIG:Debug>:/Od>)
-add_compile_options($<$<CONFIG:RelInstru>:/fsanitize=address>)
-add_compile_options($<$<CONFIG:RelInstru>:/O2>)
-add_compile_options($<$<CONFIG:RelInstru>:/Ob2>)
+add_compile_options($<$<CONFIG:Debug>:/DEBUG>)
 
-add_compile_options($<$<CONFIG:Release>:/GL>)
+add_compile_options(/MP)
+# incremental warning with ASAN
+add_link_options($<$<CONFIG:Debug>:/INCREMENTAL:NO>)
+
+# incremental warning with LTCG
+add_link_options($<$<CONFIG:RelTracy>:/INCREMENTAL:NO>)
+add_link_options($<$<CONFIG:RelTracy>:/LTCG>)
+add_link_options($<$<CONFIG:Release>:/INCREMENTAL:NO>)
+add_link_options($<$<CONFIG:Release>:/LTCG>)
 
 add_subdirectory(Vendor)
 add_subdirectory(Vendor/luau)
@@ -133,6 +142,13 @@ set_property(TARGET Luau.UnitTest PROPERTY FOLDER "NotRequired")
 set_property(TARGET SDL3_test PROPERTY FOLDER "NotRequired")
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT PhoenixEngine)
+
+set_target_properties(PhoenixEngine
+    PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/x64/${PHX_BUILD_TYPE}"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/x64/${PHX_BUILD_TYPE}"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/x64/${PHX_BUILD_TYPE}"
+)
 
 # couldn't be bothered to get $<TARGET_RUNTIME_DLLS:PhoenixEngine> to work
 add_custom_command(TARGET PhoenixEngine POST_BUILD

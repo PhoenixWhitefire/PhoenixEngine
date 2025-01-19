@@ -79,6 +79,7 @@ PHX_MAIN_HANDLECRASH(std::exception, .what()); \
 #include "asset/SceneFormat.hpp"
 #include "gameobject/Script.hpp"
 
+#include "PerformanceTiming.hpp"
 #include "GlobalJsonConfig.hpp"
 #include "UserInput.hpp"
 #include "Utilities.hpp"
@@ -523,7 +524,7 @@ static void drawUI(Reflection::GenericValue Data)
 		if (ImGui::Begin("Info"))
 		{
 			ImGui::Text("FPS: %d", EngineInstance->FramesPerSecond);
-			ImGui::Text("Frame time: %dms", (int)std::ceil(EngineInstance->FrameTime * 1000));
+			ImGui::Text("Frame time: %dms", (int)std::round(EngineInstance->FrameTime * 1000));
 			ImGui::Text("Draw calls: %zi", EngineJsonConfig.value("renderer_drawcallcount", 0ull));
 
 #ifdef TRACY_ENABLE
@@ -531,6 +532,15 @@ static void drawUI(Reflection::GenericValue Data)
 			if (!WasTracyLaunched && ImGui::Button("Start Profiling"))
 				launchTracy();
 #endif
+
+			ImGui::SeparatorText("Timers");
+
+			const std::array<double, (size_t)Timing::Timer::__count>& times = Timing::FinalFrameTimes;
+
+			ImGui::Text("EntireFrame: %dms", (int)std::round(times[(size_t)Timing::Timer::EntireFrame] * 1000));
+			ImGui::Text("Rendering: %dms", (int)std::round(times[(size_t)Timing::Timer::Rendering] * 1000));
+			ImGui::Text("Physics: %dms", (int)std::round(times[(size_t)Timing::Timer::Physics] * 1000));
+			ImGui::Text("Scripts: %dms", (int)std::round(times[(size_t)Timing::Timer::Scripts] * 1000));
 		}
 		ImGui::End();
 

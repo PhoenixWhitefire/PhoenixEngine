@@ -26,6 +26,7 @@ extern "C"
 #include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
 #include "asset/MeshProvider.hpp"
+#include "PerformanceTiming.hpp"
 #include "GlobalJsonConfig.hpp"
 #include "Log.hpp"
 
@@ -226,6 +227,7 @@ void Renderer::DrawScene(
 	double RunningTime
 )
 {
+	TIME_SCOPE_AS(Timing::Timer::Rendering);
 	ZoneScopedC(tracy::Color::HotPink);
 
 	MeshProvider* meshProvider = MeshProvider::Get();

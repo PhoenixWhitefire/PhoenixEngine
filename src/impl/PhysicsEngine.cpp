@@ -3,6 +3,7 @@
 
 #include "PhysicsEngine.hpp"
 #include "IntersectionLib.hpp"
+#include "PerformanceTiming.hpp"
 
 struct Collision
 {
@@ -161,6 +162,7 @@ static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTi
 
 static void step(std::vector<Object_Base3D*>& World, double DeltaTime)
 {
+	TIME_SCOPE_AS(Timing::Timer::Physics);
 	ZoneScopedC(tracy::Color::AntiqueWhite);
 
 	applyGlobalForces(World, DeltaTime);

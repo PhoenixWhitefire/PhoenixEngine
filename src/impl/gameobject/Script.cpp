@@ -3,13 +3,13 @@
 #include <tracy/Tracy.hpp>
 
 #include "gameobject/Script.hpp"
-#include "datatype/GameObject.hpp"
+#include "gameobject/ScriptEngine.hpp"
+#include "PerformanceTiming.hpp"
 #include "datatype/Vector3.hpp"
 #include "datatype/Color.hpp"
 #include "UserInput.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
-#include "gameobject/ScriptEngine.hpp"
 
 #define LUA_ASSERT(res, err, ...) if (!res) { luaL_error(L, err, __VA_ARGS__); }
 
@@ -928,6 +928,8 @@ static void resumeScheduledCoroutines()
 
 void Object_Script::Update(double dt)
 {
+	TIME_SCOPE_AS(Timing::Timer::Scripts);
+
 	s_WindowGrabMouse = ScriptEngine::s_BackendScriptWantGrabMouse;
 
 	// The first Script to be updated in the current frame will

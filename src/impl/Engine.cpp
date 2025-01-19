@@ -20,6 +20,7 @@
 
 #include "gameobject/GameObjects.hpp"
 #include "GlobalJsonConfig.hpp"
+#include "PerformanceTiming.hpp"
 #include "ThreadManager.hpp"
 #include "UserInput.hpp"
 #include "Utilities.hpp"
@@ -606,6 +607,8 @@ void Engine::Start()
 			std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<size_t>((fpsCapDelta - frameDelta) * 1000)));
 		}
 
+		TIME_SCOPE_AS(Timing::Timer::EntireFrame);
+
 		scene.RenderList.clear();
 		scene.LightingList.clear();
 
@@ -728,10 +731,7 @@ void Engine::Start()
 
 		updateScripts(deltaTime);
 
-		{
-			ZoneScopedN("ThisShouldntTakeSoLong");
-			s_DebugCollisionAabbs = EngineJsonConfig.value("d_aabbs", false);
-		}
+		s_DebugCollisionAabbs = EngineJsonConfig.value("d_aabbs", false);
 
 		// Aggregate mesh and light data into lists
 		recursivelyTravelHierarchy(
@@ -777,6 +777,7 @@ void Engine::Start()
 
 		if (hasSun)
 		{
+			TIME_SCOPE_AS(Timing::Timer::Rendering);
 			ZoneScopedN("Shadows");
 
 			Scene sunScene{};
@@ -1006,6 +1007,7 @@ void Engine::Start()
 			Log::Save();
 		}
 
+		Timing::Finish();
 		FrameMark;
 	}
 

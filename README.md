@@ -40,8 +40,8 @@ Developed on Windows with Visual Studio Community 2022. Not tested on other plat
 	* A Solution Folder called "NotRequired". Right-click and `Remove` to avoid unnecessary compilation
 4. Build the Solution in either:
 	* `Debug`: Standard Debug build, no optimizations, Address Sanitizer and Tracy
-	* `RelInstru`: Debug with compiler optimizations, Address Sanitizer and Tracy
 	* `Release`: All optimizations, including Linker ones, no Address Sanitizer or Tracy
+	* `RelTracy`: Same as `Release`, but with Tracy instrumentation enabled, as that carries it's own overhead
 6. Run.
 
 # Attributions

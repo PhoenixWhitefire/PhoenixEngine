@@ -1,9 +1,4 @@
 {
     "Vertex": "postprocessing.vert",
-    "Fragment": "postprocessing.frag",
-    "UsedUniforms": [
-        "Texture",
-        "DistortionTexture",
-        "PostFxEnabled"
-    ]
+    "Fragment": "postprocessing.frag"
 }
