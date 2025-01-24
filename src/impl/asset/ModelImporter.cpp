@@ -580,8 +580,21 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From, const glm::m
 			node.Parent = From;
 
 			if (isSkinned)
-				for (int32_t jointNodeId : skinJson["joints"])
-					node.Bones.push_back(jointNodeId);
+			{
+				const nlohmann::json& jointsJson = skinJson["joints"];
+
+				std::vector<glm::mat4> invBindMatrices;
+				invBindMatrices.resize(jointsJson.size(), 1.f);
+
+				if (const auto invBindMtx = skinJson.find("inverseBindMatrices"); invBindMtx != skinJson.end())
+				{
+					const nlohmann::json& accessor = m_JsonData["accessors"][(int32_t)invBindMtx.value()];
+					invBindMatrices = m_GetAndGroupFloatsMat4(accessor);
+				}
+
+				for (int32_t jointNodeIdx = 0; jointNodeIdx < jointsJson.size(); jointNodeIdx++)
+					node.Bones.emplace_back((int32_t)skinJson["joints"][jointNodeIdx], invBindMatrices[jointNodeIdx]);
+			}
 
 			m_Nodes.push_back(node);
 		}
@@ -617,12 +630,17 @@ void ModelLoader::m_BuildRig()
 	ZoneScoped;
 
 	for (ModelNode& node : m_Nodes)
-		for (int32_t jointId : node.Bones)
+		for (const ModelNode::BoneInfo& jointDesc : node.Bones)
 		{
-			uint32_t jointNodeIndex = m_NodeIdToIndex.at(jointId);
-			const ModelNode& joint = m_Nodes.at(jointNodeIndex);
+			uint32_t jointNodeIndex = m_NodeIdToIndex.at(jointDesc.NodeId);
+			const ModelNode& jointNode = m_Nodes.at(jointNodeIndex);
 
-			node.Data.Bones.emplace_back(joint.Name, joint.Transform, joint.Scale);
+			node.Data.Bones.emplace_back(
+				jointNode.Name,
+				jointNode.Transform,
+				jointNode.Scale,
+				jointDesc.InvBindMatrix
+			);
 		}
 
 	for (const nlohmann::json& animationJson : m_JsonData.value("animations", nlohmann::json::array()))
@@ -688,6 +706,9 @@ std::vector<float> ModelLoader::m_GetFloats(const nlohmann::json& accessor)
 
 	else if (type == "VEC4")
 		numPerVert = 4;
+
+	else if (type == "MAT4")
+		numPerVert = 16;
 
 	else
 		throw("Could not decode GLTF model: Type is not handled (not SCALAR, VEC2, VEC3, or VEC4)");
@@ -1026,6 +1047,9 @@ std::vector<glm::vec2> ModelLoader::m_GetAndGroupFloatsVec2(const nlohmann::json
 {
 	ZoneScoped;
 
+	if (Accessor["type"] != "VEC2")
+		throw("Expected accessor to be VEC2");
+
 	std::vector<float> floats = m_GetFloats(Accessor);
 
 	std::vector<glm::vec2> vectors;
@@ -1044,6 +1068,9 @@ std::vector<glm::vec3> ModelLoader::m_GetAndGroupFloatsVec3(const nlohmann::json
 {
 	ZoneScoped;
 
+	if (Accessor["type"] != "VEC3")
+		throw("Expected accessor to be VEC3");
+
 	std::vector<float> floats = m_GetFloats(Accessor);
 
 	std::vector<glm::vec3> vectors;
@@ -1058,6 +1085,7 @@ std::vector<glm::vec3> ModelLoader::m_GetAndGroupFloatsVec3(const nlohmann::json
 
 	return vectors;
 }
+
 std::vector<glm::vec4> ModelLoader::m_GetAndGroupFloatsVec4(const nlohmann::json& Accessor)
 {
 	ZoneScoped;
@@ -1075,6 +1103,7 @@ std::vector<glm::vec4> ModelLoader::m_GetAndGroupFloatsVec4(const nlohmann::json
 				floats[i + 1ull],
 				floats[i + 0ull]
 			);
+
 	else if (Accessor["type"] == "VEC3")
 		for (int i = 0; i < floats.size(); i += 3)
 			vectors.emplace_back(
@@ -1084,8 +1113,50 @@ std::vector<glm::vec4> ModelLoader::m_GetAndGroupFloatsVec4(const nlohmann::json
 				1.f
 			);
 
+	else
+		throw("Expected accessor to be either VEC3 or VEC4");
+
 	return vectors;
 }
+
+std::vector<glm::mat4> ModelLoader::m_GetAndGroupFloatsMat4(const nlohmann::json& Accessor)
+{
+	ZoneScoped;
+
+	if (Accessor["type"] != "MAT4")
+		throw("Expected accessor to be MAT4");
+
+	std::vector<float> floats = m_GetFloats(Accessor);
+
+	std::vector<glm::mat4> mats;
+	mats.reserve(static_cast<size_t>(mats.size() / 16));
+
+	for (int i = 0; i < floats.size(); i+=16)
+		mats.emplace_back(
+			floats[i + 0ull],
+			floats[i + 1ull],
+			floats[i + 2ull],
+			floats[i + 3ull],
+
+			floats[i + 4ull],
+			floats[i + 5ull],
+			floats[i + 6ull],
+			floats[i + 7ull],
+
+			floats[i + 8ull],
+			floats[i + 9ull],
+			floats[i + 10ull],
+			floats[i + 11ull],
+			floats[i + 12ull],
+
+			floats[i + 13ull],
+			floats[i + 14ull],
+			floats[i + 15ull]
+		);
+
+	return mats;
+}
+
 std::vector<glm::tvec4<uint8_t>> ModelLoader::m_GetAndGroupUBytesVec4(const nlohmann::json& Accessor)
 {
 	ZoneScoped;

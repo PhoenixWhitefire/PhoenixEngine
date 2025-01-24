@@ -214,8 +214,6 @@ static void luaTableToJson(lua_State* L, nlohmann::json& json)
 
 Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int StackIndex)
 {
-	ZoneScoped;
-
 	switch (lua_type(L, StackIndex))
 	{
 	case (lua_Type::LUA_TNIL):
@@ -300,8 +298,6 @@ Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int St
 
 void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericValue& gv)
 {
-	ZoneScoped;
-
 	switch (gv.Type)
 	{
 	case (Reflection::ValueType::Null):

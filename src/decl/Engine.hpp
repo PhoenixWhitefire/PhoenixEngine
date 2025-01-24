@@ -22,12 +22,10 @@
 class Engine
 {
 public:
+	Engine();
 	~Engine();
 
 	static Engine* Get();
-
-	// Initialize Engine systems, can throw exceptions
-	void Initialize();
 
 	// Initializes main engine loop
 	void Start();
@@ -41,9 +39,9 @@ public:
 
 	void LoadConfiguration();
 
-	EventSignal<Reflection::GenericValue> OnFrameStart{};
-	EventSignal<Reflection::GenericValue> OnFrameRenderGui{};
-	EventSignal<Reflection::GenericValue> OnFrameEnd{};
+	EventSignal<double> OnFrameStart{};
+	EventSignal<double> OnFrameRenderGui{};
+	EventSignal<double> OnFrameEnd{};
 
 	bool IsFullscreen = false;
 

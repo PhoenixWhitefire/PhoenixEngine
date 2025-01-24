@@ -37,22 +37,30 @@ private:
 
 	struct ModelNode
 	{
-		std::string Name;
-		uint32_t NodeId{ UINT32_MAX };
-		uint32_t Parent;
+		struct BoneInfo
+		{
+			int32_t NodeId = UINT32_MAX;
+			glm::mat4 InvBindMatrix{ 1.f };
+		};
 
 		enum class NodeType : uint8_t
 		{
 			Primitive,
 			Container,
 			Bone
-		} Type = NodeType::Primitive;
+		};
+
+		std::string Name;
+		uint32_t NodeId{ UINT32_MAX };
+		uint32_t Parent;
+
+		NodeType Type = NodeType::Primitive;
 
 		Mesh Data;
 		MeshMaterial Material;
 		glm::mat4 Transform;
 		glm::vec3 Scale{ 1.f, 1.f, 1.f };
-		std::vector<int32_t> Bones;
+		std::vector<BoneInfo> Bones;
 	};
 
 	ModelLoader() = delete;
@@ -87,6 +95,7 @@ private:
 	std::vector<glm::vec2> m_GetAndGroupFloatsVec2(const nlohmann::json& Accessor);
 	std::vector<glm::vec3> m_GetAndGroupFloatsVec3(const nlohmann::json& Accessor);
 	std::vector<glm::vec4> m_GetAndGroupFloatsVec4(const nlohmann::json& Accessor);
+	std::vector<glm::mat4> m_GetAndGroupFloatsMat4(const nlohmann::json& Accessor);
 	std::vector<glm::tvec4<uint8_t>> m_GetAndGroupUBytesVec4(const nlohmann::json& Accessor);
 
 	std::string m_File;

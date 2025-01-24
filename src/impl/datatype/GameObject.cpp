@@ -266,8 +266,6 @@ void GameObject::MergeWith(GameObject* Other)
 
 GameObject* GameObject::FromGenericValue(const Reflection::GenericValue& gv)
 {
-	ZoneScoped;
-
 	if (gv.Type == Reflection::ValueType::Null)
 		return nullptr;
 
@@ -514,8 +512,6 @@ GameObject* GameObject::GetParent() const
 
 std::vector<GameObject*> GameObject::GetChildren()
 {
-	ZoneScoped;
-
 	std::vector<GameObject*> children;
 	children.reserve(m_Children.size());
 

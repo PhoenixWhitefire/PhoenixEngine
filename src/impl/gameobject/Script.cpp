@@ -9,6 +9,7 @@
 #include "datatype/Color.hpp"
 #include "UserInput.hpp"
 #include "FileRW.hpp"
+#include "Memory.hpp"
 #include "Log.hpp"
 
 #define LUA_ASSERT(res, err, ...) if (!res) { luaL_error(L, err, __VA_ARGS__); }
@@ -355,11 +356,11 @@ static auto api_coltostring = [](lua_State* L)
 static void* l_alloc(void*, void* ptr, size_t, size_t nsize)
 {
 	if (nsize == 0) {
-		free(ptr);
+		Memory::Free(ptr);
 		return NULL;
 	}
 	else
-		return realloc(ptr, nsize);
+		return Memory::ReAlloc(ptr, nsize, Memory::Category::Luau);
 }
 
 static lua_State* createState()
@@ -1047,8 +1048,6 @@ bool Object_Script::Reload()
 
 	// needs lua.h and luacode.h
 	size_t bytecodeSize = 0;
-	// Keeps crashing upon reloading the script twice, maybe
-	// `malloc` some so it isn't a nullptr (due to the `free`)
 	char* bytecode = luau_compile(m_Source.c_str(), m_Source.length(), NULL, &bytecodeSize);
 
 	int result = luau_load(m_L, chunkname.c_str(), bytecode, bytecodeSize, 0);

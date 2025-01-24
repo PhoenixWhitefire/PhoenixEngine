@@ -83,6 +83,7 @@ PHX_MAIN_HANDLECRASH(std::exception, .what()); \
 #include "GlobalJsonConfig.hpp"
 #include "UserInput.hpp"
 #include "Utilities.hpp"
+#include "Memory.hpp"
 #include "FileRW.hpp"
 #include "Editor.hpp"
 #include "Log.hpp"
@@ -106,6 +107,11 @@ static glm::vec3 CamForward = glm::vec3(0.f, 0.f, -1.f);
 static bool WasTracyLaunched = false;
 
 #ifdef TRACY_ENABLE
+
+// not using the `Memory` namespace
+// because it interferes with code I didn't write
+// 24/01/2025
+// 24/01/2025
 
 void* operator new(size_t sz)
 {
@@ -197,7 +203,7 @@ static void launchTracy()
 		SDL_MESSAGEBOX_INFORMATION,
 		"Tracy Integration",
 		"Instrumentation was disabled for this build. You need to use a build with the `TRACY_ENABLE` macro defintion.",
-		nullptr
+		Engine::Get() ? Engine::Get()->Window : nullptr
 	);
 
 #endif
@@ -221,12 +227,8 @@ static int findCmdLineArgument(
 	return -1;
 }
 
-static void handleInputs(Reflection::GenericValue Data)
+static void handleInputs(double deltaTime)
 {
-	ZoneScoped;
-
-	double deltaTime = Data.AsDouble();
-
 	if (EngineJsonConfig.value("Developer", false))
 		EditorContext->Update(deltaTime);
 
@@ -435,59 +437,7 @@ static void handleInputs(Reflection::GenericValue Data)
 		PreviouslyPressingF11 = false;
 }
 
-static double recurseGetTime(const nlohmann::json& root)
-{
-	if (root.find("_t") != root.end())
-		return root["_t"];
-
-	double t{};
-
-	for (auto ch = root.begin(); ch != root.end(); ++ch)
-		t += recurseGetTime(ch.value());
-
-	return t;
-}
-
-static void recurseProfilerUI(const nlohmann::json& tree)
-{
-	for (auto it = tree.begin(); it != tree.end(); ++it)
-	{
-		auto& v = it.value();
-
-		if (v.type() != nlohmann::json::value_t::object)
-			continue;
-
-		// "EventCallbacks" doesn't have an `_t`, accumulate the timings of
-		// it's children
-		// 08/12/2024
-		double t = recurseGetTime(v);
-
-		uint32_t tMS = static_cast<uint32_t>(std::floor(t * 100000.f));
-		float tMSHundreds = tMS / 100.f;
-
-		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow;
-
-		if (it.value().size() == 1)
-			flags |= ImGuiTreeNodeFlags_Leaf;
-
-		bool open = ImGui::TreeNodeEx(
-			it.key().c_str(),
-			flags,
-			(std::vformat(
-				"{}: {}ms",
-				std::make_format_args(it.key(), tMSHundreds)
-			)).c_str()
-		);
-
-		if (open)
-		{
-			recurseProfilerUI(it.value());
-			ImGui::TreePop();
-		}
-	}
-}
-
-static void drawUI(Reflection::GenericValue Data)
+static void drawUI(double)
 {
 	ZoneScopedC(tracy::Color::DarkOliveGreen);
 
@@ -525,7 +475,7 @@ static void drawUI(Reflection::GenericValue Data)
 		{
 			ImGui::Text("FPS: %d", EngineInstance->FramesPerSecond);
 			ImGui::Text("Frame time: %dms", (int)std::round(EngineInstance->FrameTime * 1000));
-			ImGui::Text("Draw calls: %zi", EngineJsonConfig.value("renderer_drawcallcount", 0ull));
+			ImGui::Text("Draw calls: %u", EngineInstance->RendererContext.AccumulatedDrawCallCount);
 
 #ifdef TRACY_ENABLE
 			// 13/01/2025 hi hihihi hihiihii
@@ -541,6 +491,17 @@ static void drawUI(Reflection::GenericValue Data)
 			ImGui::Text("Rendering: %dms", (int)std::round(times[(size_t)Timing::Timer::Rendering] * 1000));
 			ImGui::Text("Physics: %dms", (int)std::round(times[(size_t)Timing::Timer::Physics] * 1000));
 			ImGui::Text("Scripts: %dms", (int)std::round(times[(size_t)Timing::Timer::Scripts] * 1000));
+
+			ImGui::SeparatorText("Memory");
+
+			const std::array<size_t, (size_t)Memory::Category::_count>& counts = Memory::Counters;
+
+			ImGui::Text("Default: %zi", counts[0]);
+			ImGui::Text("GameObject: %zi", counts[1]);
+			ImGui::Text("Reflection: %zi", counts[2]);
+			ImGui::Text("Rendering: %zi", counts[3]);
+			ImGui::Text("Mesh: %zi", counts[4]);
+			ImGui::Text("Luau: %zi", counts[5]);
 		}
 		ImGui::End();
 
@@ -649,7 +610,7 @@ static void handleCrash(const std::string& Error, const std::string& ExceptionTy
 		SDL_MESSAGEBOX_ERROR,
 		"Fatal Error",
 		errMessage.c_str(),
-		nullptr
+		Engine::Get() ? Engine::Get()->Window : nullptr
 	);
 
 	if (!showSuccess)
@@ -772,8 +733,6 @@ int main(int argc, char** argv)
 		// throws an exception, but it can't seem to catch it regardless?
 		// 10/01/2025
 		Engine engine{};
-
-		engine.Initialize();
 
 		begin(argc, argv);
 

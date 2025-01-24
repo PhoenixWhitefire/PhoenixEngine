@@ -17,6 +17,7 @@
 #include <nljson.hpp>
 
 #include "Reflection.hpp"
+#include "Memory.hpp"
 
 class GameObject : public Reflection::Reflectable
 {
@@ -84,6 +85,7 @@ public:
 	static nlohmann::json DumpApiToJson();
 
 	REFLECTION_DECLAREAPI;
+	MEM_ALLOC_OPERATORS(GameObject, GameObject);
 
 	// I followed this StackOverflow post:
 	// https://stackoverflow.com/a/582456/16875161

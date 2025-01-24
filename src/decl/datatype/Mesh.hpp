@@ -8,6 +8,8 @@
 #include <glm/vec3.hpp>
 #include <glm/vec2.hpp>
 
+#include "Memory.hpp"
+
 struct Vertex
 {
 	glm::vec3 Position;
@@ -18,6 +20,8 @@ struct Vertex
 	// skinned mesh animation, 4 bones max per vert
 	std::array<uint8_t, 4> InfluencingJoints = { UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX };
 	std::array<float, 4> JointWeights = { FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX };
+
+	MEM_ALLOC_OPERATORS(Vertex, Mesh);
 };
 
 struct Bone
@@ -25,6 +29,9 @@ struct Bone
 	std::string Name = "<UNNAMED_BONE>";
 	glm::mat4 Transform{ 1.f };
 	glm::vec3 Scale{ 1.f };
+	glm::mat4 InverseBindMatrix{ 1.f };
+
+	MEM_ALLOC_OPERATORS(Bone, Mesh);
 };
 
 struct Mesh
@@ -35,4 +42,6 @@ struct Mesh
 
 	uint32_t GpuId = UINT32_MAX;
 	bool MeshDataPreserved = false;
+
+	MEM_ALLOC_OPERATORS(Mesh, Mesh);
 };

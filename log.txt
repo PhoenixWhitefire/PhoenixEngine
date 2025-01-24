@@ -1,8 +1,8 @@
 [INFO]: Application startup
 [INFO]: Phoenix Engine:
-	Build type: RelTracy
-	Main.cpp last compiled: Jan 19 2025 @ [REDACTED]
-[INFO]: Command line:  C:\Users\phoen\Documents\PhoenixEngine\x64\RelTracy\PhoenixEngine.exe
+	Build type: Release
+	Main.cpp last compiled: Jan 24 2025 @ [REDACTED]
+[INFO]: Command line:  C:\Users\phoen\Documents\PhoenixEngine\x64\Release\PhoenixEngine.exe
 [INFO]: Configuration loaded
 [INFO]: Requesting a Core OpenGL context with version 4.6
 [INFO]: Window created

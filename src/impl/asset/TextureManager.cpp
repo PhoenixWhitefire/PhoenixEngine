@@ -474,14 +474,7 @@ void TextureManager::FinalizeAsyncLoadedTextures()
 	size_t numTexPromises = m_TexPromises.size();
 	size_t numTexFutures = m_TexFutures.size();
 
-	if (numTexPromises != numTexFutures)
-	{
-		Log::Error(std::vformat(
-			"FinalizeAsyncLoadedTextures had {} promises but {} futures, cannot proceed safely",
-			std::make_format_args(numTexPromises, numTexFutures)
-		));
-		return;
-	}
+	assert(numTexPromises == numTexFutures);
 
 	for (size_t promiseIndex = 0; promiseIndex < numTexPromises; promiseIndex++)
 	{
@@ -516,17 +509,16 @@ void TextureManager::FinalizeAsyncLoadedTextures()
 
 			image.TMP_ImageByteData = (uint8_t*)malloc(bufSize);
 
-			if (!image.TMP_ImageByteData)
-				throw(std::vformat(
-					"`malloc` failed in ::FinalizeAsyncLoadedTextures (Requested amount was {} bytes)",
-					std::make_format_args(bufSize)
-				));
+			PHX_ENSURE(image.TMP_ImageByteData, std::vformat(
+				"`malloc` failed in ::FinalizeAsyncLoadedTextures (Requested amount was {} bytes)",
+				std::make_format_args(bufSize)
+			));
 
 			// if image fails to load this will be NULL
 			if (loadedImage.TMP_ImageByteData)
 				memcpy(image.TMP_ImageByteData, loadedImage.TMP_ImageByteData, bufSize);
 
-			stbi_image_free(loadedImage.TMP_ImageByteData);
+			free(loadedImage.TMP_ImageByteData);
 		}
 
 		m_UploadTextureToGpu(image);

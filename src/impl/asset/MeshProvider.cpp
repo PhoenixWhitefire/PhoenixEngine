@@ -603,6 +603,8 @@ static void uploadMeshDataToGpuMesh(Mesh& mesh, MeshProvider::GpuMesh& gpuMesh)
 	vao.LinkAttrib(vbo, 1, 3, GL_FLOAT, sizeof(Vertex), (void*)(3 * sizeof(float)));
 	vao.LinkAttrib(vbo, 2, 4, GL_FLOAT, sizeof(Vertex), (void*)(6 * sizeof(float)));
 	vao.LinkAttrib(vbo, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)(10 * sizeof(float)));
+	vao.LinkAttrib(vbo, 4, 4, GL_FLOAT, sizeof(Vertex), (void*)(12 * sizeof(float)));
+	vao.LinkAttrib(vbo, 5, 4, GL_FLOAT, sizeof(Vertex), (void*)(16 * sizeof(float)));
 
 	vbo.SetBufferData(mesh.Vertices, BufferUsageHint::Static);
 	ebo.SetBufferData(mesh.Indices, BufferUsageHint::Static);

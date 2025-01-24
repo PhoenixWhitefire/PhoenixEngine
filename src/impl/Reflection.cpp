@@ -6,8 +6,7 @@
 #include "datatype/GameObject.hpp"
 #include "datatype/Vector3.hpp"
 #include "datatype/Color.hpp"
-
-//Reflection::Reflectable* Reflection::Reflectable::ApiReflection = new Reflection::Reflectable();
+#include "Memory.hpp"
 
 Reflection::GenericValue::GenericValue()
 	: Type(ValueType::Null)
@@ -16,7 +15,7 @@ Reflection::GenericValue::GenericValue()
 
 static void fromString(Reflection::GenericValue& G, const char* CStr)
 {
-	G.Value = malloc(G.Size + 1);
+	G.Value = Memory::Alloc(G.Size + 1, Memory::Category::Reflection);
 
 	if (!G.Value)
 		throw("Failed to allocate enough space for string in fromString");
@@ -66,7 +65,7 @@ Reflection::GenericValue::GenericValue(int i)
 
 static void fromMatrix(Reflection::GenericValue& G, const glm::mat4& M)
 {
-	G.Value = malloc(sizeof(M));
+	G.Value = Memory::Alloc(sizeof(M), Memory::Category::Reflection);
 	G.Size = sizeof(M);
 
 	if (!G.Value)
@@ -85,7 +84,7 @@ static void fromArray(Reflection::GenericValue& G, const std::vector<Reflection:
 {
 	size_t allocSize = Array.size() * sizeof(G);
 
-	G.Value = malloc(allocSize);
+	G.Value = Memory::Alloc(allocSize, Memory::Category::Reflection);
 
 	if (!G.Value)
 		throw("Allocation error while constructing GenericValue from std::vector<GenericValue>");
@@ -115,7 +114,7 @@ Reflection::GenericValue::GenericValue(const std::unordered_map<GenericValue, Ge
 
 	size_t allocSize = arr.size() * sizeof(GenericValue);
 
-	this->Value = (GenericValue*)malloc(allocSize);
+	this->Value = (GenericValue*)Memory::Alloc(allocSize, Memory::Category::Reflection);
 
 	if (!this->Value)
 		throw("Allocation error while constructing GenericValue from std::map<GenericValue, GenericValue>");
@@ -412,12 +411,12 @@ Reflection::GenericValue::~GenericValue()
 	{
 	case (Reflection::ValueType::String):
 	{
-		free(this->Value);
+		Memory::Free(this->Value);
 		break;
 	}
 	case (Reflection::ValueType::Matrix):
 	{
-		free(this->Value);
+		Memory::Free(this->Value);
 		break;
 	}
 	case (Reflection::ValueType::Color):
@@ -428,6 +427,16 @@ Reflection::GenericValue::~GenericValue()
 	case (Reflection::ValueType::Vector3):
 	{
 		delete (Vector3*)this->Value;
+		break;
+	}
+	case (Reflection::ValueType::Array):
+	{
+		Memory::Free(this->Value);
+		break;
+	}
+	case (Reflection::ValueType::Map):
+	{
+		Memory::Free(this->Value);
 		break;
 	}
 	}

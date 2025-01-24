@@ -65,6 +65,8 @@ public:
 
 	SDL_GLContext GLContext = nullptr;
 
+	uint32_t AccumulatedDrawCallCount = 0;
+
 private:
 	void m_SetMaterialData(const RenderItem&);
 

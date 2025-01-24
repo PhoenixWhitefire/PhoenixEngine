@@ -1,6 +1,7 @@
 #include <chrono>
 
 #include "Utilities.hpp"
+#include "Memory.hpp"
 
 static auto s_ChronoStartTime = std::chrono::high_resolution_clock::now();
 
@@ -12,7 +13,7 @@ void CopyStringToBuffer(char* buf, size_t capacity, std::string string)
 
 char* BufferInitialize(size_t capacity, const std::string& value)
 {
-	char* buf = (char*)malloc(capacity + 1);
+	char* buf = (char*)Memory::Alloc(capacity + 1);
 
 	if (!buf)
 		throw("There are bigger problems at hand.");

@@ -22,6 +22,7 @@
 
 #include "Utilities.hpp"
 #include "UserInput.hpp"
+#include "Memory.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
@@ -163,7 +164,7 @@ static void textEditorSaveFile()
 	// `contents.empty` early-out triggers as the user opens another file, the new file
 	// will be overwritten with the empty contents
 	// 12/02/2024
-	free(TextEditorEntryBuffer);
+	Memory::Free(TextEditorEntryBuffer);
 	TextEditorEntryBuffer = nullptr;
 
 	if (TextEditorFile == "" || TextEditorFile == "<NOT_SELECTED>")
@@ -368,7 +369,7 @@ static void renderTextEditor()
 			TextEditorFileStream->read(&scriptContents[0], scriptContents.size());
 
 			TextEditorEntryBufferCapacity = scriptContents.size() + 256;
-			TextEditorEntryBuffer = (char*)malloc(TextEditorEntryBufferCapacity);
+			TextEditorEntryBuffer = (char*)Memory::Alloc(TextEditorEntryBufferCapacity);
 
 			CopyStringToBuffer(TextEditorEntryBuffer, TextEditorEntryBufferCapacity, scriptContents);
 		}
@@ -1261,7 +1262,7 @@ void Editor::RenderUI()
 				ImGui::InputText(propName, buf, allocSize);
 				newVal = std::string(buf);
 
-				free(buf);
+				Memory::Free(buf);
 
 				break;
 			}

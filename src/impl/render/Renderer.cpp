@@ -233,9 +233,7 @@ void Renderer::DrawScene(
 	MeshProvider* meshProvider = MeshProvider::Get();
 	MaterialManager* mtlManager = MaterialManager::Get();
 
-	size_t numDrawCalls = 0;
-
-	// map< instance checksum, pair< base RenderItem, vector< array buffer data >>>
+	// map< clump hash, pair< base RenderItem, vector< array buffer data >>>
 	std::map<uint64_t, std::pair<size_t, std::vector<float>>> instancingList;
 
 	{
@@ -312,51 +310,61 @@ void Renderer::DrawScene(
 				// And it needs to be on the GPU
 			Mesh& mesh = meshProvider->GetMeshResource(renderData.RenderMeshId);
 
-			uint64_t checksum = 0;
+			uint64_t hash = 0;
 
-			if (mesh.GpuId == UINT32_MAX)
+			// make sure meshes that aren't on the gpu don't get
+			// instanced
+			// 21/01/2025 skinned meshes also can't rn
+			if (mesh.GpuId == UINT32_MAX || !mesh.Bones.empty())
 			{
-				// make sure meshes that aren't on the gpu don't get
-				// instanced
-				checksum = instancingList.size();
+				hash = instancingList.size();
 
-				while (instancingList.find(checksum) != instancingList.end())
-					checksum += 1;
+				while (instancingList.find(hash) != instancingList.end())
+					hash += 1;
+
+				if (mesh.GpuId != UINT32_MAX && !mesh.Bones.empty())
+				{
+					const MeshProvider::GpuMesh& gpuMesh = meshProvider->GetGpuMesh(renderData.RenderMeshId);
+					// 21/01/2025 dynamic bone transforms
+					gpuMesh.VertexBuffer.SetBufferData(mesh.Vertices);
+				}
 			}
 			else
-				checksum = renderData.RenderMeshId
-				+ static_cast<uint64_t>(renderData.MaterialId * 500u)
-				+ (renderData.Transparency > 0.f ? 5000000ull : 0ull)
-				+ static_cast<uint64_t>(renderData.MetallnessFactor * 115)
-				+ static_cast<uint64_t>(renderData.RoughnessFactor * 115);
+				hash = renderData.RenderMeshId
+						+ static_cast<uint64_t>(renderData.MaterialId * 500u)
+						+ (renderData.Transparency > 0.f ? 5000000ull : 0ull)
+						+ static_cast<uint64_t>(renderData.MetallnessFactor * 115)
+						+ static_cast<uint64_t>(renderData.RoughnessFactor * 115);
 
 			if (renderData.Transparency > 0.f)
 				// hacky way to get transparents closer to the camera drawn
 				// later.
-				checksum += static_cast<uint64_t>(1.f / (glm::distance(
+				hash += static_cast<uint64_t>(1.f / (glm::distance(
 					CameraTransform[3],
 					renderData.Transform[3]
 				)) * 500000.f);
 
-			auto it = instancingList.find(checksum);
+			auto it = instancingList.find(hash);
 			if (it == instancingList.end())
-				instancingList[checksum] = std::pair(renderItemIndex, std::vector<float>{});
+				instancingList[hash] = std::pair(renderItemIndex, std::vector<float>(22));
+
+			std::vector<float>& buffer = instancingList[hash].second;
 
 			// Set buffer data
 			// Transform
 			for (int8_t col = 0; col < 4; col++)
 				for (int8_t row = 0; row < 4; row++)
-					instancingList[checksum].second.push_back(renderData.Transform[col][row]);
+					buffer.push_back(renderData.Transform[col][row]);
 
 			// Size
-			instancingList[checksum].second.push_back(renderData.Size.x);
-			instancingList[checksum].second.push_back(renderData.Size.y);
-			instancingList[checksum].second.push_back(renderData.Size.z);
+			buffer.push_back(renderData.Size.x);
+			buffer.push_back(renderData.Size.y);
+			buffer.push_back(renderData.Size.z);
 
 			// Color
-			instancingList[checksum].second.push_back(renderData.TintColor.R);
-			instancingList[checksum].second.push_back(renderData.TintColor.G);
-			instancingList[checksum].second.push_back(renderData.TintColor.B);
+			buffer.push_back(renderData.TintColor.R);
+			buffer.push_back(renderData.TintColor.G);
+			buffer.push_back(renderData.TintColor.B);
 		}
 	}
 
@@ -389,33 +397,33 @@ void Renderer::DrawScene(
 
 			// `Transform` matrix
 			// 4 vec4's
-			glEnableVertexAttribArray(4);
-			glEnableVertexAttribArray(5);
 			glEnableVertexAttribArray(6);
 			glEnableVertexAttribArray(7);
+			glEnableVertexAttribArray(8);
+			glEnableVertexAttribArray(9);
 
-			glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size * 2, (void*)0);
-			glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size * 2, (void*)(1 * (size_t)vec4Size));
-			glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size * 2, (void*)(2 * (size_t)vec4Size));
-			glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size * 2, (void*)(3 * (size_t)vec4Size));
+			glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size * 2, (void*)0);
+			glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size * 2, (void*)(1 * (size_t)vec4Size));
+			glVertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size * 2, (void*)(2 * (size_t)vec4Size));
+			glVertexAttribPointer(9, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size * 2, (void*)(3 * (size_t)vec4Size));
 
-			glVertexAttribDivisor(4, 1);
-			glVertexAttribDivisor(5, 1);
 			glVertexAttribDivisor(6, 1);
 			glVertexAttribDivisor(7, 1);
+			glVertexAttribDivisor(8, 1);
+			glVertexAttribDivisor(9, 1);
 
 			// vec3s
 			// scale
-			glEnableVertexAttribArray(8);
+			glEnableVertexAttribArray(10);
 			// color
-			glEnableVertexAttribArray(9);
+			glEnableVertexAttribArray(11);
 
 			// it's still `4 * (size_t)` because that's the offset from everything else
-			glVertexAttribPointer(8, 3, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size * 2, (void*)(4 * (size_t)vec4Size));
-			glVertexAttribPointer(9, 3, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size * 2, (void*)((4 * (size_t)vec4Size) + vec3Size));
+			glVertexAttribPointer(10, 3, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size * 2, (void*)(4 * (size_t)vec4Size));
+			glVertexAttribPointer(11, 3, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size * 2, (void*)((4 * (size_t)vec4Size) + vec3Size));
 
-			glVertexAttribDivisor(8, 1);
-			glVertexAttribDivisor(9, 1);
+			glVertexAttribDivisor(10, 1);
+			glVertexAttribDivisor(11, 1);
 
 			glBufferData(
 				GL_ARRAY_BUFFER,
@@ -446,11 +454,7 @@ void Renderer::DrawScene(
 			renderData.FaceCulling,
 			numInstances > 1 ? numInstances : 0
 		);
-
-		numDrawCalls++;
 	}
-
-	EngineJsonConfig["renderer_drawcallcount"] = EngineJsonConfig.value("renderer_drawcallcount", 0) + numDrawCalls;
 }
 
 void Renderer::DrawMesh(
@@ -463,6 +467,8 @@ void Renderer::DrawMesh(
 )
 {
 	ZoneScopedC(tracy::Color::HotPink);
+
+	AccumulatedDrawCallCount++;
 
 	switch (FaceCulling)
 	{
@@ -600,6 +606,24 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData)
 	}
 	else
 		shader.SetUniform("HasEmissionMap", false);
+
+	MeshProvider* meshProv = MeshProvider::Get();
+
+	const Mesh& mesh = meshProv->GetMeshResource(RenderData.RenderMeshId);
+
+	if (!mesh.Bones.empty())
+	{
+		shader.SetUniform("Animated", true);
+
+		for (uint8_t i = 0; i < mesh.Bones.size(); i++)
+		{
+			const Bone& b = mesh.Bones[i];
+
+			shader.SetUniform("Bones[" + std::to_string(i) + "]", b.Transform);
+		}
+	}
+	else
+		shader.SetUniform("Animated", false);
 
 	// apply the uniforms for the shader program...
 	shader.ApplyDefaultUniforms();

@@ -157,7 +157,7 @@ void Engine::LoadConfiguration()
 	Log::Info("Configuration loaded");
 }
 
-void Engine::Initialize()
+Engine::Engine()
 {
 	EngineInstance = this;
 
@@ -590,7 +590,7 @@ void Engine::Start()
 		GameObjectRef<Object_Workspace> keepWorkspace{ workspace };
 
 		this->RunningTime = GetRunningTime();
-		EngineJsonConfig["renderer_drawcallcount"] = 0;
+		RendererContext.AccumulatedDrawCallCount = 0;
 		
 		static bool IsWindowFocused = true;
 
