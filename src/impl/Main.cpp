@@ -49,12 +49,21 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 // quit
 #define PHX_MAIN_HANDLECRASH(c, expr) catch (c Error) { handleCrash(Error##expr, #c); return 1; }
 
+#ifdef NDEBUG
+
 #define PHX_MAIN_CRASHHANDLERS PHX_MAIN_HANDLECRASH(std::string, ) \
 PHX_MAIN_HANDLECRASH(const char*, ) \
 PHX_MAIN_HANDLECRASH(std::bad_alloc, .what() + std::string(": System may have run out of memory")) \
 PHX_MAIN_HANDLECRASH(nlohmann::json::type_error, .what()) \
 PHX_MAIN_HANDLECRASH(nlohmann::json::parse_error, .what()) \
 PHX_MAIN_HANDLECRASH(std::exception, .what()); \
+
+#else
+
+// 24/01/2025 allow VS debugger to take us directly to the exception location
+#define PHX_MAIN_CRASHHANDLERS catch (void*) { assert(false); }
+
+#endif
 
 #include <filesystem>
 
@@ -437,7 +446,7 @@ static void handleInputs(double deltaTime)
 		PreviouslyPressingF11 = false;
 }
 
-static void drawUI(double)
+static void drawDeveloperUI(double)
 {
 	ZoneScopedC(tracy::Color::DarkOliveGreen);
 
@@ -469,120 +478,113 @@ static void drawUI(double)
 		Log::Info("Shaders reloaded");
 	}
 
-	if (EditorContext)
+	if (ImGui::Begin("Info"))
 	{
-		if (ImGui::Begin("Info"))
-		{
-			ImGui::Text("FPS: %d", EngineInstance->FramesPerSecond);
-			ImGui::Text("Frame time: %dms", (int)std::round(EngineInstance->FrameTime * 1000));
-			ImGui::Text("Draw calls: %u", EngineInstance->RendererContext.AccumulatedDrawCallCount);
+		const std::array<double, (size_t)Timing::Timer::__count>& times = Timing::FinalFrameTimes;
+
+		size_t frameTime = static_cast<size_t>(times[0] * 1000);
+
+		ImGui::Text("FPS: %d", EngineInstance->FramesPerSecond);
+		ImGui::Text("Frame time: %zims", frameTime);
+		ImGui::Text("Draw calls: %u", EngineInstance->RendererContext.AccumulatedDrawCallCount);
 
 #ifdef TRACY_ENABLE
-			// 13/01/2025 hi hihihi hihiihii
-			if (!WasTracyLaunched && ImGui::Button("Start Profiling"))
-				launchTracy();
+		// 13/01/2025 hi hihihi hihiihii
+		if (!WasTracyLaunched && ImGui::Button("Start Profiling"))
+			launchTracy();
 #endif
 
-			ImGui::SeparatorText("Timers");
+		ImGui::SeparatorText("Timers");
 
-			const std::array<double, (size_t)Timing::Timer::__count>& times = Timing::FinalFrameTimes;
+		for (int i = 0; i < (int)Timing::Timer::__count; i++)
+			ImGui::Text("%s: %zims", Timing::TimerNames[i], static_cast<size_t>(times[i] * 1000));
 
-			ImGui::Text("EntireFrame: %dms", (int)std::round(times[(size_t)Timing::Timer::EntireFrame] * 1000));
-			ImGui::Text("Rendering: %dms", (int)std::round(times[(size_t)Timing::Timer::Rendering] * 1000));
-			ImGui::Text("Physics: %dms", (int)std::round(times[(size_t)Timing::Timer::Physics] * 1000));
-			ImGui::Text("Scripts: %dms", (int)std::round(times[(size_t)Timing::Timer::Scripts] * 1000));
+		ImGui::SeparatorText("Heap");
 
-			ImGui::SeparatorText("Memory");
+		const std::array<size_t, (size_t)Memory::Category::__count>& counts = Memory::Counters;
 
-			const std::array<size_t, (size_t)Memory::Category::_count>& counts = Memory::Counters;
-
-			ImGui::Text("Default: %zi", counts[0]);
-			ImGui::Text("GameObject: %zi", counts[1]);
-			ImGui::Text("Reflection: %zi", counts[2]);
-			ImGui::Text("Rendering: %zi", counts[3]);
-			ImGui::Text("Mesh: %zi", counts[4]);
-			ImGui::Text("Luau: %zi", counts[5]);
-		}
-		ImGui::End();
-
-		if (ImGui::Begin("Settings"))
-		{
-			ImGui::Checkbox("VSync", &EngineInstance->VSync);
-
-			bool wasFullscreen = EngineInstance->IsFullscreen;
-
-			ImGui::Checkbox("Fullscreen", &EngineInstance->IsFullscreen);
-
-			if (EngineInstance->IsFullscreen != wasFullscreen)
-				EngineInstance->SetIsFullscreen(EngineInstance->IsFullscreen);
-
-				if (EngineInstance->VSync)
-					SDL_GL_SetSwapInterval(1);
-				else
-				{
-					SDL_GL_SetSwapInterval(0);
-
-					ImGui::InputInt("FPS max", &EngineInstance->FpsCap, 1, 30);
-				}
-
-			bool postFxEnabled = EngineJsonConfig.value("postfx_enabled", false);
-
-			ImGui::Checkbox("Post-Processing", &postFxEnabled);
-
-			EngineJsonConfig["postfx_enabled"] = postFxEnabled;
-
-			if (postFxEnabled)
-			{
-				float gammaCorrection = EngineJsonConfig.value("postfx_gamma", 1.f);
-				float trldmax = EngineJsonConfig.value("postfx_ldmax", 1.f);
-				float trcmax = EngineJsonConfig.value("postfx_cmax", 1.f);
-
-				ImGui::InputFloat("Gamma", &gammaCorrection);
-				ImGui::InputFloat("Tonemapper LdMax", &trldmax);
-				ImGui::InputFloat("Tonemapper CMax", &trcmax);
-
-				EngineJsonConfig["postfx_gamma"] = gammaCorrection;
-				EngineJsonConfig["postfx_ldmax"] = trldmax;
-				EngineJsonConfig["postfx_cmax"] = trcmax;
-
-				bool blurVignette = EngineJsonConfig.value("postfx_blurvignette", false);
-				bool distortion = EngineJsonConfig.value("postfx_distortion", false);
-
-				ImGui::Checkbox("Blur vignette", &blurVignette);
-				ImGui::Checkbox("Distortion", &distortion);
-
-				EngineJsonConfig["postfx_blurvignette"] = blurVignette;
-				EngineJsonConfig["postfx_distortion"] = distortion;
-
-				if (EngineJsonConfig["postfx_blurvignette"])
-				{
-					float distFactorMultiplier = EngineJsonConfig.value("postfx_blurvignette_blurstrength", 2.f);
-					float weightExponent = EngineJsonConfig.value("postfx_blurvignette_weightexp", 2.f);
-					float weightMultiplier = EngineJsonConfig.value("postfx_blurvignette_weightmul", 2.5f);
-					float sampleRadius = EngineJsonConfig.value("postfx_blurvignette_sampleradius", 4.f);
-
-					ImGui::InputFloat("Vignette dist weight factor", &distFactorMultiplier);
-					ImGui::InputFloat("Vignette weight exponent", &weightExponent);
-					ImGui::InputFloat("Vignette weight multiplier", &weightMultiplier);
-					ImGui::InputFloat("Vignette sample radius", &sampleRadius);
-
-					EngineJsonConfig["postfx_blurvignette_blurstrength"] = distFactorMultiplier;
-					EngineJsonConfig["postfx_blurvignette_weightexp"] = weightExponent;
-					EngineJsonConfig["postfx_blurvignette_weightmul"] = weightMultiplier;
-					EngineJsonConfig["postfx_blurvignette_sampleradius"] = sampleRadius;
-				}
-			}
-
-			if (ImGui::Button("Save Post FX settings"))
-			{
-				FileRW::WriteFile("phoenix.conf", EngineJsonConfig.dump(2), false);
-				Log::Info("The JSON Config overwrote the pre-existing 'phoenix.conf'.");
-			}
-		}
-		ImGui::End();
-
-		EditorContext->RenderUI();
+		for (int i = 0; i < (int)Memory::Category::__count; i++)
+			ImGui::Text("%s: %zi", Memory::CategoryNames[i], counts[i]);
 	}
+	ImGui::End();
+
+	if (ImGui::Begin("Settings"))
+	{
+		ImGui::Checkbox("VSync", &EngineInstance->VSync);
+
+		bool wasFullscreen = EngineInstance->IsFullscreen;
+
+		ImGui::Checkbox("Fullscreen", &EngineInstance->IsFullscreen);
+
+		if (EngineInstance->IsFullscreen != wasFullscreen)
+			EngineInstance->SetIsFullscreen(EngineInstance->IsFullscreen);
+
+		if (EngineInstance->VSync)
+			SDL_GL_SetSwapInterval(1);
+		else
+		{
+			SDL_GL_SetSwapInterval(0);
+
+			ImGui::InputInt("FPS limit", &EngineInstance->FpsCap, 1, 30);
+		}
+
+		bool postFxEnabled = EngineJsonConfig.value("postfx_enabled", false);
+
+		ImGui::Checkbox("Post-Processing", &postFxEnabled);
+
+		EngineJsonConfig["postfx_enabled"] = postFxEnabled;
+
+		if (postFxEnabled)
+		{
+			float gammaCorrection = EngineJsonConfig.value("postfx_gamma", 1.f);
+			float trldmax = EngineJsonConfig.value("postfx_ldmax", 1.f);
+			float trcmax = EngineJsonConfig.value("postfx_cmax", 1.f);
+
+			ImGui::InputFloat("Gamma", &gammaCorrection);
+			ImGui::InputFloat("Tonemapper LdMax", &trldmax);
+			ImGui::InputFloat("Tonemapper CMax", &trcmax);
+
+			EngineJsonConfig["postfx_gamma"] = gammaCorrection;
+			EngineJsonConfig["postfx_ldmax"] = trldmax;
+			EngineJsonConfig["postfx_cmax"] = trcmax;
+
+			bool blurVignette = EngineJsonConfig.value("postfx_blurvignette", false);
+			bool distortion = EngineJsonConfig.value("postfx_distortion", false);
+
+			ImGui::Checkbox("Blur vignette", &blurVignette);
+			ImGui::Checkbox("Distortion", &distortion);
+
+			EngineJsonConfig["postfx_blurvignette"] = blurVignette;
+			EngineJsonConfig["postfx_distortion"] = distortion;
+
+			if (EngineJsonConfig["postfx_blurvignette"])
+			{
+				float distFactorMultiplier = EngineJsonConfig.value("postfx_blurvignette_blurstrength", 2.f);
+				float weightExponent = EngineJsonConfig.value("postfx_blurvignette_weightexp", 2.f);
+				float weightMultiplier = EngineJsonConfig.value("postfx_blurvignette_weightmul", 2.5f);
+				float sampleRadius = EngineJsonConfig.value("postfx_blurvignette_sampleradius", 4.f);
+
+				ImGui::InputFloat("Vignette dist weight factor", &distFactorMultiplier);
+				ImGui::InputFloat("Vignette weight exponent", &weightExponent);
+				ImGui::InputFloat("Vignette weight multiplier", &weightMultiplier);
+				ImGui::InputFloat("Vignette sample radius", &sampleRadius);
+
+				EngineJsonConfig["postfx_blurvignette_blurstrength"] = distFactorMultiplier;
+				EngineJsonConfig["postfx_blurvignette_weightexp"] = weightExponent;
+				EngineJsonConfig["postfx_blurvignette_weightmul"] = weightMultiplier;
+				EngineJsonConfig["postfx_blurvignette_sampleradius"] = sampleRadius;
+			}
+		}
+
+		if (ImGui::Button("Save Post FX settings"))
+		{
+			FileRW::WriteFile("phoenix.conf", EngineJsonConfig.dump(2), false);
+			Log::Info("The JSON Config overwrote the pre-existing 'phoenix.conf'.");
+		}
+	}
+	ImGui::End();
+
+	EditorContext->RenderUI();
 }
 
 static void handleCrash(const std::string& Error, const std::string& ExceptionType)
@@ -642,14 +644,12 @@ static void begin(int argc, char** argv)
 	GuiIO = &ImGui::GetIO();
 	ImGui::StyleColorsDark();
 
-	if (!ImGui_ImplSDL3_InitForOpenGL(
-			EngineInstance->Window,
-			EngineInstance->RendererContext.GLContext
-	))
-		throw("ImGui intialization failure on `ImGui_ImplSDL2_InitForOpenGL`");
-
-	if (!ImGui_ImplOpenGL3_Init("#version 460"))
-		throw("ImGui initialization failure on `ImGui_ImplOpenGL3_Init`");
+	PHX_ENSURE_MSG(ImGui_ImplSDL3_InitForOpenGL(
+		EngineInstance->Window,
+		EngineInstance->RendererContext.GLContext
+	), "`ImGui_ImplSDL3_InitForOpenGL` failed");
+	
+	PHX_ENSURE_MSG(ImGui_ImplOpenGL3_Init("#version 460"), "`ImGui_ImplOpenGL3_Init` failed");
 
 	EditorContext = EngineJsonConfig.value("Developer", false) ? new Editor(&EngineInstance->RendererContext) : nullptr;
 	
@@ -676,27 +676,20 @@ static void begin(int argc, char** argv)
 	bool worldLoadSuccess = true;
 	std::vector<GameObject*> roots = SceneFormat::Deserialize(FileRW::ReadFile(mapFile), &worldLoadSuccess);
 
-	if (!worldLoadSuccess)
-	{
-		std::string errStr = SceneFormat::GetLastErrorString();
-		throw(std::vformat(
-			"World failed to load: {}",
-			std::make_format_args(errStr)
-		));
-	}
+	PHX_ENSURE_MSG(worldLoadSuccess, "World failed to load: " + SceneFormat::GetLastErrorString());
 
 	if (roots.size() > 1)
 		Log::Warning("More than 1 root object in the World, anything other than the first will be ignored");
 
-	if (roots.empty())
-		throw("No root objects in World!");
-	if (roots[0]->ClassName != "DataModel")
-		throw("Root object was not a DataModel!");
+	PHX_ENSURE_MSG(!roots.empty(), "No root objects in World!");
+	PHX_ENSURE_MSG(roots[0]->ClassName == "DataModel", "Root Object was not a DataModel!");
 
 	GameObject::s_DataModel->MergeWith(roots[0]);
 
 	EngineInstance->OnFrameStart.Connect(handleInputs);
-	EngineInstance->OnFrameRenderGui.Connect(drawUI);
+
+	if (EditorContext)
+		EngineInstance->OnFrameRenderGui.Connect(drawDeveloperUI);
 
 	EngineInstance->Start();
 }

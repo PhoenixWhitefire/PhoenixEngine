@@ -462,7 +462,7 @@ static std::string ValueTypeNames[] =
 };
 
 static_assert(
-	std::size(ValueTypeNames) == (size_t)Reflection::ValueType::_count,
+	std::size(ValueTypeNames) == (size_t)Reflection::ValueType::__count,
 	"'ValueTypeNames' does not have the same number of elements as 'ValueType'"
 );
 

@@ -877,9 +877,10 @@ Object_Script::Object_Script()
 	ApiPointer = &s_Api;
 }
 
-void Object_Script::Initialize()
+Object_Script::~Object_Script()
 {
-	//this->Reload();
+	if (m_L)
+		lua_close(m_L);
 }
 
 static void resumeScheduledCoroutines()

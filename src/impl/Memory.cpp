@@ -1,29 +1,23 @@
+// 24/01/2025
+// this thing functions based on padding the allocated memory with an
+// `AllocHeader` that describes the size and category of the allocation
+// https://stackoverflow.com/a/1208728/16875161
+// you can call it ugly all you want, but I really wanted to reduce cruft
+// with these, instead of having to pass the Size and Category to the
+// de-allocator as well
+// not sure how Tracy does it. i feel like it has to be a hash table,
+// but that sounds slow and even uglier
+
 #include <tracy/Tracy.hpp>
 #include <assert.h>
 
 #include "Memory.hpp"
 
-#undef malloc
-#undef free
-
 struct AllocHeader
 {
 	uint32_t Size = UINT32_MAX;
 	uint8_t Category = UINT8_MAX;
-	uint16_t Check = 269420ui16;
 };
-
-static const char* MemCatNames[] =
-{
-	"Default",
-	"GameObject",
-	"Reflection",
-	"Rendering",
-	"Texture",
-	"Mesh"
-};
-
-static_assert(std::size(MemCatNames) == (uint8_t)Memory::Category::_count);
 
 namespace Memory
 {
@@ -55,7 +49,7 @@ namespace Memory
 
 #if TRACY_ENABLE
 			if (MemCat != Memory::Category::Default)
-				TracyAllocN(ptr, Size, MemCatNames[memIndex]);
+				TracyAllocN(ptr, Size, CategoryNames[memIndex]);
 			else
 				TracyAlloc(ptr, Size);
 #endif
@@ -92,8 +86,8 @@ namespace Memory
 #if TRACY_ENABLE
 			if (MemCat != Memory::Category::Default)
 			{
-				TracyFreeN(Pointer, MemCatNames[memIndex]);
-				TracyAllocN(ptr, Size, MemCatNames[memIndex]);
+				TracyFreeN(Pointer, CategoryNames[memIndex]);
+				TracyAllocN(ptr, Size, CategoryNames[memIndex]);
 			}
 			else
 			{
@@ -124,11 +118,11 @@ namespace Memory
 
 		Pointer = GetPointerInfo(Pointer, &size, &memcat);
 
-		assert(memcat < static_cast<uint8_t>(Memory::Category::_count));
+		assert(memcat<static_cast<uint8_t>(Memory::Category::__count));
 
 #if TRACY_ENABLE
 		if (memcat != static_cast<uint8_t>(Memory::Category::Default))
-			TracyFreeN(Pointer, MemCatNames[memcat]);
+			TracyFreeN(Pointer, CategoryNames[memcat]);
 		else
 			TracyFree(Pointer);
 #endif

@@ -153,7 +153,7 @@ namespace Reflection
 		// Keys will be Strings. Odd items of GenericValue.Array will be the keys, even items will be the values
 		Map,
 		// Must ALWAYS be the last element
-		_count
+		__count
 	};
 
 	const std::string& TypeAsString(ValueType);

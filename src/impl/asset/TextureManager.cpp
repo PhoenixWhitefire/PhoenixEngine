@@ -509,7 +509,7 @@ void TextureManager::FinalizeAsyncLoadedTextures()
 
 			image.TMP_ImageByteData = (uint8_t*)malloc(bufSize);
 
-			PHX_ENSURE(image.TMP_ImageByteData, std::vformat(
+			PHX_ENSURE_MSG(image.TMP_ImageByteData, std::vformat(
 				"`malloc` failed in ::FinalizeAsyncLoadedTextures (Requested amount was {} bytes)",
 				std::make_format_args(bufSize)
 			));

@@ -9,8 +9,8 @@ class Object_Script : public GameObject
 {
 public:
 	Object_Script();
+	~Object_Script();
 
-	void Initialize() override;
 	void Update(double) override;
 
 	bool LoadScript(const std::string&);

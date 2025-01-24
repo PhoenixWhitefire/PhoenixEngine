@@ -56,7 +56,7 @@ static void sdlLog(void*, int Type, SDL_LogPriority Priority, const char* Messag
 		priorityName = priorityIt->second;
 
 	std::string logString = std::vformat(
-		"SDL log -\nType: {}\nPriority: {}\nMessage: {}",
+		"SDL log -\n\tType: {}\n\tPriority: {}\n\tMessage: {}",
 		std::make_format_args(Type, priorityName, Message)
 	);
 
@@ -131,6 +131,28 @@ void Engine::SetIsFullscreen(bool Fullscreen)
 		throw("`SDL_SetWindowFullscreen` failed, error: " + std::string(SDL_GetError()));
 }
 
+template <class T> static T readFromConfiguration(const std::string& Key, const T& DefaultValue)
+{
+	/*
+	try
+	{
+		return EngineJsonConfig.value(Key, DefaultValue);
+	}
+	catch (nlohmann::json::type_error Error)
+	{
+		std::string errorMessage = Error.what();
+
+		Log::Error(std::vformat(
+			"Error trying to read key '{}' of configuration: {}. Falling back to default value",
+			std::make_format_args(Key, errorMessage)
+		);
+
+		return DefaultValue;
+	}*/
+
+	return EngineJsonConfig.value(Key, DefaultValue);
+}
+
 void Engine::LoadConfiguration()
 {
 	bool ConfigFileFound = true;
@@ -144,15 +166,15 @@ void Engine::LoadConfiguration()
 		}
 		catch (nlohmann::json::parse_error err)
 		{
-			auto errmsg = err.what();
+			std::string errmsg = err.what();
 			throw(std::vformat("Parse error while loading configuration: {}", std::make_format_args(errmsg)));
 		}
 	}
 	else
 		throw("Could not find configuration file (phoenix.conf)!");
 
-	if (ConfigAscii == "")
-		throw("Configuration file is empty");
+	VSync = readFromConfiguration("VSync", false);
+	FpsCap = readFromConfiguration("FpsCap", 60);
 
 	Log::Info("Configuration loaded");
 }
@@ -176,7 +198,7 @@ Engine::Engine()
 
 	this->LoadConfiguration();
 
-	nlohmann::json defaultWindowSize = EngineJsonConfig.value(
+	nlohmann::json defaultWindowSize = readFromConfiguration(
 		"DefaultWindowSize",
 		nlohmann::json::array({ 1280, 720 })
 	);
@@ -184,13 +206,10 @@ Engine::Engine()
 	PHX_SDL_CALL(SDL_Init, SDL_INIT_VIDEO);
 
 	SDL_DisplayID primaryDisplay = SDL_GetPrimaryDisplay();
-
-	if (primaryDisplay == 0)
-		throw("`SDL_GetPrimaryDisplay` failed with error: " + std::string(SDL_GetError()));
+	PHX_ENSURE_MSG(primaryDisplay != 0, "`SDL_GetPrimaryDisplay` failed with error: " + std::string(SDL_GetError()));
 
 	float displayScale = SDL_GetDisplayContentScale(primaryDisplay);
-	if (displayScale == 0.f)
-		throw("Invalid `SDL_GetDisplayContentScale` result, error: " + std::string(SDL_GetError()));
+	PHX_ENSURE_MSG(displayScale != 0.f, "Invalid `SDL_GetDisplayContentScale` result, error: " + std::string(SDL_GetError()));
 
 	this->WindowSizeX = static_cast<int>(defaultWindowSize[0] * displayScale);
 	this->WindowSizeY = static_cast<int>(defaultWindowSize[1] * displayScale);
@@ -207,7 +226,7 @@ Engine::Engine()
 	// 09/09/2024
 	SDL_SetLogOutputFunction(sdlLog, nullptr);
 
-	nlohmann::json::array_t requestedGLVersion = EngineJsonConfig.value("OpenGLVersion", nlohmann::json{ 4, 6 });
+	nlohmann::json::array_t requestedGLVersion = readFromConfiguration("OpenGLVersion", nlohmann::json{ 4, 6 });
 	int requestedGLVersionMajor = requestedGLVersion[0];
 	int requestedGLVersionMinor = requestedGLVersion[1];
 
@@ -258,16 +277,12 @@ Engine::Engine()
 	PHX_SDL_CALL(SDL_GL_SetAttribute, SDL_GL_STENCIL_SIZE, 8);
 
 	this->Window = SDL_CreateWindow(
-		EngineJsonConfig.value("GameTitle", "PhoenixEngine").c_str(),
+		readFromConfiguration<std::string>("GameTitle", "PhoenixEngine").c_str(),
 		this->WindowSizeX, this->WindowSizeY,
 		m_SDLWindowFlags
 	);
 
-	if (!this->Window)
-	{
-		const char* errStr = SDL_GetError();
-		throw(std::vformat("SDL could not create the window: {}\n", std::make_format_args(errStr)));
-	}
+	PHX_ENSURE_MSG(this->Window, "SDL could not create the window: " + std::string(SDL_GetError()));
 
 	Log::Info("Window created");
 
@@ -595,16 +610,16 @@ void Engine::Start()
 		static bool IsWindowFocused = true;
 
 		this->FpsCap = std::clamp(this->FpsCap, 1, 600);
-		int throttledFpsCap = IsWindowFocused ? FpsCap : 5;
+		int throttledFpsCap = IsWindowFocused ? FpsCap : 10;
 
 		double frameDelta = RunningTime - LastFrame;
 		double fpsCapDelta = 1.f / throttledFpsCap;
 
 		// Wait the appropriate amount of time between frames
-		if (!VSync && (frameDelta + .0005f < fpsCapDelta))
+		if ((!VSync || !IsWindowFocused) && (frameDelta + .0005f < fpsCapDelta))
 		{
 			ZoneScopedNC("SleepForFpsCap", tracy::Color::Wheat);
-			std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<size_t>((fpsCapDelta - frameDelta) * 1000)));
+			std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<size_t>((fpsCapDelta - frameDelta) * 1000 - 2)));
 		}
 
 		TIME_SCOPE_AS(Timing::Timer::EntireFrame);
@@ -731,7 +746,7 @@ void Engine::Start()
 
 		updateScripts(deltaTime);
 
-		s_DebugCollisionAabbs = EngineJsonConfig.value("d_aabbs", false);
+		s_DebugCollisionAabbs = readFromConfiguration("d_aabbs", false);
 
 		// Aggregate mesh and light data into lists
 		recursivelyTravelHierarchy(
@@ -852,11 +867,7 @@ void Engine::Start()
 
 		RendererContext.FrameBuffer.Bind();
 
-		{
-			ZoneScopedN("ClearFrameBuffer");
-			glClearColor(0.086f, 0.105f, 0.21f, 1.f);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		}
+		glClear(/*GL_COLOR_BUFFER_BIT |*/ GL_DEPTH_BUFFER_BIT);
 
 		glDepthFunc(GL_LEQUAL);
 
@@ -875,7 +886,19 @@ void Engine::Start()
 
 		glDisable(GL_DEPTH_TEST);
 
+		// 24/01/2025 `Memory` namespace can't handle
+		// placement new rn, which is why i assume the counter is
+		// always 0
+		// use the tag MEMPLACEMENTNEW to easily grep where i do this hack
+		// when this can be avoided in the future :)
+		size_t* renderMemCounter = &Memory::Counters[(size_t)Memory::Category::RenderCommands];
+		size_t actualRenderMem = scene.RenderList.size() * sizeof(RenderItem) + scene.LightingList.size() * sizeof(LightItem);
+
+		*renderMemCounter += actualRenderMem;
+
 		this->OnFrameRenderGui.Fire(deltaTime);
+
+		*renderMemCounter -= actualRenderMem;
 
 		{
 			ZoneScopedN("DearImGuiRender");
@@ -982,14 +1005,10 @@ void Engine::Start()
 
 		this->RunningTime = GetRunningTime();
 
-		double curTimePrevSwap = RunningTime;
-
 		RendererContext.SwapBuffers();
 
 		this->RunningTime = GetRunningTime();
 
-		// Should be calculated before swapping buffers due to VSync
-		this->FrameTime = curTimePrevSwap - FrameStart;
 		LastFrame = RunningTime;
 
 		m_DrawnFramesInSecond++;

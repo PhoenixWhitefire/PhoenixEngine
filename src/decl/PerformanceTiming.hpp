@@ -37,4 +37,14 @@ namespace Timing
 		TimeWithRaii(Timing::Timer Timer);
 		~TimeWithRaii();
 	};
+
+	static inline const char* TimerNames[] =
+	{
+		"EntireFrame",
+		"Rendering",
+		"Physics",
+		"Scripts"
+	};
+	
+	static_assert(std::size(TimerNames) == static_cast<size_t>(Timer::__count));
 }

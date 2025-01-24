@@ -589,6 +589,24 @@ void MeshProvider::Save(uint32_t Id, const std::string& Path)
 	this->Save(m_Meshes.at(Id), Path);
 }
 
+static size_t getMeshSizeCpu(const Mesh& mesh)
+{
+	size_t size = 0;
+
+	if (!mesh.MeshDataPreserved)
+	{
+		size += mesh.Bones.capacity() * sizeof(Bone);
+		size += sizeof(mesh);
+
+		for (const Bone& b : mesh.Bones)
+			size += b.Name.capacity();
+	}
+	else
+		size += mesh.Vertices.capacity() * sizeof(Vertex) + mesh.Indices.capacity() * sizeof(uint32_t);
+
+	return size;
+}
+
 static void uploadMeshDataToGpuMesh(Mesh& mesh, MeshProvider::GpuMesh& gpuMesh)
 {
 	ZoneScoped;
@@ -628,10 +646,20 @@ uint32_t MeshProvider::Assign(Mesh mesh, const std::string& InternalName, bool U
 
 	auto prevPair = m_StringToMeshId.find(InternalName);
 
+
+	// 24/01/2025 `Memory` namespace can't handle
+	// placement new rn, which is why i assume the counter is
+	// always 0
+	// use the tag MEMPLACEMENTNEW to easily grep where i do this hack
+	// when this can be avoided in the future :)
+	Memory::Counters[(size_t)Memory::Category::Mesh] += getMeshSizeCpu(mesh);
+
 	if (prevPair != m_StringToMeshId.end())
 	{
 		// overwrite the pre-existing mesh
 		Mesh preExisting = m_Meshes[prevPair->second];
+		Memory::Counters[(size_t)Memory::Category::Mesh] -= getMeshSizeCpu(preExisting);
+
 		m_Meshes[prevPair->second] = mesh;
 		assignedId = prevPair->second;
 

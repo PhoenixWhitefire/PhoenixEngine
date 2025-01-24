@@ -59,7 +59,6 @@ public:
 	int FpsCap = 60;
 
 	int FramesPerSecond = 0;
-	double FrameTime = 0.f;
 
 	bool VSync = false;
 

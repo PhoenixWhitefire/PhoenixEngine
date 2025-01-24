@@ -22,16 +22,18 @@ void operator delete(void* Ptr) \
 
 namespace Memory
 {
+	// if this list is changed, remember to update
+	// `CategoryNames` further down
 	enum class Category : uint8_t
 	{
 		Default = 0,
 		GameObject,
 		Reflection,
-		Rendering,
+		RenderCommands,
 		Mesh,
 		Luau,
 
-		_count
+		__count
 	};
 
 	// can only be de-alloc'd correctly by `::Free`
@@ -45,5 +47,17 @@ namespace Memory
 	// returns the pointer to the actual `malloc` block
 	void* GetPointerInfo(void*, size_t* Size = nullptr, uint8_t* Category = nullptr);
 
-	inline std::array<size_t, static_cast<size_t>(Category::_count)> Counters{ 0 };
+	inline std::array<size_t, static_cast<size_t>(Category::__count)> Counters{ 0 };
+
+	static inline const char* CategoryNames[] =
+	{
+		"Default",
+		"GameObject",
+		"Reflection",
+		"RenderCommands",
+		"Mesh",
+		"Luau"
+	};
+
+	static_assert(std::size(CategoryNames) == (uint8_t)Memory::Category::__count);
 };
