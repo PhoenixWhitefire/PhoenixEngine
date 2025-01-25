@@ -64,6 +64,8 @@ public:
 
 	double RunningTime = 0.f;
 
+	bool DebugAabbs = false;
+
 private:
 	int m_DrawnFramesInSecond = -1;
 

@@ -39,9 +39,13 @@ void Object_Workspace::s_DeclareReflections()
 		},
 		[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)
 		{
-			((Object_Workspace*)p)->SetSceneCamera(
-				(Object_Camera*)GameObject::FromGenericValue(gv)
-			);
+			GameObject* object = GameObject::FromGenericValue(gv);
+			Object_Camera* newCam = object ? dynamic_cast<Object_Camera*>(object) : nullptr;
+
+			if (!newCam && object)
+				throw(std::string("SceneCamera must be a Camera!"));
+
+			((Object_Workspace*)p)->SetSceneCamera(newCam);
 		}
 	);
 
@@ -120,7 +124,7 @@ void Object_Workspace::Initialize()
 	this->SetSceneCamera(camera);
 }
 
-Object_Camera* Object_Workspace::GetSceneCamera()
+Object_Camera* Object_Workspace::GetSceneCamera() const
 {
 	if (!s_FallbackCamera)
 		s_FallbackCamera = createCamera();

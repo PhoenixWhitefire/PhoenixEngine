@@ -418,10 +418,14 @@
     "Properties": {
       "Class": "String: Read",
       "Enabled": "Bool: Read | Write",
+      "Length": "Double: Read",
       "LocalTransform": "Matrix: Read | Write",
+      "Looped": "Bool: Read | Write",
       "Name": "String: Read | Write",
       "ObjectId": "Integer: Read",
       "Parent": "GameObject: Read | Write",
+      "Playing": "Bool: Read | Write",
+      "Position": "Double: Read | Write",
       "Serializes": "Bool: Read | Write",
       "SoundFile": "String: Read | Write",
       "WorldTransform": "Matrix: Read"

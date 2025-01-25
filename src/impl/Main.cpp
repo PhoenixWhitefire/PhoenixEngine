@@ -78,6 +78,7 @@ PHX_MAIN_HANDLECRASH(std::exception, .what()); \
 
 #include <SDL3/SDL_messagebox.h>
 #include <SDL3/SDL_keyboard.h>
+#include <SDL3/SDL_dialog.h>
 #include <SDL3/SDL_mouse.h>
 #include <SDL3/SDL_init.h>
 
@@ -446,6 +447,24 @@ static void handleInputs(double deltaTime)
 		PreviouslyPressingF11 = false;
 }
 
+static void saveStatsCsvCallback(void* UserData, const char* const* FileList, int /* Filter */)
+{
+	if (!FileList)
+	{
+		Log::Error("Error trying to save stats to CSV: " + std::string(SDL_GetError()));
+		return;
+	}
+
+	if (!FileList[0])
+	{
+		Log::Info("User did not select a save file path for the stats CSV");
+		return;
+	}
+
+	std::string csvContents = *(std::string*)UserData;
+	FileRW::WriteFile(FileList[0], csvContents, false);
+}
+
 static void drawDeveloperUI(double)
 {
 	ZoneScopedC(tracy::Color::DarkOliveGreen);
@@ -484,9 +503,17 @@ static void drawDeveloperUI(double)
 
 		size_t frameTime = static_cast<size_t>(times[0] * 1000);
 
+		static bool IsSamplingStats = false;
+		static std::string SampledCsv;
+
 		ImGui::Text("FPS: %d", EngineInstance->FramesPerSecond);
 		ImGui::Text("Frame time: %zims", frameTime);
 		ImGui::Text("Draw calls: %u", EngineInstance->RendererContext.AccumulatedDrawCallCount);
+
+		if (IsSamplingStats)
+			SampledCsv += std::to_string(EngineInstance->FramesPerSecond) + ","
+							+ std::to_string(frameTime) + ","
+							+ std::to_string(EngineInstance->RendererContext.AccumulatedDrawCallCount) + ",";
 
 #ifdef TRACY_ENABLE
 		// 13/01/2025 hi hihihi hihiihii
@@ -496,15 +523,64 @@ static void drawDeveloperUI(double)
 
 		ImGui::SeparatorText("Timers");
 
-		for (int i = 0; i < (int)Timing::Timer::__count; i++)
-			ImGui::Text("%s: %zims", Timing::TimerNames[i], static_cast<size_t>(times[i] * 1000));
+		if (!IsSamplingStats)
+			for (int i = 0; i < (int)Timing::Timer::__count; i++)
+				ImGui::Text("%s: %zims", Timing::TimerNames[i], static_cast<size_t>(times[i] * 1000));
+		else
+			for (int i = 0; i < (int)Timing::Timer::__count; i++)
+			{
+				SampledCsv += std::to_string(times[i]) + ",";
+				ImGui::Text("%s: %zims", Timing::TimerNames[i], static_cast<size_t>(times[i] * 1000));
+			}
 
 		ImGui::SeparatorText("Heap");
 
 		const std::array<size_t, (size_t)Memory::Category::__count>& counts = Memory::Counters;
 
-		for (int i = 0; i < (int)Memory::Category::__count; i++)
-			ImGui::Text("%s: %zi", Memory::CategoryNames[i], counts[i]);
+		if (!IsSamplingStats)
+			for (int i = 0; i < (int)Memory::Category::__count; i++)
+				ImGui::Text("%s: %zi", Memory::CategoryNames[i], counts[i]);
+		else
+		{
+			for (int i = 0; i < (int)Memory::Category::__count; i++)
+			{
+				SampledCsv += std::to_string(counts[i]) + ",";
+				ImGui::Text("%s: %zi", Memory::CategoryNames[i], counts[i]);
+			}
+		}
+
+		if (IsSamplingStats)
+		{
+			if (ImGui::Button("End sampling & save to CSV"))
+			{
+				SDL_ShowSaveFileDialog(
+					saveStatsCsvCallback,
+					&SampledCsv,
+					EngineInstance->Window,
+					NULL,
+					0,
+					NULL
+				);
+
+				IsSamplingStats = false;
+			}
+
+			SampledCsv += "\n";
+		}
+		else
+			if (ImGui::Button("Begin sampling"))
+			{
+				IsSamplingStats = true;
+				SampledCsv = "FPS,Frame Time,Draw Calls,";
+
+				for (int i = 0; i < (int)Timing::Timer::__count; i++)
+					SampledCsv += Timing::TimerNames[i] + std::string(",");
+				for (int i = 0; i < (int)Memory::Category::__count; i++)
+					SampledCsv += Memory::CategoryNames[i] + std::string(",");
+
+				SampledCsv += "\n";
+			}
+
 	}
 	ImGui::End();
 
@@ -581,6 +657,8 @@ static void drawDeveloperUI(double)
 			FileRW::WriteFile("phoenix.conf", EngineJsonConfig.dump(2), false);
 			Log::Info("The JSON Config overwrote the pre-existing 'phoenix.conf'.");
 		}
+
+		ImGui::Checkbox("Debug Collision AABBs", &EngineInstance->DebugAabbs);
 	}
 	ImGui::End();
 

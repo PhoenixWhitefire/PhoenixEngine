@@ -10,13 +10,46 @@ PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(Sound);
 
 struct AudioAsset
 {
-	SDL_AudioSpec Spec;
+	SDL_AudioSpec Spec{};
 	uint8_t* Data{};
 	uint32_t DataSize{};
 };
 
 static bool s_DidInitReflection = false;
 static std::unordered_map<std::string, AudioAsset> AudioAssets{};
+
+static void streamCallback(void* UserData, SDL_AudioStream* Stream, int AdditionalAmount, int /*TotalAmount*/)
+{
+	Object_Sound* sound = static_cast<Object_Sound*>(UserData);
+	const AudioAsset& audio = AudioAssets[sound->SoundFile];
+
+	if (sound->NextRequestedPosition != -1.f)
+	{
+		float target = sound->NextRequestedPosition;
+		sound->NextRequestedPosition = -1.f;
+
+		sound->BytePosition = static_cast<uint32_t>(audio.Spec.freq * target);
+	}
+
+	if (sound->BytePosition >= audio.DataSize)
+	{
+		if (sound->Looped)
+			SDL_PutAudioStreamData(Stream, audio.Data, AdditionalAmount);
+		else
+			SDL_PauseAudioStreamDevice(Stream);
+
+		sound->BytePosition = 0;
+	}
+	else
+	{
+		int len = std::min(AdditionalAmount, static_cast<int>(audio.DataSize - sound->BytePosition));
+
+		SDL_PutAudioStreamData(Stream, audio.Data + sound->BytePosition, len);
+	}
+
+	sound->Position = (float)sound->BytePosition / (float)audio.Spec.freq;
+	sound->BytePosition += AdditionalAmount;
+}
 
 void Object_Sound::s_DeclareReflections()
 {
@@ -45,72 +78,111 @@ void Object_Sound::s_DeclareReflections()
 			if (newFile == sound->SoundFile)
 				return;
 
-			Log::Info("soundupdate");
-
-			if (sound->AudioDeviceId != UINT32_MAX)
-			{
-				SDL_PauseAudioDevice(sound->AudioDeviceId);
-				SDL_CloseAudioDevice(sound->AudioDeviceId);
-			}
-
 			sound->SoundFile = newFile;
 
-			if (newFile == "")
-				return;
+			if (sound->m_AudioStream)
+				SDL_DestroyAudioStream((SDL_AudioStream*)sound->m_AudioStream);
 
-			bool fileFound = true;
-			FileRW::ReadFile(newFile, &fileFound);
+			sound->m_AudioStream = nullptr;
 
-			if (!fileFound)
+			static std::string ResDir = EngineJsonConfig.value("ResourcesDirectory", "resources/");
+
+			AudioAsset audio{};
+
+			if (const auto& it = AudioAssets.find(newFile); it == AudioAssets.end())
 			{
-				Log::Error(std::vformat(
-					"Cannot find Sound File '{}'",
-					std::make_format_args(newFile)
-				));
-
-				return;
-			}
-
-			AudioAsset* asset = nullptr;
-
-			if (AudioAssets.find(sound->SoundFile) == AudioAssets.end())
-			{
-				AudioAssets.insert(std::pair(sound->SoundFile, AudioAsset()));
-				asset = &AudioAssets[sound->SoundFile];
-
-				SDL_LoadWAV(
-					FileRW::GetAbsolutePath(newFile).c_str(),
-					&asset->Spec,
-					&asset->Data,
-					&asset->DataSize
+				bool success = SDL_LoadWAV(
+					(ResDir + newFile).c_str(),
+					&audio.Spec,
+					&audio.Data,
+					&audio.DataSize
 				);
+
+				if (!success)
+					throw("Failed to load sound file: " + std::string(SDL_GetError()));
+
+				AudioAssets[newFile] = audio;
 			}
 			else
-				asset = &AudioAssets[sound->SoundFile];
+				audio = it->second;
 
-			//SDL_OpenAudio(&asset.Spec, NULL);
+			sound->Length = (float)audio.DataSize / (float)audio.Spec.freq;
 
-			//SDL_AudioSpec obtained{};
+			SDL_AudioStream* stream = SDL_OpenAudioDeviceStream(
+				SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
+				&audio.Spec,
+				NULL,
+				nullptr
+			);
+			sound->m_AudioStream = stream;
 
-			//sound->AudioDeviceId = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &asset->Spec, NULL, NULL);
+			if (!stream)
+				throw("Failed to create audio stream: " + std::string(SDL_GetError()));
 
-			//if (sound->AudioDeviceId == 0)
-			//	throw("Could not `SDL_OpenAudioDevice`: " + std::string(SDL_GetError()));
+			SDL_SetAudioStreamGetCallback(stream, streamCallback, sound);
 
-			/*
-			//SDL_QueueAudio(1, asset.Data, asset.DataSize);
-			int qResult = SDL_QueueAudio(sound->AudioDeviceId, asset->Data, asset->DataSize);
-
-			if (qResult < 0)
-				throw("Could not `SDL_QueueAudio`: " + std::string(SDL_GetError()));
-
-			SDL_PauseAudioDevice(sound->AudioDeviceId, 0);
-			//SDL_PauseAudio(0);
-
-			//__debugbreak();
-			*/
+			SDL_PauseAudioStreamDevice(stream);
+			sound->BytePosition = 1;
 		}
 	);
+
+	REFLECTION_DECLAREPROP(
+		"Playing",
+		Bool,
+		[](Reflection::Reflectable* p)
+		{
+			Object_Sound* sound = static_cast<Object_Sound*>(p);
+
+			if (sound->m_AudioStream)
+				return !SDL_AudioStreamDevicePaused((SDL_AudioStream*)sound->m_AudioStream);
+			else
+				return false;
+		},
+		[](Reflection::Reflectable* p, const Reflection::GenericValue& playing)
+		{
+			Object_Sound* sound = static_cast<Object_Sound*>(p);
+			SDL_AudioStream* stream = (SDL_AudioStream*)sound->m_AudioStream;
+
+			if (stream)
+				if (playing.AsBool())
+				{
+					const AudioAsset& audio = AudioAssets[sound->SoundFile];
+
+					if (sound->BytePosition >= audio.DataSize || sound->BytePosition == 0)
+					{
+						sound->BytePosition = 1;
+						SDL_PutAudioStreamData(stream, audio.Data, audio.DataSize);
+					}
+
+					SDL_ResumeAudioStreamDevice(stream);
+				}
+				else
+					SDL_PauseAudioStreamDevice(stream);
+		}
+	);
+
+	REFLECTION_DECLAREPROP(
+		"Position",
+		Double,
+		[](Reflection::Reflectable* p)
+		{
+			return static_cast<Object_Sound*>(p)->Position;
+		},
+		[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)
+		{
+			float pos = static_cast<float>(gv.AsDouble());
+			if (pos < 0.f)
+				throw("Position of Sound playback cannot be negative");
+
+			Object_Sound* sound = static_cast<Object_Sound*>(p);
+
+			sound->NextRequestedPosition = pos;
+			sound->Position = pos;
+		}
+	);
+
+	REFLECTION_DECLAREPROP_SIMPLE(Object_Sound, Looped, Bool);
+	REFLECTION_DECLAREPROP_SIMPLE_READONLY(Object_Sound, Length, Double);
 }
 
 Object_Sound::Object_Sound()
@@ -120,4 +192,22 @@ Object_Sound::Object_Sound()
 
 	s_DeclareReflections();
 	ApiPointer = &s_Api;
+}
+
+Object_Sound::~Object_Sound()
+{
+	if (m_AudioStream)
+		SDL_DestroyAudioStream((SDL_AudioStream*)m_AudioStream);
+}
+
+void Object_Sound::Update(double)
+{
+	SDL_AudioStream* stream = (SDL_AudioStream*)m_AudioStream;
+
+	if (!stream)
+		return;
+
+	if (!Enabled && !SDL_AudioStreamDevicePaused(stream))
+		if (!SDL_PauseAudioStreamDevice(stream))
+			throw("Failed to pause audio stream: " + std::string(SDL_GetError()));
 }

@@ -17,6 +17,11 @@ local lastSwitchedPerspectives = 0
 
 local SwitchToFreecamNextFrame = 0
 
+SoundStinger = GameObject.new("Sound")
+SoundStinger.Name = "SoundStinger"
+SoundStinger.SoundFile = "sounds/undertaleost_ruins_stinger.wav"
+SoundStinger.Parent = workspace
+
 local function reset()
 	CharacterController:InitDefault()
 	Character = CharacterController.Character
@@ -85,6 +90,8 @@ function Update(DeltaTime)
 			bruh.LinearVelocity = Character.Transform.Forward * 100
 			bruh.PhysicsDynamics = true
 			bruh.Parent = workspace
+			SoundStinger.Position = 0
+			SoundStinger.Playing = true
 		end
 	end
 	

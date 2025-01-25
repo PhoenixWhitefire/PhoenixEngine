@@ -288,8 +288,6 @@ GameObject::~GameObject() noexcept(false)
 		// use `::Destroy` or something maybe 24/12/2024
 		throw("I can't be killed right now, someone still needs me!");
 
-	this->SetParent(nullptr);
-
 	for (GameObject* child : this->GetChildren())
 		child->Destroy();
 
@@ -360,8 +358,8 @@ void GameObject::Destroy()
 {
 	bool wasDestructionPending = this->IsDestructionPending;
 
-	this->IsDestructionPending = true;
 	this->SetParent(nullptr);
+	this->IsDestructionPending = true;
 
 	if (!wasDestructionPending)
 		DecrementHardRefs(); // removes the first ref in `GameObject::Create`
@@ -404,20 +402,6 @@ static uint32_t NullGameObjectIdValue = PHX_GAMEOBJECT_NULL_ID;
 
 void GameObject::SetParent(GameObject* newParent)
 {
-	GameObject* oldParent = GameObject::GetObjectById(Parent);
-
-	if (newParent == oldParent)
-		return;
-
-	if (oldParent)
-		oldParent->RemoveChild(this->ObjectId);
-
-	if (!newParent)
-	{
-		this->Parent = PHX_GAMEOBJECT_NULL_ID;
-		return;
-	}
-
 	std::string fullname = this->GetFullName();
 
 	if (this->IsDestructionPending)
@@ -459,6 +443,20 @@ void GameObject::SetParent(GameObject* newParent)
 			"Tried to make object ID:{} ('{}') it's own parent",
 			std::make_format_args(this->ObjectId, fullname)
 		));
+
+	GameObject* oldParent = GameObject::GetObjectById(Parent);
+
+	if (newParent == oldParent)
+		return;
+
+	if (oldParent)
+		oldParent->RemoveChild(this->ObjectId);
+
+	if (!newParent)
+	{
+		this->Parent = PHX_GAMEOBJECT_NULL_ID;
+		return;
+	}
 
 	this->Parent = newParent->ObjectId;
 	newParent->AddChild(this);

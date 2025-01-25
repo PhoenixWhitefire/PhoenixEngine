@@ -970,25 +970,180 @@ void Editor::m_RenderMaterialEditor()
 	ImGui::End();
 }
 
-static uint32_t HierarchyTreeSelectionId = PHX_GAMEOBJECT_NULL_ID;
+static std::vector<uint32_t> Selections;
+static std::vector<uint32_t> VisibleTree;
+static std::vector<uint32_t> VisibleTreeWip;
+static uint32_t LastSelected = UINT32_MAX;
 static GameObject* ObjectInsertionTarget = nullptr;
+static bool IsPickingObject = false;
+static std::vector<uint32_t> PickerTargets;
+static std::string PickerTargetPropName;
+static std::vector<std::string> ContextActionsForSelection;
 
-static GameObject* recursiveIterateTree(GameObject* current, bool didVisitCurSelection = false)
+static std::unordered_map<std::string, std::function<void(void)>> ActionHandlers =
+{
+	{
+		"Duplicate",
+		[]()
+		{
+			std::vector<uint32_t> newSelections;
+			newSelections.reserve(Selections.size());
+			
+			for (uint32_t selId : Selections)
+				if (GameObject* g = GameObject::GetObjectById(selId))
+					newSelections.push_back(g->Duplicate()->ObjectId);
+
+			Selections = newSelections;
+		}
+	},
+	{
+		"Delete",
+		[]()
+		{
+			for (uint32_t selId : Selections)
+				if (GameObject* g = GameObject::GetObjectById(selId))
+					g->Destroy();
+
+			Selections.clear();
+		}
+	},
+	{
+		"Edit",
+		[]()
+		{
+			for (uint32_t selId : Selections)
+				if (Object_Script* s = dynamic_cast<Object_Script*>(GameObject::GetObjectById(selId)))
+					invokeTextEditor(s->SourceFile);
+		}
+	},
+	{
+		"Reload",
+		[]()
+		{
+			for (uint32_t selId : Selections)
+				if (Object_Script* s = dynamic_cast<Object_Script*>(GameObject::GetObjectById(selId)))
+					s->Reload();
+		}
+	}
+};
+
+static bool isInSelections(GameObject* g)
+{
+	return std::find(Selections.begin(), Selections.end(), g->ObjectId) != Selections.end();
+}
+
+static std::vector<std::string> getPossibleActionsForSelections()
+{
+	std::vector<std::string> actions =
+	{
+		"Duplicate",
+		"Delete"
+	};
+
+	bool gotScript = false;
+
+	for (uint32_t selId : Selections)
+	{
+		GameObject* g = GameObject::GetObjectById(selId);
+
+		if (!gotScript)
+			if (dynamic_cast<Object_Script*>(g))
+			{
+				actions.push_back("$Script");
+				actions.push_back("Edit");
+				actions.push_back("Reload");
+
+				break;
+			}
+	}
+
+	return actions;
+}
+
+static void onTreeItemClicked(GameObject* nodeClicked)
+{
+	if (IsPickingObject)
+	{
+		try
+		{
+			for (uint32_t selId : PickerTargets)
+				if (GameObject* g = GameObject::GetObjectById(selId))
+					g->SetPropertyValue(PickerTargetPropName, nodeClicked->ToGenericValue());
+		}
+		catch (std::string Err)
+		{
+			ErrorTooltipMessage = Err.c_str();
+			ErrorTooltipTimeRemaining = 5.f;
+		}
+
+		// restore prev selections
+		Selections = PickerTargets;
+
+		IsPickingObject = false;
+		PickerTargets.clear();
+		PickerTargetPropName = "";
+
+		return; // don't actually select this object
+	}
+
+	if (ImGui::GetIO().KeyCtrl)
+		if (const auto& it = std::find(Selections.begin(), Selections.end(), nodeClicked->ObjectId); it != Selections.end())
+			Selections.erase(it);
+		else
+			Selections.push_back(nodeClicked->ObjectId);
+
+	else if (ImGui::GetIO().KeyShift)
+	{
+		GameObject* lastSelected = GameObject::GetObjectById(LastSelected);
+
+		if (lastSelected && LastSelected != nodeClicked->ObjectId)
+		{
+			if (!isInSelections(nodeClicked))
+				Selections.push_back(nodeClicked->ObjectId);
+
+			auto start = std::find(VisibleTree.begin(), VisibleTree.end(), LastSelected);
+			auto end = std::find(VisibleTree.begin(), VisibleTree.end(), nodeClicked->ObjectId);
+
+			if (start > end)
+			{
+				// doesn't seem to work unless it is copied fsr
+				std::vector<uint32_t>::iterator temp = end;
+				end = start;
+				start = temp;
+			}
+
+			// 25/01/2025 this feels weird, like surely there's a better way
+			// to iterate between `start` and `end`
+			for (uint32_t middleId : std::vector<uint32_t>(start, end))
+				if (!isInSelections(GameObject::GetObjectById(middleId)))
+					Selections.push_back(middleId);
+		}
+		else
+			Selections = { nodeClicked->ObjectId };
+	}
+	else
+		Selections = { nodeClicked->ObjectId };
+
+	LastSelected = nodeClicked->ObjectId;
+}
+
+static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection = false)
 {
 	ZoneScopedC(tracy::Color::DarkSeaGreen);
 
+	if (IsPickingObject)
+	{
+		ErrorTooltipMessage = "Pick Object";
+		ErrorTooltipTimeRemaining = 0.1f;
+	}
+
 	static TextureManager* texManager = TextureManager::Get();
-
-	GameObject* hrchSelection = GameObject::GetObjectById(HierarchyTreeSelectionId);
-
-	if (hrchSelection == nullptr)
-		HierarchyTreeSelectionId = PHX_GAMEOBJECT_NULL_ID;
 
 	// https://github.com/ocornut/imgui/issues/581#issuecomment-216054349
 	// 07/10/2024
 	GameObject* nodeClicked = nullptr;
 
-	if (current->ObjectId == HierarchyTreeSelectionId)
+	if (isInSelections(current))
 		didVisitCurSelection = true;
 
 	static GameObject* InsertObjectButtonHoveredOver = nullptr;
@@ -999,10 +1154,13 @@ static GameObject* recursiveIterateTree(GameObject* current, bool didVisitCurSel
 		if (object == nullptr)
 			throw("stoopid compiler is giving me a warning for something that will probably not happen");
 
-		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanAvailWidth;
+		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow
+			| ImGuiTreeNodeFlags_AllowItemOverlap
+			| ImGuiTreeNodeFlags_SpanAvailWidth
+			| ImGuiTreeNodeFlags_FramePadding;
 
 		// make the insert button have better contrast
-		if (hrchSelection && object == hrchSelection && object != InsertObjectButtonHoveredOver)
+		if (isInSelections(object) && object != InsertObjectButtonHoveredOver)
 			flags |= ImGuiTreeNodeFlags_Selected;
 
 		if (object->GetChildren().empty())
@@ -1016,31 +1174,51 @@ static GameObject* recursiveIterateTree(GameObject* current, bool didVisitCurSel
 		);
 		ImGui::SameLine();
 
-		if (!didVisitCurSelection)
+		if (!didVisitCurSelection && Selections.size() > 0)
 		{
 			std::vector<GameObject*> descs = object->GetDescendants();
 
-			if (std::find(descs.begin(), descs.end(), hrchSelection) != descs.end())
-				ImGui::SetNextItemOpen(true);
+			for (GameObject* desc : descs)
+				if (isInSelections(desc))
+				{
+					ImGui::SetNextItemOpen(true);
+					break;
+				}
 		}
 
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2());
 		bool open = ImGui::TreeNodeEx(&object->ObjectId, flags, object->Name.c_str());
+		ImGui::PopStyleVar();
+
+		VisibleTreeWip.push_back(object->ObjectId);
 
 		if (ImGui::IsItemClicked())
 			nodeClicked = object;
 
 		if (ImGui::IsMouseClicked(ImGuiMouseButton_Right)
 			&& ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)
-		)
+			)
 		{
 			ImGui::OpenPopup(1979);
-			HierarchyTreeSelectionId = object->ObjectId;
+
+			if (ImGui::GetIO().KeyCtrl || ImGui::GetIO().KeyShift || !isInSelections(object))
+				// select/add to selections
+				onTreeItemClicked(object);
+
+			ContextActionsForSelection = getPossibleActionsForSelections();
 		}
 
 		if (ImGui::IsItemHovered())
 		{
 			ImGui::SameLine();
-			ImGui::Button("+");
+
+			ImGuiStyle style = ImGui::GetStyle();
+
+			ImVec2 defLabelSize = ImGui::CalcTextSize("+", NULL, true);
+			ImVec2 defaultSize{ defLabelSize.x + style.FramePadding.x * 2.f, defLabelSize.y + style.FramePadding.y * 2.f };
+
+			// make it the same size on both axes
+			ImGui::Button("+", ImVec2(defaultSize.y, defaultSize.y));
 
 			// the above call to `::Button` will always
 			// return false, ig this does something different
@@ -1069,8 +1247,8 @@ static GameObject* recursiveIterateTree(GameObject* current, bool didVisitCurSel
 					{
 						GameObject* newObject = GameObject::Create(it.first);
 						newObject->SetParent(ObjectInsertionTarget);
-						HierarchyTreeSelectionId = newObject->ObjectId;
-						
+						Selections = { newObject->ObjectId };
+
 						ObjectInsertionTarget = nullptr;
 					}
 
@@ -1079,7 +1257,7 @@ static GameObject* recursiveIterateTree(GameObject* current, bool didVisitCurSel
 				ImGui::EndPopup();
 			}
 		}
-			
+
 		if (open)
 		{
 			recursiveIterateTree(object, didVisitCurSelection);
@@ -1088,15 +1266,8 @@ static GameObject* recursiveIterateTree(GameObject* current, bool didVisitCurSel
 	}
 
 	if (nodeClicked)
-		if (ImGui::GetIO().KeyCtrl)
-			HierarchyTreeSelectionId = PHX_GAMEOBJECT_NULL_ID;
-		else
-			HierarchyTreeSelectionId = nodeClicked->ObjectId;
-
-	return GameObject::GetObjectById(HierarchyTreeSelectionId);
+		onTreeItemClicked(nodeClicked);
 }
-
-static std::string DoNotShowPropThisFrame = "";
 
 void Editor::RenderUI()
 {
@@ -1121,123 +1292,150 @@ void Editor::RenderUI()
 
 	ImVec2 hrchChildWinSzOverride{};
 
-	if (HierarchyTreeSelectionId != PHX_GAMEOBJECT_NULL_ID)
+	if (Selections.size() > 0)
 		hrchChildWinSzOverride = ImGui::GetContentRegionAvail() * ImVec2(1.f, .4f);
 
 	ImGui::BeginChild("HierarchyChildWindow", hrchChildWinSzOverride, ImGuiChildFlags_Border);
 
-	GameObject* selected = recursiveIterateTree(GameObject::s_DataModel);
+	VisibleTreeWip.clear();
+	recursiveIterateTree(GameObject::s_DataModel);
 	
-	GameObjectRef<GameObject>* selRef = nullptr;
+	VisibleTree = VisibleTreeWip;
 
-	if (selected)
-		selRef = new GameObjectRef<GameObject>(selected);
+	std::vector<std::unique_ptr<GameObjectRef<GameObject>>> refs;
+
+	for (uint32_t id : Selections)
+		refs.push_back(std::make_unique<GameObjectRef<GameObject>>(GameObject::GetObjectById(id)));
 
 	if (ImGui::BeginPopupEx(1979, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings))
 	{
 		ImGui::SeparatorText("Actions");
 
-		GameObject* target = GameObject::GetObjectById(HierarchyTreeSelectionId);
+		for (const std::string& Action : ContextActionsForSelection)
+			if (Action[0] == '$')
+				ImGui::SeparatorText(Action.substr(1).c_str());
 
-		if (!target)
-		{
-			HierarchyTreeSelectionId = PHX_GAMEOBJECT_NULL_ID;
-			ImGui::CloseCurrentPopup();
-		}
-		else
-		{
-			if (Object_Script* scr = dynamic_cast<Object_Script*>(target))
-			{
-				if (ImGui::MenuItem("Edit"))
-					invokeTextEditor(scr->SourceFile);
-
-				if (ImGui::MenuItem("Reload"))
-					scr->Reload();
-			}
-
-			if (ImGui::MenuItem("Duplicate"))
-			{
-				GameObject* dup = target->Duplicate();
-				HierarchyTreeSelectionId = dup->ObjectId;
-			}
-
-			if (ImGui::MenuItem("Delete"))
-				target->Destroy();
-		}
+			else if (ImGui::MenuItem(Action.c_str()))
+				ActionHandlers[Action]();
 
 		ImGui::EndPopup();
 	}
 
 	ImGui::EndChild();
 
-	if (selected)
+	if (Selections.size() > 0)
 	{
+		uint32_t idSum = 0;
+		for (uint32_t id : Selections)
+			idSum += id;
+
+		ImGui::PushID(idSum);
+
 		ImGui::BeginChild("PropertiesEditor", ImVec2(), ImGuiChildFlags_Border);
 
-		std::string sepStr = std::vformat(
-			"Properties of {} '{}'",
-			std::make_format_args(selected->ClassName, selected->Name)
-		);
+		std::string sepStr = "Properties of " + std::to_string(Selections.size()) + " objects";
+		if (Selections.size() == 1)
+		{
+			GameObject* target = GameObject::GetObjectById(Selections[0]);
+
+			sepStr = std::vformat(
+				"Properties of {} '{}'",
+				std::make_format_args(target->ClassName, target->Name)
+			);
+		}
+
 		ImGui::SeparatorText(sepStr.c_str());
 
-		auto& props = selected->GetProperties();
+		std::unordered_map<std::string, std::pair<bool, Reflection::GenericValue>> props;
+		std::unordered_map<std::string, bool> conflictingProps;
 
-		for (auto& propListItem : props)
+		for (uint32_t selId : Selections)
 		{
-			const char* propName = propListItem.first.c_str();
-			const Reflection::Property& prop = propListItem.second;
+			GameObject* sel = GameObject::GetObjectById(selId);
 
-			if (propName == DoNotShowPropThisFrame)
+			if (!sel)
 			{
-				// force Dear ImGui to lose focus of this specific property
-				// this is for CTRL+Click'ing `.Parent` so the value in the input
-				// box doesn't get carried over to the Object we jump to, forcing
-				// it's `.Parent` to change 15/12/2024
-				DoNotShowPropThisFrame = "";
-				continue;
+				// 25/01/2025 i think the iterator goes boom if i do this
+				Selections.erase(std::find(Selections.begin(), Selections.end(), selId));
+				break;
 			}
 
-			Reflection::GenericValue curVal = selected->GetPropertyValue(propName);
-
-			if (!prop.Set)
+			for (const auto& prop : sel->GetProperties())
 			{
-				// no setter (locked property, such as ClassName or ObjectId)
+				const std::string& pname = prop.first;
+				const auto& it = props.find(pname);
+				Reflection::GenericValue myVal = prop.second.Get(sel);
+
+				props.insert(std::pair(pname, std::pair(!!prop.second.Set, myVal)));
+
+				if (it != props.end())
+				{
+					const auto& prevVal = it->second;
+					if (prevVal.second != myVal)
+						conflictingProps.insert(std::pair(prop.first, true));
+					else
+						conflictingProps.insert(std::pair(prop.first, false));
+				}
+			}
+		}
+
+		for (const auto& propIt : props)
+		{
+			const std::pair<bool, Reflection::GenericValue> propItem = propIt.second;
+
+			const std::string& propName = propIt.first;
+			bool hasSetter = propItem.first;
+			const Reflection::GenericValue& curVal = propItem.second;
+
+			const char* propNameCStr = propName.c_str();
+
+			bool doConflict = conflictingProps[propName];
+
+			if (!hasSetter)
+			{
+				// no setter (read-only property, such as Class or ObjectId)
 				// 07/07/2024
 
-				std::string curValStr = curVal.ToString();
-
-				if (strcmp(propName, "Class") == 0)
-				{
-					ImGui::Text("Class: ");
-					ImGui::SameLine();
-
-					ImGui::Image(
-						TextureManager::Get()->GetTextureResource(getClassIconId(selected->ClassName)).GpuId,
-						ImVec2(16, 16)
-					);
-					ImGui::SameLine();
-
-					ImGui::Text(curValStr.c_str());
-				}
+				if (doConflict)
+					ImGui::Text("%s: <DIFFERENT>", propNameCStr);
 				else
-					if (curVal.Type == Reflection::ValueType::Matrix)
+				{
+					std::string curValStr = curVal.ToString();
+
+					if (propName == "Class")
 					{
-						ImGui::Text("%s: ", propName);
+						ImGui::Text("Class: ");
+						ImGui::SameLine();
 
-						ImGui::Indent();
+						ImGui::Image(
+							TextureManager::Get()->GetTextureResource(getClassIconId(curValStr)).GpuId,
+							ImVec2(16, 16)
+						);
+						ImGui::SameLine();
 
-						curValStr.insert(curValStr.begin() + curValStr.find_first_of("Ang"), '\n');
 						ImGui::Text(curValStr.c_str());
-
-						ImGui::Unindent();
 					}
 					else
-						ImGui::Text("%s: %s", propName, curValStr.c_str());
+						if (curVal.Type == Reflection::ValueType::Matrix)
+						{
+							ImGui::Text("%s: ", propNameCStr);
+
+							ImGui::Indent();
+
+							curValStr.insert(curValStr.begin() + curValStr.find_first_of("Ang"), '\n');
+							ImGui::Text(curValStr.c_str());
+
+							ImGui::Unindent();
+						}
+						else
+							ImGui::Text("%s: %s", propNameCStr, curValStr.c_str());
+				}
 
 				continue;
 			}
 
 			Reflection::GenericValue newVal = curVal;
+			bool canChangeValue = true;
 
 			switch (curVal.Type)
 			{
@@ -1255,11 +1453,14 @@ void Editor::RenderUI()
 					"<Initial Value 29/09/2024 Hey guys How we doing today>"
 				);
 
-				memcpy(buf, str.data(), str.size());
+				if (!doConflict)
+					memcpy(buf, str.data(), str.size());
+				else
+					CopyStringToBuffer(buf, allocSize);
 
 				buf[str.size()] = 0;
 
-				ImGui::InputText(propName, buf, allocSize);
+				ImGui::InputText(propNameCStr, buf, allocSize);
 				newVal = std::string(buf);
 
 				Memory::Free(buf);
@@ -1269,9 +1470,13 @@ void Editor::RenderUI()
 
 			case (Reflection::ValueType::Bool):
 			{
-				bool b = newVal.AsBool();
+				bool b = !doConflict ? newVal.AsBool() : false;
 
-				ImGui::Checkbox(propName, &b);
+				ImGui::Checkbox(propNameCStr, &b);
+
+				if (doConflict)
+					ImGui::SetItemTooltip("Checking this box will set this member as TRUE for all selected objects");
+
 				newVal = b;
 
 				break;
@@ -1279,62 +1484,101 @@ void Editor::RenderUI()
 
 			case (Reflection::ValueType::Double):
 			{
-				double d = newVal.AsDouble();
+				if (!doConflict)
+				{
+					double d = newVal.AsDouble();
 
-				ImGui::InputDouble(propName, &d);
-				newVal = d;
+					ImGui::InputDouble(propNameCStr, &d);
+					newVal = d;
+				}
+				else
+				{
+					char buf[] = { '<', 'C', 'O', 'N', 'F', 'L', 'I', 'C', 'T', '>' , 0 };
+
+					if (ImGui::InputText(propNameCStr, buf, sizeof(buf)))
+						newVal = atof(buf);
+				}
 
 				break;
 			}
 
 			case (Reflection::ValueType::Integer):
 			{
-				// TODO BIG BAD HACK HACK HACK
-				// stoobid Dear ImGui :'(
-				// only allows 32-bit integer input
-				// 01/09/2024
-				int32_t valAs32Bit = static_cast<int32_t>(curVal.AsInteger());
+				if (!doConflict)
+				{
+					// TODO BIG BAD HACK HACK HACK
+					// stoobid Dear ImGui :'(
+					// only allows 32-bit integer input
+					// 01/09/2024
+					int32_t valAs32Bit = static_cast<int32_t>(curVal.AsInteger());
 
-				ImGui::InputInt(propName, &valAs32Bit);
+					ImGui::InputInt(propNameCStr, &valAs32Bit);
 
-				newVal = valAs32Bit;
+					newVal = valAs32Bit;
+				}
+				else
+				{
+					char buf[] = { '<', 'C', 'O', 'N', 'F', 'L', 'I', 'C', 'T', '>' , 0 };
+
+					if (ImGui::InputText(propNameCStr, buf, sizeof(buf)))
+						newVal = (int64_t)atoi(buf);
+				}
 
 				break;
 			}
 
 			case (Reflection::ValueType::GameObject):
 			{
-				// TODO BIG BAD HACK HACK HACK
-				// stoobid Dear ImGui :'(
-				// only allows 32-bit integer input
-				// 01/09/2024
-				int32_t id = static_cast<int32_t>(curVal.AsInteger());
+				if (!doConflict)
+				{
+					GameObject* referenced = GameObject::FromGenericValue(curVal);
 
-				ImGui::InputInt(propName, &id);
-				ImGui::SetItemTooltip("CTRL+Click to select referenced GameObject 03/12/2024");
+					ImGui::InputText(propNameCStr, &referenced->Name);
+					ImGui::SetItemTooltip("CTRL+Click to select referenced GameObject 03/12/2024");
 
-				if (ImGui::IsItemClicked())
-					if (ImGui::GetIO().KeyCtrl)
+					if (ImGui::IsItemClicked())
+						if (ImGui::GetIO().KeyCtrl)
+						{
+							uint32_t targetId = static_cast<uint32_t>(curVal.AsInteger());
+							Selections = { targetId };
+						}
+						else
+						{
+							IsPickingObject = true;
+							PickerTargets = Selections;
+							PickerTargetPropName = propName;
+
+							Selections.clear();
+						}
+
+					newVal = curVal;
+				}
+				else
+				{
+					char buf[] = { '<', 'C', 'O', 'N', 'F', 'L', 'I', 'C', 'T', '>' , 0 };
+
+					if (ImGui::InputText(propNameCStr, buf, sizeof(buf)))
 					{
-						HierarchyTreeSelectionId = static_cast<uint32_t>(curVal.AsInteger());
-						DoNotShowPropThisFrame = propName;
-					}
+						IsPickingObject = true;
+						PickerTargets = Selections;
+						PickerTargetPropName = propName;
 
-				newVal = id;
-				newVal.Type = Reflection::ValueType::GameObject;
+						Selections.clear();
+
+						canChangeValue = false;
+					}
+				}
 
 				break;
 			}
 
 			case (Reflection::ValueType::Color):
 			{
-				Color col = curVal;
+				Color col = !doConflict ? curVal : Color(1.f, 1.f, 0.f);
 
 				float entry[3] = { col.R, col.G, col.B };
 
-				ImGui::ColorEdit3(propName, entry, ImGuiColorEditFlags_None);
-
-				//ImGui::InputFloat3(propName, entry);
+				ImGui::ColorEdit3(propNameCStr, entry, ImGuiColorEditFlags_None);
 
 				col.R = entry[0];
 				col.G = entry[1];
@@ -1347,72 +1591,92 @@ void Editor::RenderUI()
 
 			case (Reflection::ValueType::Vector3):
 			{
-				Vector3 vec = curVal;
-
-				float entry[3] =
+				if (!doConflict)
 				{
-					static_cast<float>(vec.X),
-					static_cast<float>(vec.Y),
-					static_cast<float>(vec.Z)
-				};
+					Vector3 vec = curVal;
 
-				ImGui::InputFloat3(propName, entry);
+					float entry[3] =
+					{
+						static_cast<float>(vec.X),
+						static_cast<float>(vec.Y),
+						static_cast<float>(vec.Z)
+					};
 
-				vec.X = entry[0];
-				vec.Y = entry[1];
-				vec.Z = entry[2];
+					ImGui::InputFloat3(propNameCStr, entry);
 
-				newVal = vec.ToGenericValue();
+					vec.X = entry[0];
+					vec.Y = entry[1];
+					vec.Z = entry[2];
+
+					newVal = vec.ToGenericValue();
+				}
+				else
+				{
+					char buf[] = { '<', 'C', 'O', 'N', 'F', 'L', 'I', 'C', 'T', '>' , 0 };
+
+					if (ImGui::InputText(propNameCStr, buf, sizeof(buf)))
+						newVal = Vector3::zero.ToGenericValue();
+				}
 
 				break;
 			}
 
 			case (Reflection::ValueType::Matrix):
 			{
-				glm::mat4 mat = curVal.AsMatrix();
-
-				ImGui::Text("%s:", propName);
-
-				float pos[3] =
+				if (!doConflict)
 				{
-					mat[3][0],
-					mat[3][1],
-					mat[3][2]
-				};
+					glm::mat4 mat = curVal.AsMatrix();
 
-				// PLEASE GOD JUST WORK ALREADY
-				// 21/09/2024
-				glm::vec3 rotrads{};
+					ImGui::Text("%s:", propNameCStr);
 
-				glm::extractEulerAngleXYZ(mat, rotrads.x, rotrads.y, rotrads.z);
+					float pos[3] =
+					{
+						mat[3][0],
+						mat[3][1],
+						mat[3][2]
+					};
 
-				//mat = glm::rotate(mat, -rotrads[0], glm::vec3(1.f, 0.f, 0.f));
-				//mat = glm::rotate(mat, -rotrads[1], glm::vec3(0.f, 1.f, 0.f));
-				//mat = glm::rotate(mat, -rotrads[2], glm::vec3(0.f, 0.f, 1.f));
+					// PLEASE GOD JUST WORK ALREADY
+					// 21/09/2024
+					glm::vec3 rotrads{};
 
-				float rotdegs[3] =
+					glm::extractEulerAngleXYZ(mat, rotrads.x, rotrads.y, rotrads.z);
+
+					//mat = glm::rotate(mat, -rotrads[0], glm::vec3(1.f, 0.f, 0.f));
+					//mat = glm::rotate(mat, -rotrads[1], glm::vec3(0.f, 1.f, 0.f));
+					//mat = glm::rotate(mat, -rotrads[2], glm::vec3(0.f, 0.f, 1.f));
+
+					float rotdegs[3] =
+					{
+						glm::degrees(rotrads.x),
+						glm::degrees(rotrads.y),
+						glm::degrees(rotrads.z)
+					};
+
+					ImGui::Indent();
+
+					ImGui::InputFloat3("Position", pos);
+					ImGui::InputFloat3("Rotation", rotdegs);
+
+					ImGui::Unindent();
+
+					mat = glm::mat4(1.f);
+
+					mat[3][0] = pos[0];
+					mat[3][1] = pos[1];
+					mat[3][2] = pos[2];
+
+					mat *= glm::eulerAngleXYZ(glm::radians(rotdegs[0]), glm::radians(rotdegs[1]), glm::radians(rotdegs[2]));
+
+					newVal = mat;
+				}
+				else
 				{
-					glm::degrees(rotrads.x),
-					glm::degrees(rotrads.y),
-					glm::degrees(rotrads.z)
-				};
+					char buf[] = { '<', 'C', 'O', 'N', 'F', 'L', 'I', 'C', 'T', '>' , 0 };
 
-				ImGui::Indent();
-
-				ImGui::InputFloat3("Position", pos);
-				ImGui::InputFloat3("Rotation", rotdegs);
-
-				ImGui::Unindent();
-
-				mat = glm::mat4(1.f);
-
-				mat[3][0] = pos[0];
-				mat[3][1] = pos[1];
-				mat[3][2] = pos[2];
-
-				mat *= glm::eulerAngleXYZ(glm::radians(rotdegs[0]), glm::radians(rotdegs[1]), glm::radians(rotdegs[2]));
-
-				newVal = Reflection::GenericValue(mat);
+					if (ImGui::InputText(propNameCStr, buf, sizeof(buf)))
+						newVal = glm::mat4(1.f);
+				}
 
 				break;
 			}
@@ -1432,21 +1696,26 @@ void Editor::RenderUI()
 
 			}
 
-			try
+			if (ImGui::IsItemEdited() && canChangeValue)
 			{
-				selected->SetPropertyValue(propName, newVal);
-			}
-			catch (std::string err)
-			{
-				ErrorTooltipMessage = err;
-				ErrorTooltipTimeRemaining = 2.f;
+				try
+				{
+					for (uint32_t selId : Selections)
+						GameObject::GetObjectById(selId)->SetPropertyValue(propName, newVal);
+				}
+				catch (std::string err)
+				{
+					ErrorTooltipMessage = err;
+					ErrorTooltipTimeRemaining = 5.f;
+					Selections.clear();
+				}
 			}
 		}
 
 		ImGui::EndChild();
+		
+		ImGui::PopID();
 	}
 
 	ImGui::End();
-
-	delete selRef;
 }

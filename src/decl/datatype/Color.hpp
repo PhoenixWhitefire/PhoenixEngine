@@ -28,7 +28,7 @@ public:
 
 	float R, G, B;
 
-	Color operator*(Color other)
+	Color operator*(const Color& other)
 	{
 		return Color(
 			this->R * other.R,
@@ -44,5 +44,15 @@ public:
 			this->G * other,
 			this->B * other
 		);
+	}
+
+	bool operator == (const Color& Other)
+	{
+		return (R == Other.R) && (G == Other.G) && (B == Other.B);
+	}
+
+	bool operator != (const Color& Other)
+	{
+		return !((*this) == Other);
 	}
 };

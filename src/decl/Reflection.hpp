@@ -188,11 +188,13 @@ namespace Reflection
 			return *this;
 		}
 
+		bool operator == (const Reflection::GenericValue& Other) const;
+
 		static void CopyInto(GenericValue&, const GenericValue&);
 
 		~GenericValue();
 
-		std::string ToString();
+		std::string ToString() const;
 
 		// Throws errors if the type does not match
 		std::string AsString() const;

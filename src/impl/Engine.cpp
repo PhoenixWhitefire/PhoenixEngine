@@ -27,12 +27,6 @@
 #include "FileRW.hpp"
 #include "Log.hpp"
 
-// TODO: move 13/08/2024
-static int WindowSizeXBeforeFullscreen = 800;
-static int WindowSizeYBeforeFullscreen = 800;
-static int WindowPosXBeforeFullscreen = SDL_WINDOWPOS_CENTERED;
-static int WindowPosYBeforeFullscreen = SDL_WINDOWPOS_CENTERED;
-
 static const std::unordered_map<SDL_LogPriority, const std::string> LogPriorityStringMap =
 {
 	{ SDL_LOG_PRIORITY_VERBOSE, "Verbose" },
@@ -111,21 +105,6 @@ void Engine::OnWindowResized(int NewSizeX, int NewSizeY)
 void Engine::SetIsFullscreen(bool Fullscreen)
 {
 	this->IsFullscreen = Fullscreen;
-
-	if (Fullscreen)
-	{
-		WindowSizeXBeforeFullscreen = this->WindowSizeX;
-		WindowSizeYBeforeFullscreen = this->WindowSizeY;
-
-		SDL_GetWindowPosition(this->Window, &WindowPosXBeforeFullscreen, &WindowPosYBeforeFullscreen);
-
-		// SDL_SetWindowFullscreen will trigger a Resize event and call ::OnWindowResized down the pipeline.
-	}
-	else
-	{
-		SDL_SetWindowPosition(this->Window, WindowPosXBeforeFullscreen, WindowPosYBeforeFullscreen);
-		this->ResizeWindow(WindowSizeXBeforeFullscreen, WindowSizeYBeforeFullscreen);
-	}
 
 	if (!SDL_SetWindowFullscreen(this->Window, this->IsFullscreen))
 		throw("`SDL_SetWindowFullscreen` failed, error: " + std::string(SDL_GetError()));
@@ -746,7 +725,7 @@ void Engine::Start()
 
 		updateScripts(deltaTime);
 
-		s_DebugCollisionAabbs = readFromConfiguration("d_aabbs", false);
+		s_DebugCollisionAabbs = this->DebugAabbs;
 
 		// Aggregate mesh and light data into lists
 		recursivelyTravelHierarchy(
@@ -1002,8 +981,6 @@ void Engine::Start()
 		glEnable(GL_DEPTH_TEST);
 
 		// End of frame
-
-		this->RunningTime = GetRunningTime();
 
 		RendererContext.SwapBuffers();
 

@@ -11,7 +11,7 @@ public:
 
 	void Initialize() override;
 
-	Object_Camera* GetSceneCamera();
+	Object_Camera* GetSceneCamera() const;
 	void SetSceneCamera(Object_Camera*);
 
 	REFLECTION_DECLAREAPI;

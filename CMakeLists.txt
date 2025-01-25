@@ -48,6 +48,7 @@ target_compile_options(PhoenixEngine PRIVATE /MP /W4)
 target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:/fsanitize=address /Od>)
 
 target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:/INCREMENTAL:NO>)
+target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:/INCREMENTAL:NO>)
 target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:/LTCG>)
 target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:Release>:/LTCG>)
 
@@ -84,7 +85,7 @@ target_link_libraries(PhoenixEngine
 	# IF:$<$<CONFIG:Debug> ${PHX_TRACY_LIB_PATH} $<$<CONFIG:RelTracy>:${PHX_TRACY_LIB_PATH}>
 )
 
-target_sources(PhoenixEngine PRIVATE README.md WindowsExeMetadata.rct)
+target_sources(PhoenixEngine PRIVATE README.md WindowsExeMetadata.rct phoenix.conf)
 
 add_compile_definitions($<$<CONFIG:RelTracy>:NDEBUG>)
 

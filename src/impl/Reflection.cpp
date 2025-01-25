@@ -180,7 +180,7 @@ Reflection::GenericValue::GenericValue(GenericValue&& Other)
 }
 */
 
-std::string Reflection::GenericValue::ToString()
+std::string Reflection::GenericValue::ToString() const
 {
 	switch (this->Type)
 	{
@@ -439,6 +439,74 @@ Reflection::GenericValue::~GenericValue()
 		Memory::Free(this->Value);
 		break;
 	}
+	}
+}
+
+bool Reflection::GenericValue::operator==(const Reflection::GenericValue& Other) const
+{
+	if (this->Type != Other.Type)
+		return false;
+
+	switch (Type)
+	{
+	case ValueType::Null:
+		return true;
+
+	case ValueType::Bool:
+	case ValueType::Integer:
+	case ValueType::Double:
+	case ValueType::GameObject:
+		return (size_t)this->Value == (size_t)Other.Value;
+
+	case ValueType::String:
+	{
+		std::string myStr = this->AsString();
+		std::string themStr = Other.AsString();
+
+		return myStr == themStr;
+	}
+
+	case ValueType::Color:
+	{
+		Color myCol{ *this };
+		Color themCol{ Other };
+
+		return myCol == themCol;
+	}
+
+	case ValueType::Vector3:
+	{
+		Vector3 myCol{ *this };
+		Vector3 themCol{ Other };
+
+		return myCol == themCol;
+	}
+
+	case ValueType::Matrix:
+	{
+		glm::mat4 myMtx = this->AsMatrix();
+		glm::mat4 themMtx = Other.AsMatrix();
+
+		return myMtx == themMtx;
+	}
+
+	case ValueType::Array:
+	{
+		if (this->Size != Other.Size)
+			return false;
+
+		std::vector<GenericValue> myArr = this->AsArray();
+		std::vector<GenericValue> themArr = Other.AsArray();
+
+		for (uint32_t i = 0; i < myArr.size(); i++)
+			if (!(myArr[i] == themArr[i]))
+				return false;
+
+		return true;
+	}
+
+	default:
+		throw("No defined equality for GenericValues of type " + TypeAsString(Type));
 	}
 }
 
