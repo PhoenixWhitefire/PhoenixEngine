@@ -132,8 +132,7 @@ void Object_Example::s_DeclareReflections()
 		}
 	);
 
-	// And there you have it! This class will now appear in the `apidump.json`, assuming
-	// you've remembered to `#include` it in `src/impl/gameobject/GameObjects.hpp`
+	// And there you have it! This class will now appear in the `apidump.json`
 }
 
 Object_Example::Object_Example()

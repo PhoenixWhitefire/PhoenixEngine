@@ -1,8 +1,6 @@
 // 15/09/2024
 // A template/example GameObject
 
-// Must be included in `src/impl/gameobject/GameObjects.hpp`
-
 #pragma once
 
 #include "datatype/GameObject.hpp"

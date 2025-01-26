@@ -15,6 +15,8 @@ public:
 
 	void Update(double) override;
 
+	void Reload();
+
 	std::string SoundFile{};
 	float Length{};
 	float Position = 0.f;

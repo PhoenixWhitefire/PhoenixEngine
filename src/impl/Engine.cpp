@@ -18,9 +18,11 @@
 
 #include "Engine.hpp"
 
-#include "gameobject/GameObjects.hpp"
-#include "GlobalJsonConfig.hpp"
+#include "gameobject/ParticleEmitter.hpp"
+#include "gameobject/Script.hpp"
+#include "gameobject/Light.hpp"
 #include "PerformanceTiming.hpp"
+#include "GlobalJsonConfig.hpp"
 #include "ThreadManager.hpp"
 #include "UserInput.hpp"
 #include "Utilities.hpp"

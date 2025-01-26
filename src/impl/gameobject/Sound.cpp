@@ -18,6 +18,17 @@ struct AudioAsset
 static bool s_DidInitReflection = false;
 static std::unordered_map<std::string, AudioAsset> AudioAssets{};
 
+// the spec of the audio device
+// must be standardized to remove overhead of 
+// creating unique audio devices
+// 26/01/2025 nvm does fuck all
+static const SDL_AudioSpec AudioSpec =
+{
+	SDL_AudioFormat::SDL_AUDIO_S16LE,
+	2,
+	44100
+};
+
 static void streamCallback(void* UserData, SDL_AudioStream* Stream, int AdditionalAmount, int /*TotalAmount*/)
 {
 	Object_Sound* sound = static_cast<Object_Sound*>(UserData);
@@ -79,50 +90,7 @@ void Object_Sound::s_DeclareReflections()
 				return;
 
 			sound->SoundFile = newFile;
-
-			if (sound->m_AudioStream)
-				SDL_DestroyAudioStream((SDL_AudioStream*)sound->m_AudioStream);
-
-			sound->m_AudioStream = nullptr;
-
-			static std::string ResDir = EngineJsonConfig.value("ResourcesDirectory", "resources/");
-
-			AudioAsset audio{};
-
-			if (const auto& it = AudioAssets.find(newFile); it == AudioAssets.end())
-			{
-				bool success = SDL_LoadWAV(
-					(ResDir + newFile).c_str(),
-					&audio.Spec,
-					&audio.Data,
-					&audio.DataSize
-				);
-
-				if (!success)
-					throw("Failed to load sound file: " + std::string(SDL_GetError()));
-
-				AudioAssets[newFile] = audio;
-			}
-			else
-				audio = it->second;
-
-			sound->Length = (float)audio.DataSize / (float)audio.Spec.freq;
-
-			SDL_AudioStream* stream = SDL_OpenAudioDeviceStream(
-				SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
-				&audio.Spec,
-				NULL,
-				nullptr
-			);
-			sound->m_AudioStream = stream;
-
-			if (!stream)
-				throw("Failed to create audio stream: " + std::string(SDL_GetError()));
-
-			SDL_SetAudioStreamGetCallback(stream, streamCallback, sound);
-
-			SDL_PauseAudioStreamDevice(stream);
-			sound->BytePosition = 1;
+			sound->Reload();
 		}
 	);
 
@@ -210,4 +178,77 @@ void Object_Sound::Update(double)
 	if (!Enabled && !SDL_AudioStreamDevicePaused(stream))
 		if (!SDL_PauseAudioStreamDevice(stream))
 			throw("Failed to pause audio stream: " + std::string(SDL_GetError()));
+}
+
+void Object_Sound::Reload()
+{
+	if (m_AudioStream)
+		SDL_DestroyAudioStream((SDL_AudioStream*)m_AudioStream);
+
+	m_AudioStream = nullptr;
+
+	static std::string ResDir = EngineJsonConfig.value("ResourcesDirectory", "resources/");
+
+	AudioAsset audio{};
+
+	if (const auto& it = AudioAssets.find(SoundFile); it == AudioAssets.end())
+	{
+		/*
+		SDL_AudioSpec fileSpec{};
+		uint8_t* fileData{};
+		uint32_t fileDataLen{};
+		*/
+
+		bool success = SDL_LoadWAV(
+			(ResDir + SoundFile).c_str(),
+			&audio.Spec,
+			&audio.Data,
+			&audio.DataSize
+		);
+
+		if (!success)
+			throw("Failed to load sound file: " + std::string(SDL_GetError()));
+
+		/*
+		// `SDL_ConvertAudioSamples` takes `int*` as the length
+		// instead of `uint32_t*`?? why 26/01/2025
+		int dataLen{};
+
+		bool cvtSuccess = SDL_ConvertAudioSamples(
+			&fileSpec,
+			fileData,
+			fileDataLen,
+			&AudioSpec,
+			&audio.Data,
+			&dataLen
+		);
+
+		if (!cvtSuccess)
+			throw("Failed to convert audio: " + std::string(SDL_GetError()));
+
+		audio.DataSize = static_cast<uint32_t>(dataLen);
+		*/
+
+		AudioAssets[SoundFile] = audio;
+	}
+	else
+		audio = it->second;
+
+	Length = (float)audio.DataSize / (float)audio.Spec.freq;
+
+	SDL_AudioStream* stream = SDL_OpenAudioDeviceStream(
+		SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
+		&audio.Spec,
+		NULL,
+		nullptr
+	);
+	m_AudioStream = stream;
+
+	if (!stream)
+		throw("Failed to create audio stream: " + std::string(SDL_GetError()));
+
+	SDL_SetAudioStreamGetCallback(stream, streamCallback, this);
+
+	SDL_PauseAudioStreamDevice(stream);
+	BytePosition = 1;
 }

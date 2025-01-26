@@ -1156,8 +1156,7 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 
 		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow
 			| ImGuiTreeNodeFlags_AllowItemOverlap
-			| ImGuiTreeNodeFlags_SpanAvailWidth
-			| ImGuiTreeNodeFlags_FramePadding;
+			| ImGuiTreeNodeFlags_SpanAvailWidth;
 
 		// make the insert button have better contrast
 		if (isInSelections(object) && object != InsertObjectButtonHoveredOver)
@@ -1186,9 +1185,7 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 				}
 		}
 
-		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2());
 		bool open = ImGui::TreeNodeEx(&object->ObjectId, flags, object->Name.c_str());
-		ImGui::PopStyleVar();
 
 		VisibleTreeWip.push_back(object->ObjectId);
 
@@ -1436,6 +1433,7 @@ void Editor::RenderUI()
 
 			Reflection::GenericValue newVal = curVal;
 			bool canChangeValue = true;
+			bool valueWasEditedManual = false;
 
 			switch (curVal.Type)
 			{
@@ -1656,6 +1654,8 @@ void Editor::RenderUI()
 					ImGui::Indent();
 
 					ImGui::InputFloat3("Position", pos);
+					valueWasEditedManual = ImGui::IsItemEdited();
+
 					ImGui::InputFloat3("Rotation", rotdegs);
 
 					ImGui::Unindent();
@@ -1696,7 +1696,7 @@ void Editor::RenderUI()
 
 			}
 
-			if (ImGui::IsItemEdited() && canChangeValue)
+			if ((ImGui::IsItemEdited() || valueWasEditedManual) && canChangeValue)
 			{
 				try
 				{
@@ -1707,7 +1707,6 @@ void Editor::RenderUI()
 				{
 					ErrorTooltipMessage = err;
 					ErrorTooltipTimeRemaining = 5.f;
-					Selections.clear();
 				}
 			}
 		}
