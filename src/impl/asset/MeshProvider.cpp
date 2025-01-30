@@ -637,6 +637,8 @@ static void uploadMeshDataToGpuMesh(Mesh& mesh, MeshProvider::GpuMesh& gpuMesh)
 	{
 		mesh.Vertices.clear();
 		mesh.Indices.clear();
+		mesh.Vertices.shrink_to_fit();
+		mesh.Indices.shrink_to_fit();
 	}
 }
 

@@ -11,7 +11,7 @@
 #include <fstream>
 #include <set>
 
-#include "Editor.hpp"
+#include "InlayEditor.hpp"
 
 #include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
@@ -29,7 +29,7 @@
 constexpr uint32_t OBJECT_NEW_CLASSNAME_BUFSIZE = 16;
 constexpr uint32_t MATERIAL_NEW_NAME_BUFSIZE = 64;
 constexpr uint32_t MATERIAL_TEXTUREPATH_BUFSIZE = 64;
-constexpr const char* MATERIAL_NEW_NAME_DEFAULT = "newmaterial";
+constexpr char MATERIAL_NEW_NAME_DEFAULT[] = "newmaterial";
 
 static const char* ParentString = "[Parent]";
 
@@ -82,16 +82,18 @@ static glm::mat4 MtlPreviewCamDefaultRotation = glm::eulerAngleYXZ(glm::radians(
 static std::string ErrorTooltipMessage = "No Error Dummy";
 static double ErrorTooltipTimeRemaining = 0.f;
 
-Editor::Editor(Renderer* renderer)
-{
-	m_MtlCreateNameBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE, MATERIAL_NEW_NAME_DEFAULT);
-	m_MtlLoadNameBuf = BufferInitialize(MATERIAL_NEW_NAME_BUFSIZE, MATERIAL_NEW_NAME_DEFAULT);
-	m_MtlDiffuseBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
-	m_MtlSpecBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
-	m_MtlNormalBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
-	m_MtlEmissionBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
-	m_MtlShpBuf = BufferInitialize(MATERIAL_TEXTUREPATH_BUFSIZE);
+static char MtlCreateNameBuf[MATERIAL_NEW_NAME_BUFSIZE] = "material";
+static char MtlLoadNameBuf[MATERIAL_NEW_NAME_BUFSIZE] = "material";
+static char MtlDiffuseBuf[MATERIAL_TEXTUREPATH_BUFSIZE] = { 0 };
+static char MtlSpecBuf[MATERIAL_TEXTUREPATH_BUFSIZE] = { 0 };
+static char MtlNormalBuf[MATERIAL_TEXTUREPATH_BUFSIZE] = { 0 };
+static char MtlEmissionBuf[MATERIAL_TEXTUREPATH_BUFSIZE] = { 0 };
+static char MtlShpBuf[MATERIAL_TEXTUREPATH_BUFSIZE] = { 0 };
+static int MtlCurItem = -1;
+static int MtlPrevItem = -1;
 
+void InlayEditor::Initialize(Renderer* renderer)
+{
 	MtlEditorPreview.Initialize(256, 256);
 	MtlPreviewRenderer = renderer;
 	MtlPreviewCamera = static_cast<Object_Camera*>(GameObject::Create("Camera"));
@@ -102,11 +104,8 @@ Editor::Editor(Renderer* renderer)
 
 	for (auto it = iconsJson.begin(); it != iconsJson.end(); ++it)
 		ClassIcons[it.key()] = (std::string)it.value();
-}
 
-void Editor::Update(double DeltaTime)
-{
-	ErrorTooltipTimeRemaining -= DeltaTime;
+	InlayEditor::DidInitialize = true;
 }
 
 static bool mtlIterator(void*, int index, const char** outText)
@@ -721,7 +720,7 @@ static uint32_t getClassIconId(const std::string& ClassName)
 // baguette with a doge face on a white background low-res
 // with the caption "pain"
 // and it's just him screaming into the mic
-void Editor::m_RenderMaterialEditor()
+static void renderMaterialEditor()
 {
 	ZoneScopedC(tracy::Color::DarkSeaGreen);
 
@@ -771,44 +770,44 @@ void Editor::m_RenderMaterialEditor()
 		return;
 	}
 
-	ImGui::InputText("Load material", m_MtlLoadNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
+	ImGui::InputText("Load material", MtlLoadNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
 	ImGui::SetItemTooltip("The name of the material to load in, NOT the file path");
 
 	if (ImGui::Button("Load"))
-		mtlManager->LoadMaterialFromPath(m_MtlLoadNameBuf);
+		mtlManager->LoadMaterialFromPath(MtlLoadNameBuf);
 
-	ImGui::InputText("New blank material", m_MtlCreateNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
+	ImGui::InputText("New blank material", MtlCreateNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
 	ImGui::SetItemTooltip("The name of the new blank material");
 
 	if (ImGui::Button("Create"))
 	{
 		FileRW::WriteFile(
-			"materials/" + std::string(m_MtlCreateNameBuf) + ".mtl",
+			"materials/" + std::string(MtlCreateNameBuf) + ".mtl",
 			DefaultNewMaterial.dump(2), true
 		);
 
-		mtlManager->LoadMaterialFromPath(m_MtlCreateNameBuf);
+		mtlManager->LoadMaterialFromPath(MtlCreateNameBuf);
 	}
 
 	std::vector<RenderMaterial>& loadedMaterials = mtlManager->GetLoadedMaterials();
 
 	ImGui::ListBox(
 		"Loaded materials",
-		&m_MtlCurItem,
+		&MtlCurItem,
 		&mtlIterator,
 		nullptr,
 		static_cast<int>(loadedMaterials.size())
 	);
 	ImGui::SetItemTooltip("Use the 'Load' button to load a material if it isn't already loaded");
 
-	if (m_MtlCurItem == -1)
+	if (MtlCurItem == -1)
 	{
 		ImGui::End();
 
 		return;
 	}
 
-	RenderMaterial& curItem = loadedMaterials.at(m_MtlCurItem);
+	RenderMaterial& curItem = loadedMaterials.at(MtlCurItem);
 
 	Texture& colorMap = texManager->GetTextureResource(curItem.ColorMap);
 	Texture& metallicRoughnessMap = texManager->GetTextureResource(curItem.MetallicRoughnessMap);
@@ -819,20 +818,20 @@ void Editor::m_RenderMaterialEditor()
 
 	static std::string s_SaveNameBuf = "";
 
-	if (m_MtlCurItem != m_MtlPrevItem)
+	if (MtlCurItem != MtlPrevItem)
 	{
-		CopyStringToBuffer(m_MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE, curItem.GetShader().Name);
+		strncpy_s(MtlShpBuf, curItem.GetShader().Name.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
 		s_SaveNameBuf = curItem.Name;
 
-		CopyStringToBuffer(m_MtlDiffuseBuf, MATERIAL_TEXTUREPATH_BUFSIZE, colorMap.ImagePath);
-		CopyStringToBuffer(m_MtlSpecBuf, MATERIAL_TEXTUREPATH_BUFSIZE, metallicRoughnessMap.ImagePath);
-		CopyStringToBuffer(m_MtlNormalBuf, MATERIAL_TEXTUREPATH_BUFSIZE, normalMap.ImagePath);
-		CopyStringToBuffer(m_MtlEmissionBuf, MATERIAL_TEXTUREPATH_BUFSIZE, emissionMap.ImagePath);
+		strncpy_s(MtlDiffuseBuf, colorMap.ImagePath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
+		strncpy_s(MtlSpecBuf, metallicRoughnessMap.ImagePath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
+		strncpy_s(MtlNormalBuf, normalMap.ImagePath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
+		strncpy_s(MtlEmissionBuf, emissionMap.ImagePath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
 
 		SelectedUniformIdx = -1;
 	}
 
-	m_MtlPrevItem = m_MtlCurItem;
+	MtlPrevItem = MtlCurItem;
 
 	ImGui::Image(
 		MtlEditorPreview.GpuTextureId,
@@ -871,7 +870,7 @@ void Editor::m_RenderMaterialEditor()
 
 	static uint32_t CubeMeshId = MeshProvider::Get()->LoadFromPath("!Cube");
 
-	MtlPreviewScene.RenderList[0].MaterialId = static_cast<uint32_t>(m_MtlCurItem);
+	MtlPreviewScene.RenderList[0].MaterialId = static_cast<uint32_t>(MtlCurItem);
 	MtlPreviewScene.RenderList[0].RenderMeshId = CubeMeshId;
 	MtlPreviewScene.UsedShaders = { curItem.ShaderId };
 
@@ -887,9 +886,9 @@ void Editor::m_RenderMaterialEditor()
 	MtlPreviewRenderer->FrameBuffer.Bind();
 	glViewport(0, 0, prevFbo.Width, prevFbo.Height);
 
-	ImGui::InputText("Shader", m_MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
+	ImGui::InputText("Shader", MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
 
-	mtlEditorTexture(&curItem.ColorMap, "Color Map:", m_MtlDiffuseBuf);
+	mtlEditorTexture(&curItem.ColorMap, "Color Map:", MtlDiffuseBuf);
 
 	bool hadSpecularTexture = curItem.MetallicRoughnessMap != 0;
 	bool metallicRoughnessEnabled = hadSpecularTexture;
@@ -900,7 +899,7 @@ void Editor::m_RenderMaterialEditor()
 		if (!hadSpecularTexture)
 			curItem.MetallicRoughnessMap = texManager->LoadTextureFromPath("textures/white.png");
 
-		mtlEditorTexture(&curItem.MetallicRoughnessMap, "Metallic Roughness Map:", m_MtlSpecBuf);
+		mtlEditorTexture(&curItem.MetallicRoughnessMap, "Metallic Roughness Map:", MtlSpecBuf);
 	}
 	else
 		// the ID is the only thing the Renderer uses to determine
@@ -919,7 +918,7 @@ void Editor::m_RenderMaterialEditor()
 		if (!hadNormalMap)
 			curItem.NormalMap = texManager->LoadTextureFromPath("textures/violet.png");
 
-		mtlEditorTexture(&curItem.NormalMap, "Normal Map:", m_MtlNormalBuf);
+		mtlEditorTexture(&curItem.NormalMap, "Normal Map:", MtlNormalBuf);
 	}
 	else
 		curItem.NormalMap = 0;
@@ -933,7 +932,7 @@ void Editor::m_RenderMaterialEditor()
 		if (!hadEmissiveMap)
 			curItem.EmissionMap = texManager->LoadTextureFromPath("textures/white.png");
 
-		mtlEditorTexture(&curItem.EmissionMap, "Emission Map:", m_MtlEmissionBuf);
+		mtlEditorTexture(&curItem.EmissionMap, "Emission Map:", MtlEmissionBuf);
 	}
 	else
 		curItem.EmissionMap = 0;
@@ -951,18 +950,18 @@ void Editor::m_RenderMaterialEditor()
 
 	if (ImGui::Button("Save changes"))
 	{
-		curItem.ColorMap = texManager->LoadTextureFromPath(m_MtlDiffuseBuf);
+		curItem.ColorMap = texManager->LoadTextureFromPath(MtlDiffuseBuf);
 
 		if (curItem.MetallicRoughnessMap != 0)
-			curItem.MetallicRoughnessMap = texManager->LoadTextureFromPath(m_MtlSpecBuf);
+			curItem.MetallicRoughnessMap = texManager->LoadTextureFromPath(MtlSpecBuf);
 
 		if (curItem.NormalMap != 0)
-			curItem.NormalMap = texManager->LoadTextureFromPath(m_MtlNormalBuf);
+			curItem.NormalMap = texManager->LoadTextureFromPath(MtlNormalBuf);
 
 		if (curItem.EmissionMap != 0)
-			curItem.EmissionMap = texManager->LoadTextureFromPath(m_MtlEmissionBuf);
+			curItem.EmissionMap = texManager->LoadTextureFromPath(MtlEmissionBuf);
 
-		curItem.ShaderId = ShaderManager::Get()->LoadFromPath(m_MtlShpBuf);
+		curItem.ShaderId = ShaderManager::Get()->LoadFromPath(MtlShpBuf);
 
 		mtlManager->SaveToPath(curItem, s_SaveNameBuf);
 	}
@@ -1266,16 +1265,18 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 		onTreeItemClicked(nodeClicked);
 }
 
-void Editor::RenderUI()
+void InlayEditor::UpdateAndRender(double DeltaTime)
 {
 	ZoneScopedC(tracy::Color::DarkSeaGreen);
+	
+	ErrorTooltipTimeRemaining -= DeltaTime;
 
 	if (ErrorTooltipTimeRemaining > 0.f)
 		ImGui::SetTooltip(ErrorTooltipMessage.c_str());
 
 	renderTextEditor();
 	renderShaderPipelinesEditor();
-	m_RenderMaterialEditor();
+	renderMaterialEditor();
 
 	if (!ImGui::Begin("Editor"))
 	{

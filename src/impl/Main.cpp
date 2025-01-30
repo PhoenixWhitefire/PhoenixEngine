@@ -91,11 +91,11 @@ PHX_MAIN_HANDLECRASH(std::exception, .what()); \
 
 #include "PerformanceTiming.hpp"
 #include "GlobalJsonConfig.hpp"
+#include "InlayEditor.hpp"
 #include "UserInput.hpp"
 #include "Utilities.hpp"
 #include "Memory.hpp"
 #include "FileRW.hpp"
-#include "Editor.hpp"
 #include "Log.hpp"
 
 static bool FirstDragFrame = false;
@@ -107,8 +107,6 @@ static ImGuiIO* GuiIO = nullptr;
 
 static const float MouseSensitivity = 100.f;
 static const float MovementSpeed = 15.f;
-
-static Editor* EditorContext = nullptr;
 
 static float PrevMouseX, PrevMouseY = 0;
 
@@ -239,9 +237,6 @@ static int findCmdLineArgument(
 
 static void handleInputs(double deltaTime)
 {
-	if (EngineJsonConfig.value("Developer", false))
-		EditorContext->Update(deltaTime);
-
 	Engine* EngineInstance = Engine::Get();
 
 	Object_Camera* camera = EngineInstance->Workspace->GetSceneCamera();
@@ -465,7 +460,7 @@ static void saveStatsCsvCallback(void* UserData, const char* const* FileList, in
 	FileRW::WriteFile(FileList[0], csvContents, false);
 }
 
-static void drawDeveloperUI(double)
+static void drawDeveloperUI(double DeltaTime)
 {
 	ZoneScopedC(tracy::Color::DarkOliveGreen);
 
@@ -662,7 +657,7 @@ static void drawDeveloperUI(double)
 	}
 	ImGui::End();
 
-	EditorContext->RenderUI();
+	InlayEditor::UpdateAndRender(DeltaTime);
 }
 
 static void handleCrash(const std::string& Error, const std::string& ExceptionType)
@@ -729,8 +724,14 @@ static void begin(int argc, char** argv)
 	
 	PHX_ENSURE_MSG(ImGui_ImplOpenGL3_Init("#version 460"), "`ImGui_ImplOpenGL3_Init` failed");
 
-	EditorContext = EngineJsonConfig.value("Developer", false) ? new Editor(&EngineInstance->RendererContext) : nullptr;
-	
+	EngineInstance->OnFrameStart.Connect(handleInputs);
+
+	if (EngineJsonConfig.value("Developer", false))
+	{
+		InlayEditor::Initialize(&EngineInstance->RendererContext);
+		EngineInstance->OnFrameRenderGui.Connect(drawDeveloperUI);
+	}
+
 	const char* mapFileFromArgs{};
 	bool hasMapFromArgs = false;
 
@@ -763,11 +764,6 @@ static void begin(int argc, char** argv)
 	PHX_ENSURE_MSG(roots[0]->ClassName == "DataModel", "Root Object was not a DataModel!");
 
 	GameObject::s_DataModel->MergeWith(roots[0]);
-
-	EngineInstance->OnFrameStart.Connect(handleInputs);
-
-	if (EditorContext)
-		EngineInstance->OnFrameRenderGui.Connect(drawDeveloperUI);
 
 	EngineInstance->Start();
 }
