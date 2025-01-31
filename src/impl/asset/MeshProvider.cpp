@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cfloat>
 #include <chrono>
 #include <nljson.hpp>
 #include <glad/gl.h>
@@ -492,7 +493,7 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 			// max 4 rn 02/01/2025
 			// invalid bones (UINT8_MAX i.e. 255) are still specified
 			// to reduce serialization/deserialization complexity
-			contents.push_back(4i8);
+			contents.push_back(4);
 
 			// bone id, then weight
 			// felt easier

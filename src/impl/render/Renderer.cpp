@@ -1,11 +1,21 @@
+#ifndef __GNUC__
+
+#define EXPORT_SYMBOL __declspec(dllexport)
+
+#else
+
+#define EXPORT_SYMBOL __attribute__((visibility("default")))
+
+#endif
+
 extern "C"
 {
 	// 25/12/2024
 	// request discrete GPU for NVIDIA and AMD respectively
 	// (i'm so inclusive, even though i have an NV card i added the flag for AMD)
 
-	__declspec(dllexport) unsigned long NvOptimusEnablement = 0x00000001;
-	__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+	EXPORT_SYMBOL unsigned long NvOptimusEnablement = 0x00000001;
+	EXPORT_SYMBOL int AmdPowerXpressRequestHighPerformance = 1;
 }
 
 #define GLM_ENABLE_EXPERIMENTAL

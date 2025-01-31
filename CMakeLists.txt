@@ -37,15 +37,19 @@ source_group(TREE src FILES ${PHX_SRCS})
 
 set_target_properties(PhoenixEngine PROPERTIES OUTPUT_NAME PhoenixEngine)
 
+set(PHX_BUILD_TYPE $<IF:$<CONFIG:Debug>,Debug,$<IF:$<CONFIG:Release>,Release,RelTracy>>)
+set(PHX_TRACY_LIB_PATH Vendor/tracy/${PHX_BUILD_TYPE}/TracyClient)
+
 target_compile_definitions(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:TRACY_ENABLE>)
 target_compile_definitions(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:TRACY_ENABLE NDEBUG>)
+target_compile_definitions(PhoenixEngine PRIVATE PHX_BUILD_TYPE="${PHX_BUILD_TYPE}")
 
 target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:/O2 /Ob2 /GL>)
 target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Release>:/O2 /Ob2 /GL>)
-target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:/Od /Ob0>)
-target_compile_options(PhoenixEngine PRIVATE /MP /W4)
+target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:-O0>)
+target_compile_options(PhoenixEngine PRIVATE -MP -fext-numeric-literals)
 
-target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:/fsanitize=address /Od>)
+target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:-fsanitize=address>)
 
 target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:/INCREMENTAL:NO>)
 target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:/INCREMENTAL:NO>)
@@ -63,11 +67,6 @@ target_include_directories(PhoenixEngine PUBLIC
 	"Vendor/luau/Common/include"
 	"Vendor/luau/VM/include"
 )
-
-set(PHX_BUILD_TYPE $<IF:$<CONFIG:Debug>,Debug,$<IF:$<CONFIG:Release>,Release,RelTracy>>)
-set(PHX_TRACY_LIB_PATH Vendor/tracy/${PHX_BUILD_TYPE}/TracyClient)
-
-target_compile_options(PhoenixEngine PRIVATE /DPHX_BUILD_TYPE="${PHX_BUILD_TYPE}")
 
 target_link_libraries(PhoenixEngine
 	opengl32.lib
@@ -95,11 +94,11 @@ add_compile_options($<$<CONFIG:RelTracy>:/Ob2>)
 add_compile_options($<$<CONFIG:Release>:/GL>)
 add_compile_options($<$<CONFIG:Release>:/O2>)
 add_compile_options($<$<CONFIG:Release>:/Ob2>)
-add_compile_options($<$<CONFIG:Debug>:/fsanitize=address>)
-add_compile_options($<$<CONFIG:Debug>:/Od>)
-add_compile_options($<$<CONFIG:Debug>:/DEBUG>)
+add_compile_options($<$<CONFIG:Debug>:-fsanitize=address>)
+add_compile_options($<$<CONFIG:Debug>:-O0>)
+#add_compile_options($<$<CONFIG:Debug>:/DEBUG>)
 
-add_compile_options(/MP)
+add_compile_options(-MP)
 # incremental warning with ASAN
 add_link_options($<$<CONFIG:Debug>:/INCREMENTAL:NO>)
 
