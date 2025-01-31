@@ -1,5 +1,0 @@
-{
-  "Fragment": "shaders/wireframe.frag",
-  "Geometry": "shaders/worldUber.geom",
-  "Vertex": "shaders/worldUber.vert"
-}

@@ -1,7 +1,0 @@
-{
-  "BilinearFiltering": true,
-  "ColorMap": "textures/white.png",
-  "HasTranslucency": false,
-  "Uniforms": {},
-  "specExponent": 16.0
-}

@@ -1,4 +1,0 @@
-{
-    "Vertex": "postprocessing.vert",
-    "Fragment": "postprocessing.frag"
-}
