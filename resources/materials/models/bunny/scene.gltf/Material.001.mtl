@@ -1,0 +1,14 @@
+PHNXENGI
+#Asset Material
+#Date 31-12-2024
+
+
+{
+  "ColorMap": "models/bunny/baseColor.png",
+  "HasTranslucency": false,
+  "MetallicRoughnessMap": "textures/black.png",
+  "Shader": "worldUber",
+  "Uniforms": null,
+  "specExponent": 16.0,
+  "specMultiply": 0.0
+}

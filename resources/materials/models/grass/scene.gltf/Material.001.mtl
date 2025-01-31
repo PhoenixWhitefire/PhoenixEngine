@@ -1,0 +1,15 @@
+PHNXENGI
+#Asset Material
+#Date 11-1-2025
+
+{
+  "ColorMap": "models/grass/diffuse.png",
+  "HasTranslucency": false,
+  "MetallicRoughnessMap": "textures/black.png",
+  "Shader": "worldUber",
+  "Uniforms": {
+    "AlphaCutoff": 0.5
+  },
+  "specExponent": 16.0,
+  "specMultiply": 0.0
+}

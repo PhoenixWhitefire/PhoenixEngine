@@ -1,0 +1,6 @@
+{
+  "Fragment": "shaders/awesome.frag",
+  "Geometry": "<NOT_SPECIFIED>",
+  "InheritUniformsOf": "",
+  "Vertex": "shaders/awesome.vert"
+}

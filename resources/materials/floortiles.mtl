@@ -1,0 +1,11 @@
+{
+  "ColorMap": "textures/materials/Tiles075_4K-JPG_Color.jpg",
+  "HasTranslucency": false,
+  "MetallicRoughnessMap": "textures/materials/Tiles075_4K-JPG_Roughness.jpg",
+  "Shader": "worldUberTriProjected",
+  "Uniforms": {
+    "MaterialProjectionFactor": 0.02500000037252903
+  },
+  "specExponent": 16.0,
+  "specMultiply": 0.5
+}

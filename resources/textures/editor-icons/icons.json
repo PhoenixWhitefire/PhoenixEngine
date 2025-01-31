@@ -1,0 +1,20 @@
+{
+  "FallbackIcon": "textures/editor-icons/Service.png",
+  "DataModel": "textures/editor-icons/Service.png",
+  "Workspace": "textures/editor-icons/Workspace.png",
+  "Camera": "textures/editor-icons/Camera.png",
+  "Model": "textures/editor-icons/Model.png",
+  "Primitive": "textures/editor-icons/Part.png",
+  "Mesh": "textures/editor-icons/MeshPart.png",
+  "DirectionalLight": "textures/editor-icons/Lighting.png",
+  "SurfaceLight": "textures/editor-icons/SurfaceLight.png",
+  "PointLight": "textures/editor-icons/PointLight.png",
+  "SpotLight": "textures/editor-icons/SpotLight.png",
+  "Sound": "textures/editor-icons/Sound.png",
+  "Script": "textures/editor-icons/Script.png",
+  "Attachment": "textures/editor-icons/Attachment.png",
+  "Animation": "textures/editor-icons/Animation.png",
+  "Bone": "textures/editor-icons/Bone.png",
+  "ParticleEmitter": "textures/editor-icons/ParticleEmitter.png",
+  "Example": "textures/pop_cat.png"
+}

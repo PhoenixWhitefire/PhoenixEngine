@@ -1,0 +1,11 @@
+{
+  "ColorMap": "textures/materials/wood.jpg",
+  "HasTranslucency": false,
+  "MetallicRoughnessMap": "textures/black.png",
+  "Shader": "worldUberTriProjected",
+  "Uniforms": {
+    "MaterialProjectionFactor": 0.10000000149011612
+  },
+  "specExponent": 8.0,
+  "specMultiply": 0.5
+}

@@ -1,0 +1,15 @@
+PHNXENGI
+#Asset Material
+#Date 13-1-2025
+
+{
+  "ColorMap": "textures/materials/plastic.jpg",
+  "HasTranslucency": false,
+  "MetallicRoughnessMap": "textures/black.png",
+  "Shader": "worldUberTriProjected",
+  "Uniforms": {
+    "MaterialProjectionFactor": 0.05000000074505806
+  },
+  "specExponent": 32.0,
+  "specMultiply": 0.5
+}

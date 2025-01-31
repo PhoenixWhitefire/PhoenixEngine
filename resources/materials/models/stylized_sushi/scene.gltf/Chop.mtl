@@ -1,0 +1,9 @@
+{
+  "albedo": "models/stylized_sushi/textures/Chop_baseColor.png",
+  "roughnessFactor": 1.0,
+  "specExponent": 16.0,
+  "specMultiply": 0.0,
+  "specular": "models/stylized_sushi/textures/Chop_metallicRoughness.png",
+  "translucency": false,
+  "uniforms": {}
+}
