@@ -820,23 +820,13 @@ static void renderMaterialEditor()
 
 	if (MtlCurItem != MtlPrevItem)
 	{
-<<<<<<< HEAD:src/impl/InlayEditor.cpp
-		strncpy_s(MtlShpBuf, curItem.GetShader().Name.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
+		strncpy(MtlShpBuf, curItem.GetShader().Name.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
 		s_SaveNameBuf = curItem.Name;
 
-		strncpy_s(MtlDiffuseBuf, colorMap.ImagePath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
-		strncpy_s(MtlSpecBuf, metallicRoughnessMap.ImagePath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
-		strncpy_s(MtlNormalBuf, normalMap.ImagePath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
-		strncpy_s(MtlEmissionBuf, emissionMap.ImagePath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
-=======
-		strncpy(m_MtlShpBuf, curItem.GetShader().Name.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
-		s_SaveNameBuf = curItem.Name;
-
-		strncpy(m_MtlDiffuseBuf, colorMap.ImagePath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
-		strncpy(m_MtlSpecBuf, metallicRoughnessMap.ImagePath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
-		strncpy(m_MtlNormalBuf, normalMap.ImagePath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
-		strncpy(m_MtlEmissionBuf, emissionMap.ImagePath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
->>>>>>> 181e45a (Includes, Macros):src/impl/Editor.cpp
+		strncpy(MtlDiffuseBuf, colorMap.ImagePath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
+		strncpy(MtlSpecBuf, metallicRoughnessMap.ImagePath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
+		strncpy(MtlNormalBuf, normalMap.ImagePath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
+		strncpy(MtlEmissionBuf, emissionMap.ImagePath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
 
 		SelectedUniformIdx = -1;
 	}

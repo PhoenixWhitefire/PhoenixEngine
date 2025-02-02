@@ -51,7 +51,7 @@ target_compile_options(PhoenixEngine PRIVATE -MP -fext-numeric-literals)
 
 target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:-fsanitize=address>)
 
-target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:/INCREMENTAL:NO>)
+#target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:/INCREMENTAL:NO>)
 target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:/INCREMENTAL:NO>)
 target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:/LTCG>)
 target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:Release>:/LTCG>)
@@ -70,11 +70,11 @@ target_include_directories(PhoenixEngine PUBLIC
 
 target_link_libraries(PhoenixEngine
 	opengl32.lib
-	Vendor/${PHX_BUILD_TYPE}/Vendor
+	Vendor
 	Vendor/glm/glm/${PHX_BUILD_TYPE}/glm
-	Vendor/luau/${PHX_BUILD_TYPE}/Luau.Ast
-	Vendor/luau/${PHX_BUILD_TYPE}/Luau.Compiler
-	Vendor/luau/${PHX_BUILD_TYPE}/Luau.VM
+	Vendor/luau/libLuau.Ast.a
+	Vendor/luau/libLuau.Compiler.a
+	Vendor/luau/libLuau.VM.a
 	Vendor/SDL/${PHX_BUILD_TYPE}/SDL_uclibc
 	Vendor/SDL/${PHX_BUILD_TYPE}/SDL3
 	

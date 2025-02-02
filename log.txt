@@ -1,8 +1,8 @@
 [INFO]: Application startup
 [INFO]: Phoenix Engine:
-	Build type: Debug
-	Main.cpp last compiled: Jan 30 2025 @ [REDACTED]
-[INFO]: Command line:  C:\Users\phoen\Documents\PhoenixEngine\x64\Debug\PhoenixEngine.exe
+	Build type: Release
+	Main.cpp last compiled: Jan 25 2025 @ [REDACTED]
+[INFO]: Command line:  Z:\home\viren\Documents\PhoenixEngine\x64\Release\PhoenixEngine.exe -tracyim -loadmap hi
 [INFO]: Configuration loaded
 [INFO]: Requesting a Core OpenGL context with version 4.6
 [INFO]: Window created
@@ -12,107 +12,7 @@
 [INFO]: Initializing DataModel...
 [INFO]: Engine initialized
 [INFO]: Initializing Dear ImGui 1.91.8 WIP...
-[INFO]: Final initializations...
-[INFO]: Main engine loop start
-[WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
-	Source: OpenGL
-	Error ID: 131154
-
-[WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Program/shader state performance warning: Vertex shader in program 12 is being recompiled based on GL state.
-	Source: OpenGL
-	Error ID: 131218
-
-[WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
-	Source: OpenGL
-	Error ID: 131154
-
-[WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
-	Source: OpenGL
-	Error ID: 131154
-
-[WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
-	Source: OpenGL
-	Error ID: 131154
-
-[WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
-	Source: OpenGL
-	Error ID: 131154
-
-[WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
-	Source: OpenGL
-	Error ID: 131154
-
-[WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
-	Source: OpenGL
-	Error ID: 131154
-
-[WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
-	Source: OpenGL
-	Error ID: 131154
-
-[WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
-	Source: OpenGL
-	Error ID: 131154
-
-[WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
-	Source: OpenGL
-	Error ID: 131154
-
-[WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
-	Source: OpenGL
-	Error ID: 131154
-
-[WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
-	Source: OpenGL
-	Error ID: 131154
-
-[WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
-	Source: OpenGL
-	Error ID: 131154
-
-[INFO]: Main loop exited
+[INFO]: Map to load specified from launch argument. Map was: hi
 [INFO]: Engine destructing...
 [INFO]: Destroying DataModel...
-[INFO]: Application shutdown
+CRASH - std::string: FileRW::ReadFile: Could not load file: 'resources/hi'
