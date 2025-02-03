@@ -27,17 +27,7 @@ Developed on Windows with Visual Studio Community 2022. Not tested on other plat
 2. `cmake -B "./"` in the root directory
 3. Open the resulting `PhoenixEngine.sln`, and you should have:
 	* `PhoenixEngine` as the startup project
-	* A Solution Folder called "Vendor", containing the following subprojects:
-		* `glm`
-		* `Luau.Ast`
-		* `Luau.Common`
-		* `Luau.Compiler`
-		* `Luau.VM`
-		* `SDL_uclibc`
-		* `SDL3-shared`
-		* `TracyClient`
-		* `Vendor`
-	* A Solution Folder called "NotRequired". Right-click and `Remove` to avoid unnecessary compilation
+	* A Solution Folder called "Vendor", containing a few sub-projects and an `SDL` and `Luau` sub-folder
 4. Build the Solution in either:
 	* `Debug`: Standard Debug build, no optimizations, Address Sanitizer and Tracy
 	* `Release`: All optimizations, including Linker ones, no Address Sanitizer or Tracy
