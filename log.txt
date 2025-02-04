@@ -1,8 +1,9 @@
 [INFO]: Application startup
 [INFO]: Phoenix Engine:
-	Build type: Release
-	Main.cpp last compiled: Jan 25 2025 @ [REDACTED]
-[INFO]: Command line:  Z:\home\viren\Documents\PhoenixEngine\x64\Release\PhoenixEngine.exe -tracyim -loadmap hi
+	Platform: Linux
+	Build type: Debug
+	Main.cpp last compiled: Feb  4 2025 @ [REDACTED]
+[INFO]: Command line:  x64/Debug/PhoenixEngine
 [INFO]: Configuration loaded
 [INFO]: Requesting a Core OpenGL context with version 4.6
 [INFO]: Window created
@@ -11,8 +12,52 @@
 [INFO]: Renderer initialized
 [INFO]: Initializing DataModel...
 [INFO]: Engine initialized
-[INFO]: Initializing Dear ImGui 1.91.8 WIP...
-[INFO]: Map to load specified from launch argument. Map was: hi
+[INFO]: Initializing Dear ImGui 1.91.9 WIP...
+[INFO]: Final initializations...
+[INFO]: Main engine loop start
+[WARN]: GL Debug callback:
+	Type: Error
+	Severity: High
+	Message: GL_INVALID_OPERATION in glGenerateMipmap(zero size base image)
+	Source: OpenGL
+	Error ID: 1
+
+[WARN]: GL Debug callback:
+	Type: Error
+	Severity: High
+	Message: GL_INVALID_OPERATION in glGenerateMipmap(zero size base image)
+	Source: OpenGL
+	Error ID: 1
+
+[WARN]: GL Debug callback:
+	Type: Error
+	Severity: High
+	Message: GL_INVALID_OPERATION in glGenerateMipmap(zero size base image)
+	Source: OpenGL
+	Error ID: 1
+
+[WARN]: GL Debug callback:
+	Type: Error
+	Severity: High
+	Message: GL_INVALID_OPERATION in glGenerateMipmap(zero size base image)
+	Source: OpenGL
+	Error ID: 1
+
+[WARN]: GL Debug callback:
+	Type: Error
+	Severity: High
+	Message: GL_INVALID_OPERATION in glGenerateMipmap(zero size base image)
+	Source: OpenGL
+	Error ID: 1
+
+[WARN]: GL Debug callback:
+	Type: Error
+	Severity: High
+	Message: GL_INVALID_OPERATION in glGenerateMipmap(zero size base image)
+	Source: OpenGL
+	Error ID: 1
+
+[INFO]: Main loop exited
 [INFO]: Engine destructing...
 [INFO]: Destroying DataModel...
-CRASH - std::string: FileRW::ReadFile: Could not load file: 'resources/hi'
+[INFO]: Application shutdown
