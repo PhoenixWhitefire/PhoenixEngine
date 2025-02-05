@@ -2,8 +2,11 @@
 # https://github.com/PhoenixWhitefire/PhoenixEngine
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 cmake_minimum_required(VERSION 3.28)
 =======
+=======
+>>>>>>> 5177928 (CMake)
 cmake_minimum_required(VERSION 3.29)
 >>>>>>> 5177928 (CMake)
 
@@ -106,6 +109,11 @@ option(LUAU_BUILD_CLI "Build CLI" OFF)
 option(LUAU_BUILD_TESTS "Build tests" OFF)
 option(SDL_TEST_LIBRARY "Build the SDL3_test library" OFF)
 
+# remove unnecessary projects
+option(LUAU_BUILD_CLI "Build CLI" OFF)
+option(LUAU_BUILD_TESTS "Build tests" OFF)
+option(SDL_TEST_LIBRARY "Build the SDL3_test library" OFF)
+
 add_subdirectory(Vendor)
 add_subdirectory(Vendor/luau)
 add_subdirectory(Vendor/glm)
@@ -114,9 +122,16 @@ add_subdirectory(Vendor/tracy)
 
 set_property(TARGET Vendor PROPERTY FOLDER "Vendor")
 <<<<<<< HEAD
+<<<<<<< HEAD
 set_property(TARGET TracyClient PROPERTY FOLDER "Vendor")
 set_property(TARGET glm PROPERTY FOLDER "Vendor")
 
+=======
+
+set_property(TARGET TracyClient PROPERTY FOLDER "Vendor")
+set_property(TARGET glm PROPERTY FOLDER "Vendor")
+
+>>>>>>> 5177928 (CMake)
 =======
 
 set_property(TARGET TracyClient PROPERTY FOLDER "Vendor")
@@ -134,10 +149,16 @@ set_property(TARGET Luau.Ast PROPERTY FOLDER "Vendor/Luau")
 set_property(TARGET Luau.VM PROPERTY FOLDER "Vendor/Luau")
 set_property(TARGET isocline PROPERTY FOLDER "Vendor/Luau")
 <<<<<<< HEAD
+<<<<<<< HEAD
 set_property(TARGET SDL3-shared PROPERTY FOLDER "Vendor/SDL")
 set_property(TARGET SDL_uclibc PROPERTY FOLDER "Vendor/SDL")
 
 add_dependencies(PhoenixEngine Vendor TracyClient glm Luau.Compiler Luau.Analysis Luau.VM SDL3-shared SDL_uclibc)
+=======
+
+set_property(TARGET SDL3-shared PROPERTY FOLDER "Vendor/SDL")
+set_property(TARGET SDL_uclibc PROPERTY FOLDER "Vendor/SDL")
+>>>>>>> 5177928 (CMake)
 =======
 
 set_property(TARGET SDL3-shared PROPERTY FOLDER "Vendor/SDL")
@@ -159,7 +180,10 @@ set_target_properties(Vendor
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Vendor/x64/${PHX_BUILD_TYPE}"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Vendor/x64/${PHX_BUILD_TYPE}"
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> 5177928 (CMake)
 )
 
 # couldn't be bothered to get $<TARGET_RUNTIME_DLLS:PhoenixEngine> to work
