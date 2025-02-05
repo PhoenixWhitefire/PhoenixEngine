@@ -1,16 +1,10 @@
 [INFO]: Application startup
 [INFO]: Phoenix Engine:
 <<<<<<< HEAD
-<<<<<<< HEAD
 	Platform: Linux
 	Build type: Release
 	Main.cpp last compiled: Feb  5 2025 @ [REDACTED]
 [INFO]: Command line:  x64/Release/PhoenixEngine
-=======
-	Build type: RelTracy
-	Main.cpp last compiled: Feb  3 2025 @ [REDACTED]
-[INFO]: Command line:  C:\Users\phoen\Documents\PhoenixEngine\x64\RelTracy\PhoenixEngine.exe
->>>>>>> 5177928 (CMake)
 =======
 	Build type: RelTracy
 	Main.cpp last compiled: Feb  3 2025 @ [REDACTED]
