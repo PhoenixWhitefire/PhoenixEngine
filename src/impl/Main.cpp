@@ -47,16 +47,17 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 // technically we should never fail to exit gracefully though, we are
 // just indicating a fatal error occurred that forced the engine to
 // quit
-#define PHX_MAIN_HANDLECRASH(c, expr) catch (c Error) { handleCrash(Error##expr, #c); return 1; }
+#define PHX_MAIN_HANDLECRASH(c, expr) catch (c Error) { handleCrash(Error ##expr, #c); return 1; }
 
 #ifdef NDEBUG
 
-#define PHX_MAIN_CRASHHANDLERS PHX_MAIN_HANDLECRASH(std::string, ) \
-PHX_MAIN_HANDLECRASH(const char*, ) \
-PHX_MAIN_HANDLECRASH(std::bad_alloc, .what() + std::string(": System may have run out of memory")) \
-PHX_MAIN_HANDLECRASH(nlohmann::json::type_error, .what()) \
-PHX_MAIN_HANDLECRASH(nlohmann::json::parse_error, .what()) \
-PHX_MAIN_HANDLECRASH(std::exception, .what()); \
+#define PHX_MAIN_CRASHHANDLERS \
+catch (std::string Error) { handleCrash(Error, "std::string"); return 1; } \
+catch (const char* Error) { handleCrash(Error, "const char*"); return 1; } \
+catch (std::bad_alloc Error) { handleCrash(Error.what() + std::string(": System may have run out of memory"), "std::bad_alloc"); return 1; } \
+catch (nlohmann::json::type_error Error) { handleCrash(Error.what(), "nlohmann::json::type_error"); return 1; } \
+catch (nlohmann::json::parse_error Error) { handleCrash(Error.what(), "nlohmann::json::parse_error"); return 1; } \
+catch (std::exception Error) { handleCrash(Error.what(), "std::exception"); return 1; }
 
 #else
 
@@ -77,6 +78,7 @@ PHX_MAIN_HANDLECRASH(std::exception, .what()); \
 #include <glm/gtx/vector_angle.hpp>
 
 #include <SDL3/SDL_messagebox.h>
+#include <SDL3/SDL_platform.h>
 #include <SDL3/SDL_keyboard.h>
 #include <SDL3/SDL_dialog.h>
 #include <SDL3/SDL_mouse.h>
@@ -113,53 +115,6 @@ static float PrevMouseX, PrevMouseY = 0;
 static glm::vec3 CamForward = glm::vec3(0.f, 0.f, -1.f);
 
 static bool WasTracyLaunched = false;
-
-#ifdef TRACY_ENABLE
-
-// not using the `Memory` namespace
-// because it interferes with code I didn't write
-// 24/01/2025
-// 24/01/2025
-
-void* operator new(size_t sz)
-{
-	if (sz == 0)
-		++sz; // avoid std::malloc(0) which may return nullptr on success
-
-	if (void* ptr = malloc(sz))
-	{
-		TracyAlloc(ptr, sz);
-		return ptr;
-	}
-
-	throw std::bad_alloc{}; // required by [new.delete.single]/3
-}
-
-void operator delete(void* ptr) noexcept
-{
-	TracyFree(ptr);
-	free(ptr);
-}
-
-void operator delete(void* ptr, size_t /* size */) noexcept
-{
-	TracyFree(ptr);
-	free(ptr);
-}
-
-void operator delete[](void* ptr) noexcept
-{
-	TracyFree(ptr);
-	free(ptr);
-}
-
-void operator delete[](void* ptr, size_t /* size */) noexcept
-{
-	TracyFree(ptr);
-	free(ptr);
-}
-
-#endif
 
 #ifdef _WIN32
 
@@ -751,7 +706,7 @@ static void begin(int argc, char** argv)
 	std::string mapFile = hasMapFromArgs ?
 							mapFileFromArgs
 							: EngineJsonConfig.value("RootScene", "scenes/root.world");
-
+	
 	bool worldLoadSuccess = true;
 	std::vector<GameObject*> roots = SceneFormat::Deserialize(FileRW::ReadFile(mapFile), &worldLoadSuccess);
 
@@ -772,9 +727,11 @@ int main(int argc, char** argv)
 {
 	Log::Info("Application startup");
 
+	const char* platform = SDL_GetPlatform();
+
 	Log::Info(std::vformat(
-		"Phoenix Engine:\n\tBuild type: {}\n\tMain.cpp last compiled: {} @ {}",
-		std::make_format_args(PHX_BUILD_TYPE, __DATE__, __TIME__)
+		"Phoenix Engine:\n\tPlatform: {}\n\tBuild type: {}\n\tMain.cpp last compiled: {} @ {}",
+		std::make_format_args(platform, PHX_BUILD_TYPE, __DATE__, __TIME__)
 	));
 
 	Log::Info("Command line: &&");

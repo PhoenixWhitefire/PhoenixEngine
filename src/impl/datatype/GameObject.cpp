@@ -167,7 +167,7 @@ void GameObject::s_DeclareReflections()
 				retval.push_back(g->ToGenericValue());
 
 			// ctor for ValueType::Array
-			return { Reflection::GenericValue::GenericValue(retval) };
+			return { Reflection::GenericValue(retval) };
 		}
 	);
 
@@ -183,7 +183,7 @@ void GameObject::s_DeclareReflections()
 				retval.push_back(g->ToGenericValue());
 
 			// ctor for ValueType::Array
-			return { Reflection::GenericValue::GenericValue(retval) };
+			return { Reflection::GenericValue(retval) };
 		}
 	);
 
