@@ -1,3 +1,6 @@
+# CMakeLists.txt for Phoenix Engine
+# https://github.com/PhoenixWhitefire/PhoenixEngine
+
 cmake_minimum_required(VERSION 3.28)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -34,27 +37,13 @@ file(GLOB_RECURSE PHX_SRCS
 add_executable(PhoenixEngine ${PHX_SRCS})
 
 source_group(TREE src FILES ${PHX_SRCS})
+target_sources(PhoenixEngine PRIVATE README.md WindowsExeMetadata.rct phoenix.conf)
 
 set_target_properties(PhoenixEngine PROPERTIES OUTPUT_NAME PhoenixEngine)
 
-set(PHX_BUILD_TYPE $<IF:$<CONFIG:Debug>,Debug,$<IF:$<CONFIG:Release>,Release,RelTracy>>)
-set(PHX_TRACY_LIB_PATH Vendor/tracy/${PHX_BUILD_TYPE}/TracyClient)
-
 target_compile_definitions(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:TRACY_ENABLE>)
+target_compile_definitions(PhoenixEngine PRIVATE $<$<CONFIG:Release>:NDEBUG>)
 target_compile_definitions(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:TRACY_ENABLE NDEBUG>)
-target_compile_definitions(PhoenixEngine PRIVATE PHX_BUILD_TYPE="${PHX_BUILD_TYPE}")
-
-target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:/O2 /Ob2 /GL>)
-target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Release>:/O2 /Ob2 /GL>)
-target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:-O0>)
-target_compile_options(PhoenixEngine PRIVATE -MP)
-
-#target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:-fsanitize=address>)
-
-#target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:/INCREMENTAL:NO>)
-target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:/INCREMENTAL:NO>)
-target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:/LTCG>)
-target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:Release>:/LTCG>)
 
 target_include_directories(PhoenixEngine PUBLIC
 	"./"
@@ -68,44 +57,18 @@ target_include_directories(PhoenixEngine PUBLIC
 	"Vendor/luau/VM/include"
 )
 
-target_link_libraries(PhoenixEngine
-	#opengl32.lib
-	${CMAKE_BINARY_DIR}/Vendor/x64/${PHX_BUILD_TYPE}/libVendor.a
-	${CMAKE_BINARY_DIR}/Vendor/glm/glm/libglm.a
-	${CMAKE_BINARY_DIR}/Vendor/luau/libLuau.Analysis.a
-	${CMAKE_BINARY_DIR}/Vendor/luau/libLuau.Compiler.a
-	${CMAKE_BINARY_DIR}/Vendor/luau/libLuau.Ast.a
-	${CMAKE_BINARY_DIR}/Vendor/luau/libLuau.VM.a
-	${CMAKE_BINARY_DIR}/Vendor/SDL/libSDL_uclibc.a
-	${CMAKE_BINARY_DIR}/Vendor/SDL/libSDL3.so
-	${CMAKE_BINARY_DIR}/Vendor/tracy/libTracyClient.a
-	
-	# IF:$<$<CONFIG:Debug> ${PHX_TRACY_LIB_PATH} $<$<CONFIG:RelTracy>:${PHX_TRACY_LIB_PATH}>
-)
+set(PHX_BUILD_TYPE $<IF:$<CONFIG:Debug>,Debug,$<IF:$<CONFIG:Release>,Release,RelTracy>>)
 
-target_sources(PhoenixEngine PRIVATE README.md WindowsExeMetadata.rct phoenix.conf)
+target_compile_definitions(PhoenixEngine PRIVATE PHX_BUILD_TYPE="${PHX_BUILD_TYPE}")
 
+add_compile_definitions($<$<CONFIG:Release>:NDEBUG>)
 add_compile_definitions($<$<CONFIG:RelTracy>:NDEBUG>)
 
-add_compile_options($<$<CONFIG:RelTracy>:/GL>)
-add_compile_options($<$<CONFIG:RelTracy>:/O2>)
-add_compile_options($<$<CONFIG:RelTracy>:/Ob2>)
-add_compile_options($<$<CONFIG:Release>:/GL>)
-add_compile_options($<$<CONFIG:Release>:/O2>)
-add_compile_options($<$<CONFIG:Release>:/Ob2>)
-#add_compile_options($<$<CONFIG:Debug>:-fsanitize=address>)
-add_compile_options($<$<CONFIG:Debug>:-O0>)
-#add_compile_options($<$<CONFIG:Debug>:/DEBUG>)
-
-add_compile_options(-MP)
-# incremental warning with ASAN
-#add_link_options($<$<CONFIG:Debug>:/INCREMENTAL:NO>)
-
-# incremental warning with LTCG
-add_link_options($<$<CONFIG:RelTracy>:/INCREMENTAL:NO>)
-add_link_options($<$<CONFIG:RelTracy>:/LTCG>)
-add_link_options($<$<CONFIG:Release>:/INCREMENTAL:NO>)
-add_link_options($<$<CONFIG:Release>:/LTCG>)
+if (MSVC)
+	include(cmake-msvc.txt)
+else() # assume G++
+	include(cmake-gnug.txt)
+endif()
 
 # remove unnecessary projects
 option(LUAU_BUILD_CLI "Build CLI" OFF)
@@ -152,9 +115,3 @@ set_target_properties(Vendor
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Vendor/x64/${PHX_BUILD_TYPE}"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Vendor/x64/${PHX_BUILD_TYPE}"
 )
-
-# couldn't be bothered to get $<TARGET_RUNTIME_DLLS:PhoenixEngine> to work
-#add_custom_command(TARGET PhoenixEngine POST_BUILD
-#  COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:PhoenixEngine> "Vendor/SDL/${PHX_BUILD_TYPE}/SDL3.dll"
-#  COMMAND_EXPAND_LISTS
-#)

@@ -1,0 +1,40 @@
+# settings formatted for G++
+
+set(PHX_TRACY_LIB_PATH Vendor/tracy/${PHX_BUILD_TYPE}/TracyClient)
+
+target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:-O2>)
+target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Release>:-O2>)
+target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:-O0>)
+target_compile_options(PhoenixEngine PRIVATE -MP)
+
+target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:-fsanitize=address>)
+
+target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:-flto>)
+target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:Release>:-flto>)
+target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:-fsanitize=address>)
+
+target_link_libraries(PhoenixEngine
+	#opengl32.lib
+	${CMAKE_BINARY_DIR}/Vendor/x64/${PHX_BUILD_TYPE}/libVendor.a
+	${CMAKE_BINARY_DIR}/Vendor/glm/glm/libglm.a
+	${CMAKE_BINARY_DIR}/Vendor/luau/libLuau.Analysis.a
+	${CMAKE_BINARY_DIR}/Vendor/luau/libLuau.Compiler.a
+	${CMAKE_BINARY_DIR}/Vendor/luau/libLuau.Ast.a
+	${CMAKE_BINARY_DIR}/Vendor/luau/libLuau.VM.a
+	${CMAKE_BINARY_DIR}/Vendor/SDL/libSDL_uclibc.a
+	${CMAKE_BINARY_DIR}/Vendor/SDL/libSDL3.so
+	${CMAKE_BINARY_DIR}/Vendor/tracy/libTracyClient.a
+	
+	# IF:$<$<CONFIG:Debug> ${PHX_TRACY_LIB_PATH} $<$<CONFIG:RelTracy>:${PHX_TRACY_LIB_PATH}>
+)
+
+add_compile_options($<$<CONFIG:RelTracy>:-O2>)
+add_compile_options($<$<CONFIG:Release>:-O2>)
+add_compile_options($<$<CONFIG:Debug>:-O0>)
+
+add_compile_options(-MP)
+
+# incremental warning with LTCG
+add_link_options($<$<CONFIG:RelTracy>:-flto>)
+add_link_options($<$<CONFIG:Release>:-flto>)
+

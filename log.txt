@@ -1,9 +1,9 @@
 [INFO]: Application startup
 [INFO]: Phoenix Engine:
 	Platform: Linux
-	Build type: Debug
-	Main.cpp last compiled: Feb  4 2025 @ [REDACTED]
-[INFO]: Command line:  x64/Debug/PhoenixEngine
+	Build type: Release
+	Main.cpp last compiled: Feb  5 2025 @ [REDACTED]
+[INFO]: Command line:  x64/Release/PhoenixEngine
 [INFO]: Configuration loaded
 [INFO]: Requesting a Core OpenGL context with version 4.6
 [INFO]: Window created
