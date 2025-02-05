@@ -11,7 +11,7 @@ Personal "Game Engine" written in C++, that can:
 * Do simple physics (dynamics and collisions w/ friction with AABBs, also has Raycasting for Scripts)
 * Do some simple, color-only post-processing (really weird Bloom, but a kinda nice blur vignette)
 
-Developed on Windows with Visual Studio Community 2022. Not tested on other platforms, however there shouldn't be anything *too* incompatible, all libraries used are explicitly cross-platform.
+Developed primary on and for Windows with Visual Studio Community 2022 with MSVC, and occasionally I'll make sure it works on Ubuntu with G++.
 
 # Building
 
