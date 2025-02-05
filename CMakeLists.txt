@@ -48,29 +48,10 @@ target_sources(PhoenixEngine PRIVATE README.md WindowsExeMetadata.rct phoenix.co
 
 set_target_properties(PhoenixEngine PROPERTIES OUTPUT_NAME PhoenixEngine)
 
-set(PHX_BUILD_TYPE $<IF:$<CONFIG:Debug>,Debug,$<IF:$<CONFIG:Release>,Release,RelTracy>>)
-set(PHX_TRACY_LIB_PATH Vendor/tracy/${PHX_BUILD_TYPE}/TracyClient)
-
 target_compile_definitions(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:TRACY_ENABLE>)
 target_compile_definitions(PhoenixEngine PRIVATE $<$<CONFIG:Release>:NDEBUG>)
 target_compile_definitions(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:TRACY_ENABLE NDEBUG>)
-target_compile_definitions(PhoenixEngine PRIVATE PHX_BUILD_TYPE="${PHX_BUILD_TYPE}")
 
-<<<<<<< HEAD
-=======
-target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:/O2 /Ob2 /GL>)
-target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Release>:/O2 /Ob2 /GL>)
-target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:-O0>)
-target_compile_options(PhoenixEngine PRIVATE -MP -fext-numeric-literals)
-
-target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:-fsanitize=address>)
-
-target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:/INCREMENTAL:NO>)
-target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:/INCREMENTAL:NO>)
-target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:/LTCG>)
-target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:Release>:/LTCG>)
-
->>>>>>> f681e78 (WHAT IS THIS Includes, Macros)
 target_include_directories(PhoenixEngine PUBLIC
 	"./"
 	"src/decl"
@@ -83,7 +64,6 @@ target_include_directories(PhoenixEngine PUBLIC
 	"Vendor/luau/VM/include"
 )
 
-<<<<<<< HEAD
 set(PHX_BUILD_TYPE $<IF:$<CONFIG:Debug>,Debug,$<IF:$<CONFIG:Release>,Release,RelTracy>>)
 
 <<<<<<< HEAD
@@ -91,8 +71,6 @@ target_compile_definitions(PhoenixEngine PRIVATE PHX_BUILD_TYPE="${PHX_BUILD_TYP
 =======
 target_compile_options(PhoenixEngine PRIVATE /DPHX_BUILD_TYPE="${PHX_BUILD_TYPE}")
 
-=======
->>>>>>> f681e78 (WHAT IS THIS Includes, Macros)
 target_link_libraries(PhoenixEngine
 	opengl32.lib
 	Vendor/x64/${PHX_BUILD_TYPE}/Vendor
@@ -115,7 +93,6 @@ target_sources(PhoenixEngine PRIVATE README.md WindowsExeMetadata.rct phoenix.co
 add_compile_definitions($<$<CONFIG:Release>:NDEBUG>)
 add_compile_definitions($<$<CONFIG:RelTracy>:NDEBUG>)
 
-<<<<<<< HEAD
 if (MSVC)
 	include(cmake-msvc.txt)
 else() # assume G++
@@ -126,21 +103,6 @@ endif()
 option(LUAU_BUILD_CLI "Build CLI" OFF)
 option(LUAU_BUILD_TESTS "Build tests" OFF)
 option(SDL_TEST_LIBRARY "Build the SDL3_test library" OFF)
-=======
-add_compile_options($<$<CONFIG:RelTracy>:/GL>)
-add_compile_options($<$<CONFIG:RelTracy>:/O2>)
-add_compile_options($<$<CONFIG:RelTracy>:/Ob2>)
-add_compile_options($<$<CONFIG:Release>:/GL>)
-add_compile_options($<$<CONFIG:Release>:/O2>)
-add_compile_options($<$<CONFIG:Release>:/Ob2>)
-add_compile_options($<$<CONFIG:Debug>:-fsanitize=address>)
-add_compile_options($<$<CONFIG:Debug>:-O0>)
-#add_compile_options($<$<CONFIG:Debug>:/DEBUG>)
-
-add_compile_options(-MP)
-# incremental warning with ASAN
-add_link_options($<$<CONFIG:Debug>:/INCREMENTAL:NO>)
->>>>>>> f681e78 (WHAT IS THIS Includes, Macros)
 
 # remove unnecessary projects
 option(LUAU_BUILD_CLI "Build CLI" OFF)
