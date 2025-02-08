@@ -10,7 +10,7 @@ static bool s_DidInitReflection = false;
 static GameObject* cloneRecursive(
 	GameObject* Root,
 	// u_m < og-child, vector < pair < clone-object-referencing-ogchild, property-referencing-ogchild > > >
-	std::unordered_map<GameObject*, std::vector<std::pair<GameObject*, std::string>>> OverwritesMap = {},
+	std::unordered_map<GameObject*, std::vector<std::pair<GameObject*, std::string_view>>> OverwritesMap = {},
 	std::unordered_map<GameObject*, GameObject*> OriginalToCloneMap = {}
 )
 {
@@ -20,7 +20,7 @@ static GameObject* cloneRecursive(
 
 	if (overwritesIt != OverwritesMap.end())
 	{
-		for (const std::pair<GameObject*, std::string>& overwrite : overwritesIt->second)
+		for (const std::pair<GameObject*, std::string_view>& overwrite : overwritesIt->second)
 			// change the reference to the OG object to it's clone
 			overwrite.first->SetPropertyValue(overwrite.second, newObj->ToGenericValue());
 
@@ -271,7 +271,7 @@ GameObject* GameObject::FromGenericValue(const Reflection::GenericValue& gv)
 
 	if (gv.Type != Reflection::ValueType::GameObject)
 	{
-		const std::string& typeName = Reflection::TypeAsString(gv.Type);
+		const std::string_view& typeName = Reflection::TypeAsString(gv.Type);
 
 		throw(std::vformat(
 			"Tried to GameObject::FromGenericValue, but GenericValue had Type '{}' instead",
@@ -295,7 +295,7 @@ GameObject::~GameObject() noexcept(false)
 		s_WorldArray.at(this->ObjectId) = nullptr;
 }
 
-bool GameObject::IsValidObjectClass(const std::string& ObjectClass)
+bool GameObject::IsValidObjectClass(const std::string_view& ObjectClass)
 {
 	GameObjectMapType::iterator it = s_GameObjectMap.find(ObjectClass);
 
@@ -383,7 +383,7 @@ std::string GameObject::GetFullName() const
 	return fullName;
 }
 
-bool GameObject::IsA(const std::string& AncestorClass) const
+bool GameObject::IsA(const std::string_view& AncestorClass) const
 {
 	if (this->ClassName == AncestorClass)
 		return true;
@@ -391,7 +391,7 @@ bool GameObject::IsA(const std::string& AncestorClass) const
 	// we do `GetLineage` instead of `s_Api.Lineage` because
 	// the latter refers to the lineage of `GameObject` (nothing as of 25/10/2024),
 	// whereas the former is a virtual function of the class we actually are
-	for (const std::string& ancestor : GetLineage())
+	for (const std::string_view& ancestor : GetLineage())
 		if (ancestor == AncestorClass)
 			return true;
 
@@ -551,7 +551,7 @@ std::vector<GameObject*> GameObject::GetDescendants()
 	return descendants;
 }
 
-GameObject* GameObject::FindChild(const std::string& ChildName)
+GameObject* GameObject::FindChild(const std::string_view& ChildName)
 {
 	for (uint32_t index = 0; index < m_Children.size(); index++)
 	{
@@ -571,7 +571,7 @@ GameObject* GameObject::FindChild(const std::string& ChildName)
 }
 
 
-GameObject* GameObject::FindChildWhichIsA(const std::string& Class)
+GameObject* GameObject::FindChildWhichIsA(const std::string_view& Class)
 {
 	for (uint32_t index = 0; index < m_Children.size(); index++)
 	{
@@ -590,10 +590,8 @@ GameObject* GameObject::FindChildWhichIsA(const std::string& Class)
 	return nullptr;
 }
 
-GameObject* GameObject::Create(const std::string& ObjectClass)
+GameObject* GameObject::Create(const std::string_view& ObjectClass)
 {
-	
-
 	uint32_t numObjects = static_cast<uint32_t>(s_WorldArray.size());
 
 	if (numObjects >= UINT32_MAX - 1)
@@ -633,15 +631,15 @@ nlohmann::json GameObject::DumpApiToJson()
 
 		nlohmann::json& gapi = dump[g.first];
 
-		const std::vector<std::string>& lineage = newobj->GetLineage();
+		const std::vector<std::string_view>& lineage = newobj->GetLineage();
 
 		gapi["Lineage"] = "";
 
 		for (size_t index = 0; index < lineage.size(); index++)
 			if (index < lineage.size() - 1)
-				gapi["Lineage"] = (std::string)gapi["Lineage"] + lineage[index] + " -> ";
+				gapi["Lineage"] = (std::string)gapi["Lineage"] + lineage[index].data() + " -> ";
 			else
-				gapi["Lineage"] = (std::string)gapi["Lineage"] + lineage[index];
+				gapi["Lineage"] = (std::string)gapi["Lineage"] + lineage[index].data();
 
 		gapi["Properties"] = {};
 		gapi["Functions"] = {};
@@ -650,7 +648,7 @@ nlohmann::json GameObject::DumpApiToJson()
 		nlohmann::json& funcs = gapi["Functions"];
 
 		for (auto& p : newobj->GetProperties())
-			props[p.first] = Reflection::TypeAsString(p.second.Type)
+			props[p.first] = std::string(Reflection::TypeAsString(p.second.Type))
 								+ ": "
 								+ (p.second.Get ? "Read" : "")
 								+ (p.second.Set ? " | Write" : "");
@@ -661,10 +659,10 @@ nlohmann::json GameObject::DumpApiToJson()
 			std::string ostring = "";
 
 			for (Reflection::ValueType i : f.second.Inputs)
-				istring += Reflection::TypeAsString(i) + ", ";
+				istring += std::string(Reflection::TypeAsString(i)) + ", ";
 
 			for (Reflection::ValueType o : f.second.Outputs)
-				ostring += Reflection::TypeAsString(o) + ", ";
+				ostring += std::string(Reflection::TypeAsString(o)) + ", ";
 
 			istring = istring.substr(0, istring.size() - 2);
 			ostring = ostring.substr(0, ostring.size() - 2);

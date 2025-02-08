@@ -381,7 +381,7 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 	}
 	default:
 	{
-		std::string typeName = Reflection::TypeAsString(gv.Type);
+		const std::string_view& typeName = Reflection::TypeAsString(gv.Type);
 		luaL_error(L, std::vformat(
 			"Could not provide Luau the GenericValue with type {}",
 			std::make_format_args(typeName)).c_str()
@@ -533,7 +533,7 @@ void ScriptEngine::L::PushFunction(lua_State* L, const char* Name)
 	);
 }
 
-std::unordered_map<std::string, lua_CFunction> ScriptEngine::L::GlobalFunctions =
+std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunctions =
 {
 	{
 	"matrix_getv",

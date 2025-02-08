@@ -51,7 +51,9 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 
 #ifdef NDEBUG
 
-#define PHX_MAIN_CRASHHANDLERS PHX_MAIN_HANDLECRASH(std::string, ) \
+#define PHX_MAIN_CRASHHANDLERS \
+PHX_MAIN_HANDLECRASH(std::string, ) \
+PHX_MAIN_HANDLECRASH(std::string_view, ) \
 PHX_MAIN_HANDLECRASH(const char*, ) \
 PHX_MAIN_HANDLECRASH(std::bad_alloc, .what() + std::string(": System may have run out of memory")) \
 PHX_MAIN_HANDLECRASH(nlohmann::json::type_error, .what()) \
@@ -113,53 +115,6 @@ static float PrevMouseX, PrevMouseY = 0;
 static glm::vec3 CamForward = glm::vec3(0.f, 0.f, -1.f);
 
 static bool WasTracyLaunched = false;
-
-#ifdef TRACY_ENABLE
-
-// not using the `Memory` namespace
-// because it interferes with code I didn't write
-// 24/01/2025
-// 24/01/2025
-
-void* operator new(size_t sz)
-{
-	if (sz == 0)
-		++sz; // avoid std::malloc(0) which may return nullptr on success
-
-	if (void* ptr = malloc(sz))
-	{
-		TracyAlloc(ptr, sz);
-		return ptr;
-	}
-
-	throw std::bad_alloc{}; // required by [new.delete.single]/3
-}
-
-void operator delete(void* ptr) noexcept
-{
-	TracyFree(ptr);
-	free(ptr);
-}
-
-void operator delete(void* ptr, size_t /* size */) noexcept
-{
-	TracyFree(ptr);
-	free(ptr);
-}
-
-void operator delete[](void* ptr) noexcept
-{
-	TracyFree(ptr);
-	free(ptr);
-}
-
-void operator delete[](void* ptr, size_t /* size */) noexcept
-{
-	TracyFree(ptr);
-	free(ptr);
-}
-
-#endif
 
 #ifdef _WIN32
 
@@ -660,7 +615,7 @@ static void drawDeveloperUI(double DeltaTime)
 	InlayEditor::UpdateAndRender(DeltaTime);
 }
 
-static void handleCrash(const std::string& Error, const std::string& ExceptionType)
+static void handleCrash(const std::string_view& Error, const std::string_view& ExceptionType)
 {
 	// Log Size Limit Exceeded Throwing Exception
 	if (!Error.starts_with("LSLETE"))
@@ -748,7 +703,7 @@ static void begin(int argc, char** argv)
 		hasMapFromArgs = true;
 	}
 
-	std::string mapFile = hasMapFromArgs ?
+	const std::string& mapFile = hasMapFromArgs ?
 							mapFileFromArgs
 							: EngineJsonConfig.value("RootScene", "scenes/root.world");
 

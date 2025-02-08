@@ -82,7 +82,7 @@ Vector3::Vector3(const Reflection::GenericValue& gv)
 {
 	if (gv.Type != Reflection::ValueType::Vector3)
 	{
-		std::string typeName = Reflection::TypeAsString(gv.Type);
+		const std::string_view& typeName = Reflection::TypeAsString(gv.Type);
 		throw(std::vformat(
 			"Attempted to construct Vector3, but GenericValue was {} instead",
 			std::make_format_args(typeName)

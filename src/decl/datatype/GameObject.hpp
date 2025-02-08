@@ -11,9 +11,9 @@
 #define PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(classname) PHX_GAMEOBJECT_LINKTOCLASS(#classname, Object_##classname)
 
 #include <unordered_map>
+#include <string_view>
 #include <functional>
 #include <vector>
-#include <string>
 #include <nljson.hpp>
 
 #include "Reflection.hpp"
@@ -29,8 +29,8 @@ public:
 
 	static GameObject* FromGenericValue(const Reflection::GenericValue&);
 
-	static bool IsValidObjectClass(const std::string&);
-	static GameObject* Create(const std::string&);
+	static bool IsValidObjectClass(const std::string_view&);
+	static GameObject* Create(const std::string_view&);
 	static GameObject* GetObjectById(uint32_t);
 
 	static inline GameObject* s_DataModel{};
@@ -52,13 +52,13 @@ public:
 	std::vector<GameObject*> GetDescendants();
 
 	GameObject* GetParent() const;
-	GameObject* FindChild(const std::string&);
+	GameObject* FindChild(const std::string_view&);
 	// accounts for inheritance
-	GameObject* FindChildWhichIsA(const std::string&);
+	GameObject* FindChildWhichIsA(const std::string_view&);
 
 	std::string GetFullName() const;
 	// whether this object inherits from or is the given class
-	bool IsA(const std::string&) const;
+	bool IsA(const std::string_view&) const;
 
 	void SetParent(GameObject*);
 	void AddChild(GameObject*);
@@ -92,7 +92,7 @@ public:
 
 	// Needs to be in at-most `protected` because `RegisterDerivedObject`
 	// So sub-classes can access it and register themselves
-	typedef std::unordered_map<std::string, GameObject* (*)()> GameObjectMapType;
+	typedef std::unordered_map<std::string_view, GameObject* (*)()> GameObjectMapType;
 	static inline GameObjectMapType s_GameObjectMap{};
 
 protected:
@@ -116,7 +116,7 @@ template<typename T> GameObject* constructGameObjectHeir()
 template <typename T>
 struct RegisterDerivedObject : GameObject
 {
-	RegisterDerivedObject(const std::string& ObjectClass)
+	RegisterDerivedObject(const std::string_view& ObjectClass)
 	{
 		s_GameObjectMap.insert(std::make_pair(ObjectClass, &constructGameObjectHeir<T>));
 	}

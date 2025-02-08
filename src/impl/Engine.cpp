@@ -10,6 +10,7 @@
 #include <imgui/backends/imgui_impl_opengl3.h>
 #include <imgui/backends/imgui_impl_sdl3.h>
 
+#include <SDL3/SDL_messagebox.h>
 #include <SDL3/SDL_video.h>
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_log.h>
@@ -112,9 +113,9 @@ void Engine::SetIsFullscreen(bool Fullscreen)
 		throw("`SDL_SetWindowFullscreen` failed, error: " + std::string(SDL_GetError()));
 }
 
-template <class T> static T readFromConfiguration(const std::string& Key, const T& DefaultValue)
+template <class T>
+static T readFromConfiguration(const std::string_view& Key, const T& DefaultValue)
 {
-	/*
 	try
 	{
 		return EngineJsonConfig.value(Key, DefaultValue);
@@ -123,36 +124,49 @@ template <class T> static T readFromConfiguration(const std::string& Key, const 
 	{
 		std::string errorMessage = Error.what();
 
+		// 03/02/2025 "no matching token: {" WTF DO YOU MEAN
+		/*
 		Log::Error(std::vformat(
 			"Error trying to read key '{}' of configuration: {}. Falling back to default value",
 			std::make_format_args(Key, errorMessage)
 		);
+		*/
 
 		return DefaultValue;
-	}*/
-
-	return EngineJsonConfig.value(Key, DefaultValue);
+	}
 }
 
 void Engine::LoadConfiguration()
 {
-	bool ConfigFileFound = true;
-	std::string ConfigAscii = FileRW::ReadFile("./phoenix.conf", &ConfigFileFound);
+	bool ConfigLoadSucceeded = true;
+	std::string ConfigLoadErrorMessage = "Failed to load configuration file.";
+	std::string ConfigAscii = FileRW::ReadFile("./phoenix.conf", &ConfigLoadSucceeded);
 
-	if (ConfigFileFound)
-	{
+	if (ConfigLoadSucceeded)
 		try
 		{
 			EngineJsonConfig = nlohmann::json::parse(ConfigAscii);
 		}
 		catch (nlohmann::json::parse_error err)
 		{
-			std::string errmsg = err.what();
-			throw(std::vformat("Parse error while loading configuration: {}", std::make_format_args(errmsg)));
+			ConfigLoadSucceeded = false;
+			ConfigLoadErrorMessage = "Failed to parse configuration file: " + std::string(err.what());
 		}
+
+	if (!ConfigLoadSucceeded)
+	{
+		SDL_ShowSimpleMessageBox(
+			SDL_MESSAGEBOX_WARNING,
+			"Configuration Error",
+			ConfigLoadErrorMessage.c_str(),
+			Window
+		);
+
+		EngineJsonConfig =
+		{
+			{ "ResourcesDirectory", "resources/" }
+		};
 	}
-	else
-		throw("Could not find configuration file (phoenix.conf)!");
 
 	VSync = readFromConfiguration("VSync", false);
 	FpsCap = readFromConfiguration("FpsCap", 60);
@@ -211,7 +225,7 @@ Engine::Engine()
 	int requestedGLVersionMajor = requestedGLVersion[0];
 	int requestedGLVersionMinor = requestedGLVersion[1];
 
-	const static std::unordered_map<std::string, SDL_GLProfile> StringToGLProfile =
+	const static std::unordered_map<std::string_view, SDL_GLProfile> StringToGLProfile =
 	{
 		{ "Core", SDL_GL_CONTEXT_PROFILE_CORE },
 		{ "Compatibility", SDL_GL_CONTEXT_PROFILE_COMPATIBILITY },
@@ -258,7 +272,7 @@ Engine::Engine()
 	PHX_SDL_CALL(SDL_GL_SetAttribute, SDL_GL_STENCIL_SIZE, 8);
 
 	this->Window = SDL_CreateWindow(
-		readFromConfiguration<std::string>("GameTitle", "PhoenixEngine").c_str(),
+		readFromConfiguration<std::string_view>("GameTitle", "PhoenixEngine").data(),
 		this->WindowSizeX, this->WindowSizeY,
 		m_SDLWindowFlags
 	);

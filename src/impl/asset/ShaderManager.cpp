@@ -98,7 +98,7 @@ void ShaderProgram::Activate()
 
 			default:
 			{
-				const std::string typeName = Reflection::TypeAsString(value.Type);
+				const std::string_view& typeName = Reflection::TypeAsString(value.Type);
 				Log::Warning(std::vformat(
 					"Unrecognized uniform type '{}' trying to set '{}' for program '{}'",
 					std::make_format_args(typeName, uniformName, this->Name)

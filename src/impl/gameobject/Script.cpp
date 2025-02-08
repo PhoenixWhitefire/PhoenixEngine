@@ -101,7 +101,7 @@ static auto api_gameobjnewindex = [](lua_State* L)
 
 			if (reflToLuaIt == ScriptEngine::ReflectedTypeLuaEquivalent.end())
 			{
-				const std::string& typeName = Reflection::TypeAsString(prop.Type);
+				const std::string_view& typeName = Reflection::TypeAsString(prop.Type);
 				luaL_error(L, std::vformat(
 					"No defined mapping between Reflection::ValueType::{} and a Lua type",
 					std::make_format_args(typeName)
@@ -790,7 +790,7 @@ static lua_State* createState()
 		lua_CFunction func = pair.second;
 
 		lua_pushlightuserdata(state, func);
-		lua_pushstring(state, pair.first.c_str());
+		lua_pushstring(state, pair.first.data());
 		
 		lua_pushcclosure(
 			state,
@@ -818,10 +818,10 @@ static lua_State* createState()
 				}
 
 			},
-			pair.first.c_str(),
+			pair.first.data(),
 			2
 		);
-		lua_setglobal(state, pair.first.c_str());
+		lua_setglobal(state, pair.first.data());
 	}
 
 	return state;

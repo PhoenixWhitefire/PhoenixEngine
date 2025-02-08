@@ -21,7 +21,7 @@ Color::Color(const Reflection::GenericValue& gv)
 {
 	if (gv.Type != Reflection::ValueType::Color)
 	{
-		std::string typeName = Reflection::TypeAsString(gv.Type);
+		const std::string_view& typeName = Reflection::TypeAsString(gv.Type);
 		throw(std::vformat(
 			"Attempted to construct Color, but GenericValue was {} instead",
 			std::make_format_args(typeName)

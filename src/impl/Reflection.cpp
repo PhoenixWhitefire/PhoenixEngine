@@ -24,6 +24,13 @@ static void fromString(Reflection::GenericValue& G, const char* CStr)
 	((char*)G.Value)[G.Size] = 0;
 }
 
+Reflection::GenericValue::GenericValue(const std::string_view& str)
+	: Type(ValueType::String)
+{
+	this->Size = str.size();
+	fromString(*this, str.data());
+}
+
 Reflection::GenericValue::GenericValue(const std::string& str)
 	: Type(ValueType::String)
 {
@@ -229,7 +236,7 @@ std::string Reflection::GenericValue::ToString() const
 					break;
 				}
 				else
-					typesString += Reflection::TypeAsString(element.Type) + "|";
+					typesString += std::string(Reflection::TypeAsString(element.Type)) + "|";
 			}
 
 			typesString = typesString.substr(0, typesString.size() - 1);
@@ -290,7 +297,7 @@ std::string Reflection::GenericValue::ToString() const
 
 	default:
 	{
-		std::string tName = TypeAsString(Type);
+		const std::string_view& tName = TypeAsString(Type);
 		return std::vformat(
 			"GenericValue::ToString failed, Type was: {}",
 			std::make_format_args(tName)
@@ -302,26 +309,26 @@ std::string Reflection::GenericValue::ToString() const
 std::string Reflection::GenericValue::AsString() const
 {
 	return Type == ValueType::String
-		? (const char*)this->Value : throw("GenericValue was not a String, but was a " + Reflection::TypeAsString(Type));
+		? (const char*)this->Value : throw("GenericValue was not a String, but was a " + std::string(Reflection::TypeAsString(Type)));
 }
 bool Reflection::GenericValue::AsBool() const
 {
 	return Type == ValueType::Bool
 		? (bool)this->Value
-		: throw("GenericValue was not a Bool, but was a " + Reflection::TypeAsString(Type));
+		: throw("GenericValue was not a Bool, but was a " + std::string(Reflection::TypeAsString(Type)));
 }
 double Reflection::GenericValue::AsDouble() const
 {
 	return Type == ValueType::Double
 		? *(double*)&this->Value
-		: throw("GenericValue was not a Double, but was a " + Reflection::TypeAsString(Type));
+		: throw("GenericValue was not a Double, but was a " + std::string(Reflection::TypeAsString(Type)));
 }
 int64_t Reflection::GenericValue::AsInteger() const
 {
 	// `|| ValueType::GameObject` because it's easier 14/09/2024
 	return (Type == ValueType::Integer || Type == ValueType::GameObject)
 		? (int64_t)this->Value
-		: throw("GenericValue was not an Integer, but was a " + Reflection::TypeAsString(Type));
+		: throw("GenericValue was not an Integer, but was a " + std::string(Reflection::TypeAsString(Type)));
 }
 glm::mat4& Reflection::GenericValue::AsMatrix() const
 {
@@ -329,7 +336,7 @@ glm::mat4& Reflection::GenericValue::AsMatrix() const
 
 	return Type == ValueType::Matrix
 		? *mptr
-		: throw("GenericValue was not a Matrix, but was a " + Reflection::TypeAsString(Type));
+		: throw("GenericValue was not a Matrix, but was a " + std::string(Reflection::TypeAsString(Type)));
 }
 std::vector<Reflection::GenericValue> Reflection::GenericValue::AsArray() const
 {
@@ -357,7 +364,7 @@ std::vector<Reflection::GenericValue> Reflection::GenericValue::AsArray() const
 
 	return this->Type == ValueType::Array
 		? array
-		: throw("GenericValue was not an Array, but was a " + Reflection::TypeAsString(Type));
+		: throw("GenericValue was not an Array, but was a " + std::string(Reflection::TypeAsString(Type)));
 }
 std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> Reflection::GenericValue::AsMap() const
 {
@@ -506,11 +513,11 @@ bool Reflection::GenericValue::operator==(const Reflection::GenericValue& Other)
 	}
 
 	default:
-		throw("No defined equality for GenericValues of type " + TypeAsString(Type));
+		throw("No defined equality for GenericValues of type " + std::string(TypeAsString(Type)));
 	}
 }
 
-static std::string ValueTypeNames[] =
+static std::string_view ValueTypeNames[] =
 {
 		"Null",
 
@@ -534,7 +541,7 @@ static_assert(
 	"'ValueTypeNames' does not have the same number of elements as 'ValueType'"
 );
 
-const std::string& Reflection::TypeAsString(ValueType t)
+const std::string_view& Reflection::TypeAsString(ValueType t)
 {
 	return ValueTypeNames[(int)t];
 }

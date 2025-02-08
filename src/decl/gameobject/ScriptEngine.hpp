@@ -49,5 +49,5 @@ namespace ScriptEngine::L
 		int nargs
 	);
 
-	extern std::unordered_map<std::string, lua_CFunction> GlobalFunctions;
+	extern std::unordered_map<std::string_view, lua_CFunction> GlobalFunctions;
 };

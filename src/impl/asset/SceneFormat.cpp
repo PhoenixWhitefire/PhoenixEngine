@@ -20,13 +20,13 @@
 
 static std::string errorString = "No error";
 
-static std::unordered_map<std::string, std::string> SpecialPropertyToSerializedName =
+static std::unordered_map<std::string_view, std::string_view> SpecialPropertyToSerializedName =
 {
 	{ "ObjectId", "$_objectId" },
 	{ "Class", "$_class" }
 };
 
-static std::vector<std::string> SpecialSerializedNames =
+static std::vector<std::string_view> SpecialSerializedNames =
 {
 	"$_objectId",
 	"$_class"
@@ -447,7 +447,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 			realIdToSceneId.insert(std::pair(newObject->ObjectId, itemObjectId));
 		}
 
-		objectProps.insert(std::pair(newObject, std::unordered_map<std::string, uint32_t>{}));
+		objectProps[newObject] = {};
 
 		ZoneName("DeserializeProperties", 21);
 
@@ -502,7 +502,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 
 			case (Reflection::ValueType::String):
 			{
-				assignment = (std::string)memberValue;
+				assignment = (std::string_view)memberValue;
 
 				break;
 			}
@@ -558,7 +558,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 
 			default:
 			{
-				const std::string& memberTypeName = Reflection::TypeAsString(memberType);
+				const std::string_view& memberTypeName = Reflection::TypeAsString(memberType);
 
 				SF_EMIT_WARNING(
 					"Not reading prop '{}' of class {} because it's type ({}) is unknown",
@@ -580,7 +580,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 				}
 				catch (std::string err)
 				{
-					std::string mtname = Reflection::TypeAsString(memberType);
+					const std::string_view& mtname = Reflection::TypeAsString(memberType);
 					std::string valueStr = assignment.ToString();
 
 					SF_EMIT_WARNING(
@@ -610,7 +610,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 
 		for (auto& objectProp : objectProps[object])
 		{
-			const std::string& propName = objectProp.first;
+			const std::string_view& propName = objectProp.first;
 			const uint32_t sceneRelativeId = objectProp.second;
 
 			auto target = objectsMap.find(sceneRelativeId);
@@ -706,7 +706,7 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 
 	for (auto& prop : Object->GetProperties())
 	{
-		const std::string& propName = prop.first;
+		const std::string_view& propName = prop.first;
 		const Reflection::Property& propInfo = prop.second;
 
 		if (!propInfo.Set && propName != "ObjectId" && propName != "Class")
@@ -719,7 +719,7 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 		if (IsRootNode && propName == "Parent")
 			continue;
 
-		std::string serializedAs = propName;
+		std::string_view serializedAs = propName;
 
 		auto specialNamesIt = SpecialPropertyToSerializedName.find(propName);
 

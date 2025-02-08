@@ -121,7 +121,7 @@ static bool mtlIterator(void*, int index, const char** outText)
 
 static bool mtlUniformIterator(void* array, int index, const char** outText)
 {
-	*outText = ((std::vector<std::string>*)array)->at(index).c_str();
+	*outText = ((std::vector<std::string_view>*)array)->at(index).data();
 
 	return true;
 }
@@ -486,7 +486,7 @@ static void uniformsEditor(std::unordered_map<std::string, Reflection::GenericVa
 			ImGui::Text(
 				"<Type ID:%i ('%s') editing not supported>",
 				(int)value.Type,
-				Reflection::TypeAsString(value.Type).c_str()
+				Reflection::TypeAsString(value.Type).data()
 			);
 			break;
 		}
@@ -977,9 +977,9 @@ static GameObject* ObjectInsertionTarget = nullptr;
 static bool IsPickingObject = false;
 static std::vector<uint32_t> PickerTargets;
 static std::string PickerTargetPropName;
-static std::vector<std::string> ContextActionsForSelection;
+static std::vector<std::string_view> ContextActionsForSelection;
 
-static std::unordered_map<std::string, std::function<void(void)>> ActionHandlers =
+static std::unordered_map<std::string_view, std::function<void(void)>> ActionHandlers =
 {
 	{
 		"Duplicate",
@@ -1031,9 +1031,9 @@ static bool isInSelections(GameObject* g)
 	return std::find(Selections.begin(), Selections.end(), g->ObjectId) != Selections.end();
 }
 
-static std::vector<std::string> getPossibleActionsForSelections()
+static std::vector<std::string_view> getPossibleActionsForSelections()
 {
-	std::vector<std::string> actions =
+	std::vector<std::string_view> actions =
 	{
 		"Duplicate",
 		"Delete"
@@ -1239,7 +1239,7 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 				ImGui::SeparatorText("Insert");
 
 				for (auto& it : GameObject::s_GameObjectMap)
-					if (ImGui::MenuItem(it.first.c_str()))
+					if (ImGui::MenuItem(it.first.data()))
 					{
 						GameObject* newObject = GameObject::Create(it.first);
 						newObject->SetParent(ObjectInsertionTarget);
@@ -1309,11 +1309,11 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 	{
 		ImGui::SeparatorText("Actions");
 
-		for (const std::string& Action : ContextActionsForSelection)
+		for (const std::string_view& Action : ContextActionsForSelection)
 			if (Action[0] == '$')
-				ImGui::SeparatorText(Action.substr(1).c_str());
+				ImGui::SeparatorText(Action.substr(1).data());
 
-			else if (ImGui::MenuItem(Action.c_str()))
+			else if (ImGui::MenuItem(Action.data()))
 				ActionHandlers[Action]();
 
 		ImGui::EndPopup();
@@ -1344,8 +1344,8 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 
 		ImGui::SeparatorText(sepStr.c_str());
 
-		std::unordered_map<std::string, std::pair<bool, Reflection::GenericValue>> props;
-		std::unordered_map<std::string, bool> conflictingProps;
+		std::unordered_map<std::string_view, std::pair<bool, Reflection::GenericValue>> props;
+		std::unordered_map<std::string_view, bool> conflictingProps;
 
 		for (uint32_t selId : Selections)
 		{
@@ -1360,7 +1360,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 
 			for (const auto& prop : sel->GetProperties())
 			{
-				const std::string& pname = prop.first;
+				const std::string_view& pname = prop.first;
 				const auto& it = props.find(pname);
 				Reflection::GenericValue myVal = prop.second.Get(sel);
 
@@ -1381,11 +1381,11 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 		{
 			const std::pair<bool, Reflection::GenericValue> propItem = propIt.second;
 
-			const std::string& propName = propIt.first;
+			const std::string_view& propName = propIt.first;
 			bool hasSetter = propItem.first;
 			const Reflection::GenericValue& curVal = propItem.second;
 
-			const char* propNameCStr = propName.c_str();
+			const char* propNameCStr = propName.data();
 
 			bool doConflict = conflictingProps[propName];
 
@@ -1460,7 +1460,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 				buf[str.size()] = 0;
 
 				ImGui::InputText(propNameCStr, buf, allocSize);
-				newVal = std::string(buf);
+				newVal = buf;
 
 				Memory::Free(buf);
 
@@ -1685,7 +1685,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 			default:
 			{
 				int typeId = static_cast<int>(curVal.Type);
-				const std::string& typeName = Reflection::TypeAsString(curVal.Type);
+				const std::string_view& typeName = Reflection::TypeAsString(curVal.Type);
 
 				ImGui::Text(std::vformat(
 					"{}: <Display of ID:{} ('{}') types not unavailable>",

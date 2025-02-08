@@ -125,7 +125,7 @@ static const Reflection::FunctionMap& s_GetFunctions()                          
 {                                                                                      \
 	return s_Api.Functions;                                                            \
 }                                                                                      \
-static const std::vector<std::string>& s_GetLineage()                                  \
+static const std::vector<std::string_view>& s_GetLineage()                             \
 {                                                                                      \
 	return s_Api.Lineage;                                                              \
 }                                                                                      \
@@ -156,7 +156,7 @@ namespace Reflection
 		__count
 	};
 
-	const std::string& TypeAsString(ValueType);
+	const std::string_view& TypeAsString(ValueType);
 
 	struct GenericValue
 	{
@@ -168,6 +168,7 @@ namespace Reflection
 		//std::vector<GenericValue> Array;
 
 		GenericValue();
+		GenericValue(const std::string_view&);
 		GenericValue(const std::string&);
 		GenericValue(const char*);
 		GenericValue(bool);
@@ -224,14 +225,14 @@ namespace Reflection
 		std::function<std::vector<Reflection::GenericValue>(Reflection::Reflectable*, const std::vector<Reflection::GenericValue>&)> Func;
 	};
 
-	typedef std::unordered_map<std::string, Reflection::Property> PropertyMap;
-	typedef std::unordered_map<std::string, Reflection::Function> FunctionMap;
+	typedef std::unordered_map<std::string_view, Reflection::Property> PropertyMap;
+	typedef std::unordered_map<std::string_view, Reflection::Function> FunctionMap;
 
 	struct Api
 	{
 		PropertyMap Properties;
 		FunctionMap Functions;
-		std::vector<std::string> Lineage;
+		std::vector<std::string_view> Lineage;
 	};
 
 	class Reflectable
@@ -245,37 +246,37 @@ namespace Reflection
 		{
 			return ApiPointer->Functions;
 		}
-		virtual const std::vector<std::string>& GetLineage() const
+		virtual const std::vector<std::string_view>& GetLineage() const
 		{
 			return ApiPointer->Lineage;
 		}
-		virtual bool HasProperty(const std::string& MemberName) const
+		virtual bool HasProperty(const std::string_view& MemberName) const
 		{
 			return ApiPointer->Properties.find(MemberName) != ApiPointer->Properties.end();
 		}
-		virtual bool HasFunction(const std::string& MemberName) const
+		virtual bool HasFunction(const std::string_view& MemberName) const
 		{
 			return ApiPointer->Functions.find(MemberName) != ApiPointer->Functions.end();
 		}
-		virtual const Reflection::Property& GetProperty(const std::string& MemberName) const
+		virtual const Reflection::Property& GetProperty(const std::string_view& MemberName) const
 		{
 			return HasProperty(MemberName)
 			? ApiPointer->Properties[MemberName]
-			: throw(std::string("Invalid Property in GetProperty ") + MemberName);
+			: throw(std::string("Invalid Property in GetProperty: ") + MemberName.data());
 		}
-		virtual const Reflection::Function& GetFunction(const std::string& MemberName) const
+		virtual const Reflection::Function& GetFunction(const std::string_view& MemberName) const
 		{
 			return HasFunction(MemberName)
 			? ApiPointer->Functions[MemberName]
-			: throw(std::string("Invalid Function in GetFunction ") + MemberName);
+			: throw(std::string("Invalid Function in GetFunction: ") + MemberName.data());
 		}
-		virtual Reflection::GenericValue GetPropertyValue(const std::string& MemberName)
+		virtual Reflection::GenericValue GetPropertyValue(const std::string_view& MemberName)
 		{
 			return HasProperty(MemberName)
 			? ApiPointer->Properties[MemberName].Get(this)
-			: throw(std::string("Invalid Property in GetPropertyValue ") + MemberName);
+			: throw(std::string("Invalid Property in GetPropertyValue: ") + MemberName.data());
 		}
-		virtual void SetPropertyValue(const std::string& MemberName, const Reflection::GenericValue& NewValue)
+		virtual void SetPropertyValue(const std::string_view& MemberName, const Reflection::GenericValue& NewValue)
 		{
 			if (HasProperty(MemberName))
 				if (ApiPointer->Properties[MemberName].Set)
@@ -286,14 +287,14 @@ namespace Reflection
 						std::make_format_args(MemberName)
 					));
 			else
-				throw(std::string("Invalid Property in SetPropertyValue ") + MemberName);
+				throw(std::string("Invalid Property in SetPropertyValue: ") + MemberName.data());
 		}
-		virtual Reflection::GenericValue CallFunction(const std::string& MemberName, const std::vector<Reflection::GenericValue>& Param)
+		virtual Reflection::GenericValue CallFunction(const std::string_view& MemberName, const std::vector<Reflection::GenericValue>& Param)
 		{
 			if (HasFunction(MemberName))
 				return ApiPointer->Functions[MemberName].Func(this, Param);
 			else
-				throw(std::string("Invalid Function in CallFunction " + MemberName)); \
+				throw(std::string("Invalid Function in CallFunction: ") + MemberName.data());
 		}
 
 		REFLECTION_DECLAREAPI;

@@ -871,7 +871,7 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 
 	const nlohmann::json& materialDescription = m_JsonData["materials"][materialId];
 
-	static std::unordered_map<std::string, MeshMaterial::MaterialAlphaMode> NameToAlphaMode =
+	static std::unordered_map<std::string_view, MeshMaterial::MaterialAlphaMode> NameToAlphaMode =
 	{
 		{ "OPAQUE", MeshMaterial::MaterialAlphaMode::Opaque },
 		{ "MASK", MeshMaterial::MaterialAlphaMode::Mask },
