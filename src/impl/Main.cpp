@@ -47,9 +47,9 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 // technically we should never fail to exit gracefully though, we are
 // just indicating a fatal error occurred that forced the engine to
 // quit
-#define PHX_MAIN_HANDLECRASH(c, expr) catch (c Error) { handleCrash(Error##expr, #c); return 1; }
+#define PHX_MAIN_HANDLECRASH(c, expr) catch (c Error) { handleCrash(Error ##expr, #c); return 1; }
 
-#ifdef NDEBUG
+#if defined(NDEBUG) && !defined(__GNUC__)
 
 #define PHX_MAIN_CRASHHANDLERS \
 PHX_MAIN_HANDLECRASH(std::string, ) \
@@ -79,6 +79,7 @@ PHX_MAIN_HANDLECRASH(std::exception, .what()); \
 #include <glm/gtx/vector_angle.hpp>
 
 #include <SDL3/SDL_messagebox.h>
+#include <SDL3/SDL_platform.h>
 #include <SDL3/SDL_keyboard.h>
 #include <SDL3/SDL_dialog.h>
 #include <SDL3/SDL_mouse.h>
@@ -706,7 +707,7 @@ static void begin(int argc, char** argv)
 	const std::string& mapFile = hasMapFromArgs ?
 							mapFileFromArgs
 							: EngineJsonConfig.value("RootScene", "scenes/root.world");
-
+	
 	bool worldLoadSuccess = true;
 	std::vector<GameObject*> roots = SceneFormat::Deserialize(FileRW::ReadFile(mapFile), &worldLoadSuccess);
 
@@ -727,9 +728,11 @@ int main(int argc, char** argv)
 {
 	Log::Info("Application startup");
 
+	const char* platform = SDL_GetPlatform();
+
 	Log::Info(std::vformat(
-		"Phoenix Engine:\n\tBuild type: {}\n\tMain.cpp last compiled: {} @ {}",
-		std::make_format_args(PHX_BUILD_TYPE, __DATE__, __TIME__)
+		"Phoenix Engine:\n\tPlatform: {}\n\tBuild type: {}\n\tMain.cpp last compiled: {} @ {}",
+		std::make_format_args(platform, PHX_BUILD_TYPE, __DATE__, __TIME__)
 	));
 
 	Log::Info("Command line: &&");

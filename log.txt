@@ -15,102 +15,46 @@
 [INFO]: Final initializations...
 [INFO]: Main engine loop start
 [WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Type: Error
+	Severity: High
+	Message: GL_INVALID_OPERATION in glGenerateMipmap(zero size base image)
 	Source: OpenGL
-	Error ID: 131154
+	Error ID: 1
 
 [WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Program/shader state performance warning: Vertex shader in program 12 is being recompiled based on GL state.
+	Type: Error
+	Severity: High
+	Message: GL_INVALID_OPERATION in glGenerateMipmap(zero size base image)
 	Source: OpenGL
-	Error ID: 131218
+	Error ID: 1
 
 [WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Type: Error
+	Severity: High
+	Message: GL_INVALID_OPERATION in glGenerateMipmap(zero size base image)
 	Source: OpenGL
-	Error ID: 131154
+	Error ID: 1
 
 [WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Type: Error
+	Severity: High
+	Message: GL_INVALID_OPERATION in glGenerateMipmap(zero size base image)
 	Source: OpenGL
-	Error ID: 131154
+	Error ID: 1
 
 [WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Type: Error
+	Severity: High
+	Message: GL_INVALID_OPERATION in glGenerateMipmap(zero size base image)
 	Source: OpenGL
-	Error ID: 131154
+	Error ID: 1
 
 [WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
+	Type: Error
+	Severity: High
+	Message: GL_INVALID_OPERATION in glGenerateMipmap(zero size base image)
 	Source: OpenGL
-	Error ID: 131154
-
-[WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
-	Source: OpenGL
-	Error ID: 131154
-
-[WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
-	Source: OpenGL
-	Error ID: 131154
-
-[WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
-	Source: OpenGL
-	Error ID: 131154
-
-[WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
-	Source: OpenGL
-	Error ID: 131154
-
-[WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
-	Source: OpenGL
-	Error ID: 131154
-
-[WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
-	Source: OpenGL
-	Error ID: 131154
-
-[WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
-	Source: OpenGL
-	Error ID: 131154
-
-[WARN]: GL Debug callback:
-	Type: Performance
-	Severity: Medium
-	Message: Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering.
-	Source: OpenGL
-	Error ID: 131154
+	Error ID: 1
 
 [INFO]: Main loop exited
 [INFO]: Engine destructing...

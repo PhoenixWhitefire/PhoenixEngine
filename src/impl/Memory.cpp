@@ -10,6 +10,12 @@
 
 #include <tracy/Tracy.hpp>
 #include <assert.h>
+// 05/02/2025 HUH
+// why is G++ like this
+// builds in Debug, but not Release
+#include <cstddef>
+#include <cstdlib>
+#include <cstring>
 
 #include "Memory.hpp"
 

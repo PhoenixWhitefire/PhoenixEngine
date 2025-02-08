@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <cfloat>
 #include <glm/gtc/type_ptr.hpp>
 #include <stb/stb_image.h>
 #include <tracy/Tracy.hpp>
@@ -163,11 +164,10 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 			ZoneScopedN("ParseGLTF");
 			m_JsonData = nlohmann::json::parse(textData);
 		}
-		PHX_CATCH_AND_RETHROW(
-			nlohmann::json::parse_error,
-			std::string("Failed to import model (parse error): ") + gltfFilePath + ,
-			.what()
-		);
+		catch (nlohmann::json::parse_error Error)
+		{
+			throw("Failed to import model due to parse error: " + std::string(Error.what()));
+		}
 
 		m_Data = m_GetData();
 	}
@@ -229,11 +229,10 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 
 		m_BuildRig();
 	}
-	PHX_CATCH_AND_RETHROW(
-		nlohmann::json::type_error,
-		std::string("Failed to import model (type error): ") + gltfFilePath + ,
-		.what()
-	);
+	catch (nlohmann::json::type_error Error)
+	{
+		throw("Failed to import model due to type error: " + std::string(Error.what()));
+	}
 
 	ZoneName("ImportNodes", 11);
 
@@ -529,7 +528,7 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From, const glm::m
 		const nlohmann::json& mat = matIt.value();
 
 		float matValues[16]{};
-		for (uint32_t i = 0; i < std::min(mat.size(), 16ull); i++)
+		for (uint32_t i = 0; i < std::min(mat.size(), (size_t)16); i++)
 			matValues[i] = mat[i];
 
 		matNode = glm::make_mat4(matValues);

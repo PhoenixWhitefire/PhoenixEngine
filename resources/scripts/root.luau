@@ -1,6 +1,6 @@
 -- root.luau, 21/12/2024
 
-local NodeEditor = require("scripts/modules/NodeEditor.luau")
+local NodeEditor = nil --require("scripts/modules/NodeEditor.luau")
 local Editor = function() end--require("scripts/modules/Editor.luau")
 
 local ModelImporterScale = 1

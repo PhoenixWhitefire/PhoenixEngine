@@ -20,6 +20,7 @@ local SwitchToFreecamNextFrame = 0
 SoundStinger = GameObject.new("Sound")
 SoundStinger.Name = "SoundStinger"
 SoundStinger.SoundFile = "sounds/undertaleost_ruins_stinger.wav"
+SoundStinger.Serializes = false
 SoundStinger.Parent = workspace
 
 local function reset()

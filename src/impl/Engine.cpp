@@ -206,8 +206,8 @@ Engine::Engine()
 	float displayScale = SDL_GetDisplayContentScale(primaryDisplay);
 	PHX_ENSURE_MSG(displayScale != 0.f, "Invalid `SDL_GetDisplayContentScale` result, error: " + std::string(SDL_GetError()));
 
-	this->WindowSizeX = static_cast<int>(defaultWindowSize[0] * displayScale);
-	this->WindowSizeY = static_cast<int>(defaultWindowSize[1] * displayScale);
+	this->WindowSizeX = static_cast<int>((float)defaultWindowSize[0] * displayScale);
+	this->WindowSizeY = static_cast<int>((float)defaultWindowSize[1] * displayScale);
 
 	SDL_Rect displayBounds{};
 	PHX_SDL_CALL(SDL_GetDisplayBounds, primaryDisplay, &displayBounds);

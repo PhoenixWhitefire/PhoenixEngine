@@ -15,6 +15,7 @@ Reflection::GenericValue::GenericValue()
 
 static void fromString(Reflection::GenericValue& G, const char* CStr)
 {
+	G.Type = Reflection::ValueType::String;
 	G.Value = Memory::Alloc(G.Size + 1, Memory::Category::Reflection);
 
 	if (!G.Value)
@@ -72,6 +73,7 @@ Reflection::GenericValue::GenericValue(int i)
 
 static void fromMatrix(Reflection::GenericValue& G, const glm::mat4& M)
 {
+	G.Type = Reflection::ValueType::Matrix;
 	G.Value = Memory::Alloc(sizeof(M), Memory::Category::Reflection);
 	G.Size = sizeof(M);
 
@@ -89,6 +91,8 @@ Reflection::GenericValue::GenericValue(const glm::mat4& m)
 
 static void fromArray(Reflection::GenericValue& G, const std::vector<Reflection::GenericValue>& Array)
 {
+	G.Type = Reflection::ValueType::Array;
+
 	size_t allocSize = Array.size() * sizeof(G);
 
 	G.Value = Memory::Alloc(allocSize, Memory::Category::Reflection);

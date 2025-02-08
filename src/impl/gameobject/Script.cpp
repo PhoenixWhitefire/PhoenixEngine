@@ -12,7 +12,7 @@
 #include "Memory.hpp"
 #include "Log.hpp"
 
-#define LUA_ASSERT(res, err, ...) if (!res) { luaL_error(L, err, __VA_ARGS__); }
+#define LUA_ASSERT(res, err, ...) { if (!res) { luaL_errorL(L, err, __VA_ARGS__); } }
 
 PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(Script);
 
@@ -75,7 +75,7 @@ static auto api_gameobjnewindex = [](lua_State* L)
 
 		ZoneText(key, strlen(key));
 
-		LUA_ASSERT(strcmp(key, "Exists") != 0, "'Exists' is read-only! - 21/12/2024");
+		{ if (!strcmp(key, "Exists") != 0) { luaL_errorL(L, "'Exists' is read-only! - 21/12/2024"); } }
 
 		LUA_ASSERT(obj, "Tried to assign to the '%s' of a deleted Game Object", key);
 
@@ -92,7 +92,7 @@ static auto api_gameobjnewindex = [](lua_State* L)
 			lua_Type argType = (lua_Type)lua_type(L, 3);
 			
 			if (!prop.Set)
-				luaL_error(L, std::vformat(
+				luaL_errorL(L, std::vformat(
 					"Cannot set Property {}::{} to {} because it is read-only",
 					std::make_format_args(obj->ClassName, key, argAsString)
 				).c_str());
@@ -102,7 +102,7 @@ static auto api_gameobjnewindex = [](lua_State* L)
 			if (reflToLuaIt == ScriptEngine::ReflectedTypeLuaEquivalent.end())
 			{
 				const std::string_view& typeName = Reflection::TypeAsString(prop.Type);
-				luaL_error(L, std::vformat(
+				luaL_errorL(L, std::vformat(
 					"No defined mapping between Reflection::ValueType::{} and a Lua type",
 					std::make_format_args(typeName)
 				).c_str());
@@ -113,7 +113,7 @@ static auto api_gameobjnewindex = [](lua_State* L)
 			if (desiredType != argType && (desiredType != LUA_TUSERDATA && argType != LUA_TNIL))
 			{
 				const char* desiredTypeName = lua_typename(L, (int)desiredType);
-				luaL_error(L, std::vformat(
+				luaL_errorL(L, std::vformat(
 					"Expected type {} for member {}::{}, got {} instead",
 					std::make_format_args(desiredTypeName, obj->ClassName, key, argTypeName)
 				).c_str());
@@ -137,7 +137,7 @@ static auto api_gameobjnewindex = [](lua_State* L)
 		else
 		{
 			std::string fullname = obj->GetFullName();
-			luaL_error(L, (std::vformat(
+			luaL_errorL(L, (std::vformat(
 				"Attempt to set invalid Member '{}' of {} '{}'",
 				std::make_format_args(key, obj->ClassName, fullname)
 			)).c_str());
@@ -256,7 +256,7 @@ static auto api_vec3index = [](lua_State* L)
 			return 1;
 		}
 		else
-			luaL_error(L, "Invalid key %s", key);
+			luaL_errorL(L, "Invalid key %s", key);
 
 		//if (vec->HasProperty(key))
 		//{
@@ -275,7 +275,7 @@ static auto api_vec3index = [](lua_State* L)
 		//}
 		//else
 		//{
-		//	luaL_error(L, std::vformat(
+		//	luaL_errorL(L, std::vformat(
 		//		"{} is not a valid member of Vector3",
 		//		std::make_format_args(key)
 		//	).c_str());
@@ -284,7 +284,7 @@ static auto api_vec3index = [](lua_State* L)
 
 static auto api_vec3newindex = [](lua_State* L)
 	{
-		luaL_error(L, "Vector3s are immutable");
+		luaL_errorL(L, "Vector3s are immutable");
 	};
 
 static auto api_vec3tostring = [](lua_State* L)
@@ -335,7 +335,7 @@ static auto api_colindex = [](lua_State* L)
 			return 1;
 		}
 		else
-			luaL_error(L, "Invalid key %s", key);
+			luaL_errorL(L, "Invalid key %s", key);
 	};
 
 static auto api_coltostring = [](lua_State* L)
@@ -789,8 +789,8 @@ static lua_State* createState()
 	{
 		lua_CFunction func = pair.second;
 
-		lua_pushlightuserdata(state, func);
-		lua_pushstring(state, pair.first.data());
+		lua_pushlightuserdata(state, (void*)func);
+		lua_pushstring(state, pair.first.c_str());
 		
 		lua_pushcclosure(
 			state,
@@ -810,11 +810,11 @@ static lua_State* createState()
 				}
 				catch (std::string e)
 				{
-					luaL_error(L, e.c_str());
+					luaL_errorL(L, e.c_str());
 				}
 				catch (const char* e)
 				{
-					luaL_error(L, e);
+					luaL_errorL(L, e);
 				}
 
 			},

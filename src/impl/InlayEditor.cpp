@@ -370,7 +370,7 @@ static void renderTextEditor()
 			TextEditorEntryBufferCapacity = scriptContents.size() + 256;
 			TextEditorEntryBuffer = (char*)Memory::Alloc(TextEditorEntryBufferCapacity);
 
-			CopyStringToBuffer(TextEditorEntryBuffer, TextEditorEntryBufferCapacity, scriptContents);
+			strncpy(TextEditorEntryBuffer, scriptContents.c_str(), TextEditorEntryBufferCapacity);
 		}
 	}
 	
@@ -747,7 +747,7 @@ static void renderMaterialEditor()
 					else
 					{
 						std::string shortpath = fullpath.substr(resDirOffset + 10);
-						CopyStringToBuffer(MtlEditorTextureSelectDialogBuffer, MATERIAL_TEXTUREPATH_BUFSIZE, shortpath);
+						strncpy(MtlEditorTextureSelectDialogBuffer, shortpath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
 						MtlEditorTextureSelectDialogBuffer = nullptr;
 
 						uint32_t newtexid = texManager->LoadTextureFromPath(shortpath);
@@ -820,13 +820,13 @@ static void renderMaterialEditor()
 
 	if (MtlCurItem != MtlPrevItem)
 	{
-		strncpy_s(MtlShpBuf, curItem.GetShader().Name.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
+		strncpy(MtlShpBuf, curItem.GetShader().Name.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
 		s_SaveNameBuf = curItem.Name;
 
-		strncpy_s(MtlDiffuseBuf, colorMap.ImagePath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
-		strncpy_s(MtlSpecBuf, metallicRoughnessMap.ImagePath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
-		strncpy_s(MtlNormalBuf, normalMap.ImagePath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
-		strncpy_s(MtlEmissionBuf, emissionMap.ImagePath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
+		strncpy(MtlDiffuseBuf, colorMap.ImagePath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
+		strncpy(MtlSpecBuf, metallicRoughnessMap.ImagePath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
+		strncpy(MtlNormalBuf, normalMap.ImagePath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
+		strncpy(MtlEmissionBuf, emissionMap.ImagePath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
 
 		SelectedUniformIdx = -1;
 	}

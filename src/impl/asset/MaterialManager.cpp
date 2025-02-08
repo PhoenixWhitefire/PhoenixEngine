@@ -1,4 +1,5 @@
 #include <format>
+#include <chrono>
 #include <nljson.hpp>
 #include <tracy/Tracy.hpp>
 
