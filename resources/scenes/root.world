@@ -1,34 +1,34 @@
 PHNXENGI
 #Version 2.00
 #Asset Scene
-#Date 4-2-2025
+#Date 8-2-2025
 #SceneName scenes/root.world
 
 {
   "GameObjects": [
     {
       "$_class": "DataModel",
-      "$_objectId": 108,
+      "$_objectId": 43,
       "Enabled": true,
       "Name": "DataModel",
       "Serializes": true
     },
     {
       "$_class": "Workspace",
-      "$_objectId": 109,
+      "$_objectId": 44,
       "Enabled": true,
       "Name": "Workspace",
-      "Parent": 108,
-      "SceneCamera": 110,
+      "Parent": 43,
+      "SceneCamera": 45,
       "Serializes": true
     },
     {
       "$_class": "Camera",
-      "$_objectId": 110,
+      "$_objectId": 45,
       "Enabled": true,
       "FieldOfView": 70.0,
       "Name": "Camera",
-      "Parent": 109,
+      "Parent": 44,
       "Serializes": true,
       "Transform": [
         [
@@ -57,109 +57,27 @@ PHNXENGI
         ]
       ],
       "UseSimpleController": true
-    },
-    {
-      "$_class": "Workspace",
-      "$_objectId": 111,
-      "Enabled": true,
-      "Name": "Workspace",
-      "Parent": 108,
-      "SceneCamera": 113,
-      "Serializes": true
-    },
-    {
-      "$_class": "Camera",
-      "$_objectId": 112,
-      "Enabled": true,
-      "FieldOfView": 70.0,
-      "Name": "Camera",
-      "Parent": 111,
-      "Serializes": true,
-      "Transform": [
-        [
-          1.0,
-          0.0,
-          -0.0,
-          0.0
-        ],
-        [
-          -0.0,
-          1.0,
-          -0.0,
-          0.0
-        ],
-        [
-          0.0,
-          0.0,
-          1.0,
-          0.0
-        ],
-        [
-          -0.0,
-          -0.0,
-          0.0,
-          1.0
-        ]
-      ],
-      "UseSimpleController": true
-    },
-    {
-      "$_class": "Camera",
-      "$_objectId": 113,
-      "Enabled": true,
-      "FieldOfView": 70.0,
-      "Name": "Camera",
-      "Parent": 111,
-      "Serializes": true,
-      "Transform": [
-        [
-          1.0,
-          0.0,
-          0.0,
-          0.0
-        ],
-        [
-          0.0,
-          1.0,
-          0.0,
-          0.0
-        ],
-        [
-          0.0,
-          0.0,
-          1.0,
-          0.0
-        ],
-        [
-          8.0,
-          13.884428024291992,
-          0.0,
-          655.0
-        ]
-      ],
-      "UseSimpleController": false
     },
     {
       "$_class": "Model",
-      "$_objectId": 114,
+      "$_objectId": 49,
       "Enabled": true,
       "Name": "Level",
-      "Parent": 111,
+      "Parent": 44,
       "Serializes": true
     },
     {
-      "$_class": "Script",
-      "$_objectId": 115,
+      "$_class": "Model",
+      "$_objectId": 50,
       "Enabled": true,
-      "Name": "MainScript",
-      "Parent": 114,
-      "Serializes": true,
-      "SourceFile": "scripts/devmap.luau"
+      "Name": "Capoeira",
+      "Parent": 49,
+      "Serializes": true
     },
     {
       "$_class": "Mesh",
-      "$_objectId": 116,
-      "Asset": "meshes/models/crow-b.glb/pasted__L_Eye_pasted__polySurface122_pasted__lambert2_0.hxmesh",
+      "$_objectId": 51,
+      "Asset": "meshes/models/Capoeira.glb/Beta_Joints.hxmesh",
       "CastsShadows": true,
       "Density": 1.0,
       "Enabled": true,
@@ -170,23 +88,23 @@ PHNXENGI
         0.0,
         0.0
       ],
-      "Material": "models/crow-b.glb/pasted__lambert2",
-      "MetallnessFactor": 0.0,
-      "Name": "crow",
-      "Parent": 114,
+      "Material": "models/Capoeira.glb/Beta_Joints_MAT1",
+      "MetallnessFactor": 0.5,
+      "Name": "Beta_Joints",
+      "Parent": 50,
       "PhysicsCollisions": true,
       "PhysicsDynamics": false,
-      "RoughnessFactor": 1.0,
+      "RoughnessFactor": 0.5527864098548889,
       "Serializes": true,
       "Size": [
-        10.895509719848633,
-        24.640920639038086,
-        9.625505447387695
+        2.5492444038391113,
+        15.967936515808105,
+        17.669342041015625
       ],
       "Tint": [
-        1.0,
-        1.0,
-        1.0
+        0.3333333432674408,
+        0.12452887743711472,
+        0.10101473331451416
       ],
       "Transform": [
         [
@@ -209,8 +127,8 @@ PHNXENGI
         ],
         [
           0.0,
-          12.0,
-          0.0,
+          -1.0,
+          -15.0,
           1.0
         ]
       ],
@@ -218,8 +136,8 @@ PHNXENGI
     },
     {
       "$_class": "Mesh",
-      "$_objectId": 117,
-      "Asset": "meshes/models/windows/scene.gltf/Plane.009.hxmesh",
+      "$_objectId": 52,
+      "Asset": "meshes/models/Capoeira.glb/Beta_Surface.hxmesh",
       "CastsShadows": true,
       "Density": 1.0,
       "Enabled": true,
@@ -230,143 +148,23 @@ PHNXENGI
         0.0,
         0.0
       ],
-      "Material": "models/windows/scene.gltf/Material.004",
+      "Material": "models/Capoeira.glb/Beta_HighLimbsGeoSG3",
       "MetallnessFactor": 0.0,
-      "Name": "windows10",
-      "Parent": 114,
+      "Name": "Beta_Surface",
+      "Parent": 50,
       "PhysicsCollisions": true,
       "PhysicsDynamics": false,
-      "RoughnessFactor": 0.5,
+      "RoughnessFactor": 0.5527864098548889,
       "Serializes": true,
       "Size": [
-        4.0,
-        8.0,
-        1.7484555314695172e-07
+        3.2069883346557617,
+        18.09205436706543,
+        18.05132484436035
       ],
       "Tint": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "Transform": [
-        [
-          1.0,
-          0.0,
-          0.0,
-          0.0
-        ],
-        [
-          0.0,
-          1.0,
-          0.0,
-          0.0
-        ],
-        [
-          0.0,
-          0.0,
-          1.0,
-          0.0
-        ],
-        [
-          0.0,
-          7.0,
-          100.0,
-          1.0
-        ]
-      ],
-      "Transparency": 0.0
-    },
-    {
-      "$_class": "Mesh",
-      "$_objectId": 118,
-      "Asset": "meshes/models/ground/scene.gltf/Grid.hxmesh",
-      "CastsShadows": true,
-      "Density": 1.0,
-      "Enabled": true,
-      "FaceCulling": 0,
-      "Friction": 0.30000001192092896,
-      "LinearVelocity": [
-        0.0,
-        0.0,
-        0.0
-      ],
-      "Material": "models/ground/scene.gltf/Material.002",
-      "MetallnessFactor": 0.0,
-      "Name": "ground",
-      "Parent": 114,
-      "PhysicsCollisions": true,
-      "PhysicsDynamics": false,
-      "RoughnessFactor": 0.5,
-      "Serializes": true,
-      "Size": [
-        75.03569030761719,
-        8.418838500976563,
-        74.95405578613281
-      ],
-      "Tint": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "Transform": [
-        [
-          1.0,
-          0.0,
-          0.0,
-          0.0
-        ],
-        [
-          0.0,
-          1.0,
-          0.0,
-          0.0
-        ],
-        [
-          0.0,
-          0.0,
-          1.0,
-          0.0
-        ],
-        [
-          0.0,
-          -1.5,
-          100.0,
-          1.0
-        ]
-      ],
-      "Transparency": 0.0
-    },
-    {
-      "$_class": "Mesh",
-      "$_objectId": 119,
-      "Asset": "meshes/models/grass/scene.gltf/Plane.hxmesh",
-      "CastsShadows": true,
-      "Density": 1.0,
-      "Enabled": true,
-      "FaceCulling": 0,
-      "Friction": 0.30000001192092896,
-      "LinearVelocity": [
-        0.0,
-        0.0,
-        0.0
-      ],
-      "Material": "models/grass/scene.gltf/Material.001",
-      "MetallnessFactor": 0.0,
-      "Name": "grass",
-      "Parent": 114,
-      "PhysicsCollisions": true,
-      "PhysicsDynamics": false,
-      "RoughnessFactor": 0.5,
-      "Serializes": true,
-      "Size": [
-        77.96974182128906,
-        11.289331436157227,
-        78.32008361816406
-      ],
-      "Tint": [
-        1.0,
-        1.0,
-        1.0
+        0.8370000123977661,
+        0.30230802297592163,
+        0.26365500688552856
       ],
       "Transform": [
         [
@@ -390,87 +188,7 @@ PHNXENGI
         [
           0.0,
           0.0,
-          100.0,
-          1.0
-        ]
-      ],
-      "Transparency": 0.0
-    },
-    {
-      "$_class": "DirectionalLight",
-      "$_objectId": 120,
-      "Brightness": 1.0,
-      "Direction": [
-        0.5,
-        0.5,
-        0.5
-      ],
-      "Enabled": true,
-      "LightColor": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "Name": "DirectionalLight",
-      "Parent": 114,
-      "Serializes": true,
-      "Shadows": false
-    },
-    {
-      "$_class": "Primitive",
-      "$_objectId": 121,
-      "CastsShadows": true,
-      "Density": 1.0,
-      "Enabled": true,
-      "FaceCulling": 1,
-      "Friction": 0.30000001192092896,
-      "LinearVelocity": [
-        0.0,
-        0.0,
-        0.0
-      ],
-      "Material": "woodplanks",
-      "MetallnessFactor": 1.0,
-      "Name": "woodplanks",
-      "Parent": 114,
-      "PhysicsCollisions": true,
-      "PhysicsDynamics": false,
-      "RoughnessFactor": 1.0,
-      "Serializes": true,
-      "Shape": 0,
-      "Size": [
-        2.0,
-        17.0,
-        20.0
-      ],
-      "Tint": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "Transform": [
-        [
-          -0.1693943738937378,
-          1.3331261072835332e-07,
-          -0.9854926466941833,
-          0.0
-        ],
-        [
-          -6.455834267171667e-08,
-          1.0,
-          1.463715904037599e-07,
-          0.0
-        ],
-        [
-          0.9854926466941833,
-          8.841735876785606e-08,
-          -0.1693943738937378,
-          0.0
-        ],
-        [
-          -8.0,
-          9.0,
-          0.0,
+          -15.0,
           1.0
         ]
       ],
@@ -478,7 +196,7 @@ PHNXENGI
     },
     {
       "$_class": "Primitive",
-      "$_objectId": 122,
+      "$_objectId": 53,
       "CastsShadows": true,
       "Density": 1.0,
       "Enabled": true,
@@ -492,7 +210,7 @@ PHNXENGI
       "Material": "floortiles",
       "MetallnessFactor": 1.0,
       "Name": "shinyfloor",
-      "Parent": 114,
+      "Parent": 49,
       "PhysicsCollisions": true,
       "PhysicsDynamics": false,
       "RoughnessFactor": 1.0,
@@ -537,17 +255,89 @@ PHNXENGI
       "Transparency": 0.0
     },
     {
-      "$_class": "Model",
-      "$_objectId": 123,
+      "$_class": "Primitive",
+      "$_objectId": 54,
+      "CastsShadows": true,
+      "Density": 1.0,
       "Enabled": true,
-      "Name": "Capoeira",
-      "Parent": 114,
-      "Serializes": true
+      "FaceCulling": 1,
+      "Friction": 0.30000001192092896,
+      "LinearVelocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Material": "woodplanks",
+      "MetallnessFactor": 1.0,
+      "Name": "woodplanks",
+      "Parent": 49,
+      "PhysicsCollisions": true,
+      "PhysicsDynamics": false,
+      "RoughnessFactor": 1.0,
+      "Serializes": true,
+      "Shape": 0,
+      "Size": [
+        2.0,
+        17.0,
+        20.0
+      ],
+      "Tint": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Transform": [
+        [
+          -0.2985962927341461,
+          -1.5896263505510433e-07,
+          0.954319417476654,
+          0.0
+        ],
+        [
+          -6.455834267171667e-08,
+          1.0,
+          1.463715904037599e-07,
+          0.0
+        ],
+        [
+          -0.954319417476654,
+          -1.7904042692862276e-08,
+          -0.2985962927341461,
+          0.0
+        ],
+        [
+          -8.0,
+          9.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "Transparency": 0.0
+    },
+    {
+      "$_class": "DirectionalLight",
+      "$_objectId": 55,
+      "Brightness": 1.0,
+      "Direction": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "Enabled": true,
+      "LightColor": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Name": "DirectionalLight",
+      "Parent": 49,
+      "Serializes": true,
+      "Shadows": false
     },
     {
       "$_class": "Mesh",
-      "$_objectId": 124,
-      "Asset": "meshes/models/Capoeira.glb/Beta_Surface.hxmesh",
+      "$_objectId": 56,
+      "Asset": "meshes/models/grass/scene.gltf/Plane.hxmesh",
       "CastsShadows": true,
       "Density": 1.0,
       "Enabled": true,
@@ -558,23 +348,23 @@ PHNXENGI
         0.0,
         0.0
       ],
-      "Material": "models/Capoeira.glb/Beta_HighLimbsGeoSG3",
+      "Material": "models/grass/scene.gltf/Material.001",
       "MetallnessFactor": 0.0,
-      "Name": "Beta_Surface",
-      "Parent": 123,
+      "Name": "grass",
+      "Parent": 49,
       "PhysicsCollisions": true,
       "PhysicsDynamics": false,
-      "RoughnessFactor": 0.5527864098548889,
+      "RoughnessFactor": 0.5,
       "Serializes": true,
       "Size": [
-        3.2069883346557617,
-        18.09205436706543,
-        18.05132484436035
+        77.96974182128906,
+        11.289331436157227,
+        78.32008361816406
       ],
       "Tint": [
-        0.8370000123977661,
-        0.30230802297592163,
-        0.26365500688552856
+        1.0,
+        1.0,
+        1.0
       ],
       "Transform": [
         [
@@ -598,7 +388,7 @@ PHNXENGI
         [
           0.0,
           0.0,
-          -15.0,
+          100.0,
           1.0
         ]
       ],
@@ -606,8 +396,8 @@ PHNXENGI
     },
     {
       "$_class": "Mesh",
-      "$_objectId": 125,
-      "Asset": "meshes/models/Capoeira.glb/Beta_Joints.hxmesh",
+      "$_objectId": 57,
+      "Asset": "meshes/models/ground/scene.gltf/Grid.hxmesh",
       "CastsShadows": true,
       "Density": 1.0,
       "Enabled": true,
@@ -618,23 +408,23 @@ PHNXENGI
         0.0,
         0.0
       ],
-      "Material": "models/Capoeira.glb/Beta_Joints_MAT1",
-      "MetallnessFactor": 0.5,
-      "Name": "Beta_Joints",
-      "Parent": 123,
+      "Material": "models/ground/scene.gltf/Material.002",
+      "MetallnessFactor": 0.0,
+      "Name": "ground",
+      "Parent": 49,
       "PhysicsCollisions": true,
       "PhysicsDynamics": false,
-      "RoughnessFactor": 0.5527864098548889,
+      "RoughnessFactor": 0.5,
       "Serializes": true,
       "Size": [
-        2.5492444038391113,
-        15.967936515808105,
-        17.669342041015625
+        75.03569030761719,
+        8.418838500976563,
+        74.95405578613281
       ],
       "Tint": [
-        0.3333333432674408,
-        0.12452887743711472,
-        0.10101473331451416
+        1.0,
+        1.0,
+        1.0
       ],
       "Transform": [
         [
@@ -657,8 +447,128 @@ PHNXENGI
         ],
         [
           0.0,
-          -1.0,
-          -15.0,
+          -1.5,
+          100.0,
+          1.0
+        ]
+      ],
+      "Transparency": 0.0
+    },
+    {
+      "$_class": "Mesh",
+      "$_objectId": 58,
+      "Asset": "meshes/models/windows/scene.gltf/Plane.009.hxmesh",
+      "CastsShadows": true,
+      "Density": 1.0,
+      "Enabled": true,
+      "FaceCulling": 0,
+      "Friction": 0.30000001192092896,
+      "LinearVelocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Material": "models/windows/scene.gltf/Material.004",
+      "MetallnessFactor": 0.0,
+      "Name": "windows10",
+      "Parent": 49,
+      "PhysicsCollisions": true,
+      "PhysicsDynamics": false,
+      "RoughnessFactor": 0.5,
+      "Serializes": true,
+      "Size": [
+        4.0,
+        8.0,
+        1.7484555314695172e-07
+      ],
+      "Tint": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          7.0,
+          100.0,
+          1.0
+        ]
+      ],
+      "Transparency": 0.0
+    },
+    {
+      "$_class": "Mesh",
+      "$_objectId": 59,
+      "Asset": "meshes/models/crow-b.glb/pasted__L_Eye_pasted__polySurface122_pasted__lambert2_0.hxmesh",
+      "CastsShadows": true,
+      "Density": 1.0,
+      "Enabled": true,
+      "FaceCulling": 0,
+      "Friction": 0.30000001192092896,
+      "LinearVelocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Material": "models/crow-b.glb/pasted__lambert2",
+      "MetallnessFactor": 0.0,
+      "Name": "crow",
+      "Parent": 49,
+      "PhysicsCollisions": true,
+      "PhysicsDynamics": false,
+      "RoughnessFactor": 1.0,
+      "Serializes": true,
+      "Size": [
+        10.895509719848633,
+        24.640920639038086,
+        9.625505447387695
+      ],
+      "Tint": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          12.0,
+          0.0,
           1.0
         ]
       ],
@@ -666,10 +576,19 @@ PHNXENGI
     },
     {
       "$_class": "Script",
-      "$_objectId": 191,
+      "$_objectId": 60,
+      "Enabled": true,
+      "Name": "MainScript",
+      "Parent": 49,
+      "Serializes": true,
+      "SourceFile": "scripts/devmap.luau"
+    },
+    {
+      "$_class": "Script",
+      "$_objectId": 61,
       "Enabled": true,
       "Name": "RootScript",
-      "Parent": 111,
+      "Parent": 44,
       "Serializes": true,
       "SourceFile": "scripts/root.luau"
     }

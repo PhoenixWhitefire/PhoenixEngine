@@ -1,21 +1,21 @@
 PHNXENGI
 #Version 2.00
 #Asset Scene
-#Date 11-1-2025
+#Date 8-2-2025
 #SceneName scenes/dev_fmtv2.hxscene
 
 {
   "GameObjects": [
     {
       "$_class": "Model",
-      "$_objectId": 109,
+      "$_objectId": 63,
       "Enabled": true,
       "Name": "Capoeira",
       "Serializes": true
     },
     {
       "$_class": "Mesh",
-      "$_objectId": 110,
+      "$_objectId": 64,
       "Asset": "meshes/models/Capoeira.glb/Beta_Joints.hxmesh",
       "CastsShadows": true,
       "Density": 1.0,
@@ -30,7 +30,7 @@ PHNXENGI
       "Material": "models/Capoeira.glb/Beta_Joints_MAT1",
       "MetallnessFactor": 0.5,
       "Name": "Beta_Joints",
-      "Parent": 109,
+      "Parent": 63,
       "PhysicsCollisions": true,
       "PhysicsDynamics": false,
       "RoughnessFactor": 0.5527864098548889,
@@ -75,7 +75,7 @@ PHNXENGI
     },
     {
       "$_class": "Mesh",
-      "$_objectId": 176,
+      "$_objectId": 65,
       "Asset": "meshes/models/Capoeira.glb/Beta_Surface.hxmesh",
       "CastsShadows": true,
       "Density": 1.0,
@@ -90,7 +90,7 @@ PHNXENGI
       "Material": "models/Capoeira.glb/Beta_HighLimbsGeoSG3",
       "MetallnessFactor": 0.0,
       "Name": "Beta_Surface",
-      "Parent": 109,
+      "Parent": 63,
       "PhysicsCollisions": true,
       "PhysicsDynamics": false,
       "RoughnessFactor": 0.5527864098548889,
@@ -135,7 +135,7 @@ PHNXENGI
     },
     {
       "$_class": "Primitive",
-      "$_objectId": 177,
+      "$_objectId": 66,
       "CastsShadows": true,
       "Density": 1.0,
       "Enabled": true,
@@ -194,7 +194,7 @@ PHNXENGI
     },
     {
       "$_class": "Primitive",
-      "$_objectId": 178,
+      "$_objectId": 67,
       "CastsShadows": true,
       "Density": 1.0,
       "Enabled": true,
@@ -225,9 +225,9 @@ PHNXENGI
       ],
       "Transform": [
         [
-          0.9927674531936646,
-          8.159808118080036e-08,
-          -0.11959868669509888,
+          -0.2985962927341461,
+          -1.5896263505510433e-07,
+          0.954319417476654,
           0.0
         ],
         [
@@ -237,9 +237,9 @@ PHNXENGI
           0.0
         ],
         [
-          0.11959868669509888,
-          -1.3759191119788738e-07,
-          0.9927674531936646,
+          -0.954319417476654,
+          -1.7904042692862276e-08,
+          -0.2985962927341461,
           0.0
         ],
         [
@@ -253,7 +253,7 @@ PHNXENGI
     },
     {
       "$_class": "DirectionalLight",
-      "$_objectId": 179,
+      "$_objectId": 68,
       "Brightness": 1.0,
       "Direction": [
         0.5,
@@ -272,7 +272,7 @@ PHNXENGI
     },
     {
       "$_class": "Mesh",
-      "$_objectId": 180,
+      "$_objectId": 69,
       "Asset": "meshes/models/grass/scene.gltf/Plane.hxmesh",
       "CastsShadows": true,
       "Density": 1.0,
@@ -331,7 +331,7 @@ PHNXENGI
     },
     {
       "$_class": "Mesh",
-      "$_objectId": 181,
+      "$_objectId": 70,
       "Asset": "meshes/models/ground/scene.gltf/Grid.hxmesh",
       "CastsShadows": true,
       "Density": 1.0,
@@ -390,7 +390,7 @@ PHNXENGI
     },
     {
       "$_class": "Mesh",
-      "$_objectId": 182,
+      "$_objectId": 71,
       "Asset": "meshes/models/windows/scene.gltf/Plane.009.hxmesh",
       "CastsShadows": true,
       "Density": 1.0,
@@ -449,7 +449,7 @@ PHNXENGI
     },
     {
       "$_class": "Mesh",
-      "$_objectId": 183,
+      "$_objectId": 72,
       "Asset": "meshes/models/crow-b.glb/pasted__L_Eye_pasted__polySurface122_pasted__lambert2_0.hxmesh",
       "CastsShadows": true,
       "Density": 1.0,
@@ -508,7 +508,7 @@ PHNXENGI
     },
     {
       "$_class": "Script",
-      "$_objectId": 184,
+      "$_objectId": 73,
       "Enabled": true,
       "Name": "MainScript",
       "Serializes": true,

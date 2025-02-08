@@ -790,7 +790,7 @@ static lua_State* createState()
 		lua_CFunction func = pair.second;
 
 		lua_pushlightuserdata(state, (void*)func);
-		lua_pushstring(state, pair.first.c_str());
+		lua_pushstring(state, pair.first.data());
 		
 		lua_pushcclosure(
 			state,
