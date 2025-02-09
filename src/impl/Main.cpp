@@ -47,18 +47,27 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 // technically we should never fail to exit gracefully though, we are
 // just indicating a fatal error occurred that forced the engine to
 // quit
-#define PHX_MAIN_HANDLECRASH(c, expr) catch (c Error) { handleCrash(Error ##expr, #c); return 1; }
+#define PHX_MAIN_HANDLECRASH(c) catch (c Error) { handleCrash(Error, #c); return 1; }
 
-#if defined(NDEBUG) && !defined(__GNUC__)
+#define PHX_MAIN_HANDLECRASH_WHAT(c) catch (c Error) { handleCrash(Error.what(), #c); return 1; }
 
-#define PHX_MAIN_CRASHHANDLERS \
-PHX_MAIN_HANDLECRASH(std::string, ) \
-PHX_MAIN_HANDLECRASH(std::string_view, ) \
-PHX_MAIN_HANDLECRASH(const char*, ) \
-PHX_MAIN_HANDLECRASH(std::bad_alloc, .what() + std::string(": System may have run out of memory")) \
-PHX_MAIN_HANDLECRASH(nlohmann::json::type_error, .what()) \
-PHX_MAIN_HANDLECRASH(nlohmann::json::parse_error, .what()) \
-PHX_MAIN_HANDLECRASH(std::exception, .what()); \
+#if defined(NDEBUG)
+
+#define PHX_MAIN_CRASHHANDLERS                                                   \
+PHX_MAIN_HANDLECRASH(std::string)                                                \
+PHX_MAIN_HANDLECRASH(std::string_view)                                           \
+PHX_MAIN_HANDLECRASH(const char*)                                                \
+catch (std::bad_alloc AllocError)                                                \
+{                                                                                \
+	handleCrash(                                                                 \
+		"System may have run out of memory: " + std::string(AllocError.what()),  \
+		"std::bad_alloc"                                                         \
+	);                                                                           \
+	return 1;                                                                    \
+}                                                                                \
+PHX_MAIN_HANDLECRASH_WHAT(nlohmann::json::type_error)                            \
+PHX_MAIN_HANDLECRASH_WHAT(nlohmann::json::parse_error)                           \
+PHX_MAIN_HANDLECRASH_WHAT(std::exception);                                       \
 
 #else
 

@@ -419,8 +419,6 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 				&BlackPixel
 			);
 
-			glGenerateMipmap(GL_TEXTURE_2D);
-
 			/*Task* LoadTextureTask = new Task();
 			LoadTextureTask->FuncArgument = (void*)this;
 			LoadTextureTask->Function = asyncTextureLoader;

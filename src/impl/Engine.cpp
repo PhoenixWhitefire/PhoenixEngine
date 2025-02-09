@@ -150,7 +150,12 @@ void Engine::LoadConfiguration()
 		catch (nlohmann::json::parse_error err)
 		{
 			ConfigLoadSucceeded = false;
-			ConfigLoadErrorMessage = "Failed to parse configuration file: " + std::string(err.what());
+			const char* errMessage = err.what();
+			
+			ConfigLoadErrorMessage = std::vformat(
+				"Failed to load configuration file: {}\nA fallback will be used.",
+				std::make_format_args(errMessage)
+			);
 		}
 
 	if (!ConfigLoadSucceeded)
@@ -660,7 +665,7 @@ void Engine::Start()
 						texture.TMP_ImageByteData
 					);
 
-					glGenerateMipmap(GL_TEXTURE_2D);
+					//glGenerateMipmap(GL_TEXTURE_2D);
 
 					free(texture.TMP_ImageByteData);
 					texture.TMP_ImageByteData = nullptr;
