@@ -92,6 +92,12 @@ static char MtlShpBuf[MATERIAL_TEXTUREPATH_BUFSIZE] = { 0 };
 static int MtlCurItem = -1;
 static int MtlPrevItem = -1;
 
+static void copyStringToBuffer(char* Buffer, const std::string_view& String, size_t BufSize)
+{
+	for (size_t i = 0; i < BufSize; i++)
+		Buffer[i] = String.size() > i ? String.at(i) : 0;
+}
+
 void InlayEditor::Initialize(Renderer* renderer)
 {
 	MtlEditorPreview.Initialize(256, 256);
@@ -370,7 +376,7 @@ static void renderTextEditor()
 			TextEditorEntryBufferCapacity = scriptContents.size() + 256;
 			TextEditorEntryBuffer = (char*)Memory::Alloc(TextEditorEntryBufferCapacity);
 
-			strncpy(TextEditorEntryBuffer, scriptContents.c_str(), TextEditorEntryBufferCapacity);
+			copyStringToBuffer(TextEditorEntryBuffer, scriptContents, TextEditorEntryBufferCapacity);
 		}
 	}
 	
@@ -747,7 +753,7 @@ static void renderMaterialEditor()
 					else
 					{
 						std::string shortpath = fullpath.substr(resDirOffset + 10);
-						strncpy(MtlEditorTextureSelectDialogBuffer, shortpath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
+						copyStringToBuffer(MtlEditorTextureSelectDialogBuffer, shortpath, MATERIAL_TEXTUREPATH_BUFSIZE);
 						MtlEditorTextureSelectDialogBuffer = nullptr;
 
 						uint32_t newtexid = texManager->LoadTextureFromPath(shortpath);
@@ -820,13 +826,13 @@ static void renderMaterialEditor()
 
 	if (MtlCurItem != MtlPrevItem)
 	{
-		strncpy_s(MtlShpBuf, curItem.GetShader().Name.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
+		copyStringToBuffer(MtlShpBuf, curItem.GetShader().Name, MATERIAL_TEXTUREPATH_BUFSIZE);
 		s_SaveNameBuf = curItem.Name;
 
-		strncpy_s(MtlDiffuseBuf, colorMap.ImagePath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
-		strncpy_s(MtlSpecBuf, metallicRoughnessMap.ImagePath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
-		strncpy_s(MtlNormalBuf, normalMap.ImagePath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
-		strncpy_s(MtlEmissionBuf, emissionMap.ImagePath.c_str(), MATERIAL_TEXTUREPATH_BUFSIZE);
+		copyStringToBuffer(MtlDiffuseBuf, colorMap.ImagePath, MATERIAL_TEXTUREPATH_BUFSIZE);
+		copyStringToBuffer(MtlSpecBuf, metallicRoughnessMap.ImagePath, MATERIAL_TEXTUREPATH_BUFSIZE);
+		copyStringToBuffer(MtlNormalBuf, normalMap.ImagePath, MATERIAL_TEXTUREPATH_BUFSIZE);
+		copyStringToBuffer(MtlEmissionBuf, emissionMap.ImagePath, MATERIAL_TEXTUREPATH_BUFSIZE);
 
 		SelectedUniformIdx = -1;
 	}

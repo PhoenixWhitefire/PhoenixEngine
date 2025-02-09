@@ -23,9 +23,9 @@ set(VEND_SRCS
 	"imgui/imgui_tables.cpp"
 	"imgui/imgui_widgets.cpp"
 	"imgui/backends/imgui_impl_opengl3.h"
-	"imgui/backends/imgui_impl_SDL3.h"
+	"imgui/backends/imgui_impl_sdl3.h"
 	"imgui/backends/imgui_impl_opengl3.cpp"
-	"imgui/backends/imgui_impl_SDL3.cpp"
+	"imgui/backends/imgui_impl_sdl3.cpp"
 	"imgui/misc/cpp/imgui_stdlib.h"
 	"imgui/misc/cpp/imgui_stdlib.cpp"
 	

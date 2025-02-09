@@ -503,7 +503,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 
 			case (Reflection::ValueType::String):
 			{
-				assignment = (std::string_view)memberValue;
+				assignment = (std::string)memberValue;
 
 				break;
 			}
