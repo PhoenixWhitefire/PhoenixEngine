@@ -279,7 +279,7 @@ Engine::Engine()
 	this->Window = SDL_CreateWindow(
 		readFromConfiguration<std::string_view>("GameTitle", "PhoenixEngine").data(),
 		this->WindowSizeX, this->WindowSizeY,
-		m_SDLWindowFlags
+		SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY
 	);
 
 	PHX_ENSURE_MSG(this->Window, "SDL could not create the window: " + std::string(SDL_GetError()));
@@ -487,13 +487,13 @@ void Engine::Start()
 	const Mesh cubeMesh = meshProvider->GetMeshResource(meshProvider->LoadFromPath("!Cube"));
 	const Mesh quadMesh = meshProvider->GetMeshResource(meshProvider->LoadFromPath("!Quad"));
 
+	double RunningTime = GetRunningTime();
+
 	// TODO:
 	// wtf are these
 	// 13/07/2024
-	double LastTime = this->RunningTime;
-	double LastFrame = GetRunningTime();
-	double FrameStart = 0.f;
-	double LastSecond = LastFrame;
+	double LastFrameEnded = RunningTime;
+	double LastSecond = 0.f;
 
 	static const std::string SkyPath = "textures/Sky1/";
 
@@ -518,7 +518,6 @@ void Engine::Start()
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-	//glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_LOD_BIAS, 15.f);
 
 	for (uint8_t faceIndex = 0; faceIndex < 6; faceIndex++)
 	{
@@ -573,9 +572,11 @@ void Engine::Start()
 	const int32_t SunShadowMapResolutionSq = 512;
 	GpuFrameBuffer sunShadowMap{ SunShadowMapResolutionSq, SunShadowMapResolutionSq };
 
+	m_IsRunning = true;
+
 	Log::Info("Main engine loop start");
 
-	while (!this->Exit)
+	while (m_IsRunning)
 	{
 		ZoneScopedN("Frame");
 
@@ -604,7 +605,7 @@ void Engine::Start()
 		// so we don't need to do additional checks past this point in the scope 11/01/2025
 		GameObjectRef<Object_Workspace> keepWorkspace{ workspace };
 
-		this->RunningTime = GetRunningTime();
+		RunningTime = GetRunningTime();
 		RendererContext.AccumulatedDrawCallCount = 0;
 		
 		static bool IsWindowFocused = true;
@@ -612,7 +613,7 @@ void Engine::Start()
 		this->FpsCap = std::clamp(this->FpsCap, 1, 600);
 		int throttledFpsCap = IsWindowFocused ? FpsCap : 10;
 
-		double frameDelta = RunningTime - LastFrame;
+		double frameDelta = RunningTime - LastFrameEnded;
 		double fpsCapDelta = 1.f / throttledFpsCap;
 
 		// Wait the appropriate amount of time between frames
@@ -679,9 +680,7 @@ void Engine::Start()
 
 		RunningTime = GetRunningTime();
 
-		double deltaTime = RunningTime - LastTime;
-		LastTime = RunningTime;
-		FrameStart = RunningTime;
+		double deltaTime = RunningTime - LastFrameEnded;
 
 		this->OnFrameStart.Fire(deltaTime);
 
@@ -700,7 +699,7 @@ void Engine::Start()
 
 				case (SDL_EVENT_QUIT):
 				{
-					this->Exit = true;
+					m_IsRunning = false;
 					break;
 				}
 
@@ -882,7 +881,7 @@ void Engine::Start()
 		glDepthFunc(GL_LESS);
 
 		//Main render pass
-		RendererContext.DrawScene(scene, renderMatrix, sceneCamera->Transform, this->RunningTime);
+		RendererContext.DrawScene(scene, renderMatrix, sceneCamera->Transform, RunningTime);
 
 		glDisable(GL_DEPTH_TEST);
 
@@ -963,7 +962,7 @@ void Engine::Start()
 				);
 			}
 
-			postFxShaders.SetUniform("Time", static_cast<float>(this->RunningTime));
+			postFxShaders.SetUniform("Time", RunningTime);
 
 			glActiveTexture(GL_TEXTURE2);
 			glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(distortionTexture).GpuId);
@@ -1005,9 +1004,9 @@ void Engine::Start()
 
 		RendererContext.SwapBuffers();
 
-		this->RunningTime = GetRunningTime();
+		RunningTime = GetRunningTime();
 
-		LastFrame = RunningTime;
+		LastFrameEnded = RunningTime;
 
 		m_DrawnFramesInSecond++;
 

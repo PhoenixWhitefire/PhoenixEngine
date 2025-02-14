@@ -4,9 +4,9 @@
 
 namespace Log
 {
-	void Info(const std::string&);
-	void Warning(const std::string&);
-	void Error(const std::string&);
-	void Append(const std::string&);
+	void Info(const std::string_view&);
+	void Warning(const std::string_view&);
+	void Error(const std::string_view&);
+	void Append(const std::string_view&);
 	void Save();
 };

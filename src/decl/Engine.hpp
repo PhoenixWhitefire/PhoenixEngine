@@ -39,37 +39,30 @@ public:
 
 	void LoadConfiguration();
 
-	EventSignal<double> OnFrameStart{};
-	EventSignal<double> OnFrameRenderGui{};
-	EventSignal<double> OnFrameEnd{};
-
-	bool IsFullscreen = false;
-
-	int WindowSizeX{};
-	int WindowSizeY{};
-
 	Object_DataModel* DataModel{};
 	Object_Workspace* Workspace{};
 
 	Renderer RendererContext;
 	SDL_Window* Window{};
 
-	bool Exit = false;
-	
-	int FpsCap = 60;
+	EventSignal<double> OnFrameStart{};
+	EventSignal<double> OnFrameRenderGui{};
+	EventSignal<double> OnFrameEnd{};
 
-	int FramesPerSecond = 0;
-
+	bool IsFullscreen = false;
 	bool VSync = false;
 
-	double RunningTime = 0.f;
+	int WindowSizeX{};
+	int WindowSizeY{};
+	
+	int FramesPerSecond = 0;
+	int FpsCap = 60;
 
 	bool DebugAabbs = false;
 
 private:
 	int m_DrawnFramesInSecond = -1;
-
-	uint32_t m_SDLWindowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY;
+	bool m_IsRunning = false;
 
 	MaterialManager m_MaterialManager;
 	TextureManager m_TextureManager;

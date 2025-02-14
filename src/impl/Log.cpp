@@ -1,3 +1,6 @@
+#include <iostream>
+#include <format>
+
 #include "Log.hpp"
 #include "FileRW.hpp"
 
@@ -12,7 +15,7 @@ void Log::Save()
 // and when app shuts down
 // If the Message ends with `&&`, won't insert a newline automatically
 // 11/11/2024
-void Log::Append(const std::string& Message)
+void Log::Append(const std::string_view& Message)
 {
 	static bool ThrewLogCapacityExceededException = false;
 
@@ -21,14 +24,15 @@ void Log::Append(const std::string& Message)
 
 	if (Message.substr(Message.size() - 2, 2) != "&&")
 	{
-		ProgramLog.append(Message + "\n");
-		printf((Message + "\n").c_str());
+		ProgramLog.append(Message);
+		ProgramLog.append("\n");
+		std::cout << Message << "\n";
 	}
 	else
 	{
-		std::string loggedString = Message.substr(0ull, Message.size() - 2);
+		std::string_view loggedString = Message.substr(0ull, Message.size() - 2);
 		ProgramLog.append(loggedString);
-		printf(loggedString.c_str());
+		std::cout << loggedString;
 	}
 
 	// log > 2 megabytes... just in case something goes wrong
@@ -45,17 +49,20 @@ void Log::Append(const std::string& Message)
 	}
 }
 
-void Log::Info(const std::string& Message)
+void Log::Info(const std::string_view& Message)
 {
-	Log::Append("[INFO]: " + Message);
+	Log::Append("[INFO]: &&");
+	Log::Append(Message);
 }
 
-void Log::Warning(const std::string& Message)
+void Log::Warning(const std::string_view& Message)
 {
-	Log::Append("[WARN]: " + Message);
+	Log::Append("[WARN]: &&");
+	Log::Append(Message);
 }
 
-void Log::Error(const std::string& Message)
+void Log::Error(const std::string_view& Message)
 {
-	Log::Append("[ERRR]: " + Message);
+	Log::Append("[ERRR]: &&");
+	Log::Append(Message);
 }
