@@ -489,9 +489,9 @@ void Engine::Start()
 
 	double RunningTime = GetRunningTime();
 
-	// TODO:
-	// wtf are these
-	// 13/07/2024
+	// `LastFrameBegan` is for deltatime
+	// `LastFrameEnded` is for FPS cap
+	double LastFrameBegan = RunningTime;
 	double LastFrameEnded = RunningTime;
 	double LastSecond = 0.f;
 
@@ -613,14 +613,14 @@ void Engine::Start()
 		this->FpsCap = std::clamp(this->FpsCap, 1, 600);
 		int throttledFpsCap = IsWindowFocused ? FpsCap : 10;
 
-		double frameDelta = RunningTime - LastFrameEnded;
+		double deltaTime = RunningTime - LastFrameEnded;
 		double fpsCapDelta = 1.f / throttledFpsCap;
 
 		// Wait the appropriate amount of time between frames
-		if ((!VSync || !IsWindowFocused) && (frameDelta + .0005f < fpsCapDelta))
+		if ((!VSync || !IsWindowFocused) && (deltaTime < fpsCapDelta))
 		{
 			ZoneScopedNC("SleepForFpsCap", tracy::Color::Wheat);
-			std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<size_t>((fpsCapDelta - frameDelta) * 1000 - 2)));
+			std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<size_t>((fpsCapDelta - deltaTime) * 1000)));
 		}
 
 		TIME_SCOPE_AS(Timing::Timer::EntireFrame);
@@ -679,8 +679,9 @@ void Engine::Start()
 		}
 
 		RunningTime = GetRunningTime();
+		deltaTime = RunningTime - LastFrameBegan;
 
-		double deltaTime = RunningTime - LastFrameEnded;
+		LastFrameBegan = RunningTime;
 
 		this->OnFrameStart.Fire(deltaTime);
 
@@ -697,13 +698,13 @@ void Engine::Start()
 				switch (pollingEvent.type)
 				{
 
-				case (SDL_EVENT_QUIT):
+				case SDL_EVENT_QUIT:
 				{
 					m_IsRunning = false;
 					break;
 				}
 
-				case (SDL_EVENT_WINDOW_RESIZED):
+				case SDL_EVENT_WINDOW_RESIZED:
 				{
 					int NewSizeX = pollingEvent.window.data1;
 					int NewSizeY = pollingEvent.window.data2;
@@ -715,13 +716,13 @@ void Engine::Start()
 					break;
 				}
 
-				case (SDL_EVENT_WINDOW_FOCUS_LOST):
+				case SDL_EVENT_WINDOW_FOCUS_LOST:
 				{
 					IsWindowFocused = false;
 					break;
 				}
 
-				case (SDL_EVENT_WINDOW_FOCUS_GAINED):
+				case SDL_EVENT_WINDOW_FOCUS_GAINED:
 				{
 					IsWindowFocused = true;
 					break;

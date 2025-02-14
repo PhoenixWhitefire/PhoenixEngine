@@ -582,14 +582,14 @@ static lua_State* createState()
 
 				switch (numArgs)
 				{
-				case (1):
+				case 1:
 				{
 					Vector3& vec = *(Vector3*)luaL_checkudata(L, -1, "Vector3");
 					m[3] = glm::vec4((glm::vec3)vec, 1.f);
 
 					break;
 				}
-				case (3):
+				case 3:
 				{
 					float x = static_cast<float>(luaL_checknumber(L, 1));
 					float y = static_cast<float>(luaL_checknumber(L, 2));

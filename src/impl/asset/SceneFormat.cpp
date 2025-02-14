@@ -501,56 +501,56 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 			switch (memberType)
 			{
 
-			case (Reflection::ValueType::String):
+			case Reflection::ValueType::String:
 			{
 				assignment = (std::string)memberValue;
 
 				break;
 			}
 
-			case (Reflection::ValueType::Bool):
+			case Reflection::ValueType::Bool:
 			{
 				assignment = (bool)memberValue;
 
 				break;
 			}
 
-			case (Reflection::ValueType::Double):
+			case Reflection::ValueType::Double:
 			{
 				assignment = (double)memberValue;
 
 				break;
 			}
 
-			case (Reflection::ValueType::Integer):
+			case Reflection::ValueType::Integer:
 			{
 				assignment = (int)memberValue;
 
 				break;
 			}
 
-			case (Reflection::ValueType::Color):
+			case Reflection::ValueType::Color:
 			{
 				assignment = GetColorFromJson(memberValue).ToGenericValue();
 
 				break;
 			}
 
-			case (Reflection::ValueType::Vector3):
+			case Reflection::ValueType::Vector3:
 			{
 				assignment = GetVector3FromJson(memberValue).ToGenericValue();
 
 				break;
 			}
 
-			case (Reflection::ValueType::Matrix):
+			case Reflection::ValueType::Matrix:
 			{
 				assignment = GetMatrixFromJson(memberValue);
 
 				break;
 			}
 
-			case (Reflection::ValueType::GameObject):
+			case Reflection::ValueType::GameObject:
 			{
 				objectProps[newObject].insert(std::pair(memberName, memberValue));
 

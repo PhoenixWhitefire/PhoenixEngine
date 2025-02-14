@@ -715,12 +715,12 @@ std::vector<float> ModelLoader::m_GetFloats(const nlohmann::json& accessor)
 	uint32_t componentSize{};
 	switch (componentType)
 	{
-	case (5123):
+	case 5123:
 	{
 		componentSize = 2;
 		break;
 	}
-	case (5126):
+	case 5126:
 	{
 		componentSize = 4;
 		break;

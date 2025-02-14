@@ -86,25 +86,25 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 	switch (texture.NumColorChannels)
 	{
 
-	case (4):
+	case 4:
 	{
 		Format = GL_RGBA;
 		break;
 	}
 
-	case (3):
+	case 3:
 	{
 		Format = GL_RGB;
 		break;
 	}
 
-	case (2):
+	case 2:
 	{
 		Format = GL_RG;
 		break;
 	}
 
-	case (1):
+	case 1:
 	{
 		Format = GL_RED;
 		break;

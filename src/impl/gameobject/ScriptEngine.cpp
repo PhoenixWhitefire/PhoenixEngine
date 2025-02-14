@@ -88,38 +88,38 @@ static void pushJson(lua_State* L, const nlohmann::json& v)
 {
 	switch (v.type())
 	{
-	case (nlohmann::json::value_t::null):
+	case nlohmann::json::value_t::null:
 	{
 		lua_pushnil(L);
 		break;
 	}
 
-	case (nlohmann::json::value_t::boolean):
+	case nlohmann::json::value_t::boolean:
 	{
 		lua_pushboolean(L, (bool)v);
 		break;
 	}
-	case (nlohmann::json::value_t::number_integer):
+	case nlohmann::json::value_t::number_integer:
 	{
 		lua_pushinteger(L, (int)v);
 		break;
 	}
-	case (nlohmann::json::value_t::number_unsigned):
+	case nlohmann::json::value_t::number_unsigned:
 	{
 		lua_pushinteger(L, static_cast<int>((uint32_t)v));
 		break;
 	}
-	case (nlohmann::json::value_t::number_float):
+	case nlohmann::json::value_t::number_float:
 	{
 		lua_pushnumber(L, (float)v);
 		break;
 	}
-	case (nlohmann::json::value_t::string):
+	case nlohmann::json::value_t::string:
 	{
 		lua_pushstring(L, ((std::string)v).c_str());
 		break;
 	}
-	case (nlohmann::json::value_t::array):
+	case nlohmann::json::value_t::array:
 	{
 		lua_newtable(L);
 
@@ -132,7 +132,7 @@ static void pushJson(lua_State* L, const nlohmann::json& v)
 		
 		break;
 	}
-	case (nlohmann::json::value_t::object):
+	case nlohmann::json::value_t::object:
 	{
 		lua_newtable(L);
 
@@ -160,27 +160,27 @@ static void luaTableToJson(lua_State* L, nlohmann::json& json)
 
 		switch (lua_type(L, -1))
 		{
-		case (LUA_TNIL):
+		case LUA_TNIL:
 		{
 			lua_pop(L, 1);
 			continue;
 		}
-		case (LUA_TBOOLEAN):
+		case LUA_TBOOLEAN:
 		{
 			v = (bool)lua_toboolean(L, -1);
 			break;
 		}
-		case (LUA_TNUMBER):
+		case LUA_TNUMBER:
 		{
 			v = lua_tonumber(L, -1);
 			break;
 		}
-		case (LUA_TSTRING):
+		case LUA_TSTRING:
 		{
 			v = lua_tostring(L, -1);
 			break;
 		}
-		case (LUA_TTABLE):
+		case LUA_TTABLE:
 		{
 			luaTableToJson(L, v);
 			break;
@@ -216,23 +216,23 @@ Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int St
 {
 	switch (lua_type(L, StackIndex))
 	{
-	case (lua_Type::LUA_TNIL):
+	case LUA_TNIL:
 	{
 		return Reflection::GenericValue();
 	}
-	case (lua_Type::LUA_TBOOLEAN):
+	case LUA_TBOOLEAN:
 	{
 		return (bool)lua_toboolean(L, StackIndex);
 	}
-	case (lua_Type::LUA_TNUMBER):
+	case LUA_TNUMBER:
 	{
 		return lua_tonumber(L, StackIndex);
 	}
-	case (lua_Type::LUA_TSTRING):
+	case LUA_TSTRING:
 	{
 		return lua_tostring(L, StackIndex);
 	}
-	case (lua_Type::LUA_TUSERDATA):
+	case LUA_TUSERDATA:
 	{
 		// IMPORTANT!!
 		// Requires `LuauPreserveLudataRenaming` to be enabled in `Luau/VM/src/ltm.cpp`
@@ -266,7 +266,7 @@ Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int St
 				std::make_format_args(tname)
 			).c_str());
 	}
-	case (lua_Type::LUA_TTABLE):
+	case LUA_TTABLE:
 	{
 		// 15/09/2024
 		// TODO
@@ -300,52 +300,52 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 {
 	switch (gv.Type)
 	{
-	case (Reflection::ValueType::Null):
+	case Reflection::ValueType::Null:
 	{
 		lua_pushnil(L);
 		break;
 	}
-	case (Reflection::ValueType::Bool):
+	case Reflection::ValueType::Bool:
 	{
 		lua_pushboolean(L, gv.AsBool());
 		break;
 	}
-	case (Reflection::ValueType::Integer):
+	case Reflection::ValueType::Integer:
 	{
 		lua_pushinteger(L, static_cast<int32_t>(gv.AsInteger()));
 		break;
 	}
-	case (Reflection::ValueType::Double):
+	case Reflection::ValueType::Double:
 	{
 		lua_pushnumber(L, gv.AsDouble());
 		break;
 	}
-	case (Reflection::ValueType::String):
+	case Reflection::ValueType::String:
 	{
 		lua_pushstring(L, gv.AsString().c_str());
 		break;
 	}
-	case (Reflection::ValueType::Vector3):
+	case Reflection::ValueType::Vector3:
 	{
 		pushVector3(L, gv);
 		break;
 	}
-	case (Reflection::ValueType::Color):
+	case Reflection::ValueType::Color:
 	{
 		pushColor(L, gv);
 		break;
 	}
-	case (Reflection::ValueType::Matrix):
+	case Reflection::ValueType::Matrix:
 	{
 		pushMatrix(L, gv.AsMatrix());
 		break;
 	}
-	case (Reflection::ValueType::GameObject):
+	case Reflection::ValueType::GameObject:
 	{
 		pushGameObject(L, GameObject::GetObjectById(static_cast<uint32_t>(gv.AsInteger())));
 		break;
 	}
-	case (Reflection::ValueType::Array):
+	case Reflection::ValueType::Array:
 	{
 		lua_newtable(L);
 
@@ -360,7 +360,7 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 
 		break;
 	}
-	case (Reflection::ValueType::Map):
+	case Reflection::ValueType::Map:
 	{
 		std::vector<Reflection::GenericValue> array = gv.AsArray();
 

@@ -63,22 +63,22 @@ void RenderMaterial::Reload()
 
 		switch (value.type())
 		{
-		case (nlohmann::detail::value_t::boolean):
+		case nlohmann::detail::value_t::boolean:
 		{
 			this->Uniforms.emplace(uniformName, (bool)value);
 			break;
 		}
-		case (nlohmann::detail::value_t::number_float):
+		case nlohmann::detail::value_t::number_float:
 		{
 			this->Uniforms.emplace(uniformName, (float)value);
 			break;
 		}
-		case (nlohmann::detail::value_t::number_integer):
+		case nlohmann::detail::value_t::number_integer:
 		{
 			this->Uniforms.emplace(uniformName, (int32_t)value);
 			break;
 		}
-		case (nlohmann::detail::value_t::number_unsigned):
+		case nlohmann::detail::value_t::number_unsigned:
 		{
 			this->Uniforms.emplace(uniformName, (uint32_t)value);
 			break;

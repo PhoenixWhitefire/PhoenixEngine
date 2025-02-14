@@ -141,29 +141,29 @@ void Reflection::GenericValue::CopyInto(GenericValue& Target, const GenericValue
 
 	switch (Target.Type)
 	{
-	case (ValueType::String):
+	case ValueType::String:
 	{
 		std::string str = Source.AsString();
 		Target.Size = str.size();
 		fromString(Target, str.data());
 		break;
 	}
-	case (ValueType::Color):
+	case ValueType::Color:
 	{
 		Target.Value = new Color(Source);
 		break;
 	}
-	case (ValueType::Vector3):
+	case ValueType::Vector3:
 	{
 		Target.Value = new Vector3(Source);
 		break;
 	}
-	case (ValueType::Matrix):
+	case ValueType::Matrix:
 	{
 		fromMatrix(Target, Source.AsMatrix());
 		break;
 	}
-	case (ValueType::Array):
+	case ValueType::Array:
 	{
 		fromArray(Target, Source.AsArray());
 		break;
@@ -195,34 +195,34 @@ std::string Reflection::GenericValue::ToString() const
 {
 	switch (this->Type)
 	{
-	case (ValueType::Null):
+	case ValueType::Null:
 		return "Null";
 
-	case (ValueType::Bool):
+	case ValueType::Bool:
 		return (bool)this->Value ? "true" : "false";
 
-	case (ValueType::Integer):
+	case ValueType::Integer:
 		return std::to_string((int64_t)this->Value);
 
-	case (ValueType::Double):
+	case ValueType::Double:
 		return std::to_string(*(double*)&this->Value);
 
-	case (ValueType::String):
+	case ValueType::String:
 		return (const char*)this->Value;
 	
-	case (ValueType::Color):
+	case ValueType::Color:
 		return Color(*this).ToString();
 
-	case (ValueType::Vector3):
+	case ValueType::Vector3:
 		return Vector3(*this).ToString();
 
-	case (ValueType::GameObject):
+	case ValueType::GameObject:
 	{
 		GameObject* object = GameObject::GetObjectById(*(uint32_t*)&this->Value);
 		return object ? object->GetFullName() : "NULL GameObject";
 	}
 	
-	case (ValueType::Array):
+	case ValueType::Array:
 	{
 		std::vector<GenericValue> arr = this->AsArray();
 
@@ -231,7 +231,7 @@ std::string Reflection::GenericValue::ToString() const
 			uint32_t numTypes = 0;
 			std::string typesString = "";
 
-			for (const Reflection::GenericValue& element : arr)
+			for (const GenericValue& element : arr)
 			{
 				numTypes++;
 				if (numTypes > 4)
@@ -240,7 +240,7 @@ std::string Reflection::GenericValue::ToString() const
 					break;
 				}
 				else
-					typesString += std::string(Reflection::TypeAsString(element.Type)) + "|";
+					typesString += std::string(TypeAsString(element.Type)) + "|";
 			}
 
 			typesString = typesString.substr(0, typesString.size() - 1);
@@ -251,7 +251,7 @@ std::string Reflection::GenericValue::ToString() const
 			return "Empty Array";
 	}
 
-	case (ValueType::Map):
+	case ValueType::Map:
 	{
 		std::vector<GenericValue> arr = this->AsArray();
 
@@ -263,15 +263,15 @@ std::string Reflection::GenericValue::ToString() const
 			return std::vformat(
 				"Map<{}:{}>",
 				std::make_format_args(
-					Reflection::TypeAsString(arr[0].Type),
-					Reflection::TypeAsString(arr[1].Type)
+					TypeAsString(arr[0].Type),
+					TypeAsString(arr[1].Type)
 				));
 		}
 		else
 			return "Empty Map";
 	}
 
-	case (ValueType::Matrix):
+	case ValueType::Matrix:
 	{
 		glm::mat4 mat = this->AsMatrix();
 
@@ -313,26 +313,26 @@ std::string Reflection::GenericValue::ToString() const
 std::string Reflection::GenericValue::AsString() const
 {
 	return Type == ValueType::String
-		? (const char*)this->Value : throw("GenericValue was not a String, but was a " + std::string(Reflection::TypeAsString(Type)));
+		? (const char*)this->Value : throw("GenericValue was not a String, but was a " + std::string(TypeAsString(Type)));
 }
 bool Reflection::GenericValue::AsBool() const
 {
 	return Type == ValueType::Bool
 		? (bool)this->Value
-		: throw("GenericValue was not a Bool, but was a " + std::string(Reflection::TypeAsString(Type)));
+		: throw("GenericValue was not a Bool, but was a " + std::string(TypeAsString(Type)));
 }
 double Reflection::GenericValue::AsDouble() const
 {
 	return Type == ValueType::Double
 		? *(double*)&this->Value
-		: throw("GenericValue was not a Double, but was a " + std::string(Reflection::TypeAsString(Type)));
+		: throw("GenericValue was not a Double, but was a " + std::string(TypeAsString(Type)));
 }
 int64_t Reflection::GenericValue::AsInteger() const
 {
 	// `|| ValueType::GameObject` because it's easier 14/09/2024
 	return (Type == ValueType::Integer || Type == ValueType::GameObject)
 		? (int64_t)this->Value
-		: throw("GenericValue was not an Integer, but was a " + std::string(Reflection::TypeAsString(Type)));
+		: throw("GenericValue was not an Integer, but was a " + std::string(TypeAsString(Type)));
 }
 glm::mat4& Reflection::GenericValue::AsMatrix() const
 {
@@ -340,7 +340,7 @@ glm::mat4& Reflection::GenericValue::AsMatrix() const
 
 	return Type == ValueType::Matrix
 		? *mptr
-		: throw("GenericValue was not a Matrix, but was a " + std::string(Reflection::TypeAsString(Type)));
+		: throw("GenericValue was not a Matrix, but was a " + std::string(TypeAsString(Type)));
 }
 std::vector<Reflection::GenericValue> Reflection::GenericValue::AsArray() const
 {
@@ -368,7 +368,7 @@ std::vector<Reflection::GenericValue> Reflection::GenericValue::AsArray() const
 
 	return this->Type == ValueType::Array
 		? array
-		: throw("GenericValue was not an Array, but was a " + std::string(Reflection::TypeAsString(Type)));
+		: throw("GenericValue was not an Array, but was a " + std::string(TypeAsString(Type)));
 }
 std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> Reflection::GenericValue::AsMap() const
 {
@@ -420,34 +420,19 @@ Reflection::GenericValue::~GenericValue()
 {
 	switch (this->Type)
 	{
-	case (Reflection::ValueType::String):
+	case (ValueType::String, ValueType::Matrix, ValueType::Array, ValueType::Map):
 	{
 		Memory::Free(this->Value);
 		break;
 	}
-	case (Reflection::ValueType::Matrix):
-	{
-		Memory::Free(this->Value);
-		break;
-	}
-	case (Reflection::ValueType::Color):
+	case ValueType::Color:
 	{
 		delete (Color*)this->Value;
 		break;
 	}
-	case (Reflection::ValueType::Vector3):
+	case ValueType::Vector3:
 	{
 		delete (Vector3*)this->Value;
-		break;
-	}
-	case (Reflection::ValueType::Array):
-	{
-		Memory::Free(this->Value);
-		break;
-	}
-	case (Reflection::ValueType::Map):
-	{
-		Memory::Free(this->Value);
 		break;
 	}
 	}

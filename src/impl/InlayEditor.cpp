@@ -415,17 +415,17 @@ static void uniformsEditor(std::unordered_map<std::string, Reflection::GenericVa
 
 		switch (TypeId)
 		{
-		case (0):
+		case 0:
 		{
 			initialValue = true;
 			break;
 		}
-		case (1):
+		case 1:
 		{
 			initialValue = 0;
 			break;
 		}
-		case (2):
+		case 2:
 		{
 			initialValue = 0.f;
 			break;
@@ -463,7 +463,7 @@ static void uniformsEditor(std::unordered_map<std::string, Reflection::GenericVa
 
 		switch (value.Type)
 		{
-		case (Reflection::ValueType::Bool):
+		case Reflection::ValueType::Bool:
 		{
 			bool curVal = value.AsBool();
 			ImGui::Checkbox("Value", &curVal);
@@ -471,7 +471,7 @@ static void uniformsEditor(std::unordered_map<std::string, Reflection::GenericVa
 			newValue = curVal;
 			break;
 		}
-		case (Reflection::ValueType::Integer):
+		case Reflection::ValueType::Integer:
 		{
 			int32_t curVal = static_cast<int32_t>(value.AsInteger());
 			ImGui::InputInt("Value", &curVal);
@@ -479,7 +479,7 @@ static void uniformsEditor(std::unordered_map<std::string, Reflection::GenericVa
 			newValue = curVal;
 			break;
 		}
-		case (Reflection::ValueType::Double):
+		case Reflection::ValueType::Double:
 		{
 			float curVal = static_cast<float>(value.AsDouble());
 			ImGui::InputFloat("Value", &curVal);
@@ -1445,7 +1445,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 			switch (curVal.Type)
 			{
 
-			case (Reflection::ValueType::String):
+			case Reflection::ValueType::String:
 			{
 				std::string str = curVal.AsString();
 
@@ -1473,7 +1473,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 				break;
 			}
 
-			case (Reflection::ValueType::Bool):
+			case Reflection::ValueType::Bool:
 			{
 				bool b = !doConflict ? newVal.AsBool() : false;
 
@@ -1487,7 +1487,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 				break;
 			}
 
-			case (Reflection::ValueType::Double):
+			case Reflection::ValueType::Double:
 			{
 				if (!doConflict)
 				{
@@ -1507,7 +1507,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 				break;
 			}
 
-			case (Reflection::ValueType::Integer):
+			case Reflection::ValueType::Integer:
 			{
 				if (!doConflict)
 				{
@@ -1532,7 +1532,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 				break;
 			}
 
-			case (Reflection::ValueType::GameObject):
+			case Reflection::ValueType::GameObject:
 			{
 				if (!doConflict)
 				{
@@ -1577,7 +1577,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 				break;
 			}
 
-			case (Reflection::ValueType::Color):
+			case Reflection::ValueType::Color:
 			{
 				Color col = !doConflict ? curVal : Color(1.f, 1.f, 0.f);
 
@@ -1594,7 +1594,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 				break;
 			}
 
-			case (Reflection::ValueType::Vector3):
+			case Reflection::ValueType::Vector3:
 			{
 				if (!doConflict)
 				{
@@ -1626,7 +1626,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 				break;
 			}
 
-			case (Reflection::ValueType::Matrix):
+			case Reflection::ValueType::Matrix:
 			{
 				if (!doConflict)
 				{
