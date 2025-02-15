@@ -11,6 +11,7 @@ desktop.ini
 *.vcxproj
 *.vcxproj.filters
 *.cmake
+log.txt
 CMakeCache.txt
 CMakeFiles
 
