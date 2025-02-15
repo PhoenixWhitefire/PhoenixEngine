@@ -1537,15 +1537,24 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 				if (!doConflict)
 				{
 					GameObject* referenced = GameObject::FromGenericValue(curVal);
+					std::string str = "";
 
-					ImGui::InputText(propNameCStr, &referenced->Name);
+					if (referenced)
+						str = referenced->Name;
+
+					ImGui::InputText(propNameCStr, &str);
 					ImGui::SetItemTooltip("CTRL+Click to select referenced GameObject 03/12/2024");
 
 					if (ImGui::IsItemClicked())
 						if (ImGui::GetIO().KeyCtrl)
 						{
-							uint32_t targetId = static_cast<uint32_t>(curVal.AsInteger());
-							Selections = { targetId };
+							if (referenced)
+							{
+								uint32_t targetId = static_cast<uint32_t>(curVal.AsInteger());
+								Selections = { targetId };
+							}
+							else
+								Selections.clear();
 						}
 						else
 						{
