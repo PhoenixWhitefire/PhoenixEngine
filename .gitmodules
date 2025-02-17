@@ -7,9 +7,6 @@
 [submodule "Vendor/luau"]
 	path = Vendor/luau
 	url = https://github.com/luau-lang/luau.git/
-[submodule "Vendor/ImGuiFD"]
-	path = Vendor/ImGuiFD
-	url = https://github.com/Julianiolo/ImGuiFD.git/
 [submodule "Vendor/stb"]
 	path = Vendor/stb
 	url = https://github.com/nothings/stb.git/
