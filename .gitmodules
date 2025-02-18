@@ -12,7 +12,7 @@
 	url = https://github.com/nothings/stb.git/
 [submodule "Vendor/tracy"]
 	path = Vendor/tracy
-	url = https://github.com/wolfpd/tracy
+	url = https://github.com/wolfpld/tracy.git
 [submodule "Vendor/SDL"]
 	path = Vendor/SDL
 	url = https://github.com/libsdl-org/SDL.git/

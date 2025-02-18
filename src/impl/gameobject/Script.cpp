@@ -12,7 +12,7 @@
 #include "Memory.hpp"
 #include "Log.hpp"
 
-#define LUA_ASSERT(res, err, ...) { if (!res) { luaL_errorL(L, err, __VA_ARGS__); } }
+#define LUA_ASSERT(res, err, ...) { if (!(res)) { luaL_errorL(L, err, __VA_ARGS__); } }
 
 PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(Script);
 
@@ -75,8 +75,7 @@ static auto api_gameobjnewindex = [](lua_State* L)
 
 		ZoneText(key, strlen(key));
 
-		{ if (!strcmp(key, "Exists") != 0) { luaL_errorL(L, "'Exists' is read-only! - 21/12/2024"); } }
-
+		LUA_ASSERT(strcmp(key, "Exists") != 0, "'Exists' is read-only! - 21/12/2024");
 		LUA_ASSERT(obj, "Tried to assign to the '%s' of a deleted Game Object", key);
 
 		if (obj->HasProperty(key))
@@ -920,6 +919,8 @@ static void resumeScheduledCoroutines()
 			ScriptEngine::s_YieldedCoroutines.erase(ScriptEngine::s_YieldedCoroutines.begin() + corIdx);
 			//lua_unref(lua_mainthread(coroutine), corInfo.CoroutineReference);
 
+			lua_pop(lua_mainthread(coroutine), 1);
+
 			// the indexes of the coroutines will have changed, and `corIdx` will point
 			// out-of-bounds. this is a lazy workaround. 24/12/2024
 			// just fucking give up
@@ -959,15 +960,18 @@ void Object_Script::Update(double dt)
 
 	if (lua_isfunction(m_L, -1))
 	{
-		lua_pushnumber(m_L, dt);
+		lua_State* co = lua_newthread(m_L);
+
+		lua_getglobal(co, "Update");
+		lua_pushnumber(co, dt);
 
 		// why do all of these functions say they return `int` and not
 		// `lua_Status` like they actually do?? 23/09/2024
-		lua_Status updateStatus = (lua_Status)lua_pcall(m_L, 1, 0, 0);
+		lua_Status updateStatus = (lua_Status)lua_resume(co, m_L, 1);
 
 		if (updateStatus != LUA_OK && updateStatus != LUA_YIELD)
 		{
-			const char* errstr = lua_tostring(m_L, -1);
+			const char* errstr = lua_tostring(co, -1);
 
 			Log::Error(std::vformat(
 				"Luau runtime error: {}",
@@ -977,9 +981,10 @@ void Object_Script::Update(double dt)
 			lua_close(m_L);
 			m_L = nullptr;
 		}
+		else if (updateStatus == LUA_OK)
+			lua_pop(m_L, 1);
 	}
-	else
-		lua_pop(m_L, 1);
+	lua_pop(m_L, 1);
 }
 
 bool Object_Script::LoadScript(const std::string& scriptFile)

@@ -1,13 +1,14 @@
 #define GLM_ENABLE_EXPERIMENTAL
+#define IMGUI_DEFINE_MATH_OPERATORS
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/euler_angles.hpp>
-#include <ImGuiFD/ImGuiFD.h>
 #include <imgui/imgui.h>
 #include <imgui/misc/cpp/imgui_stdlib.h>
 #include <imgui_internal.h>
 #include <tracy/Tracy.hpp>
 #include <glad/gl.h>
+#include <SDL3/SDL_dialog.h>
 #include <fstream>
 #include <set>
 
@@ -105,11 +106,6 @@ void InlayEditor::Initialize(Renderer* renderer)
 	MtlPreviewCamera = static_cast<Object_Camera*>(GameObject::Create("Camera"));
 	MtlPreviewCamera->Transform = MtlPreviewCamDefaultRotation * MtlPreviewCamOffset;
 	MtlPreviewCamera->FieldOfView = 50.f;
-
-	nlohmann::json iconsJson = nlohmann::json::parse(FileRW::ReadFile("textures/editor-icons/icons.json"));
-
-	for (auto it = iconsJson.begin(); it != iconsJson.end(); ++it)
-		ClassIcons[it.key()] = (std::string)it.value();
 
 	InlayEditor::DidInitialize = true;
 }
@@ -256,7 +252,35 @@ static void renderTextEditor()
 			textEditorSaveFile();
 
 			std::string curDir = getFileDirectory(TextEditorFile);
-			ImGuiFD::OpenDialog("Text Editor Open File", ImGuiFDMode_LoadFile, curDir.c_str());
+
+			SDL_ShowOpenFileDialog(
+				[](void*, const char* const* FileList, int)
+				{
+					if (!FileList)
+						throw(SDL_GetError());
+					if (!FileList[0])
+						return;
+
+					TextEditorFile = FileList[0];
+
+					// windows SMELLS :( 18/02/2025
+					size_t off = TextEditorFile.find_first_of("\\");
+
+					while (off != std::string::npos)
+						off = TextEditorFile.replace(off, 1, "/").find_first_of("\\");
+
+					if (!TextEditorFile.find("resources/"))
+						TextEditorFile.insert(0, "./"); // for `FileRW::GetAbsolutePath`
+
+					TextEditorQuickSelectFiles.insert(TextEditorFile);
+				},
+				nullptr,
+				SDL_GL_GetCurrentWindow(),
+				nullptr,
+				0,
+				curDir.c_str(),
+				false
+			);
 		}
 
 		if (ImGui::MenuItem("Save", NULL, nullptr, TextEditorFile != "" && TextEditorFile != "<NOT_SELECTED>"))
@@ -265,9 +289,34 @@ static void renderTextEditor()
 		if (ImGui::MenuItem("Save As"))
 		{
 			std::string curDir = getFileDirectory(TextEditorFile);
-			ImGuiFD::OpenDialog(
-				"Text Editor Save File As",
-				ImGuiFDMode_LoadFile,
+
+			SDL_ShowSaveFileDialog(
+				[](void*, const char* const* FileList, int)
+				{
+					if (!FileList)
+						throw(SDL_GetError());
+					if (!FileList[0])
+						return;
+
+					TextEditorFile = FileList[0];
+
+					// windows SMELLS :( 18/02/2025
+					size_t off = TextEditorFile.find_first_of("\\");
+
+					while (off != std::string::npos)
+						off = TextEditorFile.replace(off, 1, "/").find_first_of("\\");
+
+					if (!TextEditorFile.find("resources/"))
+						TextEditorFile.insert(0, "./"); // for `FileRW::GetAbsolutePath`
+
+					textEditorSaveFile();
+
+					TextEditorQuickSelectFiles.insert(TextEditorFile);
+				},
+				nullptr,
+				SDL_GL_GetCurrentWindow(),
+				nullptr,
+				0,
 				curDir.c_str()
 			);
 		}
@@ -300,48 +349,6 @@ static void renderTextEditor()
 	}
 
 	ImGui::EndMenuBar();
-
-	if (ImGuiFD::BeginDialog("Text Editor Open File"))
-	{
-		if (ImGuiFD::ActionDone())
-		{
-			if (ImGuiFD::SelectionMade())
-			{
-				textEditorSaveFile();
-				TextEditorFile = ImGuiFD::GetSelectionPathString(0);
-
-				if (!TextEditorFile.find("resources/"))
-					TextEditorFile.insert(0, "./"); // for `FileRW::GetAbsolutePath`
-
-				TextEditorQuickSelectFiles.insert(TextEditorFile);
-			}
-
-			ImGuiFD::CloseCurrentDialog();
-		}
-
-		ImGuiFD::EndDialog();
-	}
-
-	if (ImGuiFD::BeginDialog("Text Editor Save File As"))
-	{
-		if (ImGuiFD::ActionDone())
-		{
-			if (ImGuiFD::SelectionMade())
-			{
-				TextEditorFile = ImGuiFD::GetSelectionPathString(0);
-				if (!TextEditorFile.find("resources/"))
-					TextEditorFile.insert(0, "./"); // for `FileRW::GetAbsolutePath`
-
-				textEditorSaveFile();
-
-				TextEditorQuickSelectFiles.insert(TextEditorFile);
-			}
-
-			ImGuiFD::CloseCurrentDialog();
-		}
-
-		ImGuiFD::EndDialog();
-	}
 
 	if (!TextEditorEntryBuffer)
 	{
@@ -530,34 +537,24 @@ static void shaderPipelineShaderSelect(const std::string& Label, std::string* Ta
 	if (changeFile)
 	{
 		std::string shddir = getFileDirectory(*Target);
+		SDL_DialogFileFilter filter{ "Shader files", "vert;frag;geom" };
 
-		ImGuiFD::OpenDialog(
-			"Select Pipeline Shader",
-			ImGuiFDMode_LoadFile,
-			shddir.c_str(),
-			"*.vert,*.frag,*.geom",
-			0,
-			1
-		);
-
-		PipelineShaderSelectTarget = Target;
-	}
-}
-
-static void renderShaderPipelinesEditor()
-{
-	ZoneScopedC(tracy::Color::DarkSeaGreen);
-
-	if (ImGuiFD::BeginDialog("Select Pipeline Shader"))
-	{
-		if (!PipelineShaderSelectTarget)
-			throw("yada yada");
-
-		if (ImGuiFD::ActionDone())
-		{
-			if (ImGuiFD::SelectionMade())
+		SDL_ShowOpenFileDialog(
+			[](void*, const char* const* FileList, int)
 			{
-				std::string fullpath = ImGuiFD::GetSelectionPathString(0);
+				if (!FileList)
+					throw(SDL_GetError());
+				if (!FileList[0])
+					return;
+
+				std::string fullpath = FileList[0];
+
+				// windows SMELLS :( 18/02/2025
+				size_t off = fullpath.find_first_of("\\");
+
+				while (off != std::string::npos)
+					off = fullpath.replace(off, 1, "/").find_first_of("\\");
+
 				size_t resDirOffset = fullpath.find("resources/");
 
 				if (resDirOffset == std::string::npos)
@@ -569,19 +566,25 @@ static void renderShaderPipelinesEditor()
 				{
 					std::string shortpath = fullpath.substr(resDirOffset + 10);
 					*PipelineShaderSelectTarget = shortpath;
-					// maybe `*PipelineShaderSelectTarget = shortpath` can also be done but idk
-					// if that calls the copy constructor
-					//PipelineShaderSelectTarget->swap(shortpath);
 
 					PipelineShaderSelectTarget = nullptr;
 				}
-			}
+			},
+			nullptr,
+			SDL_GL_GetCurrentWindow(),
+			&filter,
+			1,
+			shddir.c_str(),
+			false
+		);
 
-			ImGuiFD::CloseCurrentDialog();
-		}
-
-		ImGuiFD::EndDialog();
+		PipelineShaderSelectTarget = Target;
 	}
+}
+
+static void renderShaderPipelinesEditor()
+{
+	ZoneScopedC(tracy::Color::DarkSeaGreen);
 
 	ShaderManager* shdManager = ShaderManager::Get();
 
@@ -674,13 +677,49 @@ static void mtlEditorTexture(uint32_t* TextureIdPtr, const char* Label, char* Bu
 		{
 			std::string texdir = getFileDirectory(Buffer);
 
-			ImGuiFD::OpenDialog(
-				"Select Texture",
-				ImGuiFDMode_LoadFile,
+			SDL_DialogFileFilter filter{ "Images", "png;jpg;jpeg" };
+
+			SDL_ShowOpenFileDialog(
+				[](void*, const char* const* FileList, int)
+				{
+					if (!FileList)
+						throw(SDL_GetError());
+					if (!FileList[0])
+						return;
+
+					std::string fullpath = FileList[0];
+
+					// windows SMELLS :( 18/02/2025
+					size_t off = fullpath.find_first_of("\\");
+
+					while (off != std::string::npos)
+						off = fullpath.replace(off, 1, "/").find_first_of("\\");
+
+					size_t resDirOffset = fullpath.find("resources/");
+
+					if (resDirOffset == std::string::npos)
+					{
+						ErrorTooltipMessage = "Selection must be within the Project's `resources/` directory!";
+						ErrorTooltipTimeRemaining = 5.f;
+						MtlEditorTextureSelectDialogBuffer = nullptr;
+					}
+					else
+					{
+						std::string shortpath = fullpath.substr(resDirOffset + 10);
+						copyStringToBuffer(MtlEditorTextureSelectDialogBuffer, shortpath, MATERIAL_TEXTUREPATH_BUFSIZE);
+						MtlEditorTextureSelectDialogBuffer = nullptr;
+
+						uint32_t newtexid = TextureManager::Get()->LoadTextureFromPath(shortpath);
+						// i'm so silly 04/12/2024
+						*MtlEditorTextureSelectTarget = newtexid;
+					}
+				},
+				nullptr,
+				SDL_GL_GetCurrentWindow(),
+				&filter,
+				1,
 				texdir.c_str(),
-				"*.png,*.jpg,*.jpeg",
-				0,
-				1
+				false
 			);
 
 			MtlEditorTextureSelectDialogBuffer = Buffer;
@@ -710,17 +749,6 @@ static void mtlEditorTexture(uint32_t* TextureIdPtr, const char* Label, char* Bu
 	).c_str());
 }
 
-static uint32_t getClassIconId(const std::string& ClassName)
-{
-	std::string iconPath = ClassIcons["FallbackIcon"];
-	auto wantedIconIt = ClassIcons.find(ClassName);
-
-	if (wantedIconIt != ClassIcons.end())
-		iconPath = wantedIconIt->second;
-
-	return TextureManager::Get()->LoadTextureFromPath(iconPath);
-}
-
 // 02/09/2024
 // That one Gianni Matragrano shitpost where it's a
 // baguette with a doge face on a white background low-res
@@ -732,43 +760,6 @@ static void renderMaterialEditor()
 
 	MaterialManager* mtlManager = MaterialManager::Get();
 	TextureManager* texManager = TextureManager::Get();
-
-	if (MtlEditorTextureSelectDialogBuffer != nullptr)
-	{
-		if (ImGuiFD::BeginDialog("Select Texture"))
-		{
-			if (ImGuiFD::ActionDone())
-			{
-				if (ImGuiFD::SelectionMade())
-				{
-					std::string fullpath = ImGuiFD::GetSelectionPathString(0);
-					size_t resDirOffset = fullpath.find("resources/");
-
-					if (resDirOffset == std::string::npos)
-					{
-						ErrorTooltipMessage = "Selection must be within the Project's `resources/` directory!";
-						ErrorTooltipTimeRemaining = 5.f;
-						MtlEditorTextureSelectDialogBuffer = nullptr;
-					}
-					else
-					{
-						std::string shortpath = fullpath.substr(resDirOffset + 10);
-						copyStringToBuffer(MtlEditorTextureSelectDialogBuffer, shortpath, MATERIAL_TEXTUREPATH_BUFSIZE);
-						MtlEditorTextureSelectDialogBuffer = nullptr;
-
-						uint32_t newtexid = texManager->LoadTextureFromPath(shortpath);
-						// i'm so silly 04/12/2024
-						*MtlEditorTextureSelectTarget = newtexid;
-					}
-				}
-
-				ImGuiFD::CloseCurrentDialog();
-				MtlEditorTextureSelectDialogBuffer = nullptr;
-			}
-
-			ImGuiFD::EndDialog();
-		}
-	}
 
 	if (!ImGui::Begin("Materials"))
 	{
@@ -1172,8 +1163,19 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 
 		ImGui::AlignTextToFramePadding();
 
+		std::string classIconPath = "textures/editor-icons/" + object->ClassName + ".png";
+		Texture& tex = texManager->GetTextureResource(texManager->LoadTextureFromPath(classIconPath));
+
+		if (tex.Status == Texture::LoadStatus::Failed && tex.ImagePath.find("fallback") == std::string::npos)
+		{
+			const std::string& fallbackPath = "texture/editor-icons/fallback.png";
+			Texture& fallback = texManager->GetTextureResource(texManager->LoadTextureFromPath(fallbackPath));
+			texManager->Assign(fallback, classIconPath);
+			tex = fallback;
+		}
+
 		ImGui::Image(
-			texManager->GetTextureResource(getClassIconId(object->ClassName)).GpuId,
+			tex.GpuId,
 			ImVec2(16.f, 16.f)
 		);
 		ImGui::SameLine();
@@ -1408,11 +1410,14 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 
 					if (propName == "Class")
 					{
+						static TextureManager* texManager = TextureManager::Get();
+						std::string classIconPath = "textures/editor-icons/" + curValStr + ".png";
+
 						ImGui::Text("Class: ");
 						ImGui::SameLine();
 
 						ImGui::Image(
-							TextureManager::Get()->GetTextureResource(getClassIconId(curValStr)).GpuId,
+							texManager->GetTextureResource(texManager->LoadTextureFromPath(classIconPath)).GpuId,
 							ImVec2(16, 16)
 						);
 						ImGui::SameLine();

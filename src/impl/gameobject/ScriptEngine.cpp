@@ -3,7 +3,7 @@
 #include <glm/mat4x4.hpp>
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
-#include <ImGuiFD/ImGuiFD.h>
+#include <SDL3/SDL_dialog.h>
 #include <SDL3/SDL_mouse.h>
 
 #include <tracy/Tracy.hpp>
@@ -531,6 +531,34 @@ void ScriptEngine::L::PushFunction(lua_State* L, const char* Name)
 		Name,
 		1
 	);
+}
+
+static bool IsFdInProgress = false;
+static std::vector<std::string> FdResults;
+
+static void fdCallback(void*, const char* const* FileList, int)
+{
+	if (!FileList)
+		throw(std::string(SDL_GetError()));
+
+	FdResults.clear();
+
+	size_t nextIdx = 0;
+	while (FileList[nextIdx])
+	{
+		FdResults.push_back(FileList[nextIdx]);
+
+		// windows SMELLS :( 18/02/2025
+		std::string& str = FdResults.back();
+		size_t off = str.find_first_of("\\");
+
+		while (off != std::string::npos)
+			off = str.replace(off, 1, "/").find_first_of("\\");
+
+		nextIdx++;
+	}
+
+	IsFdInProgress = false;
 }
 
 std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunctions =
@@ -1318,90 +1346,124 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 	},
 
 	{
-		"imfd_begin",
+		"fd_inprogress",
 		[](lua_State* L)
 		{
-			lua_pushboolean(L, ImGuiFD::BeginDialog(luaL_checkstring(L, 1)));
+			lua_pushboolean(L, IsFdInProgress);
 			return 1;
 		}
 	},
 
 	{
-		"imfd_end",
-		[](lua_State*)
-		{
-			ImGuiFD::EndDialog();
-			return 0;
-		}
-	},
-
-	{
-		"imfd_actiondone",
+		"fd_save",
 		[](lua_State* L)
 		{
-			lua_pushboolean(L, ImGuiFD::ActionDone());
-			return 1;
-		}
-	},
+			if (IsFdInProgress)
+				luaL_errorL(L, "The User has not completed the previous File Dialog");
 
-	{
-		"imfd_selectionmade",
-		[](lua_State* L)
-		{
-			lua_pushboolean(L, ImGuiFD::SelectionMade());
-			return 1;
-		}
-	},
+			lua_yield(L, 1);
 
-	{
-		"imfd_getselections",
-		[](lua_State* L)
-		{
-			lua_newtable(L);
-
-			for (int ind = 0; ind < ImGuiFD::GetSelectionStringsAmt(); ind++)
+			// `lua_yield` may fail with the "attempt to yield across metamethod/C-call boundary"
+			// only run the code if we've successfully yielded
+			if (lua_status(L) == LUA_YIELD)
 			{
-				lua_pushinteger(L, ind + 1);
-				lua_pushstring(L, ImGuiFD::GetSelectionPathString(ind));
-				lua_settable(L, -3);
+				IsFdInProgress = true;
+
+				SDL_DialogFileFilter filter{};
+				filter.name = luaL_optstring(L, 2, "All files");
+				filter.pattern = luaL_optstring(L, 3, "*");
+
+				SDL_ShowSaveFileDialog(
+					fdCallback,
+					NULL,
+					SDL_GL_GetCurrentWindow(),
+					&filter,
+					1,
+					luaL_optstring(L, 1, "./")
+				);
+
+				auto a = std::async(
+					std::launch::async,
+					[]()
+					{
+						while (IsFdInProgress)
+							std::this_thread::sleep_for(std::chrono::milliseconds(5));
+
+						return Reflection::GenericValue(FdResults[0]);
+					}
+				);
+
+				lua_pushthread(L);
+
+				ScriptEngine::s_YieldedCoroutines.emplace_back(
+					L,
+					// make sure the coroutine doesn't get de-alloc'd before we resume it
+					lua_ref(lua_mainthread(L), -1),
+					a.share()
+				);
 			}
 
-			return 1;
+			return -1;
 		}
 	},
 
 	{
-		"imfd_getrawresult",
+		"fd_open",
 		[](lua_State* L)
 		{
-			lua_pushstring(L, ImGuiFD::GetResultStringRaw());
-			return 1;
-		}
-	},
+			if (IsFdInProgress)
+				luaL_errorL(L, "The User has not completed the previous File Dialog");
 
-	{
-		"imfd_open",
-		[](lua_State* L)
-		{
-			ImGuiFD::OpenDialog(
-				luaL_checkstring(L, 1),
-				static_cast<ImGuiFDMode>(luaL_optinteger(L, 2, 0)),
-				luaL_optstring(L, 3, "resources/"),
-				luaL_optstring(L, 4, "*.*"),
-				luaL_optinteger(L, 5, 0),
-				luaL_optinteger(L, 6, 1)
-			);
+			lua_yield(L, 1);
 
-			return 0;
-		}
-	},
+			// `lua_yield` may fail with the "attempt to yield across metamethod/C-call boundary"
+			// only run the code if we've successfully yielded
+			if (lua_status(L) == LUA_YIELD)
+			{
+				IsFdInProgress = true;
 
-	{
-		"imfd_close",
-		[](lua_State*)
-		{
-			ImGuiFD::CloseCurrentDialog();
-			return 0;
+				SDL_DialogFileFilter filter{};
+				filter.name = luaL_optstring(L, 3, "All files");
+				filter.pattern = luaL_optstring(L, 4, "*");
+
+				SDL_ShowOpenFileDialog(
+					fdCallback,
+					NULL,
+					SDL_GL_GetCurrentWindow(),
+					&filter,
+					1,
+					luaL_optstring(L, 1, "./"),
+					luaL_optboolean(L, 2, 0)
+				);
+
+				auto a = std::async(
+					std::launch::async,
+					[]()
+					{
+						while (IsFdInProgress)
+							std::this_thread::sleep_for(std::chrono::milliseconds(5));
+
+						std::vector<Reflection::GenericValue> results;
+						results.reserve(FdResults.size());
+
+						for (const std::string& r : FdResults)
+							results.emplace_back(r);
+
+						return Reflection::GenericValue(results);
+					}
+				);
+
+				lua_pushthread(L);
+
+				ScriptEngine::s_YieldedCoroutines.emplace_back(
+					L,
+					// make sure the coroutine doesn't get de-alloc'd before we resume it
+					lua_ref(lua_mainthread(L), -1),
+					a.share()
+				);
+			}
+
+			return -1;
 		}
 	},
 

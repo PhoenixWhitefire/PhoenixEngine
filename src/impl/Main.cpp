@@ -78,8 +78,6 @@ PHX_MAIN_HANDLECRASH_WHAT(std::exception);                                      
 
 #include <filesystem>
 
-#include <ImGuiFD/ImGuiFD.h>
-
 #include <imgui/backends/imgui_impl_opengl3.h>
 #include <imgui/backends/imgui_impl_sdl3.h>
 #include <imgui_internal.h>
@@ -625,6 +623,7 @@ static void drawDeveloperUI(double DeltaTime)
 	InlayEditor::UpdateAndRender(DeltaTime);
 }
 
+#ifdef NDEBUG
 static void handleCrash(const std::string_view& Error, const std::string_view& ExceptionType)
 {
 	// Log Size Limit Exceeded Throwing Exception
@@ -660,6 +659,7 @@ static void handleCrash(const std::string_view& Error, const std::string_view& E
 			SDL_GetError()
 		);
 }
+#endif
 
 static void begin(int argc, char** argv)
 {

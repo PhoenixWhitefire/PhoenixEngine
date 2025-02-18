@@ -28,11 +28,6 @@ set(VEND_SRCS
 	"imgui/backends/imgui_impl_sdl3.cpp"
 	"imgui/misc/cpp/imgui_stdlib.h"
 	"imgui/misc/cpp/imgui_stdlib.cpp"
-	
-	"ImGuiFD/ImGuiFD.cpp"
-	"ImGuiFD/ImGuiFD.h"
-	"ImGuiFD/ImGuiFD_internal.h"
-	"ImGuiFD/ImGuiFDNative.cpp"
 )
 
 add_library(Vendor STATIC ${VEND_SRCS})

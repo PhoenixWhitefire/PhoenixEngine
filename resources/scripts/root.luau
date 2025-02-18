@@ -9,41 +9,14 @@ local ScriptExecutionFile = "scripts/shdgraphtest.luau"
 
 local DefaultSubLevel = "scenes/dev_fmtv2.hxscene"
 
-local function imfdOnSelectedCallback(DialogName, Callback)
-	if imfd_begin(DialogName) then
-		if imfd_actiondone() then
-			if imfd_selectionmade() then
-				local selection = imfd_getselections()[1]
-				if (not selection) then
-					Callback(imfd_getrawresult())
-				else
-					local resDirOff = selection:find("resources/")
-					if not resDirOff then
-						error("Must be within resources directory!")
-					else
-						Callback(selection:sub(resDirOff + 10, resDirOff + (#selection - resDirOff)))
-					end
-				end
-			end
-			
-			imfd_close()
-		end
-		
-		imfd_end()
-	end
-end
-
-local function imfdOnSelectedPathOverride(DialogName, CurrentPath)
-	local path = CurrentPath
-	
-	imfdOnSelectedCallback(DialogName, function(newPath)
-		path = newPath
-	end)
-	
-	return path
-end
-
 local function loadSubLevel(Path)
+	print(Path)
+	
+	if not Path then
+		print("No level was selected")
+		return
+	end
+	
 	for _, v in workspace.Level:GetChildren() do
 		v:Destroy()
 	end
@@ -54,34 +27,47 @@ local function loadSubLevel(Path)
 end
 
 function Update()
+	if input_keypressed("y") then
+		sleep(1)
+		SoundStinger:Play()
+	end
+	
 	if imgui_begin("Model Importer") then
 		ModelImporterScale = imgui_input_float("Scale", ModelImporterScale)
 
 		if imgui_button("Select & Import Model") then
-			imfd_open("ImportModel", 0, "resources/models", "*.gltf,*.glb")
+			imgui_end()
+			
+			local Path = fd_open("resources/models", false, "Models", "gltf;glb")[1]
+			if Path then
+				local pathSplit = string.split(Path, "/")
+				
+				local parts = model_import(Path)
+				--local model = GameObject.new("Model")
+				--model.Name = pathSplit[#pathSplit]
+				--model.Parent = workspace
+		
+				--for _, part in parts do
+				--part.Size *= ModelImporterScale
+				--	part.Parent = workspace
+				--end
+				
+				parts.Parent = workspace
+			end
+			
+			return
 		end
 	end
 	imgui_end()
 	
-	imfdOnSelectedCallback("ImportModel", function(Path)
-		local pathSplit = string.split(Path, "/")
-		
-		local parts = model_import(Path)
-		--local model = GameObject.new("Model")
-		--model.Name = pathSplit[#pathSplit]
-		--model.Parent = workspace
-		
-		--for _, part in parts do
-			--part.Size *= ModelImporterScale
-		--	part.Parent = workspace
-		--end
-		
-		parts.Parent = workspace
-	end)
-	
 	if imgui_begin("Run Script") then
 		if imgui_textlink("Path: " .. ScriptExecutionFile) then
-			imfd_open("SelectScript", 0, "resources/scripts", "*.luau")
+			imgui_end()
+			local Path = fd_open("resources/scripts", false, "Luau Scripts", "luau")[1]
+			if Path then
+				ScriptExecutionFile = Path
+			end
+			return
 		end
 		
 		if imgui_button("Execute") then
@@ -96,62 +82,77 @@ function Update()
 	end
 	imgui_end()
 	
-	ScriptExecutionFile = imfdOnSelectedPathOverride("SelectScript", ScriptExecutionFile)
-	
 	imgui_begin("File")
 	
 	if imgui_button("Save World") then
-		imfd_open("SaveWorld", 1, "resources/scenes/", "*.world")
+		imgui_end()
+		
 		IntendedSaveWorldState = game:Duplicate()
 		IntendedSaveWorldState.Parent = nil
-	end
-	
-	imfdOnSelectedCallback("SaveWorld", function(Path)
-		if not Path:find(".world") then
-			Path = `scenes/{ Path }.world`
+		
+		local Path = fd_save("resources/scenes", "Scenes", "world")[1]
+		
+		if Path then
+			if not Path:find(".world") then
+				Path = `scenes/{ Path }.world`
+			end
+			scene_save({ IntendedSaveWorldState }, Path)
+			IntendedSaveWorldState:Destroy()
 		end
-		scene_save({ IntendedSaveWorldState }, Path)
+		
 		IntendedSaveWorldState:Destroy()
-	end)
+		
+		return
+	end
 	
 	local loadWorld = imgui_button("Load World")
 
 	if loadWorld then
-		imfd_open("LoadWorld", 0, "resources/scenes/", "*.world")
+		imgui_end()
+		
+		local Path = fd_open("resources/scenes", false, "Worlds", "world")[1]
+		
+		if Path then
+			local dm = scene_load(Path)[1]
+			if not dm then
+				error("No root object!")
+			end
+			
+			for _, v in game:GetChildren() do
+				v:Destroy()
+			end
+			
+			game:MergeWith(dm)
+		end
+		
+		return
 	end
-	
-	imfdOnSelectedCallback("LoadWorld", function(Path)
-		local dm = scene_load(Path)[1]
-		if not dm then
-			error("No root object!")
-		end
-		
-		for _, v in game:GetChildren() do
-			v:Destroy()
-		end
-		
-		game:MergeWith(dm)
-	end)
 	
 	if imgui_button("Save Sub-Level") then
-		IntendedLevelState = workspace.Level:Duplicate()
+		imgui_end()
+		
+		IntendedLevelState = game:Duplicate()
 		IntendedLevelState.Parent = nil
-		imfd_open("SaveSubLevel", 1, "resources/scenes/", "*.hxscene")
-	end
-	
-	imfdOnSelectedCallback("SaveSubLevel", function(Path)
-		if not Path:find(".hxscene") then
-			Path = `scenes/{ Path }.hxscene`
+		
+		local Path = fd_save("resources/scenes", "Scenes", "hxscene")[1]
+		
+		if Path then
+			if not Path:find(".hxscene") then
+				Path = `scenes/{ Path }.hxscene`
+			end
+			scene_save(IntendedLevelState:GetChildren(), Path)
 		end
-		scene_save(IntendedLevelState:GetChildren(), Path)
+		
 		IntendedLevelState:Destroy()
-	end)
+		
+		return
+	end
 	
 	if imgui_button("Load Sub-Level") then
-		imfd_open("LoadSubLevel", 0, "resources/scenes/", "*.hxscene")
+		imgui_end()
+		loadSubLevel(fd_open("resources/scenes", "Scenes", "hxscene")[1])
+		return
 	end
-	
-	imfdOnSelectedCallback("LoadSubLevel", loadSubLevel)
 	
 	imgui_end()
 	
@@ -162,5 +163,5 @@ end
 loadSubLevel(DefaultSubLevel)
 
 if not conf_get("Developer") then
-	Update = nil
+	--Update = nil
 end
