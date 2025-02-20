@@ -16,13 +16,22 @@ Reflection::GenericValue::GenericValue()
 static void fromString(Reflection::GenericValue& G, const char* CStr)
 {
 	G.Type = Reflection::ValueType::String;
-	G.Value = Memory::Alloc(G.Size + 1, Memory::Category::Reflection);
 
-	if (!G.Value)
-		throw("Failed to allocate enough space for string in fromString");
+	if (G.Size > 8 && CStr[8] != 0)
+	{
+		G.Value = Memory::Alloc(G.Size + 1, Memory::Category::Reflection);
 
-	memcpy(G.Value, CStr, G.Size);
-	((char*)G.Value)[G.Size] = 0;
+		if (!G.Value)
+			throw("Failed to allocate enough space for string in fromString");
+
+		memcpy(G.Value, CStr, G.Size);
+		((char*)G.Value)[G.Size] = 0;
+	}
+	else
+	{
+		// store it directly
+		memcpy(&G.Value, CStr, 8);
+	}
 }
 
 Reflection::GenericValue::GenericValue(const std::string_view& str)
@@ -312,8 +321,13 @@ std::string Reflection::GenericValue::ToString() const
 
 std::string Reflection::GenericValue::AsString() const
 {
-	return Type == ValueType::String
-		? (const char*)this->Value : throw("GenericValue was not a String, but was a " + std::string(TypeAsString(Type)));
+	if (Type != ValueType::String)
+		throw("GenericValue was not a String, but was a " + std::string(TypeAsString(Type)));
+	else
+		if (Size > 8)
+			return std::string((char*)Value, Size);
+		else
+			return std::string((char*)&Value, Size);
 }
 bool Reflection::GenericValue::AsBool() const
 {
@@ -420,9 +434,15 @@ Reflection::GenericValue::~GenericValue()
 {
 	switch (this->Type)
 	{
-	case (ValueType::String, ValueType::Matrix, ValueType::Array, ValueType::Map):
+	case ValueType::Matrix: case ValueType::Array: case ValueType::Map:
 	{
 		Memory::Free(this->Value);
+		break;
+	}
+	case ValueType::String:
+	{
+		if (this->Size > 8)
+			Memory::Free(this->Value);
 		break;
 	}
 	case ValueType::Color:

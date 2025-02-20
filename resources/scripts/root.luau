@@ -10,8 +10,6 @@ local ScriptExecutionFile = "scripts/shdgraphtest.luau"
 local DefaultSubLevel = "scenes/dev_fmtv2.hxscene"
 
 local function loadSubLevel(Path)
-	print(Path)
-	
 	if not Path then
 		print("No level was selected")
 		return
@@ -90,14 +88,13 @@ function Update()
 		IntendedSaveWorldState = game:Duplicate()
 		IntendedSaveWorldState.Parent = nil
 		
-		local Path = fd_save("resources/scenes", "Scenes", "world")[1]
+		local Path = fd_save("resources/scenes", "Scenes", "world")
 		
 		if Path then
-			if not Path:find(".world") then
-				Path = `scenes/{ Path }.world`
-			end
 			scene_save({ IntendedSaveWorldState }, Path)
 			IntendedSaveWorldState:Destroy()
+		else
+			print("No path selected")
 		end
 		
 		IntendedSaveWorldState:Destroy()
@@ -123,6 +120,8 @@ function Update()
 			end
 			
 			game:MergeWith(dm)
+		else
+			print("No path selected")
 		end
 		
 		return
@@ -131,16 +130,15 @@ function Update()
 	if imgui_button("Save Sub-Level") then
 		imgui_end()
 		
-		IntendedLevelState = game:Duplicate()
+		IntendedLevelState = workspace.Level:Duplicate()
 		IntendedLevelState.Parent = nil
 		
-		local Path = fd_save("resources/scenes", "Scenes", "hxscene")[1]
+		local Path = fd_save("resources/scenes", "Scenes", "hxscene")
 		
 		if Path then
-			if not Path:find(".hxscene") then
-				Path = `scenes/{ Path }.hxscene`
-			end
 			scene_save(IntendedLevelState:GetChildren(), Path)
+		else
+			print("No path selected")
 		end
 		
 		IntendedLevelState:Destroy()

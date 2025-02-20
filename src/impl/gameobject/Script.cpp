@@ -941,6 +941,10 @@ void Object_Script::Update(double dt)
 	// 23/09/2024
 	resumeScheduledCoroutines();
 
+	// we got destroy'd by the resumed coroutine
+	if (this->IsDestructionPending)
+		return;
+
 	ZoneScopedC(tracy::Color::LightSkyBlue);
 
 	std::string fullname = this->GetFullName();
