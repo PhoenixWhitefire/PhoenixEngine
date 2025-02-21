@@ -25,18 +25,25 @@ void Object_Workspace::s_DeclareReflections()
 
 	REFLECTION_INHERITAPI(Model);
 
+	static const auto scget = [](Reflection::Reflectable* p)
+	-> Reflection::GenericValue
+	{
+		Object_Workspace* workspace = (Object_Workspace*)p;
+
+		if (workspace->GetSceneCamera() == s_FallbackCamera)
+		{
+			Reflection::GenericValue gv{ PHX_GAMEOBJECT_NULL_ID };
+			gv.Type = Reflection::ValueType::GameObject;
+			return gv;
+		}
+		else
+			return workspace->GetSceneCamera()->ToGenericValue();
+	};
+
 	REFLECTION_DECLAREPROP(
 		"SceneCamera",
 		GameObject,
-		[](Reflection::Reflectable* p)
-		{
-			Object_Workspace* workspace = (Object_Workspace*)p;
-
-			if (workspace->GetSceneCamera() == s_FallbackCamera)
-				return ((GameObject*)nullptr)->ToGenericValue();
-			else
-				return workspace->GetSceneCamera()->ToGenericValue();
-		},
+		scget,
 		[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)
 		{
 			GameObject* object = GameObject::FromGenericValue(gv);

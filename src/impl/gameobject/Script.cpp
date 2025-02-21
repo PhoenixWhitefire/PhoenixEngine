@@ -75,8 +75,9 @@ static auto api_gameobjnewindex = [](lua_State* L)
 
 		ZoneText(key, strlen(key));
 
-		LUA_ASSERT(strcmp(key, "Exists") != 0, "'Exists' is read-only! - 21/12/2024");
-		LUA_ASSERT(obj, "Tried to assign to the '%s' of a deleted Game Object", key);
+		if (strcmp(key, "Exists") == 0)
+			luaL_errorL(L, "%s", "'Exists' is read-only! - 21/12/2024");
+		LUA_ASSERT((obj), "Tried to assign to the '%s' of a deleted Game Object", key);
 
 		if (obj->HasProperty(key))
 		{
@@ -91,7 +92,7 @@ static auto api_gameobjnewindex = [](lua_State* L)
 			lua_Type argType = (lua_Type)lua_type(L, 3);
 			
 			if (!prop.Set)
-				luaL_errorL(L, std::vformat(
+				luaL_errorL(L, "%s", std::vformat(
 					"Cannot set Property {}::{} to {} because it is read-only",
 					std::make_format_args(obj->ClassName, key, argAsString)
 				).c_str());
@@ -101,7 +102,7 @@ static auto api_gameobjnewindex = [](lua_State* L)
 			if (reflToLuaIt == ScriptEngine::ReflectedTypeLuaEquivalent.end())
 			{
 				const std::string_view& typeName = Reflection::TypeAsString(prop.Type);
-				luaL_errorL(L, std::vformat(
+				luaL_errorL(L, "%s", std::vformat(
 					"No defined mapping between Reflection::ValueType::{} and a Lua type",
 					std::make_format_args(typeName)
 				).c_str());
@@ -112,7 +113,7 @@ static auto api_gameobjnewindex = [](lua_State* L)
 			if (desiredType != argType && (desiredType != LUA_TUSERDATA && argType != LUA_TNIL))
 			{
 				const char* desiredTypeName = lua_typename(L, (int)desiredType);
-				luaL_errorL(L, std::vformat(
+				luaL_errorL(L, "%s", std::vformat(
 					"Expected type {} for member {}::{}, got {} instead",
 					std::make_format_args(desiredTypeName, obj->ClassName, key, argTypeName)
 				).c_str());
@@ -129,17 +130,17 @@ static auto api_gameobjnewindex = [](lua_State* L)
 				}
 				catch (std::string err)
 				{
-					luaL_errorL(L, err.c_str());
+					luaL_errorL(L, "%s", err.c_str());
 				}
 			}
 		}
 		else
 		{
 			std::string fullname = obj->GetFullName();
-			luaL_errorL(L, (std::vformat(
+			luaL_errorL(L, "%s", std::vformat(
 				"Attempt to set invalid Member '{}' of {} '{}'",
 				std::make_format_args(key, obj->ClassName, fullname)
-			)).c_str());
+			).c_str());
 		}
 
 		return 0;
@@ -762,7 +763,7 @@ static lua_State* createState()
 				}
 				catch (std::string err)
 				{
-					luaL_errorL(L, err.c_str());
+					luaL_errorL(L, "%s", err.c_str());
 				}
 
 				return numresults;
@@ -809,11 +810,11 @@ static lua_State* createState()
 				}
 				catch (std::string e)
 				{
-					luaL_errorL(L, e.c_str());
+					luaL_errorL(L, "%s", e.c_str());
 				}
 				catch (const char* e)
 				{
-					luaL_errorL(L, e);
+					luaL_errorL(L, "%s", e);
 				}
 
 			},

@@ -516,7 +516,7 @@ static std::string* PipelineShaderSelectTarget = nullptr;
 
 static void shaderPipelineShaderSelect(const std::string& Label, std::string* Target)
 {
-	ImGui::Text(Label.c_str());
+	ImGui::TextUnformatted(Label.c_str());
 	ImGui::SameLine();
 
 	bool editFile = ImGui::TextLink(Target->c_str());
@@ -666,7 +666,7 @@ static void mtlEditorTexture(uint32_t* TextureIdPtr, const char* Label, char* Bu
 
 	const Texture& tx = texManager->GetTextureResource(*TextureIdPtr);
 
-	ImGui::Text(Label);
+	ImGui::TextUnformatted(Label);
 
 	if (ImGui::GetIO().KeyCtrl)
 	{
@@ -738,12 +738,12 @@ static void mtlEditorTexture(uint32_t* TextureIdPtr, const char* Label, char* Bu
 		ImVec2(256.f, tx.Height * (256.f / tx.Width))
 	);
 
-	ImGui::Text(std::vformat(
+	ImGui::TextUnformatted(std::vformat(
 		"Resolution: {}x{}",
 		std::make_format_args(tx.Width, tx.Height)
 	).c_str());
 
-	ImGui::Text(std::vformat(
+	ImGui::TextUnformatted(std::vformat(
 		"# Color channels: {}",
 		std::make_format_args(tx.NumColorChannels)
 	).c_str());
@@ -1192,7 +1192,7 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 				}
 		}
 
-		bool open = ImGui::TreeNodeEx(&object->ObjectId, flags, object->Name.c_str());
+		bool open = ImGui::TreeNodeEx(&object->ObjectId, flags, "%s", object->Name.c_str());
 
 		VisibleTreeWip.push_back(object->ObjectId);
 
@@ -1280,7 +1280,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 	ErrorTooltipTimeRemaining -= DeltaTime;
 
 	if (ErrorTooltipTimeRemaining > 0.f)
-		ImGui::SetTooltip(ErrorTooltipMessage.c_str());
+		ImGui::SetTooltip("%s", ErrorTooltipMessage.c_str());
 
 	renderTextEditor();
 	renderShaderPipelinesEditor();
@@ -1422,7 +1422,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 						);
 						ImGui::SameLine();
 
-						ImGui::Text(curValStr.c_str());
+						ImGui::TextUnformatted(curValStr.c_str());
 					}
 					else
 						if (curVal.Type == Reflection::ValueType::Matrix)
@@ -1432,7 +1432,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 							ImGui::Indent();
 
 							curValStr.insert(curValStr.begin() + curValStr.find_first_of("Ang"), '\n');
-							ImGui::Text(curValStr.c_str());
+							ImGui::TextUnformatted(curValStr.c_str());
 
 							ImGui::Unindent();
 						}
@@ -1707,7 +1707,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 				int typeId = static_cast<int>(curVal.Type);
 				const std::string_view& typeName = Reflection::TypeAsString(curVal.Type);
 
-				ImGui::Text(std::vformat(
+				ImGui::TextUnformatted(std::vformat(
 					"{}: <Display of ID:{} ('{}') types not unavailable>",
 					std::make_format_args(propName, typeId, typeName)
 				).c_str());

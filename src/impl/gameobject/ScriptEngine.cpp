@@ -261,7 +261,7 @@ Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int St
 			return gv;
 		}
 		else
-			luaL_error(L, std::vformat(
+			luaL_error(L, "%s", std::vformat(
 				"Couldn't convert a '{}' userdata to a GenericValue (unrecognized)",
 				std::make_format_args(tname)
 			).c_str());
@@ -288,7 +288,7 @@ Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int St
 	default:
 	{
 		const char* tname = luaL_typename(L, StackIndex);
-		luaL_error(L, std::vformat(
+		luaL_error(L, "%s", std::vformat(
 			"Could not convert type {} to a GenericValue (no conversion case)",
 			std::make_format_args(tname)).c_str()
 		);
@@ -382,7 +382,7 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 	default:
 	{
 		const std::string_view& typeName = Reflection::TypeAsString(gv.Type);
-		luaL_error(L, std::vformat(
+		luaL_error(L, "%s", std::vformat(
 			"Could not provide Luau the GenericValue with type {}",
 			std::make_format_args(typeName)).c_str()
 		);
@@ -416,7 +416,7 @@ int ScriptEngine::L::HandleFunctionCall(
 
 		argsString = argsString.substr(0, argsString.size() - 2);
 
-		luaL_error(L, std::vformat(
+		luaL_error(L, "%s", std::vformat(
 			"Function '{}' expected {} arguments, got {} instead: ({})",
 			std::make_format_args(fname, numParams, numArgs, argsString)
 		).c_str());
@@ -460,7 +460,7 @@ int ScriptEngine::L::HandleFunctionCall(
 			// but an `int`?? A literal fucking scalar??? What is this bullshit????
 			int indexAsLuaIndex = index + 1;
 
-			luaL_error(L, std::vformat(
+			luaL_error(L, "%s", std::vformat(
 				"Argument {} expected to be of type {}, but was '{}' ({}) instead",
 				std::make_format_args(
 					indexAsLuaIndex,
@@ -485,7 +485,7 @@ int ScriptEngine::L::HandleFunctionCall(
 	}
 	catch (std::string err)
 	{
-		luaL_error(L, err.c_str());
+		luaL_error(L, "%s", err.c_str());
 	}
 
 	for (const Reflection::GenericValue& output : outputs)
@@ -1171,7 +1171,7 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 			std::vector<GameObject*> rootNodes = SceneFormat::Deserialize(fileContents, &deserializeSuccess);
 
 			if (!deserializeSuccess)
-				luaL_errorL(L, SceneFormat::GetLastErrorString().c_str());
+				luaL_errorL(L, "%s", SceneFormat::GetLastErrorString().c_str());
 
 			std::vector<Reflection::GenericValue> convertedArray;
 
@@ -1211,7 +1211,7 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 		"imgui_setitemtooltip",
 		[](lua_State* L)
 		{
-			ImGui::SetItemTooltip(luaL_checkstring(L, 1));
+			ImGui::SetItemTooltip("%s", luaL_checkstring(L, 1));
 
 			return 0;
 		}
@@ -1237,15 +1237,6 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 
 	{
 		"imgui_text",
-		[](lua_State* L)
-		{
-			ImGui::Text(luaL_checkstring(L, 1));
-			return 0;
-		}
-	},
-
-	{
-		"imgui_text_unformatted",
 		[](lua_State* L)
 		{
 			ImGui::TextUnformatted(luaL_checkstring(L, 1));

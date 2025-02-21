@@ -645,7 +645,10 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 					propName
 				);
 
-				object->SetPropertyValue(propName, ((GameObject*)nullptr)->ToGenericValue());
+				Reflection::GenericValue gv{ PHX_GAMEOBJECT_NULL_ID };
+				gv.Type = Reflection::ValueType::GameObject;
+
+				object->SetPropertyValue(propName, gv);
 			}
 		}
 	}

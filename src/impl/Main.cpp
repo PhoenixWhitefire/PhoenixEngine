@@ -67,6 +67,7 @@ catch (std::bad_alloc AllocError)                                               
 }                                                                                \
 PHX_MAIN_HANDLECRASH_WHAT(nlohmann::json::type_error)                            \
 PHX_MAIN_HANDLECRASH_WHAT(nlohmann::json::parse_error)                           \
+PHX_MAIN_HANDLECRASH_WHAT(std::runtime_error)                                    \
 PHX_MAIN_HANDLECRASH_WHAT(std::exception);                                       \
 
 #else
@@ -143,13 +144,18 @@ static std::string exec(const char* cmd)
 {
 	std::array<char, 128> buffer{ 0 };
 	std::string result;
-	std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
+	FILE* pipe = popen(cmd, "r");
 
 	if (!pipe)
+	{
+		pclose(pipe);
 		throw std::runtime_error("popen() failed!");
+	}
 
-	while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe.get()) != nullptr)
+	while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe) != nullptr)
 		result += buffer.data();
+	
+	pclose(pipe);
 
 	return result;
 }
