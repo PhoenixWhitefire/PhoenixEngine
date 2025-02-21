@@ -960,6 +960,8 @@ void Object_Script::Update(double dt)
 
 	if (lua_status(m_L) != LUA_OK)
 		return;
+	
+	luaL_checkstack(m_L, 4, NULL);
 
 	lua_getglobal(m_L, "Update");
 

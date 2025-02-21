@@ -1380,7 +1380,7 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 						while (IsFdInProgress)
 							std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
-						return Reflection::GenericValue(FdResults[0]);
+						return FdResults.size() > 0 ? Reflection::GenericValue(FdResults[0]) : Reflection::GenericValue{};
 					}
 				);
 

@@ -358,31 +358,18 @@ glm::mat4& Reflection::GenericValue::AsMatrix() const
 }
 std::vector<Reflection::GenericValue> Reflection::GenericValue::AsArray() const
 {
-	std::vector<GenericValue> array;
+	if (this->Type != Reflection::ValueType::Array)
+		throw("GenericValue was not an Array, but was a " + std::string(TypeAsString(Type)));
+
+	std::vector<Reflection::GenericValue> array;
 	array.reserve(this->Size);
 
 	Reflection::GenericValue* first = (Reflection::GenericValue*)this->Value;
 
-	if (Type == ValueType::Map)
-	{
-		if (this->Size % 2 != 0)
-			throw("Tried to convert a Map GenericValue to an Array, but it wasn't valid and had an odd number of Array elements");
-
-		for (size_t index = 1; index < this->Size; index++)
-		{
-			array.push_back(first[index]);
-			index++;
-		}
-
-		return array;
-	}
-	else
-		for (uint32_t i = 0; i < this->Size; i++)
+	for (uint32_t i = 0; i < this->Size; i++)
 			array.push_back(first[i]);
-
-	return this->Type == ValueType::Array
-		? array
-		: throw("GenericValue was not an Array, but was a " + std::string(TypeAsString(Type)));
+	
+	return array;
 }
 std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> Reflection::GenericValue::AsMap() const
 {

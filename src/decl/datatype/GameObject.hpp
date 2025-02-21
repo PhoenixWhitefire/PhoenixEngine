@@ -17,6 +17,7 @@
 #include <nljson.hpp>
 
 #include "Reflection.hpp"
+#include "Utilities.hpp"
 #include "Memory.hpp"
 
 class GameObject : public Reflection::Reflectable
@@ -130,10 +131,9 @@ public:
 	GameObjectRef(T* Object)
 	: m_TargetId(Object->ObjectId)
 	{
-		if (m_TargetId == PHX_GAMEOBJECT_NULL_ID)
-			throw("Tried to create a Hard Reference to a GameObject prior to it being `::Initialize`'d");
-		else
-			Object->IncrementHardRefs();
+		PHX_ENSURE_MSG(m_TargetId != PHX_GAMEOBJECT_NULL_ID, "Tried to create a Hard Reference to an uninitialized/invalid GameObject");
+
+		Object->IncrementHardRefs();
 	}
 
 	GameObjectRef(GameObjectRef& Other)
@@ -155,15 +155,12 @@ public:
 
 	T* Contained()
 	{
-		if (m_TargetId == PHX_GAMEOBJECT_NULL_ID)
-			throw("Double-free'd or `::Contained` called on default-constructed GameObjectRef");
+		PHX_ENSURE_MSG(m_TargetId != PHX_GAMEOBJECT_NULL_ID, "Double-free'd or `::Contained` called on a default-constructed Ref");
 
 		GameObject* g = GameObject::GetObjectById(m_TargetId);
+		PHX_ENSURE_MSG(g, "Referenced GameObject was de-alloc'd while we wanted to keep it :(");
 
-		if (!g)
-			throw("Referenced GameObject was de-alloc'd while we wanted to keep it :(");
-		else
-			return static_cast<T*>(g);
+		return static_cast<T*>(g);
 	}
 
 	bool operator == (GameObject* them)
