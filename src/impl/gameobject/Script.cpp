@@ -1064,6 +1064,8 @@ bool Object_Script::Reload()
 	char* bytecode = luau_compile(m_Source.c_str(), m_Source.length(), NULL, &bytecodeSize);
 
 	int result = luau_load(m_L, chunkname.c_str(), bytecode, bytecodeSize, 0);
+
+	free(bytecode);
 	
 	if (result == 0)
 	{

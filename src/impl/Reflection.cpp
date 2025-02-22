@@ -17,7 +17,7 @@ static void fromString(Reflection::GenericValue& G, const char* CStr)
 {
 	G.Type = Reflection::ValueType::String;
 
-	if (G.Size > 8 && CStr[8] != 0)
+	if (G.Size > 8)
 	{
 		G.Value = Memory::Alloc(G.Size + 1, Memory::Category::Reflection);
 
@@ -147,13 +147,13 @@ Reflection::GenericValue::GenericValue(const std::unordered_map<GenericValue, Ge
 void Reflection::GenericValue::CopyInto(GenericValue& Target, const GenericValue& Source)
 {
 	Target.Type = Source.Type;
+	Target.Size = Source.Size;
 
 	switch (Target.Type)
 	{
 	case ValueType::String:
 	{
 		std::string str = Source.AsString();
-		Target.Size = str.size();
 		fromString(Target, str.data());
 		break;
 	}
@@ -217,7 +217,12 @@ std::string Reflection::GenericValue::ToString() const
 		return std::to_string(*(double*)&this->Value);
 
 	case ValueType::String:
-		return (const char*)this->Value;
+	{
+		if (this->Size > 8)
+			return (const char*)this->Value;
+		else
+			return (const char*)&this->Value;
+	}
 	
 	case ValueType::Color:
 		return Color(*this).ToString();

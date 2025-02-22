@@ -1,11 +1,11 @@
 // This is used to shade the screen just before presenting it
-// You can write post-processing effects here - if you're that rampantly homosexual :3c
+// You can write post-processing effects here - if you're that homosexual :3c
 // ...
 // Wait...
 
 #version 460 core
 
-in vec2 FragIn_UV;
+in vec2 Frag_UV;
 
 out vec4 FragColor;
 
@@ -13,6 +13,7 @@ uniform sampler2D Texture;
 
 uniform bool PostFxEnabled = false;
 uniform sampler2D DistortionTexture;
+uniform sampler2D BloomTexture;
 uniform bool ScreenEdgeBlurEnabled = false;
 uniform bool DistortionEnabled = false;
 
@@ -51,7 +52,7 @@ void main()
 {
 	if (!PostFxEnabled)
 	{
-		FragColor = texture(Texture, FragIn_UV);
+		FragColor = texture(Texture, Frag_UV);
 		return;
 	}
 
@@ -63,20 +64,14 @@ void main()
 	vec2 UVOffset = vec2(0.f, 0.f);
 
 	if (DistortionEnabled)
-		UVOffset = (texture(DistortionTexture, FragIn_UV).xy - Center) * (sin(Time) * 5);
+		UVOffset = (texture(DistortionTexture, Frag_UV).xy - Center) * (sin(Time) * 5);
 
-	vec2 sampleUV = FragIn_UV + UVOffset;
+	vec2 sampleUV = Frag_UV + UVOffset;
 	vec2 actualSamplePixel = ivec2(sampleUV * TextureSize);
 	vec3 Color = texture(Texture, sampleUV).xyz;
 
-	for (int i = 1; i < 7; i++)
-	{
-		vec3 colDownscaled = textureLod(Texture, sampleUV, i).xyz;
-		float brightness = getBrightness(colDownscaled);
-
-		if (brightness > 1.f)
-			Color += colDownscaled / (i*2);
-	}
+	Color += texture(BloomTexture, sampleUV).xyz;
+	
 	/*
 	// https://youtu.be/wbn5ULLtkHs?t=271
 	float Lin = getBrightness(Color);
@@ -101,7 +96,7 @@ void main()
 		// Multiply to create wider region of blur,
 		// then exponent to widen the 0% and make the 
 		// transition steeper
-		float RadialBlurWeight = clamp(pow(length(FragIn_UV - Center), BlurVignetteDistExp) * BlurVignetteDistMul, 0.f, 1.f);
+		float RadialBlurWeight = clamp(pow(length(Frag_UV - Center), BlurVignetteDistExp) * BlurVignetteDistMul, 0.f, 1.f);
 
 		int BlurSampleRadius = BlurVignetteSampleRadius;
 
@@ -116,7 +111,7 @@ void main()
 				float DistFactor = 1.f - Dist;
 				float SampleWeight = pow(DistFactor * 1.f, 1.f) * BlurSampleBaseWeight;
 
-				vec3 SampleCol = texture(Texture, FragIn_UV + (vec2(x, y) * PixelScale) + UVOffset).xyz;
+				vec3 SampleCol = texture(Texture, Frag_UV + (vec2(x, y) * PixelScale) + UVOffset).xyz;
 				BlurredColor += SampleCol * SampleWeight;
 			}
 		}

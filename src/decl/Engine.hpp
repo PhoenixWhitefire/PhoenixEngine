@@ -70,4 +70,6 @@ private:
 	MeshProvider m_MeshProvider;
 
 	GameObjectRef<Object_DataModel>* m_DataModelRef = nullptr;
+
+	GpuFrameBuffer m_BloomFbo;
 };

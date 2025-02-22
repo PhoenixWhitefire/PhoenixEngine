@@ -87,6 +87,7 @@ void Engine::OnWindowResized(int NewSizeX, int NewSizeY)
 	this->WindowSizeY = NewSizeY;
 
 	RendererContext.ChangeResolution(WindowSizeX, WindowSizeY);
+	m_BloomFbo.ChangeResolution(WindowSizeX, WindowSizeY);
 
 	SDL_DisplayID currentDisplay = SDL_GetDisplayForWindow(Window);
 	if (currentDisplay == 0)
@@ -289,6 +290,7 @@ Engine::Engine()
 	Log::Info("Initializing systems...");
 
 	this->RendererContext.Initialize(this->WindowSizeX, this->WindowSizeY, this->Window);
+	m_BloomFbo.Initialize(WindowSizeX, WindowSizeY, 0);
 
 	m_TextureManager.Initialize();
 	m_ShaderManager.Initialize();
@@ -549,15 +551,25 @@ void Engine::Start()
 
 	uint32_t postFxShaderId = shdManager->LoadFromPath("postprocessing");
 	uint32_t skyboxShaderId = shdManager->LoadFromPath("skybox");
+	uint32_t bloomExtractShaderId = shdManager->LoadFromPath("bloomingextract");
+	uint32_t bloomCompositeShaderId = shdManager->LoadFromPath("bloomcomposite");
+	uint32_t separableBlurShaderId = shdManager->LoadFromPath("separableblur");
 
 	// we intentionally perform a copy here, because if another shader gets loaded,
 	// the entire list can get re-allocated, and the references will break and just be
 	// garbage data.
 	ShaderProgram postFxShaders = shdManager->GetShaderResource(postFxShaderId);
 	ShaderProgram skyboxShaders = shdManager->GetShaderResource(skyboxShaderId);
+	ShaderProgram bloomExtractShaders = shdManager->GetShaderResource(bloomExtractShaderId);
+	ShaderProgram bloomCompositeShaders = shdManager->GetShaderResource(bloomCompositeShaderId);
+	ShaderProgram separableBlurShaders = shdManager->GetShaderResource(separableBlurShaderId);
 
 	postFxShaders.SetUniform("Texture", 1);
 	postFxShaders.SetUniform("DistortionTexture", 2);
+	postFxShaders.SetUniform("BloomTexture", 3);
+	bloomExtractShaders.SetUniform("Texture", 1);
+	bloomCompositeShaders.SetUniform("Texture", 3);
+	separableBlurShaders.SetUniform("Texture", 3);
 
 	skyboxShaders.SetUniform("SkyboxCubemap", 3);
 
@@ -912,6 +924,11 @@ void Engine::Start()
 
 		RendererContext.FrameBuffer.Unbind();
 
+		glActiveTexture(GL_TEXTURE1);
+		RendererContext.FrameBuffer.BindTexture();
+
+		glDisable(GL_DEPTH_TEST);
+
 		if (EngineJsonConfig.value("postfx_enabled", false))
 		{
 			ZoneScopedN("ApplyPostFxSettings");
@@ -967,6 +984,80 @@ void Engine::Start()
 
 			glActiveTexture(GL_TEXTURE2);
 			glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(distortionTexture).GpuId);
+
+			glActiveTexture(GL_TEXTURE3);
+			m_BloomFbo.BindTexture();
+
+			{
+				ZoneScopedN("Bloom");
+
+				m_BloomFbo.Bind();
+
+				{
+					ZoneScopedN("Extract");
+					RendererContext.DrawMesh(
+						quadMesh,
+						bloomExtractShaders,
+						Vector3::one * 2.f,
+						glm::mat4(1.f),
+						FaceCullingMode::BackFace,
+						0
+					);
+
+					m_BloomFbo.BindTexture();
+					glGenerateMipmap(GL_TEXTURE_2D);
+				}
+
+				{
+					ZoneScopedN("BlurMips");
+
+					for (int i = 1; i < 8; i++)
+					{
+						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_BloomFbo.GpuTextureId, i);
+						glViewport(0, 0, static_cast<int>(ceil(WindowSizeX / pow(2.f, i))), static_cast<int>(ceil(WindowSizeY / pow(2.f, i))));
+
+						separableBlurShaders.SetUniform("LodLevel", i);
+
+						separableBlurShaders.SetUniform("BlurXAxis", true);
+						RendererContext.DrawMesh(
+							quadMesh,
+							separableBlurShaders,
+							Vector3::one * 2.f,
+							glm::mat4(1.f),
+							FaceCullingMode::BackFace,
+							0
+						);
+
+						separableBlurShaders.SetUniform("BlurXAxis", false);
+						RendererContext.DrawMesh(
+							quadMesh,
+							separableBlurShaders,
+							Vector3::one * 2.f,
+							glm::mat4(1.f),
+							FaceCullingMode::BackFace,
+							0
+						);
+					}
+
+					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_BloomFbo.GpuTextureId, 0);
+					glViewport(0, 0, WindowSizeX, WindowSizeY);
+				}
+
+				{
+					ZoneScopedN("Composite");
+
+					RendererContext.DrawMesh(
+						quadMesh,
+						bloomCompositeShaders,
+						Vector3::one * 2.f,
+						glm::mat4(1.f),
+						FaceCullingMode::BackFace,
+						0
+					);
+
+					m_BloomFbo.Unbind();
+				}
+			}
 		}
 		else
 		{
@@ -977,18 +1068,8 @@ void Engine::Start()
 			);
 		}
 
-		glActiveTexture(GL_TEXTURE1);
-		RendererContext.FrameBuffer.BindTexture();
-
 		{
-			ZoneScopedN("GenerateFrameMipMap");
-			glGenerateMipmap(GL_TEXTURE_2D);
-		}
-
-		glDisable(GL_DEPTH_TEST);
-
-		{
-			ZoneScopedN("PostProcessing");
+			ZoneScopedN("MainPostProcessing");
 			RendererContext.DrawMesh(
 				quadMesh,
 				postFxShaders,

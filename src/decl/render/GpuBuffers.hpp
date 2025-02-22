@@ -85,7 +85,7 @@ public:
 	void BindTexture() const;
 	void UnbindTexture() const;
 
-	void UpdateResolution(int Width, int Height);
+	void ChangeResolution(int Width, int Height);
 
 	int Width = -1, Height = -1;
 	uint32_t GpuTextureId = UINT32_MAX;

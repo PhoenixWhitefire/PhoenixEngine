@@ -227,7 +227,7 @@ void Renderer::ChangeResolution(uint32_t Width, uint32_t Height)
 
 	glViewport(0, 0, m_Width, m_Height);
 
-	this->FrameBuffer.UpdateResolution(m_Width, m_Height);
+	this->FrameBuffer.ChangeResolution(m_Width, m_Height);
 }
 
 void Renderer::DrawScene(

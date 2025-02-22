@@ -1,0 +1,4 @@
+{
+    "Vertex": "postprocessing.vert",
+    "Fragment": "bloomingextract.frag"
+}
