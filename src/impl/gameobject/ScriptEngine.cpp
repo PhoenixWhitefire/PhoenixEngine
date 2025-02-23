@@ -1150,7 +1150,7 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 				rootNodes.push_back(GameObject::FromGenericValue(gv));
 
 			std::string fileContents = SceneFormat::Serialize(rootNodes, path);
-			FileRW::WriteFileCreateDirectories(path, fileContents, true);
+			FileRW::WriteFileCreateDirectories(path, fileContents, false);
 
 			lua_pushboolean(L, 1);
 			lua_pushstring(L, "No errors occurred");

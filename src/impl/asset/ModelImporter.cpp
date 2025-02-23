@@ -101,12 +101,12 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 {
 	ZoneScoped;
 
-	std::string gltfFilePath = AssetPath;
+	std::string gltfFilePath = FileRW::TryMakePathCwdRelative(AssetPath);
 
 	m_File = gltfFilePath;
 
 	bool fileExists = true;
-	std::string textData = FileRW::ReadFile(gltfFilePath, &fileExists);
+	std::string textData = FileRW::ReadFile(gltfFilePath, &fileExists, false);
 
 	if (!fileExists)
 		throw("Failed to load Model, file '" + AssetPath + "' not found.");
@@ -254,6 +254,17 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 			object = GameObject::Create("Mesh");
 			Object_Mesh* meshObject = static_cast<Object_Mesh*>(object);
 
+			std::string saveDir = AssetPath;
+			size_t whereRes = AssetPath.find("resources/");
+
+			if (whereRes == std::string::npos)
+				Log::Warning(std::vformat(
+					"ModelLoader cannot guarantee the mesh will be saved within the Resources directory (Path was: '{}')",
+					std::make_format_args(AssetPath)
+				));
+			else
+				saveDir = saveDir.substr(whereRes + 10, saveDir.size() - whereRes);
+
 			/*
 				When;
 					AssetPath = "models/crow/scene.gltf"
@@ -266,7 +277,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 				22/12/2024
 			*/
 			std::string meshPath = "meshes/"
-									+ AssetPath
+									+ saveDir
 									+ "/"
 									+ node.Name
 									+ ".hxmesh";
@@ -329,7 +340,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 			materialJson["BilinearFiltering"] = colorTex.DoBilinearSmoothing;
 
 			// `models/EmbeddedTexture.glb/Material.001`
-			std::string materialName = AssetPath
+			std::string materialName = saveDir
 				+ "/"
 				+ material.Name;
 
@@ -937,7 +948,8 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 		baseColFilterBilinear = m_JsonData["samplers"][(int)baseColTex["sampler"]]["magFilter"] == 9729;
 	
 	std::string baseColPath = getTexturePath(
-		m_File,
+		// cut off `resources/`
+		m_File.substr(10, m_File.size() - 10),
 		m_JsonData,
 		m_JsonData["images"][baseColSourceIndex],
 		m_Data

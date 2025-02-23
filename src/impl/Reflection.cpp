@@ -109,7 +109,9 @@ static void fromArray(Reflection::GenericValue& G, const std::vector<Reflection:
 	if (!G.Value)
 		throw("Allocation error while constructing GenericValue from std::vector<GenericValue>");
 
-	memcpy(G.Value, Array.data(), allocSize);
+	for (uint32_t i = 0; i < Array.size(); i++)
+		// placement-new to avoid 1 excess layer of indirection
+		new (&((Reflection::GenericValue*)G.Value)[i]) Reflection::GenericValue(Array[i]);
 
 	G.Size = Array.size();
 }
@@ -426,9 +428,19 @@ Reflection::GenericValue::~GenericValue()
 {
 	switch (this->Type)
 	{
-	case ValueType::Matrix: case ValueType::Array: case ValueType::Map:
+	case ValueType::Matrix:
 	{
 		Memory::Free(this->Value);
+		break;
+	}
+	case ValueType::Array: case ValueType::Map:
+	{
+		for (uint32_t i = 0; i < this->Size; i++)
+			// de-alloc potential heap buffers of elements first
+			(((Reflection::GenericValue*)this->Value)[i]).~GenericValue();
+		
+		Memory::Free(this->Value);
+
 		break;
 	}
 	case ValueType::String:

@@ -29,7 +29,7 @@
 
 constexpr uint32_t OBJECT_NEW_CLASSNAME_BUFSIZE = 16;
 constexpr uint32_t MATERIAL_NEW_NAME_BUFSIZE = 64;
-constexpr uint32_t MATERIAL_TEXTUREPATH_BUFSIZE = 64;
+constexpr uint32_t MATERIAL_TEXTUREPATH_BUFSIZE = 128;
 constexpr char MATERIAL_NEW_NAME_DEFAULT[] = "newmaterial";
 
 static const char* ParentString = "[Parent]";
@@ -270,7 +270,7 @@ static void renderTextEditor()
 						off = TextEditorFile.replace(off, 1, "/").find_first_of("\\");
 
 					if (!TextEditorFile.find("resources/"))
-						TextEditorFile.insert(0, "./"); // for `FileRW::GetAbsolutePath`
+						TextEditorFile.insert(0, "./"); // for `FileRW::TryMakePathCwdRelative`
 
 					TextEditorQuickSelectFiles.insert(TextEditorFile);
 				},
@@ -307,7 +307,7 @@ static void renderTextEditor()
 						off = TextEditorFile.replace(off, 1, "/").find_first_of("\\");
 
 					if (!TextEditorFile.find("resources/"))
-						TextEditorFile.insert(0, "./"); // for `FileRW::GetAbsolutePath`
+						TextEditorFile.insert(0, "./"); // for `FileRW::TryMakePathCwdRelative`
 
 					textEditorSaveFile();
 
@@ -358,7 +358,7 @@ static void renderTextEditor()
 			delete TextEditorFileStream;
 		}
 
-		TextEditorFileStream = new std::fstream(FileRW::GetAbsolutePath(TextEditorFile));
+		TextEditorFileStream = new std::fstream(FileRW::TryMakePathCwdRelative(TextEditorFile));
 		
 		std::string scriptContents = "";
 
@@ -728,6 +728,7 @@ static void mtlEditorTexture(uint32_t* TextureIdPtr, const char* Label, char* Bu
 	}
 	else
 	{
+		Buffer[MATERIAL_TEXTUREPATH_BUFSIZE - 1] = 0;
 		ImGui::InputText(Label, Buffer, MATERIAL_TEXTUREPATH_BUFSIZE);
 		ImGui::SetItemTooltip("Enter path directly, or hold CTRL to use a file dialog");
 	}

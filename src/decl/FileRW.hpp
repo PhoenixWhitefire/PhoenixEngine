@@ -29,5 +29,5 @@ namespace FileRW
 		bool* SuccessPtr = nullptr
 	);
 
-	std::string GetAbsolutePath(const std::string&);
+	std::string TryMakePathCwdRelative(const std::string&);
 };

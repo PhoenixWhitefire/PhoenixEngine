@@ -177,6 +177,14 @@ void Engine::LoadConfiguration()
 	VSync = readFromConfiguration("VSync", false);
 	FpsCap = readFromConfiguration("FpsCap", 60);
 
+	std::string_view resDir = readFromConfiguration("ResourcesDirectory", std::string_view("<NOT_SET>"));
+
+	if (resDir != "resources/")
+		Log::Warning(std::vformat(
+			"Resources Directory was changed to '{}' instead of 'resources/'. Prepare for unforeseen consequences.",
+			std::make_format_args(resDir)
+		));
+
 	Log::Info("Configuration loaded");
 }
 

@@ -92,7 +92,6 @@ function Update()
 		
 		if Path then
 			scene_save({ IntendedSaveWorldState }, Path)
-			IntendedSaveWorldState:Destroy()
 		else
 			print("No path selected")
 		end

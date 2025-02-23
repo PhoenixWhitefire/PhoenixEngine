@@ -9,7 +9,7 @@ out vec4 FragColor;
 
 uniform sampler2D Texture;
 
-uniform float Threshold = 1.f;
+uniform float Threshold = 1.5f;
 
 float getBrightness(vec3 Value)
 {

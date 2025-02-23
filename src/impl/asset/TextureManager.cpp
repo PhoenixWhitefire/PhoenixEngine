@@ -9,6 +9,7 @@
 #include "GlobalJsonConfig.hpp"
 #include "ThreadManager.hpp"
 #include "Utilities.hpp"
+#include "FileRW.hpp"
 #include "Log.hpp"
 
 static const std::string MissingTexPath = "!Missing";
@@ -349,7 +350,7 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 	ZoneTextF("%s", Path.c_str());
 
 	std::string ResDir = EngineJsonConfig["ResourcesDirectory"];
-	std::string ActualPath = ResDir + Path;
+	std::string ActualPath = FileRW::TryMakePathCwdRelative(Path);
 
 	auto it = m_StringToTextureId.find(Path);
 	
@@ -378,7 +379,7 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 
 			glGenTextures(1, &newGpuId);
 
-			newResourceId = this->Assign({ Path, UINT32_MAX, newGpuId }, Path);
+			newResourceId = this->Assign({ ActualPath, UINT32_MAX, newGpuId }, Path);
 			newTexture = &this->GetTextureResource(newResourceId);
 
 			glBindTexture(GL_TEXTURE_2D, newTexture->GpuId);

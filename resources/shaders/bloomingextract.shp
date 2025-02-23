@@ -1,4 +1,6 @@
 {
-    "Vertex": "postprocessing.vert",
-    "Fragment": "bloomingextract.frag"
+  "Fragment": "shaders/bloomingextract.frag",
+  "Geometry": "<NOT_SPECIFIED>",
+  "InheritUniformsOf": "",
+  "Vertex": "shaders/postprocessing.vert"
 }

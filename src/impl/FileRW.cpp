@@ -29,7 +29,7 @@ static bool createDirectoryRecursive(const std::string& dirName, std::error_code
 
 std::string FileRW::ReadFile(const std::string& ShortPath, bool* DoesFileExist, bool PrependResDir)
 {
-	std::string actualPath = PrependResDir ? FileRW::GetAbsolutePath(ShortPath) : ShortPath;
+	std::string actualPath = PrependResDir ? FileRW::TryMakePathCwdRelative(ShortPath) : ShortPath;
 
 	std::ifstream file(actualPath, std::ios::binary);
 
@@ -72,7 +72,7 @@ void FileRW::WriteFile(
 	bool* SuccessPtr
 )
 {
-	std::string path = InResourcesDirectory ? FileRW::GetAbsolutePath(ShortPath) : ShortPath;
+	std::string path = InResourcesDirectory ? FileRW::TryMakePathCwdRelative(ShortPath) : ShortPath;
 
 	std::ofstream file(path.c_str(), std::ios::binary);
 
@@ -100,7 +100,7 @@ void FileRW::WriteFileCreateDirectories(
 	bool* SuccessPtr
 )
 {
-	std::string path = InResourcesDirectory ? FileRW::GetAbsolutePath(ShortPath) : ShortPath;
+	std::string path = InResourcesDirectory ? FileRW::TryMakePathCwdRelative(ShortPath) : ShortPath;
 
 	size_t containingDirLoc = path.find_last_of("/");
 	std::string dirPath = path.substr(0, containingDirLoc);
@@ -113,18 +113,28 @@ void FileRW::WriteFileCreateDirectories(
 	FileRW::WriteFile(path, Contents, false, SuccessPtr);
 }
 
-std::string FileRW::GetAbsolutePath(const std::string& LocalPath)
+std::string FileRW::TryMakePathCwdRelative(const std::string& LocalPath)
 {
 	std::string path = LocalPath;
 
 	// TODO: allow paths specified in resource files (eg materials and levels etc) to not have to start from the root
 	// and start from resources/ automatically
-	// currently, files that *are* from the root are specified by beginning the path with '/'
+	// currently, files that *are* from the root are specified by beginning the path with `.` (such as `./`)
 	// find a better method?
 	// 12/01/2025: `.` is for preceding `./`, `:` is for drive letters, such as
 	// `C:`, where we don't need to do anything
-	if (path[0] != '.' && path[1] != ':' && path.find("resources/") == std::string::npos)
+	// 23/02/2025: `/` is for Linux paths which begin at the home directory, starting with a `/home`
+	size_t whereRes = path.find("resources/");
+
+	if ((path[0] != '.' && path[0] != '/' && path[1] != ':') && whereRes == std::string::npos)
 		path.insert(0, EngineJsonConfig.value("ResourcesDirectory", "resources/"));
+
+	else if (whereRes != std::string::npos)
+		// 23/02/2025: cut it off right to the `resources/` directory
+		// prevent cases where an asset points to something outside of the CWD,
+		// which can cause loading errors which are only present when a game is "exported"
+		// or on a different machine
+		path = path.substr(whereRes, path.size() - whereRes);
 
 	return path;
 }

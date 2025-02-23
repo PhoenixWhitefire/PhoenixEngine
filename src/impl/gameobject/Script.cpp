@@ -748,6 +748,9 @@ static lua_State* createState()
 				GameObject* g = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
 				const char* k = L->namecall->data; // this is weird 10/01/2025
 
+				if (!g)
+					luaL_errorL(L, "Tried to call '%s' of a de-allocated GameObject with ID %u", k, *(uint32_t*)lua_touserdata(L, 1));
+
 				ZoneText(k, strlen(k));
 
 				int numresults = 0;
@@ -991,7 +994,10 @@ void Object_Script::Update(double dt)
 		else if (updateStatus == LUA_OK)
 			lua_pop(m_L, 1);
 	}
-	lua_pop(m_L, 1);
+
+	// in case we killed ourselves
+	if (m_L)
+		lua_pop(m_L, 1);
 }
 
 bool Object_Script::LoadScript(const std::string& scriptFile)
