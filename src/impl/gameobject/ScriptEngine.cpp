@@ -1,6 +1,7 @@
 #include <luau/VM/include/lualib.h>
 #include <luau/VM/src/lstate.h>
 #include <glm/mat4x4.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
 #include <SDL3/SDL_dialog.h>
@@ -37,9 +38,9 @@ const std::unordered_map<Reflection::ValueType, lua_Type> ScriptEngine::Reflecte
 		{ Reflection::ValueType::Integer,     lua_Type::LUA_TNUMBER    },
 		{ Reflection::ValueType::Double,      lua_Type::LUA_TNUMBER    },
 		{ Reflection::ValueType::String,      lua_Type::LUA_TSTRING    },
+		{ Reflection::ValueType::Vector3,     lua_Type::LUA_TVECTOR  },
 
 		{ Reflection::ValueType::Color,       lua_Type::LUA_TUSERDATA  },
-		{ Reflection::ValueType::Vector3,     lua_Type::LUA_TUSERDATA  },
 		{ Reflection::ValueType::Matrix,      lua_Type::LUA_TUSERDATA  },
 
 		{ Reflection::ValueType::GameObject,  lua_Type::LUA_TUSERDATA  },
@@ -50,11 +51,7 @@ const std::unordered_map<Reflection::ValueType, lua_Type> ScriptEngine::Reflecte
 
 static void pushVector3(lua_State* L, const Vector3& vec)
 {
-	void* ptrTovec = lua_newuserdata(L, sizeof(Vector3));
-	*(Vector3*)ptrTovec = vec;
-
-	luaL_getmetatable(L, "Vector3");
-	lua_setmetatable(L, -2);
+	lua_pushvector(L, static_cast<float>(vec.X), static_cast<float>(vec.Y), static_cast<float>(vec.Z));
 }
 
 static void pushColor(lua_State* L, const Color& col)
@@ -232,6 +229,10 @@ Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int St
 	{
 		return lua_tostring(L, StackIndex);
 	}
+	case LUA_TVECTOR:
+	{
+		return Vector3(glm::make_vec3(luaL_checkvector(L, StackIndex))).ToGenericValue();
+	}
 	case LUA_TUSERDATA:
 	{
 		// IMPORTANT!!
@@ -239,11 +240,6 @@ Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int St
 		// 11/09/2024
 		const char* tname = luaL_typename(L, StackIndex);
 
-		if (strcmp(tname, "Vector3") == 0)
-		{
-			Vector3 vec = *(Vector3*)lua_touserdata(L, StackIndex);
-			return vec.ToGenericValue();
-		}
 		if (strcmp(tname, "Color") == 0)
 		{
 			Color col = *(Color*)lua_touserdata(L, StackIndex);

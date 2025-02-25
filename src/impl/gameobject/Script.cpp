@@ -1,4 +1,5 @@
 ﻿#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <luau/VM/include/lualib.h>
 #include <tracy/Tracy.hpp>
 
@@ -158,143 +159,6 @@ static auto api_gameobjecttostring = [](lua_State* L)
 		return 1;
 	};
 
-static auto api_newvec3 = [](lua_State* L)
-	{
-		double x = luaL_checknumber(L, 1);
-		double y = luaL_checknumber(L, 2);
-		double z = luaL_checknumber(L, 3);
-
-		ScriptEngine::L::PushGenericValue(L, Vector3(x, y, z).ToGenericValue());
-
-		return 1;
-	};
-
-static auto api_vec3index = [](lua_State* L)
-	{
-		ZoneScopedNC("Vector3.__index", tracy::Color::LightSkyBlue);
-
-		Vector3* vec = (Vector3*)luaL_checkudata(L, 1, "Vector3");
-		const char* key = luaL_checkstring(L, 2);
-
-		ZoneText(key, strlen(key));
-
-		lua_getglobal(L, "Vector3");
-		lua_pushstring(L, key);
-		lua_rawget(L, -2);
-
-		// Pass-through to Vector3.new
-		if (!lua_isnil(L, -1))
-			return 1;
-
-		if (strcmp(key, "X") == 0)
-		{
-			lua_pushnumber(L, vec->X);
-			return 1;
-		}
-		else if (strcmp(key, "Y") == 0)
-		{
-			lua_pushnumber(L, vec->Y);
-			return 1;
-		}
-		else if (strcmp(key, "Z") == 0)
-		{
-			lua_pushnumber(L, vec->Z);
-			return 1;
-		}
-		else if (strcmp(key, "Magnitude") == 0)
-		{
-			lua_pushnumber(L, vec->Magnitude());
-			return 1;
-		}
-		else if (strcmp(key, "Normalized") == 0)
-		{
-			ScriptEngine::L::PushGenericValue(L, (*vec / vec->Magnitude()).ToGenericValue());
-			return 1;
-		}
-		else if (strcmp(key, "Dot") == 0)
-		{
-			ScriptEngine::L::PushGenericValue(L, vec->ToGenericValue());
-
-			lua_pushcclosure(
-				L,
-				[](lua_State* L)
-				-> int
-				{
-					Vector3* v1 = (Vector3*)luaL_checkudata(L, lua_upvalueindex(1), "Vector3");
-					Vector3* v2 = (Vector3*)luaL_checkudata(L, 1, "Vector3");
-
-					ScriptEngine::L::PushGenericValue(L, v1->Dot(*v2));
-					
-					return 1;
-				},
-				"Vector3::Dot",
-				1
-			);
-
-			return 1;
-		}
-		else if (strcmp(key, "Cross") == 0)
-		{
-			ScriptEngine::L::PushGenericValue(L, vec->ToGenericValue());
-
-			lua_pushcclosure(
-				L,
-				[](lua_State* L)
-				-> int
-				{
-					Vector3* v1 = (Vector3*)luaL_checkudata(L, lua_upvalueindex(1), "Vector3");
-					Vector3* v2 = (Vector3*)luaL_checkudata(L, 1, "Vector3");
-
-					ScriptEngine::L::PushGenericValue(L, v1->Cross(*v2).ToGenericValue());
-
-					return 1;
-				},
-				"Vector3::Cross",
-				1
-			);
-
-			return 1;
-		}
-		else
-			luaL_errorL(L, "Invalid key %s", key);
-
-		//if (vec->HasProperty(key))
-		//{
-		//	Reflection::GenericValue value = vec->GetPropertyValue(key);
-		//	pushGenericValue(L, value);
-
-		//	return 1;
-		//}
-		//else if (vec->HasFunction(key))
-		//{
-		//	//pushFunction<Vector3>(L, vec, key);
-
-		//	//return 1;
-
-		//	return 0;
-		//}
-		//else
-		//{
-		//	luaL_errorL(L, std::vformat(
-		//		"{} is not a valid member of Vector3",
-		//		std::make_format_args(key)
-		//	).c_str());
-		//}
-	};
-
-static auto api_vec3newindex = [](lua_State* L)
-	{
-		luaL_errorL(L, "Vector3s are immutable");
-	};
-
-static auto api_vec3tostring = [](lua_State* L)
-	{
-		Vector3 vec = *(Vector3*)luaL_checkudata(L, 1, "Vector3");
-		lua_pushstring(L, vec.ToString().c_str());
-
-		return 1;
-	};
-
 static auto api_newcol = [](lua_State* L)
 	{
 		float x = static_cast<float>(luaL_checknumber(L, 1));
@@ -405,130 +269,6 @@ static lua_State* createState()
 	);
 	lua_setglobal(state, "print");
 
-	// Vector3
-	{
-		lua_newtable(state);
-
-		lua_pushcfunction(state, api_newvec3, "Vector3.new");
-		lua_setfield(state, -2, "new");
-
-		lua_setglobal(state, "Vector3");
-
-		luaL_newmetatable(state, "Vector3");
-
-		lua_pushcfunction(state, api_vec3index, "Vector3.__index");
-		lua_setfield(state, -2, "__index");
-
-		//lua_pushcfunction(state, api_vec3newindex, "Vector3.__newindex");
-		//lua_setfield(state, -2, "__newindex");
-
-		lua_pushcfunction(state, api_vec3tostring, "Vector3.__tostring");
-		lua_setfield(state, -2, "__tostring");
-
-		lua_pushcfunction(
-			state,
-			[](lua_State* L)
-			{
-				ZoneScopedNC("Vector3.__add", tracy::Color::LightSkyBlue);
-
-				Vector3 a = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -2));
-				Vector3 b = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -1));
-
-				ScriptEngine::L::PushGenericValue(L, (a + b).ToGenericValue());
-
-				return 1;
-			},
-			"Vector3.__add"
-		);
-		lua_setfield(state, -2, "__add");
-
-		lua_pushcfunction(
-			state,
-			[](lua_State* L)
-			{
-				ZoneScopedNC("Vector3.__sub", tracy::Color::LightSkyBlue);
-
-				Vector3 a = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -2));
-				Vector3 b = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -1));
-
-				ScriptEngine::L::PushGenericValue(L, (a - b).ToGenericValue());
-
-				return 1;
-			},
-			"Vector3.__sub"
-		);
-		lua_setfield(state, -2, "__sub");
-
-		lua_pushcfunction(
-			state,
-			[](lua_State* L)
-			{
-				ZoneScopedNC("Vector3.__mul", tracy::Color::LightSkyBlue);
-
-				Vector3 a = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -2));
-
-				int bt = lua_type(L, 2);
-
-				if (bt == LUA_TNUMBER)
-				{
-					double b = luaL_checknumber(L, 2);
-
-					ScriptEngine::L::PushGenericValue(L, (a * b).ToGenericValue());
-
-					return 1;
-				}
-				else if (bt == LUA_TUSERDATA)
-				{
-					Vector3 b = ScriptEngine::L::LuaValueToGeneric(L, -1);
-
-					ScriptEngine::L::PushGenericValue(L, (a * b).ToGenericValue());
-
-					return 1;
-				}
-
-				luaL_errorL(L, "Expected multiplication against Vector3 or number");
-			},
-			"Vector3.__mul"
-		);
-		lua_setfield(state, -2, "__mul");
-
-		lua_pushcfunction(
-			state,
-			[](lua_State* L)
-			{
-				ZoneScopedNC("Vector3.__div", tracy::Color::LightSkyBlue);
-
-				Vector3 a = Vector3(ScriptEngine::L::LuaValueToGeneric(L, -2));
-
-				int bt = lua_type(L, 2);
-
-				if (bt == LUA_TNUMBER)
-				{
-					double b = luaL_checknumber(L, 2);
-
-					ScriptEngine::L::PushGenericValue(L, (a / b).ToGenericValue());
-
-					return 1;
-				}
-				else if (bt == LUA_TUSERDATA)
-				{
-					Vector3 b = ScriptEngine::L::LuaValueToGeneric(L, -1);
-
-					ScriptEngine::L::PushGenericValue(L, Vector3(a.X / b.X, a.Y / b.Y, a.Z / b.Z).ToGenericValue());
-
-					return 1;
-				}
-
-				luaL_errorL(L, "Expected division against Vector3 or number");
-			},
-			"Vector3.__div"
-		);
-		lua_setfield(state, -2, "__div");
-
-		lua_pushstring(state, "Vector3");
-		lua_setfield(state, -2, "__type");
-	}
-
 	// Color
 	{
 		lua_newtable(state);
@@ -542,9 +282,6 @@ static lua_State* createState()
 
 		lua_pushcfunction(state, api_colindex, "Color.__index");
 		lua_setfield(state, -2, "__index");
-
-		//lua_pushcfunction(state, api_vec3newindex, "Vector3.__newindex");
-		//lua_setfield(state, -2, "__newindex");
 
 		lua_pushcfunction(state, api_coltostring, "Color.__tostring");
 		lua_setfield(state, -2, "__tostring");
@@ -584,8 +321,8 @@ static lua_State* createState()
 				{
 				case 1:
 				{
-					Vector3& vec = *(Vector3*)luaL_checkudata(L, -1, "Vector3");
-					m[3] = glm::vec4((glm::vec3)vec, 1.f);
+					const float* vec = luaL_checkvector(L, -1);
+					m[3] = glm::vec4(glm::make_vec3(vec), 1.f);
 
 					break;
 				}
@@ -643,12 +380,12 @@ static lua_State* createState()
 			state,
 			[](lua_State* L)
 			{
-				Vector3& a = *(Vector3*)luaL_checkudata(L, 1, "Vector3");
-				Vector3& b = *(Vector3*)luaL_checkudata(L, 2, "Vector3");
+				const float* a = luaL_checkvector(L, 1);
+				const float* b = luaL_checkvector(L, 2);
 
 				ScriptEngine::L::PushGenericValue(
 					L,
-					glm::lookAt((glm::vec3)a, (glm::vec3)b, glm::vec3(0.f, 1.f, 0.f))
+					glm::lookAt(glm::make_vec3(a), glm::make_vec3(b), glm::vec3(0.f, 1.f, 0.f))
 				);
 
 				return 1;

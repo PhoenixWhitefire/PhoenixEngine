@@ -3,7 +3,7 @@
 local TotalTime = 0
 
 local Camera = workspace.SceneCamera
-local CharacterControllerCreator = require("scripts/modules/character-controller.luau")
+local CharacterControllerCreator = require("scripts/modules/CharacterController.luau")
 --local RoomGen = require("scripts/roomsgen.luau")
 
 local CharacterController = CharacterControllerCreator.new(Camera)
@@ -33,10 +33,6 @@ local function reset()
 	Character.Transform = Matrix.fromTranslation(8, 10, 0)
 	
 	DefaultCameraOffset = CharacterController.CameraOffset
-end
-
-local function vecMul(v1, v2)
-	return Vector3.new(v1.X * v2.X, v1.Y * v2.Y, v1.Z * v2.Z)
 end
 
 function Update(DeltaTime)

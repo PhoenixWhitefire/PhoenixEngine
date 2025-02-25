@@ -16,7 +16,7 @@ function Controller.new(Camera)
         FirstPerson = true,
         CameraOffset = Matrix.fromTranslation(0, 0, 0),
         -- relative to the character, where to look when in third-person
-        CameraTargetOffset = Vector3.new(0, 0, 0),
+        CameraTargetOffset = vector.zero,
         
         prevMouseX = 0,
         prevMouseY = 0,
@@ -32,7 +32,7 @@ function Controller:InitDefault(CharacterHeight)
     CharacterHeight = CharacterHeight or 15
     
     local character = GameObject.new("Primitive")
-    character.Size = Vector3.new(CharacterHeight / 3, CharacterHeight, CharacterHeight / 3)
+    character.Size = vector.create(CharacterHeight / 3, CharacterHeight, CharacterHeight / 3)
     character.PhysicsDynamics = true
     character.Friction = 2
     character.Parent = workspace
@@ -50,12 +50,12 @@ function Controller:Update(DeltaTime)
     local rotationX, rotationY = self:getRotationVector()
     
     local floorRayHit = world_aabbcast(
-        self.Character.Transform.Position - Vector3.new(0, 2, 0),
+        self.Character.Transform.Position - vector.create(0, 2, 0),
         self.Character.Size * 0.8,
         { self.Character }
     )
     
-    local impulse = Vector3.new(
+    local impulse = vector.create(
         moveDirection.X * self.Acceleration * DeltaTime,
         0,
         moveDirection.Z * self.Acceleration * DeltaTime
@@ -63,8 +63,8 @@ function Controller:Update(DeltaTime)
     
     if floorRayHit then
         if input_keypressed(" ") and (self.totalTime - self.lastJumped) > self.JumpCooldown then
-            impulse += Vector3.new(0, self.JumpImpulse, 0)
-            self.Character.LinearVelocity = Vector3.new(self.Character.LinearVelocity.X, 0, self.Character.LinearVelocity.Z)
+            impulse += vector.create(0, self.JumpImpulse, 0)
+            self.Character.LinearVelocity = vector.create(self.Character.LinearVelocity.X, 0, self.Character.LinearVelocity.Z)
             self.lastJumped = self.totalTime
         end
     else
@@ -81,7 +81,7 @@ function Controller:Update(DeltaTime)
     
     local camTransform
     
-    local rollAdd = -moveDirection.Normalized:Dot(self.Camera.Transform.Right) * 0.005 * inputDirection.X
+    local rollAdd = -vector.dot(vector.normalize(moveDirection), self.Camera.Transform.Right) * DeltaTime * 0.5
     --rollAdd = moveDirection.X * 0.05
     if rollAdd == rollAdd then
         self.roll += rollAdd
@@ -109,11 +109,11 @@ function Controller:getMoveDirection()
     
     local trans = self.Camera.Transform * Matrix.fromEulerAnglesXYZ(-self.cameraPitch, 0, 0) * Matrix.fromTranslation(moveX, 0, moveZ)
     
-    return Vector3.new(
+    return vector.create(
         matrix_getv(trans, 3, 0) - matrix_getv(self.Camera.Transform, 3, 0),
         0,
         matrix_getv(trans, 3, 2) - matrix_getv(self.Camera.Transform, 3, 2)
-    ), Vector3.new(moveX, 0, moveZ)
+    ), vector.create(moveX, 0, moveZ)
     
     --[[
     local transrights = Camera.Transform
