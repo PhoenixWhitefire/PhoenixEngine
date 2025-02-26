@@ -610,9 +610,6 @@ Object_Script::Object_Script()
 	this->Name = "Script";
 	this->ClassName = "Script";
 
-	// `L` is initialized in Object_Script::Reload
-	m_L = nullptr;
-
 	s_DeclareReflections();
 	ApiPointer = &s_Api;
 }
@@ -645,7 +642,7 @@ static void resumeScheduledCoroutines()
 
 			ScriptEngine::L::PushGenericValue(coroutine, retval);
 
-			lua_Status resumeStatus = (lua_Status)lua_resume(coroutine, nullptr, 1);
+			int resumeStatus = lua_resume(coroutine, nullptr, 1);
 
 			if (resumeStatus != LUA_OK && resumeStatus != LUA_YIELD)
 			{
@@ -662,9 +659,10 @@ static void resumeScheduledCoroutines()
 
 			lua_pop(lua_mainthread(coroutine), 1);
 
-			// the indexes of the coroutines will have changed, and `corIdx` will point
-			// out-of-bounds. this is a lazy workaround. 24/12/2024
-			// just fucking give up
+			// the indexes of the coroutines will have changed, and `corIdx` will skip what the next element was
+			// this is a lazy workaround. 24/12/2024
+			resumeScheduledCoroutines();
+
 			return;
 		}
 	}
@@ -677,8 +675,8 @@ void Object_Script::Update(double dt)
 	s_WindowGrabMouse = ScriptEngine::s_BackendScriptWantGrabMouse;
 
 	// The first Script to be updated in the current frame will
-	// need to handle resuming scheduled (i.e. yielded-but-now-hopefully-finished)
-	// coroutines, the poor bastard
+	// need to handle resuming ALL the coroutines that were yielded,
+	// the poor bastard
 	// 23/09/2024
 	resumeScheduledCoroutines();
 
@@ -713,8 +711,8 @@ void Object_Script::Update(double dt)
 		lua_pushnumber(co, dt);
 
 		// why do all of these functions say they return `int` and not
-		// `lua_Status` like they actually do?? 23/09/2024
-		lua_Status updateStatus = (lua_Status)lua_resume(co, m_L, 1);
+		// `lua_Status` like they actually do? 23/09/2024
+		int updateStatus = lua_resume(co, m_L, 1);
 
 		if (updateStatus != LUA_OK && updateStatus != LUA_YIELD)
 		{
@@ -747,16 +745,18 @@ bool Object_Script::LoadScript(const std::string& scriptFile)
 	this->SourceFile = scriptFile;
 	m_StaleSource = true;
 
-	// TODO 14/09/2024
-	// Don't want the script to run before SceneFormat has fully
-	// deserialized the scene and the `script` global to
-	// report it is parented to `nil`. Only want it to run when
-	// parented under the `DataModel`. An `::IsDescendantOf` would be
-	// ideal, but it's not needed right now as this value will always
-	// be set before Script get's its GameObject properties assigned
-	// (i.e. it's Parent)
-	// This is in this property setter so that the Script can be
-	// manually loaded if the need every arises
+	/*
+		Don't want the script to run before SceneFormat has fully
+		deserialized the scene and the `script` global to
+		report it is parented to `nil`. Only want it to run when
+		parented under the `DataModel`. An `::IsDescendantOf` would be
+		ideal, but it's not needed right now as this value will always
+		be set before Script get's its GameObject properties assigned
+		(i.e. it's Parent).
+
+		Manually call `::Reload` after `::LoadScript` to bypass this
+		restriction.
+	*/
 	if (!this->GetParent())
 		return false;
 	else
@@ -775,10 +775,7 @@ bool Object_Script::Reload()
 	m_Source = FileRW::ReadFile(SourceFile, &fileExists);
 
 	m_StaleSource = false;
-	
-	// `resetthread` doesn't get rid of globals btw
-	// new things learned every day
-	// 24/12/2024
+
 	if (m_L)
 		lua_close(m_L);
 	m_L = createState();
@@ -818,9 +815,9 @@ bool Object_Script::Reload()
 		// 24/12/2024
 		GameObjectRef<Object_Script> dontKillMePlease = this;
 
-		lua_Status resumeResult = (lua_Status)lua_resume(m_L, m_L, 0);
+		int resumeResult = lua_resume(m_L, m_L, 0);
 
-		if (resumeResult != lua_Status::LUA_OK && resumeResult != lua_Status::LUA_YIELD)
+		if (resumeResult != LUA_OK && resumeResult != LUA_YIELD)
 		{
 			const char* errStr = lua_tostring(m_L, -1);
 

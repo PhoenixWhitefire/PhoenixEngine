@@ -23,6 +23,7 @@ struct AllocHeader
 {
 	uint32_t Size = UINT32_MAX;
 	uint8_t Category = UINT8_MAX;
+	uint8_t Check = 222; // you probably do not know what this in reference to
 };
 
 namespace Memory
@@ -32,6 +33,9 @@ namespace Memory
 		void* realPointer = (uint8_t*)Pointer - sizeof(AllocHeader);
 
 		AllocHeader* header = (AllocHeader*)realPointer;
+		// in case someone passes in a pointer that wasn't alloc'd by `::Alloc` and doesn't immediately segfault,
+		// hold their hand and tell them they're
+		assert(header->Check == 222);
 
 		if (Size)
 			*Size = header->Size;
@@ -104,8 +108,7 @@ namespace Memory
 			Counters[memIndex] -= prevSize;
 			Counters[memIndex] += Size;
 			
-			AllocHeader header{ static_cast<uint32_t>(Size), memIndex };
-			memcpy(ptr, &header, sizeof(AllocHeader));
+			*((AllocHeader*)ptr) = AllocHeader{ static_cast<uint32_t>(Size), memIndex };
 
 			return (void*)((uint8_t*)ptr + sizeof(AllocHeader));
 		}
@@ -124,7 +127,7 @@ namespace Memory
 
 		Pointer = GetPointerInfo(Pointer, &size, &memcat);
 
-		assert(memcat<static_cast<uint8_t>(Memory::Category::__count));
+		assert(memcat < static_cast<uint8_t>(Memory::Category::__count));
 
 #if TRACY_ENABLE
 		if (memcat != static_cast<uint8_t>(Memory::Category::Default))
@@ -139,3 +142,15 @@ namespace Memory
 		free(Pointer);
 	}
 };
+
+template <class T>
+T* Memory::Allocator<T>::allocate(size_t n)
+{
+	return (T*)Alloc(n, Category::Default);
+}
+
+template <class T>
+void Memory::Allocator<T>::deallocate(T* p, size_t n)
+{
+	Free(p);
+}

@@ -14,16 +14,15 @@ target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:Release>:-flto>)
 target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:-fsanitize=address>)
 
 target_link_libraries(PhoenixEngine
-	#opengl32.lib
 	${CMAKE_BINARY_DIR}/Vendor/x64/${PHX_BUILD_TYPE}/libVendor.a
-	${CMAKE_BINARY_DIR}/Vendor/glm/glm/libglm.a
-	${CMAKE_BINARY_DIR}/Vendor/luau/libLuau.Analysis.a
-	${CMAKE_BINARY_DIR}/Vendor/luau/libLuau.Compiler.a
-	${CMAKE_BINARY_DIR}/Vendor/luau/libLuau.Ast.a
-	${CMAKE_BINARY_DIR}/Vendor/luau/libLuau.VM.a
-	${CMAKE_BINARY_DIR}/Vendor/SDL/libSDL_uclibc.a
-	${CMAKE_BINARY_DIR}/Vendor/SDL/libSDL3.so
-	${CMAKE_BINARY_DIR}/Vendor/tracy/libTracyClient.a
+	${CMAKE_BINARY_DIR}/Vendor/glm/glm/${PHX_BUILD_TYPE}/libglm.a
+	${CMAKE_BINARY_DIR}/Vendor/luau/${PHX_BUILD_TYPE}/libLuau.Analysis.a
+	${CMAKE_BINARY_DIR}/Vendor/luau/${PHX_BUILD_TYPE}/libLuau.Compiler.a
+	${CMAKE_BINARY_DIR}/Vendor/luau/${PHX_BUILD_TYPE}/libLuau.Ast.a
+	${CMAKE_BINARY_DIR}/Vendor/luau/${PHX_BUILD_TYPE}/libLuau.VM.a
+	${CMAKE_BINARY_DIR}/Vendor/SDL/${PHX_BUILD_TYPE}/libSDL_uclibc.a
+	${CMAKE_BINARY_DIR}/Vendor/SDL/${PHX_BUILD_TYPE}/libSDL3.so
+	${CMAKE_BINARY_DIR}/Vendor/tracy/${PHX_BUILD_TYPE}/libTracyClient.a
 	
 	# IF:$<$<CONFIG:Debug> ${PHX_TRACY_LIB_PATH} $<$<CONFIG:RelTracy>:${PHX_TRACY_LIB_PATH}>
 )

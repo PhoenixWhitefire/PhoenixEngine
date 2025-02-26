@@ -60,4 +60,15 @@ namespace Memory
 	};
 
 	static_assert(std::size(CategoryNames) == (uint8_t)Memory::Category::__count);
+
+	// stl-conforming allocator
+	template <class T>
+	struct Allocator
+	{
+		T* allocate(size_t n);
+		void deallocate(T* p, size_t n);
+
+		T value_type;
+	};
 };
+

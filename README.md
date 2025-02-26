@@ -25,6 +25,13 @@ Developed primary on and for Windows with Visual Studio Community 2022 with MSVC
 
 1. `git clone https://github.com/PhoenixWhitefire/PhoenixEngine --recursive`, or just use the `Code <>` button
 2. `cmake -B "./"` in the root directory
+    * On Linux/with Ninja, use `cmake -B "./" -G "Ninja Multi-Config"`
+    * When using Visual Studio Code, set the Generator to "Ninja Multi-Config", and change the "Build Directory" setting to just `${workspaceFolder}`
+        * VS Code seems to have an issue with the `liburing` dependency for SDL. Compile directly from the terminal to avoid this, with a command such as:
+
+            `/usr/bin/cmake --build /home/viren/Documents/PhoenixEngine --config Debug --target all`
+
+        	, for a `Debug` build.
 3. Open the resulting `PhoenixEngine.sln`, and you should have:
 	* `PhoenixEngine` as the startup project
 	* A Solution Folder called "Vendor", containing a few sub-projects and an `SDL` and `Luau` sub-folder
@@ -33,6 +40,12 @@ Developed primary on and for Windows with Visual Studio Community 2022 with MSVC
 	* `Release`: All optimizations, including Linker ones, no Address Sanitizer or Tracy
 	* `RelTracy`: Same as `Release`, but with Tracy instrumentation enabled, as that carries it's own overhead
 6. Run.
+7. (Optional) I have not configured the Tracy Profiler standalone application to build along with the rest of the Engine, you will need to build it manually. The "Start Profiling" button in the Info widget, as well as the `-tracyim` launch argument, all assume you have built the Profiler yourself and that it is in the expected directory. You can do this with the following commands:
+    * `cd Vendor/tracy/profiler`
+    * `cmake -B build -G Ninja` (You can omit `-G Ninja` if you're OK with it using Make)
+    * `cmake --build build --config Release`
+    
+    By the end, you should have a binary at the location `Vendor/tracy/profiler/build/tracy-profiler`.
 
 # Attributions
 

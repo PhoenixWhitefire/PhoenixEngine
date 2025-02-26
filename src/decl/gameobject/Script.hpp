@@ -24,7 +24,7 @@ public:
 
 private:
 	std::string m_Source;
-	lua_State* m_L;
+	lua_State* m_L = nullptr;
 	bool m_StaleSource = true;
 
 	static void s_DeclareReflections();

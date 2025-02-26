@@ -40,9 +40,4 @@ target_include_directories(Vendor PUBLIC
 	"SDL/include"
 )
 
-#add_subdirectory(glm)
-#add_subdirectory(luau)
-#add_subdirectory(SDL)
-#add_subdirectory(tracy)
-
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Vendor)

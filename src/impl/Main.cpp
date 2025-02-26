@@ -135,7 +135,7 @@ static bool WasTracyLaunched = false;
 
 #else
 
-#define LAUNCH_TRACY_CMD "\"Vendor/tracy/profiler/build/Release/tracy-profiler.exe\" -a 127.0.0.1"
+#define LAUNCH_TRACY_CMD "\"Vendor/tracy/profiler/build/tracy-profiler\" -a 127.0.0.1"
 
 #endif
 
@@ -725,6 +725,12 @@ static void begin(int argc, char** argv)
 	
 	bool worldLoadSuccess = true;
 	std::vector<GameObject*> roots = SceneFormat::Deserialize(FileRW::ReadFile(mapFile), &worldLoadSuccess);
+	
+	/*
+	std::vector<GameObject, Memory::Allocator<GameObject>> memalloctest;
+	memalloctest.reserve(5000);
+	memalloctest.shrink_to_fit();
+	*/
 
 	PHX_ENSURE_MSG(worldLoadSuccess, "World failed to load: " + SceneFormat::GetLastErrorString());
 
@@ -746,7 +752,7 @@ int main(int argc, char** argv)
 	const char* platform = SDL_GetPlatform();
 
 	Log::Info(std::vformat(
-		"Phoenix Engine:\n\tPlatform: {}\n\tBuild type: {}\n\tMain.cpp last compiled: {} @ {}",
+		"Phoenix Engine:\n\tTarget platform: {}\n\tBuild type: {}\n\tMain.cpp last compiled: {} @ {}",
 		std::make_format_args(platform, PHX_BUILD_TYPE, __DATE__, __TIME__)
 	));
 
