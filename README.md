@@ -27,11 +27,7 @@ Developed primary on and for Windows with Visual Studio Community 2022 with MSVC
 2. `cmake -B "./"` in the root directory
     * On Linux/with Ninja, use `cmake -B "./" -G "Ninja Multi-Config"`
     * When using Visual Studio Code, set the Generator to "Ninja Multi-Config", and change the "Build Directory" setting to just `${workspaceFolder}`
-        * VS Code seems to have an issue with the `liburing` dependency for SDL. Compile directly from the terminal to avoid this, with a command such as:
-
-            `/usr/bin/cmake --build . --config Debug --target all`
-
-        	, for a `Debug` build.
+    
 3. Open the resulting `PhoenixEngine.sln`, and you should have:
 	* `PhoenixEngine` as the startup project
 	* A Solution Folder called "Vendor", containing a few sub-projects and an `SDL` and `Luau` sub-folder
