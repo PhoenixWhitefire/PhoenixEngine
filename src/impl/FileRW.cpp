@@ -11,7 +11,7 @@
 // Returns:
 //   true upon success.
 //   false upon failure, and set the std::error_code & err accordingly.
-static bool createDirectoryRecursive(const std::string& dirName, std::error_code& err)
+static bool createDirectoryRecursive(const std::string_view& dirName, std::error_code& err)
 {
 	err.clear();
 	if (!std::filesystem::create_directories(dirName, err))
@@ -27,9 +27,9 @@ static bool createDirectoryRecursive(const std::string& dirName, std::error_code
 	return true;
 }
 
-std::string FileRW::ReadFile(const std::string& ShortPath, bool* DoesFileExist, bool PrependResDir)
+std::string FileRW::ReadFile(const std::string_view& ShortPath, bool* DoesFileExist, bool PrependResDir)
 {
-	std::string actualPath = PrependResDir ? FileRW::TryMakePathCwdRelative(ShortPath) : ShortPath;
+	std::string actualPath = PrependResDir ? FileRW::TryMakePathCwdRelative(ShortPath) : std::string(ShortPath);
 
 	std::ifstream file(actualPath, std::ios::binary);
 
@@ -66,13 +66,13 @@ std::string FileRW::ReadFile(const std::string& ShortPath, bool* DoesFileExist, 
 }
 
 void FileRW::WriteFile(
-	const std::string& ShortPath,
-	const std::string& Contents,
+	const std::string_view& ShortPath,
+	const std::string_view& Contents,
 	bool InResourcesDirectory,
 	bool* SuccessPtr
 )
 {
-	std::string path = InResourcesDirectory ? FileRW::TryMakePathCwdRelative(ShortPath) : ShortPath;
+	std::string path = InResourcesDirectory ? FileRW::TryMakePathCwdRelative(ShortPath) : std::string(ShortPath);
 
 	std::ofstream file(path.c_str(), std::ios::binary);
 
@@ -94,13 +94,13 @@ void FileRW::WriteFile(
 }
 
 void FileRW::WriteFileCreateDirectories(
-	const std::string& ShortPath,
-	const std::string& Contents,
+	const std::string_view& ShortPath,
+	const std::string_view& Contents,
 	bool InResourcesDirectory,
 	bool* SuccessPtr
 )
 {
-	std::string path = InResourcesDirectory ? FileRW::TryMakePathCwdRelative(ShortPath) : ShortPath;
+	std::string path = InResourcesDirectory ? FileRW::TryMakePathCwdRelative(ShortPath) : std::string(ShortPath);
 
 	size_t containingDirLoc = path.find_last_of("/");
 	std::string dirPath = path.substr(0, containingDirLoc);
@@ -113,9 +113,9 @@ void FileRW::WriteFileCreateDirectories(
 	FileRW::WriteFile(path, Contents, false, SuccessPtr);
 }
 
-std::string FileRW::TryMakePathCwdRelative(const std::string& LocalPath)
+std::string FileRW::TryMakePathCwdRelative(const std::string_view& LocalPath)
 {
-	std::string path = LocalPath;
+	std::string path = std::string(LocalPath);
 
 	// TODO: allow paths specified in resource files (eg materials and levels etc) to not have to start from the root
 	// and start from resources/ automatically

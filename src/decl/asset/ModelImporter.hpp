@@ -76,7 +76,7 @@ private:
 
 	void m_BuildRig();
 
-	std::vector<int8_t> m_GetData();
+	std::string m_GetData();
 
 	std::vector<float> m_GetFloats(const nlohmann::json& Accessor);
 	std::vector<uint32_t> m_GetUnsigned32s(const nlohmann::json& Accessor);
@@ -105,5 +105,5 @@ private:
 	std::unordered_map<int32_t, uint32_t> m_NodeIdToIndex;
 	std::vector<Object_Animation*> m_Animations;
 
-	std::vector<int8_t> m_Data;
+	std::string m_Data;
 };

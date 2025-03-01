@@ -635,12 +635,13 @@ void Engine::Start()
 
 		double deltaTime = RunningTime - LastFrameEnded;
 		double fpsCapDelta = 1.f / throttledFpsCap;
+		double lastFrameTime = Timing::FinalFrameTimes[(uint8_t)Timing::Timer::EntireFrame];
 
 		// Wait the appropriate amount of time between frames
 		if ((!VSync || !IsWindowFocused) && (deltaTime < fpsCapDelta))
 		{
 			ZoneScopedNC("SleepForFpsCap", tracy::Color::Wheat);
-			std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<size_t>((fpsCapDelta - deltaTime) * 1000)));
+			std::this_thread::sleep_for(std::chrono::duration<double>(fpsCapDelta - deltaTime - lastFrameTime));
 		}
 
 		TIME_SCOPE_AS(Timing::Timer::EntireFrame);

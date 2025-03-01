@@ -19,7 +19,7 @@ constexpr uint32_t BoneChId = ('B' << 24) | ('O' << 16) | ('N' << 8) | 'E';
 
 static std::string s_ErrorString = "No error";
 
-static uint32_t readU32(const std::string& vec, size_t offset, bool* fileTooSmallPtr)
+static uint32_t readU32(const std::string_view& vec, size_t offset, bool* fileTooSmallPtr)
 {
 	if (*fileTooSmallPtr || vec.size() - 1 < offset + 3)
 	{
@@ -27,13 +27,12 @@ static uint32_t readU32(const std::string& vec, size_t offset, bool* fileTooSmal
 		return UINT32_MAX;
 	}
 
-	uint32_t u32{};
-	std::memcpy(&u32, &vec.at(offset), 4);
+	uint32_t u32 = *(uint32_t*)&vec.at(offset);
 
 	return u32;
 }
 
-static uint32_t readU32(const std::string& vec, size_t* offset, bool* fileTooSmallPtr)
+static uint32_t readU32(const std::string_view& vec, size_t* offset, bool* fileTooSmallPtr)
 {
 	uint32_t u32 = readU32(vec, *offset, fileTooSmallPtr);
 	*offset += 4ull;
@@ -41,7 +40,7 @@ static uint32_t readU32(const std::string& vec, size_t* offset, bool* fileTooSma
 	return u32;
 }
 
-static float readF32(const std::string& vec, size_t* offset, bool* fileTooSmallPtr)
+static float readF32(const std::string_view& vec, size_t* offset, bool* fileTooSmallPtr)
 {
 	if (*fileTooSmallPtr || vec.size() - 1 < (*offset) + 3)
 	{
@@ -49,14 +48,13 @@ static float readF32(const std::string& vec, size_t* offset, bool* fileTooSmallP
 		return FLT_MAX;
 	}
 
-	float f32{};
-	std::memcpy(&f32, &vec.at(*offset), 4);
+	float f32 = *(float*)&vec.at(*offset);
 	*offset += 4ull;
 
 	return f32;
 }
 
-static uint8_t readU8(const std::string& str, size_t* offset, bool* fileTooSmallPtr)
+static uint8_t readU8(const std::string_view& str, size_t* offset, bool* fileTooSmallPtr)
 {
 	if (*fileTooSmallPtr || str.size() - 1 < *offset + 1)
 	{
@@ -80,9 +78,7 @@ static void writeU32(std::string& vec, uint32_t v)
 
 static void writeF32(std::string& vec, float v)
 {
-	uint32_t u{};
-	std::memcpy(&u, &v, 4ull);
-	writeU32(vec, u);
+	writeU32(vec, *(uint32_t*)&v);
 }
 
 static float getVersion(const std::string& MapFileContents)
@@ -103,7 +99,7 @@ static float getVersion(const std::string& MapFileContents)
 static Mesh loadMeshVersion1(const std::string& FileContents, bool* SuccessPtr)
 {
 	size_t jsonStartLoc = FileContents.find_first_of("{");
-	std::string jsonFileContents = FileContents.substr(jsonStartLoc);
+	std::string_view jsonFileContents{ FileContents.begin() + jsonStartLoc, FileContents.end() };
 	nlohmann::json json = nlohmann::json::parse(jsonFileContents);
 
 	Mesh mesh;
@@ -142,7 +138,7 @@ static Mesh loadMeshVersion2(const std::string& FileContents, bool* SuccessPtr)
 	if (binaryStartLoc == std::string::npos)
 		MESHPROVIDER_ERROR("File did not contain a binary data begin symbol ('$')");
 
-	std::string contents = FileContents.substr(binaryStartLoc + 1);
+	std::string_view contents{ FileContents.begin() + binaryStartLoc + 1, FileContents.end() };
 
 	if (contents.size() < 12)
 		MESHPROVIDER_ERROR("File cannot contain header as binary data is smaller than 12 bytes");

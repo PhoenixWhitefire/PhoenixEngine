@@ -14,25 +14,16 @@
 #include "FileRW.hpp"
 #include "Log.hpp"
 
-static uint32_t readU32(const std::vector<int8_t>& vec, size_t offset)
+static uint32_t readU32(const std::string_view& vec, size_t offset)
 {
-	uint32_t u32{};
-	std::memcpy(&u32, vec.data() + offset, 4);
-
-	return u32;
-}
-
-static uint32_t readU32(const std::string& str, size_t offset)
-{
-	std::vector<int8_t> bytes(str.begin() + offset, str.begin() + offset + 4);
-	return readU32(bytes, 0);
+	return *(uint32_t*)&vec.at(offset);
 }
 
 static std::string getTexturePath(
 	const std::string& ModelName,
 	const nlohmann::json& JsonData,
 	const nlohmann::json& ImageJson,
-	const std::vector<int8_t>& BufferData
+	const std::string_view& BufferData
 )
 {
 	if (ImageJson.find("uri") == ImageJson.end())
@@ -51,10 +42,7 @@ static std::string getTexturePath(
 		if (bufferIndex != 0)
 			throw("ModelImporter::getTexturePath got non-zero buffer index " + std::to_string(bufferIndex));
 
-		std::string imageData(
-			BufferData.begin() + byteOffset,
-			BufferData.begin() + byteOffset + byteLength
-		);
+		std::string_view imageData{ BufferData.begin() + byteOffset, BufferData.begin() + byteOffset + byteLength };
 
 		std::string fileExtension;
 
@@ -65,7 +53,10 @@ static std::string getTexturePath(
 			fileExtension = ".png";
 
 		else
-			fileExtension = ".hxunknownimage";
+		{
+			Log::Warning(std::vformat("Unrecognized MIME '{}'", std::make_format_args(mimeType)));
+			fileExtension = std::string(mimeType.begin() + 6, mimeType.end());
+		}
 
 		std::string filePath = "textures/"
 								+ ModelName
@@ -113,7 +104,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 
 	// Binary files start with magic number that corresponds to "glTF"
 	// https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#binary-header
-	if (textData.substr(0, 4) == "glTF")
+	if (std::string_view(textData.begin(), textData.begin() + 4) == "glTF")
 	{
 		uint32_t glbVersion = readU32(textData, 4);
 		if (glbVersion != 2)
@@ -135,15 +126,12 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 
 		ZoneScopedN("ParseGLBStructure");
 
-		std::string jsonString = textData.substr(20, jsonChLength);
+		std::string_view jsonString{ textData.begin() + 20, textData.begin() + 20 + jsonChLength };
 		m_JsonData = nlohmann::json::parse(jsonString);
 
 		// 20ull because
 		// 12 byte header + 4 byte chunk length + 4 byte chunk type
-		std::vector<int8_t> binaryChunk(
-			textData.begin() + 20ull + jsonChLength,
-			textData.end()
-		);
+		std::string_view binaryChunk{ textData.begin() + 20ull + jsonChLength, textData.end() };
 
 		uint32_t binaryChLength = readU32(binaryChunk, 0);
 		uint32_t binaryChType = readU32(binaryChunk, 4);
@@ -155,7 +143,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 			));
 
 		// + 8 because 8 byte header
-		m_Data = std::vector<int8_t>(binaryChunk.begin() + 8, binaryChunk.begin() + binaryChLength + 8);
+		m_Data = std::string(binaryChunk.begin() + 8, binaryChunk.begin() + 8 + binaryChLength);
 	}
 	else
 	{
@@ -670,20 +658,16 @@ void ModelLoader::m_BuildRig()
 	}
 }
 
-std::vector<int8_t> ModelLoader::m_GetData()
+std::string ModelLoader::m_GetData()
 {
 	// Create a place to store the raw text, and get the uri of the .bin file
 	std::string bytesText;
 	std::string uri = m_JsonData["buffers"][0]["uri"];
 
 	// Store raw text data into bytesText
-	std::string fileStr = std::string(m_File);
-	std::string fileDirectory = fileStr.substr(0, fileStr.find_last_of('/') + 1);
-	bytesText = FileRW::ReadFile((fileDirectory + uri));
+	std::string fileDirectory = m_File.substr(0, m_File.find_last_of('/') + 1);
 
-	// Transform the raw text data into bytes and put them in a vector
-	std::vector<int8_t> data(bytesText.begin(), bytesText.end());
-	return data;
+	return FileRW::ReadFile(fileDirectory + uri);
 }
 
 std::vector<float> ModelLoader::m_GetFloats(const nlohmann::json& accessor)
@@ -747,18 +731,17 @@ std::vector<float> ModelLoader::m_GetFloats(const nlohmann::json& accessor)
 	{
 		if (componentType == 5126)
 		{
-			int8_t bytes[] = { m_Data[i++], m_Data[i++], m_Data[i++], m_Data[i++] };
-			float value;
-			std::memcpy(&value, bytes, sizeof(float));
+			float value = *(float*)&m_Data[i++];
 			floatVec.push_back(value);
+
+			i += 3;
 		}
 		else if (componentType == 5123)
 		{
-			int8_t bytes[] = { m_Data[i++], m_Data[i++] };
-			uint16_t us;
-			std::memcpy(&us, bytes, sizeof(uint16_t));
-
+			uint16_t us = *(uint16_t*)&m_Data[i++];
 			floatVec.push_back(us / 65535.f);
+
+			i += 1;
 		}
 		else
 			throw("huh??");
@@ -789,30 +772,30 @@ std::vector<uint32_t> ModelLoader::m_GetUnsigned32s(const nlohmann::json& access
 	{
 		for (uint32_t i = beginningOfData; i < byteOffset + accByteOffset + count * 4; i)
 		{
-			int8_t bytes[] = { m_Data[i++], m_Data[i++], m_Data[i++], m_Data[i++] };
-			uint32_t value;
-			std::memcpy(&value, bytes, sizeof(uint32_t));
+			uint32_t value = *(uint32_t*)&m_Data[i++];
 			indices.push_back(value);
+
+			i += 3;
 		}
 	}
 	else if (componentType == 5123)
 	{
 		for (uint32_t i = beginningOfData; i < byteOffset + accByteOffset + count * 2; i)
 		{
-			int8_t bytes[] = { m_Data[i++], m_Data[i++] };
-			uint16_t value;
-			std::memcpy(&value, bytes, sizeof(uint16_t));
+			uint16_t value = *(uint16_t*)&m_Data[i++];
 			indices.push_back(value);
+
+			i += 1;
 		}
 	}
 	else if (componentType == 5122)
 	{
 		for (uint32_t i = beginningOfData; i < byteOffset + accByteOffset + count * 2; i)
 		{
-			int8_t bytes[] = { m_Data[i++], m_Data[i++] };
-			short value;
-			std::memcpy(&value, bytes, sizeof(short));
+			short value = *(short*)&m_Data[i++];
 			indices.push_back(value);
+
+			i += 1;
 		}
 	}
 	else
