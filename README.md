@@ -55,7 +55,6 @@ The following libraries are used:
 * GLM, matrix math - [@g-truc/glm](https://github.com/g-truc/glm/)
 * `nlohmann::json`, JSON decoding/encoding for various asset types - [@nlohmann/json](https://github.com/nlohmann/json/)
 * Dear ImGui, user interface - [@ocornut/ImGui](https://github.com/ocornut/imgui/)
-* `ImGuiFD`, file dialogs - [@Julianiolo/ImGuiFD](https://github.com/Julianiolo/ImGuiFD)
 * STB Image, image loading - [@nothings/stb](https://github.com/nothings/stb)
 * OpenGL, graphics API - [Khronos Group](https://khronos.org/)
 * Tracy, profiling - [@wolfpld/Tracy](https://github.com/wolfpld/tracy)
