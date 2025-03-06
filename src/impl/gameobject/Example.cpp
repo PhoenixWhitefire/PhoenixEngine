@@ -49,6 +49,10 @@ void Object_Example::s_DeclareReflections()
 	REFLECTION_DECLAREPROP_SIMPLE(Object_Example, Value2, Integer);
 
 	// Can be read, but not set
+	// NOTE 06/03/2025: if you want a read-write String property, use
+	//
+	// REFLECTION_DECLAREPROP_SIMPSTR
+	//
 	REFLECTION_DECLAREPROP_SIMPLE_READONLY(Object_Example, Value4, String);
 
 	// If we used `REFLECTION_DECLAREPROP_SIMPLE`, we'd get a "possible loss of data"
@@ -82,7 +86,7 @@ void Object_Example::s_DeclareReflections()
 				return { p->Name + ": He- Oh... There's no one here... :(" };
 
 			else if (names.size() == 1)
-				return { p->Name + ": Hello, " + names[0].AsString() + "!" };
+				return { p->Name + ": Hello, " + std::string(names[0].AsStringView()) + "!" };
 
 			// Even though you *could* do
 			// 
@@ -97,10 +101,10 @@ void Object_Example::s_DeclareReflections()
 			std::string result = "Hello, ";
 
 			for (size_t index = 0; index < names.size() - 1; index++)
-				result += names[index].AsString() + ", ";
+				result += std::string(names[index].AsStringView()) + ", ";
 
 			result = result.substr(0, result.size() - 2);
-			result += " and " + names.back().AsString() + "!";
+			result += " and " + std::string(names.back().AsStringView()) + "!";
 
 			if (args[1].AsBool())
 				result += " (MANIACAL CACKLING) HAHAHAHAHAHAHA";

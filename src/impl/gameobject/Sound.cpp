@@ -84,7 +84,7 @@ void Object_Sound::s_DeclareReflections()
 		[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)
 		{
 			Object_Sound* sound = static_cast<Object_Sound*>(p);
-			std::string newFile = gv.AsString();
+			std::string_view newFile = gv.AsStringView();
 
 			if (newFile == sound->SoundFile)
 				return;

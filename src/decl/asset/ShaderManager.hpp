@@ -17,10 +17,10 @@ public:
 
 	// Mark a uniform to be updated upon `::Activate` being called,
 	// to be set with the provided value
-	void SetUniform(const std::string&, const Reflection::GenericValue&);
+	void SetUniform(const std::string_view&, const Reflection::GenericValue&);
 	// Sets a Texture Uniform to the Texture residing at the Resource ID Provided
 	void SetTextureUniform(
-		const std::string&,
+		const std::string_view&,
 		uint32_t,
 		Texture::DimensionType Type = Texture::DimensionType::Texture2D
 	);
@@ -57,7 +57,7 @@ public:
 
 	std::vector<ShaderProgram>& GetLoadedShaders();
 
-	uint32_t LoadFromPath(const std::string&);
+	uint32_t LoadFromPath(const std::string_view&);
 
 	ShaderProgram& GetShaderResource(uint32_t);
 

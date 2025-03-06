@@ -513,8 +513,19 @@ static void drawDeveloperUI(double DeltaTime)
 			}
 		}
 
+		ImGui::SeparatorText("Sampling");
+
+		static double NumSecondsSampled = 0.f;
+		static size_t NumFramesSampled = 0;
+
 		if (IsSamplingStats)
 		{
+			NumSecondsSampled += DeltaTime;
+			NumFramesSampled++;
+
+			ImGui::Text("Sampled %zi frames over %.1f seconds", NumFramesSampled, NumSecondsSampled);
+			ImGui::Text("Total size: %zi bytes", SampledCsv.size());
+
 			if (ImGui::Button("End sampling & save to CSV"))
 			{
 				SDL_ShowSaveFileDialog(
@@ -536,6 +547,8 @@ static void drawDeveloperUI(double DeltaTime)
 			{
 				IsSamplingStats = true;
 				SampledCsv = "FPS,Frame Time,Draw Calls,";
+				NumSecondsSampled = 0.f;
+				NumFramesSampled = 0;
 
 				for (int i = 0; i < (int)Timing::Timer::__count; i++)
 					SampledCsv += Timing::TimerNames[i] + std::string(",");

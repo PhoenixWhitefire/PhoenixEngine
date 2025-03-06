@@ -13,7 +13,7 @@ public:
 	void Update(double) override;
 
 	std::string GetRenderMeshPath();
-	void SetRenderMesh(const std::string&);
+	void SetRenderMesh(const std::string_view&);
 
 	REFLECTION_DECLAREAPI;
 

@@ -370,12 +370,12 @@ int32_t ShaderProgram::m_GetUniformLocation(const char* Uniform) const
 	return glGetUniformLocation(m_GpuId, Uniform);
 }
 
-void ShaderProgram::SetUniform(const std::string& UniformName, const Reflection::GenericValue& Value)
+void ShaderProgram::SetUniform(const std::string_view& UniformName, const Reflection::GenericValue& Value)
 {
-	m_PendingUniforms[UniformName] = Value;
+	m_PendingUniforms[std::string(UniformName)] = Value;
 }
 
-void ShaderProgram::SetTextureUniform(const std::string& UniformName, uint32_t TextureId, Texture::DimensionType Type)
+void ShaderProgram::SetTextureUniform(const std::string_view& UniformName, uint32_t TextureId, Texture::DimensionType Type)
 {
 	static std::unordered_map<Texture::DimensionType, GLenum> DimensionTypeToGLDimension =
 	{
@@ -399,7 +399,7 @@ void ShaderProgram::SetTextureUniform(const std::string& UniformName, uint32_t T
 		gpuId
 	);
 
-	m_PendingUniforms[UniformName] = slot;
+	m_PendingUniforms[std::string(UniformName)] = slot;
 }
 
 bool ShaderProgram::m_CheckForErrors(uint32_t Object, const char* Type)
@@ -488,12 +488,12 @@ std::vector<ShaderProgram>& ShaderManager::GetLoadedShaders()
 	return m_Shaders;
 }
 
-uint32_t ShaderManager::LoadFromPath(const std::string& ProgramName)
+uint32_t ShaderManager::LoadFromPath(const std::string_view& ProgramName)
 {
 	ZoneScoped;
-	ZoneTextF("%s", ProgramName.c_str());
+	ZoneTextF("%s", ProgramName.data());
 
-	auto it = s_StringToShaderId.find(ProgramName);
+	auto it = s_StringToShaderId.find(std::string(ProgramName));
 
 	if (it != s_StringToShaderId.end())
 		return it->second;

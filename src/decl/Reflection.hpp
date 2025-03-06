@@ -50,6 +50,20 @@ s_Api.Lineage.push_back(#base);                                            \
 	}                                                                          \
 )                                                                              \
 
+// Declare a STRING property with the preset Getter (return x) and Setter (x = y)
+#define REFLECTION_DECLAREPROP_SIMPSTR(c, name)      REFLECTION_DECLAREPROP(   \
+	#name,                                                                     \
+	String,                                                                    \
+	[](Reflection::Reflectable* p)                                             \
+	{                                                                          \
+		return (Reflection::GenericValue)static_cast<c*>(p)->name;             \
+	},                                                                         \
+	[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)         \
+	{                                                                          \
+		static_cast<c*>(p)->name = gv.AsStringView();                          \
+	}                                                                          \
+)                                                                              \
+
 // Declare a property with the preset Getter (return x) and Setter (x = y),
 // statically-casting `y` into `cast`. Useful for getting rid of "possible loss of data"
 // warnings when converting between similar types (like `double` and `float`)
@@ -198,7 +212,7 @@ namespace Reflection
 		std::string ToString() const;
 
 		// Throws errors if the type does not match
-		std::string AsString() const;
+		std::string_view AsStringView() const;
 		bool AsBool() const;
 		double AsDouble() const;
 		int64_t AsInteger() const;

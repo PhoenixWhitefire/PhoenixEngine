@@ -13,7 +13,7 @@ Reflection::GenericValue::GenericValue()
 {
 }
 
-static void fromString(Reflection::GenericValue& G, const char* CStr)
+static void fromString(Reflection::GenericValue& G, const char* Data)
 {
 	G.Type = Reflection::ValueType::String;
 
@@ -24,14 +24,12 @@ static void fromString(Reflection::GenericValue& G, const char* CStr)
 		if (!G.Value)
 			throw("Failed to allocate enough space for string in fromString");
 
-		memcpy(G.Value, CStr, G.Size);
+		memcpy(G.Value, Data, G.Size);
 		((char*)G.Value)[G.Size] = 0;
 	}
 	else
-	{
 		// store it directly
-		memcpy(&G.Value, CStr, 8);
-	}
+		memcpy(&G.Value, Data, 8);
 }
 
 Reflection::GenericValue::GenericValue(const std::string_view& str)
@@ -155,7 +153,7 @@ void Reflection::GenericValue::CopyInto(GenericValue& Target, const GenericValue
 	{
 	case ValueType::String:
 	{
-		std::string str = Source.AsString();
+		std::string_view str = Source.AsStringView();
 		fromString(Target, str.data());
 		break;
 	}
@@ -326,15 +324,15 @@ std::string Reflection::GenericValue::ToString() const
 	}
 }
 
-std::string Reflection::GenericValue::AsString() const
+std::string_view Reflection::GenericValue::AsStringView() const
 {
 	if (Type != ValueType::String)
 		throw("GenericValue was not a String, but was a " + std::string(TypeAsString(Type)));
 	else
 		if (Size > 8)
-			return std::string((char*)Value, Size);
+			return std::string_view((char*)Value, Size);
 		else
-			return std::string((char*)&Value, Size);
+			return std::string_view((char*)&Value, Size);
 }
 bool Reflection::GenericValue::AsBool() const
 {
@@ -466,6 +464,8 @@ bool Reflection::GenericValue::operator==(const Reflection::GenericValue& Other)
 {
 	if (this->Type != Other.Type)
 		return false;
+	if (this->Size != Other.Size)
+		return false;
 
 	switch (Type)
 	{
@@ -476,45 +476,39 @@ bool Reflection::GenericValue::operator==(const Reflection::GenericValue& Other)
 	case ValueType::Integer:
 	case ValueType::Double:
 	case ValueType::GameObject:
-		return (size_t)this->Value == (size_t)Other.Value;
+		return this->Value == Other.Value;
 
 	case ValueType::String:
 	{
-		std::string myStr = this->AsString();
-		std::string themStr = Other.AsString();
-
-		return myStr == themStr;
+		if (this->Size > 8)
+		{
+			for (size_t i = 0; i < this->Size; i++)
+				if (static_cast<char*>(this->Value)[i] != static_cast<char*>(Other.Value)[i])
+					return false;
+			
+			return true;
+		}
+		else
+			return this->Value == Other.Value;
 	}
 
 	case ValueType::Color:
 	{
-		Color myCol{ *this };
-		Color themCol{ Other };
-
-		return myCol == themCol;
+		return memcmp(this->Value, Other.Value, sizeof(Color));
 	}
 
 	case ValueType::Vector3:
 	{
-		Vector3 myCol{ *this };
-		Vector3 themCol{ Other };
-
-		return myCol == themCol;
+		return memcmp(this->Value, Other.Value, sizeof(Vector3));
 	}
 
 	case ValueType::Matrix:
 	{
-		glm::mat4 myMtx = this->AsMatrix();
-		glm::mat4 themMtx = Other.AsMatrix();
-
-		return myMtx == themMtx;
+		return memcmp(this->Value, Other.Value, sizeof(glm::mat4));
 	}
 
 	case ValueType::Array:
 	{
-		if (this->Size != Other.Size)
-			return false;
-
 		std::vector<GenericValue> myArr = this->AsArray();
 		std::vector<GenericValue> themArr = Other.AsArray();
 

@@ -285,7 +285,7 @@ Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int St
 	{
 		const char* tname = luaL_typename(L, StackIndex);
 		luaL_error(L, "%s", std::vformat(
-			"Could not convert type {} to a GenericValue (no conversion case)",
+			"Could not convert type '{}' to a GenericValue (no conversion case)",
 			std::make_format_args(tname)).c_str()
 		);
 	}
@@ -318,7 +318,7 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 	}
 	case Reflection::ValueType::String:
 	{
-		lua_pushstring(L, gv.AsString().c_str());
+		lua_pushstring(L, gv.AsStringView().data());
 		break;
 	}
 	case Reflection::ValueType::Vector3:

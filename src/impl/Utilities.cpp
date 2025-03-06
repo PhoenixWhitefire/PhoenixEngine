@@ -5,13 +5,13 @@
 
 static auto s_ChronoStartTime = std::chrono::high_resolution_clock::now();
 
-void CopyStringToBuffer(char* buf, size_t capacity, std::string string)
+void CopyStringToBuffer(char* buf, size_t capacity, const std::string_view& string)
 {
 	for (size_t i = 0; i < capacity; i++)
 		buf[i] = i < string.length() ? string.at(i) : 0;
 }
 
-char* BufferInitialize(size_t capacity, const std::string& value)
+char* BufferInitialize(size_t capacity, const std::string_view& value)
 {
 	char* buf = (char*)Memory::Alloc(capacity + 1);
 

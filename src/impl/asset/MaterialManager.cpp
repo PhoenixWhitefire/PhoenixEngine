@@ -168,16 +168,18 @@ MaterialManager* MaterialManager::Get()
 	return s_Instance;
 }
 
-uint32_t MaterialManager::LoadMaterialFromPath(const std::string& Name)
+uint32_t MaterialManager::LoadMaterialFromPath(const std::string_view& Name)
 {
 	ZoneScoped;
-	ZoneTextF("%s", Name.c_str());
+	ZoneTextF("%s", Name.data());
 
-	auto it = m_StringToMaterialId.find(Name);
+	std::string namedyn{ Name };
+
+	auto it = m_StringToMaterialId.find(namedyn);
 
 	if (it == m_StringToMaterialId.end())
 	{
-		std::string fullPath = "materials/" + Name + ".mtl";
+		std::string fullPath = "materials/" + namedyn + ".mtl";
 		bool matExists = true;
 		std::string fileData = FileRW::ReadFile(fullPath, &matExists);
 
@@ -185,7 +187,7 @@ uint32_t MaterialManager::LoadMaterialFromPath(const std::string& Name)
 		{
 			uint32_t resourceId = static_cast<uint32_t>(m_Materials.size());
 			m_StringToMaterialId.emplace(Name, resourceId);
-			m_Materials.emplace_back(Name);
+			m_Materials.emplace_back(std::string(Name));
 
 			RenderMaterial& material = m_Materials.back();
 			material.Name = Name;
@@ -207,7 +209,7 @@ uint32_t MaterialManager::LoadMaterialFromPath(const std::string& Name)
 		return it->second;
 }
 
-void MaterialManager::SaveToPath(const RenderMaterial& material, const std::string& Name)
+void MaterialManager::SaveToPath(const RenderMaterial& material, const std::string_view& Name)
 {
 	ZoneScoped;
 
@@ -262,6 +264,8 @@ void MaterialManager::SaveToPath(const RenderMaterial& material, const std::stri
 		}
 	}
 
+	std::string namedyn{ Name };
+
 	std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
 	std::chrono::year_month_day ymd = std::chrono::floor<std::chrono::days>(now);
 
@@ -269,7 +273,7 @@ void MaterialManager::SaveToPath(const RenderMaterial& material, const std::stri
 		+ std::to_string((uint32_t)ymd.month()) + "-"
 		+ std::to_string((int32_t)ymd.year());
 
-	std::string filePath = "materials/" + Name + ".mtl";
+	std::string filePath = "materials/" + namedyn + ".mtl";
 
 	std::string fileContents = "PHNXENGI\n#Asset Material\n#Date " + dateStr + "\n\n" + newMtlConfig.dump(2);
 

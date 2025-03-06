@@ -1453,7 +1453,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 
 			case Reflection::ValueType::String:
 			{
-				std::string str = curVal.AsString();
+				std::string_view str = curVal.AsStringView();
 
 				const size_t INPUT_TEXT_BUFFER_ADDITIONAL = 64;
 

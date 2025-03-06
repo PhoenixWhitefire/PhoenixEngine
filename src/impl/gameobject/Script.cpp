@@ -94,8 +94,8 @@ static auto api_gameobjnewindex = [](lua_State* L)
 			
 			if (!prop.Set)
 				luaL_errorL(L, "%s", std::vformat(
-					"Cannot set Property {}::{} to {} because it is read-only",
-					std::make_format_args(obj->ClassName, key, argAsString)
+					"Cannot set Property '{}' of a {} to {} '{}' because it is read-only",
+					std::make_format_args(key, obj->ClassName, argTypeName, argAsString)
 				).c_str());
 
 			auto reflToLuaIt = ScriptEngine::ReflectedTypeLuaEquivalent.find(prop.Type);
@@ -104,7 +104,7 @@ static auto api_gameobjnewindex = [](lua_State* L)
 			{
 				const std::string_view& typeName = Reflection::TypeAsString(prop.Type);
 				luaL_errorL(L, "%s", std::vformat(
-					"No defined mapping between Reflection::ValueType::{} and a Lua type",
+					"No defined mapping between a '{}' and a Lua type",
 					std::make_format_args(typeName)
 				).c_str());
 			}
@@ -585,7 +585,7 @@ void Object_Script::s_DeclareReflections()
 		[](Reflection::Reflectable* p, Reflection::GenericValue newval)
 		{
 			Object_Script* scr = static_cast<Object_Script*>(p);
-			scr->LoadScript(newval.AsString());
+			scr->LoadScript(newval.AsStringView());
 		}
 	);
 
@@ -735,7 +735,7 @@ void Object_Script::Update(double dt)
 		lua_pop(m_L, 1);
 }
 
-bool Object_Script::LoadScript(const std::string& scriptFile)
+bool Object_Script::LoadScript(const std::string_view& scriptFile)
 {
 	ZoneScopedC(tracy::Color::LightSkyBlue);
 

@@ -325,7 +325,7 @@ static std::vector<GameObject*> LoadMapVersion1(
 
 		if (Object.find("material") != Object.end())
 		{
-			uint32_t MeshMaterial = mtlManager->LoadMaterialFromPath(Object["material"]);
+			uint32_t MeshMaterial = mtlManager->LoadMaterialFromPath(std::string(Object["material"]));
 
 			Object3D->MaterialId = MeshMaterial;
 
@@ -751,7 +751,7 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 		}
 		case (Reflection::ValueType::String):
 		{
-			item[serializedAs] = value.AsString();
+			item[serializedAs] = value.AsStringView();
 			break;
 		}
 		

@@ -17,6 +17,6 @@
 
 #include <string>
 
-void CopyStringToBuffer(char* buf, size_t capacity, std::string string = "");
-char* BufferInitialize(size_t capacity, const std::string& value = "");
+void CopyStringToBuffer(char* buf, size_t capacity, const std::string_view& string = "");
+char* BufferInitialize(size_t capacity, const std::string_view& value = "");
 double GetRunningTime();

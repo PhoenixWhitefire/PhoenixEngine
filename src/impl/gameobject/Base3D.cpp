@@ -61,7 +61,7 @@ void Object_Base3D::s_DeclareReflections()
 			Object_Base3D* p = static_cast<Object_Base3D*>(g);
 			MaterialManager* mtlManager = MaterialManager::Get();
 
-			p->MaterialId = mtlManager->LoadMaterialFromPath(gv.AsString());
+			p->MaterialId = mtlManager->LoadMaterialFromPath(gv.AsStringView());
 		}
 	);
 

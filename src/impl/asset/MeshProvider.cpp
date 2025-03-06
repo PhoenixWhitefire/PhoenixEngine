@@ -81,7 +81,7 @@ static void writeF32(std::string& vec, float v)
 	writeU32(vec, *(uint32_t*)&v);
 }
 
-static float getVersion(const std::string& MapFileContents)
+static float getVersion(const std::string_view& MapFileContents)
 {
 	size_t matchLocation = MapFileContents.find("#Version");
 
@@ -89,14 +89,15 @@ static float getVersion(const std::string& MapFileContents)
 
 	if (matchLocation != std::string::npos)
 	{
-		std::string subStr = MapFileContents.substr(matchLocation + 9, 4);
+		// TODO 06/03/2025 `stof` doesnt accept string_views :(
+		std::string subStr = std::string(MapFileContents).substr(matchLocation + 9, 4);
 		version = std::stof(subStr);
 	}
 
 	return version;
 }
 
-static Mesh loadMeshVersion1(const std::string& FileContents, bool* SuccessPtr)
+static Mesh loadMeshVersion1(const std::string_view& FileContents, bool* SuccessPtr)
 {
 	size_t jsonStartLoc = FileContents.find_first_of("{");
 	std::string_view jsonFileContents{ FileContents.begin() + jsonStartLoc, FileContents.end() };
@@ -131,7 +132,7 @@ static Mesh loadMeshVersion1(const std::string& FileContents, bool* SuccessPtr)
 	return mesh;
 }
 
-static Mesh loadMeshVersion2(const std::string& FileContents, bool* SuccessPtr)
+static Mesh loadMeshVersion2(const std::string_view& FileContents, bool* SuccessPtr)
 {
 	size_t binaryStartLoc = FileContents.find_first_of('$');
 
@@ -552,7 +553,7 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 	return contents;
 }
 
-Mesh MeshProvider::Deserialize(const std::string& Contents, bool* SuccessPtr)
+Mesh MeshProvider::Deserialize(const std::string_view& Contents, bool* SuccessPtr)
 {
 	*SuccessPtr = true;
 
@@ -573,7 +574,7 @@ Mesh MeshProvider::Deserialize(const std::string& Contents, bool* SuccessPtr)
 	MESHPROVIDER_ERROR(std::string("Unrecognized mesh version - ") + std::to_string(version));
 }
 
-void MeshProvider::Save(const Mesh& mesh, const std::string& Path)
+void MeshProvider::Save(const Mesh& mesh, const std::string_view& Path)
 {
 	ZoneScoped;
 
@@ -581,7 +582,7 @@ void MeshProvider::Save(const Mesh& mesh, const std::string& Path)
 	FileRW::WriteFileCreateDirectories(Path, contents, true);
 }
 
-void MeshProvider::Save(uint32_t Id, const std::string& Path)
+void MeshProvider::Save(uint32_t Id, const std::string_view& Path)
 {
 	this->Save(m_Meshes.at(Id), Path);
 }
@@ -639,11 +640,11 @@ static void uploadMeshDataToGpuMesh(Mesh& mesh, MeshProvider::GpuMesh& gpuMesh)
 	}
 }
 
-uint32_t MeshProvider::Assign(Mesh mesh, const std::string& InternalName, bool UploadToGpu)
+uint32_t MeshProvider::Assign(Mesh mesh, const std::string_view& InternalName, bool UploadToGpu)
 {
 	uint32_t assignedId = static_cast<uint32_t>(m_Meshes.size());
 
-	auto prevPair = m_StringToMeshId.find(InternalName);
+	auto prevPair = m_StringToMeshId.find(std::string(InternalName));
 
 
 	// 24/01/2025 `Memory` namespace can't handle
@@ -687,12 +688,12 @@ uint32_t MeshProvider::Assign(Mesh mesh, const std::string& InternalName, bool U
 	return assignedId;
 }
 
-uint32_t MeshProvider::LoadFromPath(const std::string& Path, bool ShouldLoadAsync, bool PreserveMeshData)
+uint32_t MeshProvider::LoadFromPath(const std::string_view& Path, bool ShouldLoadAsync, bool PreserveMeshData)
 {
 	ZoneScoped;
-	ZoneTextF("%s", Path.c_str());
+	ZoneTextF("%s", Path.data());
 
-	auto meshIt = m_StringToMeshId.find(Path);
+	auto meshIt = m_StringToMeshId.find(std::string(Path));
 
 	if (meshIt != m_StringToMeshId.end())
 	{
@@ -849,7 +850,7 @@ void MeshProvider::FinalizeAsyncLoadedMeshes()
 	}
 }
 
-const std::string& MeshProvider::GetLastErrorString()
+std::string_view MeshProvider::GetLastErrorString()
 {
 	return s_ErrorString;
 }

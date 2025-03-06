@@ -117,7 +117,7 @@ void GameObject::s_DeclareReflections()
 	s_Api.Properties["Class"] = s_Api.Properties["ClassName"];
 	s_Api.Properties.erase("ClassName");
 
-	REFLECTION_DECLAREPROP_SIMPLE(GameObject, Name, String);
+	REFLECTION_DECLAREPROP_SIMPSTR(GameObject, Name);
 	REFLECTION_DECLAREPROP_SIMPLE(GameObject, Enabled, Bool);
 	REFLECTION_DECLAREPROP_SIMPLE(GameObject, Serializes, Bool);
 	REFLECTION_DECLAREPROP_SIMPLE_READONLY(GameObject, ObjectId, Integer);
@@ -194,7 +194,7 @@ void GameObject::s_DeclareReflections()
 		[](Reflection::Reflectable* p, const std::vector<Reflection::GenericValue>& gv)
 		-> std::vector<Reflection::GenericValue>
 		{
-			std::string ancestor = gv[0].AsString();
+			std::string_view ancestor = gv[0].AsStringView();
 			return { static_cast<GameObject*>(p)->IsA(ancestor) };
 		}
 	);

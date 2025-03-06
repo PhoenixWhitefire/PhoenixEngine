@@ -24,7 +24,7 @@ void Object_Mesh::s_DeclareReflections()
 		},
 		[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)
 		{
-			static_cast<Object_Mesh*>(p)->SetRenderMesh(gv.AsString());
+			static_cast<Object_Mesh*>(p)->SetRenderMesh(gv.AsStringView());
 		}
 	);
 }
@@ -72,7 +72,7 @@ void Object_Mesh::Update(double)
 	m_WaitingForMeshToLoad = false;
 }
 
-void Object_Mesh::SetRenderMesh(const std::string& NewRenderMesh)
+void Object_Mesh::SetRenderMesh(const std::string_view& NewRenderMesh)
 {
 	MeshProvider* meshProvider = MeshProvider::Get();
 

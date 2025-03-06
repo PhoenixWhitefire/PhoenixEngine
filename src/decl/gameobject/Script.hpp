@@ -13,7 +13,7 @@ public:
 
 	void Update(double) override;
 
-	bool LoadScript(const std::string&);
+	bool LoadScript(const std::string_view&);
 	bool Reload();
 
 	std::string SourceFile = "scripts/default.luau";
