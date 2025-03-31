@@ -4,11 +4,15 @@
 
 #define PHX_GAMEOBJECT_NULL_ID UINT32_MAX
 
-// link a class name to a C++ GameObject-deriving class
-#define PHX_GAMEOBJECT_LINKTOCLASS(strclassname, cclass) static RegisterDerivedObject<cclass> Register##cclass(strclassname);
-// shorthand for `PHX_GAMEOBJECT_LINKTOCLASS`. the resulting class name is the same as passed in,
-// and the C++ class is `Object_<Class>`
-#define PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(classname) PHX_GAMEOBJECT_LINKTOCLASS(#classname, Object_##classname)
+#define EC_GET_SIMPLE(c, n) [](void* p)->Reflection::GenericValue { return static_cast<c*>(p)->n; }
+#define EC_GET_SIMPLE_TGN(c, n) [](void* p)->Reflection::GenericValue { return static_cast<c*>(p)->n.ToGenericValue(); }
+#define EC_SET_SIMPLE(c, n, t) [](void* p, const Reflection::GenericValue& gv)->void { static_cast<c*>(p)->n = gv.As##t(); }
+#define EC_SET_SIMPLE_CTOR(c, n, t) [](void* p, const Reflection::GenericValue& gv)->void { static_cast<c*>(p)->n = t(gv); }
+
+#define EC_PROP(strn, t, g, s) { strn, { Reflection::ValueType::t, g, s } }
+
+#define EC_PROP_SIMPLE(c, n, t) EC_PROP(#n, t, EC_GET_SIMPLE(c, n), EC_SET_SIMPLE(c, n, t))
+#define EC_PROP_SIMPLE_NGV(c, n, t) EC_PROP(#n, t, EC_GET_SIMPLE_TGN(c, n), EC_SET_SIMPLE_CTOR(c, n, t))
 
 #include <unordered_map>
 #include <string_view>
@@ -20,25 +24,120 @@
 #include "Utilities.hpp"
 #include "Memory.hpp"
 
-class GameObject : public Reflection::Reflectable
+enum class EntityComponent : uint8_t
+{
+	Transformable,
+	Mesh,
+	ParticleEmitter,
+	Script,
+	Sound,
+	Workspace,
+	DataModel,
+	PointLight,
+	DirectionalLight,
+	SpotLight,
+	Camera,
+	Animation,
+	Model,
+	
+	__count
+};
+
+static inline const std::string_view s_EntityComponentNames[] = 
+{
+	"Transformable",
+	"Mesh",
+	"ParticleEmitter",
+	"Script",
+	"Sound",
+	"Workspace",
+	"DataModel",
+	"PointLight",
+	"DirectionalLight",
+	"SpotLight",
+	"Camera",
+	"Animation",
+	"Model"
+};
+
+static inline const std::unordered_map<std::string_view, EntityComponent> s_ComponentNameToType = 
+{
+	{ "Transformable", EntityComponent::Transformable },
+	{ "Mesh", EntityComponent::Mesh },
+	{ "ParticleEmitter", EntityComponent::ParticleEmitter },
+	{ "Script", EntityComponent::Script },
+	{ "Sound", EntityComponent::Sound },
+	{ "Workspace", EntityComponent::Workspace },
+	{ "DataModel", EntityComponent::DataModel },
+	{ "PointLight", EntityComponent::PointLight },
+	{ "DirectionalLight", EntityComponent::DirectionalLight },
+	{ "SpotLight", EntityComponent::SpotLight },
+	{ "Camera", EntityComponent::Camera },
+	{ "Animation", EntityComponent::Animation },
+	{ "Model", EntityComponent::Model }
+};
+
+static_assert(std::size(s_EntityComponentNames) == (size_t)EntityComponent::__count);
+
+void* ComponentHandleToPointer(const std::pair<EntityComponent, uint32_t>& Handle);
+
+class GameObject;
+
+class BaseComponentManager
+{
+public:
+	virtual uint32_t CreateComponent(GameObject* Object) { throw("Not implemented"); };
+	virtual void UpdateComponent(uint32_t, double) { throw("Not implemented"); };
+	virtual std::vector<void*> GetComponents() { throw("Not implemented"); };
+	virtual void* GetComponent(uint32_t) { throw("Not implemented"); };
+	virtual void DeleteComponent(uint32_t ComponentId) { throw("Not implemented"); };
+
+	virtual const Reflection::PropertyMap& GetProperties() { throw("Not implemented"); };
+	virtual const Reflection::FunctionMap& GetFunctions() { throw("Not implemented"); };
+};
+
+class GameObject
 {
 public:
 	GameObject();
-	virtual ~GameObject() noexcept(false);
-
-	GameObject(GameObject&) = delete;
 
 	static GameObject* FromGenericValue(const Reflection::GenericValue&);
 
-	static bool IsValidObjectClass(const std::string_view&);
+	static bool IsValidClass(const std::string_view&);
+	// create with a component
+	static GameObject* Create(EntityComponent);
 	static GameObject* Create(const std::string_view&);
+	// create empty object
+	static GameObject* Create();
+
 	static GameObject* GetObjectById(uint32_t);
 
-	static inline GameObject* s_DataModel{};
-	static inline std::vector<GameObject*> s_WorldArray{};
+	static inline uint32_t s_DataModel = PHX_GAMEOBJECT_NULL_ID;
+	static inline std::vector<GameObject> s_WorldArray{};
+	static inline std::array<BaseComponentManager*, (size_t)EntityComponent::__count> s_ComponentManagers{};
 
-	virtual void Initialize();
-	virtual void Update(double DeltaTime);
+	uint32_t AddComponent(EntityComponent Type);
+	void RemoveComponent(EntityComponent Type);
+	template <class T> T* GetComponent()
+	{
+		EntityComponent type = T::Type;
+		for (const std::pair<EntityComponent, uint32_t> pair : m_Components)
+			if (pair.first == type)
+				return static_cast<T*>(GameObject::s_ComponentManagers[(size_t)type]->GetComponent(pair.second));
+		
+		return nullptr;
+	}
+	void* GetComponentByType(EntityComponent);
+	std::vector<std::pair<EntityComponent, uint32_t>>& GetComponents();
+
+	Reflection::Property* FindProperty(const std::string_view&, bool* FromObject = nullptr);
+	Reflection::Function* FindFunction(const std::string_view&, bool* FromObject = nullptr);
+	Reflection::GenericValue GetPropertyValue(const std::string_view&);
+	void SetPropertyValue(const std::string_view&, const Reflection::GenericValue&);
+	std::vector<Reflection::GenericValue> CallFunction(const std::string_view&, const std::vector<Reflection::GenericValue>&);
+
+	Reflection::PropertyMap GetProperties();
+	Reflection::FunctionMap GetFunctions();
 
 	// the engine will NEED some objects to continue existing without being
 	// de-alloc'd, if only for a loop (`updateScripts`)
@@ -46,7 +145,7 @@ public:
 	void DecrementHardRefs(); // de-alloc here when refcount drops to 0
 
 	// won't necessarily de-alloc the object if the engine has any
-	// refs to it 24/12/2024
+	// hard refs to it 24/12/2024
 	void Destroy();
 
 	std::vector<GameObject*> GetChildren();
@@ -77,30 +176,23 @@ public:
 	uint32_t Parent = PHX_GAMEOBJECT_NULL_ID;
 
 	std::string Name = "GameObject";
-	std::string ClassName = "GameObject";
 
 	bool Enabled = true;
 	bool Serializes = true;
 	bool IsDestructionPending = false;
+	bool Valid = true;
 
 	static nlohmann::json DumpApiToJson();
 
-	REFLECTION_DECLAREAPI;
-	MEM_ALLOC_OPERATORS(GameObject, GameObject);
-
-	// I followed this StackOverflow post:
-	// https://stackoverflow.com/a/582456/16875161
-
-	// Needs to be in at-most `protected` because `RegisterDerivedObject`
-	// So sub-classes can access it and register themselves
-	typedef std::unordered_map<std::string_view, GameObject* (*)()> GameObjectMapType;
-	static inline GameObjectMapType s_GameObjectMap{};
-
-protected:
-	std::vector<uint32_t> m_Children;
-
 private:
-	static void s_DeclareReflections();
+	void m_AddObjectApi();
+
+	std::vector<uint32_t> m_Children;
+	// component type and ID
+	std::vector<std::pair<EntityComponent, uint32_t>> m_Components;
+	Reflection::Api m_ComponentApis{};
+	std::unordered_map<std::string_view, std::pair<EntityComponent, uint32_t>> m_MemberToComponentMap;
+
 	static inline Reflection::Api s_Api{};
 
 	// i think something fishy would have to be going on
@@ -109,26 +201,12 @@ private:
 	uint8_t m_HardRefCount = 0;
 };
 
-template<typename T> GameObject* constructGameObjectHeir()
-{
-	return new T;
-}
-
-template <typename T>
-struct RegisterDerivedObject : GameObject
-{
-	RegisterDerivedObject(const std::string_view& ObjectClass)
-	{
-		s_GameObjectMap.insert(std::make_pair(ObjectClass, &constructGameObjectHeir<T>));
-	}
-};
-
-typedef GameObject Object_GameObject;
-
-template <class T> class GameObjectRef
+class GameObjectRef
 {
 public:
-	GameObjectRef(T* Object)
+	GameObjectRef() = default;
+
+	GameObjectRef(GameObject* Object)
 	: m_TargetId(Object->ObjectId)
 	{
 		PHX_ENSURE_MSG(m_TargetId != PHX_GAMEOBJECT_NULL_ID, "Tried to create a Hard Reference to an uninitialized/invalid GameObject");
@@ -139,37 +217,77 @@ public:
 	GameObjectRef(GameObjectRef& Other)
 		: m_TargetId(Other.Contained()->ObjectId)
 	{
-		this->Contained()->IncrementHardRefs();
+		Contained()->IncrementHardRefs();
 	}
 	GameObjectRef(GameObjectRef&& Other)
 		: m_TargetId(Other.Contained()->ObjectId)
 	{
-		this->Contained()->IncrementHardRefs();
+		Contained()->IncrementHardRefs();
 	}
 
 	~GameObjectRef()
 	{
-		this->Contained()->DecrementHardRefs();
+		Contained()->DecrementHardRefs();
 		m_TargetId = PHX_GAMEOBJECT_NULL_ID;
 	}
 
-	T* Contained()
+	GameObject* Contained() const
 	{
 		PHX_ENSURE_MSG(m_TargetId != PHX_GAMEOBJECT_NULL_ID, "Double-free'd or `::Contained` called on a default-constructed Ref");
 
 		GameObject* g = GameObject::GetObjectById(m_TargetId);
 		PHX_ENSURE_MSG(g, "Referenced GameObject was de-alloc'd while we wanted to keep it :(");
 
-		return static_cast<T*>(g);
+		return g;
 	}
 
-	bool operator == (GameObject* them)
+	bool operator == (GameObject* them) const
 	{
-		return static_cast<GameObject*>(Contained()) == them;
+		return Contained() == them;
 	}
 
-	GameObjectRef& operator = (GameObjectRef&&) = delete;
-	GameObjectRef& operator = (GameObjectRef&) = delete;
+	bool operator == (const GameObjectRef& them) const
+	{
+		return Contained() == them.Contained();
+	}
+
+	GameObject* operator -> () const
+	{
+		return Contained();
+	}
+
+	GameObjectRef& operator = (GameObjectRef&& ref)
+	{
+		if (m_TargetId != PHX_GAMEOBJECT_NULL_ID)
+			Contained()->DecrementHardRefs();
+
+		m_TargetId = ref->ObjectId;
+		Contained()->IncrementHardRefs();
+
+		return *this;
+	}
+	GameObjectRef& operator = (GameObjectRef& ref)
+	{
+		if (m_TargetId != PHX_GAMEOBJECT_NULL_ID)
+			Contained()->DecrementHardRefs();
+		
+		m_TargetId = ref->ObjectId;
+		Contained()->IncrementHardRefs();
+
+		return *this;
+	}
+
+	GameObjectRef& operator = (GameObject* Object)
+	{
+		m_TargetId = Object->ObjectId;
+		Object->IncrementHardRefs();
+		return *this;
+	}
+
+	operator GameObject* () const
+	{
+		return Contained();
+	}
 
 private:
 	uint32_t m_TargetId = PHX_GAMEOBJECT_NULL_ID;

@@ -54,7 +54,7 @@ Reflection::GenericValue::GenericValue(const char* data)
 }
 
 Reflection::GenericValue::GenericValue(bool b)
-	: Type(ValueType::Bool), Value((void*)b)
+	: Type(ValueType::Boolean), Value((void*)b)
 {
 }
 
@@ -207,7 +207,7 @@ std::string Reflection::GenericValue::ToString() const
 	case ValueType::Null:
 		return "Null";
 
-	case ValueType::Bool:
+	case ValueType::Boolean:
 		return (bool)this->Value ? "true" : "false";
 
 	case ValueType::Integer:
@@ -334,9 +334,9 @@ std::string_view Reflection::GenericValue::AsStringView() const
 		else
 			return std::string_view((char*)&Value, Size);
 }
-bool Reflection::GenericValue::AsBool() const
+bool Reflection::GenericValue::AsBoolean() const
 {
-	return Type == ValueType::Bool
+	return Type == ValueType::Boolean
 		? (bool)this->Value
 		: throw("GenericValue was not a Bool, but was a " + std::string(TypeAsString(Type)));
 }
@@ -466,17 +466,13 @@ bool Reflection::GenericValue::operator==(const Reflection::GenericValue& Other)
 		return false;
 	if (this->Size != Other.Size)
 		return false;
+	if (this->Value == Other.Value)
+		return true;
 
 	switch (Type)
 	{
 	case ValueType::Null:
 		return true;
-
-	case ValueType::Bool:
-	case ValueType::Integer:
-	case ValueType::Double:
-	case ValueType::GameObject:
-		return this->Value == Other.Value;
 
 	case ValueType::String:
 	{

@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <glm/mat4x4.hpp>
 
-#include "gameobject/Base3D.hpp"
+#include "component/Mesh.hpp"
 #include "Memory.hpp"
 
 struct RenderItem

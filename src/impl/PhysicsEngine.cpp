@@ -4,79 +4,92 @@
 #include "PhysicsEngine.hpp"
 #include "IntersectionLib.hpp"
 #include "PerformanceTiming.hpp"
+#include "component/Transformable.hpp"
+#include "component/Mesh.hpp"
 
 struct Collision
 {
-	Object_Base3D* A;
-	Object_Base3D* B;
+	GameObject* A;
+	GameObject* B;
 	IntersectionLib::Intersection Hit;
 };
 
-static void applyGlobalForces(std::vector<Object_Base3D*>& World, double DeltaTime)
+static void applyGlobalForces(std::vector<GameObject*>& World, double DeltaTime)
 {
 	ZoneScopedC(tracy::Color::AntiqueWhite);
 
-	for (Object_Base3D* object : World)
+	for (GameObject* object : World)
 	{
-		object->Mass = object->Density * object->Size.X * object->Size.Y * object->Size.Z;
+		EcMesh* cm = object->GetComponent<EcMesh>();
+		EcTransformable* ct = object->GetComponent<EcTransformable>();
 
-		if (object->PhysicsDynamics)
+		cm->Mass = cm->Density * ct->Size.X * ct->Size.Y * ct->Size.Z;
+
+		if (cm->PhysicsDynamics)
 		{
 			static Vector3 GravityStrength{ 0.f, -50.f, 0.f };
 
 			// 19/09/2024 https://www.youtube.com/watch?v=-_IspRG548E
-			Vector3 force = GravityStrength * object->Mass;
+			Vector3 force = GravityStrength * cm->Mass;
 
 			static const double AirResistance = 0.15f;
 
-			object->LinearVelocity = object->LinearVelocity - (object->LinearVelocity * AirResistance * DeltaTime);
-			object->LinearVelocity += force / object->Mass * DeltaTime;
+			cm->LinearVelocity = cm->LinearVelocity - (cm->LinearVelocity * AirResistance * DeltaTime);
+			cm->LinearVelocity += force / cm->Mass * DeltaTime;
 		}
 	}
 }
 
-static void moveDynamics(std::vector<Object_Base3D*>& World, double DeltaTime)
+static void moveDynamics(std::vector<GameObject*>& World, double DeltaTime)
 {
 	ZoneScopedC(tracy::Color::AntiqueWhite);
 
-	for (Object_Base3D* object : World)
-		if (object->PhysicsDynamics)
+	for (GameObject* object : World)
+		if (EcMesh* cm = object->GetComponent<EcMesh>(); cm->PhysicsDynamics)
 		{
-			const glm::vec3& curPos = object->Transform[3];
-			glm::vec3 newPos = curPos + (glm::vec3)(object->LinearVelocity * DeltaTime);
-			object->Transform[3] = glm::vec4(newPos, object->Transform[3][3]);
+			EcTransformable* ct = object->GetComponent<EcTransformable>();
 
-			object->RecomputeAabb();
+			const glm::vec3& curPos = ct->Transform[3];
+			glm::vec3 newPos = curPos + (glm::vec3)(cm->LinearVelocity * DeltaTime);
+			ct->Transform[3] = glm::vec4(newPos, ct->Transform[3][3]);
+
+			cm->RecomputeAabb();
 		}
 }
 
-static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTime)
+static void resolveCollisions(std::vector<GameObject*>& World, double DeltaTime)
 {
 	ZoneScopedC(tracy::Color::AntiqueWhite);
 
 	std::vector<Collision> collisions;
 
-	for (Object_Base3D* a : World)
+	for (GameObject* a : World)
 	{
-		if (!a->PhysicsCollisions)
+		EcMesh* am = a->GetComponent<EcMesh>();
+		EcTransformable* at = a->GetComponent<EcTransformable>();
+
+		if (!am->PhysicsCollisions)
 			continue;
 
-		const glm::vec3& aPos = a->CollisionAabb.Position;
-		const glm::vec3& aSize = a->CollisionAabb.Size;
+		const glm::vec3& aPos = am->CollisionAabb.Position;
+		const glm::vec3& aSize = am->CollisionAabb.Size;
 
-		for (Object_Base3D* b : World)
+		for (GameObject* b : World)
 		{
 			if (a == b)
 				continue;
 
-			if (!b->PhysicsCollisions)
+			EcMesh* bm = b->GetComponent<EcMesh>();
+			EcTransformable* bt = b->GetComponent<EcTransformable>();
+
+			if (!bm->PhysicsCollisions)
 				continue;
 
-			if (!a->PhysicsDynamics && !b->PhysicsDynamics)
+			if (!am->PhysicsDynamics && !bm->PhysicsDynamics)
 				continue;
 
-			const glm::vec3& bPos = b->CollisionAabb.Position;
-			const glm::vec3& bSize = b->CollisionAabb.Size;
+			const glm::vec3& bPos = bm->CollisionAabb.Position;
+			const glm::vec3& bSize = bm->CollisionAabb.Size;
 
 			IntersectionLib::Intersection intersection = IntersectionLib::AabbAabb(
 				aPos,
@@ -107,36 +120,41 @@ static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTi
 
 		glm::vec3 reactionForce = hit.Vector * hit.Depth;
 
-		if (collision.A->PhysicsDynamics && !collision.B->PhysicsDynamics)
+		EcMesh* am = collision.A->GetComponent<EcMesh>();
+		EcMesh* bm = collision.B->GetComponent<EcMesh>();
+		EcTransformable* at = collision.A->GetComponent<EcTransformable>();
+		EcTransformable* bt = collision.B->GetComponent<EcTransformable>();
+
+		if (am->PhysicsDynamics && !bm->PhysicsDynamics)
 		{
 			// "Friction"
-			collision.A->LinearVelocity = collision.A->LinearVelocity - (collision.A->LinearVelocity * collision.A->Friction * DeltaTime);
+			am->LinearVelocity = am->LinearVelocity - (am->LinearVelocity * am->Friction * DeltaTime);
 
-			double dot = collision.A->LinearVelocity.Dot(hit.Normal);
+			double dot = am->LinearVelocity.Dot(hit.Normal);
 			Vector3 velCoefficient = Vector3::one;
 
 			if (dot < 0.f)
 				velCoefficient = Vector3::one - Vector3(hit.Normal).Abs() * (2.f * Elasticity);
 
-			collision.A->LinearVelocity = collision.A->LinearVelocity * velCoefficient + reactionForce;
-			collision.A->Transform[3] += glm::vec4(glm::vec3(hit.Vector * hit.Depth), 1.f);
+			am->LinearVelocity = am->LinearVelocity * velCoefficient + reactionForce;
+			at->Transform[3] += glm::vec4(glm::vec3(hit.Vector * hit.Depth), 1.f);
 
-			collision.A->RecomputeAabb();
+			am->RecomputeAabb();
 		}
-		else if (collision.B->PhysicsDynamics && !collision.A->PhysicsDynamics)
+		else if (bm->PhysicsDynamics && !am->PhysicsDynamics)
 		{
-			collision.B->LinearVelocity = collision.B->LinearVelocity - (collision.B->LinearVelocity * collision.B->Friction * DeltaTime);
+			bm->LinearVelocity = bm->LinearVelocity - (bm->LinearVelocity * bm->Friction * DeltaTime);
 
-			double dot = collision.A->LinearVelocity.Dot(hit.Normal);
+			double dot = am->LinearVelocity.Dot(hit.Normal);
 			Vector3 velCoefficient = Vector3::one;
 
 			if (dot < 0.f)
 				velCoefficient = Vector3::one - Vector3(hit.Normal).Abs() * (2.f * Elasticity);
 
-			collision.B->LinearVelocity = collision.B->LinearVelocity * velCoefficient + reactionForce;
-			collision.B->Transform[3] += glm::vec4(glm::vec3(hit.Vector * hit.Depth), 1.f);
+			bm->LinearVelocity = bm->LinearVelocity * velCoefficient + reactionForce;
+			bt->Transform[3] += glm::vec4(glm::vec3(hit.Vector * hit.Depth), 1.f);
 
-			collision.B->RecomputeAabb();
+			bm->RecomputeAabb();
 		}
 		else
 		{
@@ -146,11 +164,11 @@ static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTi
 			//collision.A->LinearVelocity = collision.A->LinearVelocity / 2.f;
 			//collision.B->LinearVelocity = collision.B->LinearVelocity / 2.f;
 
-			collision.A->LinearVelocity += reactionForce;
-			collision.B->LinearVelocity += reactionForce;
+			am->LinearVelocity += reactionForce;
+			bm->LinearVelocity += reactionForce;
 
-			collision.A->RecomputeAabb();
-			collision.B->RecomputeAabb();
+			am->RecomputeAabb();
+			bm->RecomputeAabb();
 		}
 
 		// 24/09/2024
@@ -160,7 +178,7 @@ static void resolveCollisions(std::vector<Object_Base3D*>& World, double DeltaTi
 	}
 }
 
-static void step(std::vector<Object_Base3D*>& World, double DeltaTime)
+static void step(std::vector<GameObject*>& World, double DeltaTime)
 {
 	TIME_SCOPE_AS(Timing::Timer::Physics);
 	ZoneScopedC(tracy::Color::AntiqueWhite);
@@ -172,7 +190,7 @@ static void step(std::vector<Object_Base3D*>& World, double DeltaTime)
 	resolveCollisions(World, DeltaTime);
 }
 
-void Physics::Step(std::vector<Object_Base3D*>& World, double DeltaTime)
+void Physics::Step(std::vector<GameObject*>& World, double DeltaTime)
 {
 	step(World, std::clamp(DeltaTime, (double)0.f, (double)1.f/30.f));
 

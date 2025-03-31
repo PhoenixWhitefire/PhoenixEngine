@@ -19,9 +19,11 @@
 
 #include "Engine.hpp"
 
-#include "gameobject/ParticleEmitter.hpp"
-#include "gameobject/Script.hpp"
-#include "gameobject/Light.hpp"
+#include "component/ParticleEmitter.hpp"
+#include "component/Transformable.hpp"
+#include "component/Camera.hpp"
+#include "component/Script.hpp"
+#include "component/Light.hpp"
 #include "PerformanceTiming.hpp"
 #include "GlobalJsonConfig.hpp"
 #include "ThreadManager.hpp"
@@ -308,12 +310,15 @@ Engine::Engine()
 
 	Log::Info("Initializing DataModel...");
 
-	this->DataModel = static_cast<Object_DataModel*>(GameObject::Create("DataModel"));
-	GameObject::s_DataModel = this->DataModel;
+	// TODO 31/03/2025 hack hack hackity hacking hack
+	GameObject::s_WorldArray.reserve(2);
+
+	this->DataModel = GameObject::Create("DataModel");
+	GameObject::s_DataModel = DataModel->ObjectId;
 
 	//ThreadManager::Get()->CreateWorkers(4, WorkerType::DefaultTaskWorker);
 
-	m_DataModelRef = new GameObjectRef<Object_DataModel>( this->DataModel );
+	m_DataModelRef = new GameObjectRef( this->DataModel );
 
 	Log::Info("Engine initialized");
 }
@@ -333,20 +338,20 @@ static void updateScripts(double DeltaTime)
 {
 	ZoneScopedC(tracy::Color::LightSkyBlue);
 
-	static std::vector<GameObjectRef<Object_Script>> ScriptsResumedThisFrame = {};
+	static std::vector<GameObjectRef> ScriptsResumedThisFrame = {};
 
-	for (GameObject* ch : GameObject::s_DataModel->GetDescendants())
+	for (GameObject* ch : Engine::Get()->DataModel->GetDescendants())
 		if (ch->Enabled)
-			if (Object_Script* script = dynamic_cast<Object_Script*>(ch))
+			if (EcScript* script = ch->GetComponent<EcScript>())
 			{
 				if (std::find(
 					ScriptsResumedThisFrame.begin(),
 					ScriptsResumedThisFrame.end(),
-					script
+					ch
 				) == ScriptsResumedThisFrame.end())
 				{
 					// ensure we keep a reference to it
-					ScriptsResumedThisFrame.emplace_back(script);
+					ScriptsResumedThisFrame.emplace_back(ch);
 
 					script->Update(DeltaTime);
 
@@ -368,9 +373,9 @@ static bool s_DebugCollisionAabbs = false;
 static void recursivelyTravelHierarchy(
 	std::vector<RenderItem>& RenderList,
 	std::vector<LightItem>& LightList,
-	std::vector<Object_Base3D*>& PhysicsList,
+	std::vector<GameObject*>& PhysicsList,
 	GameObject* Root,
-	Object_Camera* SceneCamera,
+	EcCamera* SceneCamera,
 	double DeltaTime
 )
 {
@@ -385,17 +390,14 @@ static void recursivelyTravelHierarchy(
 	{
 		if (!object->Enabled)
 			continue;
-
-		// scripts would have already been `::Update`'d by `updateScripts`
-		if (!dynamic_cast<Object_Script*>(object))
-			object->Update(DeltaTime);
-
-		Object_Base3D* object3D = dynamic_cast<Object_Base3D*>(object);
+			
+		EcMesh* object3D = object->GetComponent<EcMesh>();
+		EcTransformable* ct = object->GetComponent<EcTransformable>();
 
 		if (object3D)
 		{
 			if (object3D->PhysicsDynamics || object3D->PhysicsCollisions)
-				PhysicsList.emplace_back(object3D);
+				PhysicsList.emplace_back(object);
 
 			if (object3D->Transparency > .95f)
 				continue;
@@ -404,8 +406,8 @@ static void recursivelyTravelHierarchy(
 
 			RenderList.emplace_back(
 				object3D->RenderMeshId,
-				object3D->Transform,
-				object3D->Size,
+				ct->Transform,
+				ct->Size,
 				object3D->MaterialId,
 				object3D->Tint,
 				object3D->Transparency,
@@ -430,41 +432,36 @@ static void recursivelyTravelHierarchy(
 				);
 		}
 
-		Object_Light* light = !object3D ? dynamic_cast<Object_Light*>(object) : nullptr;
+		EcDirectionalLight* directional = object->GetComponent<EcDirectionalLight>();
+		EcPointLight* point = object->GetComponent<EcPointLight>();
+		EcSpotLight* spot = object->GetComponent<EcSpotLight>();
+		
+		if (directional)
+			LightList.emplace_back(
+				LightType::Directional,
+				directional->Shadows,
+				(glm::vec3)ct->Transform[3],
+				directional->LightColor * directional->Brightness
+			);
 
-		if (light)
-		{
-			Object_DirectionalLight* directional = dynamic_cast<Object_DirectionalLight*>(light);
-			Object_PointLight* point = dynamic_cast<Object_PointLight*>(light);
-			Object_SpotLight* spot = dynamic_cast<Object_SpotLight*>(light);
+		if (point)
+			LightList.emplace_back(
+				LightType::Point,
+				point->Shadows,
+				(glm::vec3)ct->Transform[3],
+				point->LightColor * point->Brightness,
+				point->Range
+			);
 
-			if (directional)
-				LightList.emplace_back(
-					LightType::Directional,
-					light->Shadows,
-					(glm::vec3)light->LocalTransform[3],
-					light->LightColor * light->Brightness
-				);
-
-			if (point)
-				LightList.emplace_back(
-					LightType::Point,
-					light->Shadows,
-					(glm::vec3)light->GetWorldTransform()[3],
-					light->LightColor * light->Brightness,
-					point->Range
-				);
-
-			if (spot)
-				LightList.emplace_back(
-					LightType::Spot,
-					light->Shadows,
-					(glm::vec3)light->GetWorldTransform()[3],
-					light->LightColor * light->Brightness,
-					spot->Range,
-					spot->Angle
-				);
-		}
+		if (spot)
+			LightList.emplace_back(
+				LightType::Spot,
+				spot->Shadows,
+				(glm::vec3)ct->Transform[3],
+				spot->LightColor * spot->Brightness,
+				spot->Range,
+				spot->Angle
+			);
 
 		if (!object->GetChildren().empty())
 			recursivelyTravelHierarchy(
@@ -476,7 +473,7 @@ static void recursivelyTravelHierarchy(
 				DeltaTime
 			);
 
-		Object_ParticleEmitter* emitter = (!light && !object3D) ? dynamic_cast<Object_ParticleEmitter*>(object) : nullptr;
+		EcParticleEmitter* emitter = object->GetComponent<EcParticleEmitter>();
 
 		if (emitter)
 		{
@@ -606,7 +603,9 @@ void Engine::Start()
 			break;
 		}
 
-		Object_Workspace* workspace = DataModel->GetWorkspace();
+		EcDataModel* cdm = DataModel->GetComponent<EcDataModel>();
+
+		GameObject* workspace = DataModel->FindChild("Workspace");
 
 		if (!workspace)
 		{
@@ -616,14 +615,14 @@ void Engine::Start()
 
 		this->Workspace = workspace;
 
-		if (this->DataModel->WantExit)
+		if (cdm->WantExit)
 		{
 			Log::Info("DataModel requested shutdown");
 			break;
 		}
 
 		// so we don't need to do additional checks past this point in the scope 11/01/2025
-		GameObjectRef<Object_Workspace> keepWorkspace{ workspace };
+		GameObjectRef keepWorkspace{ workspace };
 
 		RunningTime = GetRunningTime();
 		RendererContext.AccumulatedDrawCallCount = 0;
@@ -761,9 +760,9 @@ void Engine::Start()
 
 		float aspectRatio = (float)this->WindowSizeX / (float)this->WindowSizeY;
 
-		Object_Camera* sceneCamera = workspace->GetSceneCamera();
+		EcCamera* sceneCamera = Workspace->GetComponent<EcWorkspace>()->GetSceneCamera()->GetComponent<EcCamera>();
 
-		std::vector<Object_Base3D*> physicsList;
+		std::vector<GameObject*> physicsList;
 
 		updateScripts(deltaTime);
 
@@ -781,8 +780,8 @@ void Engine::Start()
 
 		bool hasPhysics = false;
 
-		for (Object_Base3D* object : physicsList)
-			if (object->PhysicsDynamics)
+		for (GameObject* object : physicsList)
+			if (object->GetComponent<EcMesh>()->PhysicsDynamics)
 			{
 				hasPhysics = true;
 				break;
@@ -1135,7 +1134,7 @@ Engine::~Engine()
 	// C++ *still* calls them again at program exit as the scope terminates.
 	// It doesn't cause a use-after-free, YET
 	this->DataModel->Destroy();
-	GameObject::s_DataModel = nullptr;
+	GameObject::s_DataModel = PHX_GAMEOBJECT_NULL_ID;
 	this->DataModel = nullptr;
 
 	delete m_DataModelRef;

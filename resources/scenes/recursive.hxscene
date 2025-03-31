@@ -4,13 +4,13 @@
   "SceneName": "hierarchyTest",
   "GameObjects": [
      {
-       "Name": "Parent",
+       "Name": "A",
        "$_class": "Model",
        "$_objectId": 1,
        "Parent": 2
      },
      {
-       "Name": "Child",
+       "Name": "B",
        "$_class": "Primitive",
        "Parent": 1,
        "$_objectId": 2

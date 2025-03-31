@@ -246,9 +246,9 @@ void MaterialManager::SaveToPath(const RenderMaterial& material, const std::stri
 
 		switch (value.Type)
 		{
-		case (Reflection::ValueType::Bool):
+		case (Reflection::ValueType::Boolean):
 		{
-			newMtlConfig["Uniforms"][it.first] = value.AsBool();
+			newMtlConfig["Uniforms"][it.first] = value.AsBoolean();
 			break;
 		}
 		case (Reflection::ValueType::Integer):

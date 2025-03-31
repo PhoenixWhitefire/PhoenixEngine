@@ -16,7 +16,7 @@ namespace SceneFormat
 	// @param Pointer to a success indicator `bool`. Use`SceneFormat::GetLastError`
 	//  to see the error string if this is false
 	// @return Root scene contents
-	std::vector<GameObject*> Deserialize(const std::string& Contents, bool*);
+	std::vector<GameObjectRef> Deserialize(const std::string& Contents, bool*);
 	// Gets the last error that occurred.
 	std::string GetLastErrorString();
 };

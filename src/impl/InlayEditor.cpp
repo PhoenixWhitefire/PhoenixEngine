@@ -18,8 +18,8 @@
 #include "asset/TextureManager.hpp"
 #include "asset/MeshProvider.hpp"
 
-#include "gameobject/Camera.hpp"
-#include "gameobject/Script.hpp"
+#include "component/Camera.hpp"
+#include "component/Script.hpp"
 
 #include "Utilities.hpp"
 #include "UserInput.hpp"
@@ -76,7 +76,7 @@ static Scene MtlPreviewScene =
 	{} // used shaders
 };
 static Renderer* MtlPreviewRenderer = nullptr;
-static Object_Camera* MtlPreviewCamera = nullptr;
+static GameObjectRef MtlPreviewCamera;
 static glm::mat4 MtlPreviewCamOffset = glm::translate(glm::mat4(1.f), glm::vec3(0.f, 0.f, -2.f));
 static glm::mat4 MtlPreviewCamDefaultRotation = glm::eulerAngleYXZ(glm::radians(168.f), glm::radians(12.f), 0.f);
 
@@ -103,9 +103,11 @@ void InlayEditor::Initialize(Renderer* renderer)
 {
 	MtlEditorPreview.Initialize(256, 256);
 	MtlPreviewRenderer = renderer;
-	MtlPreviewCamera = static_cast<Object_Camera*>(GameObject::Create("Camera"));
-	MtlPreviewCamera->Transform = MtlPreviewCamDefaultRotation * MtlPreviewCamOffset;
-	MtlPreviewCamera->FieldOfView = 50.f;
+	MtlPreviewCamera = GameObject::Create("Camera");
+
+	EcCamera* cc = MtlPreviewCamera->GetComponent<EcCamera>();
+	cc->Transform = MtlPreviewCamDefaultRotation * MtlPreviewCamOffset;
+	cc->FieldOfView = 50.f;
 
 	InlayEditor::DidInitialize = true;
 }
@@ -470,9 +472,9 @@ static void uniformsEditor(std::unordered_map<std::string, Reflection::GenericVa
 
 		switch (value.Type)
 		{
-		case Reflection::ValueType::Bool:
+		case Reflection::ValueType::Boolean:
 		{
-			bool curVal = value.AsBool();
+			bool curVal = value.AsBoolean();
 			ImGui::Checkbox("Value", &curVal);
 
 			newValue = curVal;
@@ -840,6 +842,8 @@ static void renderMaterialEditor()
 
 	static double PreviewRotStart = 0.f;
 
+	EcCamera* cc = MtlPreviewCamera->GetComponent<EcCamera>();
+
 	if (ImGui::IsItemHovered())
 	{
 		if (PreviewRotStart == 0.f)
@@ -850,11 +854,11 @@ static void renderMaterialEditor()
 			glm::radians(static_cast<float>((GetRunningTime() - PreviewRotStart) * 45.f)),
 			glm::vec3(0.f, 1.f, 0.f)
 		);
-		MtlPreviewCamera->Transform = transform * MtlPreviewCamOffset;
+		cc->Transform = transform * MtlPreviewCamOffset;
 	}
 	else
 	{
-		MtlPreviewCamera->Transform = MtlPreviewCamDefaultRotation * MtlPreviewCamOffset;
+		cc->Transform = MtlPreviewCamDefaultRotation * MtlPreviewCamOffset;
 		PreviewRotStart = 0.f;
 	}
 
@@ -874,8 +878,8 @@ static void renderMaterialEditor()
 
 	MtlPreviewRenderer->DrawScene(
 		MtlPreviewScene,
-		MtlPreviewCamera->GetMatrixForAspectRatio(1.f),
-		MtlPreviewCamera->Transform,
+		cc->GetMatrixForAspectRatio(1.f),
+		cc->Transform,
 		GetRunningTime()
 	);
 
@@ -1009,7 +1013,7 @@ static std::unordered_map<std::string_view, std::function<void(void)>> ActionHan
 		[]()
 		{
 			for (uint32_t selId : Selections)
-				if (Object_Script* s = dynamic_cast<Object_Script*>(GameObject::GetObjectById(selId)))
+				if (EcScript* s = GameObject::GetObjectById(selId)->GetComponent<EcScript>())
 					invokeTextEditor(s->SourceFile);
 		}
 	},
@@ -1018,7 +1022,7 @@ static std::unordered_map<std::string_view, std::function<void(void)>> ActionHan
 		[]()
 		{
 			for (uint32_t selId : Selections)
-				if (Object_Script* s = dynamic_cast<Object_Script*>(GameObject::GetObjectById(selId)))
+				if (EcScript* s = GameObject::GetObjectById(selId)->GetComponent<EcScript>())
 					s->Reload();
 		}
 	}
@@ -1044,7 +1048,7 @@ static std::vector<std::string_view> getPossibleActionsForSelections()
 		GameObject* g = GameObject::GetObjectById(selId);
 
 		if (!gotScript)
-			if (dynamic_cast<Object_Script*>(g))
+			if (g->GetComponent<EcScript>())
 			{
 				actions.push_back("$Script");
 				actions.push_back("Edit");
@@ -1164,7 +1168,7 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 
 		ImGui::AlignTextToFramePadding();
 
-		std::string classIconPath = "textures/editor-icons/" + object->ClassName + ".png";
+		std::string classIconPath = "textures/editor-icons/" + std::string(s_EntityComponentNames[(size_t)object->GetComponents()[0].first]) + ".png";
 		Texture& tex = texManager->GetTextureResource(texManager->LoadTextureFromPath(classIconPath));
 
 		if (tex.Status == Texture::LoadStatus::Failed && tex.ImagePath.find("fallback") == std::string::npos)
@@ -1247,10 +1251,10 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 			{
 				ImGui::SeparatorText("Insert");
 
-				for (auto& it : GameObject::s_GameObjectMap)
-					if (ImGui::MenuItem(it.first.data()))
+				for (size_t i = 0; i < (size_t)EntityComponent::__count; i++)
+					if (ImGui::MenuItem(s_EntityComponentNames[i].data()))
 					{
-						GameObject* newObject = GameObject::Create(it.first);
+						GameObject* newObject = GameObject::Create(s_EntityComponentNames[i]);
 						newObject->SetParent(ObjectInsertionTarget);
 						Selections = { newObject->ObjectId };
 
@@ -1305,14 +1309,14 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 	ImGui::BeginChild("HierarchyChildWindow", hrchChildWinSzOverride, ImGuiChildFlags_Border);
 
 	VisibleTreeWip.clear();
-	recursiveIterateTree(GameObject::s_DataModel);
+	recursiveIterateTree(GameObject::GetObjectById(GameObject::s_DataModel));
 	
 	VisibleTree = VisibleTreeWip;
 
-	std::vector<std::unique_ptr<GameObjectRef<GameObject>>> refs;
+	std::vector<std::unique_ptr<GameObjectRef>> refs;
 
 	for (uint32_t id : Selections)
-		refs.push_back(std::make_unique<GameObjectRef<GameObject>>(GameObject::GetObjectById(id)));
+		refs.push_back(std::make_unique<GameObjectRef>(GameObject::GetObjectById(id)));
 
 	if (ImGui::BeginPopupEx(1979, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings))
 	{
@@ -1346,8 +1350,8 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 			GameObject* target = GameObject::GetObjectById(Selections[0]);
 
 			sepStr = std::vformat(
-				"Properties of {} '{}'",
-				std::make_format_args(target->ClassName, target->Name)
+				"Properties of {}",
+				std::make_format_args(target->Name)
 			);
 		}
 
@@ -1479,9 +1483,9 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 				break;
 			}
 
-			case Reflection::ValueType::Bool:
+			case Reflection::ValueType::Boolean:
 			{
-				bool b = !doConflict ? newVal.AsBool() : false;
+				bool b = !doConflict ? newVal.AsBoolean() : false;
 
 				ImGui::Checkbox(propNameCStr, &b);
 

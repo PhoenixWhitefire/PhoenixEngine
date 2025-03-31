@@ -8,7 +8,9 @@
 #include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
 #include "asset/MeshProvider.hpp"
-#include "gameobject/Bone.hpp"
+#include "component/Transformable.hpp"
+#include "component/Mesh.hpp"
+#include "component/Bone.hpp"
 #include "GlobalJsonConfig.hpp"
 #include "Utilities.hpp"
 #include "FileRW.hpp"
@@ -240,7 +242,8 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		{
 			// TODO: cleanup code
 			object = GameObject::Create("Mesh");
-			Object_Mesh* meshObject = static_cast<Object_Mesh*>(object);
+			EcMesh* meshObject = object->GetComponent<EcMesh>();
+			EcTransformable* ct = object->GetComponent<EcTransformable>();
 
 			std::string saveDir = AssetPath;
 			size_t whereRes = AssetPath.find("resources/");
@@ -274,11 +277,11 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 			meshProvider->Assign(node.Data, meshPath);
 
 			meshObject->SetRenderMesh(meshPath);
-			meshObject->Transform = node.Transform;
+			ct->Transform = node.Transform;
 
 			//mo->Orientation = this->MeshRotations[MeshIndex];
 
-			meshObject->Size = node.Scale;
+			ct->Size = node.Scale;
 
 			meshObject->RecomputeAabb();
 
@@ -346,8 +349,8 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		}
 		else
 		{
-			object = GameObject::Create("Primitive");
-			Object_Base3D* prim = static_cast<Object_Base3D*>(object);
+			object = GameObject::Create("Mesh");
+			EcTransformable* prim = object->GetComponent<EcTransformable>();
 			prim->Transform = node.Transform;
 			prim->Size = node.Scale;
 		}
@@ -363,7 +366,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 			object->SetParent(this->LoadedObjs.at(parentIndex) != object ? LoadedObjs[parentIndex] : Parent);
 	}
 
-	for (Object_Animation* anim : m_Animations)
+	for (GameObject* anim : m_Animations)
 		anim->SetParent(LoadedObjs.at(0));
 }
 
@@ -643,7 +646,7 @@ void ModelLoader::m_BuildRig()
 
 	for (const nlohmann::json& animationJson : m_JsonData.value("animations", nlohmann::json::array()))
 	{
-		Object_Animation* anim = static_cast<Object_Animation*>(GameObject::Create("Animation"));
+		GameObject* anim = GameObject::Create("Animation");
 		anim->Name = animationJson["name"];
 
 		for (const nlohmann::json& channelJson : animationJson["channels"])
