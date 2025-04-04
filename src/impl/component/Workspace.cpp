@@ -1,0 +1,184 @@
+#include <glm/gtc/matrix_transform.hpp>
+
+#include "component/Workspace.hpp"
+#include "component/Camera.hpp"
+#include "Engine.hpp"
+
+static GameObject* s_FallbackCamera = nullptr;
+
+static GameObject* createCamera()
+{
+	GameObject* camera = GameObject::Create("Camera");
+	camera->GetComponent<EcCamera>()->UseSimpleController = true;
+
+	return camera;
+}
+
+class WorkspaceManager : BaseComponentManager
+{
+public:
+    virtual uint32_t CreateComponent(GameObject* Object) final
+    {
+        m_Components.emplace_back();
+
+		GameObject* cam = GameObject::Create("Camera");
+		cam->SetParent(Object);
+		m_Components.back().m_SceneCameraId = cam->ObjectId;
+
+        return static_cast<uint32_t>(m_Components.size() - 1);
+    }
+
+    virtual std::vector<void*> GetComponents() final
+    {
+        std::vector<void*> v;
+        v.reserve(m_Components.size());
+
+        for (const EcWorkspace& t : m_Components)
+            v.push_back((void*)&t);
+        
+        return v;
+    }
+
+    virtual void* GetComponent(uint32_t Id) final
+    {
+        return &m_Components[Id];
+    }
+
+    virtual void DeleteComponent(uint32_t Id) final
+    {
+        // TODO id reuse with handles that have a counter per re-use to reduce memory growth
+    }
+
+    virtual const Reflection::PropertyMap& GetProperties() final
+    {
+		static Reflection::GenericValue NullObject;
+		NullObject.Type = Reflection::ValueType::GameObject;
+
+        static const Reflection::PropertyMap props = 
+        {
+            EC_PROP(
+				"SceneCamera",
+				GameObject,
+				[](void* p)
+				-> Reflection::GenericValue
+				{
+					GameObject* cam = static_cast<EcWorkspace*>(p)->GetSceneCamera();
+
+					if (cam != s_FallbackCamera)
+						return cam->ToGenericValue();
+					else
+						return NullObject;
+				},
+				[](void* p, const Reflection::GenericValue& gv)
+				{
+					static_cast<EcWorkspace*>(p)->SetSceneCamera(GameObject::FromGenericValue(gv));
+				}
+			)
+        };
+
+        return props;
+    }
+
+    virtual const Reflection::FunctionMap& GetFunctions() final
+    {
+        static const Reflection::FunctionMap funcs =
+		{
+			{ "ScreenPointToRay", {
+				{ Reflection::ValueType::Array, Reflection::ValueType::Double },
+				{ Reflection::ValueType::Vector3 },
+				[](void* p, const std::vector<Reflection::GenericValue>& inputs)
+				-> std::vector<Reflection::GenericValue>
+				{
+					EcWorkspace* w = static_cast<EcWorkspace*>(p);
+
+					std::vector<Reflection::GenericValue> coordsgv = inputs.at(0).AsArray();
+					
+					double x = coordsgv.at(0).AsDouble();
+					double y = coordsgv.at(1).AsDouble();
+
+					float length = 1.f;
+
+					if (inputs.size() > 1)
+						length = static_cast<float>(inputs[1].AsDouble());
+
+					return { w->ScreenPointToRay(x, y, length, nullptr).ToGenericValue() };
+				}
+			} }
+		};
+        return funcs;
+    }
+
+    WorkspaceManager()
+    {
+        GameObject::s_ComponentManagers[(size_t)EntityComponent::Workspace] = this;
+    }
+
+private:
+    std::vector<EcWorkspace> m_Components;
+};
+
+static inline WorkspaceManager Instance{};
+
+Vector3 EcWorkspace::ScreenPointToRay(double x, double y, float length, Vector3* Origin)
+{
+	Engine* engine = Engine::Get();
+	int winSizeX = 0, winSizeY = 0;
+	SDL_GetWindowSize(engine->Window, &winSizeX, &winSizeY);
+
+	// thinmatrix 27/12/2024
+	// https://www.youtube.com/watch?v=DLKN0jExRIM
+	double nx = (2.f * x) / winSizeX - 1;
+	double ny = -((2.f * y) / winSizeY - 1);
+
+	glm::vec4 clipCoords{ nx, ny, -1.f, 1.f };
+
+	EcCamera* cam = GetSceneCamera()->GetComponent<EcCamera>();
+
+	glm::mat4 projectionMatrixInv = glm::inverse(glm::perspective(
+		glm::radians(cam->FieldOfView),
+		(float)winSizeX / (float)winSizeY,
+		cam->NearPlane,
+		cam->FarPlane
+	));
+
+	glm::vec4 eyeCoords = projectionMatrixInv * clipCoords;
+	eyeCoords.z = -1.f, eyeCoords.w = 0.f;
+
+	glm::vec3 position = glm::vec3(cam->Transform[3]);
+	glm::vec3 forwardVec = glm::vec3(cam->Transform[2]);
+
+	glm::mat4 viewMatrixInv = glm::inverse(glm::lookAt(
+		position,
+		position + forwardVec,
+		glm::vec3(cam->Transform[1])
+	));
+
+	glm::vec3 rayVector = glm::normalize(glm::vec3(viewMatrixInv * eyeCoords)) * length;
+
+	return rayVector;
+}
+
+GameObject* EcWorkspace::GetSceneCamera() const
+{
+	if (!s_FallbackCamera)
+		s_FallbackCamera = createCamera();
+
+	GameObject* sceneCam = GameObject::GetObjectById(m_SceneCameraId);
+
+	return (sceneCam && sceneCam->GetComponent<EcCamera>()) ? sceneCam : s_FallbackCamera;
+}
+
+void EcWorkspace::SetSceneCamera(GameObject* NewCam)
+{
+	if (NewCam && !NewCam->GetComponent<EcCamera>())
+		throw("Must have a Camera component!");
+
+	if (GameObject* prevCam = GetSceneCamera())
+		if (prevCam != NewCam)
+			prevCam->GetComponent<EcCamera>()->IsSceneCamera = false;
+
+	m_SceneCameraId = NewCam ? NewCam->ObjectId : UINT32_MAX;
+
+	if (NewCam)
+		NewCam->GetComponent<EcCamera>()->IsSceneCamera = true;
+}

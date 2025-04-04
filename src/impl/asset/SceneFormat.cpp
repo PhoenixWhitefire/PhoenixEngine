@@ -732,7 +732,7 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 		if (specialNamesIt != SpecialPropertyToSerializedName.end())
 			serializedAs = specialNamesIt->second;
 
-		Reflection::GenericValue value = propInfo.Get(Object);
+		Reflection::GenericValue value = Object->GetPropertyValue(propName);
 
 		switch (prop.second.Type)
 		{

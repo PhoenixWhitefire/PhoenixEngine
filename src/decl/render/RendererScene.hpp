@@ -5,7 +5,6 @@
 #include <glm/mat4x4.hpp>
 
 #include "component/Mesh.hpp"
-#include "Memory.hpp"
 
 struct RenderItem
 {
@@ -20,8 +19,6 @@ struct RenderItem
 
 	FaceCullingMode FaceCulling = FaceCullingMode::BackFace;
 	bool CastsShadows = false;
-
-	MEM_ALLOC_OPERATORS(RenderItem, RenderCommands);
 };
 
 enum class LightType : uint8_t { Directional, Point, Spot };
@@ -39,8 +36,6 @@ struct LightItem
 	float Range = 60.f;
 	// spotlights
 	float Angle = 60.f;
-
-	MEM_ALLOC_OPERATORS(LightItem, RenderCommands);
 };
 
 struct Scene

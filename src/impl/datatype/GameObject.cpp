@@ -38,7 +38,7 @@ static GameObject* cloneRecursive(
 		if (!it.second.Set)
 			continue; // read-only
 
-		Reflection::GenericValue rootVal = it.second.Get(Root);
+		Reflection::GenericValue rootVal = Root->GetPropertyValue(it.first);
 
 		if (rootVal.Type == Reflection::ValueType::GameObject)
 		{
@@ -84,13 +84,13 @@ static void mergeRecursive(
 	for (auto& it : other->GetProperties())
 		if (it.second.Set && it.first != "Parent")
 		{
-			Reflection::GenericValue v = it.second.Get(other);
+			Reflection::GenericValue v = other->GetPropertyValue(it.first);
 
 			if (v.Type == Reflection::ValueType::GameObject)
 			{
 				auto moit = MergedOverrides.find(GameObject::FromGenericValue(v)->ObjectId);
 				if (moit != MergedOverrides.end())
-					v = moit->second;
+					v = GameObject::GetObjectById(moit->second)->ToGenericValue();
 			}
 
 			me->SetPropertyValue(it.first, v);
@@ -789,6 +789,7 @@ GameObject* GameObject::Create(EntityComponent FirstComponent)
 {
 	GameObject* created = GameObject::Create();
 	created->AddComponent(FirstComponent);
+	created->Name = s_EntityComponentNames[(size_t)FirstComponent];
 
 	return created;
 }

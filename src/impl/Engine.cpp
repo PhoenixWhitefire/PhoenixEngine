@@ -579,6 +579,7 @@ void Engine::Start()
 	skyboxShaders.SetUniform("SkyboxCubemap", 3);
 
 	Scene scene{};
+	scene.RenderList.reserve(50);
 
 	RendererContext.FrameBuffer.Unbind();
 	
@@ -1135,7 +1136,6 @@ Engine::~Engine()
 	// It doesn't cause a use-after-free, YET
 	this->DataModel->Destroy();
 	GameObject::s_DataModel = PHX_GAMEOBJECT_NULL_ID;
-	this->DataModel = nullptr;
 
 	delete m_DataModelRef;
 

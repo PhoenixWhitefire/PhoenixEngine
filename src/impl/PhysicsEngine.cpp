@@ -22,6 +22,7 @@ static void applyGlobalForces(std::vector<GameObject*>& World, double DeltaTime)
 	{
 		EcMesh* cm = object->GetComponent<EcMesh>();
 		EcTransformable* ct = object->GetComponent<EcTransformable>();
+		assert(ct);
 
 		cm->Mass = cm->Density * ct->Size.X * ct->Size.Y * ct->Size.Z;
 

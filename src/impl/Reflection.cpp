@@ -474,6 +474,11 @@ bool Reflection::GenericValue::operator==(const Reflection::GenericValue& Other)
 	case ValueType::Null:
 		return true;
 
+	case ValueType::Boolean: case ValueType::Integer: case ValueType::Double: case ValueType::GameObject:
+	{
+		return this->Value ==  Other.Value;
+	}
+
 	case ValueType::String:
 	{
 		if (this->Size > 8)

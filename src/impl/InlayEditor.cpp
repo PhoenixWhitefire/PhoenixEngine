@@ -1168,7 +1168,11 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 
 		ImGui::AlignTextToFramePadding();
 
-		std::string classIconPath = "textures/editor-icons/" + std::string(s_EntityComponentNames[(size_t)object->GetComponents()[0].first]) + ".png";
+		std::pair<EntityComponent, uint32_t> primaryComponent = object->GetComponents()[0];
+		if (primaryComponent.first == EntityComponent::Transformable && object->GetComponents().size() > 1)
+			primaryComponent = object->GetComponents()[1];
+
+		std::string classIconPath = "textures/editor-icons/" + std::string(s_EntityComponentNames[(size_t)primaryComponent.first]) + ".png";
 		Texture& tex = texManager->GetTextureResource(texManager->LoadTextureFromPath(classIconPath));
 
 		if (tex.Status == Texture::LoadStatus::Failed && tex.ImagePath.find("fallback") == std::string::npos)
@@ -1375,7 +1379,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 			{
 				const std::string_view& pname = prop.first;
 				const auto& it = props.find(pname);
-				Reflection::GenericValue myVal = prop.second.Get(sel);
+				Reflection::GenericValue myVal = sel->GetPropertyValue(pname);
 
 				props.insert(std::pair(pname, std::pair(!!prop.second.Set, myVal)));
 
