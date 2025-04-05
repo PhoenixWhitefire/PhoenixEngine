@@ -747,6 +747,8 @@ void EcScript::Update(double dt)
 
 	s_WindowGrabMouse = ScriptEngine::s_BackendScriptWantGrabMouse;
 
+	uint32_t ecId = this->EcId;
+
 	// The first Script to be updated in the current frame will
 	// need to handle resuming ALL the coroutines that were yielded,
 	// the poor bastard

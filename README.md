@@ -49,17 +49,6 @@ All 3rd-party code and submodules are located in the `Vendor` directory.
 
 The following libraries are used:
 
-<<<<<<< HEAD
-* Luau, scripting - [@Roblox/Luau](https://github.com/Roblox/Luau/)
-* SDL3, window interface, OpenGL interface - [libsdl.org](https://libsdl.org/)
-* Glad, OpenGL API - [glad.dav1d.de/](https://glad.dav1d.de/)
-* GLM, matrix math - [@g-truc/glm](https://github.com/g-truc/glm/)
-* `nlohmann::json`, JSON decoding/encoding for various asset types - [@nlohmann/json](https://github.com/nlohmann/json/)
-* Dear ImGui, user interface - [@ocornut/ImGui](https://github.com/ocornut/imgui/)
-* STB Image, image loading - [@nothings/stb](https://github.com/nothings/stb)
-* OpenGL, graphics API - [Khronos Group](https://khronos.org/)
-* Tracy, profiling - [@wolfpld/Tracy](https://github.com/wolfpld/tracy)
-=======
 * Luau - [@Roblox/Luau](https://github.com/Roblox/Luau/)
 * SDL3 - [libsdl.org](https://libsdl.org/)
 * OpenGL - [Khronos Group](https://khronos.org/)
@@ -69,7 +58,6 @@ The following libraries are used:
 * Dear ImGui - [@ocornut/ImGui](https://github.com/ocornut/imgui/)
 * STB Image - [@nothings/stb](https://github.com/nothings/stb)
 * Tracy - [@wolfpld/Tracy](https://github.com/wolfpld/tracy)
->>>>>>> 4191382 (ECS stuff)
 
 The [OpenGL YouTube tutorials](https://youtube.com/watch?v=XpBGwZNyUh0&list=PLPaoO-vpZnumdcb4tZc4x5Q-v7CkrQ6M-) of [Victor Gordan](https://github.com/VictorGordan/) (who I occasionally make fun of in the code comments) were referenced heavily during the creation of the rendering systems of this engine.
 Initially, this started out as a 1-to-1 follow-along of what he did, but I rewrote the entire thing to work in a better "Game Engine"-style architecture, as the tutorial had a simpler Model Viewer architecture that was not suitable for a Game Engine.

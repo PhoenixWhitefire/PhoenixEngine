@@ -7,70 +7,6 @@
 #include "FileRW.hpp"
 #include "Log.hpp"
 
-class SoundManager : BaseComponentManager
-{
-public:
-    virtual uint32_t CreateComponent(GameObject* Object) final
-    {
-        m_Components.emplace_back();
-        return static_cast<uint32_t>(m_Components.size() - 1);
-    }
-
-    virtual std::vector<void*> GetComponents() final
-    {
-        std::vector<void*> v;
-        v.reserve(m_Components.size());
-
-        for (const EcSound& t : m_Components)
-            v.push_back((void*)&t);
-        
-        return v;
-    }
-
-    virtual void* GetComponent(uint32_t Id) final
-    {
-        return &m_Components[Id];
-    }
-
-    virtual void DeleteComponent(uint32_t Id) final
-    {
-        // TODO id reuse with handles that have a counter per re-use to reduce memory growth
-    }
-
-    virtual const Reflection::PropertyMap& GetProperties() final
-    {
-        static const Reflection::PropertyMap props = 
-        {
-            EC_PROP("SoundFile", String, EC_GET_SIMPLE(EcSound, SoundFile), [](void* p, const Reflection::GenericValue&)->void {}),
-			EC_PROP_SIMPLE(EcSound, Looped, Boolean),
-			EC_PROP("Playing", Boolean, [](void* p)->Reflection::GenericValue { return false; }, [](void* p, const Reflection::GenericValue&)->void{}),
-			EC_PROP_SIMPLE(EcSound, Position, Double)
-        };
-
-        return props;
-    }
-
-    virtual const Reflection::FunctionMap& GetFunctions() final
-    {
-        static const Reflection::FunctionMap funcs = {};
-        return funcs;
-    }
-	
-	SoundManager()
-    {
-        GameObject::s_ComponentManagers[(size_t)EntityComponent::Sound] = this;
-    }
-
-private:
-    std::vector<EcSound> m_Components;
-};
-
-static inline SoundManager Instance{};
-
-#if 0
-
-PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(Sound);
-
 struct AudioAsset
 {
 	SDL_AudioSpec Spec{};
@@ -78,7 +14,6 @@ struct AudioAsset
 	uint32_t DataSize{};
 };
 
-static bool s_DidInitReflection = false;
 static std::unordered_map<std::string, AudioAsset> AudioAssets{};
 
 // the spec of the audio device
@@ -94,7 +29,7 @@ static const SDL_AudioSpec AudioSpec =
 
 static void streamCallback(void* UserData, SDL_AudioStream* Stream, int AdditionalAmount, int /*TotalAmount*/)
 {
-	Object_Sound* sound = static_cast<Object_Sound*>(UserData);
+	EcSound* sound = static_cast<EcSound*>(UserData);
 	const AudioAsset& audio = AudioAssets[sound->SoundFile];
 
 	if (sound->NextRequestedPosition != -1.f)
@@ -125,125 +60,163 @@ static void streamCallback(void* UserData, SDL_AudioStream* Stream, int Addition
 	sound->BytePosition += AdditionalAmount;
 }
 
-void Object_Sound::s_DeclareReflections()
+class SoundManager : BaseComponentManager
 {
-	if (s_DidInitReflection)
-		return;
-	s_DidInitReflection = true;
+public:
+    virtual uint32_t CreateComponent(GameObject* Object) final
+    {
+        m_Components.emplace_back();
+		m_Components.back().Object = Object;
 
-	if (!SDL_Init(SDL_INIT_AUDIO))
-		throw("Unabled to init SDL Audio subsystem: " + std::string(SDL_GetError()));
+        return static_cast<uint32_t>(m_Components.size() - 1);
+    }
 
-	REFLECTION_INHERITAPI(Attachment);
+    virtual std::vector<void*> GetComponents() final
+    {
+        std::vector<void*> v;
+        v.reserve(m_Components.size());
 
-	REFLECTION_DECLAREPROP(
-		"SoundFile",
-		String,
-		[](Reflection::Reflectable* p)
-		-> Reflection::GenericValue
-		{
-			return static_cast<Object_Sound*>(p)->SoundFile;
-		},
-		[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)
-		{
-			Object_Sound* sound = static_cast<Object_Sound*>(p);
-			std::string_view newFile = gv.AsStringView();
+        for (const EcSound& t : m_Components)
+            v.push_back((void*)&t);
+        
+        return v;
+    }
 
-			if (newFile == sound->SoundFile)
-				return;
+    virtual void* GetComponent(uint32_t Id) final
+    {
+        return &m_Components[Id];
+    }
 
-			sound->SoundFile = newFile;
-			sound->Reload();
-		}
-	);
+    virtual void DeleteComponent(uint32_t Id) final
+    {
+        // TODO id reuse with handles that have a counter per re-use to reduce memory growth
 
-	REFLECTION_DECLAREPROP(
-		"Playing",
-		Bool,
-		[](Reflection::Reflectable* p)
-		{
-			Object_Sound* sound = static_cast<Object_Sound*>(p);
+		SDL_DestroyAudioStream(static_cast<SDL_AudioStream*>(m_Components[Id].m_AudioStream));
+    }
 
-			if (sound->m_AudioStream)
-				return !SDL_AudioStreamDevicePaused((SDL_AudioStream*)sound->m_AudioStream);
-			else
-				return false;
-		},
-		[](Reflection::Reflectable* p, const Reflection::GenericValue& playing)
-		{
-			Object_Sound* sound = static_cast<Object_Sound*>(p);
-			SDL_AudioStream* stream = (SDL_AudioStream*)sound->m_AudioStream;
-
-			if (stream)
-				if (playing.AsBoolean())
+    virtual const Reflection::PropertyMap& GetProperties() final
+    {
+        static const Reflection::PropertyMap props = 
+        {
+            EC_PROP(
+				"SoundFile",
+				String,
+				EC_GET_SIMPLE(EcSound, SoundFile),
+				[](void* p, const Reflection::GenericValue& gv)
 				{
-					const AudioAsset& audio = AudioAssets[sound->SoundFile];
+					EcSound* sound = static_cast<EcSound*>(p);
+					std::string_view newFile = gv.AsStringView();
 
-					if (sound->BytePosition >= audio.DataSize || sound->BytePosition == 0)
-					{
-						sound->BytePosition = 1;
-						SDL_PutAudioStreamData(stream, audio.Data, audio.DataSize);
-					}
-
-					SDL_ResumeAudioStreamDevice(stream);
+					if (newFile == sound->SoundFile)
+						return;
+					
+					sound->SoundFile = newFile;
+					sound->Reload();
 				}
-				else
-					SDL_PauseAudioStreamDevice(stream);
-		}
-	);
+			),
 
-	REFLECTION_DECLAREPROP(
-		"Position",
-		Double,
-		[](Reflection::Reflectable* p)
-		{
-			return static_cast<Object_Sound*>(p)->Position;
-		},
-		[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)
-		{
-			float pos = static_cast<float>(gv.AsDouble());
-			if (pos < 0.f)
-				throw("Position of Sound playback cannot be negative");
+			EC_PROP(
+				"Playing",
+				Boolean,
+				[](void* p)
+				{
+					EcSound* sound = static_cast<EcSound*>(p);
+		
+					if (sound->m_AudioStream)
+						return !SDL_AudioStreamDevicePaused((SDL_AudioStream*)sound->m_AudioStream);
+					else
+						return false;
+				},
+				[](void* p, const Reflection::GenericValue& playing)
+				{
+					EcSound* sound = static_cast<EcSound*>(p);
+					SDL_AudioStream* stream = (SDL_AudioStream*)sound->m_AudioStream;
+		
+					if (stream)
+						if (playing.AsBoolean())
+						{
+							if (!sound->Object->Enabled)
+								throw("Tried to play sound while Object was disabled, Object: " + sound->Object->GetFullName());
 
-			Object_Sound* sound = static_cast<Object_Sound*>(p);
+							const AudioAsset& audio = AudioAssets[sound->SoundFile];
+		
+							if (sound->BytePosition >= audio.DataSize || sound->BytePosition == 0)
+							{
+								sound->BytePosition = 1;
+								SDL_PutAudioStreamData(stream, audio.Data, audio.DataSize);
+							}
+							
+							SDL_ResumeAudioStreamDevice(stream);
+						}
+						else
+						{
+							SDL_PauseAudioStreamDevice(stream);
+							SDL_FlushAudioStream(stream);
+						}
+				}
+			),
 
-			sound->NextRequestedPosition = pos;
-			sound->Position = pos;
-		}
-	);
+			EC_PROP(
+				"Position",
+				Double,
+				[](void* p)
+				{
+					return static_cast<EcSound*>(p)->Position;
+				},
+				[](void* p, const Reflection::GenericValue& gv)
+				{
+					float pos = static_cast<float>(gv.AsDouble());
+					if (pos < 0.f)
+						throw("Position of Sound playback cannot be negative");
+		
+					EcSound* sound = static_cast<EcSound*>(p);
+		
+					sound->NextRequestedPosition = pos;
+					sound->Position = pos;
+				}
+			),
 
-	REFLECTION_DECLAREPROP_SIMPLE(Object_Sound, Looped, Bool);
-	REFLECTION_DECLAREPROP_SIMPLE_READONLY(Object_Sound, Length, Double);
-}
+			EC_PROP_SIMPLE(EcSound, Looped, Boolean),
 
-Object_Sound::Object_Sound()
-{
-	this->Name = "Sound";
-	this->ClassName = "Sound";
+			EC_PROP("Length", Double, EC_GET_SIMPLE(EcSound, Length), nullptr)
+        };
 
-	s_DeclareReflections();
-	ApiPointer = &s_Api;
-}
+        return props;
+    }
 
-Object_Sound::~Object_Sound()
-{
-	if (m_AudioStream)
-		SDL_DestroyAudioStream((SDL_AudioStream*)m_AudioStream);
-}
+    virtual const Reflection::FunctionMap& GetFunctions() final
+    {
+        static const Reflection::FunctionMap funcs = {};
+        return funcs;
+    }
+	
+	SoundManager()
+    {
+		if (!SDL_Init(SDL_INIT_AUDIO))
+			throw("Unabled to init SDL Audio subsystem: " + std::string(SDL_GetError()));
 
-void Object_Sound::Update(double)
+        GameObject::s_ComponentManagers[(size_t)EntityComponent::Sound] = this;
+    }
+
+private:
+    std::vector<EcSound> m_Components;
+};
+
+static inline SoundManager Instance{};
+
+void EcSound::Update(double)
 {
 	SDL_AudioStream* stream = (SDL_AudioStream*)m_AudioStream;
 
 	if (!stream)
 		return;
 
-	if (!Enabled && !SDL_AudioStreamDevicePaused(stream))
+	if (!Object->Enabled && !SDL_AudioStreamDevicePaused(stream))
 		if (!SDL_PauseAudioStreamDevice(stream))
-			throw("Failed to pause audio stream: " + std::string(SDL_GetError()));
+			throw("Failed to pause audio stream (in ::Update): " + std::string(SDL_GetError()));
 }
 
-void Object_Sound::Reload()
+void EcSound::Reload()
 {
 	if (m_AudioStream)
 		SDL_DestroyAudioStream((SDL_AudioStream*)m_AudioStream);
@@ -315,5 +288,3 @@ void Object_Sound::Reload()
 	SDL_PauseAudioStreamDevice(stream);
 	BytePosition = 1;
 }
-
-#endif

@@ -12,7 +12,8 @@ struct EcScript
 	void Update(double);
 
 	std::string SourceFile = "scripts/default.luau";
-	GameObject* Object = nullptr;
+	GameObjectRef Object;
+	uint32_t EcId = UINT32_MAX;
 
 	std::string m_Source;
 	lua_State* m_L = nullptr;

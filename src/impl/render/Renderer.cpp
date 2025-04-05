@@ -245,7 +245,6 @@ void Renderer::DrawScene(
 
 	// map< clump hash, pair< base RenderItem, vector< array buffer data >>>
 	std::map<uint64_t, std::pair<size_t, std::vector<float>>> instancingList;
-
 	{
 		ZoneScopedNC("Prepare", tracy::Color::AliceBlue);
 

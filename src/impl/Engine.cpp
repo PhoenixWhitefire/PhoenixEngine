@@ -88,8 +88,8 @@ void Engine::OnWindowResized(int NewSizeX, int NewSizeY)
 	this->WindowSizeX = NewSizeX;
 	this->WindowSizeY = NewSizeY;
 
+	//m_BloomFbo.ChangeResolution(WindowSizeX, WindowSizeY);
 	RendererContext.ChangeResolution(WindowSizeX, WindowSizeY);
-	m_BloomFbo.ChangeResolution(WindowSizeX, WindowSizeY);
 
 	SDL_DisplayID currentDisplay = SDL_GetDisplayForWindow(Window);
 	if (currentDisplay == 0)
@@ -232,7 +232,7 @@ Engine::Engine()
 	this->WindowSizeY = std::clamp(this->WindowSizeY, 1, displayBounds.h);
 
 	// This is easily the worst complaint I've had about this library,
-	// the log function *does not called even when an error retrievable by SDL_GetError occurs*!
+	// the log function *does not get called when an error retrievable by `SDL_GetError` occurs*!
 	// It's complete RUBBISH, USELESS, TRASH, BULLSHIT
 	// 09/09/2024
 	SDL_SetLogOutputFunction(sdlLog, nullptr);
@@ -308,17 +308,20 @@ Engine::Engine()
 
 	m_MeshProvider.Initialize();
 
-	Log::Info("Initializing DataModel...");
+	Log::Info("Blue frame...");
 
-	// TODO 31/03/2025 hack hack hackity hacking hack
-	GameObject::s_WorldArray.reserve(2);
+	RendererContext.FrameBuffer.Unbind();
+
+	glClearColor(0.07f, 0.13f, 0.17f, 1.f);
+	glClear(GL_COLOR_BUFFER_BIT);
+	RendererContext.SwapBuffers();
+
+	Log::Info("Initializing DataModel...");
 
 	this->DataModel = GameObject::Create("DataModel");
 	GameObject::s_DataModel = DataModel->ObjectId;
 
 	//ThreadManager::Get()->CreateWorkers(4, WorkerType::DefaultTaskWorker);
-
-	m_DataModelRef = new GameObjectRef( this->DataModel );
 
 	Log::Info("Engine initialized");
 }
@@ -374,7 +377,7 @@ static void recursivelyTravelHierarchy(
 	std::vector<RenderItem>& RenderList,
 	std::vector<LightItem>& LightList,
 	std::vector<GameObject*>& PhysicsList,
-	GameObject* Root,
+	GameObjectRef Root,
 	EcCamera* SceneCamera,
 	double DeltaTime
 )
@@ -384,9 +387,15 @@ static void recursivelyTravelHierarchy(
 	static uint32_t wireframeMaterial = MaterialManager::Get()->LoadMaterialFromPath("wireframe");
 	static uint32_t cubeMesh = MeshProvider::Get()->LoadFromPath("!Cube");
 
-	std::vector<GameObject*> objects = Root->GetChildren();
+	std::vector<GameObject*> objectsRaw = Root->GetChildren();
+	// TODO 05/04/2025: FIXME
+	std::vector<GameObjectRef> objects;
+	objects.reserve(objectsRaw.size());
 
-	for (GameObject* object : objects)
+	for (GameObject* o : objectsRaw)
+		objects.emplace_back(o);
+
+	for (GameObjectRef object : objects)
 	{
 		if (!object->Enabled)
 			continue;
@@ -731,7 +740,7 @@ void Engine::Start()
 					int NewSizeY = pollingEvent.window.data2;
 
 					// Only call ChangeResolution if the new resolution is actually different
-					if (NewSizeX != this->WindowSizeX || NewSizeY != this->WindowSizeY)
+					//if (NewSizeX != this->WindowSizeX || NewSizeY != this->WindowSizeY)
 						this->OnWindowResized(NewSizeX, NewSizeY);
 
 					break;
@@ -774,7 +783,7 @@ void Engine::Start()
 			scene.RenderList,
 			scene.LightingList,
 			physicsList,
-			workspace,
+			Workspace,
 			sceneCamera,
 			deltaTime
 		);
@@ -830,7 +839,6 @@ void Engine::Start()
 
 			sunShadowMap.Bind();
 			glViewport(0, 0, SunShadowMapResolutionSq, SunShadowMapResolutionSq);
-			glClearColor(1.f, 1.f, 1.f, 1.f);
 			glClear(/*GL_COLOR_BUFFER_BIT |*/ GL_DEPTH_BUFFER_BIT);
 
 			for (uint32_t shdId : scene.UsedShaders)
@@ -1000,7 +1008,7 @@ void Engine::Start()
 			{
 				ZoneScopedN("Bloom");
 
-				m_BloomFbo.Bind();
+				//m_BloomFbo.Bind();
 
 				{
 					ZoneScopedN("Extract");
@@ -1064,7 +1072,7 @@ void Engine::Start()
 						0
 					);
 
-					m_BloomFbo.Unbind();
+					//m_BloomFbo.Unbind();
 				}
 			}
 		}
@@ -1108,7 +1116,6 @@ void Engine::Start()
 			LastSecond = RunningTime;
 
 			this->FramesPerSecond = m_DrawnFramesInSecond;
-
 			m_DrawnFramesInSecond = -1;
 
 			Log::Save();
@@ -1136,8 +1143,6 @@ Engine::~Engine()
 	// It doesn't cause a use-after-free, YET
 	this->DataModel->Destroy();
 	GameObject::s_DataModel = PHX_GAMEOBJECT_NULL_ID;
-
-	delete m_DataModelRef;
 
 	EngineInstance = nullptr;
 

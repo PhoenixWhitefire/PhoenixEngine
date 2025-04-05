@@ -68,8 +68,6 @@ private:
 	TextureManager m_TextureManager;
 	ShaderManager m_ShaderManager;
 	MeshProvider m_MeshProvider;
-
-	GameObjectRef* m_DataModelRef = nullptr;
-
+	
 	GpuFrameBuffer m_BloomFbo;
 };
