@@ -9,7 +9,12 @@
 
 struct EcParticleEmitter
 {
-	std::vector<RenderItem> GetRenderList() { return {}; };
+	EcParticleEmitter();
+
+	void Update(double);
+	void AppendToRenderList(std::vector<RenderItem>);
+
+	GameObjectRef Object;
 
 	bool Emitting = true;
 	bool ParticlesRelativeToEmitter = false;
@@ -24,6 +29,24 @@ struct EcParticleEmitter
 	ValueSequence<glm::vec3> VelocityOverTime;
 
 	static inline EntityComponent Type = EntityComponent::ParticleEmitter;
+
+	struct Particle
+	{
+		float Lifetime = 1.f;
+		float TimeAliveFor = 0.f;
+		float Size = 1.f;
+		float Transparency = 0.f;
+
+		uint32_t Image{};
+
+		glm::vec3 Position{};
+	};
+
+	size_t m_GetUsableParticleIndex();
+
+	std::vector<Particle> m_Particles;
+
+	double m_TimeSinceLastSpawn = 0.f;
 };
 
 #if 0

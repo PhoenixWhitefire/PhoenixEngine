@@ -486,8 +486,8 @@ static void recursivelyTravelHierarchy(
 
 		if (emitter)
 		{
-			auto pdrawlist = emitter->GetRenderList();
-			std::copy(pdrawlist.begin(), pdrawlist.end(), std::back_inserter(RenderList));
+			emitter->Update(DeltaTime);
+			emitter->AppendToRenderList(RenderList);
 		}
 	}
 }
