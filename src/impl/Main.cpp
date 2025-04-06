@@ -636,6 +636,7 @@ static void drawDeveloperUI(double DeltaTime)
 			Log::Info("The JSON Config overwrote the pre-existing 'phoenix.conf'.");
 		}
 
+		ImGui::Checkbox("Wireframe rendering", &EngineInstance->DebugWireframeRendering);
 		ImGui::Checkbox("Debug Collision AABBs", &EngineInstance->DebugAabbs);
 	}
 	ImGui::End();

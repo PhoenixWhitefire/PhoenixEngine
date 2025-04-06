@@ -328,7 +328,7 @@ static std::vector<GameObjectRef> LoadMapVersion1(
 
 		if (Object.find("material") != Object.end())
 		{
-			uint32_t MeshMaterial = mtlManager->LoadMaterialFromPath(std::string(Object["material"]));
+			uint32_t MeshMaterial = mtlManager->LoadFromPath(std::string(Object["material"]));
 
 			cm->MaterialId = MeshMaterial;
 

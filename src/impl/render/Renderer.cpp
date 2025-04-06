@@ -234,7 +234,8 @@ void Renderer::DrawScene(
 	const Scene& Scene,
 	const glm::mat4& RenderMatrix,
 	const glm::mat4& CameraTransform,
-	double RunningTime
+	double RunningTime,
+	bool DebugWireframeRendering
 )
 {
 	TIME_SCOPE_AS(Timing::Timer::Rendering);
@@ -446,7 +447,7 @@ void Renderer::DrawScene(
 
 		RenderMaterial& material = mtlManager->GetMaterialResource(renderData.MaterialId);
 
-		m_SetMaterialData(renderData);
+		m_SetMaterialData(renderData, DebugWireframeRendering);
 
 		constexpr size_t ElementsPerInstance = 22ull;
 
@@ -546,7 +547,7 @@ void Renderer::DrawMesh(
 	}
 }
 
-void Renderer::m_SetMaterialData(const RenderItem& RenderData)
+void Renderer::m_SetMaterialData(const RenderItem& RenderData, bool DebugWireframeRendering)
 {
 	ZoneScopedC(tracy::Color::HotPink);
 
@@ -554,6 +555,35 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData)
 
 	RenderMaterial& material = mtlManager->GetMaterialResource(RenderData.MaterialId);
 	ShaderProgram& shader = material.GetShader();
+
+	if (!DebugWireframeRendering)
+		switch (material.PolygonMode)
+		{
+
+			case RenderMaterial::MaterialPolygonMode::Fill:
+			{
+				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+				break;
+			}
+
+			case RenderMaterial::MaterialPolygonMode::Lines:
+			{
+				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+				break;
+			}
+
+			case RenderMaterial::MaterialPolygonMode::Points:
+			{
+				glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+				break;
+			}
+
+		}
+	else
+		if (material.PolygonMode == RenderMaterial::MaterialPolygonMode::Points)
+			glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+		else
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 

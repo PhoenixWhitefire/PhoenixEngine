@@ -269,7 +269,7 @@ void EcParticleEmitter::AppendToRenderList(std::vector<RenderItem> RenderList)
 			QuadMeshId,
 			transform,
 			Vector3::one * particle.Size,
-			MaterialManager::Get()->LoadMaterialFromPath("error"),
+			MaterialManager::Get()->LoadFromPath("error"),
 			Color(1.f, 1.f, 1.f),
 			particle.Transparency,
 			0.f,

@@ -56,6 +56,16 @@ void RenderMaterial::Reload()
 
 	nlohmann::json uniforms = jsonMaterialData.value("Uniforms", jsonMaterialData.value("uniforms", nlohmann::json::object()));
 
+	int polygonMode = jsonMaterialData.value("PolygonMode", 0);
+
+	if (polygonMode < 0 || polygonMode > 2)
+	{
+		Log::Error("Material had invalid polygon mode of " + std::to_string(polygonMode));
+		polygonMode = 0;
+	}
+
+	this->PolygonMode = static_cast<MaterialPolygonMode>(polygonMode);
+
 	for (auto memberIt = uniforms.begin(); memberIt != uniforms.end(); ++memberIt)
 	{
 		std::string uniformName = memberIt.key();
@@ -158,7 +168,7 @@ MaterialManager::~MaterialManager()
 
 void MaterialManager::Initialize()
 {
-	this->LoadMaterialFromPath("error");
+	this->LoadFromPath("error");
 
 	s_Instance = this;
 }
@@ -168,7 +178,7 @@ MaterialManager* MaterialManager::Get()
 	return s_Instance;
 }
 
-uint32_t MaterialManager::LoadMaterialFromPath(const std::string_view& Name)
+uint32_t MaterialManager::LoadFromPath(const std::string_view& Name)
 {
 	ZoneScoped;
 	ZoneTextF("%s", Name.data());
@@ -202,7 +212,7 @@ uint32_t MaterialManager::LoadMaterialFromPath(const std::string_view& Name)
 			if (Name == "error")
 				throw("Failed to load the 'error' material. It is required due to technical reasons (I'm lazy)");
 
-			return this->LoadMaterialFromPath("error");
+			return this->LoadFromPath("error");
 		}
 	}
 	else

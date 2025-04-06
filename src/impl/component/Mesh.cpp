@@ -15,7 +15,7 @@ public:
 		if (!Object->GetComponent<EcTransformable>())
 			Object->AddComponent(EntityComponent::Transformable);
 		
-		m_Components.back().MaterialId = MaterialManager::Get()->LoadMaterialFromPath("plastic");
+		m_Components.back().MaterialId = MaterialManager::Get()->LoadFromPath("plastic");
 		m_Components.back().Object = Object;
 		
         return static_cast<uint32_t>(m_Components.size() - 1);
@@ -104,7 +104,7 @@ public:
 					EcMesh* m = static_cast<EcMesh*>(p);
 					MaterialManager* mtlManager = MaterialManager::Get();
 				
-					m->MaterialId = mtlManager->LoadMaterialFromPath(gv.AsStringView());
+					m->MaterialId = mtlManager->LoadFromPath(gv.AsStringView());
 				}
 			)
         };

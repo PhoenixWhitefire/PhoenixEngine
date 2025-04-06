@@ -29,6 +29,15 @@ struct RenderMaterial
 	float SpecExponent{};
 	float SpecMultiply{};
 
+	enum class MaterialPolygonMode : uint8_t
+	{
+		Fill = 0,
+		Lines = 1,
+		Points = 2
+	};
+
+	MaterialPolygonMode PolygonMode = MaterialPolygonMode::Fill;
+
 	std::unordered_map<std::string, Reflection::GenericValue> Uniforms;
 };
 
@@ -45,7 +54,7 @@ public:
 
 	//void FinalizeAsyncLoadedMaterials();
 
-	uint32_t LoadMaterialFromPath(const std::string_view&);
+	uint32_t LoadFromPath(const std::string_view&);
 	// uses material NAME, not file path!
 	void SaveToPath(const RenderMaterial&, const std::string_view& Name);
 

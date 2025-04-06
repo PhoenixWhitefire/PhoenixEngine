@@ -88,7 +88,7 @@ void Engine::OnWindowResized(int NewSizeX, int NewSizeY)
 	this->WindowSizeX = NewSizeX;
 	this->WindowSizeY = NewSizeY;
 
-	//m_BloomFbo.ChangeResolution(WindowSizeX, WindowSizeY);
+	m_BloomFbo.ChangeResolution(WindowSizeX, WindowSizeY);
 	RendererContext.ChangeResolution(WindowSizeX, WindowSizeY);
 
 	SDL_DisplayID currentDisplay = SDL_GetDisplayForWindow(Window);
@@ -384,7 +384,7 @@ static void recursivelyTravelHierarchy(
 {
 	ZoneScopedC(tracy::Color::LightGoldenrod);
 
-	static uint32_t wireframeMaterial = MaterialManager::Get()->LoadMaterialFromPath("wireframe");
+	static uint32_t wireframeMaterial = MaterialManager::Get()->LoadFromPath("wireframe");
 	static uint32_t cubeMesh = MeshProvider::Get()->LoadFromPath("!Cube");
 
 	std::vector<GameObject*> objectsRaw = Root->GetChildren();
@@ -853,7 +853,7 @@ void Engine::Start()
 				shd.SetUniform("DirecLightProjection", sunRenderMatrix);
 			}
 
-			RendererContext.DrawScene(sunScene, sunRenderMatrix, glm::mat4(1.f), RunningTime);
+			RendererContext.DrawScene(sunScene, sunRenderMatrix, glm::mat4(1.f), RunningTime, DebugWireframeRendering);
 
 			for (uint32_t shdId : scene.UsedShaders)
 				shdManager->GetShaderResource(shdId).SetUniform("IsShadowMap", false);
@@ -911,7 +911,7 @@ void Engine::Start()
 		glDepthFunc(GL_LESS);
 
 		//Main render pass
-		RendererContext.DrawScene(scene, renderMatrix, sceneCamera->Transform, RunningTime);
+		RendererContext.DrawScene(scene, renderMatrix, sceneCamera->Transform, RunningTime, DebugWireframeRendering);
 
 		glDisable(GL_DEPTH_TEST);
 
@@ -934,6 +934,8 @@ void Engine::Start()
 			ImGui::Render();
 			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 		}
+
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 		glEnable(GL_DEPTH_TEST);
 
@@ -1008,7 +1010,7 @@ void Engine::Start()
 			{
 				ZoneScopedN("Bloom");
 
-				//m_BloomFbo.Bind();
+				m_BloomFbo.Bind();
 
 				{
 					ZoneScopedN("Extract");
@@ -1072,7 +1074,7 @@ void Engine::Start()
 						0
 					);
 
-					//m_BloomFbo.Unbind();
+					m_BloomFbo.Unbind();
 				}
 			}
 		}

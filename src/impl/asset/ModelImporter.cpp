@@ -341,7 +341,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 				true
 			);
 
-			meshObject->MaterialId = mtlManager->LoadMaterialFromPath(materialName);
+			meshObject->MaterialId = mtlManager->LoadFromPath(materialName);
 			mtlManager->SaveToPath(mtlManager->GetMaterialResource(meshObject->MaterialId), materialName);
 
 			meshObject->MetallnessFactor = material.MetallicFactor;

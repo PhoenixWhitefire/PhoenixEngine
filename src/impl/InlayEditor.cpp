@@ -774,7 +774,7 @@ static void renderMaterialEditor()
 	ImGui::SetItemTooltip("The name of the material to load in, NOT the file path");
 
 	if (ImGui::Button("Load"))
-		mtlManager->LoadMaterialFromPath(MtlLoadNameBuf);
+		mtlManager->LoadFromPath(MtlLoadNameBuf);
 
 	ImGui::InputText("New blank material", MtlCreateNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
 	ImGui::SetItemTooltip("The name of the new blank material");
@@ -786,7 +786,7 @@ static void renderMaterialEditor()
 			DefaultNewMaterial.dump(2), true
 		);
 
-		mtlManager->LoadMaterialFromPath(MtlCreateNameBuf);
+		mtlManager->LoadFromPath(MtlCreateNameBuf);
 	}
 
 	std::vector<RenderMaterial>& loadedMaterials = mtlManager->GetLoadedMaterials();

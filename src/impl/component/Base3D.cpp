@@ -63,7 +63,7 @@ void Object_Base3D::s_DeclareReflections()
 			Object_Base3D* p = static_cast<Object_Base3D*>(g);
 			MaterialManager* mtlManager = MaterialManager::Get();
 
-			p->MaterialId = mtlManager->LoadMaterialFromPath(gv.AsStringView());
+			p->MaterialId = mtlManager->LoadFromPath(gv.AsStringView());
 		}
 	);
 
@@ -101,7 +101,7 @@ Object_Base3D::Object_Base3D()
 	this->ClassName = "Base3D";
 
 	this->RenderMeshId = MeshProvider::Get()->LoadFromPath("!Cube");
-	this->MaterialId = MaterialManager::Get()->LoadMaterialFromPath("plastic");
+	this->MaterialId = MaterialManager::Get()->LoadFromPath("plastic");
 
 	s_DeclareReflections();
 	ApiPointer = &s_Api;

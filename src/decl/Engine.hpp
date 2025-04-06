@@ -58,6 +58,7 @@ public:
 	int FramesPerSecond = 0;
 	int FpsCap = 60;
 
+	bool DebugWireframeRendering = false;
 	bool DebugAabbs = false;
 
 private:
