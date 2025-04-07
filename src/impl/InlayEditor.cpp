@@ -18,8 +18,8 @@
 #include "asset/TextureManager.hpp"
 #include "asset/MeshProvider.hpp"
 
-#include "gameobject/Camera.hpp"
-#include "gameobject/Script.hpp"
+#include "component/Camera.hpp"
+#include "component/Script.hpp"
 
 #include "Utilities.hpp"
 #include "UserInput.hpp"
@@ -76,7 +76,7 @@ static Scene MtlPreviewScene =
 	{} // used shaders
 };
 static Renderer* MtlPreviewRenderer = nullptr;
-static Object_Camera* MtlPreviewCamera = nullptr;
+static GameObjectRef MtlPreviewCamera;
 static glm::mat4 MtlPreviewCamOffset = glm::translate(glm::mat4(1.f), glm::vec3(0.f, 0.f, -2.f));
 static glm::mat4 MtlPreviewCamDefaultRotation = glm::eulerAngleYXZ(glm::radians(168.f), glm::radians(12.f), 0.f);
 
@@ -103,9 +103,11 @@ void InlayEditor::Initialize(Renderer* renderer)
 {
 	MtlEditorPreview.Initialize(256, 256);
 	MtlPreviewRenderer = renderer;
-	MtlPreviewCamera = static_cast<Object_Camera*>(GameObject::Create("Camera"));
-	MtlPreviewCamera->Transform = MtlPreviewCamDefaultRotation * MtlPreviewCamOffset;
-	MtlPreviewCamera->FieldOfView = 50.f;
+	MtlPreviewCamera = GameObject::Create("Camera");
+
+	EcCamera* cc = MtlPreviewCamera->GetComponent<EcCamera>();
+	cc->Transform = MtlPreviewCamDefaultRotation * MtlPreviewCamOffset;
+	cc->FieldOfView = 50.f;
 
 	InlayEditor::DidInitialize = true;
 }
@@ -123,7 +125,8 @@ static bool mtlIterator(void*, int index, const char** outText)
 
 static bool mtlUniformIterator(void* array, int index, const char** outText)
 {
-	*outText = ((std::vector<std::string_view>*)array)->at(index).data();
+	std::vector<std::string_view>* arr = static_cast<std::vector<std::string_view>*>(array);
+	*outText = arr->at(index).data();
 
 	return true;
 }
@@ -405,22 +408,20 @@ static void uniformsEditor(std::unordered_map<std::string, Reflection::GenericVa
 	if ((*Selection) + 1ull > Uniforms.size())
 		*Selection = -1;
 
-	static int TypeId = 0;
+	static int NewTypeId = 0;
 
 	static std::string NewUniformNameBuf;
 	NewUniformNameBuf.resize(32);
 
 	ImGui::InputText("Variable Name", &NewUniformNameBuf);
-	ImGui::InputInt("Variable Type", &TypeId);
-	ImGui::SetItemTooltip("0=Bool, 1=Int, 2=Float");
 
-	TypeId = std::clamp(TypeId, 0, 2);
+	ImGui::Combo("Variable Type", &NewTypeId, "Boolean\0Integer\0Float");
 
 	if (ImGui::Button("Add"))
 	{
 		Reflection::GenericValue initialValue;
 
-		switch (TypeId)
+		switch (NewTypeId)
 		{
 		case 0:
 		{
@@ -437,29 +438,25 @@ static void uniformsEditor(std::unordered_map<std::string, Reflection::GenericVa
 			initialValue = 0.f;
 			break;
 		}
+		default:
+			assert(false);
 		}
 
 		Uniforms[NewUniformNameBuf] = initialValue;
 	}
 
-	std::vector<std::string> uniformsArray;
+	std::vector<const char*> uniformsArray;
 	uniformsArray.reserve(Uniforms.size());
 
 	for (auto& it : Uniforms)
-		uniformsArray.push_back(it.first);
+		uniformsArray.push_back(it.first.c_str());
 
-	ImGui::ListBox(
-		"Uniforms",
-		Selection,
-		&mtlUniformIterator,
-		&uniformsArray,
-		static_cast<int>(Uniforms.size())
-	);
+	ImGui::ListBox("Uniforms", Selection, uniformsArray.data(), static_cast<int>(uniformsArray.size()));
 
 	if (*Selection != -1 && uniformsArray.size() >= 1)
 	{
 		const std::string& name = uniformsArray.at(*Selection);
-		Reflection::GenericValue& value = Uniforms.at(name);
+		Reflection::GenericValue value = Uniforms[name];
 
 		static std::string NameEditBuf;
 		NameEditBuf = name;
@@ -470,9 +467,9 @@ static void uniformsEditor(std::unordered_map<std::string, Reflection::GenericVa
 
 		switch (value.Type)
 		{
-		case Reflection::ValueType::Bool:
+		case Reflection::ValueType::Boolean:
 		{
-			bool curVal = value.AsBool();
+			bool curVal = value.AsBoolean();
 			ImGui::Checkbox("Value", &curVal);
 
 			newValue = curVal;
@@ -660,22 +657,36 @@ static void renderShaderPipelinesEditor()
 static char* MtlEditorTextureSelectDialogBuffer = nullptr;
 static uint32_t* MtlEditorTextureSelectTarget = nullptr;
 
-static void mtlEditorTexture(uint32_t* TextureIdPtr, const char* Label, char* Buffer)
+static void mtlEditorTexture(const char* Label, uint32_t* TextureIdPtr, char* CurrentPath, bool CanRemove = true)
 {
+	ImGui::PushID(TextureIdPtr);
+
+	ImGui::TextUnformatted(Label);
+	ImGui::SameLine();
+
 	TextureManager* texManager = TextureManager::Get();
+
+	bool addTextureDialog = false;
+
+	if (*TextureIdPtr == 0)
+		if (ImGui::Button("Add"))
+			addTextureDialog = true;
+		else
+		{
+			ImGui::PopID();
+			return;
+		}
 
 	const Texture& tx = texManager->GetTextureResource(*TextureIdPtr);
 
-	ImGui::TextUnformatted(Label);
-
-	if (ImGui::GetIO().KeyCtrl)
+	if (ImGui::GetIO().KeyCtrl || addTextureDialog)
 	{
-		bool fileDialogRequested = ImGui::TextLink(Buffer);
+		bool fileDialogRequested = addTextureDialog ? true : ImGui::TextLink(CurrentPath);
 		ImGui::SetItemTooltip("Open file dialog");
 
 		if (fileDialogRequested)
 		{
-			std::string texdir = getFileDirectory(Buffer);
+			std::string texdir = getFileDirectory(CurrentPath);
 
 			SDL_DialogFileFilter filter{ "Images", "png;jpg;jpeg" };
 
@@ -722,15 +733,28 @@ static void mtlEditorTexture(uint32_t* TextureIdPtr, const char* Label, char* Bu
 				false
 			);
 
-			MtlEditorTextureSelectDialogBuffer = Buffer;
+			MtlEditorTextureSelectDialogBuffer = CurrentPath;
 			MtlEditorTextureSelectTarget = TextureIdPtr;
+		}
+
+		if (addTextureDialog)
+		{
+			ImGui::PopID();
+			return;
 		}
 	}
 	else
 	{
-		Buffer[MATERIAL_TEXTUREPATH_BUFSIZE - 1] = 0;
-		ImGui::InputText(Label, Buffer, MATERIAL_TEXTUREPATH_BUFSIZE);
+		CurrentPath[MATERIAL_TEXTUREPATH_BUFSIZE - 1] = 0;
+		ImGui::InputText("##", CurrentPath, MATERIAL_TEXTUREPATH_BUFSIZE);
 		ImGui::SetItemTooltip("Enter path directly, or hold CTRL to use a file dialog");
+	}
+
+	if (CanRemove && ImGui::Button("Remove"))
+	{
+		*TextureIdPtr = 0;
+		ImGui::PopID();
+		return;
 	}
 
 	ImGui::Image(
@@ -739,15 +763,23 @@ static void mtlEditorTexture(uint32_t* TextureIdPtr, const char* Label, char* Bu
 		ImVec2(256.f, tx.Height * (256.f / tx.Width))
 	);
 
-	ImGui::TextUnformatted(std::vformat(
-		"Resolution: {}x{}",
-		std::make_format_args(tx.Width, tx.Height)
-	).c_str());
+	if (ImGui::IsItemHovered())
+	{
+		ImGui::BeginTooltip();
 
-	ImGui::TextUnformatted(std::vformat(
-		"# Color channels: {}",
-		std::make_format_args(tx.NumColorChannels)
-	).c_str());
+		ImGui::TextUnformatted(std::vformat(
+			"Resolution: {}x{}",
+			std::make_format_args(tx.Width, tx.Height)
+		).c_str());
+		ImGui::TextUnformatted(std::vformat(
+			"# Color channels: {}",
+			std::make_format_args(tx.NumColorChannels)
+		).c_str());
+
+		ImGui::EndTooltip();
+	}
+
+	ImGui::PopID();
 }
 
 // 02/09/2024
@@ -772,7 +804,7 @@ static void renderMaterialEditor()
 	ImGui::SetItemTooltip("The name of the material to load in, NOT the file path");
 
 	if (ImGui::Button("Load"))
-		mtlManager->LoadMaterialFromPath(MtlLoadNameBuf);
+		mtlManager->LoadFromPath(MtlLoadNameBuf);
 
 	ImGui::InputText("New blank material", MtlCreateNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
 	ImGui::SetItemTooltip("The name of the new blank material");
@@ -784,7 +816,7 @@ static void renderMaterialEditor()
 			DefaultNewMaterial.dump(2), true
 		);
 
-		mtlManager->LoadMaterialFromPath(MtlCreateNameBuf);
+		mtlManager->LoadFromPath(MtlCreateNameBuf);
 	}
 
 	std::vector<RenderMaterial>& loadedMaterials = mtlManager->GetLoadedMaterials();
@@ -840,6 +872,8 @@ static void renderMaterialEditor()
 
 	static double PreviewRotStart = 0.f;
 
+	EcCamera* cc = MtlPreviewCamera->GetComponent<EcCamera>();
+
 	if (ImGui::IsItemHovered())
 	{
 		if (PreviewRotStart == 0.f)
@@ -850,11 +884,11 @@ static void renderMaterialEditor()
 			glm::radians(static_cast<float>((GetRunningTime() - PreviewRotStart) * 45.f)),
 			glm::vec3(0.f, 1.f, 0.f)
 		);
-		MtlPreviewCamera->Transform = transform * MtlPreviewCamOffset;
+		cc->Transform = transform * MtlPreviewCamOffset;
 	}
 	else
 	{
-		MtlPreviewCamera->Transform = MtlPreviewCamDefaultRotation * MtlPreviewCamOffset;
+		cc->Transform = MtlPreviewCamDefaultRotation * MtlPreviewCamOffset;
 		PreviewRotStart = 0.f;
 	}
 
@@ -874,8 +908,8 @@ static void renderMaterialEditor()
 
 	MtlPreviewRenderer->DrawScene(
 		MtlPreviewScene,
-		MtlPreviewCamera->GetMatrixForAspectRatio(1.f),
-		MtlPreviewCamera->Transform,
+		cc->GetMatrixForAspectRatio(1.f),
+		cc->Transform,
 		GetRunningTime()
 	);
 
@@ -886,54 +920,14 @@ static void renderMaterialEditor()
 
 	ImGui::InputText("Shader", MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
 
-	mtlEditorTexture(&curItem.ColorMap, "Color Map:", MtlDiffuseBuf);
+	int curPolyMode = static_cast<uint8_t>(curItem.PolygonMode);
+	ImGui::Combo("Polygon Mode", &curPolyMode, "Fill\0Line\0Point");
+	curItem.PolygonMode = static_cast<RenderMaterial::MaterialPolygonMode>(std::clamp(curPolyMode, 0, 2));
 
-	bool hadSpecularTexture = curItem.MetallicRoughnessMap != 0;
-	bool metallicRoughnessEnabled = hadSpecularTexture;
-	ImGui::Checkbox("Has Metallic-Roughness Map", &metallicRoughnessEnabled);
-
-	if (metallicRoughnessEnabled)
-	{
-		if (!hadSpecularTexture)
-			curItem.MetallicRoughnessMap = texManager->LoadTextureFromPath("textures/white.png");
-
-		mtlEditorTexture(&curItem.MetallicRoughnessMap, "Metallic Roughness Map:", MtlSpecBuf);
-	}
-	else
-		// the ID is the only thing the Renderer uses to determine
-		// if a material has a certain non-required texture,
-		// as well as being what this very Editor uses to determine if it
-		// should be displayed
-		// 15/11/2024
-		curItem.MetallicRoughnessMap = 0;
-
-	bool hadNormalMap = curItem.NormalMap != 0;
-	bool normalMapEnabled = hadNormalMap;
-	ImGui::Checkbox("Has Normal Map", &normalMapEnabled);
-
-	if (normalMapEnabled)
-	{
-		if (!hadNormalMap)
-			curItem.NormalMap = texManager->LoadTextureFromPath("textures/violet.png");
-
-		mtlEditorTexture(&curItem.NormalMap, "Normal Map:", MtlNormalBuf);
-	}
-	else
-		curItem.NormalMap = 0;
-
-	bool hadEmissiveMap = curItem.EmissionMap != 0;
-	bool emissiveMapEnabled = hadEmissiveMap;
-	ImGui::Checkbox("Has Emission Map", &emissiveMapEnabled);
-
-	if (emissiveMapEnabled)
-	{
-		if (!hadEmissiveMap)
-			curItem.EmissionMap = texManager->LoadTextureFromPath("textures/white.png");
-
-		mtlEditorTexture(&curItem.EmissionMap, "Emission Map:", MtlEmissionBuf);
-	}
-	else
-		curItem.EmissionMap = 0;
+	mtlEditorTexture("Color Map: ", &curItem.ColorMap, MtlDiffuseBuf, false);
+	mtlEditorTexture("Metallic-Rougness Map: ", &curItem.MetallicRoughnessMap, MtlSpecBuf, false);
+	mtlEditorTexture("Normal Map: ", &curItem.NormalMap, MtlNormalBuf);
+	mtlEditorTexture("Emission Map:", &curItem.EmissionMap, MtlEmissionBuf);
 
 	ImGui::Text("Shader Variable Overrides");
 
@@ -1009,7 +1003,7 @@ static std::unordered_map<std::string_view, std::function<void(void)>> ActionHan
 		[]()
 		{
 			for (uint32_t selId : Selections)
-				if (Object_Script* s = dynamic_cast<Object_Script*>(GameObject::GetObjectById(selId)))
+				if (EcScript* s = GameObject::GetObjectById(selId)->GetComponent<EcScript>())
 					invokeTextEditor(s->SourceFile);
 		}
 	},
@@ -1018,7 +1012,7 @@ static std::unordered_map<std::string_view, std::function<void(void)>> ActionHan
 		[]()
 		{
 			for (uint32_t selId : Selections)
-				if (Object_Script* s = dynamic_cast<Object_Script*>(GameObject::GetObjectById(selId)))
+				if (EcScript* s = GameObject::GetObjectById(selId)->GetComponent<EcScript>())
 					s->Reload();
 		}
 	}
@@ -1044,7 +1038,7 @@ static std::vector<std::string_view> getPossibleActionsForSelections()
 		GameObject* g = GameObject::GetObjectById(selId);
 
 		if (!gotScript)
-			if (dynamic_cast<Object_Script*>(g))
+			if (g->GetComponent<EcScript>())
 			{
 				actions.push_back("$Script");
 				actions.push_back("Edit");
@@ -1164,7 +1158,11 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 
 		ImGui::AlignTextToFramePadding();
 
-		std::string classIconPath = "textures/editor-icons/" + object->ClassName + ".png";
+		std::pair<EntityComponent, uint32_t> primaryComponent = object->GetComponents()[0];
+		if (primaryComponent.first == EntityComponent::Transformable && object->GetComponents().size() > 1)
+			primaryComponent = object->GetComponents()[1];
+
+		std::string classIconPath = "textures/editor-icons/" + std::string(s_EntityComponentNames[(size_t)primaryComponent.first]) + ".png";
 		Texture& tex = texManager->GetTextureResource(texManager->LoadTextureFromPath(classIconPath));
 
 		if (tex.Status == Texture::LoadStatus::Failed && tex.ImagePath.find("fallback") == std::string::npos)
@@ -1247,10 +1245,10 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 			{
 				ImGui::SeparatorText("Insert");
 
-				for (auto& it : GameObject::s_GameObjectMap)
-					if (ImGui::MenuItem(it.first.data()))
+				for (size_t i = 0; i < (size_t)EntityComponent::__count; i++)
+					if (ImGui::MenuItem(s_EntityComponentNames[i].data()))
 					{
-						GameObject* newObject = GameObject::Create(it.first);
+						GameObject* newObject = GameObject::Create(s_EntityComponentNames[i]);
 						newObject->SetParent(ObjectInsertionTarget);
 						Selections = { newObject->ObjectId };
 
@@ -1305,14 +1303,14 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 	ImGui::BeginChild("HierarchyChildWindow", hrchChildWinSzOverride, ImGuiChildFlags_Border);
 
 	VisibleTreeWip.clear();
-	recursiveIterateTree(GameObject::s_DataModel);
+	recursiveIterateTree(GameObject::GetObjectById(GameObject::s_DataModel));
 	
 	VisibleTree = VisibleTreeWip;
 
-	std::vector<std::unique_ptr<GameObjectRef<GameObject>>> refs;
+	std::vector<std::unique_ptr<GameObjectRef>> refs;
 
 	for (uint32_t id : Selections)
-		refs.push_back(std::make_unique<GameObjectRef<GameObject>>(GameObject::GetObjectById(id)));
+		refs.push_back(std::make_unique<GameObjectRef>(GameObject::GetObjectById(id)));
 
 	if (ImGui::BeginPopupEx(1979, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings))
 	{
@@ -1346,8 +1344,8 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 			GameObject* target = GameObject::GetObjectById(Selections[0]);
 
 			sepStr = std::vformat(
-				"Properties of {} '{}'",
-				std::make_format_args(target->ClassName, target->Name)
+				"Properties of {}",
+				std::make_format_args(target->Name)
 			);
 		}
 
@@ -1371,7 +1369,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 			{
 				const std::string_view& pname = prop.first;
 				const auto& it = props.find(pname);
-				Reflection::GenericValue myVal = prop.second.Get(sel);
+				Reflection::GenericValue myVal = sel->GetPropertyValue(pname);
 
 				props.insert(std::pair(pname, std::pair(!!prop.second.Set, myVal)));
 
@@ -1479,9 +1477,9 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 				break;
 			}
 
-			case Reflection::ValueType::Bool:
+			case Reflection::ValueType::Boolean:
 			{
-				bool b = !doConflict ? newVal.AsBool() : false;
+				bool b = !doConflict ? newVal.AsBoolean() : false;
 
 				ImGui::Checkbox(propNameCStr, &b);
 

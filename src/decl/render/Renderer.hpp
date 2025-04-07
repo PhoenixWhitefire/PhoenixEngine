@@ -44,7 +44,8 @@ public:
 		const Scene& Scene,
 		const glm::mat4& RenderMatrix,
 		const glm::mat4& CameraTransform,
-		double RunningTime
+		double RunningTime,
+		bool DebugWireframeRendering = false
 	);
 
 	// Submits a single draw call
@@ -68,7 +69,7 @@ public:
 	uint32_t AccumulatedDrawCallCount = 0;
 
 private:
-	void m_SetMaterialData(const RenderItem&);
+	void m_SetMaterialData(const RenderItem&, bool DebugWireframeRendering);
 
 	GpuVertexArray m_VertexArray;
 	GpuVertexBuffer m_VertexBuffer;

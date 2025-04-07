@@ -19,9 +19,11 @@
 
 #include "Engine.hpp"
 
-#include "gameobject/ParticleEmitter.hpp"
-#include "gameobject/Script.hpp"
-#include "gameobject/Light.hpp"
+#include "component/ParticleEmitter.hpp"
+#include "component/Transformable.hpp"
+#include "component/Camera.hpp"
+#include "component/Script.hpp"
+#include "component/Light.hpp"
 #include "PerformanceTiming.hpp"
 #include "GlobalJsonConfig.hpp"
 #include "ThreadManager.hpp"
@@ -86,8 +88,8 @@ void Engine::OnWindowResized(int NewSizeX, int NewSizeY)
 	this->WindowSizeX = NewSizeX;
 	this->WindowSizeY = NewSizeY;
 
-	RendererContext.ChangeResolution(WindowSizeX, WindowSizeY);
 	m_BloomFbo.ChangeResolution(WindowSizeX, WindowSizeY);
+	RendererContext.ChangeResolution(WindowSizeX, WindowSizeY);
 
 	SDL_DisplayID currentDisplay = SDL_GetDisplayForWindow(Window);
 	if (currentDisplay == 0)
@@ -230,7 +232,7 @@ Engine::Engine()
 	this->WindowSizeY = std::clamp(this->WindowSizeY, 1, displayBounds.h);
 
 	// This is easily the worst complaint I've had about this library,
-	// the log function *does not called even when an error retrievable by SDL_GetError occurs*!
+	// the log function *does not get called when an error retrievable by `SDL_GetError` occurs*!
 	// It's complete RUBBISH, USELESS, TRASH, BULLSHIT
 	// 09/09/2024
 	SDL_SetLogOutputFunction(sdlLog, nullptr);
@@ -306,14 +308,20 @@ Engine::Engine()
 
 	m_MeshProvider.Initialize();
 
+	Log::Info("Blue frame...");
+
+	RendererContext.FrameBuffer.Unbind();
+
+	glClearColor(0.07f, 0.13f, 0.17f, 1.f);
+	glClear(GL_COLOR_BUFFER_BIT);
+	RendererContext.SwapBuffers();
+
 	Log::Info("Initializing DataModel...");
 
-	this->DataModel = static_cast<Object_DataModel*>(GameObject::Create("DataModel"));
-	GameObject::s_DataModel = this->DataModel;
+	this->DataModel = GameObject::Create("DataModel");
+	GameObject::s_DataModel = DataModel->ObjectId;
 
 	//ThreadManager::Get()->CreateWorkers(4, WorkerType::DefaultTaskWorker);
-
-	m_DataModelRef = new GameObjectRef<Object_DataModel>( this->DataModel );
 
 	Log::Info("Engine initialized");
 }
@@ -333,20 +341,20 @@ static void updateScripts(double DeltaTime)
 {
 	ZoneScopedC(tracy::Color::LightSkyBlue);
 
-	static std::vector<GameObjectRef<Object_Script>> ScriptsResumedThisFrame = {};
+	static std::vector<GameObjectRef> ScriptsResumedThisFrame = {};
 
-	for (GameObject* ch : GameObject::s_DataModel->GetDescendants())
+	for (GameObject* ch : Engine::Get()->DataModel->GetDescendants())
 		if (ch->Enabled)
-			if (Object_Script* script = dynamic_cast<Object_Script*>(ch))
+			if (EcScript* script = ch->GetComponent<EcScript>())
 			{
 				if (std::find(
 					ScriptsResumedThisFrame.begin(),
 					ScriptsResumedThisFrame.end(),
-					script
+					ch
 				) == ScriptsResumedThisFrame.end())
 				{
 					// ensure we keep a reference to it
-					ScriptsResumedThisFrame.emplace_back(script);
+					ScriptsResumedThisFrame.emplace_back(ch);
 
 					script->Update(DeltaTime);
 
@@ -368,34 +376,37 @@ static bool s_DebugCollisionAabbs = false;
 static void recursivelyTravelHierarchy(
 	std::vector<RenderItem>& RenderList,
 	std::vector<LightItem>& LightList,
-	std::vector<Object_Base3D*>& PhysicsList,
-	GameObject* Root,
-	Object_Camera* SceneCamera,
+	std::vector<GameObject*>& PhysicsList,
+	GameObjectRef Root,
+	EcCamera* SceneCamera,
 	double DeltaTime
 )
 {
 	ZoneScopedC(tracy::Color::LightGoldenrod);
 
-	static uint32_t wireframeMaterial = MaterialManager::Get()->LoadMaterialFromPath("wireframe");
+	static uint32_t wireframeMaterial = MaterialManager::Get()->LoadFromPath("wireframe");
 	static uint32_t cubeMesh = MeshProvider::Get()->LoadFromPath("!Cube");
 
-	std::vector<GameObject*> objects = Root->GetChildren();
+	std::vector<GameObject*> objectsRaw = Root->GetChildren();
+	// TODO 05/04/2025: FIXME
+	std::vector<GameObjectRef> objects;
+	objects.reserve(objectsRaw.size());
 
-	for (GameObject* object : objects)
+	for (GameObject* o : objectsRaw)
+		objects.emplace_back(o);
+
+	for (GameObjectRef object : objects)
 	{
 		if (!object->Enabled)
 			continue;
-
-		// scripts would have already been `::Update`'d by `updateScripts`
-		if (!dynamic_cast<Object_Script*>(object))
-			object->Update(DeltaTime);
-
-		Object_Base3D* object3D = dynamic_cast<Object_Base3D*>(object);
+			
+		EcMesh* object3D = object->GetComponent<EcMesh>();
+		EcTransformable* ct = object->GetComponent<EcTransformable>();
 
 		if (object3D)
 		{
 			if (object3D->PhysicsDynamics || object3D->PhysicsCollisions)
-				PhysicsList.emplace_back(object3D);
+				PhysicsList.emplace_back(object);
 
 			if (object3D->Transparency > .95f)
 				continue;
@@ -404,8 +415,8 @@ static void recursivelyTravelHierarchy(
 
 			RenderList.emplace_back(
 				object3D->RenderMeshId,
-				object3D->Transform,
-				object3D->Size,
+				ct->Transform,
+				ct->Size,
 				object3D->MaterialId,
 				object3D->Tint,
 				object3D->Transparency,
@@ -430,41 +441,36 @@ static void recursivelyTravelHierarchy(
 				);
 		}
 
-		Object_Light* light = !object3D ? dynamic_cast<Object_Light*>(object) : nullptr;
+		EcDirectionalLight* directional = object->GetComponent<EcDirectionalLight>();
+		EcPointLight* point = object->GetComponent<EcPointLight>();
+		EcSpotLight* spot = object->GetComponent<EcSpotLight>();
+		
+		if (directional)
+			LightList.emplace_back(
+				LightType::Directional,
+				directional->Shadows,
+				(glm::vec3)ct->Transform[3],
+				directional->LightColor * directional->Brightness
+			);
 
-		if (light)
-		{
-			Object_DirectionalLight* directional = dynamic_cast<Object_DirectionalLight*>(light);
-			Object_PointLight* point = dynamic_cast<Object_PointLight*>(light);
-			Object_SpotLight* spot = dynamic_cast<Object_SpotLight*>(light);
+		if (point)
+			LightList.emplace_back(
+				LightType::Point,
+				point->Shadows,
+				(glm::vec3)ct->Transform[3],
+				point->LightColor * point->Brightness,
+				point->Range
+			);
 
-			if (directional)
-				LightList.emplace_back(
-					LightType::Directional,
-					light->Shadows,
-					(glm::vec3)light->LocalTransform[3],
-					light->LightColor * light->Brightness
-				);
-
-			if (point)
-				LightList.emplace_back(
-					LightType::Point,
-					light->Shadows,
-					(glm::vec3)light->GetWorldTransform()[3],
-					light->LightColor * light->Brightness,
-					point->Range
-				);
-
-			if (spot)
-				LightList.emplace_back(
-					LightType::Spot,
-					light->Shadows,
-					(glm::vec3)light->GetWorldTransform()[3],
-					light->LightColor * light->Brightness,
-					spot->Range,
-					spot->Angle
-				);
-		}
+		if (spot)
+			LightList.emplace_back(
+				LightType::Spot,
+				spot->Shadows,
+				(glm::vec3)ct->Transform[3],
+				spot->LightColor * spot->Brightness,
+				spot->Range,
+				spot->Angle
+			);
 
 		if (!object->GetChildren().empty())
 			recursivelyTravelHierarchy(
@@ -476,12 +482,12 @@ static void recursivelyTravelHierarchy(
 				DeltaTime
 			);
 
-		Object_ParticleEmitter* emitter = (!light && !object3D) ? dynamic_cast<Object_ParticleEmitter*>(object) : nullptr;
+		EcParticleEmitter* emitter = object->GetComponent<EcParticleEmitter>();
 
 		if (emitter)
 		{
-			auto pdrawlist = emitter->GetRenderList();
-			std::copy(pdrawlist.begin(), pdrawlist.end(), std::back_inserter(RenderList));
+			emitter->Update(DeltaTime);
+			emitter->AppendToRenderList(RenderList);
 		}
 	}
 }
@@ -582,6 +588,7 @@ void Engine::Start()
 	skyboxShaders.SetUniform("SkyboxCubemap", 3);
 
 	Scene scene{};
+	scene.RenderList.reserve(50);
 
 	RendererContext.FrameBuffer.Unbind();
 	
@@ -606,7 +613,9 @@ void Engine::Start()
 			break;
 		}
 
-		Object_Workspace* workspace = DataModel->GetWorkspace();
+		EcDataModel* cdm = DataModel->GetComponent<EcDataModel>();
+
+		GameObject* workspace = DataModel->FindChild("Workspace");
 
 		if (!workspace)
 		{
@@ -616,14 +625,14 @@ void Engine::Start()
 
 		this->Workspace = workspace;
 
-		if (this->DataModel->WantExit)
+		if (cdm->WantExit)
 		{
 			Log::Info("DataModel requested shutdown");
 			break;
 		}
 
 		// so we don't need to do additional checks past this point in the scope 11/01/2025
-		GameObjectRef<Object_Workspace> keepWorkspace{ workspace };
+		GameObjectRef keepWorkspace{ workspace };
 
 		RunningTime = GetRunningTime();
 		RendererContext.AccumulatedDrawCallCount = 0;
@@ -731,7 +740,7 @@ void Engine::Start()
 					int NewSizeY = pollingEvent.window.data2;
 
 					// Only call ChangeResolution if the new resolution is actually different
-					if (NewSizeX != this->WindowSizeX || NewSizeY != this->WindowSizeY)
+					//if (NewSizeX != this->WindowSizeX || NewSizeY != this->WindowSizeY)
 						this->OnWindowResized(NewSizeX, NewSizeY);
 
 					break;
@@ -761,9 +770,9 @@ void Engine::Start()
 
 		float aspectRatio = (float)this->WindowSizeX / (float)this->WindowSizeY;
 
-		Object_Camera* sceneCamera = workspace->GetSceneCamera();
+		EcCamera* sceneCamera = Workspace->GetComponent<EcWorkspace>()->GetSceneCamera()->GetComponent<EcCamera>();
 
-		std::vector<Object_Base3D*> physicsList;
+		std::vector<GameObject*> physicsList;
 
 		updateScripts(deltaTime);
 
@@ -774,15 +783,15 @@ void Engine::Start()
 			scene.RenderList,
 			scene.LightingList,
 			physicsList,
-			workspace,
+			Workspace,
 			sceneCamera,
 			deltaTime
 		);
 
 		bool hasPhysics = false;
 
-		for (Object_Base3D* object : physicsList)
-			if (object->PhysicsDynamics)
+		for (GameObject* object : physicsList)
+			if (object->GetComponent<EcMesh>()->PhysicsDynamics)
 			{
 				hasPhysics = true;
 				break;
@@ -830,7 +839,6 @@ void Engine::Start()
 
 			sunShadowMap.Bind();
 			glViewport(0, 0, SunShadowMapResolutionSq, SunShadowMapResolutionSq);
-			glClearColor(1.f, 1.f, 1.f, 1.f);
 			glClear(/*GL_COLOR_BUFFER_BIT |*/ GL_DEPTH_BUFFER_BIT);
 
 			for (uint32_t shdId : scene.UsedShaders)
@@ -845,7 +853,7 @@ void Engine::Start()
 				shd.SetUniform("DirecLightProjection", sunRenderMatrix);
 			}
 
-			RendererContext.DrawScene(sunScene, sunRenderMatrix, glm::mat4(1.f), RunningTime);
+			RendererContext.DrawScene(sunScene, sunRenderMatrix, glm::mat4(1.f), RunningTime, DebugWireframeRendering);
 
 			for (uint32_t shdId : scene.UsedShaders)
 				shdManager->GetShaderResource(shdId).SetUniform("IsShadowMap", false);
@@ -903,7 +911,7 @@ void Engine::Start()
 		glDepthFunc(GL_LESS);
 
 		//Main render pass
-		RendererContext.DrawScene(scene, renderMatrix, sceneCamera->Transform, RunningTime);
+		RendererContext.DrawScene(scene, renderMatrix, sceneCamera->Transform, RunningTime, DebugWireframeRendering);
 
 		glDisable(GL_DEPTH_TEST);
 
@@ -926,6 +934,8 @@ void Engine::Start()
 			ImGui::Render();
 			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 		}
+
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 		glEnable(GL_DEPTH_TEST);
 
@@ -1108,7 +1118,6 @@ void Engine::Start()
 			LastSecond = RunningTime;
 
 			this->FramesPerSecond = m_DrawnFramesInSecond;
-
 			m_DrawnFramesInSecond = -1;
 
 			Log::Save();
@@ -1135,10 +1144,7 @@ Engine::~Engine()
 	// C++ *still* calls them again at program exit as the scope terminates.
 	// It doesn't cause a use-after-free, YET
 	this->DataModel->Destroy();
-	GameObject::s_DataModel = nullptr;
-	this->DataModel = nullptr;
-
-	delete m_DataModelRef;
+	GameObject::s_DataModel = PHX_GAMEOBJECT_NULL_ID;
 
 	EngineInstance = nullptr;
 

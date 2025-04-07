@@ -11,8 +11,8 @@
 #include "asset/ShaderManager.hpp"
 #include "asset/MeshProvider.hpp"
 
-#include "gameobject/DataModel.hpp"
-#include "gameobject/Workspace.hpp"
+#include "component/DataModel.hpp"
+#include "component/Workspace.hpp"
 
 #include "datatype/Vector2.hpp"
 #include "datatype/Event.hpp"
@@ -38,9 +38,9 @@ public:
 	void OnWindowResized(int NewSizeX, int NewSizeY);
 
 	void LoadConfiguration();
-
-	Object_DataModel* DataModel{};
-	Object_Workspace* Workspace{};
+	
+	GameObjectRef DataModel{};
+	GameObjectRef Workspace{};
 
 	Renderer RendererContext;
 	SDL_Window* Window{};
@@ -58,6 +58,7 @@ public:
 	int FramesPerSecond = 0;
 	int FpsCap = 60;
 
+	bool DebugWireframeRendering = false;
 	bool DebugAabbs = false;
 
 private:
@@ -68,8 +69,6 @@ private:
 	TextureManager m_TextureManager;
 	ShaderManager m_ShaderManager;
 	MeshProvider m_MeshProvider;
-
-	GameObjectRef<Object_DataModel>* m_DataModelRef = nullptr;
-
+	
 	GpuFrameBuffer m_BloomFbo;
 };

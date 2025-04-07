@@ -52,9 +52,9 @@ void ShaderProgram::Activate()
 		{
 			switch (value.Type)
 			{
-			case Reflection::ValueType::Bool:
+			case Reflection::ValueType::Boolean:
 			{
-				glUniform1i(uniformLoc, value.AsBool());
+				glUniform1i(uniformLoc, value.AsBoolean());
 				break;
 			}
 			case Reflection::ValueType::Integer:
@@ -338,9 +338,9 @@ void ShaderProgram::Save()
 
 		switch (value.Type)
 		{
-		case (Reflection::ValueType::Bool):
+		case (Reflection::ValueType::Boolean):
 		{
-			fileJson["Uniforms"][it.first] = value.AsBool();
+			fileJson["Uniforms"][it.first] = value.AsBoolean();
 			break;
 		}
 		case (Reflection::ValueType::Integer):

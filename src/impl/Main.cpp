@@ -98,7 +98,8 @@ PHX_MAIN_HANDLECRASH_WHAT(std::exception);                                      
 #include "Engine.hpp"
 
 #include "asset/SceneFormat.hpp"
-#include "gameobject/Script.hpp"
+#include "component/Camera.hpp"
+#include "component/Script.hpp"
 
 #include "PerformanceTiming.hpp"
 #include "GlobalJsonConfig.hpp"
@@ -208,7 +209,7 @@ static void handleInputs(double deltaTime)
 {
 	Engine* EngineInstance = Engine::Get();
 
-	Object_Camera* camera = EngineInstance->Workspace->GetSceneCamera();
+	EcCamera* camera = EngineInstance->Workspace->GetComponent<EcWorkspace>()->GetSceneCamera()->GetComponent<EcCamera>();
 	SDL_Window* window = EngineInstance->Window;
 
 	UserInput::InputBeingSunk = GuiIO->WantCaptureKeyboard || GuiIO->WantCaptureMouse;
@@ -354,7 +355,7 @@ static void handleInputs(double deltaTime)
 	else
 	{
 		// `input_mouse_setlocked` Luau API 21/09/2024
-		if (Object_Script::s_WindowGrabMouse && !UserInput::InputBeingSunk)
+		if (EcScript::s_WindowGrabMouse && !UserInput::InputBeingSunk)
 		{
 			SDL_SetWindowMouseGrab(window, true);
 
@@ -635,6 +636,7 @@ static void drawDeveloperUI(double DeltaTime)
 			Log::Info("The JSON Config overwrote the pre-existing 'phoenix.conf'.");
 		}
 
+		ImGui::Checkbox("Wireframe rendering", &EngineInstance->DebugWireframeRendering);
 		ImGui::Checkbox("Debug Collision AABBs", &EngineInstance->DebugAabbs);
 	}
 	ImGui::End();
@@ -708,13 +710,21 @@ static void begin(int argc, char** argv)
 	
 	PHX_ENSURE_MSG(ImGui_ImplOpenGL3_Init("#version 460"), "`ImGui_ImplOpenGL3_Init` failed");
 
+	Log::Info("Dear ImGui initialized");
+
 	EngineInstance->OnFrameStart.Connect(handleInputs);
 
 	if (EngineJsonConfig.value("Developer", false))
 	{
+		Log::Info("Developer-mode specific functionality");
 		InlayEditor::Initialize(&EngineInstance->RendererContext);
 		EngineInstance->OnFrameRenderGui.Connect(drawDeveloperUI);
 	}
+
+	Log::Info("Loading Root Scene from file...");
+
+	// FUCKING WORK ALREADY... pwese......
+	GameObject::s_WorldArray.reserve(150);
 
 	const char* mapFileFromArgs{};
 	bool hasMapFromArgs = false;
@@ -737,7 +747,7 @@ static void begin(int argc, char** argv)
 							: EngineJsonConfig.value("RootScene", "scenes/root.world");
 	
 	bool worldLoadSuccess = true;
-	std::vector<GameObject*> roots = SceneFormat::Deserialize(FileRW::ReadFile(mapFile), &worldLoadSuccess);
+	std::vector<GameObjectRef> roots = SceneFormat::Deserialize(FileRW::ReadFile(mapFile), &worldLoadSuccess);
 	
 	/*
 	std::vector<GameObject, Memory::Allocator<GameObject>> memalloctest;
@@ -751,9 +761,11 @@ static void begin(int argc, char** argv)
 		Log::Warning("More than 1 root object in the World, anything other than the first will be ignored");
 
 	PHX_ENSURE_MSG(!roots.empty(), "No root objects in World!");
-	PHX_ENSURE_MSG(roots[0]->ClassName == "DataModel", "Root Object was not a DataModel!");
+	PHX_ENSURE_MSG(roots[0]->GetComponent<EcDataModel>(), "Root Object was not a DataModel!");
 
-	GameObject::s_DataModel->MergeWith(roots[0]);
+	Log::Info("Merging Root Scene with active Data Model...");
+
+	EngineInstance->DataModel->MergeWith(roots[0].Contained());
 
 	EngineInstance->Start();
 }

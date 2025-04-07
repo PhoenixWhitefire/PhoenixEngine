@@ -253,14 +253,14 @@ void GpuFrameBuffer::ChangeResolution(int NewWidth, int NewHeight)
 	//if (this->MSAASamples > 0)
 	//	glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, m_MsaaSamples, GL_RGB, m_Width, m_Height, GL_TRUE);
 	//else
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Width, Height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, Width, Height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 
 	glBindRenderbuffer(GL_RENDERBUFFER, m_RenderBufferId);
 
 	//if (this->MSAASamples > 0)
 	//	glRenderbufferStorageMultisample(GL_RENDERBUFFER, m_MsaaSamples, GL_DEPTH32F_STENCIL8, m_Width, m_Height);
 	//else
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH32F_STENCIL8, Width, Height);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, Width, Height);
 }
 
 void GpuFrameBuffer::Bind() const

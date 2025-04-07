@@ -1,7 +1,10 @@
 #pragma once
 
-#include "gameobject/MeshObject.hpp"
-#include "gameobject/Animation.hpp"
+#include <unordered_map>
+#include <vector>
+
+#include "datatype/GameObject.hpp"
+#include "datatype/Mesh.hpp"
 
 class ModelLoader
 {
@@ -103,7 +106,7 @@ private:
 
 	std::vector<ModelNode> m_Nodes;
 	std::unordered_map<int32_t, uint32_t> m_NodeIdToIndex;
-	std::vector<Object_Animation*> m_Animations;
+	std::vector<GameObject*> m_Animations;
 
 	std::string m_Data;
 };

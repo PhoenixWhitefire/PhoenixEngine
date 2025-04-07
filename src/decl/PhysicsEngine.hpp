@@ -1,8 +1,8 @@
 #pragma once
 
-#include "gameobject/Base3D.hpp"
+#include "component/Mesh.hpp"
 
 namespace Physics
 {
-	void Step(std::vector<Object_Base3D*>& World, double DeltaTime);
+	void Step(std::vector<GameObject*>& World, double DeltaTime);
 }

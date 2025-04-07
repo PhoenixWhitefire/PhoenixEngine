@@ -40,11 +40,11 @@ s_Api.Lineage.push_back(#base);                                            \
 #define REFLECTION_DECLAREPROP_SIMPLE(c, name, type) REFLECTION_DECLAREPROP(   \
 	#name,                                                                     \
 	type,                                                                      \
-	[](Reflection::Reflectable* p)                                             \
+	[](void* p)                                                                \
 	{                                                                          \
 		return (Reflection::GenericValue)static_cast<c*>(p)->name;             \
 	},                                                                         \
-	[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)         \
+	[](void* p, const Reflection::GenericValue& gv)                            \
 	{                                                                          \
 		static_cast<c*>(p)->name = gv.As##type();                              \
 	}                                                                          \
@@ -54,11 +54,11 @@ s_Api.Lineage.push_back(#base);                                            \
 #define REFLECTION_DECLAREPROP_SIMPSTR(c, name)      REFLECTION_DECLAREPROP(   \
 	#name,                                                                     \
 	String,                                                                    \
-	[](Reflection::Reflectable* p)                                             \
+	[](void* p)                                                                \
 	{                                                                          \
 		return (Reflection::GenericValue)static_cast<c*>(p)->name;             \
 	},                                                                         \
-	[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)         \
+	[](void* p, const Reflection::GenericValue& gv)                            \
 	{                                                                          \
 		static_cast<c*>(p)->name = gv.AsStringView();                          \
 	}                                                                          \
@@ -70,11 +70,11 @@ s_Api.Lineage.push_back(#base);                                            \
 #define REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(c, name, type, cast) REFLECTION_DECLAREPROP(   \
 	#name,                                                                                      \
 	type,                                                                                       \
-	[](Reflection::Reflectable* p)                                                              \
+	[](void* p)                                                                                 \
 	{                                                                                           \
 		return (Reflection::GenericValue)static_cast<c*>(p)->name;                              \
 	},                                                                                          \
-	[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)                          \
+	[](void* p, const Reflection::GenericValue& gv)                                             \
 	{                                                                                           \
 		static_cast<c*>(p)->name = static_cast<cast>(gv.As##type());                            \
 	}                                                                                           \
@@ -85,11 +85,11 @@ s_Api.Lineage.push_back(#base);                                            \
 #define REFLECTION_DECLAREPROP_SIMPLE_TYPECAST(c, name, type) REFLECTION_DECLAREPROP(   \
 	#name,                                                                              \
 	type,                                                                               \
-	[](Reflection::Reflectable* p)                                                      \
+	[](void* p)                                                                         \
 	{                                                                                   \
 		return static_cast<c*>(p)->name.ToGenericValue();                               \
 	},                                                                                  \
-	[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)                  \
+	[](void* p, const Reflection::GenericValue& gv)                                     \
 	{                                                                                   \
 		static_cast<c*>(p)->name = type(gv);                                            \
 	}                                                                                   \
@@ -99,7 +99,7 @@ s_Api.Lineage.push_back(#base);                                            \
 #define REFLECTION_DECLAREPROP_SIMPLE_READONLY(c, name, type) REFLECTION_DECLAREPROP(   \
 	#name,                                                                              \
 	type,                                                                               \
-	[](Reflection::Reflectable* p)                                                      \
+	[](void* p)                                                                         \
 	{                                                                                   \
 		return Reflection::GenericValue(static_cast<c*>(p)->name);                      \
 	},                                                                                  \
@@ -117,7 +117,7 @@ REFLECTION_DECLAREFUNC(                                                         
 	#name,                                                                                   \
 	{},                                                                                      \
 	{},                                                                                      \
-	[name##Lambda](Reflection::Reflectable* p, const Reflection::GenericValue&)              \
+	[name##Lambda](void* p, const Reflection::GenericValue&)                                 \
     -> std::vector<Reflection::GenericValue>                                                 \
     {                                                                                        \
 		name##Lambda(p);                                                                     \
@@ -139,10 +139,6 @@ static const Reflection::FunctionMap& s_GetFunctions()                          
 {                                                                                      \
 	return s_Api.Functions;                                                            \
 }                                                                                      \
-static const std::vector<std::string_view>& s_GetLineage()                             \
-{                                                                                      \
-	return s_Api.Lineage;                                                              \
-}                                                                                      \
 
 namespace Reflection
 {
@@ -150,7 +146,7 @@ namespace Reflection
 	{
 		Null = 0,
 
-		Bool,
+		Boolean,
 		Integer,
 		Double,
 		String,
@@ -213,7 +209,7 @@ namespace Reflection
 
 		// Throws errors if the type does not match
 		std::string_view AsStringView() const;
-		bool AsBool() const;
+		bool AsBoolean() const;
 		double AsDouble() const;
 		int64_t AsInteger() const;
 		glm::mat4& AsMatrix() const;
@@ -227,8 +223,8 @@ namespace Reflection
 	{
 		Reflection::ValueType Type{};
 
-		std::function<Reflection::GenericValue(Reflection::Reflectable*)> Get;
-		std::function<void(Reflection::Reflectable*, const Reflection::GenericValue&)> Set;
+		std::function<Reflection::GenericValue(void*)> Get;
+		std::function<void(void*, const Reflection::GenericValue&)> Set;
 	};
 
 	struct Function
@@ -236,7 +232,7 @@ namespace Reflection
 		std::vector<ValueType> Inputs;
 		std::vector<ValueType> Outputs;
 
-		std::function<std::vector<Reflection::GenericValue>(Reflection::Reflectable*, const std::vector<Reflection::GenericValue>&)> Func;
+		std::function<std::vector<Reflection::GenericValue>(void*, const std::vector<Reflection::GenericValue>&)> Func;
 	};
 
 	typedef std::unordered_map<std::string_view, Reflection::Property> PropertyMap;
@@ -246,7 +242,6 @@ namespace Reflection
 	{
 		PropertyMap Properties;
 		FunctionMap Functions;
-		std::vector<std::string_view> Lineage;
 	};
 
 	class Reflectable
@@ -259,10 +254,6 @@ namespace Reflection
 		virtual const Reflection::FunctionMap& GetFunctions() const
 		{
 			return ApiPointer->Functions;
-		}
-		virtual const std::vector<std::string_view>& GetLineage() const
-		{
-			return ApiPointer->Lineage;
 		}
 		virtual bool HasProperty(const std::string_view& MemberName) const
 		{

@@ -10,7 +10,9 @@
 #include "asset/PrimitiveMeshes.hpp"
 #include "asset/MaterialManager.hpp"
 #include "asset/ModelImporter.hpp"
-#include "gameobject/Light.hpp"
+#include "component/Transformable.hpp"
+#include "component/Light.hpp"
+#include "component/Mesh.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
@@ -40,11 +42,11 @@ static auto LoadModelAsMeshes(
 	bool AutoParent = true
 )
 {
-	ModelLoader Loader(ModelFilePath, AutoParent ? static_cast<GameObject*>(GameObject::s_DataModel) : nullptr);
+	ModelLoader Loader(ModelFilePath, AutoParent ? GameObject::GetObjectById(GameObject::s_DataModel) : nullptr);
 
 	for (GameObject* object : Loader.LoadedObjs)
 	{
-		Object_Mesh* mesh = dynamic_cast<Object_Mesh*>(object);
+		EcTransformable* mesh = object->GetComponent<EcTransformable>();
 
 		if (mesh)
 		{
@@ -148,7 +150,7 @@ static float getVersion(const std::string& MapFileContents)
 	return version;
 }
 
-static std::vector<GameObject*> LoadMapVersion1(
+static std::vector<GameObjectRef> LoadMapVersion1(
 	const std::string& Contents,
 	bool* SuccessPtr
 )
@@ -182,7 +184,7 @@ static std::vector<GameObject*> LoadMapVersion1(
 	nlohmann::json ModelsNode = JsonData.value("props", nlohmann::json{});
 	nlohmann::json LightsNode = JsonData["lights"];
 
-	std::vector<GameObject*> Objects;
+	std::vector<GameObjectRef> Objects;
 	Objects.reserve(PartsNode.size() + ModelsNode.size() + LightsNode.size());
 
 	for (uint32_t Index = 0; Index < ModelsNode.size(); Index++)
@@ -244,7 +246,7 @@ static std::vector<GameObject*> LoadMapVersion1(
 
 		for (GameObject* obj : Model)
 		{
-			auto prop_3d = dynamic_cast<Object_Base3D*>(obj);
+			auto prop_3d = obj->GetComponent<EcMesh>();
 
 			if (!prop_3d)
 				continue;
@@ -280,7 +282,8 @@ static std::vector<GameObject*> LoadMapVersion1(
 		GameObject* NewObject = GameObject::Create("Primitive");
 		Objects.push_back(NewObject);
 
-		Object_Base3D* Object3D = static_cast<Object_Base3D*>(NewObject);
+		EcTransformable* ct = NewObject->GetComponent<EcTransformable>();
+		EcMesh* cm = NewObject->GetComponent<EcMesh>();
 
 		NewObject->Name = Object.value("name", NewObject->Name);
 
@@ -299,35 +302,35 @@ static std::vector<GameObject*> LoadMapVersion1(
 			*/
 		}
 
-		Object3D->Transform = glm::translate(Object3D->Transform, (glm::vec3)Position);
+		ct->Transform = glm::translate(ct->Transform, (glm::vec3)Position);
 
 		// YXZ Rotation order
-		Object3D->Transform = glm::rotate(
-			Object3D->Transform,
+		ct->Transform = glm::rotate(
+			ct->Transform,
 			glm::radians(static_cast<float>(Orientation.Y)),
 			glm::vec3(0.f, 1.f, 0.f)
 		);
-		Object3D->Transform = glm::rotate(
-			Object3D->Transform,
+		ct->Transform = glm::rotate(
+			ct->Transform,
 			glm::radians(static_cast<float>(Orientation.X)),
 			glm::vec3(1.f, 0.f, 0.f)
 		);
-		Object3D->Transform = glm::rotate(
-			Object3D->Transform,
+		ct->Transform = glm::rotate(
+			ct->Transform,
 			glm::radians(static_cast<float>(Orientation.Z)),
 			glm::vec3(0.f, 0.f, 1.f)
 		);
 
 		if (Object.find("color") != Object.end())
-			Object3D->Tint = GetColorFromJson(Object["color"]);
+			cm->Tint = GetColorFromJson(Object["color"]);
 
-		Object3D->Size = GetVector3FromJson(Object["size"]);
+		ct->Size = GetVector3FromJson(Object["size"]);
 
 		if (Object.find("material") != Object.end())
 		{
-			uint32_t MeshMaterial = mtlManager->LoadMaterialFromPath(std::string(Object["material"]));
+			uint32_t MeshMaterial = mtlManager->LoadFromPath(std::string(Object["material"]));
 
-			Object3D->MaterialId = MeshMaterial;
+			cm->MaterialId = MeshMaterial;
 
 		}
 		else if (Object.find("textures") != Object.end())
@@ -335,7 +338,7 @@ static std::vector<GameObject*> LoadMapVersion1(
 
 		}
 
-		Object3D->PhysicsDynamics = Object.value("computePhysics", 0) == 1 ? true : false;
+		cm->PhysicsDynamics = Object.value("computePhysics", 0) == 1 ? true : false;
 
 		std::string NewTitle = std::to_string(Index)
 								+ "/"
@@ -350,21 +353,21 @@ static std::vector<GameObject*> LoadMapVersion1(
 
 		std::string LightType = LightObject["type"];
 
-		GameObject* Object = (GameObject::Create(LightType));
+		GameObject* Object = GameObject::Create(LightType);
 		Objects.push_back(Object);
 
-		Object_Light* Light = static_cast<Object_Light*>(Object);
+		EcTransformable* ct = Object->GetComponent<EcTransformable>();
 
-		Light->LocalTransform = glm::translate(
+		ct->Transform = glm::translate(
 			glm::mat4(1.f),
 			(glm::vec3)GetVector3FromJson(LightObject["position"])
 		);
 
-		Light->LightColor = GetColorFromJson(LightObject["color"]);
+		//Light->LightColor = GetColorFromJson(LightObject["color"]);
 
 		if (LightType == "PointLight")
 		{
-			Object_PointLight* Pointlight = static_cast<Object_PointLight*>(Object);
+			EcPointLight* Pointlight = Object->GetComponent<EcPointLight>();
 			Pointlight->Range = LightObject["range"];
 		}
 	}
@@ -372,7 +375,7 @@ static std::vector<GameObject*> LoadMapVersion1(
 	return Objects;
 }
 
-static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, bool* Success)
+static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, bool* Success)
 {
 	ZoneScoped;
 
@@ -413,9 +416,9 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 
 	nlohmann::json gameObjectsNode = jsonData["GameObjects"];
 
-	std::unordered_map<int64_t, GameObject*> objectsMap;
+	std::unordered_map<int64_t, uint32_t> objectsMap;
 	std::unordered_map<int64_t, int64_t> realIdToSceneId;
-	std::unordered_map<GameObject*, std::unordered_map<std::string, uint32_t>> objectProps;
+	std::unordered_map<uint32_t, std::unordered_map<std::string, uint32_t>> objectProps;
 
 	objectsMap.reserve(gameObjectsNode.size());
 	realIdToSceneId.reserve(gameObjectsNode.size());
@@ -436,6 +439,9 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 		std::string className = item["$_class"];
 		std::string name = item.find("Name") != item.end() ? (std::string)item["Name"] : className;
 
+		if (className == "Primitive")
+			className = "Mesh";
+
 		GameObject* newObject = GameObject::Create(className);
 
 		if (item.find("$_objectId") == item.end())
@@ -444,11 +450,11 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 		{
 			uint32_t itemObjectId = item["$_objectId"];
 
-			objectsMap.insert(std::pair(itemObjectId, newObject));
+			objectsMap.insert(std::pair(itemObjectId, newObject->ObjectId));
 			realIdToSceneId.insert(std::pair(newObject->ObjectId, itemObjectId));
 		}
 
-		objectProps[newObject] = {};
+		objectProps[newObject->ObjectId] = {};
 
 		ZoneName("DeserializeProperties", 21);
 
@@ -467,9 +473,9 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 
 			nlohmann::json memberValue = memberIt.value();
 
-			bool hasProp = newObject->HasProperty(memberName);
+			Reflection::Property* member = newObject->FindProperty(memberName);
 
-			if (!hasProp)
+			if (!member)
 			{
 				SF_EMIT_WARNING(
 					"Member '{}' is not defined in the API for Class {} (Name: '{}')!",
@@ -480,12 +486,9 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 				continue;
 			}
 
-			auto& member = newObject->GetProperty(memberName);
+			Reflection::ValueType memberType = member->Type;
 
-			Reflection::ValueType memberType = member.Type;
-			auto& setProperty = member.Set;
-
-			if (!setProperty)
+			if (!member->Set)
 			{
 				SF_EMIT_WARNING(
 					"Member '{}' of {} '{}' is read-only!",
@@ -508,7 +511,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 				break;
 			}
 
-			case Reflection::ValueType::Bool:
+			case Reflection::ValueType::Boolean:
 			{
 				assignment = (bool)memberValue;
 
@@ -552,7 +555,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 
 			case Reflection::ValueType::GameObject:
 			{
-				objectProps[newObject].insert(std::pair(memberName, memberValue));
+				objectProps[newObject->ObjectId].insert(std::pair(memberName, memberValue));
 
 				break;
 			}
@@ -577,7 +580,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 			{
 				try
 				{
-					setProperty(newObject, assignment);
+					newObject->SetPropertyValue(memberName, assignment);
 				}
 				catch (std::string err)
 				{
@@ -593,23 +596,23 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 		}
 	}
 
-	std::vector<GameObject*> objects;
+	std::vector<GameObjectRef> objects;
 	objects.reserve(objectsMap.size());
 
 	ZoneNamedN(fixupzone, "FixupObjectReferentProperties", true);
 
 	for (auto& it : objectsMap)
 	{
-		GameObject* object = it.second;
+		GameObject* object = GameObject::GetObjectById(it.second);
 
 		// !! IMPORTANT !!
 		// The `Parent` key *should not* be set for Root Nodes as their parent
 		// *is not part of the scene!*
 		// 04/09/2024
-		if (objectProps[object].find("Parent") == objectProps[object].end())
+		if (objectProps[object->ObjectId].find("Parent") == objectProps[object->ObjectId].end())
 			objects.push_back(object);
 
-		for (auto& objectProp : objectProps[object])
+		for (auto& objectProp : objectProps[object->ObjectId])
 		{
 			const std::string_view& propName = objectProp.first;
 			const uint32_t sceneRelativeId = objectProp.second;
@@ -618,7 +621,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 
 			if (target != objectsMap.end())
 			{
-				Reflection::GenericValue gv = target->second->ObjectId;
+				Reflection::GenericValue gv = target->second;
 				gv.Type = Reflection::ValueType::GameObject;
 
 				try
@@ -630,16 +633,15 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 					std::string valueStr = gv.ToString();
 
 					SF_EMIT_WARNING(
-						"Failed to set GameObject property of '{}' ({}) to '{}': {}",
-						object->Name, object->ClassName, valueStr, err
+						"Failed to set GameObject property of '{}' to '{}': {}",
+						object->Name, valueStr, err
 					);
 				}
 			}
 			else
 			{
 				SF_EMIT_WARNING(
-					"{} '{}' refers to invalid scene-relative Object ID {} for prop {}. To avoid UB, it will be NULL'd.",
-					object->ClassName,
+					"'{}' refers to invalid scene-relative Object ID {} for prop {}. To avoid UB, it will be NULL'd.",
 					object->Name,
 					sceneRelativeId,
 					propName
@@ -656,7 +658,7 @@ static std::vector<GameObject*> LoadMapVersion2(const std::string& Contents, boo
 	return objects;
 }
 
-std::vector<GameObject*> SceneFormat::Deserialize(
+std::vector<GameObjectRef> SceneFormat::Deserialize(
 	const std::string& Contents,
 	bool* SuccessPtr
 )
@@ -680,7 +682,7 @@ std::vector<GameObject*> SceneFormat::Deserialize(
 
 	std::string jsonFileContents = Contents.substr(jsonStartLoc);
 
-	std::vector<GameObject*> objects{};
+	std::vector<GameObjectRef> objects{};
 
 	if (version >= 1.f && version < 2.f)
 		objects = LoadMapVersion1(jsonFileContents, SuccessPtr);
@@ -708,7 +710,7 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 
 	nlohmann::json item{};
 
-	for (auto& prop : Object->GetProperties())
+	for (const auto& prop : Object->GetProperties())
 	{
 		const std::string_view& propName = prop.first;
 		const Reflection::Property& propInfo = prop.second;
@@ -730,13 +732,13 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 		if (specialNamesIt != SpecialPropertyToSerializedName.end())
 			serializedAs = specialNamesIt->second;
 
-		Reflection::GenericValue value = propInfo.Get(Object);
+		Reflection::GenericValue value = Object->GetPropertyValue(propName);
 
 		switch (prop.second.Type)
 		{
-		case (Reflection::ValueType::Bool):
+		case (Reflection::ValueType::Boolean):
 		{
-			item[serializedAs] = value.AsBool();
+			item[serializedAs] = value.AsBoolean();
 			break;
 		}
 		case (Reflection::ValueType::Integer):
