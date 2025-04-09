@@ -247,6 +247,7 @@ void MaterialManager::SaveToPath(const RenderMaterial& material, const std::stri
 	newMtlConfig["specMultiply"] = material.SpecMultiply;
 	newMtlConfig["HasTranslucency"] = material.HasTranslucency;
 	newMtlConfig["Shader"] = material.GetShader().Name;
+	newMtlConfig["PolygonMode"] = static_cast<int>(material.PolygonMode);
 
 	newMtlConfig["Uniforms"] = {};
 

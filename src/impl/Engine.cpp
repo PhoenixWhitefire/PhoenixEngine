@@ -192,6 +192,8 @@ void Engine::LoadConfiguration()
 
 Engine::Engine()
 {
+	ZoneScoped;
+
 	EngineInstance = this;
 
 	// 15/08/2024:
@@ -1132,6 +1134,8 @@ void Engine::Start()
 
 Engine::~Engine()
 {
+	ZoneScoped;
+
 	Log::Info("Engine destructing...");
 
 	Log::Save();

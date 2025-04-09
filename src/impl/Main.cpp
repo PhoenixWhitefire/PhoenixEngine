@@ -140,6 +140,10 @@ static bool WasTracyLaunched = false;
 
 #endif
 
+#ifdef TRACY_ENABLE
+
+#endif
+
 // 13/01/2025: https://stackoverflow.com/a/478960
 static std::string exec(const char* cmd)
 {
@@ -682,8 +686,10 @@ static void handleCrash(const std::string_view& Error, const std::string_view& E
 }
 #endif
 
-static void begin(int argc, char** argv)
+static void init(int argc, char** argv)
 {
+	ZoneScoped;
+
 	Engine* EngineInstance = Engine::Get();
 
 	const char* imGuiVersion = IMGUI_VERSION;
@@ -766,8 +772,6 @@ static void begin(int argc, char** argv)
 	Log::Info("Merging Root Scene with active Data Model...");
 
 	EngineInstance->DataModel->MergeWith(roots[0].Contained());
-
-	EngineInstance->Start();
 }
 
 int main(int argc, char** argv)
@@ -805,7 +809,8 @@ int main(int argc, char** argv)
 		// 10/01/2025
 		Engine engine{};
 
-		begin(argc, argv);
+		init(argc, argv);
+		engine.Start();
 
 		Log::Save(); // in case FileRW::WriteFile throws an exception
 	}
