@@ -375,7 +375,52 @@ static std::vector<GameObjectRef> LoadMapVersion1(
 	return Objects;
 }
 
-static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, bool* Success)
+static GameObject* createObjectFromJsonItem(const nlohmann::json& Item, uint32_t ItemIndex, float Version, bool* Success)
+{
+	if (Version == 2.f)
+	{
+		const auto& classNameJson = Item.find("$_class");
+
+		if (classNameJson == Item.end())
+		{
+			SF_EMIT_WARNING("Object #{} was missing it's '$_class' key, skipping", ItemIndex);
+
+			return nullptr;
+		}
+
+		std::string className = classNameJson.value();
+
+		if (className == "Primitive")
+			className = "Mesh";
+
+		return GameObject::Create(className);
+	}
+	else
+	{
+		const auto& components = Item.find("$_components");
+
+		if (components == Item.end())
+		{
+			SF_EMIT_WARNING("Object #{} was missing it's '$_components' key, skipping", ItemIndex);
+
+			return nullptr;
+		}
+
+		GameObject* object = GameObject::Create();
+
+		for (auto it = components.value().begin(); it != components.value().end(); it++)
+		{
+			std::string name = it.value();
+
+			if (EntityComponent type = s_ComponentNameToType.at(name); !object->GetComponentByType(type))
+				object->AddComponent(type);
+		}
+
+		return object;
+	}
+}
+
+static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, float Version, bool* Success)
 {
 	ZoneScoped;
 
@@ -429,23 +474,12 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, b
 
 		const nlohmann::json& item = gameObjectsNode[itemIndex];
 
-		if (item.find("$_class") == item.end())
-		{
-			SF_EMIT_WARNING("Object #{} was it's '$_class' key, skipping", itemIndex);
+		GameObject* newObject = createObjectFromJsonItem(item, itemIndex, Version, Success);
 
-			continue;
-		}
-
-		std::string className = item["$_class"];
-		std::string name = item.find("Name") != item.end() ? (std::string)item["Name"] : className;
-
-		if (className == "Primitive")
-			className = "Mesh";
-
-		GameObject* newObject = GameObject::Create(className);
+		std::string name = item.find("Name") != item.end() ? (std::string)item["Name"] : newObject->Name;
 
 		if (item.find("$_objectId") == item.end())
-			SF_EMIT_WARNING("Object #{} ({}) was missing it's '$_objectId' key", itemIndex, className);
+			SF_EMIT_WARNING("Object #{} was missing it's '$_objectId' key", itemIndex);
 		else
 		{
 			uint32_t itemObjectId = item["$_objectId"];
@@ -478,9 +512,8 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, b
 			if (!member)
 			{
 				SF_EMIT_WARNING(
-					"Member '{}' is not defined in the API for Class {} (Name: '{}')!",
+					"Member '{}' is not defined in the API (Name: '{}')!",
 					memberName,
-					className,
 					name
 				);
 				continue;
@@ -491,9 +524,8 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, b
 			if (!member->Set)
 			{
 				SF_EMIT_WARNING(
-					"Member '{}' of {} '{}' is read-only!",
+					"Member '{}' of '{}' is read-only!",
 					memberName,
-					className,
 					name
 				);
 				continue;
@@ -565,9 +597,8 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, b
 				const std::string_view& memberTypeName = Reflection::TypeAsString(memberType);
 
 				SF_EMIT_WARNING(
-					"Not reading prop '{}' of class {} because it's type ({}) is unknown",
+					"Not reading prop '{}' because it's type ({}) is unknown",
 					memberName,
-					className,
 					memberTypeName
 				);
 
@@ -588,8 +619,8 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, b
 					std::string valueStr = assignment.ToString();
 
 					SF_EMIT_WARNING(
-						"Failed to set {} Property '{}' of '{}' ({}) to '{}': {}",
-						mtname, memberName, name, className, valueStr, err
+						"Failed to set {} Property '{}' of '{}' to '{}': {}",
+						mtname, memberName, name, valueStr, err
 					);
 				}
 			}
@@ -688,7 +719,7 @@ std::vector<GameObjectRef> SceneFormat::Deserialize(
 		objects = LoadMapVersion1(jsonFileContents, SuccessPtr);
 
 	else if (version >= 2.f && version < 3.f)
-			objects = LoadMapVersion2(jsonFileContents, SuccessPtr);
+			objects = LoadMapVersion2(jsonFileContents, version, SuccessPtr);
 
 	else
 	{
@@ -709,13 +740,17 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 	ZoneScoped;
 
 	nlohmann::json item{};
+	item["$_components"] = nlohmann::json::array();
+
+	for (const std::pair<EntityComponent, uint32_t>& handle : Object->GetComponents())
+		item["$_components"].push_back(s_EntityComponentNames[(size_t)handle.first]);
 
 	for (const auto& prop : Object->GetProperties())
 	{
 		const std::string_view& propName = prop.first;
 		const Reflection::Property& propInfo = prop.second;
 
-		if (!propInfo.Set && propName != "ObjectId" && propName != "Class")
+		if (!propInfo.Set && propName != "ObjectId")
 			continue;
 
 		// !! IMPORTANT !!
@@ -736,40 +771,41 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 
 		switch (prop.second.Type)
 		{
-		case (Reflection::ValueType::Boolean):
+		
+		case Reflection::ValueType::Boolean:
 		{
 			item[serializedAs] = value.AsBoolean();
 			break;
 		}
-		case (Reflection::ValueType::Integer):
+		case Reflection::ValueType::Integer:
 		{
 			item[serializedAs] = value.AsInteger();
 			break;
 		}
-		case (Reflection::ValueType::Double):
+		case Reflection::ValueType::Double:
 		{
 			item[serializedAs] = value.AsDouble();
 			break;
 		}
-		case (Reflection::ValueType::String):
+		case Reflection::ValueType::String:
 		{
 			item[serializedAs] = value.AsStringView();
 			break;
 		}
 		
-		case (Reflection::ValueType::Color):
+		case Reflection::ValueType::Color:
 		{
 			Color col(value);
 			item[serializedAs] = { col.R, col.G, col.B };
 			break;
 		}
-		case (Reflection::ValueType::Vector3):
+		case Reflection::ValueType::Vector3:
 		{
 			Vector3 vec(value);
 			item[serializedAs] = { vec.X, vec.Y, vec.Z };
 			break;
 		}
-		case (Reflection::ValueType::Matrix):
+		case Reflection::ValueType::Matrix:
 		{
 			glm::mat4 mat = value.AsMatrix();
 			item[serializedAs] = nlohmann::json::array();
@@ -785,7 +821,7 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 			break;
 		}
 
-		case (Reflection::ValueType::GameObject):
+		case Reflection::ValueType::GameObject:
 		{
 			GameObject* target = GameObject::FromGenericValue(value);
 
@@ -794,6 +830,7 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 			else
 				item[serializedAs] = PHX_GAMEOBJECT_NULL_ID;
 		}
+
 		}
 	}
 
@@ -830,7 +867,7 @@ std::string SceneFormat::Serialize(std::vector<GameObject*> Objects, const std::
 							+ std::to_string((int32_t)ymd.year());
 	
 	std::string contents = std::string("PHNXENGI\n")
-							+ "#Version 2.00\n"
+							+ "#Version 2.10\n"
 							+ "#Asset Scene\n"
 							+ "#Date " + dateStr + "\n"
 							+ "#SceneName " + SceneName + "\n"
