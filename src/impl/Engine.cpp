@@ -772,11 +772,16 @@ void Engine::Start()
 
 		float aspectRatio = (float)this->WindowSizeX / (float)this->WindowSizeY;
 
-		EcCamera* sceneCamera = Workspace->GetComponent<EcWorkspace>()->GetSceneCamera()->GetComponent<EcCamera>();
+		GameObjectRef sceneCamObject = Workspace->GetComponent<EcWorkspace>()->GetSceneCamera();
+		EcCamera* sceneCamera = sceneCamObject->GetComponent<EcCamera>();
 
 		std::vector<GameObject*> physicsList;
 
 		updateScripts(deltaTime);
+
+		// fetch the camera again because of potential scene changes that may have caused re-alloc'd
+		// (really need a generic `Ref` system)
+		sceneCamera = sceneCamObject->GetComponent<EcCamera>();
 
 		s_DebugCollisionAabbs = this->DebugAabbs;
 

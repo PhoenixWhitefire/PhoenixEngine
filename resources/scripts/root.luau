@@ -36,7 +36,7 @@ function Update()
 		if imgui_button("Select & Import Model") then
 			imgui_end()
 			
-			local Path = fd_open("resources/models", false, "Models", "gltf;glb")[1]
+			local Path = fd_open("resources/models", "Models", "gltf;glb")[1]
 			if Path then
 				local pathSplit = string.split(Path, "/")
 				
@@ -61,7 +61,7 @@ function Update()
 	if imgui_begin("Run Script") then
 		if imgui_textlink("Path: " .. ScriptExecutionFile) then
 			imgui_end()
-			local Path = fd_open("resources/scripts", false, "Luau Scripts", "luau")[1]
+			local Path = fd_open("resources/scripts", "Luau Scripts", "luau")[1]
 			if Path then
 				ScriptExecutionFile = Path
 			end
@@ -106,7 +106,7 @@ function Update()
 	if loadWorld then
 		imgui_end()
 		
-		local Path = fd_open("resources/scenes", false, "Worlds", "world")[1]
+		local Path = fd_open("resources/scenes", "Worlds", "world")[1]
 		
 		if Path then
 			local dm = scene_load(Path)[1]

@@ -20,6 +20,7 @@ public:
     {
         m_Components.emplace_back();
 		m_Components.back().Object = Object;
+		m_Components.back().EcId = m_Components.size() - 1;
 
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
@@ -792,6 +793,11 @@ void EcScript::Update(double dt)
 		// `lua_Status` like they actually do? 23/09/2024
 		int updateStatus = lua_resume(co, m_L, 1);
 
+		// 10/04/2025
+		// maybe `this` will eventually be a (for example) Ref<EcScript> in the future
+		// so i don't have to do this bs
+		EcScript* after = static_cast<EcScript*>(ManagerInstance.GetComponent(ecId));
+
 		if (updateStatus != LUA_OK && updateStatus != LUA_YIELD)
 		{
 			const char* errstr = lua_tostring(co, -1);
@@ -801,16 +807,21 @@ void EcScript::Update(double dt)
 				std::make_format_args(errstr)
 			));
 
-			lua_close(m_L);
-			m_L = nullptr;
+			lua_close(after->m_L);
+			after->m_L = nullptr;
 		}
 		else if (updateStatus == LUA_OK)
-			lua_pop(m_L, 1);
+			lua_pop(after->m_L, 1);
 	}
 
+	// 10/04/2025
+	// maybe `this` will eventually be a (for example) Ref<EcScript> in the future
+	// so i don't have to do this bs
+	EcScript* after = static_cast<EcScript*>(ManagerInstance.GetComponent(ecId));
+
 	// in case we killed ourselves
-	if (m_L)
-		lua_pop(m_L, 1);
+	if (after->m_L)
+		lua_pop(after->m_L, 1);
 }
 
 bool EcScript::LoadScript(const std::string_view& scriptFile)

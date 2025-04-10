@@ -539,7 +539,10 @@ static std::vector<std::string> FdResults;
 static void fdCallback(void*, const char* const* FileList, int)
 {
 	if (!FileList)
-		throw(std::string(SDL_GetError()));
+	{
+		const char* err = SDL_GetError();
+		throw(std::string(err));
+	}
 
 	FdResults.clear();
 
@@ -1354,6 +1357,12 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 			if (IsFdInProgress)
 				luaL_errorL(L, "The User has not completed the previous File Dialog");
 
+			const char* defaultLocation = luaL_optstring(L, 1, "./");
+
+			SDL_DialogFileFilter filter{};
+			filter.name = luaL_optstring(L, 2, "All files");
+			filter.pattern = luaL_optstring(L, 3, "*");
+
 			lua_yield(L, 1);
 
 			// `lua_yield` may fail with the "attempt to yield across metamethod/C-call boundary"
@@ -1362,17 +1371,13 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 			{
 				IsFdInProgress = true;
 
-				SDL_DialogFileFilter filter{};
-				filter.name = luaL_optstring(L, 2, "All files");
-				filter.pattern = luaL_optstring(L, 3, "*");
-
 				SDL_ShowSaveFileDialog(
 					fdCallback,
 					NULL,
 					SDL_GL_GetCurrentWindow(),
 					&filter,
 					1,
-					luaL_optstring(L, 1, "./")
+					defaultLocation
 				);
 
 				auto a = std::async(
@@ -1407,6 +1412,14 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 			if (IsFdInProgress)
 				luaL_errorL(L, "The User has not completed the previous File Dialog");
 
+			const char* defaultLocation = luaL_optstring(L, 1, "./");
+
+			SDL_DialogFileFilter filter{};
+			filter.name = luaL_optstring(L, 2, "All files");
+			filter.pattern = luaL_optstring(L, 3, "*");
+
+			bool allowMultipleFiles = luaL_optboolean(L, 4, 0);
+
 			lua_yield(L, 1);
 
 			// `lua_yield` may fail with the "attempt to yield across metamethod/C-call boundary"
@@ -1415,18 +1428,14 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 			{
 				IsFdInProgress = true;
 
-				SDL_DialogFileFilter filter{};
-				filter.name = luaL_optstring(L, 3, "All files");
-				filter.pattern = luaL_optstring(L, 4, "*");
-
 				SDL_ShowOpenFileDialog(
 					fdCallback,
 					NULL,
 					SDL_GL_GetCurrentWindow(),
 					&filter,
 					1,
-					luaL_optstring(L, 1, "./"),
-					luaL_optboolean(L, 2, 0)
+					defaultLocation,
+					allowMultipleFiles
 				);
 
 				auto a = std::async(

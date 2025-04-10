@@ -14,7 +14,9 @@ public:
     virtual uint32_t CreateComponent(GameObject* Object) final
     {
         m_Components.emplace_back();
-		Object->AddComponent(EntityComponent::Transformable);
+		
+        if (!Object->GetComponent<EcTransformable>())
+		    Object->AddComponent(EntityComponent::Transformable);
 
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
@@ -75,7 +77,8 @@ public:
         m_Components.emplace_back();
         m_Components.back().Object = Object;
 
-		Object->AddComponent(EntityComponent::Transformable);
+        if (!Object->GetComponent<EcTransformable>())
+		    Object->AddComponent(EntityComponent::Transformable);
 
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
@@ -146,7 +149,9 @@ public:
     virtual uint32_t CreateComponent(GameObject* Object) final
     {
         m_Components.emplace_back();
-		Object->AddComponent(EntityComponent::Transformable);
+		
+        if (!Object->GetComponent<EcTransformable>())
+		    Object->AddComponent(EntityComponent::Transformable);
 
         return static_cast<uint32_t>(m_Components.size() - 1);
     }

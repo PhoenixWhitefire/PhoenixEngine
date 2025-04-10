@@ -23,18 +23,6 @@
 
 static std::string errorString = "No error";
 
-static std::unordered_map<std::string_view, std::string_view> SpecialPropertyToSerializedName =
-{
-	{ "ObjectId", "$_objectId" },
-	{ "Class", "$_class" }
-};
-
-static std::vector<std::string_view> SpecialSerializedNames =
-{
-	"$_objectId",
-	"$_class"
-};
-
 static auto LoadModelAsMeshes(
 	const char* ModelFilePath,
 	Vector3 Size,
@@ -497,12 +485,8 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 		{
 			std::string memberName = memberIt.key();
 
-			if (std::find(
-				SpecialSerializedNames.begin(),
-				SpecialSerializedNames.end(),
-				memberName
-			) != SpecialSerializedNames.end()
-				)
+			// reserved prefix for data which needs to be saved but isn't a property
+			if (memberName[0] == '$' && memberName[1] == '_')
 				continue;
 
 			nlohmann::json memberValue = memberIt.value();
@@ -762,10 +746,9 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 
 		std::string_view serializedAs = propName;
 
-		auto specialNamesIt = SpecialPropertyToSerializedName.find(propName);
-
-		if (specialNamesIt != SpecialPropertyToSerializedName.end())
-			serializedAs = specialNamesIt->second;
+		if (serializedAs == "ObjectId")
+			// it's read-only but still needs to be stored to preserve hierarchy information
+			serializedAs = "$_objectId";
 
 		Reflection::GenericValue value = Object->GetPropertyValue(propName);
 
