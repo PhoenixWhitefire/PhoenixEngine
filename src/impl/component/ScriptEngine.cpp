@@ -4,6 +4,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
+#include <SDL3/SDL_filesystem.h>
 #include <SDL3/SDL_dialog.h>
 #include <SDL3/SDL_mouse.h>
 
@@ -1356,9 +1357,17 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 		{
 			if (IsFdInProgress)
 				luaL_errorL(L, "The User has not completed the previous File Dialog");
+			
+			std::string defaultLocationCwd = luaL_optstring(L, 1, "");
 
-			const char* defaultLocation = luaL_optstring(L, 1, "./");
+			std::string defaultLocationAbs = SDL_GetCurrentDirectory() + defaultLocationCwd;
 
+#ifdef _WIN32
+			for (size_t i  = 0; i < defaultLocationAbs.size(); i++)
+				if (defaultLocationAbs[i] == '/')
+					defaultLocationAbs[i] = '\\';
+#endif
+			
 			SDL_DialogFileFilter filter{};
 			filter.name = luaL_optstring(L, 2, "All files");
 			filter.pattern = luaL_optstring(L, 3, "*");
@@ -1377,7 +1386,7 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 					SDL_GL_GetCurrentWindow(),
 					&filter,
 					1,
-					defaultLocation
+					defaultLocationAbs.c_str()
 				);
 
 				auto a = std::async(
@@ -1412,7 +1421,15 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 			if (IsFdInProgress)
 				luaL_errorL(L, "The User has not completed the previous File Dialog");
 
-			const char* defaultLocation = luaL_optstring(L, 1, "./");
+			std::string defaultLocationCwd = luaL_optstring(L, 1, "");
+
+			std::string defaultLocationAbs = SDL_GetCurrentDirectory() + defaultLocationCwd;
+
+#ifdef _WIN32
+			for (size_t i  = 0; i < defaultLocationAbs.size(); i++)
+				if (defaultLocationAbs[i] == '/')
+					defaultLocationAbs[i] = '\\';
+#endif
 
 			SDL_DialogFileFilter filter{};
 			filter.name = luaL_optstring(L, 2, "All files");
@@ -1434,7 +1451,7 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 					SDL_GL_GetCurrentWindow(),
 					&filter,
 					1,
-					defaultLocation,
+					defaultLocationAbs.c_str(),
 					allowMultipleFiles
 				);
 

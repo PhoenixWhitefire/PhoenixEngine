@@ -8,6 +8,7 @@
 #include <imgui_internal.h>
 #include <tracy/Tracy.hpp>
 #include <glad/gl.h>
+#include <SDL3/SDL_filesystem.h>
 #include <SDL3/SDL_dialog.h>
 #include <fstream>
 #include <set>
@@ -136,7 +137,11 @@ static std::string getFileDirectory(const std::string& FilePath)
 	size_t lastFwdSlash = FilePath.find_last_of("/");
 
 	if (lastFwdSlash == std::string::npos)
-		return "resources/";
+#ifdef _WIN32
+		return SDL_GetCurrentDirectory() + std::string("resources\\");
+#else
+		return SDL_GetCurrentDirectory() + std::string("resources/");
+#endif
 	else
 	{
 		std::string fileDir = FilePath.substr(0, lastFwdSlash);
@@ -144,7 +149,7 @@ static std::string getFileDirectory(const std::string& FilePath)
 		if (fileDir.find("resources/") == std::string::npos)
 			fileDir = "resources/" + fileDir;
 
-		return fileDir;
+		return SDL_GetCurrentDirectory() + fileDir;
 	}
 }
 
@@ -670,7 +675,10 @@ static void mtlEditorTexture(const char* Label, uint32_t* TextureIdPtr, char* Cu
 
 	if (*TextureIdPtr == 0)
 		if (ImGui::Button("Add"))
+		{
 			addTextureDialog = true;
+			memcpy(CurrentPath, (char*)("textures/"), 9); // start the file dialog in the textures directory
+		}
 		else
 		{
 			ImGui::PopID();
