@@ -106,8 +106,14 @@ static void mergeRecursive(
 		}
 }
 
-void GameObject::m_AddObjectApi()
+void GameObject::s_AddObjectApi()
 {
+	static bool s_DidInitApi = false;
+
+	if (s_DidInitApi)
+		return;
+	s_DidInitApi = true;
+
 	REFLECTION_DECLAREPROP_SIMPSTR(GameObject, Name);
 	REFLECTION_DECLAREPROP_SIMPLE(GameObject, Enabled, Boolean);
 	REFLECTION_DECLAREPROP_SIMPLE(GameObject, Serializes, Boolean);
@@ -273,7 +279,7 @@ void GameObject::m_AddObjectApi()
 
 GameObject::GameObject()
 {
-	m_AddObjectApi();
+	s_AddObjectApi();
 }
 
 GameObject* GameObject::Duplicate()
@@ -807,62 +813,59 @@ GameObject* GameObject::Create(const std::string_view& FirstComponent)
 		return GameObject::Create(it->second);
 }
 
+static void dumpProperties(const Reflection::PropertyMap& Properties, nlohmann::json& Json)
+{
+	for (const auto& propIt : Properties)
+		if (propIt.second.Set)
+			Json[propIt.first] = Reflection::TypeAsString(propIt.second.Type);
+		else
+			Json[propIt.first] = std::string(Reflection::TypeAsString(propIt.second.Type)) + " READONLY";
+}
+
+static void dumpFunctions(const Reflection::FunctionMap& Functions, nlohmann::json& Json)
+{
+	for (const auto& funcIt : Functions)
+	{
+		std::string istring = "";
+		std::string ostring = "";
+
+		for (Reflection::ValueType i : funcIt.second.Inputs)
+			istring += std::string(Reflection::TypeAsString(i)) + ", ";
+		
+		for (Reflection::ValueType o : funcIt.second.Outputs)
+			ostring += std::string(Reflection::TypeAsString(o)) + ", ";
+		
+		istring = istring.substr(0, istring.size() - 2);
+		ostring = ostring.substr(0, ostring.size() - 2);
+
+		Json[funcIt.first] = std::vformat("({}) -> ({})", std::make_format_args(istring, ostring));
+	}
+}
+
 nlohmann::json GameObject::DumpApiToJson()
 {
-	nlohmann::json dump{};
+	nlohmann::json dump;
 	
-	dump["GameObject"] = nlohmann::json();
+	nlohmann::json& gameObjectApi = dump["GameObject"];
+	nlohmann::json& componentApi = dump["Components"];
 
-	/*
-	for (auto& g : s_GameObjectMap)
+	nlohmann::json& gameObjectProperties = gameObjectApi["Properties"];
+	nlohmann::json& gameObjectFunctions = gameObjectApi["Functions"];
+
+	dumpProperties(s_Api.Properties, gameObjectProperties);
+	dumpFunctions(s_Api.Functions, gameObjectFunctions);
+	
+	for (size_t i = 0; i < (size_t)EntityComponent::__count; i++)
 	{
-		GameObject* newobj = g.second();
-		dump[g.first] = nlohmann::json();
+		BaseComponentManager* manager = s_ComponentManagers[i];
 
-		nlohmann::json& gapi = dump[g.first];
+		nlohmann::json& api = componentApi[s_EntityComponentNames[i]];
+		nlohmann::json& properties = api["Properties"];
+		nlohmann::json& functions = api["Functions"];
 
-		const std::vector<std::string_view>& lineage = {};// newobj->GetLineage();
-
-		gapi["Lineage"] = "";
-
-		for (size_t index = 0; index < lineage.size(); index++)
-			if (index < lineage.size() - 1)
-				gapi["Lineage"] = (std::string)gapi["Lineage"] + lineage[index].data() + " -> ";
-			else
-				gapi["Lineage"] = (std::string)gapi["Lineage"] + lineage[index].data();
-
-		gapi["Properties"] = {};
-		gapi["Functions"] = {};
-
-		nlohmann::json& props = gapi["Properties"];
-		nlohmann::json& funcs = gapi["Functions"];
-
-		for (auto& p : newobj->GetProperties())
-			props[p.first] = std::string(Reflection::TypeAsString(p.second.Type))
-								+ ": "
-								+ (p.second.Get ? "Read" : "")
-								+ (p.second.Set ? " | Write" : "");
-
-		for (auto& f : newobj->GetFunctions())
-		{
-			std::string istring = "";
-			std::string ostring = "";
-
-			for (Reflection::ValueType i : f.second.Inputs)
-				istring += std::string(Reflection::TypeAsString(i)) + ", ";
-
-			for (Reflection::ValueType o : f.second.Outputs)
-				ostring += std::string(Reflection::TypeAsString(o)) + ", ";
-
-			istring = istring.substr(0, istring.size() - 2);
-			ostring = ostring.substr(0, ostring.size() - 2);
-
-			funcs[f.first] = std::vformat("({}) -> ({})", std::make_format_args(istring, ostring));
-		}
-
-		delete newobj;
+		dumpProperties(manager->GetProperties(), properties);
+		dumpFunctions(manager->GetFunctions(), functions);
 	}
-	*/
 
 	return dump;
 }

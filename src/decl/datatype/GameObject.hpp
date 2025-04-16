@@ -185,7 +185,7 @@ public:
 	static nlohmann::json DumpApiToJson();
 
 private:
-	void m_AddObjectApi();
+	static void s_AddObjectApi();
 
 	std::vector<uint32_t> m_Children;
 	// component type and ID

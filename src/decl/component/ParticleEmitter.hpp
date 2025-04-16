@@ -17,7 +17,7 @@ struct EcParticleEmitter
 	GameObjectRef Object;
 
 	bool Emitting = true;
-	bool ParticlesRelativeToEmitter = false;
+	bool ParticlesAreAttached = false;
 
 	uint32_t Rate = 50; //Particles to be spawned every second
 	Vector2 Lifetime = Vector2(1.5f, 2.f); // Randomly chosen between the range X - Y;

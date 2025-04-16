@@ -51,7 +51,7 @@ public:
         static const Reflection::PropertyMap props = 
         {
             EC_PROP_SIMPLE(EcParticleEmitter, Emitting, Boolean),
-			EC_PROP_SIMPLE(EcParticleEmitter, ParticlesRelativeToEmitter, Boolean),
+			EC_PROP_SIMPLE(EcParticleEmitter, ParticlesAreAttached, Boolean),
 
 			EC_PROP(
 				"Rate",
@@ -202,7 +202,7 @@ void EcParticleEmitter::Update(double DeltaTime)
 			1.f,
 			0.f,
 			this->PossibleImages[(uint32_t)randIndex(s_RandGenerator)],
-			this->ParticlesRelativeToEmitter ? glm::vec3{} : glm::vec3(ct->Transform[3])
+			this->ParticlesAreAttached ? glm::vec3{} : glm::vec3(ct->Transform[3])
 		};
 
 		newParticleIndex = m_GetUsableParticleIndex();
@@ -262,7 +262,7 @@ void EcParticleEmitter::AppendToRenderList(std::vector<RenderItem> RenderList)
 
 		glm::mat4 transform = glm::translate(glm::mat4(1.f), particle.Position);
 
-		if (ParticlesRelativeToEmitter)
+		if (ParticlesAreAttached)
 			transform *= ct->Transform;
 
 		RenderList.emplace_back(

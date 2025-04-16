@@ -1,483 +1,136 @@
 {
-  "Animation": {
-    "Functions": {
-      "Destroy": "() -> ()",
-      "Duplicate": "() -> (GameObject)",
-      "GetChildren": "() -> (Array)",
-      "GetDescendants": "() -> (Array)",
-      "GetFullName": "() -> (String)",
-      "IsA": "(String) -> (Bool)",
-      "MergeWith": "(GameObject) -> ()"
+  "Components": {
+    "Animation": {
+      "Functions": null,
+      "Properties": null
     },
-    "Lineage": "GameObject",
-    "Properties": {
-      "Class": "String: Read",
-      "Enabled": "Bool: Read | Write",
-      "Name": "String: Read | Write",
-      "ObjectId": "Integer: Read",
-      "Parent": "GameObject: Read | Write",
-      "Serializes": "Bool: Read | Write"
-    }
-  },
-  "Attachment": {
-    "Functions": {
-      "Destroy": "() -> ()",
-      "Duplicate": "() -> (GameObject)",
-      "GetChildren": "() -> (Array)",
-      "GetDescendants": "() -> (Array)",
-      "GetFullName": "() -> (String)",
-      "IsA": "(String) -> (Bool)",
-      "MergeWith": "(GameObject) -> ()"
+    "Camera": {
+      "Functions": null,
+      "Properties": {
+        "FieldOfView": "Double",
+        "Transform": "Matrix",
+        "UseSimpleController": "Bool"
+      }
     },
-    "Lineage": "GameObject",
-    "Properties": {
-      "Class": "String: Read",
-      "Enabled": "Bool: Read | Write",
-      "LocalTransform": "Matrix: Read | Write",
-      "Name": "String: Read | Write",
-      "ObjectId": "Integer: Read",
-      "Parent": "GameObject: Read | Write",
-      "Serializes": "Bool: Read | Write",
-      "WorldTransform": "Matrix: Read"
-    }
-  },
-  "Base3D": {
-    "Functions": {
-      "Destroy": "() -> ()",
-      "Duplicate": "() -> (GameObject)",
-      "GetChildren": "() -> (Array)",
-      "GetDescendants": "() -> (Array)",
-      "GetFullName": "() -> (String)",
-      "IsA": "(String) -> (Bool)",
-      "MergeWith": "(GameObject) -> ()"
+    "DataModel": {
+      "Functions": {
+        "Close": "() -> ()"
+      },
+      "Properties": null
     },
-    "Lineage": "GameObject",
-    "Properties": {
-      "CastsShadows": "Bool: Read | Write",
-      "Class": "String: Read",
-      "Density": "Double: Read | Write",
-      "Enabled": "Bool: Read | Write",
-      "FaceCulling": "Integer: Read | Write",
-      "Friction": "Double: Read | Write",
-      "LinearVelocity": "Vector3: Read | Write",
-      "Material": "String: Read | Write",
-      "MetallnessFactor": "Double: Read | Write",
-      "Name": "String: Read | Write",
-      "ObjectId": "Integer: Read",
-      "Parent": "GameObject: Read | Write",
-      "PhysicsCollisions": "Bool: Read | Write",
-      "PhysicsDynamics": "Bool: Read | Write",
-      "RoughnessFactor": "Double: Read | Write",
-      "Serializes": "Bool: Read | Write",
-      "Size": "Vector3: Read | Write",
-      "Tint": "Color: Read | Write",
-      "Transform": "Matrix: Read | Write",
-      "Transparency": "Double: Read | Write"
-    }
-  },
-  "Bone": {
-    "Functions": {
-      "Destroy": "() -> ()",
-      "Duplicate": "() -> (GameObject)",
-      "GetChildren": "() -> (Array)",
-      "GetDescendants": "() -> (Array)",
-      "GetFullName": "() -> (String)",
-      "IsA": "(String) -> (Bool)",
-      "MergeWith": "(GameObject) -> ()"
+    "DirectionalLight": {
+      "Functions": null,
+      "Properties": {
+        "Brightness": "Double",
+        "Direction": "Vector3",
+        "LightColor": "Color",
+        "Shadows": "Bool"
+      }
     },
-    "Lineage": "GameObject",
-    "Properties": {
-      "Class": "String: Read",
-      "Enabled": "Bool: Read | Write",
-      "IsActive": "Bool: Read",
-      "LocalTransform": "Matrix: Read | Write",
-      "Name": "String: Read | Write",
-      "ObjectId": "Integer: Read",
-      "Parent": "GameObject: Read | Write",
-      "Serializes": "Bool: Read | Write",
-      "SkeletalBoneId": "Integer: Read"
-    }
-  },
-  "Camera": {
-    "Functions": {
-      "Destroy": "() -> ()",
-      "Duplicate": "() -> (GameObject)",
-      "GetChildren": "() -> (Array)",
-      "GetDescendants": "() -> (Array)",
-      "GetFullName": "() -> (String)",
-      "IsA": "(String) -> (Bool)",
-      "MergeWith": "(GameObject) -> ()"
+    "Mesh": {
+      "Functions": null,
+      "Properties": {
+        "AngularVelocity": "Vector3",
+        "Asset": "String",
+        "CastsShadows": "Bool",
+        "Density": "Double",
+        "FaceCulling": "Integer",
+        "Friction": "Double",
+        "LinearVelocity": "Vector3",
+        "Material": "String",
+        "MetallnessFactor": "Double",
+        "PhysicsCollisions": "Bool",
+        "PhysicsDynamics": "Bool",
+        "RoughnessFactor": "Double",
+        "Tint": "Color",
+        "Transparency": "Double"
+      }
     },
-    "Lineage": "GameObject",
-    "Properties": {
-      "Class": "String: Read",
-      "Enabled": "Bool: Read | Write",
-      "FieldOfView": "Double: Read | Write",
-      "Name": "String: Read | Write",
-      "ObjectId": "Integer: Read",
-      "Parent": "GameObject: Read | Write",
-      "Serializes": "Bool: Read | Write",
-      "Transform": "Matrix: Read | Write",
-      "UseSimpleController": "Bool: Read | Write"
-    }
-  },
-  "DataModel": {
-    "Functions": {
-      "Close": "() -> ()",
-      "Destroy": "() -> ()",
-      "Duplicate": "() -> (GameObject)",
-      "GetChildren": "() -> (Array)",
-      "GetDescendants": "() -> (Array)",
-      "GetFullName": "() -> (String)",
-      "IsA": "(String) -> (Bool)",
-      "MergeWith": "(GameObject) -> ()"
+    "Model": {
+      "Functions": null,
+      "Properties": null
     },
-    "Lineage": "GameObject",
-    "Properties": {
-      "Class": "String: Read",
-      "Enabled": "Bool: Read | Write",
-      "Name": "String: Read | Write",
-      "ObjectId": "Integer: Read",
-      "Parent": "GameObject: Read | Write",
-      "Serializes": "Bool: Read | Write"
-    }
-  },
-  "DirectionalLight": {
-    "Functions": {
-      "Destroy": "() -> ()",
-      "Duplicate": "() -> (GameObject)",
-      "GetChildren": "() -> (Array)",
-      "GetDescendants": "() -> (Array)",
-      "GetFullName": "() -> (String)",
-      "IsA": "(String) -> (Bool)",
-      "MergeWith": "(GameObject) -> ()"
+    "ParticleEmitter": {
+      "Functions": null,
+      "Properties": {
+        "Emitting": "Bool",
+        "Lifetime": "Vector3",
+        "ParticlesAreAttached": "Bool",
+        "Rate": "Integer"
+      }
     },
-    "Lineage": "GameObject -> Attachment -> Light -> GameObject",
-    "Properties": {
-      "Brightness": "Double: Read | Write",
-      "Class": "String: Read",
-      "Direction": "Vector3: Read | Write",
-      "Enabled": "Bool: Read | Write",
-      "LightColor": "Color: Read | Write",
-      "Name": "String: Read | Write",
-      "ObjectId": "Integer: Read",
-      "Parent": "GameObject: Read | Write",
-      "Serializes": "Bool: Read | Write",
-      "Shadows": "Bool: Read | Write"
-    }
-  },
-  "Example": {
-    "Functions": {
-      "Destroy": "() -> ()",
-      "Duplicate": "() -> (GameObject)",
-      "GetChildren": "() -> (Array)",
-      "GetDescendants": "() -> (Array)",
-      "GetFullName": "() -> (String)",
-      "GiveUp": "() -> ()",
-      "Greet": "(Array, Bool) -> (String, String)",
-      "IsA": "(String) -> (Bool)",
-      "MergeWith": "(GameObject) -> ()",
-      "Reload": "() -> (Bool)"
+    "PointLight": {
+      "Functions": null,
+      "Properties": {
+        "Brightness": "Double",
+        "LightColor": "Color",
+        "Range": "Double",
+        "Shadows": "Bool"
+      }
     },
-    "Lineage": "GameObject -> Script",
-    "Properties": {
-      "Class": "String: Read",
-      "Enabled": "Bool: Read | Write",
-      "Name": "String: Read | Write",
-      "ObjectId": "Integer: Read",
-      "Parent": "GameObject: Read | Write",
-      "Serializes": "Bool: Read | Write",
-      "SourceFile": "String: Read | Write",
-      "Value1": "Bool: Read | Write",
-      "Value2": "Integer: Read | Write",
-      "Value3": "Double: Read | Write",
-      "Value4": "String: Read",
-      "Value5": "Vector3: Read | Write"
+    "Script": {
+      "Functions": {
+        "Reload": "() -> (Bool)"
+      },
+      "Properties": {
+        "SourceFile": "String"
+      }
+    },
+    "Sound": {
+      "Functions": null,
+      "Properties": {
+        "Length": "Double READONLY",
+        "Looped": "Bool",
+        "Playing": "Bool",
+        "Position": "Double",
+        "SoundFile": "String"
+      }
+    },
+    "SpotLight": {
+      "Functions": null,
+      "Properties": {
+        "Angle": "Double",
+        "Brightness": "Double",
+        "LightColor": "Color",
+        "Range": "Double",
+        "Shadows": "Bool"
+      }
+    },
+    "Transformable": {
+      "Functions": null,
+      "Properties": {
+        "Size": "Vector3",
+        "Transform": "Matrix"
+      }
+    },
+    "Workspace": {
+      "Functions": {
+        "ScreenPointToRay": "(Array, Double) -> (Vector3)"
+      },
+      "Properties": {
+        "SceneCamera": "GameObject"
+      }
     }
   },
   "GameObject": {
     "Functions": {
       "Destroy": "() -> ()",
       "Duplicate": "() -> (GameObject)",
+      "FindChild": "(String) -> (GameObject)",
       "GetChildren": "() -> (Array)",
+      "GetComponentNames": "() -> (Array)",
       "GetDescendants": "() -> (Array)",
       "GetFullName": "() -> (String)",
+      "HasComponent": "(String) -> (Bool)",
       "IsA": "(String) -> (Bool)",
       "MergeWith": "(GameObject) -> ()"
     },
-    "Lineage": "",
     "Properties": {
-      "Class": "String: Read",
-      "Enabled": "Bool: Read | Write",
-      "Name": "String: Read | Write",
-      "ObjectId": "Integer: Read",
-      "Parent": "GameObject: Read | Write",
-      "Serializes": "Bool: Read | Write"
-    }
-  },
-  "Light": {
-    "Functions": {
-      "Destroy": "() -> ()",
-      "Duplicate": "() -> (GameObject)",
-      "GetChildren": "() -> (Array)",
-      "GetDescendants": "() -> (Array)",
-      "GetFullName": "() -> (String)",
-      "IsA": "(String) -> (Bool)",
-      "MergeWith": "(GameObject) -> ()"
-    },
-    "Lineage": "GameObject -> Attachment",
-    "Properties": {
-      "Brightness": "Double: Read | Write",
-      "Class": "String: Read",
-      "Enabled": "Bool: Read | Write",
-      "LightColor": "Color: Read | Write",
-      "LocalTransform": "Matrix: Read | Write",
-      "Name": "String: Read | Write",
-      "ObjectId": "Integer: Read",
-      "Parent": "GameObject: Read | Write",
-      "Serializes": "Bool: Read | Write",
-      "Shadows": "Bool: Read | Write",
-      "WorldTransform": "Matrix: Read"
-    }
-  },
-  "Mesh": {
-    "Functions": {
-      "Destroy": "() -> ()",
-      "Duplicate": "() -> (GameObject)",
-      "GetChildren": "() -> (Array)",
-      "GetDescendants": "() -> (Array)",
-      "GetFullName": "() -> (String)",
-      "IsA": "(String) -> (Bool)",
-      "MergeWith": "(GameObject) -> ()"
-    },
-    "Lineage": "GameObject -> Base3D",
-    "Properties": {
-      "Asset": "String: Read | Write",
-      "CastsShadows": "Bool: Read | Write",
-      "Class": "String: Read",
-      "Density": "Double: Read | Write",
-      "Enabled": "Bool: Read | Write",
-      "FaceCulling": "Integer: Read | Write",
-      "Friction": "Double: Read | Write",
-      "LinearVelocity": "Vector3: Read | Write",
-      "Material": "String: Read | Write",
-      "MetallnessFactor": "Double: Read | Write",
-      "Name": "String: Read | Write",
-      "ObjectId": "Integer: Read",
-      "Parent": "GameObject: Read | Write",
-      "PhysicsCollisions": "Bool: Read | Write",
-      "PhysicsDynamics": "Bool: Read | Write",
-      "RoughnessFactor": "Double: Read | Write",
-      "Serializes": "Bool: Read | Write",
-      "Size": "Vector3: Read | Write",
-      "Tint": "Color: Read | Write",
-      "Transform": "Matrix: Read | Write",
-      "Transparency": "Double: Read | Write"
-    }
-  },
-  "Model": {
-    "Functions": {
-      "Destroy": "() -> ()",
-      "Duplicate": "() -> (GameObject)",
-      "GetChildren": "() -> (Array)",
-      "GetDescendants": "() -> (Array)",
-      "GetFullName": "() -> (String)",
-      "IsA": "(String) -> (Bool)",
-      "MergeWith": "(GameObject) -> ()"
-    },
-    "Lineage": "GameObject",
-    "Properties": {
-      "Class": "String: Read",
-      "Enabled": "Bool: Read | Write",
-      "Name": "String: Read | Write",
-      "ObjectId": "Integer: Read",
-      "Parent": "GameObject: Read | Write",
-      "Serializes": "Bool: Read | Write"
-    }
-  },
-  "ParticleEmitter": {
-    "Functions": {
-      "Destroy": "() -> ()",
-      "Duplicate": "() -> (GameObject)",
-      "GetChildren": "() -> (Array)",
-      "GetDescendants": "() -> (Array)",
-      "GetFullName": "() -> (String)",
-      "IsA": "(String) -> (Bool)",
-      "MergeWith": "(GameObject) -> ()"
-    },
-    "Lineage": "GameObject -> Attachment",
-    "Properties": {
-      "Class": "String: Read",
-      "EmitterEnabled": "Bool: Read | Write",
-      "Enabled": "Bool: Read | Write",
-      "Lifetime": "Vector3: Read | Write",
-      "LocalTransform": "Matrix: Read | Write",
-      "Name": "String: Read | Write",
-      "ObjectId": "Integer: Read",
-      "Parent": "GameObject: Read | Write",
-      "ParticlesRelativeToEmitter": "Bool: Read | Write",
-      "Rate": "Integer: Read | Write",
-      "Serializes": "Bool: Read | Write",
-      "WorldTransform": "Matrix: Read"
-    }
-  },
-  "PointLight": {
-    "Functions": {
-      "Destroy": "() -> ()",
-      "Duplicate": "() -> (GameObject)",
-      "GetChildren": "() -> (Array)",
-      "GetDescendants": "() -> (Array)",
-      "GetFullName": "() -> (String)",
-      "IsA": "(String) -> (Bool)",
-      "MergeWith": "(GameObject) -> ()"
-    },
-    "Lineage": "GameObject -> Attachment -> Light",
-    "Properties": {
-      "Brightness": "Double: Read | Write",
-      "Class": "String: Read",
-      "Enabled": "Bool: Read | Write",
-      "LightColor": "Color: Read | Write",
-      "LocalTransform": "Matrix: Read | Write",
-      "Name": "String: Read | Write",
-      "ObjectId": "Integer: Read",
-      "Parent": "GameObject: Read | Write",
-      "Range": "Double: Read | Write",
-      "Serializes": "Bool: Read | Write",
-      "Shadows": "Bool: Read | Write",
-      "WorldTransform": "Matrix: Read"
-    }
-  },
-  "Primitive": {
-    "Functions": {
-      "Destroy": "() -> ()",
-      "Duplicate": "() -> (GameObject)",
-      "GetChildren": "() -> (Array)",
-      "GetDescendants": "() -> (Array)",
-      "GetFullName": "() -> (String)",
-      "IsA": "(String) -> (Bool)",
-      "MergeWith": "(GameObject) -> ()"
-    },
-    "Lineage": "GameObject -> Base3D",
-    "Properties": {
-      "CastsShadows": "Bool: Read | Write",
-      "Class": "String: Read",
-      "Density": "Double: Read | Write",
-      "Enabled": "Bool: Read | Write",
-      "FaceCulling": "Integer: Read | Write",
-      "Friction": "Double: Read | Write",
-      "LinearVelocity": "Vector3: Read | Write",
-      "Material": "String: Read | Write",
-      "MetallnessFactor": "Double: Read | Write",
-      "Name": "String: Read | Write",
-      "ObjectId": "Integer: Read",
-      "Parent": "GameObject: Read | Write",
-      "PhysicsCollisions": "Bool: Read | Write",
-      "PhysicsDynamics": "Bool: Read | Write",
-      "RoughnessFactor": "Double: Read | Write",
-      "Serializes": "Bool: Read | Write",
-      "Shape": "Integer: Read | Write",
-      "Size": "Vector3: Read | Write",
-      "Tint": "Color: Read | Write",
-      "Transform": "Matrix: Read | Write",
-      "Transparency": "Double: Read | Write"
-    }
-  },
-  "Script": {
-    "Functions": {
-      "Destroy": "() -> ()",
-      "Duplicate": "() -> (GameObject)",
-      "GetChildren": "() -> (Array)",
-      "GetDescendants": "() -> (Array)",
-      "GetFullName": "() -> (String)",
-      "IsA": "(String) -> (Bool)",
-      "MergeWith": "(GameObject) -> ()",
-      "Reload": "() -> (Bool)"
-    },
-    "Lineage": "GameObject",
-    "Properties": {
-      "Class": "String: Read",
-      "Enabled": "Bool: Read | Write",
-      "Name": "String: Read | Write",
-      "ObjectId": "Integer: Read",
-      "Parent": "GameObject: Read | Write",
-      "Serializes": "Bool: Read | Write",
-      "SourceFile": "String: Read | Write"
-    }
-  },
-  "Sound": {
-    "Functions": {
-      "Destroy": "() -> ()",
-      "Duplicate": "() -> (GameObject)",
-      "GetChildren": "() -> (Array)",
-      "GetDescendants": "() -> (Array)",
-      "GetFullName": "() -> (String)",
-      "IsA": "(String) -> (Bool)",
-      "MergeWith": "(GameObject) -> ()"
-    },
-    "Lineage": "GameObject -> Attachment",
-    "Properties": {
-      "Class": "String: Read",
-      "Enabled": "Bool: Read | Write",
-      "Length": "Double: Read",
-      "LocalTransform": "Matrix: Read | Write",
-      "Looped": "Bool: Read | Write",
-      "Name": "String: Read | Write",
-      "ObjectId": "Integer: Read",
-      "Parent": "GameObject: Read | Write",
-      "Playing": "Bool: Read | Write",
-      "Position": "Double: Read | Write",
-      "Serializes": "Bool: Read | Write",
-      "SoundFile": "String: Read | Write",
-      "WorldTransform": "Matrix: Read"
-    }
-  },
-  "SpotLight": {
-    "Functions": {
-      "Destroy": "() -> ()",
-      "Duplicate": "() -> (GameObject)",
-      "GetChildren": "() -> (Array)",
-      "GetDescendants": "() -> (Array)",
-      "GetFullName": "() -> (String)",
-      "IsA": "(String) -> (Bool)",
-      "MergeWith": "(GameObject) -> ()"
-    },
-    "Lineage": "GameObject -> Attachment -> Light",
-    "Properties": {
-      "Angle": "Double: Read | Write",
-      "Brightness": "Double: Read | Write",
-      "Class": "String: Read",
-      "Enabled": "Bool: Read | Write",
-      "LightColor": "Color: Read | Write",
-      "LocalTransform": "Matrix: Read | Write",
-      "Name": "String: Read | Write",
-      "ObjectId": "Integer: Read",
-      "Parent": "GameObject: Read | Write",
-      "Range": "Double: Read | Write",
-      "Serializes": "Bool: Read | Write",
-      "Shadows": "Bool: Read | Write",
-      "WorldTransform": "Matrix: Read"
-    }
-  },
-  "Workspace": {
-    "Functions": {
-      "Destroy": "() -> ()",
-      "Duplicate": "() -> (GameObject)",
-      "GetChildren": "() -> (Array)",
-      "GetDescendants": "() -> (Array)",
-      "GetFullName": "() -> (String)",
-      "IsA": "(String) -> (Bool)",
-      "MergeWith": "(GameObject) -> ()",
-      "ScreenPointToRay": "(Array, Double) -> (Map)"
-    },
-    "Lineage": "GameObject -> Model",
-    "Properties": {
-      "Class": "String: Read",
-      "Enabled": "Bool: Read | Write",
-      "Name": "String: Read | Write",
-      "ObjectId": "Integer: Read",
-      "Parent": "GameObject: Read | Write",
-      "SceneCamera": "GameObject: Read | Write",
-      "Serializes": "Bool: Read | Write"
+      "Enabled": "Bool",
+      "Name": "String",
+      "ObjectId": "Integer READONLY",
+      "Parent": "GameObject",
+      "Serializes": "Bool"
     }
   }
 }
