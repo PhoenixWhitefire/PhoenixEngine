@@ -227,7 +227,8 @@ public:
 
 	~GameObjectRef()
 	{
-		Contained()->DecrementHardRefs();
+		if (m_TargetId != PHX_GAMEOBJECT_NULL_ID)
+			Contained()->DecrementHardRefs();
 		m_TargetId = PHX_GAMEOBJECT_NULL_ID;
 	}
 

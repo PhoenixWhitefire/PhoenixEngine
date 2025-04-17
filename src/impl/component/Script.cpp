@@ -2,6 +2,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <luau/VM/include/lualib.h>
 #include <tracy/Tracy.hpp>
+#include <Luau/Compiler.h>
 
 #include "component/Script.hpp"
 #include "component/ScriptEngine.hpp"
@@ -316,10 +317,9 @@ static void* l_alloc(void*, void* ptr, size_t, size_t nsize)
 		return Memory::ReAlloc(ptr, nsize, Memory::Category::Luau);
 }
 
-// TODO 14/03/2025
-// re-use VMs instead of creating a new one for each script
-// (assuming that's what `newstate` does... man idk man im way in over my head honestly)
-static lua_State* createState()
+static lua_State* LVM = nullptr;
+
+static lua_State* createVM()
 {
 	ZoneScopedC(tracy::Color::LightSkyBlue);
 
@@ -807,7 +807,7 @@ void EcScript::Update(double dt)
 				std::make_format_args(errstr)
 			));
 
-			lua_close(after->m_L);
+			lua_resetthread(after->m_L);
 			after->m_L = nullptr;
 		}
 		else if (updateStatus == LUA_OK)
@@ -856,6 +856,9 @@ bool EcScript::Reload()
 {
 	ZoneScopedC(tracy::Color::LightSkyBlue);
 
+	if (!LVM)
+		LVM = createVM();
+
 	std::string fullName = this->Object->GetFullName();
 
 	ZoneTextF("Script: %s\nFile: %s", fullName.c_str(), this->SourceFile.c_str());
@@ -866,8 +869,11 @@ bool EcScript::Reload()
 	m_StaleSource = false;
 
 	if (m_L)
-		lua_close(m_L);
-	m_L = createState();
+		lua_resetthread(m_L);
+	else
+		m_L = lua_newthread(LVM);
+
+	luaL_sandboxthread(m_L);
 
 	if (!fileExists)
 	{
@@ -886,15 +892,9 @@ bool EcScript::Reload()
 
 	std::string chunkname = std::vformat("{}", std::make_format_args(fullName));
 
-	// FROM: https://github.com/luau-lang/luau/ README
+	// FROM: https://github.com/luau-lang/luau/ READM
 
-	// needs lua.h and luacode.h
-	size_t bytecodeSize = 0;
-	char* bytecode = luau_compile(m_Source.c_str(), m_Source.length(), NULL, &bytecodeSize);
-
-	int result = luau_load(m_L, chunkname.c_str(), bytecode, bytecodeSize, 0);
-
-	free(bytecode);
+	int result = ScriptEngine::CompileAndLoad(m_L, m_Source, chunkname);
 	
 	if (result == 0)
 	{

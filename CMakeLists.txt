@@ -55,6 +55,8 @@ target_include_directories(PhoenixEngine PUBLIC
 	"Vendor/tracy/public"
 	"Vendor/luau/Common/include"
 	"Vendor/luau/VM/include"
+	"Vendor/luau/Compiler/include"
+	"Vendor/luau/Ast/include"
 )
 
 set(PHX_BUILD_TYPE $<IF:$<CONFIG:Debug>,Debug,$<IF:$<CONFIG:Release>,Release,RelTracy>>)

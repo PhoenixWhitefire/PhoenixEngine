@@ -12,6 +12,8 @@
 
 namespace ScriptEngine
 {
+	int CompileAndLoad(lua_State*, const std::string& SourceCode, const std::string& ChunkName);
+
 	extern bool s_BackendScriptWantGrabMouse;
 
 	// The `lua_State*` should be `lua_resume`'d upon the `std::shared_future` enreadying

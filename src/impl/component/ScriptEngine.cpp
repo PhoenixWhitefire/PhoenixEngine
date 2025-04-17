@@ -1,5 +1,6 @@
 #include <luau/VM/include/lualib.h>
 #include <luau/VM/src/lstate.h>
+#include <Luau/Compiler.h>
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
@@ -212,6 +213,26 @@ static void luaTableToJson(lua_State* L, nlohmann::json& json)
 		lua_pop(L, 1);
 	}
 
+}
+
+int ScriptEngine::CompileAndLoad(lua_State* L, const std::string& SourceCode, const std::string& ChunkName)
+{
+	// Tell Luau that these are mutable. Otherwise, GETIMPORT optimizations
+	// will cause them to be treated as constants and only invoke their `__index` function
+	// when the VM first resumes
+	const char* mutableGlobals[] = 
+	{
+		"game", "workspace", "script"
+	};
+
+	Luau::CompileOptions compileOptions;
+	compileOptions.optimizationLevel = 2;
+	compileOptions.debugLevel = 1;
+	compileOptions.mutableGlobals = mutableGlobals;
+
+	std::string bytecode = Luau::compile(SourceCode, compileOptions);
+
+	return luau_load(L, ChunkName.c_str(), bytecode.data(), bytecode.size(), 0);
 }
 
 Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int StackIndex)
@@ -715,11 +736,8 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 		// new thread needs to have the globals sandboxed
 		luaL_sandboxthread(ML);
 
-		size_t bytecodeLength = 0;
-
 		// now we can compile & run module on the new thread
-		char* bytecode = luau_compile(sourceCode.c_str(), sourceCode.length(), nullptr, &bytecodeLength);
-		if (luau_load(ML, name.c_str(), bytecode, bytecodeLength, 0) == 0)
+		if (CompileAndLoad(ML, sourceCode, name) == 0)
 		{
 			int status = lua_resume(ML, L, 0);
 
