@@ -96,6 +96,15 @@ public:
     ScriptManager()
     {
         GameObject::s_ComponentManagers[(size_t)EntityComponent::Script] = this;
+
+		Luau::assertHandler() = [](const char* Expression, const char* File, int Line, const char* Function)
+		{
+			throw(std::runtime_error(std::vformat(
+				"Luau assertion failed: {}\n\nin {}:{} '{}'",
+				std::make_format_args(Expression, File, Line, Function)
+			)));
+			return 0;
+		};
     }
 
 private:
@@ -811,20 +820,13 @@ void EcScript::Update(double dt)
 			after->m_L = nullptr;
 		}
 		else if (updateStatus == LUA_OK)
+		{
 			lua_resetthread(co);
+			lua_pop(after->m_L, 2);
+		}
 	}
-
-	/*
-	// 10/04/2025
-	// maybe `this` will eventually be a (for example) Ref<EcScript> in the future
-	// so i don't have to do this bs
-	EcScript* after = static_cast<EcScript*>(ManagerInstance.GetComponent(ecId));
-
-	// in case we killed ourselves
-	if (after->m_L && lua_status(after->m_L) != LUA_YIELD)
-		lua_pop(after->m_L, 1);
-
-	*/
+	else
+		lua_pop(m_L, 1);
 }
 
 bool EcScript::LoadScript(const std::string_view& scriptFile)
