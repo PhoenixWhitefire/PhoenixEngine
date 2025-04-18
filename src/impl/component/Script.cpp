@@ -764,6 +764,13 @@ void EcScript::Update(double dt)
 	// 23/09/2024
 	resumeScheduledCoroutines();
 
+	if (EcScript* after = static_cast<EcScript*>(ManagerInstance.GetComponent(ecId)); after != this)
+	{
+		// we got re-alloc'd, defer to clone to avoid use-after-free's
+		after->Update(dt);
+		return;
+	}
+
 	// we got destroy'd by the resumed coroutine
 	if (this->Object->IsDestructionPending)
 		return;
