@@ -737,7 +737,7 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 		luaL_sandboxthread(ML);
 
 		// now we can compile & run module on the new thread
-		if (CompileAndLoad(ML, sourceCode, name) == 0)
+		if (CompileAndLoad(ML, sourceCode, "@" + name) == 0)
 		{
 			int status = lua_resume(ML, L, 0);
 

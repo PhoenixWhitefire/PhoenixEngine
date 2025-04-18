@@ -654,45 +654,42 @@ static lua_State* createVM()
 	return state;
 }
 
-/*
-void Object_Script::s_DeclareReflections()
+// modified version of `db_traceback` from `VM/src/ldblib.cpp`
+static void dumpStacktrace(lua_State* L)
 {
-	if (s_DidInitReflection)
-		return;
-	s_DidInitReflection = true;
+	lua_Debug ar;
+	std::string trace;
 
-	REFLECTION_INHERITAPI(GameObject);
+	for (int i = 1; lua_getinfo(L, i, "sln", &ar); i++)
+	{
+		trace.append("[STCK]: from: ");
 
-	REFLECTION_DECLAREPROP(
-		"SourceFile",
-		String,
-		[](Reflection::Reflectable* p)
+		if (strcmp(ar.what, "C") == 0)
 		{
-			return Reflection::GenericValue(static_cast<Object_Script*>(p)->SourceFile);
-		},
-		[](Reflection::Reflectable* p, Reflection::GenericValue newval)
-		{
-			Object_Script* scr = static_cast<Object_Script*>(p);
-			scr->LoadScript(newval.AsStringView());
+			trace.append("[C]");
+			continue;
 		}
-	);
 
-	//REFLECTION_DECLAREPROP_SIMPLE(Object_Script, SourceFile, String);
-	REFLECTION_DECLAREFUNC(
-		"Reload",
-		{},
-		{ Reflection::ValueType::Boolean },
-		[](Reflection::Reflectable* p, const Reflection::GenericValue&)
-		-> std::vector<Reflection::GenericValue>
+		if (ar.source)
+			trace.append(ar.short_src);
+		
+		if (ar.currentline > 0)
 		{
-			Object_Script* scr = static_cast<Object_Script*>(p);
-
-			bool reloadSuccess = scr->Reload();
-			return { reloadSuccess };
+			trace.append(":");
+			trace.append(std::to_string(ar.currentline));
 		}
-	);
+
+		if (ar.name)
+		{
+			trace.append(" function ");
+			trace.append(ar.name);
+		}
+
+		trace.append("\n");
+	}
+
+	Log::Append(trace);
 }
-*/
 
 static void resumeScheduledCoroutines()
 {
@@ -726,12 +723,14 @@ static void resumeScheduledCoroutines()
 					"Luau yielded-then-resumed error: {}",
 					std::make_format_args(errstr)
 				));
+
+				dumpStacktrace(coroutine);
 			}
 
 			ScriptEngine::s_YieldedCoroutines.erase(ScriptEngine::s_YieldedCoroutines.begin() + corIdx);
 			//lua_unref(lua_mainthread(coroutine), corInfo.CoroutineReference);
 
-			lua_pop(lua_mainthread(coroutine), 1);
+			//lua_pop(lua_mainthread(coroutine), 1);
 
 			// the indexes of the coroutines will have changed, and `corIdx` will skip what the next element was
 			// this is a lazy workaround. 24/12/2024
@@ -806,22 +805,26 @@ void EcScript::Update(double dt)
 				"Luau runtime error: {}",
 				std::make_format_args(errstr)
 			));
+			dumpStacktrace(co);
 
-			lua_resetthread(after->m_L);
+			lua_resetthread(co);
 			after->m_L = nullptr;
 		}
 		else if (updateStatus == LUA_OK)
-			lua_pop(after->m_L, 1);
+			lua_resetthread(co);
 	}
 
+	/*
 	// 10/04/2025
 	// maybe `this` will eventually be a (for example) Ref<EcScript> in the future
 	// so i don't have to do this bs
 	EcScript* after = static_cast<EcScript*>(ManagerInstance.GetComponent(ecId));
 
 	// in case we killed ourselves
-	if (after->m_L)
+	if (after->m_L && lua_status(after->m_L) != LUA_YIELD)
 		lua_pop(after->m_L, 1);
+
+	*/
 }
 
 bool EcScript::LoadScript(const std::string_view& scriptFile)
@@ -890,11 +893,7 @@ bool EcScript::Reload()
 	ScriptEngine::L::PushGameObject(m_L, this->Object);
 	lua_setglobal(m_L, "script");
 
-	std::string chunkname = std::vformat("{}", std::make_format_args(fullName));
-
-	// FROM: https://github.com/luau-lang/luau/ READM
-
-	int result = ScriptEngine::CompileAndLoad(m_L, m_Source, chunkname);
+	int result = ScriptEngine::CompileAndLoad(m_L, m_Source, "@" + fullName);
 	
 	if (result == 0)
 	{
@@ -914,6 +913,7 @@ bool EcScript::Reload()
 				"Luau script init error: {}",
 				std::make_format_args(errStr)
 			));
+			dumpStacktrace(m_L);
 
 			return false;
 		}
