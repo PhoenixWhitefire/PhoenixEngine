@@ -682,7 +682,7 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 		"sleep",
 		[](lua_State* L)
 		{
-			int sleepTime = luaL_checkinteger(L, 1);
+			double sleepTime = luaL_checknumber(L, 1);
 
 			lua_yield(L, 1);
 
@@ -692,9 +692,9 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 			{
 				auto a = std::async(
 					std::launch::async,
-					[](int st)
+					[](double st)
 					{
-						std::this_thread::sleep_for(std::chrono::seconds(st));
+						std::this_thread::sleep_for(std::chrono::duration<double>(st));
 						return Reflection::GenericValue(st);
 					},
 					sleepTime
@@ -705,7 +705,7 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 				ScriptEngine::s_YieldedCoroutines.emplace_back(
 					L,
 					// make sure the coroutine doesn't get de-alloc'd before we resume it
-					lua_ref(lua_mainthread(L), -1),
+					lua_ref(L, -1),
 					a.share()
 				);
 			}

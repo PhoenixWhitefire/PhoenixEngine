@@ -708,6 +708,7 @@ static void resumeScheduledCoroutines()
 	{
 		const ScriptEngine::YieldedCoroutine& corInfo = ScriptEngine::s_YieldedCoroutines.at(corIdx);
 		lua_State* coroutine = corInfo.Coroutine;
+		int corRef = corInfo.CoroutineReference;
 		const std::shared_future<Reflection::GenericValue>& future = corInfo.Future;
 
 		if (future.valid())
@@ -737,7 +738,7 @@ static void resumeScheduledCoroutines()
 			}
 
 			ScriptEngine::s_YieldedCoroutines.erase(ScriptEngine::s_YieldedCoroutines.begin() + corIdx);
-			//lua_unref(lua_mainthread(coroutine), corInfo.CoroutineReference);
+			lua_unref(lua_mainthread(coroutine), corRef);
 
 			//lua_pop(lua_mainthread(coroutine), 1);
 

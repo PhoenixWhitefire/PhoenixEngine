@@ -22,8 +22,8 @@ void Log::Append(const std::string_view& Message)
 	if (ThrewLogCapacityExceededException)
 		return;
 
-	if ( ( Message.size() > 2 && Message.substr(Message.size() - 2, 2) != "&&" )
-		|| Message.size() <= 2
+	if ( ( Message.size() >= 2 && Message.substr(Message.size() - 2, 2) != "&&" )
+		|| Message.size() < 2
 	)
 	{
 		ProgramLog.append(Message);
