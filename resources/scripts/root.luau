@@ -9,6 +9,13 @@ local ScriptExecutionFile = "scripts/shdgraphtest.luau"
 
 local DefaultSubLevel = "scenes/dev_fmtv2.hxscene"
 
+local BackgroundAmbience = GameObject.new("Sound")
+BackgroundAmbience.SoundFile = "sounds/pixabay_soft-wind-314945.wav"
+BackgroundAmbience.Playing = true
+BackgroundAmbience.Looped = true
+BackgroundAmbience.Name = "BackgroundAmbience"
+BackgroundAmbience.Parent = workspace
+
 local function loadSubLevel(Path)
 	if not Path then
 		print("No level was selected")
@@ -25,11 +32,6 @@ local function loadSubLevel(Path)
 end
 
 function Update()
-	if input_keypressed("y") then
-		sleep(1)
-		SoundStinger:Play()
-	end
-	
 	if imgui_begin("Model Importer") then
 		ModelImporterScale = imgui_input_float("Scale", ModelImporterScale)
 

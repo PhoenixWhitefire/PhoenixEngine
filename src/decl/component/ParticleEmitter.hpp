@@ -12,7 +12,7 @@ struct EcParticleEmitter
 	EcParticleEmitter();
 
 	void Update(double);
-	void AppendToRenderList(std::vector<RenderItem>);
+	void AppendToRenderList(std::vector<RenderItem>&);
 
 	GameObjectRef Object;
 

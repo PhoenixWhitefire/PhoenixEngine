@@ -466,8 +466,6 @@ bool Reflection::GenericValue::operator==(const Reflection::GenericValue& Other)
 		return false;
 	if (this->Size != Other.Size)
 		return false;
-	if (this->Value == Other.Value)
-		return true;
 
 	switch (Type)
 	{

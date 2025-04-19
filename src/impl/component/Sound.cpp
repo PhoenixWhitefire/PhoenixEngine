@@ -15,6 +15,9 @@ struct AudioAsset
 };
 
 static std::unordered_map<std::string, AudioAsset> AudioAssets{};
+static std::mutex AudioAssetsMutex;
+static std::mutex ComponentsBufferReAllocMutex;
+static std::vector<std::promise<bool>> AudioStreamPromises;
 
 // the spec of the audio device
 // must be standardized to remove overhead of 
@@ -27,46 +30,19 @@ static const SDL_AudioSpec AudioSpec =
 	44100
 };
 
-static void streamCallback(void* UserData, SDL_AudioStream* Stream, int AdditionalAmount, int /*TotalAmount*/)
-{
-	EcSound* sound = static_cast<EcSound*>(UserData);
-	const AudioAsset& audio = AudioAssets[sound->SoundFile];
-
-	if (sound->NextRequestedPosition != -1.f)
-	{
-		float target = sound->NextRequestedPosition;
-		sound->NextRequestedPosition = -1.f;
-
-		sound->BytePosition = static_cast<uint32_t>(audio.Spec.freq * target);
-	}
-
-	if (sound->BytePosition >= audio.DataSize)
-	{
-		if (sound->Looped)
-			SDL_PutAudioStreamData(Stream, audio.Data, AdditionalAmount);
-		else
-			SDL_PauseAudioStreamDevice(Stream);
-
-		sound->BytePosition = 0;
-	}
-	else
-	{
-		int len = std::min(AdditionalAmount, static_cast<int>(audio.DataSize - sound->BytePosition));
-
-		SDL_PutAudioStreamData(Stream, audio.Data + sound->BytePosition, len);
-	}
-
-	sound->Position = (float)sound->BytePosition / (float)audio.Spec.freq;
-	sound->BytePosition += AdditionalAmount;
-}
-
 class SoundManager : BaseComponentManager
 {
 public:
     virtual uint32_t CreateComponent(GameObject* Object) final
     {
+		ComponentsBufferReAllocMutex.lock();
+
         m_Components.emplace_back();
 		m_Components.back().Object = Object;
+		m_Components.back().EcId = static_cast<uint32_t>(m_Components.size() - 1);
+		AudioStreamPromises.emplace_back();
+
+		ComponentsBufferReAllocMutex.unlock();
 
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
@@ -125,15 +101,16 @@ public:
 					if (sound->m_AudioStream)
 						return !SDL_AudioStreamDevicePaused((SDL_AudioStream*)sound->m_AudioStream);
 					else
-						return false;
+						return sound->m_PlayRequested;
 				},
 				[](void* p, const Reflection::GenericValue& playing)
 				{
 					EcSound* sound = static_cast<EcSound*>(p);
 					SDL_AudioStream* stream = (SDL_AudioStream*)sound->m_AudioStream;
-		
+					sound->m_PlayRequested = playing.AsBoolean();
+
 					if (stream)
-						if (playing.AsBoolean())
+						if (sound->m_PlayRequested)
 						{
 							if (!sound->Object->Enabled)
 								throw("Tried to play sound while Object was disabled, Object: " + sound->Object->GetFullName());
@@ -178,7 +155,8 @@ public:
 
 			EC_PROP_SIMPLE(EcSound, Looped, Boolean),
 
-			EC_PROP("Length", Double, EC_GET_SIMPLE(EcSound, Length), nullptr)
+			EC_PROP("Length", Double, EC_GET_SIMPLE(EcSound, Length), nullptr),
+			EC_PROP("FinishedLoading", Boolean, EC_GET_SIMPLE(EcSound, FinishedLoading), nullptr)
         };
 
         return props;
@@ -204,6 +182,43 @@ private:
 
 static inline SoundManager Instance{};
 
+static void streamCallback(void* UserData, SDL_AudioStream* Stream, int AdditionalAmount, int /*TotalAmount*/)
+{
+	ComponentsBufferReAllocMutex.lock();
+
+	EcSound* sound = static_cast<EcSound*>(Instance.GetComponent(*(uint32_t*)&UserData));
+	const AudioAsset& audio = AudioAssets[sound->SoundFile];
+
+	if (sound->NextRequestedPosition != -1.f)
+	{
+		float target = sound->NextRequestedPosition;
+		sound->NextRequestedPosition = -1.f;
+
+		sound->BytePosition = static_cast<uint32_t>(audio.Spec.freq * target);
+	}
+
+	if (sound->BytePosition >= audio.DataSize)
+	{
+		if (sound->Looped)
+			SDL_PutAudioStreamData(Stream, audio.Data, AdditionalAmount);
+		else
+			SDL_PauseAudioStreamDevice(Stream);
+
+		sound->BytePosition = 0;
+	}
+	else
+	{
+		int len = std::min(AdditionalAmount, static_cast<int>(audio.DataSize - sound->BytePosition));
+
+		SDL_PutAudioStreamData(Stream, audio.Data + sound->BytePosition, len);
+	}
+
+	sound->Position = (float)sound->BytePosition / (float)audio.Spec.freq;
+	sound->BytePosition += AdditionalAmount;
+
+	ComponentsBufferReAllocMutex.unlock();
+}
+
 void EcSound::Update(double)
 {
 	SDL_AudioStream* stream = (SDL_AudioStream*)m_AudioStream;
@@ -211,80 +226,124 @@ void EcSound::Update(double)
 	if (!stream)
 		return;
 
-	if (!Object->Enabled && !SDL_AudioStreamDevicePaused(stream))
-		if (!SDL_PauseAudioStreamDevice(stream))
-			throw("Failed to pause audio stream (in ::Update): " + std::string(SDL_GetError()));
+	else if (const std::future<bool>& f = AudioStreamPromises[EcId].get_future();
+		!f.valid() || f.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready
+	)
+		return;
+	
+	if (Object->Enabled)
+		if (SDL_AudioStreamDevicePaused(stream) == m_PlayRequested)
+			if (m_PlayRequested)
+				if (!SDL_ResumeAudioStreamDevice(stream))
+					throw("Failed to resume audio stream when it was requested: " + std::string(SDL_GetError()));
+			else
+				if (!SDL_PauseAudioStreamDevice(stream))
+					throw("Failed to pause audio stream when it was requested: " + std::string(SDL_GetError()));
+	else
+		if (!SDL_AudioStreamDevicePaused(stream))
+			throw("Failed to pause audio stream of a disabled Sound: " + std::string(SDL_GetError()));
 }
 
 void EcSound::Reload()
 {
+	if (!FinishedLoading)
+		throw("Cannot `::Reload` a Sound while it is still loading");
+
 	if (m_AudioStream)
 		SDL_DestroyAudioStream((SDL_AudioStream*)m_AudioStream);
 
 	m_AudioStream = nullptr;
 
-	static std::string ResDir = EngineJsonConfig.value("ResourcesDirectory", "resources/");
+	std::string ResDir = EngineJsonConfig.value("ResourcesDirectory", "resources/");
 
-	AudioAsset audio{};
+	FinishedLoading = false;
 
-	if (const auto& it = AudioAssets.find(SoundFile); it == AudioAssets.end())
-	{
-		/*
-		SDL_AudioSpec fileSpec{};
-		uint8_t* fileData{};
-		uint32_t fileDataLen{};
-		*/
+	std::promise<bool> begone;
+	AudioStreamPromises[EcId].swap(begone);
 
-		bool success = SDL_LoadWAV(
-			(ResDir + SoundFile).c_str(),
-			&audio.Spec,
-			&audio.Data,
-			&audio.DataSize
-		);
+	std::thread(
+		[ResDir](uint32_t SoundEcId, std::string RequestedSoundFile)
+		{
+			AudioAsset audio{};
 
-		if (!success)
-			throw("Failed to load sound file: " + std::string(SDL_GetError()));
+			AudioAssetsMutex.lock();
 
-		/*
-		// `SDL_ConvertAudioSamples` takes `int*` as the length
-		// instead of `uint32_t*`?? why 26/01/2025
-		int dataLen{};
+			if (const auto& it = AudioAssets.find(RequestedSoundFile); it == AudioAssets.end())
+			{
+				/*
+				SDL_AudioSpec fileSpec{};
+				uint8_t* fileData{};
+				uint32_t fileDataLen{};
+				*/
+			
+				bool success = SDL_LoadWAV(
+					(ResDir + RequestedSoundFile).c_str(),
+					&audio.Spec,
+					&audio.Data,
+					&audio.DataSize
+				);
+			
+				if (!success)
+					throw("Failed to load sound file: " + std::string(SDL_GetError()));
+			
+				/*
+				// `SDL_ConvertAudioSamples` takes `int*` as the length
+				// instead of `uint32_t*`?? why 26/01/2025
+				int dataLen{};
+			
+				bool cvtSuccess = SDL_ConvertAudioSamples(
+					&fileSpec,
+					fileData,
+					fileDataLen,
+					&AudioSpec,
+					&audio.Data,
+					&dataLen
+				);
+			
+				if (!cvtSuccess)
+					throw("Failed to convert audio: " + std::string(SDL_GetError()));
+			
+				audio.DataSize = static_cast<uint32_t>(dataLen);
+				*/
+			
+				AudioAssets[RequestedSoundFile] = audio;
+			}
+			else
+				audio = it->second;
+			
+			AudioAssetsMutex.unlock();
 
-		bool cvtSuccess = SDL_ConvertAudioSamples(
-			&fileSpec,
-			fileData,
-			fileDataLen,
-			&AudioSpec,
-			&audio.Data,
-			&dataLen
-		);
+			SDL_AudioStream* stream = SDL_OpenAudioDeviceStream(
+				SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
+				&audio.Spec,
+				NULL,
+				nullptr
+			);
+		
+			if (!stream)
+				throw("Failed to create audio stream: " + std::string(SDL_GetError()));
 
-		if (!cvtSuccess)
-			throw("Failed to convert audio: " + std::string(SDL_GetError()));
+			SDL_SetAudioStreamGetCallback(stream, streamCallback, (void*)static_cast<uint64_t>(SoundEcId));
 
-		audio.DataSize = static_cast<uint32_t>(dataLen);
-		*/
+			ComponentsBufferReAllocMutex.lock();
 
-		AudioAssets[SoundFile] = audio;
-	}
-	else
-		audio = it->second;
+			EcSound* sound = static_cast<EcSound*>(Instance.GetComponent(SoundEcId));
 
-	Length = (float)audio.DataSize / (float)audio.Spec.freq;
+			sound->Length = (float)audio.DataSize / (float)audio.Spec.freq;
+			sound->BytePosition = 1;
+			sound->m_AudioStream = stream;
+			sound->FinishedLoading = true;
 
-	SDL_AudioStream* stream = SDL_OpenAudioDeviceStream(
-		SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
-		&audio.Spec,
-		NULL,
-		nullptr
-	);
-	m_AudioStream = stream;
+			if (sound->m_PlayRequested)
+				SDL_ResumeAudioStreamDevice(stream);
+			else
+				SDL_PauseAudioStreamDevice(stream);
 
-	if (!stream)
-		throw("Failed to create audio stream: " + std::string(SDL_GetError()));
+			AudioStreamPromises[SoundEcId].set_value(true);
 
-	SDL_SetAudioStreamGetCallback(stream, streamCallback, this);
-
-	SDL_PauseAudioStreamDevice(stream);
-	BytePosition = 1;
+			ComponentsBufferReAllocMutex.unlock();
+		},
+		EcId,
+		SoundFile
+	).detach();
 }

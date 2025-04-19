@@ -134,7 +134,7 @@ EcParticleEmitter::EcParticleEmitter()
 
 	this->PossibleImages = { 1 };
 
-	this->VelocityOverTime.InsertKey(ValueSequenceKeypoint<glm::vec3>(0.00f, glm::vec3(0.f, 5.0f, 0.f)));
+	this->VelocityOverTime.InsertKey(ValueSequenceKeypoint<glm::vec3>(0.00f, glm::vec3(0.f, 5.0f, 0.f), 15.f));
 	this->VelocityOverTime.InsertKey(ValueSequenceKeypoint<glm::vec3>(0.75f, glm::vec3(0.f, 2.5f, 0.f)));
 	this->VelocityOverTime.InsertKey(ValueSequenceKeypoint<glm::vec3>(1.00f, glm::vec3(0.f, 0.0f, 0.f)));
 
@@ -190,7 +190,7 @@ void EcParticleEmitter::Update(double DeltaTime)
 
 		float numimages = (float)this->PossibleImages.size();
 
-		std::uniform_real_distribution<double> randIndex(0, numimages);
+		std::uniform_real_distribution<float> randIndex(0.f, numimages);
 		std::uniform_real_distribution<float> lifetimeDist(this->Lifetime.X, this->Lifetime.Y);
 
 		EcTransformable* ct = Object->GetComponent<EcTransformable>();
@@ -224,7 +224,7 @@ void EcParticleEmitter::Update(double DeltaTime)
 	}
 }
 
-void EcParticleEmitter::AppendToRenderList(std::vector<RenderItem> RenderList)
+void EcParticleEmitter::AppendToRenderList(std::vector<RenderItem>& RenderList)
 {
 	if (m_Particles.empty())
 		return;

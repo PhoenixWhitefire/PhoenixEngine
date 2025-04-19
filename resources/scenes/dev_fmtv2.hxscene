@@ -448,6 +448,11 @@ PHNXENGI
       "Transparency": 0.0
     },
     {
+      "$_class": "ParticleEmitter",
+      "$_objectId": 9999,
+      "Parent": 72
+    },
+    {
       "$_class": "Mesh",
       "$_objectId": 72,
       "Asset": "meshes/models/crow-b.glb/pasted__L_Eye_pasted__polySurface122_pasted__lambert2_0.hxmesh",

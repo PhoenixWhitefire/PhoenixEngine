@@ -9,7 +9,7 @@
 template <class T> class ValueSequenceKeypoint
 {
 public:
-	ValueSequenceKeypoint(float time, T value);
+	ValueSequenceKeypoint(float Time, T Value, float Envelope = 0.f);
 
 	float Time; // Time in the sequence
 	T Value; // Value at this point in time
@@ -20,7 +20,7 @@ template <class T> class ValueSequence
 { //IMPORTANT: ValueSequence<type>: 'type' should support math operations - '-', '*', '+'
 public:
 	ValueSequence(const std::vector<ValueSequenceKeypoint<T>>& InitKeys);
-	ValueSequence();
+	ValueSequence() = default;
 
 	T GetValue(float Time);
 	void InsertKey(const ValueSequenceKeypoint<T>& Key);
@@ -35,26 +35,26 @@ private:
 static std::default_random_engine RandGenerator = std::default_random_engine(static_cast<unsigned int>(time(NULL)));
 static std::uniform_real_distribution<float> EnvelopDist(0.f, 1.f);
 
-template <class T> ValueSequenceKeypoint<T>::ValueSequenceKeypoint(float time, T value)
-	: Value(value), Time(time), Envelope(0.f)
+template <class T>
+ValueSequenceKeypoint<T>::ValueSequenceKeypoint(float time, T value, float envelope)
+	: Value(value), Time(time), Envelope(envelope)
 {
 }
 
-template <class T> ValueSequence<T>::ValueSequence(const std::vector<ValueSequenceKeypoint<T>>& initialKeys)
+template <class T>
+ValueSequence<T>::ValueSequence(const std::vector<ValueSequenceKeypoint<T>>& initialKeys)
 	: m_Keys(initialKeys)
 {
 }
 
-template <class T> ValueSequence<T>::ValueSequence()
-{
-}
-
-template <typename T> bool m_compare(ValueSequenceKeypoint<T> A, ValueSequenceKeypoint<T> B)
+template <typename T>
+bool m_Compare(ValueSequenceKeypoint<T> A, ValueSequenceKeypoint<T> B)
 {
 	return (A.Time < B.Time);
 }
 
-template <class T> T ValueSequence<T>::GetValue(float Time)
+template <class T>
+T ValueSequence<T>::GetValue(float Time)
 {
 	if (m_Keys.empty())
 		return T();
@@ -62,13 +62,16 @@ template <class T> T ValueSequence<T>::GetValue(float Time)
 	if (m_Keys.size() == 1)
 		return m_Keys[0].Value;
 
-	//float deviation = EnvelopDist(RandGenerator);
+	static std::default_random_engine RandGenerator;
+	static std::uniform_real_distribution<float> RealDistribution{ -1.f, 1.f };
+
+	float deviation = RealDistribution(RandGenerator);
 
 	if (Time == 0.f)
-		return m_Keys[0].Value;// + (m_Keys[0].Envelope * deviation);
+		return m_Keys[0].Value + (m_Keys[0].Envelope * deviation);
 
 	if (Time == 1.f)
-		return m_Keys.back().Value;// + (m_Keys[m_Keys.size() - 1].Envelope * deviation);
+		return m_Keys.back().Value + (m_Keys[m_Keys.size() - 1].Envelope * deviation);
 
 	for (size_t keyIndex = 0; keyIndex < (m_Keys.size() - 1); keyIndex++)
 	{
@@ -79,21 +82,23 @@ template <class T> T ValueSequence<T>::GetValue(float Time)
 		{
 			float alpha = (Time - currentKey.Time) / (nextKey.Time - currentKey.Time);
 
-			//float enveLerp = currentKey.Envelope + (nextKey.Envelope - currentKey.Envelope) * alpha;
+			float enveLerp = currentKey.Envelope + (nextKey.Envelope - currentKey.Envelope) * alpha;
 
-			return ((nextKey.Value - currentKey.Value) * alpha + currentKey.Value);// + (enveLerp * deviation);
+			return ((nextKey.Value - currentKey.Value) * alpha + currentKey.Value) + (enveLerp * deviation);
 		}
 	}
 
 	return T();
 }
 
-template <class T> std::vector<ValueSequenceKeypoint<T>> ValueSequence<T>::GetKeys()
+template <class T>
+std::vector<ValueSequenceKeypoint<T>> ValueSequence<T>::GetKeys()
 {
 	return m_Keys;
 }
 
-template <class T> std::vector<T> ValueSequence<T>::GetKeysValues()
+template <class T>
+std::vector<T> ValueSequence<T>::GetKeysValues()
 {
 	std::vector<T> values;
 	values.reserve(m_Keys.size());
@@ -104,7 +109,8 @@ template <class T> std::vector<T> ValueSequence<T>::GetKeysValues()
 	return values;
 }
 
-template <class T> void ValueSequence<T>::InsertKey(const ValueSequenceKeypoint<T>& Key)
+template <class T>
+void ValueSequence<T>::InsertKey(const ValueSequenceKeypoint<T>& Key)
 {
 	m_Keys.push_back(Key);
 

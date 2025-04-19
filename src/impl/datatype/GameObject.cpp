@@ -541,7 +541,7 @@ std::vector<GameObject*> GameObject::GetChildren()
 	{
 		GameObject* child = GameObject::GetObjectById(m_Children[index]);
 
-		if (child)
+		if (child && child->Valid)
 			children.push_back(child);
 		else
 			m_Children.erase(m_Children.begin() + index);

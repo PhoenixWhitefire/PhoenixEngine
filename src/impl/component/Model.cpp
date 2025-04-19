@@ -7,6 +7,8 @@ public:
     virtual uint32_t CreateComponent(GameObject* Object) final
     {
         m_Components.emplace_back();
+        Object->AddComponent(EntityComponent::Transformable);
+        
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
 

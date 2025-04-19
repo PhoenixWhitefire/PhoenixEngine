@@ -21,7 +21,7 @@ SoundStinger = GameObject.new("Sound")
 SoundStinger.Name = "SoundStinger"
 SoundStinger.SoundFile = "sounds/undertaleost_ruins_stinger.wav"
 SoundStinger.Serializes = false
-SoundStinger.Parent = workspace
+SoundStinger.Parent = workspace.Level
 
 local function reset()
 	CharacterController:InitDefault()
@@ -80,13 +80,21 @@ function Update(DeltaTime)
 		CharacterController:Update(DeltaTime)
 		
 		if input_keypressed("e") and TotalTime - lastSwitchedPerspectives > 0.25 then
+			blorbs = blorbs or (function()
+				blorbs = GameObject.new("Model")
+				blorbs.Name = "blorbs"
+				blorbs.Parent = workspace
+
+				return blorbs
+			end)()
+
 			lastSwitchedPerspectives = TotalTime
 			local bruh = Character:Duplicate()
 			bruh.Name = "bruh"
 			bruh.Transform = Matrix.fromTranslation((Character.Transform * Matrix.fromTranslation(0, 0, 7)).Position)
 			bruh.LinearVelocity = Character.Transform.Forward * 100
 			bruh.PhysicsDynamics = true
-			bruh.Parent = workspace
+			bruh.Parent = blorbs
 			SoundStinger.Position = 0
 			SoundStinger.Playing = true
 		end

@@ -79,6 +79,7 @@
     "Sound": {
       "Functions": null,
       "Properties": {
+        "FinishedLoading": "Bool READONLY",
         "Length": "Double READONLY",
         "Looped": "Bool",
         "Playing": "Bool",

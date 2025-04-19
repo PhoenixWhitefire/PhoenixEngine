@@ -381,7 +381,9 @@ static void recursivelyTravelHierarchy(
 	std::vector<GameObject*>& PhysicsList,
 	GameObjectRef Root,
 	EcCamera* SceneCamera,
-	double DeltaTime
+	double DeltaTime,
+	glm::mat4 AggregateTransform = glm::mat4(1.f),
+	Vector3 AggregateScale = Vector3(1.f, 1.f, 1.f)
 )
 {
 	ZoneScopedC(tracy::Color::LightGoldenrod);
