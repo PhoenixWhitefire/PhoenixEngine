@@ -5,11 +5,11 @@
 #include "datatype/GameObject.hpp"
 #include "datatype/Vector3.hpp"
 
-struct EcTransformable
+struct EcTransform
 {
     glm::mat4 Transform{ 1.f };
     Vector3 Size{ 1.f, 1.f, 1.f };
     GameObjectRef Object;
 
-    static inline EntityComponent Type = EntityComponent::Transformable;
+    static inline EntityComponent Type = EntityComponent::Transform;
 };

@@ -1,0 +1,6 @@
+{
+  "Fragment": "shaders/worldUber.frag",
+  "Geometry": "shaders/worldUber.geom",
+  "InheritUniformsOf": "",
+  "Vertex": "shaders/grasssway.vert"
+}

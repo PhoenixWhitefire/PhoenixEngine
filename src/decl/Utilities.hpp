@@ -12,7 +12,7 @@
 #define PHX_ENSURE(expr) if (!(expr)) throw("Check failed: " + std::string(#expr))
 #else
 #define PHX_ENSURE_MSG(expr, err) assert(expr)
-#define PHX_ENSURE(expr, err) assert(expr)
+#define PHX_ENSURE(expr) assert(expr)
 #endif
 
 #include <string>

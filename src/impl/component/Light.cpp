@@ -2,7 +2,7 @@
 
 #include "component/Light.hpp"
 #include "datatype/Vector3.hpp"
-#include "component/Transformable.hpp"
+#include "component/Transform.hpp"
 
 #define LIGHT_APIS(t) EC_PROP_SIMPLE_NGV(t, LightColor, Color), \
 EC_PROP_SIMPLE(t, Brightness, Double), \
@@ -15,8 +15,8 @@ public:
     {
         m_Components.emplace_back();
 		
-        if (!Object->GetComponent<EcTransformable>())
-		    Object->AddComponent(EntityComponent::Transformable);
+        if (!Object->GetComponent<EcTransform>())
+		    Object->AddComponent(EntityComponent::Transform);
 
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
@@ -77,8 +77,8 @@ public:
         m_Components.emplace_back();
         m_Components.back().Object = Object;
 
-        if (!Object->GetComponent<EcTransformable>())
-		    Object->AddComponent(EntityComponent::Transformable);
+        if (!Object->GetComponent<EcTransform>())
+		    Object->AddComponent(EntityComponent::Transform);
 
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
@@ -116,11 +116,11 @@ public:
                 [](void* p)
                 -> Reflection::GenericValue
                 {
-                    return Vector3(glm::vec3(static_cast<EcDirectionalLight*>(p)->Object->GetComponent<EcTransformable>()->Transform[3])).ToGenericValue();
+                    return Vector3(glm::vec3(static_cast<EcDirectionalLight*>(p)->Object->GetComponent<EcTransform>()->Transform[3])).ToGenericValue();
                 },
                 [](void* p, const Reflection::GenericValue& gv)
                 {
-                    static_cast<EcDirectionalLight*>(p)->Object->GetComponent<EcTransformable>()->Transform[3] = glm::vec4((glm::vec3)Vector3(gv), 1.f);
+                    static_cast<EcDirectionalLight*>(p)->Object->GetComponent<EcTransform>()->Transform[3] = glm::vec4((glm::vec3)Vector3(gv), 1.f);
                 }
             )
         };
@@ -150,8 +150,8 @@ public:
     {
         m_Components.emplace_back();
 		
-        if (!Object->GetComponent<EcTransformable>())
-		    Object->AddComponent(EntityComponent::Transformable);
+        if (!Object->GetComponent<EcTransform>())
+		    Object->AddComponent(EntityComponent::Transform);
 
         return static_cast<uint32_t>(m_Components.size() - 1);
     }

@@ -4,7 +4,7 @@
 #include "PhysicsEngine.hpp"
 #include "IntersectionLib.hpp"
 #include "PerformanceTiming.hpp"
-#include "component/Transformable.hpp"
+#include "component/Transform.hpp"
 #include "component/Mesh.hpp"
 
 struct Collision
@@ -21,7 +21,7 @@ static void applyGlobalForces(std::vector<GameObject*>& World, double DeltaTime)
 	for (GameObject* object : World)
 	{
 		EcMesh* cm = object->GetComponent<EcMesh>();
-		EcTransformable* ct = object->GetComponent<EcTransformable>();
+		EcTransform* ct = object->GetComponent<EcTransform>();
 		assert(ct);
 
 		cm->Mass = cm->Density * ct->Size.X * ct->Size.Y * ct->Size.Z;
@@ -48,7 +48,7 @@ static void moveDynamics(std::vector<GameObject*>& World, double DeltaTime)
 	for (GameObject* object : World)
 		if (EcMesh* cm = object->GetComponent<EcMesh>(); cm->PhysicsDynamics)
 		{
-			EcTransformable* ct = object->GetComponent<EcTransformable>();
+			EcTransform* ct = object->GetComponent<EcTransform>();
 
 			const glm::vec3& curPos = ct->Transform[3];
 			glm::vec3 newPos = curPos + (glm::vec3)(cm->LinearVelocity * DeltaTime);
@@ -67,7 +67,7 @@ static void resolveCollisions(std::vector<GameObject*>& World, double DeltaTime)
 	for (GameObject* a : World)
 	{
 		EcMesh* am = a->GetComponent<EcMesh>();
-		EcTransformable* at = a->GetComponent<EcTransformable>();
+		EcTransform* at = a->GetComponent<EcTransform>();
 
 		if (!am->PhysicsCollisions)
 			continue;
@@ -81,7 +81,7 @@ static void resolveCollisions(std::vector<GameObject*>& World, double DeltaTime)
 				continue;
 
 			EcMesh* bm = b->GetComponent<EcMesh>();
-			EcTransformable* bt = b->GetComponent<EcTransformable>();
+			EcTransform* bt = b->GetComponent<EcTransform>();
 
 			if (!bm->PhysicsCollisions)
 				continue;
@@ -123,8 +123,8 @@ static void resolveCollisions(std::vector<GameObject*>& World, double DeltaTime)
 
 		EcMesh* am = collision.A->GetComponent<EcMesh>();
 		EcMesh* bm = collision.B->GetComponent<EcMesh>();
-		EcTransformable* at = collision.A->GetComponent<EcTransformable>();
-		EcTransformable* bt = collision.B->GetComponent<EcTransformable>();
+		EcTransform* at = collision.A->GetComponent<EcTransform>();
+		EcTransform* bt = collision.B->GetComponent<EcTransform>();
 
 		if (am->PhysicsDynamics && !bm->PhysicsDynamics)
 		{

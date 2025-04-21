@@ -26,6 +26,7 @@ namespace ScriptEngine
 		lua_State* Coroutine{};
 		int CoroutineReference{};
 		std::shared_future<Reflection::GenericValue> Future;
+		uint32_t ScriptId = PHX_GAMEOBJECT_NULL_ID;
 	};
 
 	extern std::vector<YieldedCoroutine> s_YieldedCoroutines;

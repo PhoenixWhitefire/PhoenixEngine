@@ -26,7 +26,7 @@
 
 enum class EntityComponent : uint8_t
 {
-	Transformable,
+	Transform,
 	Mesh,
 	ParticleEmitter,
 	Script,
@@ -45,7 +45,7 @@ enum class EntityComponent : uint8_t
 
 static inline const std::string_view s_EntityComponentNames[] = 
 {
-	"Transformable",
+	"Transform",
 	"Mesh",
 	"ParticleEmitter",
 	"Script",
@@ -62,7 +62,7 @@ static inline const std::string_view s_EntityComponentNames[] =
 
 static inline const std::unordered_map<std::string_view, EntityComponent> s_ComponentNameToType = 
 {
-	{ "Transformable", EntityComponent::Transformable },
+	{ "Transform", EntityComponent::Transform },
 	{ "Mesh", EntityComponent::Mesh },
 	{ "ParticleEmitter", EntityComponent::ParticleEmitter },
 	{ "Script", EntityComponent::Script },
@@ -201,9 +201,8 @@ private:
 	uint8_t m_HardRefCount = 0;
 };
 
-class GameObjectRef
+struct GameObjectRef
 {
-public:
 	GameObjectRef() = default;
 
 	GameObjectRef(GameObject* Object)
@@ -241,6 +240,15 @@ public:
 
 		return g;
 	}
+
+	void Invalidate()
+	{
+		PHX_ENSURE(m_TargetId != PHX_GAMEOBJECT_NULL_ID);
+
+		m_TargetId = 0;
+	}
+
+	uint32_t m_TargetId = PHX_GAMEOBJECT_NULL_ID;
 
 	bool operator == (GameObject* them) const
 	{
@@ -289,7 +297,4 @@ public:
 	{
 		return Contained();
 	}
-
-private:
-	uint32_t m_TargetId = PHX_GAMEOBJECT_NULL_ID;
 };

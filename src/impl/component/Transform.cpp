@@ -1,8 +1,8 @@
-#include "component/Transformable.hpp"
+#include "component/Transform.hpp"
 #include "component/Mesh.hpp"
 #include "datatype/GameObject.hpp"
 
-class TransformablesManager : BaseComponentManager
+class TransformsManager : BaseComponentManager
 {
 public:
     virtual uint32_t CreateComponent(GameObject* Object) final
@@ -18,7 +18,7 @@ public:
         std::vector<void*> v;
         v.reserve(m_Components.size());
 
-        for (const EcTransformable& t : m_Components)
+        for (const EcTransform& t : m_Components)
             v.push_back((void*)&t);
         
         return v;
@@ -41,10 +41,10 @@ public:
             EC_PROP(
                 "Transform",
                 Matrix,
-                EC_GET_SIMPLE(EcTransformable, Transform),
+                EC_GET_SIMPLE(EcTransform, Transform),
                 [](void* p, const Reflection::GenericValue& gv)
                 {
-                    EcTransformable* ct = static_cast<EcTransformable*>(p);
+                    EcTransform* ct = static_cast<EcTransform*>(p);
                     ct->Transform = gv.AsMatrix();
 
                     if (EcMesh* cm = ct->Object->GetComponent<EcMesh>())
@@ -55,10 +55,10 @@ public:
             EC_PROP(
                 "Size",
                 Vector3,
-                EC_GET_SIMPLE_TGN(EcTransformable, Size),
+                EC_GET_SIMPLE_TGN(EcTransform, Size),
                 [](void* p, const Reflection::GenericValue& gv)
                 {
-                    EcTransformable* ct = static_cast<EcTransformable*>(p);
+                    EcTransform* ct = static_cast<EcTransform*>(p);
                     ct->Size = Vector3(gv);
 
                     if (EcMesh* cm = ct->Object->GetComponent<EcMesh>())
@@ -76,13 +76,13 @@ public:
         return funcs;
     }
 
-    TransformablesManager()
+    TransformsManager()
     {
-        GameObject::s_ComponentManagers[(size_t)EntityComponent::Transformable] = this;
+        GameObject::s_ComponentManagers[(size_t)EntityComponent::Transform] = this;
     }
 
 private:
-    std::vector<EcTransformable> m_Components;
+    std::vector<EcTransform> m_Components;
 };
 
-static inline TransformablesManager Instance{};
+static inline TransformsManager Instance{};

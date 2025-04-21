@@ -1,5 +1,5 @@
 #include "component/Mesh.hpp"
-#include "component/Transformable.hpp"
+#include "component/Transform.hpp"
 
 #include "asset/MaterialManager.hpp"
 #include "asset/MeshProvider.hpp"
@@ -12,8 +12,8 @@ public:
     {
         m_Components.emplace_back();
 
-		if (!Object->GetComponent<EcTransformable>())
-			Object->AddComponent(EntityComponent::Transformable);
+		if (!Object->GetComponent<EcTransform>())
+			Object->AddComponent(EntityComponent::Transform);
 		
 		m_Components.back().MaterialId = MaterialManager::Get()->LoadFromPath("plastic");
 		m_Components.back().Object = Object;
@@ -144,7 +144,7 @@ void EcMesh::SetRenderMesh(const std::string_view& Mesh)
 
 void EcMesh::RecomputeAabb()
 {
-	EcTransformable* ct = this->Object->GetComponent<EcTransformable>();
+	EcTransform* ct = this->Object->GetComponent<EcTransform>();
 	const glm::mat4& transform = ct->Transform;
 	const glm::vec3& glmsize = ct->Size;
 

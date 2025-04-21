@@ -767,11 +767,17 @@ static void init(int argc, char** argv)
 		Log::Warning("More than 1 root object in the World, anything other than the first will be ignored");
 
 	PHX_ENSURE_MSG(!roots.empty(), "No root objects in World!");
-	PHX_ENSURE_MSG(roots[0]->GetComponent<EcDataModel>(), "Root Object was not a DataModel!");
+
+	GameObject* root = roots[0].Contained();
+	// NEED to get rid of all the references before we `::MergeWith`!!  otherwise will crash because
+	// root gets deleted!!!!
+	roots.clear();
+
+	PHX_ENSURE_MSG(root->GetComponent<EcDataModel>(), "Root Object was not a DataModel!");
 
 	Log::Info("Merging Root Scene with active Data Model...");
 
-	EngineInstance->DataModel->MergeWith(roots[0].Contained());
+	EngineInstance->DataModel->MergeWith(root);
 }
 
 int main(int argc, char** argv)

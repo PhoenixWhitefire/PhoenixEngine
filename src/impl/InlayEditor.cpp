@@ -1167,7 +1167,7 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 		ImGui::AlignTextToFramePadding();
 
 		std::pair<EntityComponent, uint32_t> primaryComponent = object->GetComponents()[0];
-		if (primaryComponent.first == EntityComponent::Transformable && object->GetComponents().size() > 1)
+		if (primaryComponent.first == EntityComponent::Transform && object->GetComponents().size() > 1)
 			primaryComponent = object->GetComponents()[1];
 
 		std::string classIconPath = "textures/editor-icons/" + std::string(s_EntityComponentNames[(size_t)primaryComponent.first]) + ".png";

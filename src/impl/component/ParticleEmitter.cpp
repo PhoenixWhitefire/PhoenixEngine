@@ -2,7 +2,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "component/ParticleEmitter.hpp"
-#include "component/Transformable.hpp"
+#include "component/Transform.hpp"
 #include "asset/MaterialManager.hpp"
 #include "asset/MeshProvider.hpp"
 
@@ -19,8 +19,8 @@ public:
         m_Components.emplace_back();
         m_Components.back().Object = Object;
 
-		if (!Object->GetComponent<EcTransformable>())
-			Object->AddComponent(EntityComponent::Transformable);
+		if (!Object->GetComponent<EcTransform>())
+			Object->AddComponent(EntityComponent::Transform);
 
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
@@ -193,7 +193,7 @@ void EcParticleEmitter::Update(double DeltaTime)
 		std::uniform_real_distribution<float> randIndex(0.f, numimages);
 		std::uniform_real_distribution<float> lifetimeDist(this->Lifetime.X, this->Lifetime.Y);
 
-		EcTransformable* ct = Object->GetComponent<EcTransformable>();
+		EcTransform* ct = Object->GetComponent<EcTransform>();
 
 		Particle newParticle
 		{
@@ -237,7 +237,7 @@ void EcParticleEmitter::AppendToRenderList(std::vector<RenderItem>& RenderList)
 		QuadMeshId = mp->LoadFromPath("!Quad");
 	}
 
-	EcTransformable* ct = Object->GetComponent<EcTransformable>();
+	EcTransform* ct = Object->GetComponent<EcTransform>();
 
 	for (size_t index = 0; index < m_Particles.size(); index++)
 	{

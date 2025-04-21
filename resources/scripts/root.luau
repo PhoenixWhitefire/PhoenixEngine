@@ -162,5 +162,5 @@ end
 loadSubLevel(DefaultSubLevel)
 
 if not conf_get("Developer") then
-	--Update = nil
+	Update = nil
 end

@@ -12,7 +12,7 @@
 #include <tracy/Tracy.hpp>
 
 #include "component/ScriptEngine.hpp"
-#include "component/Transformable.hpp"
+#include "component/Transform.hpp"
 #include "component/Mesh.hpp"
 
 #include "datatype/GameObject.hpp"
@@ -217,12 +217,15 @@ static void luaTableToJson(lua_State* L, nlohmann::json& json)
 
 int ScriptEngine::CompileAndLoad(lua_State* L, const std::string& SourceCode, const std::string& ChunkName)
 {
+	ZoneScoped;
+	
 	// Tell Luau that these are mutable. Otherwise, GETIMPORT optimizations
-	// will cause them to be treated as constants and only invoke their `__index` function
-	// when the VM first resumes
+	// will cause them to be treated as constants and only invoke their `__index` functions
+	// once and cache the result
 	const char* mutableGlobals[] = 
 	{
-		"game", "workspace", "script"
+		"game", "workspace", "script",
+		NULL
 	};
 
 	Luau::CompileOptions compileOptions;
@@ -684,6 +687,11 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 		{
 			double sleepTime = luaL_checknumber(L, 1);
 
+			// TODO a kind of hack to get what script we're running as?
+			lua_getglobal(L, "Script");
+			Reflection::GenericValue script = ScriptEngine::L::LuaValueToGeneric(L, -1);
+			uint32_t scriptId = GameObject::FromGenericValue(script)->ObjectId;
+
 			lua_yield(L, 1);
 
 			// `lua_yield` may fail with the "attempt to yield across metamethod/C-call boundary"
@@ -706,7 +714,8 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 					L,
 					// make sure the coroutine doesn't get de-alloc'd before we resume it
 					lua_ref(L, -1),
-					a.share()
+					a.share(),
+					scriptId
 				);
 			}
 
@@ -951,7 +960,7 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 					continue;
 
 				EcMesh* object = p->GetComponent<EcMesh>();
-				EcTransformable* ct = p->GetComponent<EcTransformable>();
+				EcTransform* ct = p->GetComponent<EcTransform>();
 
 				if (object && ct)
 				{
@@ -1026,7 +1035,7 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 					continue;
 
 				EcMesh* object = p->GetComponent<EcMesh>();
-				EcTransformable* ct = p->GetComponent<EcTransformable>();
+				EcTransform* ct = p->GetComponent<EcTransform>();
 
 				if (object && ct)
 				{
@@ -1099,7 +1108,7 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 				if (std::find(ignoreList.begin(), ignoreList.end(), p) != ignoreList.end())
 					continue;
 
-				EcTransformable* object = p->GetComponent<EcTransformable>();
+				EcTransform* object = p->GetComponent<EcTransform>();
 
 				if (object)
 				{
@@ -1390,6 +1399,11 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 			filter.name = luaL_optstring(L, 2, "All files");
 			filter.pattern = luaL_optstring(L, 3, "*");
 
+			// TODO a kind of hack to get what script we're running as?
+			lua_getglobal(L, "Script");
+			Reflection::GenericValue script = ScriptEngine::L::LuaValueToGeneric(L, -1);
+			uint32_t scriptId = GameObject::FromGenericValue(script)->ObjectId;
+
 			lua_yield(L, 1);
 
 			// `lua_yield` may fail with the "attempt to yield across metamethod/C-call boundary"
@@ -1424,7 +1438,8 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 					L,
 					// make sure the coroutine doesn't get de-alloc'd before we resume it
 					lua_ref(lua_mainthread(L), -1),
-					a.share()
+					a.share(),
+					scriptId
 				);
 			}
 
@@ -1454,6 +1469,11 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 			filter.pattern = luaL_optstring(L, 3, "*");
 
 			bool allowMultipleFiles = luaL_optboolean(L, 4, 0);
+
+			// TODO a kind of hack to get what script we're running as?
+			lua_getglobal(L, "Script");
+			Reflection::GenericValue script = ScriptEngine::L::LuaValueToGeneric(L, -1);
+			uint32_t scriptId = GameObject::FromGenericValue(script)->ObjectId;
 
 			lua_yield(L, 1);
 
@@ -1496,7 +1516,8 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 					L,
 					// make sure the coroutine doesn't get de-alloc'd before we resume it
 					lua_ref(lua_mainthread(L), -1),
-					a.share()
+					a.share(),
+					scriptId
 				);
 			}
 

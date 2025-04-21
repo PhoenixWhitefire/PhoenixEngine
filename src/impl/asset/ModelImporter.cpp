@@ -8,7 +8,7 @@
 #include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
 #include "asset/MeshProvider.hpp"
-#include "component/Transformable.hpp"
+#include "component/Transform.hpp"
 #include "component/Mesh.hpp"
 #include "component/Bone.hpp"
 #include "GlobalJsonConfig.hpp"
@@ -243,7 +243,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 			// TODO: cleanup code
 			object = GameObject::Create("Mesh");
 			EcMesh* meshObject = object->GetComponent<EcMesh>();
-			EcTransformable* ct = object->GetComponent<EcTransformable>();
+			EcTransform* ct = object->GetComponent<EcTransform>();
 
 			std::string saveDir = AssetPath;
 			size_t whereRes = AssetPath.find("resources/");
@@ -350,7 +350,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		else
 		{
 			object = GameObject::Create("Mesh");
-			EcTransformable* prim = object->GetComponent<EcTransformable>();
+			EcTransform* prim = object->GetComponent<EcTransform>();
 			prim->Transform = node.Transform;
 			prim->Size = node.Scale;
 		}

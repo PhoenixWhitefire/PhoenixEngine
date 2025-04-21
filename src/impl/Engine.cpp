@@ -20,7 +20,7 @@
 #include "Engine.hpp"
 
 #include "component/ParticleEmitter.hpp"
-#include "component/Transformable.hpp"
+#include "component/Transform.hpp"
 #include "component/Camera.hpp"
 #include "component/Script.hpp"
 #include "component/Light.hpp"
@@ -405,7 +405,7 @@ static void recursivelyTravelHierarchy(
 			continue;
 			
 		EcMesh* object3D = object->GetComponent<EcMesh>();
-		EcTransformable* ct = object->GetComponent<EcTransformable>();
+		EcTransform* ct = object->GetComponent<EcTransform>();
 
 		if (object3D)
 		{
@@ -682,6 +682,8 @@ void Engine::Start()
 
 			if (skyboxLoaded)
 			{
+				ZoneScopedN("UploadSkyboxToGpu");
+				
 				glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemap);
 
 				for (int skyboxFaceIndex = 0; skyboxFaceIndex < 6; skyboxFaceIndex++)
@@ -1147,14 +1149,6 @@ Engine::~Engine()
 
 	Log::Save();
 
-	Log::Info("Destroying DataModel...");
-
-	// TODO:
-	// 27/08/2024:
-	// Even if I call the destructors here and clear the vector as well,
-	// C++ *still* calls them again at program exit as the scope terminates.
-	// It doesn't cause a use-after-free, YET
-	this->DataModel->Destroy();
 	GameObject::s_DataModel = PHX_GAMEOBJECT_NULL_ID;
 
 	EngineInstance = nullptr;
@@ -1163,4 +1157,6 @@ Engine::~Engine()
 	ImGui_ImplSDL3_Shutdown();
 
 	SDL_Quit();
+
+	// datamodel ref destructor is called, freeing the DM when this scope exits
 }

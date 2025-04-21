@@ -28,7 +28,7 @@ local function reset()
 	Character = CharacterController.Character
 	Character.Serializes = false
 	
-	Character.Parent = workspace
+	Character.Parent = workspace.Level
 	Character.Name = `Player`
 	Character.Transform = Matrix.fromTranslation(8, 10, 0)
 	

@@ -14,6 +14,8 @@
 #include "Memory.hpp"
 #include "Log.hpp"
 
+static lua_State* LVM = nullptr;
+
 class ScriptManager : BaseComponentManager
 {
 public:
@@ -51,7 +53,7 @@ public:
     {
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
 		if (lua_State* L = m_Components[Id].m_L)
-			lua_close(L);
+			lua_resetthread(L);
     }
 
     virtual const Reflection::PropertyMap& GetProperties() final
@@ -106,6 +108,12 @@ public:
 			return 0;
 		};
     }
+
+	~ScriptManager()
+	{
+		lua_close(LVM);
+		LVM = nullptr;
+	}
 
 private:
     std::vector<EcScript> m_Components;
@@ -325,8 +333,6 @@ static void* l_alloc(void*, void* ptr, size_t, size_t nsize)
 	else
 		return Memory::ReAlloc(ptr, nsize, Memory::Category::Luau);
 }
-
-static lua_State* LVM = nullptr;
 
 static lua_State* createVM()
 {

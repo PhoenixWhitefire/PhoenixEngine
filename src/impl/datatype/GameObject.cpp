@@ -333,7 +333,7 @@ GameObject* GameObject::GetObjectById(uint32_t Id)
 	if (Id == PHX_GAMEOBJECT_NULL_ID || s_WorldArray.size() - 1 < Id)
 		return nullptr;
 
-	return &s_WorldArray.at(Id);
+	return s_WorldArray.at(Id).Valid ? &s_WorldArray[Id] : nullptr;
 }
 
 static void validateRefCount(GameObject* Object, uint32_t RefCount)
@@ -378,7 +378,14 @@ void GameObject::Destroy()
 	this->IsDestructionPending = true;
 
 	if (this->ObjectId != PHX_GAMEOBJECT_NULL_ID)
+	{
 		s_WorldArray.at(this->ObjectId).Valid = false;
+
+		for (const std::pair<EntityComponent, uint32_t>& pair : m_Components)
+			s_ComponentManagers[(size_t)pair.first]->DeleteComponent(pair.second);
+		
+		m_Components.clear();
+	}
 
 	if (!wasDestructionPending)
 	{
@@ -616,6 +623,8 @@ GameObject* GameObject::FindChildWhichIsA(const std::string_view& Class)
 
 uint32_t GameObject::AddComponent(EntityComponent Type)
 {
+	PHX_ENSURE(Valid);
+
 	for (const std::pair<EntityComponent, uint32_t>& pair : m_Components)
 		if (pair.first == Type)
 			throw("Already have that component");

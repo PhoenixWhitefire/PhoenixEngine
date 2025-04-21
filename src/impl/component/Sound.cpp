@@ -176,6 +176,13 @@ public:
         GameObject::s_ComponentManagers[(size_t)EntityComponent::Sound] = this;
     }
 
+	~SoundManager()
+	{
+		for (auto& it : AudioAssets)
+			free(it.second.Data); // get leaksan to shut up
+		AudioAssets.clear();
+	}
+
 private:
     std::vector<EcSound> m_Components;
 };

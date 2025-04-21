@@ -10,7 +10,7 @@
 #include "asset/PrimitiveMeshes.hpp"
 #include "asset/MaterialManager.hpp"
 #include "asset/ModelImporter.hpp"
-#include "component/Transformable.hpp"
+#include "component/Transform.hpp"
 #include "component/Light.hpp"
 #include "component/Mesh.hpp"
 #include "FileRW.hpp"
@@ -34,7 +34,7 @@ static auto LoadModelAsMeshes(
 
 	for (GameObject* object : Loader.LoadedObjs)
 	{
-		EcTransformable* mesh = object->GetComponent<EcTransformable>();
+		EcTransform* mesh = object->GetComponent<EcTransform>();
 
 		if (mesh)
 		{
@@ -270,7 +270,7 @@ static std::vector<GameObjectRef> LoadMapVersion1(
 		GameObject* NewObject = GameObject::Create("Primitive");
 		Objects.push_back(NewObject);
 
-		EcTransformable* ct = NewObject->GetComponent<EcTransformable>();
+		EcTransform* ct = NewObject->GetComponent<EcTransform>();
 		EcMesh* cm = NewObject->GetComponent<EcMesh>();
 
 		NewObject->Name = Object.value("name", NewObject->Name);
@@ -344,7 +344,7 @@ static std::vector<GameObjectRef> LoadMapVersion1(
 		GameObject* Object = GameObject::Create(LightType);
 		Objects.push_back(Object);
 
-		EcTransformable* ct = Object->GetComponent<EcTransformable>();
+		EcTransform* ct = Object->GetComponent<EcTransform>();
 
 		ct->Transform = glm::translate(
 			glm::mat4(1.f),
