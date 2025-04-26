@@ -81,7 +81,7 @@ static void pushMatrix(lua_State* L, const glm::mat4& Matrix)
 static void pushGameObject(lua_State* L, GameObject* obj)
 {
 	uint32_t* ptrToObj = (uint32_t*)lua_newuserdata(L, sizeof(uint32_t));
-	*ptrToObj = obj ? obj->ObjectId : 0;
+	*ptrToObj = obj ? obj->ObjectId : PHX_GAMEOBJECT_NULL_ID;
 
 	luaL_getmetatable(L, "GameObject");
 	lua_setmetatable(L, -2);
@@ -428,6 +428,9 @@ int ScriptEngine::L::HandleFunctionCall(
 )
 {
 	Reflection::Function* func = refl->FindFunction(fname);
+	if (!func)
+		throw(std::vformat("Invalid function '{}'", std::make_format_args(fname)));
+
 	const std::vector<Reflection::ValueType>& paramTypes = func->Inputs;
 
 	int numParams = static_cast<int32_t>(paramTypes.size());
@@ -688,9 +691,11 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 			double sleepTime = luaL_checknumber(L, 1);
 
 			// TODO a kind of hack to get what script we're running as?
-			lua_getglobal(L, "Script");
+			lua_getglobal(L, "script");
 			Reflection::GenericValue script = ScriptEngine::L::LuaValueToGeneric(L, -1);
-			uint32_t scriptId = GameObject::FromGenericValue(script)->ObjectId;
+			GameObject* scriptObject = GameObject::FromGenericValue(script);
+			// modules currently do not have a `script` global
+			uint32_t scriptId = scriptObject ? scriptObject->ObjectId : PHX_GAMEOBJECT_NULL_ID;
 
 			lua_yield(L, 1);
 
@@ -1400,9 +1405,11 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 			filter.pattern = luaL_optstring(L, 3, "*");
 
 			// TODO a kind of hack to get what script we're running as?
-			lua_getglobal(L, "Script");
+			lua_getglobal(L, "script");
 			Reflection::GenericValue script = ScriptEngine::L::LuaValueToGeneric(L, -1);
-			uint32_t scriptId = GameObject::FromGenericValue(script)->ObjectId;
+			GameObject* scriptObject = GameObject::FromGenericValue(script);
+			// modules currently do not have a `script` global
+			uint32_t scriptId = scriptObject ? scriptObject->ObjectId : PHX_GAMEOBJECT_NULL_ID;
 
 			lua_yield(L, 1);
 
@@ -1471,9 +1478,11 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 			bool allowMultipleFiles = luaL_optboolean(L, 4, 0);
 
 			// TODO a kind of hack to get what script we're running as?
-			lua_getglobal(L, "Script");
+			lua_getglobal(L, "script");
 			Reflection::GenericValue script = ScriptEngine::L::LuaValueToGeneric(L, -1);
-			uint32_t scriptId = GameObject::FromGenericValue(script)->ObjectId;
+			GameObject* scriptObject = GameObject::FromGenericValue(script);
+			// modules currently do not have a `script` global
+			uint32_t scriptId = scriptObject ? scriptObject->ObjectId : PHX_GAMEOBJECT_NULL_ID;
 
 			lua_yield(L, 1);
 

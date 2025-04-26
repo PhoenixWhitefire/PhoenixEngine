@@ -379,7 +379,7 @@ static void recursivelyTravelHierarchy(
 	std::vector<RenderItem>& RenderList,
 	std::vector<LightItem>& LightList,
 	std::vector<GameObject*>& PhysicsList,
-	GameObjectRef Root,
+	const GameObjectRef& Root,
 	EcCamera* SceneCamera,
 	double DeltaTime,
 	glm::mat4 AggregateTransform = glm::mat4(1.f),
@@ -500,6 +500,11 @@ void Engine::Start()
 {
 	Log::Info("Final initializations...");
 
+	if (GameObject* wp = DataModel->FindChild("Workspace"); !wp)
+		throw("There is no Workspace!");
+	else
+		this->Workspace = wp;
+
 	MaterialManager* mtlManager = MaterialManager::Get();
 	TextureManager* texManager = TextureManager::Get();
 	MeshProvider* meshProvider = MeshProvider::Get();
@@ -619,24 +624,17 @@ void Engine::Start()
 
 		EcDataModel* cdm = DataModel->GetComponent<EcDataModel>();
 
-		GameObject* workspace = DataModel->FindChild("Workspace");
-
-		if (!workspace)
+		if (!GameObject::GetObjectById(Workspace.m_TargetId))
 		{
 			Log::Warning("Workspace was removed, shutting down");
 			break;
 		}
-
-		this->Workspace = workspace;
 
 		if (cdm->WantExit)
 		{
 			Log::Info("DataModel requested shutdown");
 			break;
 		}
-
-		// so we don't need to do additional checks past this point in the scope 11/01/2025
-		GameObjectRef keepWorkspace{ workspace };
 
 		RunningTime = GetRunningTime();
 		RendererContext.AccumulatedDrawCallCount = 0;

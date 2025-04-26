@@ -213,12 +213,12 @@ struct GameObjectRef
 		Object->IncrementHardRefs();
 	}
 
-	GameObjectRef(GameObjectRef& Other)
+	GameObjectRef(const GameObjectRef& Other)
 		: m_TargetId(Other.Contained()->ObjectId)
 	{
 		Contained()->IncrementHardRefs();
 	}
-	GameObjectRef(GameObjectRef&& Other)
+	GameObjectRef(const GameObjectRef&& Other)
 		: m_TargetId(Other.Contained()->ObjectId)
 	{
 		Contained()->IncrementHardRefs();
@@ -250,7 +250,7 @@ struct GameObjectRef
 
 	uint32_t m_TargetId = PHX_GAMEOBJECT_NULL_ID;
 
-	bool operator == (GameObject* them) const
+	bool operator == (const GameObject* them) const
 	{
 		return Contained() == them;
 	}
@@ -265,7 +265,7 @@ struct GameObjectRef
 		return Contained();
 	}
 
-	GameObjectRef& operator = (GameObjectRef&& ref)
+	GameObjectRef& operator = (const GameObjectRef&& ref)
 	{
 		if (m_TargetId != PHX_GAMEOBJECT_NULL_ID)
 			Contained()->DecrementHardRefs();
@@ -275,7 +275,7 @@ struct GameObjectRef
 
 		return *this;
 	}
-	GameObjectRef& operator = (GameObjectRef& ref)
+	GameObjectRef& operator = (const GameObjectRef& ref)
 	{
 		if (m_TargetId != PHX_GAMEOBJECT_NULL_ID)
 			Contained()->DecrementHardRefs();

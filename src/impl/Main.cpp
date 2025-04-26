@@ -209,6 +209,8 @@ static int findCmdLineArgument(
 	return -1;
 }
 
+#define hasCliArgument(strn) (findCmdLineArgument(argc, argv, strn) > 0)
+
 static void handleInputs(double deltaTime)
 {
 	Engine* EngineInstance = Engine::Get();
@@ -769,15 +771,16 @@ static void init(int argc, char** argv)
 	PHX_ENSURE_MSG(!roots.empty(), "No root objects in World!");
 
 	GameObject* root = roots[0].Contained();
-	// NEED to get rid of all the references before we `::MergeWith`!!  otherwise will crash because
-	// root gets deleted!!!!
-	roots.clear();
+	root->IncrementHardRefs();
 
 	PHX_ENSURE_MSG(root->GetComponent<EcDataModel>(), "Root Object was not a DataModel!");
 
 	Log::Info("Merging Root Scene with active Data Model...");
 
 	EngineInstance->DataModel->MergeWith(root);
+
+	roots.clear();
+	root->DecrementHardRefs(); // i'm dogshit at programming
 }
 
 int main(int argc, char** argv)
@@ -801,7 +804,7 @@ int main(int argc, char** argv)
 
 	try
 	{
-		if (findCmdLineArgument(argc, argv, "-tracyim") > 0)
+		if (hasCliArgument("-tracyim"))
 		{
 			launchTracy();
 
@@ -814,7 +817,13 @@ int main(int argc, char** argv)
 		// throws an exception, but it can't seem to catch it regardless?
 		// 10/01/2025
 		Engine engine{};
-
+		
+		if (hasCliArgument("-dev"))
+			EngineJsonConfig["Developer"] = true;
+			
+		else if (hasCliArgument("-nodev"))
+			EngineJsonConfig["Developer"] = false;
+		
 		init(argc, argv);
 		engine.Start();
 

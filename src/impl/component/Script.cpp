@@ -169,7 +169,7 @@ static auto api_gameobjindex = [](lua_State* L)
 				// of static typechecking, but worse at runtime because the DataModel is 
 				// NOT STATICALLY TYPECHECKED
 				// prorgammers should use `:FindChild` if they want this behavior
-				luaL_errorL(L, "No child or member '%s' of GameObject '%s'", key, obj->Name.c_str());
+				luaL_errorL(L, "No child or member '%s' of %s", key, obj->GetFullName().c_str());
 		}
 
 		return 1;
@@ -245,10 +245,17 @@ static auto api_gameobjnewindex = [](lua_State* L)
 		else
 		{
 			std::string fullname = obj->GetFullName();
-			luaL_errorL(L,
-				"Attempt to set invalid Member '%s' of '%s'",
-				key, fullname.c_str()
-			);
+
+			if (obj->FindChild(key))
+				luaL_errorL(L,
+					"Attempt to set invalid Member '%s' of '%s', although it has a child object with that name",
+					key, fullname.c_str()
+				);
+			else
+				luaL_errorL(L,
+					"Attempt to set invalid Member '%s' of '%s'",
+					key, fullname.c_str()
+				);
 		}
 
 		return 0;
@@ -596,6 +603,9 @@ static lua_State* createVM()
 
 				ZoneText(k, strlen(k));
 
+				if (!g->FindFunction(k))
+					luaL_errorL(L, "'%s' is not a valid method of %s", k, g->GetFullName().c_str());
+
 				int numresults = 0;
 
 				try
@@ -609,7 +619,7 @@ static lua_State* createVM()
 				}
 				catch (std::string err)
 				{
-					luaL_errorL(L, "Error while invoking method '%s' '%s': %s", k, g->Name.c_str(), err.c_str());
+					luaL_errorL(L, "Error while invoking method '%s' of %s: %s", k, g->GetFullName().c_str(), err.c_str());
 				}
 
 				return numresults;
@@ -673,37 +683,35 @@ static lua_State* createVM()
 static void dumpStacktrace(lua_State* L)
 {
 	lua_Debug ar;
-	std::string trace;
 
 	for (int i = 1; lua_getinfo(L, i, "sln", &ar); i++)
 	{
-		trace.append("[STCK]: from: ");
+		std::string line = "[STCK]: from: ";
 
 		if (strcmp(ar.what, "C") == 0)
 		{
-			trace.append("[C]");
+			line.append("[C]");
+			Log::Append(line);
 			continue;
 		}
 
 		if (ar.source)
-			trace.append(ar.short_src);
+			line.append(ar.short_src);
 		
 		if (ar.currentline > 0)
 		{
-			trace.append(":");
-			trace.append(std::to_string(ar.currentline));
+			line.append(":");
+			line.append(std::to_string(ar.currentline));
 		}
 
 		if (ar.name)
 		{
-			trace.append(" function ");
-			trace.append(ar.name);
+			line.append(" in ");
+			line.append(ar.name);
 		}
 
-		trace.append("\n");
+		Log::Append(line);
 	}
-
-	Log::Append(trace);
 }
 
 static void resumeScheduledCoroutines()
@@ -724,23 +732,29 @@ static void resumeScheduledCoroutines()
 			if (status != std::future_status::ready)
 				continue;
 
-			// what the function returned
-			Reflection::GenericValue retval = future.get();
-
-			ScriptEngine::L::PushGenericValue(coroutine, retval);
-
-			int resumeStatus = lua_resume(coroutine, nullptr, 1);
-
-			if (resumeStatus != LUA_OK && resumeStatus != LUA_YIELD)
+			// make sure the script still exists
+			// modules don't have a `script` global, but they run on their own coroutine independent from
+			// where they are `require`'d from anyway
+			if (corInfo.ScriptId == PHX_GAMEOBJECT_NULL_ID || GameObject::GetObjectById(corInfo.ScriptId))
 			{
-				const char* errstr = lua_tostring(coroutine, -1);
+				// what the function returned
+				Reflection::GenericValue retval = future.get();
 
-				Log::Error(std::vformat(
-					"Luau yielded-then-resumed error: {}",
-					std::make_format_args(errstr)
-				));
+				ScriptEngine::L::PushGenericValue(coroutine, retval);
 
-				dumpStacktrace(coroutine);
+				int resumeStatus = lua_resume(coroutine, nullptr, 1);
+
+				if (resumeStatus != LUA_OK && resumeStatus != LUA_YIELD)
+				{
+					const char* errstr = lua_tostring(coroutine, -1);
+
+					Log::Error(std::vformat(
+						"Script resumption: {}",
+						std::make_format_args(errstr)
+					));
+
+					dumpStacktrace(coroutine);
+				}
 			}
 
 			ScriptEngine::s_YieldedCoroutines.erase(ScriptEngine::s_YieldedCoroutines.begin() + corIdx);
@@ -753,6 +767,7 @@ static void resumeScheduledCoroutines()
 			resumeScheduledCoroutines();
 
 			return;
+			
 		}
 	}
 }
@@ -825,7 +840,7 @@ void EcScript::Update(double dt)
 			const char* errstr = lua_tostring(co, -1);
 
 			Log::Error(std::vformat(
-				"Luau runtime error: {}",
+				"Script tick: {}",
 				std::make_format_args(errstr)
 			));
 			dumpStacktrace(co);
@@ -918,18 +933,20 @@ bool EcScript::Reload()
 		// to access `m_L` to get the error message
 		// 24/12/2024
 		GameObjectRef dontKillMePlease = this->Object;
+		// to prevent use-after-free on script error if we've gotten re-alloc'd
+		lua_State* thread = m_L;
 
 		int resumeResult = lua_resume(m_L, m_L, 0);
 
 		if (resumeResult != LUA_OK && resumeResult != LUA_YIELD)
 		{
-			const char* errStr = lua_tostring(m_L, -1);
+			const char* errStr = lua_tostring(thread, -1);
 
 			Log::Error(std::vformat(
-				"Luau script init error: {}",
+				"Script init: {}",
 				std::make_format_args(errStr)
 			));
-			dumpStacktrace(m_L);
+			dumpStacktrace(thread);
 
 			return false;
 		}
@@ -941,8 +958,8 @@ bool EcScript::Reload()
 		const char* errstr = lua_tostring(m_L, -1);
 
 		Log::Error(std::vformat(
-			"Luau compile error {}: {}: '{}'",
-			std::make_format_args(result, this->Object->Name, errstr))
+			"Script compilation: {}",
+			std::make_format_args(errstr))
 		);
 
 		return false;

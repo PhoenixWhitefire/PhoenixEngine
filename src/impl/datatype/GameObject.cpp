@@ -333,42 +333,26 @@ GameObject* GameObject::GetObjectById(uint32_t Id)
 	if (Id == PHX_GAMEOBJECT_NULL_ID || s_WorldArray.size() - 1 < Id)
 		return nullptr;
 
-	return s_WorldArray.at(Id).Valid ? &s_WorldArray[Id] : nullptr;
-}
-
-static void validateRefCount(GameObject* Object, uint32_t RefCount)
-{
-#if 0
-	if (RefCount > 254)
-	{
-		std::string fullName = Object->GetFullName();
-		throw(std::vformat(
-			"Engine has reached Reference Count limit of 255 for Object '{}' (ID:{})",
-			std::make_format_args(fullName, Object->ObjectId)
-		));
-	}
-	// only kill ourselves if nobody cares about us (i'm so edgy) 24/12/2024
-	//else if (RefCount == 0)
-	//	Object->Destroy();
-#endif
+	return s_WorldArray[Id].Valid ? &s_WorldArray[Id] : nullptr;
 }
 
 void GameObject::IncrementHardRefs()
 {
 	m_HardRefCount++;
 
-	validateRefCount(this, m_HardRefCount);
+	if (m_HardRefCount > 254)
+		throw("Too many hard ref!");
 }
 
 void GameObject::DecrementHardRefs()
 {
-	//if (m_HardRefCount == 0)
-		// use `delete` directly instead maybe
-		//throw("Tried to decrement hard refs, with no hard references!");
+	if (m_HardRefCount == 0)
+		throw("Tried to decrement hard refs, with no hard references!");
 
 	m_HardRefCount--;
 
-	validateRefCount(this, m_HardRefCount);
+	if (m_HardRefCount == 0)
+		Destroy();
 }
 
 void GameObject::Destroy()
@@ -377,27 +361,23 @@ void GameObject::Destroy()
 
 	this->IsDestructionPending = true;
 
-	if (this->ObjectId != PHX_GAMEOBJECT_NULL_ID)
-	{
-		s_WorldArray.at(this->ObjectId).Valid = false;
-
-		for (const std::pair<EntityComponent, uint32_t>& pair : m_Components)
-			s_ComponentManagers[(size_t)pair.first]->DeleteComponent(pair.second);
-		
-		m_Components.clear();
-	}
-
 	if (!wasDestructionPending)
 	{
 		this->SetParent(nullptr);
 
 		for (GameObject* child : this->GetChildren())
 			child->Destroy();
-
-		DecrementHardRefs(); // removes the first ref in `GameObject::Create`
 	}
 	else
-		validateRefCount(this, m_HardRefCount);
+		if (m_HardRefCount == 0)
+		{
+			s_WorldArray.at(this->ObjectId).Valid = false;
+
+			for (const std::pair<EntityComponent, uint32_t>& pair : m_Components)
+				s_ComponentManagers[(size_t)pair.first]->DeleteComponent(pair.second);
+			
+			m_Components.clear();
+		}
 }
 
 std::string GameObject::GetFullName() const
@@ -508,7 +488,10 @@ void GameObject::AddChild(GameObject* c)
 	auto it = std::find(m_Children.begin(), m_Children.end(), c->ObjectId);
 
 	if (it == m_Children.end())
+	{
 		m_Children.push_back(c->ObjectId);
+		c->IncrementHardRefs();
+	}
 }
 
 void GameObject::RemoveChild(uint32_t id)
@@ -516,7 +499,10 @@ void GameObject::RemoveChild(uint32_t id)
 	auto it = std::find(m_Children.begin(), m_Children.end(), id);
 
 	if (it != m_Children.end())
+	{
 		m_Children.erase(it);
+		GameObject::GetObjectById(id)->DecrementHardRefs();
+	}
 	else
 		throw(std::vformat("ID:{} is _not my ({}) sonnn~_", std::make_format_args(ObjectId, id)));
 }
@@ -794,7 +780,6 @@ GameObject* GameObject::Create()
 	s_WorldArray.emplace_back();
 	GameObject& created = s_WorldArray.back();
 
-	created.IncrementHardRefs(); // make it hard
 	created.ObjectId = numObjects;
 
 	return &created;

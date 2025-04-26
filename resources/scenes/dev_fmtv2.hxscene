@@ -257,7 +257,7 @@ PHNXENGI
       "Brightness": 1.0,
       "Direction": [
         0.5,
-        0.5,
+        0.25,
         0.5
       ],
       "Enabled": true,
@@ -440,7 +440,7 @@ PHNXENGI
         ],
         [
           0.0,
-          7.0,
+          3.0,
           100.0,
           1.0
         ]
