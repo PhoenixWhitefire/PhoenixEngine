@@ -38,6 +38,7 @@ public:
 	void OnWindowResized(int NewSizeX, int NewSizeY);
 
 	void LoadConfiguration();
+	void Close();
 	
 	GameObjectRef DataModel{};
 	GameObjectRef Workspace{};
@@ -60,6 +61,8 @@ public:
 
 	bool DebugWireframeRendering = false;
 	bool DebugAabbs = false;
+
+	int ExitCode = 0;
 
 private:
 	int m_DrawnFramesInSecond = -1;

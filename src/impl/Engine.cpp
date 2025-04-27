@@ -190,6 +190,11 @@ void Engine::LoadConfiguration()
 	Log::Info("Configuration loaded");
 }
 
+void Engine::Close()
+{
+	m_IsRunning = false;
+}
+
 Engine::Engine()
 {
 	ZoneScoped;
@@ -627,12 +632,6 @@ void Engine::Start()
 		if (!GameObject::GetObjectById(Workspace.m_TargetId))
 		{
 			Log::Warning("Workspace was removed, shutting down");
-			break;
-		}
-
-		if (cdm->WantExit)
-		{
-			Log::Info("DataModel requested shutdown");
 			break;
 		}
 

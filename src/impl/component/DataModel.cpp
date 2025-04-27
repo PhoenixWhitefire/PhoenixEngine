@@ -2,6 +2,7 @@
 // 13/08/2024
 
 #include "component/DataModel.hpp"
+#include "Engine.hpp"
 #include "Log.hpp"
 
 class DataModelManager : BaseComponentManager
@@ -58,12 +59,17 @@ public:
 		{
 			{ "Close",
 				{ 
+					{ Reflection::ParameterType{ Reflection::ValueType::Integer, true } },
 					{},
-					{},
-					[](void* p, const std::vector<Reflection::GenericValue>&)
+					[](void* p, const std::vector<Reflection::GenericValue>& inputs)
                     -> std::vector<Reflection::GenericValue>
 					{
-						static_cast<EcDataModel*>(p)->WantExit = true;
+                        Log::Info("Shutdown requested via DataModel");
+
+                        Engine* engine = Engine::Get();
+                        engine->ExitCode = inputs.size() > 0 ? static_cast<int32_t>(inputs[0].AsInteger()) : 0;
+						engine->Close();
+
                         return {};
 					}
 				}
@@ -82,51 +88,3 @@ private:
 };
 
 static inline DataModelManager Instance{};
-
-/*
-
-PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(DataModel);
-
-static bool s_DidInitReflection = false;
-
-static void closeDataModel(Reflection::Reflectable* g)
-{
-	static_cast<Object_DataModel*>(g)->WantExit = true;
-}
-
-void Object_DataModel::s_DeclareReflections()
-{
-	if (s_DidInitReflection)
-		return;
-	s_DidInitReflection = true;
-
-	REFLECTION_INHERITAPI(GameObject);
-
-	REFLECTION_DECLAREPROC_INPUTLESS(Close, closeDataModel);
-}
-
-Object_DataModel::Object_DataModel()
-{
-	this->Name = "DataModel";
-	this->ClassName = "DataModel";
-
-	s_DeclareReflections();
-	ApiPointer = &s_Api;
-}
-
-Object_DataModel::~Object_DataModel()
-{
-	// TODO: :BindToClose 15/08/2024
-}
-
-void Object_DataModel::Initialize()
-{
-	GameObject* workspace = GameObject::Create("Workspace");
-	workspace->SetParent(this);
-}
-
-Object_Workspace* Object_DataModel::GetWorkspace()
-{
-	return dynamic_cast<Object_Workspace*>(this->FindChild("Workspace"));
-}
-*/

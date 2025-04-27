@@ -8,47 +8,11 @@ Vector3 Vector3::one = Vector3(1.f, 1.f, 1.f);
 
 static bool s_DidInitReflection = false;
 
-void Vector3::s_DeclareReflections()
-{
-	if (s_DidInitReflection)
-		return;
-	s_DidInitReflection = true;
-
-	//Vector3::ApiReflection = new Reflection::ReflectionInfo();
-	/*
-	REFLECTION_DECLAREPROP_SIMPLE_READONLY(Vector3, X, Double);
-	REFLECTION_DECLAREPROP_SIMPLE_READONLY(Vector3, Y, Double);
-	REFLECTION_DECLAREPROP_SIMPLE_READONLY(Vector3, Z, Double);
-	REFLECTION_DECLAREPROP_SIMPLE_READONLY(Vector3, Magnitude, Double);
-
-	std::vector<Reflection::ValueType> ins = { Reflection::ValueType::Vector3, Reflection::ValueType::Bool };
-
-	REFLECTION_DECLAREFUNC(
-		"FuzzyEq",
-		ins,
-		{ Reflection::ValueType::Bool },
-		[](Reflection::Reflectable* p, Reflection::GenericValue& gv)
-		{
-			Vector3 me = *dynamic_cast<Vector3*>(p);
-			Vector3 other = Vector3(gv.Array[0]);
-			double fuzz = gv.Array[1].AsDouble();
-
-			double totalDiff = std::abs(me.X - other.X) + std::abs(me.Y - other.Y) + std::abs(me.Z - other.Z);
-
-			return Reflection::GenericValue(totalDiff <= fuzz);
-		}
-	);*/
-
-	//REFLECTION_INHERITAPI(Reflection::Reflectable);
-}
-
 Vector3::Vector3()
 {
 	this->X = 0.f;
 	this->Y = 0.f;
 	this->Z = 0.f;
-
-	s_DeclareReflections();
 }
 
 Vector3::Vector3(double x, double y, double z)
@@ -56,8 +20,6 @@ Vector3::Vector3(double x, double y, double z)
 	this->X = x;
 	this->Y = y;
 	this->Z = z;
-
-	s_DeclareReflections();
 }
 
 Vector3::Vector3(glm::tvec3<double, glm::highp> GLMVector)
@@ -65,8 +27,6 @@ Vector3::Vector3(glm::tvec3<double, glm::highp> GLMVector)
 	this->X = GLMVector.x;
 	this->Y = GLMVector.y;
 	this->Z = GLMVector.z;
-
-	s_DeclareReflections();
 }
 
 Vector3::Vector3(glm::vec3 GLMVector)
@@ -74,8 +34,6 @@ Vector3::Vector3(glm::vec3 GLMVector)
 	this->X = GLMVector.x;
 	this->Y = GLMVector.y;
 	this->Z = GLMVector.z;
-
-	s_DeclareReflections();
 }
 
 Vector3::Vector3(const Reflection::GenericValue& gv)
@@ -105,8 +63,6 @@ Vector3::Vector3(const Reflection::GenericValue& gv)
 	this->X = vec.X;
 	this->Y = vec.Y;
 	this->Z = vec.Z;
-
-	s_DeclareReflections();
 }
 
 Reflection::GenericValue Vector3::ToGenericValue() const

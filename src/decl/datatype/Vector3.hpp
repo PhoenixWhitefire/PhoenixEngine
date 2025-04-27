@@ -5,7 +5,7 @@
 
 #include "Reflection.hpp"
 
-class Vector3 : public Reflection::Reflectable
+class Vector3
 {
 public:
 	Vector3();
@@ -45,7 +45,4 @@ public:
 	bool operator == (Vector3 Other);
 	operator glm::tvec3<double, glm::highp>() const;
 	operator glm::tvec3<float, glm::highp>() const;
-
-private:
-	static void s_DeclareReflections();
 };

@@ -126,6 +126,8 @@ static glm::vec3 CamForward = glm::vec3(0.f, 0.f, -1.f);
 
 static bool WasTracyLaunched = false;
 
+static int s_ExitCode = 0;
+
 #ifdef _WIN32
 
 #define popen _popen
@@ -653,6 +655,8 @@ static void drawDeveloperUI(double DeltaTime)
 #ifdef NDEBUG
 static void handleCrash(const std::string_view& Error, const std::string_view& ExceptionType)
 {
+	s_ExitCode = 1;
+
 	// Log Size Limit Exceeded Throwing Exception
 	if (!Error.starts_with("LSLETE"))
 	{
@@ -828,10 +832,14 @@ int main(int argc, char** argv)
 		engine.Start();
 
 		Log::Save(); // in case FileRW::WriteFile throws an exception
+
+		s_ExitCode = engine.ExitCode;
 	}
 	PHX_MAIN_CRASHHANDLERS;
 
 	Log::Info("Application shutdown");
 
 	Log::Save();
+
+	return s_ExitCode;
 }

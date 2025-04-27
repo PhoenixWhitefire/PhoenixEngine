@@ -227,10 +227,33 @@ namespace Reflection
 		std::function<void(void*, const Reflection::GenericValue&)> Set;
 	};
 
+	// could be a `ValueType` bitmask, but tried it and got too complicated
+	// i'll just settle for this for now
+	struct ParameterType
+	{
+		ParameterType(Reflection::ValueType t)
+			: Type(t)
+		{
+		}
+
+		ParameterType(Reflection::ValueType t, bool o)
+			: Type(t), IsOptional(o)
+		{
+		}
+
+		Reflection::ValueType Type;
+		bool IsOptional = false;
+
+		operator Reflection::ValueType () const
+		{
+			return Type;
+		}
+	};
+
 	struct Function
 	{
-		std::vector<ValueType> Inputs;
-		std::vector<ValueType> Outputs;
+		std::vector<ParameterType> Inputs;
+		std::vector<ParameterType> Outputs;
 
 		std::function<std::vector<Reflection::GenericValue>(void*, const std::vector<Reflection::GenericValue>&)> Func;
 	};
@@ -242,72 +265,5 @@ namespace Reflection
 	{
 		PropertyMap Properties;
 		FunctionMap Functions;
-	};
-
-	class Reflectable
-	{
-	public:
-		virtual const Reflection::PropertyMap& GetProperties() const
-		{
-			return ApiPointer->Properties;
-		}
-		virtual const Reflection::FunctionMap& GetFunctions() const
-		{
-			return ApiPointer->Functions;
-		}
-		virtual bool HasProperty(const std::string_view& MemberName) const
-		{
-			return ApiPointer->Properties.find(MemberName) != ApiPointer->Properties.end();
-		}
-		virtual bool HasFunction(const std::string_view& MemberName) const
-		{
-			return ApiPointer->Functions.find(MemberName) != ApiPointer->Functions.end();
-		}
-		virtual const Reflection::Property& GetProperty(const std::string_view& MemberName) const
-		{
-			return HasProperty(MemberName)
-			? ApiPointer->Properties[MemberName]
-			: throw(std::string("Invalid Property in GetProperty: ") + MemberName.data());
-		}
-		virtual const Reflection::Function& GetFunction(const std::string_view& MemberName) const
-		{
-			return HasFunction(MemberName)
-			? ApiPointer->Functions[MemberName]
-			: throw(std::string("Invalid Function in GetFunction: ") + MemberName.data());
-		}
-		virtual Reflection::GenericValue GetPropertyValue(const std::string_view& MemberName)
-		{
-			return HasProperty(MemberName)
-			? ApiPointer->Properties[MemberName].Get(this)
-			: throw(std::string("Invalid Property in GetPropertyValue: ") + MemberName.data());
-		}
-		virtual void SetPropertyValue(const std::string_view& MemberName, const Reflection::GenericValue& NewValue)
-		{
-			if (HasProperty(MemberName))
-				if (ApiPointer->Properties[MemberName].Set)
-					ApiPointer->Properties[MemberName].Set(this, NewValue);
-				else
-					throw(std::vformat(
-						"Tried to set read-only property '{}' via `::SetPropertyValue`",
-						std::make_format_args(MemberName)
-					));
-			else
-				throw(std::string("Invalid Property in SetPropertyValue: ") + MemberName.data());
-		}
-		virtual Reflection::GenericValue CallFunction(const std::string_view& MemberName, const std::vector<Reflection::GenericValue>& Param)
-		{
-			if (HasFunction(MemberName))
-				return ApiPointer->Functions[MemberName].Func(this, Param);
-			else
-				throw(std::string("Invalid Function in CallFunction: ") + MemberName.data());
-		}
-
-		REFLECTION_DECLAREAPI;
-	
-	protected:
-		Reflection::Api* ApiPointer = &s_Api;
-
-	private:
-		static inline Reflection::Api s_Api{};;
 	};
 }

@@ -357,27 +357,27 @@ void GameObject::DecrementHardRefs()
 
 void GameObject::Destroy()
 {
-	bool wasDestructionPending = this->IsDestructionPending;
-
-	this->IsDestructionPending = true;
-
-	if (!wasDestructionPending)
+	if (!IsDestructionPending && Valid)
 	{
+		Valid = false;
 		this->SetParent(nullptr);
+		Valid = true; // TODO HACK to avoid RemoveChild -> DecrementHardRefs -> Destroy loop
 
 		for (GameObject* child : this->GetChildren())
 			child->Destroy();
-	}
-	else
-		if (m_HardRefCount == 0)
-		{
-			s_WorldArray.at(this->ObjectId).Valid = false;
 
-			for (const std::pair<EntityComponent, uint32_t>& pair : m_Components)
-				s_ComponentManagers[(size_t)pair.first]->DeleteComponent(pair.second);
-			
-			m_Components.clear();
-		}
+		this->IsDestructionPending = true;
+	}
+
+	if (m_HardRefCount == 0)
+	{
+		s_WorldArray.at(this->ObjectId).Valid = false;
+
+		for (const std::pair<EntityComponent, uint32_t>& pair : m_Components)
+			s_ComponentManagers[(size_t)pair.first]->DeleteComponent(pair.second);
+		
+		m_Components.clear();
+	}
 }
 
 std::string GameObject::GetFullName() const
@@ -411,9 +411,6 @@ void GameObject::SetParent(GameObject* newParent)
 {
 	if (this->IsDestructionPending)
 	{
-		if (!newParent)
-			return;
-
 		std::string parentFullName = newParent ? newParent->GetFullName() : "<NULL>";
 		std::string fullname = GetFullName();
 
@@ -501,7 +498,10 @@ void GameObject::RemoveChild(uint32_t id)
 	if (it != m_Children.end())
 	{
 		m_Children.erase(it);
-		GameObject::GetObjectById(id)->DecrementHardRefs();
+
+		// TODO HACK check ::Destroy
+		if (GameObject* ch = GameObject::GetObjectById(id))
+			ch->DecrementHardRefs();
 	}
 	else
 		throw(std::vformat("ID:{} is _not my ({}) sonnn~_", std::make_format_args(ObjectId, id)));

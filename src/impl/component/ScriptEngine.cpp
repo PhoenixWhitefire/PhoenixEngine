@@ -431,11 +431,18 @@ int ScriptEngine::L::HandleFunctionCall(
 	if (!func)
 		throw(std::vformat("Invalid function '{}'", std::make_format_args(fname)));
 
-	const std::vector<Reflection::ValueType>& paramTypes = func->Inputs;
+	const std::vector<Reflection::ParameterType>& paramTypes = func->Inputs;
 
 	int numParams = static_cast<int32_t>(paramTypes.size());
+	int minArgs = numParams;
 
-	if (numArgs != numParams)
+	for (int i = numParams; i--; i >= 0)
+		if (paramTypes[i].IsOptional)
+			minArgs--; // substract for each optional backwards
+		else
+			break; // stop when we hit the first optional in terms of argument order
+
+	if (numArgs < minArgs)
 	{
 		std::string argsString;
 
@@ -445,17 +452,24 @@ int ScriptEngine::L::HandleFunctionCall(
 		argsString = argsString.substr(0, argsString.size() - 2);
 
 		luaL_error(L, "%s", std::vformat(
-			"Function '{}' expected {} arguments, got {} instead: ({})",
+			"Function '{}' expects at least {} arguments, got {} instead: ({})",
 			std::make_format_args(fname, numParams, numArgs, argsString)
 		).c_str());
 
 		return 0;
 	}
+	else if (numArgs > numParams)
+	{
+		int numExtra = numArgs - numParams;
+		Log::Warning(std::vformat("Function '{}' received {} more arguments than necessary",
+			std::make_format_args(numExtra)
+		));
+	}
 
 	std::vector<Reflection::GenericValue> inputs;
 
 	// This *entire* for-loop is just for handling input arguments
-	for (int index = 0; index < paramTypes.size(); index++)
+	for (int index = 1; index < paramTypes.size(); index++)
 	{
 		Reflection::ValueType paramType = paramTypes[index];
 
