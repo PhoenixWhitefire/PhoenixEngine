@@ -1,0 +1,193 @@
+{
+  "GameObject": {
+    "Base": {
+      "Functions": {
+        "Destroy": "Marks the Object as \"pending for destruction\". This may or may not remove the Object from memory immediately, depending on whether the Engine is actively using the Object for some purpose",
+        "Duplicate": "Creates a duplicate of the Object",
+        "FindChild": "Returns the child Object with the given name, or `nil` if it doesn't exist",
+        "GetChildren": "Returns a list of the Object's direct children",
+        "GetComponentNames": "Returns a list of the names of all Components that the Object currently has",
+        "GetDescendants": "Returns all descendants of the Object (i.e. its children, and their children, etc)",
+        "GetFullName": "Returns the full, hierarchal path of the Object",
+        "HasComponent": "Returns whether or not the Object has the given Component",
+        "IsA": "Equivalent to `:HasComponent`",
+        "MergeWith": "Merges the Objects together, replacing descendants with the same name"
+      },
+      "Properties": {
+        "Enabled": "Whether the Engine updates and recognizes this Object, essentially freezing it if it is disabled",
+        "Name": "The name of the Object, usually what was passed into `GameObject.new`",
+        "ObjectId": "The ID of the Object, an integer. Remains the same throughout the session, but not guaranteed between sessions",
+        "Parent": "The hierarchal parent of the Object, or `nil` if it does not have one",
+        "Serializes": "Whether or not the Object should be saved with the scene if it is serialized with `scene_save`",
+        "Exists": "Whether or not the Object still exists. Will be false after calling `:Destroy`"
+      }
+    },
+    "Components": {
+      "Animation": {
+        "Functions": null,
+        "Properties": null
+      },
+      "Camera": {
+        "Description": "A 3D camera",
+        "Functions": null,
+        "Properties": {
+          "FieldOfView": "The field-of-view. By default, `70`",
+          "Transform": "Where it is in 3D space",
+          "UseSimpleController": "Whether it is affected by the built-in controller (`W`/`A`/`S`/`D` horizontal movement, `Q`/`E` vertical, Mouse to look around)"
+        }
+      },
+      "DataModel": {
+        "Description": "The root of the scene",
+        "Functions": {
+          "Close": "Closes the application"
+        },
+        "Properties": null
+      },
+      "DirectionalLight": {
+        "Description": "Intended to model a large light source infinitely far away, like the Sun",
+        "Functions": null,
+        "Properties": {
+          "Brightness": "How bright the Light is",
+          "Direction": "The direction light is emitted from",
+          "LightColor": "The color of the Light",
+          "Shadows": "Whether the Light can render shadows"
+        }
+      },
+      "Mesh": {
+        "Description": "A mesh composed of triangles",
+        "Functions": null,
+        "Properties": {
+          "AngularVelocity": "Its rotational velocity",
+          "Asset": "The path to the underlying `.hxmesh` file, or a built-in identifier like `!Quad` or `!Cube`",
+          "CastsShadows": "Bool",
+          "Density": "Its density (`Mass = Density * Size`)",
+          "FaceCulling": "An integer. `0` means no culling, `1` to cull its \"back\" faces, and `2` to cull its \"front\" faces",
+          "Friction": "Fraction of Velocity it should lose per second while in contact with another object while `PhysicsDynamics` is `true`",
+          "LinearVelocity": "Its velocity",
+          "Material": "The name of the `.mtl` in the `resources/materials/` directory it should use",
+          "MetallnessFactor": "Metallness modifier",
+          "PhysicsCollisions": "Whether other physics objects can collide with it",
+          "PhysicsDynamics": "Whether the Physics Engine should apply forces to it",
+          "RoughnessFactor": "Roughness modifier",
+          "Tint": "The Color it should be tinted with",
+          "Transparency": "Its transparency/translucency"
+        }
+      },
+      "Model": {
+        "Description": "A container",
+        "Functions": null,
+        "Properties": null
+      },
+      "ParticleEmitter": {
+        "Description": "An emitter of 2D particles",
+        "Functions": null,
+        "Properties": {
+          "Emitting": "Whether the emitter should emit new particles",
+          "Lifetime": "The X and Y components act as a range of how long any particle can last, in seconds",
+          "ParticlesAreAttached": "Whether the particles are attached to and move with the emitter",
+          "Rate": "An integer indicating how many particles should be emitted per second (must be above or equal to `0`)"
+        }
+      },
+      "PointLight": {
+        "Description": "A light source emitting light omnidirectionally from its `Transform`",
+        "Functions": null,
+        "Properties": {
+          "Brightness": "How bright the Light is",
+          "LightColor": "The color of the Light",
+          "Range": "How far light is emitted. **If `>= 0`, the Range is used and attenuation is linear, otherwise the formula `R = 1/D^2`, where `D` is the distance of any point in 3D space having its lighting calculated from the PointLight, is used for real-world attenuation**",
+          "Shadows": "Whether the Light can render shadows"
+        }
+      },
+      "Script": {
+        "Description": "A Luau script",
+        "Functions": {
+          "Reload": "Re-compiles the Source file and runs it from the beginning"
+        },
+        "Properties": {
+          "SourceFile": "The File the Script is executing. Changing this to a valid File immediately reloads the Script if it is a descendant of the `DataModel` (i.e. `game`). To forcefully reload it, `:Reload` should be used"
+        }
+      },
+      "Sound": {
+        "Description": "A sound",
+        "Functions": null,
+        "Properties": {
+          "FinishedLoading": "Whether the Sound has finished loading the `SoundFile`",
+          "Length": "The length of the sound in seconds",
+          "Looped": "Whether playback should loop once it reaches the end",
+          "Playing": "Whether the Sound is currently playing (or requested to play, if `.Playing` is set to `true` by a `Script` before it has finished loading)",
+          "Position": "Number of seconds from beginning of the file",
+          "SoundFile": "The `.wav` file to be played"
+        }
+      },
+      "SpotLight": {
+        "Description": "A light which emits in a conical shape",
+        "Functions": null,
+        "Properties": {
+          "Angle": "The Field-of-View (in radians) of light emission",
+          "Brightness": "How bright the Light is",
+          "LightColor": "The color of the Light",
+          "Range": "How far light is emitted",
+          "Shadows": "Whether the Light can render shadows"
+        }
+      },
+      "Transform": {
+        "Functions": null,
+        "Properties": {
+          "Size": "The Size of the Object influenced by the Component",
+          "Transform": "The Transformation of the Object from the World"
+        }
+      },
+      "Workspace": {
+      	"Description": [ "The container used for storing the main parts of a scene (3D objects)",  "If this is `Destroy`'d, the application closes" ],
+
+        "Functions": {
+          "ScreenPointToRay": "Converts the provided X and Y screen coordinates to a world-space vector, with the length provided or `1` by default"
+        },
+        "Properties": {
+          "SceneCamera": "The `Camera` the Player sees the world through. If set to `nil`, a *fallback* is created at the origin."
+        }
+      }
+    }
+  },
+  "ScriptGlobals": [
+    [ "conf_get", [ [ [ "Key", "string" ] ], [ "any" ], "Reads a value from the Configuration" ] ],
+    [ "fd_inprogress", [ [], [ "boolean "], "Returns whether or not a File Dialog triggered via `fd_open` or `fd_save` is currently active. Subsequent attempts to call either of those functions while a Dialog is active will result in an error" ] ],
+    [ "fd_open", [ [ [ "StartingDirectory", "string?" ], [ "AllowMultipleFiles", "boolean?" ], [ "FilterName", "string?" ], [ "FileExtensionFilter", "string?" ] ], [ "{ string }" ], [ "Prompts the User to select one or more to open", "`FilterName` is the human-readable name for the File Extension Filters you wish to place (such as `All Files` or `Image Files`)", "`FileExtensionFilter` is a string of semicolon-separated file extensions, such as `png;jpg;jpeg`", "If the User does not select any files (e.g. by closing the Dialog), the function returns an empty table" ] ] ],
+    [ "fd_save", [ [ [ "StartingDirectory", "string?" ], [ "FilterName", "string?" ], [ "FileExtensionFilter", "string?" ] ], [ "string?" ], [ "Prompts the User to select a path for a file to be saved at", "`FilterName` is the human-readable name for the File Extension Filters you wish to place (such as `All Files` or `Image Files`)", "`FileExtensionFilter` is a string of semicolon-separated file extensions, such as `png;jpg;jpeg`", "If the User does not select a target file (e.g. by closing the Dialog), the function returns `nil`" ] ] ],
+    [ "file_read", [ [ [ "Path", "string" ] ], [ "string" ], [ "Reads and returns the contents fo the entire file at the provided path" ] ] ],
+    [ "file_write", [ [ [ "Path", "string" ], [ "Contents", "string" ], [ "PrependResourcesDirectory", "boolean" ] ], [], [ "Overwrites the file at the provided path with the provided contents", "If `PrependResourcesDirectory` is true, the value of `ResourcesDirectory` from the Configuration File is prepended to the path" ] ] ],
+    [ "file_write_rcd", [ [ [ "Path", "string" ], [ "Contents", "string" ], [ "PrependResourcesDirectory", "boolean" ] ], [], [ "Same as file_write, but *R*ecursively *C*reates *D*irectories if they do not exist"  ] ] ],
+    [ "imgui_begin", [ [ [ "Title", "string" ] ], [ "boolean" ], [ "Begins a Dear ImGui widget, returning whether it is expanded" ] ] ],
+    [ "imgui_button", [ [ [ "Text", "string" ] ], [ "boolean" ], [ "Draws a text button, returning whether it is being clicked" ] ] ],
+    [ "imgui_checkbox", [ [ [ "Name", "string" ], [ "Checked", "boolean" ] ], [ "boolean" ], [ "Draws a checkbox, set to the specified value and returning the modified value" ] ] ],
+    [ "imgui_end", [ [], [], [ "Ends the last Dear ImGui widget" ] ] ],
+    [ "imgui_image", [ [ [ "Path", "string" ], [ "Width", "number?" ], [ "Height", "number?" ] ], [], [ "Draws an image label", "The resolution of the texture is used by default as the size, but can be overriden by the optional `Width` and `Height` arguments" ] ] ],
+    [ "imgui_indent", [ [ [ "Level", "number" ] ], [], [ "Indents the succeeding set of UI elements with the specified additive level" ] ] ],
+    [ "imgui_input_float", [ [ [ "Name", "string" ], [ "Value", "number" ] ], [ "number" ], [ "Draws a decimal-number input box, containing the specified value and returning the modified value" ] ] ],
+    [ "imgui_input_text", [ [ [ "Name", "string" ], [ "Value", "string" ] ], [ "string" ], [ "Draws a text input box, containing the specified value and returning the modified value" ] ] ],
+    [ "imgui_item_clicked", [ [], [ "boolean" ], [ "Returns whether the previous UI element is being clicked" ] ] ],
+    [ "imgui_item_hovered", [ [], [ "boolean" ], [ "Returns whether the previous UI element is being hovered-over" ] ] ],
+    [ "imgui_setitemtooltip", [ [ [ "Tooltip", "string" ] ], [], [ "Sets the tooltip of the previous UI element" ] ] ],
+    [ "imgui_text", [ [ [ "Text", "string" ] ], [], [ "Draws a text label" ] ] ],
+    [ "imgui_textlink", [ [ [ "Text", "string" ] ], [ "boolean" ], [ "Draws hyperlink-style text label, returning whether it is being clicked" ] ] ],
+    [ "input_keypressed", [ [ [ "Key", "string" ] ], [ "boolean" ], [ "Returns whether the key provided is being held down by the User, such as `input_keypressed(\"w\")` to check if the `W` key is being pressed" ] ] ],
+    [ "input_mouse_bdown", [ [ [ "CheckLeftMouseButton", "boolean" ] ], [ "boolean" ], [ "Returns whether the left or right Mouse button is being held. Left can be specified by having `true` as the first parameter, right with `false`" ] ] ],
+    [ "input_mouse_getpos", [ [], [ "number", "number" ], [ "Returns the X and Y position of the Mouse as a tuple of integers" ] ] ],
+    [ "input_mouse_setlocked", [ [ [ "Locked", "boolean" ] ], [], [ "Sets whether the Mouse should be locked to the window and made invisible" ] ] ],
+    [ "json_dump", [ [ [ "Table", "{ [any]: any }" ] ], [ "string" ], [ "Converts the provided Table into a string that encodes a JSON table" ] ] ],
+    [ "json_parse", [ [ [ "Json", "string" ] ], [ "{ [any]: any }" ], [ "Parses a JSON string into a Luau table" ] ] ],
+    [ "matrix_getv", [ [ [ "Matrix", "Matrix" ], [ "Column", "number" ], [ "Row", "number" ] ], [ "number" ], [ "Returns the number at the provided `Column` and `Row` of the provided `Matrix`", "`Column` and `Row` should be integers within the range `0` - `3`, but no bounds checking is done" ] ] ],
+    [ "matrix_setv", [ [ [ "Matrix", "Matrix" ], [ "Column", "number" ], [ "Row", "number" ], [ "Value", "number" ] ], [], [ "Set the number at the provided `Column` and `Row` of the provided `Matrix` to `Value`", "`Column` and `Row` should be integers within the range `0` - `3`, but no bounds checking is done" ] ] ],
+    [ "mesh_get", [ [ [ "Path", "string" ] ], [ "{ Vertices: { { Position: vector, Normal: vector, Color: Color, UV: { number, number }} }, Indices: { number } }" ], [ "Fetches the `.hxmesh` asset at the provided path and returns it as a dictionary", "This uses the same cache as the `.Asset` property of Meshes, so primitives can also be indexed with, for example, `!Cube` and `!Blank`", "This may reload the mesh from file, if it was never used on that mesh before and if that mesh is not a primitive" ] ] ],
+    [ "mesh_save", [ [ [ "Name", "string" ], [ "Path", "string" ] ], [], [ "Saves the Mesh associated with `Name` to a file at `Path`" ] ] ],
+    [ "mesh_set", [ [ [ "Name", "string" ], [ "Mesh", "{ Vertices: { { Position: vector, Normal: vector, Color: Color, UV: { number, number }} }, Indices: { number } }" ] ], [], [ "Associates, internally, the provided `Mesh` data with the provided `Name`", "This is like overwriting the file, but only applies to the active session, so whenever the Engine attempts to load a mesh from the `Path` overridden, it find the mesh specified instead" ] ] ],
+    [ "model_import", [ [ [ "Path", "string" ] ], [ "{ GameObject }" ], [ "Imports the `.gltf`/`.glb` model at `Path`, and returns the resultant root of the hierarchy in an array" ] ] ],
+    [ "require", [ [ [ "Path", "string" ] ], [ "any" ], [ "Loads the module at the specified `Path`, relative to the `resources/` directory" ] ] ],
+    [ "scene_load", [ [ [ "Path", "string" ] ], [ "{ GameObject }" ], [ "Loads the scene at `Path` and returns an array of its root Objects" ] ] ],
+    [ "scene_save", [ [ [ "RootNodes", "{ GameObject }" ], [ "Path", "string" ] ], [], [ "Serializes the provided array of `RootNodes`, including their children, and saves it to `Path`" ] ] ],
+    [ "sleep", [ [ [ "SleepTime", "number" ] ], [ "number" ], [ "Yields the Script for the specified number of seconds, returning the same number when the Script is resumed" ] ] ],
+    [ "world_aabbcast", [ [ [ "AabbPosition", "vector" ], [ "AabbSize", "vector" ], [ "IgnoreList", "{ GameObject }" ] ], [ "{ Object: GameObject, Position: vector, Normal: vector }" ], [ "Returns the Object intersecting with the provided Axis-Aligned Bounding Box the most", "If no intersections are detected, it returns `nil`" ] ] ],
+    [ "world_aabbquery", [ [ [ "AabbPosition", "vector" ], [ "AabbSize", "vector" ], [ "IgnoreList", "{ GameObject }" ] ], [ "{ GameObject }" ], [ "Returns a list of Objects intersecting with the provided Axis-Aligned Bounding Box", "If no intersections are detected, it returns an empty table" ] ] ],
+    [ "world_raycast", [ [ [ "Origin", "vector" ], [ "CastVector", "vector" ], [ "IgnoreList", "{ GameObject }" ] ], [ "{ Object: GameObject, Position: vector, Normal: vector }" ], [ "Casts a ray from `Origin` in the direction and of the magnitude of `CastVector`", "If no intersections are detected, it returns `nil`" ]  ]]
+  ]
+}

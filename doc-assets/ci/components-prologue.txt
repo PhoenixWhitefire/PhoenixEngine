@@ -1,0 +1,1 @@
+The Engine support an Entity Component System architecture, meaning that `GameObject`s have their own "base" APIs, which can be extended by adding *Components*. These are all listed below.

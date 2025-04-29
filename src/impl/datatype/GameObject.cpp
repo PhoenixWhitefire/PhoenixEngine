@@ -840,12 +840,13 @@ nlohmann::json GameObject::DumpApiToJson()
 {
 	nlohmann::json dump;
 	
-	nlohmann::json& gameObjectApi = dump["GameObject"];
+	nlohmann::json& gameObjectApi = dump["Base"];
 	nlohmann::json& componentApi = dump["Components"];
 
 	nlohmann::json& gameObjectProperties = gameObjectApi["Properties"];
 	nlohmann::json& gameObjectFunctions = gameObjectApi["Functions"];
 
+	s_AddObjectApi(); // make sure we have the api
 	dumpProperties(s_Api.Properties, gameObjectProperties);
 	dumpFunctions(s_Api.Functions, gameObjectFunctions);
 	

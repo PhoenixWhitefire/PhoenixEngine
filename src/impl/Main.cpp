@@ -100,6 +100,7 @@ PHX_MAIN_HANDLECRASH_WHAT(std::exception);                                      
 #include "asset/SceneFormat.hpp"
 #include "component/Camera.hpp"
 #include "component/Script.hpp"
+#include "component/ScriptEngine.hpp"
 
 #include "PerformanceTiming.hpp"
 #include "GlobalJsonConfig.hpp"
@@ -438,21 +439,27 @@ static void saveStatsCsvCallback(void* UserData, const char* const* FileList, in
 	FileRW::WriteFile(FileList[0], csvContents, false);
 }
 
+static void doApiDump()
+{
+	Log::Info("Dumping API...");
+
+	nlohmann::json apiDump;
+	apiDump["GameObject"] = GameObject::DumpApiToJson();
+
+	nlohmann::json& globalsDump = apiDump["ScriptGlobals"];
+
+	for (const auto& it : ScriptEngine::L::GlobalFunctions)
+		globalsDump[it.first] = "";
+
+	FileRW::WriteFile("apidump.json", apiDump.dump(2), false);
+	Log::Info("API dump finished");
+}
+
 static void drawDeveloperUI(double DeltaTime)
 {
 	ZoneScopedC(tracy::Color::DarkOliveGreen);
 
 	Engine* EngineInstance = Engine::Get();
-
-	if (UserInput::IsKeyDown(SDLK_L) && !UserInput::InputBeingSunk)
-	{
-		Log::Info("Dumping GameObject API...");
-
-		auto dump = GameObject::DumpApiToJson();
-		FileRW::WriteFile("apidump.json", dump.dump(2), false);
-
-		Log::Info("API dump finished");
-	}
 
 	if (UserInput::IsKeyDown(SDLK_I) && !UserInput::InputBeingSunk)
 	{
@@ -806,17 +813,20 @@ int main(int argc, char** argv)
 		else
 			Log::Append(" " + std::string(argv[i]));
 
+	if (hasCliArgument("-tracyim"))
+	{
+		launchTracy();
+		
+		// took ~220ms on my machine for tracy to launch, double it and give it to the next person
+		// 13/01/2025
+		std::this_thread::sleep_for(std::chrono::milliseconds(400));
+	}
+	
+	if (hasCliArgument("-apidump"))
+		doApiDump();
+
 	try
 	{
-		if (hasCliArgument("-tracyim"))
-		{
-			launchTracy();
-
-			// took ~220ms on my machine for tracy to launch, double it and give it to the next person
-			// 13/01/2025
-			std::this_thread::sleep_for(std::chrono::milliseconds(400));
-		}
-
 		// i thought about wrapping this in 2 scopes in case Engine's dtor
 		// throws an exception, but it can't seem to catch it regardless?
 		// 10/01/2025

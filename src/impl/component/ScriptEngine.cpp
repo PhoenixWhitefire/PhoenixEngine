@@ -128,7 +128,7 @@ static void pushJson(lua_State* L, const nlohmann::json& v)
 
 		for (int i = 0; i < v.size(); i++)
 		{
-			lua_pushinteger(L, i);
+			lua_pushinteger(L, i + 1);
 			pushJson(L, v[i]);
 			lua_settable(L, -3);
 		}
@@ -206,7 +206,7 @@ static void luaTableToJson(lua_State* L, nlohmann::json& json)
 		}
 
 		if (lua_type(L, -2) == LUA_TNUMBER)
-			json[static_cast<size_t>(lua_tonumber(L, -2))] = v;
+			json[static_cast<size_t>(lua_tonumber(L, -2)) - 1] = v;
 		else
 			json[lua_tostring(L, -2)] = v;
 

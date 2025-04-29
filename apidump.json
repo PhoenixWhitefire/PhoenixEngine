@@ -1,137 +1,180 @@
 {
-  "Components": {
-    "Animation": {
-      "Functions": null,
-      "Properties": null
-    },
-    "Camera": {
-      "Functions": null,
-      "Properties": {
-        "FieldOfView": "Double",
-        "Transform": "Matrix",
-        "UseSimpleController": "Bool"
-      }
-    },
-    "DataModel": {
+  "GameObject": {
+    "Base": {
       "Functions": {
-        "Close": "() -> ()"
-      },
-      "Properties": null
-    },
-    "DirectionalLight": {
-      "Functions": null,
-      "Properties": {
-        "Brightness": "Double",
-        "Direction": "Vector3",
-        "LightColor": "Color",
-        "Shadows": "Bool"
-      }
-    },
-    "Mesh": {
-      "Functions": null,
-      "Properties": {
-        "AngularVelocity": "Vector3",
-        "Asset": "String",
-        "CastsShadows": "Bool",
-        "Density": "Double",
-        "FaceCulling": "Integer",
-        "Friction": "Double",
-        "LinearVelocity": "Vector3",
-        "Material": "String",
-        "MetallnessFactor": "Double",
-        "PhysicsCollisions": "Bool",
-        "PhysicsDynamics": "Bool",
-        "RoughnessFactor": "Double",
-        "Tint": "Color",
-        "Transparency": "Double"
-      }
-    },
-    "Model": {
-      "Functions": null,
-      "Properties": null
-    },
-    "ParticleEmitter": {
-      "Functions": null,
-      "Properties": {
-        "Emitting": "Bool",
-        "Lifetime": "Vector3",
-        "ParticlesAreAttached": "Bool",
-        "Rate": "Integer"
-      }
-    },
-    "PointLight": {
-      "Functions": null,
-      "Properties": {
-        "Brightness": "Double",
-        "LightColor": "Color",
-        "Range": "Double",
-        "Shadows": "Bool"
-      }
-    },
-    "Script": {
-      "Functions": {
-        "Reload": "() -> (Bool)"
+        "Destroy": "() -> ()",
+        "Duplicate": "() -> (GameObject)",
+        "FindChild": "(String) -> (GameObject)",
+        "GetChildren": "() -> (Array)",
+        "GetComponentNames": "() -> (Array)",
+        "GetDescendants": "() -> (Array)",
+        "GetFullName": "() -> (String)",
+        "HasComponent": "(String) -> (Bool)",
+        "IsA": "(String) -> (Bool)",
+        "MergeWith": "(GameObject) -> ()"
       },
       "Properties": {
-        "SourceFile": "String"
+        "Enabled": "Bool",
+        "Name": "String",
+        "ObjectId": "Integer READONLY",
+        "Parent": "GameObject",
+        "Serializes": "Bool"
       }
     },
-    "Sound": {
-      "Functions": null,
-      "Properties": {
-        "FinishedLoading": "Bool READONLY",
-        "Length": "Double READONLY",
-        "Looped": "Bool",
-        "Playing": "Bool",
-        "Position": "Double",
-        "SoundFile": "String"
-      }
-    },
-    "SpotLight": {
-      "Functions": null,
-      "Properties": {
-        "Angle": "Double",
-        "Brightness": "Double",
-        "LightColor": "Color",
-        "Range": "Double",
-        "Shadows": "Bool"
-      }
-    },
-    "Transformable": {
-      "Functions": null,
-      "Properties": {
-        "Size": "Vector3",
-        "Transform": "Matrix"
-      }
-    },
-    "Workspace": {
-      "Functions": {
-        "ScreenPointToRay": "(Array, Double) -> (Vector3)"
+    "Components": {
+      "Animation": {
+        "Functions": null,
+        "Properties": null
       },
-      "Properties": {
-        "SceneCamera": "GameObject"
+      "Camera": {
+        "Functions": null,
+        "Properties": {
+          "FieldOfView": "Double",
+          "Transform": "Matrix",
+          "UseSimpleController": "Bool"
+        }
+      },
+      "DataModel": {
+        "Functions": {
+          "Close": "(Integer) -> ()"
+        },
+        "Properties": null
+      },
+      "DirectionalLight": {
+        "Functions": null,
+        "Properties": {
+          "Brightness": "Double",
+          "Direction": "Vector3",
+          "LightColor": "Color",
+          "Shadows": "Bool"
+        }
+      },
+      "Mesh": {
+        "Functions": null,
+        "Properties": {
+          "AngularVelocity": "Vector3",
+          "Asset": "String",
+          "CastsShadows": "Bool",
+          "Density": "Double",
+          "FaceCulling": "Integer",
+          "Friction": "Double",
+          "LinearVelocity": "Vector3",
+          "Material": "String",
+          "MetallnessFactor": "Double",
+          "PhysicsCollisions": "Bool",
+          "PhysicsDynamics": "Bool",
+          "RoughnessFactor": "Double",
+          "Tint": "Color",
+          "Transparency": "Double"
+        }
+      },
+      "Model": {
+        "Functions": null,
+        "Properties": null
+      },
+      "ParticleEmitter": {
+        "Functions": null,
+        "Properties": {
+          "Emitting": "Bool",
+          "Lifetime": "Vector3",
+          "ParticlesAreAttached": "Bool",
+          "Rate": "Integer"
+        }
+      },
+      "PointLight": {
+        "Functions": null,
+        "Properties": {
+          "Brightness": "Double",
+          "LightColor": "Color",
+          "Range": "Double",
+          "Shadows": "Bool"
+        }
+      },
+      "Script": {
+        "Functions": {
+          "Reload": "() -> (Bool)"
+        },
+        "Properties": {
+          "SourceFile": "String"
+        }
+      },
+      "Sound": {
+        "Functions": null,
+        "Properties": {
+          "FinishedLoading": "Bool READONLY",
+          "Length": "Double READONLY",
+          "Looped": "Bool",
+          "Playing": "Bool",
+          "Position": "Double",
+          "SoundFile": "String"
+        }
+      },
+      "SpotLight": {
+        "Functions": null,
+        "Properties": {
+          "Angle": "Double",
+          "Brightness": "Double",
+          "LightColor": "Color",
+          "Range": "Double",
+          "Shadows": "Bool"
+        }
+      },
+      "Transform": {
+        "Functions": null,
+        "Properties": {
+          "Size": "Vector3",
+          "Transform": "Matrix"
+        }
+      },
+      "Workspace": {
+        "Functions": {
+          "ScreenPointToRay": "(Array, Double) -> (Vector3)"
+        },
+        "Properties": {
+          "SceneCamera": "GameObject"
+        }
       }
     }
   },
-  "GameObject": {
-    "Functions": {
-      "Destroy": "() -> ()",
-      "Duplicate": "() -> (GameObject)",
-      "FindChild": "(String) -> (GameObject)",
-      "GetChildren": "() -> (Array)",
-      "GetComponentNames": "() -> (Array)",
-      "GetDescendants": "() -> (Array)",
-      "GetFullName": "() -> (String)",
-      "HasComponent": "(String) -> (Bool)",
-      "IsA": "(String) -> (Bool)",
-      "MergeWith": "(GameObject) -> ()"
-    },
-    "Properties": {
-      "Enabled": "Bool",
-      "Name": "String",
-      "ObjectId": "Integer READONLY",
-      "Parent": "GameObject",
-      "Serializes": "Bool"
-    }
+  "ScriptGlobals": {
+    "conf_get": "",
+    "fd_inprogress": "",
+    "fd_open": "",
+    "fd_save": "",
+    "file_read": "",
+    "file_write": "",
+    "file_write_rcd": "",
+    "imgui_begin": "",
+    "imgui_button": "",
+    "imgui_checkbox": "",
+    "imgui_end": "",
+    "imgui_image": "",
+    "imgui_indent": "",
+    "imgui_input_float": "",
+    "imgui_input_text": "",
+    "imgui_item_clicked": "",
+    "imgui_item_hovered": "",
+    "imgui_setitemtooltip": "",
+    "imgui_text": "",
+    "imgui_textlink": "",
+    "input_keypressed": "",
+    "input_mouse_bdown": "",
+    "input_mouse_getpos": "",
+    "input_mouse_setlocked": "",
+    "json_dump": "",
+    "json_parse": "",
+    "matrix_getv": "",
+    "matrix_setv": "",
+    "mesh_get": "",
+    "mesh_save": "",
+    "mesh_set": "",
+    "model_import": "",
+    "require": "",
+    "scene_load": "",
+    "scene_save": "",
+    "sleep": "",
+    "world_aabbcast": "",
+    "world_aabbquery": "",
+    "world_raycast": ""
   }
 }
