@@ -80,11 +80,15 @@ static void pushMatrix(lua_State* L, const glm::mat4& Matrix)
 
 static void pushGameObject(lua_State* L, GameObject* obj)
 {
-	uint32_t* ptrToObj = (uint32_t*)lua_newuserdata(L, sizeof(uint32_t));
-	*ptrToObj = obj ? obj->ObjectId : PHX_GAMEOBJECT_NULL_ID;
+	if (!obj)
+		lua_pushnil(L); // null object properties are nil and falsey
+	{
+		uint32_t* ptrToObj = (uint32_t*)lua_newuserdata(L, sizeof(uint32_t));
+		*ptrToObj = obj ? obj->ObjectId : PHX_GAMEOBJECT_NULL_ID;
 
-	luaL_getmetatable(L, "GameObject");
-	lua_setmetatable(L, -2);
+		luaL_getmetatable(L, "GameObject");
+		lua_setmetatable(L, -2);
+	}
 }
 
 static void pushJson(lua_State* L, const nlohmann::json& v)
@@ -469,7 +473,7 @@ int ScriptEngine::L::HandleFunctionCall(
 	std::vector<Reflection::GenericValue> inputs;
 
 	// This *entire* for-loop is just for handling input arguments
-	for (int index = 1; index < paramTypes.size(); index++)
+	for (int index = 0; index < paramTypes.size(); index++)
 	{
 		Reflection::ValueType paramType = paramTypes[index];
 

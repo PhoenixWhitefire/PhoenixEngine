@@ -165,3 +165,4 @@ if not conf_get("Developer") then
 	Update = nil
 end
 
+print(game:FindChild("HI"))

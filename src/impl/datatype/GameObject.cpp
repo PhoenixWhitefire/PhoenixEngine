@@ -509,6 +509,9 @@ void GameObject::RemoveChild(uint32_t id)
 
 Reflection::GenericValue GameObject::ToGenericValue() const
 {
+	if (!this)
+		return {}; // null
+
 	uint32_t targetObjectId = PHX_GAMEOBJECT_NULL_ID;
 
 	if (this)
