@@ -9,6 +9,7 @@
 #include "asset/MeshProvider.hpp"
 #include "asset/PrimitiveMeshes.hpp"
 #include "render/GpuBuffers.hpp"
+#include "ThreadManager.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
@@ -348,6 +349,8 @@ static MeshProvider* s_Instance = nullptr;
 
 void MeshProvider::Initialize()
 {
+	ZoneScoped;
+
 	this->Assign(PrimitiveMeshes::Cube(), "!Cube", true);
 	this->Assign(PrimitiveMeshes::Quad(), "!Quad", true);
 
@@ -751,9 +754,11 @@ uint32_t MeshProvider::LoadFromPath(const std::string_view& Path, bool ShouldLoa
 				uint32_t resourceId = this->Assign(Mesh{}, Path);
 				m_Meshes.at(resourceId).MeshDataPreserved = PreserveMeshData;
 
-				std::thread(
+				ThreadManager::Get()->Dispatch(
 					[promise, resourceId, this, Path, contents]()
 					{
+						ZoneScopedN("AsyncMeshLoad");
+
 						bool deserialized = true;
 						Mesh loadedMesh = this->Deserialize(contents, &deserialized);
 
@@ -763,9 +768,9 @@ uint32_t MeshProvider::LoadFromPath(const std::string_view& Path, bool ShouldLoa
 								std::make_format_args(Path, s_ErrorString)
 							));
 
-						promise->set_value_at_thread_exit(loadedMesh);
+						promise->set_value(loadedMesh);
 					}
-				).detach();
+				);
 
 				m_MeshPromises.push_back(promise);
 				m_MeshFutures.push_back(promise->get_future().share());

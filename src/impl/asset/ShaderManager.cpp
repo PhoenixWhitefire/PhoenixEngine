@@ -471,6 +471,8 @@ ShaderManager::~ShaderManager()
 
 void ShaderManager::Initialize()
 {
+	ZoneScoped;
+
 	// putting this before calling `->LoadFromPath`
 	// as it may call itself
 	s_Instance = this;

@@ -51,7 +51,7 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 
 #define PHX_MAIN_HANDLECRASH_WHAT(c) catch (c Error) { handleCrash(Error.what(), #c); return 1; }
 
-#if defined(NDEBUG)
+#ifdef NDEBUG
 
 #define PHX_MAIN_CRASHHANDLERS                                                   \
 PHX_MAIN_HANDLECRASH(std::string)                                                \
@@ -757,6 +757,8 @@ static void init(int argc, char** argv)
 			std::make_format_args(argv[mapFileArgIdx + 1])
 		));
 
+		PHX_ENSURE(mapFileArgIdx < argc);
+
 		mapFileFromArgs = argv[mapFileArgIdx + 1];
 		hasMapFromArgs = true;
 	}
@@ -827,17 +829,23 @@ int main(int argc, char** argv)
 
 	try
 	{
-		// i thought about wrapping this in 2 scopes in case Engine's dtor
-		// throws an exception, but it can't seem to catch it regardless?
-		// 10/01/2025
-		Engine engine{};
-		
 		if (hasCliArgument("-dev"))
 			EngineJsonConfig["Developer"] = true;
 			
 		else if (hasCliArgument("-nodev"))
 			EngineJsonConfig["Developer"] = false;
-		
+
+		if (int idx = findCmdLineArgument(argc, argv, "-threads"); idx > 0)
+		{
+			PHX_ENSURE(idx < argc);
+			EngineJsonConfig["ThreadManagerThreadCount"] = std::stoi(argv[idx + 1]);
+		}
+
+		// i thought about wrapping this in 2 scopes in case Engine's dtor
+		// throws an exception, but it can't seem to catch it regardless?
+		// 10/01/2025
+		Engine engine{};
+
 		init(argc, argv);
 		engine.Start();
 

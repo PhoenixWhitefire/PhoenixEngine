@@ -1,9 +1,11 @@
+#include <tracy/public/tracy/Tracy.hpp>
 #include <SDL3/SDL_audio.h>
 #include <SDL3/SDL_init.h>
 
 #include "component/Sound.hpp"
 #include "datatype/GameObject.hpp"
 #include "GlobalJsonConfig.hpp"
+#include "ThreadManager.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
@@ -268,9 +270,14 @@ void EcSound::Reload()
 	std::promise<bool> begone;
 	AudioStreamPromises[EcId].swap(begone);
 
-	std::thread(
-		[ResDir](uint32_t SoundEcId, std::string RequestedSoundFile)
+	uint32_t SoundEcId = EcId;
+	std::string RequestedSoundFile = SoundFile;
+
+	ThreadManager::Get()->Dispatch(
+		[ResDir, SoundEcId, RequestedSoundFile]()
 		{
+			ZoneScopedN("AsyncSoundLoad");
+
 			AudioAsset audio{};
 
 			AudioAssetsMutex.lock();
@@ -349,8 +356,6 @@ void EcSound::Reload()
 			AudioStreamPromises[SoundEcId].set_value(true);
 
 			ComponentsBufferReAllocMutex.unlock();
-		},
-		EcId,
-		SoundFile
-	).detach();
+		}
+	);
 }

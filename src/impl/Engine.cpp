@@ -128,12 +128,11 @@ static T readFromConfiguration(const std::string_view& Key, const T& DefaultValu
 		std::string errorMessage = Error.what();
 
 		// 03/02/2025 "no matching token: {" WTF DO YOU MEAN
-		/*
+
 		Log::Error(std::vformat(
 			"Error trying to read key '{}' of configuration: {}. Falling back to default value",
 			std::make_format_args(Key, errorMessage)
-		);
-		*/
+		));
 
 		return DefaultValue;
 	}
@@ -148,7 +147,10 @@ void Engine::LoadConfiguration()
 	if (ConfigLoadSucceeded)
 		try
 		{
-			EngineJsonConfig = nlohmann::json::parse(ConfigAscii);
+			nlohmann::json config = nlohmann::json::parse(ConfigAscii);
+			
+			for (auto it = config.begin(); it != config.end(); it++)
+				EngineJsonConfig[it.key()] = it.value();
 		}
 		catch (nlohmann::json::parse_error err)
 		{
@@ -309,10 +311,11 @@ Engine::Engine()
 	this->RendererContext.Initialize(this->WindowSizeX, this->WindowSizeY, this->Window);
 	m_BloomFbo.Initialize(WindowSizeX, WindowSizeY, 0);
 
+	m_ThreadManager.Initialize(EngineJsonConfig.value("ThreadManagerThreadCount", -1));
+
 	m_TextureManager.Initialize();
 	m_ShaderManager.Initialize();
-	m_MaterialManager.Initialize(); // mm after tm and sm as it may attempt to load a texture and shader
-
+	m_MaterialManager.Initialize(); // mat after tex and shd as it may attempt to load a texture and shader
 	m_MeshProvider.Initialize();
 
 	Log::Info("Blue frame...");
@@ -327,8 +330,6 @@ Engine::Engine()
 
 	this->DataModel = GameObject::Create("DataModel");
 	GameObject::s_DataModel = DataModel->ObjectId;
-
-	//ThreadManager::Get()->CreateWorkers(4, WorkerType::DefaultTaskWorker);
 
 	Log::Info("Engine initialized");
 }

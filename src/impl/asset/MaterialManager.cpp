@@ -168,6 +168,8 @@ MaterialManager::~MaterialManager()
 
 void MaterialManager::Initialize()
 {
+	ZoneScoped;
+
 	this->LoadFromPath("error");
 
 	s_Instance = this;

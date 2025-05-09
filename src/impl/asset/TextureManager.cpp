@@ -196,6 +196,8 @@ static TextureManager* s_Instance = nullptr;
 
 void TextureManager::Initialize()
 {
+	ZoneScoped;
+
 	glGenBuffers(1, &s_Pbo);
 	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, s_Pbo);
 	// 25/12/2024
@@ -420,27 +422,22 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 				&BlackPixel
 			);
 
-			/*Task* LoadTextureTask = new Task();
-			LoadTextureTask->FuncArgument = (void*)this;
-			LoadTextureTask->Function = asyncTextureLoader;
-			LoadTextureTask->DbgInfo = "LoadTextureTask: Tex: " + ActualPath;
-
-			ThreadManager::Get()->DispatchJob(*LoadTextureTask);*/
-
 			std::promise<Texture>* promise = new std::promise<Texture>;
 
-			std::thread(
+			ThreadManager::Get()->Dispatch(
 				[promise, ActualPath, newResourceId]()
 				{
+					ZoneScopedN("AsyncTextureLoad");
+
 					Texture asyncTexture{};
 					asyncTexture.LoadedAsynchronously = true;
 					asyncTexture.ResourceId = newResourceId;
 
 					emloadTexture(&asyncTexture, ActualPath);
 
-					promise->set_value_at_thread_exit(asyncTexture);
+					promise->set_value(asyncTexture);
 				}
-			).detach();
+			);
 
 			newTexture->Status = Texture::LoadStatus::InProgress;
 
@@ -526,8 +523,6 @@ void TextureManager::FinalizeAsyncLoadedTextures()
 		m_TexFutures.erase(m_TexFutures.begin() + promiseIndex);
 
 		delete promise;
-
-		return;
 	}
 }
 

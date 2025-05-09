@@ -10,6 +10,7 @@
 #include "asset/TextureManager.hpp"
 #include "asset/ShaderManager.hpp"
 #include "asset/MeshProvider.hpp"
+#include "ThreadManager.hpp"
 
 #include "component/DataModel.hpp"
 #include "component/Workspace.hpp"
@@ -68,6 +69,7 @@ private:
 	int m_DrawnFramesInSecond = -1;
 	bool m_IsRunning = false;
 
+	ThreadManager m_ThreadManager;
 	MaterialManager m_MaterialManager;
 	TextureManager m_TextureManager;
 	ShaderManager m_ShaderManager;

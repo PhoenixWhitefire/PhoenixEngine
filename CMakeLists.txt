@@ -41,9 +41,9 @@ target_sources(PhoenixEngine PRIVATE README.md WindowsExeMetadata.rct phoenix.co
 
 set_target_properties(PhoenixEngine PROPERTIES OUTPUT_NAME PhoenixEngine)
 
-target_compile_definitions(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:TRACY_ENABLE>)
+target_compile_definitions(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:TRACY_ENABLE TRACY_FIBERS>)
 target_compile_definitions(PhoenixEngine PRIVATE $<$<CONFIG:Release>:NDEBUG>)
-target_compile_definitions(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:TRACY_ENABLE NDEBUG>)
+target_compile_definitions(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:NDEBUG TRACY_ENABLE TRACY_FIBERS>)
 
 target_include_directories(PhoenixEngine PUBLIC
 	"./"
@@ -63,8 +63,12 @@ set(PHX_BUILD_TYPE $<IF:$<CONFIG:Debug>,Debug,$<IF:$<CONFIG:Release>,Release,Rel
 
 target_compile_definitions(PhoenixEngine PRIVATE PHX_BUILD_TYPE="${PHX_BUILD_TYPE}")
 
+add_compile_definitions($<$<CONFIG:Debug>:TRACY_ENABLE>)
+add_compile_definitions($<$<CONFIG:Debug>:TRACY_FIBERS>)
 add_compile_definitions($<$<CONFIG:Release>:NDEBUG>)
 add_compile_definitions($<$<CONFIG:RelTracy>:NDEBUG>)
+add_compile_definitions($<$<CONFIG:RelTracy>:TRACY_ENABLE>)
+add_compile_definitions($<$<CONFIG:RelTracy>:TRACY_FIBERS>)
 
 if (MSVC)
 	include(cmake-msvc.txt)
