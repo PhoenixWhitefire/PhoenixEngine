@@ -160,9 +160,14 @@ void RenderMaterial::ApplyUniforms()
 
 static MaterialManager* s_Instance = nullptr;
 
-MaterialManager::~MaterialManager()
+void MaterialManager::Shutdown()
 {
 	s_Instance = nullptr;
+}
+
+MaterialManager::~MaterialManager()
+{
+	assert(!s_Instance);
 }
 
 void MaterialManager::Initialize()

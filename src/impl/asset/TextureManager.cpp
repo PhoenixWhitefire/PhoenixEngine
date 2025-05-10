@@ -245,10 +245,8 @@ void TextureManager::Initialize()
 	s_Instance = this;
 }
 
-TextureManager::~TextureManager()
+void TextureManager::Shutdown()
 {
-	s_Instance = nullptr;
-
 	s_TextureManagerShutdown = true;
 
 	std::vector<uint32_t> textureGpuIds;
@@ -263,6 +261,13 @@ TextureManager::~TextureManager()
 	m_StringToTextureId.clear();
 	m_TexFutures.clear();
 	m_TexPromises.clear();
+
+	s_Instance = nullptr;
+}
+
+TextureManager::~TextureManager()
+{
+	assert(!s_Instance);
 }
 
 TextureManager* TextureManager::Get()

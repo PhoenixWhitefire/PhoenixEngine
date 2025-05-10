@@ -43,6 +43,8 @@ struct Texture
 class TextureManager
 {
 public:
+	void Shutdown();
+	// USE SHUTDOWN!!
 	~TextureManager();
 
 	void Initialize();

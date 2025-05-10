@@ -463,9 +463,14 @@ bool ShaderProgram::m_CheckForErrors(uint32_t Object, const char* Type)
 
 static ShaderManager* s_Instance = nullptr;
 
-ShaderManager::~ShaderManager()
+void ShaderManager::Shutdown()
 {
 	s_Instance = nullptr;
+}
+
+ShaderManager::~ShaderManager()
+{
+	assert(!s_Instance);
 }
 
 void ShaderManager::Initialize()

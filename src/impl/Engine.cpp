@@ -1143,13 +1143,20 @@ Engine::~Engine()
 	Log::Save();
 
 	GameObject::s_DataModel = PHX_GAMEOBJECT_NULL_ID;
+	DataModel->Destroy();
+	DataModel.Invalidate();
 
-	EngineInstance = nullptr;
+	m_MaterialManager.Shutdown();
+	m_TextureManager.Shutdown();
+	m_ShaderManager.Shutdown();
+	m_MeshProvider.Shutdown();
+
+	m_ThreadManager.Shutdown();
 
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplSDL3_Shutdown();
 
 	SDL_Quit();
 
-	// datamodel ref destructor is called, freeing the DM when this scope exits
+	EngineInstance = nullptr;
 }

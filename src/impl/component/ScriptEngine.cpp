@@ -452,15 +452,22 @@ int ScriptEngine::L::HandleFunctionCall(
 
 	if (numArgs < minArgs)
 	{
-		std::string argsString;
+		std::string argsString = ": ( ";
 
-		for (int arg = 1; arg < numArgs + 1; arg++)
-			argsString += std::string(luaL_typename(L, -(numArgs + 1 - arg))) + ", ";
+		if (numArgs > 0)
+		{
+			for (int arg = 1; arg < numArgs + 1; arg++)
+				argsString += std::string(luaL_typename(L, -(numArgs + 1 - arg))) + ", ";
+
+			argsString += " )";
+		}
+		else
+			argsString.clear();
 
 		argsString = argsString.substr(0, argsString.size() - 2);
 
 		luaL_error(L, "%s", std::vformat(
-			"Function '{}' expects at least {} arguments, got {} instead: ({})",
+			"Function '{}' expects at least {} arguments, got {} instead{}",
 			std::make_format_args(fname, numParams, numArgs, argsString)
 		).c_str());
 
@@ -470,14 +477,14 @@ int ScriptEngine::L::HandleFunctionCall(
 	{
 		int numExtra = numArgs - numParams;
 		Log::Warning(std::vformat("Function '{}' received {} more arguments than necessary",
-			std::make_format_args(numExtra)
+			std::make_format_args(fname, numExtra)
 		));
 	}
 
 	std::vector<Reflection::GenericValue> inputs;
 
 	// This *entire* for-loop is just for handling input arguments
-	for (int index = 1; index < paramTypes.size(); index++)
+	for (int index = 0; index < paramTypes.size(); index++)
 	{
 		Reflection::ValueType paramType = paramTypes[index];
 
@@ -486,7 +493,7 @@ int ScriptEngine::L::HandleFunctionCall(
 		// 1 = -2
 		// 2 = -1
 		// Simpler than I thought actually
-		int argStackIndex = index - numParams;
+		int argStackIndex = index - numArgs;
 
 		auto expectedLuaTypeIt = ScriptEngine::ReflectedTypeLuaEquivalent.find(paramType);
 

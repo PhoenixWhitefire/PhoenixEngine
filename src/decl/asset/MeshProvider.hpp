@@ -26,6 +26,8 @@ public:
 		uint32_t NumIndices = UINT32_MAX;
 	};
 
+	void Shutdown();
+	// USE SHUTDOWN!!
 	~MeshProvider();
 
 	void Initialize();

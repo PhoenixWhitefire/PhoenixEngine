@@ -360,10 +360,8 @@ void MeshProvider::Initialize()
 static std::mutex s_ReadShutdownMutex;
 static bool s_MeshProvShutdown = false;
 
-MeshProvider::~MeshProvider()
+void MeshProvider::Shutdown()
 {
-	s_Instance = nullptr;
-
 	{
 		std::unique_lock<std::mutex> lock{ s_ReadShutdownMutex };
 		s_MeshProvShutdown = true;
@@ -386,6 +384,13 @@ MeshProvider::~MeshProvider()
 	m_MeshPromises.clear();
 	m_MeshPromiseResourceIds.clear();
 	m_GpuMeshes.clear();
+
+	s_Instance = nullptr;
+}
+
+MeshProvider::~MeshProvider()
+{
+	assert(!s_Instance);
 }
 
 MeshProvider* MeshProvider::Get()

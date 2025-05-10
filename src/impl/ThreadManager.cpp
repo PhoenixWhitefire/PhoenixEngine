@@ -116,7 +116,7 @@ void ThreadManager::PropagateExceptions()
 		}
 }
 
-ThreadManager::~ThreadManager()
+void ThreadManager::Shutdown()
 {
 	ZoneScoped;
 
@@ -131,6 +131,13 @@ ThreadManager::~ThreadManager()
 		worker.Thread.join();
 
 	PropagateExceptions();
+
+	s_Instance = nullptr;
+}
+
+ThreadManager::~ThreadManager()
+{
+	assert(!s_Instance);
 }
 
 ThreadManager* ThreadManager::Get()

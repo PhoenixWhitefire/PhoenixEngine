@@ -10,6 +10,8 @@
 class ThreadManager
 {
 public:
+	void Shutdown();
+	// USE SHUTDOWN!!
 	~ThreadManager();
 
 	void Initialize(int NumThreads = -1);

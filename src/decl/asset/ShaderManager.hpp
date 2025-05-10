@@ -49,6 +49,8 @@ private:
 class ShaderManager
 {
 public:
+	void Shutdown();
+	// USE SHUTDOWN!!
 	~ShaderManager();
 
 	void Initialize();

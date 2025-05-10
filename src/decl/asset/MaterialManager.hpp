@@ -44,6 +44,8 @@ struct RenderMaterial
 class MaterialManager
 {
 public:
+	void Shutdown();
+	// USE SHUTDOWN!!
 	~MaterialManager();
 
 	void Initialize();
