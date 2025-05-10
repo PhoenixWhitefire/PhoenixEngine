@@ -327,7 +327,7 @@ std::string Reflection::GenericValue::ToString() const
 std::string_view Reflection::GenericValue::AsStringView() const
 {
 	if (Type != ValueType::String)
-		throw("GenericValue was not a String, but was a " + std::string(TypeAsString(Type)));
+		throw("GenericValue was not a String, but instead a " + std::string(TypeAsString(Type)));
 	else
 		if (Size > 8)
 			return std::string_view((char*)Value, Size);
@@ -338,20 +338,27 @@ bool Reflection::GenericValue::AsBoolean() const
 {
 	return Type == ValueType::Boolean
 		? (bool)this->Value
-		: throw("GenericValue was not a Bool, but was a " + std::string(TypeAsString(Type)));
+		: throw("GenericValue was not a Bool, but instead a " + std::string(TypeAsString(Type)));
 }
 double Reflection::GenericValue::AsDouble() const
 {
-	return Type == ValueType::Double
-		? *(double*)&this->Value
-		: throw("GenericValue was not a Double, but was a " + std::string(TypeAsString(Type)));
+	if (Type == ValueType::Double)
+		return *(double*)&this->Value;
+
+	else if (Type == ValueType::Integer)
+		return static_cast<double>((int64_t)this->Value);
+
+	throw("GenericValue was not a number (Integer/ Double ), but instead a " + std::string(TypeAsString(Type)));
 }
 int64_t Reflection::GenericValue::AsInteger() const
 {
-	// `|| ValueType::GameObject` because it's easier 14/09/2024
-	return (Type == ValueType::Integer || Type == ValueType::GameObject)
-		? (int64_t)this->Value
-		: throw("GenericValue was not an Integer, but was a " + std::string(TypeAsString(Type)));
+	if (Type == ValueType::Integer)
+		return (int64_t)this->Value;
+
+	else if (Type == ValueType::Double)
+		return static_cast<int64_t>(AsDouble());
+
+	throw("GenericValue was not a number ( Integer /Double), but instead a " + std::string(TypeAsString(Type)));
 }
 glm::mat4& Reflection::GenericValue::AsMatrix() const
 {
@@ -359,12 +366,12 @@ glm::mat4& Reflection::GenericValue::AsMatrix() const
 
 	return Type == ValueType::Matrix
 		? *mptr
-		: throw("GenericValue was not a Matrix, but was a " + std::string(TypeAsString(Type)));
+		: throw("GenericValue was not a Matrix, but instead a " + std::string(TypeAsString(Type)));
 }
 std::vector<Reflection::GenericValue> Reflection::GenericValue::AsArray() const
 {
 	if (this->Type != Reflection::ValueType::Array)
-		throw("GenericValue was not an Array, but was a " + std::string(TypeAsString(Type)));
+		throw("GenericValue was not an Array, but instead a " + std::string(TypeAsString(Type)));
 
 	std::vector<Reflection::GenericValue> array;
 	array.reserve(this->Size);
@@ -382,7 +389,7 @@ std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> Reflectio
 
 	/*
 	if (Type != ValueType::Map)
-		throw("GenericValue was not a Map, but was a " + Reflection::TypeAsString(Type));
+		throw("GenericValue was not a Map, but instead a " + Reflection::TypeAsString(Type));
 
 	//if (Array.size() % 2 != 0)
 	//	throw("GenericValue was not a valid Map (odd number of Array elements)");

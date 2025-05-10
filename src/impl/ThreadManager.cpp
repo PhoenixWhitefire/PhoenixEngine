@@ -1,5 +1,6 @@
 #include <tracy/public/tracy/Tracy.hpp>
 #include <format>
+#include <assert.h>
 
 #include "ThreadManager.hpp"
 #include "Log.hpp"
@@ -35,7 +36,7 @@ void ThreadManager::Initialize(int NumThreadsOverride)
 	for (size_t i = 0; i < numThreads; i++)
 	{
 		m_Workers.emplace_back(
-			[this, i]
+			std::thread([this, i]
 			{
 				TracyFiberEnter(s_WorkerFiberNames[i]);
 
@@ -64,14 +65,25 @@ void ThreadManager::Initialize(int NumThreadsOverride)
 						m_Tasks.pop();
 					}
 
+					try
 					{
 						ZoneScopedN("Task");
+
 						task();
+					}
+					catch (...)
+					{
+						TracyFiberLeave;
+
+						m_Workers[i].Exception = std::current_exception();
+						
+						return;
 					}
 				}
 
 				TracyFiberLeave;
-			}
+			}),
+			nullptr
 		);
 	}
 
@@ -82,9 +94,8 @@ void ThreadManager::Initialize(int NumThreadsOverride)
 
 void ThreadManager::Dispatch(std::function<void()> Task)
 {
-	assert(s_Instance);
-	assert(!m_Stop);
 	assert(s_Instance == this);
+	assert(!m_Stop);
 
 	{
 		std::unique_lock<std::mutex> lock{ m_TasksMutex };
@@ -92,6 +103,17 @@ void ThreadManager::Dispatch(std::function<void()> Task)
 	}
 
 	m_TasksCv.notify_one();
+}
+
+void ThreadManager::PropagateExceptions()
+{
+	for (const Worker& worker : m_Workers)
+		if (worker.Exception)
+		{
+			Log::Error("Exception occurred in Worker thread! Re-throwing...");
+
+			std::rethrow_exception(worker.Exception);
+		}
 }
 
 ThreadManager::~ThreadManager()
@@ -105,11 +127,14 @@ ThreadManager::~ThreadManager()
 
 	m_TasksCv.notify_all();
 
-	for (std::thread& worker : m_Workers)
-		worker.join();
+	for (Worker& worker : m_Workers)
+		worker.Thread.join();
+
+	PropagateExceptions();
 }
 
 ThreadManager* ThreadManager::Get()
 {
+	assert(s_Instance);
 	return s_Instance;
 }

@@ -14,8 +14,8 @@ struct EcSound
 	void Reload();
 
 	std::string SoundFile;
-	float Length;
-	float Position;
+	float Position = 0.f;
+	float Length = 0.f;
 	float NextRequestedPosition = 0.f;
 	bool Looped = false;
 	bool FinishedLoading = true;

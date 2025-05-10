@@ -16,11 +16,18 @@ public:
 
 	// queue a task
 	void Dispatch(std::function<void()>);
+	void PropagateExceptions();
 
 	static ThreadManager* Get();
 
 private:
-	std::vector<std::thread> m_Workers;
+	struct Worker
+	{
+		std::thread Thread;
+		std::exception_ptr Exception;
+	};
+
+	std::vector<Worker> m_Workers;
 
 	std::queue<std::function<void()>> m_Tasks;
 	std::mutex m_TasksMutex;

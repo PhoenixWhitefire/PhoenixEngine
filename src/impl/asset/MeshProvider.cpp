@@ -357,18 +357,22 @@ void MeshProvider::Initialize()
 	s_Instance = this;
 }
 
+static std::mutex s_ReadShutdownMutex;
+static bool s_MeshProvShutdown = false;
+
 MeshProvider::~MeshProvider()
 {
-	if (s_Instance == this)
-		s_Instance = nullptr;
+	s_Instance = nullptr;
+
+	{
+		std::unique_lock<std::mutex> lock{ s_ReadShutdownMutex };
+		s_MeshProvShutdown = true;
+	}
 
 	for (size_t promIndex = 0; promIndex < m_MeshPromises.size(); promIndex++)
 	{
 		std::promise<Mesh>* prom = m_MeshPromises[promIndex];
 		std::shared_future<Mesh>& future = m_MeshFutures[promIndex];
-
-		// we don't want our async threads accessing deleted promises
-		future.wait();
 
 		delete prom;
 	}
@@ -758,6 +762,11 @@ uint32_t MeshProvider::LoadFromPath(const std::string_view& Path, bool ShouldLoa
 					[promise, resourceId, this, Path, contents]()
 					{
 						ZoneScopedN("AsyncMeshLoad");
+
+						std::unique_lock<std::mutex> lock{ s_ReadShutdownMutex };
+
+						if (s_MeshProvShutdown)
+							return;
 
 						bool deserialized = true;
 						Mesh loadedMesh = this->Deserialize(contents, &deserialized);

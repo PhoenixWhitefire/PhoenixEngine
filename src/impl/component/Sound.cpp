@@ -173,7 +173,7 @@ public:
 	SoundManager()
     {
 		if (!SDL_Init(SDL_INIT_AUDIO))
-			throw("Unabled to init SDL Audio subsystem: " + std::string(SDL_GetError()));
+			throw("Unable to init SDL Audio subsystem: " + std::string(SDL_GetError()));
 
         GameObject::s_ComponentManagers[(size_t)EntityComponent::Sound] = this;
     }

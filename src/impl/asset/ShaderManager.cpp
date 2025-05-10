@@ -465,8 +465,7 @@ static ShaderManager* s_Instance = nullptr;
 
 ShaderManager::~ShaderManager()
 {
-	if (s_Instance == this)
-		s_Instance = nullptr;
+	s_Instance = nullptr;
 }
 
 void ShaderManager::Initialize()

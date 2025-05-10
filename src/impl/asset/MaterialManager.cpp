@@ -162,8 +162,7 @@ static MaterialManager* s_Instance = nullptr;
 
 MaterialManager::~MaterialManager()
 {
-	if (s_Instance == this)
-		s_Instance = nullptr;
+	s_Instance = nullptr;
 }
 
 void MaterialManager::Initialize()

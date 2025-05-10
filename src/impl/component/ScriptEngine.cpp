@@ -371,7 +371,7 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 	}
 	case Reflection::ValueType::GameObject:
 	{
-		pushGameObject(L, GameObject::GetObjectById(static_cast<uint32_t>(gv.AsInteger())));
+		pushGameObject(L, GameObject::FromGenericValue(gv));
 		break;
 	}
 	case Reflection::ValueType::Array:
@@ -438,13 +438,17 @@ int ScriptEngine::L::HandleFunctionCall(
 	const std::vector<Reflection::ParameterType>& paramTypes = func->Inputs;
 
 	int numParams = static_cast<int32_t>(paramTypes.size());
-	int minArgs = numParams;
+	int minArgs = 0;
 
-	for (int i = numParams; i > 0; i--)
-		if (paramTypes[i - 1].IsOptional)
-			minArgs--; // substract for each optional backwards
+	for (int i = 0; i < numParams; i++)
+	{
+		const Reflection::ParameterType& param = paramTypes[i];
+
+		if (!param.IsOptional)
+			minArgs++;
 		else
-			break; // stop when we hit the first optional in terms of argument order
+			break;
+	}
 
 	if (numArgs < minArgs)
 	{
@@ -473,7 +477,7 @@ int ScriptEngine::L::HandleFunctionCall(
 	std::vector<Reflection::GenericValue> inputs;
 
 	// This *entire* for-loop is just for handling input arguments
-	for (int index = 0; index < paramTypes.size(); index++)
+	for (int index = 1; index < paramTypes.size(); index++)
 	{
 		Reflection::ValueType paramType = paramTypes[index];
 
@@ -503,7 +507,7 @@ int ScriptEngine::L::HandleFunctionCall(
 
 			// I get that shitty fucking ::vformat can't handle
 			// a SINGULAR fucking parameter that isn't an lvalue,
-			// but an `int`?? A literal fucking scalar??? What is this bullshit????
+			// but an `int`?? A literal fucking trivial??? What is this bullshit????
 			int indexAsLuaIndex = index + 1;
 
 			luaL_error(L, "%s", std::vformat(

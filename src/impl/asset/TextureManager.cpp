@@ -43,6 +43,7 @@ static void* s_PboMapping = nullptr;
 
 static std::mutex s_PboWriteAvailable;
 static bool s_PboWriteGlobal = true;
+static bool s_TextureManagerShutdown = false;
 
 static bool isValidPboCandidate(const Texture* t)
 {
@@ -246,15 +247,16 @@ void TextureManager::Initialize()
 
 TextureManager::~TextureManager()
 {
-	if (s_Instance == this)
-		s_Instance = nullptr;
+	s_Instance = nullptr;
+
+	s_TextureManagerShutdown = true;
 
 	std::vector<uint32_t> textureGpuIds;
 	textureGpuIds.reserve(m_Textures.size());
 
 	for (const Texture& texture : m_Textures)
 		textureGpuIds.push_back(texture.GpuId);
-	
+
 	glDeleteTextures(static_cast<int32_t>(m_Textures.size()), textureGpuIds.data());
 
 	m_Textures.clear();
@@ -296,8 +298,20 @@ static void emloadTexture(
 	{
 		s_PboWriteAvailable.lock();
 
-		while (!s_PboWriteGlobal)
-			std::this_thread::sleep_for(std::chrono::milliseconds(50));
+		uint32_t totalTimeSlept = 0;
+
+		while (!s_PboWriteGlobal && !s_TextureManagerShutdown)
+		{
+			if (totalTimeSlept > 2500)
+			{
+				AsyncTexture->Status = Texture::LoadStatus::Failed;
+				AsyncTexture->ImagePath += " <POTENTIAL DEADLOCK>";
+				break; // 10/05/2025 deadlock problems
+			}
+
+			std::this_thread::sleep_for(std::chrono::milliseconds(5));
+			totalTimeSlept += 5;
+		}
 
 		s_PboWriteGlobal = false;
 

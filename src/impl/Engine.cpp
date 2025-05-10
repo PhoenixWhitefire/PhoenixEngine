@@ -513,12 +513,8 @@ void Engine::Start()
 	else
 		this->Workspace = wp;
 
-	MaterialManager* mtlManager = MaterialManager::Get();
-	TextureManager* texManager = TextureManager::Get();
-	MeshProvider* meshProvider = MeshProvider::Get();
-
-	const Mesh cubeMesh = meshProvider->GetMeshResource(meshProvider->LoadFromPath("!Cube"));
-	const Mesh quadMesh = meshProvider->GetMeshResource(meshProvider->LoadFromPath("!Quad"));
+	const Mesh cubeMesh = m_MeshProvider.GetMeshResource(m_MeshProvider.LoadFromPath("!Cube"));
+	const Mesh quadMesh = m_MeshProvider.GetMeshResource(m_MeshProvider.LoadFromPath("!Quad"));
 
 	double RunningTime = GetRunningTime();
 
@@ -556,7 +552,7 @@ void Engine::Start()
 	{
 		const std::string& skyboxImage = SkyboxCubemapImages[faceIndex];
 
-		uint32_t tex = texManager->LoadTextureFromPath(SkyPath + skyboxImage + ".jpg");
+		uint32_t tex = m_TextureManager.LoadTextureFromPath(SkyPath + skyboxImage + ".jpg");
 		skyboxFacesBeingLoaded.push_back(tex);
 
 		glTexImage2D(
@@ -568,7 +564,7 @@ void Engine::Start()
 			0,
 			GL_RED,
 			GL_UNSIGNED_BYTE,
-			texManager->GetTextureResource(tex).TMP_ImageByteData
+			m_TextureManager.GetTextureResource(tex).TMP_ImageByteData
 		);
 
 		glGenerateMipmap(GL_TEXTURE_2D);
@@ -578,22 +574,20 @@ void Engine::Start()
 
 	//Texture HDRISkyboxTexture("Assets/Textures/hdri_sky_1.jpeg", "Diffuse", 0);
 
-	ShaderManager* shdManager = ShaderManager::Get();
-
-	uint32_t postFxShaderId = shdManager->LoadFromPath("postprocessing");
-	uint32_t skyboxShaderId = shdManager->LoadFromPath("skybox");
-	uint32_t bloomExtractShaderId = shdManager->LoadFromPath("bloomingextract");
-	uint32_t bloomCompositeShaderId = shdManager->LoadFromPath("bloomcomposite");
-	uint32_t separableBlurShaderId = shdManager->LoadFromPath("separableblur");
+	uint32_t postFxShaderId = m_ShaderManager.LoadFromPath("postprocessing");
+	uint32_t skyboxShaderId = m_ShaderManager.LoadFromPath("skybox");
+	uint32_t bloomExtractShaderId = m_ShaderManager.LoadFromPath("bloomingextract");
+	uint32_t bloomCompositeShaderId = m_ShaderManager.LoadFromPath("bloomcomposite");
+	uint32_t separableBlurShaderId = m_ShaderManager.LoadFromPath("separableblur");
 
 	// we intentionally perform a copy here, because if another shader gets loaded,
 	// the entire list can get re-allocated, and the references will break and just be
 	// garbage data.
-	ShaderProgram postFxShaders = shdManager->GetShaderResource(postFxShaderId);
-	ShaderProgram skyboxShaders = shdManager->GetShaderResource(skyboxShaderId);
-	ShaderProgram bloomExtractShaders = shdManager->GetShaderResource(bloomExtractShaderId);
-	ShaderProgram bloomCompositeShaders = shdManager->GetShaderResource(bloomCompositeShaderId);
-	ShaderProgram separableBlurShaders = shdManager->GetShaderResource(separableBlurShaderId);
+	ShaderProgram postFxShaders = m_ShaderManager.GetShaderResource(postFxShaderId);
+	ShaderProgram skyboxShaders = m_ShaderManager.GetShaderResource(skyboxShaderId);
+	ShaderProgram bloomExtractShaders = m_ShaderManager.GetShaderResource(bloomExtractShaderId);
+	ShaderProgram bloomCompositeShaders = m_ShaderManager.GetShaderResource(bloomCompositeShaderId);
+	ShaderProgram separableBlurShaders = m_ShaderManager.GetShaderResource(separableBlurShaderId);
 
 	postFxShaders.SetUniform("Texture", 1);
 	postFxShaders.SetUniform("DistortionTexture", 2);
@@ -609,7 +603,7 @@ void Engine::Start()
 
 	RendererContext.FrameBuffer.Unbind();
 	
-	uint32_t distortionTexture = texManager->LoadTextureFromPath("textures/screendistort.jpg");
+	uint32_t distortionTexture = m_TextureManager.LoadTextureFromPath("textures/screendistort.jpg");
 
 	SDL_Event pollingEvent;
 
@@ -660,8 +654,9 @@ void Engine::Start()
 		scene.RenderList.clear();
 		scene.LightingList.clear();
 
-		texManager->FinalizeAsyncLoadedTextures();
-		meshProvider->FinalizeAsyncLoadedMeshes();
+		m_TextureManager.FinalizeAsyncLoadedTextures();
+		m_MeshProvider.FinalizeAsyncLoadedMeshes();
+		m_ThreadManager.PropagateExceptions();
 
 		if (skyboxFacesBeingLoaded.size() == 6)
 		{
@@ -669,7 +664,7 @@ void Engine::Start()
 
 			for (uint32_t skyboxFace : skyboxFacesBeingLoaded)
 			{
-				Texture& texture = texManager->GetTextureResource(skyboxFace);
+				Texture& texture = m_TextureManager.GetTextureResource(skyboxFace);
 
 				if (texture.Status != Texture::LoadStatus::Succeeded)
 				{
@@ -686,7 +681,7 @@ void Engine::Start()
 
 				for (int skyboxFaceIndex = 0; skyboxFaceIndex < 6; skyboxFaceIndex++)
 				{
-					Texture& texture = texManager->GetTextureResource(skyboxFacesBeingLoaded.at(skyboxFaceIndex));
+					Texture& texture = m_TextureManager.GetTextureResource(skyboxFacesBeingLoaded.at(skyboxFaceIndex));
 
 					glTexImage2D(
 						GL_TEXTURE_CUBE_MAP_POSITIVE_X + skyboxFaceIndex,
@@ -827,7 +822,7 @@ void Engine::Start()
 		scene.UsedShaders.clear();
 
 		for (const RenderItem& ri : scene.RenderList)
-			scene.UsedShaders.insert(mtlManager->GetMaterialResource(ri.MaterialId).ShaderId);
+			scene.UsedShaders.insert(m_MaterialManager.GetMaterialResource(ri.MaterialId).ShaderId);
 
 		if (hasSun)
 		{
@@ -852,7 +847,7 @@ void Engine::Start()
 
 			for (uint32_t shdId : scene.UsedShaders)
 			{
-				ShaderProgram& shd = shdManager->GetShaderResource(shdId);
+				ShaderProgram& shd = m_ShaderManager.GetShaderResource(shdId);
 				shd.SetUniform("IsShadowMap", true);
 
 				glActiveTexture(GL_TEXTURE0 + 101);
@@ -865,7 +860,7 @@ void Engine::Start()
 			RendererContext.DrawScene(sunScene, sunRenderMatrix, glm::mat4(1.f), RunningTime, DebugWireframeRendering);
 
 			for (uint32_t shdId : scene.UsedShaders)
-				shdManager->GetShaderResource(shdId).SetUniform("IsShadowMap", false);
+				m_ShaderManager.GetShaderResource(shdId).SetUniform("IsShadowMap", false);
 
 			glViewport(0, 0, WindowSizeX, WindowSizeY);
 		}
@@ -1011,7 +1006,7 @@ void Engine::Start()
 			postFxShaders.SetUniform("Time", RunningTime);
 
 			glActiveTexture(GL_TEXTURE2);
-			glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(distortionTexture).GpuId);
+			glBindTexture(GL_TEXTURE_2D, m_TextureManager.GetTextureResource(distortionTexture).GpuId);
 
 			glActiveTexture(GL_TEXTURE3);
 			m_BloomFbo.BindTexture();
