@@ -523,6 +523,11 @@ void TextureManager::FinalizeAsyncLoadedTextures()
 		m_TexFutures.erase(m_TexFutures.begin() + promiseIndex);
 
 		delete promise;
+
+		numTexPromises, numTexFutures = m_TexPromises.size();
+
+		if (numTexPromises + 1 >= m_TexPromises.size())
+			break; // GOD I HATE THIS TODO 10/05/2025
 	}
 }
 

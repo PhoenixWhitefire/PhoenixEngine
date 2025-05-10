@@ -86,11 +86,11 @@ class GameObject;
 class BaseComponentManager
 {
 public:
-	virtual uint32_t CreateComponent(GameObject* Object) { throw("Not implemented"); };
+	virtual uint32_t CreateComponent(GameObject* /* Object */) { throw("Not implemented"); };
 	virtual void UpdateComponent(uint32_t, double) { throw("Not implemented"); };
 	virtual std::vector<void*> GetComponents() { throw("Not implemented"); };
 	virtual void* GetComponent(uint32_t) { throw("Not implemented"); };
-	virtual void DeleteComponent(uint32_t ComponentId) { throw("Not implemented"); };
+	virtual void DeleteComponent(uint32_t /* ComponentId */) { throw("Not implemented"); };
 
 	virtual const Reflection::PropertyMap& GetProperties() { throw("Not implemented"); };
 	virtual const Reflection::FunctionMap& GetFunctions() { throw("Not implemented"); };
@@ -136,8 +136,8 @@ public:
 	void SetPropertyValue(const std::string_view&, const Reflection::GenericValue&);
 	std::vector<Reflection::GenericValue> CallFunction(const std::string_view&, const std::vector<Reflection::GenericValue>&);
 
-	Reflection::PropertyMap GetProperties();
-	Reflection::FunctionMap GetFunctions();
+	Reflection::PropertyMap GetProperties() const;
+	Reflection::FunctionMap GetFunctions() const;
 
 	// the engine will NEED some objects to continue existing without being
 	// de-alloc'd, if only for a loop (`updateScripts`)
@@ -233,7 +233,8 @@ struct GameObjectRef
 
 	GameObject* Contained() const
 	{
-		PHX_ENSURE_MSG(m_TargetId != PHX_GAMEOBJECT_NULL_ID, "Double-free'd or `::Contained` called on a default-constructed Ref");
+		// Double-free'd or `::Contained` called on a default-constructed Ref
+		assert(m_TargetId != PHX_GAMEOBJECT_NULL_ID);
 
 		GameObject* g = GameObject::GetObjectById(m_TargetId);
 		PHX_ENSURE_MSG(g, "Referenced GameObject was de-alloc'd while we wanted to keep it :(");
@@ -249,11 +250,6 @@ struct GameObjectRef
 	}
 
 	uint32_t m_TargetId = PHX_GAMEOBJECT_NULL_ID;
-
-	bool operator == (const GameObject* them) const
-	{
-		return Contained() == them;
-	}
 
 	bool operator == (const GameObjectRef& them) const
 	{

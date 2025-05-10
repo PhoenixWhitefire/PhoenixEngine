@@ -67,7 +67,6 @@ static void resolveCollisions(std::vector<GameObject*>& World, double DeltaTime)
 	for (GameObject* a : World)
 	{
 		EcMesh* am = a->GetComponent<EcMesh>();
-		EcTransform* at = a->GetComponent<EcTransform>();
 
 		if (!am->PhysicsCollisions)
 			continue;
@@ -81,7 +80,6 @@ static void resolveCollisions(std::vector<GameObject*>& World, double DeltaTime)
 				continue;
 
 			EcMesh* bm = b->GetComponent<EcMesh>();
-			EcTransform* bt = b->GetComponent<EcTransform>();
 
 			if (!bm->PhysicsCollisions)
 				continue;

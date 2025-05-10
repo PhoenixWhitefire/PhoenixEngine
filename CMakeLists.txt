@@ -91,6 +91,8 @@ set_property(TARGET Vendor PROPERTY FOLDER "Vendor")
 set_property(TARGET TracyClient PROPERTY FOLDER "Vendor")
 set_property(TARGET glm PROPERTY FOLDER "Vendor")
 
+set_property(TARGET Luau.RequireNavigator PROPERTY FOLDER "Vendor/Luau")
+set_property(TARGET Luau.Require PROPERTY FOLDER "Vendor/Luau")
 set_property(TARGET Luau.Compiler PROPERTY FOLDER "Vendor/Luau")
 set_property(TARGET Luau.Analysis PROPERTY FOLDER "Vendor/Luau")
 set_property(TARGET Luau.CLI.lib PROPERTY FOLDER "Vendor/Luau")

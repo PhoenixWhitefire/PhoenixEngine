@@ -124,14 +124,6 @@ static bool mtlIterator(void*, int index, const char** outText)
 	return true;
 }
 
-static bool mtlUniformIterator(void* array, int index, const char** outText)
-{
-	std::vector<std::string_view>* arr = static_cast<std::vector<std::string_view>*>(array);
-	*outText = arr->at(index).data();
-
-	return true;
-}
-
 static std::string getFileDirectory(const std::string& FilePath)
 {
 	size_t lastFwdSlash = FilePath.find_last_of("/");
@@ -149,7 +141,7 @@ static std::string getFileDirectory(const std::string& FilePath)
 		if (fileDir.find("resources/") == std::string::npos)
 			fileDir = "resources/" + fileDir;
 
-		return SDL_GetCurrentDirectory() + fileDir;
+		return SDL_GetCurrentDirectory() + fileDir + "/";
 	}
 }
 
@@ -420,7 +412,7 @@ static void uniformsEditor(std::unordered_map<std::string, Reflection::GenericVa
 
 	ImGui::InputText("Variable Name", &NewUniformNameBuf);
 
-	ImGui::Combo("Variable Type", &NewTypeId, "Boolean\0Integer\0Float");
+	ImGui::Combo("Variable Type", &NewTypeId, "Boolean\0Integer\0Float\0");
 
 	if (ImGui::Button("Add"))
 	{
@@ -929,11 +921,11 @@ static void renderMaterialEditor()
 	ImGui::InputText("Shader", MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
 
 	int curPolyMode = static_cast<uint8_t>(curItem.PolygonMode);
-	ImGui::Combo("Polygon Mode", &curPolyMode, "Fill\0Line\0Point");
+	ImGui::Combo("Polygon Mode", &curPolyMode, "Fill\0Line\0Point\0");
 	curItem.PolygonMode = static_cast<RenderMaterial::MaterialPolygonMode>(std::clamp(curPolyMode, 0, 2));
 
 	mtlEditorTexture("Color Map: ", &curItem.ColorMap, MtlDiffuseBuf, false);
-	mtlEditorTexture("Metallic-Rougness Map: ", &curItem.MetallicRoughnessMap, MtlSpecBuf, false);
+	mtlEditorTexture("Metallic-Roughness Map: ", &curItem.MetallicRoughnessMap, MtlSpecBuf, false);
 	mtlEditorTexture("Normal Map: ", &curItem.NormalMap, MtlNormalBuf);
 	mtlEditorTexture("Emission Map:", &curItem.EmissionMap, MtlEmissionBuf);
 

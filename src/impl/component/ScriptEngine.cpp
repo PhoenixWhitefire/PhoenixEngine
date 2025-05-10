@@ -440,8 +440,8 @@ int ScriptEngine::L::HandleFunctionCall(
 	int numParams = static_cast<int32_t>(paramTypes.size());
 	int minArgs = numParams;
 
-	for (int i = numParams; i--; i >= 0)
-		if (paramTypes[i].IsOptional)
+	for (int i = numParams; i > 0; i--)
+		if (paramTypes[i - 1].IsOptional)
 			minArgs--; // substract for each optional backwards
 		else
 			break; // stop when we hit the first optional in terms of argument order

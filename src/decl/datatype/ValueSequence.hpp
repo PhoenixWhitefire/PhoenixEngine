@@ -32,9 +32,6 @@ private:
 	std::vector<ValueSequenceKeypoint<T>> m_Keys;
 };
 
-static std::default_random_engine RandGenerator = std::default_random_engine(static_cast<unsigned int>(time(NULL)));
-static std::uniform_real_distribution<float> EnvelopDist(0.f, 1.f);
-
 template <class T>
 ValueSequenceKeypoint<T>::ValueSequenceKeypoint(float time, T value, float envelope)
 	: Value(value), Time(time), Envelope(envelope)

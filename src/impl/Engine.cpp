@@ -351,7 +351,7 @@ static void updateScripts(double DeltaTime)
 
 	static std::vector<GameObjectRef> ScriptsResumedThisFrame = {};
 
-	for (GameObject* ch : Engine::Get()->DataModel->GetDescendants())
+	for (GameObjectRef ch : Engine::Get()->DataModel->GetDescendants())
 		if (ch->Enabled)
 			if (EcScript* script = ch->GetComponent<EcScript>())
 			{
@@ -387,9 +387,11 @@ static void recursivelyTravelHierarchy(
 	std::vector<GameObject*>& PhysicsList,
 	const GameObjectRef& Root,
 	EcCamera* SceneCamera,
-	double DeltaTime,
-	glm::mat4 AggregateTransform = glm::mat4(1.f),
+	double DeltaTime
+	/*
+	glm::mat4  AggregateTransform = glm::mat4(1.f),
 	Vector3 AggregateScale = Vector3(1.f, 1.f, 1.f)
+	*/
 )
 {
 	ZoneScopedC(tracy::Color::LightGoldenrod);
@@ -627,8 +629,6 @@ void Engine::Start()
 			Log::Warning("`::Destroy` called on DataModel, shutting down");
 			break;
 		}
-
-		EcDataModel* cdm = DataModel->GetComponent<EcDataModel>();
 
 		if (!GameObject::GetObjectById(Workspace.m_TargetId))
 		{

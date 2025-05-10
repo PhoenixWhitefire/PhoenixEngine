@@ -119,7 +119,7 @@ private:
 
 static inline WorkspaceManager Instance{};
 
-Vector3 EcWorkspace::ScreenPointToRay(double x, double y, float length, Vector3* Origin)
+Vector3 EcWorkspace::ScreenPointToRay(double x, double y, float length, Vector3* Origin) const
 {
 	Engine* engine = Engine::Get();
 	int winSizeX = 0, winSizeY = 0;

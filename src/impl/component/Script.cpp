@@ -23,9 +23,9 @@ public:
     {
         m_Components.emplace_back();
 		m_Components.back().Object = Object;
-		m_Components.back().EcId = m_Components.size() - 1;
+		m_Components.back().EcId = static_cast<uint32_t>(m_Components.size() - 1);
 
-        return static_cast<uint32_t>(m_Components.size() - 1);
+		return m_Components.back().EcId;
     }
 
 	virtual void UpdateComponent(uint32_t Id, double DeltaTime) final
@@ -100,12 +100,12 @@ public:
         GameObject::s_ComponentManagers[(size_t)EntityComponent::Script] = this;
 
 		Luau::assertHandler() = [](const char* Expression, const char* File, int Line, const char* Function)
+		-> int
 		{
 			throw(std::runtime_error(std::vformat(
 				"Luau assertion failed: {}\n\nin {}:{} '{}'",
 				std::make_format_args(Expression, File, Line, Function)
 			)));
-			return 0;
 		};
     }
 

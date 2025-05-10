@@ -101,7 +101,7 @@ static void mergeRecursive(
 		{
 			Reflection::GenericValue v = d->GetPropertyValue(it.first);
 
-			if (v.Type == Reflection::ValueType::GameObject && GameObject::FromGenericValue(v) == other)
+			if (v.Type == Reflection::ValueType::GameObject && GameObject::FromGenericValue(v)->ObjectId == other->ObjectId)
 				d->SetPropertyValue(it.first, me->ToGenericValue());
 		}
 }
@@ -623,12 +623,12 @@ uint32_t GameObject::AddComponent(EntityComponent Type)
 
 	uint32_t componentId = m_Components.back().second;
 
-	for (auto it : manager->GetProperties())
+	for (const auto& it : manager->GetProperties())
 	{
 		m_ComponentApis.Properties[it.first] = it.second;
 		m_MemberToComponentMap[it.first] = m_Components.back();
 	}
-	for (auto it : manager->GetFunctions())
+	for (const auto& it : manager->GetFunctions())
 	{
 		m_ComponentApis.Functions[it.first] = it.second;
 		m_MemberToComponentMap[it.first] = m_Components.back();
@@ -647,12 +647,12 @@ void GameObject::RemoveComponent(EntityComponent Type)
 			BaseComponentManager* manager = GameObject::s_ComponentManagers[(size_t)Type];
 			manager->DeleteComponent(it->second);
 
-			for (auto it2 : manager->GetProperties())
+			for (const auto& it2 : manager->GetProperties())
 			{
 				m_ComponentApis.Properties.erase(it2.first);
 				m_MemberToComponentMap.erase(it2.first);
 			}
-			for (auto it2 : manager->GetFunctions())
+			for (const auto& it2 : manager->GetFunctions())
 			{
 				m_ComponentApis.Functions.erase(it2.first);
 				m_MemberToComponentMap.erase(it2.first);
@@ -662,18 +662,18 @@ void GameObject::RemoveComponent(EntityComponent Type)
 	throw("Don't have that component");
 }
 
-Reflection::Property* GameObject::FindProperty(const std::string_view& Name, bool* FromObject)
+Reflection::Property* GameObject::FindProperty(const std::string_view& PropName, bool* FromObject)
 {
 	bool dummyFo = false;
 	FromObject = FromObject ? FromObject : &dummyFo;
 
-	if (auto it = s_Api.Properties.find(Name); it != s_Api.Properties.end())
+	if (auto it = s_Api.Properties.find(PropName); it != s_Api.Properties.end())
 	{
 		*FromObject = true;
 		return &it->second;
 	}
 
-	if (auto it = m_ComponentApis.Properties.find(Name); it != m_ComponentApis.Properties.end())
+	if (auto it = m_ComponentApis.Properties.find(PropName); it != m_ComponentApis.Properties.end())
 	{
 		*FromObject = false;
 		return &it->second;
@@ -681,18 +681,18 @@ Reflection::Property* GameObject::FindProperty(const std::string_view& Name, boo
 
 	return nullptr;
 }
-Reflection::Function* GameObject::FindFunction(const std::string_view& Name, bool* FromObject)
+Reflection::Function* GameObject::FindFunction(const std::string_view& FuncName, bool* FromObject)
 {
 	bool dummyFo = false;
 	FromObject = FromObject ? FromObject : &dummyFo;
 
-	if (auto it = s_Api.Functions.find(Name); it != s_Api.Functions.end())
+	if (auto it = s_Api.Functions.find(FuncName); it != s_Api.Functions.end())
 	{
 		*FromObject = true;
 		return &it->second;
 	}
 
-	if (auto it = m_ComponentApis.Functions.find(Name); it != m_ComponentApis.Functions.end())
+	if (auto it = m_ComponentApis.Functions.find(FuncName); it != m_ComponentApis.Functions.end())
 	{
 		*FromObject = false;
 		return &it->second;
@@ -701,49 +701,49 @@ Reflection::Function* GameObject::FindFunction(const std::string_view& Name, boo
 	return nullptr;
 }
 
-Reflection::GenericValue GameObject::GetPropertyValue(const std::string_view& Name)
+Reflection::GenericValue GameObject::GetPropertyValue(const std::string_view& PropName)
 {
 	bool fromObject = false;
 
-	if (Reflection::Property* prop = FindProperty(Name, &fromObject))
+	if (Reflection::Property* prop = FindProperty(PropName, &fromObject))
 		if (!fromObject)
-			return prop->Get(ComponentHandleToPointer(m_MemberToComponentMap[Name]));
+			return prop->Get(ComponentHandleToPointer(m_MemberToComponentMap[PropName]));
 		else
 			return prop->Get(this);
 	
-	throw("Invalid property in GetPropertyValue: " + std::string(Name));
+	throw("Invalid property in GetPropertyValue: " + std::string(PropName));
 }
-void GameObject::SetPropertyValue(const std::string_view& Name, const Reflection::GenericValue& Value)
+void GameObject::SetPropertyValue(const std::string_view& PropName, const Reflection::GenericValue& Value)
 {
 	bool fromObject = false;
 
-	if (Reflection::Property* prop = FindProperty(Name, &fromObject))
+	if (Reflection::Property* prop = FindProperty(PropName, &fromObject))
 	{
 		if (!fromObject)
-			prop->Set(ComponentHandleToPointer(m_MemberToComponentMap[Name]), Value);
+			prop->Set(ComponentHandleToPointer(m_MemberToComponentMap[PropName]), Value);
 		else
 			prop->Set(this, Value);
 		
 		return;
 	}
 
-	throw("Invalid property in SetPropertyValue: " + std::string(Name));
+	throw("Invalid property in SetPropertyValue: " + std::string(PropName));
 }
 
-std::vector<Reflection::GenericValue> GameObject::CallFunction(const std::string_view& Name, const std::vector<Reflection::GenericValue>& Inputs)
+std::vector<Reflection::GenericValue> GameObject::CallFunction(const std::string_view& FuncName, const std::vector<Reflection::GenericValue>& Inputs)
 {
 	bool fromObject = false;
 
-	if (Reflection::Function* func = FindFunction(Name, &fromObject))
+	if (Reflection::Function* func = FindFunction(FuncName, &fromObject))
 		if (fromObject)
-			return func->Func(ComponentHandleToPointer(m_MemberToComponentMap[Name]), Inputs);
+			return func->Func(ComponentHandleToPointer(m_MemberToComponentMap[FuncName]), Inputs);
 		else
 			return func->Func(this, Inputs);
 	
-	throw("Invalid function in CallFunction: " + std::string(Name));
+	throw("Invalid function in CallFunction: " + std::string(FuncName));
 }
 
-Reflection::PropertyMap GameObject::GetProperties()
+Reflection::PropertyMap GameObject::GetProperties() const
 {
 	// base APIs always take priority for consistency
 	Reflection::PropertyMap cumulativeProps = m_ComponentApis.Properties;
@@ -751,7 +751,7 @@ Reflection::PropertyMap GameObject::GetProperties()
 
 	return cumulativeProps;
 }
-Reflection::FunctionMap GameObject::GetFunctions()
+Reflection::FunctionMap GameObject::GetFunctions() const
 {
 	Reflection::FunctionMap cumulativeFuncs = m_ComponentApis.Functions;
 	cumulativeFuncs.insert(s_Api.Functions.begin(), s_Api.Functions.end());

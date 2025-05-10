@@ -7,7 +7,7 @@ struct EcWorkspace
 {
 	GameObject* GetSceneCamera() const;
 	void SetSceneCamera(GameObject*);
-	Vector3 ScreenPointToRay(double x, double y, float length, Vector3* origin);
+	Vector3 ScreenPointToRay(double x, double y, float length, Vector3* origin) const;
 
 	uint32_t m_SceneCameraId = PHX_GAMEOBJECT_NULL_ID;
 
