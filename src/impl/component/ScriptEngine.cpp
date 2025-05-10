@@ -458,13 +458,14 @@ int ScriptEngine::L::HandleFunctionCall(
 		{
 			for (int arg = 1; arg < numArgs + 1; arg++)
 				argsString += std::string(luaL_typename(L, -(numArgs + 1 - arg))) + ", ";
+			
+			// trailing `, `
+			argsString = argsString.substr(0, argsString.size() - 2);
 
 			argsString += " )";
 		}
 		else
 			argsString.clear();
-
-		argsString = argsString.substr(0, argsString.size() - 2);
 
 		luaL_error(L, "%s", std::vformat(
 			"Function '{}' expects at least {} arguments, got {} instead{}",
