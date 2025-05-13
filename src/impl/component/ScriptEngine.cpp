@@ -24,6 +24,7 @@
 #include "asset/SceneFormat.hpp"
 #include "GlobalJsonConfig.hpp"
 #include "IntersectionLib.hpp"
+#include "ThreadManager.hpp"
 #include "UserInput.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
@@ -733,25 +734,19 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 			// only run the code if we've successfully yielded
 			if (lua_status(L) == LUA_YIELD)
 			{
-				auto a = std::async(
-					std::launch::async,
-					[](double st)
-					{
-						std::this_thread::sleep_for(std::chrono::duration<double>(st));
-						return Reflection::GenericValue(st);
-					},
-					sleepTime
-				);
-
 				lua_pushthread(L);
 
-				ScriptEngine::s_YieldedCoroutines.emplace_back(
+				auto& b = ScriptEngine::s_YieldedCoroutines.emplace_back(
 					L,
 					// make sure the coroutine doesn't get de-alloc'd before we resume it
 					lua_ref(L, -1),
-					a.share(),
-					scriptId
+					scriptId,
+					YieldedCoroutine::ResumptionMode::ScheduledTime
 				);
+
+				double curTime = GetRunningTime();
+
+				b.RmSchedule = { curTime, curTime + sleepTime };
 			}
 
 			return -1;
@@ -1458,26 +1453,28 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 					defaultLocationAbs.c_str()
 				);
 
-				auto a = std::async(
-					std::launch::async,
-					[]()
-					{
-						while (IsFdInProgress)
-							std::this_thread::sleep_for(std::chrono::milliseconds(5));
-
-						return FdResults.size() > 0 ? Reflection::GenericValue(FdResults[0]) : Reflection::GenericValue{};
-					}
-				);
-
 				lua_pushthread(L);
 
-				ScriptEngine::s_YieldedCoroutines.emplace_back(
+				auto& b = s_YieldedCoroutines.emplace_back(
 					L,
 					// make sure the coroutine doesn't get de-alloc'd before we resume it
 					lua_ref(lua_mainthread(L), -1),
-					a.share(),
-					scriptId
+					scriptId,
+					YieldedCoroutine::ResumptionMode::Polled
 				);
+
+				b.RmPoll = [](std::vector<Reflection::GenericValue>* ReturnValues)
+					-> bool
+					{
+						if (IsFdInProgress)
+							return false;
+						else
+						{
+							ReturnValues->emplace_back(FdResults[0]);
+
+							return true;
+						}
+					};
 			}
 
 			return -1;
@@ -1532,32 +1529,34 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 					allowMultipleFiles
 				);
 
-				auto a = std::async(
-					std::launch::async,
-					[]()
-					{
-						while (IsFdInProgress)
-							std::this_thread::sleep_for(std::chrono::milliseconds(5));
-
-						std::vector<Reflection::GenericValue> results;
-						results.reserve(FdResults.size());
-
-						for (const std::string& r : FdResults)
-							results.emplace_back(r);
-
-						return Reflection::GenericValue(results);
-					}
-				);
-
 				lua_pushthread(L);
 
-				ScriptEngine::s_YieldedCoroutines.emplace_back(
+				auto& b = ScriptEngine::s_YieldedCoroutines.emplace_back(
 					L,
 					// make sure the coroutine doesn't get de-alloc'd before we resume it
 					lua_ref(lua_mainthread(L), -1),
-					a.share(),
-					scriptId
+					scriptId,
+					YieldedCoroutine::ResumptionMode::Polled
 				);
+
+				b.RmPoll = [](std::vector<Reflection::GenericValue>* ReturnValues)
+					-> bool
+					{
+						if (IsFdInProgress)
+							return false;
+						else
+						{
+							std::vector<Reflection::GenericValue> pathsArray;
+							pathsArray.reserve(FdResults.size());
+
+							for (const std::string& r : FdResults)
+								pathsArray.emplace_back(r);
+
+							*ReturnValues = { pathsArray };
+
+							return true;
+						}
+					};
 			}
 
 			return -1;

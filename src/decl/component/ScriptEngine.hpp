@@ -16,17 +16,30 @@ namespace ScriptEngine
 
 	extern bool s_BackendScriptWantGrabMouse;
 
-	// The `lua_State*` should be `lua_resume`'d upon the `std::shared_future` enreadying
-	// (is that a real word)
-	// (I mean upon it becoming ready)
-	// 22/09/2024
-	// I think this is possible?
 	struct YieldedCoroutine
 	{
+		enum class ResumptionMode : uint8_t
+		{
+			INVALID = 0,
+			
+			ScheduledTime, // resume at a specific time
+			Future, // check the status of an `std::shared_future`
+			Polled // poll a function
+		};
+
 		lua_State* Coroutine{};
 		int CoroutineReference{};
-		std::shared_future<Reflection::GenericValue> Future;
 		uint32_t ScriptId = PHX_GAMEOBJECT_NULL_ID;
+
+		ResumptionMode Mode = ResumptionMode::INVALID;
+
+		struct
+		{
+			double YieldedAt = 0.f;
+			double ResumeAt = 0.f;
+		} RmSchedule;
+		std::shared_future<std::vector<Reflection::GenericValue>> RmFuture;
+		std::function<bool(std::vector<Reflection::GenericValue>*)> RmPoll;
 	};
 
 	extern std::vector<YieldedCoroutine> s_YieldedCoroutines;

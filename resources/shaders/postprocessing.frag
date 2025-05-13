@@ -69,6 +69,15 @@ void main()
 	vec2 sampleUV = Frag_UV + UVOffset;
 	vec2 actualSamplePixel = ivec2(sampleUV * TextureSize);
 	vec3 Color = texture(Texture, sampleUV).xyz;
+	
+	float gamma = Gamma;
+	
+	/*if (Time > 10.f)
+	{
+	        float t = Time - 5.f;
+		Color *= mix(vec3(1.f, 1.f, 1.f), vec3(3.f, 0.1f, 0.1f), clamp((t - 5.f) / 10, 0.f, 1.f));
+		gamma = mix(1.f, 1.5f, clamp(t - 10.f, 0.f, t) / 10.f);
+	}*/
 
 	Color += texture(BloomTexture, sampleUV).xyz;
 	
@@ -119,7 +128,7 @@ void main()
 		Color = mix(Color, BlurredColor, RadialBlurWeight);
 	}
 
-	Color = pow(Color, vec3(Gamma, Gamma, Gamma));
+	Color = pow(Color, vec3(gamma, gamma, gamma));
 	
 	FragColor = vec4(Color, 1.0f);
 }

@@ -809,7 +809,7 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 			GameObject* target = GameObject::FromGenericValue(value);
 
 			if (target)
-				item[serializedAs] = value.AsInteger();
+				item[serializedAs] = target->ObjectId;
 			else
 				item[serializedAs] = PHX_GAMEOBJECT_NULL_ID;
 		}

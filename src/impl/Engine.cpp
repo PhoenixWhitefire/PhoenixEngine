@@ -894,6 +894,7 @@ void Engine::Start()
 		skyRenderMatrix = projection * view;
 
 		skyboxShaders.SetUniform("RenderMatrix", skyRenderMatrix);
+		skyboxShaders.SetUniform("Time", RunningTime);
 
 		glActiveTexture(GL_TEXTURE3);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemap);

@@ -714,7 +714,59 @@ static void dumpStacktrace(lua_State* L)
 	}
 }
 
-static void resumeScheduledCoroutines()
+static bool shouldResume_Scheduled(
+	const ScriptEngine::YieldedCoroutine& CorInfo,
+	std::vector<Reflection::GenericValue>* ReturnValues
+)
+{
+	if (double curTime = GetRunningTime(); curTime >= CorInfo.RmSchedule.ResumeAt)
+	{
+		ReturnValues->emplace_back(curTime - CorInfo.RmSchedule.YieldedAt);
+
+		return true;
+	}
+	else
+		return false;
+}
+
+static bool shouldResume_Future(const ScriptEngine::YieldedCoroutine& CorInfo, std::vector<Reflection::GenericValue>* ReturnValues)
+{
+	const std::shared_future<std::vector<Reflection::GenericValue>>& future = CorInfo.RmFuture;
+
+	if ( future.valid()
+		 && future.wait_for(std::chrono::seconds(0)) == std::future_status::ready
+	)
+	{
+		*ReturnValues = future.get();
+
+		return true;
+	}
+	else
+		return false;
+}
+
+static bool shouldResume_Polled(const ScriptEngine::YieldedCoroutine& CorInfo, std::vector<Reflection::GenericValue>* ReturnValues)
+{
+	const std::function<bool(std::vector<Reflection::GenericValue>*)> checkStatus = CorInfo.RmPoll;
+
+	if (checkStatus(ReturnValues))
+		return true;
+	else
+		return false;
+}
+
+typedef bool(*ResumptionModeHandler)(const ScriptEngine::YieldedCoroutine&, std::vector<Reflection::GenericValue>*);
+
+static const ResumptionModeHandler s_ResumptionModeHandlers[] =
+{
+	nullptr,
+
+	shouldResume_Scheduled,
+	shouldResume_Future,
+	shouldResume_Polled
+};
+
+static void resumeYieldedCoroutines()
 {
 	ZoneScopedC(tracy::Color::LightSkyBlue);
 
@@ -723,31 +775,29 @@ static void resumeScheduledCoroutines()
 		const ScriptEngine::YieldedCoroutine& corInfo = ScriptEngine::s_YieldedCoroutines.at(corIdx);
 		lua_State* coroutine = corInfo.Coroutine;
 		int corRef = corInfo.CoroutineReference;
-		const std::shared_future<Reflection::GenericValue>& future = corInfo.Future;
 
-		if (future.valid())
+		uint8_t resHandlerIndex = static_cast<uint8_t>(corInfo.Mode);
+		const ResumptionModeHandler handler = s_ResumptionModeHandlers[resHandlerIndex];
+		assert(handler);
+
+		std::vector<Reflection::GenericValue> returnVals;
+		bool shouldResume = handler(corInfo, &returnVals);
+
+		if (shouldResume)
 		{
-			// 23/09/2024 TODO This is just sad
-			std::future_status status = future.wait_for(std::chrono::seconds(0));
-			if (status != std::future_status::ready)
-				continue;
-
 			// make sure the script still exists
 			// modules don't have a `script` global, but they run on their own coroutine independent from
 			// where they are `require`'d from anyway
 			if (corInfo.ScriptId == PHX_GAMEOBJECT_NULL_ID || GameObject::GetObjectById(corInfo.ScriptId))
 			{
-				// what the function returned
-				Reflection::GenericValue retval = future.get();
+				for (const Reflection::GenericValue& v : returnVals)
+					ScriptEngine::L::PushGenericValue(coroutine, v);
 
-				ScriptEngine::L::PushGenericValue(coroutine, retval);
-
-				int resumeStatus = lua_resume(coroutine, nullptr, 1);
+				int resumeStatus = lua_resume(coroutine, nullptr, returnVals.size());
 
 				if (resumeStatus != LUA_OK && resumeStatus != LUA_YIELD)
 				{
 					const char* errstr = lua_tostring(coroutine, -1);
-
 					Log::Error(std::vformat(
 						"Script resumption: {}",
 						std::make_format_args(errstr)
@@ -758,16 +808,15 @@ static void resumeScheduledCoroutines()
 			}
 
 			ScriptEngine::s_YieldedCoroutines.erase(ScriptEngine::s_YieldedCoroutines.begin() + corIdx);
+
 			lua_unref(lua_mainthread(coroutine), corRef);
 
 			//lua_pop(lua_mainthread(coroutine), 1);
-
 			// the indexes of the coroutines will have changed, and `corIdx` will skip what the next element was
 			// this is a lazy workaround. 24/12/2024
-			resumeScheduledCoroutines();
+			resumeYieldedCoroutines();
 
-			return;
-			
+			break;
 		}
 	}
 }
@@ -784,7 +833,7 @@ void EcScript::Update(double dt)
 	// need to handle resuming ALL the coroutines that were yielded,
 	// the poor bastard
 	// 23/09/2024
-	resumeScheduledCoroutines();
+	resumeYieldedCoroutines();
 
 	if (EcScript* after = static_cast<EcScript*>(ManagerInstance.GetComponent(ecId)); after != this)
 	{

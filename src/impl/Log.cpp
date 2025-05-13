@@ -1,22 +1,40 @@
 #include <iostream>
+#include <fstream>
 #include <format>
+#include <mutex>
 
 #include "Log.hpp"
 #include "FileRW.hpp"
 
 static std::string ProgramLog = "";
+static std::ofstream LogHandle;
+static bool DidInit = false;
+static std::mutex LogMutex;
 
 void Log::Save()
 {
-	FileRW::WriteFile("log.txt", ProgramLog, false);
+	std::unique_lock<std::mutex> lock{ LogMutex };
+
+	if (!DidInit)
+	{
+		FileRW::WriteFile("log.txt", "", false);
+		LogHandle.open("log.txt", std::ios_base::app);
+
+		DidInit = true;
+	}
+
+	LogHandle << ProgramLog;
+
+	ProgramLog.clear();
 }
 
-// Append message to log, which is saved to file every second
-// and when app shuts down
-// If the Message ends with `&&`, won't insert a newline automatically
-// 11/11/2024
-void Log::Append(const std::string_view& Message)
+void logAppend(const std::string_view& Message, bool ManageMutex = false)
 {
+	std::unique_lock<std::mutex> lock;
+
+	if (ManageMutex)
+		lock = std::unique_lock<std::mutex>(LogMutex);
+
 	static bool ThrewLogCapacityExceededException = false;
 
 	if (ThrewLogCapacityExceededException)
@@ -51,20 +69,35 @@ void Log::Append(const std::string_view& Message)
 	}
 }
 
+// Append message to log, which is saved to file every second
+// and when app shuts down
+// If the Message ends with `&&`, won't insert a newline automatically
+// 11/11/2024
+void Log::Append(const std::string_view& Message)
+{
+	logAppend(Message, true);
+}
+
 void Log::Info(const std::string_view& Message)
 {
-	Log::Append("[INFO]: &&");
-	Log::Append(Message);
+	std::unique_lock<std::mutex> lock{ LogMutex };
+
+	logAppend("[INFO]: &&");
+	logAppend(Message);
 }
 
 void Log::Warning(const std::string_view& Message)
 {
-	Log::Append("[WARN]: &&");
-	Log::Append(Message);
+	std::unique_lock<std::mutex> lock{ LogMutex };
+
+	logAppend("[WARN]: &&");
+	logAppend(Message);
 }
 
 void Log::Error(const std::string_view& Message)
 {
-	Log::Append("[ERRR]: &&");
-	Log::Append(Message);
+	std::unique_lock<std::mutex> lock{ LogMutex };
+
+	logAppend("[ERRR]: &&");
+	logAppend(Message);
 }

@@ -8,6 +8,7 @@ set(CMAKE_C_STANDARD 17)
 set(CMAKE_VS_PLATFORM_TOOLSET v143)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+# visual studio solution filter folders
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # Debug: Standard debug mode. Incremental linking. Tracy and ASan enabled
@@ -22,16 +23,7 @@ project(PhoenixEngine)
 
 file(GLOB_RECURSE PHX_SRCS
 	"src/decl/*.hpp"
-	"src/decl/asset/*.hpp"
-	"src/decl/datatype/*.hpp"
-	"src/decl/gameobject/*.hpp"
-	"src/decl/render/*.hpp"
-	
 	"src/impl/*.cpp"
-	"src/impl/asset/*.cpp"
-	"src/impl/datatype/*.cpp"
-	"src/impl/gameobject/*.cpp"
-	"src/impl/render/*.cpp"
 )
 
 add_executable(PhoenixEngine ${PHX_SRCS})
@@ -87,6 +79,8 @@ add_subdirectory(Vendor/glm)
 add_subdirectory(Vendor/SDL)
 add_subdirectory(Vendor/tracy)
 
+# organize vs folders
+
 set_property(TARGET Vendor PROPERTY FOLDER "Vendor")
 set_property(TARGET TracyClient PROPERTY FOLDER "Vendor")
 set_property(TARGET glm PROPERTY FOLDER "Vendor")
@@ -106,6 +100,7 @@ set_property(TARGET isocline PROPERTY FOLDER "Vendor/Luau")
 set_property(TARGET SDL3-shared PROPERTY FOLDER "Vendor/SDL")
 set_property(TARGET SDL_uclibc PROPERTY FOLDER "Vendor/SDL")
 
+# build engine after all static libs
 add_dependencies(PhoenixEngine Vendor TracyClient glm Luau.Compiler Luau.Analysis Luau.VM SDL3-shared SDL_uclibc)
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT PhoenixEngine)
