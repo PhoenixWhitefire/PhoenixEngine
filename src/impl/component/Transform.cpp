@@ -18,7 +18,7 @@ public:
         std::vector<void*> v;
         v.reserve(m_Components.size());
 
-        for (const EcTransform& t : m_Components)
+        for (EcTransform& t : m_Components)
             v.push_back((void*)&t);
         
         return v;
@@ -29,7 +29,7 @@ public:
         return &m_Components[Id];
     }
 
-    virtual void DeleteComponent(uint32_t Id) final
+    virtual void DeleteComponent(uint32_t) final
     {
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
     }

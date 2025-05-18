@@ -57,7 +57,7 @@ namespace Memory
 		{
 			uint8_t memIndex = static_cast<uint8_t>(MemCat);
 
-#if TRACY_ENABLE
+#ifdef TRACY_ENABLE
 			if (MemCat != Memory::Category::Default)
 				TracyAllocN(ptr, Size, CategoryNames[memIndex]);
 			else
@@ -87,23 +87,29 @@ namespace Memory
 		size_t prevSize = UINT64_MAX;
 		Pointer = GetPointerInfo(Pointer, &prevSize);
 
+		// stupid g++ with stupid "may be used after `void* realloc"
+		// SHUT UP
+		// I KNOW WHAT I'M DOING
+		// TODO HOW TO FIX THAT
+		// 18/05/2025
+		uint8_t memIndex = static_cast<uint8_t>(MemCat);
+		
+#ifdef TRACY_ENABLE
+		if (MemCat != Category::Default)
+			TracyFreeN(Pointer, CategoryNames[memIndex]);
+		else
+			TracyFree(Pointer);
+#endif
+
 		void* ptr = realloc(Pointer, Size);
 
 		if (ptr)
 		{
-			uint8_t memIndex = static_cast<uint8_t>(MemCat);
-
-#if TRACY_ENABLE
+#ifdef TRACY_ENABLE
 			if (MemCat != Memory::Category::Default)
-			{
-				TracyFreeN(Pointer, CategoryNames[memIndex]);
 				TracyAllocN(ptr, Size, CategoryNames[memIndex]);
-			}
 			else
-			{
-				TracyFree(Pointer);
 				TracyAlloc(ptr, Size);
-			}
 #endif
 			Counters[memIndex] -= prevSize;
 			Counters[memIndex] += Size;
@@ -129,7 +135,7 @@ namespace Memory
 
 		assert(memcat < static_cast<uint8_t>(Memory::Category::__count));
 
-#if TRACY_ENABLE
+#ifdef TRACY_ENABLE
 		if (memcat != static_cast<uint8_t>(Memory::Category::Default))
 			TracyFreeN(Pointer, CategoryNames[memcat]);
 		else

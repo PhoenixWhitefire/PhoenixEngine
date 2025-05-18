@@ -3,7 +3,7 @@
 
 #include "PhysicsEngine.hpp"
 #include "IntersectionLib.hpp"
-#include "PerformanceTiming.hpp"
+#include "Timing.hpp"
 #include "component/Transform.hpp"
 #include "component/Mesh.hpp"
 
@@ -179,7 +179,7 @@ static void resolveCollisions(std::vector<GameObject*>& World, double DeltaTime)
 
 static void step(std::vector<GameObject*>& World, double DeltaTime)
 {
-	TIME_SCOPE_AS(Timing::Timer::Physics);
+	TIME_SCOPE_AS("Physics");
 	ZoneScopedC(tracy::Color::AntiqueWhite);
 
 	applyGlobalForces(World, DeltaTime);

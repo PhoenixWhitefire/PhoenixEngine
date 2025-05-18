@@ -36,8 +36,8 @@ extern "C"
 #include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
 #include "asset/MeshProvider.hpp"
-#include "PerformanceTiming.hpp"
 #include "GlobalJsonConfig.hpp"
+#include "Timing.hpp"
 #include "Log.hpp"
 
 constexpr uint32_t SHADER_MAX_LIGHTS = 6;
@@ -238,7 +238,7 @@ void Renderer::DrawScene(
 	bool DebugWireframeRendering
 )
 {
-	TIME_SCOPE_AS(Timing::Timer::Rendering);
+	TIME_SCOPE_AS("DrawScene");
 	ZoneScopedC(tracy::Color::HotPink);
 
 	MeshProvider* meshProvider = MeshProvider::Get();
@@ -503,6 +503,8 @@ void Renderer::DrawMesh(
 		break;
 	}
 
+	[[unlikely]] default: {}
+
 	}
 
 	uint32_t gpuMeshId = Object.GpuId;
@@ -560,23 +562,25 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData, bool DebugWirefra
 		switch (material.PolygonMode)
 		{
 
-			case RenderMaterial::MaterialPolygonMode::Fill:
-			{
-				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-				break;
-			}
+		case RenderMaterial::MaterialPolygonMode::Fill:
+		{
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			break;
+		}
 
-			case RenderMaterial::MaterialPolygonMode::Lines:
-			{
-				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-				break;
-			}
+		case RenderMaterial::MaterialPolygonMode::Lines:
+		{
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			break;
+		}
 
-			case RenderMaterial::MaterialPolygonMode::Points:
-			{
-				glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
-				break;
-			}
+		case RenderMaterial::MaterialPolygonMode::Points:
+		{
+			glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+			break;
+		}
+
+		[[unlikely]] default: {}
 
 		}
 	else
@@ -654,7 +658,7 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData, bool DebugWirefra
 	{
 		shader.SetUniform("Animated", true);
 
-		for (uint8_t i = 0; i < mesh.Bones.size(); i++)
+		for (size_t i = 0; i < mesh.Bones.size(); i++)
 		{
 			const Bone& b = mesh.Bones[i];
 

@@ -11,5 +11,5 @@ namespace InlayEditor
 
 	void UpdateAndRender(double DeltaTime);
 
-	static inline bool DidInitialize = false;
+	extern bool DidInitialize;
 };

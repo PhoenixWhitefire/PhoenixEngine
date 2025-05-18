@@ -45,7 +45,8 @@ template <class T> void EventConnection<T>::Disconnect()
 
 template <class T> void EventConnection<T>::Fire(T Value)
 {
-	m_Callback(Value);
+	if (Connected)
+		m_Callback(Value);
 }
 
 template <class T> EventConnection<T> EventSignal<T>::Connect(std::function<void(T)> function)
@@ -58,14 +59,16 @@ template <class T> EventConnection<T> EventSignal<T>::Connect(std::function<void
 
 template <class T> void EventSignal<T>::DisconnectAll()
 {
-	for (int Index = 0; Index < m_Connections.size(); Index++)
+	for (size_t Index = 0; Index < m_Connections.size(); Index++)
 		m_Connections[Index].Disconnect();
+
+	m_Connections.clear();
 }
 
 template <class T> void EventSignal<T>::Fire(T Value)
 {
-	for (int Index = 0; Index < m_Connections.size(); Index++)
-		((EventConnection<T>)m_Connections[Index]).Fire(Value);
+	for (size_t Index = 0; Index < m_Connections.size(); Index++)
+		m_Connections[Index].Fire(Value);
 }
 
 template <class T> std::vector<EventConnection<T>> EventSignal<T>::GetConnections()

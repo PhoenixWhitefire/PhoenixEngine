@@ -18,7 +18,7 @@
 
 static uint32_t readU32(const std::string_view& vec, size_t offset)
 {
-	return *(uint32_t*)&vec.at(offset);
+	return *(const uint32_t*)&vec.at(offset);
 }
 
 static std::string getTexturePath(
@@ -154,7 +154,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 			ZoneScopedN("ParseGLTF");
 			m_JsonData = nlohmann::json::parse(textData);
 		}
-		catch (nlohmann::json::parse_error Error)
+		catch (const nlohmann::json::parse_error& Error)
 		{
 			throw("Failed to import model due to parse error: " + std::string(Error.what()));
 		}
@@ -219,7 +219,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 
 		m_BuildRig();
 	}
-	catch (nlohmann::json::type_error Error)
+	catch (const nlohmann::json::type_error& Error)
 	{
 		throw("Failed to import model due to type error: " + std::string(Error.what()));
 	}
@@ -593,7 +593,7 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From, const glm::m
 					invBindMatrices = m_GetAndGroupFloatsMat4(accessor);
 				}
 
-				for (int32_t jointNodeIdx = 0; jointNodeIdx < jointsJson.size(); jointNodeIdx++)
+				for (size_t jointNodeIdx = 0; jointNodeIdx < jointsJson.size(); jointNodeIdx++)
 					node.Bones.emplace_back((int32_t)skinJson["joints"][jointNodeIdx], invBindMatrices[jointNodeIdx]);
 			}
 
@@ -730,7 +730,7 @@ std::vector<float> ModelLoader::m_GetFloats(const nlohmann::json& accessor)
 	// Go over all the bytes in the data at the correct place using the properties from above
 	uint32_t beginningOfData = byteOffset + accByteOffset;
 	uint32_t lengthOfData = count * componentSize * numPerVert;
-	for (uint32_t i = beginningOfData; i < beginningOfData + lengthOfData; i)
+	for (uint32_t i = beginningOfData; i < beginningOfData + lengthOfData;)
 	{
 		if (componentType == 5126)
 		{
@@ -773,7 +773,7 @@ std::vector<uint32_t> ModelLoader::m_GetUnsigned32s(const nlohmann::json& access
 	uint32_t beginningOfData = byteOffset + accByteOffset;
 	if (componentType == 5125)
 	{
-		for (uint32_t i = beginningOfData; i < byteOffset + accByteOffset + count * 4; i)
+		for (uint32_t i = beginningOfData; i < byteOffset + accByteOffset + count * 4;)
 		{
 			uint32_t value = *(uint32_t*)&m_Data[i++];
 			indices.push_back(value);
@@ -783,7 +783,7 @@ std::vector<uint32_t> ModelLoader::m_GetUnsigned32s(const nlohmann::json& access
 	}
 	else if (componentType == 5123)
 	{
-		for (uint32_t i = beginningOfData; i < byteOffset + accByteOffset + count * 2; i)
+		for (uint32_t i = beginningOfData; i < byteOffset + accByteOffset + count * 2;)
 		{
 			uint16_t value = *(uint16_t*)&m_Data[i++];
 			indices.push_back(value);
@@ -793,7 +793,7 @@ std::vector<uint32_t> ModelLoader::m_GetUnsigned32s(const nlohmann::json& access
 	}
 	else if (componentType == 5122)
 	{
-		for (uint32_t i = beginningOfData; i < byteOffset + accByteOffset + count * 2; i)
+		for (uint32_t i = beginningOfData; i < byteOffset + accByteOffset + count * 2;)
 		{
 			short value = *(short*)&m_Data[i++];
 			indices.push_back(value);
@@ -843,7 +843,7 @@ std::vector<uint8_t> ModelLoader::m_GetUBytes(const nlohmann::json& accessor)
 	// Go over all the bytes in the data at the correct place using the properties from above
 	uint32_t beginningOfData = byteOffset + accByteOffset;
 	uint32_t lengthOfData = count * numPerVert;
-	for (uint32_t i = beginningOfData; i < beginningOfData + lengthOfData; i)
+	for (uint32_t i = beginningOfData; i < beginningOfData + lengthOfData;)
 		ubytesVec.push_back(*(uint8_t*)&m_Data[i++]);
 
 	return ubytesVec;
@@ -1016,7 +1016,7 @@ std::vector<Vertex> ModelLoader::m_AssembleVertices
 	vertices.reserve(Positions.size());
 
 	if (Joints.size() == Positions.size())
-		for (int i = 0; i < Positions.size(); i++)
+		for (size_t i = 0; i < Positions.size(); i++)
 			vertices.emplace_back(
 				Positions[i],
 				Normals[i],
@@ -1027,7 +1027,7 @@ std::vector<Vertex> ModelLoader::m_AssembleVertices
 			);
 
 	else
-		for (int i = 0; i < Positions.size(); i++)
+		for (size_t i = 0; i < Positions.size(); i++)
 			vertices.emplace_back(
 				Positions[i],
 				Normals[i],
@@ -1052,7 +1052,7 @@ std::vector<glm::vec2> ModelLoader::m_GetAndGroupFloatsVec2(const nlohmann::json
 	std::vector<glm::vec2> vectors;
 	vectors.reserve(static_cast<size_t>(floats.size() / 2));
 
-	for (int i = 0; i < floats.size(); i += 2)
+	for (size_t i = 0; i < floats.size(); i += 2)
 		vectors.emplace_back(
 			floats[i+0ull],
 			floats[i+1ull]
@@ -1073,7 +1073,7 @@ std::vector<glm::vec3> ModelLoader::m_GetAndGroupFloatsVec3(const nlohmann::json
 	std::vector<glm::vec3> vectors;
 	vectors.reserve(static_cast<size_t>(floats.size() / 3));
 
-	for (int i = 0; i < floats.size(); i += 3)
+	for (size_t i = 0; i < floats.size(); i += 3)
 		vectors.emplace_back(
 			floats[i+2ull],
 			floats[i+1ull],
@@ -1093,7 +1093,7 @@ std::vector<glm::vec4> ModelLoader::m_GetAndGroupFloatsVec4(const nlohmann::json
 	vectors.reserve(static_cast<size_t>(floats.size() / 4));
 
 	if (Accessor["type"] == "VEC4")
-		for (int i = 0; i < floats.size(); i += 4)
+		for (size_t i = 0; i < floats.size(); i += 4)
 			vectors.emplace_back(
 				floats[i + 3ull],
 				floats[i + 2ull],
@@ -1102,7 +1102,7 @@ std::vector<glm::vec4> ModelLoader::m_GetAndGroupFloatsVec4(const nlohmann::json
 			);
 
 	else if (Accessor["type"] == "VEC3")
-		for (int i = 0; i < floats.size(); i += 3)
+		for (size_t i = 0; i < floats.size(); i += 3)
 			vectors.emplace_back(
 				floats[i + 2ull],
 				floats[i + 1ull],
@@ -1128,7 +1128,7 @@ std::vector<glm::mat4> ModelLoader::m_GetAndGroupFloatsMat4(const nlohmann::json
 	std::vector<glm::mat4> mats;
 	mats.reserve(static_cast<size_t>(mats.size() / 16));
 
-	for (int i = 0; i < floats.size(); i+=16)
+	for (size_t i = 0; i < floats.size(); i+=16)
 		mats.emplace_back(
 			floats[i + 0ull],
 			floats[i + 1ull],
@@ -1163,7 +1163,7 @@ std::vector<glm::tvec4<uint8_t>> ModelLoader::m_GetAndGroupUBytesVec4(const nloh
 	std::vector<glm::tvec4<uint8_t>> vectors;
 	vectors.reserve(static_cast<size_t>(ubytes.size() / 4));
 
-	for (int i = 0; i < ubytes.size(); i += 4)
+	for (size_t i = 0; i < ubytes.size(); i += 4)
 		vectors.emplace_back(
 			ubytes[i + 3ull],
 			ubytes[i + 2ull],

@@ -34,7 +34,7 @@ private:
 
 template <class T>
 ValueSequenceKeypoint<T>::ValueSequenceKeypoint(float time, T value, float envelope)
-	: Value(value), Time(time), Envelope(envelope)
+	: Time(time), Value(value), Envelope(envelope)
 {
 }
 

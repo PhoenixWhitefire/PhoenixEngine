@@ -6,10 +6,10 @@
 
 #include "component/Script.hpp"
 #include "component/ScriptEngine.hpp"
-#include "PerformanceTiming.hpp"
 #include "datatype/Vector3.hpp"
 #include "datatype/Color.hpp"
 #include "UserInput.hpp"
+#include "Timing.hpp"
 #include "FileRW.hpp"
 #include "Memory.hpp"
 #include "Log.hpp"
@@ -38,7 +38,7 @@ public:
         std::vector<void*> v;
         v.reserve(m_Components.size());
 
-        for (const EcScript& t : m_Components)
+        for (EcScript& t : m_Components)
             v.push_back((void*)&t);
         
         return v;
@@ -162,13 +162,9 @@ static auto api_gameobjindex = [](lua_State* L)
 			if (child)
 				ScriptEngine::L::PushGameObject(L, child);
 			else
-				// 14/03/2025
-				// i decided to revert an earlier change to make invalid accesses just return `nil`
-				// you wont know that an access failed until you try to use the value, which could be
-				// wayyyy after you requested it. this is fine in normal Luau code w/ tables because
-				// of static typechecking, but worse at runtime because the DataModel is 
-				// NOT STATICALLY TYPECHECKED
-				// prorgammers should use `:FindChild` if they want this behavior
+				// 18/05/2025
+				// this is going to be an error because i spent an entire 26 seconds
+				// trying to figure out why something wasnt working
 				luaL_errorL(L, "No child or member '%s' of %s", key, obj->GetFullName().c_str());
 		}
 
@@ -212,7 +208,7 @@ static auto api_gameobjnewindex = [](lua_State* L)
 				const std::string_view& typeName = Reflection::TypeAsString(prop->Type);
 				luaL_errorL(L,
 					"No defined mapping between a '%s' and a Lua type",
-					typeName
+					typeName.data()
 				);
 			}
 
@@ -823,7 +819,7 @@ static void resumeYieldedCoroutines()
 
 void EcScript::Update(double dt)
 {
-	TIME_SCOPE_AS(Timing::Timer::Scripts);
+	TIME_SCOPE_AS("Scripts");
 
 	s_WindowGrabMouse = ScriptEngine::s_BackendScriptWantGrabMouse;
 

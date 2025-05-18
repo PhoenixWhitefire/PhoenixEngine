@@ -58,7 +58,7 @@ static Vector3 GetVector3FromJson(const nlohmann::json& Json)
 			Json[2]
 		);
 	}
-	catch (nlohmann::json::type_error TErr)
+	catch (const nlohmann::json::type_error& TErr)
 	{
 		Log::Warning(
 			"Could not read Vector3: '"
@@ -82,7 +82,7 @@ static Color GetColorFromJson(const nlohmann::json& Json)
 			Json[2]
 		);
 	}
-	catch (nlohmann::json::type_error TErr)
+	catch (const nlohmann::json::type_error& TErr)
 	{
 		Log::Warning(
 			"Could not read Color: '"
@@ -111,7 +111,7 @@ static glm::mat4 GetMatrixFromJson(const nlohmann::json& Json)
 			for (int row = 0; row < 4; row++)
 				mat[col][row] = float(Json[col][row]);
 	}
-	catch (nlohmann::json::type_error TErr)
+	catch (const nlohmann::json::type_error& TErr)
 	{
 		Log::Warning(
 			"Could not read Matrix: '"
@@ -152,7 +152,7 @@ static std::vector<GameObjectRef> LoadMapVersion1(
 		ZoneScopedN("ParseJson");
 		JsonData = nlohmann::json::parse(Contents);
 	}
-	catch (nlohmann::json::exception e)
+	catch (const nlohmann::json::parse_error& e)
 	{
 		const char* whatStr = e.what();
 
@@ -183,7 +183,7 @@ static std::vector<GameObjectRef> LoadMapVersion1(
 		{
 			PropObject = ModelsNode[Index];
 		}
-		catch (nlohmann::json::type_error e)
+		catch (const nlohmann::json::type_error& e)
 		{
 			const char* whatStr = e.what();
 			throw(std::vformat("Failed to decode map data: {}", std::make_format_args(whatStr)));
@@ -192,7 +192,7 @@ static std::vector<GameObjectRef> LoadMapVersion1(
 		std::string ModelPath = PropObject["path"];
 
 		Vector3 Position = GetVector3FromJson(PropObject["position"]);
-		Vector3 Orientation = GetVector3FromJson(PropObject["orient"]);
+		//Vector3 Orientation = GetVector3FromJson(PropObject["orient"]);
 		Vector3 Size = GetVector3FromJson(PropObject["size"]);
 
 		std::vector<GameObject*> Model = LoadModelAsMeshes(ModelPath.c_str(), Size, Position);
@@ -363,7 +363,7 @@ static std::vector<GameObjectRef> LoadMapVersion1(
 	return Objects;
 }
 
-static GameObject* createObjectFromJsonItem(const nlohmann::json& Item, uint32_t ItemIndex, float Version, bool* Success)
+static GameObject* createObjectFromJsonItem(const nlohmann::json& Item, uint32_t ItemIndex, float Version)
 {
 	if (Version == 2.f)
 	{
@@ -419,7 +419,7 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 		ZoneScopedN("ParseJson");
 		jsonData = nlohmann::json::parse(Contents);
 	}
-	catch (nlohmann::json::exception e)
+	catch (const nlohmann::json::parse_error& e)
 	{
 		const char* whatStr = e.what();
 
@@ -462,7 +462,7 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 
 		const nlohmann::json& item = gameObjectsNode[itemIndex];
 
-		GameObject* newObject = createObjectFromJsonItem(item, itemIndex, Version, Success);
+		GameObject* newObject = createObjectFromJsonItem(item, itemIndex, Version);
 
 		std::string name = item.find("Name") != item.end() ? (std::string)item["Name"] : newObject->Name;
 
@@ -812,6 +812,13 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 				item[serializedAs] = target->ObjectId;
 			else
 				item[serializedAs] = PHX_GAMEOBJECT_NULL_ID;
+			
+			break;
+		}
+
+		[[unlikely]] default:
+		{
+			assert(false);
 		}
 
 		}

@@ -31,7 +31,7 @@ void RenderMaterial::Reload()
 		{
 			jsonMaterialData = nlohmann::json::parse(jsonFileContents);
 		}
-		catch (nlohmann::json::parse_error e)
+		catch (const nlohmann::json::parse_error& e)
 		{
 			std::string errmsg = e.what();
 			Log::Error(std::vformat(
@@ -278,6 +278,9 @@ void MaterialManager::SaveToPath(const RenderMaterial& material, const std::stri
 			newMtlConfig["Uniforms"][it.first] = static_cast<float>(value.AsDouble());
 			break;
 		}
+
+		[[unlikely]] default: { assert(false); }
+
 		}
 	}
 

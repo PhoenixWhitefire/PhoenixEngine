@@ -121,7 +121,7 @@ public:
 	template <class T> T* GetComponent()
 	{
 		EntityComponent type = T::Type;
-		for (const std::pair<EntityComponent, uint32_t> pair : m_Components)
+		for (const std::pair<EntityComponent, uint32_t>& pair : m_Components)
 			if (pair.first == type)
 				return static_cast<T*>(GameObject::s_ComponentManagers[(size_t)type]->GetComponent(pair.second));
 		
@@ -170,6 +170,7 @@ public:
 	// passed object will be deleted
 	void MergeWith(GameObject*);
 
+	static Reflection::GenericValue s_ToGenericValue(const GameObject*);
 	Reflection::GenericValue ToGenericValue() const;
 
 	uint32_t ObjectId = PHX_GAMEOBJECT_NULL_ID;

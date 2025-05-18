@@ -28,7 +28,7 @@ void Log::Save()
 	ProgramLog.clear();
 }
 
-void logAppend(const std::string_view& Message, bool ManageMutex = false)
+static void logAppend(const std::string_view& Message, bool ManageMutex = false)
 {
 	std::unique_lock<std::mutex> lock;
 

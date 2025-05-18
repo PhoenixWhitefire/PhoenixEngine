@@ -455,7 +455,8 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 					emloadTexture(&asyncTexture, ActualPath);
 
 					promise->set_value(asyncTexture);
-				}
+				},
+				false
 			);
 
 			newTexture->Status = Texture::LoadStatus::InProgress;
@@ -487,9 +488,6 @@ void TextureManager::FinalizeAsyncLoadedTextures()
 	ZoneScoped;
 
 	size_t numTexPromises = m_TexPromises.size();
-	size_t numTexFutures = m_TexFutures.size();
-
-	assert(numTexPromises == numTexFutures);
 
 	for (size_t promiseIndex = 0; promiseIndex < numTexPromises; promiseIndex++)
 	{
@@ -543,7 +541,7 @@ void TextureManager::FinalizeAsyncLoadedTextures()
 
 		delete promise;
 
-		numTexPromises, numTexFutures = m_TexPromises.size();
+		numTexPromises = m_TexPromises.size();
 
 		if (numTexPromises + 1 >= m_TexPromises.size())
 			break; // GOD I HATE THIS TODO 10/05/2025

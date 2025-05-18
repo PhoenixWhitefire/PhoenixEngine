@@ -6,7 +6,7 @@
 class AnimationManager : BaseComponentManager
 {
 public:
-    virtual uint32_t CreateComponent(GameObject* Object) final
+    virtual uint32_t CreateComponent(GameObject*) final
     {
         m_Components.emplace_back();
         return static_cast<uint32_t>(m_Components.size() - 1);
@@ -17,13 +17,13 @@ public:
         std::vector<void*> v;
         v.reserve(m_Components.size());
 
-        for (const EcAnimation& t : m_Components)
+        for (EcAnimation& t : m_Components)
             v.push_back((void*)&t);
         
         return v;
     }
 
-    virtual void DeleteComponent(uint32_t Id) final
+    virtual void DeleteComponent(uint32_t) final
     {
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
     }

@@ -54,7 +54,7 @@ public:
         std::vector<void*> v;
         v.reserve(m_Components.size());
 
-        for (const EcSound& t : m_Components)
+        for (EcSound& t : m_Components)
             v.push_back((void*)&t);
         
         return v;
@@ -112,6 +112,7 @@ public:
 					sound->m_PlayRequested = playing.AsBoolean();
 
 					if (stream)
+					{
 						if (sound->m_PlayRequested)
 						{
 							if (!sound->Object->Enabled)
@@ -132,6 +133,7 @@ public:
 							SDL_PauseAudioStreamDevice(stream);
 							SDL_FlushAudioStream(stream);
 						}
+					}
 				}
 			),
 
@@ -241,13 +243,19 @@ void EcSound::Update(double)
 		return;
 	
 	if (Object->Enabled)
+	{
 		if (SDL_AudioStreamDevicePaused(stream) == m_PlayRequested)
+		{
 			if (m_PlayRequested)
+			{
 				if (!SDL_ResumeAudioStreamDevice(stream))
 					throw("Failed to resume audio stream when it was requested: " + std::string(SDL_GetError()));
+			}
 			else
 				if (!SDL_PauseAudioStreamDevice(stream))
 					throw("Failed to pause audio stream when it was requested: " + std::string(SDL_GetError()));
+		}
+	}
 	else
 		if (!SDL_AudioStreamDevicePaused(stream))
 			throw("Failed to pause audio stream of a disabled Sound: " + std::string(SDL_GetError()));
@@ -356,6 +364,7 @@ void EcSound::Reload()
 			AudioStreamPromises[SoundEcId].set_value(true);
 
 			ComponentsBufferReAllocMutex.unlock();
-		}
+		},
+		false
 	);
 }

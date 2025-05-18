@@ -37,7 +37,7 @@ public:
 	void FinalizeAsyncLoadedMeshes();
 
 	std::string Serialize(const Mesh&);
-	Mesh Deserialize(const std::string_view&, bool*);
+	Mesh Deserialize(const std::string_view&, std::string* ErrorMessage);
 	// mesh is intentionally copied here, because it must be copied into
 	// an internal array (`m_Meshes`) anyway, and may need to be modified,
 	// depending on `UploadToGpu`
@@ -50,8 +50,6 @@ public:
 
 	Mesh& GetMeshResource(uint32_t);
 	GpuMesh& GetGpuMesh(uint32_t);
-
-	std::string_view GetLastErrorString();
 
 private:
 	void m_CreateAndUploadGpuMesh(Mesh&);

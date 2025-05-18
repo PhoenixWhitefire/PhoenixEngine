@@ -6,16 +6,29 @@
 // can end up being directed to the exception handlers
 // in the `main` function, preventing VS debugger
 // from being invoked directly at the point of the exception
-// wait this actually makes no fucking sense hold on
 #ifdef NDEBUG
+
 #define PHX_ENSURE_MSG(expr, err) if (!(expr)) throw(err)
-#define PHX_ENSURE(expr) if (!(expr)) throw("Check failed: " + std::string(#expr))
+#define PHX_ENSURE(expr) if (!(expr)) throw("Failed to ensure: " + std::string(#expr))
+
+#define PHX_CHECK(expr, err) if (!(expr)) Log::Error(std::vformat( \
+    "Check '{}' failed on line {} of function '{}'", \
+    std::make_format_args(#expr, __LINE__, __FUNCTION__) \
+)); \
+
 #else
+
 #define PHX_ENSURE_MSG(expr, err) assert(expr)
 #define PHX_ENSURE(expr) assert(expr)
+
+#define PHX_CHECK assert
+
 #endif
 
-#include <string>
+#include <format>
+#include <assert.h>
+
+#include "Log.hpp"
 
 void CopyStringToBuffer(char* buf, size_t capacity, const std::string_view& string = "");
 char* BufferInitialize(size_t capacity, const std::string_view& value = "");

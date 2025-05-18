@@ -353,6 +353,8 @@ void ShaderProgram::Save()
 			fileJson["Uniforms"][it.first] = static_cast<float>(value.AsDouble());
 			break;
 		}
+
+		[[unlikely]] default: { assert(false); }
 		}
 	}
 

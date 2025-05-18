@@ -17,7 +17,13 @@ public:
 	void Initialize(int NumThreads = -1);
 
 	// queue a task
-	void Dispatch(std::function<void()>);
+	// "Critical" means "we can't skip this if we're shutting down"
+	// we skip non-critical tasks while shutting down to speed up
+	// how fast the window closes
+	// window waits on everything to finish so that the app does not
+	// appear like a suspicious background process if it gets frozen
+	// somewhere in teardown
+	void Dispatch(std::function<void()>, bool IsCritical);
 	void PropagateExceptions();
 
 	static ThreadManager* Get();
@@ -29,9 +35,15 @@ private:
 		std::exception_ptr Exception;
 	};
 
+	struct Task
+	{
+		std::function<void()> Function;
+		bool IsCritical = true;
+	};
+
 	std::vector<Worker> m_Workers;
 
-	std::queue<std::function<void()>> m_Tasks;
+	std::queue<Task> m_Tasks;
 	std::mutex m_TasksMutex;
 	std::condition_variable m_TasksCv;
 

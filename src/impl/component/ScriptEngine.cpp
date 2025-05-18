@@ -131,7 +131,7 @@ static void pushJson(lua_State* L, const nlohmann::json& v)
 	{
 		lua_newtable(L);
 
-		for (int i = 0; i < v.size(); i++)
+		for (int i = 0; static_cast<size_t>(i) < v.size(); i++)
 		{
 			lua_pushinteger(L, i + 1);
 			pushJson(L, v[i]);
@@ -381,7 +381,7 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 
 		std::vector<Reflection::GenericValue> array = gv.AsArray();
 
-		for (int index = 0; index < array.size(); index++)
+		for (int index = 0; static_cast<size_t>(index) < array.size(); index++)
 		{
 			lua_pushinteger(L, index + 1);
 			L::PushGenericValue(L, array[index]);
@@ -399,7 +399,7 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 
 		lua_newtable(L);
 
-		for (int index = 0; index < array.size(); index++)
+		for (int index = 0; static_cast<size_t>(index) < array.size(); index++)
 		{
 			L::PushGenericValue(L, array[index]);
 
@@ -486,7 +486,7 @@ int ScriptEngine::L::HandleFunctionCall(
 	std::vector<Reflection::GenericValue> inputs;
 
 	// This *entire* for-loop is just for handling input arguments
-	for (int index = 0; index < paramTypes.size(); index++)
+	for (size_t index = 0; index < paramTypes.size(); index++)
 	{
 		Reflection::ValueType paramType = paramTypes[index];
 
@@ -1159,7 +1159,7 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 
 			lua_newtable(L);
 
-			for (int index = 0; index < hits.size(); index++)
+			for (int index = 0; static_cast<size_t>(index) < hits.size(); index++)
 			{
 				lua_pushinteger(L, index);
 				ScriptEngine::L::PushGameObject(L, hits[index]);
@@ -1417,7 +1417,9 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 			
 			std::string defaultLocationCwd = luaL_optstring(L, 1, "");
 
-			std::string defaultLocationAbs = SDL_GetCurrentDirectory() + defaultLocationCwd;
+			char* sdlcwd = SDL_GetCurrentDirectory();
+			std::string defaultLocationAbs = sdlcwd + defaultLocationCwd;
+			free(sdlcwd);
 
 #ifdef _WIN32
 			for (size_t i  = 0; i < defaultLocationAbs.size(); i++)
@@ -1490,7 +1492,10 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 
 			std::string defaultLocationCwd = luaL_optstring(L, 1, "");
 
-			std::string defaultLocationAbs = SDL_GetCurrentDirectory() + defaultLocationCwd;
+			char* sdlcwd = SDL_GetCurrentDirectory();
+			std::string defaultLocationAbs = sdlcwd + defaultLocationCwd;
+			free(sdlcwd);
+
 
 #ifdef _WIN32
 			for (size_t i  = 0; i < defaultLocationAbs.size(); i++)

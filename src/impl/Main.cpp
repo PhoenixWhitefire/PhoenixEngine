@@ -57,7 +57,7 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 PHX_MAIN_HANDLECRASH(std::string)                                                \
 PHX_MAIN_HANDLECRASH(std::string_view)                                           \
 PHX_MAIN_HANDLECRASH(const char*)                                                \
-catch (std::bad_alloc AllocError)                                                \
+catch (const std::bad_alloc& AllocError)                                         \
 {                                                                                \
 	handleCrash(                                                                 \
 		"System may have run out of memory: " + std::string(AllocError.what()),  \
@@ -65,14 +65,17 @@ catch (std::bad_alloc AllocError)                                               
 	);                                                                           \
 	return 1;                                                                    \
 }                                                                                \
-PHX_MAIN_HANDLECRASH_WHAT(nlohmann::json::type_error)                            \
-PHX_MAIN_HANDLECRASH_WHAT(nlohmann::json::parse_error)                           \
-PHX_MAIN_HANDLECRASH_WHAT(std::runtime_error)                                    \
-PHX_MAIN_HANDLECRASH_WHAT(std::exception);                                       \
+PHX_MAIN_HANDLECRASH_WHAT(const std::runtime_error&)                             \
+PHX_MAIN_HANDLECRASH_WHAT(const std::exception&)                                 \
+catch (...)                                                                      \
+{                                                                                \
+	handleCrash("Unknown error", "Unknown (really helpful I know)");             \
+	return 1;                                                                    \
+}                                                                                \
 
 #else
 
-// 24/01/2025 allow VS debugger to take us directly to the exception location
+// (when running with a debugger) take me straight to the exception location
 #define PHX_MAIN_CRASHHANDLERS catch (void*) { assert(false); }
 
 #endif
@@ -102,11 +105,11 @@ PHX_MAIN_HANDLECRASH_WHAT(std::exception);                                      
 #include "component/Script.hpp"
 #include "component/ScriptEngine.hpp"
 
-#include "PerformanceTiming.hpp"
 #include "GlobalJsonConfig.hpp"
 #include "InlayEditor.hpp"
 #include "UserInput.hpp"
 #include "Utilities.hpp"
+#include "Timing.hpp"
 #include "Memory.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
@@ -124,8 +127,6 @@ static const float MovementSpeed = 15.f;
 static float PrevMouseX, PrevMouseY = 0;
 
 static glm::vec3 CamForward = glm::vec3(0.f, 0.f, -1.f);
-
-static bool WasTracyLaunched = false;
 
 static int s_ExitCode = 0;
 
@@ -145,7 +146,7 @@ static int s_ExitCode = 0;
 
 #ifdef TRACY_ENABLE
 
-#endif
+static bool WasTracyLaunched = false;
 
 // 13/01/2025: https://stackoverflow.com/a/478960
 static std::string exec(const char* cmd)
@@ -167,6 +168,8 @@ static std::string exec(const char* cmd)
 
 	return result;
 }
+
+#endif
 
 static void launchTracy()
 {
@@ -280,8 +283,10 @@ static void handleInputs(double deltaTime)
 
 				SDL_WarpMouseInWindow(nullptr, windowSizeX / 2.f, windowSizeY / 2.f);
 
-				mouseX, mouseY = windowSizeX / 2.f, windowSizeY / 2.f;
-				PrevMouseX, PrevMouseY = mouseX, mouseY;
+				mouseX = windowSizeX / 2.f;
+				mouseY = windowSizeY / 2.f;
+				PrevMouseX = mouseX;
+				PrevMouseY = mouseY;
 
 				FirstDragFrame = false;
 			}
@@ -327,7 +332,10 @@ static void handleInputs(double deltaTime)
 				newMouseY = 20;
 
 			if (UserInput::InputBeingSunk)
-				newMouseX, newMouseY = windowSizeX / 2.f, windowSizeY / 2.f;
+			{
+				newMouseX = windowSizeX / 2.f;
+				newMouseY = windowSizeY / 2.f;
+			}
 
 			if (newMouseX != mouseX || newMouseY != mouseY)
 			{
@@ -393,7 +401,10 @@ static void handleInputs(double deltaTime)
 				newMouseY = 20;
 
 			if (UserInput::InputBeingSunk)
-				newMouseX, newMouseY = EngineInstance->WindowSizeX / 2.f, EngineInstance->WindowSizeY / 2.f;
+			{
+				newMouseX = EngineInstance->WindowSizeX / 2.f;
+				newMouseY = EngineInstance->WindowSizeY / 2.f;
+			}
 
 			if (newMouseX != mouseX || newMouseY != mouseY)
 			{
@@ -412,11 +423,13 @@ static void handleInputs(double deltaTime)
 	}
 
 	if (UserInput::IsKeyDown(SDLK_F11))
+	{
 		if (!PreviouslyPressingF11)
 		{
 			PreviouslyPressingF11 = true;
 			EngineInstance->SetIsFullscreen(!EngineInstance->IsFullscreen);
 		}
+	}
 	else
 		PreviouslyPressingF11 = false;
 }
@@ -479,9 +492,12 @@ static void drawDeveloperUI(double DeltaTime)
 
 	if (ImGui::Begin("Info"))
 	{
-		const std::array<double, (size_t)Timing::Timer::__count>& times = Timing::FinalFrameTimes;
+		const double* times = Timing::FinalFrameTimes;
+		uint8_t numTimers = Timing::StaticMagicTimerThing::s_NumTimers;
 
-		size_t frameTime = static_cast<size_t>(times[0] * 1000);
+		// 0 - EntireFrame, 1 - FrameSleep, 2 - FrameWork, ...
+		assert(strcmp(Timing::TimerNames[2], "FrameWork") == 0);
+		size_t frameTime = static_cast<size_t>(times[1] * 1000);
 
 		static bool IsSamplingStats = false;
 		static std::string SampledCsv;
@@ -504,10 +520,10 @@ static void drawDeveloperUI(double DeltaTime)
 		ImGui::SeparatorText("Timers");
 
 		if (!IsSamplingStats)
-			for (int i = 0; i < (int)Timing::Timer::__count; i++)
+			for (int i = 0; i < numTimers; i++)
 				ImGui::Text("%s: %zims", Timing::TimerNames[i], static_cast<size_t>(times[i] * 1000));
 		else
-			for (int i = 0; i < (int)Timing::Timer::__count; i++)
+			for (int i = 0; i < numTimers; i++)
 			{
 				SampledCsv += std::to_string(times[i]) + ",";
 				ImGui::Text("%s: %zims", Timing::TimerNames[i], static_cast<size_t>(times[i] * 1000));
@@ -566,7 +582,7 @@ static void drawDeveloperUI(double DeltaTime)
 				NumSecondsSampled = 0.f;
 				NumFramesSampled = 0;
 
-				for (int i = 0; i < (int)Timing::Timer::__count; i++)
+				for (int i = 0; i < numTimers; i++)
 					SampledCsv += Timing::TimerNames[i] + std::string(",");
 				for (int i = 0; i < (int)Memory::Category::__count; i++)
 					SampledCsv += Memory::CategoryNames[i] + std::string(",");

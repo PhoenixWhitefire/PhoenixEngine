@@ -24,11 +24,11 @@
 #include "component/Camera.hpp"
 #include "component/Script.hpp"
 #include "component/Light.hpp"
-#include "PerformanceTiming.hpp"
 #include "GlobalJsonConfig.hpp"
 #include "ThreadManager.hpp"
 #include "UserInput.hpp"
 #include "Utilities.hpp"
+#include "Timing.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
@@ -123,11 +123,9 @@ static T readFromConfiguration(const std::string_view& Key, const T& DefaultValu
 	{
 		return EngineJsonConfig.value(Key, DefaultValue);
 	}
-	catch (nlohmann::json::type_error Error)
+	catch (const nlohmann::json::type_error& Error)
 	{
 		std::string errorMessage = Error.what();
-
-		// 03/02/2025 "no matching token: {" WTF DO YOU MEAN
 
 		Log::Error(std::vformat(
 			"Error trying to read key '{}' of configuration: {}. Falling back to default value",
@@ -152,7 +150,7 @@ void Engine::LoadConfiguration()
 			for (auto it = config.begin(); it != config.end(); it++)
 				EngineJsonConfig[it.key()] = it.value();
 		}
-		catch (nlohmann::json::parse_error err)
+		catch (const nlohmann::json::parse_error& err)
 		{
 			ConfigLoadSucceeded = false;
 			const char* errMessage = err.what();
@@ -616,6 +614,7 @@ void Engine::Start()
 
 	while (m_IsRunning)
 	{
+		TIME_SCOPE_AS_N("EntireFrame", EntireFrameTimerScope);
 		ZoneScopedN("Frame");
 
 		if (DataModel->IsDestructionPending)
@@ -640,16 +639,23 @@ void Engine::Start()
 
 		double deltaTime = RunningTime - LastFrameEnded;
 		double fpsCapDelta = 1.f / throttledFpsCap;
-		double lastFrameTime = Timing::FinalFrameTimes[(uint8_t)Timing::Timer::EntireFrame];
+		double lastFrameTime = Timing::FinalFrameTimes[EntireFrameTimerScope.TimerId];
+
+		// make sure the order of timers is
+		// 0 - EntireFrame, 1 - FrameSleep, 2 - FrameWork
+		// `drawDeveloperUI` depends on this
+		static Timing::StaticMagicTimerThing FrameSleepTimerScope("FrameSleep");
 
 		// Wait the appropriate amount of time between frames
 		if ((!VSync || !IsWindowFocused) && (deltaTime < fpsCapDelta))
 		{
+			Timing::ScopedTimer scoped(FrameSleepTimerScope.TimerId);
 			ZoneScopedNC("SleepForFpsCap", tracy::Color::Wheat);
+
 			std::this_thread::sleep_for(std::chrono::duration<double>(fpsCapDelta - deltaTime - lastFrameTime));
 		}
 
-		TIME_SCOPE_AS(Timing::Timer::EntireFrame);
+		TIME_SCOPE_AS("FrameWork");
 
 		scene.RenderList.clear();
 		scene.LightingList.clear();
@@ -757,6 +763,8 @@ void Engine::Start()
 					break;
 				}
 
+				default: {}
+
 				}
 			}
 		}
@@ -826,7 +834,7 @@ void Engine::Start()
 
 		if (hasSun)
 		{
-			TIME_SCOPE_AS(Timing::Timer::Rendering);
+			TIME_SCOPE_AS("Shadows");
 			ZoneScopedN("Shadows");
 
 			Scene sunScene{};

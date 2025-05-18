@@ -214,7 +214,7 @@ std::string Reflection::GenericValue::ToString() const
 		return std::to_string((int64_t)this->Value);
 
 	case ValueType::Double:
-		return std::to_string(*(double*)&this->Value);
+		return std::to_string(*(const double*)&this->Value);
 
 	case ValueType::String:
 	{
@@ -232,7 +232,7 @@ std::string Reflection::GenericValue::ToString() const
 
 	case ValueType::GameObject:
 	{
-		GameObject* object = GameObject::GetObjectById(*(uint32_t*)&this->Value);
+		GameObject* object = GameObject::GetObjectById(*(const uint32_t*)&this->Value);
 		return object ? object->GetFullName() : "NULL GameObject";
 	}
 	
@@ -332,7 +332,7 @@ std::string_view Reflection::GenericValue::AsStringView() const
 		if (Size > 8)
 			return std::string_view((char*)Value, Size);
 		else
-			return std::string_view((char*)&Value, Size);
+			return std::string_view((const char*)&Value, Size);
 }
 bool Reflection::GenericValue::AsBoolean() const
 {
@@ -343,7 +343,7 @@ bool Reflection::GenericValue::AsBoolean() const
 double Reflection::GenericValue::AsDouble() const
 {
 	if (Type == ValueType::Double)
-		return *(double*)&this->Value;
+		return *(const double*)&this->Value;
 
 	else if (Type == ValueType::Integer)
 		return static_cast<double>((int64_t)this->Value);
@@ -386,47 +386,6 @@ std::vector<Reflection::GenericValue> Reflection::GenericValue::AsArray() const
 std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> Reflection::GenericValue::AsMap() const
 {
 	throw("GenericValue::AsMap not implemented");
-
-	/*
-	if (Type != ValueType::Map)
-		throw("GenericValue was not a Map, but instead a " + Reflection::TypeAsString(Type));
-
-	//if (Array.size() % 2 != 0)
-	//	throw("GenericValue was not a valid Map (odd number of Array elements)");
-
-	/*
-	std::unordered_map<GenericValue, GenericValue> map;
-
-	for (size_t index = 0; index < Array.size(); index++)
-	{
-		map.insert(Array.at(index), Array.at(index + 1));
-		index++;
-	}
-
-	return map;
-	*/
-
-	// 16/09/2024
-	/*
-	* 
-	Severity	Code	Description	Project	File	Line	Suppression State	Details
-	Error	C2280	'std::_Umap_traits<_Kty,_Ty,std::_Uhash_compare<_Kty,_Hasher,_Keyeq>,_Alloc,false>
-	::_Umap_traits(const std::_Umap_traits<_Kty,_Ty,std::_Uhash_compare<_Kty,_Hasher,_Keyeq>,_Alloc,false> &)'
-	: attempting to reference a deleted function
-        with
-        [
-            _Kty=Reflection::GenericValue,
-            _Ty=Reflection::GenericValue,
-            _Hasher=std::hash<Reflection::GenericValue>,
-            _Keyeq=std::equal_to<Reflection::GenericValue>,
-            _Alloc=std::allocator<std::pair<const Reflection::GenericValue,Reflection::GenericValue>>
-        ]	PhoenixEngine	C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.41.34120\include\xhash	396		
-
-
-	What is blud yapping about?? :skull:
-	
-	throw("GenericValue::AsMap not implemented");
-	*/
 }
 
 Reflection::GenericValue::~GenericValue()
@@ -464,6 +423,8 @@ Reflection::GenericValue::~GenericValue()
 		delete (Vector3*)this->Value;
 		break;
 	}
+
+	default: {}
 	}
 }
 
@@ -549,6 +510,8 @@ static std::string_view ValueTypeNames[] =
 		"Map"
 };
 
+static const std::string_view TypeAsStringError = "<CANNOT_FIND_TYPE_NAME>";
+
 static_assert(
 	std::size(ValueTypeNames) == (size_t)Reflection::ValueType::__count,
 	"'ValueTypeNames' does not have the same number of elements as 'ValueType'"
@@ -556,5 +519,8 @@ static_assert(
 
 const std::string_view& Reflection::TypeAsString(ValueType t)
 {
-	return ValueTypeNames[(int)t];
+	if ((int)t < std::size(ValueTypeNames))
+		return ValueTypeNames[(int)t];
+	else
+		return TypeAsStringError;
 }

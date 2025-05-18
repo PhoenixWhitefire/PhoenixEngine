@@ -42,7 +42,7 @@ void ThreadManager::Initialize(int NumThreadsOverride)
 
 				while (true)
 				{
-					std::function<void()> task;
+					Task task;
 
 					{
 						std::unique_lock<std::mutex> lock{ m_TasksMutex };
@@ -63,13 +63,16 @@ void ThreadManager::Initialize(int NumThreadsOverride)
 
 						task = std::move(m_Tasks.front());
 						m_Tasks.pop();
+
+						if (m_Stop && !task.IsCritical)
+							continue;
 					}
 
 					try
 					{
 						ZoneScopedN("Task");
 
-						task();
+						task.Function();
 					}
 					catch (...)
 					{
@@ -92,14 +95,14 @@ void ThreadManager::Initialize(int NumThreadsOverride)
 	Log::Info("ThreadManager initialized");
 }
 
-void ThreadManager::Dispatch(std::function<void()> Task)
+void ThreadManager::Dispatch(std::function<void()> Task, bool IsCritical)
 {
 	assert(s_Instance == this);
 	assert(!m_Stop);
 
 	{
 		std::unique_lock<std::mutex> lock{ m_TasksMutex };
-		m_Tasks.emplace(std::move(Task));
+		m_Tasks.emplace(std::move(Task), IsCritical);
 	}
 
 	m_TasksCv.notify_one();

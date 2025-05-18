@@ -78,7 +78,7 @@ void FileRW::WriteFile(
 
 	if (file && file.is_open())
 	{
-		file.write((char*)Contents.data(), Contents.size());
+		file.write((const char*)Contents.data(), Contents.size());
 		file.close();
 	}
 	else

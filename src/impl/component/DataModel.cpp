@@ -8,7 +8,7 @@
 class DataModelManager : BaseComponentManager
 {
 public:
-    virtual uint32_t CreateComponent(GameObject* Object) final
+    virtual uint32_t CreateComponent(GameObject*) final
     {
         m_Components.emplace_back();
 
@@ -30,7 +30,7 @@ public:
         std::vector<void*> v;
         v.reserve(m_Components.size());
 
-        for (const EcDataModel& t : m_Components)
+        for (EcDataModel& t : m_Components)
             v.push_back((void*)&t);
         
         return v;
@@ -41,7 +41,7 @@ public:
         return &m_Components[Id];
     }
 
-    virtual void DeleteComponent(uint32_t Id) final
+    virtual void DeleteComponent(uint32_t) final
     {
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
     }
@@ -61,7 +61,7 @@ public:
 				{ 
 					{ Reflection::ParameterType{ Reflection::ValueType::Integer, true } },
 					{},
-					[](void* p, const std::vector<Reflection::GenericValue>& inputs)
+					[](void*, const std::vector<Reflection::GenericValue>& inputs)
                     -> std::vector<Reflection::GenericValue>
 					{
                         Log::Info("Shutdown requested via DataModel");

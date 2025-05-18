@@ -6,8 +6,6 @@ Vector3 Vector3::yAxis = Vector3(0.f, 1.f, 0.f);
 Vector3 Vector3::zAxis = Vector3(0.f, 0.f, 1.f);
 Vector3 Vector3::one = Vector3(1.f, 1.f, 1.f);
 
-static bool s_DidInitReflection = false;
-
 Vector3::Vector3()
 {
 	this->X = 0.f;

@@ -28,12 +28,12 @@
 #include "FileRW.hpp"
 #include "Log.hpp"
 
+bool InlayEditor::DidInitialize = false;
+
 constexpr uint32_t OBJECT_NEW_CLASSNAME_BUFSIZE = 16;
 constexpr uint32_t MATERIAL_NEW_NAME_BUFSIZE = 64;
 constexpr uint32_t MATERIAL_TEXTUREPATH_BUFSIZE = 128;
 constexpr char MATERIAL_NEW_NAME_DEFAULT[] = "newmaterial";
-
-static const char* ParentString = "[Parent]";
 
 static bool TextEditorEnabled = false;
 static std::string TextEditorFile = "<NOT_SELECTED>";
@@ -127,12 +127,15 @@ static bool mtlIterator(void*, int index, const char** outText)
 static std::string getFileDirectory(const std::string& FilePath)
 {
 	size_t lastFwdSlash = FilePath.find_last_of("/");
+	char* sdlcwd = SDL_GetCurrentDirectory();
+	std::string cwd = sdlcwd;
+	free(sdlcwd);
 
 	if (lastFwdSlash == std::string::npos)
 #ifdef _WIN32
-		return SDL_GetCurrentDirectory() + std::string("resources\\");
+		return cwd + "resources\\";
 #else
-		return SDL_GetCurrentDirectory() + std::string("resources/");
+		return cwd + "resources/";
 #endif
 	else
 	{
@@ -141,7 +144,7 @@ static std::string getFileDirectory(const std::string& FilePath)
 		if (fileDir.find("resources/") == std::string::npos)
 			fileDir = "resources/" + fileDir;
 
-		return SDL_GetCurrentDirectory() + fileDir + "/";
+		return cwd + fileDir + "/";
 	}
 }
 
@@ -666,16 +669,18 @@ static void mtlEditorTexture(const char* Label, uint32_t* TextureIdPtr, char* Cu
 	bool addTextureDialog = false;
 
 	if (*TextureIdPtr == 0)
+	{
 		if (ImGui::Button("Add"))
 		{
 			addTextureDialog = true;
-			memcpy(CurrentPath, (char*)("textures/"), 9); // start the file dialog in the textures directory
+			memcpy(CurrentPath, (const char*)("textures/"), 9); // start the file dialog in the textures directory
 		}
 		else
 		{
 			ImGui::PopID();
 			return;
 		}
+	}
 
 	const Texture& tx = texManager->GetTextureResource(*TextureIdPtr);
 
@@ -1550,6 +1555,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 					ImGui::SetItemTooltip("CTRL+Click to select referenced GameObject 03/12/2024");
 
 					if (ImGui::IsItemClicked())
+					{
 						if (ImGui::GetIO().KeyCtrl)
 						{
 							if (referenced)
@@ -1568,7 +1574,8 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 
 							Selections.clear();
 						}
-
+					}
+					
 					newVal = curVal;
 				}
 				else

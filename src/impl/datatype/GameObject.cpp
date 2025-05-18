@@ -17,7 +17,7 @@ static GameObject* cloneRecursive(
 {
 	GameObject* newObj = GameObject::Create();
 
-	for (const std::pair<EntityComponent, uint32_t> pair : Root->GetComponents())
+	for (const std::pair<EntityComponent, uint32_t>& pair : Root->GetComponents())
 		newObj->AddComponent(pair.first);
 
 	auto overwritesIt = OverwritesMap.find(Root);
@@ -398,7 +398,7 @@ std::string GameObject::GetFullName() const
 
 bool GameObject::IsA(const std::string_view& AncestorClass) const
 {
-	for (const std::pair<EntityComponent, uint32_t> p : m_Components)
+	for (const std::pair<EntityComponent, uint32_t>& p : m_Components)
 		if (s_EntityComponentNames[(size_t)p.first] == AncestorClass)
 			return true;
 	
@@ -507,20 +507,22 @@ void GameObject::RemoveChild(uint32_t id)
 		throw(std::vformat("ID:{} is _not my ({}) sonnn~_", std::make_format_args(ObjectId, id)));
 }
 
+Reflection::GenericValue GameObject::s_ToGenericValue(const GameObject* Object)
+{
+	if (Object)
+	{
+		Reflection::GenericValue gv{ Object->ObjectId };
+		gv.Type = Reflection::ValueType::GameObject;
+
+		return gv;
+	}
+	else
+		return {}; // null
+}
+
 Reflection::GenericValue GameObject::ToGenericValue() const
 {
-	if (!this)
-		return {}; // null
-
-	uint32_t targetObjectId = PHX_GAMEOBJECT_NULL_ID;
-
-	if (this)
-		targetObjectId = this->ObjectId;
-
-	Reflection::GenericValue gv{ targetObjectId };
-	gv.Type = Reflection::ValueType::GameObject;
-
-	return gv;
+	return s_ToGenericValue(this);
 }
 
 GameObject* GameObject::GetParent() const
@@ -706,11 +708,13 @@ Reflection::GenericValue GameObject::GetPropertyValue(const std::string_view& Pr
 	bool fromObject = false;
 
 	if (Reflection::Property* prop = FindProperty(PropName, &fromObject))
+	{
 		if (!fromObject)
 			return prop->Get(ComponentHandleToPointer(m_MemberToComponentMap[PropName]));
 		else
 			return prop->Get(this);
-	
+	}
+
 	throw("Invalid property in GetPropertyValue: " + std::string(PropName));
 }
 void GameObject::SetPropertyValue(const std::string_view& PropName, const Reflection::GenericValue& Value)
@@ -735,11 +739,13 @@ std::vector<Reflection::GenericValue> GameObject::CallFunction(const std::string
 	bool fromObject = false;
 
 	if (Reflection::Function* func = FindFunction(FuncName, &fromObject))
+	{
 		if (fromObject)
 			return func->Func(ComponentHandleToPointer(m_MemberToComponentMap[FuncName]), Inputs);
 		else
 			return func->Func(this, Inputs);
-	
+	}
+
 	throw("Invalid function in CallFunction: " + std::string(FuncName));
 }
 
@@ -766,7 +772,7 @@ std::vector<std::pair<EntityComponent, uint32_t>>& GameObject::GetComponents()
 
 void* GameObject::GetComponentByType(EntityComponent Type)
 {
-	for (const std::pair<EntityComponent, uint32_t> pair : m_Components)
+	for (const std::pair<EntityComponent, uint32_t>& pair : m_Components)
 		if (pair.first == Type)
 			return GameObject::s_ComponentManagers[(size_t)Type]->GetComponent(pair.second);
 	
