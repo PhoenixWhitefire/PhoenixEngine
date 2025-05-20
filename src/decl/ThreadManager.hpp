@@ -41,6 +41,8 @@ private:
 		bool IsCritical = true;
 	};
 
+	void m_StopThreads();
+
 	std::vector<Worker> m_Workers;
 
 	std::queue<Task> m_Tasks;

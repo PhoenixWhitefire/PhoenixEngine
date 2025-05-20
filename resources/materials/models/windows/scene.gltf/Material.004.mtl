@@ -1,13 +1,16 @@
 PHNXENGI
 #Asset Material
-#Date 11-1-2025
+#Date 20-5-2025
 
 {
-  "ColorMap": "models/windows/diffuse.png",
+  "ColorMap": "resources/models/windows/diffuse.png",
   "HasTranslucency": true,
-  "MetallicRoughnessMap": "textures/black.png",
+  "MetallicRoughnessMap": "resources/textures/black.png",
+  "PolygonMode": 0,
   "Shader": "worldUber",
-  "Uniforms": null,
+  "Uniforms": {
+    "EmissionStrength\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000": 0.5
+  },
   "specExponent": 16.0,
   "specMultiply": 0.0
 }

@@ -445,13 +445,23 @@ static void uniformsEditor(std::unordered_map<std::string, Reflection::GenericVa
 		Uniforms[NewUniformNameBuf] = initialValue;
 	}
 
-	std::vector<const char*> uniformsArray;
+	std::vector<std::string> uniformsArray;
 	uniformsArray.reserve(Uniforms.size());
 
 	for (auto& it : Uniforms)
-		uniformsArray.push_back(it.first.c_str());
+		uniformsArray.push_back(it.first);
 
-	ImGui::ListBox("Uniforms", Selection, uniformsArray.data(), static_cast<int>(uniformsArray.size()));
+	ImGui::ListBox(
+		"Uniforms",
+		Selection,
+		[](void* ud, int index)
+		{
+			std::vector<std::string>* uniforms = (std::vector<std::string>*)ud;
+			return uniforms->at(index).c_str();
+		},
+		&uniformsArray,
+		static_cast<int>(Uniforms.size())
+	);
 
 	if (*Selection != -1 && uniformsArray.size() >= 1)
 	{
@@ -513,6 +523,7 @@ static std::string* PipelineShaderSelectTarget = nullptr;
 
 static void shaderPipelineShaderSelect(const std::string& Label, std::string* Target)
 {
+	throw("H");
 	ImGui::TextUnformatted(Label.c_str());
 	ImGui::SameLine();
 

@@ -257,7 +257,7 @@ void EcSound::Update(double)
 		}
 	}
 	else
-		if (!SDL_AudioStreamDevicePaused(stream))
+		if (!SDL_PauseAudioStreamDevice(stream))
 			throw("Failed to pause audio stream of a disabled Sound: " + std::string(SDL_GetError()));
 }
 

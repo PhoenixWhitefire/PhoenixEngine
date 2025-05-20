@@ -196,10 +196,7 @@ private:
 
 	static inline Reflection::Api s_Api{};
 
-	// i think something fishy would have to be going on
-	// for the refcount to be >255
-	// 24/12/2024
-	uint8_t m_HardRefCount = 0;
+	uint16_t m_HardRefCount = 0;
 };
 
 struct GameObjectRef

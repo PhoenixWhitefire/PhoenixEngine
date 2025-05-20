@@ -83,10 +83,23 @@ static void pushGameObject(lua_State* L, GameObject* obj)
 {
 	if (!obj)
 		lua_pushnil(L); // null object properties are nil and falsey
+	else
 	{
-		uint32_t* ptrToObj = (uint32_t*)lua_newuserdata(L, sizeof(uint32_t));
-		*ptrToObj = obj ? obj->ObjectId : PHX_GAMEOBJECT_NULL_ID;
+		obj->IncrementHardRefs();
 
+		uint32_t* ptrToObj = (uint32_t*)lua_newuserdatadtor(
+			L,
+			sizeof(uint32_t),
+			[](void* ptrId)
+			{
+				uint32_t id = *(uint32_t*)ptrId;
+
+				if (GameObject* o = GameObject::GetObjectById(id))
+					o->DecrementHardRefs();
+			}
+		);
+		*ptrToObj = obj ? obj->ObjectId : PHX_GAMEOBJECT_NULL_ID;
+		
 		luaL_getmetatable(L, "GameObject");
 		lua_setmetatable(L, -2);
 	}
@@ -486,7 +499,7 @@ int ScriptEngine::L::HandleFunctionCall(
 	std::vector<Reflection::GenericValue> inputs;
 
 	// This *entire* for-loop is just for handling input arguments
-	for (size_t index = 0; index < paramTypes.size(); index++)
+	for (int index = 0; index < numArgs; index++)
 	{
 		Reflection::ValueType paramType = paramTypes[index];
 

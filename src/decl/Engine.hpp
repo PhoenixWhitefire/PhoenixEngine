@@ -30,6 +30,7 @@ public:
 
 	// Initializes main engine loop
 	void Start();
+	void Shutdown();
 
 	void SetIsFullscreen(bool IsFullscreen);
 	// Resize to a different resolution, also runs `Engine->OnWindowResized`

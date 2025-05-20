@@ -340,8 +340,8 @@ void GameObject::IncrementHardRefs()
 {
 	m_HardRefCount++;
 
-	if (m_HardRefCount > 254)
-		throw("Too many hard ref!");
+	if (m_HardRefCount > UINT16_MAX - 1)
+		throw("Too many hard refs!");
 }
 
 void GameObject::DecrementHardRefs()
@@ -425,7 +425,7 @@ void GameObject::SetParent(GameObject* newParent)
 		));
 	}
 
-	std::string fullname = this->GetFullName();
+	std::string fullname;;
 
 	if (newParent != this)
 	{
@@ -441,30 +441,40 @@ void GameObject::SetParent(GameObject* newParent)
 			}
 
 		if (isOwnDescendant)
+		{
+			fullname = this->GetFullName();
+
 			throw(std::vformat(
 				"Tried to make object ID:{} ('{}') a descendant of itself",
 				std::make_format_args(this->ObjectId, fullname)
 			));
+		}
 	}
 	else
+	{
+		fullname = this->GetFullName();
+
 		throw(std::vformat(
 			"Tried to make object ID:{} ('{}') it's own parent",
 			std::make_format_args(this->ObjectId, fullname)
 		));
+	}
 
-	GameObject* oldParent = GameObject::GetObjectById(Parent);
+	GameObject* oldParent = GetObjectById(Parent);
 
 	if (newParent == oldParent)
 		return;
+
+	// we HAVE to do this BEFORE `::RemoveChild`, otherwise
+	// it could get called twice in a row due to `::DecrementHardRefs`
+	// leading to a `::Destroy`
+	Parent = PHX_GAMEOBJECT_NULL_ID;
 
 	if (oldParent)
 		oldParent->RemoveChild(this->ObjectId);
 
 	if (!newParent)
-	{
-		this->Parent = PHX_GAMEOBJECT_NULL_ID;
 		return;
-	}
 
 	this->Parent = newParent->ObjectId;
 	newParent->AddChild(this);
@@ -539,7 +549,7 @@ std::vector<GameObject*> GameObject::GetChildren()
 	{
 		GameObject* child = GameObject::GetObjectById(m_Children[index]);
 
-		if (child && child->Valid)
+		if (child && child->Valid && !child->IsDestructionPending)
 			children.push_back(child);
 		else
 			m_Children.erase(m_Children.begin() + index);

@@ -843,31 +843,30 @@ int main(int argc, char** argv)
 	if (hasCliArgument("-apidump"))
 		doApiDump();
 
+	if (hasCliArgument("-dev"))
+			EngineJsonConfig["Developer"] = true;
+
+	else if (hasCliArgument("-nodev"))
+		EngineJsonConfig["Developer"] = false;
+
+	if (int idx = findCmdLineArgument(argc, argv, "-threads"); idx > 0)
+	{
+		PHX_ENSURE(idx < argc);
+		EngineJsonConfig["ThreadManagerThreadCount"] = std::stoi(argv[idx + 1]);
+	}
+
 	try
 	{
-		if (hasCliArgument("-dev"))
-			EngineJsonConfig["Developer"] = true;
-			
-		else if (hasCliArgument("-nodev"))
-			EngineJsonConfig["Developer"] = false;
-
-		if (int idx = findCmdLineArgument(argc, argv, "-threads"); idx > 0)
-		{
-			PHX_ENSURE(idx < argc);
-			EngineJsonConfig["ThreadManagerThreadCount"] = std::stoi(argv[idx + 1]);
-		}
-
-		// i thought about wrapping this in 2 scopes in case Engine's dtor
-		// throws an exception, but it can't seem to catch it regardless?
-		// 10/01/2025
 		Engine engine{};
 
 		init(argc, argv);
 		engine.Start();
 
 		Log::Save(); // in case FileRW::WriteFile throws an exception
-
+		
 		s_ExitCode = engine.ExitCode;
+
+		engine.Shutdown();
 	}
 	PHX_MAIN_CRASHHANDLERS;
 

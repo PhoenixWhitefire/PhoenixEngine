@@ -98,20 +98,12 @@ public:
     ScriptManager()
     {
         GameObject::s_ComponentManagers[(size_t)EntityComponent::Script] = this;
-
-		Luau::assertHandler() = [](const char* Expression, const char* File, int Line, const char* Function)
-		-> int
-		{
-			throw(std::runtime_error(std::vformat(
-				"Luau assertion failed: {}\n\nin {}:{} '{}'",
-				std::make_format_args(Expression, File, Line, Function)
-			)));
-		};
     }
 
 	~ScriptManager()
 	{
-		lua_close(LVM);
+		if (LVM)
+			lua_close(LVM);
 		LVM = nullptr;
 	}
 
@@ -766,25 +758,24 @@ static void resumeYieldedCoroutines()
 {
 	ZoneScopedC(tracy::Color::LightSkyBlue);
 
-	for (size_t corIdx = 0; corIdx < ScriptEngine::s_YieldedCoroutines.size(); corIdx++)
+	for (auto it = ScriptEngine::s_YieldedCoroutines.begin(); it < ScriptEngine::s_YieldedCoroutines.end(); it += 1)
 	{
-		const ScriptEngine::YieldedCoroutine& corInfo = ScriptEngine::s_YieldedCoroutines.at(corIdx);
-		lua_State* coroutine = corInfo.Coroutine;
-		int corRef = corInfo.CoroutineReference;
+		lua_State* coroutine = it->Coroutine;
+		int corRef = it->CoroutineReference;
 
-		uint8_t resHandlerIndex = static_cast<uint8_t>(corInfo.Mode);
+		uint8_t resHandlerIndex = static_cast<uint8_t>(it->Mode);
 		const ResumptionModeHandler handler = s_ResumptionModeHandlers[resHandlerIndex];
 		assert(handler);
 
 		std::vector<Reflection::GenericValue> returnVals;
-		bool shouldResume = handler(corInfo, &returnVals);
+		bool shouldResume = handler(*it, &returnVals);
 
 		if (shouldResume)
 		{
 			// make sure the script still exists
 			// modules don't have a `script` global, but they run on their own coroutine independent from
 			// where they are `require`'d from anyway
-			if (corInfo.ScriptId == PHX_GAMEOBJECT_NULL_ID || GameObject::GetObjectById(corInfo.ScriptId))
+			if (it->ScriptId == PHX_GAMEOBJECT_NULL_ID || GameObject::GetObjectById(it->ScriptId))
 			{
 				for (const Reflection::GenericValue& v : returnVals)
 					ScriptEngine::L::PushGenericValue(coroutine, v);
@@ -803,16 +794,9 @@ static void resumeYieldedCoroutines()
 				}
 			}
 
-			ScriptEngine::s_YieldedCoroutines.erase(ScriptEngine::s_YieldedCoroutines.begin() + corIdx);
-
 			lua_unref(lua_mainthread(coroutine), corRef);
 
-			//lua_pop(lua_mainthread(coroutine), 1);
-			// the indexes of the coroutines will have changed, and `corIdx` will skip what the next element was
-			// this is a lazy workaround. 24/12/2024
-			resumeYieldedCoroutines();
-
-			break;
+			it = ScriptEngine::s_YieldedCoroutines.erase(it);
 		}
 	}
 }

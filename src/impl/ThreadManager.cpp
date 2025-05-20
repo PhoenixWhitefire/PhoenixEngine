@@ -110,16 +110,27 @@ void ThreadManager::Dispatch(std::function<void()> Task, bool IsCritical)
 
 void ThreadManager::PropagateExceptions()
 {
-	for (const Worker& worker : m_Workers)
-		if (worker.Exception)
-		{
-			Log::Error("Exception occurred in Worker thread! Re-throwing...");
+	std::vector<std::exception_ptr> exceptions;
 
-			std::rethrow_exception(worker.Exception);
+	for (auto it = m_Workers.begin(); it < m_Workers.end(); it += 1)
+		if (it->Exception)
+		{
+			exceptions.push_back(it->Exception);
+			it->Exception = nullptr;
 		}
+
+	if (exceptions.size() > 0)
+	{
+		if (exceptions.size() > 1)
+			Log::Warning("Multiple Worker exceptions occurred, only the first one will be re-thrown");
+		
+		Log::Error("Exception occurred in Worker thread! Re-throwing...");
+		
+		std::rethrow_exception(exceptions[0]);
+	}
 }
 
-void ThreadManager::Shutdown()
+void ThreadManager::m_StopThreads()
 {
 	ZoneScoped;
 
@@ -131,8 +142,15 @@ void ThreadManager::Shutdown()
 	m_TasksCv.notify_all();
 
 	for (Worker& worker : m_Workers)
-		worker.Thread.join();
+		if (worker.Thread.joinable())
+			worker.Thread.join();
+}
 
+void ThreadManager::Shutdown()
+{
+	ZoneScoped;
+
+	m_StopThreads();
 	PropagateExceptions();
 
 	s_Instance = nullptr;
@@ -140,7 +158,14 @@ void ThreadManager::Shutdown()
 
 ThreadManager::~ThreadManager()
 {
-	assert(!s_Instance);
+	ZoneScoped;
+
+	// we crashed before `::Shutdown` was called
+	if (s_Instance)
+	{
+		m_StopThreads();
+		s_Instance = nullptr;
+	}
 }
 
 ThreadManager* ThreadManager::Get()

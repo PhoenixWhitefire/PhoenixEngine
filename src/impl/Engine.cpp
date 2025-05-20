@@ -1143,7 +1143,7 @@ void Engine::Start()
 	Log::Info("Main loop exited");
 }
 
-Engine::~Engine()
+void Engine::Shutdown()
 {
 	ZoneScoped;
 
@@ -1168,4 +1168,9 @@ Engine::~Engine()
 	SDL_Quit();
 
 	EngineInstance = nullptr;
+}
+
+Engine::~Engine()
+{
+	assert(!EngineInstance);
 }
