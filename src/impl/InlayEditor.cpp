@@ -523,7 +523,6 @@ static std::string* PipelineShaderSelectTarget = nullptr;
 
 static void shaderPipelineShaderSelect(const std::string& Label, std::string* Target)
 {
-	throw("H");
 	ImGui::TextUnformatted(Label.c_str());
 	ImGui::SameLine();
 
