@@ -333,45 +333,52 @@ GameObject* GameObject::GetObjectById(uint32_t Id)
 	if (Id == PHX_GAMEOBJECT_NULL_ID || s_WorldArray.size() - 1 < Id)
 		return nullptr;
 
-	return s_WorldArray[Id].Valid ? &s_WorldArray[Id] : nullptr;
+	GameObject& obj = s_WorldArray[Id];
+
+	return obj.Valid ? &obj : nullptr;
 }
 
 void GameObject::IncrementHardRefs()
 {
-	m_HardRefCount++;
+	//m_HardRefCount++;
 
-	if (m_HardRefCount > UINT16_MAX - 1)
-		throw("Too many hard refs!");
+	//if (m_HardRefCount > UINT16_MAX - 1)
+	//	throw("Too many hard refs!");
 }
 
 void GameObject::DecrementHardRefs()
 {
-	if (m_HardRefCount == 0)
-		throw("Tried to decrement hard refs, with no hard references!");
+	//if (m_HardRefCount == 0)
+	//	throw("Tried to decrement hard refs, with no hard references!");
 
-	m_HardRefCount--;
+	//m_HardRefCount--;
 
-	if (m_HardRefCount == 0)
-		Destroy();
+	//if (m_HardRefCount == 0)
+	//	Destroy();
 }
 
 void GameObject::Destroy()
 {
-	if (!IsDestructionPending && Valid)
+	assert(Valid);
+
+	if (!IsDestructionPending)
 	{
 		Valid = false;
 		this->SetParent(nullptr);
 		Valid = true; // TODO HACK to avoid RemoveChild -> DecrementHardRefs -> Destroy loop
 
+		this->IsDestructionPending = true;
+
+		if (m_HardRefCount > 0)
+			DecrementHardRefs(); // removes the reference in `::Create`
+	}
+
+	if (m_HardRefCount == 0 && Valid)
+	{
 		for (GameObject* child : this->GetChildren())
 			child->Destroy();
 
-		this->IsDestructionPending = true;
-	}
-
-	if (m_HardRefCount == 0)
-	{
-		s_WorldArray.at(this->ObjectId).Valid = false;
+		Valid = false;
 
 		for (const std::pair<EntityComponent, uint32_t>& pair : m_Components)
 			s_ComponentManagers[(size_t)pair.first]->DeleteComponent(pair.second);
@@ -425,7 +432,7 @@ void GameObject::SetParent(GameObject* newParent)
 		));
 	}
 
-	std::string fullname;;
+	std::string fullname;
 
 	if (newParent != this)
 	{
@@ -794,12 +801,21 @@ GameObject* GameObject::Create()
 	uint32_t numObjects = static_cast<uint32_t>(s_WorldArray.size());
 
 	if (numObjects >= UINT32_MAX - 1)
-		throw("Reached end of GameObject ID space (UINT32_MAX - 1)");
-	
+		throw("Reached end of GameObject ID space (2^32 - 1)");
+
+#ifndef NDEBUG
+
+	// cause as many re-allocations as possible to catch stale pointers
+	if (s_WorldArray.size() > 15)
+		s_WorldArray.shrink_to_fit();
+
+#endif
+
 	s_WorldArray.emplace_back();
 	GameObject& created = s_WorldArray.back();
 
 	created.ObjectId = numObjects;
+	created.IncrementHardRefs(); // "i'm tired boss"
 
 	return &created;
 }

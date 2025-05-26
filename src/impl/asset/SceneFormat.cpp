@@ -449,7 +449,7 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 
 	nlohmann::json gameObjectsNode = jsonData["GameObjects"];
 
-	std::unordered_map<int64_t, uint32_t> objectsMap;
+	std::unordered_map<int64_t, GameObjectRef> objectsMap;
 	std::unordered_map<int64_t, int64_t> realIdToSceneId;
 	std::unordered_map<uint32_t, std::unordered_map<std::string, uint32_t>> objectProps;
 
@@ -472,7 +472,7 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 		{
 			uint32_t itemObjectId = item["$_objectId"];
 
-			objectsMap.insert(std::pair(itemObjectId, newObject->ObjectId));
+			objectsMap.insert(std::pair(itemObjectId, newObject));
 			realIdToSceneId.insert(std::pair(newObject->ObjectId, itemObjectId));
 		}
 
@@ -618,7 +618,7 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 
 	for (auto& it : objectsMap)
 	{
-		GameObject* object = GameObject::GetObjectById(it.second);
+		GameObjectRef object = it.second;
 
 		// !! IMPORTANT !!
 		// The `Parent` key *should not* be set for Root Nodes as their parent
@@ -636,16 +636,13 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 
 			if (target != objectsMap.end())
 			{
-				Reflection::GenericValue gv = target->second;
-				gv.Type = Reflection::ValueType::GameObject;
-
 				try
 				{
-					object->SetPropertyValue(propName, gv);
+					object->SetPropertyValue(propName, target->second->ToGenericValue());
 				}
 				catch (std::string err)
 				{
-					std::string valueStr = gv.ToString();
+					std::string valueStr = target->second->GetFullName();
 
 					SF_EMIT_WARNING(
 						"Failed to set GameObject property of '{}' to '{}': {}",

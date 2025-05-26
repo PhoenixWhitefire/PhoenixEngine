@@ -68,8 +68,14 @@ public:
     virtual void DeleteComponent(uint32_t Id) final
     {
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
+		EcSound& sound = m_Components[Id];
 
-		SDL_DestroyAudioStream(static_cast<SDL_AudioStream*>(m_Components[Id].m_AudioStream));
+		if (sound.m_AudioStream)
+			SDL_DestroyAudioStream(static_cast<SDL_AudioStream*>(sound.m_AudioStream));
+
+		sound.m_AudioStream = nullptr;
+
+		sound.Object.Invalidate();
     }
 
     virtual const Reflection::PropertyMap& GetProperties() final
@@ -109,21 +115,21 @@ public:
 				{
 					EcSound* sound = static_cast<EcSound*>(p);
 					SDL_AudioStream* stream = (SDL_AudioStream*)sound->m_AudioStream;
-					sound->m_PlayRequested = playing.AsBoolean();
+					sound->m_PlayRequested = sound->Object->Enabled && playing.AsBoolean();
+
+					if (playing.AsBoolean() && !sound->Object->Enabled)
+						throw("Tried to play sound while Object was disabled");
 
 					if (stream)
 					{
 						if (sound->m_PlayRequested)
 						{
-							if (!sound->Object->Enabled)
-								throw("Tried to play sound while Object was disabled, Object: " + sound->Object->GetFullName());
-
 							const AudioAsset& audio = AudioAssets[sound->SoundFile];
 		
 							if (sound->BytePosition >= audio.DataSize || sound->BytePosition == 0)
 							{
 								sound->BytePosition = 1;
-								SDL_PutAudioStreamData(stream, audio.Data, audio.DataSize);
+								SDL_PutAudioStreamData(stream, audio.Data, 200);
 							}
 							
 							SDL_ResumeAudioStreamDevice(stream);
@@ -158,8 +164,22 @@ public:
 			),
 
 			EC_PROP_SIMPLE(EcSound, Looped, Boolean),
+			EC_PROP(
+				"Volume",
+				Double,
+				EC_GET_SIMPLE(EcSound, Volume),
+				[](void* p, const Reflection::GenericValue& gv)
+				{
+					float volume = static_cast<float>(gv.AsDouble());
+					if (volume < 0.f)
+						throw("Volume cannot be negative");
+					
+					static_cast<EcSound*>(p)->Volume = volume;
+				}
+			),
 
 			EC_PROP("Length", Double, EC_GET_SIMPLE(EcSound, Length), nullptr),
+
 			EC_PROP("FinishedLoading", Boolean, EC_GET_SIMPLE(EcSound, FinishedLoading), nullptr)
         };
 
@@ -180,10 +200,14 @@ public:
         GameObject::s_ComponentManagers[(size_t)EntityComponent::Sound] = this;
     }
 
-	~SoundManager()
+	virtual void Shutdown() final
 	{
+		for (size_t i = 0; i < m_Components.size(); i++)
+            DeleteComponent(i);
+
 		for (auto& it : AudioAssets)
 			free(it.second.Data); // get leaksan to shut up
+		
 		AudioAssets.clear();
 	}
 
@@ -199,6 +223,7 @@ static void streamCallback(void* UserData, SDL_AudioStream* Stream, int Addition
 
 	EcSound* sound = static_cast<EcSound*>(Instance.GetComponent(*(uint32_t*)&UserData));
 	const AudioAsset& audio = AudioAssets[sound->SoundFile];
+	SDL_SetAudioStreamGain(Stream, sound->Volume);
 
 	if (sound->NextRequestedPosition != -1.f)
 	{
@@ -235,11 +260,6 @@ void EcSound::Update(double)
 	SDL_AudioStream* stream = (SDL_AudioStream*)m_AudioStream;
 
 	if (!stream)
-		return;
-
-	else if (const std::future<bool>& f = AudioStreamPromises[EcId].get_future();
-		!f.valid() || f.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready
-	)
 		return;
 	
 	if (Object->Enabled)

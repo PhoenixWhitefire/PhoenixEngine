@@ -41,9 +41,17 @@ public:
         return &m_Components[Id];
     }
 
-    virtual void DeleteComponent(uint32_t) final
+    virtual void DeleteComponent(uint32_t Id) final
     {
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
+
+		m_Components[Id].Object.Invalidate();
+    }
+
+	virtual void Shutdown() final
+    {
+        for (size_t i = 0; i < m_Components.size(); i++)
+            DeleteComponent(i);
     }
 
     virtual const Reflection::PropertyMap& GetProperties() final

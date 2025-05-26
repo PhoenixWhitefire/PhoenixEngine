@@ -1745,6 +1745,11 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 					ErrorTooltipMessage = err;
 					ErrorTooltipTimeRemaining = 5.f;
 				}
+				catch (const char* err)
+				{
+					ErrorTooltipMessage = err;
+					ErrorTooltipTimeRemaining = 5.f;
+				}
 			}
 		}
 

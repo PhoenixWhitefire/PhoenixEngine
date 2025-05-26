@@ -758,9 +758,6 @@ static void init(int argc, char** argv)
 
 	Log::Info("Loading Root Scene from file...");
 
-	// FUCKING WORK ALREADY... pwese......
-	GameObject::s_WorldArray.reserve(150);
-
 	const char* mapFileFromArgs{};
 	bool hasMapFromArgs = false;
 
@@ -808,8 +805,28 @@ static void init(int argc, char** argv)
 
 	EngineInstance->DataModel->MergeWith(root);
 
-	roots.clear();
-	root->DecrementHardRefs(); // i'm dogshit at programming
+	for (GameObjectRef& r : roots)
+		r.Invalidate(); // fml 24/05/2025
+
+	//roots.clear();
+	//root->DecrementHardRefs(); // i'm dogshit at programming
+}
+
+static void patchConfigFromCliArgs(int argc, char** argv)
+{
+	if (hasCliArgument("-dev"))
+		EngineJsonConfig["Developer"] = true;
+		
+	else if (hasCliArgument("-nodev"))
+		EngineJsonConfig["Developer"] = false;
+		
+	if (int idx = findCmdLineArgument(argc, argv, "-threads"); idx > 0)
+	{
+		if (idx < argc - 1)
+			EngineJsonConfig["ThreadManagerThreadCount"] = std::stoi(argv[idx + 1]);
+		else
+			Log::Error("'-threads' argument from command-line is not followed by the desired Thread Count, ignoring");
+	}
 }
 
 int main(int argc, char** argv)
@@ -843,20 +860,9 @@ int main(int argc, char** argv)
 	if (hasCliArgument("-apidump"))
 		doApiDump();
 
-	if (hasCliArgument("-dev"))
-			EngineJsonConfig["Developer"] = true;
-
-	else if (hasCliArgument("-nodev"))
-		EngineJsonConfig["Developer"] = false;
-
-	if (int idx = findCmdLineArgument(argc, argv, "-threads"); idx > 0)
-	{
-		PHX_ENSURE(idx < argc);
-		EngineJsonConfig["ThreadManagerThreadCount"] = std::stoi(argv[idx + 1]);
-	}
-
 	try
 	{
+		patchConfigFromCliArgs(argc, argv);
 		Engine engine{};
 
 		init(argc, argv);

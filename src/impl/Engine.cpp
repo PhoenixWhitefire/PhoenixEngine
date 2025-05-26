@@ -23,6 +23,7 @@
 #include "component/Transform.hpp"
 #include "component/Camera.hpp"
 #include "component/Script.hpp"
+#include "component/Sound.hpp"
 #include "component/Light.hpp"
 #include "GlobalJsonConfig.hpp"
 #include "ThreadManager.hpp"
@@ -148,7 +149,8 @@ void Engine::LoadConfiguration()
 			nlohmann::json config = nlohmann::json::parse(ConfigAscii);
 			
 			for (auto it = config.begin(); it != config.end(); it++)
-				EngineJsonConfig[it.key()] = it.value();
+				if (EngineJsonConfig.find(it.key()) == EngineJsonConfig.end())
+					EngineJsonConfig[it.key()] = it.value();
 		}
 		catch (const nlohmann::json::parse_error& err)
 		{
@@ -328,6 +330,7 @@ Engine::Engine()
 
 	this->DataModel = GameObject::Create("DataModel");
 	GameObject::s_DataModel = DataModel->ObjectId;
+	GameObject::s_WorldArray.reserve(15);
 
 	Log::Info("Engine initialized");
 }
@@ -407,6 +410,9 @@ static void recursivelyTravelHierarchy(
 
 	for (GameObjectRef object : objects)
 	{
+		if (EcSound* sound = object->GetComponent<EcSound>())
+			sound->Update(DeltaTime);
+
 		if (!object->Enabled)
 			continue;
 			
@@ -491,10 +497,8 @@ static void recursivelyTravelHierarchy(
 				SceneCamera,
 				DeltaTime
 			);
-
-		EcParticleEmitter* emitter = object->GetComponent<EcParticleEmitter>();
-
-		if (emitter)
+		
+		if (EcParticleEmitter* emitter = object->GetComponent<EcParticleEmitter>())
 		{
 			emitter->Update(DeltaTime);
 			emitter->AppendToRenderList(RenderList);
@@ -885,7 +889,7 @@ void Engine::Start()
 			aspectRatio,
 			sceneCamera->NearPlane,
 			sceneCamera->FarPlane
-		);;
+		);
 
 		// "We make the mat4 into a mat3 and then a mat4 again in order to get rid of the last row and column
 		// The last row and column affect the translation of the skybox (which we don't want to affect)"
@@ -1154,6 +1158,7 @@ void Engine::Shutdown()
 	GameObject::s_DataModel = PHX_GAMEOBJECT_NULL_ID;
 	DataModel->Destroy();
 	DataModel.Invalidate();
+	Workspace.Invalidate();
 
 	m_MaterialManager.Shutdown();
 	m_TextureManager.Shutdown();
@@ -1161,6 +1166,11 @@ void Engine::Shutdown()
 	m_MeshProvider.Shutdown();
 
 	m_ThreadManager.Shutdown();
+
+	Log::Info("Shutting down Component Managers...");
+
+	for (size_t i = 0; i < (size_t)EntityComponent::__count; i++)
+		GameObject::s_ComponentManagers[i]->Shutdown();
 
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplSDL3_Shutdown();

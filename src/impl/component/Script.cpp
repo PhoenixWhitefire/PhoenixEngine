@@ -54,6 +54,8 @@ public:
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
 		if (lua_State* L = m_Components[Id].m_L)
 			lua_resetthread(L);
+		
+		m_Components[Id].Object.Invalidate();
     }
 
     virtual const Reflection::PropertyMap& GetProperties() final
@@ -100,12 +102,15 @@ public:
         GameObject::s_ComponentManagers[(size_t)EntityComponent::Script] = this;
     }
 
-	~ScriptManager()
-	{
+	virtual void Shutdown() final
+    {
+        for (size_t i = 0; i < m_Components.size(); i++)
+            DeleteComponent(i);
+		
 		if (LVM)
 			lua_close(LVM);
 		LVM = nullptr;
-	}
+    }
 
 private:
     std::vector<EcScript> m_Components;

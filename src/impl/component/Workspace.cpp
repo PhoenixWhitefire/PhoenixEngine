@@ -19,10 +19,13 @@ class WorkspaceManager : BaseComponentManager
 public:
     virtual uint32_t CreateComponent(GameObject* Object) final
     {
+		GameObjectRef ro = Object;
+
         m_Components.emplace_back();
 
 		GameObject* cam = GameObject::Create("Camera");
-		cam->SetParent(Object);
+		cam->SetParent(ro.Contained());
+
 		m_Components.back().m_SceneCameraId = cam->ObjectId;
 
         return static_cast<uint32_t>(m_Components.size() - 1);

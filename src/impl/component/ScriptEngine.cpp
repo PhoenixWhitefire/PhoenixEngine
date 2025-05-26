@@ -85,8 +85,6 @@ static void pushGameObject(lua_State* L, GameObject* obj)
 		lua_pushnil(L); // null object properties are nil and falsey
 	else
 	{
-		obj->IncrementHardRefs();
-
 		uint32_t* ptrToObj = (uint32_t*)lua_newuserdatadtor(
 			L,
 			sizeof(uint32_t),
@@ -95,7 +93,7 @@ static void pushGameObject(lua_State* L, GameObject* obj)
 				uint32_t id = *(uint32_t*)ptrId;
 
 				if (GameObject* o = GameObject::GetObjectById(id))
-					o->DecrementHardRefs();
+					o->DecrementHardRefs(); // removes the reference in `::Create`
 			}
 		);
 		*ptrToObj = obj ? obj->ObjectId : PHX_GAMEOBJECT_NULL_ID;

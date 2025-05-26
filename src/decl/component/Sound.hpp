@@ -16,6 +16,7 @@ struct EcSound
 	std::string SoundFile;
 	float Position = 0.f;
 	float Length = 0.f;
+	float Volume = 1.f;
 	float NextRequestedPosition = 0.f;
 	bool Looped = false;
 	bool FinishedLoading = true;
@@ -27,4 +28,6 @@ struct EcSound
 
 	void* m_AudioStream = nullptr;
 	bool m_PlayRequested = false;
+
+	static const EntityComponent Type = EntityComponent::Sound;
 };

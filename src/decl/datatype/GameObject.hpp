@@ -91,6 +91,7 @@ public:
 	virtual std::vector<void*> GetComponents() { throw("Not implemented"); };
 	virtual void* GetComponent(uint32_t) { throw("Not implemented"); };
 	virtual void DeleteComponent(uint32_t /* ComponentId */) { throw("Not implemented"); };
+	virtual void Shutdown() {};
 
 	virtual const Reflection::PropertyMap& GetProperties() { throw("Not implemented"); };
 	virtual const Reflection::FunctionMap& GetFunctions() { throw("Not implemented"); };
@@ -206,7 +207,9 @@ struct GameObjectRef
 	GameObjectRef(GameObject* Object)
 	: m_TargetId(Object->ObjectId)
 	{
-		PHX_ENSURE_MSG(m_TargetId != PHX_GAMEOBJECT_NULL_ID, "Tried to create a Hard Reference to an uninitialized/invalid GameObject");
+		assert(m_TargetId != PHX_GAMEOBJECT_NULL_ID);
+		assert(!Object->IsDestructionPending);
+		assert(Object->Valid);
 
 		Object->IncrementHardRefs();
 	}
@@ -214,11 +217,17 @@ struct GameObjectRef
 	GameObjectRef(const GameObjectRef& Other)
 		: m_TargetId(Other.Contained()->ObjectId)
 	{
+		assert(!Other->IsDestructionPending);
+		assert(Other->Valid);
+
 		Contained()->IncrementHardRefs();
 	}
 	GameObjectRef(const GameObjectRef&& Other)
 		: m_TargetId(Other.Contained()->ObjectId)
 	{
+		assert(!Other->IsDestructionPending);
+		assert(Other->Valid);
+
 		Contained()->IncrementHardRefs();
 	}
 
@@ -242,9 +251,8 @@ struct GameObjectRef
 
 	void Invalidate()
 	{
-		PHX_ENSURE(m_TargetId != PHX_GAMEOBJECT_NULL_ID);
-
-		m_TargetId = 0;
+		if (m_TargetId != PHX_GAMEOBJECT_NULL_ID)
+			m_TargetId = PHX_GAMEOBJECT_NULL_ID;
 	}
 
 	uint32_t m_TargetId = PHX_GAMEOBJECT_NULL_ID;
