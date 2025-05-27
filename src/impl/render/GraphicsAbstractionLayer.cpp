@@ -42,7 +42,7 @@ GraphicsLayer::GraphicsLayer(
 		*WasSuccess = false;
 		this->Error = std::string(SDLError);
 
-		throw(std::vformat("SDL could not create window: {}", std::make_format_args(SDLError)));
+		throw(std::format("SDL could not create window: {}", SDLError));
 
 		return;
 	}
@@ -58,9 +58,9 @@ GraphicsLayer::GraphicsLayer(
 		{
 			const char* SDLError = SDL_GetError();
 
-			throw(std::vformat(
+			throw(std::format(
 				"SDL could not create an OpenGL context: {}",
-				std::make_format_args(SDLError)
+				SDLError
 			));
 		}
 

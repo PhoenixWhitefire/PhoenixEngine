@@ -204,7 +204,8 @@ static void luaTableToJson(lua_State* L, nlohmann::json& json)
 			luaTableToJson(L, v);
 			break;
 		}
-		default:
+
+		[[unlikely]] default:
 		{
 			const char* vtname = luaL_typename(L, -1);
 			std::string k;
@@ -214,9 +215,9 @@ static void luaTableToJson(lua_State* L, nlohmann::json& json)
 			else
 				k = lua_tostring(L, -2);
 
-			throw(std::vformat(
+			throw(std::format(
 				"Key '{}' is of non-JSON type {}!",
-				std::make_format_args(k, vtname)
+				k, vtname
 			));
 		}
 		}
@@ -302,9 +303,9 @@ Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int St
 			return gv;
 		}
 		else
-			luaL_error(L, "%s", std::vformat(
+			luaL_error(L, "%s", std::format(
 				"Couldn't convert a '{}' userdata to a GenericValue (unrecognized)",
-				std::make_format_args(tname)
+				tname
 			).c_str());
 	}
 	case LUA_TTABLE:
@@ -329,10 +330,10 @@ Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int St
 	default:
 	{
 		const char* tname = luaL_typename(L, StackIndex);
-		luaL_error(L, "%s", std::vformat(
+		luaL_error(L, "%s", std::format(
 			"Could not convert type '{}' to a GenericValue (no conversion case)",
-			std::make_format_args(tname)).c_str()
-		);
+			tname
+		).c_str());
 	}
 	}
 }
@@ -423,10 +424,10 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 	default:
 	{
 		const std::string_view& typeName = Reflection::TypeAsString(gv.Type);
-		luaL_error(L, "%s", std::vformat(
+		luaL_error(L, "%s", std::format(
 			"Could not provide Luau the GenericValue with type {}",
-			std::make_format_args(typeName)).c_str()
-		);
+			typeName
+		).c_str());
 	}
 	}
 }
@@ -445,7 +446,7 @@ int ScriptEngine::L::HandleFunctionCall(
 {
 	Reflection::Function* func = refl->FindFunction(fname);
 	if (!func)
-		throw(std::vformat("Invalid function '{}'", std::make_format_args(fname)));
+		throw(std::format("Invalid function '{}'", fname));
 
 	const std::vector<Reflection::ParameterType>& paramTypes = func->Inputs;
 
@@ -479,9 +480,9 @@ int ScriptEngine::L::HandleFunctionCall(
 		else
 			argsString.clear();
 
-		luaL_error(L, "%s", std::vformat(
+		luaL_error(L, "%s", std::format(
 			"Function '{}' expects at least {} arguments, got {} instead{}",
-			std::make_format_args(fname, numParams, numArgs, argsString)
+			fname, numParams, numArgs, argsString
 		).c_str());
 
 		return 0;
@@ -489,8 +490,8 @@ int ScriptEngine::L::HandleFunctionCall(
 	else if (numArgs > numParams)
 	{
 		int numExtra = numArgs - numParams;
-		Log::Warning(std::vformat("Function '{}' received {} more arguments than necessary",
-			std::make_format_args(fname, numExtra)
+		Log::Warning(std::format("Function '{}' received {} more arguments than necessary",
+			fname, numExtra
 		));
 	}
 
@@ -511,9 +512,9 @@ int ScriptEngine::L::HandleFunctionCall(
 		auto expectedLuaTypeIt = ScriptEngine::ReflectedTypeLuaEquivalent.find(paramType);
 
 		if (expectedLuaTypeIt == ScriptEngine::ReflectedTypeLuaEquivalent.end())
-			throw(std::vformat(
+			throw(std::format(
 				"Couldn't find the equivalent of a Reflection::ValueType::{} in Lua",
-				std::make_format_args(Reflection::TypeAsString(paramType))
+				Reflection::TypeAsString(paramType)
 			));
 
 		int expectedLuaType = (int)expectedLuaTypeIt->second;
@@ -525,19 +526,12 @@ int ScriptEngine::L::HandleFunctionCall(
 			const char* actualTypeName = luaL_typename(L, argStackIndex);
 			const char* providedValue = luaL_tolstring(L, argStackIndex, NULL);
 
-			// I get that shitty fucking ::vformat can't handle
-			// a SINGULAR fucking parameter that isn't an lvalue,
-			// but an `int`?? A literal fucking trivial??? What is this bullshit????
-			int indexAsLuaIndex = index + 1;
-
-			luaL_error(L, "%s", std::vformat(
+			luaL_error(L, "%s", std::format(
 				"Argument {} expected to be of type {}, but was '{}' ({}) instead",
-				std::make_format_args(
-					indexAsLuaIndex,
-					expectedName,
-					providedValue,
-					actualTypeName
-				)
+				index + 1,
+				expectedName,
+				providedValue,
+				actualTypeName
 			).c_str());
 
 			return 0;

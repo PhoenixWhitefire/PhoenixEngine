@@ -54,9 +54,9 @@ std::string FileRW::ReadFile(const std::string_view& ShortPath, bool* DoesFileEx
 	else
 	{
 		if (!DoesFileExist)
-			throw(std::vformat(
-				"FileRW::ReadFile: Could not load file: '{}'",
-				std::make_format_args(actualPath)
+			throw(std::format(
+				"FileRW::ReadFile: Could not open file handle: '{}'",
+				actualPath
 			));
 		else
 			*DoesFileExist = false;
@@ -84,9 +84,9 @@ void FileRW::WriteFile(
 	else
 	{
 		if (!SuccessPtr)
-			throw(std::vformat(
+			throw(std::format(
 				"FileRW::WriteFile: Could not open the handle to '{}'",
-				std::make_format_args(path)
+				path
 			));
 		else
 			*SuccessPtr = false;

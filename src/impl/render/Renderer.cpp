@@ -73,7 +73,7 @@ static std::string glEnumToString(GLenum Id)
 	if (it != GLEnumToStringMap.end())
 		return it->second;
 	else
-		return std::vformat("ID:{}", std::make_format_args(Id));
+		return std::format("ID:{}", Id);
 }
 
 static void GLDebugCallback(
@@ -101,15 +101,13 @@ static void GLDebugCallback(
 
 	std::string messageStr = std::string(Message, MessageLength);
 
-	std::string debugString = std::vformat(
-		std::string("GL Debug callback:\n\tType: {}\n\tSeverity: {}\n\tMessage: {}\n\tSource: {}\n\tError ID: {}\n"),
-		std::make_format_args(
-			typeName,
-			severityName,
-			messageStr,
-			sourceName,
-			Id
-		)
+	std::string debugString = std::format(
+		"GL Debug callback:\n\tType: {}\n\tSeverity: {}\n\tMessage: {}\n\tSource: {}\n\tError ID: {}\n",
+		typeName,
+		severityName,
+		messageStr,
+		sourceName,
+		Id
 	);
 
 	Log::Warning(debugString);
@@ -138,7 +136,7 @@ void Renderer::Initialize(uint32_t Width, uint32_t Height, SDL_Window* Window)
 	if (!this->GLContext)
 	{
 		const char* sdlErrStr = SDL_GetError();
-		throw(std::vformat("Could not create an OpenGL context, SDL error: {}", std::make_format_args(sdlErrStr)));
+		throw(std::format("Could not create an OpenGL context, SDL error: {}", sdlErrStr));
 	}
 
 	PHX_SDL_CALL(SDL_GL_MakeCurrent, m_Window, this->GLContext);
@@ -170,9 +168,9 @@ void Renderer::Initialize(uint32_t Width, uint32_t Height, SDL_Window* Window)
 	glGetIntegerv(GL_MAJOR_VERSION, &glVersionMajor);
 	glGetIntegerv(GL_MINOR_VERSION, &glVersionMinor);
 
-	std::string glVersionStr = std::vformat(
+	std::string glVersionStr = std::format(
 		"Running OpenGL version {}.{}",
-		std::make_format_args(glVersionMajor, glVersionMinor)
+		glVersionMajor, glVersionMinor
 	);
 
 	Log::Info(glVersionStr);
@@ -210,14 +208,12 @@ Renderer::~Renderer()
 
 void Renderer::ChangeResolution(uint32_t Width, uint32_t Height)
 {
-	std::string resChangedStr = std::vformat(
+	std::string resChangedStr = std::format(
 		"Changing window resolution: ({}, {}) -> ({}, {})",
-		std::make_format_args(
-			m_Width,
-			m_Height,
-			Width,
-			Height
-		)
+		m_Width,
+		m_Height,
+		Width,
+		Height
 	);
 
 	Log::Info(resChangedStr);

@@ -32,9 +32,9 @@ void ShaderProgram::Activate()
 
 		if (!glIsProgram(m_GpuId))
 		{
-			Log::Error(std::vformat(
+			Log::Error(std::format(
 				"Tried to ::Activate shader '{}', but it was (likely) deleted, and the fallback shader 'error' was also invalid.",
-				std::make_format_args(this->Name)
+				this->Name
 			));
 
 			return;
@@ -96,12 +96,12 @@ void ShaderProgram::Activate()
 				break;
 			}
 
-			default:
+			[[unlikely]] default:
 			{
 				const std::string_view& typeName = Reflection::TypeAsString(value.Type);
-				Log::Warning(std::vformat(
+				Log::Warning(std::format(
 					"Unrecognized uniform type '{}' trying to set '{}' for program '{}'",
-					std::make_format_args(typeName, uniformName, this->Name)
+					typeName, uniformName, this->Name
 				));
 			}
 			}
@@ -135,10 +135,10 @@ void ShaderProgram::Reload()
 		// TODO: a different function for error logging
 		// Should also fire a callback so that an Output can be implemented
 		// 13/07/2024
-		Log::Error(std::vformat(
+		Log::Error(std::format(
 			"**ERR** Shader program '{}' does not exist! Geometry will appear magenta",
-			std::make_format_args(this->Name))
-		);
+			this->Name
+		));
 
 		ShaderManager* shpManager = ShaderManager::Get();
 		ShaderProgram& fallback = shpManager->GetShaderResource(0);
@@ -173,21 +173,21 @@ void ShaderProgram::Reload()
 									: "";
 
 	if (!vertexShdExists)
-		SP_LOADERROR(std::vformat(
+		SP_LOADERROR(std::format(
 			"Could not load Vertex shader for program {}! File specified: {}",
-			std::make_format_args(this->Name, VertexShader)
+			this->Name, VertexShader
 		));
 
 	if (!fragmentShdExists)
-		SP_LOADERROR(std::vformat(
+		SP_LOADERROR(std::format(
 			"Could not load Fragment shader for program {}! File specified: {}",
-			std::make_format_args(this->Name, FragmentShader)
+			this->Name, FragmentShader
 		));
 
 	if (!geometryShdExists)
-		SP_LOADERROR(std::vformat(
+		SP_LOADERROR(std::format(
 			"Could not load Geometry shader for program {}! File specified: {}",
-			std::make_format_args(this->Name, GeometryShader)
+			this->Name, GeometryShader
 		));
 
 	const char* vertexSource = vertexStrSource.c_str();
@@ -296,13 +296,13 @@ void ShaderProgram::Reload()
 			break;
 		}
 
-		default:
+		[[unlikely] ]default:
 		{
 			const char* typeName = value.type_name();
 
-			Log::Warning(std::vformat(
+			Log::Warning(std::format(
 				"Shader Program '{}' tried to specify Uniform '{}', but it had unsupported type '{}'",
-				std::make_format_args(this->Name, uniformName, typeName)
+				this->Name, uniformName, typeName
 			));
 			break;
 		}
@@ -417,9 +417,9 @@ bool ShaderProgram::m_CheckForErrors(uint32_t Object, const char* Type)
 		{
 			glGetShaderInfoLog(Object, 2048, NULL, infoLog);
 
-			std::string errorString = std::vformat(
+			std::string errorString = std::format(
 				"Error while compiling {} for program '{}':\n{}",
-				std::make_format_args(Type, this->Name, infoLog)
+				Type, this->Name, infoLog
 			);
 
 			Log::Error(errorString);
@@ -444,9 +444,9 @@ bool ShaderProgram::m_CheckForErrors(uint32_t Object, const char* Type)
 		{
 			glGetProgramInfoLog(Object, 2048, NULL, infoLog);
 
-			Log::Error(std::vformat(
+			Log::Error(std::format(
 				"Error while linking shader program '{}':\n{}",
-				std::make_format_args(this->Name, infoLog)
+				this->Name, infoLog
 			));
 
 			if (this->Name == "error")

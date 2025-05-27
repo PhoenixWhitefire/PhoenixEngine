@@ -683,19 +683,17 @@ static void handleCrash(const std::string_view& Error, const std::string_view& E
 	// Log Size Limit Exceeded Throwing Exception
 	if (!Error.starts_with("LSLETE"))
 	{
-		Log::Append(std::vformat(
+		Log::Append(std::format(
 			"CRASH - {}: {}",
-			std::make_format_args(ExceptionType, Error)
+			ExceptionType, Error
 		));
 		Log::Save();
 	}
 
-	std::string errMessage = std::vformat(
+	std::string errMessage = std::format(
 		"An unexpected error occurred, and the application will now close. Details: \n\n{}\n\n{}",
-		std::make_format_args(
-			Error,
-			"If this is the first time this has happened, please re-try. Otherwise, contact the developers."
-		)
+		Error,
+		"If this is the first time this has happened, please re-try. Otherwise, contact the developers."
 	);
 
 	// can fail, write to stderr if so 18/01/2025
@@ -723,9 +721,9 @@ static void init(int argc, char** argv)
 
 	const char* imGuiVersion = IMGUI_VERSION;
 
-	Log::Info(std::vformat(
+	Log::Info(std::format(
 		"Initializing Dear ImGui {}...",
-		std::make_format_args(imGuiVersion)
+		imGuiVersion
 	));
 
 	bool imGuiVersionCorrect = IMGUI_CHECKVERSION();
@@ -765,9 +763,9 @@ static void init(int argc, char** argv)
 
 	if (mapFileArgIdx > 0)
 	{
-		Log::Info(std::vformat(
+		Log::Info(std::format(
 			"Map to load specified from launch argument. Map was: {}",
-			std::make_format_args(argv[mapFileArgIdx + 1])
+			argv[mapFileArgIdx + 1]
 		));
 
 		PHX_ENSURE(mapFileArgIdx < argc);
@@ -835,9 +833,9 @@ int main(int argc, char** argv)
 
 	const char* platform = SDL_GetPlatform();
 
-	Log::Info(std::vformat(
+	Log::Info(std::format(
 		"Phoenix Engine:\n\tTarget platform: {}\n\tBuild type: {}\n\tMain.cpp last compiled: {} @ {}",
-		std::make_format_args(platform, PHX_BUILD_TYPE, __DATE__, __TIME__)
+		platform, PHX_BUILD_TYPE, __DATE__, __TIME__
 	));
 
 	Log::Info("Command line: &&");

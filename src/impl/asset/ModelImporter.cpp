@@ -56,7 +56,7 @@ static std::string getTexturePath(
 
 		else
 		{
-			Log::Warning(std::vformat("Unrecognized MIME '{}'", std::make_format_args(mimeType)));
+			Log::Warning(std::format("Unrecognized MIME '{}'", mimeType));
 			fileExtension = std::string(mimeType.begin() + 6, mimeType.end());
 		}
 
@@ -76,9 +76,9 @@ static std::string getTexturePath(
 		);
 
 		if (!writeSucceeded)
-			Log::Warning(std::vformat(
+			Log::Warning(std::format(
 				"Failed to extract image from Model '{}' to path: {}",
-				std::make_format_args(ModelName, filePath)
+				ModelName, filePath
 			));
 
 		return filePath;
@@ -110,9 +110,9 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 	{
 		uint32_t glbVersion = readU32(textData, 4);
 		if (glbVersion != 2)
-			Log::Warning(std::vformat(
+			Log::Warning(std::format(
 				"GLB header declares version as '{}', when only `2` is supported. Unexpected behavior may occur.",
-				std::make_format_args(glbVersion)
+				glbVersion
 			));
 
 		// header is 12 bytes
@@ -121,9 +121,9 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		uint32_t jsonChType = readU32(textData, 16);
 
 		if (jsonChType != 0x4E4F534A)
-			throw(std::vformat(
+			throw(std::format(
 				"Failed to load Model '{}', first Chunk in binary file was not of type JSON",
-				std::make_format_args(AssetPath)
+				AssetPath
 			));
 
 		ZoneScopedN("ParseGLBStructure");
@@ -139,9 +139,9 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		uint32_t binaryChType = readU32(binaryChunk, 4);
 
 		if (binaryChType != 0x004E4942)
-			throw(std::vformat(
+			throw(std::format(
 				"Failed to load Model '{}', second Chunk in binary file was not of type BIN",
-				std::make_format_args(AssetPath)
+				AssetPath
 			));
 
 		// + 8 because 8 byte header
@@ -170,9 +170,9 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		{
 			float gltfMinVersion = std::stof(assetInfoJson.value("minVersion", "2.0"));
 
-			Log::Warning(std::vformat(
+			Log::Warning(std::format(
 				"glTF file specifies `asset.minVersion` as '{}'. Unexpected behavior may occur.",
-				std::make_format_args(gltfMinVersion)
+				gltfMinVersion
 			));
 		}
 		else
@@ -180,9 +180,9 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 			float gltfVersion = std::stof(assetInfoJson.value("version", "2.0"));
 
 			if (gltfVersion < 2.f || gltfVersion >= 3.f)
-				Log::Warning(std::vformat(
+				Log::Warning(std::format(
 					"Expected glTF version >= 2.0 and < 3.0, got {}. Unexpected behavior may occur.",
-					std::make_format_args(gltfVersion)
+					gltfVersion
 				));
 		}
 
@@ -190,15 +190,15 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		const nlohmann::json& usedExtensionsJson = m_JsonData["extensionsUsed"];
 
 		for (std::string v : requiredExtensionsJson)
-			Log::Warning(std::vformat(
+			Log::Warning(std::format(
 				"glTF file specifies 'required' extension '{}'. That's too bad, because no extensions are supported.",
-				std::make_format_args(v)
+				v
 			));
 
 		for (std::string v : usedExtensionsJson)
-			Log::Warning(std::vformat(
+			Log::Warning(std::format(
 				"glTF file specifies extension '{}' is used. That's too bad, because no extensions are supported.",
-				std::make_format_args(v)
+				v
 			));
 
 		// actually load the model
@@ -249,9 +249,9 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 			size_t whereRes = AssetPath.find("resources/");
 
 			if (whereRes == std::string::npos)
-				Log::Warning(std::vformat(
+				Log::Warning(std::format(
 					"ModelLoader cannot guarantee the mesh will be saved within the Resources directory (Path was: '{}')",
-					std::make_format_args(AssetPath)
+					AssetPath
 				));
 			else
 				saveDir = saveDir.substr(whereRes + 10, saveDir.size() - whereRes);

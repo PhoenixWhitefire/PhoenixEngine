@@ -31,7 +31,7 @@ void ThreadManager::Initialize(int NumThreadsOverride)
 	if (NumThreadsOverride > 0)
 		numThreads = static_cast<size_t>(NumThreadsOverride);
 
-	Log::Info(std::vformat("Creating {} parallel threads...", std::make_format_args(numThreads)));
+	Log::Info(std::format("Creating {} parallel threads...", numThreads));
 
 	for (size_t i = 0; i < numThreads; i++)
 	{

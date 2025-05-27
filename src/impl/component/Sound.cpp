@@ -115,6 +115,8 @@ public:
 				{
 					EcSound* sound = static_cast<EcSound*>(p);
 					SDL_AudioStream* stream = (SDL_AudioStream*)sound->m_AudioStream;
+
+					bool wasPlayRequested = sound->m_PlayRequested;
 					sound->m_PlayRequested = sound->Object->Enabled && playing.AsBoolean();
 
 					if (playing.AsBoolean() && !sound->Object->Enabled)
@@ -122,23 +124,21 @@ public:
 
 					if (stream)
 					{
+						if (wasPlayRequested != sound->m_PlayRequested)
+							SDL_FlushAudioStream(stream);
+
 						if (sound->m_PlayRequested)
 						{
 							const AudioAsset& audio = AudioAssets[sound->SoundFile];
-		
-							if (sound->BytePosition >= audio.DataSize || sound->BytePosition == 0)
-							{
-								sound->BytePosition = 1;
-								SDL_PutAudioStreamData(stream, audio.Data, 200);
-							}
+
+							int len = std::min(200, static_cast<int>(audio.DataSize - sound->BytePosition));
+							SDL_PutAudioStreamData(stream, audio.Data + sound->BytePosition, len);
+							sound->BytePosition += 200;
 							
 							SDL_ResumeAudioStreamDevice(stream);
 						}
 						else
-						{
 							SDL_PauseAudioStreamDevice(stream);
-							SDL_FlushAudioStream(stream);
-						}
 					}
 				}
 			),
@@ -160,6 +160,8 @@ public:
 		
 					sound->NextRequestedPosition = pos;
 					sound->Position = pos;
+
+					SDL_FlushAudioStream((SDL_AudioStream*)sound->m_AudioStream);
 				}
 			),
 

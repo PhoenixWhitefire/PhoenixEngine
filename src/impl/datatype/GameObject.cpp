@@ -310,9 +310,9 @@ GameObject* GameObject::FromGenericValue(const Reflection::GenericValue& gv)
 	{
 		const std::string_view& typeName = Reflection::TypeAsString(gv.Type);
 
-		throw(std::vformat(
+		throw(std::format(
 			"Tried to GameObject::FromGenericValue, but GenericValue had Type '{}' instead",
-			std::make_format_args(typeName)
+			typeName
 		));
 	}
 
@@ -417,23 +417,15 @@ static uint32_t NullGameObjectIdValue = PHX_GAMEOBJECT_NULL_ID;
 void GameObject::SetParent(GameObject* newParent)
 {
 	if (this->IsDestructionPending)
-	{
-		std::string parentFullName = newParent ? newParent->GetFullName() : "<NULL>";
-		std::string fullname = GetFullName();
-
-		throw(std::vformat(
+		throw(std::format(
 			"Tried to re-parent '{}' (ID:{}) to '{}' (ID:{}), but it's Parent has been locked due to `::Destroy`",
-			std::make_format_args(
-				fullname,
-				this->ObjectId,
-				parentFullName,
-				newParent ? newParent->ObjectId : NullGameObjectIdValue
-			)
+
+			GetFullName(),
+			this->ObjectId,
+			newParent ? newParent->GetFullName() : "<NULL>",
+			newParent ? newParent->ObjectId : NullGameObjectIdValue
 		));
-	}
-
-	std::string fullname;
-
+	
 	if (newParent != this)
 	{
 		std::vector<GameObject*> descendants = this->GetDescendants();
@@ -448,24 +440,16 @@ void GameObject::SetParent(GameObject* newParent)
 			}
 
 		if (isOwnDescendant)
-		{
-			fullname = this->GetFullName();
-
-			throw(std::vformat(
+			throw(std::format(
 				"Tried to make object ID:{} ('{}') a descendant of itself",
-				std::make_format_args(this->ObjectId, fullname)
+				this->ObjectId, GetFullName()
 			));
-		}
 	}
 	else
-	{
-		fullname = this->GetFullName();
-
-		throw(std::vformat(
+		throw(std::format(
 			"Tried to make object ID:{} ('{}') it's own parent",
-			std::make_format_args(this->ObjectId, fullname)
+			this->ObjectId, GetFullName()
 		));
-	}
 
 	GameObject* oldParent = GetObjectById(Parent);
 
@@ -490,14 +474,10 @@ void GameObject::SetParent(GameObject* newParent)
 void GameObject::AddChild(GameObject* c)
 {
 	if (c->ObjectId == this->ObjectId)
-	{
-		std::string fullName = this->GetFullName();
-
-		throw(std::vformat(
+		throw(std::format(
 			"::AddChild called on Object ID:{} (`{}`) with itself as the adopt'ed",
-			std::make_format_args(this->ObjectId, fullName)
+			this->ObjectId, GetFullName()
 		));
-	}
 
 	auto it = std::find(m_Children.begin(), m_Children.end(), c->ObjectId);
 
@@ -521,7 +501,7 @@ void GameObject::RemoveChild(uint32_t id)
 			ch->DecrementHardRefs();
 	}
 	else
-		throw(std::vformat("ID:{} is _not my ({}) sonnn~_", std::make_format_args(ObjectId, id)));
+		throw(std::format("ID:{} is _not my ({}) sonnn~_", ObjectId, id));
 }
 
 Reflection::GenericValue GameObject::s_ToGenericValue(const GameObject* Object)
@@ -867,7 +847,7 @@ static void dumpFunctions(const Reflection::FunctionMap& Functions, nlohmann::js
 		istring = istring.substr(0, istring.size() - 2);
 		ostring = ostring.substr(0, ostring.size() - 2);
 
-		Json[funcIt.first] = std::vformat("({}) -> ({})", std::make_format_args(istring, ostring));
+		Json[funcIt.first] = std::format("({}) -> ({})", istring, ostring);
 	}
 }
 

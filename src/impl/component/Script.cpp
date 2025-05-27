@@ -315,9 +315,9 @@ static auto api_coltostring = [](lua_State* L)
 
 		lua_pushstring(
 			L,
-			std::vformat(
+			std::format(
 				"{}, {}, {}",
-				std::make_format_args(col->R, col->G, col->B)
+				col->R, col->G, col->B
 			).c_str()
 		);
 
@@ -790,9 +790,9 @@ static void resumeYieldedCoroutines()
 				if (resumeStatus != LUA_OK && resumeStatus != LUA_YIELD)
 				{
 					const char* errstr = lua_tostring(coroutine, -1);
-					Log::Error(std::vformat(
+					Log::Error(std::format(
 						"Script resumption: {}",
-						std::make_format_args(errstr)
+						errstr
 					));
 
 					dumpStacktrace(coroutine);
@@ -873,9 +873,9 @@ void EcScript::Update(double dt)
 		{
 			const char* errstr = lua_tostring(co, -1);
 
-			Log::Error(std::vformat(
+			Log::Error(std::format(
 				"Script tick: {}",
-				std::make_format_args(errstr)
+				errstr
 			));
 			dumpStacktrace(co);
 
@@ -946,9 +946,9 @@ bool EcScript::Reload()
 	if (!fileExists)
 	{
 		Log::Error(
-			std::vformat(
+			std::format(
 				"Script '{}' references invalid Source File '{}'!",
-				std::make_format_args(fullName, this->SourceFile)
+				fullName, this->SourceFile
 			)
 		);
 
@@ -976,9 +976,9 @@ bool EcScript::Reload()
 		{
 			const char* errStr = lua_tostring(thread, -1);
 
-			Log::Error(std::vformat(
+			Log::Error(std::format(
 				"Script init: {}",
-				std::make_format_args(errStr)
+				errStr
 			));
 			dumpStacktrace(thread);
 
@@ -991,10 +991,10 @@ bool EcScript::Reload()
 	{
 		const char* errstr = lua_tostring(m_L, -1);
 
-		Log::Error(std::vformat(
+		Log::Error(std::format(
 			"Script compilation: {}",
-			std::make_format_args(errstr))
-		);
+			errstr
+		));
 
 		return false;
 	}

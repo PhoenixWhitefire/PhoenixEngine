@@ -22,9 +22,9 @@ Color::Color(const Reflection::GenericValue& gv)
 	if (gv.Type != Reflection::ValueType::Color)
 	{
 		const std::string_view& typeName = Reflection::TypeAsString(gv.Type);
-		throw(std::vformat(
+		throw(std::format(
 			"Attempted to construct Color, but GenericValue was {} instead",
-			std::make_format_args(typeName)
+			typeName
 		));
 	}
 
@@ -48,5 +48,5 @@ Reflection::GenericValue Color::ToGenericValue() const
 
 std::string Color::ToString()
 {
-	return std::vformat("{}, {}, {}", std::make_format_args(this->R, this->G, this->B));
+	return std::format("{}, {}, {}", this->R, this->G, this->B);
 }

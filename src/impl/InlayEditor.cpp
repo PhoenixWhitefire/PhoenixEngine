@@ -782,13 +782,13 @@ static void mtlEditorTexture(const char* Label, uint32_t* TextureIdPtr, char* Cu
 	{
 		ImGui::BeginTooltip();
 
-		ImGui::TextUnformatted(std::vformat(
+		ImGui::TextUnformatted(std::format(
 			"Resolution: {}x{}",
-			std::make_format_args(tx.Width, tx.Height)
+			tx.Width, tx.Height
 		).c_str());
-		ImGui::TextUnformatted(std::vformat(
+		ImGui::TextUnformatted(std::format(
 			"# Color channels: {}",
-			std::make_format_args(tx.NumColorChannels)
+			tx.NumColorChannels
 		).c_str());
 
 		ImGui::EndTooltip();
@@ -1358,9 +1358,9 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 		{
 			GameObject* target = GameObject::GetObjectById(Selections[0]);
 
-			sepStr = std::vformat(
+			sepStr = std::format(
 				"Properties of {}",
-				std::make_format_args(target->Name)
+				target->Name
 			);
 		}
 
@@ -1723,9 +1723,9 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 				int typeId = static_cast<int>(curVal.Type);
 				const std::string_view& typeName = Reflection::TypeAsString(curVal.Type);
 
-				ImGui::TextUnformatted(std::vformat(
+				ImGui::TextUnformatted(std::format(
 					"{}: <Display of ID:{} ('{}') types not unavailable>",
-					std::make_format_args(propName, typeId, typeName)
+					propName, typeId, typeName
 				).c_str());
 
 				break;

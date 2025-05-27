@@ -55,9 +55,9 @@ static void sdlLog(void*, int Type, SDL_LogPriority Priority, const char* Messag
 	else
 		priorityName = priorityIt->second;
 
-	std::string logString = std::vformat(
+	std::string logString = std::format(
 		"SDL log -\n\tType: {}\n\tPriority: {}\n\tMessage: {}",
-		std::make_format_args(Type, priorityName, Message)
+		Type, priorityName, Message
 	);
 
 	if (Priority < SDL_LOG_PRIORITY_ERROR)
@@ -128,9 +128,9 @@ static T readFromConfiguration(const std::string_view& Key, const T& DefaultValu
 	{
 		std::string errorMessage = Error.what();
 
-		Log::Error(std::vformat(
+		Log::Error(std::format(
 			"Error trying to read key '{}' of configuration: {}. Falling back to default value",
-			std::make_format_args(Key, errorMessage)
+			Key, errorMessage
 		));
 
 		return DefaultValue;
@@ -157,9 +157,9 @@ void Engine::LoadConfiguration()
 			ConfigLoadSucceeded = false;
 			const char* errMessage = err.what();
 			
-			ConfigLoadErrorMessage = std::vformat(
+			ConfigLoadErrorMessage = std::format(
 				"Failed to load configuration file: {}\nA fallback will be used.",
-				std::make_format_args(errMessage)
+				errMessage
 			);
 		}
 
@@ -184,9 +184,9 @@ void Engine::LoadConfiguration()
 	std::string_view resDir = readFromConfiguration("ResourcesDirectory", std::string_view("<NOT_SET>"));
 
 	if (resDir != "resources/")
-		Log::Warning(std::vformat(
+		Log::Warning(std::format(
 			"Resources Directory was changed to '{}' instead of 'resources/'. Prepare for unforeseen consequences.",
-			std::make_format_args(resDir)
+			resDir
 		));
 
 	Log::Info("Configuration loaded");
@@ -263,16 +263,16 @@ Engine::Engine()
 	SDL_GLProfile requestedProfile = SDL_GL_CONTEXT_PROFILE_CORE;
 
 	if (requestedProfileIt == StringToGLProfile.end())
-		Log::Warning(std::vformat(
+		Log::Warning(std::format(
 			"Invalid/unsupported OpenGL profile '{}' requested, defaulting to the Core profile",
-			std::make_format_args(requestedProfileString)
+			requestedProfileString
 		));
 	else
 		requestedProfile = requestedProfileIt->second;
 
-	Log::Info(std::vformat(
+	Log::Info(std::format(
 		"Requesting a {} OpenGL context with version {}.{}",
-		std::make_format_args(requestedProfileString, requestedGLVersionMajor, requestedGLVersionMinor)
+		requestedProfileString, requestedGLVersionMajor, requestedGLVersionMinor
 	));
 
 	// Must be set *before* window creation

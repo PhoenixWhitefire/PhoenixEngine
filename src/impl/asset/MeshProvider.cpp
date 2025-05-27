@@ -228,9 +228,9 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 	size_t actualDataSize = contents.size() - headerPtr;
 
 	if (actualDataSize < totalExpectedDataSize)
-		MESHPROVIDER_ERROR(std::vformat(
+		MESHPROVIDER_ERROR(std::format(
 			"Binary section of File was expected to be {} bytes, but was {} instead (smaller)",
-			std::make_format_args(totalExpectedDataSize, actualDataSize)
+			totalExpectedDataSize, actualDataSize
 		));
 
 	Mesh mesh{};
@@ -324,9 +324,9 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 
 			if (numJoints > 4)
 			{
-				Log::Warning(std::vformat(
+				Log::Warning(std::format(
 					"Vertex #{} specified {} joints, but only up to 4 are supported, clamping.",
-					std::make_format_args(vertexIndex, numJoints)
+					vertexIndex, numJoints
 				));
 
 				numJoints = 4;
@@ -360,9 +360,9 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 		uint32_t chId = readU32(contents, &cursor, &fileTooSmallError);
 
 		if (chId != BoneChId)
-			Log::Error(std::vformat(
+			Log::Error(std::format(
 				"Invalid BONE chunk, expected ID {}, got {}. Skipping",
-				std::make_format_args(BoneChId, chId)
+				BoneChId, chId
 			));
 		else
 		{
@@ -409,9 +409,9 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 
 				if (fileTooSmallError)
 				{
-					Log::Error(std::vformat(
+					Log::Error(std::format(
 						"Reached EoF trying to read Bone ID {}",
-						std::make_format_args(boneIdx)
+						boneIdx
 					));
 
 					break;
@@ -912,9 +912,9 @@ uint32_t MeshProvider::LoadFromPath(const std::string_view& Path, bool ShouldLoa
 
 		if (!success)
 		{
-			Log::Error(std::vformat(
+			Log::Error(std::format(
 				"MeshProvider Failed to load mesh '{}': Invalid path/File could not be opened",
-				std::make_format_args(Path)
+				Path
 			));
 
 			return this->Assign(Mesh{}, Path);
@@ -941,9 +941,9 @@ uint32_t MeshProvider::LoadFromPath(const std::string_view& Path, bool ShouldLoa
 						Mesh loadedMesh = this->Deserialize(contents, &error);
 
 						if (error.size() > 0)
-							Log::Error(std::vformat(
+							Log::Error(std::format(
 								"MeshProvider failed to load mesh '{}' asynchronously: {}",
-								std::make_format_args(pathCapturable, error)
+								pathCapturable, error
 							));
 
 						promise->set_value(loadedMesh);
@@ -966,9 +966,9 @@ uint32_t MeshProvider::LoadFromPath(const std::string_view& Path, bool ShouldLoa
 				mesh.MeshDataPreserved = PreserveMeshData;
 
 				if (error.size() > 0)
-					Log::Error(std::vformat(
+					Log::Error(std::format(
 						"MeshProvider failed to load mesh '{}': {}",
-						std::make_format_args(Path, error)
+						Path, error
 					));
 
 				m_CreateAndUploadGpuMesh(mesh);
@@ -1001,9 +1001,9 @@ void MeshProvider::FinalizeAsyncLoadedMeshes()
 
 	if (numMeshPromises != numMeshFutures || numMeshFutures != numMeshResourceIds)
 	{
-		Log::Error(std::vformat(
+		Log::Error(std::format(
 			"FinalizeAsyncLoadedMeshes had {} promises, {} futures and {} resource IDs, cannot proceed safely",
-			std::make_format_args(numMeshPromises, numMeshFutures, numMeshResourceIds)
+			numMeshPromises, numMeshFutures, numMeshResourceIds
 		));
 		return;
 	}

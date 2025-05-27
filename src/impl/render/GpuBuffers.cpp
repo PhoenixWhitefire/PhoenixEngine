@@ -216,7 +216,7 @@ void GpuFrameBuffer::Initialize(int TargetWidth, int TargetHeight, int MSSamples
 	auto FrameBufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 
 	if (FrameBufferStatus != GL_FRAMEBUFFER_COMPLETE)
-		throw(std::vformat("Could not create a framebuffer, error ID: {}", std::make_format_args(FrameBufferStatus)));
+		throw(std::format("Could not create a framebuffer, error ID: {}", FrameBufferStatus));
 }
 
 void GpuFrameBuffer::Delete()

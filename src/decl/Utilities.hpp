@@ -11,9 +11,9 @@
 #define PHX_ENSURE_MSG(expr, err) if (!(expr)) throw(err)
 #define PHX_ENSURE(expr) if (!(expr)) throw("Failed to ensure: " + std::string(#expr))
 
-#define PHX_CHECK(expr, err) if (!(expr)) Log::Error(std::vformat( \
+#define PHX_CHECK(expr, err) if (!(expr)) Log::Error(std::format( \
     "Check '{}' failed on line {} of function '{}'", \
-    std::make_format_args(#expr, __LINE__, __FUNCTION__) \
+    #expr, __LINE__, __FUNCTION__ \
 )); \
 
 #else

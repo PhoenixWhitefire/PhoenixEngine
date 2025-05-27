@@ -39,9 +39,9 @@ Vector3::Vector3(const Reflection::GenericValue& gv)
 	if (gv.Type != Reflection::ValueType::Vector3)
 	{
 		const std::string_view& typeName = Reflection::TypeAsString(gv.Type);
-		throw(std::vformat(
+		throw(std::format(
 			"Attempted to construct Vector3, but GenericValue was {} instead",
-			std::make_format_args(typeName)
+			typeName
 		));
 	}
 
@@ -76,7 +76,7 @@ Reflection::GenericValue Vector3::ToGenericValue() const
 
 std::string Vector3::ToString()
 {
-	return std::vformat("{}, {}, {}", std::make_format_args(X, Y, Z));
+	return std::format("{}, {}, {}", X, Y, Z);
 }
 
 Vector3 Vector3::Cross(Vector3 OtherVec) const

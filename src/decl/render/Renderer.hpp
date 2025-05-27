@@ -21,9 +21,9 @@
 	if (!success)                                                \
 	{                                                            \
 		const char* errMessage = SDL_GetError();                 \
-		throw(std::vformat(                                      \
-			"Error in {}:\nMessage: {}",               \
-			std::make_format_args(funcName, errMessage)          \
+		throw(std::format(                                       \
+			"Error in {}:\nMessage: {}",                         \
+			funcName, errMessage                                 \
 		));                                                      \
 	}                                                            \
 }                                                                \

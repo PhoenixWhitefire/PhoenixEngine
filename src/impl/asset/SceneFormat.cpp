@@ -16,9 +16,9 @@
 #include "FileRW.hpp"
 #include "Log.hpp"
 
-#define SF_EMIT_WARNING(err, ...) Log::Warning(std::vformat(    \
-	std::string("Deserialization warning: ") + err,             \
-	std::make_format_args(__VA_ARGS__)                          \
+#define SF_EMIT_WARNING(err, ...) Log::Warning(std::format(     \
+	"Deserialization warning: " err,                            \
+	__VA_ARGS__                                                 \
 ))                                                              \
 
 static std::string errorString = "No error";
@@ -156,9 +156,9 @@ static std::vector<GameObjectRef> LoadMapVersion1(
 	{
 		const char* whatStr = e.what();
 
-		errorString = std::vformat(
+		errorString = std::format(
 			"JSON Parsing error: {}",
-			std::make_format_args(whatStr)
+			whatStr
 		);
 
 		*SuccessPtr = false;
@@ -186,7 +186,7 @@ static std::vector<GameObjectRef> LoadMapVersion1(
 		catch (const nlohmann::json::type_error& e)
 		{
 			const char* whatStr = e.what();
-			throw(std::vformat("Failed to decode map data: {}", std::make_format_args(whatStr)));
+			throw(std::format("Failed to decode map data: {}", whatStr));
 		}
 
 		std::string ModelPath = PropObject["path"];
@@ -201,12 +201,10 @@ static std::vector<GameObjectRef> LoadMapVersion1(
 
 		if (Model.empty())
 			Log::Warning(
-				std::vformat(
+				std::format(
 					"Model '{}' in map file '{}' has no meshes!",
-					std::make_format_args(
-						modelName,
-						sceneName
-					)
+					modelName,
+					sceneName
 				)
 			);
 		else
@@ -423,9 +421,9 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 	{
 		const char* whatStr = e.what();
 
-		errorString = std::vformat(
+		errorString = std::format(
 			"V2 - JSON Parsing error: {}",
-			std::make_format_args(whatStr)
+			whatStr
 		);
 
 		*Success = false;
@@ -437,9 +435,9 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 
 	if (jsonData.find("GameObjects") == jsonData.end())
 	{
-		errorString = std::vformat(
+		errorString = std::format(
 			"The `GameObjects` key is not present in scene '{}'",
-			std::make_format_args(sceneName)
+			sceneName
 		);
 
 		*Success = false;
@@ -683,9 +681,9 @@ std::vector<GameObjectRef> SceneFormat::Deserialize(
 
 	if (jsonStartLoc == std::string::npos)
 	{
-		errorString = std::vformat(
+		errorString = std::format(
 			"Unable to find JSON section of file. Format version retrieved was {}",
-			std::make_format_args(version)
+			version
 		);
 		*SuccessPtr = false;
 
@@ -704,9 +702,9 @@ std::vector<GameObjectRef> SceneFormat::Deserialize(
 
 	else
 	{
-		errorString = std::vformat(
+		errorString = std::format(
 			"Format version '{}' not recognized",
-			std::make_format_args(version)
+			version
 		);
 		*SuccessPtr = false;
 

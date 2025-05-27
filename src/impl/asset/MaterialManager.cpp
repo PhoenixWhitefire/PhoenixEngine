@@ -34,9 +34,9 @@ void RenderMaterial::Reload()
 		catch (const nlohmann::json::parse_error& e)
 		{
 			std::string errmsg = e.what();
-			Log::Error(std::vformat(
+			Log::Error(std::format(
 				"Parse error trying to load material {}: {}",
-				std::make_format_args(this->Name, errmsg)
+				this->Name, errmsg
 			));
 		}
 	}
@@ -98,9 +98,9 @@ void RenderMaterial::Reload()
 		{
 			const char* typeName = value.type_name();
 
-			throw(std::vformat(
+			throw(std::format(
 				"Material '{}' tried to specify Uniform '{}', but it had unsupported type '{}'",
-				std::make_format_args(this->Name, uniformName, typeName)
+				this->Name, uniformName, typeName
 			));
 
 			break;

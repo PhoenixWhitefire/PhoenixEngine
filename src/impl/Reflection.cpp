@@ -259,7 +259,7 @@ std::string Reflection::GenericValue::ToString() const
 
 			typesString = typesString.substr(0, typesString.size() - 1);
 
-			return std::vformat("Array<{}>", std::make_format_args(typesString));
+			return std::format("Array<{}>", typesString);
 		}
 		else
 			return "Empty Array";
@@ -274,12 +274,11 @@ std::string Reflection::GenericValue::ToString() const
 			if (arr.size() % 2 != 0)
 				return "Invalid Map (Odd number of Array elements)";
 			
-			return std::vformat(
+			return std::format(
 				"Map<{}:{}>",
-				std::make_format_args(
-					TypeAsString(arr[0].Type),
-					TypeAsString(arr[1].Type)
-				));
+				TypeAsString(arr[0].Type),
+				TypeAsString(arr[1].Type)
+			);
 		}
 		else
 			return "Empty Map";
@@ -307,18 +306,18 @@ std::string Reflection::GenericValue::ToString() const
 			glm::degrees(rotrads.z)
 		};
 
-		return std::vformat(
+		return std::format(
 			"Pos: ( {}, {}, {} ), Ang: ( {}, {}, {} )",
-			std::make_format_args(pos[0], pos[1], pos[2], rotdegs[0], rotdegs[1], rotdegs[2])
+			pos[0], pos[1], pos[2], rotdegs[0], rotdegs[1], rotdegs[2]
 		);
 	}
 
 	default:
 	{
 		const std::string_view& tName = TypeAsString(Type);
-		return std::vformat(
+		return std::format(
 			"GenericValue::ToString failed, Type was: {}",
-			std::make_format_args(tName)
+			tName
 		);
 	}
 	}
