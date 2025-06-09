@@ -10,6 +10,7 @@ struct EcWorkspace
 	Vector3 ScreenPointToRay(double x, double y, float length, Vector3* origin) const;
 
 	uint32_t m_SceneCameraId = PHX_GAMEOBJECT_NULL_ID;
+	GameObjectRef Object;
 
 	static inline EntityComponent Type = EntityComponent::Workspace;
 };

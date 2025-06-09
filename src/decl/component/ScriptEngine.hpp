@@ -56,13 +56,11 @@ namespace ScriptEngine::L
 
 	void PushGenericValue(lua_State*, const Reflection::GenericValue&);
 	void PushGameObject(lua_State*, GameObject*);
-	void PushFunction(lua_State* L, const char*);
+	void PushFunction(lua_State* L, Reflection::Function*);
 
-	int HandleFunctionCall(
+	int HandleMethodCall(
 		lua_State* L,
-		GameObject* g,
-		const char* fnaf,
-		int nargs
+		Reflection::Function* fnaf
 	);
 
 	extern std::unordered_map<std::string_view, lua_CFunction> GlobalFunctions;

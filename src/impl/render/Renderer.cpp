@@ -146,16 +146,20 @@ void Renderer::Initialize(uint32_t Width, uint32_t Height, SDL_Window* Window)
 	if (!gladStatus)
 		throw("GLAD could not load OpenGL. Please update your drivers.");
 
-	glEnable(GL_DEBUG_OUTPUT);
-	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-
 	// `glDebugMessageCallback` will be NULL if the user
 	// does not have the `GL_ARB_debug_output`/`GL_KHR_debug` OpenGL extensions
 	// I just want this to work on a specific machine
 	// 13/09/2024
 	if (glDebugMessageCallback)
+	{
+		glEnable(GL_DEBUG_OUTPUT);
+		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+
 		glDebugMessageCallback(GLDebugCallback, nullptr);
-	
+	}
+	else
+		Log::Warning("No `glDebugMessageCallback`");
+
 	glEnable(GL_MULTISAMPLE);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);

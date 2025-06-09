@@ -146,11 +146,19 @@ static auto api_gameobjindex = [](lua_State* L)
 
 		LUA_ASSERT(obj, "Tried to index '%s' of a deleted Game Object (use '.Exists' to check before accessing a member)", key);
 
-		if (obj->FindProperty(key))
-			ScriptEngine::L::PushGenericValue(L, obj->GetPropertyValue(key));
+		std::pair<EntityComponent, uint32_t> componentHandle;
 
-		else if (obj->FindFunction(key))
-			ScriptEngine::L::PushFunction(L, key);
+		if (const Reflection::Property* prop = obj->FindProperty(key, &componentHandle))
+		{
+			void* p = componentHandle.first != EntityComponent::None
+				? GameObject::ComponentHandleToPointer(componentHandle)
+				: obj;
+			
+			ScriptEngine::L::PushGenericValue(L, prop->Get(p));
+		}
+
+		else if (Reflection::Function* func = obj->FindFunction(key))
+			ScriptEngine::L::PushFunction(L, func);
 
 		else
 		{
@@ -353,6 +361,14 @@ static lua_State* createVM()
 			// `Luau/VM/src/lbaselib.cpp`
 			// 11/11/2024
 
+			if (lua_Debug ar; lua_getinfo(L, 1, "sl", &ar))
+			{
+				std::string extraTag = std::format("[S{}:{}]", ar.short_src, ar.currentline);
+				Log::Info("&&", extraTag);
+			}
+			else
+				Log::Warning("Could not `lua_getinfo` for the following Luau log:");
+
 			int n = lua_gettop(L); // number of arguments
 			for (int i = 1; i <= n; i++)
 			{
@@ -362,7 +378,7 @@ static lua_State* createVM()
 				if (i > 1)
 					Log::Append(" &&");
 				else
-					Log::Info("&&");
+					Log::Append("&&");
 
 				Log::Append(std::string(s) + "&&");
 				lua_pop(L, 1); // pop result
@@ -586,8 +602,6 @@ static lua_State* createVM()
 			{
 				ZoneScopedNC("GameObject.__namecall", tracy::Color::LightSkyBlue);
 
-				int nargs = lua_gettop(L) - 1;
-
 				GameObject* g = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
 				const char* k = L->namecall->data; // this is weird 10/01/2025
 
@@ -596,18 +610,18 @@ static lua_State* createVM()
 
 				ZoneText(k, strlen(k));
 
-				if (!g->FindFunction(k))
+				Reflection::Function* func = g->FindFunction(k);
+
+				if (!func)
 					luaL_errorL(L, "'%s' is not a valid method of %s", k, g->GetFullName().c_str());
 
 				int numresults = 0;
 
 				try
 				{
-					numresults = ScriptEngine::L::HandleFunctionCall(
+					numresults = ScriptEngine::L::HandleMethodCall(
 						L,
-						g,
-						k,
-						nargs
+						func
 					);
 				}
 				catch (std::string err)

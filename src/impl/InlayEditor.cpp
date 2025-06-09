@@ -782,14 +782,8 @@ static void mtlEditorTexture(const char* Label, uint32_t* TextureIdPtr, char* Cu
 	{
 		ImGui::BeginTooltip();
 
-		ImGui::TextUnformatted(std::format(
-			"Resolution: {}x{}",
-			tx.Width, tx.Height
-		).c_str());
-		ImGui::TextUnformatted(std::format(
-			"# Color channels: {}",
-			tx.NumColorChannels
-		).c_str());
+		ImGui::Text("Resolution: %ix%i", tx.Width, tx.Height);
+		ImGui::Text("# Color channels: %i", tx.NumColorChannels);
 
 		ImGui::EndTooltip();
 	}
@@ -1081,13 +1075,18 @@ static void onTreeItemClicked(GameObject* nodeClicked)
 			ErrorTooltipMessage = Err.c_str();
 			ErrorTooltipTimeRemaining = 5.f;
 		}
+		catch (const char* Err)
+		{
+			ErrorTooltipMessage = Err;
+			ErrorTooltipTimeRemaining = 5.f;
+		}
 
 		// restore prev selections
 		Selections = PickerTargets;
 
 		IsPickingObject = false;
 		PickerTargets.clear();
-		PickerTargetPropName = "";
+		PickerTargetPropName.clear();
 
 		return; // don't actually select this object
 	}
@@ -1141,6 +1140,13 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 	{
 		ErrorTooltipMessage = "Pick Object";
 		ErrorTooltipTimeRemaining = 0.1f;
+
+		if (ImGui::IsMouseDown(ImGuiMouseButton_Right))
+		{
+			IsPickingObject = false;
+			PickerTargets.clear();
+			PickerTargetPropName.clear();
+		}
 	}
 
 	static TextureManager* texManager = TextureManager::Get();
@@ -1217,7 +1223,7 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 			&& ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)
 			)
 		{
-			ImGui::OpenPopup(1979);
+			ImGui::OpenPopup(1979); // the mimic!!
 
 			if (ImGui::GetIO().KeyCtrl || ImGui::GetIO().KeyShift || !isInSelections(object))
 				// select/add to selections
@@ -1260,7 +1266,8 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 			{
 				ImGui::SeparatorText("Insert");
 
-				for (size_t i = 0; i < (size_t)EntityComponent::__count; i++)
+				// skip `<NONE>`
+				for (size_t i = 1; i < (size_t)EntityComponent::__count; i++)
 					if (ImGui::MenuItem(s_EntityComponentNames[i].data()))
 					{
 						GameObject* newObject = GameObject::Create(s_EntityComponentNames[i]);
@@ -1570,7 +1577,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 						{
 							if (referenced)
 							{
-								uint32_t targetId = static_cast<uint32_t>(curVal.AsInteger());
+								uint32_t targetId = GameObject::FromGenericValue(curVal)->ObjectId;
 								Selections = { targetId };
 							}
 							else
@@ -1723,10 +1730,10 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 				int typeId = static_cast<int>(curVal.Type);
 				const std::string_view& typeName = Reflection::TypeAsString(curVal.Type);
 
-				ImGui::TextUnformatted(std::format(
-					"{}: <Display of ID:{} ('{}') types not unavailable>",
-					propName, typeId, typeName
-				).c_str());
+				ImGui::Text(
+					"%s: <Display of ID:%i ('%s') types not unavailable>",
+					propName.data(), typeId, typeName.data()
+				);
 
 				break;
 			}

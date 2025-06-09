@@ -42,5 +42,7 @@ namespace Timing
 	{
 		ScopedTimer(uint8_t);
 		~ScopedTimer();
+
+		bool m_DidBegin = true;
 	};
 }

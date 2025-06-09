@@ -8,7 +8,6 @@ static std::stack<uint8_t> s_TimerStack;
 
 void Timing::BeginTimer(uint8_t Timer)
 {
-	// RECURSION NOT GOOD
 	assert(Timing::StartTimes[Timer] == FLT_MAX);
 
 	s_TimerStack.push(Timer);
@@ -53,12 +52,18 @@ Timing::StaticMagicTimerThing::StaticMagicTimerThing(const char* Name)
 
 Timing::ScopedTimer::ScopedTimer(uint8_t Timer)
 {
-	Timing::BeginTimer(Timer);
+	if (Timing::StartTimes[Timer] == FLT_MAX)
+		Timing::BeginTimer(Timer);
+	else
+	{
+		Log::Warning(std::format("Timer {} recursion detected", Timer));
+		m_DidBegin = false;
+	}
 }
 
 Timing::ScopedTimer::~ScopedTimer()
 {
 	// refer to the comment inside `::Finish`
-	if (s_TimerStack.size() > 0)
+	if (m_DidBegin && s_TimerStack.size() > 0)
 		Timing::EndLastTimer();
 }

@@ -3,11 +3,6 @@
 #include "datatype/GameObject.hpp"
 #include "Log.hpp"
 
-void* ComponentHandleToPointer(const std::pair<EntityComponent, uint32_t>& Handle)
-{
-	return GameObject::s_ComponentManagers[(size_t)Handle.first]->GetComponent(Handle.second);
-}
-
 static GameObject* cloneRecursive(
 	GameObject* Root,
 	// u_m < og-child, vector < pair < clone-object-referencing-ogchild, property-referencing-ogchild > > >
@@ -88,7 +83,12 @@ static void mergeRecursive(
 
 			if (v.Type == Reflection::ValueType::GameObject)
 			{
-				auto moit = MergedOverrides.find(GameObject::FromGenericValue(v)->ObjectId);
+				// TODO 29/05/2025
+				// not sure what it means if this is NULL, i kinda forgor how this
+				// whole thing works
+				GameObject* g = GameObject::FromGenericValue(v);
+
+				auto moit = MergedOverrides.find(g ? g->ObjectId : PHX_GAMEOBJECT_NULL_ID);
 				if (moit != MergedOverrides.end())
 					v = GameObject::GetObjectById(moit->second)->ToGenericValue();
 			}
@@ -330,12 +330,17 @@ bool GameObject::IsValidClass(const std::string_view& ObjectClass)
 
 GameObject* GameObject::GetObjectById(uint32_t Id)
 {
-	if (Id == PHX_GAMEOBJECT_NULL_ID || s_WorldArray.size() - 1 < Id)
+	if (Id == PHX_GAMEOBJECT_NULL_ID || Id >= s_WorldArray.size())
 		return nullptr;
 
 	GameObject& obj = s_WorldArray[Id];
-
+	
 	return obj.Valid ? &obj : nullptr;
+}
+
+void* GameObject::ComponentHandleToPointer(const std::pair<EntityComponent, uint32_t>& Handle)
+{
+	return GameObject::s_ComponentManagers[(size_t)Handle.first]->GetComponent(Handle.second);
 }
 
 void GameObject::IncrementHardRefs()
@@ -661,39 +666,37 @@ void GameObject::RemoveComponent(EntityComponent Type)
 	throw("Don't have that component");
 }
 
-Reflection::Property* GameObject::FindProperty(const std::string_view& PropName, bool* FromObject)
+Reflection::Property* GameObject::FindProperty(const std::string_view& PropName, std::pair<EntityComponent, uint32_t>* FromComponent)
 {
-	bool dummyFo = false;
-	FromObject = FromObject ? FromObject : &dummyFo;
+	std::pair<EntityComponent, uint32_t> dummyFc;
+	FromComponent = FromComponent ? FromComponent : &dummyFc;
 
 	if (auto it = s_Api.Properties.find(PropName); it != s_Api.Properties.end())
 	{
-		*FromObject = true;
 		return &it->second;
 	}
 
 	if (auto it = m_ComponentApis.Properties.find(PropName); it != m_ComponentApis.Properties.end())
 	{
-		*FromObject = false;
+		*FromComponent = m_MemberToComponentMap[PropName];
 		return &it->second;
 	}
 
 	return nullptr;
 }
-Reflection::Function* GameObject::FindFunction(const std::string_view& FuncName, bool* FromObject)
+Reflection::Function* GameObject::FindFunction(const std::string_view& FuncName, std::pair<EntityComponent, uint32_t>* FromComponent)
 {
-	bool dummyFo = false;
-	FromObject = FromObject ? FromObject : &dummyFo;
+	std::pair<EntityComponent, uint32_t> dummyFc;
+	FromComponent = FromComponent ? FromComponent : &dummyFc;
 
 	if (auto it = s_Api.Functions.find(FuncName); it != s_Api.Functions.end())
 	{
-		*FromObject = true;
 		return &it->second;
 	}
 
 	if (auto it = m_ComponentApis.Functions.find(FuncName); it != m_ComponentApis.Functions.end())
 	{
-		*FromObject = false;
+		*FromComponent = m_MemberToComponentMap[FuncName];
 		return &it->second;
 	}
 
@@ -702,11 +705,11 @@ Reflection::Function* GameObject::FindFunction(const std::string_view& FuncName,
 
 Reflection::GenericValue GameObject::GetPropertyValue(const std::string_view& PropName)
 {
-	bool fromObject = false;
+	std::pair<EntityComponent, uint32_t> fromComponent;
 
-	if (Reflection::Property* prop = FindProperty(PropName, &fromObject))
+	if (Reflection::Property* prop = FindProperty(PropName, &fromComponent))
 	{
-		if (!fromObject)
+		if (fromComponent.first != EntityComponent::None)
 			return prop->Get(ComponentHandleToPointer(m_MemberToComponentMap[PropName]));
 		else
 			return prop->Get(this);
@@ -716,11 +719,11 @@ Reflection::GenericValue GameObject::GetPropertyValue(const std::string_view& Pr
 }
 void GameObject::SetPropertyValue(const std::string_view& PropName, const Reflection::GenericValue& Value)
 {
-	bool fromObject = false;
+	std::pair<EntityComponent, uint32_t> fromComponent;
 
-	if (Reflection::Property* prop = FindProperty(PropName, &fromObject))
+	if (Reflection::Property* prop = FindProperty(PropName, &fromComponent))
 	{
-		if (!fromObject)
+		if (fromComponent.first != EntityComponent::None)
 			prop->Set(ComponentHandleToPointer(m_MemberToComponentMap[PropName]), Value);
 		else
 			prop->Set(this, Value);
@@ -733,11 +736,11 @@ void GameObject::SetPropertyValue(const std::string_view& PropName, const Reflec
 
 std::vector<Reflection::GenericValue> GameObject::CallFunction(const std::string_view& FuncName, const std::vector<Reflection::GenericValue>& Inputs)
 {
-	bool fromObject = false;
+	std::pair<EntityComponent, uint32_t> fromComponent;
 
-	if (Reflection::Function* func = FindFunction(FuncName, &fromObject))
+	if (Reflection::Function* func = FindFunction(FuncName, &fromComponent))
 	{
-		if (fromObject)
+		if (fromComponent.first != EntityComponent::None)
 			return func->Func(ComponentHandleToPointer(m_MemberToComponentMap[FuncName]), Inputs);
 		else
 			return func->Func(this, Inputs);
@@ -786,8 +789,9 @@ GameObject* GameObject::Create()
 #ifndef NDEBUG
 
 	// cause as many re-allocations as possible to catch stale pointers
-	if (s_WorldArray.size() > 15)
-		s_WorldArray.shrink_to_fit();
+	//if (s_WorldArray.size() > 15)
+	//	s_WorldArray.shrink_to_fit();
+	// cant be bothered 29/05/2025
 
 #endif
 

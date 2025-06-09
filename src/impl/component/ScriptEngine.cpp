@@ -79,30 +79,6 @@ static void pushMatrix(lua_State* L, const glm::mat4& Matrix)
 	lua_setmetatable(L, -2);
 }
 
-static void pushGameObject(lua_State* L, GameObject* obj)
-{
-	if (!obj)
-		lua_pushnil(L); // null object properties are nil and falsey
-	else
-	{
-		uint32_t* ptrToObj = (uint32_t*)lua_newuserdatadtor(
-			L,
-			sizeof(uint32_t),
-			[](void* ptrId)
-			{
-				uint32_t id = *(uint32_t*)ptrId;
-
-				if (GameObject* o = GameObject::GetObjectById(id))
-					o->DecrementHardRefs(); // removes the reference in `::Create`
-			}
-		);
-		*ptrToObj = obj ? obj->ObjectId : PHX_GAMEOBJECT_NULL_ID;
-		
-		luaL_getmetatable(L, "GameObject");
-		lua_setmetatable(L, -2);
-	}
-}
-
 static void pushJson(lua_State* L, const nlohmann::json& v)
 {
 	switch (v.type())
@@ -384,7 +360,7 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 	}
 	case Reflection::ValueType::GameObject:
 	{
-		pushGameObject(L, GameObject::FromGenericValue(gv));
+		PushGameObject(L, GameObject::FromGenericValue(gv));
 		break;
 	}
 	case Reflection::ValueType::Array:
@@ -432,21 +408,37 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 	}
 }
 
-void ScriptEngine::L::PushGameObject(lua_State* L, GameObject* Object)
+void ScriptEngine::L::PushGameObject(lua_State* L, GameObject* obj)
 {
-	PushGenericValue(L, Object->ToGenericValue());
+	if (!obj)
+		lua_pushnil(L); // null object properties are nil and falsey
+	else
+	{
+		uint32_t* ptrToObj = (uint32_t*)lua_newuserdatadtor(
+			L,
+			sizeof(uint32_t),
+			[](void* ptrId)
+			{
+				uint32_t id = *(uint32_t*)ptrId;
+
+				if (GameObject* o = GameObject::GetObjectById(id))
+					o->DecrementHardRefs(); // removes the reference in `::Create`
+			}
+		);
+		*ptrToObj = obj ? obj->ObjectId : PHX_GAMEOBJECT_NULL_ID;
+		
+		luaL_getmetatable(L, "GameObject");
+		lua_setmetatable(L, -2);
+	}
 }
 
-int ScriptEngine::L::HandleFunctionCall(
+int ScriptEngine::L::HandleMethodCall(
 	lua_State* L,
-	GameObject* refl,
-	const char* fname,
-	int numArgs
+	Reflection::Function* func
 )
 {
-	Reflection::Function* func = refl->FindFunction(fname);
-	if (!func)
-		throw(std::format("Invalid function '{}'", fname));
+	GameObject* refl = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
+	int numArgs = lua_gettop(L) - 1;
 
 	const std::vector<Reflection::ParameterType>& paramTypes = func->Inputs;
 
@@ -481,8 +473,8 @@ int ScriptEngine::L::HandleFunctionCall(
 			argsString.clear();
 
 		luaL_error(L, "%s", std::format(
-			"Function '{}' expects at least {} arguments, got {} instead{}",
-			fname, numParams, numArgs, argsString
+			"Function expects at least {} arguments, got {} instead{}",
+			numParams, numArgs, argsString
 		).c_str());
 
 		return 0;
@@ -490,8 +482,8 @@ int ScriptEngine::L::HandleFunctionCall(
 	else if (numArgs > numParams)
 	{
 		int numExtra = numArgs - numParams;
-		Log::Warning(std::format("Function '{}' received {} more arguments than necessary",
-			fname, numExtra
+		Log::Warning(std::format("Function received {} more arguments than necessary",
+			numExtra
 		));
 	}
 
@@ -566,35 +558,40 @@ int ScriptEngine::L::HandleFunctionCall(
 	// 15/08/2024
 }
 
-void ScriptEngine::L::PushFunction(lua_State* L, const char* Name)
+void ScriptEngine::L::PushFunction(lua_State* L, Reflection::Function* Function)
 {
-	// need to remember our name
-	lua_pushstring(L, Name);
+	// if we dont do this then comparison will not work
+	// ex: `game.Close == game.Close`
 
-	lua_pushcclosure(
-		L,
+	lua_pushlightuserdata(L, Function);
+	lua_rawget(L, LUA_ENVIRONINDEX);
 
-		[](lua_State* L)
-		{
-			// -1 because the object is passed in as the first argument
-			// (also means we don't need to add the object as an upvalue)
-			// 11/09/2024
-			int numArgs = lua_gettop(L) - 1;
+	if (lua_isnil(L, -1))
+	{
+		lua_pop(L, 1); // remove `nil`, stack empty
 
-			GameObject* refl = GameObject::GetObjectById(*(uint32_t*)luaL_checkudata(L, 1, "GameObject"));
-			const char* fname = lua_tostring(L, lua_upvalueindex(1));
+		lua_pushlightuserdata(L, Function);
+		lua_pushcclosure(
+			L,
+			[](lua_State* L)
+			{
+				return ScriptEngine::L::HandleMethodCall(
+					L,
+					static_cast<Reflection::Function*>(lua_tolightuserdata(L, lua_upvalueindex(1)))
+				);
+			},
 
-			return ScriptEngine::L::HandleFunctionCall(
-				L,
-				refl,
-				fname,
-				numArgs
-			);
-		},
+			"PushFunctionThunk",
+			1
+		); // stack is now just closure
 
-		Name,
-		1
-	);
+		lua_pushlightuserdata(L, Function); // stack: closure, lud
+		lua_pushvalue(L, -2);               // stack: closure, lud, closure
+		lua_settable(L, LUA_ENVIRONINDEX);  // map closure (value) to lud (key)
+
+		// stack is now just closure
+	}
+	// value we fetch from `_ENVIRON` will be closure that was pushed earlier
 }
 
 static bool IsFdInProgress = false;

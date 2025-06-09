@@ -16,7 +16,7 @@
 */
 #define PHX_SDL_CALL(func, ...)                                  \
 {                                                                \
-	int success = func(__VA_ARGS__);                             \
+	bool success = func(__VA_ARGS__);                             \
 	std::string funcName = #func;                                \
 	if (!success)                                                \
 	{                                                            \

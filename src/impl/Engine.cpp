@@ -328,9 +328,10 @@ Engine::Engine()
 
 	Log::Info("Initializing DataModel...");
 
+	GameObject::s_WorldArray.reserve(32);
+
 	this->DataModel = GameObject::Create("DataModel");
 	GameObject::s_DataModel = DataModel->ObjectId;
-	GameObject::s_WorldArray.reserve(15);
 
 	Log::Info("Engine initialized");
 }
@@ -1169,7 +1170,8 @@ void Engine::Shutdown()
 
 	Log::Info("Shutting down Component Managers...");
 
-	for (size_t i = 0; i < (size_t)EntityComponent::__count; i++)
+	// skip the first "None" component manager
+	for (size_t i = 1; i < (size_t)EntityComponent::__count; i++)
 		GameObject::s_ComponentManagers[i]->Shutdown();
 
 	ImGui_ImplOpenGL3_Shutdown();

@@ -28,7 +28,7 @@ void Log::Save()
 	ProgramLog.clear();
 }
 
-static void logAppend(const std::string_view& Message, bool ManageMutex = false)
+static void logAppend(const std::string_view& Message, bool NoNewline = false, bool ManageMutex = false)
 {
 	std::unique_lock<std::mutex> lock;
 
@@ -40,8 +40,8 @@ static void logAppend(const std::string_view& Message, bool ManageMutex = false)
 	if (ThrewLogCapacityExceededException)
 		return;
 
-	if ( ( Message.size() >= 2 && Message.substr(Message.size() - 2, 2) != "&&" )
-		|| Message.size() < 2
+	if ( (( Message.size() >= 2 && Message.substr(Message.size() - 2, 2) != "&&" )
+		|| Message.size() < 2) && !NoNewline
 	)
 	{
 		ProgramLog.append(Message);
@@ -50,7 +50,7 @@ static void logAppend(const std::string_view& Message, bool ManageMutex = false)
 	}
 	else
 	{
-		std::string_view loggedString = Message.substr(0ull, Message.size() - 2);
+		std::string_view loggedString = !NoNewline ? Message.substr(0ull, Message.size() - 2) : Message;
 		ProgramLog.append(loggedString);
 		std::cout << loggedString;
 	}
@@ -75,29 +75,35 @@ static void logAppend(const std::string_view& Message, bool ManageMutex = false)
 // 11/11/2024
 void Log::Append(const std::string_view& Message)
 {
-	logAppend(Message, true);
+	logAppend(Message, false, true);
 }
 
-void Log::Info(const std::string_view& Message)
+void Log::Info(const std::string_view& Message, const std::string_view& ExtraTags)
 {
 	std::unique_lock<std::mutex> lock{ LogMutex };
 
-	logAppend("[INFO]: &&");
+	logAppend("[INFO]", true);
+	logAppend(ExtraTags, true);
+	logAppend(": ", true);
 	logAppend(Message);
 }
 
-void Log::Warning(const std::string_view& Message)
+void Log::Warning(const std::string_view& Message, const std::string_view& ExtraTags)
 {
 	std::unique_lock<std::mutex> lock{ LogMutex };
 
-	logAppend("[WARN]: &&");
+	logAppend("[WARN]", true);
+	logAppend(ExtraTags, true);
+	logAppend(": ", true);
 	logAppend(Message);
 }
 
-void Log::Error(const std::string_view& Message)
+void Log::Error(const std::string_view& Message, const std::string_view& ExtraTags)
 {
 	std::unique_lock<std::mutex> lock{ LogMutex };
 
-	logAppend("[ERRR]: &&");
+	logAppend("[ERRR]", true);
+	logAppend(ExtraTags, true);
+	logAppend(": ", true);
 	logAppend(Message);
 }

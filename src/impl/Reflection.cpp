@@ -185,7 +185,17 @@ void Reflection::GenericValue::CopyInto(GenericValue& Target, const GenericValue
 
 Reflection::GenericValue::GenericValue(GenericValue&& Other)
 {
-	CopyInto(*this, Other);
+	if (this == &Other)
+		return;
+
+	Reset();
+	this->Type = Other.Type;
+	this->Value = Other.Value;
+	this->Size = Other.Size;
+
+	Other.Type = ValueType::Null;
+	Other.Value = nullptr;
+	Other.Size = 0;
 }
 
 Reflection::GenericValue::GenericValue(const GenericValue& Other)
@@ -387,7 +397,7 @@ std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> Reflectio
 	throw("GenericValue::AsMap not implemented");
 }
 
-Reflection::GenericValue::~GenericValue()
+void Reflection::GenericValue::Reset()
 {
 	switch (this->Type)
 	{
@@ -425,6 +435,15 @@ Reflection::GenericValue::~GenericValue()
 
 	default: {}
 	}
+
+	Type = Reflection::ValueType::Null;
+	Value = nullptr;
+	Size = 0;
+}
+
+Reflection::GenericValue::~GenericValue()
+{
+	Reset();
 }
 
 bool Reflection::GenericValue::operator==(const Reflection::GenericValue& Other) const
@@ -488,6 +507,30 @@ bool Reflection::GenericValue::operator==(const Reflection::GenericValue& Other)
 	default:
 		throw("No defined equality for GenericValues of type " + std::string(TypeAsString(Type)));
 	}
+}
+
+Reflection::GenericValue& Reflection::GenericValue::operator=(Reflection::GenericValue&& Other)
+{
+	if (this == &Other)
+		return *this;
+
+	Reset();
+	this->Type = Other.Type;
+	this->Value = Other.Value;
+	this->Size = Other.Size;
+
+	Other.Type = ValueType::Null;
+	Other.Value = nullptr;
+	Other.Size = 0;
+
+	return *this;
+}
+
+Reflection::GenericValue& Reflection::GenericValue::operator=(const Reflection::GenericValue& Other)
+{
+	CopyInto(*this, Other);
+
+	return *this;
 }
 
 static std::string_view ValueTypeNames[] =

@@ -9,6 +9,8 @@
 #include "FileRW.hpp"
 #include "Log.hpp"
 
+#define SCOPED_LOCK(mtx) std::unique_lock<std::mutex> __lock_##mtx(mtx)
+
 struct AudioAsset
 {
 	SDL_AudioSpec Spec{};
@@ -19,7 +21,7 @@ struct AudioAsset
 static std::unordered_map<std::string, AudioAsset> AudioAssets{};
 static std::mutex AudioAssetsMutex;
 static std::mutex ComponentsBufferReAllocMutex;
-static std::vector<std::promise<bool>> AudioStreamPromises;
+//static std::vector<std::promise<bool>> AudioStreamPromises;
 
 // the spec of the audio device
 // must be standardized to remove overhead of 
@@ -42,7 +44,7 @@ public:
         m_Components.emplace_back();
 		m_Components.back().Object = Object;
 		m_Components.back().EcId = static_cast<uint32_t>(m_Components.size() - 1);
-		AudioStreamPromises.emplace_back();
+		//AudioStreamPromises.emplace_back();
 
 		ComponentsBufferReAllocMutex.unlock();
 
@@ -95,6 +97,7 @@ public:
 						return;
 					
 					sound->SoundFile = newFile;
+					sound->NextRequestedPosition = 0.f;
 					sound->Reload();
 				}
 			),
@@ -105,11 +108,7 @@ public:
 				[](void* p)
 				{
 					EcSound* sound = static_cast<EcSound*>(p);
-		
-					if (sound->m_AudioStream)
-						return !SDL_AudioStreamDevicePaused((SDL_AudioStream*)sound->m_AudioStream);
-					else
-						return sound->m_PlayRequested;
+					return sound->m_PlayRequested;
 				},
 				[](void* p, const Reflection::GenericValue& playing)
 				{
@@ -221,7 +220,7 @@ static inline SoundManager Instance{};
 
 static void streamCallback(void* UserData, SDL_AudioStream* Stream, int AdditionalAmount, int /*TotalAmount*/)
 {
-	ComponentsBufferReAllocMutex.lock();
+	SCOPED_LOCK(ComponentsBufferReAllocMutex);
 
 	EcSound* sound = static_cast<EcSound*>(Instance.GetComponent(*(uint32_t*)&UserData));
 	const AudioAsset& audio = AudioAssets[sound->SoundFile];
@@ -233,6 +232,8 @@ static void streamCallback(void* UserData, SDL_AudioStream* Stream, int Addition
 		sound->NextRequestedPosition = -1.f;
 
 		sound->BytePosition = static_cast<uint32_t>(audio.Spec.freq * target);
+
+		SDL_FlushAudioStream(Stream);
 	}
 
 	if (sound->BytePosition >= audio.DataSize)
@@ -240,7 +241,10 @@ static void streamCallback(void* UserData, SDL_AudioStream* Stream, int Addition
 		if (sound->Looped)
 			SDL_PutAudioStreamData(Stream, audio.Data, AdditionalAmount);
 		else
+		{
 			SDL_PauseAudioStreamDevice(Stream);
+			sound->m_PlayRequested = false; // prevent it from resuming in `::Update`
+		}
 
 		sound->BytePosition = 0;
 	}
@@ -253,8 +257,6 @@ static void streamCallback(void* UserData, SDL_AudioStream* Stream, int Addition
 
 	sound->Position = (float)sound->BytePosition / (float)audio.Spec.freq;
 	sound->BytePosition += AdditionalAmount;
-
-	ComponentsBufferReAllocMutex.unlock();
 }
 
 void EcSound::Update(double)
@@ -297,8 +299,8 @@ void EcSound::Reload()
 
 	FinishedLoading = false;
 
-	std::promise<bool> begone;
-	AudioStreamPromises[EcId].swap(begone);
+	//std::promise<bool> begone;
+	//AudioStreamPromises[EcId].swap(begone);
 
 	uint32_t SoundEcId = EcId;
 	std::string RequestedSoundFile = SoundFile;
@@ -328,8 +330,18 @@ void EcSound::Reload()
 				);
 			
 				if (!success)
-					throw("Failed to load sound file: " + std::string(SDL_GetError()));
-			
+				{
+					AudioAssetsMutex.unlock();
+
+					Log::Error(std::format("Failed to load sound file '{}': {}", RequestedSoundFile, SDL_GetError()));
+
+					SCOPED_LOCK(ComponentsBufferReAllocMutex);
+
+					EcSound* sound = static_cast<EcSound*>(Instance.GetComponent(SoundEcId));
+					sound->FinishedLoading = true;
+
+					return;
+				}
 				/*
 				// `SDL_ConvertAudioSamples` takes `int*` as the length
 				// instead of `uint32_t*`?? why 26/01/2025
@@ -365,11 +377,24 @@ void EcSound::Reload()
 			);
 		
 			if (!stream)
-				throw("Failed to create audio stream: " + std::string(SDL_GetError()));
+			{
+				Log::Error(std::format(
+					"Failed to create audio stream for sound with file '{}': {}",
+					RequestedSoundFile,
+					SDL_GetError()
+				));
+
+				SCOPED_LOCK(ComponentsBufferReAllocMutex);
+
+				EcSound* sound = static_cast<EcSound*>(Instance.GetComponent(SoundEcId));
+				sound->FinishedLoading = true;
+
+				return;
+			}
 
 			SDL_SetAudioStreamGetCallback(stream, streamCallback, (void*)static_cast<uint64_t>(SoundEcId));
 
-			ComponentsBufferReAllocMutex.lock();
+			SCOPED_LOCK(ComponentsBufferReAllocMutex);
 
 			EcSound* sound = static_cast<EcSound*>(Instance.GetComponent(SoundEcId));
 
@@ -383,9 +408,7 @@ void EcSound::Reload()
 			else
 				SDL_PauseAudioStreamDevice(stream);
 
-			AudioStreamPromises[SoundEcId].set_value(true);
-
-			ComponentsBufferReAllocMutex.unlock();
+			//AudioStreamPromises[SoundEcId].set_value(true);
 		},
 		false
 	);

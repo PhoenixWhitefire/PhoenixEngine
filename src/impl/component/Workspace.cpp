@@ -4,7 +4,7 @@
 #include "component/Camera.hpp"
 #include "Engine.hpp"
 
-static GameObject* s_FallbackCamera = nullptr;
+static GameObjectRef s_FallbackCamera;
 
 static GameObject* createCamera()
 {
@@ -19,14 +19,10 @@ class WorkspaceManager : BaseComponentManager
 public:
     virtual uint32_t CreateComponent(GameObject* Object) final
     {
-		GameObjectRef ro = Object;
-
         m_Components.emplace_back();
 
-		GameObject* cam = GameObject::Create("Camera");
-		cam->SetParent(ro.Contained());
-
-		m_Components.back().m_SceneCameraId = cam->ObjectId;
+		m_Components.back().Object = Object;
+		m_Components.back().m_SceneCameraId = PHX_GAMEOBJECT_NULL_ID;
 
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
@@ -45,21 +41,18 @@ public:
     virtual void* GetComponent(uint32_t Id) final
     {
         return &m_Components[Id];
-    }
+	}
 
-    virtual void DeleteComponent(uint32_t) final
+    virtual void DeleteComponent(uint32_t Id) final
     {
-        // TODO id reuse with handles that have a counter per re-use to reduce memory growth
+        m_Components[Id].Object.Invalidate();
     }
 
     virtual const Reflection::PropertyMap& GetProperties() final
     {
-		static Reflection::GenericValue NullObject;
-		NullObject.Type = Reflection::ValueType::GameObject;
-
         static const Reflection::PropertyMap props = 
         {
-            EC_PROP(
+			EC_PROP(
 				"SceneCamera",
 				GameObject,
 				[](void* p)
@@ -67,10 +60,10 @@ public:
 				{
 					GameObject* cam = static_cast<EcWorkspace*>(p)->GetSceneCamera();
 
-					if (cam != s_FallbackCamera)
+					if (cam->ObjectId != s_FallbackCamera->ObjectId)
 						return cam->ToGenericValue();
 					else
-						return NullObject;
+						return {}; // Null
 				},
 				[](void* p, const Reflection::GenericValue& gv)
 				{
@@ -114,6 +107,7 @@ public:
     WorkspaceManager()
     {
         GameObject::s_ComponentManagers[(size_t)EntityComponent::Workspace] = this;
+		m_Components.reserve(3);
     }
 
 private:
@@ -163,12 +157,18 @@ Vector3 EcWorkspace::ScreenPointToRay(double x, double y, float length, Vector3*
 
 GameObject* EcWorkspace::GetSceneCamera() const
 {
-	if (!s_FallbackCamera)
+	if (s_FallbackCamera.m_TargetId == PHX_GAMEOBJECT_NULL_ID)
 		s_FallbackCamera = createCamera();
 
 	GameObject* sceneCam = GameObject::GetObjectById(m_SceneCameraId);
 
-	return (sceneCam && sceneCam->GetComponent<EcCamera>()) ? sceneCam : s_FallbackCamera;
+	if (sceneCam && !sceneCam->GetComponent<EcCamera>())
+	{
+		Log::Warning("Scene Camera lost it's Camera component!");
+		sceneCam = nullptr;
+	}
+
+	return sceneCam ? sceneCam : s_FallbackCamera.Contained();
 }
 
 void EcWorkspace::SetSceneCamera(GameObject* NewCam)

@@ -470,6 +470,15 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 		{
 			uint32_t itemObjectId = item["$_objectId"];
 
+			if (const auto& prev = objectsMap.find(itemObjectId); prev != objectsMap.end())
+			{
+				SF_EMIT_WARNING(
+					"Object #{} ('{}') shares an `$_objectId` ({}) with ID:{} ('{}'), it will be skipped",
+					itemIndex, item.value("Name", "<UNNAMED>"), itemObjectId, prev->second->ObjectId, prev->second->Name
+				);
+				continue;
+			}
+
 			objectsMap.insert(std::pair(itemObjectId, newObject));
 			realIdToSceneId.insert(std::pair(newObject->ObjectId, itemObjectId));
 		}

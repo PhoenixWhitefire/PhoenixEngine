@@ -8,11 +8,10 @@
 class DataModelManager : BaseComponentManager
 {
 public:
-    virtual uint32_t CreateComponent(GameObject*) final
+    virtual uint32_t CreateComponent(GameObject* Object) final
     {
         m_Components.emplace_back();
 
-        /*
         // WorldArray might get re-alloc'd when we create the Workspace,
         // save our ID
         uint32_t objectId = Object->ObjectId;
@@ -20,7 +19,6 @@ public:
 		GameObject* workspace = GameObject::Create(EntityComponent::Workspace);
 		workspace->SetParent(GameObject::GetObjectById(objectId));
 		m_Components.back().Workspace = workspace->ObjectId;
-        */
 
         return static_cast<uint32_t>(m_Components.size() - 1);
     }

@@ -175,9 +175,9 @@ namespace Reflection
 		// Array length or allocated memory for `Value`
 		size_t Size = 0;
 
-		//std::vector<GenericValue> Array;
-
 		GenericValue();
+		~GenericValue();
+
 		GenericValue(const std::string_view&);
 		GenericValue(const std::string&);
 		GenericValue(const char*);
@@ -190,20 +190,12 @@ namespace Reflection
 		GenericValue(const std::vector<GenericValue>&);
 		GenericValue(const std::unordered_map<GenericValue, GenericValue>&);
 
-		GenericValue(GenericValue&&);
 		GenericValue(const GenericValue&);
-		
-		GenericValue& operator = (const Reflection::GenericValue& Other)
-		{
-			CopyInto(*this, Other);
-			return *this;
-		}
-
-		bool operator == (const Reflection::GenericValue& Other) const;
+		GenericValue(GenericValue&&);
 
 		static void CopyInto(GenericValue&, const GenericValue&);
 
-		~GenericValue();
+		void Reset();
 
 		std::string ToString() const;
 
@@ -215,6 +207,10 @@ namespace Reflection
 		glm::mat4& AsMatrix() const;
 		std::vector<GenericValue> AsArray() const;
 		std::unordered_map<GenericValue, GenericValue> AsMap() const;
+
+		GenericValue& operator = (const Reflection::GenericValue& Other);
+		GenericValue& operator = (Reflection::GenericValue&& Other);
+		bool operator == (const Reflection::GenericValue& Other) const;
 	};
 
 	class Reflectable;

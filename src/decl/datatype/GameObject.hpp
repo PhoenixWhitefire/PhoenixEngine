@@ -26,6 +26,8 @@
 
 enum class EntityComponent : uint8_t
 {
+	None,
+
 	Transform,
 	Mesh,
 	ParticleEmitter,
@@ -45,6 +47,7 @@ enum class EntityComponent : uint8_t
 
 static inline const std::string_view s_EntityComponentNames[] = 
 {
+	"<NONE>",
 	"Transform",
 	"Mesh",
 	"ParticleEmitter",
@@ -62,6 +65,7 @@ static inline const std::string_view s_EntityComponentNames[] =
 
 static inline const std::unordered_map<std::string_view, EntityComponent> s_ComponentNameToType = 
 {
+	{ "<NONE>", EntityComponent::None },
 	{ "Transform", EntityComponent::Transform },
 	{ "Mesh", EntityComponent::Mesh },
 	{ "ParticleEmitter", EntityComponent::ParticleEmitter },
@@ -112,6 +116,7 @@ public:
 	static GameObject* Create();
 
 	static GameObject* GetObjectById(uint32_t);
+	static void* ComponentHandleToPointer(const std::pair<EntityComponent, uint32_t>& Handle);
 
 	static inline uint32_t s_DataModel = PHX_GAMEOBJECT_NULL_ID;
 	static inline std::vector<GameObject> s_WorldArray{};
@@ -131,8 +136,8 @@ public:
 	void* GetComponentByType(EntityComponent);
 	std::vector<std::pair<EntityComponent, uint32_t>>& GetComponents();
 
-	Reflection::Property* FindProperty(const std::string_view&, bool* FromObject = nullptr);
-	Reflection::Function* FindFunction(const std::string_view&, bool* FromObject = nullptr);
+	Reflection::Property* FindProperty(const std::string_view&, std::pair<EntityComponent, uint32_t>* FromComponent = nullptr);
+	Reflection::Function* FindFunction(const std::string_view&, std::pair<EntityComponent, uint32_t>* FromComponent = nullptr);
 	Reflection::GenericValue GetPropertyValue(const std::string_view&);
 	void SetPropertyValue(const std::string_view&, const Reflection::GenericValue&);
 	std::vector<Reflection::GenericValue> CallFunction(const std::string_view&, const std::vector<Reflection::GenericValue>&);
