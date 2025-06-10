@@ -17,10 +17,11 @@ struct EcSound
 	float Position = 0.f;
 	float Length = 0.f;
 	float Volume = 1.f;
-	float NextRequestedPosition = 0.f;
+	float Speed = 1.f;
 	bool Looped = false;
 	bool FinishedLoading = true;
 
+	float NextRequestedPosition = 0.f;
 	uint32_t BytePosition = 0;
 
 	GameObjectRef Object;

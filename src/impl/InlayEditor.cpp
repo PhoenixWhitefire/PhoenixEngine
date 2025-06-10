@@ -1143,6 +1143,8 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 
 		if (ImGui::IsMouseDown(ImGuiMouseButton_Right))
 		{
+			Selections = PickerTargets;
+
 			IsPickingObject = false;
 			PickerTargets.clear();
 			PickerTargetPropName.clear();

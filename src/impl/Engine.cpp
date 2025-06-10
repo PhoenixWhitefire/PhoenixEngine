@@ -77,7 +77,7 @@ void Engine::ResizeWindow(int NewSizeX, int NewSizeY)
 {
 	ZoneScoped;
 
-	SDL_SetWindowSize(this->Window, NewSizeX, NewSizeY);
+	assert(SDL_SetWindowSize(this->Window, NewSizeX, NewSizeY));
 
 	this->OnWindowResized(NewSizeX, NewSizeY);
 }
@@ -165,12 +165,12 @@ void Engine::LoadConfiguration()
 
 	if (!ConfigLoadSucceeded)
 	{
-		SDL_ShowSimpleMessageBox(
+		assert(SDL_ShowSimpleMessageBox(
 			SDL_MESSAGEBOX_WARNING,
 			"Configuration Error",
 			ConfigLoadErrorMessage.c_str(),
 			Window
-		);
+		));
 
 		EngineJsonConfig =
 		{
@@ -240,10 +240,8 @@ Engine::Engine()
 	this->WindowSizeX = std::clamp(this->WindowSizeX, 1, displayBounds.w);
 	this->WindowSizeY = std::clamp(this->WindowSizeY, 1, displayBounds.h);
 
-	// This is easily the worst complaint I've had about this library,
-	// the log function *does not get called when an error retrievable by `SDL_GetError` occurs*!
-	// It's complete RUBBISH, USELESS, TRASH, BULLSHIT
-	// 09/09/2024
+	// make sure to enable the call to `SDL_LogError` in `SDL_error.c` so
+	// that this actually works!! 10/06/2025
 	SDL_SetLogOutputFunction(sdlLog, nullptr);
 
 	nlohmann::json::array_t requestedGLVersion = readFromConfiguration("OpenGLVersion", nlohmann::json{ 4, 6 });

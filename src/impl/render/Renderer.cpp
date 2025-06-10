@@ -679,5 +679,5 @@ void Renderer::SwapBuffers()
 {
 	ZoneScopedC(tracy::Color::HotPink);
 
-	SDL_GL_SwapWindow(m_Window);
+	assert(SDL_GL_SwapWindow(m_Window));
 }

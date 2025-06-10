@@ -187,12 +187,12 @@ static void launchTracy()
 
 #else
 
-	SDL_ShowSimpleMessageBox(
+	assert(SDL_ShowSimpleMessageBox(
 		SDL_MESSAGEBOX_INFORMATION,
 		"Tracy Integration",
 		"Instrumentation was disabled for this build. You need to use a build with the `TRACY_ENABLE` macro defintion.",
 		Engine::Get() ? Engine::Get()->Window : nullptr
-	);
+	));
 
 #endif
 }
@@ -275,11 +275,11 @@ static void handleInputs(double deltaTime)
 
 			int windowSizeX, windowSizeY;
 
-			SDL_GetWindowSize(nullptr, &windowSizeX, &windowSizeY);
+			assert(SDL_GetWindowSize(nullptr, &windowSizeX, &windowSizeY));
 
 			if (FirstDragFrame)
 			{
-				SDL_SetWindowMouseGrab(window, true);
+				assert(SDL_SetWindowMouseGrab(window, true));
 
 				SDL_WarpMouseInWindow(nullptr, windowSizeX / 2.f, windowSizeY / 2.f);
 
@@ -355,7 +355,7 @@ static void handleInputs(double deltaTime)
 			if (!FirstDragFrame)
 			{
 				PHX_SDL_CALL(SDL_ShowCursor);
-				SDL_SetWindowMouseGrab(window, false);
+				assert(SDL_SetWindowMouseGrab(window, false));
 
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
 
@@ -374,7 +374,7 @@ static void handleInputs(double deltaTime)
 		// `input_mouse_setlocked` Luau API 21/09/2024
 		if (EcScript::s_WindowGrabMouse && !UserInput::InputBeingSunk)
 		{
-			SDL_SetWindowMouseGrab(window, true);
+			assert(SDL_SetWindowMouseGrab(window, true));
 
 			PHX_SDL_CALL(SDL_ShowCursor);
 			ImGui::SetMouseCursor(ImGuiMouseCursor_None);
@@ -415,7 +415,7 @@ static void handleInputs(double deltaTime)
 		}
 		else
 		{
-			SDL_SetWindowMouseGrab(window, false);
+			assert(SDL_SetWindowMouseGrab(window, false));
 
 			PHX_SDL_CALL(SDL_ShowCursor);
 			ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
@@ -605,10 +605,10 @@ static void drawDeveloperUI(double DeltaTime)
 			EngineInstance->SetIsFullscreen(EngineInstance->IsFullscreen);
 
 		if (EngineInstance->VSync)
-			SDL_GL_SetSwapInterval(1);
+			assert(SDL_GL_SetSwapInterval(1));
 		else
 		{
-			SDL_GL_SetSwapInterval(0);
+			assert(SDL_GL_SetSwapInterval(0));
 
 			ImGui::InputInt("FPS limit", &EngineInstance->FpsCap, 1, 30);
 		}

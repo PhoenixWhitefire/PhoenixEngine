@@ -106,7 +106,7 @@ static void writeU32(std::string& vec, uint32_t v)
 
 static void writeF32(std::string& vec, float v)
 {
-	writeU32(vec, *(uint32_t*)&v);
+	writeU32(vec, std::bit_cast<uint32_t, float>(v));
 }
 
 static float getVersion(const std::string_view& MapFileContents)

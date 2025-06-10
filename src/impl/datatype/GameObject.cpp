@@ -3,14 +3,23 @@
 #include "datatype/GameObject.hpp"
 #include "Log.hpp"
 
+// https://stackoverflow.com/a/75891310
+struct RefHasher
+{
+	size_t operator()(const GameObjectRef& a) const
+    {
+        return a.m_TargetId;
+    }
+};
+
 static GameObject* cloneRecursive(
-	GameObject* Root,
+	GameObjectRef Root,
 	// u_m < og-child, vector < pair < clone-object-referencing-ogchild, property-referencing-ogchild > > >
-	std::unordered_map<GameObject*, std::vector<std::pair<GameObject*, std::string_view>>> OverwritesMap = {},
-	std::unordered_map<GameObject*, GameObject*> OriginalToCloneMap = {}
+	std::unordered_map<GameObjectRef, std::vector<std::pair<GameObjectRef, std::string_view>>, RefHasher> OverwritesMap = {},
+	std::unordered_map<GameObjectRef, GameObjectRef, RefHasher> OriginalToCloneMap = {}
 )
 {
-	GameObject* newObj = GameObject::Create();
+	GameObjectRef newObj = GameObject::Create();
 
 	for (const std::pair<EntityComponent, uint32_t>& pair : Root->GetComponents())
 		newObj->AddComponent(pair.first);
@@ -19,7 +28,7 @@ static GameObject* cloneRecursive(
 
 	if (overwritesIt != OverwritesMap.end())
 	{
-		for (const std::pair<GameObject*, std::string_view>& overwrite : overwritesIt->second)
+		for (const std::pair<GameObjectRef, std::string_view>& overwrite : overwritesIt->second)
 			// change the reference to the OG object to it's clone
 			overwrite.first->SetPropertyValue(overwrite.second, newObj->ToGenericValue());
 
@@ -52,7 +61,12 @@ static GameObject* cloneRecursive(
 		newObj->SetPropertyValue(it.first, rootVal);
 	}
 
+	std::vector<GameObjectRef> chrefs;
+
 	for (GameObject* ch : Root->GetChildren())
+		chrefs.emplace_back(ch);
+
+	for (GameObjectRef ch : chrefs)
 		cloneRecursive(ch, OverwritesMap, OriginalToCloneMap)->SetParent(newObj);
 
 	return newObj;

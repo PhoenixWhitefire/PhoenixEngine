@@ -124,20 +124,20 @@ public:
 					if (stream)
 					{
 						if (wasPlayRequested != sound->m_PlayRequested)
-							SDL_FlushAudioStream(stream);
+							assert(SDL_FlushAudioStream(stream));
 
 						if (sound->m_PlayRequested)
 						{
 							const AudioAsset& audio = AudioAssets[sound->SoundFile];
 
 							int len = std::min(200, static_cast<int>(audio.DataSize - sound->BytePosition));
-							SDL_PutAudioStreamData(stream, audio.Data + sound->BytePosition, len);
+							assert(SDL_PutAudioStreamData(stream, audio.Data + sound->BytePosition, len));
 							sound->BytePosition += 200;
 							
-							SDL_ResumeAudioStreamDevice(stream);
+							assert(SDL_ResumeAudioStreamDevice(stream));
 						}
 						else
-							SDL_PauseAudioStreamDevice(stream);
+							assert(SDL_PauseAudioStreamDevice(stream));
 					}
 				}
 			),
@@ -160,7 +160,8 @@ public:
 					sound->NextRequestedPosition = pos;
 					sound->Position = pos;
 
-					SDL_FlushAudioStream((SDL_AudioStream*)sound->m_AudioStream);
+					if (sound->m_AudioStream)
+						assert(SDL_FlushAudioStream((SDL_AudioStream*)sound->m_AudioStream));
 				}
 			),
 
@@ -176,6 +177,22 @@ public:
 						throw("Volume cannot be negative");
 					
 					static_cast<EcSound*>(p)->Volume = volume;
+				}
+			),
+			EC_PROP(
+				"Speed",
+				Double,
+				EC_GET_SIMPLE(EcSound, Speed),
+				[](void* p, const Reflection::GenericValue& gv)
+				{
+					float speed = static_cast<float>(gv.AsDouble());
+
+					if (speed < 0.01f)
+						throw("Speed cannot be less than 0.01");
+					if (speed > 100.f)
+						throw("Speed cannot be greater than 100");
+
+					static_cast<EcSound*>(p)->Speed = speed;
 				}
 			),
 
@@ -224,7 +241,8 @@ static void streamCallback(void* UserData, SDL_AudioStream* Stream, int Addition
 
 	EcSound* sound = static_cast<EcSound*>(Instance.GetComponent(*(uint32_t*)&UserData));
 	const AudioAsset& audio = AudioAssets[sound->SoundFile];
-	SDL_SetAudioStreamGain(Stream, sound->Volume);
+	assert(SDL_SetAudioStreamFrequencyRatio(Stream, sound->Speed));
+	assert(SDL_SetAudioStreamGain(Stream, sound->Volume));
 
 	if (sound->NextRequestedPosition != -1.f)
 	{
@@ -233,16 +251,16 @@ static void streamCallback(void* UserData, SDL_AudioStream* Stream, int Addition
 
 		sound->BytePosition = static_cast<uint32_t>(audio.Spec.freq * target);
 
-		SDL_FlushAudioStream(Stream);
+		assert(SDL_FlushAudioStream(Stream));
 	}
 
 	if (sound->BytePosition >= audio.DataSize)
 	{
 		if (sound->Looped)
-			SDL_PutAudioStreamData(Stream, audio.Data, AdditionalAmount);
+			assert(SDL_PutAudioStreamData(Stream, audio.Data, AdditionalAmount));
 		else
 		{
-			SDL_PauseAudioStreamDevice(Stream);
+			assert(SDL_PauseAudioStreamDevice(Stream));
 			sound->m_PlayRequested = false; // prevent it from resuming in `::Update`
 		}
 
@@ -252,10 +270,16 @@ static void streamCallback(void* UserData, SDL_AudioStream* Stream, int Addition
 	{
 		int len = std::min(AdditionalAmount, static_cast<int>(audio.DataSize - sound->BytePosition));
 
-		SDL_PutAudioStreamData(Stream, audio.Data + sound->BytePosition, len);
+		assert(SDL_PutAudioStreamData(Stream, audio.Data + sound->BytePosition, len));
 	}
 
-	sound->Position = (float)sound->BytePosition / (float)audio.Spec.freq;
+	uint32_t sampleSize = SDL_AUDIO_BITSIZE(audio.Spec.format) / 8;
+	uint32_t sampleCount = sound->BytePosition / sampleSize;
+	
+	assert(audio.Spec.channels > 0);
+	uint32_t sampleLen = sampleCount / audio.Spec.channels;
+
+	sound->Position = (float)sampleLen / (float)audio.Spec.freq;
 	sound->BytePosition += AdditionalAmount;
 }
 
@@ -392,21 +416,27 @@ void EcSound::Reload()
 				return;
 			}
 
-			SDL_SetAudioStreamGetCallback(stream, streamCallback, (void*)static_cast<uint64_t>(SoundEcId));
+			assert(SDL_SetAudioStreamGetCallback(stream, streamCallback, (void*)static_cast<uint64_t>(SoundEcId)));
 
 			SCOPED_LOCK(ComponentsBufferReAllocMutex);
 
 			EcSound* sound = static_cast<EcSound*>(Instance.GetComponent(SoundEcId));
 
-			sound->Length = (float)audio.DataSize / (float)audio.Spec.freq;
+			uint32_t sampleSize = SDL_AUDIO_BITSIZE(audio.Spec.format) / 8;
+			uint32_t sampleCount = audio.DataSize / sampleSize;
+
+			assert(audio.Spec.channels > 0);
+			uint32_t sampleLen = sampleCount / audio.Spec.channels;
+
+			sound->Length = (float)sampleLen / (float)audio.Spec.freq;
 			sound->BytePosition = 1;
 			sound->m_AudioStream = stream;
 			sound->FinishedLoading = true;
 
 			if (sound->m_PlayRequested)
-				SDL_ResumeAudioStreamDevice(stream);
+				assert(SDL_ResumeAudioStreamDevice(stream));
 			else
-				SDL_PauseAudioStreamDevice(stream);
+				assert(SDL_PauseAudioStreamDevice(stream));
 
 			//AudioStreamPromises[SoundEcId].set_value(true);
 		},

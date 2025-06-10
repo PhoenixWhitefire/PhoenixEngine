@@ -17,11 +17,20 @@ local lastSwitchedPerspectives = 0
 
 local SwitchToFreecamNextFrame = 0
 
-SoundStinger = GameObject.new("Sound")
+local SoundStinger = GameObject.new("Sound")
+local RareSoundStinger = GameObject.new("Sound")
+
+local TimesNormalStingerPlayed = 0
+
 SoundStinger.Name = "SoundStinger"
 SoundStinger.SoundFile = "sounds/undertaleost_ruins_stinger.wav"
 SoundStinger.Serializes = false
 SoundStinger.Parent = workspace.Level
+
+RareSoundStinger.Name = "RareSoundStinger"
+RareSoundStinger.SoundFile = "sounds/undertaleost_ruins_stingr2.wav"
+RareSoundStinger.Serializes = false
+RareSoundStinger.Parent = workspace.Level
 
 local function reset()
 	CharacterController:InitDefault()
@@ -95,8 +104,18 @@ function Update(DeltaTime)
 			bruh.LinearVelocity = Character.Transform.Forward * 100
 			bruh.PhysicsDynamics = true
 			bruh.Parent = blorbs
-			SoundStinger.Position = 0
-			SoundStinger.Playing = true
+			
+			if TimesNormalStingerPlayed == 0 then
+				RareSoundStinger.Playing = false
+				SoundStinger.Position = 0
+				SoundStinger.Playing = true
+				TimesNormalStingerPlayed += 1
+			else
+				SoundStinger.Playing = false
+				RareSoundStinger.Position = 0
+				RareSoundStinger.Playing = true
+				TimesNormalStingerPlayed = 0
+			end
 		end
 	end
 	

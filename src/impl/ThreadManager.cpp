@@ -5,18 +5,79 @@
 #include "ThreadManager.hpp"
 #include "Log.hpp"
 
+// https://stackoverflow.com/a/23899379
+#ifdef _WIN32
+#include <windows.h>
+const DWORD MS_VC_EXCEPTION=0x406D1388;
+
+#pragma pack(push,8)
+typedef struct tagTHREADNAME_INFO
+{
+   DWORD dwType; // Must be 0x1000.
+   LPCSTR szName; // Pointer to name (in user addr space).
+   DWORD dwThreadID; // Thread ID (-1=caller thread).
+   DWORD dwFlags; // Reserved for future use, must be zero.
+} THREADNAME_INFO;
+#pragma pack(pop)
+
+
+static void SetThreadName(uint32_t dwThreadID, const char* threadName)
+{
+
+  // DWORD dwThreadID = ::GetThreadId( static_cast<HANDLE>( t.native_handle() ) );
+
+   THREADNAME_INFO info;
+   info.dwType = 0x1000;
+   info.szName = threadName;
+   info.dwThreadID = dwThreadID;
+   info.dwFlags = 0;
+
+   __try
+   {
+      RaiseException( MS_VC_EXCEPTION, 0, sizeof(info)/sizeof(ULONG_PTR), (ULONG_PTR*)&info );
+   }
+   __except(EXCEPTION_EXECUTE_HANDLER)
+   {
+   }
+}
+static void SetThreadName( const char* threadName)
+{
+    SetThreadName(GetCurrentThreadId(),threadName);
+}
+
+static void SetThreadName( std::thread* thread, const char* threadName)
+{
+    DWORD threadId = ::GetThreadId( static_cast<HANDLE>( thread->native_handle() ) );
+    SetThreadName(threadId,threadName);
+}
+
+#elif defined(__linux__)
+#include <sys/prctl.h>
+static void SetThreadName( const char* threadName)
+{
+  prctl(PR_SET_NAME,threadName,0,0,0);
+}
+
+#else
+static void SetThreadName(std::thread* thread, const char* threadName)
+{
+   auto handle = thread->native_handle();
+   pthread_setname_np(handle,threadName);
+}
+#endif
+
 static ThreadManager* s_Instance;
 
 const char* s_WorkerFiberNames[] = 
 {
-	"Worker1",
-	"Worker2",
-	"Worker3",
-	"Worker4",
-	"Worker5",
-	"Worker6",
-	"Worker7",
-	"Worker8"
+	"Phx_Worker1",
+	"Phx_Worker2",
+	"Phx_Worker3",
+	"Phx_Worker4",
+	"Phx_Worker5",
+	"Phx_Worker6",
+	"Phx_Worker7",
+	"Phx_Worker8"
 };
 
 // 09/05/2025
@@ -39,6 +100,7 @@ void ThreadManager::Initialize(int NumThreadsOverride)
 			std::thread([this, i]
 			{
 				TracyFiberEnter(s_WorkerFiberNames[i]);
+				SetThreadName(s_WorkerFiberNames[i]);
 
 				while (true)
 				{

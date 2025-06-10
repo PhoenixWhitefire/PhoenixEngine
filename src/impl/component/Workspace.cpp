@@ -120,7 +120,7 @@ Vector3 EcWorkspace::ScreenPointToRay(double x, double y, float length, Vector3*
 {
 	Engine* engine = Engine::Get();
 	int winSizeX = 0, winSizeY = 0;
-	SDL_GetWindowSize(engine->Window, &winSizeX, &winSizeY);
+	assert(SDL_GetWindowSize(engine->Window, &winSizeX, &winSizeY));
 
 	// thinmatrix 27/12/2024
 	// https://www.youtube.com/watch?v=DLKN0jExRIM

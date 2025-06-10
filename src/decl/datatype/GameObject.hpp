@@ -220,7 +220,7 @@ struct GameObjectRef
 	}
 
 	GameObjectRef(const GameObjectRef& Other)
-		: m_TargetId(Other.Contained()->ObjectId)
+		: m_TargetId(Other.m_TargetId)
 	{
 		assert(!Other->IsDestructionPending);
 		assert(Other->Valid);
@@ -228,7 +228,7 @@ struct GameObjectRef
 		Contained()->IncrementHardRefs();
 	}
 	GameObjectRef(const GameObjectRef&& Other)
-		: m_TargetId(Other.Contained()->ObjectId)
+		: m_TargetId(Other.m_TargetId)
 	{
 		assert(!Other->IsDestructionPending);
 		assert(Other->Valid);
@@ -238,8 +238,13 @@ struct GameObjectRef
 
 	~GameObjectRef()
 	{
-		if (m_TargetId != PHX_GAMEOBJECT_NULL_ID)
-			Contained()->DecrementHardRefs();
+		GameObject* g = GameObject::GetObjectById(m_TargetId);
+
+		// avoid being as bothersome as `::Contained`,
+		// if the object got deleted earlier don't complain
+		// since we were going to delete it anyway
+		if (m_TargetId != PHX_GAMEOBJECT_NULL_ID && g)
+			g->DecrementHardRefs();
 		m_TargetId = PHX_GAMEOBJECT_NULL_ID;
 	}
 
@@ -264,7 +269,7 @@ struct GameObjectRef
 
 	bool operator == (const GameObjectRef& them) const
 	{
-		return Contained() == them.Contained();
+		return m_TargetId == them.m_TargetId;
 	}
 
 	GameObject* operator -> () const

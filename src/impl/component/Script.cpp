@@ -777,8 +777,12 @@ static void resumeYieldedCoroutines()
 {
 	ZoneScopedC(tracy::Color::LightSkyBlue);
 
-	for (auto it = ScriptEngine::s_YieldedCoroutines.begin(); it < ScriptEngine::s_YieldedCoroutines.end(); it += 1)
+	size_t size = ScriptEngine::s_YieldedCoroutines.size();
+
+	for (size_t i = 0; i < size; i++)
 	{
+		auto it = &ScriptEngine::s_YieldedCoroutines[i];
+
 		lua_State* coroutine = it->Coroutine;
 		int corRef = it->CoroutineReference;
 
@@ -815,7 +819,17 @@ static void resumeYieldedCoroutines()
 
 			lua_unref(lua_mainthread(coroutine), corRef);
 
-			it = ScriptEngine::s_YieldedCoroutines.erase(it);
+			ScriptEngine::s_YieldedCoroutines.erase(ScriptEngine::s_YieldedCoroutines.begin() + i);
+		}
+
+		// https://stackoverflow.com/a/17956637
+		// asan was not happy about the iterator from
+		// `::erase` for some reason?? TODO
+		// 10/06/2025
+		if (size != ScriptEngine::s_YieldedCoroutines.size())
+		{
+			i--;
+			size = ScriptEngine::s_YieldedCoroutines.size();
 		}
 	}
 }
