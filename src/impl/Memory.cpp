@@ -26,6 +26,8 @@ struct AllocHeader
 	uint8_t Check = 222; // you probably do not know what this in reference to
 };
 
+static std::array<size_t, static_cast<size_t>(Memory::Category::__count)> s_ActivityWip{ 0 };
+
 namespace Memory
 {
 	void* GetPointerInfo(void* Pointer, size_t* Size, uint8_t* Category)
@@ -65,6 +67,7 @@ namespace Memory
 #endif
 
 			Counters[memIndex] += Size;
+			s_ActivityWip[memIndex] += Size;
 
 			AllocHeader header{ static_cast<uint32_t>(Size), memIndex };
 			memcpy(ptr, &header, sizeof(AllocHeader));
@@ -113,6 +116,7 @@ namespace Memory
 #endif
 			Counters[memIndex] -= prevSize;
 			Counters[memIndex] += Size;
+			s_ActivityWip[memIndex] += prevSize + Size;
 			
 			*((AllocHeader*)ptr) = AllocHeader{ static_cast<uint32_t>(Size), memIndex };
 
@@ -144,19 +148,14 @@ namespace Memory
 
 		assert(Counters[memcat] > 0);
 		Counters[memcat] -= size;
+		s_ActivityWip[memcat] += size;
 
 		free(Pointer);
 	}
+
+	void FrameFinish()
+	{
+		Activity = s_ActivityWip;
+		s_ActivityWip.fill(0.f);
+	}
 };
-
-template <class T>
-T* Memory::Allocator<T>::allocate(size_t n)
-{
-	return (T*)Alloc(n, Category::Default);
-}
-
-template <class T>
-void Memory::Allocator<T>::deallocate(T* p, size_t n)
-{
-	Free(p);
-}

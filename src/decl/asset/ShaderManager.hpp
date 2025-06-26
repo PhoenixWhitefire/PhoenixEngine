@@ -4,6 +4,7 @@
 
 #include "asset/TextureManager.hpp"
 #include "Reflection.hpp"
+#include "Memory.hpp"
 
 class ShaderProgram
 {
@@ -29,13 +30,13 @@ public:
 	// back to the default
 	void ApplyDefaultUniforms();
 
-	std::string Name;
-	std::string VertexShader;
-	std::string FragmentShader;
-	std::string GeometryShader = "<NOT_SPECIFIED>";
+	Memory::string<MEMCAT(Shader)> Name;
+	Memory::string<MEMCAT(Shader)> VertexShader;
+	Memory::string<MEMCAT(Shader)> FragmentShader;
+	Memory::string<MEMCAT(Shader)> GeometryShader = "<NOT_SPECIFIED>";
 
-	std::unordered_map<std::string, Reflection::GenericValue> DefaultUniforms;
-	std::string UniformsAncestor;
+	Memory::unordered_map<std::string, Reflection::GenericValue, MEMCAT(Shader)> DefaultUniforms;
+	Memory::string<MEMCAT(Shader)> UniformsAncestor;
 
 private:
 	bool m_CheckForErrors(uint32_t Object, const char* Type);
@@ -43,7 +44,7 @@ private:
 
 	uint32_t m_GpuId = UINT32_MAX;
 
-	std::unordered_map<std::string, Reflection::GenericValue> m_PendingUniforms{};
+	Memory::unordered_map<std::string, Reflection::GenericValue, MEMCAT(Shader)> m_PendingUniforms{};
 };
 
 class ShaderManager
@@ -57,7 +58,7 @@ public:
 
 	static ShaderManager* Get();
 
-	std::vector<ShaderProgram>& GetLoadedShaders();
+	Memory::vector<ShaderProgram, MEMCAT(Shader)>& GetLoadedShaders();
 
 	uint32_t LoadFromPath(const std::string_view&);
 
@@ -67,6 +68,6 @@ public:
 	void ReloadAll();
 
 private:
-	std::vector<ShaderProgram> m_Shaders;
-	std::unordered_map<std::string, uint32_t> s_StringToShaderId;
+	Memory::vector<ShaderProgram, MEMCAT(Shader)> m_Shaders;
+	Memory::unordered_map<Memory::string<MEMCAT(Shader)>, uint32_t, MEMCAT(Shader)> s_StringToShaderId;
 };

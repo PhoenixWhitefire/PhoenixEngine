@@ -33,10 +33,9 @@ void RenderMaterial::Reload()
 		}
 		catch (const nlohmann::json::parse_error& e)
 		{
-			std::string errmsg = e.what();
 			Log::Error(std::format(
 				"Parse error trying to load material {}: {}",
-				this->Name, errmsg
+				this->Name, e.what()
 			));
 		}
 	}
@@ -96,11 +95,9 @@ void RenderMaterial::Reload()
 
 		default:
 		{
-			const char* typeName = value.type_name();
-
 			throw(std::format(
 				"Material '{}' tried to specify Uniform '{}', but it had unsupported type '{}'",
-				this->Name, uniformName, typeName
+				this->Name, uniformName, value.type_name()
 			));
 
 			break;
@@ -186,9 +183,6 @@ MaterialManager* MaterialManager::Get()
 
 uint32_t MaterialManager::LoadFromPath(const std::string_view& Name)
 {
-	ZoneScoped;
-	ZoneTextF("%s", Name.data());
-
 	std::string namedyn{ Name };
 
 	auto it = m_StringToMaterialId.find(namedyn);

@@ -119,7 +119,7 @@ public:
 	static void* ComponentHandleToPointer(const std::pair<EntityComponent, uint32_t>& Handle);
 
 	static inline uint32_t s_DataModel = PHX_GAMEOBJECT_NULL_ID;
-	static inline std::vector<GameObject> s_WorldArray{};
+	static inline Memory::vector<GameObject, MEMCAT(GameObject)> s_WorldArray{};
 	static inline std::array<BaseComponentManager*, (size_t)EntityComponent::__count> s_ComponentManagers{};
 
 	uint32_t AddComponent(EntityComponent Type);
@@ -194,11 +194,11 @@ public:
 private:
 	static void s_AddObjectApi();
 
-	std::vector<uint32_t> m_Children;
+	Memory::vector<uint32_t, MEMCAT(GameObject)> m_Children;
 	// component type and ID
-	std::vector<std::pair<EntityComponent, uint32_t>> m_Components;
+	Memory::vector<std::pair<EntityComponent, uint32_t>, MEMCAT(GameObject)> m_Components;
 	Reflection::Api m_ComponentApis{};
-	std::unordered_map<std::string_view, std::pair<EntityComponent, uint32_t>> m_MemberToComponentMap;
+	Memory::unordered_map<std::string_view, std::pair<EntityComponent, uint32_t>, MEMCAT(GameObject)> m_MemberToComponentMap;
 
 	static inline Reflection::Api s_Api{};
 

@@ -20,13 +20,10 @@ Color::Color(const Reflection::GenericValue& gv)
 	: R(0.f), G(0.f), B(0.f)
 {
 	if (gv.Type != Reflection::ValueType::Color)
-	{
-		const std::string_view& typeName = Reflection::TypeAsString(gv.Type);
 		throw(std::format(
 			"Attempted to construct Color, but GenericValue was {} instead",
-			typeName
+			Reflection::TypeAsString(gv.Type)
 		));
-	}
 
 	if (!gv.Value)
 		throw("Attempted to construct Color, but GenericValue.Value was NULL");

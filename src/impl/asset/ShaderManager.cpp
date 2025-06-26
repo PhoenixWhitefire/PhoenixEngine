@@ -7,7 +7,6 @@
 #include "asset/ShaderManager.hpp"
 
 #include "asset/TextureManager.hpp"
-#include "datatype/Vector3.hpp"
 #include "datatype/Color.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
@@ -69,12 +68,12 @@ void ShaderProgram::Activate()
 			}
 			case Reflection::ValueType::Vector3:
 			{
-				Vector3 vec = Vector3(value);
+				glm::vec3& vec = value.AsVector3();
 				glUniform3f(
 					uniformLoc,
-					static_cast<float>(vec.X),
-					static_cast<float>(vec.Y),
-					static_cast<float>(vec.Z)
+					vec.x,
+					vec.y,
+					vec.z
 				);
 				break;
 			}
@@ -98,10 +97,9 @@ void ShaderProgram::Activate()
 
 			[[unlikely]] default:
 			{
-				const std::string_view& typeName = Reflection::TypeAsString(value.Type);
 				Log::Warning(std::format(
 					"Unrecognized uniform type '{}' trying to set '{}' for program '{}'",
-					typeName, uniformName, this->Name
+					Reflection::TypeAsString(value.Type), uniformName, this->Name
 				));
 			}
 			}
@@ -298,12 +296,11 @@ void ShaderProgram::Reload()
 
 		[[unlikely] ]default:
 		{
-			const char* typeName = value.type_name();
-
 			Log::Warning(std::format(
 				"Shader Program '{}' tried to specify Uniform '{}', but it had unsupported type '{}'",
-				this->Name, uniformName, typeName
+				this->Name, uniformName, value.type_name()
 			));
+			
 			break;
 		}
 		}
@@ -498,9 +495,6 @@ std::vector<ShaderProgram>& ShaderManager::GetLoadedShaders()
 
 uint32_t ShaderManager::LoadFromPath(const std::string_view& ProgramName)
 {
-	ZoneScoped;
-	ZoneTextF("%s", ProgramName.data());
-
 	auto it = s_StringToShaderId.find(std::string(ProgramName));
 
 	if (it != s_StringToShaderId.end())

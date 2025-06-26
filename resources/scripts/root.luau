@@ -5,7 +5,7 @@ local Editor = function() end--require("scripts/modules/Editor.luau")
 
 local ModelImporterScale = 1
 
-local ScriptExecutionFile = "scripts/shdgraphtest.luau"
+local ScriptExecutionFile = "scripts/mc.luau"
 
 local DefaultSubLevel = "scenes/dev_fmtv2.hxscene"
 

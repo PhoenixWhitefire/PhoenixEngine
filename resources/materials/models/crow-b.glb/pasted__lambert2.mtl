@@ -1,14 +1,14 @@
 PHNXENGI
 #Asset Material
-#Date 11-1-2025
+#Date 10-6-2025
 
 {
-  "ColorMap": "textures/models/crow-b.glb/diffuse.png",
-  "EmissionMap": "textures/models/crow-b.glb/diffuse.png",
+  "ColorMap": "resources/textures/models/crow-b.glb/diffuse.png",
   "HasTranslucency": false,
-  "MetallicRoughnessMap": "textures/black.png",
+  "MetallicRoughnessMap": "resources/textures/white.png",
+  "PolygonMode": 0,
   "Shader": "worldUber",
   "Uniforms": null,
-  "specExponent": 16.0,
-  "specMultiply": 0.0
+  "specExponent": 8.0,
+  "specMultiply": 0.5
 }

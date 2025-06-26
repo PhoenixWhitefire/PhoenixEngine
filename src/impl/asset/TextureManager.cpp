@@ -118,6 +118,7 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 			"Invalid ImageNumColorChannels (was '{}') for '{}'!",
 			texture.NumColorChannels, texture.ImagePath
 		));
+		
 		break;
 	}
 
@@ -367,9 +368,6 @@ uint32_t TextureManager::Assign(const Texture& texture, const std::string& name)
 
 uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool ShouldLoadAsync, bool DoBilinearSmoothing)
 {
-	ZoneScoped;
-	ZoneTextF("%s", Path.c_str());
-
 	std::string ResDir = EngineJsonConfig["ResourcesDirectory"];
 	std::string ActualPath = FileRW::TryMakePathCwdRelative(Path);
 

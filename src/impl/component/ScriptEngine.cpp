@@ -16,7 +16,6 @@
 #include "component/Mesh.hpp"
 
 #include "datatype/GameObject.hpp"
-#include "datatype/Vector3.hpp"
 #include "datatype/Color.hpp"
 #include "asset/TextureManager.hpp"
 #include "asset/MeshProvider.hpp"
@@ -45,7 +44,8 @@ const std::unordered_map<Reflection::ValueType, lua_Type> ScriptEngine::Reflecte
 		{ Reflection::ValueType::Integer,     lua_Type::LUA_TNUMBER    },
 		{ Reflection::ValueType::Double,      lua_Type::LUA_TNUMBER    },
 		{ Reflection::ValueType::String,      lua_Type::LUA_TSTRING    },
-		{ Reflection::ValueType::Vector3,       lua_Type::LUA_TVECTOR  },
+		{ Reflection::ValueType::Vector2,     lua_Type::LUA_TTABLE     },
+		{ Reflection::ValueType::Vector3,     lua_Type::LUA_TVECTOR    },
 
 		{ Reflection::ValueType::Color,       lua_Type::LUA_TUSERDATA  },
 		{ Reflection::ValueType::Matrix,      lua_Type::LUA_TUSERDATA  },
@@ -56,14 +56,14 @@ const std::unordered_map<Reflection::ValueType, lua_Type> ScriptEngine::Reflecte
 		{ Reflection::ValueType::Map,         lua_Type::LUA_TTABLE     }
 };
 
-static void pushVector3(lua_State* L, const Vector3& vec)
+static void pushVector3(lua_State* L, const glm::vec3& vec)
 {
-	lua_pushvector(L, static_cast<float>(vec.X), static_cast<float>(vec.Y), static_cast<float>(vec.Z));
+	lua_pushvector(L, vec.x, vec.y, vec.z);
 }
 
 static void pushColor(lua_State* L, const Color& col)
 {
-	void* ptr = lua_newuserdata(L, sizeof(Vector3));
+	void* ptr = lua_newuserdata(L, sizeof(Color));
 	*(Color*)ptr = col;
 
 	luaL_getmetatable(L, "Color");
@@ -253,7 +253,7 @@ Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int St
 	}
 	case LUA_TVECTOR:
 	{
-		return Vector3(glm::make_vec3(luaL_checkvector(L, StackIndex))).ToGenericValue();
+		return glm::make_vec3(luaL_checkvector(L, StackIndex));
 	}
 	case LUA_TUSERDATA:
 	{
@@ -279,10 +279,7 @@ Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int St
 			return gv;
 		}
 		else
-			luaL_error(L, "%s", std::format(
-				"Couldn't convert a '{}' userdata to a GenericValue (unrecognized)",
-				tname
-			).c_str());
+			luaL_error(L, "Couldn't convert a '%s' userdata to a GenericValue (unrecognized)", tname);
 	}
 	case LUA_TTABLE:
 	{
@@ -306,16 +303,21 @@ Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int St
 	default:
 	{
 		const char* tname = luaL_typename(L, StackIndex);
-		luaL_error(L, "%s", std::format(
-			"Could not convert type '{}' to a GenericValue (no conversion case)",
-			tname
-		).c_str());
+		luaL_error(L, "Could not convert type '%s' to a GenericValue (no conversion case)", tname);
 	}
 	}
 }
 
 void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericValue& gv)
 {
+	if (!lua_checkstack(L, 1))
+		luaL_errorL(
+			L,
+			"Not enough stack space to push Generic Value '%s' (a %s)",
+			gv.ToString().c_str(),
+			Reflection::TypeAsString(gv.Type).data()
+		);
+
 	switch (gv.Type)
 	{
 	case Reflection::ValueType::Null:
@@ -345,7 +347,7 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 	}
 	case Reflection::ValueType::Vector3:
 	{
-		pushVector3(L, gv);
+		pushVector3(L, gv.AsVector3());
 		break;
 	}
 	case Reflection::ValueType::Color:
@@ -367,7 +369,7 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 	{
 		lua_newtable(L);
 
-		std::vector<Reflection::GenericValue> array = gv.AsArray();
+		std::span<Reflection::GenericValue> array = gv.AsArray();
 
 		for (int index = 0; static_cast<size_t>(index) < array.size(); index++)
 		{
@@ -380,7 +382,7 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 	}
 	case Reflection::ValueType::Map:
 	{
-		std::vector<Reflection::GenericValue> array = gv.AsArray();
+		std::span<Reflection::GenericValue> array = gv.AsArray();
 
 		if (array.size() % 2 != 0)
 			throw("GenericValue type was Map, but it does not have an even number of elements!");
@@ -400,10 +402,7 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 	default:
 	{
 		const std::string_view& typeName = Reflection::TypeAsString(gv.Type);
-		luaL_error(L, "%s", std::format(
-			"Could not provide Luau the GenericValue with type {}",
-			typeName
-		).c_str());
+		luaL_error(L, "Cannot reflect values of type '%s'", typeName.data());
 	}
 	}
 }
@@ -472,18 +471,17 @@ int ScriptEngine::L::HandleMethodCall(
 		else
 			argsString.clear();
 
-		luaL_error(L, "%s", std::format(
-			"Function expects at least {} arguments, got {} instead{}",
-			numParams, numArgs, argsString
-		).c_str());
+		luaL_error(L,
+			"Function expects at least %i arguments, got %i instead%s", 
+			numParams, numArgs, argsString.c_str()
+		);
 
 		return 0;
 	}
 	else if (numArgs > numParams)
 	{
-		int numExtra = numArgs - numParams;
 		Log::Warning(std::format("Function received {} more arguments than necessary",
-			numExtra
+			numArgs - numParams
 		));
 	}
 
@@ -505,8 +503,8 @@ int ScriptEngine::L::HandleMethodCall(
 
 		if (expectedLuaTypeIt == ScriptEngine::ReflectedTypeLuaEquivalent.end())
 			throw(std::format(
-				"Couldn't find the equivalent of a Reflection::ValueType::{} in Lua",
-				Reflection::TypeAsString(paramType)
+				"Cannot verify that argument %i should be a %s",
+				index + 1, Reflection::TypeAsString(paramType).data()
 			));
 
 		int expectedLuaType = (int)expectedLuaTypeIt->second;
@@ -518,13 +516,13 @@ int ScriptEngine::L::HandleMethodCall(
 			const char* actualTypeName = luaL_typename(L, argStackIndex);
 			const char* providedValue = luaL_tolstring(L, argStackIndex, NULL);
 
-			luaL_error(L, "%s", std::format(
-				"Argument {} expected to be of type {}, but was '{}' ({}) instead",
+			luaL_error(L,
+				"Argument %i expected to be of type %s, but was '%s' (%s) instead",
 				index + 1,
 				expectedName,
 				providedValue,
 				actualTypeName
-			).c_str());
+			);
 
 			return 0;
 		}
@@ -625,7 +623,7 @@ static void fdCallback(void*, const char* const* FileList, int)
 	IsFdInProgress = false;
 }
 
-std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunctions =
+std::vector<std::pair<std::string_view, lua_CFunction>> ScriptEngine::L::GlobalFunctions =
 {
 	{
 	"matrix_getv",
@@ -851,7 +849,7 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 				lua_pushnumber(L, v.Paint.w);
 				lua_setfield(L, -2, "A");
 
-				lua_setfield(L, -3, "Paint");
+				lua_setfield(L, -2, "Paint");
 
 				lua_newtable(L);
 
@@ -900,13 +898,14 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 			while (lua_next(L, -2) != 0)
 			{
 				lua_getfield(L, -1, "Position");
-				glm::vec3 position = Vector3(ScriptEngine::L::LuaValueToGeneric(L));
+				glm::vec3 position = ScriptEngine::L::LuaValueToGeneric(L).AsVector3();
 
 				lua_getfield(L, -2, "Normal");
-				glm::vec3 normal = Vector3(ScriptEngine::L::LuaValueToGeneric(L));
+				glm::vec3 normal = ScriptEngine::L::LuaValueToGeneric(L).AsVector3();
 
 				lua_getfield(L, -3, "Paint");
-				std::vector<Reflection::GenericValue> paintgv = ScriptEngine::L::LuaValueToGeneric(L).AsArray();
+				Reflection::GenericValue paintVal = ScriptEngine::L::LuaValueToGeneric(L);
+				std::span<Reflection::GenericValue> paintgv = paintVal.AsArray();
 				glm::vec4 paint{ paintgv[0].AsDouble(), paintgv[1].AsDouble(), paintgv[2].AsDouble(), paintgv[3].AsDouble() };
 				
 				lua_getfield(L, -4, "UV");
@@ -941,11 +940,7 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 			}
 
 			MeshProvider* meshProvider = MeshProvider::Get();
-			meshProvider->Assign(mesh, meshName);
-
-			// Informs the Renderer the mesh doesn't exist on the GPU on it's own
-			// and must be uploaded when it's rendered
-			meshProvider->GetMeshResource(meshProvider->LoadFromPath(meshName)).GpuId = UINT32_MAX;
+			meshProvider->Assign(mesh, meshName, true);
 
 			return 0;
 		}
@@ -974,9 +969,11 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 			if (!workspace)
 				luaL_error(L, "A Workspace was not found within the DataModel");
 
-			glm::vec3 origin = Vector3(LuaValueToGeneric(L, -3));
-			glm::vec3 vector = Vector3(LuaValueToGeneric(L, -2));
-			std::vector<Reflection::GenericValue> providedIgnoreList = LuaValueToGeneric(L, -1).AsArray();
+			glm::vec3 origin = LuaValueToGeneric(L, -3).AsVector3();
+			glm::vec3 vector = LuaValueToGeneric(L, -2).AsVector3();
+
+			Reflection::GenericValue ignoreListVal = LuaValueToGeneric(L, -1);
+			std::span<Reflection::GenericValue> providedIgnoreList = ignoreListVal.AsArray();
 
 			std::vector<GameObject*> ignoreList;
 			for (const Reflection::GenericValue& gv : providedIgnoreList)
@@ -1023,12 +1020,12 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 				ScriptEngine::L::PushGameObject(L, hitObject);
 				lua_setfield(L, -2, "Object");
 
-				Reflection::GenericValue posg = Vector3(result.Vector).ToGenericValue();
+				Reflection::GenericValue posg{ result.Vector };
 
 				ScriptEngine::L::PushGenericValue(L, posg);
 				lua_setfield(L, -2, "Position");
 
-				Reflection::GenericValue normalg = Vector3(result.Normal).ToGenericValue();
+				Reflection::GenericValue normalg{ result.Normal };
 
 				ScriptEngine::L::PushGenericValue(L, normalg);
 				lua_setfield(L, -2, "Normal");
@@ -1049,9 +1046,11 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 			if (!workspace)
 				luaL_error(L, "A Workspace was not found within the DataModel");
 
-			glm::vec3 apos = Vector3(LuaValueToGeneric(L, -3));
-			glm::vec3 asize = Vector3(LuaValueToGeneric(L, -2));
-			std::vector<Reflection::GenericValue> providedIgnoreList = LuaValueToGeneric(L, -1).AsArray();
+			glm::vec3 apos = LuaValueToGeneric(L, -3).AsVector3();
+			glm::vec3 asize = LuaValueToGeneric(L, -2).AsVector3();
+
+			Reflection::GenericValue ignoreListVal = LuaValueToGeneric(L, -1);
+			std::span<Reflection::GenericValue> providedIgnoreList = ignoreListVal.AsArray();
 
 			std::vector<GameObject*> ignoreList;
 			for (const Reflection::GenericValue& gv : providedIgnoreList)
@@ -1098,12 +1097,12 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 				ScriptEngine::L::PushGameObject(L, hitObject);
 				lua_setfield(L, -2, "Object");
 
-				Reflection::GenericValue posg = Vector3(result.Vector).ToGenericValue();
+				Reflection::GenericValue posg = result.Vector;
 
 				ScriptEngine::L::PushGenericValue(L, posg);
 				lua_setfield(L, -2, "Position");
 
-				Reflection::GenericValue normalg = Vector3(result.Normal).ToGenericValue();
+				Reflection::GenericValue normalg = result.Normal;
 
 				ScriptEngine::L::PushGenericValue(L, normalg);
 				lua_setfield(L, -2, "Normal");
@@ -1124,9 +1123,11 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 			if (!workspace)
 				luaL_error(L, "A Workspace was not found within the DataModel");
 
-			glm::vec3 apos = Vector3(LuaValueToGeneric(L, -3));
-			glm::vec3 asize = Vector3(LuaValueToGeneric(L, -2));
-			std::vector<Reflection::GenericValue> providedIgnoreList = LuaValueToGeneric(L, -1).AsArray();
+			glm::vec3 apos = LuaValueToGeneric(L, -3).AsVector3();
+			glm::vec3 asize = LuaValueToGeneric(L, -2).AsVector3();
+
+			Reflection::GenericValue ignoreListVal = LuaValueToGeneric(L, -1);
+			std::span<Reflection::GenericValue> providedIgnoreList = ignoreListVal.AsArray();
 
 			std::vector<GameObject*> ignoreList;
 			for (const Reflection::GenericValue& gv : providedIgnoreList)
@@ -1208,7 +1209,7 @@ std::unordered_map<std::string_view, lua_CFunction> ScriptEngine::L::GlobalFunct
 			Reflection::GenericValue rootNodesGv = ScriptEngine::L::LuaValueToGeneric(L, -2);
 			const char* path = luaL_checkstring(L, 2);
 
-			std::vector<Reflection::GenericValue> rootNodesArray = rootNodesGv.AsArray();
+			std::span<Reflection::GenericValue> rootNodesArray = rootNodesGv.AsArray();
 			std::vector<GameObject*> rootNodes;
 
 			for (const Reflection::GenericValue& gv : rootNodesArray)

@@ -321,14 +321,10 @@ GameObject* GameObject::FromGenericValue(const Reflection::GenericValue& gv)
 		return nullptr;
 
 	if (gv.Type != Reflection::ValueType::GameObject)
-	{
-		const std::string_view& typeName = Reflection::TypeAsString(gv.Type);
-
 		throw(std::format(
 			"Tried to GameObject::FromGenericValue, but GenericValue had Type '{}' instead",
-			typeName
+			Reflection::TypeAsString(gv.Type)
 		));
-	}
 
 	return GameObject::GetObjectById(static_cast<uint32_t>((int64_t)gv.Value));
 }

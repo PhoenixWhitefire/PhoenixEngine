@@ -16,16 +16,13 @@
 */
 #define PHX_SDL_CALL(func, ...)                                  \
 {                                                                \
-	bool success = func(__VA_ARGS__);                             \
+	bool success = func(__VA_ARGS__);                            \
 	std::string funcName = #func;                                \
 	if (!success)                                                \
-	{                                                            \
-		const char* errMessage = SDL_GetError();                 \
 		throw(std::format(                                       \
-			"Error in {}:\nMessage: {}",                         \
-			funcName, errMessage                                 \
+			"Error in " #func ":\nMessage: {}",                  \
+			SDL_GetError()                                       \
 		));                                                      \
-	}                                                            \
 }                                                                \
 
 class Renderer
@@ -54,7 +51,7 @@ public:
 	void DrawMesh(
 		const Mesh& Object,
 		ShaderProgram& Shader,
-		const Vector3& Size,
+		const glm::vec3& Size,
 		const glm::mat4& Transform = glm::mat4(1.f),
 		FaceCullingMode Culling = FaceCullingMode::BackFace,
 		int32_t NumInstances = 1

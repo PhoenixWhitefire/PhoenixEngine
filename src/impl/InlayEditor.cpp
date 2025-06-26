@@ -56,9 +56,9 @@ static Scene MtlPreviewScene =
 		{
 			0u,
 			glm::mat4(1.f),
-			glm::vec3(1.f, 1.f, 1.f),
+			glm::vec3(1.f),
 			0u,
-			Color(1.f, 1.f, 1.f),
+			glm::vec3(1.f),
 			0.f,
 			0.f,
 			0.f,
@@ -70,8 +70,8 @@ static Scene MtlPreviewScene =
 		{
 			LightType::Directional,
 			false,
-			Vector3(0.57f, 0.57f, 0.57f),
-			Color(1.f, 1.f, 1.f)
+			glm::vec3{ 0.57f, 0.57f, 0.57f },
+			glm::vec3{ 1.f, 1.f, 1.f }
 		}
 	},
 	{} // used shaders
@@ -978,52 +978,62 @@ static GameObject* ObjectInsertionTarget = nullptr;
 static bool IsPickingObject = false;
 static std::vector<uint32_t> PickerTargets;
 static std::string PickerTargetPropName;
-static std::vector<std::string_view> ContextActionsForSelection;
 
-static std::unordered_map<std::string_view, std::function<void(void)>> ActionHandlers =
+enum class ContextMenuAction : uint8_t
 {
-	{
-		"Duplicate",
-		[]()
-		{
-			std::vector<uint32_t> newSelections;
-			newSelections.reserve(Selections.size());
-			
-			for (uint32_t selId : Selections)
-				if (GameObject* g = GameObject::GetObjectById(selId))
-					newSelections.push_back(g->Duplicate()->ObjectId);
+	Duplicate = 0,
+	Delete,
+	EditScript,
+	ReloadScript,
 
-			Selections = newSelections;
-		}
-	},
-	{
-		"Delete",
-		[]()
-		{
-			for (uint32_t selId : Selections)
-				if (GameObject* g = GameObject::GetObjectById(selId))
-					g->Destroy();
+	__sectionSeparator
+};
 
-			Selections.clear();
-		}
-	},
+static std::vector<ContextMenuAction> ContextActionsForSelection;
+
+static const char* ContextMenuActionStrings[] =
+{
+	"Duplicate",
+	"Delete",
+	"Edit",
+	"Reload"
+};
+
+static std::function<void(void)> ContextMenuActionHandlers[] =
+{
+	[]()
 	{
-		"Edit",
-		[]()
-		{
-			for (uint32_t selId : Selections)
-				if (EcScript* s = GameObject::GetObjectById(selId)->GetComponent<EcScript>())
-					invokeTextEditor(s->SourceFile);
-		}
+		std::vector<uint32_t> newSelections;
+		newSelections.reserve(Selections.size());
+		
+		for (uint32_t selId : Selections)
+			if (GameObject* g = GameObject::GetObjectById(selId))
+				newSelections.push_back(g->Duplicate()->ObjectId);
+	
+		Selections = newSelections;
 	},
+
+	[]()
 	{
-		"Reload",
-		[]()
-		{
-			for (uint32_t selId : Selections)
-				if (EcScript* s = GameObject::GetObjectById(selId)->GetComponent<EcScript>())
-					s->Reload();
-		}
+		for (uint32_t selId : Selections)
+			if (GameObject* g = GameObject::GetObjectById(selId))
+				g->Destroy();
+				
+		Selections.clear();
+	},
+
+	[]()
+	{
+		for (uint32_t selId : Selections)
+			if (EcScript* s = GameObject::GetObjectById(selId)->GetComponent<EcScript>())
+				invokeTextEditor(s->SourceFile);
+	},
+
+	[]()
+	{
+		for (uint32_t selId : Selections)
+			if (EcScript* s = GameObject::GetObjectById(selId)->GetComponent<EcScript>())
+				s->Reload();
 	}
 };
 
@@ -1032,13 +1042,10 @@ static bool isInSelections(GameObject* g)
 	return std::find(Selections.begin(), Selections.end(), g->ObjectId) != Selections.end();
 }
 
-static std::vector<std::string_view> getPossibleActionsForSelections()
+static std::vector<ContextMenuAction> getPossibleActionsForSelections()
 {
-	std::vector<std::string_view> actions =
-	{
-		"Duplicate",
-		"Delete"
-	};
+	std::vector<ContextMenuAction> actions;
+	actions.reserve(4);
 
 	bool gotScript = false;
 
@@ -1049,13 +1056,16 @@ static std::vector<std::string_view> getPossibleActionsForSelections()
 		if (!gotScript)
 			if (g->GetComponent<EcScript>())
 			{
-				actions.push_back("$Script");
-				actions.push_back("Edit");
-				actions.push_back("Reload");
+				actions.push_back(ContextMenuAction::EditScript);
+				actions.push_back(ContextMenuAction::ReloadScript);
+				actions.push_back(ContextMenuAction::__sectionSeparator);
 
 				break;
 			}
 	}
+
+	actions.push_back(ContextMenuAction::Duplicate);
+	actions.push_back(ContextMenuAction::Delete);
 
 	return actions;
 }
@@ -1296,6 +1306,17 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 		onTreeItemClicked(nodeClicked);
 }
 
+static bool resetConflictedProperty(const char* PropName, char* Buf = nullptr)
+{
+	char dbuf[2] = { 0 };
+	Buf = Buf ? Buf : dbuf;
+
+	bool reset = ImGui::InputText(PropName, Buf, 1);
+	ImGui::SetItemTooltip("Start typing here to reset this conflicting property to a default");
+
+	return reset;
+}
+
 void InlayEditor::UpdateAndRender(double DeltaTime)
 {
 	ZoneScopedC(tracy::Color::DarkSeaGreen);
@@ -1340,12 +1361,12 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 	{
 		ImGui::SeparatorText("Actions");
 
-		for (const std::string_view& Action : ContextActionsForSelection)
-			if (Action[0] == '$')
-				ImGui::SeparatorText(Action.substr(1).data());
+		for (ContextMenuAction action : ContextActionsForSelection)
+			if (action == ContextMenuAction::__sectionSeparator)
+				ImGui::Separator();
 
-			else if (ImGui::MenuItem(Action.data()))
-				ActionHandlers[Action]();
+			else if (ImGui::MenuItem(ContextMenuActionStrings[(uint8_t)action]))
+				ContextMenuActionHandlers[(uint8_t)action]();
 
 		ImGui::EndPopup();
 	}
@@ -1503,68 +1524,65 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 
 			case Reflection::ValueType::Boolean:
 			{
-				bool b = !doConflict ? newVal.AsBoolean() : false;
-
-				ImGui::Checkbox(propNameCStr, &b);
-
 				if (doConflict)
-					ImGui::SetItemTooltip("Checking this box will set this member as TRUE for all selected objects");
-
-				newVal = b;
+				{
+					if (resetConflictedProperty(propNameCStr))
+						newVal = false;
+				}
+				else
+					ImGui::Checkbox(propNameCStr, (bool*)&newVal.Value);
 
 				break;
 			}
 
 			case Reflection::ValueType::Double:
 			{
-				if (!doConflict)
+				if (doConflict)
 				{
-					double d = newVal.AsDouble();
-
-					ImGui::InputDouble(propNameCStr, &d);
-					newVal = d;
-				}
-				else
-				{
-					char buf[] = { '<', 'C', 'O', 'N', 'F', 'L', 'I', 'C', 'T', '>' , 0 };
-
-					if (ImGui::InputText(propNameCStr, buf, sizeof(buf)))
+					if (char buf[2] = {0}; resetConflictedProperty(propNameCStr, buf))
 						newVal = atof(buf);
 				}
+				else
+					ImGui::InputDouble(propNameCStr, (double*)&newVal.Value);
 
 				break;
 			}
 
 			case Reflection::ValueType::Integer:
 			{
-				if (!doConflict)
+				if (doConflict)
 				{
-					// TODO BIG BAD HACK HACK HACK
-					// stoobid Dear ImGui :'(
-					// only allows 32-bit integer input
-					// 01/09/2024
-					int32_t valAs32Bit = static_cast<int32_t>(curVal.AsInteger());
-
-					ImGui::InputInt(propNameCStr, &valAs32Bit);
-
-					newVal = valAs32Bit;
-				}
-				else
-				{
-					char buf[] = { '<', 'C', 'O', 'N', 'F', 'L', 'I', 'C', 'T', '>' , 0 };
-
-					if (ImGui::InputText(propNameCStr, buf, sizeof(buf)))
+					if (char buf[2] = {0}; resetConflictedProperty(propNameCStr))
 						newVal = (int64_t)atoi(buf);
 				}
+				else
+					ImGui::InputInt(propNameCStr, (int32_t*)&newVal.Value);
 
 				break;
 			}
 
 			case Reflection::ValueType::GameObject:
 			{
-				if (!doConflict)
+				if (doConflict)
 				{
-					GameObject* referenced = GameObject::FromGenericValue(curVal);
+					bool pick = ImGui::Button(" ");
+					ImGui::SameLine();
+					ImGui::TextUnformatted(propNameCStr);
+
+					if (pick)
+					{
+						IsPickingObject = true;
+						PickerTargets = Selections;
+						PickerTargetPropName = propName;
+
+						Selections.clear();
+
+						canChangeValue = false;
+					}
+				}
+				else
+				{
+					GameObject* referenced = GameObject::FromGenericValue(newVal);
 					std::string str = "";
 
 					if (referenced)
@@ -1579,7 +1597,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 						{
 							if (referenced)
 							{
-								uint32_t targetId = GameObject::FromGenericValue(curVal)->ObjectId;
+								uint32_t targetId = GameObject::FromGenericValue(newVal)->ObjectId;
 								Selections = { targetId };
 							}
 							else
@@ -1594,23 +1612,6 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 							Selections.clear();
 						}
 					}
-					
-					newVal = curVal;
-				}
-				else
-				{
-					char buf[] = { '<', 'C', 'O', 'N', 'F', 'L', 'I', 'C', 'T', '>' , 0 };
-
-					if (ImGui::InputText(propNameCStr, buf, sizeof(buf)))
-					{
-						IsPickingObject = true;
-						PickerTargets = Selections;
-						PickerTargetPropName = propName;
-
-						Selections.clear();
-
-						canChangeValue = false;
-					}
 				}
 
 				break;
@@ -1618,49 +1619,26 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 
 			case Reflection::ValueType::Color:
 			{
-				Color col = !doConflict ? curVal : Color(1.f, 1.f, 0.f);
-
-				float entry[3] = { col.R, col.G, col.B };
-
-				ImGui::ColorEdit3(propNameCStr, entry, ImGuiColorEditFlags_None);
-
-				col.R = entry[0];
-				col.G = entry[1];
-				col.B = entry[2];
-
-				newVal = col.ToGenericValue();
+				if (doConflict)
+				{
+					if (resetConflictedProperty(propNameCStr))
+						newVal = Color(0.f, 0.f, 0.f).ToGenericValue();
+				}
+				else
+					ImGui::ColorEdit3(propNameCStr, &((Color*)newVal.Value)->R);
 
 				break;
 			}
 
 			case Reflection::ValueType::Vector3:
 			{
-				if (!doConflict)
+				if (doConflict)
 				{
-					Vector3 vec = curVal;
-
-					float entry[3] =
-					{
-						static_cast<float>(vec.X),
-						static_cast<float>(vec.Y),
-						static_cast<float>(vec.Z)
-					};
-
-					ImGui::InputFloat3(propNameCStr, entry);
-
-					vec.X = entry[0];
-					vec.Y = entry[1];
-					vec.Z = entry[2];
-
-					newVal = vec.ToGenericValue();
+					if (resetConflictedProperty(propNameCStr))
+						newVal = glm::vec3(0.f);
 				}
 				else
-				{
-					char buf[] = { '<', 'C', 'O', 'N', 'F', 'L', 'I', 'C', 'T', '>' , 0 };
-
-					if (ImGui::InputText(propNameCStr, buf, sizeof(buf)))
-						newVal = Vector3::zero.ToGenericValue();
-				}
+					ImGui::InputFloat3(propNameCStr, &((glm::vec3*)newVal.Value)->x);
 
 				break;
 			}
@@ -1717,12 +1695,8 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 					newVal = mat;
 				}
 				else
-				{
-					char buf[] = { '<', 'C', 'O', 'N', 'F', 'L', 'I', 'C', 'T', '>' , 0 };
-
-					if (ImGui::InputText(propNameCStr, buf, sizeof(buf)))
+					if (resetConflictedProperty(propNameCStr))
 						newVal = glm::mat4(1.f);
-				}
 
 				break;
 			}

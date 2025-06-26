@@ -15,7 +15,6 @@
 #include "component/DataModel.hpp"
 #include "component/Workspace.hpp"
 
-#include "datatype/Vector2.hpp"
 #include "datatype/Event.hpp"
 #include "PhysicsEngine.hpp"
 

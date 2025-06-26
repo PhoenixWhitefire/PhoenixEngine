@@ -30,6 +30,9 @@ namespace Timing
 
 	inline const char* TimerNames[UINT8_MAX] = { NULL };
 
+	// TODO 24/06/2025
+	// mmmm idk if i like this, but it seems
+	// like the only way
 	struct StaticMagicTimerThing
 	{
 		StaticMagicTimerThing(const char* Name);

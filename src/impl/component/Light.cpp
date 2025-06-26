@@ -1,7 +1,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "component/Light.hpp"
-#include "datatype/Vector3.hpp"
 #include "component/Transform.hpp"
 
 #define LIGHT_APIS(t) EC_PROP_SIMPLE_NGV(t, LightColor, Color), \
@@ -124,11 +123,11 @@ public:
                 [](void* p)
                 -> Reflection::GenericValue
                 {
-                    return Vector3(glm::vec3(static_cast<EcDirectionalLight*>(p)->Object->GetComponent<EcTransform>()->Transform[3])).ToGenericValue();
+                    return glm::vec3(static_cast<EcDirectionalLight*>(p)->Object->GetComponent<EcTransform>()->Transform[3]);
                 },
                 [](void* p, const Reflection::GenericValue& gv)
                 {
-                    static_cast<EcDirectionalLight*>(p)->Object->GetComponent<EcTransform>()->Transform[3] = glm::vec4((glm::vec3)Vector3(gv), 1.f);
+                    static_cast<EcDirectionalLight*>(p)->Object->GetComponent<EcTransform>()->Transform[3] = glm::vec4(gv.AsVector3(), 1.f);
                 }
             )
         };

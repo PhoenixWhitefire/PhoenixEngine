@@ -302,8 +302,8 @@ void main()
 	//Normal = normalize(Frag_TBN * Normal);
 	//Normal = normalize(Normal + (NormalSample * 2.f - 1.f));
 	
-	Albedo -= vec4(0.f, 0.f, 0.f, Transparency);
-
+	Albedo.w -= Transparency;
+	
 	Albedo = vec4(Albedo.xyz * Frag_Paint.xyz, Albedo.w * Frag_Paint.w);
 
 	if (Albedo.a < AlphaCutoff)

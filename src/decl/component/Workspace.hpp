@@ -1,13 +1,14 @@
 #pragma once
 
+#include <glm/vec3.hpp>
+
 #include "datatype/GameObject.hpp"
-#include "datatype/Vector3.hpp"
 
 struct EcWorkspace
 {
 	GameObject* GetSceneCamera() const;
 	void SetSceneCamera(GameObject*);
-	Vector3 ScreenPointToRay(double x, double y, float length, Vector3* origin) const;
+	glm::vec3 ScreenPointToRay(double x, double y, float length, glm::vec3* origin) const;
 
 	uint32_t m_SceneCameraId = PHX_GAMEOBJECT_NULL_ID;
 	GameObjectRef Object;

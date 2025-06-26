@@ -63,5 +63,7 @@ namespace ScriptEngine::L
 		Reflection::Function* fnaf
 	);
 
-	extern std::unordered_map<std::string_view, lua_CFunction> GlobalFunctions;
+	// TODO replace with `std::span` once engine is moved over to C++ 26
+	// (initializer lists cannot be used for spans before that)
+	extern std::vector<std::pair<std::string_view, lua_CFunction>> GlobalFunctions;
 };

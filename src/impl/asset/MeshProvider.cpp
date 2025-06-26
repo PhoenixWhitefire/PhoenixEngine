@@ -766,24 +766,6 @@ void MeshProvider::Save(uint32_t Id, const std::string_view& Path)
 	this->Save(m_Meshes.at(Id), Path);
 }
 
-static size_t getMeshSizeCpu(const Mesh& mesh)
-{
-	size_t size = 0;
-
-	if (!mesh.MeshDataPreserved)
-	{
-		size += mesh.Bones.capacity() * sizeof(Bone);
-		size += sizeof(mesh);
-
-		for (const Bone& b : mesh.Bones)
-			size += b.Name.capacity();
-	}
-	else
-		size += mesh.Vertices.capacity() * sizeof(Vertex) + mesh.Indices.capacity() * sizeof(uint32_t);
-
-	return size;
-}
-
 static void uploadMeshDataToGpuMesh(Mesh& mesh, MeshProvider::GpuMesh& gpuMesh)
 {
 	ZoneScoped;
@@ -825,18 +807,10 @@ uint32_t MeshProvider::Assign(Mesh mesh, const std::string_view& InternalName, b
 
 	auto prevPair = m_StringToMeshId.find(std::string(InternalName));
 
-	// 24/01/2025 `Memory` namespace can't handle
-	// placement new rn, which is why i assume the counter is
-	// always 0
-	// use the tag MEMPLACEMENTNEW to easily grep where i do this hack
-	// when this can be avoided in the future :)
-	Memory::Counters[(size_t)Memory::Category::Mesh] += getMeshSizeCpu(mesh);
-
 	if (prevPair != m_StringToMeshId.end())
 	{
 		// overwrite the pre-existing mesh
 		Mesh preExisting = m_Meshes[prevPair->second];
-		Memory::Counters[(size_t)Memory::Category::Mesh] -= getMeshSizeCpu(preExisting);
 
 		m_Meshes[prevPair->second] = mesh;
 		assignedId = prevPair->second;
@@ -856,7 +830,7 @@ uint32_t MeshProvider::Assign(Mesh mesh, const std::string_view& InternalName, b
 	}
 	else
 	{
-		m_StringToMeshId.insert(std::pair(InternalName, assignedId));
+		m_StringToMeshId[std::string(InternalName)] = assignedId;
 		m_Meshes.push_back(mesh);
 
 		if (UploadToGpu)
@@ -868,8 +842,16 @@ uint32_t MeshProvider::Assign(Mesh mesh, const std::string_view& InternalName, b
 
 uint32_t MeshProvider::LoadFromPath(const std::string_view& Path, bool ShouldLoadAsync, bool PreserveMeshData)
 {
-	ZoneScoped;
-	ZoneTextF("%s", Path.data());
+	if (Path[0] == '$')
+	{
+		for (const auto& [k, v] : m_StringToMeshId)
+			if (k[0] == '$')
+			{
+				bool t = Path == k;
+
+				printf("%d\n", (int)t);
+			}
+	}
 
 	auto meshIt = m_StringToMeshId.find(std::string(Path));
 
@@ -907,74 +889,86 @@ uint32_t MeshProvider::LoadFromPath(const std::string_view& Path, bool ShouldLoa
 
 	if (meshIt == m_StringToMeshId.end())
 	{
-		bool success = true;
-		std::string contents = FileRW::ReadFile(Path, &success);
-
-		if (!success)
+		if (ShouldLoadAsync)
 		{
-			Log::Error(std::format(
-				"MeshProvider Failed to load mesh '{}': Invalid path/File could not be opened",
-				Path
-			));
+			std::promise<Mesh>* promise = new std::promise<Mesh>;
+		
+			uint32_t resourceId = this->Assign(Mesh{}, Path);
+			m_Meshes.at(resourceId).MeshDataPreserved = PreserveMeshData;
+		
+			// otherwise we get use-after-free if the source of
+			// Path is de-alloc'd
+			std::string pathCapturable{ Path };
+		
+			ThreadManager::Get()->Dispatch(
+				[promise, resourceId, this, pathCapturable]()
+				{
+					ZoneScopedN("AsyncMeshLoad");
 
-			return this->Assign(Mesh{}, Path);
+					bool success = true;
+					std::string contents = FileRW::ReadFile(pathCapturable, &success);
+
+					if (!success)
+					{
+						Log::Error(std::format(
+							"Failed to load mesh '{}' asynchronously: File could not be opened",
+							pathCapturable
+						));
+						promise->set_value(Mesh{});
+
+						return;
+					}
+
+					std::string error;
+					Mesh loadedMesh = this->Deserialize(contents, &error);
+					
+					if (error.size() > 0)
+						Log::Error(std::format(
+							"Failed to load mesh '{}' asynchronously: {}",
+							pathCapturable, error
+						));
+					
+					promise->set_value(loadedMesh);
+				},
+				false
+			);
+			
+			m_MeshPromises.push_back(promise);
+			m_MeshFutures.push_back(promise->get_future().share());
+			m_MeshPromiseResourceIds.push_back(resourceId);
+			
+			return resourceId;
 		}
 		else
 		{
-			if (ShouldLoadAsync)
+			ZoneScopedN("LoadSynchronous");
+
+			bool success = true;
+			std::string contents = FileRW::ReadFile(Path, &success);
+
+			if (!success)
 			{
-				std::promise<Mesh>* promise = new std::promise<Mesh>;
+				Log::Error(std::format(
+					"Failed to load mesh '{}' synchronously: File could not be opened",
+					Path
+				));
 
-				uint32_t resourceId = this->Assign(Mesh{}, Path);
-				m_Meshes.at(resourceId).MeshDataPreserved = PreserveMeshData;
-
-				// otherwise we get use-after-free if the source of
-				// Path is de-alloc'd
-				std::string pathCapturable{ Path };
-
-				ThreadManager::Get()->Dispatch(
-					[promise, resourceId, this, pathCapturable, contents]()
-					{
-						ZoneScopedN("AsyncMeshLoad");
-
-						std::string error;
-						Mesh loadedMesh = this->Deserialize(contents, &error);
-
-						if (error.size() > 0)
-							Log::Error(std::format(
-								"MeshProvider failed to load mesh '{}' asynchronously: {}",
-								pathCapturable, error
-							));
-
-						promise->set_value(loadedMesh);
-					},
-					false
-				);
-
-				m_MeshPromises.push_back(promise);
-				m_MeshFutures.push_back(promise->get_future().share());
-				m_MeshPromiseResourceIds.push_back(resourceId);
-
-				return resourceId;
+				return this->Assign(Mesh{}, Path);
 			}
-			else
-			{
-				ZoneScopedN("LoadSynchronous");
 
-				std::string error;
-				Mesh mesh = this->Deserialize(contents, &error);
-				mesh.MeshDataPreserved = PreserveMeshData;
-
-				if (error.size() > 0)
-					Log::Error(std::format(
-						"MeshProvider failed to load mesh '{}': {}",
-						Path, error
-					));
-
-				m_CreateAndUploadGpuMesh(mesh);
-
-				return this->Assign(mesh, Path);
-			}
+			std::string error;
+			Mesh mesh = this->Deserialize(contents, &error);
+			mesh.MeshDataPreserved = PreserveMeshData;
+			
+			if (error.size() > 0)
+				Log::Error(std::format(
+					"Failed to load mesh '{}' synchronously: {}",
+					Path, error
+				));
+			
+			m_CreateAndUploadGpuMesh(mesh);
+			
+			return this->Assign(mesh, Path);
 		}
 	}
 	else

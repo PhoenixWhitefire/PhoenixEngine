@@ -1,8 +1,9 @@
 #pragma once
 
 #include "component/Mesh.hpp"
+#include "Memory.hpp"
 
 namespace Physics
 {
-	void Step(std::vector<GameObject*>& World, double DeltaTime);
+	void Step(Memory::vector<GameObject*, MEMCAT(Physics)>& World, double DeltaTime);
 }

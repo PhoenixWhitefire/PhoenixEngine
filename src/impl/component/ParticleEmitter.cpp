@@ -95,24 +95,8 @@ public:
 				}
 			);
 			*/
-			
-			EC_PROP(
-				"Lifetime",
-				Vector3,
-				[](void* g)
-				{
-					EcParticleEmitter* p = static_cast<EcParticleEmitter*>(g);
-					return Vector3(p->Lifetime.X, p->Lifetime.Y, 0.f).ToGenericValue();
-				},
-				[](void* g, const Reflection::GenericValue& gv)
-				{
-					Vector3 newLifetime = gv;
-					static_cast<EcParticleEmitter*>(g)->Lifetime = Vector2(
-						static_cast<float>(newLifetime.X),
-						static_cast<float>(newLifetime.Y)
-					);
-				}
-			)
+
+			EC_PROP_SIMPLE(EcParticleEmitter, Lifetime, Vector2)
         };
 
         return props;
@@ -142,16 +126,16 @@ EcParticleEmitter::EcParticleEmitter()
 
 	this->PossibleImages = { 1 };
 
-	this->VelocityOverTime.InsertKey(ValueSequenceKeypoint<glm::vec3>(0.00f, glm::vec3(0.f, 5.0f, 0.f), 15.f));
-	this->VelocityOverTime.InsertKey(ValueSequenceKeypoint<glm::vec3>(0.75f, glm::vec3(0.f, 2.5f, 0.f)));
-	this->VelocityOverTime.InsertKey(ValueSequenceKeypoint<glm::vec3>(1.00f, glm::vec3(0.f, 0.0f, 0.f)));
+	this->VelocityOverTime.InsertKey(0.00f, glm::vec3(0.f, 5.0f, 0.f), 15.f);
+	this->VelocityOverTime.InsertKey(0.75f, glm::vec3(0.f, 2.5f, 0.f));
+	this->VelocityOverTime.InsertKey(1.00f, glm::vec3(0.f, 0.0f, 0.f));
 
-	this->TransparencyOverTime.InsertKey(ValueSequenceKeypoint<float>(0.f, 0.f));
-	this->TransparencyOverTime.InsertKey(ValueSequenceKeypoint<float>(.8f, .5f));
-	this->TransparencyOverTime.InsertKey(ValueSequenceKeypoint<float>(1.f, 1.f));
+	this->TransparencyOverTime.InsertKey(0.f,  0.f);
+	this->TransparencyOverTime.InsertKey(0.8f, 0.5f);
+	this->TransparencyOverTime.InsertKey(1.f,  1.f);
 
-	this->SizeOverTime.InsertKey(ValueSequenceKeypoint<float>(0.f, 1.f));
-	this->SizeOverTime.InsertKey(ValueSequenceKeypoint<float>(1.f, 15.f));
+	this->SizeOverTime.InsertKey(0.f, 1.f);
+	this->SizeOverTime.InsertKey(1.f, 15.f);
 }
 
 size_t EcParticleEmitter::m_GetUsableParticleIndex()
@@ -199,7 +183,7 @@ void EcParticleEmitter::Update(double DeltaTime)
 		float numimages = (float)this->PossibleImages.size();
 
 		std::uniform_real_distribution<float> randIndex(0.f, numimages);
-		std::uniform_real_distribution<float> lifetimeDist(this->Lifetime.X, this->Lifetime.Y);
+		std::uniform_real_distribution<float> lifetimeDist(this->Lifetime.x, this->Lifetime.y);
 
 		EcTransform* ct = Object->GetComponent<EcTransform>();
 
@@ -276,7 +260,7 @@ void EcParticleEmitter::AppendToRenderList(std::vector<RenderItem>& RenderList)
 		RenderList.emplace_back(
 			QuadMeshId,
 			transform,
-			Vector3::one * particle.Size,
+			glm::vec3{ particle.Size },
 			MaterialManager::Get()->LoadFromPath("error"),
 			Color(1.f, 1.f, 1.f),
 			particle.Transparency,

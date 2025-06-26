@@ -4,6 +4,7 @@
 #include <unordered_map>
 
 #include "asset/ShaderManager.hpp"
+#include "Memory.hpp"
 
 struct RenderMaterial
 {
@@ -38,7 +39,7 @@ struct RenderMaterial
 
 	MaterialPolygonMode PolygonMode = MaterialPolygonMode::Fill;
 
-	std::unordered_map<std::string, Reflection::GenericValue> Uniforms;
+	Memory::unordered_map<Memory::string<MEMCAT(Material)>, Reflection::GenericValue, MEMCAT(Material)> Uniforms;
 };
 
 class MaterialManager
@@ -52,7 +53,7 @@ public:
 
 	static MaterialManager* Get();
 
-	std::vector<RenderMaterial>& GetLoadedMaterials();
+	Memory::vector<RenderMaterial, MEMCAT(Material)>& GetLoadedMaterials();
 
 	//void FinalizeAsyncLoadedMaterials();
 
@@ -63,8 +64,8 @@ public:
 	RenderMaterial& GetMaterialResource(uint32_t);
 
 private:
-	std::vector<RenderMaterial> m_Materials;
-	std::unordered_map<std::string, uint32_t> m_StringToMaterialId;
+	Memory::vector<RenderMaterial, MEMCAT(Material)> m_Materials;
+	Memory::unordered_map<std::string, uint32_t, MEMCAT(Material)> m_StringToMaterialId;
 
 	/*
 	std::vector<std::promise<RenderMaterial>*> m_MatPromises;

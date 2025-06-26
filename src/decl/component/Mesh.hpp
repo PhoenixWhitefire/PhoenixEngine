@@ -1,10 +1,9 @@
 #pragma once
 
 #include <string>
+#include <glm/vec3.hpp>
 
 #include "datatype/GameObject.hpp"
-
-#include "datatype/Vector3.hpp"
 #include "datatype/Color.hpp"
 
 enum class FaceCullingMode : uint8_t { None, BackFace, FrontFace };
@@ -29,12 +28,12 @@ struct EcMesh
 
 	Color Tint = Color(1.f, 1.f, 1.f);
 
-	Vector3 LinearVelocity;
-	Vector3 AngularVelocity;
+	glm::vec3 LinearVelocity;
+	glm::vec3 AngularVelocity;
 	struct
 	{
-		Vector3 Position{};
-		Vector3 Size{ 1.f, 1.f, 1.f };
+		glm::vec3 Position{};
+		glm::vec3 Size{ 1.f, 1.f, 1.f };
 	} CollisionAabb;
 
 	double Mass = 1.f;

@@ -25,8 +25,8 @@ static std::string errorString = "No error";
 
 static auto LoadModelAsMeshes(
 	const char* ModelFilePath,
-	Vector3 Size,
-	Vector3 Position,
+	glm::vec3 Size,
+	glm::vec3 Position,
 	bool AutoParent = true
 )
 {
@@ -46,13 +46,13 @@ static auto LoadModelAsMeshes(
 	return Loader.LoadedObjs;
 }
 
-static Vector3 GetVector3FromJson(const nlohmann::json& Json)
+static glm::vec3 GetVector3FromJson(const nlohmann::json& Json)
 {
-	Vector3 Vec3;
+	glm::vec3 Vec3;
 
 	try
 	{
-		Vec3 = Vector3(
+		Vec3 = glm::vec3(
 			Json[0],
 			Json[1],
 			Json[2]
@@ -154,11 +154,9 @@ static std::vector<GameObjectRef> LoadMapVersion1(
 	}
 	catch (const nlohmann::json::parse_error& e)
 	{
-		const char* whatStr = e.what();
-
 		errorString = std::format(
 			"JSON Parsing error: {}",
-			whatStr
+			e.what()
 		);
 
 		*SuccessPtr = false;
@@ -185,15 +183,14 @@ static std::vector<GameObjectRef> LoadMapVersion1(
 		}
 		catch (const nlohmann::json::type_error& e)
 		{
-			const char* whatStr = e.what();
-			throw(std::format("Failed to decode map data: {}", whatStr));
+			throw(std::format("Failed to decode map data: {}", e.what()));
 		}
 
 		std::string ModelPath = PropObject["path"];
 
-		Vector3 Position = GetVector3FromJson(PropObject["position"]);
+		glm::vec3 Position = GetVector3FromJson(PropObject["position"]);
 		//Vector3 Orientation = GetVector3FromJson(PropObject["orient"]);
-		Vector3 Size = GetVector3FromJson(PropObject["size"]);
+		glm::vec3 Size = GetVector3FromJson(PropObject["size"]);
 
 		std::vector<GameObject*> Model = LoadModelAsMeshes(ModelPath.c_str(), Size, Position);
 
@@ -273,8 +270,8 @@ static std::vector<GameObjectRef> LoadMapVersion1(
 
 		NewObject->Name = Object.value("name", NewObject->Name);
 
-		Vector3 Position = GetVector3FromJson(Object["position"]);
-		Vector3 Orientation;
+		glm::vec3 Position = GetVector3FromJson(Object["position"]);
+		glm::vec3 Orientation;
 
 		if (Object.find("orient") != Object.end())
 		{
@@ -293,17 +290,17 @@ static std::vector<GameObjectRef> LoadMapVersion1(
 		// YXZ Rotation order
 		ct->Transform = glm::rotate(
 			ct->Transform,
-			glm::radians(static_cast<float>(Orientation.Y)),
+			glm::radians(Orientation.y),
 			glm::vec3(0.f, 1.f, 0.f)
 		);
 		ct->Transform = glm::rotate(
 			ct->Transform,
-			glm::radians(static_cast<float>(Orientation.X)),
+			glm::radians(Orientation.x),
 			glm::vec3(1.f, 0.f, 0.f)
 		);
 		ct->Transform = glm::rotate(
 			ct->Transform,
-			glm::radians(static_cast<float>(Orientation.Z)),
+			glm::radians(Orientation.z),
 			glm::vec3(0.f, 0.f, 1.f)
 		);
 
@@ -419,11 +416,9 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 	}
 	catch (const nlohmann::json::parse_error& e)
 	{
-		const char* whatStr = e.what();
-
 		errorString = std::format(
 			"V2 - JSON Parsing error: {}",
-			whatStr
+			e.what()
 		);
 
 		*Success = false;
@@ -564,7 +559,7 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 
 			case Reflection::ValueType::Vector3:
 			{
-				assignment = GetVector3FromJson(memberValue).ToGenericValue();
+				assignment = GetVector3FromJson(memberValue);
 
 				break;
 			}
@@ -786,10 +781,16 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 			item[serializedAs] = { col.R, col.G, col.B };
 			break;
 		}
+		case Reflection::ValueType::Vector2:
+		{
+			const glm::vec2 vec = value.AsVector2();
+			item[serializedAs] = { vec.x, vec.y };
+			break;
+		}
 		case Reflection::ValueType::Vector3:
 		{
-			Vector3 vec(value);
-			item[serializedAs] = { vec.X, vec.Y, vec.Z };
+			glm::vec3& vec = value.AsVector3();
+			item[serializedAs] = { vec.x, vec.y, vec.z };
 			break;
 		}
 		case Reflection::ValueType::Matrix:

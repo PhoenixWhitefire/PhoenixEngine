@@ -63,11 +63,11 @@ public:
             EC_PROP(
                 "Size",
                 Vector3,
-                EC_GET_SIMPLE_TGN(EcTransform, Size),
+                EC_GET_SIMPLE(EcTransform, Size),
                 [](void* p, const Reflection::GenericValue& gv)
                 {
                     EcTransform* ct = static_cast<EcTransform*>(p);
-                    ct->Size = Vector3(gv);
+                    ct->Size = gv.AsVector3();
 
                     if (EcMesh* cm = ct->Object->GetComponent<EcMesh>())
                         cm->RecomputeAabb();

@@ -6,7 +6,6 @@
 
 #include "component/Script.hpp"
 #include "component/ScriptEngine.hpp"
-#include "datatype/Vector3.hpp"
 #include "datatype/Color.hpp"
 #include "UserInput.hpp"
 #include "Timing.hpp"
@@ -537,22 +536,22 @@ static lua_State* createVM()
 				if (strcmp(k, "Position") == 0)
 					ScriptEngine::L::PushGenericValue(
 						L,
-						Vector3(glm::vec3(m[3])).ToGenericValue()
+						glm::vec3(m[3])
 					);
 				else if (strcmp(k, "Forward") == 0)
 					ScriptEngine::L::PushGenericValue(
 						L,
-						Vector3(glm::normalize(glm::vec3(m[2]))).ToGenericValue()
+						glm::normalize(glm::vec3(m[2]))
 					);
 				else if (strcmp(k, "Up") == 0)
 					ScriptEngine::L::PushGenericValue(
 						L,
-						Vector3(glm::normalize(glm::vec3(m[1]))).ToGenericValue()
+						glm::normalize(glm::vec3(m[1]))
 					);
 				else if (strcmp(k, "Right") == 0)
 					ScriptEngine::L::PushGenericValue(
 						L,
-						Vector3(glm::normalize(glm::vec3(m[0]))).ToGenericValue()
+						glm::normalize(glm::vec3(m[0]))
 					);
 				else
 					luaL_errorL(L, "Invalid member %s", k);
@@ -807,10 +806,9 @@ static void resumeYieldedCoroutines()
 
 				if (resumeStatus != LUA_OK && resumeStatus != LUA_YIELD)
 				{
-					const char* errstr = lua_tostring(coroutine, -1);
 					Log::Error(std::format(
 						"Script resumption: {}",
-						errstr
+						lua_tostring(coroutine, -1)
 					));
 
 					dumpStacktrace(coroutine);
@@ -1002,11 +1000,9 @@ bool EcScript::Reload()
 
 		if (resumeResult != LUA_OK && resumeResult != LUA_YIELD)
 		{
-			const char* errStr = lua_tostring(thread, -1);
-
 			Log::Error(std::format(
 				"Script init: {}",
-				errStr
+				lua_tostring(thread, -1)
 			));
 			dumpStacktrace(thread);
 
@@ -1017,11 +1013,9 @@ bool EcScript::Reload()
 	}
 	else
 	{
-		const char* errstr = lua_tostring(m_L, -1);
-
 		Log::Error(std::format(
 			"Script compilation: {}",
-			errstr
+			lua_tostring(m_L, -1)
 		));
 
 		return false;

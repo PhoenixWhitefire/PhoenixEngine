@@ -1,7 +1,12 @@
+PHNXENGI
+#Asset Material
+#Date 19-6-2025
+
 {
-  "ColorMap": "textures/materials/Tiles075_4K-JPG_Color.jpg",
-  "HasTranslucency": false,
-  "MetallicRoughnessMap": "textures/materials/Tiles075_4K-JPG_Roughness.jpg",
+  "ColorMap": "resources/textures/materials/Tiles075_4K-JPG_Color.jpg",
+  "HasTranslucency": true,
+  "MetallicRoughnessMap": "resources/textures/materials/Tiles075_4K-JPG_Roughness.jpg",
+  "PolygonMode": 0,
   "Shader": "worldUberTriProjected",
   "Uniforms": {
     "MaterialProjectionFactor": 0.02500000037252903

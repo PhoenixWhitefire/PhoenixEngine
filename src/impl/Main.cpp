@@ -228,7 +228,7 @@ static void handleInputs(double deltaTime)
 
 	if (camera->UseSimpleController)
 	{
-		static const glm::vec3 UpVec = Vector3::yAxis;
+		static const glm::vec3 UpVec{ 0.f, 1.f, 0.f };
 
 		if (!UserInput::InputBeingSunk)
 		{
@@ -237,25 +237,25 @@ static void handleInputs(double deltaTime)
 			if (UserInput::IsKeyDown(SDLK_LSHIFT))
 				displacementSpeed *= 0.5f;
 
-			Vector3 displacement{};
+			glm::vec3 displacement{};
 
 			if (UserInput::IsKeyDown(SDLK_W))
-				displacement += Vector3(0, 0, displacementSpeed);
+				displacement += glm::vec3(0, 0, displacementSpeed);
 
 			if (UserInput::IsKeyDown(SDLK_A))
-				displacement += Vector3(displacementSpeed, 0, 0);
+				displacement += glm::vec3(displacementSpeed, 0, 0);
 
 			if (UserInput::IsKeyDown(SDLK_S))
-				displacement += Vector3(0, 0, -displacementSpeed);
+				displacement += glm::vec3(0, 0, -displacementSpeed);
 
 			if (UserInput::IsKeyDown(SDLK_D))
-				displacement += Vector3(-displacementSpeed, 0, 0);
+				displacement += glm::vec3(-displacementSpeed, 0, 0);
 
 			if (UserInput::IsKeyDown(SDLK_Q))
-				displacement += Vector3(0, -displacementSpeed, 0);
+				displacement += glm::vec3(0, -displacementSpeed, 0);
 
 			if (UserInput::IsKeyDown(SDLK_E))
-				displacement += Vector3(0, displacementSpeed, 0);
+				displacement += glm::vec3(0, displacementSpeed, 0);
 
 			camera->Transform = glm::translate(camera->Transform, (glm::vec3)displacement);
 		}
@@ -531,19 +531,59 @@ static void drawDeveloperUI(double DeltaTime)
 
 		ImGui::SeparatorText("Heap");
 
-		const std::array<size_t, (size_t)Memory::Category::__count>& counts = Memory::Counters;
+		constexpr size_t HeapDebugDatapoints = 128;
 
-		if (!IsSamplingStats)
-			for (int i = 0; i < (int)Memory::Category::__count; i++)
-				ImGui::Text("%s: %zi", Memory::CategoryNames[i], counts[i]);
-		else
+		const std::array<size_t, (size_t)Memory::Category::__count>& counts = Memory::Counters;
+		static std::array<decltype(Memory::Counters), HeapDebugDatapoints> HeapUsageHist;
+		static std::array<decltype(Memory::Counters), HeapDebugDatapoints> HeapActivityHist;
+
+		static double LastSampled = 0.f;
+
+		if (double ct = GetRunningTime(); ct - LastSampled > 0.2f)
 		{
-			for (int i = 0; i < (int)Memory::Category::__count; i++)
+			for (size_t i = 0; i < HeapDebugDatapoints - 1; i++)
 			{
-				SampledCsv += std::to_string(counts[i]) + ",";
-				ImGui::Text("%s: %zi", Memory::CategoryNames[i], counts[i]);
+				HeapUsageHist[i] = HeapUsageHist[i+1];
+				HeapActivityHist[i] = HeapActivityHist[i+1];
+			}
+
+			HeapUsageHist[HeapDebugDatapoints - 1] = Memory::Counters;
+			HeapActivityHist[HeapDebugDatapoints - 1] = Memory::Activity;
+
+			LastSampled = ct;
+		}
+
+		for (int i = 0; i < (int)Memory::Category::__count; i++)
+		{
+			bool open = ImGui::TreeNodeEx(
+				(void*)(int64_t)i,
+				ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth,
+				"%s: %zi",
+				Memory::CategoryNames[i],
+				counts[i]
+			);
+
+			if (open)
+			{
+				float usageValues[HeapDebugDatapoints] = { 0 };
+				float activityValues[HeapDebugDatapoints] = { 0 };
+
+				for (size_t hi = 0; hi < HeapDebugDatapoints; hi++)
+				{
+					usageValues[hi] = (float)HeapUsageHist[hi][i];
+					activityValues[hi] = (float)HeapActivityHist[hi][i];
+				}
+				
+				ImGui::PlotLines("Usage", usageValues, HeapDebugDatapoints);
+				ImGui::PlotLines("Activity", activityValues, HeapDebugDatapoints);
+
+				ImGui::TreePop(); // ocornut why do you do this to me
 			}
 		}
+
+		if (IsSamplingStats)
+			for (int i = 0; i < (int)Memory::Category::__count; i++)
+				SampledCsv += std::to_string(counts[i]) + ",";
 
 		ImGui::SeparatorText("Sampling");
 
@@ -719,16 +759,12 @@ static void init(int argc, char** argv)
 
 	Engine* EngineInstance = Engine::Get();
 
-	const char* imGuiVersion = IMGUI_VERSION;
-
 	Log::Info(std::format(
 		"Initializing Dear ImGui {}...",
-		imGuiVersion
+		IMGUI_VERSION
 	));
 
-	bool imGuiVersionCorrect = IMGUI_CHECKVERSION();
-
-	if (!imGuiVersionCorrect)
+	if (!IMGUI_CHECKVERSION())
 		throw("Dear ImGui detected a version mismatch");
 
 	ImGui::CreateContext();
@@ -830,12 +866,10 @@ static void patchConfigFromCliArgs(int argc, char** argv)
 int main(int argc, char** argv)
 {
 	Log::Info("Application startup");
-
-	const char* platform = SDL_GetPlatform();
-
+	
 	Log::Info(std::format(
 		"Phoenix Engine:\n\tTarget platform: {}\n\tBuild type: {}\n\tMain.cpp last compiled: {} @ {}",
-		platform, PHX_BUILD_TYPE, __DATE__, __TIME__
+		SDL_GetPlatform(), PHX_BUILD_TYPE, __DATE__, __TIME__
 	));
 
 	Log::Info("Command line: &&");

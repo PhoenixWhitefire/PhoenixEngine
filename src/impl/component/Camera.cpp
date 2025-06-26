@@ -6,7 +6,6 @@
 #include <tracy/Tracy.hpp> 
 
 #include "component/Camera.hpp"
-#include "datatype/Vector3.hpp"
 #include "UserInput.hpp"
 
 glm::mat4 EcCamera::GetMatrixForAspectRatio(float AspectRatio) const

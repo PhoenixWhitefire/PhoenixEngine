@@ -14,7 +14,7 @@ struct Collision
 	IntersectionLib::Intersection Hit;
 };
 
-static void applyGlobalForces(std::vector<GameObject*>& World, double DeltaTime)
+static void applyGlobalForces(Memory::vector<GameObject*, MEMCAT(Physics)>& World, float DeltaTime)
 {
 	ZoneScopedC(tracy::Color::AntiqueWhite);
 
@@ -24,24 +24,24 @@ static void applyGlobalForces(std::vector<GameObject*>& World, double DeltaTime)
 		EcTransform* ct = object->GetComponent<EcTransform>();
 		assert(ct);
 
-		cm->Mass = cm->Density * ct->Size.X * ct->Size.Y * ct->Size.Z;
+		cm->Mass = cm->Density * ct->Size.x * ct->Size.y * ct->Size.z;
 
 		if (cm->PhysicsDynamics)
 		{
-			static Vector3 GravityStrength{ 0.f, -50.f, 0.f };
+			static glm::vec3 GravityStrength{ 0.f, -50.f, 0.f };
 
 			// 19/09/2024 https://www.youtube.com/watch?v=-_IspRG548E
-			Vector3 force = GravityStrength * cm->Mass;
+			glm::vec3 force = GravityStrength * static_cast<float>(cm->Mass);
 
-			static const double AirResistance = 0.15f;
+			static const float AirResistance = 0.15f;
 
 			cm->LinearVelocity = cm->LinearVelocity - (cm->LinearVelocity * AirResistance * DeltaTime);
-			cm->LinearVelocity += force / cm->Mass * DeltaTime;
+			cm->LinearVelocity += force / static_cast<float>(cm->Mass) * DeltaTime;
 		}
 	}
 }
 
-static void moveDynamics(std::vector<GameObject*>& World, double DeltaTime)
+static void moveDynamics(Memory::vector<GameObject*, MEMCAT(Physics)>& World, float DeltaTime)
 {
 	ZoneScopedC(tracy::Color::AntiqueWhite);
 
@@ -58,11 +58,11 @@ static void moveDynamics(std::vector<GameObject*>& World, double DeltaTime)
 		}
 }
 
-static void resolveCollisions(std::vector<GameObject*>& World, double DeltaTime)
+static void resolveCollisions(Memory::vector<GameObject*, MEMCAT(Physics)>& World, float DeltaTime)
 {
 	ZoneScopedC(tracy::Color::AntiqueWhite);
 
-	std::vector<Collision> collisions;
+	Memory::vector<Collision, MEMCAT(Physics)> collisions;
 
 	for (GameObject* a : World)
 	{
@@ -127,13 +127,13 @@ static void resolveCollisions(std::vector<GameObject*>& World, double DeltaTime)
 		if (am->PhysicsDynamics && !bm->PhysicsDynamics)
 		{
 			// "Friction"
-			am->LinearVelocity = am->LinearVelocity - (am->LinearVelocity * am->Friction * DeltaTime);
+			am->LinearVelocity = am->LinearVelocity - (am->LinearVelocity * static_cast<float>(am->Friction) * DeltaTime);
 
-			double dot = am->LinearVelocity.Dot(hit.Normal);
-			Vector3 velCoefficient = Vector3::one;
+			double dot = glm::dot(am->LinearVelocity, hit.Normal);
+			glm::vec3 velCoefficient{ 1.f, 1.f, 1.f };
 
 			if (dot < 0.f)
-				velCoefficient = Vector3::one - Vector3(hit.Normal).Abs() * (2.f * Elasticity);
+				velCoefficient = glm::vec3(1.f) - glm::abs(hit.Normal) * (2.f * Elasticity);
 
 			am->LinearVelocity = am->LinearVelocity * velCoefficient + reactionForce;
 			at->Transform[3] += glm::vec4(glm::vec3(hit.Vector * hit.Depth), 1.f);
@@ -142,13 +142,13 @@ static void resolveCollisions(std::vector<GameObject*>& World, double DeltaTime)
 		}
 		else if (bm->PhysicsDynamics && !am->PhysicsDynamics)
 		{
-			bm->LinearVelocity = bm->LinearVelocity - (bm->LinearVelocity * bm->Friction * DeltaTime);
+			bm->LinearVelocity = bm->LinearVelocity - (bm->LinearVelocity * static_cast<float>(bm->Friction) * DeltaTime);
 
-			double dot = am->LinearVelocity.Dot(hit.Normal);
-			Vector3 velCoefficient = Vector3::one;
+			double dot = glm::dot(am->LinearVelocity, hit.Normal);
+			glm::vec3 velCoefficient{ 1.f, 1.f, 1.f };
 
 			if (dot < 0.f)
-				velCoefficient = Vector3::one - Vector3(hit.Normal).Abs() * (2.f * Elasticity);
+				velCoefficient = glm::vec3(1.f) - glm::abs(hit.Normal) * (2.f * Elasticity);
 
 			bm->LinearVelocity = bm->LinearVelocity * velCoefficient + reactionForce;
 			bt->Transform[3] += glm::vec4(glm::vec3(hit.Vector * hit.Depth), 1.f);
@@ -177,7 +177,7 @@ static void resolveCollisions(std::vector<GameObject*>& World, double DeltaTime)
 	}
 }
 
-static void step(std::vector<GameObject*>& World, double DeltaTime)
+static void step(Memory::vector<GameObject*, MEMCAT(Physics)>& World, float DeltaTime)
 {
 	TIME_SCOPE_AS("Physics");
 	ZoneScopedC(tracy::Color::AntiqueWhite);
@@ -189,9 +189,9 @@ static void step(std::vector<GameObject*>& World, double DeltaTime)
 	resolveCollisions(World, DeltaTime);
 }
 
-void Physics::Step(std::vector<GameObject*>& World, double DeltaTime)
+void Physics::Step(Memory::vector<GameObject*, MEMCAT(Physics)>& World, double DeltaTime)
 {
-	step(World, std::clamp(DeltaTime, (double)0.f, (double)1.f/30.f));
+	step(World, std::clamp(static_cast<float>(DeltaTime), 0.f, 1.f/30.f));
 
 	/*
 	static double MaximumDeltaTime = 1.f / 240.f;

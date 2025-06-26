@@ -1,12 +1,12 @@
 PHNXENGI
 #Asset Material
-#Date31-12-2024
-
+#Date 10-6-2025
 
 {
-  "ColorMap": "textures/white.png",
+  "ColorMap": "resources/textures/white.png",
   "HasTranslucency": false,
-  "MetallicRoughnessMap": "textures/black.png",
+  "MetallicRoughnessMap": "resources/textures/black.png",
+  "PolygonMode": 0,
   "Shader": "worldUber",
   "Uniforms": null,
   "specExponent": 16.0,

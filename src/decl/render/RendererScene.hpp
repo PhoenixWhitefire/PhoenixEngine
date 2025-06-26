@@ -5,6 +5,7 @@
 #include <glm/mat4x4.hpp>
 
 #include "component/Mesh.hpp"
+#include "Memory.hpp"
 
 struct RenderItem
 {
@@ -12,7 +13,7 @@ struct RenderItem
 	glm::mat4 Transform{};
 	glm::vec3 Size;
 	uint32_t MaterialId{};
-	Color TintColor;
+	glm::vec3 TintColor;
 	float Transparency{};
 	float MetallnessFactor{};
 	float RoughnessFactor{};
@@ -29,8 +30,8 @@ struct LightItem
 	bool Shadows = false;
 
 	// acts as the direction for Directional Lights
-	Vector3 Position;
-	Color LightColor;
+	glm::vec3 Position;
+	glm::vec3 LightColor;
 
 	// spot & pointlights
 	float Range = 60.f;
@@ -40,8 +41,8 @@ struct LightItem
 
 struct Scene
 {
-	std::vector<RenderItem> RenderList;
-	std::vector<LightItem> LightingList;
+	Memory::vector<RenderItem, MEMCAT(Rendering)> RenderList;
+	Memory::vector<LightItem, MEMCAT(Rendering)> LightingList;
 
-	std::unordered_set<uint32_t> UsedShaders;
+	Memory::unordered_set<uint32_t, MEMCAT(Rendering)> UsedShaders;
 };

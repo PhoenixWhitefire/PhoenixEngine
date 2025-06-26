@@ -79,8 +79,8 @@ public:
 
 			EC_PROP_SIMPLE_NGV(EcMesh, Tint, Color),
 
-			EC_PROP_SIMPLE_NGV(EcMesh, LinearVelocity, Vector3),
-			EC_PROP_SIMPLE_NGV(EcMesh, AngularVelocity, Vector3),
+			EC_PROP_SIMPLE(EcMesh, LinearVelocity, Vector3),
+			EC_PROP_SIMPLE(EcMesh, AngularVelocity, Vector3),
 
 			EC_PROP_SIMPLE(EcMesh, Density, Double),
 			EC_PROP_SIMPLE(EcMesh, Friction, Double),

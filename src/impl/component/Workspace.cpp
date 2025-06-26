@@ -87,17 +87,17 @@ public:
 				{
 					EcWorkspace* w = static_cast<EcWorkspace*>(p);
 
-					std::vector<Reflection::GenericValue> coordsgv = inputs.at(0).AsArray();
+					std::span<Reflection::GenericValue> coordsgv = inputs[0].AsArray();
 					
-					double x = coordsgv.at(0).AsDouble();
-					double y = coordsgv.at(1).AsDouble();
+					double x = coordsgv[0].AsDouble();
+					double y = coordsgv[1].AsDouble();
 
 					float length = 1.f;
 
 					if (inputs.size() > 1)
 						length = static_cast<float>(inputs[1].AsDouble());
 
-					return { w->ScreenPointToRay(x, y, length, nullptr).ToGenericValue() };
+					return { w->ScreenPointToRay(x, y, length, nullptr) };
 				}
 			} }
 		};
@@ -116,7 +116,7 @@ private:
 
 static inline WorkspaceManager Instance{};
 
-Vector3 EcWorkspace::ScreenPointToRay(double x, double y, float length, Vector3* Origin) const
+glm::vec3 EcWorkspace::ScreenPointToRay(double x, double y, float length, glm::vec3* Origin) const
 {
 	Engine* engine = Engine::Get();
 	int winSizeX = 0, winSizeY = 0;

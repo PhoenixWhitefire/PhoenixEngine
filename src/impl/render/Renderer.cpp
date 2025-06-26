@@ -67,6 +67,14 @@ static std::unordered_map<GLenum, std::string> GLEnumToStringMap =
 	{ GL_DEBUG_TYPE_OTHER, "Other" }
 };
 
+const char* LightLocs[8] = { 0 };
+const char* LightPosLocs[8] = { 0 };
+const char* LightColLocs[8] = { 0 };
+const char* LightTypeLocs[8] = { 0 };
+const char* LightRangeLocs[8] = { 0 };
+const char* LightAngLocs[8] = { 0 };
+const char* LightShadowsLocs[8] = { 0 };
+
 static std::string glEnumToString(GLenum Id)
 {
 	auto it = GLEnumToStringMap.find(Id);
@@ -94,19 +102,13 @@ static void GLDebugCallback(
 	// "Buffer object X will use VIDEO memory as the source for buffer object operations"
 	if (Id == 131185)
 		return;
-
-	std::string sourceName = glEnumToString(SourceId);
-	std::string severityName = glEnumToString(SeverityId);
-	std::string typeName = glEnumToString(TypeId);
-
-	std::string messageStr = std::string(Message, MessageLength);
-
+	
 	std::string debugString = std::format(
 		"GL Debug callback:\n\tType: {}\n\tSeverity: {}\n\tMessage: {}\n\tSource: {}\n\tError ID: {}\n",
-		typeName,
-		severityName,
-		messageStr,
-		sourceName,
+		glEnumToString(TypeId),
+		glEnumToString(SeverityId),
+		std::string_view(Message, MessageLength),
+		glEnumToString(SourceId),
 		Id
 	);
 
@@ -134,10 +136,7 @@ void Renderer::Initialize(uint32_t Width, uint32_t Height, SDL_Window* Window)
 	this->GLContext = SDL_GL_CreateContext(m_Window);
 
 	if (!this->GLContext)
-	{
-		const char* sdlErrStr = SDL_GetError();
-		throw(std::format("Could not create an OpenGL context, SDL error: {}", sdlErrStr));
-	}
+		throw(std::format("Could not create an OpenGL context, SDL error: {}", SDL_GetError()));
 
 	PHX_SDL_CALL(SDL_GL_MakeCurrent, m_Window, this->GLContext);
 
@@ -193,6 +192,25 @@ void Renderer::Initialize(uint32_t Width, uint32_t Height, SDL_Window* Window)
 	this->FrameBuffer.Initialize(m_Width, m_Height, m_MsaaSamples);
 
 	glGenBuffers(1, &m_InstancingBuffer);
+
+#define SETLIGHTLOCS(i) LightLocs[i] = "Lights[" #i "]"; \
+LightPosLocs[i] = "Lights[" #i "].Position";             \
+LightColLocs[i] = "Lights[" #i "].Color";                \
+LightTypeLocs[i] = "Lights[" #i "].Type";                 \
+LightRangeLocs[i] = "Lights[" #i "].Range";                \
+LightAngLocs[i] = "Lights[" #i "].Angle";                \
+LightShadowsLocs[i] = "Lights[" #i "].Shadows";              \
+
+	SETLIGHTLOCS(0);
+	SETLIGHTLOCS(1);
+	SETLIGHTLOCS(2);
+	SETLIGHTLOCS(3);
+	SETLIGHTLOCS(4);
+	SETLIGHTLOCS(5);
+	SETLIGHTLOCS(6);
+	SETLIGHTLOCS(7);
+
+#undef SETLIGHTLOCS
 
 	Log::Info("Renderer initialized");
 }
@@ -262,7 +280,7 @@ void Renderer::DrawScene(
 				ShaderProgram& shader = shdManager->GetShaderResource(shaderId);
 
 				shader.SetUniform("RenderMatrix", RenderMatrix);
-				shader.SetUniform("CameraPosition", Vector3(glm::vec3(CameraTransform[3])).ToGenericValue());
+				shader.SetUniform("CameraPosition", glm::vec3(CameraTransform[3]));
 				shader.SetUniform("Time", static_cast<float>(RunningTime));
 				shader.SetUniform("SkyboxCubemap", 3);
 
@@ -278,24 +296,21 @@ void Renderer::DrawScene(
 
 					const LightItem& lightData = Scene.LightingList.at(lightIndex);
 
-					std::string lightIdxString = std::to_string(lightIndex);
-					std::string shaderLightLoc = "Lights[" + lightIdxString + "]";
-
 					shader.SetUniform(
-						(shaderLightLoc + ".Position").c_str(),
-						lightData.Position.ToGenericValue()
+						LightPosLocs[lightIndex],
+						lightData.Position
 					);
 
 					shader.SetUniform(
-						(shaderLightLoc + ".Color").c_str(),
-						lightData.LightColor.ToGenericValue()
+						LightColLocs[lightIndex],
+						lightData.LightColor
 					);
 
-					shader.SetUniform((shaderLightLoc + ".Type").c_str(), (int)lightData.Type);
+					shader.SetUniform(LightTypeLocs[lightIndex], (int)lightData.Type);
 
-					shader.SetUniform((shaderLightLoc + ".Range").c_str(), lightData.Range);
-					shader.SetUniform((shaderLightLoc + ".Angle").c_str(), lightData.Angle);
-					shader.SetUniform((shaderLightLoc + ".Shadows").c_str(), lightData.Shadows);
+					shader.SetUniform(LightRangeLocs[lightIndex], lightData.Range);
+					shader.SetUniform(LightAngLocs[lightIndex], lightData.Angle);
+					shader.SetUniform(LightShadowsLocs[lightIndex], lightData.Shadows);
 				}
 
 				shader.SetUniform(
@@ -372,9 +387,9 @@ void Renderer::DrawScene(
 			buffer.push_back(renderData.Size.z);
 
 			// Color
-			buffer.push_back(renderData.TintColor.R);
-			buffer.push_back(renderData.TintColor.G);
-			buffer.push_back(renderData.TintColor.B);
+			buffer.push_back(renderData.TintColor.r);
+			buffer.push_back(renderData.TintColor.g);
+			buffer.push_back(renderData.TintColor.b);
 		}
 	}
 
@@ -470,7 +485,7 @@ void Renderer::DrawScene(
 void Renderer::DrawMesh(
 	const Mesh& Object,
 	ShaderProgram& Shader,
-	const Vector3& Size,
+	const glm::vec3& Size,
 	const glm::mat4& Transform,
 	FaceCullingMode FaceCulling,
 	int32_t NumInstances
@@ -513,6 +528,8 @@ void Renderer::DrawMesh(
 	// mesh not uploaded to the GPU by MeshProvider
 	if (gpuMeshId == UINT32_MAX)
 	{
+		assert(false); // genuinely what the fuck is wrong with you
+
 		m_VertexArray.Bind();
 
 		m_VertexBuffer.SetBufferData(Object.Vertices);
@@ -542,7 +559,7 @@ void Renderer::DrawMesh(
 	{
 		Shader.SetUniform("IsInstanced", false);
 		Shader.SetUniform("Transform", Transform);
-		Shader.SetUniform("Scale", Size.ToGenericValue());
+		Shader.SetUniform("Scale", Size);
 		Shader.Activate();
 
 		glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, 0);
@@ -605,7 +622,7 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData, bool DebugWirefra
 
 	shader.SetUniform(
 		"ColorTint",
-		RenderData.TintColor.ToGenericValue()
+		RenderData.TintColor
 	);
 
 	/*

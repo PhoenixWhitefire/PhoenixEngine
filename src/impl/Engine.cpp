@@ -126,11 +126,9 @@ static T readFromConfiguration(const std::string_view& Key, const T& DefaultValu
 	}
 	catch (const nlohmann::json::type_error& Error)
 	{
-		std::string errorMessage = Error.what();
-
 		Log::Error(std::format(
 			"Error trying to read key '{}' of configuration: {}. Falling back to default value",
-			Key, errorMessage
+			Key, Error.what()
 		));
 
 		return DefaultValue;
@@ -155,11 +153,10 @@ void Engine::LoadConfiguration()
 		catch (const nlohmann::json::parse_error& err)
 		{
 			ConfigLoadSucceeded = false;
-			const char* errMessage = err.what();
 			
 			ConfigLoadErrorMessage = std::format(
 				"Failed to load configuration file: {}\nA fallback will be used.",
-				errMessage
+				err.what()
 			);
 		}
 
@@ -382,9 +379,9 @@ static void updateScripts(double DeltaTime)
 static bool s_DebugCollisionAabbs = false;
 
 static void recursivelyTravelHierarchy(
-	std::vector<RenderItem>& RenderList,
-	std::vector<LightItem>& LightList,
-	std::vector<GameObject*>& PhysicsList,
+	Memory::vector<RenderItem, MEMCAT(Rendering)>& RenderList,
+	Memory::vector<LightItem, MEMCAT(Rendering)>& LightList,
+	Memory::vector<GameObject*, MEMCAT(Physics)>& PhysicsList,
 	const GameObjectRef& Root,
 	EcCamera* SceneCamera,
 	double DeltaTime
@@ -538,6 +535,7 @@ void Engine::Start()
 	};
 
 	std::vector<uint32_t> skyboxFacesBeingLoaded;
+	skyboxFacesBeingLoaded.reserve(6);
 
 	GLuint skyboxCubemap = 0;
 
@@ -783,7 +781,7 @@ void Engine::Start()
 		GameObjectRef sceneCamObject = Workspace->GetComponent<EcWorkspace>()->GetSceneCamera();
 		EcCamera* sceneCamera = sceneCamObject->GetComponent<EcCamera>();
 
-		std::vector<GameObject*> physicsList;
+		Memory::vector<GameObject*, MEMCAT(Physics)> physicsList;
 
 		updateScripts(deltaTime);
 
@@ -919,7 +917,7 @@ void Engine::Start()
 		RendererContext.DrawMesh(
 			cubeMesh,
 			skyboxShaders,
-			Vector3::one,
+			{ 1.f, 1.f, 1.f },
 			skyRenderMatrix,
 			FaceCullingMode::FrontFace // Cull the Outside, not the Inside
 		);
@@ -930,20 +928,8 @@ void Engine::Start()
 		RendererContext.DrawScene(scene, renderMatrix, sceneCamera->Transform, RunningTime, DebugWireframeRendering);
 
 		glDisable(GL_DEPTH_TEST);
-
-		// 24/01/2025 `Memory` namespace can't handle
-		// placement new rn, which is why i assume the counter is
-		// always 0
-		// use the tag MEMPLACEMENTNEW to easily grep where i do this hack
-		// when this can be avoided in the future :)
-		size_t* renderMemCounter = &Memory::Counters[(size_t)Memory::Category::RenderCommands];
-		size_t actualRenderMem = scene.RenderList.size() * sizeof(RenderItem) + scene.LightingList.size() * sizeof(LightItem);
-
-		*renderMemCounter += actualRenderMem;
-
+		
 		this->OnFrameRenderGui.Fire(deltaTime);
-
-		*renderMemCounter -= actualRenderMem;
 
 		{
 			ZoneScopedN("DearImGuiRender");
@@ -1033,7 +1019,7 @@ void Engine::Start()
 					RendererContext.DrawMesh(
 						quadMesh,
 						bloomExtractShaders,
-						Vector3::one * 2.f,
+						{ 2.f, 2.f, 2.f },
 						glm::mat4(1.f),
 						FaceCullingMode::BackFace,
 						0
@@ -1057,7 +1043,7 @@ void Engine::Start()
 						RendererContext.DrawMesh(
 							quadMesh,
 							separableBlurShaders,
-							Vector3::one * 2.f,
+							{ 2.f, 2.f, 2.f },
 							glm::mat4(1.f),
 							FaceCullingMode::BackFace,
 							0
@@ -1067,7 +1053,7 @@ void Engine::Start()
 						RendererContext.DrawMesh(
 							quadMesh,
 							separableBlurShaders,
-							Vector3::one * 2.f,
+							{ 2.f, 2.f, 2.f },
 							glm::mat4(1.f),
 							FaceCullingMode::BackFace,
 							0
@@ -1084,7 +1070,7 @@ void Engine::Start()
 					RendererContext.DrawMesh(
 						quadMesh,
 						bloomCompositeShaders,
-						Vector3::one * 2.f,
+						{ 2.f, 2.f, 2.f },
 						glm::mat4(1.f),
 						FaceCullingMode::BackFace,
 						0
@@ -1108,7 +1094,7 @@ void Engine::Start()
 			RendererContext.DrawMesh(
 				quadMesh,
 				postFxShaders,
-				Vector3::one * 2.f,
+				{ 2.f, 2.f, 2.f },
 				glm::mat4(1.f),
 				FaceCullingMode::BackFace,
 				0
@@ -1139,6 +1125,7 @@ void Engine::Start()
 			Log::Save();
 		}
 
+		Memory::FrameFinish();
 		Timing::Finish();
 		FrameMark;
 	}

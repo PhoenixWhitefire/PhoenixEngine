@@ -55,4 +55,9 @@ public:
 	{
 		return !((*this) == Other);
 	}
+
+	operator glm::vec3() const
+	{
+		return { R, G, B };
+	}
 };

@@ -168,11 +168,9 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 
 		if (assetInfoJson.find("minVersion") != assetInfoJson.end())
 		{
-			float gltfMinVersion = std::stof(assetInfoJson.value("minVersion", "2.0"));
-
 			Log::Warning(std::format(
 				"glTF file specifies `asset.minVersion` as '{}'. Unexpected behavior may occur.",
-				gltfMinVersion
+				std::stof(assetInfoJson.value("minVersion", "2.0"))
 			));
 		}
 		else
