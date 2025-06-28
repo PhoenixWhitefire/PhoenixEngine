@@ -647,8 +647,9 @@ static lua_State* createVM()
 	ScriptEngine::L::PushGameObject(state, GameObject::GetObjectById(GameObject::s_DataModel)->FindChild("Workspace"));
 	lua_setglobal(state, "workspace");
 
-	for (auto& pair : ScriptEngine::L::GlobalFunctions)
+	for (size_t i = 0; ScriptEngine::L::GlobalFunctions[i].second != nullptr; i++)
 	{
+		const std::pair<std::string_view, lua_CFunction>& pair = ScriptEngine::L::GlobalFunctions[i];
 		lua_CFunction func = pair.second;
 
 		lua_pushlightuserdata(state, (void*)func);

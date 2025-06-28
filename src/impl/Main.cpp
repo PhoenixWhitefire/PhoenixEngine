@@ -461,8 +461,8 @@ static void doApiDump()
 
 	nlohmann::json& globalsDump = apiDump["ScriptGlobals"];
 
-	for (const auto& it : ScriptEngine::L::GlobalFunctions)
-		globalsDump[it.first] = "";
+	for (size_t i = 0; ScriptEngine::L::GlobalFunctions[i].second != nullptr; i++)
+		globalsDump[ScriptEngine::L::GlobalFunctions[i].first] = "";
 
 	FileRW::WriteFile("apidump.json", apiDump.dump(2), false);
 	Log::Info("API dump finished");
@@ -507,13 +507,16 @@ static void drawDeveloperUI(double DeltaTime)
 		ImGui::Text("Draw calls: %u", EngineInstance->RendererContext.AccumulatedDrawCallCount);
 
 		if (IsSamplingStats)
-			SampledCsv += std::to_string(EngineInstance->FramesPerSecond) + ","
-							+ std::to_string(frameTime) + ","
-							+ std::to_string(EngineInstance->RendererContext.AccumulatedDrawCallCount) + ",";
+			SampledCsv.append(std::format(
+				"{},{},{},",
+				EngineInstance->FramesPerSecond,
+				frameTime,
+				EngineInstance->RendererContext.AccumulatedDrawCallCount
+			));
 
 #ifdef TRACY_ENABLE
 		// 13/01/2025 hi hihihi hihiihii
-		if (!WasTracyLaunched && ImGui::Button("Start Profiling"))
+		if (!WasTracyLaunched && ImGui::Button("Open Profiler"))
 			launchTracy();
 #endif
 

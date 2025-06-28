@@ -883,6 +883,9 @@ nlohmann::json GameObject::DumpApiToJson()
 	{
 		BaseComponentManager* manager = s_ComponentManagers[i];
 
+		if (!manager)
+			continue;
+
 		nlohmann::json& api = componentApi[s_EntityComponentNames[i]];
 		nlohmann::json& properties = api["Properties"];
 		nlohmann::json& functions = api["Functions"];

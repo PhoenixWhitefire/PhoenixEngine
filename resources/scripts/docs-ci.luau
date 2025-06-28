@@ -1,5 +1,7 @@
 -- docs-ci.luau, 29/04/2025
 
+print("Docs CI begin\n\n\n\n\n")
+
 local apiDump = json_parse(file_read("./apidump.json"))
 local docComments = json_parse(file_read("./doc-assets/ci/doc-comments.json"))
 
@@ -37,6 +39,10 @@ for _, def in docComments.ScriptGlobals do
 	globals ..= `#### \`{ name }({ args }){ returns }\`\n`
 	
 	for _, comment in (if typeof(contents[3]) == "table" then contents[3] else { contents[3] }) do
+		if not comment then
+			print(`Missing doc comment for global '{ name }'`)
+		end
+		
 		globals ..= `* { comment }\n`
 	end
 	
@@ -60,7 +66,7 @@ local function count(t)
 	return n
 end
 
-local function dumpReflectionApi(t, d)
+local function dumpReflectionApi(t, d, cn)
 	local hasProps = t.Properties and (count(t.Properties) > 0)
 	local hasFuncs = t.Functions and (count(t.Functions) > 0)
 	
@@ -71,6 +77,10 @@ local function dumpReflectionApi(t, d)
 			s = "### Properties:\n"
 			
 			for n, v in t.Properties do
+				if not d.Properties[n] then
+					print(`Missing doc comment for '{ cn }.{ n }'`)
+				end
+				
 				s ..= `* \`{ n }: { rtol[v] or v }\`: { d.Properties[n] }\n`
 			end
 		end
@@ -79,6 +89,10 @@ local function dumpReflectionApi(t, d)
 			s ..= "\n### Functions:\n"
 			
 			for n, v in t.Functions do
+				if not d.Functions[n] then
+					print(`Missing doc comment for '{ cn }:{ n }'`)
+				end
+				
 				s ..= `* \`{ n }{ v }\`: { d.Functions[n] }\n`
 			end
 		end
@@ -108,10 +122,12 @@ for k, v in apiDump.GameObject.Components do
 		components ..= "\n"
 	end
 	
-	components ..= dumpReflectionApi(v, docComments.GameObject.Components[k])
+	components ..= dumpReflectionApi(v, docComments.GameObject.Components[k], k)
 end
 
 file_write("./doc-assets/ci/components.txt", components, false)
+
+print("Docs CI finish\n\n\n\n\n")
 
 -- close when we're done
 game:Close()

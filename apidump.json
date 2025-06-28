@@ -76,7 +76,7 @@
         "Functions": null,
         "Properties": {
           "Emitting": "Bool",
-          "Lifetime": "Vector3",
+          "Lifetime": "Vector2",
           "ParticlesAreAttached": "Bool",
           "Rate": "Integer"
         }
@@ -106,7 +106,9 @@
           "Looped": "Bool",
           "Playing": "Bool",
           "Position": "Double",
-          "SoundFile": "String"
+          "SoundFile": "String",
+          "Speed": "Double",
+          "Volume": "Double"
         }
       },
       "SpotLight": {

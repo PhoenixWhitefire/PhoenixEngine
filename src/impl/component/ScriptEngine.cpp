@@ -623,7 +623,10 @@ static void fdCallback(void*, const char* const* FileList, int)
 	IsFdInProgress = false;
 }
 
-std::vector<std::pair<std::string_view, lua_CFunction>> ScriptEngine::L::GlobalFunctions =
+using namespace ScriptEngine;
+using namespace ScriptEngine::L;
+
+static std::pair<std::string_view, lua_CFunction> s_GlobalFunctions[] =
 {
 	{
 	"matrix_getv",
@@ -1649,5 +1652,12 @@ std::vector<std::pair<std::string_view, lua_CFunction>> ScriptEngine::L::GlobalF
 
 			return 1;
 		}
+	},
+
+	{
+		"",
+		nullptr
 	}
 };
+
+std::pair<std::string_view, lua_CFunction>* ScriptEngine::L::GlobalFunctions = s_GlobalFunctions;

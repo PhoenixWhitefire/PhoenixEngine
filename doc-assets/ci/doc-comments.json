@@ -116,7 +116,9 @@
           "Looped": "Whether playback should loop once it reaches the end",
           "Playing": "Whether the Sound is currently playing (or requested to play, if `.Playing` is set to `true` by a `Script` before it has finished loading)",
           "Position": "Number of seconds from beginning of the file",
-          "SoundFile": "The `.wav` file to be played"
+          "SoundFile": "The `.wav` file to be played",
+          "Speed": "The speed at which the sound plays, within the range of 0.01 to 100",
+          "Volume": "The volume at which the sound plays. Must be positive"
         }
       },
       "SpotLight": {

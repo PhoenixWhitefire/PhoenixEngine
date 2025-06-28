@@ -106,12 +106,12 @@ function Update(DeltaTime)
 			bruh.Parent = blorbs
 			
 			if TimesNormalStingerPlayed == 0 then
-				RareSoundStinger.Playing = false
+				--RareSoundStinger.Playing = false
 				SoundStinger.Position = 0
 				SoundStinger.Playing = true
 				TimesNormalStingerPlayed += 1
 			else
-				SoundStinger.Playing = false
+				--SoundStinger.Playing = false
 				RareSoundStinger.Position = 0
 				RareSoundStinger.Playing = true
 				TimesNormalStingerPlayed = 0

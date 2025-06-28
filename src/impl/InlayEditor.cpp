@@ -1630,6 +1630,19 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 				break;
 			}
 
+			case Reflection::ValueType::Vector2:
+			{
+				if (doConflict)
+				{
+					if (resetConflictedProperty(propNameCStr))
+						newVal = glm::vec2(0.f);
+				}
+				else
+					ImGui::InputFloat2(propNameCStr, (float*)&newVal.Value);
+
+				break;
+			}
+
 			case Reflection::ValueType::Vector3:
 			{
 				if (doConflict)

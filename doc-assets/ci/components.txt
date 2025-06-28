@@ -47,7 +47,9 @@ No members defined
 * A sound
 
 ### Properties:
+* `Volume: number`: The volume at which the sound plays. Must be positive
 * `SoundFile: string`: The `.wav` file to be played
+* `Speed: number`: The speed at which the sound plays, within the range of 0.01 to 100
 * `Position: number`: Number of seconds from beginning of the file
 * `FinishedLoading: Bool READONLY`: Whether the Sound has finished loading the `SoundFile`
 * `Looped: boolean`: Whether playback should loop once it reaches the end
@@ -126,5 +128,5 @@ No members defined
 * `Rate: number`: An integer indicating how many particles should be emitted per second (must be above or equal to `0`)
 * `ParticlesAreAttached: boolean`: Whether the particles are attached to and move with the emitter
 * `Emitting: boolean`: Whether the emitter should emit new particles
-* `Lifetime: Vector3`: The X and Y components act as a range of how long any particle can last, in seconds
+* `Lifetime: Vector2`: The X and Y components act as a range of how long any particle can last, in seconds
 
