@@ -124,20 +124,20 @@ public:
 					if (stream)
 					{
 						if (wasPlayRequested != sound->m_PlayRequested)
-							assert(SDL_FlushAudioStream(stream));
+							PHX_ENSURE(SDL_FlushAudioStream(stream));
 
 						if (sound->m_PlayRequested)
 						{
 							const AudioAsset& audio = AudioAssets[sound->SoundFile];
 
 							int len = std::min(200, static_cast<int>(audio.DataSize - sound->BytePosition));
-							assert(SDL_PutAudioStreamData(stream, audio.Data + sound->BytePosition, len));
+							PHX_ENSURE(SDL_PutAudioStreamData(stream, audio.Data + sound->BytePosition, len));
 							sound->BytePosition += 200;
 							
-							assert(SDL_ResumeAudioStreamDevice(stream));
+							PHX_ENSURE(SDL_ResumeAudioStreamDevice(stream));
 						}
 						else
-							assert(SDL_PauseAudioStreamDevice(stream));
+							PHX_ENSURE(SDL_PauseAudioStreamDevice(stream));
 					}
 				}
 			),
@@ -161,7 +161,7 @@ public:
 					sound->Position = pos;
 
 					if (sound->m_AudioStream)
-						assert(SDL_FlushAudioStream((SDL_AudioStream*)sound->m_AudioStream));
+						PHX_ENSURE(SDL_FlushAudioStream((SDL_AudioStream*)sound->m_AudioStream));
 				}
 			),
 
@@ -239,10 +239,10 @@ static void streamCallback(void* UserData, SDL_AudioStream* Stream, int Addition
 {
 	SCOPED_LOCK(ComponentsBufferReAllocMutex);
 
-	EcSound* sound = static_cast<EcSound*>(Instance.GetComponent(*(uint32_t*)&UserData));
+	EcSound* sound = static_cast<EcSound*>(Instance.GetComponent(static_cast<uint32_t>((uint64_t)UserData)));
 	const AudioAsset& audio = AudioAssets[sound->SoundFile];
-	assert(SDL_SetAudioStreamFrequencyRatio(Stream, sound->Speed));
-	assert(SDL_SetAudioStreamGain(Stream, sound->Volume));
+	PHX_ENSURE(SDL_SetAudioStreamFrequencyRatio(Stream, sound->Speed));
+	PHX_ENSURE(SDL_SetAudioStreamGain(Stream, sound->Volume));
 
 	if (sound->NextRequestedPosition != -1.f)
 	{
@@ -251,16 +251,18 @@ static void streamCallback(void* UserData, SDL_AudioStream* Stream, int Addition
 
 		sound->BytePosition = static_cast<uint32_t>(audio.Spec.freq * target);
 
-		assert(SDL_FlushAudioStream(Stream));
+		PHX_ENSURE(SDL_FlushAudioStream(Stream));
 	}
 
 	if (sound->BytePosition >= audio.DataSize)
 	{
 		if (sound->Looped)
-			assert(SDL_PutAudioStreamData(Stream, audio.Data, AdditionalAmount));
+		{
+			PHX_ENSURE(SDL_PutAudioStreamData(Stream, audio.Data, AdditionalAmount));
+		}
 		else
 		{
-			assert(SDL_PauseAudioStreamDevice(Stream));
+			PHX_ENSURE(SDL_PauseAudioStreamDevice(Stream));
 			sound->m_PlayRequested = false; // prevent it from resuming in `::Update`
 		}
 
@@ -270,7 +272,7 @@ static void streamCallback(void* UserData, SDL_AudioStream* Stream, int Addition
 	{
 		int len = std::min(AdditionalAmount, static_cast<int>(audio.DataSize - sound->BytePosition));
 
-		assert(SDL_PutAudioStreamData(Stream, audio.Data + sound->BytePosition, len));
+		PHX_ENSURE(SDL_PutAudioStreamData(Stream, audio.Data + sound->BytePosition, len));
 	}
 
 	uint32_t sampleSize = SDL_AUDIO_BITSIZE(audio.Spec.format) / 8;
@@ -416,7 +418,7 @@ void EcSound::Reload()
 				return;
 			}
 
-			assert(SDL_SetAudioStreamGetCallback(stream, streamCallback, (void*)static_cast<uint64_t>(SoundEcId)));
+			PHX_ENSURE(SDL_SetAudioStreamGetCallback(stream, streamCallback, (void*)static_cast<uint64_t>(SoundEcId)));
 
 			SCOPED_LOCK(ComponentsBufferReAllocMutex);
 
@@ -425,7 +427,7 @@ void EcSound::Reload()
 			uint32_t sampleSize = SDL_AUDIO_BITSIZE(audio.Spec.format) / 8;
 			uint32_t sampleCount = audio.DataSize / sampleSize;
 
-			assert(audio.Spec.channels > 0);
+			PHX_ENSURE(audio.Spec.channels > 0);
 			uint32_t sampleLen = sampleCount / audio.Spec.channels;
 
 			sound->Length = (float)sampleLen / (float)audio.Spec.freq;
@@ -434,9 +436,11 @@ void EcSound::Reload()
 			sound->FinishedLoading = true;
 
 			if (sound->m_PlayRequested)
-				assert(SDL_ResumeAudioStreamDevice(stream));
+			{
+				PHX_ENSURE(SDL_ResumeAudioStreamDevice(stream));
+			}
 			else
-				assert(SDL_PauseAudioStreamDevice(stream));
+				PHX_ENSURE(SDL_PauseAudioStreamDevice(stream));
 
 			//AudioStreamPromises[SoundEcId].set_value(true);
 		},

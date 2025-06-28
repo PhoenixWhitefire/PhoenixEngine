@@ -222,18 +222,24 @@ struct GameObjectRef
 	GameObjectRef(const GameObjectRef& Other)
 		: m_TargetId(Other.m_TargetId)
 	{
-		assert(!Other->IsDestructionPending);
-		assert(Other->Valid);
+		if (Other.m_TargetId != PHX_GAMEOBJECT_NULL_ID)
+		{
+			assert(!Other->IsDestructionPending);
+			assert(Other->Valid);
 
-		Contained()->IncrementHardRefs();
+			Contained()->IncrementHardRefs();
+		}
 	}
 	GameObjectRef(const GameObjectRef&& Other)
 		: m_TargetId(Other.m_TargetId)
 	{
-		assert(!Other->IsDestructionPending);
-		assert(Other->Valid);
-
-		Contained()->IncrementHardRefs();
+		if (Other.m_TargetId != PHX_GAMEOBJECT_NULL_ID)
+		{
+			assert(!Other->IsDestructionPending);
+			assert(Other->Valid);
+			
+			Contained()->IncrementHardRefs();
+		}
 	}
 
 	~GameObjectRef()

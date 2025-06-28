@@ -120,7 +120,7 @@ glm::vec3 EcWorkspace::ScreenPointToRay(double x, double y, float length, glm::v
 {
 	Engine* engine = Engine::Get();
 	int winSizeX = 0, winSizeY = 0;
-	assert(SDL_GetWindowSize(engine->Window, &winSizeX, &winSizeY));
+	PHX_ENSURE(SDL_GetWindowSize(engine->Window, &winSizeX, &winSizeY));
 
 	// thinmatrix 27/12/2024
 	// https://www.youtube.com/watch?v=DLKN0jExRIM

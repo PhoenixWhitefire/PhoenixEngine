@@ -156,10 +156,7 @@ static std::string exec(const char* cmd)
 	FILE* pipe = popen(cmd, "r");
 
 	if (!pipe)
-	{
-		pclose(pipe);
 		throw std::runtime_error("popen() failed!");
-	}
 
 	while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe) != nullptr)
 		result += buffer.data();
@@ -187,7 +184,7 @@ static void launchTracy()
 
 #else
 
-	assert(SDL_ShowSimpleMessageBox(
+	PHX_ENSURE(SDL_ShowSimpleMessageBox(
 		SDL_MESSAGEBOX_INFORMATION,
 		"Tracy Integration",
 		"Instrumentation was disabled for this build. You need to use a build with the `TRACY_ENABLE` macro defintion.",
@@ -275,11 +272,11 @@ static void handleInputs(double deltaTime)
 
 			int windowSizeX, windowSizeY;
 
-			assert(SDL_GetWindowSize(nullptr, &windowSizeX, &windowSizeY));
+			PHX_ENSURE(SDL_GetWindowSize(nullptr, &windowSizeX, &windowSizeY));
 
 			if (FirstDragFrame)
 			{
-				assert(SDL_SetWindowMouseGrab(window, true));
+				PHX_ENSURE(SDL_SetWindowMouseGrab(window, true));
 
 				SDL_WarpMouseInWindow(nullptr, windowSizeX / 2.f, windowSizeY / 2.f);
 
@@ -355,7 +352,7 @@ static void handleInputs(double deltaTime)
 			if (!FirstDragFrame)
 			{
 				PHX_SDL_CALL(SDL_ShowCursor);
-				assert(SDL_SetWindowMouseGrab(window, false));
+				PHX_ENSURE(SDL_SetWindowMouseGrab(window, false));
 
 				ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
 
@@ -374,7 +371,7 @@ static void handleInputs(double deltaTime)
 		// `input_mouse_setlocked` Luau API 21/09/2024
 		if (EcScript::s_WindowGrabMouse && !UserInput::InputBeingSunk)
 		{
-			assert(SDL_SetWindowMouseGrab(window, true));
+			PHX_ENSURE(SDL_SetWindowMouseGrab(window, true));
 
 			PHX_SDL_CALL(SDL_ShowCursor);
 			ImGui::SetMouseCursor(ImGuiMouseCursor_None);
@@ -415,7 +412,7 @@ static void handleInputs(double deltaTime)
 		}
 		else
 		{
-			assert(SDL_SetWindowMouseGrab(window, false));
+			PHX_ENSURE(SDL_SetWindowMouseGrab(window, false));
 
 			PHX_SDL_CALL(SDL_ShowCursor);
 			ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
@@ -648,10 +645,12 @@ static void drawDeveloperUI(double DeltaTime)
 			EngineInstance->SetIsFullscreen(EngineInstance->IsFullscreen);
 
 		if (EngineInstance->VSync)
-			assert(SDL_GL_SetSwapInterval(1));
+		{
+			PHX_ENSURE(SDL_GL_SetSwapInterval(1));
+		}
 		else
 		{
-			assert(SDL_GL_SetSwapInterval(0));
+			PHX_ENSURE(SDL_GL_SetSwapInterval(0));
 
 			ImGui::InputInt("FPS limit", &EngineInstance->FpsCap, 1, 30);
 		}

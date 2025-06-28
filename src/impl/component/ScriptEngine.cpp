@@ -342,7 +342,7 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 	}
 	case Reflection::ValueType::String:
 	{
-		lua_pushstring(L, gv.AsStringView().data());
+		lua_pushlstring(L, gv.AsStringView().data(), gv.AsStringView().size());
 		break;
 	}
 	case Reflection::ValueType::Vector3:
@@ -367,9 +367,9 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 	}
 	case Reflection::ValueType::Array:
 	{
-		lua_newtable(L);
-
 		std::span<Reflection::GenericValue> array = gv.AsArray();
+		PHX_ENSURE(lua_checkstack(L, 6));
+		lua_newtable(L);
 
 		for (int index = 0; static_cast<size_t>(index) < array.size(); index++)
 		{

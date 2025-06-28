@@ -77,8 +77,7 @@ void Engine::ResizeWindow(int NewSizeX, int NewSizeY)
 {
 	ZoneScoped;
 
-	assert(SDL_SetWindowSize(this->Window, NewSizeX, NewSizeY));
-
+	PHX_ENSURE(SDL_SetWindowSize(this->Window, NewSizeX, NewSizeY));
 	this->OnWindowResized(NewSizeX, NewSizeY);
 }
 
@@ -162,7 +161,7 @@ void Engine::LoadConfiguration()
 
 	if (!ConfigLoadSucceeded)
 	{
-		assert(SDL_ShowSimpleMessageBox(
+		PHX_ENSURE(SDL_ShowSimpleMessageBox(
 			SDL_MESSAGEBOX_WARNING,
 			"Configuration Error",
 			ConfigLoadErrorMessage.c_str(),
