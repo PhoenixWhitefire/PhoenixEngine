@@ -557,6 +557,13 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 				break;
 			}
 
+			case Reflection::ValueType::Vector2:
+			{
+				assignment = glm::vec2((float)memberValue[0], (float)memberValue[1]);
+				
+				break;
+			}
+
 			case Reflection::ValueType::Vector3:
 			{
 				assignment = GetVector3FromJson(memberValue);

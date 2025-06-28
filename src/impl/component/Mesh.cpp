@@ -73,6 +73,21 @@ public:
 				}
 			),
 
+			EC_PROP(
+				"CollisionFidelity",
+				Integer,
+				[](void* p)
+				-> Reflection::GenericValue
+				{
+					return static_cast<uint32_t>(static_cast<EcMesh*>(p)->CollisionFidelity);
+				},
+				[](void* p, const Reflection::GenericValue& gv)
+				-> void
+				{
+					static_cast<EcMesh*>(p)->CollisionFidelity = static_cast<CollisionFidelityMode>(gv.AsInteger());
+				}
+			),
+
 			EC_PROP_SIMPLE(EcMesh, Transparency, Double),
 			EC_PROP_SIMPLE(EcMesh, MetallnessFactor, Double),
 			EC_PROP_SIMPLE(EcMesh, RoughnessFactor, Double),
@@ -156,45 +171,36 @@ void EcMesh::RecomputeAabb()
 	const glm::mat4& transform = ct->Transform;
 	const glm::vec3& glmsize = ct->Size;
 
-	glm::vec3 a = transform * glm::vec4(glmsize * glm::vec3( 1.f,  1.f,  1.f), 1.f);
-	glm::vec3 b = transform * glm::vec4(glmsize * glm::vec3(-1.f, -1.f, -1.f), 1.f);
-
-	glm::vec3 c = transform * glm::vec4(glmsize * glm::vec3(-1.f,  1.f,  1.f), 1.f);
-	glm::vec3 d = transform * glm::vec4(glmsize * glm::vec3( 1.f, -1.f,  1.f), 1.f);
-	glm::vec3 e = transform * glm::vec4(glmsize * glm::vec3( 1.f,  1.f, -1.f), 1.f);
-
-	glm::vec3 f = transform * glm::vec4(glmsize * glm::vec3(-1.f, -1.f,  1.f), 1.f);
-	glm::vec3 g = transform * glm::vec4(glmsize * glm::vec3( 1.f, -1.f, -1.f), 1.f);
-
-	glm::vec3 h = transform * glm::vec4(glmsize * glm::vec3(-1.f,  1.f, -1.f), 1.f);
-
-	std::array<glm::vec3, 8> verts = { a, b, c, d, e, f, g, h };
-
-	glm::vec3 max{ FLT_MIN, FLT_MIN, FLT_MIN };
-	glm::vec3 min{ FLT_MAX, FLT_MAX, FLT_MAX };
-
-	for (const glm::vec3& v : verts)
+	if (CollisionFidelity == CollisionFidelityMode::Aabb)
 	{
-		if (v.x > max.x)
-			max.x = v.x;
-		if (v.y > max.y)
-			max.y = v.y;
-		if (v.z > max.z)
-			max.z = v.z;
+		std::array<glm::vec3, 8> verts;
+		
+		int i = 0;
+		for (int x : {-1, 1})
+			for (int y : {-1, 1})
+				for (int z : {-1, 1})
+					verts[i++] = transform * glm::vec4(glmsize * glm::vec3(x, y, z), 1.f);
 
-		if (v.x < min.x)
-			min.x = v.x;
-		if (v.y < min.y)
-			min.y = v.y;
-		if (v.z < min.z)
-			min.z = v.z;
+		glm::vec3 max( -FLT_MAX );
+		glm::vec3 min(  FLT_MAX );
+
+		for (const glm::vec3& v : verts)
+		{
+			max = glm::max(max, v);
+			min = glm::min(min, v);
+		}
+		
+		glm::vec3 size = (max - min) / 2.f;
+		glm::vec3 center = (min + max) / 2.f;
+
+		this->CollisionAabb.Position = center;
+		this->CollisionAabb.Size = size;
 	}
-
-	glm::vec3 size = (max - min) / 2.f;
-	glm::vec3 center = (min + max) / 2.f;
-
-	this->CollisionAabb.Position = center;
-	this->CollisionAabb.Size = size;
+	else if (CollisionFidelity == CollisionFidelityMode::AabbStaticSize)
+	{
+		this->CollisionAabb.Position = glm::vec3(transform[3]);
+		this->CollisionAabb.Size = glmsize;
+	}
 }
 
 /*

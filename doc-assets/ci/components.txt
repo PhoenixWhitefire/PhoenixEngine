@@ -109,12 +109,13 @@ No members defined
 * `PhysicsCollisions: boolean`: Whether other physics objects can collide with it
 * `LinearVelocity: Vector3`: Its velocity
 * `Transparency: number`: Its transparency/translucency
-* `Asset: string`: The path to the underlying `.hxmesh` file, or a built-in identifier like `!Quad` or `!Cube`
 * `Tint: Color`: The Color it should be tinted with
+* `Asset: string`: The path to the underlying `.hxmesh` file, or a built-in identifier like `!Quad` or `!Cube`
+* `RoughnessFactor: number`: Roughness modifier
 * `Density: number`: Its density (`Mass = Density * Size`)
 * `PhysicsDynamics: boolean`: Whether the Physics Engine should apply forces to it
-* `RoughnessFactor: number`: Roughness modifier
 * `MetallnessFactor: number`: Metallness modifier
+* `CollisionFidelity: number`: 0 - `Aabb`: An axis-aligned bounding box. 1 - `AabbStaticSize`: An AABB which keeps the same size as the Object
 * `AngularVelocity: Vector3`: Its rotational velocity
 * `Material: string`: The name of the `.mtl` in the `resources/materials/` directory it should use
 * `FaceCulling: number`: An integer. `0` means no culling, `1` to cull its "back" faces, and `2` to cull its "front" faces

@@ -35,6 +35,7 @@ function Controller:InitDefault(CharacterHeight)
 	character.Size = vector.create(CharacterHeight / 3, CharacterHeight, CharacterHeight / 3)
 	character.PhysicsDynamics = true
 	character.Friction = 2
+	character.CollisionFidelity = 1 -- AabbStaticSize
 	character.Parent = workspace
 	
 	self.Character = character
@@ -43,15 +44,19 @@ function Controller:InitDefault(CharacterHeight)
 	self.JumpRayDistance = CharacterHeight * 0.6
 end
 
+local CHARACTER_MAX_STEP_UP_DIST = 1.5
+
 function Controller:Update(DeltaTime)
 	self.totalTime += DeltaTime
 	
 	local moveDirection, inputDirection = self:getMoveDirection()
 	local rotationX, rotationY = self:getRotationVector()
 	
+	local charSize = self.Character.Size
+	
 	local floorRayHit = world_aabbcast(
-		self.Character.Transform.Position - vector.create(0, 2, 0),
-		self.Character.Size * 0.8,
+		self.Character.Transform.Position - vector.create(0, charSize.Y / 4, 0),
+		vector.create(charSize.x * 1.2, charSize.Y / 2, charSize.z * 1.2),
 		{ self.Character }
 	)
 	
@@ -66,6 +71,12 @@ function Controller:Update(DeltaTime)
 			impulse += vector.create(0, self.JumpImpulse, 0)
 			self.Character.LinearVelocity = vector.create(self.Character.LinearVelocity.X, 0, self.Character.LinearVelocity.Z)
 			self.lastJumped = self.totalTime
+		end
+		
+		local sink = (self.Character.Transform.Position.Y - charSize.Y / 2) - floorRayHit.Position.Y
+		
+		if sink > 0.2 and vector.magnitude(moveDirection) > 0 then
+			self.Character.Transform *= Matrix.fromTranslation(0, sink, 0)
 		end
 	else
 		impulse *= 0.3

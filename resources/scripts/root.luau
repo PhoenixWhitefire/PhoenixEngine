@@ -137,7 +137,14 @@ function Update()
 		local Path = fd_save("resources/scenes", "Scenes", "hxscene")
 		
 		if Path then
-			scene_save(IntendedLevelState:GetChildren(), Path)
+			local actuallySave = {}
+			for _, g in IntendedLevelState:GetChildren() do
+				if g.Serializes then
+					table.insert(actuallySave, g)
+				end
+			end
+			
+			scene_save(actuallySave, Path)
 		else
 			print("No path selected")
 		end

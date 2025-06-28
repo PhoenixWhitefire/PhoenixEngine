@@ -7,6 +7,7 @@
 #include "datatype/Color.hpp"
 
 enum class FaceCullingMode : uint8_t { None, BackFace, FrontFace };
+enum class CollisionFidelityMode : uint8_t { Aabb, AabbStaticSize };
 
 struct EcMesh
 {
@@ -35,6 +36,7 @@ struct EcMesh
 		glm::vec3 Position{};
 		glm::vec3 Size{ 1.f, 1.f, 1.f };
 	} CollisionAabb;
+	CollisionFidelityMode CollisionFidelity = CollisionFidelityMode::Aabb;
 
 	double Mass = 1.f;
 	double Density = 1.f;

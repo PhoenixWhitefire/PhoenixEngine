@@ -1,21 +1,580 @@
 PHNXENGI
-#Version 2.00
+#Version 2.10
 #Asset Scene
-#Date 8-2-2025
-#SceneName scenes/dev_fmtv2.hxscene
+#Date 28-6-2025
+#SceneName resources/scenes/dev_fmtv2.hxscene
 
 {
   "GameObjects": [
     {
-      "$_class": "Model",
-      "$_objectId": 63,
+      "$_components": [
+        "Transform",
+        "Model"
+      ],
+      "$_objectId": 39,
       "Enabled": true,
-      "Name": "Capoeira",
-      "Serializes": true
+      "Name": "Stairs\u0000",
+      "Serializes": true,
+      "Size": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
     },
     {
-      "$_class": "Mesh",
-      "$_objectId": 64,
+      "$_components": [
+        "Transform",
+        "Mesh"
+      ],
+      "$_objectId": 40,
+      "AngularVelocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Asset": "!Cube",
+      "CastsShadows": true,
+      "Density": 1.0,
+      "Enabled": true,
+      "FaceCulling": 1,
+      "Friction": 0.30000001192092896,
+      "LinearVelocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Material": "plastic",
+      "MetallnessFactor": 1.0,
+      "Name": "Mesh",
+      "Parent": 39,
+      "PhysicsCollisions": true,
+      "PhysicsDynamics": false,
+      "RoughnessFactor": 1.0,
+      "Serializes": true,
+      "Size": [
+        15.0,
+        1.0,
+        10.0
+      ],
+      "Tint": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          17.5,
+          5.0,
+          -36.0,
+          1.0
+        ]
+      ],
+      "Transparency": 0.0
+    },
+    {
+      "$_components": [
+        "Transform",
+        "Mesh"
+      ],
+      "$_objectId": 41,
+      "AngularVelocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Asset": "!Cube",
+      "CastsShadows": true,
+      "Density": 1.0,
+      "Enabled": true,
+      "FaceCulling": 1,
+      "Friction": 0.30000001192092896,
+      "LinearVelocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Material": "plastic",
+      "MetallnessFactor": 1.0,
+      "Name": "Mesh",
+      "Parent": 39,
+      "PhysicsCollisions": true,
+      "PhysicsDynamics": false,
+      "RoughnessFactor": 1.0,
+      "Serializes": true,
+      "Size": [
+        15.0,
+        1.0,
+        1.0
+      ],
+      "Tint": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          17.5,
+          5.0,
+          -30.5,
+          1.0
+        ]
+      ],
+      "Transparency": 0.0
+    },
+    {
+      "$_components": [
+        "Transform",
+        "Mesh"
+      ],
+      "$_objectId": 42,
+      "AngularVelocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Asset": "!Cube",
+      "CastsShadows": true,
+      "Density": 1.0,
+      "Enabled": true,
+      "FaceCulling": 1,
+      "Friction": 0.30000001192092896,
+      "LinearVelocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Material": "plastic",
+      "MetallnessFactor": 1.0,
+      "Name": "Mesh",
+      "Parent": 39,
+      "PhysicsCollisions": true,
+      "PhysicsDynamics": false,
+      "RoughnessFactor": 1.0,
+      "Serializes": true,
+      "Size": [
+        15.0,
+        1.0,
+        1.0
+      ],
+      "Tint": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          17.5,
+          4.0,
+          -29.5,
+          1.0
+        ]
+      ],
+      "Transparency": 0.0
+    },
+    {
+      "$_components": [
+        "Transform",
+        "Mesh"
+      ],
+      "$_objectId": 43,
+      "AngularVelocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Asset": "!Cube",
+      "CastsShadows": true,
+      "Density": 1.0,
+      "Enabled": true,
+      "FaceCulling": 1,
+      "Friction": 0.30000001192092896,
+      "LinearVelocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Material": "plastic",
+      "MetallnessFactor": 1.0,
+      "Name": "Mesh",
+      "Parent": 39,
+      "PhysicsCollisions": true,
+      "PhysicsDynamics": false,
+      "RoughnessFactor": 1.0,
+      "Serializes": true,
+      "Size": [
+        15.0,
+        1.0,
+        1.0
+      ],
+      "Tint": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          17.5,
+          3.0,
+          -28.5,
+          1.0
+        ]
+      ],
+      "Transparency": 0.0
+    },
+    {
+      "$_components": [
+        "Transform",
+        "Mesh"
+      ],
+      "$_objectId": 44,
+      "AngularVelocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Asset": "!Cube",
+      "CastsShadows": true,
+      "Density": 1.0,
+      "Enabled": true,
+      "FaceCulling": 1,
+      "Friction": 0.30000001192092896,
+      "LinearVelocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Material": "plastic",
+      "MetallnessFactor": 1.0,
+      "Name": "Mesh",
+      "Parent": 39,
+      "PhysicsCollisions": true,
+      "PhysicsDynamics": false,
+      "RoughnessFactor": 1.0,
+      "Serializes": true,
+      "Size": [
+        15.0,
+        1.0,
+        1.0
+      ],
+      "Tint": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          17.5,
+          2.0,
+          -27.5,
+          1.0
+        ]
+      ],
+      "Transparency": 0.0
+    },
+    {
+      "$_components": [
+        "Transform",
+        "Mesh"
+      ],
+      "$_objectId": 45,
+      "AngularVelocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Asset": "!Cube",
+      "CastsShadows": true,
+      "Density": 1.0,
+      "Enabled": true,
+      "FaceCulling": 1,
+      "Friction": 0.30000001192092896,
+      "LinearVelocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Material": "plastic",
+      "MetallnessFactor": 1.0,
+      "Name": "Mesh",
+      "Parent": 39,
+      "PhysicsCollisions": true,
+      "PhysicsDynamics": false,
+      "RoughnessFactor": 1.0,
+      "Serializes": true,
+      "Size": [
+        15.0,
+        1.0,
+        1.0
+      ],
+      "Tint": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          17.5,
+          1.0,
+          -26.5,
+          1.0
+        ]
+      ],
+      "Transparency": 0.0
+    },
+    {
+      "$_components": [
+        "Transform",
+        "Mesh"
+      ],
+      "$_objectId": 46,
+      "AngularVelocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Asset": "!Cube",
+      "CastsShadows": true,
+      "Density": 1.0,
+      "Enabled": true,
+      "FaceCulling": 1,
+      "Friction": 0.30000001192092896,
+      "LinearVelocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Material": "plastic",
+      "MetallnessFactor": 1.0,
+      "Name": "Mesh",
+      "Parent": 39,
+      "PhysicsCollisions": true,
+      "PhysicsDynamics": false,
+      "RoughnessFactor": 1.0,
+      "Serializes": true,
+      "Size": [
+        15.0,
+        1.0,
+        1.0
+      ],
+      "Tint": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          17.5,
+          0.0,
+          -25.5,
+          1.0
+        ]
+      ],
+      "Transparency": 0.0
+    },
+    {
+      "$_components": [
+        "Transform",
+        "Model"
+      ],
+      "$_objectId": 51,
+      "Enabled": true,
+      "Name": "Capoeira",
+      "Serializes": true,
+      "Size": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "$_components": [
+        "Transform",
+        "Mesh"
+      ],
+      "$_objectId": 52,
+      "AngularVelocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
       "Asset": "meshes/models/Capoeira.glb/Beta_Joints.hxmesh",
       "CastsShadows": true,
       "Density": 1.0,
@@ -30,7 +589,7 @@ PHNXENGI
       "Material": "models/Capoeira.glb/Beta_Joints_MAT1",
       "MetallnessFactor": 0.5,
       "Name": "Beta_Joints",
-      "Parent": 63,
+      "Parent": 51,
       "PhysicsCollisions": true,
       "PhysicsDynamics": false,
       "RoughnessFactor": 0.5527864098548889,
@@ -74,8 +633,16 @@ PHNXENGI
       "Transparency": 0.0
     },
     {
-      "$_class": "Mesh",
-      "$_objectId": 65,
+      "$_components": [
+        "Transform",
+        "Mesh"
+      ],
+      "$_objectId": 53,
+      "AngularVelocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
       "Asset": "meshes/models/Capoeira.glb/Beta_Surface.hxmesh",
       "CastsShadows": true,
       "Density": 1.0,
@@ -90,7 +657,7 @@ PHNXENGI
       "Material": "models/Capoeira.glb/Beta_HighLimbsGeoSG3",
       "MetallnessFactor": 0.0,
       "Name": "Beta_Surface",
-      "Parent": 63,
+      "Parent": 51,
       "PhysicsCollisions": true,
       "PhysicsDynamics": false,
       "RoughnessFactor": 0.5527864098548889,
@@ -134,8 +701,17 @@ PHNXENGI
       "Transparency": 0.0
     },
     {
-      "$_class": "Primitive",
-      "$_objectId": 66,
+      "$_components": [
+        "Transform",
+        "Mesh"
+      ],
+      "$_objectId": 54,
+      "AngularVelocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Asset": "!Cube",
       "CastsShadows": true,
       "Density": 1.0,
       "Enabled": true,
@@ -153,7 +729,6 @@ PHNXENGI
       "PhysicsDynamics": false,
       "RoughnessFactor": 1.0,
       "Serializes": true,
-      "Shape": 0,
       "Size": [
         50.0,
         1.0,
@@ -193,8 +768,17 @@ PHNXENGI
       "Transparency": 0.0
     },
     {
-      "$_class": "Primitive",
-      "$_objectId": 67,
+      "$_components": [
+        "Transform",
+        "Mesh"
+      ],
+      "$_objectId": 55,
+      "AngularVelocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Asset": "!Cube",
       "CastsShadows": true,
       "Density": 1.0,
       "Enabled": true,
@@ -212,7 +796,6 @@ PHNXENGI
       "PhysicsDynamics": false,
       "RoughnessFactor": 1.0,
       "Serializes": true,
-      "Shape": 0,
       "Size": [
         2.0,
         17.0,
@@ -225,9 +808,9 @@ PHNXENGI
       ],
       "Transform": [
         [
-          -0.2985962927341461,
-          -1.5896263505510433e-07,
-          0.954319417476654,
+          0.5107499957084656,
+          1.5880296189152432e-07,
+          -0.8596507906913757,
           0.0
         ],
         [
@@ -237,9 +820,9 @@ PHNXENGI
           0.0
         ],
         [
-          -0.954319417476654,
-          -1.7904042692862276e-08,
-          -0.2985962927341461,
+          0.8596507906913757,
+          -1.9261078065824222e-08,
+          0.5107499957084656,
           0.0
         ],
         [
@@ -252,8 +835,11 @@ PHNXENGI
       "Transparency": 0.0
     },
     {
-      "$_class": "DirectionalLight",
-      "$_objectId": 68,
+      "$_components": [
+        "Transform",
+        "DirectionalLight"
+      ],
+      "$_objectId": 56,
       "Brightness": 1.0,
       "Direction": [
         0.5,
@@ -268,11 +854,50 @@ PHNXENGI
       ],
       "Name": "DirectionalLight",
       "Serializes": true,
-      "Shadows": false
+      "Shadows": false,
+      "Size": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.5,
+          0.25,
+          0.5,
+          1.0
+        ]
+      ]
     },
     {
-      "$_class": "Mesh",
-      "$_objectId": 69,
+      "$_components": [
+        "Transform",
+        "Mesh"
+      ],
+      "$_objectId": 57,
+      "AngularVelocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
       "Asset": "meshes/models/grass/scene.gltf/Plane.hxmesh",
       "CastsShadows": true,
       "Density": 1.0,
@@ -330,8 +955,16 @@ PHNXENGI
       "Transparency": 0.0
     },
     {
-      "$_class": "Mesh",
-      "$_objectId": 70,
+      "$_components": [
+        "Transform",
+        "Mesh"
+      ],
+      "$_objectId": 58,
+      "AngularVelocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
       "Asset": "meshes/models/ground/scene.gltf/Grid.hxmesh",
       "CastsShadows": true,
       "Density": 1.0,
@@ -389,8 +1022,16 @@ PHNXENGI
       "Transparency": 0.0
     },
     {
-      "$_class": "Mesh",
-      "$_objectId": 71,
+      "$_components": [
+        "Transform",
+        "Mesh"
+      ],
+      "$_objectId": 59,
+      "AngularVelocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
       "Asset": "meshes/models/windows/scene.gltf/Plane.009.hxmesh",
       "CastsShadows": true,
       "Density": 1.0,
@@ -448,13 +1089,16 @@ PHNXENGI
       "Transparency": 0.0
     },
     {
-      "$_class": "ParticleEmitter",
-      "$_objectId": 9999,
-      "Parent": 72
-    },
-    {
-      "$_class": "Mesh",
-      "$_objectId": 72,
+      "$_components": [
+        "Transform",
+        "Mesh"
+      ],
+      "$_objectId": 60,
+      "AngularVelocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
       "Asset": "meshes/models/crow-b.glb/pasted__L_Eye_pasted__polySurface122_pasted__lambert2_0.hxmesh",
       "CastsShadows": true,
       "Density": 1.0,
@@ -512,13 +1156,64 @@ PHNXENGI
       "Transparency": 0.0
     },
     {
-      "$_class": "Script",
-      "$_objectId": 73,
+      "$_components": [
+        "Transform",
+        "ParticleEmitter"
+      ],
+      "$_objectId": 61,
+      "Emitting": true,
+      "Enabled": true,
+      "Lifetime": [
+        1.5,
+        2.0
+      ],
+      "Name": "ParticleEmitter",
+      "Parent": 60,
+      "ParticlesAreAttached": false,
+      "Rate": 50,
+      "Serializes": true,
+      "Size": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "$_components": [
+        "Script"
+      ],
+      "$_objectId": 62,
       "Enabled": true,
       "Name": "MainScript",
       "Serializes": true,
       "SourceFile": "scripts/devmap.luau"
     }
   ],
-  "SceneName": "scenes/dev_fmtv2.hxscene"
+  "SceneName": "resources/scenes/dev_fmtv2.hxscene"
 }

@@ -130,12 +130,12 @@ EcParticleEmitter::EcParticleEmitter()
 	this->VelocityOverTime.InsertKey(0.75f, glm::vec3(0.f, 2.5f, 0.f));
 	this->VelocityOverTime.InsertKey(1.00f, glm::vec3(0.f, 0.0f, 0.f));
 
-	this->TransparencyOverTime.InsertKey(0.f,  0.f);
+	this->TransparencyOverTime.InsertKey(0.0f, 0.0f);
 	this->TransparencyOverTime.InsertKey(0.8f, 0.5f);
-	this->TransparencyOverTime.InsertKey(1.f,  1.f);
+	this->TransparencyOverTime.InsertKey(1.0f, 1.0f);
 
-	this->SizeOverTime.InsertKey(0.f, 1.f);
-	this->SizeOverTime.InsertKey(1.f, 15.f);
+	this->SizeOverTime.InsertKey(0.0f, 1.0f);
+	this->SizeOverTime.InsertKey(1.0f, 15.f);
 }
 
 size_t EcParticleEmitter::m_GetUsableParticleIndex()

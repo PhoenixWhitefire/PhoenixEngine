@@ -70,7 +70,8 @@
           "PhysicsDynamics": "Whether the Physics Engine should apply forces to it",
           "RoughnessFactor": "Roughness modifier",
           "Tint": "The Color it should be tinted with",
-          "Transparency": "Its transparency/translucency"
+          "Transparency": "Its transparency/translucency",
+          "CollisionFidelity": "0 - `Aabb`: An axis-aligned bounding box. 1 - `AabbStaticSize`: An AABB which keeps the same size as the Object"
         }
       },
       "Model": {

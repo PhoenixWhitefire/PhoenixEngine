@@ -55,6 +55,7 @@
           "AngularVelocity": "Vector3",
           "Asset": "String",
           "CastsShadows": "Bool",
+          "CollisionFidelity": "Integer",
           "Density": "Double",
           "FaceCulling": "Integer",
           "Friction": "Double",
