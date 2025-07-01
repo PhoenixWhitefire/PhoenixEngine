@@ -79,7 +79,7 @@ function Update(DeltaTime)
 		if CharacterController.FirstPerson then
 			CharacterController.CameraOffset = DefaultCameraOffset
 		else
-			CharacterController.CameraOffset = DefaultCameraOffset * Matrix.fromTranslation(0, 2, -20)
+			CharacterController.CameraOffset = DefaultCameraOffset * Matrix.fromTranslation(0, 1, -25)
 			--CharacterController.CameraTargetOffset = DefaultCameraOffset
 		end
 	end
@@ -105,13 +105,13 @@ function Update(DeltaTime)
 			bruh.PhysicsDynamics = true
 			bruh.Parent = blorbs
 			
-			if TimesNormalStingerPlayed == 0 then
-				--RareSoundStinger.Playing = false
+			if TimesNormalStingerPlayed == 0 or math.random(1, 4) ~= 1 then
+				RareSoundStinger.Playing = false
 				SoundStinger.Position = 0
 				SoundStinger.Playing = true
 				TimesNormalStingerPlayed += 1
 			else
-				--SoundStinger.Playing = false
+				SoundStinger.Playing = false
 				RareSoundStinger.Position = 0
 				RareSoundStinger.Playing = true
 				TimesNormalStingerPlayed = 0

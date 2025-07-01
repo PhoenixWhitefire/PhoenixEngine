@@ -13,6 +13,13 @@ namespace IntersectionLib
 		float Depth{};
 	};
 
+	struct SweptIntersection
+	{
+		glm::vec3 Position{};
+		Intersection Hit{};
+		float Time{};
+	};
+
 	IntersectionLib::Intersection AabbAabb(
 		const glm::vec3& APosition,
 		const glm::vec3& ASize,
@@ -28,5 +35,13 @@ namespace IntersectionLib
 		float PaddingX = 0.f,
 		float PaddingY = 0.f,
 		float PaddingZ = 0.f
+	);
+
+	IntersectionLib::SweptIntersection SweepAabb(
+		const glm::vec3& APosition,
+		const glm::vec3& ASize,
+		const glm::vec3& BPosition,
+		const glm::vec3& BSize,
+		const glm::vec3& Delta
 	);
 }

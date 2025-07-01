@@ -27,7 +27,8 @@ struct EcSound
 	GameObjectRef Object;
 	uint32_t EcId = PHX_GAMEOBJECT_NULL_ID;
 
-	void* m_AudioStream = nullptr;
+	bool m_IsWaitingForLoad = false;
+	void* m_Channel = nullptr;
 	bool m_PlayRequested = false;
 
 	static const EntityComponent Type = EntityComponent::Sound;

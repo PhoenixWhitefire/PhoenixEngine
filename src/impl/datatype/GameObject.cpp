@@ -374,6 +374,8 @@ void GameObject::DecrementHardRefs()
 
 void GameObject::Destroy()
 {
+	ZoneScoped;
+
 	assert(Valid);
 
 	if (!IsDestructionPending)

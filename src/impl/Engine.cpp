@@ -198,20 +198,7 @@ Engine::Engine()
 	ZoneScoped;
 
 	EngineInstance = this;
-
-	// 15/08/2024:
-	// Hmm, this single commented-out line look like the remnants
-	//  of my first attempt trying to get behavior like we have
-	// `GameObject::Create` today.
-	// My idea was, "Since constructors return objects, why don't I
-	// just have a list of pointers to constructors"?
-	// And, that's actually pretty similar to what I ended up going through
-	// with. It works because they all share the same baseclass and thus
-	// are implicitly downcasted. The current version just has an additional
-	// layer with a templated function.
-	// 
-	//GameObject::GameObjectTable["Model"] = &Object_Model()
-
+	
 	this->LoadConfiguration();
 
 	nlohmann::json defaultWindowSize = readFromConfiguration(
@@ -244,11 +231,11 @@ Engine::Engine()
 	int requestedGLVersionMajor = requestedGLVersion[0];
 	int requestedGLVersionMinor = requestedGLVersion[1];
 
-	const static std::unordered_map<std::string_view, SDL_GLProfile> StringToGLProfile =
+	const std::unordered_map<std::string_view, SDL_GLProfile> StringToGLProfile =
 	{
-		{ "Core", SDL_GL_CONTEXT_PROFILE_CORE },
-		{ "Compatibility", SDL_GL_CONTEXT_PROFILE_COMPATIBILITY },
-		{ "ES", SDL_GL_CONTEXT_PROFILE_ES }
+		{ "Core",            SDL_GL_CONTEXT_PROFILE_CORE          },
+		{ "Compatibility",   SDL_GL_CONTEXT_PROFILE_COMPATIBILITY },
+		{ "ES",              SDL_GL_CONTEXT_PROFILE_ES            }
 	};
 
 	std::string requestedProfileString = EngineJsonConfig.value("OpenGLProfile", "Core");
@@ -312,13 +299,17 @@ Engine::Engine()
 	m_MaterialManager.Initialize(); // mat after tex and shd as it may attempt to load a texture and shader
 	m_MeshProvider.Initialize();
 
-	Log::Info("Blue frame...");
+	{
+		ZoneScopedN("Blue Frame");
 
-	RendererContext.FrameBuffer.Unbind();
+		Log::Info("Blue frame...");
 
-	glClearColor(0.07f, 0.13f, 0.17f, 1.f);
-	glClear(GL_COLOR_BUFFER_BIT);
-	RendererContext.SwapBuffers();
+		RendererContext.FrameBuffer.Unbind();
+
+		glClearColor(0.07f, 0.13f, 0.17f, 1.f);
+		glClear(GL_COLOR_BUFFER_BIT);
+		RendererContext.SwapBuffers();
+	}
 
 	Log::Info("Initializing DataModel...");
 
@@ -521,9 +512,9 @@ void Engine::Start()
 	double LastFrameEnded = RunningTime;
 	double LastSecond = 0.f;
 
-	static const std::string SkyPath = "textures/Sky1/";
+	const std::string_view SkyPath = "textures/Sky1/";
 
-	static const std::string SkyboxCubemapImages[6] =
+	const std::string_view SkyboxCubemapImages[6] =
 	{
 		"right",
 		"left",
@@ -548,9 +539,9 @@ void Engine::Start()
 
 	for (uint8_t faceIndex = 0; faceIndex < 6; faceIndex++)
 	{
-		const std::string& skyboxImage = SkyboxCubemapImages[faceIndex];
+		const std::string_view& face = SkyboxCubemapImages[faceIndex];
 
-		uint32_t tex = m_TextureManager.LoadTextureFromPath(SkyPath + skyboxImage + ".jpg");
+		uint32_t tex = m_TextureManager.LoadTextureFromPath(std::format("{}{}.jpg", SkyPath, face));
 		skyboxFacesBeingLoaded.push_back(tex);
 
 		glTexImage2D(
@@ -1155,8 +1146,13 @@ void Engine::Shutdown()
 	Log::Info("Shutting down Component Managers...");
 
 	// skip the first "None" component manager
-	for (size_t i = 1; i < (size_t)EntityComponent::__count; i++)
+	for (size_t i = 1; i < std::size(s_EntityComponentNames); i++)
+	{
+		ZoneScopedN("Shutdown Component");
+		ZoneText(s_EntityComponentNames[i].data(), s_EntityComponentNames[i].size());
+
 		GameObject::s_ComponentManagers[i]->Shutdown();
+	}
 
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplSDL3_Shutdown();

@@ -16,8 +16,8 @@
 */
 #define PHX_SDL_CALL(func, ...)                                  \
 {                                                                \
+	ZoneScopedN(#func);                                          \
 	bool success = func(__VA_ARGS__);                            \
-	std::string funcName = #func;                                \
 	if (!success)                                                \
 		throw(std::format(                                       \
 			"Error in " #func ":\nMessage: {}",                  \

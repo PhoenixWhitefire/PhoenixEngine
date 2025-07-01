@@ -10,7 +10,7 @@ target_compile_options(PhoenixEngine PRIVATE -MP -g)
 # https://stackoverflow.com/a/9862800
 target_compile_options(PhoenixEngine PRIVATE
 	-pedantic -Wall -Wextra -Wcast-align
-	-Wcast-qual -Wctor-dtor-privacy -Wdisabled-optimization
+	-Wcast-qual -Wdisabled-optimization
 	-Wformat=2 -Winit-self -Wlogical-op -Wmissing-declarations
 	-Wmissing-include-dirs -Woverloaded-virtual
 	-Wshadow -Wsign-promo
@@ -36,6 +36,7 @@ target_link_libraries(PhoenixEngine
 	${CMAKE_BINARY_DIR}/Vendor/SDL/${PHX_BUILD_TYPE}/libSDL_uclibc.a
 	${CMAKE_BINARY_DIR}/Vendor/SDL/${PHX_BUILD_TYPE}/libSDL3.so
 	${CMAKE_BINARY_DIR}/Vendor/tracy/${PHX_BUILD_TYPE}/libTracyClient.a
+	${CMAKE_BINARY_DIR}/Vendor/FMOD/bin/lib/libfmodL.so.14
 	
 	# IF:$<$<CONFIG:Debug> ${PHX_TRACY_LIB_PATH} $<$<CONFIG:RelTracy>:${PHX_TRACY_LIB_PATH}>
 )

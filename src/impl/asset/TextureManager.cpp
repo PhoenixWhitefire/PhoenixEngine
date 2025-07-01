@@ -284,16 +284,24 @@ static void emloadTexture(
 	std::string ActualPath
 )
 {
+	ZoneScoped;
+
 	AsyncTexture->NumColorChannels = 4;
 
-	uint8_t* data = stbi_load(
-		ActualPath.c_str(),
-		&AsyncTexture->Width,
-		&AsyncTexture->Height,
-		&AsyncTexture->NumColorChannels,
-		0
-	);
+	uint8_t* data = nullptr;
+	
+	{
+		ZoneScopedN("stbi_load");
 
+		data = stbi_load(
+			ActualPath.c_str(),
+			&AsyncTexture->Width,
+			&AsyncTexture->Height,
+			&AsyncTexture->NumColorChannels,
+			0
+		);
+	}
+	
 	AsyncTexture->Status = data ? Texture::LoadStatus::Succeeded : Texture::LoadStatus::Failed;
 	AsyncTexture->TMP_ImageByteData = data;
 
@@ -302,30 +310,40 @@ static void emloadTexture(
 
 	else if (isValidPboCandidate(AsyncTexture))
 	{
-		s_PboWriteAvailable.lock();
+		{
+			ZoneScopedN("Mutex lock");
+			s_PboWriteAvailable.lock();
+		}
 
 		uint32_t totalTimeSlept = 0;
 
-		while (!s_PboWriteGlobal && !s_TextureManagerShutdown)
 		{
-			if (totalTimeSlept > 2500)
-			{
-				AsyncTexture->Status = Texture::LoadStatus::Failed;
-				AsyncTexture->ImagePath += " <POTENTIAL DEADLOCK>";
-				break; // 10/05/2025 deadlock problems
-			}
+			ZoneScopedN("Wait for s_PboWriteGlobal");
 
-			std::this_thread::sleep_for(std::chrono::milliseconds(5));
-			totalTimeSlept += 5;
+			while (!s_PboWriteGlobal && !s_TextureManagerShutdown)
+			{
+				if (totalTimeSlept > 2500)
+				{
+					AsyncTexture->Status = Texture::LoadStatus::Failed;
+					AsyncTexture->ImagePath += " <POTENTIAL DEADLOCK>";
+					break; // 10/05/2025 deadlock problems
+				}
+
+				std::this_thread::sleep_for(std::chrono::milliseconds(5));
+				totalTimeSlept += 5;
+			}
 		}
 
 		s_PboWriteGlobal = false;
 
-		memcpy(
-			s_PboMapping,
-			AsyncTexture->TMP_ImageByteData,
-			static_cast<size_t>(AsyncTexture->Width) * AsyncTexture->Height * AsyncTexture->NumColorChannels
-		);
+		{
+			ZoneScopedN("memcpy");
+			memcpy(
+				s_PboMapping,
+				AsyncTexture->TMP_ImageByteData,
+				static_cast<size_t>(AsyncTexture->Width) * AsyncTexture->Height * AsyncTexture->NumColorChannels
+			);
+		}
 
 		s_PboWriteAvailable.unlock();
 	}
@@ -541,8 +559,11 @@ void TextureManager::FinalizeAsyncLoadedTextures()
 
 		numTexPromises = m_TexPromises.size();
 
-		if (numTexPromises + 1 >= m_TexPromises.size())
-			break; // GOD I HATE THIS TODO 10/05/2025
+		if (numTexPromises != m_TexPromises.size())
+		{
+			promiseIndex--;
+			numTexPromises = m_TexPromises.size();
+		}
 	}
 }
 

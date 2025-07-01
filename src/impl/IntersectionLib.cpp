@@ -40,26 +40,39 @@ IntersectionLib::Intersection IntersectionLib::AabbAabb
 
 	result.Occurred = true;
 
-	if (px < py && px < pz)
+	if (px < py)
 	{
-		int sx = sign(dx);
-		result.Depth = px * sx;
-		result.Normal = glm::vec3(-sx, 0.f, 0.f);
-		result.Vector = glm::vec3(APosition.x + (aSizeHalf.x * sx), 0.f, 0.f);
+		if (py < pz)
+		{
+			int sx = sign(dx);
+			result.Depth = px * sx;
+			result.Normal = glm::vec3(-sx, 0.f, 0.f);
+			result.Vector = glm::vec3(APosition.x + (aSizeHalf.x * sx), 0.f, 0.f);
+		}
+		else
+		{
+			int sz = sign(dz);
+			result.Depth = pz * sz;
+			result.Normal = glm::vec3(0.f, 0.f, -sz);
+			result.Vector = glm::vec3(0.f, 0.f, APosition.z + (aSizeHalf.z * sz));
+		}
 	}
-	else if (py < px && py < pz)
+	else // py < px
 	{
-		int sy = sign(dy);
-		result.Depth = py * sy;
-		result.Normal = glm::vec3(0.f, -sy, 0.f);
-		result.Vector = glm::vec3(0.f, APosition.y + (aSizeHalf.y * sy), 0.f);
-	}
-	else if (pz < py)
-	{
-		int sz = sign(dz);
-		result.Depth = pz * sz;
-		result.Normal = glm::vec3(0.f, 0.f, -sz);
-		result.Vector = glm::vec3(0.f, 0.f, APosition.z + (aSizeHalf.z * sz));
+		if (px < pz)
+		{
+			int sy = sign(dy);
+			result.Depth = py * sy;
+			result.Normal = glm::vec3(0.f, -sy, 0.f);
+			result.Vector = glm::vec3(0.f, APosition.y + (aSizeHalf.y * sy), 0.f);
+		}
+		else
+		{
+			int sz = sign(dz);
+			result.Depth = pz * sz;
+			result.Normal = glm::vec3(0.f, 0.f, -sz);
+			result.Vector = glm::vec3(0.f, 0.f, APosition.z + (aSizeHalf.z * sz));
+		}
 	}
 
 	return result;
@@ -130,4 +143,24 @@ IntersectionLib::Intersection IntersectionLib::LineAabb(
 	return result;
 }
 
+IntersectionLib::SweptIntersection IntersectionLib::SweepAabb(
+	const glm::vec3& APosition,
+	const glm::vec3& ASize,
+	const glm::vec3& BPosition,
+	const glm::vec3& BSize,
+	const glm::vec3& Delta
+)
+{
+	if (glm::length(Delta) == 0.f)
+	{
+		Intersection hit = AabbAabb(APosition, ASize, BPosition, BSize);
 
+		return {
+			BPosition,
+			hit,
+			hit.Occurred ? 0.f : 1.f
+		};
+	}
+
+	return {};
+}
