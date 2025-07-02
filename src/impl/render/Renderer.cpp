@@ -262,8 +262,20 @@ void Renderer::DrawScene(
 	MeshProvider* meshProvider = MeshProvider::Get();
 	MaterialManager* mtlManager = MaterialManager::Get();
 
+	struct InstanceDrawInfo
+	{
+		glm::vec4 TransformRow1;
+		glm::vec4 TransformRow2;
+		glm::vec4 TransformRow3;
+		glm::vec4 TransformRow4;
+		glm::vec3 Scale;
+		glm::vec3 Color;
+		float Transparency;
+	};
+	static_assert(sizeof(InstanceDrawInfo) == ((4*4) + (3*2) + 1) * 4);
+
 	// map< clump hash, pair< base RenderItem, vector< array buffer data >>>
-	std::map<uint64_t, std::pair<size_t, std::vector<float>>> instancingList;
+	std::map<uint64_t, std::pair<size_t, std::vector<InstanceDrawInfo>>> instancingList;
 	{
 		ZoneScopedNC("Prepare", tracy::Color::AliceBlue);
 
@@ -281,7 +293,7 @@ void Renderer::DrawScene(
 
 				shader.SetUniform("RenderMatrix", RenderMatrix);
 				shader.SetUniform("CameraPosition", glm::vec3(CameraTransform[3]));
-				shader.SetUniform("Time", static_cast<float>(RunningTime));
+				shader.SetUniform("Time", RunningTime);
 				shader.SetUniform("SkyboxCubemap", 3);
 
 				shader.SetUniform("FrameBuffer", 0);
@@ -355,41 +367,32 @@ void Renderer::DrawScene(
 				}
 			}
 			else
+				// yum
 				hash = renderData.RenderMeshId
 						+ static_cast<uint64_t>(renderData.MaterialId * 500u)
 						+ (renderData.Transparency > 0.f ? 5000000ull : 0ull)
 						+ static_cast<uint64_t>(renderData.MetallnessFactor * 115)
 						+ static_cast<uint64_t>(renderData.RoughnessFactor * 115);
 
-			if (renderData.Transparency > 0.f)
-				// hacky way to get transparents closer to the camera drawn
-				// later.
-				hash += static_cast<uint64_t>(1.f / (glm::distance(
-					CameraTransform[3],
-					renderData.Transform[3]
-				)) * 500000.f);
-
 			auto it = instancingList.find(hash);
 			if (it == instancingList.end())
-				instancingList[hash] = std::pair(renderItemIndex, std::vector<float>(22));
+			{
+				instancingList[hash] = std::pair(renderItemIndex, std::vector<InstanceDrawInfo>());
+				instancingList[hash].second.reserve(8);
+			}
 
-			std::vector<float>& buffer = instancingList[hash].second;
+			std::vector<InstanceDrawInfo>& drawInfos = instancingList[hash].second;
 
 			// Set buffer data
-			// Transform
-			for (int8_t col = 0; col < 4; col++)
-				for (int8_t row = 0; row < 4; row++)
-					buffer.push_back(renderData.Transform[col][row]);
-
-			// Size
-			buffer.push_back(renderData.Size.x);
-			buffer.push_back(renderData.Size.y);
-			buffer.push_back(renderData.Size.z);
-
-			// Color
-			buffer.push_back(renderData.TintColor.r);
-			buffer.push_back(renderData.TintColor.g);
-			buffer.push_back(renderData.TintColor.b);
+			drawInfos.emplace_back(
+				renderData.Transform[0],
+				renderData.Transform[1],
+				renderData.Transform[2],
+				renderData.Transform[3],
+				renderData.Size,
+				renderData.TintColor,
+				renderData.Transparency
+			);
 		}
 	}
 
@@ -402,9 +405,9 @@ void Renderer::DrawScene(
 
 		const RenderItem& renderData = Scene.RenderList[iter.second.first];
 		const Mesh& mesh = meshProvider->GetMeshResource(renderData.RenderMeshId);
-		const std::vector<float>& drawInfos = iter.second.second;
 
-		if (mesh.GpuId != UINT32_MAX)
+		const std::vector<InstanceDrawInfo>& drawInfos = iter.second.second;
+
 		{
 			ZoneNamedNC(uploadzone, "UploadInstancingData", tracy::Color::Khaki, true);
 
@@ -412,9 +415,8 @@ void Renderer::DrawScene(
 			gpuMesh.VertexArray.Bind();
 
 			glBindBuffer(GL_ARRAY_BUFFER, m_InstancingBuffer);
-
-			constexpr int32_t vec4Size = static_cast<int32_t>(sizeof(glm::vec4));
-			constexpr int32_t vec3Size = static_cast<int32_t>(sizeof(glm::vec3));
+			
+			constexpr int32_t stride = sizeof(InstanceDrawInfo);
 
 			// TODO 14/11/2024
 			// I don't like having these here, but it looks like both the Vertex Array
@@ -427,10 +429,10 @@ void Renderer::DrawScene(
 			glEnableVertexAttribArray(8);
 			glEnableVertexAttribArray(9);
 
-			glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size * 2, (void*)0);
-			glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size * 2, (void*)(1 * (size_t)vec4Size));
-			glVertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size * 2, (void*)(2 * (size_t)vec4Size));
-			glVertexAttribPointer(9, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size * 2, (void*)(3 * (size_t)vec4Size));
+			glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(InstanceDrawInfo, TransformRow1));
+			glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(InstanceDrawInfo, TransformRow2));
+			glVertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(InstanceDrawInfo, TransformRow3));
+			glVertexAttribPointer(9, 4, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(InstanceDrawInfo, TransformRow4));
 
 			glVertexAttribDivisor(6, 1);
 			glVertexAttribDivisor(7, 1);
@@ -444,32 +446,29 @@ void Renderer::DrawScene(
 			glEnableVertexAttribArray(11);
 
 			// it's still `4 * (size_t)` because that's the offset from everything else
-			glVertexAttribPointer(10, 3, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size * 2, (void*)(4 * (size_t)vec4Size));
-			glVertexAttribPointer(11, 3, GL_FLOAT, GL_FALSE, 4 * vec4Size + vec3Size * 2, (void*)((4 * (size_t)vec4Size) + vec3Size));
+			glVertexAttribPointer(10, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(InstanceDrawInfo, Scale));
+			glVertexAttribPointer(11, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(InstanceDrawInfo, Color));
 
 			glVertexAttribDivisor(10, 1);
 			glVertexAttribDivisor(11, 1);
 
+			glEnableVertexAttribArray(12);
+
+			glVertexAttribPointer(12, 1, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(InstanceDrawInfo, Transparency));
+
+			glVertexAttribDivisor(12, 1);
+
 			glBufferData(
 				GL_ARRAY_BUFFER,
-				drawInfos.size() * sizeof(float),
+				drawInfos.size() * sizeof(InstanceDrawInfo),
 				drawInfos.data(),
 				GL_STREAM_DRAW
 			);
 		}
-		else
-			glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 		RenderMaterial& material = mtlManager->GetMaterialResource(renderData.MaterialId);
 
 		m_SetMaterialData(renderData, DebugWireframeRendering);
-
-		constexpr size_t ElementsPerInstance = 22ull;
-
-		if (drawInfos.size() % ElementsPerInstance != 0)
-			throw("`drawInfos` was not divisible by `ElementsPerInstance`");
-
-		int32_t numInstances = static_cast<int32_t>(drawInfos.size() / ElementsPerInstance);
 
 		this->DrawMesh(
 			mesh,
@@ -477,7 +476,7 @@ void Renderer::DrawScene(
 			renderData.Size,
 			renderData.Transform,
 			renderData.FaceCulling,
-			numInstances > 1 ? numInstances : 0
+			drawInfos.size()
 		);
 	}
 }
@@ -616,7 +615,6 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData, bool DebugWirefra
 	shader.SetUniform("SpecularMultiplier", material.SpecMultiply);
 	shader.SetUniform("SpecularPower", material.SpecExponent);
 
-	shader.SetUniform("Transparency", RenderData.Transparency);
 	shader.SetUniform("MetallnessFactor", RenderData.MetallnessFactor);
 	shader.SetUniform("RoughnessFactor", RenderData.RoughnessFactor);
 

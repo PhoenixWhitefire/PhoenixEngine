@@ -1355,8 +1355,11 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 	std::vector<std::unique_ptr<GameObjectRef>> refs;
 
 	for (uint32_t id : Selections)
-		refs.push_back(std::make_unique<GameObjectRef>(GameObject::GetObjectById(id)));
-
+		if (GameObject* g = GameObject::GetObjectById(id))
+			refs.push_back(std::make_unique<GameObjectRef>(g));
+		else
+			Selections.erase(std::find(Selections.begin(), Selections.end(), id));
+	
 	if (ImGui::BeginPopupEx(1979, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings))
 	{
 		ImGui::SeparatorText("Actions");

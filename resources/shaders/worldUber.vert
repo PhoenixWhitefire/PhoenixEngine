@@ -12,6 +12,7 @@ layout (location = 5) in vec4 SkinJointIds;
 layout (location = 6) in mat4 InstanceTransform;
 layout (location = 10) in vec3 InstanceScale;
 layout (location = 11) in vec3 InstanceColor;
+layout (location = 12) in float InstanceTransparency;
 
 const int MAX_LIGHTS = 6;
 
@@ -36,6 +37,7 @@ out DATA
 	vec2 TextureUV;
 	vec4 Paint;
 	mat4 RenderMatrix;
+	float Transparency;
 
 	vec3 ModelPosition;
 	vec3 WorldPosition;
@@ -60,6 +62,7 @@ void main()
 	data_out.VertexNormal = VertexNormal;
 	data_out.Paint = pain;
 	data_out.TextureUV = VertexUV;
+	data_out.Transparency = InstanceTransparency;
 	data_out.RenderMatrix = RenderMatrix;
 	data_out.ModelPosition = VertexPosition * sca;
 	data_out.WorldPosition = vec3(trans * vec4(data_out.ModelPosition, 1.0f));

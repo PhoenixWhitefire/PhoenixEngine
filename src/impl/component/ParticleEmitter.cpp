@@ -172,10 +172,10 @@ void EcParticleEmitter::Update(double DeltaTime)
 	float deltaTimeForGLM = static_cast<float>(DeltaTime);
 	float timeBetweenSpawn = 1.f / this->Rate;
 
-	size_t newParticleIndex = UINT32_MAX;
-
 	if (m_TimeSinceLastSpawn >= timeBetweenSpawn && !this->PossibleImages.empty() && this->Emitting)
 	{
+		uint32_t numToSpawn = static_cast<uint32_t>(m_TimeSinceLastSpawn / timeBetweenSpawn);
+
 		m_TimeSinceLastSpawn = 0.f;
 
 		//Spawn a new particle
@@ -187,18 +187,20 @@ void EcParticleEmitter::Update(double DeltaTime)
 
 		EcTransform* ct = Object->GetComponent<EcTransform>();
 
-		Particle newParticle
+		for (uint32_t i = 0; i < numToSpawn; i++)
 		{
-			lifetimeDist(s_RandGenerator),
-			0.f,
-			1.f,
-			0.f,
-			this->PossibleImages[(uint32_t)randIndex(s_RandGenerator)],
-			this->ParticlesAreAttached ? glm::vec3{} : glm::vec3(ct->Transform[3])
-		};
+			Particle newParticle
+			{
+				lifetimeDist(s_RandGenerator),
+				0.f,
+				1.f,
+				0.f,
+				this->PossibleImages[(uint32_t)randIndex(s_RandGenerator)],
+				this->ParticlesAreAttached ? glm::vec3{} : glm::vec3(ct->Transform[3])
+			};
 
-		newParticleIndex = m_GetUsableParticleIndex();
-		m_Particles[newParticleIndex] = newParticle;
+			m_Particles[m_GetUsableParticleIndex()] = newParticle;
+		}
 	}
 	else
 		m_TimeSinceLastSpawn += DeltaTime;

@@ -68,7 +68,7 @@ static void resolveCollisions(Memory::vector<GameObject*, MEMCAT(Physics)>& Worl
 	{
 		EcMesh* am = a->GetComponent<EcMesh>();
 
-		if (!am->PhysicsCollisions)
+		if (!am->PhysicsCollisions || !am->PhysicsDynamics)
 			continue;
 
 		const glm::vec3& aPos = am->CollisionAabb.Position;
@@ -83,10 +83,7 @@ static void resolveCollisions(Memory::vector<GameObject*, MEMCAT(Physics)>& Worl
 
 			if (!bm->PhysicsCollisions)
 				continue;
-
-			if (!am->PhysicsDynamics && !bm->PhysicsDynamics)
-				continue;
-
+			
 			const glm::vec3& bPos = bm->CollisionAabb.Position;
 			const glm::vec3& bSize = bm->CollisionAabb.Size;
 
@@ -117,12 +114,11 @@ static void resolveCollisions(Memory::vector<GameObject*, MEMCAT(Physics)>& Worl
 
 		IntersectionLib::Intersection& hit = collision.Hit;
 
-		glm::vec3 reactionForce = hit.Vector * hit.Depth;
+		glm::vec3 reactionForce = hit.Position * hit.Depth;
 
 		EcMesh* am = collision.A->GetComponent<EcMesh>();
 		EcMesh* bm = collision.B->GetComponent<EcMesh>();
 		EcTransform* at = collision.A->GetComponent<EcTransform>();
-		EcTransform* bt = collision.B->GetComponent<EcTransform>();
 
 		if (am->PhysicsDynamics && !bm->PhysicsDynamics)
 		{
@@ -136,24 +132,9 @@ static void resolveCollisions(Memory::vector<GameObject*, MEMCAT(Physics)>& Worl
 				velCoefficient = glm::vec3(1.f) - glm::abs(hit.Normal) * (2.f * Elasticity);
 
 			am->LinearVelocity = am->LinearVelocity * velCoefficient + reactionForce;
-			at->Transform[3] += glm::vec4(glm::vec3(hit.Vector * hit.Depth), 1.f);
+			at->Transform[3] += glm::vec4(glm::vec3(hit.Position * hit.Depth), 1.f);
 
 			am->RecomputeAabb();
-		}
-		else if (bm->PhysicsDynamics && !am->PhysicsDynamics)
-		{
-			bm->LinearVelocity = bm->LinearVelocity - (bm->LinearVelocity * static_cast<float>(bm->Friction) * DeltaTime);
-
-			double dot = glm::dot(am->LinearVelocity, hit.Normal);
-			glm::vec3 velCoefficient{ 1.f, 1.f, 1.f };
-
-			if (dot < 0.f)
-				velCoefficient = glm::vec3(1.f) - glm::abs(hit.Normal) * (2.f * Elasticity);
-
-			bm->LinearVelocity = bm->LinearVelocity * velCoefficient + reactionForce;
-			bt->Transform[3] += glm::vec4(glm::vec3(hit.Vector * hit.Depth), 1.f);
-
-			bm->RecomputeAabb();
 		}
 		else
 		{
@@ -164,10 +145,8 @@ static void resolveCollisions(Memory::vector<GameObject*, MEMCAT(Physics)>& Worl
 			//collision.B->LinearVelocity = collision.B->LinearVelocity / 2.f;
 
 			am->LinearVelocity += reactionForce;
-			bm->LinearVelocity += reactionForce;
 
 			am->RecomputeAabb();
-			bm->RecomputeAabb();
 		}
 
 		// 24/09/2024

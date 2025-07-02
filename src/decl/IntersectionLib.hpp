@@ -8,9 +8,10 @@ namespace IntersectionLib
 	{
 		bool Occurred = false;
 
-		glm::vec3 Vector{};
+		glm::vec3 Position{};
 		glm::vec3 Normal{};
 		float Depth{};
+		float Time{}; // only used in `::LineAabb`
 	};
 
 	struct SweptIntersection
@@ -20,24 +21,22 @@ namespace IntersectionLib
 		float Time{};
 	};
 
-	IntersectionLib::Intersection AabbAabb(
+	Intersection AabbAabb(
 		const glm::vec3& APosition,
 		const glm::vec3& ASize,
 		const glm::vec3& BPosition,
 		const glm::vec3& BSize
 	);
 
-	IntersectionLib::Intersection LineAabb(
+	Intersection LineAabb(
 		const glm::vec3& Origin,
 		const glm::vec3& Vector,
 		const glm::vec3& BbPosition,
 		const glm::vec3& BbSize,
-		float PaddingX = 0.f,
-		float PaddingY = 0.f,
-		float PaddingZ = 0.f
+		const glm::vec3& Padding = glm::vec3(1.f)
 	);
 
-	IntersectionLib::SweptIntersection SweepAabb(
+	SweptIntersection SweptAabbAabb(
 		const glm::vec3& APosition,
 		const glm::vec3& ASize,
 		const glm::vec3& BPosition,

@@ -29,6 +29,7 @@ out mat4 Frag_Transform;
 out vec4 Frag_RelativeToDirecLight;
 //out mat3 Frag_TBN;
 out vec3 Frag_CameraPosition;
+out float Frag_Transparency;
 
 in DATA
 {
@@ -36,6 +37,7 @@ in DATA
 	vec2 TextureUV;
 	vec4 Paint;
 	mat4 RenderMatrix;
+	float Transparency;
 
 	vec3 ModelPosition;
 	vec3 WorldPosition;
@@ -71,6 +73,7 @@ void main()
 	Frag_WorldPosition = data_in[0].WorldPosition;
 	Frag_VertexNormal = data_in[0].VertexNormal;
 	Frag_Paint = data_in[0].Paint;
+	Frag_Transparency = data_in[0].Transparency;
 	Frag_TextureUV = data_in[0].TextureUV;
 	Frag_Transform = data_in[0].Transform;
 	Frag_RelativeToDirecLight = data_in[0].RelativeToDirecLight;
@@ -85,6 +88,7 @@ void main()
 	Frag_WorldPosition = data_in[1].WorldPosition;
 	Frag_VertexNormal = data_in[1].VertexNormal;
 	Frag_Paint = data_in[1].Paint;
+	Frag_Transparency = data_in[1].Transparency;
 	Frag_TextureUV = data_in[1].TextureUV;
 	Frag_Transform = data_in[1].Transform;
 	Frag_RelativeToDirecLight = data_in[1].RelativeToDirecLight;
@@ -99,6 +103,7 @@ void main()
 	Frag_WorldPosition = data_in[2].WorldPosition;
 	Frag_VertexNormal = data_in[2].VertexNormal;
 	Frag_Paint = data_in[2].Paint;
+	Frag_Transparency = data_in[2].Transparency;
 	Frag_TextureUV = data_in[2].TextureUV;
 	Frag_Transform = data_in[2].Transform;
 	Frag_RelativeToDirecLight = data_in[2].RelativeToDirecLight;

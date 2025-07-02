@@ -34,7 +34,7 @@ function Controller:InitDefault(CharacterHeight)
 	local character = GameObject.new("Primitive")
 	character.Size = vector.create(CharacterHeight / 3, CharacterHeight, CharacterHeight / 3)
 	character.PhysicsDynamics = true
-	character.Friction = 2
+	character.Friction = 4
 	character.CollisionFidelity = 1 -- AabbStaticSize
 	character.Parent = workspace
 	

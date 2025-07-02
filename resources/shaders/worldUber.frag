@@ -49,7 +49,6 @@ uniform vec3 LightAmbient = vec3(0.3f);
 uniform float SpecularMultiplier;
 uniform float SpecularPower;
 
-uniform float Transparency;
 uniform float MetallnessFactor;
 uniform float RoughnessFactor;
 uniform float EmissionStrength;
@@ -80,6 +79,7 @@ in mat4 Frag_Transform;
 in vec4 Frag_RelativeToDirecLight;
 //in mat3 Frag_TBN;
 in vec3 Frag_CameraPosition;
+in float Frag_Transparency;
 
 out vec4 FragColor;
 
@@ -302,7 +302,7 @@ void main()
 	//Normal = normalize(Frag_TBN * Normal);
 	//Normal = normalize(Normal + (NormalSample * 2.f - 1.f));
 	
-	Albedo.w -= Transparency;
+	Albedo.w -= Frag_Transparency;
 	
 	Albedo = vec4(Albedo.xyz * Frag_Paint.xyz, Albedo.w * Frag_Paint.w);
 

@@ -3,6 +3,8 @@
 
 #include "IntersectionLib.hpp"
 
+static const float EPSILON = 1e-8;
+
 template<class T> static int sign(T v)
 {
 	return v < 0 ? -1 : (v > 0 ? 1 : 0);
@@ -40,39 +42,26 @@ IntersectionLib::Intersection IntersectionLib::AabbAabb
 
 	result.Occurred = true;
 
-	if (px < py)
+	if (px < py && px < pz)
 	{
-		if (py < pz)
-		{
-			int sx = sign(dx);
-			result.Depth = px * sx;
-			result.Normal = glm::vec3(-sx, 0.f, 0.f);
-			result.Vector = glm::vec3(APosition.x + (aSizeHalf.x * sx), 0.f, 0.f);
-		}
-		else
-		{
-			int sz = sign(dz);
-			result.Depth = pz * sz;
-			result.Normal = glm::vec3(0.f, 0.f, -sz);
-			result.Vector = glm::vec3(0.f, 0.f, APosition.z + (aSizeHalf.z * sz));
-		}
+		int sx = sign(dx);
+		result.Depth = px * sx;
+		result.Normal = glm::vec3(-sx, 0.f, 0.f);
+		result.Position = glm::vec3(APosition.x + (aSizeHalf.x * sx), 0.f, 0.f);
 	}
-	else // py < px
+	else if (py < px && py < pz)
 	{
-		if (px < pz)
-		{
-			int sy = sign(dy);
-			result.Depth = py * sy;
-			result.Normal = glm::vec3(0.f, -sy, 0.f);
-			result.Vector = glm::vec3(0.f, APosition.y + (aSizeHalf.y * sy), 0.f);
-		}
-		else
-		{
-			int sz = sign(dz);
-			result.Depth = pz * sz;
-			result.Normal = glm::vec3(0.f, 0.f, -sz);
-			result.Vector = glm::vec3(0.f, 0.f, APosition.z + (aSizeHalf.z * sz));
-		}
+		int sy = sign(dy);
+		result.Depth = py * sy;
+		result.Normal = glm::vec3(0.f, -sy, 0.f);
+		result.Position = glm::vec3(0.f, APosition.y + (aSizeHalf.y * sy), 0.f);
+	}
+	else if (pz < py)
+	{
+		int sz = sign(dz);
+		result.Depth = pz * sz;
+		result.Normal = glm::vec3(0.f, 0.f, -sz);
+		result.Position = glm::vec3(0.f, 0.f, APosition.z + (aSizeHalf.z * sz));
 	}
 
 	return result;
@@ -83,9 +72,7 @@ IntersectionLib::Intersection IntersectionLib::LineAabb(
 	const glm::vec3& Vector,
 	const glm::vec3& BbPosition,
 	const glm::vec3& BbSize,
-	float PaddingX,
-	float PaddingY,
-	float PaddingZ
+	const glm::vec3& Padding
 )
 {
 	Intersection result{};
@@ -101,13 +88,13 @@ IntersectionLib::Intersection IntersectionLib::LineAabb(
 
 	glm::vec3 bbSizeHalf = BbSize * .5f;
 
-	float nearTimeX = (BbPosition.x - signX * (bbSizeHalf.x + PaddingX) - Origin.x) * scaleX;
-	float nearTimeY = (BbPosition.y - signY * (bbSizeHalf.y + PaddingY) - Origin.y) * scaleY;
-	float nearTimeZ = (BbPosition.z - signZ * (bbSizeHalf.z + PaddingZ) - Origin.z) * scaleZ;
+	float nearTimeX = (BbPosition.x - signX * (bbSizeHalf.x + Padding.x) - Origin.x) * scaleX;
+	float nearTimeY = (BbPosition.y - signY * (bbSizeHalf.y + Padding.y) - Origin.y) * scaleY;
+	float nearTimeZ = (BbPosition.z - signZ * (bbSizeHalf.z + Padding.z) - Origin.z) * scaleZ;
 
-	float farTimeX = (BbPosition.x + signX * (bbSizeHalf.x + PaddingX) - Origin.x) * scaleX;
-	float farTimeY = (BbPosition.y + signY * (bbSizeHalf.y + PaddingY) - Origin.y) * scaleY;
-	float farTimeZ = (BbPosition.z + signZ * (bbSizeHalf.z + PaddingZ) - Origin.z) * scaleZ;
+	float farTimeX = (BbPosition.x + signX * (bbSizeHalf.x + Padding.x) - Origin.x) * scaleX;
+	float farTimeY = (BbPosition.y + signY * (bbSizeHalf.y + Padding.y) - Origin.y) * scaleY;
+	float farTimeZ = (BbPosition.z + signZ * (bbSizeHalf.z + Padding.z) - Origin.z) * scaleZ;
 
 	if (nearTimeX > farTimeX || nearTimeY > farTimeY || nearTimeZ > farTimeZ)
 		return result;
@@ -124,10 +111,9 @@ IntersectionLib::Intersection IntersectionLib::LineAabb(
 
 	result.Occurred = true;
 
-	float time = std::clamp(nearTime, 0.f, 1.f);
-
-	result.Vector = Origin + Vector * time;
-	result.Depth = glm::length((1.f - time) * Vector);
+	result.Time = std::clamp(nearTime, 0.f, 1.f);
+	result.Position = Origin + (Vector * result.Time);
+	result.Depth = glm::length((1.f - result.Time) * Vector);
 
 	if (nearTimeX > nearTimeY)
 		if (nearTimeY > nearTimeZ)
@@ -143,7 +129,7 @@ IntersectionLib::Intersection IntersectionLib::LineAabb(
 	return result;
 }
 
-IntersectionLib::SweptIntersection IntersectionLib::SweepAabb(
+IntersectionLib::SweptIntersection IntersectionLib::SweptAabbAabb(
 	const glm::vec3& APosition,
 	const glm::vec3& ASize,
 	const glm::vec3& BPosition,
@@ -162,5 +148,29 @@ IntersectionLib::SweptIntersection IntersectionLib::SweepAabb(
 		};
 	}
 
-	return {};
+	glm::vec3 bSizeHalf = BSize / 2.f;
+	SweptIntersection sweep;
+
+	sweep.Hit = LineAabb(BPosition, Delta, APosition, ASize, bSizeHalf);
+
+	if (sweep.Hit.Occurred)
+	{
+		sweep.Time = std::clamp(sweep.Hit.Time - EPSILON, 0.f, 1.f);
+		sweep.Position = BPosition + (Delta * sweep.Time);
+
+		glm::vec3 direction = glm::normalize(Delta);
+		glm::vec3 aSizeHalf = ASize / 2.f;
+
+		sweep.Hit.Position = glm::clamp(
+			sweep.Hit.Position + (direction * bSizeHalf),
+			APosition - aSizeHalf, APosition + aSizeHalf
+		);
+	}
+	else
+	{
+		sweep.Position = BPosition + Delta;
+		sweep.Time = 1.f;
+	}
+
+	return sweep;
 }

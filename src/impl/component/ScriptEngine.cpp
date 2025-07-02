@@ -1023,7 +1023,7 @@ static std::pair<std::string_view, lua_CFunction> s_GlobalFunctions[] =
 				ScriptEngine::L::PushGameObject(L, hitObject);
 				lua_setfield(L, -2, "Object");
 
-				Reflection::GenericValue posg{ result.Vector };
+				Reflection::GenericValue posg{ result.Position };
 
 				ScriptEngine::L::PushGenericValue(L, posg);
 				lua_setfield(L, -2, "Position");
@@ -1100,7 +1100,7 @@ static std::pair<std::string_view, lua_CFunction> s_GlobalFunctions[] =
 				ScriptEngine::L::PushGameObject(L, hitObject);
 				lua_setfield(L, -2, "Object");
 
-				Reflection::GenericValue posg = result.Vector;
+				Reflection::GenericValue posg = result.Position;
 
 				ScriptEngine::L::PushGenericValue(L, posg);
 				lua_setfield(L, -2, "Position");

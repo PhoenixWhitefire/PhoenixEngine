@@ -781,16 +781,19 @@ void Engine::Start()
 
 		s_DebugCollisionAabbs = this->DebugAabbs;
 
-		// Aggregate mesh and light data into lists
-		recursivelyTravelHierarchy(
-			scene.RenderList,
-			scene.LightingList,
-			physicsList,
-			Workspace,
-			sceneCamera,
-			deltaTime
-		);
+		{
+			TIME_SCOPE_AS("RecurseHierarchy");
 
+			// Aggregate mesh and light data into lists
+			recursivelyTravelHierarchy(
+				scene.RenderList,
+				scene.LightingList,
+				physicsList,
+				Workspace,
+				sceneCamera,
+				deltaTime
+			);
+		}
 		bool hasPhysics = false;
 
 		for (GameObject* object : physicsList)
