@@ -20,14 +20,14 @@ struct EcSound
 	float Speed = 1.f;
 	bool Looped = false;
 	bool FinishedLoading = true;
+	bool LoadSucceeded = false;
 
 	float NextRequestedPosition = 0.f;
 	uint32_t BytePosition = 0;
 
 	GameObjectRef Object;
 	uint32_t EcId = PHX_GAMEOBJECT_NULL_ID;
-
-	bool m_IsWaitingForLoad = false;
+	
 	void* m_Channel = nullptr;
 	bool m_PlayRequested = false;
 

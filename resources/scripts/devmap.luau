@@ -23,12 +23,12 @@ local RareSoundStinger = GameObject.new("Sound")
 local TimesNormalStingerPlayed = 0
 
 SoundStinger.Name = "SoundStinger"
-SoundStinger.SoundFile = "sounds/undertaleost_ruins_stinger.wav"
+SoundStinger.SoundFile = "sounds/undertaleost_ruins_stinger.mp3"
 SoundStinger.Serializes = false
 SoundStinger.Parent = workspace.Level
 
 RareSoundStinger.Name = "RareSoundStinger"
-RareSoundStinger.SoundFile = "sounds/undertaleost_ruins_stingr2.wav"
+RareSoundStinger.SoundFile = "sounds/undertaleost_ruins_stingr2.mp3"
 RareSoundStinger.Serializes = false
 RareSoundStinger.Parent = workspace.Level
 

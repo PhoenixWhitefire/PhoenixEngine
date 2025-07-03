@@ -489,7 +489,15 @@ static void drawDeveloperUI(double DeltaTime)
 
 	if (ImGui::Begin("Info"))
 	{
+		constexpr size_t GraphDatapoints = 512;
+
+		static std::array<double[255], GraphDatapoints> TimersHist;
+		static std::array<decltype(Memory::Counters), GraphDatapoints> HeapUsageHist;
+		static std::array<decltype(Memory::Counters), GraphDatapoints> HeapActivityHist;
+
 		const double* times = Timing::FinalFrameTimes;
+		const std::array<size_t, (size_t)Memory::Category::__count>& memcounts = Memory::Counters;
+		
 		uint8_t numTimers = Timing::StaticMagicTimerThing::s_NumTimers;
 
 		// 0 - EntireFrame, 1 - FrameSleep, 2 - FrameWork, ...
@@ -502,7 +510,7 @@ static void drawDeveloperUI(double DeltaTime)
 		ImGui::Text("FPS: %d", EngineInstance->FramesPerSecond);
 		ImGui::Text("Frame time: %zims", frameTime);
 		ImGui::Text("Draw calls: %u", EngineInstance->RendererContext.AccumulatedDrawCallCount);
-
+		
 		if (IsSamplingStats)
 			SampledCsv.append(std::format(
 				"{},{},{},",
@@ -517,41 +525,81 @@ static void drawDeveloperUI(double DeltaTime)
 			launchTracy();
 #endif
 
-		ImGui::SeparatorText("Timers");
+		static bool WasRmbPressed = false;
+		static bool AreGraphsPaused = false;
 
-		if (!IsSamplingStats)
-			for (int i = 0; i < numTimers; i++)
-				ImGui::Text("%s: %zims", Timing::TimerNames[i], static_cast<size_t>(times[i] * 1000));
-		else
-			for (int i = 0; i < numTimers; i++)
-			{
-				SampledCsv += std::to_string(times[i]) + ",";
-				ImGui::Text("%s: %zims", Timing::TimerNames[i], static_cast<size_t>(times[i] * 1000));
-			}
+		ImGui::BeginChild("Graphs", ImVec2(), ImGuiChildFlags_Borders);
+		ImGui::Text("Right-click to");
+		ImGui::SameLine();
 
-		ImGui::SeparatorText("Heap");
-
-		constexpr size_t HeapDebugDatapoints = 128;
-
-		const std::array<size_t, (size_t)Memory::Category::__count>& counts = Memory::Counters;
-		static std::array<decltype(Memory::Counters), HeapDebugDatapoints> HeapUsageHist;
-		static std::array<decltype(Memory::Counters), HeapDebugDatapoints> HeapActivityHist;
-
-		static double LastSampled = 0.f;
-
-		if (double ct = GetRunningTime(); ct - LastSampled > 0.2f)
+		if (AreGraphsPaused)
 		{
-			for (size_t i = 0; i < HeapDebugDatapoints - 1; i++)
+			if (ImGui::Button("resume"))
+				AreGraphsPaused = false;
+		}
+		else if (ImGui::Button("pause"))
+				AreGraphsPaused = true;
+		
+		ImGui::SameLine();
+		ImGui::Text("graphs");
+
+		if (SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON_RMASK)
+		{
+			if (!WasRmbPressed)
+				AreGraphsPaused = !AreGraphsPaused;
+			
+			WasRmbPressed = true;
+		}
+		else
+			WasRmbPressed = false;
+
+		if (!AreGraphsPaused)
+		{
+			for (size_t i = 0; i < GraphDatapoints - 1; i++)
 			{
+				memcpy(TimersHist[i], TimersHist[i+1], sizeof(double) * 255);
 				HeapUsageHist[i] = HeapUsageHist[i+1];
 				HeapActivityHist[i] = HeapActivityHist[i+1];
 			}
 
-			HeapUsageHist[HeapDebugDatapoints - 1] = Memory::Counters;
-			HeapActivityHist[HeapDebugDatapoints - 1] = Memory::Activity;
-
-			LastSampled = ct;
+			memcpy(TimersHist[GraphDatapoints - 1], times, sizeof(double) * 255);
+			HeapUsageHist[GraphDatapoints - 1] = Memory::Counters;
+			HeapActivityHist[GraphDatapoints - 1] = Memory::Activity;
 		}
+
+		ImGui::SeparatorText("Timers");
+		ImGui::PushID("Timers");
+
+		for (int i = 0; i < numTimers; i++)
+		{
+			bool open = ImGui::TreeNodeEx(
+				(void*)(int64_t)i,
+				ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth,
+				"%s: %zims",
+				Timing::TimerNames[i],
+				static_cast<size_t>(times[i] * 1000)
+			);
+
+			if (open)
+			{
+				float usageValues[GraphDatapoints] = { 0 };
+
+				for (size_t hi = 0; hi < GraphDatapoints; hi++)
+					usageValues[hi] = (float)TimersHist[hi][i] * 1000.f;
+				
+				ImGui::PlotLines("##", usageValues, GraphDatapoints, 0, nullptr, FLT_MAX, FLT_MAX, ImVec2(0, 100));
+
+				ImGui::TreePop(); // ocornut why do you do this to me
+			}
+		}
+
+		if (IsSamplingStats)
+			for (int i = 0; i < numTimers; i++)
+				SampledCsv.append(std::to_string(times[i]) + ",");
+
+		ImGui::PopID();
+		ImGui::SeparatorText("Heap");
+		ImGui::PushID("Heap");
 
 		for (int i = 0; i < (int)Memory::Category::__count; i++)
 		{
@@ -560,22 +608,22 @@ static void drawDeveloperUI(double DeltaTime)
 				ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth,
 				"%s: %zi",
 				Memory::CategoryNames[i],
-				counts[i]
+				memcounts[i]
 			);
 
 			if (open)
 			{
-				float usageValues[HeapDebugDatapoints] = { 0 };
-				float activityValues[HeapDebugDatapoints] = { 0 };
+				float usageValues[GraphDatapoints] = { 0 };
+				float activityValues[GraphDatapoints] = { 0 };
 
-				for (size_t hi = 0; hi < HeapDebugDatapoints; hi++)
+				for (size_t hi = 0; hi < GraphDatapoints; hi++)
 				{
 					usageValues[hi] = (float)HeapUsageHist[hi][i];
 					activityValues[hi] = (float)HeapActivityHist[hi][i];
 				}
 				
-				ImGui::PlotLines("Usage", usageValues, HeapDebugDatapoints);
-				ImGui::PlotLines("Activity", activityValues, HeapDebugDatapoints);
+				ImGui::PlotLines("Usage", usageValues, GraphDatapoints, 0, nullptr, FLT_MAX, FLT_MAX, ImVec2(0, 100));
+				ImGui::PlotLines("Activity", activityValues, GraphDatapoints, 0, nullptr, FLT_MAX, FLT_MAX, ImVec2(0, 100));
 
 				ImGui::TreePop(); // ocornut why do you do this to me
 			}
@@ -583,7 +631,10 @@ static void drawDeveloperUI(double DeltaTime)
 
 		if (IsSamplingStats)
 			for (int i = 0; i < (int)Memory::Category::__count; i++)
-				SampledCsv += std::to_string(counts[i]) + ",";
+				SampledCsv += std::to_string(memcounts[i]) + ",";
+
+		ImGui::PopID();
+		ImGui::EndChild();
 
 		ImGui::SeparatorText("Sampling");
 
@@ -596,7 +647,7 @@ static void drawDeveloperUI(double DeltaTime)
 			NumFramesSampled++;
 
 			ImGui::Text("Sampled %zi frames over %.1f seconds", NumFramesSampled, NumSecondsSampled);
-			ImGui::Text("Total size: %zi bytes", SampledCsv.size());
+			ImGui::Text("Total size: %zi bytes (%zi bytes memory)", SampledCsv.size(), SampledCsv.capacity());
 
 			if (ImGui::Button("End sampling & save to CSV"))
 			{

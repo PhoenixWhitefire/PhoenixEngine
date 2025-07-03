@@ -183,7 +183,8 @@ public:
 
 			EC_PROP("Length", Double, EC_GET_SIMPLE(EcSound, Length), nullptr),
 
-			EC_PROP("FinishedLoading", Boolean, EC_GET_SIMPLE(EcSound, FinishedLoading), nullptr)
+			EC_PROP("FinishedLoading", Boolean, EC_GET_SIMPLE(EcSound, FinishedLoading), nullptr),
+			EC_PROP("LoadSucceeded", Boolean, EC_GET_SIMPLE(EcSound, LoadSucceeded), nullptr)
         };
 
         return props;
@@ -241,23 +242,35 @@ static inline SoundManager Instance{};
 static FMOD_RESULT F_CALL fmodNonBlockingCallback(FMOD_SOUND* Sound, FMOD_RESULT Result)
 {
 	FMOD::Sound* sound = (FMOD::Sound*)Sound;
+	const auto& it = AudioAssets.find(SoundToSoundFile[sound]);
 
 	if (Result != FMOD_OK)
+	{
+		SCOPED_LOCK(AudioAssetsMutex);
+		SCOPED_LOCK(ComponentsMutex);
+
 		Log::Warning(std::format(
 			"FMOD sound failed to load: code {} - '{}'",
 			(int)Result, FMOD_ErrorString(Result))
 		);
+
+		for (uint32_t ecId : it->second.second)
+		{
+			EcSound* ecSound = (EcSound*)Instance.GetComponent(ecId);
+			ecSound->FinishedLoading = true;
+			ecSound->LoadSucceeded = false;
+		}
+	}
 	else
 	{
 		SCOPED_LOCK(AudioAssetsMutex);
 		SCOPED_LOCK(ComponentsMutex);
 
-		const auto& it = AudioAssets.find(SoundToSoundFile[sound]);
-
 		for (uint32_t ecId : it->second.second)
 		{
 			EcSound* ecSound = (EcSound*)Instance.GetComponent(ecId);
-			ecSound->m_IsWaitingForLoad = false;
+			ecSound->FinishedLoading = true;
+			ecSound->LoadSucceeded = true;
 		}
 	}
 
@@ -294,7 +307,10 @@ void EcSound::Update(double)
 	if (GetRunningTime() != Instance.LastTick)
 		Instance.Update();
 
-	if (m_IsWaitingForLoad)
+	if (FinishedLoading && m_Channel)
+		return;
+
+	if (!LoadSucceeded)
 		return;
 
 	if (!m_Channel && m_PlayRequested)
@@ -327,9 +343,7 @@ void EcSound::Update(double)
 		FMOD_CALL(chan->getMode(&mode), "get channel mode [2]");
 
 		if (bool chlooped = mode & FMOD_LOOP_NORMAL; chlooped != Looped)
-		{
 			FMOD_CALL(chan->setMode(Looped ? FMOD_LOOP_NORMAL : FMOD_LOOP_OFF), "sync loop state");
-		}
 	}
 }
 
@@ -343,6 +357,7 @@ void EcSound::Reload()
 		std::string ResDir = EngineJsonConfig.value("ResourcesDirectory", "resources/");
 
 		FinishedLoading = false;
+		LoadSucceeded = false;
 		m_Channel = nullptr;
 
 		FMOD::Sound* sound;
@@ -361,8 +376,6 @@ void EcSound::Reload()
 		pair.first = sound;
 		pair.second.push_back(EcId);
 		SoundToSoundFile[sound] = SoundFile;
-
-		m_IsWaitingForLoad = true;
 	}
 	else
 	{

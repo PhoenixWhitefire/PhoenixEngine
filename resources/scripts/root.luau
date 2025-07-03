@@ -10,7 +10,7 @@ local ScriptExecutionFile = "scripts/mc.luau"
 local DefaultSubLevel = "scenes/dev_fmtv2.hxscene"
 
 local BackgroundAmbience = GameObject.new("Sound")
-BackgroundAmbience.SoundFile = "sounds/pixabay_soft-wind-314945.wav"
+BackgroundAmbience.SoundFile = "sounds/pixabay_soft-wind-314945.mp3"
 BackgroundAmbience.Playing = true
 BackgroundAmbience.Looped = true
 BackgroundAmbience.Name = "BackgroundAmbience"
