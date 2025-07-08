@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <functional>
 #include <future>
 
 #include "datatype/Mesh.hpp"
@@ -47,7 +48,12 @@ public:
 	void Save(const Mesh&, const std::string_view& Path);
 	void Save(uint32_t, const std::string_view& Path);
 	
-	uint32_t LoadFromPath(const std::string_view& Path, bool ShouldLoadAsync = true, bool PreserveMeshData = false);
+	uint32_t LoadFromPath(
+		const std::string_view& Path,
+		bool ShouldLoadAsync = true,
+		bool PreserveMeshData = false,
+		std::function<void(Mesh&)> PostLoadCallback = nullptr
+	);
 
 	Mesh& GetMeshResource(uint32_t);
 	GpuMesh& GetGpuMesh(uint32_t);
@@ -59,9 +65,15 @@ private:
 	Memory::vector<Mesh, MEMCAT(Mesh)> m_Meshes;
 	Memory::unordered_map<std::string, uint32_t, MEMCAT(Mesh)> m_StringToMeshId;
 
-	std::vector<std::promise<Mesh>*> m_MeshPromises;
-	std::vector<std::shared_future<Mesh>> m_MeshFutures;
-	std::vector<uint32_t> m_MeshPromiseResourceIds;
+	struct MeshLoadRequest
+	{
+		std::promise<Mesh>* Promise;
+		std::shared_future<Mesh> Future;
+		uint32_t ResourceId = UINT32_MAX;
+		std::function<void(Mesh&)> PostLoadCallback = nullptr;
+	};
+
+	std::vector<MeshLoadRequest> m_LoadingRequests;
 
 	Memory::vector<GpuMesh, MEMCAT(Mesh)> m_GpuMeshes;
 };

@@ -5,6 +5,7 @@
 
 #include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
+#include "Utilities.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
@@ -95,7 +96,7 @@ void RenderMaterial::Reload()
 
 		default:
 		{
-			throw(std::format(
+			RAISE_RT(std::format(
 				"Material '{}' tried to specify Uniform '{}', but it had unsupported type '{}'",
 				this->Name, uniformName, value.type_name()
 			));
@@ -170,9 +171,7 @@ MaterialManager::~MaterialManager()
 void MaterialManager::Initialize()
 {
 	ZoneScoped;
-
-	this->LoadFromPath("error");
-
+	
 	s_Instance = this;
 }
 
@@ -210,7 +209,7 @@ uint32_t MaterialManager::LoadFromPath(const std::string_view& Name)
 			Log::Error("Failed to load material '" + fullPath + "'");
 
 			if (Name == "error")
-				throw("Failed to load the 'error' material. It is required due to technical reasons (I'm lazy)");
+				RAISE_RT("Failed to load the 'error' material. It is required due to technical reasons (I'm lazy)");
 
 			return this->LoadFromPath("error");
 		}

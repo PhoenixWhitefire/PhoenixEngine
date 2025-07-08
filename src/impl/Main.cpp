@@ -172,7 +172,7 @@ static void launchTracy()
 {
 #ifdef TRACY_ENABLE
 	if (WasTracyLaunched)
-		throw("Tried to launch Tracy twice in one session");
+		RAISE_RT("Tried to launch Tracy twice in one session");
 	WasTracyLaunched = true;
 
 	std::thread(
@@ -193,26 +193,6 @@ static void launchTracy()
 
 #endif
 }
-
-static int findCmdLineArgument(
-	int ArgCount,
-	char** Arguments,
-	const char* SeekingArgument
-)
-{
-	// linear search through all cli arguments
-	for (int argIndex = 0; argIndex < ArgCount; argIndex++)
-	{
-		// strcmp makes no sense, why does it return 0 if they match and not 1??
-		if (strcmp(Arguments[argIndex], SeekingArgument) == 0)
-			return argIndex;
-	}
-
-	// argument not found
-	return -1;
-}
-
-#define hasCliArgument(strn) (findCmdLineArgument(argc, argv, strn) > 0)
 
 static void handleInputs(double deltaTime)
 {
@@ -458,8 +438,11 @@ static void doApiDump()
 
 	nlohmann::json& globalsDump = apiDump["ScriptGlobals"];
 
-	for (size_t i = 0; ScriptEngine::L::GlobalFunctions[i].second != nullptr; i++)
-		globalsDump[ScriptEngine::L::GlobalFunctions[i].first] = "";
+	for (size_t i = 0; ScriptEngine::L::GlobalFunctions[i].second.Function != nullptr; i++)
+	{
+		const auto& it = ScriptEngine::L::GlobalFunctions[i];
+		globalsDump[it.first] = it.second.NumMinArgs;
+	}
 
 	FileRW::WriteFile("apidump.json", apiDump.dump(2), false);
 	Log::Info("API dump finished");
@@ -532,18 +515,23 @@ static void drawDeveloperUI(double DeltaTime)
 		ImGui::Text("Right-click to");
 		ImGui::SameLine();
 
+		ImGuiStyle style = ImGui::GetStyle();
+
+		ImVec2 defLabelSize = ImGui::CalcTextSize("resume", NULL, true);
+		ImVec2 defaultSize{ defLabelSize.x + style.FramePadding.x * 2.f, defLabelSize.y + style.FramePadding.y * 2.f };
+
 		if (AreGraphsPaused)
 		{
-			if (ImGui::Button("resume"))
+			if (ImGui::Button("resume", ImVec2(0, defaultSize.y)))
 				AreGraphsPaused = false;
 		}
-		else if (ImGui::Button("pause"))
+		else if (ImGui::Button("pause", ImVec2(0, defaultSize.y)))
 				AreGraphsPaused = true;
 		
 		ImGui::SameLine();
 		ImGui::Text("graphs");
-
-		if (SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON_RMASK)
+		
+		if (GuiIO->WantCaptureMouse && SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON_RMASK)
 		{
 			if (!WasRmbPressed)
 				AreGraphsPaused = !AreGraphsPaused;
@@ -806,6 +794,8 @@ static void handleCrash(const std::string_view& Error, const std::string_view& E
 }
 #endif
 
+static const char* MapFileFromArgs = nullptr;
+
 static void init(int argc, char** argv)
 {
 	ZoneScoped;
@@ -818,7 +808,7 @@ static void init(int argc, char** argv)
 	));
 
 	if (!IMGUI_CHECKVERSION())
-		throw("Dear ImGui detected a version mismatch");
+		RAISE_RT("Dear ImGui detected a version mismatch");
 
 	ImGui::CreateContext();
 
@@ -845,27 +835,9 @@ static void init(int argc, char** argv)
 
 	Log::Info("Loading Root Scene from file...");
 
-	const char* mapFileFromArgs{};
-	bool hasMapFromArgs = false;
-
-	int mapFileArgIdx = findCmdLineArgument(argc, argv, "-loadmap");
-
-	if (mapFileArgIdx > 0)
-	{
-		Log::Info(std::format(
-			"Map to load specified from launch argument. Map was: {}",
-			argv[mapFileArgIdx + 1]
-		));
-
-		PHX_ENSURE(mapFileArgIdx < argc);
-
-		mapFileFromArgs = argv[mapFileArgIdx + 1];
-		hasMapFromArgs = true;
-	}
-
-	const std::string& mapFile = hasMapFromArgs ?
-							mapFileFromArgs
-							: EngineJsonConfig.value("RootScene", "scenes/root.world");
+	const std::string& mapFile = MapFileFromArgs ?
+									MapFileFromArgs
+									: EngineJsonConfig.value("RootScene", "scenes/root.world");
 	
 	bool worldLoadSuccess = true;
 	std::vector<GameObjectRef> roots = SceneFormat::Deserialize(FileRW::ReadFile(mapFile), &worldLoadSuccess);
@@ -899,20 +871,60 @@ static void init(int argc, char** argv)
 	//root->DecrementHardRefs(); // i'm dogshit at programming
 }
 
-static void patchConfigFromCliArgs(int argc, char** argv)
+static void processCliArgs(int argc, char** argv)
 {
-	if (hasCliArgument("-dev"))
-		EngineJsonConfig["Developer"] = true;
-		
-	else if (hasCliArgument("-nodev"))
-		EngineJsonConfig["Developer"] = false;
-		
-	if (int idx = findCmdLineArgument(argc, argv, "-threads"); idx > 0)
+	for (int i = 1; i < argc; i++)
 	{
-		if (idx < argc - 1)
-			EngineJsonConfig["ThreadManagerThreadCount"] = std::stoi(argv[idx + 1]);
+		const char* v = argv[i];
+
+		if (strcmp(v, "-dev") == 0)
+		{
+			EngineJsonConfig["Developer"] = true;
+		}
+		else if (strcmp(v, "-nodev") == 0)
+		{
+			EngineJsonConfig["Developer"] = false;
+		}
+		else if (strcmp(v, "-threads") == 0)
+		{
+			if (i + 1 < argc)
+			{
+				EngineJsonConfig["ThreadManagerThreadCount"] = std::stoi(argv[i + 1]);
+				i++;
+			}
+			else
+				Log::Error("'-threads' argument from command-line was not followed by the desired Thread Count");
+		}
+		else if (strcmp(v, "-tracyim") == 0)
+		{
+			launchTracy();
+
+			// took ~220ms on my machine for tracy to launch, double it and give it to the next person
+			// 13/01/2025
+			std::this_thread::sleep_for(std::chrono::milliseconds(400));
+		}
+		else if (strcmp(v, "-apidump") == 0)
+		{
+			doApiDump();
+		}
+		else if (strcmp(v, "-loadmap") == 0)
+		{
+			if (i + 1 < argc)
+			{
+				MapFileFromArgs = argv[i + 1];
+
+				Log::Info(std::format(
+					"Map to load specified from launch argument. Map was: {}",
+					MapFileFromArgs
+				));
+
+				i++;
+			}
+			else
+				Log::Error("'-loadmap' argument from command-line was not followed by the desired File");
+		}
 		else
-			Log::Error("'-threads' argument from command-line is not followed by the desired Thread Count, ignoring");
+			Log::Error(std::format("Unknown CLI argument '{}'", v));
 	}
 }
 
@@ -933,21 +945,10 @@ int main(int argc, char** argv)
 		else
 			Log::Append(" " + std::string(argv[i]));
 
-	if (hasCliArgument("-tracyim"))
-	{
-		launchTracy();
-		
-		// took ~220ms on my machine for tracy to launch, double it and give it to the next person
-		// 13/01/2025
-		std::this_thread::sleep_for(std::chrono::milliseconds(400));
-	}
-	
-	if (hasCliArgument("-apidump"))
-		doApiDump();
+	processCliArgs(argc, argv);
 
 	try
 	{
-		patchConfigFromCliArgs(argc, argv);
 		Engine engine{};
 
 		init(argc, argv);

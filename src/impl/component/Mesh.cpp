@@ -5,10 +5,10 @@
 #include "asset/MeshProvider.hpp"
 #include "component/Bone.hpp"
 
-class MeshManager : BaseComponentManager
+class MeshManager : public BaseComponentManager
 {
 public:
-    virtual uint32_t CreateComponent(GameObject* Object) final
+    virtual uint32_t CreateComponent(GameObject* Object) override
     {
         m_Components.emplace_back();
 
@@ -21,7 +21,7 @@ public:
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
 
-    virtual std::vector<void*> GetComponents() final
+    virtual std::vector<void*> GetComponents() override
     {
         std::vector<void*> v;
         v.reserve(m_Components.size());
@@ -32,25 +32,25 @@ public:
         return v;
     }
 
-	virtual void* GetComponent(uint32_t Id) final
+	virtual void* GetComponent(uint32_t Id) override
 	{
 		return &m_Components[Id];
 	}
 
-    virtual void DeleteComponent(uint32_t Id) final
+    virtual void DeleteComponent(uint32_t Id) override
     {
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
 
 		m_Components[Id].Object.Invalidate();
     }
 
-	virtual void Shutdown() final
+	virtual void Shutdown() override
     {
         for (size_t i = 0; i < m_Components.size(); i++)
             DeleteComponent(i);
     }
 
-    virtual const Reflection::PropertyMap& GetProperties() final
+    virtual const Reflection::PropertyMap& GetProperties() override
     {
         static const Reflection::PropertyMap props = 
         {
@@ -135,7 +135,7 @@ public:
         return props;
     }
 
-    virtual const Reflection::FunctionMap& GetFunctions() final
+    virtual const Reflection::FunctionMap& GetFunctions() override
     {
         static const Reflection::FunctionMap funcs = {};
         return funcs;
@@ -152,17 +152,41 @@ private:
 
 static inline MeshManager Instance{};
 
-void EcMesh::SetRenderMesh(const std::string_view& Mesh)
+void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 {
 	MeshProvider* meshProvider = MeshProvider::Get();
+	GameObjectRef obj = Object;
 
-	this->RenderMeshId = meshProvider->LoadFromPath(Mesh);
+	this->RenderMeshId = meshProvider->LoadFromPath(
+		MeshPath,
+		true,
+		false,
+		[obj](Mesh& mesh)
+		{
+			if (mesh.Bones.size() == 0)
+				return;
+			
+			for (GameObject* ch : obj->GetChildren())
+				if (ch->GetComponent<EcBone>())
+					ch->Destroy();
 
-	// in case it has any bones
-	// can't do this in this function because it'll (most likely)
-	// load asynchronously
-	this->WaitingForMeshToLoad = true;
-	this->Asset = Mesh;
+			for (uint8_t boneId = 0; boneId < mesh.Bones.size(); boneId++)
+			{
+				const Bone& b = mesh.Bones[boneId];
+			
+				GameObject* boneObj = GameObject::Create(EntityComponent::Bone);
+				EcBone* bone = boneObj->GetComponent<EcBone>();
+
+				boneObj->SetParent(obj);
+				boneObj->Name = b.Name;
+				boneObj->Serializes = false;
+				
+				bone->Transform = b.Transform;
+				bone->SkeletalBoneId = boneId;
+			}
+		}
+	);
+	this->Asset = MeshPath;
 }
 
 void EcMesh::RecomputeAabb()
@@ -202,92 +226,3 @@ void EcMesh::RecomputeAabb()
 		this->CollisionAabb.Size = glmsize;
 	}
 }
-
-/*
-PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(Mesh);
-
-static bool s_DidInitReflection = false;
-
-void Object_Mesh::s_DeclareReflections()
-{
-	if (s_DidInitReflection)
-		return;
-	s_DidInitReflection = true;
-
-	REFLECTION_INHERITAPI(Base3D);
-
-	REFLECTION_DECLAREPROP(
-		"Asset",
-		String,
-		[](Reflection::Reflectable* p)
-		{
-			return static_cast<Object_Mesh*>(p)->GetRenderMeshPath();
-		},
-		[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)
-		{
-			static_cast<Object_Mesh*>(p)->SetRenderMesh(gv.AsStringView());
-		}
-	);
-}
-
-Object_Mesh::Object_Mesh()
-{
-	this->Name = "Mesh";
-	this->ClassName = "Mesh";
-
-	this->SetRenderMesh("!Cube");
-
-	s_DeclareReflections();
-	ApiPointer = &s_Api;
-}
-
-void Object_Mesh::Update(double)
-{
-	if (!m_WaitingForMeshToLoad)
-		return;
-
-	MeshProvider* meshProvider = MeshProvider::Get();
-
-	const Mesh& mesh = meshProvider->GetMeshResource(this->RenderMeshId);
-
-	if (mesh.GpuId == UINT32_MAX)
-		return;
-
-	for (GameObject* ch : this->GetChildren())
-		if (ch->ClassName == "Bone")
-			ch->Destroy();
-
-	for (uint8_t boneId = 0; boneId < mesh.Bones.size(); boneId++)
-	{
-		const Bone& b = mesh.Bones[boneId];
-
-		Object_Bone* bone = static_cast<Object_Bone*>(GameObject::Create("Bone"));
-		bone->SetParent(this);
-
-		bone->LocalTransform = b.Transform;
-		bone->SkeletalBoneId = boneId;
-		bone->Name = b.Name;
-		bone->Serializes = false;
-	}
-
-	m_WaitingForMeshToLoad = false;
-}
-
-void Object_Mesh::SetRenderMesh(const std::string_view& NewRenderMesh)
-{
-	MeshProvider* meshProvider = MeshProvider::Get();
-
-	this->RenderMeshId = meshProvider->LoadFromPath(NewRenderMesh);
-	m_MeshPath = NewRenderMesh;
-
-	// in case it has any bones
-	// can't do this in this function because it'll (most likely)
-	// load asynchronously
-	m_WaitingForMeshToLoad = true;
-}
-
-std::string Object_Mesh::GetRenderMeshPath()
-{
-	return m_MeshPath;
-}
-*/

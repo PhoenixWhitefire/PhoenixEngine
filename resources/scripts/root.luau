@@ -164,11 +164,33 @@ function Update()
 	
 	Editor(DeltaTime)
 	--NodeEditor()
+
+	if input_keypressed('m') then
+		local sweeping = GameObject.new("Script")
+		sweeping.SourceFile = "scripts/minesweeper.luau"
+		sweeping.Name = "MinesweeperMain"
+		sweeping.Parent = workspace
+
+		workspace.Level.DirectionalLight.Parent = workspace
+		workspace.Level:Destroy()
+		script.Enabled = false
+	end
 end
 
 loadSubLevel(DefaultSubLevel)
 
 if not conf_get("Developer") then
-	Update = nil
+	Update = function()
+		if input_keypressed('m') then
+			local sweeping = GameObject.new("Script")
+			sweeping.SourceFile = "scripts/minesweeper.luau"
+			sweeping.Name = "MinesweeperMain"
+			sweeping.Parent = workspace
+			
+			workspace.Level.DirectionalLight.Parent = workspace
+			workspace.Level:Destroy()
+			script.Enabled = false
+		end
+	end
 end
 

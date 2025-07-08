@@ -56,14 +56,21 @@ namespace ScriptEngine::L
 
 	void PushGenericValue(lua_State*, const Reflection::GenericValue&);
 	void PushGameObject(lua_State*, GameObject*);
-	void PushFunction(lua_State* L, Reflection::Function*);
+	void PushFunction(lua_State* L, Reflection::Function*, std::pair<EntityComponent, uint32_t>);
 
 	int HandleMethodCall(
 		lua_State* L,
-		Reflection::Function* fnaf
+		Reflection::Function* fnaf,
+		std::pair<EntityComponent, uint32_t>
 	);
+
+	struct GlobalFn
+	{
+		lua_CFunction Function;
+		int NumMinArgs = 0;
+	};
 
 	// TODO replace with `std::span` once engine is moved over to C++ 26
 	// (initializer lists cannot be used for spans before that)
-	extern std::pair<std::string_view, lua_CFunction>* GlobalFunctions;
+	extern std::pair<std::string_view, GlobalFn>* GlobalFunctions;
 };

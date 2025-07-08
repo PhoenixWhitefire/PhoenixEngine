@@ -3,6 +3,7 @@
 #include <tracy/Tracy.hpp>
 
 #include "render/GpuBuffers.hpp"
+#include "Utilities.hpp"
 
 void GpuVertexArray::Initialize()
 {
@@ -216,7 +217,7 @@ void GpuFrameBuffer::Initialize(int TargetWidth, int TargetHeight, int MSSamples
 	auto FrameBufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 
 	if (FrameBufferStatus != GL_FRAMEBUFFER_COMPLETE)
-		throw(std::format("Could not create a framebuffer, error ID: {}", FrameBufferStatus));
+		RAISE_RT(std::format("Could not create a framebuffer, error ID: {}", FrameBufferStatus));
 }
 
 void GpuFrameBuffer::Delete()

@@ -191,7 +191,7 @@ static void luaTableToJson(lua_State* L, nlohmann::json& json)
 			else
 				k = lua_tostring(L, -2);
 
-			throw(std::format(
+			RAISE_RT(std::format(
 				"Key '{}' is of non-JSON type {}!",
 				k, vtname
 			));
@@ -292,7 +292,7 @@ Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int St
 		// https://www.lua.org/manual/5.1/manual.html#lua_next
 		lua_pushnil(L);
 
-		while (lua_next(L, StackIndex - 1) != 0)
+		while (lua_next(L, -2) != 0)
 		{
 			items.push_back(ScriptEngine::L::LuaValueToGeneric(L, -1));
 			lua_pop(L, 1);
@@ -385,7 +385,7 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 		std::span<Reflection::GenericValue> array = gv.AsArray();
 
 		if (array.size() % 2 != 0)
-			throw("GenericValue type was Map, but it does not have an even number of elements!");
+			RAISE_RT("GenericValue type was Map, but it does not have an even number of elements!");
 
 		lua_newtable(L);
 
@@ -433,10 +433,10 @@ void ScriptEngine::L::PushGameObject(lua_State* L, GameObject* obj)
 
 int ScriptEngine::L::HandleMethodCall(
 	lua_State* L,
-	Reflection::Function* func
+	Reflection::Function* func,
+	std::pair<EntityComponent, uint32_t> FromComponent
 )
 {
-	GameObject* refl = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
 	int numArgs = lua_gettop(L) - 1;
 
 	const std::vector<Reflection::ParameterType>& paramTypes = func->Inputs;
@@ -502,7 +502,7 @@ int ScriptEngine::L::HandleMethodCall(
 		auto expectedLuaTypeIt = ScriptEngine::ReflectedTypeLuaEquivalent.find(paramType);
 
 		if (expectedLuaTypeIt == ScriptEngine::ReflectedTypeLuaEquivalent.end())
-			throw(std::format(
+			RAISE_RT(std::format(
 				"Cannot verify that argument %i should be a %s",
 				index + 1, Reflection::TypeAsString(paramType).data()
 			));
@@ -535,7 +535,7 @@ int ScriptEngine::L::HandleMethodCall(
 
 	try
 	{
-		outputs = func->Func(refl, inputs);
+		outputs = func->Func(GameObject::ReflectorHandleToPointer(FromComponent), inputs);
 	}
 	catch (std::string err)
 	{
@@ -556,7 +556,7 @@ int ScriptEngine::L::HandleMethodCall(
 	// 15/08/2024
 }
 
-void ScriptEngine::L::PushFunction(lua_State* L, Reflection::Function* Function)
+void ScriptEngine::L::PushFunction(lua_State* L, Reflection::Function* Function, std::pair<EntityComponent, uint32_t> FromComponent)
 {
 	// if we dont do this then comparison will not work
 	// ex: `game.Close == game.Close`
@@ -569,13 +569,20 @@ void ScriptEngine::L::PushFunction(lua_State* L, Reflection::Function* Function)
 		lua_pop(L, 1); // remove `nil`, stack empty
 
 		lua_pushlightuserdata(L, Function);
+		static_assert(sizeof(FromComponent) <= sizeof(void*));
+		lua_pushlightuserdata(L, *(void**)&FromComponent);
+
 		lua_pushcclosure(
 			L,
 			[](lua_State* L)
 			{
+				Reflection::Function* fn = static_cast<Reflection::Function*>(lua_tolightuserdata(L, lua_upvalueindex(1)));
+				auto& fc = *static_cast<decltype(FromComponent)*>(lua_tolightuserdata(L, lua_upvalueindex(2)));
+
 				return ScriptEngine::L::HandleMethodCall(
 					L,
-					static_cast<Reflection::Function*>(lua_tolightuserdata(L, lua_upvalueindex(1)))
+					fn,
+					fc
 				);
 			},
 
@@ -626,107 +633,126 @@ static void fdCallback(void*, const char* const* FileList, int)
 using namespace ScriptEngine;
 using namespace ScriptEngine::L;
 
-static std::pair<std::string_view, lua_CFunction> s_GlobalFunctions[] =
+static std::pair<std::string_view, GlobalFn> s_GlobalFunctions[] =
 {
 	{
 	"matrix_getv",
-	[](lua_State* L)
 	{
-		glm::mat4& mtx = *(glm::mat4*)luaL_checkudata(L, 1, "Matrix");
-		int r = luaL_checkinteger(L, 2);
-		int c = luaL_checkinteger(L, 3);
+		[](lua_State* L)
+		{
+			glm::mat4& mtx = *(glm::mat4*)luaL_checkudata(L, 1, "Matrix");
+			int r = luaL_checkinteger(L, 2);
+			int c = luaL_checkinteger(L, 3);
 
-		lua_pushnumber(L, mtx[r][c]);
+			lua_pushnumber(L, mtx[r][c]);
 
-		return 1;
+			return 1;
+		},
+		3
 	}
 	},
 
 	{
 	"matrix_setv",
-	[](lua_State* L)
 	{
-		glm::mat4& mtx = *(glm::mat4*)luaL_checkudata(L, 1, "Matrix");
-		int r = luaL_checkinteger(L, 2);
-		int c = luaL_checkinteger(L, 3);
-		float v = static_cast<float>(luaL_checknumber(L, 4));
+		[](lua_State* L)
+		{
+			glm::mat4& mtx = *(glm::mat4*)luaL_checkudata(L, 1, "Matrix");
+			int r = luaL_checkinteger(L, 2);
+			int c = luaL_checkinteger(L, 3);
+			float v = static_cast<float>(luaL_checknumber(L, 4));
 
-		mtx[r][c] = v;
+			mtx[r][c] = v;
 
-		Reflection::GenericValue gv{ mtx };
+			Reflection::GenericValue gv{ mtx };
 
-		L::PushGenericValue(L, gv);
+			L::PushGenericValue(L, gv);
 
-		return 1;
+			return 1;
+		},
+		4
 	}
 	},
 
 	{
 	"input_keypressed",
-	[](lua_State* L)
 	{
-		if (ImGui::GetIO().WantCaptureKeyboard)
-			lua_pushboolean(L, false);
-		else
+		[](lua_State* L)
 		{
-			const char* kname = luaL_checkstring(L, 1);
-			lua_pushboolean(L, UserInput::IsKeyDown(SDL_Keycode(kname[0])));
-		}
+			if (ImGui::GetIO().WantCaptureKeyboard)
+				lua_pushboolean(L, false);
+			else
+			{
+				const char* kname = luaL_checkstring(L, 1);
+				lua_pushboolean(L, UserInput::IsKeyDown(SDL_Keycode(kname[0])));
+			}
 
-		return 1;
+			return 1;
+		},
+		0
 	}
 	},
 
 	{
 	"input_mouse_bdown",
-	[](lua_State* L)
 	{
-		if (ImGui::GetIO().WantCaptureMouse)
-			lua_pushboolean(L, false);
-		else
+		[](lua_State* L)
 		{
-			bool lmb = luaL_checkboolean(L, 1);
-			lua_pushboolean(L, UserInput::IsMouseButtonDown(lmb));
-		}
+			if (ImGui::GetIO().WantCaptureMouse)
+				lua_pushboolean(L, false);
+			else
+			{
+				bool lmb = luaL_checkboolean(L, 1);
+				lua_pushboolean(L, UserInput::IsMouseButtonDown(lmb));
+			}
 
-		return 1;
+			return 1;
+		},
+		1
 	}
 	},
 
 	{
 	"input_mouse_getpos",
-	[](lua_State* L)
 	{
-		float mx = 0;
-		float my = 0;
+		[](lua_State* L)
+		{
+			float mx = 0;
+			float my = 0;
 
-		SDL_GetMouseState(&mx, &my);
+			SDL_GetMouseState(&mx, &my);
 
-		lua_pushnumber(L, mx);
-		lua_pushnumber(L, my);
+			lua_pushnumber(L, mx);
+			lua_pushnumber(L, my);
 
-		return 2;
+			return 2;
+		},
+		0
 	}
 	},
 
 	{
 	"input_mouse_setlocked",
-	[](lua_State* L)
 	{
-		s_BackendScriptWantGrabMouse = luaL_checkboolean(L, 1);
-		return 0;
+		[](lua_State* L)
+		{
+			s_BackendScriptWantGrabMouse = luaL_checkboolean(L, 1);
+			return 0;
+		},
+		0
 	}
 	},
 
 	{
-		"sleep",
+	"sleep",
+	{
 		[](lua_State* L)
 		{
 			double sleepTime = luaL_checknumber(L, 1);
 
 			// TODO a kind of hack to get what script we're running as?
 			lua_getglobal(L, "script");
-			Reflection::GenericValue script = ScriptEngine::L::LuaValueToGeneric(L, -1);
+			Reflection::GenericValue script = ScriptEngine::L::LuaValueToGeneric(L, 1);
 			GameObject* scriptObject = GameObject::FromGenericValue(script);
 			// modules currently do not have a `script` global
 			uint32_t scriptId = scriptObject ? scriptObject->ObjectId : PHX_GAMEOBJECT_NULL_ID;
@@ -753,66 +779,72 @@ static std::pair<std::string_view, lua_CFunction> s_GlobalFunctions[] =
 			}
 
 			return -1;
-		}
+		},
+		1
+	}
 	},
 
 	{
 	"require",
 	// `lua_require` from `Luau/CLI/Repl.cpp` 18/09/2024
-	[](lua_State* L)
 	{
-		std::string name = luaL_checkstring(L, 1);
-
-		bool found = true;
-		std::string sourceCode = FileRW::ReadFile(name, &found);
-
-		if (!found)
-			luaL_errorL(L, "module not found");
-
-		// module needs to run in a new thread, isolated from the rest
-		// note: we create ML on main thread so that it doesn't inherit environment of L
-		lua_State* GL = lua_mainthread(L);
-		lua_State* ML = lua_newthread(GL);
-		lua_xmove(GL, L, 1);
-
-		// new thread needs to have the globals sandboxed
-		luaL_sandboxthread(ML);
-
-		// now we can compile & run module on the new thread
-		if (CompileAndLoad(ML, sourceCode, "@" + name) == 0)
+		[](lua_State* L)
 		{
-			int status = lua_resume(ML, L, 0);
+			std::string name = luaL_checkstring(L, 1);
 
-			if (status == 0)
+			bool found = true;
+			std::string sourceCode = FileRW::ReadFile(name, &found);
+
+			if (!found)
+				luaL_errorL(L, "module not found");
+
+			// module needs to run in a new thread, isolated from the rest
+			// note: we create ML on main thread so that it doesn't inherit environment of L
+			lua_State* GL = lua_mainthread(L);
+			lua_State* ML = lua_newthread(GL);
+			lua_xmove(GL, L, 1);
+
+			// new thread needs to have the globals sandboxed
+			luaL_sandboxthread(ML);
+
+			// now we can compile & run module on the new thread
+			if (CompileAndLoad(ML, sourceCode, "@" + name) == 0)
 			{
-				if (lua_gettop(ML) == 0)
-					lua_pushstring(ML, "module must return a value");
+				int status = lua_resume(ML, L, 0);
 
-				else if (!lua_istable(ML, -1) && !lua_isfunction(ML, -1))
-					lua_pushstring(ML, "module must return a table or function");
+				if (status == 0)
+				{
+					if (lua_gettop(ML) == 0)
+						lua_pushstring(ML, "module must return a value");
+
+					else if (!lua_istable(ML, -1) && !lua_isfunction(ML, -1))
+						lua_pushstring(ML, "module must return a table or function");
+				}
+				else if (status == LUA_YIELD)
+					lua_pushstring(ML, "module can not yield");
+
+				else if (!lua_isstring(ML, -1))
+					lua_pushstring(ML, "unknown error while running module");
 			}
-			else if (status == LUA_YIELD)
-				lua_pushstring(ML, "module can not yield");
 
-			else if (!lua_isstring(ML, -1))
-				lua_pushstring(ML, "unknown error while running module");
-		}
+			// there's now a return value on top of ML; L stack: _MODULES ML
+			lua_xmove(ML, L, 1);
+			lua_pushvalue(L, -1);
+			//lua_setfield(L, -4, name.c_str());
 
-		// there's now a return value on top of ML; L stack: _MODULES ML
-		lua_xmove(ML, L, 1);
-		lua_pushvalue(L, -1);
-		//lua_setfield(L, -4, name.c_str());
+			// L stack: _MODULES ML result
+			if (lua_isstring(L, -1))
+				lua_error(L);
 
-		// L stack: _MODULES ML result
-		if (lua_isstring(L, -1))
-			lua_error(L);
-
-		return 1;
+			return 1;
+		},
+		1
 	}
 	},
 
 	{
-		"mesh_get",
+	"mesh_get",
+	{
 		[](lua_State* L)
 		{
 			const char* meshPath = luaL_checkstring(L, 1);
@@ -883,11 +915,14 @@ static std::pair<std::string_view, lua_CFunction> s_GlobalFunctions[] =
 			lua_setfield(L, -2, "Indices");
 
 			return 1;
+		},
+		1
 	}
 	},
 
 	{
-		"mesh_set",
+	"mesh_set",
+	{
 		[](lua_State* L)
 		{
 			const char* meshName = luaL_checkstring(L, 1);
@@ -946,11 +981,14 @@ static std::pair<std::string_view, lua_CFunction> s_GlobalFunctions[] =
 			meshProvider->Assign(mesh, meshName, true);
 
 			return 0;
-		}
+		},
+		1
+	}
 	},
 
 	{
-		"mesh_save",
+	"mesh_save",
+	{
 		[](lua_State* L)
 		{
 			const char* internalName = luaL_checkstring(L, 1);
@@ -960,11 +998,14 @@ static std::pair<std::string_view, lua_CFunction> s_GlobalFunctions[] =
 			meshProv->Save(meshProv->LoadFromPath(internalName), savePath);
 
 			return 0;
-		}
+		},
+		2
+	}
 	},
 
 	{
-		"world_raycast",
+	"world_raycast",
+	{
 		[](lua_State* L)
 		{
 			GameObject* workspace = GameObject::GetObjectById(GameObject::s_DataModel)->FindChildWhichIsA("Workspace");
@@ -972,10 +1013,10 @@ static std::pair<std::string_view, lua_CFunction> s_GlobalFunctions[] =
 			if (!workspace)
 				luaL_error(L, "A Workspace was not found within the DataModel");
 
-			glm::vec3 origin = LuaValueToGeneric(L, -3).AsVector3();
-			glm::vec3 vector = LuaValueToGeneric(L, -2).AsVector3();
+			glm::vec3 origin = LuaValueToGeneric(L, 1).AsVector3();
+			glm::vec3 vector = LuaValueToGeneric(L, 2).AsVector3();
 
-			Reflection::GenericValue ignoreListVal = LuaValueToGeneric(L, -1);
+			Reflection::GenericValue ignoreListVal = LuaValueToGeneric(L, 3);
 			std::span<Reflection::GenericValue> providedIgnoreList = ignoreListVal.AsArray();
 
 			std::vector<GameObject*> ignoreList;
@@ -1037,11 +1078,14 @@ static std::pair<std::string_view, lua_CFunction> s_GlobalFunctions[] =
 				lua_pushnil(L);
 
 			return 1;
-		}
+		},
+		3
+	}
 	},
 
 	{
-		"world_aabbcast",
+	"world_aabbcast",
+	{
 		[](lua_State* L)
 		{
 			GameObject* workspace = GameObject::GetObjectById(GameObject::s_DataModel)->FindChildWhichIsA("Workspace");
@@ -1049,10 +1093,10 @@ static std::pair<std::string_view, lua_CFunction> s_GlobalFunctions[] =
 			if (!workspace)
 				luaL_error(L, "A Workspace was not found within the DataModel");
 
-			glm::vec3 apos = LuaValueToGeneric(L, -3).AsVector3();
-			glm::vec3 asize = LuaValueToGeneric(L, -2).AsVector3();
+			glm::vec3 apos = LuaValueToGeneric(L, 1).AsVector3();
+			glm::vec3 asize = LuaValueToGeneric(L, 2).AsVector3();
 
-			Reflection::GenericValue ignoreListVal = LuaValueToGeneric(L, -1);
+			Reflection::GenericValue ignoreListVal = LuaValueToGeneric(L, 3);
 			std::span<Reflection::GenericValue> providedIgnoreList = ignoreListVal.AsArray();
 
 			std::vector<GameObject*> ignoreList;
@@ -1114,11 +1158,14 @@ static std::pair<std::string_view, lua_CFunction> s_GlobalFunctions[] =
 				lua_pushnil(L);
 
 			return 1;
-		}
+		},
+		3
+	}
 	},
 
 	{
-		"world_aabbquery",
+	"world_aabbquery",
+	{
 		[](lua_State* L)
 		{
 			GameObject* workspace = GameObject::GetObjectById(GameObject::s_DataModel)->FindChildWhichIsA("Workspace");
@@ -1126,10 +1173,10 @@ static std::pair<std::string_view, lua_CFunction> s_GlobalFunctions[] =
 			if (!workspace)
 				luaL_error(L, "A Workspace was not found within the DataModel");
 
-			glm::vec3 apos = LuaValueToGeneric(L, -3).AsVector3();
-			glm::vec3 asize = LuaValueToGeneric(L, -2).AsVector3();
+			glm::vec3 apos = LuaValueToGeneric(L, 1).AsVector3();
+			glm::vec3 asize = LuaValueToGeneric(L, 2).AsVector3();
 
-			Reflection::GenericValue ignoreListVal = LuaValueToGeneric(L, -1);
+			Reflection::GenericValue ignoreListVal = LuaValueToGeneric(L, 3);
 			std::span<Reflection::GenericValue> providedIgnoreList = ignoreListVal.AsArray();
 
 			std::vector<GameObject*> ignoreList;
@@ -1173,11 +1220,14 @@ static std::pair<std::string_view, lua_CFunction> s_GlobalFunctions[] =
 			}
 
 			return 1;
-		}
+		},
+		3
+	}
 	},
 
 	{
-		"model_import",
+	"model_import",
+	{
 		[](lua_State* L)
 		{
 			const char* path = luaL_checkstring(L, 1);
@@ -1202,14 +1252,17 @@ static std::pair<std::string_view, lua_CFunction> s_GlobalFunctions[] =
 			*/
 
 			return 1;
-		}
+		},
+		1
+	}
 	},
 
 	{
-		"scene_save",
+	"scene_save",
+	{
 		[](lua_State* L)
 		{
-			Reflection::GenericValue rootNodesGv = ScriptEngine::L::LuaValueToGeneric(L, -2);
+			Reflection::GenericValue rootNodesGv = ScriptEngine::L::LuaValueToGeneric(L, 1);
 			const char* path = luaL_checkstring(L, 2);
 
 			std::span<Reflection::GenericValue> rootNodesArray = rootNodesGv.AsArray();
@@ -1225,11 +1278,14 @@ static std::pair<std::string_view, lua_CFunction> s_GlobalFunctions[] =
 			lua_pushstring(L, "No errors occurred");
 
 			return 2;
-		}
+		},
+		1
+	}
 	},
 
 	{
-		"scene_load",
+	"scene_load",
+	{
 		[](lua_State* L)
 		{
 			const char* path = luaL_checkstring(L, 1);
@@ -1252,170 +1308,214 @@ static std::pair<std::string_view, lua_CFunction> s_GlobalFunctions[] =
 			ScriptEngine::L::PushGenericValue(L, gv);
 
 			return 1;
-		}
+		},
+		1
+	}
 	},
 
 	{
 		"imgui_begin",
-		[](lua_State* L)
 		{
-			const char* title = luaL_checkstring(L, 1);
-			lua_pushboolean(L, ImGui::Begin(title));
+			[](lua_State* L)
+			{
+				const char* title = luaL_checkstring(L, 1);
+				lua_pushboolean(L, ImGui::Begin(title));
 
-			return 1;
+				return 1;
+			},
+			1
 		}
 	},
 
 	{
 		"imgui_end",
-		[](lua_State*)
 		{
-			ImGui::End();
+			[](lua_State*)
+			{
+				ImGui::End();
 
-			return 0;
+				return 0;
+			},
+			0
 		}
 	},
 
 	{
 		"imgui_setitemtooltip",
-		[](lua_State* L)
 		{
-			ImGui::SetItemTooltip("%s", luaL_checkstring(L, 1));
+			[](lua_State* L)
+			{
+				ImGui::SetItemTooltip("%s", luaL_checkstring(L, 1));
 
-			return 0;
+				return 0;
+			},
+			1
 		}
 	},
 
 	{
 		"imgui_item_hovered",
-		[](lua_State* L)
 		{
-			lua_pushboolean(L, ImGui::IsItemHovered());
-			return 1;
+			[](lua_State* L)
+			{
+				lua_pushboolean(L, ImGui::IsItemHovered());
+				return 1;
+			},
+			0
 		}
 	},
 
 	{
 		"imgui_item_clicked",
-		[](lua_State* L)
 		{
-			lua_pushboolean(L, ImGui::IsItemClicked());
-			return 1;
+			[](lua_State* L)
+			{
+				lua_pushboolean(L, ImGui::IsItemClicked());
+				return 1;
+			},
+			0
 		}
 	},
 
 	{
 		"imgui_text",
-		[](lua_State* L)
 		{
-			ImGui::TextUnformatted(luaL_checkstring(L, 1));
-			return 0;
+			[](lua_State* L)
+			{
+				ImGui::TextUnformatted(luaL_checkstring(L, 1));
+				return 0;
+			},
+			1
 		}
 	},
 
 	{
 		"imgui_image",
-		[](lua_State* L)
 		{
-			TextureManager* texManager = TextureManager::Get();
-			uint32_t resId = texManager->LoadTextureFromPath(luaL_checkstring(L, 1));
-			const Texture& texture = texManager->GetTextureResource(resId);
+			[](lua_State* L)
+			{
+				TextureManager* texManager = TextureManager::Get();
+				uint32_t resId = texManager->LoadTextureFromPath(luaL_checkstring(L, 1));
+				const Texture& texture = texManager->GetTextureResource(resId);
 
-			ImGui::Image(
-				texture.GpuId,
-				ImVec2(
-					static_cast<float>(luaL_optnumber(L, 2, texture.Width)),
-					static_cast<float>(luaL_optnumber(L, 3, texture.Height))
-				)
-			);
+				ImGui::Image(
+					texture.GpuId,
+					ImVec2(
+						static_cast<float>(luaL_optnumber(L, 2, texture.Width)),
+						static_cast<float>(luaL_optnumber(L, 3, texture.Height))
+					)
+				);
 
-			return 0;
+				return 0;
+			},
+			3
 		}
 	},
 
 	{
 		"imgui_indent",
-		[](lua_State* L)
 		{
-			ImGui::Indent(static_cast<float>(luaL_checknumber(L, 1)));
-			return 0;
+			[](lua_State* L)
+			{
+				ImGui::Indent(static_cast<float>(luaL_checknumber(L, 1)));
+				return 0;
+			},
+			1
 		}
 	},
 
 	{
 		"imgui_input_text",
-		[](lua_State* L)
 		{
-			const char* name = luaL_checkstring(L, 1);
-			std::string value = luaL_checkstring(L, 2);
-			ImGui::InputText(name, &value);
+			[](lua_State* L)
+			{
+				const char* name = luaL_checkstring(L, 1);
+				std::string value = luaL_checkstring(L, 2);
+				ImGui::InputText(name, &value);
 
-			lua_pushstring(L, value.c_str());
+				lua_pushstring(L, value.c_str());
 
-			return 1;
+				return 1;
+			},
+			2
 		}
 	},
 
 	{
 		"imgui_input_float",
-		[](lua_State* L)
 		{
-			const char* title = luaL_checkstring(L, 1);
-			float value = static_cast<float>(luaL_checknumber(L, 2));
-			ImGui::InputFloat(title, &value);
+			[](lua_State* L)
+			{
+				const char* title = luaL_checkstring(L, 1);
+				float value = static_cast<float>(luaL_checknumber(L, 2));
+				ImGui::InputFloat(title, &value);
 
-			lua_pushnumber(L, value);
+				lua_pushnumber(L, value);
 
-			return 1;
+				return 1;
+			}, 2
 		}
 	},
 
 	{
 		"imgui_button",
-		[](lua_State* L)
 		{
-			lua_pushboolean(L, ImGui::Button(luaL_checkstring(L, 1)));
+			[](lua_State* L)
+			{
+				lua_pushboolean(L, ImGui::Button(luaL_checkstring(L, 1)));
 
-			return 1;
+				return 1;
+			},
+			1
 		}
 	},
 
 	{
 		"imgui_textlink",
-		[](lua_State* L)
 		{
-			lua_pushboolean(L, ImGui::TextLink(luaL_checkstring(L, 1)));
+			[](lua_State* L)
+			{
+				lua_pushboolean(L, ImGui::TextLink(luaL_checkstring(L, 1)));
 
-			return 1;
+				return 1;
+			},
+			1
 		}
 	},
 
 	{
 		"imgui_checkbox",
-		[](lua_State* L)
 		{
-			const char* title = luaL_checkstring(L, 1);
-			bool curval = luaL_checkboolean(L, 2);
-			bool pressed = ImGui::Checkbox(title, &curval);
+			[](lua_State* L)
+			{
+				const char* title = luaL_checkstring(L, 1);
+				bool curval = luaL_checkboolean(L, 2);
+				bool pressed = ImGui::Checkbox(title, &curval);
 
-			lua_pushboolean(L, curval);
-			lua_pushboolean(L, pressed);
+				lua_pushboolean(L, curval);
+				lua_pushboolean(L, pressed);
 
-			return 2;
+				return 2;
+			},
+			2
 		}
 	},
 
 	{
 		"fd_inprogress",
-		[](lua_State* L)
 		{
-			lua_pushboolean(L, IsFdInProgress);
-			return 1;
+			[](lua_State* L)
+			{
+				lua_pushboolean(L, IsFdInProgress);
+				return 1;
+			},
+			0
 		}
 	},
 
 	{
-		"fd_save",
+	"fd_save",
+	{
 		[](lua_State* L)
 		{
 			if (IsFdInProgress)
@@ -1486,11 +1586,14 @@ static std::pair<std::string_view, lua_CFunction> s_GlobalFunctions[] =
 			}
 
 			return -1;
-		}
+		},
+		0
+	}
 	},
 
 	{
-		"fd_open",
+	"fd_open",
+	{
 		[](lua_State* L)
 		{
 			if (IsFdInProgress)
@@ -1571,11 +1674,14 @@ static std::pair<std::string_view, lua_CFunction> s_GlobalFunctions[] =
 			}
 
 			return -1;
-		}
+		},
+		0
+	}
 	},
 
 	{
-		"file_read",
+	"file_read",
+	{
 		[](lua_State* L)
 		{
 			const char* path = luaL_checkstring(L, 1);
@@ -1583,11 +1689,14 @@ static std::pair<std::string_view, lua_CFunction> s_GlobalFunctions[] =
 			lua_pushstring(L, FileRW::ReadFile(path).c_str());
 
 			return 1;
-		}
+		},
+		1
+	}
 	},
 
 	{
-		"file_write",
+	"file_write",
+	{
 		[](lua_State* L)
 		{
 			const char* path = luaL_checkstring(L, 1);
@@ -1597,11 +1706,14 @@ static std::pair<std::string_view, lua_CFunction> s_GlobalFunctions[] =
 			FileRW::WriteFile(path, contents, prependResDir);
 
 			return 0;
-		}
+		},
+		3
+	}
 	},
 
 	{
-		"file_write_rcd",
+	"file_write_rcd",
+	{
 		[](lua_State* L)
 		{
 			const char* path = luaL_checkstring(L, 1);
@@ -1611,11 +1723,14 @@ static std::pair<std::string_view, lua_CFunction> s_GlobalFunctions[] =
 			FileRW::WriteFileCreateDirectories(path, contents, prependResDir);
 
 			return 0;
-		}
+		},
+		3
+	}
 	},
 
 	{
-		"conf_get",
+	"conf_get",
+	{
 		[](lua_State* L)
 		{
 			const char* k = luaL_checkstring(L, 1);
@@ -1623,11 +1738,14 @@ static std::pair<std::string_view, lua_CFunction> s_GlobalFunctions[] =
 			pushJson(L, v);
 
 			return 1;
-		}
+		},
+		1
+	}
 	},
 
 	{
-		"json_parse",
+	"json_parse",
+	{
 		[](lua_State* L)
 		{
 			const char* jsonStr = luaL_checkstring(L, 1);
@@ -1635,11 +1753,14 @@ static std::pair<std::string_view, lua_CFunction> s_GlobalFunctions[] =
 			pushJson(L, json);
 
 			return 1;
-		}
+		},
+		1
+	}
 	},
 
 	{
-		"json_dump",
+	"json_dump",
+	{
 		[](lua_State* L)
 		{
 			luaL_checktype(L, 1, LUA_TTABLE);
@@ -1651,13 +1772,18 @@ static std::pair<std::string_view, lua_CFunction> s_GlobalFunctions[] =
 			lua_pushstring(L, json.dump(indent).c_str());
 
 			return 1;
-		}
+		},
+		1
+	}
 	},
 
 	{
 		"",
-		nullptr
+		{
+			nullptr,
+			0
+		}
 	}
 };
 
-std::pair<std::string_view, lua_CFunction>* ScriptEngine::L::GlobalFunctions = s_GlobalFunctions;
+std::pair<std::string_view, GlobalFn>* ScriptEngine::L::GlobalFunctions = s_GlobalFunctions;

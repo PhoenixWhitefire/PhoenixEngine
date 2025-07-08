@@ -28,16 +28,16 @@ glm::mat4 EcCamera::GetMatrixForAspectRatio(float AspectRatio) const
 	return projectionMatrix * viewMatrix;
 }
 
-class CameraManager : BaseComponentManager
+class CameraManager : public BaseComponentManager
 {
 public:
-    virtual uint32_t CreateComponent(GameObject*) final
+    virtual uint32_t CreateComponent(GameObject*) override
     {
         m_Components.emplace_back();
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
 
-    virtual std::vector<void*> GetComponents() final
+    virtual std::vector<void*> GetComponents() override
     {
         std::vector<void*> v;
         v.reserve(m_Components.size());
@@ -48,17 +48,17 @@ public:
         return v;
     }
 
-	virtual void* GetComponent(uint32_t Id) final
+	virtual void* GetComponent(uint32_t Id) override
 	{
 		return &m_Components[Id];
 	}
 
-    virtual void DeleteComponent(uint32_t) final
+    virtual void DeleteComponent(uint32_t) override
     {
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
     }
 
-    virtual const Reflection::PropertyMap& GetProperties() final
+    virtual const Reflection::PropertyMap& GetProperties() override
     {
         static const Reflection::PropertyMap props = 
         {
@@ -70,7 +70,7 @@ public:
         return props;
     }
 
-    virtual const Reflection::FunctionMap& GetFunctions() final
+    virtual const Reflection::FunctionMap& GetFunctions() override
     {
         static const Reflection::FunctionMap funcs = {};
         return funcs;
@@ -86,67 +86,3 @@ private:
 };
 
 static inline CameraManager Instance{};
-
-#if 0
-PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(Camera);
-
-static bool s_DidInitReflection = false;
-
-void Object_Camera::s_DeclareReflections()
-{
-	if (s_DidInitReflection)
-		return;
-	s_DidInitReflection = true;
-
-	REFLECTION_INHERITAPI(GameObject);
-
-	REFLECTION_DECLAREPROP_SIMPLE(Object_Camera, UseSimpleController, Bool);
-	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_Camera, FieldOfView, Double, float);
-
-	REFLECTION_DECLAREPROP_SIMPLE(Object_Camera, Transform, Matrix);
-}
-
-/*
-Object_Camera::Object_Camera()
-{
-	this->Name = "Camera";
-	this->ClassName = "Camera";
-
-	this->Transform = glm::lookAt(glm::vec3(), glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f, 1.f, 0.f));
-
-	s_DeclareReflections();
-	ApiPointer = &s_Api;
-}
-
-void Object_Camera::Update(double)
-{
-	if (!this->IsSceneCamera)
-		return;
-
-	if (!this->UseSimpleController)
-		return;
-
-	// Camera movement code
-}
-
-glm::mat4 Object_Camera::GetMatrixForAspectRatio(float AspectRatio) const
-{
-	glm::vec3 position = glm::vec3(this->Transform[3]);
-	glm::vec3 forwardVec = glm::vec3(this->Transform[2]);
-
-	glm::mat4 projectionMatrix = glm::perspective(
-		glm::radians(this->FieldOfView),
-		AspectRatio,
-		this->NearPlane,
-		this->FarPlane
-	);
-	glm::mat4 viewMatrix = glm::lookAt(
-		position,
-		position + forwardVec,
-		glm::vec3(this->Transform[1])
-	);
-
-	return projectionMatrix * viewMatrix;
-}
-*/
-#endif

@@ -183,7 +183,7 @@ static std::vector<GameObjectRef> LoadMapVersion1(
 		}
 		catch (const nlohmann::json::type_error& e)
 		{
-			throw(std::format("Failed to decode map data: {}", e.what()));
+			RAISE_RT(std::format("Failed to decode map data: {}", e.what()));
 		}
 
 		std::string ModelPath = PropObject["path"];

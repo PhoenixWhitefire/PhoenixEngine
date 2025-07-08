@@ -16,7 +16,7 @@ char* BufferInitialize(size_t capacity, const std::string_view& value)
 	char* buf = (char*)Memory::Alloc(capacity + 1);
 
 	if (!buf)
-		throw("There are bigger problems at hand.");
+		RAISE_RT("There are bigger problems at hand.");
 
 	buf[capacity] = 0;
 

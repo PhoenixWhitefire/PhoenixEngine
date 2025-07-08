@@ -1,6 +1,7 @@
 #include <format>
 
 #include "datatype/Color.hpp"
+#include "Utilities.hpp"
 
 Color::Color()
 {
@@ -20,13 +21,13 @@ Color::Color(const Reflection::GenericValue& gv)
 	: R(0.f), G(0.f), B(0.f)
 {
 	if (gv.Type != Reflection::ValueType::Color)
-		throw(std::format(
+		RAISE_RT(std::format(
 			"Attempted to construct Color, but GenericValue was {} instead",
 			Reflection::TypeAsString(gv.Type)
 		));
 
 	if (!gv.Value)
-		throw("Attempted to construct Color, but GenericValue.Value was NULL");
+		RAISE_RT("Attempted to construct Color, but GenericValue.Value was NULL");
 
 	Color col = *(Color*)gv.Value;
 	this->R = col.R;

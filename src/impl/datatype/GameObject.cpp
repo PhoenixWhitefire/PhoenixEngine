@@ -280,7 +280,7 @@ void GameObject::s_AddObjectApi()
 			std::string_view requested = inputs.at(0).AsStringView();
 
 			if (!GameObject::IsValidClass(requested))
-				throw("Invalid component type");
+				RAISE_RT("Invalid component type");
 			
 			for (const std::pair<EntityComponent, uint32_t>& pair : static_cast<GameObject*>(p)->GetComponents())
 				if (s_EntityComponentNames[(size_t)pair.first] == requested)
@@ -321,7 +321,7 @@ GameObject* GameObject::FromGenericValue(const Reflection::GenericValue& gv)
 		return nullptr;
 
 	if (gv.Type != Reflection::ValueType::GameObject)
-		throw(std::format(
+		RAISE_RT(std::format(
 			"Tried to GameObject::FromGenericValue, but GenericValue had Type '{}' instead",
 			Reflection::TypeAsString(gv.Type)
 		));
@@ -340,7 +340,7 @@ bool GameObject::IsValidClass(const std::string_view& ObjectClass)
 
 GameObject* GameObject::GetObjectById(uint32_t Id)
 {
-	if (Id == PHX_GAMEOBJECT_NULL_ID || Id >= s_WorldArray.size())
+	if (Id == PHX_GAMEOBJECT_NULL_ID || Id == 0 || Id >= s_WorldArray.size())
 		return nullptr;
 
 	GameObject& obj = s_WorldArray[Id];
@@ -348,9 +348,12 @@ GameObject* GameObject::GetObjectById(uint32_t Id)
 	return obj.Valid ? &obj : nullptr;
 }
 
-void* GameObject::ComponentHandleToPointer(const std::pair<EntityComponent, uint32_t>& Handle)
+void* GameObject::ReflectorHandleToPointer(const std::pair<EntityComponent, uint32_t>& Handle)
 {
-	return GameObject::s_ComponentManagers[(size_t)Handle.first]->GetComponent(Handle.second);
+	if (Handle.first == EntityComponent::None)
+		return (void*)GetObjectById(Handle.second);
+	else
+		return GameObject::s_ComponentManagers[(size_t)Handle.first]->GetComponent(Handle.second);
 }
 
 void GameObject::IncrementHardRefs()
@@ -358,13 +361,13 @@ void GameObject::IncrementHardRefs()
 	//m_HardRefCount++;
 
 	//if (m_HardRefCount > UINT16_MAX - 1)
-	//	throw("Too many hard refs!");
+	//	RAISE_RT("Too many hard refs!");
 }
 
 void GameObject::DecrementHardRefs()
 {
 	//if (m_HardRefCount == 0)
-	//	throw("Tried to decrement hard refs, with no hard references!");
+	//	RAISE_RT("Tried to decrement hard refs, with no hard references!");
 
 	//m_HardRefCount--;
 
@@ -434,7 +437,7 @@ static uint32_t NullGameObjectIdValue = PHX_GAMEOBJECT_NULL_ID;
 void GameObject::SetParent(GameObject* newParent)
 {
 	if (this->IsDestructionPending)
-		throw(std::format(
+		RAISE_RT(std::format(
 			"Tried to re-parent '{}' (ID:{}) to '{}' (ID:{}), but it's Parent has been locked due to `::Destroy`",
 
 			GetFullName(),
@@ -457,13 +460,13 @@ void GameObject::SetParent(GameObject* newParent)
 			}
 
 		if (isOwnDescendant)
-			throw(std::format(
+			RAISE_RT(std::format(
 				"Tried to make object ID:{} ('{}') a descendant of itself",
 				this->ObjectId, GetFullName()
 			));
 	}
 	else
-		throw(std::format(
+		RAISE_RT(std::format(
 			"Tried to make object ID:{} ('{}') it's own parent",
 			this->ObjectId, GetFullName()
 		));
@@ -491,7 +494,7 @@ void GameObject::SetParent(GameObject* newParent)
 void GameObject::AddChild(GameObject* c)
 {
 	if (c->ObjectId == this->ObjectId)
-		throw(std::format(
+		RAISE_RT(std::format(
 			"::AddChild called on Object ID:{} (`{}`) with itself as the adopt'ed",
 			this->ObjectId, GetFullName()
 		));
@@ -518,7 +521,7 @@ void GameObject::RemoveChild(uint32_t id)
 			ch->DecrementHardRefs();
 	}
 	else
-		throw(std::format("ID:{} is _not my ({}) sonnn~_", ObjectId, id));
+		RAISE_RT(std::format("ID:{} is _not my ({}) sonnn~_", ObjectId, id));
 }
 
 Reflection::GenericValue GameObject::s_ToGenericValue(const GameObject* Object)
@@ -632,7 +635,7 @@ uint32_t GameObject::AddComponent(EntityComponent Type)
 
 	for (const std::pair<EntityComponent, uint32_t>& pair : m_Components)
 		if (pair.first == Type)
-			throw("Already have that component");
+			RAISE_RT("Already have that component");
 	
 	BaseComponentManager* manager = GameObject::s_ComponentManagers[(size_t)Type];
 	m_Components.emplace_back(Type, manager->CreateComponent(this));
@@ -675,16 +678,17 @@ void GameObject::RemoveComponent(EntityComponent Type)
 			}
 		}
 	
-	throw("Don't have that component");
+	RAISE_RT("Don't have that component");
 }
 
 Reflection::Property* GameObject::FindProperty(const std::string_view& PropName, std::pair<EntityComponent, uint32_t>* FromComponent)
 {
-	std::pair<EntityComponent, uint32_t> dummyFc;
+	std::pair<EntityComponent, uint32_t> dummyFc{ EntityComponent::None, PHX_GAMEOBJECT_NULL_ID };
 	FromComponent = FromComponent ? FromComponent : &dummyFc;
 
 	if (auto it = s_Api.Properties.find(PropName); it != s_Api.Properties.end())
 	{
+		FromComponent->second = ObjectId;
 		return &it->second;
 	}
 
@@ -698,11 +702,12 @@ Reflection::Property* GameObject::FindProperty(const std::string_view& PropName,
 }
 Reflection::Function* GameObject::FindFunction(const std::string_view& FuncName, std::pair<EntityComponent, uint32_t>* FromComponent)
 {
-	std::pair<EntityComponent, uint32_t> dummyFc;
+	std::pair<EntityComponent, uint32_t> dummyFc{ EntityComponent::None, PHX_GAMEOBJECT_NULL_ID };
 	FromComponent = FromComponent ? FromComponent : &dummyFc;
 
 	if (auto it = s_Api.Functions.find(FuncName); it != s_Api.Functions.end())
 	{
+		FromComponent->second = ObjectId;
 		return &it->second;
 	}
 
@@ -717,33 +722,25 @@ Reflection::Function* GameObject::FindFunction(const std::string_view& FuncName,
 
 Reflection::GenericValue GameObject::GetPropertyValue(const std::string_view& PropName)
 {
-	std::pair<EntityComponent, uint32_t> fromComponent;
+	std::pair<EntityComponent, uint32_t> fromComponent{ EntityComponent::None, PHX_GAMEOBJECT_NULL_ID };
 
 	if (Reflection::Property* prop = FindProperty(PropName, &fromComponent))
-	{
-		if (fromComponent.first != EntityComponent::None)
-			return prop->Get(ComponentHandleToPointer(m_MemberToComponentMap[PropName]));
-		else
-			return prop->Get(this);
-	}
+		return prop->Get(ReflectorHandleToPointer(fromComponent));
 
-	throw("Invalid property in GetPropertyValue: " + std::string(PropName));
+	RAISE_RT("Invalid property in GetPropertyValue: " + std::string(PropName));
 }
 void GameObject::SetPropertyValue(const std::string_view& PropName, const Reflection::GenericValue& Value)
 {
-	std::pair<EntityComponent, uint32_t> fromComponent;
+	std::pair<EntityComponent, uint32_t> fromComponent{ EntityComponent::None, PHX_GAMEOBJECT_NULL_ID };
 
 	if (Reflection::Property* prop = FindProperty(PropName, &fromComponent))
 	{
-		if (fromComponent.first != EntityComponent::None)
-			prop->Set(ComponentHandleToPointer(m_MemberToComponentMap[PropName]), Value);
-		else
-			prop->Set(this, Value);
+		prop->Set(ReflectorHandleToPointer(fromComponent), Value);
 		
 		return;
 	}
 
-	throw("Invalid property in SetPropertyValue: " + std::string(PropName));
+	RAISE_RT("Invalid property in SetPropertyValue: " + std::string(PropName));
 }
 
 std::vector<Reflection::GenericValue> GameObject::CallFunction(const std::string_view& FuncName, const std::vector<Reflection::GenericValue>& Inputs)
@@ -751,14 +748,9 @@ std::vector<Reflection::GenericValue> GameObject::CallFunction(const std::string
 	std::pair<EntityComponent, uint32_t> fromComponent;
 
 	if (Reflection::Function* func = FindFunction(FuncName, &fromComponent))
-	{
-		if (fromComponent.first != EntityComponent::None)
-			return func->Func(ComponentHandleToPointer(m_MemberToComponentMap[FuncName]), Inputs);
-		else
-			return func->Func(this, Inputs);
-	}
+		return func->Func(ReflectorHandleToPointer(fromComponent), Inputs);
 
-	throw("Invalid function in CallFunction: " + std::string(FuncName));
+	RAISE_RT("Invalid function in CallFunction: " + std::string(FuncName));
 }
 
 Reflection::PropertyMap GameObject::GetProperties() const
@@ -793,10 +785,16 @@ void* GameObject::GetComponentByType(EntityComponent Type)
 
 GameObject* GameObject::Create()
 {
+	if (s_WorldArray.size() == 0)
+	{
+		s_WorldArray.emplace_back();
+		s_WorldArray[0].Name = "<RESERVED INVALID SLOT>";
+	}
+
 	uint32_t numObjects = static_cast<uint32_t>(s_WorldArray.size());
 
 	if (numObjects >= UINT32_MAX - 1)
-		throw("Reached end of GameObject ID space (2^32 - 1)");
+		RAISE_RT("Reached end of GameObject ID space (2^32 - 1)");
 
 #ifndef NDEBUG
 
@@ -833,7 +831,7 @@ GameObject* GameObject::Create(const std::string_view& FirstComponent)
 	auto it = s_ComponentNameToType.find(FirstComponent);
 
 	if (it == s_ComponentNameToType.end())
-		throw("Invalid Component Name " + std::string(FirstComponent));
+		RAISE_RT("Invalid Component Name " + std::string(FirstComponent));
 	else
 		return GameObject::Create(it->second);
 }

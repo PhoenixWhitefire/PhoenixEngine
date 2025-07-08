@@ -21,7 +21,7 @@ static void fromString(Reflection::GenericValue& G, const char* Data)
 		G.Value = Memory::Alloc(G.Size, Memory::Category::Reflection);
 
 		if (!G.Value)
-			throw("Failed to allocate enough space for string in fromString");
+			RAISE_RT("Failed to allocate enough space for string in fromString");
 
 		memcpy(G.Value, Data, G.Size);
 	}
@@ -83,7 +83,7 @@ static void fromMatrix(Reflection::GenericValue& G, const glm::mat4& M)
 	G.Size = sizeof(M);
 
 	if (!G.Value)
-		throw("Allocation error while constructing GenericValue from glm::mat4");
+		RAISE_RT("Allocation error while constructing GenericValue from glm::mat4");
 
 	memcpy(G.Value, &M, sizeof(M));
 }
@@ -95,7 +95,7 @@ static void fromVector3(Reflection::GenericValue& G, const glm::vec3& V)
 	G.Size = sizeof(glm::vec3);
 
 	if (!G.Value)
-		throw("Allocation error while constructing GenericValue from glm::vec3");
+		RAISE_RT("Allocation error while constructing GenericValue from glm::vec3");
 
 	memcpy(G.Value, &V, sizeof(V));
 }
@@ -126,7 +126,7 @@ static void fromArray(Reflection::GenericValue& G, std::span<const Reflection::G
 	G.Value = Memory::Alloc(allocSize, Memory::Category::Reflection);
 
 	if (!G.Value)
-		throw("Allocation error while constructing GenericValue from std::vector<GenericValue>");
+		RAISE_RT("Allocation error while constructing GenericValue from std::vector<GenericValue>");
 
 	for (uint32_t i = 0; i < Array.size(); i++)
 		// placement-new to avoid 1 excess layer of indirection
@@ -164,7 +164,7 @@ Reflection::GenericValue::GenericValue(const std::unordered_map<GenericValue, Ge
 	this->Value = (GenericValue*)Memory::Alloc(allocSize, Memory::Category::Reflection);
 
 	if (!this->Value)
-		throw("Allocation error while constructing GenericValue from std::map<GenericValue, GenericValue>");
+		RAISE_RT("Allocation error while constructing GenericValue from std::map<GenericValue, GenericValue>");
 
 	memcpy(this->Value, arr.data(), allocSize);
 
@@ -369,7 +369,7 @@ std::string Reflection::GenericValue::ToString() const
 std::string_view Reflection::GenericValue::AsStringView() const
 {
 	if (Type != ValueType::String)
-		throw("GenericValue was not a String, but instead a " + std::string(TypeAsString(Type)));
+		RAISE_RT("GenericValue was not a String, but instead a " + std::string(TypeAsString(Type)));
 	else
 		if (Size > 8)
 			return std::string_view((char*)Value, Size);
@@ -380,7 +380,7 @@ bool Reflection::GenericValue::AsBoolean() const
 {
 	return Type == ValueType::Boolean
 		? (bool)this->Value
-		: throw("GenericValue was not a Bool, but instead a " + std::string(TypeAsString(Type)));
+		: RAISE_RT("GenericValue was not a Bool, but instead a " + std::string(TypeAsString(Type)));
 }
 double Reflection::GenericValue::AsDouble() const
 {
@@ -390,7 +390,7 @@ double Reflection::GenericValue::AsDouble() const
 	else if (Type == ValueType::Integer)
 		return static_cast<double>((int64_t)this->Value);
 
-	throw("GenericValue was not a number (Integer/ Double ), but instead a " + std::string(TypeAsString(Type)));
+	RAISE_RT("GenericValue was not a number (Integer/ Double ), but instead a " + std::string(TypeAsString(Type)));
 }
 int64_t Reflection::GenericValue::AsInteger() const
 {
@@ -400,20 +400,20 @@ int64_t Reflection::GenericValue::AsInteger() const
 	else if (Type == ValueType::Double)
 		return static_cast<int64_t>(AsDouble());
 
-	throw("GenericValue was not a number ( Integer /Double), but instead a " + std::string(TypeAsString(Type)));
+	RAISE_RT("GenericValue was not a number ( Integer /Double), but instead a " + std::string(TypeAsString(Type)));
 }
 
 const glm::vec2 Reflection::GenericValue::AsVector2() const
 {
 	return Type == ValueType::Vector2
 		? std::bit_cast<glm::vec2>(Value)
-		: throw("GenericValue was not a Matrix, but instead a " + std::string(TypeAsString(Type)));
+		: RAISE_RT("GenericValue was not a Matrix, but instead a " + std::string(TypeAsString(Type)));
 }
 glm::vec3& Reflection::GenericValue::AsVector3() const
 {
 	return Type == ValueType::Vector3
 		? *(glm::vec3*)this->Value
-		: throw("GenericValue was not a Matrix, but instead a " + std::string(TypeAsString(Type)));
+		: RAISE_RT("GenericValue was not a Matrix, but instead a " + std::string(TypeAsString(Type)));
 }
 glm::mat4& Reflection::GenericValue::AsMatrix() const
 {
@@ -421,19 +421,19 @@ glm::mat4& Reflection::GenericValue::AsMatrix() const
 
 	return Type == ValueType::Matrix
 		? *mptr
-		: throw("GenericValue was not a Matrix, but instead a " + std::string(TypeAsString(Type)));
+		: RAISE_RT("GenericValue was not a Matrix, but instead a " + std::string(TypeAsString(Type)));
 }
 std::span<Reflection::GenericValue> Reflection::GenericValue::AsArray() const
 {
 	if (this->Type != Reflection::ValueType::Array)
-		throw("GenericValue was not an Array, but instead a " + std::string(TypeAsString(Type)));
+		RAISE_RT("GenericValue was not an Array, but instead a " + std::string(TypeAsString(Type)));
 	
 	Reflection::GenericValue* first = (Reflection::GenericValue*)this->Value;
 	return std::span(first, Size);
 }
 std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> Reflection::GenericValue::AsMap() const
 {
-	throw("GenericValue::AsMap not implemented");
+	RAISE_RT("GenericValue::AsMap not implemented");
 }
 
 void Reflection::GenericValue::Reset()

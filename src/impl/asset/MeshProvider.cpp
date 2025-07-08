@@ -451,9 +451,7 @@ void MeshProvider::Shutdown()
 
 	m_Meshes.clear();
 	m_StringToMeshId.clear();
-	m_MeshFutures.clear();
-	m_MeshPromises.clear();
-	m_MeshPromiseResourceIds.clear();
+	m_LoadingRequests.clear();
 	m_GpuMeshes.clear();
 
 	s_Instance = nullptr;
@@ -472,9 +470,9 @@ MeshProvider* MeshProvider::Get()
 std::string MeshProvider::Serialize(const Mesh& mesh)
 {
 	if (mesh.Vertices.size() > UINT32_MAX)
-		throw("Mesh has too many vertices to serialize");
+		throw(std::runtime_error("Mesh has too many vertices to serialize"));
 	if (mesh.Indices.size() > UINT32_MAX)
-		throw("Mesh has too many indices to serialize");
+		throw(std::runtime_error("Mesh has too many indices to serialize"));
 
 	std::string contents = "PHNXENGI\n#Asset Mesh\n";
 
@@ -792,13 +790,15 @@ static void uploadMeshDataToGpuMesh(Mesh& mesh, MeshProvider::GpuMesh& gpuMesh)
 
 	gpuMesh.NumIndices = static_cast<uint32_t>(mesh.Indices.size());
 
-	if (!mesh.MeshDataPreserved)
+	if (!mesh.MeshDataPreserved && mesh.Bones.size() == 0)
 	{
 		mesh.Vertices.clear();
 		mesh.Indices.clear();
 		mesh.Vertices.shrink_to_fit();
 		mesh.Indices.shrink_to_fit();
 	}
+	else
+		mesh.MeshDataPreserved = true; // preserve for CPU skinning
 }
 
 uint32_t MeshProvider::Assign(Mesh mesh, const std::string_view& InternalName, bool UploadToGpu)
@@ -840,7 +840,12 @@ uint32_t MeshProvider::Assign(Mesh mesh, const std::string_view& InternalName, b
 	return assignedId;
 }
 
-uint32_t MeshProvider::LoadFromPath(const std::string_view& Path, bool ShouldLoadAsync, bool PreserveMeshData)
+uint32_t MeshProvider::LoadFromPath(
+	const std::string_view& Path,
+	bool ShouldLoadAsync,
+	bool PreserveMeshData,
+	std::function<void(Mesh&)> PostLoadCallback
+)
 {
 	if (Path[0] == '$')
 	{
@@ -867,14 +872,14 @@ uint32_t MeshProvider::LoadFromPath(const std::string_view& Path, bool ShouldLoa
 		{
 			bool meshLoaded = false;
 
-			for (uint32_t asyncMeshIndex = 0; asyncMeshIndex < m_MeshPromiseResourceIds.size(); asyncMeshIndex++)
+			for (const MeshLoadRequest& loadRequest : m_LoadingRequests)
 			{
-				if (m_MeshPromiseResourceIds[asyncMeshIndex] != meshIt->second)
+				if (loadRequest.ResourceId != meshIt->second)
 					continue;
 
 				m_Meshes[meshIt->second].MeshDataPreserved = true;
 
-				m_MeshFutures[asyncMeshIndex].wait();
+				loadRequest.Future.wait();
 				this->FinalizeAsyncLoadedMeshes();
 				meshLoaded = true;
 			}
@@ -932,10 +937,13 @@ uint32_t MeshProvider::LoadFromPath(const std::string_view& Path, bool ShouldLoa
 				},
 				false
 			);
-			
-			m_MeshPromises.push_back(promise);
-			m_MeshFutures.push_back(promise->get_future().share());
-			m_MeshPromiseResourceIds.push_back(resourceId);
+
+			m_LoadingRequests.emplace_back(
+				promise,
+				promise->get_future().share(),
+				resourceId,
+				PostLoadCallback
+			);
 			
 			return resourceId;
 		}
@@ -961,11 +969,17 @@ uint32_t MeshProvider::LoadFromPath(const std::string_view& Path, bool ShouldLoa
 			mesh.MeshDataPreserved = PreserveMeshData;
 			
 			if (error.size() > 0)
+			{
 				Log::Error(std::format(
 					"Failed to load mesh '{}' synchronously: {}",
 					Path, error
 				));
-			
+			}
+			else
+			{
+				PostLoadCallback(mesh);
+			}
+
 			m_CreateAndUploadGpuMesh(mesh);
 			
 			return this->Assign(mesh, Path);
@@ -989,43 +1003,24 @@ void MeshProvider::FinalizeAsyncLoadedMeshes()
 {
 	ZoneScoped;
 
-	size_t numMeshPromises = m_MeshPromises.size();
-	size_t numMeshFutures = m_MeshFutures.size();
-	size_t numMeshResourceIds = m_MeshPromiseResourceIds.size();
-
-	if (numMeshPromises != numMeshFutures || numMeshFutures != numMeshResourceIds)
+	for (auto it = m_LoadingRequests.begin(); it < m_LoadingRequests.end(); it += 1)
 	{
-		Log::Error(std::format(
-			"FinalizeAsyncLoadedMeshes had {} promises, {} futures and {} resource IDs, cannot proceed safely",
-			numMeshPromises, numMeshFutures, numMeshResourceIds
-		));
-		return;
-	}
-
-	for (size_t promiseIndex = 0; promiseIndex < m_MeshPromises.size(); promiseIndex++)
-	{
-		std::promise<Mesh>* promise = m_MeshPromises[promiseIndex];
-		std::shared_future<Mesh>& f = m_MeshFutures[promiseIndex];
-
-		if (!f.valid() || f.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+		if (!it->Future.valid() || it->Future.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
 			continue;
 
-		const Mesh& loadedMesh = f.get();
-		uint32_t resourceId = m_MeshPromiseResourceIds[promiseIndex];
-
-		Mesh& mesh = m_Meshes.at(resourceId);
+		const Mesh& loadedMesh = it->Future.get();
+		Mesh& mesh = m_Meshes.at(it->ResourceId);
 
 		mesh.Vertices = loadedMesh.Vertices;
 		mesh.Indices = loadedMesh.Indices;
 		mesh.Bones = loadedMesh.Bones;
 
+		it->PostLoadCallback(mesh);
 		m_CreateAndUploadGpuMesh(mesh);
 
-		m_MeshPromises.erase(m_MeshPromises.begin() + promiseIndex);
-		m_MeshFutures.erase(m_MeshFutures.begin() + promiseIndex);
-		m_MeshPromiseResourceIds.erase(m_MeshPromiseResourceIds.begin() + promiseIndex);
+		delete it->Promise;
 
-		delete promise;
+		it = m_LoadingRequests.erase(it);
 	}
 }
 

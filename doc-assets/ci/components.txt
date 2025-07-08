@@ -1,60 +1,22 @@
 The Engine support an Entity Component System architecture, meaning that `GameObject`s have their own "base" APIs, which can be extended by adding *Components*. These are all listed below.
 
 
-## `Transform`
-
-### Properties:
-* `Transform: Matrix`: The Transformation of the Object from the World
-* `Size: Vector3`: The Size of the Object influenced by the Component
-
-## `Script`
-
-* A Luau script
-
-### Properties:
-* `SourceFile: string`: The File the Script is executing. Changing this to a valid File immediately reloads the Script if it is a descendant of the `DataModel` (i.e. `game`). To forcefully reload it, `:Reload` should be used
-
-### Functions:
-* `Reload() -> (Bool)`: Re-compiles the Source file and runs it from the beginning
-
 ## `Animation`
+
+* Represents an Animation
+* Not functional currently
 
 No members defined
 
-## `SpotLight`
+## `Bone`
 
-* A light which emits in a conical shape
-
-### Properties:
-* `Shadows: boolean`: Whether the Light can render shadows
-* `LightColor: Color`: The color of the Light
-* `Brightness: number`: How bright the Light is
-* `Range: number`: How far light is emitted
-* `Angle: number`: The Field-of-View (in radians) of light emission
-
-## `PointLight`
-
-* A light source emitting light omnidirectionally from its `Transform`
+* Represents a Bone of a Mesh
+* Created automatically when the asset of a Mesh component finishes loading
 
 ### Properties:
-* `Shadows: boolean`: Whether the Light can render shadows
-* `Brightness: number`: How bright the Light is
-* `Range: number`: How far light is emitted. **If `>= 0`, the Range is used and attenuation is linear, otherwise the formula `R = 1/D^2`, where `D` is the distance of any point in 3D space having its lighting calculated from the PointLight, is used for real-world attenuation**
-* `LightColor: Color`: The color of the Light
-
-## `Sound`
-
-* A sound
-
-### Properties:
-* `Volume: number`: The volume at which the sound plays. Must be positive
-* `SoundFile: string`: The `.wav` file to be played
-* `Speed: number`: The speed at which the sound plays, within the range of 0.01 to 100
-* `Position: number`: Number of seconds from beginning of the file
-* `FinishedLoading: Bool READONLY`: Whether the Sound has finished loading the `SoundFile`
-* `Looped: boolean`: Whether playback should loop once it reaches the end
-* `Length: Double READONLY`: The length of the sound in seconds
-* `Playing: boolean`: Whether the Sound is currently playing (or requested to play, if `.Playing` is set to `true` by a `Script` before it has finished loading)
+* `IsActive: Bool READONLY`: Whether or not the Bone Object is actively affecting a Mesh
+* `LocalTransform: Matrix`: The transformation of the Bone
+* `SkeletalBoneId: Integer READONLY`: The internal ID of the bone, valid range is 0-126
 
 ## `Camera`
 
@@ -62,25 +24,8 @@ No members defined
 
 ### Properties:
 * `FieldOfView: number`: The field-of-view. By default, `70`
-* `UseSimpleController: boolean`: Whether it is affected by the built-in controller (`W`/`A`/`S`/`D` horizontal movement, `Q`/`E` vertical, Mouse to look around)
 * `Transform: Matrix`: Where it is in 3D space
-
-## `Workspace`
-
-* The container used for storing the main parts of a scene (3D objects)
-* If this is `Destroy`'d, the application closes
-
-### Properties:
-* `SceneCamera: GameObject`: The `Camera` the Player sees the world through. If set to `nil`, a *fallback* is created at the origin.
-
-### Functions:
-* `ScreenPointToRay(Array, Double) -> (Vector3)`: Converts the provided X and Y screen coordinates to a world-space vector, with the length provided or `1` by default
-
-## `Model`
-
-* A container
-
-No members defined
+* `UseSimpleController: boolean`: Whether it is affected by the built-in controller (`W`/`A`/`S`/`D` horizontal movement, `Q`/`E` vertical, Mouse to look around)
 
 ## `DataModel`
 
@@ -95,39 +40,108 @@ No members defined
 * Intended to model a large light source infinitely far away, like the Sun
 
 ### Properties:
-* `Shadows: boolean`: Whether the Light can render shadows
 * `Brightness: number`: How bright the Light is
-* `LightColor: Color`: The color of the Light
 * `Direction: Vector3`: The direction light is emitted from
+* `LightColor: Color`: The color of the Light
+* `Shadows: boolean`: Whether the Light can render shadows
 
 ## `Mesh`
 
 * A mesh composed of triangles
 
 ### Properties:
-* `Friction: number`: Fraction of Velocity it should lose per second while in contact with another object while `PhysicsDynamics` is `true`
-* `PhysicsCollisions: boolean`: Whether other physics objects can collide with it
-* `LinearVelocity: Vector3`: Its velocity
-* `Transparency: number`: Its transparency/translucency
-* `Tint: Color`: The Color it should be tinted with
-* `Asset: string`: The path to the underlying `.hxmesh` file, or a built-in identifier like `!Quad` or `!Cube`
-* `RoughnessFactor: number`: Roughness modifier
-* `Density: number`: Its density (`Mass = Density * Size`)
-* `PhysicsDynamics: boolean`: Whether the Physics Engine should apply forces to it
-* `MetallnessFactor: number`: Metallness modifier
-* `CollisionFidelity: number`: 0 - `Aabb`: An axis-aligned bounding box. 1 - `AabbStaticSize`: An AABB which keeps the same size as the Object
 * `AngularVelocity: Vector3`: Its rotational velocity
-* `Material: string`: The name of the `.mtl` in the `resources/materials/` directory it should use
-* `FaceCulling: number`: An integer. `0` means no culling, `1` to cull its "back" faces, and `2` to cull its "front" faces
+* `Asset: string`: The path to the underlying `.hxmesh` file, or a built-in identifier like `!Quad` or `!Cube`
 * `CastsShadows: boolean`: Bool
+* `CollisionFidelity: number`: 0 - `Aabb`: An axis-aligned bounding box. 1 - `AabbStaticSize`: An AABB which keeps the same size as the Object
+* `Density: number`: Its density (`Mass = Density * Size`)
+* `FaceCulling: number`: An integer. `0` means no culling, `1` to cull its "back" faces, and `2` to cull its "front" faces
+* `Friction: number`: Fraction of Velocity it should lose per second while in contact with another object while `PhysicsDynamics` is `true`
+* `LinearVelocity: Vector3`: Its velocity
+* `Material: string`: The name of the `.mtl` in the `resources/materials/` directory it should use
+* `MetallnessFactor: number`: Metallness modifier
+* `PhysicsCollisions: boolean`: Whether other physics objects can collide with it
+* `PhysicsDynamics: boolean`: Whether the Physics Engine should apply forces to it
+* `RoughnessFactor: number`: Roughness modifier
+* `Tint: Color`: The Color it should be tinted with
+* `Transparency: number`: Its transparency/translucency
+
+## `Model`
+
+* A container
+
+No members defined
 
 ## `ParticleEmitter`
 
 * An emitter of 2D particles
 
 ### Properties:
-* `Rate: number`: An integer indicating how many particles should be emitted per second (must be above or equal to `0`)
-* `ParticlesAreAttached: boolean`: Whether the particles are attached to and move with the emitter
 * `Emitting: boolean`: Whether the emitter should emit new particles
 * `Lifetime: Vector2`: The X and Y components act as a range of how long any particle can last, in seconds
+* `ParticlesAreAttached: boolean`: Whether the particles are attached to and move with the emitter
+* `Rate: number`: An integer indicating how many particles should be emitted per second (must be above or equal to `0`)
+
+## `PointLight`
+
+* A light source emitting light omnidirectionally from its `Transform`
+
+### Properties:
+* `Brightness: number`: How bright the Light is
+* `LightColor: Color`: The color of the Light
+* `Range: number`: How far light is emitted. **If `>= 0`, the Range is used and attenuation is linear, otherwise the formula `R = 1/D^2`, where `D` is the distance of any point in 3D space having its lighting calculated from the PointLight, is used for real-world attenuation**
+* `Shadows: boolean`: Whether the Light can render shadows
+
+## `Script`
+
+* A Luau script
+
+### Properties:
+* `SourceFile: string`: The File the Script is executing. Changing this to a valid File immediately reloads the Script if it is a descendant of the `DataModel` (i.e. `game`). To forcefully reload it, `:Reload` should be used
+
+### Functions:
+* `Reload() -> (Bool)`: Re-compiles the Source file and runs it from the beginning
+
+## `Sound`
+
+* A sound
+
+### Properties:
+* `FinishedLoading: Bool READONLY`: Whether the Sound has finished loading the `SoundFile`
+* `Length: Double READONLY`: The length of the sound in seconds
+* `LoadSucceeded: Bool READONLY`: Whether or not the sound loaded successfully
+* `Looped: boolean`: Whether playback should loop once it reaches the end
+* `Playing: boolean`: Whether the Sound is currently playing (or requested to play, if `.Playing` is set to `true` by a `Script` before it has finished loading)
+* `Position: number`: Number of seconds from beginning of the file
+* `SoundFile: string`: The `.wav` file to be played
+* `Speed: number`: The speed at which the sound plays, within the range of 0.01 to 100
+* `Volume: number`: The volume at which the sound plays. Must be positive
+
+## `SpotLight`
+
+* A light which emits in a conical shape
+
+### Properties:
+* `Angle: number`: The Field-of-View (in radians) of light emission
+* `Brightness: number`: How bright the Light is
+* `LightColor: Color`: The color of the Light
+* `Range: number`: How far light is emitted
+* `Shadows: boolean`: Whether the Light can render shadows
+
+## `Transform`
+
+### Properties:
+* `Size: Vector3`: The Size of the Object influenced by the Component
+* `Transform: Matrix`: The Transformation of the Object from the World
+
+## `Workspace`
+
+* The container used for storing the main parts of a scene (3D objects)
+* If this is `Destroy`'d, the application closes
+
+### Properties:
+* `SceneCamera: GameObject`: The `Camera` the Player sees the world through. If set to `nil`, a *fallback* is created at the origin.
+
+### Functions:
+* `ScreenPointToRay(Array, Double) -> (Vector3)`: Converts the provided X and Y screen coordinates to a world-space vector, with the length provided or `1` by default
 

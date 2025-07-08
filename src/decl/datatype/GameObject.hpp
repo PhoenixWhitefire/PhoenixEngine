@@ -41,6 +41,7 @@ enum class EntityComponent : uint8_t
 	Camera,
 	Animation,
 	Model,
+	Bone,
 	
 	__count
 };
@@ -60,7 +61,8 @@ static inline const std::string_view s_EntityComponentNames[] =
 	"SpotLight",
 	"Camera",
 	"Animation",
-	"Model"
+	"Model",
+	"Bone"
 };
 
 static inline const std::unordered_map<std::string_view, EntityComponent> s_ComponentNameToType = 
@@ -78,27 +80,28 @@ static inline const std::unordered_map<std::string_view, EntityComponent> s_Comp
 	{ "SpotLight", EntityComponent::SpotLight },
 	{ "Camera", EntityComponent::Camera },
 	{ "Animation", EntityComponent::Animation },
-	{ "Model", EntityComponent::Model }
+	{ "Model", EntityComponent::Model },
+	{ "Bone", EntityComponent::Bone }
 };
 
 static_assert(std::size(s_EntityComponentNames) == (size_t)EntityComponent::__count);
-
-void* ComponentHandleToPointer(const std::pair<EntityComponent, uint32_t>& Handle);
 
 class GameObject;
 
 class BaseComponentManager
 {
 public:
-	virtual uint32_t CreateComponent(GameObject* /* Object */) { throw("Not implemented"); };
-	virtual void UpdateComponent(uint32_t, double) { throw("Not implemented"); };
-	virtual std::vector<void*> GetComponents() { throw("Not implemented"); };
-	virtual void* GetComponent(uint32_t) { throw("Not implemented"); };
-	virtual void DeleteComponent(uint32_t /* ComponentId */) { throw("Not implemented"); };
+	virtual uint32_t CreateComponent(GameObject* /* Object */) = 0;
+	virtual void UpdateComponent(uint32_t, double) {};
+	virtual std::vector<void*> GetComponents() = 0;
+	virtual void* GetComponent(uint32_t) = 0;
+	virtual void DeleteComponent(uint32_t /* ComponentId */) = 0;
 	virtual void Shutdown() {};
 
-	virtual const Reflection::PropertyMap& GetProperties() { throw("Not implemented"); };
-	virtual const Reflection::FunctionMap& GetFunctions() { throw("Not implemented"); };
+	virtual const Reflection::PropertyMap& GetProperties() = 0;
+	virtual const Reflection::FunctionMap& GetFunctions() = 0;
+
+	virtual void DummyFunction() { throw("Link will fail if this is not done."); };
 };
 
 class GameObject
@@ -116,7 +119,7 @@ public:
 	static GameObject* Create();
 
 	static GameObject* GetObjectById(uint32_t);
-	static void* ComponentHandleToPointer(const std::pair<EntityComponent, uint32_t>& Handle);
+	static void* ReflectorHandleToPointer(const std::pair<EntityComponent, uint32_t>& Handle);
 
 	static inline uint32_t s_DataModel = PHX_GAMEOBJECT_NULL_ID;
 	static inline Memory::vector<GameObject, MEMCAT(GameObject)> s_WorldArray{};

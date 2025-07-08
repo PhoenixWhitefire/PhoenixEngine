@@ -134,7 +134,7 @@ void Object_Example::s_DeclareReflections()
 				// Coerce. Convince. Force.
 				static_cast<Object_DataModel*>(GameObject::s_DataModel)->WantExit = true;
 
-			throw("Gave up. Gave in. Ending it all. The world swallows itself up, or, at the very least, I will no longer exist.");
+			RAISE_RT("Gave up. Gave in. Ending it all. The world swallows itself up, or, at the very least, I will no longer exist.");
 		}
 	);
 

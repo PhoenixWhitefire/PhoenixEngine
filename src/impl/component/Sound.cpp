@@ -14,7 +14,7 @@
 	if (FMOD_RESULT result = (expr); result != FMOD_OK) { \
 		std::string errstr = std::format("FMOD " op " failed: code {} - '{}'", (int)result, FMOD_ErrorString(result)); \
 		Log::Error(errstr); \
-		throw(errstr); \
+		throw(std::runtime_error(errstr)); \
 	} \
 } \
 
@@ -25,10 +25,10 @@ static std::mutex AudioAssetsMutex;
 static std::mutex ComponentsMutex;
 //static std::vector<std::promise<bool>> AudioStreamPromises;
 
-class SoundManager : BaseComponentManager
+class SoundManager : public BaseComponentManager
 {
 public:
-    virtual uint32_t CreateComponent(GameObject* Object) final
+    virtual uint32_t CreateComponent(GameObject* Object) override
     {
 		if (!m_DidInit)
 			Initialize();
@@ -43,7 +43,7 @@ public:
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
 
-    virtual std::vector<void*> GetComponents() final
+    virtual std::vector<void*> GetComponents() override
     {
         std::vector<void*> v;
         v.reserve(m_Components.size());
@@ -54,12 +54,12 @@ public:
         return v;
     }
 
-    virtual void* GetComponent(uint32_t Id) final
+    virtual void* GetComponent(uint32_t Id) override
     {
         return &m_Components[Id];
     }
 
-    virtual void DeleteComponent(uint32_t Id) final
+    virtual void DeleteComponent(uint32_t Id) override
     {
 		SCOPED_LOCK(ComponentsMutex);
 
@@ -72,7 +72,7 @@ public:
 		sound.Object.Invalidate();
     }
 
-    virtual const Reflection::PropertyMap& GetProperties() final
+    virtual const Reflection::PropertyMap& GetProperties() override
     {
         static const Reflection::PropertyMap props = 
         {
@@ -106,7 +106,7 @@ public:
 				{
 					EcSound* sound = static_cast<EcSound*>(p);
 					if (!sound->Object->Enabled && playing.AsBoolean())
-						throw("Tried to play Sound while Object was disabled");
+						RAISE_RT("Tried to play Sound while Object was disabled");
 
 					sound->m_PlayRequested = playing.AsBoolean();
 
@@ -138,7 +138,7 @@ public:
 					double t = gv.AsDouble();
 
 					if (t < 0.f)
-						throw("Position cannot be negative");
+						RAISE_RT("Position cannot be negative");
 
 					if (FMOD::Channel* chan = (FMOD::Channel*)sound->m_Channel)
 					{
@@ -159,7 +159,7 @@ public:
 				{
 					float volume = static_cast<float>(gv.AsDouble());
 					if (volume < 0.f)
-						throw("Volume cannot be negative");
+						RAISE_RT("Volume cannot be negative");
 					
 					static_cast<EcSound*>(p)->Volume = volume;
 				}
@@ -173,9 +173,9 @@ public:
 					float speed = static_cast<float>(gv.AsDouble());
 
 					if (speed < 0.01f)
-						throw("Speed cannot be less than 0.01");
+						RAISE_RT("Speed cannot be less than 0.01");
 					if (speed > 100.f)
-						throw("Speed cannot be greater than 100");
+						RAISE_RT("Speed cannot be greater than 100");
 
 					static_cast<EcSound*>(p)->Speed = speed;
 				}
@@ -190,7 +190,7 @@ public:
         return props;
     }
 
-    virtual const Reflection::FunctionMap& GetFunctions() final
+    virtual const Reflection::FunctionMap& GetFunctions() override
     {
         static const Reflection::FunctionMap funcs = {};
         return funcs;
@@ -219,7 +219,7 @@ public:
 		LastTick = GetRunningTime();
 	}
 
-	virtual void Shutdown() final
+	virtual void Shutdown() override
 	{
 		FMOD_CALL(FmodSystem->release(), "System shutdown");
 
@@ -350,7 +350,7 @@ void EcSound::Update(double)
 void EcSound::Reload()
 {
 	if (!FinishedLoading)
-		throw("Cannot `::Reload` a Sound while it is still loading");
+		RAISE_RT("Cannot `::Reload` a Sound while it is still loading");
 
 	if (const auto& it = AudioAssets.find(SoundFile); it == AudioAssets.end())
 	{

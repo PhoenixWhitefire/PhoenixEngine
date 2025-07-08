@@ -4,6 +4,7 @@
 
 #include "FileRW.hpp"
 #include "GlobalJsonConfig.hpp"
+#include "Utilities.hpp"
 #include "Log.hpp"
 
 // 16/09/2024 PWK2K
@@ -54,7 +55,7 @@ std::string FileRW::ReadFile(const std::string_view& ShortPath, bool* DoesFileEx
 	else
 	{
 		if (!DoesFileExist)
-			throw(std::format(
+			RAISE_RT(std::format(
 				"FileRW::ReadFile: Could not open file handle: '{}'",
 				actualPath
 			));
@@ -84,7 +85,7 @@ void FileRW::WriteFile(
 	else
 	{
 		if (!SuccessPtr)
-			throw(std::format(
+			RAISE_RT(std::format(
 				"FileRW::WriteFile: Could not open the handle to '{}'",
 				path
 			));
@@ -108,7 +109,7 @@ void FileRW::WriteFileCreateDirectories(
 	std::error_code ec;
 	
 	if (!createDirectoryRecursive(dirPath, ec))
-		throw("FileRW::WriteFileCreateDirectories: `createDirectoryRecursive` failed: " + ec.message());
+		throw(std::runtime_error("Failed to recursively create directories: " + ec.message()));
 
 	FileRW::WriteFile(path, Contents, false, SuccessPtr);
 }

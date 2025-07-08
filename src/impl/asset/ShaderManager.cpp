@@ -8,11 +8,12 @@
 
 #include "asset/TextureManager.hpp"
 #include "datatype/Color.hpp"
+#include "Utilities.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
 #define SP_TRYFALLBACK() { if (this->Name == "error")               \
-	throw("Fallback Shader failed to load");                        \
+	RAISE_RT("Fallback Shader failed to load");                     \
 else                                                                \
 	m_GpuId = ShaderManager::Get()->GetShaderResource(0).m_GpuId; } \
 
@@ -128,7 +129,7 @@ void ShaderProgram::Reload()
 	if (!shpExists)
 	{
 		if (this->Name == "error")
-			throw("Cannot load the fallback Shader Program ('error.shp'), giving up.");
+			RAISE_RT("Cannot load the fallback Shader Program ('error.shp'), giving up.");
 
 		// TODO: a different function for error logging
 		// Should also fire a callback so that an Output can be implemented
@@ -422,7 +423,7 @@ bool ShaderProgram::m_CheckForErrors(uint32_t Object, const char* Type)
 			Log::Error(errorString);
 
 			if (this->Name == "error")
-				throw("Failed to compile the required `error` Shader Pipeline");
+				RAISE_RT("Failed to compile the required `error` Shader Pipeline");
 
 			ShaderManager* shdManager = ShaderManager::Get();
 
@@ -447,7 +448,7 @@ bool ShaderProgram::m_CheckForErrors(uint32_t Object, const char* Type)
 			));
 
 			if (this->Name == "error")
-				throw("Failed to link the required `error` Shader Pipeline");
+				RAISE_RT("Failed to link the required `error` Shader Pipeline");
 
 			ShaderManager* shdManager = ShaderManager::Get();
 
@@ -475,12 +476,8 @@ ShaderManager::~ShaderManager()
 void ShaderManager::Initialize()
 {
 	ZoneScoped;
-
-	// putting this before calling `->LoadFromPath`
-	// as it may call itself
+	
 	s_Instance = this;
-
-	this->LoadFromPath("error");
 }
 
 ShaderManager* ShaderManager::Get()

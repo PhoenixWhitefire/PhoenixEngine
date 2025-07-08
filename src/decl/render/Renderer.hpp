@@ -19,7 +19,7 @@
 	ZoneScopedN(#func);                                          \
 	bool success = func(__VA_ARGS__);                            \
 	if (!success)                                                \
-		throw(std::format(                                       \
+		RAISE_RT(std::format(                                       \
 			"Error in " #func ":\nMessage: {}",                  \
 			SDL_GetError()                                       \
 		));                                                      \

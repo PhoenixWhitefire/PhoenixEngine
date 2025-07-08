@@ -42,7 +42,7 @@ static std::string getTexturePath(
 		uint32_t byteLength = bufferView["byteLength"];
 
 		if (bufferIndex != 0)
-			throw("ModelImporter::getTexturePath got non-zero buffer index " + std::to_string(bufferIndex));
+			RAISE_RT("ModelImporter::getTexturePath got non-zero buffer index " + std::to_string(bufferIndex));
 
 		std::string_view imageData{ BufferData.begin() + byteOffset, BufferData.begin() + byteOffset + byteLength };
 
@@ -102,7 +102,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 	std::string textData = FileRW::ReadFile(gltfFilePath, &fileExists, false);
 
 	if (!fileExists)
-		throw("Failed to load Model, file '" + AssetPath + "' not found.");
+		RAISE_RT("Failed to load Model, file '" + AssetPath + "' not found.");
 
 	// Binary files start with magic number that corresponds to "glTF"
 	// https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#binary-header
@@ -121,7 +121,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		uint32_t jsonChType = readU32(textData, 16);
 
 		if (jsonChType != 0x4E4F534A)
-			throw(std::format(
+			RAISE_RT(std::format(
 				"Failed to load Model '{}', first Chunk in binary file was not of type JSON",
 				AssetPath
 			));
@@ -139,7 +139,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		uint32_t binaryChType = readU32(binaryChunk, 4);
 
 		if (binaryChType != 0x004E4942)
-			throw(std::format(
+			RAISE_RT(std::format(
 				"Failed to load Model '{}', second Chunk in binary file was not of type BIN",
 				AssetPath
 			));
@@ -156,7 +156,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 		}
 		catch (const nlohmann::json::parse_error& Error)
 		{
-			throw("Failed to import model due to parse error: " + std::string(Error.what()));
+			RAISE_RT("Failed to import model due to parse error: " + std::string(Error.what()));
 		}
 
 		m_Data = m_GetData();
@@ -219,7 +219,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 	}
 	catch (const nlohmann::json::type_error& Error)
 	{
-		throw("Failed to import model due to type error: " + std::string(Error.what()));
+		RAISE_RT("Failed to import model due to type error: " + std::string(Error.what()));
 	}
 
 	ZoneName("ImportNodes", 11);
@@ -522,23 +522,29 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From, const glm::m
 		scale = glm::make_vec3(scaleValues);
 	}
 	// Get matrix if it exists
-	glm::mat4 matNode = glm::mat4(1.f);
+	glm::mat4 matLocal = glm::mat4(1.f);
 	if (const auto matIt = nodeJson.find("matrix"); matIt != nodeJson.end())
 	{
+		assert(nodeJson.find("translation") == nodeJson.end());
+		assert(nodeJson.find("rotation") == nodeJson.end());
+
 		const nlohmann::json& mat = matIt.value();
 
 		float matValues[16]{};
 		for (uint32_t i = 0; i < std::min(mat.size(), (size_t)16); i++)
 			matValues[i] = mat[i];
 
-		matNode = glm::make_mat4(matValues);
+		matLocal = glm::make_mat4(matValues);
+	}
+	else
+	{
+		glm::mat4 trans = glm::translate(glm::mat4(1.f), translation); // 14/09/2024 har har har
+		glm::mat4 rot = glm::mat4_cast(rotation);
+		matLocal = trans * rot;
 	}
 
-	glm::mat4 trans = glm::translate(glm::mat4(1.f), translation); // 14/09/2024 har har har
-	glm::mat4 rot = glm::mat4_cast(rotation);
-
 	// Multiply all matrices together
-	glm::mat4 matNextNode = Transform * matNode * trans * rot;
+	glm::mat4 matNextNode = Transform * matLocal;
 
 	uint32_t myIndex = static_cast<uint32_t>(m_Nodes.size());
 	m_NodeIdToIndex[NodeIndex] = myIndex;
@@ -706,7 +712,7 @@ std::vector<float> ModelLoader::m_GetFloats(const nlohmann::json& accessor)
 		numPerVert = 16;
 
 	else
-		throw("Could not decode GLTF model: Type is not handled (not SCALAR, VEC2, VEC3, or VEC4)");
+		RAISE_RT("Could not decode GLTF model: Type is not handled (not SCALAR, VEC2, VEC3, or VEC4)");
 
 	uint32_t componentSize{};
 	switch (componentType)
@@ -722,7 +728,7 @@ std::vector<float> ModelLoader::m_GetFloats(const nlohmann::json& accessor)
 		break;
 	}
 	default:
-		throw("Unsupported `componentType` of " + std::to_string(componentType));
+		RAISE_RT("Unsupported `componentType` of " + std::to_string(componentType));
 	}
 
 	// Go over all the bytes in the data at the correct place using the properties from above
@@ -745,7 +751,7 @@ std::vector<float> ModelLoader::m_GetFloats(const nlohmann::json& accessor)
 			i += 1;
 		}
 		else
-			throw("huh??");
+			RAISE_RT("huh??");
 	}
 
 	return floatVec;
@@ -836,7 +842,7 @@ std::vector<uint8_t> ModelLoader::m_GetUBytes(const nlohmann::json& accessor)
 		numPerVert = 4;
 
 	else
-		throw("Could not decode GLTF model: Type is not handled (not SCALAR, VEC2, VEC3, or VEC4)");
+		RAISE_RT("Could not decode GLTF model: Type is not handled (not SCALAR, VEC2, VEC3, or VEC4)");
 
 	// Go over all the bytes in the data at the correct place using the properties from above
 	uint32_t beginningOfData = byteOffset + accByteOffset;
@@ -868,8 +874,8 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 	static std::unordered_map<std::string_view, MeshMaterial::MaterialAlphaMode> NameToAlphaMode =
 	{
 		{ "OPAQUE", MeshMaterial::MaterialAlphaMode::Opaque },
-		{ "MASK", MeshMaterial::MaterialAlphaMode::Mask },
-		{ "BLEND", MeshMaterial::MaterialAlphaMode::Blend }
+		{ "MASK",   MeshMaterial::MaterialAlphaMode::Mask   },
+		{ "BLEND",  MeshMaterial::MaterialAlphaMode::Blend  }
 	};
 
 	material.Name = materialDescription.value("name", "PHX_UNNAMED_MATERIAL");
@@ -1043,7 +1049,7 @@ std::vector<glm::vec2> ModelLoader::m_GetAndGroupFloatsVec2(const nlohmann::json
 	ZoneScoped;
 
 	if (Accessor["type"] != "VEC2")
-		throw("Expected accessor to be VEC2");
+		RAISE_RT("Expected accessor to be VEC2");
 
 	std::vector<float> floats = m_GetFloats(Accessor);
 
@@ -1064,7 +1070,7 @@ std::vector<glm::vec3> ModelLoader::m_GetAndGroupFloatsVec3(const nlohmann::json
 	ZoneScoped;
 
 	if (Accessor["type"] != "VEC3")
-		throw("Expected accessor to be VEC3");
+		RAISE_RT("Expected accessor to be VEC3");
 
 	std::vector<float> floats = m_GetFloats(Accessor);
 
@@ -1109,7 +1115,7 @@ std::vector<glm::vec4> ModelLoader::m_GetAndGroupFloatsVec4(const nlohmann::json
 			);
 
 	else
-		throw("Expected accessor to be either VEC3 or VEC4");
+		RAISE_RT("Expected accessor to be either VEC3 or VEC4");
 
 	return vectors;
 }
@@ -1119,7 +1125,7 @@ std::vector<glm::mat4> ModelLoader::m_GetAndGroupFloatsMat4(const nlohmann::json
 	ZoneScoped;
 
 	if (Accessor["type"] != "MAT4")
-		throw("Expected accessor to be MAT4");
+		RAISE_RT("Expected accessor to be MAT4");
 
 	std::vector<float> floats = m_GetFloats(Accessor);
 

@@ -114,7 +114,7 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 
 	default:
 	{
-		throw(std::format(
+		RAISE_RT(std::format(
 			"Invalid ImageNumColorChannels (was '{}') for '{}'!",
 			texture.NumColorChannels, texture.ImagePath
 		));

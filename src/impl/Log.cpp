@@ -4,6 +4,7 @@
 #include <mutex>
 
 #include "Log.hpp"
+#include "Utilities.hpp"
 #include "FileRW.hpp"
 
 static std::string ProgramLog = "";
@@ -65,7 +66,7 @@ static void logAppend(const std::string_view& Message, bool NoNewline = false, b
 		ProgramLog.append("\nLSLETE: Log size limit exceeded, throwing exception\n");
 		Log::Save();
 
-		throw("Program log exceeds maximum size of 2e6 bytes (2 megabytes)");
+		RAISE_RT("Program log exceeds maximum size of 2e6 bytes (2 megabytes)");
 	}
 }
 

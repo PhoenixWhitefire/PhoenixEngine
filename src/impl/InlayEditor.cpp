@@ -1176,11 +1176,12 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 	for (GameObject* object : current->GetChildren())
 	{
 		if (object == nullptr)
-			throw("stoopid compiler is giving me a warning for something that will probably not happen");
+			RAISE_RT("stoopid compiler is giving me a warning for something that will probably not happen");
 
 		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow
 			| ImGuiTreeNodeFlags_AllowItemOverlap
-			| ImGuiTreeNodeFlags_SpanAvailWidth;
+			| ImGuiTreeNodeFlags_SpanAvailWidth
+			| ImGuiTreeNodeFlags_DrawLinesFull;
 
 		// make the insert button have better contrast
 		if (isInSelections(object) && object != InsertObjectButtonHoveredOver)
@@ -1206,12 +1207,6 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 			tex = fallback;
 		}
 
-		ImGui::Image(
-			tex.GpuId,
-			ImVec2(16.f, 16.f)
-		);
-		ImGui::SameLine();
-
 		if (!didVisitCurSelection && Selections.size() > 0)
 		{
 			std::vector<GameObject*> descs = object->GetDescendants();
@@ -1224,16 +1219,47 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 				}
 		}
 
-		bool open = ImGui::TreeNodeEx(&object->ObjectId, flags, "%s", object->Name.c_str());
+		const ImGuiStyle& style = ImGui::GetStyle();
 
-		VisibleTreeWip.push_back(object->ObjectId);
+		bool openInserter = false;
+		bool isHovered = false;
+
+		bool open = ImGui::TreeNodeEx(&object->ObjectId, flags, " ");
+		if (ImGui::IsItemClicked())
+			nodeClicked = object;
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
+			isHovered = true;
+		if (ImGui::IsMouseClicked(ImGuiMouseButton_Right) && isHovered)
+			openInserter = true;
+
+		ImGui::SameLine();
+		ImGui::SetCursorPosX(ImGui::GetCursorPosX() - style.IndentSpacing * 0.8f);
+		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 2.f); // not the faintest idea
+
+		ImGui::Image(
+			tex.GpuId,
+			ImVec2(16.f, 16.f)
+		);
+		if (ImGui::IsItemClicked())
+			nodeClicked = object;
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
+			isHovered = true;
+		if (ImGui::IsMouseClicked(ImGuiMouseButton_Right) && isHovered)
+			openInserter = true;
+		
+		ImGui::SameLine();
+		ImGui::TextUnformatted(object->Name.c_str());
 
 		if (ImGui::IsItemClicked())
 			nodeClicked = object;
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
+			isHovered = true;
+		if (ImGui::IsMouseClicked(ImGuiMouseButton_Right) && isHovered)
+			openInserter = true;
 
-		if (ImGui::IsMouseClicked(ImGuiMouseButton_Right)
-			&& ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)
-			)
+		VisibleTreeWip.push_back(object->ObjectId);
+
+		if (openInserter || (ImGui::IsMouseClicked(ImGuiMouseButton_Right) && isHovered))
 		{
 			ImGui::OpenPopup(1979); // the mimic!!
 
@@ -1244,11 +1270,9 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 			ContextActionsForSelection = getPossibleActionsForSelections();
 		}
 
-		if (ImGui::IsItemHovered())
+		if (isHovered || ImGui::IsItemHovered())
 		{
 			ImGui::SameLine();
-
-			ImGuiStyle style = ImGui::GetStyle();
 
 			ImVec2 defLabelSize = ImGui::CalcTextSize("+", NULL, true);
 			ImVec2 defaultSize{ defLabelSize.x + style.FramePadding.x * 2.f, defLabelSize.y + style.FramePadding.y * 2.f };

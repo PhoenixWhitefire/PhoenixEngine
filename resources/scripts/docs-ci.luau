@@ -12,21 +12,41 @@ local componentsPrologue = file_read("./doc-assets/ci/components-prologue.txt")
 local globals = globalsPrologue .. "\n\n"
 local components = componentsPrologue .. "\n\n"
 
-for _, def in docComments.ScriptGlobals do
-	local name, contents = def[1], def[2]
+local function keysOf(t)
+	local kt = {}
+	for k, _ in t do
+		table.insert(kt, k)
+	end
 	
-	assert(#contents == 3, name .. " " .. #contents .. " " .. json_dump(contents))
+	return kt
+end
+
+local orderedGlobals = keysOf(apiDump.ScriptGlobals)
+table.sort(orderedGlobals)
+
+for _, name in orderedGlobals do
+	local contents = docComments.ScriptGlobals[name]
+	
+	if not contents then
+		print(`Missing doc entry for global '{ name }'`)
+		continue
+	end
+	
+	if #(contents[1] or {}) < apiDump.ScriptGlobals[name] then
+		print(`Expected at least { apiDump.ScriptGlobals[name] } args to be documented for global '{ name }', got { #contents[1] } instead`)
+		continue
+	end
 	
 	local args = ""
-	for _, a in contents[1] do
+	for _, a in (contents[1] or {}) do
 		args ..= `{ a[1] }: { a[2] }, `
 	end
 	args = args:sub(1, #args - 2)
 	
 	local returns = ""
-	if #contents[2] == 1 then
+	if #(contents[2] or {}) == 1 then
 		returns =  " : " .. contents[2][1]
-	elseif #contents[2] > 1 then
+	elseif #(contents[2] or {}) > 1 then
 		returns = " : ("
 		
 		for _, r in contents[2] do
@@ -76,9 +96,15 @@ local function dumpReflectionApi(t, d, cn)
 		if hasProps then
 			s = "### Properties:\n"
 			
-			for n, v in t.Properties do
-				if not d.Properties[n] then
+			local orderedProps = keysOf(t.Properties)
+			table.sort(orderedProps)
+			
+			for _, n in orderedProps do
+				local v = t.Properties[n]
+				
+				if not d.Properties or not d.Properties[n] then
 					print(`Missing doc comment for '{ cn }.{ n }'`)
+					continue
 				end
 				
 				s ..= `* \`{ n }: { rtol[v] or v }\`: { d.Properties[n] }\n`
@@ -88,9 +114,15 @@ local function dumpReflectionApi(t, d, cn)
 		if hasFuncs then
 			s ..= "\n### Functions:\n"
 			
-			for n, v in t.Functions do
-				if not d.Functions[n] then
+			local orderedFuncs = keysOf(t.Functions)
+			table.sort(orderedFuncs)
+			
+			for _, n in orderedFuncs do
+				local v = t.Functions[n]
+				
+				if not d.Functions or not d.Functions[n] then
 					print(`Missing doc comment for '{ cn }:{ n }'`)
+					continue
 				end
 				
 				s ..= `* \`{ n }{ v }\`: { d.Functions[n] }\n`
@@ -109,10 +141,19 @@ globals ..= dumpReflectionApi(apiDump.GameObject.Base, docComments.GameObject.Ba
 
 file_write("./doc-assets/ci/globals.txt", globals, false)
 
-for k, v in apiDump.GameObject.Components do
+local orderedComponents = keysOf(apiDump.GameObject.Components)
+table.sort(orderedComponents)
+
+for _, k in orderedComponents do
+	local v = apiDump.GameObject.Components[k]
+	
 	components ..= `## \`{ k }\`\n\n`
 	
 	local vd = docComments.GameObject.Components[k]
+	if not vd then
+		print(`No docs for Component '{ k }'`)
+		continue
+	end
 	
 	if vd.Description then
 		for _, d in (if typeof(vd.Description) == "table" then vd.Description else { vd.Description }) do

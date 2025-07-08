@@ -11,10 +11,10 @@ static std::default_random_engine s_RandGenerator = std::default_random_engine(s
 
 static uint32_t QuadMeshId = 0;
 
-class ParticleEmitterManager : BaseComponentManager
+class ParticleEmitterManager : public BaseComponentManager
 {
 public:
-    virtual uint32_t CreateComponent(GameObject* Object) final
+    virtual uint32_t CreateComponent(GameObject* Object) override
     {
         m_Components.emplace_back();
         m_Components.back().Object = Object;
@@ -25,7 +25,7 @@ public:
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
 
-    virtual std::vector<void*> GetComponents() final
+    virtual std::vector<void*> GetComponents() override
     {
         std::vector<void*> v;
         v.reserve(m_Components.size());
@@ -36,25 +36,25 @@ public:
         return v;
     }
 
-    virtual void* GetComponent(uint32_t Id) final
+    virtual void* GetComponent(uint32_t Id) override
     {
         return &m_Components[Id];
     }
 
-    virtual void DeleteComponent(uint32_t Id) final
+    virtual void DeleteComponent(uint32_t Id) override
     {
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
 
 		m_Components[Id].Object.Invalidate();
     }
 
-	virtual void Shutdown() final
+	virtual void Shutdown() override
     {
         for (size_t i = 0; i < m_Components.size(); i++)
             DeleteComponent(i);
     }
 
-    virtual const Reflection::PropertyMap& GetProperties() final
+    virtual const Reflection::PropertyMap& GetProperties() override
     {
         static const Reflection::PropertyMap props = 
         {
@@ -72,7 +72,7 @@ public:
 				{
 					int64_t newRate = gv.AsInteger();
 					if (newRate < 0 || newRate > UINT32_MAX)
-						throw("ParticleEmitter.Rate must be within uint32_t bounds (0 <= Rate <= 0xFFFFFFFFu)");
+						RAISE_RT("ParticleEmitter.Rate must be within uint32_t bounds (0 <= Rate <= 0xFFFFFFFFu)");
 					static_cast<EcParticleEmitter*>(g)->Rate = static_cast<uint32_t>(newRate);
 
 				}
@@ -90,7 +90,7 @@ public:
 				{
 					int64_t newMax = gv.AsInteger();
 					if (newMax < 0 || newMax > UINT32_MAX)
-						throw("ParticleEmitter.MaxParticles must be within uint32_t bounds (0 < MaxParticles <= 0xFFFFFFFFu)");
+						RAISE_RT("ParticleEmitter.MaxParticles must be within uint32_t bounds (0 < MaxParticles <= 0xFFFFFFFFu)");
 					dynamic_cast<Object_ParticleEmitter*>(g)->MaxParticles = static_cast<uint32_t>(newMax);
 				}
 			);
@@ -102,7 +102,7 @@ public:
         return props;
     }
 
-    virtual const Reflection::FunctionMap& GetFunctions() final
+    virtual const Reflection::FunctionMap& GetFunctions() override
     {
         static const Reflection::FunctionMap funcs = {};
         return funcs;

@@ -15,10 +15,10 @@
 
 static lua_State* LVM = nullptr;
 
-class ScriptManager : BaseComponentManager
+class ScriptManager : public BaseComponentManager
 {
 public:
-    virtual uint32_t CreateComponent(GameObject* Object) final
+    virtual uint32_t CreateComponent(GameObject* Object) override
     {
         m_Components.emplace_back();
 		m_Components.back().Object = Object;
@@ -27,12 +27,12 @@ public:
 		return m_Components.back().EcId;
     }
 
-	virtual void UpdateComponent(uint32_t Id, double DeltaTime) final
+	virtual void UpdateComponent(uint32_t Id, double DeltaTime) override
 	{
 		m_Components[Id].Update(DeltaTime);
 	}
 
-    virtual std::vector<void*> GetComponents() final
+    virtual std::vector<void*> GetComponents() override
     {
         std::vector<void*> v;
         v.reserve(m_Components.size());
@@ -43,12 +43,12 @@ public:
         return v;
     }
 
-	virtual void* GetComponent(uint32_t Id) final
+	virtual void* GetComponent(uint32_t Id) override
 	{
 		return &m_Components[Id];
 	}
 
-    virtual void DeleteComponent(uint32_t Id) final
+    virtual void DeleteComponent(uint32_t Id) override
     {
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
 		if (lua_State* L = m_Components[Id].m_L)
@@ -57,7 +57,7 @@ public:
 		m_Components[Id].Object.Invalidate();
     }
 
-    virtual const Reflection::PropertyMap& GetProperties() final
+    virtual const Reflection::PropertyMap& GetProperties() override
     {
         static const Reflection::PropertyMap props = 
         {
@@ -76,7 +76,7 @@ public:
         return props;
     }
 
-    virtual const Reflection::FunctionMap& GetFunctions() final
+    virtual const Reflection::FunctionMap& GetFunctions() override
     {
         static const Reflection::FunctionMap funcs =
 		{
@@ -101,7 +101,7 @@ public:
         GameObject::s_ComponentManagers[(size_t)EntityComponent::Script] = this;
     }
 
-	virtual void Shutdown() final
+	virtual void Shutdown() override
     {
         for (size_t i = 0; i < m_Components.size(); i++)
             DeleteComponent(i);
@@ -148,16 +148,10 @@ static auto api_gameobjindex = [](lua_State* L)
 		std::pair<EntityComponent, uint32_t> componentHandle;
 
 		if (const Reflection::Property* prop = obj->FindProperty(key, &componentHandle))
-		{
-			void* p = componentHandle.first != EntityComponent::None
-				? GameObject::ComponentHandleToPointer(componentHandle)
-				: obj;
-			
-			ScriptEngine::L::PushGenericValue(L, prop->Get(p));
-		}
+			ScriptEngine::L::PushGenericValue(L, prop->Get(GameObject::ReflectorHandleToPointer(componentHandle)));
 
-		else if (Reflection::Function* func = obj->FindFunction(key))
-			ScriptEngine::L::PushFunction(L, func);
+		else if (Reflection::Function* func = obj->FindFunction(key, &componentHandle))
+			ScriptEngine::L::PushFunction(L, func, componentHandle);
 
 		else
 		{
@@ -595,9 +589,7 @@ static lua_State* createVM()
 		lua_pushcfunction(state, api_gameobjnewindex, "GameObject.__newindex");
 		lua_setfield(state, -2, "__newindex");
 
-		lua_pushcfunction(
-			state,
-			[](lua_State* L)
+		const auto namecallFn = [](lua_State* L)
 			{
 				ZoneScopedNC("GameObject.__namecall", tracy::Color::LightSkyBlue);
 
@@ -609,7 +601,8 @@ static lua_State* createVM()
 
 				ZoneText(k, strlen(k));
 
-				Reflection::Function* func = g->FindFunction(k);
+				std::pair<EntityComponent, uint32_t> reflectorHandle;
+				Reflection::Function* func = g->FindFunction(k, &reflectorHandle);
 
 				if (!func)
 					luaL_errorL(L, "'%s' is not a valid method of %s", k, g->GetFullName().c_str());
@@ -620,7 +613,8 @@ static lua_State* createVM()
 				{
 					numresults = ScriptEngine::L::HandleMethodCall(
 						L,
-						func
+						func,
+						reflectorHandle
 					);
 				}
 				catch (std::string err)
@@ -629,7 +623,11 @@ static lua_State* createVM()
 				}
 
 				return numresults;
-			},
+			};
+
+		lua_pushcfunction(
+			state,
+			namecallFn,
 			"GameObject.__namecall"
 		);
 		lua_setfield(state, -2, "__namecall");
@@ -647,12 +645,12 @@ static lua_State* createVM()
 	ScriptEngine::L::PushGameObject(state, GameObject::GetObjectById(GameObject::s_DataModel)->FindChild("Workspace"));
 	lua_setglobal(state, "workspace");
 
-	for (size_t i = 0; ScriptEngine::L::GlobalFunctions[i].second != nullptr; i++)
+	for (size_t i = 0; ScriptEngine::L::GlobalFunctions[i].second.Function != nullptr; i++)
 	{
-		const std::pair<std::string_view, lua_CFunction>& pair = ScriptEngine::L::GlobalFunctions[i];
-		lua_CFunction func = pair.second;
+		std::pair<std::string_view, ScriptEngine::L::GlobalFn>& pair = ScriptEngine::L::GlobalFunctions[i];
+		ScriptEngine::L::GlobalFn& func = pair.second;
 
-		lua_pushlightuserdata(state, (void*)func);
+		lua_pushlightuserdata(state, (void*)&func);
 		lua_pushstring(state, pair.first.data());
 		
 		lua_pushcclosure(
@@ -665,11 +663,20 @@ static lua_State* createVM()
 
 				ZoneText(fnName, strlen(fnName));
 
-				lua_CFunction func = (lua_CFunction)lua_touserdata(L, lua_upvalueindex(1));
+				ScriptEngine::L::GlobalFn* func = (ScriptEngine::L::GlobalFn*)lua_touserdata(L, lua_upvalueindex(1));
 
 				try
 				{
-					return func(L);
+					if (int nargs = lua_gettop(L); nargs >= func->NumMinArgs)
+						return func->Function(L);
+					else
+						luaL_error(
+							L,
+							"Function `%s` expects at least %i arguments, but got only %i",
+							fnName,
+							func->NumMinArgs,
+							nargs
+						);
 				}
 				catch (std::string e)
 				{

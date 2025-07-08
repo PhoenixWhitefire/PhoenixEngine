@@ -1,5 +1,7 @@
 #pragma once
 
+#define RAISE_RT(errstring) throw(std::runtime_error(errstring))
+
 // 24/01/2025
 // an assert, but also at runtime
 // can be useful, because important exceptions
@@ -8,8 +10,8 @@
 // from being invoked directly at the point of the exception
 #ifdef NDEBUG
 
-#define PHX_ENSURE_MSG(expr, err) if (!(expr)) throw(err)
-#define PHX_ENSURE(expr) if (!(expr)) throw("Failed to ensure: " + std::string(#expr))
+#define PHX_ENSURE_MSG(expr, err) if (!(expr)) RAISE_RT(err)
+#define PHX_ENSURE(expr) if (!(expr)) RAISE_RT("Failed to ensure: " + std::string(#expr))
 
 #define PHX_CHECK(expr, err) if (!(expr)) Log::Error(std::format( \
     "Check '{}' failed on line {} of function '{}'", \

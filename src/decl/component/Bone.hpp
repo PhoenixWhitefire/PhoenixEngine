@@ -1,5 +1,18 @@
 #pragma once
 
+#include <stdint.h>
+
+#include "datatype/GameObject.hpp"
+
+struct EcBone
+{
+	glm::mat4 Transform{ 1.f };
+	uint8_t SkeletalBoneId = UINT8_MAX;
+	GameObjectRef Object;
+
+	static const EntityComponent Type = EntityComponent::Bone;
+};
+
 /*
 
 #include "gameobject/Attachment.hpp"

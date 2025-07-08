@@ -136,14 +136,14 @@ void Renderer::Initialize(uint32_t Width, uint32_t Height, SDL_Window* Window)
 	this->GLContext = SDL_GL_CreateContext(m_Window);
 
 	if (!this->GLContext)
-		throw(std::format("Could not create an OpenGL context, SDL error: {}", SDL_GetError()));
+		RAISE_RT(std::format("Could not create an OpenGL context, SDL error: {}", SDL_GetError()));
 
 	PHX_SDL_CALL(SDL_GL_MakeCurrent, m_Window, this->GLContext);
 
 	bool gladStatus = gladLoadGL((GLADloadfunc)SDL_GL_GetProcAddress);
 
 	if (!gladStatus)
-		throw("GLAD could not load OpenGL. Please update your drivers.");
+		RAISE_RT("GLAD could not load OpenGL. Please update your drivers.");
 
 	// `glDebugMessageCallback` will be NULL if the user
 	// does not have the `GL_ARB_debug_output`/`GL_KHR_debug` OpenGL extensions

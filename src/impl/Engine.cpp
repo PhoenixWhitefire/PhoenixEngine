@@ -35,13 +35,12 @@
 
 static const std::unordered_map<SDL_LogPriority, const std::string> LogPriorityStringMap =
 {
-	{ SDL_LOG_PRIORITY_VERBOSE, "Verbose" },
-	{ SDL_LOG_PRIORITY_DEBUG, "Debug" },
-	{ SDL_LOG_PRIORITY_INFO, "Info" },
-	{ SDL_LOG_PRIORITY_WARN, "Warning" },
-	{ SDL_LOG_PRIORITY_ERROR, "Error" },
-	{ SDL_LOG_PRIORITY_CRITICAL, "Critical" },
-	{ SDL_LOG_PRIORITY_COUNT, "[This string should never be displayed]" }
+	{ SDL_LOG_PRIORITY_VERBOSE,   "Verbose"  },
+	{ SDL_LOG_PRIORITY_DEBUG,     "Debug"    },
+	{ SDL_LOG_PRIORITY_INFO,      "Info"     },
+	{ SDL_LOG_PRIORITY_WARN,      "Warning"  },
+	{ SDL_LOG_PRIORITY_ERROR,     "Error"    },
+	{ SDL_LOG_PRIORITY_CRITICAL,  "Critical" },
 };
 
 static void sdlLog(void*, int Type, SDL_LogPriority Priority, const char* Message)
@@ -93,11 +92,11 @@ void Engine::OnWindowResized(int NewSizeX, int NewSizeY)
 
 	SDL_DisplayID currentDisplay = SDL_GetDisplayForWindow(Window);
 	if (currentDisplay == 0)
-		throw("`SDL_GetDisplayForWindow` failed with error: " + std::string(SDL_GetError()));
+		RAISE_RT("`SDL_GetDisplayForWindow` failed with error: " + std::string(SDL_GetError()));
 
 	float displayScale = SDL_GetDisplayContentScale(currentDisplay);
 	if (displayScale == 0.f)
-		throw("`SDL_GetDisplayContentScale` returned invalid result, error: " + std::string(SDL_GetError()));
+		RAISE_RT("`SDL_GetDisplayContentScale` returned invalid result, error: " + std::string(SDL_GetError()));
 
 	static ImGuiStyle DefaultStyle = ImGui::GetStyle();
 	ImGuiStyle scaledStyle = DefaultStyle;
@@ -113,7 +112,7 @@ void Engine::SetIsFullscreen(bool Fullscreen)
 	this->IsFullscreen = Fullscreen;
 
 	if (!SDL_SetWindowFullscreen(this->Window, this->IsFullscreen))
-		throw("`SDL_SetWindowFullscreen` failed, error: " + std::string(SDL_GetError()));
+		RAISE_RT("`SDL_SetWindowFullscreen` failed, error: " + std::string(SDL_GetError()));
 }
 
 template <class T>
@@ -497,7 +496,7 @@ void Engine::Start()
 	Log::Info("Final initializations...");
 
 	if (GameObject* wp = DataModel->FindChild("Workspace"); !wp)
-		throw("There is no Workspace!");
+		RAISE_RT("There is no Workspace!");
 	else
 		this->Workspace = wp;
 
