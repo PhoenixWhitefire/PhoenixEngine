@@ -126,6 +126,23 @@ REFLECTION_DECLAREFUNC(                                                         
 );                                                                              \
 }                                                                               \
 
+#define REFLECTION_EVENT(c, n, ...) { \
+	#n, \
+	{ \
+		{ __VA_ARGS__ }, \
+		[](void* p, Reflection::EventCallback Callback) \
+        { \
+            c* ec = static_cast<c*>(p); \
+            ec->n##Callbacks.push_back(Callback); \
+            return ec->n##Callbacks.size() - 1; \
+        }, \
+        [](void* p, uint32_t Id) \
+        { \
+            static_cast<c*>(p)->n##Callbacks[Id] = nullptr; \
+        } \
+	} \
+} \
+
 // 01/09/2024:
 // MUST be added to the `public` section of *all* objects so
 // any APIs they declare can be found
@@ -139,6 +156,12 @@ static const Reflection::FunctionMap& s_GetFunctions()                          
 {                                                                                      \
 	return s_Api.Functions;                                                        \
 }                                                                                      \
+
+#define REFLECTION_SIGNAL(CbList, ...) { ZoneScopedN(#CbList); \
+	for (size_t i = 0; i < CbList.size(); i++) \
+		if (const Reflection::EventCallback& cb = CbList[i]; cb) \
+			cb({ __VA_ARGS__ }); \
+} \
 
 namespace Reflection
 {
@@ -264,12 +287,24 @@ namespace Reflection
 		std::function<std::vector<Reflection::GenericValue>(void*, const std::vector<Reflection::GenericValue>&)> Func;
 	};
 
+	typedef std::function<void(const std::vector<Reflection::GenericValue>&)> EventCallback;
+
+	struct Event
+	{
+		std::vector<ValueType> CallbackInputs;
+
+		std::function<uint32_t(void*, EventCallback)> Connect;
+		std::function<void(void*, uint32_t)> Disconnect;
+	};
+
 	typedef std::unordered_map<std::string_view, Reflection::Property> PropertyMap;
 	typedef std::unordered_map<std::string_view, Reflection::Function> FunctionMap;
+	typedef std::unordered_map<std::string_view, Reflection::Event> EventMap;
 
 	struct Api
 	{
 		PropertyMap Properties;
 		FunctionMap Functions;
+		EventMap Events;
 	};
 }

@@ -46,7 +46,10 @@
       "DataModel": {
         "Description": "The root of the scene",
         "Functions": {
-          "Close": "Closes the application"
+          "Close": "Closes the application with the specified exit code integer or 0"
+        },
+        "Events": {
+          "OnFrameBegin": "Fires at the beginning of a frame, passing in the time elapsed since the last frame (delta time)"
         }
       },
       "DirectionalLight": {
@@ -102,7 +105,7 @@
       "Script": {
         "Description": "A Luau script",
         "Functions": {
-          "Reload": "Re-compiles the Source file and runs it from the beginning"
+          "Reload": "Re-compiles the Source file and runs it from the beginning, returning whether the compilation and initial run were successful"
         },
         "Properties": {
           "SourceFile": "The File the Script is executing. Changing this to a valid File immediately reloads the Script if it is a descendant of the `DataModel` (i.e. `game`). To forcefully reload it, `:Reload` should be used"
@@ -120,6 +123,9 @@
           "SoundFile": "The `.wav` file to be played",
           "Speed": "The speed at which the sound plays, within the range of 0.01 to 100",
           "Volume": "The volume at which the sound plays. Must be positive"
+        },
+        "Events": {
+          "OnLoaded": "Fires when the Sound finishes loading, and whether it loaded successfully or not"
         }
       },
       "SpotLight": {

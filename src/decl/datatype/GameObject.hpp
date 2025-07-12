@@ -100,8 +100,7 @@ public:
 
 	virtual const Reflection::PropertyMap& GetProperties() = 0;
 	virtual const Reflection::FunctionMap& GetFunctions() = 0;
-
-	virtual void DummyFunction() { throw("Link will fail if this is not done."); };
+	virtual const Reflection::EventMap& GetEvents() { static Reflection::EventMap e{}; return e; };
 };
 
 class GameObject
@@ -141,12 +140,16 @@ public:
 
 	Reflection::Property* FindProperty(const std::string_view&, std::pair<EntityComponent, uint32_t>* FromComponent = nullptr);
 	Reflection::Function* FindFunction(const std::string_view&, std::pair<EntityComponent, uint32_t>* FromComponent = nullptr);
+	Reflection::Event* FindEvent(const std::string_view&, std::pair<EntityComponent, uint32_t>* FromComponent = nullptr);
+
 	Reflection::GenericValue GetPropertyValue(const std::string_view&);
 	void SetPropertyValue(const std::string_view&, const Reflection::GenericValue&);
+
 	std::vector<Reflection::GenericValue> CallFunction(const std::string_view&, const std::vector<Reflection::GenericValue>&);
 
 	Reflection::PropertyMap GetProperties() const;
 	Reflection::FunctionMap GetFunctions() const;
+	Reflection::EventMap GetEvents() const;
 
 	// the engine will NEED some objects to continue existing without being
 	// de-alloc'd, if only for a loop (`updateScripts`)

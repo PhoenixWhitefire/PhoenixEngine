@@ -5,5 +5,5 @@
 
 namespace Physics
 {
-	void Step(Memory::vector<GameObject*, MEMCAT(Physics)>& World, double DeltaTime);
+	void Step(Memory::vector<GameObjectRef, MEMCAT(Physics)>& World, double DeltaTime);
 }

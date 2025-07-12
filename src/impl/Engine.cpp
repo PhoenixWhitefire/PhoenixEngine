@@ -320,57 +320,12 @@ Engine::Engine()
 	Log::Info("Engine initialized");
 }
 
-/*
-	TODO 23/12/2024
-	
-	We need to update all the scripts FIRST, as they may delete Objects
-	that we want to keep track of (i.e. that were collected in the `PhysicsList`
-	before they were deleted).
-
-	This can be superseded by a proper (deferred) Event System, as we'd have better
-	control over WHEN Scripts are resumed, instead of just resuming them
-	as we stumble upon them.
-*/
-static void updateScripts(double DeltaTime)
-{
-	ZoneScopedC(tracy::Color::LightSkyBlue);
-
-	static std::vector<GameObjectRef> ScriptsResumedThisFrame = {};
-
-	for (GameObjectRef ch : Engine::Get()->DataModel->GetDescendants())
-		if (ch->Enabled)
-			if (EcScript* script = ch->GetComponent<EcScript>())
-			{
-				if (std::find(
-					ScriptsResumedThisFrame.begin(),
-					ScriptsResumedThisFrame.end(),
-					ch
-				) == ScriptsResumedThisFrame.end())
-				{
-					// ensure we keep a reference to it
-					ScriptsResumedThisFrame.emplace_back(ch);
-
-					script->Update(DeltaTime);
-
-					// we need to do this in case a script deletes another script,
-					// causing their to potentially be stale pointers in the list
-					// of descendants we are iterating, or if it just deletes
-					// parts of the datamodel we are about to iterate
-					updateScripts(DeltaTime);
-
-					return;
-				}
-			}
-
-	ScriptsResumedThisFrame.clear();
-}
-
 static bool s_DebugCollisionAabbs = false;
 
 static void recursivelyTravelHierarchy(
 	Memory::vector<RenderItem, MEMCAT(Rendering)>& RenderList,
 	Memory::vector<LightItem, MEMCAT(Rendering)>& LightList,
-	Memory::vector<GameObject*, MEMCAT(Physics)>& PhysicsList,
+	Memory::vector<GameObjectRef, MEMCAT(Physics)>& PhysicsList,
 	const GameObjectRef& Root,
 	EcCamera* SceneCamera,
 	double DeltaTime
@@ -441,6 +396,9 @@ static void recursivelyTravelHierarchy(
 					false
 				);
 		}
+
+		if (EcScript* scr = object->GetComponent<EcScript>())
+			scr->Update(DeltaTime);
 
 		EcDirectionalLight* directional = object->GetComponent<EcDirectionalLight>();
 		EcPointLight* point = object->GetComponent<EcPointLight>();
@@ -770,9 +728,9 @@ void Engine::Start()
 		GameObjectRef sceneCamObject = Workspace->GetComponent<EcWorkspace>()->GetSceneCamera();
 		EcCamera* sceneCamera = sceneCamObject->GetComponent<EcCamera>();
 
-		Memory::vector<GameObject*, MEMCAT(Physics)> physicsList;
+		Memory::vector<GameObjectRef, MEMCAT(Physics)> physicsList;
 
-		updateScripts(deltaTime);
+		REFLECTION_SIGNAL(DataModel->GetComponent<EcDataModel>()->OnFrameBeginCallbacks, deltaTime);
 
 		// fetch the camera again because of potential scene changes that may have caused re-alloc'd
 		// (really need a generic `Ref` system)

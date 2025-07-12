@@ -652,6 +652,11 @@ uint32_t GameObject::AddComponent(EntityComponent Type)
 		m_ComponentApis.Functions[it.first] = it.second;
 		m_MemberToComponentMap[it.first] = m_Components.back();
 	}
+	for (const auto& it : manager->GetEvents())
+	{
+		m_ComponentApis.Events[it.first] = it.second;
+		m_MemberToComponentMap[it.first] = m_Components.back();
+	}
 
 	return componentId;
 }
@@ -674,6 +679,11 @@ void GameObject::RemoveComponent(EntityComponent Type)
 			for (const auto& it2 : manager->GetFunctions())
 			{
 				m_ComponentApis.Functions.erase(it2.first);
+				m_MemberToComponentMap.erase(it2.first);
+			}
+			for (const auto& it2 : manager->GetEvents())
+			{
+				m_ComponentApis.Events.erase(it2.first);
 				m_MemberToComponentMap.erase(it2.first);
 			}
 		}
@@ -714,6 +724,25 @@ Reflection::Function* GameObject::FindFunction(const std::string_view& FuncName,
 	if (auto it = m_ComponentApis.Functions.find(FuncName); it != m_ComponentApis.Functions.end())
 	{
 		*FromComponent = m_MemberToComponentMap[FuncName];
+		return &it->second;
+	}
+
+	return nullptr;
+}
+Reflection::Event* GameObject::FindEvent(const std::string_view& EventName, std::pair<EntityComponent, uint32_t>* ReflectorHandle)
+{
+	std::pair<EntityComponent, uint32_t> dummyHandle{ EntityComponent::None, PHX_GAMEOBJECT_NULL_ID };
+	ReflectorHandle = ReflectorHandle ? ReflectorHandle : &dummyHandle;
+
+	if (auto it = s_Api.Events.find(EventName); it != s_Api.Events.end())
+	{
+		ReflectorHandle->second = ObjectId;
+		return &it->second;
+	}
+
+	if (auto it = m_ComponentApis.Events.find(EventName); it != m_ComponentApis.Events.end())
+	{
+		*ReflectorHandle = m_MemberToComponentMap[EventName];
 		return &it->second;
 	}
 
@@ -865,6 +894,21 @@ static void dumpFunctions(const Reflection::FunctionMap& Functions, nlohmann::js
 	}
 }
 
+static void dumpEvents(const Reflection::EventMap& Events, nlohmann::json& Json)
+{
+	for (const auto& eventIt : Events)
+	{
+		std::string argstring = "";
+
+		for (Reflection::ValueType a : eventIt.second.CallbackInputs)
+			argstring += std::string(Reflection::TypeAsString(a)) + ", ";
+
+		argstring = argstring.substr(0, argstring.size() - 2);
+
+		Json[eventIt.first] = std::format("({})", argstring);
+	}
+}
+
 nlohmann::json GameObject::DumpApiToJson()
 {
 	nlohmann::json dump;
@@ -874,10 +918,12 @@ nlohmann::json GameObject::DumpApiToJson()
 
 	nlohmann::json& gameObjectProperties = gameObjectApi["Properties"];
 	nlohmann::json& gameObjectFunctions = gameObjectApi["Functions"];
+	nlohmann::json& gameObjectEvents = gameObjectApi["Events"];
 
 	s_AddObjectApi(); // make sure we have the api
 	dumpProperties(s_Api.Properties, gameObjectProperties);
 	dumpFunctions(s_Api.Functions, gameObjectFunctions);
+	dumpEvents(s_Api.Events, gameObjectEvents);
 	
 	for (size_t i = 0; i < (size_t)EntityComponent::__count; i++)
 	{
@@ -889,9 +935,11 @@ nlohmann::json GameObject::DumpApiToJson()
 		nlohmann::json& api = componentApi[s_EntityComponentNames[i]];
 		nlohmann::json& properties = api["Properties"];
 		nlohmann::json& functions = api["Functions"];
+		nlohmann::json& events = api["Events"];
 
 		dumpProperties(manager->GetProperties(), properties);
 		dumpFunctions(manager->GetFunctions(), functions);
+		dumpEvents(manager->GetEvents(), events);
 	}
 
 	return dump;

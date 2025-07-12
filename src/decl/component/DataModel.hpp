@@ -4,10 +4,13 @@
 #pragma once
 
 #include "component/Workspace.hpp"
+#include "Reflection.hpp"
 
 struct EcDataModel
 {
 	uint32_t Workspace = UINT32_MAX;
+
+	std::vector<Reflection::EventCallback> OnFrameBeginCallbacks;
 
 	static inline EntityComponent Type = EntityComponent::DataModel;
 };

@@ -27,6 +27,8 @@ struct EcSound
 
 	GameObjectRef Object;
 	uint32_t EcId = PHX_GAMEOBJECT_NULL_ID;
+
+	std::vector<Reflection::EventCallback> OnLoadedCallbacks;
 	
 	void* m_Channel = nullptr;
 	bool m_PlayRequested = false;

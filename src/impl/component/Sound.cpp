@@ -9,7 +9,8 @@
 #include "FileRW.hpp"
 #include "Log.hpp"
 
-#define SCOPED_LOCK(mtx) std::unique_lock<std::mutex> __lock_##mtx(mtx)
+#define SCOPED_LOCK(mtx) std::unique_lock<std::mutex> lock(mtx);
+
 #define FMOD_CALL(expr, op) { \
 	if (FMOD_RESULT result = (expr); result != FMOD_OK) { \
 		std::string errstr = std::format("FMOD " op " failed: code {} - '{}'", (int)result, FMOD_ErrorString(result)); \
@@ -21,9 +22,7 @@
 static std::unordered_map<std::string, std::pair<FMOD::Sound*, std::vector<uint32_t>>> AudioAssets{};
 static std::unordered_map<FMOD::Sound*, std::string> SoundToSoundFile{};
 static std::unordered_map<void*, uint32_t> ChannelToComponent{};
-static std::mutex AudioAssetsMutex;
-static std::mutex ComponentsMutex;
-//static std::vector<std::promise<bool>> AudioStreamPromises;
+static std::mutex SoundMutex;
 
 class SoundManager : public BaseComponentManager
 {
@@ -33,8 +32,8 @@ public:
 		if (!m_DidInit)
 			Initialize();
 
-		SCOPED_LOCK(ComponentsMutex);
-
+		SCOPED_LOCK(SoundMutex);
+		
         m_Components.emplace_back();
 		m_Components.back().Object = Object;
 		m_Components.back().EcId = static_cast<uint32_t>(m_Components.size() - 1);
@@ -61,8 +60,6 @@ public:
 
     virtual void DeleteComponent(uint32_t Id) override
     {
-		SCOPED_LOCK(ComponentsMutex);
-
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
 		EcSound& sound = m_Components[Id];
 
@@ -195,6 +192,16 @@ public:
         static const Reflection::FunctionMap funcs = {};
         return funcs;
     }
+
+	virtual const Reflection::EventMap& GetEvents() override
+	{
+		static const Reflection::EventMap events =
+		{
+			REFLECTION_EVENT(EcSound, OnLoaded, Reflection::ValueType::Boolean)
+		};
+
+		return events;
+	}
 	
 	SoundManager()
     {
@@ -241,14 +248,13 @@ static inline SoundManager Instance{};
 
 static FMOD_RESULT F_CALL fmodNonBlockingCallback(FMOD_SOUND* Sound, FMOD_RESULT Result)
 {
+	SCOPED_LOCK(SoundMutex);
+
 	FMOD::Sound* sound = (FMOD::Sound*)Sound;
 	const auto& it = AudioAssets.find(SoundToSoundFile[sound]);
 
 	if (Result != FMOD_OK)
 	{
-		SCOPED_LOCK(AudioAssetsMutex);
-		SCOPED_LOCK(ComponentsMutex);
-
 		Log::Warning(std::format(
 			"FMOD sound failed to load: code {} - '{}'",
 			(int)Result, FMOD_ErrorString(Result))
@@ -259,18 +265,19 @@ static FMOD_RESULT F_CALL fmodNonBlockingCallback(FMOD_SOUND* Sound, FMOD_RESULT
 			EcSound* ecSound = (EcSound*)Instance.GetComponent(ecId);
 			ecSound->FinishedLoading = true;
 			ecSound->LoadSucceeded = false;
+
+			REFLECTION_SIGNAL(ecSound->OnLoadedCallbacks, false);
 		}
 	}
 	else
 	{
-		SCOPED_LOCK(AudioAssetsMutex);
-		SCOPED_LOCK(ComponentsMutex);
-
 		for (uint32_t ecId : it->second.second)
 		{
 			EcSound* ecSound = (EcSound*)Instance.GetComponent(ecId);
 			ecSound->FinishedLoading = true;
 			ecSound->LoadSucceeded = true;
+
+			REFLECTION_SIGNAL(ecSound->OnLoadedCallbacks, true);
 		}
 	}
 
@@ -285,6 +292,8 @@ static FMOD_RESULT F_CALL channelCtlCallback(
 	void* CommandData2
 )
 {
+	SCOPED_LOCK(SoundMutex);
+
 	if (CallbackType == FMOD_CHANNELCONTROL_CALLBACK_END)
 	{
 		uint32_t ecId = ChannelToComponent[(void*)Channel];
@@ -312,6 +321,8 @@ void EcSound::Update(double)
 
 	if (!LoadSucceeded)
 		return;
+
+	SCOPED_LOCK(SoundMutex);
 
 	if (!m_Channel && m_PlayRequested)
 	{
@@ -352,6 +363,8 @@ void EcSound::Reload()
 	if (!FinishedLoading)
 		RAISE_RT("Cannot `::Reload` a Sound while it is still loading");
 
+	SCOPED_LOCK(SoundMutex);
+
 	if (const auto& it = AudioAssets.find(SoundFile); it == AudioAssets.end())
 	{
 		std::string ResDir = EngineJsonConfig.value("ResourcesDirectory", "resources/");
@@ -369,8 +382,6 @@ void EcSound::Reload()
 			Instance.FmodSystem->createSound((ResDir + SoundFile).c_str(), FMOD_NONBLOCKING, &exinfo, &sound),
 			"create sound"
 		);
-
-		SCOPED_LOCK(AudioAssetsMutex);
 
 		std::pair<FMOD::Sound*, std::vector<uint32_t>>& pair = AudioAssets[SoundFile];
 		pair.first = sound;

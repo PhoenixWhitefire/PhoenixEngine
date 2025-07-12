@@ -517,17 +517,18 @@ static void drawDeveloperUI(double DeltaTime)
 
 		ImGuiStyle style = ImGui::GetStyle();
 
-		ImVec2 defLabelSize = ImGui::CalcTextSize("resume", NULL, true);
-		ImVec2 defaultSize{ defLabelSize.x + style.FramePadding.x * 2.f, defLabelSize.y + style.FramePadding.y * 2.f };
+		ImGui::SetCursorPosY(ImGui::GetCursorPosY() - style.FramePadding.y);
 
 		if (AreGraphsPaused)
 		{
-			if (ImGui::Button("resume", ImVec2(0, defaultSize.y)))
+			if (ImGui::Button("resume"))
 				AreGraphsPaused = false;
 		}
-		else if (ImGui::Button("pause", ImVec2(0, defaultSize.y)))
+		else if (ImGui::Button("pause"))
 				AreGraphsPaused = true;
 		
+		ImGui::SetCursorPosY(ImGui::GetCursorPosY() - style.FramePadding.y);
+
 		ImGui::SameLine();
 		ImGui::Text("graphs");
 		

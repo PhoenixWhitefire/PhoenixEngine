@@ -44,7 +44,7 @@ local function reset()
 	DefaultCameraOffset = CharacterController.CameraOffset
 end
 
-function Update(DeltaTime)
+game.OnFrameBegin:Connect(function(DeltaTime)
 	DeltaTime = math.clamp(DeltaTime, 0, 1/30)
 	TotalTime += DeltaTime
 	
@@ -123,7 +123,7 @@ function Update(DeltaTime)
 	
 	--RoomGen()
 	--NodeEditor()
-end
+end)
 
 reset()
 

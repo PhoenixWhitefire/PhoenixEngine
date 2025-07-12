@@ -60,7 +60,7 @@ namespace ScriptEngine::L
 
 	int HandleMethodCall(
 		lua_State* L,
-		Reflection::Function* fnaf,
+		Reflection::Function* fnaf, // THE MIMICCCCC!!!!
 		std::pair<EntityComponent, uint32_t>
 	);
 

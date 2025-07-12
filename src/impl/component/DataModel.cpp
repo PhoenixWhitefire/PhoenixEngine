@@ -76,6 +76,16 @@ public:
         return funcs;
     }
 
+    virtual const Reflection::EventMap& GetEvents() override
+    {
+        static Reflection::EventMap events =
+        {
+            REFLECTION_EVENT(EcDataModel, OnFrameBegin, Reflection::ValueType::Double)
+        };
+
+        return events;
+    }
+
     DataModelManager()
     {
         GameObject::s_ComponentManagers[(size_t)EntityComponent::DataModel] = this;

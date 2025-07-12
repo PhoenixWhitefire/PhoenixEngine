@@ -14,11 +14,11 @@ struct Collision
 	IntersectionLib::Intersection Hit;
 };
 
-static void applyGlobalForces(Memory::vector<GameObject*, MEMCAT(Physics)>& World, float DeltaTime)
+static void applyGlobalForces(Memory::vector<GameObjectRef, MEMCAT(Physics)>& World, float DeltaTime)
 {
 	ZoneScopedC(tracy::Color::AntiqueWhite);
 
-	for (GameObject* object : World)
+	for (GameObjectRef object : World)
 	{
 		EcMesh* cm = object->GetComponent<EcMesh>();
 		EcTransform* ct = object->GetComponent<EcTransform>();
@@ -41,11 +41,11 @@ static void applyGlobalForces(Memory::vector<GameObject*, MEMCAT(Physics)>& Worl
 	}
 }
 
-static void moveDynamics(Memory::vector<GameObject*, MEMCAT(Physics)>& World, float DeltaTime)
+static void moveDynamics(Memory::vector<GameObjectRef, MEMCAT(Physics)>& World, float DeltaTime)
 {
 	ZoneScopedC(tracy::Color::AntiqueWhite);
 
-	for (GameObject* object : World)
+	for (GameObjectRef object : World)
 		if (EcMesh* cm = object->GetComponent<EcMesh>(); cm->PhysicsDynamics)
 		{
 			EcTransform* ct = object->GetComponent<EcTransform>();
@@ -58,13 +58,13 @@ static void moveDynamics(Memory::vector<GameObject*, MEMCAT(Physics)>& World, fl
 		}
 }
 
-static void resolveCollisions(Memory::vector<GameObject*, MEMCAT(Physics)>& World, float DeltaTime)
+static void resolveCollisions(Memory::vector<GameObjectRef, MEMCAT(Physics)>& World, float DeltaTime)
 {
 	ZoneScopedC(tracy::Color::AntiqueWhite);
 
 	Memory::vector<Collision, MEMCAT(Physics)> collisions;
 
-	for (GameObject* a : World)
+	for (GameObjectRef a : World)
 	{
 		EcMesh* am = a->GetComponent<EcMesh>();
 
@@ -74,7 +74,7 @@ static void resolveCollisions(Memory::vector<GameObject*, MEMCAT(Physics)>& Worl
 		const glm::vec3& aPos = am->CollisionAabb.Position;
 		const glm::vec3& aSize = am->CollisionAabb.Size;
 
-		for (GameObject* b : World)
+		for (GameObjectRef b : World)
 		{
 			if (a == b)
 				continue;
@@ -156,7 +156,7 @@ static void resolveCollisions(Memory::vector<GameObject*, MEMCAT(Physics)>& Worl
 	}
 }
 
-static void step(Memory::vector<GameObject*, MEMCAT(Physics)>& World, float DeltaTime)
+static void step(Memory::vector<GameObjectRef, MEMCAT(Physics)>& World, float DeltaTime)
 {
 	TIME_SCOPE_AS("Physics");
 	ZoneScopedC(tracy::Color::AntiqueWhite);
@@ -168,7 +168,7 @@ static void step(Memory::vector<GameObject*, MEMCAT(Physics)>& World, float Delt
 	resolveCollisions(World, DeltaTime);
 }
 
-void Physics::Step(Memory::vector<GameObject*, MEMCAT(Physics)>& World, double DeltaTime)
+void Physics::Step(Memory::vector<GameObjectRef, MEMCAT(Physics)>& World, double DeltaTime)
 {
 	step(World, std::clamp(static_cast<float>(DeltaTime), 0.f, 1.f/30.f));
 

@@ -310,13 +310,7 @@ Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int St
 
 void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericValue& gv)
 {
-	if (!lua_checkstack(L, 1))
-		luaL_errorL(
-			L,
-			"Not enough stack space to push Generic Value '%s' (a %s)",
-			gv.ToString().c_str(),
-			Reflection::TypeAsString(gv.Type).data()
-		);
+	luaL_checkstack(L, 1, "::PushGenericValue");
 
 	switch (gv.Type)
 	{
@@ -368,7 +362,7 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 	case Reflection::ValueType::Array:
 	{
 		std::span<Reflection::GenericValue> array = gv.AsArray();
-		PHX_ENSURE(lua_checkstack(L, 6));
+		luaL_checkstack(L, 6, "::PushGenericValue of type Array");
 		lua_newtable(L);
 
 		for (int index = 0; static_cast<size_t>(index) < array.size(); index++)
@@ -542,8 +536,15 @@ int ScriptEngine::L::HandleMethodCall(
 		luaL_error(L, "%s", err.c_str());
 	}
 
-	for (const Reflection::GenericValue& output : outputs)
+	assert(outputs.size() == func->Outputs.size());
+
+	for (size_t i = 0; i < outputs.size(); i++)
+	{
+		const Reflection::GenericValue& output = outputs[i];
+
+		assert(output.Type == func->Outputs[i]);
 		L::PushGenericValue(L, output);
+	}
 
 	return (int)func->Outputs.size();
 
@@ -568,9 +569,12 @@ void ScriptEngine::L::PushFunction(lua_State* L, Reflection::Function* Function,
 	{
 		lua_pop(L, 1); // remove `nil`, stack empty
 
-		lua_pushlightuserdata(L, Function);
 		static_assert(sizeof(FromComponent) <= sizeof(void*));
-		lua_pushlightuserdata(L, *(void**)&FromComponent);
+		void* data = nullptr;
+		memcpy(&data, &FromComponent, sizeof(FromComponent));
+
+		lua_pushlightuserdata(L, Function);
+		lua_pushlightuserdata(L, data);
 
 		lua_pushcclosure(
 			L,

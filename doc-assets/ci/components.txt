@@ -32,8 +32,11 @@ No members defined
 * The root of the scene
 
 
-### Functions:
-* `Close(Integer) -> ()`: Closes the application
+### Methods:
+* `Close(number) -> ()`: Closes the application with the specified exit code integer or 0
+
+### Events:
+* `OnFrameBegin(number)`: Fires at the beginning of a frame, passing in the time elapsed since the last frame (delta time)
 
 ## `DirectionalLight`
 
@@ -99,8 +102,8 @@ No members defined
 ### Properties:
 * `SourceFile: string`: The File the Script is executing. Changing this to a valid File immediately reloads the Script if it is a descendant of the `DataModel` (i.e. `game`). To forcefully reload it, `:Reload` should be used
 
-### Functions:
-* `Reload() -> (Bool)`: Re-compiles the Source file and runs it from the beginning
+### Methods:
+* `Reload() -> (boolean)`: Re-compiles the Source file and runs it from the beginning, returning whether the compilation and initial run were successful
 
 ## `Sound`
 
@@ -116,6 +119,9 @@ No members defined
 * `SoundFile: string`: The `.wav` file to be played
 * `Speed: number`: The speed at which the sound plays, within the range of 0.01 to 100
 * `Volume: number`: The volume at which the sound plays. Must be positive
+
+### Events:
+* `OnLoaded(boolean)`: Fires when the Sound finishes loading, and whether it loaded successfully or not
 
 ## `SpotLight`
 
@@ -142,6 +148,6 @@ No members defined
 ### Properties:
 * `SceneCamera: GameObject`: The `Camera` the Player sees the world through. If set to `nil`, a *fallback* is created at the origin.
 
-### Functions:
-* `ScreenPointToRay(Array, Double) -> (Vector3)`: Converts the provided X and Y screen coordinates to a world-space vector, with the length provided or `1` by default
+### Methods:
+* `ScreenPointToRay(Array, number) -> (Vector3)`: Converts the provided X and Y screen coordinates to a world-space vector, with the length provided or `1` by default
 

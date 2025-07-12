@@ -3,6 +3,7 @@
 #include <luau/VM/include/lualib.h>
 #include <tracy/Tracy.hpp>
 #include <Luau/Compiler.h>
+#include <format>
 
 #include "component/Script.hpp"
 #include "component/ScriptEngine.hpp"
@@ -119,211 +120,388 @@ static inline ScriptManager ManagerInstance{};
 
 #define LUA_ASSERT(res, err, ...) { if (!(res)) { luaL_errorL(L, err, __VA_ARGS__); } }
 
-static auto api_newobject = [](lua_State* L)
+struct EventSignalData
+{
+	std::pair<EntityComponent, uint32_t> Reflector;
+	Reflection::Event* Event = nullptr;
+};
+
+struct EventConnectionData
+{
+	std::pair<EntityComponent, uint32_t> Reflector;
+	Reflection::Event* Event = nullptr;
+	uint32_t ConnectionId = UINT32_MAX;
+	int ThreadRef = LUA_NOREF;
+	lua_State* L = nullptr;
+};
+
+// modified version of `db_traceback` from `VM/src/ldblib.cpp`
+static void dumpStacktrace(lua_State* L, std::string* Into = nullptr)
+{
+	lua_Debug ar;
+
+	for (int i = 0; lua_getinfo(L, i, "sln", &ar); i++)
 	{
-		GameObject* newObject = GameObject::Create(luaL_checkstring(L, 1));
-		ScriptEngine::L::PushGameObject(L, newObject);
+		std::string line = "[STCK]: from: ";
 
-		return 1;
-	};
-
-static auto api_gameobjindex = [](lua_State* L)
-	{
-		ZoneScopedNC("GameObject.__index", tracy::Color::LightSkyBlue);
-
-		GameObject* obj = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
-		const char* key = luaL_checkstring(L, 2);
-
-		ZoneText(key, strlen(key));
-
-		if (strcmp(key, "Exists") == 0)
-		{
-			// whether or not it exists
-			lua_pushboolean(L, obj ? 1 : 0);
-			return 1;
-		}
-
-		LUA_ASSERT(obj, "Tried to index '%s' of a deleted Game Object (use '.Exists' to check before accessing a member)", key);
-
-		std::pair<EntityComponent, uint32_t> componentHandle;
-
-		if (const Reflection::Property* prop = obj->FindProperty(key, &componentHandle))
-			ScriptEngine::L::PushGenericValue(L, prop->Get(GameObject::ReflectorHandleToPointer(componentHandle)));
-
-		else if (Reflection::Function* func = obj->FindFunction(key, &componentHandle))
-			ScriptEngine::L::PushFunction(L, func, componentHandle);
-
-		else
-		{
-			GameObject* child = obj->FindChild(key);
-
-			if (child)
-				ScriptEngine::L::PushGameObject(L, child);
-			else
-				// 18/05/2025
-				// this is going to be an error because i spent an entire 26 seconds
-				// trying to figure out why something wasnt working
-				luaL_errorL(L, "No child or member '%s' of %s", key, obj->GetFullName().c_str());
-		}
-
-		return 1;
-	};
-
-static auto api_gameobjnewindex = [](lua_State* L)
-	{
-		ZoneScopedNC("GameObject.__newindex", tracy::Color::LightSkyBlue);
-
-		GameObject* obj = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
-		const char* key = luaL_checkstring(L, 2);
-
-		ZoneText(key, strlen(key));
-
-		if (strcmp(key, "Exists") == 0)
-			luaL_errorL(L, "%s", "'Exists' is read-only! - 21/12/2024");
-
-		LUA_ASSERT((obj), "Tried to assign to the '%s' of a deleted Game Object", key);
-
-		if (Reflection::Property* prop = obj->FindProperty(key))
-		{
-			const char* argAsString = luaL_tolstring(L, -1, NULL);
-			const char* argTypeName = luaL_typename(L, -1);
-			// 14/09/2024
-			// Lua what the fuck
-			// Please stop flip-flopping between negative and positive indexes for
-			// stack offsets! What is the point! Why?!
-			lua_Type argType = (lua_Type)lua_type(L, 3);
-			
-			if (!prop->Set)
-				luaL_errorL(L, 
-					"Cannot set Property '%s' to %s '%s' because it is read-only",
-					key, argTypeName, argAsString
-				);
-
-			auto reflToLuaIt = ScriptEngine::ReflectedTypeLuaEquivalent.find(prop->Type);
-
-			if (reflToLuaIt == ScriptEngine::ReflectedTypeLuaEquivalent.end())
-			{
-				const std::string_view& typeName = Reflection::TypeAsString(prop->Type);
-				luaL_errorL(L,
-					"No defined mapping between a '%s' and a Lua type",
-					typeName.data()
-				);
-			}
-
-			lua_Type desiredType = reflToLuaIt->second;
-
-			if (desiredType != argType && (desiredType != LUA_TUSERDATA && argType != LUA_TNIL))
-			{
-				const char* desiredTypeName = lua_typename(L, (int)desiredType);
-				luaL_errorL(L, 
-					"Expected type %s for member '%s', got %s instead",
-					desiredTypeName, key, argTypeName
-				);
-			}
-			else
-			{
-				lua_pushvalue(L, 3);
-
-				Reflection::GenericValue newValue = ScriptEngine::L::LuaValueToGeneric(L);
-
-				try
-				{
-					obj->SetPropertyValue(key, newValue);
-				}
-				catch (std::string err)
-				{
-					luaL_errorL(L, "Error while setting property %s '%s': %s", key, obj->Name.c_str(), err.c_str());
-				}
-			}
-		}
-		else
-		{
-			std::string fullname = obj->GetFullName();
-
-			if (obj->FindChild(key))
-				luaL_errorL(L,
-					"Attempt to set invalid Member '%s' of '%s', although it has a child object with that name",
-					key, fullname.c_str()
-				);
-			else
-				luaL_errorL(L,
-					"Attempt to set invalid Member '%s' of '%s'",
-					key, fullname.c_str()
-				);
-		}
-
-		return 0;
-	};
-
-static auto api_gameobjecttostring = [](lua_State* L)
-	{
-		GameObject* object = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
+		if (ar.source)
+			line.append(ar.short_src);
 		
-		if (object)
-			lua_pushstring(L, object->GetFullName().c_str());
+		if (ar.currentline > 0)
+		{
+			line.append(":");
+			line.append(std::to_string(ar.currentline));
+		}
+
+		if (ar.name)
+		{
+			line.append(" in ");
+			line.append(ar.name);
+		}
+
+		if (!Into)
+			Log::Append(line);
 		else
-			lua_pushstring(L, "<!Deleted GameObject!>");
+		{
+			Into->append(line);
+			Into->append("\n");
+		}
+	}
+}
 
+static void pushSignal(lua_State* L, Reflection::Event* Event, const std::pair<EntityComponent, uint32_t>& Reflector)
+{
+	EventSignalData* ev = (EventSignalData*)lua_newuserdata(L, sizeof(EventSignalData));
+	ev->Reflector = Reflector;
+	ev->Event = Event;
+
+	luaL_getmetatable(L, "EventSignal");
+	lua_setmetatable(L, -2);
+}
+
+static int api_newobject(lua_State* L)
+{
+	GameObject* newObject = GameObject::Create(luaL_checkstring(L, 1));
+	ScriptEngine::L::PushGameObject(L, newObject);
+
+	return 1;
+};
+
+static int api_gameobjindex(lua_State* L)
+{
+	ZoneScopedNC("GameObject.__index", tracy::Color::LightSkyBlue);
+
+	GameObject* obj = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
+	const char* key = luaL_checkstring(L, 2);
+
+	ZoneText(key, strlen(key));
+
+	if (strcmp(key, "Exists") == 0)
+	{
+		// whether or not it exists
+		lua_pushboolean(L, obj ? 1 : 0);
 		return 1;
-	};
+	}
 
-static auto api_newcol = [](lua_State* L)
+	LUA_ASSERT(obj, "Tried to index '%s' of a deleted Game Object (use '.Exists' to check before accessing a member)", key);
+
+	std::pair<EntityComponent, uint32_t> reflectorHandle;
+
+	if (const Reflection::Property* prop = obj->FindProperty(key, &reflectorHandle))
 	{
-		float x = static_cast<float>(luaL_checknumber(L, 1));
-		float y = static_cast<float>(luaL_checknumber(L, 2));
-		float z = static_cast<float>(luaL_checknumber(L, 3));
+		Reflection::GenericValue v = prop->Get(GameObject::ReflectorHandleToPointer(reflectorHandle));
 
-		ScriptEngine::L::PushGenericValue(L, Color(x, y, z).ToGenericValue());
-
-		return 1;
-	};
-
-static auto api_colindex = [](lua_State* L)
-	{
-		Color* vec = (Color*)luaL_checkudata(L, 1, "Color");
-		const char* key = luaL_checkstring(L, 2);
-
-		lua_getglobal(L, "Color");
-		lua_pushstring(L, key);
-		lua_rawget(L, -2);
-
-		// Pass-through to Vector3.new
-		if (!lua_isnil(L, -1))
-			return 1;
-
-		if (strcmp(key, "R") == 0)
-		{
-			lua_pushnumber(L, vec->R);
-			return 1;
-		}
-		else if (strcmp(key, "G") == 0)
-		{
-			lua_pushnumber(L, vec->G);
-			return 1;
-		}
-		else if (strcmp(key, "B") == 0)
-		{
-			lua_pushnumber(L, vec->B);
-			return 1;
-		}
-		else
-			luaL_errorL(L, "Invalid key %s", key);
-	};
-
-static auto api_coltostring = [](lua_State* L)
-	{
-		Color* col = (Color*)luaL_checkudata(L, 1, "Color");
-
-		lua_pushstring(
-			L,
-			std::format(
-				"{}, {}, {}",
-				col->R, col->G, col->B
-			).c_str()
+		assert(
+			(v.Type == prop->Type)
+			|| (v.Type == Reflection::ValueType::Null && prop->Type == Reflection::ValueType::GameObject)
 		);
+		ScriptEngine::L::PushGenericValue(L, v);
+	}
 
+	else if (Reflection::Event* event = obj->FindEvent(key, &reflectorHandle))
+		pushSignal(L, event, reflectorHandle);
+
+	else if (Reflection::Function* func = obj->FindFunction(key, &reflectorHandle))
+		ScriptEngine::L::PushFunction(L, func, reflectorHandle);
+
+	else
+	{
+		GameObject* child = obj->FindChild(key);
+
+		if (child)
+			ScriptEngine::L::PushGameObject(L, child);
+		else
+			// 18/05/2025
+			// this is going to be an error because i spent an entire 26 seconds
+			// trying to figure out why something wasnt working
+			luaL_errorL(L, "No child or member '%s' of %s", key, obj->GetFullName().c_str());
+	}
+
+	return 1;
+};
+
+static int api_gameobjnewindex(lua_State* L)
+{
+	ZoneScopedNC("GameObject.__newindex", tracy::Color::LightSkyBlue);
+
+	GameObject* obj = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
+	const char* key = luaL_checkstring(L, 2);
+
+	ZoneText(key, strlen(key));
+
+	if (strcmp(key, "Exists") == 0)
+		luaL_errorL(L, "%s", "'Exists' is read-only! - 21/12/2024");
+
+	LUA_ASSERT((obj), "Tried to assign to the '%s' of a deleted Game Object", key);
+
+	if (Reflection::Property* prop = obj->FindProperty(key))
+	{
+		const char* argAsString = luaL_tolstring(L, -1, NULL);
+		const char* argTypeName = luaL_typename(L, -1);
+		// 14/09/2024
+		// Lua what the fuck
+		// Please stop flip-flopping between negative and positive indexes for
+		// stack offsets! What is the point! Why?!
+		lua_Type argType = (lua_Type)lua_type(L, 3);
+		
+		if (!prop->Set)
+			luaL_errorL(L, 
+				"Cannot set Property '%s' to %s '%s' because it is read-only",
+				key, argTypeName, argAsString
+			);
+		
+		auto reflToLuaIt = ScriptEngine::ReflectedTypeLuaEquivalent.find(prop->Type);
+
+		if (reflToLuaIt == ScriptEngine::ReflectedTypeLuaEquivalent.end())
+		{
+			const std::string_view& typeName = Reflection::TypeAsString(prop->Type);
+			luaL_errorL(L,
+				"No defined mapping between a '%s' and a Lua type",
+				typeName.data()
+			);
+		}
+	
+		lua_Type desiredType = reflToLuaIt->second;
+	
+		if (desiredType != argType && (desiredType != LUA_TUSERDATA && argType != LUA_TNIL))
+		{
+			const char* desiredTypeName = lua_typename(L, (int)desiredType);
+			luaL_errorL(L, 
+				"Expected type %s for member '%s', got %s instead",
+				desiredTypeName, key, argTypeName
+			);
+		}
+		else
+		{
+			lua_pushvalue(L, 3);
+		
+			Reflection::GenericValue newValue = ScriptEngine::L::LuaValueToGeneric(L);
+		
+			try
+			{
+				obj->SetPropertyValue(key, newValue);
+			}
+			catch (std::string err)
+			{
+				luaL_errorL(L, "Error while setting property %s '%s': %s", key, obj->Name.c_str(), err.c_str());
+			}
+		}
+	}
+	else
+	{
+		std::string fullname = obj->GetFullName();
+	
+		if (obj->FindChild(key))
+			luaL_errorL(L,
+				"Attempt to set invalid Member '%s' of '%s', although it has a child object with that name",
+				key, fullname.c_str()
+			);
+		else
+			luaL_errorL(L,
+				"Attempt to set invalid Member '%s' of '%s'",
+				key, fullname.c_str()
+			);
+	}
+
+	return 0;
+};
+
+static int api_gameobjecttostring(lua_State* L)
+{
+	GameObject* object = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
+	
+	if (object)
+		lua_pushstring(L, object->GetFullName().c_str());
+	else
+		lua_pushstring(L, "<!Deleted GameObject!>");
+
+	return 1;
+};
+
+static int api_newcol(lua_State* L)
+{
+	float x = static_cast<float>(luaL_checknumber(L, 1));
+	float y = static_cast<float>(luaL_checknumber(L, 2));
+	float z = static_cast<float>(luaL_checknumber(L, 3));
+
+	ScriptEngine::L::PushGenericValue(L, Color(x, y, z).ToGenericValue());
+
+	return 1;
+};
+
+static int api_colindex(lua_State* L)
+{
+	Color* vec = (Color*)luaL_checkudata(L, 1, "Color");
+	const char* key = luaL_checkstring(L, 2);
+
+	lua_getglobal(L, "Color");
+	lua_pushstring(L, key);
+	lua_rawget(L, -2);
+
+	// Pass-through to Vector3.new
+	if (!lua_isnil(L, -1))
 		return 1;
-	};
+
+	if (strcmp(key, "R") == 0)
+	{
+		lua_pushnumber(L, vec->R);
+		return 1;
+	}
+	else if (strcmp(key, "G") == 0)
+	{
+		lua_pushnumber(L, vec->G);
+		return 1;
+	}
+	else if (strcmp(key, "B") == 0)
+	{
+		lua_pushnumber(L, vec->B);
+		return 1;
+	}
+	else
+		luaL_errorL(L, "Invalid key %s", key);
+};
+
+static int api_coltostring(lua_State* L)
+{
+	Color* col = (Color*)luaL_checkudata(L, 1, "Color");
+
+	lua_pushstring(
+		L,
+		std::format(
+			"{}, {}, {}",
+			col->R, col->G, col->B
+		).c_str()
+	);
+
+	return 1;
+};
+
+static int api_eventnamecall(lua_State* L)
+{
+	if (strcmp(L->namecall->data, "Connect") == 0)
+	{
+		luaL_argcheck(L, lua_isfunction(L, 2), 2, "expected function");
+
+		EventSignalData* ev = (EventSignalData*)luaL_checkudata(L, 1, "EventSignal");
+		Reflection::Event* rev = ev->Event;
+	
+		lua_State* eL = lua_newthread(L);
+		lua_xpush(L, eL, 2);
+	
+		int threadRef = lua_ref(L, -1);
+	
+		// store the location for `lprint` etc
+		// only useful if we have NO OTHER STACK FRAMES
+		// aka for something like
+		// `game.OnFrameBegin:Connect(print)`
+		lua_Debug ar;
+		lua_getinfo(L, 1, "sl", &ar);
+		std::string str = std::format("[S{}:{}]", ar.short_src, ar.currentline);
+	
+		lua_pushlightuserdata(L, eL);
+		lua_pushstring(L, str.c_str());
+		lua_settable(L, LUA_ENVIRONINDEX);
+	
+		uint32_t cnId = rev->Connect(
+			GameObject::ReflectorHandleToPointer(ev->Reflector),
+		
+			[eL, rev](const std::vector<Reflection::GenericValue>& Inputs)
+			-> void
+			{
+				assert(Inputs.size() == rev->CallbackInputs.size());
+				luaL_checkstack(eL, Inputs.size(), "event connection");
+			
+				// push our callback back to the top of the stack first
+				lua_pushvalue(eL, 1);
+			
+				for (size_t i = 0; i < Inputs.size(); i++)
+				{
+					assert(Inputs[i].Type == rev->CallbackInputs[i]);
+					ScriptEngine::L::PushGenericValue(eL, Inputs[i]);
+				}
+			
+				int status = lua_pcall(eL, Inputs.size(), 0, 0);
+			
+				if (status != LUA_OK)
+				{
+					Log::Error(std::format("Script event: {}", lua_tostring(eL, -1)));
+					dumpStacktrace(eL);
+				}
+			}
+		);
+	
+		EventConnectionData* ec = (EventConnectionData*)lua_newuserdata(L, sizeof(EventConnectionData));
+		ec->Reflector = ev->Reflector;
+		ec->ThreadRef = threadRef;
+		ec->ConnectionId = cnId;
+		ec->Event = ev->Event;
+		ec->L = L;
+	
+		luaL_getmetatable(L, "EventConnection");
+		lua_setmetatable(L, -2);
+	
+		return 1;
+	}
+	else
+		luaL_error(L, "No such method of Event Signal known as '%s'", L->namecall->data);
+}
+
+static int api_evconnectionindex(lua_State* L)
+{
+	const char* k = luaL_checkstring(L, 2);
+	EventConnectionData* ec = (EventConnectionData*)luaL_checkudata(L, 1, "EventConnection");
+
+	if (strcmp(k, "Connected") == 0)
+		lua_pushboolean(L, ec->ConnectionId != UINT32_MAX);
+
+	else if (strcmp(k, "Signal") == 0)
+		pushSignal(L, ec->Event, ec->Reflector);
+
+	else
+		luaL_error(L, "Invalid member '%s' of Event Connection", k);
+				
+	return 1;
+}
+
+static int api_evconnectionnamecall(lua_State* L)
+{
+	if (strcmp(L->namecall->data, "Disconnect") == 0)
+	{
+		EventConnectionData* ec = (EventConnectionData*)luaL_checkudata(L, 1, "EventConnection");
+
+		if (ec->ConnectionId == UINT32_MAX)
+			luaL_error(L, "Event Connection was already disconnected!");
+
+		ec->Event->Disconnect(GameObject::ReflectorHandleToPointer(ec->Reflector), ec->ConnectionId);
+		ec->ConnectionId = UINT32_MAX;
+
+		lua_unref(ec->L, ec->ThreadRef);
+	}
+	else
+		luaL_error(L, "No such method of Event Connection known as '%s'", L->namecall->data);
+	
+	return 0;
+}
 
 static void* l_alloc(void*, void* ptr, size_t, size_t nsize)
 {
@@ -333,6 +511,49 @@ static void* l_alloc(void*, void* ptr, size_t, size_t nsize)
 	}
 	else
 		return Memory::ReAlloc(ptr, nsize, Memory::Category::Luau);
+}
+
+static int lprint(lua_State* L)
+{
+	// FROM:
+	// `luaB_print`
+	// `Luau/VM/src/lbaselib.cpp`
+	// 11/11/2024
+
+	if (lua_Debug ar; lua_getinfo(L, 1, "sl", &ar))
+		Log::Info("&&", std::format("[S{}:{}]", ar.short_src, ar.currentline));
+
+	else
+	{
+		lua_pushlightuserdata(L, L);
+		lua_rawget(L, LUA_ENVIRONINDEX);
+
+		if (lua_isstring(L, -1))
+		{
+			Log::Info("&&", lua_tostring(L, -1));
+			lua_pop(L, 1);
+		}
+		else
+			Log::Warning("Could not `lua_getinfo` for the following Luau log:");
+	}
+
+	int n = lua_gettop(L); // number of arguments
+	for (int i = 1; i <= n; i++)
+	{
+		size_t l;
+		const char* s = luaL_tolstring(L, i, &l); // convert to string using __tostring et al
+	
+		if (i > 1)
+			Log::Append(" &&");
+		else
+			Log::Append("&&");
+	
+		Log::Append(std::string(s) + "&&");
+		lua_pop(L, 1); // pop result
+	}
+	Log::Append("\n&&");
+
+	return 0;
 }
 
 static lua_State* createVM()
@@ -347,39 +568,7 @@ static lua_State* createVM()
 	// override std `print` to use logging system
 	lua_pushcfunction(
 		state,
-		[](lua_State* L)
-		{
-			// FROM:
-			// `luaB_print`
-			// `Luau/VM/src/lbaselib.cpp`
-			// 11/11/2024
-
-			if (lua_Debug ar; lua_getinfo(L, 1, "sl", &ar))
-			{
-				std::string extraTag = std::format("[S{}:{}]", ar.short_src, ar.currentline);
-				Log::Info("&&", extraTag);
-			}
-			else
-				Log::Warning("Could not `lua_getinfo` for the following Luau log:");
-
-			int n = lua_gettop(L); // number of arguments
-			for (int i = 1; i <= n; i++)
-			{
-				size_t l;
-				const char* s = luaL_tolstring(L, i, &l); // convert to string using __tostring et al
-
-				if (i > 1)
-					Log::Append(" &&");
-				else
-					Log::Append("&&");
-
-				Log::Append(std::string(s) + "&&");
-				lua_pop(L, 1); // pop result
-			}
-			Log::Append("\n&&");
-
-			return 0;
-		},
+		lprint,
 		"PhxPrintOverride"
 	);
 	lua_setglobal(state, "print");
@@ -639,6 +828,43 @@ static lua_State* createVM()
 		lua_setfield(state, -2, "__type");
 	}
 
+	// Event Signal
+	{
+		luaL_newmetatable(state, "EventSignal");
+
+		lua_pushcfunction(
+			state,
+			api_eventnamecall,
+			"EventSignal.__namecall"
+		);
+		lua_setfield(state, -2, "__namecall");
+
+		lua_pushstring(state, "EventSignal");
+		lua_setfield(state, -2, "__type");
+	}
+
+	// Event Connection
+	{
+		luaL_newmetatable(state, "EventConnection");
+
+		lua_pushcfunction(
+			state,
+			api_evconnectionnamecall,
+			"EventConnection.__namecall"
+		);
+		lua_setfield(state, -2, "__namecall");
+
+		lua_pushcfunction(
+			state,
+			api_evconnectionindex,
+			"EventConnection.__index"
+		);
+		lua_setfield(state, -2, "__index");
+
+		lua_pushstring(state, "EventConnection");
+		lua_setfield(state, -2, "__type");
+	}
+
 	ScriptEngine::L::PushGameObject(state, GameObject::GetObjectById(GameObject::s_DataModel));
 	lua_setglobal(state, "game");
 
@@ -691,41 +917,6 @@ static lua_State* createVM()
 	}
 
 	return state;
-}
-
-// modified version of `db_traceback` from `VM/src/ldblib.cpp`
-static void dumpStacktrace(lua_State* L)
-{
-	lua_Debug ar;
-
-	for (int i = 1; lua_getinfo(L, i, "sln", &ar); i++)
-	{
-		std::string line = "[STCK]: from: ";
-
-		if (strcmp(ar.what, "C") == 0)
-		{
-			line.append("[C]");
-			Log::Append(line);
-			continue;
-		}
-
-		if (ar.source)
-			line.append(ar.short_src);
-		
-		if (ar.currentline > 0)
-		{
-			line.append(":");
-			line.append(std::to_string(ar.currentline));
-		}
-
-		if (ar.name)
-		{
-			line.append(" in ");
-			line.append(ar.name);
-		}
-
-		Log::Append(line);
-	}
 }
 
 static bool shouldResume_Scheduled(
@@ -871,59 +1062,7 @@ void EcScript::Update(double dt)
 	ZoneTextF("Script: %s\nFile: %s", fullname.c_str(), this->SourceFile.c_str());
 
 	if (m_StaleSource)
-	{
 		this->Reload();
-		return;
-	}
-
-	// script has failed to load (compilation error) 07/11/2024
-	if (!m_L)
-		return;
-
-	if (lua_status(m_L) != LUA_OK)
-		return;
-	
-	luaL_checkstack(m_L, 4, NULL);
-
-	lua_getglobal(m_L, "Update");
-
-	if (lua_isfunction(m_L, -1))
-	{
-		lua_State* co = lua_newthread(m_L);
-
-		lua_getglobal(co, "Update");
-		lua_pushnumber(co, dt);
-
-		// why do all of these functions say they return `int` and not
-		// `lua_Status` like they actually do? 23/09/2024
-		int updateStatus = lua_resume(co, m_L, 1);
-
-		// 10/04/2025
-		// maybe `this` will eventually be a (for example) Ref<EcScript> in the future
-		// so i don't have to do this bs
-		EcScript* after = static_cast<EcScript*>(ManagerInstance.GetComponent(ecId));
-
-		if (updateStatus != LUA_OK && updateStatus != LUA_YIELD)
-		{
-			const char* errstr = lua_tostring(co, -1);
-
-			Log::Error(std::format(
-				"Script tick: {}",
-				errstr
-			));
-			dumpStacktrace(co);
-
-			lua_resetthread(co);
-			after->m_L = nullptr;
-		}
-		else if (updateStatus == LUA_OK)
-		{
-			lua_resetthread(co);
-			lua_pop(after->m_L, 2);
-		}
-	}
-	else
-		lua_pop(m_L, 1);
 }
 
 bool EcScript::LoadScript(const std::string_view& scriptFile)

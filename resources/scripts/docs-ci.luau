@@ -78,6 +78,14 @@ local rtol = {
 	String = "string"
 }
 
+local function rtolsub(str)
+	for p, s in rtol do
+		str = string.gsub(str, p, s)
+	end
+	
+	return str
+end
+
 local function count(t)
 	local n = 0
 	for _, _ in t do
@@ -89,10 +97,11 @@ end
 local function dumpReflectionApi(t, d, cn)
 	local hasProps = t.Properties and (count(t.Properties) > 0)
 	local hasFuncs = t.Functions and (count(t.Functions) > 0)
+	local hasEvnts = t.Events and (count(t.Events) > 0)
 	
 	local s = ""
 	
-	if hasProps or hasFuncs then
+	if hasProps or hasFuncs or hasEvnts then
 		if hasProps then
 			s = "### Properties:\n"
 			
@@ -103,7 +112,7 @@ local function dumpReflectionApi(t, d, cn)
 				local v = t.Properties[n]
 				
 				if not d.Properties or not d.Properties[n] then
-					print(`Missing doc comment for '{ cn }.{ n }'`)
+					print(`Missing doc comment for Property '{ cn }.{ n }'`)
 					continue
 				end
 				
@@ -112,7 +121,7 @@ local function dumpReflectionApi(t, d, cn)
 		end
 		
 		if hasFuncs then
-			s ..= "\n### Functions:\n"
+			s ..= "\n### Methods:\n"
 			
 			local orderedFuncs = keysOf(t.Functions)
 			table.sort(orderedFuncs)
@@ -121,11 +130,29 @@ local function dumpReflectionApi(t, d, cn)
 				local v = t.Functions[n]
 				
 				if not d.Functions or not d.Functions[n] then
-					print(`Missing doc comment for '{ cn }:{ n }'`)
+					print(`Missing doc comment for Method '{ cn }:{ n }'`)
 					continue
 				end
 				
-				s ..= `* \`{ n }{ v }\`: { d.Functions[n] }\n`
+				s ..= `* \`{ n }{ rtolsub(v) }\`: { d.Functions[n] }\n`
+			end
+		end
+		
+		if hasEvnts then
+			s..= "\n### Events:\n"
+			
+			local orderedEvents = keysOf(t.Events)
+			table.sort(orderedEvents)
+			
+			for _, n in orderedEvents do
+				local v = t.Events[n]
+				
+				if not d.Events or not d.Events[n] then
+					print(`Missing doc comment for Event '{ cn }.{ n }'`)
+					continue
+				end
+				
+				s ..= `* \`{ n }{ rtolsub(v) }\`: { d.Events[n] }\n`
 			end
 		end
 	else

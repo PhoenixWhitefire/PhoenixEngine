@@ -31,7 +31,7 @@ local function loadSubLevel(Path)
 	end
 end
 
-function Update()
+local function update()
 	if imgui_begin("Model Importer") then
 		ModelImporterScale = imgui_input_float("Scale", ModelImporterScale)
 
@@ -180,7 +180,7 @@ end
 loadSubLevel(DefaultSubLevel)
 
 if not conf_get("Developer") then
-	Update = function()
+	update = function()
 		if input_keypressed('m') then
 			local sweeping = GameObject.new("Script")
 			sweeping.SourceFile = "scripts/minesweeper.luau"
@@ -193,4 +193,6 @@ if not conf_get("Developer") then
 		end
 	end
 end
+
+game.OnFrameBegin:Connect(update)
 
