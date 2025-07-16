@@ -418,6 +418,7 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 
 			newResourceId = this->Assign({ ActualPath, UINT32_MAX, newGpuId }, Path);
 			newTexture = &this->GetTextureResource(newResourceId);
+			newTexture->DoBilinearSmoothing = DoBilinearSmoothing;
 
 			glBindTexture(GL_TEXTURE_2D, newTexture->GpuId);
 
@@ -496,7 +497,10 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 
 Texture& TextureManager::GetTextureResource(uint32_t ResourceId)
 {
-	return m_Textures.at(ResourceId);
+	if (ResourceId < m_Textures.size())
+		return m_Textures.at(ResourceId);
+	else
+		return m_Textures[1];
 }
 
 void TextureManager::FinalizeAsyncLoadedTextures()

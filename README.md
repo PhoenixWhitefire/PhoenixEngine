@@ -44,6 +44,8 @@ Intended to be compatible with both Windows and Linux/Ubuntu.
     
     By the end, you should have a binary at the location `Vendor/tracy/profiler/build/tracy-profiler`.
 
+<img src="doc-assets/infooverload.png"/>
+
 # Attributions
 
 All 3rd-party code and submodules are located in the `Vendor` directory.
@@ -66,3 +68,6 @@ Initially, this started out as a 1-to-1 follow-along of what he did, but I rewro
 
 Additionally, I referred to ["Dave Poo"'s C++ Lua embedding tutorials](https://www.youtube.com/watch?v=xrLQ0OXfjaI&list=PLLwK93hM93Z3nhfJyRRWGRXHaXgNX0Itk) while adding the Luau scripting capabilities.
 
+End of README.
+
+<img src="doc-assets/texteditorclose.png">

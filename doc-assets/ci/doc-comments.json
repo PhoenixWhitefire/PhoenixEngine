@@ -66,7 +66,7 @@
         "Properties": {
           "AngularVelocity": "Its rotational velocity",
           "Asset": "The path to the underlying `.hxmesh` file, or a built-in identifier like `!Quad` or `!Cube`",
-          "CastsShadows": "Bool",
+          "CastsShadows": "Whether it casts shadows (not functional currently)",
           "CollisionFidelity": "0 - `Aabb`: An axis-aligned bounding box. 1 - `AabbStaticSize`: An AABB which keeps the same size as the Object",
           "Density": "Its density (`Mass = Density * Size`)",
           "FaceCulling": "An integer. `0` means no culling, `1` to cull its \"back\" faces, and `2` to cull its \"front\" faces",
@@ -120,7 +120,7 @@
           "Looped": "Whether playback should loop once it reaches the end",
           "Playing": "Whether the Sound is currently playing (or requested to play, if `.Playing` is set to `true` by a `Script` before it has finished loading)",
           "Position": "Number of seconds from beginning of the file",
-          "SoundFile": "The `.wav` file to be played",
+          "SoundFile": "The sound file to be played",
           "Speed": "The speed at which the sound plays, within the range of 0.01 to 100",
           "Volume": "The volume at which the sound plays. Must be positive"
         },
@@ -139,6 +139,7 @@
         }
       },
       "Transform": {
+        "Description": "Gives a physical position and size to Object",
         "Properties": {
           "Size": "The Size of the Object influenced by the Component",
           "Transform": "The Transformation of the Object from the World"

@@ -54,7 +54,7 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 #ifdef NDEBUG
 
 #define PHX_MAIN_CRASHHANDLERS                                                   \
-PHX_MAIN_HANDLECRASH(std::string)                                                \
+PHX_MAIN_HANDLECRASH(const std::string&)                                         \
 PHX_MAIN_HANDLECRASH(std::string_view)                                           \
 PHX_MAIN_HANDLECRASH(const char*)                                                \
 catch (const std::bad_alloc& AllocError)                                         \
@@ -526,13 +526,13 @@ static void drawDeveloperUI(double DeltaTime)
 		}
 		else if (ImGui::Button("pause"))
 				AreGraphsPaused = true;
-		
-		ImGui::SetCursorPosY(ImGui::GetCursorPosY() - style.FramePadding.y);
 
 		ImGui::SameLine();
+		ImGui::SetCursorPosY(ImGui::GetCursorPosY() - style.FramePadding.y);
+
 		ImGui::Text("graphs");
 		
-		if (GuiIO->WantCaptureMouse && SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON_RMASK)
+		if (GuiIO->WantCaptureMouse && (SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON_RMASK))
 		{
 			if (!WasRmbPressed)
 				AreGraphsPaused = !AreGraphsPaused;
@@ -704,16 +704,10 @@ static void drawDeveloperUI(double DeltaTime)
 		if (postFxEnabled)
 		{
 			float gammaCorrection = EngineJsonConfig.value("postfx_gamma", 1.f);
-			float trldmax = EngineJsonConfig.value("postfx_ldmax", 1.f);
-			float trcmax = EngineJsonConfig.value("postfx_cmax", 1.f);
 
 			ImGui::InputFloat("Gamma", &gammaCorrection);
-			ImGui::InputFloat("Tonemapper LdMax", &trldmax);
-			ImGui::InputFloat("Tonemapper CMax", &trcmax);
 
 			EngineJsonConfig["postfx_gamma"] = gammaCorrection;
-			EngineJsonConfig["postfx_ldmax"] = trldmax;
-			EngineJsonConfig["postfx_cmax"] = trcmax;
 
 			bool blurVignette = EngineJsonConfig.value("postfx_blurvignette", false);
 			bool distortion = EngineJsonConfig.value("postfx_distortion", false);
@@ -856,20 +850,12 @@ static void init(int argc, char** argv)
 
 	PHX_ENSURE_MSG(!roots.empty(), "No root objects in World!");
 
-	GameObject* root = roots[0].Contained();
+	GameObjectRef root = roots[0];
 	root->IncrementHardRefs();
 
 	PHX_ENSURE_MSG(root->GetComponent<EcDataModel>(), "Root Object was not a DataModel!");
 
-	Log::Info("Merging Root Scene with active Data Model...");
-
-	EngineInstance->DataModel->MergeWith(root);
-
-	for (GameObjectRef& r : roots)
-		r.Invalidate(); // fml 24/05/2025
-
-	//roots.clear();
-	//root->DecrementHardRefs(); // i'm dogshit at programming
+	EngineInstance->DataModel = root;
 }
 
 static void processCliArgs(int argc, char** argv)

@@ -301,9 +301,9 @@ static int api_gameobjnewindex(lua_State* L)
 			{
 				obj->SetPropertyValue(key, newValue);
 			}
-			catch (std::string err)
+			catch (const std::runtime_error& err)
 			{
-				luaL_errorL(L, "Error while setting property %s '%s': %s", key, obj->Name.c_str(), err.c_str());
+				luaL_errorL(L, "Error while setting property %s '%s': %s", key, obj->Name.c_str(), err.what());
 			}
 		}
 	}
@@ -806,9 +806,9 @@ static lua_State* createVM()
 						reflectorHandle
 					);
 				}
-				catch (std::string err)
+				catch (const std::runtime_error& err)
 				{
-					luaL_errorL(L, "Error while invoking method '%s' of %s: %s", k, g->GetFullName().c_str(), err.c_str());
+					luaL_errorL(L, "Error while invoking method '%s' of %s: %s", k, g->GetFullName().c_str(), err.what());
 				}
 
 				return numresults;
@@ -904,9 +904,9 @@ static lua_State* createVM()
 							nargs
 						);
 				}
-				catch (std::string e)
+				catch (const std::runtime_error& e)
 				{
-					luaL_errorL(L, "Error while invoking global function '%s': %s", fnName, e.c_str());
+					luaL_errorL(L, "Error while invoking global function '%s': %s", fnName, e.what());
 				}
 
 			},

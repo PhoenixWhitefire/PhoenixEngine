@@ -23,8 +23,6 @@ uniform float BlurVignetteDistExp = 16.f;
 uniform int BlurVignetteSampleRadius = 4;
 
 uniform float Gamma = 1.f;
-uniform float LdMax = .5f;
-uniform float ContrastMax = .9f;
 
 uniform float Time = 0.f;
 

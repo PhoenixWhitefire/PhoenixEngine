@@ -45,6 +45,8 @@ static nlohmann::json DefaultNewMaterial =
 	{ "specMultiply", 0.5f }
 };
 
+static nlohmann::json ObjectDocCommentsJson;
+
 static std::unordered_map<std::string, std::string> ClassIcons{};
 
 static GpuFrameBuffer MtlEditorPreview;
@@ -109,6 +111,30 @@ void InlayEditor::Initialize(Renderer* renderer)
 	EcCamera* cc = MtlPreviewCamera->GetComponent<EcCamera>();
 	cc->Transform = MtlPreviewCamDefaultRotation * MtlPreviewCamOffset;
 	cc->FieldOfView = 50.f;
+
+	nlohmann::json docComments;
+
+	try
+	{
+		docComments = nlohmann::json::parse(FileRW::ReadFile("./doc-assets/ci/doc-comments.json"));
+	}
+	catch (const nlohmann::json::parse_error& Err)
+	{
+		Log::Error(std::format("Parse error reading doc comments for Editor: {}", Err.what()));
+	}
+
+	if (!docComments.is_null())
+	{
+		ObjectDocCommentsJson = docComments["GameObject"];
+		
+		if (ObjectDocCommentsJson.is_null())
+		{
+			Log::Error("`doc-comments.json` malformed");
+
+			ObjectDocCommentsJson["Base"] = {};
+			ObjectDocCommentsJson["Components"] = {};
+		}
+	}
 
 	InlayEditor::DidInitialize = true;
 }
@@ -1080,14 +1106,9 @@ static void onTreeItemClicked(GameObject* nodeClicked)
 				if (GameObject* g = GameObject::GetObjectById(selId))
 					g->SetPropertyValue(PickerTargetPropName, nodeClicked->ToGenericValue());
 		}
-		catch (std::string Err)
+		catch (const std::runtime_error& Error)
 		{
-			ErrorTooltipMessage = Err.c_str();
-			ErrorTooltipTimeRemaining = 5.f;
-		}
-		catch (const char* Err)
-		{
-			ErrorTooltipMessage = Err;
+			ErrorTooltipMessage = Error.what();
 			ErrorTooltipTimeRemaining = 5.f;
 		}
 
@@ -1197,12 +1218,12 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 			primaryComponent = object->GetComponents()[1];
 
 		std::string classIconPath = "textures/editor-icons/" + std::string(s_EntityComponentNames[(size_t)primaryComponent.first]) + ".png";
-		Texture& tex = texManager->GetTextureResource(texManager->LoadTextureFromPath(classIconPath));
+		Texture& tex = texManager->GetTextureResource(texManager->LoadTextureFromPath(classIconPath, true, false));
 
 		if (tex.Status == Texture::LoadStatus::Failed && tex.ImagePath.find("fallback") == std::string::npos)
 		{
 			const std::string& fallbackPath = "texture/editor-icons/fallback.png";
-			Texture& fallback = texManager->GetTextureResource(texManager->LoadTextureFromPath(fallbackPath));
+			Texture& fallback = texManager->GetTextureResource(texManager->LoadTextureFromPath(fallbackPath, true, false));
 			texManager->Assign(fallback, classIconPath);
 			tex = fallback;
 		}
@@ -1304,7 +1325,37 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 
 				// skip `<NONE>`
 				for (size_t i = 1; i < (size_t)EntityComponent::__count; i++)
-					if (ImGui::MenuItem(s_EntityComponentNames[i].data()))
+				{
+					std::string_view name = s_EntityComponentNames[i];
+					std::string tooltip;
+
+					bool clicked = ImGui::MenuItem(name.data());
+
+					if (ImGui::IsItemHovered())
+					{
+						if (const auto& it = ObjectDocCommentsJson["Components"].find(name);
+							(it != ObjectDocCommentsJson["Components"].end() && it.value().is_object())
+						)
+						{
+							const auto& desc = it.value()["Description"];
+
+							if (desc.is_string())
+								tooltip = desc;
+
+							else if (desc.is_array())
+							{
+								for (size_t i = 0; i < desc.size(); i++)
+									tooltip += std::string(desc[i]) + "\n";
+								
+								tooltip = tooltip.substr(0, tooltip.size() - 1);
+							}
+						}
+					}
+
+					if (tooltip.size() > 1)
+						ImGui::SetItemTooltip("%s", tooltip.c_str());
+
+					if (clicked)
 					{
 						GameObject* newObject = GameObject::Create(s_EntityComponentNames[i]);
 						newObject->SetParent(ObjectInsertionTarget);
@@ -1312,6 +1363,7 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 
 						ObjectInsertionTarget = nullptr;
 					}
+				}
 
 				InsertObjectButtonHoveredOver = nullptr;
 
@@ -1339,6 +1391,123 @@ static bool resetConflictedProperty(const char* PropName, char* Buf = nullptr)
 	ImGui::SetItemTooltip("Start typing here to reset this conflicting property to a default");
 
 	return reset;
+}
+
+static void propertyTooltip(const std::string_view& PropName, bool IsObjectProp = false)
+{
+	static std::unordered_map<std::string, std::string> PropTips;
+
+	if (ImGui::IsItemHovered() && !ImGui::GetIO().WantCaptureKeyboard)
+	{
+		std::string PropNameStr{ PropName };
+
+		auto pcit = PropTips.find(PropNameStr);
+
+		if (pcit == PropTips.end())
+		{
+			auto it = ObjectDocCommentsJson["Base"]["Properties"].find(PropNameStr);
+			bool found = it != ObjectDocCommentsJson["Base"]["Properties"].end();
+
+			if (!found)
+			{
+				for (auto cit = ObjectDocCommentsJson["Components"].begin();
+					cit != ObjectDocCommentsJson["Components"].end();
+					cit++
+				)
+				{
+					it = cit.value()["Properties"].find(PropNameStr);
+				
+					if (it != cit.value()["Properties"].end())
+					{
+						found = true;
+						break;
+					}
+				}
+			}
+
+			if (found)
+			{
+				std::string tip = it.value();
+				constexpr size_t MaxCharactersBeforeNewline = 75;
+				int64_t naturalMaxCharactersPerLine = (size_t)MaxCharactersBeforeNewline;
+
+				if (tip.size() > MaxCharactersBeforeNewline)
+				{
+					size_t longestWithoutNewline = tip.find('\n');
+					int64_t lineOffset = 0;
+
+					while (longestWithoutNewline > (size_t)naturalMaxCharactersPerLine)
+					{
+						size_t nearest = std::string::npos;
+						int64_t nearestDistance = naturalMaxCharactersPerLine / 2;
+						int64_t targetSplitPoint = lineOffset + naturalMaxCharactersPerLine;
+
+						for (int64_t i = 0; i < (int64_t)tip.size(); i++)
+						{
+							char c = tip[i];
+
+							if (c == ' ' && tip.size() - i > (size_t)naturalMaxCharactersPerLine / 4)
+							{
+								int64_t distance = std::abs(i - targetSplitPoint);
+
+								if (distance < nearestDistance
+									// prefer cutting forward
+									|| (std::abs(distance - nearestDistance) < 4 && i > (int64_t)nearest)
+								)
+								{
+									nearest = i;
+									nearestDistance = distance;
+								}
+							}
+							else if (tip[i + 1] == ' ' &&
+								(c == '.' || c == ',' || c == ';' || c == ':' || c == '!' || c == '-' || c == '?' || c == ')')
+							)
+							{
+								int64_t distance = std::abs(i - targetSplitPoint);
+								distance -= 4; // DISTANCE CANNOT BE UNSIGNED
+
+								if (distance < nearestDistance)
+								{
+									nearest = i + 1; // replace the proceeding space instead of removing punctuation
+									nearestDistance = distance;
+								}
+							}
+						}
+
+						if (nearest == std::string::npos)
+							break;
+
+						tip[nearest] = '\n';
+						lineOffset += nearest;
+						longestWithoutNewline = std::string_view(tip.begin() + nearest + 1, tip.end()).find('\n');
+
+						// if we end up creating a line that's longer than `MaxCharactersBeforeNewline`,
+						// (due to long words etc), align to that instead
+						int64_t newNaturalMaxCharactersPerLine = 0;
+						for (size_t i = 0; i < nearest; i++)
+						{
+							newNaturalMaxCharactersPerLine++;
+
+							if (tip[i] == '\n')
+								newNaturalMaxCharactersPerLine = 0;
+						}
+
+						naturalMaxCharactersPerLine = std::max(naturalMaxCharactersPerLine, newNaturalMaxCharactersPerLine);
+					} 
+				}
+
+				PropTips[PropNameStr] = tip;
+				pcit = PropTips.find(PropNameStr);
+			}
+		}
+
+		std::string fulltip = IsObjectProp ? "\n(CTRL+Click to select)" : "";
+		
+		if (pcit != PropTips.end())
+			fulltip = pcit->second + fulltip;
+
+		ImGui::SetItemTooltip("%s", fulltip.data());
+	}
 }
 
 void InlayEditor::UpdateAndRender(double DeltaTime)
@@ -1511,6 +1680,8 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 							ImGui::Text("%s: %s", propNameCStr, curValStr.c_str());
 				}
 
+				propertyTooltip(propName);
+
 				continue;
 			}
 
@@ -1616,7 +1787,6 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 						str = referenced->Name;
 
 					ImGui::InputText(propNameCStr, &str);
-					ImGui::SetItemTooltip("CTRL+Click to select referenced GameObject 03/12/2024");
 
 					if (ImGui::IsItemClicked())
 					{
@@ -1690,6 +1860,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 					glm::mat4 mat = curVal.AsMatrix();
 
 					ImGui::Text("%s:", propNameCStr);
+					propertyTooltip(propName);
 
 					float pos[3] =
 					{
@@ -1718,10 +1889,11 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 					ImGui::Indent();
 
 					ImGui::InputFloat3("Position", pos);
+					propertyTooltip(propName);
 					valueWasEditedManual = ImGui::IsItemEdited();
 
 					ImGui::InputFloat3("Rotation", rotdegs);
-
+					propertyTooltip(propName);
 					ImGui::Unindent();
 
 					mat = glm::mat4(1.f);
@@ -1763,16 +1935,15 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 					for (uint32_t selId : Selections)
 						GameObject::GetObjectById(selId)->SetPropertyValue(propName, newVal);
 				}
-				catch (std::string err)
+				catch (const std::runtime_error& Err)
 				{
-					ErrorTooltipMessage = err;
+					ErrorTooltipMessage = Err.what();
 					ErrorTooltipTimeRemaining = 5.f;
 				}
-				catch (const char* err)
-				{
-					ErrorTooltipMessage = err;
-					ErrorTooltipTimeRemaining = 5.f;
-				}
+			}
+			else
+			{
+				propertyTooltip(propName, curVal.Type == Reflection::ValueType::GameObject);
 			}
 		}
 

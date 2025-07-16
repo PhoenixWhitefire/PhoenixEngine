@@ -531,9 +531,9 @@ int ScriptEngine::L::HandleMethodCall(
 	{
 		outputs = func->Func(GameObject::ReflectorHandleToPointer(FromComponent), inputs);
 	}
-	catch (std::string err)
+	catch (const std::runtime_error& err)
 	{
-		luaL_error(L, "%s", err.c_str());
+		luaL_error(L, "%s", err.what());
 	}
 
 	assert(outputs.size() == func->Outputs.size());

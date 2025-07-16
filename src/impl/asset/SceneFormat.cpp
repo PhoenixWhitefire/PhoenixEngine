@@ -46,6 +46,30 @@ static auto LoadModelAsMeshes(
 	return Loader.LoadedObjs;
 }
 
+static glm::vec2 GetVector2FromJson(const nlohmann::json& Json)
+{
+	glm::vec2 Vec2;
+
+	try
+	{
+		Vec2 = glm::vec2(
+			Json[0],
+			Json[1]
+		);
+	}
+	catch (const nlohmann::json::type_error& TErr)
+	{
+		Log::Warning(
+			"Could not read Vector2: '"
+			+ std::string(TErr.what())
+			+ "'"
+		);
+	}
+	
+
+	return Vec2;
+}
+
 static glm::vec3 GetVector3FromJson(const nlohmann::json& Json)
 {
 	glm::vec3 Vec3;
@@ -166,9 +190,9 @@ static std::vector<GameObjectRef> LoadMapVersion1(
 
 	std::string sceneName = JsonData.value("SceneName", "<UNNAMED SCENE>");
 
-	nlohmann::json PartsNode = JsonData["parts"];
-	nlohmann::json ModelsNode = JsonData.value("props", nlohmann::json{});
-	nlohmann::json LightsNode = JsonData["lights"];
+	const nlohmann::json& PartsNode = JsonData["parts"];
+	const nlohmann::json& ModelsNode = JsonData.value("props", nlohmann::json{});
+	const nlohmann::json& LightsNode = JsonData["lights"];
 
 	std::vector<GameObjectRef> Objects;
 	Objects.reserve(PartsNode.size() + ModelsNode.size() + LightsNode.size());
@@ -260,7 +284,7 @@ static std::vector<GameObjectRef> LoadMapVersion1(
 
 	for (uint32_t Index = 0; Index < PartsNode.size(); Index++)
 	{
-		nlohmann::json Object = PartsNode[Index];
+		const nlohmann::json& Object = PartsNode[Index];
 
 		GameObject* NewObject = GameObject::Create("Primitive");
 		Objects.push_back(NewObject);
@@ -332,7 +356,7 @@ static std::vector<GameObjectRef> LoadMapVersion1(
 
 	for (uint32_t LightIndex = 0; LightIndex < LightsNode.size(); LightIndex++)
 	{
-		nlohmann::json LightObject = LightsNode[LightIndex];
+		const nlohmann::json& LightObject = LightsNode[LightIndex];
 
 		std::string LightType = LightObject["type"];
 
@@ -426,7 +450,7 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 		return {};
 	}
 
-	std::string sceneName = jsonData.value("SceneName", "<UNNAMED SCENE>");
+	std::string_view sceneName = jsonData.value("SceneName", "<UNNAMED SCENE>");
 
 	if (jsonData.find("GameObjects") == jsonData.end())
 	{
@@ -440,7 +464,7 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 		return {};
 	}
 
-	nlohmann::json gameObjectsNode = jsonData["GameObjects"];
+	const nlohmann::json& gameObjectsNode = jsonData["GameObjects"];
 
 	std::unordered_map<int64_t, GameObjectRef> objectsMap;
 	std::unordered_map<int64_t, int64_t> realIdToSceneId;
@@ -483,15 +507,15 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 		ZoneName("DeserializeProperties", 21);
 
 		// https://json.nlohmann.me/features/iterators/#access-object-key-during-iteration
-		for (auto memberIt = item.begin(); memberIt != item.end(); ++memberIt)
+		for (auto memberIt = item.begin(); memberIt != item.end(); memberIt++)
 		{
-			std::string memberName = memberIt.key();
+			std::string_view memberName = memberIt.key();
 
 			// reserved prefix for data which needs to be saved but isn't a property
 			if (memberName[0] == '$' && memberName[1] == '_')
 				continue;
 
-			nlohmann::json memberValue = memberIt.value();
+			const nlohmann::json& memberValue = memberIt.value();
 
 			Reflection::Property* member = newObject->FindProperty(memberName);
 
@@ -559,7 +583,7 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 
 			case Reflection::ValueType::Vector2:
 			{
-				assignment = glm::vec2((float)memberValue[0], (float)memberValue[1]);
+				assignment = GetVector2FromJson(memberValue);
 				
 				break;
 			}
@@ -606,14 +630,14 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 				{
 					newObject->SetPropertyValue(memberName, assignment);
 				}
-				catch (std::string err)
+				catch (const std::runtime_error& err)
 				{
 					const std::string_view& mtname = Reflection::TypeAsString(memberType);
 					std::string valueStr = assignment.ToString();
 
 					SF_EMIT_WARNING(
 						"Failed to set {} Property '{}' of '{}' to '{}': {}",
-						mtname, memberName, name, valueStr, err
+						mtname, memberName, name, valueStr, err.what()
 					);
 				}
 			}
@@ -649,13 +673,13 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 				{
 					object->SetPropertyValue(propName, target->second->ToGenericValue());
 				}
-				catch (std::string err)
+				catch (const std::runtime_error& err)
 				{
 					std::string valueStr = target->second->GetFullName();
 
 					SF_EMIT_WARNING(
 						"Failed to set GameObject property of '{}' to '{}': {}",
-						object->Name, valueStr, err
+						object->Name, valueStr, err.what()
 					);
 				}
 			}
@@ -844,7 +868,6 @@ std::string SceneFormat::Serialize(std::vector<GameObject*> Objects, const std::
 	ZoneScoped;
 
 	nlohmann::json json;
-
 	json["SceneName"] = SceneName;
 
 	nlohmann::json objectsArray = nlohmann::json::array();

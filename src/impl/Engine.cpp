@@ -310,12 +310,7 @@ Engine::Engine()
 		RendererContext.SwapBuffers();
 	}
 
-	Log::Info("Initializing DataModel...");
-
 	GameObject::s_WorldArray.reserve(32);
-
-	this->DataModel = GameObject::Create("DataModel");
-	GameObject::s_DataModel = DataModel->ObjectId;
 
 	Log::Info("Engine initialized");
 }
@@ -451,10 +446,16 @@ static void recursivelyTravelHierarchy(
 
 void Engine::Start()
 {
+	if (!GameObject::GetObjectById(DataModel.m_TargetId))
+		RAISE_RT("DataModel not bound!");
+
 	Log::Info("Final initializations...");
 
+	GameObject::s_DataModel = DataModel->ObjectId;
+
 	if (GameObject* wp = DataModel->FindChild("Workspace"); !wp)
-		RAISE_RT("There is no Workspace!");
+		RAISE_RT("No Workspace!");
+
 	else
 		this->Workspace = wp;
 
@@ -917,14 +918,6 @@ void Engine::Start()
 			postFxShaders.SetUniform(
 				"Gamma",
 				EngineJsonConfig.value("postfx_gamma", 1.f)
-			);
-			postFxShaders.SetUniform(
-				"LdMax",
-				EngineJsonConfig.value("postfx_ldmax", 1.f)
-			);
-			postFxShaders.SetUniform(
-				"ContrastMax",
-				EngineJsonConfig.value("postfx_cmax", 1.f)
 			);
 			skyboxShaders.SetUniform(
 				"HdrEnabled",

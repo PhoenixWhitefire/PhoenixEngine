@@ -228,6 +228,9 @@ public:
 
 	virtual void Shutdown() override
 	{
+		if (!FmodSystem)
+			return;
+
 		FMOD_CALL(FmodSystem->release(), "System shutdown");
 
 		for (size_t i = 0; i < m_Components.size(); i++)
