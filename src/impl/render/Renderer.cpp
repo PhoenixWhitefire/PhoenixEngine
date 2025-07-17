@@ -196,10 +196,10 @@ void Renderer::Initialize(uint32_t Width, uint32_t Height, SDL_Window* Window)
 #define SETLIGHTLOCS(i) LightLocs[i] = "Lights[" #i "]"; \
 LightPosLocs[i] = "Lights[" #i "].Position";             \
 LightColLocs[i] = "Lights[" #i "].Color";                \
-LightTypeLocs[i] = "Lights[" #i "].Type";                 \
-LightRangeLocs[i] = "Lights[" #i "].Range";                \
+LightTypeLocs[i] = "Lights[" #i "].Type";                \
+LightRangeLocs[i] = "Lights[" #i "].Range";              \
 LightAngLocs[i] = "Lights[" #i "].Angle";                \
-LightShadowsLocs[i] = "Lights[" #i "].Shadows";              \
+LightShadowsLocs[i] = "Lights[" #i "].Shadows";          \
 
 	SETLIGHTLOCS(0);
 	SETLIGHTLOCS(1);
@@ -230,15 +230,13 @@ Renderer::~Renderer()
 
 void Renderer::ChangeResolution(uint32_t Width, uint32_t Height)
 {
-	std::string resChangedStr = std::format(
+	Log::Info(std::format(
 		"Changing window resolution: ({}, {}) -> ({}, {})",
 		m_Width,
 		m_Height,
 		Width,
 		Height
-	);
-
-	Log::Info(resChangedStr);
+	));
 
 	m_Width = Width;
 	m_Height = Height;

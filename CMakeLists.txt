@@ -29,7 +29,7 @@ file(GLOB_RECURSE PHX_SRCS
 add_executable(PhoenixEngine ${PHX_SRCS})
 
 source_group(TREE src FILES ${PHX_SRCS})
-target_sources(PhoenixEngine PRIVATE README.md WindowsExeMetadata.rct phoenix.conf)
+target_sources(PhoenixEngine PRIVATE README.md phoenix.conf)
 
 set_target_properties(PhoenixEngine PROPERTIES OUTPUT_NAME PhoenixEngine)
 

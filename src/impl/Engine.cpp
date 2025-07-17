@@ -194,8 +194,9 @@ void Engine::Close()
 
 Engine::Engine()
 {
-	ZoneScoped;
+	ZoneScopedC(tracy::Color::Aqua);
 
+	assert(!EngineInstance);
 	EngineInstance = this;
 	
 	this->LoadConfiguration();
@@ -222,8 +223,6 @@ Engine::Engine()
 	this->WindowSizeX = std::clamp(this->WindowSizeX, 1, displayBounds.w);
 	this->WindowSizeY = std::clamp(this->WindowSizeY, 1, displayBounds.h);
 
-	// make sure to enable the call to `SDL_LogError` in `SDL_error.c` so
-	// that this actually works!! 10/06/2025
 	SDL_SetLogOutputFunction(sdlLog, nullptr);
 
 	nlohmann::json::array_t requestedGLVersion = readFromConfiguration("OpenGLVersion", nlohmann::json{ 4, 6 });
@@ -284,9 +283,7 @@ Engine::Engine()
 
 	PHX_ENSURE_MSG(this->Window, "SDL could not create the window: " + std::string(SDL_GetError()));
 
-	Log::Info("Window created");
-
-	Log::Info("Initializing systems...");
+	Log::Info("Window created, initializing renderer and systems...");
 
 	this->RendererContext.Initialize(this->WindowSizeX, this->WindowSizeY, this->Window);
 	m_BloomFbo.Initialize(WindowSizeX, WindowSizeY, 0);
@@ -444,6 +441,57 @@ static void recursivelyTravelHierarchy(
 	}
 }
 
+static GLuint startLoadingSkybox(std::vector<uint32_t>* skyboxFacesBeingLoaded)
+{
+	ZoneScoped;
+
+	const std::string_view SkyPath = "textures/Sky1/";
+	const std::string_view SkyboxCubemapImages[6] =
+	{
+		"right",
+		"left",
+		"top",
+		"bottom",
+		"front",
+		"back"
+	};
+
+	GLuint skyboxCubemap = 0;
+	glGenTextures(1, &skyboxCubemap);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemap);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+	for (uint8_t faceIndex = 0; faceIndex < 6; faceIndex++)
+	{
+		const std::string_view& face = SkyboxCubemapImages[faceIndex];
+
+		uint32_t tex = TextureManager::Get()->LoadTextureFromPath(std::format("{}{}.jpg", SkyPath, face));
+		skyboxFacesBeingLoaded->push_back(tex);
+
+		glTexImage2D(
+			GL_TEXTURE_CUBE_MAP_POSITIVE_X + faceIndex,
+			0,
+			GL_RGB,
+			1,
+			1,
+			0,
+			GL_RED,
+			GL_UNSIGNED_BYTE,
+			TextureManager::Get()->GetTextureResource(tex).TMP_ImageByteData
+		);
+
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
+
+	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
+	return skyboxCubemap;
+}
+
 void Engine::Start()
 {
 	if (!GameObject::GetObjectById(DataModel.m_TargetId))
@@ -470,62 +518,26 @@ void Engine::Start()
 	double LastFrameEnded = RunningTime;
 	double LastSecond = 0.f;
 
-	const std::string_view SkyPath = "textures/Sky1/";
-
-	const std::string_view SkyboxCubemapImages[6] =
-	{
-		"right",
-		"left",
-		"top",
-		"bottom",
-		"front",
-		"back"
-	};
-
 	std::vector<uint32_t> skyboxFacesBeingLoaded;
 	skyboxFacesBeingLoaded.reserve(6);
 
-	GLuint skyboxCubemap = 0;
+	GLuint skyboxCubemap = startLoadingSkybox(&skyboxFacesBeingLoaded);
 
-	glGenTextures(1, &skyboxCubemap);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemap);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	uint32_t postFxShaderId = 0;
+	uint32_t skyboxShaderId = 0;
+	uint32_t bloomExtractShaderId = 0;
+	uint32_t bloomCompositeShaderId = 0;
+	uint32_t separableBlurShaderId = 0;
 
-	for (uint8_t faceIndex = 0; faceIndex < 6; faceIndex++)
 	{
-		const std::string_view& face = SkyboxCubemapImages[faceIndex];
+		ZoneScopedN("LoadShaders");
 
-		uint32_t tex = m_TextureManager.LoadTextureFromPath(std::format("{}{}.jpg", SkyPath, face));
-		skyboxFacesBeingLoaded.push_back(tex);
-
-		glTexImage2D(
-			GL_TEXTURE_CUBE_MAP_POSITIVE_X + faceIndex,
-			0,
-			GL_RGB,
-			1,
-			1,
-			0,
-			GL_RED,
-			GL_UNSIGNED_BYTE,
-			m_TextureManager.GetTextureResource(tex).TMP_ImageByteData
-		);
-
-		glGenerateMipmap(GL_TEXTURE_2D);
+		postFxShaderId = m_ShaderManager.LoadFromPath("postprocessing");
+		skyboxShaderId = m_ShaderManager.LoadFromPath("skybox");
+		bloomExtractShaderId = m_ShaderManager.LoadFromPath("bloomingextract");
+		bloomCompositeShaderId = m_ShaderManager.LoadFromPath("bloomcomposite");
+		separableBlurShaderId = m_ShaderManager.LoadFromPath("separableblur");
 	}
-
-	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
-
-	//Texture HDRISkyboxTexture("Assets/Textures/hdri_sky_1.jpeg", "Diffuse", 0);
-
-	uint32_t postFxShaderId = m_ShaderManager.LoadFromPath("postprocessing");
-	uint32_t skyboxShaderId = m_ShaderManager.LoadFromPath("skybox");
-	uint32_t bloomExtractShaderId = m_ShaderManager.LoadFromPath("bloomingextract");
-	uint32_t bloomCompositeShaderId = m_ShaderManager.LoadFromPath("bloomcomposite");
-	uint32_t separableBlurShaderId = m_ShaderManager.LoadFromPath("separableblur");
 
 	// we intentionally perform a copy here, because if another shader gets loaded,
 	// the entire list can get re-allocated, and the references will break and just be
@@ -564,7 +576,7 @@ void Engine::Start()
 	while (m_IsRunning)
 	{
 		TIME_SCOPE_AS_N("EntireFrame", EntireFrameTimerScope);
-		ZoneScopedN("Frame");
+		ZoneScopedNC("Frame", tracy::Color::PaleTurquoise);
 
 		if (DataModel->IsDestructionPending)
 		{
@@ -645,7 +657,10 @@ void Engine::Start()
 						texture.Width,
 						texture.Height,
 						0,
-						GL_RGB,
+						texture.NumColorChannels == 1 ? GL_RED
+							: texture.NumColorChannels == 2 ? GL_RG
+							: texture.NumColorChannels == 3 ? GL_RGB
+							: GL_RGBA,
 						GL_UNSIGNED_BYTE,
 						texture.TMP_ImageByteData
 					);
@@ -670,7 +685,7 @@ void Engine::Start()
 		this->OnFrameStart.Fire(deltaTime);
 
 		{
-			ZoneScopedN("PollEvents");
+			ZoneScopedNC("PollEvents", tracy::Color::Orange);
 
 			while (SDL_PollEvent(&pollingEvent) != 0)
 			{

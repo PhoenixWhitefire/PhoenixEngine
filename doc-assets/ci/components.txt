@@ -55,7 +55,7 @@ No members defined
 ### Properties:
 * `AngularVelocity: Vector3`: Its rotational velocity
 * `Asset: string`: The path to the underlying `.hxmesh` file, or a built-in identifier like `!Quad` or `!Cube`
-* `CastsShadows: boolean`: Bool
+* `CastsShadows: boolean`: Whether it casts shadows (not functional currently)
 * `CollisionFidelity: number`: 0 - `Aabb`: An axis-aligned bounding box. 1 - `AabbStaticSize`: An AABB which keeps the same size as the Object
 * `Density: number`: Its density (`Mass = Density * Size`)
 * `FaceCulling: number`: An integer. `0` means no culling, `1` to cull its "back" faces, and `2` to cull its "front" faces
@@ -116,7 +116,7 @@ No members defined
 * `Looped: boolean`: Whether playback should loop once it reaches the end
 * `Playing: boolean`: Whether the Sound is currently playing (or requested to play, if `.Playing` is set to `true` by a `Script` before it has finished loading)
 * `Position: number`: Number of seconds from beginning of the file
-* `SoundFile: string`: The `.wav` file to be played
+* `SoundFile: string`: The sound file to be played
 * `Speed: number`: The speed at which the sound plays, within the range of 0.01 to 100
 * `Volume: number`: The volume at which the sound plays. Must be positive
 
@@ -135,6 +135,8 @@ No members defined
 * `Shadows: boolean`: Whether the Light can render shadows
 
 ## `Transform`
+
+* Gives a physical position and size to Object
 
 ### Properties:
 * `Size: Vector3`: The Size of the Object influenced by the Component
