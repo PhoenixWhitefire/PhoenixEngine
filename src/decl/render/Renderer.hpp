@@ -32,6 +32,8 @@ public:
 	Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window);
 	~Renderer();
 
+	static Renderer* Get();
+
 	void Initialize(uint32_t Width, uint32_t Height, SDL_Window* Window);
 
 	// Changes the rendering resolution
@@ -59,11 +61,24 @@ public:
 
 	void SwapBuffers();
 
+	struct InstanceDrawInfo
+	{
+		glm::vec4 TransformRow1;
+		glm::vec4 TransformRow2;
+		glm::vec4 TransformRow3;
+		glm::vec4 TransformRow4;
+		glm::vec3 Scale;
+		glm::vec3 Color;
+		float Transparency;
+	};
+	static_assert(sizeof(InstanceDrawInfo) == ((4*4) + (3*2) + 1) * 4);
+
 	GpuFrameBuffer FrameBuffer;
 
 	SDL_GLContext GLContext = nullptr;
 
 	uint32_t AccumulatedDrawCallCount = 0;
+	uint32_t InstancingBuffer = UINT32_MAX;
 
 private:
 	void m_SetMaterialData(const RenderItem&, bool DebugWireframeRendering);
@@ -71,7 +86,6 @@ private:
 	GpuVertexArray m_VertexArray;
 	GpuVertexBuffer m_VertexBuffer;
 	GpuElementBuffer m_ElementBuffer;
-	uint32_t m_InstancingBuffer{};
 
 	SDL_Window* m_Window = nullptr;
 	

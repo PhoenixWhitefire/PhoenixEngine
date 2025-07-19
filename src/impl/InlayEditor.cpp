@@ -17,6 +17,7 @@
 
 #include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
+#include "asset/SceneFormat.hpp"
 #include "asset/MeshProvider.hpp"
 
 #include "component/Camera.hpp"
@@ -286,7 +287,7 @@ static void renderTextEditor()
 				[](void*, const char* const* FileList, int)
 				{
 					if (!FileList)
-						throw(SDL_GetError());
+						RAISE_RT(SDL_GetError());
 					if (!FileList[0])
 						return;
 
@@ -323,7 +324,7 @@ static void renderTextEditor()
 				[](void*, const char* const* FileList, int)
 				{
 					if (!FileList)
-						throw(SDL_GetError());
+						RAISE_RT(SDL_GetError());
 					if (!FileList[0])
 						return;
 
@@ -576,7 +577,7 @@ static void shaderPipelineShaderSelect(const std::string& Label, std::string* Ta
 			[](void*, const char* const* FileList, int)
 			{
 				if (!FileList)
-					throw(SDL_GetError());
+					RAISE_RT(SDL_GetError());
 				if (!FileList[0])
 					return;
 
@@ -735,7 +736,7 @@ static void mtlEditorTexture(const char* Label, uint32_t* TextureIdPtr, char* Cu
 				[](void*, const char* const* FileList, int)
 				{
 					if (!FileList)
-						throw(SDL_GetError());
+						RAISE_RT(SDL_GetError());
 					if (!FileList[0])
 						return;
 
@@ -1009,6 +1010,8 @@ enum class ContextMenuAction : uint8_t
 {
 	Duplicate = 0,
 	Delete,
+	SaveToFile,
+	LoadFromFile,
 	EditScript,
 	ReloadScript,
 
@@ -1021,6 +1024,8 @@ static const char* ContextMenuActionStrings[] =
 {
 	"Duplicate",
 	"Delete",
+	"Save to File",
+	"Insert from File",
 	"Edit",
 	"Reload"
 };
@@ -1046,6 +1051,115 @@ static std::function<void(void)> ContextMenuActionHandlers[] =
 				g->Destroy();
 				
 		Selections.clear();
+	},
+
+	[]()
+	{
+		std::vector<GameObject*> sels;
+		std::string sceneName = "";
+
+		for (uint32_t s : Selections)
+			if (GameObject* g = GameObject::GetObjectById(s))
+			{
+				sels.push_back(g);
+				sceneName += g->Name + "_";
+			}
+
+		sceneName = sceneName.substr(0, sceneName.size() - 1);
+		std::string* ser = new std::string(SceneFormat::Serialize(sels, "SaveToFileAction_" + sceneName));
+		
+		SDL_ShowSaveFileDialog(
+			[](void* contentsptr, const char* const* FileList, int)
+			{
+				std::string* contentsptrstr = (std::string*)contentsptr;
+				std::string contents = *contentsptrstr;
+				delete contentsptrstr;
+
+				if (!FileList)
+					RAISE_RT(SDL_GetError());
+				if (!FileList[0])
+					return;
+
+				std::string file = FileList[0];
+
+				// windows SMELLS :( 18/02/2025
+				size_t off = file.find_first_of("\\");
+
+				while (off != std::string::npos)
+					off = file.replace(off, 1, "/").find_first_of("\\");
+				
+				if (!file.find("resources/"))
+					file.insert(0, "./"); // for `FileRW::TryMakePathCwdRelative`
+
+				FileRW::WriteFile(file, contents, false);
+			},
+			(void*)ser,
+			SDL_GL_GetCurrentWindow(),
+			nullptr,
+			0,
+			getFileDirectory("resources/scenes/dummy.file").c_str()
+		);
+	},
+
+	[]()
+	{
+		SDL_ShowOpenFileDialog(
+			[](void*, const char* const* FileList, int)
+			{
+				if (!FileList)
+					RAISE_RT(SDL_GetError());
+				if (!FileList[0])
+					return;
+
+				std::string fullpath = FileList[0];
+
+				// windows SMELLS :( 18/02/2025
+				size_t off = fullpath.find_first_of("\\");
+
+				while (off != std::string::npos)
+					off = fullpath.replace(off, 1, "/").find_first_of("\\");
+
+				size_t resDirOffset = fullpath.find("resources/");
+
+				if (resDirOffset == std::string::npos)
+				{
+					ErrorTooltipMessage = "Selection must be within the Project's `resources/` directory!";
+					ErrorTooltipTimeRemaining = 5.f;
+				}
+				else
+				{
+					bool readSuccess = false;
+					std::string contents = FileRW::ReadFile(fullpath, &readSuccess);
+
+					if (!readSuccess)
+					{
+						ErrorTooltipMessage = "Couldn't read file " + fullpath;
+						ErrorTooltipTimeRemaining = 5.f;
+						return;
+					}
+
+					std::vector<GameObjectRef> roots = SceneFormat::Deserialize(contents, &readSuccess);
+
+					if (!readSuccess)
+					{
+						ErrorTooltipMessage = SceneFormat::GetLastErrorString();
+						ErrorTooltipTimeRemaining = 5.f;
+						return;
+					}
+
+					assert(GameObject::GetObjectById(Selections[0]));
+
+					for (GameObjectRef r : roots)
+						r->SetParent(GameObject::GetObjectById(Selections[0]));
+				}
+			},
+			nullptr,
+			SDL_GL_GetCurrentWindow(),
+			nullptr,
+			0,
+			getFileDirectory("resources/scenes/dummy.file").c_str(),
+			false
+		);
 	},
 
 	[]()
@@ -1092,6 +1206,8 @@ static std::vector<ContextMenuAction> getPossibleActionsForSelections()
 
 	actions.push_back(ContextMenuAction::Duplicate);
 	actions.push_back(ContextMenuAction::Delete);
+	actions.push_back(ContextMenuAction::SaveToFile);
+	actions.push_back(ContextMenuAction::LoadFromFile);
 
 	return actions;
 }
@@ -1163,6 +1279,60 @@ static void onTreeItemClicked(GameObject* nodeClicked)
 	LastSelected = nodeClicked->ObjectId;
 }
 
+static Texture getIconForComponent(EntityComponent Ec)
+{
+	TextureManager* texManager = TextureManager::Get();
+
+	std::string classIconPath = "textures/editor-icons/" + std::string(s_EntityComponentNames[(size_t)Ec]) + ".png";
+	Texture tex = texManager->GetTextureResource(texManager->LoadTextureFromPath(classIconPath, true, false));
+
+	if (tex.Status == Texture::LoadStatus::Failed && tex.ImagePath.find("fallback") == std::string::npos)
+	{
+		const std::string& fallbackPath = "textures/editor-icons/fallback.png";
+		Texture& fallback = texManager->GetTextureResource(texManager->LoadTextureFromPath(fallbackPath, true, false));
+		texManager->Assign(fallback, classIconPath);
+		tex = fallback;
+	}
+
+	return tex;
+}
+
+static std::string getDescriptionForComponent(EntityComponent Ec)
+{
+	static std::vector<std::string> Descriptions;
+	size_t index = (size_t)Ec;
+
+	if (Descriptions.size() < index + 1)
+		Descriptions.resize(index + 1);
+
+	if (Descriptions[index].size() == 0)
+	{
+		std::string desc = "";
+
+		if (const auto& it = ObjectDocCommentsJson["Components"].find(s_EntityComponentNames[index]);
+			(it != ObjectDocCommentsJson["Components"].end() && it.value().is_object())
+		)
+		{
+			const auto& descJson = it.value()["Description"];
+		
+			if (descJson.is_string())
+				desc = descJson;
+		
+			else if (descJson.is_array())
+			{
+				for (size_t i = 0; i < descJson.size(); i++)
+					desc += std::string(descJson[i]) + "\n";
+				
+				desc = desc.substr(0, desc.size() - 1);
+			}
+		}
+
+		Descriptions[index] = desc;
+	}
+
+	return Descriptions[index];
+}
+
 static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection = false)
 {
 	ZoneScopedC(tracy::Color::DarkSeaGreen);
@@ -1181,8 +1351,6 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 			PickerTargetPropName.clear();
 		}
 	}
-
-	static TextureManager* texManager = TextureManager::Get();
 
 	// https://github.com/ocornut/imgui/issues/581#issuecomment-216054349
 	// 07/10/2024
@@ -1216,17 +1384,8 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 		std::pair<EntityComponent, uint32_t> primaryComponent = object->GetComponents()[0];
 		if (primaryComponent.first == EntityComponent::Transform && object->GetComponents().size() > 1)
 			primaryComponent = object->GetComponents()[1];
-
-		std::string classIconPath = "textures/editor-icons/" + std::string(s_EntityComponentNames[(size_t)primaryComponent.first]) + ".png";
-		Texture& tex = texManager->GetTextureResource(texManager->LoadTextureFromPath(classIconPath, true, false));
-
-		if (tex.Status == Texture::LoadStatus::Failed && tex.ImagePath.find("fallback") == std::string::npos)
-		{
-			const std::string& fallbackPath = "texture/editor-icons/fallback.png";
-			Texture& fallback = texManager->GetTextureResource(texManager->LoadTextureFromPath(fallbackPath, true, false));
-			texManager->Assign(fallback, classIconPath);
-			tex = fallback;
-		}
+		
+		Texture tex = getIconForComponent(primaryComponent.first);
 
 		if (!didVisitCurSelection && Selections.size() > 0)
 		{
@@ -1332,25 +1491,7 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 					bool clicked = ImGui::MenuItem(name.data());
 
 					if (ImGui::IsItemHovered())
-					{
-						if (const auto& it = ObjectDocCommentsJson["Components"].find(name);
-							(it != ObjectDocCommentsJson["Components"].end() && it.value().is_object())
-						)
-						{
-							const auto& desc = it.value()["Description"];
-
-							if (desc.is_string())
-								tooltip = desc;
-
-							else if (desc.is_array())
-							{
-								for (size_t i = 0; i < desc.size(); i++)
-									tooltip += std::string(desc[i]) + "\n";
-								
-								tooltip = tooltip.substr(0, tooltip.size() - 1);
-							}
-						}
-					}
+						tooltip = getDescriptionForComponent((EntityComponent)i);
 
 					if (tooltip.size() > 1)
 						ImGui::SetItemTooltip("%s", tooltip.c_str());
@@ -1591,6 +1732,40 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 		}
 
 		ImGui::SeparatorText(sepStr.c_str());
+
+		static bool ShowComponents = false;
+		if (ImGui::IsItemClicked())
+			ShowComponents = !ShowComponents;
+
+		ImGui::PushID(static_cast<uint32_t>(115111116109));
+
+		std::set<EntityComponent> components;
+
+		for (uint32_t selId : Selections)
+		{
+			GameObject* sel = GameObject::GetObjectById(selId);
+
+			if (!sel)
+				continue;
+
+			for (auto [ec, id] : sel->GetComponents())
+				components.insert(ec);
+		}
+
+		for (EntityComponent ec : components)
+		{
+			Texture tex = getIconForComponent(ec);
+			ImGui::Image(tex.GpuId, ImVec2(16, 16));
+			ImGui::SetItemTooltip(
+				"%s\n%s",
+				s_EntityComponentNames[(size_t)ec].data(),
+				getDescriptionForComponent(ec).c_str()
+			);
+			ImGui::SameLine();
+		}
+
+		ImGui::NewLine();
+		ImGui::PopID();
 
 		std::unordered_map<std::string_view, std::pair<Reflection::Property, Reflection::GenericValue>> props;
 		std::unordered_map<std::string_view, bool> conflictingProps;

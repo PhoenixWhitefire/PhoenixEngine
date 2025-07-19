@@ -16,6 +16,9 @@ BackgroundAmbience.Looped = true
 BackgroundAmbience.Name = "BackgroundAmbience"
 BackgroundAmbience.Parent = workspace
 
+local animtest = scene_load("scenes/animtest.hxscene")[1]
+animtest.Parent = workspace
+
 local function loadSubLevel(Path)
 	if not Path then
 		print("No level was selected")
@@ -31,7 +34,9 @@ local function loadSubLevel(Path)
 	end
 end
 
-local function update()
+local totalelapsed = 0
+
+local function update(DeltaTime)
 	if imgui_begin("Model Importer") then
 		ModelImporterScale = imgui_input_float("Scale", ModelImporterScale)
 
@@ -174,6 +179,12 @@ local function update()
 		workspace.Level.DirectionalLight.Parent = workspace
 		workspace.Level:Destroy()
 		script.Enabled = false
+	end
+	
+	totalelapsed += DeltaTime
+	
+	if totalelapsed > 3 then
+		animtest.Top.Transform = Matrix.fromEulerAnglesXYZ(math.sin(totalelapsed), 0, math.sin(totalelapsed))
 	end
 end
 

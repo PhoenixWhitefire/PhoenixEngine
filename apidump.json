@@ -1,8 +1,7 @@
 {
   "GameObject": {
     "Base": {
-      "Events": null,
-      "Functions": {
+      "Methods": {
         "Destroy": "() -> ()",
         "Duplicate": "() -> (GameObject)",
         "FindChild": "(String) -> (GameObject)",
@@ -23,23 +22,15 @@
       }
     },
     "Components": {
-      "Animation": {
-        "Events": null,
-        "Functions": null,
-        "Properties": null
-      },
+      "Animation": null,
       "Bone": {
-        "Events": null,
-        "Functions": null,
         "Properties": {
           "IsActive": "Bool READONLY",
-          "LocalTransform": "Matrix",
-          "SkeletalBoneId": "Integer READONLY"
+          "SkeletalBoneId": "Integer READONLY",
+          "Transform": "Matrix"
         }
       },
       "Camera": {
-        "Events": null,
-        "Functions": null,
         "Properties": {
           "FieldOfView": "Double",
           "Transform": "Matrix",
@@ -50,14 +41,11 @@
         "Events": {
           "OnFrameBegin": "(Double)"
         },
-        "Functions": {
+        "Methods": {
           "Close": "(Integer) -> ()"
-        },
-        "Properties": null
+        }
       },
       "DirectionalLight": {
-        "Events": null,
-        "Functions": null,
         "Properties": {
           "Brightness": "Double",
           "Direction": "Vector3",
@@ -66,8 +54,6 @@
         }
       },
       "Mesh": {
-        "Events": null,
-        "Functions": null,
         "Properties": {
           "AngularVelocity": "Vector3",
           "Asset": "String",
@@ -86,14 +72,8 @@
           "Transparency": "Double"
         }
       },
-      "Model": {
-        "Events": null,
-        "Functions": null,
-        "Properties": null
-      },
+      "Model": null,
       "ParticleEmitter": {
-        "Events": null,
-        "Functions": null,
         "Properties": {
           "Emitting": "Bool",
           "Lifetime": "Vector2",
@@ -102,8 +82,6 @@
         }
       },
       "PointLight": {
-        "Events": null,
-        "Functions": null,
         "Properties": {
           "Brightness": "Double",
           "LightColor": "Color",
@@ -112,8 +90,7 @@
         }
       },
       "Script": {
-        "Events": null,
-        "Functions": {
+        "Methods": {
           "Reload": "() -> (Bool)"
         },
         "Properties": {
@@ -124,7 +101,6 @@
         "Events": {
           "OnLoaded": "(Bool)"
         },
-        "Functions": null,
         "Properties": {
           "FinishedLoading": "Bool READONLY",
           "Length": "Double READONLY",
@@ -138,8 +114,6 @@
         }
       },
       "SpotLight": {
-        "Events": null,
-        "Functions": null,
         "Properties": {
           "Angle": "Double",
           "Brightness": "Double",
@@ -149,16 +123,13 @@
         }
       },
       "Transform": {
-        "Events": null,
-        "Functions": null,
         "Properties": {
           "Size": "Vector3",
           "Transform": "Matrix"
         }
       },
       "Workspace": {
-        "Events": null,
-        "Functions": {
+        "Methods": {
           "ScreenPointToRay": "(Array, Double) -> (Vector3)"
         },
         "Properties": {

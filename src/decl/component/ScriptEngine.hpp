@@ -56,11 +56,11 @@ namespace ScriptEngine::L
 
 	void PushGenericValue(lua_State*, const Reflection::GenericValue&);
 	void PushGameObject(lua_State*, GameObject*);
-	void PushFunction(lua_State* L, Reflection::Function*, std::pair<EntityComponent, uint32_t>);
+	void PushMethod(lua_State* L, Reflection::Method*, std::pair<EntityComponent, uint32_t>);
 
 	int HandleMethodCall(
 		lua_State* L,
-		Reflection::Function* fnaf, // THE MIMICCCCC!!!!
+		Reflection::Method* fnaf, // THE MIMICCCCC!!!!
 		std::pair<EntityComponent, uint32_t>
 	);
 

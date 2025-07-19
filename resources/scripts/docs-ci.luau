@@ -96,7 +96,7 @@ end
 
 local function dumpReflectionApi(t, d, cn)
 	local hasProps = t.Properties and (count(t.Properties) > 0)
-	local hasFuncs = t.Functions and (count(t.Functions) > 0)
+	local hasFuncs = t.Methods and (count(t.Methods) > 0)
 	local hasEvnts = t.Events and (count(t.Events) > 0)
 	
 	local s = ""
@@ -123,18 +123,18 @@ local function dumpReflectionApi(t, d, cn)
 		if hasFuncs then
 			s ..= "\n### Methods:\n"
 			
-			local orderedFuncs = keysOf(t.Functions)
+			local orderedFuncs = keysOf(t.Methods)
 			table.sort(orderedFuncs)
 			
 			for _, n in orderedFuncs do
-				local v = t.Functions[n]
+				local v = t.Methods[n]
 				
-				if not d.Functions or not d.Functions[n] then
+				if not d.Methods or not d.Methods[n] then
 					print(`Missing doc comment for Method '{ cn }:{ n }'`)
 					continue
 				end
 				
-				s ..= `* \`{ n }{ rtolsub(v) }\`: { d.Functions[n] }\n`
+				s ..= `* \`{ n }{ rtolsub(v) }\`: { d.Methods[n] }\n`
 			end
 		end
 		

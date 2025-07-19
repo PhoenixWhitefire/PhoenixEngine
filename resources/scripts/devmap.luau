@@ -21,6 +21,7 @@ local SoundStinger = GameObject.new("Sound")
 local RareSoundStinger = GameObject.new("Sound")
 
 local TimesNormalStingerPlayed = 0
+local ElapsedTime = 0
 
 SoundStinger.Name = "SoundStinger"
 SoundStinger.SoundFile = "sounds/undertaleost_ruins_stinger.mp3"
@@ -123,6 +124,22 @@ game.OnFrameBegin:Connect(function(DeltaTime)
 	
 	--RoomGen()
 	--NodeEditor()
+	
+	ElapsedTime += DeltaTime
+	
+	if ElapsedTime > 2 then
+		local c = workspace.Level.Capoeira
+		c.Beta_Surface["mixamorig:Hips"].Transform *= Matrix.fromEulerAnglesXYZ(0, math.rad(DeltaTime) * 4, 0)
+		c.Beta_Joints["mixamorig:Hips"].Transform *= Matrix.fromEulerAnglesXYZ(0, math.rad(DeltaTime) * 4, 0)
+		
+		c.Beta_Surface["mixamorig:Spine2"].Transform *= Matrix.fromEulerAnglesXYZ(-math.rad(DeltaTime) * 5, 0, 0)
+		c.Beta_Joints["mixamorig:Spine2"].Transform *= Matrix.fromEulerAnglesXYZ(-math.rad(DeltaTime) * 5, 0, 0)
+		
+		if ElapsedTime < 2.5 then
+			c.Beta_Surface["mixamorig:Spine2"].Transform = Matrix.fromTranslation(0, 0, 0)
+			c.Beta_Joints["mixamorig:Spine2"].Transform = Matrix.fromTranslation(0, 0, 0)
+		end
+	end
 end)
 
 reset()

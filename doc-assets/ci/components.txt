@@ -1,13 +1,6 @@
 The Engine support an Entity Component System architecture, meaning that `GameObject`s have their own "base" APIs, which can be extended by adding *Components*. These are all listed below.
 
 
-## `Animation`
-
-* Represents an Animation
-* Not functional currently
-
-No members defined
-
 ## `Bone`
 
 * Represents a Bone of a Mesh
@@ -15,8 +8,8 @@ No members defined
 
 ### Properties:
 * `IsActive: Bool READONLY`: Whether or not the Bone Object is actively affecting a Mesh
-* `LocalTransform: Matrix`: The transformation of the Bone
 * `SkeletalBoneId: Integer READONLY`: The internal ID of the bone, valid range is 0-126
+* `Transform: Matrix`: The transformation of the Bone
 
 ## `Camera`
 
@@ -68,12 +61,6 @@ No members defined
 * `RoughnessFactor: number`: Roughness modifier
 * `Tint: Color`: The Color it should be tinted with
 * `Transparency: number`: Its transparency/translucency
-
-## `Model`
-
-* A container
-
-No members defined
 
 ## `ParticleEmitter`
 

@@ -75,9 +75,9 @@ public:
         return props;
     }
 
-    virtual const Reflection::FunctionMap& GetFunctions() override
+    virtual const Reflection::MethodMap& GetMethods() override
     {
-        static const Reflection::FunctionMap funcs =
+        static const Reflection::MethodMap funcs =
 		{
 			{ "ScreenPointToRay", {
 				{ Reflection::ValueType::Array, Reflection::ValueType::Double },

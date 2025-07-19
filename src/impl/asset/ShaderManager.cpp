@@ -121,8 +121,9 @@ void ShaderProgram::Reload()
 	m_GpuId = glCreateProgram();
 
 	bool shpExists = true;
+	std::string realShpPath = (Name.find("shaders/") == std::string::npos ? BaseShaderPath : "") + Name + ".shp";
 	std::string shpContents = FileRW::ReadFile(
-		(Name.find("shaders/") == std::string::npos ? BaseShaderPath : "") + Name + ".shp",
+		realShpPath,
 		&shpExists
 	);
 
@@ -135,8 +136,8 @@ void ShaderProgram::Reload()
 		// Should also fire a callback so that an Output can be implemented
 		// 13/07/2024
 		Log::Error(std::format(
-			"**ERR** Shader program '{}' does not exist! Geometry will appear magenta",
-			this->Name
+			"Shader program '{}' does not exist! Geometry will appear magenta",
+			realShpPath
 		));
 
 		ShaderManager* shpManager = ShaderManager::Get();

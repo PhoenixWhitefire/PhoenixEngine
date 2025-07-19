@@ -43,6 +43,7 @@ struct EcMesh
 	double Friction = 0.3f;
 
 	std::string Asset = "!Cube";
+	uint32_t GpuSkinningBuffer = UINT32_MAX;
 
 	GameObjectRef Object;
 

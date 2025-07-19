@@ -647,9 +647,9 @@ uint32_t GameObject::AddComponent(EntityComponent Type)
 		m_ComponentApis.Properties[it.first] = it.second;
 		m_MemberToComponentMap[it.first] = m_Components.back();
 	}
-	for (const auto& it : manager->GetFunctions())
+	for (const auto& it : manager->GetMethods())
 	{
-		m_ComponentApis.Functions[it.first] = it.second;
+		m_ComponentApis.Methods[it.first] = it.second;
 		m_MemberToComponentMap[it.first] = m_Components.back();
 	}
 	for (const auto& it : manager->GetEvents())
@@ -676,9 +676,9 @@ void GameObject::RemoveComponent(EntityComponent Type)
 				m_ComponentApis.Properties.erase(it2.first);
 				m_MemberToComponentMap.erase(it2.first);
 			}
-			for (const auto& it2 : manager->GetFunctions())
+			for (const auto& it2 : manager->GetMethods())
 			{
-				m_ComponentApis.Functions.erase(it2.first);
+				m_ComponentApis.Methods.erase(it2.first);
 				m_MemberToComponentMap.erase(it2.first);
 			}
 			for (const auto& it2 : manager->GetEvents())
@@ -710,18 +710,18 @@ Reflection::Property* GameObject::FindProperty(const std::string_view& PropName,
 
 	return nullptr;
 }
-Reflection::Function* GameObject::FindFunction(const std::string_view& FuncName, std::pair<EntityComponent, uint32_t>* FromComponent)
+Reflection::Method* GameObject::FindMethod(const std::string_view& FuncName, std::pair<EntityComponent, uint32_t>* FromComponent)
 {
 	std::pair<EntityComponent, uint32_t> dummyFc{ EntityComponent::None, PHX_GAMEOBJECT_NULL_ID };
 	FromComponent = FromComponent ? FromComponent : &dummyFc;
 
-	if (auto it = s_Api.Functions.find(FuncName); it != s_Api.Functions.end())
+	if (auto it = s_Api.Methods.find(FuncName); it != s_Api.Methods.end())
 	{
 		FromComponent->second = ObjectId;
 		return &it->second;
 	}
 
-	if (auto it = m_ComponentApis.Functions.find(FuncName); it != m_ComponentApis.Functions.end())
+	if (auto it = m_ComponentApis.Methods.find(FuncName); it != m_ComponentApis.Methods.end())
 	{
 		*FromComponent = m_MemberToComponentMap[FuncName];
 		return &it->second;
@@ -776,7 +776,7 @@ std::vector<Reflection::GenericValue> GameObject::CallFunction(const std::string
 {
 	std::pair<EntityComponent, uint32_t> fromComponent;
 
-	if (Reflection::Function* func = FindFunction(FuncName, &fromComponent))
+	if (Reflection::Method* func = FindMethod(FuncName, &fromComponent))
 		return func->Func(ReflectorHandleToPointer(fromComponent), Inputs);
 
 	RAISE_RT("Invalid function in CallFunction: " + std::string(FuncName));
@@ -790,10 +790,10 @@ Reflection::PropertyMap GameObject::GetProperties() const
 
 	return cumulativeProps;
 }
-Reflection::FunctionMap GameObject::GetFunctions() const
+Reflection::MethodMap GameObject::GetMethods() const
 {
-	Reflection::FunctionMap cumulativeFuncs = m_ComponentApis.Functions;
-	cumulativeFuncs.insert(s_Api.Functions.begin(), s_Api.Functions.end());
+	Reflection::MethodMap cumulativeFuncs = m_ComponentApis.Methods;
+	cumulativeFuncs.insert(s_Api.Methods.begin(), s_Api.Methods.end());
 
 	return cumulativeFuncs;
 }
@@ -868,13 +868,20 @@ GameObject* GameObject::Create(const std::string_view& FirstComponent)
 static void dumpProperties(const Reflection::PropertyMap& Properties, nlohmann::json& Json)
 {
 	for (const auto& propIt : Properties)
-		if (propIt.second.Set)
-			Json[propIt.first] = Reflection::TypeAsString(propIt.second.Type);
-		else
-			Json[propIt.first] = std::string(Reflection::TypeAsString(propIt.second.Type)) + " READONLY";
+	{
+		std::string pstr{ Reflection::TypeAsString(propIt.second.Type) };
+
+		if (!propIt.second.Set)
+			pstr += " READONLY";
+		
+		else if (!propIt.second.Serializes)
+			pstr += " RUNTIMEONLY";
+
+		Json["Properties"][propIt.first] = pstr;
+	}
 }
 
-static void dumpFunctions(const Reflection::FunctionMap& Functions, nlohmann::json& Json)
+static void dumpMethods(const Reflection::MethodMap& Functions, nlohmann::json& Json)
 {
 	for (const auto& funcIt : Functions)
 	{
@@ -890,7 +897,7 @@ static void dumpFunctions(const Reflection::FunctionMap& Functions, nlohmann::js
 		istring = istring.substr(0, istring.size() - 2);
 		ostring = ostring.substr(0, ostring.size() - 2);
 
-		Json[funcIt.first] = std::format("({}) -> ({})", istring, ostring);
+		Json["Methods"][funcIt.first] = std::format("({}) -> ({})", istring, ostring);
 	}
 }
 
@@ -905,7 +912,7 @@ static void dumpEvents(const Reflection::EventMap& Events, nlohmann::json& Json)
 
 		argstring = argstring.substr(0, argstring.size() - 2);
 
-		Json[eventIt.first] = std::format("({})", argstring);
+		Json["Events"][eventIt.first] = std::format("({})", argstring);
 	}
 }
 
@@ -916,14 +923,10 @@ nlohmann::json GameObject::DumpApiToJson()
 	nlohmann::json& gameObjectApi = dump["Base"];
 	nlohmann::json& componentApi = dump["Components"];
 
-	nlohmann::json& gameObjectProperties = gameObjectApi["Properties"];
-	nlohmann::json& gameObjectFunctions = gameObjectApi["Functions"];
-	nlohmann::json& gameObjectEvents = gameObjectApi["Events"];
-
 	s_AddObjectApi(); // make sure we have the api
-	dumpProperties(s_Api.Properties, gameObjectProperties);
-	dumpFunctions(s_Api.Functions, gameObjectFunctions);
-	dumpEvents(s_Api.Events, gameObjectEvents);
+	dumpProperties(s_Api.Properties, gameObjectApi);
+	dumpMethods(s_Api.Methods, gameObjectApi);
+	dumpEvents(s_Api.Events, gameObjectApi);
 	
 	for (size_t i = 0; i < (size_t)EntityComponent::__count; i++)
 	{
@@ -933,13 +936,10 @@ nlohmann::json GameObject::DumpApiToJson()
 			continue;
 
 		nlohmann::json& api = componentApi[s_EntityComponentNames[i]];
-		nlohmann::json& properties = api["Properties"];
-		nlohmann::json& functions = api["Functions"];
-		nlohmann::json& events = api["Events"];
 
-		dumpProperties(manager->GetProperties(), properties);
-		dumpFunctions(manager->GetFunctions(), functions);
-		dumpEvents(manager->GetEvents(), events);
+		dumpProperties(manager->GetProperties(), api);
+		dumpMethods(manager->GetMethods(), api);
+		dumpEvents(manager->GetEvents(), api);
 	}
 
 	return dump;

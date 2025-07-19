@@ -11,6 +11,8 @@ layout (location = 4) in mat4 InstanceTransform;
 layout (location = 8) in vec3 InstanceScale;
 layout (location = 9) in vec3 InstanceColor;
 layout (location = 10) in float InstanceTransparency;
+// skinned meshes
+layout (location = 11) in mat4 SkinnedVertexTransform;
 
 const int MAX_LIGHTS = 6;
 
@@ -25,8 +27,6 @@ uniform float Time;
 uniform mat4 DirecLightProjection;
 
 uniform vec3 CameraPosition;
-
-const vec3 WindDirection = normalize(vec3(0.5f, 0.5f, 0.5f));
 
 out DATA
 {
@@ -56,14 +56,14 @@ void main()
 		pain = vec4(InstanceColor, 1.f) * VertexPaint;
 	}
 	
+	trans *= SkinnedVertexTransform;
+	
 	data_out.VertexNormal = VertexNormal;
-	float inten = sin((Time + VertexPosition.x + VertexPosition.z) * 3);
-	//data_out.Paint = vec4(vec3(inten + 1, inten + 1, inten + 1) * 0.5, 1.f);
 	data_out.Paint = pain;
-	data_out.Transparency = InstanceTransparency;
 	data_out.TextureUV = VertexUV;
+	data_out.Transparency = InstanceTransparency;
 	data_out.RenderMatrix = RenderMatrix;
-	data_out.ModelPosition = (VertexPosition + WindDirection * ((1 - VertexUV.y) * (inten * 0.03 - 0.05) * 0.5)) * sca;
+	data_out.ModelPosition = VertexPosition * sca;
 	data_out.WorldPosition = vec3(trans * vec4(data_out.ModelPosition, 1.0f));
 	data_out.Transform = trans;
 	data_out.RelativeToDirecLight = DirecLightProjection * vec4(data_out.WorldPosition, 1.f);

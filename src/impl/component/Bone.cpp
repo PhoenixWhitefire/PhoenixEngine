@@ -22,6 +22,21 @@ static Bone* getUnderlyingBone(EcBone* BoneComponent)
 		return nullptr;
 }
 
+static float lerp(float a, float b, float t)
+{
+	return a + (b - a) * t;
+}
+
+static glm::mat4 lerpMatrix(const glm::mat4& a, const glm::mat4& b, float t)
+{
+	glm::mat4 result;
+	for (int i = 0; i < 4; ++i)
+		for (int j = 0; j < 4; ++j)
+			result[i][j] = lerp(a[i][j], b[i][j], t);
+	
+	return result;
+}
+
 class BoneManager : public BaseComponentManager
 {
 public:
@@ -60,7 +75,7 @@ public:
 		{
 
 			EC_PROP(
-				"LocalTransform",
+				"Transform",
 				Matrix,
 				[](void* p)
 				{
@@ -78,7 +93,34 @@ public:
 					Bone* realBone = getUnderlyingBone(boneObj);
 					
 					if (realBone)
+					{
 						realBone->Transform = gv.AsMatrix();
+
+						GameObject* meshObj = boneObj->Object->GetParent();
+						EcMesh* mesh = meshObj->GetComponent<EcMesh>();
+
+						Mesh& meshData = MeshProvider::Get()->GetMeshResource(mesh->RenderMeshId);
+						MeshProvider::GpuMesh& gpuMesh = MeshProvider::Get()->GetGpuMesh(meshData.GpuId);
+
+						for (size_t i = 0; i < meshData.Vertices.size(); i++)
+						{
+							const Vertex& v = meshData.Vertices[i];
+
+							uint8_t jntIdx = UINT8_MAX;
+
+							for (uint8_t i = 0; i < 4; i++)
+								if (v.InfluencingJoints[i] == boneObj->SkeletalBoneId)
+								{
+									jntIdx = i;
+									break;
+								}
+
+							if (jntIdx != UINT8_MAX)
+							{
+								gpuMesh.SkinningData[i] = lerpMatrix(glm::mat4(1.f), gv.AsMatrix(), v.JointWeights[jntIdx]);
+							}
+						}
+					}
 					else
 						boneObj->Transform = gv.AsMatrix();
 				}
@@ -109,9 +151,9 @@ public:
         return props;
     }
 
-    virtual const Reflection::FunctionMap& GetFunctions() override
+    virtual const Reflection::MethodMap& GetMethods() override
     {
-        static const Reflection::FunctionMap funcs =
+        static const Reflection::MethodMap funcs =
 		{
 			
 		};

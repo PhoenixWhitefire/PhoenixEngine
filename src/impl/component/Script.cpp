@@ -77,9 +77,9 @@ public:
         return props;
     }
 
-    virtual const Reflection::FunctionMap& GetFunctions() override
+    virtual const Reflection::MethodMap& GetMethods() override
     {
-        static const Reflection::FunctionMap funcs =
+        static const Reflection::MethodMap funcs =
 		{
 			{ "Reload", {
 				{},
@@ -140,7 +140,7 @@ static void dumpStacktrace(lua_State* L, std::string* Into = nullptr)
 {
 	lua_Debug ar;
 
-	for (int i = 0; lua_getinfo(L, i, "sln", &ar); i++)
+	for (int i = (Into ? 1 : 0); lua_getinfo(L, i, "sln", &ar); i++)
 	{
 		std::string line = "[STCK]: from: ";
 
@@ -166,6 +166,18 @@ static void dumpStacktrace(lua_State* L, std::string* Into = nullptr)
 			Into->append(line);
 			Into->append("\n");
 		}
+	}
+
+	luaL_checkstack(L, 1, "yep");
+
+	lua_pushlightuserdata(L, L);
+	lua_gettable(L, LUA_ENVIRONINDEX);
+
+	if (lua_isstring(L, -1))
+	{
+		Log::Append("[STCK]: Trace to `:Connect` function call:");
+		Log::Append(lua_tostring(L, -1));
+		lua_pop(L, 1);
 	}
 }
 
@@ -221,8 +233,8 @@ static int api_gameobjindex(lua_State* L)
 	else if (Reflection::Event* event = obj->FindEvent(key, &reflectorHandle))
 		pushSignal(L, event, reflectorHandle);
 
-	else if (Reflection::Function* func = obj->FindFunction(key, &reflectorHandle))
-		ScriptEngine::L::PushFunction(L, func, reflectorHandle);
+	else if (Reflection::Method* func = obj->FindMethod(key, &reflectorHandle))
+		ScriptEngine::L::PushMethod(L, func, reflectorHandle);
 
 	else
 	{
@@ -400,26 +412,24 @@ static int api_eventnamecall(lua_State* L)
 {
 	if (strcmp(L->namecall->data, "Connect") == 0)
 	{
-		luaL_argcheck(L, lua_isfunction(L, 2), 2, "expected function");
+		luaL_checktype(L, 2, LUA_TFUNCTION);
 
 		EventSignalData* ev = (EventSignalData*)luaL_checkudata(L, 1, "EventSignal");
 		Reflection::Event* rev = ev->Event;
 	
 		lua_State* eL = lua_newthread(L);
-		lua_xpush(L, eL, 2);
-	
 		int threadRef = lua_ref(L, -1);
+		lua_xpush(L, eL, 2);
 	
 		// store the location for `lprint` etc
 		// only useful if we have NO OTHER STACK FRAMES
 		// aka for something like
 		// `game.OnFrameBegin:Connect(print)`
-		lua_Debug ar;
-		lua_getinfo(L, 1, "sl", &ar);
-		std::string str = std::format("[S{}:{}]", ar.short_src, ar.currentline);
+		std::string trace;
+		dumpStacktrace(L, &trace);
 	
 		lua_pushlightuserdata(L, eL);
-		lua_pushstring(L, str.c_str());
+		lua_pushstring(L, trace.c_str());
 		lua_settable(L, LUA_ENVIRONINDEX);
 	
 		uint32_t cnId = rev->Connect(
@@ -429,24 +439,39 @@ static int api_eventnamecall(lua_State* L)
 			-> void
 			{
 				assert(Inputs.size() == rev->CallbackInputs.size());
-				luaL_checkstack(eL, Inputs.size(), "event connection");
-			
-				// push our callback back to the top of the stack first
-				lua_pushvalue(eL, 1);
-			
+
+				lua_State* co = lua_newthread(eL);
+				luaL_checkstack(co, Inputs.size() + 3, "event connection");
+
+				lua_pushlightuserdata(eL, co);       // stack: co
+				lua_pushlightuserdata(eL, eL);       // stack: co, eL
+				lua_gettable(eL, LUA_ENVIRONINDEX);  // stack: co, trace
+				lua_settable(eL, LUA_ENVIRONINDEX);
+
+				lua_xpush(eL, co, 1);
+
 				for (size_t i = 0; i < Inputs.size(); i++)
 				{
 					assert(Inputs[i].Type == rev->CallbackInputs[i]);
-					ScriptEngine::L::PushGenericValue(eL, Inputs[i]);
+					ScriptEngine::L::PushGenericValue(co, Inputs[i]);
 				}
-			
-				int status = lua_pcall(eL, Inputs.size(), 0, 0);
-			
-				if (status != LUA_OK)
+
+				int status = lua_resume(co, eL, Inputs.size());
+
+				if (status != LUA_OK && status != LUA_YIELD)
 				{
-					Log::Error(std::format("Script event: {}", lua_tostring(eL, -1)));
-					dumpStacktrace(eL);
+					Log::Error(std::format("Script event: {}", lua_tostring(co, -1)));
+					dumpStacktrace(co);
 				}
+
+				if (status != LUA_YIELD)
+				{
+					lua_pushlightuserdata(eL, co);
+					lua_pushnil(eL);
+					lua_settable(eL, LUA_ENVIRONINDEX); // remove stacktrace string
+				}
+
+				lua_pop(eL, 1);
 			}
 		);
 	
@@ -494,6 +519,10 @@ static int api_evconnectionnamecall(lua_State* L)
 
 		ec->Event->Disconnect(GameObject::ReflectorHandleToPointer(ec->Reflector), ec->ConnectionId);
 		ec->ConnectionId = UINT32_MAX;
+
+		lua_pushlightuserdata(L, L);
+		lua_pushnil(L);
+		lua_settable(L, LUA_ENVIRONINDEX); // remove stacktrace string
 
 		lua_unref(ec->L, ec->ThreadRef);
 	}
@@ -791,7 +820,7 @@ static lua_State* createVM()
 				ZoneText(k, strlen(k));
 
 				std::pair<EntityComponent, uint32_t> reflectorHandle;
-				Reflection::Function* func = g->FindFunction(k, &reflectorHandle);
+				Reflection::Method* func = g->FindMethod(k, &reflectorHandle);
 
 				if (!func)
 					luaL_errorL(L, "'%s' is not a valid method of %s", k, g->GetFullName().c_str());

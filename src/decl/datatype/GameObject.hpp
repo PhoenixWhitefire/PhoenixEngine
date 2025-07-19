@@ -99,7 +99,7 @@ public:
 	virtual void Shutdown() {};
 
 	virtual const Reflection::PropertyMap& GetProperties() = 0;
-	virtual const Reflection::FunctionMap& GetFunctions() = 0;
+	virtual const Reflection::MethodMap& GetMethods() = 0;
 	virtual const Reflection::EventMap& GetEvents() { static Reflection::EventMap e{}; return e; };
 };
 
@@ -139,7 +139,7 @@ public:
 	std::vector<std::pair<EntityComponent, uint32_t>>& GetComponents();
 
 	Reflection::Property* FindProperty(const std::string_view&, std::pair<EntityComponent, uint32_t>* FromComponent = nullptr);
-	Reflection::Function* FindFunction(const std::string_view&, std::pair<EntityComponent, uint32_t>* FromComponent = nullptr);
+	Reflection::Method* FindMethod(const std::string_view&, std::pair<EntityComponent, uint32_t>* FromComponent = nullptr);
 	Reflection::Event* FindEvent(const std::string_view&, std::pair<EntityComponent, uint32_t>* FromComponent = nullptr);
 
 	Reflection::GenericValue GetPropertyValue(const std::string_view&);
@@ -148,7 +148,7 @@ public:
 	std::vector<Reflection::GenericValue> CallFunction(const std::string_view&, const std::vector<Reflection::GenericValue>&);
 
 	Reflection::PropertyMap GetProperties() const;
-	Reflection::FunctionMap GetFunctions() const;
+	Reflection::MethodMap GetMethods() const;
 	Reflection::EventMap GetEvents() const;
 
 	// the engine will NEED some objects to continue existing without being

@@ -118,8 +118,10 @@ static void GLDebugCallback(
 	// "Vertex shader in program is being recompiled based on GL state"
 	if (Id != 131218 && SeverityId > GL_DEBUG_SEVERITY_NOTIFICATION)
 		if (EngineJsonConfig.value("render_glerrorsarefatal", true))
-			throw(debugString);
+			RAISE_RT(debugString);
 }
+
+static Renderer* s_Instance = nullptr;
 
 Renderer::Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window)
 {
@@ -167,16 +169,17 @@ void Renderer::Initialize(uint32_t Width, uint32_t Height, SDL_Window* Window)
 	glViewport(0, 0, m_Width, m_Height);
 
 	int glVersionMajor, glVersionMinor = 0;
+	int maxVertexAttribs = 0;
 
 	glGetIntegerv(GL_MAJOR_VERSION, &glVersionMajor);
 	glGetIntegerv(GL_MINOR_VERSION, &glVersionMinor);
+	glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxVertexAttribs);
 
-	std::string glVersionStr = std::format(
+	Log::Info(std::format(
 		"Running OpenGL version {}.{}",
 		glVersionMajor, glVersionMinor
-	);
-
-	Log::Info(glVersionStr);
+	));
+	Log::Info(std::format("Max vertex attribs: {}", maxVertexAttribs));
 
 	m_VertexArray.Initialize();
 	m_VertexBuffer.Initialize();
@@ -191,7 +194,7 @@ void Renderer::Initialize(uint32_t Width, uint32_t Height, SDL_Window* Window)
 
 	this->FrameBuffer.Initialize(m_Width, m_Height, m_MsaaSamples);
 
-	glGenBuffers(1, &m_InstancingBuffer);
+	glGenBuffers(1, &InstancingBuffer);
 
 #define SETLIGHTLOCS(i) LightLocs[i] = "Lights[" #i "]"; \
 LightPosLocs[i] = "Lights[" #i "].Position";             \
@@ -212,12 +215,23 @@ LightShadowsLocs[i] = "Lights[" #i "].Shadows";          \
 
 #undef SETLIGHTLOCS
 
+	assert(!s_Instance);
+	s_Instance = this;
+
 	Log::Info("Renderer initialized");
+}
+
+Renderer* Renderer::Get()
+{
+	assert(s_Instance);
+	return s_Instance;
 }
 
 Renderer::~Renderer()
 {
-	glDeleteBuffers(1, &m_InstancingBuffer);
+	s_Instance = nullptr;
+
+	glDeleteBuffers(1, &InstancingBuffer);
 
 	m_VertexArray.Delete();
 	m_ElementBuffer.Delete();
@@ -259,18 +273,6 @@ void Renderer::DrawScene(
 
 	MeshProvider* meshProvider = MeshProvider::Get();
 	MaterialManager* mtlManager = MaterialManager::Get();
-
-	struct InstanceDrawInfo
-	{
-		glm::vec4 TransformRow1;
-		glm::vec4 TransformRow2;
-		glm::vec4 TransformRow3;
-		glm::vec4 TransformRow4;
-		glm::vec3 Scale;
-		glm::vec3 Color;
-		float Transparency;
-	};
-	static_assert(sizeof(InstanceDrawInfo) == ((4*4) + (3*2) + 1) * 4);
 
 	// map< clump hash, pair< base RenderItem, vector< array buffer data >>>
 	std::map<uint64_t, std::pair<size_t, std::vector<InstanceDrawInfo>>> instancingList;
@@ -405,61 +407,35 @@ void Renderer::DrawScene(
 		const Mesh& mesh = meshProvider->GetMeshResource(renderData.RenderMeshId);
 
 		const std::vector<InstanceDrawInfo>& drawInfos = iter.second.second;
+		MeshProvider::GpuMesh& gpuMesh = meshProvider->GetGpuMesh(mesh.GpuId);
 
 		{
 			ZoneNamedNC(uploadzone, "UploadInstancingData", tracy::Color::Khaki, true);
 
-			MeshProvider::GpuMesh& gpuMesh = meshProvider->GetGpuMesh(mesh.GpuId);
 			gpuMesh.VertexArray.Bind();
 
-			glBindBuffer(GL_ARRAY_BUFFER, m_InstancingBuffer);
-			
-			constexpr int32_t stride = sizeof(InstanceDrawInfo);
-
-			// TODO 14/11/2024
-			// I don't like having these here, but it looks like both the Vertex Array
-			// and the Instancing Buffer need to be bound for it to function
-
-			// `Transform` matrix
-			// 4 vec4's
-			glEnableVertexAttribArray(6);
-			glEnableVertexAttribArray(7);
-			glEnableVertexAttribArray(8);
-			glEnableVertexAttribArray(9);
-
-			glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(InstanceDrawInfo, TransformRow1));
-			glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(InstanceDrawInfo, TransformRow2));
-			glVertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(InstanceDrawInfo, TransformRow3));
-			glVertexAttribPointer(9, 4, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(InstanceDrawInfo, TransformRow4));
-
-			glVertexAttribDivisor(6, 1);
-			glVertexAttribDivisor(7, 1);
-			glVertexAttribDivisor(8, 1);
-			glVertexAttribDivisor(9, 1);
-
-			// vec3s
-			// scale
-			glEnableVertexAttribArray(10);
-			// color
-			glEnableVertexAttribArray(11);
-
-			// it's still `4 * (size_t)` because that's the offset from everything else
-			glVertexAttribPointer(10, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(InstanceDrawInfo, Scale));
-			glVertexAttribPointer(11, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(InstanceDrawInfo, Color));
-
-			glVertexAttribDivisor(10, 1);
-			glVertexAttribDivisor(11, 1);
-
-			glEnableVertexAttribArray(12);
-
-			glVertexAttribPointer(12, 1, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(InstanceDrawInfo, Transparency));
-
-			glVertexAttribDivisor(12, 1);
+			glBindBuffer(GL_ARRAY_BUFFER, InstancingBuffer);
 
 			glBufferData(
 				GL_ARRAY_BUFFER,
 				drawInfos.size() * sizeof(InstanceDrawInfo),
 				drawInfos.data(),
+				GL_STREAM_DRAW
+			);
+		}
+
+		if (mesh.Bones.size() > 0)
+		{
+			ZoneNamedNC(uploadZoneSkinned, "UploadSkinningTransforms", tracy::Color::Khaki2, true);
+
+			mtlManager->GetMaterialResource(renderData.MaterialId).ShaderId = ShaderManager::Get()->LoadFromPath("worldUberSkinned");
+
+			glBindBuffer(GL_ARRAY_BUFFER, gpuMesh.SkinningBuffer);
+
+			glBufferData(
+				GL_ARRAY_BUFFER,
+				gpuMesh.SkinningData.size() * sizeof(glm::mat4),
+				gpuMesh.SkinningData.data(),
 				GL_STREAM_DRAW
 			);
 		}
@@ -662,24 +638,6 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData, bool DebugWirefra
 	}
 	else
 		shader.SetUniform("HasEmissionMap", false);
-
-	MeshProvider* meshProv = MeshProvider::Get();
-
-	const Mesh& mesh = meshProv->GetMeshResource(RenderData.RenderMeshId);
-
-	if (!mesh.Bones.empty())
-	{
-		shader.SetUniform("Animated", true);
-
-		for (size_t i = 0; i < mesh.Bones.size(); i++)
-		{
-			const Bone& b = mesh.Bones[i];
-
-			shader.SetUniform("Bones[" + std::to_string(i) + "]", b.Transform);
-		}
-	}
-	else
-		shader.SetUniform("Animated", false);
 
 	// apply the uniforms for the shader program...
 	shader.ApplyDefaultUniforms();

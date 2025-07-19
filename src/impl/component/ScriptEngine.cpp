@@ -28,11 +28,6 @@
 #include "FileRW.hpp"
 #include "Log.hpp"
 
-template <class T> static void throwWrapped(T exc)
-{
-	throw(exc);
-}
-
 bool ScriptEngine::s_BackendScriptWantGrabMouse = false;
 
 std::vector<ScriptEngine::YieldedCoroutine> ScriptEngine::s_YieldedCoroutines{};
@@ -427,7 +422,7 @@ void ScriptEngine::L::PushGameObject(lua_State* L, GameObject* obj)
 
 int ScriptEngine::L::HandleMethodCall(
 	lua_State* L,
-	Reflection::Function* func,
+	Reflection::Method* func,
 	std::pair<EntityComponent, uint32_t> FromComponent
 )
 {
@@ -557,7 +552,7 @@ int ScriptEngine::L::HandleMethodCall(
 	// 15/08/2024
 }
 
-void ScriptEngine::L::PushFunction(lua_State* L, Reflection::Function* Function, std::pair<EntityComponent, uint32_t> FromComponent)
+void ScriptEngine::L::PushMethod(lua_State* L, Reflection::Method* Function, std::pair<EntityComponent, uint32_t> FromComponent)
 {
 	// if we dont do this then comparison will not work
 	// ex: `game.Close == game.Close`
@@ -580,7 +575,7 @@ void ScriptEngine::L::PushFunction(lua_State* L, Reflection::Function* Function,
 			L,
 			[](lua_State* L)
 			{
-				Reflection::Function* fn = static_cast<Reflection::Function*>(lua_tolightuserdata(L, lua_upvalueindex(1)));
+				Reflection::Method* fn = static_cast<Reflection::Method*>(lua_tolightuserdata(L, lua_upvalueindex(1)));
 				auto& fc = *static_cast<decltype(FromComponent)*>(lua_tolightuserdata(L, lua_upvalueindex(2)));
 
 				return ScriptEngine::L::HandleMethodCall(
@@ -590,7 +585,7 @@ void ScriptEngine::L::PushFunction(lua_State* L, Reflection::Function* Function,
 				);
 			},
 
-			"PushFunctionThunk",
+			"PushMethodThunk",
 			1
 		); // stack is now just closure
 
@@ -611,7 +606,7 @@ static void fdCallback(void*, const char* const* FileList, int)
 	if (!FileList)
 	{
 		const char* err = SDL_GetError();
-		throw(std::string(err));
+		RAISE_RT(err);
 	}
 
 	FdResults.clear();
@@ -756,33 +751,26 @@ static std::pair<std::string_view, GlobalFn> s_GlobalFunctions[] =
 
 			// TODO a kind of hack to get what script we're running as?
 			lua_getglobal(L, "script");
-			Reflection::GenericValue script = ScriptEngine::L::LuaValueToGeneric(L, 1);
+			Reflection::GenericValue script = ScriptEngine::L::LuaValueToGeneric(L, -1);
 			GameObject* scriptObject = GameObject::FromGenericValue(script);
 			// modules currently do not have a `script` global
 			uint32_t scriptId = scriptObject ? scriptObject->ObjectId : PHX_GAMEOBJECT_NULL_ID;
 
-			lua_yield(L, 1);
+			lua_pushthread(L);
 
-			// `lua_yield` may fail with the "attempt to yield across metamethod/C-call boundary"
-			// only run the code if we've successfully yielded
-			if (lua_status(L) == LUA_YIELD)
-			{
-				lua_pushthread(L);
+			auto& b = ScriptEngine::s_YieldedCoroutines.emplace_back(
+				L,
+				// make sure the coroutine doesn't get de-alloc'd before we resume it
+				lua_ref(L, -1),
+				scriptId,
+				YieldedCoroutine::ResumptionMode::ScheduledTime
+			);
 
-				auto& b = ScriptEngine::s_YieldedCoroutines.emplace_back(
-					L,
-					// make sure the coroutine doesn't get de-alloc'd before we resume it
-					lua_ref(L, -1),
-					scriptId,
-					YieldedCoroutine::ResumptionMode::ScheduledTime
-				);
+			double curTime = GetRunningTime();
 
-				double curTime = GetRunningTime();
+			b.RmSchedule = { curTime, curTime + sleepTime };
 
-				b.RmSchedule = { curTime, curTime + sleepTime };
-			}
-
-			return -1;
+			return lua_yield(L, 1);
 		},
 		1
 	}
@@ -1548,48 +1536,41 @@ static std::pair<std::string_view, GlobalFn> s_GlobalFunctions[] =
 			// modules currently do not have a `script` global
 			uint32_t scriptId = scriptObject ? scriptObject->ObjectId : PHX_GAMEOBJECT_NULL_ID;
 
-			lua_yield(L, 1);
-
-			// `lua_yield` may fail with the "attempt to yield across metamethod/C-call boundary"
-			// only run the code if we've successfully yielded
-			if (lua_status(L) == LUA_YIELD)
-			{
-				IsFdInProgress = true;
-
-				SDL_ShowSaveFileDialog(
-					fdCallback,
-					NULL,
-					SDL_GL_GetCurrentWindow(),
-					&filter,
-					1,
-					defaultLocationAbs.c_str()
-				);
-
-				lua_pushthread(L);
-
-				auto& b = s_YieldedCoroutines.emplace_back(
-					L,
-					// make sure the coroutine doesn't get de-alloc'd before we resume it
-					lua_ref(lua_mainthread(L), -1),
-					scriptId,
-					YieldedCoroutine::ResumptionMode::Polled
-				);
-
-				b.RmPoll = [](std::vector<Reflection::GenericValue>* ReturnValues)
-					-> bool
+			IsFdInProgress = true;
+		
+			SDL_ShowSaveFileDialog(
+				fdCallback,
+				NULL,
+				SDL_GL_GetCurrentWindow(),
+				&filter,
+				1,
+				defaultLocationAbs.c_str()
+			);
+		
+			lua_pushthread(L);
+		
+			auto& b = s_YieldedCoroutines.emplace_back(
+				L,
+				// make sure the coroutine doesn't get de-alloc'd before we resume it
+				lua_ref(L, -1),
+				scriptId,
+				YieldedCoroutine::ResumptionMode::Polled
+			);
+		
+			b.RmPoll = [](std::vector<Reflection::GenericValue>* ReturnValues)
+				-> bool
+				{
+					if (IsFdInProgress)
+						return false;
+					else
 					{
-						if (IsFdInProgress)
-							return false;
-						else
-						{
-							ReturnValues->emplace_back(FdResults[0]);
+						ReturnValues->emplace_back(FdResults[0]);
+					
+						return true;
+					}
+				};
 
-							return true;
-						}
-					};
-			}
-
-			return -1;
+			return lua_yield(L, 1);
 		},
 		0
 	}
@@ -1629,55 +1610,48 @@ static std::pair<std::string_view, GlobalFn> s_GlobalFunctions[] =
 			// modules currently do not have a `script` global
 			uint32_t scriptId = scriptObject ? scriptObject->ObjectId : PHX_GAMEOBJECT_NULL_ID;
 
-			lua_yield(L, 1);
-
-			// `lua_yield` may fail with the "attempt to yield across metamethod/C-call boundary"
-			// only run the code if we've successfully yielded
-			if (lua_status(L) == LUA_YIELD)
-			{
-				IsFdInProgress = true;
-
-				SDL_ShowOpenFileDialog(
-					fdCallback,
-					NULL,
-					SDL_GL_GetCurrentWindow(),
-					&filter,
-					1,
-					defaultLocationAbs.c_str(),
-					allowMultipleFiles
-				);
-
-				lua_pushthread(L);
-
-				auto& b = ScriptEngine::s_YieldedCoroutines.emplace_back(
-					L,
-					// make sure the coroutine doesn't get de-alloc'd before we resume it
-					lua_ref(lua_mainthread(L), -1),
-					scriptId,
-					YieldedCoroutine::ResumptionMode::Polled
-				);
-
-				b.RmPoll = [](std::vector<Reflection::GenericValue>* ReturnValues)
-					-> bool
+			IsFdInProgress = true;
+		
+			SDL_ShowOpenFileDialog(
+				fdCallback,
+				NULL,
+				SDL_GL_GetCurrentWindow(),
+				&filter,
+				1,
+				defaultLocationAbs.c_str(),
+				allowMultipleFiles
+			);
+		
+			lua_pushthread(L);
+		
+			auto& b = ScriptEngine::s_YieldedCoroutines.emplace_back(
+				L,
+				// make sure the coroutine doesn't get de-alloc'd before we resume it
+				lua_ref(L, -1),
+				scriptId,
+				YieldedCoroutine::ResumptionMode::Polled
+			);
+		
+			b.RmPoll = [](std::vector<Reflection::GenericValue>* ReturnValues)
+				-> bool
+				{
+					if (IsFdInProgress)
+						return false;
+					else
 					{
-						if (IsFdInProgress)
-							return false;
-						else
-						{
-							std::vector<Reflection::GenericValue> pathsArray;
-							pathsArray.reserve(FdResults.size());
+						std::vector<Reflection::GenericValue> pathsArray;
+						pathsArray.reserve(FdResults.size());
+					
+						for (const std::string& r : FdResults)
+							pathsArray.emplace_back(r);
+					
+						*ReturnValues = { pathsArray };
+					
+						return true;
+					}
+				};
 
-							for (const std::string& r : FdResults)
-								pathsArray.emplace_back(r);
-
-							*ReturnValues = { pathsArray };
-
-							return true;
-						}
-					};
-			}
-
-			return -1;
+			return lua_yield(L, 1);
 		},
 		0
 	}

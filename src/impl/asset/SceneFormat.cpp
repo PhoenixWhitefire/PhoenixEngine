@@ -16,10 +16,10 @@
 #include "FileRW.hpp"
 #include "Log.hpp"
 
-#define SF_EMIT_WARNING(err, ...) Log::Warning(std::format(     \
-	"Deserialization warning: " err,                            \
-	__VA_ARGS__                                                 \
-))                                                              \
+#define SF_WARN(err, ...) Log::Warning(std::format(     \
+	"Deserialization warning: " err,                    \
+	__VA_ARGS__                                         \
+))                                                      \
 
 static std::string errorString = "No error";
 
@@ -390,7 +390,7 @@ static GameObject* createObjectFromJsonItem(const nlohmann::json& Item, uint32_t
 
 		if (classNameJson == Item.end())
 		{
-			SF_EMIT_WARNING("Object #{} was missing it's '$_class' key, skipping", ItemIndex);
+			SF_WARN("Object #{} was missing it's '$_class' key, skipping", ItemIndex);
 
 			return nullptr;
 		}
@@ -408,7 +408,7 @@ static GameObject* createObjectFromJsonItem(const nlohmann::json& Item, uint32_t
 
 		if (components == Item.end())
 		{
-			SF_EMIT_WARNING("Object #{} was missing it's '$_components' key, skipping", ItemIndex);
+			SF_WARN("Object #{} was missing it's '$_components' key, skipping", ItemIndex);
 
 			return nullptr;
 		}
@@ -484,14 +484,14 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 		std::string name = item.find("Name") != item.end() ? (std::string)item["Name"] : newObject->Name;
 
 		if (item.find("$_objectId") == item.end())
-			SF_EMIT_WARNING("Object #{} was missing it's '$_objectId' key", itemIndex);
+			SF_WARN("Object #{} was missing it's '$_objectId' key", itemIndex);
 		else
 		{
 			uint32_t itemObjectId = item["$_objectId"];
 
 			if (const auto& prev = objectsMap.find(itemObjectId); prev != objectsMap.end())
 			{
-				SF_EMIT_WARNING(
+				SF_WARN(
 					"Object #{} ('{}') shares an `$_objectId` ({}) with ID:{} ('{}'), it will be skipped",
 					itemIndex, item.value("Name", "<UNNAMED>"), itemObjectId, prev->second->ObjectId, prev->second->Name
 				);
@@ -521,7 +521,7 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 
 			if (!member)
 			{
-				SF_EMIT_WARNING(
+				SF_WARN(
 					"Member '{}' is not defined in the API (Name: '{}')!",
 					memberName,
 					name
@@ -533,7 +533,7 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 
 			if (!member->Set)
 			{
-				SF_EMIT_WARNING(
+				SF_WARN(
 					"Member '{}' of '{}' is read-only!",
 					memberName,
 					name
@@ -613,7 +613,7 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 			{
 				const std::string_view& memberTypeName = Reflection::TypeAsString(memberType);
 
-				SF_EMIT_WARNING(
+				SF_WARN(
 					"Not reading prop '{}' because it's type ({}) is unknown",
 					memberName,
 					memberTypeName
@@ -635,7 +635,7 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 					const std::string_view& mtname = Reflection::TypeAsString(memberType);
 					std::string valueStr = assignment.ToString();
 
-					SF_EMIT_WARNING(
+					SF_WARN(
 						"Failed to set {} Property '{}' of '{}' to '{}': {}",
 						mtname, memberName, name, valueStr, err.what()
 					);
@@ -677,7 +677,7 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 				{
 					std::string valueStr = target->second->GetFullName();
 
-					SF_EMIT_WARNING(
+					SF_WARN(
 						"Failed to set GameObject property of '{}' to '{}': {}",
 						object->Name, valueStr, err.what()
 					);
@@ -685,7 +685,7 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 			}
 			else
 			{
-				SF_EMIT_WARNING(
+				SF_WARN(
 					"'{}' refers to invalid scene-relative Object ID {} for prop {}. To avoid UB, it will be NULL'd.",
 					object->Name,
 					sceneRelativeId,
@@ -763,6 +763,9 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 	{
 		const std::string_view& propName = prop.first;
 		const Reflection::Property& propInfo = prop.second;
+
+		if (!propInfo.Serializes)
+			continue;
 
 		if (!propInfo.Set && propName != "ObjectId")
 			continue;

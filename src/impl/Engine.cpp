@@ -62,7 +62,7 @@ static void sdlLog(void*, int Type, SDL_LogPriority Priority, const char* Messag
 	if (Priority < SDL_LOG_PRIORITY_ERROR)
 		Log::Warning(logString);
 	else
-		throw(logString);
+		RAISE_RT(logString);
 }
 
 static Engine* EngineInstance = nullptr;

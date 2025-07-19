@@ -1,3 +1,5 @@
+#include <glad/gl.h>
+
 #include "component/Mesh.hpp"
 #include "component/Transform.hpp"
 
@@ -135,9 +137,9 @@ public:
         return props;
     }
 
-    virtual const Reflection::FunctionMap& GetFunctions() override
+    virtual const Reflection::MethodMap& GetMethods() override
     {
-        static const Reflection::FunctionMap funcs = {};
+        static const Reflection::MethodMap funcs = {};
         return funcs;
     }
 
