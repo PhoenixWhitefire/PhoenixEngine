@@ -323,10 +323,10 @@ static void emloadTexture(
 
 			while (!s_PboWriteGlobal && !s_TextureManagerShutdown)
 			{
-				if (totalTimeSlept > 2500)
+				if (totalTimeSlept > 5000)
 				{
 					AsyncTexture->Status = Texture::LoadStatus::Failed;
-					AsyncTexture->ImagePath += " <POTENTIAL DEADLOCK>";
+					AsyncTexture->FailureReason = " <POTENTIAL DEADLOCK>";
 					break; // 10/05/2025 deadlock problems
 				}
 

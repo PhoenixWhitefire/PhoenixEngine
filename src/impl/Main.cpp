@@ -791,7 +791,7 @@ static void handleCrash(const std::string_view& Error, const std::string_view& E
 
 static const char* MapFileFromArgs = nullptr;
 
-static void init(int argc, char** argv)
+static void init()
 {
 	ZoneScoped;
 
@@ -938,7 +938,7 @@ int main(int argc, char** argv)
 	{
 		Engine engine{};
 
-		init(argc, argv);
+		init();
 		engine.Start();
 
 		Log::Save(); // in case FileRW::WriteFile throws an exception

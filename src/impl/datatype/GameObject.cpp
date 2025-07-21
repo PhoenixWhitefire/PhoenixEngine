@@ -39,7 +39,7 @@ static GameObject* cloneRecursive(
 
 	for (auto& it : Root->GetProperties())
 	{
-		if (!it.second.Set)
+		if (!it.second->Set)
 			continue; // read-only
 
 		Reflection::GenericValue rootVal = Root->GetPropertyValue(it.first);
@@ -94,7 +94,7 @@ static void mergeRecursive(
 			me->AddComponent(pair.first);
 
 	for (auto& it : other->GetProperties())
-		if (it.second.Set && it.first != "Parent")
+		if (it.second->Set && it.first != "Parent")
 		{
 			Reflection::GenericValue v = other->GetPropertyValue(it.first);
 
@@ -351,7 +351,7 @@ GameObject* GameObject::GetObjectById(uint32_t Id)
 	return obj.Valid ? &obj : nullptr;
 }
 
-void* GameObject::ReflectorHandleToPointer(const std::pair<EntityComponent, uint32_t>& Handle)
+void* GameObject::ReflectorHandleToPointer(const ReflectorHandle& Handle)
 {
 	if (Handle.first == EntityComponent::None)
 		return (void*)GetObjectById(Handle.second);
@@ -647,17 +647,17 @@ uint32_t GameObject::AddComponent(EntityComponent Type)
 
 	for (const auto& it : manager->GetProperties())
 	{
-		m_ComponentApis.Properties[it.first] = it.second;
+		m_ComponentApis.Properties[it.first] = &it.second;
 		m_MemberToComponentMap[it.first] = m_Components.back();
 	}
 	for (const auto& it : manager->GetMethods())
 	{
-		m_ComponentApis.Methods[it.first] = it.second;
+		m_ComponentApis.Methods[it.first] = &it.second;
 		m_MemberToComponentMap[it.first] = m_Components.back();
 	}
 	for (const auto& it : manager->GetEvents())
 	{
-		m_ComponentApis.Events[it.first] = it.second;
+		m_ComponentApis.Events[it.first] = &it.second;
 		m_MemberToComponentMap[it.first] = m_Components.back();
 	}
 
@@ -694,9 +694,9 @@ void GameObject::RemoveComponent(EntityComponent Type)
 	RAISE_RT("Don't have that component");
 }
 
-Reflection::Property* GameObject::FindProperty(const std::string_view& PropName, std::pair<EntityComponent, uint32_t>* FromComponent)
+const Reflection::Property* GameObject::FindProperty(const std::string_view& PropName, ReflectorHandle* FromComponent)
 {
-	std::pair<EntityComponent, uint32_t> dummyFc{ EntityComponent::None, PHX_GAMEOBJECT_NULL_ID };
+	ReflectorHandle dummyFc{ EntityComponent::None, PHX_GAMEOBJECT_NULL_ID };
 	FromComponent = FromComponent ? FromComponent : &dummyFc;
 
 	if (auto it = s_Api.Properties.find(PropName); it != s_Api.Properties.end())
@@ -708,14 +708,14 @@ Reflection::Property* GameObject::FindProperty(const std::string_view& PropName,
 	if (auto it = m_ComponentApis.Properties.find(PropName); it != m_ComponentApis.Properties.end())
 	{
 		*FromComponent = m_MemberToComponentMap[PropName];
-		return &it->second;
+		return it->second;
 	}
 
 	return nullptr;
 }
-Reflection::Method* GameObject::FindMethod(const std::string_view& FuncName, std::pair<EntityComponent, uint32_t>* FromComponent)
+const Reflection::Method* GameObject::FindMethod(const std::string_view& FuncName, ReflectorHandle* FromComponent)
 {
-	std::pair<EntityComponent, uint32_t> dummyFc{ EntityComponent::None, PHX_GAMEOBJECT_NULL_ID };
+	ReflectorHandle dummyFc{ EntityComponent::None, PHX_GAMEOBJECT_NULL_ID };
 	FromComponent = FromComponent ? FromComponent : &dummyFc;
 
 	if (auto it = s_Api.Methods.find(FuncName); it != s_Api.Methods.end())
@@ -727,26 +727,26 @@ Reflection::Method* GameObject::FindMethod(const std::string_view& FuncName, std
 	if (auto it = m_ComponentApis.Methods.find(FuncName); it != m_ComponentApis.Methods.end())
 	{
 		*FromComponent = m_MemberToComponentMap[FuncName];
-		return &it->second;
+		return it->second;
 	}
 
 	return nullptr;
 }
-Reflection::Event* GameObject::FindEvent(const std::string_view& EventName, std::pair<EntityComponent, uint32_t>* ReflectorHandle)
+const Reflection::Event* GameObject::FindEvent(const std::string_view& EventName, ReflectorHandle* Handle)
 {
-	std::pair<EntityComponent, uint32_t> dummyHandle{ EntityComponent::None, PHX_GAMEOBJECT_NULL_ID };
-	ReflectorHandle = ReflectorHandle ? ReflectorHandle : &dummyHandle;
+	ReflectorHandle dummyHandle{ EntityComponent::None, PHX_GAMEOBJECT_NULL_ID };
+	Handle = Handle ? Handle : &dummyHandle;
 
 	if (auto it = s_Api.Events.find(EventName); it != s_Api.Events.end())
 	{
-		ReflectorHandle->second = ObjectId;
+		Handle->second = ObjectId;
 		return &it->second;
 	}
 
 	if (auto it = m_ComponentApis.Events.find(EventName); it != m_ComponentApis.Events.end())
 	{
-		*ReflectorHandle = m_MemberToComponentMap[EventName];
-		return &it->second;
+		*Handle = m_MemberToComponentMap[EventName];
+		return it->second;
 	}
 
 	return nullptr;
@@ -756,7 +756,7 @@ Reflection::GenericValue GameObject::GetPropertyValue(const std::string_view& Pr
 {
 	std::pair<EntityComponent, uint32_t> fromComponent{ EntityComponent::None, PHX_GAMEOBJECT_NULL_ID };
 
-	if (Reflection::Property* prop = FindProperty(PropName, &fromComponent))
+	if (const Reflection::Property* prop = FindProperty(PropName, &fromComponent))
 		return prop->Get(ReflectorHandleToPointer(fromComponent));
 
 	RAISE_RT("Invalid property in GetPropertyValue: " + std::string(PropName));
@@ -765,7 +765,7 @@ void GameObject::SetPropertyValue(const std::string_view& PropName, const Reflec
 {
 	std::pair<EntityComponent, uint32_t> fromComponent{ EntityComponent::None, PHX_GAMEOBJECT_NULL_ID };
 
-	if (Reflection::Property* prop = FindProperty(PropName, &fromComponent))
+	if (const Reflection::Property* prop = FindProperty(PropName, &fromComponent))
 	{
 		prop->Set(ReflectorHandleToPointer(fromComponent), Value);
 		
@@ -779,7 +779,7 @@ std::vector<Reflection::GenericValue> GameObject::CallFunction(const std::string
 {
 	std::pair<EntityComponent, uint32_t> fromComponent;
 
-	if (Reflection::Method* func = FindMethod(FuncName, &fromComponent))
+	if (const Reflection::Method* func = FindMethod(FuncName, &fromComponent))
 		return func->Func(ReflectorHandleToPointer(fromComponent), Inputs);
 
 	RAISE_RT("Invalid function in CallFunction: " + std::string(FuncName));
@@ -789,16 +789,29 @@ Reflection::PropertyMap GameObject::GetProperties() const
 {
 	// base APIs always take priority for consistency
 	Reflection::PropertyMap cumulativeProps = m_ComponentApis.Properties;
-	cumulativeProps.insert(s_Api.Properties.begin(), s_Api.Properties.end());
+
+	for (const auto& it : s_Api.Properties)
+		cumulativeProps.insert(std::pair(it.first, &it.second));
 
 	return cumulativeProps;
 }
 Reflection::MethodMap GameObject::GetMethods() const
 {
 	Reflection::MethodMap cumulativeFuncs = m_ComponentApis.Methods;
-	cumulativeFuncs.insert(s_Api.Methods.begin(), s_Api.Methods.end());
+
+	for (const auto& it : s_Api.Methods)
+		cumulativeFuncs.insert(std::pair(it.first, &it.second));
 
 	return cumulativeFuncs;
+}
+Reflection::EventMap GameObject::GetEvents() const
+{
+	Reflection::EventMap cumulativeEvents = m_ComponentApis.Events;
+
+	for (const auto& it : s_Api.Events)
+		cumulativeEvents.insert(std::pair(it.first, &it.second));
+
+	return cumulativeEvents;
 }
 
 std::vector<std::pair<EntityComponent, uint32_t>>& GameObject::GetComponents()
@@ -868,7 +881,7 @@ GameObject* GameObject::Create(const std::string_view& FirstComponent)
 		return GameObject::Create(it->second);
 }
 
-static void dumpProperties(const Reflection::PropertyMap& Properties, nlohmann::json& Json)
+static void dumpProperties(const Reflection::StaticPropertyMap& Properties, nlohmann::json& Json)
 {
 	for (const auto& propIt : Properties)
 	{
@@ -884,7 +897,7 @@ static void dumpProperties(const Reflection::PropertyMap& Properties, nlohmann::
 	}
 }
 
-static void dumpMethods(const Reflection::MethodMap& Functions, nlohmann::json& Json)
+static void dumpMethods(const Reflection::StaticMethodMap& Functions, nlohmann::json& Json)
 {
 	for (const auto& funcIt : Functions)
 	{
@@ -904,7 +917,7 @@ static void dumpMethods(const Reflection::MethodMap& Functions, nlohmann::json& 
 	}
 }
 
-static void dumpEvents(const Reflection::EventMap& Events, nlohmann::json& Json)
+static void dumpEvents(const Reflection::StaticEventMap& Events, nlohmann::json& Json)
 {
 	for (const auto& eventIt : Events)
 	{

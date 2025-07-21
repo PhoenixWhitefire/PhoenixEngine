@@ -52,15 +52,15 @@ public:
     virtual void DeleteComponent(uint32_t Id) override
     {
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
-		if (lua_State* L = m_Components[Id].m_L)
-			lua_resetthread(L);
+		//if (lua_State* L = m_Components[Id].m_L)
+		//	lua_resetthread(L);
 		
 		m_Components[Id].Object.Invalidate();
     }
 
-    virtual const Reflection::PropertyMap& GetProperties() override
+    virtual const Reflection::StaticPropertyMap& GetProperties() override
     {
-        static const Reflection::PropertyMap props = 
+        static const Reflection::StaticPropertyMap props = 
         {
             { "SourceFile", {
 				Reflection::ValueType::String,
@@ -77,9 +77,9 @@ public:
         return props;
     }
 
-    virtual const Reflection::MethodMap& GetMethods() override
+    virtual const Reflection::StaticMethodMap& GetMethods() override
     {
-        static const Reflection::MethodMap funcs =
+        static const Reflection::StaticMethodMap funcs =
 		{
 			{ "Reload", {
 				{},
@@ -104,7 +104,7 @@ public:
 
 	virtual void Shutdown() override
     {
-        for (size_t i = 0; i < m_Components.size(); i++)
+        for (uint32_t i = 0; i < m_Components.size(); i++)
             DeleteComponent(i);
 		
 		if (LVM)
@@ -122,14 +122,14 @@ static inline ScriptManager ManagerInstance{};
 
 struct EventSignalData
 {
-	std::pair<EntityComponent, uint32_t> Reflector;
-	Reflection::Event* Event = nullptr;
+	ReflectorHandle Reflector;
+	const Reflection::Event* Event = nullptr;
 };
 
 struct EventConnectionData
 {
-	std::pair<EntityComponent, uint32_t> Reflector;
-	Reflection::Event* Event = nullptr;
+	ReflectorHandle Reflector;
+	const Reflection::Event* Event = nullptr;
 	uint32_t ConnectionId = UINT32_MAX;
 	int ThreadRef = LUA_NOREF;
 	lua_State* L = nullptr;
@@ -181,7 +181,7 @@ static void dumpStacktrace(lua_State* L, std::string* Into = nullptr)
 	}
 }
 
-static void pushSignal(lua_State* L, Reflection::Event* Event, const std::pair<EntityComponent, uint32_t>& Reflector)
+static void pushSignal(lua_State* L, const Reflection::Event* Event, const ReflectorHandle& Reflector)
 {
 	EventSignalData* ev = (EventSignalData*)lua_newuserdata(L, sizeof(EventSignalData));
 	ev->Reflector = Reflector;
@@ -230,10 +230,11 @@ static int api_gameobjindex(lua_State* L)
 		ScriptEngine::L::PushGenericValue(L, v);
 	}
 
-	else if (Reflection::Event* event = obj->FindEvent(key, &reflectorHandle))
+	else if (const Reflection::Event* event = obj->FindEvent(key, &reflectorHandle))
 		pushSignal(L, event, reflectorHandle);
 
-	else if (Reflection::Method* func = obj->FindMethod(key, &reflectorHandle))
+	// Methods are lower because we prefer namecalls
+	else if (const Reflection::Method* func = obj->FindMethod(key, &reflectorHandle))
 		ScriptEngine::L::PushMethod(L, func, reflectorHandle);
 
 	else
@@ -266,7 +267,7 @@ static int api_gameobjnewindex(lua_State* L)
 
 	LUA_ASSERT((obj), "Tried to assign to the '%s' of a deleted Game Object", key);
 
-	if (Reflection::Property* prop = obj->FindProperty(key))
+	if (const Reflection::Property* prop = obj->FindProperty(key))
 	{
 		const char* argAsString = luaL_tolstring(L, -1, NULL);
 		const char* argTypeName = luaL_typename(L, -1);
@@ -415,7 +416,7 @@ static int api_eventnamecall(lua_State* L)
 		luaL_checktype(L, 2, LUA_TFUNCTION);
 
 		EventSignalData* ev = (EventSignalData*)luaL_checkudata(L, 1, "EventSignal");
-		Reflection::Event* rev = ev->Event;
+		const Reflection::Event* rev = ev->Event;
 	
 		lua_State* eL = lua_newthread(L);
 		int threadRef = lua_ref(L, -1);
@@ -441,7 +442,7 @@ static int api_eventnamecall(lua_State* L)
 				assert(Inputs.size() == rev->CallbackInputs.size());
 
 				lua_State* co = lua_newthread(eL);
-				luaL_checkstack(co, Inputs.size() + 3, "event connection");
+				luaL_checkstack(co, (int32_t)Inputs.size() + 3, "event connection");
 
 				lua_pushlightuserdata(eL, co);       // stack: co
 				lua_pushlightuserdata(eL, eL);       // stack: co, eL
@@ -456,7 +457,7 @@ static int api_eventnamecall(lua_State* L)
 					ScriptEngine::L::PushGenericValue(co, Inputs[i]);
 				}
 
-				int status = lua_resume(co, eL, Inputs.size());
+				int status = lua_resume(co, eL, (int32_t)Inputs.size());
 
 				if (status != LUA_OK && status != LUA_YIELD)
 				{
@@ -820,7 +821,7 @@ static lua_State* createVM()
 				ZoneText(k, strlen(k));
 
 				std::pair<EntityComponent, uint32_t> reflectorHandle;
-				Reflection::Method* func = g->FindMethod(k, &reflectorHandle);
+				const Reflection::Method* func = g->FindMethod(k, &reflectorHandle);
 
 				if (!func)
 					luaL_errorL(L, "'%s' is not a valid method of %s", k, g->GetFullName().c_str());
@@ -1030,7 +1031,7 @@ static void resumeYieldedCoroutines()
 				for (const Reflection::GenericValue& v : returnVals)
 					ScriptEngine::L::PushGenericValue(coroutine, v);
 
-				int resumeStatus = lua_resume(coroutine, nullptr, returnVals.size());
+				int resumeStatus = lua_resume(coroutine, nullptr, (int32_t)returnVals.size());
 
 				if (resumeStatus != LUA_OK && resumeStatus != LUA_YIELD)
 				{

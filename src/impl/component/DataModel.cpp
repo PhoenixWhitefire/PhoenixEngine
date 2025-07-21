@@ -8,7 +8,7 @@
 class DataModelManager : public BaseComponentManager
 {
 public:
-    virtual uint32_t CreateComponent(GameObject* Object) override
+    virtual uint32_t CreateComponent(GameObject*) override
     {
         m_Components.emplace_back();
         
@@ -36,16 +36,16 @@ public:
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
     }
 
-    virtual const Reflection::PropertyMap& GetProperties() override
+    virtual const Reflection::StaticPropertyMap& GetProperties() override
     {
-        static const Reflection::PropertyMap props = {};
+        static const Reflection::StaticPropertyMap props = {};
 
         return props;
     }
 
-    virtual const Reflection::MethodMap& GetMethods() override
+    virtual const Reflection::StaticMethodMap& GetMethods() override
     {
-        static const Reflection::MethodMap funcs =
+        static const Reflection::StaticMethodMap funcs =
 		{
 			{ "Close",
 				{ 
@@ -68,9 +68,9 @@ public:
         return funcs;
     }
 
-    virtual const Reflection::EventMap& GetEvents() override
+    virtual const Reflection::StaticEventMap& GetEvents() override
     {
-        static Reflection::EventMap events =
+        static Reflection::StaticEventMap events =
         {
             REFLECTION_EVENT(EcDataModel, OnFrameBegin, Reflection::ValueType::Double)
         };

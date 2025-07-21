@@ -1767,7 +1767,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 		ImGui::NewLine();
 		ImGui::PopID();
 
-		std::unordered_map<std::string_view, std::pair<Reflection::Property, Reflection::GenericValue>> props;
+		std::unordered_map<std::string_view, std::pair<const Reflection::Property*, Reflection::GenericValue>> props;
 		std::unordered_map<std::string_view, bool> conflictingProps;
 
 		for (uint32_t selId : Selections)
@@ -1802,17 +1802,17 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 
 		for (const auto& propIt : props)
 		{
-			const std::pair<Reflection::Property, Reflection::GenericValue> propItem = propIt.second;
+			const std::pair<const Reflection::Property*, Reflection::GenericValue> propItem = propIt.second;
 
 			const std::string_view& propName = propIt.first;
-			const Reflection::Property& propDesc = propItem.first;
+			const Reflection::Property* propDesc = propItem.first;
 			const Reflection::GenericValue& curVal = propItem.second;
 
 			const char* propNameCStr = propName.data();
 
 			bool doConflict = conflictingProps[propName];
 
-			if (!propDesc.Set)
+			if (!propDesc->Set)
 			{
 				// no setter (read-only property, such as Class or ObjectId)
 				// 07/07/2024
@@ -1864,7 +1864,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 			bool canChangeValue = true;
 			bool valueWasEditedManual = false;
 
-			switch (propDesc.Type)
+			switch (propDesc->Type)
 			{
 
 			case Reflection::ValueType::String:

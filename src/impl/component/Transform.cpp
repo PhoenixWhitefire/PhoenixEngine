@@ -38,13 +38,13 @@ public:
 
     virtual void Shutdown() override
     {
-        for (size_t i = 0; i < m_Components.size(); i++)
+        for (uint32_t i = 0; i < m_Components.size(); i++)
             DeleteComponent(i);
     }
 
-    virtual const Reflection::PropertyMap& GetProperties() override
+    virtual const Reflection::StaticPropertyMap& GetProperties() override
     {
-        static const Reflection::PropertyMap props = 
+        static const Reflection::StaticPropertyMap props = 
         {
             EC_PROP(
                 "Transform",
@@ -78,9 +78,9 @@ public:
         return props;
     }
 
-    virtual const Reflection::MethodMap& GetMethods() override
+    virtual const Reflection::StaticMethodMap& GetMethods() override
     {
-        static const Reflection::MethodMap funcs = {};
+        static const Reflection::StaticMethodMap funcs = {};
         return funcs;
     }
 

@@ -23,6 +23,7 @@ target_link_libraries(PhoenixEngine
 	Vendor/luau/${PHX_BUILD_TYPE}/Luau.VM
 	Vendor/SDL/${PHX_BUILD_TYPE}/SDL_uclibc
 	Vendor/SDL/${PHX_BUILD_TYPE}/SDL3
+	Vendor/FMOD/api/core/lib/x64/fmodL_vc
 	
 	# too much of a waste of my time to get the `IF` expression to work, link regardless
 	${PHX_TRACY_LIB_PATH}
@@ -53,5 +54,9 @@ add_link_options($<$<CONFIG:Release>:/LTCG>)
 # couldn't be bothered to get $<TARGET_RUNTIME_DLLS:PhoenixEngine> to work
 add_custom_command(TARGET PhoenixEngine POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:PhoenixEngine> "Vendor/SDL/${PHX_BUILD_TYPE}/SDL3.dll"
+  COMMAND_EXPAND_LISTS
+)
+add_custom_command(TARGET PhoenixEngine POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:PhoenixEngine> "Vendor/FMOD/api/core/lib/x64/fmodL.dll"
   COMMAND_EXPAND_LISTS
 )

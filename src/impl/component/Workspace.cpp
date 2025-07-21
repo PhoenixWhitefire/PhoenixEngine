@@ -48,9 +48,9 @@ public:
         m_Components[Id].Object.Invalidate();
     }
 
-    virtual const Reflection::PropertyMap& GetProperties() override
+    virtual const Reflection::StaticPropertyMap& GetProperties() override
     {
-        static const Reflection::PropertyMap props = 
+        static const Reflection::StaticPropertyMap props = 
         {
 			EC_PROP(
 				"SceneCamera",
@@ -75,9 +75,9 @@ public:
         return props;
     }
 
-    virtual const Reflection::MethodMap& GetMethods() override
+    virtual const Reflection::StaticMethodMap& GetMethods() override
     {
-        static const Reflection::MethodMap funcs =
+        static const Reflection::StaticMethodMap funcs =
 		{
 			{ "ScreenPointToRay", {
 				{ Reflection::ValueType::Array, Reflection::ValueType::Double },

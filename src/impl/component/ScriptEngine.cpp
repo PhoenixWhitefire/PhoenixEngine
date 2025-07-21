@@ -422,8 +422,8 @@ void ScriptEngine::L::PushGameObject(lua_State* L, GameObject* obj)
 
 int ScriptEngine::L::HandleMethodCall(
 	lua_State* L,
-	Reflection::Method* func,
-	std::pair<EntityComponent, uint32_t> FromComponent
+	const Reflection::Method* func,
+	ReflectorHandle FromComponent
 )
 {
 	int numArgs = lua_gettop(L) - 1;
@@ -552,12 +552,12 @@ int ScriptEngine::L::HandleMethodCall(
 	// 15/08/2024
 }
 
-void ScriptEngine::L::PushMethod(lua_State* L, Reflection::Method* Function, std::pair<EntityComponent, uint32_t> FromComponent)
+void ScriptEngine::L::PushMethod(lua_State* L, const Reflection::Method* Function, ReflectorHandle FromComponent)
 {
 	// if we dont do this then comparison will not work
 	// ex: `game.Close == game.Close`
 
-	lua_pushlightuserdata(L, Function);
+	lua_pushlightuserdata(L, const_cast<Reflection::Method*>(Function));
 	lua_rawget(L, LUA_ENVIRONINDEX);
 
 	if (lua_isnil(L, -1))
@@ -568,7 +568,7 @@ void ScriptEngine::L::PushMethod(lua_State* L, Reflection::Method* Function, std
 		void* data = nullptr;
 		memcpy(&data, &FromComponent, sizeof(FromComponent));
 
-		lua_pushlightuserdata(L, Function);
+		lua_pushlightuserdata(L, const_cast<Reflection::Method*>(Function));
 		lua_pushlightuserdata(L, data);
 
 		lua_pushcclosure(
@@ -589,9 +589,9 @@ void ScriptEngine::L::PushMethod(lua_State* L, Reflection::Method* Function, std
 			1
 		); // stack is now just closure
 
-		lua_pushlightuserdata(L, Function); // stack: closure, lud
-		lua_pushvalue(L, -2);               // stack: closure, lud, closure
-		lua_settable(L, LUA_ENVIRONINDEX);  // map closure (value) to lud (key)
+		lua_pushlightuserdata(L, const_cast<Reflection::Method*>(Function));  // stack: closure, lud
+		lua_pushvalue(L, -2);                                                 // stack: closure, lud, closure
+		lua_settable(L, LUA_ENVIRONINDEX);                                    // map closure (value) to lud (key)
 
 		// stack is now just closure
 	}

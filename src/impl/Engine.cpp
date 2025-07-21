@@ -746,7 +746,13 @@ void Engine::Start()
 
 		Memory::vector<GameObjectRef, MEMCAT(Physics)> physicsList;
 
-		REFLECTION_SIGNAL(DataModel->GetComponent<EcDataModel>()->OnFrameBeginCallbacks, deltaTime);
+		{
+			static constexpr tracy::SourceLocationData __tracy_source_location749U{ "DataModel->GetComponent<EcDataModel>()->OnFrameBeginCallbacks", __FUNCTION__, "C:\\Users\\phoen\\Documents\\PhoenixEngine\\src\\impl\\Engine.cpp", (uint32_t)749U, 0 };
+			tracy::ScopedZone ___tracy_scoped_zone(&__tracy_source_location749U, 0, true);
+			for (size_t i = 0; i < DataModel->GetComponent<EcDataModel>()->OnFrameBeginCallbacks.size(); i++)
+				if (const Reflection::EventCallback& cb = DataModel->GetComponent<EcDataModel>()->OnFrameBeginCallbacks[i]; cb)
+					cb({ deltaTime }); 
+		};
 
 		// fetch the camera again because of potential scene changes that may have caused re-alloc'd
 		// (really need a generic `Ref` system)

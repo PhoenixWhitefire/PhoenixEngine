@@ -46,6 +46,11 @@ enum class EntityComponent : uint8_t
 	__count
 };
 
+// component type and ID
+// if type is "None", the ID is a Game Object ID
+// retrieve pointer to reflector with `GameObject::ReflectorHandleToPointer`
+typedef std::pair<EntityComponent, uint32_t> ReflectorHandle;
+
 static inline const std::string_view s_EntityComponentNames[] = 
 {
 	"<NONE>",
@@ -98,9 +103,9 @@ public:
 	virtual void DeleteComponent(uint32_t /* ComponentId */) = 0;
 	virtual void Shutdown() {};
 
-	virtual const Reflection::PropertyMap& GetProperties() = 0;
-	virtual const Reflection::MethodMap& GetMethods() = 0;
-	virtual const Reflection::EventMap& GetEvents() { static Reflection::EventMap e{}; return e; };
+	virtual const Reflection::StaticPropertyMap& GetProperties() = 0;
+	virtual const Reflection::StaticMethodMap& GetMethods() = 0;
+	virtual const Reflection::StaticEventMap& GetEvents() { static Reflection::StaticEventMap e{}; return e; };
 };
 
 class GameObject
@@ -118,29 +123,30 @@ public:
 	static GameObject* Create();
 
 	static GameObject* GetObjectById(uint32_t);
-	static void* ReflectorHandleToPointer(const std::pair<EntityComponent, uint32_t>& Handle);
+	static void* ReflectorHandleToPointer(const ReflectorHandle& Handle);
 
 	static inline uint32_t s_DataModel = PHX_GAMEOBJECT_NULL_ID;
 	static inline Memory::vector<GameObject, MEMCAT(GameObject)> s_WorldArray{};
 	static inline std::array<BaseComponentManager*, (size_t)EntityComponent::__count> s_ComponentManagers{};
 
-	uint32_t AddComponent(EntityComponent Type);
-	void RemoveComponent(EntityComponent Type);
-	template <class T> T* GetComponent()
+	template <class T>
+	T* GetComponent()
 	{
 		EntityComponent type = T::Type;
 		for (const std::pair<EntityComponent, uint32_t>& pair : m_Components)
 			if (pair.first == type)
 				return static_cast<T*>(GameObject::s_ComponentManagers[(size_t)type]->GetComponent(pair.second));
-		
+
 		return nullptr;
 	}
+	uint32_t AddComponent(EntityComponent Type);
+	void RemoveComponent(EntityComponent Type);
 	void* GetComponentByType(EntityComponent);
-	std::vector<std::pair<EntityComponent, uint32_t>>& GetComponents();
+	std::vector<ReflectorHandle>& GetComponents();
 
-	Reflection::Property* FindProperty(const std::string_view&, std::pair<EntityComponent, uint32_t>* FromComponent = nullptr);
-	Reflection::Method* FindMethod(const std::string_view&, std::pair<EntityComponent, uint32_t>* FromComponent = nullptr);
-	Reflection::Event* FindEvent(const std::string_view&, std::pair<EntityComponent, uint32_t>* FromComponent = nullptr);
+	const Reflection::Property* FindProperty(const std::string_view&, ReflectorHandle* FromComponent = nullptr);
+	const Reflection::Method* FindMethod(const std::string_view&, ReflectorHandle* FromComponent = nullptr);
+	const Reflection::Event* FindEvent(const std::string_view&, ReflectorHandle* FromComponent = nullptr);
 
 	Reflection::GenericValue GetPropertyValue(const std::string_view&);
 	void SetPropertyValue(const std::string_view&, const Reflection::GenericValue&);
@@ -201,12 +207,11 @@ private:
 	static void s_AddObjectApi();
 
 	Memory::vector<uint32_t, MEMCAT(GameObject)> m_Children;
-	// component type and ID
-	Memory::vector<std::pair<EntityComponent, uint32_t>, MEMCAT(GameObject)> m_Components;
+	Memory::vector<ReflectorHandle, MEMCAT(GameObject)> m_Components;
 	Reflection::Api m_ComponentApis{};
-	Memory::unordered_map<std::string_view, std::pair<EntityComponent, uint32_t>, MEMCAT(GameObject)> m_MemberToComponentMap;
+	Memory::unordered_map<std::string_view, ReflectorHandle, MEMCAT(GameObject)> m_MemberToComponentMap;
 
-	static inline Reflection::Api s_Api{};
+	static inline Reflection::StaticApi s_Api{};
 
 	uint16_t m_HardRefCount = 0;
 };

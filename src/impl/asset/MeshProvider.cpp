@@ -1096,18 +1096,22 @@ void MeshProvider::FinalizeAsyncLoadedMeshes()
 			continue;
 
 		const Mesh& loadedMesh = it->Future.get();
-		Mesh& mesh = m_Meshes.at(it->ResourceId);
+		Mesh* mesh = &m_Meshes.at(it->ResourceId);
 
-		mesh.Vertices = loadedMesh.Vertices;
-		mesh.Indices = loadedMesh.Indices;
-		mesh.Bones = loadedMesh.Bones;
+		mesh->Vertices = loadedMesh.Vertices;
+		mesh->Indices = loadedMesh.Indices;
+		mesh->Bones = loadedMesh.Bones;
 
-		it->PostLoadCallback(mesh);
-		m_CreateAndUploadGpuMesh(mesh);
+		it->PostLoadCallback(*mesh);
+		mesh = &m_Meshes.at(it->ResourceId);
+		m_CreateAndUploadGpuMesh(*mesh);
 
 		delete it->Promise;
 
 		it = m_LoadingRequests.erase(it);
+
+		if (it >= m_LoadingRequests.end())
+			break;
 	}
 }
 

@@ -295,7 +295,7 @@ static std::vector<GameObjectRef> LoadMapVersion1(
 		NewObject->Name = Object.value("name", NewObject->Name);
 
 		glm::vec3 Position = GetVector3FromJson(Object["position"]);
-		glm::vec3 Orientation;
+		glm::vec3 Orientation{};
 
 		if (Object.find("orient") != Object.end())
 		{
@@ -517,7 +517,7 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 
 			const nlohmann::json& memberValue = memberIt.value();
 
-			Reflection::Property* member = newObject->FindProperty(memberName);
+			const Reflection::Property* member = newObject->FindProperty(memberName);
 
 			if (!member)
 			{
@@ -762,12 +762,12 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 	for (const auto& prop : Object->GetProperties())
 	{
 		const std::string_view& propName = prop.first;
-		const Reflection::Property& propInfo = prop.second;
+		const Reflection::Property* propInfo = prop.second;
 
-		if (!propInfo.Serializes)
+		if (!propInfo->Serializes)
 			continue;
 
-		if (!propInfo.Set && propName != "ObjectId")
+		if (!propInfo->Set && propName != "ObjectId")
 			continue;
 
 		// !! IMPORTANT !!
@@ -785,7 +785,7 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 
 		Reflection::GenericValue value = Object->GetPropertyValue(propName);
 
-		switch (prop.second.Type)
+		switch (prop.second->Type)
 		{
 		
 		case Reflection::ValueType::Boolean:

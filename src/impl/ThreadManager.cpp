@@ -45,11 +45,8 @@ static void SetThreadName( const char* threadName)
     SetThreadName(GetCurrentThreadId(),threadName);
 }
 
-static void SetThreadName( std::thread* thread, const char* threadName)
-{
-    DWORD threadId = ::GetThreadId( static_cast<HANDLE>( thread->native_handle() ) );
-    SetThreadName(threadId,threadName);
-}
+#undef min
+#undef max
 
 #elif defined(__linux__)
 #include <sys/prctl.h>

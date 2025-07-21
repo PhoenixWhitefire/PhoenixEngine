@@ -450,7 +450,7 @@ void Renderer::DrawScene(
 			renderData.Size,
 			renderData.Transform,
 			renderData.FaceCulling,
-			drawInfos.size()
+			static_cast<int32_t>(drawInfos.size())
 		);
 	}
 }

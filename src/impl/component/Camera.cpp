@@ -58,9 +58,9 @@ public:
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
     }
 
-    virtual const Reflection::PropertyMap& GetProperties() override
+    virtual const Reflection::StaticPropertyMap& GetProperties() override
     {
-        static const Reflection::PropertyMap props = 
+        static const Reflection::StaticPropertyMap props = 
         {
 			EC_PROP_SIMPLE(EcCamera, UseSimpleController, Boolean),
 			EC_PROP_SIMPLE(EcCamera, FieldOfView, Double),
@@ -70,9 +70,9 @@ public:
         return props;
     }
 
-    virtual const Reflection::MethodMap& GetMethods() override
+    virtual const Reflection::StaticMethodMap& GetMethods() override
     {
-        static const Reflection::MethodMap funcs = {};
+        static const Reflection::StaticMethodMap funcs = {};
         return funcs;
     }
 

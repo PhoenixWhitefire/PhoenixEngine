@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <format>
+#include <span>
 #include <glm/mat4x4.hpp>
 
 #define REFLECTION_INHERITAPI(base) {                                      \
@@ -243,8 +244,6 @@ namespace Reflection
 		}
 	};
 
-	class Reflectable;
-
 	struct Property
 	{
 		Reflection::ValueType Type{};
@@ -296,9 +295,20 @@ namespace Reflection
 		std::function<void(void*, uint32_t)> Disconnect;
 	};
 
-	typedef std::unordered_map<std::string_view, Reflection::Property> PropertyMap;
-	typedef std::unordered_map<std::string_view, Reflection::Method> MethodMap;
-	typedef std::unordered_map<std::string_view, Reflection::Event> EventMap;
+	typedef std::unordered_map<std::string_view, Reflection::Property> StaticPropertyMap;
+	typedef std::unordered_map<std::string_view, Reflection::Method> StaticMethodMap;
+	typedef std::unordered_map<std::string_view, Reflection::Event> StaticEventMap;
+
+	typedef std::unordered_map<std::string_view, const Reflection::Property*> PropertyMap;
+	typedef std::unordered_map<std::string_view, const Reflection::Method*> MethodMap;
+	typedef std::unordered_map<std::string_view, const Reflection::Event*> EventMap;
+
+	struct StaticApi
+	{
+		StaticPropertyMap Properties;
+		StaticMethodMap Methods;
+		StaticEventMap Events;
+	};
 
 	struct Api
 	{

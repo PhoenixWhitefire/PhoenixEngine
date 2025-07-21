@@ -41,9 +41,9 @@ public:
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
     }
 
-    virtual const Reflection::PropertyMap& GetProperties() override
+    virtual const Reflection::StaticPropertyMap& GetProperties() override
     {
-        static const Reflection::PropertyMap props = 
+        static const Reflection::StaticPropertyMap props = 
         {
             LIGHT_APIS(EcPointLight),
 
@@ -53,9 +53,9 @@ public:
         return props;
     }
 
-    virtual const Reflection::MethodMap& GetMethods() override
+    virtual const Reflection::StaticMethodMap& GetMethods() override
     {
-        static const Reflection::MethodMap funcs = {};
+        static const Reflection::StaticMethodMap funcs = {};
         return funcs;
     }
 
@@ -107,13 +107,13 @@ public:
 
     virtual void Shutdown() override
     {
-        for (size_t i = 0; i < m_Components.size(); i++)
+        for (uint32_t i = 0; i < m_Components.size(); i++)
             DeleteComponent(i);
     }
 
-    virtual const Reflection::PropertyMap& GetProperties() override
+    virtual const Reflection::StaticPropertyMap& GetProperties() override
     {
-        static const Reflection::PropertyMap props = 
+        static const Reflection::StaticPropertyMap props = 
         {
             LIGHT_APIS(EcDirectionalLight),
 
@@ -135,9 +135,9 @@ public:
         return props;
     }
 
-    virtual const Reflection::MethodMap& GetMethods() override
+    virtual const Reflection::StaticMethodMap& GetMethods() override
     {
-        static const Reflection::MethodMap funcs = {};
+        static const Reflection::StaticMethodMap funcs = {};
         return funcs;
     }
 
@@ -184,9 +184,9 @@ public:
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
     }
 
-    virtual const Reflection::PropertyMap& GetProperties() override
+    virtual const Reflection::StaticPropertyMap& GetProperties() override
     {
-        static const Reflection::PropertyMap props = 
+        static const Reflection::StaticPropertyMap props = 
         {
             LIGHT_APIS(EcSpotLight),
 
@@ -197,9 +197,9 @@ public:
         return props;
     }
 
-    virtual const Reflection::MethodMap& GetMethods() override
+    virtual const Reflection::StaticMethodMap& GetMethods() override
     {
-        static const Reflection::MethodMap funcs = {};
+        static const Reflection::StaticMethodMap funcs = {};
         return funcs;
     }
 

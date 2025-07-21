@@ -67,13 +67,13 @@ public:
 
 	virtual void Shutdown() override
     {
-        for (size_t i = 0; i < m_Components.size(); i++)
+        for (uint32_t i = 0; i < m_Components.size(); i++)
             DeleteComponent(i);
     }
 
-    virtual const Reflection::PropertyMap& GetProperties() override
+    virtual const Reflection::StaticPropertyMap& GetProperties() override
     {
-        static const Reflection::PropertyMap props = 
+        static const Reflection::StaticPropertyMap props = 
         {
             EC_PROP_SIMPLE(EcMesh, PhysicsDynamics, Boolean),
 			EC_PROP_SIMPLE(EcMesh, PhysicsCollisions, Boolean),
@@ -156,9 +156,9 @@ public:
         return props;
     }
 
-    virtual const Reflection::MethodMap& GetMethods() override
+    virtual const Reflection::StaticMethodMap& GetMethods() override
     {
-        static const Reflection::MethodMap funcs = {};
+        static const Reflection::StaticMethodMap funcs = {};
         return funcs;
     }
 
@@ -222,11 +222,11 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 				if (ch->GetComponent<EcBone>())
 					ch->Destroy();
 
-			mesh = meshProvider->GetMeshResource(meshId);
+			Mesh& meshAfter = meshProvider->GetMeshResource(meshId);
 
-			for (uint8_t boneId = 0; boneId < mesh.Bones.size(); boneId++)
+			for (uint8_t boneId = 0; boneId < meshAfter.Bones.size(); boneId++)
 			{
-				const Bone& b = mesh.Bones[boneId];
+				const Bone& b = meshAfter.Bones[boneId];
 			
 				GameObjectRef boneObj;
 				if (GameObject* g = obj->FindChild(b.Name))
@@ -251,7 +251,7 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 
 				boneObj->SetParent(b.Parent == UINT8_MAX
 					? obj.Contained()
-					: obj->FindChild(mesh.Bones[b.Parent].Name)
+					: obj->FindChild(meshAfter.Bones[b.Parent].Name)
 				);
 				boneObj->Name = b.Name;
 				boneObj->Serializes = false;

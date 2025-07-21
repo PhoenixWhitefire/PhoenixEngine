@@ -69,9 +69,9 @@ public:
 		sound.Object.Invalidate();
     }
 
-    virtual const Reflection::PropertyMap& GetProperties() override
+    virtual const Reflection::StaticPropertyMap& GetProperties() override
     {
-        static const Reflection::PropertyMap props = 
+        static const Reflection::StaticPropertyMap props = 
         {
             EC_PROP(
 				"SoundFile",
@@ -187,15 +187,15 @@ public:
         return props;
     }
 
-    virtual const Reflection::MethodMap& GetMethods() override
+    virtual const Reflection::StaticMethodMap& GetMethods() override
     {
-        static const Reflection::MethodMap funcs = {};
+        static const Reflection::StaticMethodMap funcs = {};
         return funcs;
     }
 
-	virtual const Reflection::EventMap& GetEvents() override
+	virtual const Reflection::StaticEventMap& GetEvents() override
 	{
-		static const Reflection::EventMap events =
+		static const Reflection::StaticEventMap events =
 		{
 			REFLECTION_EVENT(EcSound, OnLoaded, Reflection::ValueType::Boolean)
 		};
@@ -233,7 +233,7 @@ public:
 
 		FMOD_CALL(FmodSystem->release(), "System shutdown");
 
-		for (size_t i = 0; i < m_Components.size(); i++)
+		for (uint32_t i = 0; i < m_Components.size(); i++)
             DeleteComponent(i);
 		
 		AudioAssets.clear();
@@ -289,10 +289,10 @@ static FMOD_RESULT F_CALL fmodNonBlockingCallback(FMOD_SOUND* Sound, FMOD_RESULT
 
 static FMOD_RESULT F_CALL channelCtlCallback(
 	FMOD_CHANNELCONTROL* Channel,
-	FMOD_CHANNELCONTROL_TYPE ChannelType,
+	FMOD_CHANNELCONTROL_TYPE /* ChannelType */,
 	FMOD_CHANNELCONTROL_CALLBACK_TYPE CallbackType,
-	void* CommandData1,
-	void* CommandData2
+	void* /* CommandData1 */,
+	void* /* CommandData2 */
 )
 {
 	SCOPED_LOCK(SoundMutex);
