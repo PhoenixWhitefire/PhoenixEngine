@@ -69,6 +69,7 @@ static Engine* EngineInstance = nullptr;
 
 Engine* Engine::Get()
 {
+	assert(EngineInstance);
 	return EngineInstance;
 }
 
@@ -623,7 +624,6 @@ void Engine::Start()
 
 		m_TextureManager.FinalizeAsyncLoadedTextures();
 		m_MeshProvider.FinalizeAsyncLoadedMeshes();
-		m_ThreadManager.PropagateExceptions();
 
 		if (skyboxFacesBeingLoaded.size() == 6)
 		{
@@ -1099,18 +1099,6 @@ void Engine::Shutdown()
 
 	Log::Save();
 
-	GameObject::s_DataModel = PHX_GAMEOBJECT_NULL_ID;
-	DataModel->Destroy();
-	DataModel.Invalidate();
-	Workspace.Invalidate();
-
-	m_MaterialManager.Shutdown();
-	m_TextureManager.Shutdown();
-	m_ShaderManager.Shutdown();
-	m_MeshProvider.Shutdown();
-
-	m_ThreadManager.Shutdown();
-
 	Log::Info("Shutting down Component Managers...");
 
 	// skip the first "None" component manager
@@ -1121,6 +1109,24 @@ void Engine::Shutdown()
 
 		GameObject::s_ComponentManagers[i]->Shutdown();
 	}
+
+	Log::Info("Destroying DataModel...");
+
+	GameObject::s_DataModel = PHX_GAMEOBJECT_NULL_ID;
+	DataModel->Destroy();
+	DataModel.Invalidate();
+	Workspace.Invalidate();
+
+	Log::Info("Shutting down managers...");
+
+	m_MaterialManager.Shutdown();
+	m_TextureManager.Shutdown();
+	m_ShaderManager.Shutdown();
+	m_MeshProvider.Shutdown();
+
+	m_ThreadManager.Shutdown();
+
+	Log::Info("Shutting down libraries...");
 
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplSDL3_Shutdown();

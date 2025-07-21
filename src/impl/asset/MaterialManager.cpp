@@ -177,6 +177,7 @@ void MaterialManager::Initialize()
 
 MaterialManager* MaterialManager::Get()
 {
+	assert(s_Instance);
 	return s_Instance;
 }
 

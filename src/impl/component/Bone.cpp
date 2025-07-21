@@ -102,23 +102,10 @@ public:
 						Mesh& meshData = MeshProvider::Get()->GetMeshResource(mesh->RenderMeshId);
 						MeshProvider::GpuMesh& gpuMesh = MeshProvider::Get()->GetGpuMesh(meshData.GpuId);
 
-						for (size_t i = 0; i < meshData.Vertices.size(); i++)
+						for (auto [vi, ji] : realBone->TargetVertices)
 						{
-							const Vertex& v = meshData.Vertices[i];
-
-							uint8_t jntIdx = UINT8_MAX;
-
-							for (uint8_t i = 0; i < 4; i++)
-								if (v.InfluencingJoints[i] == boneObj->SkeletalBoneId)
-								{
-									jntIdx = i;
-									break;
-								}
-
-							if (jntIdx != UINT8_MAX)
-							{
-								gpuMesh.SkinningData[i] = lerpMatrix(glm::mat4(1.f), gv.AsMatrix(), v.JointWeights[jntIdx]);
-							}
+							const Vertex& v = meshData.Vertices[vi];
+							gpuMesh.SkinningData[vi] = lerpMatrix(glm::mat4(1.f), realBone->Transform, v.JointWeights[ji]);
 						}
 					}
 					else

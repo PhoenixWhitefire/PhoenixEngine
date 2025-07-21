@@ -26,9 +26,11 @@ struct Vertex
 struct Bone
 {
 	std::string Name = "<UNNAMED_BONE>";
+	uint8_t Parent = UINT8_MAX;
 	glm::mat4 Transform{ 1.f };
-	glm::vec3 Scale{ 1.f };
-	glm::mat4 InverseBindMatrix{ 1.f };
+	glm::mat4 InverseBind{ 1.f };
+	// pair< vertex index, joint weights index>
+	std::vector<std::pair<uint32_t, uint8_t>> TargetVertices;
 };
 
 struct Mesh

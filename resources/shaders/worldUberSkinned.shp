@@ -5,7 +5,7 @@
   "Uniforms": {
     "AlphaCutoff": 0.05000000074505806,
     "EmissionStrength": 0.0,
-    "Fog": true
+    "Fog": false
   },
   "Vertex": "shaders/worldUberSkinned.vert"
 }

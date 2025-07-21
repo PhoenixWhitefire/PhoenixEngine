@@ -1404,7 +1404,7 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 		bool openInserter = false;
 		bool isHovered = false;
 
-		bool open = ImGui::TreeNodeEx(&object->ObjectId, flags, " ");
+		bool open = ImGui::TreeNodeEx(&object->ObjectId, flags, "%s", "");
 		if (ImGui::IsItemClicked())
 			nodeClicked = object;
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
@@ -1413,7 +1413,7 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 			openInserter = true;
 
 		ImGui::SameLine();
-		ImGui::SetCursorPosX(ImGui::GetCursorPosX() - style.IndentSpacing * 0.8f);
+		ImGui::SetCursorPosX(ImGui::GetCursorPosX() - style.IndentSpacing * 0.6f + 0.5f);
 		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 2.f); // not the faintest idea
 
 		ImGui::Image(

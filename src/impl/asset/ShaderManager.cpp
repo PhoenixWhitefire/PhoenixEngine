@@ -483,6 +483,7 @@ void ShaderManager::Initialize()
 
 ShaderManager* ShaderManager::Get()
 {
+	assert(s_Instance);
 	return s_Instance;
 }
 

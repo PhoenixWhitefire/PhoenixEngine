@@ -67,7 +67,10 @@ static GameObject* cloneRecursive(
 		chrefs.emplace_back(ch);
 
 	for (GameObjectRef ch : chrefs)
-		cloneRecursive(ch, OverwritesMap, OriginalToCloneMap)->SetParent(newObj);
+	{
+		if (ch->Serializes)
+			cloneRecursive(ch, OverwritesMap, OriginalToCloneMap)->SetParent(newObj);
+	}
 
 	return newObj;
 }
@@ -936,6 +939,7 @@ nlohmann::json GameObject::DumpApiToJson()
 			continue;
 
 		nlohmann::json& api = componentApi[s_EntityComponentNames[i]];
+		api = nlohmann::json::object();
 
 		dumpProperties(manager->GetProperties(), api);
 		dumpMethods(manager->GetMethods(), api);

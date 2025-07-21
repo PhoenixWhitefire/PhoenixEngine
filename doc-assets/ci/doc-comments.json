@@ -19,7 +19,7 @@
         "Name": "The name of the Object, usually what was passed into `GameObject.new`",
         "ObjectId": "The ID of the Object, an integer. Remains the same throughout the session, but not guaranteed between sessions",
         "Parent": "The hierarchal parent of the Object, or `nil` if it does not have one",
-        "Serializes": "Whether or not the Object should be saved with the scene if it is serialized with `scene_save`"
+        "Serializes": "Whether or not the Object should be saved with the scene if it is serialized with `scene_save`, and whether `:Duplicate` will duplicate (only applies to descendants)"
       }
     },
     "Components": {

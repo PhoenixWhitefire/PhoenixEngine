@@ -24,17 +24,10 @@ public:
 	// appear like a suspicious background process if it gets frozen
 	// somewhere in teardown
 	void Dispatch(std::function<void()>, bool IsCritical);
-	void PropagateExceptions();
 
 	static ThreadManager* Get();
 
 private:
-	struct Worker
-	{
-		std::thread Thread;
-		std::exception_ptr Exception;
-	};
-
 	struct Task
 	{
 		std::function<void()> Function;
@@ -43,7 +36,7 @@ private:
 
 	void m_StopThreads();
 
-	std::vector<Worker> m_Workers;
+	std::vector<std::thread> m_Workers;
 
 	std::queue<Task> m_Tasks;
 	std::mutex m_TasksMutex;

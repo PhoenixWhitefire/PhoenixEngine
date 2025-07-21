@@ -30,7 +30,7 @@ static auto LoadModelAsMeshes(
 	bool AutoParent = true
 )
 {
-	ModelLoader Loader(ModelFilePath, AutoParent ? GameObject::GetObjectById(GameObject::s_DataModel) : nullptr);
+	ModelLoader Loader(ModelFilePath, AutoParent ? GameObject::s_DataModel : PHX_GAMEOBJECT_NULL_ID);
 
 	for (GameObject* object : Loader.LoadedObjs)
 	{
@@ -216,7 +216,7 @@ static std::vector<GameObjectRef> LoadMapVersion1(
 		//Vector3 Orientation = GetVector3FromJson(PropObject["orient"]);
 		glm::vec3 Size = GetVector3FromJson(PropObject["size"]);
 
-		std::vector<GameObject*> Model = LoadModelAsMeshes(ModelPath.c_str(), Size, Position);
+		std::vector<GameObjectRef> Model = LoadModelAsMeshes(ModelPath.c_str(), Size, Position);
 
 		std::string modelName = PropObject.value("name", "<UN-NAMED>");
 
@@ -236,7 +236,7 @@ static std::vector<GameObjectRef> LoadMapVersion1(
 
 				for (size_t index = 0; index < Model.size(); index++)
 				{
-					GameObject* mesh = Model[index];
+					GameObject* mesh = Model[index].Contained();
 					mesh->SetParent(container);
 				}
 

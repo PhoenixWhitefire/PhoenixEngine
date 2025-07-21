@@ -9,9 +9,9 @@
 class ModelLoader
 {
 public:
-	ModelLoader(const std::string& AssetPath, GameObject* Parent);
+	ModelLoader(const std::string& AssetPath, uint32_t Parent);
 
-	std::vector<GameObject*> LoadedObjs;
+	std::vector<GameObjectRef> LoadedObjs;
 
 private:
 	struct MeshMaterial
@@ -106,7 +106,7 @@ private:
 
 	std::vector<ModelNode> m_Nodes;
 	std::unordered_map<int32_t, uint32_t> m_NodeIdToIndex;
-	std::vector<GameObject*> m_Animations;
+	std::vector<GameObjectRef> m_Animations;
 
 	std::string m_Data;
 };

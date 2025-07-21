@@ -47,7 +47,7 @@ Reflection::GenericValue::GenericValue(const std::string& str)
 Reflection::GenericValue::GenericValue(const char* data)
 	: Type(ValueType::String)
 {
-	this->Size = strlen(data) + 1;
+	this->Size = strlen(data);
 	fromString(*this, data);
 }
 

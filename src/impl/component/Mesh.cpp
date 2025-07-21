@@ -1,11 +1,27 @@
-#include <glad/gl.h>
-
 #include "component/Mesh.hpp"
 #include "component/Transform.hpp"
 
 #include "asset/MaterialManager.hpp"
 #include "asset/MeshProvider.hpp"
 #include "component/Bone.hpp"
+
+static std::unordered_map<std::string, std::vector<uint32_t>> FreeSkinnedMeshPseudoAssets;
+
+static void tryMarkFreeSkinnedMeshPseudoAsset(EcMesh& mesh)
+{
+	if (Mesh& meshAsset = MeshProvider::Get()->GetMeshResource(mesh.RenderMeshId);
+			meshAsset.Bones.size() > 0
+	)
+	{
+			FreeSkinnedMeshPseudoAssets[mesh.Asset].push_back(mesh.RenderMeshId);
+
+			MeshProvider::GpuMesh& gpuMesh = MeshProvider::Get()->GetGpuMesh(meshAsset.GpuId);
+
+			// reset all vertex transformations
+			for (glm::mat4& t : gpuMesh.SkinningData)
+				t = glm::mat4(1.f);
+	}
+}
 
 class MeshManager : public BaseComponentManager
 {
@@ -43,7 +59,10 @@ public:
     {
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
 
-		m_Components[Id].Object.Invalidate();
+		EcMesh& mesh = m_Components[Id];
+		tryMarkFreeSkinnedMeshPseudoAsset(mesh);
+
+		mesh.Object.Invalidate();
     }
 
 	virtual void Shutdown() override
@@ -156,30 +175,84 @@ static inline MeshManager Instance{};
 
 void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 {
+	if (MeshPath == Asset)
+		return;
+
+	if (RenderMeshId != UINT32_MAX)
+		tryMarkFreeSkinnedMeshPseudoAsset(*this);
+
 	MeshProvider* meshProvider = MeshProvider::Get();
 	GameObjectRef obj = Object;
+	std::string meshPathStr{ MeshPath };
 
 	this->RenderMeshId = meshProvider->LoadFromPath(
-		MeshPath,
+		std::string(MeshPath),
 		true,
 		false,
-		[obj](Mesh& mesh)
+		[obj, meshPathStr, meshProvider](Mesh& mesh)
 		{
 			if (mesh.Bones.size() == 0)
 				return;
+
+			// TODO
+			// due to skinned mesh transforms being associated with ASSETS
+			// and NOT the object using them, these need to be separate to
+			// allow multiple instances of the same mesh to have different
+			// transforms
+
+			uint32_t meshId = UINT32_MAX;
+
+			if (std::vector<uint32_t>& freelist = FreeSkinnedMeshPseudoAssets[meshPathStr];
+				freelist.size() == 0
+			)
+			{
+				std::string pseudoPath = meshPathStr + "!" + std::to_string(obj->ObjectId);
+				meshId = meshProvider->Assign(mesh, pseudoPath);
+			}
+			else
+			{
+				meshId = freelist[0];
+				freelist[0] = freelist[freelist.size() - 1];
+				freelist.erase(freelist.begin() + freelist.size() - 1);
+			}
+
+			obj->GetComponent<EcMesh>()->RenderMeshId = meshId;
 			
 			for (GameObject* ch : obj->GetChildren())
 				if (ch->GetComponent<EcBone>())
 					ch->Destroy();
 
+			mesh = meshProvider->GetMeshResource(meshId);
+
 			for (uint8_t boneId = 0; boneId < mesh.Bones.size(); boneId++)
 			{
 				const Bone& b = mesh.Bones[boneId];
 			
-				GameObject* boneObj = GameObject::Create(EntityComponent::Bone);
+				GameObjectRef boneObj;
+				if (GameObject* g = obj->FindChild(b.Name))
+				{
+					if (g->GetComponent<EcBone>())
+						boneObj = g;
+					else
+					{
+						Log::Warning(std::format(
+							"Non-bone with name '{}' under Mesh at {} will be removed for rig bone",
+							b.Name, obj->GetFullName()
+						));
+
+						g->Destroy();
+						boneObj = GameObject::Create(EntityComponent::Bone);
+					}
+				}
+				else
+					boneObj = GameObject::Create(EntityComponent::Bone);
+				
 				EcBone* bone = boneObj->GetComponent<EcBone>();
 
-				boneObj->SetParent(obj);
+				boneObj->SetParent(b.Parent == UINT8_MAX
+					? obj.Contained()
+					: obj->FindChild(mesh.Bones[b.Parent].Name)
+				);
 				boneObj->Name = b.Name;
 				boneObj->Serializes = false;
 				

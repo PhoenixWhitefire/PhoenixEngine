@@ -97,7 +97,7 @@ void ThreadManager::Initialize(int NumThreadsOverride)
 	for (size_t i = 0; i < numThreads; i++)
 	{
 		m_Workers.emplace_back(
-			std::thread([this, i]
+			[this, i]
 			{
 				TracyFiberEnter(s_WorkerFiberNames[i]);
 				SetThreadName(s_WorkerFiberNames[i]);
@@ -130,25 +130,13 @@ void ThreadManager::Initialize(int NumThreadsOverride)
 							continue;
 					}
 
-					try
-					{
-						ZoneScopedN("Task");
+					ZoneScopedN("Task");
 
-						task.Function();
-					}
-					catch (...)
-					{
-						TracyFiberLeave;
-
-						m_Workers[i].Exception = std::current_exception();
-						
-						return;
-					}
+					task.Function();
 				}
 
 				TracyFiberLeave;
-			}),
-			nullptr
+			}
 		);
 	}
 
@@ -170,28 +158,6 @@ void ThreadManager::Dispatch(std::function<void()> Task, bool IsCritical)
 	m_TasksCv.notify_one();
 }
 
-void ThreadManager::PropagateExceptions()
-{
-	std::vector<std::exception_ptr> exceptions;
-
-	for (auto it = m_Workers.begin(); it < m_Workers.end(); it += 1)
-		if (it->Exception)
-		{
-			exceptions.push_back(it->Exception);
-			it->Exception = nullptr;
-		}
-
-	if (exceptions.size() > 0)
-	{
-		if (exceptions.size() > 1)
-			Log::Warning("Multiple Worker exceptions occurred, only the first one will be re-thrown");
-		
-		Log::Error("Exception occurred in Worker thread! Re-throwing...");
-		
-		std::rethrow_exception(exceptions[0]);
-	}
-}
-
 void ThreadManager::m_StopThreads()
 {
 	ZoneScoped;
@@ -203,9 +169,9 @@ void ThreadManager::m_StopThreads()
 
 	m_TasksCv.notify_all();
 
-	for (Worker& worker : m_Workers)
-		if (worker.Thread.joinable())
-			worker.Thread.join();
+	for (std::thread& worker : m_Workers)
+		if (worker.joinable())
+			worker.join();
 }
 
 void ThreadManager::Shutdown()
@@ -213,7 +179,6 @@ void ThreadManager::Shutdown()
 	ZoneScoped;
 
 	m_StopThreads();
-	PropagateExceptions();
 
 	s_Instance = nullptr;
 }

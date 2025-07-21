@@ -90,7 +90,7 @@ static std::string getTexturePath(
 	}
 }
 
-ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
+ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 {
 	ZoneScoped;
 
@@ -231,7 +231,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 
 	for (ModelLoader::ModelNode& node : m_Nodes)
 	{
-		GameObject* object{};
+		GameObjectRef object;
 
 		if (node.Type == ModelNode::NodeType::Container)
 			object = GameObject::Create("Model");
@@ -359,12 +359,16 @@ ModelLoader::ModelLoader(const std::string& AssetPath, GameObject* Parent)
 
 		uint32_t parentIndex = node.Parent;
 		if (parentIndex == UINT32_MAX) // root node
-			object->SetParent(Parent);
+			object->SetParent(GameObject::GetObjectById(Parent));
 		else
-			object->SetParent(this->LoadedObjs.at(parentIndex) != object ? LoadedObjs[parentIndex] : Parent);
+			object->SetParent(
+				this->LoadedObjs.at(parentIndex) != object
+				? LoadedObjs[parentIndex].Contained()
+				: GameObject::GetObjectById(Parent)
+			);
 	}
 
-	for (GameObject* anim : m_Animations)
+	for (GameObjectRef anim : m_Animations)
 		anim->SetParent(LoadedObjs.at(0));
 }
 
@@ -635,31 +639,40 @@ void ModelLoader::m_BuildRig()
 	ZoneScoped;
 
 	for (ModelNode& node : m_Nodes)
+	{
 		for (const ModelNode::BoneInfo& jointDesc : node.Bones)
 		{
 			uint32_t jointNodeIndex = m_NodeIdToIndex.at(jointDesc.NodeId);
+			ModelNode& jointNode = m_Nodes.at(jointNodeIndex);
+			jointNode.Type = ModelNode::NodeType::Bone;
+		}
+
+		for (uint8_t ji = 0; ji < node.Bones.size(); ji++)
+		{
+			const ModelNode::BoneInfo& jointDesc = node.Bones[ji];
+			uint32_t jointNodeIndex = m_NodeIdToIndex.at(jointDesc.NodeId);
 			const ModelNode& jointNode = m_Nodes.at(jointNodeIndex);
+			const ModelNode& parent = m_Nodes.at(jointNode.Parent);
+
+			uint8_t parentId = UINT8_MAX;
+
+			for (uint8_t pi = 0; pi < node.Bones.size(); pi++)
+				if (&m_Nodes[m_NodeIdToIndex[node.Bones[pi].NodeId]] == &parent)
+					parentId = pi;
 
 			node.Data.Bones.emplace_back(
 				jointNode.Name,
+				parentId,
 				jointNode.Transform,
-				jointNode.Scale,
 				jointDesc.InvBindMatrix
 			);
 		}
+	}
 
 	for (const nlohmann::json& animationJson : m_JsonData.value("animations", nlohmann::json::array()))
 	{
 		GameObject* anim = GameObject::Create("Animation");
 		anim->Name = animationJson["name"];
-
-		for (const nlohmann::json& channelJson : animationJson["channels"])
-		{
-			uint32_t targetId = m_NodeIdToIndex[channelJson["target"]["node"]];
-			ModelNode& target = m_Nodes[targetId];
-
-			target.Type = ModelNode::NodeType::Bone;
-		}
 
 		m_Animations.push_back(anim);
 	}

@@ -32,10 +32,12 @@ std::string FileRW::ReadFile(const std::string_view& ShortPath, bool* DoesFileEx
 {
 	std::string actualPath = PrependResDir ? FileRW::TryMakePathCwdRelative(ShortPath) : std::string(ShortPath);
 
-	std::ifstream file(actualPath, std::ios::binary);
-
+	std::ifstream file;
 	std::string contents = "";
 
+	if (std::filesystem::is_regular_file(actualPath))
+		file.open(actualPath, std::ios::binary);
+	
 	if (file && file.is_open())
 	{
 		if (DoesFileExist != nullptr)

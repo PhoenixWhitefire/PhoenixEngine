@@ -1224,7 +1224,7 @@ static std::pair<std::string_view, GlobalFn> s_GlobalFunctions[] =
 		{
 			const char* path = luaL_checkstring(L, 1);
 
-			const std::vector<GameObject*>& loaded = ModelLoader(path, nullptr).LoadedObjs;
+			std::vector<GameObjectRef> loaded = ModelLoader(path, PHX_GAMEOBJECT_NULL_ID).LoadedObjs;
 			
 			ScriptEngine::L::PushGenericValue(L, loaded.at(0)->ToGenericValue());
 

@@ -3,6 +3,7 @@
 #include <chrono>
 #include <nljson.hpp>
 #include <glad/gl.h>
+#include <glm/gtc/matrix_transform.hpp>
 #include <glm/vec4.hpp>
 #include <tracy/Tracy.hpp>
 
@@ -75,7 +76,7 @@ static float readF32(const std::string_view& vec, size_t* offset, bool* fileTooS
 
 static uint8_t readU8(const std::string_view& str, size_t* offset, bool* fileTooSmallPtr)
 {
-	if (*fileTooSmallPtr || str.size() - 1 < *offset + 1)
+	if (*fileTooSmallPtr || str.size() - 1 < *offset)
 	{
 		*fileTooSmallPtr = true;
 		return UINT8_MAX;
@@ -190,6 +191,7 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 	bool isRigged         = vertexMeta & 0b00001000;
 	bool quantizedFloats  = vertexMeta & 0b00010000;
 	bool quantizedNormals = vertexMeta & 0b00100000;
+	bool skinCorrections  = vertexMeta & 0b01000000;
 
 	glm::vec3 uniformVertexNormal{};
 	glm::vec4 uniformVertexRGBA{ 1.f, 1.f, 1.f, 1.f };
@@ -374,11 +376,14 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 
 			for (uint8_t boneIdx = 0; boneIdx < numBones; boneIdx++)
 			{
+				mesh.Bones.emplace_back();
+				Bone& bone = mesh.Bones.back();
+
 				uint8_t nameLen = readU8(contents, &cursor, &fileTooSmallError);
-				std::string name = std::string(contents, cursor, nameLen);
+				bone.Name = std::string(contents, cursor, nameLen);
 				cursor += nameLen;
 
-				glm::mat4 trans =
+				bone.InverseBind =
 				{
 					readF32(contents, &cursor, &fileTooSmallError),
 					readF32(contents, &cursor, &fileTooSmallError),
@@ -401,12 +406,16 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 					readF32(contents, &cursor, &fileTooSmallError)
 				};
 
-				glm::vec3 scale =
+				if (skinCorrections)
 				{
-					readF32(contents, &cursor, &fileTooSmallError),
-					readF32(contents, &cursor, &fileTooSmallError),
-					readF32(contents, &cursor, &fileTooSmallError)
-				};
+					bone.Parent = readU8(contents, &cursor, &fileTooSmallError);
+				}
+				else
+				{
+					bone.Parent = UINT8_MAX;
+					// useless scale vec3
+					cursor += sizeof(float) * 3;
+				}
 
 				if (fileTooSmallError)
 				{
@@ -417,8 +426,6 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 
 					break;
 				}
-
-				mesh.Bones.emplace_back(name, trans, scale);
 			}
 		}
 	}
@@ -465,6 +472,7 @@ MeshProvider::~MeshProvider()
 
 MeshProvider* MeshProvider::Get()
 {
+	assert(s_Instance);
 	return s_Instance;
 }
 
@@ -579,6 +587,8 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 			// 18/05/2025 oooooh yeah squeeze out all those bits
 			+ (quantizedFloats   ? 0b00010000 : 0)
 			+ (quantizedNormals  ? 0b00100000 : 0)
+			// skinCorrections revision
+			+ 0b01000000
 	);
 	writeU32(contents, static_cast<uint32_t>(mesh.Vertices.size()));
 	writeU32(contents, static_cast<uint32_t>(mesh.Indices.size()));
@@ -703,31 +713,28 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 		contents.push_back(*(const int8_t*)&nameLen);
 		contents += b.Name;
 
-		// 4x4 transform matrix
-		writeF32(contents, b.Transform[0][0]);
-		writeF32(contents, b.Transform[0][1]);
-		writeF32(contents, b.Transform[0][2]);
-		writeF32(contents, b.Transform[0][3]);
+		// 4x4 inverse bind matrix
+		writeF32(contents, b.InverseBind[0][0]);
+		writeF32(contents, b.InverseBind[0][1]);
+		writeF32(contents, b.InverseBind[0][2]);
+		writeF32(contents, b.InverseBind[0][3]);
 
-		writeF32(contents, b.Transform[1][0]);
-		writeF32(contents, b.Transform[1][1]);
-		writeF32(contents, b.Transform[1][2]);
-		writeF32(contents, b.Transform[1][3]);
+		writeF32(contents, b.InverseBind[1][0]);
+		writeF32(contents, b.InverseBind[1][1]);
+		writeF32(contents, b.InverseBind[1][2]);
+		writeF32(contents, b.InverseBind[1][3]);
 
-		writeF32(contents, b.Transform[2][0]);
-		writeF32(contents, b.Transform[2][1]);
-		writeF32(contents, b.Transform[2][2]);
-		writeF32(contents, b.Transform[2][3]);
+		writeF32(contents, b.InverseBind[2][0]);
+		writeF32(contents, b.InverseBind[2][1]);
+		writeF32(contents, b.InverseBind[2][2]);
+		writeF32(contents, b.InverseBind[2][3]);
 
-		writeF32(contents, b.Transform[3][0]);
-		writeF32(contents, b.Transform[3][1]);
-		writeF32(contents, b.Transform[3][2]);
-		writeF32(contents, b.Transform[3][3]);
+		writeF32(contents, b.InverseBind[3][0]);
+		writeF32(contents, b.InverseBind[3][1]);
+		writeF32(contents, b.InverseBind[3][2]);
+		writeF32(contents, b.InverseBind[3][3]);
 
-		// vec3 scale
-		writeF32(contents, b.Scale.x);
-		writeF32(contents, b.Scale.y);
-		writeF32(contents, b.Scale.z);
+		contents.push_back(*(const char*)&b.Parent);
 	}
 
 	return contents;
@@ -765,7 +772,7 @@ void MeshProvider::Save(uint32_t Id, const std::string_view& Path)
 	this->Save(m_Meshes.at(Id), Path);
 }
 
-static void uploadMeshDataToGpuMesh(Mesh& mesh, MeshProvider::GpuMesh& gpuMesh)
+static void finishAndUploadMesh(Mesh& mesh, MeshProvider::GpuMesh& gpuMesh)
 {
 	ZoneScoped;
 
@@ -852,6 +859,25 @@ static void uploadMeshDataToGpuMesh(Mesh& mesh, MeshProvider::GpuMesh& gpuMesh)
 			gpuMesh.SkinningData.data(),
 			GL_STREAM_DRAW
 		);
+
+		for (uint8_t bi = 0; bi < mesh.Bones.size(); bi++)
+		{
+			Bone& bone = mesh.Bones[bi];
+
+			for (uint32_t vi = 0; vi < mesh.Vertices.size(); vi++)
+			{
+				const Vertex& v = mesh.Vertices[vi];
+
+				for (uint8_t ji = 0; ji < v.InfluencingJoints.size(); ji++)
+					if (v.InfluencingJoints[ji] == bi
+						&& v.JointWeights[ji] > 0.f
+					)
+						bone.TargetVertices.emplace_back(vi, ji);
+			}
+
+			// generally not ever going to be modified again
+			bone.TargetVertices.shrink_to_fit();
+		}
 	}
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -871,11 +897,11 @@ static void uploadMeshDataToGpuMesh(Mesh& mesh, MeshProvider::GpuMesh& gpuMesh)
 		mesh.MeshDataPreserved = true; // preserve for CPU skinning
 }
 
-uint32_t MeshProvider::Assign(Mesh mesh, const std::string_view& InternalName, bool UploadToGpu)
+uint32_t MeshProvider::Assign(Mesh mesh, const std::string& InternalName, bool UploadToGpu)
 {
 	uint32_t assignedId = static_cast<uint32_t>(m_Meshes.size());
 
-	auto prevPair = m_StringToMeshId.find(std::string(InternalName));
+	auto prevPair = m_StringToMeshId.find(InternalName);
 
 	if (prevPair != m_StringToMeshId.end())
 	{
@@ -891,7 +917,7 @@ uint32_t MeshProvider::Assign(Mesh mesh, const std::string_view& InternalName, b
 
 			if (UploadToGpu)
 			{
-				uploadMeshDataToGpuMesh(m_Meshes[prevPair->second], gpuMesh);
+				finishAndUploadMesh(m_Meshes[prevPair->second], gpuMesh);
 				m_Meshes[prevPair->second].GpuId = preExisting.GpuId;
 			}
 			else
@@ -900,7 +926,7 @@ uint32_t MeshProvider::Assign(Mesh mesh, const std::string_view& InternalName, b
 	}
 	else
 	{
-		m_StringToMeshId[std::string(InternalName)] = assignedId;
+		m_StringToMeshId[InternalName] = assignedId;
 		m_Meshes.push_back(mesh);
 
 		if (UploadToGpu)
@@ -911,24 +937,13 @@ uint32_t MeshProvider::Assign(Mesh mesh, const std::string_view& InternalName, b
 }
 
 uint32_t MeshProvider::LoadFromPath(
-	const std::string_view& Path,
+	const std::string& Path,
 	bool ShouldLoadAsync,
 	bool PreserveMeshData,
 	std::function<void(Mesh&)> PostLoadCallback
 )
 {
-	if (Path[0] == '$')
-	{
-		for (const auto& [k, v] : m_StringToMeshId)
-			if (k[0] == '$')
-			{
-				bool t = Path == k;
-
-				printf("%d\n", (int)t);
-			}
-	}
-
-	auto meshIt = m_StringToMeshId.find(std::string(Path));
+	auto meshIt = m_StringToMeshId.find(Path);
 
 	if (meshIt != m_StringToMeshId.end())
 	{
@@ -960,6 +975,11 @@ uint32_t MeshProvider::LoadFromPath(
 				ShouldLoadAsync = false;
 			}
 		}
+		else
+		{
+			if (PostLoadCallback)
+				PostLoadCallback(mesh);
+		}
 	}
 
 	if (meshIt == m_StringToMeshId.end())
@@ -971,23 +991,19 @@ uint32_t MeshProvider::LoadFromPath(
 			uint32_t resourceId = this->Assign(Mesh{}, Path);
 			m_Meshes.at(resourceId).MeshDataPreserved = PreserveMeshData;
 		
-			// otherwise we get use-after-free if the source of
-			// Path is de-alloc'd
-			std::string pathCapturable{ Path };
-		
 			ThreadManager::Get()->Dispatch(
-				[promise, resourceId, this, pathCapturable]()
+				[promise, resourceId, this, Path]()
 				{
 					ZoneScopedN("AsyncMeshLoad");
 
 					bool success = true;
-					std::string contents = FileRW::ReadFile(pathCapturable, &success);
+					std::string contents = FileRW::ReadFile(Path, &success);
 
 					if (!success)
 					{
 						Log::Error(std::format(
 							"Failed to load mesh '{}' asynchronously: File could not be opened",
-							pathCapturable
+							Path
 						));
 						promise->set_value(Mesh{});
 
@@ -1000,7 +1016,7 @@ uint32_t MeshProvider::LoadFromPath(
 					if (error.size() > 0)
 						Log::Error(std::format(
 							"Failed to load mesh '{}' asynchronously: {}",
-							pathCapturable, error
+							Path, error
 						));
 					
 					promise->set_value(loadedMesh);
@@ -1047,7 +1063,8 @@ uint32_t MeshProvider::LoadFromPath(
 			}
 			else
 			{
-				PostLoadCallback(mesh);
+				if (PostLoadCallback)
+					PostLoadCallback(mesh);
 			}
 
 			m_CreateAndUploadGpuMesh(mesh);
@@ -1106,7 +1123,7 @@ void MeshProvider::m_CreateAndUploadGpuMesh(Mesh& mesh)
 	gpuMesh.VertexBuffer.Initialize();
 	gpuMesh.ElementBuffer.Initialize();
 
-	uploadMeshDataToGpuMesh(mesh, gpuMesh);
+	finishAndUploadMesh(mesh, gpuMesh);
 
 	mesh.GpuId = static_cast<uint32_t>(m_GpuMeshes.size() - 1);
 }
