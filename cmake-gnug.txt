@@ -36,7 +36,7 @@ target_link_libraries(PhoenixEngine
 	${CMAKE_BINARY_DIR}/Vendor/SDL/${PHX_BUILD_TYPE}/libSDL_uclibc.a
 	${CMAKE_BINARY_DIR}/Vendor/SDL/${PHX_BUILD_TYPE}/libSDL3.so
 	${CMAKE_BINARY_DIR}/Vendor/tracy/${PHX_BUILD_TYPE}/libTracyClient.a
-	${CMAKE_BINARY_DIR}/Vendor/FMOD/bin/lib/libfmodL.so.14
+	${CMAKE_BINARY_DIR}/Vendor/FMOD/api/core/lib/x86_64/libfmodL.so
 	
 	# IF:$<$<CONFIG:Debug> ${PHX_TRACY_LIB_PATH} $<$<CONFIG:RelTracy>:${PHX_TRACY_LIB_PATH}>
 )

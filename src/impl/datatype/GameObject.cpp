@@ -249,7 +249,7 @@ void GameObject::s_AddObjectApi()
 	REFLECTION_DECLAREFUNC(
 		"FindChild",
 		{ Reflection::ValueType::String },
-		{ Reflection::ValueType::GameObject },
+		{ Reflection::ParameterType{ Reflection::ValueType::GameObject, true } },
 		[](void* p, const std::vector<Reflection::GenericValue>& inputs)
 		-> std::vector<Reflection::GenericValue>
 		{

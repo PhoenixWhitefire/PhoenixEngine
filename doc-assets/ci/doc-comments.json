@@ -23,7 +23,6 @@
       }
     },
     "Components": {
-      "Animation": null,
       "Bone": {
         "Description": [
           "Represents a Bone of a Mesh",
@@ -45,6 +44,9 @@
       },
       "DataModel": {
         "Description": "The root of the scene",
+        "Properties": {
+          "Time": "Number of seconds since the Engine started running"
+        },
         "Methods": {
           "Close": "Closes the application with the specified exit code integer or 0"
         },
@@ -163,7 +165,13 @@
           "Not functional currently"
         ],
         "Methods": {},
-        "Properties": {}
+        "Properties": {
+          "Animation": "The animation file",
+          "Looped": "Whether the Animation should loop when it reaches the end",
+          "Playing": "Whether the Animation is playing",
+          "Ready": "Whether the Animation can be played",
+          "Weight": "The influence the Animation has over the rig"
+        }
       }
     }
   },

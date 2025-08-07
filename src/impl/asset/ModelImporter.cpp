@@ -1,5 +1,6 @@
 #include <filesystem>
 #include <cfloat>
+#include <set>
 #include <glm/gtc/type_ptr.hpp>
 #include <stb/stb_image.h>
 #include <tracy/Tracy.hpp>
@@ -244,7 +245,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 			EcTransform* ct = object->GetComponent<EcTransform>();
 
 			std::string saveDir = AssetPath;
-			size_t whereRes = AssetPath.find("resources/");
+			size_t whereRes = saveDir.find("resources/");
 
 			if (whereRes == std::string::npos)
 				Log::Warning(std::format(
@@ -634,6 +635,27 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From, const glm::m
 	}
 }
 
+static void writeU16(std::string& vec, uint16_t v)
+{
+	vec.push_back(*(int8_t*)&v);
+	vec.push_back(*((int8_t*)&v + 1ull));
+}
+
+static void writeU32(std::string& vec, uint32_t v)
+{
+	vec.push_back(*(int8_t*)&v);
+	vec.push_back(*((int8_t*)&v + 1ull));
+	vec.push_back(*((int8_t*)&v + 2ull));
+	vec.push_back(*((int8_t*)&v + 3ull));
+}
+
+/*
+static void writeF32(std::string& vec, float v)
+{
+	writeU32(vec, std::bit_cast<uint32_t, float>(v));
+}
+*/
+
 void ModelLoader::m_BuildRig()
 {
 	ZoneScoped;
@@ -651,7 +673,7 @@ void ModelLoader::m_BuildRig()
 		{
 			const ModelNode::BoneInfo& jointDesc = node.Bones[ji];
 			uint32_t jointNodeIndex = m_NodeIdToIndex.at(jointDesc.NodeId);
-			const ModelNode& jointNode = m_Nodes.at(jointNodeIndex);
+			ModelNode& jointNode = m_Nodes.at(jointNodeIndex);
 			const ModelNode& parent = m_Nodes.at(jointNode.Parent);
 
 			uint8_t parentId = UINT8_MAX;
@@ -666,16 +688,56 @@ void ModelLoader::m_BuildRig()
 				jointNode.Transform,
 				jointDesc.InvBindMatrix
 			);
+
+			jointNode.Type = ModelNode::NodeType::Bone;
 		}
 	}
+
+	std::string saveDir = m_File;
+	size_t whereRes = saveDir.find("resources/");
+
+	if (whereRes == std::string::npos)
+		Log::Warning(std::format(
+			"ModelLoader cannot guarantee the mesh will be saved within the Resources directory (Path was: '{}')",
+			m_File
+		));
+	else
+		saveDir = saveDir.substr(whereRes + 10, saveDir.size() - whereRes);
 
 	for (const nlohmann::json& animationJson : m_JsonData.value("animations", nlohmann::json::array()))
 	{
 		GameObject* anim = GameObject::Create("Animation");
 		anim->Name = animationJson["name"];
-
 		m_Animations.push_back(anim);
+
+		std::string animData = m_SerializeAnimation(animationJson);
+		FileRW::WriteFile("animations/" + saveDir + "/" + anim->Name + ".hxanimation", animData, true);
 	}
+}
+
+std::string ModelLoader::m_SerializeAnimation(const nlohmann::json& Animation)
+{
+	std::string data = "PHNXENGI/ANIM\n";
+	writeU32(data, 0);
+
+	std::set<int32_t> nodes;
+	for (const nlohmann::json& channel : Animation.value("channels", nlohmann::json::array()))
+	{
+		nodes.insert((int32_t)channel["target"]["node"]);
+	}
+
+	assert(nodes.size() < UINT8_MAX);
+	uint8_t u8nodessize = (uint8_t)nodes.size();
+	data.push_back(*(int8_t*)&u8nodessize);
+
+	for (int32_t i : nodes)
+	{
+		const ModelNode& node = m_Nodes[i];
+		writeU16(data, node.Name.size());
+		data.append(node.Name);
+	}
+
+	return data;
 }
 
 std::string ModelLoader::m_GetData()

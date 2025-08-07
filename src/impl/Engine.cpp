@@ -11,6 +11,7 @@
 #include <imgui/backends/imgui_impl_sdl3.h>
 
 #include <SDL3/SDL_messagebox.h>
+#include <SDL3/SDL_version.h>
 #include <SDL3/SDL_video.h>
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_log.h>
@@ -207,7 +208,16 @@ Engine::Engine()
 		nlohmann::json::array({ 1280, 720 })
 	);
 
+	Log::Info(std::format(
+		"Initializing SDL {}/{} (Dyn. Revision: {})...",
+		SDL_VERSION,
+		SDL_GetVersion(),
+		SDL_GetRevision()
+	));
+
 	PHX_SDL_CALL(SDL_Init, SDL_INIT_VIDEO);
+
+	Log::Info(std::format("The SDL video driver is {}", SDL_GetCurrentVideoDriver()));
 
 	SDL_DisplayID primaryDisplay = SDL_GetPrimaryDisplay();
 	PHX_ENSURE_MSG(primaryDisplay != 0, "`SDL_GetPrimaryDisplay` failed with error: " + std::string(SDL_GetError()));
@@ -484,8 +494,6 @@ static GLuint startLoadingSkybox(std::vector<uint32_t>* skyboxFacesBeingLoaded)
 			GL_UNSIGNED_BYTE,
 			TextureManager::Get()->GetTextureResource(tex).TMP_ImageByteData
 		);
-
-		glGenerateMipmap(GL_TEXTURE_2D);
 	}
 
 	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
@@ -990,7 +998,6 @@ void Engine::Start()
 					);
 
 					m_BloomFbo.BindTexture();
-					glGenerateMipmap(GL_TEXTURE_2D);
 				}
 
 				{

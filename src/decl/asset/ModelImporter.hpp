@@ -78,6 +78,7 @@ private:
 	void m_TraverseNode(uint32_t NextNode, uint32_t From, const glm::mat4& Transform = glm::mat4(1.f));
 
 	void m_BuildRig();
+	std::string m_SerializeAnimation(const nlohmann::json&);
 
 	std::string m_GetData();
 

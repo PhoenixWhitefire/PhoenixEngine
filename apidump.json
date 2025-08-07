@@ -22,7 +22,15 @@
       }
     },
     "Components": {
-      "Animation": null,
+      "Animation": {
+        "Properties": {
+          "Animation": "String",
+          "Looped": "Bool",
+          "Playing": "Bool",
+          "Ready": "Bool READONLY",
+          "Weight": "Double"
+        }
+      },
       "Bone": {
         "Properties": {
           "IsActive": "Bool READONLY",
@@ -43,6 +51,9 @@
         },
         "Methods": {
           "Close": "(Integer) -> ()"
+        },
+        "Properties": {
+          "Time": "Double READONLY"
         }
       },
       "DirectionalLight": {
@@ -72,7 +83,7 @@
           "Transparency": "Double"
         }
       },
-      "Model": null,
+      "Model": {},
       "ParticleEmitter": {
         "Properties": {
           "Emitting": "Bool",

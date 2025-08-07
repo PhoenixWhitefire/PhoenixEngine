@@ -192,7 +192,7 @@ Custom types with functions and properties.
 * `Name: string`: The name of the Object, usually what was passed into `GameObject.new`
 * `ObjectId: Integer READONLY`: The ID of the Object, an integer. Remains the same throughout the session, but not guaranteed between sessions
 * `Parent: GameObject`: The hierarchal parent of the Object, or `nil` if it does not have one
-* `Serializes: boolean`: Whether or not the Object should be saved with the scene if it is serialized with `scene_save`
+* `Serializes: boolean`: Whether or not the Object should be saved with the scene if it is serialized with `scene_save`, and whether `:Duplicate` will duplicate (only applies to descendants)
 
 ### Methods:
 * `Destroy() -> ()`: Marks the Object as "pending for destruction". This may or may not remove the Object from memory immediately, depending on whether the Engine is actively using the Object for some purpose

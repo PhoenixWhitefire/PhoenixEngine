@@ -38,7 +38,18 @@ public:
 
     virtual const Reflection::StaticPropertyMap& GetProperties() override
     {
-        static const Reflection::StaticPropertyMap props = {};
+        static const Reflection::StaticPropertyMap props =
+        {
+            EC_PROP(
+                "Time",
+                Double,
+                [](void*)
+                {
+                    return GetRunningTime();
+                },
+                nullptr
+            )
+        };
 
         return props;
     }

@@ -34,8 +34,6 @@ local function loadSubLevel(Path)
 	end
 end
 
-local totalelapsed = 0
-
 local function update(DeltaTime)
 	if imgui_begin("Model Importer") then
 		ModelImporterScale = imgui_input_float("Scale", ModelImporterScale)
@@ -181,10 +179,9 @@ local function update(DeltaTime)
 		script.Enabled = false
 	end
 	
-	totalelapsed += DeltaTime
-	
-	if totalelapsed > 3 then
-		animtest.Top.Transform = Matrix.fromEulerAnglesXYZ(math.sin(totalelapsed), 0, math.sin(totalelapsed))
+	local top = animtest:FindChild("Top")
+	if top then
+		top.Transform = Matrix.fromEulerAnglesXYZ(math.sin(game.Time), 0, math.sin(game.Time))
 	end
 end
 

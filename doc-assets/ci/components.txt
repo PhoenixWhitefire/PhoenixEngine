@@ -1,6 +1,18 @@
 The Engine support an Entity Component System architecture, meaning that `GameObject`s have their own "base" APIs, which can be extended by adding *Components*. These are all listed below.
 
 
+## `Animation`
+
+* Represents an Animation
+* Not functional currently
+
+### Properties:
+* `Animation: string`: The animation file
+* `Looped: boolean`: Whether the Animation should loop when it reaches the end
+* `Playing: boolean`: Whether the Animation is playing
+* `Ready: Bool READONLY`: Whether the Animation can be played
+* `Weight: number`: The influence the Animation has over the rig
+
 ## `Bone`
 
 * Represents a Bone of a Mesh
@@ -24,6 +36,8 @@ The Engine support an Entity Component System architecture, meaning that `GameOb
 
 * The root of the scene
 
+### Properties:
+* `Time: Double READONLY`: Number of seconds since the Engine started running
 
 ### Methods:
 * `Close(number) -> ()`: Closes the application with the specified exit code integer or 0
@@ -61,6 +75,12 @@ The Engine support an Entity Component System architecture, meaning that `GameOb
 * `RoughnessFactor: number`: Roughness modifier
 * `Tint: Color`: The Color it should be tinted with
 * `Transparency: number`: Its transparency/translucency
+
+## `Model`
+
+* A container
+
+No members defined
 
 ## `ParticleEmitter`
 

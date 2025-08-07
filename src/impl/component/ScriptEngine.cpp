@@ -537,7 +537,9 @@ int ScriptEngine::L::HandleMethodCall(
 	{
 		const Reflection::GenericValue& output = outputs[i];
 
-		assert(output.Type == func->Outputs[i]);
+		assert(output.Type == func->Outputs[i]
+			|| (output.Type == Reflection::ValueType::Null && func->Outputs[i].IsOptional)
+		);
 		L::PushGenericValue(L, output);
 	}
 

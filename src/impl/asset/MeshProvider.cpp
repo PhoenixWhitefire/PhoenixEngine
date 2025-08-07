@@ -100,10 +100,6 @@ static void writeU32(std::string& vec, uint32_t v)
 	vec.push_back(*((int8_t*)&v + 1ull));
 	vec.push_back(*((int8_t*)&v + 2ull));
 	vec.push_back(*((int8_t*)&v + 3ull));
-
-	// TODO why does this generate an out-of-bounds access warning
-	//writeU16(vec, v);
-	//writeU16(vec, *(uint16_t*)(&v + 2ull));
 }
 
 static void writeF32(std::string& vec, float v)
