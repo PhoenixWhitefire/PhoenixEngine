@@ -10,7 +10,7 @@ The Engine support an Entity Component System architecture, meaning that `GameOb
 * `Animation: string`: The animation file
 * `Looped: boolean`: Whether the Animation should loop when it reaches the end
 * `Playing: boolean`: Whether the Animation is playing
-* `Ready: Bool READONLY`: Whether the Animation can be played
+* `Ready: boolean READONLY`: Whether the Animation can be played
 * `Weight: number`: The influence the Animation has over the rig
 
 ## `Bone`
@@ -19,8 +19,8 @@ The Engine support an Entity Component System architecture, meaning that `GameOb
 * Created automatically when the asset of a Mesh component finishes loading
 
 ### Properties:
-* `IsActive: Bool READONLY`: Whether or not the Bone Object is actively affecting a Mesh
-* `SkeletalBoneId: Integer READONLY`: The internal ID of the bone, valid range is 0-126
+* `IsActive: boolean READONLY`: Whether or not the Bone Object is actively affecting a Mesh
+* `SkeletalBoneId: number READONLY`: The internal ID of the bone, valid range is 0-126
 * `Transform: Matrix`: The transformation of the Bone
 
 ## `Camera`
@@ -37,10 +37,10 @@ The Engine support an Entity Component System architecture, meaning that `GameOb
 * The root of the scene
 
 ### Properties:
-* `Time: Double READONLY`: Number of seconds since the Engine started running
+* `Time: number READONLY`: Number of seconds since the Engine started running
 
 ### Methods:
-* `Close(number) -> ()`: Closes the application with the specified exit code integer or 0
+* `Close(number?) -> ()`: Closes the application with the specified exit code integer or 0
 
 ### Events:
 * `OnFrameBegin(number)`: Fires at the beginning of a frame, passing in the time elapsed since the last frame (delta time)
@@ -117,9 +117,9 @@ No members defined
 * A sound
 
 ### Properties:
-* `FinishedLoading: Bool READONLY`: Whether the Sound has finished loading the `SoundFile`
-* `Length: Double READONLY`: The length of the sound in seconds
-* `LoadSucceeded: Bool READONLY`: Whether or not the sound loaded successfully
+* `FinishedLoading: boolean READONLY`: Whether the Sound has finished loading the `SoundFile`
+* `Length: number READONLY`: The length of the sound in seconds
+* `LoadSucceeded: boolean READONLY`: Whether or not the sound loaded successfully
 * `Looped: boolean`: Whether playback should loop once it reaches the end
 * `Playing: boolean`: Whether the Sound is currently playing (or requested to play, if `.Playing` is set to `true` by a `Script` before it has finished loading)
 * `Position: number`: Number of seconds from beginning of the file

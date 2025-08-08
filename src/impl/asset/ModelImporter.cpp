@@ -698,7 +698,7 @@ void ModelLoader::m_BuildRig()
 
 	if (whereRes == std::string::npos)
 		Log::Warning(std::format(
-			"ModelLoader cannot guarantee the mesh will be saved within the Resources directory (Path was: '{}')",
+			"ModelLoader cannot guarantee the animation will be saved within the Resources directory (Path was: '{}')",
 			m_File
 		));
 	else

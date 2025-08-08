@@ -72,7 +72,7 @@ end
 globals ..= globalsEpilogue
 
 local rtol = {
-	Bool = "boolean",
+	Boolean = "boolean",
 	Integer = "number",
 	Double = "number",
 	String = "string"
@@ -116,7 +116,7 @@ local function dumpReflectionApi(t, d, cn)
 					continue
 				end
 				
-				s ..= `* \`{ n }: { rtol[v] or v }\`: { d.Properties[n] }\n`
+				s ..= `* \`{ n }: { rtolsub(v) }\`: { d.Properties[n] }\n`
 			end
 		end
 		

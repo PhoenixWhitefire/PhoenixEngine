@@ -56,11 +56,14 @@ public:
 
     virtual const Reflection::StaticMethodMap& GetMethods() override
     {
+#define U8(vt) (uint8_t)vt
+#define VT(u8) static_cast<Reflection::ValueType>(u8)
+
         static const Reflection::StaticMethodMap funcs =
 		{
 			{ "Close",
-				{ 
-					{ Reflection::ParameterType{ Reflection::ValueType::Integer, true } },
+				Reflection::Method{ 
+					{ VT(U8(Reflection::ValueType::Integer) | U8(Reflection::ValueType::Null)) },
 					{},
 					[](void*, const std::vector<Reflection::GenericValue>& inputs)
                     -> std::vector<Reflection::GenericValue>

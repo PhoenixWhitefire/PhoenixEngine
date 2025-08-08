@@ -522,10 +522,9 @@ static void uniformsEditor(std::unordered_map<std::string, Reflection::GenericVa
 		}
 		case Reflection::ValueType::Double:
 		{
-			float curVal = static_cast<float>(value.AsDouble());
-			ImGui::InputFloat("Value", &curVal);
+			ImGui::InputDouble("Value", &value.Val.Double);
 
-			newValue = curVal;
+			newValue = value;
 			break;
 		}
 		default:
@@ -1528,7 +1527,7 @@ static bool resetConflictedProperty(const char* PropName, char* Buf = nullptr)
 	char dbuf[2] = { 0 };
 	Buf = Buf ? Buf : dbuf;
 
-	bool reset = ImGui::InputText(PropName, Buf, 1);
+	bool reset = ImGui::InputText(PropName, Buf, 2);
 	ImGui::SetItemTooltip("Start typing here to reset this conflicting property to a default");
 
 	return reset;
@@ -1686,11 +1685,11 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 	
 	VisibleTree = VisibleTreeWip;
 
-	std::vector<std::unique_ptr<GameObjectRef>> refs;
+	std::vector<GameObjectRef> refs;
 
 	for (uint32_t id : Selections)
 		if (GameObject* g = GameObject::GetObjectById(id))
-			refs.push_back(std::make_unique<GameObjectRef>(g));
+			refs.emplace_back(g);
 		else
 			Selections.erase(std::find(Selections.begin(), Selections.end(), id));
 	
@@ -1791,6 +1790,12 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 
 				if (it != props.end())
 				{
+					const auto& cit = conflictingProps.find(prop.first);
+					// avoid changing this to false if it was already true
+					if (cit != conflictingProps.end())
+						if (cit->second)
+							continue;
+
 					const auto& prevVal = it->second;
 					if (prevVal.second != myVal)
 						conflictingProps.insert(std::pair(prop.first, true));
@@ -1903,7 +1908,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 						newVal = false;
 				}
 				else
-					ImGui::Checkbox(propNameCStr, (bool*)&newVal.Value);
+					ImGui::Checkbox(propNameCStr, &newVal.Val.Bool);
 
 				break;
 			}
@@ -1916,7 +1921,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 						newVal = atof(buf);
 				}
 				else
-					ImGui::InputDouble(propNameCStr, (double*)&newVal.Value);
+					ImGui::InputDouble(propNameCStr, &newVal.Val.Double);
 
 				break;
 			}
@@ -1929,7 +1934,11 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 						newVal = (int64_t)atoi(buf);
 				}
 				else
-					ImGui::InputInt(propNameCStr, (int32_t*)&newVal.Value);
+				{
+					int32_t i = static_cast<int32_t>(newVal.Val.Int);
+					ImGui::InputInt(propNameCStr, &i);
+					newVal.Val.Int = i;
+				}
 
 				break;
 			}
@@ -1997,7 +2006,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 						newVal = Color(0.f, 0.f, 0.f).ToGenericValue();
 				}
 				else
-					ImGui::ColorEdit3(propNameCStr, &((Color*)newVal.Value)->R);
+					ImGui::ColorEdit3(propNameCStr, &newVal.Val.Vec3.x);
 
 				break;
 			}
@@ -2010,7 +2019,11 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 						newVal = glm::vec2(0.f);
 				}
 				else
-					ImGui::InputFloat2(propNameCStr, (float*)&newVal.Value);
+				{
+					float f = static_cast<float>(newVal.Val.Double);
+					ImGui::InputFloat2(propNameCStr, &f);
+					newVal.Val.Double = f;
+				}
 
 				break;
 			}
@@ -2023,7 +2036,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 						newVal = glm::vec3(0.f);
 				}
 				else
-					ImGui::InputFloat3(propNameCStr, &((glm::vec3*)newVal.Value)->x);
+					ImGui::InputFloat3(propNameCStr, &newVal.Val.Vec3.x);
 
 				break;
 			}
@@ -2091,11 +2104,11 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 			default:
 			{
 				int typeId = static_cast<int>(curVal.Type);
-				const std::string_view& typeName = Reflection::TypeAsString(curVal.Type);
+				std::string typeName = Reflection::TypeAsString(curVal.Type);
 
 				ImGui::Text(
 					"%s: <Display of ID:%i ('%s') types not unavailable>",
-					propName.data(), typeId, typeName.data()
+					propName.data(), typeId, typeName.c_str()
 				);
 
 				break;

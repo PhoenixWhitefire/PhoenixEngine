@@ -46,12 +46,12 @@ public:
 		);
 	}
 
-	bool operator == (const Color& Other)
+	bool operator == (const Color& Other) const
 	{
 		return (R == Other.R) && (G == Other.G) && (B == Other.B);
 	}
 
-	bool operator != (const Color& Other)
+	bool operator != (const Color& Other) const
 	{
 		return !((*this) == Other);
 	}

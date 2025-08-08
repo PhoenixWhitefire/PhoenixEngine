@@ -133,6 +133,7 @@ struct EventConnectionData
 	uint32_t ConnectionId = UINT32_MAX;
 	int ThreadRef = LUA_NOREF;
 	lua_State* L = nullptr;
+	bool CallbackYields = false;
 };
 
 // modified version of `db_traceback` from `VM/src/ldblib.cpp`
@@ -166,18 +167,6 @@ static void dumpStacktrace(lua_State* L, std::string* Into = nullptr)
 			Into->append(line);
 			Into->append("\n");
 		}
-	}
-
-	luaL_checkstack(L, 1, "yep");
-
-	lua_pushlightuserdata(L, L);
-	lua_gettable(L, LUA_ENVIRONINDEX);
-
-	if (lua_isstring(L, -1))
-	{
-		Log::Append("[STCK]: Trace to `:Connect` function call:");
-		Log::Append(lua_tostring(L, -1));
-		lua_pop(L, 1);
 	}
 }
 
@@ -265,7 +254,7 @@ static int api_gameobjnewindex(lua_State* L)
 	if (strcmp(key, "Exists") == 0)
 		luaL_errorL(L, "%s", "'Exists' is read-only! - 21/12/2024");
 
-	LUA_ASSERT((obj), "Tried to assign to the '%s' of a deleted Game Object", key);
+	LUA_ASSERT(obj, "Tried to assign to the '%s' of a deleted Game Object", key);
 
 	if (const Reflection::Property* prop = obj->FindProperty(key))
 	{
@@ -287,7 +276,7 @@ static int api_gameobjnewindex(lua_State* L)
 
 		if (reflToLuaIt == ScriptEngine::ReflectedTypeLuaEquivalent.end())
 		{
-			const std::string_view& typeName = Reflection::TypeAsString(prop->Type);
+			std::string typeName = Reflection::TypeAsString(prop->Type);
 			luaL_errorL(L,
 				"No defined mapping between a '%s' and a Lua type",
 				typeName.data()
@@ -421,17 +410,15 @@ static int api_eventnamecall(lua_State* L)
 		lua_State* eL = lua_newthread(L);
 		int threadRef = lua_ref(L, -1);
 		lua_xpush(L, eL, 2);
-	
-		// store the location for `lprint` etc
-		// only useful if we have NO OTHER STACK FRAMES
-		// aka for something like
-		// `game.OnFrameBegin:Connect(print)`
-		std::string trace;
-		dumpStacktrace(L, &trace);
-	
-		lua_pushlightuserdata(L, eL);
-		lua_pushstring(L, trace.c_str());
-		lua_settable(L, LUA_ENVIRONINDEX);
+
+		EventConnectionData* ec = (EventConnectionData*)lua_newuserdata(eL, sizeof(EventConnectionData));
+		luaL_getmetatable(eL, "EventConnection"); // stack: ec, mt
+		lua_setmetatable(eL, -2); // stack: ec
+
+		lua_pushlightuserdata(eL, eL); // stack: ec, lud
+		lua_pushvalue(eL, -2); // stack: ec, lud, ec
+		lua_settable(eL, LUA_ENVIRONINDEX); // stack: ec
+		lua_pop(eL, 1);
 	
 		uint32_t cnId = rev->Connect(
 			GameObject::ReflectorHandleToPointer(ev->Reflector),
@@ -441,15 +428,27 @@ static int api_eventnamecall(lua_State* L)
 			{
 				assert(Inputs.size() == rev->CallbackInputs.size());
 
-				lua_State* co = lua_newthread(eL);
-				luaL_checkstack(co, (int32_t)Inputs.size() + 3, "event connection");
+				lua_pushlightuserdata(eL, eL);
+				lua_gettable(eL, LUA_ENVIRONINDEX);
+				EventConnectionData* cn = (EventConnectionData*)luaL_checkudata(eL, -1, "EventConnection");
 
-				lua_pushlightuserdata(eL, co);       // stack: co
-				lua_pushlightuserdata(eL, eL);       // stack: co, eL
-				lua_gettable(eL, LUA_ENVIRONINDEX);  // stack: co, trace
-				lua_settable(eL, LUA_ENVIRONINDEX);
+				lua_State* co = eL;
 
-				lua_xpush(eL, co, 1);
+				// performance optimization:
+				// if the callback never yields, then we know that
+				// there cannot be more than one instance of it
+				// running concurrently. thus, we can re-use a single thread
+				// instead of creating a new one for each invocation
+				if (cn->CallbackYields)
+				{
+					lua_State* nL = lua_newthread(eL);
+					luaL_checkstack(nL, (int32_t)Inputs.size() + 1, "event connection");
+					lua_xpush(eL, nL, 1);
+
+					co = nL;
+				}
+
+				lua_pop(eL, 1);
 
 				for (size_t i = 0; i < Inputs.size(); i++)
 				{
@@ -457,34 +456,27 @@ static int api_eventnamecall(lua_State* L)
 					ScriptEngine::L::PushGenericValue(co, Inputs[i]);
 				}
 
-				int status = lua_resume(co, eL, (int32_t)Inputs.size());
+				int status = lua_resume(co, eL, static_cast<int32_t>(Inputs.size()));
 
 				if (status != LUA_OK && status != LUA_YIELD)
 				{
 					Log::Error(std::format("Script event: {}", lua_tostring(co, -1)));
 					dumpStacktrace(co);
+					lua_pop(co, 1);
 				}
 
-				if (status != LUA_YIELD)
+				if (status == LUA_YIELD)
 				{
-					lua_pushlightuserdata(eL, co);
-					lua_pushnil(eL);
-					lua_settable(eL, LUA_ENVIRONINDEX); // remove stacktrace string
+					cn->CallbackYields = true;
 				}
-
-				lua_pop(eL, 1);
 			}
 		);
-	
-		EventConnectionData* ec = (EventConnectionData*)lua_newuserdata(L, sizeof(EventConnectionData));
+
 		ec->Reflector = ev->Reflector;
 		ec->ThreadRef = threadRef;
 		ec->ConnectionId = cnId;
 		ec->Event = ev->Event;
 		ec->L = L;
-	
-		luaL_getmetatable(L, "EventConnection");
-		lua_setmetatable(L, -2);
 	
 		return 1;
 	}
@@ -554,18 +546,7 @@ static int lprint(lua_State* L)
 		Log::Info("&&", std::format("[S{}:{}]", ar.short_src, ar.currentline));
 
 	else
-	{
-		lua_pushlightuserdata(L, L);
-		lua_rawget(L, LUA_ENVIRONINDEX);
-
-		if (lua_isstring(L, -1))
-		{
-			Log::Info("&&", lua_tostring(L, -1));
-			lua_pop(L, 1);
-		}
-		else
-			Log::Warning("Could not `lua_getinfo` for the following Luau log:");
-	}
+		Log::Warning("Could not `lua_getinfo` for the following Luau log:");
 
 	int n = lua_gettop(L); // number of arguments
 	for (int i = 1; i <= n; i++)
@@ -1083,6 +1064,8 @@ void EcScript::Update(double dt)
 	}
 
 	// we got destroy'd by the resumed coroutine
+	if (!GameObject::GetObjectById(this->Object.m_TargetId))
+		return;
 	if (this->Object->IsDestructionPending)
 		return;
 

@@ -22,24 +22,20 @@ Color::Color(const Reflection::GenericValue& gv)
 {
 	if (gv.Type != Reflection::ValueType::Color)
 		RAISE_RT(std::format(
-			"Attempted to construct Color, but GenericValue was {} instead",
+			"Attempted to construct Color, but GenericValue was a {} instead",
 			Reflection::TypeAsString(gv.Type)
 		));
-
-	if (!gv.Value)
-		RAISE_RT("Attempted to construct Color, but GenericValue.Value was NULL");
-
-	Color col = *(Color*)gv.Value;
-	this->R = col.R;
-	this->G = col.G;
-	this->B = col.B;
+		
+	this->R = gv.Val.Vec3.x;
+	this->G = gv.Val.Vec3.y;
+	this->B = gv.Val.Vec3.z;
 }
 
 Reflection::GenericValue Color::ToGenericValue() const
 {
 	Reflection::GenericValue gv;
 	gv.Type = Reflection::ValueType::Color;
-	gv.Value = new Color(*this);
+	gv.Val.Vec3 = { R, G, B };
 
 	return gv;
 }

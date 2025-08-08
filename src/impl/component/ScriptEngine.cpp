@@ -390,7 +390,7 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 	}
 	default:
 	{
-		const std::string_view& typeName = Reflection::TypeAsString(gv.Type);
+		std::string_view typeName = Reflection::TypeAsString(gv.Type);
 		luaL_error(L, "Cannot reflect values of type '%s'", typeName.data());
 	}
 	}
@@ -402,7 +402,7 @@ void ScriptEngine::L::PushGameObject(lua_State* L, GameObject* obj)
 		lua_pushnil(L); // null object properties are nil and falsey
 	else
 	{
-		uint32_t* ptrToObj = (uint32_t*)lua_newuserdatadtor(
+		/*uint32_t* ptrToObj = (uint32_t*)lua_newuserdatadtor(
 			L,
 			sizeof(uint32_t),
 			[](void* ptrId)
@@ -412,7 +412,8 @@ void ScriptEngine::L::PushGameObject(lua_State* L, GameObject* obj)
 				if (GameObject* o = GameObject::GetObjectById(id))
 					o->DecrementHardRefs(); // removes the reference in `::Create`
 			}
-		);
+		);*/
+		uint32_t* ptrToObj = (uint32_t*)lua_newuserdata(L, sizeof(uint32_t));
 		*ptrToObj = obj ? obj->ObjectId : PHX_GAMEOBJECT_NULL_ID;
 		
 		luaL_getmetatable(L, "GameObject");
@@ -428,16 +429,16 @@ int ScriptEngine::L::HandleMethodCall(
 {
 	int numArgs = lua_gettop(L) - 1;
 
-	const std::vector<Reflection::ParameterType>& paramTypes = func->Inputs;
+	const std::vector<Reflection::ValueType>& paramTypes = func->Inputs;
 
 	int numParams = static_cast<int32_t>(paramTypes.size());
 	int minArgs = 0;
 
 	for (int i = 0; i < numParams; i++)
 	{
-		const Reflection::ParameterType& param = paramTypes[i];
+		const Reflection::ValueType& param = paramTypes[i];
 
-		if (!param.IsOptional)
+		if (!((uint8_t)param & (uint8_t)Reflection::ValueType::Null))
 			minArgs++;
 		else
 			break;
@@ -536,9 +537,12 @@ int ScriptEngine::L::HandleMethodCall(
 	for (size_t i = 0; i < outputs.size(); i++)
 	{
 		const Reflection::GenericValue& output = outputs[i];
+		Reflection::ValueType base = func->Outputs[i];
+		if ((uint8_t)base > (uint8_t)Reflection::ValueType::Null)
+			base = (Reflection::ValueType)((uint8_t)base - (uint8_t)Reflection::ValueType::Null);
 
-		assert(output.Type == func->Outputs[i]
-			|| (output.Type == Reflection::ValueType::Null && func->Outputs[i].IsOptional)
+		assert(output.Type == base
+			|| ((uint8_t)func->Outputs[i] > (uint8_t)Reflection::ValueType::Null && output.Type == Reflection::ValueType::Null)
 		);
 		L::PushGenericValue(L, output);
 	}

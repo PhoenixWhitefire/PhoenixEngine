@@ -18,16 +18,16 @@ static void fromString(Reflection::GenericValue& G, const char* Data)
 
 	if (G.Size > 8)
 	{
-		G.Value = Memory::Alloc(G.Size, Memory::Category::Reflection);
+		G.Val.Str = (char*)Memory::Alloc(G.Size, Memory::Category::Reflection);
 
-		if (!G.Value)
+		if (!G.Val.Str)
 			RAISE_RT("Failed to allocate enough space for string in fromString");
 
-		memcpy(G.Value, Data, G.Size);
+		memcpy(G.Val.Str, Data, G.Size);
 	}
 	else
 		// store it directly
-		memcpy(&G.Value, Data, 8);
+		memcpy(G.Val.StrSso, Data, G.Size);
 }
 
 Reflection::GenericValue::GenericValue(const std::string_view& str)
@@ -52,63 +52,57 @@ Reflection::GenericValue::GenericValue(const char* data)
 }
 
 Reflection::GenericValue::GenericValue(bool b)
-	: Type(ValueType::Boolean), Value((void*)b)
+	: Type(ValueType::Boolean)
 {
+	Val.Bool = b;
 }
 
 Reflection::GenericValue::GenericValue(double d)
-	: Type(ValueType::Double), Value((void*)std::bit_cast<size_t>(d))
+	: Type(ValueType::Double)
 {
+	Val.Double = d;
 }
 
 Reflection::GenericValue::GenericValue(int64_t i)
-	: Type(ValueType::Integer), Value((void*)i)
+	: Type(ValueType::Integer)
 {
+	Val.Int = i;
 }
 
 Reflection::GenericValue::GenericValue(uint32_t i)
-	: Type(ValueType::Integer), Value((void*)static_cast<int64_t>(i))
+	: Type(ValueType::Integer)
 {
+	Val.Int = i;
 }
 
 Reflection::GenericValue::GenericValue(int i)
-	: Type(ValueType::Integer), Value((void*)static_cast<int64_t>(i))
+	: Type(ValueType::Integer)
 {
+	Val.Int = i;
 }
 
 static void fromMatrix(Reflection::GenericValue& G, const glm::mat4& M)
 {
 	G.Type = Reflection::ValueType::Matrix;
-	G.Value = Memory::Alloc(sizeof(M), Memory::Category::Reflection);
+	G.Val.Ptr = Memory::Alloc(sizeof(M), Memory::Category::Reflection);
 	G.Size = sizeof(M);
 
-	if (!G.Value)
+	if (!G.Val.Ptr)
 		RAISE_RT("Allocation error while constructing GenericValue from glm::mat4");
 
-	memcpy(G.Value, &M, sizeof(M));
-}
-
-static void fromVector3(Reflection::GenericValue& G, const glm::vec3& V)
-{
-	G.Type = Reflection::ValueType::Vector3;
-	G.Value = Memory::Alloc(sizeof(glm::vec3), Memory::Category::Reflection);
-	G.Size = sizeof(glm::vec3);
-
-	if (!G.Value)
-		RAISE_RT("Allocation error while constructing GenericValue from glm::vec3");
-
-	memcpy(G.Value, &V, sizeof(V));
+	memcpy(G.Val.Ptr, &M, sizeof(M));
 }
 
 Reflection::GenericValue::GenericValue(glm::vec2 v)
 	: Type(Reflection::ValueType::Vector2)
 {
-	memcpy(&Value, &v.x, sizeof(float) * 2);
+	Val.Vec2 = v;
 }
 
 Reflection::GenericValue::GenericValue(const glm::vec3& v)
+	: Type(Reflection::ValueType::Vector3)
 {
-	fromVector3(*this, v);
+	Val.Vec3 = v;
 }
 
 Reflection::GenericValue::GenericValue(const glm::mat4& m)
@@ -123,14 +117,14 @@ static void fromArray(Reflection::GenericValue& G, std::span<const Reflection::G
 
 	size_t allocSize = Array.size() * sizeof(G);
 
-	G.Value = Memory::Alloc(allocSize, Memory::Category::Reflection);
+	G.Val.Ptr = Memory::Alloc(allocSize, Memory::Category::Reflection);
 
-	if (!G.Value)
+	if (!G.Val.Ptr)
 		RAISE_RT("Allocation error while constructing GenericValue from std::vector<GenericValue>");
 
 	for (uint32_t i = 0; i < Array.size(); i++)
 		// placement-new to avoid 1 excess layer of indirection
-		new (&((Reflection::GenericValue*)G.Value)[i]) Reflection::GenericValue(Array[i]);
+		new (&((Reflection::GenericValue*)G.Val.Ptr)[i]) Reflection::GenericValue(Array[i]);
 
 	G.Size = Array.size();
 }
@@ -161,12 +155,12 @@ Reflection::GenericValue::GenericValue(const std::unordered_map<GenericValue, Ge
 
 	size_t allocSize = arr.size() * sizeof(GenericValue);
 
-	this->Value = (GenericValue*)Memory::Alloc(allocSize, Memory::Category::Reflection);
+	this->Val.Ptr = (GenericValue*)Memory::Alloc(allocSize, Memory::Category::Reflection);
 
-	if (!this->Value)
+	if (!this->Val.Ptr)
 		RAISE_RT("Allocation error while constructing GenericValue from std::map<GenericValue, GenericValue>");
 
-	memcpy(this->Value, arr.data(), allocSize);
+	memcpy(this->Val.Ptr, arr.data(), allocSize);
 
 	this->Size = static_cast<uint32_t>(arr.size());
 }
@@ -186,12 +180,12 @@ void Reflection::GenericValue::CopyInto(GenericValue& Target, const GenericValue
 	}
 	case ValueType::Color:
 	{
-		Target.Value = new Color(Source);
+		Target.Val.Vec3 = Source.Val.Vec3;
 		break;
 	}
 	case ValueType::Vector3:
 	{
-		fromVector3(Target, *(glm::vec3*)Source.Value);
+		Target.Val.Vec3 = Source.Val.Vec3;
 		break;
 	}
 	case ValueType::Matrix:
@@ -205,8 +199,10 @@ void Reflection::GenericValue::CopyInto(GenericValue& Target, const GenericValue
 		break;
 	}
 
+	case ValueType::Boolean: case ValueType::Double: case ValueType::Integer:
+
 	default:
-		Target.Value = Source.Value;
+		Target.Val.Ptr = Source.Val.Ptr;
 	}
 }
 
@@ -217,11 +213,11 @@ Reflection::GenericValue::GenericValue(GenericValue&& Other)
 
 	Reset();
 	this->Type = Other.Type;
-	this->Value = Other.Value;
+	this->Val = Other.Val;
 	this->Size = Other.Size;
 
 	Other.Type = ValueType::Null;
-	Other.Value = nullptr;
+	Other.Val = {};
 	Other.Size = 0;
 }
 
@@ -245,7 +241,7 @@ std::string Reflection::GenericValue::ToString() const
 		return "Null";
 
 	case ValueType::Boolean:
-		return (bool)this->Value ? "true" : "false";
+		return Val.Bool ? "true" : "false";
 
 	case ValueType::Integer:
 		return std::to_string(AsInteger());
@@ -255,10 +251,10 @@ std::string Reflection::GenericValue::ToString() const
 
 	case ValueType::String:
 	{
-		if (this->Size > 8)
-			return (const char*)this->Value;
+		if (this->Size > sizeof(Val.StrSso))
+			return Val.Str;
 		else
-			return (const char*)&this->Value;
+			return Val.StrSso;
 	}
 	
 	case ValueType::Color:
@@ -300,7 +296,7 @@ std::string Reflection::GenericValue::ToString() const
 					break;
 				}
 				else
-					typesString += std::string(TypeAsString(element.Type)) + "|";
+					typesString += TypeAsString(element.Type) + "|";
 			}
 
 			typesString = typesString.substr(0, typesString.size() - 1);
@@ -372,33 +368,33 @@ std::string_view Reflection::GenericValue::AsStringView() const
 		RAISE_RT("GenericValue was not a String, but instead a " + std::string(TypeAsString(Type)));
 	else
 		if (Size > 8)
-			return std::string_view((char*)Value, Size);
+			return std::string_view(Val.Str, Size);
 		else
-			return std::string_view((const char*)&Value, Size);
+			return std::string_view(Val.StrSso, Size);
 }
 bool Reflection::GenericValue::AsBoolean() const
 {
 	return Type == ValueType::Boolean
-		? (bool)this->Value
+		? Val.Bool
 		: RAISE_RT("GenericValue was not a Bool, but instead a " + std::string(TypeAsString(Type)));
 }
 double Reflection::GenericValue::AsDouble() const
 {
 	if (Type == ValueType::Double)
-		return std::bit_cast<double>(Value);
+		return Val.Double;
 
 	else if (Type == ValueType::Integer)
-		return static_cast<double>((int64_t)this->Value);
+		return Val.Int;
 
 	RAISE_RT("GenericValue was not a number (Integer/ Double ), but instead a " + std::string(TypeAsString(Type)));
 }
 int64_t Reflection::GenericValue::AsInteger() const
 {
 	if (Type == ValueType::Integer)
-		return (int64_t)this->Value;
+		return Val.Int;
 
 	else if (Type == ValueType::Double)
-		return static_cast<int64_t>(AsDouble());
+		return Val.Double;
 
 	RAISE_RT("GenericValue was not a number ( Integer /Double), but instead a " + std::string(TypeAsString(Type)));
 }
@@ -406,18 +402,18 @@ int64_t Reflection::GenericValue::AsInteger() const
 const glm::vec2 Reflection::GenericValue::AsVector2() const
 {
 	return Type == ValueType::Vector2
-		? std::bit_cast<glm::vec2>(Value)
+		? Val.Vec2
 		: RAISE_RT("GenericValue was not a Matrix, but instead a " + std::string(TypeAsString(Type)));
 }
 glm::vec3& Reflection::GenericValue::AsVector3() const
 {
 	return Type == ValueType::Vector3
-		? *(glm::vec3*)this->Value
+		? const_cast<glm::vec3&>(Val.Vec3)
 		: RAISE_RT("GenericValue was not a Matrix, but instead a " + std::string(TypeAsString(Type)));
 }
 glm::mat4& Reflection::GenericValue::AsMatrix() const
 {
-	glm::mat4* mptr = (glm::mat4*)this->Value;
+	glm::mat4* mptr = (glm::mat4*)this->Val.Ptr;
 
 	return Type == ValueType::Matrix
 		? *mptr
@@ -428,7 +424,7 @@ std::span<Reflection::GenericValue> Reflection::GenericValue::AsArray() const
 	if (this->Type != Reflection::ValueType::Array)
 		RAISE_RT("GenericValue was not an Array, but instead a " + std::string(TypeAsString(Type)));
 	
-	Reflection::GenericValue* first = (Reflection::GenericValue*)this->Value;
+	Reflection::GenericValue* first = (Reflection::GenericValue*)this->Val.Ptr;
 	return std::span(first, Size);
 }
 std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> Reflection::GenericValue::AsMap() const
@@ -442,33 +438,23 @@ void Reflection::GenericValue::Reset()
 	{
 	case ValueType::Matrix:
 	{
-		Memory::Free(this->Value);
+		Memory::Free(this->Val.Ptr);
 		break;
 	}
 	case ValueType::Array: case ValueType::Map:
 	{
 		for (uint32_t i = 0; i < this->Size; i++)
 			// de-alloc potential heap buffers of elements first
-			(((Reflection::GenericValue*)this->Value)[i]).~GenericValue();
+			(((Reflection::GenericValue*)this->Val.Ptr)[i]).~GenericValue();
 		
-		Memory::Free(this->Value);
+		Memory::Free(this->Val.Ptr);
 
 		break;
 	}
 	case ValueType::String:
 	{
-		if (this->Size > 8)
-			Memory::Free(this->Value);
-		break;
-	}
-	case ValueType::Color:
-	{
-		delete (Color*)this->Value;
-		break;
-	}
-	case ValueType::Vector3:
-	{
-		Memory::Free(this->Value);
+		if (this->Size > sizeof(this->Val.StrSso))
+			Memory::Free(this->Val.Ptr);
 		break;
 	}
 
@@ -476,7 +462,7 @@ void Reflection::GenericValue::Reset()
 	}
 
 	Type = Reflection::ValueType::Null;
-	Value = nullptr;
+	Val = {};
 	Size = 0;
 }
 
@@ -499,31 +485,21 @@ bool Reflection::GenericValue::operator==(const Reflection::GenericValue& Other)
 
 	case ValueType::String:
 	{
-		if (this->Size > 8)
+		if (this->Size > sizeof(this->Val.StrSso))
 		{
 			for (size_t i = 0; i < this->Size; i++)
-				if (static_cast<char*>(this->Value)[i] != static_cast<char*>(Other.Value)[i])
+				if (this->Val.Str[i] != Other.Val.Str[i])
 					return false;
 			
 			return true;
 		}
 		else
-			return this->Value == Other.Value;
-	}
-
-	case ValueType::Color:
-	{
-		return memcmp(this->Value, Other.Value, sizeof(Color));
-	}
-
-	case ValueType::Vector3:
-	{
-		return memcmp(this->Value, Other.Value, sizeof(glm::vec3));
+			return memcmp(this->Val.StrSso, Other.Val.StrSso, sizeof(this->Val.StrSso)) == 0;
 	}
 
 	case ValueType::Matrix:
 	{
-		return memcmp(this->Value, Other.Value, sizeof(glm::mat4));
+		return memcmp(this->Val.Ptr, Other.Val.Ptr, sizeof(glm::mat4));
 	}
 
 	case ValueType::Array:
@@ -538,8 +514,29 @@ bool Reflection::GenericValue::operator==(const Reflection::GenericValue& Other)
 		return true;
 	}
 
+	case ValueType::Boolean:
+	{
+		return Val.Bool == Other.Val.Bool;
+	}
+	case ValueType::Integer:
+	{
+		return Val.Int == Other.Val.Int;
+	}
+	case ValueType::Double:
+	{
+		return Val.Double == Other.Val.Double;
+	}
+	case ValueType::Vector2:
+	{
+		return Val.Vec2 == Other.Val.Vec2;
+	}
+	case ValueType::Color: case ValueType::Vector3:
+	{
+		return Val.Vec3 == Other.Val.Vec3;
+	}
+
 	default:
-		return this->Value ==  Other.Value;
+		return memcmp(&Val, &Other.Val, sizeof(ValueData));
 	}
 }
 
@@ -550,11 +547,11 @@ Reflection::GenericValue& Reflection::GenericValue::operator=(Reflection::Generi
 
 	Reset();
 	this->Type = Other.Type;
-	this->Value = Other.Value;
+	this->Val = Other.Val;
 	this->Size = Other.Size;
 
 	Other.Type = ValueType::Null;
-	Other.Value = nullptr;
+	Other.Val = {};
 	Other.Size = 0;
 
 	return *this;
@@ -567,11 +564,9 @@ Reflection::GenericValue& Reflection::GenericValue::operator=(const Reflection::
 	return *this;
 }
 
-static std::string_view ValueTypeNames[] =
+static std::string_view BaseNames[] =
 {
-		"Null",
-
-		"Bool",
+		"Boolean",
 		"Integer",
 		"Double",
 		"String",
@@ -590,14 +585,23 @@ static std::string_view ValueTypeNames[] =
 static const std::string_view TypeAsStringError = "<CANNOT_FIND_TYPE_NAME>";
 
 static_assert(
-	std::size(ValueTypeNames) == (size_t)Reflection::ValueType::__count,
+	std::size(BaseNames) == (size_t)Reflection::ValueType::__lastBase,
 	"'ValueTypeNames' does not have the same number of elements as 'ValueType'"
 );
 
-const std::string_view& Reflection::TypeAsString(ValueType t)
+std::string Reflection::TypeAsString(ValueType vt)
 {
-	if ((int)t < std::size(ValueTypeNames))
-		return ValueTypeNames[(int)t];
-	else
-		return TypeAsStringError;
+	if (vt == ValueType::Null)
+		return "Null";
+
+#define U8(t) (uint8_t)t
+
+	uint8_t t = U8(vt);
+
+	if (t < U8(ValueType::Null))
+		return std::string(BaseNames[t]);
+
+	// everything greater than Null means optional
+	// Null + Boolean = Boolean? (optional boolean)
+	return std::string(BaseNames[t - U8(ValueType::Null)]) + "?";
 }

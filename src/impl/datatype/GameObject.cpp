@@ -249,7 +249,7 @@ void GameObject::s_AddObjectApi()
 	REFLECTION_DECLAREFUNC(
 		"FindChild",
 		{ Reflection::ValueType::String },
-		{ Reflection::ParameterType{ Reflection::ValueType::GameObject, true } },
+		{ Reflection::ValueType((uint8_t)Reflection::ValueType::GameObject | (uint8_t)Reflection::ValueType::Null) },
 		[](void* p, const std::vector<Reflection::GenericValue>& inputs)
 		-> std::vector<Reflection::GenericValue>
 		{
@@ -329,7 +329,7 @@ GameObject* GameObject::FromGenericValue(const Reflection::GenericValue& gv)
 			Reflection::TypeAsString(gv.Type)
 		));
 
-	return GameObject::GetObjectById(static_cast<uint32_t>((int64_t)gv.Value));
+	return GameObject::GetObjectById(static_cast<uint32_t>(gv.Val.Int));
 }
 
 bool GameObject::IsValidClass(const std::string_view& ObjectClass)
@@ -361,21 +361,21 @@ void* GameObject::ReflectorHandleToPointer(const ReflectorHandle& Handle)
 
 void GameObject::IncrementHardRefs()
 {
-	//m_HardRefCount++;
+	m_HardRefCount++;
 
-	//if (m_HardRefCount > UINT16_MAX - 1)
-	//	RAISE_RT("Too many hard refs!");
+	if (m_HardRefCount > UINT16_MAX - 1)
+		RAISE_RT("Too many hard refs!");
 }
 
 void GameObject::DecrementHardRefs()
 {
-	//if (m_HardRefCount == 0)
-	//	RAISE_RT("Tried to decrement hard refs, with no hard references!");
+	if (m_HardRefCount == 0)
+		RAISE_RT("Tried to decrement hard refs, with no hard references!");
 
-	//m_HardRefCount--;
+	m_HardRefCount--;
 
-	//if (m_HardRefCount == 0)
-	//	Destroy();
+	if (m_HardRefCount == 0)
+		Destroy();
 }
 
 void GameObject::Destroy()
@@ -386,14 +386,11 @@ void GameObject::Destroy()
 
 	if (!IsDestructionPending)
 	{
-		Valid = false;
 		this->SetParent(nullptr);
-		Valid = true; // TODO HACK to avoid RemoveChild -> DecrementHardRefs -> Destroy loop
 
 		this->IsDestructionPending = true;
 
-		if (m_HardRefCount > 0)
-			DecrementHardRefs(); // removes the reference in `::Create`
+		DecrementHardRefs(); // removes the reference in `::Create`
 	}
 
 	if (m_HardRefCount == 0 && Valid)
@@ -507,7 +504,7 @@ void GameObject::AddChild(GameObject* c)
 	if (it == m_Children.end())
 	{
 		m_Children.push_back(c->ObjectId);
-		c->IncrementHardRefs();
+		//c->IncrementHardRefs();
 	}
 }
 
@@ -520,8 +517,8 @@ void GameObject::RemoveChild(uint32_t id)
 		m_Children.erase(it);
 
 		// TODO HACK check ::Destroy
-		if (GameObject* ch = GameObject::GetObjectById(id))
-			ch->DecrementHardRefs();
+		//if (GameObject* ch = GameObject::GetObjectById(id))
+		//	ch->DecrementHardRefs();
 	}
 	else
 		RAISE_RT(std::format("ID:{} is _not my ({}) sonnn~_", ObjectId, id));

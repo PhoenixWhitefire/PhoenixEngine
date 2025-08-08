@@ -165,9 +165,7 @@ namespace Reflection
 {
 	enum class ValueType : uint8_t
 	{
-		Null = 0,
-
-		Boolean,
+		Boolean = 0,
 		Integer,
 		Double,
 		String,
@@ -184,16 +182,30 @@ namespace Reflection
 		Array,
 		// Keys will be Strings. Odd items of GenericValue.Array will be the keys, even items will be the values
 		Map,
-		// Must ALWAYS be the last element
-		__count
-	};
 
-	const std::string_view& TypeAsString(ValueType);
+		// BEFORE Null
+		__lastBase,
+
+		Null = 0b10000000
+	};
+	static_assert((uint8_t)ValueType::__lastBase < (uint8_t)ValueType::Null);
+
+	std::string TypeAsString(ValueType);
 
 	struct GenericValue
 	{
 		Reflection::ValueType Type = Reflection::ValueType::Null;
-		void* Value = nullptr;
+		union ValueData
+		{
+			bool Bool;
+			int64_t Int;
+			double Double;
+			char* Str;
+			char StrSso[12]; // small string optimization. largest elem is glm::vec3 of 12 bytes
+			glm::vec2 Vec2;
+			glm::vec3 Vec3;
+			void* Ptr;
+		} Val = {};
 		// Array length or allocated memory for `Value`
 		size_t Size = 0;
 
@@ -254,33 +266,10 @@ namespace Reflection
 		bool Serializes = true;
 	};
 
-	// could be a `ValueType` bitmask, but tried it and got too complicated
-	// i'll just settle for this for now
-	struct ParameterType
-	{
-		ParameterType(Reflection::ValueType t)
-			: Type(t)
-		{
-		}
-
-		ParameterType(Reflection::ValueType t, bool o)
-			: Type(t), IsOptional(o)
-		{
-		}
-
-		Reflection::ValueType Type;
-		bool IsOptional = false;
-
-		operator Reflection::ValueType () const
-		{
-			return Type;
-		}
-	};
-
 	struct Method
 	{
-		std::vector<ParameterType> Inputs;
-		std::vector<ParameterType> Outputs;
+		std::vector<ValueType> Inputs;
+		std::vector<ValueType> Outputs;
 
 		std::function<std::vector<Reflection::GenericValue>(void*, const std::vector<Reflection::GenericValue>&)> Func;
 	};

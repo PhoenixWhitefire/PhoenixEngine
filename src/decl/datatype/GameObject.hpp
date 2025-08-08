@@ -257,10 +257,7 @@ struct GameObjectRef
 	{
 		GameObject* g = GameObject::GetObjectById(m_TargetId);
 
-		// avoid being as bothersome as `::Contained`,
-		// if the object got deleted earlier don't complain
-		// since we were going to delete it anyway
-		if (m_TargetId != PHX_GAMEOBJECT_NULL_ID && g)
+		if (m_TargetId != PHX_GAMEOBJECT_NULL_ID)
 			g->DecrementHardRefs();
 		m_TargetId = PHX_GAMEOBJECT_NULL_ID;
 	}

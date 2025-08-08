@@ -190,14 +190,14 @@ Custom types with functions and properties.
 ### Properties:
 * `Enabled: boolean`: Whether the Engine updates and recognizes this Object, essentially freezing it if it is disabled
 * `Name: string`: The name of the Object, usually what was passed into `GameObject.new`
-* `ObjectId: Integer READONLY`: The ID of the Object, an integer. Remains the same throughout the session, but not guaranteed between sessions
+* `ObjectId: number READONLY`: The ID of the Object, an integer. Remains the same throughout the session, but not guaranteed between sessions
 * `Parent: GameObject`: The hierarchal parent of the Object, or `nil` if it does not have one
 * `Serializes: boolean`: Whether or not the Object should be saved with the scene if it is serialized with `scene_save`, and whether `:Duplicate` will duplicate (only applies to descendants)
 
 ### Methods:
 * `Destroy() -> ()`: Marks the Object as "pending for destruction". This may or may not remove the Object from memory immediately, depending on whether the Engine is actively using the Object for some purpose
 * `Duplicate() -> (GameObject)`: Creates a duplicate of the Object
-* `FindChild(string) -> (GameObject)`: Returns the child Object with the given name, or `nil` if it doesn't exist
+* `FindChild(string) -> (GameObject?)`: Returns the child Object with the given name, or `nil` if it doesn't exist
 * `GetChildren() -> (Array)`: Returns a list of the Object's direct children
 * `GetComponentNames() -> (Array)`: Returns a list of the names of all Components that the Object currently has
 * `GetDescendants() -> (Array)`: Returns all descendants of the Object (i.e. its children, and their children, etc)

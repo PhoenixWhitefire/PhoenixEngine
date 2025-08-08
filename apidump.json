@@ -4,36 +4,36 @@
       "Methods": {
         "Destroy": "() -> ()",
         "Duplicate": "() -> (GameObject)",
-        "FindChild": "(String) -> (GameObject)",
+        "FindChild": "(String) -> (GameObject?)",
         "GetChildren": "() -> (Array)",
         "GetComponentNames": "() -> (Array)",
         "GetDescendants": "() -> (Array)",
         "GetFullName": "() -> (String)",
-        "HasComponent": "(String) -> (Bool)",
-        "IsA": "(String) -> (Bool)",
+        "HasComponent": "(String) -> (Boolean)",
+        "IsA": "(String) -> (Boolean)",
         "MergeWith": "(GameObject) -> ()"
       },
       "Properties": {
-        "Enabled": "Bool",
+        "Enabled": "Boolean",
         "Name": "String",
         "ObjectId": "Integer READONLY",
         "Parent": "GameObject",
-        "Serializes": "Bool"
+        "Serializes": "Boolean"
       }
     },
     "Components": {
       "Animation": {
         "Properties": {
           "Animation": "String",
-          "Looped": "Bool",
-          "Playing": "Bool",
-          "Ready": "Bool READONLY",
+          "Looped": "Boolean",
+          "Playing": "Boolean",
+          "Ready": "Boolean READONLY",
           "Weight": "Double"
         }
       },
       "Bone": {
         "Properties": {
-          "IsActive": "Bool READONLY",
+          "IsActive": "Boolean READONLY",
           "SkeletalBoneId": "Integer READONLY",
           "Transform": "Matrix"
         }
@@ -42,7 +42,7 @@
         "Properties": {
           "FieldOfView": "Double",
           "Transform": "Matrix",
-          "UseSimpleController": "Bool"
+          "UseSimpleController": "Boolean"
         }
       },
       "DataModel": {
@@ -50,7 +50,7 @@
           "OnFrameBegin": "(Double)"
         },
         "Methods": {
-          "Close": "(Integer) -> ()"
+          "Close": "(Integer?) -> ()"
         },
         "Properties": {
           "Time": "Double READONLY"
@@ -61,14 +61,14 @@
           "Brightness": "Double",
           "Direction": "Vector3",
           "LightColor": "Color",
-          "Shadows": "Bool"
+          "Shadows": "Boolean"
         }
       },
       "Mesh": {
         "Properties": {
           "AngularVelocity": "Vector3",
           "Asset": "String",
-          "CastsShadows": "Bool",
+          "CastsShadows": "Boolean",
           "CollisionFidelity": "Integer",
           "Density": "Double",
           "FaceCulling": "Integer",
@@ -76,8 +76,8 @@
           "LinearVelocity": "Vector3",
           "Material": "String",
           "MetallnessFactor": "Double",
-          "PhysicsCollisions": "Bool",
-          "PhysicsDynamics": "Bool",
+          "PhysicsCollisions": "Boolean",
+          "PhysicsDynamics": "Boolean",
           "RoughnessFactor": "Double",
           "Tint": "Color",
           "Transparency": "Double"
@@ -86,9 +86,9 @@
       "Model": {},
       "ParticleEmitter": {
         "Properties": {
-          "Emitting": "Bool",
+          "Emitting": "Boolean",
           "Lifetime": "Vector2",
-          "ParticlesAreAttached": "Bool",
+          "ParticlesAreAttached": "Boolean",
           "Rate": "Integer"
         }
       },
@@ -97,12 +97,12 @@
           "Brightness": "Double",
           "LightColor": "Color",
           "Range": "Double",
-          "Shadows": "Bool"
+          "Shadows": "Boolean"
         }
       },
       "Script": {
         "Methods": {
-          "Reload": "() -> (Bool)"
+          "Reload": "() -> (Boolean)"
         },
         "Properties": {
           "SourceFile": "String"
@@ -110,14 +110,14 @@
       },
       "Sound": {
         "Events": {
-          "OnLoaded": "(Bool)"
+          "OnLoaded": "(Boolean)"
         },
         "Properties": {
-          "FinishedLoading": "Bool READONLY",
+          "FinishedLoading": "Boolean READONLY",
           "Length": "Double READONLY",
-          "LoadSucceeded": "Bool READONLY",
-          "Looped": "Bool",
-          "Playing": "Bool",
+          "LoadSucceeded": "Boolean READONLY",
+          "Looped": "Boolean",
+          "Playing": "Boolean",
           "Position": "Double",
           "SoundFile": "String",
           "Speed": "Double",
@@ -130,7 +130,7 @@
           "Brightness": "Double",
           "LightColor": "Color",
           "Range": "Double",
-          "Shadows": "Bool"
+          "Shadows": "Boolean"
         }
       },
       "Transform": {

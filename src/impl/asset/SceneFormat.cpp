@@ -611,7 +611,7 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 
 			default:
 			{
-				const std::string_view& memberTypeName = Reflection::TypeAsString(memberType);
+				std::string memberTypeName = Reflection::TypeAsString(memberType);
 
 				SF_WARN(
 					"Not reading prop '{}' because it's type ({}) is unknown",
@@ -632,7 +632,7 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 				}
 				catch (const std::runtime_error& err)
 				{
-					const std::string_view& mtname = Reflection::TypeAsString(memberType);
+					std::string mtname = Reflection::TypeAsString(memberType);
 					std::string valueStr = assignment.ToString();
 
 					SF_WARN(
