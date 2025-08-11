@@ -530,6 +530,7 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 			}
 
 			Reflection::ValueType memberType = member->Type;
+			memberType = (Reflection::ValueType)((uint8_t)memberType & ~(uint8_t)Reflection::ValueType::Null);
 
 			if (!member->Set)
 			{
@@ -614,7 +615,7 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 				std::string memberTypeName = Reflection::TypeAsString(memberType);
 
 				SF_WARN(
-					"Not reading prop '{}' because it's type ({}) is unknown",
+					"Property '{}' cannot be deserialized because it's type ({}) is not supported",
 					memberName,
 					memberTypeName
 				);

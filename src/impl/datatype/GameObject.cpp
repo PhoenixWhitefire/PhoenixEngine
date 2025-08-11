@@ -135,21 +135,18 @@ void GameObject::s_AddObjectApi()
 	REFLECTION_DECLAREPROP_SIMPLE(GameObject, Enabled, Boolean);
 	REFLECTION_DECLAREPROP_SIMPLE(GameObject, Serializes, Boolean);
 	REFLECTION_DECLAREPROP_SIMPLE_READONLY(GameObject, ObjectId, Integer);
-	REFLECTION_DECLAREPROP(
-		"Parent",
-		GameObject,
+	s_Api.Properties["Parent"] = Reflection::Property
+	{
+		(Reflection::ValueType)((uint8_t)Reflection::ValueType::GameObject + (uint8_t)Reflection::ValueType::Null),
 		[](void* p)
 		{
-			// This is OK even if `->GetParent()` returns `nullptr`,
-			// because `::ToGenericValue` accounts for when `this` is `nullptr`
-			// 06/10/2024
 			return static_cast<GameObject*>(p)->GetParent()->ToGenericValue();
 		},
 		[](void* p, const Reflection::GenericValue& gv)
 		{
 			static_cast<GameObject*>(p)->SetParent(GameObject::FromGenericValue(gv));
 		}
-	);
+	};
 
 	REFLECTION_DECLAREPROC_INPUTLESS(
 		Destroy,
@@ -329,7 +326,9 @@ GameObject* GameObject::FromGenericValue(const Reflection::GenericValue& gv)
 			Reflection::TypeAsString(gv.Type)
 		));
 
-	return GameObject::GetObjectById(static_cast<uint32_t>(gv.Val.Int));
+	GameObject* obj = GameObject::GetObjectById(static_cast<uint32_t>(gv.Val.Int));
+	assert(obj);
+	return obj;
 }
 
 bool GameObject::IsValidClass(const std::string_view& ObjectClass)

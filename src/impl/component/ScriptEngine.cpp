@@ -303,6 +303,31 @@ Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int St
 	}
 }
 
+void ScriptEngine::L::CheckType(lua_State* L, Reflection::ValueType Type, int StackIndex)
+{
+	bool isOptional = (uint8_t)Type & (uint8_t)Reflection::ValueType::Null;
+	int givenType = lua_type(L, StackIndex);
+
+	if (!isOptional || givenType != LUA_TNIL)
+	{
+		Type = (Reflection::ValueType)((uint8_t)Type & ~(uint8_t)Reflection::ValueType::Null);
+		auto reflToLuaIt = ScriptEngine::ReflectedTypeLuaEquivalent.find(Type);
+
+		if (reflToLuaIt == ScriptEngine::ReflectedTypeLuaEquivalent.end())
+		{
+			luaL_errorL(L,
+				"No defined mapping between a '%s' and a Luau type",
+				Reflection::TypeAsString(Type).c_str()
+			);
+		}
+
+		luaL_checktype(L, StackIndex, reflToLuaIt->second);
+
+		if (reflToLuaIt->second == LUA_TUSERDATA)
+			luaL_checkudata(L, StackIndex, Reflection::TypeAsString(Type).c_str());
+	}
+}
+
 void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericValue& gv)
 {
 	luaL_checkstack(L, 1, "::PushGenericValue");
@@ -488,36 +513,9 @@ int ScriptEngine::L::HandleMethodCall(
 		// 2 = -1
 		// Simpler than I thought actually
 		int argStackIndex = index - numArgs;
+		ScriptEngine::L::CheckType(L, paramType, argStackIndex);
 
-		auto expectedLuaTypeIt = ScriptEngine::ReflectedTypeLuaEquivalent.find(paramType);
-
-		if (expectedLuaTypeIt == ScriptEngine::ReflectedTypeLuaEquivalent.end())
-			RAISE_RT(std::format(
-				"Cannot verify that argument %i should be a %s",
-				index + 1, Reflection::TypeAsString(paramType).data()
-			));
-
-		int expectedLuaType = (int)expectedLuaTypeIt->second;
-		int actualLuaType = lua_type(L, argStackIndex);
-
-		if (actualLuaType != expectedLuaType)
-		{
-			const char* expectedName = lua_typename(L, expectedLuaType);
-			const char* actualTypeName = luaL_typename(L, argStackIndex);
-			const char* providedValue = luaL_tolstring(L, argStackIndex, NULL);
-
-			luaL_error(L,
-				"Argument %i expected to be of type %s, but was '%s' (%s) instead",
-				index + 1,
-				expectedName,
-				providedValue,
-				actualTypeName
-			);
-
-			return 0;
-		}
-		else
-			inputs.push_back(L::LuaValueToGeneric(L, argStackIndex));
+		inputs.push_back(L::LuaValueToGeneric(L, argStackIndex));
 	}
 
 	// Now, onto the *REAL* business...

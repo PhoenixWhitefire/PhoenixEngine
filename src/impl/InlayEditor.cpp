@@ -1869,7 +1869,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 			bool canChangeValue = true;
 			bool valueWasEditedManual = false;
 
-			switch (propDesc->Type)
+			switch (curVal.Type)
 			{
 
 			case Reflection::ValueType::String:
@@ -2107,7 +2107,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 				std::string typeName = Reflection::TypeAsString(curVal.Type);
 
 				ImGui::Text(
-					"%s: <Display of ID:%i ('%s') types not unavailable>",
+					"%s: <Editing of ID:%i ('%s') types not supported>",
 					propName.data(), typeId, typeName.c_str()
 				);
 

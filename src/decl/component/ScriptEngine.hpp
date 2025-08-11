@@ -53,6 +53,11 @@ namespace ScriptEngine::L
 		lua_State*,
 		int StackIndex = -1
 	);
+	void CheckType(
+		lua_State*,
+		Reflection::ValueType,
+		int StackIndex = -1
+	);
 
 	void PushGenericValue(lua_State*, const Reflection::GenericValue&);
 	void PushGameObject(lua_State*, GameObject*);

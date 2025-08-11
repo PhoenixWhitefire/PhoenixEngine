@@ -258,55 +258,26 @@ static int api_gameobjnewindex(lua_State* L)
 
 	if (const Reflection::Property* prop = obj->FindProperty(key))
 	{
-		const char* argAsString = luaL_tolstring(L, -1, NULL);
-		const char* argTypeName = luaL_typename(L, -1);
-		// 14/09/2024
-		// Lua what the fuck
-		// Please stop flip-flopping between negative and positive indexes for
-		// stack offsets! What is the point! Why?!
-		lua_Type argType = (lua_Type)lua_type(L, 3);
+		const char* argAsString = luaL_tolstring(L, 3, NULL);
+		const char* argTypeName = luaL_typename(L, 3);
 		
 		if (!prop->Set)
 			luaL_errorL(L, 
 				"Cannot set Property '%s' to %s '%s' because it is read-only",
 				key, argTypeName, argAsString
 			);
-		
-		auto reflToLuaIt = ScriptEngine::ReflectedTypeLuaEquivalent.find(prop->Type);
 
-		if (reflToLuaIt == ScriptEngine::ReflectedTypeLuaEquivalent.end())
+		ScriptEngine::L::CheckType(L, prop->Type, 3);
+
+		Reflection::GenericValue newValue = ScriptEngine::L::LuaValueToGeneric(L, 3);
+
+		try
 		{
-			std::string typeName = Reflection::TypeAsString(prop->Type);
-			luaL_errorL(L,
-				"No defined mapping between a '%s' and a Lua type",
-				typeName.data()
-			);
+			obj->SetPropertyValue(key, newValue);
 		}
-	
-		lua_Type desiredType = reflToLuaIt->second;
-	
-		if (desiredType != argType && (desiredType != LUA_TUSERDATA && argType != LUA_TNIL))
+		catch (const std::runtime_error& err)
 		{
-			const char* desiredTypeName = lua_typename(L, (int)desiredType);
-			luaL_errorL(L, 
-				"Expected type %s for member '%s', got %s instead",
-				desiredTypeName, key, argTypeName
-			);
-		}
-		else
-		{
-			lua_pushvalue(L, 3);
-		
-			Reflection::GenericValue newValue = ScriptEngine::L::LuaValueToGeneric(L);
-		
-			try
-			{
-				obj->SetPropertyValue(key, newValue);
-			}
-			catch (const std::runtime_error& err)
-			{
-				luaL_errorL(L, "Error while setting property %s '%s': %s", key, obj->Name.c_str(), err.what());
-			}
+			luaL_errorL(L, "Error while setting property %s '%s': %s", key, obj->Name.c_str(), err.what());
 		}
 	}
 	else
@@ -327,6 +298,42 @@ static int api_gameobjnewindex(lua_State* L)
 
 	return 0;
 };
+
+static int api_gameobjectnamecall(lua_State* L)
+{
+	ZoneScopedNC("GameObject.__namecall", tracy::Color::LightSkyBlue);
+
+	GameObject* g = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
+	const char* k = L->namecall->data; // this is weird 10/01/2025
+
+	if (!g)
+		luaL_errorL(L, "Tried to call '%s' of a de-allocated GameObject with ID %u", k, *(uint32_t*)lua_touserdata(L, 1));
+
+	ZoneText(k, strlen(k));
+
+	std::pair<EntityComponent, uint32_t> reflectorHandle;
+	const Reflection::Method* func = g->FindMethod(k, &reflectorHandle);
+
+	if (!func)
+		luaL_errorL(L, "'%s' is not a valid method of %s", k, g->GetFullName().c_str());
+
+	int numresults = 0;
+
+	try
+	{
+		numresults = ScriptEngine::L::HandleMethodCall(
+			L,
+			func,
+			reflectorHandle
+		);
+	}
+	catch (const std::runtime_error& err)
+	{
+		luaL_errorL(L, "Error while invoking method '%s' of %s: %s", k, g->GetFullName().c_str(), err.what());
+	}
+
+	return numresults;
+}
 
 static int api_gameobjecttostring(lua_State* L)
 {
@@ -406,8 +413,23 @@ static int api_eventnamecall(lua_State* L)
 
 		EventSignalData* ev = (EventSignalData*)luaL_checkudata(L, 1, "EventSignal");
 		const Reflection::Event* rev = ev->Event;
-	
+
+		// TRUST ME, ALL THESE L's MAKE SENSE OK
+		// `eL` IS. UH. UHHH. *EVENT* L! YES, *E*VENT L
+		// THEN, *THEN*, `cL` IS... *C*ONNECTION L!! YES, YES, YES!!!
+		// "And then, `nL`?", YOU MAY ASK, (smart and kinda cute as always)
+		// ...
+		// ...
+		// ...
+		// ...
+		// _*NNNNNNNNNNNNNNN*EW_ L! *NNNNNNN*EW!! *N*EW *N*EW *N*EW *N*EW!!!!!!!
+		// MY GENIUS
+		// UNPARAARALELLED
+		//    ARAARA
+		//    ara ara
+		// (tee hee)
 		lua_State* eL = lua_newthread(L);
+		lua_State* cL = lua_newthread(eL);
 		int threadRef = lua_ref(L, -1);
 		lua_xpush(L, eL, 2);
 
@@ -423,16 +445,18 @@ static int api_eventnamecall(lua_State* L)
 		uint32_t cnId = rev->Connect(
 			GameObject::ReflectorHandleToPointer(ev->Reflector),
 		
-			[eL, rev](const std::vector<Reflection::GenericValue>& Inputs)
+			[eL, cL, rev](const std::vector<Reflection::GenericValue>& Inputs)
 			-> void
 			{
 				assert(Inputs.size() == rev->CallbackInputs.size());
+				assert(lua_isfunction(eL, 2));
 
 				lua_pushlightuserdata(eL, eL);
 				lua_gettable(eL, LUA_ENVIRONINDEX);
 				EventConnectionData* cn = (EventConnectionData*)luaL_checkudata(eL, -1, "EventConnection");
+				lua_pop(eL, 1);
 
-				lua_State* co = eL;
+				lua_State* co = cL;
 
 				// performance optimization:
 				// if the callback never yields, then we know that
@@ -442,13 +466,16 @@ static int api_eventnamecall(lua_State* L)
 				if (cn->CallbackYields)
 				{
 					lua_State* nL = lua_newthread(eL);
-					luaL_checkstack(nL, (int32_t)Inputs.size() + 1, "event connection");
-					lua_xpush(eL, nL, 1);
+					luaL_checkstack(nL, (int32_t)Inputs.size() + 1, "event connection callback args");
+					lua_xpush(eL, nL, 2);
+					lua_pop(eL, 1); // pop nL off eL
 
 					co = nL;
 				}
-
-				lua_pop(eL, 1);
+				else
+				{
+					lua_xpush(eL, cL, 2);
+				}
 
 				for (size_t i = 0; i < Inputs.size(); i++)
 				{
@@ -456,7 +483,12 @@ static int api_eventnamecall(lua_State* L)
 					ScriptEngine::L::PushGenericValue(co, Inputs[i]);
 				}
 
-				int status = lua_resume(co, eL, static_cast<int32_t>(Inputs.size()));
+				// TODO 11/08/2025
+				// they added a "correct" way to do this, with continuations n stuff
+				// but i genuinely just could not be bothered
+				co->baseCcalls++;
+				int status = lua_pcall(co, static_cast<int32_t>(Inputs.size()), 0, 0);
+				co->baseCcalls++;
 
 				if (status != LUA_OK && status != LUA_YIELD)
 				{
@@ -465,7 +497,8 @@ static int api_eventnamecall(lua_State* L)
 					lua_pop(co, 1);
 				}
 
-				if (status == LUA_YIELD)
+				// status returned from _pcall is 0 when it yields for some reason?? TODO
+				if (status == LUA_YIELD || co->status == LUA_YIELD)
 				{
 					cn->CallbackYields = true;
 				}
@@ -789,46 +822,10 @@ static lua_State* createVM()
 		lua_pushcfunction(state, api_gameobjnewindex, "GameObject.__newindex");
 		lua_setfield(state, -2, "__newindex");
 
-		const auto namecallFn = [](lua_State* L)
-			{
-				ZoneScopedNC("GameObject.__namecall", tracy::Color::LightSkyBlue);
-
-				GameObject* g = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
-				const char* k = L->namecall->data; // this is weird 10/01/2025
-
-				if (!g)
-					luaL_errorL(L, "Tried to call '%s' of a de-allocated GameObject with ID %u", k, *(uint32_t*)lua_touserdata(L, 1));
-
-				ZoneText(k, strlen(k));
-
-				std::pair<EntityComponent, uint32_t> reflectorHandle;
-				const Reflection::Method* func = g->FindMethod(k, &reflectorHandle);
-
-				if (!func)
-					luaL_errorL(L, "'%s' is not a valid method of %s", k, g->GetFullName().c_str());
-
-				int numresults = 0;
-
-				try
-				{
-					numresults = ScriptEngine::L::HandleMethodCall(
-						L,
-						func,
-						reflectorHandle
-					);
-				}
-				catch (const std::runtime_error& err)
-				{
-					luaL_errorL(L, "Error while invoking method '%s' of %s: %s", k, g->GetFullName().c_str(), err.what());
-				}
-
-				return numresults;
-			};
-
 		lua_pushcfunction(
 			state,
-			namecallFn,
-			"GameObject.__namecall"
+			api_gameobjectnamecall,
+			"__namecall" // leaving as "__namecall" SPECIFICALLY adds the method name to errors (check `currfuncname` in laux.cpp)
 		);
 		lua_setfield(state, -2, "__namecall");
 
@@ -846,7 +843,7 @@ static lua_State* createVM()
 		lua_pushcfunction(
 			state,
 			api_eventnamecall,
-			"EventSignal.__namecall"
+			"__namecall"
 		);
 		lua_setfield(state, -2, "__namecall");
 
@@ -861,7 +858,7 @@ static lua_State* createVM()
 		lua_pushcfunction(
 			state,
 			api_evconnectionnamecall,
-			"EventConnection.__namecall"
+			"__namecall"
 		);
 		lua_setfield(state, -2, "__namecall");
 
