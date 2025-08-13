@@ -17,7 +17,7 @@
         "Enabled": "Boolean",
         "Name": "String",
         "ObjectId": "Integer READONLY",
-        "Parent": "GameObject",
+        "Parent": "GameObject?",
         "Serializes": "Boolean"
       }
     },
@@ -157,6 +157,9 @@
     "file_read": 1,
     "file_write": 3,
     "file_write_rcd": 3,
+    "fs_isdirectory": 1,
+    "fs_isfile": 1,
+    "fs_listdir": 1,
     "imgui_begin": 1,
     "imgui_button": 1,
     "imgui_checkbox": 2,
@@ -182,7 +185,6 @@
     "mesh_save": 2,
     "mesh_set": 1,
     "model_import": 1,
-    "require": 1,
     "scene_load": 1,
     "scene_save": 1,
     "sleep": 1,

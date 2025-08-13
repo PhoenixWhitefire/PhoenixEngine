@@ -797,6 +797,55 @@
         "Casts a ray from `Origin` in the direction and of the magnitude of `CastVector`",
         "If no intersections are detected, it returns `nil`"
       ]
+    ],
+    "fs_isdirectory": [
+      [
+        [
+          "Path",
+          "string"
+        ]
+      ],
+      [
+        "boolean"
+      ],
+      [
+        "Returns whether or not the provided path refers to a directory"
+      ]
+    ],
+    "fs_isfile": [
+      [
+        [
+          "Path",
+          "string"
+        ]
+      ],
+      [
+        "boolean"
+      ],
+      [
+        "Returns whether or not the provided path refers to a file"
+      ]
+    ],
+    "fs_listdir": [
+      [
+        [
+          "Path",
+          "string"
+        ],
+        [
+          "Filter",
+          "string?"
+        ]
+      ],
+      [
+        "{ [ Entry: string ] : [ Type : 'f'|'d' ]"
+      ],
+      [
+        "Returns a table of the direct children of the directory",
+        "The key is the path to the child, the value is either the string 'f' or 'd', representing whether it is a File or Directory",
+        "The Filter argument can either be 'a', 'f', or 'd', meaning 'All', 'Files' or 'Directories'",
+        "If not provided, it will default to 'a'"
+      ]
     ]
   }
 }

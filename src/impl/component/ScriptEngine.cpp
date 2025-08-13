@@ -1653,6 +1653,92 @@ static std::pair<std::string_view, GlobalFn> s_GlobalFunctions[] =
 	},
 
 	{
+	"fs_listdir",
+	{
+		[](lua_State* L)
+		{
+			const char* path = luaL_checkstring(L, 1);
+			const char filter = luaL_optstring(L, 2, "a")[0];
+
+			if (filter != 'a' && filter != 'f' && filter != 'd')
+				luaL_error(L, "Invalid filter '%c', expected 'a', 'f' or 'd'", filter);
+
+			lua_newtable(L);
+
+			for (const auto& entry : std::filesystem::directory_iterator(FileRW::TryMakePathCwdRelative(path)))
+			{
+				switch (filter)
+				{
+				case 'f':
+				{
+					if (std::filesystem::is_regular_file(entry))
+					{
+						lua_pushstring(L, entry.path().c_str());
+						lua_pushstring(L, "f");
+						lua_settable(L, -3);
+					}
+					break;
+				}
+				case 'd':
+				{
+					if (std::filesystem::is_directory(entry))
+					{
+						lua_pushstring(L, entry.path().c_str());
+						lua_pushstring(L, "d");
+						lua_settable(L, -3);
+					}
+					break;
+				}
+				default:
+				{
+					lua_pushstring(L, entry.path().c_str());
+				
+					if (std::filesystem::is_directory(entry))
+						lua_pushstring(L, "d");
+					else
+						lua_pushstring(L, "f");
+				
+					lua_settable(L, -3);
+					break;
+				}
+				}
+			}
+
+			return 1;
+		},
+		1
+	}
+	},
+
+	{
+		"fs_isfile",
+		{
+		[](lua_State* L)
+		{
+			const char* path = luaL_checkstring(L, 1);
+			lua_pushboolean(L, std::filesystem::is_regular_file(FileRW::TryMakePathCwdRelative(path)));
+
+			return 1;
+		},
+		1
+		}
+	},
+
+	{
+		"fs_isdirectory",
+		{
+		[](lua_State* L)
+		{
+			const char* path = luaL_checkstring(L, 1);
+			lua_pushboolean(L, std::filesystem::is_directory(FileRW::TryMakePathCwdRelative(path)));
+
+			return 1;
+		},
+		1
+		}
+	},
+
+	{
 	"conf_get",
 	{
 		[](lua_State* L)

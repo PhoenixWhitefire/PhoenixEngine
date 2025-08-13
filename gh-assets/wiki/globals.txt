@@ -31,6 +31,18 @@ A (possibly) incomplete list of all Script Globals provided by the Engine not pr
 #### `file_write_rcd(Path: string, Contents: string, PrependResourcesDirectory: boolean)`
 * Same as file_write, but *R*ecursively *C*reates *D*irectories if they do not exist
 
+#### `fs_isdirectory(Path: string) : boolean`
+* Returns whether or not the provided path refers to a directory
+
+#### `fs_isfile(Path: string) : boolean`
+* Returns whether or not the provided path refers to a file
+
+#### `fs_listdir(Path: string, Filter: string?) : { [ Entry: string ] : [ Type : 'f'|'d' ]`
+* Returns a table of the direct children of the directory
+* The key is the path to the child, the value is either the string 'f' or 'd', representing whether it is a File or Directory
+* The Filter argument can either be 'a', 'f', or 'd', meaning 'All', 'Files' or 'Directories'
+* If not provided, it will default to 'a'
+
 #### `imgui_begin(Title: string) : boolean`
 * Begins a Dear ImGui widget, returning whether it is expanded
 
@@ -112,9 +124,6 @@ A (possibly) incomplete list of all Script Globals provided by the Engine not pr
 #### `model_import(Path: string) : { GameObject }`
 * Imports the `.gltf`/`.glb` model at `Path`, and returns the resultant root of the hierarchy in an array
 
-#### `require(Path: string) : any`
-* Loads the module at the specified `Path`, relative to the `resources/` directory
-
 #### `scene_load(Path: string) : { GameObject }`
 * Loads the scene at `Path` and returns an array of its root Objects
 
@@ -191,7 +200,7 @@ Custom types with functions and properties.
 * `Enabled: boolean`: Whether the Engine updates and recognizes this Object, essentially freezing it if it is disabled
 * `Name: string`: The name of the Object, usually what was passed into `GameObject.new`
 * `ObjectId: number READONLY`: The ID of the Object, an integer. Remains the same throughout the session, but not guaranteed between sessions
-* `Parent: GameObject`: The hierarchal parent of the Object, or `nil` if it does not have one
+* `Parent: GameObject?`: The hierarchal parent of the Object, or `nil` if it does not have one
 * `Serializes: boolean`: Whether or not the Object should be saved with the scene if it is serialized with `scene_save`, and whether `:Duplicate` will duplicate (only applies to descendants)
 
 ### Methods:

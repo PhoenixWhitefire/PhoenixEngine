@@ -195,7 +195,7 @@ for _, k in orderedComponents do
 	components ..= dumpReflectionApi(v, docComments.GameObject.Components[k], k)
 end
 
-file_write("./doc-assets/wiki/components.txt", components, false)
+file_write(BASE_PATH .. "/components.txt", components, false)
 
 print("Docs CI finish\n\n\n\n\n")
 
