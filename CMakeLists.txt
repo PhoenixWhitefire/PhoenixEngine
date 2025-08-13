@@ -101,7 +101,7 @@ set_property(TARGET SDL3-shared PROPERTY FOLDER "Vendor/SDL")
 set_property(TARGET SDL_uclibc PROPERTY FOLDER "Vendor/SDL")
 
 # build engine after all static libs
-add_dependencies(PhoenixEngine Vendor TracyClient glm Luau.Compiler Luau.Analysis Luau.VM SDL3-shared SDL_uclibc)
+add_dependencies(PhoenixEngine Vendor TracyClient glm Luau.Compiler Luau.Analysis Luau.RequireNavigator Luau.Require Luau.VM SDL3-shared SDL_uclibc)
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT PhoenixEngine)
 

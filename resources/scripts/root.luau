@@ -203,5 +203,4 @@ if not conf_get("Developer") then
 end
 
 game.OnFrameBegin:Connect(update)
-game:FindChild(nil)
 

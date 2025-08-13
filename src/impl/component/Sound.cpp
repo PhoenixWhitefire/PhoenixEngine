@@ -258,9 +258,9 @@ static FMOD_RESULT F_CALL fmodNonBlockingCallback(FMOD_SOUND* Sound, FMOD_RESULT
 
 	if (Result != FMOD_OK)
 	{
-		Log::Warning(std::format(
+		Log::WarningF(
 			"FMOD sound failed to load: code {} - '{}'",
-			(int)Result, FMOD_ErrorString(Result))
+			(int)Result, FMOD_ErrorString(Result)
 		);
 
 		for (uint32_t ecId : it->second.second)

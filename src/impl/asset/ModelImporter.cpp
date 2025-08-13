@@ -57,7 +57,7 @@ static std::string getTexturePath(
 
 		else
 		{
-			Log::Warning(std::format("Unrecognized MIME '{}'", mimeType));
+			Log::WarningF("Unrecognized MIME '{}'", mimeType);
 			fileExtension = std::string(mimeType.begin() + 6, mimeType.end());
 		}
 
@@ -77,10 +77,10 @@ static std::string getTexturePath(
 		);
 
 		if (!writeSucceeded)
-			Log::Warning(std::format(
+			Log::WarningF(
 				"Failed to extract image from Model '{}' to path: {}",
 				ModelName, filePath
-			));
+			);
 
 		return filePath;
 	}
@@ -111,10 +111,10 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 	{
 		uint32_t glbVersion = readU32(textData, 4);
 		if (glbVersion != 2)
-			Log::Warning(std::format(
+			Log::WarningF(
 				"GLB header declares version as '{}', when only `2` is supported. Unexpected behavior may occur.",
 				glbVersion
-			));
+			);
 
 		// header is 12 bytes
 		// chunks begin past it
@@ -169,36 +169,36 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 
 		if (assetInfoJson.find("minVersion") != assetInfoJson.end())
 		{
-			Log::Warning(std::format(
+			Log::WarningF(
 				"glTF file specifies `asset.minVersion` as '{}'. Unexpected behavior may occur.",
 				std::stof(assetInfoJson.value("minVersion", "2.0"))
-			));
+			);
 		}
 		else
 		{
 			float gltfVersion = std::stof(assetInfoJson.value("version", "2.0"));
 
 			if (gltfVersion < 2.f || gltfVersion >= 3.f)
-				Log::Warning(std::format(
+				Log::WarningF(
 					"Expected glTF version >= 2.0 and < 3.0, got {}. Unexpected behavior may occur.",
 					gltfVersion
-				));
+				);
 		}
 
 		const nlohmann::json& requiredExtensionsJson = m_JsonData["extensionsRequired"];
 		const nlohmann::json& usedExtensionsJson = m_JsonData["extensionsUsed"];
 
 		for (std::string v : requiredExtensionsJson)
-			Log::Warning(std::format(
+			Log::WarningF(
 				"glTF file specifies 'required' extension '{}'. That's too bad, because no extensions are supported.",
 				v
-			));
+			);
 
 		for (std::string v : usedExtensionsJson)
-			Log::Warning(std::format(
+			Log::WarningF(
 				"glTF file specifies extension '{}' is used. That's too bad, because no extensions are supported.",
 				v
-			));
+			);
 
 		// actually load the model
 
@@ -248,10 +248,10 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 			size_t whereRes = saveDir.find("resources/");
 
 			if (whereRes == std::string::npos)
-				Log::Warning(std::format(
+				Log::WarningF(
 					"ModelLoader cannot guarantee the mesh will be saved within the Resources directory (Path was: '{}')",
 					AssetPath
-				));
+				);
 			else
 				saveDir = saveDir.substr(whereRes + 10, saveDir.size() - whereRes);
 
@@ -697,10 +697,10 @@ void ModelLoader::m_BuildRig()
 	size_t whereRes = saveDir.find("resources/");
 
 	if (whereRes == std::string::npos)
-		Log::Warning(std::format(
+		Log::WarningF(
 			"ModelLoader cannot guarantee the animation will be saved within the Resources directory (Path was: '{}')",
 			m_File
-		));
+		);
 	else
 		saveDir = saveDir.substr(whereRes + 10, saveDir.size() - whereRes);
 

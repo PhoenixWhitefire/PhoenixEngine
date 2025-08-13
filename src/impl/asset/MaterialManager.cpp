@@ -34,10 +34,10 @@ void RenderMaterial::Reload()
 		}
 		catch (const nlohmann::json::parse_error& e)
 		{
-			Log::Error(std::format(
+			Log::ErrorF(
 				"Parse error trying to load material {}: {}",
 				this->Name, e.what()
-			));
+			);
 		}
 	}
 	else

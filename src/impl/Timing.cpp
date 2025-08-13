@@ -56,7 +56,7 @@ Timing::ScopedTimer::ScopedTimer(uint8_t Timer)
 		Timing::BeginTimer(Timer);
 	else
 	{
-		Log::Warning(std::format("Timer '{}' (#{}) recursion detected", TimerNames[Timer], Timer));
+		Log::WarningF("Timer '{}' (#{}) recursion detected", TimerNames[Timer], Timer);
 		m_DidBegin = false;
 	}
 }

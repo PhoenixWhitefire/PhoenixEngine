@@ -117,11 +117,17 @@ void InlayEditor::Initialize(Renderer* renderer)
 
 	try
 	{
-		docComments = nlohmann::json::parse(FileRW::ReadFile("./doc-assets/ci/doc-comments.json"));
+		bool readSuccess = true;
+		std::string contents = FileRW::ReadFile("./gh-assets/wiki/doc-comments.json", &readSuccess);
+
+		if (readSuccess)
+			docComments = nlohmann::json::parse(contents);
+		else
+			Log::Warning("Documentation tooltips will not be available (`doc-comments.json` could not be read)");
 	}
 	catch (const nlohmann::json::parse_error& Err)
 	{
-		Log::Error(std::format("Parse error reading doc comments for Editor: {}", Err.what()));
+		Log::ErrorF("Parse error reading doc comments for Editor: {}", Err.what());
 	}
 
 	if (!docComments.is_null())

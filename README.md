@@ -4,7 +4,7 @@
 
 <hr>
 
-<img src="doc-assets/pretty1_13-06-2024_bsky.jpg"/>
+<img src="gh-assets/pretty1_13-06-2024_bsky.jpg"/>
 
 Personal 3D OpenGL "Game Engine" written in C++, that can:
 * Load, Save and Render Scenes
@@ -44,7 +44,7 @@ Intended to be compatible with both Windows and Linux/Ubuntu.
     
     By the end, you should have a binary at the location `Vendor/tracy/profiler/build/tracy-profiler`.
 
-<img src="doc-assets/infooverload.png"/>
+<img src="gh-assets/infooverload.png"/>
 
 # Attributions
 
@@ -70,4 +70,4 @@ Additionally, I referred to ["Dave Poo"'s C++ Lua embedding tutorials](https://w
 
 End of README.
 
-<img src="doc-assets/texteditorclose.png">
+<img src="gh-assets/texteditorclose.png">

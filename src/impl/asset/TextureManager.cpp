@@ -59,10 +59,10 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 		std::string fallbackPath = MissingTexPath;
 
 		if (texture.ImagePath != MissingTexPath)
-			Log::Error(std::format(
+			Log::ErrorF(
 				"Failed to load texture '{}': {}",
 				texture.ImagePath, texture.FailureReason
-			));
+			);
 		else
 			fallbackPath = "!Missing";
 
@@ -353,10 +353,10 @@ static void emloadTexture(
 uint32_t TextureManager::Assign(const Texture& texture, const std::string& name)
 {
 	if (texture.TMP_ImageByteData != nullptr)
-		Log::Warning(std::format(
+		Log::WarningF(
 			"The Texture being assigned to '{}' has non-NULL byte data and may create UB",
 			name
-		));
+		);
 
 	if (texture.ResourceId != UINT32_MAX)
 	{

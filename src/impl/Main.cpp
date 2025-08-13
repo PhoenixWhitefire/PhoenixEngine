@@ -797,10 +797,10 @@ static void init()
 
 	Engine* EngineInstance = Engine::Get();
 
-	Log::Info(std::format(
+	Log::InfoF(
 		"Initializing Dear ImGui {}...",
 		IMGUI_VERSION
-	));
+	);
 
 	if (!IMGUI_CHECKVERSION())
 		RAISE_RT("Dear ImGui detected a version mismatch");
@@ -858,19 +858,51 @@ static void init()
 	EngineInstance->DataModel = root;
 }
 
+static bool isBoolArgument(const char* v, const char* arg)
+{
+	return memcmp(v, arg, std::min(strlen(v), strlen(arg))) == 0;
+}
+
+static bool checkBoolArgument(const char* v, const char* arg, bool defaultVal)
+{
+	size_t alen = strlen(arg);
+	size_t vlen = strlen(v);
+
+	if (vlen == alen) // no `:`
+		return defaultVal;
+
+	assert(vlen > alen); // shouldve been caught by `isBoolArgument`
+
+	if (v[alen] != ':')
+	{
+		Log::ErrorF("Malformed boolean argument '{}' (matching '{}')", v, arg);
+		return defaultVal;
+	}
+
+	if (vlen < alen + 2)
+	{
+		Log::ErrorF("Missing Y/N after '{}' (matching '{}')", v, arg);
+		return defaultVal;
+	}
+
+	if (v[alen + 1] == 'Y')
+		return true;
+	if (v[alen + 1] == 'N')
+		return false;
+
+	Log::ErrorF("Invalid option for boolean '{}' in '{}' (matching '{}'), expected Y/N", v[alen+1], v, arg);
+	return defaultVal;
+}
+
 static void processCliArgs(int argc, char** argv)
 {
 	for (int i = 1; i < argc; i++)
 	{
 		const char* v = argv[i];
 
-		if (strcmp(v, "-dev") == 0)
+		if (isBoolArgument(v, "-dev"))
 		{
-			EngineJsonConfig["Developer"] = true;
-		}
-		else if (strcmp(v, "-nodev") == 0)
-		{
-			EngineJsonConfig["Developer"] = false;
+			EngineJsonConfig["Developer"] = checkBoolArgument(v, "-dev", true);
 		}
 		else if (strcmp(v, "-threads") == 0)
 		{
@@ -900,18 +932,22 @@ static void processCliArgs(int argc, char** argv)
 			{
 				MapFileFromArgs = argv[i + 1];
 
-				Log::Info(std::format(
+				Log::InfoF(
 					"Map to load specified from launch argument. Map was: {}",
 					MapFileFromArgs
-				));
+				);
 
 				i++;
 			}
 			else
 				Log::Error("'-loadmap' argument from command-line was not followed by the desired File");
 		}
+		else if (isBoolArgument(v, "-headless"))
+		{
+			EngineJsonConfig["Headless"] = checkBoolArgument(v, "-headless", true);
+		}
 		else
-			Log::Error(std::format("Unknown CLI argument '{}'", v));
+			Log::ErrorF("Unknown CLI argument '{}'", v);
 	}
 }
 
@@ -919,10 +955,10 @@ int main(int argc, char** argv)
 {
 	Log::Info("Application startup");
 	
-	Log::Info(std::format(
+	Log::InfoF(
 		"Phoenix Engine:\n\tTarget platform: {}\n\tBuild type: {}\n\tMain.cpp last compiled: {} @ {}",
 		SDL_GetPlatform(), PHX_BUILD_TYPE, __DATE__, __TIME__
-	));
+	);
 
 	Log::Info("Command line: &&");
 

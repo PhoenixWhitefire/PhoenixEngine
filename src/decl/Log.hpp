@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <format>
 
 namespace Log
 {
@@ -9,4 +10,22 @@ namespace Log
 	void Error(const std::string_view&, const std::string_view& ExtraTags = "");
 	void Append(const std::string_view&);
 	void Save();
+
+	template <typename ...Args>
+	void InfoF(std::format_string<Args...> fmt, Args&&... args)
+	{
+		Info(std::format(fmt, std::forward<Args>(args)...));
+	}
+
+	template <typename ...Args>
+	void WarningF(std::format_string<Args...> fmt, Args&&... args)
+	{
+		Warning(std::format(fmt, std::forward<Args>(args)...));
+	}
+
+	template <typename ...Args>
+	void ErrorF(std::format_string<Args...> fmt, Args&&... args)
+	{
+		Error(std::format(fmt, std::forward<Args>(args)...));
+	}
 };

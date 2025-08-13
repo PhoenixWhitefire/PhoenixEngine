@@ -16,10 +16,10 @@
 #include "FileRW.hpp"
 #include "Log.hpp"
 
-#define SF_WARN(err, ...) Log::Warning(std::format(     \
-	"Deserialization warning: " err,                    \
-	__VA_ARGS__                                         \
-))                                                      \
+#define SF_WARN(err, ...) Log::WarningF(     \
+	"Deserialization warning: " err,         \
+	__VA_ARGS__                              \
+)                                            \
 
 static std::string errorString = "No error";
 

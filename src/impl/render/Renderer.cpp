@@ -175,11 +175,11 @@ void Renderer::Initialize(uint32_t Width, uint32_t Height, SDL_Window* Window)
 	glGetIntegerv(GL_MINOR_VERSION, &glVersionMinor);
 	glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxVertexAttribs);
 
-	Log::Info(std::format(
+	Log::InfoF(
 		"Running OpenGL version {}.{}",
 		glVersionMajor, glVersionMinor
-	));
-	Log::Info(std::format("Max vertex attribs: {}", maxVertexAttribs));
+	);
+	Log::InfoF("Max vertex attribs: {}", maxVertexAttribs);
 
 	m_VertexArray.Initialize();
 	m_VertexBuffer.Initialize();
@@ -244,13 +244,13 @@ Renderer::~Renderer()
 
 void Renderer::ChangeResolution(uint32_t Width, uint32_t Height)
 {
-	Log::Info(std::format(
+	Log::InfoF(
 		"Changing window resolution: ({}, {}) -> ({}, {})",
 		m_Width,
 		m_Height,
 		Width,
 		Height
-	));
+	);
 
 	m_Width = Width;
 	m_Height = Height;

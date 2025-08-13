@@ -13,10 +13,10 @@
 #define PHX_ENSURE_MSG(expr, err) if (!(expr)) RAISE_RT(err)
 #define PHX_ENSURE(expr) if (!(expr)) RAISE_RT("Failed to ensure: " + std::string(#expr))
 
-#define PHX_CHECK(expr, err) if (!(expr)) Log::Error(std::format( \
+#define PHX_CHECK(expr, err) if (!(expr)) Log::ErrorF( \
     "Check '{}' failed on line {} of function '{}'", \
     #expr, __LINE__, __FUNCTION__ \
-)); \
+); \
 
 #else
 

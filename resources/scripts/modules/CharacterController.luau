@@ -169,3 +169,4 @@ function Controller:getRotationVector()
 end
 
 return Controller
+

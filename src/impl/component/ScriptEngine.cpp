@@ -495,9 +495,9 @@ int ScriptEngine::L::HandleMethodCall(
 	}
 	else if (numArgs > numParams)
 	{
-		Log::Warning(std::format("Function received {} more arguments than necessary",
+		Log::WarningF("Function received {} more arguments than necessary",
 			numArgs - numParams
-		));
+		);
 	}
 
 	std::vector<Reflection::GenericValue> inputs;
@@ -780,6 +780,7 @@ static std::pair<std::string_view, GlobalFn> s_GlobalFunctions[] =
 	}
 	},
 
+	/*
 	{
 	"require",
 	// `lua_require` from `Luau/CLI/Repl.cpp` 18/09/2024
@@ -804,7 +805,7 @@ static std::pair<std::string_view, GlobalFn> s_GlobalFunctions[] =
 			luaL_sandboxthread(ML);
 
 			// now we can compile & run module on the new thread
-			if (CompileAndLoad(ML, sourceCode, "@" + name) == 0)
+			if (CompileAndLoad(ML, sourceCode, "@" + FileRW::TryMakePathCwdRelative(name)) == 0)
 			{
 				int status = lua_resume(ML, L, 0);
 
@@ -837,7 +838,7 @@ static std::pair<std::string_view, GlobalFn> s_GlobalFunctions[] =
 		1
 	}
 	},
-
+*/
 	{
 	"mesh_get",
 	{

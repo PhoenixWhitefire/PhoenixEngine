@@ -3,6 +3,7 @@
 #include <luau/VM/include/lualib.h>
 #include <tracy/Tracy.hpp>
 #include <Luau/Compiler.h>
+#include <luau/Require/Runtime/include/Luau/Require.h>
 #include <format>
 
 #include "component/Script.hpp"
@@ -492,7 +493,7 @@ static int api_eventnamecall(lua_State* L)
 
 				if (status != LUA_OK && status != LUA_YIELD)
 				{
-					Log::Error(std::format("Script event: {}", lua_tostring(co, -1)));
+					Log::ErrorF("Script event: {}", lua_tostring(co, -1));
 					dumpStacktrace(co);
 					lua_pop(co, 1);
 				}
@@ -600,6 +601,133 @@ static int lprint(lua_State* L)
 	return 0;
 }
 
+static void requireConfigInit(luarequire_Configuration* config)
+{
+	config->is_require_allowed = [](lua_State*, void*, const char*)
+		{
+			return true;
+		};
+	config->reset = [](lua_State*, void* ctx, const char* chname)
+		{
+			// chunkname is prefixed with @
+			assert(chname[0] == '@');
+			((std::filesystem::path*)ctx)->assign(chname + 1);
+			return NAVIGATE_SUCCESS;
+		};
+	config->jump_to_alias = [](lua_State*, void*, const char*)
+		{
+			return NAVIGATE_NOT_FOUND;
+		};
+	config->to_parent = [](lua_State*, void* ctx)
+		{
+			std::filesystem::path* curpath = (std::filesystem::path*)ctx;
+
+			if (curpath->has_parent_path())
+			{
+				*curpath = curpath->parent_path();
+				return NAVIGATE_SUCCESS;
+			}
+			else
+				return NAVIGATE_NOT_FOUND;
+		};
+	config->to_child = [](lua_State*, void* ctx, const char* name)
+		{
+			std::filesystem::path* curpath = (std::filesystem::path*)ctx;
+			if (!std::filesystem::exists(*curpath / name))
+				return NAVIGATE_NOT_FOUND;
+
+			*curpath /= name;
+			return NAVIGATE_SUCCESS;
+		};
+	config->is_module_present = [](lua_State*, void* ctx)
+		{
+			std::filesystem::path* curpath = (std::filesystem::path*)ctx;
+
+			if (std::filesystem::is_regular_file(*curpath))
+				return true;
+			else
+				return false;
+		};
+	config->get_chunkname = [](lua_State*, void* ctx, char* buffer, size_t bufferSize, size_t* outSize)
+		{
+			std::filesystem::path* curpath = (std::filesystem::path*)ctx;
+			std::string strpath = curpath->string();
+			*outSize = strpath.size();
+
+			if (bufferSize < strpath.size())
+				return WRITE_BUFFER_TOO_SMALL;
+			else
+			{
+				memcpy(buffer, strpath.data(), strpath.size());
+				return WRITE_SUCCESS;
+			}
+		};
+	config->get_loadname = config->get_chunkname; // TODO what's a loadname
+	config->get_cache_key = config->get_chunkname;
+	config->is_config_present = [](lua_State*, void* ctx)
+		{
+			return std::filesystem::is_regular_file(*(std::filesystem::path*)ctx / ".luaurc");
+		};
+	config->get_config = [](lua_State*, void* ctx, char* buffer, size_t bufferSize, size_t* outSize)
+		{
+			std::filesystem::path* curpath = (std::filesystem::path*)ctx;
+			std::string contents = FileRW::ReadFile(curpath->string());
+			*outSize = contents.size();
+
+			if (bufferSize < contents.size())
+				return WRITE_BUFFER_TOO_SMALL;
+			
+			memcpy(buffer, contents.data(), contents.size());
+
+			return WRITE_SUCCESS;
+		};
+	config->load = [](lua_State* L, void* ctx, const char* path, const char* chname, const char* ldname)
+		{
+			std::filesystem::path* curpath = (std::filesystem::path*)ctx;
+
+			// from `Luau/CLI/src/ReplRequirer.cpp` 13/08/2025
+
+			// module needs to run in a new thread, isolated from the rest
+			// note: we create ML on main thread so that it doesn't inherit environment of L
+			lua_State* GL = lua_mainthread(L);
+			lua_State* ML = lua_newthread(GL);
+			lua_xmove(GL, L, 1);
+
+			// new thread needs to have the globals sandboxed
+			luaL_sandboxthread(ML);
+			
+			if (ScriptEngine::CompileAndLoad(ML, FileRW::ReadFile(curpath->string()), chname) == 0)
+			{
+				int status = lua_resume(ML, L, 0);
+
+				if (status == 0)
+				{
+					if (lua_gettop(ML) == 0)
+						lua_pushstring(ML, "module must return a value");
+
+					else if (!lua_istable(ML, -1) && !lua_isfunction(ML, -1))
+						lua_pushstring(ML, "module must return a table or function");
+				}
+				else if (status == LUA_YIELD)
+					lua_pushstring(ML, "module can not yield");
+
+				else if (!lua_isstring(ML, -1))
+					lua_pushstring(ML, "unknown error while running module");
+			}
+			
+			// add ML result to L stack
+    		lua_xmove(ML, L, 1);
+    		if (lua_isstring(L, -1))
+    		    lua_error(L);
+
+    		// remove ML thread from L stack
+    		lua_remove(L, -2);
+
+    		// added one value to L stack: module result
+			return 1;
+		};
+}
+
 static lua_State* createVM()
 {
 	ZoneScopedC(tracy::Color::LightSkyBlue);
@@ -607,7 +735,12 @@ static lua_State* createVM()
 	lua_State* state = lua_newstate(l_alloc, nullptr);
 	// Load Standard Library ('print' etc
 	luaL_openlibs(state);
-	luaopen_vector(state); // vec lib not opened by default when i checked? even though it's in the `lualibs` array??
+
+	luaopen_require(
+		state,
+		requireConfigInit,
+		new std::filesystem::path()
+	);
 
 	// override std `print` to use logging system
 	lua_pushcfunction(
@@ -1013,10 +1146,10 @@ static void resumeYieldedCoroutines()
 
 				if (resumeStatus != LUA_OK && resumeStatus != LUA_YIELD)
 				{
-					Log::Error(std::format(
+					Log::ErrorF(
 						"Script resumption: {}",
 						lua_tostring(coroutine, -1)
-					));
+					);
 
 					dumpStacktrace(coroutine);
 				}
@@ -1141,7 +1274,7 @@ bool EcScript::Reload()
 	ScriptEngine::L::PushGameObject(m_L, this->Object);
 	lua_setglobal(m_L, "script");
 
-	int result = ScriptEngine::CompileAndLoad(m_L, m_Source, "@" + fullName);
+	int result = ScriptEngine::CompileAndLoad(m_L, m_Source, "@" + FileRW::TryMakePathCwdRelative(SourceFile));
 	
 	if (result == 0)
 	{
@@ -1157,10 +1290,10 @@ bool EcScript::Reload()
 
 		if (resumeResult != LUA_OK && resumeResult != LUA_YIELD)
 		{
-			Log::Error(std::format(
+			Log::ErrorF(
 				"Script init: {}",
 				lua_tostring(thread, -1)
-			));
+			);
 			dumpStacktrace(thread);
 
 			return false;
@@ -1170,10 +1303,10 @@ bool EcScript::Reload()
 	}
 	else
 	{
-		Log::Error(std::format(
+		Log::ErrorF(
 			"Script compilation: {}",
 			lua_tostring(m_L, -1)
-		));
+		);
 
 		return false;
 	}

@@ -323,10 +323,10 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 
 			if (numJoints > 4)
 			{
-				Log::Warning(std::format(
+				Log::WarningF(
 					"Vertex #{} specified {} joints, but only up to 4 are supported, clamping.",
 					vertexIndex, numJoints
-				));
+				);
 
 				numJoints = 4;
 			}
@@ -359,10 +359,10 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 		uint32_t chId = readU32(contents, &cursor, &fileTooSmallError);
 
 		if (chId != BoneChId)
-			Log::Error(std::format(
+			Log::ErrorF(
 				"Invalid BONE chunk, expected ID {}, got {}. Skipping",
 				BoneChId, chId
-			));
+			);
 		else
 		{
 			uint8_t numBones = readU8(contents, &cursor, &fileTooSmallError);
@@ -415,10 +415,10 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 
 				if (fileTooSmallError)
 				{
-					Log::Error(std::format(
+					Log::ErrorF(
 						"Reached EoF trying to read Bone ID {}",
 						boneIdx
-					));
+					);
 
 					break;
 				}
@@ -997,10 +997,10 @@ uint32_t MeshProvider::LoadFromPath(
 
 					if (!success)
 					{
-						Log::Error(std::format(
+						Log::ErrorF(
 							"Failed to load mesh '{}' asynchronously: File could not be opened",
 							Path
-						));
+						);
 						promise->set_value(Mesh{});
 
 						return;
@@ -1010,10 +1010,10 @@ uint32_t MeshProvider::LoadFromPath(
 					Mesh loadedMesh = this->Deserialize(contents, &error);
 					
 					if (error.size() > 0)
-						Log::Error(std::format(
+						Log::ErrorF(
 							"Failed to load mesh '{}' asynchronously: {}",
 							Path, error
-						));
+						);
 					
 					promise->set_value(loadedMesh);
 				},
@@ -1038,10 +1038,10 @@ uint32_t MeshProvider::LoadFromPath(
 
 			if (!success)
 			{
-				Log::Error(std::format(
+				Log::ErrorF(
 					"Failed to load mesh '{}' synchronously: File could not be opened",
 					Path
-				));
+				);
 
 				return this->Assign(Mesh{}, Path);
 			}
@@ -1052,10 +1052,10 @@ uint32_t MeshProvider::LoadFromPath(
 			
 			if (error.size() > 0)
 			{
-				Log::Error(std::format(
+				Log::ErrorF(
 					"Failed to load mesh '{}' synchronously: {}",
 					Path, error
-				));
+				);
 			}
 			else
 			{

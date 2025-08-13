@@ -235,10 +235,10 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 						boneObj = g;
 					else
 					{
-						Log::Warning(std::format(
+						Log::WarningF(
 							"Non-bone with name '{}' under Mesh at {} will be removed for rig bone",
 							b.Name, obj->GetFullName()
-						));
+						);
 
 						g->Destroy();
 						boneObj = GameObject::Create(EntityComponent::Bone);

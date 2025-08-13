@@ -13,6 +13,7 @@
 #include <SDL3/SDL_messagebox.h>
 #include <SDL3/SDL_version.h>
 #include <SDL3/SDL_video.h>
+#include <SDL3/SDL_hints.h>
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_log.h>
 
@@ -126,10 +127,10 @@ static T readFromConfiguration(const std::string_view& Key, const T& DefaultValu
 	}
 	catch (const nlohmann::json::type_error& Error)
 	{
-		Log::Error(std::format(
+		Log::ErrorF(
 			"Error trying to read key '{}' of configuration: {}. Falling back to default value",
 			Key, Error.what()
-		));
+		);
 
 		return DefaultValue;
 	}
@@ -181,10 +182,10 @@ void Engine::LoadConfiguration()
 	std::string_view resDir = readFromConfiguration("ResourcesDirectory", std::string_view("<NOT_SET>"));
 
 	if (resDir != "resources/")
-		Log::Warning(std::format(
+		Log::WarningF(
 			"Resources Directory was changed to '{}' instead of 'resources/'. Prepare for unforeseen consequences.",
 			resDir
-		));
+		);
 
 	Log::Info("Configuration loaded");
 }
@@ -203,21 +204,27 @@ Engine::Engine()
 	
 	this->LoadConfiguration();
 
+	if (readFromConfiguration("Headless", false))
+		this->IsHeadlessMode = true;
+
 	nlohmann::json defaultWindowSize = readFromConfiguration(
 		"DefaultWindowSize",
 		nlohmann::json::array({ 1280, 720 })
 	);
 
-	Log::Info(std::format(
+	Log::InfoF(
 		"Initializing SDL {}/{} (Dyn. Revision: {})...",
 		SDL_VERSION,
 		SDL_GetVersion(),
 		SDL_GetRevision()
-	));
+	);
+
+	if (IsHeadlessMode)
+		SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "dummy");
 
 	PHX_SDL_CALL(SDL_Init, SDL_INIT_VIDEO);
 
-	Log::Info(std::format("The SDL video driver is {}", SDL_GetCurrentVideoDriver()));
+	Log::InfoF("The SDL video driver is {}", SDL_GetCurrentVideoDriver());
 
 	SDL_DisplayID primaryDisplay = SDL_GetPrimaryDisplay();
 	PHX_ENSURE_MSG(primaryDisplay != 0, "`SDL_GetPrimaryDisplay` failed with error: " + std::string(SDL_GetError()));
@@ -253,17 +260,17 @@ Engine::Engine()
 	SDL_GLProfile requestedProfile = SDL_GL_CONTEXT_PROFILE_CORE;
 
 	if (requestedProfileIt == StringToGLProfile.end())
-		Log::Warning(std::format(
+		Log::WarningF(
 			"Invalid/unsupported OpenGL profile '{}' requested, defaulting to the Core profile",
 			requestedProfileString
-		));
+		);
 	else
 		requestedProfile = requestedProfileIt->second;
 
-	Log::Info(std::format(
+	Log::InfoF(
 		"Requesting a {} OpenGL context with version {}.{}",
 		requestedProfileString, requestedGLVersionMajor, requestedGLVersionMinor
-	));
+	);
 
 	// Must be set *before* window creation
 	PHX_SDL_CALL(

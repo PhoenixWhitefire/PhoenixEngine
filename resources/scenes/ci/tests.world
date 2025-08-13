@@ -1,0 +1,161 @@
+PHNXENGI
+#Version 2.00
+#Asset Scene
+#Date 9-2-2025
+#SceneName scenes/docs-ci.world
+
+{
+  "GameObjects": [
+    {
+      "$_class": "DataModel",
+      "$_objectId": 62,
+      "Enabled": true,
+      "Name": "DataModel",
+      "Serializes": true
+    },
+    {
+      "$_class": "Workspace",
+      "$_objectId": 63,
+      "Enabled": true,
+      "Name": "Workspace",
+      "Parent": 62,
+      "SceneCamera": 64,
+      "Serializes": true
+    },
+    {
+      "$_class": "Camera",
+      "$_objectId": 64,
+      "Enabled": true,
+      "FieldOfView": 70.0,
+      "Name": "Camera",
+      "Parent": 63,
+      "Serializes": true,
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          -0.0,
+          0.0
+        ],
+        [
+          -0.0,
+          1.0,
+          -0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          -0.0,
+          -0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "UseSimpleController": true
+    },
+    {
+      "$_class": "Workspace",
+      "$_objectId": 65,
+      "Enabled": true,
+      "Name": "Workspace",
+      "Parent": 62,
+      "SceneCamera": 67,
+      "Serializes": true
+    },
+    {
+      "$_class": "Camera",
+      "$_objectId": 66,
+      "Enabled": true,
+      "FieldOfView": 70.0,
+      "Name": "Camera",
+      "Parent": 65,
+      "Serializes": true,
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          -0.0,
+          0.0
+        ],
+        [
+          -0.0,
+          1.0,
+          -0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          -0.0,
+          -0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "UseSimpleController": true
+    },
+    {
+      "$_class": "Camera",
+      "$_objectId": 67,
+      "Enabled": true,
+      "FieldOfView": 70.0,
+      "Name": "Camera",
+      "Parent": 65,
+      "Serializes": true,
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          8.0,
+          13.87342643737793,
+          0.0,
+          933.0
+        ]
+      ],
+      "UseSimpleController": false
+    },
+    {
+      "$_class": "Model",
+      "$_objectId": 68,
+      "Enabled": true,
+      "Name": "Level",
+      "Parent": 65,
+      "Serializes": true
+    },
+    {
+      "$_class": "Script",
+      "$_objectId": 69,
+      "Enabled": true,
+      "Name": "RootScript",
+      "Parent": 65,
+      "Serializes": true,
+      "SourceFile": "scripts/docs-ci.luau"
+    }
+  ],
+  "SceneName": "scenes/docs-ci.world"
+}

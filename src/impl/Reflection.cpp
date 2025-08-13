@@ -1,3 +1,5 @@
+// C++ interop transmission channel
+
 #define GLM_ENABLE_EXPERIMENTAL
 
 #include <glm/gtx/euler_angles.hpp>
@@ -6,6 +8,9 @@
 #include "datatype/GameObject.hpp"
 #include "datatype/Color.hpp"
 #include "Memory.hpp"
+
+#define GV_SSO sizeof(Reflection::GenericValue::Val.StrSso)
+static_assert(GV_SSO == 12);
 
 Reflection::GenericValue::GenericValue()
 	: Type(ValueType::Null)
@@ -16,7 +21,7 @@ static void fromString(Reflection::GenericValue& G, const char* Data)
 {
 	G.Type = Reflection::ValueType::String;
 
-	if (G.Size > 8)
+	if (G.Size > GV_SSO)
 	{
 		G.Val.Str = (char*)Memory::Alloc(G.Size, Memory::Category::Reflection);
 
@@ -251,7 +256,7 @@ std::string Reflection::GenericValue::ToString() const
 
 	case ValueType::String:
 	{
-		if (this->Size > sizeof(Val.StrSso))
+		if (this->Size > GV_SSO)
 			return Val.Str;
 		else
 			return Val.StrSso;
@@ -367,7 +372,7 @@ std::string_view Reflection::GenericValue::AsStringView() const
 	if (Type != ValueType::String)
 		RAISE_RT("GenericValue was not a String, but instead a " + std::string(TypeAsString(Type)));
 	else
-		if (Size > 8)
+		if (Size > GV_SSO)
 			return std::string_view(Val.Str, Size);
 		else
 			return std::string_view(Val.StrSso, Size);
@@ -434,6 +439,10 @@ std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> Reflectio
 
 void Reflection::GenericValue::Reset()
 {
+	// values actually being transmitted shouldnt ever have the optional flag,
+	// that's only for type definitions
+	assert((uint8_t)Type <= (uint8_t)Reflection::ValueType::Null);
+
 	switch (this->Type)
 	{
 	case ValueType::Matrix:
@@ -453,8 +462,8 @@ void Reflection::GenericValue::Reset()
 	}
 	case ValueType::String:
 	{
-		if (this->Size > sizeof(this->Val.StrSso))
-			Memory::Free(this->Val.Ptr);
+		if (this->Size > GV_SSO)
+			Memory::Free(this->Val.Str);
 		break;
 	}
 
@@ -485,7 +494,7 @@ bool Reflection::GenericValue::operator==(const Reflection::GenericValue& Other)
 
 	case ValueType::String:
 	{
-		if (this->Size > sizeof(this->Val.StrSso))
+		if (this->Size > GV_SSO)
 		{
 			for (size_t i = 0; i < this->Size; i++)
 				if (this->Val.Str[i] != Other.Val.Str[i])
@@ -494,7 +503,7 @@ bool Reflection::GenericValue::operator==(const Reflection::GenericValue& Other)
 			return true;
 		}
 		else
-			return memcmp(this->Val.StrSso, Other.Val.StrSso, sizeof(this->Val.StrSso)) == 0;
+			return memcmp(this->Val.StrSso, Other.Val.StrSso, GV_SSO) == 0;
 	}
 
 	case ValueType::Matrix:
