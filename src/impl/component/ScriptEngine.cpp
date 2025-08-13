@@ -779,66 +779,7 @@ static std::pair<std::string_view, GlobalFn> s_GlobalFunctions[] =
 		1
 	}
 	},
-
-	/*
-	{
-	"require",
-	// `lua_require` from `Luau/CLI/Repl.cpp` 18/09/2024
-	{
-		[](lua_State* L)
-		{
-			std::string name = luaL_checkstring(L, 1);
-
-			bool found = true;
-			std::string sourceCode = FileRW::ReadFile(name, &found);
-
-			if (!found)
-				luaL_errorL(L, "module not found");
-
-			// module needs to run in a new thread, isolated from the rest
-			// note: we create ML on main thread so that it doesn't inherit environment of L
-			lua_State* GL = lua_mainthread(L);
-			lua_State* ML = lua_newthread(GL);
-			lua_xmove(GL, L, 1);
-
-			// new thread needs to have the globals sandboxed
-			luaL_sandboxthread(ML);
-
-			// now we can compile & run module on the new thread
-			if (CompileAndLoad(ML, sourceCode, "@" + FileRW::TryMakePathCwdRelative(name)) == 0)
-			{
-				int status = lua_resume(ML, L, 0);
-
-				if (status == 0)
-				{
-					if (lua_gettop(ML) == 0)
-						lua_pushstring(ML, "module must return a value");
-
-					else if (!lua_istable(ML, -1) && !lua_isfunction(ML, -1))
-						lua_pushstring(ML, "module must return a table or function");
-				}
-				else if (status == LUA_YIELD)
-					lua_pushstring(ML, "module can not yield");
-
-				else if (!lua_isstring(ML, -1))
-					lua_pushstring(ML, "unknown error while running module");
-			}
-
-			// there's now a return value on top of ML; L stack: _MODULES ML
-			lua_xmove(ML, L, 1);
-			lua_pushvalue(L, -1);
-			//lua_setfield(L, -4, name.c_str());
-
-			// L stack: _MODULES ML result
-			if (lua_isstring(L, -1))
-				lua_error(L);
-
-			return 1;
-		},
-		1
-	}
-	},
-*/
+	
 	{
 	"mesh_get",
 	{
