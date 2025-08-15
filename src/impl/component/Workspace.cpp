@@ -45,8 +45,14 @@ public:
 
     virtual void DeleteComponent(uint32_t Id) override
     {
-        m_Components[Id].Object.Invalidate();
+        m_Components[Id].Object.~GameObjectRef();
     }
+
+	virtual void Shutdown() override
+	{
+		s_FallbackCamera.Invalidate();
+		m_Components.clear();
+	}
 
     virtual const Reflection::StaticPropertyMap& GetProperties() override
     {

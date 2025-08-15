@@ -146,6 +146,11 @@ void InlayEditor::Initialize(Renderer* renderer)
 	InlayEditor::DidInitialize = true;
 }
 
+void InlayEditor::Shutdown()
+{
+	MtlPreviewCamera.Invalidate();
+}
+
 static bool mtlIterator(void*, int index, const char** outText)
 {
 	MaterialManager* mtlManager = MaterialManager::Get();
@@ -1790,8 +1795,14 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 			{
 				const std::string_view& pname = prop.first;
 				const auto& it = props.find(pname);
-				Reflection::GenericValue myVal = sel->GetPropertyValue(pname);
 
+				Reflection::GenericValue myVal;
+
+				if (prop.second->Get)
+					myVal = sel->GetPropertyValue(pname);
+				else
+					myVal = "<CANNOT_READ>";
+				
 				props.insert(std::pair(pname, std::pair(prop.second, myVal)));
 
 				if (it != props.end())

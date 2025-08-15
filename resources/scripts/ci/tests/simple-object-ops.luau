@@ -7,19 +7,17 @@ return function(describe, test, expect)
 		expect(workspace.SceneCamera.FieldOfView):toBe(999)
 		workspace.SceneCamera.FieldOfView = 90
 	end)
-	test("Create and Destroy Object with Component", function()
+	test("Component check", function()
 		local new = GameObject.new("Primitive")
 		expect(new:HasComponent("Mesh") and new:HasComponent("Transform")):toBe(true)
-		--new:Destroy()
-		new.Parent = nil
+		new:Destroy()
 	end)
 	test("Parenting", function()
 		local new = GameObject.new("Bone")
 		new.Name = "NewObject"
 		new.Parent = workspace
 		expect(workspace:FindChild("NewObject") ~= nil):toBe(true)
-		--new:Destroy()
-		new.Parent = nil
+		new:Destroy()
 	end)
 	test("Un-Parent", function()
 		local new = GameObject.new("Bone")
@@ -32,16 +30,21 @@ return function(describe, test, expect)
 		local new = GameObject.new("Bone")
 		new.Name = "NewObject"
 		new.Parent = workspace
-		--new:Destroy()
-		new.Parent = nil
+		new:Destroy()
 		expect(workspace:FindChild("NewObject")):toBeNil()
 	end)
-	test("Reflection type validation - Properties", function()
+	test(".Exists", function()
+		local new = GameObject.new("Example")
+		expect(new.Exists):toBe(true)
+		new:Destroy()
+		expect(new.Exists):toBe(false)
+	end)
+	test("Type validation - Properties", function()
 		expect(function()
 			game.Parent = 2
 		end):toThrow("invalid argument")
 	end)
-	test("Reflection type validation - Methods", function()
+	test("Type validation - Methods", function()
 		expect(function()
 			game:FindChild(nil)
 		end):toThrow("invalid argument")

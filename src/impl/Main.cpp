@@ -981,6 +981,7 @@ int main(int argc, char** argv)
 		
 		s_ExitCode = engine.ExitCode;
 
+		InlayEditor::Shutdown();
 		engine.Shutdown();
 	}
 	PHX_MAIN_CRASHHANDLERS;

@@ -5,6 +5,7 @@
 
 #include <string>
 #include <future>
+#include <cfloat>
 
 #include "datatype/GameObject.hpp"
 
@@ -32,6 +33,7 @@ struct EcSound
 	
 	void* m_Channel = nullptr;
 	bool m_PlayRequested = false;
+	float m_BaseFrequency = FLT_MAX;
 
 	static const EntityComponent Type = EntityComponent::Sound;
 };

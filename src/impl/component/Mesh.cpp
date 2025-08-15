@@ -62,14 +62,13 @@ public:
 		EcMesh& mesh = m_Components[Id];
 		tryMarkFreeSkinnedMeshPseudoAsset(mesh);
 
-		mesh.Object.Invalidate();
+		mesh.Object.~GameObjectRef();
     }
 
 	virtual void Shutdown() override
-    {
-        for (uint32_t i = 0; i < m_Components.size(); i++)
-            DeleteComponent(i);
-    }
+	{
+		m_Components.clear();
+	}
 
     virtual const Reflection::StaticPropertyMap& GetProperties() override
     {

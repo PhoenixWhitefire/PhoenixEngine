@@ -172,6 +172,27 @@
           "Ready": "Whether the Animation can be played",
           "Weight": "The influence the Animation has over the rig"
         }
+      },
+      "Example": {
+        "Description": [
+          "An example to be made fun of and bullied",
+          "The least-popular kid in school no one remembers the name of"
+        ],
+        "Methods": {
+          "Greet": "Says hello to the given list of names. If the second argument is `true`, does so extra villainously",
+          "GiveUp": "Tells Engine-chan to kill herself and throws an exception"
+        },
+        "Properties": {
+          "Value1": "A boolean",
+          "Value2": "An integer",
+          "Value3": "A float",
+          "Value4": "A secret message that's so important it's read-only",
+          "Value5": "A secret message that's so, *so* secret that it cannot be read by Reflection-kun, almost like they're keeping a secret from her...",
+          "Value6": "A 3-dimensional vector quantity"
+        },
+        "Events": {
+          "OnGreeted": "Fires when `:Greet` is called, and sends the response to the callback before the original caller of `:Greet` receives it"
+        }
       }
     }
   },
@@ -845,6 +866,25 @@
         "The key is the path to the child, the value is either the string 'f' or 'd', representing whether it is a File or Directory",
         "The Filter argument can either be 'a', 'f', or 'd', meaning 'All', 'Files' or 'Directories'",
         "If not provided, it will default to 'a'"
+      ]
+    ],
+    "print": [
+      [
+        [ "...", "any" ]
+      ],
+      [],
+      [
+        "Logs the given arguments to the output, converting them to strings and separating them with spaces",
+        "Automatically prefixes the log with `[INFO]`, to avoid this behavior, use `appendlog`"
+      ]
+    ],
+    "appendlog": [
+      [
+        [ "...", "any" ]
+      ],
+      [],
+      [
+        "Same as `print`, but does not prefix the log message with `[INFO]`"
       ]
     ]
   }

@@ -3,6 +3,9 @@
 A (possibly) incomplete list of all Script Globals provided by the Engine not present in Vanilla Luau.
 
 
+#### `appendlog(...: any)`
+* Same as `print`, but does not prefix the log message with `[INFO]`
+
 #### `conf_get(Key: string) : any`
 * Reads a value from the Configuration
 
@@ -123,6 +126,10 @@ A (possibly) incomplete list of all Script Globals provided by the Engine not pr
 
 #### `model_import(Path: string) : { GameObject }`
 * Imports the `.gltf`/`.glb` model at `Path`, and returns the resultant root of the hierarchy in an array
+
+#### `print(...: any)`
+* Logs the given arguments to the output, converting them to strings and separating them with spaces
+* Automatically prefixes the log with `[INFO]`, to avoid this behavior, use `appendlog`
 
 #### `scene_load(Path: string) : { GameObject }`
 * Loads the scene at `Path` and returns an array of its root Objects

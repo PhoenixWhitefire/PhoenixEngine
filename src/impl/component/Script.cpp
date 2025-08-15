@@ -56,7 +56,7 @@ public:
 		//if (lua_State* L = m_Components[Id].m_L)
 		//	lua_resetthread(L);
 		
-		m_Components[Id].Object.Invalidate();
+		m_Components[Id].Object.~GameObjectRef();
     }
 
     virtual const Reflection::StaticPropertyMap& GetProperties() override
@@ -105,9 +105,8 @@ public:
 
 	virtual void Shutdown() override
     {
-        for (uint32_t i = 0; i < m_Components.size(); i++)
-            DeleteComponent(i);
-		
+		m_Components.clear();
+
 		if (LVM)
 			lua_close(LVM);
 		LVM = nullptr;
@@ -138,13 +137,24 @@ struct EventConnectionData
 };
 
 // modified version of `db_traceback` from `VM/src/ldblib.cpp`
-static void dumpStacktrace(lua_State* L, std::string* Into = nullptr)
+static void dumpStacktrace(lua_State* L, std::string* Into = nullptr, int Level = 0, const char* Message = nullptr)
 {
 	lua_Debug ar;
 
-	for (int i = (Into ? 1 : 0); lua_getinfo(L, i, "sln", &ar); i++)
+	if (Message)
 	{
-		std::string line = "[STCK]: from: ";
+		if (Into)
+		{
+			Into->append(Message);
+			Into->append("\n");
+		}
+		else
+			Log::Append(Message);
+	}
+	
+	for (int i = Level; lua_getinfo(L, i, "sln", &ar); i++)
+	{
+		std::string line = "from: ";
 
 		if (ar.source)
 			line.append(ar.short_src);
@@ -569,38 +579,6 @@ static void* l_alloc(void*, void* ptr, size_t, size_t nsize)
 		return Memory::ReAlloc(ptr, nsize, Memory::Category::Luau);
 }
 
-static int lprint(lua_State* L)
-{
-	// FROM:
-	// `luaB_print`
-	// `Luau/VM/src/lbaselib.cpp`
-	// 11/11/2024
-
-	if (lua_Debug ar; lua_getinfo(L, 1, "sl", &ar))
-		Log::Info("&&", std::format("[S{}:{}]", ar.short_src, ar.currentline));
-
-	else
-		Log::Warning("Could not `lua_getinfo` for the following Luau log:");
-
-	int n = lua_gettop(L); // number of arguments
-	for (int i = 1; i <= n; i++)
-	{
-		size_t l;
-		const char* s = luaL_tolstring(L, i, &l); // convert to string using __tostring et al
-	
-		if (i > 1)
-			Log::Append(" &&");
-		else
-			Log::Append("&&");
-	
-		Log::Append(std::string(s) + "&&");
-		lua_pop(L, 1); // pop result
-	}
-	Log::Append("\n&&");
-
-	return 0;
-}
-
 static void requireConfigInit(luarequire_Configuration* config)
 {
 	config->is_require_allowed = [](lua_State*, void*, const char*)
@@ -652,13 +630,14 @@ static void requireConfigInit(luarequire_Configuration* config)
 		{
 			std::filesystem::path* curpath = (std::filesystem::path*)ctx;
 			std::string strpath = curpath->string();
-			*outSize = strpath.size();
+			*outSize = strpath.size() + 1;
 
-			if (bufferSize < strpath.size())
+			if (bufferSize < strpath.size() + 1)
 				return WRITE_BUFFER_TOO_SMALL;
 			else
 			{
-				memcpy(buffer, strpath.data(), strpath.size());
+				memcpy(buffer + 1, strpath.data(), strpath.size());
+				buffer[0] = '@';
 				return WRITE_SUCCESS;
 			}
 		};
@@ -728,6 +707,21 @@ static void requireConfigInit(luarequire_Configuration* config)
 		};
 }
 
+// FROM: `ldblib.cpp` 15/08/2025
+static lua_State* getthread(lua_State* L, int* arg)
+{
+    if (lua_isthread(L, 1))
+    {
+        *arg = 1;
+        return lua_tothread(L, 1);
+    }
+    else
+    {
+        *arg = 0;
+        return L;
+    }
+}
+
 static lua_State* createVM()
 {
 	ZoneScopedC(tracy::Color::LightSkyBlue);
@@ -742,13 +736,26 @@ static lua_State* createVM()
 		new std::filesystem::path()
 	);
 
-	// override std `print` to use logging system
+	lua_getglobal(state, "debug");
 	lua_pushcfunction(
 		state,
-		lprint,
-		"PhxPrintOverride"
+		[](lua_State* L)
+		{
+			int arg;
+    		lua_State* L1 = getthread(L, &arg);
+    		const char* msg = luaL_optstring(L, arg + 1, NULL);
+    		int level = luaL_optinteger(L, arg + 2, (L == L1) ? 1 : 0);
+    		luaL_argcheck(L, level >= 0, arg + 2, "level can't be negative");
+
+			std::string trace;
+			dumpStacktrace(L, &trace, level, msg);
+
+			lua_pushlstring(L, trace.data(), trace.size());
+			return 1;
+		},
+		"hx_dumpStacktrace"
 	);
-	lua_setglobal(state, "print");
+	lua_setfield(state, -2, "traceback");
 
 	// Color
 	{

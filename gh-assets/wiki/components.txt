@@ -55,6 +55,25 @@ The Engine support an Entity Component System architecture, meaning that `GameOb
 * `LightColor: Color`: The color of the Light
 * `Shadows: boolean`: Whether the Light can render shadows
 
+## `Example`
+
+* An example to be made fun of and bullied
+* The least-popular kid in school no one remembers the name of
+
+### Properties:
+* `Value1: boolean`: A boolean
+* `Value2: number`: An integer
+* `Value4: string READONLY`: A secret message that's so important it's read-only
+* `Value5: string READONLY`: A secret message that's so, *so* secret that it cannot be read by Reflection-kun, almost like they're keeping a secret from her...
+* `Value6: Vector3`: A 3-dimensional vector quantity
+
+### Methods:
+* `GiveUp() -> ()`: Tells Engine-chan to kill herself and throws an exception
+* `Greet(Array, boolean) -> (string, string)`: Says hello to the given list of names. If the second argument is `true`, does so extra villainously
+
+### Events:
+* `OnGreeted(string, string)`: Fires when `:Greet` is called, and sends the response to the callback before the original caller of `:Greet` receives it
+
 ## `Mesh`
 
 * A mesh composed of triangles

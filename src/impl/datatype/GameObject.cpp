@@ -325,10 +325,8 @@ GameObject* GameObject::FromGenericValue(const Reflection::GenericValue& gv)
 			"Tried to GameObject::FromGenericValue, but GenericValue had Type '{}' instead",
 			Reflection::TypeAsString(gv.Type)
 		));
-
-	GameObject* obj = GameObject::GetObjectById(static_cast<uint32_t>(gv.Val.Int));
-	assert(obj);
-	return obj;
+		
+	return GameObject::GetObjectById(static_cast<uint32_t>(gv.Val.Int));
 }
 
 bool GameObject::IsValidClass(const std::string_view& ObjectClass)
@@ -389,20 +387,20 @@ void GameObject::Destroy()
 
 		this->IsDestructionPending = true;
 
+		for (const std::pair<EntityComponent, uint32_t>& pair : m_Components)
+			s_ComponentManagers[(size_t)pair.first]->DeleteComponent(pair.second);
+
+		m_Components.clear();
+
+		for (GameObject* child : this->GetChildren())
+			child->Destroy();
+
 		DecrementHardRefs(); // removes the reference in `::Create`
 	}
 
 	if (m_HardRefCount == 0 && Valid)
 	{
-		for (GameObject* child : this->GetChildren())
-			child->Destroy();
-
 		Valid = false;
-
-		for (const std::pair<EntityComponent, uint32_t>& pair : m_Components)
-			s_ComponentManagers[(size_t)pair.first]->DeleteComponent(pair.second);
-		
-		m_Components.clear();
 	}
 }
 

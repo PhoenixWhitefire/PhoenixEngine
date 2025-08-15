@@ -1,162 +1,161 @@
 // 15/09/2024 PHOENIXWHITEFIRE2000
 // A template/example GameObject.
 
-#if 0
+#include <tracy/public/tracy/Tracy.hpp>
 
-#include "gameobject/Example.hpp"
-#include "gameobject/DataModel.hpp"
+#include "component/Example.hpp"
+#include "datatype/GameObject.hpp"
+#include "Engine.hpp"
 
-// This inserts a pointer to the template function `createGameObjectHeir<Object_Example>`
-// into the `unordered_map` `GameObject::s_GameObjectMap`, which is then
-// called by `GameObject::Create`
-PHX_GAMEOBJECT_LINKTOCLASS_SIMPLE(Example);
-
-static bool s_DidInitReflection = false;
-
-void Object_Example::s_DeclareReflections()
+class ExamplesManager : BaseComponentManager
 {
-	if (s_DidInitReflection)
-		return;
-	s_DidInitReflection = true;
+public:
+    virtual uint32_t CreateComponent(GameObject* Object) override
+    {
+        m_Components.emplace_back();
+		m_Components.back().Object = Object;
 
-	// Inherits the properties of all base classes as well
-	REFLECTION_INHERITAPI(Script);
+        return static_cast<uint32_t>(m_Components.size() - 1);
+    }
 
-	// We go base-to-derived so members declared in the ancestral classes
-	// can be overriden by any inheriting descendants for their own
-	// uses
+    virtual std::vector<void*> GetComponents() override
+    {
+        std::vector<void*> v;
+        v.reserve(m_Components.size());
 
-	// Implement our own stuff
+        for (EcExample& t : m_Components)
+            v.push_back((void*)&t);
+        
+        return v;
+    }
 
-	REFLECTION_DECLAREPROP(
-		"Value1",
-		Bool,
-		[](Reflection::Reflectable* p)
+    virtual void* GetComponent(uint32_t Id) override
+    {
+        return &m_Components[Id];
+    }
+
+    virtual void DeleteComponent(uint32_t Id) override
+    {
+        // TODO id reuse with handles that have a counter per re-use to reduce memory growth
+
+        m_Components[Id].Object.~GameObjectRef();
+    }
+
+	virtual void Shutdown() override
+	{
+		m_Components.clear();
+	}
+
+    virtual const Reflection::StaticPropertyMap& GetProperties() override
+    {
+        static const Reflection::StaticPropertyMap props = 
+        {
+            EC_PROP(
+                "Value1",
+                Boolean,
+				[](void* p)
+				{
+					EcExample* example = static_cast<EcExample*>(p);
+					return example->Value1;
+				},
+                [](void* p, const Reflection::GenericValue& gv)
+                {
+                    EcExample* example = static_cast<EcExample*>(p);
+					example->Value1 = gv.AsBoolean();
+                }
+            ),
+
+			// Effectively equivalent to the above
+			EC_PROP_SIMPLE(EcExample, Value2, Integer),
+			EC_PROP_SIMPLE(EcExample, Value6, Vector3),
+			// A read-only property
+			EC_PROP("Value4", String, EC_GET_SIMPLE(EcExample, Value4), nullptr),
+			// A property
+			EC_PROP("Value5", String, nullptr, nullptr)
+        };
+
+        return props;
+    }
+
+    virtual const Reflection::StaticMethodMap& GetMethods() override
+    {
+        static const Reflection::StaticMethodMap funcs =
 		{
-			// Implicitly calls the `::GenericValue(bool)` constructor
-			// This is not voodoo. It really is returning a `Reflection::GenericValue`
-			return static_cast<Object_Example*>(p)->Value1;
-		},
-		// Making this read-only is as simple as replacing the setter
-		// with `nullptr`, which is what `REFLECTION_DECLAREPROP_SIMPLE_READONLY` does
-		[](Reflection::Reflectable* p, const Reflection::GenericValue& gv)
+			{ "Greet", Reflection::Method{
+				{ Reflection::ValueType::Array, Reflection::ValueType::Boolean },
+				{ Reflection::ValueType::String, Reflection::ValueType::String },
+				[](void* p, const std::vector<Reflection::GenericValue>& args)
+				-> std::vector<Reflection::GenericValue>
+				{
+					EcExample* ex = static_cast<EcExample*>(p);
+					GameObjectRef object = ex->Object;
+
+					Reflection::GenericValue gv = args.at(0);
+					std::span<Reflection::GenericValue> names = gv.AsArray();
+
+					if (names.empty())
+						return { object->Name + ": He- Oh... There's no one here... :(" };
+
+					else if (names.size() == 1)
+						return { object->Name + ": Hello, " + std::string(names[0].AsStringView()) + "!" };
+
+					std::string result = "Hello, ";
+
+					for (size_t index = 0; index < names.size() - 1; index++)
+						result += std::string(names[index].AsStringView()) + ", ";
+
+					result = result.substr(0, result.size() - 2);
+					result += " and " + std::string(names.back().AsStringView()) + "!";
+
+					if (args[1].AsBoolean())
+						result += " (MANIACAL CACKLING) HAHAHAHAHAHAHA";
+
+					std::vector<Reflection::GenericValue> returnVals =
+					{
+						Reflection::GenericValue(object->Name),
+						Reflection::GenericValue(result)
+					};
+
+					REFLECTION_SIGNAL(ex->OnGreetedCallbacks, returnVals);
+
+					return returnVals;
+				}
+			} },
+
+			{ "GiveUp", {
+				{},
+				{},
+				[](void* p, const std::vector<Reflection::GenericValue>&)
+				-> std::vector<Reflection::GenericValue>
+				{
+					static_cast<EcExample*>(p)->Object->Destroy();
+					Engine::Get()->Close();
+
+					RAISE_RT("learning is too harddddddddddddd >///~///<");
+				}
+			} }
+		};
+
+        return funcs;
+    }
+
+	virtual const Reflection::StaticEventMap& GetEvents() override
+	{
+		static const Reflection::StaticEventMap events =
 		{
-			// Always use the `::As[X]` methods, even if it's a String for
-			// forward-compatibility and built-in sanity-checking
-			static_cast<Object_Example*>(p)->Value1 = gv.AsBoolean();
-		}
-	);
+			REFLECTION_EVENT(EcExample, OnGreeted, Reflection::ValueType::String, Reflection::ValueType::String)
+		};
 
-	// Prop name is `Value2`. It will be read and set exactly like the above `REFLECTION_DECLAREPROP`
-	REFLECTION_DECLAREPROP_SIMPLE(Object_Example, Value2, Integer);
+		return events;
+	}
 
-	// Can be read, but not set
-	// NOTE 06/03/2025: if you want a read-write String property, use
-	//
-	// REFLECTION_DECLAREPROP_SIMPSTR
-	//
-	REFLECTION_DECLAREPROP_SIMPLE_READONLY(Object_Example, Value4, String);
+    ExamplesManager()
+    {
+        GameObject::s_ComponentManagers[(size_t)EntityComponent::Example] = this;
+    }
 
-	// If we used `REFLECTION_DECLAREPROP_SIMPLE`, we'd get a "possible loss of data"
-	// warning as we're converting between `double` and `float`
-	// Use a `static_cast` to silence the warning
-	REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(Object_Example, Value3, Double, float);
+private:
+    std::vector<EcExample> m_Components;
+};
 
-	// We can't use `REFLECTION_DECLAREPROP_SIMPLE` here because `GenericValue` doesn't
-	// have a constructor accepting `Vector3`, but `Vector3` has a `Reflection::GenericValue`
-	// cast operator, which is what `_TYPECAST` calls
-	REFLECTION_DECLAREPROP_SIMPLE_TYPECAST(Object_Example, Value5, Vector3);
-
-	// Functions take in a value, and return another value, possibly generating
-	// side-effects. They may not mutate their parameters. The Script engine
-	// will enforce the input type on it's side, but, right now (15/09/2024),
-	// it does not enforce the output. Really, it only exists for IntelliSense
-	// plans for the distant future
-	REFLECTION_DECLAREFUNC(
-		"Greet",
-		{ Reflection::ValueType::Array, Reflection::ValueType::Bool },
-		{ Reflection::ValueType::String, Reflection::ValueType::String },
-		[](Reflection::Reflectable* r, const std::vector<Reflection::GenericValue>& args)
-		-> std::vector<Reflection::GenericValue>
-		{
-			GameObject* p = static_cast<GameObject*>(r);
-
-			Reflection::GenericValue gv = args.at(0);
-			std::vector<Reflection::GenericValue> names = gv.AsArray();
-
-			if (names.empty())
-				return { p->Name + ": He- Oh... There's no one here... :(" };
-
-			else if (names.size() == 1)
-				return { p->Name + ": Hello, " + std::string(names[0].AsStringView()) + "!" };
-
-			// Even though you *could* do
-			// 
-			// Reflection::GenericValue result = "Hello, ";
-			// 
-			// and assign to it with
-			// 
-			// result.String += "XYZ";
-			//
-			// , it's not very forward-compatible in my opinion.
-
-			std::string result = "Hello, ";
-
-			for (size_t index = 0; index < names.size() - 1; index++)
-				result += std::string(names[index].AsStringView()) + ", ";
-
-			result = result.substr(0, result.size() - 2);
-			result += " and " + std::string(names.back().AsStringView()) + "!";
-
-			if (args[1].AsBoolean())
-				result += " (MANIACAL CACKLING) HAHAHAHAHAHAHA";
-
-			std::vector<Reflection::GenericValue> returnVals =
-			{
-				Reflection::GenericValue(p->Name),
-				Reflection::GenericValue(result)
-			};
-
-			return returnVals;
-		}
-	);
-
-	// Procedures are functions that do not return any value. There is no
-	// `REFLECTION_DECLAREPROC` because of some macro expansion problems.
-	REFLECTION_DECLAREPROC_INPUTLESS(
-		GiveUp,
-		[](Reflection::Reflectable* p)
-		{
-			static_cast<GameObject*>(p)->Destroy();
-
-			// It is not enough for just me to cease. Everything else must also.
-			if (GameObject::s_DataModel)
-				// Coerce. Convince. Force.
-				static_cast<Object_DataModel*>(GameObject::s_DataModel)->WantExit = true;
-
-			RAISE_RT("Gave up. Gave in. Ending it all. The world swallows itself up, or, at the very least, I will no longer exist.");
-		}
-	);
-
-	// And there you have it! This class will now appear in the `apidump.json`
-}
-
-Object_Example::Object_Example()
-{
-	this->Name = "Example";
-	this->ClassName = "Example";
-	
-	s_DeclareReflections();
-	ApiPointer = &s_Api;
-}
-
-void Object_Example::Initialize()
-{
-	// Returns whether it succeeded, but this class isn't
-	// very important so we don't care
-	this->LoadScript("scripts/safe-space.luau");
-	// `::LoadScript` won't actually load it if we aren't
-	// parented to anything
-	this->Reload();
-}
-#endif
+static inline ExamplesManager Instance{};

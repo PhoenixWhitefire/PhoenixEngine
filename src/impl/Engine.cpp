@@ -1132,9 +1132,7 @@ void Engine::Shutdown()
 	}
 
 	Log::Info("Destroying DataModel...");
-
-	GameObject::s_DataModel = PHX_GAMEOBJECT_NULL_ID;
-	DataModel->Destroy();
+	GameObject::s_WorldArray.clear();
 	DataModel.Invalidate();
 	Workspace.Invalidate();
 

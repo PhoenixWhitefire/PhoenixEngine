@@ -42,6 +42,7 @@ enum class EntityComponent : uint8_t
 	Animation,
 	Model,
 	Bone,
+	Example,
 	
 	__count
 };
@@ -67,7 +68,8 @@ static inline const std::string_view s_EntityComponentNames[] =
 	"Camera",
 	"Animation",
 	"Model",
-	"Bone"
+	"Bone",
+	"Example"
 };
 
 static inline const std::unordered_map<std::string_view, EntityComponent> s_ComponentNameToType = 
@@ -86,7 +88,8 @@ static inline const std::unordered_map<std::string_view, EntityComponent> s_Comp
 	{ "Camera", EntityComponent::Camera },
 	{ "Animation", EntityComponent::Animation },
 	{ "Model", EntityComponent::Model },
-	{ "Bone", EntityComponent::Bone }
+	{ "Bone", EntityComponent::Bone },
+	{ "Example", EntityComponent::Example }
 };
 
 static_assert(std::size(s_EntityComponentNames) == (size_t)EntityComponent::__count);
@@ -224,7 +227,6 @@ struct GameObjectRef
 	: m_TargetId(Object->ObjectId)
 	{
 		assert(m_TargetId != PHX_GAMEOBJECT_NULL_ID);
-		assert(!Object->IsDestructionPending);
 		assert(Object->Valid);
 
 		Object->IncrementHardRefs();
@@ -235,7 +237,6 @@ struct GameObjectRef
 	{
 		if (Other.m_TargetId != PHX_GAMEOBJECT_NULL_ID)
 		{
-			assert(!Other->IsDestructionPending);
 			assert(Other->Valid);
 
 			Contained()->IncrementHardRefs();
@@ -246,7 +247,6 @@ struct GameObjectRef
 	{
 		if (Other.m_TargetId != PHX_GAMEOBJECT_NULL_ID)
 		{
-			assert(!Other->IsDestructionPending);
 			assert(Other->Valid);
 			
 			Contained()->IncrementHardRefs();
@@ -255,11 +255,12 @@ struct GameObjectRef
 
 	~GameObjectRef()
 	{
-		GameObject* g = GameObject::GetObjectById(m_TargetId);
-
-		if (m_TargetId != PHX_GAMEOBJECT_NULL_ID)
+		if (m_TargetId != PHX_GAMEOBJECT_NULL_ID && m_TargetId != 0)
+		{
+			GameObject* g = GameObject::GetObjectById(m_TargetId);
+			m_TargetId = PHX_GAMEOBJECT_NULL_ID;
 			g->DecrementHardRefs();
-		m_TargetId = PHX_GAMEOBJECT_NULL_ID;
+		}
 	}
 
 	GameObject* Contained() const

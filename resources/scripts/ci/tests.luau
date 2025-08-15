@@ -1,6 +1,10 @@
 -- tests.luau, 13/08/2025
 -- Simple testing engine
 
+sleep(1)
+
+local start = game.Time
+
 local testEntries = fs_listdir("scripts/ci/tests")
 
 local tests = {}
@@ -75,8 +79,8 @@ local function describe(group, callback)
 	curGroup = prevGroup
 end
 
-local function test(description, callback)
-	table.insert(curGroup, { IsTest = true, Callback = callback, Description = description })
+local function test(name, callback)
+	table.insert(curGroup, { IsTest = true, Callback = callback, Name = name })
 	testCount += 1
 end
 
@@ -110,31 +114,49 @@ end
 
 discoverTests(testEntries, tests)
 
-print(`\n\n\n\nRunning { testCount } tests...\n\n\n`)
+appendlog(`\n\n\n\n`)
+print(`Running { testCount } tests...\n\n\n`)
 
 local succeeded = 0
 local failed = 0
+local totaltesttime = 0
+
+local function errorStackTrace(errm)
+	return { errm, debug.traceback(errm, 2) }
+end
 
 local function runTests(t, depth)
 	for index, entry in t do
 		if entry.IsTest then
-			local success, err = pcall(function()
+			local indent = string.rep("    ", depth)
+			
+			local printstr = `{indent}Test {index}: {entry.Name}... `
+			print(printstr, string.rep(" ", 50 - #printstr), "&&")
+			
+			local tstart = game.Time
+			
+			local success, errd = xpcall(function()
 				entry.Callback()
-			end)
+			end, errorStackTrace)
+			
+			totaltesttime += game.Time - tstart
+			local mstime = (game.Time - tstart) * 1000
+			local mstimestr = if mstime > 1 then math.ceil(mstime) .. "ms" else "<1ms"
 			
 			if success then
 				succeeded += 1
-				print(`{ string.rep("    ", depth) }Test {index}: {entry.Description} succeeded`)
+				appendlog(`Succeeded ({mstimestr})`)
 			else
-				local failReasonStartPos = err:find("FAILTEST:")
+				local failReasonStartPos = errd[1]:find("FAILTEST:")
 				
 				if failReasonStartPos then
-					print(`{ string.rep("    ", depth) }Test {index}: {entry.Description} FAILED: {string.sub(err, failReasonStartPos + #("FAILTEST:"), #err)}`)
+					appendlog(`FAILED ({mstimestr}): {string.sub(errd[1], failReasonStartPos + #("FAILTEST:"), #errd[1])}`)
 					failed += 1
 				else
+					appendlog("\n")
 					error(`TESTING ERROR: A test or the framework threw an unexpected error\n`
-						.. `Test {index}: "{entry.Description}"\n`
-						.. `Error:\n{err}`)
+						.. `Test {index}: "{entry.Name}"\n`
+						.. `Error:\n{errd[2]}-- End caught exception --`)
 				end
 			end
 		else
@@ -146,6 +168,8 @@ end
 
 runTests(tests, 0)
 
+print("\n")
+print("Finished testing.")
 print(`{succeeded} succeeded, {failed} failed`)
 
 if succeeded == testCount then
@@ -158,7 +182,10 @@ elseif testCount == 0 then
 	print("No tests :/")
 end
 
-print("\n\n\n\n")
+print("\n")
+print(`Testing session took { game.Time - start } seconds. Tests themselves took { totaltesttime } seconds in total`)
+
+appendlog("\n\n\n\n")
 
 game:Close()
 

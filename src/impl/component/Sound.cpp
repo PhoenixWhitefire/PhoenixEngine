@@ -66,7 +66,7 @@ public:
 		if (FMOD::Channel* chan = (FMOD::Channel*)sound.m_Channel)
 			chan->stop();
 
-		sound.Object.Invalidate();
+		sound.Object.~GameObjectRef();
     }
 
     virtual const Reflection::StaticPropertyMap& GetProperties() override
@@ -232,11 +232,9 @@ public:
 			return;
 
 		FMOD_CALL(FmodSystem->release(), "System shutdown");
-
-		for (uint32_t i = 0; i < m_Components.size(); i++)
-            DeleteComponent(i);
 		
 		AudioAssets.clear();
+		m_Components.clear();
 	}
 
 	FMOD::System* FmodSystem = nullptr;
@@ -318,10 +316,7 @@ void EcSound::Update(double)
 {
 	if (GetRunningTime() != Instance.LastTick)
 		Instance.Update();
-
-	if (FinishedLoading && m_Channel)
-		return;
-
+		
 	if (!LoadSucceeded)
 		return;
 
@@ -358,6 +353,13 @@ void EcSound::Update(double)
 
 		if (bool chlooped = mode & FMOD_LOOP_NORMAL; chlooped != Looped)
 			FMOD_CALL(chan->setMode(Looped ? FMOD_LOOP_NORMAL : FMOD_LOOP_OFF), "sync loop state");
+
+		FMOD_CALL(chan->setVolume(Volume), "sync volume");
+
+		if (m_BaseFrequency == FLT_MAX)
+			FMOD_CALL(chan->getFrequency(&m_BaseFrequency), "get base frequency");
+
+		FMOD_CALL(chan->setFrequency(m_BaseFrequency * Speed), "set frequency");
 	}
 }
 

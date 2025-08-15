@@ -64,10 +64,16 @@ public:
         return &m_Components[Id];
     }
 
-    virtual void DeleteComponent(uint32_t) override
+    virtual void DeleteComponent(uint32_t Id) override
     {
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
+		m_Components[Id].Object.~GameObjectRef();
     }
+
+	virtual void Shutdown() override
+	{
+		m_Components.clear();
+	}
 
     virtual const Reflection::StaticPropertyMap& GetProperties() override
     {

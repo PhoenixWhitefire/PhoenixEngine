@@ -231,13 +231,6 @@ Reflection::GenericValue::GenericValue(const GenericValue& Other)
 	CopyInto(*this, Other);
 }
 
-/*
-Reflection::GenericValue::GenericValue(GenericValue&& Other)
-{
-	CopyInto(*this, Other);
-}
-*/
-
 std::string Reflection::GenericValue::ToString() const
 {
 	switch (this->Type)
@@ -257,7 +250,7 @@ std::string Reflection::GenericValue::ToString() const
 	case ValueType::String:
 	{
 		if (this->Size > GV_SSO)
-			return Val.Str;
+			return std::string(Val.Str, this->Size);
 		else
 			return Val.StrSso;
 	}

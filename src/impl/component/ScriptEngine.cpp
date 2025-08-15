@@ -284,6 +284,8 @@ Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int St
 
 		std::vector<Reflection::GenericValue> items;
 
+		lua_pushvalue(L, StackIndex);
+
 		// https://www.lua.org/manual/5.1/manual.html#lua_next
 		lua_pushnil(L);
 
@@ -292,6 +294,7 @@ Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int St
 			items.push_back(ScriptEngine::L::LuaValueToGeneric(L, -1));
 			lua_pop(L, 1);
 		}
+		lua_pop(L, 1);
 
 		return items;
 	}
@@ -1785,6 +1788,77 @@ static std::pair<std::string_view, GlobalFn> s_GlobalFunctions[] =
 		},
 		1
 	}
+	},
+
+	{
+		"print",
+		{
+			[](lua_State* L)
+			{
+				// FROM:
+				// `luaB_print`
+				// `Luau/VM/src/lbaselib.cpp`
+				// 11/11/2024
+
+				Log::Info("&&");
+
+				int n = lua_gettop(L); // number of arguments
+				for (int i = 1; i <= n; i++)
+				{
+					size_t l;
+					const char* s = luaL_tolstring(L, i, &l); // convert to string using __tostring et al
+
+					if (i > 1)
+						Log::Append(" &&");
+					else
+						Log::Append("&&");
+
+					if (i < n)
+						Log::Append(std::string(s) + "&&");
+					else
+						Log::Append(s);
+
+					lua_pop(L, 1); // pop result
+				}
+
+				return 0;
+			},
+			1
+		}
+	},
+	{
+		"appendlog",
+		{
+			[](lua_State* L)
+			{
+				// FROM:
+				// `luaB_print`
+				// `Luau/VM/src/lbaselib.cpp`
+				// 11/11/2024
+
+				int n = lua_gettop(L); // number of arguments
+				for (int i = 1; i <= n; i++)
+				{
+					size_t l;
+					const char* s = luaL_tolstring(L, i, &l); // convert to string using __tostring et al
+
+					if (i > 1)
+						Log::Append(" &&");
+					else
+						Log::Append("&&");
+
+					if (i < n)
+						Log::Append(std::string(s) + "&&");
+					else
+						Log::Append(s);
+						
+					lua_pop(L, 1); // pop result
+				}
+
+				return 0;
+			},
+			1
+		}
 	},
 
 	{

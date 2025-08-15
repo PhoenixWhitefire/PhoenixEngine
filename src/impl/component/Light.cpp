@@ -102,14 +102,13 @@ public:
     {
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
 
-        m_Components[Id].Object.Invalidate();
+        m_Components[Id].Object.~GameObjectRef();
     }
 
     virtual void Shutdown() override
-    {
-        for (uint32_t i = 0; i < m_Components.size(); i++)
-            DeleteComponent(i);
-    }
+	{
+		m_Components.clear();
+	}
 
     virtual const Reflection::StaticPropertyMap& GetProperties() override
     {

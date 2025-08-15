@@ -64,6 +64,22 @@
           "Shadows": "Boolean"
         }
       },
+      "Example": {
+        "Events": {
+          "OnGreeted": "(String, String)"
+        },
+        "Methods": {
+          "GiveUp": "() -> ()",
+          "Greet": "(Array, Boolean) -> (String, String)"
+        },
+        "Properties": {
+          "Value1": "Boolean",
+          "Value2": "Integer",
+          "Value4": "String READONLY",
+          "Value5": "String READONLY",
+          "Value6": "Vector3"
+        }
+      },
       "Mesh": {
         "Properties": {
           "AngularVelocity": "Vector3",
@@ -150,6 +166,7 @@
     }
   },
   "ScriptGlobals": {
+    "appendlog": 1,
     "conf_get": 1,
     "fd_inprogress": 0,
     "fd_open": 0,
@@ -185,6 +202,7 @@
     "mesh_save": 2,
     "mesh_set": 1,
     "model_import": 1,
+    "print": 1,
     "scene_load": 1,
     "scene_save": 1,
     "sleep": 1,

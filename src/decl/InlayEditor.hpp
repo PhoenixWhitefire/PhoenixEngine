@@ -8,8 +8,8 @@
 namespace InlayEditor
 {
 	void Initialize(Renderer*);
-
 	void UpdateAndRender(double DeltaTime);
+	void Shutdown();
 
 	extern bool DidInitialize;
 };
