@@ -19,7 +19,7 @@ local CellTemplate = GameObject.new("Mesh")
 CellTemplate.Parent = GridModel
 
 workspace.SceneCamera.UseSimpleController = false
-input_mouse_setlocked(false)
+input.setmouselocked(false)
 
 local Grid = {}
 local GRID_SIZE = 5
@@ -74,10 +74,10 @@ workspace.SceneCamera.Transform = Matrix.fromTranslation(GRID_SIZE / 2, GRID_SIZ
 local WasLmbPressed = false
 
 local function handleClick()
-    local mouseX, mouseY = input_mouse_getpos()
+    local mouseX, mouseY = input.getmousepos()
     local mouseRayVec = workspace:ScreenPointToRay({ mouseX, mouseY }, 100)
     
-    local hit = world_raycast(workspace.SceneCamera.Transform.Position, mouseRayVec, {})
+    local hit = world.raycast(workspace.SceneCamera.Transform.Position, mouseRayVec, {})
 
     if hit then
         local prevCol = hit.Object.Tint
@@ -88,7 +88,7 @@ local function handleClick()
 end
 
 function Update(DeltaTime)
-    if input_mouse_bdown(true) then
+    if input.mousedown("l") then
         if not WasLmbPressed then
             coroutine.wrap(handleClick)()
         end

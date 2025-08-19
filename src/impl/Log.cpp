@@ -18,7 +18,7 @@ void Log::Save()
 
 	if (!DidInit)
 	{
-		FileRW::WriteFile("log.txt", "", false);
+		PHX_CHECK(FileRW::WriteFile("log.txt", ""));
 		LogHandle.open("log.txt", std::ios_base::app);
 
 		DidInit = true;

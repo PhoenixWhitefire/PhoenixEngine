@@ -55,6 +55,30 @@ set(PHX_BUILD_TYPE $<IF:$<CONFIG:Debug>,Debug,$<IF:$<CONFIG:Release>,Release,Rel
 
 target_compile_definitions(PhoenixEngine PRIVATE PHX_BUILD_TYPE="${PHX_BUILD_TYPE}")
 
+if (MSVC)
+	set(FMOD_PATH Vendor/FMOD/api/core/lib/x64/fmodL_vc)
+else()
+	set(FMOD_PATH ${CMAKE_BINARY_DIR}/Vendor/FMOD/api/core/lib/x86_64/libfmodL.so)
+endif()
+
+target_link_libraries(PhoenixEngine PRIVATE
+	Vendor
+	glm
+	SDL_uclibc
+	SDL3-shared
+	libcurl
+	$<IF:$<CONFIG:Release>,,TracyClient> # TODO: seemingly no way to not build this even if we dont link it
+	${FMOD_PATH}
+
+	Luau.Compiler
+	Luau.Ast
+	Luau.VM
+	Luau.Require
+	Luau.RequireNavigator
+	Luau.Config
+)
+
+# not letting me put multiple definitions in the same expression waaa
 add_compile_definitions($<$<CONFIG:Debug>:TRACY_ENABLE>)
 add_compile_definitions($<$<CONFIG:Debug>:TRACY_FIBERS>)
 add_compile_definitions($<$<CONFIG:Release>:NDEBUG>)
@@ -63,24 +87,26 @@ add_compile_definitions($<$<CONFIG:RelTracy>:TRACY_ENABLE>)
 add_compile_definitions($<$<CONFIG:RelTracy>:TRACY_FIBERS>)
 
 if (MSVC)
-	include(cmake-msvc.txt)
+	include(cmake/cmake-msvc.txt)
 else() # assume G++
-	include(cmake-gnug.txt)
+	include(cmake/cmake-gnug.txt)
 endif()
 
 # remove unnecessary projects
 option(LUAU_BUILD_CLI "Build CLI" OFF)
 option(LUAU_BUILD_TESTS "Build tests" OFF)
 option(SDL_TEST_LIBRARY "Build the SDL3_test library" OFF)
+# curl static
+option(BUILD_STATIC_LIBS "Build static libraries" OFF)
 
 add_subdirectory(Vendor)
 add_subdirectory(Vendor/luau)
 add_subdirectory(Vendor/glm)
 add_subdirectory(Vendor/SDL)
 add_subdirectory(Vendor/tracy)
+add_subdirectory(Vendor/curl)
 
 # organize vs folders
-
 set_property(TARGET Vendor PROPERTY FOLDER "Vendor")
 set_property(TARGET TracyClient PROPERTY FOLDER "Vendor")
 set_property(TARGET glm PROPERTY FOLDER "Vendor")
@@ -100,8 +126,20 @@ set_property(TARGET isocline PROPERTY FOLDER "Vendor/Luau")
 set_property(TARGET SDL3-shared PROPERTY FOLDER "Vendor/SDL")
 set_property(TARGET SDL_uclibc PROPERTY FOLDER "Vendor/SDL")
 
-# build engine after all static libs
-add_dependencies(PhoenixEngine Vendor TracyClient glm Luau.Compiler Luau.Analysis Luau.RequireNavigator Luau.Require Luau.VM SDL3-shared SDL_uclibc)
+# build engine after all libs
+add_dependencies(PhoenixEngine
+	Vendor
+	TracyClient
+	glm
+	Luau.Compiler
+	Luau.Analysis
+	Luau.RequireNavigator
+	Luau.Require
+	Luau.VM
+	SDL3-shared
+	SDL_uclibc
+	libcurl
+)
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT PhoenixEngine)
 

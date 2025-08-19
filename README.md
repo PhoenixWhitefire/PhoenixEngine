@@ -10,7 +10,7 @@ Personal 3D OpenGL "Game Engine" written in C++, that can:
 * Load, Save and Render Scenes
     * Multiple objects with materials (Color, Metallic-Roughness, Emission and Normal maps), other parameters and GPU instancing
 * Import simple Models (`.gltf`/`.glb`)
-* Execute [*Luau*](https://github.com/luau-lang/luau/) scripts w/ per-frame callbacks
+* Execute [*Luau*](https://github.com/luau-lang/luau/) scripts with a per-frame event system
 * Do simple physics (dynamics and collisions w/ friction with AABBs, also has Raycasting for Scripts)
 * Do some simple, color-only post-processing (really weird Bloom, but a kinda nice blur vignette)
 
@@ -50,9 +50,10 @@ Intended to be compatible with both Windows and Linux/Ubuntu.
 
 All 3rd-party code and submodules are located in the `Vendor` directory.
 
-The following libraries are used:
+The following third-party projects were used/referenced during this Engine's development:
 
 * Luau - [@Roblox/Luau](https://github.com/Roblox/Luau/)
+* Lute - [@luau-lang/lute](https://github.com/luau-lang/lute)
 * SDL3 - [libsdl.org](https://libsdl.org/)
 * OpenGL - [Khronos Group](https://khronos.org/)
 * Glad - [glad.dav1d.de/](https://glad.dav1d.de/)

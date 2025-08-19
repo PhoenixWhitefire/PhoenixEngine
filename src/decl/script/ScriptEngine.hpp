@@ -10,6 +10,8 @@
 #include "Reflection.hpp"
 #include "datatype/GameObject.hpp"
 
+#define LUA_ASSERT(res, err, ...) { if (!(res)) { luaL_errorL(L, err, __VA_ARGS__); } }
+
 namespace ScriptEngine
 {
 	int CompileAndLoad(lua_State*, const std::string& SourceCode, const std::string& ChunkName);
@@ -39,7 +41,7 @@ namespace ScriptEngine
 			double ResumeAt = 0.f;
 		} RmSchedule;
 		std::shared_future<std::vector<Reflection::GenericValue>> RmFuture;
-		std::function<bool(std::vector<Reflection::GenericValue>*)> RmPoll;
+		std::function<int(lua_State*)> RmPoll;
 	};
 
 	extern std::vector<YieldedCoroutine> s_YieldedCoroutines;
@@ -49,10 +51,12 @@ namespace ScriptEngine
 
 namespace ScriptEngine::L
 {
+	lua_State* Create();
 	Reflection::GenericValue LuaValueToGeneric(
 		lua_State*,
 		int StackIndex = -1
 	);
+	nlohmann::json LuaValueToJson(lua_State*, int StackIndex = -1);
 	void CheckType(
 		lua_State*,
 		Reflection::ValueType,
@@ -60,8 +64,11 @@ namespace ScriptEngine::L
 	);
 
 	void PushGenericValue(lua_State*, const Reflection::GenericValue&);
+	void PushJson(lua_State*, const nlohmann::json&);
 	void PushGameObject(lua_State*, GameObject*);
 	void PushMethod(lua_State* L, const Reflection::Method*, ReflectorHandle);
+
+	void DumpStacktrace(lua_State* L, std::string* Into = nullptr, int Level = 0, const char* Message = nullptr);
 
 	int HandleMethodCall(
 		lua_State* L,

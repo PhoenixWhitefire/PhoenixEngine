@@ -103,7 +103,7 @@ catch (...)                                                                     
 #include "asset/SceneFormat.hpp"
 #include "component/Camera.hpp"
 #include "component/Script.hpp"
-#include "component/ScriptEngine.hpp"
+#include "script/ScriptEngine.hpp"
 
 #include "GlobalJsonConfig.hpp"
 #include "InlayEditor.hpp"
@@ -426,7 +426,7 @@ static void saveStatsCsvCallback(void* UserData, const char* const* FileList, in
 	}
 
 	std::string csvContents = *(std::string*)UserData;
-	FileRW::WriteFile(FileList[0], csvContents, false);
+	PHX_CHECK(FileRW::WriteFile(FileList[0], csvContents));
 }
 
 static void doApiDump()
@@ -436,15 +436,17 @@ static void doApiDump()
 	nlohmann::json apiDump;
 	apiDump["GameObject"] = GameObject::DumpApiToJson();
 
-	nlohmann::json& globalsDump = apiDump["ScriptGlobals"];
+	//nlohmann::json& globalsDump = apiDump["ScriptGlobals"];
 
+	/*
 	for (size_t i = 0; ScriptEngine::L::GlobalFunctions[i].second.Function != nullptr; i++)
 	{
 		const auto& it = ScriptEngine::L::GlobalFunctions[i];
 		globalsDump[it.first] = it.second.NumMinArgs;
 	}
+	*/
 
-	FileRW::WriteFile("apidump.json", apiDump.dump(2), false);
+	PHX_CHECK(FileRW::WriteFile("apidump.json", apiDump.dump(2)));
 	Log::Info("API dump finished");
 }
 
@@ -739,7 +741,7 @@ static void drawDeveloperUI(double DeltaTime)
 
 		if (ImGui::Button("Save Post FX settings"))
 		{
-			FileRW::WriteFile("phoenix.conf", EngineJsonConfig.dump(2), false);
+			PHX_CHECK(FileRW::WriteFile("phoenix.conf", EngineJsonConfig.dump(2)));
 			Log::Info("The JSON Config overwrote the pre-existing 'phoenix.conf'.");
 		}
 

@@ -357,7 +357,7 @@ void ShaderProgram::Save()
 		}
 	}
 
-	FileRW::WriteFile(BaseShaderPath + Name + ".shp", fileJson.dump(2), true);
+	PHX_CHECK(FileRW::WriteFile(BaseShaderPath + Name + ".shp", fileJson.dump(2)));
 }
 
 void ShaderProgram::ApplyDefaultUniforms()

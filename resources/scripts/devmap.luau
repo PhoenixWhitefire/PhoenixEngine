@@ -55,24 +55,24 @@ game.OnFrameBegin:Connect(function(DeltaTime)
 		end
 	end
 	
-	if input_keypressed("t") and TotalTime - lastSwitchedPerspectives > 0.5 then
+	if input.keypressed("t") and TotalTime - lastSwitchedPerspectives > 0.5 then
 		reset()
 		lastSwitchedPerspectives = TotalTime
 	end
 	
-	if input_keypressed("f") and TotalTime - lastSwitchedPerspectives > 0.5 then
+	if input.keypressed("f") and TotalTime - lastSwitchedPerspectives > 0.5 then
 		lastSwitchedPerspectives = TotalTime
 		
 		InFreecam = not InFreecam
 		if InFreecam then
-			input_mouse_setlocked(false)
+			input.setmouselocked(false)
 			SwitchToFreecamNextFrame = 2
 		else
 			Camera.UseSimpleController = false
 		end
 	end
 	
-	if input_keypressed("p") and TotalTime - lastSwitchedPerspectives > 0.5 then
+	if input.keypressed("p") and TotalTime - lastSwitchedPerspectives > 0.5 then
 		CharacterController.FirstPerson = not CharacterController.FirstPerson
 		lastSwitchedPerspectives = TotalTime
 		
@@ -88,7 +88,7 @@ game.OnFrameBegin:Connect(function(DeltaTime)
 		--CharacterController.CameraOffset = DefaultCameraOffset * Matrix.fromEulerAnglesXYZ(0, 0, Character.LinearVelocity.X)
 		CharacterController:Update(DeltaTime)
 		
-		if input_keypressed("e") and TotalTime - lastSwitchedPerspectives > 0.25 then
+		if input.keypressed("e") and TotalTime - lastSwitchedPerspectives > 0.25 then
 			blorbs = blorbs or (function()
 				blorbs = GameObject.new("Model")
 				blorbs.Name = "blorbs"

@@ -68,14 +68,13 @@ std::string FileRW::ReadFile(const std::string_view& ShortPath, bool* DoesFileEx
 	}
 }
 
-void FileRW::WriteFile(
+bool FileRW::WriteFile(
 	const std::string_view& ShortPath,
 	const std::string_view& Contents,
-	bool InResourcesDirectory,
-	bool* SuccessPtr
+	std::string* ErrorMessage
 )
 {
-	std::string path = InResourcesDirectory ? FileRW::TryMakePathCwdRelative(ShortPath) : std::string(ShortPath);
+	std::string path = FileRW::TryMakePathCwdRelative(ShortPath);
 
 	std::ofstream file(path.c_str(), std::ios::binary);
 
@@ -83,27 +82,23 @@ void FileRW::WriteFile(
 	{
 		file.write((const char*)Contents.data(), Contents.size());
 		file.close();
+
+		return true;
 	}
 	else
 	{
-		if (!SuccessPtr)
-			RAISE_RT(std::format(
-				"FileRW::WriteFile: Could not open the handle to '{}'",
-				path
-			));
-		else
-			*SuccessPtr = false;
-	}
+		*ErrorMessage = "Couldn't open handle to file";
+		return false;
+	} 
 }
 
-void FileRW::WriteFileCreateDirectories(
+bool FileRW::WriteFileCreateDirectories(
 	const std::string_view& ShortPath,
 	const std::string_view& Contents,
-	bool InResourcesDirectory,
-	bool* SuccessPtr
+	std::string* ErrorMessage
 )
 {
-	std::string path = InResourcesDirectory ? FileRW::TryMakePathCwdRelative(ShortPath) : std::string(ShortPath);
+	std::string path = FileRW::TryMakePathCwdRelative(ShortPath);
 
 	size_t containingDirLoc = path.find_last_of("/");
 	std::string dirPath = path.substr(0, containingDirLoc);
@@ -111,9 +106,12 @@ void FileRW::WriteFileCreateDirectories(
 	std::error_code ec;
 	
 	if (!createDirectoryRecursive(dirPath, ec))
-		throw(std::runtime_error("Failed to recursively create directories: " + ec.message()));
+	{
+		*ErrorMessage = "Failed to recursively create directories: " + ec.message();
+		return false;
+	}
 
-	FileRW::WriteFile(path, Contents, false, SuccessPtr);
+	return FileRW::WriteFile(path, Contents, ErrorMessage);
 }
 
 std::string FileRW::TryMakePathCwdRelative(const std::string_view& LocalPath)
@@ -127,9 +125,12 @@ std::string FileRW::TryMakePathCwdRelative(const std::string_view& LocalPath)
 	// 12/01/2025: `.` is for preceding `./`, `:` is for drive letters, such as
 	// `C:`, where we don't need to do anything
 	// 23/02/2025: `/` is for Linux paths which begin at the home directory, starting with a `/home`
+	// 19/08/2025: `~` is a shortcut for `/home/<USERNAME>` on linux
 	size_t whereRes = path.find("resources/");
 
-	if ((path[0] != '.' && path[0] != '/' && path[1] != ':') && whereRes == std::string::npos)
+	if ((path[0] != '.' && path[0] != '/' && path[0] != '~' && path[1] != ':')
+		&& whereRes == std::string::npos
+	)
 		path.insert(0, EngineJsonConfig.value("ResourcesDirectory", "resources/"));
 
 	else if (whereRes != std::string::npos)

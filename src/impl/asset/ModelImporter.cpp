@@ -66,14 +66,10 @@ static std::string getTexturePath(
 								+ "/"
 								+ ImageJson.value("name", "UNNAMED")
 								+ fileExtension;
-
-		bool writeSucceeded = true;
-
-		FileRW::WriteFileCreateDirectories(
+		
+		bool writeSucceeded = FileRW::WriteFileCreateDirectories(
 			filePath,
-			imageData,
-			true,
-			&writeSucceeded
+			imageData
 		);
 
 		if (!writeSucceeded)
@@ -334,11 +330,10 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 				+ "/"
 				+ material.Name;
 
-			FileRW::WriteFileCreateDirectories(
+			PHX_CHECK(FileRW::WriteFileCreateDirectories(
 				"materials/" + materialName + ".mtl",
-				materialJson.dump(2),
-				true
-			);
+				materialJson.dump(2)
+			));
 
 			meshObject->MaterialId = mtlManager->LoadFromPath(materialName);
 			mtlManager->SaveToPath(mtlManager->GetMaterialResource(meshObject->MaterialId), materialName);
@@ -711,7 +706,7 @@ void ModelLoader::m_BuildRig()
 		m_Animations.push_back(anim);
 
 		std::string animData = m_SerializeAnimation(animationJson);
-		FileRW::WriteFile("animations/" + saveDir + "/" + anim->Name + ".hxanimation", animData, true);
+		PHX_CHECK(FileRW::WriteFile("animations/" + saveDir + "/" + anim->Name + ".hxanimation", animData));
 	}
 }
 

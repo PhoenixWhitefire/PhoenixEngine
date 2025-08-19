@@ -1,3 +1,3 @@
 #!/bin/bash
 
-x64/Debug/PhoenixEngine -apidump -loadmap scenes/ci/tests.world
+x64/Debug/PhoenixEngine -loadmap scenes/ci/tests.world

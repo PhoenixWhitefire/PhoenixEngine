@@ -1,0 +1,1569 @@
+#include <luau/Require/Runtime/include/Luau/Require.h>
+#include <luau/VM/include/lualib.h>
+#include <luau/VM/src/lstate.h>
+#include <Luau/Compiler.h>
+#include <glm/mat4x4.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+#include <tracy/Tracy.hpp>
+
+#include "script/ScriptEngine.hpp"
+#include "script/luhx.hpp"
+#include "datatype/Color.hpp"
+#include "FileRW.hpp"
+#include "Log.hpp"
+
+bool ScriptEngine::s_BackendScriptWantGrabMouse = false;
+
+std::vector<ScriptEngine::YieldedCoroutine> ScriptEngine::s_YieldedCoroutines{};
+const std::unordered_map<Reflection::ValueType, lua_Type> ScriptEngine::ReflectedTypeLuaEquivalent =
+{
+		{ Reflection::ValueType::Null,        lua_Type::LUA_TNIL       },
+
+		{ Reflection::ValueType::Boolean,     lua_Type::LUA_TBOOLEAN   },
+		{ Reflection::ValueType::Integer,     lua_Type::LUA_TNUMBER    },
+		{ Reflection::ValueType::Double,      lua_Type::LUA_TNUMBER    },
+		{ Reflection::ValueType::String,      lua_Type::LUA_TSTRING    },
+		{ Reflection::ValueType::Vector2,     lua_Type::LUA_TTABLE     },
+		{ Reflection::ValueType::Vector3,     lua_Type::LUA_TVECTOR    },
+
+		{ Reflection::ValueType::Color,       lua_Type::LUA_TUSERDATA  },
+		{ Reflection::ValueType::Matrix,      lua_Type::LUA_TUSERDATA  },
+
+		{ Reflection::ValueType::GameObject,  lua_Type::LUA_TUSERDATA  },
+
+		{ Reflection::ValueType::Array,       lua_Type::LUA_TTABLE     },
+		{ Reflection::ValueType::Map,         lua_Type::LUA_TTABLE     }
+};
+
+static void pushVector3(lua_State* L, const glm::vec3& vec)
+{
+	lua_pushvector(L, vec.x, vec.y, vec.z);
+}
+
+static void pushColor(lua_State* L, const Color& col)
+{
+	void* ptr = lua_newuserdata(L, sizeof(Color));
+	*(Color*)ptr = col;
+
+	luaL_getmetatable(L, "Color");
+	lua_setmetatable(L, -2);
+}
+
+static void pushMatrix(lua_State* L, const glm::mat4& Matrix)
+{
+	void* ptrToMtx = lua_newuserdata(L, sizeof(Matrix));
+	*(glm::mat4*)ptrToMtx = Matrix;
+
+	luaL_getmetatable(L, "Matrix");
+	lua_setmetatable(L, -2);
+}
+
+void ScriptEngine::L::PushJson(lua_State* L, const nlohmann::json& v)
+{
+	switch (v.type())
+	{
+	case nlohmann::json::value_t::null:
+	{
+		lua_pushnil(L);
+		break;
+	}
+
+	case nlohmann::json::value_t::boolean:
+	{
+		lua_pushboolean(L, (bool)v);
+		break;
+	}
+	case nlohmann::json::value_t::number_integer:
+	{
+		lua_pushinteger(L, (int)v);
+		break;
+	}
+	case nlohmann::json::value_t::number_unsigned:
+	{
+		lua_pushinteger(L, static_cast<int>((uint32_t)v));
+		break;
+	}
+	case nlohmann::json::value_t::number_float:
+	{
+		lua_pushnumber(L, (float)v);
+		break;
+	}
+	case nlohmann::json::value_t::string:
+	{
+		lua_pushstring(L, ((std::string)v).c_str());
+		break;
+	}
+	case nlohmann::json::value_t::array:
+	{
+		lua_newtable(L);
+
+		for (int i = 0; static_cast<size_t>(i) < v.size(); i++)
+		{
+			lua_pushinteger(L, i + 1);
+			PushJson(L, v[i]);
+			lua_settable(L, -3);
+		}
+		
+		break;
+	}
+	case nlohmann::json::value_t::object:
+	{
+		lua_newtable(L);
+
+		for (auto it = v.begin(); it != v.end(); ++it)
+		{
+			PushJson(L, it.value());
+			lua_setfield(L, -2, it.key().c_str());
+		}
+
+		break;
+	}
+	default:
+	{
+		lua_pushstring(L, (std::string("< JSON Value : ") + v.type_name() + " >").c_str());
+	}
+	}
+}
+
+nlohmann::json ScriptEngine::L::LuaValueToJson(lua_State* L, int StackIndex)
+{
+	switch (lua_type(L, StackIndex))
+	{
+	case LUA_TNIL:
+	{
+		return {};
+	}
+	case LUA_TBOOLEAN:
+	{
+		return (bool)lua_toboolean(L, StackIndex);
+	}
+	case LUA_TNUMBER:
+	{
+		return lua_tonumber(L, StackIndex);
+	}
+	case LUA_TSTRING:
+	{
+		return lua_tostring(L, StackIndex);
+	}
+	case LUA_TTABLE:
+	{
+		nlohmann::json t;
+		int keytype = LUA_TNIL;
+
+		lua_pushvalue(L, StackIndex);
+		lua_pushnil(L);
+
+		while (lua_next(L, -2) != 0)
+		{
+			if (lua_type(L, -2) != keytype && keytype != LUA_TNIL)
+				luaL_error(
+					L,
+					"All keys must have the same type. Previous type: %s, current type: %s (%s)",
+					lua_typename(L, keytype),
+					luaL_typename(L, -2),
+					lua_tostring(L, -2)
+				);
+
+			if (keytype == LUA_TNIL)
+			{
+				keytype = lua_type(L, -2);
+
+				if (keytype != LUA_TSTRING && keytype != LUA_TNUMBER)
+					luaL_error(L,
+						"Table keys expected to be strings or numbers, got '%s' (%s)",
+						lua_tostring(L, -2),
+						luaL_typename(L, -2)
+					);
+			}
+
+			if (lua_type(L, -2) == LUA_TNUMBER)
+				t[static_cast<size_t>(lua_tonumber(L, -2)) - 1] = LuaValueToJson(L, -1);
+			else if (lua_type(L, -2))
+				t[lua_tostring(L, -2)] = LuaValueToJson(L, -1);
+			
+			lua_pop(L, 1);
+		}
+		lua_pop(L, 1);
+
+		return t;
+	}
+
+	[[unlikely]] default:
+	{
+		const char* vtname = luaL_typename(L, -1);
+		std::string k;
+	
+		if (lua_type(L, -2) == LUA_TNUMBER)
+			k = std::to_string(lua_tonumber(L, -2));
+		else
+			k = lua_tostring(L, -2);
+	
+		RAISE_RT(std::format(
+			"Key '{}' is of non-JSON type {}!",
+			k, vtname
+		));
+	}
+	}
+}
+
+int ScriptEngine::CompileAndLoad(lua_State* L, const std::string& SourceCode, const std::string& ChunkName)
+{
+	ZoneScoped;
+	
+	// Tell Luau that these are mutable. Otherwise, GETIMPORT optimizations
+	// will cause them to be treated as constants and only invoke their `__index` functions
+	// once and cache the result
+	const char* mutableGlobals[] = 
+	{
+		"game", "workspace", "script",
+		NULL
+	};
+
+	Luau::CompileOptions compileOptions;
+	compileOptions.optimizationLevel = 2;
+	compileOptions.debugLevel = 1;
+	compileOptions.mutableGlobals = mutableGlobals;
+
+	std::string bytecode = Luau::compile(SourceCode, compileOptions);
+
+	return luau_load(L, ChunkName.c_str(), bytecode.data(), bytecode.size(), 0);
+}
+
+Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int StackIndex)
+{
+	switch (lua_type(L, StackIndex))
+	{
+	case LUA_TNIL:
+	{
+		return Reflection::GenericValue();
+	}
+	case LUA_TBOOLEAN:
+	{
+		return (bool)lua_toboolean(L, StackIndex);
+	}
+	case LUA_TNUMBER:
+	{
+		return lua_tonumber(L, StackIndex);
+	}
+	case LUA_TSTRING:
+	{
+		return lua_tostring(L, StackIndex);
+	}
+	case LUA_TVECTOR:
+	{
+		return glm::make_vec3(luaL_checkvector(L, StackIndex));
+	}
+	case LUA_TUSERDATA:
+	{
+		// IMPORTANT!!
+		// Requires `LuauPreserveLudataRenaming` to be enabled in `Luau/VM/src/ltm.cpp`
+		// 11/09/2024
+		const char* tname = luaL_typename(L, StackIndex);
+
+		if (strcmp(tname, "Color") == 0)
+		{
+			Color col = *(Color*)lua_touserdata(L, StackIndex);
+			return col.ToGenericValue();
+		}
+		else if (strcmp(tname, "Matrix") == 0)
+		{
+			return *(glm::mat4*)lua_touserdata(L, StackIndex);
+		}
+		else if (strcmp(tname, "GameObject") == 0)
+		{
+			Reflection::GenericValue gv = *(uint32_t*)lua_touserdata(L, StackIndex);
+			gv.Type = Reflection::ValueType::GameObject;
+
+			return gv;
+		}
+		else
+			luaL_error(L, "Couldn't convert a '%s' userdata to a GenericValue (unrecognized)", tname);
+	}
+	case LUA_TTABLE:
+	{
+		// 15/09/2024
+		// TODO
+		// Maps
+
+		std::vector<Reflection::GenericValue> items;
+
+		lua_pushvalue(L, StackIndex);
+
+		// https://www.lua.org/manual/5.1/manual.html#lua_next
+		lua_pushnil(L);
+
+		while (lua_next(L, -2) != 0)
+		{
+			items.push_back(ScriptEngine::L::LuaValueToGeneric(L, -1));
+			lua_pop(L, 1);
+		}
+		lua_pop(L, 1);
+
+		return items;
+	}
+	default:
+	{
+		const char* tname = luaL_typename(L, StackIndex);
+		luaL_error(L, "Could not convert type '%s' to a GenericValue (no conversion case)", tname);
+	}
+	}
+}
+
+void ScriptEngine::L::CheckType(lua_State* L, Reflection::ValueType Type, int StackIndex)
+{
+	bool isOptional = (uint8_t)Type & (uint8_t)Reflection::ValueType::Null;
+	int givenType = lua_type(L, StackIndex);
+
+	if (!isOptional || givenType != LUA_TNIL)
+	{
+		Type = (Reflection::ValueType)((uint8_t)Type & ~(uint8_t)Reflection::ValueType::Null);
+		auto reflToLuaIt = ScriptEngine::ReflectedTypeLuaEquivalent.find(Type);
+
+		if (reflToLuaIt == ScriptEngine::ReflectedTypeLuaEquivalent.end())
+		{
+			luaL_errorL(L,
+				"No defined mapping between a '%s' and a Luau type",
+				Reflection::TypeAsString(Type).c_str()
+			);
+		}
+
+		luaL_checktype(L, StackIndex, reflToLuaIt->second);
+
+		if (reflToLuaIt->second == LUA_TUSERDATA)
+			luaL_checkudata(L, StackIndex, Reflection::TypeAsString(Type).c_str());
+	}
+}
+
+void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericValue& gv)
+{
+	luaL_checkstack(L, 1, "::PushGenericValue");
+
+	switch (gv.Type)
+	{
+	case Reflection::ValueType::Null:
+	{
+		lua_pushnil(L);
+		break;
+	}
+	case Reflection::ValueType::Boolean:
+	{
+		lua_pushboolean(L, gv.AsBoolean());
+		break;
+	}
+	case Reflection::ValueType::Integer:
+	{
+		lua_pushinteger(L, static_cast<int32_t>(gv.AsInteger()));
+		break;
+	}
+	case Reflection::ValueType::Double:
+	{
+		lua_pushnumber(L, gv.AsDouble());
+		break;
+	}
+	case Reflection::ValueType::String:
+	{
+		lua_pushlstring(L, gv.AsStringView().data(), gv.AsStringView().size());
+		break;
+	}
+	case Reflection::ValueType::Vector3:
+	{
+		pushVector3(L, gv.AsVector3());
+		break;
+	}
+	case Reflection::ValueType::Color:
+	{
+		pushColor(L, gv);
+		break;
+	}
+	case Reflection::ValueType::Matrix:
+	{
+		pushMatrix(L, gv.AsMatrix());
+		break;
+	}
+	case Reflection::ValueType::GameObject:
+	{
+		PushGameObject(L, GameObject::FromGenericValue(gv));
+		break;
+	}
+	case Reflection::ValueType::Array:
+	{
+		std::span<Reflection::GenericValue> array = gv.AsArray();
+		luaL_checkstack(L, 6, "::PushGenericValue of type Array");
+		lua_newtable(L);
+
+		for (int index = 0; static_cast<size_t>(index) < array.size(); index++)
+		{
+			lua_pushinteger(L, index + 1);
+			L::PushGenericValue(L, array[index]);
+			lua_settable(L, -3);
+		}
+
+		break;
+	}
+	case Reflection::ValueType::Map:
+	{
+		std::span<Reflection::GenericValue> array = gv.AsArray();
+
+		if (array.size() % 2 != 0)
+			RAISE_RT("GenericValue type was Map, but it does not have an even number of elements!");
+
+		lua_newtable(L);
+
+		for (int index = 0; static_cast<size_t>(index) < array.size(); index++)
+		{
+			L::PushGenericValue(L, array[index]);
+
+			if ((index + 1) % 2 == 0)
+				lua_settable(L, -3);
+		}
+
+		break;
+	}
+	default:
+	{
+		std::string_view typeName = Reflection::TypeAsString(gv.Type);
+		luaL_error(L, "Cannot reflect values of type '%s'", typeName.data());
+	}
+	}
+}
+
+void ScriptEngine::L::PushGameObject(lua_State* L, GameObject* obj)
+{
+	if (!obj)
+		lua_pushnil(L); // null object properties are nil and falsey
+	else
+	{
+		/*uint32_t* ptrToObj = (uint32_t*)lua_newuserdatadtor(
+			L,
+			sizeof(uint32_t),
+			[](void* ptrId)
+			{
+				uint32_t id = *(uint32_t*)ptrId;
+
+				if (GameObject* o = GameObject::GetObjectById(id))
+					o->DecrementHardRefs(); // removes the reference in `::Create`
+			}
+		);*/
+		uint32_t* ptrToObj = (uint32_t*)lua_newuserdata(L, sizeof(uint32_t));
+		*ptrToObj = obj ? obj->ObjectId : PHX_GAMEOBJECT_NULL_ID;
+		
+		luaL_getmetatable(L, "GameObject");
+		lua_setmetatable(L, -2);
+	}
+}
+
+int ScriptEngine::L::HandleMethodCall(
+	lua_State* L,
+	const Reflection::Method* func,
+	ReflectorHandle FromComponent
+)
+{
+	int numArgs = lua_gettop(L) - 1;
+
+	const std::vector<Reflection::ValueType>& paramTypes = func->Inputs;
+
+	int numParams = static_cast<int32_t>(paramTypes.size());
+	int minArgs = 0;
+
+	for (int i = 0; i < numParams; i++)
+	{
+		const Reflection::ValueType& param = paramTypes[i];
+
+		if (!((uint8_t)param & (uint8_t)Reflection::ValueType::Null))
+			minArgs++;
+		else
+			break;
+	}
+
+	if (numArgs < minArgs)
+	{
+		std::string argsString = ": ( ";
+
+		if (numArgs > 0)
+		{
+			for (int arg = 1; arg < numArgs + 1; arg++)
+				argsString += std::string(luaL_typename(L, -(numArgs + 1 - arg))) + ", ";
+			
+			// trailing `, `
+			argsString = argsString.substr(0, argsString.size() - 2);
+
+			argsString += " )";
+		}
+		else
+			argsString.clear();
+
+		luaL_error(L,
+			"Function expects at least %i arguments, got %i instead%s", 
+			numParams, numArgs, argsString.c_str()
+		);
+
+		return 0;
+	}
+	else if (numArgs > numParams)
+	{
+		Log::WarningF("Function received {} more arguments than necessary",
+			numArgs - numParams
+		);
+	}
+
+	std::vector<Reflection::GenericValue> inputs;
+
+	// This *entire* for-loop is just for handling input arguments
+	for (int index = 0; index < numArgs; index++)
+	{
+		Reflection::ValueType paramType = paramTypes[index];
+
+		// Ex: W/ 3 args:
+		// 0 = -3
+		// 1 = -2
+		// 2 = -1
+		// Simpler than I thought actually
+		int argStackIndex = index - numArgs;
+		ScriptEngine::L::CheckType(L, paramType, argStackIndex);
+
+		inputs.push_back(L::LuaValueToGeneric(L, argStackIndex));
+	}
+
+	// Now, onto the *REAL* business...
+	std::vector<Reflection::GenericValue> outputs;
+
+	try
+	{
+		outputs = func->Func(GameObject::ReflectorHandleToPointer(FromComponent), inputs);
+	}
+	catch (const std::runtime_error& err)
+	{
+		luaL_error(L, "%s", err.what());
+	}
+
+	assert(outputs.size() == func->Outputs.size());
+
+	for (size_t i = 0; i < outputs.size(); i++)
+	{
+		const Reflection::GenericValue& output = outputs[i];
+		Reflection::ValueType base = func->Outputs[i];
+		if ((uint8_t)base > (uint8_t)Reflection::ValueType::Null)
+			base = (Reflection::ValueType)((uint8_t)base - (uint8_t)Reflection::ValueType::Null);
+
+		assert(output.Type == base
+			|| ((uint8_t)func->Outputs[i] > (uint8_t)Reflection::ValueType::Null && output.Type == Reflection::ValueType::Null)
+		);
+		L::PushGenericValue(L, output);
+	}
+
+	return (int)func->Outputs.size();
+
+	// ... kinda expected more, but ngl i feel SOOOO gigabrain for
+	// giving ::GenericValue an Array, like, it all just clicks in now!
+	// And then Maps just being Arrays, except odd elements are the keys
+	// and even elements are the values?! Call me Einstein already on god-
+	// (Me writing this as Rendering is completely busted and I have no clue
+	// why oh no
+	// 15/08/2024
+}
+
+void ScriptEngine::L::PushMethod(lua_State* L, const Reflection::Method* Function, ReflectorHandle FromComponent)
+{
+	// if we dont do this then comparison will not work
+	// ex: `game.Close == game.Close`
+
+	lua_pushlightuserdata(L, const_cast<Reflection::Method*>(Function));
+	lua_rawget(L, LUA_ENVIRONINDEX);
+
+	if (lua_isnil(L, -1))
+	{
+		lua_pop(L, 1); // remove `nil`, stack empty
+
+		static_assert(sizeof(FromComponent) <= sizeof(void*));
+		void* data = nullptr;
+		memcpy(&data, &FromComponent, sizeof(FromComponent));
+
+		lua_pushlightuserdata(L, const_cast<Reflection::Method*>(Function));
+		lua_pushlightuserdata(L, data);
+
+		lua_pushcclosure(
+			L,
+			[](lua_State* L)
+			{
+				Reflection::Method* fn = static_cast<Reflection::Method*>(lua_tolightuserdata(L, lua_upvalueindex(1)));
+				auto& fc = *static_cast<decltype(FromComponent)*>(lua_tolightuserdata(L, lua_upvalueindex(2)));
+
+				return ScriptEngine::L::HandleMethodCall(
+					L,
+					fn,
+					fc
+				);
+			},
+
+			"PushMethodThunk",
+			1
+		); // stack is now just closure
+
+		lua_pushlightuserdata(L, const_cast<Reflection::Method*>(Function));  // stack: closure, lud
+		lua_pushvalue(L, -2);                                                 // stack: closure, lud, closure
+		lua_settable(L, LUA_ENVIRONINDEX);                                    // map closure (value) to lud (key)
+
+		// stack is now just closure
+	}
+	// value we fetch from `_ENVIRON` will be closure that was pushed earlier
+}
+
+// modified version of `db_traceback` from `VM/src/ldblib.cpp`
+void ScriptEngine::L::DumpStacktrace(
+	lua_State* L,
+	std::string* Into,
+	int Level,
+	const char* Message
+)
+{
+	lua_Debug ar;
+
+	if (Message)
+	{
+		if (Into)
+		{
+			Into->append(Message);
+			Into->append("\n");
+		}
+		else
+			Log::Append(Message);
+	}
+	
+	for (int i = Level; lua_getinfo(L, i, "sln", &ar); i++)
+	{
+		std::string line = "from: ";
+
+		if (ar.source)
+			line.append(ar.short_src);
+		
+		if (ar.currentline > 0)
+		{
+			line.append(":");
+			line.append(std::to_string(ar.currentline));
+		}
+
+		if (ar.name)
+		{
+			line.append(" in ");
+			line.append(ar.name);
+		}
+
+		if (!Into)
+			Log::Append(line);
+		else
+		{
+			Into->append(line);
+			Into->append("\n");
+		}
+	}
+}
+
+struct EventSignalData
+{
+	ReflectorHandle Reflector;
+	const Reflection::Event* Event = nullptr;
+};
+
+struct EventConnectionData
+{
+	ReflectorHandle Reflector;
+	const Reflection::Event* Event = nullptr;
+	uint32_t ConnectionId = UINT32_MAX;
+	int ThreadRef = LUA_NOREF;
+	lua_State* L = nullptr;
+	bool CallbackYields = false;
+};
+
+static void pushSignal(lua_State* L, const Reflection::Event* Event, const ReflectorHandle& Reflector)
+{
+	EventSignalData* ev = (EventSignalData*)lua_newuserdata(L, sizeof(EventSignalData));
+	ev->Reflector = Reflector;
+	ev->Event = Event;
+
+	luaL_getmetatable(L, "EventSignal");
+	lua_setmetatable(L, -2);
+}
+
+static int api_newobject(lua_State* L)
+{
+	GameObject* newObject = GameObject::Create(luaL_checkstring(L, 1));
+	ScriptEngine::L::PushGameObject(L, newObject);
+
+	return 1;
+};
+
+static int api_gameobjindex(lua_State* L)
+{
+	ZoneScopedNC("GameObject.__index", tracy::Color::LightSkyBlue);
+
+	GameObject* obj = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
+	const char* key = luaL_checkstring(L, 2);
+
+	ZoneText(key, strlen(key));
+
+	if (strcmp(key, "Exists") == 0)
+	{
+		// whether or not it exists
+		lua_pushboolean(L, obj ? 1 : 0);
+		return 1;
+	}
+
+	LUA_ASSERT(obj, "Tried to index '%s' of a deleted Game Object (use '.Exists' to check before accessing a member)", key);
+
+	std::pair<EntityComponent, uint32_t> reflectorHandle;
+
+	if (const Reflection::Property* prop = obj->FindProperty(key, &reflectorHandle))
+	{
+		Reflection::GenericValue v = prop->Get(GameObject::ReflectorHandleToPointer(reflectorHandle));
+
+		assert(
+			(v.Type == prop->Type)
+			|| (v.Type == Reflection::ValueType::Null && prop->Type == Reflection::ValueType::GameObject)
+		);
+		ScriptEngine::L::PushGenericValue(L, v);
+	}
+
+	else if (const Reflection::Event* event = obj->FindEvent(key, &reflectorHandle))
+		pushSignal(L, event, reflectorHandle);
+
+	// Methods are lower because we prefer namecalls
+	else if (const Reflection::Method* func = obj->FindMethod(key, &reflectorHandle))
+		ScriptEngine::L::PushMethod(L, func, reflectorHandle);
+
+	else
+	{
+		GameObject* child = obj->FindChild(key);
+
+		if (child)
+			ScriptEngine::L::PushGameObject(L, child);
+		else
+			// 18/05/2025
+			// this is going to be an error because i spent an entire 26 seconds
+			// trying to figure out why something wasnt working
+			luaL_errorL(L, "No child or member '%s' of %s", key, obj->GetFullName().c_str());
+	}
+
+	return 1;
+};
+
+static int api_gameobjnewindex(lua_State* L)
+{
+	ZoneScopedNC("GameObject.__newindex", tracy::Color::LightSkyBlue);
+
+	GameObject* obj = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
+	const char* key = luaL_checkstring(L, 2);
+
+	ZoneText(key, strlen(key));
+
+	if (strcmp(key, "Exists") == 0)
+		luaL_errorL(L, "%s", "'Exists' is read-only! - 21/12/2024");
+
+	LUA_ASSERT(obj, "Tried to assign to the '%s' of a deleted Game Object", key);
+
+	if (const Reflection::Property* prop = obj->FindProperty(key))
+	{
+		const char* argAsString = luaL_tolstring(L, 3, NULL);
+		const char* argTypeName = luaL_typename(L, 3);
+		
+		if (!prop->Set)
+			luaL_errorL(L, 
+				"Cannot set Property '%s' to %s '%s' because it is read-only",
+				key, argTypeName, argAsString
+			);
+
+		ScriptEngine::L::CheckType(L, prop->Type, 3);
+
+		Reflection::GenericValue newValue = ScriptEngine::L::LuaValueToGeneric(L, 3);
+
+		try
+		{
+			obj->SetPropertyValue(key, newValue);
+		}
+		catch (const std::runtime_error& err)
+		{
+			luaL_errorL(L, "Error while setting property %s '%s': %s", key, obj->Name.c_str(), err.what());
+		}
+	}
+	else
+	{
+		std::string fullname = obj->GetFullName();
+	
+		if (obj->FindChild(key))
+			luaL_errorL(L,
+				"Attempt to set invalid Member '%s' of '%s', although it has a child object with that name",
+				key, fullname.c_str()
+			);
+		else
+			luaL_errorL(L,
+				"Attempt to set invalid Member '%s' of '%s'",
+				key, fullname.c_str()
+			);
+	}
+
+	return 0;
+};
+
+static int api_gameobjectnamecall(lua_State* L)
+{
+	ZoneScopedNC("GameObject.__namecall", tracy::Color::LightSkyBlue);
+
+	GameObject* g = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
+	const char* k = L->namecall->data; // this is weird 10/01/2025
+
+	if (!g)
+		luaL_errorL(L, "Tried to call '%s' of a de-allocated GameObject with ID %u", k, *(uint32_t*)lua_touserdata(L, 1));
+
+	ZoneText(k, strlen(k));
+
+	std::pair<EntityComponent, uint32_t> reflectorHandle;
+	const Reflection::Method* func = g->FindMethod(k, &reflectorHandle);
+
+	if (!func)
+		luaL_errorL(L, "'%s' is not a valid method of %s", k, g->GetFullName().c_str());
+
+	int numresults = 0;
+
+	try
+	{
+		numresults = ScriptEngine::L::HandleMethodCall(
+			L,
+			func,
+			reflectorHandle
+		);
+	}
+	catch (const std::runtime_error& err)
+	{
+		luaL_errorL(L, "Error while invoking method '%s' of %s: %s", k, g->GetFullName().c_str(), err.what());
+	}
+
+	return numresults;
+}
+
+static int api_gameobjecttostring(lua_State* L)
+{
+	GameObject* object = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
+	
+	if (object)
+		lua_pushstring(L, object->GetFullName().c_str());
+	else
+		lua_pushstring(L, "<!Deleted GameObject!>");
+
+	return 1;
+};
+
+static int api_newcol(lua_State* L)
+{
+	float x = static_cast<float>(luaL_checknumber(L, 1));
+	float y = static_cast<float>(luaL_checknumber(L, 2));
+	float z = static_cast<float>(luaL_checknumber(L, 3));
+
+	ScriptEngine::L::PushGenericValue(L, Color(x, y, z).ToGenericValue());
+
+	return 1;
+};
+
+static int api_colindex(lua_State* L)
+{
+	Color* vec = (Color*)luaL_checkudata(L, 1, "Color");
+	const char* key = luaL_checkstring(L, 2);
+
+	lua_getglobal(L, "Color");
+	lua_pushstring(L, key);
+	lua_rawget(L, -2);
+
+	// Pass-through to Vector3.new
+	if (!lua_isnil(L, -1))
+		return 1;
+
+	if (strcmp(key, "R") == 0)
+	{
+		lua_pushnumber(L, vec->R);
+		return 1;
+	}
+	else if (strcmp(key, "G") == 0)
+	{
+		lua_pushnumber(L, vec->G);
+		return 1;
+	}
+	else if (strcmp(key, "B") == 0)
+	{
+		lua_pushnumber(L, vec->B);
+		return 1;
+	}
+	else
+		luaL_errorL(L, "Invalid key %s", key);
+};
+
+static int api_coltostring(lua_State* L)
+{
+	Color* col = (Color*)luaL_checkudata(L, 1, "Color");
+
+	lua_pushstring(
+		L,
+		std::format(
+			"{}, {}, {}",
+			col->R, col->G, col->B
+		).c_str()
+	);
+
+	return 1;
+};
+
+static int api_eventnamecall(lua_State* L)
+{
+	if (strcmp(L->namecall->data, "Connect") == 0)
+	{
+		luaL_checktype(L, 2, LUA_TFUNCTION);
+
+		EventSignalData* ev = (EventSignalData*)luaL_checkudata(L, 1, "EventSignal");
+		const Reflection::Event* rev = ev->Event;
+
+		// TRUST ME, ALL THESE L's MAKE SENSE OK
+		// `eL` IS. UH. UHHH. *EVENT* L! YES, *E*VENT L
+		// THEN, *THEN*, `cL` IS... *C*ONNECTION L!! YES, YES, YES!!!
+		// "And then, `nL`?", YOU MAY ASK, (smart and kinda cute as always)
+		// ...
+		// ...
+		// ...
+		// ...
+		// _*NNNNNNNNNNNNNNN*EW_ L! *NNNNNNN*EW!! *N*EW *N*EW *N*EW *N*EW!!!!!!!
+		// MY GENIUS
+		// UNPARAARALELLED
+		//    ARAARA
+		//    ara ara
+		// (tee hee)
+		lua_State* eL = lua_newthread(L);
+		lua_State* cL = lua_newthread(eL);
+		int threadRef = lua_ref(L, -1);
+		lua_xpush(L, eL, 2);
+
+		EventConnectionData* ec = (EventConnectionData*)lua_newuserdata(eL, sizeof(EventConnectionData));
+		luaL_getmetatable(eL, "EventConnection"); // stack: ec, mt
+		lua_setmetatable(eL, -2); // stack: ec
+
+		lua_pushlightuserdata(eL, eL); // stack: ec, lud
+		lua_pushvalue(eL, -2); // stack: ec, lud, ec
+		lua_settable(eL, LUA_ENVIRONINDEX); // stack: ec
+		lua_pop(eL, 1);
+	
+		uint32_t cnId = rev->Connect(
+			GameObject::ReflectorHandleToPointer(ev->Reflector),
+		
+			[eL, cL, rev](const std::vector<Reflection::GenericValue>& Inputs)
+			-> void
+			{
+				assert(Inputs.size() == rev->CallbackInputs.size());
+				assert(lua_isfunction(eL, 2));
+
+				lua_pushlightuserdata(eL, eL);
+				lua_gettable(eL, LUA_ENVIRONINDEX);
+				EventConnectionData* cn = (EventConnectionData*)luaL_checkudata(eL, -1, "EventConnection");
+				lua_pop(eL, 1);
+
+				lua_State* co = cL;
+
+				// performance optimization:
+				// if the callback never yields, then we know that
+				// there cannot be more than one instance of it
+				// running concurrently. thus, we can re-use a single thread
+				// instead of creating a new one for each invocation
+				if (cn->CallbackYields)
+				{
+					lua_State* nL = lua_newthread(eL);
+					luaL_checkstack(nL, (int32_t)Inputs.size() + 1, "event connection callback args");
+					lua_xpush(eL, nL, 2);
+					lua_pop(eL, 1); // pop nL off eL
+
+					co = nL;
+				}
+				else
+				{
+					lua_xpush(eL, cL, 2);
+				}
+
+				for (size_t i = 0; i < Inputs.size(); i++)
+				{
+					assert(Inputs[i].Type == rev->CallbackInputs[i]);
+					ScriptEngine::L::PushGenericValue(co, Inputs[i]);
+				}
+
+				// TODO 11/08/2025
+				// they added a "correct" way to do this, with continuations n stuff
+				// but i genuinely just could not be bothered
+				co->baseCcalls++;
+				int status = lua_pcall(co, static_cast<int32_t>(Inputs.size()), 0, 0);
+				co->baseCcalls++;
+
+				if (status != LUA_OK && status != LUA_YIELD)
+				{
+					Log::ErrorF("Script event: {}", lua_tostring(co, -1));
+					ScriptEngine::L::DumpStacktrace(co);
+					lua_pop(co, 1);
+				}
+
+				// status returned from _pcall is 0 when it yields for some reason?? TODO
+				if (status == LUA_YIELD || co->status == LUA_YIELD)
+				{
+					cn->CallbackYields = true;
+				}
+			}
+		);
+
+		ec->Reflector = ev->Reflector;
+		ec->ThreadRef = threadRef;
+		ec->ConnectionId = cnId;
+		ec->Event = ev->Event;
+		ec->L = L;
+	
+		return 1;
+	}
+	else
+		luaL_error(L, "No such method of Event Signal known as '%s'", L->namecall->data);
+}
+
+static int api_evconnectionindex(lua_State* L)
+{
+	const char* k = luaL_checkstring(L, 2);
+	EventConnectionData* ec = (EventConnectionData*)luaL_checkudata(L, 1, "EventConnection");
+
+	if (strcmp(k, "Connected") == 0)
+		lua_pushboolean(L, ec->ConnectionId != UINT32_MAX);
+
+	else if (strcmp(k, "Signal") == 0)
+		pushSignal(L, ec->Event, ec->Reflector);
+
+	else
+		luaL_error(L, "Invalid member '%s' of Event Connection", k);
+				
+	return 1;
+}
+
+static int api_evconnectionnamecall(lua_State* L)
+{
+	if (strcmp(L->namecall->data, "Disconnect") == 0)
+	{
+		EventConnectionData* ec = (EventConnectionData*)luaL_checkudata(L, 1, "EventConnection");
+
+		if (ec->ConnectionId == UINT32_MAX)
+			luaL_error(L, "Event Connection was already disconnected!");
+
+		ec->Event->Disconnect(GameObject::ReflectorHandleToPointer(ec->Reflector), ec->ConnectionId);
+		ec->ConnectionId = UINT32_MAX;
+
+		lua_pushlightuserdata(L, L);
+		lua_pushnil(L);
+		lua_settable(L, LUA_ENVIRONINDEX); // remove stacktrace string
+
+		lua_unref(ec->L, ec->ThreadRef);
+	}
+	else
+		luaL_error(L, "No such method of Event Connection known as '%s'", L->namecall->data);
+	
+	return 0;
+}
+
+static void* l_alloc(void*, void* ptr, size_t, size_t nsize)
+{
+	if (nsize == 0) {
+		Memory::Free(ptr);
+		return NULL;
+	}
+	else
+		return Memory::ReAlloc(ptr, nsize, Memory::Category::Luau);
+}
+
+static void requireConfigInit(luarequire_Configuration* config)
+{
+	config->is_require_allowed = [](lua_State*, void*, const char*)
+		{
+			return true;
+		};
+	config->reset = [](lua_State*, void* ctx, const char* chname)
+		{
+			// chunkname is prefixed with @
+			assert(chname[0] == '@');
+			((std::filesystem::path*)ctx)->assign(chname + 1);
+			return NAVIGATE_SUCCESS;
+		};
+	config->jump_to_alias = [](lua_State*, void*, const char*)
+		{
+			return NAVIGATE_NOT_FOUND;
+		};
+	config->to_parent = [](lua_State*, void* ctx)
+		{
+			std::filesystem::path* curpath = (std::filesystem::path*)ctx;
+
+			if (curpath->has_parent_path())
+			{
+				*curpath = curpath->parent_path();
+				return NAVIGATE_SUCCESS;
+			}
+			else
+				return NAVIGATE_NOT_FOUND;
+		};
+	config->to_child = [](lua_State*, void* ctx, const char* name)
+		{
+			std::filesystem::path* curpath = (std::filesystem::path*)ctx;
+			if (!std::filesystem::exists(*curpath / name))
+				return NAVIGATE_NOT_FOUND;
+
+			*curpath /= name;
+			return NAVIGATE_SUCCESS;
+		};
+	config->is_module_present = [](lua_State*, void* ctx)
+		{
+			std::filesystem::path* curpath = (std::filesystem::path*)ctx;
+
+			if (std::filesystem::is_regular_file(*curpath))
+				return true;
+			else
+				return false;
+		};
+	config->get_chunkname = [](lua_State*, void* ctx, char* buffer, size_t bufferSize, size_t* outSize)
+		{
+			std::filesystem::path* curpath = (std::filesystem::path*)ctx;
+			std::string strpath = curpath->string();
+			*outSize = strpath.size() + 1;
+
+			if (bufferSize < strpath.size() + 1)
+				return WRITE_BUFFER_TOO_SMALL;
+			else
+			{
+				memcpy(buffer + 1, strpath.data(), strpath.size());
+				buffer[0] = '@';
+				return WRITE_SUCCESS;
+			}
+		};
+	config->get_loadname = config->get_chunkname; // TODO what's a loadname
+	config->get_cache_key = config->get_chunkname;
+	config->is_config_present = [](lua_State*, void* ctx)
+		{
+			return std::filesystem::is_regular_file(*(std::filesystem::path*)ctx / ".luaurc");
+		};
+	config->get_config = [](lua_State*, void* ctx, char* buffer, size_t bufferSize, size_t* outSize)
+		{
+			std::filesystem::path* curpath = (std::filesystem::path*)ctx;
+			std::string contents = FileRW::ReadFile(curpath->string());
+			*outSize = contents.size();
+
+			if (bufferSize < contents.size())
+				return WRITE_BUFFER_TOO_SMALL;
+			
+			memcpy(buffer, contents.data(), contents.size());
+
+			return WRITE_SUCCESS;
+		};
+	config->load = [](lua_State* L, void* ctx, const char* path, const char* chname, const char* ldname)
+		{
+			std::filesystem::path* curpath = (std::filesystem::path*)ctx;
+
+			// from `Luau/CLI/src/ReplRequirer.cpp` 13/08/2025
+
+			// module needs to run in a new thread, isolated from the rest
+			// note: we create ML on main thread so that it doesn't inherit environment of L
+			lua_State* GL = lua_mainthread(L);
+			lua_State* ML = lua_newthread(GL);
+			lua_xmove(GL, L, 1);
+
+			// new thread needs to have the globals sandboxed
+			luaL_sandboxthread(ML);
+			
+			if (ScriptEngine::CompileAndLoad(ML, FileRW::ReadFile(curpath->string()), chname) == 0)
+			{
+				int status = lua_resume(ML, L, 0);
+
+				if (status == 0)
+				{
+					if (lua_gettop(ML) == 0)
+						lua_pushstring(ML, "module must return a value");
+
+					else if (!lua_istable(ML, -1) && !lua_isfunction(ML, -1))
+						lua_pushstring(ML, "module must return a table or function");
+				}
+				else if (status == LUA_YIELD)
+					lua_pushstring(ML, "module can not yield");
+
+				else if (!lua_isstring(ML, -1))
+					lua_pushstring(ML, "unknown error while running module");
+			}
+			
+			// add ML result to L stack
+    		lua_xmove(ML, L, 1);
+    		if (lua_isstring(L, -1))
+    		    lua_error(L);
+
+    		// remove ML thread from L stack
+    		lua_remove(L, -2);
+
+    		// added one value to L stack: module result
+			return 1;
+		};
+}
+
+// FROM: `ldblib.cpp` 15/08/2025
+static lua_State* getthread(lua_State* L, int* arg)
+{
+    if (lua_isthread(L, 1))
+    {
+        *arg = 1;
+        return lua_tothread(L, 1);
+    }
+    else
+    {
+        *arg = 0;
+        return L;
+    }
+}
+
+lua_State* ScriptEngine::L::Create()
+{
+	ZoneScopedC(tracy::Color::LightSkyBlue);
+
+	lua_State* state = lua_newstate(l_alloc, nullptr);
+	// Load Standard Library ('print' etc)
+	luaL_openlibs(state);
+	// Load runtime-specific libraries
+	luhx_openlibs(state);
+
+	luaopen_require(
+		state,
+		requireConfigInit,
+		new std::filesystem::path()
+	);
+
+	lua_getglobal(state, "debug");
+	lua_pushcfunction(
+		state,
+		[](lua_State* L)
+		{
+			int arg;
+    		lua_State* L1 = getthread(L, &arg);
+    		const char* msg = luaL_optstring(L, arg + 1, NULL);
+    		int level = luaL_optinteger(L, arg + 2, (L == L1) ? 1 : 0);
+    		luaL_argcheck(L, level >= 0, arg + 2, "level can't be negative");
+
+			std::string trace;
+			ScriptEngine::L::DumpStacktrace(L, &trace, level, msg);
+
+			lua_pushlstring(L, trace.data(), trace.size());
+			return 1;
+		},
+		"hx_dumpStacktrace"
+	);
+	lua_setfield(state, -2, "traceback");
+
+	// Color
+	{
+		lua_newtable(state);
+
+		lua_pushcfunction(state, api_newcol, "Color.new");
+		lua_setfield(state, -2, "new");
+
+		lua_setglobal(state, "Color");
+
+		luaL_newmetatable(state, "Color");
+
+		lua_pushcfunction(state, api_colindex, "Color.__index");
+		lua_setfield(state, -2, "__index");
+
+		lua_pushcfunction(state, api_coltostring, "Color.__tostring");
+		lua_setfield(state, -2, "__tostring");
+
+		lua_pushstring(state, "Color");
+		lua_setfield(state, -2, "__type");
+	}
+
+	// Matrix 
+	{
+		lua_newtable(state);
+
+		lua_pushcfunction(
+			state,
+			[](lua_State* L)
+			{
+				Reflection::GenericValue gv{ glm::mat4(1.f) };
+				ScriptEngine::L::PushGenericValue(L, gv);
+
+				return 1;
+			},
+			"Matrix.new"
+		);
+		lua_setfield(state, -2, "new");
+
+		lua_pushcfunction(
+			state,
+			[](lua_State* L)
+			{
+				ZoneScopedNC("Matrix.fromTranslation", tracy::Color::LightSkyBlue);
+
+				glm::mat4 m(1.f);
+
+				int numArgs = lua_gettop(L);
+
+				switch (numArgs)
+				{
+				case 1:
+				{
+					const float* vec = luaL_checkvector(L, -1);
+					m[3] = glm::vec4(glm::make_vec3(vec), 1.f);
+
+					break;
+				}
+				case 3:
+				{
+					float x = static_cast<float>(luaL_checknumber(L, 1));
+					float y = static_cast<float>(luaL_checknumber(L, 2));
+					float z = static_cast<float>(luaL_checknumber(L, 3));
+
+					m[3] = glm::vec4(glm::vec3(x, y, z), 1.f);
+
+					break;
+				}
+
+				default:
+					luaL_errorL(
+						L,
+						"`Matrix.fromTranslation` expected 1 or 3 arguments, got %i",
+						numArgs
+					);
+				}
+				
+				ScriptEngine::L::PushGenericValue(L, m);
+
+				return 1;
+			},
+			"Matrix.fromTranslation"
+		);
+		lua_setfield(state, -2, "fromTranslation");
+
+		lua_pushcfunction(
+			state,
+			[](lua_State* L)
+			{
+				ZoneScopedNC("Matrix.fromEulerAnglesXYZ", tracy::Color::LightSkyBlue);
+
+				float x = static_cast<float>(luaL_checknumber(L, 1));
+				float y = static_cast<float>(luaL_checknumber(L, 2));
+				float z = static_cast<float>(luaL_checknumber(L, 3));
+
+				glm::mat4 t(1.f);
+				t = glm::rotate(t, x, glm::vec3(1.f, 0.f, 0.f));
+				t = glm::rotate(t, y, glm::vec3(0.f, 1.f, 0.f));
+				t = glm::rotate(t, z, glm::vec3(0.f, 0.f, 1.f));
+
+				ScriptEngine::L::PushGenericValue(L, t);
+
+				return 1;
+			},
+			"Matrix.fromEulerAnglesXYZ"
+		);
+		lua_setfield(state, -2, "fromEulerAnglesXYZ");
+
+		lua_pushcfunction(
+			state,
+			[](lua_State* L)
+			{
+				const float* a = luaL_checkvector(L, 1);
+				const float* b = luaL_checkvector(L, 2);
+
+				ScriptEngine::L::PushGenericValue(
+					L,
+					glm::lookAt(glm::make_vec3(a), glm::make_vec3(b), glm::vec3(0.f, 1.f, 0.f))
+				);
+
+				return 1;
+			},
+			"Matrix.lookAt"
+		);
+		lua_setfield(state, -2, "lookAt");
+
+		lua_setglobal(state, "Matrix");
+
+		luaL_newmetatable(state, "Matrix");
+
+		lua_pushstring(state, "Matrix");
+		lua_setfield(state, -2, "__type");
+
+		lua_pushcfunction(
+			state,
+			[](lua_State* L)
+			{
+				ZoneScopedNC("Matrix.__index", tracy::Color::LightSkyBlue);
+
+				glm::mat4& m = *(glm::mat4*)luaL_checkudata(L, 1, "Matrix");
+				size_t klen = 0;
+				const char* k = luaL_checklstring(L, 2, &klen);
+
+				ZoneText(k, strlen(k));
+
+				if (strcmp(k, "Position") == 0)
+					ScriptEngine::L::PushGenericValue(
+						L,
+						glm::vec3(m[3])
+					);
+				else if (strcmp(k, "Forward") == 0)
+					ScriptEngine::L::PushGenericValue(
+						L,
+						glm::normalize(glm::vec3(m[2]))
+					);
+				else if (strcmp(k, "Up") == 0)
+					ScriptEngine::L::PushGenericValue(
+						L,
+						glm::normalize(glm::vec3(m[1]))
+					);
+				else if (strcmp(k, "Right") == 0)
+					ScriptEngine::L::PushGenericValue(
+						L,
+						glm::normalize(glm::vec3(m[0]))
+					);
+
+				else if (klen == 4 && k[0] == 'C' && k[2] == 'R')
+				{
+					char col = k[1];
+					char row = k[3];
+
+					// allows ASCII 49, 50, 51, 52, AKA
+					// 1, 2, 3, and 4
+					luaL_argcheck(L, col > 48 && col < 53, 2, "column index must be in range [1 .. 4]");
+					luaL_argcheck(L, row > 48 && row < 53, 2, "row index must be in range [1 .. 4]");
+
+					lua_pushnumber(L, m[col - 49][row - 49]);
+				}
+				else
+					luaL_errorL(L, "Invalid member %s", k);
+
+				return 1;
+			},
+			"Matrix.__index"
+		);
+		lua_setfield(state, -2, "__index");
+
+		lua_pushcfunction(
+			state,
+			[](lua_State* L)
+			{
+				ZoneScopedNC("Matrix.__newindex", tracy::Color::LightSkyBlue);
+
+				glm::mat4& m = *(glm::mat4*)luaL_checkudata(L, 1, "Matrix");
+				size_t klen = 0;
+				const char* k = luaL_checklstring(L, 2, &klen);
+				float v = static_cast<float>(luaL_checknumber(L, 3));
+
+				ZoneText(k, strlen(k));
+
+				if (klen == 4 && k[0] == 'C' && k[2] == 'R')
+				{
+					char col = k[1];
+					char row = k[3];
+
+					// allows ASCII 49, 50, 51, 52, AKA
+					// 1, 2, 3, and 4
+					luaL_argcheck(L, col > 48 && col < 53, 2, "column index must be in range [1 .. 4]");
+					luaL_argcheck(L, row > 48 && row < 53, 2, "row index must be in range [1 .. 4]");
+
+					// push previous value
+					lua_pushnumber(L, m[col - 49][row - 49]);
+					m[col - 49][row - 49] = v;
+				}
+				else
+					luaL_errorL(L, "Invalid member %s", k);
+
+				return 1;
+			},
+			"Matrix.__newindex"
+		);
+		lua_setfield(state, -2, "__newindex");
+
+		lua_pushcfunction(
+			state,
+			[](lua_State* L)
+			{
+				glm::mat4& a = *(glm::mat4*)luaL_checkudata(L, 1, "Matrix");
+				glm::mat4& b = *(glm::mat4*)luaL_checkudata(L, 2, "Matrix");
+
+				ScriptEngine::L::PushGenericValue(L, a * b);
+
+				return 1;
+			},
+			"Matrix.__mul"
+		);
+		lua_setfield(state, -2, "__mul");
+	}
+
+	// GameObject
+	{
+		lua_newtable(state);
+
+		lua_pushcfunction(state, api_newobject, "GameObject.new");
+		lua_setfield(state, -2, "new");
+
+		lua_setglobal(state, "GameObject");
+
+		luaL_newmetatable(state, "GameObject");
+
+		lua_pushcfunction(state, api_gameobjindex, "GameObject.__index");
+		lua_setfield(state, -2, "__index");
+
+		lua_pushcfunction(state, api_gameobjnewindex, "GameObject.__newindex");
+		lua_setfield(state, -2, "__newindex");
+
+		lua_pushcfunction(
+			state,
+			api_gameobjectnamecall,
+			"__namecall" // leaving as "__namecall" SPECIFICALLY adds the method name to errors (check `currfuncname` in laux.cpp)
+		);
+		lua_setfield(state, -2, "__namecall");
+
+		lua_pushcfunction(state, api_gameobjecttostring, "GameObject.__tostring");
+		lua_setfield(state, -2, "__tostring");
+
+		lua_pushstring(state, "GameObject");
+		lua_setfield(state, -2, "__type");
+	}
+
+	// Event Signal
+	{
+		luaL_newmetatable(state, "EventSignal");
+
+		lua_pushcfunction(
+			state,
+			api_eventnamecall,
+			"__namecall"
+		);
+		lua_setfield(state, -2, "__namecall");
+
+		lua_pushstring(state, "EventSignal");
+		lua_setfield(state, -2, "__type");
+	}
+
+	// Event Connection
+	{
+		luaL_newmetatable(state, "EventConnection");
+
+		lua_pushcfunction(
+			state,
+			api_evconnectionnamecall,
+			"__namecall"
+		);
+		lua_setfield(state, -2, "__namecall");
+
+		lua_pushcfunction(
+			state,
+			api_evconnectionindex,
+			"EventConnection.__index"
+		);
+		lua_setfield(state, -2, "__index");
+
+		lua_pushstring(state, "EventConnection");
+		lua_setfield(state, -2, "__type");
+	}
+
+	ScriptEngine::L::PushGameObject(state, GameObject::GetObjectById(GameObject::s_DataModel));
+	lua_setglobal(state, "game");
+
+	ScriptEngine::L::PushGameObject(state, GameObject::GetObjectById(GameObject::s_DataModel)->FindChild("Workspace"));
+	lua_setglobal(state, "workspace");
+
+	return state;
+}

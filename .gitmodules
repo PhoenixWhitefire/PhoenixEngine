@@ -16,3 +16,6 @@
 [submodule "Vendor/SDL"]
 	path = Vendor/SDL
 	url = https://github.com/libsdl-org/SDL.git/
+[submodule "Vendor/curl"]
+	path = Vendor/curl
+	url = https://github.com/curl/curl.git

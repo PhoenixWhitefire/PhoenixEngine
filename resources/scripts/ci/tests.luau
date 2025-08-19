@@ -3,9 +3,9 @@
 
 sleep(1)
 
-local start = game.Time
+local start = os.clock()
 
-local testEntries = fs_listdir("scripts/ci/tests")
+local testEntries = fs.listdir("scripts/ci/tests")
 
 local tests = {}
 local curGroup = nil
@@ -98,7 +98,8 @@ end
 
 local function discoverTests(t, parent)
 	for k, v in t do
-		local groupName = string.sub(k, string.find(k, "tests/") + #("tests/"), #k)
+		local lastSlash = #k - string.find(string.reverse(k), "/")
+		local groupName = string.sub(k, lastSlash + 2, #k)
 		parent[groupName] = {}
 		curGroup = parent[groupName]
 		
@@ -107,7 +108,7 @@ local function discoverTests(t, parent)
 			m(describe, it, expect)
 			
 		elseif v == "d" then
-			discoverTests(fs_listdir(k), curGroup)
+			discoverTests(fs.listdir(k), curGroup)
 		end
 	end
 end
@@ -133,14 +134,14 @@ local function runTests(t, depth)
 			local printstr = `{indent}Test {index}: {entry.Name}... `
 			print(printstr, string.rep(" ", 50 - #printstr), "&&")
 			
-			local tstart = game.Time
+			local tstart = os.clock()
 			
 			local success, errd = xpcall(function()
 				entry.Callback()
 			end, errorStackTrace)
 			
-			totaltesttime += game.Time - tstart
-			local mstime = (game.Time - tstart) * 1000
+			totaltesttime += os.clock() - tstart
+			local mstime = (os.clock() - tstart) * 1000
 			local mstimestr = if mstime > 1 then math.ceil(mstime) .. "ms" else "<1ms"
 			
 			if success then
@@ -183,7 +184,7 @@ elseif testCount == 0 then
 end
 
 print("\n")
-print(`Testing session took { game.Time - start } seconds. Tests themselves took { totaltesttime } seconds in total`)
+print(`Testing session took { os.clock() - start } seconds. Tests themselves took { totaltesttime } seconds in total`)
 
 appendlog("\n\n\n\n")
 

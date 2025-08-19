@@ -82,6 +82,13 @@ public:
         return funcs;
     }
 
+// stupid compiler false positive warnings
+#if defined(__GNUG__) && (__GNUG__ == 14)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
+
     virtual const Reflection::StaticEventMap& GetEvents() override
     {
         static Reflection::StaticEventMap events =
@@ -91,6 +98,10 @@ public:
 
         return events;
     }
+
+#if defined(__GNUG__) && (__GNUG__ == 14)
+#pragma GCC diagnostic pop
+#endif
 
     DataModelManager()
     {

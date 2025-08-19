@@ -187,7 +187,10 @@ void Engine::LoadConfiguration()
 			resDir
 		);
 
-	Log::Info("Configuration loaded");
+	if (ConfigLoadSucceeded)
+		Log::Info("Configuration loaded");
+	else
+		Log::Info(ConfigLoadErrorMessage);
 }
 
 void Engine::Close()

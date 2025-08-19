@@ -16,7 +16,7 @@ BackgroundAmbience.Looped = true
 BackgroundAmbience.Name = "BackgroundAmbience"
 BackgroundAmbience.Parent = workspace
 
-local animtest = scene_load("scenes/animtest.hxscene")[1]
+local animtest = ({ scene.load("scenes/animtest.hxscene") })[2][1]
 animtest.Parent = workspace
 
 local function loadSubLevel(Path)
@@ -29,23 +29,23 @@ local function loadSubLevel(Path)
 		v:Destroy()
 	end
 	
-	for _, root in scene_load(Path) do
+	for _, root in ({scene.load(Path)})[2] do
 		root.Parent = workspace.Level
 	end
 end
 
 local function update(DeltaTime)
-	if imgui_begin("Model Importer") then
-		ModelImporterScale = imgui_input_float("Scale", ModelImporterScale)
+	if imgui.begin("Model Importer") then
+		ModelImporterScale = imgui.inputnumber("Scale", ModelImporterScale)
 
-		if imgui_button("Select & Import Model") then
-			imgui_end()
+		if imgui.button("Select & Import Model") then
+			imgui.endw()
 			
-			local Path = fd_open("resources/models", "Models", "gltf;glb")[1]
+			local Path = fs.promptopen("./hi", "Models", "gltf;glb")[1]
 			if Path then
 				local pathSplit = string.split(Path, "/")
 				
-				local parts = model_import(Path)
+				local parts = model.import(Path)
 				--local model = GameObject.new("Model")
 				--model.Name = pathSplit[#pathSplit]
 				--model.Parent = workspace
@@ -61,19 +61,19 @@ local function update(DeltaTime)
 			return
 		end
 	end
-	imgui_end()
+	imgui.endw()
 	
-	if imgui_begin("Run Script") then
-		if imgui_textlink("Path: " .. ScriptExecutionFile) then
-			imgui_end()
-			local Path = fd_open("resources/scripts", "Luau Scripts", "luau")[1]
+	if imgui.begin("Run Script") then
+		if imgui.textlink("Path: " .. ScriptExecutionFile) then
+			imgui.endw()
+			local Path = fs.promptopen("resources/scripts", "Luau Scripts", "luau")[1]
 			if Path then
 				ScriptExecutionFile = Path
 			end
 			return
 		end
 		
-		if imgui_button("Execute") then
+		if imgui.button("Execute") then
 			if scriptHost then
 				scriptHost:Destroy()
 			end
@@ -83,20 +83,20 @@ local function update(DeltaTime)
 			scriptHost.Parent = script
 		end
 	end
-	imgui_end()
+	imgui.endw()
 	
-	imgui_begin("File")
+	imgui.begin("File")
 	
-	if imgui_button("Save World") then
-		imgui_end()
+	if imgui.button("Save World") then
+		imgui.endw()
 		
 		IntendedSaveWorldState = game:Duplicate()
 		IntendedSaveWorldState.Parent = nil
 		
-		local Path = fd_save("resources/scenes", "Scenes", "world")
+		local Path = fs.promptsave("resources/scenes", "Scenes", "world")
 		
 		if Path then
-			scene_save({ IntendedSaveWorldState }, Path)
+			scene.save({ IntendedSaveWorldState }, Path)
 		else
 			print("No path selected")
 		end
@@ -106,15 +106,15 @@ local function update(DeltaTime)
 		return
 	end
 	
-	local loadWorld = imgui_button("Load World")
+	local loadWorld = imgui.button("Load World")
 
 	if loadWorld then
-		imgui_end()
+		imgui.endw()
 		
-		local Path = fd_open("resources/scenes", "Worlds", "world")[1]
+		local Path = fs.promptopen("resources/scenes", "Worlds", "world")[1]
 		
 		if Path then
-			local dm = scene_load(Path)[1]
+			local dm = scene.load(Path)[1]
 			if not dm then
 				error("No root object!")
 			end
@@ -131,13 +131,13 @@ local function update(DeltaTime)
 		return
 	end
 	
-	if imgui_button("Save Sub-Level") then
-		imgui_end()
+	if imgui.button("Save Sub-Level") then
+		imgui.endw()
 		
 		IntendedLevelState = workspace.Level:Duplicate()
 		IntendedLevelState.Parent = nil
 		
-		local Path = fd_save("resources/scenes", "Scenes", "hxscene")
+		local Path = fs.promptsave("resources/scenes", "Scenes", "hxscene")
 		
 		if Path then
 			local actuallySave = {}
@@ -147,7 +147,7 @@ local function update(DeltaTime)
 				end
 			end
 			
-			scene_save(actuallySave, Path)
+			scene.save(actuallySave, Path)
 		else
 			print("No path selected")
 		end
@@ -157,18 +157,18 @@ local function update(DeltaTime)
 		return
 	end
 	
-	if imgui_button("Load Sub-Level") then
-		imgui_end()
-		loadSubLevel(fd_open("resources/scenes", "Scenes", "hxscene")[1])
+	if imgui.button("Load Sub-Level") then
+		imgui.endw()
+		loadSubLevel(fs.promptopen("resources/scenes", "Scenes", "hxscene")[1])
 		return
 	end
 	
-	imgui_end()
+	imgui.endw()
 	
 	Editor(DeltaTime)
 	--NodeEditor()
 
-	if input_keypressed('m') then
+	if input.keypressed('m') then
 		local sweeping = GameObject.new("Script")
 		sweeping.SourceFile = "scripts/minesweeper.luau"
 		sweeping.Name = "MinesweeperMain"
@@ -187,9 +187,9 @@ end
 
 loadSubLevel(DefaultSubLevel)
 
-if not conf_get("Developer") then
+if not conf.get("Developer") then
 	update = function()
-		if input_keypressed('m') then
+		if input.keypressed('m') then
 			local sweeping = GameObject.new("Script")
 			sweeping.SourceFile = "scripts/minesweeper.luau"
 			sweeping.Name = "MinesweeperMain"

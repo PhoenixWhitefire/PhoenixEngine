@@ -291,11 +291,10 @@ void MaterialManager::SaveToPath(const RenderMaterial& material, const std::stri
 
 	std::string fileContents = "PHNXENGI\n#Asset Material\n#Date " + dateStr + "\n\n" + newMtlConfig.dump(2);
 
-	FileRW::WriteFile(
+	PHX_CHECK(FileRW::WriteFile(
 		filePath,
-		fileContents,
-		true
-	);
+		fileContents
+	));
 }
 
 RenderMaterial& MaterialManager::GetMaterialResource(uint32_t ResourceId)

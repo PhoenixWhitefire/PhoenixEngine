@@ -15,18 +15,16 @@ namespace FileRW
 	*/
 	std::string ReadFile(const std::string_view&, bool* DoesFileExist = nullptr, bool PrependResDir = true);
 
-	void WriteFile(
+	bool WriteFile(
 		const std::string_view& FilePath,
 		const std::string_view& Contents,
-		bool InResourcesDirectory,
-		bool* SuccessPtr = nullptr
+		std::string* ErrorMessage = nullptr
 	);
 	// Writes to a path, creating directories along the way if they do not exist
-	void WriteFileCreateDirectories(
+	bool WriteFileCreateDirectories(
 		const std::string_view& FilePath,
 		const std::string_view& Contents,
-		bool InResourcesDirectory,
-		bool* SuccessPtr = nullptr
+		std::string* ErrorMessage = nullptr
 	);
 
 	std::string TryMakePathCwdRelative(const std::string_view&);

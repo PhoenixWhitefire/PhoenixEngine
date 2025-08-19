@@ -97,6 +97,12 @@ static char MtlShpBuf[MATERIAL_TEXTUREPATH_BUFSIZE] = { 0 };
 static int MtlCurItem = -1;
 static int MtlPrevItem = -1;
 
+static void setErrorMessage(std::string errm)
+{
+	ErrorTooltipMessage = errm;
+	ErrorTooltipTimeRemaining = 2.5f;
+}
+
 static void copyStringToBuffer(char* Buffer, const std::string_view& String, size_t BufSize)
 {
 	for (size_t i = 0; i < BufSize; i++)
@@ -191,12 +197,13 @@ static size_t TextEditorEntryBufferCapacity = 0;
 static std::fstream* TextEditorFileStream = nullptr;
 static std::set<std::string> TextEditorQuickSelectFiles;
 
+#define EDCHECKEXPR(expr) { if (!(expr)) { setErrorMessage(#expr " failed"); } }
+
 static void textEditorSaveFile()
 {
 	if (!TextEditorEntryBuffer)
 	{
-		ErrorTooltipMessage = "Text Editor tried to save file, but had no text buffer";
-		ErrorTooltipTimeRemaining = 3.f;
+		setErrorMessage("Text Editor tried to save file, but had no text buffer");
 		return;
 	}
 
@@ -218,9 +225,7 @@ static void textEditorSaveFile()
 		ErrCount++;
 
 		TextEditorFile = "texteditor_default_" + std::to_string(ErrCount) + ".txt";
-
-		ErrorTooltipMessage = "Text Editor tried to save a file with no path. Will be saved to " + TextEditorFile;
-		ErrorTooltipTimeRemaining = 5.f;
+		setErrorMessage("Text Editor tried to save a file with no path. Will be saved to " + TextEditorFile);
 	}
 
 	if (TextEditorFileStream && TextEditorFileStream->is_open())
@@ -241,11 +246,10 @@ static void textEditorSaveFile()
 	if (lastPeriod == std::string::npos || (lastFwdSlash != std::string::npos && lastFwdSlash > lastPeriod))
 	{
 		TextEditorFile += ".txt";
-		ErrorTooltipMessage = "File will be saved as " + TextEditorFile;
-		ErrorTooltipTimeRemaining = 2.f;
+		setErrorMessage("File will be saved as " + TextEditorFile);
 	}
 
-	FileRW::WriteFile(TextEditorFile, contents, true);
+	EDCHECKEXPR(FileRW::WriteFile(TextEditorFile, contents));
 }
 
 static void invokeTextEditor(const std::string& File)
@@ -405,8 +409,7 @@ static void renderTextEditor()
 
 		if (!(*TextEditorFileStream) || !TextEditorFileStream->is_open())
 		{
-			ErrorTooltipMessage = "File couldn't be opened";
-			ErrorTooltipTimeRemaining = 5.f;
+			setErrorMessage("File couldn't be opened");
 			TextEditorFile = "<NOT_SELECTED>";
 
 			TextEditorEntryBuffer = BufferInitialize(512);
@@ -603,8 +606,7 @@ static void shaderPipelineShaderSelect(const std::string& Label, std::string* Ta
 
 				if (resDirOffset == std::string::npos)
 				{
-					ErrorTooltipMessage = "Selection must be within the Project's `resources/` directory!";
-					ErrorTooltipTimeRemaining = 5.f;
+					setErrorMessage("Selection must be within the Project's `resources/` directory!");
 				}
 				else
 				{
@@ -762,8 +764,7 @@ static void mtlEditorTexture(const char* Label, uint32_t* TextureIdPtr, char* Cu
 
 					if (resDirOffset == std::string::npos)
 					{
-						ErrorTooltipMessage = "Selection must be within the Project's `resources/` directory!";
-						ErrorTooltipTimeRemaining = 5.f;
+						setErrorMessage("Selection must be within the Project's `resources/` directory!");
 						MtlEditorTextureSelectDialogBuffer = nullptr;
 					}
 					else
@@ -857,10 +858,10 @@ static void renderMaterialEditor()
 
 	if (ImGui::Button("Create"))
 	{
-		FileRW::WriteFile(
+		EDCHECKEXPR(FileRW::WriteFile(
 			"materials/" + std::string(MtlCreateNameBuf) + ".mtl",
-			DefaultNewMaterial.dump(2), true
-		);
+			DefaultNewMaterial.dump(2)
+		));
 
 		mtlManager->LoadFromPath(MtlCreateNameBuf);
 	}
@@ -1101,7 +1102,7 @@ static std::function<void(void)> ContextMenuActionHandlers[] =
 				if (!file.find("resources/"))
 					file.insert(0, "./"); // for `FileRW::TryMakePathCwdRelative`
 
-				FileRW::WriteFile(file, contents, false);
+				EDCHECKEXPR(FileRW::WriteFile(file, contents));
 			},
 			(void*)ser,
 			SDL_GL_GetCurrentWindow(),
@@ -1133,8 +1134,7 @@ static std::function<void(void)> ContextMenuActionHandlers[] =
 
 				if (resDirOffset == std::string::npos)
 				{
-					ErrorTooltipMessage = "Selection must be within the Project's `resources/` directory!";
-					ErrorTooltipTimeRemaining = 5.f;
+					setErrorMessage("Selection must be within the Project's `resources/` directory!");
 				}
 				else
 				{
@@ -1143,8 +1143,7 @@ static std::function<void(void)> ContextMenuActionHandlers[] =
 
 					if (!readSuccess)
 					{
-						ErrorTooltipMessage = "Couldn't read file " + fullpath;
-						ErrorTooltipTimeRemaining = 5.f;
+						setErrorMessage("Couldn't read file " + fullpath);
 						return;
 					}
 
@@ -1152,8 +1151,7 @@ static std::function<void(void)> ContextMenuActionHandlers[] =
 
 					if (!readSuccess)
 					{
-						ErrorTooltipMessage = SceneFormat::GetLastErrorString();
-						ErrorTooltipTimeRemaining = 5.f;
+						setErrorMessage(SceneFormat::GetLastErrorString());
 						return;
 					}
 
@@ -1234,8 +1232,7 @@ static void onTreeItemClicked(GameObject* nodeClicked)
 		}
 		catch (const std::runtime_error& Error)
 		{
-			ErrorTooltipMessage = Error.what();
-			ErrorTooltipTimeRemaining = 5.f;
+			setErrorMessage(Error.what());
 		}
 
 		// restore prev selections
@@ -2142,8 +2139,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 				}
 				catch (const std::runtime_error& Err)
 				{
-					ErrorTooltipMessage = Err.what();
-					ErrorTooltipTimeRemaining = 5.f;
+					setErrorMessage(Err.what());
 				}
 			}
 			else

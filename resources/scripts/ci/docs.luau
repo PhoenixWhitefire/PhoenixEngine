@@ -4,12 +4,12 @@ print("Docs CI begin\n\n\n\n\n")
 
 local BASE_PATH = "./gh-assets/wiki"
 
-local apiDump = json_parse(file_read("./apidump.json"))
-local docComments = json_parse(file_read(BASE_PATH .. "/doc-comments.json"))
+local apiDump = json.parse(fs.read("./apidump.json"))
+local docComments = json.parse(fs.read(BASE_PATH .. "/doc-comments.json"))
 
-local globalsPrologue = file_read(BASE_PATH .. "/globals-prologue.txt")
-local globalsEpilogue = file_read(BASE_PATH .. "/globals-epilogue.txt")
-local componentsPrologue = file_read(BASE_PATH .. "/components-prologue.txt")
+local globalsPrologue = fs.read(BASE_PATH .. "/globals-prologue.txt")
+local globalsEpilogue = fs.read(BASE_PATH .. "/globals-epilogue.txt")
+local componentsPrologue = fs.read(BASE_PATH .. "/components-prologue.txt")
 
 local globals = globalsPrologue .. "\n\n"
 local components = componentsPrologue .. "\n\n"
@@ -168,7 +168,7 @@ end
 
 globals ..= dumpReflectionApi(apiDump.GameObject.Base, docComments.GameObject.Base)
 
-file_write(BASE_PATH .. "/globals.txt", globals, false)
+fs.write(BASE_PATH .. "/globals.txt", globals, false)
 
 local orderedComponents = keysOf(apiDump.GameObject.Components)
 table.sort(orderedComponents)
@@ -195,7 +195,7 @@ for _, k in orderedComponents do
 	components ..= dumpReflectionApi(v, docComments.GameObject.Components[k], k)
 end
 
-file_write(BASE_PATH .. "/components.txt", components, false)
+fs.write(BASE_PATH .. "/components.txt", components, false)
 
 print("Docs CI finish\n\n\n\n\n")
 
