@@ -51,27 +51,27 @@ public:
         static const Reflection::StaticPropertyMap props = 
         {
             EC_PROP(
-                "Value1",
+                "SuperCoolBool",
                 Boolean,
 				[](void* p)
 				{
 					EcExample* example = static_cast<EcExample*>(p);
-					return example->Value1;
+					return example->SuperCoolBool;
 				},
                 [](void* p, const Reflection::GenericValue& gv)
                 {
                     EcExample* example = static_cast<EcExample*>(p);
-					example->Value1 = gv.AsBoolean();
+					example->SuperCoolBool = gv.AsBoolean();
                 }
             ),
 
 			// Effectively equivalent to the above
-			EC_PROP_SIMPLE(EcExample, Value2, Integer),
-			EC_PROP_SIMPLE(EcExample, Value6, Vector3),
+			EC_PROP_SIMPLE(EcExample, SomeInteger, Integer),
+			EC_PROP_SIMPLE(EcExample, WhereIAm, Vector3),
 			// A read-only property
-			EC_PROP("Value4", String, EC_GET_SIMPLE(EcExample, Value4), nullptr),
+			EC_PROP("SecretMessage", String, EC_GET_SIMPLE(EcExample, SecretMessage), nullptr),
 			// A property
-			EC_PROP("Value5", String, nullptr, nullptr)
+			EC_PROP("EvenMoreSecretMessage", String, nullptr, nullptr)
         };
 
         return props;

@@ -53,6 +53,7 @@ static bool isValidPboCandidate(const Texture* t)
 void TextureManager::m_UploadTextureToGpu(Texture& texture)
 {
 	ZoneScoped;
+	assert(!m_IsHeadless);
 
 	if (texture.Status == Texture::LoadStatus::Failed)
 	{
@@ -196,9 +197,17 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 
 static TextureManager* s_Instance = nullptr;
 
-void TextureManager::Initialize()
+void TextureManager::Initialize(bool IsHeadless)
 {
 	ZoneScoped;
+
+	m_IsHeadless = IsHeadless;
+
+	if (IsHeadless)
+	{
+		s_Instance = this;
+		return;
+	}
 
 	glGenBuffers(1, &s_Pbo);
 	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, s_Pbo);
@@ -248,6 +257,12 @@ void TextureManager::Initialize()
 
 void TextureManager::Shutdown()
 {
+	if (m_IsHeadless)
+	{
+		s_Instance = nullptr;
+		return;
+	}
+
 	s_TextureManagerShutdown = true;
 
 	std::vector<uint32_t> textureGpuIds;
@@ -387,6 +402,9 @@ uint32_t TextureManager::Assign(const Texture& texture, const std::string& name)
 
 uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool ShouldLoadAsync, bool DoBilinearSmoothing)
 {
+	if (m_IsHeadless)
+		return 0;
+
 	std::string ResDir = EngineJsonConfig["ResourcesDirectory"];
 	std::string ActualPath = FileRW::TryMakePathCwdRelative(Path);
 
@@ -507,6 +525,9 @@ Texture& TextureManager::GetTextureResource(uint32_t ResourceId)
 void TextureManager::FinalizeAsyncLoadedTextures()
 {
 	ZoneScoped;
+
+	if (m_IsHeadless)
+		return;
 
 	size_t numTexPromises = m_TexPromises.size();
 

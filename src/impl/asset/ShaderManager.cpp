@@ -25,6 +25,9 @@ void ShaderProgram::Activate()
 {
 	ZoneScoped;
 
+	if (ShaderManager::Get()->IsHeadless)
+		return;
+
 	if (!glIsProgram(m_GpuId))
 	{
 		ShaderManager* shdManager = ShaderManager::Get();
@@ -115,10 +118,15 @@ void ShaderProgram::Reload()
 	ZoneScoped;
 	ZoneTextF("%s", this->Name.c_str());
 
-	if (m_GpuId != UINT32_MAX)
-		glDeleteProgram(m_GpuId);
+	bool isHeadless = ShaderManager::Get()->IsHeadless;
 
-	m_GpuId = glCreateProgram();
+	if (!isHeadless)
+	{
+		if (m_GpuId != UINT32_MAX)
+			glDeleteProgram(m_GpuId);
+
+		m_GpuId = glCreateProgram();
+	}
 
 	bool shpExists = true;
 	std::string realShpPath = (Name.find("shaders/") == std::string::npos ? BaseShaderPath : "") + Name + ".shp";
@@ -150,9 +158,72 @@ void ShaderProgram::Reload()
 
 	nlohmann::json shpJson = nlohmann::json::parse(shpContents);
 
-	bool vertexShdExists = true;
-	bool fragmentShdExists = true;
-	bool geometryShdExists = true;
+	/*
+		Certain SP's may just be another SP, but with a specific uniform
+		(such as `worldUberTriProjected` really just being `worldUber` with
+		the `UseTriPlanarProjection` uniform)
+
+		Reduce duplicate configuration by allowing for "inheritance" of uniforms
+		Do this *before* loading the SP-specific uniforms, so that inherited ones
+		may be overriden
+		Even means you can have lineages
+	*/
+	if (const auto uancestorIt = shpJson.find("InheritUniformsOf"); uancestorIt != shpJson.end())
+	{
+		UniformsAncestor = uancestorIt.value();
+
+		if (UniformsAncestor != "")
+		{
+			ShaderManager* shdManager = ShaderManager::Get();
+
+			uint32_t ancestorId = shdManager->LoadFromPath(UniformsAncestor);
+			ShaderProgram& ancestor = shdManager->GetShaderResource(ancestorId);
+
+			DefaultUniforms.insert(ancestor.DefaultUniforms.begin(), ancestor.DefaultUniforms.end());
+		}
+	}
+
+	for (auto memberIt = shpJson["Uniforms"].begin(); memberIt != shpJson["Uniforms"].end(); ++memberIt)
+	{
+		const char* uniformName = memberIt.key().c_str();
+		const nlohmann::json& value = memberIt.value();
+
+		switch (value.type())
+		{
+		case (nlohmann::detail::value_t::boolean):
+		{
+			DefaultUniforms[uniformName] = (bool)value;
+			break;
+		}
+		case (nlohmann::detail::value_t::number_float):
+		{
+			DefaultUniforms[uniformName] = (float)value;
+			break;
+		}
+		case (nlohmann::detail::value_t::number_integer):
+		{
+			DefaultUniforms[uniformName] = (int32_t)value;
+			break;
+		}
+		case (nlohmann::detail::value_t::number_unsigned):
+		{
+			DefaultUniforms[uniformName] = (uint32_t)value;
+			break;
+		}
+
+		[[unlikely]] default:
+		{
+			Log::WarningF(
+				"Shader Program '{}' tried to specify Uniform '{}', but it had unsupported type '{}'",
+				this->Name, uniformName, value.type_name()
+			);
+			
+			break;
+		}
+		}
+	}
+
+	this->ApplyDefaultUniforms();
 
 	VertexShader = shpJson.value("Vertex", "worldUber.vert");
 	FragmentShader = shpJson.value("Fragment", "worldUber.frag");
@@ -165,6 +236,13 @@ void ShaderProgram::Reload()
 
 	if (hasGeometryShader)
 		GeometryShader = (GeometryShader.find("shaders/") == std::string::npos ? BaseShaderPath : "") + GeometryShader;
+
+	if (isHeadless)
+		return;
+
+	bool vertexShdExists = true;
+	bool fragmentShdExists = true;
+	bool geometryShdExists = true;
 
 	std::string vertexStrSource = FileRW::ReadFile(VertexShader, &vertexShdExists);
 	std::string fragmentStrSource = FileRW::ReadFile(FragmentShader, &fragmentShdExists);
@@ -242,78 +320,11 @@ void ShaderProgram::Reload()
 
 	if (hasGeometryShader)
 		glDeleteShader(geometryShader);
-
-	/*
-		Certain SP's may just be another SP, but with a specific uniform
-		(such as `worldUberTriProjected` really just being `worldUber` with
-		the `UseTriPlanarProjection` uniform)
-
-		Reduce duplicate configuration by allowing for "inheritance" of uniforms
-		Do this *before* loading the SP-specific uniforms, so that inherited ones
-		may be overriden
-		Even means you can have lineages
-	*/
-	if (const auto uancestorIt = shpJson.find("InheritUniformsOf"); uancestorIt != shpJson.end())
-	{
-		UniformsAncestor = uancestorIt.value();
-
-		if (UniformsAncestor != "")
-		{
-			ShaderManager* shdManager = ShaderManager::Get();
-
-			uint32_t ancestorId = shdManager->LoadFromPath(UniformsAncestor);
-			ShaderProgram& ancestor = shdManager->GetShaderResource(ancestorId);
-
-			DefaultUniforms.insert(ancestor.DefaultUniforms.begin(), ancestor.DefaultUniforms.end());
-		}
-	}
-
-	for (auto memberIt = shpJson["Uniforms"].begin(); memberIt != shpJson["Uniforms"].end(); ++memberIt)
-	{
-		const char* uniformName = memberIt.key().c_str();
-		const nlohmann::json& value = memberIt.value();
-
-		switch (value.type())
-		{
-		case (nlohmann::detail::value_t::boolean):
-		{
-			DefaultUniforms[uniformName] = (bool)value;
-			break;
-		}
-		case (nlohmann::detail::value_t::number_float):
-		{
-			DefaultUniforms[uniformName] = (float)value;
-			break;
-		}
-		case (nlohmann::detail::value_t::number_integer):
-		{
-			DefaultUniforms[uniformName] = (int32_t)value;
-			break;
-		}
-		case (nlohmann::detail::value_t::number_unsigned):
-		{
-			DefaultUniforms[uniformName] = (uint32_t)value;
-			break;
-		}
-
-		[[unlikely]] default:
-		{
-			Log::WarningF(
-				"Shader Program '{}' tried to specify Uniform '{}', but it had unsupported type '{}'",
-				this->Name, uniformName, value.type_name()
-			);
-			
-			break;
-		}
-		}
-	}
-
-	this->ApplyDefaultUniforms();
 }
 
 void ShaderProgram::Delete()
 {
-	if (glIsProgram(m_GpuId))
+	if (!ShaderManager::Get()->IsHeadless && glIsProgram(m_GpuId))
 		glDeleteProgram(m_GpuId);
 
 	m_GpuId = UINT32_MAX;
@@ -368,6 +379,7 @@ void ShaderProgram::ApplyDefaultUniforms()
 
 int32_t ShaderProgram::m_GetUniformLocation(const char* Uniform) const
 {
+	assert(!ShaderManager::Get()->IsHeadless);
 	return glGetUniformLocation(m_GpuId, Uniform);
 }
 
@@ -394,17 +406,22 @@ void ShaderProgram::SetTextureUniform(const std::string_view& UniformName, uint3
 	uint32_t gpuId = texManager->GetTextureResource(TextureId).GpuId;
 	uint32_t slot = gpuId + 15; // the first 15 units are "reserved"
 
+	m_PendingUniforms[std::string(UniformName)] = slot;
+
+	if (ShaderManager::Get()->IsHeadless)
+		return;
+
 	glActiveTexture(GL_TEXTURE0 + slot);
 	glBindTexture(
 		DimensionTypeToGLDimension.at(Type),
 		gpuId
 	);
-
-	m_PendingUniforms[std::string(UniformName)] = slot;
 }
 
 bool ShaderProgram::m_CheckForErrors(uint32_t Object, const char* Type)
 {
+	assert(!ShaderManager::Get()->IsHeadless);
+
 	char infoLog[2048];
 
 	if (Object != m_GpuId)
@@ -474,10 +491,11 @@ ShaderManager::~ShaderManager()
 	assert(!s_Instance);
 }
 
-void ShaderManager::Initialize()
+void ShaderManager::Initialize(bool IsHeadless)
 {
 	ZoneScoped;
-	
+
+	this->IsHeadless = IsHeadless;
 	s_Instance = this;
 }
 

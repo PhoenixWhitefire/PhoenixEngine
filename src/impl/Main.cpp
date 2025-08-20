@@ -799,35 +799,38 @@ static void init()
 
 	Engine* EngineInstance = Engine::Get();
 
-	Log::InfoF(
-		"Initializing Dear ImGui {}...",
-		IMGUI_VERSION
-	);
-
-	if (!IMGUI_CHECKVERSION())
-		RAISE_RT("Dear ImGui detected a version mismatch");
-
-	ImGui::CreateContext();
-
-	GuiIO = &ImGui::GetIO();
-	ImGui::StyleColorsDark();
-
-	PHX_ENSURE_MSG(ImGui_ImplSDL3_InitForOpenGL(
-		EngineInstance->Window,
-		EngineInstance->RendererContext.GLContext
-	), "`ImGui_ImplSDL3_InitForOpenGL` failed");
-	
-	PHX_ENSURE_MSG(ImGui_ImplOpenGL3_Init("#version 460"), "`ImGui_ImplOpenGL3_Init` failed");
-
-	Log::Info("Dear ImGui initialized");
-
-	EngineInstance->OnFrameStart.Connect(handleInputs);
-
-	if (EngineJsonConfig.value("Developer", false))
+	if (!EngineInstance->IsHeadlessMode)
 	{
-		Log::Info("Developer-mode specific functionality");
-		InlayEditor::Initialize(&EngineInstance->RendererContext);
-		EngineInstance->OnFrameRenderGui.Connect(drawDeveloperUI);
+		Log::InfoF(
+			"Initializing Dear ImGui {}...",
+			IMGUI_VERSION
+		);
+	
+		if (!IMGUI_CHECKVERSION())
+			RAISE_RT("Dear ImGui detected a version mismatch");
+	
+		ImGui::CreateContext();
+	
+		GuiIO = &ImGui::GetIO();
+		ImGui::StyleColorsDark();
+	
+		PHX_ENSURE_MSG(ImGui_ImplSDL3_InitForOpenGL(
+			EngineInstance->Window,
+			EngineInstance->RendererContext.GLContext
+		), "`ImGui_ImplSDL3_InitForOpenGL` failed");
+		
+		PHX_ENSURE_MSG(ImGui_ImplOpenGL3_Init("#version 460"), "`ImGui_ImplOpenGL3_Init` failed");
+	
+		Log::Info("Dear ImGui initialized");
+	
+		EngineInstance->OnFrameStart.Connect(handleInputs);
+	
+		if (EngineJsonConfig.value("Developer", false))
+		{
+			Log::Info("Developer-mode specific functionality");
+			InlayEditor::Initialize(&EngineInstance->RendererContext);
+			EngineInstance->OnFrameRenderGui.Connect(drawDeveloperUI);
+		}
 	}
 
 	Log::Info("Loading Root Scene from file...");

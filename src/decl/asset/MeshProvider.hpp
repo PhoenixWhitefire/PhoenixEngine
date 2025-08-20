@@ -34,7 +34,7 @@ public:
 	// USE SHUTDOWN!!
 	~MeshProvider();
 
-	void Initialize();
+	void Initialize(bool Headless);
 
 	static MeshProvider* Get();
 
@@ -59,6 +59,8 @@ public:
 
 	Mesh& GetMeshResource(uint32_t);
 	GpuMesh& GetGpuMesh(uint32_t);
+
+	bool IsHeadless = false;
 
 private:
 	void m_CreateAndUploadGpuMesh(Mesh&);

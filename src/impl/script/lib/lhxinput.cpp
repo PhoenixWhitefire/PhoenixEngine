@@ -4,6 +4,7 @@
 #include "script/luhx.hpp"
 #include "script/ScriptEngine.hpp"
 #include "UserInput.hpp"
+#include "Engine.hpp"
 
 static int input_keypressed(lua_State* L)
 {
@@ -91,7 +92,12 @@ static luaL_Reg input_funcs[] =
 
 int luhxopen_input(lua_State* L)
 {
-    luaL_register(L, LUHX_INPUTLIBNAME, input_funcs);
+    if (!Engine::Get()->IsHeadlessMode)
+    {
+        luaL_register(L, LUHX_INPUTLIBNAME, input_funcs);
 
-    return 1;
+        return 1;
+    }
+    else
+        return 0;
 }

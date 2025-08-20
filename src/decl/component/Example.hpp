@@ -8,12 +8,12 @@
 
 struct EcExample
 {
-	bool Value1 = true;
-	int64_t Value2 = 64;
-	float Value3 = 3.141592f;
-	std::string Value4 = "Love is Love!";
-	std::string Value5 = "I am NOT homosexual";
-	glm::vec3 Value6{};
+	bool SuperCoolBool = true;
+	int64_t SomeInteger = 64;
+	float MaybeDeliciousPi = 3.141592f;
+	std::string SecretMessage = "Love is Love!";
+	std::string EvenMoreSecretMessage = "57";
+	glm::vec3 WhereIAm{};
 
 	std::vector<Reflection::EventCallback> OnGreetedCallbacks;
 

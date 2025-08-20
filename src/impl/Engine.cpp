@@ -90,7 +90,6 @@ void Engine::OnWindowResized(int NewSizeX, int NewSizeY)
 	this->WindowSizeX = NewSizeX;
 	this->WindowSizeY = NewSizeY;
 
-	m_BloomFbo.ChangeResolution(WindowSizeX, WindowSizeY);
 	RendererContext.ChangeResolution(WindowSizeX, WindowSizeY);
 
 	SDL_DisplayID currentDisplay = SDL_GetDisplayForWindow(Window);
@@ -198,42 +197,18 @@ void Engine::Close()
 	m_IsRunning = false;
 }
 
-Engine::Engine()
+void Engine::m_InitVideo()
 {
-	ZoneScopedC(tracy::Color::Aqua);
-
-	assert(!EngineInstance);
-	EngineInstance = this;
-	
-	this->LoadConfiguration();
-
-	if (readFromConfiguration("Headless", false))
-		this->IsHeadlessMode = true;
-
-	nlohmann::json defaultWindowSize = readFromConfiguration(
-		"DefaultWindowSize",
-		nlohmann::json::array({ 1280, 720 })
-	);
-
-	Log::InfoF(
-		"Initializing SDL {}/{} (Dyn. Revision: {})...",
-		SDL_VERSION,
-		SDL_GetVersion(),
-		SDL_GetRevision()
-	);
-
-	if (IsHeadlessMode)
-		SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "dummy");
-
-	PHX_SDL_CALL(SDL_Init, SDL_INIT_VIDEO);
-
-	Log::InfoF("The SDL video driver is {}", SDL_GetCurrentVideoDriver());
-
 	SDL_DisplayID primaryDisplay = SDL_GetPrimaryDisplay();
 	PHX_ENSURE_MSG(primaryDisplay != 0, "`SDL_GetPrimaryDisplay` failed with error: " + std::string(SDL_GetError()));
 
 	float displayScale = SDL_GetDisplayContentScale(primaryDisplay);
 	PHX_ENSURE_MSG(displayScale != 0.f, "Invalid `SDL_GetDisplayContentScale` result, error: " + std::string(SDL_GetError()));
+
+	nlohmann::json defaultWindowSize = readFromConfiguration(
+		"DefaultWindowSize",
+		nlohmann::json::array({ 1280, 720 })
+	);
 
 	this->WindowSizeX = static_cast<int>((float)defaultWindowSize[0] * displayScale);
 	this->WindowSizeY = static_cast<int>((float)defaultWindowSize[1] * displayScale);
@@ -243,8 +218,6 @@ Engine::Engine()
 
 	this->WindowSizeX = std::clamp(this->WindowSizeX, 1, displayBounds.w);
 	this->WindowSizeY = std::clamp(this->WindowSizeY, 1, displayBounds.h);
-
-	SDL_SetLogOutputFunction(sdlLog, nullptr);
 
 	nlohmann::json::array_t requestedGLVersion = readFromConfiguration("OpenGLVersion", nlohmann::json{ 4, 6 });
 	int requestedGLVersionMajor = requestedGLVersion[0];
@@ -304,18 +277,55 @@ Engine::Engine()
 
 	PHX_ENSURE_MSG(this->Window, "SDL could not create the window: " + std::string(SDL_GetError()));
 
-	Log::Info("Window created, initializing renderer and systems...");
+	Log::Info("Window created, initializing renderer...");
 
 	this->RendererContext.Initialize(this->WindowSizeX, this->WindowSizeY, this->Window);
-	m_BloomFbo.Initialize(WindowSizeX, WindowSizeY, 0);
+}
+
+const int32_t SunShadowMapResolutionSq = 512;
+
+Engine::Engine()
+{
+	ZoneScopedC(tracy::Color::Aqua);
+
+	assert(!EngineInstance);
+	EngineInstance = this;
+	
+	this->LoadConfiguration();
+
+	if (readFromConfiguration("Headless", false))
+		this->IsHeadlessMode = true;
+
+	Log::InfoF(
+		"Initializing SDL {}/{} (Dyn. Revision: {})...",
+		SDL_VERSION,
+		SDL_GetVersion(),
+		SDL_GetRevision()
+	);
+
+	if (IsHeadlessMode)
+		SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "dummy");
+
+	PHX_SDL_CALL(SDL_Init, SDL_INIT_VIDEO);
+
+	Log::InfoF("The SDL video driver is {}", SDL_GetCurrentVideoDriver());
+	SDL_SetLogOutputFunction(sdlLog, nullptr);
+
+	GameObject::s_WorldArray.reserve(32);
+
+	if (!IsHeadlessMode)
+		m_InitVideo();
+
+	Log::Info("Initializing managers...");
 
 	m_ThreadManager.Initialize(EngineJsonConfig.value("ThreadManagerThreadCount", -1));
 
-	m_TextureManager.Initialize();
-	m_ShaderManager.Initialize();
+	m_TextureManager.Initialize(IsHeadlessMode);
+	m_ShaderManager.Initialize(IsHeadlessMode);
 	m_MaterialManager.Initialize(); // mat after tex and shd as it may attempt to load a texture and shader
-	m_MeshProvider.Initialize();
+	m_MeshProvider.Initialize(IsHeadlessMode);
 
+	if (!IsHeadlessMode)
 	{
 		ZoneScopedN("Blue Frame");
 
@@ -326,9 +336,23 @@ Engine::Engine()
 		glClearColor(0.07f, 0.13f, 0.17f, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT);
 		RendererContext.SwapBuffers();
-	}
 
-	GameObject::s_WorldArray.reserve(32);
+		ZoneNamedN(miscshaders, "Misc shader load", true);
+
+		m_PostFxShader = m_ShaderManager.GetShaderResource(m_ShaderManager.LoadFromPath("postprocessing"));
+		m_SkyboxShader = m_ShaderManager.GetShaderResource(m_ShaderManager.LoadFromPath("skybox"));
+		m_SeparableBlurShader = m_ShaderManager.GetShaderResource(m_ShaderManager.LoadFromPath("separableblur"));
+
+		m_PostFxShader.SetUniform("Texture", 1);
+		m_PostFxShader.SetUniform("DistortionTexture", 2);
+		m_PostFxShader.SetUniform("BloomTexture", 3);
+		m_SeparableBlurShader.SetUniform("Texture", 3);
+		m_SkyboxShader.SetUniform("SkyboxCubemap", 3);
+
+		m_DistortionTexture = m_TextureManager.LoadTextureFromPath("textures/screendistort.jpg");
+
+		m_SunShadowMap.Initialize(SunShadowMapResolutionSq, SunShadowMapResolutionSq);
+	}
 
 	Log::Info("Engine initialized");
 }
@@ -377,7 +401,7 @@ static void recursivelyTravelHierarchy(
 			if (object3D->PhysicsDynamics || object3D->PhysicsCollisions)
 				PhysicsList.emplace_back(object);
 
-			if (object3D->Transparency > .95f)
+			if (object3D->Transparency > .95f || Engine::Get()->IsHeadlessMode)
 				continue;
 
 			// TODO: frustum culling
@@ -471,6 +495,9 @@ static GLuint startLoadingSkybox(std::vector<uint32_t>* skyboxFacesBeingLoaded)
 {
 	ZoneScoped;
 
+	if (Engine::Get()->IsHeadlessMode)
+		return 0;
+
 	const std::string_view SkyPath = "textures/Sky1/";
 	const std::string_view SkyboxCubemapImages[6] =
 	{
@@ -516,6 +543,168 @@ static GLuint startLoadingSkybox(std::vector<uint32_t>* skyboxFacesBeingLoaded)
 	return skyboxCubemap;
 }
 
+void Engine::m_Render(const Scene& scene, double deltaTime)
+{
+	static const Mesh cubeMesh = m_MeshProvider.GetMeshResource(m_MeshProvider.LoadFromPath("!Cube"));
+	static const Mesh quadMesh = m_MeshProvider.GetMeshResource(m_MeshProvider.LoadFromPath("!Quad"));
+
+	float aspectRatio = (float)this->WindowSizeX / (float)this->WindowSizeY;
+
+	GameObjectRef sceneCamObject = Workspace->GetComponent<EcWorkspace>()->GetSceneCamera();
+	EcCamera* sceneCamera = sceneCamObject->GetComponent<EcCamera>();
+
+	// we do this AFTER  `recursivelyTravelHierarchy` in case any Scripts
+	// update the camera transform
+	glm::mat4 renderMatrix = sceneCamera->GetMatrixForAspectRatio(aspectRatio);
+
+	glm::mat4 skyRenderMatrix{ 1.f };
+
+	glm::vec3 camPos = glm::vec3(sceneCamera->Transform[3]);
+	glm::vec3 camForward = glm::vec3(sceneCamera->Transform[2]);
+	glm::vec3 camUp = glm::vec3(sceneCamera->Transform[1]);
+
+	glm::mat4 view = glm::lookAt(camPos, camPos + camForward, camUp);
+	glm::mat4 projection = glm::perspective(
+		glm::radians(sceneCamera->FieldOfView),
+		aspectRatio,
+		sceneCamera->NearPlane,
+		sceneCamera->FarPlane
+	);
+
+	// "We make the mat4 into a mat3 and then a mat4 again in order to get rid of the last row and column
+	// The last row and column affect the translation of the skybox (which we don't want to affect)"
+	//view = glm::mat4(glm::mat3(glm::lookAt(camPos, camPos + camForward, glm::vec3(0.f, 1.f, 0.f))));
+	// ...
+	// ...
+	// ...
+	// Wow Mr Victor Gordan sir, that sounds really complicated.
+	// It's really too bad there isn't a way simpler, 300x more understandable way
+	// of zeroing-out the first 3 values of the last column of what is literally 4 `vec4`s that represent
+	// a 4x4 matrix...
+	view[3] = glm::vec4(0.f, 0.f, 0.f, 1.f);
+
+	skyRenderMatrix = projection * view;
+
+	m_SkyboxShader.SetUniform("RenderMatrix", skyRenderMatrix);
+	m_SkyboxShader.SetUniform("Time", GetRunningTime());
+
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, m_SkyboxCubemap);
+
+	RendererContext.FrameBuffer.Bind();
+
+	glClear(/*GL_COLOR_BUFFER_BIT |*/ GL_DEPTH_BUFFER_BIT);
+
+	glDepthFunc(GL_LEQUAL);
+
+	RendererContext.DrawMesh(
+		cubeMesh,
+		m_SkyboxShader,
+		{ 1.f, 1.f, 1.f },
+		skyRenderMatrix,
+		FaceCullingMode::FrontFace // Cull the Outside, not the Inside
+	);
+
+	glDepthFunc(GL_LESS);
+
+	//Main render pass
+	RendererContext.DrawScene(scene, renderMatrix, sceneCamera->Transform, GetRunningTime(), DebugWireframeRendering);
+
+	glDisable(GL_DEPTH_TEST);
+	
+	this->OnFrameRenderGui.Fire(deltaTime);
+
+	{
+		ZoneScopedN("DearImGuiRender");
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+	}
+
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+	glEnable(GL_DEPTH_TEST);
+
+	//Do framebuffer stuff after everything is drawn
+
+	RendererContext.FrameBuffer.Unbind();
+
+	glActiveTexture(GL_TEXTURE1);
+	RendererContext.FrameBuffer.BindTexture();
+
+	glDisable(GL_DEPTH_TEST);
+
+	if (EngineJsonConfig.value("postfx_enabled", false))
+	{
+		ZoneScopedN("ApplyPostFxSettings");
+	
+		m_PostFxShader.SetUniform("PostFxEnabled", 1);
+		m_PostFxShader.SetUniform(
+			"ScreenEdgeBlurEnabled",
+			EngineJsonConfig.value("postfx_blurvignette", false)
+		);
+		m_PostFxShader.SetUniform(
+			"DistortionEnabled",
+			EngineJsonConfig.value("postfx_distortion", false)
+		);
+	
+		m_PostFxShader.SetUniform(
+			"Gamma",
+			EngineJsonConfig.value("postfx_gamma", 1.f)
+		);
+		m_SkyboxShader.SetUniform(
+			"HdrEnabled",
+			true
+		);
+	
+		if (EngineJsonConfig.find("postfx_blurvignette_blurstrength") != EngineJsonConfig.end())
+		{
+			m_PostFxShader.SetUniform(
+				"BlurVignetteStrength",
+				(float)EngineJsonConfig["postfx_blurvignette_blurstrength"]
+			);
+			m_PostFxShader.SetUniform(
+				"BlurVignetteDistMul",
+				(float)EngineJsonConfig["postfx_blurvignette_weightmul"]
+			);
+			m_PostFxShader.SetUniform(
+				"BlurVignetteDistExp",
+				(float)EngineJsonConfig["postfx_blurvignette_weightexp"]
+			);
+			m_PostFxShader.SetUniform(
+				"BlurVignetteSampleRadius",
+				(int)EngineJsonConfig["postfx_blurvignette_sampleradius"]
+			);
+		}
+	
+		m_PostFxShader.SetUniform("Time", GetRunningTime());
+	
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, m_TextureManager.GetTextureResource(m_DistortionTexture).GpuId);
+	}
+	else
+	{
+		m_PostFxShader.SetUniform("PostFxEnabled", 0);
+		m_SkyboxShader.SetUniform(
+			"HdrEnabled",
+			false
+		);
+	}
+
+	{
+		ZoneScopedN("MainPostProcessing");
+		RendererContext.DrawMesh(
+			quadMesh,
+			m_PostFxShader,
+			{ 2.f, 2.f, 2.f },
+			glm::mat4(1.f),
+			FaceCullingMode::BackFace,
+			0
+		);
+	}
+
+	glEnable(GL_DEPTH_TEST);
+}
+
 void Engine::Start()
 {
 	if (!GameObject::GetObjectById(DataModel.m_TargetId))
@@ -531,9 +720,6 @@ void Engine::Start()
 	else
 		this->Workspace = wp;
 
-	const Mesh cubeMesh = m_MeshProvider.GetMeshResource(m_MeshProvider.LoadFromPath("!Cube"));
-	const Mesh quadMesh = m_MeshProvider.GetMeshResource(m_MeshProvider.LoadFromPath("!Quad"));
-
 	double RunningTime = GetRunningTime();
 
 	// `LastFrameBegan` is for deltatime
@@ -545,53 +731,12 @@ void Engine::Start()
 	std::vector<uint32_t> skyboxFacesBeingLoaded;
 	skyboxFacesBeingLoaded.reserve(6);
 
-	GLuint skyboxCubemap = startLoadingSkybox(&skyboxFacesBeingLoaded);
-
-	uint32_t postFxShaderId = 0;
-	uint32_t skyboxShaderId = 0;
-	uint32_t bloomExtractShaderId = 0;
-	uint32_t bloomCompositeShaderId = 0;
-	uint32_t separableBlurShaderId = 0;
-
-	{
-		ZoneScopedN("LoadShaders");
-
-		postFxShaderId = m_ShaderManager.LoadFromPath("postprocessing");
-		skyboxShaderId = m_ShaderManager.LoadFromPath("skybox");
-		bloomExtractShaderId = m_ShaderManager.LoadFromPath("bloomingextract");
-		bloomCompositeShaderId = m_ShaderManager.LoadFromPath("bloomcomposite");
-		separableBlurShaderId = m_ShaderManager.LoadFromPath("separableblur");
-	}
-
-	// we intentionally perform a copy here, because if another shader gets loaded,
-	// the entire list can get re-allocated, and the references will break and just be
-	// garbage data.
-	ShaderProgram postFxShaders = m_ShaderManager.GetShaderResource(postFxShaderId);
-	ShaderProgram skyboxShaders = m_ShaderManager.GetShaderResource(skyboxShaderId);
-	ShaderProgram bloomExtractShaders = m_ShaderManager.GetShaderResource(bloomExtractShaderId);
-	ShaderProgram bloomCompositeShaders = m_ShaderManager.GetShaderResource(bloomCompositeShaderId);
-	ShaderProgram separableBlurShaders = m_ShaderManager.GetShaderResource(separableBlurShaderId);
-
-	postFxShaders.SetUniform("Texture", 1);
-	postFxShaders.SetUniform("DistortionTexture", 2);
-	postFxShaders.SetUniform("BloomTexture", 3);
-	bloomExtractShaders.SetUniform("Texture", 1);
-	bloomCompositeShaders.SetUniform("Texture", 3);
-	separableBlurShaders.SetUniform("Texture", 3);
-
-	skyboxShaders.SetUniform("SkyboxCubemap", 3);
+	m_SkyboxCubemap = startLoadingSkybox(&skyboxFacesBeingLoaded);
 
 	Scene scene{};
 	scene.RenderList.reserve(50);
 
-	RendererContext.FrameBuffer.Unbind();
-	
-	uint32_t distortionTexture = m_TextureManager.LoadTextureFromPath("textures/screendistort.jpg");
-
 	SDL_Event pollingEvent;
-
-	const int32_t SunShadowMapResolutionSq = 512;
-	GpuFrameBuffer sunShadowMap{ SunShadowMapResolutionSq, SunShadowMapResolutionSq };
 
 	m_IsRunning = true;
 
@@ -645,10 +790,12 @@ void Engine::Start()
 		scene.RenderList.clear();
 		scene.LightingList.clear();
 
-		m_TextureManager.FinalizeAsyncLoadedTextures();
+		if (!IsHeadlessMode)
+			m_TextureManager.FinalizeAsyncLoadedTextures();
+		
 		m_MeshProvider.FinalizeAsyncLoadedMeshes();
 
-		if (skyboxFacesBeingLoaded.size() == 6)
+		if (skyboxFacesBeingLoaded.size() == 6 && !IsHeadlessMode)
 		{
 			bool skyboxLoaded = true;
 
@@ -667,7 +814,7 @@ void Engine::Start()
 			{
 				ZoneScopedN("UploadSkyboxToGpu");
 				
-				glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemap);
+				glBindTexture(GL_TEXTURE_CUBE_MAP, m_SkyboxCubemap);
 
 				for (int skyboxFaceIndex = 0; skyboxFaceIndex < 6; skyboxFaceIndex++)
 				{
@@ -756,13 +903,13 @@ void Engine::Start()
 			}
 		}
 
-		// so scripts can use the `imgui_*` APIs
-		// 09/11/2024
-		ImGui_ImplOpenGL3_NewFrame();
-		ImGui_ImplSDL3_NewFrame();
-		ImGui::NewFrame();
-
-		float aspectRatio = (float)this->WindowSizeX / (float)this->WindowSizeY;
+		if (!IsHeadlessMode)
+		{
+			// so scripts can use the `imgui` library
+			ImGui_ImplOpenGL3_NewFrame();
+			ImGui_ImplSDL3_NewFrame();
+			ImGui::NewFrame();
+		}
 
 		GameObjectRef sceneCamObject = Workspace->GetComponent<EcWorkspace>()->GetSceneCamera();
 		EcCamera* sceneCamera = sceneCamObject->GetComponent<EcCamera>();
@@ -815,16 +962,15 @@ void Engine::Start()
 				break;
 			}
 
-		// we do this AFTER  `recursivelyTravelHierarchy` in case any Scripts
-		// update the camera transform
-		glm::mat4 renderMatrix = sceneCamera->GetMatrixForAspectRatio(aspectRatio);
+		if (!IsHeadlessMode)
+		{
+			scene.UsedShaders.clear();
 
-		scene.UsedShaders.clear();
+			for (const RenderItem& ri : scene.RenderList)
+				scene.UsedShaders.insert(m_MaterialManager.GetMaterialResource(ri.MaterialId).ShaderId);
+		}
 
-		for (const RenderItem& ri : scene.RenderList)
-			scene.UsedShaders.insert(m_MaterialManager.GetMaterialResource(ri.MaterialId).ShaderId);
-
-		if (hasSun)
+		if (hasSun && !IsHeadlessMode)
 		{
 			TIME_SCOPE_AS("Shadows");
 			ZoneScopedN("Shadows");
@@ -841,7 +987,7 @@ void Engine::Start()
 			glm::mat4 sunView = glm::lookAt(50.f * sunDirection, glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
 			glm::mat4 sunRenderMatrix = sunOrtho * sunView;
 
-			sunShadowMap.Bind();
+			m_SunShadowMap.Bind();
 			glViewport(0, 0, SunShadowMapResolutionSq, SunShadowMapResolutionSq);
 			glClear(/*GL_COLOR_BUFFER_BIT |*/ GL_DEPTH_BUFFER_BIT);
 
@@ -851,7 +997,7 @@ void Engine::Start()
 				shd.SetUniform("IsShadowMap", true);
 
 				glActiveTexture(GL_TEXTURE0 + 101);
-				sunShadowMap.BindTexture();
+				m_SunShadowMap.BindTexture();
 				shd.SetUniform("ShadowAtlas", 101);
 
 				shd.SetUniform("DirecLightProjection", sunRenderMatrix);
@@ -865,230 +1011,13 @@ void Engine::Start()
 			glViewport(0, 0, WindowSizeX, WindowSizeY);
 		}
 
-		glm::mat4 skyRenderMatrix{ 1.f };
-
-		glm::vec3 camPos = glm::vec3(sceneCamera->Transform[3]);
-		glm::vec3 camForward = glm::vec3(sceneCamera->Transform[2]);
-		glm::vec3 camUp = glm::vec3(sceneCamera->Transform[1]);
-
-		glm::mat4 view = glm::lookAt(camPos, camPos + camForward, camUp);
-		glm::mat4 projection = glm::perspective(
-			glm::radians(sceneCamera->FieldOfView),
-			aspectRatio,
-			sceneCamera->NearPlane,
-			sceneCamera->FarPlane
-		);
-
-		// "We make the mat4 into a mat3 and then a mat4 again in order to get rid of the last row and column
-		// The last row and column affect the translation of the skybox (which we don't want to affect)"
-		//view = glm::mat4(glm::mat3(glm::lookAt(camPos, camPos + camForward, glm::vec3(0.f, 1.f, 0.f))));
-		// ...
-		// ...
-		// ...
-		// Wow Mr Victor Gordan sir, that sounds really complicated.
-		// It's really too bad there isn't a way simpler, 300x more understandable way
-		// of zeroing-out the first 3 values of the last column of what is literally 4 `vec4`s that represent
-		// a 4x4 matrix...
-		view[3] = glm::vec4(0.f, 0.f, 0.f, 1.f);
-
-		skyRenderMatrix = projection * view;
-
-		skyboxShaders.SetUniform("RenderMatrix", skyRenderMatrix);
-		skyboxShaders.SetUniform("Time", RunningTime);
-
-		glActiveTexture(GL_TEXTURE3);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemap);
-
-		RendererContext.FrameBuffer.Bind();
-
-		glClear(/*GL_COLOR_BUFFER_BIT |*/ GL_DEPTH_BUFFER_BIT);
-
-		glDepthFunc(GL_LEQUAL);
-
-		RendererContext.DrawMesh(
-			cubeMesh,
-			skyboxShaders,
-			{ 1.f, 1.f, 1.f },
-			skyRenderMatrix,
-			FaceCullingMode::FrontFace // Cull the Outside, not the Inside
-		);
-
-		glDepthFunc(GL_LESS);
-
-		//Main render pass
-		RendererContext.DrawScene(scene, renderMatrix, sceneCamera->Transform, RunningTime, DebugWireframeRendering);
-
-		glDisable(GL_DEPTH_TEST);
-		
-		this->OnFrameRenderGui.Fire(deltaTime);
-
+		if (!IsHeadlessMode)
 		{
-			ZoneScopedN("DearImGuiRender");
-			ImGui::Render();
-			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+			m_Render(scene, deltaTime);
+			RendererContext.SwapBuffers();
 		}
-
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-		glEnable(GL_DEPTH_TEST);
-
-		//Do framebuffer stuff after everything is drawn
-
-		RendererContext.FrameBuffer.Unbind();
-
-		glActiveTexture(GL_TEXTURE1);
-		RendererContext.FrameBuffer.BindTexture();
-
-		glDisable(GL_DEPTH_TEST);
-
-		if (EngineJsonConfig.value("postfx_enabled", false))
-		{
-			ZoneScopedN("ApplyPostFxSettings");
-
-			postFxShaders.SetUniform("PostFxEnabled", 1);
-			postFxShaders.SetUniform(
-				"ScreenEdgeBlurEnabled",
-				EngineJsonConfig.value("postfx_blurvignette", false)
-			);
-			postFxShaders.SetUniform(
-				"DistortionEnabled",
-				EngineJsonConfig.value("postfx_distortion", false)
-			);
-
-			postFxShaders.SetUniform(
-				"Gamma",
-				EngineJsonConfig.value("postfx_gamma", 1.f)
-			);
-			skyboxShaders.SetUniform(
-				"HdrEnabled",
-				true
-			);
-
-			if (EngineJsonConfig.find("postfx_blurvignette_blurstrength") != EngineJsonConfig.end())
-			{
-				postFxShaders.SetUniform(
-					"BlurVignetteStrength",
-					(float)EngineJsonConfig["postfx_blurvignette_blurstrength"]
-				);
-				postFxShaders.SetUniform(
-					"BlurVignetteDistMul",
-					(float)EngineJsonConfig["postfx_blurvignette_weightmul"]
-				);
-				postFxShaders.SetUniform(
-					"BlurVignetteDistExp",
-					(float)EngineJsonConfig["postfx_blurvignette_weightexp"]
-				);
-				postFxShaders.SetUniform(
-					"BlurVignetteSampleRadius",
-					(int)EngineJsonConfig["postfx_blurvignette_sampleradius"]
-				);
-			}
-
-			postFxShaders.SetUniform("Time", RunningTime);
-
-			glActiveTexture(GL_TEXTURE2);
-			glBindTexture(GL_TEXTURE_2D, m_TextureManager.GetTextureResource(distortionTexture).GpuId);
-
-			glActiveTexture(GL_TEXTURE3);
-			m_BloomFbo.BindTexture();
-
-			{
-				ZoneScopedN("Bloom");
-
-				m_BloomFbo.Bind();
-
-				{
-					ZoneScopedN("Extract");
-					RendererContext.DrawMesh(
-						quadMesh,
-						bloomExtractShaders,
-						{ 2.f, 2.f, 2.f },
-						glm::mat4(1.f),
-						FaceCullingMode::BackFace,
-						0
-					);
-
-					m_BloomFbo.BindTexture();
-				}
-
-				{
-					ZoneScopedN("BlurMips");
-
-					for (int i = 1; i < 8; i++)
-					{
-						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_BloomFbo.GpuTextureId, i);
-						glViewport(0, 0, static_cast<int>(ceil(WindowSizeX / pow(2.f, i))), static_cast<int>(ceil(WindowSizeY / pow(2.f, i))));
-
-						separableBlurShaders.SetUniform("LodLevel", i);
-
-						separableBlurShaders.SetUniform("BlurXAxis", true);
-						RendererContext.DrawMesh(
-							quadMesh,
-							separableBlurShaders,
-							{ 2.f, 2.f, 2.f },
-							glm::mat4(1.f),
-							FaceCullingMode::BackFace,
-							0
-						);
-
-						separableBlurShaders.SetUniform("BlurXAxis", false);
-						RendererContext.DrawMesh(
-							quadMesh,
-							separableBlurShaders,
-							{ 2.f, 2.f, 2.f },
-							glm::mat4(1.f),
-							FaceCullingMode::BackFace,
-							0
-						);
-					}
-
-					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_BloomFbo.GpuTextureId, 0);
-					glViewport(0, 0, WindowSizeX, WindowSizeY);
-				}
-
-				{
-					ZoneScopedN("Composite");
-
-					RendererContext.DrawMesh(
-						quadMesh,
-						bloomCompositeShaders,
-						{ 2.f, 2.f, 2.f },
-						glm::mat4(1.f),
-						FaceCullingMode::BackFace,
-						0
-					);
-
-					m_BloomFbo.Unbind();
-				}
-			}
-		}
-		else
-		{
-			postFxShaders.SetUniform("PostFxEnabled", 0);
-			skyboxShaders.SetUniform(
-				"HdrEnabled",
-				false
-			);
-		}
-
-		{
-			ZoneScopedN("MainPostProcessing");
-			RendererContext.DrawMesh(
-				quadMesh,
-				postFxShaders,
-				{ 2.f, 2.f, 2.f },
-				glm::mat4(1.f),
-				FaceCullingMode::BackFace,
-				0
-			);
-		}
-
-		glEnable(GL_DEPTH_TEST);
 
 		// End of frame
-
-		RendererContext.SwapBuffers();
-
 		RunningTime = GetRunningTime();
 
 		LastFrameEnded = RunningTime;
@@ -1150,9 +1079,12 @@ void Engine::Shutdown()
 
 	Log::Info("Shutting down libraries...");
 
-	ImGui_ImplOpenGL3_Shutdown();
-	ImGui_ImplSDL3_Shutdown();
-
+	if (!IsHeadlessMode)
+	{
+		ImGui_ImplOpenGL3_Shutdown();
+		ImGui_ImplSDL3_Shutdown();
+	}
+	
 	SDL_Quit();
 
 	EngineInstance = nullptr;

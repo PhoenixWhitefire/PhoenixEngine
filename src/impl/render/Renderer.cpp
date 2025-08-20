@@ -229,6 +229,9 @@ Renderer* Renderer::Get()
 
 Renderer::~Renderer()
 {
+	if (!s_Instance)
+		return; // never initialized
+
 	s_Instance = nullptr;
 
 	glDeleteBuffers(1, &InstancingBuffer);

@@ -3,6 +3,7 @@
 
 #include "script/luhx.hpp"
 #include "asset/TextureManager.hpp"
+#include "Engine.hpp"
 
 static int imgui_begin(lua_State* L)
 {
@@ -138,7 +139,12 @@ static luaL_Reg imgui_funcs[] =
 
 int luhxopen_imgui(lua_State* L)
 {
-    luaL_register(L, LUHX_IMGUILIBNAME, imgui_funcs);
+    if (!Engine::Get()->IsHeadlessMode)
+    {
+        luaL_register(L, LUHX_IMGUILIBNAME, imgui_funcs);
 
-    return 1;
+        return 1;
+    }
+    else
+        return 0;
 }

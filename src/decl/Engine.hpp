@@ -67,6 +67,9 @@ public:
 	int ExitCode = 0;
 
 private:
+	void m_InitVideo();
+	void m_Render(const Scene&, double DeltaTime);
+
 	int m_DrawnFramesInSecond = -1;
 	bool m_IsRunning = false;
 
@@ -75,6 +78,11 @@ private:
 	TextureManager m_TextureManager;
 	ShaderManager m_ShaderManager;
 	MeshProvider m_MeshProvider;
-	
-	GpuFrameBuffer m_BloomFbo;
+
+	ShaderProgram m_PostFxShader;
+	ShaderProgram m_SkyboxShader;
+	ShaderProgram m_SeparableBlurShader;
+	uint32_t m_SkyboxCubemap = UINT32_MAX;
+	uint32_t m_DistortionTexture = UINT32_MAX;
+	GpuFrameBuffer m_SunShadowMap;
 };

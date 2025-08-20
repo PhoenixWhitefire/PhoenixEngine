@@ -1,0 +1,43 @@
+# settings formatted for MSVC
+
+target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:/O2 /Ob2 /GL>)
+target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Release>:/O2 /Ob2 /GL>)
+target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:/Od /Ob0>)
+target_compile_options(PhoenixEngine PRIVATE /MP /W4)
+
+target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:/fsanitize=address /Od>)
+
+target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:/INCREMENTAL:NO>)
+target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:/INCREMENTAL:NO>)
+target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:/LTCG>)
+target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:Release>:/LTCG>)
+
+add_compile_options($<$<CONFIG:RelTracy>:/GL>)
+add_compile_options($<$<CONFIG:RelTracy>:/O2>)
+add_compile_options($<$<CONFIG:RelTracy>:/Ob2>)
+add_compile_options($<$<CONFIG:Release>:/GL>)
+add_compile_options($<$<CONFIG:Release>:/O2>)
+add_compile_options($<$<CONFIG:Release>:/Ob2>)
+add_compile_options($<$<CONFIG:Debug>:/fsanitize=address>)
+add_compile_options($<$<CONFIG:Debug>:/Od>)
+add_compile_options($<$<CONFIG:Debug>:/DEBUG>)
+
+add_compile_options(/MP)
+# incremental warning with ASAN
+add_link_options($<$<CONFIG:Debug>:/INCREMENTAL:NO>)
+
+# incremental warning with LTCG
+add_link_options($<$<CONFIG:RelTracy>:/INCREMENTAL:NO>)
+add_link_options($<$<CONFIG:RelTracy>:/LTCG>)
+add_link_options($<$<CONFIG:Release>:/INCREMENTAL:NO>)
+add_link_options($<$<CONFIG:Release>:/LTCG>)
+
+# couldn't be bothered to get $<TARGET_RUNTIME_DLLS:PhoenixEngine> to work
+add_custom_command(TARGET PhoenixEngine POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:PhoenixEngine> "Vendor/SDL/${PHX_BUILD_TYPE}/SDL3.dll"
+  COMMAND_EXPAND_LISTS
+)
+add_custom_command(TARGET PhoenixEngine POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:PhoenixEngine> "Vendor/FMOD/api/core/lib/x64/fmodL.dll"
+  COMMAND_EXPAND_LISTS
+)

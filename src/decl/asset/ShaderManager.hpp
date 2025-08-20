@@ -54,7 +54,7 @@ public:
 	// USE SHUTDOWN!!
 	~ShaderManager();
 
-	void Initialize();
+	void Initialize(bool IsHeadless);
 
 	static ShaderManager* Get();
 
@@ -66,6 +66,8 @@ public:
 
 	void ClearAll();
 	void ReloadAll();
+
+	bool IsHeadless = false;
 
 private:
 	Memory::vector<ShaderProgram, MEMCAT(Shader)> m_Shaders;

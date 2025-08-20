@@ -437,10 +437,12 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 
 static MeshProvider* s_Instance = nullptr;
 
-void MeshProvider::Initialize()
+void MeshProvider::Initialize(bool IsHeadless)
 {
 	ZoneScoped;
 	assert(!s_Instance);
+
+	this->IsHeadless = IsHeadless;
 
 	this->Assign(PrimitiveMeshes::Cube(), "!Cube", true);
 	this->Assign(PrimitiveMeshes::Quad(), "!Quad", true);
@@ -450,6 +452,12 @@ void MeshProvider::Initialize()
 
 void MeshProvider::Shutdown()
 {
+	if (IsHeadless)
+	{
+		s_Instance = nullptr;
+		return;
+	}
+
 	for (GpuMesh& gpuMesh : m_GpuMeshes)
 		gpuMesh.Delete();
 
@@ -768,9 +776,32 @@ void MeshProvider::Save(uint32_t Id, const std::string_view& Path)
 	this->Save(m_Meshes.at(Id), Path);
 }
 
-static void finishAndUploadMesh(Mesh& mesh, MeshProvider::GpuMesh& gpuMesh)
+static void finishAndUploadMesh(Mesh& mesh, MeshProvider::GpuMesh& gpuMesh, bool IsHeadless)
 {
 	ZoneScoped;
+
+	if (IsHeadless)
+	{
+		for (uint8_t bi = 0; bi < mesh.Bones.size(); bi++)
+		{
+			Bone& bone = mesh.Bones[bi];
+
+			for (uint32_t vi = 0; vi < mesh.Vertices.size(); vi++)
+			{
+				const Vertex& v = mesh.Vertices[vi];
+
+				for (uint8_t ji = 0; ji < v.InfluencingJoints.size(); ji++)
+					if (v.InfluencingJoints[ji] == bi
+						&& v.JointWeights[ji] > 0.f
+					)
+						bone.TargetVertices.emplace_back(vi, ji);
+			}
+
+			// generally not ever going to be modified again
+			bone.TargetVertices.shrink_to_fit();
+		}
+		return;
+	}
 
 	GpuVertexArray& vao = gpuMesh.VertexArray;
 	GpuVertexBuffer& vbo = gpuMesh.VertexBuffer;
@@ -913,7 +944,7 @@ uint32_t MeshProvider::Assign(Mesh mesh, const std::string& InternalName, bool U
 
 			if (UploadToGpu)
 			{
-				finishAndUploadMesh(m_Meshes[prevPair->second], gpuMesh);
+				finishAndUploadMesh(m_Meshes[prevPair->second], gpuMesh, IsHeadless);
 				m_Meshes[prevPair->second].GpuId = preExisting.GpuId;
 			}
 			else
@@ -1100,7 +1131,9 @@ void MeshProvider::FinalizeAsyncLoadedMeshes()
 
 		it->PostLoadCallback(*mesh);
 		mesh = &m_Meshes.at(it->ResourceId);
-		m_CreateAndUploadGpuMesh(*mesh);
+
+		if (!IsHeadless)
+			m_CreateAndUploadGpuMesh(*mesh);
 
 		delete it->Promise;
 
@@ -1119,11 +1152,14 @@ void MeshProvider::m_CreateAndUploadGpuMesh(Mesh& mesh)
 
 	MeshProvider::GpuMesh& gpuMesh = m_GpuMeshes.back();
 
-	gpuMesh.VertexArray.Initialize();
-	gpuMesh.VertexBuffer.Initialize();
-	gpuMesh.ElementBuffer.Initialize();
-
-	finishAndUploadMesh(mesh, gpuMesh);
+	if (!IsHeadless)
+	{
+		gpuMesh.VertexArray.Initialize();
+		gpuMesh.VertexBuffer.Initialize();
+		gpuMesh.ElementBuffer.Initialize();
+	}
+	
+	finishAndUploadMesh(mesh, gpuMesh, IsHeadless);
 
 	mesh.GpuId = static_cast<uint32_t>(m_GpuMeshes.size() - 1);
 }

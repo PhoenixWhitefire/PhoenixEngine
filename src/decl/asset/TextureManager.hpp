@@ -49,7 +49,7 @@ public:
 	// USE SHUTDOWN!!
 	~TextureManager();
 
-	void Initialize();
+	void Initialize(bool IsHeadless);
 
 	static TextureManager* Get();
 
@@ -88,4 +88,6 @@ private:
 
 	std::vector<std::promise<Texture>*> m_TexPromises;
 	std::vector<std::shared_future<Texture>> m_TexFutures;
+
+	bool m_IsHeadless = false;
 };
