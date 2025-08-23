@@ -15,6 +15,7 @@ static const luaL_Reg luhxlibs[] =
     { LUHX_MODELLIBNAME, luhxopen_model },
     { LUHX_SCENELIBNAME, luhxopen_scene },
     { LUHX_WORLDLIBNAME, luhxopen_world },
+    { LUHX_ENGINELIBNAME, luhxopen_engine },
     { NULL, NULL }
 };
 

@@ -114,19 +114,13 @@ catch (...)                                                                     
 #include "FileRW.hpp"
 #include "Log.hpp"
 
-static bool FirstDragFrame = false;
-
 static bool PreviouslyPressingF11 = false;
 static bool MouseCaptured = false;
-
-static ImGuiIO* GuiIO = nullptr;
-
-static const float MouseSensitivity = 100.f;
+static const float MouseSensitivity = 400.f;
 static const float MovementSpeed = 15.f;
-
 static float PrevMouseX, PrevMouseY = 0;
 
-static glm::vec3 CamForward = glm::vec3(0.f, 0.f, -1.f);
+static ImGuiIO* GuiIO = nullptr;
 
 static int s_ExitCode = 0;
 
@@ -201,95 +195,76 @@ static void handleInputs(double deltaTime)
 	EcCamera* camera = EngineInstance->Workspace->GetComponent<EcWorkspace>()->GetSceneCamera()->GetComponent<EcCamera>();
 	SDL_Window* window = EngineInstance->Window;
 
-	UserInput::InputBeingSunk = GuiIO->WantCaptureKeyboard || GuiIO->WantCaptureMouse;
+	float mouseX;
+	float mouseY;
 
+	uint32_t activeMouseButton = SDL_GetMouseState(&mouseX, &mouseY);
+	
 	if (camera->UseSimpleController)
 	{
-		static const glm::vec3 UpVec{ 0.f, 1.f, 0.f };
+		static const glm::vec3 WorldUp{ 0.f, 1.f, 0.f };
+		glm::vec3 camForward = glm::vec3(camera->Transform[2]);
+		glm::vec3 camUp = glm::vec3(camera->Transform[1]);
 
-		if (!UserInput::InputBeingSunk)
+		if (!GuiIO->WantCaptureKeyboard)
 		{
-			double displacementSpeed = MovementSpeed * deltaTime;
+			float speed = MovementSpeed * static_cast<float>(deltaTime);
 
 			if (UserInput::IsKeyDown(SDLK_LSHIFT))
-				displacementSpeed *= 0.5f;
+				speed *= 0.5f;
 
-			glm::vec3 displacement{};
+			glm::vec3 position = (glm::vec3)camera->Transform[3];
 
 			if (UserInput::IsKeyDown(SDLK_W))
-				displacement += glm::vec3(0, 0, displacementSpeed);
+				position += camForward * speed;
 
 			if (UserInput::IsKeyDown(SDLK_A))
-				displacement += glm::vec3(displacementSpeed, 0, 0);
+				position += -glm::normalize(glm::cross(camForward, WorldUp)) * speed;
 
 			if (UserInput::IsKeyDown(SDLK_S))
-				displacement += glm::vec3(0, 0, -displacementSpeed);
+				position += camForward * -speed;
 
 			if (UserInput::IsKeyDown(SDLK_D))
-				displacement += glm::vec3(-displacementSpeed, 0, 0);
+				position += glm::normalize(glm::cross(camForward, WorldUp)) * speed;
 
 			if (UserInput::IsKeyDown(SDLK_Q))
-				displacement += glm::vec3(0, -displacementSpeed, 0);
+				position += camUp * -speed;
 
 			if (UserInput::IsKeyDown(SDLK_E))
-				displacement += glm::vec3(0, displacementSpeed, 0);
+				position += camUp * speed;
 
-			camera->Transform = glm::translate(camera->Transform, (glm::vec3)displacement);
+			camera->Transform[3] = glm::vec4(position, camera->Transform[3].w);
 		}
-
-		float mouseX;
-		float mouseY;
-
-		uint32_t activeMouseButton = SDL_GetMouseState(&mouseX, &mouseY);
 
 		if (MouseCaptured)
 		{
 			// Doesn't hide unless we tell Dear ImGui to hide the cursor too
 			// (Otherwise it flickers)
 			// 22/08/2024
-			ImGui::SetMouseCursor(ImGuiMouseCursor_None);
 			PHX_SDL_CALL(SDL_HideCursor);
+			PHX_ENSURE(SDL_SetWindowMouseGrab(window, true));
+			ImGui::SetMouseCursor(ImGuiMouseCursor_None);
 
 			int windowSizeX, windowSizeY;
+			PHX_ENSURE(SDL_GetWindowSize(window, &windowSizeX, &windowSizeY));
 
-			PHX_ENSURE(SDL_GetWindowSize(nullptr, &windowSizeX, &windowSizeY));
+			float deltaMouseX = mouseX - PrevMouseX;
+			float deltaMouseY = mouseY - PrevMouseY;
 
-			if (FirstDragFrame)
-			{
-				PHX_ENSURE(SDL_SetWindowMouseGrab(window, true));
-
-				SDL_WarpMouseInWindow(nullptr, windowSizeX / 2.f, windowSizeY / 2.f);
-
-				mouseX = windowSizeX / 2.f;
-				mouseY = windowSizeY / 2.f;
-				PrevMouseX = mouseX;
-				PrevMouseY = mouseY;
-
-				FirstDragFrame = false;
-			}
-
-			float deltaMouseX = PrevMouseX - mouseX;
-			float deltaMouseY = PrevMouseY - mouseY;
-
-			float rotationX = MouseSensitivity * (deltaMouseY - (windowSizeY / 2.f)) / windowSizeY;
-			float rotationY = MouseSensitivity * (deltaMouseX - (windowSizeX / 2.f)) / windowSizeX;
-			rotationX += 50.f; // TODO 22/08/2024: Why??
-			rotationY += 50.f;
+			float rotationX = deltaMouseY / MouseSensitivity;
+			float rotationY = deltaMouseX / MouseSensitivity;
 
 			glm::vec3 newForward = glm::rotate(
-				CamForward,
-				glm::radians(rotationX),
-				glm::normalize(glm::cross(CamForward, UpVec))
+				camForward,
+				-rotationX,
+				glm::normalize(glm::cross(camForward, WorldUp))
 			);
 
-			if (abs(glm::angle(newForward, UpVec) - glm::radians(90.f)) <= glm::radians(85.f))
-				CamForward = newForward;
+			if (abs(glm::angle(newForward, WorldUp) - glm::radians(90.f)) <= glm::radians(85.f))
+				camForward = newForward;
 
-			CamForward = glm::rotate(CamForward, glm::radians(-rotationY), UpVec);
-
-			glm::vec3 position{ camera->Transform[3] };
-
-			camera->Transform = glm::lookAt(position, position + CamForward, UpVec);
+			camForward = glm::rotate(camForward, -rotationY, WorldUp);
+			camera->Transform[2] = glm::vec4(camForward, camera->Transform[2].w);
 
 			// Keep the mouse in the window.
 			// Teleport it to the other side if it hits the edge.
@@ -308,12 +283,6 @@ static void handleInputs(double deltaTime)
 			if (mouseY >= windowSizeY - 10)
 				newMouseY = 20;
 
-			if (UserInput::InputBeingSunk)
-			{
-				newMouseX = windowSizeX / 2.f;
-				newMouseY = windowSizeY / 2.f;
-			}
-
 			if (newMouseX != mouseX || newMouseY != mouseY)
 			{
 				SDL_WarpMouseInWindow(nullptr, newMouseX, newMouseY);
@@ -329,75 +298,17 @@ static void handleInputs(double deltaTime)
 		}
 		else
 		{
-			if (!FirstDragFrame)
-			{
-				PHX_SDL_CALL(SDL_ShowCursor);
-				PHX_ENSURE(SDL_SetWindowMouseGrab(window, false));
-
-				ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
-
-				FirstDragFrame = true;
-			}
-
-			//if (activeMouseButton & SDL_BUTTON_LMASK && !UserInput::InputBeingSunk)
-				//MouseCaptured = true;
-		}
-
-		PrevMouseX = mouseX;
-		PrevMouseY = mouseY;
-	}
-	else
-	{
-		// `input_mouse_setlocked` Luau API 21/09/2024
-		if (EcScript::s_WindowGrabMouse && !UserInput::InputBeingSunk)
-		{
-			PHX_ENSURE(SDL_SetWindowMouseGrab(window, true));
-
 			PHX_SDL_CALL(SDL_ShowCursor);
-			ImGui::SetMouseCursor(ImGuiMouseCursor_None);
-
-			float mouseX = 0, mouseY = 0;
-
-			SDL_GetMouseState(&mouseX, &mouseY);
-
-			// Keep the mouse in the window.
-			// Teleport it to the other side if it hits the edge.
-
-			float newMouseX = mouseX, newMouseY = mouseY;
-
-			if (mouseX <= 10)
-				newMouseX = static_cast<float>(EngineInstance->WindowSizeX - 20);
-
-			if (mouseX >= EngineInstance->WindowSizeX - 10)
-				newMouseX = 20;
-
-			if (mouseY <= 10)
-				newMouseY = static_cast<float>(EngineInstance->WindowSizeY - 20);
-
-			if (mouseY >= EngineInstance->WindowSizeY - 10)
-				newMouseY = 20;
-
-			if (UserInput::InputBeingSunk)
-			{
-				newMouseX = EngineInstance->WindowSizeX / 2.f;
-				newMouseY = EngineInstance->WindowSizeY / 2.f;
-			}
-
-			if (newMouseX != mouseX || newMouseY != mouseY)
-			{
-				SDL_WarpMouseInWindow(window, newMouseX, newMouseY);
-				mouseX = newMouseX;
-				mouseY = newMouseY;
-			}
-		}
-		else
-		{
 			PHX_ENSURE(SDL_SetWindowMouseGrab(window, false));
-
-			PHX_SDL_CALL(SDL_ShowCursor);
 			ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
+
+			if (activeMouseButton & SDL_BUTTON_LMASK && !GuiIO->WantCaptureMouse)
+				MouseCaptured = true;
 		}
 	}
+
+	PrevMouseX = mouseX;
+	PrevMouseY = mouseY;
 
 	if (UserInput::IsKeyDown(SDLK_F11))
 	{
@@ -456,14 +367,14 @@ static void drawDeveloperUI(double DeltaTime)
 
 	Engine* EngineInstance = Engine::Get();
 
-	if (UserInput::IsKeyDown(SDLK_I) && !UserInput::InputBeingSunk)
+	if (UserInput::IsKeyDown(SDLK_I) && !GuiIO->WantCaptureKeyboard)
 	{
 		Log::Info("Reloading configuration...");
 
 		EngineInstance->LoadConfiguration();
 	}
 
-	if (UserInput::IsKeyDown(SDLK_K) && !UserInput::InputBeingSunk)
+	if (UserInput::IsKeyDown(SDLK_K) && !GuiIO->WantCaptureKeyboard)
 	{
 		Log::Info("Reloading shaders...");
 
@@ -686,16 +597,8 @@ static void drawDeveloperUI(double DeltaTime)
 		if (EngineInstance->IsFullscreen != wasFullscreen)
 			EngineInstance->SetIsFullscreen(EngineInstance->IsFullscreen);
 
-		if (EngineInstance->VSync)
-		{
-			PHX_ENSURE(SDL_GL_SetSwapInterval(1));
-		}
-		else
-		{
-			PHX_ENSURE(SDL_GL_SetSwapInterval(0));
-
+		if (!EngineInstance->VSync)
 			ImGui::InputInt("FPS limit", &EngineInstance->FpsCap, 1, 30);
-		}
 
 		bool postFxEnabled = EngineJsonConfig.value("postfx_enabled", false);
 

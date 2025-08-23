@@ -37,7 +37,12 @@ constexpr uint32_t MATERIAL_TEXTUREPATH_BUFSIZE = 128;
 constexpr char MATERIAL_NEW_NAME_DEFAULT[] = "newmaterial";
 
 static bool TextEditorEnabled = false;
-static std::string TextEditorFile = "<NOT_SELECTED>";
+static char* TextEditorEntryBuffer = nullptr;
+static size_t TextEditorEntryBufferCapacity = 0;
+static std::fstream* TextEditorFileStream = nullptr;
+static std::set<std::string> TextEditorRecentFiles;
+static std::vector<std::string> TextEdOpenFiles;
+static size_t TextEdCurrentFileTab = 0;
 
 static nlohmann::json DefaultNewMaterial = 
 {
@@ -101,6 +106,7 @@ static void setErrorMessage(std::string errm)
 {
 	ErrorTooltipMessage = errm;
 	ErrorTooltipTimeRemaining = 2.5f;
+	Log::Error(errm);
 }
 
 static void copyStringToBuffer(char* Buffer, const std::string_view& String, size_t BufSize)
@@ -183,7 +189,7 @@ static std::string getFileDirectory(const std::string& FilePath)
 #endif
 	else
 	{
-		std::string fileDir = FilePath.substr(0, lastFwdSlash);
+		std::string fileDir = FilePath.substr(0, lastFwdSlash + 1);
 
 		if (fileDir.find("resources/") == std::string::npos)
 			fileDir = "resources/" + fileDir;
@@ -191,11 +197,6 @@ static std::string getFileDirectory(const std::string& FilePath)
 		return cwd + fileDir + "/";
 	}
 }
-
-static char* TextEditorEntryBuffer = nullptr;
-static size_t TextEditorEntryBufferCapacity = 0;
-static std::fstream* TextEditorFileStream = nullptr;
-static std::set<std::string> TextEditorQuickSelectFiles;
 
 #define EDCHECKEXPR(expr) { if (!(expr)) { setErrorMessage(#expr " failed"); } }
 
@@ -209,14 +210,16 @@ static void textEditorSaveFile()
 
 	std::string contents = TextEditorEntryBuffer;
 
-	// always flush the buffer. if a new file is created (i.e. "<NOT_SELECTED>"), and the
+	// always flush the buffer. if a new file is created (i.e. "<NEW>"), and the
 	// `contents.empty` early-out triggers as the user opens another file, the new file
 	// will be overwritten with the empty contents
 	// 12/02/2024
 	Memory::Free(TextEditorEntryBuffer);
 	TextEditorEntryBuffer = nullptr;
 
-	if (TextEditorFile == "" || TextEditorFile == "<NOT_SELECTED>")
+	std::string textEditorFile = TextEdOpenFiles[TextEdCurrentFileTab];
+
+	if (textEditorFile == "" || textEditorFile == "<NEW>")
 	{
 		if (contents.empty())
 			return;
@@ -224,9 +227,11 @@ static void textEditorSaveFile()
 		static uint32_t ErrCount = 0;
 		ErrCount++;
 
-		TextEditorFile = "texteditor_default_" + std::to_string(ErrCount) + ".txt";
-		setErrorMessage("Text Editor tried to save a file with no path. Will be saved to " + TextEditorFile);
+		textEditorFile = "texteditor_default_" + std::to_string(ErrCount) + ".txt";
+		setErrorMessage("Text Editor tried to save a file with no path. Will be saved to " + textEditorFile);
 	}
+	else
+		TextEditorRecentFiles.insert(textEditorFile);
 
 	if (TextEditorFileStream && TextEditorFileStream->is_open())
 	{
@@ -235,21 +240,10 @@ static void textEditorSaveFile()
 		TextEditorFileStream = nullptr;
 	}
 
-	if (TextEditorFile.find("scripts/") != std::string::npos
-		&& TextEditorFile.find("resources/scripts/") == std::string::npos
-	)
-		TextEditorFile = "resources/" + TextEditorFile;
+	std::string realSaveLoc = FileRW::MakePathCwdRelative(textEditorFile);
 
-	size_t lastPeriod = TextEditorFile.find_last_of(".");
-	size_t lastFwdSlash = TextEditorFile.find_last_of("/");
-
-	if (lastPeriod == std::string::npos || (lastFwdSlash != std::string::npos && lastFwdSlash > lastPeriod))
-	{
-		TextEditorFile += ".txt";
-		setErrorMessage("File will be saved as " + TextEditorFile);
-	}
-
-	EDCHECKEXPR(FileRW::WriteFile(TextEditorFile, contents));
+	Log::InfoF("Saving file to {}", realSaveLoc);
+	EDCHECKEXPR(FileRW::WriteFile(realSaveLoc, contents));
 }
 
 static void invokeTextEditor(const std::string& File)
@@ -258,8 +252,18 @@ static void invokeTextEditor(const std::string& File)
 		textEditorSaveFile();
 
 	TextEditorEnabled = true;
-	TextEditorFile = File;
-	TextEditorQuickSelectFiles.insert(File);
+
+	for (size_t i = 0; i < TextEdOpenFiles.size(); i++)
+	{
+		if (TextEdOpenFiles[i] == File)
+		{
+			TextEdCurrentFileTab = i;
+			return;
+		}
+	}
+
+	TextEdOpenFiles.push_back(File);
+	TextEdCurrentFileTab = TextEdOpenFiles.size() - 1;
 }
 
 static void renderTextEditor()
@@ -270,8 +274,6 @@ static void renderTextEditor()
 	{
 		if (TextEditorEntryBuffer)
 			textEditorSaveFile();
-		TextEditorFile = "<NOT_SELECTED>";
-
 		return;
 	}
 
@@ -284,7 +286,8 @@ static void renderTextEditor()
 		if (ImGui::MenuItem("New"))
 		{
 			textEditorSaveFile();
-			TextEditorFile = "<NOT_SELECTED>";
+			TextEdOpenFiles.push_back("<NEW>");
+			TextEdCurrentFileTab = TextEdOpenFiles.size() - 1;
 
 			TextEditorEntryBuffer = BufferInitialize(512);
 			TextEditorEntryBufferCapacity = 512;
@@ -292,11 +295,8 @@ static void renderTextEditor()
 
 		if (ImGui::MenuItem("Open"))
 		{
-			TextEditorQuickSelectFiles.insert(TextEditorFile);
-
-			textEditorSaveFile();
-
-			std::string curDir = getFileDirectory(TextEditorFile);
+			TextEditorRecentFiles.insert(TextEdOpenFiles[TextEdCurrentFileTab]);
+			std::string curDir = getFileDirectory(TextEdOpenFiles[TextEdCurrentFileTab]);
 
 			SDL_ShowOpenFileDialog(
 				[](void*, const char* const* FileList, int)
@@ -306,18 +306,11 @@ static void renderTextEditor()
 					if (!FileList[0])
 						return;
 
-					TextEditorFile = FileList[0];
+					textEditorSaveFile();
+					TextEditorRecentFiles.insert(TextEdOpenFiles[TextEdCurrentFileTab]);
 
-					// windows SMELLS :( 18/02/2025
-					size_t off = TextEditorFile.find_first_of("\\");
-
-					while (off != std::string::npos)
-						off = TextEditorFile.replace(off, 1, "/").find_first_of("\\");
-
-					if (!TextEditorFile.find("resources/"))
-						TextEditorFile.insert(0, "./"); // for `FileRW::TryMakePathCwdRelative`
-
-					TextEditorQuickSelectFiles.insert(TextEditorFile);
+					TextEdOpenFiles.push_back(FileRW::MakePathCwdRelative(FileList[0]));
+					TextEdCurrentFileTab = TextEdOpenFiles.size() - 1;
 				},
 				nullptr,
 				SDL_GL_GetCurrentWindow(),
@@ -328,12 +321,14 @@ static void renderTextEditor()
 			);
 		}
 
-		if (ImGui::MenuItem("Save", NULL, nullptr, TextEditorFile != "" && TextEditorFile != "<NOT_SELECTED>"))
+		std::string textEditorFile = TextEdOpenFiles[TextEdCurrentFileTab];
+
+		if (ImGui::MenuItem("Save", NULL, nullptr, textEditorFile != "" && textEditorFile != "<NEW>"))
 			textEditorSaveFile();
 
 		if (ImGui::MenuItem("Save As"))
 		{
-			std::string curDir = getFileDirectory(TextEditorFile);
+			std::string curDir = getFileDirectory(textEditorFile);
 
 			SDL_ShowSaveFileDialog(
 				[](void*, const char* const* FileList, int)
@@ -343,20 +338,11 @@ static void renderTextEditor()
 					if (!FileList[0])
 						return;
 
-					TextEditorFile = FileList[0];
-
-					// windows SMELLS :( 18/02/2025
-					size_t off = TextEditorFile.find_first_of("\\");
-
-					while (off != std::string::npos)
-						off = TextEditorFile.replace(off, 1, "/").find_first_of("\\");
-
-					if (!TextEditorFile.find("resources/"))
-						TextEditorFile.insert(0, "./"); // for `FileRW::TryMakePathCwdRelative`
-
+					TextEdOpenFiles.push_back(FileRW::MakePathCwdRelative(FileList[0]));
+					TextEdCurrentFileTab = TextEdOpenFiles.size() - 1;
 					textEditorSaveFile();
 
-					TextEditorQuickSelectFiles.insert(TextEditorFile);
+					TextEditorRecentFiles.insert(TextEdOpenFiles[TextEdCurrentFileTab]);
 				},
 				nullptr,
 				SDL_GL_GetCurrentWindow(),
@@ -364,6 +350,27 @@ static void renderTextEditor()
 				0,
 				curDir.c_str()
 			);
+		}
+
+		if (ImGui::BeginMenu("Recent", TextEditorRecentFiles.size() > 0) || ImGui::IsItemHovered())
+		{
+			std::set<std::string>::reverse_iterator rit;
+		
+			for (rit = TextEditorRecentFiles.rbegin(); rit != TextEditorRecentFiles.rend(); rit++)
+			{
+				std::string label = rit->data();
+				if (label.find("resources/") == 0)
+					label = label.substr(strlen("resources/"), label.size() - strlen("resources/"));
+
+				if (ImGui::MenuItem(label.c_str()))
+				{
+					textEditorSaveFile();
+					TextEdOpenFiles.push_back(rit->data());
+					TextEdCurrentFileTab = TextEdOpenFiles.size() - 1;
+				}
+			}
+
+			ImGui::EndMenu();
 		}
 
 		if (ImGui::MenuItem("Close"))
@@ -375,23 +382,78 @@ static void renderTextEditor()
 		ImGui::EndMenu();
 	}
 
-	std::string selectorMenuText = "Active: " + TextEditorFile;
-	bool quickSelectOpen = ImGui::BeginMenu(selectorMenuText.c_str());
-	ImGui::SetItemTooltip("Quick Select from recent files");
+	ImGui::Separator();
 
-	if (quickSelectOpen)
+	static size_t NextButtonHighlight = UINT64_MAX;
+	static size_t HoveredId = UINT64_MAX;
+	size_t wipNextButtonHighlight = UINT64_MAX;
+	size_t wipHoveredId = UINT64_MAX;
+
+	for (size_t i = 0; i < TextEdOpenFiles.size(); i++)
 	{
-		std::set<std::string>::reverse_iterator rit;
+		ImGui::PushID(i);
 
-		for (rit = TextEditorQuickSelectFiles.rbegin(); rit != TextEditorQuickSelectFiles.rend(); rit++)
-			if (ImGui::MenuItem(rit->data()))
+		std::string label = TextEdOpenFiles[i];
+		if (label.find("resources/") == 0)
+			label = label.substr(strlen("resources/"), label.size() - strlen("resources/"));
+
+		if (i == TextEdCurrentFileTab && HoveredId == i && label.size() > 5)
+		{
+			label = label.substr(0, label.size() - 3);
+			label.append("... ");
+		}
+
+		if (ImGui::MenuItemEx(
+			label.c_str(),
+			nullptr,
+			nullptr,
+			(i == TextEdCurrentFileTab) && (HoveredId != i),
+			true
+		) && TextEdCurrentFileTab != i)
+		{
+			textEditorSaveFile();
+			TextEdCurrentFileTab = i;
+		}
+
+		bool hovered = ImGui::IsItemHovered();
+		if (hovered)
+			wipHoveredId = i;
+
+		if (i == TextEdCurrentFileTab && hovered)
+		{
+			ImGui::SetCursorPosX(ImGui::GetCursorPosX() - 20.f);
+
+			if (HoveredId == i)
 			{
-				textEditorSaveFile();
-				TextEditorFile = rit->data();
+				if (i == NextButtonHighlight)
+					ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.f, 0.f, 1.f, 1.f));
+				else
+					ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.f, 0.f, 0.f, 1.f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.f, 0.f, 1.f, 1.f));
 			}
 
-		ImGui::EndMenu();
+			bool closeTab = ImGui::Button("X", ImVec2(16.f, 18.f)) || ImGui::IsItemClicked();
+
+			if (ImGui::IsItemHovered())
+			{
+				wipNextButtonHighlight = i;
+				wipHoveredId = i;
+			}
+
+			if (HoveredId == i)
+				ImGui::PopStyleColor(2);
+
+			if (closeTab || ImGui::IsItemClicked())
+			{
+				textEditorSaveFile();
+				TextEdOpenFiles.erase(TextEdOpenFiles.begin() + i);
+			}
+		}
+
+		ImGui::PopID();
 	}
+	NextButtonHighlight = wipNextButtonHighlight;
+	HoveredId = wipHoveredId;
 
 	ImGui::EndMenuBar();
 
@@ -403,17 +465,41 @@ static void renderTextEditor()
 			delete TextEditorFileStream;
 		}
 
-		TextEditorFileStream = new std::fstream(FileRW::TryMakePathCwdRelative(TextEditorFile));
+		if (TextEdCurrentFileTab >= TextEdOpenFiles.size())
+		{
+			if (TextEdOpenFiles.size() > 0)
+				TextEdCurrentFileTab = TextEdOpenFiles.size() - 1;
+			else
+			{
+				TextEdOpenFiles.push_back("<NEW>");
+				TextEdCurrentFileTab = 0;
+			}
+		}
+
+		TextEditorFileStream = new std::fstream(FileRW::MakePathCwdRelative(TextEdOpenFiles[TextEdCurrentFileTab]));
 		
 		std::string scriptContents = "";
 
 		if (!(*TextEditorFileStream) || !TextEditorFileStream->is_open())
 		{
-			setErrorMessage("File couldn't be opened");
-			TextEditorFile = "<NOT_SELECTED>";
-
 			TextEditorEntryBuffer = BufferInitialize(512);
 			TextEditorEntryBufferCapacity = 512;
+
+			if (TextEdOpenFiles[TextEdCurrentFileTab] != "<NEW>")
+			{
+				setErrorMessage(std::format(
+					"File '{}' couldn't be opened",
+					TextEdOpenFiles[TextEdCurrentFileTab]
+				));
+				TextEdOpenFiles.push_back("<NEW>");
+				TextEdCurrentFileTab = TextEdOpenFiles.size() - 1;
+
+				copyStringToBuffer(
+					TextEditorEntryBuffer,
+					"Couldn't read file:\n" + TextEdOpenFiles[TextEdCurrentFileTab],
+					512
+				);
+			}
 		}
 		else
 		{
@@ -1090,19 +1176,8 @@ static std::function<void(void)> ContextMenuActionHandlers[] =
 					RAISE_RT(SDL_GetError());
 				if (!FileList[0])
 					return;
-
-				std::string file = FileList[0];
-
-				// windows SMELLS :( 18/02/2025
-				size_t off = file.find_first_of("\\");
-
-				while (off != std::string::npos)
-					off = file.replace(off, 1, "/").find_first_of("\\");
-				
-				if (!file.find("resources/"))
-					file.insert(0, "./"); // for `FileRW::TryMakePathCwdRelative`
-
-				EDCHECKEXPR(FileRW::WriteFile(file, contents));
+					
+				EDCHECKEXPR(FileRW::WriteFile(FileList[0], contents));
 			},
 			(void*)ser,
 			SDL_GL_GetCurrentWindow(),
@@ -1420,7 +1495,7 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 			openInserter = true;
 
 		ImGui::SameLine();
-		ImGui::SetCursorPosX(ImGui::GetCursorPosX() - style.IndentSpacing * 0.6f + 0.5f);
+		ImGui::SetCursorPosX(ImGui::GetCursorPosX() - style.IndentSpacing * 0.6f + 1.5f);
 		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 2.f); // not the faintest idea
 
 		ImGui::Image(

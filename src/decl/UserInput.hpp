@@ -6,6 +6,4 @@ namespace UserInput
 {
 	bool IsKeyDown(SDL_Keycode Key);
 	bool IsMouseButtonDown(bool Left);
-
-	extern bool InputBeingSunk;
 };

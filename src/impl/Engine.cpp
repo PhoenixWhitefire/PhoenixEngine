@@ -137,6 +137,8 @@ static T readFromConfiguration(const std::string_view& Key, const T& DefaultValu
 
 void Engine::LoadConfiguration()
 {
+	ZoneScoped;
+
 	bool ConfigLoadSucceeded = true;
 	std::string ConfigLoadErrorMessage = "Failed to load configuration file.";
 	std::string ConfigAscii = FileRW::ReadFile("./phoenix.conf", &ConfigLoadSucceeded);
@@ -199,6 +201,8 @@ void Engine::Close()
 
 void Engine::m_InitVideo()
 {
+	ZoneScoped;
+
 	SDL_DisplayID primaryDisplay = SDL_GetPrimaryDisplay();
 	PHX_ENSURE_MSG(primaryDisplay != 0, "`SDL_GetPrimaryDisplay` failed with error: " + std::string(SDL_GetError()));
 
@@ -545,8 +549,15 @@ static GLuint startLoadingSkybox(std::vector<uint32_t>* skyboxFacesBeingLoaded)
 
 void Engine::m_Render(const Scene& scene, double deltaTime)
 {
+	ZoneScoped;
+
 	static const Mesh cubeMesh = m_MeshProvider.GetMeshResource(m_MeshProvider.LoadFromPath("!Cube"));
 	static const Mesh quadMesh = m_MeshProvider.GetMeshResource(m_MeshProvider.LoadFromPath("!Quad"));
+
+	if (VSync)
+		PHX_ENSURE(SDL_GL_SetSwapInterval(1));
+	else
+		PHX_ENSURE(SDL_GL_SetSwapInterval(0));
 
 	float aspectRatio = (float)this->WindowSizeX / (float)this->WindowSizeY;
 

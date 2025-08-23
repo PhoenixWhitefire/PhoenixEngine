@@ -12,6 +12,7 @@ glm::mat4 EcCamera::GetMatrixForAspectRatio(float AspectRatio) const
 {
 	glm::vec3 position = glm::vec3(this->Transform[3]);
 	glm::vec3 forwardVec = glm::vec3(this->Transform[2]);
+    glm::vec3 upVec = glm::vec3(this->Transform[1]);
 
 	glm::mat4 projectionMatrix = glm::perspective(
 		glm::radians(this->FieldOfView),
@@ -22,7 +23,7 @@ glm::mat4 EcCamera::GetMatrixForAspectRatio(float AspectRatio) const
 	glm::mat4 viewMatrix = glm::lookAt(
 		position,
 		position + forwardVec,
-		glm::vec3(this->Transform[1])
+		upVec
 	);
 
 	return projectionMatrix * viewMatrix;

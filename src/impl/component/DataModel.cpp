@@ -2,7 +2,6 @@
 // 13/08/2024
 
 #include "component/DataModel.hpp"
-#include "Engine.hpp"
 #include "Log.hpp"
 
 class DataModelManager : public BaseComponentManager
@@ -56,29 +55,7 @@ public:
 
     virtual const Reflection::StaticMethodMap& GetMethods() override
     {
-#define U8(vt) (uint8_t)vt
-#define VT(u8) static_cast<Reflection::ValueType>(u8)
-
-        static const Reflection::StaticMethodMap funcs =
-		{
-			{ "Close",
-				Reflection::Method{ 
-					{ VT(U8(Reflection::ValueType::Integer) | U8(Reflection::ValueType::Null)) },
-					{},
-					[](void*, const std::vector<Reflection::GenericValue>& inputs)
-                    -> std::vector<Reflection::GenericValue>
-					{
-                        Log::Info("Shutdown requested via DataModel");
-
-                        Engine* engine = Engine::Get();
-                        engine->ExitCode = inputs.size() > 0 ? static_cast<int32_t>(inputs[0].AsInteger()) : 0;
-						engine->Close();
-
-                        return {};
-					}
-				}
-			}
-		};
+        static const Reflection::StaticMethodMap funcs = {};
         return funcs;
     }
 

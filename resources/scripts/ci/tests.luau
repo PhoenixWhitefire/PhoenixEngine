@@ -188,5 +188,5 @@ print(`Testing session took { os.clock() - start } seconds. Tests themselves too
 
 appendlog("\n\n\n\n")
 
-game:Close()
+engine.exit()
 

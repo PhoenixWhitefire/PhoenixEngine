@@ -91,7 +91,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 {
 	ZoneScoped;
 
-	std::string gltfFilePath = FileRW::TryMakePathCwdRelative(AssetPath);
+	std::string gltfFilePath = FileRW::MakePathCwdRelative(AssetPath);
 
 	m_File = gltfFilePath;
 

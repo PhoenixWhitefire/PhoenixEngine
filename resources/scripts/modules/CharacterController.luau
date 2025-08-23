@@ -90,8 +90,6 @@ function Controller:Update(DeltaTime)
 	self.cameraPitch += rotationX
 	self.cameraPitch = math.clamp(self.cameraPitch, -math.rad(89), math.rad(89))
 	
-	local camTransform
-	
 	local rollAdd = -vector.dot(vector.normalize(moveDirection), self.Camera.Transform.Right) * DeltaTime * 0.5
 	--rollAdd = moveDirection.X * 0.05
 	if rollAdd == rollAdd then
@@ -145,21 +143,36 @@ function Controller:getRotationVector()
 	elseif input.mousedown("r") then
 		self.isMouseLocked = false -- unlock mouse with right-click
 	end
-	input.setmouselocked(self.isMouseLocked)
+	input.setmousegrabbed(self.isMouseLocked)
+	input.setcursorvisible(not self.isMouseLocked)
 	
 	local rx, ry = 0, 0
 	local mouseX, mouseY = input.getmousepos()
 	
 	if self.isMouseLocked then
 		rx, ry = (mouseY - self.prevMouseY) / 400, (self.prevMouseX - mouseX) / 400
-		-- when the mouse is warped to the other side of the screen upon hitting the edge,
-		-- when it's locked to window
-		-- 23/09/2024
-		if math.abs(rx) > math.rad(45) then
-			rx = 0
+		
+		local windowSizeX, windowSizeY = engine.getwindowsize()
+		
+		local newMouseX, newMouseY = mouseX, mouseY
+		
+		if mouseX <= 10 then
+			newMouseX = windowSizeX - 20
 		end
-		if math.abs(ry) > math.rad(45) then
-			ry = 0
+		if mouseX >= windowSizeX - 10 then
+			newMouseX = 20
+		end
+		
+		if mouseY <= 10 then
+			newMouseY = windowSizeY - 20
+		end
+		if mouseY >= windowSizeY - 10 then
+			newMouseY = 20
+		end
+		
+		if (newMouseX ~= mouseX) or (newMouseY ~= mouseY) then
+			input.setmousepos(newMouseX, newMouseY)
+			mouseX, mouseY = newMouseX, newMouseY -- assigned to `self.prevMouse*` below
 		end
 	end
 	

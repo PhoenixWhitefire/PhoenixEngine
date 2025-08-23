@@ -15,9 +15,7 @@
 namespace ScriptEngine
 {
 	int CompileAndLoad(lua_State*, const std::string& SourceCode, const std::string& ChunkName);
-
-	extern bool s_BackendScriptWantGrabMouse;
-
+	
 	struct YieldedCoroutine
 	{
 		enum class ResumptionMode : uint8_t

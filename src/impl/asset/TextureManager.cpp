@@ -406,7 +406,7 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 		return 0;
 
 	std::string ResDir = EngineJsonConfig["ResourcesDirectory"];
-	std::string ActualPath = FileRW::TryMakePathCwdRelative(Path);
+	std::string ActualPath = FileRW::MakePathCwdRelative(Path);
 
 	auto it = m_StringToTextureId.find(Path);
 	

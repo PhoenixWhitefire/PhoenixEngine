@@ -77,7 +77,7 @@ static inline AnimationManager Instance{};
 void EcAnimation::SetAnimation(const std::string_view& Asset)
 {
     bool found = false;
-    std::string animFileContents = FileRW::ReadFile(Asset, &found);
+    std::string animFileContents = FileRW::ReadFile(std::string(Asset), &found);
 
     if (!found)
         RAISE_RT(std::format("Cannot find animation file '{}'", Asset));

@@ -12,6 +12,7 @@
 #include "asset/MeshProvider.hpp"
 #include "ThreadManager.hpp"
 
+#include "datatype/GameObject.hpp"
 #include "component/DataModel.hpp"
 #include "component/Workspace.hpp"
 

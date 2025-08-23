@@ -37,3 +37,6 @@ int luhxopen_scene(lua_State*);
 
 #define LUHX_WORLDLIBNAME "world"
 int luhxopen_world(lua_State*);
+
+#define LUHX_ENGINELIBNAME "engine"
+int luhxopen_engine(lua_State*);

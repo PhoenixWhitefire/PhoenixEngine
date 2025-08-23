@@ -13,8 +13,6 @@
 #include "FileRW.hpp"
 #include "Log.hpp"
 
-bool ScriptEngine::s_BackendScriptWantGrabMouse = false;
-
 std::vector<ScriptEngine::YieldedCoroutine> ScriptEngine::s_YieldedCoroutines{};
 const std::unordered_map<Reflection::ValueType, lua_Type> ScriptEngine::ReflectedTypeLuaEquivalent =
 {
@@ -669,9 +667,9 @@ struct EventConnectionData
 {
 	ReflectorHandle Reflector;
 	const Reflection::Event* Event = nullptr;
+	lua_State* L = nullptr;
 	uint32_t ConnectionId = UINT32_MAX;
 	int ThreadRef = LUA_NOREF;
-	lua_State* L = nullptr;
 	bool CallbackYields = false;
 };
 

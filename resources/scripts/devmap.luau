@@ -65,7 +65,8 @@ game.OnFrameBegin:Connect(function(DeltaTime)
 		
 		InFreecam = not InFreecam
 		if InFreecam then
-			input.setmouselocked(false)
+			input.setmousegrabbed(false)
+			input.setcursorvisible(true)
 			SwitchToFreecamNextFrame = 2
 		else
 			Camera.UseSimpleController = false

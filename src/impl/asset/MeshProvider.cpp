@@ -768,7 +768,7 @@ void MeshProvider::Save(const Mesh& mesh, const std::string_view& Path)
 	ZoneScoped;
 
 	std::string contents = this->Serialize(mesh);
-	PHX_CHECK(FileRW::WriteFileCreateDirectories(Path, contents));
+	PHX_CHECK(FileRW::WriteFileCreateDirectories(std::string(Path), contents));
 }
 
 void MeshProvider::Save(uint32_t Id, const std::string_view& Path)

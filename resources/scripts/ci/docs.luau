@@ -200,4 +200,5 @@ fs.write(BASE_PATH .. "/components.txt", components, false)
 print("Docs CI finish\n\n\n\n\n")
 
 -- close when we're done
-game:Close()
+engine.exit()
+

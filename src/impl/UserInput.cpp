@@ -4,8 +4,6 @@
 
 const bool* KeyboardState = SDL_GetKeyboardState(NULL);
 
-bool UserInput::InputBeingSunk = false;
-
 bool UserInput::IsKeyDown(SDL_Keycode Key)
 {
 	return KeyboardState[SDL_GetScancodeFromKey(Key, SDL_KMOD_NONE)] == 1;

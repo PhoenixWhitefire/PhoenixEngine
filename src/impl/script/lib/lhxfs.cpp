@@ -38,7 +38,7 @@ static int fs_listdir(lua_State* L)
 
 	lua_newtable(L);
 
-	for (const auto& entry : std::filesystem::directory_iterator(FileRW::TryMakePathCwdRelative(path)))
+	for (const auto& entry : std::filesystem::directory_iterator(FileRW::MakePathCwdRelative(path)))
 	{
 		switch (filter)
 		{
@@ -83,7 +83,7 @@ static int fs_listdir(lua_State* L)
 static int fs_isfile(lua_State* L)
 {
     const char* path = luaL_checkstring(L, 1);
-	lua_pushboolean(L, std::filesystem::is_regular_file(FileRW::TryMakePathCwdRelative(path)));
+	lua_pushboolean(L, std::filesystem::is_regular_file(FileRW::MakePathCwdRelative(path)));
 
 	return 1;
 }
@@ -91,7 +91,7 @@ static int fs_isfile(lua_State* L)
 static int fs_isdirectory(lua_State* L)
 {
     const char* path = luaL_checkstring(L, 1);
-	lua_pushboolean(L, std::filesystem::is_directory(FileRW::TryMakePathCwdRelative(path)));
+	lua_pushboolean(L, std::filesystem::is_directory(FileRW::MakePathCwdRelative(path)));
 
 	return 1;
 }
@@ -137,29 +137,12 @@ static int fs_ispromptactive(lua_State* L)
     return 1;
 }
 
-static std::string tryMakePathAbsolute(const std::string& Path)
-{
-	std::string cwd = FileRW::TryMakePathCwdRelative(Path);
-	std::string abs = cwd;
-
-	if (abs[0] != '/' && abs[0] != '~' && abs[1] != ':')
-		abs = (std::filesystem::current_path() / abs).string();
-
-#ifdef _WIN32
-	for (size_t i  = 0; i < abs.size(); i++)
-		if (abs[i] == '/')
-			abs[i] = '\\';
-#endif
-
-	return abs;
-}
-
 static int fs_promptsave(lua_State* L)
 {
     if (IsFdInProgress)
 		luaL_errorL(L, "The User has not completed the previous File Dialog");
 	
-	std::string defaultLocation = tryMakePathAbsolute(luaL_optstring(L, 1, "./"));
+	std::string defaultLocation = FileRW::MakePathAbsolute(luaL_optstring(L, 1, "./"));
 	SDL_DialogFileFilter filter{};
 	filter.name = luaL_optstring(L, 2, "All files");
 	filter.pattern = luaL_optstring(L, 3, "*");
@@ -215,7 +198,7 @@ static int fs_promptopen(lua_State* L)
     if (IsFdInProgress)
 		luaL_errorL(L, "The User has not completed the previous File Dialog");
 
-	std::string defaultLocation = tryMakePathAbsolute(luaL_optstring(L, 1, "./"));
+	std::string defaultLocation = FileRW::MakePathAbsolute(luaL_optstring(L, 1, "./"));
 	SDL_DialogFileFilter filter{};
 	filter.name = luaL_optstring(L, 2, "All files");
 	filter.pattern = luaL_optstring(L, 3, "*");

@@ -46,16 +46,17 @@ public:
 
 	virtual void* GetComponent(uint32_t Id) override
 	{
-		return &m_Components[Id];
+		return m_Components[Id].Valid ? &m_Components[Id] : nullptr;
 	}
 
     virtual void DeleteComponent(uint32_t Id) override
     {
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
-		//if (lua_State* L = m_Components[Id].m_L)
-		//	lua_resetthread(L);
+		if (lua_State* L = m_Components[Id].m_L)
+			lua_resetthread(L);
 		
 		m_Components[Id].Object.~GameObjectRef();
+		m_Components[Id].Valid = false;
     }
 
     virtual const Reflection::StaticPropertyMap& GetProperties() override
@@ -226,8 +227,6 @@ void EcScript::Update(double dt)
 {
 	TIME_SCOPE_AS("Scripts");
 
-	s_WindowGrabMouse = ScriptEngine::s_BackendScriptWantGrabMouse;
-
 	uint32_t ecId = this->EcId;
 
 	// The first Script to be updated in the current frame will
@@ -324,7 +323,7 @@ bool EcScript::Reload()
 	ScriptEngine::L::PushGameObject(m_L, this->Object);
 	lua_setglobal(m_L, "script");
 
-	int result = ScriptEngine::CompileAndLoad(m_L, m_Source, "@" + FileRW::TryMakePathCwdRelative(SourceFile));
+	int result = ScriptEngine::CompileAndLoad(m_L, m_Source, "@" + FileRW::MakePathCwdRelative(SourceFile));
 	
 	if (result == 0)
 	{
