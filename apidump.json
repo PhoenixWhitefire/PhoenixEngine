@@ -49,9 +49,6 @@
         "Events": {
           "OnFrameBegin": "(Double)"
         },
-        "Methods": {
-          "Close": "(Integer?) -> ()"
-        },
         "Properties": {
           "Time": "Double READONLY"
         }
@@ -73,11 +70,11 @@
           "Greet": "(Array, Boolean) -> (String, String)"
         },
         "Properties": {
-          "Value1": "Boolean",
-          "Value2": "Integer",
-          "Value4": "String READONLY",
-          "Value5": "String READONLY",
-          "Value6": "Vector3"
+          "EvenMoreSecretMessage": "String READONLY",
+          "SecretMessage": "String READONLY",
+          "SomeInteger": "Integer",
+          "SuperCoolBool": "Boolean",
+          "WhereIAm": "Vector3"
         }
       },
       "Mesh": {
@@ -165,49 +162,134 @@
       }
     }
   },
-  "ScriptGlobals": {
-    "appendlog": 1,
-    "conf_get": 1,
-    "fd_inprogress": 0,
-    "fd_open": 0,
-    "fd_save": 0,
-    "file_read": 1,
-    "file_write": 3,
-    "file_write_rcd": 3,
-    "fs_isdirectory": 1,
-    "fs_isfile": 1,
-    "fs_listdir": 1,
-    "imgui_begin": 1,
-    "imgui_button": 1,
-    "imgui_checkbox": 2,
-    "imgui_end": 0,
-    "imgui_image": 3,
-    "imgui_indent": 1,
-    "imgui_input_float": 2,
-    "imgui_input_text": 2,
-    "imgui_item_clicked": 0,
-    "imgui_item_hovered": 0,
-    "imgui_setitemtooltip": 1,
-    "imgui_text": 1,
-    "imgui_textlink": 1,
-    "input_keypressed": 0,
-    "input_mouse_bdown": 1,
-    "input_mouse_getpos": 0,
-    "input_mouse_setlocked": 0,
-    "json_dump": 1,
-    "json_parse": 1,
-    "matrix_getv": 3,
-    "matrix_setv": 4,
-    "mesh_get": 1,
-    "mesh_save": 2,
-    "mesh_set": 1,
-    "model_import": 1,
-    "print": 1,
-    "scene_load": 1,
-    "scene_save": 1,
-    "sleep": 1,
-    "world_aabbcast": 3,
-    "world_aabbquery": 3,
-    "world_raycast": 3
+  "ScriptEnv": {
+    "Datatypes": {
+      "Color": {
+        "Library": {
+          "new": "function"
+        },
+        "Metatable": {
+          "__index": "function",
+          "__tostring": "function",
+          "__type": "string"
+        }
+      },
+      "GameObject": {
+        "Library": {
+          "new": "function"
+        },
+        "Metatable": {
+          "__index": "function",
+          "__namecall": "function",
+          "__newindex": "function",
+          "__tostring": "function",
+          "__type": "string"
+        }
+      },
+      "Matrix": {
+        "Library": {
+          "fromEulerAnglesXYZ": "function",
+          "fromTranslation": "function",
+          "lookAt": "function",
+          "new": "function"
+        },
+        "Metatable": {
+          "__index": "function",
+          "__mul": "function",
+          "__newindex": "function",
+          "__type": "string"
+        }
+      }
+    },
+    "Globals": {
+      "appendlog": "function",
+      "game": "GameObject",
+      "sleep": "function",
+      "workspace": "GameObject"
+    },
+    "Libraries": {
+      "conf": {
+        "get": "function",
+        "save": "function",
+        "set": "function"
+      },
+      "engine": {
+        "daabbs": "function",
+        "dwireframes": "function",
+        "exit": "function",
+        "framerate": "function",
+        "getfullscreen": "function",
+        "getmaxframerate": "function",
+        "getvsync": "function",
+        "getwindowsize": "function",
+        "isheadless": "function",
+        "setfullscreen": "function",
+        "setmaxframerate": "function",
+        "setvsync": "function",
+        "setwindowsize": "function"
+      },
+      "fs": {
+        "isdirectory": "function",
+        "isfile": "function",
+        "ispromptactive": "function",
+        "listdir": "function",
+        "promptopen": "function",
+        "promptsave": "function",
+        "read": "function",
+        "write": "function"
+      },
+      "imgui": {
+        "begin": "function",
+        "button": "function",
+        "checkbox": "function",
+        "endw": "function",
+        "image": "function",
+        "indent": "function",
+        "inputnumber": "function",
+        "inputstring": "function",
+        "itemclicked": "function",
+        "itemhovered": "function",
+        "setitemtooltip": "function",
+        "text": "function",
+        "textlink": "function"
+      },
+      "input": {
+        "getmousepos": "function",
+        "guihandled": "function",
+        "guihandledk": "function",
+        "guihandledm": "function",
+        "iscursorvisible": "function",
+        "ismousegrabbed": "function",
+        "keypressed": "function",
+        "mousedown": "function",
+        "setcursorvisible": "function",
+        "setmousegrabbed": "function",
+        "setmousepos": "function"
+      },
+      "json": {
+        "encode": "function",
+        "parse": "function"
+      },
+      "mesh": {
+        "get": "function",
+        "save": "function",
+        "set": "function"
+      },
+      "model": {
+        "import": "function"
+      },
+      "net": {
+        "request": "function"
+      },
+      "scene": {
+        "load": "function",
+        "save": "function"
+      },
+      "world": {
+        "aabbcast": "function",
+        "aabbquery": "function",
+        "raycast": "function"
+      }
+    }
   }
 }

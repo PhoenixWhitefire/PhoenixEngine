@@ -10,15 +10,15 @@
 // from being invoked directly at the point of the exception
 #ifdef NDEBUG
 
-#define PHX_ENSURE_MSG(expr, err) if (!(expr)) RAISE_RT(err)
-#define PHX_ENSURE(expr) if (!(expr)) RAISE_RT("Failed to ensure: " + std::string(#expr))
+#define PHX_ENSURE_MSG(expr, err) do { if (!(expr)) RAISE_RT(err); } while (false)
+#define PHX_ENSURE(expr) do { if (!(expr)) RAISE_RT("Failed to ensure: " + std::string(#expr)); } while (false)
 
-#define PHX_CHECK(expr) { if (!(expr)) Log::Error( "'" #expr "' failed"); }
+#define PHX_CHECK(expr) do { if (!(expr)) Log::Error( "'" #expr "' failed"); } while (false)
 
 #else
 
 #define PHX_ENSURE_MSG(expr, err) assert(expr)
-#define PHX_ENSURE(expr) assert(expr)
+#define PHX_ENSURE assert
 
 #define PHX_CHECK assert
 

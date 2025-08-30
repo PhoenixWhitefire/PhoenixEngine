@@ -19,7 +19,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 # 19/01/2025
 set(CMAKE_CONFIGURATION_TYPES "Debug;RelTracy;Release")
 
-project(PhoenixEngine)
+project(PhoenixEngine LANGUAGES C CXX)
 
 file(GLOB_RECURSE PHX_SRCS
 	"src/decl/*.hpp"

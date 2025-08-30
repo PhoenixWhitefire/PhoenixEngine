@@ -346,18 +346,9 @@ static void doApiDump()
 
 	nlohmann::json apiDump;
 	apiDump["GameObject"] = GameObject::DumpApiToJson();
+	apiDump["ScriptEnv"] = ScriptEngine::DumpApiToJson();
 
-	//nlohmann::json& globalsDump = apiDump["ScriptGlobals"];
-
-	/*
-	for (size_t i = 0; ScriptEngine::L::GlobalFunctions[i].second.Function != nullptr; i++)
-	{
-		const auto& it = ScriptEngine::L::GlobalFunctions[i];
-		globalsDump[it.first] = it.second.NumMinArgs;
-	}
-	*/
-
-	PHX_CHECK(FileRW::WriteFile("apidump.json", apiDump.dump(2)));
+	PHX_CHECK(FileRW::WriteFile("./apidump.json", apiDump.dump(2)));
 	Log::Info("API dump finished");
 }
 
@@ -881,14 +872,13 @@ int main(int argc, char** argv)
 	try
 	{
 		Engine engine{};
-
 		init();
+
 		engine.Start();
 
 		Log::Save(); // in case FileRW::WriteFile throws an exception
 		
 		s_ExitCode = engine.ExitCode;
-
 		InlayEditor::Shutdown();
 		engine.Shutdown();
 	}

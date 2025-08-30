@@ -83,9 +83,7 @@ static int engine_dwireframes(lua_State* L)
 {
     Engine* eng = Engine::Get();
     lua_pushboolean(L, eng->DebugWireframeRendering);
-
-    if (lua_isboolean(L, 1))
-        eng->DebugWireframeRendering = lua_toboolean(L, 1);
+    eng->DebugWireframeRendering = luaL_optboolean(L, 1, eng->DebugWireframeRendering);
 
     return 1;
 }
@@ -94,9 +92,7 @@ static int engine_daabbs(lua_State* L)
 {
     Engine* eng = Engine::Get();
     lua_pushboolean(L, eng->DebugAabbs);
-
-    if (lua_isboolean(L, 1))
-        eng->DebugAabbs = lua_toboolean(L, 1);
+    eng->DebugAabbs = luaL_optboolean(L, 1, eng->DebugAabbs);
 
     return 1;
 }

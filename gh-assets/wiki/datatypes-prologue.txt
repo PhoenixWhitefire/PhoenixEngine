@@ -1,0 +1,4 @@
+## Datatypes
+
+Custom types with functions and properties.
+

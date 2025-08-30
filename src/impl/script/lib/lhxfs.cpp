@@ -21,9 +21,12 @@ static int fs_read(lua_State* L)
     bool success = true;
     std::string contents = FileRW::ReadFile(path, &success);
 
-    lua_pushboolean(L, success);
-	lua_pushstring(L, contents.c_str());
-	return 2;
+	if (success)
+		lua_pushstring(L, contents.c_str());
+	else
+		lua_pushnil(L);
+	
+	return 1;
 }
 
 static int fs_listdir(lua_State* L)
@@ -144,8 +147,8 @@ static int fs_promptsave(lua_State* L)
 	
 	std::string defaultLocation = FileRW::MakePathAbsolute(luaL_optstring(L, 1, "./"));
 	SDL_DialogFileFilter filter{};
-	filter.name = luaL_optstring(L, 2, "All files");
-	filter.pattern = luaL_optstring(L, 3, "*");
+	filter.pattern = luaL_optstring(L, 2, "*");
+	filter.name = luaL_optstring(L, 3, "All files");
 
 	// TODO a kind of hack to get what script we're running as?
 	lua_getglobal(L, "script");
@@ -200,10 +203,10 @@ static int fs_promptopen(lua_State* L)
 
 	std::string defaultLocation = FileRW::MakePathAbsolute(luaL_optstring(L, 1, "./"));
 	SDL_DialogFileFilter filter{};
-	filter.name = luaL_optstring(L, 2, "All files");
-	filter.pattern = luaL_optstring(L, 3, "*");
+	filter.pattern = luaL_optstring(L, 2, "*");
+	filter.name = luaL_optstring(L, 3, "All files");
 
-	bool allowMultipleFiles = luaL_optboolean(L, 4, 0);
+	bool allowMultipleFiles = luaL_optboolean(L, 4, false);
 
 	// TODO a kind of hack to get what script we're running as?
 	lua_getglobal(L, "script");

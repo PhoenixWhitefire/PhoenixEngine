@@ -116,6 +116,10 @@ bool FileRW::WriteFileCreateDirectories(
 
 std::string FileRW::MakePathCwdRelative(std::string Path)
 {
+	std::string resdir = EngineJsonConfig.type() != nlohmann::json::value_t::null
+							? EngineJsonConfig.value("ResourcesDirectory", "resources/")
+							: "resources/";
+
 	// TODO: allow paths specified in resource files (eg materials and levels etc) to not have to start from the root
 	// and start from resources/ automatically
 	// currently, files that *are* from the root are specified by beginning the path with `.` (such as `./`)
@@ -124,12 +128,12 @@ std::string FileRW::MakePathCwdRelative(std::string Path)
 	// `C:`, where we don't need to do anything
 	// 23/02/2025: `/` is for Linux paths which begin at the home directory, starting with a `/home`
 	// 19/08/2025: `~` is a shortcut for `/home/<USERNAME>` on linux
-	size_t whereRes = Path.find("resources/");
+	size_t whereRes = Path.find(resdir);
 
 	if ((Path[0] != '.' && Path[0] != '/' && Path[0] != '~' && Path[1] != ':')
 		&& whereRes == std::string::npos
 	)
-		Path.insert(0, EngineJsonConfig.value("ResourcesDirectory", "resources/"));
+		Path.insert(0, resdir);
 
 	else if (whereRes != std::string::npos)
 		// 23/02/2025: cut it off right to the `resources/` directory

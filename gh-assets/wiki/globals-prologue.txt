@@ -1,3 +1,4 @@
 ## Globals
 
-A (possibly) incomplete list of all Script Globals provided by the Engine not present in Vanilla Luau.
+Other globals.
+

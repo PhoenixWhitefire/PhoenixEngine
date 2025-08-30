@@ -149,12 +149,7 @@ static luaL_Reg input_funcs[] =
 
 int luhxopen_input(lua_State* L)
 {
-    if (!Engine::Get()->IsHeadlessMode)
-    {
-        luaL_register(L, LUHX_INPUTLIBNAME, input_funcs);
+    luaL_register(L, LUHX_INPUTLIBNAME, input_funcs);
 
-        return 1;
-    }
-    else
-        return 0;
+    return 1;
 }

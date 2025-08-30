@@ -41,7 +41,7 @@ local function update(DeltaTime)
 		if imgui.button("Select & Import Model") then
 			imgui.endw()
 			
-			local Path = fs.promptopen("./hi", "Models", "gltf;glb")[1]
+			local Path = fs.promptopen("models", "gltf;glb", "Models")[1]
 			if Path then
 				local pathSplit = string.split(Path, "/")
 				
@@ -66,7 +66,7 @@ local function update(DeltaTime)
 	if imgui.begin("Run Script") then
 		if imgui.textlink("Path: " .. ScriptExecutionFile) then
 			imgui.endw()
-			local Path = fs.promptopen("resources/scripts", "Luau Scripts", "luau")[1]
+			local Path = fs.promptopen("resources/scripts", "luau", "Luau Scripts")[1]
 			if Path then
 				ScriptExecutionFile = Path
 			end
@@ -93,7 +93,7 @@ local function update(DeltaTime)
 		IntendedSaveWorldState = game:Duplicate()
 		IntendedSaveWorldState.Parent = nil
 		
-		local Path = fs.promptsave("resources/scenes", "Scenes", "world")
+		local Path = fs.promptsave("resources/scenes", "world", "Worlds")
 		
 		if Path then
 			scene.save({ IntendedSaveWorldState }, Path)
@@ -111,7 +111,7 @@ local function update(DeltaTime)
 	if loadWorld then
 		imgui.endw()
 		
-		local Path = fs.promptopen("resources/scenes", "Worlds", "world")[1]
+		local Path = fs.promptopen("resources/scenes", "world", "Worlds")[1]
 		
 		if Path then
 			local dm = scene.load(Path)[1]
@@ -137,7 +137,7 @@ local function update(DeltaTime)
 		IntendedLevelState = workspace.Level:Duplicate()
 		IntendedLevelState.Parent = nil
 		
-		local Path = fs.promptsave("resources/scenes", "Scenes", "hxscene")
+		local Path = fs.promptsave("resources/scenes", "hxscene", "Scenes")
 		
 		if Path then
 			local actuallySave = {}
@@ -159,7 +159,7 @@ local function update(DeltaTime)
 	
 	if imgui.button("Load Sub-Level") then
 		imgui.endw()
-		loadSubLevel(fs.promptopen("resources/scenes", "Scenes", "hxscene")[1])
+		loadSubLevel(fs.promptopen("resources/scenes", "hxscene", "Scenes")[1])
 		return
 	end
 	

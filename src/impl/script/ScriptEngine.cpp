@@ -146,7 +146,7 @@ nlohmann::json ScriptEngine::L::LuaValueToJson(lua_State* L, int StackIndex)
 	}
 	case LUA_TTABLE:
 	{
-		nlohmann::json t;
+		nlohmann::json t = nlohmann::json::object();
 		int keytype = LUA_TNIL;
 
 		lua_pushvalue(L, StackIndex);
@@ -864,7 +864,8 @@ static int api_newcol(lua_State* L)
 static int api_colindex(lua_State* L)
 {
 	Color* vec = (Color*)luaL_checkudata(L, 1, "Color");
-	const char* key = luaL_checkstring(L, 2);
+	size_t ksize = 0;
+	const char* key = luaL_checklstring(L, 2, &ksize);
 
 	lua_getglobal(L, "Color");
 	lua_pushstring(L, key);
@@ -874,23 +875,25 @@ static int api_colindex(lua_State* L)
 	if (!lua_isnil(L, -1))
 		return 1;
 
-	if (strcmp(key, "R") == 0)
+	if (ksize == 1)
 	{
-		lua_pushnumber(L, vec->R);
+		switch (key[0])
+		{
+		case 'R':
+			lua_pushnumber(L, vec->R);
+			break;
+		case 'G':
+			lua_pushnumber(L, vec->G);
+		case 'B':
+			lua_pushnumber(L, vec->B);
+		default:
+			luaL_error(L, "attempt to index Color with '%s'", key);
+		}
+
 		return 1;
 	}
-	else if (strcmp(key, "G") == 0)
-	{
-		lua_pushnumber(L, vec->G);
-		return 1;
-	}
-	else if (strcmp(key, "B") == 0)
-	{
-		lua_pushnumber(L, vec->B);
-		return 1;
-	}
-	else
-		luaL_errorL(L, "Invalid key %s", key);
+
+	luaL_error(L, "attempt to index Color with '%s'", key);
 };
 
 static int api_coltostring(lua_State* L)
@@ -1564,4 +1567,78 @@ lua_State* ScriptEngine::L::Create()
 	lua_setglobal(state, "workspace");
 
 	return state;
+}
+
+nlohmann::json ScriptEngine::DumpApiToJson()
+{
+	GameObjectRef tempdm = GameObject::Create("DataModel");
+	GameObjectRef tempwp = GameObject::Create("Workspace");
+	tempwp->SetParent(tempdm);
+	GameObject::s_DataModel = tempdm->ObjectId;
+	
+	lua_State* base = lua_newstate(l_alloc, nullptr);
+	lua_State* luhx = L::Create();
+	// Load Standard Library ('print' etc)
+	luaL_openlibs(base);
+	lua_pushinteger(base, 0);
+	lua_setglobal(base, "require");
+
+	// Compare the environment of our extended environment ("Luhx")
+	// with the standard Luau environment to figure out what got added
+	nlohmann::json json;
+
+	lua_getglobal(luhx, "_G");
+	lua_pushnil(luhx);
+	while (lua_next(luhx, -2))
+	{
+		std::string k = luaL_checkstring(luhx, -2);
+
+		lua_getglobal(base, k.c_str());
+		if (lua_isnil(base, -1))
+		{
+			if (!lua_istable(luhx, -1))
+			{
+				json["Globals"][k] = luaL_typename(luhx, -1);
+			}
+			else
+			{
+				nlohmann::json lib;
+
+				lua_pushnil(luhx);
+				while (lua_next(luhx, -2))
+				{
+					lib[luaL_checkstring(luhx, -2)] = luaL_typename(luhx, -1);
+
+					lua_pop(luhx, 1);
+				}
+
+				if (luaL_getmetatable(luhx, k.c_str()) == LUA_TTABLE)
+				{
+					json["Datatypes"][k]["Library"] = lib;
+
+					lua_pushnil(luhx);
+					while (lua_next(luhx, -2))
+					{
+						json["Datatypes"][k]["Metatable"][luaL_checkstring(luhx, -2)] = luaL_typename(luhx, -1);
+						lua_pop(luhx, 1);
+					}
+				}
+				else
+					json["Libraries"][k] = lib;
+
+				lua_pop(luhx, 1);
+			}
+		}
+
+		lua_pop(base, 1);
+		lua_pop(luhx, 1);
+	}
+
+	lua_close(base);
+	lua_close(luhx);
+
+	GameObject::s_DataModel = PHX_GAMEOBJECT_NULL_ID;
+	tempdm->Destroy();
+
+	return json;
 }

@@ -15,6 +15,7 @@
 namespace ScriptEngine
 {
 	int CompileAndLoad(lua_State*, const std::string& SourceCode, const std::string& ChunkName);
+	nlohmann::json DumpApiToJson();
 	
 	struct YieldedCoroutine
 	{

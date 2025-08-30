@@ -139,12 +139,7 @@ static luaL_Reg imgui_funcs[] =
 
 int luhxopen_imgui(lua_State* L)
 {
-    if (!Engine::Get()->IsHeadlessMode)
-    {
-        luaL_register(L, LUHX_IMGUILIBNAME, imgui_funcs);
+    luaL_register(L, LUHX_IMGUILIBNAME, imgui_funcs);
 
-        return 1;
-    }
-    else
-        return 0;
+    return 1;
 }

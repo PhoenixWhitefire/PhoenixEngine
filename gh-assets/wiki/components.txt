@@ -1,5 +1,26 @@
-The Engine support an Entity Component System architecture, meaning that `GameObject`s have their own "base" APIs, which can be extended by adding *Components*. These are all listed below.
+The Engine support an Entity Component System architecture, meaning that `GameObject`s have their own "base" APIs, which can be extended by adding *Components*. These, as well as the base APIs, are all listed below.
 
+
+## `GameObject`
+
+### Properties:
+* `Enabled: boolean`: Whether the Engine updates and recognizes this Object, essentially freezing it if it is disabled
+* `Name: string`: The name of the Object, usually what was passed into `GameObject.new`
+* `ObjectId: number READONLY`: The ID of the Object, an integer. Remains the same throughout the session, but not guaranteed between sessions
+* `Parent: GameObject?`: The hierarchal parent of the Object, or `nil` if it does not have one
+* `Serializes: boolean`: Whether or not the Object should be saved with the scene if it is serialized with `scene_save`, and whether `:Duplicate` will duplicate (only applies to descendants)
+
+### Methods:
+* `Destroy() -> ()`: Marks the Object as "pending for destruction". This may or may not remove the Object from memory immediately, depending on whether the Engine is actively using the Object for some purpose
+* `Duplicate() -> (GameObject)`: Creates a duplicate of the Object
+* `FindChild(string) -> (GameObject?)`: Returns the child Object with the given name, or `nil` if it doesn't exist
+* `GetChildren() -> (Array)`: Returns a list of the Object's direct children
+* `GetComponentNames() -> (Array)`: Returns a list of the names of all Components that the Object currently has
+* `GetDescendants() -> (Array)`: Returns all descendants of the Object (i.e. its children, and their children, etc)
+* `GetFullName() -> (string)`: Returns the full, hierarchal path of the Object
+* `HasComponent(string) -> (boolean)`: Returns whether or not the Object has the given Component
+* `IsA(string) -> (boolean)`: Equivalent to `:HasComponent`
+* `MergeWith(GameObject) -> ()`: Merges the Objects together, replacing descendants with the same name
 
 ## `Animation`
 
@@ -39,9 +60,6 @@ The Engine support an Entity Component System architecture, meaning that `GameOb
 ### Properties:
 * `Time: number READONLY`: Number of seconds since the Engine started running
 
-### Methods:
-* `Close(number?) -> ()`: Closes the application with the specified exit code integer or 0
-
 ### Events:
 * `OnFrameBegin(number)`: Fires at the beginning of a frame, passing in the time elapsed since the last frame (delta time)
 
@@ -61,11 +79,11 @@ The Engine support an Entity Component System architecture, meaning that `GameOb
 * The least-popular kid in school no one remembers the name of
 
 ### Properties:
-* `Value1: boolean`: A boolean
-* `Value2: number`: An integer
-* `Value4: string READONLY`: A secret message that's so important it's read-only
-* `Value5: string READONLY`: A secret message that's so, *so* secret that it cannot be read by Reflection-kun, almost like they're keeping a secret from her...
-* `Value6: Vector3`: A 3-dimensional vector quantity
+* `EvenMoreSecretMessage: string READONLY`: A secret message that's so, *so* secret that it cannot be read by Reflection-kun, almost like they're keeping a secret from her...
+* `SecretMessage: string READONLY`: A secret message that's so important it's read-only
+* `SomeInteger: number`: An integer
+* `SuperCoolBool: boolean`: A boolean
+* `WhereIAm: Vector3`: A 3-dimensional vector quantity
 
 ### Methods:
 * `GiveUp() -> ()`: Tells Engine-chan to kill herself and throws an exception
