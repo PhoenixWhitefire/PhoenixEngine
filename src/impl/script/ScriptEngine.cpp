@@ -666,6 +666,7 @@ struct EventSignalData
 struct EventConnectionData
 {
 	ReflectorHandle Reflector;
+	ReflectorHandle Script;
 	const Reflection::Event* Event = nullptr;
 	lua_State* L = nullptr;
 	uint32_t ConnectionId = UINT32_MAX;
@@ -949,7 +950,7 @@ static int api_eventnamecall(lua_State* L)
 		lua_pushvalue(eL, -2); // stack: ec, lud, ec
 		lua_settable(eL, LUA_ENVIRONINDEX); // stack: ec
 		lua_pop(eL, 1);
-	
+
 		uint32_t cnId = rev->Connect(
 			GameObject::ReflectorHandleToPointer(ev->Reflector),
 		
@@ -963,6 +964,18 @@ static int api_eventnamecall(lua_State* L)
 				lua_gettable(eL, LUA_ENVIRONINDEX);
 				EventConnectionData* cn = (EventConnectionData*)luaL_checkudata(eL, -1, "EventConnection");
 				lua_pop(eL, 1);
+
+				GameObject* scr = (GameObject*)GameObject::ReflectorHandleToPointer(cn->Script);
+
+				if (!scr || !scr->GetComponentByType(EntityComponent::Script)
+				)
+				{
+					lua_resetthread(cL);
+					lua_resetthread(eL);
+					cn->Event->Disconnect(GameObject::ReflectorHandleToPointer(cn->Reflector), cn->ConnectionId);
+
+					return;
+				}
 
 				lua_State* co = cL;
 
@@ -1018,6 +1031,16 @@ static int api_eventnamecall(lua_State* L)
 		ec->ConnectionId = cnId;
 		ec->Event = ev->Event;
 		ec->L = L;
+
+		lua_getglobal(L, "script");
+		Reflection::GenericValue scrgv = ScriptEngine::L::LuaValueToGeneric(L, -1);
+		if (scrgv.Type == Reflection::ValueType::GameObject)
+		{
+			GameObjectRef scr = GameObject::FromGenericValue(scrgv);
+			ec->Script = { EntityComponent::None, scr->ObjectId };
+		}
+
+		lua_pop(L, 1);
 	
 		return 1;
 	}

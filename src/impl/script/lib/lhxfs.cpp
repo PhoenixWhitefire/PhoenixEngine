@@ -187,7 +187,7 @@ static int fs_promptsave(lua_State* L)
 				return -1;
 			else
 			{
-				lua_pushstring(CL, FdResults[0].c_str());
+				lua_pushstring(CL, FileRW::MakePathCwdRelative(FdResults[0]).c_str());
 			
 				return 1;
 			}
@@ -248,10 +248,10 @@ static int fs_promptopen(lua_State* L)
 			{
 				lua_newtable(CL);
 
-				for (int i = 1; i < (int)FdResults.size(); i++)
+				for (int i = 0; i < (int)FdResults.size(); i++)
 				{
-					lua_pushinteger(CL, i);
-					lua_pushstring(CL, FdResults[i].c_str());
+					lua_pushinteger(CL, i + 1);
+					lua_pushstring(CL, FileRW::MakePathCwdRelative(FdResults[i]).c_str());
 					lua_settable(CL, -3);
 				}
 

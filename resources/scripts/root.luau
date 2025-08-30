@@ -66,6 +66,7 @@ local function update(DeltaTime)
 	if imgui.begin("Run Script") then
 		if imgui.textlink("Path: " .. ScriptExecutionFile) then
 			imgui.endw()
+			
 			local Path = fs.promptopen("resources/scripts", "luau", "Luau Scripts")[1]
 			if Path then
 				ScriptExecutionFile = Path
@@ -179,7 +180,7 @@ local function update(DeltaTime)
 		script.Enabled = false
 	end
 	
-	local top = animtest:FindChild("Top")
+	local top = animtest.Exists and animtest:FindChild("Top")
 	if top then
 		top.Transform = Matrix.fromEulerAnglesXYZ(math.sin(game.Time), 0, math.sin(game.Time))
 	end

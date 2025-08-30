@@ -916,6 +916,7 @@ void Engine::Start()
 
 		if (!IsHeadlessMode)
 		{
+			ZoneNamedN(imguizone, "NewDearImGuiFrame", true);
 			// so scripts can use the `imgui` library
 			ImGui_ImplOpenGL3_NewFrame();
 			ImGui_ImplSDL3_NewFrame();
