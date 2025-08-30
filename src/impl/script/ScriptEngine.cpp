@@ -884,8 +884,10 @@ static int api_colindex(lua_State* L)
 			break;
 		case 'G':
 			lua_pushnumber(L, vec->G);
+			break;
 		case 'B':
 			lua_pushnumber(L, vec->B);
+			break;
 		default:
 			luaL_error(L, "attempt to index Color with '%s'", key);
 		}
