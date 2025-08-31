@@ -16,20 +16,21 @@ BackgroundAmbience.Looped = true
 BackgroundAmbience.Name = "BackgroundAmbience"
 BackgroundAmbience.Parent = workspace
 
-local animtest = ({ scene.load("scenes/animtest.hxscene") })[2][1]
-animtest.Parent = workspace
-
 local function loadSubLevel(Path)
 	if not Path then
 		print("No level was selected")
 		return
 	end
 	
-	for _, v in workspace.Level:GetChildren() do
-		v:Destroy()
+	if workspace:FindChild("Level") then
+		workspace.Level:Destroy()
 	end
 	
-	for _, root in ({scene.load(Path)})[2] do
+	local lvl = GameObject.new("Model")
+	lvl.Name = "Level"
+	lvl.Parent = workspace
+	
+	for _, root in scene.load(Path) do
 		root.Parent = workspace.Level
 	end
 end
@@ -91,18 +92,13 @@ local function update(DeltaTime)
 	if imgui.button("Save World") then
 		imgui.endw()
 		
-		IntendedSaveWorldState = game:Duplicate()
-		IntendedSaveWorldState.Parent = nil
-		
 		local Path = fs.promptsave("resources/scenes", "world", "Worlds")
 		
 		if Path then
-			scene.save({ IntendedSaveWorldState }, Path)
+			scene.save({ game }, Path)
 		else
 			print("No path selected")
 		end
-		
-		IntendedSaveWorldState:Destroy()
 		
 		return
 	end
@@ -179,14 +175,11 @@ local function update(DeltaTime)
 		workspace.Level:Destroy()
 		script.Enabled = false
 	end
-	
-	local top = animtest.Exists and animtest:FindChild("Top")
-	if top then
-		top.Transform = Matrix.fromEulerAnglesXYZ(math.sin(game.Time), 0, math.sin(game.Time))
-	end
 end
 
-loadSubLevel(DefaultSubLevel)
+if not workspace:FindChild("Level") then
+	loadSubLevel(DefaultSubLevel)
+end
 
 if not conf.get("Developer") then
 	update = function()

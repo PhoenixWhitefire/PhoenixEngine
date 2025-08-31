@@ -286,7 +286,7 @@ void Engine::m_InitVideo()
 	this->RendererContext.Initialize(this->WindowSizeX, this->WindowSizeY, this->Window);
 }
 
-const int32_t SunShadowMapResolutionSq = 512;
+const int32_t SunShadowMapResolutionSq = 2048;
 
 Engine::Engine()
 {
@@ -355,7 +355,11 @@ Engine::Engine()
 
 		m_DistortionTexture = m_TextureManager.LoadTextureFromPath("textures/screendistort.jpg");
 
-		m_SunShadowMap.Initialize(SunShadowMapResolutionSq, SunShadowMapResolutionSq);
+		m_SunShadowMap.Initialize(
+			SunShadowMapResolutionSq, SunShadowMapResolutionSq,
+			/* MSSamples = */ 0,
+			/* DepthOnly = */ true
+		);
 	}
 
 	Log::Info("Engine initialized");
@@ -995,8 +999,14 @@ void Engine::Start()
 				if (ri.CastsShadows)
 					sunScene.RenderList.push_back(ri);
 
-			glm::mat4 sunOrtho = glm::ortho(-35.f, 35.f, -35.f, 35.f, 0.1f, 75.f);
-			glm::mat4 sunView = glm::lookAt(50.f * sunDirection, glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
+			constexpr float size = 200.f;
+
+			glm::mat4 sunOrtho = glm::ortho(-size, size, -size, size, 0.1f, 700.f);
+			glm::mat4 sunView = glm::lookAt(
+				glm::normalize(sunDirection) * 300.f,
+				glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f)
+			);
+			sunView[3] = glm::vec4(glm::vec3(sunView[3]) - glm::vec3(sceneCamera->Transform[3]), 1.f);
 			glm::mat4 sunRenderMatrix = sunOrtho * sunView;
 
 			m_SunShadowMap.Bind();

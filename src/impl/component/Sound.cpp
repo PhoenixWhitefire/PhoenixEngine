@@ -115,20 +115,7 @@ public:
 			EC_PROP(
 				"Position",
 				Double,
-				[](void* p)
-				{
-					EcSound* sound = static_cast<EcSound*>(p);
-
-					if (FMOD::Channel* chan = (FMOD::Channel*)sound->m_Channel)
-					{
-						uint32_t pos = 0;
-						FMOD_CALL(chan->getPosition(&pos, FMOD_TIMEUNIT_MS), "get channel time position");
-
-						return (double)pos / 1000;
-					}
-					else
-						return 0.0;
-				},
+				EC_GET_SIMPLE(EcSound, Position),
 				[](void* p, const Reflection::GenericValue& gv)
 				{
 					EcSound* sound = static_cast<EcSound*>(p);

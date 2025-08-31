@@ -13,12 +13,11 @@ static int json_parse(lua_State* L)
 
 static int json_encode(lua_State* L)
 {
-    luaL_checktype(L, 1, LUA_TTABLE);
 	int indent = luaL_optinteger(L, 2, 2);
 
 	nlohmann::json json = ScriptEngine::L::LuaValueToJson(L, 1);
-
 	lua_pushstring(L, json.dump(indent).c_str());
+	
 	return 1;
 }
 

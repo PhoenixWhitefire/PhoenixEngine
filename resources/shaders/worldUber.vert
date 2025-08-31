@@ -53,16 +53,19 @@ void main()
 		sca = InstanceScale;
 		pain = vec4(InstanceColor, 1.f) * VertexPaint;
 	}
+
+	vec3 modelPos = VertexPosition * sca;
+	vec4 worldPos = trans * vec4(modelPos, 1.0f);
 	
 	data_out.VertexNormal = VertexNormal;
 	data_out.Paint = pain;
 	data_out.TextureUV = VertexUV;
 	data_out.Transparency = InstanceTransparency;
 	data_out.RenderMatrix = RenderMatrix;
-	data_out.ModelPosition = VertexPosition * sca;
-	data_out.WorldPosition = vec3(trans * vec4(data_out.ModelPosition, 1.0f));
+	data_out.ModelPosition = modelPos;
+	data_out.WorldPosition = vec3(worldPos);
 	data_out.Transform = trans;
-	data_out.RelativeToDirecLight = DirecLightProjection * vec4(data_out.WorldPosition, 1.f);
+	data_out.RelativeToDirecLight = DirecLightProjection * worldPos;
 	data_out.CameraPosition = CameraPosition;
 	
 	gl_Position = vec4(data_out.WorldPosition, 1.f);

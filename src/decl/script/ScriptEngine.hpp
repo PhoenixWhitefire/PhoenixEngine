@@ -55,7 +55,7 @@ namespace ScriptEngine::L
 		lua_State*,
 		int StackIndex = -1
 	);
-	nlohmann::json LuaValueToJson(lua_State*, int StackIndex = -1);
+	nlohmann::json LuaValueToJson(lua_State*, int StackIndex = -1, std::string Context = "");
 	void CheckType(
 		lua_State*,
 		Reflection::ValueType,

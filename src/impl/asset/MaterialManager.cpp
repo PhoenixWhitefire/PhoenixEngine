@@ -120,7 +120,7 @@ void RenderMaterial::Reload()
 	if (metallicRoughnessPath != "")
 		this->MetallicRoughnessMap = texManager->LoadTextureFromPath(metallicRoughnessPath, true, doBilinearFiltering);
 	else
-		this->MetallicRoughnessMap = texManager->LoadTextureFromPath("textures/black.png", true, doBilinearFiltering);
+		this->MetallicRoughnessMap = texManager->LoadTextureFromPath("textures/white.png", true, doBilinearFiltering);
 
 	if (normalPath != "")
 		this->NormalMap = texManager->LoadTextureFromPath(normalPath, true, doBilinearFiltering);
@@ -134,8 +134,8 @@ void RenderMaterial::Reload()
 
 	this->HasTranslucency = jsonMaterialData.value("HasTranslucency", jsonMaterialData.value("translucency", false));
 
-	this->SpecExponent = jsonMaterialData.value("specExponent", this->SpecExponent);
-	this->SpecMultiply = jsonMaterialData.value("specMultiply", this->SpecMultiply);
+	this->SpecExponent = jsonMaterialData.value("specExponent", 8.f);
+	this->SpecMultiply = jsonMaterialData.value("specMultiply", 0.5f);
 
 	ShaderProgram& shader = GetShader();
 	// reserved slots for material textures

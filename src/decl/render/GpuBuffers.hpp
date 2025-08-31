@@ -74,9 +74,9 @@ class GpuFrameBuffer
 {
 public:
 	GpuFrameBuffer() = default;
-	GpuFrameBuffer(int Width, int Height, int MSSamples = 0, bool AttachRenderBuffer = true);
+	GpuFrameBuffer(int Width, int Height, int MSSamples = 0, bool DepthOnly = false);
 
-	void Initialize(int Width, int Height, int MSSamples = 0, bool AttachRenderBuffer = true);
+	void Initialize(int Width, int Height, int MSSamples = 0, bool DepthOnly = false);
 	void Delete();
 
 	void Bind() const;
@@ -92,6 +92,5 @@ public:
 
 private:
 	uint32_t m_GpuId = UINT32_MAX;
-
 	uint32_t m_RenderBufferId = UINT32_MAX;
 };

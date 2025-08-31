@@ -32,7 +32,7 @@ static int scene_load(lua_State* L)
 
 	if (!deserializeSuccess)
     {
-        lua_pushboolean(L, 0);
+        lua_pushnil(L);
 		lua_pushstring(L, SceneFormat::GetLastErrorString().c_str());
 
         return 2;
@@ -44,11 +44,9 @@ static int scene_load(lua_State* L)
 		convertedArray.push_back(node->ToGenericValue());
 
 	Reflection::GenericValue gv = convertedArray;
-
-    lua_pushboolean(L, 1);
 	ScriptEngine::L::PushGenericValue(L, gv);
 
-	return 2;
+	return 1;
 }
 
 static luaL_Reg scene_funcs[] =

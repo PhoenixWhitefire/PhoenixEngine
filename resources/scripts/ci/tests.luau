@@ -1,7 +1,8 @@
 -- tests.luau, 13/08/2025
 -- Simple testing engine
 
-sleep(1)
+-- Sleep for a little bit to avoid tests appearing to take several milliseconds due to initial slowdowns
+sleep(0.04)
 
 local start = os.clock()
 
@@ -11,13 +12,37 @@ local tests = {}
 local curGroup = nil
 local testCount = 0
 
+local function contextify(v)
+	if typeof(v) == "string" then
+		return `.{v}`
+	else
+		return `[{v}]`
+	end
+end
+
+local function testAreDeepEqual(selfv, expectedv, context)
+	context = context or ""
+	
+	if typeof(selfv) ~= typeof(expectedv) or typeof(selfv) ~= "table" then
+		assert(selfv == expectedv, `FAILTEST:Value{context} was '{selfv}' ({ typeof(selfv) }) and not '{expectedv}' ({typeof(expectedv)})`)
+	else
+		for i, v in expectedv do
+			testAreDeepEqual(selfv[i], v, context .. contextify(i))
+		end
+		
+		for i, v in selfv do
+			testAreDeepEqual(v, expectedv[i], context .. contextify(i))
+		end
+	end
+end
+
 local expectationMt = {}
 expectationMt.__index = expectationMt
-function expectationMt:toBe(v)
-	assert(v == self._val, `FAILTEST:Value was '{self._val}' ({ typeof(self._val) }) and not '{v}' ({typeof(v)})`)
+function expectationMt:toBe(val)
+	testAreDeepEqual(self._val, val)
 end
-function expectationMt:toBeNil(v)
-	return self:toBe(nil)
+function expectationMt.toBeNil(self)
+	expectationMt.toBe(self, nil)
 end
 function expectationMt:toThrow(errstr)
 	assert(typeof(self._val) == "function", `':toThrow({ errstr })' called on type { typeof(self._val) }, expected function`)
@@ -48,7 +73,7 @@ local function argsToString(...)
 end
 
 local expectNeverMt = {}
-expectNeverMt.__index = function(self, check)
+function expectNeverMt.__index(self, check)
 	assert(expectationMt[check], `invalid index {check}`)
 	
 	return function(_, ...)
@@ -115,7 +140,7 @@ end
 
 discoverTests(testEntries, tests)
 
-appendlog(`\n\n\n\n`)
+appendlog(`\n\n`)
 print(`Running { testCount } tests...\n\n\n`)
 
 local succeeded = 0
@@ -169,7 +194,7 @@ end
 
 runTests(tests, 0)
 
-print("\n")
+appendlog("\n")
 print("Finished testing.")
 print(`{succeeded} succeeded, {failed} failed`)
 
@@ -183,10 +208,10 @@ elseif testCount == 0 then
 	print("No tests :/")
 end
 
-print("\n")
+appendlog("\n\n")
 print(`Testing session took { os.clock() - start } seconds. Tests themselves took { totaltesttime } seconds in total`)
 
-appendlog("\n\n\n\n")
+appendlog("\n\n\n")
 
 engine.exit()
 

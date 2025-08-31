@@ -786,7 +786,7 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 
 		Reflection::GenericValue value = Object->GetPropertyValue(propName);
 
-		switch (prop.second->Type)
+		switch (value.Type)
 		{
 		
 		case Reflection::ValueType::Boolean:

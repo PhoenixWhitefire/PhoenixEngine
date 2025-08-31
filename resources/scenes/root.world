@@ -59,14 +59,6 @@ PHNXENGI
       "UseSimpleController": true
     },
     {
-      "$_class": "Model",
-      "$_objectId": 3,
-      "Enabled": true,
-      "Name": "Level",
-      "Parent": 1,
-      "Serializes": true
-    },
-    {
       "$_class": "Script",
       "$_objectId": 4,
       "Enabled": true,

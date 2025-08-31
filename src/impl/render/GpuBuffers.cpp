@@ -141,14 +141,14 @@ void GpuElementBuffer::Unbind() const
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
-GpuFrameBuffer::GpuFrameBuffer(int TargetWidth, int TargetHeight, int MSSamples, bool AttachRenderBuffer)
+GpuFrameBuffer::GpuFrameBuffer(int TargetWidth, int TargetHeight, int MSSamples, bool DepthOnly)
 {
 	ZoneScoped;
 
-	this->Initialize(TargetWidth, TargetHeight, MSSamples, AttachRenderBuffer);
+	this->Initialize(TargetWidth, TargetHeight, MSSamples, DepthOnly);
 }
 
-void GpuFrameBuffer::Initialize(int TargetWidth, int TargetHeight, int MSSamples, bool AttachRenderBuffer)
+void GpuFrameBuffer::Initialize(int TargetWidth, int TargetHeight, int MSSamples, bool DepthOnly)
 {
 	ZoneScoped;
 
@@ -167,39 +167,41 @@ void GpuFrameBuffer::Initialize(int TargetWidth, int TargetHeight, int MSSamples
 		glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, MSSamples, GL_RGB, Width, Height, GL_TRUE);
 	else
 	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, Width, Height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-		glGenerateMipmap(GL_TEXTURE_2D);
+		if (!DepthOnly)
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, Width, Height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		else
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, Width, Height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 	}
 
 	if (binding != GL_TEXTURE_2D_MULTISAMPLE)
 	{
-		glTexParameteri(binding, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-		glTexParameteri(binding, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		if (!DepthOnly)
+		{
+			glTexParameteri(binding, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+			glTexParameteri(binding, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-		glTexParameteri(binding, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(binding, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(binding, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(binding, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		}
+		else
+		{
+			glTexParameteri(binding, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(binding, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+			glTexParameteri(binding, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+			glTexParameteri(binding, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+
+			// Prevents darkness outside the frustrum
+			float clampColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+			glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, clampColor);
+		}
 	}
+
+	glGenerateMipmap(GL_TEXTURE_2D);
 
 	this->Bind();
 
-	// TODO fix shadowmap specific stuff!
-
-	/*
-	if (IsShadowMap)
-	{
-		GLfloat shadowmapclampcol[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-
-		glTexParameterfv(Binding, GL_TEXTURE_BORDER_COLOR, shadowmapclampcol);
-
-		//TODO fix stuff for shadow map (missing in SDL opengl)
-		
-		glDrawBuffer(GL_NONE);
-		glReadBuffer(GL_NONE);
-		
-	}
-	*/
-
-	if (AttachRenderBuffer)
+	if (!DepthOnly)
 	{
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, GpuTextureId, 0);
 
@@ -213,11 +215,21 @@ void GpuFrameBuffer::Initialize(int TargetWidth, int TargetHeight, int MSSamples
 
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_RenderBufferId);
 	}
+	else
+	{
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, GpuTextureId, 0);
+		
+		// Needed since we don't touch the color buffer
+		glDrawBuffer(GL_NONE);
+		glReadBuffer(GL_NONE);
+	}
 
 	if (GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 		status != GL_FRAMEBUFFER_COMPLETE
 	)
 		RAISE_RT(std::format("Could not create a framebuffer, error ID: {}", status));
+	
+	Unbind();
 }
 
 void GpuFrameBuffer::Delete()

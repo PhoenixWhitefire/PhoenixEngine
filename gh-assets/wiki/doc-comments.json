@@ -461,7 +461,7 @@
           "Description": "Scene assets",
           "Members": {
             "save": "Saves the list of `GameObject`s to the provided path",
-            "load": "Loads `GameObject`s from the scene file at the provided path, returning a list of the root objects"
+            "load": "Loads `GameObject`s from the scene file at the provided path, returning a list of the root objects or `nil` and an error message upon failure"
           }
         },
         "world": {

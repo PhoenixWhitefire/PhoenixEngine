@@ -124,7 +124,13 @@ void ScriptEngine::L::PushJson(lua_State* L, const nlohmann::json& v)
 	}
 }
 
-nlohmann::json ScriptEngine::L::LuaValueToJson(lua_State* L, int StackIndex)
+#define ERROR_CONTEXTUALIZED(e, ...) { \
+if (Context.size() > 0) \
+	luaL_error(L, e " in %s", __VA_ARGS__, Context.c_str()); \
+else \
+	luaL_error(L, e, __VA_ARGS__); } \
+
+nlohmann::json ScriptEngine::L::LuaValueToJson(lua_State* L, int StackIndex, std::string Context)
 {
 	switch (lua_type(L, StackIndex))
 	{
@@ -142,7 +148,9 @@ nlohmann::json ScriptEngine::L::LuaValueToJson(lua_State* L, int StackIndex)
 	}
 	case LUA_TSTRING:
 	{
-		return lua_tostring(L, StackIndex);
+		nlohmann::json str = luaL_tolstring(L, StackIndex, nullptr);
+		lua_pop(L, 1);
+		return str;
 	}
 	case LUA_TTABLE:
 	{
@@ -155,31 +163,76 @@ nlohmann::json ScriptEngine::L::LuaValueToJson(lua_State* L, int StackIndex)
 		while (lua_next(L, -2) != 0)
 		{
 			if (lua_type(L, -2) != keytype && keytype != LUA_TNIL)
-				luaL_error(
-					L,
-					"All keys must have the same type. Previous type: %s, current type: %s (%s)",
-					lua_typename(L, keytype),
-					luaL_typename(L, -2),
-					lua_tostring(L, -2)
+			{
+				// C++ does not specify the order of evaluation of function arguments,
+				// and `luaL_tolstring` will produce side-effects (pushing string on stack)
+				const char* ktname = luaL_typename(L, -2);
+
+				ERROR_CONTEXTUALIZED(
+					"All keys must have the same type. Previous type: %s, Current type: %s ('%s')",
+					lua_typename(L, keytype), ktname, luaL_tolstring(L, -2, nullptr)
 				);
+			}
 
 			if (keytype == LUA_TNIL)
 			{
 				keytype = lua_type(L, -2);
 
 				if (keytype != LUA_TSTRING && keytype != LUA_TNUMBER)
-					luaL_error(L,
-						"Table keys expected to be strings or numbers, got '%s' (%s)",
-						lua_tostring(L, -2),
-						luaL_typename(L, -2)
-					);
+				{
+					const char* ktname = luaL_typename(L, -2);
+
+					ERROR_CONTEXTUALIZED(
+						"Table keys expected to be string or number, got '%s' (%s)",
+						luaL_tolstring(L, -2, nullptr), ktname
+					); // `luaL_tolstring` always pushes the string onto the stack,
+					// which is why the succeeding arguments are offset by -1
+				}
+
+				if (keytype == LUA_TNUMBER)
+					t = nlohmann::json::array();
 			}
 
 			if (lua_type(L, -2) == LUA_TNUMBER)
-				t[static_cast<size_t>(lua_tonumber(L, -2)) - 1] = LuaValueToJson(L, -1);
-			else if (lua_type(L, -2))
-				t[lua_tostring(L, -2)] = LuaValueToJson(L, -1);
-			
+			{
+				int index = lua_tointeger(L, -2);
+
+				if (index == 0)
+				{
+					const char* vtname = luaL_typename(L, -1);
+
+					ERROR_CONTEXTUALIZED(
+						"Tables cannot be zero-indexed. Value: '%s' (%s)",
+						luaL_tolstring(L, -1, nullptr), vtname
+					);
+				}
+
+				if (index < 0)
+				{
+					const char* vtname = luaL_typename(L, -1);
+
+					ERROR_CONTEXTUALIZED(
+						"Tables cannot have negative indices. Index: %i, Value: '%s' (%s)",
+						index, luaL_tolstring(L, -1, nullptr), vtname
+					);
+				}
+
+				if (Context.size() == 0)
+					Context = "Array";
+
+				t[index - 1] = LuaValueToJson(L, -1, Context + "[" + std::to_string(index) + "]");
+			}
+			else
+			{
+				assert(lua_type(L, -2) == LUA_TSTRING);
+				const char* key = luaL_checkstring(L, -2);
+
+				if (Context.size() == 0)
+					Context = "Object";
+
+				t[key] = LuaValueToJson(L, -1, Context + "." + key);
+			}
+
 			lua_pop(L, 1);
 		}
 		lua_pop(L, 1);
@@ -189,25 +242,22 @@ nlohmann::json ScriptEngine::L::LuaValueToJson(lua_State* L, int StackIndex)
 
 	[[unlikely]] default:
 	{
-		const char* vtname = luaL_typename(L, -1);
-		std::string k;
-	
-		if (lua_type(L, -2) == LUA_TNUMBER)
-			k = std::to_string(lua_tonumber(L, -2));
-		else
-			k = lua_tostring(L, -2);
-	
-		RAISE_RT(std::format(
-			"Key '{}' is of non-JSON type {}!",
-			k, vtname
-		));
+		const char* vtname = luaL_typename(L, StackIndex);
+		const char* vstr = luaL_tolstring(L, StackIndex, nullptr);
+
+		ERROR_CONTEXTUALIZED(
+			"Cannot convert '%s' (%s) to a JSON value",
+			vstr, vtname
+		);
 	}
 	}
 }
+#undef ERROR_CONTEXTUALIZED
 
 int ScriptEngine::CompileAndLoad(lua_State* L, const std::string& SourceCode, const std::string& ChunkName)
 {
 	ZoneScoped;
+	ZoneText(ChunkName.data(), ChunkName.size());
 	
 	// Tell Luau that these are mutable. Otherwise, GETIMPORT optimizations
 	// will cause them to be treated as constants and only invoke their `__index` functions
@@ -246,7 +296,9 @@ Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int St
 	}
 	case LUA_TSTRING:
 	{
-		return lua_tostring(L, StackIndex);
+		Reflection::GenericValue str = luaL_tolstring(L, StackIndex, nullptr);
+		lua_pop(L, 1);
+		return str;
 	}
 	case LUA_TVECTOR:
 	{
@@ -310,22 +362,25 @@ Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int St
 
 void ScriptEngine::L::CheckType(lua_State* L, Reflection::ValueType Type, int StackIndex)
 {
+	ZoneScoped;
+
 	bool isOptional = (uint8_t)Type & (uint8_t)Reflection::ValueType::Null;
 	int givenType = lua_type(L, StackIndex);
 
 	if (!isOptional || givenType != LUA_TNIL)
 	{
 		Type = (Reflection::ValueType)((uint8_t)Type & ~(uint8_t)Reflection::ValueType::Null);
-		auto reflToLuaIt = ScriptEngine::ReflectedTypeLuaEquivalent.find(Type);
+		const auto& reflToLuaIt = ScriptEngine::ReflectedTypeLuaEquivalent.find(Type);
 
 		if (reflToLuaIt == ScriptEngine::ReflectedTypeLuaEquivalent.end())
-		{
-			luaL_errorL(L,
+			luaL_error(L,
 				"No defined mapping between a '%s' and a Luau type",
 				Reflection::TypeAsString(Type).c_str()
 			);
-		}
 
+		// the literal `if` check inside this function likes to take 190 microseconds in Debug mode for some reason
+		// probably some cache bullshit
+		// fuck
 		luaL_checktype(L, StackIndex, reflToLuaIt->second);
 
 		if (reflToLuaIt->second == LUA_TUSERDATA)
@@ -512,15 +567,14 @@ int ScriptEngine::L::HandleMethodCall(
 	{
 		Reflection::ValueType paramType = paramTypes[index];
 
-		// Ex: W/ 3 args:
-		// 0 = -3
-		// 1 = -2
-		// 2 = -1
-		// Simpler than I thought actually
-		int argStackIndex = index - numArgs;
-		ScriptEngine::L::CheckType(L, paramType, argStackIndex);
+		assert(luaL_checkudata(L, 1, "GameObject"));
 
-		inputs.push_back(L::LuaValueToGeneric(L, argStackIndex));
+		// offset the stack so the error message gives the correct argument number
+		// without this, the first argument would be reported as "argument #2"
+		L->base++;
+		ScriptEngine::L::CheckType(L, paramType, index + 1);
+		L->base--;
+		inputs.push_back(L::LuaValueToGeneric(L, index + 2));
 	}
 
 	// Now, onto the *REAL* business...
@@ -762,17 +816,18 @@ static int api_gameobjnewindex(lua_State* L)
 
 	if (const Reflection::Property* prop = obj->FindProperty(key))
 	{
-		const char* argAsString = luaL_tolstring(L, 3, NULL);
-		const char* argTypeName = luaL_typename(L, 3);
-		
 		if (!prop->Set)
+		{
+			const char* argTypeName = luaL_typename(L, 3);
+			const char* argAsString = luaL_tolstring(L, 3, nullptr);
+
 			luaL_errorL(L, 
-				"Cannot set Property '%s' to %s '%s' because it is read-only",
-				key, argTypeName, argAsString
+				"Cannot set '%s' to '%s' (%s) because it is read-only",
+				key, argAsString, argTypeName
 			);
+		}
 
 		ScriptEngine::L::CheckType(L, prop->Type, 3);
-
 		Reflection::GenericValue newValue = ScriptEngine::L::LuaValueToGeneric(L, 3);
 
 		try
@@ -787,7 +842,7 @@ static int api_gameobjnewindex(lua_State* L)
 	else
 	{
 		std::string fullname = obj->GetFullName();
-	
+
 		if (obj->FindChild(key))
 			luaL_errorL(L,
 				"Attempt to set invalid Member '%s' of '%s', although it has a child object with that name",
@@ -941,6 +996,7 @@ static int api_eventnamecall(lua_State* L)
 		lua_State* cL = lua_newthread(eL);
 		int threadRef = lua_ref(L, -1);
 		lua_xpush(L, eL, 2);
+		luaL_sandboxthread(cL);
 
 		EventConnectionData* ec = (EventConnectionData*)lua_newuserdata(eL, sizeof(EventConnectionData));
 		luaL_getmetatable(eL, "EventConnection"); // stack: ec, mt
@@ -991,6 +1047,7 @@ static int api_eventnamecall(lua_State* L)
 					lua_xpush(eL, nL, 2);
 					lua_pop(eL, 1); // pop nL off eL
 
+					luaL_sandboxthread(nL);
 					co = nL;
 				}
 				else
@@ -1013,7 +1070,7 @@ static int api_eventnamecall(lua_State* L)
 
 				if (status != LUA_OK && status != LUA_YIELD)
 				{
-					Log::ErrorF("Script event: {}", lua_tostring(co, -1));
+					Log::ErrorF("Script event: {}", luaL_tolstring(co, -1, nullptr));
 					ScriptEngine::L::DumpStacktrace(co);
 					lua_pop(co, 1);
 				}
@@ -1591,6 +1648,7 @@ lua_State* ScriptEngine::L::Create()
 	ScriptEngine::L::PushGameObject(state, GameObject::GetObjectById(GameObject::s_DataModel)->FindChild("Workspace"));
 	lua_setglobal(state, "workspace");
 
+	luaL_sandbox(state);
 	return state;
 }
 
