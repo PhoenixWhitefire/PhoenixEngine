@@ -19,6 +19,14 @@ struct EcPointLight : public EcLight
 
 struct EcDirectionalLight : public EcLight
 {
+	glm::vec3 ShadowViewOffset;
+	float ShadowViewDistance = 300.f;
+	float ShadowViewSizeH = 200.f;
+	float ShadowViewSizeV = 200.f;
+	float ShadowViewFarPlane = 700.f;
+	float ShadowViewNearPlane = 0.1f;
+	bool ShadowViewMoveWithCamera = true;
+
 	GameObjectRef Object;
 
 	static inline EntityComponent Type = EntityComponent::DirectionalLight;

@@ -235,7 +235,7 @@ void EcScript::Update(double dt)
 	// 23/09/2024
 	resumeYieldedCoroutines();
 
-	if (EcScript* after = static_cast<EcScript*>(ManagerInstance.GetComponent(ecId)); after != this)
+	if (EcScript* after = static_cast<EcScript*>(ManagerInstance.GetComponent(ecId)); after && after != this)
 	{
 		// we got re-alloc'd, defer to clone to avoid use-after-free's
 		after->Update(dt);

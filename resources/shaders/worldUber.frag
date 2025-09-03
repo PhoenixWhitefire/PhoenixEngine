@@ -9,9 +9,9 @@ const int MAX_LIGHTS = 6;
 
 /*
 LIGHT TYPE IDS:
--Directional lights = 0
--Point lights = 1
--Spot lights = 2
+- Directional lights = 0
+- Point lights = 1
+- Spot lights = 2
 
 When Directional light, Position = Direction
 */
@@ -121,7 +121,7 @@ float LogisticDepth(float Steepness, float Offset)
 	return (1 / (1 + exp(-Steepness * (ZVal - Offset))));
 }
 
-//Calculates what a light would add to a pixel
+// Calculates what a light would add to a pixel
 vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 {
 	LightObject Light = Lights[Index];
@@ -146,24 +146,20 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 				lightCoords = (lightCoords + 1.f) / 2.f;
 				float currentDepth = lightCoords.z;
 
-				//float curDepthL = LinearizeDepth(curDepth);
-				float bias = max(0.01f * (1.f - dot(Normal, Incoming)), 0.f);
-				
-				int SampleRadius = 0;
-				vec2 pixelSize = 1.f / textureSize(ShadowAtlas, 0);
+				float bias = min(0.05 * (dot(Normal, Incoming)), 0.000005);
+
+				const int SampleRadius = 1;
+				vec2 texelSize = 1.f / textureSize(ShadowAtlas, 0);
 				for (int y = -SampleRadius; y <= SampleRadius; y++)
 					for (int x = -SampleRadius; x <= SampleRadius; x++)
 					{
-						float closestDepth = texture(ShadowAtlas, lightCoords.xy + vec2(x, y) * pixelSize).r;
-						float lit = smoothstep(closestDepth + bias, closestDepth + bias, currentDepth);
-
-						shadow += lit;
+						float pcfDepth = texture(ShadowAtlas, lightCoords.xy + vec2(x, y) * texelSize).r;
+						shadow += currentDepth - bias > pcfDepth ? 1.f : 0.f;
 					}
 
 				shadow /= pow((SampleRadius * 2 + 1), 2);
 			}
 		}
-		//shadow = 0.f;
 
 		float Intensity = max(dot(Normal, Incoming), 0.f);
 		float Diffuse = Intensity;
@@ -179,7 +175,6 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 		float SpecularTerm = SpecMapValue * Specular * SpecularMultiplier;
 
 		return (Diffuse * (1.f - shadow) + SpecularTerm * (1.f - shadow) * Intensity) * LightColor;
-		//FinalColor = Albedo * SpecMapValue;
 	}
 	else if (LightType == 1)
 	{
@@ -223,6 +218,17 @@ vec3 getTriPlanarBlending(vec3 _wNorm)
 
 void main()
 {
+//#define DEBUG_DRAWSHADOWMAP
+#ifdef DEBUG_DRAWSHADOWMAP
+
+	if (gl_FragCoord.x < 512 && gl_FragCoord.y < 512)
+	{
+		FragColor = vec4(texture(ShadowAtlas, gl_FragCoord.xy / 512.f).rrr, 1.f);
+		return;
+	}
+
+#endif
+
 	float mipLevel = textureQueryLod(ColorMap, Frag_TextureUV).x;
 
 	if (IsShadowMap)

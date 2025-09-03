@@ -126,7 +126,41 @@ public:
                 },
                 [](void* p, const Reflection::GenericValue& gv)
                 {
-                    static_cast<EcDirectionalLight*>(p)->Object->GetComponent<EcTransform>()->Transform[3] = glm::vec4(gv.AsVector3(), 1.f);
+                    static_cast<EcDirectionalLight*>(p)
+                        ->Object->GetComponent<EcTransform>()->Transform[3] = glm::vec4(gv.AsVector3(), 1.f);
+                }
+            ),
+
+            EC_PROP_SIMPLE(EcDirectionalLight, ShadowViewOffset, Vector3),
+            EC_PROP_SIMPLE(EcDirectionalLight, ShadowViewDistance, Double),
+            EC_PROP_SIMPLE(EcDirectionalLight, ShadowViewSizeH, Double),
+            EC_PROP_SIMPLE(EcDirectionalLight, ShadowViewSizeV, Double),
+			EC_PROP_SIMPLE(EcDirectionalLight, ShadowViewNearPlane, Double),
+			EC_PROP_SIMPLE(EcDirectionalLight, ShadowViewFarPlane, Double),
+			EC_PROP_SIMPLE(EcDirectionalLight, ShadowViewMoveWithCamera, Boolean),
+
+            EC_PROP(
+                "ShadowViewSize",
+                Double,
+                [](void* p)
+                {
+                    EcDirectionalLight* d = static_cast<EcDirectionalLight*>(p);
+
+                    if (d->ShadowViewSizeH == d->ShadowViewSizeV)
+                        return d->ShadowViewSizeH;
+                    else
+                        return -1.f;
+                },
+                [](void* p, const Reflection::GenericValue& gv)
+                {
+                    EcDirectionalLight* d = static_cast<EcDirectionalLight*>(p);
+
+                    if (d->ShadowViewSizeH == d->ShadowViewSizeV)
+                    {
+                        float size = gv.AsDouble();
+                        d->ShadowViewSizeH = size;
+                        d->ShadowViewSizeV = size;
+                    }
                 }
             )
         };

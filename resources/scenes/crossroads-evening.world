@@ -32,21 +32,33 @@ PHNXENGI
         "DirectionalLight"
       ],
       "$_objectId": 1679,
-      "Brightness": 1.5,
+      "Brightness": 3.0,
       "Direction": [
-        2.0,
-        1.0,
-        2.0
+        -2.0,
+        1.5,
+        -4.0
       ],
       "Enabled": true,
       "LightColor": [
-        0.9726067185401917,
         1.0,
-        0.5343137383460999
+        0.7638407945632935,
+        0.5539215803146362
       ],
       "Name": "DirectionalLight",
       "Parent": 3,
       "Serializes": true,
+      "ShadowViewDistance": 300.0,
+      "ShadowViewFarPlane": 550.0,
+      "ShadowViewMoveWithCamera": false,
+      "ShadowViewNearPlane": 30.0,
+      "ShadowViewOffset": [
+        0.0,
+        -28.0,
+        0.0
+      ],
+      "ShadowViewSize": -1.0,
+      "ShadowViewSizeH": 268.0,
+      "ShadowViewSizeV": 108.0,
       "Shadows": true,
       "Size": [
         1.0,
@@ -73,9 +85,9 @@ PHNXENGI
           0.0
         ],
         [
-          2.0,
-          1.0,
-          2.0,
+          -2.0,
+          1.5,
+          -4.0,
           1.0
         ]
       ]
@@ -115420,22 +115432,6 @@ PHNXENGI
         ]
       ],
       "Transparency": 0.0
-    },
-    {
-      "$_components": [
-        "Sound"
-      ],
-      "$_objectId": 6,
-      "Enabled": true,
-      "Looped": true,
-      "Name": "BackgroundAmbience",
-      "Parent": 3,
-      "Playing": true,
-      "Position": 0.0,
-      "Serializes": true,
-      "SoundFile": "sounds/pixabay_soft-wind-314945.mp3",
-      "Speed": 1.0,
-      "Volume": 1.0
     },
     {
       "$_components": [

@@ -373,7 +373,8 @@ static void recursivelyTravelHierarchy(
 	Memory::vector<GameObjectRef, MEMCAT(Physics)>& PhysicsList,
 	const GameObjectRef& Root,
 	EcCamera* SceneCamera,
-	double DeltaTime
+	double DeltaTime,
+	EcDirectionalLight** Sun
 	/*
 	glm::mat4  AggregateTransform = glm::mat4(1.f),
 	Vector3 AggregateScale = Vector3(1.f, 1.f, 1.f)
@@ -455,12 +456,17 @@ static void recursivelyTravelHierarchy(
 		EcSpotLight* spot = object->GetComponent<EcSpotLight>();
 		
 		if (directional)
+		{
 			LightList.emplace_back(
 				LightType::Directional,
 				directional->Shadows,
 				(glm::vec3)ct->Transform[3],
 				directional->LightColor * directional->Brightness
 			);
+
+			if (!*Sun && directional->Shadows)
+				*Sun = directional;
+		}
 
 		if (point)
 			LightList.emplace_back(
@@ -488,7 +494,8 @@ static void recursivelyTravelHierarchy(
 				PhysicsList,
 				object,
 				SceneCamera,
-				DeltaTime
+				DeltaTime,
+				Sun
 			);
 		
 		if (EcParticleEmitter* emitter = object->GetComponent<EcParticleEmitter>())
@@ -939,7 +946,7 @@ void Engine::Start()
 		sceneCamera = sceneCamObject->GetComponent<EcCamera>();
 
 		s_DebugCollisionAabbs = this->DebugAabbs;
-
+		EcDirectionalLight* sun = nullptr;
 		{
 			TIME_SCOPE_AS("RecurseHierarchy");
 
@@ -950,7 +957,8 @@ void Engine::Start()
 				physicsList,
 				Workspace,
 				sceneCamera,
-				deltaTime
+				deltaTime,
+				&sun
 			);
 
 			sceneCamera = sceneCamObject->GetComponent<EcCamera>();
@@ -967,17 +975,6 @@ void Engine::Start()
 		if (hasPhysics)
 			Physics::Step(physicsList, deltaTime);
 
-		bool hasSun = false;
-		glm::vec3 sunDirection{ .5f, .5f, .5f };
-
-		for (const LightItem& light : scene.LightingList)
-			if (light.Type == LightType::Directional && light.Shadows)
-			{
-				hasSun = true;
-				sunDirection = light.Position;
-				break;
-			}
-
 		if (!IsHeadlessMode)
 		{
 			scene.UsedShaders.clear();
@@ -986,7 +983,7 @@ void Engine::Start()
 				scene.UsedShaders.insert(m_MaterialManager.GetMaterialResource(ri.MaterialId).ShaderId);
 		}
 
-		if (hasSun && !IsHeadlessMode)
+		if (!IsHeadlessMode && sun)
 		{
 			TIME_SCOPE_AS("Shadows");
 			ZoneScopedN("Shadows");
@@ -997,16 +994,25 @@ void Engine::Start()
 
 			for (const RenderItem& ri : scene.RenderList)
 				if (ri.CastsShadows)
+				{
 					sunScene.RenderList.push_back(ri);
+					sunScene.RenderList.back().FaceCulling = FaceCullingMode::FrontFace;
+				}
 
-			constexpr float size = 200.f;
-
-			glm::mat4 sunOrtho = glm::ortho(-size, size, -size, size, 0.1f, 700.f);
+			glm::vec3 sunDirection = glm::vec3(sun->Object->GetComponent<EcTransform>()->Transform[3]);
+			
+			glm::mat4 sunOrtho = glm::ortho(
+				-sun->ShadowViewSizeH, sun->ShadowViewSizeH, -sun->ShadowViewSizeV, sun->ShadowViewSizeV,
+				sun->ShadowViewNearPlane, sun->ShadowViewFarPlane
+			);
 			glm::mat4 sunView = glm::lookAt(
-				glm::normalize(sunDirection) * 300.f,
+				glm::normalize(sunDirection) * sun->ShadowViewDistance,
 				glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f)
 			);
-			sunView[3] = glm::vec4(glm::vec3(sunView[3]) - glm::vec3(sceneCamera->Transform[3]), 1.f);
+			sunView[3] = glm::vec4(glm::vec3(sunView[3]) + sun->ShadowViewOffset, 1.f);
+			if (sun->ShadowViewMoveWithCamera)
+				sunView[3] = glm::vec4(glm::vec3(sunView[3]) - glm::vec3(sceneCamera->Transform[3]), 1.f);
+
 			glm::mat4 sunRenderMatrix = sunOrtho * sunView;
 
 			m_SunShadowMap.Bind();

@@ -528,9 +528,13 @@ static void renderTextEditor()
 	ImGui::End();
 }
 
-static void uniformsEditor(std::unordered_map<std::string, Reflection::GenericValue>& Uniforms, int* Selection)
+static void uniformsEditor(
+	std::unordered_map<std::string, Reflection::GenericValue>& Uniforms,
+	int* Selection, const char* Name
+)
 {
 	ZoneScopedC(tracy::Color::DarkSeaGreen);
+	ImGui::BeginChild(Name, ImVec2(), ImGuiChildFlags_Border);
 
 	if ((*Selection) + 1ull > Uniforms.size())
 		*Selection = -1;
@@ -541,7 +545,6 @@ static void uniformsEditor(std::unordered_map<std::string, Reflection::GenericVa
 	NewUniformNameBuf.resize(32);
 
 	ImGui::InputText("Variable Name", &NewUniformNameBuf);
-
 	ImGui::Combo("Variable Type", &NewTypeId, "Boolean\0Integer\0Float\0");
 
 	if (ImGui::Button("Add"))
@@ -579,7 +582,7 @@ static void uniformsEditor(std::unordered_map<std::string, Reflection::GenericVa
 		uniformsArray.push_back(it.first);
 
 	ImGui::ListBox(
-		"Uniforms",
+		Name,
 		Selection,
 		[](void* ud, int index)
 		{
@@ -643,6 +646,8 @@ static void uniformsEditor(std::unordered_map<std::string, Reflection::GenericVa
 
 		Uniforms[NameEditBuf] = newValue;
 	}
+
+	ImGui::EndChild();
 }
 
 static std::string* PipelineShaderSelectTarget = nullptr;
@@ -768,7 +773,8 @@ static void renderShaderPipelinesEditor()
 		shaderPipelineShaderSelect("Fragment Shader: ", &curItem.FragmentShader);
 		shaderPipelineShaderSelect("Geometry Shader: ", &curItem.GeometryShader);
 
-		static int UniformSelectionIdx = -1;
+		static int MainUniformSelectionIdx = -1;
+		static int InheritedUniformSelectionIdx = -1;
 
 		ImGui::Text("Inherit variables of: ");
 		ImGui::SameLine();
@@ -777,7 +783,34 @@ static void renderShaderPipelinesEditor()
 
 		ImGui::InputText("##", &curItem.UniformsAncestor);
 
-		uniformsEditor(curItem.DefaultUniforms, &UniformSelectionIdx);
+		std::unordered_map<std::string, Reflection::GenericValue> mainUniforms = curItem.DefaultUniforms;
+		std::unordered_map<std::string, Reflection::GenericValue> inheritedUniforms;
+
+		if (curItem.UniformsAncestor.size() > 0)
+		{
+			const ShaderProgram& ancestor = shdManager->GetShaderResource(shdManager->LoadFromPath(curItem.UniformsAncestor));
+			// do NOT show inherited uniforms to the developer unless they are modified to
+			// reduce clutter
+			for (const auto& it : ancestor.DefaultUniforms)
+				if (const auto& cit = mainUniforms.find(it.first);
+					cit != mainUniforms.end() && cit->second == it.second
+				)
+				{
+					inheritedUniforms[it.first] = it.second;
+					mainUniforms.erase(cit);
+				}
+		}
+
+		uniformsEditor(mainUniforms, &MainUniformSelectionIdx, "Uniforms");
+
+		if (inheritedUniforms.size() > 0)
+			uniformsEditor(inheritedUniforms, &InheritedUniformSelectionIdx, "Inherited Uniforms");
+
+		for (const auto& it : mainUniforms)
+			curItem.DefaultUniforms[it.first] = it.second;
+
+		for (const auto& it : inheritedUniforms)
+			curItem.DefaultUniforms[it.first] = it.second;
 
 		if (ImGui::Button("Save & Reload"))
 		{
@@ -1064,7 +1097,7 @@ static void renderMaterialEditor()
 
 	ImGui::Text("Shader Variable Overrides");
 
-	uniformsEditor(curItem.Uniforms, &SelectedUniformIdx);
+	uniformsEditor(curItem.Uniforms, &SelectedUniformIdx, "Variables");
 
 	ImGui::Checkbox("Has translucency", &curItem.HasTranslucency);
 	ImGui::InputFloat("Spec pow", &curItem.SpecExponent);

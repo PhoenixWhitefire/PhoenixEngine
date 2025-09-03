@@ -14,6 +14,7 @@ BackgroundAmbience.SoundFile = "sounds/pixabay_soft-wind-314945.mp3"
 BackgroundAmbience.Playing = true
 BackgroundAmbience.Looped = true
 BackgroundAmbience.Name = "BackgroundAmbience"
+BackgroundAmbience.Serializes = false
 BackgroundAmbience.Parent = workspace
 
 local function loadSubLevel(Path)

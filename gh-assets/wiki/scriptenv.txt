@@ -267,7 +267,7 @@ Custom libraries.
 * Scene assets
 
 #### `scene.load(...): ...`
-* Loads `GameObject`s from the scene file at the provided path, returning a list of the root objects
+* Loads `GameObject`s from the scene file at the provided path, returning a list of the root objects or `nil` and an error message upon failure
 
 #### `scene.save(...): ...`
 * Saves the list of `GameObject`s to the provided path

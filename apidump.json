@@ -58,6 +58,13 @@
           "Brightness": "Double",
           "Direction": "Vector3",
           "LightColor": "Color",
+          "ShadowViewFarPlane": "Double",
+          "ShadowViewMoveWithCamera": "Boolean",
+          "ShadowViewNearPlane": "Double",
+          "ShadowViewOffset": "Double",
+          "ShadowViewSize": "Double",
+          "ShadowViewSizeH": "Double",
+          "ShadowViewSizeV": "Double",
           "Shadows": "Boolean"
         }
       },

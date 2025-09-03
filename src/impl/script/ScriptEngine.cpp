@@ -275,7 +275,15 @@ int ScriptEngine::CompileAndLoad(lua_State* L, const std::string& SourceCode, co
 
 	std::string bytecode = Luau::compile(SourceCode, compileOptions);
 
-	return luau_load(L, ChunkName.c_str(), bytecode.data(), bytecode.size(), 0);
+	int result = luau_load(L, ChunkName.c_str(), bytecode.data(), bytecode.size(), 0);
+
+	if (result == 0)
+	{
+		lua_pushstring(L, ChunkName.c_str())
+		lua_setglobal(L, "_CHUNKNAME");
+	}
+
+	return result
 }
 
 Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int StackIndex)
