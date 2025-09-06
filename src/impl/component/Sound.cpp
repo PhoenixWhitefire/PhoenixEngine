@@ -95,6 +95,7 @@ public:
 				"Playing",
 				Boolean,
 				[](void* p)
+				-> Reflection::GenericValue
 				{
 					EcSound* sound = static_cast<EcSound*>(p);
 					return sound->m_PlayRequested;

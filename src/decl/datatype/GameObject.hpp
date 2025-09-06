@@ -9,7 +9,7 @@
 #define EC_SET_SIMPLE(c, n, t) [](void* p, const Reflection::GenericValue& gv)->void { static_cast<c*>(p)->n = gv.As##t(); }
 #define EC_SET_SIMPLE_CTOR(c, n, t) [](void* p, const Reflection::GenericValue& gv)->void { static_cast<c*>(p)->n = t(gv); }
 
-#define EC_PROP(strn, t, g, s) { strn, { Reflection::ValueType::t, g, s } }
+#define EC_PROP(strn, t, g, s) { strn, { Reflection::ValueType::t, (Reflection::PropertyGetter)g, (Reflection::PropertySetter)s } }
 
 #define EC_PROP_SIMPLE(c, n, t) EC_PROP(#n, t, EC_GET_SIMPLE(c, n), EC_SET_SIMPLE(c, n, t))
 #define EC_PROP_SIMPLE_NGV(c, n, t) EC_PROP(#n, t, EC_GET_SIMPLE_TGN(c, n), EC_SET_SIMPLE_CTOR(c, n, t))
@@ -147,9 +147,9 @@ public:
 	void* GetComponentByType(EntityComponent);
 	std::vector<ReflectorHandle>& GetComponents();
 
-	const Reflection::Property* FindProperty(const std::string_view&, ReflectorHandle* FromComponent = nullptr);
-	const Reflection::Method* FindMethod(const std::string_view&, ReflectorHandle* FromComponent = nullptr);
-	const Reflection::Event* FindEvent(const std::string_view&, ReflectorHandle* FromComponent = nullptr);
+	const Reflection::PropertyDescriptor* FindProperty(const std::string_view&, ReflectorHandle* Reflector = nullptr);
+	const Reflection::MethodDescriptor* FindMethod(const std::string_view&, ReflectorHandle* Reflector = nullptr);
+	const Reflection::EventDescriptor* FindEvent(const std::string_view&, ReflectorHandle* Reflector = nullptr);
 
 	Reflection::GenericValue GetPropertyValue(const std::string_view&);
 	void SetPropertyValue(const std::string_view&, const Reflection::GenericValue&);
@@ -169,6 +169,9 @@ public:
 	// hard refs to it 24/12/2024
 	void Destroy();
 
+	// preferable to use this instead of `::GetChildren`/`::GetDescendants`
+	// because it does not require any memory allocations
+	void ForEachChild(const std::function<bool(GameObject*)>&);
 	std::vector<GameObject*> GetChildren();
 	std::vector<GameObject*> GetDescendants();
 

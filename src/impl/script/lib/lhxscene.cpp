@@ -5,7 +5,7 @@
 
 static int scene_save(lua_State* L)
 {
-    Reflection::GenericValue rootNodesGv = ScriptEngine::L::LuaValueToGeneric(L, 1);
+    Reflection::GenericValue rootNodesGv = ScriptEngine::L::ToGeneric(L, 1);
 	const char* path = luaL_checkstring(L, 2);
 
 	std::span<Reflection::GenericValue> rootNodesArray = rootNodesGv.AsArray();

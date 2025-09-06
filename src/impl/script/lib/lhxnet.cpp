@@ -153,72 +153,63 @@ static int net_request(lua_State* L)
         }
         lua_pop(L, 1);
     }
-    
-    // TODO a kind of hack to get what script we're running as?
-	lua_getglobal(L, "script");
-	Reflection::GenericValue script = ScriptEngine::L::LuaValueToGeneric(L, -1);
-	GameObject* scriptObject = GameObject::FromGenericValue(script);
-	// modules currently do not have a `script` global
-	uint32_t scriptId = scriptObject ? scriptObject->ObjectId : PHX_GAMEOBJECT_NULL_ID;
 
-    lua_yield(L, 1);
-
-    std::mutex* responseMutex = new std::mutex;
-    CurlResponse* response = new CurlResponse;
-
-    ThreadManager::Get()->Dispatch(
-        [=]()
+    ScriptEngine::L::Yield(
+        L,
+        1,
+        [&](ScriptEngine::YieldedCoroutine& yc)
         {
-            CurlResponse resp = requestData(url, method, body, headers);
+            std::mutex* responseMutex = new std::mutex;
+            CurlResponse* response = new CurlResponse;
 
-            responseMutex->lock();
-            *response = resp;
-            responseMutex->unlock();
-        },
-        true
-    );
+            ThreadManager::Get()->Dispatch(
+                [=]()
+                {
+                    CurlResponse resp = requestData(url, method, body, headers);
 
-    auto& b = ScriptEngine::s_YieldedCoroutines.emplace_back(
-		L,
-		// make sure the coroutine doesn't get de-alloc'd before we resume it
-		lua_ref(L, -1),
-		scriptId,
-		ScriptEngine::YieldedCoroutine::ResumptionMode::Polled
-	);
+                    responseMutex->lock();
+                    *response = resp;
+                    responseMutex->unlock();
+                },
+                true
+            );
 
-    b.RmPoll = [response, responseMutex](lua_State* CL)
-    {
-        std::unique_lock<std::mutex> lock(*responseMutex);
+            yc.Mode = ScriptEngine::YieldedCoroutine::ResumptionMode::Polled;
+            yc.RmPoll = [response, responseMutex](lua_State* CL)
+                {
+                    std::unique_lock<std::mutex> lock(*responseMutex);
+                
+                    // not done yet
+                    if (response->status == INT64_MAX)
+                        return -1;
 
-        // not done yet
-        if (response->status == INT64_MAX)
-            return -1;
-        
-        lua_createtable(CL, 0, 4);
-
-        lua_pushlstring(CL, response->body.data(), response->body.size());
-        lua_setfield(CL, -2, "body");
-
-        lua_createtable(CL, 0, response->headers.size());
-        for (const auto& header : response->headers)
-        {
-            lua_pushlstring(CL, header.first.data(), header.first.size());
-            lua_pushlstring(CL, header.second.data(), header.second.size());
-            lua_settable(CL, -3);
+                    lua_createtable(CL, 0, 4);
+                
+                    lua_pushlstring(CL, response->body.data(), response->body.size());
+                    lua_setfield(CL, -2, "body");
+                
+                    lua_createtable(CL, 0, response->headers.size());
+                    for (const auto& header : response->headers)
+                    {
+                        lua_pushlstring(CL, header.first.data(), header.first.size());
+                        lua_pushlstring(CL, header.second.data(), header.second.size());
+                        lua_settable(CL, -3);
+                    }
+                    lua_setfield(CL, -2, "headers");
+                
+                    lua_pushinteger(CL, response->status);
+                    lua_setfield(CL, -2, "status");
+                
+                    lua_pushboolean(CL, (response->status >= 200 && response->status < 300));
+                    lua_setfield(CL, -2, "ok");
+                
+                    lua_pushlstring(CL, response->error.data(), response->error.size());
+                    lua_setfield(CL, -2, "error");
+                
+                    return 1;
+                };
         }
-        lua_setfield(CL, -2, "headers");
-
-        lua_pushinteger(CL, response->status);
-        lua_setfield(CL, -2, "status");
-
-        lua_pushboolean(CL, (response->status >= 200 && response->status < 300));
-        lua_setfield(CL, -2, "ok");
-
-        lua_pushlstring(CL, response->error.data(), response->error.size());
-        lua_setfield(CL, -2, "error");
-
-        return 1;
-    };
+    );
 
     return -1;
 }

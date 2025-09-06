@@ -12,10 +12,10 @@ static int world_raycast(lua_State* L)
 	if (!workspace)
 		luaL_error(L, "A Workspace was not found within the DataModel");
 
-	glm::vec3 origin = ScriptEngine::L::LuaValueToGeneric(L, 1).AsVector3();
-	glm::vec3 vector = ScriptEngine::L::LuaValueToGeneric(L, 2).AsVector3();
+	glm::vec3 origin = ScriptEngine::L::ToGeneric(L, 1).AsVector3();
+	glm::vec3 vector = ScriptEngine::L::ToGeneric(L, 2).AsVector3();
 
-	Reflection::GenericValue ignoreListVal = ScriptEngine::L::LuaValueToGeneric(L, 3);
+	Reflection::GenericValue ignoreListVal = ScriptEngine::L::ToGeneric(L, 3);
 	std::span<Reflection::GenericValue> providedIgnoreList = ignoreListVal.AsArray();
 
 	std::vector<GameObject*> ignoreList;
@@ -86,10 +86,10 @@ static int world_aabbcast(lua_State* L)
 	if (!workspace)
 		luaL_error(L, "A Workspace was not found within the DataModel");
 
-	glm::vec3 apos = ScriptEngine::L::LuaValueToGeneric(L, 1).AsVector3();
-	glm::vec3 asize = ScriptEngine::L::LuaValueToGeneric(L, 2).AsVector3();
+	glm::vec3 apos = ScriptEngine::L::ToGeneric(L, 1).AsVector3();
+	glm::vec3 asize = ScriptEngine::L::ToGeneric(L, 2).AsVector3();
 
-	Reflection::GenericValue ignoreListVal = ScriptEngine::L::LuaValueToGeneric(L, 3);
+	Reflection::GenericValue ignoreListVal = ScriptEngine::L::ToGeneric(L, 3);
 	std::span<Reflection::GenericValue> providedIgnoreList = ignoreListVal.AsArray();
 
 	std::vector<GameObject*> ignoreList;
@@ -160,10 +160,10 @@ static int world_aabbquery(lua_State* L)
 	if (!workspace)
 		luaL_error(L, "A Workspace was not found within the DataModel");
 
-	glm::vec3 apos = ScriptEngine::L::LuaValueToGeneric(L, 1).AsVector3();
-	glm::vec3 asize = ScriptEngine::L::LuaValueToGeneric(L, 2).AsVector3();
+	glm::vec3 apos = ScriptEngine::L::ToGeneric(L, 1).AsVector3();
+	glm::vec3 asize = ScriptEngine::L::ToGeneric(L, 2).AsVector3();
 
-	Reflection::GenericValue ignoreListVal = ScriptEngine::L::LuaValueToGeneric(L, 3);
+	Reflection::GenericValue ignoreListVal = ScriptEngine::L::ToGeneric(L, 3);
 	std::span<Reflection::GenericValue> providedIgnoreList = ignoreListVal.AsArray();
 
 	std::vector<GameObject*> ignoreList;

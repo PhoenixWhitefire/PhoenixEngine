@@ -14,7 +14,7 @@
 #include "Log.hpp"
 
 std::vector<ScriptEngine::YieldedCoroutine> ScriptEngine::s_YieldedCoroutines{};
-const std::unordered_map<Reflection::ValueType, lua_Type> ScriptEngine::ReflectedTypeLuaEquivalent =
+const std::unordered_map<Reflection::ValueType, lua_Type> ScriptEngine::ValueTypeToLuauType =
 {
 		{ Reflection::ValueType::Null,        lua_Type::LUA_TNIL       },
 
@@ -29,6 +29,7 @@ const std::unordered_map<Reflection::ValueType, lua_Type> ScriptEngine::Reflecte
 		{ Reflection::ValueType::Matrix,      lua_Type::LUA_TUSERDATA  },
 
 		{ Reflection::ValueType::GameObject,  lua_Type::LUA_TUSERDATA  },
+		{ Reflection::ValueType::Function,    lua_Type::LUA_TFUNCTION  },
 
 		{ Reflection::ValueType::Array,       lua_Type::LUA_TTABLE     },
 		{ Reflection::ValueType::Map,         lua_Type::LUA_TTABLE     }
@@ -130,7 +131,7 @@ if (Context.size() > 0) \
 else \
 	luaL_error(L, e, __VA_ARGS__); } \
 
-nlohmann::json ScriptEngine::L::LuaValueToJson(lua_State* L, int StackIndex, std::string Context)
+nlohmann::json ScriptEngine::L::ToJson(lua_State* L, int StackIndex, std::string Context)
 {
 	switch (lua_type(L, StackIndex))
 	{
@@ -220,7 +221,7 @@ nlohmann::json ScriptEngine::L::LuaValueToJson(lua_State* L, int StackIndex, std
 				if (Context.size() == 0)
 					Context = "Array";
 
-				t[index - 1] = LuaValueToJson(L, -1, Context + "[" + std::to_string(index) + "]");
+				t[index - 1] = L::ToJson(L, -1, Context + "[" + std::to_string(index) + "]");
 			}
 			else
 			{
@@ -230,7 +231,7 @@ nlohmann::json ScriptEngine::L::LuaValueToJson(lua_State* L, int StackIndex, std
 				if (Context.size() == 0)
 					Context = "Object";
 
-				t[key] = LuaValueToJson(L, -1, Context + "." + key);
+				t[key] = L::ToJson(L, -1, Context + "." + key);
 			}
 
 			lua_pop(L, 1);
@@ -279,14 +280,16 @@ int ScriptEngine::CompileAndLoad(lua_State* L, const std::string& SourceCode, co
 
 	if (result == 0)
 	{
-		lua_pushstring(L, ChunkName.c_str())
+		lua_pushstring(L, ChunkName.c_str());
 		lua_setglobal(L, "_CHUNKNAME");
 	}
 
-	return result
+	return result;
 }
 
-Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int StackIndex)
+#define YIELDBLOCKERTRACKING "_YIELDBLOCKERS"
+
+Reflection::GenericValue ScriptEngine::L::ToGeneric(lua_State* L, int StackIndex)
 {
 	switch (lua_type(L, StackIndex))
 	{
@@ -338,6 +341,86 @@ Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int St
 		else
 			luaL_error(L, "Couldn't convert a '%s' userdata to a GenericValue (unrecognized)", tname);
 	}
+	case LUA_TFUNCTION:
+	{
+		Reflection::GenericValue gv;
+		gv.Type = Reflection::ValueType::Function;
+
+		lua_State* CL = lua_newthread(L);
+		lua_pushvalue(L, StackIndex);
+		lua_xmove(L, CL, 1);
+
+		std::string traceback;
+		DumpStacktrace(L, &traceback);
+
+		std::string fndbinfo;
+		lua_Debug ar;
+		lua_getinfo(L, 0, "n", &ar);
+		std::string fnname = ar.name;
+		if (fnname == "__namecall")
+			fnname = L->namecall->data;
+
+		lua_getinfo(L, 1, "sln", &ar);
+		fndbinfo = std::format(
+			"{}:{} to {} in {}",
+			ar.short_src, ar.currentline, fnname, ar.name ? ar.name : "<anonymous>"
+		);
+
+		gv.Val.Func = new Reflection::GenericFunction([CL, traceback, fndbinfo](const std::vector<Reflection::GenericValue>& Inputs)
+			-> std::vector<Reflection::GenericValue>
+			{
+				lua_pushvalue(CL, -1); // keep the function value
+
+				for (const Reflection::GenericValue& i : Inputs)
+					PushGenericValue(CL, i);
+				
+				lua_getglobal(CL, YIELDBLOCKERTRACKING);
+				if (!lua_istable(CL, -1))
+				{
+					lua_newtable(CL);
+					lua_pushvalue(CL, -1);
+					lua_setglobal(CL, YIELDBLOCKERTRACKING);
+				}
+
+				int ybsize = lua_objlen(CL, -1);
+				lua_pushinteger(CL, ybsize + 1);
+				lua_pushstring(CL, fndbinfo.c_str());
+				lua_settable(CL, -3);
+				lua_pop(CL, 2);
+
+				int status = lua_pcall(CL, Inputs.size(), -1, 0);
+
+				lua_getglobal(CL, YIELDBLOCKERTRACKING);
+				luaL_checktype(CL, -1, LUA_TTABLE);
+
+				lua_pushinteger(CL, ybsize + 1);
+				lua_pushnil(CL);
+				lua_settable(CL, -3);
+				lua_pop(CL, 1);
+
+				if (status == LUA_OK)
+				{
+					std::vector<Reflection::GenericValue> retvals;
+					for (int i = 2; i < lua_gettop(CL); i++)
+						retvals.push_back(L::ToGeneric(CL, i));
+
+					return retvals;
+				}
+
+				std::string thisTraceback;
+				DumpStacktrace(CL, &thisTraceback, 0);
+
+				if (status == LUA_BREAK)
+					RAISE_RT(std::format("BREAKING INTO DEBUGGER not supported\n{}\nDefined: {}", thisTraceback, traceback));
+
+				RAISE_RT(std::format(
+					"Callback encountered an error: {}\n{}\nDefined: {}",
+					luaL_checkstring(CL, -1), thisTraceback, traceback
+				));
+			});
+
+		return gv;
+	}
 	case LUA_TTABLE:
 	{
 		// 15/09/2024
@@ -353,7 +436,7 @@ Reflection::GenericValue ScriptEngine::L::LuaValueToGeneric(lua_State* L, int St
 
 		while (lua_next(L, -2) != 0)
 		{
-			items.push_back(ScriptEngine::L::LuaValueToGeneric(L, -1));
+			items.push_back(L::ToGeneric(L, -1));
 			lua_pop(L, 1);
 		}
 		lua_pop(L, 1);
@@ -378,9 +461,9 @@ void ScriptEngine::L::CheckType(lua_State* L, Reflection::ValueType Type, int St
 	if (!isOptional || givenType != LUA_TNIL)
 	{
 		Type = (Reflection::ValueType)((uint8_t)Type & ~(uint8_t)Reflection::ValueType::Null);
-		const auto& reflToLuaIt = ScriptEngine::ReflectedTypeLuaEquivalent.find(Type);
+		const auto& reflToLuaIt = ValueTypeToLuauType.find(Type);
 
-		if (reflToLuaIt == ScriptEngine::ReflectedTypeLuaEquivalent.end())
+		if (reflToLuaIt == ValueTypeToLuauType.end())
 			luaL_error(L,
 				"No defined mapping between a '%s' and a Luau type",
 				Reflection::TypeAsString(Type).c_str()
@@ -516,13 +599,15 @@ void ScriptEngine::L::PushGameObject(lua_State* L, GameObject* obj)
 
 int ScriptEngine::L::HandleMethodCall(
 	lua_State* L,
-	const Reflection::Method* func,
+	const Reflection::MethodDescriptor* func,
 	ReflectorHandle FromComponent
 )
 {
-	int numArgs = lua_gettop(L) - 1;
-
 	const std::vector<Reflection::ValueType>& paramTypes = func->Inputs;
+	int numArgs = lua_gettop(L) - 1;
+	assert(numArgs >= 0);
+	// missing parameter declarations?
+	assert(paramTypes.size() >= static_cast<size_t>(numArgs));
 
 	int numParams = static_cast<int32_t>(paramTypes.size());
 	int minArgs = 0;
@@ -582,7 +667,7 @@ int ScriptEngine::L::HandleMethodCall(
 		L->base++;
 		ScriptEngine::L::CheckType(L, paramType, index + 1);
 		L->base--;
-		inputs.push_back(L::LuaValueToGeneric(L, index + 2));
+		inputs.push_back(L::ToGeneric(L, index + 2));
 	}
 
 	// Now, onto the *REAL* business...
@@ -623,31 +708,86 @@ int ScriptEngine::L::HandleMethodCall(
 	// 15/08/2024
 }
 
-void ScriptEngine::L::PushMethod(lua_State* L, const Reflection::Method* Function, ReflectorHandle FromComponent)
+void ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(YieldedCoroutine&)> Configure)
+{
+	lua_getglobal(L, YIELDBLOCKERTRACKING);
+	if (lua_istable(L, -1) && lua_objlen(L, -1) > 0)
+	{
+		std::vector<std::string> blockerslist;
+
+		lua_pushnil(L);
+		while (lua_next(L, -2) != 0)
+		{
+			blockerslist.push_back(luaL_checkstring(L, -1));
+			lua_pop(L, 1);
+		}
+
+		std::string blockers;
+
+		for (int i = blockerslist.size() - 1; i >= 0; i--)
+		{
+			blockers.append(blockerslist[i]);
+			blockers.append("\n");
+		}
+
+		RAISE_RT(std::format("Cannot yield right now, blocked by the following functions:\n{}", blockers.c_str()));
+	}
+
+	if (L->nCcalls > L->baseCcalls)
+		// if a `lua_Exception` is thrown by `lua_yield`, we hit an assertion in
+		// `ldo.cpp` line 137
+		// LUAU_ASSERT(e.getThread() == L)
+		RAISE_RT("Cannot yield right now");
+
+	// TODO a kind of hack to get what script we're running as?
+	lua_getglobal(L, "script");
+	Reflection::GenericValue script = ScriptEngine::L::ToGeneric(L, -1);
+	GameObject* scriptObject = GameObject::FromGenericValue(script);
+	// modules currently do not have a `script` global
+	uint32_t scriptId = scriptObject ? scriptObject->ObjectId : PHX_GAMEOBJECT_NULL_ID;
+	// need to do that before `lua_yield` because of thread chicanery idk how it works
+
+	lua_yield(L, NumResults);
+	lua_pushthread(L);
+
+	YieldedCoroutine& yc = s_YieldedCoroutines.emplace_back(
+		L,
+		// make sure the coroutine doesn't get de-alloc'd before we resume it
+		lua_ref(L, -1),
+		scriptId,
+		YieldedCoroutine::ResumptionMode::INVALID
+	);
+
+	Configure(yc);
+	assert(yc.Mode != YieldedCoroutine::ResumptionMode::INVALID);
+}
+
+void ScriptEngine::L::PushMethod(lua_State* L, const Reflection::MethodDescriptor* Method, ReflectorHandle Reflector)
 {
 	// if we dont do this then comparison will not work
 	// ex: `game.Close == game.Close`
 
-	lua_pushlightuserdata(L, const_cast<Reflection::Method*>(Function));
+	lua_pushlightuserdata(L, const_cast<Reflection::MethodDescriptor*>(Method));
 	lua_rawget(L, LUA_ENVIRONINDEX);
 
 	if (lua_isnil(L, -1))
 	{
 		lua_pop(L, 1); // remove `nil`, stack empty
 
-		static_assert(sizeof(FromComponent) <= sizeof(void*));
+		static_assert(sizeof(Reflector) <= sizeof(void*));
 		void* data = nullptr;
-		memcpy(&data, &FromComponent, sizeof(FromComponent));
+		memcpy(&data, &Reflector, sizeof(Reflector));
 
-		lua_pushlightuserdata(L, const_cast<Reflection::Method*>(Function));
+		lua_pushlightuserdata(L, const_cast<Reflection::MethodDescriptor*>(Method));
 		lua_pushlightuserdata(L, data);
 
 		lua_pushcclosure(
 			L,
 			[](lua_State* L)
 			{
-				Reflection::Method* fn = static_cast<Reflection::Method*>(lua_tolightuserdata(L, lua_upvalueindex(1)));
-				auto& fc = *static_cast<decltype(FromComponent)*>(lua_tolightuserdata(L, lua_upvalueindex(2)));
+				Reflection::MethodDescriptor* fn =
+					static_cast<Reflection::MethodDescriptor*>(lua_tolightuserdata(L, lua_upvalueindex(1)));
+				auto& fc = *static_cast<decltype(Reflector)*>(lua_tolightuserdata(L, lua_upvalueindex(2)));
 
 				return ScriptEngine::L::HandleMethodCall(
 					L,
@@ -660,7 +800,7 @@ void ScriptEngine::L::PushMethod(lua_State* L, const Reflection::Method* Functio
 			1
 		); // stack is now just closure
 
-		lua_pushlightuserdata(L, const_cast<Reflection::Method*>(Function));  // stack: closure, lud
+		lua_pushlightuserdata(L, const_cast<Reflection::MethodDescriptor*>(Method));  // stack: closure, lud
 		lua_pushvalue(L, -2);                                                 // stack: closure, lud, closure
 		lua_settable(L, LUA_ENVIRONINDEX);                                    // map closure (value) to lud (key)
 
@@ -692,7 +832,7 @@ void ScriptEngine::L::DumpStacktrace(
 	
 	for (int i = Level; lua_getinfo(L, i, "sln", &ar); i++)
 	{
-		std::string line = "from: ";
+		std::string line = "from ";
 
 		if (ar.source)
 			line.append(ar.short_src);
@@ -706,7 +846,11 @@ void ScriptEngine::L::DumpStacktrace(
 		if (ar.name)
 		{
 			line.append(" in ");
-			line.append(ar.name);
+
+			if (i == 0 && strcmp(ar.name, "__namecall") == 0)
+				line.append(L->namecall->data);
+			else
+				line.append(ar.name);
 		}
 
 		if (!Into)
@@ -722,21 +866,21 @@ void ScriptEngine::L::DumpStacktrace(
 struct EventSignalData
 {
 	ReflectorHandle Reflector;
-	const Reflection::Event* Event = nullptr;
+	const Reflection::EventDescriptor* Event = nullptr;
 };
 
 struct EventConnectionData
 {
 	ReflectorHandle Reflector;
 	ReflectorHandle Script;
-	const Reflection::Event* Event = nullptr;
+	const Reflection::EventDescriptor* Event = nullptr;
 	lua_State* L = nullptr;
 	uint32_t ConnectionId = UINT32_MAX;
 	int ThreadRef = LUA_NOREF;
 	bool CallbackYields = false;
 };
 
-static void pushSignal(lua_State* L, const Reflection::Event* Event, const ReflectorHandle& Reflector)
+static void pushSignal(lua_State* L, const Reflection::EventDescriptor* Event, const ReflectorHandle& Reflector)
 {
 	EventSignalData* ev = (EventSignalData*)lua_newuserdata(L, sizeof(EventSignalData));
 	ev->Reflector = Reflector;
@@ -758,7 +902,7 @@ static int api_gameobjindex(lua_State* L)
 {
 	ZoneScopedNC("GameObject.__index", tracy::Color::LightSkyBlue);
 
-	GameObject* obj = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
+	GameObject* obj = GameObject::FromGenericValue(ScriptEngine::L::ToGeneric(L, 1));
 	const char* key = luaL_checkstring(L, 2);
 
 	ZoneText(key, strlen(key));
@@ -774,7 +918,7 @@ static int api_gameobjindex(lua_State* L)
 
 	std::pair<EntityComponent, uint32_t> reflectorHandle;
 
-	if (const Reflection::Property* prop = obj->FindProperty(key, &reflectorHandle))
+	if (const Reflection::PropertyDescriptor* prop = obj->FindProperty(key, &reflectorHandle))
 	{
 		Reflection::GenericValue v = prop->Get(GameObject::ReflectorHandleToPointer(reflectorHandle));
 
@@ -785,11 +929,11 @@ static int api_gameobjindex(lua_State* L)
 		ScriptEngine::L::PushGenericValue(L, v);
 	}
 
-	else if (const Reflection::Event* event = obj->FindEvent(key, &reflectorHandle))
+	else if (const Reflection::EventDescriptor* event = obj->FindEvent(key, &reflectorHandle))
 		pushSignal(L, event, reflectorHandle);
 
 	// Methods are lower because we prefer namecalls
-	else if (const Reflection::Method* func = obj->FindMethod(key, &reflectorHandle))
+	else if (const Reflection::MethodDescriptor* func = obj->FindMethod(key, &reflectorHandle))
 		ScriptEngine::L::PushMethod(L, func, reflectorHandle);
 
 	else
@@ -812,7 +956,7 @@ static int api_gameobjnewindex(lua_State* L)
 {
 	ZoneScopedNC("GameObject.__newindex", tracy::Color::LightSkyBlue);
 
-	GameObject* obj = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
+	GameObject* obj = GameObject::FromGenericValue(ScriptEngine::L::ToGeneric(L, 1));
 	const char* key = luaL_checkstring(L, 2);
 
 	ZoneText(key, strlen(key));
@@ -822,7 +966,7 @@ static int api_gameobjnewindex(lua_State* L)
 
 	LUA_ASSERT(obj, "Tried to assign to the '%s' of a deleted Game Object", key);
 
-	if (const Reflection::Property* prop = obj->FindProperty(key))
+	if (const Reflection::PropertyDescriptor* prop = obj->FindProperty(key))
 	{
 		if (!prop->Set)
 		{
@@ -836,7 +980,7 @@ static int api_gameobjnewindex(lua_State* L)
 		}
 
 		ScriptEngine::L::CheckType(L, prop->Type, 3);
-		Reflection::GenericValue newValue = ScriptEngine::L::LuaValueToGeneric(L, 3);
+		Reflection::GenericValue newValue = ScriptEngine::L::ToGeneric(L, 3);
 
 		try
 		{
@@ -870,7 +1014,7 @@ static int api_gameobjectnamecall(lua_State* L)
 {
 	ZoneScopedNC("GameObject.__namecall", tracy::Color::LightSkyBlue);
 
-	GameObject* g = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
+	GameObject* g = GameObject::FromGenericValue(ScriptEngine::L::ToGeneric(L, 1));
 	const char* k = L->namecall->data; // this is weird 10/01/2025
 
 	if (!g)
@@ -879,7 +1023,7 @@ static int api_gameobjectnamecall(lua_State* L)
 	ZoneText(k, strlen(k));
 
 	std::pair<EntityComponent, uint32_t> reflectorHandle;
-	const Reflection::Method* func = g->FindMethod(k, &reflectorHandle);
+	const Reflection::MethodDescriptor* func = g->FindMethod(k, &reflectorHandle);
 
 	if (!func)
 		luaL_errorL(L, "'%s' is not a valid method of %s", k, g->GetFullName().c_str());
@@ -904,7 +1048,7 @@ static int api_gameobjectnamecall(lua_State* L)
 
 static int api_gameobjecttostring(lua_State* L)
 {
-	GameObject* object = GameObject::FromGenericValue(ScriptEngine::L::LuaValueToGeneric(L, 1));
+	GameObject* object = GameObject::FromGenericValue(ScriptEngine::L::ToGeneric(L, 1));
 	
 	if (object)
 		lua_pushstring(L, object->GetFullName().c_str());
@@ -984,7 +1128,7 @@ static int api_eventnamecall(lua_State* L)
 		luaL_checktype(L, 2, LUA_TFUNCTION);
 
 		EventSignalData* ev = (EventSignalData*)luaL_checkudata(L, 1, "EventSignal");
-		const Reflection::Event* rev = ev->Event;
+		const Reflection::EventDescriptor* rev = ev->Event;
 
 		// TRUST ME, ALL THESE L's MAKE SENSE OK
 		// `eL` IS. UH. UHHH. *EVENT* L! YES, *E*VENT L
@@ -1098,7 +1242,7 @@ static int api_eventnamecall(lua_State* L)
 		ec->L = L;
 
 		lua_getglobal(L, "script");
-		Reflection::GenericValue scrgv = ScriptEngine::L::LuaValueToGeneric(L, -1);
+		Reflection::GenericValue scrgv = ScriptEngine::L::ToGeneric(L, -1);
 		if (scrgv.Type == Reflection::ValueType::GameObject)
 		{
 			GameObjectRef scr = GameObject::FromGenericValue(scrgv);
@@ -1317,11 +1461,18 @@ lua_State* ScriptEngine::L::Create()
 	// Load runtime-specific libraries
 	luhx_openlibs(state);
 
+	std::filesystem::path* requirePath = new std::filesystem::path;
 	luaopen_require(
 		state,
 		requireConfigInit,
-		new std::filesystem::path()
+		requirePath
 	);
+	
+	lua_getglobal(state, "_G");
+	lua_pushinteger(state, 67);
+	lua_pushlightuserdatatagged(state, requirePath, 67);
+	lua_settable(state, -3);
+	lua_pop(state, 1);
 
 	lua_getglobal(state, "debug");
 	lua_pushcfunction(
@@ -1624,6 +1775,20 @@ lua_State* ScriptEngine::L::Create()
 		);
 		lua_setfield(state, -2, "__namecall");
 
+		lua_pushcfunction(
+			state,
+			[](lua_State* L)
+			{
+				EventSignalData* ev1 = (EventSignalData*)luaL_checkudata(L, 1, "EventSignal");
+				EventSignalData* ev2 = (EventSignalData*)luaL_checkudata(L, 1, "EventSignal");
+
+				lua_pushboolean(L, ev1->Event == ev2->Event && ev1->Reflector == ev2->Reflector);
+				return 1;
+			},
+			"__eq"
+		);
+		lua_setfield(state, -2, "EventSignal.__eq");
+
 		lua_pushstring(state, "EventSignal");
 		lua_setfield(state, -2, "__type");
 	}
@@ -1682,6 +1847,13 @@ nlohmann::json ScriptEngine::DumpApiToJson()
 	lua_pushnil(luhx);
 	while (lua_next(luhx, -2))
 	{
+		if (lua_islightuserdata(luhx, -1))
+		{
+			// 67
+			lua_pop(luhx, 1);
+			continue;
+		}
+
 		std::string k = luaL_checkstring(luhx, -2);
 
 		lua_getglobal(base, k.c_str());
@@ -1724,6 +1896,12 @@ nlohmann::json ScriptEngine::DumpApiToJson()
 		lua_pop(base, 1);
 		lua_pop(luhx, 1);
 	}
+
+	lua_getglobal(luhx, "_G");
+	lua_pushinteger(luhx, 67);
+	lua_gettable(luhx, -2);
+	delete (std::filesystem::path*)lua_tolightuserdatatagged(luhx, -1, 67);
+	lua_pop(luhx, 1);
 
 	lua_close(base);
 	lua_close(luhx);

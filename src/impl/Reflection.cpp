@@ -116,6 +116,12 @@ Reflection::GenericValue::GenericValue(const glm::mat4& m)
 	fromMatrix(*this, m);
 }
 
+Reflection::GenericValue::GenericValue(const Reflection::GenericFunction& gf) // damn
+	: Type(ValueType::Function)
+{
+	Val.Func = new GenericFunction(gf); // damm
+}
+
 static void fromArray(Reflection::GenericValue& G, std::span<const Reflection::GenericValue> Array)
 {
 	G.Type = Reflection::ValueType::Array;
@@ -360,10 +366,16 @@ std::string Reflection::GenericValue::ToString() const
 	}
 }
 
+// `::AsInteger` and `::AsDouble` have special errors
+#define WRONG_TYPE() RAISE_RT(std::string("Called `") + __func__ + "` but Generic Value was a " + TypeAsString(Type))
+
+// does not work because of bullshit error
+// #define WRONG_TYPE() throw RAISE_RT("Called " __FUNCTION__ " but Generic Value was a " + TypeAsString(Type))
+
 std::string_view Reflection::GenericValue::AsStringView() const
 {
 	if (Type != ValueType::String)
-		RAISE_RT("GenericValue was not a String, but instead a " + std::string(TypeAsString(Type)));
+		WRONG_TYPE();
 	else
 		if (Size > GV_SSO)
 			return std::string_view(Val.Str, Size);
@@ -374,7 +386,7 @@ bool Reflection::GenericValue::AsBoolean() const
 {
 	return Type == ValueType::Boolean
 		? Val.Bool
-		: RAISE_RT("GenericValue was not a Bool, but instead a " + std::string(TypeAsString(Type)));
+		: WRONG_TYPE();
 }
 double Reflection::GenericValue::AsDouble() const
 {
@@ -384,7 +396,8 @@ double Reflection::GenericValue::AsDouble() const
 	else if (Type == ValueType::Integer)
 		return Val.Int;
 
-	RAISE_RT("GenericValue was not a number (Integer/ Double ), but instead a " + std::string(TypeAsString(Type)));
+	// special error message
+	RAISE_RT("GenericValue was not a number (Integer/ Double ), but instead a " + TypeAsString(Type));
 }
 int64_t Reflection::GenericValue::AsInteger() const
 {
@@ -394,20 +407,20 @@ int64_t Reflection::GenericValue::AsInteger() const
 	else if (Type == ValueType::Double)
 		return Val.Double;
 
-	RAISE_RT("GenericValue was not a number ( Integer /Double), but instead a " + std::string(TypeAsString(Type)));
+	RAISE_RT("GenericValue was not a number ( Integer /Double), but instead a " + TypeAsString(Type));
 }
 
 const glm::vec2 Reflection::GenericValue::AsVector2() const
 {
 	return Type == ValueType::Vector2
 		? Val.Vec2
-		: RAISE_RT("GenericValue was not a Matrix, but instead a " + std::string(TypeAsString(Type)));
+		: WRONG_TYPE();
 }
 glm::vec3& Reflection::GenericValue::AsVector3() const
 {
 	return Type == ValueType::Vector3
 		? const_cast<glm::vec3&>(Val.Vec3)
-		: RAISE_RT("GenericValue was not a Matrix, but instead a " + std::string(TypeAsString(Type)));
+		: WRONG_TYPE();
 }
 glm::mat4& Reflection::GenericValue::AsMatrix() const
 {
@@ -415,7 +428,13 @@ glm::mat4& Reflection::GenericValue::AsMatrix() const
 
 	return Type == ValueType::Matrix
 		? *mptr
-		: RAISE_RT("GenericValue was not a Matrix, but instead a " + std::string(TypeAsString(Type)));
+		: WRONG_TYPE();
+}
+Reflection::GenericFunction& Reflection::GenericValue::AsFunction() const
+{
+	return Type == ValueType::Function
+		? *Val.Func
+		: WRONG_TYPE();
 }
 std::span<Reflection::GenericValue> Reflection::GenericValue::AsArray() const
 {
@@ -429,6 +448,8 @@ std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> Reflectio
 {
 	RAISE_RT("GenericValue::AsMap not implemented");
 }
+
+#undef WRONG_TYPE
 
 void Reflection::GenericValue::Reset()
 {
@@ -457,6 +478,11 @@ void Reflection::GenericValue::Reset()
 	{
 		if (this->Size > GV_SSO)
 			Memory::Free(this->Val.Str);
+		break;
+	}
+	case ValueType::Function:
+	{
+		delete this->Val.Func;
 		break;
 	}
 
@@ -579,6 +605,7 @@ static std::string_view BaseNames[] =
 		"Matrix",
 
 		"GameObject",
+		"Function",
 
 		"Array",
 		"Map"

@@ -135,7 +135,7 @@ void GameObject::s_AddObjectApi()
 	REFLECTION_DECLAREPROP_SIMPLE(GameObject, Enabled, Boolean);
 	REFLECTION_DECLAREPROP_SIMPLE(GameObject, Serializes, Boolean);
 	REFLECTION_DECLAREPROP_SIMPLE_READONLY(GameObject, ObjectId, Integer);
-	s_Api.Properties["Parent"] = Reflection::Property
+	s_Api.Properties["Parent"] = Reflection::PropertyDescriptor
 	{
 		(Reflection::ValueType)((uint8_t)Reflection::ValueType::GameObject + (uint8_t)Reflection::ValueType::Null),
 		[](void* p)
@@ -148,11 +148,15 @@ void GameObject::s_AddObjectApi()
 		}
 	};
 
-	REFLECTION_DECLAREPROC_INPUTLESS(
-		Destroy,
-		[](void* p)
+	REFLECTION_DECLAREFUNC(
+		"Destroy",
+		{},
+		{},
+		[](void* p, const std::vector<Reflection::GenericValue>&)
+		-> std::vector<Reflection::GenericValue>
 		{
 			static_cast<GameObject*>(p)->Destroy();
+			return {};
 		}
 	);
 	REFLECTION_DECLAREFUNC(
@@ -163,6 +167,34 @@ void GameObject::s_AddObjectApi()
 		-> std::vector<Reflection::GenericValue>
 		{
 			return { static_cast<GameObject*>(p)->GetFullName() };
+		}
+	);
+
+	REFLECTION_DECLAREFUNC(
+		"ForEachChild",
+		{ Reflection::ValueType::Function },
+		{},
+		[](void* p, const std::vector<Reflection::GenericValue>& gv)
+		-> std::vector<Reflection::GenericValue>
+		{
+			const Reflection::GenericFunction& gf = gv.at(0).AsFunction(); // damn
+
+			static_cast<GameObject*>(p)->ForEachChild(
+				// damn
+				[gf](GameObject* g)
+				-> bool
+				{
+					std::vector<Reflection::GenericValue> rets = gf({ g->ToGenericValue() }); // damn
+					PHX_ENSURE_MSG(rets.size() <= 1, "`:ForEachChild` expects none or one return value");
+
+					if (rets.size() == 0)
+						return true;
+					else
+						return rets[0].AsBoolean();
+				}
+			);
+
+			return {};
 		}
 	);
 
@@ -544,19 +576,28 @@ GameObject* GameObject::GetParent() const
 	return GameObject::GetObjectById(this->Parent);
 }
 
+void GameObject::ForEachChild(const std::function<bool(GameObject*)>& Callback)
+{
+	for (uint32_t id : m_Children)
+	{
+		GameObject* child = GameObject::GetObjectById(id);
+		assert(child);
+		
+		if (bool shouldContinue = Callback(child); !shouldContinue)
+			break;
+	}
+}
+
 std::vector<GameObject*> GameObject::GetChildren()
 {
 	std::vector<GameObject*> children;
 	children.reserve(m_Children.size());
 
-	for (uint32_t index = 0; index < m_Children.size(); index++)
+	for (uint32_t id : m_Children)
 	{
-		GameObject* child = GameObject::GetObjectById(m_Children[index]);
-
-		if (child && child->Valid && !child->IsDestructionPending)
-			children.push_back(child);
-		else
-			m_Children.erase(m_Children.begin() + index);
+		GameObject* child = GameObject::GetObjectById(id);
+		assert(child);
+		children.push_back(child);
 	}
 
 	return children;
@@ -569,19 +610,14 @@ std::vector<GameObject*> GameObject::GetDescendants()
 	std::vector<GameObject*> descendants;
 	descendants.reserve(m_Children.size());
 
-	for (uint32_t index = 0; index < m_Children.size(); index++)
+	for (uint32_t id : m_Children)
 	{
-		GameObject* child = GameObject::GetObjectById(m_Children[index]);
+		GameObject* child = GameObject::GetObjectById(id);
+		assert(child);
+		descendants.push_back(child);
 
-		if (child)
-		{
-			descendants.push_back(child);
-
-			std::vector<GameObject*> childrenDescendants = child->GetDescendants();
-			std::copy(childrenDescendants.begin(), childrenDescendants.end(), std::back_inserter(descendants));
-		}
-		else
-			m_Children.erase(m_Children.begin() + index);
+		std::vector<GameObject*> childrenDescendants = child->GetDescendants();
+		std::copy(childrenDescendants.begin(), childrenDescendants.end(), std::back_inserter(descendants));
 	}
 
 	return descendants;
@@ -688,7 +724,7 @@ void GameObject::RemoveComponent(EntityComponent Type)
 	RAISE_RT("Don't have that component");
 }
 
-const Reflection::Property* GameObject::FindProperty(const std::string_view& PropName, ReflectorHandle* FromComponent)
+const Reflection::PropertyDescriptor* GameObject::FindProperty(const std::string_view& PropName, ReflectorHandle* FromComponent)
 {
 	ReflectorHandle dummyFc{ EntityComponent::None, PHX_GAMEOBJECT_NULL_ID };
 	FromComponent = FromComponent ? FromComponent : &dummyFc;
@@ -707,7 +743,7 @@ const Reflection::Property* GameObject::FindProperty(const std::string_view& Pro
 
 	return nullptr;
 }
-const Reflection::Method* GameObject::FindMethod(const std::string_view& FuncName, ReflectorHandle* FromComponent)
+const Reflection::MethodDescriptor* GameObject::FindMethod(const std::string_view& FuncName, ReflectorHandle* FromComponent)
 {
 	ReflectorHandle dummyFc{ EntityComponent::None, PHX_GAMEOBJECT_NULL_ID };
 	FromComponent = FromComponent ? FromComponent : &dummyFc;
@@ -726,7 +762,7 @@ const Reflection::Method* GameObject::FindMethod(const std::string_view& FuncNam
 
 	return nullptr;
 }
-const Reflection::Event* GameObject::FindEvent(const std::string_view& EventName, ReflectorHandle* Handle)
+const Reflection::EventDescriptor* GameObject::FindEvent(const std::string_view& EventName, ReflectorHandle* Handle)
 {
 	ReflectorHandle dummyHandle{ EntityComponent::None, PHX_GAMEOBJECT_NULL_ID };
 	Handle = Handle ? Handle : &dummyHandle;
@@ -750,7 +786,7 @@ Reflection::GenericValue GameObject::GetPropertyValue(const std::string_view& Pr
 {
 	std::pair<EntityComponent, uint32_t> fromComponent{ EntityComponent::None, PHX_GAMEOBJECT_NULL_ID };
 
-	if (const Reflection::Property* prop = FindProperty(PropName, &fromComponent))
+	if (const Reflection::PropertyDescriptor* prop = FindProperty(PropName, &fromComponent))
 		return prop->Get(ReflectorHandleToPointer(fromComponent));
 
 	RAISE_RT("Invalid property in GetPropertyValue: " + std::string(PropName));
@@ -759,7 +795,7 @@ void GameObject::SetPropertyValue(const std::string_view& PropName, const Reflec
 {
 	std::pair<EntityComponent, uint32_t> fromComponent{ EntityComponent::None, PHX_GAMEOBJECT_NULL_ID };
 
-	if (const Reflection::Property* prop = FindProperty(PropName, &fromComponent))
+	if (const Reflection::PropertyDescriptor* prop = FindProperty(PropName, &fromComponent))
 	{
 		prop->Set(ReflectorHandleToPointer(fromComponent), Value);
 		
@@ -773,7 +809,7 @@ std::vector<Reflection::GenericValue> GameObject::CallFunction(const std::string
 {
 	std::pair<EntityComponent, uint32_t> fromComponent;
 
-	if (const Reflection::Method* func = FindMethod(FuncName, &fromComponent))
+	if (const Reflection::MethodDescriptor* func = FindMethod(FuncName, &fromComponent))
 		return func->Func(ReflectorHandleToPointer(fromComponent), Inputs);
 
 	RAISE_RT("Invalid function in CallFunction: " + std::string(FuncName));

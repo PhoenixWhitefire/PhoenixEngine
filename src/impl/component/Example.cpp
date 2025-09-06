@@ -54,6 +54,7 @@ public:
                 "SuperCoolBool",
                 Boolean,
 				[](void* p)
+				-> Reflection::GenericValue
 				{
 					EcExample* example = static_cast<EcExample*>(p);
 					return example->SuperCoolBool;
@@ -81,7 +82,7 @@ public:
     {
         static const Reflection::StaticMethodMap funcs =
 		{
-			{ "Greet", Reflection::Method{
+			{ "Greet", {
 				{ Reflection::ValueType::Array, Reflection::ValueType::Boolean },
 				{ Reflection::ValueType::String, Reflection::ValueType::String },
 				[](void* p, const std::vector<Reflection::GenericValue>& args)

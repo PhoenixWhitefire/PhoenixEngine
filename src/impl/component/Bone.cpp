@@ -84,6 +84,7 @@ public:
 				"Transform",
 				Matrix,
 				[](void* p)
+				-> Reflection::GenericValue
 				{
 					EcBone* boneObj = static_cast<EcBone*>(p);
 					Bone* realBone = getUnderlyingBone(boneObj);
@@ -123,6 +124,7 @@ public:
 				"IsActive",
 				Boolean,
 				[](void* p)
+				-> Reflection::GenericValue
 				{
 					return getUnderlyingBone(static_cast<EcBone*>(p)) != nullptr;	
 				},
@@ -133,6 +135,7 @@ public:
 				"SkeletalBoneId",
 				Integer,
 				[](void* p)
+				-> Reflection::GenericValue
 				{
 					return (uint32_t)static_cast<EcBone*>(p)->SkeletalBoneId;
 				},

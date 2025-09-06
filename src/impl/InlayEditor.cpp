@@ -1160,7 +1160,9 @@ static const char* ContextMenuActionStrings[] =
 	"Reload"
 };
 
-static std::function<void(void)> ContextMenuActionHandlers[] =
+typedef void(*ContextActionMenuHandlerFunc)(void);
+
+static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] =
 {
 	[]()
 	{
@@ -1882,7 +1884,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 		ImGui::NewLine();
 		ImGui::PopID();
 
-		std::unordered_map<std::string_view, std::pair<const Reflection::Property*, Reflection::GenericValue>> props;
+		std::unordered_map<std::string_view, std::pair<const Reflection::PropertyDescriptor*, Reflection::GenericValue>> props;
 		std::unordered_map<std::string_view, bool> conflictingProps;
 
 		for (uint32_t selId : Selections)
@@ -1929,10 +1931,10 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 
 		for (const auto& propIt : props)
 		{
-			const std::pair<const Reflection::Property*, Reflection::GenericValue> propItem = propIt.second;
+			const std::pair<const Reflection::PropertyDescriptor*, Reflection::GenericValue> propItem = propIt.second;
 
 			const std::string_view& propName = propIt.first;
-			const Reflection::Property* propDesc = propItem.first;
+			const Reflection::PropertyDescriptor* propDesc = propItem.first;
 			const Reflection::GenericValue& curVal = propItem.second;
 
 			const char* propNameCStr = propName.data();

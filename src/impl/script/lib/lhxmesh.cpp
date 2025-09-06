@@ -86,13 +86,13 @@ static int mesh_set(lua_State* L)
 	while (lua_next(L, -2) != 0)
 	{
 		lua_getfield(L, -1, "Position");
-		glm::vec3 position = ScriptEngine::L::LuaValueToGeneric(L).AsVector3();
+		glm::vec3 position = ScriptEngine::L::ToGeneric(L).AsVector3();
     
 		lua_getfield(L, -2, "Normal");
-		glm::vec3 normal = ScriptEngine::L::LuaValueToGeneric(L).AsVector3();
+		glm::vec3 normal = ScriptEngine::L::ToGeneric(L).AsVector3();
     
 		lua_getfield(L, -3, "Paint");
-		Reflection::GenericValue paintVal = ScriptEngine::L::LuaValueToGeneric(L);
+		Reflection::GenericValue paintVal = ScriptEngine::L::ToGeneric(L);
 		std::span<Reflection::GenericValue> paintgv = paintVal.AsArray();
 		glm::vec4 paint{ paintgv[0].AsDouble(), paintgv[1].AsDouble(), paintgv[2].AsDouble(), paintgv[3].AsDouble() };
     

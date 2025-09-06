@@ -108,7 +108,14 @@ public:
 		m_Components.clear();
 
 		if (LVM)
+		{
+			lua_getglobal(LVM, "_G");
+			lua_pushinteger(LVM, 67);
+			lua_gettable(LVM, -2);
+			delete (std::filesystem::path*)lua_tolightuserdatatagged(LVM, -1, 67);
+			
 			lua_close(LVM);
+		}
 		LVM = nullptr;
     }
 

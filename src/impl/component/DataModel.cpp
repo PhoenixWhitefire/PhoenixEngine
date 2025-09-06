@@ -43,6 +43,7 @@ public:
                 "Time",
                 Double,
                 [](void*)
+                -> Reflection::GenericValue
                 {
                     return GetRunningTime();
                 },

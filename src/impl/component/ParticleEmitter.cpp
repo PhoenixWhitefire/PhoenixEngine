@@ -64,6 +64,7 @@ public:
 				"Rate",
 				Integer,
 				[](void* g)
+				-> Reflection::GenericValue
 				{
 					return static_cast<EcParticleEmitter*>(g)->Rate;
 				},

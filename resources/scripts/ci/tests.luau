@@ -157,7 +157,7 @@ local function runTests(t, depth)
 			local indent = string.rep("    ", depth)
 			
 			local printstr = `{indent}Test {index}: {entry.Name}... `
-			print(printstr, string.rep(" ", 50 - #printstr), "&&")
+			print(printstr, string.rep(" ", 60 - #printstr), "&&")
 			
 			local tstart = os.clock()
 			

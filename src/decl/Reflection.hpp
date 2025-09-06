@@ -27,7 +27,7 @@ s_Api.Lineage.push_back(#base);                                            \
 }                                                                          \
 
 // Declare a property with a custom Getter and Setter
-#define REFLECTION_DECLAREPROP(strname, type, get, set) s_Api.Properties[strname] = Reflection::Property  \
+#define REFLECTION_DECLAREPROP(strname, type, get, set) s_Api.Properties[strname] = Reflection::PropertyDescriptor  \
 	{	                                                                                                  \
 		Reflection::ValueType::type,                                                                      \
 		get,                                                                                              \
@@ -104,37 +104,24 @@ s_Api.Lineage.push_back(#base);                                            \
 	nullptr                                                                              \
 )                                                                                        \
 
-#define REFLECTION_DECLAREFUNC(strname, ...) s_Api.Methods[strname] = Reflection::Method    \
+#define REFLECTION_DECLAREFUNC(strname, ...) s_Api.Methods[strname] = Reflection::MethodDescriptor    \
 	{                                                                                       \
 		__VA_ARGS__                                                                         \
 	}                                                                                       \
-
-#define REFLECTION_DECLAREPROC_INPUTLESS(name, func) {          \
-auto name##Lambda = func;                                       \
-REFLECTION_DECLAREFUNC(                                         \
-	#name,                                                      \
-	{},                                                         \
-	{},                                                         \
-	[name##Lambda](void* p, const Reflection::GenericValue&)    \
-    -> std::vector<Reflection::GenericValue>                    \
-    {                                                           \
-		name##Lambda(p);                                        \
-		return {};                                              \
-	}                                                           \
-);                                                              \
-}                                                               \
 
 #define REFLECTION_EVENT(c, n, ...) { \
 	#n, \
 	{ \
 		{ __VA_ARGS__ }, \
 		[](void* p, Reflection::EventCallback Callback) \
+		-> uint32_t \
         { \
             c* ec = static_cast<c*>(p); \
             ec->n##Callbacks.push_back(Callback); \
             return ec->n##Callbacks.size() - 1; \
         }, \
         [](void* p, uint32_t Id) \
+		-> void \
         { \
             static_cast<c*>(p)->n##Callbacks[Id] = nullptr; \
         } \
@@ -176,6 +163,8 @@ namespace Reflection
 		Matrix,
 
 		GameObject,
+		Function,
+
 		// 12/08/2024:
 		// Yep, it's all coming together now...
 		// Why have a GenericValueArray, when a GenericValue can simply BE an Array?
@@ -192,6 +181,9 @@ namespace Reflection
 
 	std::string TypeAsString(ValueType);
 
+	struct GenericValue;
+	typedef std::function<std::vector<Reflection::GenericValue>(const std::vector<Reflection::GenericValue>&)> GenericFunction;
+
 	struct GenericValue
 	{
 		Reflection::ValueType Type = Reflection::ValueType::Null;
@@ -204,6 +196,7 @@ namespace Reflection
 			char StrSso[12]; // small string optimization. largest elem is glm::vec3 of 12 bytes
 			glm::vec2 Vec2;
 			glm::vec3 Vec3;
+			GenericFunction* Func;
 			void* Ptr;
 		} Val = {};
 		// Array length or allocated memory for `Value`
@@ -223,6 +216,7 @@ namespace Reflection
 		GenericValue(glm::vec2);
 		GenericValue(const glm::vec3&);
 		GenericValue(const glm::mat4&);
+		GenericValue(const GenericFunction&);
 		GenericValue(const std::span<GenericValue>&);
 		GenericValue(const std::vector<GenericValue>&);
 		GenericValue(const std::unordered_map<GenericValue, GenericValue>&);
@@ -244,6 +238,7 @@ namespace Reflection
 		const glm::vec2 AsVector2() const;
 		glm::vec3& AsVector3() const;
 		glm::mat4& AsMatrix() const;
+		GenericFunction& AsFunction() const;
 		std::span<GenericValue> AsArray() const;
 		std::unordered_map<GenericValue, GenericValue> AsMap() const;
 
@@ -256,41 +251,47 @@ namespace Reflection
 		}
 	};
 
-	struct Property
+	typedef Reflection::GenericValue(*PropertyGetter)(void*);
+	typedef void(*PropertySetter)(void*, const Reflection::GenericValue&);
+	typedef std::vector<Reflection::GenericValue>(*MethodFunction)(void*, const std::vector<Reflection::GenericValue>&);
+
+	typedef std::function<void(const std::vector<Reflection::GenericValue>&)> EventCallback;
+	typedef uint32_t(*EventConnectFunction)(void*, EventCallback);
+	typedef void(*EventDisconnectFunction)(void*, uint32_t);
+
+	struct PropertyDescriptor
 	{
 		Reflection::ValueType Type{};
 
-		std::function<Reflection::GenericValue(void*)> Get;
-		std::function<void(void*, const Reflection::GenericValue&)> Set;
+		PropertyGetter Get;
+		PropertySetter Set;
 		
 		bool Serializes = true;
 	};
 
-	struct Method
+	struct MethodDescriptor
 	{
 		std::vector<ValueType> Inputs;
 		std::vector<ValueType> Outputs;
 
-		std::function<std::vector<Reflection::GenericValue>(void*, const std::vector<Reflection::GenericValue>&)> Func;
+		MethodFunction Func;
 	};
 
-	typedef std::function<void(const std::vector<Reflection::GenericValue>&)> EventCallback;
-
-	struct Event
+	struct EventDescriptor
 	{
 		std::vector<ValueType> CallbackInputs;
 
-		std::function<uint32_t(void*, EventCallback)> Connect;
-		std::function<void(void*, uint32_t)> Disconnect;
+		EventConnectFunction Connect;
+		EventDisconnectFunction Disconnect;
 	};
 
-	typedef std::unordered_map<std::string_view, Reflection::Property> StaticPropertyMap;
-	typedef std::unordered_map<std::string_view, Reflection::Method> StaticMethodMap;
-	typedef std::unordered_map<std::string_view, Reflection::Event> StaticEventMap;
+	typedef std::unordered_map<std::string_view, Reflection::PropertyDescriptor> StaticPropertyMap;
+	typedef std::unordered_map<std::string_view, Reflection::MethodDescriptor> StaticMethodMap;
+	typedef std::unordered_map<std::string_view, Reflection::EventDescriptor> StaticEventMap;
 
-	typedef std::unordered_map<std::string_view, const Reflection::Property*> PropertyMap;
-	typedef std::unordered_map<std::string_view, const Reflection::Method*> MethodMap;
-	typedef std::unordered_map<std::string_view, const Reflection::Event*> EventMap;
+	typedef std::unordered_map<std::string_view, const Reflection::PropertyDescriptor*> PropertyMap;
+	typedef std::unordered_map<std::string_view, const Reflection::MethodDescriptor*> MethodMap;
+	typedef std::unordered_map<std::string_view, const Reflection::EventDescriptor*> EventMap;
 
 	struct StaticApi
 	{

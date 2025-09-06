@@ -145,6 +145,7 @@ local function update(DeltaTime)
 				end
 			end
 			
+			print("Saving to", Path)
 			scene.save(actuallySave, Path)
 		else
 			print("No path selected")

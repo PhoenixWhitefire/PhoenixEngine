@@ -11,7 +11,8 @@
         "GetFullName": "Returns the full, hierarchal path of the Object",
         "HasComponent": "Returns whether or not the Object has the given Component",
         "IsA": "Equivalent to `:HasComponent`",
-        "MergeWith": "Merges the Objects together, replacing descendants with the same name"
+        "MergeWith": "Merges the Objects together, replacing descendants with the same name",
+        "ForEachChild": "For all children of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield"
       },
       "Properties": {
         "Enabled": "Whether the Engine updates and recognizes this Object, essentially freezing it if it is disabled",
@@ -60,7 +61,15 @@
           "Brightness": "How bright the Light is",
           "Direction": "The direction light is emitted from",
           "LightColor": "The color of the Light",
-          "Shadows": "Whether the Light can render shadows"
+          "Shadows": "Whether the Light can render shadows",
+          "ShadowViewDistance": "How far back the shadow view is offset from the focus",
+          "ShadowViewFarPlane": "The Far Z plane of the shadow view. Should be greater than `ShadowViewNearPlane`",
+          "ShadowViewNearPlane": "The Near Z plane of the shadow view. Should be less than `ShadowViewFarPlane`. Shouldn't be `0`",
+          "ShadowViewMoveWithCamera": "Sets the focus of the shadow view to be the Scene Camera",
+          "ShadowViewOffset": "Offset of the shadow view from the focus, after `ShadowViewDistance` is applied",
+          "ShadowViewSize": "Size of the shadow view. Sets `ShadowViewSizeH` and `ShadowViewSizeV` to the assigned value if they are equal. Is `-1` if they are not equal",
+          "ShadowViewSizeH": "Horizontal size of the shadow view",
+          "ShadowViewSizeV": "Vertical size of the shadow view"
         }
       },
       "Mesh": {

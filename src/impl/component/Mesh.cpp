@@ -87,7 +87,6 @@ public:
 					return static_cast<uint32_t>(static_cast<EcMesh*>(p)->FaceCulling);
 				},
 				[](void* p, const Reflection::GenericValue& gv)
-				-> void
 				{
 					static_cast<EcMesh*>(p)->FaceCulling = static_cast<FaceCullingMode>(gv.AsInteger());
 				}
@@ -102,7 +101,6 @@ public:
 					return static_cast<uint32_t>(static_cast<EcMesh*>(p)->CollisionFidelity);
 				},
 				[](void* p, const Reflection::GenericValue& gv)
-				-> void
 				{
 					static_cast<EcMesh*>(p)->CollisionFidelity = static_cast<CollisionFidelityMode>(gv.AsInteger());
 				}
@@ -142,7 +140,7 @@ public:
 				
 					return mtlManager->GetMaterialResource(m->MaterialId).Name;
 				},
-				[](void* p, Reflection::GenericValue gv)
+				[](void* p, const Reflection::GenericValue& gv)
 				{
 					EcMesh* m = static_cast<EcMesh*>(p);
 					MaterialManager* mtlManager = MaterialManager::Get();

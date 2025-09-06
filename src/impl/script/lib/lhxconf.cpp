@@ -18,7 +18,7 @@ static int conf_set(lua_State* L)
 
     ScriptEngine::L::PushJson(L, EngineJsonConfig[k]);
 
-	EngineJsonConfig[k] = ScriptEngine::L::LuaValueToJson(L, 2);
+	EngineJsonConfig[k] = ScriptEngine::L::ToJson(L, 2);
 	return 0;
 }
 

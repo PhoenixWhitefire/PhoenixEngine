@@ -507,44 +507,44 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 		ZoneName("DeserializeProperties", 21);
 
 		// https://json.nlohmann.me/features/iterators/#access-object-key-during-iteration
-		for (auto memberIt = item.begin(); memberIt != item.end(); memberIt++)
+		for (auto propIt = item.begin(); propIt != item.end(); propIt++)
 		{
-			std::string_view memberName = memberIt.key();
+			std::string_view propName = propIt.key();
 
 			// reserved prefix for data which needs to be saved but isn't a property
-			if (memberName[0] == '$' && memberName[1] == '_')
+			if (propName[0] == '$' && propName[1] == '_')
 				continue;
 
-			const nlohmann::json& memberValue = memberIt.value();
+			const nlohmann::json& memberValue = propIt.value();
 
-			const Reflection::Property* member = newObject->FindProperty(memberName);
+			const Reflection::PropertyDescriptor* prop = newObject->FindProperty(propName);
 
-			if (!member)
+			if (!prop)
 			{
 				SF_WARN(
 					"Member '{}' is not defined in the API (Name: '{}')!",
-					memberName,
+					propName,
 					name
 				);
 				continue;
 			}
 
-			Reflection::ValueType memberType = member->Type;
-			memberType = (Reflection::ValueType)((uint8_t)memberType & ~(uint8_t)Reflection::ValueType::Null);
-
-			if (!member->Set)
+			if (!prop->Set)
 			{
 				SF_WARN(
 					"Member '{}' of '{}' is read-only!",
-					memberName,
+					propName,
 					name
 				);
 				continue;
 			}
 
+			Reflection::ValueType propType = prop->Type;
+			propType = (Reflection::ValueType)((uint8_t)propType & ~(uint8_t)Reflection::ValueType::Null);
+
 			Reflection::GenericValue assignment;
 
-			switch (memberType)
+			switch (propType)
 			{
 
 			case Reflection::ValueType::String:
@@ -605,19 +605,17 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 
 			case Reflection::ValueType::GameObject:
 			{
-				objectProps[newObject->ObjectId].insert(std::pair(memberName, memberValue));
+				objectProps[newObject->ObjectId].insert(std::pair(propName, memberValue));
 
 				break;
 			}
 
 			default:
 			{
-				std::string memberTypeName = Reflection::TypeAsString(memberType);
-
 				SF_WARN(
 					"Property '{}' cannot be deserialized because it's type ({}) is not supported",
-					memberName,
-					memberTypeName
+					propName,
+					Reflection::TypeAsString(propType)
 				);
 
 				break;
@@ -629,16 +627,13 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 			{
 				try
 				{
-					newObject->SetPropertyValue(memberName, assignment);
+					newObject->SetPropertyValue(propName, assignment);
 				}
 				catch (const std::runtime_error& err)
 				{
-					std::string mtname = Reflection::TypeAsString(memberType);
-					std::string valueStr = assignment.ToString();
-
 					SF_WARN(
 						"Failed to set {} Property '{}' of '{}' to '{}': {}",
-						mtname, memberName, name, valueStr, err.what()
+						Reflection::TypeAsString(propType), propName, name, assignment.ToString(), err.what()
 					);
 				}
 			}
@@ -763,7 +758,7 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 	for (const auto& prop : Object->GetProperties())
 	{
 		const std::string_view& propName = prop.first;
-		const Reflection::Property* propInfo = prop.second;
+		const Reflection::PropertyDescriptor* propInfo = prop.second;
 
 		if (!propInfo->Serializes)
 			continue;

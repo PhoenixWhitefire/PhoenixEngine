@@ -143,6 +143,7 @@ public:
                 "ShadowViewSize",
                 Double,
                 [](void* p)
+                -> Reflection::GenericValue
                 {
                     EcDirectionalLight* d = static_cast<EcDirectionalLight*>(p);
 

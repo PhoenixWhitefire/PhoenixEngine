@@ -66,26 +66,16 @@ static int base_sleep(lua_State* L)
 {
 	double sleepTime = luaL_checknumber(L, 1);
 
-	// TODO a kind of hack to get what script we're running as?
-	lua_getglobal(L, "script");
-	Reflection::GenericValue script = ScriptEngine::L::LuaValueToGeneric(L, -1);
-	GameObject* scriptObject = GameObject::FromGenericValue(script);
-	// modules currently do not have a `script` global
-	uint32_t scriptId = scriptObject ? scriptObject->ObjectId : PHX_GAMEOBJECT_NULL_ID;
-
-	lua_yield(L, 1);
-	lua_pushthread(L);
-
-	auto& b = ScriptEngine::s_YieldedCoroutines.emplace_back(
+	ScriptEngine::L::Yield(
 		L,
-		// make sure the coroutine doesn't get de-alloc'd before we resume it
-		lua_ref(L, -1),
-		scriptId,
-		ScriptEngine::YieldedCoroutine::ResumptionMode::ScheduledTime
+		1,
+		[sleepTime](ScriptEngine::YieldedCoroutine& yc)
+		{
+			double curTime = GetRunningTime();
+			yc.Mode = ScriptEngine::YieldedCoroutine::ResumptionMode::ScheduledTime;
+			yc.RmSchedule = { curTime, curTime + sleepTime };
+		}
 	);
-
-	double curTime = GetRunningTime();
-	b.RmSchedule = { curTime, curTime + sleepTime };
 
 	return -1;
 }

@@ -150,48 +150,40 @@ static int fs_promptsave(lua_State* L)
 	filter.pattern = luaL_optstring(L, 2, "*");
 	filter.name = luaL_optstring(L, 3, "All files");
 
-	// TODO a kind of hack to get what script we're running as?
-	lua_getglobal(L, "script");
-	Reflection::GenericValue script = ScriptEngine::L::LuaValueToGeneric(L, -1);
-	GameObject* scriptObject = GameObject::FromGenericValue(script);
-	// modules currently do not have a `script` global
-	uint32_t scriptId = scriptObject ? scriptObject->ObjectId : PHX_GAMEOBJECT_NULL_ID;
-
-    lua_yield(L, 1);
-
-	IsFdInProgress = true;
-		
-	SDL_ShowSaveFileDialog(
-		fdCallback,
-		NULL,
-		SDL_GL_GetCurrentWindow(),
-		&filter,
-		1,
-		defaultLocation.c_str()
-	);
-		
-	lua_pushthread(L);
-		
-	auto& b = ScriptEngine::s_YieldedCoroutines.emplace_back(
+	ScriptEngine::L::Yield(
 		L,
-		// make sure the coroutine doesn't get de-alloc'd before we resume it
-		lua_ref(L, -1),
-		scriptId,
-		ScriptEngine::YieldedCoroutine::ResumptionMode::Polled
-	);
-		
-	b.RmPoll = [](lua_State* CL)
-		-> int
+		1,
+		[filter, defaultLocation](ScriptEngine::YieldedCoroutine& yc)
 		{
-			if (IsFdInProgress)
-				return -1;
-			else
-			{
-				lua_pushstring(CL, FileRW::MakePathCwdRelative(FdResults[0]).c_str());
-			
-				return 1;
-			}
-		};
+			IsFdInProgress = true;
+	
+			SDL_ShowSaveFileDialog(
+				fdCallback,
+				NULL,
+				SDL_GL_GetCurrentWindow(),
+				&filter,
+				1,
+				defaultLocation.c_str()
+			);
+
+			yc.Mode = ScriptEngine::YieldedCoroutine::ResumptionMode::Polled;
+			yc.RmPoll = [](lua_State* CL)
+				-> int
+				{
+					if (IsFdInProgress)
+						return -1;
+					else
+					{
+						if (FdResults.size() == 0)
+							lua_pushnil(CL);
+						else
+							lua_pushstring(CL, FileRW::MakePathCwdRelative(FdResults[0]).c_str());
+					
+						return 1;
+					}
+				};
+		}
+	);
 
 	return -1;
 }
@@ -208,56 +200,45 @@ static int fs_promptopen(lua_State* L)
 
 	bool allowMultipleFiles = luaL_optboolean(L, 4, false);
 
-	// TODO a kind of hack to get what script we're running as?
-	lua_getglobal(L, "script");
-	Reflection::GenericValue script = ScriptEngine::L::LuaValueToGeneric(L, -1);
-	GameObject* scriptObject = GameObject::FromGenericValue(script);
-	// modules currently do not have a `script` global
-	uint32_t scriptId = scriptObject ? scriptObject->ObjectId : PHX_GAMEOBJECT_NULL_ID;
-
-    lua_yield(L, 1);
-
-	IsFdInProgress = true;
-		
-	SDL_ShowOpenFileDialog(
-		fdCallback,
-		NULL,
-		SDL_GL_GetCurrentWindow(),
-		&filter,
-		1,
-		defaultLocation.c_str(),
-		allowMultipleFiles
-	);
-		
-	lua_pushthread(L);
-		
-	auto& b = ScriptEngine::s_YieldedCoroutines.emplace_back(
+	ScriptEngine::L::Yield(
 		L,
-		// make sure the coroutine doesn't get de-alloc'd before we resume it
-		lua_ref(L, -1),
-		scriptId,
-		ScriptEngine::YieldedCoroutine::ResumptionMode::Polled
-	);
-		
-	b.RmPoll = [](lua_State* CL)
-		-> int
+		1,
+		[&](ScriptEngine::YieldedCoroutine& yc)
 		{
-			if (IsFdInProgress)
-				return -1;
-			else
-			{
-				lua_newtable(CL);
+			IsFdInProgress = true;
+		
+			SDL_ShowOpenFileDialog(
+				fdCallback,
+				NULL,
+				SDL_GL_GetCurrentWindow(),
+				&filter,
+				1,
+				defaultLocation.c_str(),
+				allowMultipleFiles
+			);
 
-				for (int i = 0; i < (int)FdResults.size(); i++)
+			yc.Mode = ScriptEngine::YieldedCoroutine::ResumptionMode::Polled;
+			yc.RmPoll = [](lua_State* CL)
+				-> int
 				{
-					lua_pushinteger(CL, i + 1);
-					lua_pushstring(CL, FileRW::MakePathCwdRelative(FdResults[i]).c_str());
-					lua_settable(CL, -3);
-				}
-
-				return 1;
-			}
-		};
+					if (IsFdInProgress)
+						return -1;
+					else
+					{
+						lua_newtable(CL);
+					
+						for (int i = 0; i < (int)FdResults.size(); i++)
+						{
+							lua_pushinteger(CL, i + 1);
+							lua_pushstring(CL, FileRW::MakePathCwdRelative(FdResults[i]).c_str());
+							lua_settable(CL, -3);
+						}
+					
+						return 1;
+					}
+				};
+		}
+	);
 
 	return -1;
 }

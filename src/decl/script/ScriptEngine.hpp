@@ -45,17 +45,17 @@ namespace ScriptEngine
 
 	extern std::vector<YieldedCoroutine> s_YieldedCoroutines;
 
-	extern const std::unordered_map<Reflection::ValueType, lua_Type> ReflectedTypeLuaEquivalent;
+	extern const std::unordered_map<Reflection::ValueType, lua_Type> ValueTypeToLuauType;
 };
 
 namespace ScriptEngine::L
 {
 	lua_State* Create();
-	Reflection::GenericValue LuaValueToGeneric(
+	Reflection::GenericValue ToGeneric(
 		lua_State*,
 		int StackIndex = -1
 	);
-	nlohmann::json LuaValueToJson(lua_State*, int StackIndex = -1, std::string Context = "");
+	nlohmann::json ToJson(lua_State*, int StackIndex = -1, std::string Context = "");
 	void CheckType(
 		lua_State*,
 		Reflection::ValueType,
@@ -65,14 +65,22 @@ namespace ScriptEngine::L
 	void PushGenericValue(lua_State*, const Reflection::GenericValue&);
 	void PushJson(lua_State*, const nlohmann::json&);
 	void PushGameObject(lua_State*, GameObject*);
-	void PushMethod(lua_State* L, const Reflection::Method*, ReflectorHandle);
+	void PushMethod(lua_State* L, const Reflection::MethodDescriptor*, ReflectorHandle);
 
 	void DumpStacktrace(lua_State* L, std::string* Into = nullptr, int Level = 0, const char* Message = nullptr);
 
 	int HandleMethodCall(
 		lua_State* L,
-		const Reflection::Method* fnaf, // THE MIMICCCCC!!!!
+		const Reflection::MethodDescriptor* fnaf, // THE MIMICCCCC!!!!
 		ReflectorHandle
+	);
+
+	// This yields the given Luau thread (ensuring that we are in a yieldable context),
+	// and calls `Configure` to set the resumption mode and do any final preparations
+	void Yield(
+		lua_State*,
+		int NumResults,
+		std::function<void(YieldedCoroutine&)> Configure
 	);
 
 	struct GlobalFn

@@ -14,6 +14,7 @@ The Engine support an Entity Component System architecture, meaning that `GameOb
 * `Destroy() -> ()`: Marks the Object as "pending for destruction". This may or may not remove the Object from memory immediately, depending on whether the Engine is actively using the Object for some purpose
 * `Duplicate() -> (GameObject)`: Creates a duplicate of the Object
 * `FindChild(string) -> (GameObject?)`: Returns the child Object with the given name, or `nil` if it doesn't exist
+* `ForEachChild(Function) -> ()`: For all children of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield
 * `GetChildren() -> (Array)`: Returns a list of the Object's direct children
 * `GetComponentNames() -> (Array)`: Returns a list of the names of all Components that the Object currently has
 * `GetDescendants() -> (Array)`: Returns all descendants of the Object (i.e. its children, and their children, etc)
@@ -71,6 +72,14 @@ The Engine support an Entity Component System architecture, meaning that `GameOb
 * `Brightness: number`: How bright the Light is
 * `Direction: Vector3`: The direction light is emitted from
 * `LightColor: Color`: The color of the Light
+* `ShadowViewDistance: number`: How far back the shadow view is offset from the focus
+* `ShadowViewFarPlane: number`: The Far Z plane of the shadow view. Should be greater than `ShadowViewNearPlane`
+* `ShadowViewMoveWithCamera: boolean`: Sets the focus of the shadow view to be the Scene Camera
+* `ShadowViewNearPlane: number`: The Near Z plane of the shadow view. Should be less than `ShadowViewFarPlane`. Shouldn't be `0`
+* `ShadowViewOffset: Vector3`: Offset of the shadow view from the focus, after `ShadowViewDistance` is applied
+* `ShadowViewSize: number`: Size of the shadow view. Sets `ShadowViewSizeH` and `ShadowViewSizeV` to the assigned value if they are equal. Is `-1` if they are not equal
+* `ShadowViewSizeH: number`: Horizontal size of the shadow view
+* `ShadowViewSizeV: number`: Vertical size of the shadow view
 * `Shadows: boolean`: Whether the Light can render shadows
 
 ## `Example`
