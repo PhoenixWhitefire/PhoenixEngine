@@ -104,9 +104,7 @@ local function update(DeltaTime)
 		return
 	end
 	
-	local loadWorld = imgui.button("Load World")
-
-	if loadWorld then
+	if imgui.button("Load World") then
 		imgui.endw()
 		
 		local Path = fs.promptopen("resources/scenes", "world", "Worlds")[1]
@@ -158,6 +156,12 @@ local function update(DeltaTime)
 	
 	if imgui.button("Load Sub-Level") then
 		imgui.endw()
+		globalv = "HI"
+		local v = 10
+		for k , v in _G do
+			print(k, v)
+		end
+		breakpoint(165)
 		loadSubLevel(fs.promptopen("resources/scenes", "hxscene", "Scenes")[1])
 		return
 	end

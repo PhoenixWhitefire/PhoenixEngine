@@ -271,7 +271,7 @@ int ScriptEngine::CompileAndLoad(lua_State* L, const std::string& SourceCode, co
 
 	Luau::CompileOptions compileOptions;
 	compileOptions.optimizationLevel = 2;
-	compileOptions.debugLevel = 1;
+	compileOptions.debugLevel = L::DebugBreak ? 2 : 1;
 	compileOptions.mutableGlobals = mutableGlobals;
 
 	std::string bytecode = Luau::compile(SourceCode, compileOptions);

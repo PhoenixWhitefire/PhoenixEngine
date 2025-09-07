@@ -2386,7 +2386,8 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar)
 	ZoneScoped;
 
 	ImGui::Render();
-	lua_getinfo(L, 0, "sln", ar);
+	lua_getinfo(L, 0, "slnfu", ar);
+	int currfuncindex = lua_gettop(L);
 	lua_mainthread(L)->status = LUA_BREAK;
 
 	Engine* engine = Engine::Get();
@@ -2469,10 +2470,11 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar)
 		if (ImGui::Begin("Watch"))
 		{
 			static int Section = 0;
-			ImGui::Combo("Variables", &Section, "Locals\0Globals\0Environment\0Registry\0");
+			ImGui::Combo("Variables", &Section, "Locals\0Upvalues\0Globals\0Environment\0Registry\0");
 
 			ImGui::BeginChild("VariablesSection", ImVec2(), ImGuiChildFlags_Border);
 			L->status = LUA_OK; // avoid hitting assertion due to potential calls to `__tostring` metamethods
+
 			switch (Section)
 			{
 			case 0:
@@ -2481,7 +2483,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar)
 				{
 					ImGui::Text("---LEVEL %i---", l);
 
-					for (int i = 0; i < 256; i++)
+					for (int i = 1; i < 256; i++)
 					{
 						const char* name = lua_getlocal(L, l, i);
 
@@ -2489,8 +2491,9 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar)
 							break;
 
 						lua_pushstring(L, name);
+						lua_pushvalue(L, -2);
 						debugVariable(L);
-						lua_pop(L, 1);
+						lua_pop(L, 2);
 
 						lua_pop(L, 1);
 					}
@@ -2500,19 +2503,36 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar)
 			}
 			case 1:
 			{
-				lua_getmetatable(L, LUA_GLOBALSINDEX);
-				lua_getfield(L, -1, "__index");
-				lua_pushnil(L);
-				while (lua_next(L, -2))
+				for (int i = 1; i < ar->nupvals; i++)
 				{
+					const char* name = lua_getupvalue(L, currfuncindex, i);
+				
+					if (!name)
+						break;
+				
+					lua_pushstring(L, name);
+					lua_pushvalue(L, -2);
 					debugVariable(L);
+					lua_pop(L, 2);
+				
 					lua_pop(L, 1);
 				}
-				lua_pop(L, 2);
-				
+
 				break;
 			}
 			case 2:
+			{
+				lua_pushnil(L);
+				while (lua_next(L, LUA_GLOBALSINDEX))
+				{
+					debugVariable(L);
+
+					lua_pop(L, 1);
+				}
+				
+				break;
+			}
+			case 3:
 			{
 				lua_pushnil(L);
 				while (lua_next(L, LUA_ENVIRONINDEX))
@@ -2524,7 +2544,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar)
 
 				break;
 			}
-			case 3:
+			case 4:
 			{
 				lua_pushnil(L);
 				while (lua_next(L, LUA_REGISTRYINDEX))
