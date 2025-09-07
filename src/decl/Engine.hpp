@@ -52,6 +52,8 @@ public:
 	EventSignal<double> OnFrameRenderGui{};
 	EventSignal<double> OnFrameEnd{};
 
+	Scene CurrentScene;
+
 	bool IsHeadlessMode = false;
 	bool IsFullscreen = false;
 	bool VSync = false;

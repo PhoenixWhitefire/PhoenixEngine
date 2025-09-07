@@ -80,11 +80,28 @@ static int base_sleep(lua_State* L)
 	return -1;
 }
 
+// FROM: `luau/tests/Conformance.test.cpp` line 1364 for `breakpoint` function
+static int base_breakpoint(lua_State* L)
+{
+	if (lua_gettop(L) == 0)
+		return lua_break(L);
+
+	int line = luaL_checkinteger(L, 1);
+    bool enabled = luaL_optboolean(L, 2, true);
+
+    lua_Debug ar = {};
+    lua_getinfo(L, lua_stackdepth(L) - 1, "f", &ar);
+
+    lua_breakpoint(L, -1, line, enabled);
+    return 0;
+}
+
 static luaL_Reg base_funcs[] =
 {
     { "print", base_print },
     { "appendlog", base_appendlog },
 	{ "sleep", base_sleep },
+	{ "breakpoint", base_breakpoint },
     { NULL, NULL }
 };
 

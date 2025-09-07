@@ -410,8 +410,12 @@ Reflection::GenericValue ScriptEngine::L::ToGeneric(lua_State* L, int StackIndex
 				std::string thisTraceback;
 				DumpStacktrace(CL, &thisTraceback, 0);
 
-				if (status == LUA_BREAK)
-					RAISE_RT(std::format("BREAKING INTO DEBUGGER not supported\n{}\nDefined: {}", thisTraceback, traceback));
+				if (status == LUA_BREAK && ScriptEngine::L::DebugBreak)
+				{
+					lua_Debug ar;
+					lua_getinfo(CL, 0, "sln", &ar);
+					ScriptEngine::L::DebugBreak(CL, &ar);
+				}
 
 				RAISE_RT(std::format(
 					"Callback encountered an error: {}\n{}\nDefined: {}",
@@ -867,6 +871,7 @@ struct EventSignalData
 {
 	ReflectorHandle Reflector;
 	const Reflection::EventDescriptor* Event = nullptr;
+	const char* EventName = nullptr;
 };
 
 struct EventConnectionData
@@ -877,13 +882,20 @@ struct EventConnectionData
 	lua_State* L = nullptr;
 	uint32_t ConnectionId = UINT32_MAX;
 	int ThreadRef = LUA_NOREF;
+	int SignalRef = LUA_NOREF;
 	bool CallbackYields = false;
 };
 
-static void pushSignal(lua_State* L, const Reflection::EventDescriptor* Event, const ReflectorHandle& Reflector)
+static void pushSignal(
+	lua_State* L,
+	const Reflection::EventDescriptor* Event,
+	const ReflectorHandle& Reflector,
+	const char* EventName
+)
 {
 	EventSignalData* ev = (EventSignalData*)lua_newuserdata(L, sizeof(EventSignalData));
 	ev->Reflector = Reflector;
+	ev->EventName = EventName;
 	ev->Event = Event;
 
 	luaL_getmetatable(L, "EventSignal");
@@ -930,7 +942,7 @@ static int api_gameobjindex(lua_State* L)
 	}
 
 	else if (const Reflection::EventDescriptor* event = obj->FindEvent(key, &reflectorHandle))
-		pushSignal(L, event, reflectorHandle);
+		pushSignal(L, event, reflectorHandle, key);
 
 	// Methods are lower because we prefer namecalls
 	else if (const Reflection::MethodDescriptor* func = obj->FindMethod(key, &reflectorHandle))
@@ -1129,6 +1141,7 @@ static int api_eventnamecall(lua_State* L)
 
 		EventSignalData* ev = (EventSignalData*)luaL_checkudata(L, 1, "EventSignal");
 		const Reflection::EventDescriptor* rev = ev->Event;
+		int signalRef = lua_ref(L, 1);
 
 		// TRUST ME, ALL THESE L's MAKE SENSE OK
 		// `eL` IS. UH. UHHH. *EVENT* L! YES, *E*VENT L
@@ -1218,27 +1231,37 @@ static int api_eventnamecall(lua_State* L)
 				// but i genuinely just could not be bothered
 				co->baseCcalls++;
 				int status = lua_pcall(co, static_cast<int32_t>(Inputs.size()), 0, 0);
-				co->baseCcalls++;
+				co->baseCcalls--;
+				// TODO 06/09/2025
+				// i dont even know
+				// is this intentional??
+				// only a problem when the status is YIELD or BREAK,
+				// in which case `lua_pcall` misleading returns `0`
+				// other times it doesnt matter
+				status = co->status;
 
-				if (status != LUA_OK && status != LUA_YIELD)
+				if (status != LUA_OK && status != LUA_YIELD && status != LUA_BREAK)
 				{
 					Log::ErrorF("Script event: {}", luaL_tolstring(co, -1, nullptr));
 					ScriptEngine::L::DumpStacktrace(co);
 					lua_pop(co, 1);
 				}
 
-				// status returned from _pcall is 0 when it yields for some reason?? TODO
-				if (status == LUA_YIELD || co->status == LUA_YIELD)
-				{
+				if (status == LUA_YIELD)
 					cn->CallbackYields = true;
+
+				if (status == LUA_BREAK && ScriptEngine::L::DebugBreak)
+				{
+					lua_Debug ar;
+					lua_getinfo(co, 0, "sln", &ar);
+					ScriptEngine::L::DebugBreak(co, &ar);
 				}
 			}
 		);
 
-		ec->Reflector = ev->Reflector;
+		ec->SignalRef = signalRef;
 		ec->ThreadRef = threadRef;
 		ec->ConnectionId = cnId;
-		ec->Event = ev->Event;
 		ec->L = L;
 
 		lua_getglobal(L, "script");
@@ -1266,8 +1289,10 @@ static int api_evconnectionindex(lua_State* L)
 		lua_pushboolean(L, ec->ConnectionId != UINT32_MAX);
 
 	else if (strcmp(k, "Signal") == 0)
-		pushSignal(L, ec->Event, ec->Reflector);
-
+	{
+		lua_pushinteger(L, ec->SignalRef);
+		lua_gettable(L, LUA_REGISTRYINDEX);
+	}
 	else
 		luaL_error(L, "Invalid member '%s' of Event Connection", k);
 				
@@ -1780,14 +1805,32 @@ lua_State* ScriptEngine::L::Create()
 			[](lua_State* L)
 			{
 				EventSignalData* ev1 = (EventSignalData*)luaL_checkudata(L, 1, "EventSignal");
-				EventSignalData* ev2 = (EventSignalData*)luaL_checkudata(L, 1, "EventSignal");
+				EventSignalData* ev2 = (EventSignalData*)luaL_checkudata(L, 2, "EventSignal");
 
 				lua_pushboolean(L, ev1->Event == ev2->Event && ev1->Reflector == ev2->Reflector);
 				return 1;
 			},
-			"__eq"
+			"EventSignal.__eq"
 		);
 		lua_setfield(state, -2, "EventSignal.__eq");
+
+		lua_pushcfunction(
+			state,
+			[](lua_State* L)
+			{
+				EventSignalData* ev = (EventSignalData*)luaL_checkudata(L, 1, "EventSignal");
+				GameObject* obj = GameObject::GetObjectById(ev->Reflector.second);
+
+				std::string source = ev->Reflector.first == EntityComponent::None
+					? (obj ? obj->GetFullName() + "." : "GameObject::")
+					: std::format("{}::", s_EntityComponentNames[(size_t)ev->Reflector.first]);
+
+				lua_pushfstring(L, "%s%s", source.c_str(), ev->EventName);
+				return 1;
+			},
+			"EventSignal.__tostring"
+		);
+		lua_setfield(state, -2, "__tostring");
 
 		lua_pushstring(state, "EventSignal");
 		lua_setfield(state, -2, "__type");
@@ -1811,6 +1854,28 @@ lua_State* ScriptEngine::L::Create()
 		);
 		lua_setfield(state, -2, "__index");
 
+		lua_pushcfunction(
+			state,
+			[](lua_State* L)
+			{
+				EventConnectionData* ec = (EventConnectionData*)luaL_checkudata(L, 1, "EventConnection");
+				lua_pushinteger(L, ec->SignalRef);
+				lua_gettable(L, LUA_REGISTRYINDEX);
+
+				EventSignalData* ev = (EventSignalData*)luaL_checkudata(L, -1, "EventSignal");
+				GameObject* obj = GameObject::GetObjectById(ev->Reflector.second);
+
+				std::string source = ev->Reflector.first == EntityComponent::None
+					? (obj ? obj->GetFullName() + "." : "GameObject::")
+					: std::format("{}::", s_EntityComponentNames[(size_t)ev->Reflector.first]);
+
+				lua_pushfstring(L, "Connection to %s%s", source.c_str(), ev->EventName);
+				return 1;
+			},
+			"EventConnection.__tostring"
+		);
+		lua_setfield(state, -2, "__tostring");
+
 		lua_pushstring(state, "EventConnection");
 		lua_setfield(state, -2, "__type");
 	}
@@ -1820,6 +1885,17 @@ lua_State* ScriptEngine::L::Create()
 
 	ScriptEngine::L::PushGameObject(state, GameObject::GetObjectById(GameObject::s_DataModel)->FindChild("Workspace"));
 	lua_setglobal(state, "workspace");
+
+	if (L::DebugBreak)
+	{
+		state->global->cb.debugbreak = L::DebugBreak;
+		state->global->cb.debugprotectederror = [](lua_State* L)
+			{
+				lua_Debug ar;
+				lua_getinfo(L, 1, "sln", &ar);
+				L::DebugBreak(L, &ar);
+			};
+	}
 
 	luaL_sandbox(state);
 	return state;

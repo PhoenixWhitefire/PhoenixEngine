@@ -558,7 +558,7 @@ static GLuint startLoadingSkybox(std::vector<uint32_t>* skyboxFacesBeingLoaded)
 	return skyboxCubemap;
 }
 
-void Engine::m_Render(const Scene& scene, double deltaTime)
+void Engine::m_Render(const Scene& CurrentScene, double deltaTime)
 {
 	ZoneScoped;
 
@@ -630,7 +630,7 @@ void Engine::m_Render(const Scene& scene, double deltaTime)
 	glDepthFunc(GL_LESS);
 
 	//Main render pass
-	RendererContext.DrawScene(scene, renderMatrix, sceneCamera->Transform, GetRunningTime(), DebugWireframeRendering);
+	RendererContext.DrawScene(CurrentScene, renderMatrix, sceneCamera->Transform, GetRunningTime(), DebugWireframeRendering);
 
 	glDisable(GL_DEPTH_TEST);
 	
@@ -755,11 +755,7 @@ void Engine::Start()
 
 	m_SkyboxCubemap = startLoadingSkybox(&skyboxFacesBeingLoaded);
 
-	Scene scene{};
-	scene.RenderList.reserve(50);
-
-	SDL_Event pollingEvent;
-
+	CurrentScene.RenderList.reserve(50);
 	m_IsRunning = true;
 
 	Log::Info("Main engine loop start");
@@ -808,9 +804,6 @@ void Engine::Start()
 		}
 
 		TIME_SCOPE_AS("FrameWork");
-
-		scene.RenderList.clear();
-		scene.LightingList.clear();
 
 		if (!IsHeadlessMode)
 			m_TextureManager.FinalizeAsyncLoadedTextures();
@@ -879,6 +872,7 @@ void Engine::Start()
 		{
 			ZoneScopedNC("PollEvents", tracy::Color::Orange);
 
+			SDL_Event pollingEvent;
 			while (SDL_PollEvent(&pollingEvent) != 0)
 			{
 				ZoneScopedN("Event");
@@ -941,7 +935,7 @@ void Engine::Start()
 
 		REFLECTION_SIGNAL(DataModel->GetComponent<EcDataModel>()->OnFrameBeginCallbacks, deltaTime);
 
-		// fetch the camera again because of potential scene changes that may have caused re-alloc'd
+		// fetch the camera again because of potential CurrentScene changes that may have caused re-alloc'd
 		// (really need a generic `Ref` system)
 		sceneCamera = sceneCamObject->GetComponent<EcCamera>();
 
@@ -950,10 +944,13 @@ void Engine::Start()
 		{
 			TIME_SCOPE_AS("RecurseHierarchy");
 
+			CurrentScene.RenderList.clear();
+			CurrentScene.LightingList.clear();
+
 			// Aggregate mesh and light data into lists
 			recursivelyTravelHierarchy(
-				scene.RenderList,
-				scene.LightingList,
+				CurrentScene.RenderList,
+				CurrentScene.LightingList,
 				physicsList,
 				Workspace,
 				sceneCamera,
@@ -977,10 +974,10 @@ void Engine::Start()
 
 		if (!IsHeadlessMode)
 		{
-			scene.UsedShaders.clear();
+			CurrentScene.UsedShaders.clear();
 
-			for (const RenderItem& ri : scene.RenderList)
-				scene.UsedShaders.insert(m_MaterialManager.GetMaterialResource(ri.MaterialId).ShaderId);
+			for (const RenderItem& ri : CurrentScene.RenderList)
+				CurrentScene.UsedShaders.insert(m_MaterialManager.GetMaterialResource(ri.MaterialId).ShaderId);
 		}
 
 		if (!IsHeadlessMode && sun)
@@ -989,10 +986,10 @@ void Engine::Start()
 			ZoneScopedN("Shadows");
 
 			Scene sunScene{};
-			sunScene.RenderList.reserve(scene.RenderList.size());
-			sunScene.UsedShaders = scene.UsedShaders;
+			sunScene.RenderList.reserve(CurrentScene.RenderList.size());
+			sunScene.UsedShaders = CurrentScene.UsedShaders;
 
-			for (const RenderItem& ri : scene.RenderList)
+			for (const RenderItem& ri : CurrentScene.RenderList)
 				if (ri.CastsShadows)
 				{
 					sunScene.RenderList.push_back(ri);
@@ -1019,7 +1016,7 @@ void Engine::Start()
 			glViewport(0, 0, SunShadowMapResolutionSq, SunShadowMapResolutionSq);
 			glClear(/*GL_COLOR_BUFFER_BIT |*/ GL_DEPTH_BUFFER_BIT);
 
-			for (uint32_t shdId : scene.UsedShaders)
+			for (uint32_t shdId : CurrentScene.UsedShaders)
 			{
 				ShaderProgram& shd = m_ShaderManager.GetShaderResource(shdId);
 				shd.SetUniform("IsShadowMap", true);
@@ -1033,7 +1030,7 @@ void Engine::Start()
 
 			RendererContext.DrawScene(sunScene, sunRenderMatrix, glm::mat4(1.f), RunningTime, DebugWireframeRendering);
 
-			for (uint32_t shdId : scene.UsedShaders)
+			for (uint32_t shdId : CurrentScene.UsedShaders)
 				m_ShaderManager.GetShaderResource(shdId).SetUniform("IsShadowMap", false);
 
 			glViewport(0, 0, WindowSizeX, WindowSizeY);
@@ -1041,7 +1038,7 @@ void Engine::Start()
 
 		if (!IsHeadlessMode)
 		{
-			m_Render(scene, deltaTime);
+			m_Render(CurrentScene, deltaTime);
 			RendererContext.SwapBuffers();
 		}
 

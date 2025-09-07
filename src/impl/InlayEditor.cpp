@@ -115,6 +115,9 @@ static void copyStringToBuffer(char* Buffer, const std::string_view& String, siz
 		Buffer[i] = String.size() > i ? String.at(i) : 0;
 }
 
+#include "script/ScriptEngine.hpp"
+static void debugBreakHook(lua_State*, lua_Debug*);
+
 void InlayEditor::Initialize(Renderer* renderer)
 {
 	MtlEditorPreview.Initialize(256, 256);
@@ -154,6 +157,8 @@ void InlayEditor::Initialize(Renderer* renderer)
 			ObjectDocCommentsJson["Components"] = {};
 		}
 	}
+
+	ScriptEngine::L::DebugBreak = &debugBreakHook;
 
 	InlayEditor::DidInitialize = true;
 }
@@ -487,18 +492,22 @@ static void renderTextEditor()
 
 			if (TextEdOpenFiles[TextEdCurrentFileTab] != "<NEW>")
 			{
-				setErrorMessage(std::format(
-					"File '{}' couldn't be opened",
-					TextEdOpenFiles[TextEdCurrentFileTab]
-				));
-				TextEdOpenFiles.push_back("<NEW>");
-				TextEdCurrentFileTab = TextEdOpenFiles.size() - 1;
+				std::string failedFileName = TextEdOpenFiles[TextEdCurrentFileTab];
+				if (strlen(TextEditorEntryBuffer) > 0)
+				{
+					TextEdOpenFiles.push_back("<NEW>");
+					TextEdCurrentFileTab = TextEdOpenFiles.size() - 1;
+				}
 
 				copyStringToBuffer(
 					TextEditorEntryBuffer,
-					"Couldn't read file:\n" + TextEdOpenFiles[TextEdCurrentFileTab],
+					"Couldn't read file:\n" + failedFileName,
 					512
 				);
+				setErrorMessage(std::format(
+					"File '{}' couldn't be opened",
+					failedFileName
+				));
 			}
 		}
 		else
@@ -2264,4 +2273,327 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 	}
 
 	ImGui::End();
+}
+
+#include <imgui/backends/imgui_impl_opengl3.h>
+#include <imgui/backends/imgui_impl_sdl3.h>
+#include <SDL3/SDL_events.h>
+#include <lualib.h>
+#include <thread>
+#include <cmath>
+
+#include "Engine.hpp"
+
+static void debugVariable(lua_State* L)
+{
+	ZoneScoped;
+
+	std::string varname;
+	switch (lua_type(L, -2))
+	{
+	case LUA_TLIGHTUSERDATA:
+	{
+		varname = "(light userdata)";
+		break;
+	}
+	case LUA_TSTRING:
+	{
+		varname = luaL_checkstring(L, -2);
+		break;
+	}
+	default:
+	{
+		const char* ktn = luaL_typename(L, -2);
+		varname = std::format("{} ({})", luaL_tolstring(L, -2, nullptr), ktn);
+		lua_pop(L, 1);
+	}
+	}
+
+	const char* vtn = luaL_typename(L, -1);
+	constexpr ImGuiTreeNodeFlags NodeFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DrawLinesFull;
+
+	switch (lua_type(L, -1))
+	{
+	case LUA_TFUNCTION:
+	{
+		lua_Debug ar{};
+		lua_getinfo(L, -1, "sluan", &ar);
+
+		std::string reassigned = ar.name != varname ? std::format("{} ", ar.name) : "";
+
+		if (ImGui::TreeNodeEx(varname.c_str(), NodeFlags, "%s: %s(function)", varname.c_str(), reassigned.c_str()))
+		{
+			ImGui::Text("%s function '%s'", ar.what, ar.name ? ar.name : "<anonymous>");
+
+			if (ar.linedefined != -1 || strcmp(ar.short_src, "[C]") != 0 || !ar.isvararg || ar.nupvals != 0)
+			{
+				ImGui::Text("Defined at line %i", ar.linedefined);
+				ImGui::Text("Of %s", ar.short_src);
+				ImGui::Text("Is variadic: %s", ar.isvararg ? "true" : "false");
+
+				if (!ar.isvararg)
+					ImGui::Text("# Parameters: %i", ar.nparams);
+				
+				ImGui::Text("# Upvalues: %i", ar.nupvals);
+			}
+
+			ImGui::TreePop();
+		}
+
+		break;
+	}
+
+	case LUA_TTABLE:
+	{
+		if (ImGui::TreeNodeEx(varname.c_str(), NodeFlags, "%s: (table)", varname.c_str()))
+		{
+			lua_pushnil(L);
+			while (lua_next(L, -2))
+			{
+				debugVariable(L);
+
+				lua_pop(L, 1);
+			}
+			ImGui::TreePop();
+		}
+
+		break;
+	}
+
+	case LUA_TLIGHTUSERDATA:
+	{
+		ImGui::Text("%s: (light userdata)", varname.c_str());
+		break;
+	}
+
+	default:
+	{
+		if (ImGui::TreeNodeEx(
+			varname.c_str(),
+			NodeFlags | ImGuiTreeNodeFlags_Leaf,
+			"%s: %s (%s)",
+			varname.c_str(), luaL_tolstring(L, -1, nullptr), vtn
+		))
+			ImGui::TreePop();
+			
+		lua_pop(L, 1);
+	}
+	}
+}
+
+static void debugBreakHook(lua_State* L, lua_Debug* ar)
+{
+	ZoneScoped;
+
+	ImGui::Render();
+	lua_getinfo(L, 0, "sln", ar);
+	lua_mainthread(L)->status = LUA_BREAK;
+
+	Engine* engine = Engine::Get();
+
+	double debuggerLastSecond = GetRunningTime();
+	double debuggerLastFrame = GetRunningTime();
+	int framesPerSecond = 0;
+	int framesInSecond = 0;
+	bool develUI = false;
+	bool quietBg = true;
+	bool running = true;
+
+	bool wasTextEdEnabled = TextEditorEnabled;
+	invokeTextEditor(ar->short_src);
+
+	while (running)
+	{
+		ZoneScopedN("DebuggerFrame");
+		double dt = GetRunningTime() - debuggerLastFrame;
+		debuggerLastFrame = GetRunningTime();
+
+		SDL_Event event;
+		while (SDL_PollEvent(&event) != 0)
+		{
+			engine->RendererContext.AccumulatedDrawCallCount = 0;
+			ImGui_ImplSDL3_ProcessEvent(&event);
+
+			switch (event.type)
+			{
+			
+			case SDL_EVENT_QUIT:
+			{
+				running = false;
+				engine->Close();
+				break;
+			}
+		
+			case SDL_EVENT_WINDOW_RESIZED:
+			{
+				int NewSizeX = event.window.data1;
+				int NewSizeY = event.window.data2;
+			
+				// Only call ChangeResolution if the new resolution is actually different
+				//if (NewSizeX != this->WindowSizeX || NewSizeY != this->WindowSizeY)
+					engine->OnWindowResized(NewSizeX, NewSizeY);
+			
+				break;
+			}
+			default: {}
+			}
+		}
+
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplSDL3_NewFrame();
+		ImGui::NewFrame();
+
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		if (ImGui::Begin("Debugger"))
+		{
+			ImGui::Text("Broke into debugger");
+			ImGui::Text("Script: %s", ar->short_src);
+			ImGui::Text("Line: %i", ar->currentline);
+			ImGui::Text("In: %s", ar->name ? ar->name : "<anonymous function>");
+
+			if (ImGui::Button("Resume (F5)") || ImGui::IsKeyDown(ImGuiKey_F5))
+				running = false;
+
+			ImGui::Checkbox("All Developer UIs", &develUI);
+			ImGui::Checkbox("Quiet Background", &quietBg);
+			ImGui::Text("Debugger %i FPS / %.2fms", framesPerSecond, dt);
+		}
+		ImGui::End();
+
+		if (develUI)
+			engine->OnFrameRenderGui.Fire(dt);
+		else
+			renderTextEditor();
+
+		if (ImGui::Begin("Watch"))
+		{
+			static int Section = 0;
+			ImGui::Combo("Variables", &Section, "Locals\0Globals\0Environment\0Registry\0");
+
+			ImGui::BeginChild("VariablesSection", ImVec2(), ImGuiChildFlags_Border);
+			L->status = LUA_OK; // avoid hitting assertion due to potential calls to `__tostring` metamethods
+			switch (Section)
+			{
+			case 0:
+			{
+				for (int l = 0; l < L->ci - L->base_ci; l++)
+				{
+					ImGui::Text("---LEVEL %i---", l);
+
+					for (int i = 0; i < 256; i++)
+					{
+						const char* name = lua_getlocal(L, l, i);
+
+						if (!name)
+							break;
+
+						lua_pushstring(L, name);
+						debugVariable(L);
+						lua_pop(L, 1);
+
+						lua_pop(L, 1);
+					}
+				}
+
+				break;
+			}
+			case 1:
+			{
+				lua_getmetatable(L, LUA_GLOBALSINDEX);
+				lua_getfield(L, -1, "__index");
+				lua_pushnil(L);
+				while (lua_next(L, -2))
+				{
+					debugVariable(L);
+					lua_pop(L, 1);
+				}
+				lua_pop(L, 2);
+				
+				break;
+			}
+			case 2:
+			{
+				lua_pushnil(L);
+				while (lua_next(L, LUA_ENVIRONINDEX))
+				{
+					debugVariable(L);
+
+					lua_pop(L, 1);
+				}
+
+				break;
+			}
+			case 3:
+			{
+				lua_pushnil(L);
+				while (lua_next(L, LUA_REGISTRYINDEX))
+				{
+					debugVariable(L);
+
+					lua_pop(L, 1);
+				}
+
+				break;
+			}
+			[[unlikely]] default: { assert(false); }
+
+			}
+			L->status = LUA_BREAK;
+			ImGui::EndChild();
+		}
+		ImGui::End();
+
+		if (ImGui::Begin("Callstack"))
+		{
+			lua_Debug ar;
+			for (int i = 0; lua_getinfo(L, i, "sln", &ar); i++)
+			{
+				if (ar.currentline > 0)
+				{
+					if (ImGui::Button(std::format(
+						"{}:{} in {}",
+						ar.short_src, ar.currentline, ar.name ? ar.name : "<anonmyous>"
+					).c_str()))
+						invokeTextEditor(ar.short_src);
+				}
+				else
+					ImGui::Text("%s in %s", ar.short_src, ar.name);
+			}
+		}
+		ImGui::End();
+
+		if (!quietBg)
+		{
+			EcCamera* sceneCam = engine->Workspace->GetComponent<EcWorkspace>()->GetSceneCamera()->GetComponent<EcCamera>();
+
+			engine->RendererContext.DrawScene(
+				engine->CurrentScene,
+				sceneCam->GetMatrixForAspectRatio((float)engine->WindowSizeX / engine->WindowSizeY),
+				sceneCam->Transform,
+				GetRunningTime(),
+				engine->DebugWireframeRendering
+			);
+		}
+
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+		engine->RendererContext.SwapBuffers();
+
+		framesInSecond++;
+		if (GetRunningTime() - debuggerLastSecond >= 1.f)
+		{
+			debuggerLastSecond = GetRunningTime();
+			framesPerSecond = framesInSecond;
+			framesInSecond = 0;
+		}
+
+		std::this_thread::sleep_for(std::chrono::duration<double>(std::clamp(0.01 - dt, 0.0, 0.01)));
+		Memory::FrameFinish();
+	}
+
+	L->status = LUA_OK;
+	lua_mainthread(L)->status = LUA_BREAK;
+	TextEditorEnabled = wasTextEdEnabled;
+	ImGui::NewFrame();
 }

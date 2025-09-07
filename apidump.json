@@ -212,6 +212,7 @@
     },
     "Globals": {
       "appendlog": "function",
+      "breakpoint": "function",
       "game": "GameObject",
       "sleep": "function",
       "workspace": "GameObject"

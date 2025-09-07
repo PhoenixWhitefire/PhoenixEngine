@@ -92,4 +92,6 @@ namespace ScriptEngine::L
 	// TODO replace with `std::span` once engine is moved over to C++ 26
 	// (initializer lists cannot be used for spans before that)
 	extern std::pair<std::string_view, GlobalFn>* GlobalFunctions;
+
+	inline lua_Hook DebugBreak = nullptr;
 };

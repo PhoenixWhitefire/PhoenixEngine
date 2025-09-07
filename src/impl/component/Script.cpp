@@ -289,7 +289,12 @@ bool EcScript::LoadScript(const std::string_view& scriptFile)
 	if (!this->Object->GetParent())
 		return false;
 	else
-		return this->Reload();
+	{
+		if (LVM->status != LUA_BREAK)
+			return this->Reload();
+		else
+			RAISE_RT("Script will run once debugger is exited");
+	}
 }
 
 bool EcScript::Reload()
@@ -344,7 +349,7 @@ bool EcScript::Reload()
 
 		int resumeResult = lua_resume(m_L, m_L, 0);
 
-		if (resumeResult != LUA_OK && resumeResult != LUA_YIELD)
+		if (resumeResult != LUA_OK && resumeResult != LUA_YIELD && resumeResult != LUA_BREAK)
 		{
 			Log::ErrorF(
 				"Script init: {}",
@@ -353,6 +358,13 @@ bool EcScript::Reload()
 			ScriptEngine::L::DumpStacktrace(thread);
 
 			return false;
+		}
+
+		if (resumeResult == LUA_BREAK && ScriptEngine::L::DebugBreak)
+		{
+			lua_Debug ar;
+			lua_getinfo(m_L, 0, "sln", &ar);
+			ScriptEngine::L::DebugBreak(m_L, &ar);
 		}
 
 		return true; /* return chunk main function */
