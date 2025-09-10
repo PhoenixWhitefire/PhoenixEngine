@@ -15,13 +15,6 @@ log.txt
 CMakeCache.txt
 CMakeFiles
 
-Vendor/tracy
-Vendor/glm
-Vendor/imgui
-Vendor/luau
-Vendor/SDL
-Vendor/stb
-
 # Shortcuts
 *.lnk
 
