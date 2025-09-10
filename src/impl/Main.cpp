@@ -707,6 +707,7 @@ static void init()
 	
 		GuiIO = &ImGui::GetIO();
 		ImGui::StyleColorsDark();
+		GuiIO->ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	
 		PHX_ENSURE_MSG(ImGui_ImplSDL3_InitForOpenGL(
 			EngineInstance->Window,

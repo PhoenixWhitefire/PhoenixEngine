@@ -119,6 +119,28 @@ static int imgui_checkbox(lua_State* L)
     return 2;
 }
 
+static int imgui_stylecolors(lua_State* L)
+{
+    size_t siz = 0;
+    const char* n = luaL_checklstring(L, 1, &siz);
+
+    if (siz == 1)
+    {
+        if (n[0] == 'L')
+            ImGui::StyleColorsLight();
+            
+        else if (n[0] == 'D')
+            ImGui::StyleColorsDark();
+
+        else
+            luaL_error("Invalid style '%s'", n);
+    }
+    
+    luaL_error("Invalid style '%s'", n);
+
+    return 0;
+}
+
 static luaL_Reg imgui_funcs[] =
 {
     { "begin", imgui_begin },
