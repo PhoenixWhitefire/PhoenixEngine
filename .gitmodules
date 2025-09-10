@@ -16,3 +16,6 @@
 [submodule "Vendor/curl"]
 	path = Vendor/curl
 	url = https://github.com/curl/curl.git
+[submodule "Vendor/imgui"]
+	path = Vendor/imgui
+	url = https://github.com/ocornut/imgui.git
