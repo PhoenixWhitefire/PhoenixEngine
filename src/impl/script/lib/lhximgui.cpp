@@ -127,18 +127,20 @@ static int imgui_stylecolors(lua_State* L)
     if (siz == 1)
     {
         if (n[0] == 'L')
+        {
             ImGui::StyleColorsLight();
-            
+            return 0;
+        }
         else if (n[0] == 'D')
+        {
             ImGui::StyleColorsDark();
-
+            return 0;
+        }
         else
-            luaL_error("Invalid style '%s'", n);
+            luaL_error(L, "Invalid style '%s'", n);
     }
     
-    luaL_error("Invalid style '%s'", n);
-
-    return 0;
+    luaL_error(L, "Invalid style '%s'", n);
 }
 
 static luaL_Reg imgui_funcs[] =
@@ -156,6 +158,7 @@ static luaL_Reg imgui_funcs[] =
     { "button", imgui_button },
     { "textlink", imgui_textlink },
     { "checkbox", imgui_checkbox },
+    { "stylecolors", imgui_stylecolors },
     { NULL, NULL }
 };
 

@@ -410,13 +410,6 @@ Reflection::GenericValue ScriptEngine::L::ToGeneric(lua_State* L, int StackIndex
 				std::string thisTraceback;
 				DumpStacktrace(CL, &thisTraceback, 0);
 
-				if (status == LUA_BREAK && ScriptEngine::L::DebugBreak)
-				{
-					lua_Debug ar;
-					lua_getinfo(CL, 0, "sln", &ar);
-					ScriptEngine::L::DebugBreak(CL, &ar);
-				}
-
 				RAISE_RT(std::format(
 					"Callback encountered an error: {}\n{}\nDefined: {}",
 					luaL_checkstring(CL, -1), thisTraceback, traceback
@@ -1238,7 +1231,7 @@ static int api_eventnamecall(lua_State* L)
 				// only a problem when the status is YIELD or BREAK,
 				// in which case `lua_pcall` misleading returns `0`
 				// other times it doesnt matter
-				status = co->status;
+				status = status == 0 ? co->status : status;
 
 				if (status != LUA_OK && status != LUA_YIELD && status != LUA_BREAK)
 				{
@@ -1249,13 +1242,6 @@ static int api_eventnamecall(lua_State* L)
 
 				if (status == LUA_YIELD)
 					cn->CallbackYields = true;
-
-				if (status == LUA_BREAK && ScriptEngine::L::DebugBreak)
-				{
-					lua_Debug ar;
-					lua_getinfo(co, 0, "sln", &ar);
-					ScriptEngine::L::DebugBreak(co, &ar);
-				}
 			}
 		);
 
@@ -1888,12 +1874,15 @@ lua_State* ScriptEngine::L::Create()
 
 	if (L::DebugBreak)
 	{
-		state->global->cb.debugbreak = L::DebugBreak;
+		state->global->cb.debugbreak = [](lua_State* L, lua_Debug* ar)
+			{
+				L::DebugBreak(L, ar, false);
+			};
 		state->global->cb.debugprotectederror = [](lua_State* L)
 			{
 				lua_Debug ar;
 				lua_getinfo(L, 1, "sln", &ar);
-				L::DebugBreak(L, &ar);
+				L::DebugBreak(L, &ar, true);
 			};
 	}
 

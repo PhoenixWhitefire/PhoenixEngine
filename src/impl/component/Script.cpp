@@ -360,13 +360,6 @@ bool EcScript::Reload()
 			return false;
 		}
 
-		if (resumeResult == LUA_BREAK && ScriptEngine::L::DebugBreak)
-		{
-			lua_Debug ar;
-			lua_getinfo(m_L, 0, "sln", &ar);
-			ScriptEngine::L::DebugBreak(m_L, &ar);
-		}
-
 		return true; /* return chunk main function */
 	}
 	else

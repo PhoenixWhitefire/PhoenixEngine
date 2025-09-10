@@ -9,6 +9,7 @@
 #include <tracy/Tracy.hpp>
 #include <glad/gl.h>
 #include <SDL3/SDL_filesystem.h>
+#include <SDL3/SDL_messagebox.h>
 #include <SDL3/SDL_dialog.h>
 #include <fstream>
 #include <set>
@@ -116,7 +117,7 @@ static void copyStringToBuffer(char* Buffer, const std::string_view& String, siz
 }
 
 #include "script/ScriptEngine.hpp"
-static void debugBreakHook(lua_State*, lua_Debug*);
+static void debugBreakHook(lua_State*, lua_Debug*, bool HasError);
 
 void InlayEditor::Initialize(Renderer* renderer)
 {
@@ -168,15 +169,12 @@ void InlayEditor::Shutdown()
 	MtlPreviewCamera.Invalidate();
 }
 
-static bool mtlIterator(void*, int index, const char** outText)
+static const char* mtlIterator(void*, int index)
 {
 	MaterialManager* mtlManager = MaterialManager::Get();
-
 	RenderMaterial& selected = mtlManager->GetLoadedMaterials()[index];
 
-	*outText = selected.Name.c_str();
-
-	return true;
+	return selected.Name.c_str();
 }
 
 static std::string getFileDirectory(const std::string& FilePath)
@@ -205,6 +203,74 @@ static std::string getFileDirectory(const std::string& FilePath)
 
 #define EDCHECKEXPR(expr) { if (!(expr)) { setErrorMessage(#expr " failed"); } }
 
+static void textEditorSaveFileNoPath(std::string Contents)
+{
+	std::string message = std::format(
+		"Do you want to save the following file?\n\nLength: {} characters\nBody:\n{}{}",
+		Contents.size(), Contents.substr(0, std::min((size_t)50ull, Contents.size())),
+		Contents.size() > (size_t)50ull ? "\n... (truncated)" : ""
+	);
+
+	SDL_MessageBoxButtonData buttons[2] =
+	{
+		{
+			.buttonID = 0,
+			.text = "Yes"
+		},
+		{
+			.buttonID = 1,
+			.text = "No"
+		}
+	};
+
+	SDL_MessageBoxData messageData{};
+	messageData.flags = SDL_MESSAGEBOX_WARNING;
+	messageData.window = SDL_GL_GetCurrentWindow();
+	messageData.title = "Save File?";
+	messageData.message = message.c_str();
+	messageData.numbuttons = 2;
+	messageData.buttons = buttons;
+
+	int chosenOption = 0;
+	PHX_ENSURE(SDL_ShowMessageBox(&messageData, &chosenOption));
+
+	if (chosenOption == 1)
+		return;
+
+	SDL_ShowSaveFileDialog(
+		[](void* FileContents, const char* const* FileList, int)
+		{
+			if (!FileList)
+				RAISE_RT(SDL_GetError());
+
+			const char* file = FileList[0];
+			if (!file)
+			{
+				Log::Info("No file path selected in `textEditorSaveFileNoPath`");
+				return;
+			}
+
+			std::string* contents = (std::string*)FileContents;
+			std::string errMessage;
+			if (!FileRW::WriteFile(file, *contents, &errMessage))
+			{
+				std::string saveError = std::format("Couldn't save to file '{}' because of error {}", file, errMessage);
+				Log::Error(saveError);
+				PHX_ENSURE(SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Save Error", saveError.c_str(), SDL_GL_GetCurrentWindow()));
+
+				textEditorSaveFileNoPath(*contents);
+			}
+
+			delete contents;
+		},
+		new std::string(Contents),
+		SDL_GL_GetCurrentWindow(),
+		nullptr,
+		0,
+		nullptr
+	);
+}
+
 static void textEditorSaveFile()
 {
 	if (!TextEditorEntryBuffer)
@@ -232,8 +298,7 @@ static void textEditorSaveFile()
 		static uint32_t ErrCount = 0;
 		ErrCount++;
 
-		textEditorFile = "texteditor_default_" + std::to_string(ErrCount) + ".txt";
-		setErrorMessage("Text Editor tried to save a file with no path. Will be saved to " + textEditorFile);
+		textEditorSaveFileNoPath(contents);
 	}
 	else
 		TextEditorRecentFiles.insert(textEditorFile);
@@ -543,7 +608,7 @@ static void uniformsEditor(
 )
 {
 	ZoneScopedC(tracy::Color::DarkSeaGreen);
-	ImGui::BeginChild(Name, ImVec2(), ImGuiChildFlags_Border);
+	ImGui::BeginChild(Name, ImVec2(), ImGuiChildFlags_Borders);
 
 	if ((*Selection) + 1ull > Uniforms.size())
 		*Selection = -1;
@@ -1494,7 +1559,7 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 			RAISE_RT("stoopid compiler is giving me a warning for something that will probably not happen");
 
 		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow
-			| ImGuiTreeNodeFlags_AllowItemOverlap
+			| ImGuiTreeNodeFlags_AllowOverlap
 			| ImGuiTreeNodeFlags_SpanAvailWidth
 			| ImGuiTreeNodeFlags_DrawLinesFull;
 
@@ -1805,7 +1870,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 	if (Selections.size() > 0)
 		hrchChildWinSzOverride = ImGui::GetContentRegionAvail() * ImVec2(1.f, .4f);
 
-	ImGui::BeginChild("HierarchyChildWindow", hrchChildWinSzOverride, ImGuiChildFlags_Border);
+	ImGui::BeginChild("HierarchyChildWindow", hrchChildWinSzOverride, ImGuiChildFlags_Borders);
 
 	VisibleTreeWip.clear();
 	recursiveIterateTree(GameObject::GetObjectById(GameObject::s_DataModel));
@@ -1844,7 +1909,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 
 		ImGui::PushID(idSum);
 
-		ImGui::BeginChild("PropertiesEditor", ImVec2(), ImGuiChildFlags_Border);
+		ImGui::BeginChild("PropertiesEditor", ImVec2(), ImGuiChildFlags_Borders);
 
 		std::string sepStr = "Properties of " + std::to_string(Selections.size()) + " objects";
 		if (Selections.size() == 1)
@@ -2381,16 +2446,23 @@ static void debugVariable(lua_State* L)
 	}
 }
 
-static void debugBreakHook(lua_State* L, lua_Debug* ar)
+static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError)
 {
 	ZoneScoped;
 
-	ImGui::Render();
-	lua_getinfo(L, 0, "slnfu", ar);
-	int currfuncindex = lua_gettop(L);
-	lua_mainthread(L)->status = LUA_BREAK;
+	std::string errorMessage = HasError ? luaL_checkstring(L, -1) : "<No error message>";
 
 	Engine* engine = Engine::Get();
+
+	ImGuiContext* debuggerContext = ImGui::CreateContext();
+	ImGuiContext* prevContext = ImGui::GetCurrentContext();
+	ImGui::SetCurrentContext(debuggerContext);
+
+	PHX_ENSURE_MSG(ImGui_ImplSDL3_InitForOpenGL(
+		engine->Window,
+		engine->RendererContext.GLContext
+	), "`ImGui_ImplSDL3_InitForOpenGL` failed");
+	PHX_ENSURE_MSG(ImGui_ImplOpenGL3_Init("#version 460"), "`ImGui_ImplOpenGL3_Init` failed");
 
 	double debuggerLastSecond = GetRunningTime();
 	double debuggerLastFrame = GetRunningTime();
@@ -2401,6 +2473,22 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar)
 	bool running = true;
 
 	bool wasTextEdEnabled = TextEditorEnabled;
+
+	int li = 0;
+	lua_getinfo(L, li, "slnfu", ar);
+	while (strcmp(ar->short_src, "[C]") == 0)
+	{
+		lua_pop(L, 1);
+		li++;
+
+		if (!lua_getinfo(L, li, "slnfu", ar))
+		{
+			lua_getinfo(L, 0, "slnfu", ar);
+			break;
+		}
+	}
+
+	int currfuncindex = lua_gettop(L);
 	invokeTextEditor(ar->short_src);
 
 	while (running)
@@ -2452,6 +2540,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar)
 			ImGui::Text("Script: %s", ar->short_src);
 			ImGui::Text("Line: %i", ar->currentline);
 			ImGui::Text("In: %s", ar->name ? ar->name : "<anonymous function>");
+			ImGui::TextUnformatted(errorMessage.c_str());
 
 			if (ImGui::Button("Resume (F5)") || ImGui::IsKeyDown(ImGuiKey_F5))
 				running = false;
@@ -2472,7 +2561,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar)
 			static int Section = 0;
 			ImGui::Combo("Variables", &Section, "Locals\0Upvalues\0Globals\0Environment\0Registry\0");
 
-			ImGui::BeginChild("VariablesSection", ImVec2(), ImGuiChildFlags_Border);
+			ImGui::BeginChild("VariablesSection", ImVec2(), ImGuiChildFlags_Borders);
 			L->status = LUA_OK; // avoid hitting assertion due to potential calls to `__tostring` metamethods
 
 			switch (Section)
@@ -2613,7 +2702,10 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar)
 	}
 
 	L->status = LUA_OK;
-	lua_mainthread(L)->status = LUA_BREAK;
 	TextEditorEnabled = wasTextEdEnabled;
-	ImGui::NewFrame();
+
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplSDL3_Shutdown();
+	ImGui::SetCurrentContext(prevContext);
+	ImGui::DestroyContext(debuggerContext);
 }
