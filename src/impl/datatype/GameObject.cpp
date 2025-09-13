@@ -670,7 +670,7 @@ uint32_t GameObject::AddComponent(EntityComponent Type)
 		if (pair.first == Type)
 			RAISE_RT("Already have that component");
 	
-	BaseComponentManager* manager = GameObject::s_ComponentManagers[(size_t)Type];
+	IComponentManager* manager = GameObject::s_ComponentManagers[(size_t)Type];
 	m_Components.emplace_back(Type, manager->CreateComponent(this));
 
 	uint32_t componentId = m_Components.back().second;
@@ -701,7 +701,7 @@ void GameObject::RemoveComponent(EntityComponent Type)
 		{
 			m_Components.erase(it);
 
-			BaseComponentManager* manager = GameObject::s_ComponentManagers[(size_t)Type];
+			IComponentManager* manager = GameObject::s_ComponentManagers[(size_t)Type];
 			manager->DeleteComponent(it->second);
 
 			for (const auto& it2 : manager->GetProperties())
@@ -976,7 +976,7 @@ nlohmann::json GameObject::DumpApiToJson()
 	
 	for (size_t i = 0; i < (size_t)EntityComponent::__count; i++)
 	{
-		BaseComponentManager* manager = s_ComponentManagers[i];
+		IComponentManager* manager = s_ComponentManagers[i];
 
 		if (!manager)
 			continue;

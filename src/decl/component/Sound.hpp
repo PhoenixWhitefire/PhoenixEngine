@@ -34,6 +34,7 @@ struct EcSound
 	void* m_Channel = nullptr;
 	bool m_PlayRequested = false;
 	float m_BaseFrequency = FLT_MAX;
+	bool Valid = true;
 
 	static const EntityComponent Type = EntityComponent::Sound;
 };

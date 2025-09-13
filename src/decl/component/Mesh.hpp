@@ -46,6 +46,7 @@ struct EcMesh
 	uint32_t GpuSkinningBuffer = UINT32_MAX;
 
 	GameObjectRef Object;
+	bool Valid = true;
 
 	static inline EntityComponent Type = EntityComponent::Mesh;
 };

@@ -5,36 +5,9 @@
 #include "datatype/GameObject.hpp"
 #include "FileRW.hpp"
 
-class AnimationManager : public BaseComponentManager
+class AnimationManager : public ComponentManager<EcAnimation>
 {
 public:
-    virtual uint32_t CreateComponent(GameObject*) override
-    {
-        m_Components.emplace_back();
-        return static_cast<uint32_t>(m_Components.size() - 1);
-    }
-
-    virtual std::vector<void*> GetComponents() override
-    {
-        std::vector<void*> v;
-        v.reserve(m_Components.size());
-
-        for (EcAnimation& t : m_Components)
-            v.push_back((void*)&t);
-        
-        return v;
-    }
-
-    virtual void* GetComponent(uint32_t Id) override
-    {
-        return (void*)&m_Components[Id];
-    }
-
-    virtual void DeleteComponent(uint32_t) override
-    {
-        // TODO id reuse with handles that have a counter per re-use to reduce memory growth
-    }
-
     virtual const Reflection::StaticPropertyMap& GetProperties() override
     {
         static const Reflection::StaticPropertyMap props =
@@ -56,20 +29,6 @@ public:
         };
         return props;
     }
-
-    virtual const Reflection::StaticMethodMap& GetMethods() override
-    {
-        static const Reflection::StaticMethodMap funcs = {};
-        return funcs;
-    }
-
-    AnimationManager()
-    {
-        GameObject::s_ComponentManagers[(size_t)EntityComponent::Animation] = this;
-    }
-    
-private:
-    std::vector<EcAnimation> m_Components;
 };
 
 static inline AnimationManager Instance{};

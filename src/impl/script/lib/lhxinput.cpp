@@ -149,6 +149,19 @@ static luaL_Reg input_funcs[] =
 
 int luhxopen_input(lua_State* L)
 {
+    if (Engine::Get()->IsHeadlessMode)
+    {
+        luaL_Reg* l = &input_funcs[0];
+        for (; l->name; l++)
+        {
+            l->func = [](lua_State* L)
+                -> int
+                {
+                    luaL_error(L, "Function cannot be called in headless mode");
+                };
+        }
+    }
+
     luaL_register(L, LUHX_INPUTLIBNAME, input_funcs);
 
     return 1;

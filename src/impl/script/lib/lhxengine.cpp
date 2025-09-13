@@ -1,72 +1,85 @@
 #include "script/luhx.hpp"
+#include "script/ScriptEngine.hpp"
 #include "Engine.hpp"
 
 static int engine_getwindowsize(lua_State* L)
 {
     Engine* eng = Engine::Get();
+
     lua_pushinteger(L, eng->WindowSizeX);
     lua_pushinteger(L, eng->WindowSizeY);
-
     return 2;
 }
 
 static int engine_setwindowsize(lua_State* L)
 {
-    Engine::Get()->ResizeWindow(luaL_checkinteger(L, 1), luaL_checkinteger(L, 2));
+    Engine* eng = Engine::Get();
+
+    eng->ResizeWindow(luaL_checkinteger(L, 1), luaL_checkinteger(L, 2));
     return 0;
 }
 
 static int engine_isheadless(lua_State* L)
 {
-    lua_pushboolean(L, Engine::Get()->IsHeadlessMode);
+    Engine* eng = Engine::Get();
+
+    lua_pushboolean(L, eng->IsHeadlessMode);
     return 1;
 }
 
 static int engine_isfullscreen(lua_State* L)
 {
     Engine* eng = Engine::Get();
+
     lua_pushboolean(L, eng->IsFullscreen);
-    
     return 1;
 }
 
 static int engine_setfullscreen(lua_State* L)
 {
-    Engine::Get()->SetIsFullscreen(luaL_optboolean(L, 1, true));
+    Engine* eng = Engine::Get();
+    eng->SetIsFullscreen(luaL_optboolean(L, 1, true));
+
     return 0;
 }
 
 static int engine_getvsync(lua_State* L)
 {
     Engine* eng = Engine::Get();
-    lua_pushboolean(L, eng->VSync);
 
+    lua_pushboolean(L, eng->VSync);
     return 1;
 }
 
 static int engine_setvsync(lua_State* L)
 {
-    Engine::Get()->VSync = luaL_checkboolean(L, 1);
+    Engine* eng = Engine::Get();
+    eng->VSync = luaL_checkboolean(L, 1);
+
     return 0;
 }
 
 static int engine_framerate(lua_State* L)
 {
-    lua_pushinteger(L, Engine::Get()->FramesPerSecond);
+    Engine* eng = Engine::Get();
+
+    lua_pushinteger(L, eng->FramesPerSecond);
     return 1;
 }
 
 static int engine_getmaxframerate(lua_State* L)
 {
     Engine* eng = Engine::Get();
-    lua_pushinteger(L, eng->FpsCap);
 
+    lua_pushinteger(L, eng->FpsCap);
     return 1;
 }
 
 static int engine_setmaxframerate(lua_State* L)
 {
-    Engine::Get()->FpsCap = luaL_checkinteger(L, 1);
+    Engine* eng = Engine::Get();
+    eng->FpsCap = luaL_checkinteger(L, 1);
+
     return 1;
 }
 
@@ -97,6 +110,15 @@ static int engine_daabbs(lua_State* L)
     return 1;
 }
 
+static int engine_binddatamodel(lua_State* L)
+{
+    Engine* eng = Engine::Get();
+    Reflection::GenericValue gv = ScriptEngine::L::ToGeneric(L, 1);
+    eng->BindDataModel(GameObject::FromGenericValue(gv));
+
+    return 0;
+}
+
 static luaL_Reg engine_funcs[] =
 {
     { "getwindowsize", engine_getwindowsize },
@@ -112,6 +134,7 @@ static luaL_Reg engine_funcs[] =
     { "exit", engine_exit },
     { "dwireframes", engine_dwireframes },
     { "daabbs", engine_daabbs },
+    { "binddatamodel", engine_binddatamodel },
     { NULL, NULL }
 };
 

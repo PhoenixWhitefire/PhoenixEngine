@@ -1,13 +1,13 @@
 // 15/09/2024 PHOENIXWHITEFIRE2000
 // A template/example GameObject.
 
-#include <tracy/public/tracy/Tracy.hpp>
+#include <tracy/Tracy.hpp>
 
 #include "component/Example.hpp"
 #include "datatype/GameObject.hpp"
 #include "Engine.hpp"
 
-class ExamplesManager : BaseComponentManager
+class ExampleManager : ComponentManager<EcExample>
 {
 public:
     virtual uint32_t CreateComponent(GameObject* Object) override
@@ -18,32 +18,10 @@ public:
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
 
-    virtual std::vector<void*> GetComponents() override
-    {
-        std::vector<void*> v;
-        v.reserve(m_Components.size());
-
-        for (EcExample& t : m_Components)
-            v.push_back((void*)&t);
-        
-        return v;
-    }
-
-    virtual void* GetComponent(uint32_t Id) override
-    {
-        return &m_Components[Id];
-    }
-
-    virtual void DeleteComponent(uint32_t Id) override
-    {
-        // TODO id reuse with handles that have a counter per re-use to reduce memory growth
-
-        m_Components[Id].Object.~GameObjectRef();
-    }
-
-	virtual void Shutdown() override
+	virtual void DeleteComponent(uint32_t Id) override
 	{
-		m_Components.clear();
+		m_Components[Id].Object.~GameObjectRef();
+		ComponentManager<EcExample>::DeleteComponent(Id);
 	}
 
     virtual const Reflection::StaticPropertyMap& GetProperties() override
@@ -149,14 +127,6 @@ public:
 
 		return events;
 	}
-
-    ExamplesManager()
-    {
-        GameObject::s_ComponentManagers[(size_t)EntityComponent::Example] = this;
-    }
-
-private:
-    std::vector<EcExample> m_Components;
 };
 
-static inline ExamplesManager Instance{};
+static inline ExampleManager Instance{};

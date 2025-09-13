@@ -16,7 +16,7 @@
 
 static lua_State* LVM = nullptr;
 
-class ScriptManager : public BaseComponentManager
+class ScriptManager : public ComponentManager<EcScript>
 {
 public:
     virtual uint32_t CreateComponent(GameObject* Object) override
@@ -33,22 +33,6 @@ public:
 		m_Components[Id].Update(DeltaTime);
 	}
 
-    virtual std::vector<void*> GetComponents() override
-    {
-        std::vector<void*> v;
-        v.reserve(m_Components.size());
-
-        for (EcScript& t : m_Components)
-            v.push_back((void*)&t);
-        
-        return v;
-    }
-
-	virtual void* GetComponent(uint32_t Id) override
-	{
-		return m_Components[Id].Valid ? &m_Components[Id] : nullptr;
-	}
-
     virtual void DeleteComponent(uint32_t Id) override
     {
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
@@ -56,7 +40,7 @@ public:
 			lua_resetthread(L);
 		
 		m_Components[Id].Object.~GameObjectRef();
-		m_Components[Id].Valid = false;
+		ComponentManager<EcScript>::DeleteComponent(Id);
     }
 
     virtual const Reflection::StaticPropertyMap& GetProperties() override
@@ -98,14 +82,9 @@ public:
         return funcs;
     }
 
-    ScriptManager()
-    {
-        GameObject::s_ComponentManagers[(size_t)EntityComponent::Script] = this;
-    }
-
 	virtual void Shutdown() override
     {
-		m_Components.clear();
+		ComponentManager<EcScript>::Shutdown();
 
 		if (LVM)
 		{
@@ -118,9 +97,6 @@ public:
 		}
 		LVM = nullptr;
     }
-
-private:
-    std::vector<EcScript> m_Components;
 };
 
 static inline ScriptManager ManagerInstance{};

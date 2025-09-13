@@ -23,6 +23,7 @@
 
 #include "component/ParticleEmitter.hpp"
 #include "component/Transform.hpp"
+#include "component/TreeLink.hpp"
 #include "component/Camera.hpp"
 #include "component/Script.hpp"
 #include "component/Sound.hpp"
@@ -503,6 +504,17 @@ static void recursivelyTravelHierarchy(
 			emitter->Update(DeltaTime);
 			emitter->AppendToRenderList(RenderList);
 		}
+
+		if (EcTreeLink* link = object->GetComponent<EcTreeLink>(); link && link->Target.IsValid())
+			recursivelyTravelHierarchy(
+				RenderList,
+				LightList,
+				PhysicsList,
+				link->Target,
+				SceneCamera,
+				DeltaTime,
+				Sun
+			);
 	}
 }
 
@@ -616,8 +628,8 @@ void Engine::m_Render(const Scene& CurrentScene, double deltaTime)
 	RendererContext.FrameBuffer.Bind();
 
 	glClear(/*GL_COLOR_BUFFER_BIT |*/ GL_DEPTH_BUFFER_BIT);
-
 	glDepthFunc(GL_LEQUAL);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	RendererContext.DrawMesh(
 		cubeMesh,
@@ -727,20 +739,31 @@ void Engine::m_Render(const Scene& CurrentScene, double deltaTime)
 	glEnable(GL_DEPTH_TEST);
 }
 
+static void ensureDataModelValid(GameObject* DataModel)
+{
+	PHX_ENSURE_MSG(DataModel, "DataModel is NULL!");
+
+	GameObject* workspace = DataModel->FindChild("Workspace");
+	PHX_ENSURE(workspace /* , "DataModel has no Workspace!" */);
+	PHX_ENSURE(workspace->GetComponent<EcWorkspace>() /*, "Workspace masquerading!" */);
+	PHX_ENSURE(DataModel->GetComponent<EcDataModel>() /*, "DataModel masquerading!" */);
+}
+
+void Engine::BindDataModel(GameObject* NewDataModel)
+{
+	ensureDataModelValid(NewDataModel);
+
+	DataModel = NewDataModel;
+	Workspace = NewDataModel->FindChild("Workspace");
+	GameObject::s_DataModel = DataModel->ObjectId;
+}
+
 void Engine::Start()
 {
-	if (!GameObject::GetObjectById(DataModel.m_TargetId))
-		RAISE_RT("DataModel not bound!");
+	Log::Info("Validating DataModel...");
+	ensureDataModelValid(DataModel.Contained());
 
 	Log::Info("Final initializations...");
-
-	GameObject::s_DataModel = DataModel->ObjectId;
-
-	if (GameObject* wp = DataModel->FindChild("Workspace"); !wp)
-		RAISE_RT("No Workspace!");
-
-	else
-		this->Workspace = wp;
 
 	double RunningTime = GetRunningTime();
 
@@ -782,7 +805,7 @@ void Engine::Start()
 		
 		static bool IsWindowFocused = true;
 
-		this->FpsCap = std::clamp(this->FpsCap, 1, 600);
+		this->FpsCap = std::clamp(this->FpsCap, 1, INT32_MAX);
 		int throttledFpsCap = IsWindowFocused ? FpsCap : 10;
 
 		double deltaTime = RunningTime - LastFrameEnded;
@@ -970,7 +993,7 @@ void Engine::Start()
 			}
 
 		if (hasPhysics)
-			Physics::Step(physicsList, deltaTime);
+			Physics::Step(physicsList, deltaTime * PhysicsTimeScale);
 
 		if (!IsHeadlessMode)
 		{

@@ -1,19 +1,9 @@
 #pragma once
 
+#include "datatype/GameObject.hpp"
+
 struct EcModel
 {
+	bool Valid = true;
+	static const EntityComponent Type = EntityComponent::Model;
 };
-
-/*
-class Object_Model : public GameObject
-{
-public:
-	Object_Model();
-
-	REFLECTION_DECLAREAPI;
-
-private:
-	static void s_DeclareReflections();
-	static inline Reflection::Api s_Api{};;
-};
-*/

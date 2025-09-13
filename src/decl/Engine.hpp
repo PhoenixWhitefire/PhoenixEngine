@@ -40,8 +40,10 @@ public:
 	void OnWindowResized(int NewSizeX, int NewSizeY);
 
 	void LoadConfiguration();
+	void BindDataModel(GameObject*);
 	void Close();
 	
+	// Use `BindDataModel` when switching DataModels
 	GameObjectRef DataModel{};
 	GameObjectRef Workspace{};
 
@@ -63,6 +65,7 @@ public:
 	
 	int FramesPerSecond = 0;
 	int FpsCap = 60;
+	float PhysicsTimeScale = 1.f;
 
 	bool DebugWireframeRendering = false;
 	bool DebugAabbs = false;

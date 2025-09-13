@@ -18,4 +18,7 @@ struct EcExample
 	std::vector<Reflection::EventCallback> OnGreetedCallbacks;
 
 	GameObjectRef Object;
+	bool Valid = true;
+
+	static const EntityComponent Type = EntityComponent::Example;
 };

@@ -2,7 +2,7 @@
 #include "component/Mesh.hpp"
 #include "datatype/GameObject.hpp"
 
-class TransformsManager : BaseComponentManager
+class TransformsManager : ComponentManager<EcTransform>
 {
 public:
     virtual uint32_t CreateComponent(GameObject* Object) override
@@ -13,33 +13,13 @@ public:
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
 
-    virtual std::vector<void*> GetComponents() override
-    {
-        std::vector<void*> v;
-        v.reserve(m_Components.size());
-
-        for (EcTransform& t : m_Components)
-            v.push_back((void*)&t);
-        
-        return v;
-    }
-
-    virtual void* GetComponent(uint32_t Id) override
-    {
-        return &m_Components[Id];
-    }
-
     virtual void DeleteComponent(uint32_t Id) override
     {
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
-
         m_Components[Id].Object.~GameObjectRef();
-    }
 
-    virtual void Shutdown() override
-	{
-		m_Components.clear();
-	}
+        ComponentManager<EcTransform>::DeleteComponent(Id);
+    }
 
     virtual const Reflection::StaticPropertyMap& GetProperties() override
     {
@@ -76,20 +56,6 @@ public:
 
         return props;
     }
-
-    virtual const Reflection::StaticMethodMap& GetMethods() override
-    {
-        static const Reflection::StaticMethodMap funcs = {};
-        return funcs;
-    }
-
-    TransformsManager()
-    {
-        GameObject::s_ComponentManagers[(size_t)EntityComponent::Transform] = this;
-    }
-
-private:
-    std::vector<EcTransform> m_Components;
 };
 
 static inline TransformsManager Instance{};

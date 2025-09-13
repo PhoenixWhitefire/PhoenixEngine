@@ -87,7 +87,14 @@ bool FileRW::WriteFile(
 	}
 	else
 	{
-		*ErrorMessage = "Couldn't open handle to file";
+		if (ErrorMessage)
+		{
+			if (file.bad())
+				*ErrorMessage = "Fatal I/O error (badbit), e.x.: hardware error, disk full, etc";
+			else
+				*ErrorMessage = "Non-fatal I/O error (failbit), e.x.: can't access path, etc";
+		}
+
 		return false;
 	} 
 }

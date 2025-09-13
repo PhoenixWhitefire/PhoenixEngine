@@ -24,6 +24,7 @@ struct EcCamera
 	// When in `UseSimpleController` mode (not functional yet)
 	float MovementSpeed = 0.5f;
 	float MouseSensitivity = 100.f;
+	bool Valid = true;
 
 	static inline EntityComponent Type = EntityComponent::Camera;
 };

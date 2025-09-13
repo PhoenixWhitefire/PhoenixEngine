@@ -2,8 +2,9 @@
 #include <luau/VM/include/lualib.h>
 #include <luau/VM/src/lstate.h>
 #include <Luau/Compiler.h>
-#include <glm/mat4x4.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/mat4x4.hpp>
+#include <imgui.h>
 
 #include <tracy/Tracy.hpp>
 
@@ -350,9 +351,6 @@ Reflection::GenericValue ScriptEngine::L::ToGeneric(lua_State* L, int StackIndex
 		lua_pushvalue(L, StackIndex);
 		lua_xmove(L, CL, 1);
 
-		std::string traceback;
-		DumpStacktrace(L, &traceback);
-
 		std::string fndbinfo;
 		lua_Debug ar;
 		lua_getinfo(L, 0, "n", &ar);
@@ -366,7 +364,7 @@ Reflection::GenericValue ScriptEngine::L::ToGeneric(lua_State* L, int StackIndex
 			ar.short_src, ar.currentline, fnname, ar.name ? ar.name : "<anonymous>"
 		);
 
-		gv.Val.Func = new Reflection::GenericFunction([CL, traceback, fndbinfo](const std::vector<Reflection::GenericValue>& Inputs)
+		gv.Val.Func = new Reflection::GenericFunction([CL, fndbinfo](const std::vector<Reflection::GenericValue>& Inputs)
 			-> std::vector<Reflection::GenericValue>
 			{
 				lua_pushvalue(CL, -1); // keep the function value
@@ -377,16 +375,17 @@ Reflection::GenericValue ScriptEngine::L::ToGeneric(lua_State* L, int StackIndex
 				lua_getglobal(CL, YIELDBLOCKERTRACKING);
 				if (!lua_istable(CL, -1))
 				{
+					lua_pop(CL, 1); // pop nil value
 					lua_newtable(CL);
-					lua_pushvalue(CL, -1);
-					lua_setglobal(CL, YIELDBLOCKERTRACKING);
+					lua_pushvalue(CL, -1); // B
+					lua_setglobal(CL, YIELDBLOCKERTRACKING); // leaves same empty table at stack top after popping B
 				}
 
 				int ybsize = lua_objlen(CL, -1);
 				lua_pushinteger(CL, ybsize + 1);
 				lua_pushstring(CL, fndbinfo.c_str());
 				lua_settable(CL, -3);
-				lua_pop(CL, 2);
+				lua_pop(CL, 1);
 
 				int status = lua_pcall(CL, Inputs.size(), -1, 0);
 
@@ -407,13 +406,7 @@ Reflection::GenericValue ScriptEngine::L::ToGeneric(lua_State* L, int StackIndex
 					return retvals;
 				}
 
-				std::string thisTraceback;
-				DumpStacktrace(CL, &thisTraceback, 0);
-
-				RAISE_RT(std::format(
-					"Callback encountered an error: {}\n{}\nDefined: {}",
-					luaL_checkstring(CL, -1), thisTraceback, traceback
-				));
+				RAISE_RT(luaL_checkstring(CL, -1));
 			});
 
 		return gv;
@@ -705,8 +698,20 @@ int ScriptEngine::L::HandleMethodCall(
 	// 15/08/2024
 }
 
+#include <imgui_internal.h> // needed for `ImGuiContext`
+
 void ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(YieldedCoroutine&)> Configure)
 {
+	if (ImGuiContext* ctx = ImGui::GetCurrentContext(); ctx && ctx->CurrentWindowStack.Size > 1)
+	{
+		lua_Debug ar;
+		lua_getinfo(L, 0, "n", &ar);
+		RAISE_RT(std::format(
+			"Cannot yield with '{}' while in Dear ImGui section",
+			ar.name ? ar.name : "<unknown>"
+		));	
+	}
+
 	lua_getglobal(L, YIELDBLOCKERTRACKING);
 	if (lua_istable(L, -1) && lua_objlen(L, -1) > 0)
 	{
@@ -727,14 +732,26 @@ void ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yie
 			blockers.append("\n");
 		}
 
-		RAISE_RT(std::format("Cannot yield right now, blocked by the following functions:\n{}", blockers.c_str()));
+		lua_Debug ar;
+		lua_Debug yieldar;
+		lua_getinfo(L, 0, "n", &yieldar);
+		lua_getinfo(L, 1, "sln", &ar);
+
+		RAISE_RT(std::format(
+			"{}:{} in {}: Cannot yield right now with '{}', blocked by the following functions:\n{}",
+			ar.short_src, ar.currentline, ar.name ? ar.name : "<anonymous>", yieldar.name ? yieldar.name : "<unknown>", blockers.c_str()
+		));
 	}
 
 	if (L->nCcalls > L->baseCcalls)
+	{
 		// if a `lua_Exception` is thrown by `lua_yield`, we hit an assertion in
 		// `ldo.cpp` line 137
 		// LUAU_ASSERT(e.getThread() == L)
-		RAISE_RT("Cannot yield right now");
+		lua_Debug ar;
+		lua_getinfo(L, 0, "n", &ar);
+		RAISE_RT(std::format("Cannot yield with '{}' right now", ar.name ? ar.name : "<unknown>"));
+	}
 
 	// TODO a kind of hack to get what script we're running as?
 	lua_getglobal(L, "script");
@@ -951,7 +968,7 @@ static int api_gameobjindex(lua_State* L)
 			// 18/05/2025
 			// this is going to be an error because i spent an entire 26 seconds
 			// trying to figure out why something wasnt working
-			luaL_errorL(L, "No child or member '%s' of %s", key, obj->GetFullName().c_str());
+			luaL_error(L, "No child or member '%s' of %s", key, obj->GetFullName().c_str());
 	}
 
 	return 1;
@@ -967,7 +984,7 @@ static int api_gameobjnewindex(lua_State* L)
 	ZoneText(key, strlen(key));
 
 	if (strcmp(key, "Exists") == 0)
-		luaL_errorL(L, "%s", "'Exists' is read-only! - 21/12/2024");
+		luaL_error(L, "%s", "'Exists' is read-only! - 21/12/2024");
 
 	LUA_ASSERT(obj, "Tried to assign to the '%s' of a deleted Game Object", key);
 
@@ -978,7 +995,7 @@ static int api_gameobjnewindex(lua_State* L)
 			const char* argTypeName = luaL_typename(L, 3);
 			const char* argAsString = luaL_tolstring(L, 3, nullptr);
 
-			luaL_errorL(L, 
+			luaL_error(L, 
 				"Cannot set '%s' to '%s' (%s) because it is read-only",
 				key, argAsString, argTypeName
 			);
@@ -993,7 +1010,7 @@ static int api_gameobjnewindex(lua_State* L)
 		}
 		catch (const std::runtime_error& err)
 		{
-			luaL_errorL(L, "Error while setting property %s '%s': %s", key, obj->Name.c_str(), err.what());
+			luaL_error(L, "Error while setting property %s '%s': %s", key, obj->Name.c_str(), err.what());
 		}
 	}
 	else
@@ -1001,12 +1018,12 @@ static int api_gameobjnewindex(lua_State* L)
 		std::string fullname = obj->GetFullName();
 
 		if (obj->FindChild(key))
-			luaL_errorL(L,
+			luaL_error(L,
 				"Attempt to set invalid Member '%s' of '%s', although it has a child object with that name",
 				key, fullname.c_str()
 			);
 		else
-			luaL_errorL(L,
+			luaL_error(L,
 				"Attempt to set invalid Member '%s' of '%s'",
 				key, fullname.c_str()
 			);
@@ -1023,7 +1040,7 @@ static int api_gameobjectnamecall(lua_State* L)
 	const char* k = L->namecall->data; // this is weird 10/01/2025
 
 	if (!g)
-		luaL_errorL(L, "Tried to call '%s' of a de-allocated GameObject with ID %u", k, *(uint32_t*)lua_touserdata(L, 1));
+		luaL_error(L, "Tried to call '%s' of a de-allocated GameObject with ID %u", k, *(uint32_t*)lua_touserdata(L, 1));
 
 	ZoneText(k, strlen(k));
 
@@ -1031,7 +1048,7 @@ static int api_gameobjectnamecall(lua_State* L)
 	const Reflection::MethodDescriptor* func = g->FindMethod(k, &reflectorHandle);
 
 	if (!func)
-		luaL_errorL(L, "'%s' is not a valid method of %s", k, g->GetFullName().c_str());
+		luaL_error(L, "'%s' is not a valid method of %s", k, g->GetFullName().c_str());
 
 	int numresults = 0;
 
@@ -1045,7 +1062,7 @@ static int api_gameobjectnamecall(lua_State* L)
 	}
 	catch (const std::runtime_error& err)
 	{
-		luaL_errorL(L, "Error while invoking method '%s' of %s: %s", k, g->GetFullName().c_str(), err.what());
+		luaL_error(L, "Error while invoking method '%s' of %s: %s", k, g->GetFullName().c_str(), err.what());
 	}
 
 	return numresults;
@@ -1235,9 +1252,10 @@ static int api_eventnamecall(lua_State* L)
 
 				if (status != LUA_OK && status != LUA_YIELD && status != LUA_BREAK)
 				{
+					luaL_checkstack(co, 2, "error string"); // tolstring may push a metatable temporarily as well
 					Log::ErrorF("Script event: {}", luaL_tolstring(co, -1, nullptr));
 					ScriptEngine::L::DumpStacktrace(co);
-					lua_pop(co, 1);
+					lua_pop(co, 2);
 				}
 
 				if (status == LUA_YIELD)
@@ -1575,7 +1593,7 @@ lua_State* ScriptEngine::L::Create()
 				}
 
 				default:
-					luaL_errorL(
+					luaL_error(
 						L,
 						"`Matrix.fromTranslation` expected 1 or 3 arguments, got %i",
 						numArgs
@@ -1684,7 +1702,7 @@ lua_State* ScriptEngine::L::Create()
 					lua_pushnumber(L, m[col - 49][row - 49]);
 				}
 				else
-					luaL_errorL(L, "Invalid member %s", k);
+					luaL_error(L, "Invalid member %s", k);
 
 				return 1;
 			},
@@ -1720,7 +1738,7 @@ lua_State* ScriptEngine::L::Create()
 					m[col - 49][row - 49] = v;
 				}
 				else
-					luaL_errorL(L, "Invalid member %s", k);
+					luaL_error(L, "Invalid member %s", k);
 
 				return 1;
 			},

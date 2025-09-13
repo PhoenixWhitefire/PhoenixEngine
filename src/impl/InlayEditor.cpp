@@ -10,6 +10,7 @@
 #include <glad/gl.h>
 #include <SDL3/SDL_filesystem.h>
 #include <SDL3/SDL_messagebox.h>
+#include <SDL3/SDL_events.h>
 #include <SDL3/SDL_dialog.h>
 #include <fstream>
 #include <set>
@@ -164,11 +165,6 @@ void InlayEditor::Initialize(Renderer* renderer)
 	InlayEditor::DidInitialize = true;
 }
 
-void InlayEditor::Shutdown()
-{
-	MtlPreviewCamera.Invalidate();
-}
-
 static const char* mtlIterator(void*, int index)
 {
 	MaterialManager* mtlManager = MaterialManager::Get();
@@ -202,14 +198,21 @@ static std::string getFileDirectory(const std::string& FilePath)
 }
 
 #define EDCHECKEXPR(expr) { if (!(expr)) { setErrorMessage(#expr " failed"); } }
+#define UNSAVEDTAG "<NEW>"
+#define SAVINGTAG ">///SAVING...///<"
 
-static void textEditorSaveFileNoPath(std::string Contents)
+static bool textEditorAskSaveFileAs(
+	const std::string& Contents,
+	const std::string& Reason = "Do you want to save the following file?"
+)
 {
 	std::string message = std::format(
-		"Do you want to save the following file?\n\nLength: {} characters\nBody:\n{}{}",
+		"{}\n\nLength: {} characters\nBody:\n{}{}",
+		Reason,
 		Contents.size(), Contents.substr(0, std::min((size_t)50ull, Contents.size())),
 		Contents.size() > (size_t)50ull ? "\n... (truncated)" : ""
 	);
+	Log::InfoF("`textEditorAskSaveFileAs` prompting: {}", message);
 
 	SDL_MessageBoxButtonData buttons[2] =
 	{
@@ -235,7 +238,11 @@ static void textEditorSaveFileNoPath(std::string Contents)
 	PHX_ENSURE(SDL_ShowMessageBox(&messageData, &chosenOption));
 
 	if (chosenOption == 1)
-		return;
+		return false;
+
+	static bool SaveOperationFinished = false;
+	static bool DidSave = false;
+	SaveOperationFinished = false;
 
 	SDL_ShowSaveFileDialog(
 		[](void* FileContents, const char* const* FileList, int)
@@ -243,25 +250,40 @@ static void textEditorSaveFileNoPath(std::string Contents)
 			if (!FileList)
 				RAISE_RT(SDL_GetError());
 
-			const char* file = FileList[0];
-			if (!file)
+			const char* rawPath = FileList[0];
+			if (!rawPath)
 			{
-				Log::Info("No file path selected in `textEditorSaveFileNoPath`");
+				Log::Info("No file path selected in `textEditorAskSaveFileAs`");
+
+				DidSave = false;
+				SaveOperationFinished = true;
 				return;
 			}
+			std::string savePath = FileRW::MakePathCwdRelative(rawPath);
+
+			if (TextEdOpenFiles[TextEdCurrentFileTab] == SAVINGTAG)
+				TextEdOpenFiles[TextEdCurrentFileTab] = savePath;
+			else
+				for (size_t i = 0; i < TextEdOpenFiles.size(); i++)
+					if (TextEdOpenFiles[TextEdCurrentFileTab] == SAVINGTAG)
+						TextEdOpenFiles[TextEdCurrentFileTab] = savePath;
 
 			std::string* contents = (std::string*)FileContents;
 			std::string errMessage;
-			if (!FileRW::WriteFile(file, *contents, &errMessage))
+			if (!FileRW::WriteFile(savePath, *contents, &errMessage))
 			{
-				std::string saveError = std::format("Couldn't save to file '{}' because of error {}", file, errMessage);
-				Log::Error(saveError);
-				PHX_ENSURE(SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Save Error", saveError.c_str(), SDL_GL_GetCurrentWindow()));
-
-				textEditorSaveFileNoPath(*contents);
+				Log::ErrorF("`textEditorAskSaveFileAs` save failed with {} to {}, re-prompting", savePath, errMessage);
+				textEditorAskSaveFileAs(
+					*contents,
+					std::format("Couldn't save to file '{}' because of error {}\nRetry?", savePath, errMessage)
+				);
 			}
+			else
+				TextEditorRecentFiles.insert(savePath);
 
 			delete contents;
+			DidSave = true;
+			SaveOperationFinished = true;
 		},
 		new std::string(Contents),
 		SDL_GL_GetCurrentWindow(),
@@ -269,6 +291,14 @@ static void textEditorSaveFileNoPath(std::string Contents)
 		0,
 		nullptr
 	);
+
+	while (!SaveOperationFinished)
+	{
+		SDL_PumpEvents();
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	}
+
+	return DidSave;
 }
 
 static void textEditorSaveFile()
@@ -279,18 +309,32 @@ static void textEditorSaveFile()
 		return;
 	}
 
+	std::string textEditorFile = TextEdOpenFiles[TextEdCurrentFileTab];
+
+	if (textEditorFile == SAVINGTAG)
+	{
+		setErrorMessage("Can't... Shouldn't try and save that... How'd you do this?");
+		return;
+	}
+
 	std::string contents = TextEditorEntryBuffer;
 
-	// always flush the buffer. if a new file is created (i.e. "<NEW>"), and the
+	// always flush the buffer. if a new file is created (i.e. "<NEW>"/UNSAVEDTAG), and the
 	// `contents.empty` early-out triggers as the user opens another file, the new file
 	// will be overwritten with the empty contents
 	// 12/02/2024
 	Memory::Free(TextEditorEntryBuffer);
 	TextEditorEntryBuffer = nullptr;
 
-	std::string textEditorFile = TextEdOpenFiles[TextEdCurrentFileTab];
+	if (TextEditorFileStream)
+	{
+		if (TextEditorFileStream->is_open())
+			TextEditorFileStream->close();
+		delete TextEditorFileStream;
+		TextEditorFileStream = nullptr;
+	}
 
-	if (textEditorFile == "" || textEditorFile == "<NEW>")
+	if (textEditorFile == UNSAVEDTAG)
 	{
 		if (contents.empty())
 			return;
@@ -298,22 +342,25 @@ static void textEditorSaveFile()
 		static uint32_t ErrCount = 0;
 		ErrCount++;
 
-		textEditorSaveFileNoPath(contents);
+		TextEdOpenFiles[TextEdCurrentFileTab] = SAVINGTAG;
+		if (!textEditorAskSaveFileAs(contents))
+			TextEdOpenFiles[TextEdCurrentFileTab] = UNSAVEDTAG;
 	}
 	else
+	{
 		TextEditorRecentFiles.insert(textEditorFile);
 
-	if (TextEditorFileStream && TextEditorFileStream->is_open())
-	{
-		TextEditorFileStream->close();
-		delete TextEditorFileStream;
-		TextEditorFileStream = nullptr;
+		std::string realSaveLoc = FileRW::MakePathCwdRelative(textEditorFile);
+
+		Log::InfoF("Saving file to {}", realSaveLoc);
+		if (!FileRW::WriteFile(realSaveLoc, contents))
+		{
+			textEditorAskSaveFileAs(
+				contents,
+				std::format("Couldn't save to {}. YES to choose a different location, NO to discard file", realSaveLoc)
+			);
+		}
 	}
-
-	std::string realSaveLoc = FileRW::MakePathCwdRelative(textEditorFile);
-
-	Log::InfoF("Saving file to {}", realSaveLoc);
-	EDCHECKEXPR(FileRW::WriteFile(realSaveLoc, contents));
 }
 
 static void invokeTextEditor(const std::string& File)
@@ -356,7 +403,7 @@ static void renderTextEditor()
 		if (ImGui::MenuItem("New"))
 		{
 			textEditorSaveFile();
-			TextEdOpenFiles.push_back("<NEW>");
+			TextEdOpenFiles.push_back(UNSAVEDTAG);
 			TextEdCurrentFileTab = TextEdOpenFiles.size() - 1;
 
 			TextEditorEntryBuffer = BufferInitialize(512);
@@ -393,34 +440,8 @@ static void renderTextEditor()
 
 		std::string textEditorFile = TextEdOpenFiles[TextEdCurrentFileTab];
 
-		if (ImGui::MenuItem("Save", NULL, nullptr, textEditorFile != "" && textEditorFile != "<NEW>"))
+		if (ImGui::MenuItem("Save", NULL, nullptr))
 			textEditorSaveFile();
-
-		if (ImGui::MenuItem("Save As"))
-		{
-			std::string curDir = getFileDirectory(textEditorFile);
-
-			SDL_ShowSaveFileDialog(
-				[](void*, const char* const* FileList, int)
-				{
-					if (!FileList)
-						RAISE_RT(SDL_GetError());
-					if (!FileList[0])
-						return;
-
-					TextEdOpenFiles.push_back(FileRW::MakePathCwdRelative(FileList[0]));
-					TextEdCurrentFileTab = TextEdOpenFiles.size() - 1;
-					textEditorSaveFile();
-
-					TextEditorRecentFiles.insert(TextEdOpenFiles[TextEdCurrentFileTab]);
-				},
-				nullptr,
-				SDL_GL_GetCurrentWindow(),
-				nullptr,
-				0,
-				curDir.c_str()
-			);
-		}
 
 		if (ImGui::BeginMenu("Recent", TextEditorRecentFiles.size() > 0) || ImGui::IsItemHovered())
 		{
@@ -459,11 +480,11 @@ static void renderTextEditor()
 	size_t wipNextButtonHighlight = UINT64_MAX;
 	size_t wipHoveredId = UINT64_MAX;
 
-	for (size_t i = 0; i < TextEdOpenFiles.size(); i++)
+	for (size_t i = 0; i < TextEdOpenFiles.size() + 1; i++)
 	{
 		ImGui::PushID(i);
 
-		std::string label = TextEdOpenFiles[i];
+		std::string label = TextEdOpenFiles.size() > i ? TextEdOpenFiles[i] : "+";
 		if (label.find("resources/") == 0)
 			label = label.substr(strlen("resources/"), label.size() - strlen("resources/"));
 
@@ -483,6 +504,9 @@ static void renderTextEditor()
 		{
 			textEditorSaveFile();
 			TextEdCurrentFileTab = i;
+
+			if (i == TextEdOpenFiles.size())
+				TextEdOpenFiles.push_back(UNSAVEDTAG);
 		}
 
 		bool hovered = ImGui::IsItemHovered();
@@ -541,7 +565,7 @@ static void renderTextEditor()
 				TextEdCurrentFileTab = TextEdOpenFiles.size() - 1;
 			else
 			{
-				TextEdOpenFiles.push_back("<NEW>");
+				TextEdOpenFiles.push_back(UNSAVEDTAG);
 				TextEdCurrentFileTab = 0;
 			}
 		}
@@ -555,12 +579,12 @@ static void renderTextEditor()
 			TextEditorEntryBuffer = BufferInitialize(512);
 			TextEditorEntryBufferCapacity = 512;
 
-			if (TextEdOpenFiles[TextEdCurrentFileTab] != "<NEW>")
+			if (TextEdOpenFiles[TextEdCurrentFileTab] != UNSAVEDTAG)
 			{
 				std::string failedFileName = TextEdOpenFiles[TextEdCurrentFileTab];
 				if (strlen(TextEditorEntryBuffer) > 0)
 				{
-					TextEdOpenFiles.push_back("<NEW>");
+					TextEdOpenFiles.push_back(UNSAVEDTAG);
 					TextEdCurrentFileTab = TextEdOpenFiles.size() - 1;
 				}
 
@@ -2340,9 +2364,16 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 	ImGui::End();
 }
 
+void InlayEditor::Shutdown()
+{
+	MtlPreviewCamera.Invalidate();
+	
+	if (TextEditorEntryBuffer)
+		textEditorSaveFile();
+}
+
 #include <imgui/backends/imgui_impl_opengl3.h>
 #include <imgui/backends/imgui_impl_sdl3.h>
-#include <SDL3/SDL_events.h>
 #include <lualib.h>
 #include <thread>
 #include <cmath>

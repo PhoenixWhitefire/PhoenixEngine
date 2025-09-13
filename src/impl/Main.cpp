@@ -754,7 +754,7 @@ static void init()
 
 	PHX_ENSURE_MSG(root->GetComponent<EcDataModel>(), "Root Object was not a DataModel!");
 
-	EngineInstance->DataModel = root;
+	EngineInstance->BindDataModel(root);
 }
 
 static bool isBoolArgument(const char* v, const char* arg)

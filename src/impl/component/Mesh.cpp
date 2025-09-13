@@ -23,7 +23,7 @@ static void tryMarkFreeSkinnedMeshPseudoAsset(EcMesh& mesh)
 	}
 }
 
-class MeshManager : public BaseComponentManager
+class MeshManager : public ComponentManager<EcMesh>
 {
 public:
     virtual uint32_t CreateComponent(GameObject* Object) override
@@ -39,22 +39,6 @@ public:
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
 
-    virtual std::vector<void*> GetComponents() override
-    {
-        std::vector<void*> v;
-        v.reserve(m_Components.size());
-
-        for (EcMesh& t : m_Components)
-            v.push_back((void*)&t);
-        
-        return v;
-    }
-
-	virtual void* GetComponent(uint32_t Id) override
-	{
-		return &m_Components[Id];
-	}
-
     virtual void DeleteComponent(uint32_t Id) override
     {
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
@@ -63,12 +47,8 @@ public:
 		tryMarkFreeSkinnedMeshPseudoAsset(mesh);
 
 		mesh.Object.~GameObjectRef();
+		ComponentManager<EcMesh>::DeleteComponent(Id);
     }
-
-	virtual void Shutdown() override
-	{
-		m_Components.clear();
-	}
 
     virtual const Reflection::StaticPropertyMap& GetProperties() override
     {
@@ -152,20 +132,6 @@ public:
 
         return props;
     }
-
-    virtual const Reflection::StaticMethodMap& GetMethods() override
-    {
-        static const Reflection::StaticMethodMap funcs = {};
-        return funcs;
-    }
-
-    MeshManager()
-    {
-        GameObject::s_ComponentManagers[(size_t)EntityComponent::Mesh] = this;
-    }
-
-private:
-    std::vector<EcMesh> m_Components;
 };
 
 static inline MeshManager Instance{};

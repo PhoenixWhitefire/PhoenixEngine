@@ -14,7 +14,7 @@ static GameObject* createCamera()
 	return camera;
 }
 
-class WorkspaceManager : public BaseComponentManager
+class WorkspaceManager : public ComponentManager<EcWorkspace>
 {
 public:
     virtual uint32_t CreateComponent(GameObject* Object) override
@@ -27,31 +27,16 @@ public:
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
 
-    virtual std::vector<void*> GetComponents() override
-    {
-        std::vector<void*> v;
-        v.reserve(m_Components.size());
-
-        for (EcWorkspace& t : m_Components)
-            v.push_back((void*)&t);
-        
-        return v;
-    }
-
-    virtual void* GetComponent(uint32_t Id) override
-    {
-        return &m_Components[Id];
-	}
-
     virtual void DeleteComponent(uint32_t Id) override
     {
         m_Components[Id].Object.~GameObjectRef();
+		ComponentManager<EcWorkspace>::DeleteComponent(Id);
     }
 
 	virtual void Shutdown() override
 	{
 		s_FallbackCamera.Invalidate();
-		m_Components.clear();
+		ComponentManager<EcWorkspace>::Shutdown();
 	}
 
     virtual const Reflection::StaticPropertyMap& GetProperties() override
@@ -109,15 +94,6 @@ public:
 		};
         return funcs;
     }
-
-    WorkspaceManager()
-    {
-        GameObject::s_ComponentManagers[(size_t)EntityComponent::Workspace] = this;
-		m_Components.reserve(3);
-    }
-
-private:
-    std::vector<EcWorkspace> m_Components;
 };
 
 static inline WorkspaceManager Instance{};

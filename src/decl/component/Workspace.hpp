@@ -12,6 +12,7 @@ struct EcWorkspace
 
 	uint32_t m_SceneCameraId = PHX_GAMEOBJECT_NULL_ID;
 	GameObjectRef Object;
+	bool Valid = true;
 
 	static inline EntityComponent Type = EntityComponent::Workspace;
 };

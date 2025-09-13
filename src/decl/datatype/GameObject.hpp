@@ -43,6 +43,7 @@ enum class EntityComponent : uint8_t
 	Model,
 	Bone,
 	Example,
+	TreeLink,
 	
 	__count
 };
@@ -69,7 +70,8 @@ static inline const std::string_view s_EntityComponentNames[] =
 	"Animation",
 	"Model",
 	"Bone",
-	"Example"
+	"Example",
+	"TreeLink"
 };
 
 static inline const std::unordered_map<std::string_view, EntityComponent> s_ComponentNameToType = 
@@ -89,19 +91,22 @@ static inline const std::unordered_map<std::string_view, EntityComponent> s_Comp
 	{ "Animation", EntityComponent::Animation },
 	{ "Model", EntityComponent::Model },
 	{ "Bone", EntityComponent::Bone },
-	{ "Example", EntityComponent::Example }
+	{ "Example", EntityComponent::Example },
+	{ "TreeLink", EntityComponent::TreeLink }
 };
 
 static_assert(std::size(s_EntityComponentNames) == (size_t)EntityComponent::__count);
 
 class GameObject;
 
-class BaseComponentManager
+// Check `ComponentManager` at the bottom of this file
+class IComponentManager
 {
 public:
 	virtual uint32_t CreateComponent(GameObject* /* Object */) = 0;
 	virtual void UpdateComponent(uint32_t, double) {};
 	virtual std::vector<void*> GetComponents() = 0;
+	virtual void ForEachComponent(const std::function<bool(void*)>) = 0;
 	virtual void* GetComponent(uint32_t) = 0;
 	virtual void DeleteComponent(uint32_t /* ComponentId */) = 0;
 	virtual void Shutdown() {};
@@ -130,7 +135,7 @@ public:
 
 	static inline uint32_t s_DataModel = PHX_GAMEOBJECT_NULL_ID;
 	static inline Memory::vector<GameObject, MEMCAT(GameObject)> s_WorldArray{};
-	static inline std::array<BaseComponentManager*, (size_t)EntityComponent::__count> s_ComponentManagers{};
+	static inline std::array<IComponentManager*, (size_t)EntityComponent::__count> s_ComponentManagers{};
 
 	template <class T>
 	T* GetComponent()
@@ -206,6 +211,8 @@ public:
 	bool Serializes = true;
 	bool IsDestructionPending = false;
 	bool Valid = true;
+	bool InDataModel = false;
+	bool InWorkspace = false;
 
 	static nlohmann::json DumpApiToJson();
 
@@ -277,6 +284,11 @@ struct GameObjectRef
 		return g;
 	}
 
+	bool IsValid() const
+	{
+		return GameObject::GetObjectById(m_TargetId) != nullptr;
+	}
+
 	void Invalidate()
 	{
 		if (m_TargetId != PHX_GAMEOBJECT_NULL_ID)
@@ -327,4 +339,79 @@ struct GameObjectRef
 	{
 		return Contained();
 	}
+};
+
+template <class T>
+class ComponentManager : public IComponentManager
+{
+public:
+	virtual uint32_t CreateComponent(GameObject* Object) override
+	{
+		m_Components.emplace_back();
+		assert(m_Components.back().Valid);
+		return static_cast<uint32_t>(m_Components.size() - 1);
+	}
+
+	virtual void* GetComponent(uint32_t Id) override
+	{
+		T& component = m_Components.at(Id);
+		return component.Valid ? (void*)&component : nullptr;;
+	}
+
+	virtual std::vector<void*> GetComponents() override
+	{
+		std::vector<void*> v;
+        v.reserve(m_Components.size());
+
+        for (T& component : m_Components)
+			if (component.Valid)
+            	v.push_back((void*)&component);
+        
+        return v;
+	}
+
+	virtual void ForEachComponent(const std::function<bool(void*)> Continue) override
+	{
+		for (T& component : m_Components)
+			if (component.Valid && !Continue((void*)&component))
+				break;
+	}
+
+	virtual void UpdateComponent(uint32_t, double) override {};
+
+	virtual void DeleteComponent(uint32_t Id) override
+	{
+		T& component = m_Components.at(Id);
+		component.Valid = false;
+	}
+
+	virtual void Shutdown() override
+	{
+		m_Components.clear();
+	}
+
+	virtual const Reflection::StaticPropertyMap& GetProperties() override
+	{
+		static const Reflection::StaticPropertyMap properties;
+		return properties;
+	}
+
+	virtual const Reflection::StaticMethodMap& GetMethods() override
+	{
+		static const Reflection::StaticMethodMap methods;
+		return methods;
+	}
+
+	virtual const Reflection::StaticEventMap& GetEvents() override
+	{
+		static const Reflection::StaticEventMap events;
+		return events;
+	}
+
+	ComponentManager()
+	{
+		GameObject::s_ComponentManagers[(size_t)T::Type] = this;
+	}
+
+	std::vector<T> m_Components;
 };

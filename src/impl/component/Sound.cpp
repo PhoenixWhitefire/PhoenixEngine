@@ -24,7 +24,7 @@ static std::unordered_map<FMOD::Sound*, std::string> SoundToSoundFile{};
 static std::unordered_map<void*, uint32_t> ChannelToComponent{};
 static std::mutex SoundMutex;
 
-class SoundManager : public BaseComponentManager
+class SoundManager : public ComponentManager<EcSound>
 {
 public:
     virtual uint32_t CreateComponent(GameObject* Object) override
@@ -42,22 +42,6 @@ public:
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
 
-    virtual std::vector<void*> GetComponents() override
-    {
-        std::vector<void*> v;
-        v.reserve(m_Components.size());
-
-        for (EcSound& t : m_Components)
-            v.push_back((void*)&t);
-        
-        return v;
-    }
-
-    virtual void* GetComponent(uint32_t Id) override
-    {
-        return &m_Components[Id];
-    }
-
     virtual void DeleteComponent(uint32_t Id) override
     {
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
@@ -67,6 +51,8 @@ public:
 			chan->stop();
 
 		sound.Object.~GameObjectRef();
+
+		ComponentManager<EcSound>::DeleteComponent(Id);
     }
 
     virtual const Reflection::StaticPropertyMap& GetProperties() override
@@ -175,12 +161,6 @@ public:
         return props;
     }
 
-    virtual const Reflection::StaticMethodMap& GetMethods() override
-    {
-        static const Reflection::StaticMethodMap funcs = {};
-        return funcs;
-    }
-
 // stupid compiler false positive warnings
 #if defined(__GNUG__) && (__GNUG__ == 14)
 #pragma GCC diagnostic push
@@ -202,11 +182,6 @@ public:
 #pragma GCC diagnostic pop
 #endif
 	
-	SoundManager()
-    {
-        GameObject::s_ComponentManagers[(size_t)EntityComponent::Sound] = this;
-    }
-
 	void Initialize()
 	{
 		ZoneScoped;
@@ -233,14 +208,13 @@ public:
 		FMOD_CALL(FmodSystem->release(), "System shutdown");
 		
 		AudioAssets.clear();
-		m_Components.clear();
+		ComponentManager<EcSound>::Shutdown();
 	}
 
 	FMOD::System* FmodSystem = nullptr;
 	double LastTick = 0.f;
 
 private:
-    std::vector<EcSound> m_Components;
 	bool m_DidInit = false;
 };
 

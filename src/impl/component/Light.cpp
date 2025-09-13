@@ -7,7 +7,7 @@
 EC_PROP_SIMPLE(t, Brightness, Double), \
 EC_PROP_SIMPLE(t, Shadows, Boolean) \
 
-class PointLightManager : public BaseComponentManager
+class PointLightManager : public ComponentManager<EcPointLight>
 {
 public:
     virtual uint32_t CreateComponent(GameObject* Object) override
@@ -18,27 +18,6 @@ public:
 		    Object->AddComponent(EntityComponent::Transform);
 
         return static_cast<uint32_t>(m_Components.size() - 1);
-    }
-
-    virtual std::vector<void*> GetComponents() override
-    {
-        std::vector<void*> v;
-        v.reserve(m_Components.size());
-
-        for (EcPointLight& t : m_Components)
-            v.push_back((void*)&t);
-        
-        return v;
-    }
-
-    virtual void* GetComponent(uint32_t Id) override
-	{
-		return &m_Components[Id];
-	}
-
-    virtual void DeleteComponent(uint32_t) override
-    {
-        // TODO id reuse with handles that have a counter per re-use to reduce memory growth
     }
 
     virtual const Reflection::StaticPropertyMap& GetProperties() override
@@ -52,23 +31,9 @@ public:
 
         return props;
     }
-
-    virtual const Reflection::StaticMethodMap& GetMethods() override
-    {
-        static const Reflection::StaticMethodMap funcs = {};
-        return funcs;
-    }
-
-    PointLightManager()
-    {
-        GameObject::s_ComponentManagers[(size_t)EntityComponent::PointLight] = this;
-    }
-
-private:
-    std::vector<EcPointLight> m_Components;
 };
 
-class DirectionalLightManager : public BaseComponentManager
+class DirectionalLightManager : public ComponentManager<EcDirectionalLight>
 {
 public:
     virtual uint32_t CreateComponent(GameObject* Object) override
@@ -82,33 +47,13 @@ public:
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
 
-    virtual std::vector<void*> GetComponents() override
-    {
-        std::vector<void*> v;
-        v.reserve(m_Components.size());
-
-        for (EcDirectionalLight& t : m_Components)
-            v.push_back((void*)&t);
-        
-        return v;
-    }
-
-    virtual void* GetComponent(uint32_t Id) override
-	{
-		return &m_Components[Id];
-	}
-
     virtual void DeleteComponent(uint32_t Id) override
     {
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
-
         m_Components[Id].Object.~GameObjectRef();
-    }
 
-    virtual void Shutdown() override
-	{
-		m_Components.clear();
-	}
+        ComponentManager<EcDirectionalLight>::DeleteComponent(Id);
+    }
 
     virtual const Reflection::StaticPropertyMap& GetProperties() override
     {
@@ -168,23 +113,9 @@ public:
 
         return props;
     }
-
-    virtual const Reflection::StaticMethodMap& GetMethods() override
-    {
-        static const Reflection::StaticMethodMap funcs = {};
-        return funcs;
-    }
-
-    DirectionalLightManager()
-    {
-        GameObject::s_ComponentManagers[(size_t)EntityComponent::DirectionalLight] = this;
-    }
-
-private:
-    std::vector<EcDirectionalLight> m_Components;
 };
 
-class SpotLightManager : public BaseComponentManager
+class SpotLightManager : public ComponentManager<EcSpotLight>
 {
 public:
     virtual uint32_t CreateComponent(GameObject* Object) override
@@ -195,27 +126,6 @@ public:
 		    Object->AddComponent(EntityComponent::Transform);
 
         return static_cast<uint32_t>(m_Components.size() - 1);
-    }
-
-    virtual std::vector<void*> GetComponents() override
-    {
-        std::vector<void*> v;
-        v.reserve(m_Components.size());
-
-        for (EcSpotLight& t : m_Components)
-            v.push_back((void*)&t);
-        
-        return v;
-    }
-
-    virtual void* GetComponent(uint32_t Id) override
-	{
-		return &m_Components[Id];
-	}
-
-    virtual void DeleteComponent(uint32_t) override
-    {
-        // TODO id reuse with handles that have a counter per re-use to reduce memory growth
     }
 
     virtual const Reflection::StaticPropertyMap& GetProperties() override
@@ -230,20 +140,6 @@ public:
 
         return props;
     }
-
-    virtual const Reflection::StaticMethodMap& GetMethods() override
-    {
-        static const Reflection::StaticMethodMap funcs = {};
-        return funcs;
-    }
-
-    SpotLightManager()
-    {
-        GameObject::s_ComponentManagers[(size_t)EntityComponent::SpotLight] = this;
-    }
-
-private:
-    std::vector<EcSpotLight> m_Components;
 };
 
 static inline PointLightManager PlInstance{};

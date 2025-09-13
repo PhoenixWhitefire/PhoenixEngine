@@ -127,12 +127,6 @@ local function update(DeltaTime)
 		return
 	end
 	
-	local prevLightTheme = LightTheme
-	LightTheme = imgui.checkbox("Light-mode", LightTheme or false)
-	if LightTheme ~= prevLightTheme then
-		imgui.stylecolors(if LightTheme then "L" else "D")
-	end
-	
 	if imgui.button("Save Sub-Level") then
 		imgui.endw()
 		
@@ -162,11 +156,14 @@ local function update(DeltaTime)
 	
 	if imgui.button("Load Sub-Level") then
 		imgui.endw()
-		globalv = "HI"
-		local v = 10
-		breakpoint(168)
 		loadSubLevel(fs.promptopen("resources/scenes", "hxscene", "Scenes")[1])
 		return
+	end
+	
+	local prevLightTheme = LightTheme
+	LightTheme = imgui.checkbox("Light-mode", LightTheme or false)
+	if LightTheme ~= prevLightTheme then
+		imgui.stylecolors(if LightTheme then "L" else "D")
 	end
 	
 	imgui.endw()
