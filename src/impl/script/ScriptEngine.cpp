@@ -949,6 +949,7 @@ static int api_gameobjindex(lua_State* L)
 		assert(
 			(v.Type == prop->Type)
 			|| (v.Type == Reflection::ValueType::Null && prop->Type == Reflection::ValueType::GameObject)
+			|| ((uint8_t)v.Type == ((uint8_t)prop->Type & ~(uint8_t)Reflection::ValueType::Null))
 		);
 		ScriptEngine::L::PushGenericValue(L, v);
 	}
@@ -1171,6 +1172,7 @@ static int api_eventnamecall(lua_State* L)
 		EventConnectionData* ec = (EventConnectionData*)lua_newuserdata(eL, sizeof(EventConnectionData));
 		luaL_getmetatable(eL, "EventConnection"); // stack: ec, mt
 		lua_setmetatable(eL, -2); // stack: ec
+		lua_xpush(eL, L, -1);
 
 		lua_pushlightuserdata(eL, eL); // stack: ec, lud
 		lua_pushvalue(eL, -2); // stack: ec, lud, ec
@@ -1258,9 +1260,11 @@ static int api_eventnamecall(lua_State* L)
 			}
 		);
 
+		ec->Reflector = ev->Reflector;
 		ec->SignalRef = signalRef;
 		ec->ThreadRef = threadRef;
 		ec->ConnectionId = cnId;
+		ec->Event = rev;
 		ec->L = L;
 
 		lua_getglobal(L, "script");
@@ -1310,9 +1314,10 @@ static int api_evconnectionnamecall(lua_State* L)
 		ec->Event->Disconnect(GameObject::ReflectorHandleToPointer(ec->Reflector), ec->ConnectionId);
 		ec->ConnectionId = UINT32_MAX;
 
-		lua_pushlightuserdata(L, L);
-		lua_pushnil(L);
-		lua_settable(L, LUA_ENVIRONINDEX); // remove stacktrace string
+		// errors with `attempt to modify readonly table`
+		//lua_pushlightuserdata(L, L);
+		//lua_pushnil(L);
+		//lua_settable(L, LUA_ENVIRONINDEX); // remove stacktrace string
 
 		lua_unref(ec->L, ec->ThreadRef);
 	}

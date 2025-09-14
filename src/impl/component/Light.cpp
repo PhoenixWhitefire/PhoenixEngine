@@ -44,6 +44,8 @@ public:
         if (!Object->GetComponent<EcTransform>())
 		    Object->AddComponent(EntityComponent::Transform);
 
+        Object->GetComponent<EcTransform>()->Transform[3] = glm::vec4(0.5f, 0.5f, 0.5f, 1.f);
+
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
 

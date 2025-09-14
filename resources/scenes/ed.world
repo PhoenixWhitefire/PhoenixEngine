@@ -1,0 +1,72 @@
+PHNXENGI
+#Version 2.00
+#Asset Scene
+#Date 9-2-2025
+#SceneName scenes/ed.world
+
+{
+  "GameObjects": [
+    {
+      "$_class": "DataModel",
+      "$_objectId": 0,
+      "Enabled": true,
+      "Name": "DataModel",
+      "Serializes": true
+    },
+    {
+      "$_class": "Workspace",
+      "$_objectId": 1,
+      "Enabled": true,
+      "Name": "Workspace",
+      "Parent": 0,
+      "SceneCamera": 2,
+      "Serializes": true
+    },
+    {
+      "$_class": "Camera",
+      "$_objectId": 2,
+      "Enabled": true,
+      "FieldOfView": 70.0,
+      "Name": "Camera",
+      "Parent": 1,
+      "Serializes": true,
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          -0.0,
+          0.0
+        ],
+        [
+          -0.0,
+          1.0,
+          -0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          -0.0,
+          -0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "UseSimpleController": true
+    },
+    {
+      "$_class": "Script",
+      "$_objectId": 4,
+      "Enabled": true,
+      "Name": "Editor",
+      "Parent": 1,
+      "Serializes": true,
+      "SourceFile": "scripts/ed/ed.luau"
+    }
+  ],
+  "SceneName": "scenes/ed.world"
+}

@@ -104,6 +104,8 @@ static char MtlShpBuf[MATERIAL_TEXTUREPATH_BUFSIZE] = { 0 };
 static int MtlCurItem = -1;
 static int MtlPrevItem = -1;
 
+static GameObjectRef ExplorerRoot;
+
 static void setErrorMessage(std::string errm)
 {
 	ErrorTooltipMessage = errm;
@@ -1856,7 +1858,7 @@ static void propertyTooltip(const std::string_view& PropName, bool IsObjectProp 
 			}
 		}
 
-		std::string fulltip = IsObjectProp ? "\n(CTRL+Click to select)" : "";
+		std::string fulltip = IsObjectProp ? "\n(CTRL+LClick to select, CTRL+RClick to set to nil)" : "";
 		
 		if (pcit != PropTips.end())
 			fulltip = pcit->second + fulltip;
@@ -1868,7 +1870,10 @@ static void propertyTooltip(const std::string_view& PropName, bool IsObjectProp 
 void InlayEditor::UpdateAndRender(double DeltaTime)
 {
 	ZoneScopedC(tracy::Color::DarkSeaGreen);
-	
+
+	if (!GameObject::GetObjectById(ExplorerRoot.m_TargetId))
+		ExplorerRoot = GameObject::GetObjectById(GameObject::s_DataModel);
+
 	ErrorTooltipTimeRemaining -= DeltaTime;
 
 	if (ErrorTooltipTimeRemaining > 0.f)
@@ -1896,7 +1901,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 	ImGui::BeginChild("HierarchyChildWindow", hrchChildWinSzOverride, ImGuiChildFlags_Borders);
 
 	VisibleTreeWip.clear();
-	recursiveIterateTree(GameObject::GetObjectById(GameObject::s_DataModel));
+	recursiveIterateTree(ExplorerRoot);
 	
 	VisibleTree = VisibleTreeWip;
 
@@ -2193,7 +2198,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 
 					ImGui::InputText(propNameCStr, &str);
 
-					if (ImGui::IsItemClicked())
+					if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
 					{
 						if (ImGui::GetIO().KeyCtrl)
 						{
@@ -2214,6 +2219,17 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 							Selections.clear();
 						}
 					}
+					else if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+						if (ImGui::GetIO().KeyCtrl)
+						{
+							for (uint32_t pid : PickerTargets)
+							{
+								GameObject* obj = GameObject::GetObjectById(pid);
+
+								if (pid)
+									obj->SetPropertyValue(PickerTargetPropName, {});
+							}
+						}
 				}
 
 				break;
@@ -2363,9 +2379,23 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 	ImGui::End();
 }
 
+void InlayEditor::SetExplorerRoot(const GameObjectRef NewRoot)
+{
+	ExplorerRoot = NewRoot;
+}
+
+void InlayEditor::SetExplorerSelections(const std::vector<GameObjectRef>& NewSelections)
+{
+	Selections.clear();
+
+	for (const GameObjectRef& r : NewSelections)
+		Selections.push_back(r.m_TargetId);
+}
+
 void InlayEditor::Shutdown()
 {
 	MtlPreviewCamera.Invalidate();
+	ExplorerRoot.Invalidate();
 	
 	if (TextEditorEntryBuffer)
 		textEditorSaveFile();

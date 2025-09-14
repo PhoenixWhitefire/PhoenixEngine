@@ -119,6 +119,46 @@ static int engine_binddatamodel(lua_State* L)
     return 0;
 }
 
+static int engine_physicstimescale(lua_State* L)
+{
+    Engine* eng = Engine::Get();
+    int top = lua_gettop(L);
+    lua_pushnumber(L, eng->PhysicsTimeScale);
+
+    if (top == 1)
+        eng->PhysicsTimeScale = luaL_checknumber(L, 1);
+
+    else if (top > 1)
+        luaL_error(L, "Too many arguments to `engine.physicstimescale`");
+
+    return 1;
+}
+
+#include "InlayEditor.hpp"
+
+static int engine_setexplorerroot(lua_State* L)
+{
+    InlayEditor::SetExplorerRoot(GameObject::FromGenericValue(ScriptEngine::L::ToGeneric(L, 1)));
+    return 0;
+}
+
+static int engine_setexplorerselections(lua_State* L)
+{
+    std::vector<GameObjectRef> objects;
+
+    lua_pushnil(L);
+    while (lua_next(L, 1))
+    {
+        objects.push_back(GameObject::FromGenericValue(ScriptEngine::L::ToGeneric(L, -1)));
+
+        lua_pop(L, 1);
+    }
+
+    InlayEditor::SetExplorerSelections(objects);
+
+    return 0;
+}
+
 static luaL_Reg engine_funcs[] =
 {
     { "getwindowsize", engine_getwindowsize },
@@ -135,6 +175,9 @@ static luaL_Reg engine_funcs[] =
     { "dwireframes", engine_dwireframes },
     { "daabbs", engine_daabbs },
     { "binddatamodel", engine_binddatamodel },
+    { "physicstimescale", engine_physicstimescale },
+    { "setexplorerroot", engine_setexplorerroot },
+    { "setexplorerselections", engine_setexplorerselections },
     { NULL, NULL }
 };
 
