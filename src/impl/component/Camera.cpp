@@ -31,7 +31,7 @@ glm::mat4 EcCamera::GetMatrixForAspectRatio(float AspectRatio) const
 class CameraManager : public ComponentManager<EcCamera>
 {
 public:
-    virtual const Reflection::StaticPropertyMap& GetProperties() override
+    const Reflection::StaticPropertyMap& GetProperties() override
     {
         static const Reflection::StaticPropertyMap props = 
         {

@@ -202,6 +202,15 @@
         "Events": {
           "OnGreeted": "Fires when `:Greet` is called, and sends the response to the callback before the original caller of `:Greet` receives it"
         }
+      },
+      "TreeLink": {
+        "Description": [
+          "The Engine, for rendering and physics, will pretend the children of this Object's `Target` are the children of the node",
+          "There is one very specific use-case for which this was implemented, this was designed around said use-case. It is *not* intended to act like a transparent proxy"
+        ],
+        "Properties": {
+          "Target": "The target to link"
+        }
       }
     }
   },
@@ -220,6 +229,20 @@
       "sleep": {
         "In": "SleepTime: number",
         "Description": "Yields the thread for the specified number of seconds"
+      },
+      "breakpoint": {
+        "In": "Line: number",
+        "Description": "Set a breakpoint at the given line"
+      },
+      "loadthread": {
+        "In": "Code: string, ChunkName: string",
+        "Out": "( coroutine?, string? )",
+        "Description": "Like `loadstring` in *other* runtimes, however does not compromise Global Import optimizations and returns a coroutine instead of a function. If an error occurs, returns `nil` as the first value and the error message as the second value"
+      },
+      "loadfile": {
+        "In": "File: string, ChunkName: string",
+        "Out": "( coroutine?, string? )",
+        "Description": "Similar to `loadthread`, however loads from a file instead of from a string directly"
       }
     },
     "Datatypes": {

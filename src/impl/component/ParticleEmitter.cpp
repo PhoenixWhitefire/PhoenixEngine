@@ -14,7 +14,7 @@ static uint32_t QuadMeshId = 0;
 class ParticleEmitterManager : public ComponentManager<EcParticleEmitter>
 {
 public:
-    virtual uint32_t CreateComponent(GameObject* Object) override
+    uint32_t CreateComponent(GameObject* Object) override
     {
         m_Components.emplace_back();
         m_Components.back().Object = Object;
@@ -25,7 +25,7 @@ public:
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
 	
-    virtual const Reflection::StaticPropertyMap& GetProperties() override
+    const Reflection::StaticPropertyMap& GetProperties() override
     {
         static const Reflection::StaticPropertyMap props = 
         {

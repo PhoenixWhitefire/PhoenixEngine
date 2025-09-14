@@ -40,7 +40,7 @@ static glm::mat4 lerpMatrix(const glm::mat4& a, const glm::mat4& b, float t)
 class BoneManager : public ComponentManager<EcBone>
 {
 public:
-    virtual uint32_t CreateComponent(GameObject* Object) override
+    uint32_t CreateComponent(GameObject* Object) override
     {
         m_Components.emplace_back();
 		m_Components.back().Object = Object;
@@ -48,7 +48,7 @@ public:
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
 
-    virtual void DeleteComponent(uint32_t Id) override
+    void DeleteComponent(uint32_t Id) override
     {
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
 		m_Components[Id].Object.~GameObjectRef();
@@ -56,7 +56,7 @@ public:
 		ComponentManager<EcBone>::DeleteComponent(Id);
     }
 
-    virtual const Reflection::StaticPropertyMap& GetProperties() override
+    const Reflection::StaticPropertyMap& GetProperties() override
     {
         static const Reflection::StaticPropertyMap props =
 		{

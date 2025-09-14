@@ -19,7 +19,7 @@ static lua_State* LVM = nullptr;
 class ScriptManager : public ComponentManager<EcScript>
 {
 public:
-    virtual uint32_t CreateComponent(GameObject* Object) override
+    uint32_t CreateComponent(GameObject* Object) override
     {
         m_Components.emplace_back();
 		m_Components.back().Object = Object;
@@ -28,12 +28,12 @@ public:
 		return m_Components.back().EcId;
     }
 
-	virtual void UpdateComponent(uint32_t Id, double DeltaTime) override
+	void UpdateComponent(uint32_t Id, double DeltaTime) override
 	{
 		m_Components[Id].Update(DeltaTime);
 	}
 
-    virtual void DeleteComponent(uint32_t Id) override
+    void DeleteComponent(uint32_t Id) override
     {
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
 		if (lua_State* L = m_Components[Id].m_L)
@@ -43,7 +43,7 @@ public:
 		ComponentManager<EcScript>::DeleteComponent(Id);
     }
 
-    virtual const Reflection::StaticPropertyMap& GetProperties() override
+    const Reflection::StaticPropertyMap& GetProperties() override
     {
         static const Reflection::StaticPropertyMap props = 
         {
@@ -62,7 +62,7 @@ public:
         return props;
     }
 
-    virtual const Reflection::StaticMethodMap& GetMethods() override
+    const Reflection::StaticMethodMap& GetMethods() override
     {
         static const Reflection::StaticMethodMap funcs =
 		{
@@ -82,7 +82,7 @@ public:
         return funcs;
     }
 
-	virtual void Shutdown() override
+	void Shutdown() override
     {
 		ComponentManager<EcScript>::Shutdown();
 

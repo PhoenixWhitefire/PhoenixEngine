@@ -141,7 +141,7 @@ public:
 	T* GetComponent()
 	{
 		EntityComponent type = T::Type;
-		for (const std::pair<EntityComponent, uint32_t>& pair : m_Components)
+		for (const std::pair<EntityComponent, uint32_t>& pair : Components)
 			if (pair.first == type)
 				return static_cast<T*>(GameObject::s_ComponentManagers[(size_t)type]->GetComponent(pair.second));
 
@@ -184,6 +184,8 @@ public:
 	GameObject* FindChild(const std::string_view&);
 	// accounts for inheritance
 	GameObject* FindChildWhichIsA(const std::string_view&);
+	
+	bool IsDescendantOf(GameObject*);
 
 	std::string GetFullName() const;
 	// whether this object inherits from or is the given class
@@ -214,15 +216,15 @@ public:
 	bool InDataModel = false;
 	bool InWorkspace = false;
 
+	Memory::vector<uint32_t, MEMCAT(GameObject)> Children;
+	Memory::vector<ReflectorHandle, MEMCAT(GameObject)> Components;
+	Reflection::Api ComponentApis{};
+	Memory::unordered_map<std::string_view, ReflectorHandle, MEMCAT(GameObject)> MemberToComponentMap;
+
 	static nlohmann::json DumpApiToJson();
 
 private:
 	static void s_AddObjectApi();
-
-	Memory::vector<uint32_t, MEMCAT(GameObject)> m_Children;
-	Memory::vector<ReflectorHandle, MEMCAT(GameObject)> m_Components;
-	Reflection::Api m_ComponentApis{};
-	Memory::unordered_map<std::string_view, ReflectorHandle, MEMCAT(GameObject)> m_MemberToComponentMap;
 
 	static inline Reflection::StaticApi s_Api{};
 

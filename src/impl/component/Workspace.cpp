@@ -17,7 +17,7 @@ static GameObject* createCamera()
 class WorkspaceManager : public ComponentManager<EcWorkspace>
 {
 public:
-    virtual uint32_t CreateComponent(GameObject* Object) override
+    uint32_t CreateComponent(GameObject* Object) override
     {
         m_Components.emplace_back();
 
@@ -27,19 +27,19 @@ public:
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
 
-    virtual void DeleteComponent(uint32_t Id) override
+    void DeleteComponent(uint32_t Id) override
     {
         m_Components[Id].Object.~GameObjectRef();
 		ComponentManager<EcWorkspace>::DeleteComponent(Id);
     }
 
-	virtual void Shutdown() override
+	void Shutdown() override
 	{
 		s_FallbackCamera.Invalidate();
 		ComponentManager<EcWorkspace>::Shutdown();
 	}
 
-    virtual const Reflection::StaticPropertyMap& GetProperties() override
+    const Reflection::StaticPropertyMap& GetProperties() override
     {
         static const Reflection::StaticPropertyMap props = 
         {
@@ -66,7 +66,7 @@ public:
         return props;
     }
 
-    virtual const Reflection::StaticMethodMap& GetMethods() override
+    const Reflection::StaticMethodMap& GetMethods() override
     {
         static const Reflection::StaticMethodMap funcs =
 		{

@@ -4,7 +4,7 @@
 class ModelManager : public ComponentManager<EcModel>
 {
 public:
-    virtual uint32_t CreateComponent(GameObject* Object) override
+    uint32_t CreateComponent(GameObject* Object) override
     {
         m_Components.emplace_back();
 

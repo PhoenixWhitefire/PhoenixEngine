@@ -22,7 +22,7 @@ static int fs_read(lua_State* L)
     std::string contents = FileRW::ReadFile(path, &success);
 
 	if (success)
-		lua_pushstring(L, contents.c_str());
+		lua_pushlstring(L, contents.data(), contents.size());
 	else
 		lua_pushnil(L);
 	

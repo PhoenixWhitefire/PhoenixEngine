@@ -34,6 +34,13 @@ static int imgui_setitemtooltip(lua_State* L)
 	return 0;
 }
 
+static int imgui_settooltip(lua_State* L)
+{
+    ImGui::SetTooltip("%s", luaL_checkstring(L, 1));
+
+    return 0;
+}
+
 static int imgui_itemhovered(lua_State* L)
 {
     lua_pushboolean(L, ImGui::IsItemHovered());
@@ -79,7 +86,7 @@ static int imgui_inputstring(lua_State* L)
     value.reserve(value.size() + 64);
 	ImGui::InputText(name, &value);
 
-	lua_pushstring(L, value.c_str());
+	lua_pushlstring(L, value.data(), value.size());
 	return 1;
 }
 
@@ -149,12 +156,13 @@ static luaL_Reg imgui_funcs[] =
     { "endw", imgui_end },
     { "indent", imgui_indent },
     { "setitemtooltip", imgui_setitemtooltip },
+    { "settooltip", imgui_settooltip },
     { "itemhovered", imgui_itemhovered },
     { "itemclicked", imgui_itemclicked },
     { "text", imgui_text },
     { "image", imgui_image },
-    { "inputnumber", imgui_inputstring },
-    { "inputstring", imgui_inputnumber },
+    { "inputnumber", imgui_inputnumber },
+    { "inputstring", imgui_inputstring },
     { "button", imgui_button },
     { "textlink", imgui_textlink },
     { "checkbox", imgui_checkbox },

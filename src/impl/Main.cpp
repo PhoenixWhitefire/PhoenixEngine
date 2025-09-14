@@ -342,6 +342,8 @@ static void saveStatsCsvCallback(void* UserData, const char* const* FileList, in
 
 static void doApiDump()
 {
+	ZoneScoped;
+
 	Log::Info("Dumping API...");
 
 	nlohmann::json apiDump;
@@ -793,6 +795,8 @@ static bool checkBoolArgument(const char* v, const char* arg, bool defaultVal)
 	return defaultVal;
 }
 
+static bool DoApiDump = false;
+
 static void processCliArgs(int argc, char** argv)
 {
 	for (int i = 1; i < argc; i++)
@@ -823,7 +827,7 @@ static void processCliArgs(int argc, char** argv)
 		}
 		else if (strcmp(v, "-apidump") == 0)
 		{
-			doApiDump();
+			DoApiDump = true;
 		}
 		else if (strcmp(v, "-loadmap") == 0)
 		{
@@ -872,6 +876,9 @@ int main(int argc, char** argv)
 	try
 	{
 		Engine engine{};
+		if (DoApiDump)
+			doApiDump();
+
 		init();
 
 		engine.Start();

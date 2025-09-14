@@ -7,7 +7,7 @@
 class DataModelManager : public ComponentManager<EcDataModel>
 {
 public:
-    virtual const Reflection::StaticPropertyMap& GetProperties() override
+    const Reflection::StaticPropertyMap& GetProperties() override
     {
         static const Reflection::StaticPropertyMap props =
         {
@@ -33,7 +33,7 @@ public:
 #pragma GCC diagnostic ignored "-Wstringop-overflow"
 #endif
 
-    virtual const Reflection::StaticEventMap& GetEvents() override
+    const Reflection::StaticEventMap& GetEvents() override
     {
         static Reflection::StaticEventMap events =
         {

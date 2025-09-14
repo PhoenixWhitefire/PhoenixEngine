@@ -161,6 +161,11 @@
           "Transform": "Matrix"
         }
       },
+      "TreeLink": {
+        "Properties": {
+          "Target": "GameObject"
+        }
+      },
       "Workspace": {
         "Methods": {
           "ScreenPointToRay": "(Array, Double) -> (Vector3)"
@@ -214,6 +219,8 @@
       "appendlog": "function",
       "breakpoint": "function",
       "game": "GameObject",
+      "loadfile": "function",
+      "loadthread": "function",
       "sleep": "function",
       "workspace": "GameObject"
     },
@@ -224,6 +231,7 @@
         "set": "function"
       },
       "engine": {
+        "binddatamodel": "function",
         "daabbs": "function",
         "dwireframes": "function",
         "exit": "function",
@@ -260,6 +268,8 @@
         "itemclicked": "function",
         "itemhovered": "function",
         "setitemtooltip": "function",
+        "settooltip": "function",
+        "stylecolors": "function",
         "text": "function",
         "textlink": "function"
       },

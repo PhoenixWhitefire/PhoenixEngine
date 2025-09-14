@@ -10,7 +10,7 @@
 class ExampleManager : ComponentManager<EcExample>
 {
 public:
-    virtual uint32_t CreateComponent(GameObject* Object) override
+    uint32_t CreateComponent(GameObject* Object) override
     {
         m_Components.emplace_back();
 		m_Components.back().Object = Object;
@@ -18,13 +18,13 @@ public:
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
 
-	virtual void DeleteComponent(uint32_t Id) override
+	void DeleteComponent(uint32_t Id) override
 	{
 		m_Components[Id].Object.~GameObjectRef();
 		ComponentManager<EcExample>::DeleteComponent(Id);
 	}
 
-    virtual const Reflection::StaticPropertyMap& GetProperties() override
+    const Reflection::StaticPropertyMap& GetProperties() override
     {
         static const Reflection::StaticPropertyMap props = 
         {
@@ -56,7 +56,7 @@ public:
         return props;
     }
 
-    virtual const Reflection::StaticMethodMap& GetMethods() override
+    const Reflection::StaticMethodMap& GetMethods() override
     {
         static const Reflection::StaticMethodMap funcs =
 		{
@@ -118,7 +118,7 @@ public:
         return funcs;
     }
 
-	virtual const Reflection::StaticEventMap& GetEvents() override
+	const Reflection::StaticEventMap& GetEvents() override
 	{
 		static const Reflection::StaticEventMap events =
 		{

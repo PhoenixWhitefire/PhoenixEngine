@@ -291,8 +291,17 @@ Other globals.
 #### `appendlog(...: any): ...`
 * Same as `print`, but does not prefix the log message with `[INFO]`
 
+#### `breakpoint(Line: number): ...`
+* Set a breakpoint at the given line
+
 #### `game: GameObject`
 * The GameObject acting as the Data Model of the Engine
+
+#### `loadfile(File: string, ChunkName: string): ( coroutine?, string? )`
+* Similar to `loadthread`, however loads from a file instead of from a string directly
+
+#### `loadthread(Code: string, ChunkName: string): ( coroutine?, string? )`
+* Like `loadstring` in *other* runtimes, however does not compromise Global Import optimizations and returns a coroutine instead of a function. If an error occurs, returns `nil` as the first value and the error message as the second value
 
 #### `sleep(SleepTime: number): ...`
 * Yields the thread for the specified number of seconds

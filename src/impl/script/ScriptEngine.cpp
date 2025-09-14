@@ -11,6 +11,8 @@
 #include "script/ScriptEngine.hpp"
 #include "script/luhx.hpp"
 #include "datatype/Color.hpp"
+#include "GlobalJsonConfig.hpp"
+#include "Engine.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
@@ -281,7 +283,7 @@ int ScriptEngine::CompileAndLoad(lua_State* L, const std::string& SourceCode, co
 
 	if (result == 0)
 	{
-		lua_pushstring(L, ChunkName.c_str());
+		lua_pushlstring(L, ChunkName.data(), ChunkName.size());
 		lua_setglobal(L, "_CHUNKNAME");
 	}
 
@@ -1132,14 +1134,7 @@ static int api_coltostring(lua_State* L)
 {
 	Color* col = (Color*)luaL_checkudata(L, 1, "Color");
 
-	lua_pushstring(
-		L,
-		std::format(
-			"{}, {}, {}",
-			col->R, col->G, col->B
-		).c_str()
-	);
-
+	lua_pushfstringL(L, "%f, %f, %f", col->R, col->G, col->B);
 	return 1;
 };
 
@@ -1437,13 +1432,10 @@ static void requireConfigInit(luarequire_Configuration* config)
 			{
 				int status = lua_resume(ML, L, 0);
 
-				if (status == 0)
+				if (status == LUA_OK)
 				{
 					if (lua_gettop(ML) == 0)
 						lua_pushstring(ML, "module must return a value");
-
-					else if (!lua_istable(ML, -1) && !lua_isfunction(ML, -1))
-						lua_pushstring(ML, "module must return a table or function");
 				}
 				else if (status == LUA_YIELD)
 					lua_pushstring(ML, "module can not yield");
@@ -1991,6 +1983,6 @@ nlohmann::json ScriptEngine::DumpApiToJson()
 
 	GameObject::s_DataModel = PHX_GAMEOBJECT_NULL_ID;
 	tempdm->Destroy();
-
+	
 	return json;
 }

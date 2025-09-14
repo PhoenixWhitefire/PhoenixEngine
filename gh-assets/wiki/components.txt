@@ -195,6 +195,14 @@ No members defined
 * `Size: Vector3`: The Size of the Object influenced by the Component
 * `Transform: Matrix`: The Transformation of the Object from the World
 
+## `TreeLink`
+
+* The Engine, for rendering and physics, will pretend the children of this Object's `Target` are the children of the node
+* There is one very specific use-case for which this was implemented, this was designed around said use-case. It is *not* intended to act like a transparent proxy
+
+### Properties:
+* `Target: GameObject`: The target to link
+
 ## `Workspace`
 
 * The container used for storing the main parts of a scene (3D objects)

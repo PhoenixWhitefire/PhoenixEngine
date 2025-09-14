@@ -1577,11 +1577,8 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 	static GameObject* InsertObjectButtonHoveredOver = nullptr;
 	InsertObjectButtonHoveredOver = nullptr;
 
-	for (GameObject* object : current->GetChildren())
+	current->ForEachChild([&](GameObject* object)
 	{
-		if (object == nullptr)
-			RAISE_RT("stoopid compiler is giving me a warning for something that will probably not happen");
-
 		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow
 			| ImGuiTreeNodeFlags_AllowOverlap
 			| ImGuiTreeNodeFlags_SpanAvailWidth
@@ -1591,7 +1588,7 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 		if (isInSelections(object) && object != InsertObjectButtonHoveredOver)
 			flags |= ImGuiTreeNodeFlags_Selected;
 
-		if (object->GetChildren().empty())
+		if (object->Children.empty())
 			flags |= ImGuiTreeNodeFlags_Leaf;
 
 		ImGui::AlignTextToFramePadding();
@@ -1732,7 +1729,9 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 			recursiveIterateTree(object, didVisitCurSelection);
 			ImGui::TreePop();
 		}
-	}
+
+		return true;
+	});
 
 	if (nodeClicked)
 		onTreeItemClicked(nodeClicked);
@@ -2383,6 +2382,7 @@ void InlayEditor::Shutdown()
 static void debugVariable(lua_State* L)
 {
 	ZoneScoped;
+	luaL_checkstack(L, 2, "debugVariable");
 
 	std::string varname;
 	switch (lua_type(L, -2))
@@ -2414,6 +2414,7 @@ static void debugVariable(lua_State* L)
 	{
 		lua_Debug ar{};
 		lua_getinfo(L, -1, "sluan", &ar);
+		ar.name = ar.name ? ar.name : "<anonymous>";
 
 		std::string reassigned = ar.name != varname ? std::format("{} ", ar.name) : "";
 
@@ -2594,7 +2595,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError)
 
 			ImGui::BeginChild("VariablesSection", ImVec2(), ImGuiChildFlags_Borders);
 			L->status = LUA_OK; // avoid hitting assertion due to potential calls to `__tostring` metamethods
-
+			
 			switch (Section)
 			{
 			case 0:
@@ -2605,6 +2606,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError)
 
 					for (int i = 1; i < 256; i++)
 					{
+						luaL_checkstack(L, 3, "get local");
 						const char* name = lua_getlocal(L, l, i);
 
 						if (!name)
@@ -2616,7 +2618,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError)
 						lua_pop(L, 2);
 
 						lua_pop(L, 1);
-					}
+					};
 				}
 
 				break;

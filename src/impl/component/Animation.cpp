@@ -8,7 +8,7 @@
 class AnimationManager : public ComponentManager<EcAnimation>
 {
 public:
-    virtual const Reflection::StaticPropertyMap& GetProperties() override
+    const Reflection::StaticPropertyMap& GetProperties() override
     {
         static const Reflection::StaticPropertyMap props =
         {

@@ -27,7 +27,7 @@ static std::mutex SoundMutex;
 class SoundManager : public ComponentManager<EcSound>
 {
 public:
-    virtual uint32_t CreateComponent(GameObject* Object) override
+    uint32_t CreateComponent(GameObject* Object) override
     {
 		if (!m_DidInit)
 			Initialize();
@@ -42,7 +42,7 @@ public:
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
 
-    virtual void DeleteComponent(uint32_t Id) override
+    void DeleteComponent(uint32_t Id) override
     {
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
 		EcSound& sound = m_Components[Id];
@@ -55,7 +55,7 @@ public:
 		ComponentManager<EcSound>::DeleteComponent(Id);
     }
 
-    virtual const Reflection::StaticPropertyMap& GetProperties() override
+    const Reflection::StaticPropertyMap& GetProperties() override
     {
         static const Reflection::StaticPropertyMap props = 
         {
@@ -168,7 +168,7 @@ public:
 #pragma GCC diagnostic ignored "-Wstringop-overflow"
 #endif
 
-	virtual const Reflection::StaticEventMap& GetEvents() override
+	const Reflection::StaticEventMap& GetEvents() override
 	{
 		static const Reflection::StaticEventMap events =
 		{
@@ -200,7 +200,7 @@ public:
 		LastTick = GetRunningTime();
 	}
 
-	virtual void Shutdown() override
+	void Shutdown() override
 	{
 		if (!FmodSystem)
 			return;

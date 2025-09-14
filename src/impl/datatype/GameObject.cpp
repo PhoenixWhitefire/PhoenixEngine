@@ -419,10 +419,10 @@ void GameObject::Destroy()
 
 		this->IsDestructionPending = true;
 
-		for (const std::pair<EntityComponent, uint32_t>& pair : m_Components)
+		for (const std::pair<EntityComponent, uint32_t>& pair : Components)
 			s_ComponentManagers[(size_t)pair.first]->DeleteComponent(pair.second);
 
-		m_Components.clear();
+		Components.clear();
 
 		for (GameObject* child : this->GetChildren())
 			child->Destroy();
@@ -454,7 +454,7 @@ std::string GameObject::GetFullName() const
 
 bool GameObject::IsA(const std::string_view& AncestorClass) const
 {
-	for (const std::pair<EntityComponent, uint32_t>& p : m_Components)
+	for (const std::pair<EntityComponent, uint32_t>& p : Components)
 		if (s_EntityComponentNames[(size_t)p.first] == AncestorClass)
 			return true;
 	
@@ -462,6 +462,19 @@ bool GameObject::IsA(const std::string_view& AncestorClass) const
 }
 
 static uint32_t NullGameObjectIdValue = PHX_GAMEOBJECT_NULL_ID;
+
+bool GameObject::IsDescendantOf(GameObject* Object)
+{
+	GameObject* current = this->GetParent();
+	while (current)
+	{
+		if (current == Object)
+			return true;
+		current = current->GetParent();
+	}
+
+	return false;
+}
 
 void GameObject::SetParent(GameObject* newParent)
 {
@@ -477,18 +490,7 @@ void GameObject::SetParent(GameObject* newParent)
 	
 	if (newParent != this)
 	{
-		std::vector<GameObject*> descendants = this->GetDescendants();
-
-		bool isOwnDescendant = false;
-
-		for (GameObject* d : descendants)
-			if (d == newParent)
-			{
-				isOwnDescendant = true;
-				break;
-			}
-
-		if (isOwnDescendant)
+		if (newParent && newParent->IsDescendantOf(this))
 			RAISE_RT(std::format(
 				"Tried to make object ID:{} ('{}') a descendant of itself",
 				this->ObjectId, GetFullName()
@@ -528,22 +530,22 @@ void GameObject::AddChild(GameObject* c)
 			this->ObjectId, GetFullName()
 		));
 
-	auto it = std::find(m_Children.begin(), m_Children.end(), c->ObjectId);
+	auto it = std::find(Children.begin(), Children.end(), c->ObjectId);
 
-	if (it == m_Children.end())
+	if (it == Children.end())
 	{
-		m_Children.push_back(c->ObjectId);
+		Children.push_back(c->ObjectId);
 		//c->IncrementHardRefs();
 	}
 }
 
 void GameObject::RemoveChild(uint32_t id)
 {
-	auto it = std::find(m_Children.begin(), m_Children.end(), id);
+	auto it = std::find(Children.begin(), Children.end(), id);
 
-	if (it != m_Children.end())
+	if (it != Children.end())
 	{
-		m_Children.erase(it);
+		Children.erase(it);
 
 		// TODO HACK check ::Destroy
 		//if (GameObject* ch = GameObject::GetObjectById(id))
@@ -555,15 +557,11 @@ void GameObject::RemoveChild(uint32_t id)
 
 Reflection::GenericValue GameObject::s_ToGenericValue(const GameObject* Object)
 {
-	if (Object)
-	{
-		Reflection::GenericValue gv{ Object->ObjectId };
-		gv.Type = Reflection::ValueType::GameObject;
-
-		return gv;
-	}
-	else
-		return {}; // null
+	Reflection::GenericValue gv;
+	gv.Type = Reflection::ValueType::GameObject;
+	gv.Val.Int = Object ? Object->ObjectId : PHX_GAMEOBJECT_NULL_ID;
+	
+	return gv;
 }
 
 Reflection::GenericValue GameObject::ToGenericValue() const
@@ -578,7 +576,7 @@ GameObject* GameObject::GetParent() const
 
 void GameObject::ForEachChild(const std::function<bool(GameObject*)>& Callback)
 {
-	for (uint32_t id : m_Children)
+	for (uint32_t id : Children)
 	{
 		GameObject* child = GameObject::GetObjectById(id);
 		assert(child);
@@ -591,9 +589,9 @@ void GameObject::ForEachChild(const std::function<bool(GameObject*)>& Callback)
 std::vector<GameObject*> GameObject::GetChildren()
 {
 	std::vector<GameObject*> children;
-	children.reserve(m_Children.size());
+	children.reserve(Children.size());
 
-	for (uint32_t id : m_Children)
+	for (uint32_t id : Children)
 	{
 		GameObject* child = GameObject::GetObjectById(id);
 		assert(child);
@@ -608,9 +606,9 @@ std::vector<GameObject*> GameObject::GetDescendants()
 	ZoneScoped;
 
 	std::vector<GameObject*> descendants;
-	descendants.reserve(m_Children.size());
+	descendants.reserve(Children.size());
 
-	for (uint32_t id : m_Children)
+	for (uint32_t id : Children)
 	{
 		GameObject* child = GameObject::GetObjectById(id);
 		assert(child);
@@ -625,15 +623,10 @@ std::vector<GameObject*> GameObject::GetDescendants()
 
 GameObject* GameObject::FindChild(const std::string_view& ChildName)
 {
-	for (uint32_t index = 0; index < m_Children.size(); index++)
+	for (uint32_t index = 0; index < Children.size(); index++)
 	{
-		GameObject* child = GameObject::GetObjectById(m_Children[index]);
-
-		if (!child)
-		{
-			m_Children.erase(m_Children.begin() + index);
-			continue;
-		}
+		GameObject* child = GameObject::GetObjectById(Children[index]);
+		assert(child);
 
 		if (child->Name == ChildName)
 			return child;
@@ -645,15 +638,10 @@ GameObject* GameObject::FindChild(const std::string_view& ChildName)
 
 GameObject* GameObject::FindChildWhichIsA(const std::string_view& Class)
 {
-	for (uint32_t index = 0; index < m_Children.size(); index++)
+	for (uint32_t index = 0; index < Children.size(); index++)
 	{
-		GameObject* child = GameObject::GetObjectById(m_Children[index]);
-
-		if (!child)
-		{
-			m_Children.erase(m_Children.begin() + index);
-			continue;
-		}
+		GameObject* child = GameObject::GetObjectById(Children[index]);
+		assert(child);
 
 		if (child->IsA(Class))
 			return child;
@@ -666,29 +654,29 @@ uint32_t GameObject::AddComponent(EntityComponent Type)
 {
 	PHX_ENSURE(Valid);
 
-	for (const std::pair<EntityComponent, uint32_t>& pair : m_Components)
+	for (const std::pair<EntityComponent, uint32_t>& pair : Components)
 		if (pair.first == Type)
 			RAISE_RT("Already have that component");
 	
 	IComponentManager* manager = GameObject::s_ComponentManagers[(size_t)Type];
-	m_Components.emplace_back(Type, manager->CreateComponent(this));
+	Components.emplace_back(Type, manager->CreateComponent(this));
 
-	uint32_t componentId = m_Components.back().second;
+	uint32_t componentId = Components.back().second;
 
 	for (const auto& it : manager->GetProperties())
 	{
-		m_ComponentApis.Properties[it.first] = &it.second;
-		m_MemberToComponentMap[it.first] = m_Components.back();
+		ComponentApis.Properties[it.first] = &it.second;
+		MemberToComponentMap[it.first] = Components.back();
 	}
 	for (const auto& it : manager->GetMethods())
 	{
-		m_ComponentApis.Methods[it.first] = &it.second;
-		m_MemberToComponentMap[it.first] = m_Components.back();
+		ComponentApis.Methods[it.first] = &it.second;
+		MemberToComponentMap[it.first] = Components.back();
 	}
 	for (const auto& it : manager->GetEvents())
 	{
-		m_ComponentApis.Events[it.first] = &it.second;
-		m_MemberToComponentMap[it.first] = m_Components.back();
+		ComponentApis.Events[it.first] = &it.second;
+		MemberToComponentMap[it.first] = Components.back();
 	}
 
 	return componentId;
@@ -696,28 +684,28 @@ uint32_t GameObject::AddComponent(EntityComponent Type)
 
 void GameObject::RemoveComponent(EntityComponent Type)
 {
-	for (auto it = m_Components.begin(); it < m_Components.end(); it++)
+	for (auto it = Components.begin(); it < Components.end(); it++)
 		if (it->first == Type)
 		{
-			m_Components.erase(it);
+			Components.erase(it);
 
 			IComponentManager* manager = GameObject::s_ComponentManagers[(size_t)Type];
 			manager->DeleteComponent(it->second);
 
 			for (const auto& it2 : manager->GetProperties())
 			{
-				m_ComponentApis.Properties.erase(it2.first);
-				m_MemberToComponentMap.erase(it2.first);
+				ComponentApis.Properties.erase(it2.first);
+				MemberToComponentMap.erase(it2.first);
 			}
 			for (const auto& it2 : manager->GetMethods())
 			{
-				m_ComponentApis.Methods.erase(it2.first);
-				m_MemberToComponentMap.erase(it2.first);
+				ComponentApis.Methods.erase(it2.first);
+				MemberToComponentMap.erase(it2.first);
 			}
 			for (const auto& it2 : manager->GetEvents())
 			{
-				m_ComponentApis.Events.erase(it2.first);
-				m_MemberToComponentMap.erase(it2.first);
+				ComponentApis.Events.erase(it2.first);
+				MemberToComponentMap.erase(it2.first);
 			}
 		}
 	
@@ -735,9 +723,9 @@ const Reflection::PropertyDescriptor* GameObject::FindProperty(const std::string
 		return &it->second;
 	}
 
-	if (auto it = m_ComponentApis.Properties.find(PropName); it != m_ComponentApis.Properties.end())
+	if (auto it = ComponentApis.Properties.find(PropName); it != ComponentApis.Properties.end())
 	{
-		*FromComponent = m_MemberToComponentMap[PropName];
+		*FromComponent = MemberToComponentMap[PropName];
 		return it->second;
 	}
 
@@ -754,9 +742,9 @@ const Reflection::MethodDescriptor* GameObject::FindMethod(const std::string_vie
 		return &it->second;
 	}
 
-	if (auto it = m_ComponentApis.Methods.find(FuncName); it != m_ComponentApis.Methods.end())
+	if (auto it = ComponentApis.Methods.find(FuncName); it != ComponentApis.Methods.end())
 	{
-		*FromComponent = m_MemberToComponentMap[FuncName];
+		*FromComponent = MemberToComponentMap[FuncName];
 		return it->second;
 	}
 
@@ -773,9 +761,9 @@ const Reflection::EventDescriptor* GameObject::FindEvent(const std::string_view&
 		return &it->second;
 	}
 
-	if (auto it = m_ComponentApis.Events.find(EventName); it != m_ComponentApis.Events.end())
+	if (auto it = ComponentApis.Events.find(EventName); it != ComponentApis.Events.end())
 	{
-		*Handle = m_MemberToComponentMap[EventName];
+		*Handle = MemberToComponentMap[EventName];
 		return it->second;
 	}
 
@@ -818,7 +806,7 @@ std::vector<Reflection::GenericValue> GameObject::CallFunction(const std::string
 Reflection::PropertyMap GameObject::GetProperties() const
 {
 	// base APIs always take priority for consistency
-	Reflection::PropertyMap cumulativeProps = m_ComponentApis.Properties;
+	Reflection::PropertyMap cumulativeProps = ComponentApis.Properties;
 
 	for (const auto& it : s_Api.Properties)
 		cumulativeProps.insert(std::pair(it.first, &it.second));
@@ -827,7 +815,7 @@ Reflection::PropertyMap GameObject::GetProperties() const
 }
 Reflection::MethodMap GameObject::GetMethods() const
 {
-	Reflection::MethodMap cumulativeFuncs = m_ComponentApis.Methods;
+	Reflection::MethodMap cumulativeFuncs = ComponentApis.Methods;
 
 	for (const auto& it : s_Api.Methods)
 		cumulativeFuncs.insert(std::pair(it.first, &it.second));
@@ -836,7 +824,7 @@ Reflection::MethodMap GameObject::GetMethods() const
 }
 Reflection::EventMap GameObject::GetEvents() const
 {
-	Reflection::EventMap cumulativeEvents = m_ComponentApis.Events;
+	Reflection::EventMap cumulativeEvents = ComponentApis.Events;
 
 	for (const auto& it : s_Api.Events)
 		cumulativeEvents.insert(std::pair(it.first, &it.second));
@@ -846,12 +834,12 @@ Reflection::EventMap GameObject::GetEvents() const
 
 std::vector<std::pair<EntityComponent, uint32_t>>& GameObject::GetComponents()
 {
-	return m_Components;
+	return Components;
 }
 
 void* GameObject::GetComponentByType(EntityComponent Type)
 {
-	for (const std::pair<EntityComponent, uint32_t>& pair : m_Components)
+	for (const std::pair<EntityComponent, uint32_t>& pair : Components)
 		if (pair.first == Type)
 			return GameObject::s_ComponentManagers[(size_t)Type]->GetComponent(pair.second);
 	

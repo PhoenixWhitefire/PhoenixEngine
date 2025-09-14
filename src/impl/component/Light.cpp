@@ -10,7 +10,7 @@ EC_PROP_SIMPLE(t, Shadows, Boolean) \
 class PointLightManager : public ComponentManager<EcPointLight>
 {
 public:
-    virtual uint32_t CreateComponent(GameObject* Object) override
+    uint32_t CreateComponent(GameObject* Object) override
     {
         m_Components.emplace_back();
 		
@@ -20,7 +20,7 @@ public:
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
 
-    virtual const Reflection::StaticPropertyMap& GetProperties() override
+    const Reflection::StaticPropertyMap& GetProperties() override
     {
         static const Reflection::StaticPropertyMap props = 
         {
@@ -36,7 +36,7 @@ public:
 class DirectionalLightManager : public ComponentManager<EcDirectionalLight>
 {
 public:
-    virtual uint32_t CreateComponent(GameObject* Object) override
+    uint32_t CreateComponent(GameObject* Object) override
     {
         m_Components.emplace_back();
         m_Components.back().Object = Object;
@@ -47,7 +47,7 @@ public:
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
 
-    virtual void DeleteComponent(uint32_t Id) override
+    void DeleteComponent(uint32_t Id) override
     {
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
         m_Components[Id].Object.~GameObjectRef();
@@ -55,7 +55,7 @@ public:
         ComponentManager<EcDirectionalLight>::DeleteComponent(Id);
     }
 
-    virtual const Reflection::StaticPropertyMap& GetProperties() override
+    const Reflection::StaticPropertyMap& GetProperties() override
     {
         static const Reflection::StaticPropertyMap props = 
         {
@@ -118,7 +118,7 @@ public:
 class SpotLightManager : public ComponentManager<EcSpotLight>
 {
 public:
-    virtual uint32_t CreateComponent(GameObject* Object) override
+    uint32_t CreateComponent(GameObject* Object) override
     {
         m_Components.emplace_back();
 		
@@ -128,7 +128,7 @@ public:
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
 
-    virtual const Reflection::StaticPropertyMap& GetProperties() override
+    const Reflection::StaticPropertyMap& GetProperties() override
     {
         static const Reflection::StaticPropertyMap props = 
         {

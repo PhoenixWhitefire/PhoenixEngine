@@ -17,6 +17,15 @@ BackgroundAmbience.Name = "BackgroundAmbience"
 BackgroundAmbience.Serializes = false
 BackgroundAmbience.Parent = workspace
 
+local ErrorMessage = "No error dummy"
+local ErrorMessageTimeRemaining = 0
+
+local function setError(errm)
+	ErrorMessage = errm
+	ErrorMessageTimeRemaining = 2
+	print(errm)
+end
+
 local function loadSubLevel(Path)
 	if not Path then
 		print("No level was selected")
@@ -76,15 +85,26 @@ local function update(DeltaTime)
 			return
 		end
 		
-		if imgui.button("Execute") then
-			if scriptHost then
-				scriptHost:Destroy()
+		if imgui.button("Execute file") then
+			local co, err = loadfile(ScriptExecutionFile)
+			if not co then
+				setError(err)
+			else
+				coroutine.resume(co)
 			end
-			scriptHost = GameObject.new("Script")
-			scriptHost.Name = "TempScriptHost"
-			scriptHost.SourceFile = ScriptExecutionFile
-			scriptHost.Parent = script
 		end
+		
+		CommandLine = imgui.inputstring("Command", CommandLine or "")
+		
+		if imgui.button("Execute command") then
+			local co, err = loadthread(CommandLine)
+			if not co then
+				setError(err)
+			else
+				coroutine.resume(co)
+			end
+		end
+		
 	end
 	imgui.endw()
 	

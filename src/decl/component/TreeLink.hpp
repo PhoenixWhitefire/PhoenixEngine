@@ -8,6 +8,7 @@
 struct EcTreeLink
 {
     GameObjectRef Target;
+    GameObjectRef Object;
     bool Valid = true;
     
     static const EntityComponent Type = EntityComponent::TreeLink;
