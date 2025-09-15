@@ -382,7 +382,7 @@ static std::vector<GameObjectRef> LoadMapVersion1(
 	return Objects;
 }
 
-static GameObject* createObjectFromJsonItem(const nlohmann::json& Item, uint32_t ItemIndex, float Version)
+static GameObjectRef createObjectFromJsonItem(const nlohmann::json& Item, uint32_t ItemIndex, float Version)
 {
 	if (Version == 2.f)
 	{
@@ -413,7 +413,7 @@ static GameObject* createObjectFromJsonItem(const nlohmann::json& Item, uint32_t
 			return nullptr;
 		}
 
-		GameObject* object = GameObject::Create();
+		GameObjectRef object = GameObject::Create();
 
 		for (auto it = components.value().begin(); it != components.value().end(); it++)
 		{
@@ -479,7 +479,7 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 
 		const nlohmann::json& item = gameObjectsNode[itemIndex];
 
-		GameObject* newObject = createObjectFromJsonItem(item, itemIndex, Version);
+		GameObjectRef newObject = createObjectFromJsonItem(item, itemIndex, Version);
 
 		std::string name = item.find("Name") != item.end() ? (std::string)item["Name"] : newObject->Name;
 

@@ -1,11 +1,11 @@
 PHNXENGI
 #Asset Material
-#Date 3-9-2025
+#Date 15-9-2025
 
 {
   "ColorMap": "textures/white.png",
   "HasTranslucency": false,
-  "MetallicRoughnessMap": "textures/white.png",
+  "MetallicRoughnessMap": "!Missing",
   "PolygonMode": 0,
   "Shader": "worldUber",
   "Uniforms": null,

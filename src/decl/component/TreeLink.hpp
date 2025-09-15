@@ -8,6 +8,8 @@
 struct EcTreeLink
 {
     GameObjectRef Target;
+    bool Scripting = true;
+
     GameObjectRef Object;
     bool Valid = true;
     

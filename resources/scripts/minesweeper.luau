@@ -19,7 +19,7 @@ local CellTemplate = GameObject.new("Mesh")
 CellTemplate.Parent = GridModel
 
 workspace.SceneCamera.UseSimpleController = false
-input.setmouselocked(false)
+input.setmousegrabbed(false)
 
 local Grid = {}
 local GRID_SIZE = 5

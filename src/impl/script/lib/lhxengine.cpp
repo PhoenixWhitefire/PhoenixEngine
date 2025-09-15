@@ -1,5 +1,6 @@
 #include "script/luhx.hpp"
 #include "script/ScriptEngine.hpp"
+#include "component/Script.hpp"
 #include "Engine.hpp"
 
 static int engine_getwindowsize(lua_State* L)
@@ -159,6 +160,20 @@ static int engine_setexplorerselections(lua_State* L)
     return 0;
 }
 
+static int engine_pushlvm(lua_State* L)
+{
+    EcScript::PushLVM();
+
+    return 0;
+}
+
+static int engine_poplvm(lua_State* L)
+{
+    EcScript::PopLVM();
+
+    return 0;
+}
+
 static luaL_Reg engine_funcs[] =
 {
     { "getwindowsize", engine_getwindowsize },
@@ -178,6 +193,8 @@ static luaL_Reg engine_funcs[] =
     { "physicstimescale", engine_physicstimescale },
     { "setexplorerroot", engine_setexplorerroot },
     { "setexplorerselections", engine_setexplorerselections },
+    { "pushlvm", engine_pushlvm },
+    { "poplvm", engine_poplvm },
     { NULL, NULL }
 };
 

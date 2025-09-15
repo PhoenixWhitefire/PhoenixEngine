@@ -51,6 +51,8 @@ namespace ScriptEngine
 namespace ScriptEngine::L
 {
 	lua_State* Create();
+	void Close(lua_State*);
+	
 	Reflection::GenericValue ToGeneric(
 		lua_State*,
 		int StackIndex = -1

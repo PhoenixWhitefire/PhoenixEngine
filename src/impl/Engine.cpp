@@ -368,14 +368,15 @@ Engine::Engine()
 
 static bool s_DebugCollisionAabbs = false;
 
-static void recursivelyTravelHierarchy(
+static void traverseHierarchy(
 	Memory::vector<RenderItem, MEMCAT(Rendering)>& RenderList,
 	Memory::vector<LightItem, MEMCAT(Rendering)>& LightList,
 	Memory::vector<GameObjectRef, MEMCAT(Physics)>& PhysicsList,
 	const GameObjectRef& Root,
 	EcCamera* SceneCamera,
 	double DeltaTime,
-	EcDirectionalLight** Sun
+	EcDirectionalLight** Sun,
+	bool ScriptsUpdate = true
 	/*
 	glm::mat4  AggregateTransform = glm::mat4(1.f),
 	Vector3 AggregateScale = Vector3(1.f, 1.f, 1.f)
@@ -444,7 +445,7 @@ static void recursivelyTravelHierarchy(
 				);
 		}
 
-		if (EcScript* scr = object->GetComponent<EcScript>())
+		if (EcScript* scr = object->GetComponent<EcScript>(); ScriptsUpdate && scr)
 		{
 			scr->Update(DeltaTime);
 
@@ -489,7 +490,7 @@ static void recursivelyTravelHierarchy(
 			);
 
 		if (!object->GetChildren().empty())
-			recursivelyTravelHierarchy(
+			traverseHierarchy(
 				RenderList,
 				LightList,
 				PhysicsList,
@@ -506,14 +507,15 @@ static void recursivelyTravelHierarchy(
 		}
 
 		if (EcTreeLink* link = object->GetComponent<EcTreeLink>(); link && link->Target.IsValid())
-			recursivelyTravelHierarchy(
+			traverseHierarchy(
 				RenderList,
 				LightList,
 				PhysicsList,
 				link->Target,
 				SceneCamera,
 				DeltaTime,
-				Sun
+				Sun,
+				link->Scripting
 			);
 	}
 }
@@ -587,7 +589,7 @@ void Engine::m_Render(const Scene& CurrentScene, double deltaTime)
 	GameObjectRef sceneCamObject = Workspace->GetComponent<EcWorkspace>()->GetSceneCamera();
 	EcCamera* sceneCamera = sceneCamObject->GetComponent<EcCamera>();
 
-	// we do this AFTER  `recursivelyTravelHierarchy` in case any Scripts
+	// we do this AFTER  `traverseHierarchy` in case any Scripts
 	// update the camera transform
 	glm::mat4 renderMatrix = sceneCamera->GetMatrixForAspectRatio(aspectRatio);
 
@@ -965,13 +967,13 @@ void Engine::Start()
 		s_DebugCollisionAabbs = this->DebugAabbs;
 		EcDirectionalLight* sun = nullptr;
 		{
-			TIME_SCOPE_AS("RecurseHierarchy");
+			TIME_SCOPE_AS("TraverseHierarchy");
 
 			CurrentScene.RenderList.clear();
 			CurrentScene.LightingList.clear();
 
 			// Aggregate mesh and light data into lists
-			recursivelyTravelHierarchy(
+			traverseHierarchy(
 				CurrentScene.RenderList,
 				CurrentScene.LightingList,
 				physicsList,

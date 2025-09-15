@@ -21,4 +21,7 @@ struct EcScript
 	bool m_StaleSource = true;
 
 	static inline EntityComponent Type = EntityComponent::Script;
+
+	static void PushLVM();
+	static void PopLVM();
 };

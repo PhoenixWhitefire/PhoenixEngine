@@ -416,9 +416,11 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 
 		if (texture.DoBilinearSmoothing != DoBilinearSmoothing)
 		{
-			for (size_t index = 0; index < m_Textures.size(); index++)
-				if (m_Textures[index].DoBilinearSmoothing == DoBilinearSmoothing)
-					return m_Textures[index].ResourceId;
+			for (const Texture& other : m_Textures)
+			{
+				if (other.ImagePath == Path && other.DoBilinearSmoothing == DoBilinearSmoothing)
+					return other.ResourceId;
+			}
 
 			it = m_StringToTextureId.end();
 		}

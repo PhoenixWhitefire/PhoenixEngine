@@ -6,7 +6,6 @@ PHNXENGI
 {
   "ColorMap": "textures/materials/yellowframe.png",
   "Shader": "wireframe",
-  "BilinearFiltering": false,
   // FILL = 0, LINES = 1, POINTS = 2
   // most rendering APIs seem to support points (although I'm not sure where the use in it is),
   // so engine will support it too

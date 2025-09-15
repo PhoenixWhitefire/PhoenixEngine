@@ -4,6 +4,7 @@
 #include <tracy/Tracy.hpp>
 #include <Luau/Compiler.h>
 #include <format>
+#include <stack>
 
 #include "component/Script.hpp"
 #include "script/ScriptEngine.hpp"
@@ -87,14 +88,7 @@ public:
 		ComponentManager<EcScript>::Shutdown();
 
 		if (LVM)
-		{
-			lua_getglobal(LVM, "_G");
-			lua_pushinteger(LVM, 67);
-			lua_gettable(LVM, -2);
-			delete (std::filesystem::path*)lua_tolightuserdatatagged(LVM, -1, 67);
-			
-			lua_close(LVM);
-		}
+			ScriptEngine::L::Close(LVM);
 		LVM = nullptr;
     }
 };
@@ -248,29 +242,9 @@ bool EcScript::LoadScript(const std::string_view& scriptFile)
 		return true;
 
 	this->SourceFile = scriptFile;
-	m_StaleSource = true;
+	m_StaleSource = true; // will be loaded on the next `::Update`
 
-	/*
-		Don't want the script to run before SceneFormat has fully
-		deserialized the scene and the `script` global to
-		report it is parented to `nil`. Only want it to run when
-		parented under the `DataModel`. An `::IsDescendantOf` would be
-		ideal, but it's not needed right now as this value will always
-		be set before Script get's its GameObject properties assigned
-		(i.e. it's Parent).
-
-		Manually call `::Reload` after `::LoadScript` to bypass this
-		restriction.
-	*/
-	if (!this->Object->GetParent())
-		return false;
-	else
-	{
-		if (LVM->status != LUA_BREAK)
-			return this->Reload();
-		else
-			RAISE_RT("Script will run once debugger is exited");
-	}
+	return false;
 }
 
 bool EcScript::Reload()
@@ -349,4 +323,26 @@ bool EcScript::Reload()
 	}
 
 	return false;
+}
+
+static std::stack<lua_State*> s_LvmStack;
+
+void EcScript::PushLVM()
+{
+	if (s_LvmStack.size() == 0)
+		s_LvmStack.push(LVM);
+	
+	s_LvmStack.push(ScriptEngine::L::Create());
+	LVM = s_LvmStack.top();
+}
+
+void EcScript::PopLVM()
+{
+	if (s_LvmStack.size() == 1)
+		RAISE_RT("Tried to pop Luau VMs with only 1 remaining");
+
+	ScriptEngine::L::Close(LVM);
+	
+	s_LvmStack.pop();
+	LVM = s_LvmStack.top();
 }

@@ -13,7 +13,7 @@ struct EcCamera
 
 	// if the Camera is the Scene Camera, the engine will move it with
 	// WASD + Mouse
-	bool UseSimpleController = true;
+	bool UseSimpleController = false;
 	bool IsSceneCamera = false;
 
 	glm::mat4 Transform = glm::lookAt(glm::vec3(), glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f, 1.f, 0.f));

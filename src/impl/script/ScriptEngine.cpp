@@ -1905,6 +1905,16 @@ lua_State* ScriptEngine::L::Create()
 	return state;
 }
 
+void ScriptEngine::L::Close(lua_State* L)
+{
+	lua_getglobal(L, "_G");
+	lua_pushinteger(L, 67);
+	lua_gettable(L, -2);
+	delete (std::filesystem::path*)lua_tolightuserdatatagged(L, -1, 67);
+	
+	lua_close(L);
+}
+
 nlohmann::json ScriptEngine::DumpApiToJson()
 {
 	GameObjectRef tempdm = GameObject::Create("DataModel");

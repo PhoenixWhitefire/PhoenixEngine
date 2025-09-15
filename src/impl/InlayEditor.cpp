@@ -2002,6 +2002,12 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 
 			for (const auto& prop : sel->GetProperties())
 			{
+				if (!sel) // not entirely sure how it happened, but it did
+				{
+					Selections.erase(std::find(Selections.begin(), Selections.end(), selId));
+					break;
+				}
+
 				const std::string_view& pname = prop.first;
 				const auto& it = props.find(pname);
 

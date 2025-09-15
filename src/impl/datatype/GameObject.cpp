@@ -47,6 +47,8 @@ static GameObject* cloneRecursive(
 		if (rootVal.Type == Reflection::ValueType::GameObject)
 		{
 			GameObject* ref = GameObject::FromGenericValue(rootVal);
+			if (!ref)
+				continue;
 
 			auto otcit = OriginalToCloneMap.find(ref);
 

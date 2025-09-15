@@ -24,7 +24,7 @@ class TreeLinkManager : public ComponentManager<EcTreeLink>
         {
             { "Target",
                 {
-                    Reflection::ValueType::GameObject,
+                    (Reflection::ValueType)((uint8_t)Reflection::ValueType::GameObject + (uint8_t)Reflection::ValueType::Null),
                     [](void* p)
                     {
                         EcTreeLink* tl = static_cast<EcTreeLink*>(p);
@@ -37,7 +37,11 @@ class TreeLinkManager : public ComponentManager<EcTreeLink>
 
                         if (!newTarget)
                         {
-                            tl->Target = nullptr;
+                            // i need to re-write `GameObjectRef` completely
+                            if (GameObject* t = GameObject::GetObjectById(tl->Target.m_TargetId))
+                                t->DecrementHardRefs();
+
+                            tl->Target.m_TargetId = PHX_GAMEOBJECT_NULL_ID;
                             return;
                         }
 
@@ -51,7 +55,9 @@ class TreeLinkManager : public ComponentManager<EcTreeLink>
                         tl->Target = GameObject::FromGenericValue(gv);
                     }
                 }
-            }
+            },
+
+            EC_PROP_SIMPLE(EcTreeLink, Scripting, Boolean)
         };
 
         return props;
