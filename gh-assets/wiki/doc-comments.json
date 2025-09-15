@@ -209,7 +209,8 @@
           "There is one very specific use-case for which this was implemented, this was designed around said use-case. It is *not* intended to act like a transparent proxy"
         ],
         "Properties": {
-          "Target": "The target to link"
+          "Target": "The target to link",
+          "Scripting": "Whether Scripts which descend from the `Target` will run"
         }
       }
     }

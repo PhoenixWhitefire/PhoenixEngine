@@ -201,7 +201,8 @@ No members defined
 * There is one very specific use-case for which this was implemented, this was designed around said use-case. It is *not* intended to act like a transparent proxy
 
 ### Properties:
-* `Target: GameObject`: The target to link
+* `Scripting: boolean`: Whether Scripts which descend from the `Target` will run
+* `Target: GameObject?`: The target to link
 
 ## `Workspace`
 

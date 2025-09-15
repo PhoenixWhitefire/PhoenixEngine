@@ -163,7 +163,8 @@
       },
       "TreeLink": {
         "Properties": {
-          "Target": "GameObject"
+          "Scripting": "Boolean",
+          "Target": "GameObject?"
         }
       },
       "Workspace": {
@@ -241,6 +242,11 @@
         "getvsync": "function",
         "getwindowsize": "function",
         "isheadless": "function",
+        "physicstimescale": "function",
+        "poplvm": "function",
+        "pushlvm": "function",
+        "setexplorerroot": "function",
+        "setexplorerselections": "function",
         "setfullscreen": "function",
         "setmaxframerate": "function",
         "setvsync": "function",
