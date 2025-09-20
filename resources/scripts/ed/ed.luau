@@ -1,4 +1,3 @@
---!optimize 0
 -- ed.luau, 14/09/2025
 local CurrentStage = "None"
 local StageUpdateSignal = nil
