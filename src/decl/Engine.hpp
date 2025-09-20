@@ -44,8 +44,8 @@ public:
 	void Close();
 	
 	// Use `BindDataModel` when switching DataModels
-	GameObjectRef DataModel{};
-	GameObjectRef Workspace{};
+	ObjectHandle DataModelRef;
+	ObjectHandle WorkspaceRef;
 
 	Renderer RendererContext;
 	SDL_Window* Window{};

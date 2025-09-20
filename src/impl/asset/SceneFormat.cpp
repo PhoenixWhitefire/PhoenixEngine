@@ -162,7 +162,7 @@ static float getVersion(const std::string& MapFileContents)
 	return version;
 }
 
-static std::vector<GameObjectRef> LoadMapVersion1(
+static std::vector<ObjectRef> LoadMapVersion1(
 	const std::string& Contents,
 	bool* SuccessPtr
 )
@@ -194,7 +194,7 @@ static std::vector<GameObjectRef> LoadMapVersion1(
 	const nlohmann::json& ModelsNode = JsonData.value("props", nlohmann::json{});
 	const nlohmann::json& LightsNode = JsonData["lights"];
 
-	std::vector<GameObjectRef> Objects;
+	std::vector<ObjectRef> Objects;
 	Objects.reserve(PartsNode.size() + ModelsNode.size() + LightsNode.size());
 
 	for (uint32_t Index = 0; Index < ModelsNode.size(); Index++)
@@ -216,7 +216,7 @@ static std::vector<GameObjectRef> LoadMapVersion1(
 		//Vector3 Orientation = GetVector3FromJson(PropObject["orient"]);
 		glm::vec3 Size = GetVector3FromJson(PropObject["size"]);
 
-		std::vector<GameObjectRef> Model = LoadModelAsMeshes(ModelPath.c_str(), Size, Position);
+		std::vector<ObjectRef> Model = LoadModelAsMeshes(ModelPath.c_str(), Size, Position);
 
 		std::string modelName = PropObject.value("name", "<UN-NAMED>");
 
@@ -236,7 +236,7 @@ static std::vector<GameObjectRef> LoadMapVersion1(
 
 				for (size_t index = 0; index < Model.size(); index++)
 				{
-					GameObject* mesh = Model[index].Contained();
+					GameObject* mesh = Model[index].Referred();
 					mesh->SetParent(container);
 				}
 
@@ -382,7 +382,7 @@ static std::vector<GameObjectRef> LoadMapVersion1(
 	return Objects;
 }
 
-static GameObjectRef createObjectFromJsonItem(const nlohmann::json& Item, uint32_t ItemIndex, float Version)
+static ObjectRef createObjectFromJsonItem(const nlohmann::json& Item, uint32_t ItemIndex, float Version)
 {
 	if (Version == 2.f)
 	{
@@ -413,7 +413,7 @@ static GameObjectRef createObjectFromJsonItem(const nlohmann::json& Item, uint32
 			return nullptr;
 		}
 
-		GameObjectRef object = GameObject::Create();
+		ObjectRef object = GameObject::Create();
 
 		for (auto it = components.value().begin(); it != components.value().end(); it++)
 		{
@@ -427,7 +427,7 @@ static GameObjectRef createObjectFromJsonItem(const nlohmann::json& Item, uint32
 	}
 }
 
-static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, float Version, bool* Success)
+static std::vector<ObjectRef> LoadMapVersion2(const std::string& Contents, float Version, bool* Success)
 {
 	ZoneScoped;
 
@@ -466,7 +466,7 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 
 	const nlohmann::json& gameObjectsNode = jsonData["GameObjects"];
 
-	std::unordered_map<int64_t, GameObjectRef> objectsMap;
+	std::unordered_map<int64_t, ObjectRef> objectsMap;
 	std::unordered_map<int64_t, int64_t> realIdToSceneId;
 	std::unordered_map<uint32_t, std::unordered_map<std::string, uint32_t>> objectProps;
 
@@ -479,7 +479,7 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 
 		const nlohmann::json& item = gameObjectsNode[itemIndex];
 
-		GameObjectRef newObject = createObjectFromJsonItem(item, itemIndex, Version);
+		ObjectRef newObject = createObjectFromJsonItem(item, itemIndex, Version);
 
 		std::string name = item.find("Name") != item.end() ? (std::string)item["Name"] : newObject->Name;
 
@@ -640,14 +640,14 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 		}
 	}
 
-	std::vector<GameObjectRef> objects;
+	std::vector<ObjectRef> objects;
 	objects.reserve(objectsMap.size());
 
 	ZoneNamedN(fixupzone, "FixupObjectReferentProperties", true);
 
 	for (auto& it : objectsMap)
 	{
-		GameObjectRef object = it.second;
+		ObjectRef object = it.second;
 
 		// !! IMPORTANT !!
 		// The `Parent` key *should not* be set for Root Nodes as their parent
@@ -699,7 +699,7 @@ static std::vector<GameObjectRef> LoadMapVersion2(const std::string& Contents, f
 	return objects;
 }
 
-std::vector<GameObjectRef> SceneFormat::Deserialize(
+std::vector<ObjectRef> SceneFormat::Deserialize(
 	const std::string& Contents,
 	bool* SuccessPtr
 )
@@ -723,7 +723,7 @@ std::vector<GameObjectRef> SceneFormat::Deserialize(
 
 	std::string jsonFileContents = Contents.substr(jsonStartLoc);
 
-	std::vector<GameObjectRef> objects{};
+	std::vector<ObjectRef> objects{};
 
 	if (version >= 1.f && version < 2.f)
 		objects = LoadMapVersion1(jsonFileContents, SuccessPtr);
@@ -752,8 +752,8 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 	nlohmann::json item{};
 	item["$_components"] = nlohmann::json::array();
 
-	for (const std::pair<EntityComponent, uint32_t>& handle : Object->GetComponents())
-		item["$_components"].push_back(s_EntityComponentNames[(size_t)handle.first]);
+	for (const ReflectorRef& handle : Object->Components)
+		item["$_components"].push_back(s_EntityComponentNames[(size_t)handle.Type]);
 
 	for (const auto& prop : Object->GetProperties())
 	{

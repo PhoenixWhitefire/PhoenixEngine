@@ -40,7 +40,6 @@ public:
 		if (lua_State* L = m_Components[Id].m_L)
 			lua_resetthread(L);
 		
-		m_Components[Id].Object.~GameObjectRef();
 		ComponentManager<EcScript>::DeleteComponent(Id);
     }
 
@@ -220,7 +219,7 @@ void EcScript::Update(double dt)
 	}
 
 	// we got destroy'd by the resumed coroutine
-	if (!GameObject::GetObjectById(this->Object.m_TargetId))
+	if (!this->Object.Referred())
 		return;
 	if (this->Object->IsDestructionPending)
 		return;
@@ -293,7 +292,7 @@ bool EcScript::Reload()
 		// if that code errors, it'll be a use-after-free as we try
 		// to access `m_L` to get the error message
 		// 24/12/2024
-		GameObjectRef dontKillMePlease = this->Object;
+		ObjectHandle dontKillMePlease = this->Object;
 		// to prevent use-after-free on script error if we've gotten re-alloc'd
 		lua_State* thread = m_L;
 

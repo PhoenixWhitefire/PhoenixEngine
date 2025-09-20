@@ -26,7 +26,7 @@ struct EcSound
 	float NextRequestedPosition = 0.f;
 	uint32_t BytePosition = 0;
 
-	GameObjectRef Object;
+	ObjectRef Object;
 	uint32_t EcId = PHX_GAMEOBJECT_NULL_ID;
 
 	std::vector<Reflection::EventCallback> OnLoadedCallbacks;

@@ -592,7 +592,7 @@ void ScriptEngine::L::PushGameObject(lua_State* L, GameObject* obj)
 int ScriptEngine::L::HandleMethodCall(
 	lua_State* L,
 	const Reflection::MethodDescriptor* func,
-	ReflectorHandle FromComponent
+	ReflectorRef Reflector
 )
 {
 	const std::vector<Reflection::ValueType>& paramTypes = func->Inputs;
@@ -667,7 +667,7 @@ int ScriptEngine::L::HandleMethodCall(
 
 	try
 	{
-		outputs = func->Func(GameObject::ReflectorHandleToPointer(FromComponent), inputs);
+		outputs = func->Func(Reflector.Referred(), inputs);
 	}
 	catch (const std::runtime_error& err)
 	{
@@ -778,7 +778,7 @@ void ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yie
 	assert(yc.Mode != YieldedCoroutine::ResumptionMode::INVALID);
 }
 
-void ScriptEngine::L::PushMethod(lua_State* L, const Reflection::MethodDescriptor* Method, ReflectorHandle Reflector)
+void ScriptEngine::L::PushMethod(lua_State* L, const Reflection::MethodDescriptor* Method, ReflectorRef Reflector)
 {
 	// if we dont do this then comparison will not work
 	// ex: `game.Close == game.Close`
@@ -881,15 +881,15 @@ void ScriptEngine::L::DumpStacktrace(
 
 struct EventSignalData
 {
-	ReflectorHandle Reflector;
+	ReflectorRef Reflector;
 	const Reflection::EventDescriptor* Event = nullptr;
 	const char* EventName = nullptr;
 };
 
 struct EventConnectionData
 {
-	ReflectorHandle Reflector;
-	ReflectorHandle Script;
+	ReflectorRef Reflector;
+	ObjectHandle Script;
 	const Reflection::EventDescriptor* Event = nullptr;
 	lua_State* L = nullptr;
 	uint32_t ConnectionId = UINT32_MAX;
@@ -901,7 +901,7 @@ struct EventConnectionData
 static void pushSignal(
 	lua_State* L,
 	const Reflection::EventDescriptor* Event,
-	const ReflectorHandle& Reflector,
+	const ReflectorRef& Reflector,
 	const char* EventName
 )
 {
@@ -940,11 +940,11 @@ static int api_gameobjindex(lua_State* L)
 
 	LUA_ASSERT(obj, "Tried to index '%s' of a deleted Game Object (use '.Exists' to check before accessing a member)", key);
 
-	std::pair<EntityComponent, uint32_t> reflectorHandle;
+	ReflectorRef ref;
 
-	if (const Reflection::PropertyDescriptor* prop = obj->FindProperty(key, &reflectorHandle))
+	if (const Reflection::PropertyDescriptor* prop = obj->FindProperty(key, &ref))
 	{
-		Reflection::GenericValue v = prop->Get(GameObject::ReflectorHandleToPointer(reflectorHandle));
+		Reflection::GenericValue v = prop->Get(ref.Referred());
 
 		assert(
 			(v.Type == prop->Type)
@@ -954,12 +954,12 @@ static int api_gameobjindex(lua_State* L)
 		ScriptEngine::L::PushGenericValue(L, v);
 	}
 
-	else if (const Reflection::EventDescriptor* event = obj->FindEvent(key, &reflectorHandle))
-		pushSignal(L, event, reflectorHandle, key);
+	else if (const Reflection::EventDescriptor* event = obj->FindEvent(key, &ref))
+		pushSignal(L, event, ref, key);
 
 	// Methods are lower because we prefer namecalls
-	else if (const Reflection::MethodDescriptor* func = obj->FindMethod(key, &reflectorHandle))
-		ScriptEngine::L::PushMethod(L, func, reflectorHandle);
+	else if (const Reflection::MethodDescriptor* func = obj->FindMethod(key, &ref))
+		ScriptEngine::L::PushMethod(L, func, ref);
 
 	else
 	{
@@ -1047,8 +1047,8 @@ static int api_gameobjectnamecall(lua_State* L)
 
 	ZoneText(k, strlen(k));
 
-	std::pair<EntityComponent, uint32_t> reflectorHandle;
-	const Reflection::MethodDescriptor* func = g->FindMethod(k, &reflectorHandle);
+	ReflectorRef reflector;
+	const Reflection::MethodDescriptor* func = g->FindMethod(k, &reflector);
 
 	if (!func)
 		luaL_error(L, "'%s' is not a valid method of %s", k, g->GetFullName().c_str());
@@ -1060,7 +1060,7 @@ static int api_gameobjectnamecall(lua_State* L)
 		numresults = ScriptEngine::L::HandleMethodCall(
 			L,
 			func,
-			reflectorHandle
+			reflector
 		);
 	}
 	catch (const std::runtime_error& err)
@@ -1170,6 +1170,7 @@ static int api_eventnamecall(lua_State* L)
 		luaL_sandboxthread(cL);
 
 		EventConnectionData* ec = (EventConnectionData*)lua_newuserdata(eL, sizeof(EventConnectionData));
+		ec->Script.Reference = nullptr; // zero-initialization breaks some assumptions that IDs which are not `PHX_GAMEOBJECT_NULL_ID` are valid
 		luaL_getmetatable(eL, "EventConnection"); // stack: ec, mt
 		lua_setmetatable(eL, -2); // stack: ec
 		lua_xpush(eL, L, -1);
@@ -1180,7 +1181,7 @@ static int api_eventnamecall(lua_State* L)
 		lua_pop(eL, 1);
 
 		uint32_t cnId = rev->Connect(
-			GameObject::ReflectorHandleToPointer(ev->Reflector),
+			ev->Reflector.Referred(),
 		
 			[eL, cL, rev](const std::vector<Reflection::GenericValue>& Inputs)
 			-> void
@@ -1193,14 +1194,14 @@ static int api_eventnamecall(lua_State* L)
 				EventConnectionData* cn = (EventConnectionData*)luaL_checkudata(eL, -1, "EventConnection");
 				lua_pop(eL, 1);
 
-				GameObject* scr = (GameObject*)GameObject::ReflectorHandleToPointer(cn->Script);
+				GameObject* scr = (GameObject*)cn->Script.Dereference();
 
 				if (!scr || !scr->GetComponentByType(EntityComponent::Script)
 				)
 				{
 					lua_resetthread(cL);
 					lua_resetthread(eL);
-					cn->Event->Disconnect(GameObject::ReflectorHandleToPointer(cn->Reflector), cn->ConnectionId);
+					cn->Event->Disconnect(cn->Reflector.Referred(), cn->ConnectionId);
 
 					return;
 				}
@@ -1271,8 +1272,8 @@ static int api_eventnamecall(lua_State* L)
 		Reflection::GenericValue scrgv = ScriptEngine::L::ToGeneric(L, -1);
 		if (scrgv.Type == Reflection::ValueType::GameObject)
 		{
-			GameObjectRef scr = GameObject::FromGenericValue(scrgv);
-			ec->Script = { EntityComponent::None, scr->ObjectId };
+			GameObject* scr = GameObject::FromGenericValue(scrgv);
+			ec->Script = scr;
 		}
 
 		lua_pop(L, 1);
@@ -1311,7 +1312,7 @@ static int api_evconnectionnamecall(lua_State* L)
 		if (ec->ConnectionId == UINT32_MAX)
 			luaL_error(L, "Event Connection was already disconnected!");
 
-		ec->Event->Disconnect(GameObject::ReflectorHandleToPointer(ec->Reflector), ec->ConnectionId);
+		ec->Event->Disconnect(ec->Reflector.Referred(), ec->ConnectionId);
 		ec->ConnectionId = UINT32_MAX;
 
 		// errors with `attempt to modify readonly table`
@@ -1820,11 +1821,11 @@ lua_State* ScriptEngine::L::Create()
 			[](lua_State* L)
 			{
 				EventSignalData* ev = (EventSignalData*)luaL_checkudata(L, 1, "EventSignal");
-				GameObject* obj = GameObject::GetObjectById(ev->Reflector.second);
+				GameObject* obj = GameObject::GetObjectById(ev->Reflector.Id);
 
-				std::string source = ev->Reflector.first == EntityComponent::None
+				std::string source = ev->Reflector.Type == EntityComponent::None
 					? (obj ? obj->GetFullName() + "." : "GameObject::")
-					: std::format("{}::", s_EntityComponentNames[(size_t)ev->Reflector.first]);
+					: std::format("{}::", s_EntityComponentNames[(size_t)ev->Reflector.Type]);
 
 				lua_pushfstring(L, "%s%s", source.c_str(), ev->EventName);
 				return 1;
@@ -1864,11 +1865,11 @@ lua_State* ScriptEngine::L::Create()
 				lua_gettable(L, LUA_REGISTRYINDEX);
 
 				EventSignalData* ev = (EventSignalData*)luaL_checkudata(L, -1, "EventSignal");
-				GameObject* obj = GameObject::GetObjectById(ev->Reflector.second);
+				GameObject* obj = GameObject::GetObjectById(ev->Reflector.Id);
 
-				std::string source = ev->Reflector.first == EntityComponent::None
+				std::string source = ev->Reflector.Type == EntityComponent::None
 					? (obj ? obj->GetFullName() + "." : "GameObject::")
-					: std::format("{}::", s_EntityComponentNames[(size_t)ev->Reflector.first]);
+					: std::format("{}::", s_EntityComponentNames[(size_t)ev->Reflector.Type]);
 
 				lua_pushfstring(L, "Connection to %s%s", source.c_str(), ev->EventName);
 				return 1;
@@ -1917,8 +1918,8 @@ void ScriptEngine::L::Close(lua_State* L)
 
 nlohmann::json ScriptEngine::DumpApiToJson()
 {
-	GameObjectRef tempdm = GameObject::Create("DataModel");
-	GameObjectRef tempwp = GameObject::Create("Workspace");
+	ObjectRef tempdm = GameObject::Create("DataModel");
+	ObjectRef tempwp = GameObject::Create("Workspace");
 	tempwp->SetParent(tempdm);
 	GameObject::s_DataModel = tempdm->ObjectId;
 	

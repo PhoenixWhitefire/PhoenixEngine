@@ -102,7 +102,7 @@ static int imgui_inputnumber(lua_State* L)
 
 static int imgui_button(lua_State* L)
 {
-    lua_pushboolean(L, ImGui::Button(luaL_checkstring(L, 1)));
+    lua_pushboolean(L, ImGui::Button(luaL_checkstring(L, 1), { (float)luaL_optnumber(L, 2, 0.f), (float)luaL_optnumber(L, 3, 0.f) }));
 
     return 1;
 }
@@ -150,6 +150,220 @@ static int imgui_stylecolors(lua_State* L)
     luaL_error(L, "Invalid style '%s'", n);
 }
 
+static int imgui_setnextwindowfocus(lua_State* L)
+{
+    ImGui::SetNextWindowFocus();
+
+    return 0;
+}
+
+static int imgui_beginfullscreen(lua_State* L)
+{
+    ImGuiIO& guiIO = ImGui::GetIO();
+    ImGui::SetNextWindowPos(ImVec2(0.f, 0.f));
+    ImGui::SetNextWindowSize(guiIO.DisplaySize);
+
+    lua_pushboolean(L, ImGui::Begin(
+        luaL_optstring(L, 1, "FullscreenWindow"),
+        nullptr,
+        ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove
+    ));
+    return 1;
+}
+
+static int imgui_beginmainmenubar(lua_State* L)
+{
+    lua_pushboolean(L, ImGui::BeginMainMenuBar());
+
+    return 1;
+}
+
+static int imgui_endmainmenubar(lua_State* L)
+{
+    ImGui::EndMainMenuBar();
+
+    return 0;
+}
+
+static int imgui_beginmenubar(lua_State* L)
+{
+    lua_pushboolean(L, ImGui::BeginMenuBar());
+
+    return 1;
+}
+
+static int imgui_endmenubar(lua_State* L)
+{
+    ImGui::EndMenuBar();
+
+    return 0;
+}
+
+static int imgui_beginmenu(lua_State* L)
+{
+    lua_pushboolean(L, ImGui::BeginMenu(luaL_checkstring(L, 1), luaL_optboolean(L, 2, true)));
+
+    return 1;
+}
+
+static int imgui_endmenu(lua_State* L)
+{
+    ImGui::EndMenu();
+
+    return 0;
+}
+
+static int imgui_menuitem(lua_State* L)
+{
+    lua_pushboolean(L, ImGui::MenuItem(luaL_checkstring(L, 1), nullptr, nullptr, luaL_optboolean(L, 2, true)));
+
+    return 1;
+}
+
+static int imgui_getcursorpos(lua_State* L)
+{
+    ImVec2 cpos = ImGui::GetCursorPos();
+
+    lua_pushnumber(L, cpos.x);
+    lua_pushnumber(L, cpos.y);
+    return 2;
+}
+
+static int imgui_setcursorpos(lua_State* L)
+{
+    ImGui::SetCursorPos({ (float)luaL_checknumber(L, 1), (float)luaL_checknumber(L, 2) });
+
+    return 0;
+}
+
+static int imgui_dummy(lua_State* L)
+{
+    ImGui::Dummy({ (float)luaL_optnumber(L, 1, 0.f), (float)luaL_optnumber(L, 2, 0.f) });
+
+    return 0;
+}
+
+static int imgui_beginchild(lua_State* L)
+{
+    ImGuiChildFlags flags = 0;
+    const char* flagsstr = luaL_optstring(L, 4, "");
+
+    for (; *flagsstr; flagsstr++)
+    {
+        switch (*flagsstr)
+        {
+
+        case 'b':
+        {
+            flags |= ImGuiChildFlags_Borders;
+            break;
+        }
+
+        case 'w':
+        {
+            if (*(flagsstr+1) == 'p')
+                flags |= ImGuiChildFlags_AlwaysUseWindowPadding;
+            else
+                luaL_error(L, "Expected 'wp', got 'w%c'", *(flagsstr+1));
+
+            flagsstr++;
+            break;
+        }
+
+        case 'r':
+        {
+            if (*(flagsstr+1) == 'x')
+                flags |= ImGuiChildFlags_ResizeX;
+
+            else if (*(flagsstr+1) == 'y')
+                flags |= ImGuiChildFlags_ResizeY;
+
+            else
+                luaL_error(L, "Expected next character to be 'x' or 'y', got '%c'", *(flagsstr+1));
+
+            flagsstr++;
+            break;
+        }
+
+        case 'a':
+        {
+            if (*(flagsstr+1) == 'x')
+                flags |= ImGuiChildFlags_AutoResizeX;
+
+            else if (*(flagsstr+1) == 'y')
+                flags |= ImGuiChildFlags_AutoResizeY;
+
+            else
+                flags |= ImGuiChildFlags_AlwaysAutoResize;
+
+            flagsstr++;
+            break;
+        }
+
+        case 'f':
+        {
+            flags |= ImGuiChildFlags_FrameStyle;
+            break;
+        }
+
+        case ' ': case ';':
+        {
+            break;
+        }
+
+        default:
+        {
+            luaL_error(L, "Invalid flag '%c'", *flagsstr);
+        }
+
+        }
+    }
+
+    lua_pushboolean(
+        L,
+        ImGui::BeginChild(
+            luaL_checkstring(L, 1),
+            { (float)luaL_optnumber(L, 2, 0.f), (float)luaL_optnumber(L, 3, 0.f) },
+            flags
+        )
+    );
+
+    return 1;
+}
+
+static int imgui_endchild(lua_State* L)
+{
+    ImGui::EndChild();
+
+    return 0;
+}
+
+static int imgui_combo(lua_State* L)
+{
+    luaL_checktype(L, 2, LUA_TTABLE);
+    int curopt = luaL_checkinteger(L, 3) - 1;
+
+    std::string options;
+    options.reserve(lua_objlen(L, 2));
+
+    lua_pushnil(L);
+    while (lua_next(L, 2))
+    {
+        luaL_checktype(L, -2, LUA_TNUMBER);
+        options.append(luaL_checkstring(L, -1));
+        options.push_back('\0');
+
+        lua_pop(L, 2);
+    }
+
+    options.push_back('\0');
+
+    ImGui::Combo(luaL_checkstring(L, 1), &curopt, options.data());
+
+    lua_pushinteger(L, curopt + 1);
+    return 2;
+}
+
 static luaL_Reg imgui_funcs[] =
 {
     { "begin", imgui_begin },
@@ -167,6 +381,21 @@ static luaL_Reg imgui_funcs[] =
     { "textlink", imgui_textlink },
     { "checkbox", imgui_checkbox },
     { "stylecolors", imgui_stylecolors },
+    { "setnextwindowfocus", imgui_setnextwindowfocus },
+    { "beginfullscreen", imgui_beginfullscreen },
+    { "beginmainmenubar", imgui_beginmainmenubar },
+    { "endmainmenubar", imgui_endmainmenubar },
+    { "beginmenubar", imgui_beginmenubar },
+    { "endmenubar", imgui_endmenubar },
+    { "beginmenu", imgui_beginmenu },
+    { "endmenu", imgui_endmenu },
+    { "menuitem", imgui_menuitem },
+    { "getcursorpos", imgui_getcursorpos },
+    { "setcursorpos", imgui_setcursorpos },
+    { "dummy", imgui_dummy },
+    { "beginchild", imgui_beginchild },
+    { "endchild", imgui_endchild },
+    { "combo", imgui_combo },
     { NULL, NULL }
 };
 

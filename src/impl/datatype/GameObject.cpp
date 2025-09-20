@@ -6,29 +6,37 @@
 // https://stackoverflow.com/a/75891310
 struct RefHasher
 {
-	size_t operator()(const GameObjectRef& a) const
+	size_t operator()(const ObjectRef& a) const
     {
-        return a.m_TargetId;
+        return a.TargetId;
     }
 };
 
+void* ReflectorRef::Referred() const
+{
+	if (Type == EntityComponent::None)
+		return (void*)GameObject::GetObjectById(Id);
+	else
+		return GameObject::s_ComponentManagers[(size_t)Type]->GetComponent(Id);
+}
+
 static GameObject* cloneRecursive(
-	GameObjectRef Root,
+	ObjectRef Root,
 	// u_m < og-child, vector < pair < clone-object-referencing-ogchild, property-referencing-ogchild > > >
-	std::unordered_map<GameObjectRef, std::vector<std::pair<GameObjectRef, std::string_view>>, RefHasher> OverwritesMap = {},
-	std::unordered_map<GameObjectRef, GameObjectRef, RefHasher> OriginalToCloneMap = {}
+	std::unordered_map<ObjectRef, std::vector<std::pair<ObjectRef, std::string_view>>, RefHasher> OverwritesMap = {},
+	std::unordered_map<ObjectRef, ObjectRef, RefHasher> OriginalToCloneMap = {}
 )
 {
-	GameObjectRef newObj = GameObject::Create();
+	ObjectRef newObj = GameObject::Create();
 
-	for (const std::pair<EntityComponent, uint32_t>& pair : Root->GetComponents())
-		newObj->AddComponent(pair.first);
+	for (const ReflectorRef& ref : Root->Components)
+		newObj->AddComponent(ref.Type);
 
 	auto overwritesIt = OverwritesMap.find(Root);
 
 	if (overwritesIt != OverwritesMap.end())
 	{
-		for (const std::pair<GameObjectRef, std::string_view>& overwrite : overwritesIt->second)
+		for (const std::pair<ObjectRef, std::string_view>& overwrite : overwritesIt->second)
 			// change the reference to the OG object to it's clone
 			overwrite.first->SetPropertyValue(overwrite.second, newObj->ToGenericValue());
 
@@ -63,12 +71,11 @@ static GameObject* cloneRecursive(
 		newObj->SetPropertyValue(it.first, rootVal);
 	}
 
-	std::vector<GameObjectRef> chrefs;
-
+	std::vector<ObjectRef> chrefs;
 	for (GameObject* ch : Root->GetChildren())
 		chrefs.emplace_back(ch);
 
-	for (GameObjectRef ch : chrefs)
+	for (ObjectRef ch : chrefs)
 	{
 		if (ch->Serializes)
 			cloneRecursive(ch, OverwritesMap, OriginalToCloneMap)->SetParent(newObj);
@@ -78,22 +85,22 @@ static GameObject* cloneRecursive(
 }
 
 static void mergeRecursive(
-	GameObjectRef me,
-	GameObjectRef other,
+	ObjectRef me,
+	ObjectRef other,
 	std::unordered_map<uint32_t, uint32_t>& MergedOverrides
 )
 {
 	MergedOverrides[other->ObjectId] = me->ObjectId;
 
-	for (GameObjectRef ch : other->GetChildren())
+	for (ObjectRef ch : other->GetChildren())
 		if (GameObject* og = me->FindChild(ch->Name))
 			mergeRecursive(og, ch, MergedOverrides);
 		else
 			ch->SetParent(me);
 	
-	for (const std::pair<EntityComponent, uint32_t>& pair : other->GetComponents())
-		if (!me->GetComponentByType(pair.first))
-			me->AddComponent(pair.first);
+	for (const ReflectorRef& ref : other->Components)
+		if (!me->GetComponentByType(ref.Type))
+			me->AddComponent(ref.Type);
 
 	for (auto& it : other->GetProperties())
 		if (it.second->Set && it.first != "Parent")
@@ -115,7 +122,7 @@ static void mergeRecursive(
 			me->SetPropertyValue(it.first, v);
 		}
 
-	for (GameObjectRef d : me->GetDescendants())
+	for (ObjectRef d : me->GetDescendants())
 		for (auto& it : d->GetProperties())
 		{
 			Reflection::GenericValue v = d->GetPropertyValue(it.first);
@@ -297,8 +304,8 @@ void GameObject::s_AddObjectApi()
 		{
 			std::vector<Reflection::GenericValue> ret;
 
-			for (const std::pair<EntityComponent, uint32_t>& pair : static_cast<GameObject*>(p)->GetComponents())
-				ret.emplace_back(s_EntityComponentNames[(size_t)pair.first]);
+			for (const ReflectorRef& ref : static_cast<GameObject*>(p)->Components)
+				ret.emplace_back(s_EntityComponentNames[(size_t)ref.Type]);
 			
 			return { ret };
 		}
@@ -316,8 +323,8 @@ void GameObject::s_AddObjectApi()
 			if (!GameObject::IsValidClass(requested))
 				RAISE_RT("Invalid component type");
 			
-			for (const std::pair<EntityComponent, uint32_t>& pair : static_cast<GameObject*>(p)->GetComponents())
-				if (s_EntityComponentNames[(size_t)pair.first] == requested)
+			for (const ReflectorRef& ref : static_cast<GameObject*>(p)->Components)
+				if (s_EntityComponentNames[(size_t)ref.Type] == requested)
 					return { true };
 			
 			return { false };
@@ -382,14 +389,6 @@ GameObject* GameObject::GetObjectById(uint32_t Id)
 	return obj.Valid ? &obj : nullptr;
 }
 
-void* GameObject::ReflectorHandleToPointer(const ReflectorHandle& Handle)
-{
-	if (Handle.first == EntityComponent::None)
-		return (void*)GetObjectById(Handle.second);
-	else
-		return GameObject::s_ComponentManagers[(size_t)Handle.first]->GetComponent(Handle.second);
-}
-
 void GameObject::IncrementHardRefs()
 {
 	m_HardRefCount++;
@@ -418,22 +417,21 @@ void GameObject::Destroy()
 	if (!IsDestructionPending)
 	{
 		this->SetParent(nullptr);
-
 		this->IsDestructionPending = true;
-
-		for (const std::pair<EntityComponent, uint32_t>& pair : Components)
-			s_ComponentManagers[(size_t)pair.first]->DeleteComponent(pair.second);
-
-		Components.clear();
-
-		for (GameObject* child : this->GetChildren())
-			child->Destroy();
 
 		DecrementHardRefs(); // removes the reference in `::Create`
 	}
 
 	if (m_HardRefCount == 0 && Valid)
 	{
+		for (const ReflectorRef& ref : Components)
+			s_ComponentManagers[(size_t)ref.Type]->DeleteComponent(ref.Id);
+
+		Components.clear();
+
+		for (GameObject* child : this->GetChildren())
+			child->Destroy();
+
 		Valid = false;
 	}
 }
@@ -456,8 +454,8 @@ std::string GameObject::GetFullName() const
 
 bool GameObject::IsA(const std::string_view& AncestorClass) const
 {
-	for (const std::pair<EntityComponent, uint32_t>& p : Components)
-		if (s_EntityComponentNames[(size_t)p.first] == AncestorClass)
+	for (const ReflectorRef& p : Components)
+		if (s_EntityComponentNames[(size_t)p.Type] == AncestorClass)
 			return true;
 	
 	return false;
@@ -656,14 +654,13 @@ uint32_t GameObject::AddComponent(EntityComponent Type)
 {
 	PHX_ENSURE(Valid);
 
-	for (const std::pair<EntityComponent, uint32_t>& pair : Components)
-		if (pair.first == Type)
-			RAISE_RT("Already have that component");
+	if (GetComponentByType(Type))
+		RAISE_RT("Already have that component");
 	
 	IComponentManager* manager = GameObject::s_ComponentManagers[(size_t)Type];
-	Components.emplace_back(Type, manager->CreateComponent(this));
+	Components.emplace_back(manager->CreateComponent(this), Type);
 
-	uint32_t componentId = Components.back().second;
+	uint32_t componentId = Components.back().Id;
 
 	for (const auto& it : manager->GetProperties())
 	{
@@ -687,12 +684,12 @@ uint32_t GameObject::AddComponent(EntityComponent Type)
 void GameObject::RemoveComponent(EntityComponent Type)
 {
 	for (auto it = Components.begin(); it < Components.end(); it++)
-		if (it->first == Type)
+		if (it->Type == Type)
 		{
 			Components.erase(it);
 
 			IComponentManager* manager = GameObject::s_ComponentManagers[(size_t)Type];
-			manager->DeleteComponent(it->second);
+			manager->DeleteComponent(it->Id);
 
 			for (const auto& it2 : manager->GetProperties())
 			{
@@ -714,14 +711,14 @@ void GameObject::RemoveComponent(EntityComponent Type)
 	RAISE_RT("Don't have that component");
 }
 
-const Reflection::PropertyDescriptor* GameObject::FindProperty(const std::string_view& PropName, ReflectorHandle* FromComponent)
+const Reflection::PropertyDescriptor* GameObject::FindProperty(const std::string_view& PropName, ReflectorRef* FromComponent)
 {
-	ReflectorHandle dummyFc{ EntityComponent::None, PHX_GAMEOBJECT_NULL_ID };
+	ReflectorRef dummyFc;
 	FromComponent = FromComponent ? FromComponent : &dummyFc;
 
 	if (auto it = s_Api.Properties.find(PropName); it != s_Api.Properties.end())
 	{
-		FromComponent->second = ObjectId;
+		FromComponent->Id = ObjectId;
 		return &it->second;
 	}
 
@@ -733,14 +730,14 @@ const Reflection::PropertyDescriptor* GameObject::FindProperty(const std::string
 
 	return nullptr;
 }
-const Reflection::MethodDescriptor* GameObject::FindMethod(const std::string_view& FuncName, ReflectorHandle* FromComponent)
+const Reflection::MethodDescriptor* GameObject::FindMethod(const std::string_view& FuncName, ReflectorRef* FromComponent)
 {
-	ReflectorHandle dummyFc{ EntityComponent::None, PHX_GAMEOBJECT_NULL_ID };
+	ReflectorRef dummyFc;
 	FromComponent = FromComponent ? FromComponent : &dummyFc;
 
 	if (auto it = s_Api.Methods.find(FuncName); it != s_Api.Methods.end())
 	{
-		FromComponent->second = ObjectId;
+		FromComponent->Id = ObjectId;
 		return &it->second;
 	}
 
@@ -752,14 +749,14 @@ const Reflection::MethodDescriptor* GameObject::FindMethod(const std::string_vie
 
 	return nullptr;
 }
-const Reflection::EventDescriptor* GameObject::FindEvent(const std::string_view& EventName, ReflectorHandle* Handle)
+const Reflection::EventDescriptor* GameObject::FindEvent(const std::string_view& EventName, ReflectorRef* Handle)
 {
-	ReflectorHandle dummyHandle{ EntityComponent::None, PHX_GAMEOBJECT_NULL_ID };
+	ReflectorRef dummyHandle;
 	Handle = Handle ? Handle : &dummyHandle;
 
 	if (auto it = s_Api.Events.find(EventName); it != s_Api.Events.end())
 	{
-		Handle->second = ObjectId;
+		Handle->Id = ObjectId;
 		return &it->second;
 	}
 
@@ -774,20 +771,20 @@ const Reflection::EventDescriptor* GameObject::FindEvent(const std::string_view&
 
 Reflection::GenericValue GameObject::GetPropertyValue(const std::string_view& PropName)
 {
-	std::pair<EntityComponent, uint32_t> fromComponent{ EntityComponent::None, PHX_GAMEOBJECT_NULL_ID };
+	ReflectorRef ref;
 
-	if (const Reflection::PropertyDescriptor* prop = FindProperty(PropName, &fromComponent))
-		return prop->Get(ReflectorHandleToPointer(fromComponent));
+	if (const Reflection::PropertyDescriptor* prop = FindProperty(PropName, &ref))
+		return prop->Get(ref.Referred());
 
 	RAISE_RT("Invalid property in GetPropertyValue: " + std::string(PropName));
 }
 void GameObject::SetPropertyValue(const std::string_view& PropName, const Reflection::GenericValue& Value)
 {
-	std::pair<EntityComponent, uint32_t> fromComponent{ EntityComponent::None, PHX_GAMEOBJECT_NULL_ID };
+	ReflectorRef ref;
 
-	if (const Reflection::PropertyDescriptor* prop = FindProperty(PropName, &fromComponent))
+	if (const Reflection::PropertyDescriptor* prop = FindProperty(PropName, &ref))
 	{
-		prop->Set(ReflectorHandleToPointer(fromComponent), Value);
+		prop->Set(ref.Referred(), Value);
 		
 		return;
 	}
@@ -797,10 +794,10 @@ void GameObject::SetPropertyValue(const std::string_view& PropName, const Reflec
 
 std::vector<Reflection::GenericValue> GameObject::CallFunction(const std::string_view& FuncName, const std::vector<Reflection::GenericValue>& Inputs)
 {
-	std::pair<EntityComponent, uint32_t> fromComponent;
+	ReflectorRef ref;
 
-	if (const Reflection::MethodDescriptor* func = FindMethod(FuncName, &fromComponent))
-		return func->Func(ReflectorHandleToPointer(fromComponent), Inputs);
+	if (const Reflection::MethodDescriptor* func = FindMethod(FuncName, &ref))
+		return func->Func(ref.Referred(), Inputs);
 
 	RAISE_RT("Invalid function in CallFunction: " + std::string(FuncName));
 }
@@ -834,16 +831,11 @@ Reflection::EventMap GameObject::GetEvents() const
 	return cumulativeEvents;
 }
 
-std::vector<std::pair<EntityComponent, uint32_t>>& GameObject::GetComponents()
-{
-	return Components;
-}
-
 void* GameObject::GetComponentByType(EntityComponent Type)
 {
-	for (const std::pair<EntityComponent, uint32_t>& pair : Components)
-		if (pair.first == Type)
-			return GameObject::s_ComponentManagers[(size_t)Type]->GetComponent(pair.second);
+	for (const ReflectorRef& ref : Components)
+		if (ref.Type == Type)
+			return GameObject::s_ComponentManagers[(size_t)Type]->GetComponent(ref.Id);
 	
 	return nullptr;
 }

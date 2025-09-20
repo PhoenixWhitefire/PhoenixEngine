@@ -50,8 +50,23 @@ enum class EntityComponent : uint8_t
 
 // component type and ID
 // if type is "None", the ID is a Game Object ID
-// retrieve pointer to reflector with `GameObject::ReflectorHandleToPointer`
-typedef std::pair<EntityComponent, uint32_t> ReflectorHandle;
+struct ReflectorRef
+{
+	void* Referred() const;
+
+	uint32_t Id = UINT32_MAX;
+	EntityComponent Type = EntityComponent::None;
+
+	bool operator == (const ReflectorRef& Other) const
+	{
+		return Type == Other.Type && Id == Other.Id;
+	}
+
+	bool operator != (const ReflectorRef& Other) const
+	{
+		return !(*this == Other);
+	}
+};
 
 static inline const std::string_view s_EntityComponentNames[] = 
 {
@@ -131,7 +146,6 @@ public:
 	static GameObject* Create();
 
 	static GameObject* GetObjectById(uint32_t);
-	static void* ReflectorHandleToPointer(const ReflectorHandle& Handle);
 
 	static inline uint32_t s_DataModel = PHX_GAMEOBJECT_NULL_ID;
 	static inline Memory::vector<GameObject, MEMCAT(GameObject)> s_WorldArray{};
@@ -141,20 +155,19 @@ public:
 	T* GetComponent()
 	{
 		EntityComponent type = T::Type;
-		for (const std::pair<EntityComponent, uint32_t>& pair : Components)
-			if (pair.first == type)
-				return static_cast<T*>(GameObject::s_ComponentManagers[(size_t)type]->GetComponent(pair.second));
+		for (const ReflectorRef& ref : Components)
+			if (ref.Type == type)
+				return static_cast<T*>(GameObject::s_ComponentManagers[(size_t)type]->GetComponent(ref.Id));
 
 		return nullptr;
 	}
 	uint32_t AddComponent(EntityComponent Type);
 	void RemoveComponent(EntityComponent Type);
 	void* GetComponentByType(EntityComponent);
-	std::vector<ReflectorHandle>& GetComponents();
 
-	const Reflection::PropertyDescriptor* FindProperty(const std::string_view&, ReflectorHandle* Reflector = nullptr);
-	const Reflection::MethodDescriptor* FindMethod(const std::string_view&, ReflectorHandle* Reflector = nullptr);
-	const Reflection::EventDescriptor* FindEvent(const std::string_view&, ReflectorHandle* Reflector = nullptr);
+	const Reflection::PropertyDescriptor* FindProperty(const std::string_view&, ReflectorRef* Reflector = nullptr);
+	const Reflection::MethodDescriptor* FindMethod(const std::string_view&, ReflectorRef* Reflector = nullptr);
+	const Reflection::EventDescriptor* FindEvent(const std::string_view&, ReflectorRef* Reflector = nullptr);
 
 	Reflection::GenericValue GetPropertyValue(const std::string_view&);
 	void SetPropertyValue(const std::string_view&, const Reflection::GenericValue&);
@@ -217,9 +230,9 @@ public:
 	bool InWorkspace = false;
 
 	Memory::vector<uint32_t, MEMCAT(GameObject)> Children;
-	Memory::vector<ReflectorHandle, MEMCAT(GameObject)> Components;
+	Memory::vector<ReflectorRef, MEMCAT(GameObject)> Components;
 	Reflection::Api ComponentApis{};
-	Memory::unordered_map<std::string_view, ReflectorHandle, MEMCAT(GameObject)> MemberToComponentMap;
+	Memory::unordered_map<std::string_view, ReflectorRef, MEMCAT(GameObject)> MemberToComponentMap;
 
 	static nlohmann::json DumpApiToJson();
 
@@ -231,115 +244,180 @@ private:
 	uint16_t m_HardRefCount = 0;
 };
 
-struct GameObjectRef
+// `GameObject*` directly has the least overhead. `ObjectRef`, a little more,
+// and `ObjectHandle`, more than that.
+// Use `GameObject*` when you know the World Array won't get re-allocated
+// for the scope of your variable.
+// Use `ObjectRef` when you know nothing will try to delete your Object.
+// Use `ObjectHandle` when you can't trust anybody.
+// 
+// 20/09/2025
+
+// `ObjectRef`: a weak reference to a GameObject
+struct ObjectRef
 {
-	GameObjectRef() = default;
+	ObjectRef() = default;
 
-	GameObjectRef(GameObject* Object)
-	: m_TargetId(Object->ObjectId)
+	ObjectRef(GameObject* Object)
 	{
-		assert(m_TargetId != PHX_GAMEOBJECT_NULL_ID);
-		assert(Object->Valid);
-
-		Object->IncrementHardRefs();
-	}
-
-	GameObjectRef(const GameObjectRef& Other)
-		: m_TargetId(Other.m_TargetId)
-	{
-		if (Other.m_TargetId != PHX_GAMEOBJECT_NULL_ID)
+		if (Object)
 		{
-			assert(Other->Valid);
-
-			Contained()->IncrementHardRefs();
+			assert(Object->Valid);
+			TargetId = Object->ObjectId;
 		}
-	}
-	GameObjectRef(const GameObjectRef&& Other)
-		: m_TargetId(Other.m_TargetId)
-	{
-		if (Other.m_TargetId != PHX_GAMEOBJECT_NULL_ID)
-		{
-			assert(Other->Valid);
-			
-			Contained()->IncrementHardRefs();
-		}
+		else
+			TargetId = PHX_GAMEOBJECT_NULL_ID;
 	}
 
-	~GameObjectRef()
+	GameObject* Referred() const
 	{
-		if (m_TargetId != PHX_GAMEOBJECT_NULL_ID && m_TargetId != 0)
-		{
-			GameObject* g = GameObject::GetObjectById(m_TargetId);
-			m_TargetId = PHX_GAMEOBJECT_NULL_ID;
-			g->DecrementHardRefs();
-		}
-	}
-
-	GameObject* Contained() const
-	{
-		// Double-free'd or `::Contained` called on a default-constructed Ref
-		assert(m_TargetId != PHX_GAMEOBJECT_NULL_ID);
-
-		GameObject* g = GameObject::GetObjectById(m_TargetId);
-		PHX_ENSURE_MSG(g, "Referenced GameObject was de-alloc'd while we wanted to keep it :(");
-
-		return g;
+		return GameObject::GetObjectById(TargetId);
 	}
 
 	bool IsValid() const
 	{
-		return GameObject::GetObjectById(m_TargetId) != nullptr;
+		return GameObject::GetObjectById(TargetId) != nullptr;
 	}
 
-	void Invalidate()
+	bool operator == (const ObjectRef& them) const
 	{
-		if (m_TargetId != PHX_GAMEOBJECT_NULL_ID)
-			m_TargetId = PHX_GAMEOBJECT_NULL_ID;
-	}
-
-	uint32_t m_TargetId = PHX_GAMEOBJECT_NULL_ID;
-
-	bool operator == (const GameObjectRef& them) const
-	{
-		return m_TargetId == them.m_TargetId;
+		return TargetId == them.TargetId;
 	}
 
 	GameObject* operator -> () const
 	{
-		return Contained();
+		GameObject* object = Referred();
+		assert(object);
+
+		return object;
 	}
 
-	GameObjectRef& operator = (const GameObjectRef&& ref)
+	operator GameObject* () const
 	{
-		if (m_TargetId != PHX_GAMEOBJECT_NULL_ID)
-			Contained()->DecrementHardRefs();
-
-		m_TargetId = ref->ObjectId;
-		Contained()->IncrementHardRefs();
-
-		return *this;
+		return Referred();
 	}
-	GameObjectRef& operator = (const GameObjectRef& ref)
+
+	uint32_t TargetId = PHX_GAMEOBJECT_NULL_ID;
+};
+
+// `ObjectHandle`: a strong reference to a GameObject, prevents it from being de-alloc'd
+struct ObjectHandle
+{
+	ObjectRef Reference;
+
+	ObjectHandle() = default;
+
+	ObjectHandle(GameObject* Object)
 	{
-		if (m_TargetId != PHX_GAMEOBJECT_NULL_ID)
-			Contained()->DecrementHardRefs();
+		Reference = Object;
 		
-		m_TargetId = ref->ObjectId;
-		Contained()->IncrementHardRefs();
+		if (Object)
+			Object->IncrementHardRefs();
+	}
+
+	ObjectHandle(const ObjectRef& Other)
+	{
+		if (GameObject* prevObj = Reference.Referred())
+			prevObj->DecrementHardRefs();
+
+		Reference = Other;
+
+		if (GameObject* newObject = Reference.Referred())
+			newObject->IncrementHardRefs();
+	}
+
+	ObjectHandle(const ObjectHandle& Other)
+	{
+		if (GameObject* prevObj = Reference.Referred())
+			prevObj->DecrementHardRefs();
+
+		Reference = Other.Reference;
+
+		if (GameObject* newObj = Reference.Referred())
+			newObj->IncrementHardRefs();
+	}
+	ObjectHandle(const ObjectHandle&& Other)
+	{
+		if (GameObject* prevObj = Reference.Referred())
+			prevObj->DecrementHardRefs();
+
+		Reference = Other.Reference;
+
+		if (GameObject* newObj = Reference.Referred())
+			newObj->IncrementHardRefs();
+	}
+
+	~ObjectHandle()
+	{
+		if (GameObject* obj = Reference.Referred())
+		{
+			obj->DecrementHardRefs();
+			Reference = nullptr;
+		}
+	}
+
+	bool HasValue() const
+	{
+		return Reference.TargetId != PHX_GAMEOBJECT_NULL_ID;
+	}
+
+	GameObject* Dereference() const
+	{
+		// Double-free'd or `::Dereference` called on a default-constructed Ref
+		assert(HasValue());
+
+		GameObject* object = Reference.Referred();
+		assert(object);
+
+		return object;
+	}
+
+	void Clear()
+	{
+		if (HasValue())
+			Dereference()->DecrementHardRefs();
+
+		Reference = nullptr;
+	}
+
+	bool operator == (const ObjectHandle& them) const
+	{
+		return Reference == them.Reference;
+	}
+
+	GameObject* operator -> () const
+	{
+		return Dereference();
+	}
+
+	ObjectHandle& operator = (const ObjectHandle&& ref)
+	{
+		if (HasValue())
+			Dereference()->DecrementHardRefs();
+
+		Reference = ref.Reference;
+
+		if (HasValue())
+			Dereference()->IncrementHardRefs();
 
 		return *this;
 	}
-
-	GameObjectRef& operator = (GameObject* Object)
+	ObjectHandle& operator = (const ObjectHandle& ref)
 	{
-		m_TargetId = Object->ObjectId;
-		Object->IncrementHardRefs();
+		if (HasValue())
+			Dereference()->DecrementHardRefs();
+
+		Reference = ref.Reference;
+
+		if (HasValue())
+			Dereference()->IncrementHardRefs();
+
 		return *this;
 	}
 
 	operator GameObject* () const
 	{
-		return Contained();
+		return Dereference();
 	}
 };
 

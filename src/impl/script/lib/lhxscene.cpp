@@ -28,7 +28,7 @@ static int scene_load(lua_State* L)
 	std::string fileContents = FileRW::ReadFile(path);
 
 	bool deserializeSuccess = true;
-	std::vector<GameObjectRef> rootNodes = SceneFormat::Deserialize(fileContents, &deserializeSuccess);
+	std::vector<ObjectRef> rootNodes = SceneFormat::Deserialize(fileContents, &deserializeSuccess);
 
 	if (!deserializeSuccess)
     {

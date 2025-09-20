@@ -1,3 +1,4 @@
+--!optimize 0
 -- ed.luau, 14/09/2025
 local CurrentStage = "None"
 local StageUpdateSignal = nil
@@ -37,51 +38,89 @@ local projDm = nil
 local projWp = nil
 local projCam = nil
 
-function Stages.SelectProject(DeltaTime)
-	if imgui.begin("Select Project") then
-		if imgui.button("New") then
-			changeStageTo("CreateNewProject")
-		end
-		
-		if imgui.button("Open") then
-			imgui.endw()
+local function renderMainMenuBar()
+	if not imgui.beginmainmenubar() then
+		return
+	end
+	
+	if imgui.beginmenu("File") then
+		if CurrentStage == "SelectProject" then
+			if imgui.menuitem("Open") then
+				imgui.endmenu()
+				imgui.endmainmenubar()
 			
-			local path = fs.promptopen("resources/scenes", "world", "Worlds")[1]
-			if not path then
-				print("No project selected")
+				local path = fs.promptopen("resources/scenes", "world", "Worlds")[1]
+				if not path then
+					print("No project selected")
+					return
+				end
+			
+				projDm = scene.load(path)[1]
+				projWp = projDm.Workspace
+				projCam = projWp.SceneCamera
+				EditorTl.Target = projWp
+			
+				changeStageTo("ProjectEditing")
+				
 				return
 			end
 			
-			projDm = scene.load(path)[1]
-			projWp = projDm.Workspace
-			projCam = projWp.SceneCamera
-			EditorTl.Target = projWp
+			if imgui.menuitem("New") then
+				imgui.endmenu()
+				imgui.endmainmenubar()
+				
+				projDm = GameObject.new("DataModel")
+				projWp = GameObject.new("Workspace")
+				projCam = GameObject.new("Camera")
+				
+				projWp.Parent = projDm
+				projCam.Parent = projWp
+				projWp.SceneCamera = projCam
+				EditorTl.Parent = workspace
+				EditorTl.Target = projWp
+				EditorTl.Scripting = false
+	
+				engine.setexplorerroot(projDm)
+				
+				changeStageTo("ProjectEditing")
+				
+				return
+			end
 			
-			changeStageTo("ProjectEditing")
+		elseif CurrentStage == "ProjectEditing" then
+			if imgui.menuitem("Save") then
+				imgui.endmenu()
+				imgui.endmainmenubar()
+				
+				local path = fs.promptsave("resources/scenes", "world", "Worlds")
+				if not path then
+					print("No path was selected for saving, cancelled")
+					return
+				end
+				
+				scene.save({ projDm }, path)
+				
+				return
+			end
 			
-			return
+			if imgui.menuitem("Close") then
+				changeStageTo("SelectProject")
+			end
 		end
+		
+		imgui.endmenu()
+	end
+	
+	imgui.endmainmenubar()
+end
+
+function Stages.SelectProject(DeltaTime)
+	if imgui.begin("Select Project") then
+		imgui.text("Use the File menu")
 	end
 	imgui.endw()
-end
-
-function Stages.CreateNewProject_Enter()
-	projDm = GameObject.new("DataModel")
-	projWp = GameObject.new("Workspace")
-	projCam = GameObject.new("Camera")
 	
-	projWp.Parent = projDm
-	projCam.Parent = projWp
-	projWp.SceneCamera = projCam
-	EditorTl.Parent = workspace
-	EditorTl.Target = projWp
-	EditorTl.Scripting = false
-	
-	engine.setexplorerroot(projDm)
-end
-
-function Stages.CreateNewProject()
-	changeStageTo("ProjectEditing")
+	renderMainMenuBar()
 end
 
 local function projectWindow(InPlaytest)
@@ -102,27 +141,11 @@ local function projectWindow(InPlaytest)
 			if imgui.button("Start playtest") then
 				changeStageTo("ProjectPlaying")
 			end
-			
-			if imgui.button("Save") then
-				imgui.endw()
-				
-				local path = fs.promptsave("resources/scenes", "world", "Worlds")
-				if not path then
-					print("No path was selected for saving, cancelled")
-					return
-				end
-				
-				scene.save({ projDm }, path)
-				
-				return
-			end
-			
-			if imgui.button("Close") then
-				changeStageTo("SelectProject")
-			end
 		end
 	end
 	imgui.endw()
+	
+	renderMainMenuBar()
 end
 
 function Stages.ProjectEditing_Enter(DeltaTime)
@@ -133,7 +156,7 @@ function Stages.ProjectEditing(DeltaTime)
 	projectWindow(false)
 	
 	-- sometimes this can get called after `ProjectEditing_Leave` or something somehow
-	if projWp then
+	if projWp and projWp.SceneCamera then
 		projWp.SceneCamera.Transform = EditorCam.Transform
 	end
 end

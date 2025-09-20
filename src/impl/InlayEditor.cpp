@@ -87,7 +87,7 @@ static Scene MtlPreviewScene =
 	{} // used shaders
 };
 static Renderer* MtlPreviewRenderer = nullptr;
-static GameObjectRef MtlPreviewCamera;
+static ObjectHandle MtlPreviewCamera;
 static glm::mat4 MtlPreviewCamOffset = glm::translate(glm::mat4(1.f), glm::vec3(0.f, 0.f, -2.f));
 static glm::mat4 MtlPreviewCamDefaultRotation = glm::eulerAngleYXZ(glm::radians(168.f), glm::radians(12.f), 0.f);
 
@@ -104,7 +104,7 @@ static char MtlShpBuf[MATERIAL_TEXTUREPATH_BUFSIZE] = { 0 };
 static int MtlCurItem = -1;
 static int MtlPrevItem = -1;
 
-static GameObjectRef ExplorerRoot;
+static ObjectHandle ExplorerRoot;
 
 static void setErrorMessage(std::string errm)
 {
@@ -1227,13 +1227,13 @@ static void renderMaterialEditor()
 	ImGui::End();
 }
 
-static std::vector<uint32_t> Selections;
-static std::vector<uint32_t> VisibleTree;
-static std::vector<uint32_t> VisibleTreeWip;
-static uint32_t LastSelected = UINT32_MAX;
-static GameObject* ObjectInsertionTarget = nullptr;
+static std::vector<ObjectHandle> Selections;
+static std::vector<ObjectHandle> VisibleTree;
+static std::vector<ObjectHandle> VisibleTreeWip;
+static ObjectHandle LastSelected;
+static ObjectHandle ObjectInsertionTarget = nullptr;
 static bool IsPickingObject = false;
-static std::vector<uint32_t> PickerTargets;
+static std::vector<ObjectHandle> PickerTargets;
 static std::string PickerTargetPropName;
 
 enum class ContextMenuAction : uint8_t
@@ -1266,21 +1266,19 @@ static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] =
 {
 	[]()
 	{
-		std::vector<uint32_t> newSelections;
+		std::vector<ObjectHandle> newSelections;
 		newSelections.reserve(Selections.size());
 		
-		for (uint32_t selId : Selections)
-			if (GameObject* g = GameObject::GetObjectById(selId))
-				newSelections.push_back(g->Duplicate()->ObjectId);
+		for (const ObjectHandle& sel : Selections)
+			newSelections.push_back(sel->Duplicate());
 	
 		Selections = newSelections;
 	},
 
 	[]()
 	{
-		for (uint32_t selId : Selections)
-			if (GameObject* g = GameObject::GetObjectById(selId))
-				g->Destroy();
+		for (const ObjectHandle& sel : Selections)
+			sel->Destroy();
 				
 		Selections.clear();
 	},
@@ -1290,12 +1288,11 @@ static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] =
 		std::vector<GameObject*> sels;
 		std::string sceneName = "";
 
-		for (uint32_t s : Selections)
-			if (GameObject* g = GameObject::GetObjectById(s))
-			{
-				sels.push_back(g);
-				sceneName += g->Name + "_";
-			}
+		for (const ObjectHandle& sel : Selections)
+		{
+			sels.push_back(sel.Dereference());
+			sceneName += sel->Name + "_";
+		}
 
 		sceneName = sceneName.substr(0, sceneName.size() - 1);
 		std::string* ser = new std::string(SceneFormat::Serialize(sels, "SaveToFileAction_" + sceneName));
@@ -1357,7 +1354,7 @@ static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] =
 						return;
 					}
 
-					std::vector<GameObjectRef> roots = SceneFormat::Deserialize(contents, &readSuccess);
+					std::vector<ObjectRef> roots = SceneFormat::Deserialize(contents, &readSuccess);
 
 					if (!readSuccess)
 					{
@@ -1365,10 +1362,10 @@ static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] =
 						return;
 					}
 
-					assert(GameObject::GetObjectById(Selections[0]));
+					assert(Selections[0].Dereference());
 
-					for (GameObjectRef r : roots)
-						r->SetParent(GameObject::GetObjectById(Selections[0]));
+					for (ObjectRef r : roots)
+						r->SetParent(Selections[0].Dereference());
 				}
 			},
 			nullptr,
@@ -1382,22 +1379,22 @@ static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] =
 
 	[]()
 	{
-		for (uint32_t selId : Selections)
-			if (EcScript* s = GameObject::GetObjectById(selId)->GetComponent<EcScript>())
+		for (const ObjectHandle& sel : Selections)
+			if (EcScript* s = sel->GetComponent<EcScript>())
 				invokeTextEditor(s->SourceFile);
 	},
 
 	[]()
 	{
-		for (uint32_t selId : Selections)
-			if (EcScript* s = GameObject::GetObjectById(selId)->GetComponent<EcScript>())
+		for (const ObjectHandle& sel : Selections)
+			if (EcScript* s = sel->GetComponent<EcScript>())
 				s->Reload();
 	}
 };
 
-static bool isInSelections(GameObject* g)
+static bool isInSelections(const ObjectHandle& obj)
 {
-	return std::find(Selections.begin(), Selections.end(), g->ObjectId) != Selections.end();
+	return std::find(Selections.begin(), Selections.end(), obj) != Selections.end();
 }
 
 static std::vector<ContextMenuAction> getPossibleActionsForSelections()
@@ -1407,12 +1404,10 @@ static std::vector<ContextMenuAction> getPossibleActionsForSelections()
 
 	bool gotScript = false;
 
-	for (uint32_t selId : Selections)
+	for (const ObjectHandle& sel : Selections)
 	{
-		GameObject* g = GameObject::GetObjectById(selId);
-
 		if (!gotScript)
-			if (g->GetComponent<EcScript>())
+			if (sel->GetComponent<EcScript>())
 			{
 				actions.push_back(ContextMenuAction::EditScript);
 				actions.push_back(ContextMenuAction::ReloadScript);
@@ -1436,9 +1431,8 @@ static void onTreeItemClicked(GameObject* nodeClicked)
 	{
 		try
 		{
-			for (uint32_t selId : PickerTargets)
-				if (GameObject* g = GameObject::GetObjectById(selId))
-					g->SetPropertyValue(PickerTargetPropName, nodeClicked->ToGenericValue());
+			for (const ObjectHandle& target : PickerTargets)
+				target->SetPropertyValue(PickerTargetPropName, nodeClicked->ToGenericValue());
 		}
 		catch (const std::runtime_error& Error)
 		{
@@ -1456,44 +1450,46 @@ static void onTreeItemClicked(GameObject* nodeClicked)
 	}
 
 	if (ImGui::GetIO().KeyCtrl)
-		if (const auto& it = std::find(Selections.begin(), Selections.end(), nodeClicked->ObjectId); it != Selections.end())
+	{
+		ObjectHandle tempNc = nodeClicked;
+
+		if (const auto& it = std::find(Selections.begin(), Selections.end(), tempNc); it != Selections.end())
 			Selections.erase(it);
 		else
-			Selections.push_back(nodeClicked->ObjectId);
+			Selections.push_back(nodeClicked);
+	}
 
 	else if (ImGui::GetIO().KeyShift)
 	{
-		GameObject* lastSelected = GameObject::GetObjectById(LastSelected);
-
-		if (lastSelected && LastSelected != nodeClicked->ObjectId)
+		if (LastSelected.Reference.Referred() && LastSelected.Dereference() != nodeClicked)
 		{
 			if (!isInSelections(nodeClicked))
-				Selections.push_back(nodeClicked->ObjectId);
+				Selections.push_back(nodeClicked);
 
 			auto start = std::find(VisibleTree.begin(), VisibleTree.end(), LastSelected);
-			auto end = std::find(VisibleTree.begin(), VisibleTree.end(), nodeClicked->ObjectId);
+			auto end = std::find(VisibleTree.begin(), VisibleTree.end(), ObjectHandle(nodeClicked));
 
 			if (start > end)
 			{
 				// doesn't seem to work unless it is copied fsr
-				std::vector<uint32_t>::iterator temp = end;
+				std::vector<ObjectHandle>::iterator temp = end;
 				end = start;
 				start = temp;
 			}
 
 			// 25/01/2025 this feels weird, like surely there's a better way
 			// to iterate between `start` and `end`
-			for (uint32_t middleId : std::vector<uint32_t>(start, end))
-				if (!isInSelections(GameObject::GetObjectById(middleId)))
-					Selections.push_back(middleId);
+			for (const ObjectHandle& middle : std::span<ObjectHandle>(start, end))
+				if (!isInSelections(middle))
+					Selections.push_back(middle);
 		}
 		else
-			Selections = { nodeClicked->ObjectId };
+			Selections = { nodeClicked };
 	}
 	else
-		Selections = { nodeClicked->ObjectId };
+		Selections = { nodeClicked };
 
-	LastSelected = nodeClicked->ObjectId;
+	LastSelected = nodeClicked;
 }
 
 static Texture getIconForComponent(EntityComponent Ec)
@@ -1595,11 +1591,11 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 
 		ImGui::AlignTextToFramePadding();
 
-		std::pair<EntityComponent, uint32_t> primaryComponent = object->GetComponents()[0];
-		if (primaryComponent.first == EntityComponent::Transform && object->GetComponents().size() > 1)
-			primaryComponent = object->GetComponents()[1];
+		ReflectorRef primaryComponent = object->Components[0];
+		if (primaryComponent.Type == EntityComponent::Transform && object->Components.size() > 1)
+			primaryComponent = object->Components[1];
 		
-		Texture tex = getIconForComponent(primaryComponent.first);
+		Texture tex = getIconForComponent(primaryComponent.Type);
 
 		if (!didVisitCurSelection && Selections.size() > 0)
 		{
@@ -1623,7 +1619,7 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 			nodeClicked = object;
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
 			isHovered = true;
-		if (ImGui::IsMouseClicked(ImGuiMouseButton_Right) && isHovered)
+		if (ImGui::IsMouseClicked(ImGuiMouseButton_Right))
 			openInserter = true;
 
 		ImGui::SameLine();
@@ -1638,7 +1634,7 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 			nodeClicked = object;
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
 			isHovered = true;
-		if (ImGui::IsMouseClicked(ImGuiMouseButton_Right) && isHovered)
+		if (ImGui::IsMouseClicked(ImGuiMouseButton_Right))
 			openInserter = true;
 		
 		ImGui::SameLine();
@@ -1648,12 +1644,12 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 			nodeClicked = object;
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
 			isHovered = true;
-		if (ImGui::IsMouseClicked(ImGuiMouseButton_Right) && isHovered)
+		if (ImGui::IsMouseClicked(ImGuiMouseButton_Right))
 			openInserter = true;
 
-		VisibleTreeWip.push_back(object->ObjectId);
+		VisibleTreeWip.push_back(object);
 
-		if (openInserter || (ImGui::IsMouseClicked(ImGuiMouseButton_Right) && isHovered))
+		if (openInserter || ImGui::IsMouseClicked(ImGuiMouseButton_Right))
 		{
 			ImGui::OpenPopup(1979); // the mimic!!
 
@@ -1690,7 +1686,7 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 			}
 		}
 
-		if (object == ObjectInsertionTarget)
+		if (object == (ObjectInsertionTarget.HasValue() ? ObjectInsertionTarget.Dereference() : nullptr))
 		{
 			if (ImGui::BeginPopup("Object Insertion Window"))
 			{
@@ -1714,7 +1710,7 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 					{
 						GameObject* newObject = GameObject::Create(s_EntityComponentNames[i]);
 						newObject->SetParent(ObjectInsertionTarget);
-						Selections = { newObject->ObjectId };
+						Selections = { newObject };
 
 						ObjectInsertionTarget = nullptr;
 					}
@@ -1871,7 +1867,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 {
 	ZoneScopedC(tracy::Color::DarkSeaGreen);
 
-	if (!GameObject::GetObjectById(ExplorerRoot.m_TargetId))
+	if (!ExplorerRoot.Reference.Referred())
 		ExplorerRoot = GameObject::GetObjectById(GameObject::s_DataModel);
 
 	ErrorTooltipTimeRemaining -= DeltaTime;
@@ -1904,14 +1900,6 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 	recursiveIterateTree(ExplorerRoot);
 	
 	VisibleTree = VisibleTreeWip;
-
-	std::vector<GameObjectRef> refs;
-
-	for (uint32_t id : Selections)
-		if (GameObject* g = GameObject::GetObjectById(id))
-			refs.emplace_back(g);
-		else
-			Selections.erase(std::find(Selections.begin(), Selections.end(), id));
 	
 	if (ImGui::BeginPopupEx(1979, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings))
 	{
@@ -1932,8 +1920,8 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 	if (Selections.size() > 0)
 	{
 		uint32_t idSum = 0;
-		for (uint32_t id : Selections)
-			idSum += id;
+		for (const ObjectHandle& sel : Selections)
+			idSum += sel->ObjectId;
 
 		ImGui::PushID(idSum);
 
@@ -1941,14 +1929,10 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 
 		std::string sepStr = "Properties of " + std::to_string(Selections.size()) + " objects";
 		if (Selections.size() == 1)
-		{
-			GameObject* target = GameObject::GetObjectById(Selections[0]);
-
 			sepStr = std::format(
 				"Properties of {}",
-				target->Name
+				Selections[0]->Name
 			);
-		}
 
 		ImGui::SeparatorText(sepStr.c_str());
 
@@ -1960,16 +1944,9 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 
 		std::set<EntityComponent> components;
 
-		for (uint32_t selId : Selections)
-		{
-			GameObject* sel = GameObject::GetObjectById(selId);
-
-			if (!sel)
-				continue;
-
-			for (auto [ec, id] : sel->GetComponents())
-				components.insert(ec);
-		}
+		for (const ObjectHandle& sel : Selections)
+			for (const ReflectorRef& ref : sel->Components)
+				components.insert(ref.Type);
 
 		for (EntityComponent ec : components)
 		{
@@ -1989,25 +1966,10 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 		std::unordered_map<std::string_view, std::pair<const Reflection::PropertyDescriptor*, Reflection::GenericValue>> props;
 		std::unordered_map<std::string_view, bool> conflictingProps;
 
-		for (uint32_t selId : Selections)
+		for (const ObjectHandle& sel : Selections)
 		{
-			GameObject* sel = GameObject::GetObjectById(selId);
-
-			if (!sel)
-			{
-				// 25/01/2025 i think the iterator goes boom if i do this
-				Selections.erase(std::find(Selections.begin(), Selections.end(), selId));
-				break;
-			}
-
 			for (const auto& prop : sel->GetProperties())
 			{
-				if (!sel) // not entirely sure how it happened, but it did
-				{
-					Selections.erase(std::find(Selections.begin(), Selections.end(), selId));
-					break;
-				}
-
 				const std::string_view& pname = prop.first;
 				const auto& it = props.find(pname);
 
@@ -2210,8 +2172,8 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 						{
 							if (referenced)
 							{
-								uint32_t targetId = GameObject::FromGenericValue(newVal)->ObjectId;
-								Selections = { targetId };
+								GameObject* target = GameObject::FromGenericValue(newVal);
+								Selections = { target };
 							}
 							else
 								Selections.clear();
@@ -2228,13 +2190,8 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 					else if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
 						if (ImGui::GetIO().KeyCtrl)
 						{
-							for (uint32_t pid : PickerTargets)
-							{
-								GameObject* obj = GameObject::GetObjectById(pid);
-
-								if (pid)
-									obj->SetPropertyValue(PickerTargetPropName, {});
-							}
+							for (const ObjectHandle& object : PickerTargets)
+								object->SetPropertyValue(PickerTargetPropName, {});
 						}
 				}
 
@@ -2363,8 +2320,8 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 			{
 				try
 				{
-					for (uint32_t selId : Selections)
-						GameObject::GetObjectById(selId)->SetPropertyValue(propName, newVal);
+					for (const ObjectHandle& sel : Selections)
+						sel->SetPropertyValue(propName, newVal);
 				}
 				catch (const std::runtime_error& Err)
 				{
@@ -2385,23 +2342,24 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 	ImGui::End();
 }
 
-void InlayEditor::SetExplorerRoot(const GameObjectRef NewRoot)
+void InlayEditor::SetExplorerRoot(const ObjectHandle NewRoot)
 {
 	ExplorerRoot = NewRoot;
 }
 
-void InlayEditor::SetExplorerSelections(const std::vector<GameObjectRef>& NewSelections)
+void InlayEditor::SetExplorerSelections(const std::vector<ObjectHandle>& NewSelections)
 {
-	Selections.clear();
-
-	for (const GameObjectRef& r : NewSelections)
-		Selections.push_back(r.m_TargetId);
+	Selections = NewSelections;
 }
 
 void InlayEditor::Shutdown()
 {
-	MtlPreviewCamera.Invalidate();
-	ExplorerRoot.Invalidate();
+	MtlPreviewCamera = nullptr;
+	ExplorerRoot = nullptr;
+	Selections.clear();
+	VisibleTree.clear();
+	VisibleTreeWip.clear();
+	PickerTargets.clear();
 	
 	if (TextEditorEntryBuffer)
 		textEditorSaveFile();
@@ -2480,6 +2438,15 @@ static void debugVariable(lua_State* L)
 	{
 		if (ImGui::TreeNodeEx(varname.c_str(), NodeFlags, "%s: (table)", varname.c_str()))
 		{
+			if (lua_getmetatable(L, -1))
+			{
+				lua_pushstring(L, "(metatable)");
+				lua_pushvalue(L, -2);
+				debugVariable(L);
+				
+				lua_pop(L, 3);
+			}
+
 			lua_pushnil(L);
 			while (lua_next(L, -2))
 			{
@@ -2487,6 +2454,7 @@ static void debugVariable(lua_State* L)
 
 				lua_pop(L, 1);
 			}
+
 			ImGui::TreePop();
 		}
 
@@ -2646,7 +2614,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError)
 						const char* name = lua_getlocal(L, l, i);
 
 						if (!name)
-							break;
+							break; // TODO are they contiguous?
 
 						lua_pushstring(L, name);
 						lua_pushvalue(L, -2);
@@ -2680,6 +2648,15 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError)
 			}
 			case 2:
 			{
+				if (lua_getmetatable(L, -1))
+				{
+					lua_pushstring(L, "(metatable)");
+					lua_pushvalue(L, -2);
+					debugVariable(L);
+
+					lua_pop(L, 3);
+				}
+
 				lua_pushnil(L);
 				while (lua_next(L, LUA_GLOBALSINDEX))
 				{
@@ -2692,6 +2669,15 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError)
 			}
 			case 3:
 			{
+				if (lua_getmetatable(L, -1))
+				{
+					lua_pushstring(L, "(metatable)");
+					lua_pushvalue(L, -2);
+					debugVariable(L);
+					
+					lua_pop(L, 3);
+				}
+
 				lua_pushnil(L);
 				while (lua_next(L, LUA_ENVIRONINDEX))
 				{
@@ -2704,6 +2690,15 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError)
 			}
 			case 4:
 			{
+				if (lua_getmetatable(L, -1))
+				{
+					lua_pushstring(L, "(metatable)");
+					lua_pushvalue(L, -2);
+					debugVariable(L);
+					
+					lua_pop(L, 3);
+				}
+
 				lua_pushnil(L);
 				while (lua_next(L, LUA_REGISTRYINDEX))
 				{
@@ -2743,7 +2738,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError)
 
 		if (!quietBg)
 		{
-			EcCamera* sceneCam = engine->Workspace->GetComponent<EcWorkspace>()->GetSceneCamera()->GetComponent<EcCamera>();
+			EcCamera* sceneCam = engine->WorkspaceRef->GetComponent<EcWorkspace>()->GetSceneCamera()->GetComponent<EcCamera>();
 
 			engine->RendererContext.DrawScene(
 				engine->CurrentScene,

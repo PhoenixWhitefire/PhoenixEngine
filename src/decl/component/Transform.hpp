@@ -8,7 +8,7 @@ struct EcTransform
 {
     glm::mat4 Transform{ 1.f };
     glm::vec3 Size{ 1.f, 1.f, 1.f };
-    GameObjectRef Object;
+    ObjectRef Object;
     bool Valid = true;
 
     static inline EntityComponent Type = EntityComponent::Transform;

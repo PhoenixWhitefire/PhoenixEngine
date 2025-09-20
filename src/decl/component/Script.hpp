@@ -12,7 +12,7 @@ struct EcScript
 	void Update(double);
 
 	std::string SourceFile = "scripts/default.luau";
-	GameObjectRef Object;
+	ObjectRef Object;
 	uint32_t EcId = UINT32_MAX;
 	bool Valid = true;
 

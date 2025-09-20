@@ -371,8 +371,8 @@ static bool s_DebugCollisionAabbs = false;
 static void traverseHierarchy(
 	Memory::vector<RenderItem, MEMCAT(Rendering)>& RenderList,
 	Memory::vector<LightItem, MEMCAT(Rendering)>& LightList,
-	Memory::vector<GameObjectRef, MEMCAT(Physics)>& PhysicsList,
-	const GameObjectRef& Root,
+	Memory::vector<ObjectHandle, MEMCAT(Physics)>& PhysicsList,
+	const ObjectHandle& Root,
 	EcCamera* SceneCamera,
 	double DeltaTime,
 	EcDirectionalLight** Sun,
@@ -390,13 +390,13 @@ static void traverseHierarchy(
 
 	std::vector<GameObject*> objectsRaw = Root->GetChildren();
 	// TODO 05/04/2025: FIXME
-	std::vector<GameObjectRef> objects;
+	std::vector<ObjectHandle> objects;
 	objects.reserve(objectsRaw.size());
 
 	for (GameObject* o : objectsRaw)
 		objects.emplace_back(o);
 
-	for (GameObjectRef object : objects)
+	for (ObjectHandle object : objects)
 	{
 		if (EcSound* sound = object->GetComponent<EcSound>())
 			sound->Update(DeltaTime);
@@ -446,12 +446,7 @@ static void traverseHierarchy(
 		}
 
 		if (EcScript* scr = object->GetComponent<EcScript>(); ScriptsUpdate && scr)
-		{
 			scr->Update(DeltaTime);
-
-			if (!GameObject::GetObjectById(object.m_TargetId))
-				return;
-		}
 
 		EcDirectionalLight* directional = object->GetComponent<EcDirectionalLight>();
 		EcPointLight* point = object->GetComponent<EcPointLight>();
@@ -586,7 +581,7 @@ void Engine::m_Render(const Scene& CurrentScene, double deltaTime)
 
 	float aspectRatio = (float)this->WindowSizeX / (float)this->WindowSizeY;
 
-	GameObjectRef sceneCamObject = Workspace->GetComponent<EcWorkspace>()->GetSceneCamera();
+	ObjectHandle sceneCamObject = WorkspaceRef->GetComponent<EcWorkspace>()->GetSceneCamera();
 	EcCamera* sceneCamera = sceneCamObject->GetComponent<EcCamera>();
 
 	// we do this AFTER  `traverseHierarchy` in case any Scripts
@@ -755,15 +750,17 @@ void Engine::BindDataModel(GameObject* NewDataModel)
 {
 	ensureDataModelValid(NewDataModel);
 
-	DataModel = NewDataModel;
-	Workspace = NewDataModel->FindChild("Workspace");
-	GameObject::s_DataModel = DataModel->ObjectId;
+	DataModelRef = NewDataModel;
+	WorkspaceRef = NewDataModel->FindChild("Workspace");
+	assert(WorkspaceRef.Dereference());
+
+	GameObject::s_DataModel = DataModelRef->ObjectId;
 }
 
 void Engine::Start()
 {
 	Log::Info("Validating DataModel...");
-	ensureDataModelValid(DataModel.Contained());
+	ensureDataModelValid(DataModelRef.Dereference());
 
 	Log::Info("Final initializations...");
 
@@ -790,15 +787,15 @@ void Engine::Start()
 		TIME_SCOPE_AS_N("EntireFrame", EntireFrameTimerScope);
 		ZoneScopedNC("Frame", tracy::Color::PaleTurquoise);
 
-		if (DataModel->IsDestructionPending)
+		if (DataModelRef->IsDestructionPending)
 		{
 			Log::Warning("`::Destroy` called on DataModel, shutting down");
 			break;
 		}
 
-		if (!GameObject::GetObjectById(Workspace.m_TargetId))
+		if (WorkspaceRef->IsDestructionPending)
 		{
-			Log::Warning("Workspace was removed, shutting down");
+			Log::Warning("`::Destroy` called on Workspace, shutting down");
 			break;
 		}
 
@@ -953,12 +950,12 @@ void Engine::Start()
 			ImGui::NewFrame();
 		}
 
-		GameObjectRef sceneCamObject = Workspace->GetComponent<EcWorkspace>()->GetSceneCamera();
+		ObjectHandle sceneCamObject = WorkspaceRef->GetComponent<EcWorkspace>()->GetSceneCamera();
 		EcCamera* sceneCamera = sceneCamObject->GetComponent<EcCamera>();
 
-		Memory::vector<GameObjectRef, MEMCAT(Physics)> physicsList;
+		Memory::vector<ObjectHandle, MEMCAT(Physics)> physicsList;
 
-		REFLECTION_SIGNAL(DataModel->GetComponent<EcDataModel>()->OnFrameBeginCallbacks, deltaTime);
+		REFLECTION_SIGNAL(DataModelRef->GetComponent<EcDataModel>()->OnFrameBeginCallbacks, deltaTime);
 
 		// fetch the camera again because of potential CurrentScene changes that may have caused re-alloc'd
 		// (really need a generic `Ref` system)
@@ -977,7 +974,7 @@ void Engine::Start()
 				CurrentScene.RenderList,
 				CurrentScene.LightingList,
 				physicsList,
-				Workspace,
+				WorkspaceRef,
 				sceneCamera,
 				deltaTime,
 				&sun
@@ -1113,10 +1110,17 @@ void Engine::Shutdown()
 		GameObject::s_ComponentManagers[i]->Shutdown();
 	}
 
-	Log::Info("Destroying DataModel...");
+#ifdef NDEBUG
+	Log::Info("Clearing World Array...");
 	GameObject::s_WorldArray.clear();
-	DataModel.Invalidate();
-	Workspace.Invalidate();
+#else
+	// Helps ensure correctness, but slower
+	Log::Info("Destroying DataModel...");
+	DataModelRef->Destroy();
+	WorkspaceRef->Destroy();
+	DataModelRef.Clear();
+	WorkspaceRef.Clear();
+#endif
 
 	Log::Info("Shutting down managers...");
 

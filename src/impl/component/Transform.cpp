@@ -13,14 +13,6 @@ public:
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
 
-    void DeleteComponent(uint32_t Id) override
-    {
-        // TODO id reuse with handles that have a counter per re-use to reduce memory growth
-        m_Components[Id].Object.~GameObjectRef();
-
-        ComponentManager<EcTransform>::DeleteComponent(Id);
-    }
-
     const Reflection::StaticPropertyMap& GetProperties() override
     {
         static const Reflection::StaticPropertyMap props = 

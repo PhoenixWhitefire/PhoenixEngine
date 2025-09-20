@@ -5,8 +5,8 @@
 static int model_import(lua_State* L)
 {
 	const char* path = luaL_checkstring(L, 1);
-	std::vector<GameObjectRef> loaded = ModelLoader(path, PHX_GAMEOBJECT_NULL_ID).LoadedObjs;
-			
+	std::vector<ObjectRef> loaded = ModelLoader(path, PHX_GAMEOBJECT_NULL_ID).LoadedObjs;
+	
 	ScriptEngine::L::PushGenericValue(L, loaded.at(0)->ToGenericValue());
 
 	/*

@@ -67,14 +67,14 @@ namespace ScriptEngine::L
 	void PushGenericValue(lua_State*, const Reflection::GenericValue&);
 	void PushJson(lua_State*, const nlohmann::json&);
 	void PushGameObject(lua_State*, GameObject*);
-	void PushMethod(lua_State* L, const Reflection::MethodDescriptor*, ReflectorHandle);
+	void PushMethod(lua_State* L, const Reflection::MethodDescriptor*, ReflectorRef);
 
 	void DumpStacktrace(lua_State* L, std::string* Into = nullptr, int Level = 0, const char* Message = nullptr);
 
 	int HandleMethodCall(
 		lua_State* L,
 		const Reflection::MethodDescriptor* fnaf, // THE MIMICCCCC!!!!
-		ReflectorHandle
+		ReflectorRef
 	);
 
 	// This yields the given Luau thread (ensuring that we are in a yieldable context),

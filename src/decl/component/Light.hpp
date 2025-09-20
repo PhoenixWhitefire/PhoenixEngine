@@ -28,7 +28,7 @@ struct EcDirectionalLight : public EcLight
 	float ShadowViewNearPlane = 0.1f;
 	bool ShadowViewMoveWithCamera = true;
 
-	GameObjectRef Object;
+	ObjectRef Object;
 
 	static inline EntityComponent Type = EntityComponent::DirectionalLight;
 };

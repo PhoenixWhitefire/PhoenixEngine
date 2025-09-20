@@ -145,7 +145,7 @@ static int engine_setexplorerroot(lua_State* L)
 
 static int engine_setexplorerselections(lua_State* L)
 {
-    std::vector<GameObjectRef> objects;
+    std::vector<ObjectHandle> objects;
 
     lua_pushnil(L);
     while (lua_next(L, 1))

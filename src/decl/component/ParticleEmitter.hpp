@@ -15,7 +15,7 @@ struct EcParticleEmitter
 	void Update(double);
 	void AppendToRenderList(std::vector<RenderItem>&);
 
-	GameObjectRef Object;
+	ObjectRef Object;
 
 	bool Emitting = true;
 	bool ParticlesAreAttached = false;

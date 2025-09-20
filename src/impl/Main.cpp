@@ -192,7 +192,7 @@ static void handleInputs(double deltaTime)
 {
 	Engine* EngineInstance = Engine::Get();
 
-	EcCamera* camera = EngineInstance->Workspace->GetComponent<EcWorkspace>()->GetSceneCamera()->GetComponent<EcCamera>();
+	EcCamera* camera = EngineInstance->WorkspaceRef->GetComponent<EcWorkspace>()->GetSceneCamera()->GetComponent<EcCamera>();
 	SDL_Window* window = EngineInstance->Window;
 
 	float mouseX;
@@ -736,7 +736,7 @@ static void init()
 									: EngineJsonConfig.value("RootScene", "scenes/root.world");
 	
 	bool worldLoadSuccess = true;
-	std::vector<GameObjectRef> roots = SceneFormat::Deserialize(FileRW::ReadFile(mapFile), &worldLoadSuccess);
+	std::vector<ObjectRef> roots = SceneFormat::Deserialize(FileRW::ReadFile(mapFile), &worldLoadSuccess);
 	
 	/*
 	std::vector<GameObject, Memory::Allocator<GameObject>> memalloctest;
@@ -751,11 +751,10 @@ static void init()
 
 	PHX_ENSURE_MSG(!roots.empty(), "No root objects in World!");
 
-	GameObjectRef root = roots[0];
-	root->IncrementHardRefs();
-
+	ObjectRef root = roots[0];
 	PHX_ENSURE_MSG(root->GetComponent<EcDataModel>(), "Root Object was not a DataModel!");
 
+	root->IncrementHardRefs();
 	EngineInstance->BindDataModel(root);
 }
 

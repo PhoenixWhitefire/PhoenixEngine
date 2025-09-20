@@ -8,7 +8,7 @@ struct EcBone
 {
 	glm::mat4 Transform{ 1.f };
 	uint8_t SkeletalBoneId = UINT8_MAX;
-	GameObjectRef Object;
+	ObjectRef Object;
 	bool Valid = true;
 
 	static const EntityComponent Type = EntityComponent::Bone;

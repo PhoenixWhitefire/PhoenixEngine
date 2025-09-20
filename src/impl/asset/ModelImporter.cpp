@@ -228,7 +228,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 
 	for (ModelLoader::ModelNode& node : m_Nodes)
 	{
-		GameObjectRef object;
+		ObjectRef object;
 
 		if (node.Type == ModelNode::NodeType::Container)
 			object = GameObject::Create("Model");
@@ -359,12 +359,12 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 		else
 			object->SetParent(
 				this->LoadedObjs.at(parentIndex) != object
-				? LoadedObjs[parentIndex].Contained()
+				? LoadedObjs[parentIndex].Referred()
 				: GameObject::GetObjectById(Parent)
 			);
 	}
 
-	for (GameObjectRef anim : m_Animations)
+	for (ObjectRef anim : m_Animations)
 		anim->SetParent(LoadedObjs.at(0));
 }
 

@@ -50,8 +50,6 @@ public:
 		if (FMOD::Channel* chan = (FMOD::Channel*)sound.m_Channel)
 			chan->stop();
 
-		sound.Object.~GameObjectRef();
-
 		ComponentManager<EcSound>::DeleteComponent(Id);
     }
 

@@ -4,7 +4,7 @@
 #include "component/Camera.hpp"
 #include "Engine.hpp"
 
-static GameObjectRef s_FallbackCamera;
+static ObjectHandle s_FallbackCamera;
 
 static GameObject* createCamera()
 {
@@ -26,16 +26,10 @@ public:
 
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
-
-    void DeleteComponent(uint32_t Id) override
-    {
-        m_Components[Id].Object.~GameObjectRef();
-		ComponentManager<EcWorkspace>::DeleteComponent(Id);
-    }
-
+	
 	void Shutdown() override
 	{
-		s_FallbackCamera.Invalidate();
+		s_FallbackCamera = nullptr;
 		ComponentManager<EcWorkspace>::Shutdown();
 	}
 
@@ -139,7 +133,7 @@ glm::vec3 EcWorkspace::ScreenPointToRay(double x, double y, float length, glm::v
 
 GameObject* EcWorkspace::GetSceneCamera() const
 {
-	if (s_FallbackCamera.m_TargetId == PHX_GAMEOBJECT_NULL_ID)
+	if (!s_FallbackCamera.HasValue())
 		s_FallbackCamera = createCamera();
 
 	GameObject* sceneCam = GameObject::GetObjectById(m_SceneCameraId);
@@ -150,7 +144,7 @@ GameObject* EcWorkspace::GetSceneCamera() const
 		sceneCam = nullptr;
 	}
 
-	return sceneCam ? sceneCam : s_FallbackCamera.Contained();
+	return sceneCam ? sceneCam : s_FallbackCamera.Dereference();
 }
 
 void EcWorkspace::SetSceneCamera(GameObject* NewCam)

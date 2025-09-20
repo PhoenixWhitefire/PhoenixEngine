@@ -46,7 +46,6 @@ public:
 		EcMesh& mesh = m_Components[Id];
 		tryMarkFreeSkinnedMeshPseudoAsset(mesh);
 
-		mesh.Object.~GameObjectRef();
 		ComponentManager<EcMesh>::DeleteComponent(Id);
     }
 
@@ -145,7 +144,7 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 		tryMarkFreeSkinnedMeshPseudoAsset(*this);
 
 	MeshProvider* meshProvider = MeshProvider::Get();
-	GameObjectRef obj = Object;
+	ObjectRef obj = Object;
 	std::string meshPathStr{ MeshPath };
 
 	this->RenderMeshId = meshProvider->LoadFromPath(
@@ -191,7 +190,7 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 			{
 				const Bone& b = meshAfter.Bones[boneId];
 			
-				GameObjectRef boneObj;
+				ObjectRef boneObj;
 				if (GameObject* g = obj->FindChild(b.Name))
 				{
 					if (g->GetComponent<EcBone>())
@@ -213,7 +212,7 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 				EcBone* bone = boneObj->GetComponent<EcBone>();
 
 				boneObj->SetParent(b.Parent == UINT8_MAX
-					? obj.Contained()
+					? obj.Referred()
 					: obj->FindChild(meshAfter.Bones[b.Parent].Name)
 				);
 				boneObj->Name = b.Name;

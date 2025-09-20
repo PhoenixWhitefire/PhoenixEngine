@@ -45,7 +45,7 @@ struct EcMesh
 	std::string Asset = "!Cube";
 	uint32_t GpuSkinningBuffer = UINT32_MAX;
 
-	GameObjectRef Object;
+	ObjectRef Object;
 	bool Valid = true;
 
 	static inline EntityComponent Type = EntityComponent::Mesh;

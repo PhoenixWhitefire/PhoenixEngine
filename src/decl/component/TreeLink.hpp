@@ -7,10 +7,10 @@
 
 struct EcTreeLink
 {
-    GameObjectRef Target;
+    ObjectRef Target;
     bool Scripting = true;
 
-    GameObjectRef Object;
+    ObjectRef Object;
     bool Valid = true;
     
     static const EntityComponent Type = EntityComponent::TreeLink;

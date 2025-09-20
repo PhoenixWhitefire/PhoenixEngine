@@ -18,12 +18,6 @@ public:
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
 
-	void DeleteComponent(uint32_t Id) override
-	{
-		m_Components[Id].Object.~GameObjectRef();
-		ComponentManager<EcExample>::DeleteComponent(Id);
-	}
-
     const Reflection::StaticPropertyMap& GetProperties() override
     {
         static const Reflection::StaticPropertyMap props = 
@@ -67,7 +61,7 @@ public:
 				-> std::vector<Reflection::GenericValue>
 				{
 					EcExample* ex = static_cast<EcExample*>(p);
-					GameObjectRef object = ex->Object;
+					ObjectRef object = ex->Object;
 
 					Reflection::GenericValue gv = args.at(0);
 					std::span<Reflection::GenericValue> names = gv.AsArray();

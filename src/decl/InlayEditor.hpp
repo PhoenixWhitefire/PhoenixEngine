@@ -9,8 +9,8 @@ namespace InlayEditor
 {
 	void Initialize(Renderer*);
 	void UpdateAndRender(double DeltaTime);
-	void SetExplorerSelections(const std::vector<GameObjectRef>&);
-	void SetExplorerRoot(const GameObjectRef);
+	void SetExplorerSelections(const std::vector<ObjectHandle>&);
+	void SetExplorerRoot(const ObjectHandle);
 	void Shutdown();
 
 	extern bool DidInitialize;
