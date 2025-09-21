@@ -21,6 +21,7 @@ Intended to be compatible with both Windows and Linux/Ubuntu.
 * Minimum CMake version of `3.28` (arbitrary, the one I use on Linux. I use `3.30` on Windows)
 * Compiler which supports C++ Standard `20` and C Standard `17` (G++/MSVC are intentionally supported)
 * For Windows, Visual Studio 2022 platform toolset `v143`
+* **Last commit with verified Windows compatibility: `49f2ef282796c9cb10453b6c4ff2cc5e1da91df2`** - Because I mainly use the Linux portion of my dualboot setup, I am not able to frequently verify that I haven't accidentally introduced incompatibilities with Windows/MSVC. The prior commit is the last one which I verified to compile on Visual Studio
 
 1. `git clone https://github.com/PhoenixWhitefire/PhoenixEngine --recursive --depth 1`, or just use the `Code <>` button
     * `--recursive` clones submodules as well (check the `Vendor` directory)
