@@ -44,8 +44,6 @@ function Controller:InitDefault(CharacterHeight)
 	self.JumpRayDistance = CharacterHeight * 0.6
 end
 
-local CHARACTER_MAX_STEP_UP_DIST = 1.5
-
 function Controller:Update(DeltaTime)
 	self.totalTime += DeltaTime
 	

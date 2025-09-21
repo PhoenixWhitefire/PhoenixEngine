@@ -1952,7 +1952,24 @@ nlohmann::json ScriptEngine::DumpApiToJson()
 		{
 			if (!lua_istable(luhx, -1))
 			{
-				json["Globals"][k] = luaL_typename(luhx, -1);
+				const char* tn = luaL_typename(luhx, -1);
+
+				if (strcmp(tn, "GameObject") == 0)
+				{
+					std::string type = tn;
+
+					GameObject* obj = GameObject::FromGenericValue(L::ToGeneric(luhx, -1));
+
+					for (const ReflectorRef& ref : obj->Components)
+					{
+						type.append(" & ");
+						type.append(s_EntityComponentNames[(uint8_t)ref.Type]);
+					}
+
+					json["Globals"][k] = type;
+				}
+				else
+					json["Globals"][k] = tn;
 			}
 			else
 			{
@@ -1987,6 +2004,11 @@ nlohmann::json ScriptEngine::DumpApiToJson()
 		lua_pop(base, 1);
 		lua_pop(luhx, 1);
 	}
+
+	nlohmann::json& eventSignal = json["Datatypes"]["EventSignal"];
+	eventSignal = nlohmann::json::object();
+	nlohmann::json& eventConnection = json["Datatypes"]["EventConnection"];
+	eventConnection = nlohmann::json::object();
 
 	lua_getglobal(luhx, "_G");
 	lua_pushinteger(luhx, 67);

@@ -237,12 +237,12 @@
       },
       "loadthread": {
         "In": "Code: string, ChunkName: string",
-        "Out": "( coroutine?, string? )",
+        "Out": "( thread?, string? )",
         "Description": "Like `loadstring` in *other* runtimes, however does not compromise Global Import optimizations and returns a coroutine instead of a function. If an error occurs, returns `nil` as the first value and the error message as the second value"
       },
       "loadfile": {
         "In": "File: string, ChunkName: string",
-        "Out": "( coroutine?, string? )",
+        "Out": "( thread?, string? )",
         "Description": "Similar to `loadthread`, however loads from a file instead of from a string directly"
       }
     },
@@ -271,6 +271,7 @@
         }
       },
       "GameObject": {
+        "TypeDependencies": [ "EventSignal" ],
         "Description": [ "A Game Object", "For organization, the members of this type will be on the Components wiki page" ],
         "Library": {
           "new": {
@@ -291,7 +292,8 @@
             "Description": "Creates a Matrix which has been rotated by the given Euler angles (in radians) with the rotation order X-Y-Z"
           },
           "fromTranslation": {
-            "In": "( Position: vector ) | ( X: number, Y: number, Z: number )",
+            "In": "Position: vector",
+            "Overloads": [ "X: number, Y: number, Z: number" ],
             "Out": "Matrix",
             "Description": "Creates a Matrix which has been translated to the given coordinates (specified as either a `vector` or the individual X, Y, and Z component)"
           },
@@ -302,6 +304,11 @@
           }
         },
         "Members": {
+          ":__mul": {
+            "In": "Matrix",
+            "Out": "Matrix",
+            "Description": "Two Matrices may be multiplied together with the `*` operator"
+          },
           "Position": {
             "Type": "vector",
             "Description": "The position of the Matrix in world-space"
@@ -318,9 +325,98 @@
             "Type": "vector",
             "Description": "The upward vector of the Matrix"
           },
-          "C*R*": {
+          "C1R1": {
             "Type": "number",
-            "Description": "Access the individual values of the Matrix by indexing with the format 'C<Column>R<Row>', where `Column` and `Row` are integers from 1-4, e.g.: `someMatrix.C4R4 == 1`"
+            "Description": "The value at Column 1, Row 1"
+          },
+          "C1R2": {
+            "Type": "number",
+            "Description": "The value at Column 1, Row 2"
+          },
+          "C1R3": {
+            "Type": "number",
+            "Description": "The value at Column 1, Row 3"
+          },
+          "C1R4": {
+            "Type": "number",
+            "Description": "The value at Column 1, Row 4"
+          },
+          "C2R1": {
+            "Type": "number",
+            "Description": "The value at Column 2, Row 1"
+          },
+          "C2R2": {
+            "Type": "number",
+            "Description": "The value at Column 2, Row 2"
+          },
+          "C2R3": {
+            "Type": "number",
+            "Description": "The value at Column 2, Row 3"
+          },
+          "C2R4": {
+            "Type": "number",
+            "Description": "The value at Column 2, Row 4"
+          },
+          "C3R1": {
+            "Type": "number",
+            "Description": "The value at Column 3, Row 1"
+          },
+          "C3R2": {
+            "Type": "number",
+            "Description": "The value at Column 3, Row 2"
+          },
+          "C3R3": {
+            "Type": "number",
+            "Description": "The value at Column 3, Row 3"
+          },
+          "C3R4": {
+            "Type": "number",
+            "Description": "The value at Column 3, Row 4"
+          },
+          "C4R1": {
+            "Type": "number",
+            "Description": "The value at Column 4, Row 1"
+          },
+          "C4R2": {
+            "Type": "number",
+            "Description": "The value at Column 4, Row 2"
+          },
+          "C4R3": {
+            "Type": "number",
+            "Description": "The value at Column 4, Row 3"
+          },
+          "C4R4": {
+            "Type": "number",
+            "Description": "The value at Column 4, Row 4"
+          }
+        },
+        "Operations": {
+          "__mul": [ "Matrix" ]
+        }
+      },
+      "EventSignal": {
+        "Description": "An Event that can be connected to",
+        "Members": {
+          ":Connect": {
+            "In": "(any) -> (any)",
+            "Out": "EventConnection",
+            "Description": "Connect a callback to the Event"
+          }
+        }
+      },
+      "EventConnection": {
+        "Description": "A connection to an Event",
+        "Members": {
+          ":Disconnect": {
+            "Description": "Disconnects the Connection, causing the callback to no longer be invoked, may only be called once"
+          },
+          "Connected": {
+            "Type": "boolean",
+            "Description": "Whether the Connection is connected or not"
+          },
+          "Signal": {
+            "Type": "any",
+            "Description": "The Event which `:Connect` was called upon to return this Connection"
           }
         }
       }
@@ -401,7 +497,7 @@
             "isdirectory": "Returns whether the specified Path refers to a directory",
             "isfile": "Returns whether the specified Path refers to a file",
             "listdir": {
-              "In": "Path: string, Filter: 'a' | 'f' | 'd' [ 'a' ]",
+              "In": [ "Path: string", [ "Filter: 'a' | 'f' | 'd'", "'a'"  ] ],
               "Out": "{ [string]: 'f' | 'd' }",
               "Description": [
                 "Returns a table of all the entries in the specified directory",
@@ -411,7 +507,7 @@
             },
             "ispromptactive": "Returns whether a File Dialog is currently visible to the player and blocking any more file dialogs from being opened",
             "promptopen": {
-              "In": "DefaultLocation: string? [ './' ], Filter: string? [ '*.*' ], FilterName: string? [ 'All files ' ], AllowMultipleFiles: boolean [ false ]",
+              "In": [ ["DefaultLocation: string?", "'./' "], [ "Filter: string?", "'*.*'" ], [ "FilterName: string?", "'All files '" ], [ "AllowMultipleFiles: boolean", "false" ] ],
               "Out": "{ string }",
               "Description": [
                 "Prompts the player to select a file to open",
@@ -420,7 +516,7 @@
               ]
             },
             "promptsave": {
-              "In": "DefaultLocation: string? [ './' ], Filter: string? [ '*.*' ], FilterName: string? [ 'All files ' ]",
+              "In": [ [ "DefaultLocation: string?", "'./'" ], [ "Filter: string?", "'*.*'" ], [ "FilterName: string?", "'All files'"] ],
               "Out": "string",
               "Description": [
                 "Prompts the player to select a path to save a file to",

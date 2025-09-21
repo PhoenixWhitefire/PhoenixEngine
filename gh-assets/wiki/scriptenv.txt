@@ -19,6 +19,26 @@ Custom types with functions and properties.
 #### `.B: number`
 * The Blue channel
 
+### `EventConnection`
+
+* A connection to an Event
+
+#### `.Connected: boolean`
+* Whether the Connection is connected or not
+
+#### `Disconnect(): nil`
+* Disconnects the Connection, causing the callback to no longer be invoked, may only be called once
+
+#### `.Signal: any`
+* The Event which `:Connect` was called upon to return this Connection
+
+### `EventSignal`
+
+* An Event that can be connected to
+
+#### `Connect((any) -> (any)): EventConnection`
+* Connect a callback to the Event
+
 ### `GameObject`
 
 * A Game Object
@@ -31,10 +51,11 @@ Custom types with functions and properties.
 
 * A 4x4 transformation matrix
 
-#### `Matrix.new(): Matrix`
+#### `Matrix.new(  ): Matrix`
 * Creates a new identity matrix
 
-#### `Matrix.fromTranslation(( Position: vector ) | ( X: number, Y: number, Z: number )): Matrix`
+#### `Matrix.fromTranslation(Position: vector): Matrix`
+#### `Matrix.fromTranslation(X: number, Y: number, Z: number): Matrix`
 * Creates a Matrix which has been translated to the given coordinates (specified as either a `vector` or the individual X, Y, and Z component)
 
 #### `Matrix.lookAt(Eye: vector, Target: vector): Matrix`
@@ -43,20 +64,68 @@ Custom types with functions and properties.
 #### `Matrix.fromEulerAnglesXYZ(X: number, Y: number, Z: number): Matrix`
 * Creates a Matrix which has been rotated by the given Euler angles (in radians) with the rotation order X-Y-Z
 
-#### `.Position: vector`
-* The position of the Matrix in world-space
-
-#### `.C*R*: number`
-* Access the individual values of the Matrix by indexing with the format 'C<Column>R<Row>', where `Column` and `Row` are integers from 1-4, e.g.: `someMatrix.C4R4 == 1`
+#### `__mul(Matrix): Matrix`
+* Two Matrices may be multiplied together with the `*` operator
 
 #### `.Right: vector`
 * The rightward vector of the Matrix
 
+#### `.C1R1: number`
+* The value at Column 1, Row 1
+
+#### `.C4R1: number`
+* The value at Column 4, Row 1
+
+#### `.C3R1: number`
+* The value at Column 3, Row 1
+
+#### `.C2R1: number`
+* The value at Column 2, Row 1
+
+#### `.C1R2: number`
+* The value at Column 1, Row 2
+
+#### `.C3R2: number`
+* The value at Column 3, Row 2
+
+#### `.C4R2: number`
+* The value at Column 4, Row 2
+
 #### `.Up: vector`
 * The upward vector of the Matrix
 
+#### `.C4R3: number`
+* The value at Column 4, Row 3
+
+#### `.C3R3: number`
+* The value at Column 3, Row 3
+
+#### `.C2R3: number`
+* The value at Column 2, Row 3
+
+#### `.C1R3: number`
+* The value at Column 1, Row 3
+
+#### `.C2R2: number`
+* The value at Column 2, Row 2
+
 #### `.Forward: vector`
 * The forward vector of the Matrix
+
+#### `.Position: vector`
+* The position of the Matrix in world-space
+
+#### `.C1R4: number`
+* The value at Column 1, Row 4
+
+#### `.C2R4: number`
+* The value at Column 2, Row 4
+
+#### `.C3R4: number`
+* The value at Column 3, Row 4
+
+#### `.C4R4: number`
+* The value at Column 4, Row 4
 
 ## Libraries
 
@@ -65,7 +134,7 @@ Custom libraries.
 ### `conf`
 * Internal Engine configuration state, loaded from file (`phoenix.conf`) upon startup
 
-#### `conf.save(): boolean`
+#### `conf.save(  ): boolean`
 * Save the current state of the configuration to file (`phoenix.conf`), returning whether the file was successfully overwritten
 
 #### `conf.set(Key: string, Value: any): `
@@ -77,46 +146,46 @@ Custom libraries.
 ### `engine`
 * Inspect and modify various parts of the Engine
 
+#### `engine.framerate(any): any`
+* Returns the current framerate
+
+#### `engine.setvsync(any): any`
+* Enables/disables VSync
+
+#### `engine.setwindowsize(any): any`
+* Sets the size of the window to the specified two Width and Height integers
+
 #### `engine.exit(ExitCode: number?): `
 * Shuts down the Engine and exits the process with the specified Exit Code (or 0 by default)
 
-#### `engine.setfullscreen(...): ...`
+#### `engine.setfullscreen(any): any`
 * Enables/disables fullscreen mode
-
-#### `engine.getfullscreen(...): ...`
-* Returns whether the Engine is currently in fullscreen
 
 #### `engine.setmaxframerate(MaxFramerate: number): `
 * Sets the maximum framerate the Engine will reach before self-limiting
 
-#### `engine.setvsync(...): ...`
-* Enables/disables VSync
+#### `engine.getfullscreen(any): any`
+* Returns whether the Engine is currently in fullscreen
 
-#### `engine.framerate(...): ...`
-* Returns the current framerate
-
-#### `engine.getvsync(...): ...`
+#### `engine.getvsync(any): any`
 * Returns whether VSync is currently enabled
 
-#### `engine.getmaxframerate(...): ...`
+#### `engine.getmaxframerate(any): any`
 * Returns the current framerate cap
 
-#### `engine.getwindowsize(...): ...`
+#### `engine.getwindowsize(any): any`
 * Returns the current size of the window as two integers
 
 #### `engine.dwireframes(Enabled: boolean?): `
 * Returns whether all visible 3D objects are being rendered with wireframes
 * Optionally, the visualization can be enabled/disabled by passing in a boolean argument
 
-#### `engine.isheadless(...): ...`
+#### `engine.isheadless(any): any`
 * Returns whether the Engine is currently running Headless mode
 
 #### `engine.daabbs(Enabled: boolean?): `
 * Returns whether AABBs are drawn for all objects with collisions enabled (`.PhysicsCollisions == true`)
 * Optionally, the visualization can be enabled/disabled by passing in a boolean argument
-
-#### `engine.setwindowsize(...): ...`
-* Sets the size of the window to the specified two Width and Height integers
 
 ### `fs`
 * Interacting with the player's filesystem
@@ -129,15 +198,15 @@ Custom libraries.
 * Reads the file at the given address, and returns the contents
 * If the file could not be read, returns `nil`
 
-#### `fs.promptopen(DefaultLocation: string? [ './' ], Filter: string? [ '*.*' ], FilterName: string? [ 'All files ' ], AllowMultipleFiles: boolean [ false ]): { string }`
+#### `fs.promptopen(DefaultLocation: string? [ './'  ], Filter: string? [ '*.*' ], FilterName: string? [ 'All files ' ], AllowMultipleFiles: boolean [ false ]): { string }`
 * Prompts the player to select a file to open
 * Returns the list of files the player selected, or an empty list if the player cancelled the dialog
 * If the operation fails, returns `nil` instead
 
-#### `fs.isfile(...): ...`
+#### `fs.isfile(any): any`
 * Returns whether the specified Path refers to a file
 
-#### `fs.promptsave(DefaultLocation: string? [ './' ], Filter: string? [ '*.*' ], FilterName: string? [ 'All files ' ]): string`
+#### `fs.promptsave(DefaultLocation: string? [ './' ], Filter: string? [ '*.*' ], FilterName: string? [ 'All files' ]): string`
 * Prompts the player to select a path to save a file to
 * Returns the path the player selected, or `nil` if they cancelled the dialog
 
@@ -146,166 +215,166 @@ Custom libraries.
 * The keys of the table is the path of the entry, while the values are the type of the entry
 * `f` is file, `d` is directory, and `a` is all
 
-#### `fs.isdirectory(...): ...`
+#### `fs.isdirectory(any): any`
 * Returns whether the specified Path refers to a directory
 
-#### `fs.ispromptactive(...): ...`
+#### `fs.ispromptactive(any): any`
 * Returns whether a File Dialog is currently visible to the player and blocking any more file dialogs from being opened
 
 ### `imgui`
 * UI with Dear ImGui
 
-#### `imgui.checkbox(...): ...`
-* `ImGui::Checkbox`
-
-#### `imgui.endw(...): ...`
+#### `imgui.endw(any): any`
 * `ImGui::End`, `endw` and not `end` because `end` is a Luau keyword
 
-#### `imgui.text(...): ...`
-* `ImGui::Text`
-
-#### `imgui.itemhovered(...): ...`
-* `ImGui::IsItemHovered`
-
-#### `imgui.itemclicked(...): ...`
-* `ImGui::IsItemClicked`
-
-#### `imgui.indent(...): ...`
-* `ImGui::Indent`
-
-#### `imgui.image(...): ...`
-* `ImGui::Image`
-
-#### `imgui.begin(...): ...`
-* `ImGui::Begin`
-
-#### `imgui.setitemtooltip(...): ...`
-* `ImGui::SetItemTooltip`
-
-#### `imgui.button(...): ...`
-* `ImGui::Button`
-
-#### `imgui.textlink(...): ...`
+#### `imgui.textlink(any): any`
 * `ImGui::TextLink`
 
-#### `imgui.inputnumber(...): ...`
+#### `imgui.itemclicked(any): any`
+* `ImGui::IsItemClicked`
+
+#### `imgui.image(any): any`
+* `ImGui::Image`
+
+#### `imgui.button(any): any`
+* `ImGui::Button`
+
+#### `imgui.inputstring(any): any`
+* `ImGui::InputText`
+
+#### `imgui.checkbox(any): any`
+* `ImGui::Checkbox`
+
+#### `imgui.setitemtooltip(any): any`
+* `ImGui::SetItemTooltip`
+
+#### `imgui.text(any): any`
+* `ImGui::Text`
+
+#### `imgui.itemhovered(any): any`
+* `ImGui::IsItemHovered`
+
+#### `imgui.begin(any): any`
+* `ImGui::Begin`
+
+#### `imgui.inputnumber(any): any`
 * `ImGui::InputDouble`
 
-#### `imgui.inputstring(...): ...`
-* `ImGui::InputText`
+#### `imgui.indent(any): any`
+* `ImGui::Indent`
 
 ### `input`
 * Checking player inputs
 
-#### `input.ismousegrabbed(...): ...`
+#### `input.ismousegrabbed(any): any`
 * Returns whether the mouse cursor is currently restricted to the window
 
-#### `input.setmousegrabbed(...): ...`
+#### `input.setmousegrabbed(any): any`
 * Grabs/ungrabs the mouse cursor
 
-#### `input.guihandledm(...): ...`
+#### `input.guihandledm(any): any`
 * Returns whether Dear ImGui is using the player's mouse inputs
 
-#### `input.setmousepos(...): ...`
+#### `input.setmousepos(any): any`
 * Sets the position of the mouse in the window
 
-#### `input.iscursorvisible(...): ...`
+#### `input.iscursorvisible(any): any`
 * Returns whether the mouse cursor is currently visible
 
-#### `input.setcursorvisible(...): ...`
+#### `input.setcursorvisible(any): any`
 * Sets the visibility of the mouse cursor to the specified value
 
-#### `input.getmousepos(...): ...`
+#### `input.getmousepos(any): any`
 * Returns the current position of the player's mouse cursor, offset from the top-righ54
 
-#### `input.guihandled(...): ...`
+#### `input.guihandled(any): any`
 * Returns whether Dear ImGui is using the player's inputs at all
 
-#### `input.mousedown(...): ...`
+#### `input.mousedown(any): any`
 * Returns whether the specified mouse button (`l`eft, `r`ight, or `b`oth) is currently being pressed
 
-#### `input.keypressed(...): ...`
+#### `input.keypressed(any): any`
 * Returns whether the specified key (as lowercase, e.g. `'a'`, `'b'`) is currently being pressed
 
-#### `input.guihandledk(...): ...`
+#### `input.guihandledk(any): any`
 * Returns whether Dear ImGui is using the player's keyboard inputs
 
 ### `json`
 * Encoding and decoding JSON files
 
-#### `json.encode(...): ...`
+#### `json.encode(any): any`
 * Encodes the provided value into a JSON string
 
-#### `json.parse(...): ...`
+#### `json.parse(any): any`
 * Decodes the JSON string and returns it as a value
 
 ### `mesh`
 * Mesh assets
 
-#### `mesh.save(...): ...`
+#### `mesh.save(any): any`
 * Saves the mesh data at the provided path to a file
 
-#### `mesh.set(...): ...`
+#### `mesh.set(any): any`
 * Associates the provided mesh data with the provided path
 
-#### `mesh.get(...): ...`
+#### `mesh.get(any): any`
 * Returns the provided mesh data associated with the provided path
 
 ### `model`
 * `glTF` models
 
-#### `model.import(...): ...`
+#### `model.import(any): any`
 * Imports the glTF model at the provided path and returns it as a list of `GameObject`s
 
 ### `net`
 * Networking
 
-#### `net.request(...): ...`
+#### `net.request(any): any`
 * Performs an HTTP request to the given URL and returns the response
 
 ### `scene`
 * Scene assets
 
-#### `scene.load(...): ...`
+#### `scene.load(any): any`
 * Loads `GameObject`s from the scene file at the provided path, returning a list of the root objects or `nil` and an error message upon failure
 
-#### `scene.save(...): ...`
+#### `scene.save(any): any`
 * Saves the list of `GameObject`s to the provided path
 
 ### `world`
 * World queries
 
-#### `world.aabbcast(...): ...`
+#### `world.aabbcast(any): any`
 * Cast an AABB
 
-#### `world.raycast(...): ...`
+#### `world.raycast(any): any`
 * Cast a ray
 
-#### `world.aabbquery(...): ...`
+#### `world.aabbquery(any): any`
 * Query all objects within the provided AABB
 
 ## Globals
 
 Other globals.
 
-#### `appendlog(...: any): ...`
+#### `appendlog(...: any): ()`
 * Same as `print`, but does not prefix the log message with `[INFO]`
 
-#### `breakpoint(Line: number): ...`
+#### `breakpoint(Line: number): ()`
 * Set a breakpoint at the given line
 
-#### `game: GameObject`
+#### `game: GameObject & DataModel`
 * The GameObject acting as the Data Model of the Engine
 
-#### `loadfile(File: string, ChunkName: string): ( coroutine?, string? )`
+#### `loadfile(File: string, ChunkName: string): ( thread?, string? )`
 * Similar to `loadthread`, however loads from a file instead of from a string directly
 
-#### `loadthread(Code: string, ChunkName: string): ( coroutine?, string? )`
+#### `loadthread(Code: string, ChunkName: string): ( thread?, string? )`
 * Like `loadstring` in *other* runtimes, however does not compromise Global Import optimizations and returns a coroutine instead of a function. If an error occurs, returns `nil` as the first value and the error message as the second value
 
-#### `sleep(SleepTime: number): ...`
+#### `sleep(SleepTime: number): ()`
 * Yields the thread for the specified number of seconds
 
-#### `workspace: GameObject`
+#### `workspace: GameObject & Workspace`
 * Shorthand for `game.Workspace`
 

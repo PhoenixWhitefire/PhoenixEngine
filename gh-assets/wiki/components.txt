@@ -6,22 +6,22 @@ The Engine support an Entity Component System architecture, meaning that `GameOb
 ### Properties:
 * `Enabled: boolean`: Whether the Engine updates and recognizes this Object, essentially freezing it if it is disabled
 * `Name: string`: The name of the Object, usually what was passed into `GameObject.new`
-* `ObjectId: number READONLY`: The ID of the Object, an integer. Remains the same throughout the session, but not guaranteed between sessions
+* `ObjectId: number `: The ID of the Object, an integer. Remains the same throughout the session, but not guaranteed between sessions
 * `Parent: GameObject?`: The hierarchal parent of the Object, or `nil` if it does not have one
 * `Serializes: boolean`: Whether or not the Object should be saved with the scene if it is serialized with `scene_save`, and whether `:Duplicate` will duplicate (only applies to descendants)
 
 ### Methods:
-* `Destroy() -> ()`: Marks the Object as "pending for destruction". This may or may not remove the Object from memory immediately, depending on whether the Engine is actively using the Object for some purpose
-* `Duplicate() -> (GameObject)`: Creates a duplicate of the Object
-* `FindChild(string) -> (GameObject?)`: Returns the child Object with the given name, or `nil` if it doesn't exist
-* `ForEachChild(Function) -> ()`: For all children of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield
-* `GetChildren() -> (Array)`: Returns a list of the Object's direct children
-* `GetComponentNames() -> (Array)`: Returns a list of the names of all Components that the Object currently has
-* `GetDescendants() -> (Array)`: Returns all descendants of the Object (i.e. its children, and their children, etc)
-* `GetFullName() -> (string)`: Returns the full, hierarchal path of the Object
-* `HasComponent(string) -> (boolean)`: Returns whether or not the Object has the given Component
-* `IsA(string) -> (boolean)`: Equivalent to `:HasComponent`
-* `MergeWith(GameObject) -> ()`: Merges the Objects together, replacing descendants with the same name
+* `Destroy() : ()`: Marks the Object as "pending for destruction". This may or may not remove the Object from memory immediately, depending on whether the Engine is actively using the Object for some purpose
+* `Duplicate() : (GameObject)`: Creates a duplicate of the Object
+* `FindChild(string) : (GameObject?)`: Returns the child Object with the given name, or `nil` if it doesn't exist
+* `ForEachChild((any) -> (any)) : ()`: For all children of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield
+* `GetChildren() : ({ any })`: Returns a list of the Object's direct children
+* `GetComponentNames() : ({ any })`: Returns a list of the names of all Components that the Object currently has
+* `GetDescendants() : ({ any })`: Returns all descendants of the Object (i.e. its children, and their children, etc)
+* `GetFullName() : (string)`: Returns the full, hierarchal path of the Object
+* `HasComponent(string) : (boolean)`: Returns whether or not the Object has the given Component
+* `IsA(string) : (boolean)`: Equivalent to `:HasComponent`
+* `MergeWith(GameObject) : ()`: Merges the Objects together, replacing descendants with the same name
 
 ## `Animation`
 
@@ -32,7 +32,7 @@ The Engine support an Entity Component System architecture, meaning that `GameOb
 * `Animation: string`: The animation file
 * `Looped: boolean`: Whether the Animation should loop when it reaches the end
 * `Playing: boolean`: Whether the Animation is playing
-* `Ready: boolean READONLY`: Whether the Animation can be played
+* `Ready: boolean `: Whether the Animation can be played
 * `Weight: number`: The influence the Animation has over the rig
 
 ## `Bone`
@@ -41,8 +41,8 @@ The Engine support an Entity Component System architecture, meaning that `GameOb
 * Created automatically when the asset of a Mesh component finishes loading
 
 ### Properties:
-* `IsActive: boolean READONLY`: Whether or not the Bone Object is actively affecting a Mesh
-* `SkeletalBoneId: number READONLY`: The internal ID of the bone, valid range is 0-126
+* `IsActive: boolean `: Whether or not the Bone Object is actively affecting a Mesh
+* `SkeletalBoneId: number `: The internal ID of the bone, valid range is 0-126
 * `Transform: Matrix`: The transformation of the Bone
 
 ## `Camera`
@@ -59,7 +59,7 @@ The Engine support an Entity Component System architecture, meaning that `GameOb
 * The root of the scene
 
 ### Properties:
-* `Time: number READONLY`: Number of seconds since the Engine started running
+* `Time: number `: Number of seconds since the Engine started running
 
 ### Events:
 * `OnFrameBegin(number)`: Fires at the beginning of a frame, passing in the time elapsed since the last frame (delta time)
@@ -70,13 +70,13 @@ The Engine support an Entity Component System architecture, meaning that `GameOb
 
 ### Properties:
 * `Brightness: number`: How bright the Light is
-* `Direction: Vector3`: The direction light is emitted from
+* `Direction: vector`: The direction light is emitted from
 * `LightColor: Color`: The color of the Light
 * `ShadowViewDistance: number`: How far back the shadow view is offset from the focus
 * `ShadowViewFarPlane: number`: The Far Z plane of the shadow view. Should be greater than `ShadowViewNearPlane`
 * `ShadowViewMoveWithCamera: boolean`: Sets the focus of the shadow view to be the Scene Camera
 * `ShadowViewNearPlane: number`: The Near Z plane of the shadow view. Should be less than `ShadowViewFarPlane`. Shouldn't be `0`
-* `ShadowViewOffset: Vector3`: Offset of the shadow view from the focus, after `ShadowViewDistance` is applied
+* `ShadowViewOffset: vector`: Offset of the shadow view from the focus, after `ShadowViewDistance` is applied
 * `ShadowViewSize: number`: Size of the shadow view. Sets `ShadowViewSizeH` and `ShadowViewSizeV` to the assigned value if they are equal. Is `-1` if they are not equal
 * `ShadowViewSizeH: number`: Horizontal size of the shadow view
 * `ShadowViewSizeV: number`: Vertical size of the shadow view
@@ -88,15 +88,15 @@ The Engine support an Entity Component System architecture, meaning that `GameOb
 * The least-popular kid in school no one remembers the name of
 
 ### Properties:
-* `EvenMoreSecretMessage: string READONLY`: A secret message that's so, *so* secret that it cannot be read by Reflection-kun, almost like they're keeping a secret from her...
-* `SecretMessage: string READONLY`: A secret message that's so important it's read-only
+* `EvenMoreSecretMessage: string `: A secret message that's so, *so* secret that it cannot be read by Reflection-kun, almost like they're keeping a secret from her...
+* `SecretMessage: string `: A secret message that's so important it's read-only
 * `SomeInteger: number`: An integer
 * `SuperCoolBool: boolean`: A boolean
-* `WhereIAm: Vector3`: A 3-dimensional vector quantity
+* `WhereIAm: vector`: A 3-dimensional vector quantity
 
 ### Methods:
-* `GiveUp() -> ()`: Tells Engine-chan to kill herself and throws an exception
-* `Greet(Array, boolean) -> (string, string)`: Says hello to the given list of names. If the second argument is `true`, does so extra villainously
+* `GiveUp() : ()`: Tells Engine-chan to kill herself and throws an exception
+* `Greet({ any }, boolean) : (string, string)`: Says hello to the given list of names. If the second argument is `true`, does so extra villainously
 
 ### Events:
 * `OnGreeted(string, string)`: Fires when `:Greet` is called, and sends the response to the callback before the original caller of `:Greet` receives it
@@ -106,14 +106,14 @@ The Engine support an Entity Component System architecture, meaning that `GameOb
 * A mesh composed of triangles
 
 ### Properties:
-* `AngularVelocity: Vector3`: Its rotational velocity
+* `AngularVelocity: vector`: Its rotational velocity
 * `Asset: string`: The path to the underlying `.hxmesh` file, or a built-in identifier like `!Quad` or `!Cube`
 * `CastsShadows: boolean`: Whether it casts shadows (not functional currently)
 * `CollisionFidelity: number`: 0 - `Aabb`: An axis-aligned bounding box. 1 - `AabbStaticSize`: An AABB which keeps the same size as the Object
 * `Density: number`: Its density (`Mass = Density * Size`)
 * `FaceCulling: number`: An integer. `0` means no culling, `1` to cull its "back" faces, and `2` to cull its "front" faces
 * `Friction: number`: Fraction of Velocity it should lose per second while in contact with another object while `PhysicsDynamics` is `true`
-* `LinearVelocity: Vector3`: Its velocity
+* `LinearVelocity: vector`: Its velocity
 * `Material: string`: The name of the `.mtl` in the `resources/materials/` directory it should use
 * `MetallnessFactor: number`: Metallness modifier
 * `PhysicsCollisions: boolean`: Whether other physics objects can collide with it
@@ -156,16 +156,16 @@ No members defined
 * `SourceFile: string`: The File the Script is executing. Changing this to a valid File immediately reloads the Script if it is a descendant of the `DataModel` (i.e. `game`). To forcefully reload it, `:Reload` should be used
 
 ### Methods:
-* `Reload() -> (boolean)`: Re-compiles the Source file and runs it from the beginning, returning whether the compilation and initial run were successful
+* `Reload() : (boolean)`: Re-compiles the Source file and runs it from the beginning, returning whether the compilation and initial run were successful
 
 ## `Sound`
 
 * A sound
 
 ### Properties:
-* `FinishedLoading: boolean READONLY`: Whether the Sound has finished loading the `SoundFile`
-* `Length: number READONLY`: The length of the sound in seconds
-* `LoadSucceeded: boolean READONLY`: Whether or not the sound loaded successfully
+* `FinishedLoading: boolean `: Whether the Sound has finished loading the `SoundFile`
+* `Length: number `: The length of the sound in seconds
+* `LoadSucceeded: boolean `: Whether or not the sound loaded successfully
 * `Looped: boolean`: Whether playback should loop once it reaches the end
 * `Playing: boolean`: Whether the Sound is currently playing (or requested to play, if `.Playing` is set to `true` by a `Script` before it has finished loading)
 * `Position: number`: Number of seconds from beginning of the file
@@ -192,7 +192,7 @@ No members defined
 * Gives a physical position and size to Object
 
 ### Properties:
-* `Size: Vector3`: The Size of the Object influenced by the Component
+* `Size: vector`: The Size of the Object influenced by the Component
 * `Transform: Matrix`: The Transformation of the Object from the World
 
 ## `TreeLink`
@@ -213,5 +213,5 @@ No members defined
 * `SceneCamera: GameObject`: The `Camera` the Player sees the world through. If set to `nil`, a *fallback* is created at the origin.
 
 ### Methods:
-* `ScreenPointToRay(Array, number) -> (Vector3)`: Converts the provided X and Y screen coordinates to a world-space vector, with the length provided or `1` by default
+* `ScreenPointToRay({ any }, number) : (vector)`: Converts the provided X and Y screen coordinates to a world-space vector, with the length provided or `1` by default
 

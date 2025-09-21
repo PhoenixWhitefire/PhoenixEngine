@@ -33,26 +33,86 @@ table.sort(orderedDatatypes)
 table.sort(orderedLibraries)
 table.sort(orderedGlobals)
 
-local function dumpLibMembers(libm, t, libname)
-	local str = ""
+local definitionsFile = [[
+declare class Vector2
+end
+]]
+
+local function dumpFuncSignature(libname, funcname, In, Out, V)
+	local docargs = In or ""
+	local returns = Out or ""
 	
-	for k, v in libm do
+	if typeof(V) == "string" then
+		docargs = "any"
+		returns = "any"
+	end
+	
+	local defargs = docargs
+	
+	if typeof(docargs) == "table" then
+		local docasstr = ""
+		defargs = ""
+		
+		for k, a in docargs do
+			if typeof(a) == "table" then
+				docasstr ..= `{ a[1] } [ {a[2] } ], `
+				defargs ..= `{ a[1] }, `
+			else
+				docasstr ..= `{ a }, `
+				defargs ..= `{ a }, `
+			end
+		end
+		
+		docasstr = string.sub(docasstr, 1, #docasstr - 2)
+		defargs = string.sub(defargs, 1, #defargs - 2)
+		docargs = docasstr
+	end
+	
+	if funcname == "new" and not Out then
+		returns = libname
+	end
+	
+	return `#### \`{libname}.{ funcname }({ docargs }): { returns }\`\n`, `(( { defargs } ) -> ({ returns }))`
+end
+
+local function dumpLibMembers(libm, t, libname)
+	if not t then
+		return ""
+	end
+	
+	definitionsFile ..= `declare { libname }: \{\n,\n`
+	
+	local str = ""
+	local first = true
+	
+	for k, d in t do
+		if first then
+			definitionsFile = string.sub(definitionsFile, 1, #definitionsFile - 2)
+				
+			first = false
+		end
+		
+		local v = libm[k]
+		
+		if not v then
+			print(`Missing docs for { libname }.{ k }`)
+			continue
+		end
+		
 		if t[k] == "function" then
-			local args = v.In or ""
-			local returns = v.Out or ""
+			definitionsFile ..= `  { k }: `
 			
-			if typeof(v) == "string" then
-				args = "..."
-				returns = "..."
+			for _, vIn in { v.In or "  ", table.unpack(v.Overloads or {}) } do
+				local docsig, defsig = dumpFuncSignature(libname, k, vIn, v.Out, v)
+				str ..= docsig
+				definitionsFile ..= `{ defsig } & `
 			end
 			
-			if k == "new" and not v.Out then
-				returns = libname
-			end
-			
-			str ..= `#### \`{libname}.{ k }({ args }): { returns }\`\n`
+			definitionsFile = string.sub(definitionsFile, 1, #definitionsFile - 3)
+			definitionsFile ..= ",\n"
 		else
 			str ..= `#### \`{libname}.{ k }: { v.Type }\`\n`
+			definitionsFile ..= `  { k }: { v.Type },\n`
 		end
 		
 		local desc = v.Description
@@ -75,97 +135,29 @@ local function dumpLibMembers(libm, t, libname)
 		str ..= "\n"
 	end
 	
+	definitionsFile = string.sub(definitionsFile, 1, #definitionsFile - 2)
+	definitionsFile ..= `\n}\n`
+	
 	return str
-end
-
-for _, name in orderedDatatypes do
-	local dt = docComments.ScriptEnv.Datatypes[name]
-	datatypes ..= `### \`{ name }\`\n\n`
-	
-	for _, d in (if typeof(dt.Description) == "table" then dt.Description else { dt.Description }) do
-		datatypes ..= `* { d }\n`
-	end
-	
-	datatypes ..= "\n" .. dumpLibMembers(dt.Library, apiDump.ScriptEnv.Datatypes[name].Library, name)
-	
-	for k, v in (dt.Members or {}) do
-		if string.sub(k, 1) == ":" then
-			local args = v.In or "..."
-			local returns = v.Out or "..."
-			
-			datatypes ..= `#### \`{ k }({ args }): { returns }\`\n`
-		else
-			datatypes ..= `#### \`.{ k }: { v.Type }\`\n`
-		end
-		
-		if not v.Description then
-			print(`No description for { name }.{ k }`)
-		end
-		
-		for _, comment in (if typeof(v.Description) == "table" then v.Description else { v.Description }) do
-			if not comment then
-				print(`Missing doc comment for '{ k }'`)
-			end
-		
-			datatypes ..= `* { comment }\n`
-		end
-		
-		datatypes ..= "\n"
-	end
-end
-
-for _, name in orderedLibraries do
-	local lib = docComments.ScriptEnv.Libraries[name]
-	libraries ..= `### \`{ name }\`\n`
-	
-	assert(lib, name)
-	
-	for _, d in (if typeof(lib.Description) == "table" then lib.Description else { lib.Description }) do
-		libraries ..= `* { d }\n`
-	end
-	
-	libraries ..= "\n" .. dumpLibMembers(lib.Members, apiDump.ScriptEnv.Libraries[name], name)
-end
-
-for _, name in orderedGlobals do
-	local contents = docComments.ScriptEnv.Globals[name]
-	
-	if not contents then
-		print(`Missing doc entry for global '{ name }'`)
-		continue
-	end
-	
-	if apiDump.ScriptEnv.Globals[name] == "function" then
-		local args = contents.In or "..."
-		local returns = contents.Out or "..."
-		
-		globals ..= `#### \`{ name }({ args }): { returns }\`\n`
-	else
-		globals ..= `#### \`{ name }: { apiDump.ScriptEnv.Globals[name] }\`\n`
-	end
-	
-	for _, comment in (if typeof(contents.Description) == "table" then contents.Description else { contents.Description }) do
-		if not comment then
-			print(`Missing doc comment for global '{ name }'`)
-		end
-		
-		globals ..= `* { comment }\n`
-	end
-	
-	globals ..= "\n"
 end
 
 local rtol = {
 	Boolean = "boolean",
 	Integer = "number",
 	Double = "number",
-	String = "string"
+	String = "string",
+	Array = "{ any }",
+	Vector3 = "vector",
+	["->"] = ":",
+	READONLY = ""
 }
 
 local function rtolsub(str)
 	for p, s in rtol do
 		str = string.gsub(str, p, s)
 	end
+	
+	str = string.gsub(str, "Function", "(any) -> (any)")
 	
 	return str
 end
@@ -201,10 +193,12 @@ local function dumpReflectionApi(t, d, cn)
 				end
 				
 				s ..= `* \`{ n }: { rtolsub(v) }\`: { d.Properties[n] }\n`
+				definitionsFile ..= `  { n }: { rtolsub(v) }\n`
 			end
 		end
 		
 		if hasFuncs then
+			definitionsFile ..= "\n"
 			s ..= "\n### Methods:\n"
 			
 			local orderedFuncs = keysOf(t.Methods)
@@ -219,10 +213,36 @@ local function dumpReflectionApi(t, d, cn)
 				end
 				
 				s ..= `* \`{ n }{ rtolsub(v) }\`: { d.Methods[n] }\n`
+				
+				local subst = rtolsub(v)
+				subst = string.sub(subst, 2, #subst)
+				
+				if string.sub(subst, 1, 1) == ")" then -- ") : ()" when no inputs
+					subst = "(self)"
+				else
+					local close = string.find(subst, ") :")
+					assert(close)
+					
+					local inputsstr = string.sub(subst, 1, close)
+					local inputs = string.split(inputsstr, ", ")
+					local newinputs = {}
+					
+					for i, t in inputs do
+						table.insert(newinputs, `Param_{i}: {t}`)
+					end
+					
+					subst = string.sub(subst, close + 1, #subst)
+					subst = table.concat(newinputs, ", ") .. subst
+					
+					subst = "(self, " .. subst
+				end
+				
+				definitionsFile ..= `  function { n }{ subst }\n`
 			end
 		end
 		
 		if hasEvnts then
+			definitionsFile ..= "\n"
 			s..= "\n### Events:\n"
 			
 			local orderedEvents = keysOf(t.Events)
@@ -237,6 +257,7 @@ local function dumpReflectionApi(t, d, cn)
 				end
 				
 				s ..= `* \`{ n }{ rtolsub(v) }\`: { d.Events[n] }\n`
+				definitionsFile ..= `  { n }: EventSignal\n`
 			end
 		end
 	else
@@ -248,8 +269,134 @@ local function dumpReflectionApi(t, d, cn)
 	return s
 end
 
-local scriptenv = datatypesPrologue .. datatypes .. librariesPrologue .. libraries .. globalsPrologue .. globals
-fs.write(BASE_PATH .. "/scriptenv.txt", scriptenv, false)
+local alreadyAdded = {}
+local descsForMetafields = {
+	__type = "Calling <code>typeof</code> on this object will return %s",
+	__mul = "You may multiply this object with another object via the <code>*</code> operator",
+	__div = "You may divide this object with another object via the <code>/</code> operator",
+	__imul = "You may perform integer division on this object with another object via the <code>//</code> operator",
+	__sub = "You may substract this object with another object via the <code>-</code> operator",
+	__add = "You may add this object with another object via the <code>+</code> operator",
+	__index = "You may read a value of this object via the <code>.</code> or <code>[\"\"]</code> index operators",
+	__newindex = "You may assign a value of this object via the <code>=</code> operator",
+	__metatable = "This object's metatable is locked",
+	__tostring = "This object can be converted to a string representation via <code>tostring</code>",
+	__namecall = "This object has methods that can be called with the <code>:</code> operator"
+}
+
+local function documentDatatype(name)
+	if alreadyAdded[name] then
+		return
+	end
+	alreadyAdded[name] = true
+	
+	local dt = docComments.ScriptEnv.Datatypes[name]
+	assert(dt, name)
+	
+	for _, t in (dt.TypeDependencies or {}) do
+		if not definitionsFile:find(`declare class { t }`) then
+			documentDatatype(t)
+		end
+	end
+	
+	datatypes ..= `### \`{ name }\`\n\n`
+	
+	for _, d in (if typeof(dt.Description) == "table" then dt.Description else { dt.Description }) do
+		datatypes ..= `* { d }\n`
+	end
+	
+	local datatype = ""
+	
+	if name ~= "GameObject" then
+		definitionsFile ..= `declare class { name }\n`
+	end
+	
+	dt.Members = dt.Members or {}
+	
+	--[[
+	for k, v in (apiDump.ScriptEnv.Datatypes[name].Metatable or {}) do
+		if not dt.Members[k] then
+			local formatString = descsForMetafields[k]
+			assert(formatString, k)
+			
+			if v == "function" then
+				local vIn = "...: any"
+				if k == "__index" or k == "__newindex" then
+					vIn = "string"
+				elseif k == "__tostring" then
+					vIn = ""
+				end
+				
+				dt.Members[":" .. k] = {
+			 		In = vIn,
+			 		Out = if k == "__tostring" then "string" else "any",
+			 		Description = formatString:format(v)
+				}
+			else
+				dt.Members[k] = {
+					Type = typeof(v),
+					Description = formatString:format(v)
+				}
+			end
+		end
+	end
+	]]--
+	
+	for k, v in dt.Members do
+		if string.sub(k, 1, 1) == ":" then
+			local rk = string.sub(k, 2, #k)
+			local args = v.In or ""
+			local returns = v.Out or "nil"
+			local defargs = args
+			
+			if #args == 0 then
+				defargs = "self"
+			else
+				local inputs = string.split(args, ", ")
+				local newinputs = {}
+				
+				for i, t in inputs do
+					table.insert(newinputs, `Param_{i}: {t}`)
+				end
+				
+				defargs = "self, " .. table.concat(newinputs, ", ")
+			end
+			
+			datatype ..= `#### \`{ rk }({ args }): { returns }\`\n`
+			definitionsFile ..= `  function { rk }({ defargs }): ( { returns } )\n`
+		else
+			datatype ..= `#### \`.{ k }: { v.Type }\`\n`
+			definitionsFile ..= `  { k }: { v.Type }\n`
+		end
+		
+		if not v.Description then
+			print(`No description for { name }.{ k }`)
+		end
+		
+		for _, comment in (if typeof(v.Description) == "table" then v.Description else { v.Description }) do
+			if not comment then
+				print(`Missing doc comment for '{ k }'`)
+			end
+		
+			datatype ..= `* { comment }\n`
+		end
+		
+		datatype ..= "\n"
+	end
+	
+	if name ~= "GameObject" then
+		definitionsFile ..= "end\n"
+	end
+	
+	datatypes ..= "\n" .. dumpLibMembers(dt.Library, apiDump.ScriptEnv.Datatypes[name].Library, name)
+	datatypes ..= datatype
+end
+
+for _, name in orderedDatatypes do
+	documentDatatype(name)
+end
+
+definitionsFile ..= "\n\n"
 
 local orderedComponents = keysOf(apiDump.GameObject.Components)
 table.sort(orderedComponents)
@@ -263,6 +410,8 @@ for _, k in orderedComponents do
 		v = apiDump.GameObject.Base
 		vd = docComments.GameObject.Base
 	end
+	
+	definitionsFile ..= `declare class { k }\n`
 	
 	components ..= `## \`{ k }\`\n\n`
 	
@@ -280,9 +429,65 @@ for _, k in orderedComponents do
 	end
 	
 	components ..= dumpReflectionApi(v, vd, k)
+	
+	definitionsFile ..= "end\n"
 end
 
+definitionsFile ..= "\n\n"
+
+for _, name in orderedLibraries do
+	local lib = docComments.ScriptEnv.Libraries[name]
+	libraries ..= `### \`{ name }\`\n`
+	
+	assert(lib, name)
+	
+	for _, d in (if typeof(lib.Description) == "table" then lib.Description else { lib.Description }) do
+		libraries ..= `* { d }\n`
+	end
+	
+	libraries ..= "\n" .. dumpLibMembers(lib.Members, apiDump.ScriptEnv.Libraries[name], name)
+end
+
+definitionsFile ..= "\n\n"
+
+for _, name in orderedGlobals do
+	local contents = docComments.ScriptEnv.Globals[name]
+	
+	if not contents then
+		print(`Missing doc entry for global '{ name }'`)
+		continue
+	end
+	
+	if apiDump.ScriptEnv.Globals[name] == "function" then
+		local args = contents.In or ""
+		local returns = contents.Out or "()"
+		
+		globals ..= `#### \`{ name }({ args }): { returns }\`\n`
+		definitionsFile ..= `declare function { name }( { args } ): { returns }\n`
+	else
+		globals ..= `#### \`{ name }: { apiDump.ScriptEnv.Globals[name] }\`\n`
+		definitionsFile ..= `declare { name }: { apiDump.ScriptEnv.Globals[name] }\n`
+	end
+	
+	for _, comment in (if typeof(contents.Description) == "table" then contents.Description else { contents.Description }) do
+		if not comment then
+			print(`Missing doc comment for global '{ name }'`)
+		end
+		
+		globals ..= `* { comment }\n`
+	end
+	
+	globals ..= "\n"
+end
+
+definitionsFile ..= "\n\n"
+
+local scriptenv = datatypesPrologue .. datatypes .. librariesPrologue .. libraries .. globalsPrologue .. globals
+fs.write(BASE_PATH .. "/scriptenv.txt", scriptenv, false)
+
 fs.write(BASE_PATH .. "/components.txt", components, false)
+
+fs.write("scripts/lsp-defs.d.luau", definitionsFile)
 
 print("Docs CI finish\n\n\n\n\n")
 

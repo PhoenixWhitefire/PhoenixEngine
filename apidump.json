@@ -189,6 +189,8 @@
           "__type": "string"
         }
       },
+      "EventConnection": {},
+      "EventSignal": {},
       "GameObject": {
         "Library": {
           "new": "function"
@@ -219,11 +221,11 @@
     "Globals": {
       "appendlog": "function",
       "breakpoint": "function",
-      "game": "GameObject",
+      "game": "GameObject & DataModel",
       "loadfile": "function",
       "loadthread": "function",
       "sleep": "function",
-      "workspace": "GameObject"
+      "workspace": "GameObject & Workspace"
     },
     "Libraries": {
       "conf": {

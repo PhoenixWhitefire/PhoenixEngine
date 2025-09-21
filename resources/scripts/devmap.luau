@@ -1,8 +1,9 @@
 -- devmap.luau, 10/07/2024
+--!strict
 
 local TotalTime = 0
 
-local Camera = workspace.SceneCamera
+local Camera = workspace.SceneCamera :: ( GameObject & Camera )
 local CharacterControllerCreator = require("./modules/CharacterController.luau")
 --local RoomGen = require("scripts/roomsgen.luau")
 
