@@ -394,7 +394,7 @@ double Reflection::GenericValue::AsDouble() const
 		return Val.Double;
 
 	else if (Type == ValueType::Integer)
-		return Val.Int;
+		return (double)Val.Int;
 
 	// special error message
 	RAISE_RT("GenericValue was not a number (Integer/ Double ), but instead a " + TypeAsString(Type));
@@ -405,7 +405,7 @@ int64_t Reflection::GenericValue::AsInteger() const
 		return Val.Int;
 
 	else if (Type == ValueType::Double)
-		return Val.Double;
+		return (int64_t)Val.Double;
 
 	RAISE_RT("GenericValue was not a number ( Integer /Double), but instead a " + TypeAsString(Type));
 }

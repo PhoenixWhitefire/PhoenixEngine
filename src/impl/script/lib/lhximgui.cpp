@@ -13,7 +13,7 @@ static int imgui_begin(lua_State* L)
 	return 1;
 }
 
-static int imgui_end(lua_State* L)
+static int imgui_end(lua_State*)
 {
     ImGui::End();
 
@@ -150,7 +150,7 @@ static int imgui_stylecolors(lua_State* L)
     luaL_error(L, "Invalid style '%s'", n);
 }
 
-static int imgui_setnextwindowfocus(lua_State* L)
+static int imgui_setnextwindowfocus(lua_State*)
 {
     ImGui::SetNextWindowFocus();
 
@@ -178,7 +178,7 @@ static int imgui_beginmainmenubar(lua_State* L)
     return 1;
 }
 
-static int imgui_endmainmenubar(lua_State* L)
+static int imgui_endmainmenubar(lua_State*)
 {
     ImGui::EndMainMenuBar();
 
@@ -192,7 +192,7 @@ static int imgui_beginmenubar(lua_State* L)
     return 1;
 }
 
-static int imgui_endmenubar(lua_State* L)
+static int imgui_endmenubar(lua_State*)
 {
     ImGui::EndMenuBar();
 
@@ -206,7 +206,7 @@ static int imgui_beginmenu(lua_State* L)
     return 1;
 }
 
-static int imgui_endmenu(lua_State* L)
+static int imgui_endmenu(lua_State*)
 {
     ImGui::EndMenu();
 
@@ -331,7 +331,7 @@ static int imgui_beginchild(lua_State* L)
     return 1;
 }
 
-static int imgui_endchild(lua_State* L)
+static int imgui_endchild(lua_State*)
 {
     ImGui::EndChild();
 

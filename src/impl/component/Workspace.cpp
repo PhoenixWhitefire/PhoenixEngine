@@ -92,7 +92,7 @@ public:
 
 static inline WorkspaceManager Instance{};
 
-glm::vec3 EcWorkspace::ScreenPointToRay(double x, double y, float length, glm::vec3* Origin) const
+glm::vec3 EcWorkspace::ScreenPointToRay(double x, double y, float length, glm::vec3* /* Origin */) const
 {
 	Engine* engine = Engine::Get();
 	int winSizeX = 0, winSizeY = 0;

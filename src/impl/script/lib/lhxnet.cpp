@@ -1,13 +1,50 @@
-#include <optional>
-#include <memory>
-#include <vector>
-#include <string>
-#include <mutex>
-#include <curl/curl.h>
+// #include <optional>
+// #include <memory>
+// #include <vector>
+// #include <string>
+// #include <mutex>
+// #include <curl/curl.h>
 
 #include "script/luhx.hpp"
-#include "script/ScriptEngine.hpp"
-#include "ThreadManager.hpp"
+// #include "script/ScriptEngine.hpp"
+// #include "ThreadManager.hpp"
+
+static int net_request(lua_State* L)
+{
+    lua_newtable(L);
+
+    lua_pushstring(L, "API disabled");
+    lua_setfield(L, -2, "body");
+
+    lua_newtable(L);
+    lua_setfield(L, -2, "headers");
+
+    lua_pushinteger(L, 0);
+    lua_setfield(L, -2, "status");
+
+    lua_pushboolean(L, false);
+    lua_setfield(L, -2, "ok");
+
+    lua_pushstring(L, "Networking API is not enabled");
+    lua_setfield(L, -2, "error");
+
+    return 1;
+}
+
+static luaL_Reg net_funcs[] =
+{
+    { "request", net_request },
+    { NULL, NULL }
+};
+
+int luhxopen_net(lua_State * L)
+{
+    luaL_register(L, LUHX_NETLIBNAME, net_funcs);
+
+    return 1;
+}
+
+#if 0
 
 static_assert(sizeof(long) == sizeof(int64_t));
 
@@ -248,3 +285,6 @@ int luhxopen_net(lua_State* L)
 
     return 1;
 }
+
+#endif
+

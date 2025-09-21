@@ -118,7 +118,7 @@ s_Api.Lineage.push_back(#base);                                            \
         { \
             c* ec = static_cast<c*>(p); \
             ec->n##Callbacks.push_back(Callback); \
-            return ec->n##Callbacks.size() - 1; \
+            return (uint32_t)ec->n##Callbacks.size() - 1; \
         }, \
         [](void* p, uint32_t Id) \
 		-> void \

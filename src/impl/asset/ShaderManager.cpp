@@ -491,11 +491,11 @@ ShaderManager::~ShaderManager()
 	assert(!s_Instance);
 }
 
-void ShaderManager::Initialize(bool IsHeadless)
+void ShaderManager::Initialize(bool InitIsHeadless)
 {
 	ZoneScoped;
 
-	this->IsHeadless = IsHeadless;
+	this->IsHeadless = InitIsHeadless;
 	s_Instance = this;
 }
 

@@ -57,6 +57,7 @@ target_compile_definitions(PhoenixEngine PRIVATE PHX_BUILD_TYPE="${PHX_BUILD_TYP
 
 if (MSVC)
 	set(FMOD_PATH Vendor/FMOD/api/core/lib/x64/fmodL_vc)
+	target_compile_options(PhoenixEngine PRIVATE /wd4244)
 else()
 	set(FMOD_PATH ${CMAKE_BINARY_DIR}/Vendor/FMOD/api/core/lib/x86_64/libfmodL.so)
 endif()
@@ -66,7 +67,6 @@ target_link_libraries(PhoenixEngine PRIVATE
 	glm
 	SDL_uclibc
 	SDL3-shared
-	libcurl
 	$<IF:$<CONFIG:Release>,,TracyClient> # TODO: seemingly no way to not build this even if we dont link it
 	${FMOD_PATH}
 
@@ -104,7 +104,6 @@ add_subdirectory(Vendor/luau)
 add_subdirectory(Vendor/glm)
 add_subdirectory(Vendor/SDL)
 add_subdirectory(Vendor/tracy)
-add_subdirectory(Vendor/curl)
 
 # organize vs folders
 set_property(TARGET Vendor PROPERTY FOLDER "Vendor")
@@ -138,7 +137,6 @@ add_dependencies(PhoenixEngine
 	Luau.VM
 	SDL3-shared
 	SDL_uclibc
-	libcurl
 )
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT PhoenixEngine)

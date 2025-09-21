@@ -581,7 +581,7 @@
           }
         },
         "net": {
-          "Description": "Networking",
+          "Description": "**This API has been disabled due to dependency burden**",
           "Members": {
             "request": "Performs an HTTP request to the given URL and returns the response"
           }

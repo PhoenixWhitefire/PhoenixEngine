@@ -389,7 +389,7 @@ Reflection::GenericValue ScriptEngine::L::ToGeneric(lua_State* L, int StackIndex
 				lua_settable(CL, -3);
 				lua_pop(CL, 1);
 
-				int status = lua_pcall(CL, Inputs.size(), -1, 0);
+				int status = lua_pcall(CL, (int)Inputs.size(), -1, 0);
 
 				lua_getglobal(CL, YIELDBLOCKERTRACKING);
 				luaL_checktype(CL, -1, LUA_TTABLE);
@@ -728,7 +728,7 @@ void ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yie
 
 		std::string blockers;
 
-		for (int i = blockerslist.size() - 1; i >= 0; i--)
+		for (size_t i = blockerslist.size() - 1; i >= 0; i--)
 		{
 			blockers.append(blockerslist[i]);
 			blockers.append("\n");
@@ -1419,7 +1419,7 @@ static void requireConfigInit(luarequire_Configuration* config)
 
 			return WRITE_SUCCESS;
 		};
-	config->load = [](lua_State* L, void* ctx, const char* path, const char* chname, const char* ldname)
+	config->load = [](lua_State* L, void* ctx, const char* /* path */, const char* chname, const char* ldname)
 		{
 			std::filesystem::path* curpath = (std::filesystem::path*)ctx;
 
@@ -1436,6 +1436,9 @@ static void requireConfigInit(luarequire_Configuration* config)
 			
 			if (ScriptEngine::CompileAndLoad(ML, FileRW::ReadFile(curpath->string()), chname) == 0)
 			{
+				lua_pushstring(ML, ldname);
+				lua_setglobal(ML, "_LOADNAME");
+
 				int status = lua_resume(ML, L, 0);
 
 				if (status == LUA_OK)

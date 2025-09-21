@@ -437,12 +437,12 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 
 static MeshProvider* s_Instance = nullptr;
 
-void MeshProvider::Initialize(bool IsHeadless)
+void MeshProvider::Initialize(bool InitIsHeadless)
 {
 	ZoneScoped;
 	assert(!s_Instance);
 
-	this->IsHeadless = IsHeadless;
+	this->IsHeadless = InitIsHeadless;
 
 	this->Assign(PrimitiveMeshes::Cube(), "!Cube", true);
 	this->Assign(PrimitiveMeshes::Quad(), "!Quad", true);

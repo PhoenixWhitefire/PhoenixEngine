@@ -3,7 +3,7 @@
 
 #include "IntersectionLib.hpp"
 
-static const float EPSILON = 1e-8;
+static const float EPSILON = 1e-8f;
 
 template<class T> static int sign(T v)
 {

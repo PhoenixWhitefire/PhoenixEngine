@@ -74,7 +74,7 @@ public:
 
 private:
 	void m_InitVideo();
-	void m_Render(const Scene&, double DeltaTime);
+	void m_Render(double DeltaTime);
 
 	int m_DrawnFramesInSecond = -1;
 	bool m_IsRunning = false;

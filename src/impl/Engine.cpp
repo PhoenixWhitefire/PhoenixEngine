@@ -567,7 +567,7 @@ static GLuint startLoadingSkybox(std::vector<uint32_t>* skyboxFacesBeingLoaded)
 	return skyboxCubemap;
 }
 
-void Engine::m_Render(const Scene& CurrentScene, double deltaTime)
+void Engine::m_Render(double deltaTime)
 {
 	ZoneScoped;
 
@@ -1060,7 +1060,7 @@ void Engine::Start()
 
 		if (!IsHeadlessMode)
 		{
-			m_Render(CurrentScene, deltaTime);
+			m_Render(deltaTime);
 			RendererContext.SwapBuffers();
 		}
 
@@ -1099,17 +1099,6 @@ void Engine::Shutdown()
 
 	Log::Save();
 
-	Log::Info("Shutting down Component Managers...");
-
-	// skip the first "None" component manager
-	for (size_t i = 1; i < std::size(s_EntityComponentNames); i++)
-	{
-		ZoneScopedN("Shutdown Component");
-		ZoneText(s_EntityComponentNames[i].data(), s_EntityComponentNames[i].size());
-
-		GameObject::s_ComponentManagers[i]->Shutdown();
-	}
-
 #ifdef NDEBUG
 	Log::Info("Clearing World Array...");
 	GameObject::s_WorldArray.clear();
@@ -1121,6 +1110,17 @@ void Engine::Shutdown()
 	DataModelRef.Clear();
 	WorkspaceRef.Clear();
 #endif
+
+	Log::Info("Shutting down Component Managers...");
+
+	// skip the first "None" component manager
+	for (size_t i = 1; i < std::size(s_EntityComponentNames); i++)
+	{
+		ZoneScopedN("Shutdown Component");
+		ZoneText(s_EntityComponentNames[i].data(), s_EntityComponentNames[i].size());
+
+		GameObject::s_ComponentManagers[i]->Shutdown();
+	}
 
 	Log::Info("Shutting down managers...");
 

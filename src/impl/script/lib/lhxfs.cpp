@@ -3,6 +3,17 @@
 #include "script/luhx.hpp"
 #include "FileRW.hpp"
 
+static std::string unifyPath(const std::string& Str)
+{
+	std::string newStr = Str;
+
+	for (char& c : newStr)
+		if (c == '\\')
+			c = '/';
+
+	return newStr;
+}
+
 static int fs_write(lua_State* L)
 {
     const char* path = luaL_checkstring(L, 1);
@@ -49,7 +60,8 @@ static int fs_listdir(lua_State* L)
 		{
 			if (std::filesystem::is_regular_file(entry))
 			{
-				lua_pushstring(L, entry.path().c_str());
+				std::string entryPath = unifyPath(entry.path().string());
+				lua_pushstring(L, entryPath.c_str());
 				lua_pushstring(L, "f");
 				lua_settable(L, -3);
 			}
@@ -59,7 +71,8 @@ static int fs_listdir(lua_State* L)
 		{
 			if (std::filesystem::is_directory(entry))
 			{
-				lua_pushstring(L, entry.path().c_str());
+				std::string entryPath = unifyPath(entry.path().string());
+				lua_pushstring(L, entryPath.c_str());
 				lua_pushstring(L, "d");
 				lua_settable(L, -3);
 			}
@@ -67,7 +80,8 @@ static int fs_listdir(lua_State* L)
 		}
 		default:
 		{
-			lua_pushstring(L, entry.path().c_str());
+			std::string entryPath = unifyPath(entry.path().string());
+			lua_pushstring(L, entryPath.c_str());
 
 			if (std::filesystem::is_directory(entry))
 				lua_pushstring(L, "d");

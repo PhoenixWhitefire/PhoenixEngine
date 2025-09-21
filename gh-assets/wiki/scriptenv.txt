@@ -327,7 +327,7 @@ Custom libraries.
 * Imports the glTF model at the provided path and returns it as a list of `GameObject`s
 
 ### `net`
-* Networking
+* **This API has been disabled due to dependency burden**
 
 #### `net.request(any): any`
 * Performs an HTTP request to the given URL and returns the response

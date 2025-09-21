@@ -129,6 +129,7 @@ local function discoverTests(t, parent)
 		curGroup = parent[groupName]
 		
 		if v == "f" then
+			assert(k:find("tests/"), k)
 			local m = require("./" .. k:sub(k:find("tests/"), #k))
 			m(describe, it, expect)
 			

@@ -484,7 +484,7 @@ static void renderTextEditor()
 
 	for (size_t i = 0; i < TextEdOpenFiles.size() + 1; i++)
 	{
-		ImGui::PushID(i);
+		ImGui::PushID((int)i);
 
 		std::string label = TextEdOpenFiles.size() > i ? TextEdOpenFiles[i] : "+";
 		if (label.find("resources/") == 0)
@@ -2719,19 +2719,19 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError)
 
 		if (ImGui::Begin("Callstack"))
 		{
-			lua_Debug ar;
-			for (int i = 0; lua_getinfo(L, i, "sln", &ar); i++)
+			lua_Debug car;
+			for (int i = 0; lua_getinfo(L, i, "sln", &car); i++)
 			{
-				if (ar.currentline > 0)
+				if (car.currentline > 0)
 				{
 					if (ImGui::Button(std::format(
 						"{}:{} in {}",
-						ar.short_src, ar.currentline, ar.name ? ar.name : "<anonmyous>"
+						car.short_src, car.currentline, car.name ? car.name : "<anonmyous>"
 					).c_str()))
-						invokeTextEditor(ar.short_src);
+						invokeTextEditor(car.short_src);
 				}
 				else
-					ImGui::Text("%s in %s", ar.short_src, ar.name);
+					ImGui::Text("%s in %s", car.short_src, car.name);
 			}
 		}
 		ImGui::End();

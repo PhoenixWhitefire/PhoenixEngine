@@ -728,7 +728,7 @@ std::string ModelLoader::m_SerializeAnimation(const nlohmann::json& Animation)
 	for (int32_t i : nodes)
 	{
 		const ModelNode& node = m_Nodes[i];
-		writeU16(data, node.Name.size());
+		writeU16(data, (uint16_t)node.Name.size());
 		data.append(node.Name);
 	}
 

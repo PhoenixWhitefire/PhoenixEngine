@@ -121,7 +121,7 @@ static int shouldResume_Future(const ScriptEngine::YieldedCoroutine& CorInfo, lu
 		for (const Reflection::GenericValue& v : returnVals)
 			ScriptEngine::L::PushGenericValue(L, v);
 
-		return returnVals.size();
+		return (int)returnVals.size();
 	}
 	else
 		return -1;

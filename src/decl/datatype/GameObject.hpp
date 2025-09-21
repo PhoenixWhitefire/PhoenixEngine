@@ -425,7 +425,7 @@ template <class T>
 class ComponentManager : public IComponentManager
 {
 public:
-	virtual uint32_t CreateComponent(GameObject* Object) override
+	virtual uint32_t CreateComponent(GameObject*) override
 	{
 		m_Components.emplace_back();
 		assert(m_Components.back().Valid);

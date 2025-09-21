@@ -160,14 +160,14 @@ static int engine_setexplorerselections(lua_State* L)
     return 0;
 }
 
-static int engine_pushlvm(lua_State* L)
+static int engine_pushlvm(lua_State*)
 {
     EcScript::PushLVM();
 
     return 0;
 }
 
-static int engine_poplvm(lua_State* L)
+static int engine_poplvm(lua_State*)
 {
     EcScript::PopLVM();
 
