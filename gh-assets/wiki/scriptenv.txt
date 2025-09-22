@@ -266,37 +266,36 @@ Custom libraries.
 ### `input`
 * Checking player inputs
 
-#### `input.ismousegrabbed(any): any`
+#### `input.ismousegrabbed(  ): boolean`
 * Returns whether the mouse cursor is currently restricted to the window
 
-#### `input.setmousegrabbed(any): any`
+#### `input.setmousegrabbed(Grabbed: boolean): `
 * Grabs/ungrabs the mouse cursor
 
-#### `input.guihandledm(any): any`
+#### `input.guihandledm(  ): boolean`
 * Returns whether Dear ImGui is using the player's mouse inputs
 
-#### `input.setmousepos(any): any`
-* Sets the position of the mouse in the window
+#### `input.setmousepos(X: number, Y: number): `
 
-#### `input.iscursorvisible(any): any`
+#### `input.iscursorvisible(  ): boolean`
 * Returns whether the mouse cursor is currently visible
 
-#### `input.setcursorvisible(any): any`
+#### `input.setcursorvisible(Visible: boolean): `
 * Sets the visibility of the mouse cursor to the specified value
 
-#### `input.getmousepos(any): any`
-* Returns the current position of the player's mouse cursor, offset from the top-righ54
+#### `input.getmousepos(  ): number, number`
+* Returns the current position of the player's mouse cursor, offset from the top-right
 
-#### `input.guihandled(any): any`
+#### `input.guihandled(  ): boolean`
 * Returns whether Dear ImGui is using the player's inputs at all
 
-#### `input.mousedown(any): any`
-* Returns whether the specified mouse button (`l`eft, `r`ight, or `b`oth) is currently being pressed
+#### `input.mousedown(Button: 'l' | 'r' | 'b'): `
+* Returns whether the specified mouse button (`l`eft, `r`ight, or `b`oth for either) is currently being pressed
 
-#### `input.keypressed(any): any`
+#### `input.keypressed(Key: string): boolean`
 * Returns whether the specified key (as lowercase, e.g. `'a'`, `'b'`) is currently being pressed
 
-#### `input.guihandledk(any): any`
+#### `input.guihandledk(  ): boolean`
 * Returns whether Dear ImGui is using the player's keyboard inputs
 
 ### `json`

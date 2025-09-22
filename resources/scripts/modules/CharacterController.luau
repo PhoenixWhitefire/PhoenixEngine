@@ -134,7 +134,7 @@ function Controller:getMoveDirection()
 	]]--
 end
 
-function Controller:getRotationVector()
+function Controller:getRotationVector() : (number, number)
 	if input.mousedown("l") then
 		self.isMouseLocked = true -- lock mouse with left-click
 		

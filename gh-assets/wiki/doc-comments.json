@@ -469,7 +469,7 @@
           "getmaxframerate": "Returns the current framerate cap",
           "getfullscreen": "Returns whether the Engine is currently in fullscreen",
           "getvsync": "Returns whether VSync is currently enabled",
-          "getwindowsize": "Returns the current size of the window as two integers",
+          "getwindowsize": { "Out": "number, number", "Description": "Returns the current size of the window as two integers" },
           "isheadless": "Returns whether the Engine is currently running Headless mode",
           "setfullscreen": "Enables/disables fullscreen mode",
           "setvsync": "Enables/disables VSync",
@@ -546,17 +546,17 @@
         "input": {
           "Description": "Checking player inputs",
           "Members": {
-            "getmousepos": "Returns the current position of the player's mouse cursor, offset from the top-righ54",
-            "guihandled": "Returns whether Dear ImGui is using the player's inputs at all",
-            "guihandledk": "Returns whether Dear ImGui is using the player's keyboard inputs",
-            "guihandledm": "Returns whether Dear ImGui is using the player's mouse inputs",
-            "iscursorvisible": "Returns whether the mouse cursor is currently visible",
-            "ismousegrabbed": "Returns whether the mouse cursor is currently restricted to the window",
-            "keypressed": "Returns whether the specified key (as lowercase, e.g. `'a'`, `'b'`) is currently being pressed",
-            "mousedown": "Returns whether the specified mouse button (`l`eft, `r`ight, or `b`oth) is currently being pressed",
-            "setcursorvisible": "Sets the visibility of the mouse cursor to the specified value",
-            "setmousegrabbed": "Grabs/ungrabs the mouse cursor",
-            "setmousepos": "Sets the position of the mouse in the window"
+            "getmousepos": { "Out": "number, number", "Description": "Returns the current position of the player's mouse cursor, offset from the top-right" },
+            "guihandled": { "Out": "boolean", "Description": "Returns whether Dear ImGui is using the player's inputs at all" },
+            "guihandledk": { "Out": "boolean", "Description": "Returns whether Dear ImGui is using the player's keyboard inputs" },
+            "guihandledm": { "Out": "boolean", "Description": "Returns whether Dear ImGui is using the player's mouse inputs" },
+            "iscursorvisible": { "Out": "boolean", "Description": "Returns whether the mouse cursor is currently visible" },
+            "ismousegrabbed": { "Out": "boolean", "Description": "Returns whether the mouse cursor is currently restricted to the window" },
+            "keypressed": { "In": "Key: string", "Out": "boolean", "Description": "Returns whether the specified key (as lowercase, e.g. `'a'`, `'b'`) is currently being pressed" },
+            "mousedown": { "In": "Button: 'l' | 'r' | 'b'", "Description": "Returns whether the specified mouse button (`l`eft, `r`ight, or `b`oth for either) is currently being pressed" },
+            "setcursorvisible": { "In": "Visible: boolean", "Description": "Sets the visibility of the mouse cursor to the specified value" },
+            "setmousegrabbed": { "In": "Grabbed: boolean", "Description": "Grabs/ungrabs the mouse cursor" },
+            "setmousepos": { "In": "X: number, Y: number", "Description:": "Sets the position of the mouse in the window" }
           }
         },
         "json": {

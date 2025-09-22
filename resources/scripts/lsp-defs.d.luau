@@ -234,17 +234,17 @@ declare imgui: {
   indent: (( any ) -> (any))
 }
 declare input: {
-  ismousegrabbed: (( any ) -> (any)),
-  setmousegrabbed: (( any ) -> (any)),
-  guihandledm: (( any ) -> (any)),
-  setmousepos: (( any ) -> (any)),
-  iscursorvisible: (( any ) -> (any)),
-  setcursorvisible: (( any ) -> (any)),
-  getmousepos: (( any ) -> (any)),
-  guihandled: (( any ) -> (any)),
-  mousedown: (( any ) -> (any)),
-  keypressed: (( any ) -> (any)),
-  guihandledk: (( any ) -> (any))
+  ismousegrabbed: ((    ) -> (boolean)),
+  setmousegrabbed: (( Grabbed: boolean ) -> ()),
+  guihandledm: ((    ) -> (boolean)),
+  setmousepos: (( X: number, Y: number ) -> ()),
+  iscursorvisible: ((    ) -> (boolean)),
+  setcursorvisible: (( Visible: boolean ) -> ()),
+  getmousepos: ((    ) -> (number, number)),
+  guihandled: ((    ) -> (boolean)),
+  mousedown: (( Button: 'l' | 'r' | 'b' ) -> ()),
+  keypressed: (( Key: string ) -> (boolean)),
+  guihandledk: ((    ) -> (boolean))
 }
 declare json: {
   encode: (( any ) -> (any)),
