@@ -12,12 +12,17 @@ local librariesPrologue = fs.read(BASE_PATH .. "/libraries-prologue.txt")
 local globalsPrologue = fs.read(BASE_PATH .. "/globals-prologue.txt")
 local componentsPrologue = fs.read(BASE_PATH .. "/components-prologue.txt")
 
+assert(datatypesPrologue)
+assert(librariesPrologue)
+assert(globalsPrologue)
+assert(componentsPrologue)
+
 local datatypes = ""
 local libraries = ""
 local globals = ""
 local components = componentsPrologue .. "\n\n"
 
-local function keysOf(t)
+local function keysOf<T>(t: { [T]: any }) : { T }
 	local kt = {}
 	for k, _ in t do
 		table.insert(kt, k)
@@ -75,7 +80,7 @@ local function dumpFuncSignature(libname, funcname, In, Out, V)
 	return `#### \`{libname}.{ funcname }({ docargs }): { returns }\`\n`, `(( { defargs } ) -> ({ returns }))`
 end
 
-local function dumpLibMembers(libm, t, libname)
+local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, libname: string)
 	if not t then
 		return ""
 	end
@@ -96,14 +101,16 @@ local function dumpLibMembers(libm, t, libname)
 		
 		if not v then
 			print(`Missing docs for { libname }.{ k }`)
-			continue
 		end
 		
+		v = v or {}
+		
 		if t[k] == "function" then
+			local defpos = #definitionsFile
 			definitionsFile ..= `  { k }: `
 			
-			for _, vIn in { v.In or "  ", table.unpack(v.Overloads or {}) } do
-				local docsig, defsig = dumpFuncSignature(libname, k, vIn, v.Out, v)
+			for _, vIn in { v.In or "any", table.unpack(v.Overloads or {}) } do
+				local docsig, defsig = dumpFuncSignature(libname, k, vIn, v.Out or "any", v)
 				str ..= docsig
 				definitionsFile ..= `{ defsig } & `
 			end
@@ -111,6 +118,7 @@ local function dumpLibMembers(libm, t, libname)
 			definitionsFile = string.sub(definitionsFile, 1, #definitionsFile - 3)
 			definitionsFile ..= ",\n"
 		else
+			assert(v.Type and typeof(v.Type) == "string", k);
 			str ..= `#### \`{libname}.{ k }: { v.Type }\`\n`
 			definitionsFile ..= `  { k }: { v.Type },\n`
 		end
@@ -118,10 +126,6 @@ local function dumpLibMembers(libm, t, libname)
 		local desc = v.Description
 		if not desc and typeof(v) == "string" then
 			desc = v
-		end
-		
-		if not desc then
-			print(`No doc for {libname}.{k}`)
 		end
 		
 		for _, comment in (if typeof(desc) == "table" then desc else { desc }) do
@@ -141,7 +145,7 @@ local function dumpLibMembers(libm, t, libname)
 	return str
 end
 
-local rtol = {
+local rtol: { [string]: string } = {
 	Boolean = "boolean",
 	Integer = "number",
 	Double = "number",
@@ -162,7 +166,7 @@ local function rtolsub(str)
 	return str
 end
 
-local function count(t)
+local function count(t: { any })
 	local n = 0
 	for _, _ in t do
 		n += 1
@@ -491,6 +495,7 @@ fs.write("scripts/lsp-defs.d.luau", definitionsFile)
 
 print("Docs CI finish\n\n\n\n\n")
 
--- close when we're done
-engine.exit()
-
+if not conf.get("LspDefinitionsGeneratorDoNotShutdown") then
+	-- close when we're done
+	engine.exit()
+end

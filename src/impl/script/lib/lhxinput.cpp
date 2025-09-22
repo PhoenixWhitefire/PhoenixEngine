@@ -49,13 +49,13 @@ static int input_mousedown(lua_State* L)
     const char* bstr = luaL_optlstring(L, 1, "b", &bstrlen);
     luaL_argcheck(L, bstrlen == 1, 1, "must be exactly 1 character long");
     char b = bstr[0];
-    luaL_argcheck(L, b == 'b' || b == 'l' || b == 'r', 1, "must be either 'b', 'l', or 'r'");
+    luaL_argcheck(L, b == 'e' || b == 'l' || b == 'r', 1, "must be either 'e', 'l', or 'r'");
 
     bool value = false;
 
     switch (b)
     {
-    case 'b':
+    case 'e':
     {
         value = UserInput::IsMouseButtonDown(true) || UserInput::IsMouseButtonDown(false);
         break;

@@ -688,6 +688,7 @@ static void handleCrash(const std::string_view& Error, const std::string_view& E
 #endif
 
 static const char* MapFileFromArgs = nullptr;
+static const char* ScriptTool = nullptr;
 
 static void init()
 {
@@ -756,6 +757,14 @@ static void init()
 
 	root->IncrementHardRefs();
 	EngineInstance->BindDataModel(root);
+
+	if (ScriptTool)
+	{
+		GameObject* script = GameObject::Create(EntityComponent::Script);
+		script->GetComponent<EcScript>()->SourceFile = ScriptTool;
+		script->SetParent(root->FindChild("Workspace"));
+		script->Name = "Tool";
+	}
 }
 
 static bool isBoolArgument(const char* v, const char* arg)
@@ -843,6 +852,24 @@ static void processCliArgs(int argc, char** argv)
 			}
 			else
 				Log::Error("'-loadmap' argument from command-line was not followed by the desired File");
+		}
+		else if (strcmp(v, "-tool") == 0)
+		{
+			if (i + 1 < argc)
+			{
+				ScriptTool = argv[i + 1];
+
+				Log::InfoF(
+					"Standalone tool: {}",
+					ScriptTool
+				);
+
+				EngineJsonConfig["RootScene"] = "scenes/empty.world";
+
+				i++;
+			}
+			else
+				Log::Error("'-script' argument from command-line was not followed by the desired File");
 		}
 		else if (isBoolArgument(v, "-headless"))
 		{

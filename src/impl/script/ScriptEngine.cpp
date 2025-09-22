@@ -161,6 +161,7 @@ nlohmann::json ScriptEngine::L::ToJson(lua_State* L, int StackIndex, std::string
 		nlohmann::json t = nlohmann::json::object();
 		int keytype = LUA_TNIL;
 
+		luaL_checkstack(L, 5, "JSON encode");
 		lua_pushvalue(L, StackIndex);
 		lua_pushnil(L);
 
@@ -728,9 +729,9 @@ void ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yie
 
 		std::string blockers;
 
-		for (size_t i = blockerslist.size() - 1; i >= 0; i--)
+		for (size_t i = blockerslist.size(); i != 0; i--)
 		{
-			blockers.append(blockerslist[i]);
+			blockers.append(blockerslist[i - 1]);
 			blockers.append("\n");
 		}
 
@@ -1769,6 +1770,19 @@ lua_State* ScriptEngine::L::Create()
 
 		lua_pushcfunction(state, api_newobject, "GameObject.new");
 		lua_setfield(state, -2, "new");
+
+		{
+			lua_createtable(state, (int)EntityComponent::__count, 0);
+
+			for (uint8_t i = 1; i < (int)EntityComponent::__count; i++)
+			{
+				lua_pushinteger(state, i);
+				lua_pushlstring(state, s_EntityComponentNames[i].data(), s_EntityComponentNames[i].length());
+				lua_settable(state, -3);
+			}
+
+			lua_setfield(state, -2, "validComponents");
+		}
 
 		lua_setglobal(state, "GameObject");
 

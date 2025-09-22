@@ -5,14 +5,14 @@
         "Destroy": "Marks the Object as \"pending for destruction\". This may or may not remove the Object from memory immediately, depending on whether the Engine is actively using the Object for some purpose",
         "Duplicate": "Creates a duplicate of the Object",
         "FindChild": "Returns the child Object with the given name, or `nil` if it doesn't exist",
+        "ForEachChild": "For all children of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield",
         "GetChildren": "Returns a list of the Object's direct children",
         "GetComponentNames": "Returns a list of the names of all Components that the Object currently has",
         "GetDescendants": "Returns all descendants of the Object (i.e. its children, and their children, etc)",
         "GetFullName": "Returns the full, hierarchal path of the Object",
         "HasComponent": "Returns whether or not the Object has the given Component",
         "IsA": "Equivalent to `:HasComponent`",
-        "MergeWith": "Merges the Objects together, replacing descendants with the same name",
-        "ForEachChild": "For all children of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield"
+        "MergeWith": "Merges the Objects together, replacing descendants with the same name"
       },
       "Properties": {
         "Enabled": "Whether the Engine updates and recognizes this Object, essentially freezing it if it is disabled",
@@ -24,6 +24,20 @@
       }
     },
     "Components": {
+      "Animation": {
+        "Description": [
+          "Represents an Animation",
+          "Not functional currently"
+        ],
+        "Methods": {},
+        "Properties": {
+          "Animation": "The animation file",
+          "Looped": "Whether the Animation should loop when it reaches the end",
+          "Playing": "Whether the Animation is playing",
+          "Ready": "Whether the Animation can be played",
+          "Weight": "The influence the Animation has over the rig"
+        }
+      },
       "Bone": {
         "Description": [
           "Represents a Bone of a Mesh",
@@ -31,8 +45,8 @@
         ],
         "Properties": {
           "IsActive": "Whether or not the Bone Object is actively affecting a Mesh",
-          "Transform": "The transformation of the Bone",
-          "SkeletalBoneId": "The internal ID of the bone, valid range is 0-126"
+          "SkeletalBoneId": "The internal ID of the bone, valid range is 0-126",
+          "Transform": "The transformation of the Bone"
         }
       },
       "Camera": {
@@ -45,14 +59,14 @@
       },
       "DataModel": {
         "Description": "The root of the scene",
-        "Properties": {
-          "Time": "Number of seconds since the Engine started running"
+        "Events": {
+          "OnFrameBegin": "Fires at the beginning of a frame, passing in the time elapsed since the last frame (delta time)"
         },
         "Methods": {
           "Close": "Closes the application with the specified exit code integer or 0"
         },
-        "Events": {
-          "OnFrameBegin": "Fires at the beginning of a frame, passing in the time elapsed since the last frame (delta time)"
+        "Properties": {
+          "Time": "Number of seconds since the Engine started running"
         }
       },
       "DirectionalLight": {
@@ -61,15 +75,36 @@
           "Brightness": "How bright the Light is",
           "Direction": "The direction light is emitted from",
           "LightColor": "The color of the Light",
-          "Shadows": "Whether the Light can render shadows",
           "ShadowViewDistance": "How far back the shadow view is offset from the focus",
           "ShadowViewFarPlane": "The Far Z plane of the shadow view. Should be greater than `ShadowViewNearPlane`",
-          "ShadowViewNearPlane": "The Near Z plane of the shadow view. Should be less than `ShadowViewFarPlane`. Shouldn't be `0`",
           "ShadowViewMoveWithCamera": "Sets the focus of the shadow view to be the Scene Camera",
+          "ShadowViewNearPlane": "The Near Z plane of the shadow view. Should be less than `ShadowViewFarPlane`. Shouldn't be `0`",
           "ShadowViewOffset": "Offset of the shadow view from the focus, after `ShadowViewDistance` is applied",
           "ShadowViewSize": "Size of the shadow view. Sets `ShadowViewSizeH` and `ShadowViewSizeV` to the assigned value if they are equal. Is `-1` if they are not equal",
           "ShadowViewSizeH": "Horizontal size of the shadow view",
-          "ShadowViewSizeV": "Vertical size of the shadow view"
+          "ShadowViewSizeV": "Vertical size of the shadow view",
+          "Shadows": "Whether the Light can render shadows"
+        }
+      },
+      "Example": {
+        "Description": [
+          "An example to be made fun of and bullied",
+          "The least-popular kid in school no one remembers the name of"
+        ],
+        "Events": {
+          "OnGreeted": "Fires when `:Greet` is called, and sends the response to the callback before the original caller of `:Greet` receives it"
+        },
+        "Methods": {
+          "GiveUp": "Tells Engine-chan to kill herself and throws an exception",
+          "Greet": "Says hello to the given list of names. If the second argument is `true`, does so extra villainously"
+        },
+        "Properties": {
+          "EvenMoreSecretMessage": "A secret message that's so, *so* secret that it cannot be read by Reflection-kun, almost like they're keeping a secret from her...",
+          "SecretMessage": "A secret message that's so important it's read-only",
+          "SomeInteger": "An integer",
+          "SuperCoolBool": "A boolean",
+          "Value3": "A float",
+          "WhereIAm": "A 3-dimensional vector quantity"
         }
       },
       "Mesh": {
@@ -124,6 +159,9 @@
       },
       "Sound": {
         "Description": "A sound",
+        "Events": {
+          "OnLoaded": "Fires when the Sound finishes loading, and whether it loaded successfully or not"
+        },
         "Properties": {
           "FinishedLoading": "Whether the Sound has finished loading the `SoundFile`",
           "Length": "The length of the sound in seconds",
@@ -134,9 +172,6 @@
           "SoundFile": "The sound file to be played",
           "Speed": "The speed at which the sound plays, within the range of 0.01 to 100",
           "Volume": "The volume at which the sound plays. Must be positive"
-        },
-        "Events": {
-          "OnLoaded": "Fires when the Sound finishes loading, and whether it loaded successfully or not"
         }
       },
       "SpotLight": {
@@ -156,6 +191,16 @@
           "Transform": "The Transformation of the Object from the World"
         }
       },
+      "TreeLink": {
+        "Description": [
+          "The Engine, for rendering and physics, will pretend the children of this Object's `Target` are the children of the node",
+          "There is one very specific use-case for which this was implemented, this was designed around said use-case. It is *not* intended to act like a transparent proxy"
+        ],
+        "Properties": {
+          "Scripting": "Whether Scripts which descend from the `Target` will run",
+          "Target": "The target to link"
+        }
+      },
       "Workspace": {
         "Description": [
           "The container used for storing the main parts of a scene (3D objects)",
@@ -167,240 +212,34 @@
         "Properties": {
           "SceneCamera": "The `Camera` the Player sees the world through. If set to `nil`, a *fallback* is created at the origin."
         }
-      },
-      "Animation": {
-        "Description": [
-          "Represents an Animation",
-          "Not functional currently"
-        ],
-        "Methods": {},
-        "Properties": {
-          "Animation": "The animation file",
-          "Looped": "Whether the Animation should loop when it reaches the end",
-          "Playing": "Whether the Animation is playing",
-          "Ready": "Whether the Animation can be played",
-          "Weight": "The influence the Animation has over the rig"
-        }
-      },
-      "Example": {
-        "Description": [
-          "An example to be made fun of and bullied",
-          "The least-popular kid in school no one remembers the name of"
-        ],
-        "Methods": {
-          "Greet": "Says hello to the given list of names. If the second argument is `true`, does so extra villainously",
-          "GiveUp": "Tells Engine-chan to kill herself and throws an exception"
-        },
-        "Properties": {
-          "SuperCoolBool": "A boolean",
-          "SomeInteger": "An integer",
-          "Value3": "A float",
-          "SecretMessage": "A secret message that's so important it's read-only",
-          "EvenMoreSecretMessage": "A secret message that's so, *so* secret that it cannot be read by Reflection-kun, almost like they're keeping a secret from her...",
-          "WhereIAm": "A 3-dimensional vector quantity"
-        },
-        "Events": {
-          "OnGreeted": "Fires when `:Greet` is called, and sends the response to the callback before the original caller of `:Greet` receives it"
-        }
-      },
-      "TreeLink": {
-        "Description": [
-          "The Engine, for rendering and physics, will pretend the children of this Object's `Target` are the children of the node",
-          "There is one very specific use-case for which this was implemented, this was designed around said use-case. It is *not* intended to act like a transparent proxy"
-        ],
-        "Properties": {
-          "Target": "The target to link",
-          "Scripting": "Whether Scripts which descend from the `Target` will run"
-        }
       }
     }
   },
   "ScriptEnv": {
-    "Globals": {
-      "game": {
-        "Description": "The GameObject acting as the Data Model of the Engine"
-      },
-      "workspace": {
-          "Description": "Shorthand for `game.Workspace`"
-        },
-      "appendlog": {
-        "In": "...: any",
-        "Description": "Same as `print`, but does not prefix the log message with `[INFO]`"
-      },
-      "sleep": {
-        "In": "SleepTime: number",
-        "Description": "Yields the thread for the specified number of seconds"
-      },
-      "breakpoint": {
-        "In": "Line: number",
-        "Description": "Set a breakpoint at the given line"
-      },
-      "loadthread": {
-        "In": "Code: string, ChunkName: string",
-        "Out": "( thread?, string? )",
-        "Description": "Like `loadstring` in *other* runtimes, however does not compromise Global Import optimizations and returns a coroutine instead of a function. If an error occurs, returns `nil` as the first value and the error message as the second value"
-      },
-      "loadfile": {
-        "In": "File: string, ChunkName: string",
-        "Out": "( thread?, string? )",
-        "Description": "Similar to `loadthread`, however loads from a file instead of from a string directly"
-      }
-    },
     "Datatypes": {
       "Color": {
         "Description": "An RGB color",
         "Library": {
           "new": {
-            "In": "R: number, G: number, B: number",
-            "Description": [ "Returns a Color with the provided R, G, and B values", "Values are expected to be in the range 0 to 1" ]
+            "Description": [
+              "Returns a Color with the provided R, G, and B values",
+              "Values are expected to be in the range 0 to 1"
+            ],
+            "In": "R: number, G: number, B: number"
           }
         },
         "Members": {
-          "R": {
-            "Type": "number",
-            "Description": "The Red channel"
+          "B": {
+            "Description": "The Blue channel",
+            "Type": "number"
           },
           "G": {
-            "Type": "number",
-            "Description": "The Green channel"
+            "Description": "The Green channel",
+            "Type": "number"
           },
-          "B": {
-            "Type": "number",
-            "Description": "The Blue channel"
-          }
-        }
-      },
-      "GameObject": {
-        "TypeDependencies": [ "EventSignal" ],
-        "Description": [ "A Game Object", "For organization, the members of this type will be on the Components wiki page" ],
-        "Library": {
-          "new": {
-            "In": "Component: string",
-            "Description": "Creates a new GameObject with the provided Component"
-          }
-        }
-      },
-      "Matrix": {
-        "Description": "A 4x4 transformation matrix",
-        "Library": {
-          "new": {
-            "Description": "Creates a new identity matrix"
-          },
-          "fromEulerAnglesXYZ": {
-            "In": "X: number, Y: number, Z: number",
-            "Out": "Matrix",
-            "Description": "Creates a Matrix which has been rotated by the given Euler angles (in radians) with the rotation order X-Y-Z"
-          },
-          "fromTranslation": {
-            "In": "Position: vector",
-            "Overloads": [ "X: number, Y: number, Z: number" ],
-            "Out": "Matrix",
-            "Description": "Creates a Matrix which has been translated to the given coordinates (specified as either a `vector` or the individual X, Y, and Z component)"
-          },
-          "lookAt": {
-            "In": "Eye: vector, Target: vector",
-            "Out": "Matrix",
-            "Description": "Creates a Matrix at position `Eye` oriented such that the `.Forward` vector moves toward `Target`"
-          }
-        },
-        "Members": {
-          ":__mul": {
-            "In": "Matrix",
-            "Out": "Matrix",
-            "Description": "Two Matrices may be multiplied together with the `*` operator"
-          },
-          "Position": {
-            "Type": "vector",
-            "Description": "The position of the Matrix in world-space"
-          },
-          "Forward": {
-            "Type": "vector",
-            "Description": "The forward vector of the Matrix"
-          },
-          "Right": {
-            "Type": "vector",
-            "Description": "The rightward vector of the Matrix"
-          },
-          "Up": {
-            "Type": "vector",
-            "Description": "The upward vector of the Matrix"
-          },
-          "C1R1": {
-            "Type": "number",
-            "Description": "The value at Column 1, Row 1"
-          },
-          "C1R2": {
-            "Type": "number",
-            "Description": "The value at Column 1, Row 2"
-          },
-          "C1R3": {
-            "Type": "number",
-            "Description": "The value at Column 1, Row 3"
-          },
-          "C1R4": {
-            "Type": "number",
-            "Description": "The value at Column 1, Row 4"
-          },
-          "C2R1": {
-            "Type": "number",
-            "Description": "The value at Column 2, Row 1"
-          },
-          "C2R2": {
-            "Type": "number",
-            "Description": "The value at Column 2, Row 2"
-          },
-          "C2R3": {
-            "Type": "number",
-            "Description": "The value at Column 2, Row 3"
-          },
-          "C2R4": {
-            "Type": "number",
-            "Description": "The value at Column 2, Row 4"
-          },
-          "C3R1": {
-            "Type": "number",
-            "Description": "The value at Column 3, Row 1"
-          },
-          "C3R2": {
-            "Type": "number",
-            "Description": "The value at Column 3, Row 2"
-          },
-          "C3R3": {
-            "Type": "number",
-            "Description": "The value at Column 3, Row 3"
-          },
-          "C3R4": {
-            "Type": "number",
-            "Description": "The value at Column 3, Row 4"
-          },
-          "C4R1": {
-            "Type": "number",
-            "Description": "The value at Column 4, Row 1"
-          },
-          "C4R2": {
-            "Type": "number",
-            "Description": "The value at Column 4, Row 2"
-          },
-          "C4R3": {
-            "Type": "number",
-            "Description": "The value at Column 4, Row 3"
-          },
-          "C4R4": {
-            "Type": "number",
-            "Description": "The value at Column 4, Row 4"
-          }
-        },
-        "Operations": {
-          "__mul": [ "Matrix" ]
-        }
-      },
-      "EventSignal": {
-        "Description": "An Event that can be connected to",
-        "Members": {
-          ":Connect": {
-            "In": "(any) -> (any)",
-            "Out": "EventConnection",
-            "Description": "Connect a callback to the Event"
+          "R": {
+            "Description": "The Red channel",
+            "Type": "number"
           }
         }
       },
@@ -411,14 +250,191 @@
             "Description": "Disconnects the Connection, causing the callback to no longer be invoked, may only be called once"
           },
           "Connected": {
-            "Type": "boolean",
-            "Description": "Whether the Connection is connected or not"
+            "Description": "Whether the Connection is connected or not",
+            "Type": "boolean"
           },
           "Signal": {
-            "Type": "any",
-            "Description": "The Event which `:Connect` was called upon to return this Connection"
+            "Description": "The Event which `:Connect` was called upon to return this Connection",
+            "Type": "any"
           }
         }
+      },
+      "EventSignal": {
+        "Description": "An Event that can be connected to",
+        "Members": {
+          ":Connect": {
+            "Description": "Connect a callback to the Event",
+            "In": "(any) -> (any)",
+            "Out": "EventConnection"
+          }
+        }
+      },
+      "GameObject": {
+        "Description": [
+          "A Game Object",
+          "For organization, the members of this type will be on the Components wiki page"
+        ],
+        "Library": {
+          "new": {
+            "Description": "Creates a new GameObject with the provided Component",
+            "In": "Component: string"
+          },
+          "validComponents": {
+            "Description": "A list of all valid component names which can be passed into `.new`",
+            "Type": "{ string }"
+          }
+        },
+        "TypeDependencies": [
+          "EventSignal"
+        ]
+      },
+      "Matrix": {
+        "Description": "A 4x4 transformation matrix",
+        "Library": {
+          "fromEulerAnglesXYZ": {
+            "Description": "Creates a Matrix which has been rotated by the given Euler angles (in radians) with the rotation order X-Y-Z",
+            "In": "X: number, Y: number, Z: number",
+            "Out": "Matrix"
+          },
+          "fromTranslation": {
+            "Description": "Creates a Matrix which has been translated to the given coordinates (specified as either a `vector` or the individual X, Y, and Z component)",
+            "In": "Position: vector",
+            "Out": "Matrix",
+            "Overloads": [
+              "X: number, Y: number, Z: number"
+            ]
+          },
+          "lookAt": {
+            "Description": "Creates a Matrix at position `Eye` oriented such that the `.Forward` vector moves toward `Target`",
+            "In": "Eye: vector, Target: vector",
+            "Out": "Matrix"
+          },
+          "new": {
+            "Description": "Creates a new identity matrix"
+          }
+        },
+        "Members": {
+          ":__mul": {
+            "Description": "Two Matrices may be multiplied together with the `*` operator",
+            "In": "Matrix",
+            "Out": "Matrix"
+          },
+          "C1R1": {
+            "Description": "The value at Column 1, Row 1",
+            "Type": "number"
+          },
+          "C1R2": {
+            "Description": "The value at Column 1, Row 2",
+            "Type": "number"
+          },
+          "C1R3": {
+            "Description": "The value at Column 1, Row 3",
+            "Type": "number"
+          },
+          "C1R4": {
+            "Description": "The value at Column 1, Row 4",
+            "Type": "number"
+          },
+          "C2R1": {
+            "Description": "The value at Column 2, Row 1",
+            "Type": "number"
+          },
+          "C2R2": {
+            "Description": "The value at Column 2, Row 2",
+            "Type": "number"
+          },
+          "C2R3": {
+            "Description": "The value at Column 2, Row 3",
+            "Type": "number"
+          },
+          "C2R4": {
+            "Description": "The value at Column 2, Row 4",
+            "Type": "number"
+          },
+          "C3R1": {
+            "Description": "The value at Column 3, Row 1",
+            "Type": "number"
+          },
+          "C3R2": {
+            "Description": "The value at Column 3, Row 2",
+            "Type": "number"
+          },
+          "C3R3": {
+            "Description": "The value at Column 3, Row 3",
+            "Type": "number"
+          },
+          "C3R4": {
+            "Description": "The value at Column 3, Row 4",
+            "Type": "number"
+          },
+          "C4R1": {
+            "Description": "The value at Column 4, Row 1",
+            "Type": "number"
+          },
+          "C4R2": {
+            "Description": "The value at Column 4, Row 2",
+            "Type": "number"
+          },
+          "C4R3": {
+            "Description": "The value at Column 4, Row 3",
+            "Type": "number"
+          },
+          "C4R4": {
+            "Description": "The value at Column 4, Row 4",
+            "Type": "number"
+          },
+          "Forward": {
+            "Description": "The forward vector of the Matrix",
+            "Type": "vector"
+          },
+          "Position": {
+            "Description": "The position of the Matrix in world-space",
+            "Type": "vector"
+          },
+          "Right": {
+            "Description": "The rightward vector of the Matrix",
+            "Type": "vector"
+          },
+          "Up": {
+            "Description": "The upward vector of the Matrix",
+            "Type": "vector"
+          }
+        },
+        "Operations": {
+          "__mul": [
+            "Matrix"
+          ]
+        }
+      }
+    },
+    "Globals": {
+      "appendlog": {
+        "Description": "Same as `print`, but does not prefix the log message with `[INFO]`",
+        "In": "...: any"
+      },
+      "breakpoint": {
+        "Description": "Set a breakpoint at the given line",
+        "In": "Line: number"
+      },
+      "game": {
+        "Description": "The GameObject acting as the Data Model of the Engine"
+      },
+      "loadfile": {
+        "Description": "Similar to `loadthread`, however loads from a file instead of from a string directly",
+        "In": "File: string, ChunkName: string",
+        "Out": "( thread?, string? )"
+      },
+      "loadthread": {
+        "Description": "Like `loadstring` in *other* runtimes, however does not compromise Global Import optimizations and returns a coroutine instead of a function. If an error occurs, returns `nil` as the first value and the error message as the second value",
+        "In": "Code: string, ChunkName: string",
+        "Out": "( thread?, string? )"
+      },
+      "sleep": {
+        "Description": "Yields the thread for the specified number of seconds",
+        "In": "SleepTime: number"
+      },
+      "workspace": {
+        "Description": "Shorthand for `game.Workspace`"
       }
     },
     "Libraries": {
@@ -426,17 +442,17 @@
         "Description": "Internal Engine configuration state, loaded from file (`phoenix.conf`) upon startup",
         "Members": {
           "get": {
+            "Description": "Read a specific value from the configuration",
             "In": "Key: string",
-            "Out": "any",
-            "Description": "Read a specific value from the configuration"
-          },
-          "set": {
-            "In": "Key: string, Value: any",
-            "Description": "Change a specific value in the configuration"
+            "Out": "any"
           },
           "save": {
-            "Out": "boolean",
-            "Description": "Save the current state of the configuration to file (`phoenix.conf`), returning whether the file was successfully overwritten"
+            "Description": "Save the current state of the configuration to file (`phoenix.conf`), returning whether the file was successfully overwritten",
+            "Out": "boolean"
+          },
+          "set": {
+            "Description": "Change a specific value in the configuration",
+            "In": "Key: string, Value: any"
           }
         }
       },
@@ -444,163 +460,290 @@
         "Description": "Inspect and modify various parts of the Engine",
         "Members": {
           "daabbs": {
-            "In": "Enabled: boolean?",
             "Description": [
               "Returns whether AABBs are drawn for all objects with collisions enabled (`.PhysicsCollisions == true`)",
               "Optionally, the visualization can be enabled/disabled by passing in a boolean argument"
-            ]
+            ],
+            "In": "Enabled: boolean?"
           },
           "dwireframes": {
-            "In": "Enabled: boolean?",
             "Description": [
               "Returns whether all visible 3D objects are being rendered with wireframes",
               "Optionally, the visualization can be enabled/disabled by passing in a boolean argument"
-            ]
+            ],
+            "In": "Enabled: boolean?"
           },
           "exit": {
-            "In": "ExitCode: number?",
-            "Description": "Shuts down the Engine and exits the process with the specified Exit Code (or 0 by default)"
+            "Description": "Shuts down the Engine and exits the process with the specified Exit Code (or 0 by default)",
+            "In": "ExitCode: number?"
           },
           "framerate": "Returns the current framerate",
-          "setmaxframerate": {
-            "In": "MaxFramerate: number",
-            "Description": "Sets the maximum framerate the Engine will reach before self-limiting"
-          },
-          "getmaxframerate": "Returns the current framerate cap",
           "getfullscreen": "Returns whether the Engine is currently in fullscreen",
+          "getmaxframerate": "Returns the current framerate cap",
           "getvsync": "Returns whether VSync is currently enabled",
-          "getwindowsize": { "Out": "number, number", "Description": "Returns the current size of the window as two integers" },
+          "getwindowsize": {
+            "Description": "Returns the current size of the window as two integers",
+            "Out": "number, number"
+          },
           "isheadless": "Returns whether the Engine is currently running Headless mode",
           "setfullscreen": "Enables/disables fullscreen mode",
+          "setmaxframerate": {
+            "Description": "Sets the maximum framerate the Engine will reach before self-limiting",
+            "In": "MaxFramerate: number"
+          },
           "setvsync": "Enables/disables VSync",
           "setwindowsize": "Sets the size of the window to the specified two Width and Height integers"
-        }},
-        "fs": {
-          "Description": "Interacting with the player's filesystem",
-          "Members": {
-            "read": {
-              "In": "Path: string",
-              "Out": "string?",
-              "Description": [ 
-                "Reads the file at the given address, and returns the contents",
-                "If the file could not be read, returns `nil`"
+        }
+      },
+      "fs": {
+        "Description": "Interacting with the player's filesystem",
+        "Members": {
+          "isdirectory": {
+            "Description": "Returns whether the specified Path refers to a directory"
+          },
+          "isfile": {
+            "Description": "Returns whether the specified Path refers to a file"
+          },
+          "ispromptactive": {
+            "Description": "Returns whether a File Dialog is currently visible to the player and blocking any more file dialogs from being opened"
+          },
+          "listdir": {
+            "Description": [
+              "Returns a table of all the entries in the specified directory",
+              "The keys of the table is the path of the entry, while the values are the type of the entry",
+              "`f` is file, `d` is directory, and `a` is all"
+            ],
+            "In": [
+              "Path: string",
+              [
+                "Filter: 'a' | 'f' | 'd'",
+                "'a'"
               ]
-            },
-            "write": {
-              "In": "Path: string, Contents: string",
-              "Out": "boolean",
-              "Description": [
-                "Overwrites/creates the file at `Path` with the provided `Contents`",
-                "Returns whether the operation was successful"
+            ],
+            "Out": "{ [string]: 'f' | 'd' }"
+          },
+          "promptopen": {
+            "Description": [
+              "Prompts the player to select a file to open",
+              "Returns the list of files the player selected, or an empty list if the player cancelled the dialog",
+              "If the operation fails, returns `nil` instead"
+            ],
+            "In": [
+              [
+                "DefaultLocation: string?",
+                "'./' "
+              ],
+              [
+                "Filter: string?",
+                "'*.*'"
+              ],
+              [
+                "FilterName: string?",
+                "'All files '"
+              ],
+              [
+                "AllowMultipleFiles: boolean",
+                "false"
               ]
-            },
-            "isdirectory": "Returns whether the specified Path refers to a directory",
-            "isfile": "Returns whether the specified Path refers to a file",
-            "listdir": {
-              "In": [ "Path: string", [ "Filter: 'a' | 'f' | 'd'", "'a'"  ] ],
-              "Out": "{ [string]: 'f' | 'd' }",
-              "Description": [
-                "Returns a table of all the entries in the specified directory",
-                "The keys of the table is the path of the entry, while the values are the type of the entry",
-                "`f` is file, `d` is directory, and `a` is all"
+            ],
+            "Out": "{ string }"
+          },
+          "promptsave": {
+            "Description": [
+              "Prompts the player to select a path to save a file to",
+              "Returns the path the player selected, or `nil` if they cancelled the dialog"
+            ],
+            "In": [
+              [
+                "DefaultLocation: string?",
+                "'./'"
+              ],
+              [
+                "Filter: string?",
+                "'*.*'"
+              ],
+              [
+                "FilterName: string?",
+                "'All files'"
               ]
-            },
-            "ispromptactive": "Returns whether a File Dialog is currently visible to the player and blocking any more file dialogs from being opened",
-            "promptopen": {
-              "In": [ ["DefaultLocation: string?", "'./' "], [ "Filter: string?", "'*.*'" ], [ "FilterName: string?", "'All files '" ], [ "AllowMultipleFiles: boolean", "false" ] ],
-              "Out": "{ string }",
-              "Description": [
-                "Prompts the player to select a file to open",
-                "Returns the list of files the player selected, or an empty list if the player cancelled the dialog",
-                "If the operation fails, returns `nil` instead"
-              ]
-            },
-            "promptsave": {
-              "In": [ [ "DefaultLocation: string?", "'./'" ], [ "Filter: string?", "'*.*'" ], [ "FilterName: string?", "'All files'"] ],
-              "Out": "string",
-              "Description": [
-                "Prompts the player to select a path to save a file to",
-                "Returns the path the player selected, or `nil` if they cancelled the dialog"
-              ]
-            }
+            ],
+            "Out": "string"
+          },
+          "read": {
+            "Description": [
+              "Reads the file at the given address, and returns the contents",
+              "If the file could not be read, returns `nil`"
+            ],
+            "In": [
+              "Path: string"
+            ],
+            "Out": "string?"
+          },
+          "write": {
+            "Description": [
+              "Overwrites/creates the file at `Path` with the provided `Contents`",
+              "Returns whether the operation was successful"
+            ],
+            "In": [
+              "Path: string",
+              "Contents: string"
+            ],
+            "Out": "boolean"
           }
-        },
-        "imgui": {
-          "Description": "UI with Dear ImGui",
-          "Members": {
-            "begin": "`ImGui::Begin`",
-            "button": "`ImGui::Button`",
-            "checkbox": "`ImGui::Checkbox`",
-            "endw": "`ImGui::End`, `endw` and not `end` because `end` is a Luau keyword",
-            "image": "`ImGui::Image`",
-            "indent": "`ImGui::Indent`",
-            "inputnumber": "`ImGui::InputDouble`",
-            "inputstring": "`ImGui::InputText`",
-            "itemclicked": "`ImGui::IsItemClicked`",
-            "itemhovered": "`ImGui::IsItemHovered`",
-            "setitemtooltip": "`ImGui::SetItemTooltip`",
-            "text": "`ImGui::Text`",
-            "textlink": "`ImGui::TextLink`"
+        }
+      },
+      "imgui": {
+        "Description": "UI with Dear ImGui",
+        "Members": {
+          "begin": "`ImGui::Begin`",
+          "button": "`ImGui::Button`",
+          "checkbox": "`ImGui::Checkbox`",
+          "endw": "`ImGui::End`, `endw` and not `end` because `end` is a Luau keyword",
+          "image": "`ImGui::Image`",
+          "indent": "`ImGui::Indent`",
+          "inputnumber": "`ImGui::InputDouble`",
+          "inputstring": "`ImGui::InputText`",
+          "itemclicked": "`ImGui::IsItemClicked`",
+          "itemhovered": "`ImGui::IsItemHovered`",
+          "setitemtooltip": "`ImGui::SetItemTooltip`",
+          "text": "`ImGui::Text`",
+          "textlink": "`ImGui::TextLink`"
+        }
+      },
+      "input": {
+        "Description": "Checking player inputs",
+        "Members": {
+          "getmousepos": {
+            "Description": "Returns the current position of the player's mouse cursor, offset from the top-right",
+            "Out": "number, number"
+          },
+          "guihandled": {
+            "Description": "Returns whether Dear ImGui is using the player's inputs at all",
+            "Out": "boolean"
+          },
+          "guihandledk": {
+            "Description": "Returns whether Dear ImGui is using the player's keyboard inputs",
+            "Out": "boolean"
+          },
+          "guihandledm": {
+            "Description": "Returns whether Dear ImGui is using the player's mouse inputs",
+            "Out": "boolean"
+          },
+          "iscursorvisible": {
+            "Description": "Returns whether the mouse cursor is currently visible",
+            "Out": "boolean"
+          },
+          "ismousegrabbed": {
+            "Description": "Returns whether the mouse cursor is currently restricted to the window",
+            "Out": "boolean"
+          },
+          "keypressed": {
+            "Description": "Returns whether the specified key (as lowercase, e.g. `'a'`, `'b'`) is currently being pressed",
+            "In": [
+              "Key: string"
+            ],
+            "Out": "boolean"
+          },
+          "mousedown": {
+            "Description": [
+              "Returns whether the specified mouse button (`l`eft, `r`ight, or `e`ither) is currently being pressed"
+            ],
+            "In": [
+              "Button: 'l' | 'r' | 'e'"
+            ],
+            "Out": "boolean"
+          },
+          "setcursorvisible": {
+            "Description": "Sets the visibility of the mouse cursor to the specified value",
+            "In": [
+              "Visible: boolean"
+            ]
+          },
+          "setmousegrabbed": {
+            "Description": "Grabs/ungrabs the mouse cursor",
+            "In": [
+              "Grabbed: boolean"
+            ]
+          },
+          "setmousepos": {
+            "Description:": "Sets the position of the mouse in the window",
+            "In": [
+              "X: number",
+              "Y: number"
+            ]
           }
-        },
-        "input": {
-          "Description": "Checking player inputs",
-          "Members": {
-            "getmousepos": { "Out": "number, number", "Description": "Returns the current position of the player's mouse cursor, offset from the top-right" },
-            "guihandled": { "Out": "boolean", "Description": "Returns whether Dear ImGui is using the player's inputs at all" },
-            "guihandledk": { "Out": "boolean", "Description": "Returns whether Dear ImGui is using the player's keyboard inputs" },
-            "guihandledm": { "Out": "boolean", "Description": "Returns whether Dear ImGui is using the player's mouse inputs" },
-            "iscursorvisible": { "Out": "boolean", "Description": "Returns whether the mouse cursor is currently visible" },
-            "ismousegrabbed": { "Out": "boolean", "Description": "Returns whether the mouse cursor is currently restricted to the window" },
-            "keypressed": { "In": "Key: string", "Out": "boolean", "Description": "Returns whether the specified key (as lowercase, e.g. `'a'`, `'b'`) is currently being pressed" },
-            "mousedown": { "In": "Button: 'l' | 'r' | 'b'", "Description": "Returns whether the specified mouse button (`l`eft, `r`ight, or `b`oth for either) is currently being pressed" },
-            "setcursorvisible": { "In": "Visible: boolean", "Description": "Sets the visibility of the mouse cursor to the specified value" },
-            "setmousegrabbed": { "In": "Grabbed: boolean", "Description": "Grabs/ungrabs the mouse cursor" },
-            "setmousepos": { "In": "X: number, Y: number", "Description:": "Sets the position of the mouse in the window" }
+        }
+      },
+      "json": {
+        "Description": "Encoding and decoding JSON files",
+        "Members": {
+          "encode": {
+            "Description": [
+              "Encodes the provided value into a JSON string"
+            ],
+            "In": [
+              "Value: any"
+            ],
+            "Out": "string"
+          },
+          "parse": {
+            "Description": [
+              "Decodes the JSON string and returns it as a value"
+            ],
+            "In": [
+              "Json: string"
+            ],
+            "Out": "any"
           }
-        },
-        "json": {
-          "Description": "Encoding and decoding JSON files",
-          "Members": {
-            "parse": "Decodes the JSON string and returns it as a value",
-            "encode": "Encodes the provided value into a JSON string"
+        }
+      },
+      "mesh": {
+        "Description": "Mesh assets",
+        "Members": {
+          "get": "Returns the provided mesh data associated with the provided path",
+          "save": "Saves the mesh data at the provided path to a file",
+          "set": "Associates the provided mesh data with the provided path"
+        }
+      },
+      "model": {
+        "Description": "`glTF` models",
+        "Members": {
+          "import": "Imports the glTF model at the provided path and returns it as a list of `GameObject`s"
+        }
+      },
+      "net": {
+        "Description": "**This API has been disabled due to dependency burden**",
+        "Members": {
+          "request": {
+            "Description": [
+              "Performs an HTTP request to the given URL and returns the response"
+            ]
           }
-        },
-        "mesh": {
-          "Description": "Mesh assets",
-          "Members": {
-            "get": "Returns the provided mesh data associated with the provided path",
-            "set": "Associates the provided mesh data with the provided path",
-            "save": "Saves the mesh data at the provided path to a file"
+        }
+      },
+      "scene": {
+        "Description": "Scene assets",
+        "Members": {
+          "load": {
+            "Description": "Loads `GameObject`s from the scene file at the provided path, returning a list of the root objects or `nil` and an error message upon failure",
+            "In": "Path: string",
+            "Out": "GameObject?, string?"
+          },
+          "save": {
+            "Description": "Saves the list of `GameObject`s to the provided path, returning whether the operation succeeded",
+            "In": "RootNodes: { GameObject }, Path: string",
+            "Out": "boolean"
           }
-        },
-        "model": {
-          "Description": "`glTF` models",
-          "Members": {
-            "import": "Imports the glTF model at the provided path and returns it as a list of `GameObject`s"
-          }
-        },
-        "net": {
-          "Description": "**This API has been disabled due to dependency burden**",
-          "Members": {
-            "request": "Performs an HTTP request to the given URL and returns the response"
-          }
-        },
-        "scene": {
-          "Description": "Scene assets",
-          "Members": {
-            "save": "Saves the list of `GameObject`s to the provided path",
-            "load": "Loads `GameObject`s from the scene file at the provided path, returning a list of the root objects or `nil` and an error message upon failure"
-          }
-        },
-        "world": {
-          "Description": "World queries",
-          "Members": {
-            "aabbcast": "Cast an AABB",
-            "aabbquery": "Query all objects within the provided AABB",
-            "raycast": "Cast a ray"
-          }
+        }
+      },
+      "world": {
+        "Description": "World queries",
+        "Members": {
+          "aabbcast": "Cast an AABB",
+          "aabbquery": "Query all objects within the provided AABB",
+          "raycast": "Cast a ray"
         }
       }
     }
   }
+}

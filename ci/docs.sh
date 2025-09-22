@@ -1,3 +1,3 @@
 #!/bin/bash
 
-x64/Debug/PhoenixEngine -apidump -loadmap scenes/ci/docs.world -headless $@
+x64/Debug/PhoenixEngine -apidump -tool scripts/ci/docs.luau -headless $@

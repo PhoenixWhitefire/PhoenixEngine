@@ -364,6 +364,30 @@ static int imgui_combo(lua_State* L)
     return 2;
 }
 
+static int imgui_treenode(lua_State* L)
+{
+    lua_pushboolean(L, ImGui::TreeNode(luaL_checkstring(L, 1)));
+    return 1;
+}
+
+static int imgui_treepop(lua_State* L)
+{
+    ImGui::TreePop();
+    return 0;
+}
+
+static int imgui_pushid(lua_State* L)
+{
+    ImGui::PushID(luaL_checkstring(L, 1));
+    return 0;
+}
+
+static int imgui_popid(lua_State* L)
+{
+    ImGui::PopID();
+    return 0;
+}
+
 static luaL_Reg imgui_funcs[] =
 {
     { "begin", imgui_begin },
@@ -396,6 +420,10 @@ static luaL_Reg imgui_funcs[] =
     { "beginchild", imgui_beginchild },
     { "endchild", imgui_endchild },
     { "combo", imgui_combo },
+    { "treenode", imgui_treenode },
+    { "treepop", imgui_treepop },
+    { "pushid", imgui_pushid },
+    { "popid", imgui_popid },
     { NULL, NULL }
 };
 

@@ -6,7 +6,7 @@ Custom types with functions and properties.
 
 * An RGB color
 
-#### `Color.new(R: number, G: number, B: number): Color`
+#### `Color.new(R: number, G: number, B: number): any`
 * Returns a Color with the provided R, G, and B values
 * Values are expected to be in the range 0 to 1
 
@@ -44,14 +44,17 @@ Custom types with functions and properties.
 * A Game Object
 * For organization, the members of this type will be on the Components wiki page
 
-#### `GameObject.new(Component: string): GameObject`
+#### `GameObject.validComponents: { string }`
+* A list of all valid component names which can be passed into `.new`
+
+#### `GameObject.new(Component: string): any`
 * Creates a new GameObject with the provided Component
 
 ### `Matrix`
 
 * A 4x4 transformation matrix
 
-#### `Matrix.new(  ): Matrix`
+#### `Matrix.new(any): any`
 * Creates a new identity matrix
 
 #### `Matrix.fromTranslation(Position: vector): Matrix`
@@ -134,10 +137,10 @@ Custom libraries.
 ### `conf`
 * Internal Engine configuration state, loaded from file (`phoenix.conf`) upon startup
 
-#### `conf.save(  ): boolean`
+#### `conf.save(any): boolean`
 * Save the current state of the configuration to file (`phoenix.conf`), returning whether the file was successfully overwritten
 
-#### `conf.set(Key: string, Value: any): `
+#### `conf.set(Key: string, Value: any): any`
 * Change a specific value in the configuration
 
 #### `conf.get(Key: string): any`
@@ -146,23 +149,33 @@ Custom libraries.
 ### `engine`
 * Inspect and modify various parts of the Engine
 
+#### `engine.poplvm(any): any`
+
 #### `engine.framerate(any): any`
 * Returns the current framerate
 
 #### `engine.setvsync(any): any`
 * Enables/disables VSync
 
+#### `engine.binddatamodel(any): any`
+
 #### `engine.setwindowsize(any): any`
 * Sets the size of the window to the specified two Width and Height integers
 
-#### `engine.exit(ExitCode: number?): `
+#### `engine.setexplorerselections(any): any`
+
+#### `engine.exit(ExitCode: number?): any`
 * Shuts down the Engine and exits the process with the specified Exit Code (or 0 by default)
 
 #### `engine.setfullscreen(any): any`
 * Enables/disables fullscreen mode
 
-#### `engine.setmaxframerate(MaxFramerate: number): `
+#### `engine.pushlvm(any): any`
+
+#### `engine.setmaxframerate(MaxFramerate: number): any`
 * Sets the maximum framerate the Engine will reach before self-limiting
+
+#### `engine.physicstimescale(any): any`
 
 #### `engine.getfullscreen(any): any`
 * Returns whether the Engine is currently in fullscreen
@@ -173,17 +186,19 @@ Custom libraries.
 #### `engine.getmaxframerate(any): any`
 * Returns the current framerate cap
 
-#### `engine.getwindowsize(any): any`
+#### `engine.getwindowsize(any): number, number`
 * Returns the current size of the window as two integers
 
-#### `engine.dwireframes(Enabled: boolean?): `
+#### `engine.dwireframes(Enabled: boolean?): any`
 * Returns whether all visible 3D objects are being rendered with wireframes
 * Optionally, the visualization can be enabled/disabled by passing in a boolean argument
 
 #### `engine.isheadless(any): any`
 * Returns whether the Engine is currently running Headless mode
 
-#### `engine.daabbs(Enabled: boolean?): `
+#### `engine.setexplorerroot(any): any`
+
+#### `engine.daabbs(Enabled: boolean?): any`
 * Returns whether AABBs are drawn for all objects with collisions enabled (`.PhysicsCollisions == true`)
 * Optionally, the visualization can be enabled/disabled by passing in a boolean argument
 
@@ -224,20 +239,21 @@ Custom libraries.
 ### `imgui`
 * UI with Dear ImGui
 
-#### `imgui.endw(any): any`
-* `ImGui::End`, `endw` and not `end` because `end` is a Luau keyword
+#### `imgui.beginmainmenubar(any): any`
 
-#### `imgui.textlink(any): any`
-* `ImGui::TextLink`
+#### `imgui.endmenubar(any): any`
 
-#### `imgui.itemclicked(any): any`
-* `ImGui::IsItemClicked`
+#### `imgui.setnextwindowfocus(any): any`
 
 #### `imgui.image(any): any`
 * `ImGui::Image`
 
+#### `imgui.settooltip(any): any`
+
 #### `imgui.button(any): any`
 * `ImGui::Button`
+
+#### `imgui.menuitem(any): any`
 
 #### `imgui.inputstring(any): any`
 * `ImGui::InputText`
@@ -245,14 +261,12 @@ Custom libraries.
 #### `imgui.checkbox(any): any`
 * `ImGui::Checkbox`
 
-#### `imgui.setitemtooltip(any): any`
-* `ImGui::SetItemTooltip`
+#### `imgui.endmenu(any): any`
 
 #### `imgui.text(any): any`
 * `ImGui::Text`
 
-#### `imgui.itemhovered(any): any`
-* `ImGui::IsItemHovered`
+#### `imgui.getcursorpos(any): any`
 
 #### `imgui.begin(any): any`
 * `ImGui::Begin`
@@ -260,51 +274,94 @@ Custom libraries.
 #### `imgui.inputnumber(any): any`
 * `ImGui::InputDouble`
 
+#### `imgui.textlink(any): any`
+* `ImGui::TextLink`
+
+#### `imgui.setitemtooltip(any): any`
+* `ImGui::SetItemTooltip`
+
+#### `imgui.combo(any): any`
+
+#### `imgui.setcursorpos(any): any`
+
+#### `imgui.popid(any): any`
+
+#### `imgui.beginmenu(any): any`
+
+#### `imgui.treepop(any): any`
+
+#### `imgui.treenode(any): any`
+
+#### `imgui.endchild(any): any`
+
+#### `imgui.endw(any): any`
+* `ImGui::End`, `endw` and not `end` because `end` is a Luau keyword
+
+#### `imgui.itemhovered(any): any`
+* `ImGui::IsItemHovered`
+
+#### `imgui.itemclicked(any): any`
+* `ImGui::IsItemClicked`
+
 #### `imgui.indent(any): any`
 * `ImGui::Indent`
+
+#### `imgui.stylecolors(any): any`
+
+#### `imgui.dummy(any): any`
+
+#### `imgui.beginchild(any): any`
+
+#### `imgui.beginfullscreen(any): any`
+
+#### `imgui.endmainmenubar(any): any`
+
+#### `imgui.beginmenubar(any): any`
+
+#### `imgui.pushid(any): any`
 
 ### `input`
 * Checking player inputs
 
-#### `input.ismousegrabbed(  ): boolean`
+#### `input.ismousegrabbed(any): boolean`
 * Returns whether the mouse cursor is currently restricted to the window
 
-#### `input.setmousegrabbed(Grabbed: boolean): `
+#### `input.setmousegrabbed(Grabbed: boolean): any`
 * Grabs/ungrabs the mouse cursor
 
-#### `input.guihandledm(  ): boolean`
+#### `input.guihandledm(any): boolean`
 * Returns whether Dear ImGui is using the player's mouse inputs
 
-#### `input.setmousepos(X: number, Y: number): `
+#### `input.setmousepos(X: number, Y: number): any`
 
-#### `input.iscursorvisible(  ): boolean`
+#### `input.iscursorvisible(any): boolean`
 * Returns whether the mouse cursor is currently visible
 
-#### `input.setcursorvisible(Visible: boolean): `
+#### `input.setcursorvisible(Visible: boolean): any`
 * Sets the visibility of the mouse cursor to the specified value
 
-#### `input.getmousepos(  ): number, number`
+#### `input.getmousepos(any): number, number`
 * Returns the current position of the player's mouse cursor, offset from the top-right
 
-#### `input.guihandled(  ): boolean`
+#### `input.guihandled(any): boolean`
 * Returns whether Dear ImGui is using the player's inputs at all
 
-#### `input.mousedown(Button: 'l' | 'r' | 'b'): `
-* Returns whether the specified mouse button (`l`eft, `r`ight, or `b`oth for either) is currently being pressed
+#### `input.mousedown(Button: 'l' | 'r' | 'e'): boolean`
+* Returns whether the specified mouse button (`l`eft, `r`ight, or `e`ither) is currently being pressed
 
 #### `input.keypressed(Key: string): boolean`
 * Returns whether the specified key (as lowercase, e.g. `'a'`, `'b'`) is currently being pressed
 
-#### `input.guihandledk(  ): boolean`
+#### `input.guihandledk(any): boolean`
 * Returns whether Dear ImGui is using the player's keyboard inputs
 
 ### `json`
 * Encoding and decoding JSON files
 
-#### `json.encode(any): any`
+#### `json.encode(Value: any): string`
 * Encodes the provided value into a JSON string
 
-#### `json.parse(any): any`
+#### `json.parse(Json: string): any`
 * Decodes the JSON string and returns it as a value
 
 ### `mesh`
@@ -334,11 +391,11 @@ Custom libraries.
 ### `scene`
 * Scene assets
 
-#### `scene.load(any): any`
+#### `scene.load(Path: string): GameObject?, string?`
 * Loads `GameObject`s from the scene file at the provided path, returning a list of the root objects or `nil` and an error message upon failure
 
-#### `scene.save(any): any`
-* Saves the list of `GameObject`s to the provided path
+#### `scene.save(RootNodes: { GameObject }, Path: string): boolean`
+* Saves the list of `GameObject`s to the provided path, returning whether the operation succeeded
 
 ### `world`
 * World queries

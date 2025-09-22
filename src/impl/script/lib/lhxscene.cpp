@@ -18,7 +18,7 @@ static int scene_save(lua_State* L)
     bool success = FileRW::WriteFileCreateDirectories(path, fileContents);
 
 	lua_pushboolean(L, success);
-    return 2;
+    return 1;
 }
 
 static int scene_load(lua_State* L)

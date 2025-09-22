@@ -193,7 +193,8 @@
       "EventSignal": {},
       "GameObject": {
         "Library": {
-          "new": "function"
+          "new": "function",
+          "validComponents": "table"
         },
         "Metatable": {
           "__index": "function",
@@ -288,13 +289,17 @@
         "itemclicked": "function",
         "itemhovered": "function",
         "menuitem": "function",
+        "popid": "function",
+        "pushid": "function",
         "setcursorpos": "function",
         "setitemtooltip": "function",
         "setnextwindowfocus": "function",
         "settooltip": "function",
         "stylecolors": "function",
         "text": "function",
-        "textlink": "function"
+        "textlink": "function",
+        "treenode": "function",
+        "treepop": "function"
       },
       "input": {
         "getmousepos": "function",
