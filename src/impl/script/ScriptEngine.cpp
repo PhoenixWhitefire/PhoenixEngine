@@ -1257,6 +1257,13 @@ static int api_eventnamecall(lua_State* L)
 					lua_pop(co, 2);
 				}
 
+				if (status == LUA_BREAK)
+				{
+					cn->CallbackYields = true;
+					while (co->status == LUA_BREAK)
+						lua_resume(co, nullptr, 0); // i dont knowwwwww
+				}
+
 				if (status == LUA_YIELD)
 					cn->CallbackYields = true;
 			}
@@ -1909,13 +1916,26 @@ lua_State* ScriptEngine::L::Create()
 	{
 		state->global->cb.debugbreak = [](lua_State* L, lua_Debug* ar)
 			{
-				L::DebugBreak(L, ar, false);
+				Log::Info("Debug breakpoint");
+				L::DebugBreak(L, ar, false, false);
 			};
+		state->global->cb.debugstep = [](lua_State* L, lua_Debug* ar)
+			{
+				Log::Info("Debug single-stepping");
+				L::DebugBreak(L, ar, false, true);
+			};
+		state->global->cb.debuginterrupt = [](lua_State* L, lua_Debug* ar)
+			{
+				Log::Info("Debug interrupt");
+				L::DebugBreak((lua_State*)ar->userdata, ar, false, true);
+			};
+
 		state->global->cb.debugprotectederror = [](lua_State* L)
 			{
 				lua_Debug ar;
 				lua_getinfo(L, 1, "sln", &ar);
-				L::DebugBreak(L, &ar, true);
+				Log::Info("Debug protected error");
+				L::DebugBreak(L, &ar, true, false);
 			};
 	}
 
@@ -2026,6 +2046,8 @@ nlohmann::json ScriptEngine::DumpApiToJson()
 	eventSignal = nlohmann::json::object();
 	nlohmann::json& eventConnection = json["Datatypes"]["EventConnection"];
 	eventConnection = nlohmann::json::object();
+
+	json["Globals"]["script"] = "GameObject & Script";
 
 	lua_getglobal(luhx, "_G");
 	lua_pushinteger(luhx, 67);

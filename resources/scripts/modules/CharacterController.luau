@@ -3,7 +3,32 @@
 local Controller = {}
 Controller.__index = Controller
 
-function Controller.new(Camera)
+type ControllerData = {
+	Character: GameObject & Mesh,
+	Camera: GameObject & Camera,
+
+	Acceleration: number,
+	JumpImpulse: number,
+	JumpCooldown: number,
+	MouseSensitivity: number,
+	JumpRayDistance: number,
+
+	FirstPerson: boolean,
+	CameraOffset: Matrix,
+	CameraTargetOffset: vector,
+
+	prevMouseX: number,
+	prevMouseY: number,
+	isMouseLocked: boolean,
+	totalTime: number,
+	lastJumped: number,
+	cameraPitch: number,
+	roll: number
+}
+
+export type Controller = setmetatable<ControllerData, typeof(Controller)>
+
+function Controller.new(Camera: GameObject & Camera): Controller
 	return setmetatable({
 		Camera = Camera,
 		
@@ -25,13 +50,13 @@ function Controller.new(Camera)
 		lastJumped = 0,
 		cameraPitch = 0,
 		roll = 0
-	}, Controller)
+	}, Controller) :: any
 end
 
-function Controller:InitDefault(CharacterHeight)
+function Controller.InitDefault(self: Controller, CharacterHeight)
 	CharacterHeight = CharacterHeight or 15
 	
-	local character = GameObject.new("Primitive")
+	local character = (GameObject.new("Primitive") :: any) :: GameObject & Mesh
 	character.Size = vector.create(CharacterHeight / 3, CharacterHeight, CharacterHeight / 3)
 	character.PhysicsDynamics = true
 	character.Friction = 4
@@ -44,10 +69,10 @@ function Controller:InitDefault(CharacterHeight)
 	self.JumpRayDistance = CharacterHeight * 0.6
 end
 
-function Controller:Update(DeltaTime)
+function Controller.Update(self: Controller, DeltaTime: number)
 	self.totalTime += DeltaTime
 	
-	local moveDirection, inputDirection = self:getMoveDirection()
+	local moveDirection, _ = self:getMoveDirection()
 	local rotationX, rotationY = self:getRotationVector()
 	
 	local charSize = self.Character.Size
@@ -59,19 +84,19 @@ function Controller:Update(DeltaTime)
 	)
 	
 	local impulse = vector.create(
-		moveDirection.X * self.Acceleration * DeltaTime,
+		moveDirection.x * self.Acceleration * DeltaTime,
 		0,
-		moveDirection.Z * self.Acceleration * DeltaTime
+		moveDirection.z * self.Acceleration * DeltaTime
 	)
 	
 	if floorRayHit then
 		if input.keypressed(" ") and (self.totalTime - self.lastJumped) > self.JumpCooldown then
 			impulse += vector.create(0, self.JumpImpulse, 0)
-			self.Character.LinearVelocity = vector.create(self.Character.LinearVelocity.X, 0, self.Character.LinearVelocity.Z)
+			self.Character.LinearVelocity = vector.create(self.Character.LinearVelocity.x, 0, self.Character.LinearVelocity.z)
 			self.lastJumped = self.totalTime
 		end
 		
-		local sink = (self.Character.Transform.Position.Y - charSize.Y / 2) - floorRayHit.Position.Y
+		local sink = (self.Character.Transform.Position.Y - charSize.Y / 2) - floorRayHit.Position.y
 		
 		if sink > 0.2 and vector.magnitude(moveDirection) > 0 then
 			self.Character.Transform *= Matrix.fromTranslation(0, sink, 0)
@@ -96,6 +121,8 @@ function Controller:Update(DeltaTime)
 
 	self.roll -= DeltaTime * self.roll
 
+	local camTransform
+
 	if self.FirstPerson then
 		camTransform = self.Character.Transform
 						* self.CameraOffset
@@ -110,7 +137,7 @@ function Controller:Update(DeltaTime)
 	self.Camera.Transform = camTransform
 end
 
-function Controller:getMoveDirection()
+function Controller.getMoveDirection(self: Controller)
 	local moveX = (if input.keypressed("a") then 1 else 0) - (if input.keypressed("d") then 1 else 0)
 	local moveZ = (if input.keypressed("w") then 1 else 0) - (if input.keypressed("s") then 1 else 0)
 	
@@ -134,7 +161,7 @@ function Controller:getMoveDirection()
 	]]--
 end
 
-function Controller:getRotationVector() : (number, number)
+function Controller.getRotationVector(self: Controller) : (number, number)
 	if input.mousedown("l") then
 		self.isMouseLocked = true -- lock mouse with left-click
 		

@@ -4,8 +4,8 @@ print("Docs CI begin\n\n\n\n\n")
 
 local BASE_PATH = "./gh-assets/wiki"
 
-local apiDump = json.parse(fs.read("./apidump.json"))
-local docComments = json.parse(fs.read(BASE_PATH .. "/doc-comments.json"))
+local apiDump = json.parse(assert(fs.read("./apidump.json")))
+local docComments = json.parse(assert(fs.read(BASE_PATH .. "/doc-comments.json")))
 
 local datatypesPrologue = fs.read(BASE_PATH .. "/datatypes-prologue.txt")
 local librariesPrologue = fs.read(BASE_PATH .. "/libraries-prologue.txt")
@@ -48,8 +48,8 @@ local function dumpFuncSignature(libname, funcname, In, Out, V)
 	local returns = Out or ""
 	
 	if typeof(V) == "string" then
-		docargs = "any"
-		returns = "any"
+		docargs = "" -- inaccurate, overly-lax type definitions are worse than none at all
+		returns = ""
 	end
 	
 	local defargs = docargs
@@ -106,11 +106,10 @@ local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, lib
 		v = v or {}
 		
 		if t[k] == "function" then
-			local defpos = #definitionsFile
 			definitionsFile ..= `  { k }: `
 			
-			for _, vIn in { v.In or "any", table.unpack(v.Overloads or {}) } do
-				local docsig, defsig = dumpFuncSignature(libname, k, vIn, v.Out or "any", v)
+			for _, vIn in { v.In or "", table.unpack(v.Overloads or {}) } do
+				local docsig, defsig = dumpFuncSignature(libname, k, vIn, v.Out or "", v)
 				str ..= docsig
 				definitionsFile ..= `{ defsig } & `
 			end
@@ -215,7 +214,11 @@ local function dumpReflectionApi(t, d, cn)
 					print(`Missing doc comment for Method '{ cn }:{ n }'`)
 					continue
 				end
-				
+
+				if n == "GetChildren" then
+					breakpoint(222)
+				end
+
 				s ..= `* \`{ n }{ rtolsub(v) }\`: { d.Methods[n] }\n`
 				
 				local subst = rtolsub(v)
@@ -347,6 +350,7 @@ local function documentDatatype(name)
 	]]--
 	
 	for k, v in dt.Members do
+		assert(k and typeof(k) == "string")
 		if string.sub(k, 1, 1) == ":" then
 			local rk = string.sub(k, 2, #k)
 			local args = v.In or ""
@@ -356,6 +360,7 @@ local function documentDatatype(name)
 			if #args == 0 then
 				defargs = "self"
 			else
+				assert(args and typeof(args) == "string")
 				local inputs = string.split(args, ", ")
 				local newinputs = {}
 				

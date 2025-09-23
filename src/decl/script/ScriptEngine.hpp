@@ -95,5 +95,5 @@ namespace ScriptEngine::L
 	// (initializer lists cannot be used for spans before that)
 	extern std::pair<std::string_view, GlobalFn>* GlobalFunctions;
 
-	inline void(*DebugBreak)(lua_State*, lua_Debug*, bool) = nullptr;
+	inline void(*DebugBreak)(lua_State*, lua_Debug*, bool, bool) = nullptr;
 };

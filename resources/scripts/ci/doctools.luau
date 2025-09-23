@@ -6,6 +6,8 @@ assert(not engine.isheadless());
 
 local function libTools()
     for lib, members in apiDump.ScriptEnv.Libraries do
+        assert(typeof(lib) == "string")
+
         local docLib = docComments.ScriptEnv.Libraries[lib]
         assert(docLib)
 
@@ -13,7 +15,10 @@ local function libTools()
             docLib.Description = imgui.inputstring("Description", docLib.Description or "")
 
             for name, type in members do
-                local docMember = docLib.Members[name] or {}
+                assert(typeof(name) == "string")
+
+                docLib.Members[name] = docLib.Members[name] or {}
+                local docMember = docLib.Members[name] :: { [string]: any }
 
                 if typeof(docMember) == "string" then
                     docMember = { Description = docMember }
@@ -37,11 +42,12 @@ local function libTools()
 
                             if docMember.In[index] == "\\del" then
                                 table.remove(docMember.In, index)
+                                imgui.popid()
                                 break
                             end
 
                             if imgui.button("<Default value>") then
-                                docMember.In[index] = { docMember.In[Index], "" }
+                                docMember.In[index] = { docMember.In[index], "" }
                             end
                         else
                             param[1] = param[1] or ""
@@ -52,6 +58,7 @@ local function libTools()
 
                             if docMember.In[index][1] == "\\del" then
                                 table.remove(docMember.In, index)
+                                imgui.popid()
                                 break
                             end
 

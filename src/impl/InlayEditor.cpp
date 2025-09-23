@@ -120,7 +120,7 @@ static void copyStringToBuffer(char* Buffer, const std::string_view& String, siz
 }
 
 #include "script/ScriptEngine.hpp"
-static void debugBreakHook(lua_State*, lua_Debug*, bool HasError);
+static void debugBreakHook(lua_State*, lua_Debug*, bool HasError, bool InSingleStep);
 
 void InlayEditor::Initialize(Renderer* renderer)
 {
@@ -2482,9 +2482,14 @@ static void debugVariable(lua_State* L)
 	}
 }
 
-static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError)
+static int s_TargetLine = 0;
+
+static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool InSingleStep)
 {
 	ZoneScoped;
+
+	if (s_TargetLine != 0 && ar->currentline < s_TargetLine)
+		return;
 
 	std::string errorMessage = HasError ? luaL_checkstring(L, -1) : "<No error message>";
 
@@ -2545,6 +2550,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError)
 			case SDL_EVENT_QUIT:
 			{
 				running = false;
+				lua_singlestep(L, false);
 				engine->Close();
 				break;
 			}
@@ -2579,11 +2585,84 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError)
 			ImGui::TextUnformatted(errorMessage.c_str());
 
 			if (ImGui::Button("Resume (F5)") || ImGui::IsKeyDown(ImGuiKey_F5))
+			{
 				running = false;
+				L->singlestep = false;
+			}
+
+			if (ScriptEngine::L::DebugBreak && (ImGui::Button("Single-step (F8)") || ImGui::IsKeyDown(ImGuiKey_F8)))
+			{
+				running = false;
+
+				lua_singlestep(L, true);
+				s_TargetLine = ar->currentline + 1;
+				int steps = 0;
+
+				while (ar->currentline < s_TargetLine)
+				{
+					lua_pushcfunction(
+						L,
+						[](lua_State* L)
+						{
+							lua_resume(L, L, 0);
+							return 0;
+						},
+						"ResumeWrapper"
+					);
+					int prevstatus = lua_status(L);
+					L->status = LUA_OK;
+					lua_call(L, 0, 0);
+					L->status = prevstatus;
+					steps++;
+					if (!lua_getinfo(L, 1, "l", ar))
+					{
+						Log::Error("Single-step failed: Can't `lua_getinfo`");
+						break;
+					}
+
+					if (steps > 500)
+					{
+						Log::Error("Single-step failed: Attempts exceeded");
+						break;
+					}
+				}
+
+				s_TargetLine = 0;
+				lua_singlestep(L, false);
+
+				int li = 0;
+				lua_getinfo(L, li, "slnfu", ar);
+				while (strcmp(ar->short_src, "[C]") == 0)
+				{
+					lua_pop(L, 1);
+					li++;
+				
+					if (!lua_getinfo(L, li, "slnfu", ar))
+					{
+						lua_getinfo(L, 0, "slnfu", ar);
+						break;
+					}
+				}
+			}
 
 			ImGui::Checkbox("All Developer UIs", &develUI);
 			ImGui::Checkbox("Quiet Background", &quietBg);
 			ImGui::Text("Debugger %i FPS / %.2fms", framesPerSecond, dt);
+
+			if (ScriptEngine::L::DebugBreak)
+			{
+				if (ImGui::Button("Disconnect Debugger"))
+				{
+					ScriptEngine::L::DebugBreak = nullptr;
+					L->global->cb.debugbreak = nullptr;
+					L->global->cb.debugprotectederror = nullptr;
+					L->global->cb.debugstep = nullptr;
+				}
+			}
+			else
+			{
+				ImGui::Text("The Debugger has been disconnected.");
+			}
 		}
 		ImGui::End();
 
@@ -2607,6 +2686,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError)
 				for (int l = 0; l < L->ci - L->base_ci; l++)
 				{
 					ImGui::Text("---LEVEL %i---", l);
+					ImGui::PushID(l);
 
 					for (int i = 1; i < 256; i++)
 					{
@@ -2623,6 +2703,8 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError)
 
 						lua_pop(L, 1);
 					};
+
+					ImGui::PopID();
 				}
 
 				break;
@@ -2765,7 +2847,9 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError)
 		Memory::FrameFinish();
 	}
 
-	L->status = LUA_OK;
+	if (!L->singlestep)
+		L->status = LUA_OK;
+
 	TextEditorEnabled = wasTextEdEnabled;
 
 	ImGui_ImplOpenGL3_Shutdown();

@@ -22,7 +22,7 @@ static int imgui_end(lua_State*)
 
 static int imgui_indent(lua_State* L)
 {
-    ImGui::Indent(static_cast<float>(luaL_checknumber(L, 1)));
+    ImGui::Indent(static_cast<float>(luaL_optnumber(L, 1, 0.f)));
 
     return 0;
 }
@@ -361,7 +361,7 @@ static int imgui_combo(lua_State* L)
     ImGui::Combo(luaL_checkstring(L, 1), &curopt, options.data());
 
     lua_pushinteger(L, curopt + 1);
-    return 2;
+    return 1;
 }
 
 static int imgui_treenode(lua_State* L)

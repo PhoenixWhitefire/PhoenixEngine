@@ -1,6 +1,7 @@
 -- root.luau, 21/12/2024
+--!strict
 
-local NodeEditor = nil --require("scripts/modules/NodeEditor.luau")
+-- local NodeEditor = nil --require("scripts/modules/NodeEditor.luau")
 local Editor = function() end--require("scripts/modules/Editor.luau")
 
 local ModelImporterScale = 1
@@ -9,7 +10,7 @@ local ScriptExecutionFile = "scripts/mc.luau"
 
 local DefaultSubLevel = "scenes/dev_fmtv2.hxscene"
 
-local BackgroundAmbience = GameObject.new("Sound")
+local BackgroundAmbience = GameObject.new("Sound") :: (GameObject & Sound)
 BackgroundAmbience.SoundFile = "sounds/pixabay_soft-wind-314945.mp3"
 BackgroundAmbience.Playing = true
 BackgroundAmbience.Looped = true
@@ -19,6 +20,9 @@ BackgroundAmbience.Parent = workspace
 
 local ErrorMessage = "No error dummy"
 local ErrorMessageTimeRemaining = 0
+
+local CommandLine = ""
+local LightTheme = false
 
 local function setError(errm)
 	ErrorMessage = errm
@@ -40,7 +44,7 @@ local function loadSubLevel(Path)
 	lvl.Name = "Level"
 	lvl.Parent = workspace
 	
-	for _, root in scene.load(Path) do
+	for _, root in assert(scene.load(Path)) do
 		root.Parent = workspace.Level
 	end
 end
@@ -54,8 +58,6 @@ local function update(DeltaTime)
 			
 			local Path = fs.promptopen("models", "gltf;glb", "Models")[1]
 			if Path then
-				local pathSplit = string.split(Path, "/")
-				
 				local parts = model.import(Path)
 				--local model = GameObject.new("Model")
 				--model.Name = pathSplit[#pathSplit]
@@ -130,12 +132,12 @@ local function update(DeltaTime)
 		local Path = fs.promptopen("resources/scenes", "world", "Worlds")[1]
 		
 		if Path then
-			local dm = scene.load(Path)[1]
+			local dm = assert(scene.load(Path))[1]
 			if not dm then
 				error("No root object!")
 			end
 			
-			for _, v in game:GetChildren() do
+			for _, v: GameObject in game:GetChildren() do
 				v:Destroy()
 			end
 			
@@ -150,14 +152,11 @@ local function update(DeltaTime)
 	if imgui.button("Save Sub-Level") then
 		imgui.endw()
 		
-		IntendedLevelState = workspace.Level:Duplicate()
-		IntendedLevelState.Parent = nil
-		
 		local Path = fs.promptsave("resources/scenes", "hxscene", "Scenes")
 		
 		if Path then
 			local actuallySave = {}
-			for _, g in IntendedLevelState:GetChildren() do
+			for _, g: GameObject in workspace.Level:GetChildren() do
 				if g.Serializes then
 					table.insert(actuallySave, g)
 				end
@@ -168,8 +167,6 @@ local function update(DeltaTime)
 		else
 			print("No path selected")
 		end
-		
-		IntendedLevelState:Destroy()
 		
 		return
 	end

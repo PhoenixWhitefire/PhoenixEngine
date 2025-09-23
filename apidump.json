@@ -225,6 +225,7 @@
       "game": "GameObject & DataModel",
       "loadfile": "function",
       "loadthread": "function",
+      "script": "GameObject & Script",
       "sleep": "function",
       "workspace": "GameObject & Workspace"
     },

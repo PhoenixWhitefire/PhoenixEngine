@@ -6,7 +6,7 @@ declare class Color
   B: number
 end
 declare Color: {
-  new: (( R: number, G: number, B: number ) -> (any))
+  new: (( R: number, G: number, B: number ) -> ())
 }
 declare class EventConnection
   Connected: boolean
@@ -18,7 +18,7 @@ declare class EventSignal
 end
 declare GameObject: {
   validComponents: { string },
-  new: (( Component: string ) -> (any))
+  new: (( Component: string ) -> (GameObject))
 }
 declare class Matrix
   function __mul(self, Param_1: Matrix): ( Matrix )
@@ -44,7 +44,7 @@ declare class Matrix
   C4R4: number
 end
 declare Matrix: {
-  new: (( any ) -> (any)),
+  new: ((  ) -> ()),
   fromTranslation: (( Position: vector ) -> (Matrix)) & (( X: number, Y: number, Z: number ) -> (Matrix)),
   lookAt: (( Eye: vector, Target: vector ) -> (Matrix)),
   fromEulerAnglesXYZ: (( X: number, Y: number, Z: number ) -> (Matrix))
@@ -190,121 +190,122 @@ end
 
 
 declare conf: {
-  save: (( any ) -> (boolean)),
-  set: (( Key: string, Value: any ) -> (any)),
+  save: ((  ) -> (boolean)),
+  set: (( Key: string, Value: any ) -> ()),
   get: (( Key: string ) -> (any))
 }
 declare engine: {
-  poplvm: (( any ) -> (any)),
-  framerate: (( any ) -> (any)),
-  setvsync: (( any ) -> (any)),
-  binddatamodel: (( any ) -> (any)),
-  setwindowsize: (( any ) -> (any)),
-  setexplorerselections: (( any ) -> (any)),
-  exit: (( ExitCode: number? ) -> (any)),
-  setfullscreen: (( any ) -> (any)),
-  pushlvm: (( any ) -> (any)),
-  setmaxframerate: (( MaxFramerate: number ) -> (any)),
-  physicstimescale: (( any ) -> (any)),
-  getfullscreen: (( any ) -> (any)),
-  getvsync: (( any ) -> (any)),
-  getmaxframerate: (( any ) -> (any)),
-  getwindowsize: (( any ) -> (number, number)),
-  dwireframes: (( Enabled: boolean? ) -> (any)),
-  isheadless: (( any ) -> (any)),
-  setexplorerroot: (( any ) -> (any)),
-  daabbs: (( Enabled: boolean? ) -> (any))
+  poplvm: ((  ) -> ()),
+  framerate: ((  ) -> (number)),
+  setvsync: (( VSyncEnabled: boolean ) -> ()),
+  binddatamodel: (( NewDataModel: GameObject ) -> ()),
+  setwindowsize: (( Width: number, Height: number ) -> ()),
+  setexplorerselections: (( Selections: { GameObject } ) -> ()),
+  exit: (( ExitCode: number? ) -> ()),
+  setfullscreen: (( Fullscreen: boolean ) -> ()),
+  pushlvm: ((  ) -> ()),
+  setmaxframerate: (( MaxFramerate: number ) -> ()),
+  physicstimescale: (( Timescale: number ) -> ()),
+  getfullscreen: ((  ) -> (boolean)),
+  getvsync: ((  ) -> (boolean)),
+  getmaxframerate: ((  ) -> (number)),
+  getwindowsize: ((  ) -> (number, number)),
+  dwireframes: (( Enabled: boolean? ) -> (boolean)),
+  isheadless: ((  ) -> (boolean)),
+  setexplorerroot: (( Root: GameObject ) -> ()),
+  daabbs: (( Enabled: boolean? ) -> (boolean))
 }
 declare fs: {
   write: (( Path: string, Contents: string ) -> (boolean)),
   read: (( Path: string ) -> (string?)),
-  promptopen: (( DefaultLocation: string?, Filter: string?, FilterName: string?, AllowMultipleFiles: boolean ) -> ({ string })),
-  isfile: (( any ) -> (any)),
+  promptopen: (( DefaultLocation: string?, Filter: string?, FilterName: string?, AllowMultipleFiles: boolean? ) -> ({ string })),
+  isfile: ((  ) -> ()),
   promptsave: (( DefaultLocation: string?, Filter: string?, FilterName: string? ) -> (string)),
   listdir: (( Path: string, Filter: 'a' | 'f' | 'd' ) -> ({ [string]: 'f' | 'd' })),
-  isdirectory: (( any ) -> (any)),
-  ispromptactive: (( any ) -> (any))
+  isdirectory: ((  ) -> ()),
+  ispromptactive: ((  ) -> ())
 }
 declare imgui: {
-  beginmainmenubar: (( any ) -> (any)),
-  endmenubar: (( any ) -> (any)),
-  setnextwindowfocus: (( any ) -> (any)),
-  image: (( any ) -> (any)),
-  settooltip: (( any ) -> (any)),
-  button: (( any ) -> (any)),
-  menuitem: (( any ) -> (any)),
-  inputstring: (( any ) -> (any)),
-  checkbox: (( any ) -> (any)),
-  endmenu: (( any ) -> (any)),
-  text: (( any ) -> (any)),
-  getcursorpos: (( any ) -> (any)),
-  begin: (( any ) -> (any)),
-  inputnumber: (( any ) -> (any)),
-  textlink: (( any ) -> (any)),
-  setitemtooltip: (( any ) -> (any)),
-  combo: (( any ) -> (any)),
-  setcursorpos: (( any ) -> (any)),
-  popid: (( any ) -> (any)),
-  beginmenu: (( any ) -> (any)),
-  treepop: (( any ) -> (any)),
-  treenode: (( any ) -> (any)),
-  endchild: (( any ) -> (any)),
-  endw: (( any ) -> (any)),
-  itemhovered: (( any ) -> (any)),
-  itemclicked: (( any ) -> (any)),
-  indent: (( any ) -> (any)),
-  stylecolors: (( any ) -> (any)),
-  dummy: (( any ) -> (any)),
-  beginchild: (( any ) -> (any)),
-  beginfullscreen: (( any ) -> (any)),
-  endmainmenubar: (( any ) -> (any)),
-  beginmenubar: (( any ) -> (any)),
-  pushid: (( any ) -> (any))
+  beginmainmenubar: ((  ) -> (boolean)),
+  endmenubar: ((  ) -> ()),
+  setnextwindowfocus: ((  ) -> ()),
+  image: (( ImagePath: string, Width: number?, Height: number? ) -> ()),
+  settooltip: (( Tooltip: string ) -> ()),
+  button: (( Text: string, Width: number?, Height: number? ) -> (boolean)),
+  menuitem: (( Text: string ) -> (boolean)),
+  inputstring: (( Name: string, Value: string ) -> (string)),
+  checkbox: (( Name: string ) -> (boolean)),
+  endmenu: ((  ) -> ()),
+  text: (( Text: string ) -> ()),
+  getcursorpos: ((  ) -> (number, number)),
+  begin: (( WindowTitle: string ) -> (boolean)),
+  inputnumber: (( Text: string, Value: number ) -> (number)),
+  textlink: (( Text: string ) -> (boolean)),
+  setitemtooltip: (( Text: string ) -> ()),
+  combo: (( Text: string, Options: { string }, CurrentOption: number ) -> (number)),
+  setcursorpos: (( X: number, Y: number ) -> ()),
+  popid: ((  ) -> ()),
+  beginmenu: (( Name: string, Enabled: boolean? ) -> (boolean)),
+  treepop: ((  ) -> ()),
+  treenode: (( Text: string ) -> (boolean)),
+  endchild: ((  ) -> ()),
+  endw: ((  ) -> ()),
+  itemhovered: ((  ) -> (boolean)),
+  itemclicked: ((  ) -> (boolean)),
+  indent: (( Indent: number? ) -> ()),
+  stylecolors: (( Theme: 'L' | 'D' ) -> ()),
+  dummy: (( Width: number, Height: number ) -> ()),
+  beginchild: (( Name: string, Width: number?, Height: number?, Flags: string? ) -> (boolean)),
+  beginfullscreen: (( Name: string ) -> ()),
+  endmainmenubar: ((  ) -> ()),
+  beginmenubar: ((  ) -> (boolean)),
+  pushid: (( Id: string ) -> ())
 }
 declare input: {
-  ismousegrabbed: (( any ) -> (boolean)),
-  setmousegrabbed: (( Grabbed: boolean ) -> (any)),
-  guihandledm: (( any ) -> (boolean)),
-  setmousepos: (( X: number, Y: number ) -> (any)),
-  iscursorvisible: (( any ) -> (boolean)),
-  setcursorvisible: (( Visible: boolean ) -> (any)),
-  getmousepos: (( any ) -> (number, number)),
-  guihandled: (( any ) -> (boolean)),
+  ismousegrabbed: ((  ) -> (boolean)),
+  setmousegrabbed: (( Grabbed: boolean ) -> ()),
+  guihandledm: ((  ) -> (boolean)),
+  setmousepos: (( X: number, Y: number ) -> ()),
+  iscursorvisible: ((  ) -> (boolean)),
+  setcursorvisible: (( Visible: boolean ) -> ()),
+  getmousepos: ((  ) -> (number, number)),
+  guihandled: ((  ) -> (boolean)),
   mousedown: (( Button: 'l' | 'r' | 'e' ) -> (boolean)),
   keypressed: (( Key: string ) -> (boolean)),
-  guihandledk: (( any ) -> (boolean))
+  guihandledk: ((  ) -> (boolean))
 }
 declare json: {
   encode: (( Value: any ) -> (string)),
   parse: (( Json: string ) -> (any))
 }
 declare mesh: {
-  save: (( any ) -> (any)),
-  set: (( any ) -> (any)),
-  get: (( any ) -> (any))
+  save: (( Id: string, SaveTo: string ) -> ()),
+  set: (( Id: string, Data: { Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } } ) -> ()),
+  get: (( Id: string ) -> ({ Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } }))
 }
 declare model: {
-  import: (( any ) -> (any))
+  import: (( Path: string ) -> (GameObject & Model))
 }
 declare net: {
-  request: (( any ) -> (any))
+  request: ((  ) -> ())
 }
 declare scene: {
-  load: (( Path: string ) -> (GameObject?, string?)),
+  load: (( Path: string ) -> ({ GameObject }?, string?)),
   save: (( RootNodes: { GameObject }, Path: string ) -> (boolean))
 }
 declare world: {
-  aabbcast: (( any ) -> (any)),
-  raycast: (( any ) -> (any)),
-  aabbquery: (( any ) -> (any))
+  aabbcast: (( APos: vector, ASize: vector, IgnoreList: { GameObject } ) -> ({ Object: GameObject, Position: vector, Normal: vector }?)),
+  raycast: (( Origin: vector, CastVector: vector, IgnoreList: { GameObject } ) -> ({ Object: GameObject, Position: vector, Normal: vector }?)),
+  aabbquery: (( APos: vector, ASize: vector, IgnoreList: { GameObject } ) -> ({ GameObject }))
 }
 
 
 declare function appendlog( ...: any ): ()
 declare function breakpoint( Line: number ): ()
 declare game: GameObject & DataModel
-declare function loadfile( File: string, ChunkName: string ): ( thread?, string? )
-declare function loadthread( Code: string, ChunkName: string ): ( thread?, string? )
+declare function loadfile( File: string, ChunkName: string? ): ( thread?, string? )
+declare function loadthread( Code: string, ChunkName: string? ): ( thread?, string? )
+declare script: GameObject & Script
 declare function sleep( SleepTime: number ): ()
 declare workspace: GameObject & Workspace
 

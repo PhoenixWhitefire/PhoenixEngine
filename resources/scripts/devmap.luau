@@ -3,7 +3,7 @@
 
 local TotalTime = 0
 
-local Camera = workspace.SceneCamera :: ( GameObject & Camera )
+local Camera = (workspace.SceneCamera :: any) :: ( GameObject & Camera )
 local CharacterControllerCreator = require("./modules/CharacterController.luau")
 --local RoomGen = require("scripts/roomsgen.luau")
 
@@ -18,8 +18,8 @@ local lastSwitchedPerspectives = 0
 
 local SwitchToFreecamNextFrame = 0
 
-local SoundStinger = GameObject.new("Sound")
-local RareSoundStinger = GameObject.new("Sound")
+local SoundStinger = (GameObject.new("Sound") :: any) :: GameObject & Sound
+local RareSoundStinger = (GameObject.new("Sound") :: any) :: GameObject & Sound
 
 local TimesNormalStingerPlayed = 0
 
@@ -32,6 +32,8 @@ RareSoundStinger.Name = "RareSoundStinger"
 RareSoundStinger.SoundFile = "sounds/undertaleost_ruins_stingr2.mp3"
 RareSoundStinger.Serializes = false
 RareSoundStinger.Parent = workspace.Level
+
+local blorbs: (GameObject & Model)? = nil
 
 local function reset()
 	CharacterController:InitDefault()
@@ -91,16 +93,15 @@ game.OnFrameBegin:Connect(function(DeltaTime)
 		CharacterController:Update(DeltaTime)
 		
 		if input.keypressed("e") and TotalTime - lastSwitchedPerspectives > 0.25 then
-			blorbs = blorbs or (function()
-				blorbs = GameObject.new("Model")
+			if not blorbs then
+				blorbs = GameObject.new("Model") :: any
+				assert(blorbs)
 				blorbs.Name = "blorbs"
 				blorbs.Parent = workspace
-
-				return blorbs
-			end)()
+			end
 
 			lastSwitchedPerspectives = TotalTime
-			local bruh = Character:Duplicate()
+			local bruh = (Character:Duplicate() :: any) :: GameObject & Mesh
 			bruh.Name = "bruh"
 			bruh.Transform = Matrix.fromTranslation((Character.Transform * Matrix.fromTranslation(0, 0, 7)).Position)
 			bruh.LinearVelocity = Character.Transform.Forward * 100
@@ -128,4 +129,3 @@ game.OnFrameBegin:Connect(function(DeltaTime)
 end)
 
 reset()
-

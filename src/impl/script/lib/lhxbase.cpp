@@ -155,7 +155,7 @@ static int base_loadfile(lua_State* L)
 	{
 		lua_getglobal(L, "loadthread");
 		lua_pushlstring(L, contents.data(), contents.size());
-		lua_pushstring(L, chname);
+		lua_pushstring(L, (std::string("@") + chname).c_str());
 
 		lua_call(L, 2, 2);
 	}
