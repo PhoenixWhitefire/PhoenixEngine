@@ -138,7 +138,7 @@ static int base_loadthread(lua_State* L)
 	return 2;
 }
 
-static int base_loadfile(lua_State* L)
+static int base_loadthreadfromfile(lua_State* L)
 {
 	const char* path = luaL_checkstring(L, 1);
 	const char* chname = luaL_optstring(L, 1, path);
@@ -171,7 +171,7 @@ static luaL_Reg base_funcs[] =
 	{ "breakpoint", base_breakpoint },
 	//{ "loadstring", base_loadstring },
 	{ "loadthread", base_loadthread },
-	{ "loadfile", base_loadfile },
+	{ "loadthreadfromfile", base_loadthreadfromfile },
     { NULL, NULL }
 };
 

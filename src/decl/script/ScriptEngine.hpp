@@ -50,7 +50,7 @@ namespace ScriptEngine
 
 namespace ScriptEngine::L
 {
-	lua_State* Create();
+	lua_State* Create(const std::string& VmName);
 	void Close(lua_State*);
 	
 	Reflection::GenericValue ToGeneric(

@@ -303,19 +303,13 @@ static bool textEditorAskSaveFileAs(
 	return DidSave;
 }
 
+static bool TextEditorFileModified = false;
+
 static void textEditorSaveFile()
 {
 	if (!TextEditorEntryBuffer)
 	{
 		setErrorMessage("Text Editor tried to save file, but had no text buffer");
-		return;
-	}
-
-	std::string textEditorFile = TextEdOpenFiles[TextEdCurrentFileTab];
-
-	if (textEditorFile == SAVINGTAG)
-	{
-		setErrorMessage("Can't... Shouldn't try and save that... How'd you do this?");
 		return;
 	}
 
@@ -327,6 +321,21 @@ static void textEditorSaveFile()
 	// 12/02/2024
 	Memory::Free(TextEditorEntryBuffer);
 	TextEditorEntryBuffer = nullptr;
+
+	if (!TextEditorFileModified)
+	{
+		setErrorMessage("File not modified, not saving");
+		return;
+	}
+	TextEditorFileModified = false;
+
+	std::string textEditorFile = TextEdOpenFiles[TextEdCurrentFileTab];
+
+	if (textEditorFile == SAVINGTAG)
+	{
+		setErrorMessage("Can't... Shouldn't try and save that... How'd you do this?");
+		return;
+	}
 
 	if (TextEditorFileStream)
 	{
@@ -443,7 +452,10 @@ static void renderTextEditor()
 		std::string textEditorFile = TextEdOpenFiles[TextEdCurrentFileTab];
 
 		if (ImGui::MenuItem("Save", NULL, nullptr))
+		{
+			TextEditorFileModified = true; // forces a save
 			textEditorSaveFile();
+		}
 
 		if (ImGui::BeginMenu("Recent", TextEditorRecentFiles.size() > 0) || ImGui::IsItemHovered())
 		{
@@ -506,9 +518,13 @@ static void renderTextEditor()
 		{
 			textEditorSaveFile();
 			TextEdCurrentFileTab = i;
+			TextEditorFileModified = false;
 
 			if (i == TextEdOpenFiles.size())
 				TextEdOpenFiles.push_back(UNSAVEDTAG);
+
+			Memory::Free(TextEditorEntryBuffer);
+			TextEditorEntryBuffer = nullptr;
 		}
 
 		bool hovered = ImGui::IsItemHovered();
@@ -614,16 +630,21 @@ static void renderTextEditor()
 			TextEditorEntryBuffer = (char*)Memory::Alloc(TextEditorEntryBufferCapacity);
 
 			copyStringToBuffer(TextEditorEntryBuffer, scriptContents, TextEditorEntryBufferCapacity);
+
+			TextEditorFileModified = false;
 		}
 	}
 	
 	if (TextEditorEntryBuffer)
-		ImGui::InputTextMultiline(
+	{
+		bool changed = ImGui::InputTextMultiline(
 			"##",
 			TextEditorEntryBuffer,
 			TextEditorEntryBufferCapacity,
 			ImGui::GetContentRegionAvail()
 		);
+		TextEditorFileModified = TextEditorFileModified || changed;
+	}
 
 	ImGui::End();
 }
@@ -2360,6 +2381,7 @@ void InlayEditor::Shutdown()
 	VisibleTree.clear();
 	VisibleTreeWip.clear();
 	PickerTargets.clear();
+	LastSelected.Clear();
 	
 	if (TextEditorEntryBuffer)
 		textEditorSaveFile();
@@ -2482,28 +2504,45 @@ static void debugVariable(lua_State* L)
 	}
 }
 
+static bool s_IsSingleStepping = false;
+static bool s_Resume = false;
 static int s_TargetLine = 0;
+static int s_PrevLine = 0;
 
 static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool InSingleStep)
 {
 	ZoneScoped;
 
-	if (s_TargetLine != 0 && ar->currentline < s_TargetLine)
+	if (s_IsSingleStepping && ar->currentline < s_TargetLine && ar->currentline == s_PrevLine)
 		return;
 
+	if (InSingleStep && !s_IsSingleStepping)
+		return;
+
+	luaL_checkstack(L, 20, "debugger");
+
 	std::string errorMessage = HasError ? luaL_checkstring(L, -1) : "<No error message>";
+	std::string vmName;
+	lua_getglobal(L, "_VMNAME");
+	vmName = luaL_tolstring(L, -1, nullptr);
+	lua_pop(L, 1);
 
 	Engine* engine = Engine::Get();
 
-	ImGuiContext* debuggerContext = ImGui::CreateContext();
 	ImGuiContext* prevContext = ImGui::GetCurrentContext();
-	ImGui::SetCurrentContext(debuggerContext);
+	ImGuiContext* debuggerContext = prevContext;
 
-	PHX_ENSURE_MSG(ImGui_ImplSDL3_InitForOpenGL(
-		engine->Window,
-		engine->RendererContext.GLContext
-	), "`ImGui_ImplSDL3_InitForOpenGL` failed");
-	PHX_ENSURE_MSG(ImGui_ImplOpenGL3_Init("#version 460"), "`ImGui_ImplOpenGL3_Init` failed");
+	if (!s_IsSingleStepping)
+	{
+		debuggerContext = ImGui::CreateContext();
+		ImGui::SetCurrentContext(debuggerContext);
+
+		PHX_ENSURE_MSG(ImGui_ImplSDL3_InitForOpenGL(
+			engine->Window,
+			engine->RendererContext.GLContext
+		), "`ImGui_ImplSDL3_InitForOpenGL` failed");
+		PHX_ENSURE_MSG(ImGui_ImplOpenGL3_Init("#version 460"), "`ImGui_ImplOpenGL3_Init` failed");
+	}
 
 	double debuggerLastSecond = GetRunningTime();
 	double debuggerLastFrame = GetRunningTime();
@@ -2550,8 +2589,17 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool InSi
 			case SDL_EVENT_QUIT:
 			{
 				running = false;
-				lua_singlestep(L, false);
+				L->singlestep = false;
+				L->global->cb.debugstep = nullptr;
+
+				if (s_IsSingleStepping)
+				{
+					ImGui::NewFrame();
+					return;
+				}
+
 				engine->Close();
+				
 				break;
 			}
 		
@@ -2583,66 +2631,85 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool InSi
 			ImGui::Text("Line: %i", ar->currentline);
 			ImGui::Text("In: %s", ar->name ? ar->name : "<anonymous function>");
 			ImGui::TextUnformatted(errorMessage.c_str());
+			ImGui::Text("VM: %s", vmName.c_str());
 
 			if (ImGui::Button("Resume (F5)") || ImGui::IsKeyDown(ImGuiKey_F5))
 			{
 				running = false;
 				L->singlestep = false;
+				L->global->cb.debugstep = nullptr;
+
+				if (s_IsSingleStepping)
+				{
+					s_Resume = true;
+					return;
+				}
 			}
 
-			if (ScriptEngine::L::DebugBreak && (ImGui::Button("Single-step (F8)") || ImGui::IsKeyDown(ImGuiKey_F8)))
+			static bool s_WasF8Down = false;
+			bool isF8Down = ImGui::IsKeyDown(ImGuiKey_F8);
+
+			if (!isF8Down)
+				s_WasF8Down = false;
+
+			if (s_WasF8Down)
+				isF8Down = false;
+
+			if (ScriptEngine::L::DebugBreak && (ImGui::Button("Single-step (F8)") || isF8Down))
 			{
-				running = false;
+				ImGui::End();
 
-				lua_singlestep(L, true);
-				s_TargetLine = ar->currentline + 1;
-				int steps = 0;
-
-				while (ar->currentline < s_TargetLine)
+				if (s_IsSingleStepping)
 				{
-					lua_pushcfunction(
-						L,
-						[](lua_State* L)
-						{
-							lua_resume(L, L, 0);
-							return 0;
-						},
-						"ResumeWrapper"
-					);
-					int prevstatus = lua_status(L);
 					L->status = LUA_OK;
-					lua_call(L, 0, 0);
-					L->status = prevstatus;
-					steps++;
-					if (!lua_getinfo(L, 1, "l", ar))
-					{
-						Log::Error("Single-step failed: Can't `lua_getinfo`");
-						break;
-					}
-
-					if (steps > 500)
-					{
-						Log::Error("Single-step failed: Attempts exceeded");
-						break;
-					}
+					s_TargetLine = ar->currentline + 1;
+					s_PrevLine = ar->currentline;
+					
+					return;
 				}
+				else
+					s_Resume = false;
 
-				s_TargetLine = 0;
+				s_IsSingleStepping = true;
+				s_TargetLine = ar->currentline + 1;
+				s_PrevLine = ar->currentline;
+
+				L->global->cb.debugstep = [](lua_State* L, lua_Debug* ar)
+					{
+						ImGui::EndFrame();
+						debugBreakHook(L, ar, false, true);
+					};
+				lua_singlestep(L, true);
+				if (lua_resume(L, L, 0) == LUA_OK)
+				{
+					// got to the end of the script
+					running = false;
+				}
+				L->global->cb.debugstep = nullptr;
 				lua_singlestep(L, false);
 
+				s_IsSingleStepping = false;
+
+				if (s_Resume)
+				{
+					running = false;
+					ImGui::End();
+				}
+
 				int li = 0;
-				lua_getinfo(L, li, "slnfu", ar);
+				lua_getinfo(L, li, "slnu", ar);
 				while (strcmp(ar->short_src, "[C]") == 0)
 				{
-					lua_pop(L, 1);
 					li++;
 				
-					if (!lua_getinfo(L, li, "slnfu", ar))
+					if (!lua_getinfo(L, li, "slnu", ar))
 					{
-						lua_getinfo(L, 0, "slnfu", ar);
+						lua_getinfo(L, 0, "slnu", ar);
 						break;
 					}
 				}
+
+				ImGui::Begin("Debugger");
 			}
 
 			ImGui::Checkbox("All Developer UIs", &develUI);
@@ -2651,7 +2718,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool InSi
 
 			if (ScriptEngine::L::DebugBreak)
 			{
-				if (ImGui::Button("Disconnect Debugger"))
+				if (ImGui::Button("Detach Debugger for this VM"))
 				{
 					ScriptEngine::L::DebugBreak = nullptr;
 					L->global->cb.debugbreak = nullptr;
@@ -2661,7 +2728,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool InSi
 			}
 			else
 			{
-				ImGui::Text("The Debugger has been disconnected.");
+				ImGui::Text("The Debugger has been detached for VM %s.", vmName.c_str());
 			}
 		}
 		ImGui::End();
@@ -2852,8 +2919,11 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool InSi
 
 	TextEditorEnabled = wasTextEdEnabled;
 
-	ImGui_ImplOpenGL3_Shutdown();
-	ImGui_ImplSDL3_Shutdown();
-	ImGui::SetCurrentContext(prevContext);
-	ImGui::DestroyContext(debuggerContext);
+	if (prevContext != debuggerContext)
+	{
+		ImGui_ImplOpenGL3_Shutdown();
+		ImGui_ImplSDL3_Shutdown();
+		ImGui::SetCurrentContext(prevContext);
+		ImGui::DestroyContext(debuggerContext);
+	}
 }

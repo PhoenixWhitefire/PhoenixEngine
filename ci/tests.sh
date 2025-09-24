@@ -1,3 +1,3 @@
 #!/bin/bash
 
-x64/Debug/PhoenixEngine -tool scripts/ci/tests.world -headless $@
+x64/Debug/PhoenixEngine -tool scripts/ci/tests.luau -headless $@

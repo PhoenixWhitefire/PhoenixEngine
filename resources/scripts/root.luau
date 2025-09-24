@@ -88,7 +88,7 @@ local function update(DeltaTime)
 		end
 		
 		if imgui.button("Execute file") then
-			local co, err = loadfile(ScriptExecutionFile)
+			local co, err = loadthreadfromfile(ScriptExecutionFile)
 			if not co then
 				setError(err)
 			else

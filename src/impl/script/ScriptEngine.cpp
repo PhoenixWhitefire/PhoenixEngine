@@ -1489,7 +1489,7 @@ static lua_State* getthread(lua_State* L, int* arg)
     }
 }
 
-lua_State* ScriptEngine::L::Create()
+lua_State* ScriptEngine::L::Create(const std::string& VmName)
 {
 	ZoneScopedC(tracy::Color::LightSkyBlue);
 
@@ -1912,17 +1912,15 @@ lua_State* ScriptEngine::L::Create()
 	ScriptEngine::L::PushGameObject(state, GameObject::GetObjectById(GameObject::s_DataModel)->FindChild("Workspace"));
 	lua_setglobal(state, "workspace");
 
+	lua_pushlstring(state, VmName.data(), VmName.size());
+	lua_setglobal(state, "_VMNAME");
+
 	if (L::DebugBreak)
 	{
 		state->global->cb.debugbreak = [](lua_State* L, lua_Debug* ar)
 			{
 				Log::Info("Debug breakpoint");
 				L::DebugBreak(L, ar, false, false);
-			};
-		state->global->cb.debugstep = [](lua_State* L, lua_Debug* ar)
-			{
-				Log::Info("Debug single-stepping");
-				L::DebugBreak(L, ar, false, true);
 			};
 		state->global->cb.debuginterrupt = [](lua_State* L, lua_Debug* ar)
 			{
@@ -1961,7 +1959,7 @@ nlohmann::json ScriptEngine::DumpApiToJson()
 	GameObject::s_DataModel = tempdm->ObjectId;
 	
 	lua_State* base = lua_newstate(l_alloc, nullptr);
-	lua_State* luhx = L::Create();
+	lua_State* luhx = L::Create("ApiDump");
 	// Load Standard Library ('print' etc)
 	luaL_openlibs(base);
 	lua_pushinteger(base, 0);

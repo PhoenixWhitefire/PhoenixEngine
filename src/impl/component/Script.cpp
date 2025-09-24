@@ -251,7 +251,7 @@ bool EcScript::Reload()
 	ZoneScopedC(tracy::Color::LightSkyBlue);
 
 	if (!LVM)
-		LVM = ScriptEngine::L::Create();
+		LVM = ScriptEngine::L::Create("RootLVM");
 
 	std::string fullName = this->Object->GetFullName();
 
@@ -326,12 +326,12 @@ bool EcScript::Reload()
 
 static std::stack<lua_State*> s_LvmStack;
 
-void EcScript::PushLVM()
+void EcScript::PushLVM(const std::string& VmName)
 {
 	if (s_LvmStack.size() == 0)
 		s_LvmStack.push(LVM);
 	
-	s_LvmStack.push(ScriptEngine::L::Create());
+	s_LvmStack.push(ScriptEngine::L::Create(VmName));
 	LVM = s_LvmStack.top();
 }
 

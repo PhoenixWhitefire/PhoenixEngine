@@ -54,7 +54,7 @@ local function renderMainMenuBar()
 					return
 				end
 			
-				projDm = scene.load(path)[1]
+				projDm = assert(scene.load(path))[1]
 				projWp = projDm.Workspace
 				projCam = projWp.SceneCamera
 				EditorTl.Target = projWp
@@ -187,7 +187,7 @@ function Stages.ProjectPlaying_Enter()
 	engine.setexplorerroot(projDm)
 	
 	engine.binddatamodel(projDm) -- Set the `game` and `workspace` variables to the correct values in game scripts
-	engine.pushlvm()
+	engine.pushlvm("GameScripts")
 	
 	workspace.SceneCamera = projWp.SceneCamera
 	
@@ -214,4 +214,3 @@ function Stages.ProjectPlaying_Leave()
 end
 
 changeStageTo("SelectProject")
-

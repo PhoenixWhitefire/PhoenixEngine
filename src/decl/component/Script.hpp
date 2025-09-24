@@ -22,6 +22,6 @@ struct EcScript
 
 	static inline EntityComponent Type = EntityComponent::Script;
 
-	static void PushLVM();
+	static void PushLVM(const std::string& Name);
 	static void PopLVM();
 };
