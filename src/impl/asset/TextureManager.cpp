@@ -437,7 +437,7 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 
 			glGenTextures(1, &newGpuId);
 
-			newResourceId = this->Assign({ Path, UINT32_MAX, newGpuId }, Path);
+			newResourceId = this->Assign({ ActualPath, UINT32_MAX, newGpuId }, Path);
 			newTexture = &this->GetTextureResource(newResourceId);
 			newTexture->DoBilinearSmoothing = DoBilinearSmoothing;
 

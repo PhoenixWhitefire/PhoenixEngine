@@ -1,6 +1,6 @@
---!optimize 0
-
+--!optimize 1
 breakpoint(4)
+
 local var1 = 1
 var1 = 2
 var1 = 3
@@ -14,4 +14,4 @@ local function foo()
 end
 
 foo()
-print("DONE")
+print("Done")

@@ -5,6 +5,7 @@ The Engine support an Entity Component System architecture, meaning that `GameOb
 
 ### Properties:
 * `Enabled: boolean`: Whether the Engine updates and recognizes this Object, essentially freezing it if it is disabled
+* `Exists: boolean `: Whether or not the Object still exists. Will be false after calling `:Destroy`
 * `Name: string`: The name of the Object, usually what was passed into `GameObject.new`
 * `ObjectId: number `: The ID of the Object, an integer. Remains the same throughout the session, but not guaranteed between sessions
 * `Parent: GameObject?`: The hierarchal parent of the Object, or `nil` if it does not have one

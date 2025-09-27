@@ -409,6 +409,9 @@
       }
     },
     "Globals": {
+      "_VMNAME": {
+        "Description": "A non-unique identifier for the current Luau VM"
+      },
       "appendlog": {
         "Description": "Same as `print`, but does not prefix the log message with `[INFO]`",
         "In": "...: any"
@@ -420,14 +423,14 @@
       "game": {
         "Description": "The GameObject acting as the Data Model of the Engine"
       },
-      "loadfile": {
-        "Description": "Similar to `loadthread`, however loads from a file instead of from a string directly",
-        "In": "File: string, ChunkName: string?",
-        "Out": "( thread?, string? )"
-      },
       "loadthread": {
         "Description": "Like `loadstring` in *other* runtimes, however does not compromise Global Import optimizations and returns a coroutine instead of a function. If an error occurs, returns `nil` as the first value and the error message as the second value",
         "In": "Code: string, ChunkName: string?",
+        "Out": "( thread?, string? )"
+      },
+      "loadthreadfromfile": {
+        "Description": "Similar to `loadthread`, however loads from a file instead of from a string directly",
+        "In": "File: string, ChunkName: string?",
         "Out": "( thread?, string? )"
       },
       "script": {
@@ -725,7 +728,11 @@
               "`ImGui::Begin`"
             ],
             "In": [
-              "WindowTitle: string"
+              "WindowTitle: string",
+              [
+                "Options: string?",
+                "\"\""
+              ]
             ],
             "Out": "boolean"
           },
@@ -746,7 +753,15 @@
               "Creates a Dear ImGui window which takes up the entire screen"
             ],
             "In": [
-              "Name: string"
+              "Name: string",
+              [
+                "OffsetX: number?",
+                "0"
+              ],
+              [
+                "OffsetY: number?",
+                "0"
+              ]
             ]
           },
           "beginmainmenubar": {
@@ -788,7 +803,8 @@
               "`ImGui::Checkbox`"
             ],
             "In": [
-              "Name: string"
+              "Name: string",
+              "Value: boolean"
             ],
             "Out": "boolean"
           },
@@ -838,6 +854,12 @@
             "Description": [
               "`ImGui::End`, `endw` and not `end` because `end` is a Luau keyword"
             ]
+          },
+          "getcontentregionavail": {
+            "Description": [
+              "`ImGui::GetContentRegionAvail`"
+            ],
+            "Out": "number, number"
           },
           "getcursorpos": {
             "Description": [
@@ -900,7 +922,11 @@
               "`ImGui::MenuItem`"
             ],
             "In": [
-              "Text: string"
+              "Text: string",
+              [
+                "Enabled: boolean?",
+                "true"
+              ]
             ],
             "Out": "boolean"
           },
@@ -915,6 +941,11 @@
             ],
             "In": [
               "Id: string"
+            ]
+          },
+          "sameline": {
+            "Description": [
+              "`ImGui::SameLine`"
             ]
           },
           "setcursorpos": {
@@ -937,6 +968,17 @@
           "setnextwindowfocus": {
             "Description": [
               "`ImGui::SetNextWindowFocus`"
+            ]
+          },
+          "setnextwindowopen": {
+            "Description": [
+              "`ImGui::SetNextWindowCollapsed(!Open)`"
+            ],
+            "In": [
+              [
+                "Open: boolean?",
+                "true"
+              ]
             ]
           },
           "settooltip": {

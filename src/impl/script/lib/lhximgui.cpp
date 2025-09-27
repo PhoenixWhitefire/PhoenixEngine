@@ -1,3 +1,5 @@
+#define IMGUI_DEFINE_MATH_OPERATORS
+
 #include <imgui.h>
 #include <imgui/misc/cpp/imgui_stdlib.h>
 
@@ -8,7 +10,35 @@
 static int imgui_begin(lua_State* L)
 {
     const char* title = luaL_checkstring(L, 1);
-	lua_pushboolean(L, ImGui::Begin(title));
+    const char* flagsstr = luaL_optstring(L, 2, "");
+    ImGuiWindowFlags flags = 0;
+
+    for (; *flagsstr; flagsstr++)
+    {
+        switch (*flagsstr)
+        {
+        case 'n':
+        {
+            flagsstr++;
+            if (*flagsstr == 'c')
+                flags |= ImGuiWindowFlags_NoCollapse;
+            else
+                luaL_error(L, "Unknown option to flag 'n': '%c'", *flagsstr);
+
+            break;
+        }
+
+        case ' ': case '|':
+            break;
+
+        default:
+        {
+            luaL_error(L, "Unknown flag '%c'", *flagsstr);
+        }
+        }
+    }
+
+	lua_pushboolean(L, ImGui::Begin(title, nullptr, flags));
 
 	return 1;
 }
@@ -159,9 +189,11 @@ static int imgui_setnextwindowfocus(lua_State*)
 
 static int imgui_beginfullscreen(lua_State* L)
 {
+    ImVec2 offset( luaL_optnumber(L, 2, 0.f), luaL_optnumber(L, 3, 0.f) );
+
     ImGuiIO& guiIO = ImGui::GetIO();
-    ImGui::SetNextWindowPos(ImVec2(0.f, 0.f));
-    ImGui::SetNextWindowSize(guiIO.DisplaySize);
+    ImGui::SetNextWindowPos(offset);
+    ImGui::SetNextWindowSize(guiIO.DisplaySize - offset);
 
     lua_pushboolean(L, ImGui::Begin(
         luaL_optstring(L, 1, "FullscreenWindow"),
@@ -306,7 +338,7 @@ static int imgui_beginchild(lua_State* L)
             break;
         }
 
-        case ' ': case ';':
+        case ' ': case '|':
         {
             break;
         }
@@ -388,6 +420,27 @@ static int imgui_popid(lua_State* L)
     return 0;
 }
 
+static int imgui_sameline(lua_State* L)
+{
+    ImGui::SameLine();
+    return 0;
+}
+
+static int imgui_setnextwindowopen(lua_State* L)
+{
+    ImGui::SetNextWindowCollapsed(!luaL_optboolean(L, 1, true));
+    return 0;
+}
+
+static int imgui_getcontentregionavail(lua_State* L)
+{
+    ImVec2 avail = ImGui::GetContentRegionAvail();
+
+    lua_pushnumber(L, avail.x);
+    lua_pushnumber(L, avail.y);
+    return 2;
+}
+
 static luaL_Reg imgui_funcs[] =
 {
     { "begin", imgui_begin },
@@ -424,6 +477,9 @@ static luaL_Reg imgui_funcs[] =
     { "treepop", imgui_treepop },
     { "pushid", imgui_pushid },
     { "popid", imgui_popid },
+    { "sameline", imgui_sameline },
+    { "setnextwindowopen", imgui_setnextwindowopen },
+    { "getcontentregionavail", imgui_getcontentregionavail },
     { NULL, NULL }
 };
 

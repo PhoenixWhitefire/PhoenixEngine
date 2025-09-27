@@ -53,6 +53,7 @@ declare Matrix: {
 
 declare class GameObject
   Enabled: boolean
+  Exists: boolean 
   Name: string
   ObjectId: number 
   Parent: GameObject?
@@ -228,38 +229,41 @@ declare fs: {
 declare imgui: {
   beginmainmenubar: ((  ) -> (boolean)),
   endmenubar: ((  ) -> ()),
-  setnextwindowfocus: ((  ) -> ()),
+  dummy: (( Width: number, Height: number ) -> ()),
   image: (( ImagePath: string, Width: number?, Height: number? ) -> ()),
   settooltip: (( Tooltip: string ) -> ()),
   button: (( Text: string, Width: number?, Height: number? ) -> (boolean)),
-  menuitem: (( Text: string ) -> (boolean)),
+  menuitem: (( Text: string, Enabled: boolean? ) -> (boolean)),
   inputstring: (( Name: string, Value: string ) -> (string)),
-  checkbox: (( Name: string ) -> (boolean)),
+  checkbox: (( Name: string, Value: boolean ) -> (boolean)),
   endmenu: ((  ) -> ()),
   text: (( Text: string ) -> ()),
   getcursorpos: ((  ) -> (number, number)),
-  begin: (( WindowTitle: string ) -> (boolean)),
+  begin: (( WindowTitle: string, Options: string? ) -> (boolean)),
   inputnumber: (( Text: string, Value: number ) -> (number)),
-  textlink: (( Text: string ) -> (boolean)),
+  setnextwindowopen: (( Open: boolean? ) -> ()),
+  sameline: ((  ) -> ()),
   setitemtooltip: (( Text: string ) -> ()),
   combo: (( Text: string, Options: { string }, CurrentOption: number ) -> (number)),
-  setcursorpos: (( X: number, Y: number ) -> ()),
+  beginchild: (( Name: string, Width: number?, Height: number?, Flags: string? ) -> (boolean)),
   popid: ((  ) -> ()),
-  beginmenu: (( Name: string, Enabled: boolean? ) -> (boolean)),
   treepop: ((  ) -> ()),
+  getcontentregionavail: ((  ) -> (number, number)),
   treenode: (( Text: string ) -> (boolean)),
+  textlink: (( Text: string ) -> (boolean)),
+  stylecolors: (( Theme: 'L' | 'D' ) -> ()),
   endchild: ((  ) -> ()),
   endw: ((  ) -> ()),
   itemhovered: ((  ) -> (boolean)),
   itemclicked: ((  ) -> (boolean)),
   indent: (( Indent: number? ) -> ()),
-  stylecolors: (( Theme: 'L' | 'D' ) -> ()),
-  dummy: (( Width: number, Height: number ) -> ()),
-  beginchild: (( Name: string, Width: number?, Height: number?, Flags: string? ) -> (boolean)),
-  beginfullscreen: (( Name: string ) -> ()),
+  setnextwindowfocus: ((  ) -> ()),
+  setcursorpos: (( X: number, Y: number ) -> ()),
+  pushid: (( Id: string ) -> ()),
+  beginfullscreen: (( Name: string, OffsetX: number?, OffsetY: number? ) -> ()),
   endmainmenubar: ((  ) -> ()),
   beginmenubar: ((  ) -> (boolean)),
-  pushid: (( Id: string ) -> ())
+  beginmenu: (( Name: string, Enabled: boolean? ) -> (boolean))
 }
 declare input: {
   ismousegrabbed: ((  ) -> (boolean)),
@@ -300,11 +304,12 @@ declare world: {
 }
 
 
+declare _VMNAME: string
 declare function appendlog( ...: any ): ()
 declare function breakpoint( Line: number ): ()
 declare game: GameObject & DataModel
-declare function loadfile( File: string, ChunkName: string? ): ( thread?, string? )
 declare function loadthread( Code: string, ChunkName: string? ): ( thread?, string? )
+declare function loadthreadfromfile( File: string, ChunkName: string? ): ( thread?, string? )
 declare script: GameObject & Script
 declare function sleep( SleepTime: number ): ()
 declare workspace: GameObject & Workspace

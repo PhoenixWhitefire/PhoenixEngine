@@ -1924,8 +1924,9 @@ lua_State* ScriptEngine::L::Create(const std::string& VmName)
 			};
 		state->global->cb.debuginterrupt = [](lua_State* L, lua_Debug* ar)
 			{
-				Log::Info("Debug interrupt");
-				L::DebugBreak((lua_State*)ar->userdata, ar, false, true);
+				assert(false); // TODO should this be triggering?
+				Log::Info("Debug interrupt - MAYBE SHOULDN'T BE OCCURRING");
+				L::DebugBreak(L, ar, false, true);
 			};
 
 		state->global->cb.debugprotectederror = [](lua_State* L)

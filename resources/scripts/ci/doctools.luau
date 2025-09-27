@@ -55,6 +55,11 @@ local function libTools()
 
                             docMember.In[index][1] = imgui.inputstring(tostring(index) .. " type", param[1])
                             docMember.In[index][2] = imgui.inputstring(tostring(index) .. " default", param[2])
+                            
+                            local paramstr = docMember.In[index][1]
+                            if string.sub(paramstr, #paramstr, #paramstr) ~= "?" then
+                                imgui.text("(Are you sure you haven't forgotten to end the parameter with a '?'?)")
+                            end
 
                             if docMember.In[index][1] == "\\del" then
                                 table.remove(docMember.In, index)
@@ -74,7 +79,7 @@ local function libTools()
 
                     if imgui.button("+ Param") then
                         docMember.In = docMember.In or {}
-                        table.insert(docMember.In, "")
+                        table.insert(docMember.In :: { string }, "")
                     end
 
                     local returns = imgui.inputstring("Outputs", docMember.Out or "")
@@ -118,7 +123,7 @@ game.OnFrameBegin:Connect(function()
             fs.write("./gh-assets/wiki/doc-comments.json", json.encode(docComments))
 
             conf.set("LspDefinitionsGeneratorDoNotShutdown", true);
-            local co, err = loadfile("scripts/ci/docs.luau", "LspDefinitionsGenerator")
+            local co, err = loadthreadfromfile("scripts/ci/docs.luau", "LspDefinitionsGenerator")
             assert(co, err)
 
             coroutine.resume(co)

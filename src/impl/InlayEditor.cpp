@@ -120,7 +120,7 @@ static void copyStringToBuffer(char* Buffer, const std::string_view& String, siz
 }
 
 #include "script/ScriptEngine.hpp"
-static void debugBreakHook(lua_State*, lua_Debug*, bool HasError, bool InSingleStep);
+static void debugBreakHook(lua_State*, lua_Debug*, bool HasError, bool);
 
 void InlayEditor::Initialize(Renderer* renderer)
 {
@@ -394,6 +394,8 @@ static void invokeTextEditor(const std::string& File)
 	TextEdCurrentFileTab = TextEdOpenFiles.size() - 1;
 }
 
+static int s_TextEdDebuggerCurrentLine = 0;
+
 static void renderTextEditor()
 {
 	ZoneScopedC(tracy::Color::DarkSeaGreen);
@@ -637,11 +639,47 @@ static void renderTextEditor()
 	
 	if (TextEditorEntryBuffer)
 	{
+		ImVec2 startPos = ImGui::GetCursorPos();
+		float textYSize = ImGui::CalcTextSize("").y;
+
+		if (s_TextEdDebuggerCurrentLine != 0)
+		{
+			ImGui::SetCursorPos({ startPos.x, startPos.y + textYSize * (s_TextEdDebuggerCurrentLine - 1) });
+
+			TextureManager* texManager = TextureManager::Get();
+			ImGui::ImageWithBg(
+				texManager->GetTextureResource(1).GpuId,
+				ImVec2(textYSize, textYSize),
+				{},
+				{},
+				{},
+				ImVec4(1.f, 0.f, 0.f, 1.f)
+			);
+		}
+
+		int line = 0;
+
+		for (size_t i = 0; i < TextEditorEntryBufferCapacity; i++)
+		{
+			if (TextEditorEntryBuffer[i] == '\0')
+				break;
+
+			if (TextEditorEntryBuffer[i] == '\n')
+			{
+				line++;
+				// set the position precisely to avoid inaccuracy from padding
+				ImGui::SetCursorPos({ startPos.x, startPos.y + textYSize * (line - 1) });
+				ImGui::Text("%d", line);
+			}
+		}
+
+		ImGui::SetCursorPos(startPos + ImVec2(textYSize * 2, 0.f));
+
 		bool changed = ImGui::InputTextMultiline(
 			"##",
 			TextEditorEntryBuffer,
 			TextEditorEntryBufferCapacity,
-			ImGui::GetContentRegionAvail()
+			ImVec2(ImGui::GetContentRegionAvail().x, (line + 2) * textYSize * 1.1f)
 		);
 		TextEditorFileModified = TextEditorFileModified || changed;
 	}
@@ -2504,22 +2542,12 @@ static void debugVariable(lua_State* L)
 	}
 }
 
-static bool s_IsSingleStepping = false;
-static bool s_Resume = false;
-static int s_TargetLine = 0;
-static int s_PrevLine = 0;
-
-static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool InSingleStep)
+static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 {
 	ZoneScoped;
 
-	if (s_IsSingleStepping && ar->currentline < s_TargetLine && ar->currentline == s_PrevLine)
-		return;
-
-	if (InSingleStep && !s_IsSingleStepping)
-		return;
-
 	luaL_checkstack(L, 20, "debugger");
+	int initialStatus = L->status;
 
 	std::string errorMessage = HasError ? luaL_checkstring(L, -1) : "<No error message>";
 	std::string vmName;
@@ -2529,20 +2557,15 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool InSi
 
 	Engine* engine = Engine::Get();
 
+	ImGuiContext* debuggerContext = ImGui::CreateContext();
 	ImGuiContext* prevContext = ImGui::GetCurrentContext();
-	ImGuiContext* debuggerContext = prevContext;
+	ImGui::SetCurrentContext(debuggerContext);
 
-	if (!s_IsSingleStepping)
-	{
-		debuggerContext = ImGui::CreateContext();
-		ImGui::SetCurrentContext(debuggerContext);
-
-		PHX_ENSURE_MSG(ImGui_ImplSDL3_InitForOpenGL(
-			engine->Window,
-			engine->RendererContext.GLContext
-		), "`ImGui_ImplSDL3_InitForOpenGL` failed");
-		PHX_ENSURE_MSG(ImGui_ImplOpenGL3_Init("#version 460"), "`ImGui_ImplOpenGL3_Init` failed");
-	}
+	PHX_ENSURE_MSG(ImGui_ImplSDL3_InitForOpenGL(
+		engine->Window,
+		engine->RendererContext.GLContext
+	), "`ImGui_ImplSDL3_InitForOpenGL` failed");
+	PHX_ENSURE_MSG(ImGui_ImplOpenGL3_Init("#version 460"), "`ImGui_ImplOpenGL3_Init` failed");
 
 	double debuggerLastSecond = GetRunningTime();
 	double debuggerLastFrame = GetRunningTime();
@@ -2592,12 +2615,6 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool InSi
 				L->singlestep = false;
 				L->global->cb.debugstep = nullptr;
 
-				if (s_IsSingleStepping)
-				{
-					ImGui::NewFrame();
-					return;
-				}
-
 				engine->Close();
 				
 				break;
@@ -2626,7 +2643,11 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool InSi
 
 		if (ImGui::Begin("Debugger"))
 		{
-			ImGui::Text("Broke into debugger");
+			if (HasError)
+				ImGui::Text("Exception thrown");
+			else
+				ImGui::Text("Breakpoint hit");
+				
 			ImGui::Text("Script: %s", ar->short_src);
 			ImGui::Text("Line: %i", ar->currentline);
 			ImGui::Text("In: %s", ar->name ? ar->name : "<anonymous function>");
@@ -2634,67 +2655,54 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool InSi
 			ImGui::Text("VM: %s", vmName.c_str());
 
 			if (ImGui::Button("Resume (F5)") || ImGui::IsKeyDown(ImGuiKey_F5))
-			{
 				running = false;
-				L->singlestep = false;
-				L->global->cb.debugstep = nullptr;
-
-				if (s_IsSingleStepping)
-				{
-					s_Resume = true;
-					return;
-				}
-			}
 
 			static bool s_WasF8Down = false;
-			bool isF8Down = ImGui::IsKeyDown(ImGuiKey_F8);
+			bool isF8Down = ImGui::IsKeyDown(ImGuiKey_F8) && running;
 
-			if (!isF8Down)
+			if (isF8Down)
+			{
+				if (s_WasF8Down)
+					isF8Down = false;
+
+				s_WasF8Down = true;
+			}
+			else
 				s_WasF8Down = false;
-
-			if (s_WasF8Down)
-				isF8Down = false;
 
 			if (ScriptEngine::L::DebugBreak && (ImGui::Button("Single-step (F8)") || isF8Down))
 			{
-				ImGui::End();
-
-				if (s_IsSingleStepping)
-				{
-					L->status = LUA_OK;
-					s_TargetLine = ar->currentline + 1;
-					s_PrevLine = ar->currentline;
-					
-					return;
-				}
-				else
-					s_Resume = false;
-
-				s_IsSingleStepping = true;
+				static int s_TargetLine = 0;
+				static int s_PrevLine = 0;
 				s_TargetLine = ar->currentline + 1;
 				s_PrevLine = ar->currentline;
 
+				static int s_BreakOnNext = false;
+				s_BreakOnNext = false;
+
 				L->global->cb.debugstep = [](lua_State* L, lua_Debug* ar)
 					{
-						ImGui::EndFrame();
-						debugBreakHook(L, ar, false, true);
+						if (s_BreakOnNext)
+							lua_break(L);
+
+						if (ar->currentline >= s_TargetLine)
+							s_BreakOnNext = true;
+
+						if (ar->currentline < s_PrevLine)
+							lua_break(L);
 					};
+				
 				lua_singlestep(L, true);
+				L->status = LUA_BREAK;
+
 				if (lua_resume(L, L, 0) == LUA_OK)
 				{
 					// got to the end of the script
 					running = false;
 				}
+				
 				L->global->cb.debugstep = nullptr;
 				lua_singlestep(L, false);
-
-				s_IsSingleStepping = false;
-
-				if (s_Resume)
-				{
-					running = false;
-					ImGui::End();
-				}
 
 				int li = 0;
 				lua_getinfo(L, li, "slnu", ar);
@@ -2708,8 +2716,6 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool InSi
 						break;
 					}
 				}
-
-				ImGui::Begin("Debugger");
 			}
 
 			ImGui::Checkbox("All Developer UIs", &develUI);
@@ -2732,6 +2738,8 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool InSi
 			}
 		}
 		ImGui::End();
+
+		s_TextEdDebuggerCurrentLine = ar->currentline;
 
 		if (develUI)
 			engine->OnFrameRenderGui.Fire(dt);
@@ -2861,7 +2869,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool InSi
 			[[unlikely]] default: { assert(false); }
 
 			}
-			L->status = LUA_BREAK;
+			L->status = initialStatus;
 			ImGui::EndChild();
 		}
 		ImGui::End();
@@ -2877,7 +2885,10 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool InSi
 						"{}:{} in {}",
 						car.short_src, car.currentline, car.name ? car.name : "<anonmyous>"
 					).c_str()))
+					{
 						invokeTextEditor(car.short_src);
+						lua_getinfo(L, i, "sln", ar);
+					}
 				}
 				else
 					ImGui::Text("%s in %s", car.short_src, car.name);
@@ -2914,16 +2925,13 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool InSi
 		Memory::FrameFinish();
 	}
 
-	if (!L->singlestep)
-		L->status = LUA_OK;
+	L->status = initialStatus;
 
 	TextEditorEnabled = wasTextEdEnabled;
+	s_TextEdDebuggerCurrentLine = 0;
 
-	if (prevContext != debuggerContext)
-	{
-		ImGui_ImplOpenGL3_Shutdown();
-		ImGui_ImplSDL3_Shutdown();
-		ImGui::SetCurrentContext(prevContext);
-		ImGui::DestroyContext(debuggerContext);
-	}
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplSDL3_Shutdown();
+	ImGui::SetCurrentContext(prevContext);
+	ImGui::DestroyContext(debuggerContext);
 }

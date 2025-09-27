@@ -254,7 +254,7 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 			{
 				uint32_t normal = readU32(contents, &cursor, &fileTooSmallError);
 
-				// 10 bytes per component, not 16!!
+				// 10 bits per component, not 16!!
 				uint16_t x = static_cast<uint16_t>(normal) & 0b0000001111111111;
 				uint16_t y = static_cast<uint16_t>(normal >> 10) & 0b0000001111111111;
 				uint16_t z = static_cast<uint16_t>(normal >> 20) & 0b0000001111111111;

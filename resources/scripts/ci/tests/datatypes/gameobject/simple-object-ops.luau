@@ -1,4 +1,4 @@
-return function(describe, test, expect)
+return function(describe, test: (string, () -> ()) -> (), expect: (any) -> (any))
 	test("Read property", function()
 		expect(workspace.Name):toBe("Workspace")
 	end)

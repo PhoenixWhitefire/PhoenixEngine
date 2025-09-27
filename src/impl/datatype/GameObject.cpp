@@ -156,6 +156,17 @@ void GameObject::s_AddObjectApi()
 			static_cast<GameObject*>(p)->SetParent(GameObject::FromGenericValue(gv));
 		}
 	};
+	s_Api.Properties["Exists"] = Reflection::PropertyDescriptor
+	{
+		Reflection::ValueType::Boolean,
+		[](void* p)
+		-> Reflection::GenericValue
+		{
+			return true; // actual logic is handled in `api_gameobjindex`
+		},
+		nullptr
+	};
+
 
 	REFLECTION_DECLAREFUNC(
 		"Destroy",

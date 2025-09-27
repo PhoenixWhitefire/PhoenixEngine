@@ -737,7 +737,27 @@ static void init()
 									: EngineJsonConfig.value("RootScene", "scenes/root.world");
 	
 	bool worldLoadSuccess = true;
-	std::vector<ObjectRef> roots = SceneFormat::Deserialize(FileRW::ReadFile(mapFile), &worldLoadSuccess);
+	std::vector<ObjectRef> roots;
+
+	if (!ScriptTool)
+		roots = SceneFormat::Deserialize(FileRW::ReadFile(mapFile), &worldLoadSuccess);
+	else
+	{
+		ObjectRef dm = GameObject::Create(EntityComponent::DataModel);
+		ObjectRef wp = GameObject::Create(EntityComponent::Workspace);
+		ObjectRef cam = GameObject::Create(EntityComponent::Camera);
+
+		wp->SetParent(dm);
+		cam->SetParent(wp);
+		wp->GetComponent<EcWorkspace>()->SetSceneCamera(cam);
+
+		GameObject* script = GameObject::Create(EntityComponent::Script);
+		script->GetComponent<EcScript>()->SourceFile = ScriptTool;
+		script->Name = "Tool";
+		script->SetParent(wp);
+
+		roots.push_back(dm);
+	}
 	
 	/*
 	std::vector<GameObject, Memory::Allocator<GameObject>> memalloctest;
@@ -757,14 +777,6 @@ static void init()
 
 	root->IncrementHardRefs();
 	EngineInstance->BindDataModel(root);
-
-	if (ScriptTool)
-	{
-		GameObject* script = GameObject::Create(EntityComponent::Script);
-		script->GetComponent<EcScript>()->SourceFile = ScriptTool;
-		script->SetParent(root->FindChild("Workspace"));
-		script->Name = "Tool";
-	}
 }
 
 static bool isBoolArgument(const char* v, const char* arg)
@@ -863,8 +875,6 @@ static void processCliArgs(int argc, char** argv)
 					"Standalone tool: {}",
 					ScriptTool
 				);
-
-				EngineJsonConfig["RootScene"] = "scenes/empty.world";
 
 				i++;
 			}

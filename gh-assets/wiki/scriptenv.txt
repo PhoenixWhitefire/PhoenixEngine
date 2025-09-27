@@ -252,8 +252,8 @@ Custom libraries.
 #### `imgui.endmenubar(): `
 * `ImGui::EndMenuBar`
 
-#### `imgui.setnextwindowfocus(): `
-* `ImGui::SetNextWindowFocus`
+#### `imgui.dummy(Width: number [ 0 ], Height: number [ 0 ]): `
+* `ImGui::Dummy`
 
 #### `imgui.image(ImagePath: string, Width: number?, Height: number?): `
 * `ImGui::Image`
@@ -264,13 +264,13 @@ Custom libraries.
 #### `imgui.button(Text: string, Width: number?, Height: number?): boolean`
 * `ImGui::Button`
 
-#### `imgui.menuitem(Text: string): boolean`
+#### `imgui.menuitem(Text: string, Enabled: boolean? [ true ]): boolean`
 * `ImGui::MenuItem`
 
 #### `imgui.inputstring(Name: string, Value: string): string`
 * `ImGui::InputText`
 
-#### `imgui.checkbox(Name: string): boolean`
+#### `imgui.checkbox(Name: string, Value: boolean): boolean`
 * `ImGui::Checkbox`
 
 #### `imgui.endmenu(): `
@@ -281,14 +281,17 @@ Custom libraries.
 #### `imgui.getcursorpos(): number, number`
 * `ImGui::GetCursorPos`
 
-#### `imgui.begin(WindowTitle: string): boolean`
+#### `imgui.begin(WindowTitle: string, Options: string? [ "" ]): boolean`
 * `ImGui::Begin`
 
 #### `imgui.inputnumber(Text: string, Value: number): number`
 * `ImGui::InputDouble`
 
-#### `imgui.textlink(Text: string): boolean`
-* `ImGui::TextLink`
+#### `imgui.setnextwindowopen(Open: boolean? [ true ]): `
+* `ImGui::SetNextWindowCollapsed(!Open)`
+
+#### `imgui.sameline(): `
+* `ImGui::SameLine`
 
 #### `imgui.setitemtooltip(Text: string): `
 * `ImGui::SetItemTooltip`
@@ -296,20 +299,26 @@ Custom libraries.
 #### `imgui.combo(Text: string, Options: { string }, CurrentOption: number): number`
 * `ImGui::Combo`. Returns the selected option index
 
-#### `imgui.setcursorpos(X: number, Y: number): `
-* `ImGui::SetCursorPos`
+#### `imgui.beginchild(Name: string, Width: number?, Height: number?, Flags: string?): boolean`
+* `ImGui::BeginChild`
 
 #### `imgui.popid(): `
 * `ImGui::PopID`
 
-#### `imgui.beginmenu(Name: string, Enabled: boolean?): boolean`
-* `ImGui::BeginMenu`
-
 #### `imgui.treepop(): `
 * `ImGui::TreePop`
 
+#### `imgui.getcontentregionavail(): number, number`
+* `ImGui::GetContentRegionAvail`
+
 #### `imgui.treenode(Text: string): boolean`
 * `ImGui::TreeNode`
+
+#### `imgui.textlink(Text: string): boolean`
+* `ImGui::TextLink`
+
+#### `imgui.stylecolors(Theme: 'L' | 'D'): `
+* `ImGui::StyleColorsDark`/`ImGui::StyleColorsLight`
 
 #### `imgui.endchild(): `
 * `ImGui::EndChild`
@@ -326,16 +335,16 @@ Custom libraries.
 #### `imgui.indent(Indent: number?): `
 * `ImGui::Indent`
 
-#### `imgui.stylecolors(Theme: 'L' | 'D'): `
-* `ImGui::StyleColorsDark`/`ImGui::StyleColorsLight`
+#### `imgui.setnextwindowfocus(): `
+* `ImGui::SetNextWindowFocus`
 
-#### `imgui.dummy(Width: number [ 0 ], Height: number [ 0 ]): `
-* `ImGui::Dummy`
+#### `imgui.setcursorpos(X: number, Y: number): `
+* `ImGui::SetCursorPos`
 
-#### `imgui.beginchild(Name: string, Width: number?, Height: number?, Flags: string?): boolean`
-* `ImGui::BeginChild`
+#### `imgui.pushid(Id: string): `
+* `ImGui::PushID`
 
-#### `imgui.beginfullscreen(Name: string): `
+#### `imgui.beginfullscreen(Name: string, OffsetX: number? [ 0 ], OffsetY: number? [ 0 ]): `
 * Creates a Dear ImGui window which takes up the entire screen
 
 #### `imgui.endmainmenubar(): `
@@ -344,8 +353,8 @@ Custom libraries.
 #### `imgui.beginmenubar(): boolean`
 * `ImGui::BeginMenuBar`
 
-#### `imgui.pushid(Id: string): `
-* `ImGui::PushID`
+#### `imgui.beginmenu(Name: string, Enabled: boolean?): boolean`
+* `ImGui::BeginMenu`
 
 ### `input`
 * Checking player inputs
@@ -441,6 +450,9 @@ Custom libraries.
 
 Other globals.
 
+#### `_VMNAME: string`
+* A non-unique identifier for the current Luau VM
+
 #### `appendlog(...: any): ()`
 * Same as `print`, but does not prefix the log message with `[INFO]`
 
@@ -450,11 +462,11 @@ Other globals.
 #### `game: GameObject & DataModel`
 * The GameObject acting as the Data Model of the Engine
 
-#### `loadfile(File: string, ChunkName: string?): ( thread?, string? )`
-* Similar to `loadthread`, however loads from a file instead of from a string directly
-
 #### `loadthread(Code: string, ChunkName: string?): ( thread?, string? )`
 * Like `loadstring` in *other* runtimes, however does not compromise Global Import optimizations and returns a coroutine instead of a function. If an error occurs, returns `nil` as the first value and the error message as the second value
+
+#### `loadthreadfromfile(File: string, ChunkName: string?): ( thread?, string? )`
+* Similar to `loadthread`, however loads from a file instead of from a string directly
 
 #### `script: GameObject & Script`
 * The Script object the current coroutine is running as

@@ -16,6 +16,7 @@
       },
       "Properties": {
         "Enabled": "Boolean",
+        "Exists": "Boolean READONLY",
         "Name": "String",
         "ObjectId": "Integer READONLY",
         "Parent": "GameObject?",
@@ -220,11 +221,12 @@
       }
     },
     "Globals": {
+      "_VMNAME": "string",
       "appendlog": "function",
       "breakpoint": "function",
       "game": "GameObject & DataModel",
-      "loadfile": "function",
       "loadthread": "function",
+      "loadthreadfromfile": "function",
       "script": "GameObject & Script",
       "sleep": "function",
       "workspace": "GameObject & Workspace"
@@ -282,6 +284,7 @@
         "endmenu": "function",
         "endmenubar": "function",
         "endw": "function",
+        "getcontentregionavail": "function",
         "getcursorpos": "function",
         "image": "function",
         "indent": "function",
@@ -292,9 +295,11 @@
         "menuitem": "function",
         "popid": "function",
         "pushid": "function",
+        "sameline": "function",
         "setcursorpos": "function",
         "setitemtooltip": "function",
         "setnextwindowfocus": "function",
+        "setnextwindowopen": "function",
         "settooltip": "function",
         "stylecolors": "function",
         "text": "function",
