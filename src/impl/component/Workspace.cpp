@@ -29,7 +29,7 @@ public:
 	
 	void Shutdown() override
 	{
-		s_FallbackCamera = nullptr;
+		s_FallbackCamera.Reference = nullptr; // Reference is not valid at this point
 		ComponentManager<EcWorkspace>::Shutdown();
 	}
 
