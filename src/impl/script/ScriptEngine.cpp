@@ -1472,6 +1472,9 @@ static void requireConfigInit(luarequire_Configuration* config)
     		// added one value to L stack: module result
 			return 1;
 		};
+
+	assert(!config->get_alias); // should've been initialized to NULL by default
+	config->get_alias = nullptr;
 }
 
 // FROM: `ldblib.cpp` 15/08/2025
