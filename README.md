@@ -23,7 +23,7 @@ Intended to be compatible with both Windows and Linux/Ubuntu.
 * For Windows, Visual Studio 2022 platform toolset `v143`
 * **Last commit with verified Windows compatibility: `49f2ef282796c9cb10453b6c4ff2cc5e1da91df2`** - Because I mainly use the Linux portion of my dualboot setup, I am not able to frequently verify that I haven't accidentally introduced incompatibilities with Windows/MSVC. The prior commit is the last one which I verified to compile on Visual Studio
 
-1. `git clone https://github.com/PhoenixWhitefire/PhoenixEngine --recursive --depth 1`, or just use the `Code <>` button
+1. `git clone https://github.com/PhoenixWhitefire/PhoenixEngine --recursive --depth=1`, or just use the `Code <>` button
     * `--recursive` clones submodules as well (check the `Vendor` directory)
     * `--depth 1` causes only the current commit to be fetched, reducing download times
 2. Download the [FMOD Sound Engine](https://fmod.com/download#fmodengine) (personally I've used `2.03.08`), move the extracted folder into the `Vendor` directory and rename it to `FMOD`

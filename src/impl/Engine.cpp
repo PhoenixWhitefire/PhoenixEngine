@@ -948,6 +948,7 @@ void Engine::Start()
 			ImGui_ImplOpenGL3_NewFrame();
 			ImGui_ImplSDL3_NewFrame();
 			ImGui::NewFrame();
+			ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
 		}
 
 		ObjectHandle sceneCamObject = WorkspaceRef->GetComponent<EcWorkspace>()->GetSceneCamera();
