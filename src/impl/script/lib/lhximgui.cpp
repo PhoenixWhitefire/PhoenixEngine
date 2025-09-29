@@ -441,6 +441,18 @@ static int imgui_getcontentregionavail(lua_State* L)
     return 2;
 }
 
+static int imgui_separator(lua_State*)
+{
+    ImGui::Separator();
+    return 0;
+}
+
+static int imgui_separatortext(lua_State* L)
+{
+    ImGui::SeparatorText(luaL_checkstring(L, 1));
+    return 0;
+}
+
 static luaL_Reg imgui_funcs[] =
 {
     { "begin", imgui_begin },
@@ -480,6 +492,8 @@ static luaL_Reg imgui_funcs[] =
     { "sameline", imgui_sameline },
     { "setnextwindowopen", imgui_setnextwindowopen },
     { "getcontentregionavail", imgui_getcontentregionavail },
+    { "separator", imgui_separator },
+    { "separatortext", imgui_separatortext },
     { NULL, NULL }
 };
 

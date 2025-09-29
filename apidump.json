@@ -296,6 +296,8 @@
         "popid": "function",
         "pushid": "function",
         "sameline": "function",
+        "separator": "function",
+        "separatortext": "function",
         "setcursorpos": "function",
         "setitemtooltip": "function",
         "setnextwindowfocus": "function",

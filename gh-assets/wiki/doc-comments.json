@@ -948,6 +948,19 @@
               "`ImGui::SameLine`"
             ]
           },
+          "separator": {
+            "Description": [
+              "`ImGui::Separator`"
+            ]
+          },
+          "separatortext": {
+            "Description": [
+              "`ImGui::SeparatorText`"
+            ],
+            "In": [
+              "Text: string"
+            ]
+          },
           "setcursorpos": {
             "Description": [
               "`ImGui::SetCursorPos`"

@@ -215,10 +215,6 @@ local function dumpReflectionApi(t, d, cn)
 					continue
 				end
 
-				if n == "GetChildren" then
-					breakpoint(222)
-				end
-
 				s ..= `* \`{ n }{ rtolsub(v) }\`: { d.Methods[n] }\n`
 				
 				local subst = rtolsub(v)

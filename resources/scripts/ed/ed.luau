@@ -89,9 +89,37 @@ local function openProject(ManualPath: string?)
 	changeStageTo("ProjectEditing")
 end
 
-local aboutWindowOpen = false
-local allowCopyGitHubUrl = false
-local isLightMode = false
+local function homeTab()
+	local inPlaytest = CurrentStage == "ProjectPlaying"
+
+	if inPlaytest then
+		if imgui.button("Stop playtest", 150, 150) then
+			changeStageTo("ProjectEditing")
+		end
+	else
+		if imgui.button("Start playtest", 150, 150) then
+			changeStageTo("ProjectPlaying")
+		end
+	end
+
+	imgui.sameline()
+
+	if imgui.button("Explorer to Project DM", 150, 150) then
+		assert(projDm)
+		engine.setexplorerroot(projDm)
+	end
+
+	imgui.sameline()
+	
+	if imgui.button("Explorer to Editor DM", 150, 150) then
+		engine.setexplorerroot(game)
+	end
+end
+
+local AboutWindowOpen = false
+local AllowCopyGitHubUrl = false
+local IsLightMode = false
+local CurrentRibbonTab = "Home"
 
 local GITHUB_URL = "https://github.com/PhoenixWhitefire/PhoenixEngine"
 
@@ -140,23 +168,33 @@ local function renderMainMenuBar()
 			return
 		end
 
-		if not aboutWindowOpen and imgui.menuitem("About") then
-			aboutWindowOpen = true
+		if not AboutWindowOpen and imgui.menuitem("About") then
+			AboutWindowOpen = true
 			imgui.setnextwindowopen()
 		end
 
-		local lightMode = imgui.checkbox("Light", isLightMode)
-		if lightMode ~= isLightMode then
+		local lightMode = imgui.checkbox("Light", IsLightMode)
+		if lightMode ~= IsLightMode then
 			imgui.stylecolors(if lightMode then "L" else "D")
 		end
-		isLightMode = lightMode
+		IsLightMode = lightMode
 		
 		imgui.endmenu()
+	end
+
+	if CurrentStage ~= "SelectProject" then
+		imgui.separator()
+
+		if imgui.beginmenu("Home") then
+			homeTab()
+
+			imgui.endmenu()
+		end
 	end
 	
 	imgui.endmainmenubar()
 
-	if aboutWindowOpen then
+	if AboutWindowOpen then
 		imgui.setnextwindowfocus()
 
 		if imgui.begin("About") then
@@ -173,16 +211,16 @@ local function renderMainMenuBar()
 
 			imgui.text("Phoenix Engine Editor")
 
-			if not allowCopyGitHubUrl then
+			if not AllowCopyGitHubUrl then
 				if imgui.textlink(GITHUB_URL) then
-					allowCopyGitHubUrl = true
+					AllowCopyGitHubUrl = true
 				end
 			else
 				imgui.inputstring("##", GITHUB_URL)
 			end
 		else
-			aboutWindowOpen = false
-			allowCopyGitHubUrl = false
+			AboutWindowOpen = false
+			AllowCopyGitHubUrl = false
 		end
 
 		imgui.endw()
@@ -254,44 +292,18 @@ function Stages.SelectProject(DeltaTime)
 	renderMainMenuBar()
 end
 
-local function projectWindow(InPlaytest)
-	if imgui.begin("Project") then
-		if imgui.button("Explorer to Project DM") then
-			assert(projDm)
-			engine.setexplorerroot(projDm)
-		end
-		
-		if imgui.button("Explorer to Editor DM") then
-			engine.setexplorerroot(game)
-		end
-		
-		if InPlaytest then
-			if imgui.button("Stop playtest") then
-				changeStageTo("ProjectEditing")
-			end
-		else
-			if imgui.button("Start playtest") then
-				changeStageTo("ProjectPlaying")
-			end
-		end
-	end
-	imgui.endw()
-	
-	renderMainMenuBar()
-end
-
 function Stages.ProjectEditing_Enter(DeltaTime)
 	assert(projDm)
 	engine.setexplorerroot(projDm)
 end
 
 function Stages.ProjectEditing(DeltaTime)
-	projectWindow(false)
-	
 	-- sometimes this can get called after `ProjectEditing_Leave` or something somehow
 	if projWp and projWp.SceneCamera then
 		projWp.SceneCamera.Transform = EditorCam.Transform
 	end
+
+	renderMainMenuBar()
 end
 
 function Stages.ProjectEditing_Leave(NextStage)
@@ -331,7 +343,7 @@ function Stages.ProjectPlaying_Enter()
 end
 
 function Stages.ProjectPlaying(DeltaTime)
-	projectWindow(true)
+	renderMainMenuBar()
 end
 
 function Stages.ProjectPlaying_Leave()

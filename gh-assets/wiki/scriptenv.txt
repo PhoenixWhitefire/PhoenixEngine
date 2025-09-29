@@ -287,6 +287,9 @@ Custom libraries.
 #### `imgui.inputnumber(Text: string, Value: number): number`
 * `ImGui::InputDouble`
 
+#### `imgui.separator(): `
+* `ImGui::Separator`
+
 #### `imgui.setnextwindowopen(Open: boolean? [ true ]): `
 * `ImGui::SetNextWindowCollapsed(!Open)`
 
@@ -308,17 +311,20 @@ Custom libraries.
 #### `imgui.treepop(): `
 * `ImGui::TreePop`
 
-#### `imgui.getcontentregionavail(): number, number`
-* `ImGui::GetContentRegionAvail`
-
 #### `imgui.treenode(Text: string): boolean`
 * `ImGui::TreeNode`
+
+#### `imgui.beginmenu(Name: string, Enabled: boolean?): boolean`
+* `ImGui::BeginMenu`
 
 #### `imgui.textlink(Text: string): boolean`
 * `ImGui::TextLink`
 
 #### `imgui.stylecolors(Theme: 'L' | 'D'): `
 * `ImGui::StyleColorsDark`/`ImGui::StyleColorsLight`
+
+#### `imgui.setnextwindowfocus(): `
+* `ImGui::SetNextWindowFocus`
 
 #### `imgui.endchild(): `
 * `ImGui::EndChild`
@@ -335,14 +341,14 @@ Custom libraries.
 #### `imgui.indent(Indent: number?): `
 * `ImGui::Indent`
 
-#### `imgui.setnextwindowfocus(): `
-* `ImGui::SetNextWindowFocus`
-
 #### `imgui.setcursorpos(X: number, Y: number): `
 * `ImGui::SetCursorPos`
 
-#### `imgui.pushid(Id: string): `
-* `ImGui::PushID`
+#### `imgui.separatortext(Text: string): `
+* `ImGui::SeparatorText`
+
+#### `imgui.getcontentregionavail(): number, number`
+* `ImGui::GetContentRegionAvail`
 
 #### `imgui.beginfullscreen(Name: string, OffsetX: number? [ 0 ], OffsetY: number? [ 0 ]): `
 * Creates a Dear ImGui window which takes up the entire screen
@@ -353,8 +359,8 @@ Custom libraries.
 #### `imgui.beginmenubar(): boolean`
 * `ImGui::BeginMenuBar`
 
-#### `imgui.beginmenu(Name: string, Enabled: boolean?): boolean`
-* `ImGui::BeginMenu`
+#### `imgui.pushid(Id: string): `
+* `ImGui::PushID`
 
 ### `input`
 * Checking player inputs
