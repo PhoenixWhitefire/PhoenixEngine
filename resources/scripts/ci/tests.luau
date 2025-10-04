@@ -20,7 +20,7 @@ local function contextify(v)
 	end
 end
 
-local function testAreDeepEqual(selfv, expectedv, context)
+local function testAreDeepEqual(selfv, expectedv, context: string?)
 	context = context or ""
 	
 	if typeof(selfv) ~= typeof(expectedv) or typeof(selfv) ~= "table" then
@@ -77,7 +77,7 @@ function expectNeverMt.__index(self, check)
 	assert(expectationMt[check], `invalid index {check}`)
 	
 	return function(_, ...)
-		local success, err = pcall(function(...)
+		local success, err: string | any = pcall(function(...)
 			return expectationMt[check](self, ...)
 		end, ...)
 		
@@ -122,7 +122,7 @@ local function expect(val)
 end
 
 local function discoverTests(t, parent)
-	for k, v in t do
+	for k: string, v in t do
 		local lastSlash = #k - string.find(string.reverse(k), "/")
 		local groupName = string.sub(k, lastSlash + 2, #k)
 		parent[groupName] = {}

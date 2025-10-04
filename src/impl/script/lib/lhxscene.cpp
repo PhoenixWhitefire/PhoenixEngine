@@ -25,7 +25,15 @@ static int scene_load(lua_State* L)
 {
     const char* path = luaL_checkstring(L, 1);
 
-	std::string fileContents = FileRW::ReadFile(path);
+	bool readSuccess = true;
+	std::string fileContents = FileRW::ReadFile(path, &readSuccess);
+
+	if (!readSuccess)
+	{
+		lua_pushboolean(L, false);
+		lua_pushstring(L, "Couldn't open file");
+		return 2;
+	}
 
 	bool deserializeSuccess = true;
 	std::vector<ObjectRef> rootNodes = SceneFormat::Deserialize(fileContents, &deserializeSuccess);

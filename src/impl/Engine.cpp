@@ -92,14 +92,17 @@ void Engine::OnWindowResized(int NewSizeX, int NewSizeY)
 	this->WindowSizeY = NewSizeY;
 
 	RendererContext.ChangeResolution(WindowSizeX, WindowSizeY);
+	Texture& fboRes = m_TextureManager.GetTextureResource(m_FboResourceId);
+	fboRes.Width = NewSizeX;
+	fboRes.Height = NewSizeY;
 
 	SDL_DisplayID currentDisplay = SDL_GetDisplayForWindow(Window);
 	if (currentDisplay == 0)
-		RAISE_RT("`SDL_GetDisplayForWindow` failed with error: " + std::string(SDL_GetError()));
+		RAISE_RTF("`SDL_GetDisplayForWindow` failed with error: {}", SDL_GetError());
 
 	float displayScale = SDL_GetDisplayContentScale(currentDisplay);
 	if (displayScale == 0.f)
-		RAISE_RT("`SDL_GetDisplayContentScale` returned invalid result, error: " + std::string(SDL_GetError()));
+		RAISE_RTF("`SDL_GetDisplayContentScale` returned invalid result, error: {}", SDL_GetError());
 
 	static ImGuiStyle DefaultStyle = ImGui::GetStyle();
 	ImGuiStyle scaledStyle = DefaultStyle;
@@ -115,7 +118,7 @@ void Engine::SetIsFullscreen(bool Fullscreen)
 	this->IsFullscreen = Fullscreen;
 
 	if (!SDL_SetWindowFullscreen(this->Window, this->IsFullscreen))
-		RAISE_RT("`SDL_SetWindowFullscreen` failed, error: " + std::string(SDL_GetError()));
+		RAISE_RTF("`SDL_SetWindowFullscreen` failed, error: {}", SDL_GetError());
 }
 
 template <class T>
@@ -567,6 +570,10 @@ static GLuint startLoadingSkybox(std::vector<uint32_t>* skyboxFacesBeingLoaded)
 	return skyboxCubemap;
 }
 
+#include "imgui_internal.h"
+
+static ImGuiID ViewportNodeId = UINT32_MAX;
+
 void Engine::m_Render(double deltaTime)
 {
 	ZoneScoped;
@@ -578,8 +585,9 @@ void Engine::m_Render(double deltaTime)
 		PHX_ENSURE(SDL_GL_SetSwapInterval(1));
 	else
 		PHX_ENSURE(SDL_GL_SetSwapInterval(0));
-
-	float aspectRatio = (float)this->WindowSizeX / (float)this->WindowSizeY;
+	
+	ImGuiDockNode* viewportNode = ImGui::DockBuilderGetNode(ViewportNodeId)->CentralNode;
+	float aspectRatio = viewportNode->Size.x / viewportNode->Size.y;
 
 	ObjectHandle sceneCamObject = WorkspaceRef->GetComponent<EcWorkspace>()->GetSceneCamera();
 	EcCamera* sceneCamera = sceneCamObject->GetComponent<EcCamera>();
@@ -624,6 +632,13 @@ void Engine::m_Render(double deltaTime)
 
 	RendererContext.FrameBuffer.Bind();
 
+	glViewport(
+		(int)viewportNode->Pos.x,
+		(int)viewportNode->Pos.y,
+		(int)viewportNode->Size.x,
+		(int)viewportNode->Size.y
+	);
+
 	glClear(/*GL_COLOR_BUFFER_BIT |*/ GL_DEPTH_BUFFER_BIT);
 	glDepthFunc(GL_LEQUAL);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -641,15 +656,10 @@ void Engine::m_Render(double deltaTime)
 	//Main render pass
 	RendererContext.DrawScene(CurrentScene, renderMatrix, sceneCamera->Transform, GetRunningTime(), DebugWireframeRendering);
 
+	glViewport(0, 0, WindowSizeX, WindowSizeY);
 	glDisable(GL_DEPTH_TEST);
 	
 	this->OnFrameRenderGui.Fire(deltaTime);
-
-	{
-		ZoneScopedN("DearImGuiRender");
-		ImGui::Render();
-		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-	}
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
@@ -733,6 +743,12 @@ void Engine::m_Render(double deltaTime)
 		);
 	}
 
+	{
+		ZoneScopedN("DearImGuiRender");
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+	}
+
 	glEnable(GL_DEPTH_TEST);
 }
 
@@ -776,6 +792,14 @@ void Engine::Start()
 	skyboxFacesBeingLoaded.reserve(6);
 
 	m_SkyboxCubemap = startLoadingSkybox(&skyboxFacesBeingLoaded);
+
+	m_FboResourceId = m_TextureManager.Assign({
+		.ImagePath = "!Framebuffer:Main",
+		.ResourceId = UINT32_MAX,
+		.GpuId = RendererContext.FrameBuffer.GpuTextureId,
+		.Width = WindowSizeX, .Height = WindowSizeY,
+		.NumColorChannels = 3
+	}, "!Framebuffer:Main");
 
 	CurrentScene.RenderList.reserve(50);
 	m_IsRunning = true;
@@ -948,7 +972,7 @@ void Engine::Start()
 			ImGui_ImplOpenGL3_NewFrame();
 			ImGui_ImplSDL3_NewFrame();
 			ImGui::NewFrame();
-			ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
+			ViewportNodeId = ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
 		}
 
 		ObjectHandle sceneCamObject = WorkspaceRef->GetComponent<EcWorkspace>()->GetSceneCamera();

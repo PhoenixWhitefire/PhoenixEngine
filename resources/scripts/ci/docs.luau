@@ -99,7 +99,7 @@ local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, lib
 		
 		local v = libm[k]
 		
-		if not v then
+		if not v or not v.Description then
 			print(`Missing docs for { libname }.{ k }`)
 		end
 		
@@ -488,9 +488,9 @@ end
 definitionsFile ..= "\n\n"
 
 local scriptenv = datatypesPrologue .. datatypes .. librariesPrologue .. libraries .. globalsPrologue .. globals
-fs.write(BASE_PATH .. "/scriptenv.txt", scriptenv, false)
+fs.write(BASE_PATH .. "/scriptenv.txt", scriptenv)
 
-fs.write(BASE_PATH .. "/components.txt", components, false)
+fs.write(BASE_PATH .. "/components.txt", components)
 
 fs.write("scripts/lsp-defs.d.luau", definitionsFile)
 

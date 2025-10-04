@@ -25,6 +25,7 @@
 #include "component/Camera.hpp"
 #include "component/Script.hpp"
 
+#include "GlobalJsonConfig.hpp"
 #include "Utilities.hpp"
 #include "UserInput.hpp"
 #include "Memory.hpp"
@@ -882,9 +883,8 @@ static void renderShaderPipelinesEditor()
 {
 	ZoneScopedC(tracy::Color::DarkSeaGreen);
 
-	ShaderManager* shdManager = ShaderManager::Get();
-
-	std::vector<ShaderProgram>& shaders = shdManager->GetLoadedShaders();
+	if (EngineJsonConfig["Tool_Shaders"] == false)
+		return;
 
 	if (!ImGui::Begin("Shader Pipelines"))
 	{
@@ -892,6 +892,9 @@ static void renderShaderPipelinesEditor()
 
 		return;
 	}
+
+	ShaderManager* shdManager = ShaderManager::Get();
+	std::vector<ShaderProgram>& shaders = shdManager->GetLoadedShaders();
 
 	static std::string NewShdName = "";
 	NewShdName.reserve(64);
@@ -1116,14 +1119,17 @@ static void renderMaterialEditor()
 {
 	ZoneScopedC(tracy::Color::DarkSeaGreen);
 
-	MaterialManager* mtlManager = MaterialManager::Get();
-	TextureManager* texManager = TextureManager::Get();
+	if (EngineJsonConfig["Tool_Materials"] == false)
+		return;
 
 	if (!ImGui::Begin("Materials"))
 	{
 		ImGui::End();
 		return;
 	}
+
+	MaterialManager* mtlManager = MaterialManager::Get();
+	TextureManager* texManager = TextureManager::Get();
 
 	ImGui::InputText("Load material", MtlLoadNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
 	ImGui::SetItemTooltip("The name of the material to load in, NOT the file path");
@@ -1678,22 +1684,26 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 			nodeClicked = object;
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
 			isHovered = true;
-		if (ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+		if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
 			openInserter = true;
 
 		ImGui::SameLine();
 		ImGui::SetCursorPosX(ImGui::GetCursorPosX() - style.IndentSpacing * 0.6f + 1.5f);
 		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 2.f); // not the faintest idea
 
-		ImGui::Image(
+		ImGui::ImageWithBg(
 			tex.GpuId,
-			ImVec2(16.f, 16.f)
+			ImVec2(16.f, 16.f),
+			ImVec2(0.f, 0.f),
+			ImVec2(1.f, 1.f),
+			ImVec4(),
+			object->Enabled ? ImVec4(1.f, 1.f, 1.f, 1.f) : ImVec4(.5f, .5f, .5f, 1.f)
 		);
 		if (ImGui::IsItemClicked())
 			nodeClicked = object;
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
 			isHovered = true;
-		if (ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+		if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
 			openInserter = true;
 		
 		ImGui::SameLine();
@@ -1703,12 +1713,12 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 			nodeClicked = object;
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
 			isHovered = true;
-		if (ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+		if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
 			openInserter = true;
 
 		VisibleTreeWip.push_back(object);
 
-		if (openInserter || ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+		if (openInserter || ImGui::IsItemClicked(ImGuiMouseButton_Right))
 		{
 			ImGui::OpenPopup(1979); // the mimic!!
 
@@ -1922,38 +1932,18 @@ static void propertyTooltip(const std::string_view& PropName, bool IsObjectProp 
 	}
 }
 
-void InlayEditor::UpdateAndRender(double DeltaTime)
+static void renderExplorer()
 {
-	ZoneScopedC(tracy::Color::DarkSeaGreen);
+	ZoneScoped;
 
-	if (!ExplorerRoot.Reference.Referred())
-		ExplorerRoot = GameObject::GetObjectById(GameObject::s_DataModel);
+	if (EngineJsonConfig["Tool_Explorer"] == false)
+		return;
 
-	ErrorTooltipTimeRemaining -= DeltaTime;
-
-	if (ErrorTooltipTimeRemaining > 0.f)
-		ImGui::SetTooltip("%s", ErrorTooltipMessage.c_str());
-
-	renderTextEditor();
-	renderShaderPipelinesEditor();
-	renderMaterialEditor();
-
-	if (!ImGui::Begin("Editor"))
+	if ( !ImGui::Begin("Explorer"))
 	{
 		ImGui::End();
 		return;
 	}
-
-	ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(227, 227, 227, 255));
-	ImGui::Text("Compiled: %s", __DATE__);
-	ImGui::PopStyleColor();
-
-	ImVec2 hrchChildWinSzOverride{};
-
-	if (Selections.size() > 0)
-		hrchChildWinSzOverride = ImGui::GetContentRegionAvail() * ImVec2(1.f, .4f);
-
-	ImGui::BeginChild("HierarchyChildWindow", hrchChildWinSzOverride, ImGuiChildFlags_Borders);
 
 	VisibleTreeWip.clear();
 	recursiveIterateTree(ExplorerRoot);
@@ -1974,7 +1964,22 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 		ImGui::EndPopup();
 	}
 
-	ImGui::EndChild();
+
+	ImGui::End();
+}
+
+static void renderProperties()
+{
+	ZoneScoped;
+
+	if (EngineJsonConfig["Tool_Properties"] == false)
+		return;
+
+	if (!ImGui::Begin("Properties"))
+	{
+		ImGui::End();
+		return;
+	}
 
 	if (Selections.size() > 0)
 	{
@@ -1983,8 +1988,6 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 			idSum += sel->ObjectId;
 
 		ImGui::PushID(idSum);
-
-		ImGui::BeginChild("PropertiesEditor", ImVec2(), ImGuiChildFlags_Borders);
 
 		std::string sepStr = "Properties of " + std::to_string(Selections.size()) + " objects";
 		if (Selections.size() == 1)
@@ -2007,6 +2010,8 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 			for (const ReflectorRef& ref : sel->Components)
 				components.insert(ref.Type);
 
+		static EntityComponent RemoveComponentPopupTarget = EntityComponent::None;
+
 		for (EntityComponent ec : components)
 		{
 			Texture tex = getIconForComponent(ec);
@@ -2016,10 +2021,46 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 				s_EntityComponentNames[(size_t)ec].data(),
 				getDescriptionForComponent(ec).c_str()
 			);
+
+			if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+			{
+				RemoveComponentPopupTarget = ec;
+				ImGui::OpenPopup("RemoveComponent");
+			}
+
 			ImGui::SameLine();
 		}
 
-		ImGui::NewLine();
+		if (ImGui::Button("+", ImVec2(16, 16)))
+			ImGui::OpenPopup("AddComponent");
+
+		if (ImGui::BeginPopup("AddComponent"))
+		{
+			for (size_t i = 1; i < (size_t)EntityComponent::__count; i++)
+				if (ImGui::MenuItem(s_EntityComponentNames[i].data()))
+				{
+					for (const ObjectHandle& obj : Selections)
+						if (!obj->GetComponentByType((EntityComponent)i))
+							obj->AddComponent((EntityComponent)i);
+				}
+
+			ImGui::EndPopup();
+		}
+
+		if (ImGui::BeginPopup("RemoveComponent"))
+		{
+			ImGui::SeparatorText(s_EntityComponentNames[(size_t)RemoveComponentPopupTarget].data());
+
+			if (ImGui::MenuItem("Remove"))
+			{
+				for (const ObjectHandle& obj : Selections)
+					if (obj->GetComponentByType(RemoveComponentPopupTarget))
+						obj->RemoveComponent(RemoveComponentPopupTarget);
+			}
+			
+			ImGui::EndPopup();
+		}
+
 		ImGui::PopID();
 
 		std::unordered_map<std::string_view, std::pair<const Reflection::PropertyDescriptor*, Reflection::GenericValue>> props;
@@ -2392,13 +2433,30 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 				propertyTooltip(propName, curVal.Type == Reflection::ValueType::GameObject);
 			}
 		}
-
-		ImGui::EndChild();
 		
 		ImGui::PopID();
 	}
 
 	ImGui::End();
+}
+
+void InlayEditor::UpdateAndRender(double DeltaTime)
+{
+	ZoneScopedC(tracy::Color::DarkSeaGreen);
+
+	if (!ExplorerRoot.Reference.Referred())
+		ExplorerRoot = GameObject::GetObjectById(GameObject::s_DataModel);
+
+	ErrorTooltipTimeRemaining -= DeltaTime;
+
+	if (ErrorTooltipTimeRemaining > 0.f)
+		ImGui::SetTooltip("%s", ErrorTooltipMessage.c_str());
+
+	renderTextEditor();
+	renderShaderPipelinesEditor();
+	renderMaterialEditor();
+	renderExplorer();
+	renderProperties();
 }
 
 void InlayEditor::SetExplorerRoot(const ObjectHandle NewRoot)
@@ -2559,6 +2617,11 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 
 	ImGuiContext* debuggerContext = ImGui::CreateContext();
 	ImGuiContext* prevContext = ImGui::GetCurrentContext();
+
+	ImGuiIO& debuggerGuiIO = ImGui::GetIO(debuggerContext);
+	debuggerGuiIO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	debuggerGuiIO.IniFilename = "debugger-layout.ini";
+
 	ImGui::SetCurrentContext(debuggerContext);
 
 	PHX_ENSURE_MSG(ImGui_ImplSDL3_InitForOpenGL(
@@ -2638,6 +2701,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplSDL3_NewFrame();
 		ImGui::NewFrame();
+		ImGui::DockSpaceOverViewport();
 
 		glClear(GL_COLOR_BUFFER_BIT);
 
@@ -2881,7 +2945,12 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 			{
 				if (car.currentline > 0)
 				{
-					if (ImGui::Button(std::format(
+					ImGui::PushStyleColor(
+						ImGuiCol_TextLink,
+						ImVec4(1.f, 1.f, 1.f, 1.f) - ImGui::GetStyleColorVec4(ImGuiCol_WindowBg) + ImVec4(0.f, 0.f, 0.f, 1.f)
+					);
+
+					if (ImGui::TextLink(std::format(
 						"{}:{} in {}",
 						car.short_src, car.currentline, car.name ? car.name : "<anonmyous>"
 					).c_str()))
@@ -2889,9 +2958,15 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 						invokeTextEditor(car.short_src);
 						lua_getinfo(L, i, "sln", ar);
 					}
+
+					ImGui::SetItemTooltip("View source");
+					ImGui::PopStyleColor();
 				}
 				else
+				{
 					ImGui::Text("%s in %s", car.short_src, car.name);
+					ImGui::SetItemTooltip("Cannot view the source of functions defined in C++");
+				}
 			}
 		}
 		ImGui::End();

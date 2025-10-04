@@ -1,6 +1,7 @@
 #pragma once
 
-#define RAISE_RT(errstring) throw(std::runtime_error(errstring))
+#define RAISE_RT(error, ...) throw(std::runtime_error(error))
+#define RAISE_RTF(fmtstr, ...) RAISE_RT(std::format(fmtstr, __VA_ARGS__))
 
 // 24/01/2025
 // an assert, but also at runtime

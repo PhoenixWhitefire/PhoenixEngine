@@ -43,7 +43,7 @@ static std::string getTexturePath(
 		uint32_t byteLength = bufferView["byteLength"];
 
 		if (bufferIndex != 0)
-			RAISE_RT("ModelImporter::getTexturePath got non-zero buffer index " + std::to_string(bufferIndex));
+			RAISE_RTF("ModelImporter::getTexturePath got non-zero buffer index {}", std::to_string(bufferIndex));
 
 		std::string_view imageData{ BufferData.begin() + byteOffset, BufferData.begin() + byteOffset + byteLength };
 
@@ -99,7 +99,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 	std::string textData = FileRW::ReadFile(gltfFilePath, &fileExists, false);
 
 	if (!fileExists)
-		RAISE_RT("Failed to load Model, file '" + AssetPath + "' not found.");
+		RAISE_RTF("Failed to load Model, file '{}' not found", AssetPath);
 
 	// Binary files start with magic number that corresponds to "glTF"
 	// https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#binary-header
@@ -118,10 +118,10 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 		uint32_t jsonChType = readU32(textData, 16);
 
 		if (jsonChType != 0x4E4F534A)
-			RAISE_RT(std::format(
+			RAISE_RTF(
 				"Failed to load Model '{}', first Chunk in binary file was not of type JSON",
 				AssetPath
-			));
+			);
 
 		ZoneScopedN("ParseGLBStructure");
 
@@ -136,10 +136,10 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 		uint32_t binaryChType = readU32(binaryChunk, 4);
 
 		if (binaryChType != 0x004E4942)
-			RAISE_RT(std::format(
+			RAISE_RTF(
 				"Failed to load Model '{}', second Chunk in binary file was not of type BIN",
 				AssetPath
-			));
+			);
 
 		// + 8 because 8 byte header
 		m_Data = std::string(binaryChunk.begin() + 8, binaryChunk.begin() + 8 + binaryChLength);
@@ -153,7 +153,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 		}
 		catch (const nlohmann::json::parse_error& Error)
 		{
-			RAISE_RT("Failed to import model due to parse error: " + std::string(Error.what()));
+			RAISE_RTF("Failed to import model due to parse error: {}", Error.what());
 		}
 
 		m_Data = m_GetData();
@@ -216,7 +216,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 	}
 	catch (const nlohmann::json::type_error& Error)
 	{
-		RAISE_RT("Failed to import model due to type error: " + std::string(Error.what()));
+		RAISE_RTF("Failed to import model due to type error: {}", Error.what());
 	}
 
 	ZoneName("ImportNodes", 11);
@@ -782,7 +782,7 @@ std::vector<float> ModelLoader::m_GetFloats(const nlohmann::json& accessor)
 		numPerVert = 16;
 
 	else
-		RAISE_RT("Could not decode GLTF model: Type is not handled (not SCALAR, VEC2, VEC3, or VEC4)");
+		RAISE_RTF("Could not decode GLTF model: Invalid type '{}' (not SCALAR, VEC2, VEC3, or VEC4)", type);
 
 	uint32_t componentSize{};
 	switch (componentType)
@@ -798,7 +798,7 @@ std::vector<float> ModelLoader::m_GetFloats(const nlohmann::json& accessor)
 		break;
 	}
 	default:
-		RAISE_RT("Unsupported `componentType` of " + std::to_string(componentType));
+		RAISE_RTF("Unsupported `componentType` of {}", componentType);
 	}
 
 	// Go over all the bytes in the data at the correct place using the properties from above
@@ -912,7 +912,7 @@ std::vector<uint8_t> ModelLoader::m_GetUBytes(const nlohmann::json& accessor)
 		numPerVert = 4;
 
 	else
-		RAISE_RT("Could not decode GLTF model: Type is not handled (not SCALAR, VEC2, VEC3, or VEC4)");
+		RAISE_RTF("Could not decode GLTF model: Invalid type '{}' (not SCALAR, VEC2, VEC3, or VEC4)", type);
 
 	// Go over all the bytes in the data at the correct place using the properties from above
 	uint32_t beginningOfData = byteOffset + accByteOffset;
@@ -1119,7 +1119,7 @@ std::vector<glm::vec2> ModelLoader::m_GetAndGroupFloatsVec2(const nlohmann::json
 	ZoneScoped;
 
 	if (Accessor["type"] != "VEC2")
-		RAISE_RT("Expected accessor to be VEC2");
+		RAISE_RTF("Expected accessor to be VEC2, but is {}", (std::string)Accessor["type"]);
 
 	std::vector<float> floats = m_GetFloats(Accessor);
 
@@ -1140,7 +1140,7 @@ std::vector<glm::vec3> ModelLoader::m_GetAndGroupFloatsVec3(const nlohmann::json
 	ZoneScoped;
 
 	if (Accessor["type"] != "VEC3")
-		RAISE_RT("Expected accessor to be VEC3");
+		RAISE_RTF("Expected accessor to be VEC3, but is {}", (std::string)Accessor["type"]);
 
 	std::vector<float> floats = m_GetFloats(Accessor);
 
@@ -1185,7 +1185,7 @@ std::vector<glm::vec4> ModelLoader::m_GetAndGroupFloatsVec4(const nlohmann::json
 			);
 
 	else
-		RAISE_RT("Expected accessor to be either VEC3 or VEC4");
+		RAISE_RTF("Expected accessor to be either VEC3 or VEC4, but is {}", (std::string)Accessor["type"]);
 
 	return vectors;
 }
@@ -1195,7 +1195,7 @@ std::vector<glm::mat4> ModelLoader::m_GetAndGroupFloatsMat4(const nlohmann::json
 	ZoneScoped;
 
 	if (Accessor["type"] != "MAT4")
-		RAISE_RT("Expected accessor to be MAT4");
+		RAISE_RTF("Expected accessor to be MAT4, but is '{}'", (std::string)Accessor["type"]);
 
 	std::vector<float> floats = m_GetFloats(Accessor);
 

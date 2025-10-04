@@ -96,10 +96,10 @@ void RenderMaterial::Reload()
 
 		default:
 		{
-			RAISE_RT(std::format(
+			RAISE_RTF(
 				"Material '{}' tried to specify Uniform '{}', but it had unsupported type '{}'",
 				this->Name, uniformName, value.type_name()
-			));
+			);
 
 			break;
 		}

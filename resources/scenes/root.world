@@ -1,34 +1,51 @@
 PHNXENGI
-#Version 2.00
+#Version 2.10
 #Asset Scene
-#Date 9-2-2025
-#SceneName scenes/root.world
+#Date 4-10-2025
+#SceneName resources/scenes/root.world
 
 {
   "GameObjects": [
     {
-      "$_class": "DataModel",
-      "$_objectId": 0,
+      "$_components": [
+        "DataModel"
+      ],
+      "$_objectId": 8,
       "Enabled": true,
       "Name": "DataModel",
       "Serializes": true
     },
     {
-      "$_class": "Workspace",
-      "$_objectId": 1,
+      "$_components": [
+        "Workspace"
+      ],
+      "$_objectId": 9,
       "Enabled": true,
       "Name": "Workspace",
-      "Parent": 0,
-      "SceneCamera": 2,
+      "Parent": 8,
+      "SceneCamera": 10,
       "Serializes": true
     },
     {
-      "$_class": "Camera",
-      "$_objectId": 2,
+      "$_components": [
+        "Script"
+      ],
+      "$_objectId": 11,
+      "Enabled": true,
+      "Name": "RootScript",
+      "Parent": 9,
+      "Serializes": true,
+      "SourceFile": "scripts/root.luau"
+    },
+    {
+      "$_components": [
+        "Camera"
+      ],
+      "$_objectId": 10,
       "Enabled": true,
       "FieldOfView": 70.0,
       "Name": "Camera",
-      "Parent": 1,
+      "Parent": 9,
       "Serializes": true,
       "Transform": [
         [
@@ -57,16 +74,7 @@ PHNXENGI
         ]
       ],
       "UseSimpleController": true
-    },
-    {
-      "$_class": "Script",
-      "$_objectId": 4,
-      "Enabled": true,
-      "Name": "RootScript",
-      "Parent": 1,
-      "Serializes": true,
-      "SourceFile": "scripts/root.luau"
     }
   ],
-  "SceneName": "scenes/root.world"
+  "SceneName": "resources/scenes/root.world"
 }

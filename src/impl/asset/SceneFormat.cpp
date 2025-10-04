@@ -207,7 +207,7 @@ static std::vector<ObjectRef> LoadMapVersion1(
 		}
 		catch (const nlohmann::json::type_error& e)
 		{
-			RAISE_RT(std::format("Failed to decode map data: {}", e.what()));
+			RAISE_RTF("Failed to decode map data: {}", e.what());
 		}
 
 		std::string ModelPath = PropObject["path"];

@@ -174,6 +174,119 @@ static int engine_poplvm(lua_State*)
     return 0;
 }
 
+#include "GlobalJsonConfig.hpp"
+
+static const std::string_view Tools[] =
+{
+    "Tool_Explorer",
+    "Tool_Properties",
+    "Tool_Materials",
+    "Tool_Shaders",
+    "Tool_Settings",
+    "Tool_Info"
+};
+
+static int engine_gettoolnames(lua_State* L)
+{
+    lua_createtable(L, (int)std::size(Tools), 0);
+
+    for (int i = 0; i < (int)std::size(Tools); i++)
+    {
+        lua_pushinteger(L, i);
+        lua_pushlstring(L, Tools[i].data(), Tools[i].size());
+        lua_settable(L, -3);
+    }
+
+    return 1;
+}
+
+static const char* checkValidTool(lua_State* L)
+{
+    const char* toolName = luaL_checkstring(L, 1);
+    bool isValidTool = false;
+
+    for (int i = 0; i < (int)std::size(Tools); i++)
+    {
+        if (strcmp(Tools[i].data(), toolName) == 0)
+        {
+            isValidTool = true;
+            break;
+        }
+    }
+
+    if (!isValidTool)
+        luaL_error(L, "Invalid tool '%s'", toolName);
+
+    return toolName;
+}
+
+static int engine_settoolenabled(lua_State* L)
+{
+    const char* requestedTool = checkValidTool(L);
+    EngineJsonConfig[requestedTool] = (bool)luaL_checkboolean(L, 2);
+
+    return 0;
+}
+
+static int engine_istoolenabled(lua_State* L)
+{
+    const char* requestedTool = checkValidTool(L);
+    const nlohmann::json& value = EngineJsonConfig[requestedTool];
+
+    lua_pushboolean(L, value.is_null() ? true : (bool)value);
+    return 1;
+}
+
+#include <SDL3/SDL_messagebox.h>
+
+static int engine_showmessagebox(lua_State* L)
+{
+    size_t typestrlen = 0;
+    const char* typestr = luaL_optlstring(L, 3, "", &typestrlen);
+
+    if (typestrlen > 1)
+        luaL_error(L, "Flags string should only be 1 character or less, but is %zi", typestrlen);
+
+    SDL_MessageBoxFlags flags = 0;
+    switch (*typestr)
+    {
+    case '\0':
+    {
+        break;
+    }
+
+    case 'i':
+    {
+        flags |= SDL_MESSAGEBOX_INFORMATION;
+        break;
+    }
+    case 'w':
+    {
+        flags |= SDL_MESSAGEBOX_WARNING;
+        break;
+    }
+    case 'e':
+    {
+        flags |= SDL_MESSAGEBOX_ERROR;
+        break;
+    }
+
+    default:
+    {
+        luaL_error(L, "Invalid message box type '%c'", *typestr);
+    }
+    }
+
+    PHX_ENSURE(SDL_ShowSimpleMessageBox(
+        flags,
+        luaL_checkstring(L, 1),
+        luaL_checkstring(L, 2),
+        SDL_GL_GetCurrentWindow()
+    ));
+
+    return 0;
+}
+
 static luaL_Reg engine_funcs[] =
 {
     { "getwindowsize", engine_getwindowsize },
@@ -195,6 +308,10 @@ static luaL_Reg engine_funcs[] =
     { "setexplorerselections", engine_setexplorerselections },
     { "pushlvm", engine_pushlvm },
     { "poplvm", engine_poplvm },
+    { "gettoolnames", engine_gettoolnames },
+    { "settoolenabled", engine_settoolenabled },
+    { "istoolenabled", engine_istoolenabled },
+    { "showmessagebox", engine_showmessagebox },
     { NULL, NULL }
 };
 

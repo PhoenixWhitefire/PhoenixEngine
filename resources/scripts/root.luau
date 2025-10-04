@@ -49,8 +49,6 @@ local function loadSubLevel(Path)
 	end
 end
 
-breakpoint(54)
-
 local function update(DeltaTime)
 	if imgui.begin("Model Importer") then
 		ModelImporterScale = imgui.inputnumber("Scale", ModelImporterScale)
@@ -200,8 +198,6 @@ local function update(DeltaTime)
 		workspace.Level:Destroy()
 		script.Enabled = false
 	end
-
-	breakpoint(205)
 end
 
 if not workspace:FindChild("Level") then

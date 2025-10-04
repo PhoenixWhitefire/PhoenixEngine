@@ -245,9 +245,11 @@
         "framerate": "function",
         "getfullscreen": "function",
         "getmaxframerate": "function",
+        "gettoolnames": "function",
         "getvsync": "function",
         "getwindowsize": "function",
         "isheadless": "function",
+        "istoolenabled": "function",
         "physicstimescale": "function",
         "poplvm": "function",
         "pushlvm": "function",
@@ -255,8 +257,10 @@
         "setexplorerselections": "function",
         "setfullscreen": "function",
         "setmaxframerate": "function",
+        "settoolenabled": "function",
         "setvsync": "function",
-        "setwindowsize": "function"
+        "setwindowsize": "function",
+        "showmessagebox": "function"
       },
       "fs": {
         "isdirectory": "function",
@@ -269,6 +273,7 @@
         "write": "function"
       },
       "imgui": {
+        "anyitemactive": "function",
         "begin": "function",
         "beginchild": "function",
         "beginfullscreen": "function",
@@ -286,7 +291,10 @@
         "endw": "function",
         "getcontentregionavail": "function",
         "getcursorpos": "function",
+        "getwindowposition": "function",
+        "getwindowsize": "function",
         "image": "function",
+        "imagebutton": "function",
         "indent": "function",
         "inputnumber": "function",
         "inputstring": "function",
@@ -294,7 +302,9 @@
         "itemhovered": "function",
         "menuitem": "function",
         "popid": "function",
+        "popstylecolor": "function",
         "pushid": "function",
+        "pushstylecolor": "function",
         "sameline": "function",
         "separator": "function",
         "separatortext": "function",
@@ -302,12 +312,15 @@
         "setitemtooltip": "function",
         "setnextwindowfocus": "function",
         "setnextwindowopen": "function",
+        "setnextwindowposition": "function",
+        "setnextwindowsize": "function",
         "settooltip": "function",
         "stylecolors": "function",
         "text": "function",
         "textlink": "function",
         "treenode": "function",
-        "treepop": "function"
+        "treepop": "function",
+        "windowhovered": "function"
       },
       "input": {
         "getmousepos": "function",

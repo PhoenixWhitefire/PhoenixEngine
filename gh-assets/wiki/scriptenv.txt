@@ -54,7 +54,7 @@ Custom types with functions and properties.
 
 * A 4x4 transformation matrix
 
-#### `Matrix.new(): `
+#### `Matrix.new(): Matrix`
 * Creates a new identity matrix
 
 #### `Matrix.fromTranslation(Position: vector): Matrix`
@@ -152,36 +152,50 @@ Custom libraries.
 #### `engine.poplvm(): `
 * Pops the topmost Luau VM from the VM stack, causing the VM below it to be used for any Scripts resumed beyond that point
 
+#### `engine.gettoolnames(): { string }`
+* Returns the list of valid tool names which can be passed into `.settoolenabled` and `.istoolenabled`
+
 #### `engine.framerate(): number`
 * Returns the current framerate
+
+#### `engine.showmessagebox(Title: string, Message: string, Type: ('' | 'i' | 'w' | 'e')? [ '' ]): `
+* Shows a message to the player with the given title, message and type (Info, Warning, Error or N/A)
+* This is a blocking operation and no scripts or other parts of the Engine run until the message is dismissed
 
 #### `engine.setvsync(VSyncEnabled: boolean): `
 * Enables/disables VSync
 
-#### `engine.binddatamodel(NewDataModel: GameObject): `
-* Switches Data Models to the specified Object
-
 #### `engine.setwindowsize(Width: number, Height: number): `
 * Sets the size of the window to the specified two Width and Height integers
 
-#### `engine.setexplorerselections(Selections: { GameObject }): `
-* Changes the built-in Explorer's Object selections to the specified Objects
+#### `engine.binddatamodel(NewDataModel: GameObject): `
+* Switches Data Models to the specified Object
 
-#### `engine.exit(ExitCode: number? [ 0 ]): `
-* Shuts down the Engine and exits the process with the specified Exit Code (or 0 by default)
-
-#### `engine.setfullscreen(Fullscreen: boolean): `
-* Enables/disables fullscreen mode
+#### `engine.settoolenabled(Tool: string, Enabled: boolean): `
+* Enables/disables the given tool
 
 #### `engine.pushlvm(): `
 * Pushes a new Luau VM to the Luau VM stack. Scripts resumed past that point will run in the new VM
 * The `game` and `workspace` globals in the new VM will depend on the current bound datamodel
 
+#### `engine.exit(ExitCode: number? [ 0 ]): `
+* Shuts down the Engine and exits the process with the specified Exit Code (or 0 by default)
+
+#### `engine.setexplorerselections(Selections: { GameObject }): `
+* Changes the built-in Explorer's Object selections to the specified Objects
+
+#### `engine.setfullscreen(Fullscreen: boolean): `
+* Enables/disables fullscreen mode
+
+#### `engine.setexplorerroot(Root: GameObject): `
+* Changes the Root of the built-in Explorer's hierarchy view
+
 #### `engine.setmaxframerate(MaxFramerate: number): `
 * Sets the maximum framerate the Engine will reach before self-limiting
 
-#### `engine.physicstimescale(Timescale: number): `
-* Sets the time scale factor of the physics simulation
+#### `engine.istoolenabled(Tool: string): boolean`
+* Returns whether the given tool is enabled
+* If the given tool name is not valid, an error is thrown
 
 #### `engine.getfullscreen(): boolean`
 * Returns whether the Engine is currently in fullscreen
@@ -202,8 +216,8 @@ Custom libraries.
 #### `engine.isheadless(): boolean`
 * Returns whether the Engine is currently running Headless mode
 
-#### `engine.setexplorerroot(Root: GameObject): `
-* Changes the Root of the built-in Explorer's hierarchy view
+#### `engine.physicstimescale(Timescale: number): `
+* Sets the time scale factor of the physics simulation
 
 #### `engine.daabbs(Enabled: boolean?): boolean`
 * Returns whether AABBs are drawn for all objects with collisions enabled (`.PhysicsCollisions == true`)
@@ -225,22 +239,22 @@ Custom libraries.
 * Returns the list of files the player selected, or an empty list if the player cancelled the dialog
 * If the operation fails, returns `nil` instead
 
-#### `fs.isfile(): `
+#### `fs.isfile(): boolean`
 * Returns whether the specified Path refers to a file
 
 #### `fs.promptsave(DefaultLocation: string? [ './' ], Filter: string? [ '*.*' ], FilterName: string? [ 'All files' ]): string`
 * Prompts the player to select a path to save a file to
 * Returns the path the player selected, or `nil` if they cancelled the dialog
 
-#### `fs.listdir(Path: string, Filter: 'a' | 'f' | 'd' [ 'a' ]): { [string]: 'f' | 'd' }`
+#### `fs.listdir(Path: string, Filter: ('a' | 'f' | 'd')? [ 'a' ]): { [string]: 'f' | 'd' }`
 * Returns a table of all the entries in the specified directory
 * The keys of the table is the path of the entry, while the values are the type of the entry
 * `f` is file, `d` is directory, and `a` is all
 
-#### `fs.isdirectory(): `
+#### `fs.isdirectory(): boolean`
 * Returns whether the specified Path refers to a directory
 
-#### `fs.ispromptactive(): `
+#### `fs.ispromptactive(): boolean`
 * Returns whether a File Dialog is currently visible to the player and blocking any more file dialogs from being opened
 
 ### `imgui`
@@ -255,7 +269,7 @@ Custom libraries.
 #### `imgui.dummy(Width: number [ 0 ], Height: number [ 0 ]): `
 * `ImGui::Dummy`
 
-#### `imgui.image(ImagePath: string, Width: number?, Height: number?): `
+#### `imgui.image(ImagePath: string, Size: { number }?, FlipVertically: boolean? [ false ], TintColor: { number }? [ { 1, 1, 1, 1 } ]): `
 * `ImGui::Image`
 
 #### `imgui.settooltip(Tooltip: string): `
@@ -273,7 +287,11 @@ Custom libraries.
 #### `imgui.checkbox(Name: string, Value: boolean): boolean`
 * `ImGui::Checkbox`
 
+#### `imgui.setnextwindowsize(Width: number, Height: number): `
+* `ImGui::SetNextWindowSize`
+
 #### `imgui.endmenu(): `
+* `ImGui::EndMenu`
 
 #### `imgui.text(Text: string): `
 * `ImGui::Text`
@@ -287,8 +305,8 @@ Custom libraries.
 #### `imgui.inputnumber(Text: string, Value: number): number`
 * `ImGui::InputDouble`
 
-#### `imgui.separator(): `
-* `ImGui::Separator`
+#### `imgui.getwindowsize(): number, number`
+* `ImGui::GetWindowSize`
 
 #### `imgui.setnextwindowopen(Open: boolean? [ true ]): `
 * `ImGui::SetNextWindowCollapsed(!Open)`
@@ -296,17 +314,14 @@ Custom libraries.
 #### `imgui.sameline(): `
 * `ImGui::SameLine`
 
-#### `imgui.setitemtooltip(Text: string): `
-* `ImGui::SetItemTooltip`
+#### `imgui.endw(): `
+* `ImGui::End`, `endw` and not `end` because `end` is a Luau keyword
 
 #### `imgui.combo(Text: string, Options: { string }, CurrentOption: number): number`
 * `ImGui::Combo`. Returns the selected option index
 
-#### `imgui.beginchild(Name: string, Width: number?, Height: number?, Flags: string?): boolean`
-* `ImGui::BeginChild`
-
-#### `imgui.popid(): `
-* `ImGui::PopID`
+#### `imgui.windowhovered(): boolean`
+* `ImGui::IsWindowHovered`
 
 #### `imgui.treepop(): `
 * `ImGui::TreePop`
@@ -314,32 +329,26 @@ Custom libraries.
 #### `imgui.treenode(Text: string): boolean`
 * `ImGui::TreeNode`
 
-#### `imgui.beginmenu(Name: string, Enabled: boolean?): boolean`
-* `ImGui::BeginMenu`
-
 #### `imgui.textlink(Text: string): boolean`
 * `ImGui::TextLink`
 
 #### `imgui.stylecolors(Theme: 'L' | 'D'): `
 * `ImGui::StyleColorsDark`/`ImGui::StyleColorsLight`
 
+#### `imgui.setnextwindowposition(X: number, Y: number): `
+* `ImGui::SetNextWindowPos
+
 #### `imgui.setnextwindowfocus(): `
 * `ImGui::SetNextWindowFocus`
 
-#### `imgui.endchild(): `
-* `ImGui::EndChild`
+#### `imgui.beginchild(Name: string, Width: number?, Height: number?, Flags: string?): boolean`
+* `ImGui::BeginChild`
 
-#### `imgui.endw(): `
-* `ImGui::End`, `endw` and not `end` because `end` is a Luau keyword
+#### `imgui.popid(): `
+* `ImGui::PopID`
 
-#### `imgui.itemhovered(): boolean`
-* `ImGui::IsItemHovered`
-
-#### `imgui.itemclicked(): boolean`
-* `ImGui::IsItemClicked`
-
-#### `imgui.indent(Indent: number?): `
-* `ImGui::Indent`
+#### `imgui.setitemtooltip(Text: string): `
+* `ImGui::SetItemTooltip`
 
 #### `imgui.setcursorpos(X: number, Y: number): `
 * `ImGui::SetCursorPos`
@@ -347,8 +356,42 @@ Custom libraries.
 #### `imgui.separatortext(Text: string): `
 * `ImGui::SeparatorText`
 
+#### `imgui.beginmenu(Name: string, Enabled: boolean?): boolean`
+* `ImGui::BeginMenu`
+
+#### `imgui.separator(): `
+* `ImGui::Separator`
+
+#### `imgui.pushstylecolor(StyleIndex: number, Color: { number }): `
+* `ImGui::PushStyleColor`
+* `Color` is an array with 4 numbers representing R, G, B, and A
+
+#### `imgui.pushid(Id: string): `
+* `ImGui::PushID`
+
+#### `imgui.endchild(): `
+* `ImGui::EndChild`
+
 #### `imgui.getcontentregionavail(): number, number`
 * `ImGui::GetContentRegionAvail`
+
+#### `imgui.anyitemactive(): boolean`
+* `ImGui::IsAnyItemActive`
+
+#### `imgui.itemclicked(): boolean`
+* `ImGui::IsItemClicked`
+
+#### `imgui.indent(Indent: number?): `
+* `ImGui::Indent`
+
+#### `imgui.itemhovered(): boolean`
+* `ImGui::IsItemHovered`
+
+#### `imgui.popstylecolor(): `
+* `ImGui::PopStyleColor`
+
+#### `imgui.getwindowposition(): number, number`
+* `ImGui::GetWindowPos`
 
 #### `imgui.beginfullscreen(Name: string, OffsetX: number? [ 0 ], OffsetY: number? [ 0 ]): `
 * Creates a Dear ImGui window which takes up the entire screen
@@ -359,8 +402,8 @@ Custom libraries.
 #### `imgui.beginmenubar(): boolean`
 * `ImGui::BeginMenuBar`
 
-#### `imgui.pushid(Id: string): `
-* `ImGui::PushID`
+#### `imgui.imagebutton(Name: string, Image: string, Size: { number }?): boolean`
+* `ImGui::ImageButton`
 
 ### `input`
 * Checking player inputs

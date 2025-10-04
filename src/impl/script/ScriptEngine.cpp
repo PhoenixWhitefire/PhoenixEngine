@@ -709,10 +709,10 @@ void ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yie
 	{
 		lua_Debug ar;
 		lua_getinfo(L, 0, "n", &ar);
-		RAISE_RT(std::format(
+		RAISE_RTF(
 			"Cannot yield with '{}' while in Dear ImGui section",
 			ar.name ? ar.name : "<unknown>"
-		));	
+		);	
 	}
 
 	lua_getglobal(L, YIELDBLOCKERTRACKING);
@@ -740,10 +740,10 @@ void ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yie
 		lua_getinfo(L, 0, "n", &yieldar);
 		lua_getinfo(L, 1, "sln", &ar);
 
-		RAISE_RT(std::format(
+		RAISE_RTF(
 			"{}:{} in {}: Cannot yield right now with '{}', blocked by the following functions:\n{}",
 			ar.short_src, ar.currentline, ar.name ? ar.name : "<anonymous>", yieldar.name ? yieldar.name : "<unknown>", blockers.c_str()
-		));
+		);
 	}
 
 	if (L->nCcalls > L->baseCcalls)
@@ -753,7 +753,7 @@ void ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yie
 		// LUAU_ASSERT(e.getThread() == L)
 		lua_Debug ar;
 		lua_getinfo(L, 0, "n", &ar);
-		RAISE_RT(std::format("Cannot yield with '{}' right now", ar.name ? ar.name : "<unknown>"));
+		RAISE_RTF("Cannot yield with '{}' right now", ar.name ? ar.name : "<unknown>");
 	}
 
 	// TODO a kind of hack to get what script we're running as?
@@ -1176,6 +1176,8 @@ static int api_eventnamecall(lua_State* L)
 		lua_setmetatable(eL, -2); // stack: ec
 		lua_xpush(eL, L, -1);
 
+		// assign the connection to the Event Thread so it can be used by the Connection Threads
+		// `eL` itself is never resumed, only `cL` or `nL` (`nL` being created per-invocation if the thread yields every time)
 		lua_pushlightuserdata(eL, eL); // stack: ec, lud
 		lua_pushvalue(eL, -2); // stack: ec, lud, ec
 		lua_settable(eL, LUA_ENVIRONINDEX); // stack: ec
@@ -1225,9 +1227,7 @@ static int api_eventnamecall(lua_State* L)
 					co = nL;
 				}
 				else
-				{
 					lua_xpush(eL, cL, 2);
-				}
 
 				for (size_t i = 0; i < Inputs.size(); i++)
 				{
@@ -1264,8 +1264,14 @@ static int api_eventnamecall(lua_State* L)
 						lua_resume(co, nullptr, 0); // i dont knowwwwww
 				}
 
-				if (status == LUA_YIELD)
+				if (!cn->CallbackYields && status == LUA_YIELD)
 					cn->CallbackYields = true;
+
+				if (status == LUA_OK && cn->CallbackYields && cL->status == LUA_OK)
+				{ // unmark the callback as yielding if we didnt yield and the original thread is ready to be re-used
+					lua_pop(cL, lua_gettop(cL)); // not entirely sure how these are piling up
+					cn->CallbackYields = false;
+				}
 			}
 		);
 

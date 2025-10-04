@@ -17,7 +17,7 @@
 #include "component/Workspace.hpp"
 
 #include "datatype/Event.hpp"
-#include "PhysicsEngine.hpp"
+#include "Physics.hpp"
 
 // TODO: cleanup structure of public vs private
 class Engine
@@ -91,4 +91,6 @@ private:
 	uint32_t m_SkyboxCubemap = UINT32_MAX;
 	uint32_t m_DistortionTexture = UINT32_MAX;
 	GpuFrameBuffer m_SunShadowMap;
+
+	uint32_t m_FboResourceId = UINT32_MAX;
 };

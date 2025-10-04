@@ -21,10 +21,10 @@ Color::Color(const Reflection::GenericValue& gv)
 	: R(0.f), G(0.f), B(0.f)
 {
 	if (gv.Type != Reflection::ValueType::Color)
-		RAISE_RT(std::format(
+		RAISE_RTF(
 			"Attempted to construct Color, but GenericValue was a {} instead",
 			Reflection::TypeAsString(gv.Type)
-		));
+		);
 		
 	this->R = gv.Val.Vec3.x;
 	this->G = gv.Val.Vec3.y;

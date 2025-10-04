@@ -26,7 +26,7 @@ static void fromString(Reflection::GenericValue& G, const char* Data)
 		G.Val.Str = (char*)Memory::Alloc(G.Size, Memory::Category::Reflection);
 
 		if (!G.Val.Str)
-			RAISE_RT("Failed to allocate enough space for string in fromString");
+			RAISE_RTF("Failed to allocate {} bytes for string in fromString", G.Size);
 
 		memcpy(G.Val.Str, Data, G.Size);
 	}
@@ -93,7 +93,7 @@ static void fromMatrix(Reflection::GenericValue& G, const glm::mat4& M)
 	G.Size = sizeof(M);
 
 	if (!G.Val.Ptr)
-		RAISE_RT("Allocation error while constructing GenericValue from glm::mat4");
+		RAISE_RT("Failed to allocate {} bytes in fromMatrix", sizeof(M));
 
 	memcpy(G.Val.Ptr, &M, sizeof(M));
 }
@@ -131,7 +131,7 @@ static void fromArray(Reflection::GenericValue& G, std::span<const Reflection::G
 	G.Val.Ptr = Memory::Alloc(allocSize, Memory::Category::Reflection);
 
 	if (!G.Val.Ptr)
-		RAISE_RT("Allocation error while constructing GenericValue from std::vector<GenericValue>");
+		RAISE_RT("Failed to allocate {} bytes in fromArray (length {}, GV Size {})", allocSize, Array.size(), sizeof(G));
 
 	for (uint32_t i = 0; i < Array.size(); i++)
 		// placement-new to avoid 1 excess layer of indirection
@@ -169,7 +169,7 @@ Reflection::GenericValue::GenericValue(const std::unordered_map<GenericValue, Ge
 	this->Val.Ptr = (GenericValue*)Memory::Alloc(allocSize, Memory::Category::Reflection);
 
 	if (!this->Val.Ptr)
-		RAISE_RT("Allocation error while constructing GenericValue from std::map<GenericValue, GenericValue>");
+		RAISE_RT("Failed to allocate {} bytes in construction from std::unordered_map (length {}, GV Size {})", arr.size(), sizeof(GenericValue));
 
 	memcpy(this->Val.Ptr, arr.data(), allocSize);
 
@@ -367,10 +367,7 @@ std::string Reflection::GenericValue::ToString() const
 }
 
 // `::AsInteger` and `::AsDouble` have special errors
-#define WRONG_TYPE() RAISE_RT(std::string("Called `") + __func__ + "` but Generic Value was a " + TypeAsString(Type))
-
-// does not work because of bullshit error
-// #define WRONG_TYPE() throw RAISE_RT("Called " __FUNCTION__ " but Generic Value was a " + TypeAsString(Type))
+#define WRONG_TYPE() RAISE_RTF("Called {} but Generic Value was a {}", __FUNCTION__, TypeAsString(Type))
 
 std::string_view Reflection::GenericValue::AsStringView() const
 {
@@ -397,7 +394,7 @@ double Reflection::GenericValue::AsDouble() const
 		return (double)Val.Int;
 
 	// special error message
-	RAISE_RT("GenericValue was not a number (Integer/ Double ), but instead a " + TypeAsString(Type));
+	RAISE_RTF("GenericValue was not a number (Integer/ Double ), but instead a {}", TypeAsString(Type));
 }
 int64_t Reflection::GenericValue::AsInteger() const
 {
@@ -407,7 +404,7 @@ int64_t Reflection::GenericValue::AsInteger() const
 	else if (Type == ValueType::Double)
 		return (int64_t)Val.Double;
 
-	RAISE_RT("GenericValue was not a number ( Integer /Double), but instead a " + TypeAsString(Type));
+	RAISE_RTF("GenericValue was not a number ( Integer /Double), but instead a {}", TypeAsString(Type));
 }
 
 const glm::vec2 Reflection::GenericValue::AsVector2() const
@@ -439,7 +436,7 @@ Reflection::GenericFunction& Reflection::GenericValue::AsFunction() const
 std::span<Reflection::GenericValue> Reflection::GenericValue::AsArray() const
 {
 	if (this->Type != Reflection::ValueType::Array)
-		RAISE_RT("GenericValue was not an Array, but instead a " + std::string(TypeAsString(Type)));
+		RAISE_RTF("GenericValue was not an Array, but instead a {}", TypeAsString(Type));
 	
 	Reflection::GenericValue* first = (Reflection::GenericValue*)this->Val.Ptr;
 	return std::span(first, Size);

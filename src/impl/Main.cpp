@@ -376,7 +376,9 @@ static void drawDeveloperUI(double DeltaTime)
 		Log::Info("Shaders reloaded");
 	}
 
-	if (ImGui::Begin("Info"))
+	bool infoDrawable = EngineJsonConfig["Tool_Info"] != false;
+
+	if (infoDrawable && ImGui::Begin("Info"))
 	{
 		constexpr size_t GraphDatapoints = 512;
 
@@ -577,9 +579,12 @@ static void drawDeveloperUI(double DeltaTime)
 			}
 
 	}
-	ImGui::End();
+	if (infoDrawable)
+		ImGui::End();
 
-	if (ImGui::Begin("Settings"))
+	bool settingsDrawable = EngineJsonConfig["Tool_Settings"] != false;
+
+	if (settingsDrawable && ImGui::Begin("Settings"))
 	{
 		ImGui::Checkbox("VSync", &EngineInstance->VSync);
 
@@ -644,7 +649,8 @@ static void drawDeveloperUI(double DeltaTime)
 		ImGui::Checkbox("Wireframe rendering", &EngineInstance->DebugWireframeRendering);
 		ImGui::Checkbox("Debug Collision AABBs", &EngineInstance->DebugAabbs);
 	}
-	ImGui::End();
+	if (settingsDrawable)
+		ImGui::End();
 
 	InlayEditor::UpdateAndRender(DeltaTime);
 }
@@ -661,6 +667,8 @@ static void handleCrash(const std::string_view& Error, const std::string_view& E
 			"CRASH - {}: {}",
 			ExceptionType, Error
 		));
+		if (const char* sdlError = SDL_GetError())
+			Log::Append(std::format("Last SDL error: {}", sdlError));
 		Log::Save();
 	}
 

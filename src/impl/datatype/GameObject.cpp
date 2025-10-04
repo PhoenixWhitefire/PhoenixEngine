@@ -373,10 +373,10 @@ GameObject* GameObject::FromGenericValue(const Reflection::GenericValue& gv)
 		return nullptr;
 
 	if (gv.Type != Reflection::ValueType::GameObject)
-		RAISE_RT(std::format(
+		RAISE_RTF(
 			"Tried to GameObject::FromGenericValue, but GenericValue had Type '{}' instead",
 			Reflection::TypeAsString(gv.Type)
-		));
+		);
 		
 	return GameObject::GetObjectById(static_cast<uint32_t>(gv.Val.Int));
 }
@@ -490,28 +490,28 @@ bool GameObject::IsDescendantOf(GameObject* Object)
 void GameObject::SetParent(GameObject* newParent)
 {
 	if (this->IsDestructionPending)
-		RAISE_RT(std::format(
+		RAISE_RTF(
 			"Tried to re-parent '{}' (ID:{}) to '{}' (ID:{}), but it's Parent has been locked due to `::Destroy`",
 
 			GetFullName(),
 			this->ObjectId,
 			newParent ? newParent->GetFullName() : "<NULL>",
 			newParent ? newParent->ObjectId : NullGameObjectIdValue
-		));
+		);
 	
 	if (newParent != this)
 	{
 		if (newParent && newParent->IsDescendantOf(this))
-			RAISE_RT(std::format(
+			RAISE_RTF(
 				"Tried to make object ID:{} ('{}') a descendant of itself",
 				this->ObjectId, GetFullName()
-			));
+			);
 	}
 	else
-		RAISE_RT(std::format(
+		RAISE_RTF(
 			"Tried to make object ID:{} ('{}') it's own parent",
 			this->ObjectId, GetFullName()
-		));
+		);
 
 	GameObject* oldParent = GetObjectById(Parent);
 
@@ -536,10 +536,10 @@ void GameObject::SetParent(GameObject* newParent)
 void GameObject::AddChild(GameObject* c)
 {
 	if (c->ObjectId == this->ObjectId)
-		RAISE_RT(std::format(
+		RAISE_RTF(
 			"::AddChild called on Object ID:{} (`{}`) with itself as the adopt'ed",
 			this->ObjectId, GetFullName()
-		));
+		);
 
 	auto it = std::find(Children.begin(), Children.end(), c->ObjectId);
 
@@ -563,7 +563,7 @@ void GameObject::RemoveChild(uint32_t id)
 		//	ch->DecrementHardRefs();
 	}
 	else
-		RAISE_RT(std::format("ID:{} is _not my ({}) sonnn~_", ObjectId, id));
+		RAISE_RTF("ID:{} is _not my ({}) sonnn~_", ObjectId, id);
 }
 
 Reflection::GenericValue GameObject::s_ToGenericValue(const GameObject* Object)
@@ -717,6 +717,8 @@ void GameObject::RemoveComponent(EntityComponent Type)
 				ComponentApis.Events.erase(it2.first);
 				MemberToComponentMap.erase(it2.first);
 			}
+
+			return;
 		}
 	
 	RAISE_RT("Don't have that component");
@@ -787,7 +789,7 @@ Reflection::GenericValue GameObject::GetPropertyValue(const std::string_view& Pr
 	if (const Reflection::PropertyDescriptor* prop = FindProperty(PropName, &ref))
 		return prop->Get(ref.Referred());
 
-	RAISE_RT("Invalid property in GetPropertyValue: " + std::string(PropName));
+	RAISE_RTF("Invalid property '{}' in GetPropertyValue", PropName);
 }
 void GameObject::SetPropertyValue(const std::string_view& PropName, const Reflection::GenericValue& Value)
 {
@@ -800,7 +802,7 @@ void GameObject::SetPropertyValue(const std::string_view& PropName, const Reflec
 		return;
 	}
 
-	RAISE_RT("Invalid property in SetPropertyValue: " + std::string(PropName));
+	RAISE_RTF("Invalid property '{}' in SetPropertyValue", PropName);
 }
 
 std::vector<Reflection::GenericValue> GameObject::CallFunction(const std::string_view& FuncName, const std::vector<Reflection::GenericValue>& Inputs)
@@ -810,7 +812,7 @@ std::vector<Reflection::GenericValue> GameObject::CallFunction(const std::string
 	if (const Reflection::MethodDescriptor* func = FindMethod(FuncName, &ref))
 		return func->Func(ref.Referred(), Inputs);
 
-	RAISE_RT("Invalid function in CallFunction: " + std::string(FuncName));
+	RAISE_RTF("Invalid function '{}' in CallFunction", FuncName);
 }
 
 Reflection::PropertyMap GameObject::GetProperties() const
@@ -899,7 +901,7 @@ GameObject* GameObject::Create(const std::string_view& FirstComponent)
 	auto it = s_ComponentNameToType.find(FirstComponent);
 
 	if (it == s_ComponentNameToType.end())
-		RAISE_RT("Invalid Component Name " + std::string(FirstComponent));
+		RAISE_RTF("Invalid Component Name '{}'", FirstComponent);
 	else
 		return GameObject::Create(it->second);
 }

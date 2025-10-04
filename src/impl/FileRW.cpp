@@ -57,10 +57,10 @@ std::string FileRW::ReadFile(const std::string& ShortPath, bool* DoesFileExist, 
 	else
 	{
 		if (!DoesFileExist)
-			RAISE_RT(std::format(
+			RAISE_RTF(
 				"FileRW::ReadFile: Could not open file handle: '{}'",
 				actualPath
-			));
+			);
 		else
 			*DoesFileExist = false;
 

@@ -7,10 +7,8 @@
 #include "asset/TextureManager.hpp"
 #include "Engine.hpp"
 
-static int imgui_begin(lua_State* L)
+static ImGuiWindowFlags strToWindowFlags(lua_State* L, const char* flagsstr)
 {
-    const char* title = luaL_checkstring(L, 1);
-    const char* flagsstr = luaL_optstring(L, 2, "");
     ImGuiWindowFlags flags = 0;
 
     for (; *flagsstr; flagsstr++)
@@ -20,11 +18,53 @@ static int imgui_begin(lua_State* L)
         case 'n':
         {
             flagsstr++;
-            if (*flagsstr == 'c')
-                flags |= ImGuiWindowFlags_NoCollapse;
-            else
-                luaL_error(L, "Unknown option to flag 'n': '%c'", *flagsstr);
 
+            switch (*flagsstr)
+            {
+            case 't':
+            {
+                flags |= ImGuiWindowFlags_NoTitleBar;
+                break;
+            }
+            case 'r':
+            {
+                flags |= ImGuiWindowFlags_NoResize;
+                break;
+            }
+            case 'm':
+            {
+                flags |= ImGuiWindowFlags_NoMove;
+                break;
+            }
+            case 'c':
+            {
+                flags |= ImGuiWindowFlags_NoCollapse;
+                break;
+            }
+            case 's':
+            {
+                flags |= ImGuiWindowFlags_NoSavedSettings;
+                break;
+            }
+            case 'i':
+            {
+                flags |= ImGuiWindowFlags_NoInputs;
+                break;
+            }
+
+            default:
+            {
+                luaL_error(L, "Invalid option to flag 'n': '%c'", *flagsstr);
+                break;
+            }
+            }
+
+            break;
+        }
+
+        case 'h':
+        {
+            flags |= ImGuiWindowFlags_HorizontalScrollbar;
             break;
         }
 
@@ -38,7 +78,15 @@ static int imgui_begin(lua_State* L)
         }
     }
 
-	lua_pushboolean(L, ImGui::Begin(title, nullptr, flags));
+    return flags;
+}
+
+static int imgui_begin(lua_State* L)
+{
+    const char* title = luaL_checkstring(L, 1);
+    const char* flagsstr = luaL_optstring(L, 2, "");
+
+	lua_pushboolean(L, ImGui::Begin(title, nullptr, strToWindowFlags(L, flagsstr)));
 
 	return 1;
 }
@@ -78,6 +126,20 @@ static int imgui_itemhovered(lua_State* L)
 	return 1;
 }
 
+static int imgui_anyitemactive(lua_State* L)
+{
+    lua_pushboolean(L, ImGui::IsAnyItemActive());
+
+    return 1;
+}
+
+static int imgui_windowhovered(lua_State* L)
+{
+    lua_pushboolean(L, ImGui::IsWindowHovered());
+
+    return 1;
+}
+
 static int imgui_itemclicked(lua_State* L)
 {
     lua_pushboolean(L, ImGui::IsItemClicked());
@@ -98,15 +160,89 @@ static int imgui_image(lua_State* L)
 	uint32_t resId = texManager->LoadTextureFromPath(luaL_checkstring(L, 1));
 	const Texture& texture = texManager->GetTextureResource(resId);
 
-	ImGui::Image(
+    ImVec2 texSize = ImVec2(texture.Width, texture.Height);
+    ImVec2 uv0 = ImVec2(0.f, luaL_optboolean(L, 3, false) ? 1.f : 0.f);
+    ImVec2 uv1 = ImVec2(1.f, luaL_optboolean(L, 3, false) ? 0.f : 1.f);
+
+    if (!lua_isnoneornil(L, 2))
+    {
+        luaL_checktype(L, 2, LUA_TTABLE);
+        
+        lua_pushinteger(L, 1);
+        if (lua_gettable(L, 2) != LUA_TNIL)
+            texSize.x = luaL_checknumber(L, -1);
+
+        lua_pushinteger(L, 2);
+        if (lua_gettable(L, 2) != LUA_TNIL)
+            texSize.y = luaL_checknumber(L, -1);
+
+        lua_pop(L, 2);
+    }
+
+    ImVec4 tintcol = ImVec4(1.f, 1.f, 1.f, 1.f);
+
+    if (!lua_isnoneornil(L, 4))
+    {
+        luaL_checktype(L, 4, LUA_TTABLE);
+
+        lua_pushinteger(L, 1);
+        if (lua_gettable(L, 4) != LUA_TNIL)
+            tintcol.x = luaL_checknumber(L, -1);
+
+        lua_pushinteger(L, 2);
+        if (lua_gettable(L, 4) != LUA_TNIL)
+            tintcol.y = luaL_checknumber(L, -1);
+
+        lua_pushinteger(L, 3);
+        if (lua_gettable(L, 4) != LUA_TNIL)
+            tintcol.z = luaL_checknumber(L, -1);
+
+        lua_pushinteger(L, 4);
+        if (lua_gettable(L, 4) != LUA_TNIL)
+            tintcol.w = luaL_checknumber(L, -1);
+    }
+
+	ImGui::ImageWithBg(
 		texture.GpuId,
-		ImVec2(
-			static_cast<float>(luaL_optnumber(L, 2, texture.Width)),
-			static_cast<float>(luaL_optnumber(L, 3, texture.Height))
-		)
+		texSize,
+        uv0, uv1,
+        ImVec4(),
+        tintcol
 	);
 
     return 0;
+}
+
+static int imgui_imagebutton(lua_State* L)
+{
+    TextureManager* texManager = TextureManager::Get();
+	uint32_t resId = texManager->LoadTextureFromPath(luaL_checkstring(L, 2));
+	const Texture& texture = texManager->GetTextureResource(resId);
+
+    ImVec2 imgSize = ImVec2(texture.Width, texture.Height);
+
+    if (!lua_isnoneornil(L, 3))
+    {
+        luaL_checktype(L, 3, LUA_TTABLE);
+        
+        lua_pushinteger(L, 1);
+        if (lua_gettable(L, 3) != LUA_TNIL)
+            imgSize.x = luaL_checknumber(L, -1);
+
+        lua_pushinteger(L, 2);
+        if (lua_gettable(L, 3) != LUA_TNIL)
+            imgSize.y = luaL_checknumber(L, -1);
+
+        lua_pop(L, 2);
+    }
+
+    lua_pushboolean(L, ImGui::ImageButton(
+        luaL_checkstring(L, 1),
+        texture.GpuId,
+        imgSize
+    ));
+
+    return 1;
 }
 
 static int imgui_inputstring(lua_State* L)
@@ -183,6 +319,20 @@ static int imgui_stylecolors(lua_State* L)
 static int imgui_setnextwindowfocus(lua_State*)
 {
     ImGui::SetNextWindowFocus();
+
+    return 0;
+}
+
+static int imgui_setnextwindowposition(lua_State* L)
+{
+    ImGui::SetNextWindowPos({ (float)luaL_checknumber(L, 1), (float)luaL_checknumber(L, 2) });
+
+    return 0;
+}
+
+static int imgui_setnextwindowsize(lua_State* L)
+{
+    ImGui::SetNextWindowSize({ (float)luaL_checknumber(L, 1), (float)luaL_checknumber(L, 2) });
 
     return 0;
 }
@@ -277,6 +427,7 @@ static int imgui_dummy(lua_State* L)
 
 static int imgui_beginchild(lua_State* L)
 {
+    ImGuiWindowFlags winFlags = strToWindowFlags(L, luaL_optstring(L, 5, ""));
     ImGuiChildFlags flags = 0;
     const char* flagsstr = luaL_optstring(L, 4, "");
 
@@ -356,7 +507,7 @@ static int imgui_beginchild(lua_State* L)
         ImGui::BeginChild(
             luaL_checkstring(L, 1),
             { (float)luaL_optnumber(L, 2, 0.f), (float)luaL_optnumber(L, 3, 0.f) },
-            flags
+            flags, winFlags
         )
     );
 
@@ -453,6 +604,53 @@ static int imgui_separatortext(lua_State* L)
     return 0;
 }
 
+static int imgui_pushstylecolor(lua_State* L)
+{
+    lua_pushinteger(L, 1);
+    lua_gettable(L, 2);
+    lua_pushinteger(L, 2);
+    lua_gettable(L, 2);
+    lua_pushinteger(L, 3);
+    lua_gettable(L, 2);
+    lua_pushinteger(L, 4);
+    lua_gettable(L, 2);
+
+    ImVec4 col;
+    col.x = luaL_checknumber(L, -4);
+    col.y = luaL_checknumber(L, -3);
+    col.z = luaL_checknumber(L, -2);
+    col.w = luaL_checknumber(L, -1);
+
+    ImGui::PushStyleColor(luaL_checkinteger(L, 1), col);
+
+    return 0;
+}
+
+static int imgui_popstylecolor(lua_State*)
+{
+    ImGui::PopStyleColor();
+
+    return 0;
+}
+
+static int imgui_getwindowposition(lua_State* L)
+{
+    ImVec2 pos = ImGui::GetWindowPos();
+
+    lua_pushnumber(L, pos.x);
+    lua_pushnumber(L, pos.y);
+    return 2;
+}
+
+static int imgui_getwindowsize(lua_State* L)
+{
+    ImVec2 size = ImGui::GetWindowSize();
+
+    lua_pushnumber(L, size.x);
+    lua_pushnumber(L, size.y);
+    return 2;
+}
+
 static luaL_Reg imgui_funcs[] =
 {
     { "begin", imgui_begin },
@@ -462,8 +660,11 @@ static luaL_Reg imgui_funcs[] =
     { "settooltip", imgui_settooltip },
     { "itemhovered", imgui_itemhovered },
     { "itemclicked", imgui_itemclicked },
+    { "anyitemactive", imgui_anyitemactive },
+    { "windowhovered", imgui_windowhovered },
     { "text", imgui_text },
     { "image", imgui_image },
+    { "imagebutton", imgui_imagebutton },
     { "inputnumber", imgui_inputnumber },
     { "inputstring", imgui_inputstring },
     { "button", imgui_button },
@@ -471,6 +672,8 @@ static luaL_Reg imgui_funcs[] =
     { "checkbox", imgui_checkbox },
     { "stylecolors", imgui_stylecolors },
     { "setnextwindowfocus", imgui_setnextwindowfocus },
+    { "setnextwindowposition", imgui_setnextwindowposition },
+    { "setnextwindowsize", imgui_setnextwindowsize },
     { "beginfullscreen", imgui_beginfullscreen },
     { "beginmainmenubar", imgui_beginmainmenubar },
     { "endmainmenubar", imgui_endmainmenubar },
@@ -494,6 +697,10 @@ static luaL_Reg imgui_funcs[] =
     { "getcontentregionavail", imgui_getcontentregionavail },
     { "separator", imgui_separator },
     { "separatortext", imgui_separatortext },
+    { "pushstylecolor", imgui_pushstylecolor },
+    { "popstylecolor", imgui_popstylecolor },
+    { "getwindowposition", imgui_getwindowposition },
+    { "getwindowsize", imgui_getwindowsize },
     { NULL, NULL }
 };
 

@@ -311,7 +311,8 @@
             "Out": "Matrix"
           },
           "new": {
-            "Description": "Creates a new identity matrix"
+            "Description": "Creates a new identity matrix",
+            "Out": "Matrix"
           }
         },
         "Members": {
@@ -535,6 +536,12 @@
             ],
             "Out": "number"
           },
+          "gettoolnames": {
+            "Description": [
+              "Returns the list of valid tool names which can be passed into `.settoolenabled` and `.istoolenabled`"
+            ],
+            "Out": "{ string }"
+          },
           "getvsync": {
             "Description": [
               "Returns whether VSync is currently enabled"
@@ -550,6 +557,16 @@
           "isheadless": {
             "Description": [
               "Returns whether the Engine is currently running Headless mode"
+            ],
+            "Out": "boolean"
+          },
+          "istoolenabled": {
+            "Description": [
+              "Returns whether the given tool is enabled",
+              "If the given tool name is not valid, an error is thrown"
+            ],
+            "In": [
+              "Tool: string"
             ],
             "Out": "boolean"
           },
@@ -604,6 +621,15 @@
               "MaxFramerate: number"
             ]
           },
+          "settoolenabled": {
+            "Description": [
+              "Enables/disables the given tool"
+            ],
+            "In": [
+              "Tool: string",
+              "Enabled: boolean"
+            ]
+          },
           "setvsync": {
             "Description": [
               "Enables/disables VSync"
@@ -620,6 +646,20 @@
               "Width: number",
               "Height: number"
             ]
+          },
+          "showmessagebox": {
+            "Description": [
+              "Shows a message to the player with the given title, message and type (Info, Warning, Error or N/A)",
+              "This is a blocking operation and no scripts or other parts of the Engine run until the message is dismissed"
+            ],
+            "In": [
+              "Title: string",
+              "Message: string",
+              [
+                "Type: ('' | 'i' | 'w' | 'e')?",
+                "''"
+              ]
+            ]
           }
         }
       },
@@ -627,13 +667,22 @@
         "Description": "Interacting with the player's filesystem",
         "Members": {
           "isdirectory": {
-            "Description": "Returns whether the specified Path refers to a directory"
+            "Description": [
+              "Returns whether the specified Path refers to a directory"
+            ],
+            "Out": "boolean"
           },
           "isfile": {
-            "Description": "Returns whether the specified Path refers to a file"
+            "Description": [
+              "Returns whether the specified Path refers to a file"
+            ],
+            "Out": "boolean"
           },
           "ispromptactive": {
-            "Description": "Returns whether a File Dialog is currently visible to the player and blocking any more file dialogs from being opened"
+            "Description": [
+              "Returns whether a File Dialog is currently visible to the player and blocking any more file dialogs from being opened"
+            ],
+            "Out": "boolean"
           },
           "listdir": {
             "Description": [
@@ -644,7 +693,7 @@
             "In": [
               "Path: string",
               [
-                "Filter: 'a' | 'f' | 'd'",
+                "Filter: ('a' | 'f' | 'd')?",
                 "'a'"
               ]
             ],
@@ -723,6 +772,12 @@
       "imgui": {
         "Description": "UI with Dear ImGui",
         "Members": {
+          "anyitemactive": {
+            "Description": [
+              "`ImGui::IsAnyItemActive`"
+            ],
+            "Out": "boolean"
+          },
           "begin": {
             "Description": [
               "`ImGui::Begin`"
@@ -844,7 +899,11 @@
               "`ImGui::EndMainMenuBar`"
             ]
           },
-          "endmenu": {},
+          "endmenu": {
+            "Description": [
+              "`ImGui::EndMenu`"
+            ]
+          },
           "endmenubar": {
             "Description": [
               "`ImGui::EndMenuBar`"
@@ -867,15 +926,46 @@
             ],
             "Out": "number, number"
           },
+          "getwindowposition": {
+            "Description": [
+              "`ImGui::GetWindowPos`"
+            ],
+            "Out": "number, number"
+          },
+          "getwindowsize": {
+            "Description": [
+              "`ImGui::GetWindowSize`"
+            ],
+            "In": {},
+            "Out": "number, number"
+          },
           "image": {
             "Description": [
               "`ImGui::Image`"
             ],
             "In": [
               "ImagePath: string",
-              "Width: number?",
-              "Height: number?"
+              "Size: { number }?",
+              [
+                "FlipVertically: boolean?",
+                "false"
+              ],
+              [
+                "TintColor: { number }?",
+                "{ 1, 1, 1, 1 }"
+              ]
             ]
+          },
+          "imagebutton": {
+            "Description": [
+              "`ImGui::ImageButton`"
+            ],
+            "In": [
+              "Name: string",
+              "Image: string",
+              "Size: { number }?"
+            ],
+            "Out": "boolean"
           },
           "indent": {
             "Description": [
@@ -935,12 +1025,27 @@
               "`ImGui::PopID`"
             ]
           },
+          "popstylecolor": {
+            "Description": [
+              "`ImGui::PopStyleColor`"
+            ]
+          },
           "pushid": {
             "Description": [
               "`ImGui::PushID`"
             ],
             "In": [
               "Id: string"
+            ]
+          },
+          "pushstylecolor": {
+            "Description": [
+              "`ImGui::PushStyleColor`",
+              "`Color` is an array with 4 numbers representing R, G, B, and A"
+            ],
+            "In": [
+              "StyleIndex: number",
+              "Color: { number }"
             ]
           },
           "sameline": {
@@ -994,6 +1099,24 @@
               ]
             ]
           },
+          "setnextwindowposition": {
+            "Description": [
+              "`ImGui::SetNextWindowPos"
+            ],
+            "In": [
+              "X: number",
+              "Y: number"
+            ]
+          },
+          "setnextwindowsize": {
+            "Description": [
+              "`ImGui::SetNextWindowSize`"
+            ],
+            "In": [
+              "Width: number",
+              "Height: number"
+            ]
+          },
           "settooltip": {
             "Description": [
               "`ImGui::SetTooltip`"
@@ -1040,6 +1163,12 @@
             "Description": [
               "`ImGui::TreePop`"
             ]
+          },
+          "windowhovered": {
+            "Description": [
+              "`ImGui::IsWindowHovered`"
+            ],
+            "Out": "boolean"
           }
         }
       },

@@ -16,7 +16,7 @@ char* BufferInitialize(size_t capacity, const std::string_view& value)
 	char* buf = (char*)Memory::Alloc(capacity + 1);
 
 	if (!buf)
-		RAISE_RT("There are bigger problems at hand.");
+		RAISE_RTF("Failed to allocate {} bytes in BufferInitialize", capacity + 1);
 
 	buf[capacity] = 0;
 

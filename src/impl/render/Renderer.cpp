@@ -138,7 +138,7 @@ void Renderer::Initialize(uint32_t Width, uint32_t Height, SDL_Window* Window)
 	this->GLContext = SDL_GL_CreateContext(m_Window);
 
 	if (!this->GLContext)
-		RAISE_RT(std::format("Could not create an OpenGL context, SDL error: {}", SDL_GetError()));
+		RAISE_RTF("Could not create an OpenGL context, SDL error: {}", SDL_GetError());
 
 	PHX_SDL_CALL(SDL_GL_MakeCurrent, m_Window, this->GLContext);
 

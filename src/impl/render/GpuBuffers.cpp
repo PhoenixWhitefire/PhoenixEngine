@@ -227,7 +227,7 @@ void GpuFrameBuffer::Initialize(int TargetWidth, int TargetHeight, int MSSamples
 	if (GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 		status != GL_FRAMEBUFFER_COMPLETE
 	)
-		RAISE_RT(std::format("Could not create a framebuffer, error ID: {}", status));
+		RAISE_RTF("Could not create a framebuffer, error ID: {}", status);
 	
 	Unbind();
 }
@@ -281,7 +281,7 @@ void GpuFrameBuffer::ChangeResolution(int NewWidth, int NewHeight)
 	if (GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 		status != GL_FRAMEBUFFER_COMPLETE
 	)
-		RAISE_RT(std::format("Could not resize a framebuffer, error ID: {}", status));
+		RAISE_RTF("Could not resize a framebuffer, error ID: {}", status);
 }
 
 void GpuFrameBuffer::Bind() const

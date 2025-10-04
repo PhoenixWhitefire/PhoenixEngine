@@ -113,12 +113,12 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 		break;
 	}
 
-	default:
+	[[unlikely]] default:
 	{
-		RAISE_RT(std::format(
+		RAISE_RTF(
 			"Invalid ImageNumColorChannels (was '{}') for '{}'!",
 			texture.NumColorChannels, texture.ImagePath
-		));
+		);
 		
 		break;
 	}

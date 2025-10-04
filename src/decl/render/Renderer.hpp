@@ -19,10 +19,10 @@
 	ZoneScopedN(#func);                                          \
 	bool success = func(__VA_ARGS__);                            \
 	if (!success)                                                \
-		RAISE_RT(std::format(                                       \
+		RAISE_RTF(                                               \
 			"Error in " #func ":\nMessage: {}",                  \
 			SDL_GetError()                                       \
-		));                                                      \
+		);                                                       \
 }                                                                \
 
 class Renderer
