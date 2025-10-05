@@ -54,7 +54,9 @@ static nlohmann::json DefaultNewMaterial =
 	{ "specMultiply", 0.5f }
 };
 
+static nlohmann::json DocumentationJson;
 static nlohmann::json ObjectDocCommentsJson;
+static nlohmann::json ApiDumpJson;
 
 static std::unordered_map<std::string, std::string> ClassIcons{};
 
@@ -133,15 +135,13 @@ void InlayEditor::Initialize(Renderer* renderer)
 	cc->Transform = MtlPreviewCamDefaultRotation * MtlPreviewCamOffset;
 	cc->FieldOfView = 50.f;
 
-	nlohmann::json docComments;
-
 	try
 	{
 		bool readSuccess = true;
 		std::string contents = FileRW::ReadFile("./gh-assets/wiki/doc-comments.json", &readSuccess);
 
 		if (readSuccess)
-			docComments = nlohmann::json::parse(contents);
+			DocumentationJson = nlohmann::json::parse(contents);
 		else
 			Log::Warning("Documentation tooltips will not be available (`doc-comments.json` could not be read)");
 	}
@@ -150,9 +150,9 @@ void InlayEditor::Initialize(Renderer* renderer)
 		Log::ErrorF("Parse error reading doc comments for Editor: {}", Err.what());
 	}
 
-	if (!docComments.is_null())
+	if (!DocumentationJson.is_null())
 	{
-		ObjectDocCommentsJson = docComments["GameObject"];
+		ObjectDocCommentsJson = DocumentationJson["GameObject"];
 		
 		if (ObjectDocCommentsJson.is_null())
 		{
@@ -161,6 +161,21 @@ void InlayEditor::Initialize(Renderer* renderer)
 			ObjectDocCommentsJson["Base"] = {};
 			ObjectDocCommentsJson["Components"] = {};
 		}
+	}
+
+	try
+	{
+		bool readSuccess = false;
+		std::string contents = FileRW::ReadFile("./apidump.json", &readSuccess);
+
+		if (readSuccess)
+			ApiDumpJson = nlohmann::json::parse(contents);
+		else
+			Log::Warning("Failed to read API Dump, some documentation information may be unavailable");
+	}
+	catch(const nlohmann::json::parse_error& e)
+	{
+		Log::ErrorF("Parse error reading API Dump: {}", e.what());
 	}
 
 	ScriptEngine::L::DebugBreak = &debugBreakHook;
@@ -1815,11 +1830,86 @@ static bool resetConflictedProperty(const char* PropName, char* Buf = nullptr)
 	return reset;
 }
 
+static void addNewlines(std::string& String, size_t MaxCharactersBeforeNewline)
+{
+	int64_t naturalMaxCharactersPerLine = (size_t)MaxCharactersBeforeNewline;
+
+	if (String.size() > MaxCharactersBeforeNewline)
+	{
+		size_t longestWithoutNewline = String.find('\n');
+		int64_t lineOffset = 0;
+
+		while (longestWithoutNewline > (size_t)naturalMaxCharactersPerLine)
+		{
+			size_t nearest = std::string::npos;
+			int64_t nearestDistance = naturalMaxCharactersPerLine / 2;
+			int64_t targetSplitPoint = lineOffset + naturalMaxCharactersPerLine;
+
+			for (int64_t i = 0; i < (int64_t)String.size(); i++)
+			{
+				char c = String[i];
+
+				if (c == ' ' && String.size() - i > (size_t)naturalMaxCharactersPerLine / 4)
+				{
+					int64_t distance = std::abs(i - targetSplitPoint);
+
+					if (distance < nearestDistance
+						// prefer cutting forward
+						|| (std::abs(distance - nearestDistance) < 4 && i > (int64_t)nearest)
+					)
+					{
+						nearest = i;
+						nearestDistance = distance;
+					}
+				}
+				else if (String[i + 1] == ' ' &&
+					(c == '.' || c == ',' || c == ';' || c == ':' || c == '!' || c == '-' || c == '?' || c == ')')
+				)
+				{
+					int64_t distance = std::abs(i - targetSplitPoint);
+					distance -= 4; // DISTANCE CANNOT BE UNSIGNED
+
+					if (distance < nearestDistance)
+					{
+						nearest = i + 1; // replace the proceeding space instead of removing punctuation
+						nearestDistance = distance;
+					}
+				}
+			}
+
+			if (nearest == std::string::npos)
+				break;
+
+			String[nearest] = '\n';
+			lineOffset += nearest;
+			longestWithoutNewline = std::string_view(String.begin() + nearest + 1, String.end()).find('\n');
+
+			// if we end up creating a line that's longer than `MaxCharactersBeforeNewline`,
+			// (due to long words etc), align to that instead
+			int64_t newNaturalMaxCharactersPerLine = 0;
+			for (size_t i = 0; i < nearest; i++)
+			{
+				newNaturalMaxCharactersPerLine++;
+
+				if (String[i] == '\n')
+					newNaturalMaxCharactersPerLine = 0;
+			}
+
+			naturalMaxCharactersPerLine = std::max(naturalMaxCharactersPerLine, newNaturalMaxCharactersPerLine);
+		} 
+	}
+}
+
+static std::string_view ForceRenderingTooltip = "";
+
 static void propertyTooltip(const std::string_view& PropName, bool IsObjectProp = false)
 {
 	static std::unordered_map<std::string, std::string> PropTips;
 
-	if (ImGui::IsItemHovered() && !ImGui::GetIO().WantCaptureKeyboard)
+	if (ForceRenderingTooltip.size() > 0 && PropName.begin() != ForceRenderingTooltip.begin())
+		return;
+
+	if ((ImGui::IsItemHovered() && !ImGui::GetIO().WantCaptureKeyboard) || ForceRenderingTooltip.size() > 0)
 	{
 		std::string PropNameStr{ PropName };
 
@@ -1850,73 +1940,7 @@ static void propertyTooltip(const std::string_view& PropName, bool IsObjectProp 
 			if (found)
 			{
 				std::string tip = it.value();
-				constexpr size_t MaxCharactersBeforeNewline = 75;
-				int64_t naturalMaxCharactersPerLine = (size_t)MaxCharactersBeforeNewline;
-
-				if (tip.size() > MaxCharactersBeforeNewline)
-				{
-					size_t longestWithoutNewline = tip.find('\n');
-					int64_t lineOffset = 0;
-
-					while (longestWithoutNewline > (size_t)naturalMaxCharactersPerLine)
-					{
-						size_t nearest = std::string::npos;
-						int64_t nearestDistance = naturalMaxCharactersPerLine / 2;
-						int64_t targetSplitPoint = lineOffset + naturalMaxCharactersPerLine;
-
-						for (int64_t i = 0; i < (int64_t)tip.size(); i++)
-						{
-							char c = tip[i];
-
-							if (c == ' ' && tip.size() - i > (size_t)naturalMaxCharactersPerLine / 4)
-							{
-								int64_t distance = std::abs(i - targetSplitPoint);
-
-								if (distance < nearestDistance
-									// prefer cutting forward
-									|| (std::abs(distance - nearestDistance) < 4 && i > (int64_t)nearest)
-								)
-								{
-									nearest = i;
-									nearestDistance = distance;
-								}
-							}
-							else if (tip[i + 1] == ' ' &&
-								(c == '.' || c == ',' || c == ';' || c == ':' || c == '!' || c == '-' || c == '?' || c == ')')
-							)
-							{
-								int64_t distance = std::abs(i - targetSplitPoint);
-								distance -= 4; // DISTANCE CANNOT BE UNSIGNED
-
-								if (distance < nearestDistance)
-								{
-									nearest = i + 1; // replace the proceeding space instead of removing punctuation
-									nearestDistance = distance;
-								}
-							}
-						}
-
-						if (nearest == std::string::npos)
-							break;
-
-						tip[nearest] = '\n';
-						lineOffset += nearest;
-						longestWithoutNewline = std::string_view(tip.begin() + nearest + 1, tip.end()).find('\n');
-
-						// if we end up creating a line that's longer than `MaxCharactersBeforeNewline`,
-						// (due to long words etc), align to that instead
-						int64_t newNaturalMaxCharactersPerLine = 0;
-						for (size_t i = 0; i < nearest; i++)
-						{
-							newNaturalMaxCharactersPerLine++;
-
-							if (tip[i] == '\n')
-								newNaturalMaxCharactersPerLine = 0;
-						}
-
-						naturalMaxCharactersPerLine = std::max(naturalMaxCharactersPerLine, newNaturalMaxCharactersPerLine);
-					} 
-				}
+				addNewlines(tip, 75);
 
 				PropTips[PropNameStr] = tip;
 				pcit = PropTips.find(PropNameStr);
@@ -1928,8 +1952,169 @@ static void propertyTooltip(const std::string_view& PropName, bool IsObjectProp 
 		if (pcit != PropTips.end())
 			fulltip = pcit->second + fulltip;
 
-		ImGui::SetItemTooltip("%s", fulltip.data());
+		static ImVec2 PrevTooltipPos;
+
+		if (ImGui::IsKeyDown(ImGuiKey_LeftAlt))
+		{
+			ImGui::SetNextWindowPos(PrevTooltipPos);
+			ForceRenderingTooltip = PropName;
+		}
+		else
+			ForceRenderingTooltip = "";
+
+		bool drawContent = false;
+
+		if (ForceRenderingTooltip.size() > 0)
+			drawContent = ImGui::Begin(
+				"TooltipWindow",
+				nullptr,
+				ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize
+					| ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoDocking
+			);
+		else
+			drawContent = ImGui::BeginTooltip();
+
+		if (drawContent)
+		{
+			ImGui::TextLink(PropName.data());
+			ImGui::TextUnformatted(fulltip.data());
+		}
+
+		if (ForceRenderingTooltip.size() == 0)
+		{
+			if (drawContent)
+			{
+				PrevTooltipPos = ImGui::GetWindowPos();
+				ImGui::EndTooltip();
+			}
+		}
+		else
+			ImGui::End();
 	}
+}
+
+static bool DocumentationViewerOpen = false;
+static int DocumentationViewerSection = -1;
+static int DocumentationViewerPage = 0;
+
+static void renderDocumentationViewer()
+{
+	if (!DocumentationViewerOpen)
+		return;
+
+	if (!ImGui::Begin("Documentation Viewer"))
+	{
+		ImGui::End();
+		return;
+	}
+
+	ImGui::BeginChild(1983, ImGui::GetContentRegionAvail() * ImVec2(0.2f, 1.f), ImGuiChildFlags_Borders);
+
+	if (ImGui::Button("Close"))
+		DocumentationViewerOpen = false;
+
+	if (ImGui::TreeNodeEx("Game Object", DocumentationViewerSection == 0 ? ImGuiTreeNodeFlags_Selected : 0))
+	{
+		DocumentationViewerSection = 0;
+
+		for (int i = 1; i < (int)EntityComponent::__count; i++)
+		{
+			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf;
+			flags |= DocumentationViewerPage == i ? ImGuiTreeNodeFlags_Selected : 0;
+
+			if (ImGui::TreeNodeEx(s_EntityComponentNames[i].data(), flags))
+			{
+				if (ImGui::IsItemClicked())
+					DocumentationViewerPage = i;
+				ImGui::TreePop();
+			}
+		}
+
+		ImGui::TreePop();
+	}
+
+	ImGui::EndChild();
+
+	ImGui::SameLine();
+
+	ImGui::BeginChild(67, ImVec2(), ImGuiChildFlags_Borders, ImGuiWindowFlags_HorizontalScrollbar);
+	ImVec2 space = ImGui::GetContentRegionAvail();
+	float charsize = ImGui::CalcTextSize("").y;
+	size_t nCharsPerLine = (size_t)std::floor(space.x / charsize);
+
+	if (DocumentationViewerSection == 0)
+	{
+		std::string_view name = DocumentationViewerPage == 0 ? "GameObject" : s_EntityComponentNames[DocumentationViewerPage];
+
+		ImGui::SeparatorText(name.data());
+
+		const nlohmann::json& description = DocumentationViewerPage == 0
+												? DocumentationJson["ScriptEnv"]["Datatypes"]["GameObject"]["Description"]
+												: ObjectDocCommentsJson["Components"][name]["Description"];
+
+		if (description.is_string())
+			ImGui::Text("* %s", ((std::string)description).c_str());
+		else
+		{
+			assert(description.is_array());
+
+			for (size_t i = 0; i < description.size(); i++)
+				ImGui::Text("* %s", ((std::string)description[i]).c_str());
+		}
+
+		const nlohmann::json& apiDocs = DocumentationViewerPage == 0 ? ObjectDocCommentsJson["Base"] : ObjectDocCommentsJson["Components"][name];
+		const nlohmann::json& api = DocumentationViewerPage == 0 ? ApiDumpJson["GameObject"]["Base"] : ApiDumpJson["GameObject"]["Components"][name];
+
+		if (const auto& props = apiDocs.find("Properties"); props != apiDocs.end())
+		{
+			ImGui::NewLine();
+			ImGui::SeparatorText("Properties");
+
+			for (auto it = props.value().begin(); it != props.value().end(); it++)
+			{
+				std::string description = it.value();
+				addNewlines(description, nCharsPerLine);
+
+				ImGui::Text("* %s: %s - %s", it.key().c_str(), ((std::string)api["Properties"].value(it.key(), "*ERROR*")).c_str(), description.c_str());
+			}
+		}
+
+		if (const auto& methods = apiDocs.find("Methods"); methods != apiDocs.end())
+		{
+			ImGui::NewLine();
+			ImGui::SeparatorText("Methods");
+
+			for (auto it = methods.value().begin(); it != methods.value().end(); it++)
+			{
+				std::string description = it.value();
+				addNewlines(description, nCharsPerLine);
+
+				ImGui::Text("* %s: %s - %s", it.key().c_str(), ((std::string)api["Methods"][it.key()]).c_str(), description.c_str());
+			}
+		}
+
+		if (const auto& events = apiDocs.find("Events"); events != apiDocs.end())
+		{
+			ImGui::NewLine();
+			ImGui::SeparatorText("Events");
+
+			for (auto it = events.value().begin(); it != events.value().end(); it++)
+			{
+				std::string description = it.value();
+				addNewlines(description, nCharsPerLine);
+
+				ImGui::Text("* %s: %s - %s", it.key().c_str(), ((std::string)api["Events"][it.key()]).c_str(), description.c_str());
+			}
+		}
+	}
+	else
+	{
+		ImGui::Text("Select a Section and Page from the left");
+	}
+
+	ImGui::EndChild();
+
+	ImGui::End();
 }
 
 static void renderExplorer()
@@ -2050,6 +2235,13 @@ static void renderProperties()
 		if (ImGui::BeginPopup("RemoveComponent"))
 		{
 			ImGui::SeparatorText(s_EntityComponentNames[(size_t)RemoveComponentPopupTarget].data());
+
+			if (ImGui::MenuItem("Info"))
+			{
+				DocumentationViewerOpen = true;
+				DocumentationViewerSection = 0;
+				DocumentationViewerPage = (int)RemoveComponentPopupTarget;
+			}
 
 			if (ImGui::MenuItem("Remove"))
 			{
@@ -2457,6 +2649,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 	renderMaterialEditor();
 	renderExplorer();
 	renderProperties();
+	renderDocumentationViewer();
 }
 
 void InlayEditor::SetExplorerRoot(const ObjectHandle NewRoot)

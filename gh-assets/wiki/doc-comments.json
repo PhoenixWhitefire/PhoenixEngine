@@ -780,12 +780,13 @@
           },
           "begin": {
             "Description": [
-              "`ImGui::Begin`"
+              "`ImGui::Begin`",
+              "`WindowFlags` may be a combination of any of the following sequences, optionally separated by ' ' or '|' characters: `nt` (no titlebar), `nr` (no resize), `nm` (no move), `nc` (no collapse), `ns` (no saved settings), `ni` (no interact), `h` (horizontal scrolling)"
             ],
             "In": [
               "WindowTitle: string",
               [
-                "Options: string?",
+                "WindowFlags: string?",
                 "\"\""
               ]
             ],
@@ -793,13 +794,28 @@
           },
           "beginchild": {
             "Description": [
-              "`ImGui::BeginChild`"
+              "`ImGui::BeginChild`",
+              "`ChildFlags` may be a combination of any of the following sequences, optionally separated by ' ' or '|' characters: `b` (borders), `wp` (always use window padding), `rx` (resize X), `ry` (resize Y), `ax` (auto resize X), `ay` (auto resize Y), `f` (frame style)",
+              "`WindowFlags` may be a combination of any of the following sequences, optionally separated by ' ' or '|' characters: `nt` (no titlebar), `nr` (no resize), `nm` (no move), `nc` (no collapse), `ns` (no saved settings), `ni` (no interact), `h` (horizontal scrolling)"
             ],
             "In": [
               "Name: string",
-              "Width: number?",
-              "Height: number?",
-              "Flags: string?"
+              [
+                "Width: number?",
+                "0"
+              ],
+              [
+                "Height: number?",
+                "0"
+              ],
+              [
+                "ChildFlags: string?",
+                "\"\""
+              ],
+              [
+                "WindowFlags: string?",
+                "\"\""
+              ]
             ],
             "Out": "boolean"
           },

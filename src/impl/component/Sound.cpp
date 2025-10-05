@@ -313,6 +313,12 @@ void EcSound::Update(double)
 	}
 	else if (FMOD::Channel* chan = (FMOD::Channel*)m_Channel; chan && m_PlayRequested)
 	{
+		if (!Object->Enabled)
+		{
+			FMOD_CALL(chan->setPaused(true), "set paused (object disabled)");
+			return;
+		}
+
 		bool paused = false;
 		FMOD_CALL(chan->getPaused(&paused), "get is paused");
 

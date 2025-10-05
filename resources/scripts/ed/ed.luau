@@ -322,15 +322,17 @@ local function renderMainMenuBar()
 		if HoveringOverMenuBar or HoveringOverRibbonTab or TabButtonHovering ~= nil or WindowHovering then
 			local windowWidth, _ = engine.getwindowsize()
 
+			local TAB_HEIGHT = 175
+
 			imgui.setnextwindowposition(0, 16)
-			imgui.setnextwindowsize(windowWidth, 175)
+			imgui.setnextwindowsize(windowWidth, TAB_HEIGHT)
 
 			imgui.begin("RibbonTabContents", "nt | nr | nm | nc | ns | h")
 			HoveringOverRibbonTab = imgui.windowhovered() or imgui.anyitemactive()
 			RibbonTabs[CurrentRibbonTab]()
 			imgui.endw()
 
-			RibbonPopupDistance = 48
+			RibbonPopupDistance = TAB_HEIGHT -- fixes ribbon closing when enabling tools
 		else
 			RibbonPopupDistance = 24
 		end
@@ -509,11 +511,16 @@ end
 function Stages.ProjectEditing_Enter(DeltaTime)
 	assert(projDm)
 	engine.setexplorerroot(projDm)
+
+	if projWp and projWp.SceneCamera and projWp.SceneCamera:HasComponent("Camera") then
+		projWp.SceneCamera.Transform = EditorCam.Transform
+		EditorCam.FieldOfView = projWp.SceneCamera.FieldOfView
+	end
 end
 
 function Stages.ProjectEditing(DeltaTime)
 	-- sometimes this can get called after `ProjectEditing_Leave` or something somehow
-	if projWp and projWp.SceneCamera then
+	if projWp and projWp.SceneCamera and projWp.SceneCamera:HasComponent("Camera") then
 		projWp.SceneCamera.Transform = EditorCam.Transform
 		EditorCam.FieldOfView = projWp.SceneCamera.FieldOfView
 	end

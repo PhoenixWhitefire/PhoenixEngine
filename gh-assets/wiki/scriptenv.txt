@@ -299,8 +299,9 @@ Custom libraries.
 #### `imgui.getcursorpos(): number, number`
 * `ImGui::GetCursorPos`
 
-#### `imgui.begin(WindowTitle: string, Options: string? [ "" ]): boolean`
+#### `imgui.begin(WindowTitle: string, WindowFlags: string? [ "" ]): boolean`
 * `ImGui::Begin`
+* `WindowFlags` may be a combination of any of the following sequences, optionally separated by ' ' or '|' characters: `nt` (no titlebar), `nr` (no resize), `nm` (no move), `nc` (no collapse), `ns` (no saved settings), `ni` (no interact), `h` (horizontal scrolling)
 
 #### `imgui.inputnumber(Text: string, Value: number): number`
 * `ImGui::InputDouble`
@@ -341,8 +342,10 @@ Custom libraries.
 #### `imgui.setnextwindowfocus(): `
 * `ImGui::SetNextWindowFocus`
 
-#### `imgui.beginchild(Name: string, Width: number?, Height: number?, Flags: string?): boolean`
+#### `imgui.beginchild(Name: string, Width: number? [ 0 ], Height: number? [ 0 ], ChildFlags: string? [ "" ], WindowFlags: string? [ "" ]): boolean`
 * `ImGui::BeginChild`
+* `ChildFlags` may be a combination of any of the following sequences, optionally separated by ' ' or '|' characters: `b` (borders), `wp` (always use window padding), `rx` (resize X), `ry` (resize Y), `ax` (auto resize X), `ay` (auto resize Y), `f` (frame style)
+* `WindowFlags` may be a combination of any of the following sequences, optionally separated by ' ' or '|' characters: `nt` (no titlebar), `nr` (no resize), `nm` (no move), `nc` (no collapse), `ns` (no saved settings), `ni` (no interact), `h` (horizontal scrolling)
 
 #### `imgui.popid(): `
 * `ImGui::PopID`

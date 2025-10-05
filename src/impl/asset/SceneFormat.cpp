@@ -854,6 +854,12 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 		[[unlikely]] default:
 		{
 			assert(false);
+			Log::ErrorF(
+				"Cannot serialize property '{}' of {} because it has unserializable type {}", 
+				propName,
+				Object->GetFullName(),
+				Reflection::TypeAsString(value.Type)
+			);
 		}
 
 		}
@@ -873,7 +879,7 @@ std::string SceneFormat::Serialize(std::vector<GameObject*> Objects, const std::
 
 	for (GameObject* rootObject : Objects)
 	{
-		objectsArray.push_back(serializeObject(rootObject, true));
+		objectsArray.push_back(serializeObject(rootObject, /* IsRootNode = */ true));
 		
 		for (GameObject* desc : rootObject->GetDescendants())
 			if (desc->Serializes)
