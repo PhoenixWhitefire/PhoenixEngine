@@ -17,6 +17,10 @@ assert(librariesPrologue)
 assert(globalsPrologue)
 assert(componentsPrologue)
 
+datatypesPrologue = "## Datatypes\n\n" .. datatypesPrologue
+librariesPrologue = "## Libraries\n\n" .. librariesPrologue
+globalsPrologue = "## Globals\n\n" .. globalsPrologue
+
 local datatypes = ""
 local libraries = ""
 local globals = ""

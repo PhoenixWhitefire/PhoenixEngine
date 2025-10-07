@@ -1,4 +1,2 @@
-## Globals
-
-Other globals.
+Additional global variables
 

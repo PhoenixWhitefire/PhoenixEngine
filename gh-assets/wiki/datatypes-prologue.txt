@@ -1,4 +1,2 @@
-## Datatypes
-
-Custom types with functions and properties.
+Additional types with methods and properties
 

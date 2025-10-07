@@ -57,6 +57,9 @@ static nlohmann::json DefaultNewMaterial =
 static nlohmann::json DocumentationJson;
 static nlohmann::json ObjectDocCommentsJson;
 static nlohmann::json ApiDumpJson;
+static std::string DatatypesDocPrologue;
+static std::string LibrariesDocPrologue;
+static std::string GlobalsDocPrologue;
 
 static std::unordered_map<std::string, std::string> ClassIcons{};
 
@@ -177,6 +180,16 @@ void InlayEditor::Initialize(Renderer* renderer)
 	{
 		Log::ErrorF("Parse error reading API Dump: {}", e.what());
 	}
+
+	bool prologueFound = true;
+	DatatypesDocPrologue = FileRW::ReadFile("./gh-assets/wiki/datatypes-prologue.txt", &prologueFound);
+	PHX_CHECK(prologueFound && "Datatypes prologue - ./gh-assets/wiki/datatypes-prologue.txt");
+
+	LibrariesDocPrologue = FileRW::ReadFile("./gh-assets/wiki/libraries-prologue.txt", &prologueFound);
+	PHX_CHECK(prologueFound && "Libraries prologue - ./gh-assets/wiki/libraries-prologue.txt");
+
+	GlobalsDocPrologue = FileRW::ReadFile("./gh-assets/wiki/globals-prologue.txt", &prologueFound);
+	PHX_CHECK(prologueFound && "Globals prologue - ./gh-assets/wiki/globals-prologue.txt");
 
 	ScriptEngine::L::DebugBreak = &debugBreakHook;
 
@@ -1830,79 +1843,62 @@ static bool resetConflictedProperty(const char* PropName, char* Buf = nullptr)
 	return reset;
 }
 
-static void addNewlines(std::string& String, size_t MaxCharactersBeforeNewline)
+static bool canBreakLineAtChar(char c)
 {
-	int64_t naturalMaxCharactersPerLine = (size_t)MaxCharactersBeforeNewline;
-
-	if (String.size() > MaxCharactersBeforeNewline)
-	{
-		size_t longestWithoutNewline = String.find('\n');
-		int64_t lineOffset = 0;
-
-		while (longestWithoutNewline > (size_t)naturalMaxCharactersPerLine)
-		{
-			size_t nearest = std::string::npos;
-			int64_t nearestDistance = naturalMaxCharactersPerLine / 2;
-			int64_t targetSplitPoint = lineOffset + naturalMaxCharactersPerLine;
-
-			for (int64_t i = 0; i < (int64_t)String.size(); i++)
-			{
-				char c = String[i];
-
-				if (c == ' ' && String.size() - i > (size_t)naturalMaxCharactersPerLine / 4)
-				{
-					int64_t distance = std::abs(i - targetSplitPoint);
-
-					if (distance < nearestDistance
-						// prefer cutting forward
-						|| (std::abs(distance - nearestDistance) < 4 && i > (int64_t)nearest)
-					)
-					{
-						nearest = i;
-						nearestDistance = distance;
-					}
-				}
-				else if (String[i + 1] == ' ' &&
-					(c == '.' || c == ',' || c == ';' || c == ':' || c == '!' || c == '-' || c == '?' || c == ')')
-				)
-				{
-					int64_t distance = std::abs(i - targetSplitPoint);
-					distance -= 4; // DISTANCE CANNOT BE UNSIGNED
-
-					if (distance < nearestDistance)
-					{
-						nearest = i + 1; // replace the proceeding space instead of removing punctuation
-						nearestDistance = distance;
-					}
-				}
-			}
-
-			if (nearest == std::string::npos)
-				break;
-
-			String[nearest] = '\n';
-			lineOffset += nearest;
-			longestWithoutNewline = std::string_view(String.begin() + nearest + 1, String.end()).find('\n');
-
-			// if we end up creating a line that's longer than `MaxCharactersBeforeNewline`,
-			// (due to long words etc), align to that instead
-			int64_t newNaturalMaxCharactersPerLine = 0;
-			for (size_t i = 0; i < nearest; i++)
-			{
-				newNaturalMaxCharactersPerLine++;
-
-				if (String[i] == '\n')
-					newNaturalMaxCharactersPerLine = 0;
-			}
-
-			naturalMaxCharactersPerLine = std::max(naturalMaxCharactersPerLine, newNaturalMaxCharactersPerLine);
-		} 
-	}
+	return c == ' ' || c == ',' || c == '.' || c == '!' || c == '?';
 }
+
+static std::string addLinebreaks(std::string String, const size_t MaxCharactersBeforeLinebreak)
+{
+	if (String.size() < MaxCharactersBeforeLinebreak)
+		return String;
+
+	size_t sinceLinebreak = 0;
+
+	for (size_t i = 0; i < String.size(); i++)
+	{
+		if (sinceLinebreak == MaxCharactersBeforeLinebreak)
+		{
+			if (canBreakLineAtChar(String[i]))
+				String.insert(String.begin() + i, '\n');
+			else
+			{
+				bool didBreak = false;
+
+				for (size_t j = i; j > 0; j--)
+					if (canBreakLineAtChar(String[j]))
+					{
+						String.insert(String.begin() + j, '\n');
+						didBreak = true;
+						break;
+					}
+
+				if (!didBreak)
+					String.insert(i, "-\n");
+			}
+
+			sinceLinebreak = 0;
+		}
+
+		sinceLinebreak++;
+	}
+
+	return String;
+}
+
+static const ImVec4 ApiPropertyColor = ImVec4(.52f, .69f, 1.f, 1.f);
+static const ImVec4 ApiFunctionColor = ImVec4(.91f, .41f, .12f, 1.f);
+static const ImVec4 ApiEventColor = ImVec4(1.f, .93f, 0.f, 1.f);
+static const ImVec4 ApiTypeColor = ImVec4(.62f, 0.f, .55f, 1.f);
+
+static bool DocumentationViewerOpen = false;
+static int DocumentationViewerSection = -1;
+static int DocumentationViewerSubPage = 0;
+static std::string DocumentationViewerSubPageName = "";
 
 static std::string_view ForceRenderingTooltip = "";
 
-static void propertyTooltip(const std::string_view& PropName, bool IsObjectProp = false)
+static void propertyTooltip(const std::string_view& PropName, EntityComponent Component, Reflection::ValueType Type, bool IsCurrentlyObject = false)
 {
 	static std::unordered_map<std::string, std::string> PropTips;
 
@@ -1939,15 +1935,14 @@ static void propertyTooltip(const std::string_view& PropName, bool IsObjectProp 
 
 			if (found)
 			{
-				std::string tip = it.value();
-				addNewlines(tip, 75);
+				std::string tip = addLinebreaks(it.value(), 75);
 
 				PropTips[PropNameStr] = tip;
 				pcit = PropTips.find(PropNameStr);
 			}
 		}
 
-		std::string fulltip = IsObjectProp ? "\n(CTRL+LClick to select, CTRL+RClick to set to nil)" : "";
+		std::string fulltip = IsCurrentlyObject ? "\n(CTRL+LClick to select, CTRL+RClick to set to nil)" : "";
 		
 		if (pcit != PropTips.end())
 			fulltip = pcit->second + fulltip;
@@ -1976,8 +1971,22 @@ static void propertyTooltip(const std::string_view& PropName, bool IsObjectProp 
 
 		if (drawContent)
 		{
-			ImGui::TextLink(PropName.data());
+			if (ImGui::TextLink(PropName.data()))
+			{
+				DocumentationViewerOpen = true;
+				DocumentationViewerSection = 0;
+				DocumentationViewerSubPage = (int)Component;
+			}
+
+			ImGui::SameLine();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
+			ImGui::TextUnformatted(Reflection::TypeAsString(Type).c_str());
+			ImGui::PopStyleColor();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(.4f, .4f, .4f, 1.f));
 			ImGui::TextUnformatted(fulltip.data());
+			ImGui::PopStyleColor();
 		}
 
 		if (ForceRenderingTooltip.size() == 0)
@@ -1993,9 +2002,56 @@ static void propertyTooltip(const std::string_view& PropName, bool IsObjectProp 
 	}
 }
 
-static bool DocumentationViewerOpen = false;
-static int DocumentationViewerSection = -1;
-static int DocumentationViewerPage = 0;
+static void renderDescription(const nlohmann::json& DescriptionJson, size_t nCharsPerLine)
+{
+	if (DescriptionJson.is_string())
+	{
+		std::string desc = addLinebreaks("* " + (std::string)DescriptionJson, nCharsPerLine);
+
+		ImGui::TextUnformatted(desc.c_str());
+	}
+	else if (DescriptionJson.is_array())
+	{
+		for (auto descit = DescriptionJson.begin(); descit != DescriptionJson.end(); descit++)
+		{
+			std::string desc = addLinebreaks("* " + (std::string)descit.value(), nCharsPerLine);
+
+			ImGui::TextUnformatted(desc.c_str());
+		}
+	}
+	else if (DescriptionJson.is_null())
+		ImGui::Text("No description provided");
+
+	else
+		ImGui::Text("Unexpected description type '%s'", DescriptionJson.type_name());
+}
+
+static std::string funcArgumentDefsToString(const nlohmann::json& In)
+{
+	if (In.is_null())
+		return "";
+
+	else if (In.is_string())
+		return (std::string)In;
+
+	else
+	{
+		std::string str;
+
+		for (auto it = In.begin(); it != In.end(); it++)
+		{
+			if (it.value().is_string())
+				str.append(it.value());
+			else
+				str.append(std::format("{} [{}]", (std::string)it.value()[0], (std::string)it.value()[1]));
+
+			str.append(", ");
+		}
+
+		str = str.substr(0, str.size() - 2);
+		return str;
+	}
+}
 
 static void renderDocumentationViewer()
 {
@@ -2013,25 +2069,131 @@ static void renderDocumentationViewer()
 	if (ImGui::Button("Close"))
 		DocumentationViewerOpen = false;
 
-	if (ImGui::TreeNodeEx("Game Object", DocumentationViewerSection == 0 ? ImGuiTreeNodeFlags_Selected : 0))
+	bool sectionOpen = ImGui::TreeNodeEx("Game Object", DocumentationViewerSection == 0 ? ImGuiTreeNodeFlags_Selected : 0);
+	if (ImGui::IsItemClicked())
 	{
 		DocumentationViewerSection = 0;
+		DocumentationViewerSubPage = 0;
+	}
 
+	if (sectionOpen)
+	{
 		for (int i = 1; i < (int)EntityComponent::__count; i++)
 		{
 			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf;
-			flags |= DocumentationViewerPage == i ? ImGuiTreeNodeFlags_Selected : 0;
+			flags |= (DocumentationViewerSection == 0 && DocumentationViewerSubPage == i) ? ImGuiTreeNodeFlags_Selected : 0;
 
-			if (ImGui::TreeNodeEx(s_EntityComponentNames[i].data(), flags))
+			float startX = ImGui::GetCursorPosX();
+			bool popen = ImGui::TreeNodeEx(s_EntityComponentNames[i].data(), flags, "                           ");
+
+			if (ImGui::IsItemClicked())
 			{
-				if (ImGui::IsItemClicked())
-					DocumentationViewerPage = i;
-				ImGui::TreePop();
+				DocumentationViewerSection = 0;
+				DocumentationViewerSubPage = i;
 			}
+
+			ImGui::SameLine();
+			ImGui::SetCursorPosX(startX);
+
+			ImGui::Image(
+				getIconForComponent((EntityComponent)i).GpuId,
+				ImVec2(16, 16)
+			);
+
+			if (ImGui::IsItemClicked())
+			{
+				DocumentationViewerSection = 0;
+				DocumentationViewerSubPage = i;
+			}
+
+			ImGui::SameLine();
+
+			ImGui::TextUnformatted(s_EntityComponentNames[i].data());
+
+			if (ImGui::IsItemClicked())
+			{
+				DocumentationViewerSection = 0;
+				DocumentationViewerSubPage = i;
+			}
+
+			if (popen)
+				ImGui::TreePop();
 		}
 
 		ImGui::TreePop();
 	}
+
+	sectionOpen = ImGui::TreeNodeEx("Datatypes", DocumentationViewerSection == 1 ? ImGuiTreeNodeFlags_Selected : 0);
+	if (ImGui::IsItemClicked())
+	{
+		DocumentationViewerSection = 1;
+		DocumentationViewerSubPageName = "";
+	}
+
+	const nlohmann::json& datatypesDoc = DocumentationJson["ScriptEnv"]["Datatypes"];
+
+	if (sectionOpen)
+	{
+		for (auto it = datatypesDoc.begin(); it != datatypesDoc.end(); it++)
+		{
+			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf;
+			flags |= (DocumentationViewerSection == 1 && DocumentationViewerSubPageName == it.key()) ? ImGuiTreeNodeFlags_Selected : 0;
+
+			bool popen = ImGui::TreeNodeEx(it.key().c_str(), flags);
+
+			if (ImGui::IsItemClicked())
+			{
+				DocumentationViewerSection = 1;
+				DocumentationViewerSubPageName = it.key();
+			}
+
+			if (popen)
+				ImGui::TreePop();
+		}
+
+		ImGui::TreePop();
+	}
+
+	sectionOpen = ImGui::TreeNodeEx("Libraries", DocumentationViewerSection == 2 ? ImGuiTreeNodeFlags_Selected : 0);
+	if (ImGui::IsItemClicked())
+	{
+		DocumentationViewerSection = 2;
+		DocumentationViewerSubPageName = "";
+	}
+
+	const nlohmann::json& librariesDoc = DocumentationJson["ScriptEnv"]["Libraries"];
+
+	if (sectionOpen)
+	{
+		for (auto it = librariesDoc.begin(); it != librariesDoc.end(); it++)
+		{
+			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf;
+			flags |= (DocumentationViewerSection == 2 && DocumentationViewerSubPageName == it.key()) ? ImGuiTreeNodeFlags_Selected : 0;
+
+			bool popen = ImGui::TreeNodeEx(it.key().c_str(), flags);
+
+			if (ImGui::IsItemClicked())
+			{
+				DocumentationViewerSection = 2;
+				DocumentationViewerSubPageName = it.key();
+			}
+
+			if (popen)
+				ImGui::TreePop();
+		}
+
+		ImGui::TreePop();
+	}
+
+	sectionOpen = ImGui::TreeNodeEx("Globals", ImGuiTreeNodeFlags_Leaf | (DocumentationViewerSection == 3 ? ImGuiTreeNodeFlags_Selected : 0));
+	if (ImGui::IsItemClicked())
+	{
+		DocumentationViewerSection = 3;
+		DocumentationViewerSubPage = 0;
+	}
+
+	if (sectionOpen)
+		ImGui::TreePop();
 
 	ImGui::EndChild();
 
@@ -2040,76 +2202,294 @@ static void renderDocumentationViewer()
 	ImGui::BeginChild(67, ImVec2(), ImGuiChildFlags_Borders, ImGuiWindowFlags_HorizontalScrollbar);
 	ImVec2 space = ImGui::GetContentRegionAvail();
 	float charsize = ImGui::CalcTextSize("").y;
-	size_t nCharsPerLine = (size_t)std::floor(space.x / charsize);
+	size_t nCharsPerLine = (size_t)std::floor(space.x * 1.75f / charsize);
 
-	if (DocumentationViewerSection == 0)
+	switch (DocumentationViewerSection)
 	{
-		std::string_view name = DocumentationViewerPage == 0 ? "GameObject" : s_EntityComponentNames[DocumentationViewerPage];
+
+	case 0:
+	{
+		std::string_view name = DocumentationViewerSubPage == 0 ? "GameObject" : s_EntityComponentNames[DocumentationViewerSubPage];
 
 		ImGui::SeparatorText(name.data());
 
-		const nlohmann::json& description = DocumentationViewerPage == 0
+		const nlohmann::json& description = DocumentationViewerSubPage == 0
 												? DocumentationJson["ScriptEnv"]["Datatypes"]["GameObject"]["Description"]
 												: ObjectDocCommentsJson["Components"][name]["Description"];
 
-		if (description.is_string())
-			ImGui::Text("* %s", ((std::string)description).c_str());
-		else
-		{
-			assert(description.is_array());
+		renderDescription(description, nCharsPerLine);
 
-			for (size_t i = 0; i < description.size(); i++)
-				ImGui::Text("* %s", ((std::string)description[i]).c_str());
-		}
+		const nlohmann::json& apiDocs = DocumentationViewerSubPage == 0 ? ObjectDocCommentsJson["Base"] : ObjectDocCommentsJson["Components"][name];
+		const nlohmann::json& api = DocumentationViewerSubPage == 0 ? ApiDumpJson["GameObject"]["Base"] : ApiDumpJson["GameObject"]["Components"][name];
 
-		const nlohmann::json& apiDocs = DocumentationViewerPage == 0 ? ObjectDocCommentsJson["Base"] : ObjectDocCommentsJson["Components"][name];
-		const nlohmann::json& api = DocumentationViewerPage == 0 ? ApiDumpJson["GameObject"]["Base"] : ApiDumpJson["GameObject"]["Components"][name];
-
-		if (const auto& props = apiDocs.find("Properties"); props != apiDocs.end())
+		if (const auto& props = api.find("Properties"); props != api.end())
 		{
 			ImGui::NewLine();
 			ImGui::SeparatorText("Properties");
 
-			for (auto it = props.value().begin(); it != props.value().end(); it++)
+			for (auto ita = props.value().begin(); ita != props.value().end(); ita++)
 			{
-				std::string description = it.value();
-				addNewlines(description, nCharsPerLine);
+				ImGui::PushStyleColor(ImGuiCol_Text, ApiPropertyColor);
+				ImGui::Text("* %s", ita.key().c_str());
+				ImGui::PopStyleColor();
+				
+				ImGui::SameLine();
 
-				ImGui::Text("* %s: %s - %s", it.key().c_str(), ((std::string)api["Properties"].value(it.key(), "*ERROR*")).c_str(), description.c_str());
+				ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
+				ImGui::TextUnformatted(((std::string)ita.value()).c_str());
+				ImGui::PopStyleColor();
+
+				ImGui::TextUnformatted(addLinebreaks(apiDocs["Properties"][ita.key()], nCharsPerLine).c_str());
 			}
 		}
 
-		if (const auto& methods = apiDocs.find("Methods"); methods != apiDocs.end())
+		if (const auto& methods = api.find("Methods"); methods != api.end())
 		{
 			ImGui::NewLine();
 			ImGui::SeparatorText("Methods");
 
-			for (auto it = methods.value().begin(); it != methods.value().end(); it++)
+			for (auto ita = methods.value().begin(); ita != methods.value().end(); ita++)
 			{
-				std::string description = it.value();
-				addNewlines(description, nCharsPerLine);
+				ImGui::PushStyleColor(ImGuiCol_Text, ApiFunctionColor);
+				ImGui::Text("* %s", ita.key().c_str());
+				ImGui::PopStyleColor();
+				
+				ImGui::SameLine();
 
-				ImGui::Text("* %s: %s - %s", it.key().c_str(), ((std::string)api["Methods"][it.key()]).c_str(), description.c_str());
+				ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
+				ImGui::TextUnformatted(((std::string)ita.value()).c_str());
+				ImGui::PopStyleColor();
+
+				ImGui::TextUnformatted(addLinebreaks(apiDocs["Methods"][ita.key()], nCharsPerLine).c_str());
 			}
 		}
 
-		if (const auto& events = apiDocs.find("Events"); events != apiDocs.end())
+		if (const auto& events = api.find("Events"); events != api.end())
 		{
 			ImGui::NewLine();
 			ImGui::SeparatorText("Events");
 
-			for (auto it = events.value().begin(); it != events.value().end(); it++)
+			for (auto ita = events.value().begin(); ita != events.value().end(); ita++)
 			{
-				std::string description = it.value();
-				addNewlines(description, nCharsPerLine);
+				ImGui::PushStyleColor(ImGuiCol_Text, ApiEventColor);
+				ImGui::Text("* %s", ita.key().c_str());
+				ImGui::PopStyleColor();
+				
+				ImGui::SameLine();
 
-				ImGui::Text("* %s: %s - %s", it.key().c_str(), ((std::string)api["Events"][it.key()]).c_str(), description.c_str());
+				ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
+				ImGui::TextUnformatted(((std::string)ita.value()).c_str());
+				ImGui::PopStyleColor();
+
+				ImGui::TextUnformatted(addLinebreaks(apiDocs["Events"][ita.key()], nCharsPerLine).c_str());
 			}
 		}
+
+		break;
 	}
-	else
+
+	case 1:
+	{
+		if (DocumentationViewerSubPageName == "")
+		{
+			ImGui::SeparatorText("Datatypes");
+			ImGui::TextUnformatted(DatatypesDocPrologue.c_str());
+
+			break;
+		}
+
+		const nlohmann::json& datatype = datatypesDoc[DocumentationViewerSubPageName];
+
+		ImGui::SeparatorText(DocumentationViewerSubPageName.c_str());
+		renderDescription(datatype["Description"], nCharsPerLine);
+
+		if (const auto& library = datatype.find("Library"); library != datatype.end())
+		{
+			ImGui::SeparatorText("Library");
+
+			for (auto memberIt = library.value().begin(); memberIt != library.value().end(); memberIt++)
+			{
+				const nlohmann::json& member = memberIt.value();
+
+				if (const auto& typeIt = member.find("Type"); typeIt != member.end())
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ApiPropertyColor);
+					ImGui::Text("%s: ", memberIt.key().c_str());
+					ImGui::PopStyleColor();
+
+					ImGui::SameLine();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
+					ImGui::TextUnformatted(((std::string)typeIt.value()).c_str());
+					ImGui::PopStyleColor();
+				}
+				else
+				{
+					nlohmann::json last = member.value("Out", "");
+					if (last.size() > 0)
+						last = ": " + (std::string)last;
+
+					ImGui::PushStyleColor(ImGuiCol_Text, ApiFunctionColor);
+					ImGui::Text("%s(", memberIt.key().c_str());
+					ImGui::PopStyleColor();
+
+					ImGui::SameLine();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
+					ImGui::TextUnformatted(funcArgumentDefsToString(member["In"]).c_str());
+					ImGui::PopStyleColor();
+
+					ImGui::SameLine();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, ApiFunctionColor);
+					ImGui::TextUnformatted(")");
+					ImGui::PopStyleColor();
+
+					ImGui::SameLine();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
+					ImGui::TextUnformatted(((std::string)last).c_str());
+					ImGui::PopStyleColor();
+				}
+
+				renderDescription(member["Description"], nCharsPerLine);
+			}
+		}
+
+		break;
+	}
+
+	case 2:
+	{
+		if (DocumentationViewerSubPageName == "")
+		{
+			ImGui::SeparatorText("Libraries");
+			ImGui::TextUnformatted(LibrariesDocPrologue.c_str());
+
+			break;
+		}
+
+		const nlohmann::json& library = librariesDoc[DocumentationViewerSubPageName];
+
+		ImGui::SeparatorText(DocumentationViewerSubPageName.c_str());
+		renderDescription(library["Description"], nCharsPerLine);
+
+		ImGui::SeparatorText("Members");
+
+		for (auto memberIt = library["Members"].begin(); memberIt != library["Members"].end(); memberIt++)
+		{
+			const nlohmann::json& member = memberIt.value();
+
+			if (const auto& typeIt = member.find("Type"); typeIt != member.end())
+			{
+				ImGui::PushStyleColor(ImGuiCol_Text, ApiPropertyColor);
+				ImGui::Text("%s: ", memberIt.key().c_str());
+				ImGui::PopStyleColor();
+			
+				ImGui::SameLine();
+			
+				ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
+				ImGui::TextUnformatted(((std::string)typeIt.value()).c_str());
+				ImGui::PopStyleColor();
+			}
+			else
+			{
+				nlohmann::json last = member.value("Out", "");
+				if (last.size() > 0)
+					last = ": " + (std::string)last;
+			
+				ImGui::PushStyleColor(ImGuiCol_Text, ApiFunctionColor);
+				ImGui::Text("%s(", memberIt.key().c_str());
+				ImGui::PopStyleColor();
+			
+				ImGui::SameLine();
+			
+				ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
+				ImGui::TextUnformatted(funcArgumentDefsToString(member.value("In", nlohmann::json())).c_str());
+				ImGui::PopStyleColor();
+
+				ImGui::SameLine();
+
+				ImGui::PushStyleColor(ImGuiCol_Text, ApiFunctionColor);
+				ImGui::TextUnformatted(")");
+				ImGui::PopStyleColor();
+
+				ImGui::SameLine();
+			
+				ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
+				ImGui::TextUnformatted(((std::string)last).c_str());
+				ImGui::PopStyleColor();
+			}
+
+			renderDescription(member["Description"], nCharsPerLine);
+		}
+
+		break;
+	}
+
+	case 3:
+	{
+		const nlohmann::json& globals = DocumentationJson["ScriptEnv"]["Globals"];
+
+		ImGui::SeparatorText("Globals");
+		ImGui::TextUnformatted(GlobalsDocPrologue.c_str());
+
+		for (auto memberIt = globals.begin(); memberIt != globals.end(); memberIt++)
+		{
+			const nlohmann::json& member = memberIt.value();
+
+			if (const auto& dumpedType = ApiDumpJson["ScriptEnv"]["Globals"][memberIt.key()]; dumpedType != "function")
+			{
+				ImGui::PushStyleColor(ImGuiCol_Text, ApiPropertyColor);
+				ImGui::Text("%s: ", memberIt.key().c_str());
+				ImGui::PopStyleColor();
+			
+				ImGui::SameLine();
+			
+				ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
+				ImGui::TextUnformatted(((std::string)dumpedType).c_str());
+				ImGui::PopStyleColor();
+			}
+			else
+			{
+				nlohmann::json last = member.value("Out", "");
+				if (last.size() > 0)
+					last = ": " + (std::string)last;
+			
+				ImGui::PushStyleColor(ImGuiCol_Text, ApiFunctionColor);
+				ImGui::Text("%s(", memberIt.key().c_str());
+				ImGui::PopStyleColor();
+			
+				ImGui::SameLine();
+			
+				ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
+				ImGui::TextUnformatted(funcArgumentDefsToString(member.value("In", nlohmann::json())).c_str());
+				ImGui::PopStyleColor();
+
+				ImGui::SameLine();
+			
+				ImGui::PushStyleColor(ImGuiCol_Text, ApiFunctionColor);
+				ImGui::TextUnformatted(")");
+				ImGui::PopStyleColor();
+
+				ImGui::SameLine();
+			
+				ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
+				ImGui::TextUnformatted(((std::string)last).c_str());
+				ImGui::PopStyleColor();
+			}
+
+			renderDescription(member["Description"], nCharsPerLine);
+		}
+
+		break;
+	}
+	
+	default:
 	{
 		ImGui::Text("Select a Section and Page from the left");
+		break;
+	}
 	}
 
 	ImGui::EndChild();
@@ -2240,7 +2620,7 @@ static void renderProperties()
 			{
 				DocumentationViewerOpen = true;
 				DocumentationViewerSection = 0;
-				DocumentationViewerPage = (int)RemoveComponentPopupTarget;
+				DocumentationViewerSubPage = (int)RemoveComponentPopupTarget;
 			}
 
 			if (ImGui::MenuItem("Remove"))
@@ -2257,6 +2637,7 @@ static void renderProperties()
 
 		std::unordered_map<std::string_view, std::pair<const Reflection::PropertyDescriptor*, Reflection::GenericValue>> props;
 		std::unordered_map<std::string_view, bool> conflictingProps;
+		std::unordered_map<std::string_view, EntityComponent> propToComponent;
 
 		for (const ObjectHandle& sel : Selections)
 		{
@@ -2288,6 +2669,8 @@ static void renderProperties()
 					else
 						conflictingProps.insert(std::pair(prop.first, false));
 				}
+				else
+					propToComponent[pname] = sel->MemberToComponentMap[pname].Type;
 			}
 		}
 
@@ -2346,7 +2729,7 @@ static void renderProperties()
 							ImGui::Text("%s: %s", propNameCStr, curValStr.c_str());
 				}
 
-				propertyTooltip(propName);
+				propertyTooltip(propName, propToComponent[propName], propDesc->Type);
 
 				continue;
 			}
@@ -2540,7 +2923,7 @@ static void renderProperties()
 					glm::mat4 mat = curVal.AsMatrix();
 
 					ImGui::Text("%s:", propNameCStr);
-					propertyTooltip(propName);
+					propertyTooltip(propName, propToComponent[propName], propDesc->Type);
 
 					float pos[3] =
 					{
@@ -2569,11 +2952,11 @@ static void renderProperties()
 					ImGui::Indent();
 
 					ImGui::InputFloat3("Position", pos);
-					propertyTooltip(propName);
+					propertyTooltip(propName, propToComponent[propName], propDesc->Type);
 					valueWasEditedManual = ImGui::IsItemEdited();
 
 					ImGui::InputFloat3("Rotation", rotdegs);
-					propertyTooltip(propName);
+					propertyTooltip(propName, propToComponent[propName], propDesc->Type);
 					ImGui::Unindent();
 
 					mat = glm::mat4(1.f);
@@ -2622,7 +3005,7 @@ static void renderProperties()
 			}
 			else
 			{
-				propertyTooltip(propName, curVal.Type == Reflection::ValueType::GameObject);
+				propertyTooltip(propName, propToComponent[propName], propDesc->Type, curVal.Type == Reflection::ValueType::GameObject);
 			}
 		}
 		
