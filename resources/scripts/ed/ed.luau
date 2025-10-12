@@ -389,7 +389,7 @@ local function renderViewport()
 	if BottomBarEnabled then
 		local wx, wy = engine.windowsize()
 
-		imgui.setviewportdockspace(0, 0, wx, wy - 35)
+		imgui.setviewportdockspace(0, 20, wx, wy - 35)
 		imgui.setnextwindowposition(0, wy - 35)
 		imgui.setnextwindowsize(wx, 35)
 		imgui.begin("Bottom Bar", "nt | nd | nr")
