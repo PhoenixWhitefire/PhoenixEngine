@@ -19,7 +19,7 @@ public:
         m_Components.emplace_back();
         m_Components.back().Object = Object;
 
-		if (!Object->GetComponent<EcTransform>())
+		if (!Object->FindComponent<EcTransform>())
 			Object->AddComponent(EntityComponent::Transform);
 
         return static_cast<uint32_t>(m_Components.size() - 1);
@@ -143,7 +143,7 @@ void EcParticleEmitter::Update(double DeltaTime)
 		std::uniform_real_distribution<float> randIndex(0.f, numimages);
 		std::uniform_real_distribution<float> lifetimeDist(this->Lifetime.x, this->Lifetime.y);
 
-		EcTransform* ct = Object->GetComponent<EcTransform>();
+		EcTransform* ct = Object->FindComponent<EcTransform>();
 
 		for (uint32_t i = 0; i < numToSpawn; i++)
 		{
@@ -189,7 +189,7 @@ void EcParticleEmitter::AppendToRenderList(std::vector<RenderItem>& RenderList)
 		QuadMeshId = mp->LoadFromPath("!Quad");
 	}
 
-	EcTransform* ct = Object->GetComponent<EcTransform>();
+	EcTransform* ct = Object->FindComponent<EcTransform>();
 
 	for (size_t index = 0; index < m_Particles.size(); index++)
 	{

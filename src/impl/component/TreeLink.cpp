@@ -36,7 +36,7 @@ class TreeLinkManager : public ComponentManager<EcTreeLink>
                         if (tl->Object->IsDescendantOf(newTarget))
                             RAISE_RT("Cannot make a TreeLink target an ancestor of itself");
 
-                        if (newTarget->GetComponent<EcTreeLink>())
+                        if (newTarget->FindComponent<EcTreeLink>())
                             // code to prevent infinite recursion is too complicated for me to care right now
                             RAISE_RT("TreeLink cannot target another TreeLink");
 

@@ -30,7 +30,7 @@ public:
     {
         m_Components.emplace_back();
 
-		if (!Object->GetComponent<EcTransform>())
+		if (!Object->FindComponent<EcTransform>())
 			Object->AddComponent(EntityComponent::Transform);
 		
 		m_Components.back().MaterialId = MaterialManager::Get()->LoadFromPath("plastic");
@@ -178,10 +178,10 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 				freelist.erase(freelist.begin() + freelist.size() - 1);
 			}
 
-			obj->GetComponent<EcMesh>()->RenderMeshId = meshId;
+			obj->FindComponent<EcMesh>()->RenderMeshId = meshId;
 			
 			for (GameObject* ch : obj->GetChildren())
-				if (ch->GetComponent<EcBone>())
+				if (ch->FindComponent<EcBone>())
 					ch->Destroy();
 
 			Mesh& meshAfter = meshProvider->GetMeshResource(meshId);
@@ -193,7 +193,7 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 				ObjectRef boneObj;
 				if (GameObject* g = obj->FindChild(b.Name))
 				{
-					if (g->GetComponent<EcBone>())
+					if (g->FindComponent<EcBone>())
 						boneObj = g;
 					else
 					{
@@ -209,7 +209,7 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 				else
 					boneObj = GameObject::Create(EntityComponent::Bone);
 				
-				EcBone* bone = boneObj->GetComponent<EcBone>();
+				EcBone* bone = boneObj->FindComponent<EcBone>();
 
 				boneObj->SetParent(b.Parent == UINT8_MAX
 					? obj.Referred()
@@ -228,7 +228,7 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 
 void EcMesh::RecomputeAabb()
 {
-	EcTransform* ct = this->Object->GetComponent<EcTransform>();
+	EcTransform* ct = this->Object->FindComponent<EcTransform>();
 	const glm::mat4& transform = ct->Transform;
 	const glm::vec3& glmsize = ct->Size;
 

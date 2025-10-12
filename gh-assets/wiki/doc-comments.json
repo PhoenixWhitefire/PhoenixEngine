@@ -278,7 +278,7 @@
           "new": {
             "Description": "Creates a new GameObject with the provided Component",
             "In": "Component: string",
-            "Out": "GameObject"
+            "Out": "any"
           },
           "validComponents": {
             "Description": "A list of all valid component names which can be passed into `.new`",
@@ -523,6 +523,13 @@
             ],
             "Out": "number"
           },
+          "fullscreen": {
+            "Description": [
+              "Returns whether or not the window is currently fullscreened",
+              "To *set* whether the window is fullscreened, use `.setfullscreen`"
+            ],
+            "Out": "boolean"
+          },
           "getfullscreen": {
             "Description": [
               "Returns whether the Engine is currently in fullscreen"
@@ -569,6 +576,13 @@
               "Tool: string"
             ],
             "Out": "boolean"
+          },
+          "maxframerate": {
+            "Description": [
+              "Returns the current maximum framerate setting",
+              "To *set* the maximum framerate, use `.setmaxframerate`"
+            ],
+            "Out": "number"
           },
           "physicstimescale": {
             "Description": [
@@ -660,6 +674,29 @@
                 "''"
               ]
             ]
+          },
+          "toolenabled": {
+            "Description": [
+              "Returns whether the given tool is currently enabled",
+              "To *enable* or *disable* the tool, use `.settoolenabled`"
+            ],
+            "In": [
+              "Tool: string"
+            ],
+            "Out": "boolean"
+          },
+          "toolnames": {
+            "Description": [
+              "Returns a list of valid Engine tools"
+            ],
+            "Out": "{ string }"
+          },
+          "windowsize": {
+            "Description": [
+              "Returns the current size, in pixels, of the game window",
+              "To *set* the size of the window, use `.setwindowsize`"
+            ],
+            "Out": "number, number"
           }
         }
       },
@@ -670,11 +707,17 @@
             "Description": [
               "Returns whether the specified Path refers to a directory"
             ],
+            "In": [
+              "string"
+            ],
             "Out": "boolean"
           },
           "isfile": {
             "Description": [
               "Returns whether the specified Path refers to a file"
+            ],
+            "In": [
+              "string"
             ],
             "Out": "boolean"
           },
@@ -890,17 +933,24 @@
             ],
             "Out": "number"
           },
+          "cursorposition": {
+            "Description": [
+              "Returns the current position of the Dear ImGui element cursor within the current window",
+              "To *set* the cursor position, use `.setcursorposition`"
+            ],
+            "Out": "number, number"
+          },
           "dummy": {
             "Description": [
               "`ImGui::Dummy`"
             ],
             "In": [
               [
-                "Width: number",
+                "Width: number?",
                 "0"
               ],
               [
-                "Height: number",
+                "Height: number?",
                 "0"
               ]
             ]
@@ -1091,6 +1141,15 @@
               "Y: number"
             ]
           },
+          "setcursorposition": {
+            "Description": [
+              "Sets the position of the Dear ImGui element cursor within the current window"
+            ],
+            "In": [
+              "X: number",
+              "Y: number"
+            ]
+          },
           "setitemtooltip": {
             "Description": [
               "`ImGui::SetItemTooltip`"
@@ -1141,6 +1200,31 @@
               "Tooltip: string"
             ]
           },
+          "setviewportdockspace": {
+            "Description": [
+              "Sets the region of the window in which Dear ImGui windows can be docked"
+            ],
+            "In": [
+              "PositionX: number",
+              "PositionY: number",
+              "SizeX: number",
+              "SizeY: number"
+            ]
+          },
+          "setviewportdockspacedefault": {
+            "Description": [
+              "Reverts the region of the window in which Dear ImGui windows can be docked to the default settings"
+            ]
+          },
+          "setwindowsize": {
+            "Description": [
+              "Sets the size of the current Dear ImGui window"
+            ],
+            "In": [
+              "SizeX: number",
+              "SizeY: number"
+            ]
+          },
           "stylecolors": {
             "Description": [
               "`ImGui::StyleColorsDark`/`ImGui::StyleColorsLight`"
@@ -1185,12 +1269,26 @@
               "`ImGui::IsWindowHovered`"
             ],
             "Out": "boolean"
+          },
+          "windowposition": {
+            "Description": [
+              "Returns the position of the current Dear ImGui window (`ImGui::GetWindowPos`)",
+              "To *set* the position of the window, use `.setwindowposition`"
+            ],
+            "Out": "number, number"
           }
         }
       },
       "input": {
         "Description": "Checking player inputs",
         "Members": {
+          "cursorvisible": {
+            "Description": [
+              "Returns whether the mouse cursor is current visible",
+              "To *change* the visibility of the cursor, use `.setcursorvisible`"
+            ],
+            "Out": "boolean"
+          },
           "getmousepos": {
             "Description": [
               "Returns the current position of the player's mouse cursor, offset from the top-right"
@@ -1245,6 +1343,19 @@
             ],
             "Out": "boolean"
           },
+          "mousegrabbed": {
+            "Description": [
+              "Returns whether the mouse is currently restricted to the game window",
+              "To *change* whether the mouse is grabbed, use `.setmousegrabbed`"
+            ],
+            "Out": "boolean"
+          },
+          "mouseposition": {
+            "Description": [
+              "Returns the current position of the mouse"
+            ],
+            "Out": "number, number"
+          },
           "setcursorvisible": {
             "Description": [
               "Sets the visibility of the mouse cursor to the specified value"
@@ -1269,6 +1380,15 @@
             "In": [
               "X: number",
               "Y: number"
+            ]
+          },
+          "setmouseposition": {
+            "Description": [
+              "Moves the mouse to the given coordinates of the window"
+            ],
+            "In": [
+              "MouseX: number",
+              "MouseY: number"
             ]
           }
         }
@@ -1339,16 +1459,6 @@
               "Path: string"
             ],
             "Out": "GameObject & Model"
-          }
-        }
-      },
-      "net": {
-        "Description": "**This API has been disabled due to dependency burden**",
-        "Members": {
-          "request": {
-            "Description": [
-              "Performs an HTTP request to the given URL and returns the response"
-            ]
           }
         }
       },

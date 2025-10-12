@@ -1,7 +1,7 @@
 PHNXENGI
 #Version 2.10
 #Asset Scene
-#Date 4-10-2025
+#Date 12-10-2025
 #SceneName resources/scenes/root.world
 
 {
@@ -73,7 +73,7 @@ PHNXENGI
           1.0
         ]
       ],
-      "UseSimpleController": true
+      "UseSimpleController": false
     }
   ],
   "SceneName": "resources/scenes/root.world"

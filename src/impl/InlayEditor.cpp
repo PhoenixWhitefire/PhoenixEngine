@@ -134,7 +134,7 @@ void InlayEditor::Initialize(Renderer* renderer)
 	MtlPreviewRenderer = renderer;
 	MtlPreviewCamera = GameObject::Create("Camera");
 
-	EcCamera* cc = MtlPreviewCamera->GetComponent<EcCamera>();
+	EcCamera* cc = MtlPreviewCamera->FindComponent<EcCamera>();
 	cc->Transform = MtlPreviewCamDefaultRotation * MtlPreviewCamOffset;
 	cc->FieldOfView = 50.f;
 
@@ -424,10 +424,13 @@ static void invokeTextEditor(const std::string& File)
 }
 
 static int s_TextEdDebuggerCurrentLine = 0;
+static int s_TextEdDebuggerJumpToLine = 0;
 
 static void renderTextEditor()
 {
 	ZoneScopedC(tracy::Color::DarkSeaGreen);
+
+	const float TextSpacingExtra = .01f;
 
 	if (!TextEditorEnabled)
 	{
@@ -436,8 +439,25 @@ static void renderTextEditor()
 		return;
 	}
 
-	ImGui::Begin("Text Editor", 0, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_MenuBar);
+	if (s_TextEdDebuggerJumpToLine > 0)
+	{
+		float textYSize = ImGui::CalcTextSize("").y;
+		float textSpacing = textYSize + TextSpacingExtra;
+		float scrollY = std::max(textSpacing * (s_TextEdDebuggerJumpToLine - 15), 0.f);
 
+		// force the window to the correct scroll position by adding content (`::Dummy`)
+		// `::SetScrollY` clamps :(
+		ImGui::Begin("Text Editor", 0, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_MenuBar);
+		ImGui::BeginMenuBar();
+		ImGui::EndMenuBar();
+		ImGui::Dummy({ ImGui::GetContentRegionAvail().x, scrollY * 2.f });
+		ImGui::SetScrollY(scrollY);
+		ImGui::End();
+
+		s_TextEdDebuggerJumpToLine = 0;
+	}
+
+	ImGui::Begin("Text Editor", 0, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_MenuBar);
 	ImGui::BeginMenuBar();
 
 	if (ImGui::BeginMenu("File"))
@@ -651,15 +671,12 @@ static void renderTextEditor()
 		else
 		{
 			TextEditorFileStream->seekg(0, std::ios::end);
-
 			scriptContents.resize(TextEditorFileStream->tellg());
 			TextEditorFileStream->seekg(0, std::ios::beg);
-
 			TextEditorFileStream->read(&scriptContents[0], scriptContents.size());
 
 			TextEditorEntryBufferCapacity = scriptContents.size() + 256;
 			TextEditorEntryBuffer = (char*)Memory::Alloc(TextEditorEntryBufferCapacity);
-
 			copyStringToBuffer(TextEditorEntryBuffer, scriptContents, TextEditorEntryBufferCapacity);
 
 			TextEditorFileModified = false;
@@ -670,15 +687,16 @@ static void renderTextEditor()
 	{
 		ImVec2 startPos = ImGui::GetCursorPos();
 		float textYSize = ImGui::CalcTextSize("").y;
+		float textSpacing = textYSize + TextSpacingExtra;
 
 		if (s_TextEdDebuggerCurrentLine != 0)
 		{
-			ImGui::SetCursorPos({ startPos.x, startPos.y + textYSize * (s_TextEdDebuggerCurrentLine - 1) });
+			ImGui::SetCursorPos({ startPos.x, startPos.y + textSpacing * (s_TextEdDebuggerCurrentLine - 1) });
 
 			TextureManager* texManager = TextureManager::Get();
 			ImGui::ImageWithBg(
 				texManager->GetTextureResource(1).GpuId,
-				ImVec2(textYSize, textYSize),
+				ImVec2(textYSize * 2.f, textYSize),
 				{},
 				{},
 				{},
@@ -697,7 +715,7 @@ static void renderTextEditor()
 			{
 				line++;
 				// set the position precisely to avoid inaccuracy from padding
-				ImGui::SetCursorPos({ startPos.x, startPos.y + textYSize * (line - 1) });
+				ImGui::SetCursorPos({ startPos.x, startPos.y + textSpacing * (line - 1) });
 				ImGui::Text("%d", line);
 			}
 		}
@@ -708,7 +726,7 @@ static void renderTextEditor()
 			"##",
 			TextEditorEntryBuffer,
 			TextEditorEntryBufferCapacity,
-			ImVec2(ImGui::GetContentRegionAvail().x, (line + 2) * textYSize * 1.1f)
+			ImVec2(ImGui::GetContentRegionAvail().x, (line + 2) * textSpacing)
 		);
 		TextEditorFileModified = TextEditorFileModified || changed;
 	}
@@ -1231,7 +1249,7 @@ static void renderMaterialEditor()
 
 	static double PreviewRotStart = 0.f;
 
-	EcCamera* cc = MtlPreviewCamera->GetComponent<EcCamera>();
+	EcCamera* cc = MtlPreviewCamera->FindComponent<EcCamera>();
 
 	if (ImGui::IsItemHovered())
 	{
@@ -1473,14 +1491,14 @@ static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] =
 	[]()
 	{
 		for (const ObjectHandle& sel : Selections)
-			if (EcScript* s = sel->GetComponent<EcScript>())
+			if (EcScript* s = sel->FindComponent<EcScript>())
 				invokeTextEditor(s->SourceFile);
 	},
 
 	[]()
 	{
 		for (const ObjectHandle& sel : Selections)
-			if (EcScript* s = sel->GetComponent<EcScript>())
+			if (EcScript* s = sel->FindComponent<EcScript>())
 				s->Reload();
 	}
 };
@@ -1500,7 +1518,7 @@ static std::vector<ContextMenuAction> getPossibleActionsForSelections()
 	for (const ObjectHandle& sel : Selections)
 	{
 		if (!gotScript)
-			if (sel->GetComponent<EcScript>())
+			if (sel->FindComponent<EcScript>())
 			{
 				actions.push_back(ContextMenuAction::EditScript);
 				actions.push_back(ContextMenuAction::ReloadScript);
@@ -2006,17 +2024,15 @@ static void renderDescription(const nlohmann::json& DescriptionJson, size_t nCha
 {
 	if (DescriptionJson.is_string())
 	{
-		std::string desc = addLinebreaks("* " + (std::string)DescriptionJson, nCharsPerLine);
-
-		ImGui::TextUnformatted(desc.c_str());
+		std::string desc = addLinebreaks(DescriptionJson, nCharsPerLine);
+		ImGui::Text("* %s", desc.c_str());
 	}
 	else if (DescriptionJson.is_array())
 	{
 		for (auto descit = DescriptionJson.begin(); descit != DescriptionJson.end(); descit++)
 		{
-			std::string desc = addLinebreaks("* " + (std::string)descit.value(), nCharsPerLine);
-
-			ImGui::TextUnformatted(desc.c_str());
+			std::string desc = addLinebreaks(descit.value(), nCharsPerLine);
+			ImGui::Text("* %s", desc.c_str());
 		}
 	}
 	else if (DescriptionJson.is_null())
@@ -2051,6 +2067,72 @@ static std::string funcArgumentDefsToString(const nlohmann::json& In)
 		str = str.substr(0, str.size() - 2);
 		return str;
 	}
+}
+
+static void renderPropertySignature(const std::string& name, const std::string& type)
+{
+	ImGui::PushStyleColor(ImGuiCol_Text, ApiPropertyColor);
+	ImGui::Text("%s: ", name.c_str());
+	ImGui::PopStyleColor();
+
+	ImGui::SameLine();
+
+	ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
+	ImGui::TextUnformatted(type.c_str());
+	ImGui::PopStyleColor();
+}
+
+static void renderFunctionSignature(const nlohmann::json::const_iterator& memberIt, const std::string& in, const std::string& out)
+{
+	ImGui::PushStyleColor(ImGuiCol_Text, ApiFunctionColor);
+	ImGui::Text("%s(", memberIt.key().c_str());
+	ImGui::PopStyleColor();
+	
+	ImGui::SameLine();
+
+	ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
+	ImGui::TextUnformatted(funcArgumentDefsToString(in).c_str());
+	ImGui::PopStyleColor();
+
+	ImGui::SameLine();
+
+	ImGui::PushStyleColor(ImGuiCol_Text, ApiFunctionColor);
+	ImGui::TextUnformatted(")");
+	ImGui::PopStyleColor();
+
+	if (out.size() > 0)
+	{
+		ImGui::SameLine();
+
+		ImGui::PushStyleColor(ImGuiCol_Text, ApiFunctionColor);
+		ImGui::Text(": ");
+		ImGui::PopStyleColor();
+
+		ImGui::SameLine();
+
+		ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
+		ImGui::TextUnformatted(out.c_str());
+		ImGui::PopStyleColor();
+	}
+}
+
+static void renderFunctionSignature(const nlohmann::json::const_iterator& memberIt)
+{
+	renderFunctionSignature(memberIt, funcArgumentDefsToString(memberIt.value().value("In", nlohmann::json())), memberIt.value().value("Out", ""));
+}
+
+// events do not have a signature function, it's done directly inside `renderDocumentationViewer`
+
+static void renderApiMemberBulletpoint(const nlohmann::json::const_iterator& memberIt, const size_t nCharsPerLine)
+{
+	const nlohmann::json& member = memberIt.value();
+
+	if (const auto& typeIt = member.find("Type"); typeIt != member.end())
+		renderPropertySignature(memberIt.key(), typeIt.value());
+	else
+		renderFunctionSignature(memberIt);
+
+	renderDescription(member.value("Description", nlohmann::json()), nCharsPerLine);
 }
 
 static void renderDocumentationViewer()
@@ -2202,7 +2284,7 @@ static void renderDocumentationViewer()
 	ImGui::BeginChild(67, ImVec2(), ImGuiChildFlags_Borders, ImGuiWindowFlags_HorizontalScrollbar);
 	ImVec2 space = ImGui::GetContentRegionAvail();
 	float charsize = ImGui::CalcTextSize("").y;
-	size_t nCharsPerLine = (size_t)std::floor(space.x * 1.75f / charsize);
+	size_t nCharsPerLine = (size_t)std::floor(space.x * 1.65f / charsize);
 
 	switch (DocumentationViewerSection)
 	{
@@ -2229,17 +2311,8 @@ static void renderDocumentationViewer()
 
 			for (auto ita = props.value().begin(); ita != props.value().end(); ita++)
 			{
-				ImGui::PushStyleColor(ImGuiCol_Text, ApiPropertyColor);
-				ImGui::Text("* %s", ita.key().c_str());
-				ImGui::PopStyleColor();
-				
-				ImGui::SameLine();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
-				ImGui::TextUnformatted(((std::string)ita.value()).c_str());
-				ImGui::PopStyleColor();
-
-				ImGui::TextUnformatted(addLinebreaks(apiDocs["Properties"][ita.key()], nCharsPerLine).c_str());
+				renderPropertySignature(ita.key(), ita.value());
+				ImGui::Text("* %s", addLinebreaks(apiDocs["Properties"][ita.key()], nCharsPerLine).c_str());
 			}
 		}
 
@@ -2250,17 +2323,14 @@ static void renderDocumentationViewer()
 
 			for (auto ita = methods.value().begin(); ita != methods.value().end(); ita++)
 			{
-				ImGui::PushStyleColor(ImGuiCol_Text, ApiFunctionColor);
-				ImGui::Text("* %s", ita.key().c_str());
-				ImGui::PopStyleColor();
-				
-				ImGui::SameLine();
+				std::string type = ita.value();
+				size_t iut = type.find_first_of("-"); // the `->` in, for example, `(Integer) -> (GameObject)`
 
-				ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
-				ImGui::TextUnformatted(((std::string)ita.value()).c_str());
-				ImGui::PopStyleColor();
+				std::string in = type.substr(1, iut - 3);
+				std::string out = type.substr(iut + 4, type.size() - (iut + 5));
 
-				ImGui::TextUnformatted(addLinebreaks(apiDocs["Methods"][ita.key()], nCharsPerLine).c_str());
+				renderFunctionSignature(ita, in, out);
+				ImGui::Text("* %s", addLinebreaks(apiDocs["Methods"][ita.key()], nCharsPerLine).c_str());
 			}
 		}
 
@@ -2281,7 +2351,7 @@ static void renderDocumentationViewer()
 				ImGui::TextUnformatted(((std::string)ita.value()).c_str());
 				ImGui::PopStyleColor();
 
-				ImGui::TextUnformatted(addLinebreaks(apiDocs["Events"][ita.key()], nCharsPerLine).c_str());
+				ImGui::Text("* %s", addLinebreaks(apiDocs["Events"][ita.key()], nCharsPerLine).c_str());
 			}
 		}
 
@@ -2302,57 +2372,28 @@ static void renderDocumentationViewer()
 
 		ImGui::SeparatorText(DocumentationViewerSubPageName.c_str());
 		renderDescription(datatype["Description"], nCharsPerLine);
+		ImGui::NewLine();
 
 		if (const auto& library = datatype.find("Library"); library != datatype.end())
 		{
 			ImGui::SeparatorText("Library");
 
 			for (auto memberIt = library.value().begin(); memberIt != library.value().end(); memberIt++)
+				renderApiMemberBulletpoint(memberIt, nCharsPerLine);
+		}
+
+		ImGui::NewLine();
+
+		if (const auto& type = datatype.find("Members"); type != datatype.end())
+		{
+			ImGui::SeparatorText("Type");
+
+			for (auto memberIt = type.value().begin(); memberIt != type.value().end(); memberIt++)
 			{
-				const nlohmann::json& member = memberIt.value();
+				if (type.key()[0] == '_' && type.key()[1] == '_')
+					continue; // metamethod, handled later
 
-				if (const auto& typeIt = member.find("Type"); typeIt != member.end())
-				{
-					ImGui::PushStyleColor(ImGuiCol_Text, ApiPropertyColor);
-					ImGui::Text("%s: ", memberIt.key().c_str());
-					ImGui::PopStyleColor();
-
-					ImGui::SameLine();
-
-					ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
-					ImGui::TextUnformatted(((std::string)typeIt.value()).c_str());
-					ImGui::PopStyleColor();
-				}
-				else
-				{
-					nlohmann::json last = member.value("Out", "");
-					if (last.size() > 0)
-						last = ": " + (std::string)last;
-
-					ImGui::PushStyleColor(ImGuiCol_Text, ApiFunctionColor);
-					ImGui::Text("%s(", memberIt.key().c_str());
-					ImGui::PopStyleColor();
-
-					ImGui::SameLine();
-
-					ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
-					ImGui::TextUnformatted(funcArgumentDefsToString(member["In"]).c_str());
-					ImGui::PopStyleColor();
-
-					ImGui::SameLine();
-
-					ImGui::PushStyleColor(ImGuiCol_Text, ApiFunctionColor);
-					ImGui::TextUnformatted(")");
-					ImGui::PopStyleColor();
-
-					ImGui::SameLine();
-
-					ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
-					ImGui::TextUnformatted(((std::string)last).c_str());
-					ImGui::PopStyleColor();
-				}
-
-				renderDescription(member["Description"], nCharsPerLine);
+				renderApiMemberBulletpoint(memberIt, nCharsPerLine);
 			}
 		}
 
@@ -2374,55 +2415,11 @@ static void renderDocumentationViewer()
 		ImGui::SeparatorText(DocumentationViewerSubPageName.c_str());
 		renderDescription(library["Description"], nCharsPerLine);
 
+		ImGui::NewLine();
 		ImGui::SeparatorText("Members");
 
 		for (auto memberIt = library["Members"].begin(); memberIt != library["Members"].end(); memberIt++)
-		{
-			const nlohmann::json& member = memberIt.value();
-
-			if (const auto& typeIt = member.find("Type"); typeIt != member.end())
-			{
-				ImGui::PushStyleColor(ImGuiCol_Text, ApiPropertyColor);
-				ImGui::Text("%s: ", memberIt.key().c_str());
-				ImGui::PopStyleColor();
-			
-				ImGui::SameLine();
-			
-				ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
-				ImGui::TextUnformatted(((std::string)typeIt.value()).c_str());
-				ImGui::PopStyleColor();
-			}
-			else
-			{
-				nlohmann::json last = member.value("Out", "");
-				if (last.size() > 0)
-					last = ": " + (std::string)last;
-			
-				ImGui::PushStyleColor(ImGuiCol_Text, ApiFunctionColor);
-				ImGui::Text("%s(", memberIt.key().c_str());
-				ImGui::PopStyleColor();
-			
-				ImGui::SameLine();
-			
-				ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
-				ImGui::TextUnformatted(funcArgumentDefsToString(member.value("In", nlohmann::json())).c_str());
-				ImGui::PopStyleColor();
-
-				ImGui::SameLine();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, ApiFunctionColor);
-				ImGui::TextUnformatted(")");
-				ImGui::PopStyleColor();
-
-				ImGui::SameLine();
-			
-				ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
-				ImGui::TextUnformatted(((std::string)last).c_str());
-				ImGui::PopStyleColor();
-			}
-
-			renderDescription(member["Description"], nCharsPerLine);
-		}
+			renderApiMemberBulletpoint(memberIt, nCharsPerLine);
 
 		break;
 	}
@@ -2439,45 +2436,10 @@ static void renderDocumentationViewer()
 			const nlohmann::json& member = memberIt.value();
 
 			if (const auto& dumpedType = ApiDumpJson["ScriptEnv"]["Globals"][memberIt.key()]; dumpedType != "function")
-			{
-				ImGui::PushStyleColor(ImGuiCol_Text, ApiPropertyColor);
-				ImGui::Text("%s: ", memberIt.key().c_str());
-				ImGui::PopStyleColor();
-			
-				ImGui::SameLine();
-			
-				ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
-				ImGui::TextUnformatted(((std::string)dumpedType).c_str());
-				ImGui::PopStyleColor();
-			}
+				renderPropertySignature(memberIt.key(), dumpedType);
+
 			else
-			{
-				nlohmann::json last = member.value("Out", "");
-				if (last.size() > 0)
-					last = ": " + (std::string)last;
-			
-				ImGui::PushStyleColor(ImGuiCol_Text, ApiFunctionColor);
-				ImGui::Text("%s(", memberIt.key().c_str());
-				ImGui::PopStyleColor();
-			
-				ImGui::SameLine();
-			
-				ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
-				ImGui::TextUnformatted(funcArgumentDefsToString(member.value("In", nlohmann::json())).c_str());
-				ImGui::PopStyleColor();
-
-				ImGui::SameLine();
-			
-				ImGui::PushStyleColor(ImGuiCol_Text, ApiFunctionColor);
-				ImGui::TextUnformatted(")");
-				ImGui::PopStyleColor();
-
-				ImGui::SameLine();
-			
-				ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
-				ImGui::TextUnformatted(((std::string)last).c_str());
-				ImGui::PopStyleColor();
-			}
+				renderFunctionSignature(memberIt);
 
 			renderDescription(member["Description"], nCharsPerLine);
 		}
@@ -2605,7 +2567,7 @@ static void renderProperties()
 				if (ImGui::MenuItem(s_EntityComponentNames[i].data()))
 				{
 					for (const ObjectHandle& obj : Selections)
-						if (!obj->GetComponentByType((EntityComponent)i))
+						if (!obj->FindComponentByType((EntityComponent)i))
 							obj->AddComponent((EntityComponent)i);
 				}
 
@@ -2626,7 +2588,7 @@ static void renderProperties()
 			if (ImGui::MenuItem("Remove"))
 			{
 				for (const ObjectHandle& obj : Selections)
-					if (obj->GetComponentByType(RemoveComponentPopupTarget))
+					if (obj->FindComponentByType(RemoveComponentPopupTarget))
 						obj->RemoveComponent(RemoveComponentPopupTarget);
 			}
 			
@@ -3215,6 +3177,8 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 	bool running = true;
 
 	bool wasTextEdEnabled = TextEditorEnabled;
+	bool wasMouseGrabbed = SDL_GetWindowMouseGrab(SDL_GL_GetCurrentWindow());
+	SDL_SetWindowMouseGrab(SDL_GL_GetCurrentWindow(), false);
 
 	int li = 0;
 	lua_getinfo(L, li, "slnfu", ar);
@@ -3231,6 +3195,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 	}
 
 	int currfuncindex = lua_gettop(L);
+	s_TextEdDebuggerJumpToLine = ar->currentline;
 	invokeTextEditor(ar->short_src);
 
 	while (running)
@@ -3531,6 +3496,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 						car.short_src, car.currentline, car.name ? car.name : "<anonmyous>"
 					).c_str()))
 					{
+						s_TextEdDebuggerJumpToLine = car.currentline;
 						invokeTextEditor(car.short_src);
 						lua_getinfo(L, i, "sln", ar);
 					}
@@ -3549,7 +3515,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 
 		if (!quietBg)
 		{
-			EcCamera* sceneCam = engine->WorkspaceRef->GetComponent<EcWorkspace>()->GetSceneCamera()->GetComponent<EcCamera>();
+			EcCamera* sceneCam = engine->WorkspaceRef->FindComponent<EcWorkspace>()->GetSceneCamera()->FindComponent<EcCamera>();
 
 			engine->RendererContext.DrawScene(
 				engine->CurrentScene,
@@ -3580,6 +3546,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 
 	TextEditorEnabled = wasTextEdEnabled;
 	s_TextEdDebuggerCurrentLine = 0;
+	SDL_SetWindowMouseGrab(SDL_GL_GetCurrentWindow(), wasMouseGrabbed);
 
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplSDL3_Shutdown();

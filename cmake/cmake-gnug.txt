@@ -30,7 +30,7 @@ add_compile_options($<$<CONFIG:RelTracy>:-O2>)
 add_compile_options($<$<CONFIG:Release>:-O2>)
 add_compile_options($<$<CONFIG:Debug>:-O0>)
 
-add_compile_options(-MP)
+add_compile_options(-MP -g)
 
 # incremental warning with LTCG
 add_link_options($<$<CONFIG:RelTracy>:-flto>)

@@ -152,7 +152,7 @@ public:
 	static inline std::array<IComponentManager*, (size_t)EntityComponent::__count> s_ComponentManagers{};
 
 	template <class T>
-	T* GetComponent()
+	T* FindComponent()
 	{
 		EntityComponent type = T::Type;
 		for (const ReflectorRef& ref : Components)
@@ -163,7 +163,7 @@ public:
 	}
 	uint32_t AddComponent(EntityComponent Type);
 	void RemoveComponent(EntityComponent Type);
-	void* GetComponentByType(EntityComponent);
+	void* FindComponentByType(EntityComponent);
 
 	const Reflection::PropertyDescriptor* FindProperty(const std::string_view&, ReflectorRef* Reflector = nullptr);
 	const Reflection::MethodDescriptor* FindMethod(const std::string_view&, ReflectorRef* Reflector = nullptr);
@@ -195,14 +195,11 @@ public:
 
 	GameObject* GetParent() const;
 	GameObject* FindChild(const std::string_view&);
-	// accounts for inheritance
-	GameObject* FindChildWhichIsA(const std::string_view&);
+	GameObject* FindChildWithComponent(EntityComponent);
 	
 	bool IsDescendantOf(GameObject*);
 
 	std::string GetFullName() const;
-	// whether this object inherits from or is the given class
-	bool IsA(const std::string_view&) const;
 
 	void SetParent(GameObject*);
 	void AddChild(GameObject*);

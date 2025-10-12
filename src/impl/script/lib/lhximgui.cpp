@@ -52,6 +52,12 @@ static ImGuiWindowFlags strToWindowFlags(lua_State* L, const char* flagsstr)
                 break;
             }
 
+            case 'd':
+            {
+                flags |= ImGuiWindowFlags_NoDocking;
+                break;
+            }
+
             default:
             {
                 luaL_error(L, "Invalid option to flag 'n': '%c'", *flagsstr);
@@ -402,7 +408,7 @@ static int imgui_menuitem(lua_State* L)
     return 1;
 }
 
-static int imgui_getcursorpos(lua_State* L)
+static int imgui_cursorposition(lua_State* L)
 {
     ImVec2 cpos = ImGui::GetCursorPos();
 
@@ -411,7 +417,7 @@ static int imgui_getcursorpos(lua_State* L)
     return 2;
 }
 
-static int imgui_setcursorpos(lua_State* L)
+static int imgui_setcursorposition(lua_State* L)
 {
     ImGui::SetCursorPos({ (float)luaL_checknumber(L, 1), (float)luaL_checknumber(L, 2) });
 
@@ -583,7 +589,7 @@ static int imgui_setnextwindowopen(lua_State* L)
     return 0;
 }
 
-static int imgui_getcontentregionavail(lua_State* L)
+static int imgui_contentregionavail(lua_State* L)
 {
     ImVec2 avail = ImGui::GetContentRegionAvail();
 
@@ -633,7 +639,7 @@ static int imgui_popstylecolor(lua_State*)
     return 0;
 }
 
-static int imgui_getwindowposition(lua_State* L)
+static int imgui_windowposition(lua_State* L)
 {
     ImVec2 pos = ImGui::GetWindowPos();
 
@@ -642,13 +648,32 @@ static int imgui_getwindowposition(lua_State* L)
     return 2;
 }
 
-static int imgui_getwindowsize(lua_State* L)
+static int imgui_windowsize(lua_State* L)
 {
     ImVec2 size = ImGui::GetWindowSize();
 
     lua_pushnumber(L, size.x);
     lua_pushnumber(L, size.y);
     return 2;
+}
+
+static int imgui_setviewportdockspace(lua_State* L)
+{
+    Engine* engine = Engine::Get();
+    engine->ViewportDockSpacePosition = { (float)luaL_checknumber(L, 1), (float)luaL_checknumber(L, 2) };
+    engine->ViewportDockSpaceSize = { (float)luaL_checknumber(L, 3), (float)luaL_checknumber(L, 4) };
+
+    engine->OverrideDefaultGuiViewportDockSpace = true;
+
+    return 0;
+}
+
+static int imgui_setviewportdockspacedefault(lua_State* L)
+{
+    Engine* engine = Engine::Get();
+    engine->OverrideDefaultGuiViewportDockSpace = false;
+
+    return 0;
 }
 
 static luaL_Reg imgui_funcs[] =
@@ -682,8 +707,8 @@ static luaL_Reg imgui_funcs[] =
     { "beginmenu", imgui_beginmenu },
     { "endmenu", imgui_endmenu },
     { "menuitem", imgui_menuitem },
-    { "getcursorpos", imgui_getcursorpos },
-    { "setcursorpos", imgui_setcursorpos },
+    { "cursorposition", imgui_cursorposition },
+    { "setcursorposition", imgui_setcursorposition },
     { "dummy", imgui_dummy },
     { "beginchild", imgui_beginchild },
     { "endchild", imgui_endchild },
@@ -694,13 +719,15 @@ static luaL_Reg imgui_funcs[] =
     { "popid", imgui_popid },
     { "sameline", imgui_sameline },
     { "setnextwindowopen", imgui_setnextwindowopen },
-    { "getcontentregionavail", imgui_getcontentregionavail },
+    { "getcontentregionavail", imgui_contentregionavail },
     { "separator", imgui_separator },
     { "separatortext", imgui_separatortext },
     { "pushstylecolor", imgui_pushstylecolor },
     { "popstylecolor", imgui_popstylecolor },
-    { "getwindowposition", imgui_getwindowposition },
-    { "getwindowsize", imgui_getwindowsize },
+    { "windowposition", imgui_windowposition },
+    { "setwindowsize", imgui_windowsize },
+    { "setviewportdockspace", imgui_setviewportdockspace },
+    { "setviewportdockspacedefault", imgui_setviewportdockspacedefault },
     { NULL, NULL }
 };
 

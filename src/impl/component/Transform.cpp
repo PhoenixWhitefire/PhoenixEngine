@@ -26,7 +26,7 @@ public:
                     EcTransform* ct = static_cast<EcTransform*>(p);
                     ct->Transform = gv.AsMatrix();
 
-                    if (EcMesh* cm = ct->Object->GetComponent<EcMesh>())
+                    if (EcMesh* cm = ct->Object->FindComponent<EcMesh>())
                         cm->RecomputeAabb();
                 }
             ),
@@ -40,7 +40,7 @@ public:
                     EcTransform* ct = static_cast<EcTransform*>(p);
                     ct->Size = gv.AsVector3();
 
-                    if (EcMesh* cm = ct->Object->GetComponent<EcMesh>())
+                    if (EcMesh* cm = ct->Object->FindComponent<EcMesh>())
                         cm->RecomputeAabb();
                 }
             )

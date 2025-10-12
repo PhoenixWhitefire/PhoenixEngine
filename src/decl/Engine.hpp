@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <nljson.hpp>
 #include <SDL3/SDL_video.h>
+#include <imgui/imgui.h>
 
 #include "render/Renderer.hpp"
 
@@ -55,6 +56,10 @@ public:
 	EventSignal<double> OnFrameEnd{};
 
 	Scene CurrentScene;
+
+	ImVec2 ViewportDockSpacePosition{ -1.f, -1.f };
+	ImVec2 ViewportDockSpaceSize{ -1.f, -1.f };
+	bool OverrideDefaultGuiViewportDockSpace = false;
 
 	bool IsHeadlessMode = false;
 	bool IsFullscreen = false;

@@ -13,3 +13,6 @@
 [submodule "Vendor/SDL"]
 	path = Vendor/SDL
 	url = https://github.com/libsdl-org/SDL.git/
+[submodule "Vendor/miniaudio"]
+	path = Vendor/miniaudio
+	url = https://github.com/mackron/miniaudio

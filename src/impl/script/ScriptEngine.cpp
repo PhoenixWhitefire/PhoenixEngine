@@ -1199,7 +1199,7 @@ static int api_eventnamecall(lua_State* L)
 
 				GameObject* scr = (GameObject*)cn->Script.Dereference();
 
-				if (!scr || !scr->GetComponentByType(EntityComponent::Script)
+				if (!scr || !scr->FindComponentByType(EntityComponent::Script)
 				)
 				{
 					lua_resetthread(cL);

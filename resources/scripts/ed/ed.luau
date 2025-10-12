@@ -7,8 +7,8 @@ local CurrentStage: Stage = "None"
 local StageUpdateSignal: EventConnection? = nil
 local Stages: { [string]: (any) -> () } = {}
 
-local EditorCam = (workspace.SceneCamera :: any) :: GameObject & Camera
-local EditorTl = (GameObject.new("TreeLink") :: any) :: GameObject & TreeLink
+local EditorCam = workspace.SceneCamera
+local EditorTl = GameObject.new("TreeLink") :: GameObject & TreeLink
 
 EditorCam.UseSimpleController = true
 EditorTl.Parent = workspace
@@ -20,9 +20,10 @@ local ToolOrder = {
 	"Tool_Properties"
 }
 
-for _, tool in engine.gettoolnames() do
-	engine.settoolenabled(tool, false)
+local BottomBarEnabled = conf.get("Ed_Tool_BottomBarEnabled")
+assert(typeof(BottomBarEnabled) == "boolean" or typeof(BottomBarEnabled) == "nil")
 
+for _, tool in engine.toolnames() do
 	if not table.find(ToolOrder, tool) then
 		table.insert(ToolOrder, tool)
 	end
@@ -61,9 +62,9 @@ local projectSavePath: string? = nil
 local projectIcon: string? = nil
 
 local function createNewProject()
-	projDm = (GameObject.new("DataModel") :: any) :: GameObject & DataModel
-	projWp = (GameObject.new("Workspace") :: any) :: GameObject & Workspace
-	projCam = (GameObject.new("Camera") :: any) :: GameObject & Camera
+	projDm = GameObject.new("DataModel") :: GameObject & DataModel
+	projWp = GameObject.new("Workspace") :: GameObject & Workspace
+	projCam = GameObject.new("Camera") :: GameObject & Camera
 				
 	projWp.Parent = projDm
 	projCam.Parent = projWp
@@ -130,8 +131,8 @@ local function openProject(ManualPath: string?)
 	end
 
 	projDm = (assert(file[1]) :: any) :: GameObject & DataModel
-	projWp = (assert(projDm.Workspace) :: any) :: GameObject & Workspace
-	projCam = (projWp.SceneCamera :: any) :: GameObject & Camera
+	projWp = assert(projDm.Workspace) :: GameObject & Workspace
+	projCam = projWp.SceneCamera
 	EditorTl.Target = projWp
 	saveToRecents(path)
 
@@ -201,18 +202,23 @@ end
 local function toolsTab()
 	for _, tool in ToolOrder do
 		local name = tool:sub(#("Tool_") + 1, #tool)
+		local enabled = engine.toolenabled(tool)
+		local tint = if enabled then { 1, 1, 1, 1 } else { 0.5, 0.5, 0.5, 1 }
 
-		if engine.istoolenabled(tool) then
-			if tabButton(`{name}\nEnabled`, "textures/editor-icons/" .. name .. ".png") then
-				engine.settoolenabled(tool, false)
-			end
-		else
-			if tabButton(`{name}\nDisabled`, "textures/editor-icons/" .. name .. ".png", { 0.5, 0.5, 0.5, 1 }) then
-				engine.settoolenabled(tool, true)
-			end
+		if tabButton(`{name}\n{ if enabled then "Enabled" else "Disabled" }`, `textures/editor-icons/{name}.png`, tint) then
+			engine.settoolenabled(tool, not enabled)
+			conf.save()
 		end
 
 		imgui.sameline()
+	end
+
+	local tint = if BottomBarEnabled then { 1, 1, 1, 1 } else { 0.5, 0.5, 0.5, 1 }
+
+	if tabButton(`Bottom Bar\n{ if BottomBarEnabled then "Enabled" else "Disabled" }`, `textures/editor-icons/fallback.png`, tint) then
+		BottomBarEnabled = not BottomBarEnabled
+		conf.set("Ed_Tool_BottomBarEnabled", BottomBarEnabled)
+		conf.save()
 	end
 end
 
@@ -236,7 +242,7 @@ local function renderMainMenuBar()
 	if not imgui.beginmainmenubar() then
 		return
 	end
-	local _, cursorY = input.getmousepos()
+	local _, cursorY = input.mouseposition()
 	HoveringOverMenuBar = cursorY < RibbonPopupDistance
 	
 	if imgui.beginmenu("File") then
@@ -320,7 +326,7 @@ local function renderMainMenuBar()
 		end
 
 		if HoveringOverMenuBar or HoveringOverRibbonTab or TabButtonHovering ~= nil or WindowHovering then
-			local windowWidth, _ = engine.getwindowsize()
+			local windowWidth, _ = engine.windowsize()
 
 			local TAB_HEIGHT = 175
 
@@ -347,15 +353,15 @@ local function renderMainMenuBar()
 
 		if imgui.begin("About") then
 			local cxavail, _ = imgui.getcontentregionavail()
-			local cursorx, cursory = imgui.getcursorpos()
+			local cursorx, cursory = imgui.cursorposition()
 
-			imgui.setcursorpos(cursorx + cxavail / 2 - 150, cursory)
+			imgui.setcursorposition(cursorx + cxavail / 2 - 150, cursory)
 
 			imgui.image("textures/niko.png", { 150, 150 })
 			imgui.sameline()
 			imgui.image("textures/yes.png", { 150, 150 })
 
-			imgui.setcursorpos(cursorx, cursory + 160)
+			imgui.setcursorposition(cursorx, cursory + 160)
 
 			imgui.text("Phoenix Engine Editor")
 
@@ -377,7 +383,40 @@ end
 
 --local IsHoveringViewportTitlebar = false
 
+local CommandBarCommand = ""
+
 local function renderViewport()
+	if BottomBarEnabled then
+		local wx, wy = engine.windowsize()
+
+		imgui.setviewportdockspace(0, 0, wx, wy - 35)
+		imgui.setnextwindowposition(0, wy - 35)
+		imgui.setnextwindowsize(wx, 35)
+		imgui.begin("Bottom Bar", "nt | nd | nr")
+
+		imgui.text("> ")
+		imgui.sameline()
+		CommandBarCommand = imgui.inputstring("##Command", CommandBarCommand)
+		imgui.sameline()
+
+		if imgui.button("Run") then
+			local thread, error = loadthread(CommandBarCommand, "CommandBar")
+
+			if not thread then
+				print(`Failed to run command, error: {error}`)
+			else
+				coroutine.resume(thread)
+			end
+		end
+		imgui.sameline()
+
+		imgui.text(if projectSavePath then projectSavePath else "<No save path> | ")
+		imgui.sameline()
+		imgui.text(tostring(engine.framerate()) .. " FPS")
+
+		imgui.endw()
+	end
+
 	--[[
 	imgui.begin("Viewport", if IsHoveringViewportTitlebar then "" else "ni")
 
@@ -395,7 +434,7 @@ local function renderViewport()
 		IsHoveringViewportTitlebar = false
 	end
 
-	imgui.setcursorpos(0, 0)
+	imgui.setcursorposition(0, 0)
 
 	imgui.image("!Framebuffer:Main", { wsx, wsy }, true)
 
@@ -418,7 +457,7 @@ local RecentsHoveringOver: number? = nil
 
 function Stages.SelectProject(DeltaTime)
 	if imgui.beginfullscreen("Select Project", 0, 18) then
-		local startPosX, startPosY = imgui.getcursorpos()
+		local startPosX, startPosY = imgui.cursorposition()
 
 		if imgui.beginchild("SidePanel", 165, 0, "b") then
 			if imgui.imagebutton("+", "textures/editor-icons/new.png", { 150, 150 }) then
@@ -435,43 +474,46 @@ function Stages.SelectProject(DeltaTime)
 		end
 		imgui.endchild()
 
-		imgui.setcursorpos(startPosX + 170, startPosY)
+		imgui.setcursorposition(startPosX + 170, startPosY)
 
 		imgui.beginchild("MainSection", 0, 0, "b")
 
 		imgui.text("Recent")
-		local cx, cy = imgui.getcursorpos()
-		imgui.setcursorpos(cx, cy + 10)
+		local cx, cy = imgui.cursorposition()
+		imgui.setcursorposition(cx, cy + 10)
 
-		local windowSizeX, _ = engine.getwindowsize()
+		local windowSizeX, _ = engine.windowsize()
 		local lastnl = #recentProjects
 
 		local hoveringOverWip = nil
 
-		cx, cy = imgui.getcursorpos()
-		imgui.setcursorpos(cx + 10, cy)
+		cx, cy = imgui.cursorposition()
+		imgui.setcursorposition(cx + 10, cy)
 		local firstcx = cx + 10
 
 		for i = #recentProjects, 1, -1 do
 			local proj = recentProjects[i]
 			local clicked = false
 			local hovered = false
-			cx, cy = imgui.getcursorpos()
+			cx, cy = imgui.cursorposition()
+
+			imgui.dummy(300, 300)
+			imgui.setcursorposition(cx, cy)
 
 			if RecentsHoveringOver == i then
 				imgui.pushstylecolor(5, { 1, 1, 1, 1 })
 
-				imgui.setcursorpos(cx - 10, cy - 10)
+				imgui.setcursorposition(cx - 10, cy - 10)
 				imgui.beginchild(proj.Path .. "_Selection", 270, 280, "b", "ni")
 				imgui.endchild()
-				imgui.setcursorpos(cx, cy)
+				imgui.setcursorposition(cx, cy)
 
 				imgui.popstylecolor()
 			end
 
 			imgui.image(proj.Icon or FALLBACK_IMAGE, { 250, 250 })
 			clicked, hovered = imgui.itemclicked(), imgui.itemhovered()
-			imgui.setcursorpos(cx, cy + 250)
+			imgui.setcursorposition(cx, cy + 250)
 			imgui.text(proj.Path:sub(#("resources/scenes/") + 1, #proj.Path))
 			clicked, hovered = clicked or imgui.itemclicked(), hovered or imgui.itemhovered()
 
@@ -489,13 +531,13 @@ function Stages.SelectProject(DeltaTime)
 			end
 
 			if (lastnl - i) * 250 + 170 + 250 + startPosX < windowSizeX - 170 - startPosX then
-				imgui.setcursorpos(cx + 275 - 15, cy)
+				imgui.setcursorposition(cx + 275 - 15, cy)
 				imgui.dummy(0, 0)
 				imgui.sameline()
 			else
 				lastnl = i-1
-				_, cy = imgui.getcursorpos()
-				imgui.setcursorpos(firstcx, cy + 10)
+				_, cy = imgui.cursorposition()
+				imgui.setcursorposition(firstcx, cy + 10)
 			end
 		end
 
@@ -560,7 +602,7 @@ function Stages.ProjectPlaying_Enter()
 	assert(projDm)
 	restoreState = projDm
 	
-	projDm = projDm:Duplicate()
+	projDm = (projDm:Duplicate() :: any) :: GameObject & DataModel
 	projWp = projDm.Workspace
 	projCam = projWp.SceneCamera
 	EditorTl.Target = projWp
@@ -579,6 +621,7 @@ end
 
 function Stages.ProjectPlaying(DeltaTime)
 	renderMainMenuBar()
+	renderViewport()
 end
 
 function Stages.ProjectPlaying_Leave()

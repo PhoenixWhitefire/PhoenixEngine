@@ -20,8 +20,8 @@ static void applyGlobalForces(Memory::vector<ObjectHandle, MEMCAT(Physics)>& Wor
 
 	for (ObjectHandle& object : World)
 	{
-		EcMesh* cm = object->GetComponent<EcMesh>();
-		EcTransform* ct = object->GetComponent<EcTransform>();
+		EcMesh* cm = object->FindComponent<EcMesh>();
+		EcTransform* ct = object->FindComponent<EcTransform>();
 		assert(ct);
 
 		cm->Mass = cm->Density * ct->Size.x * ct->Size.y * ct->Size.z;
@@ -46,9 +46,9 @@ static void moveDynamics(Memory::vector<ObjectHandle, MEMCAT(Physics)>& World, f
 	ZoneScopedC(tracy::Color::AntiqueWhite);
 
 	for (ObjectHandle& object : World)
-		if (EcMesh* cm = object->GetComponent<EcMesh>(); cm->PhysicsDynamics)
+		if (EcMesh* cm = object->FindComponent<EcMesh>(); cm->PhysicsDynamics)
 		{
-			EcTransform* ct = object->GetComponent<EcTransform>();
+			EcTransform* ct = object->FindComponent<EcTransform>();
 
 			const glm::vec3& curPos = ct->Transform[3];
 			glm::vec3 newPos = curPos + (glm::vec3)(cm->LinearVelocity * DeltaTime);
@@ -66,7 +66,7 @@ static void resolveCollisions(Memory::vector<ObjectHandle, MEMCAT(Physics)>& Wor
 
 	for (ObjectHandle& a : World)
 	{
-		EcMesh* am = a->GetComponent<EcMesh>();
+		EcMesh* am = a->FindComponent<EcMesh>();
 
 		if (!am->PhysicsCollisions || !am->PhysicsDynamics)
 			continue;
@@ -79,7 +79,7 @@ static void resolveCollisions(Memory::vector<ObjectHandle, MEMCAT(Physics)>& Wor
 			if (a == b)
 				continue;
 
-			EcMesh* bm = b->GetComponent<EcMesh>();
+			EcMesh* bm = b->FindComponent<EcMesh>();
 
 			if (!bm->PhysicsCollisions)
 				continue;
@@ -116,9 +116,9 @@ static void resolveCollisions(Memory::vector<ObjectHandle, MEMCAT(Physics)>& Wor
 
 		glm::vec3 reactionForce = hit.Position * hit.Depth;
 
-		EcMesh* am = collision.A->GetComponent<EcMesh>();
-		EcMesh* bm = collision.B->GetComponent<EcMesh>();
-		EcTransform* at = collision.A->GetComponent<EcTransform>();
+		EcMesh* am = collision.A->FindComponent<EcMesh>();
+		EcMesh* bm = collision.B->FindComponent<EcMesh>();
+		EcTransform* at = collision.A->FindComponent<EcTransform>();
 
 		if (am->PhysicsDynamics && !bm->PhysicsDynamics)
 		{

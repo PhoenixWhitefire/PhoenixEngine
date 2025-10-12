@@ -24,7 +24,7 @@ static int conf_set(lua_State* L)
 
 static int conf_save(lua_State* L)
 {
-    bool success = FileRW::WriteFile("./", EngineJsonConfig.dump(2));
+    bool success = FileRW::WriteFile("./phoenix.conf", EngineJsonConfig.dump(2));
 
     lua_pushboolean(L, success);
 	return 1;

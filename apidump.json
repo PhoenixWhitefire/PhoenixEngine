@@ -11,7 +11,6 @@
         "GetDescendants": "() -> (Array)",
         "GetFullName": "() -> (String)",
         "HasComponent": "(String) -> (Boolean)",
-        "IsA": "(String) -> (Boolean)",
         "MergeWith": "(GameObject) -> ()"
       },
       "Properties": {
@@ -243,13 +242,10 @@
         "dwireframes": "function",
         "exit": "function",
         "framerate": "function",
-        "getfullscreen": "function",
-        "getmaxframerate": "function",
-        "gettoolnames": "function",
+        "fullscreen": "function",
         "getvsync": "function",
-        "getwindowsize": "function",
         "isheadless": "function",
-        "istoolenabled": "function",
+        "maxframerate": "function",
         "physicstimescale": "function",
         "poplvm": "function",
         "pushlvm": "function",
@@ -260,7 +256,10 @@
         "settoolenabled": "function",
         "setvsync": "function",
         "setwindowsize": "function",
-        "showmessagebox": "function"
+        "showmessagebox": "function",
+        "toolenabled": "function",
+        "toolnames": "function",
+        "windowsize": "function"
       },
       "fs": {
         "isdirectory": "function",
@@ -283,6 +282,7 @@
         "button": "function",
         "checkbox": "function",
         "combo": "function",
+        "cursorposition": "function",
         "dummy": "function",
         "endchild": "function",
         "endmainmenubar": "function",
@@ -290,9 +290,6 @@
         "endmenubar": "function",
         "endw": "function",
         "getcontentregionavail": "function",
-        "getcursorpos": "function",
-        "getwindowposition": "function",
-        "getwindowsize": "function",
         "image": "function",
         "imagebutton": "function",
         "indent": "function",
@@ -308,32 +305,36 @@
         "sameline": "function",
         "separator": "function",
         "separatortext": "function",
-        "setcursorpos": "function",
+        "setcursorposition": "function",
         "setitemtooltip": "function",
         "setnextwindowfocus": "function",
         "setnextwindowopen": "function",
         "setnextwindowposition": "function",
         "setnextwindowsize": "function",
         "settooltip": "function",
+        "setviewportdockspace": "function",
+        "setviewportdockspacedefault": "function",
+        "setwindowsize": "function",
         "stylecolors": "function",
         "text": "function",
         "textlink": "function",
         "treenode": "function",
         "treepop": "function",
-        "windowhovered": "function"
+        "windowhovered": "function",
+        "windowposition": "function"
       },
       "input": {
-        "getmousepos": "function",
+        "cursorvisible": "function",
         "guihandled": "function",
         "guihandledk": "function",
         "guihandledm": "function",
-        "iscursorvisible": "function",
-        "ismousegrabbed": "function",
         "keypressed": "function",
         "mousedown": "function",
+        "mousegrabbed": "function",
+        "mouseposition": "function",
         "setcursorvisible": "function",
         "setmousegrabbed": "function",
-        "setmousepos": "function"
+        "setmouseposition": "function"
       },
       "json": {
         "encode": "function",
@@ -346,9 +347,6 @@
       },
       "model": {
         "import": "function"
-      },
-      "net": {
-        "request": "function"
       },
       "scene": {
         "load": "function",

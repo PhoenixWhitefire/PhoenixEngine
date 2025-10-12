@@ -80,8 +80,44 @@ local function dumpFuncSignature(libname, funcname, In, Out, V)
 	if funcname == "new" and not Out then
 		returns = libname
 	end
-	
-	return `#### \`{libname}.{ funcname }({ docargs }): { returns }\`\n`, `(( { defargs } ) -> ({ returns }))`
+
+	local lspDef = `(( { defargs } ) -> ({ returns }))`
+
+	-- generates "Code too complex to typecheck" error in definitions file :(
+	--[[
+	if libname == "GameObject" and funcname == "new" then
+		local genericDef = lspDef -- aka the `(Component: string) -> (GameObject)` one
+		lspDef = ""
+
+		-- some components will automatically add other components to the Object if they
+		-- are not present
+		local EXTRA_COMPONENT_INITS = {
+			PointLight = { "Transform" },
+			DirectionalLight = { "Transform" },
+			SpotLight = { "Transform" },
+			Mesh = { "Transform" },
+			Model = { "Transform" },
+			ParticleEmitter = { "Transform" },
+		}
+
+		for _, v in GameObject.validComponents do
+			local finalComponents = v
+			local extra = EXTRA_COMPONENT_INITS[v]
+
+			if extra then
+				for _, e in extra do
+					finalComponents ..= ` & {e}`
+				end
+			end
+
+			lspDef ..= `(( Component: "{v}" ) -> ( GameObject & {finalComponents} )) & `
+		end
+
+		lspDef ..= genericDef
+	end
+	]]
+
+	return `#### \`{libname}.{ funcname }({ docargs }): { returns }\`\n`, lspDef
 end
 
 local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, libname: string)
@@ -200,7 +236,12 @@ local function dumpReflectionApi(t, d, cn)
 				end
 				
 				s ..= `* \`{ n }: { rtolsub(v) }\`: { d.Properties[n] }\n`
-				definitionsFile ..= `  { n }: { rtolsub(v) }\n`
+
+				if n == "SceneCamera" then
+					definitionsFile ..= `  { n }: { rtolsub(v) .. " & Camera" }\n`
+				else
+					definitionsFile ..= `  { n }: { rtolsub(v) }\n`
+				end
 			end
 		end
 		
@@ -225,7 +266,11 @@ local function dumpReflectionApi(t, d, cn)
 				subst = string.sub(subst, 2, #subst)
 				
 				if string.sub(subst, 1, 1) == ")" then -- ") : ()" when no inputs
-					subst = "(self)"
+					local close = string.find(subst, ") :")
+					assert(close)
+
+					subst = "(self)" .. string.sub(subst, close + 1, #subst)
+
 				else
 					local close = string.find(subst, ") :")
 					assert(close)
@@ -375,7 +420,13 @@ local function documentDatatype(name)
 			definitionsFile ..= `  function { rk }({ defargs }): ( { returns } )\n`
 		else
 			datatype ..= `#### \`.{ k }: { v.Type }\`\n`
-			definitionsFile ..= `  { k }: { v.Type }\n`
+			definitionsFile ..= `  { k }: { v.Type }`
+
+			if k == "SceneCamera" then
+				definitionsFile ..= "& Camera"
+			end
+
+			definitionsFile ..= "\n"
 		end
 		
 		if not v.Description then

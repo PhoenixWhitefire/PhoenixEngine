@@ -93,7 +93,7 @@ static void fromMatrix(Reflection::GenericValue& G, const glm::mat4& M)
 	G.Size = sizeof(M);
 
 	if (!G.Val.Ptr)
-		RAISE_RT("Failed to allocate {} bytes in fromMatrix", sizeof(M));
+		RAISE_RTF("Failed to allocate {} bytes in fromMatrix", sizeof(M));
 
 	memcpy(G.Val.Ptr, &M, sizeof(M));
 }
@@ -131,7 +131,7 @@ static void fromArray(Reflection::GenericValue& G, std::span<const Reflection::G
 	G.Val.Ptr = Memory::Alloc(allocSize, Memory::Category::Reflection);
 
 	if (!G.Val.Ptr)
-		RAISE_RT("Failed to allocate {} bytes in fromArray (length {}, GV Size {})", allocSize, Array.size(), sizeof(G));
+		RAISE_RTF("Failed to allocate {} bytes in fromArray (length {}, GV Size {})", allocSize, Array.size(), sizeof(G));
 
 	for (uint32_t i = 0; i < Array.size(); i++)
 		// placement-new to avoid 1 excess layer of indirection
@@ -169,7 +169,7 @@ Reflection::GenericValue::GenericValue(const std::unordered_map<GenericValue, Ge
 	this->Val.Ptr = (GenericValue*)Memory::Alloc(allocSize, Memory::Category::Reflection);
 
 	if (!this->Val.Ptr)
-		RAISE_RT("Failed to allocate {} bytes in construction from std::unordered_map (length {}, GV Size {})", arr.size(), sizeof(GenericValue));
+		RAISE_RTF("Failed to allocate {} bytes in construction from std::unordered_map (length {}, GV Size {})", allocSize, arr.size(), sizeof(GenericValue));
 
 	memcpy(this->Val.Ptr, arr.data(), allocSize);
 

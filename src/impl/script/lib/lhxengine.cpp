@@ -3,7 +3,7 @@
 #include "component/Script.hpp"
 #include "Engine.hpp"
 
-static int engine_getwindowsize(lua_State* L)
+static int engine_windowsize(lua_State* L)
 {
     Engine* eng = Engine::Get();
 
@@ -28,7 +28,7 @@ static int engine_isheadless(lua_State* L)
     return 1;
 }
 
-static int engine_isfullscreen(lua_State* L)
+static int engine_fullscreen(lua_State* L)
 {
     Engine* eng = Engine::Get();
 
@@ -44,7 +44,7 @@ static int engine_setfullscreen(lua_State* L)
     return 0;
 }
 
-static int engine_getvsync(lua_State* L)
+static int engine_vsync(lua_State* L)
 {
     Engine* eng = Engine::Get();
 
@@ -68,7 +68,7 @@ static int engine_framerate(lua_State* L)
     return 1;
 }
 
-static int engine_getmaxframerate(lua_State* L)
+static int engine_maxframerate(lua_State* L)
 {
     Engine* eng = Engine::Get();
 
@@ -186,7 +186,7 @@ static const std::string_view Tools[] =
     "Tool_Info"
 };
 
-static int engine_gettoolnames(lua_State* L)
+static int engine_toolnames(lua_State* L)
 {
     lua_createtable(L, (int)std::size(Tools), 0);
 
@@ -228,7 +228,7 @@ static int engine_settoolenabled(lua_State* L)
     return 0;
 }
 
-static int engine_istoolenabled(lua_State* L)
+static int engine_toolenabled(lua_State* L)
 {
     const char* requestedTool = checkValidTool(L);
     const nlohmann::json& value = EngineJsonConfig[requestedTool];
@@ -289,15 +289,15 @@ static int engine_showmessagebox(lua_State* L)
 
 static luaL_Reg engine_funcs[] =
 {
-    { "getwindowsize", engine_getwindowsize },
+    { "windowsize", engine_windowsize },
     { "setwindowsize", engine_setwindowsize },
     { "isheadless", engine_isheadless },
-    { "getfullscreen", engine_isfullscreen },
+    { "fullscreen", engine_fullscreen },
     { "setfullscreen", engine_setfullscreen },
-    { "getvsync", engine_getvsync },
+    { "getvsync", engine_vsync },
     { "setvsync", engine_setvsync },
     { "framerate", engine_framerate },
-    { "getmaxframerate", engine_getmaxframerate },
+    { "maxframerate", engine_maxframerate },
     { "setmaxframerate", engine_setmaxframerate },
     { "exit", engine_exit },
     { "dwireframes", engine_dwireframes },
@@ -308,9 +308,9 @@ static luaL_Reg engine_funcs[] =
     { "setexplorerselections", engine_setexplorerselections },
     { "pushlvm", engine_pushlvm },
     { "poplvm", engine_poplvm },
-    { "gettoolnames", engine_gettoolnames },
+    { "toolnames", engine_toolnames },
     { "settoolenabled", engine_settoolenabled },
-    { "istoolenabled", engine_istoolenabled },
+    { "toolenabled", engine_toolenabled },
     { "showmessagebox", engine_showmessagebox },
     { NULL, NULL }
 };

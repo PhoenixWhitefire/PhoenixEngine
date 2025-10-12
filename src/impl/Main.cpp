@@ -192,7 +192,7 @@ static void handleInputs(double deltaTime)
 {
 	Engine* EngineInstance = Engine::Get();
 
-	EcCamera* camera = EngineInstance->WorkspaceRef->GetComponent<EcWorkspace>()->GetSceneCamera()->GetComponent<EcCamera>();
+	EcCamera* camera = EngineInstance->WorkspaceRef->FindComponent<EcWorkspace>()->GetSceneCamera()->FindComponent<EcCamera>();
 	SDL_Window* window = EngineInstance->Window;
 
 	float mouseX;
@@ -758,10 +758,10 @@ static void init()
 
 		wp->SetParent(dm);
 		cam->SetParent(wp);
-		wp->GetComponent<EcWorkspace>()->SetSceneCamera(cam);
+		wp->FindComponent<EcWorkspace>()->SetSceneCamera(cam);
 
 		GameObject* script = GameObject::Create(EntityComponent::Script);
-		script->GetComponent<EcScript>()->SourceFile = ScriptTool;
+		script->FindComponent<EcScript>()->SourceFile = ScriptTool;
 		script->Name = "Tool";
 		script->SetParent(wp);
 
@@ -782,7 +782,7 @@ static void init()
 	PHX_ENSURE_MSG(!roots.empty(), "No root objects in World!");
 
 	ObjectRef root = roots[0];
-	PHX_ENSURE_MSG(root->GetComponent<EcDataModel>(), "Root Object was not a DataModel!");
+	PHX_ENSURE_MSG(root->FindComponent<EcDataModel>(), "Root Object was not a DataModel!");
 
 	root->IncrementHardRefs();
 	EngineInstance->BindDataModel(root);

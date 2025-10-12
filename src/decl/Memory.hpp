@@ -29,6 +29,7 @@ namespace Memory
 		Material,
 		Physics,
 		Luau,
+		Sound,
 
 		__count
 	};
@@ -60,7 +61,8 @@ namespace Memory
 		"Shader",
 		"Material",
 		"Physics",
-		"Luau"
+		"Luau",
+		"Sound"
 	};
 
 	static_assert(std::size(CategoryNames) == (uint8_t)Memory::Category::__count);

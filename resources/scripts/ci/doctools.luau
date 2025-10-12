@@ -179,7 +179,7 @@ local function isTypeValid(type: string) : (boolean, string?)
 end
 
 local function areMemberTypesValid(member)
-    for _, param in (member.In or {}) do
+    for _, param in (if typeof(member.In) == "string" then { member.In } else (member.In or {})) do
         if typeof(param) == "string" then
             if not isTypeValid(param) then
                 return false

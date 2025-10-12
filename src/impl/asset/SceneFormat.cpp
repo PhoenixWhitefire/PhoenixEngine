@@ -34,7 +34,7 @@ static auto LoadModelAsMeshes(
 
 	for (GameObject* object : Loader.LoadedObjs)
 	{
-		EcTransform* mesh = object->GetComponent<EcTransform>();
+		EcTransform* mesh = object->FindComponent<EcTransform>();
 
 		if (mesh)
 		{
@@ -253,7 +253,7 @@ static std::vector<ObjectRef> LoadMapVersion1(
 
 		for (GameObject* obj : Model)
 		{
-			auto prop_3d = obj->GetComponent<EcMesh>();
+			auto prop_3d = obj->FindComponent<EcMesh>();
 
 			if (!prop_3d)
 				continue;
@@ -289,8 +289,8 @@ static std::vector<ObjectRef> LoadMapVersion1(
 		GameObject* NewObject = GameObject::Create("Primitive");
 		Objects.push_back(NewObject);
 
-		EcTransform* ct = NewObject->GetComponent<EcTransform>();
-		EcMesh* cm = NewObject->GetComponent<EcMesh>();
+		EcTransform* ct = NewObject->FindComponent<EcTransform>();
+		EcMesh* cm = NewObject->FindComponent<EcMesh>();
 
 		NewObject->Name = Object.value("name", NewObject->Name);
 
@@ -363,7 +363,7 @@ static std::vector<ObjectRef> LoadMapVersion1(
 		GameObject* Object = GameObject::Create(LightType);
 		Objects.push_back(Object);
 
-		EcTransform* ct = Object->GetComponent<EcTransform>();
+		EcTransform* ct = Object->FindComponent<EcTransform>();
 
 		ct->Transform = glm::translate(
 			glm::mat4(1.f),
@@ -374,7 +374,7 @@ static std::vector<ObjectRef> LoadMapVersion1(
 
 		if (LightType == "PointLight")
 		{
-			EcPointLight* Pointlight = Object->GetComponent<EcPointLight>();
+			EcPointLight* Pointlight = Object->FindComponent<EcPointLight>();
 			Pointlight->Range = LightObject["range"];
 		}
 	}
@@ -419,7 +419,7 @@ static ObjectRef createObjectFromJsonItem(const nlohmann::json& Item, uint32_t I
 		{
 			std::string name = it.value();
 
-			if (EntityComponent type = s_ComponentNameToType.at(name); !object->GetComponentByType(type))
+			if (EntityComponent type = s_ComponentNameToType.at(name); !object->FindComponentByType(type))
 				object->AddComponent(type);
 		}
 

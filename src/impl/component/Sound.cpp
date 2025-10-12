@@ -1,163 +1,131 @@
 #include <tracy/public/tracy/Tracy.hpp>
-#include <Vendor/FMOD/api/core/inc/fmod.hpp>
-#include <Vendor/FMOD/api/core/inc/fmod_errors.h>
+#include <miniaudio/miniaudio.h>
 
 #include "component/Sound.hpp"
-#include "datatype/GameObject.hpp"
-#include "GlobalJsonConfig.hpp"
-#include "ThreadManager.hpp"
+#include "component/Transform.hpp"
+#include "Memory.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
-#define SCOPED_LOCK(mtx) std::unique_lock<std::mutex> lock(mtx);
-
-#define FMOD_CALL(expr, op) { \
-	if (FMOD_RESULT result = (expr); result != FMOD_OK) { \
-		std::string errstr = std::format("FMOD " op " failed: code {} - '{}'", (int)result, FMOD_ErrorString(result)); \
-		Log::Error(errstr); \
-		throw(std::runtime_error(errstr)); \
-	} \
-} \
-
-static std::unordered_map<std::string, std::pair<FMOD::Sound*, std::vector<uint32_t>>> AudioAssets{};
-static std::unordered_map<FMOD::Sound*, std::string> SoundToSoundFile{};
-static std::unordered_map<void*, uint32_t> ChannelToComponent{};
-static std::mutex SoundMutex;
-
-class SoundManager : public ComponentManager<EcSound>
+uint32_t SoundManager::CreateComponent(GameObject* Object)
 {
-public:
-    uint32_t CreateComponent(GameObject* Object) override
+	if (!m_DidInit)
+		Initialize();
+	
+    m_Components.emplace_back();
+	m_Components.back().Object = Object;
+	m_Components.back().EcId = static_cast<uint32_t>(m_Components.size() - 1);
+	//AudioStreamPromises.emplace_back();
+
+    return static_cast<uint32_t>(m_Components.size() - 1);
+}
+
+void SoundManager::DeleteComponent(uint32_t Id)
+{
+    // TODO id reuse with handles that have a counter per re-use to reduce memory growth
+	EcSound& sound = m_Components[Id];
+	if (sound.SoundInstance.pDataSource)
+		ma_sound_uninit(&sound.SoundInstance);
+
+	ComponentManager<EcSound>::DeleteComponent(Id);
+}
+
+const Reflection::StaticPropertyMap& SoundManager::GetProperties()
+{
+    static const Reflection::StaticPropertyMap props = 
     {
-		if (!m_DidInit)
-			Initialize();
+        EC_PROP(
+			"SoundFile",
+			String,
+			EC_GET_SIMPLE(EcSound, SoundFile),
+			[](void* p, const Reflection::GenericValue& gv)
+			{
+				EcSound* sound = static_cast<EcSound*>(p);
+				std::string_view newFile = gv.AsStringView();
 
-		SCOPED_LOCK(SoundMutex);
-		
-        m_Components.emplace_back();
-		m_Components.back().Object = Object;
-		m_Components.back().EcId = static_cast<uint32_t>(m_Components.size() - 1);
-		//AudioStreamPromises.emplace_back();
+				if (newFile == sound->SoundFile)
+					return;
 
-        return static_cast<uint32_t>(m_Components.size() - 1);
-    }
+				sound->SoundFile = newFile;
+				sound->NextRequestedPosition = 0.f;
+				sound->Reload();
+			}
+		),
 
-    void DeleteComponent(uint32_t Id) override
-    {
-        // TODO id reuse with handles that have a counter per re-use to reduce memory growth
-		EcSound& sound = m_Components[Id];
+		EC_PROP(
+			"Playing",
+			Boolean,
+			[](void* p)
+			-> Reflection::GenericValue
+			{
+				EcSound* sound = static_cast<EcSound*>(p);
+				return sound->m_PlayRequested;
+			},
+			[](void* p, const Reflection::GenericValue& playing)
+			{
+				EcSound* sound = static_cast<EcSound*>(p);
+				if (!sound->Object->Enabled && playing.AsBoolean())
+					RAISE_RT("Tried to play Sound while Object was disabled");
 
-		if (FMOD::Channel* chan = (FMOD::Channel*)sound.m_Channel)
-			chan->stop();
+				sound->m_PlayRequested = playing.AsBoolean();
+			}
+		),
 
-		ComponentManager<EcSound>::DeleteComponent(Id);
-    }
+		EC_PROP(
+			"Position",
+			Double,
+			EC_GET_SIMPLE(EcSound, Position),
+			[](void* p, const Reflection::GenericValue& gv)
+			{
+				EcSound* sound = static_cast<EcSound*>(p);
+				double t = gv.AsDouble();
 
-    const Reflection::StaticPropertyMap& GetProperties() override
-    {
-        static const Reflection::StaticPropertyMap props = 
-        {
-            EC_PROP(
-				"SoundFile",
-				String,
-				EC_GET_SIMPLE(EcSound, SoundFile),
-				[](void* p, const Reflection::GenericValue& gv)
-				{
-					EcSound* sound = static_cast<EcSound*>(p);
-					std::string_view newFile = gv.AsStringView();
+				if (t < 0.f)
+					RAISE_RT("Position cannot be negative");
 
-					if (newFile == sound->SoundFile)
-						return;
-					
-					sound->SoundFile = newFile;
-					sound->NextRequestedPosition = 0.f;
-					sound->Reload();
-				}
-			),
+				sound->NextRequestedPosition = static_cast<float>(t);
+			}
+		),
 
-			EC_PROP(
-				"Playing",
-				Boolean,
-				[](void* p)
-				-> Reflection::GenericValue
-				{
-					EcSound* sound = static_cast<EcSound*>(p);
-					return sound->m_PlayRequested;
-				},
-				[](void* p, const Reflection::GenericValue& playing)
-				{
-					EcSound* sound = static_cast<EcSound*>(p);
-					if (!sound->Object->Enabled && playing.AsBoolean())
-						RAISE_RT("Tried to play Sound while Object was disabled");
+		EC_PROP_SIMPLE(EcSound, Looped, Boolean),
+		EC_PROP(
+			"Volume",
+			Double,
+			EC_GET_SIMPLE(EcSound, Volume),
+			[](void* p, const Reflection::GenericValue& gv)
+			{
+				float volume = static_cast<float>(gv.AsDouble());
+				if (volume < 0.f)
+					RAISE_RT("Volume cannot be negative");
 
-					sound->m_PlayRequested = playing.AsBoolean();
+				static_cast<EcSound*>(p)->Volume = volume;
+			}
+		),
+		EC_PROP(
+			"Speed",
+			Double,
+			EC_GET_SIMPLE(EcSound, Speed),
+			[](void* p, const Reflection::GenericValue& gv)
+			{
+				float speed = static_cast<float>(gv.AsDouble());
 
-					if (FMOD::Channel* chan = (FMOD::Channel*)sound->m_Channel)
-						chan->setPaused(!sound->m_PlayRequested);
-				}
-			),
+				if (speed < 0.01f)
+					RAISE_RT("Speed cannot be less than 0.01");
+				if (speed > 100.f)
+					RAISE_RT("Speed cannot be greater than 100");
 
-			EC_PROP(
-				"Position",
-				Double,
-				EC_GET_SIMPLE(EcSound, Position),
-				[](void* p, const Reflection::GenericValue& gv)
-				{
-					EcSound* sound = static_cast<EcSound*>(p);
-					double t = gv.AsDouble();
+				static_cast<EcSound*>(p)->Speed = speed;
+			}
+		),
 
-					if (t < 0.f)
-						RAISE_RT("Position cannot be negative");
+		EC_PROP("Length", Double, EC_GET_SIMPLE(EcSound, Length), nullptr),
 
-					if (FMOD::Channel* chan = (FMOD::Channel*)sound->m_Channel)
-					{
-						uint32_t pos = static_cast<uint32_t>(t * 1000);
-						FMOD_CALL(chan->setPosition(pos, FMOD_TIMEUNIT_MS), "set channel time position");
-					}
-					else
-						sound->NextRequestedPosition = static_cast<float>(t);
-				}
-			),
+		EC_PROP("FinishedLoading", Boolean, EC_GET_SIMPLE(EcSound, FinishedLoading), nullptr),
+		EC_PROP("LoadSucceeded", Boolean, EC_GET_SIMPLE(EcSound, LoadSucceeded), nullptr)
+    };
 
-			EC_PROP_SIMPLE(EcSound, Looped, Boolean),
-			EC_PROP(
-				"Volume",
-				Double,
-				EC_GET_SIMPLE(EcSound, Volume),
-				[](void* p, const Reflection::GenericValue& gv)
-				{
-					float volume = static_cast<float>(gv.AsDouble());
-					if (volume < 0.f)
-						RAISE_RT("Volume cannot be negative");
-					
-					static_cast<EcSound*>(p)->Volume = volume;
-				}
-			),
-			EC_PROP(
-				"Speed",
-				Double,
-				EC_GET_SIMPLE(EcSound, Speed),
-				[](void* p, const Reflection::GenericValue& gv)
-				{
-					float speed = static_cast<float>(gv.AsDouble());
-
-					if (speed < 0.01f)
-						RAISE_RT("Speed cannot be less than 0.01");
-					if (speed > 100.f)
-						RAISE_RT("Speed cannot be greater than 100");
-
-					static_cast<EcSound*>(p)->Speed = speed;
-				}
-			),
-
-			EC_PROP("Length", Double, EC_GET_SIMPLE(EcSound, Length), nullptr),
-
-			EC_PROP("FinishedLoading", Boolean, EC_GET_SIMPLE(EcSound, FinishedLoading), nullptr),
-			EC_PROP("LoadSucceeded", Boolean, EC_GET_SIMPLE(EcSound, LoadSucceeded), nullptr)
-        };
-
-        return props;
-    }
+    return props;
+}
 
 // stupid compiler false positive warnings
 #if defined(__GNUG__) && (__GNUG__ == 14)
@@ -166,223 +134,151 @@ public:
 #pragma GCC diagnostic ignored "-Wstringop-overflow"
 #endif
 
-	const Reflection::StaticEventMap& GetEvents() override
+const Reflection::StaticEventMap& SoundManager::GetEvents()
+{
+	static const Reflection::StaticEventMap events =
 	{
-		static const Reflection::StaticEventMap events =
-		{
-			REFLECTION_EVENT(EcSound, OnLoaded, Reflection::ValueType::Boolean)
-		};
+		REFLECTION_EVENT(EcSound, OnLoaded, Reflection::ValueType::Boolean)
+	};
 
-		return events;
-	}
+	return events;
+}
 
 #if defined(__GNUG__) && (__GNUG__ == 14)
 #pragma GCC diagnostic pop
 #endif
 	
-	void Initialize()
-	{
-		ZoneScoped;
-
-		FMOD_CALL(FMOD::System_Create(&FmodSystem), "System creation");
-		FMOD_CALL(FmodSystem->init(32, FMOD_INIT_NORMAL, 0), "System initialization");
-
-		m_DidInit = true;
-	}
-
-	void Update()
-	{
-		ZoneScoped;
-
-		FMOD_CALL(FmodSystem->update(), "System update");
-		LastTick = GetRunningTime();
-	}
-
-	void Shutdown() override
-	{
-		if (!FmodSystem)
-			return;
-
-		FMOD_CALL(FmodSystem->release(), "System shutdown");
-		
-		AudioAssets.clear();
-		ComponentManager<EcSound>::Shutdown();
-	}
-
-	FMOD::System* FmodSystem = nullptr;
-	double LastTick = 0.f;
-
-private:
-	bool m_DidInit = false;
-};
-
-static inline SoundManager Instance{};
-
-static FMOD_RESULT F_CALL fmodNonBlockingCallback(FMOD_SOUND* Sound, FMOD_RESULT Result)
+void SoundManager::Initialize()
 {
-	SCOPED_LOCK(SoundMutex);
+	ZoneScoped;
 
-	FMOD::Sound* sound = (FMOD::Sound*)Sound;
-	const auto& it = AudioAssets.find(SoundToSoundFile[sound]);
-
-	if (Result != FMOD_OK)
-	{
-		Log::WarningF(
-			"FMOD sound failed to load: code {} - '{}'",
-			(int)Result, FMOD_ErrorString(Result)
-		);
-
-		for (uint32_t ecId : it->second.second)
+	ma_engine_config config{};
+	config.allocationCallbacks.onMalloc = [](size_t Size, void*)
 		{
-			EcSound* ecSound = (EcSound*)Instance.GetComponent(ecId);
-			ecSound->FinishedLoading = true;
-			ecSound->LoadSucceeded = false;
-
-			REFLECTION_SIGNAL(ecSound->OnLoadedCallbacks, false);
-		}
-	}
-	else
-	{
-		for (uint32_t ecId : it->second.second)
+			return Memory::Alloc(Size, MEMCAT(Sound));
+		};
+	config.allocationCallbacks.onRealloc = [](void* P, size_t Size, void*)
 		{
-			EcSound* ecSound = (EcSound*)Instance.GetComponent(ecId);
-			ecSound->FinishedLoading = true;
-			ecSound->LoadSucceeded = true;
+			return Memory::ReAlloc(P, Size, MEMCAT(Sound));
+		};
+	config.allocationCallbacks.onFree = [](void* P, void*)
+		{
+			Memory::Free(P);
+		};
 
-			REFLECTION_SIGNAL(ecSound->OnLoadedCallbacks, true);
-		}
-	}
+	if (ma_result initResult = ma_engine_init(&config, &AudioEngine); initResult != MA_SUCCESS)
+		RAISE_RTF("Audio Engine init failed, error code: {}", (int)initResult);
 
-	return FMOD_OK;
+	m_DidInit = true;
 }
 
-static FMOD_RESULT F_CALL channelCtlCallback(
-	FMOD_CHANNELCONTROL* Channel,
-	FMOD_CHANNELCONTROL_TYPE /* ChannelType */,
-	FMOD_CHANNELCONTROL_CALLBACK_TYPE CallbackType,
-	void* /* CommandData1 */,
-	void* /* CommandData2 */
-)
+void SoundManager::Update(const glm::mat4& CameraTransform)
 {
-	SCOPED_LOCK(SoundMutex);
+	ZoneScoped;
 
-	if (CallbackType == FMOD_CHANNELCONTROL_CALLBACK_END)
-	{
-		uint32_t ecId = ChannelToComponent[(void*)Channel];
-		if (EcSound* sound = (EcSound*)Instance.GetComponent(ecId))
-		{
-			if (!sound->Looped)
-			{
-				((FMOD::Channel*)Channel)->stop();
-				sound->m_PlayRequested = false;
-				sound->m_Channel = nullptr;
-			}
-		}
-	}
+	ma_engine_listener_set_position(&AudioEngine, 0, CameraTransform[3][0], CameraTransform[3][2], CameraTransform[3][2]);
 
-	return FMOD_OK;
+	const glm::vec4& forward = CameraTransform[2];
+	ma_engine_listener_set_direction(&AudioEngine, 0, forward[0], forward[1], forward[2]);
+
+	LastTick = GetRunningTime();
 }
 
-void EcSound::Update(double)
+void SoundManager::Shutdown()
 {
-	if (GetRunningTime() != Instance.LastTick)
-		Instance.Update();
-		
-	if (!LoadSucceeded)
-		return;
+	//AudioAssets.clear();
 
-	SCOPED_LOCK(SoundMutex);
+	ma_engine_uninit(&AudioEngine);
+	ComponentManager<EcSound>::Shutdown();
+}
 
-	if (!m_Channel && m_PlayRequested)
-	{
-		FMOD::Sound* sound = AudioAssets[SoundFile].first;
-		assert(sound);
+static inline SoundManager Manager{};
 
-		FMOD::Channel*& chan = (FMOD::Channel*&)m_Channel;
-
-		FMOD_CALL(Instance.FmodSystem->playSound(
-			sound,
-			nullptr,
-			!m_PlayRequested,
-			&chan
-		), "play nonblocking sound");
-		ChannelToComponent[m_Channel] = EcId;
-
-		FMOD_CALL(chan->setCallback(channelCtlCallback), "set channel control callback");
-		FMOD_CALL(chan->setMode(Looped ? FMOD_LOOP_NORMAL : FMOD_DEFAULT), "set channel mode [1]");
-	}
-	else if (FMOD::Channel* chan = (FMOD::Channel*)m_Channel; chan && m_PlayRequested)
-	{
-		if (!Object->Enabled)
-		{
-			FMOD_CALL(chan->setPaused(true), "set paused (object disabled)");
-			return;
-		}
-
-		bool paused = false;
-		FMOD_CALL(chan->getPaused(&paused), "get is paused");
-
-		if (paused == m_PlayRequested)
-			FMOD_CALL(chan->setPaused(!m_PlayRequested), "set paused");
-		
-		FMOD_MODE mode;
-		FMOD_CALL(chan->getMode(&mode), "get channel mode [2]");
-
-		if (bool chlooped = mode & FMOD_LOOP_NORMAL; chlooped != Looped)
-			FMOD_CALL(chan->setMode(Looped ? FMOD_LOOP_NORMAL : FMOD_LOOP_OFF), "sync loop state");
-
-		FMOD_CALL(chan->setVolume(Volume), "sync volume");
-
-		if (m_BaseFrequency == FLT_MAX)
-			FMOD_CALL(chan->getFrequency(&m_BaseFrequency), "get base frequency");
-
-		FMOD_CALL(chan->setFrequency(m_BaseFrequency * Speed), "set frequency");
-	}
+SoundManager& SoundManager::Get()
+{
+	return Manager;
 }
 
 void EcSound::Reload()
 {
-	if (!FinishedLoading)
-		RAISE_RT("Cannot `::Reload` a Sound while it is still loading");
+	ZoneScoped;
 
-	SCOPED_LOCK(SoundMutex);
+	std::string filePath = FileRW::MakePathCwdRelative(SoundFile);
 
-	if (const auto& it = AudioAssets.find(SoundFile); it == AudioAssets.end())
+	if (SoundInstance.pDataSource)
+		ma_sound_uninit(&SoundInstance);
+	SoundInstance = ma_sound();
+
+	FinishedLoading = false;
+	LoadSucceeded = false;
+	Length = 0.f;
+
+	if (ma_result result = ma_sound_init_from_file(&Manager.AudioEngine, filePath.c_str(), 0, NULL, NULL, &SoundInstance);
+		result != MA_SUCCESS
+	)
 	{
-		std::string ResDir = EngineJsonConfig.value("ResourcesDirectory", "resources/");
-
-		FinishedLoading = false;
-		LoadSucceeded = false;
-		m_Channel = nullptr;
-
-		FMOD::Sound* sound;
-		FMOD_CREATESOUNDEXINFO exinfo{};
-		exinfo.nonblockcallback = fmodNonBlockingCallback;
-		exinfo.cbsize = sizeof(exinfo);
-
-		FMOD_CALL(
-			Instance.FmodSystem->createSound((ResDir + SoundFile).c_str(), FMOD_NONBLOCKING, &exinfo, &sound),
-			"create sound"
-		);
-
-		std::pair<FMOD::Sound*, std::vector<uint32_t>>& pair = AudioAssets[SoundFile];
-		pair.first = sound;
-		pair.second.push_back(EcId);
-		SoundToSoundFile[sound] = SoundFile;
+		FinishedLoading = true;
+		Log::ErrorF("Failed to load sound file '{}' for '{}', error code: {}", filePath, Object->GetFullName(), (int)result);
+		return;
 	}
-	else
+
+	FinishedLoading = true;
+
+	if (ma_result result = ma_sound_get_length_in_seconds(&SoundInstance, &Length); result != MA_SUCCESS)
 	{
-		FMOD::Channel*& chan = (FMOD::Channel*&)m_Channel;
-
-		FMOD_CALL(Instance.FmodSystem->playSound(
-			it->second.first,
-			nullptr,
-			!m_PlayRequested,
-			&chan
-		), "play sound");
-		ChannelToComponent[m_Channel] = EcId;
-
-		FMOD_CALL(chan->setCallback(channelCtlCallback), "set channel control callback");
-		FMOD_CALL(chan->setMode(Looped ? FMOD_LOOP_NORMAL : FMOD_DEFAULT), "set channel mode");
+		Log::ErrorF("Failed to get length of sound '{}', error code: {}", Object->GetFullName(), (int)result);
+		return;
 	}
+
+	REFLECTION_SIGNAL(OnLoadedCallbacks, SoundFile);
+	FinishedLoading = true;
+	LoadSucceeded = true;
+}
+
+void EcSound::Update(double)
+{
+	ZoneScoped;
+
+	if (!SoundInstance.pDataSource)
+		return;
+
+	bool playing = ma_sound_is_playing(&SoundInstance);
+
+	if (!Object->Enabled && playing)
+	{
+		if (ma_result result = ma_sound_stop(&SoundInstance); result != MA_SUCCESS)
+			Log::ErrorF("Failed to stop sound '{}' (disabled object), error code: {}", Object->GetFullName(), (int)result);
+		return;
+	}
+
+	if (playing && !m_PlayRequested)
+	{
+		if (ma_result result = ma_sound_stop(&SoundInstance); result != MA_SUCCESS)
+			Log::ErrorF("Failed to play sound '{}', error code: {}", Object->GetFullName(), (int)result);
+	}
+	else if (!playing && m_PlayRequested)
+		if (ma_result result = ma_sound_start(&SoundInstance); result != MA_SUCCESS)
+			Log::ErrorF("Failed to stop sound '{}', error code: {}", Object->GetFullName(), (int)result);
+
+	ma_sound_set_looping(&SoundInstance, Looped); // TODO doesn't work
+	if (!Looped && Length - Position < 0.05f)
+		m_PlayRequested = false;
+
+	ma_sound_set_volume(&SoundInstance, Volume);
+	
+	if (NextRequestedPosition >= 0.f)
+	{
+		if (ma_result result = ma_sound_seek_to_second(&SoundInstance, NextRequestedPosition); result != MA_SUCCESS)
+			Log::ErrorF(
+				"Failed to seek to position {} (in seconds) for sound '{}', error code: {}",
+				NextRequestedPosition, Object->GetFullName(), (int)result
+			);
+		NextRequestedPosition = -1.f;
+	}
+
+	if (ma_result result = ma_sound_get_cursor_in_seconds(&SoundInstance, &Position); result != MA_SUCCESS)
+		Log::ErrorF("Failed to get playback position of sound '{}', error code: {}", Object->GetFullName(), (int)result);
+
+	if (EcTransform* trans = Object->FindComponent<EcTransform>())
+		ma_sound_set_position(&SoundInstance, trans->Transform[3][0], trans->Transform[3][1], trans->Transform[3][2]);
 }

@@ -2,6 +2,7 @@
 
 #include "component/Workspace.hpp"
 #include "component/Camera.hpp"
+#include "component/Sound.hpp"
 #include "Engine.hpp"
 
 static ObjectHandle s_FallbackCamera;
@@ -9,7 +10,7 @@ static ObjectHandle s_FallbackCamera;
 static GameObject* createCamera()
 {
 	GameObject* camera = GameObject::Create("Camera");
-	camera->GetComponent<EcCamera>()->UseSimpleController = true;
+	camera->FindComponent<EcCamera>()->UseSimpleController = true;
 
 	return camera;
 }
@@ -105,7 +106,7 @@ glm::vec3 EcWorkspace::ScreenPointToRay(double x, double y, float length, glm::v
 
 	glm::vec4 clipCoords{ nx, ny, -1.f, 1.f };
 
-	EcCamera* cam = GetSceneCamera()->GetComponent<EcCamera>();
+	EcCamera* cam = GetSceneCamera()->FindComponent<EcCamera>();
 
 	glm::mat4 projectionMatrixInv = glm::inverse(glm::perspective(
 		glm::radians(cam->FieldOfView),
@@ -138,7 +139,7 @@ GameObject* EcWorkspace::GetSceneCamera() const
 
 	GameObject* sceneCam = GameObject::GetObjectById(m_SceneCameraId);
 
-	if (sceneCam && !sceneCam->GetComponent<EcCamera>())
+	if (sceneCam && !sceneCam->FindComponent<EcCamera>())
 	{
 		Log::Warning("Scene Camera lost it's Camera component!");
 		sceneCam = nullptr;
@@ -149,15 +150,21 @@ GameObject* EcWorkspace::GetSceneCamera() const
 
 void EcWorkspace::SetSceneCamera(GameObject* NewCam)
 {
-	if (NewCam && !NewCam->GetComponent<EcCamera>())
+	if (NewCam && !NewCam->FindComponent<EcCamera>())
 		RAISE_RT("Must have a Camera component!");
 
 	if (GameObject* prevCam = GetSceneCamera())
 		if (prevCam != NewCam)
-			prevCam->GetComponent<EcCamera>()->IsSceneCamera = false;
+			prevCam->FindComponent<EcCamera>()->IsSceneCamera = false;
 
 	m_SceneCameraId = NewCam ? NewCam->ObjectId : UINT32_MAX;
 
 	if (NewCam)
-		NewCam->GetComponent<EcCamera>()->IsSceneCamera = true;
+		NewCam->FindComponent<EcCamera>()->IsSceneCamera = true;
+}
+
+void EcWorkspace::Update() const
+{
+	SoundManager& soundManager = SoundManager::Get();
+	soundManager.Update(GetSceneCamera()->FindComponent<EcCamera>()->Transform);
 }

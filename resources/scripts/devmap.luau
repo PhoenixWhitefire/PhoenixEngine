@@ -3,7 +3,7 @@
 
 local TotalTime = 0
 
-local Camera = (workspace.SceneCamera :: any) :: ( GameObject & Camera )
+local Camera = workspace.SceneCamera
 local CharacterControllerCreator = require("./modules/CharacterController.luau")
 --local RoomGen = require("scripts/roomsgen.luau")
 
@@ -18,8 +18,8 @@ local lastSwitchedPerspectives = 0
 
 local SwitchToFreecamNextFrame = 0
 
-local SoundStinger = (GameObject.new("Sound") :: any) :: GameObject & Sound
-local RareSoundStinger = (GameObject.new("Sound") :: any) :: GameObject & Sound
+local SoundStinger = GameObject.new("Sound") :: GameObject & Sound
+local RareSoundStinger = GameObject.new("Sound") :: GameObject & Sound
 
 local TimesNormalStingerPlayed = 0
 
@@ -94,7 +94,7 @@ game.OnFrameBegin:Connect(function(DeltaTime)
 		
 		if input.keypressed("e") and TotalTime - lastSwitchedPerspectives > 0.25 then
 			if not blorbs then
-				blorbs = GameObject.new("Model") :: any
+				blorbs = GameObject.new("Model")
 				assert(blorbs)
 				blorbs.Name = "blorbs"
 				blorbs.Parent = workspace

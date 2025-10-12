@@ -21,7 +21,6 @@ The Engine support an Entity Component System architecture, meaning that `GameOb
 * `GetDescendants() : ({ any })`: Returns all descendants of the Object (i.e. its children, and their children, etc)
 * `GetFullName() : (string)`: Returns the full, hierarchal path of the Object
 * `HasComponent(string) : (boolean)`: Returns whether or not the Object has the given Component
-* `IsA(string) : (boolean)`: Equivalent to `:HasComponent`
 * `MergeWith(GameObject) : ()`: Merges the Objects together, replacing descendants with the same name
 
 ## `Animation`

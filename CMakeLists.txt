@@ -56,10 +56,7 @@ set(PHX_BUILD_TYPE $<IF:$<CONFIG:Debug>,Debug,$<IF:$<CONFIG:Release>,Release,Rel
 target_compile_definitions(PhoenixEngine PRIVATE PHX_BUILD_TYPE="${PHX_BUILD_TYPE}")
 
 if (MSVC)
-	set(FMOD_PATH Vendor/FMOD/api/core/lib/x64/fmodL_vc)
 	target_compile_options(PhoenixEngine PRIVATE /wd4244)
-else()
-	set(FMOD_PATH ${CMAKE_BINARY_DIR}/Vendor/FMOD/api/core/lib/x86_64/libfmodL.so)
 endif()
 
 target_link_libraries(PhoenixEngine PRIVATE
@@ -67,8 +64,8 @@ target_link_libraries(PhoenixEngine PRIVATE
 	glm
 	SDL_uclibc
 	SDL3-shared
-	$<IF:$<CONFIG:Release>,,TracyClient> # TODO: seemingly no way to not build this even if we dont link it
-	${FMOD_PATH}
+	miniaudio
+	$<IF:$<CONFIG:Release>,,TracyClient> # TODO: figure out how to not build this if we dont link it
 
 	Luau.Compiler
 	Luau.Ast
@@ -96,14 +93,13 @@ endif()
 option(LUAU_BUILD_CLI "Build CLI" OFF)
 option(LUAU_BUILD_TESTS "Build tests" OFF)
 option(SDL_TEST_LIBRARY "Build the SDL3_test library" OFF)
-# curl static
-option(BUILD_STATIC_LIBS "Build static libraries" OFF)
 
 add_subdirectory(Vendor)
 add_subdirectory(Vendor/luau)
 add_subdirectory(Vendor/glm)
 add_subdirectory(Vendor/SDL)
 add_subdirectory(Vendor/tracy)
+add_subdirectory(Vendor/miniaudio)
 
 # organize vs folders
 set_property(TARGET Vendor PROPERTY FOLDER "Vendor")

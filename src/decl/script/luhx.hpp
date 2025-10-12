@@ -11,9 +11,6 @@ int luhxopen_base(lua_State*);
 #define LUHX_FSLIBNAME "fs"
 int luhxopen_fs(lua_State*);
 
-#define LUHX_NETLIBNAME "net"
-int luhxopen_net(lua_State*);
-
 #define LUHX_CONFLIBNAME "conf"
 int luhxopen_conf(lua_State*);
 

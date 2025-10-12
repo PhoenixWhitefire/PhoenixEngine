@@ -237,8 +237,8 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 		{
 			// TODO: cleanup code
 			object = GameObject::Create("Mesh");
-			EcMesh* meshObject = object->GetComponent<EcMesh>();
-			EcTransform* ct = object->GetComponent<EcTransform>();
+			EcMesh* meshObject = object->FindComponent<EcMesh>();
+			EcTransform* ct = object->FindComponent<EcTransform>();
 
 			std::string saveDir = AssetPath;
 			size_t whereRes = saveDir.find("resources/");
@@ -344,7 +344,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 		else
 		{
 			object = GameObject::Create("Mesh");
-			EcTransform* prim = object->GetComponent<EcTransform>();
+			EcTransform* prim = object->FindComponent<EcTransform>();
 			prim->Transform = node.Transform;
 			prim->Size = node.Scale;
 		}

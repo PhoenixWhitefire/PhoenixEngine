@@ -7,7 +7,7 @@
 
 static int world_raycast(lua_State* L)
 {
-    GameObject* workspace = GameObject::GetObjectById(GameObject::s_DataModel)->FindChildWhichIsA("Workspace");
+    GameObject* workspace = GameObject::GetObjectById(GameObject::s_DataModel)->FindChildWithComponent(EntityComponent::Workspace);
 
 	if (!workspace)
 		luaL_error(L, "A Workspace was not found within the DataModel");
@@ -31,8 +31,8 @@ static int world_raycast(lua_State* L)
 		if (std::find(ignoreList.begin(), ignoreList.end(), p) != ignoreList.end())
 			continue;
     
-		EcMesh* object = p->GetComponent<EcMesh>();
-		EcTransform* ct = p->GetComponent<EcTransform>();
+		EcMesh* object = p->FindComponent<EcMesh>();
+		EcTransform* ct = p->FindComponent<EcTransform>();
     
 		if (object && ct)
 		{
@@ -81,7 +81,7 @@ static int world_raycast(lua_State* L)
 
 static int world_aabbcast(lua_State* L)
 {
-    GameObject* workspace = GameObject::GetObjectById(GameObject::s_DataModel)->FindChildWhichIsA("Workspace");
+    GameObject* workspace = GameObject::GetObjectById(GameObject::s_DataModel)->FindChildWithComponent(EntityComponent::Workspace);
 
 	if (!workspace)
 		luaL_error(L, "A Workspace was not found within the DataModel");
@@ -105,8 +105,8 @@ static int world_aabbcast(lua_State* L)
 		if (std::find(ignoreList.begin(), ignoreList.end(), p) != ignoreList.end())
 			continue;
     
-		EcMesh* object = p->GetComponent<EcMesh>();
-		EcTransform* ct = p->GetComponent<EcTransform>();
+		EcMesh* object = p->FindComponent<EcMesh>();
+		EcTransform* ct = p->FindComponent<EcTransform>();
     
 		if (object && ct)
 		{
@@ -155,7 +155,7 @@ static int world_aabbcast(lua_State* L)
 
 static int world_aabbquery(lua_State* L)
 {
-    GameObject* workspace = GameObject::GetObjectById(GameObject::s_DataModel)->FindChildWhichIsA("Workspace");
+    GameObject* workspace = GameObject::GetObjectById(GameObject::s_DataModel)->FindChildWithComponent(EntityComponent::Workspace);
 
 	if (!workspace)
 		luaL_error(L, "A Workspace was not found within the DataModel");
@@ -178,7 +178,7 @@ static int world_aabbquery(lua_State* L)
 		if (std::find(ignoreList.begin(), ignoreList.end(), p) != ignoreList.end())
 			continue;
     
-		EcTransform* object = p->GetComponent<EcTransform>();
+		EcTransform* object = p->FindComponent<EcTransform>();
     
 		if (object)
 		{

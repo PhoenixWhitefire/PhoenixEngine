@@ -6,7 +6,7 @@
 static Bone* getUnderlyingBone(EcBone* BoneComponent)
 {
 	GameObject* meshObj = BoneComponent->Object->GetParent();
-	EcMesh* mesh = meshObj ? meshObj->GetComponent<EcMesh>() : nullptr;
+	EcMesh* mesh = meshObj ? meshObj->FindComponent<EcMesh>() : nullptr;
 
 	if (mesh)
 	{
@@ -77,7 +77,7 @@ public:
 						realBone->Transform = gv.AsMatrix();
 
 						GameObject* meshObj = boneObj->Object->GetParent();
-						EcMesh* mesh = meshObj->GetComponent<EcMesh>();
+						EcMesh* mesh = meshObj->FindComponent<EcMesh>();
 
 						Mesh& meshData = MeshProvider::Get()->GetMeshResource(mesh->RenderMeshId);
 						MeshProvider::GpuMesh& gpuMesh = MeshProvider::Get()->GetGpuMesh(meshData.GpuId);

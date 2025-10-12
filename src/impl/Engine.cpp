@@ -401,14 +401,14 @@ static void traverseHierarchy(
 
 	for (ObjectHandle object : objects)
 	{
-		if (EcSound* sound = object->GetComponent<EcSound>())
+		if (EcSound* sound = object->FindComponent<EcSound>())
 			sound->Update(DeltaTime);
 
 		if (!object->Enabled)
 			continue;
 			
-		EcMesh* object3D = object->GetComponent<EcMesh>();
-		EcTransform* ct = object->GetComponent<EcTransform>();
+		EcMesh* object3D = object->FindComponent<EcMesh>();
+		EcTransform* ct = object->FindComponent<EcTransform>();
 
 		if (object3D)
 		{
@@ -448,12 +448,12 @@ static void traverseHierarchy(
 				);
 		}
 
-		if (EcScript* scr = object->GetComponent<EcScript>(); ScriptsUpdate && scr)
+		if (EcScript* scr = object->FindComponent<EcScript>(); ScriptsUpdate && scr)
 			scr->Update(DeltaTime);
 
-		EcDirectionalLight* directional = object->GetComponent<EcDirectionalLight>();
-		EcPointLight* point = object->GetComponent<EcPointLight>();
-		EcSpotLight* spot = object->GetComponent<EcSpotLight>();
+		EcDirectionalLight* directional = object->FindComponent<EcDirectionalLight>();
+		EcPointLight* point = object->FindComponent<EcPointLight>();
+		EcSpotLight* spot = object->FindComponent<EcSpotLight>();
 		
 		if (directional)
 		{
@@ -498,13 +498,13 @@ static void traverseHierarchy(
 				Sun
 			);
 		
-		if (EcParticleEmitter* emitter = object->GetComponent<EcParticleEmitter>())
+		if (EcParticleEmitter* emitter = object->FindComponent<EcParticleEmitter>())
 		{
 			emitter->Update(DeltaTime);
 			emitter->AppendToRenderList(RenderList);
 		}
 
-		if (EcTreeLink* link = object->GetComponent<EcTreeLink>(); link && link->Target.IsValid())
+		if (EcTreeLink* link = object->FindComponent<EcTreeLink>(); link && link->Target.IsValid())
 			traverseHierarchy(
 				RenderList,
 				LightList,
@@ -589,8 +589,8 @@ void Engine::m_Render(double deltaTime)
 	ImGuiDockNode* viewportNode = ImGui::DockBuilderGetNode(ViewportNodeId)->CentralNode;
 	float aspectRatio = viewportNode->Size.x / viewportNode->Size.y;
 
-	ObjectHandle sceneCamObject = WorkspaceRef->GetComponent<EcWorkspace>()->GetSceneCamera();
-	EcCamera* sceneCamera = sceneCamObject->GetComponent<EcCamera>();
+	ObjectHandle sceneCamObject = WorkspaceRef->FindComponent<EcWorkspace>()->GetSceneCamera();
+	EcCamera* sceneCamera = sceneCamObject->FindComponent<EcCamera>();
 
 	// we do this AFTER  `traverseHierarchy` in case any Scripts
 	// update the camera transform
@@ -758,8 +758,8 @@ static void ensureDataModelValid(GameObject* DataModel)
 
 	GameObject* workspace = DataModel->FindChild("Workspace");
 	PHX_ENSURE(workspace /* , "DataModel has no Workspace!" */);
-	PHX_ENSURE(workspace->GetComponent<EcWorkspace>() /*, "Workspace masquerading!" */);
-	PHX_ENSURE(DataModel->GetComponent<EcDataModel>() /*, "DataModel masquerading!" */);
+	PHX_ENSURE(workspace->FindComponent<EcWorkspace>() /*, "Workspace masquerading!" */);
+	PHX_ENSURE(DataModel->FindComponent<EcDataModel>() /*, "DataModel masquerading!" */);
 }
 
 void Engine::BindDataModel(GameObject* NewDataModel)
@@ -972,19 +972,37 @@ void Engine::Start()
 			ImGui_ImplOpenGL3_NewFrame();
 			ImGui_ImplSDL3_NewFrame();
 			ImGui::NewFrame();
-			ViewportNodeId = ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
+
+			if (!OverrideDefaultGuiViewportDockSpace)
+				ViewportNodeId = ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
+			else
+			{
+				ImGuiViewport* viewport = ImGui::GetMainViewport();
+
+				if (ViewportDockSpacePosition.x != -1.f)
+					viewport->WorkPos = ViewportDockSpacePosition;
+
+				if (ViewportDockSpaceSize.x != 1.f)
+					viewport->WorkSize = ViewportDockSpaceSize;
+
+				ViewportNodeId = ImGui::DockSpaceOverViewport(0, viewport, ImGuiDockNodeFlags_PassthruCentralNode);
+			}
 		}
 
-		ObjectHandle sceneCamObject = WorkspaceRef->GetComponent<EcWorkspace>()->GetSceneCamera();
-		EcCamera* sceneCamera = sceneCamObject->GetComponent<EcCamera>();
+		EcWorkspace* workspaceComponent = WorkspaceRef->FindComponent<EcWorkspace>();
+		ObjectHandle sceneCamObject = workspaceComponent->GetSceneCamera();
+		EcCamera* sceneCamera = sceneCamObject->FindComponent<EcCamera>();
+
+		if (!IsHeadlessMode)
+			workspaceComponent->Update();
 
 		Memory::vector<ObjectHandle, MEMCAT(Physics)> physicsList;
 
-		REFLECTION_SIGNAL(DataModelRef->GetComponent<EcDataModel>()->OnFrameBeginCallbacks, deltaTime);
+		REFLECTION_SIGNAL(DataModelRef->FindComponent<EcDataModel>()->OnFrameBeginCallbacks, deltaTime);
 
 		// fetch the camera again because of potential CurrentScene changes that may have caused re-alloc'd
 		// (really need a generic `Ref` system)
-		sceneCamera = sceneCamObject->GetComponent<EcCamera>();
+		sceneCamera = sceneCamObject->FindComponent<EcCamera>();
 
 		s_DebugCollisionAabbs = this->DebugAabbs;
 		EcDirectionalLight* sun = nullptr;
@@ -1005,12 +1023,12 @@ void Engine::Start()
 				&sun
 			);
 
-			sceneCamera = sceneCamObject->GetComponent<EcCamera>();
+			sceneCamera = sceneCamObject->FindComponent<EcCamera>();
 		}
 		bool hasPhysics = false;
 
 		for (GameObject* object : physicsList)
-			if (object->GetComponent<EcMesh>()->PhysicsDynamics)
+			if (object->FindComponent<EcMesh>()->PhysicsDynamics)
 			{
 				hasPhysics = true;
 				break;
@@ -1043,7 +1061,7 @@ void Engine::Start()
 					sunScene.RenderList.back().FaceCulling = FaceCullingMode::FrontFace;
 				}
 
-			glm::vec3 sunDirection = glm::vec3(sun->Object->GetComponent<EcTransform>()->Transform[3]);
+			glm::vec3 sunDirection = glm::vec3(sun->Object->FindComponent<EcTransform>()->Transform[3]);
 			
 			glm::mat4 sunOrtho = glm::ortho(
 				-sun->ShadowViewSizeH, sun->ShadowViewSizeH, -sun->ShadowViewSizeV, sun->ShadowViewSizeV,

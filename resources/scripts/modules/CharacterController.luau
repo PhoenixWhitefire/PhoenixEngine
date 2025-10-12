@@ -56,7 +56,7 @@ end
 function Controller.InitDefault(self: Controller, CharacterHeight)
 	CharacterHeight = CharacterHeight or 15
 	
-	local character = (GameObject.new("Primitive") :: any) :: GameObject & Mesh
+	local character = GameObject.new("Primitive") :: GameObject & Mesh
 	character.Size = vector.create(CharacterHeight / 3, CharacterHeight, CharacterHeight / 3)
 	character.PhysicsDynamics = true
 	character.Friction = 4
@@ -172,12 +172,12 @@ function Controller.getRotationVector(self: Controller) : (number, number)
 	input.setcursorvisible(not self.isMouseLocked)
 	
 	local rx, ry = 0, 0
-	local mouseX, mouseY = input.getmousepos()
+	local mouseX, mouseY = input.mouseposition()
 	
 	if self.isMouseLocked then
 		rx, ry = (mouseY - self.prevMouseY) / 400, (self.prevMouseX - mouseX) / 400
 		
-		local windowSizeX, windowSizeY = engine.getwindowsize()
+		local windowSizeX, windowSizeY = engine.windowsize()
 		
 		local newMouseX, newMouseY = mouseX, mouseY
 		
@@ -196,7 +196,7 @@ function Controller.getRotationVector(self: Controller) : (number, number)
 		end
 		
 		if (newMouseX ~= mouseX) or (newMouseY ~= mouseY) then
-			input.setmousepos(newMouseX, newMouseY)
+			input.setmouseposition(newMouseX, newMouseY)
 			mouseX, mouseY = newMouseX, newMouseY -- assigned to `self.prevMouse*` below
 		end
 	end

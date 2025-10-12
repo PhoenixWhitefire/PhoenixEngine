@@ -6,6 +6,8 @@
 #include <string>
 #include <future>
 #include <cfloat>
+#include <miniaudio/miniaudio.h>
+#include <glm/mat4x4.hpp>
 
 #include "datatype/GameObject.hpp"
 
@@ -23,18 +25,38 @@ struct EcSound
 	bool FinishedLoading = true;
 	bool LoadSucceeded = false;
 
-	float NextRequestedPosition = 0.f;
-	uint32_t BytePosition = 0;
+	float NextRequestedPosition = -1.f;
 
 	ObjectRef Object;
 	uint32_t EcId = PHX_GAMEOBJECT_NULL_ID;
 
 	std::vector<Reflection::EventCallback> OnLoadedCallbacks;
+	ma_sound SoundInstance{};
 	
-	void* m_Channel = nullptr;
 	bool m_PlayRequested = false;
-	float m_BaseFrequency = FLT_MAX;
 	bool Valid = true;
 
 	static const EntityComponent Type = EntityComponent::Sound;
+};
+
+class SoundManager : public ComponentManager<EcSound>
+{
+public:
+	static SoundManager& Get();
+
+	uint32_t CreateComponent(GameObject*) override;
+	void DeleteComponent(uint32_t) override;
+	const Reflection::StaticPropertyMap& GetProperties() override;
+	const Reflection::StaticEventMap& GetEvents() override;
+
+	void Initialize();
+	void Update(const glm::mat4& CameraTransform);
+	void Shutdown() override;
+
+	ma_engine AudioEngine{};
+	double LastTick = 0.f;
+
+private:
+
+	bool m_DidInit = false;
 };

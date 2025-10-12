@@ -1,0 +1,197 @@
+PHNXENGI
+#Version 2.10
+#Asset Scene
+#Date 12-10-2025
+#SceneName resources/scenes/spatial-audio-test.world
+
+{
+  "GameObjects": [
+    {
+      "$_components": [
+        "DataModel"
+      ],
+      "$_objectId": 68,
+      "Enabled": true,
+      "Name": "DataModel",
+      "Serializes": true
+    },
+    {
+      "$_components": [
+        "Workspace"
+      ],
+      "$_objectId": 69,
+      "Enabled": true,
+      "Name": "Workspace",
+      "Parent": 68,
+      "SceneCamera": 73,
+      "Serializes": true
+    },
+    {
+      "$_components": [
+        "Camera"
+      ],
+      "$_objectId": 73,
+      "Enabled": true,
+      "FieldOfView": 70.0,
+      "Name": "Camera",
+      "Parent": 69,
+      "Serializes": true,
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          -0.0,
+          0.0
+        ],
+        [
+          -0.0,
+          1.0,
+          -0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          -0.0,
+          -0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "UseSimpleController": false
+    },
+    {
+      "$_components": [
+        "Transform",
+        "Mesh"
+      ],
+      "$_objectId": 72,
+      "AngularVelocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Asset": "!Cube",
+      "CastsShadows": true,
+      "CollisionFidelity": 0,
+      "Density": 1.0,
+      "Enabled": true,
+      "FaceCulling": 1,
+      "Friction": 0.30000001192092896,
+      "LinearVelocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Material": "plastic",
+      "MetallnessFactor": 1.0,
+      "Name": "Mesh",
+      "Parent": 69,
+      "PhysicsCollisions": true,
+      "PhysicsDynamics": false,
+      "RoughnessFactor": 1.0,
+      "Serializes": true,
+      "Size": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Tint": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "Transparency": 0.0
+    },
+    {
+      "$_components": [
+        "Sound",
+        "Transform"
+      ],
+      "$_objectId": 71,
+      "Enabled": true,
+      "Looped": false,
+      "Name": "Sound",
+      "Parent": 69,
+      "Playing": false,
+      "Position": 0.0,
+      "Serializes": true,
+      "Size": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "SoundFile": "sounds/deltarune_rudebuster.mp3",
+      "Speed": 1.0,
+      "Transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "Volume": 1.0
+    },
+    {
+      "$_components": [
+        "Script"
+      ],
+      "$_objectId": 70,
+      "Enabled": true,
+      "Name": "Script",
+      "Parent": 69,
+      "Serializes": true,
+      "SourceFile": "scripts/spatial-audio-test.luau"
+    }
+  ],
+  "SceneName": "resources/scenes/spatial-audio-test.world"
+}

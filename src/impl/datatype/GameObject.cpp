@@ -99,7 +99,7 @@ static void mergeRecursive(
 			ch->SetParent(me);
 	
 	for (const ReflectorRef& ref : other->Components)
-		if (!me->GetComponentByType(ref.Type))
+		if (!me->FindComponentByType(ref.Type))
 			me->AddComponent(ref.Type);
 
 	for (auto& it : other->GetProperties())
@@ -247,18 +247,6 @@ void GameObject::s_AddObjectApi()
 
 			// ctor for ValueType::Array
 			return { Reflection::GenericValue(retval) };
-		}
-	);
-
-	REFLECTION_DECLAREFUNC(
-		"IsA",
-		{ Reflection::ValueType::String },
-		{ Reflection::ValueType::Boolean },
-		[](void* p, const std::vector<Reflection::GenericValue>& gv)
-		-> std::vector<Reflection::GenericValue>
-		{
-			std::string_view ancestor = gv[0].AsStringView();
-			return { static_cast<GameObject*>(p)->IsA(ancestor) };
 		}
 	);
 
@@ -463,15 +451,6 @@ std::string GameObject::GetFullName() const
 	return fullName;
 }
 
-bool GameObject::IsA(const std::string_view& AncestorClass) const
-{
-	for (const ReflectorRef& p : Components)
-		if (s_EntityComponentNames[(size_t)p.Type] == AncestorClass)
-			return true;
-	
-	return false;
-}
-
 static uint32_t NullGameObjectIdValue = PHX_GAMEOBJECT_NULL_ID;
 
 bool GameObject::IsDescendantOf(GameObject* Object)
@@ -647,14 +626,14 @@ GameObject* GameObject::FindChild(const std::string_view& ChildName)
 }
 
 
-GameObject* GameObject::FindChildWhichIsA(const std::string_view& Class)
+GameObject* GameObject::FindChildWithComponent(EntityComponent Component)
 {
 	for (uint32_t index = 0; index < Children.size(); index++)
 	{
 		GameObject* child = GameObject::GetObjectById(Children[index]);
 		assert(child);
 
-		if (child->IsA(Class))
+		if (child->FindComponentByType(Component))
 			return child;
 	}
 
@@ -665,7 +644,7 @@ uint32_t GameObject::AddComponent(EntityComponent Type)
 {
 	PHX_ENSURE(Valid);
 
-	if (GetComponentByType(Type))
+	if (FindComponentByType(Type))
 		RAISE_RT("Already have that component");
 	
 	IComponentManager* manager = GameObject::s_ComponentManagers[(size_t)Type];
@@ -844,7 +823,7 @@ Reflection::EventMap GameObject::GetEvents() const
 	return cumulativeEvents;
 }
 
-void* GameObject::GetComponentByType(EntityComponent Type)
+void* GameObject::FindComponentByType(EntityComponent Type)
 {
 	for (const ReflectorRef& ref : Components)
 		if (ref.Type == Type)
