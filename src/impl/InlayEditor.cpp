@@ -3309,7 +3309,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 				L->global->cb.debugstep = nullptr;
 				lua_singlestep(L, false);
 
-				int li = 0;
+				li = 0;
 				lua_getinfo(L, li, "slnu", ar);
 				while (strcmp(ar->short_src, "[C]") == 0)
 				{

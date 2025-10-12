@@ -50,7 +50,7 @@ The Engine support an Entity Component System architecture, meaning that `GameOb
 * A 3D camera
 
 ### Properties:
-* `FieldOfView: number`: The field-of-view. By default, `70`
+* `FieldOfView: number`: The field-of-view. By default, `90`
 * `Transform: Matrix`: Where it is in 3D space
 * `UseSimpleController: boolean`: Whether it is affected by the built-in controller (`W`/`A`/`S`/`D` horizontal movement, `Q`/`E` vertical, Mouse to look around)
 

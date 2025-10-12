@@ -605,7 +605,10 @@ static std::vector<ObjectRef> LoadMapVersion2(const std::string& Contents, float
 
 			case Reflection::ValueType::GameObject:
 			{
-				objectProps[newObject->ObjectId].insert(std::pair(propName, memberValue));
+				objectProps[newObject->ObjectId].insert(std::pair(
+					propName,
+					memberValue.is_null() ? PHX_GAMEOBJECT_NULL_ID : (uint32_t)memberValue
+				));
 
 				break;
 			}
@@ -848,6 +851,12 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 			else
 				item[serializedAs] = PHX_GAMEOBJECT_NULL_ID;
 			
+			break;
+		}
+
+		case Reflection::ValueType::Null:
+		{
+			item[serializedAs] = nlohmann::json(); // save as Null
 			break;
 		}
 

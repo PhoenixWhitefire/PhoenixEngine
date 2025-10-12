@@ -93,6 +93,7 @@ endif()
 option(LUAU_BUILD_CLI "Build CLI" OFF)
 option(LUAU_BUILD_TESTS "Build tests" OFF)
 option(SDL_TEST_LIBRARY "Build the SDL3_test library" OFF)
+option(MINIAUDIO_NO_EXTRA_NODES                "Do not build extra node graph nodes" ON)
 
 add_subdirectory(Vendor)
 add_subdirectory(Vendor/luau)
@@ -101,10 +102,11 @@ add_subdirectory(Vendor/SDL)
 add_subdirectory(Vendor/tracy)
 add_subdirectory(Vendor/miniaudio)
 
-# organize vs folders
+# organize VS folders
 set_property(TARGET Vendor PROPERTY FOLDER "Vendor")
 set_property(TARGET TracyClient PROPERTY FOLDER "Vendor")
 set_property(TARGET glm PROPERTY FOLDER "Vendor")
+set_property(TARGET miniaudio PROPERTY FOLDER "Vendor")
 
 set_property(TARGET Luau.RequireNavigator PROPERTY FOLDER "Vendor/Luau")
 set_property(TARGET Luau.Require PROPERTY FOLDER "Vendor/Luau")

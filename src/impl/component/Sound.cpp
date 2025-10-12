@@ -169,6 +169,7 @@ void SoundManager::Initialize()
 	if (ma_result initResult = ma_engine_init(&config, &AudioEngine); initResult != MA_SUCCESS)
 		RAISE_RTF("Audio Engine init failed, error code: {}", (int)initResult);
 
+	m_Components.reserve(16);
 	m_DidInit = true;
 }
 

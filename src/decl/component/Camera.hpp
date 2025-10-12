@@ -17,7 +17,7 @@ struct EcCamera
 	bool IsSceneCamera = false;
 
 	glm::mat4 Transform = glm::lookAt(glm::vec3(), glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f, 1.f, 0.f));
-	float FieldOfView = 70.f;
+	float FieldOfView = 90.f;
 	float NearPlane = 0.1f;
 	float FarPlane = 10000.f;
 

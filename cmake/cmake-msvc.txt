@@ -37,7 +37,3 @@ add_custom_command(TARGET PhoenixEngine POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:PhoenixEngine> "Vendor/SDL/${PHX_BUILD_TYPE}/SDL3.dll"
   COMMAND_EXPAND_LISTS
 )
-add_custom_command(TARGET PhoenixEngine POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:PhoenixEngine> "Vendor/FMOD/api/core/lib/x64/fmodL.dll"
-  COMMAND_EXPAND_LISTS
-)

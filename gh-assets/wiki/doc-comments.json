@@ -52,7 +52,7 @@
       "Camera": {
         "Description": "A 3D camera",
         "Properties": {
-          "FieldOfView": "The field-of-view. By default, `70`",
+          "FieldOfView": "The field-of-view. By default, `90`",
           "Transform": "Where it is in 3D space",
           "UseSimpleController": "Whether it is affected by the built-in controller (`W`/`A`/`S`/`D` horizontal movement, `Q`/`E` vertical, Mouse to look around)"
         }

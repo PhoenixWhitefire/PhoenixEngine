@@ -543,6 +543,7 @@ function Stages.SelectProject(DeltaTime)
 
 		RecentsHoveringOver = hoveringOverWip
 
+		imgui.dummy()
 		imgui.endchild()
 	end
 	imgui.endw()
@@ -614,6 +615,11 @@ function Stages.ProjectPlaying_Enter()
 	engine.binddatamodel(projDm) -- Set the `game` and `workspace` variables to the correct values in game scripts
 	engine.pushlvm("GameScripts")
 	
+	if not projWp.SceneCamera then
+		projWp.SceneCamera = GameObject.new("Camera")
+		projWp.SceneCamera.Parent = projWp
+	end
+
 	workspace.SceneCamera = projWp.SceneCamera
 	
 	return projDm -- Connect to the Project's datamodel `.OnFrameBegin`
