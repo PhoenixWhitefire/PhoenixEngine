@@ -229,7 +229,7 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 ### `fs`
 * Interacting with the player's filesystem
 
-#### `fs.write(Path: string, Contents: string): boolean`
+#### `fs.write(Path: string, Contents: string): boolean, string?`
 * Overwrites/creates the file at `Path` with the provided `Contents`
 * Returns whether the operation was successful
 

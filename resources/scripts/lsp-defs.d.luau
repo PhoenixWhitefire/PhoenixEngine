@@ -220,7 +220,7 @@ declare engine: {
   maxframerate: ((  ) -> (number))
 }
 declare fs: {
-  write: (( Path: string, Contents: string ) -> (boolean)),
+  write: (( Path: string, Contents: string ) -> (boolean, string?)),
   read: (( Path: string ) -> (string?)),
   promptopen: (( DefaultLocation: string?, Filter: string?, FilterName: string?, AllowMultipleFiles: boolean? ) -> ({ string })),
   isfile: (( string ) -> (boolean)),

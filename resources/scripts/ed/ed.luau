@@ -33,6 +33,9 @@ end
 engine.settoolenabled("Tool_Explorer", true)
 engine.settoolenabled("Tool_Properties", true)
 
+local WasHoldingDownM1 = false
+local MouseClick = false
+
 local function changeStageTo(NewStage: Stage)
 	print(`Changing stage from { CurrentStage } to { NewStage }`)
 	
@@ -52,7 +55,13 @@ local function changeStageTo(NewStage: Stage)
 	end
 	
 	CurrentStage = NewStage
-	StageUpdateSignal = targetDm.OnFrameBegin:Connect(Stages[CurrentStage])
+	StageUpdateSignal = targetDm.OnFrameBegin:Connect(function()
+		MouseClick = (not WasHoldingDownM1) and input.mousedown("l")
+
+		Stages[CurrentStage]()
+
+		WasHoldingDownM1 = input.mousedown("l")
+	end)
 end
 
 local projDm: (GameObject & DataModel)? = nil
@@ -161,12 +170,16 @@ local function tabButton(Text: string, Icon: string, TintColor: { number }?)
 
 	imgui.endchild()
 
-	if Text == TabButtonHovering then
-		imgui.popstylecolor()
-	end
-
 	if hovered or windowHovered then
 		WipTabButtonHovering = Text
+	end
+
+	if Text == TabButtonHovering then
+		imgui.popstylecolor()
+
+		if MouseClick then
+			return true
+		end
 	end
 
 	return clicked
@@ -389,7 +402,7 @@ local function renderViewport()
 	if BottomBarEnabled then
 		local wx, wy = engine.windowsize()
 
-		imgui.setviewportdockspace(0, 20, wx, wy - 35)
+		imgui.setviewportdockspace(0, 19, wx, wy - 55)
 		imgui.setnextwindowposition(0, wy - 35)
 		imgui.setnextwindowsize(wx, 35)
 		imgui.begin("Bottom Bar", "nt | nd | nr")

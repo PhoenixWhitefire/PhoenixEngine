@@ -27,33 +27,24 @@ static int input_guihandled(lua_State* L)
 
 static int input_keypressed(lua_State* L)
 {
-    if (ImGui::GetIO().WantCaptureKeyboard)
-        lua_pushboolean(L, false);
+    if (lua_isstring(L, 1))
+    {
+        const char* kname = luaL_checkstring(L, 1);
+        lua_pushboolean(L, UserInput::IsKeyDown((SDL_Keycode)kname[0]));
+    }
+    else if (lua_isnumber(L, 1))
+    {
+        lua_pushboolean(L, UserInput::IsKeyDown((uint32_t)luaL_checkinteger(L, 1)));
+    }
     else
     {
-        if (lua_isstring(L, 1))
-        {
-            const char* kname = luaL_checkstring(L, 1);
-            lua_pushboolean(L, UserInput::IsKeyDown((SDL_Keycode)kname[0]));
-        }
-        else if (lua_isnumber(L, 1))
-        {
-            lua_pushboolean(L, UserInput::IsKeyDown((uint32_t)luaL_checkinteger(L, 1)));
-        }
-        else
-            luaL_typeerror(L, 1, "string or number");
+        luaL_typeerror(L, 1, "string or number");
     }
 	return 1;
 }
 
 static int input_mousedown(lua_State* L)
 {
-    if (ImGui::GetIO().WantCaptureMouse)
-    {
-        lua_pushboolean(L, false);
-        return 1;
-    }
-
     size_t bstrlen = 0;
     const char* bstr = luaL_optlstring(L, 1, "b", &bstrlen);
     luaL_argcheck(L, bstrlen == 1, 1, "must be exactly 1 character long");

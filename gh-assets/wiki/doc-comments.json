@@ -808,7 +808,7 @@
               "Path: string",
               "Contents: string"
             ],
-            "Out": "boolean"
+            "Out": "boolean, string?"
           }
         }
       },

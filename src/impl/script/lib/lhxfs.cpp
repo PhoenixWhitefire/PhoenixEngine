@@ -18,11 +18,21 @@ static int fs_write(lua_State* L)
 {
     const char* path = luaL_checkstring(L, 1);
 	const char* contents = luaL_checkstring(L, 2);
+	std::string errorMessage;
 
-    bool success = FileRW::WriteFileCreateDirectories(path, contents);
+    bool success = FileRW::WriteFileCreateDirectories(path, contents, &errorMessage);
 
-    lua_pushboolean(L, success);
-	return 1;
+	if (success)
+	{
+    	lua_pushboolean(L, true);
+		return 1;
+	}
+	else
+	{
+		lua_pushboolean(L, false);
+		lua_pushlstring(L, errorMessage.data(), errorMessage.size());
+		return 2;
+	}
 }
 
 static int fs_read(lua_State* L)

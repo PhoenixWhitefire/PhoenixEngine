@@ -214,5 +214,5 @@ print(`Testing session took { os.clock() - start } seconds. Tests themselves too
 
 appendlog("\n\n\n")
 
-engine.exit()
+engine.exit(if failed == 0 then 0 else 1)
 

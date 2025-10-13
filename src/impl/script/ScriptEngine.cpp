@@ -1479,7 +1479,7 @@ static void requireConfigInit(luarequire_Configuration* config)
 			return 1;
 		};
 
-	assert(!config->get_alias); // should've been initialized to NULL by default
+	// 13/10/2025 https://github.com/luau-lang/luau/issues/2046
 	config->get_alias = nullptr;
 }
 
