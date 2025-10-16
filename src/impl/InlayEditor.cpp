@@ -1688,6 +1688,8 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 
 	current->ForEachChild([&](GameObject* object)
 	{
+		ImGui::PushID((int)object->ObjectId);
+
 		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow
 			| ImGuiTreeNodeFlags_AllowOverlap
 			| ImGuiTreeNodeFlags_SpanAvailWidth
@@ -1726,6 +1728,34 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 		bool isHovered = false;
 
 		bool open = ImGui::TreeNodeEx(&object->ObjectId, flags, "%s", "");
+
+		if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
+		{
+			ImGui::SetDragDropPayload("Explorer_DragGameObject", &object->ObjectId, sizeof(uint32_t));
+			ImGui::Text("Dragging %s", object->Name.c_str());
+			ImGui::EndDragDropSource();
+			nodeClicked = object;
+		}
+
+		if (ImGui::BeginDragDropTarget())
+		{
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("Explorer_DragGameObject"))
+			{
+				uint32_t child = *(uint32_t*)payload->Data;
+
+				try
+				{
+					GameObject::GetObjectById(child)->SetParent(object);
+				}
+				catch (const std::runtime_error& e)
+				{
+					setErrorMessage(e.what());
+				}
+			}
+
+			ImGui::EndDragDropTarget();
+		}
+
 		if (ImGui::IsItemClicked())
 			nodeClicked = object;
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
@@ -1843,6 +1873,7 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 			ImGui::TreePop();
 		}
 
+		ImGui::PopID();
 		return true;
 	});
 

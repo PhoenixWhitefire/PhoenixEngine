@@ -5,8 +5,20 @@ name: CMake on multiple platforms
 on:
   push:
     branches: [ "main" ]
+    paths-ignore:
+      - "gh-assets/**"
+      - "*.md"
+      - "api-dump.json"
+      - "imgui.ini"
+      - "debugger.layout.ini"
   pull_request:
     branches: [ "main" ]
+    paths-ignore:
+      - "gh-assets/**"
+      - "*.md"
+      - "api-dump.json"
+      - "imgui.ini"
+      - "debugger.layout.ini"
 
 jobs:
   build:
@@ -38,6 +50,7 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: true
+        depth: 1
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
@@ -54,10 +67,27 @@ jobs:
       # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
       run: cmake --build ./ --config ${{ matrix.build_type }}
 
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-output
+        path: |
+          x64/Debug
+          Vendor/SDL/Debug
+          resources/
+          gh-assets/wiki/doc-comments.json
+          api-dump.json
+          imgui.ini
+          debugger-layout.init
+          phoenix.conf
+        retention-days: 3
+
     - name: Test (Linux)
+      shell: bash
       if: runner.os == 'Linux'
-      run: "${{ github.workspace }}/x64/Debug/PhoenixEngine -headless -tool scripts/ci/tests.luau"
+      run: "./x64/Debug/PhoenixEngine -headless -tool scripts/ci/tests.luau"
     
     - name: Test (Windows)
+      shell: bash
       if: runner.os == 'Windows'
-      run: "${{ github.workspace }}\\x64\\Debug\\PhoenixEngine.exe -headless -tool scripts/ci/tests.luau"
+      run: "x64/Debug/PhoenixEngine.exe -headless -tool scripts/ci/tests.luau"
