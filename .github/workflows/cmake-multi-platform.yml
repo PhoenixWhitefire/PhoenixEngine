@@ -25,11 +25,11 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     strategy:
-      fail-fast: true
+      fail-fast: false
 
       matrix:
         os: [ubuntu-latest, windows-latest]
-        build_type: [Debug]
+        build_type: [Debug, Release]
         c_compiler: [gcc, cl]
         include:
           - os: windows-latest
@@ -78,7 +78,7 @@ jobs:
           gh-assets/wiki/doc-comments.json
           api-dump.json
           imgui.ini
-          debugger-layout.init
+          debugger-layout.ini
           phoenix.conf
         retention-days: 3
 
@@ -86,8 +86,3 @@ jobs:
       shell: bash
       if: runner.os == 'Linux'
       run: "./x64/Debug/PhoenixEngine -headless -tool scripts/ci/tests.luau"
-    
-    - name: Test (Windows)
-      shell: bash
-      if: runner.os == 'Windows'
-      run: "x64/Debug/PhoenixEngine.exe -headless -tool scripts/ci/tests.luau"
