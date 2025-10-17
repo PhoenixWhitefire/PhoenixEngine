@@ -8,14 +8,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <imgui/backends/imgui_impl_opengl3.h>
-#include <imgui/backends/imgui_impl_sdl3.h>
+#include <imgui/backends/imgui_impl_glfw.h>
 
-#include <SDL3/SDL_messagebox.h>
-#include <SDL3/SDL_version.h>
-#include <SDL3/SDL_video.h>
-#include <SDL3/SDL_hints.h>
-#include <SDL3/SDL_init.h>
-#include <SDL3/SDL_log.h>
+#include <tinyfiledialogs.h>
 
 #include <tracy/Tracy.hpp>
 
@@ -36,38 +31,6 @@
 #include "FileRW.hpp"
 #include "Log.hpp"
 
-static const std::unordered_map<SDL_LogPriority, const std::string> LogPriorityStringMap =
-{
-	{ SDL_LOG_PRIORITY_VERBOSE,   "Verbose"  },
-	{ SDL_LOG_PRIORITY_DEBUG,     "Debug"    },
-	{ SDL_LOG_PRIORITY_INFO,      "Info"     },
-	{ SDL_LOG_PRIORITY_WARN,      "Warning"  },
-	{ SDL_LOG_PRIORITY_ERROR,     "Error"    },
-	{ SDL_LOG_PRIORITY_CRITICAL,  "Critical" },
-};
-
-static void sdlLog(void*, int Type, SDL_LogPriority Priority, const char* Message)
-{
-	auto priorityIt = LogPriorityStringMap.find(Priority);
-
-	std::string priorityName;
-
-	if (priorityIt == LogPriorityStringMap.end())
-		priorityName = std::to_string((int)Priority);
-	else
-		priorityName = priorityIt->second;
-
-	std::string logString = std::format(
-		"SDL log -\n\tType: {}\n\tPriority: {}\n\tMessage: {}",
-		Type, priorityName, Message
-	);
-
-	if (Priority < SDL_LOG_PRIORITY_ERROR)
-		Log::Warning(logString);
-	else
-		RAISE_RT(logString);
-}
-
 static Engine* EngineInstance = nullptr;
 
 Engine* Engine::Get()
@@ -80,7 +43,7 @@ void Engine::ResizeWindow(int NewSizeX, int NewSizeY)
 {
 	ZoneScoped;
 
-	PHX_ENSURE(SDL_SetWindowSize(this->Window, NewSizeX, NewSizeY));
+	glfwSetWindowSize(Window, NewSizeX, NewSizeY);
 	this->OnWindowResized(NewSizeX, NewSizeY);
 }
 
@@ -96,13 +59,9 @@ void Engine::OnWindowResized(int NewSizeX, int NewSizeY)
 	fboRes.Width = NewSizeX;
 	fboRes.Height = NewSizeY;
 
-	SDL_DisplayID currentDisplay = SDL_GetDisplayForWindow(Window);
-	if (currentDisplay == 0)
-		RAISE_RTF("`SDL_GetDisplayForWindow` failed with error: {}", SDL_GetError());
-
-	float displayScale = SDL_GetDisplayContentScale(currentDisplay);
-	if (displayScale == 0.f)
-		RAISE_RTF("`SDL_GetDisplayContentScale` returned invalid result, error: {}", SDL_GetError());
+	GLFWmonitor* primaryDisplay = glfwGetPrimaryMonitor();
+	float displayScale = 0.f;
+	glfwGetMonitorContentScale(primaryDisplay, &displayScale, nullptr);
 
 	static ImGuiStyle DefaultStyle = ImGui::GetStyle();
 	ImGuiStyle scaledStyle = DefaultStyle;
@@ -113,12 +72,27 @@ void Engine::OnWindowResized(int NewSizeX, int NewSizeY)
 	ImGui::GetStyle() = scaledStyle;
 }
 
-void Engine::SetIsFullscreen(bool Fullscreen)
+void Engine::SetIsFullscreen(bool MakeFullscreen)
 {
-	this->IsFullscreen = Fullscreen;
+	if (!IsFullscreen == MakeFullscreen)
+		return;
 
-	if (!SDL_SetWindowFullscreen(this->Window, this->IsFullscreen))
-		RAISE_RTF("`SDL_SetWindowFullscreen` failed, error: {}", SDL_GetError());
+	if (MakeFullscreen)
+	{
+		glfwGetWindowSize(Window, &m_WindowedWidth, &m_WindowedHeight);
+		glfwGetWindowPos(Window, &m_WindowedPosX, &m_WindowedPosY);
+
+		GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+		const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+
+		glfwSetWindowMonitor(Window, glfwGetPrimaryMonitor(), 0, 0, mode->width, mode->height, GLFW_DONT_CARE);
+	}
+	else
+	{
+		glfwSetWindowMonitor(Window, nullptr, m_WindowedPosX, m_WindowedPosY, m_WindowedWidth, m_WindowedHeight, GLFW_DONT_CARE);
+	}
+
+	this->IsFullscreen = MakeFullscreen;
 }
 
 template <class T>
@@ -168,12 +142,13 @@ void Engine::LoadConfiguration()
 
 	if (!ConfigLoadSucceeded)
 	{
-		PHX_ENSURE(SDL_ShowSimpleMessageBox(
-			SDL_MESSAGEBOX_WARNING,
+		tinyfd_messageBox(
 			"Configuration Error",
 			ConfigLoadErrorMessage.c_str(),
-			Window
-		));
+			"ok",
+			"warn",
+			1
+		);
 
 		EngineJsonConfig =
 		{
@@ -203,15 +178,45 @@ void Engine::Close()
 	m_IsRunning = false;
 }
 
+static void windowResizeCallback(GLFWwindow* window, int newWidth, int newHeight)
+{
+	Engine::Get()->OnWindowResized(newWidth, newHeight);
+}
+
+static void windowFocusChangedCallback(GLFWwindow* window, int focused)
+{
+	Engine::Get()->IsWindowFocused = (bool)focused;	
+}
+
+static void errorCallback(int code, const char* message)
+{
+	RAISE_RTF("Error occurred in GLFW:\nCode: {}, Message: {}", code, message);
+}
+
 void Engine::m_InitVideo()
 {
 	ZoneScoped;
 
-	SDL_DisplayID primaryDisplay = SDL_GetPrimaryDisplay();
-	PHX_ENSURE_MSG(primaryDisplay != 0, "`SDL_GetPrimaryDisplay` failed with error: " + std::string(SDL_GetError()));
+	if (PHX_HEADLESS_BUILD || readFromConfiguration("Headless", false))
+		this->IsHeadlessMode = true;
 
-	float displayScale = SDL_GetDisplayContentScale(primaryDisplay);
-	PHX_ENSURE_MSG(displayScale != 0.f, "Invalid `SDL_GetDisplayContentScale` result, error: " + std::string(SDL_GetError()));
+	if (IsHeadlessMode)
+		return;
+
+	glfwSetErrorCallback(errorCallback);
+
+	if (!glfwInit())
+	{
+		const char* error = nullptr;
+		int ec = glfwGetError(&error);
+		RAISE_RTF("Failed to initialize GLFW: Code: {}, Error: {}", ec, error);
+	}
+
+	Log::InfoF("GLFW platform: {}", glfwGetPlatform());
+
+	GLFWmonitor* primaryDisplay = glfwGetPrimaryMonitor();
+	float displayScale = 0.f;
+	glfwGetMonitorContentScale(primaryDisplay, &displayScale, nullptr);
 
 	nlohmann::json defaultWindowSize = readFromConfiguration(
 		"DefaultWindowSize",
@@ -221,73 +226,49 @@ void Engine::m_InitVideo()
 	this->WindowSizeX = static_cast<int>((float)defaultWindowSize[0] * displayScale);
 	this->WindowSizeY = static_cast<int>((float)defaultWindowSize[1] * displayScale);
 
-	SDL_Rect displayBounds{};
-	PHX_SDL_CALL(SDL_GetDisplayBounds, primaryDisplay, &displayBounds);
-
-	this->WindowSizeX = std::clamp(this->WindowSizeX, 1, displayBounds.w);
-	this->WindowSizeY = std::clamp(this->WindowSizeY, 1, displayBounds.h);
+	glfwGetMonitorWorkarea(primaryDisplay, nullptr, nullptr, &WindowSizeX, &WindowSizeY);
 
 	nlohmann::json::array_t requestedGLVersion = readFromConfiguration("OpenGLVersion", nlohmann::json{ 4, 6 });
 	int requestedGLVersionMajor = requestedGLVersion[0];
 	int requestedGLVersionMinor = requestedGLVersion[1];
 
-	const std::unordered_map<std::string_view, SDL_GLProfile> StringToGLProfile =
-	{
-		{ "Core",            SDL_GL_CONTEXT_PROFILE_CORE          },
-		{ "Compatibility",   SDL_GL_CONTEXT_PROFILE_COMPATIBILITY },
-		{ "ES",              SDL_GL_CONTEXT_PROFILE_ES            }
-	};
-
-	std::string requestedProfileString = EngineJsonConfig.value("OpenGLProfile", "Core");
-
-	auto requestedProfileIt = StringToGLProfile.find(requestedProfileString);
-	SDL_GLProfile requestedProfile = SDL_GL_CONTEXT_PROFILE_CORE;
-
-	if (requestedProfileIt == StringToGLProfile.end())
-		Log::WarningF(
-			"Invalid/unsupported OpenGL profile '{}' requested, defaulting to the Core profile",
-			requestedProfileString
-		);
-	else
-		requestedProfile = requestedProfileIt->second;
-
 	Log::InfoF(
-		"Requesting a {} OpenGL context with version {}.{}",
-		requestedProfileString, requestedGLVersionMajor, requestedGLVersionMinor
+		"Requesting a Core OpenGL context with version {}.{}",
+		requestedGLVersionMajor, requestedGLVersionMinor
 	);
 
 	// Must be set *before* window creation
-	PHX_SDL_CALL(
-		SDL_GL_SetAttribute,
-		SDL_GL_CONTEXT_PROFILE_MASK, 
-		requestedProfile
-	);
-	PHX_SDL_CALL(
-		SDL_GL_SetAttribute,
-		SDL_GL_CONTEXT_MAJOR_VERSION, 
-		requestedGLVersionMajor
-	);
-	PHX_SDL_CALL(
-		SDL_GL_SetAttribute,
-		SDL_GL_CONTEXT_MINOR_VERSION, 
-		requestedGLVersionMinor
-	);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, requestedGLVersionMajor);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, requestedGLVersionMinor);
 
-	PHX_SDL_CALL(SDL_GL_SetAttribute, SDL_GL_DOUBLEBUFFER, 1);
-	PHX_SDL_CALL(SDL_GL_SetAttribute, SDL_GL_DEPTH_SIZE, 24);
-	PHX_SDL_CALL(SDL_GL_SetAttribute, SDL_GL_STENCIL_SIZE, 8);
+	glfwWindowHint(GLFW_DOUBLEBUFFER, 1);
+	glfwWindowHint(GLFW_DEPTH_BITS, 24);
+	glfwWindowHint(GLFW_STENCIL_BITS, 8);
 
-	this->Window = SDL_CreateWindow(
+	Window = glfwCreateWindow(
+		WindowSizeX, WindowSizeY,
 		readFromConfiguration<std::string_view>("GameTitle", "PhoenixEngine").data(),
-		this->WindowSizeX, this->WindowSizeY,
-		SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY
+		nullptr, nullptr
 	);
 
-	PHX_ENSURE_MSG(this->Window, "SDL could not create the window: " + std::string(SDL_GetError()));
+	if (!Window)
+	{
+		const char* error = nullptr;
+		int ec = glfwGetError(&error);
+		RAISE_RTF("GLFW could not create the window\nCode: {}, Error: {}", ec, error);
+	}
 
 	Log::Info("Window created, initializing renderer...");
 
 	this->RendererContext.Initialize(this->WindowSizeX, this->WindowSizeY, this->Window);
+
+	Log::Info("Registering callbacks...");
+
+	glfwSetWindowSizeCallback(Window, windowResizeCallback);
+	glfwSetWindowFocusCallback(Window, windowFocusChangedCallback);
+
+	Log::Info("Finished initializing video");
 }
 
 const int32_t SunShadowMapResolutionSq = 2048;
@@ -300,29 +281,9 @@ Engine::Engine()
 	EngineInstance = this;
 	
 	this->LoadConfiguration();
-
-	if (readFromConfiguration("Headless", false))
-		this->IsHeadlessMode = true;
-
-	Log::InfoF(
-		"Initializing SDL {}/{} (Dyn. Revision: {})...",
-		SDL_VERSION,
-		SDL_GetVersion(),
-		SDL_GetRevision()
-	);
-
-	if (IsHeadlessMode)
-		SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "dummy");
-
-	PHX_SDL_CALL(SDL_Init, SDL_INIT_VIDEO);
-
-	Log::InfoF("The SDL video driver is {}", SDL_GetCurrentVideoDriver());
-	SDL_SetLogOutputFunction(sdlLog, nullptr);
+	m_InitVideo();
 
 	GameObject::s_WorldArray.reserve(32);
-
-	if (!IsHeadlessMode)
-		m_InitVideo();
 
 	Log::Info("Initializing managers...");
 
@@ -333,7 +294,7 @@ Engine::Engine()
 	m_MaterialManager.Initialize(); // mat after tex and shd as it may attempt to load a texture and shader
 	m_MeshProvider.Initialize(IsHeadlessMode);
 
-	if (!IsHeadlessMode)
+	if (!PHX_HEADLESS_BUILD && !IsHeadlessMode)
 	{
 		ZoneScopedN("Blue Frame");
 
@@ -582,9 +543,9 @@ void Engine::m_Render(double deltaTime)
 	static const Mesh quadMesh = m_MeshProvider.GetMeshResource(m_MeshProvider.LoadFromPath("!Quad"));
 
 	if (VSync)
-		PHX_ENSURE(SDL_GL_SetSwapInterval(1));
+		glfwSwapInterval(1);
 	else
-		PHX_ENSURE(SDL_GL_SetSwapInterval(0));
+		glfwSwapInterval(0);
 	
 	ImGuiDockNode* viewportNode = ImGui::DockBuilderGetNode(ViewportNodeId)->CentralNode;
 	float aspectRatio = viewportNode->Size.x / viewportNode->Size.y;
@@ -806,7 +767,7 @@ void Engine::Start()
 
 	Log::Info("Main engine loop start");
 
-	while (m_IsRunning)
+	while ((!PHX_HEADLESS_BUILD && !IsHeadlessMode) ? (!glfwWindowShouldClose(Window) && m_IsRunning) : m_IsRunning)
 	{
 		TIME_SCOPE_AS_N("EntireFrame", EntireFrameTimerScope);
 		ZoneScopedNC("Frame", tracy::Color::PaleTurquoise);
@@ -825,8 +786,6 @@ void Engine::Start()
 
 		RunningTime = GetRunningTime();
 		RendererContext.AccumulatedDrawCallCount = 0;
-		
-		static bool IsWindowFocused = true;
 
 		this->FpsCap = std::clamp(this->FpsCap, 1, INT32_MAX);
 		int throttledFpsCap = IsWindowFocused ? FpsCap : 10;
@@ -918,51 +877,7 @@ void Engine::Start()
 		{
 			ZoneScopedNC("PollEvents", tracy::Color::Orange);
 
-			SDL_Event pollingEvent;
-			while (SDL_PollEvent(&pollingEvent) != 0)
-			{
-				ZoneScopedN("Event");
-				ZoneTextF("Type: %d", pollingEvent.common.type);
-
-				ImGui_ImplSDL3_ProcessEvent(&pollingEvent);
-
-				switch (pollingEvent.type)
-				{
-
-				case SDL_EVENT_QUIT:
-				{
-					m_IsRunning = false;
-					break;
-				}
-
-				case SDL_EVENT_WINDOW_RESIZED:
-				{
-					int NewSizeX = pollingEvent.window.data1;
-					int NewSizeY = pollingEvent.window.data2;
-
-					// Only call ChangeResolution if the new resolution is actually different
-					//if (NewSizeX != this->WindowSizeX || NewSizeY != this->WindowSizeY)
-						this->OnWindowResized(NewSizeX, NewSizeY);
-
-					break;
-				}
-
-				case SDL_EVENT_WINDOW_FOCUS_LOST:
-				{
-					IsWindowFocused = false;
-					break;
-				}
-
-				case SDL_EVENT_WINDOW_FOCUS_GAINED:
-				{
-					IsWindowFocused = true;
-					break;
-				}
-
-				default: {}
-
-				}
-			}
+			glfwPollEvents();
 		}
 
 		if (!IsHeadlessMode)
@@ -970,7 +885,7 @@ void Engine::Start()
 			ZoneNamedN(imguizone, "NewDearImGuiFrame", true);
 			// so scripts can use the `imgui` library
 			ImGui_ImplOpenGL3_NewFrame();
-			ImGui_ImplSDL3_NewFrame();
+			ImGui_ImplGlfw_NewFrame();
 			ImGui::NewFrame();
 
 			if (!OverrideDefaultGuiViewportDockSpace)
@@ -1179,10 +1094,12 @@ void Engine::Shutdown()
 	if (!IsHeadlessMode)
 	{
 		ImGui_ImplOpenGL3_Shutdown();
-		ImGui_ImplSDL3_Shutdown();
+		ImGui_ImplGlfw_Shutdown();
 	}
 	
-	SDL_Quit();
+	if (Window)
+		glfwDestroyWindow(Window);
+	glfwTerminate();
 
 	EngineInstance = nullptr;
 }

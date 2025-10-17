@@ -26,8 +26,6 @@ extern "C"
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/transform.hpp>
 
-#include <SDL3/SDL_video.h>
-
 #include <tracy/Tracy.hpp>
 
 #include <glad/gl.h>
@@ -123,26 +121,21 @@ static void GLDebugCallback(
 
 static Renderer* s_Instance = nullptr;
 
-Renderer::Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window)
+Renderer::Renderer(uint32_t Width, uint32_t Height, GLFWwindow* Window)
 {
 	this->Initialize(Width, Height, Window);
 }
 
-void Renderer::Initialize(uint32_t Width, uint32_t Height, SDL_Window* Window)
+void Renderer::Initialize(uint32_t Width, uint32_t Height, GLFWwindow* MainWindow)
 {
-	m_Window = Window;
+	Window = MainWindow;
 
 	m_Width = Width;
 	m_Height = Height;
 
-	this->GLContext = SDL_GL_CreateContext(m_Window);
+	glfwMakeContextCurrent(Window);
 
-	if (!this->GLContext)
-		RAISE_RTF("Could not create an OpenGL context, SDL error: {}", SDL_GetError());
-
-	PHX_SDL_CALL(SDL_GL_MakeCurrent, m_Window, this->GLContext);
-
-	bool gladStatus = gladLoadGL((GLADloadfunc)SDL_GL_GetProcAddress);
+	bool gladStatus = gladLoadGL((GLADloadfunc)glfwGetProcAddress);
 
 	if (!gladStatus)
 		RAISE_RT("GLAD could not load OpenGL. Please update your drivers.");
@@ -239,10 +232,9 @@ Renderer::~Renderer()
 	m_VertexArray.Delete();
 	m_ElementBuffer.Delete();
 	m_VertexBuffer.Delete();
-	this->FrameBuffer.Delete();
+	FrameBuffer.Delete();
 
-	this->GLContext = nullptr;
-	m_Window = nullptr;
+	Window = nullptr;
 }
 
 void Renderer::ChangeResolution(uint32_t Width, uint32_t Height)
@@ -653,5 +645,5 @@ void Renderer::SwapBuffers()
 {
 	ZoneScopedC(tracy::Color::HotPink);
 
-	PHX_ENSURE(SDL_GL_SwapWindow(m_Window));
+	glfwSwapBuffers(Window);
 }

@@ -54,7 +54,6 @@ The following third-party projects were used/referenced during this Engine's dev
 
 * Luau - [@Roblox/Luau](https://github.com/Roblox/Luau/)
 * Lute - [@luau-lang/lute](https://github.com/luau-lang/lute)
-* SDL3 - [libsdl.org](https://libsdl.org/)
 * OpenGL - [Khronos Group](https://khronos.org/)
 * Glad - [glad.dav1d.de/](https://glad.dav1d.de/)
 * GLM - [@g-truc/glm](https://github.com/g-truc/glm/)
@@ -62,7 +61,9 @@ The following third-party projects were used/referenced during this Engine's dev
 * Dear ImGui - [@ocornut/ImGui](https://github.com/ocornut/imgui/)
 * STB Image - [@nothings/stb](https://github.com/nothings/stb)
 * Tracy - [@wolfpld/Tracy](https://github.com/wolfpld/tracy)
-* `minimp3` - [@lieff/minimp3](https://github.com/lieff/minimp3)
+* `miniaudio` - [@mackron/miniaudio](https://github.com/mackron/miniaudio)
+* GLFW - [@glfw/glfw](https://github.com/glfw/glfw)
+* tinyfiledialogs - [Guillaume Vareille/tinyfiledialogs|@native-toolkit/libtinyfiledialogs](https://github.com/native-toolkit/libtinyfiledialogs)
 
 The [OpenGL YouTube tutorials](https://youtube.com/watch?v=XpBGwZNyUh0&list=PLPaoO-vpZnumdcb4tZc4x5Q-v7CkrQ6M-) of [Victor Gordan](https://github.com/VictorGordan/) (who I occasionally make fun of in the code comments) were referenced heavily during the creation of the rendering systems of this engine.
 Initially, this started out as a 1-to-1 follow-along of what he did, but I rewrote the entire thing to work in a better "Game Engine"-style architecture, as the tutorial had a simpler Model Viewer architecture that was not suitable for a Game Engine.

@@ -1,3 +1,5 @@
+#include <tinyfiledialogs.h>
+
 #include "script/luhx.hpp"
 #include "script/ScriptEngine.hpp"
 #include "component/Script.hpp"
@@ -237,54 +239,20 @@ static int engine_toolenabled(lua_State* L)
     return 1;
 }
 
-#include <SDL3/SDL_messagebox.h>
-
 static int engine_showmessagebox(lua_State* L)
 {
-    size_t typestrlen = 0;
-    const char* typestr = luaL_optlstring(L, 3, "", &typestrlen);
+    const char* icon = luaL_optstring(L, 3, "");
+    const char* buttons = luaL_optstring(L, 4, "");
+    int defaultButton = luaL_optinteger(L, 5, 1);
 
-    if (typestrlen > 1)
-        luaL_error(L, "Flags string should only be 1 character or less, but is %zi", typestrlen);
-
-    SDL_MessageBoxFlags flags = 0;
-    switch (*typestr)
-    {
-    case '\0':
-    {
-        break;
-    }
-
-    case 'i':
-    {
-        flags |= SDL_MESSAGEBOX_INFORMATION;
-        break;
-    }
-    case 'w':
-    {
-        flags |= SDL_MESSAGEBOX_WARNING;
-        break;
-    }
-    case 'e':
-    {
-        flags |= SDL_MESSAGEBOX_ERROR;
-        break;
-    }
-
-    default:
-    {
-        luaL_error(L, "Invalid message box type '%c'", *typestr);
-    }
-    }
-
-    PHX_ENSURE(SDL_ShowSimpleMessageBox(
-        flags,
+    lua_pushboolean(L, tinyfd_messageBox(
         luaL_checkstring(L, 1),
         luaL_checkstring(L, 2),
-        SDL_GL_GetCurrentWindow()
+        buttons,
+        icon,
+        defaultButton
     ));
-
-    return 0;
+    return 1;
 }
 
 static luaL_Reg engine_funcs[] =

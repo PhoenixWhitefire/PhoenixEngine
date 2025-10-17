@@ -8,10 +8,8 @@
 #include <imgui_internal.h>
 #include <tracy/Tracy.hpp>
 #include <glad/gl.h>
-#include <SDL3/SDL_filesystem.h>
-#include <SDL3/SDL_messagebox.h>
-#include <SDL3/SDL_events.h>
-#include <SDL3/SDL_dialog.h>
+#include <GLFW/glfw3.h>
+#include <tinyfiledialogs.h>
 #include <fstream>
 #include <set>
 
@@ -207,9 +205,7 @@ static const char* mtlIterator(void*, int index)
 static std::string getFileDirectory(const std::string& FilePath)
 {
 	size_t lastFwdSlash = FilePath.find_last_of("/");
-	char* sdlcwd = SDL_GetCurrentDirectory();
-	std::string cwd = sdlcwd;
-	free(sdlcwd);
+	std::string cwd = std::filesystem::current_path().string();
 
 	if (lastFwdSlash == std::string::npos)
 #ifdef _WIN32
@@ -234,7 +230,8 @@ static std::string getFileDirectory(const std::string& FilePath)
 
 static bool textEditorAskSaveFileAs(
 	const std::string& Contents,
-	const std::string& Reason = "Do you want to save the following file?"
+	const std::string& Reason = "Do you want to save the following file?",
+	bool isError = false
 )
 {
 	std::string message = std::format(
@@ -245,91 +242,53 @@ static bool textEditorAskSaveFileAs(
 	);
 	Log::InfoF("`textEditorAskSaveFileAs` prompting: {}", message);
 
-	SDL_MessageBoxButtonData buttons[2] =
-	{
-		{
-			.buttonID = 0,
-			.text = "Yes"
-		},
-		{
-			.buttonID = 1,
-			.text = "No"
-		}
-	};
+	int choice = tinyfd_messageBox(
+		"Save File?",
+		message.c_str(),
+		"yesno",
+		isError ? "error" : "question",
+		1
+	);
 
-	SDL_MessageBoxData messageData{};
-	messageData.flags = SDL_MESSAGEBOX_WARNING;
-	messageData.window = SDL_GL_GetCurrentWindow();
-	messageData.title = "Save File?";
-	messageData.message = message.c_str();
-	messageData.numbuttons = 2;
-	messageData.buttons = buttons;
-
-	int chosenOption = 0;
-	PHX_ENSURE(SDL_ShowMessageBox(&messageData, &chosenOption));
-
-	if (chosenOption == 1)
+	if (choice == 0)
 		return false;
 
-	static bool SaveOperationFinished = false;
-	static bool DidSave = false;
-	SaveOperationFinished = false;
-
-	SDL_ShowSaveFileDialog(
-		[](void* FileContents, const char* const* FileList, int)
-		{
-			if (!FileList)
-				RAISE_RT(SDL_GetError());
-
-			const char* rawPath = FileList[0];
-			if (!rawPath)
-			{
-				Log::Info("No file path selected in `textEditorAskSaveFileAs`");
-
-				DidSave = false;
-				SaveOperationFinished = true;
-				return;
-			}
-			std::string savePath = FileRW::MakePathCwdRelative(rawPath);
-
-			if (TextEdOpenFiles[TextEdCurrentFileTab] == SAVINGTAG)
-				TextEdOpenFiles[TextEdCurrentFileTab] = savePath;
-			else
-				for (size_t i = 0; i < TextEdOpenFiles.size(); i++)
-					if (TextEdOpenFiles[TextEdCurrentFileTab] == SAVINGTAG)
-						TextEdOpenFiles[TextEdCurrentFileTab] = savePath;
-
-			std::string* contents = (std::string*)FileContents;
-			std::string errMessage;
-			if (!FileRW::WriteFile(savePath, *contents, &errMessage))
-			{
-				Log::ErrorF("`textEditorAskSaveFileAs` save failed with {} to {}, re-prompting", savePath, errMessage);
-				textEditorAskSaveFileAs(
-					*contents,
-					std::format("Couldn't save to file '{}' because of error {}\nRetry?", savePath, errMessage)
-				);
-			}
-			else
-				TextEditorRecentFiles.insert(savePath);
-
-			delete contents;
-			DidSave = true;
-			SaveOperationFinished = true;
-		},
-		new std::string(Contents),
-		SDL_GL_GetCurrentWindow(),
-		nullptr,
+	const char* saveTargetRaw = tinyfd_saveFileDialog(
+		"Save Text Document",
+		std::filesystem::current_path().c_str(),
 		0,
+		nullptr,
 		nullptr
 	);
 
-	while (!SaveOperationFinished)
+	if (!saveTargetRaw)
 	{
-		SDL_PumpEvents();
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		Log::Info("No file path selected in `textEditorAskSaveFileAs`");
+		return false;
 	}
+	std::string savePath = FileRW::MakePathCwdRelative(saveTargetRaw);
 
-	return DidSave;
+	if (TextEdOpenFiles[TextEdCurrentFileTab] == SAVINGTAG)
+		TextEdOpenFiles[TextEdCurrentFileTab] = savePath;
+	else
+		for (size_t i = 0; i < TextEdOpenFiles.size(); i++)
+			if (TextEdOpenFiles[TextEdCurrentFileTab] == SAVINGTAG)
+				TextEdOpenFiles[TextEdCurrentFileTab] = savePath;
+
+	std::string errMessage;
+	if (!FileRW::WriteFile(savePath, Contents, &errMessage))
+	{
+		Log::ErrorF("`textEditorAskSaveFileAs` save failed with {} to {}, re-prompting", savePath, errMessage);
+		return textEditorAskSaveFileAs(
+			Contents,
+			std::format("Couldn't save to file '{}' because of error {}\nRetry?", savePath, errMessage),
+			true
+		);
+	}
+	else
+		TextEditorRecentFiles.insert(savePath);
+
+	return true;
 }
 
 static bool TextEditorFileModified = false;
@@ -477,27 +436,25 @@ static void renderTextEditor()
 			TextEditorRecentFiles.insert(TextEdOpenFiles[TextEdCurrentFileTab]);
 			std::string curDir = getFileDirectory(TextEdOpenFiles[TextEdCurrentFileTab]);
 
-			SDL_ShowOpenFileDialog(
-				[](void*, const char* const* FileList, int)
-				{
-					if (!FileList)
-						RAISE_RT(SDL_GetError());
-					if (!FileList[0])
-						return;
-
-					textEditorSaveFile();
-					TextEditorRecentFiles.insert(TextEdOpenFiles[TextEdCurrentFileTab]);
-
-					TextEdOpenFiles.push_back(FileRW::MakePathCwdRelative(FileList[0]));
-					TextEdCurrentFileTab = TextEdOpenFiles.size() - 1;
-				},
-				nullptr,
-				SDL_GL_GetCurrentWindow(),
+			const char* saveTarget = tinyfd_openFileDialog(
+				"Open Text Document",
 				nullptr,
 				0,
-				curDir.c_str(),
+				nullptr,
+				nullptr,
 				false
 			);
+
+			if (saveTarget)
+			{
+				textEditorSaveFile();
+				TextEditorRecentFiles.insert(TextEdOpenFiles[TextEdCurrentFileTab]);
+
+				TextEdOpenFiles.push_back(FileRW::MakePathCwdRelative(saveTarget));
+				TextEdCurrentFileTab = TextEdOpenFiles.size() - 1;
+			}
+			else
+				Log::Info("Did not select a Text Document to open");
 		}
 
 		std::string textEditorFile = TextEdOpenFiles[TextEdCurrentFileTab];
@@ -856,8 +813,6 @@ static void uniformsEditor(
 	ImGui::EndChild();
 }
 
-static std::string* PipelineShaderSelectTarget = nullptr;
-
 static void shaderPipelineShaderSelect(const std::string& Label, std::string* Target)
 {
 	ImGui::TextUnformatted(Label.c_str());
@@ -881,47 +836,39 @@ static void shaderPipelineShaderSelect(const std::string& Label, std::string* Ta
 	if (changeFile)
 	{
 		std::string shddir = getFileDirectory(*Target);
-		SDL_DialogFileFilter filter{ "Shader files", "vert;frag;geom" };
+		const char* filter[] = { "*.vert", "*.frag", "*.geom" };
 
-		SDL_ShowOpenFileDialog(
-			[](void*, const char* const* FileList, int)
-			{
-				if (!FileList)
-					RAISE_RT(SDL_GetError());
-				if (!FileList[0])
-					return;
-
-				std::string fullpath = FileList[0];
-
-				// windows SMELLS :( 18/02/2025
-				size_t off = fullpath.find_first_of("\\");
-
-				while (off != std::string::npos)
-					off = fullpath.replace(off, 1, "/").find_first_of("\\");
-
-				size_t resDirOffset = fullpath.find("resources/");
-
-				if (resDirOffset == std::string::npos)
-				{
-					setErrorMessage("Selection must be within the Project's `resources/` directory!");
-				}
-				else
-				{
-					std::string shortpath = fullpath.substr(resDirOffset + 10);
-					*PipelineShaderSelectTarget = shortpath;
-
-					PipelineShaderSelectTarget = nullptr;
-				}
-			},
-			nullptr,
-			SDL_GL_GetCurrentWindow(),
-			&filter,
-			1,
+		const char* file = tinyfd_openFileDialog(
+			"Select Shader File",
 			shddir.c_str(),
+			3,
+			filter,
+			"Shader Files",
 			false
 		);
 
-		PipelineShaderSelectTarget = Target;
+		if (file)
+		{
+			std::string fullpath = file;
+	
+			// windows SMELLS :( 18/02/2025
+			size_t off = fullpath.find_first_of("\\");
+	
+			while (off != std::string::npos)
+				off = fullpath.replace(off, 1, "/").find_first_of("\\");
+	
+			size_t resDirOffset = fullpath.find("resources/");
+	
+			if (resDirOffset == std::string::npos)
+			{
+				setErrorMessage("Selection must be within the Project's `resources/` directory!");
+			}
+			else
+			{
+				std::string shortpath = fullpath.substr(resDirOffset + 10);
+				*Target = shortpath;
+			}
+		}
 	}
 }
 
@@ -1030,9 +977,6 @@ static void renderShaderPipelinesEditor()
 	ImGui::End();
 }
 
-static char* MtlEditorTextureSelectDialogBuffer = nullptr;
-static uint32_t* MtlEditorTextureSelectTarget = nullptr;
-
 static void mtlEditorTexture(const char* Label, uint32_t* TextureIdPtr, char* CurrentPath, bool CanRemove = true)
 {
 	ImGui::PushID(TextureIdPtr);
@@ -1068,53 +1012,43 @@ static void mtlEditorTexture(const char* Label, uint32_t* TextureIdPtr, char* Cu
 		if (fileDialogRequested)
 		{
 			std::string texdir = getFileDirectory(CurrentPath);
+			const char* filter[] = { "*.png", "*.jpg", "*.jpeg" };
 
-			SDL_DialogFileFilter filter{ "Images", "png;jpg;jpeg" };
-
-			SDL_ShowOpenFileDialog(
-				[](void*, const char* const* FileList, int)
-				{
-					if (!FileList)
-						RAISE_RT(SDL_GetError());
-					if (!FileList[0])
-						return;
-
-					std::string fullpath = FileList[0];
-
-					// windows SMELLS :( 18/02/2025
-					size_t off = fullpath.find_first_of("\\");
-
-					while (off != std::string::npos)
-						off = fullpath.replace(off, 1, "/").find_first_of("\\");
-
-					size_t resDirOffset = fullpath.find("resources/");
-
-					if (resDirOffset == std::string::npos)
-					{
-						setErrorMessage("Selection must be within the Project's `resources/` directory!");
-						MtlEditorTextureSelectDialogBuffer = nullptr;
-					}
-					else
-					{
-						std::string shortpath = fullpath.substr(resDirOffset + 10);
-						copyStringToBuffer(MtlEditorTextureSelectDialogBuffer, shortpath, MATERIAL_TEXTUREPATH_BUFSIZE);
-						MtlEditorTextureSelectDialogBuffer = nullptr;
-
-						uint32_t newtexid = TextureManager::Get()->LoadTextureFromPath(shortpath);
-						// i'm so silly 04/12/2024
-						*MtlEditorTextureSelectTarget = newtexid;
-					}
-				},
-				nullptr,
-				SDL_GL_GetCurrentWindow(),
-				&filter,
-				1,
+			const char* path = tinyfd_openFileDialog(
+				"Select Texture",
 				texdir.c_str(),
+				3,
+				filter,
+				"Images",
 				false
 			);
 
-			MtlEditorTextureSelectDialogBuffer = CurrentPath;
-			MtlEditorTextureSelectTarget = TextureIdPtr;
+			if (path)
+			{
+				std::string fullpath = path;
+	
+				// windows SMELLS :( 18/02/2025
+				size_t off = fullpath.find_first_of("\\");
+	
+				while (off != std::string::npos)
+					off = fullpath.replace(off, 1, "/").find_first_of("\\");
+	
+				size_t resDirOffset = fullpath.find("resources/");
+	
+				if (resDirOffset == std::string::npos)
+				{
+					setErrorMessage("Selection must be within the Project's `resources/` directory!");
+				}
+				else
+				{
+					std::string shortpath = fullpath.substr(resDirOffset + 10);
+					copyStringToBuffer(CurrentPath, shortpath, MATERIAL_TEXTUREPATH_BUFSIZE);
+				
+					uint32_t newtexid = TextureManager::Get()->LoadTextureFromPath(shortpath);
+					// i'm so silly 04/12/2024
+					*TextureIdPtr = newtexid;
+				}
+			}
 		}
 
 		if (addTextureDialog)
@@ -1406,86 +1340,83 @@ static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] =
 		}
 
 		sceneName = sceneName.substr(0, sceneName.size() - 1);
-		std::string* ser = new std::string(SceneFormat::Serialize(sels, "SaveToFileAction_" + sceneName));
-		
-		SDL_ShowSaveFileDialog(
-			[](void* contentsptr, const char* const* FileList, int)
-			{
-				std::string* contentsptrstr = (std::string*)contentsptr;
-				std::string contents = *contentsptrstr;
-				delete contentsptrstr;
+		std::string ser = SceneFormat::Serialize(sels, "SaveToFileAction_" + sceneName);
+		const char* filter[] = { ".hxscene" };
 
-				if (!FileList)
-					RAISE_RT(SDL_GetError());
-				if (!FileList[0])
-					return;
-					
-				EDCHECKEXPR(FileRW::WriteFile(FileList[0], contents));
-			},
-			(void*)ser,
-			SDL_GL_GetCurrentWindow(),
-			nullptr,
-			0,
-			getFileDirectory("resources/scenes/dummy.file").c_str()
+		const char* path = tinyfd_saveFileDialog(
+			"Save Objects",
+			getFileDirectory("resources/scenes/dummy.file").c_str(),
+			1,
+			filter,
+			"Scenes"
 		);
+
+		if (path)
+		{
+			std::string error;
+			if (!FileRW::WriteFile(path, ser))
+				setErrorMessage(std::format("Failed to save to '{}', error: {}", path, error));
+		}
+		else
+			Log::Info("No save path select to save objects");
 	},
 
 	[]()
 	{
-		SDL_ShowOpenFileDialog(
-			[](void*, const char* const* FileList, int)
-			{
-				if (!FileList)
-					RAISE_RT(SDL_GetError());
-				if (!FileList[0])
-					return;
+		const char* filter[] = { "*.hxscene" };
 
-				std::string fullpath = FileList[0];
-
-				// windows SMELLS :( 18/02/2025
-				size_t off = fullpath.find_first_of("\\");
-
-				while (off != std::string::npos)
-					off = fullpath.replace(off, 1, "/").find_first_of("\\");
-
-				size_t resDirOffset = fullpath.find("resources/");
-
-				if (resDirOffset == std::string::npos)
-				{
-					setErrorMessage("Selection must be within the Project's `resources/` directory!");
-				}
-				else
-				{
-					bool readSuccess = false;
-					std::string contents = FileRW::ReadFile(fullpath, &readSuccess);
-
-					if (!readSuccess)
-					{
-						setErrorMessage("Couldn't read file " + fullpath);
-						return;
-					}
-
-					std::vector<ObjectRef> roots = SceneFormat::Deserialize(contents, &readSuccess);
-
-					if (!readSuccess)
-					{
-						setErrorMessage(SceneFormat::GetLastErrorString());
-						return;
-					}
-
-					assert(Selections[0].Dereference());
-
-					for (ObjectRef r : roots)
-						r->SetParent(Selections[0].Dereference());
-				}
-			},
-			nullptr,
-			SDL_GL_GetCurrentWindow(),
-			nullptr,
-			0,
+		const char* path = tinyfd_openFileDialog(
+			"Insert Objects",
 			getFileDirectory("resources/scenes/dummy.file").c_str(),
+			1,
+			filter,
+			"Scenes",
 			false
 		);
+
+		if (path)
+		{
+			std::string fullpath = path;
+	
+			// windows SMELLS :( 18/02/2025
+			size_t off = fullpath.find_first_of("\\");
+	
+			while (off != std::string::npos)
+				off = fullpath.replace(off, 1, "/").find_first_of("\\");
+	
+			size_t resDirOffset = fullpath.find("resources/");
+	
+			if (resDirOffset == std::string::npos)
+			{
+				setErrorMessage("Selection must be within the Project's `resources/` directory!");
+			}
+			else
+			{
+				bool readSuccess = false;
+				std::string contents = FileRW::ReadFile(fullpath, &readSuccess);
+			
+				if (!readSuccess)
+				{
+					setErrorMessage("Couldn't read file " + fullpath);
+					return;
+				}
+			
+				std::vector<ObjectRef> roots = SceneFormat::Deserialize(contents, &readSuccess);
+			
+				if (!readSuccess)
+				{
+					setErrorMessage(SceneFormat::GetLastErrorString());
+					return;
+				}
+			
+				assert(Selections[0].Dereference());
+			
+				for (ObjectRef r : roots)
+					r->SetParent(Selections[0].Dereference());
+			}
+		}
+		else
+			Log::Info("No file selected to insert object from");
 	},
 
 	[]()
@@ -3053,7 +2984,7 @@ void InlayEditor::Shutdown()
 }
 
 #include <imgui/backends/imgui_impl_opengl3.h>
-#include <imgui/backends/imgui_impl_sdl3.h>
+#include <imgui/backends/imgui_impl_glfw.h>
 #include <lualib.h>
 #include <thread>
 #include <cmath>
@@ -3193,11 +3124,8 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 
 	ImGui::SetCurrentContext(debuggerContext);
 
-	PHX_ENSURE_MSG(ImGui_ImplSDL3_InitForOpenGL(
-		engine->Window,
-		engine->RendererContext.GLContext
-	), "`ImGui_ImplSDL3_InitForOpenGL` failed");
-	PHX_ENSURE_MSG(ImGui_ImplOpenGL3_Init("#version 460"), "`ImGui_ImplOpenGL3_Init` failed");
+	PHX_ENSURE_MSG(ImGui_ImplGlfw_InitForOpenGL(engine->Window, true), "Failed to initialize Dear ImGui for GLFW");
+	PHX_ENSURE_MSG(ImGui_ImplOpenGL3_Init("#version 460"), "Failed to initialize Dear ImGui for OpenGL");
 
 	double debuggerLastSecond = GetRunningTime();
 	double debuggerLastFrame = GetRunningTime();
@@ -3208,8 +3136,8 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 	bool running = true;
 
 	bool wasTextEdEnabled = TextEditorEnabled;
-	bool wasMouseGrabbed = SDL_GetWindowMouseGrab(SDL_GL_GetCurrentWindow());
-	SDL_SetWindowMouseGrab(SDL_GL_GetCurrentWindow(), false);
+	int prevCursorMode = glfwGetInputMode(engine->Window, GLFW_CURSOR);
+	glfwSetInputMode(engine->Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
 	int li = 0;
 	lua_getinfo(L, li, "slnfu", ar);
@@ -3229,49 +3157,15 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 	s_TextEdDebuggerJumpToLine = ar->currentline;
 	invokeTextEditor(ar->short_src);
 
-	while (running)
+	while (!glfwWindowShouldClose(engine->Window) && running)
 	{
 		ZoneScopedN("DebuggerFrame");
 		double dt = GetRunningTime() - debuggerLastFrame;
 		debuggerLastFrame = GetRunningTime();
 
-		SDL_Event event;
-		while (SDL_PollEvent(&event) != 0)
-		{
-			engine->RendererContext.AccumulatedDrawCallCount = 0;
-			ImGui_ImplSDL3_ProcessEvent(&event);
-
-			switch (event.type)
-			{
-			
-			case SDL_EVENT_QUIT:
-			{
-				running = false;
-				L->singlestep = false;
-				L->global->cb.debugstep = nullptr;
-
-				engine->Close();
-				
-				break;
-			}
-		
-			case SDL_EVENT_WINDOW_RESIZED:
-			{
-				int NewSizeX = event.window.data1;
-				int NewSizeY = event.window.data2;
-			
-				// Only call ChangeResolution if the new resolution is actually different
-				//if (NewSizeX != this->WindowSizeX || NewSizeY != this->WindowSizeY)
-					engine->OnWindowResized(NewSizeX, NewSizeY);
-			
-				break;
-			}
-			default: {}
-			}
-		}
-
+		glfwPollEvents();
 		ImGui_ImplOpenGL3_NewFrame();
-		ImGui_ImplSDL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 		ImGui::DockSpaceOverViewport();
 
@@ -3577,10 +3471,10 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 
 	TextEditorEnabled = wasTextEdEnabled;
 	s_TextEdDebuggerCurrentLine = 0;
-	SDL_SetWindowMouseGrab(SDL_GL_GetCurrentWindow(), wasMouseGrabbed);
+	glfwSetInputMode(engine->Window, GLFW_CURSOR, prevCursorMode);
 
 	ImGui_ImplOpenGL3_Shutdown();
-	ImGui_ImplSDL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
 	ImGui::SetCurrentContext(prevContext);
 	ImGui::DestroyContext(debuggerContext);
 }

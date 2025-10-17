@@ -2,7 +2,6 @@
 
 #include <filesystem>
 #include <nljson.hpp>
-#include <SDL3/SDL_video.h>
 #include <imgui/imgui.h>
 
 #include "render/Renderer.hpp"
@@ -49,7 +48,7 @@ public:
 	ObjectHandle WorkspaceRef;
 
 	Renderer RendererContext;
-	SDL_Window* Window{};
+	GLFWwindow* Window{};
 
 	EventSignal<double> OnFrameStart{};
 	EventSignal<double> OnFrameRenderGui{};
@@ -75,6 +74,8 @@ public:
 	bool DebugWireframeRendering = false;
 	bool DebugAabbs = false;
 
+	bool IsWindowFocused = true;
+
 	int ExitCode = 0;
 
 private:
@@ -83,6 +84,11 @@ private:
 
 	int m_DrawnFramesInSecond = -1;
 	bool m_IsRunning = false;
+
+	int m_WindowedWidth = 800;
+	int m_WindowedHeight = 800;
+	int m_WindowedPosX = 0;
+	int m_WindowedPosY = 0;
 
 	ThreadManager m_ThreadManager;
 	MaterialManager m_MaterialManager;

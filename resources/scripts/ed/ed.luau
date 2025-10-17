@@ -543,7 +543,7 @@ function Stages.SelectProject(DeltaTime)
 				hoveringOverWip = i
 			end
 
-			if (lastnl - i) * 250 + 170 + 250 + startPosX < windowSizeX - 170 - startPosX then
+			if (lastnl - i) * 250 + 170 + 250 + startPosX < windowSizeX - (170 * 2) - startPosX then
 				imgui.setcursorposition(cx + 275 - 15, cy)
 				imgui.dummy(0, 0)
 				imgui.sameline()

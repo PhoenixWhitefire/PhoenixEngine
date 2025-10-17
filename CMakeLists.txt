@@ -36,19 +36,29 @@ set_target_properties(PhoenixEngine PROPERTIES OUTPUT_NAME PhoenixEngine)
 target_compile_definitions(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:TRACY_ENABLE TRACY_FIBERS>)
 target_compile_definitions(PhoenixEngine PRIVATE $<$<CONFIG:Release>:NDEBUG>)
 target_compile_definitions(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:NDEBUG TRACY_ENABLE TRACY_FIBERS>)
+target_compile_definitions(PhoenixEngine PRIVATE PHX_TARGET_PLATFORM="${CMAKE_SYSTEM_NAME}")
+
+option(PHX_HEADLESS "Build in Headless mode" OFF)
+
+if (PHX_HEADLESS)
+	target_compile_definitions(PhoenixEngine PRIVATE PHX_HEADLESS_BUILD=1)
+else()
+	target_compile_definitions(PhoenixEngine PRIVATE PHX_HEADLESS_BUILD=0)
+endif()
 
 target_include_directories(PhoenixEngine PUBLIC
 	"./"
 	"src/decl"
 	"Vendor"
 	"Vendor/glm"
-	"Vendor/SDL/include"
 	"Vendor/imgui"
 	"Vendor/tracy/public"
 	"Vendor/luau/Common/include"
 	"Vendor/luau/VM/include"
 	"Vendor/luau/Compiler/include"
 	"Vendor/luau/Ast/include"
+	"Vendor/glfw/include"
+	"Vendor/tinyfd"
 )
 
 set(PHX_BUILD_TYPE $<IF:$<CONFIG:Debug>,Debug,$<IF:$<CONFIG:Release>,Release,RelTracy>>)
@@ -62,9 +72,8 @@ endif()
 target_link_libraries(PhoenixEngine PRIVATE
 	Vendor
 	glm
-	SDL_uclibc
-	SDL3-shared
 	miniaudio
+	glfw
 	$<IF:$<CONFIG:Release>,,TracyClient> # TODO: figure out how to not build this if we dont link it
 
 	Luau.Compiler
@@ -85,28 +94,31 @@ add_compile_definitions($<$<CONFIG:RelTracy>:TRACY_FIBERS>)
 
 if (MSVC)
 	include(cmake/cmake-msvc.txt)
+	target_compile_definitions(PhoenixEngine PRIVATE PHX_TARGET_COMPILER="MSVC")
 else() # assume G++
 	include(cmake/cmake-gnug.txt)
+	target_compile_definitions(PhoenixEngine PRIVATE PHX_TARGET_COMPILER="G++")
+	target_link_libraries(PhoenixEngine PRIVATE X11) # audible sigh when i checked `imgui_impl_glfw.cpp` line 1266
 endif()
 
 # remove unnecessary projects
 option(LUAU_BUILD_CLI "Build CLI" OFF)
 option(LUAU_BUILD_TESTS "Build tests" OFF)
-option(SDL_TEST_LIBRARY "Build the SDL3_test library" OFF)
 option(MINIAUDIO_NO_EXTRA_NODES                "Do not build extra node graph nodes" ON)
 
 add_subdirectory(Vendor)
 add_subdirectory(Vendor/luau)
 add_subdirectory(Vendor/glm)
-add_subdirectory(Vendor/SDL)
 add_subdirectory(Vendor/tracy)
 add_subdirectory(Vendor/miniaudio)
+add_subdirectory(Vendor/glfw)
 
 # organize VS folders
 set_property(TARGET Vendor PROPERTY FOLDER "Vendor")
 set_property(TARGET TracyClient PROPERTY FOLDER "Vendor")
 set_property(TARGET glm PROPERTY FOLDER "Vendor")
 set_property(TARGET miniaudio PROPERTY FOLDER "Vendor")
+set_property(TARGET glfw PROPERTY FOLDER "Vendor")
 
 set_property(TARGET Luau.RequireNavigator PROPERTY FOLDER "Vendor/Luau")
 set_property(TARGET Luau.Require PROPERTY FOLDER "Vendor/Luau")
@@ -120,8 +132,6 @@ set_property(TARGET Luau.EqSat PROPERTY FOLDER "Vendor/Luau")
 set_property(TARGET Luau.Ast PROPERTY FOLDER "Vendor/Luau")
 set_property(TARGET Luau.VM PROPERTY FOLDER "Vendor/Luau")
 set_property(TARGET isocline PROPERTY FOLDER "Vendor/Luau")
-set_property(TARGET SDL3-shared PROPERTY FOLDER "Vendor/SDL")
-set_property(TARGET SDL_uclibc PROPERTY FOLDER "Vendor/SDL")
 
 # build engine after all libs
 add_dependencies(PhoenixEngine
@@ -133,8 +143,7 @@ add_dependencies(PhoenixEngine
 	Luau.RequireNavigator
 	Luau.Require
 	Luau.VM
-	SDL3-shared
-	SDL_uclibc
+	glfw
 )
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT PhoenixEngine)

@@ -10,9 +10,12 @@
 [submodule "Vendor/tracy"]
 	path = Vendor/tracy
 	url = https://github.com/wolfpld/tracy.git
-[submodule "Vendor/SDL"]
-	path = Vendor/SDL
-	url = https://github.com/libsdl-org/SDL.git/
 [submodule "Vendor/miniaudio"]
 	path = Vendor/miniaudio
-	url = https://github.com/mackron/miniaudio
+	url = https://github.com/mackron/miniaudio.git
+[submodule "Vendor/glfw"]
+	path = Vendor/glfw
+	url = https://github.com/glfw/glfw.git
+[submodule "Vendor/tinyfd"]
+	path = Vendor/tinyfd
+	url = https://github.com/native-toolkit/libtinyfiledialogs.git

@@ -3,38 +3,22 @@
 #include <unordered_set>
 #include <optional>
 #include <glm/mat4x4.hpp>
-#include <SDL3/SDL_video.h>
+#include <GLFW/glfw3.h>
 
 #include "render/RendererScene.hpp"
 #include "render/GpuBuffers.hpp"
 #include "asset/ShaderManager.hpp"
 
-/*
-	09/09/2024
-	Why can't SDL have something like OpenGL's Debug Log?
-	They have their own logging stuff, but it doesn't seem to do anything with errors
-*/
-#define PHX_SDL_CALL(func, ...)                                  \
-{                                                                \
-	ZoneScopedN(#func);                                          \
-	bool success = func(__VA_ARGS__);                            \
-	if (!success)                                                \
-		RAISE_RTF(                                               \
-			"Error in " #func ":\nMessage: {}",                  \
-			SDL_GetError()                                       \
-		);                                                       \
-}                                                                \
-
 class Renderer
 {
 public:
 	Renderer() = default;
-	Renderer(uint32_t Width, uint32_t Height, SDL_Window* Window);
+	Renderer(uint32_t Width, uint32_t Height, GLFWwindow* Window);
 	~Renderer();
 
 	static Renderer* Get();
 
-	void Initialize(uint32_t Width, uint32_t Height, SDL_Window* Window);
+	void Initialize(uint32_t Width, uint32_t Height, GLFWwindow* Window);
 
 	// Changes the rendering resolution
 	void ChangeResolution(uint32_t newWidth, uint32_t newHeight);
@@ -75,7 +59,7 @@ public:
 
 	GpuFrameBuffer FrameBuffer;
 
-	SDL_GLContext GLContext = nullptr;
+	GLFWwindow* Window = nullptr;
 
 	uint32_t AccumulatedDrawCallCount = 0;
 	uint32_t InstancingBuffer = UINT32_MAX;
@@ -86,8 +70,6 @@ private:
 	GpuVertexArray m_VertexArray;
 	GpuVertexBuffer m_VertexBuffer;
 	GpuElementBuffer m_ElementBuffer;
-
-	SDL_Window* m_Window = nullptr;
 	
 	uint32_t m_Width = 0, m_Height = 0;
 

@@ -1195,7 +1195,6 @@ static int api_eventnamecall(lua_State* L)
 				lua_pushlightuserdata(eL, eL);
 				lua_gettable(eL, LUA_ENVIRONINDEX);
 				EventConnectionData* cn = (EventConnectionData*)luaL_checkudata(eL, -1, "EventConnection");
-				int connRef = lua_ref(eL, -1);
 				lua_pop(eL, 1);
 
 				GameObject* scr = (GameObject*)cn->Script.Dereference();
@@ -1204,7 +1203,6 @@ static int api_eventnamecall(lua_State* L)
 				)
 				{
 					cn->Event->Disconnect(cn->Reflector.Referred(), cn->ConnectionId);
-					lua_unref(eL, connRef);
 					lua_resetthread(cL);
 					lua_resetthread(eL);
 
@@ -1273,8 +1271,6 @@ static int api_eventnamecall(lua_State* L)
 					lua_pop(cL, lua_gettop(cL)); // not entirely sure how these are piling up
 					cn->CallbackYields = false;
 				}
-
-				lua_unref(eL, connRef);
 			}
 		);
 

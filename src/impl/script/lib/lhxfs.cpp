@@ -123,148 +123,120 @@ static int fs_isdirectory(lua_State* L)
 	return 1;
 }
 
-#include <SDL3/SDL_dialog.h>
+#include <tinyfiledialogs.h>
 
 #include "script/ScriptEngine.hpp"
 
-static bool IsFdInProgress = false;
-static std::vector<std::string> FdResults;
 
-static void fdCallback(void*, const char* const* FileList, int)
+
+static std::string normalizePath(std::string path)
 {
-	if (!FileList)
-	{
-		const char* err = SDL_GetError();
-		RAISE_RT(err);
-	}
+	for (size_t i = 0; i < path.size(); i++)
+		if (path[i] == '\\')
+			path[i] = '/';
 
-	FdResults.clear();
-
-	size_t nextIdx = 0;
-	while (FileList[nextIdx])
-	{
-		FdResults.push_back(FileList[nextIdx]);
-
-		// windows SMELLS :( 18/02/2025
-		std::string& str = FdResults.back();
-		size_t off = str.find_first_of("\\");
-
-		while (off != std::string::npos)
-			off = str.replace(off, 1, "/").find_first_of("\\");
-
-		nextIdx++;
-	}
-
-	IsFdInProgress = false;
-}
-
-static int fs_ispromptactive(lua_State* L)
-{
-    lua_pushboolean(L, IsFdInProgress);
-    return 1;
+	return path;
 }
 
 static int fs_promptsave(lua_State* L)
 {
-    if (IsFdInProgress)
-		luaL_errorL(L, "The User has not completed the previous File Dialog");
-	
 	std::string defaultLocation = FileRW::MakePathAbsolute(luaL_optstring(L, 1, "./"));
-	SDL_DialogFileFilter filter{};
-	filter.pattern = luaL_optstring(L, 2, "*");
-	filter.name = luaL_optstring(L, 3, "All files");
+	std::vector<const char*> filters;
 
-	ScriptEngine::L::Yield(
-		L,
-		1,
-		[filter, defaultLocation](ScriptEngine::YieldedCoroutine& yc)
+	if (lua_isstring(L, 2))
+	{
+		filters.push_back(lua_tostring(L, 2));
+	}
+	else
+	{
+		lua_pushnil(L);
+		while (lua_next(L, 2))
 		{
-			IsFdInProgress = true;
-	
-			SDL_ShowSaveFileDialog(
-				fdCallback,
-				NULL,
-				SDL_GL_GetCurrentWindow(),
-				&filter,
-				1,
-				defaultLocation.c_str()
-			);
-
-			yc.Mode = ScriptEngine::YieldedCoroutine::ResumptionMode::Polled;
-			yc.RmPoll = [](lua_State* CL)
-				-> int
-				{
-					if (IsFdInProgress)
-						return -1;
-					else
-					{
-						if (FdResults.size() == 0)
-							lua_pushnil(CL);
-						else
-							lua_pushstring(CL, FileRW::MakePathCwdRelative(FdResults[0]).c_str());
-					
-						return 1;
-					}
-				};
+			filters.push_back(luaL_checkstring(L, -1));
+			lua_pop(L, 1);
 		}
+	}
+	
+	const char* filterName = luaL_optstring(L, 3, nullptr);
+
+	const char* path = tinyfd_saveFileDialog(
+		"Save File",
+		defaultLocation.c_str(),
+		filters.size(),
+		filters.data(),
+		filterName
 	);
 
-	return -1;
+	if (path)
+		lua_pushstring(L, normalizePath(path).c_str());
+	else
+		lua_pushnil(L);
+
+	return 1;
 }
 
 static int fs_promptopen(lua_State* L)
 {
-    if (IsFdInProgress)
-		luaL_errorL(L, "The User has not completed the previous File Dialog");
-
 	std::string defaultLocation = FileRW::MakePathAbsolute(luaL_optstring(L, 1, "./"));
-	SDL_DialogFileFilter filter{};
-	filter.pattern = luaL_optstring(L, 2, "*");
-	filter.name = luaL_optstring(L, 3, "All files");
+	std::vector<const char*> filters;
 
+	if (lua_isstring(L, 2))
+	{
+		filters.push_back(lua_tostring(L, 2));
+	}
+	else
+	{
+		lua_pushnil(L);
+		while (lua_next(L, 2))
+		{
+			filters.push_back(luaL_checkstring(L, -1));
+			lua_pop(L, 1);
+		}
+	}
+
+	const char* filterName = luaL_optstring(L, 3, nullptr);
 	bool allowMultipleFiles = luaL_optboolean(L, 4, false);
 
-	ScriptEngine::L::Yield(
-		L,
-		1,
-		[&](ScriptEngine::YieldedCoroutine& yc)
-		{
-			IsFdInProgress = true;
-		
-			SDL_ShowOpenFileDialog(
-				fdCallback,
-				NULL,
-				SDL_GL_GetCurrentWindow(),
-				&filter,
-				1,
-				defaultLocation.c_str(),
-				allowMultipleFiles
-			);
-
-			yc.Mode = ScriptEngine::YieldedCoroutine::ResumptionMode::Polled;
-			yc.RmPoll = [](lua_State* CL)
-				-> int
-				{
-					if (IsFdInProgress)
-						return -1;
-					else
-					{
-						lua_newtable(CL);
-					
-						for (int i = 0; i < (int)FdResults.size(); i++)
-						{
-							lua_pushinteger(CL, i + 1);
-							lua_pushstring(CL, FileRW::MakePathCwdRelative(FdResults[i]).c_str());
-							lua_settable(CL, -3);
-						}
-					
-						return 1;
-					}
-				};
-		}
+	const char* filescstr = tinyfd_openFileDialog(
+		"Open File(s)",
+		defaultLocation.c_str(),
+		filters.size(),
+		filters.data(),
+		filterName,
+		allowMultipleFiles
 	);
 
-	return -1;
+	if (filescstr)
+	{
+		size_t lastOff = 0;
+		std::string filesstr = filescstr;
+		std::string file = "";
+		int nfiles = 0;
+
+		lua_newtable(L);
+
+		for (size_t i = 0; i < filesstr.size(); i++)
+		{
+			if (filesstr[i] == '|')
+			{
+				nfiles++;
+
+				lua_pushinteger(L, nfiles);
+				lua_pushstring(L, FileRW::MakePathCwdRelative(file).c_str());
+				lua_settable(L, -3);
+
+				lastOff = i+1;
+				file.clear();
+				continue;
+			}
+
+			file = std::string(filesstr.begin() + lastOff, filesstr.begin() + i);
+		}
+	}
+	else
+		lua_pushnil(L);
+
+	return 1;
 }
 
 static const luaL_Reg fs_funcs[] =
@@ -275,7 +247,6 @@ static const luaL_Reg fs_funcs[] =
     { "isfile", fs_isfile },
     { "isdirectory", fs_isdirectory },
 
-	{ "ispromptactive", fs_ispromptactive },
     { "promptsave", fs_promptsave },
     { "promptopen", fs_promptopen },
     { NULL, NULL }

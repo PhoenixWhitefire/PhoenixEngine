@@ -1,9 +1,11 @@
 #pragma once
 
-#include <SDL3/SDL_keyboard.h>
+#include <GLFW/glfw3.h>
 
 namespace UserInput
 {
-	bool IsKeyDown(SDL_Keycode Key);
-	bool IsMouseButtonDown(bool Left);
+	// expects GLFW keys
+	bool IsKeyDown(int Key);
+	// expects GLFW mouse buttons
+	bool IsMouseButtonDown(int Button);
 };

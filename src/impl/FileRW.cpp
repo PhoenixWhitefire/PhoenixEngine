@@ -92,7 +92,7 @@ bool FileRW::WriteFile(
 			if (file.bad())
 				*ErrorMessage = "Fatal I/O error (badbit), e.x.: hardware error, disk full, etc";
 			else
-				*ErrorMessage = "Non-fatal I/O error (failbit), e.x.: can't access path, etc";
+				*ErrorMessage = "Non-fatal I/O error (failbit), e.x.: can't access path due to lacking permissions, invalid path, etc";
 		}
 
 		return false;

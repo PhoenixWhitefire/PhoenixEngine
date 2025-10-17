@@ -1,5 +1,4 @@
 #include <imgui.h>
-#include <SDL3/SDL_mouse.h>
 
 #include "script/luhx.hpp"
 #include "script/ScriptEngine.hpp"
@@ -30,7 +29,7 @@ static int input_keypressed(lua_State* L)
     if (lua_isstring(L, 1))
     {
         const char* kname = luaL_checkstring(L, 1);
-        lua_pushboolean(L, UserInput::IsKeyDown((SDL_Keycode)kname[0]));
+        lua_pushboolean(L, UserInput::IsKeyDown((int)kname[0]));
     }
     else if (lua_isnumber(L, 1))
     {
@@ -80,38 +79,37 @@ static int input_mousedown(lua_State* L)
 
 static int input_mouseposition(lua_State* L)
 {
-    float mx = 0;
-	float my = 0;
+    double mx = 0;
+    double my = 0;
 
-	SDL_GetMouseState(&mx, &my);
-
-	lua_pushnumber(L, mx);
-	lua_pushnumber(L, my);
-
-	return 2;
+    glfwGetCursorPos(glfwGetCurrentContext(), &mx, &my);
+    
+    lua_pushnumber(L, mx);
+    lua_pushnumber(L, my);
+    return 2;
 }
 
 static int input_setmouseposition(lua_State* L)
 {
-    SDL_WarpMouseInWindow(SDL_GL_GetCurrentWindow(), luaL_checknumber(L, 1), luaL_checknumber(L, 2));
+    glfwSetCursorPos(glfwGetCurrentContext(), luaL_checknumber(L, 1), luaL_checknumber(L, 2));
     return 0;
 }
 
 static int input_mousegrabbed(lua_State* L)
 {
-    lua_pushboolean(L, SDL_GetWindowMouseGrab(SDL_GL_GetCurrentWindow()));
+    lua_pushboolean(L, glfwGetInputMode(glfwGetCurrentContext(), GLFW_CURSOR) == GLFW_CURSOR_DISABLED);
     return 1;
 }
 
 static int input_setmousegrabbed(lua_State* L)
 {
-    SDL_SetWindowMouseGrab(SDL_GL_GetCurrentWindow(), luaL_checkboolean(L, 1));
+    glfwSetInputMode(glfwGetCurrentContext(), GLFW_CURSOR, luaL_checkboolean(L, 1) ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
     return 0;
 }
 
 static int input_cursorvisible(lua_State* L)
 {
-    lua_pushboolean(L, SDL_CursorVisible());
+    lua_pushboolean(L, glfwGetInputMode(glfwGetCurrentContext(), GLFW_CURSOR) == GLFW_CURSOR_NORMAL);
     return 1;
 }
 
@@ -119,13 +117,13 @@ static int input_setcursorvisible(lua_State* L)
 {
     if (luaL_checkboolean(L, 1))
     {
+        glfwSetInputMode(glfwGetCurrentContext(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
-        SDL_ShowCursor();
     }
     else
     {
+        glfwSetInputMode(glfwGetCurrentContext(), GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
         ImGui::SetMouseCursor(ImGuiMouseCursor_None);
-        SDL_HideCursor();
     }
     
     return 0;

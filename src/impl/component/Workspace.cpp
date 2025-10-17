@@ -96,13 +96,11 @@ static inline WorkspaceManager Instance{};
 glm::vec3 EcWorkspace::ScreenPointToRay(double x, double y, float length, glm::vec3* /* Origin */) const
 {
 	Engine* engine = Engine::Get();
-	int winSizeX = 0, winSizeY = 0;
-	PHX_ENSURE(SDL_GetWindowSize(engine->Window, &winSizeX, &winSizeY));
 
 	// thinmatrix 27/12/2024
 	// https://www.youtube.com/watch?v=DLKN0jExRIM
-	double nx = (2.f * x) / winSizeX - 1;
-	double ny = -((2.f * y) / winSizeY - 1);
+	double nx = (2.f * x) / engine->WindowSizeX - 1;
+	double ny = -((2.f * y) / engine->WindowSizeY - 1);
 
 	glm::vec4 clipCoords{ nx, ny, -1.f, 1.f };
 
@@ -110,7 +108,7 @@ glm::vec3 EcWorkspace::ScreenPointToRay(double x, double y, float length, glm::v
 
 	glm::mat4 projectionMatrixInv = glm::inverse(glm::perspective(
 		glm::radians(cam->FieldOfView),
-		(float)winSizeX / (float)winSizeY,
+		(float)engine->WindowSizeX / (float)engine->WindowSizeY,
 		cam->NearPlane,
 		cam->FarPlane
 	));

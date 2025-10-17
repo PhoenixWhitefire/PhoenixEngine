@@ -83,20 +83,15 @@ catch (...)                                                                     
 #include <filesystem>
 
 #include <imgui/backends/imgui_impl_opengl3.h>
-#include <imgui/backends/imgui_impl_sdl3.h>
+#include <imgui/backends/imgui_impl_glfw.h>
 #include <imgui_internal.h>
 
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtx/vector_angle.hpp>
 
-#include <SDL3/SDL_messagebox.h>
-#include <SDL3/SDL_platform.h>
-#include <SDL3/SDL_keyboard.h>
-#include <SDL3/SDL_dialog.h>
-#include <SDL3/SDL_mouse.h>
-#include <SDL3/SDL_init.h>
-
 #include <tracy/Tracy.hpp>
+
+#include <tinyfiledialogs.h>
 
 #include "Engine.hpp"
 
@@ -178,12 +173,13 @@ static void launchTracy()
 
 #else
 
-	PHX_ENSURE(SDL_ShowSimpleMessageBox(
-		SDL_MESSAGEBOX_INFORMATION,
+	tinyfd_messageBox(
 		"Tracy Integration",
 		"Instrumentation was disabled for this build. You need to use a build with the `TRACY_ENABLE` macro defintion.",
-		Engine::Get() ? Engine::Get()->Window : nullptr
-	));
+		"ok",
+		"info",
+		1
+	);
 
 #endif
 }
@@ -193,12 +189,13 @@ static void handleInputs(double deltaTime)
 	Engine* EngineInstance = Engine::Get();
 
 	EcCamera* camera = EngineInstance->WorkspaceRef->FindComponent<EcWorkspace>()->GetSceneCamera()->FindComponent<EcCamera>();
-	SDL_Window* window = EngineInstance->Window;
+	GLFWwindow* window = EngineInstance->Window;
 
 	float mouseX;
 	float mouseY;
 
-	uint32_t activeMouseButton = SDL_GetMouseState(&mouseX, &mouseY);
+	bool lmbPressed = UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_LEFT);
+	bool rmbPressed = UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT);
 	
 	if (camera->UseSimpleController)
 	{
@@ -210,27 +207,27 @@ static void handleInputs(double deltaTime)
 		{
 			float speed = MovementSpeed * static_cast<float>(deltaTime);
 
-			if (UserInput::IsKeyDown(SDLK_LSHIFT))
+			if (UserInput::IsKeyDown(GLFW_KEY_LEFT_SHIFT))
 				speed *= 0.5f;
 
 			glm::vec3 position = (glm::vec3)camera->Transform[3];
 
-			if (UserInput::IsKeyDown(SDLK_W))
+			if (UserInput::IsKeyDown(GLFW_KEY_W))
 				position += camForward * speed;
 
-			if (UserInput::IsKeyDown(SDLK_A))
+			if (UserInput::IsKeyDown(GLFW_KEY_A))
 				position += -glm::normalize(glm::cross(camForward, WorldUp)) * speed;
 
-			if (UserInput::IsKeyDown(SDLK_S))
+			if (UserInput::IsKeyDown(GLFW_KEY_S))
 				position += camForward * -speed;
 
-			if (UserInput::IsKeyDown(SDLK_D))
+			if (UserInput::IsKeyDown(GLFW_KEY_D))
 				position += glm::normalize(glm::cross(camForward, WorldUp)) * speed;
 
-			if (UserInput::IsKeyDown(SDLK_Q))
+			if (UserInput::IsKeyDown(GLFW_KEY_Q))
 				position += camUp * -speed;
 
-			if (UserInput::IsKeyDown(SDLK_E))
+			if (UserInput::IsKeyDown(GLFW_KEY_E))
 				position += camUp * speed;
 
 			camera->Transform[3] = glm::vec4(position, camera->Transform[3].w);
@@ -238,15 +235,11 @@ static void handleInputs(double deltaTime)
 
 		if (MouseCaptured)
 		{
-			// Doesn't hide unless we tell Dear ImGui to hide the cursor too
-			// (Otherwise it flickers)
-			// 22/08/2024
-			PHX_SDL_CALL(SDL_HideCursor);
-			PHX_ENSURE(SDL_SetWindowMouseGrab(window, true));
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 			ImGui::SetMouseCursor(ImGuiMouseCursor_None);
 
 			int windowSizeX, windowSizeY;
-			PHX_ENSURE(SDL_GetWindowSize(window, &windowSizeX, &windowSizeY));
+			glfwGetWindowSize(window, &windowSizeX, &windowSizeY);
 
 			float deltaMouseX = mouseX - PrevMouseX;
 			float deltaMouseY = mouseY - PrevMouseY;
@@ -266,43 +259,18 @@ static void handleInputs(double deltaTime)
 			camForward = glm::rotate(camForward, -rotationY, WorldUp);
 			camera->Transform[2] = glm::vec4(camForward, camera->Transform[2].w);
 
-			// Keep the mouse in the window.
-			// Teleport it to the other side if it hits the edge.
-
-			float newMouseX = mouseX, newMouseY = mouseY;
-
-			if (mouseX <= 10)
-				newMouseX = static_cast<float>(windowSizeX - 20);
-
-			if (mouseX >= windowSizeX - 10)
-				newMouseX = 20;
-
-			if (mouseY <= 10)
-				newMouseY = static_cast<float>(windowSizeY - 20);
-
-			if (mouseY >= windowSizeY - 10)
-				newMouseY = 20;
-
-			if (newMouseX != mouseX || newMouseY != mouseY)
-			{
-				SDL_WarpMouseInWindow(nullptr, newMouseX, newMouseY);
-				mouseX = newMouseX;
-				mouseY = newMouseY;
-			}
-
-			if (activeMouseButton & SDL_BUTTON_RMASK)
+			if (rmbPressed)
 			{
 				MouseCaptured = false;
-				SDL_WarpMouseInWindow(nullptr, windowSizeX / 2.f, windowSizeY / 2.f);
+				glfwSetCursorPos(window, windowSizeX / 2.f, windowSizeY / 2.f);
 			}
 		}
 		else
 		{
-			PHX_SDL_CALL(SDL_ShowCursor);
-			PHX_ENSURE(SDL_SetWindowMouseGrab(window, false));
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 			ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
 
-			if (activeMouseButton & SDL_BUTTON_LMASK && !GuiIO->WantCaptureMouse)
+			if (lmbPressed && !GuiIO->WantCaptureMouse)
 				MouseCaptured = true;
 		}
 	}
@@ -310,7 +278,7 @@ static void handleInputs(double deltaTime)
 	PrevMouseX = mouseX;
 	PrevMouseY = mouseY;
 
-	if (UserInput::IsKeyDown(SDLK_F11))
+	if (UserInput::IsKeyDown(GLFW_KEY_F11))
 	{
 		if (!PreviouslyPressingF11)
 		{
@@ -320,24 +288,6 @@ static void handleInputs(double deltaTime)
 	}
 	else
 		PreviouslyPressingF11 = false;
-}
-
-static void saveStatsCsvCallback(void* UserData, const char* const* FileList, int /* Filter */)
-{
-	if (!FileList)
-	{
-		Log::Error("Error trying to save stats to CSV: " + std::string(SDL_GetError()));
-		return;
-	}
-
-	if (!FileList[0])
-	{
-		Log::Info("User did not select a save file path for the stats CSV");
-		return;
-	}
-
-	std::string csvContents = *(std::string*)UserData;
-	PHX_CHECK(FileRW::WriteFile(FileList[0], csvContents));
 }
 
 static void doApiDump()
@@ -360,14 +310,14 @@ static void drawDeveloperUI(double DeltaTime)
 
 	Engine* EngineInstance = Engine::Get();
 
-	if (UserInput::IsKeyDown(SDLK_I) && !GuiIO->WantCaptureKeyboard)
+	if (UserInput::IsKeyDown(GLFW_KEY_I) && !GuiIO->WantCaptureKeyboard)
 	{
 		Log::Info("Reloading configuration...");
 
 		EngineInstance->LoadConfiguration();
 	}
 
-	if (UserInput::IsKeyDown(SDLK_K) && !GuiIO->WantCaptureKeyboard)
+	if (UserInput::IsKeyDown(GLFW_KEY_K) && !GuiIO->WantCaptureKeyboard)
 	{
 		Log::Info("Reloading shaders...");
 
@@ -440,7 +390,7 @@ static void drawDeveloperUI(double DeltaTime)
 
 		ImGui::Text("graphs");
 		
-		if (GuiIO->WantCaptureMouse && (SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON_RMASK))
+		if (GuiIO->WantCaptureMouse && UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT))
 		{
 			if (!WasRmbPressed)
 				AreGraphsPaused = !AreGraphsPaused;
@@ -548,16 +498,39 @@ static void drawDeveloperUI(double DeltaTime)
 
 			if (ImGui::Button("End sampling & save to CSV"))
 			{
-				SDL_ShowSaveFileDialog(
-					saveStatsCsvCallback,
-					&SampledCsv,
-					EngineInstance->Window,
-					NULL,
-					0,
-					NULL
+				const char* filters[] = { ".csv" };
+
+				const char* path = tinyfd_saveFileDialog(
+					"Save Stats CSV",
+					std::filesystem::current_path().c_str(),
+					1,
+					filters,
+					"Comma-Separated Value files"
 				);
 
-				IsSamplingStats = false;
+				if (path)
+				{
+					std::string err;
+					if (FileRW::WriteFile(path, SampledCsv, &err))
+					{
+						IsSamplingStats = false;
+					}
+					else
+					{
+						tinyfd_messageBox(
+							"Failed to save",
+							std::format("Couldn't save the CSV file to '{}': {}", path, err).c_str(),
+							"ok",
+							"error",
+							1
+						);
+					}
+				}
+				else
+				{
+					Log::Info("User did not select a save file path for the stats CSV");
+					IsSamplingStats = false;
+				}
 			}
 
 			SampledCsv += "\n";
@@ -667,8 +640,6 @@ static void handleCrash(const std::string_view& Error, const std::string_view& E
 			"CRASH - {}: {}",
 			ExceptionType, Error
 		));
-		if (const char* sdlError = SDL_GetError())
-			Log::Append(std::format("Last SDL error: {}", sdlError));
 		Log::Save();
 	}
 
@@ -679,19 +650,13 @@ static void handleCrash(const std::string_view& Error, const std::string_view& E
 	);
 
 	// can fail, write to stderr if so 18/01/2025
-	bool showSuccess = SDL_ShowSimpleMessageBox(
-		SDL_MESSAGEBOX_ERROR,
+	tinyfd_messageBox(
 		"Fatal Error",
 		errMessage.c_str(),
-		Engine::Get() ? Engine::Get()->Window : nullptr
+		"ok",
+		"error",
+		1
 	);
-
-	if (!showSuccess)
-		fprintf(
-			stderr,
-			"Failed to show message box: %s.\n\nI'm not sure how you've done this. Check `log.txt` for the original crash reason.",
-			SDL_GetError()
-		);
 }
 #endif
 
@@ -720,12 +685,8 @@ static void init()
 		ImGui::StyleColorsDark();
 		GuiIO->ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
-		PHX_ENSURE_MSG(ImGui_ImplSDL3_InitForOpenGL(
-			EngineInstance->Window,
-			EngineInstance->RendererContext.GLContext
-		), "`ImGui_ImplSDL3_InitForOpenGL` failed");
-		
-		PHX_ENSURE_MSG(ImGui_ImplOpenGL3_Init("#version 460"), "`ImGui_ImplOpenGL3_Init` failed");
+		PHX_ENSURE_MSG(ImGui_ImplGlfw_InitForOpenGL(EngineInstance->Window, true), "Failed to initialize Dear ImGui for GLFW");
+		PHX_ENSURE_MSG(ImGui_ImplOpenGL3_Init("#version 460"), "Failed to initialize Dear ImGui for OpenGL");
 	
 		Log::Info("Dear ImGui initialized");
 	
@@ -899,13 +860,21 @@ static void processCliArgs(int argc, char** argv)
 	}
 }
 
+#if PHX_HEADLESS_BUILD
+#define IS_HEADLESS_STR "Yes"
+#else
+#define IS_HEADLESS_STR "No"
+#endif
+
 int main(int argc, char** argv)
 {
 	Log::Info("Application startup");
 	
-	Log::InfoF(
-		"Phoenix Engine:\n\tTarget platform: {}\n\tBuild type: {}\n\tMain.cpp last compiled: {} @ {}",
-		SDL_GetPlatform(), PHX_BUILD_TYPE, __DATE__, __TIME__
+	Log::InfoF("Phoenix Engine");
+	Log::Append(
+		"\tTarget platform: " PHX_TARGET_PLATFORM "\n\tTarget Compiler: " PHX_TARGET_COMPILER
+		"\n\tBuild type: " PHX_BUILD_TYPE "\n\tMain.cpp last compiled: " __DATE__ " @ " __TIME__
+		"\n\tHeadless: " IS_HEADLESS_STR
 	);
 
 	Log::Info("Command line: &&");
