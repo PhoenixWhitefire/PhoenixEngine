@@ -1146,6 +1146,15 @@ static int api_eventnamecall(lua_State* L)
 	{
 		luaL_checktype(L, 2, LUA_TFUNCTION);
 
+		lua_Debug callerAr{};
+		lua_getinfo(L, 1, "sln", &callerAr);
+		std::string callerInfo = std::format(
+			"{}:{} in {}",
+			callerAr.short_src,
+			callerAr.currentline,
+			callerAr.name ? callerAr.name : "<anonymous>"
+		);
+
 		EventSignalData* ev = (EventSignalData*)luaL_checkudata(L, 1, "EventSignal");
 		const Reflection::EventDescriptor* rev = ev->Event;
 		int signalRef = lua_ref(L, 1);
@@ -1186,9 +1195,12 @@ static int api_eventnamecall(lua_State* L)
 		uint32_t cnId = rev->Connect(
 			ev->Reflector.Referred(),
 		
-			[eL, cL, rev](const std::vector<Reflection::GenericValue>& Inputs)
+			[eL, cL, rev, callerInfo](const std::vector<Reflection::GenericValue>& Inputs)
 			-> void
 			{
+				ZoneScopedN("RunEventCallback");
+				ZoneText(callerInfo.data(), callerInfo.size());
+
 				assert(Inputs.size() == rev->CallbackInputs.size());
 				assert(lua_isfunction(eL, 2));
 
@@ -1233,6 +1245,8 @@ static int api_eventnamecall(lua_State* L)
 					assert(Inputs[i].Type == rev->CallbackInputs[i]);
 					ScriptEngine::L::PushGenericValue(co, Inputs[i]);
 				}
+
+				ZoneNamedN(pcallzone, "pcall", true);
 
 				// TODO 11/08/2025
 				// they added a "correct" way to do this, with continuations n stuff

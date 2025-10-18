@@ -135,7 +135,7 @@ static std::string normalizePath(std::string path)
 		if (path[i] == '\\')
 			path[i] = '/';
 
-	return path;
+	return FileRW::MakePathCwdRelative(path);
 }
 
 static int fs_promptsave(lua_State* L)
@@ -206,14 +206,14 @@ static int fs_promptopen(lua_State* L)
 		allowMultipleFiles
 	);
 
+	lua_newtable(L);
+
 	if (filescstr)
 	{
 		size_t lastOff = 0;
 		std::string filesstr = filescstr;
 		std::string file = "";
 		int nfiles = 0;
-
-		lua_newtable(L);
 
 		for (size_t i = 0; i < filesstr.size(); i++)
 		{
@@ -222,7 +222,7 @@ static int fs_promptopen(lua_State* L)
 				nfiles++;
 
 				lua_pushinteger(L, nfiles);
-				lua_pushstring(L, FileRW::MakePathCwdRelative(file).c_str());
+				lua_pushstring(L, normalizePath(file).c_str());
 				lua_settable(L, -3);
 
 				lastOff = i+1;
@@ -230,11 +230,16 @@ static int fs_promptopen(lua_State* L)
 				continue;
 			}
 
-			file = std::string(filesstr.begin() + lastOff, filesstr.begin() + i);
+			file = std::string(filesstr.begin() + lastOff, filesstr.begin() + i + 1);
+		}
+
+		if (file.size() != 0)
+		{
+			lua_pushinteger(L, 1);
+			lua_pushstring(L, normalizePath(file).c_str());
+			lua_settable(L, -3);
 		}
 	}
-	else
-		lua_pushnil(L);
 
 	return 1;
 }

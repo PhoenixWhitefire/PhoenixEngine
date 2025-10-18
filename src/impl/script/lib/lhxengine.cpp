@@ -241,16 +241,12 @@ static int engine_toolenabled(lua_State* L)
 
 static int engine_showmessagebox(lua_State* L)
 {
-    const char* icon = luaL_optstring(L, 3, "");
-    const char* buttons = luaL_optstring(L, 4, "");
-    int defaultButton = luaL_optinteger(L, 5, 1);
-
-    lua_pushboolean(L, tinyfd_messageBox(
-        luaL_checkstring(L, 1),
-        luaL_checkstring(L, 2),
-        buttons,
-        icon,
-        defaultButton
+    lua_pushinteger(L, tinyfd_messageBox(
+        luaL_checkstring(L, 1),       // title
+        luaL_checkstring(L, 2),       // message
+        luaL_optstring(L, 3, "ok"),   // buttons
+        luaL_optstring(L, 4, "info"), // icon
+        luaL_optinteger(L, 5, 1)      // default button
     ));
     return 1;
 }

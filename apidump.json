@@ -264,7 +264,6 @@
       "fs": {
         "isdirectory": "function",
         "isfile": "function",
-        "ispromptactive": "function",
         "listdir": "function",
         "promptopen": "function",
         "promptsave": "function",

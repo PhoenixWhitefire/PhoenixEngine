@@ -113,7 +113,7 @@ static bool PreviouslyPressingF11 = false;
 static bool MouseCaptured = false;
 static const float MouseSensitivity = 400.f;
 static const float MovementSpeed = 15.f;
-static float PrevMouseX, PrevMouseY = 0;
+static double PrevMouseX, PrevMouseY = 0;
 
 static ImGuiIO* GuiIO = nullptr;
 
@@ -125,11 +125,11 @@ static int s_ExitCode = 0;
 #define pclose _pclose
 
 // 13/01/2025 windows and it's quirkyness
-#define LAUNCH_TRACY_CMD "\"Vendor\\tracy\\profiler\\build\\Release\\tracy-profiler.exe\" -a 127.0.0.1"
+#define LAUNCH_TRACY_CMD "\"Vendor\\tracy\\profiler\\build\\Release\\tracy-profiler.exe\" -a 192.168.8.109 -p 8087"
 
 #else
 
-#define LAUNCH_TRACY_CMD "\"Vendor/tracy/profiler/build/tracy-profiler\" -a 127.0.0.1"
+#define LAUNCH_TRACY_CMD "\"Vendor/tracy/profiler/build/tracy-profiler\" -a 192.168.8.109 -p 8087"
 
 #endif
 
@@ -191,8 +191,9 @@ static void handleInputs(double deltaTime)
 	EcCamera* camera = EngineInstance->WorkspaceRef->FindComponent<EcWorkspace>()->GetSceneCamera()->FindComponent<EcCamera>();
 	GLFWwindow* window = EngineInstance->Window;
 
-	float mouseX;
-	float mouseY;
+	double mouseX;
+	double mouseY;
+	glfwGetCursorPos(window, &mouseX, &mouseY);
 
 	bool lmbPressed = UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_LEFT);
 	bool rmbPressed = UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT);
@@ -236,7 +237,6 @@ static void handleInputs(double deltaTime)
 		if (MouseCaptured)
 		{
 			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-			ImGui::SetMouseCursor(ImGuiMouseCursor_None);
 
 			int windowSizeX, windowSizeY;
 			glfwGetWindowSize(window, &windowSizeX, &windowSizeY);
@@ -268,7 +268,6 @@ static void handleInputs(double deltaTime)
 		else
 		{
 			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-			ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
 
 			if (lmbPressed && !GuiIO->WantCaptureMouse)
 				MouseCaptured = true;

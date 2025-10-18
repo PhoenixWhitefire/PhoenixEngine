@@ -159,9 +159,11 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `engine.framerate(): number`
 * Returns the current framerate
 
-#### `engine.showmessagebox(Title: string, Message: string, Type: ('' | 'i' | 'w' | 'e')? [ '' ]): `
-* Shows a message to the player with the given title, message and type (Info, Warning, Error or N/A)
+#### `engine.showmessagebox(Title: string, Message: string, Buttons: ("ok" | "okcancel" | "yesno" | "yesnocancel")? [ "ok" ], Icon: ("info" | "warning" | "error" | "question")? [ "info" ], DefaultButton: number? [ 1 ]): number`
+* Shows a message to the player with the given specification
+* The returned number will be the selected option: `0` for Cancel/No, `1` for Ok/Yes, `2` for No in `yesnocancel`
 * This is a blocking operation and no scripts or other parts of the Engine run until the message is dismissed
+* Avoid using quotes (`'` and `"`) or backticks (`\``) in the `Message`
 
 #### `engine.setvsync(VSyncEnabled: boolean): `
 * Enables/disables VSync
@@ -229,10 +231,6 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 ### `fs`
 * Interacting with the player's filesystem
 
-#### `fs.write(Path: string, Contents: string): boolean, string?`
-* Overwrites/creates the file at `Path` with the provided `Contents`
-* Returns whether the operation was successful
-
 #### `fs.read(Path: string): string?`
 * Reads the file at the given address, and returns the contents
 * If the file could not be read, returns `nil`
@@ -249,16 +247,17 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * Prompts the player to select a path to save a file to
 * Returns the path the player selected, or `nil` if they cancelled the dialog
 
-#### `fs.listdir(Path: string, Filter: ('a' | 'f' | 'd')? [ 'a' ]): { [string]: 'f' | 'd' }`
-* Returns a table of all the entries in the specified directory
-* The keys of the table is the path of the entry, while the values are the type of the entry
-* `f` is file, `d` is directory, and `a` is all
+#### `fs.write(Path: string, Contents: string): boolean, string?`
+* Overwrites/creates the file at `Path` with the provided `Contents`
+* Returns whether the operation was successful
 
 #### `fs.isdirectory(string): boolean`
 * Returns whether the specified Path refers to a directory
 
-#### `fs.ispromptactive(): boolean`
-* Returns whether a File Dialog is currently visible to the player and blocking any more file dialogs from being opened
+#### `fs.listdir(Path: string, Filter: ('a' | 'f' | 'd')? [ 'a' ]): { [string]: 'f' | 'd' }`
+* Returns a table of all the entries in the specified directory
+* The keys of the table is the path of the entry, while the values are the type of the entry
+* `f` is file, `d` is directory, and `a` is all
 
 ### `imgui`
 * UI with Dear ImGui

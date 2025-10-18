@@ -130,16 +130,16 @@ local function openProject(ManualPath: string?)
 		end
 	end
 
-	local file, error = scene.load(path)
+	local objects, error = scene.load(path)
 
-	if not file then
+	if not objects then
 		error = error or "Unknown error"
-		engine.showmessagebox("Project Error", "Couldn't open project: " .. error, "e")
+		engine.showmessagebox("Project Error", `Couldn't open project '{path}': {error}`, "ok", "error")
 
 		return
 	end
 
-	projDm = (assert(file[1]) :: any) :: GameObject & DataModel
+	projDm = (assert(objects[1]) :: any) :: GameObject & DataModel
 	projWp = assert(projDm.Workspace) :: GameObject & Workspace
 	projCam = projWp.SceneCamera
 	EditorTl.Target = projWp
@@ -593,17 +593,24 @@ function Stages.ProjectEditing_Leave(NextStage)
 	engine.setexplorerroot(game)
 	assert(projDm)
 
-	local savePath = projectSavePath or fs.promptsave("scenes/", "world", "Projects")
+	local buttonSelection = engine.showmessagebox("Save Project", "Save project before closing?", "yesnocancel", "warning");
 
-	if savePath then
-		saveToRecents(savePath)
-		assert(projDm)
-		scene.save({ projDm }, savePath)
+	if buttonSelection == 1 then
+		local savePath = projectSavePath or fs.promptsave("scenes/", "world", "Projects")
 
-		projectSavePath = nil
+		if savePath then
+			saveToRecents(savePath)
+			assert(projDm)
+			scene.save({ projDm }, savePath)
+
+			projectSavePath = nil
+		else
+			print("Project discarded")
+		end
 	else
-		print("Project discarded")
+		print("Not saving project")
 	end
+
 	projDm:Destroy()
 	projWp = nil
 	projCam = nil

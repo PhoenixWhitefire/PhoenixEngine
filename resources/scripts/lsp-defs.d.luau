@@ -198,7 +198,7 @@ declare engine: {
   exit: (( ExitCode: number? ) -> ()),
   windowsize: ((  ) -> (number, number)),
   framerate: ((  ) -> (number)),
-  showmessagebox: (( Title: string, Message: string, Type: ('' | 'i' | 'w' | 'e')? ) -> ()),
+  showmessagebox: (( Title: string, Message: string, Buttons: ("ok" | "okcancel" | "yesno" | "yesnocancel")?, Icon: ("info" | "warning" | "error" | "question")?, DefaultButton: number? ) -> (number)),
   setvsync: (( VSyncEnabled: boolean ) -> ()),
   toolnames: ((  ) -> ({ string })),
   binddatamodel: (( NewDataModel: GameObject ) -> ()),
@@ -220,14 +220,13 @@ declare engine: {
   maxframerate: ((  ) -> (number))
 }
 declare fs: {
-  write: (( Path: string, Contents: string ) -> (boolean, string?)),
   read: (( Path: string ) -> (string?)),
   promptopen: (( DefaultLocation: string?, Filter: string?, FilterName: string?, AllowMultipleFiles: boolean? ) -> ({ string })),
   isfile: (( string ) -> (boolean)),
   promptsave: (( DefaultLocation: string?, Filter: string?, FilterName: string? ) -> (string)),
-  listdir: (( Path: string, Filter: ('a' | 'f' | 'd')? ) -> ({ [string]: 'f' | 'd' })),
+  write: (( Path: string, Contents: string ) -> (boolean, string?)),
   isdirectory: (( string ) -> (boolean)),
-  ispromptactive: ((  ) -> (boolean))
+  listdir: (( Path: string, Filter: ('a' | 'f' | 'd')? ) -> ({ [string]: 'f' | 'd' }))
 }
 declare imgui: {
   setcursorposition: (( X: number, Y: number ) -> ()),

@@ -663,17 +663,28 @@
           },
           "showmessagebox": {
             "Description": [
-              "Shows a message to the player with the given title, message and type (Info, Warning, Error or N/A)",
-              "This is a blocking operation and no scripts or other parts of the Engine run until the message is dismissed"
+              "Shows a message to the player with the given specification",
+              "The returned number will be the selected option: `0` for Cancel/No, `1` for Ok/Yes, `2` for No in `yesnocancel`",
+              "This is a blocking operation and no scripts or other parts of the Engine run until the message is dismissed",
+              "Avoid using quotes (`'` and `\"`) or backticks (`\\``) in the `Message`"
             ],
             "In": [
               "Title: string",
               "Message: string",
               [
-                "Type: ('' | 'i' | 'w' | 'e')?",
-                "''"
+                "Buttons: (\"ok\" | \"okcancel\" | \"yesno\" | \"yesnocancel\")?",
+                "\"ok\""
+              ],
+              [
+                "Icon: (\"info\" | \"warning\" | \"error\" | \"question\")?",
+                "\"info\""
+              ],
+              [
+                "DefaultButton: number?",
+                "1"
               ]
-            ]
+            ],
+            "Out": "number"
           },
           "toolenabled": {
             "Description": [

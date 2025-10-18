@@ -205,7 +205,7 @@ static const char* mtlIterator(void*, int index)
 static std::string getFileDirectory(const std::string& FilePath)
 {
 	size_t lastFwdSlash = FilePath.find_last_of("/");
-	std::string cwd = std::filesystem::current_path().string();
+	std::string cwd = std::filesystem::current_path().string() + "/";
 
 	if (lastFwdSlash == std::string::npos)
 #ifdef _WIN32
@@ -3124,7 +3124,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 
 	ImGui::SetCurrentContext(debuggerContext);
 
-	PHX_ENSURE_MSG(ImGui_ImplGlfw_InitForOpenGL(engine->Window, true), "Failed to initialize Dear ImGui for GLFW");
+	PHX_ENSURE_MSG(ImGui_ImplGlfw_InitForOpenGL(engine->Window, false), "Failed to initialize Dear ImGui for GLFW");
 	PHX_ENSURE_MSG(ImGui_ImplOpenGL3_Init("#version 460"), "Failed to initialize Dear ImGui for OpenGL");
 
 	double debuggerLastSecond = GetRunningTime();
