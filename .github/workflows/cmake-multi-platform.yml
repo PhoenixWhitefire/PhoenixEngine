@@ -67,7 +67,7 @@ jobs:
         name: "Engine_${{ runner.os }}-${{ matrix.build_type }}"
         path: |
           x64/Debug
-          Vendor/SDL/Debug
+          x64/Release
           resources/
           gh-assets/wiki/doc-comments.json
           api-dump.json
