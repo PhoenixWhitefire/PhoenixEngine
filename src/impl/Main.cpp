@@ -501,7 +501,7 @@ static void drawDeveloperUI(double DeltaTime)
 
 				const char* path = tinyfd_saveFileDialog(
 					"Save Stats CSV",
-					std::filesystem::current_path().c_str(),
+					std::filesystem::current_path().string().c_str(),
 					1,
 					filters,
 					"Comma-Separated Value files"

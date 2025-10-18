@@ -255,7 +255,7 @@ static bool textEditorAskSaveFileAs(
 
 	const char* saveTargetRaw = tinyfd_saveFileDialog(
 		"Save Text Document",
-		std::filesystem::current_path().c_str(),
+		std::filesystem::current_path().string().c_str(),
 		0,
 		nullptr,
 		nullptr
