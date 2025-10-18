@@ -64,7 +64,7 @@ jobs:
       if: runner.os == 'Windows'
       uses: actions/upload-artifact@v4
       with:
-        name: build-output
+        name: "Engine_${{ runner.os }}-${{ matrix.build_type }}"
         path: |
           x64/Debug
           Vendor/SDL/Debug
