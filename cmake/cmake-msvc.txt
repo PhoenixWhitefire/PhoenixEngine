@@ -31,9 +31,3 @@ add_link_options($<$<CONFIG:RelTracy>:/INCREMENTAL:NO>)
 add_link_options($<$<CONFIG:RelTracy>:/LTCG>)
 add_link_options($<$<CONFIG:Release>:/INCREMENTAL:NO>)
 add_link_options($<$<CONFIG:Release>:/LTCG>)
-
-# couldn't be bothered to get $<TARGET_RUNTIME_DLLS:PhoenixEngine> to work
-add_custom_command(TARGET PhoenixEngine POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:PhoenixEngine> "Vendor/SDL/${PHX_BUILD_TYPE}/SDL3.dll"
-  COMMAND_EXPAND_LISTS
-)
