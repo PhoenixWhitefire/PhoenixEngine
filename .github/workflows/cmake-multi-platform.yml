@@ -29,8 +29,8 @@ jobs:
 
       matrix:
         os: [windows-latest]
-        build_type: [Debug]
-        c_compiler: [gcc, cl]
+        build_type: [Debug, Release]
+        c_compiler: [cl]
         include:
           - os: windows-latest
             c_compiler: cl
