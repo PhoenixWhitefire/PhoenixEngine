@@ -22,7 +22,7 @@ constexpr uint32_t BoneChId = ('B' << 24) | ('O' << 16) | ('N' << 8) | 'E';
 
 static uint16_t readU16(const std::string_view& vec, size_t offset, bool* fileTooSmallPtr)
 {
-	if (*fileTooSmallPtr || vec.size() - 1 < offset + 1)
+	if (*fileTooSmallPtr || vec.size() < offset + 2)
 	{
 		*fileTooSmallPtr = true;
 		return UINT16_MAX;
@@ -41,7 +41,7 @@ static uint16_t readU16(const std::string_view& vec, size_t* offset, bool* fileT
 
 static uint32_t readU32(const std::string_view& vec, size_t offset, bool* fileTooSmallPtr)
 {
-	if (*fileTooSmallPtr || vec.size() - 1 < offset + 3)
+	if (*fileTooSmallPtr || vec.size() < offset + 4)
 	{
 		*fileTooSmallPtr = true;
 		return UINT32_MAX;
@@ -62,7 +62,7 @@ static uint32_t readU32(const std::string_view& vec, size_t* offset, bool* fileT
 
 static float readF32(const std::string_view& vec, size_t* offset, bool* fileTooSmallPtr)
 {
-	if (*fileTooSmallPtr || vec.size() - 1 < (*offset) + 3)
+	if (*fileTooSmallPtr || vec.size() < (*offset) + 4)
 	{
 		*fileTooSmallPtr = true;
 		return FLT_MAX;
@@ -250,7 +250,7 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 
 		if (hasVertexNormal)
 		{
-			if (quantizedFloats)
+			if (quantizedNormals)
 			{
 				uint32_t normal = readU32(contents, &cursor, &fileTooSmallError);
 
@@ -522,8 +522,8 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 			break;
 		}
 
-	bool quantizedFloats = true;
-	bool quantizedNormals = true;
+	bool quantizedFloats = false; //true;  <-- not working properly
+	bool quantizedNormals = false; //true; <-- not working properly
 
 	for (const Vertex& v : mesh.Vertices)
 	{
@@ -562,7 +562,7 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 			quantizedNormals = false;
 			break;
 		}
-	
+
 	// minimum: Px, Py, Pz, Nx, Ny, Nz, Tu, Tv
 	// Optional: (R, G, B), (A)
 	size_t floatsPerVertex = 8ull + (hasPerVertexColor * 3ull) + (hasPerVertexAlpha);
@@ -581,7 +581,7 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 	// making it 4 bytes as being intentional
 	writeU32(
 		contents,
-		0b00000100
+		0b00000100 // hasVertexNormal
 			+ (hasPerVertexAlpha ? 0b00000001 : 0)
 			+ (hasPerVertexColor ? 0b00000010 : 0)
 			// ruh roh, just realized, the deserialization code
@@ -669,8 +669,8 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 
 		if (quantizedFloats)
 		{
-			writeU16(contents, static_cast<uint16_t>(v.TextureUV.x * UINT16_MAX));
-			writeU16(contents, static_cast<uint16_t>(v.TextureUV.y * UINT16_MAX));
+			writeU16(contents, static_cast<uint16_t>(std::clamp(v.TextureUV.x, 0.f, 1.f) * UINT16_MAX));
+			writeU16(contents, static_cast<uint16_t>(std::clamp(v.TextureUV.y, 0.f, 1.f) * UINT16_MAX));
 		}
 		else
 		{

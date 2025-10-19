@@ -269,7 +269,6 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 									+ ".hxmesh";
 
 			meshProvider->Save(node.Data, meshPath);
-			meshProvider->Assign(node.Data, meshPath);
 
 			meshObject->SetRenderMesh(meshPath);
 			ct->Transform = node.Transform;
@@ -630,11 +629,11 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From, const glm::m
 	}
 }
 
-static void writeU16(std::string& vec, uint16_t v)
-{
-	vec.push_back(*(int8_t*)&v);
-	vec.push_back(*((int8_t*)&v + 1ull));
-}
+//static void writeU16(std::string& vec, uint16_t v)
+//{
+//	vec.push_back(*(int8_t*)&v);
+//	vec.push_back(*((int8_t*)&v + 1ull));
+//}
 
 static void writeU32(std::string& vec, uint32_t v)
 {
@@ -688,26 +687,26 @@ void ModelLoader::m_BuildRig()
 		}
 	}
 
-	std::string saveDir = m_File;
-	size_t whereRes = saveDir.find("resources/");
-
-	if (whereRes == std::string::npos)
-		Log::WarningF(
-			"ModelLoader cannot guarantee the animation will be saved within the Resources directory (Path was: '{}')",
-			m_File
-		);
-	else
-		saveDir = saveDir.substr(whereRes + 10, saveDir.size() - whereRes);
-
-	for (const nlohmann::json& animationJson : m_JsonData.value("animations", nlohmann::json::array()))
-	{
-		GameObject* anim = GameObject::Create("Animation");
-		anim->Name = animationJson["name"];
-		m_Animations.push_back(anim);
-
-		std::string animData = m_SerializeAnimation(animationJson);
-		PHX_CHECK(FileRW::WriteFile("animations/" + saveDir + "/" + anim->Name + ".hxanimation", animData));
-	}
+	//std::string saveDir = m_File;
+	//size_t whereRes = saveDir.find("resources/");
+//
+	//if (whereRes == std::string::npos)
+	//	Log::WarningF(
+	//		"ModelLoader cannot guarantee the animation will be saved within the Resources directory (Path was: '{}')",
+	//		m_File
+	//	);
+	//else
+	//	saveDir = saveDir.substr(whereRes + 10, saveDir.size() - whereRes);
+//
+	//for (const nlohmann::json& animationJson : m_JsonData.value("animations", nlohmann::json::array()))
+	//{
+	//	GameObject* anim = GameObject::Create("Animation");
+	//	anim->Name = animationJson["name"];
+	//	m_Animations.push_back(anim);
+//
+	//	std::string animData = m_SerializeAnimation(animationJson);
+	//	PHX_CHECK(FileRW::WriteFile("animations/" + saveDir + "/" + anim->Name + ".hxanimation", animData));
+	//}
 }
 
 std::string ModelLoader::m_SerializeAnimation(const nlohmann::json& Animation)
@@ -725,12 +724,12 @@ std::string ModelLoader::m_SerializeAnimation(const nlohmann::json& Animation)
 	uint8_t u8nodessize = (uint8_t)nodes.size();
 	data.push_back(*(int8_t*)&u8nodessize);
 
-	for (int32_t i : nodes)
-	{
-		const ModelNode& node = m_Nodes[i];
-		writeU16(data, (uint16_t)node.Name.size());
-		data.append(node.Name);
-	}
+	//for (int32_t i : nodes)
+	//{
+	//	const ModelNode& node = m_Nodes[i];
+	//	writeU16(data, (uint16_t)node.Name.size());
+	//	data.append(node.Name);
+	//}
 
 	return data;
 }

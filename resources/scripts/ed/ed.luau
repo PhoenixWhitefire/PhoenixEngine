@@ -8,7 +8,7 @@ local StageUpdateSignal: EventConnection? = nil
 local Stages: { [string]: (any) -> () } = {}
 local PluginManager = require("./PluginManager.luau")
 
-local EditorCam = workspace.SceneCamera
+local EditorCam = assert(workspace.SceneCamera)
 local EditorTl = GameObject.new("TreeLink") :: GameObject & TreeLink
 
 EditorCam.UseSimpleController = true
@@ -77,14 +77,16 @@ local function createNewProject()
 	projDm = GameObject.new("DataModel") :: GameObject & DataModel
 	projWp = GameObject.new("Workspace") :: GameObject & Workspace
 	projCam = GameObject.new("Camera") :: GameObject & Camera
-				
+
 	projWp.Parent = projDm
 	projCam.Parent = projWp
 	projWp.SceneCamera = projCam
 	EditorTl.Parent = workspace
 	EditorTl.Target = projWp
 	EditorTl.Scripting = false
-	
+
+	GameObject.new("DirectionalLight").Parent = projWp
+
 	engine.setexplorerroot(projDm)
 	
 	projectSavePath = nil
@@ -239,6 +241,28 @@ local function homeTab(_: number)
 	if tabButton("Explorer to Editor DM", "textures/editor-icons/ExplorerToEdit.png") then
 		engine.setexplorerroot(game)
 	end
+
+	imgui.sameline()
+
+	if tabButton("Import Model", "textures/editor-icons/Model.png") then
+		defer(function()
+			local paths = fs.promptopen("models/", { "*.gltf", "*.glb" }, "Models")
+
+			if paths[1] then
+				local imported = model.import(paths[1])
+
+				if not imported then
+					print("Failed to import")
+					return
+				end
+
+				imported.Parent = projWp
+				engine.setexplorerselections({ imported })
+			else
+				print("No model selected")
+			end
+		end)
+	end
 end
 
 local function toolsTab(_: number)
@@ -321,17 +345,17 @@ local function renderMainMenuBar(dt: number)
 		if imgui.menuitem("Save", CurrentStage == "ProjectEditing") then
 			imgui.endmenu()
 			imgui.endmainmenubar()
-				
-			local path = fs.promptsave("scenes/", "*.world", "Worlds")
+
+			local path = projectSavePath or fs.promptsave("scenes/", "*.world", "Worlds")
 			if not path then
 				print("No path was selected for saving, cancelled")
 				return
 			end
-			
+
 			saveToRecents(path)
 			assert(projDm)
 			scene.save({ projDm }, path)
-				
+
 			return
 		end
 
@@ -340,7 +364,7 @@ local function renderMainMenuBar(dt: number)
 				imgui.endmenu()
 				imgui.endmainmenubar()
 
-				projectIcon = fs.promptopen("textures/", "*.png,*.jpg,*.jpeg", "Images")[1]
+				projectIcon = fs.promptopen("textures/", { "*.png" , "*.jpg", "*.jpeg" }, "Images")[1]
 
 				return
 			end
@@ -477,7 +501,7 @@ local function renderViewport(DeltaTime: number)
 		end
 		imgui.sameline()
 
-		imgui.text(if projectSavePath then projectSavePath else "<No save path> | ")
+		imgui.text(projectSavePath or "<No save path> | ")
 		imgui.sameline()
 		imgui.text(tostring(engine.framerate()) .. " FPS")
 
@@ -659,7 +683,7 @@ function Stages.ProjectEditing_Leave(NextStage)
 	engine.setexplorerroot(game)
 	assert(projDm)
 
-	local buttonSelection = engine.showmessagebox("Save Project", "Save project before closing?", "yesnocancel", "warning");
+	local buttonSelection = engine.showmessagebox("Save Project", "Save project before closing?", "yesno", "warning");
 
 	if buttonSelection == 1 then
 		local savePath = projectSavePath or fs.promptsave("scenes/", "*.world", "Projects")

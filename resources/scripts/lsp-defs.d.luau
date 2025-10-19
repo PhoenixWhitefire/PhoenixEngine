@@ -183,7 +183,7 @@ declare class TreeLink
   Target: GameObject?
 end
 declare class Workspace
-  SceneCamera: GameObject? & Camera
+  SceneCamera: (GameObject & Camera)?
 
   function ScreenPointToRay(self, Param_1: { any }, Param_2: number) : (vector)
 end
@@ -320,7 +320,7 @@ declare world: {
 declare _VMNAME: string
 declare function appendlog( ...: any ): ()
 declare function breakpoint( Line: number ): ()
-declare function defer( (() -> ()) | thread, number? ): ()
+declare function defer( Task: (() -> ()) | thread, SleepFor: number? ): ()
 declare game: GameObject & DataModel
 declare function loadthread( Code: string, ChunkName: string? ): ( thread?, string? )
 declare function loadthreadfromfile( File: string, ChunkName: string? ): ( thread?, string? )

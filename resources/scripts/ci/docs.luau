@@ -238,7 +238,7 @@ local function dumpReflectionApi(t, d, cn)
 				s ..= `* \`{ n }: { rtolsub(v) }\`: { d.Properties[n] }\n`
 
 				if n == "SceneCamera" then
-					definitionsFile ..= `  { n }: { rtolsub(v) .. " & Camera" }\n`
+					definitionsFile ..= `  { n }: { "(GameObject & Camera)?" }\n`
 				else
 					definitionsFile ..= `  { n }: { rtolsub(v) }\n`
 				end

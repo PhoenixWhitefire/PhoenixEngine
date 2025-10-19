@@ -522,7 +522,7 @@ Additional global variables
 #### `breakpoint(Line: number): ()`
 * Set a breakpoint at the given line
 
-#### `defer((() -> ()) | thread, number?): ()`
+#### `defer(Task: (() -> ()) | thread, SleepFor: number?): ()`
 * Schedules the given function or coroutine to be resumed some number of seconds later, or as soon as possible
 
 #### `game: GameObject & DataModel`
