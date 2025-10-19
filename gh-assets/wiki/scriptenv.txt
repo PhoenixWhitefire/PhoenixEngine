@@ -321,11 +321,14 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * Returns the position of the current Dear ImGui window (`ImGui::GetWindowPos`)
 * To *set* the position of the window, use `.setwindowposition`
 
+#### `imgui.windowhovered(): boolean`
+* `ImGui::IsWindowHovered`
+
 #### `imgui.endw(): `
 * `ImGui::End`, `endw` and not `end` because `end` is a Luau keyword
 
-#### `imgui.windowhovered(): boolean`
-* `ImGui::IsWindowHovered`
+#### `imgui.setnextwindowposition(X: number, Y: number): `
+* `ImGui::SetNextWindowPos
 
 #### `imgui.pushstylecolor(StyleIndex: number, Color: { number }): `
 * `ImGui::PushStyleColor`
@@ -350,7 +353,7 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `imgui.setviewportdockspacedefault(): `
 * Reverts the region of the window in which Dear ImGui windows can be docked to the default settings
 
-#### `imgui.stylecolors(Theme: 'L' | 'D'): `
+#### `imgui.stylecolors(Theme: 'l' | 'd'): `
 * `ImGui::StyleColorsDark`/`ImGui::StyleColorsLight`
 
 #### `imgui.beginchild(Name: string, Width: number? [ 0 ], Height: number? [ 0 ], ChildFlags: string? [ "" ], WindowFlags: string? [ "" ]): boolean`
@@ -364,8 +367,10 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `imgui.setwindowsize(SizeX: number, SizeY: number): `
 * Sets the size of the current Dear ImGui window
 
-#### `imgui.setnextwindowposition(X: number, Y: number): `
-* `ImGui::SetNextWindowPos
+#### `imgui.urllink(Text: string, Url: string? [ Text ]): boolean`
+* Similar to `imgui.textlink`, however, will open the given URL upon being clicked
+* `Url` will be `Text` if not provided
+* `ImGui::TextLinkOpenUrl`
 
 #### `imgui.setnextwindowfocus(): `
 * `ImGui::SetNextWindowFocus`
@@ -516,6 +521,9 @@ Additional global variables
 
 #### `breakpoint(Line: number): ()`
 * Set a breakpoint at the given line
+
+#### `defer((() -> ()) | thread, number?): ()`
+* Schedules the given function or coroutine to be resumed some number of seconds later, or as soon as possible
 
 #### `game: GameObject & DataModel`
 * The GameObject acting as the Data Model of the Engine

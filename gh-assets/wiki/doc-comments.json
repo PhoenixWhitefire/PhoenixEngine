@@ -421,6 +421,10 @@
         "Description": "Set a breakpoint at the given line",
         "In": "Line: number"
       },
+      "defer": {
+        "Description": "Schedules the given function or coroutine to be resumed some number of seconds later, or as soon as possible",
+        "In": "(() -> ()) | thread, number?"
+      },
       "game": {
         "Description": "The GameObject acting as the Data Model of the Engine"
       },
@@ -1241,7 +1245,7 @@
               "`ImGui::StyleColorsDark`/`ImGui::StyleColorsLight`"
             ],
             "In": [
-              "Theme: 'L' | 'D'"
+              "Theme: 'l' | 'd'"
             ]
           },
           "text": {
@@ -1274,6 +1278,21 @@
             "Description": [
               "`ImGui::TreePop`"
             ]
+          },
+          "urllink": {
+            "Description": [
+              "Similar to `imgui.textlink`, however, will open the given URL upon being clicked",
+              "`Url` will be `Text` if not provided",
+              "`ImGui::TextLinkOpenUrl`"
+            ],
+            "In": [
+              "Text: string",
+              [
+                "Url: string?",
+                "Text"
+              ]
+            ],
+            "Out": "boolean"
           },
           "windowhovered": {
             "Description": [

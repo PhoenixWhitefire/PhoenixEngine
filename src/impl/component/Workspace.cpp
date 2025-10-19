@@ -38,24 +38,26 @@ public:
     {
         static const Reflection::StaticPropertyMap props = 
         {
-			EC_PROP(
+			{
 				"SceneCamera",
-				GameObject,
-				[](void* p)
-				-> Reflection::GenericValue
 				{
-					GameObject* cam = static_cast<EcWorkspace*>(p)->GetSceneCamera();
+					(Reflection::ValueType)((uint8_t)Reflection::ValueType::GameObject + (uint8_t)Reflection::ValueType::Null),
+					[](void* p)
+					-> Reflection::GenericValue
+					{
+						GameObject* cam = static_cast<EcWorkspace*>(p)->GetSceneCamera();
 
-					if (cam->ObjectId != s_FallbackCamera->ObjectId)
-						return cam->ToGenericValue();
-					else
-						return {}; // Null
-				},
-				[](void* p, const Reflection::GenericValue& gv)
-				{
-					static_cast<EcWorkspace*>(p)->SetSceneCamera(GameObject::FromGenericValue(gv));
+						if (cam->ObjectId != s_FallbackCamera->ObjectId)
+							return cam->ToGenericValue();
+						else
+							return {}; // Null
+					},
+					[](void* p, const Reflection::GenericValue& gv)
+					{
+						static_cast<EcWorkspace*>(p)->SetSceneCamera(GameObject::FromGenericValue(gv));
+					}
 				}
-			)
+			}
         };
 
         return props;

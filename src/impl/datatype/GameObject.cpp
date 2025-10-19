@@ -766,7 +766,21 @@ Reflection::GenericValue GameObject::GetPropertyValue(const std::string_view& Pr
 	ReflectorRef ref;
 
 	if (const Reflection::PropertyDescriptor* prop = FindProperty(PropName, &ref))
+	{
+		Reflection::GenericValue gv = prop->Get(ref.Referred());
+
+#ifndef NDEBUG
+		Reflection::ValueType base = prop->Type;
+		if ((uint8_t)base > (uint8_t)Reflection::ValueType::Null)
+			base = (Reflection::ValueType)((uint8_t)base - (uint8_t)Reflection::ValueType::Null);
+
+		assert(gv.Type == base
+			|| ((uint8_t)prop->Type > (uint8_t)Reflection::ValueType::Null && gv.Type == Reflection::ValueType::Null)
+		);
+#endif
+
 		return prop->Get(ref.Referred());
+	}
 
 	RAISE_RTF("Invalid property '{}' in GetPropertyValue", PropName);
 }

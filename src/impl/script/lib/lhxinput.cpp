@@ -56,17 +56,17 @@ static int input_mousedown(lua_State* L)
     {
     case 'e':
     {
-        value = UserInput::IsMouseButtonDown(true) || UserInput::IsMouseButtonDown(false);
+        value = UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_LEFT) || UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT);
         break;
     }
     case 'l':
     {
-        value = UserInput::IsMouseButtonDown(true);
+        value = UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_LEFT);
         break;
     }
     case 'r':
     {
-        value = UserInput::IsMouseButtonDown(false);
+        value = UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT);
         break;
     }
     [[unlikely]] default: { assert(false); }

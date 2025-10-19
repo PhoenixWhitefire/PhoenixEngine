@@ -1,11 +1,12 @@
 -- ed.luau, 14/09/2025
 type Stage = "None" | "SelectProject" | "ProjectEditing" | "ProjectPlaying"
 
-local FALLBACK_IMAGE = "textures/fallback-x512.png"
+local FALLBACK_IMAGE = "textures/editor-icons/fallback.png"
 
 local CurrentStage: Stage = "None"
 local StageUpdateSignal: EventConnection? = nil
 local Stages: { [string]: (any) -> () } = {}
+local PluginManager = require("./PluginManager.luau")
 
 local EditorCam = workspace.SceneCamera
 local EditorTl = GameObject.new("TreeLink") :: GameObject & TreeLink
@@ -53,12 +54,14 @@ local function changeStageTo(NewStage: Stage)
 	if Stages[NewStage .. "_Enter"] then
 		targetDm = Stages[NewStage .. "_Enter"](CurrentStage) or targetDm
 	end
+
+	PluginManager.OnEditorStageChanged(CurrentStage, NewStage)
 	
 	CurrentStage = NewStage
-	StageUpdateSignal = targetDm.OnFrameBegin:Connect(function()
+	StageUpdateSignal = targetDm.OnFrameBegin:Connect(function(DeltaTime)
 		MouseClick = (not WasHoldingDownM1) and input.mousedown("l")
 
-		Stages[CurrentStage]()
+		Stages[CurrentStage](DeltaTime)
 
 		WasHoldingDownM1 = input.mousedown("l")
 	end)
@@ -153,15 +156,36 @@ local TabButtonHovering: string? = nil
 local WipTabButtonHovering = TabButtonHovering
 local WindowHovering = false
 
-local function tabButton(Text: string, Icon: string, TintColor: { number }?)
-	if Text == TabButtonHovering then
+local function tabButton(Text: string, Icon: string, Enabled: boolean?, Lit: boolean?, Id: string?)
+	if Enabled == nil then
+		Enabled = true
+	end
+
+	if Lit == nil then
+		Lit = false
+	end
+
+	if not Id then
+		Id = Text
+	end
+
+	local tint = if Enabled then { 1, 1, 1, 1 } else { 0.5, 0.5, 0.5, 1 }
+
+	if Id == TabButtonHovering then
 		imgui.pushstylecolor(5, { 1, 1, 1, 1 })
+	end
+
+	if Lit then
+		imgui.pushstylecolor(3, { 1, 1, 1, 0.05 })
 	end
 
 	imgui.beginchild(Text .. "_Selection", 120, 150, "b")
 
 	local clicked, hovered = false, false
-	imgui.image(Icon, { 100, 100 }, false, TintColor)
+	local cx, cy = imgui.cursorposition()
+	imgui.setcursorposition(cx + 2, cy)
+
+	imgui.image(Icon, { 100, 100 }, false, tint)
 	clicked, hovered = imgui.itemclicked(), imgui.itemhovered()
 	imgui.text(Text)
 	clicked, hovered = clicked or imgui.itemclicked(), hovered or imgui.itemhovered()
@@ -170,22 +194,27 @@ local function tabButton(Text: string, Icon: string, TintColor: { number }?)
 
 	imgui.endchild()
 
-	if hovered or windowHovered then
-		WipTabButtonHovering = Text
+	if Enabled and (hovered or windowHovered) then
+		WipTabButtonHovering = Id
 	end
 
-	if Text == TabButtonHovering then
+	if Lit then
+		imgui.popstylecolor()
+	end
+
+	if Id == TabButtonHovering then
 		imgui.popstylecolor()
 
-		if MouseClick then
+		-- if we are hovering and mouseclick
+		if Enabled and MouseClick then
 			return true
 		end
 	end
 
-	return clicked
+	return if Enabled then clicked else false
 end
 
-local function homeTab()
+local function homeTab(_: number)
 	local inPlaytest = CurrentStage == "ProjectPlaying"
 
 	if inPlaytest then
@@ -212,13 +241,12 @@ local function homeTab()
 	end
 end
 
-local function toolsTab()
+local function toolsTab(_: number)
 	for _, tool in ToolOrder do
 		local name = tool:sub(#("Tool_") + 1, #tool)
 		local enabled = engine.toolenabled(tool)
-		local tint = if enabled then { 1, 1, 1, 1 } else { 0.5, 0.5, 0.5, 1 }
 
-		if tabButton(`{name}\n{ if enabled then "Enabled" else "Disabled" }`, `textures/editor-icons/{name}.png`, tint) then
+		if tabButton(name, `textures/editor-icons/{name}.png`, true, enabled) then
 			engine.settoolenabled(tool, not enabled)
 			conf.save()
 		end
@@ -226,24 +254,55 @@ local function toolsTab()
 		imgui.sameline()
 	end
 
-	local tint = if BottomBarEnabled then { 1, 1, 1, 1 } else { 0.5, 0.5, 0.5, 1 }
-
-	if tabButton(`Bottom Bar\n{ if BottomBarEnabled then "Enabled" else "Disabled" }`, `textures/editor-icons/fallback.png`, tint) then
+	if tabButton("Bottom Bar", `textures/editor-icons/fallback.png`, true, BottomBarEnabled) then
 		BottomBarEnabled = not BottomBarEnabled
 		conf.set("Ed_Tool_BottomBarEnabled", BottomBarEnabled)
 		conf.save()
 	end
 end
 
-local RibbonTabs = {
-	Home = homeTab,
-	Tools = toolsTab
+local function pluginsTab(dt: number)
+	local sepDepth = 0
+
+	local buttons = PluginManager.GetToolbarButtons(CurrentStage)
+	for _, button in buttons do
+		if button.IsSeparator then
+			imgui.separator() -- goes horizontal for some reason
+			imgui.sameline()
+			sepDepth += 1
+			continue
+		end
+
+		imgui.pushid(tostring(sepDepth))
+
+		if tabButton(button.Text, button.Icon or FALLBACK_IMAGE, button.Enabled, button.Lit, button.Text .. sepDepth) then
+			button.OnClick(button)
+		end
+
+		imgui.popid()
+
+		imgui.sameline()
+	end
+end
+
+local RibbonTabs: { { Name: string, Renderer: (number) -> () } } = {
+	{
+		Name = "Home",
+		Renderer = homeTab
+	},
+	{
+		Name = "Tools",
+		Renderer = toolsTab
+	},
+	{
+		Name = "Plugins",
+		Renderer = pluginsTab
+	}
 }
 
 local AboutWindowOpen = false
-local AllowCopyGitHubUrl = false
 local IsLightMode = false
-local CurrentRibbonTab = "Home"
+local CurrentRibbonTab: number = 1
 
 local GITHUB_URL = "https://github.com/PhoenixWhitefire/PhoenixEngine"
 
@@ -251,7 +310,7 @@ local HoveringOverMenuBar = false
 local HoveringOverRibbonTab = false
 local RibbonPopupDistance = 24
 
-local function renderMainMenuBar()
+local function renderMainMenuBar(dt: number)
 	if not imgui.beginmainmenubar() then
 		return
 	end
@@ -319,7 +378,7 @@ local function renderMainMenuBar()
 
 		local lightMode = imgui.checkbox("Light", IsLightMode)
 		if lightMode ~= IsLightMode then
-			imgui.stylecolors(if lightMode then "L" else "D")
+			imgui.stylecolors(if lightMode then "l" else "d")
 		end
 		IsLightMode = lightMode
 		
@@ -332,9 +391,9 @@ local function renderMainMenuBar()
 		WipTabButtonHovering = nil
 		WindowHovering = false
 
-		for tabName, _ in RibbonTabs do
-			if imgui.menuitem(if CurrentRibbonTab == tabName then `[{tabName}]` else tabName) then
-				CurrentRibbonTab = tabName
+		for i, tab in RibbonTabs do
+			if imgui.menuitem(if CurrentRibbonTab == i then `[{tab.Name}]` else tab.Name) then
+				CurrentRibbonTab = i
 			end
 		end
 
@@ -348,7 +407,7 @@ local function renderMainMenuBar()
 
 			imgui.begin("RibbonTabContents", "nt | nr | nm | nc | ns | h")
 			HoveringOverRibbonTab = imgui.windowhovered() or imgui.anyitemactive()
-			RibbonTabs[CurrentRibbonTab]()
+			RibbonTabs[CurrentRibbonTab].Renderer(dt)
 			imgui.endw()
 
 			RibbonPopupDistance = TAB_HEIGHT -- fixes ribbon closing when enabling tools
@@ -378,16 +437,9 @@ local function renderMainMenuBar()
 
 			imgui.text("Phoenix Engine Editor")
 
-			if not AllowCopyGitHubUrl then
-				if imgui.textlink(GITHUB_URL) then
-					AllowCopyGitHubUrl = true
-				end
-			else
-				imgui.inputstring("##", GITHUB_URL)
-			end
+			imgui.urllink(GITHUB_URL)
 		else
 			AboutWindowOpen = false
-			AllowCopyGitHubUrl = false
 		end
 
 		imgui.endw()
@@ -398,7 +450,9 @@ end
 
 local CommandBarCommand = ""
 
-local function renderViewport()
+local function renderViewport(DeltaTime: number)
+	PluginManager.OnUpdate(DeltaTime, CurrentStage)
+
 	if BottomBarEnabled then
 		local wx, wy = engine.windowsize()
 
@@ -464,18 +518,30 @@ function Stages.SelectProject_Enter()
 	end
 
 	recentProjects = json.parse(rpstr)
+
+	PluginManager.Shutdown()
+end
+
+function Stages.SelectProject_Leave()
+	PluginManager.Load()
 end
 
 local RecentsHoveringOver: number? = nil
 
-function Stages.SelectProject(DeltaTime)
+function Stages.SelectProject(DeltaTime: number)
 	if imgui.beginfullscreen("Select Project", 0, 18) then
 		local startPosX, startPosY = imgui.cursorposition()
 
 		if imgui.beginchild("SidePanel", 165, 0, "b") then
+			local cx, cy = imgui.cursorposition()
+			imgui.setcursorposition(cx - 4, cy)
+
 			if imgui.imagebutton("+", "textures/editor-icons/new.png", { 150, 150 }) then
 				createNewProject()
 			end
+
+			cx, cy = imgui.cursorposition()
+			imgui.setcursorposition(cx - 4, cy)
 
 			if imgui.imagebutton("O", "textures/editor-icons/open.png", { 150, 150 }) then
 				imgui.endchild()
@@ -561,7 +627,7 @@ function Stages.SelectProject(DeltaTime)
 	end
 	imgui.endw()
 	
-	renderMainMenuBar()
+	renderMainMenuBar(DeltaTime)
 end
 
 function Stages.ProjectEditing_Enter(DeltaTime)
@@ -581,8 +647,8 @@ function Stages.ProjectEditing(DeltaTime)
 		EditorCam.FieldOfView = projWp.SceneCamera.FieldOfView
 	end
 
-	renderMainMenuBar()
-	renderViewport()
+	renderMainMenuBar(DeltaTime)
+	renderViewport(DeltaTime)
 end
 
 function Stages.ProjectEditing_Leave(NextStage)
@@ -646,8 +712,8 @@ function Stages.ProjectPlaying_Enter()
 end
 
 function Stages.ProjectPlaying(DeltaTime)
-	renderMainMenuBar()
-	renderViewport()
+	renderMainMenuBar(DeltaTime)
+	renderViewport(DeltaTime)
 end
 
 function Stages.ProjectPlaying_Leave()

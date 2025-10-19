@@ -2978,6 +2978,7 @@ void InlayEditor::Shutdown()
 	VisibleTreeWip.clear();
 	PickerTargets.clear();
 	LastSelected.Clear();
+	ObjectInsertionTarget.Clear();
 	
 	if (TextEditorEntryBuffer)
 		textEditorSaveFile();

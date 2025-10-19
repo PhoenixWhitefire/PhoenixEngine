@@ -680,6 +680,8 @@ int ScriptEngine::L::HandleMethodCall(
 	for (size_t i = 0; i < outputs.size(); i++)
 	{
 		const Reflection::GenericValue& output = outputs[i];
+
+#ifndef NDEBUG
 		Reflection::ValueType base = func->Outputs[i];
 		if ((uint8_t)base > (uint8_t)Reflection::ValueType::Null)
 			base = (Reflection::ValueType)((uint8_t)base - (uint8_t)Reflection::ValueType::Null);
@@ -687,6 +689,8 @@ int ScriptEngine::L::HandleMethodCall(
 		assert(output.Type == base
 			|| ((uint8_t)func->Outputs[i] > (uint8_t)Reflection::ValueType::Null && output.Type == Reflection::ValueType::Null)
 		);
+#endif
+
 		L::PushGenericValue(L, output);
 	}
 
@@ -945,14 +949,19 @@ static int api_gameobjindex(lua_State* L)
 
 	if (const Reflection::PropertyDescriptor* prop = obj->FindProperty(key, &ref))
 	{
-		Reflection::GenericValue v = prop->Get(ref.Referred());
+		Reflection::GenericValue gv = prop->Get(ref.Referred());
 
-		assert(
-			(v.Type == prop->Type)
-			|| (v.Type == Reflection::ValueType::Null && prop->Type == Reflection::ValueType::GameObject)
-			|| ((uint8_t)v.Type == ((uint8_t)prop->Type & ~(uint8_t)Reflection::ValueType::Null))
+#ifndef NDEBUG
+		Reflection::ValueType base = prop->Type;
+		if ((uint8_t)base > (uint8_t)Reflection::ValueType::Null)
+			base = (Reflection::ValueType)((uint8_t)base - (uint8_t)Reflection::ValueType::Null);
+
+		assert(gv.Type == base
+			|| ((uint8_t)prop->Type > (uint8_t)Reflection::ValueType::Null && gv.Type == Reflection::ValueType::Null)
 		);
-		ScriptEngine::L::PushGenericValue(L, v);
+#endif
+
+		ScriptEngine::L::PushGenericValue(L, gv);
 	}
 
 	else if (const Reflection::EventDescriptor* event = obj->FindEvent(key, &ref))
@@ -1209,16 +1218,18 @@ static int api_eventnamecall(lua_State* L)
 				EventConnectionData* cn = (EventConnectionData*)luaL_checkudata(eL, -1, "EventConnection");
 				lua_pop(eL, 1);
 
-				GameObject* scr = (GameObject*)cn->Script.Dereference();
-
-				if (!scr || !scr->FindComponentByType(EntityComponent::Script)
-				)
+				if (cn->Script.HasValue())
 				{
-					cn->Event->Disconnect(cn->Reflector.Referred(), cn->ConnectionId);
-					lua_resetthread(cL);
-					lua_resetthread(eL);
+					GameObject* scr = (GameObject*)cn->Script.Dereference();
 
-					return;
+					if (!scr || !scr->FindComponentByType(EntityComponent::Script))
+					{
+						cn->Event->Disconnect(cn->Reflector.Referred(), cn->ConnectionId);
+						lua_resetthread(cL);
+						lua_resetthread(eL);
+
+						return;
+					}
 				}
 				lua_State* co = cL;
 

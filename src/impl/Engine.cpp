@@ -58,29 +58,18 @@ void Engine::OnWindowResized(int NewSizeX, int NewSizeY)
 	Texture& fboRes = m_TextureManager.GetTextureResource(m_FboResourceId);
 	fboRes.Width = NewSizeX;
 	fboRes.Height = NewSizeY;
-
-	GLFWmonitor* primaryDisplay = glfwGetPrimaryMonitor();
-	float displayScale = 0.f;
-	glfwGetMonitorContentScale(primaryDisplay, &displayScale, nullptr);
-
-	static ImGuiStyle DefaultStyle = ImGui::GetStyle();
-	ImGuiStyle scaledStyle = DefaultStyle;
-	scaledStyle.ScaleAllSizes(displayScale);
-	scaledStyle.DisplayWindowPadding = ImVec2(19.f, 19.f);
-
-	// this looks weird 02/01/2025
-	ImGui::GetStyle() = scaledStyle;
 }
 
 void Engine::SetIsFullscreen(bool MakeFullscreen)
 {
-	if (!IsFullscreen == MakeFullscreen)
+	if (IsFullscreen == MakeFullscreen)
 		return;
 
 	if (MakeFullscreen)
 	{
 		glfwGetWindowSize(Window, &m_WindowedWidth, &m_WindowedHeight);
-		glfwGetWindowPos(Window, &m_WindowedPosX, &m_WindowedPosY);
+		// Not supported on Wayland
+		//glfwGetWindowPos(Window, &m_WindowedPosX, &m_WindowedPosY);
 
 		GLFWmonitor* monitor = glfwGetPrimaryMonitor();
 		const GLFWvidmode* mode = glfwGetVideoMode(monitor);
@@ -215,17 +204,7 @@ void Engine::m_InitVideo()
 	Log::InfoF("GLFW platform: {}", glfwGetPlatform());
 
 	GLFWmonitor* primaryDisplay = glfwGetPrimaryMonitor();
-	float displayScale = 0.f;
-	glfwGetMonitorContentScale(primaryDisplay, &displayScale, nullptr);
-
-	nlohmann::json defaultWindowSize = readFromConfiguration(
-		"DefaultWindowSize",
-		nlohmann::json::array({ 1280, 720 })
-	);
-
-	this->WindowSizeX = static_cast<int>((float)defaultWindowSize[0] * displayScale);
-	this->WindowSizeY = static_cast<int>((float)defaultWindowSize[1] * displayScale);
-
+	
 	glfwGetMonitorWorkarea(primaryDisplay, nullptr, nullptr, &WindowSizeX, &WindowSizeY);
 
 	nlohmann::json::array_t requestedGLVersion = readFromConfiguration("OpenGLVersion", nlohmann::json{ 4, 6 });

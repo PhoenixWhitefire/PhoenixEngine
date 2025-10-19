@@ -172,7 +172,7 @@
           "ScreenPointToRay": "(Array, Double) -> (Vector3)"
         },
         "Properties": {
-          "SceneCamera": "GameObject"
+          "SceneCamera": "GameObject?"
         }
       }
     }
@@ -223,6 +223,7 @@
       "_VMNAME": "string",
       "appendlog": "function",
       "breakpoint": "function",
+      "defer": "function",
       "game": "GameObject & DataModel",
       "loadthread": "function",
       "loadthreadfromfile": "function",
@@ -319,6 +320,7 @@
         "textlink": "function",
         "treenode": "function",
         "treepop": "function",
+        "urllink": "function",
         "windowhovered": "function",
         "windowposition": "function"
       },

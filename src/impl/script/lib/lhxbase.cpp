@@ -163,6 +163,45 @@ static int base_loadthreadfromfile(lua_State* L)
 	return 2;
 }
 
+static int base_defer(lua_State* L)
+{
+	luaL_argexpected(L, lua_type(L, 1) == LUA_TFUNCTION || lua_type(L, 1) == LUA_TTHREAD, 1, "function or thread (coroutine)");
+
+	lua_State* DL = nullptr;
+	int ref = 0;
+
+	if (lua_type(L, 1) == LUA_TFUNCTION)
+	{
+		DL = lua_newthread(L);
+		ref = lua_ref(L, -1);
+		lua_pop(L, 1);
+
+		lua_xmove(L, DL, 1);
+	}
+	else
+	{
+		DL = lua_tothread(L, 1);
+		ref = lua_ref(L, 1);
+	}
+
+	lua_pushthread(DL);
+	lua_pop(DL, 1);
+
+	ScriptEngine::YieldedCoroutine yc =
+	{
+		.Coroutine = DL,
+		.CoroutineReference = ref,
+		.Mode = ScriptEngine::YieldedCoroutine::ResumptionMode::ScheduledTime,
+		.RmSchedule = {
+			.YieldedAt = GetRunningTime(),
+			.ResumeAt = GetRunningTime() + luaL_optnumber(L, 2, 0.0)
+		}
+	};
+	ScriptEngine::s_YieldedCoroutines.push_back(yc);
+
+	return 0;
+}
+
 static luaL_Reg base_funcs[] =
 {
     { "print", base_print },
@@ -172,6 +211,7 @@ static luaL_Reg base_funcs[] =
 	//{ "loadstring", base_loadstring },
 	{ "loadthread", base_loadthread },
 	{ "loadthreadfromfile", base_loadthreadfromfile },
+	{ "defer", base_defer },
     { NULL, NULL }
 };
 

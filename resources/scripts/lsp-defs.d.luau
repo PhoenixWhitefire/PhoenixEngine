@@ -183,7 +183,7 @@ declare class TreeLink
   Target: GameObject?
 end
 declare class Workspace
-  SceneCamera: GameObject & Camera
+  SceneCamera: GameObject? & Camera
 
   function ScreenPointToRay(self, Param_1: { any }, Param_2: number) : (vector)
 end
@@ -248,8 +248,9 @@ declare imgui: {
   setnextwindowopen: (( Open: boolean? ) -> ()),
   sameline: ((  ) -> ()),
   windowposition: ((  ) -> (number, number)),
-  endw: ((  ) -> ()),
   windowhovered: ((  ) -> (boolean)),
+  endw: ((  ) -> ()),
+  setnextwindowposition: (( X: number, Y: number ) -> ()),
   pushstylecolor: (( StyleIndex: number, Color: { number } ) -> ()),
   cursorposition: ((  ) -> (number, number)),
   treepop: ((  ) -> ()),
@@ -257,11 +258,11 @@ declare imgui: {
   textlink: (( Text: string ) -> (boolean)),
   text: (( Text: string ) -> ()),
   setviewportdockspacedefault: ((  ) -> ()),
-  stylecolors: (( Theme: 'L' | 'D' ) -> ()),
+  stylecolors: (( Theme: 'l' | 'd' ) -> ()),
   beginchild: (( Name: string, Width: number?, Height: number?, ChildFlags: string?, WindowFlags: string? ) -> (boolean)),
   popid: ((  ) -> ()),
   setwindowsize: (( SizeX: number, SizeY: number ) -> ()),
-  setnextwindowposition: (( X: number, Y: number ) -> ()),
+  urllink: (( Text: string, Url: string? ) -> (boolean)),
   setnextwindowfocus: ((  ) -> ()),
   getcontentregionavail: ((  ) -> (number, number)),
   setitemtooltip: (( Text: string ) -> ()),
@@ -319,6 +320,7 @@ declare world: {
 declare _VMNAME: string
 declare function appendlog( ...: any ): ()
 declare function breakpoint( Line: number ): ()
+declare function defer( (() -> ()) | thread, number? ): ()
 declare game: GameObject & DataModel
 declare function loadthread( Code: string, ChunkName: string? ): ( thread?, string? )
 declare function loadthreadfromfile( File: string, ChunkName: string? ): ( thread?, string? )

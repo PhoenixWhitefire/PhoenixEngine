@@ -286,6 +286,13 @@ static int imgui_textlink(lua_State* L)
     return 1;
 }
 
+static int imgui_urllink(lua_State* L)
+{
+    lua_pushboolean(L, ImGui::TextLinkOpenURL(luaL_checkstring(L, 1), luaL_optstring(L, 2, nullptr)));
+
+    return 1;
+}
+
 static int imgui_checkbox(lua_State* L)
 {
     const char* title = luaL_checkstring(L, 1);
@@ -305,12 +312,12 @@ static int imgui_stylecolors(lua_State* L)
 
     if (siz == 1)
     {
-        if (n[0] == 'L')
+        if (n[0] == 'l')
         {
             ImGui::StyleColorsLight();
             return 0;
         }
-        else if (n[0] == 'D')
+        else if (n[0] == 'd')
         {
             ImGui::StyleColorsDark();
             return 0;
@@ -694,6 +701,7 @@ static luaL_Reg imgui_funcs[] =
     { "inputstring", imgui_inputstring },
     { "button", imgui_button },
     { "textlink", imgui_textlink },
+    { "urllink", imgui_urllink },
     { "checkbox", imgui_checkbox },
     { "stylecolors", imgui_stylecolors },
     { "setnextwindowfocus", imgui_setnextwindowfocus },

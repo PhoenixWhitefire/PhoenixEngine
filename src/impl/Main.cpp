@@ -110,7 +110,7 @@ catch (...)                                                                     
 #include "Log.hpp"
 
 static bool PreviouslyPressingF11 = false;
-static bool MouseCaptured = false;
+static bool WasRmbPressed = false;
 static const float MouseSensitivity = 400.f;
 static const float MovementSpeed = 15.f;
 static double PrevMouseX, PrevMouseY = 0;
@@ -194,12 +194,11 @@ static void handleInputs(double deltaTime)
 	double mouseX;
 	double mouseY;
 	glfwGetCursorPos(window, &mouseX, &mouseY);
-
-	bool lmbPressed = UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_LEFT);
-	bool rmbPressed = UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT);
 	
 	if (camera->UseSimpleController)
 	{
+		bool rmbPressed = !GuiIO->WantCaptureMouse && UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT);
+
 		static const glm::vec3 WorldUp{ 0.f, 1.f, 0.f };
 		glm::vec3 camForward = glm::vec3(camera->Transform[2]);
 		glm::vec3 camUp = glm::vec3(camera->Transform[1]);
@@ -234,13 +233,16 @@ static void handleInputs(double deltaTime)
 			camera->Transform[3] = glm::vec4(position, camera->Transform[3].w);
 		}
 
-		if (MouseCaptured)
-		{
+		if (rmbPressed && !WasRmbPressed)
 			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-			int windowSizeX, windowSizeY;
-			glfwGetWindowSize(window, &windowSizeX, &windowSizeY);
+		else if (!rmbPressed && WasRmbPressed)
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
+		WasRmbPressed = rmbPressed;
+
+		if (rmbPressed)
+		{
 			float deltaMouseX = mouseX - PrevMouseX;
 			float deltaMouseY = mouseY - PrevMouseY;
 
@@ -258,19 +260,6 @@ static void handleInputs(double deltaTime)
 
 			camForward = glm::rotate(camForward, -rotationY, WorldUp);
 			camera->Transform[2] = glm::vec4(camForward, camera->Transform[2].w);
-
-			if (rmbPressed)
-			{
-				MouseCaptured = false;
-				glfwSetCursorPos(window, windowSizeX / 2.f, windowSizeY / 2.f);
-			}
-		}
-		else
-		{
-			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-
-			if (lmbPressed && !GuiIO->WantCaptureMouse)
-				MouseCaptured = true;
 		}
 	}
 
@@ -679,10 +668,15 @@ static void init()
 			RAISE_RT("Dear ImGui detected a version mismatch");
 	
 		ImGui::CreateContext();
-	
 		GuiIO = &ImGui::GetIO();
 		ImGui::StyleColorsDark();
 		GuiIO->ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+		float displayScale = 0.f;
+		glfwGetMonitorContentScale(glfwGetPrimaryMonitor(), &displayScale, nullptr);
+
+		ImGui::GetStyle().ScaleAllSizes(displayScale);
+		ImGui::GetStyle().DisplayWindowPadding = ImVec2(19.f, 19.f);
 
 		PHX_ENSURE_MSG(ImGui_ImplGlfw_InitForOpenGL(EngineInstance->Window, true), "Failed to initialize Dear ImGui for GLFW");
 		PHX_ENSURE_MSG(ImGui_ImplOpenGL3_Init("#version 460"), "Failed to initialize Dear ImGui for OpenGL");

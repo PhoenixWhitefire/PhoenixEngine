@@ -210,7 +210,7 @@ No members defined
 * If this is `Destroy`'d, the application closes
 
 ### Properties:
-* `SceneCamera: GameObject`: The `Camera` the Player sees the world through. If set to `nil`, a *fallback* is created at the origin.
+* `SceneCamera: GameObject?`: The `Camera` the Player sees the world through. If set to `nil`, a *fallback* is created at the origin.
 
 ### Methods:
 * `ScreenPointToRay({ any }, number) : (vector)`: Converts the provided X and Y screen coordinates to a world-space vector, with the length provided or `1` by default
