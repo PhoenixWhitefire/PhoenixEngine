@@ -118,7 +118,7 @@ local function saveToRecents(Path: string)
 end
 
 local function openProject(ManualPath: string?)
-	local path = ManualPath or fs.promptopen("scenes/", "world", "Worlds")[1]
+	local path = ManualPath or fs.promptopen("scenes/", "*.world", "Worlds")[1]
 	if not path then
 		print("No project selected")
 		return
@@ -322,7 +322,7 @@ local function renderMainMenuBar(dt: number)
 			imgui.endmenu()
 			imgui.endmainmenubar()
 				
-			local path = fs.promptsave("scenes/", "world", "Worlds")
+			local path = fs.promptsave("scenes/", "*.world", "Worlds")
 			if not path then
 				print("No path was selected for saving, cancelled")
 				return
@@ -340,7 +340,7 @@ local function renderMainMenuBar(dt: number)
 				imgui.endmenu()
 				imgui.endmainmenubar()
 
-				projectIcon = fs.promptopen("textures/", "png;jpg;jpeg", "Images")[1]
+				projectIcon = fs.promptopen("textures/", "*.png,*.jpg,*.jpeg", "Images")[1]
 
 				return
 			end
@@ -662,7 +662,7 @@ function Stages.ProjectEditing_Leave(NextStage)
 	local buttonSelection = engine.showmessagebox("Save Project", "Save project before closing?", "yesnocancel", "warning");
 
 	if buttonSelection == 1 then
-		local savePath = projectSavePath or fs.promptsave("scenes/", "world", "Projects")
+		local savePath = projectSavePath or fs.promptsave("scenes/", "*.world", "Projects")
 
 		if savePath then
 			saveToRecents(savePath)

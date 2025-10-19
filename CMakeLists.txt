@@ -118,7 +118,6 @@ set_property(TARGET Vendor PROPERTY FOLDER "Vendor")
 set_property(TARGET TracyClient PROPERTY FOLDER "Vendor")
 set_property(TARGET glm PROPERTY FOLDER "Vendor")
 set_property(TARGET miniaudio PROPERTY FOLDER "Vendor")
-set_property(TARGET glfw PROPERTY FOLDER "Vendor")
 
 set_property(TARGET Luau.RequireNavigator PROPERTY FOLDER "Vendor/Luau")
 set_property(TARGET Luau.Require PROPERTY FOLDER "Vendor/Luau")
@@ -132,6 +131,10 @@ set_property(TARGET Luau.EqSat PROPERTY FOLDER "Vendor/Luau")
 set_property(TARGET Luau.Ast PROPERTY FOLDER "Vendor/Luau")
 set_property(TARGET Luau.VM PROPERTY FOLDER "Vendor/Luau")
 set_property(TARGET isocline PROPERTY FOLDER "Vendor/Luau")
+
+set_property(TARGET glfw PROPERTY FOLDER "Vendor/GLFW3")
+set_property(TARGET uninstall PROPERTY FOLDER "Vendor/GLFW3")
+set_property(TARGET update_mappings PROPERTY FOLDER "Vendor/GLFW3")
 
 # build engine after all libs
 add_dependencies(PhoenixEngine

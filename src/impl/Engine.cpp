@@ -68,8 +68,10 @@ void Engine::SetIsFullscreen(bool MakeFullscreen)
 	if (MakeFullscreen)
 	{
 		glfwGetWindowSize(Window, &m_WindowedWidth, &m_WindowedHeight);
-		// Not supported on Wayland
-		//glfwGetWindowPos(Window, &m_WindowedPosX, &m_WindowedPosY);
+		// Not supported on Linux with Wayland
+#ifdef _WIN32
+		glfwGetWindowPos(Window, &m_WindowedPosX, &m_WindowedPosY);
+#endif
 
 		GLFWmonitor* monitor = glfwGetPrimaryMonitor();
 		const GLFWvidmode* mode = glfwGetVideoMode(monitor);
