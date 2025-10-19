@@ -38,6 +38,8 @@ namespace ScriptEngine
 		{
 			double YieldedAt = 0.f;
 			double ResumeAt = 0.f;
+			int NumRetVals = 1;
+			bool PushSleptTime = true;
 		} RmSchedule;
 		std::shared_future<std::vector<Reflection::GenericValue>> RmFuture;
 		std::function<int(lua_State*)> RmPoll;

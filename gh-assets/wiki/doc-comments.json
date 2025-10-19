@@ -423,7 +423,8 @@
       },
       "defer": {
         "Description": "Schedules the given function or coroutine to be resumed some number of seconds later, or as soon as possible",
-        "In": "Task: (() -> ()) | thread, SleepFor: number?"
+        "Generics": "A...",
+        "In": "Task: ((A...) -> ()) | thread, SleepFor: number?, ...: A..."
       },
       "game": {
         "Description": "The GameObject acting as the Data Model of the Engine"
@@ -605,6 +606,9 @@
             "Description": [
               "Pushes a new Luau VM to the Luau VM stack. Scripts resumed past that point will run in the new VM",
               "The `game` and `workspace` globals in the new VM will depend on the current bound datamodel"
+            ],
+            "In": [
+              "VmName: string"
             ]
           },
           "setexplorerroot": {
@@ -769,7 +773,7 @@
                 "'./' "
               ],
               [
-                "Filter: string?",
+                "Filter: ( { string } | string)?",
                 "'*.*'"
               ],
               [
@@ -794,7 +798,7 @@
                 "'./'"
               ],
               [
-                "Filter: string?",
+                "Filter: ( { string } | string)?",
                 "'*.*'"
               ],
               [

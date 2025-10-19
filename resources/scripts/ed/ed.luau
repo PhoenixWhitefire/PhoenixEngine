@@ -568,11 +568,7 @@ function Stages.SelectProject(DeltaTime: number)
 			imgui.setcursorposition(cx - 4, cy)
 
 			if imgui.imagebutton("O", "textures/editor-icons/open.png", { 150, 150 }) then
-				imgui.endchild()
-				imgui.endw()
-
-				openProject()
-				return
+				defer(openProject)
 			end
 		end
 		imgui.endchild()
@@ -621,12 +617,7 @@ function Stages.SelectProject(DeltaTime: number)
 			clicked, hovered = clicked or imgui.itemclicked(), hovered or imgui.itemhovered()
 
 			if clicked then
-				imgui.endchild()
-				imgui.endw();
-
-				openProject(proj.Path)
-
-				return
+				defer(openProject, 0, proj.Path)
 			end
 
 			if hovered then

@@ -104,9 +104,10 @@ static int shouldResume_Scheduled(
 {
 	if (double curTime = GetRunningTime(); curTime >= CorInfo.RmSchedule.ResumeAt)
 	{
-		lua_pushnumber(L, curTime - CorInfo.RmSchedule.YieldedAt);
+		if (CorInfo.RmSchedule.PushSleptTime)
+			lua_pushnumber(L, curTime - CorInfo.RmSchedule.YieldedAt);
 
-		return 1;
+		return CorInfo.RmSchedule.NumRetVals;
 	}
 	else
 		return -1;

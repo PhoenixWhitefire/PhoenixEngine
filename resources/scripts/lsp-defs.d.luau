@@ -213,7 +213,7 @@ declare engine: {
   setexplorerselections: (( Selections: { GameObject } ) -> ()),
   getvsync: ((  ) -> (boolean)),
   toolenabled: (( Tool: string ) -> (boolean)),
-  pushlvm: ((  ) -> ()),
+  pushlvm: (( VmName: string ) -> ()),
   dwireframes: (( Enabled: boolean? ) -> (boolean)),
   isheadless: ((  ) -> (boolean)),
   daabbs: (( Enabled: boolean? ) -> (boolean)),
@@ -221,9 +221,9 @@ declare engine: {
 }
 declare fs: {
   read: (( Path: string ) -> (string?)),
-  promptopen: (( DefaultLocation: string?, Filter: string?, FilterName: string?, AllowMultipleFiles: boolean? ) -> ({ string })),
+  promptopen: (( DefaultLocation: string?, Filter: ( { string } | string)?, FilterName: string?, AllowMultipleFiles: boolean? ) -> ({ string })),
   isfile: (( string ) -> (boolean)),
-  promptsave: (( DefaultLocation: string?, Filter: string?, FilterName: string? ) -> (string)),
+  promptsave: (( DefaultLocation: string?, Filter: ( { string } | string)?, FilterName: string? ) -> (string)),
   write: (( Path: string, Contents: string ) -> (boolean, string?)),
   isdirectory: (( string ) -> (boolean)),
   listdir: (( Path: string, Filter: ('a' | 'f' | 'd')? ) -> ({ [string]: 'f' | 'd' }))
@@ -320,7 +320,7 @@ declare world: {
 declare _VMNAME: string
 declare function appendlog( ...: any ): ()
 declare function breakpoint( Line: number ): ()
-declare function defer( Task: (() -> ()) | thread, SleepFor: number? ): ()
+declare function defer<A...>( Task: ((A...) -> ()) | thread, SleepFor: number?, ...: A... ): ()
 declare game: GameObject & DataModel
 declare function loadthread( Code: string, ChunkName: string? ): ( thread?, string? )
 declare function loadthreadfromfile( File: string, ChunkName: string? ): ( thread?, string? )

@@ -167,8 +167,13 @@ static int base_defer(lua_State* L)
 {
 	luaL_argexpected(L, lua_type(L, 1) == LUA_TFUNCTION || lua_type(L, 1) == LUA_TTHREAD, 1, "function or thread (coroutine)");
 
+	int numArgs = lua_gettop(L);
+	int numFnArgs = numArgs > 2 ? numArgs - 2 : 0;
+
 	lua_State* DL = nullptr;
 	int ref = 0;
+
+	double sleepTime = luaL_optnumber(L, 2, 0.f);
 
 	if (lua_type(L, 1) == LUA_TFUNCTION)
 	{
@@ -176,16 +181,24 @@ static int base_defer(lua_State* L)
 		ref = lua_ref(L, -1);
 		lua_pop(L, 1);
 
-		lua_xmove(L, DL, 1);
+		if (numFnArgs > 0)
+		{
+			lua_remove(L, 2);
+			lua_xmove(L, DL, numFnArgs + 1); // L:           | DL: fn, args
+		}
+		else
+		{
+			lua_pushvalue(L, 1);
+			lua_xmove(L, DL, 1);
+		}
 	}
 	else
 	{
 		DL = lua_tothread(L, 1);
 		ref = lua_ref(L, 1);
-	}
 
-	lua_pushthread(DL);
-	lua_pop(DL, 1);
+		lua_xmove(L, DL, numFnArgs);
+	}
 
 	ScriptEngine::YieldedCoroutine yc =
 	{
@@ -194,7 +207,9 @@ static int base_defer(lua_State* L)
 		.Mode = ScriptEngine::YieldedCoroutine::ResumptionMode::ScheduledTime,
 		.RmSchedule = {
 			.YieldedAt = GetRunningTime(),
-			.ResumeAt = GetRunningTime() + luaL_optnumber(L, 2, 0.0)
+			.ResumeAt = GetRunningTime() + sleepTime,
+			.NumRetVals = numFnArgs,
+			.PushSleptTime = false
 		}
 	};
 	ScriptEngine::s_YieldedCoroutines.push_back(yc);

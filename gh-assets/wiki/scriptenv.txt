@@ -209,7 +209,7 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * Returns whether the given tool is currently enabled
 * To *enable* or *disable* the tool, use `.settoolenabled`
 
-#### `engine.pushlvm(): `
+#### `engine.pushlvm(VmName: string): `
 * Pushes a new Luau VM to the Luau VM stack. Scripts resumed past that point will run in the new VM
 * The `game` and `workspace` globals in the new VM will depend on the current bound datamodel
 
@@ -235,7 +235,7 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * Reads the file at the given address, and returns the contents
 * If the file could not be read, returns `nil`
 
-#### `fs.promptopen(DefaultLocation: string? [ './'  ], Filter: string? [ '*.*' ], FilterName: string? [ 'All files' ], AllowMultipleFiles: boolean? [ false ]): { string }`
+#### `fs.promptopen(DefaultLocation: string? [ './'  ], Filter: ( { string } | string)? [ '*.*' ], FilterName: string? [ 'All files' ], AllowMultipleFiles: boolean? [ false ]): { string }`
 * Prompts the player to select a file to open
 * Returns the list of files the player selected, or an empty list if the player cancelled the dialog
 * If the operation fails, returns `nil` instead
@@ -243,7 +243,7 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `fs.isfile(string): boolean`
 * Returns whether the specified Path refers to a file
 
-#### `fs.promptsave(DefaultLocation: string? [ './' ], Filter: string? [ '*.*' ], FilterName: string? [ 'All files' ]): string`
+#### `fs.promptsave(DefaultLocation: string? [ './' ], Filter: ( { string } | string)? [ '*.*' ], FilterName: string? [ 'All files' ]): string`
 * Prompts the player to select a path to save a file to
 * Returns the path the player selected, or `nil` if they cancelled the dialog
 
@@ -522,7 +522,7 @@ Additional global variables
 #### `breakpoint(Line: number): ()`
 * Set a breakpoint at the given line
 
-#### `defer(Task: (() -> ()) | thread, SleepFor: number?): ()`
+#### `defer<A...>(Task: ((A...) -> ()) | thread, SleepFor: number?, ...: A...): ()`
 * Schedules the given function or coroutine to be resumed some number of seconds later, or as soon as possible
 
 #### `game: GameObject & DataModel`

@@ -81,7 +81,12 @@ local function dumpFuncSignature(libname, funcname, In, Out, V)
 		returns = libname
 	end
 
-	local lspDef = `(( { defargs } ) -> ({ returns }))`
+	local generics = ""
+	if V.Generics then
+		generics = `<{V.Generics}>`
+	end
+
+	local lspDef = `{generics}(( { defargs } ) -> ({ returns }))`
 
 	-- generates "Code too complex to typecheck" error in definitions file :(
 	--[[
@@ -117,7 +122,7 @@ local function dumpFuncSignature(libname, funcname, In, Out, V)
 	end
 	]]
 
-	return `#### \`{libname}.{ funcname }({ docargs }): { returns }\`\n`, lspDef
+	return `#### \`{libname}.{ funcname }{generics}({ docargs }): { returns }\`\n`, lspDef
 end
 
 local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, libname: string)
@@ -521,9 +526,14 @@ for _, name in orderedGlobals do
 	if apiDump.ScriptEnv.Globals[name] == "function" then
 		local args = contents.In or ""
 		local returns = contents.Out or "()"
-		
-		globals ..= `#### \`{ name }({ args }): { returns }\`\n`
-		definitionsFile ..= `declare function { name }( { args } ): { returns }\n`
+
+		local generics = ""
+		if contents.Generics then
+			generics = `<{contents.Generics}>`
+		end
+
+		globals ..= `#### \`{ name }{generics}({ args }): { returns }\`\n`
+		definitionsFile ..= `declare function { name }{generics}( { args } ): { returns }\n`
 	else
 		globals ..= `#### \`{ name }: { apiDump.ScriptEnv.Globals[name] }\`\n`
 		definitionsFile ..= `declare { name }: { apiDump.ScriptEnv.Globals[name] }\n`

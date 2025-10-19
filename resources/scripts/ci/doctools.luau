@@ -103,7 +103,7 @@ local function isTypeValid(type: string) : (boolean, string?)
 
             elseif #lexeme > 0 and c ~= " " then
                 if not combinable and not firstLex then
-                    assert(false)
+                    --assert(false)
                     return false, `Cannot combine type '{ lexeme }' with the previous type because there is no combiner ('&', '|' or ',')`
                 end
 
