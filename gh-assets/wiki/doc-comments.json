@@ -722,6 +722,32 @@
       "fs": {
         "Description": "Interacting with the player's filesystem",
         "Members": {
+          "copy": {
+            "Description": [
+              "Copies the file/directory at the given path to a new path",
+              "Returns whether the operation was successful. If unsuccessful, an error message is also returned"
+            ],
+            "In": [
+              "From: string",
+              "To: string"
+            ],
+            "Out": "boolean, string?"
+          },
+          "cwd": {
+            "Description": [
+              "Returns the Current Working Directory of the Engine"
+            ],
+            "Out": "string"
+          },
+          "definealias": {
+            "Description": [
+              "Defines an alias for the filesystem, such that `@<Alias>/` refers to `<Path>/` to the Engine"
+            ],
+            "In": [
+              "Alias: string",
+              "For: string"
+            ]
+          },
           "isdirectory": {
             "Description": [
               "Returns whether the specified Path refers to a directory"
@@ -760,6 +786,25 @@
               ]
             ],
             "Out": "{ [string]: 'f' | 'd' }"
+          },
+          "makecwdaliasof": {
+            "Description": [
+              "Changes the meaning of paths beginning with `.` to act as aliases to the given path instead of referring to the CWD"
+            ],
+            "In": [
+              "Alias: string"
+            ]
+          },
+          "mkdir": {
+            "Description": [
+              "Creates a directory at the given path",
+              "Returns whether a directory was actually created",
+              "Will return false if the directory already exists, but the error message will be `nil`"
+            ],
+            "In": [
+              "Path: string"
+            ],
+            "Out": "boolean, string?"
           },
           "promptopen": {
             "Description": [

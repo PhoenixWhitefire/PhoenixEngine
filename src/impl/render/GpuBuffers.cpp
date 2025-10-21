@@ -180,8 +180,8 @@ void GpuFrameBuffer::Initialize(int TargetWidth, int TargetHeight, int MSSamples
 			glTexParameteri(binding, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
 			glTexParameteri(binding, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-			glTexParameteri(binding, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameteri(binding, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(binding, GL_TEXTURE_WRAP_S, GL_REPEAT);
+			glTexParameteri(binding, GL_TEXTURE_WRAP_T, GL_REPEAT);
 		}
 		else
 		{

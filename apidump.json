@@ -263,9 +263,14 @@
         "windowsize": "function"
       },
       "fs": {
+        "copy": "function",
+        "cwd": "function",
+        "definealias": "function",
         "isdirectory": "function",
         "isfile": "function",
         "listdir": "function",
+        "makecwdaliasof": "function",
+        "mkdir": "function",
         "promptopen": "function",
         "promptsave": "function",
         "read": "function",

@@ -1,3 +1,4 @@
+#include <unordered_map>
 #include <filesystem>
 #include <fstream>
 #include <format>
@@ -28,20 +29,20 @@ static bool createDirectoryRecursive(const std::string_view& dirName, std::error
 	return true;
 }
 
-std::string FileRW::ReadFile(const std::string& ShortPath, bool* DoesFileExist, bool PrependResDir)
+std::string FileRW::ReadFile(const std::string& ShortPath, bool* Success, std::string* ErrorMessage)
 {
-	const std::string& actualPath = PrependResDir ? FileRW::MakePathCwdRelative(ShortPath) : ShortPath;
+	const std::string actualPath = FileRW::MakePathCwdRelative(ShortPath);
 
 	std::ifstream file;
-	std::string contents = "";
+	std::string contents;
 
 	if (std::filesystem::is_regular_file(actualPath))
 		file.open(actualPath, std::ios::binary);
 	
 	if (file && file.is_open())
 	{
-		if (DoesFileExist != nullptr)
-			*DoesFileExist = true;
+		if (Success != nullptr)
+			*Success = true;
 
 		file.seekg(0, std::ios::end);
 
@@ -56,15 +57,28 @@ std::string FileRW::ReadFile(const std::string& ShortPath, bool* DoesFileExist, 
 	}
 	else
 	{
-		if (!DoesFileExist)
-			RAISE_RTF(
-				"FileRW::ReadFile: Could not open file handle: '{}'",
-				actualPath
+		std::string error;
+
+		if (file.bad())
+			error = std::format(
+				"Fatal I/O error (badbit), e.x.: hardware error, stream error, etc. System error (may be inaccurate): {}",
+				std::strerror(errno)
 			);
 		else
-			*DoesFileExist = false;
+			error = std::format(
+				"Non-fatal I/O error (failbit), e.x.: can't access path due to lacking permissions, invalid path, etc. System error (may be inaccurate): {}",
+				std::strerror(errno)
+			);
 
-		return contents;
+		Log::ErrorF("Failed to read file '{}': {}", actualPath, error);
+
+		if (Success)
+			*Success = false;
+
+		if (ErrorMessage)
+			*ErrorMessage = error;
+
+		return "";
 	}
 }
 
@@ -75,7 +89,6 @@ bool FileRW::WriteFile(
 )
 {
 	std::string path = FileRW::MakePathCwdRelative(ShortPath);
-
 	std::ofstream file(path.c_str(), std::ios::binary);
 
 	if (file && file.is_open())
@@ -87,13 +100,23 @@ bool FileRW::WriteFile(
 	}
 	else
 	{
+		std::string error;
+
+		if (file.bad())
+			error = std::format(
+				"Fatal I/O error (badbit), e.x.: hardware error, stream error, disk full, etc. System error (may be inaccurate): {}",
+				std::strerror(errno)
+			);
+		else
+			error = std::format(
+				"Non-fatal I/O error (failbit), e.x.: can't access path due to lacking permissions, invalid path, etc. System error (may be inaccurate): {}",
+				std::strerror(errno)
+			);
+
+		Log::ErrorF("Failed to write {} bytes to file '{}': {}", Contents.size(), path, error);
+
 		if (ErrorMessage)
-		{
-			if (file.bad())
-				*ErrorMessage = "Fatal I/O error (badbit), e.x.: hardware error, disk full, etc";
-			else
-				*ErrorMessage = "Non-fatal I/O error (failbit), e.x.: can't access path due to lacking permissions, invalid path, etc";
-		}
+			*ErrorMessage = error;
 
 		return false;
 	} 
@@ -121,8 +144,44 @@ bool FileRW::WriteFileCreateDirectories(
 	return FileRW::WriteFile(path, Contents, ErrorMessage);
 }
 
+static std::unordered_map<std::string, std::string> s_AliasMap;
+static std::string s_CwdAliasing;
+
+void FileRW::DefineAlias(const std::string& Alias, const std::string& Path)
+{
+	s_AliasMap[Alias] = Path;
+}
+
+void FileRW::MakeCwdAliasOf(const std::string& Alias)
+{
+	s_CwdAliasing = Alias;
+}
+
 std::string FileRW::MakePathCwdRelative(std::string Path)
 {
+	if (Path.size() == 0)
+	{
+		Log::Warning("`MakePathCwdRelative` given a path 0 bytes in length!");
+		return Path;
+	}
+
+	if (Path[0] == '@')
+	{
+		size_t aliasEnd = Path.find_first_of('/');
+		std::string alias = Path.substr(1, aliasEnd - 1);
+		const auto& aliasIt = s_AliasMap.find(alias);
+
+		if (aliasIt == s_AliasMap.end())
+			Log::ErrorF("Invalid alias '{}' in path '{}'", alias, Path);
+
+		Path = aliasIt->second + Path.substr(aliasEnd, Path.size() - aliasEnd);
+	}
+	else if (s_CwdAliasing.size() > 0)
+	{
+		if (Path[0] == '.' && Path.size() > 1)
+			Path = s_CwdAliasing + Path.substr(1, Path.size() - 1);
+	}
+
 	std::string resdir = EngineJsonConfig.type() != nlohmann::json::value_t::null
 							? EngineJsonConfig.value("ResourcesDirectory", "resources/")
 							: "resources/";
@@ -137,7 +196,7 @@ std::string FileRW::MakePathCwdRelative(std::string Path)
 	// 19/08/2025: `~` is a shortcut for `/home/<USERNAME>` on linux
 	size_t whereRes = Path.find(resdir);
 
-	if ((Path[0] != '.' && Path[0] != '/' && Path[0] != '~' && Path[1] != ':')
+	if ((Path[0] != '.' && Path[0] != '/' && Path[0] != '~' && (Path.size() < 2 || Path[1] != ':'))
 		&& whereRes == std::string::npos
 	)
 		Path.insert(0, resdir);
@@ -154,16 +213,22 @@ std::string FileRW::MakePathCwdRelative(std::string Path)
 
 std::string FileRW::MakePathAbsolute(std::string Path)
 {
+	if (Path.size() == 0)
+	{
+		Log::Warning("`MakePathAbsolute` given a path 0 bytes in length!");
+		return Path;
+	}
+
 	std::string cwd = MakePathCwdRelative(Path);
 	std::string abs = cwd;
 
-	if (abs[0] != '/' && abs[0] != '~' && abs[1] != ':')
+	if (abs[0] != '/' && abs[0] != '~' && (abs.size() < 2 || abs[1] != ':'))
 		abs = (std::filesystem::current_path() / abs).string();
 
 #ifdef _WIN32
-	for (size_t i  = 0; i < abs.size(); i++)
-		if (abs[i] == '/')
-			abs[i] = '\\';
+	for (char& c : abs)
+		if (c == '/')
+			c = '\\';
 #endif
 
 	return abs;

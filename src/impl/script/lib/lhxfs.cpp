@@ -40,14 +40,20 @@ static int fs_read(lua_State* L)
     const char* path = luaL_checkstring(L, 1);
 
     bool success = true;
-    std::string contents = FileRW::ReadFile(path, &success);
+	std::string errorMessage;
+    std::string contents = FileRW::ReadFile(path, &success, &errorMessage);
 
 	if (success)
+	{
 		lua_pushlstring(L, contents.data(), contents.size());
+		return 1;
+	}
 	else
+	{
 		lua_pushnil(L);
-	
-	return 1;
+		lua_pushlstring(L, errorMessage.data(), errorMessage.size());
+		return 2;
+	}
 }
 
 static int fs_listdir(lua_State* L)
@@ -123,11 +129,65 @@ static int fs_isdirectory(lua_State* L)
 	return 1;
 }
 
+static int fs_definealias(lua_State* L)
+{
+	FileRW::DefineAlias(luaL_checkstring(L, 1), luaL_checkstring(L, 2));
+	return 0;
+}
+
+static int fs_makecwdaliasof(lua_State* L)
+{
+	FileRW::MakeCwdAliasOf(luaL_checkstring(L, 1));
+	return 1;
+}
+
+static int fs_cwd(lua_State* L)
+{
+	std::string cwd = std::filesystem::current_path().string();
+	lua_pushlstring(L, cwd.data(), cwd.size());
+	return 1;
+}
+
+static int fs_copy(lua_State* L)
+{
+	std::error_code ec;
+
+	std::filesystem::copy(
+		FileRW::MakePathCwdRelative(luaL_checkstring(L, 1)),
+		FileRW::MakePathCwdRelative(luaL_checkstring(L, 2)),
+		ec
+	);
+
+	if (ec)
+	{
+		lua_pushboolean(L, false);
+		lua_pushstring(L, ec.message().c_str());
+		return 2;
+	}
+	else
+	{
+		lua_pushboolean(L, true);
+		return 1;
+	}
+}
+
+static int fs_mkdir(lua_State* L)
+{
+	std::error_code ec;
+	lua_pushboolean(L, std::filesystem::create_directory(FileRW::MakePathCwdRelative(luaL_checkstring(L, 1))));
+
+	if (ec)
+	{
+		lua_pushstring(L, ec.message().c_str());
+		return 2;
+	}
+
+	return 1;
+}
+
 #include <tinyfiledialogs.h>
 
 #include "script/ScriptEngine.hpp"
-
-
 
 static std::string normalizePath(std::string path)
 {
@@ -251,6 +311,11 @@ static const luaL_Reg fs_funcs[] =
     { "listdir", fs_listdir },
     { "isfile", fs_isfile },
     { "isdirectory", fs_isdirectory },
+	{ "definealias", fs_definealias },
+	{ "makecwdaliasof", fs_makecwdaliasof },
+	{ "cwd", fs_cwd },
+	{ "copy", fs_copy },
+	{ "mkdir", fs_mkdir },
 
     { "promptsave", fs_promptsave },
     { "promptopen", fs_promptopen },

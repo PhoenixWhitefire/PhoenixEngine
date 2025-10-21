@@ -96,7 +96,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 	m_File = gltfFilePath;
 
 	bool fileExists = true;
-	std::string textData = FileRW::ReadFile(gltfFilePath, &fileExists, false);
+	std::string textData = FileRW::ReadFile(gltfFilePath, &fileExists);
 
 	if (!fileExists)
 		RAISE_RTF("Failed to load Model, file '{}' not found", AssetPath);

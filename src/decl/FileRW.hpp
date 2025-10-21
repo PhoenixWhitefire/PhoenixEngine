@@ -6,14 +6,13 @@
 namespace FileRW
 {
 	/*
-	Reads and returns the contents of a file
-
-	@param const std::string& FilePath: The path of the file. *IMPORTANT:* If it doesn't start with ".",
-	it will automatically have "resources/" or whatever the resources directory is prepended to it (EXCEPT if 3rd arg is false).
-	@param OPTIONAL bool* DoesFileExist: Gets set to true or false depending on whether the file exists.
-	ReadFile will always return an empty string if the file does not exist, hence this parameters' existence.
+		Reads and returns the contents of a file
+		@param ShortPath The path to the file to read. "resources/" is automatically prepended to it, unless it begins with "."
+			or an alias
+		@param Success An optional pointer to a bool used to indicate whether the file was read succesfully. Returns an empty string if unsuccessful
+		@param ErrorMessage An optional pointer to an string which will be filled with an error message upon failure
 	*/
-	std::string ReadFile(const std::string&, bool* DoesFileExist = nullptr, bool PrependResDir = true);
+	std::string ReadFile(const std::string& ShortPath, bool* Success = nullptr, std::string* ErrorMessage = nullptr);
 
 	bool WriteFile(
 		const std::string& FilePath,
@@ -26,6 +25,13 @@ namespace FileRW
 		const std::string_view& Contents,
 		std::string* ErrorMessage = nullptr
 	);
+
+	// Defines an alias to be used in the beginning of a path
+	// E.x.: with `::DefineAlias("modules", "scripts/modules")` the path
+	// "@modules/MyModule.luau" resolves to "scripts/modules/MyModule.luau"
+	void DefineAlias(const std::string& Alias, const std::string& Path);
+	// When the path given begins with a `.` to indicate CWD, set the alias
+	void MakeCwdAliasOf(const std::string&);
 
 	std::string MakePathCwdRelative(std::string);
 	std::string MakePathAbsolute(std::string);

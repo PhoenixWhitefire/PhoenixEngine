@@ -3123,10 +3123,12 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 	debuggerGuiIO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	debuggerGuiIO.IniFilename = "debugger-layout.ini";
 
+	ImGui_ImplGlfw_Shutdown();
+
 	ImGui::SetCurrentContext(debuggerContext);
 
-	PHX_ENSURE_MSG(ImGui_ImplGlfw_InitForOpenGL(engine->Window, false), "Failed to initialize Dear ImGui for GLFW");
-	PHX_ENSURE_MSG(ImGui_ImplOpenGL3_Init("#version 460"), "Failed to initialize Dear ImGui for OpenGL");
+	PHX_ENSURE_MSG(ImGui_ImplGlfw_InitForOpenGL(engine->Window, true), "Failed to initialize Dear ImGui for GLFW on Debugger init");
+	PHX_ENSURE_MSG(ImGui_ImplOpenGL3_Init("#version 460"), "Failed to initialize Dear ImGui for OpenGL on Debugger init");
 
 	double debuggerLastSecond = GetRunningTime();
 	double debuggerLastFrame = GetRunningTime();
@@ -3478,4 +3480,6 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::SetCurrentContext(prevContext);
 	ImGui::DestroyContext(debuggerContext);
+
+	PHX_ENSURE_MSG(ImGui_ImplGlfw_InitForOpenGL(engine->Window, true), "Failed to initialize Dear ImGui for GLFW on Debugger shutdown");
 }

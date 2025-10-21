@@ -220,13 +220,18 @@ declare engine: {
   maxframerate: ((  ) -> (number))
 }
 declare fs: {
-  read: (( Path: string ) -> (string?)),
-  promptopen: (( DefaultLocation: string?, Filter: ( { string } | string)?, FilterName: string?, AllowMultipleFiles: boolean? ) -> ({ string })),
-  isfile: (( string ) -> (boolean)),
-  promptsave: (( DefaultLocation: string?, Filter: ( { string } | string)?, FilterName: string? ) -> (string)),
+  makecwdaliasof: (( Alias: string ) -> ()),
   write: (( Path: string, Contents: string ) -> (boolean, string?)),
+  isfile: (( string ) -> (boolean)),
+  listdir: (( Path: string, Filter: ('a' | 'f' | 'd')? ) -> ({ [string]: 'f' | 'd' })),
+  read: (( Path: string ) -> (string?)),
+  copy: (( From: string, To: string ) -> (boolean, string?)),
+  mkdir: (( Path: string ) -> (boolean, string?)),
+  promptopen: (( DefaultLocation: string?, Filter: ( { string } | string)?, FilterName: string?, AllowMultipleFiles: boolean? ) -> ({ string })),
+  promptsave: (( DefaultLocation: string?, Filter: ( { string } | string)?, FilterName: string? ) -> (string)),
+  definealias: (( Alias: string, For: string ) -> ()),
   isdirectory: (( string ) -> (boolean)),
-  listdir: (( Path: string, Filter: ('a' | 'f' | 'd')? ) -> ({ [string]: 'f' | 'd' }))
+  cwd: ((  ) -> (string))
 }
 declare imgui: {
   setcursorposition: (( X: number, Y: number ) -> ()),

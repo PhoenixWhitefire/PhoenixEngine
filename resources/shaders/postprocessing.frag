@@ -65,6 +65,13 @@ void main()
 		UVOffset = (texture(DistortionTexture, Frag_UV).xy - Center) * (sin(Time) * 5);
 
 	vec2 sampleUV = Frag_UV + UVOffset;
+
+	if (sampleUV.x > 1.f || sampleUV.x < 0.f || sampleUV.y > 1.f || sampleUV.y < 0.f)
+	{
+		FragColor = vec4(0.f, 1.f, 0.f, 1.f);
+		return;
+	}
+
 	vec2 actualSamplePixel = ivec2(sampleUV * TextureSize);
 	vec3 Color = texture(Texture, sampleUV).xyz;
 	

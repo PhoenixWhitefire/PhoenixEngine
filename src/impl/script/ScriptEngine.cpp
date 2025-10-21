@@ -1503,8 +1503,7 @@ static void requireConfigInit(luarequire_Configuration* config)
 			return 1;
 		};
 
-	// 13/10/2025 https://github.com/luau-lang/luau/issues/2046
-	config->get_alias = nullptr;
+	assert(!config->get_alias);
 }
 
 // FROM: `ldblib.cpp` 15/08/2025

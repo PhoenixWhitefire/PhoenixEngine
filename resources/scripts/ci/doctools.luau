@@ -178,56 +178,68 @@ local function isTypeValid(type: string) : (boolean, string?)
     return true, nil
 end
 
-local function areMemberTypesValid(member)
-    for _, param in (if typeof(member.In) == "string" then { member.In } else (member.In or {})) do
+local function areMemberTypesValid(member): (boolean, string?)
+    for i, param in (if typeof(member.In) == "string" then { member.In } else (member.In or {})) do
         if typeof(param) == "string" then
-            if not isTypeValid(param) then
-                return false
+            local valid, error = isTypeValid(param)
+            if not valid then
+                return false, `Input param {i}: ` .. assert(error)
             end
         else
             assert(typeof(param) == "table")
 
-            if not isTypeValid(param[1]) then
-                return false
+            local valid, error = isTypeValid(param[1])
+            if not valid then
+                return false, `Input param {i}: ` .. assert(error)
             end
         end
     end
 
-    if not isTypeValid(member.Out or "") then
-        return false
+    local valid, error = isTypeValid(member.Out or "")
+
+    if not valid then
+        return false, `Return value: ` .. assert(error)
     end
 
-    return true
+    return true, nil
 end
 
-local function isLibFullyDescribed(docLib: any)
+local function isLibFullyDescribed(docLib: any, apiDumpLib: any): (boolean, string?)
     if not docLib.Description or #docLib.Description <= 2 then
-        return false
+        return false, "No description for library"
     end
 
-    for _, member in docLib.Members do
+    for name, member in docLib.Members do
         if not member.Description then
-            return false
+            return false, `{name} has no description`
         end
 
         if typeof(member.Description) == "table" then
             if #member.Description == 0 or #member.Description[1] <= 2 then
-                return false
+                return false, `{name} has empty description bulletpoint table`
             end
         else
             assert(typeof(member.Description) == "string")
 
             if #member.Description <= 2 then
-                return false
+                return false, `{name}'s description is too short`
             end
         end
 
-        if not areMemberTypesValid(member :: any) then
-            return false
+        local typesAreValid, error = areMemberTypesValid(member)
+
+        if not typesAreValid then
+            return false, `{name}'s types are not valid: {error}`
         end
     end
 
-    return true
+    for k, _ in apiDumpLib do
+        if not docLib.Members[k] then
+            return false, `{k} is not documented`
+        end
+    end
+
+    return true, nil
 end
 
 local function libTools()
@@ -241,13 +253,18 @@ local function libTools()
         local docLib = docComments.ScriptEnv.Libraries[lib]
         assert(docLib)
 
-        local hadDescription = isLibFullyDescribed(docLib)
+        local hadDescription, missingDescErrorMessage = isLibFullyDescribed(docLib, members)
 
         if not hadDescription then
             imgui.pushstylecolor(0, { 1, 0, 0, 1 })
         end
 
-        if imgui.treenode(lib) then
+        local libtnopen = imgui.treenode(lib)
+        if not hadDescription then
+            imgui.setitemtooltip(assert(missingDescErrorMessage))
+        end
+
+        if libtnopen then
             if not hadDescription then
                 imgui.popstylecolor()
             end
@@ -428,16 +445,19 @@ local function libTools()
     end
 end
 
+local function runDocGen()
+    conf.set("LspDefinitionsGeneratorDoNotShutdown", true);
+    local co, err = loadthreadfromfile("scripts/ci/docs.luau", "DocumentationGenerator")
+    assert(co, err)
+
+    coroutine.resume(co)
+end
+
 game.OnFrameBegin:Connect(function()
     if imgui.begin("Documentation Tools") then
         if imgui.button("Save") then
             fs.write("./gh-assets/wiki/doc-comments.json", json.encode(docComments))
-
-            conf.set("LspDefinitionsGeneratorDoNotShutdown", true);
-            local co, err = loadthreadfromfile("scripts/ci/docs.luau", "LspDefinitionsGenerator")
-            assert(co, err)
-
-            coroutine.resume(co)
+            runDocGen()
         end
     end
     imgui.endw()
@@ -447,3 +467,5 @@ game.OnFrameBegin:Connect(function()
     end
     imgui.endw()
 end)
+
+runDocGen()
