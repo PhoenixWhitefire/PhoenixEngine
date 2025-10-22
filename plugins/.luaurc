@@ -1,0 +1,6 @@
+{
+  "languageMode": "strict",
+  "aliases": {
+    "ed": "../resources/scripts/ed"
+  }
+}
