@@ -139,7 +139,7 @@ void InlayEditor::Initialize(Renderer* renderer)
 	try
 	{
 		bool readSuccess = true;
-		std::string contents = FileRW::ReadFile("./gh-assets/wiki/doc-comments.json", &readSuccess);
+		std::string contents = FileRW::ReadFile("@cwd/gh-assets/wiki/doc-comments.json", &readSuccess);
 
 		if (readSuccess)
 			DocumentationJson = nlohmann::json::parse(contents);
@@ -167,7 +167,7 @@ void InlayEditor::Initialize(Renderer* renderer)
 	try
 	{
 		bool readSuccess = false;
-		std::string contents = FileRW::ReadFile("./apidump.json", &readSuccess);
+		std::string contents = FileRW::ReadFile("@cwd/apidump.json", &readSuccess);
 
 		if (readSuccess)
 			ApiDumpJson = nlohmann::json::parse(contents);
@@ -180,14 +180,14 @@ void InlayEditor::Initialize(Renderer* renderer)
 	}
 
 	bool prologueFound = true;
-	DatatypesDocPrologue = FileRW::ReadFile("./gh-assets/wiki/datatypes-prologue.txt", &prologueFound);
-	PHX_CHECK(prologueFound && "Datatypes prologue - ./gh-assets/wiki/datatypes-prologue.txt");
+	DatatypesDocPrologue = FileRW::ReadFile("@cwd/gh-assets/wiki/datatypes-prologue.txt", &prologueFound);
+	PHX_CHECK(prologueFound && "Datatypes prologue - @cwd/gh-assets/wiki/datatypes-prologue.txt");
 
-	LibrariesDocPrologue = FileRW::ReadFile("./gh-assets/wiki/libraries-prologue.txt", &prologueFound);
-	PHX_CHECK(prologueFound && "Libraries prologue - ./gh-assets/wiki/libraries-prologue.txt");
+	LibrariesDocPrologue = FileRW::ReadFile("@cwd/gh-assets/wiki/libraries-prologue.txt", &prologueFound);
+	PHX_CHECK(prologueFound && "Libraries prologue - @cwd/gh-assets/wiki/libraries-prologue.txt");
 
-	GlobalsDocPrologue = FileRW::ReadFile("./gh-assets/wiki/globals-prologue.txt", &prologueFound);
-	PHX_CHECK(prologueFound && "Globals prologue - ./gh-assets/wiki/globals-prologue.txt");
+	GlobalsDocPrologue = FileRW::ReadFile("@cwd/gh-assets/wiki/globals-prologue.txt", &prologueFound);
+	PHX_CHECK(prologueFound && "Globals prologue - @cwd/gh-assets/wiki/globals-prologue.txt");
 
 	ScriptEngine::L::DebugBreak = &debugBreakHook;
 
@@ -229,33 +229,37 @@ static std::string getFileDirectory(const std::string& FilePath)
 #define SAVINGTAG ">///SAVING...///<"
 
 static bool textEditorAskSaveFileAs(
+	bool AskSave,
 	const std::string& Contents,
 	const std::string& Reason = "Do you want to save the following file?",
 	bool isError = false
 )
 {
-	std::string message = std::format(
-		"{}\n\nLength: {} characters\nBody:\n{}{}",
-		Reason,
-		Contents.size(), Contents.substr(0, std::min((size_t)50ull, Contents.size())),
-		Contents.size() > (size_t)50ull ? "\n... (truncated)" : ""
-	);
-	Log::InfoF("`textEditorAskSaveFileAs` prompting: {}", message);
+	if (AskSave)
+	{
+		std::string message = std::format(
+			"{}\n\nLength: {} characters\nBody:\n{}{}",
+			Reason,
+			Contents.size(), Contents.substr(0, std::min((size_t)50ull, Contents.size())),
+			Contents.size() > (size_t)50ull ? "\n... (truncated)" : ""
+		);
+		Log::InfoF("`textEditorAskSaveFileAs` prompting: {}", message);
 
-	int choice = tinyfd_messageBox(
-		"Save File?",
-		message.c_str(),
-		"yesno",
-		isError ? "error" : "question",
-		1
-	);
+		int choice = tinyfd_messageBox(
+			"Save File?",
+			message.c_str(),
+			"yesno",
+			isError ? "error" : "question",
+			1
+		);
 
-	if (choice == 0)
-		return false;
+		if (choice == 0)
+			return false;
+	}
 
 	const char* saveTargetRaw = tinyfd_saveFileDialog(
 		"Save Text Document",
-		std::filesystem::current_path().string().c_str(),
+		FileRW::MakePathAbsolute("@projres/").c_str(),
 		0,
 		nullptr,
 		nullptr
@@ -280,6 +284,7 @@ static bool textEditorAskSaveFileAs(
 	{
 		Log::ErrorF("`textEditorAskSaveFileAs` save failed with {} to {}, re-prompting", savePath, errMessage);
 		return textEditorAskSaveFileAs(
+			true,
 			Contents,
 			std::format("Couldn't save to file '{}' because of error {}\nRetry?", savePath, errMessage),
 			true
@@ -293,7 +298,7 @@ static bool textEditorAskSaveFileAs(
 
 static bool TextEditorFileModified = false;
 
-static void textEditorSaveFile()
+static void textEditorSaveFile(bool AskSave = true)
 {
 	if (!TextEditorEntryBuffer)
 	{
@@ -335,14 +340,11 @@ static void textEditorSaveFile()
 
 	if (textEditorFile == UNSAVEDTAG)
 	{
-		if (contents.empty())
-			return;
-
 		static uint32_t ErrCount = 0;
 		ErrCount++;
 
 		TextEdOpenFiles[TextEdCurrentFileTab] = SAVINGTAG;
-		if (!textEditorAskSaveFileAs(contents))
+		if (!textEditorAskSaveFileAs(AskSave, contents))
 			TextEdOpenFiles[TextEdCurrentFileTab] = UNSAVEDTAG;
 	}
 	else
@@ -352,11 +354,14 @@ static void textEditorSaveFile()
 		std::string realSaveLoc = FileRW::MakePathCwdRelative(textEditorFile);
 
 		Log::InfoF("Saving file to {}", realSaveLoc);
-		if (!FileRW::WriteFile(realSaveLoc, contents))
+		
+		std::string error;
+		if (!FileRW::WriteFile(realSaveLoc, contents, &error))
 		{
 			textEditorAskSaveFileAs(
+				true,
 				contents,
-				std::format("Couldn't save to {}. YES to choose a different location, NO to discard file", realSaveLoc)
+				std::format("Couldn't save to {}: {}.\nClick YES to choose a different location, or NO to discard the file", error, realSaveLoc)
 			);
 		}
 	}
@@ -459,10 +464,10 @@ static void renderTextEditor()
 
 		std::string textEditorFile = TextEdOpenFiles[TextEdCurrentFileTab];
 
-		if (ImGui::MenuItem("Save", NULL, nullptr))
+		if (ImGui::MenuItem("Save", nullptr, nullptr))
 		{
 			TextEditorFileModified = true; // forces a save
-			textEditorSaveFile();
+			textEditorSaveFile(false);
 		}
 
 		if (ImGui::BeginMenu("Recent", TextEditorRecentFiles.size() > 0) || ImGui::IsItemHovered())
@@ -507,8 +512,8 @@ static void renderTextEditor()
 		ImGui::PushID((int)i);
 
 		std::string label = TextEdOpenFiles.size() > i ? TextEdOpenFiles[i] : "+";
-		if (label.find("resources/") == 0)
-			label = label.substr(strlen("resources/"), label.size() - strlen("resources/"));
+		if (size_t resLoc = label.find("resources/"); resLoc != std::string::npos)
+			label = label.substr(resLoc + strlen("resources/"), label.size() - resLoc);
 
 		if (i == TextEdCurrentFileTab && HoveredId == i && label.size() > 5)
 		{
@@ -661,7 +666,10 @@ static void renderTextEditor()
 			);
 		}
 
-		int line = 0;
+		int line = 1;
+
+		ImGui::SetCursorPos({ startPos.x, startPos.y });
+		ImGui::Text("1");
 
 		for (size_t i = 0; i < TextEditorEntryBufferCapacity; i++)
 		{
@@ -1538,12 +1546,12 @@ static Texture getIconForComponent(EntityComponent Ec)
 {
 	TextureManager* texManager = TextureManager::Get();
 
-	std::string classIconPath = "textures/editor-icons/" + std::string(s_EntityComponentNames[(size_t)Ec]) + ".png";
+	std::string classIconPath = "@editres/textures/editor-icons/" + std::string(s_EntityComponentNames[(size_t)Ec]) + ".png";
 	Texture tex = texManager->GetTextureResource(texManager->LoadTextureFromPath(classIconPath, true, false));
 
 	if (tex.Status == Texture::LoadStatus::Failed && tex.ImagePath.find("fallback") == std::string::npos)
 	{
-		const std::string& fallbackPath = "textures/editor-icons/fallback.png";
+		const std::string& fallbackPath = "@editres/textures/editor-icons/fallback.png";
 		Texture& fallback = texManager->GetTextureResource(texManager->LoadTextureFromPath(fallbackPath, true, false));
 		texManager->Assign(fallback, classIconPath);
 		tex = fallback;
@@ -2621,36 +2629,19 @@ static void renderProperties()
 				{
 					std::string curValStr = curVal.ToString();
 
-					if (propName == "Class")
+					if (curVal.Type == Reflection::ValueType::Matrix)
 					{
-						static TextureManager* texManager = TextureManager::Get();
-						std::string classIconPath = "textures/editor-icons/" + curValStr + ".png";
+						ImGui::Text("%s: ", propNameCStr);
 
-						ImGui::Text("Class: ");
-						ImGui::SameLine();
+						ImGui::Indent();
 
-						ImGui::Image(
-							texManager->GetTextureResource(texManager->LoadTextureFromPath(classIconPath)).GpuId,
-							ImVec2(16, 16)
-						);
-						ImGui::SameLine();
-
+						curValStr.insert(curValStr.begin() + curValStr.find_first_of("Ang"), '\n');
 						ImGui::TextUnformatted(curValStr.c_str());
+
+						ImGui::Unindent();
 					}
 					else
-						if (curVal.Type == Reflection::ValueType::Matrix)
-						{
-							ImGui::Text("%s: ", propNameCStr);
-
-							ImGui::Indent();
-
-							curValStr.insert(curValStr.begin() + curValStr.find_first_of("Ang"), '\n');
-							ImGui::TextUnformatted(curValStr.c_str());
-
-							ImGui::Unindent();
-						}
-						else
-							ImGui::Text("%s: %s", propNameCStr, curValStr.c_str());
+						ImGui::Text("%s: %s", propNameCStr, curValStr.c_str());
 				}
 
 				propertyTooltip(propName, propToComponent[propName], propDesc->Type);

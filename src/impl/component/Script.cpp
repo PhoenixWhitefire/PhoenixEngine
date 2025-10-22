@@ -262,7 +262,8 @@ bool EcScript::Reload()
 	ZoneTextF("Script: %s\nFile: %s", fullName.c_str(), this->SourceFile.c_str());
 
 	bool fileExists = true;
-	m_Source = FileRW::ReadFile(SourceFile, &fileExists);
+	std::string fileError;
+	m_Source = FileRW::ReadFile(SourceFile, &fileExists, &fileError);
 
 	m_StaleSource = false;
 
@@ -277,8 +278,8 @@ bool EcScript::Reload()
 	{
 		Log::Error(
 			std::format(
-				"Script '{}' references invalid Source File '{}'!",
-				fullName, this->SourceFile
+				"Failed to load '{}' for Script {}: {}",
+				this->SourceFile, fullName, fileError
 			)
 		);
 

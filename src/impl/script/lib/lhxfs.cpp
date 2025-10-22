@@ -18,9 +18,12 @@ static int fs_write(lua_State* L)
 {
     const char* path = luaL_checkstring(L, 1);
 	const char* contents = luaL_checkstring(L, 2);
+	bool createDirectories = luaL_optboolean(L, 3, false);
 	std::string errorMessage;
 
-    bool success = FileRW::WriteFileCreateDirectories(path, contents, &errorMessage);
+    bool success = createDirectories ?
+					FileRW::WriteFileCreateDirectories(path, contents, &errorMessage)
+					: FileRW::WriteFile(path, contents, &errorMessage);
 
 	if (success)
 	{
@@ -131,7 +134,11 @@ static int fs_isdirectory(lua_State* L)
 
 static int fs_definealias(lua_State* L)
 {
-	FileRW::DefineAlias(luaL_checkstring(L, 1), luaL_checkstring(L, 2));
+	const char* aliasName = luaL_checkstring(L, 1);
+	if (aliasName[0] == '@')
+		luaL_error(L, "invalid alias name '%s' - alias names should not begin with '@' as it is most likely a misunderstanding", aliasName);
+
+	FileRW::DefineAlias(aliasName, luaL_checkstring(L, 2));
 	return 0;
 }
 
@@ -152,16 +159,19 @@ static int fs_copy(lua_State* L)
 {
 	std::error_code ec;
 
+	std::string from = FileRW::MakePathCwdRelative(luaL_checkstring(L, 1));
+	std::string to = FileRW::MakePathCwdRelative(luaL_checkstring(L, 2));
 	std::filesystem::copy(
-		FileRW::MakePathCwdRelative(luaL_checkstring(L, 1)),
-		FileRW::MakePathCwdRelative(luaL_checkstring(L, 2)),
+		from,
+		to,
+		std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing,
 		ec
 	);
 
 	if (ec)
 	{
 		lua_pushboolean(L, false);
-		lua_pushstring(L, ec.message().c_str());
+		lua_pushfstring(L, "'%s' -> '%s': %s", from.c_str(), to.c_str(), ec.message().c_str());
 		return 2;
 	}
 	else
@@ -174,15 +184,61 @@ static int fs_copy(lua_State* L)
 static int fs_mkdir(lua_State* L)
 {
 	std::error_code ec;
-	lua_pushboolean(L, std::filesystem::create_directory(FileRW::MakePathCwdRelative(luaL_checkstring(L, 1))));
+	std::string realPath = FileRW::MakePathCwdRelative(luaL_checkstring(L, 1));
+	std::filesystem::create_directory(realPath, ec);
 
 	if (ec)
 	{
+		lua_pushboolean(L, false);
+		lua_pushfstring(L, "'%s': %s", realPath.c_str(), ec.message().c_str());
+		return 2;
+	}
+	else
+	{
+		lua_pushboolean(L, true);
+		return 1;
+	}
+}
+
+static int fs_rename(lua_State* L)
+{
+	std::error_code ec;
+
+	std::string path = FileRW::MakePathCwdRelative(luaL_checkstring(L, 1));
+	std::string name = luaL_checkstring(L, 2);
+
+	std::string fullnewpath = path.substr(0, path.find_last_of('/') + 1) + name;
+	std::filesystem::rename(path, fullnewpath, ec);
+
+	if (ec)
+	{
+		lua_pushboolean(L, false);
+		lua_pushfstring(L, "'%s' ren '%s': %s", path.c_str(), fullnewpath.c_str(), ec.message().c_str());
+		return 3;
+	}
+	else
+	{
+		lua_pushboolean(L, true);
+		return 1;
+	}
+}
+
+static int fs_remove(lua_State* L)
+{
+	std::error_code ec;
+	int numRemoved = (int)std::filesystem::remove_all(FileRW::MakePathCwdRelative(luaL_checkstring(L, 1)), ec);
+
+	if (ec)
+	{
+		lua_pushboolean(L, false);
 		lua_pushstring(L, ec.message().c_str());
 		return 2;
 	}
-
-	return 1;
+	else
+	{
+		lua_pushinteger(L, numRemoved);
+		return 1;
+	}
 }
 
 #include <tinyfiledialogs.h>
@@ -304,6 +360,21 @@ static int fs_promptopen(lua_State* L)
 	return 1;
 }
 
+static int fs_promptopenfolder(lua_State* L)
+{
+	const char* path = tinyfd_selectFolderDialog(
+		luaL_checkstring(L, 1),
+		luaL_optstring(L, 2, nullptr)
+	);
+
+	if (path)
+		lua_pushstring(L, path);
+	else
+		lua_pushnil(L);
+
+	return 1;
+}
+
 static const luaL_Reg fs_funcs[] =
 {
     { "write", fs_write },
@@ -316,9 +387,12 @@ static const luaL_Reg fs_funcs[] =
 	{ "cwd", fs_cwd },
 	{ "copy", fs_copy },
 	{ "mkdir", fs_mkdir },
+	{ "rename", fs_rename },
+	{ "remove", fs_remove },
 
     { "promptsave", fs_promptsave },
     { "promptopen", fs_promptopen },
+	{ "promptopenfolder", fs_promptopenfolder },
     { NULL, NULL }
 };
 

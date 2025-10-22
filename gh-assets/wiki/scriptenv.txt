@@ -39,6 +39,9 @@ Additional types with methods and properties
 #### `Connect((any) -> (any)): EventConnection`
 * Connect a callback to the Event
 
+#### `WaitUntil(): any`
+* Yields the thread until the Event is fired
+
 ### `GameObject`
 
 * A Game Object
@@ -165,6 +168,9 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * This is a blocking operation and no scripts or other parts of the Engine run until the message is dismissed
 * Avoid using quotes (`'` and `"`) or backticks (`\``) in the `Message`
 
+#### `engine.unloadtexture(Path: string): `
+* Unloads the given texture from the Engine's cache
+
 #### `engine.setvsync(VSyncEnabled: boolean): `
 * Enables/disables VSync
 
@@ -234,21 +240,30 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `fs.makecwdaliasof(Alias: string): `
 * Changes the meaning of paths beginning with `.` to act as aliases to the given path instead of referring to the CWD
 
-#### `fs.write(Path: string, Contents: string): boolean, string?`
+#### `fs.write(Path: string, Contents: string, CreateDirectories: boolean? [ false ]): boolean, string?`
 * Overwrites/creates the file at `Path` with the provided `Contents`
 * Returns whether the operation was successful
+* If `CreateDirectories` is `true`, will automatically create missing intermediate directories to the file
 
 #### `fs.isfile(string): boolean`
 * Returns whether the specified Path refers to a file
+
+#### `fs.rename(Path: string, NewName: string): boolean, string?`
+* Renames the file at the given `Path` to have the `NewName`
+
+#### `fs.remove(Path: string): number | false, string?`
+* Removes everything at the given path
+* On success, returns the number of items removed
+* On failure, returns `false` and an error message
 
 #### `fs.listdir(Path: string, Filter: ('a' | 'f' | 'd')? [ 'a' ]): { [string]: 'f' | 'd' }`
 * Returns a table of all the entries in the specified directory
 * The keys of the table is the path of the entry, while the values are the type of the entry
 * `f` is file, `d` is directory, and `a` is all
 
-#### `fs.read(Path: string): string?`
+#### `fs.read(Path: string): string?, string?`
 * Reads the file at the given address, and returns the contents
-* If the file could not be read, returns `nil`
+* If the file could not be read, returns `nil` and an error message
 
 #### `fs.copy(From: string, To: string): boolean, string?`
 * Copies the file/directory at the given path to a new path
@@ -295,6 +310,9 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `imgui.image(ImagePath: string, Size: { number }?, FlipVertically: boolean? [ false ], TintColor: { number }? [ { 1, 1, 1, 1 } ]): `
 * `ImGui::Image`
 
+#### `imgui.openpopup(Name: string): `
+* `ImGui::OpenPopup`
+
 #### `imgui.settooltip(Tooltip: string): `
 * `ImGui::SetTooltip`
 
@@ -310,6 +328,10 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `imgui.checkbox(Name: string, Value: boolean): boolean`
 * `ImGui::Checkbox`
 
+#### `imgui.windowposition(): number, number`
+* Returns the position of the current Dear ImGui window (`ImGui::GetWindowPos`)
+* To *set* the position of the window, use `.setwindowposition`
+
 #### `imgui.setnextwindowsize(Width: number, Height: number): `
 * `ImGui::SetNextWindowSize`
 
@@ -319,6 +341,12 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `imgui.setviewportdockspace(PositionX: number, PositionY: number, SizeX: number, SizeY: number): `
 * Sets the region of the window in which Dear ImGui windows can be docked
 
+#### `imgui.windowhovered(): boolean`
+* `ImGui::IsWindowHovered`
+
+#### `imgui.sameline(): `
+* `ImGui::SameLine`
+
 #### `imgui.begin(WindowTitle: string, WindowFlags: string? [ "" ]): boolean`
 * `ImGui::Begin`
 * `WindowFlags` may be a combination of any of the following sequences, optionally separated by ' ' or '|' characters: `nt` (no titlebar), `nr` (no resize), `nm` (no move), `nc` (no collapse), `ns` (no saved settings), `ni` (no interact), `h` (horizontal scrolling)
@@ -326,53 +354,57 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `imgui.inputnumber(Text: string, Value: number): number`
 * `ImGui::InputDouble`
 
+#### `imgui.treepop(): `
+* `ImGui::TreePop`
+
 #### `imgui.separator(): `
 * `ImGui::Separator`
+
+#### `imgui.treenode(Text: string): boolean`
+* `ImGui::TreeNode`
 
 #### `imgui.setnextwindowopen(Open: boolean? [ true ]): `
 * `ImGui::SetNextWindowCollapsed(!Open)`
 
-#### `imgui.sameline(): `
-* `ImGui::SameLine`
+#### `imgui.endpopup(): `
+* `ImGui::EndPopup`
 
-#### `imgui.windowposition(): number, number`
-* Returns the position of the current Dear ImGui window (`ImGui::GetWindowPos`)
-* To *set* the position of the window, use `.setwindowposition`
+#### `imgui.textsize(Text: string): number, number`
+* `ImGui::CalcTextSize`
 
-#### `imgui.windowhovered(): boolean`
-* `ImGui::IsWindowHovered`
+#### `imgui.textlink(Text: string): boolean`
+* `ImGui::TextLink`
 
 #### `imgui.endw(): `
 * `ImGui::End`, `endw` and not `end` because `end` is a Luau keyword
 
-#### `imgui.setnextwindowposition(X: number, Y: number): `
-* `ImGui::SetNextWindowPos
+#### `imgui.text(Text: string): `
+* `ImGui::Text`
 
-#### `imgui.pushstylecolor(StyleIndex: number, Color: { number }): `
-* `ImGui::PushStyleColor`
-* `Color` is an array with 4 numbers representing R, G, B, and A
+#### `imgui.combo(Text: string, Options: { string }, CurrentOption: number): number`
+* `ImGui::Combo`. Returns the selected option index
 
 #### `imgui.cursorposition(): number, number`
 * Returns the current position of the Dear ImGui element cursor within the current window
 * To *set* the cursor position, use `.setcursorposition`
 
-#### `imgui.treepop(): `
-* `ImGui::TreePop`
+#### `imgui.stylecolors(Theme: 'l' | 'd'): `
+* `ImGui::StyleColorsDark`/`ImGui::StyleColorsLight`
 
-#### `imgui.treenode(Text: string): boolean`
-* `ImGui::TreeNode`
+#### `imgui.setwindowsize(SizeX: number, SizeY: number): `
+* Sets the size of the current Dear ImGui window
 
-#### `imgui.textlink(Text: string): boolean`
-* `ImGui::TextLink`
+#### `imgui.setnextwindowfocus(): `
+* `ImGui::SetNextWindowFocus`
 
-#### `imgui.text(Text: string): `
-* `ImGui::Text`
+#### `imgui.setnextwindowposition(X: number, Y: number): `
+* `ImGui::SetNextWindowPos
 
 #### `imgui.setviewportdockspacedefault(): `
 * Reverts the region of the window in which Dear ImGui windows can be docked to the default settings
 
-#### `imgui.stylecolors(Theme: 'l' | 'd'): `
-* `ImGui::StyleColorsDark`/`ImGui::StyleColorsLight`
+#### `imgui.setitemtooltip(Text: string): `
+* `ImGui::SetItemTooltip`
 
 #### `imgui.beginchild(Name: string, Width: number? [ 0 ], Height: number? [ 0 ], ChildFlags: string? [ "" ], WindowFlags: string? [ "" ]): boolean`
 * `ImGui::BeginChild`
@@ -382,43 +414,20 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `imgui.popid(): `
 * `ImGui::PopID`
 
-#### `imgui.setwindowsize(SizeX: number, SizeY: number): `
-* Sets the size of the current Dear ImGui window
+#### `imgui.separatortext(Text: string): `
+* `ImGui::SeparatorText`
 
 #### `imgui.urllink(Text: string, Url: string? [ Text ]): boolean`
 * Similar to `imgui.textlink`, however, will open the given URL upon being clicked
 * `Url` will be `Text` if not provided
 * `ImGui::TextLinkOpenUrl`
 
-#### `imgui.setnextwindowfocus(): `
-* `ImGui::SetNextWindowFocus`
-
-#### `imgui.getcontentregionavail(): number, number`
-* `ImGui::GetContentRegionAvail`
-
-#### `imgui.setitemtooltip(Text: string): `
-* `ImGui::SetItemTooltip`
-
-#### `imgui.separatortext(Text: string): `
-* `ImGui::SeparatorText`
+#### `imgui.pushstylecolor(StyleIndex: number, Color: { number }): `
+* `ImGui::PushStyleColor`
+* `Color` is an array with 4 numbers representing R, G, B, and A
 
 #### `imgui.beginmenu(Name: string, Enabled: boolean?): boolean`
 * `ImGui::BeginMenu`
-
-#### `imgui.endchild(): `
-* `ImGui::EndChild`
-
-#### `imgui.combo(Text: string, Options: { string }, CurrentOption: number): number`
-* `ImGui::Combo`. Returns the selected option index
-
-#### `imgui.anyitemactive(): boolean`
-* `ImGui::IsAnyItemActive`
-
-#### `imgui.itemclicked(): boolean`
-* `ImGui::IsItemClicked`
-
-#### `imgui.indent(Indent: number?): `
-* `ImGui::Indent`
 
 #### `imgui.pushid(Id: string): `
 * `ImGui::PushID`
@@ -429,6 +438,30 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `imgui.itemhovered(): boolean`
 * `ImGui::IsItemHovered`
 
+#### `imgui.endchild(): `
+* `ImGui::EndChild`
+
+#### `imgui.beginpopupmodal(Name: string, HasCloseButton: boolean? [ false ]): boolean`
+* `ImGui::BeginPopupModal`
+
+#### `imgui.anyitemactive(): boolean`
+* `ImGui::IsAnyItemActive`
+
+#### `imgui.itemclicked(): boolean`
+* `ImGui::IsItemClicked`
+
+#### `imgui.beginpopup(Name: string): boolean`
+* `ImGui::BeginPopup`
+
+#### `imgui.indent(Indent: number?): `
+* `ImGui::Indent`
+
+#### `imgui.closecurrentpopup(): `
+* `ImGui::CloseCurrentPopup`
+
+#### `imgui.imagebutton(Name: string, Image: string, Size: { number }?): boolean`
+* `ImGui::ImageButton`
+
 #### `imgui.beginfullscreen(Name: string, OffsetX: number? [ 0 ], OffsetY: number? [ 0 ]): `
 * Creates a Dear ImGui window which takes up the entire screen
 
@@ -438,8 +471,8 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `imgui.beginmenubar(): boolean`
 * `ImGui::BeginMenuBar`
 
-#### `imgui.imagebutton(Name: string, Image: string, Size: { number }?): boolean`
-* `ImGui::ImageButton`
+#### `imgui.getcontentregionavail(): number, number`
+* `ImGui::GetContentRegionAvail`
 
 ### `input`
 * Checking player inputs

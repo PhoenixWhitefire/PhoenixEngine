@@ -260,6 +260,7 @@
         "showmessagebox": "function",
         "toolenabled": "function",
         "toolnames": "function",
+        "unloadtexture": "function",
         "windowsize": "function"
       },
       "fs": {
@@ -274,6 +275,8 @@
         "promptopen": "function",
         "promptsave": "function",
         "read": "function",
+        "remove": "function",
+        "rename": "function",
         "write": "function"
       },
       "imgui": {
@@ -284,8 +287,11 @@
         "beginmainmenubar": "function",
         "beginmenu": "function",
         "beginmenubar": "function",
+        "beginpopup": "function",
+        "beginpopupmodal": "function",
         "button": "function",
         "checkbox": "function",
+        "closecurrentpopup": "function",
         "combo": "function",
         "cursorposition": "function",
         "dummy": "function",
@@ -293,6 +299,7 @@
         "endmainmenubar": "function",
         "endmenu": "function",
         "endmenubar": "function",
+        "endpopup": "function",
         "endw": "function",
         "getcontentregionavail": "function",
         "image": "function",
@@ -303,6 +310,7 @@
         "itemclicked": "function",
         "itemhovered": "function",
         "menuitem": "function",
+        "openpopup": "function",
         "popid": "function",
         "popstylecolor": "function",
         "pushid": "function",
@@ -323,6 +331,7 @@
         "stylecolors": "function",
         "text": "function",
         "textlink": "function",
+        "textsize": "function",
         "treenode": "function",
         "treepop": "function",
         "urllink": "function",

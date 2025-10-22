@@ -19,7 +19,8 @@ struct Texture
 		NotAttempted,
 		InProgress,
 		Succeeded,
-		Failed
+		Failed,
+		Unloaded
 	};
 
 	Memory::string<MEMCAT(Texture)> ImagePath{};
@@ -54,31 +55,33 @@ public:
 	static TextureManager* Get();
 
 	/*
-	Goes through all images which are done loading asynchronously and instantiates their texture objects with the ID.
+		Goes through all images which are done loading asynchronously and instantiates their texture objects with the ID.
 	*/
 	void FinalizeAsyncLoadedTextures();
 
 	/*
-	Load texture data from an image file and upload it to the GPU as a GL_TEXTURE_2D
-	@param The image path
-	@param Should it be loaded in a separate thread without freezing the game (default `true`)
-	@return The Texture Resource ID (texture can be queried with `::GetTextureResource`)
+		Load texture data from an image file and upload it to the GPU as a GL_TEXTURE_2D
+		@param The image path
+		@param Should it be loaded in a separate thread without freezing the game (default `true`)
+		@return The Texture Resource ID (texture can be queried with `::GetTextureResource`)
 	*/
 	uint32_t LoadTextureFromPath(const std::string& Path, bool ShouldLoadAsync = true, bool DoBilinearSmoothing = true);
 
 	/*
-	Assign the Texture to the given Name, it's Resource ID will be returned when queried with `::LoadTextureFromPath`
-	IMPORTANT: If the `ResourceId` of the Texture is NOT `UINT32_MAX`, it will replace the Texture at that ID
-	@param The Texture
-	@param It's Internal Name
-	@return It's Texture Resource ID
+		Assign the Texture to the given Name, it's Resource ID will be returned when queried with `::LoadTextureFromPath`
+		IMPORTANT: If the `ResourceId` of the Texture is NOT `UINT32_MAX`, it will replace the Texture at that ID
+		@param The Texture
+		@param It's Internal Name
+		@return It's Texture Resource ID
 	*/
 	uint32_t Assign(const Texture& Texture, const std::string& Name);
 
 	/*
-	Get a Texture by it's Resource ID
+		Get a Texture by it's Resource ID
 	*/
 	Texture& GetTextureResource(uint32_t);
+
+	void UnloadTexture(uint32_t);
 
 private:
 	void m_UploadTextureToGpu(Texture&);

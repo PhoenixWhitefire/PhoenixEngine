@@ -1,4 +1,6 @@
 #include <algorithm>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/component_wise.hpp>
 #include <tracy/Tracy.hpp>
 
 #include "IntersectionLib.hpp"
@@ -77,54 +79,41 @@ IntersectionLib::Intersection IntersectionLib::LineAabb(
 {
 	Intersection result{};
 	result.Occurred = false;
+	
+	glm::vec3 minBound = BbPosition - (BbSize * 0.5f + Padding);
+	glm::vec3 maxBound = BbPosition + (BbSize * 0.5f + Padding);
 
-	float scaleX = 1.f / Vector.x;
-	float scaleY = 1.f / Vector.y;
-	float scaleZ = 1.f / Vector.z;
+	glm::vec3 invDir = 1.0f / glm::max(glm::abs(Vector), glm::vec3(1e-6f));
+	glm::vec3 t1 = (minBound - Origin) * invDir * glm::sign(Vector);
+	glm::vec3 t2 = (maxBound - Origin) * invDir * glm::sign(Vector);
 
-	int signX = sign(scaleX);
-	int signY = sign(scaleY);
-	int signZ = sign(scaleZ);
+	glm::vec3 tmin = glm::min(t1, t2);
+	glm::vec3 tmax = glm::max(t1, t2);
 
-	glm::vec3 bbSizeHalf = BbSize * .5f;
+	float tNear = glm::compMax(tmin);
+	float tFar  = glm::compMin(tmax);
 
-	float nearTimeX = (BbPosition.x - signX * (bbSizeHalf.x + Padding.x) - Origin.x) * scaleX;
-	float nearTimeY = (BbPosition.y - signY * (bbSizeHalf.y + Padding.y) - Origin.y) * scaleY;
-	float nearTimeZ = (BbPosition.z - signZ * (bbSizeHalf.z + Padding.z) - Origin.z) * scaleZ;
-
-	float farTimeX = (BbPosition.x + signX * (bbSizeHalf.x + Padding.x) - Origin.x) * scaleX;
-	float farTimeY = (BbPosition.y + signY * (bbSizeHalf.y + Padding.y) - Origin.y) * scaleY;
-	float farTimeZ = (BbPosition.z + signZ * (bbSizeHalf.z + Padding.z) - Origin.z) * scaleZ;
-
-	if (nearTimeX > farTimeX || nearTimeY > farTimeY || nearTimeZ > farTimeZ)
-		return result;
-
-	float nearTime = std::max(nearTimeX, std::max(nearTimeY, nearTimeZ));
-	float farTime = std::min(farTimeX, std::min(farTimeY, farTimeZ));
-
-	if (nearTime >= 1 || farTime <= 0)
+	if (tFar < 0.f || tNear > tFar)
 		return result;
 
 	// segment is starting inside the object
-	if (nearTime < 0)
+	if (tNear < 0)
 		return result;
 
 	result.Occurred = true;
 
-	result.Time = std::clamp(nearTime, 0.f, 1.f);
+	result.Time = std::clamp(tNear, 0.f, 1.f);
 	result.Position = Origin + (Vector * result.Time);
-	result.Depth = glm::length((1.f - result.Time) * Vector);
+	result.Depth = tFar - tNear;
 
-	if (nearTimeX > nearTimeY)
-		if (nearTimeY > nearTimeZ)
-			result.Normal = glm::vec3(1.f, 0.f, 0.f);
-		else
-			result.Normal = glm::vec3(0.f, 0.f, 1.f);
+	if (tNear == tmin.x)
+		result.Normal = glm::vec3(Vector.x > 0 ? -1 : 1, 0, 0);
+
+	else if (tNear == tmin.y)
+		result.Normal = glm::vec3(0, Vector.y > 0 ? -1 : 1, 0);
+
 	else
-		if (nearTimeY > nearTimeZ)
-			result.Normal = glm::vec3(0.f, 1.f, 0.f);
-		else
-			result.Normal = glm::vec3(0.f, 0.f, 1.f);
+		result.Normal = glm::vec3(0, 0, Vector.z > 0 ? -1 : 1);
 
 	return result;
 }

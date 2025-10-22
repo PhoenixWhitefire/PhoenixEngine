@@ -90,10 +90,12 @@ Index of this file:
 #define IMGUI_IMPL_API              IMGUI_API
 #endif
 
+void hxassert(bool v, const char* msg);
+
 // Helper Macros
 #ifndef IM_ASSERT
 #include <assert.h>
-#define IM_ASSERT(_EXPR)            assert(_EXPR)                               // You can override the default assert handler by editing imconfig.h
+#define IM_ASSERT(_EXPR)            hxassert(_EXPR, #_EXPR)                               // You can override the default assert handler by editing imconfig.h
 #endif
 #define IM_ARRAYSIZE(_ARR)          ((int)(sizeof(_ARR) / sizeof(*(_ARR))))     // Size of a static C-style array. Don't use on pointers!
 #define IM_UNUSED(_VAR)             ((void)(_VAR))                              // Used to silence "unused variable warnings". Often useful as asserts may be stripped out from final builds.

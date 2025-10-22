@@ -887,6 +887,8 @@ int main(int argc, char** argv)
 			doApiDump();
 
 		init();
+		engine.argc = argc;
+		engine.argv = argv;
 
 		engine.Start();
 

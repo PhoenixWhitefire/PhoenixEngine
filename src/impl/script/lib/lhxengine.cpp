@@ -251,6 +251,32 @@ static int engine_showmessagebox(lua_State* L)
     return 1;
 }
 
+#include "asset/TextureManager.hpp"
+
+static int engine_unloadtexture(lua_State* L)
+{
+    TextureManager* texManager = TextureManager::Get();
+    uint32_t resId = texManager->LoadTextureFromPath(luaL_checkstring(L, 1), false);
+    texManager->UnloadTexture(resId);
+
+    return 0;
+}
+
+static int engine_args(lua_State* L)
+{
+    Engine* engine = Engine::Get();
+
+    lua_createtable(L, engine->argc, 0);
+    for (int i = 0; i < engine->argc; i++)
+    {
+        lua_pushinteger(L, i + 1);
+        lua_pushstring(L, engine->argv[i]);
+        lua_settable(L, -3);
+    }
+
+    return 1;
+}
+
 static luaL_Reg engine_funcs[] =
 {
     { "windowsize", engine_windowsize },
@@ -276,6 +302,8 @@ static luaL_Reg engine_funcs[] =
     { "settoolenabled", engine_settoolenabled },
     { "toolenabled", engine_toolenabled },
     { "showmessagebox", engine_showmessagebox },
+    { "unloadtexture", engine_unloadtexture },
+    { "args", engine_args },
     { NULL, NULL }
 };
 

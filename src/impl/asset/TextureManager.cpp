@@ -67,11 +67,13 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 		else
 			fallbackPath = "!Missing";
 
+		uint32_t texId = texture.ResourceId;
 		uint32_t replacementId = this->LoadTextureFromPath(
 			fallbackPath,
 			false
 		);
 
+		texture = GetTextureResource(texId); // in case `m_Textures` got re-alloc'd
 		glDeleteTextures(1, &texture.GpuId);
 
 		Texture& replacement = this->GetTextureResource(replacementId);
@@ -408,25 +410,33 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 	std::string ResDir = EngineJsonConfig["ResourcesDirectory"];
 	std::string ActualPath = FileRW::MakePathCwdRelative(Path);
 
-	auto it = m_StringToTextureId.find(Path);
+	auto it = m_StringToTextureId.find(ActualPath);
+	uint32_t forceResourceId = UINT32_MAX;
 	
 	if (it != m_StringToTextureId.end())
 	{
 		const Texture& texture = m_Textures.at(it->second);
 
-		if (texture.DoBilinearSmoothing != DoBilinearSmoothing)
+		if (texture.Status != Texture::LoadStatus::Unloaded)
 		{
-			for (const Texture& other : m_Textures)
+			if (texture.DoBilinearSmoothing != DoBilinearSmoothing)
 			{
-				if (other.ImagePath == Path && other.DoBilinearSmoothing == DoBilinearSmoothing)
-					return other.ResourceId;
-			}
+				for (const Texture& other : m_Textures)
+				{
+					if (other.ImagePath == ActualPath && other.DoBilinearSmoothing == DoBilinearSmoothing)
+						return other.ResourceId;
+				}
 
-			it = m_StringToTextureId.end();
+				it = m_StringToTextureId.end();
+			}
+		}
+		else
+		{
+			forceResourceId = it->second;
 		}
 	}
 
-	if (it == m_StringToTextureId.end())
+	if (it == m_StringToTextureId.end() || forceResourceId != UINT32_MAX)
 	{
 		uint32_t newGpuId;
 		uint32_t newResourceId = UINT32_MAX;
@@ -437,9 +447,14 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 
 			glGenTextures(1, &newGpuId);
 
-			newResourceId = this->Assign({ ActualPath, UINT32_MAX, newGpuId }, Path);
+			if (forceResourceId == UINT32_MAX)
+				newResourceId = this->Assign({ .ImagePath = ActualPath, .ResourceId = UINT32_MAX }, ActualPath);
+			else
+				newResourceId = forceResourceId;
+
 			newTexture = &this->GetTextureResource(newResourceId);
 			newTexture->DoBilinearSmoothing = DoBilinearSmoothing;
+			newTexture->GpuId = newGpuId;
 
 			glBindTexture(GL_TEXTURE_2D, newTexture->GpuId);
 
@@ -593,6 +608,21 @@ void TextureManager::FinalizeAsyncLoadedTextures()
 			numTexPromises = m_TexPromises.size();
 		}
 	}
+}
+
+void TextureManager::UnloadTexture(uint32_t Id)
+{
+	Texture& tex = GetTextureResource(Id);
+	if (tex.Status == Texture::LoadStatus::Unloaded)
+		return;
+
+	m_StringToTextureId.erase(tex.ImagePath);
+
+	if (tex.GpuId > 0 && tex.GpuId != UINT32_MAX)
+		glDeleteTextures(1, &tex.GpuId);
+	tex.GpuId = GetTextureResource(1).GpuId;
+
+	tex.Status = Texture::LoadStatus::Unloaded;
 }
 
 /*

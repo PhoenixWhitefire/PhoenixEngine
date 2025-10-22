@@ -336,16 +336,47 @@ static int imgui_setnextwindowfocus(lua_State*)
     return 0;
 }
 
+static std::unordered_map<std::string, ImGuiCond> s_ConditionMap =
+{
+    { "none", ImGuiCond_None },
+    { "always", ImGuiCond_Always },
+    { "once", ImGuiCond_Once },
+    { "first-use", ImGuiCond_FirstUseEver },
+    { "appearing", ImGuiCond_Appearing }
+};
+
 static int imgui_setnextwindowposition(lua_State* L)
 {
-    ImGui::SetNextWindowPos({ (float)luaL_checknumber(L, 1), (float)luaL_checknumber(L, 2) });
+    ImGuiCond condition = 0;
+    
+    if (const char* cond = luaL_optstring(L, 3, nullptr))
+    {
+        const auto& it = s_ConditionMap.find(cond);
+        if (it != s_ConditionMap.end())
+            condition = it->second;
+        else
+            luaL_error(L, "Invalid condition '%s'", cond);
+    }
+
+    ImGui::SetNextWindowPos({ (float)luaL_checknumber(L, 1), (float)luaL_checknumber(L, 2) }, condition);
 
     return 0;
 }
 
 static int imgui_setnextwindowsize(lua_State* L)
 {
-    ImGui::SetNextWindowSize({ (float)luaL_checknumber(L, 1), (float)luaL_checknumber(L, 2) });
+    ImGuiCond condition = 0;
+
+    if (const char* cond = luaL_optstring(L, 3, nullptr))
+    {
+        const auto& it = s_ConditionMap.find(cond);
+        if (it != s_ConditionMap.end())
+            condition = it->second;
+        else
+            luaL_error(L, "Invalid condition '%s'", cond);
+    }
+
+    ImGui::SetNextWindowSize({ (float)luaL_checknumber(L, 1), (float)luaL_checknumber(L, 2) }, condition);
 
     return 0;
 }
@@ -683,6 +714,50 @@ static int imgui_setviewportdockspacedefault(lua_State* L)
     return 0;
 }
 
+static int imgui_openpopup(lua_State* L)
+{
+    ImGui::OpenPopup(luaL_checkstring(L, 1));
+    return 0;
+}
+
+static int imgui_closecurrentpopup(lua_State* L)
+{
+    ImGui::CloseCurrentPopup();
+    return 0;
+}
+
+static int imgui_beginpopup(lua_State* L)
+{
+    lua_pushboolean(L, ImGui::BeginPopup(luaL_checkstring(L, 1), strToWindowFlags(L, luaL_optstring(L, 2, ""))));
+    return 1;
+}
+
+static int imgui_endpopup(lua_State* L)
+{
+    ImGui::EndPopup();
+    return 0;
+}
+
+static int imgui_beginpopupmodal(lua_State* L)
+{
+    bool open = true;
+    bool* p_open = nullptr;
+    if (luaL_optboolean(L, 2, false))
+        p_open = &open;
+
+    lua_pushboolean(L, ImGui::BeginPopupModal(luaL_checkstring(L, 1), p_open, strToWindowFlags(L, luaL_optstring(L, 3, ""))));
+    return 1;
+}
+
+static int imgui_textsize(lua_State* L)
+{
+    ImVec2 sz = ImGui::CalcTextSize(luaL_checkstring(L, 1));
+    
+    lua_pushnumber(L, sz.x);
+    lua_pushnumber(L, sz.y);
+    return 2;
+}
+
 static luaL_Reg imgui_funcs[] =
 {
     { "begin", imgui_begin },
@@ -736,6 +811,12 @@ static luaL_Reg imgui_funcs[] =
     { "setwindowsize", imgui_windowsize },
     { "setviewportdockspace", imgui_setviewportdockspace },
     { "setviewportdockspacedefault", imgui_setviewportdockspacedefault },
+    { "openpopup", imgui_openpopup },
+    { "closecurrentpopup", imgui_closecurrentpopup },
+    { "beginpopup", imgui_beginpopup },
+    { "endpopup", imgui_endpopup },
+    { "beginpopupmodal", imgui_beginpopupmodal },
+    { "textsize", imgui_textsize },
     { NULL, NULL }
 };
 

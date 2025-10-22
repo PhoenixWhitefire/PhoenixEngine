@@ -1,31 +1,10 @@
 --!strict
-
-type ToolbarButton = {
-    Text: string,
-    Icon: string?,
-    Enabled: boolean,
-    Lit: boolean?,
-    IsSeparator: boolean?,
-    OnClick: (ToolbarButton) -> ()
-}
-
-type Plugin = {
-    Name: string,
-    Description: string?,
-    Icon: string?,
-    Path: string,
-    ActiveStages: { EditorStage },
-    ToolbarButtons: { ToolbarButton },
-
-    OnLoad: ((Plugin) -> ())?,
-    OnShutdown: ((Plugin) -> ())?,
-    OnEditorStageChanged: ((Plugin, EditorStage, EditorStage) -> ())?,
-    OnUpdate: ((Plugin, number) -> ())?
-}
-
-type EditorStage = "None" | "SelectProject" | "ProjectEditing" | "ProjectPlaying"
-
 local FALLBACK_IMAGE = "textures/editor-icons/fallback.png"
+
+local Types = require("./Types.luau")
+type EditorStage = Types.Stage
+type Plugin = Types.Plugin
+type ToolbarButton = Types.ToolbarButton
 
 local PluginManager = {}
 PluginManager.Plugins = {} :: { Plugin }
@@ -100,24 +79,26 @@ end
 local function loadPluginsRecursive(ParentPath)
     for path, type in fs.listdir(ParentPath) do
         if type == "f" then
-            local co, err = loadthreadfromfile(path)
+            if path:sub(#path - 4, #path) == ".luau" then
+                local co, err = loadthreadfromfile(path)
 
-            if co then
-                local success, data: Plugin = coroutine.resume(co)
+                if co then
+                    local success, data: Plugin = coroutine.resume(co)
 
-                if success then
-                    data.Path = path:sub(assert((path:find("/plugins"))) + 1, #path)
-                    table.freeze(data)
-                    table.insert(PluginManager.Plugins, data)
+                    if success then
+                        data.Path = path:sub(assert((path:find("/plugins"))) + 1, #path)
+                        table.freeze(data)
+                        table.insert(PluginManager.Plugins, data)
 
-                    if getPluginSettings(data).Enabled and data.OnLoad then
-                        data:OnLoad()
+                        if getPluginSettings(data).Enabled and data.OnLoad then
+                            data:OnLoad()
+                        end
+                    else
+                        print(`Failed to load-execute plugin {path}: {data}`)
                     end
                 else
-                    print(`Failed to load-execute plugin {path}: {data}`)
+                    print(`Failed to load plugin {path}: {err}`)
                 end
-            else
-                print(`Failed to load plugin {path}: {err}`)
             end
         else
             loadPluginsRecursive(path)

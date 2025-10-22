@@ -1023,7 +1023,7 @@ static int api_gameobjnewindex(lua_State* L)
 		}
 		catch (const std::runtime_error& err)
 		{
-			luaL_error(L, "Error while setting property %s '%s': %s", key, obj->Name.c_str(), err.what());
+			luaL_error(L, "Error while setting property '%s' of %s: %s", key, obj->GetFullName().c_str(), err.what());
 		}
 	}
 	else
@@ -1318,6 +1318,58 @@ static int api_eventnamecall(lua_State* L)
 	
 		return 1;
 	}
+	else if (strcmp(L->namecall->data, "WaitUntil") == 0)
+	{
+		EventSignalData* ev = (EventSignalData*)luaL_checkudata(L, 1, "EventSignal");
+		const Reflection::EventDescriptor* rev = ev->Event;
+
+		ReflectorRef reflector = ev->Reflector;
+		bool* resume = new bool;
+		std::vector<Reflection::GenericValue>* values = new std::vector<Reflection::GenericValue>;
+		*resume = false;
+
+		uint32_t cid = rev->Connect(
+			reflector.Referred(),
+
+			[ev, resume, reflector, rev, values](const std::vector<Reflection::GenericValue>& Values)
+			-> void
+			{
+				*values = Values;
+				*resume = true;
+			}
+		);
+
+		ScriptEngine::L::Yield(
+			L,
+			rev->CallbackInputs.size(),
+			[resume, values, reflector, rev, cid](ScriptEngine::YieldedCoroutine& yc)
+			-> void
+			{
+				yc.Mode = ScriptEngine::YieldedCoroutine::ResumptionMode::Polled;
+				yc.RmPoll = [resume, values, reflector, rev, cid](lua_State* L) -> int
+					{
+						if (*resume)
+						{
+							rev->Disconnect(reflector.Referred(), cid);
+
+							int count = (int)values->size();
+
+							for (const Reflection::GenericValue& gv : *values)
+								ScriptEngine::L::PushGenericValue(L, gv);
+
+							delete values;
+							delete resume;
+
+							return count;
+						}
+
+						return -1;
+					};
+			}
+		);
+
+		return -1;
+	}
 	else
 		luaL_error(L, "No such method of Event Signal known as '%s'", L->namecall->data);
 }
@@ -1447,7 +1499,10 @@ static void requireConfigInit(luarequire_Configuration* config)
 	config->get_config = [](lua_State*, void* ctx, char* buffer, size_t bufferSize, size_t* outSize)
 		{
 			std::filesystem::path* curpath = (std::filesystem::path*)ctx;
-			std::string contents = FileRW::ReadFile(curpath->string());
+
+			bool success = true;
+			std::string error;
+			std::string contents = FileRW::ReadFile(((*curpath) / ".luaurc").string(), &success, &error);
 			*outSize = contents.size();
 
 			if (bufferSize < contents.size())
@@ -1455,7 +1510,7 @@ static void requireConfigInit(luarequire_Configuration* config)
 			
 			memcpy(buffer, contents.data(), contents.size());
 
-			return WRITE_SUCCESS;
+			return success ? WRITE_SUCCESS : WRITE_FAILURE;
 		};
 	config->load = [](lua_State* L, void* ctx, const char* /* path */, const char* chname, const char* ldname)
 		{
@@ -1471,8 +1526,19 @@ static void requireConfigInit(luarequire_Configuration* config)
 
 			// new thread needs to have the globals sandboxed
 			luaL_sandboxthread(ML);
-			
-			if (ScriptEngine::CompileAndLoad(ML, FileRW::ReadFile(curpath->string()), chname) == 0)
+
+			bool readSuccess = true;
+			std::string readError;
+			std::string contents = FileRW::ReadFile(curpath->string(), &readSuccess, &readError);
+
+			if (!readSuccess)
+			{
+				lua_pop(GL, 1);
+				luaL_error(L, "%s", contents.c_str());
+				return 1;
+			}
+
+			if (ScriptEngine::CompileAndLoad(ML, contents, chname) == 0)
 			{
 				lua_pushstring(ML, ldname);
 				lua_setglobal(ML, "_LOADNAME");

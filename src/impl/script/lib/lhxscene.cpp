@@ -15,10 +15,20 @@ static int scene_save(lua_State* L)
 		rootNodes.push_back(GameObject::FromGenericValue(gv));
 
 	std::string fileContents = SceneFormat::Serialize(rootNodes, path);
-    bool success = FileRW::WriteFileCreateDirectories(path, fileContents);
+	std::string error;
+    bool success = FileRW::WriteFileCreateDirectories(path, fileContents, &error);
 
-	lua_pushboolean(L, success);
-    return 1;
+	if (!success)
+	{
+		lua_pushboolean(L, false);
+		lua_pushlstring(L, error.data(), error.size());
+		return 2;
+	}
+	else
+	{
+		lua_pushboolean(L, true);
+		return 1;
+	}
 }
 
 static int scene_load(lua_State* L)
@@ -26,12 +36,13 @@ static int scene_load(lua_State* L)
     const char* path = luaL_checkstring(L, 1);
 
 	bool readSuccess = true;
-	std::string fileContents = FileRW::ReadFile(path, &readSuccess);
+	std::string readError;
+	std::string fileContents = FileRW::ReadFile(path, &readSuccess, &readError);
 
 	if (!readSuccess)
 	{
 		lua_pushboolean(L, false);
-		lua_pushstring(L, "Couldn't open file");
+		lua_pushlstring(L, readError.data(), readError.size());
 		return 2;
 	}
 

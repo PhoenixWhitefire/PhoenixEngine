@@ -78,6 +78,9 @@ public:
 
 	int ExitCode = 0;
 
+	int argc = 0;
+	char** argv = nullptr;
+
 private:
 	void m_InitVideo();
 	void m_Render(double DeltaTime);

@@ -57,18 +57,9 @@ std::string FileRW::ReadFile(const std::string& ShortPath, bool* Success, std::s
 	}
 	else
 	{
-		std::string error;
-
-		if (file.bad())
-			error = std::format(
-				"Fatal I/O error (badbit), e.x.: hardware error, stream error, etc. System error (may be inaccurate): {}",
-				std::strerror(errno)
-			);
-		else
-			error = std::format(
-				"Non-fatal I/O error (failbit), e.x.: can't access path due to lacking permissions, invalid path, etc. System error (may be inaccurate): {}",
-				std::strerror(errno)
-			);
+		std::string error = std::strerror(errno);
+		if (!std::filesystem::is_regular_file(actualPath))
+			error = "Not a file"; // "Succeeds" on Linux for some reason
 
 		Log::ErrorF("Failed to read file '{}': {}", actualPath, error);
 
@@ -100,18 +91,7 @@ bool FileRW::WriteFile(
 	}
 	else
 	{
-		std::string error;
-
-		if (file.bad())
-			error = std::format(
-				"Fatal I/O error (badbit), e.x.: hardware error, stream error, disk full, etc. System error (may be inaccurate): {}",
-				std::strerror(errno)
-			);
-		else
-			error = std::format(
-				"Non-fatal I/O error (failbit), e.x.: can't access path due to lacking permissions, invalid path, etc. System error (may be inaccurate): {}",
-				std::strerror(errno)
-			);
+		std::string error = std::strerror(errno);
 
 		Log::ErrorF("Failed to write {} bytes to file '{}': {}", Contents.size(), path, error);
 
@@ -149,12 +129,36 @@ static std::string s_CwdAliasing;
 
 void FileRW::DefineAlias(const std::string& Alias, const std::string& Path)
 {
+	assert(Alias[0] != '@'); // you've probably made a mistake
 	s_AliasMap[Alias] = Path;
 }
 
 void FileRW::MakeCwdAliasOf(const std::string& Alias)
 {
 	s_CwdAliasing = Alias;
+}
+
+static std::string aliasResolveRecursive(std::string Path)
+{
+	size_t aliasEnd = Path.find_first_of('/');
+	if (aliasEnd == std::string::npos)
+		aliasEnd = Path.size();
+
+	std::string alias = Path.substr(1, aliasEnd - 1);
+	const auto& aliasIt = s_AliasMap.find(alias);
+
+	if (aliasIt == s_AliasMap.end())
+	{
+		Log::ErrorF("Invalid alias '{}' in path '{}'", alias, Path);
+		return Path;
+	}
+	else
+		Path = aliasIt->second + Path.substr(aliasEnd, Path.size() - aliasEnd);
+
+	if (Path[0] == '@')
+		Path = aliasResolveRecursive(Path);
+	
+	return Path;
 }
 
 std::string FileRW::MakePathCwdRelative(std::string Path)
@@ -165,22 +169,11 @@ std::string FileRW::MakePathCwdRelative(std::string Path)
 		return Path;
 	}
 
+	if (Path[0] == '!')
+		return Path;
+
 	if (Path[0] == '@')
-	{
-		size_t aliasEnd = Path.find_first_of('/');
-		std::string alias = Path.substr(1, aliasEnd - 1);
-		const auto& aliasIt = s_AliasMap.find(alias);
-
-		if (aliasIt == s_AliasMap.end())
-			Log::ErrorF("Invalid alias '{}' in path '{}'", alias, Path);
-
-		Path = aliasIt->second + Path.substr(aliasEnd, Path.size() - aliasEnd);
-	}
-	else if (s_CwdAliasing.size() > 0)
-	{
-		if (Path[0] == '.' && Path.size() > 1)
-			Path = s_CwdAliasing + Path.substr(1, Path.size() - 1);
-	}
+		Path = aliasResolveRecursive(Path);
 
 	std::string resdir = EngineJsonConfig.type() != nlohmann::json::value_t::null
 							? EngineJsonConfig.value("ResourcesDirectory", "resources/")
@@ -197,16 +190,21 @@ std::string FileRW::MakePathCwdRelative(std::string Path)
 	size_t whereRes = Path.find(resdir);
 
 	if ((Path[0] != '.' && Path[0] != '/' && Path[0] != '~' && (Path.size() < 2 || Path[1] != ':'))
-		&& whereRes == std::string::npos
 	)
-		Path.insert(0, resdir);
+	{
+		if (whereRes == std::string::npos)
+			Path.insert(0, resdir);
 
-	else if (whereRes != std::string::npos)
-		// 23/02/2025: cut it off right to the `resources/` directory
-		// prevent cases where an asset points to something outside of the CWD,
-		// which can cause loading errors which are only present when a game is "exported"
-		// or on a different machine
-		Path = Path.substr(whereRes, Path.size() - whereRes);
+		if (s_CwdAliasing.size() > 0)
+		{
+			Path.insert(0, s_CwdAliasing);
+			if (Path[0] == '@')
+				Path = aliasResolveRecursive(Path);
+		}
+	}
+	
+	if (std::string cwd = std::filesystem::current_path().string(); Path.find(cwd) != std::string::npos)
+		Path = "./" + Path.substr(cwd.size() + 1, Path.size() - cwd.size() - 1);
 
 	return Path;
 }

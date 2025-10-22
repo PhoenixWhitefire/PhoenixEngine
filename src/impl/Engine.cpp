@@ -265,6 +265,9 @@ Engine::Engine()
 	m_InitVideo();
 
 	GameObject::s_WorldArray.reserve(32);
+	FileRW::DefineAlias("cwd", std::filesystem::current_path().string());
+	FileRW::DefineAlias("editres", "resources/");
+	FileRW::DefineAlias("projres", "resources/");
 
 	Log::Info("Initializing managers...");
 
@@ -393,6 +396,21 @@ static void traverseHierarchy(
 		if (EcScript* scr = object->FindComponent<EcScript>(); ScriptsUpdate && scr)
 			scr->Update(DeltaTime);
 
+		if (EcTreeLink* link = object->FindComponent<EcTreeLink>(); link && link->Target.IsValid())
+			traverseHierarchy(
+				RenderList,
+				LightList,
+				PhysicsList,
+				link->Target,
+				SceneCamera,
+				DeltaTime,
+				Sun,
+				link->Scripting
+			);
+
+		if (!ct)
+			continue; // lights require a Transform
+
 		EcDirectionalLight* directional = object->FindComponent<EcDirectionalLight>();
 		EcPointLight* point = object->FindComponent<EcPointLight>();
 		EcSpotLight* spot = object->FindComponent<EcSpotLight>();
@@ -445,18 +463,6 @@ static void traverseHierarchy(
 			emitter->Update(DeltaTime);
 			emitter->AppendToRenderList(RenderList);
 		}
-
-		if (EcTreeLink* link = object->FindComponent<EcTreeLink>(); link && link->Target.IsValid())
-			traverseHierarchy(
-				RenderList,
-				LightList,
-				PhysicsList,
-				link->Target,
-				SceneCamera,
-				DeltaTime,
-				Sun,
-				link->Scripting
-			);
 	}
 }
 

@@ -266,6 +266,10 @@
             "Description": "Connect a callback to the Event",
             "In": "(any) -> (any)",
             "Out": "EventConnection"
+          },
+          ":WaitUntil": {
+            "Description": "Yields the thread until the Event is fired",
+            "Out": "any"
           }
         }
       },
@@ -710,6 +714,14 @@
             ],
             "Out": "{ string }"
           },
+          "unloadtexture": {
+            "Description": [
+              "Unloads the given texture from the Engine's cache"
+            ],
+            "In": [
+              "Path: string"
+            ]
+          },
           "windowsize": {
             "Description": [
               "Returns the current size, in pixels, of the game window",
@@ -856,21 +868,47 @@
           "read": {
             "Description": [
               "Reads the file at the given address, and returns the contents",
-              "If the file could not be read, returns `nil`"
+              "If the file could not be read, returns `nil` and an error message"
             ],
             "In": [
               "Path: string"
             ],
-            "Out": "string?"
+            "Out": "string?, string?"
+          },
+          "remove": {
+            "Description": [
+              "Removes everything at the given path",
+              "On success, returns the number of items removed",
+              "On failure, returns `false` and an error message"
+            ],
+            "In": [
+              "Path: string"
+            ],
+            "Out": "number | false, string?"
+          },
+          "rename": {
+            "Description": [
+              "Renames the file at the given `Path` to have the `NewName`"
+            ],
+            "In": [
+              "Path: string",
+              "NewName: string"
+            ],
+            "Out": "boolean, string?"
           },
           "write": {
             "Description": [
               "Overwrites/creates the file at `Path` with the provided `Contents`",
-              "Returns whether the operation was successful"
+              "Returns whether the operation was successful",
+              "If `CreateDirectories` is `true`, will automatically create missing intermediate directories to the file"
             ],
             "In": [
               "Path: string",
-              "Contents: string"
+              "Contents: string",
+              [
+                "CreateDirectories: boolean?",
+                "false"
+              ]
             ],
             "Out": "boolean, string?"
           }
@@ -965,6 +1003,28 @@
             "In": {},
             "Out": "boolean"
           },
+          "beginpopup": {
+            "Description": [
+              "`ImGui::BeginPopup`"
+            ],
+            "In": [
+              "Name: string"
+            ],
+            "Out": "boolean"
+          },
+          "beginpopupmodal": {
+            "Description": [
+              "`ImGui::BeginPopupModal`"
+            ],
+            "In": [
+              "Name: string",
+              [
+                "HasCloseButton: boolean?",
+                "false"
+              ]
+            ],
+            "Out": "boolean"
+          },
           "button": {
             "Description": [
               "`ImGui::Button`"
@@ -985,6 +1045,11 @@
               "Value: boolean"
             ],
             "Out": "boolean"
+          },
+          "closecurrentpopup": {
+            "Description": [
+              "`ImGui::CloseCurrentPopup`"
+            ]
           },
           "combo": {
             "Description": [
@@ -1037,6 +1102,11 @@
           "endmenubar": {
             "Description": [
               "`ImGui::EndMenuBar`"
+            ]
+          },
+          "endpopup": {
+            "Description": [
+              "`ImGui::EndPopup`"
             ]
           },
           "endw": {
@@ -1149,6 +1219,14 @@
               ]
             ],
             "Out": "boolean"
+          },
+          "openpopup": {
+            "Description": [
+              "`ImGui::OpenPopup`"
+            ],
+            "In": [
+              "Name: string"
+            ]
           },
           "popid": {
             "Description": [
@@ -1313,6 +1391,15 @@
               "Text: string"
             ],
             "Out": "boolean"
+          },
+          "textsize": {
+            "Description": [
+              "`ImGui::CalcTextSize`"
+            ],
+            "In": [
+              "Text: string"
+            ],
+            "Out": "number, number"
           },
           "treenode": {
             "Description": [

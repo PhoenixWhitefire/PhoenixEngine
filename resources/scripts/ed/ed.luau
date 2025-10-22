@@ -1,7 +1,8 @@
 -- ed.luau, 14/09/2025
-type Stage = "None" | "SelectProject" | "ProjectEditing" | "ProjectPlaying"
+local FALLBACK_IMAGE = "@etextures/editor-icons/fallback.png"
 
-local FALLBACK_IMAGE = "textures/editor-icons/fallback.png"
+local Types = require("./Types.luau")
+type Stage = Types.Stage
 
 local CurrentStage: Stage = "None"
 local StageUpdateSignal: EventConnection? = nil
@@ -30,12 +31,21 @@ for _, tool in engine.toolnames() do
 	end
 end
 
---  only want Explorer and Properties to be enabled by default
-engine.settoolenabled("Tool_Explorer", true)
-engine.settoolenabled("Tool_Properties", true)
-
 local WasHoldingDownM1 = false
 local MouseClick = false
+
+fs.definealias("editres", "@cwd/resources")
+fs.definealias("etextures", "@editres/textures")
+
+local function assert(cond: any, err: string?, ...)
+	if not cond then
+		local em = "Assertion failed: " .. (err or "")
+		engine.showmessagebox("Editor error", debug.traceback(em, 1), "ok", "error")
+		error(em)
+	end
+
+	return cond, err, ...
+end
 
 local function changeStageTo(NewStage: Stage)
 	print(`Changing stage from { CurrentStage } to { NewStage }`)
@@ -67,37 +77,16 @@ local function changeStageTo(NewStage: Stage)
 	end)
 end
 
-local projDm: (GameObject & DataModel)? = nil
-local projWp: (GameObject & Workspace)? = nil
-local projCam: (GameObject & Camera)? = nil
-local projectSavePath: string? = nil
-local projectIcon: string? = nil
+local Project = {
+	DataModel = nil :: (GameObject & DataModel)?,
+	Name = "Should not be visible" :: string,
+	IsTempPath = false :: boolean
+}
 
-local function createNewProject()
-	projDm = GameObject.new("DataModel") :: GameObject & DataModel
-	projWp = GameObject.new("Workspace") :: GameObject & Workspace
-	projCam = GameObject.new("Camera") :: GameObject & Camera
-
-	projWp.Parent = projDm
-	projCam.Parent = projWp
-	projWp.SceneCamera = projCam
-	EditorTl.Parent = workspace
-	EditorTl.Target = projWp
-	EditorTl.Scripting = false
-
-	GameObject.new("DirectionalLight").Parent = projWp
-
-	engine.setexplorerroot(projDm)
-	
-	projectSavePath = nil
-	projectIcon = nil
-	changeStageTo("ProjectEditing")
-end
-
-local recentProjects: { { Path: string, Icon: string? } } = {}
+local RecentProjects: { string } = {}
 
 local function saveRecents()
-	if not fs.write("recent-projects.json", json.encode(recentProjects)) then
+	if not fs.write("@editres/recent-projects.json", json.encode(RecentProjects)) then
 		print("Failed to save the Recent Projects list")
 	end
 end
@@ -105,37 +94,80 @@ end
 local function saveToRecents(Path: string)
 	local oldIndex = nil
 
-	for i, v in recentProjects do
-		if v.Path == Path then
+	for i, v in RecentProjects do
+		if v == Path then
 			oldIndex = i
 			break
 		end
 	end
 
 	if oldIndex then
-		table.remove(recentProjects, oldIndex)
+		table.remove(RecentProjects, oldIndex)
 	end
-	table.insert(recentProjects, { Path = Path, Icon = projectIcon })
+	table.insert(RecentProjects, Path)
 	saveRecents()
 end
 
 local function openProject(ManualPath: string?)
-	local path = ManualPath or fs.promptopen("scenes/", "*.world", "Worlds")[1]
-	if not path then
-		print("No project selected")
-		return
+	local path = ManualPath
+	local selecting = not path
+	local atLeastOneProject = false
+
+	if selecting then
+		imgui.openpopup("Select Project")
 	end
 
-	for _, v in recentProjects do
-		if v.Path == path then
-			projectIcon = v.Icon
-			break
-		else
-			projectIcon = FALLBACK_IMAGE
+	while selecting do
+		local open = imgui.beginpopup("Select Project")
+
+		if not open then
+			print("Closed selector")
+			return
 		end
+
+		imgui.text("Projects")
+
+		for proj, type in fs.listdir("@cwd/projects") do
+			if type ~= "d" then
+				continue
+			end
+
+			local conf = fs.read(proj .. "/phoenix.conf")
+			local name = nil
+
+			if conf then
+				name = json.parse(conf).GameTitle
+			end
+
+			if name then
+				if imgui.button(name) then
+					selecting = false
+					path = name
+					break
+				end
+
+				if not atLeastOneProject then
+					atLeastOneProject = true
+				end
+			end
+		end
+
+		imgui.endpopup()
+
+		if not atLeastOneProject then
+			engine.showmessagebox("No projects", "You do not have any projects")
+			return
+		end
+
+		game.OnFrameBegin:WaitUntil()
 	end
 
-	local objects, error = scene.load(path)
+	fs.definealias("proj", "@cwd/projects/" .. assert(path))
+	fs.definealias("projres", "@proj/resources")
+	fs.makecwdaliasof("@proj/")
+
+	assert(path)
+	local objects, error = scene.load("@projres/scenes/root.world")
 
 	if not objects then
 		error = error or "Unknown error"
@@ -144,14 +176,84 @@ local function openProject(ManualPath: string?)
 		return
 	end
 
-	projDm = (assert(objects[1]) :: any) :: GameObject & DataModel
-	projWp = assert(projDm.Workspace) :: GameObject & Workspace
-	projCam = projWp.SceneCamera
-	EditorTl.Target = projWp
+	Project.DataModel = (assert(objects[1]) :: any) :: GameObject & DataModel
+	EditorTl.Target = assert(Project.DataModel):FindChild("Workspace")
 	saveToRecents(path)
 
-	projectSavePath = path
+	Project.Name = path
 	changeStageTo("ProjectEditing")
+end
+
+local SavedProjectsCache: { string }? = nil
+
+local function createNewProject()
+	if not fs.isdirectory("@cwd/projects") then
+		assert(fs.mkdir("@cwd/projects"))
+	end
+
+	local name = "New Project "
+	local nameIndex = 1
+
+	while fs.isdirectory("@cwd/projects/" .. name .. nameIndex) do
+		nameIndex += 1
+	end
+
+	Project.Name = name .. nameIndex
+	Project.IsTempPath = true
+
+	local fullPath = "@cwd/projects/" .. assert(Project.Name)
+
+	local success, createError = fs.mkdir(fullPath)
+	if not success then
+		engine.showmessagebox("Failed to create project", `Failed to create project at '{fullPath}':\n{ assert(createError) }`)
+		return
+	end
+
+	fs.definealias("proj", fullPath)
+	fs.definealias("projres", "@proj/resources")
+
+	assert(fs.write(fullPath .. "/phoenix.conf", json.encode({
+		GameTitle = Project.Name,
+		ResourcesDirectory = "resources/",
+		RootScene = "scenes/root.world"
+	})))
+
+	assert(fs.mkdir("@projres"))
+	assert(fs.mkdir("@projres/materials"))
+	assert(fs.mkdir("@projres/meshes"))
+	assert(fs.mkdir("@projres/scenes"))
+	assert(fs.mkdir("@projres/scripts"))
+	assert(fs.mkdir("@projres/sounds"))
+	assert(fs.mkdir("@projres/textures"))
+	assert(fs.mkdir("@projres/textures/materials"))
+
+	assert(fs.copy("@editres/shaders", "@projres/shaders"))
+
+	assert(fs.copy("@editres/materials", "@projres/materials"))
+	assert(fs.copy("@editres/textures/materials", "@projres/textures/materials"))
+
+	assert(fs.copy("@editres/textures/DONOTUSE.png", "@projres/textures/DONOTUSE.png"))
+	assert(fs.copy("@editres/textures/screendistort.jpg", "@projres/textures/screendistort.jpg"))
+	assert(fs.copy("@editres/textures/white.png", "@projres/textures/white.png"))
+
+	assert(fs.copy("@editres/textures/Sky1", "@projres/textures/Sky1"))
+
+	assert(fs.copy("@etextures/editor-icons/fallback.png", "@proj/icon.png"))
+	assert(fs.copy("@editres/scripts/default.luau", "@projres/scripts/default.luau"))
+
+	local dm = GameObject.new("DataModel") :: GameObject & DataModel
+	local projWp = GameObject.new("Workspace") :: GameObject & Workspace
+	local camera = GameObject.new("Camera") :: GameObject & Camera
+	GameObject.new("DirectionalLight").Parent = workspace
+
+	projWp.Parent = dm
+	camera.Parent = projWp
+	projWp.SceneCamera = camera
+
+	assert(scene.save({ dm }, "@projres/scenes/root.world"))
+
+	SavedProjectsCache = nil
+	openProject(Project.Name)
 end
 
 local TabButtonHovering: string? = nil
@@ -220,31 +322,31 @@ local function homeTab(_: number)
 	local inPlaytest = CurrentStage == "ProjectPlaying"
 
 	if inPlaytest then
-		if tabButton("Stop", "textures/editor-icons/stop.png") then
+		if tabButton("Stop", "@etextures/editor-icons/stop.png") then
 			changeStageTo("ProjectEditing")
 		end
 	else
-		if tabButton("Start", "textures/editor-icons/start.png") then
+		if tabButton("Start", "@etextures/editor-icons/start.png") then
 			changeStageTo("ProjectPlaying")
 		end
 	end
 
 	imgui.sameline()
 
-	if tabButton("Explorer to Project DM", "textures/editor-icons/ExplorerToProj.png") then
-		assert(projDm)
-		engine.setexplorerroot(projDm)
+	if tabButton("Explorer to Project DM", "@etextures/editor-icons/ExplorerToProj.png") then
+		assert(Project.DataModel)
+		engine.setexplorerroot(Project.DataModel)
 	end
 
 	imgui.sameline()
 	
-	if tabButton("Explorer to Editor DM", "textures/editor-icons/ExplorerToEdit.png") then
+	if tabButton("Explorer to Editor DM", "@etextures/editor-icons/ExplorerToEdit.png") then
 		engine.setexplorerroot(game)
 	end
 
 	imgui.sameline()
 
-	if tabButton("Import Model", "textures/editor-icons/Model.png") then
+	if tabButton("Import Model", "@etextures/editor-icons/Model.png") then
 		defer(function()
 			local paths = fs.promptopen("models/", { "*.gltf", "*.glb" }, "Models")
 
@@ -256,7 +358,8 @@ local function homeTab(_: number)
 					return
 				end
 
-				imported.Parent = projWp
+				assert(Project.DataModel)
+				imported.Parent = Project.DataModel.Workspace
 				engine.setexplorerselections({ imported })
 			else
 				print("No model selected")
@@ -270,7 +373,7 @@ local function toolsTab(_: number)
 		local name = tool:sub(#("Tool_") + 1, #tool)
 		local enabled = engine.toolenabled(tool)
 
-		if tabButton(name, `textures/editor-icons/{name}.png`, true, enabled) then
+		if tabButton(name, `@etextures/editor-icons/{name}.png`, true, enabled) then
 			engine.settoolenabled(tool, not enabled)
 			conf.save()
 		end
@@ -278,7 +381,7 @@ local function toolsTab(_: number)
 		imgui.sameline()
 	end
 
-	if tabButton("Bottom Bar", `textures/editor-icons/fallback.png`, true, BottomBarEnabled) then
+	if tabButton("Bottom Bar", `@etextures/editor-icons/fallback.png`, true, BottomBarEnabled) then
 		BottomBarEnabled = not BottomBarEnabled
 		conf.set("Ed_Tool_BottomBarEnabled", BottomBarEnabled)
 		conf.save()
@@ -324,7 +427,6 @@ local RibbonTabs: { { Name: string, Renderer: (number) -> () } } = {
 	}
 }
 
-local AboutWindowOpen = false
 local IsLightMode = false
 local CurrentRibbonTab: number = 1
 
@@ -340,64 +442,147 @@ local function renderMainMenuBar(dt: number)
 	end
 	local _, cursorY = input.mouseposition()
 	HoveringOverMenuBar = cursorY < RibbonPopupDistance
+
+	local openAboutWindow = false
 	
 	if imgui.beginmenu("File") then
 		if imgui.menuitem("Save", CurrentStage == "ProjectEditing") then
-			imgui.endmenu()
-			imgui.endmainmenubar()
-
-			local path = projectSavePath or fs.promptsave("scenes/", "*.world", "Worlds")
-			if not path then
-				print("No path was selected for saving, cancelled")
-				return
-			end
-
-			saveToRecents(path)
-			assert(projDm)
-			scene.save({ projDm }, path)
-
-			return
+			scene.save({ assert(Project.DataModel) }, "@projres/scenes/root.world")
 		end
 
 		if CurrentStage == "ProjectEditing" then
-			if imgui.menuitem("Set icon") then
-				imgui.endmenu()
-				imgui.endmainmenubar()
+			if imgui.menuitem("Project Settings") then
+				defer(function()
+					imgui.openpopup("Project Settings")
 
-				projectIcon = fs.promptopen("textures/", { "*.png" , "*.jpg", "*.jpeg" }, "Images")[1]
+					local newProjectName = Project.Name
 
-				return
+					while true do
+						if not imgui.beginpopupmodal("Project Settings", true) then
+							break
+						end
+
+						newProjectName = imgui.inputstring("Project Name", newProjectName)
+
+						if newProjectName:match("[^%w%s]") then
+							imgui.text("Only a-z, A-Z, 0-9 (alphanumeric) is allowed")
+						end
+
+						if newProjectName ~= Project.Name and imgui.button("Save new name") then
+							local buttonSelection = engine.showmessagebox("Rename project?", "Are you sure you want to rename the project?", "yesno")
+
+							if buttonSelection == 1 then
+								local prevName = Project.Name
+
+								assert(fs.rename("@cwd/projects/" .. Project.Name, newProjectName))
+								fs.definealias("proj", "@cwd/projects/" .. newProjectName)
+
+								Project.Name = newProjectName
+
+								local conf = json.parse(assert(fs.read("@proj/phoenix.conf")))
+								conf.GameTitle = newProjectName
+
+								assert(fs.write(
+									"@proj/phoenix.conf",
+									json.encode(conf)
+								))
+
+								table.remove(RecentProjects, table.find(RecentProjects, prevName))
+								saveToRecents(newProjectName)
+							else
+								newProjectName = Project.Name
+							end
+						end
+
+						imgui.text("Project icon:")
+
+						if imgui.imagebutton("Icon", "@proj/icon.png", { 150, 150 }) then
+							local buttonSelection = engine.showmessagebox(
+								"Change icon?",
+								"Change the project icon? Note that the original icon file will be overwritten!",
+								"yesno",
+								"question"
+							)
+
+							if buttonSelection == 1 then
+								defer(function()
+									local path = fs.promptopen("@etextures/", { "*.png" , "*.jpg", "*.jpeg" }, "Images")[1]
+
+									if path then
+										assert(fs.remove("@proj/icon.png"))
+										assert(fs.copy(path, "@proj/icon.png"))
+										engine.unloadtexture("@proj/icon.png") -- force the texture to be reloaded
+									else
+										print("No icon selected")
+									end
+								end)
+							end
+						end
+
+						imgui.endpopup()
+
+						game.OnFrameBegin:WaitUntil()
+					end
+				end)
+			end
+
+			if imgui.menuitem("Export") then
+				local dest = fs.promptopenfolder("Select Destination Folder")
+
+				if not dest then
+					print("No export destination selected, cancelling")
+				else
+					local saveDest = `{dest}/{Project.Name}`
+					local continueExport = true
+
+					if fs.isdirectory(saveDest) then
+						local chosenOption = engine.showmessagebox(
+							"Directory already exists",
+							`The folder '{saveDest}' already exists\nClick YES to delete, and NO to cancel the export`,
+							"yesno",
+							"warning"
+						)
+
+						if chosenOption == 1 then
+							assert(fs.remove(saveDest))
+						else
+							continueExport = false
+						end
+					end
+
+					if continueExport then
+						assert(fs.mkdir(saveDest))
+						assert(fs.copy("@proj", saveDest))
+
+						local execPath = engine.args()[1]
+						assert(fs.copy(execPath, `{saveDest}/{Project.Name}{if execPath:find(".exe") then ".exe" else ""}`))
+
+						if execPath:find("x64/Debug") and execPath:find(".exe") then
+							engine.showmessagebox(
+								"Windows Debug build",
+								"Windows Debug builds cannot be distributed without additional dependencies that the Engine does not distribute"
+							)
+						end
+					end
+				end
 			end
 
 			if imgui.menuitem("Close") then
-				imgui.endmenu()
-				imgui.endmainmenubar()
-
-				changeStageTo("SelectProject")
-
-				return
+				defer(changeStageTo, 0, "SelectProject" :: "SelectProject")
 			end
 		end
 
 		if imgui.menuitem("Open", CurrentStage == "SelectProject") then
-			imgui.endmenu()
-			imgui.endmainmenubar()
-
-			openProject()
-			return
+			SavedProjectsCache = nil
+			defer(openProject)
 		end
 
 		if imgui.menuitem("New", CurrentStage == "SelectProject") then
-			imgui.endmenu()
-			imgui.endmainmenubar()
-				
-			createNewProject()
-			return
+			defer(createNewProject)
 		end
 
-		if not AboutWindowOpen and imgui.menuitem("About") then
-			AboutWindowOpen = true
-			imgui.setnextwindowopen()
+		if imgui.menuitem("About") then
+			openAboutWindow = true
 		end
 
 		local lightMode = imgui.checkbox("Light", IsLightMode)
@@ -444,29 +629,35 @@ local function renderMainMenuBar(dt: number)
 
 	imgui.endmainmenubar()
 
-	if AboutWindowOpen then
-		imgui.setnextwindowfocus()
+	if openAboutWindow then
+		imgui.openpopup("About")
 
-		if imgui.begin("About") then
-			local cxavail, _ = imgui.getcontentregionavail()
-			local cursorx, cursory = imgui.cursorposition()
+		local wsx, wsy = engine.windowsize()
 
-			imgui.setcursorposition(cursorx + cxavail / 2 - 150, cursory)
+		imgui.setnextwindowposition((wsx - 375) / 2, (wsy - 240) / 2 - 100, "once");
+		imgui.setnextwindowsize(375, 240, "once");
+	end
 
-			imgui.image("textures/niko.png", { 150, 150 })
-			imgui.sameline()
-			imgui.image("textures/yes.png", { 150, 150 })
+	if imgui.beginpopupmodal("About", true) then
+		local cxavail, _ = imgui.getcontentregionavail()
+		local cursorx, cursory = imgui.cursorposition()
 
-			imgui.setcursorposition(cursorx, cursory + 160)
+		imgui.setcursorposition(cursorx + cxavail / 2 - 150, cursory)
 
-			imgui.text("Phoenix Engine Editor")
+		imgui.image("@etextures/niko.png", { 150, 150 })
+		imgui.sameline()
+		imgui.image("@etextures/yes.png", { 150, 150 })
 
-			imgui.urllink(GITHUB_URL)
-		else
-			AboutWindowOpen = false
-		end
+		local ttsx, ttsy = imgui.textsize("Phoenix Engine Editor")
+		local utsx, _ = imgui.textsize(GITHUB_URL)
 
-		imgui.endw()
+		imgui.setcursorposition(cursorx + (cxavail - ttsx) / 2, cursory + 160)
+		imgui.text("Phoenix Engine Editor")
+
+		imgui.setcursorposition(cursorx + (cxavail - utsx) / 2, cursory + 160 + ttsy + 10)
+		imgui.urllink(GITHUB_URL)
+
+		imgui.endpopup()
 	end
 end
 
@@ -501,9 +692,7 @@ local function renderViewport(DeltaTime: number)
 		end
 		imgui.sameline()
 
-		imgui.text(projectSavePath or "<No save path> | ")
-		imgui.sameline()
-		imgui.text(tostring(engine.framerate()) .. " FPS")
+		imgui.text(`{ Project.Name } | { engine.framerate() } FPS`)
 
 		imgui.endw()
 	end
@@ -534,14 +723,19 @@ local function renderViewport(DeltaTime: number)
 end
 
 function Stages.SelectProject_Enter()
-	local rpstr = fs.read("recent-projects.json")
+	if not fs.isfile("@editres/recent-projects.json") then
+		assert(fs.write("@editres/recent-projects.json", "[]"))
+	end
+
+	local rpstr, err = fs.read("@editres/recent-projects.json")
 
 	if not rpstr then
-		print("Couldn't read `recent-projects.json`")
+		print("Couldn't read `recent-projects.json`:", err)
 		return
 	end
 
-	recentProjects = json.parse(rpstr)
+	RecentProjects = json.parse(rpstr)
+	SavedProjectsCache = nil
 
 	PluginManager.Shutdown()
 end
@@ -550,7 +744,157 @@ function Stages.SelectProject_Leave()
 	PluginManager.Load()
 end
 
-local RecentsHoveringOver: number? = nil
+local SelectorHoveringOver: number? = nil
+local ProjectContextMenuTarget = 0
+
+local function renderProjectSelectorTiles(Projects: { string }, StartX: number)
+	local cx, cy = imgui.cursorposition()
+	local firstcx = cx + 10
+
+	local windowSizeX, _ = engine.windowsize()
+	local lastnl = #RecentProjects
+	local hoveringOverWip = nil
+
+	for i = #Projects, 1, -1 do
+		local proj = Projects[i]
+		local clicked = false
+		local hovered = false
+		cx, cy = imgui.cursorposition()
+
+		imgui.dummy(300, 300)
+		imgui.setcursorposition(cx, cy)
+
+		if SelectorHoveringOver == i then
+			imgui.pushstylecolor(5, { 1, 1, 1, 1 })
+
+			imgui.setcursorposition(cx - 10, cy - 10)
+			imgui.beginchild(Project.Name .. "_Selection", 270, 280, "b", "ni")
+			imgui.endchild()
+			imgui.setcursorposition(cx, cy)
+
+			imgui.popstylecolor()
+
+			if input.mousedown("r") then
+				imgui.openpopup("ProjectContextMenu")
+				ProjectContextMenuTarget = i
+			end
+		end
+
+		imgui.image(`@cwd/projects/{proj}/icon.png`, { 250, 250 })
+		clicked, hovered = imgui.itemclicked(), imgui.itemhovered()
+		imgui.setcursorposition(cx, cy + 250)
+		imgui.text(proj)
+		clicked, hovered = clicked or imgui.itemclicked(), hovered or imgui.itemhovered()
+
+		if clicked then
+			defer(openProject, 0, proj)
+		end
+
+		if hovered then
+			hoveringOverWip = i
+		end
+
+		if (lastnl - i) * 250 + 170 + 250 + StartX < windowSizeX - (170 * 2) - StartX then
+			imgui.setcursorposition(cx + 275 - 15, cy)
+			imgui.dummy(0, 0)
+			imgui.sameline()
+		else
+			lastnl = i-1
+			_, cy = imgui.cursorposition()
+			imgui.setcursorposition(firstcx, cy + 10)
+		end
+	end
+
+	SelectorHoveringOver = hoveringOverWip
+end
+
+local function renderRenderProjects(StartX: number)
+	imgui.text("Recent")
+	local cx, cy = imgui.cursorposition()
+	imgui.setcursorposition(cx, cy + 10)
+
+	cx, cy = imgui.cursorposition()
+	imgui.setcursorposition(cx + 10, cy)
+
+	renderProjectSelectorTiles(RecentProjects, StartX)
+	
+	if imgui.beginpopup("ProjectContextMenu") then
+		if imgui.menuitem("Remove from Recents") then
+			table.remove(RecentProjects, ProjectContextMenuTarget)
+			fs.write("recent-projects.json", json.encode(RecentProjects))
+		end
+	
+		imgui.endpopup()
+	end
+end
+
+local function renderSavedProjects(StartX: number)
+	if not SavedProjectsCache then
+		SavedProjectsCache = {}
+		assert(SavedProjectsCache)
+
+		for path, type in fs.listdir("@cwd/projects") do
+			if type == "d" and fs.isfile(path .. "/phoenix.conf") then
+				local conf = json.parse(assert(fs.read(path .. "/phoenix.conf")))
+				assert(typeof(conf.GameTitle == "string"))
+
+				table.insert(SavedProjectsCache, conf.GameTitle)
+			end
+		end
+	end
+
+	imgui.text("All Projects")
+	local cx, cy = imgui.cursorposition()
+	imgui.setcursorposition(cx, cy + 10)
+
+	cx, cy = imgui.cursorposition()
+	imgui.setcursorposition(cx + 10, cy)
+
+	renderProjectSelectorTiles(assert(SavedProjectsCache), StartX)
+	
+	if imgui.beginpopup("ProjectContextMenu") then
+		if imgui.menuitem("Delete") then
+			local name = SavedProjectsCache[ProjectContextMenuTarget]
+
+			local buttonSelection = engine.showmessagebox(
+				"Are you sure?",
+				`Are you sure you want to delete '{name}'? This cannot be undone.`,
+				"yesno",
+				"warning"
+			)
+
+			if buttonSelection == 1 then
+				assert(fs.remove(`@cwd/projects/{name}`))
+
+				table.remove(RecentProjects, table.find(RecentProjects, name))
+				saveRecents()
+
+				SavedProjectsCache = nil
+			end
+		end
+	
+		imgui.endpopup()
+	end
+end
+
+local ProjectCategories: { { Name: string, Icon: string, Render: (number) -> (), OnSwitchTo: (()->())? } } = {
+	{
+		Name = "Recents",
+		Icon = "@etextures/editor-icons/recent.png",
+		Render = renderRenderProjects
+	},
+	{
+		Name = "Saved",
+		Icon = "@etextures/editor-icons/open.png",
+		Render = renderSavedProjects,
+		OnSwitchTo = function()
+			SavedProjectsCache = nil
+		end
+	}
+}
+
+local SelectedProjectsCategory = 1
+local PrevSelectedProjectsCategory = 0
 
 function Stages.SelectProject(DeltaTime: number)
 	if imgui.beginfullscreen("Select Project", 0, 18) then
@@ -560,15 +904,37 @@ function Stages.SelectProject(DeltaTime: number)
 			local cx, cy = imgui.cursorposition()
 			imgui.setcursorposition(cx - 4, cy)
 
-			if imgui.imagebutton("+", "textures/editor-icons/new.png", { 150, 150 }) then
-				createNewProject()
+			if imgui.imagebutton("+", "@etextures/editor-icons/new.png", { 150, 150 }) then
+				defer(createNewProject)
 			end
 
 			cx, cy = imgui.cursorposition()
-			imgui.setcursorposition(cx - 4, cy)
 
-			if imgui.imagebutton("O", "textures/editor-icons/open.png", { 150, 150 }) then
-				defer(openProject)
+			for i, cat in ProjectCategories do
+				if SelectedProjectsCategory == i then
+					imgui.setcursorposition(cx - 5, cy - 2)
+					imgui.pushstylecolor(5, { 1, 1, 1, 1 })
+
+					imgui.beginchild("Selection", 160, 160, "b", "ni")
+					imgui.endchild()
+
+					imgui.popstylecolor()
+				end
+
+				imgui.setcursorposition(cx - 4, cy)
+
+				if imgui.imagebutton(cat.Name, cat.Icon, { 150, 150 }) then
+					SelectedProjectsCategory = i
+				end
+
+				cx, cy = imgui.cursorposition()
+			end
+
+			if PrevSelectedProjectsCategory ~= SelectedProjectsCategory then
+				local onSwitchTo = ProjectCategories[SelectedProjectsCategory].OnSwitchTo
+				if onSwitchTo then
+					onSwitchTo()
+				end
 			end
 		end
 		imgui.endchild()
@@ -577,65 +943,7 @@ function Stages.SelectProject(DeltaTime: number)
 
 		imgui.beginchild("MainSection", 0, 0, "b")
 
-		imgui.text("Recent")
-		local cx, cy = imgui.cursorposition()
-		imgui.setcursorposition(cx, cy + 10)
-
-		local windowSizeX, _ = engine.windowsize()
-		local lastnl = #recentProjects
-
-		local hoveringOverWip = nil
-
-		cx, cy = imgui.cursorposition()
-		imgui.setcursorposition(cx + 10, cy)
-		local firstcx = cx + 10
-
-		for i = #recentProjects, 1, -1 do
-			local proj = recentProjects[i]
-			local clicked = false
-			local hovered = false
-			cx, cy = imgui.cursorposition()
-
-			imgui.dummy(300, 300)
-			imgui.setcursorposition(cx, cy)
-
-			if RecentsHoveringOver == i then
-				imgui.pushstylecolor(5, { 1, 1, 1, 1 })
-
-				imgui.setcursorposition(cx - 10, cy - 10)
-				imgui.beginchild(proj.Path .. "_Selection", 270, 280, "b", "ni")
-				imgui.endchild()
-				imgui.setcursorposition(cx, cy)
-
-				imgui.popstylecolor()
-			end
-
-			imgui.image(proj.Icon or FALLBACK_IMAGE, { 250, 250 })
-			clicked, hovered = imgui.itemclicked(), imgui.itemhovered()
-			imgui.setcursorposition(cx, cy + 250)
-			imgui.text(proj.Path:sub(#("resources/scenes/") + 1, #proj.Path))
-			clicked, hovered = clicked or imgui.itemclicked(), hovered or imgui.itemhovered()
-
-			if clicked then
-				defer(openProject, 0, proj.Path)
-			end
-
-			if hovered then
-				hoveringOverWip = i
-			end
-
-			if (lastnl - i) * 250 + 170 + 250 + startPosX < windowSizeX - (170 * 2) - startPosX then
-				imgui.setcursorposition(cx + 275 - 15, cy)
-				imgui.dummy(0, 0)
-				imgui.sameline()
-			else
-				lastnl = i-1
-				_, cy = imgui.cursorposition()
-				imgui.setcursorposition(firstcx, cy + 10)
-			end
-		end
-
-		RecentsHoveringOver = hoveringOverWip
+		ProjectCategories[SelectedProjectsCategory].Render(startPosX)
 
 		imgui.dummy()
 		imgui.endchild()
@@ -646,16 +954,20 @@ function Stages.SelectProject(DeltaTime: number)
 end
 
 function Stages.ProjectEditing_Enter(DeltaTime)
-	assert(projDm)
-	engine.setexplorerroot(projDm)
+	assert(Project.DataModel)
+	engine.setexplorerroot(Project.DataModel)
 
-	if projWp and projWp.SceneCamera and projWp.SceneCamera:HasComponent("Camera") then
+	local projWp = (Project.DataModel:FindChild("Workspace") :: any)
+
+	if projWp and projWp.SceneCamera and (projWp.SceneCamera :: any):HasComponent("Camera") then
 		projWp.SceneCamera.Transform = EditorCam.Transform
 		EditorCam.FieldOfView = projWp.SceneCamera.FieldOfView
 	end
 end
 
 function Stages.ProjectEditing(DeltaTime)
+	local projWp = (Project.DataModel:FindChild("Workspace") :: any) :: GameObject & Workspace
+
 	-- sometimes this can get called after `ProjectEditing_Leave` or something somehow
 	if projWp and projWp.SceneCamera and projWp.SceneCamera:HasComponent("Camera") then
 		projWp.SceneCamera.Transform = EditorCam.Transform
@@ -672,50 +984,35 @@ function Stages.ProjectEditing_Leave(NextStage)
 	end
 	
 	engine.setexplorerroot(game)
-	assert(projDm)
+	engine.setexplorerselections({})
 
-	local buttonSelection = engine.showmessagebox("Save Project", "Save project before closing?", "yesno", "warning");
+	assert(Project.DataModel)
+	scene.save({ Project.DataModel }, "@projres/scenes/root.world")
 
-	if buttonSelection == 1 then
-		local savePath = projectSavePath or fs.promptsave("scenes/", "*.world", "Projects")
-
-		if savePath then
-			saveToRecents(savePath)
-			assert(projDm)
-			scene.save({ projDm }, savePath)
-
-			projectSavePath = nil
-		else
-			print("Project discarded")
-		end
-	else
-		print("Not saving project")
-	end
-
-	projDm:Destroy()
-	projWp = nil
-	projCam = nil
-	projDm = nil
+	Project.DataModel:Destroy()
+	Project.Name = "Should not be visible"
+	Project.IsTempPath = true
+	Project.DataModel = nil
 end
 
 local restoreState = nil
 
 function Stages.ProjectPlaying_Enter()
-	assert(projDm)
-	restoreState = projDm
+	assert(Project)
+	restoreState = Project.DataModel
 	
-	projDm = (projDm:Duplicate() :: any) :: GameObject & DataModel
-	projWp = projDm.Workspace
-	projCam = projWp.SceneCamera
-	EditorTl.Target = projWp
+	assert(Project.DataModel)
+	Project.DataModel = (Project.DataModel:Duplicate() :: any) :: GameObject & DataModel
+	EditorTl.Target = Project.DataModel.Workspace
 	EditorTl.Scripting = true
 	
 	engine.physicstimescale(1)
-	engine.setexplorerroot(projDm)
+	engine.setexplorerroot(Project.DataModel)
 	
-	engine.binddatamodel(projDm) -- Set the `game` and `workspace` variables to the correct values in game scripts
+	engine.binddatamodel(Project.DataModel) -- Set the `game` and `workspace` variables to the correct values in game scripts
 	engine.pushlvm("GameScripts")
 	
+	local projWp = Project.DataModel.Workspace
 	if not projWp.SceneCamera then
 		projWp.SceneCamera = GameObject.new("Camera")
 		projWp.SceneCamera.Parent = projWp
@@ -723,7 +1020,7 @@ function Stages.ProjectPlaying_Enter()
 
 	workspace.SceneCamera = projWp.SceneCamera
 	
-	return projDm -- Connect to the Project's datamodel `.OnFrameBegin`
+	return Project.DataModel -- Connect to the Project's datamodel `.OnFrameBegin`
 end
 
 function Stages.ProjectPlaying(DeltaTime)
@@ -733,15 +1030,13 @@ end
 
 function Stages.ProjectPlaying_Leave()
 	assert(restoreState)
-	assert(projDm)
+	assert(Project.DataModel)
 
-	projDm:Destroy()
-	projDm = restoreState
-	projWp = restoreState.Workspace
-	projCam = projWp.SceneCamera
-	EditorTl.Target = projWp
+	Project.DataModel:Destroy()
+	Project.DataModel = restoreState
+	EditorTl.Target = Project.DataModel.Workspace
 	EditorTl.Scripting = false
-	engine.setexplorerroot(projDm)
+	engine.setexplorerroot(Project.DataModel)
 	
 	engine.poplvm()
 	engine.binddatamodel(game)

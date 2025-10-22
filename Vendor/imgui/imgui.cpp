@@ -23866,3 +23866,11 @@ void ImGui::ShowFontSelector(const char* label)
 //-----------------------------------------------------------------------------
 
 #endif // #ifndef IMGUI_DISABLE
+
+#include <stdexcept>
+
+void hxassert(bool v, const char* msg)
+{
+    if (!v)
+        throw std::runtime_error(msg);
+}

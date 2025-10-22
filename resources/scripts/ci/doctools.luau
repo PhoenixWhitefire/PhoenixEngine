@@ -23,6 +23,8 @@ local VALID_TYPES = {
     GameObject = true,
     Matrix = true,
     Color = true,
+    ["false"] = true,
+    ["true"] = true,
 
     Model = true,
 }
