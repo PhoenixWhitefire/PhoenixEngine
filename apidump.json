@@ -238,6 +238,7 @@
         "set": "function"
       },
       "engine": {
+        "args": "function",
         "binddatamodel": "function",
         "daabbs": "function",
         "dwireframes": "function",
@@ -273,6 +274,7 @@
         "makecwdaliasof": "function",
         "mkdir": "function",
         "promptopen": "function",
+        "promptopenfolder": "function",
         "promptsave": "function",
         "read": "function",
         "remove": "function",

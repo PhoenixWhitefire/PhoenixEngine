@@ -522,6 +522,8 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 			break;
 		}
 
+	// TODO fix
+	// corrupts mesh UVs and normals
 	bool quantizedFloats = false; //true;  <-- not working properly
 	bool quantizedNormals = false; //true; <-- not working properly
 

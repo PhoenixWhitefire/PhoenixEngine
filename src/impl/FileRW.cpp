@@ -58,8 +58,8 @@ std::string FileRW::ReadFile(const std::string& ShortPath, bool* Success, std::s
 	else
 	{
 		std::string error = std::strerror(errno);
-		if (!std::filesystem::is_regular_file(actualPath))
-			error = "Not a file"; // "Succeeds" on Linux for some reason
+		if (std::filesystem::is_directory(actualPath))
+			error += " Not a file"; // "Succeeds" on Linux for some reason
 
 		Log::ErrorF("Failed to read file '{}': {}", actualPath, error);
 

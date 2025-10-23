@@ -152,15 +152,17 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 ### `engine`
 * Inspect and modify various parts of the Engine
 
-#### `engine.exit(ExitCode: number? [ 0 ]): `
-* Shuts down the Engine and exits the process with the specified Exit Code (or 0 by default)
+#### `engine.fullscreen(): boolean`
+* Returns whether or not the window is currently fullscreened
+* To *set* whether the window is fullscreened, use `.setfullscreen`
 
 #### `engine.windowsize(): number, number`
 * Returns the current size, in pixels, of the game window
 * To *set* the size of the window, use `.setwindowsize`
 
-#### `engine.framerate(): number`
-* Returns the current framerate
+#### `engine.daabbs(Enabled: boolean?): boolean`
+* Returns whether AABBs are drawn for all objects with collisions enabled (`.PhysicsCollisions == true`)
+* Optionally, the visualization can be enabled/disabled by passing in a boolean argument
 
 #### `engine.showmessagebox(Title: string, Message: string, Buttons: ("ok" | "okcancel" | "yesno" | "yesnocancel")? [ "ok" ], Icon: ("info" | "warning" | "error" | "question")? [ "info" ], DefaultButton: number? [ 1 ]): number`
 * Shows a message to the player with the given specification
@@ -171,6 +173,9 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `engine.unloadtexture(Path: string): `
 * Unloads the given texture from the Engine's cache
 
+#### `engine.poplvm(): `
+* Pops the topmost Luau VM from the VM stack, causing the VM below it to be used for any Scripts resumed beyond that point
+
 #### `engine.setvsync(VSyncEnabled: boolean): `
 * Enables/disables VSync
 
@@ -180,24 +185,24 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `engine.binddatamodel(NewDataModel: GameObject): `
 * Switches Data Models to the specified Object
 
-#### `engine.setexplorerroot(Root: GameObject): `
-* Changes the Root of the built-in Explorer's hierarchy view
-
 #### `engine.setwindowsize(Width: number, Height: number): `
 * Sets the size of the window to the specified two Width and Height integers
 
 #### `engine.settoolenabled(Tool: string, Enabled: boolean): `
 * Enables/disables the given tool
 
-#### `engine.fullscreen(): boolean`
-* Returns whether or not the window is currently fullscreened
-* To *set* whether the window is fullscreened, use `.setfullscreen`
+#### `engine.setexplorerroot(Root: GameObject): `
+* Changes the Root of the built-in Explorer's hierarchy view
+
+#### `engine.exit(ExitCode: number? [ 0 ]): `
+* Shuts down the Engine and exits the process with the specified Exit Code (or 0 by default)
 
 #### `engine.setfullscreen(Fullscreen: boolean): `
 * Enables/disables fullscreen mode
 
-#### `engine.poplvm(): `
-* Pops the topmost Luau VM from the VM stack, causing the VM below it to be used for any Scripts resumed beyond that point
+#### `engine.pushlvm(VmName: string): `
+* Pushes a new Luau VM to the Luau VM stack. Scripts resumed past that point will run in the new VM
+* The `game` and `workspace` globals in the new VM will depend on the current bound datamodel
 
 #### `engine.setmaxframerate(MaxFramerate: number): `
 * Sets the maximum framerate the Engine will reach before self-limiting
@@ -215,9 +220,9 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * Returns whether the given tool is currently enabled
 * To *enable* or *disable* the tool, use `.settoolenabled`
 
-#### `engine.pushlvm(VmName: string): `
-* Pushes a new Luau VM to the Luau VM stack. Scripts resumed past that point will run in the new VM
-* The `game` and `workspace` globals in the new VM will depend on the current bound datamodel
+#### `engine.args(): { string }`
+* Returns the list of launch arguments given to the Engine
+* The first item is always the path to the Engine executable
 
 #### `engine.dwireframes(Enabled: boolean?): boolean`
 * Returns whether all visible 3D objects are being rendered with wireframes
@@ -226,9 +231,8 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `engine.isheadless(): boolean`
 * Returns whether the Engine is currently running Headless mode
 
-#### `engine.daabbs(Enabled: boolean?): boolean`
-* Returns whether AABBs are drawn for all objects with collisions enabled (`.PhysicsCollisions == true`)
-* Optionally, the visualization can be enabled/disabled by passing in a boolean argument
+#### `engine.framerate(): number`
+* Returns the current framerate
 
 #### `engine.maxframerate(): number`
 * Returns the current maximum framerate setting
@@ -247,6 +251,10 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 
 #### `fs.isfile(string): boolean`
 * Returns whether the specified Path refers to a file
+
+#### `fs.promptopenfolder(Title: string, DefaultDirectory: string?): string?`
+* Prompts the user to select a folder
+* Returns `nil` if no selection was made
 
 #### `fs.rename(Path: string, NewName: string): boolean, string?`
 * Renames the file at the given `Path` to have the `NewName`

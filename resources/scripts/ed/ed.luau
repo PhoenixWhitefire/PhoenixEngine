@@ -108,6 +108,10 @@ local function saveToRecents(Path: string)
 	saveRecents()
 end
 
+local function saveProject()
+	scene.save({ assert(Project.DataModel) }, "@projres/scenes/root.world")
+end
+
 local function openProject(ManualPath: string?)
 	local path = ManualPath
 	local selecting = not path
@@ -133,7 +137,7 @@ local function openProject(ManualPath: string?)
 			end
 
 			local conf = fs.read(proj .. "/phoenix.conf")
-			local name = nil
+			local name: string? = nil
 
 			if conf then
 				name = json.parse(conf).GameTitle
@@ -249,11 +253,12 @@ local function createNewProject()
 	projWp.Parent = dm
 	camera.Parent = projWp
 	projWp.SceneCamera = camera
+	Project.DataModel = dm
 
-	assert(scene.save({ dm }, "@projres/scenes/root.world"))
+	saveProject()
+	openProject(Project.Name)
 
 	SavedProjectsCache = nil
-	openProject(Project.Name)
 end
 
 local TabButtonHovering: string? = nil
@@ -436,6 +441,112 @@ local HoveringOverMenuBar = false
 local HoveringOverRibbonTab = false
 local RibbonPopupDistance = 24
 
+local function exportProject()
+	saveProject()
+
+	imgui.openpopup("Export Project")
+	local exportName = Project.Name
+	local exportDir = fs.promptopenfolder("Choose export directory")
+	local exportTo = `{exportDir}/{exportName}`
+	
+	local prevExportTo = ""
+
+	while true do
+		if not imgui.beginpopupmodal("Export Project", true) then
+			print("Export cancelled - Popup closed")
+			return
+		end
+
+		exportName = imgui.inputstring("Export As", exportName)
+		if exportName:find("[^%w%s]") then
+			imgui.text("Only alphanumeric characters are permitted")
+		end
+		
+		imgui.text(`Export directory: {exportDir}`)
+		imgui.sameline()
+
+		if imgui.button("...") then
+			exportDir = fs.promptopenfolder("Change export directory")
+		end
+
+		exportTo = `{exportDir}/{exportName}`
+
+		imgui.separator()
+
+		imgui.text("Your project will export to:")
+		imgui.pushstylecolor(0, { 1, 1, 1, 1 })
+		imgui.text(exportTo)
+		imgui.popstylecolor()
+
+		if prevExportTo ~= exportTo then
+			if fs.isdirectory(exportTo) then
+				imgui.text("This directory already exists!")
+			end
+		else
+			prevExportTo = exportTo
+		end
+
+		if imgui.button("Cancel") then
+			print("Export cancelled - Cancel button clicked in Export dialogue")
+			imgui.endpopup()
+			return
+		end
+
+		imgui.sameline()
+
+		local cax, _ = imgui.getcontentregionavail()
+		local cx, cy = imgui.cursorposition()
+		imgui.setcursorposition(cx + cax - 50, cy)
+
+		if imgui.button("Export") then
+			print("Export button clicked")
+
+			if fs.isdirectory(exportTo) then
+				local chosenOption = engine.showmessagebox(
+					"Export will overwrite",
+					`The directory:\n\n{ exportTo }\n\nalready exists. Are you sure you want to overwrite it? This will erase all of it's content!`,
+					"yesno",
+					"warning"
+				)
+
+				if chosenOption == 0 then
+					print("Chose not to overwrite")
+				else
+					print("Removing directory to overwrite with export -", exportTo)
+					fs.remove(exportTo)
+
+					imgui.endpopup()
+					break
+				end
+			else
+				imgui.closecurrentpopup()
+				imgui.endpopup()
+				break
+			end
+		end
+
+		imgui.endpopup()
+		game.OnFrameBegin:WaitUntil()
+	end
+
+	print("Exporting")
+
+	assert(fs.mkdir(exportTo))
+	assert(fs.copy("@proj", exportTo))
+
+	local execPath = engine.args()[1]
+	assert(fs.copy(execPath, `{exportTo}/{Project.Name}{if execPath:find(".exe") then ".exe" else ""}`))
+
+	if execPath:find("x64/Debug") and execPath:find(".exe") then
+		engine.showmessagebox(
+			"Windows Debug build",
+			"Windows Debug builds cannot be distributed without additional dependencies"
+		)
+	end
+
+	print("Export done")
+end
+
 local function renderMainMenuBar(dt: number)
 	if not imgui.beginmainmenubar() then
 		return
@@ -447,7 +558,7 @@ local function renderMainMenuBar(dt: number)
 	
 	if imgui.beginmenu("File") then
 		if imgui.menuitem("Save", CurrentStage == "ProjectEditing") then
-			scene.save({ assert(Project.DataModel) }, "@projres/scenes/root.world")
+			saveProject()
 		end
 
 		if CurrentStage == "ProjectEditing" then
@@ -527,44 +638,7 @@ local function renderMainMenuBar(dt: number)
 			end
 
 			if imgui.menuitem("Export") then
-				local dest = fs.promptopenfolder("Select Destination Folder")
-
-				if not dest then
-					print("No export destination selected, cancelling")
-				else
-					local saveDest = `{dest}/{Project.Name}`
-					local continueExport = true
-
-					if fs.isdirectory(saveDest) then
-						local chosenOption = engine.showmessagebox(
-							"Directory already exists",
-							`The folder '{saveDest}' already exists\nClick YES to delete, and NO to cancel the export`,
-							"yesno",
-							"warning"
-						)
-
-						if chosenOption == 1 then
-							assert(fs.remove(saveDest))
-						else
-							continueExport = false
-						end
-					end
-
-					if continueExport then
-						assert(fs.mkdir(saveDest))
-						assert(fs.copy("@proj", saveDest))
-
-						local execPath = engine.args()[1]
-						assert(fs.copy(execPath, `{saveDest}/{Project.Name}{if execPath:find(".exe") then ".exe" else ""}`))
-
-						if execPath:find("x64/Debug") and execPath:find(".exe") then
-							engine.showmessagebox(
-								"Windows Debug build",
-								"Windows Debug builds cannot be distributed without additional dependencies that the Engine does not distribute"
-							)
-						end
-					end
-				end
+				defer(exportProject)
 			end
 
 			if imgui.menuitem("Close") then
@@ -747,12 +821,14 @@ end
 local SelectorHoveringOver: number? = nil
 local ProjectContextMenuTarget = 0
 
-local function renderProjectSelectorTiles(Projects: { string }, StartX: number)
+local function renderProjectSelectorTiles(Projects: { string })
 	local cx, cy = imgui.cursorposition()
 	local firstcx = cx + 10
 
+	local startX = cx
+
 	local windowSizeX, _ = engine.windowsize()
-	local lastnl = #RecentProjects
+	local lastnl = #Projects
 	local hoveringOverWip = nil
 
 	for i = #Projects, 1, -1 do
@@ -794,21 +870,23 @@ local function renderProjectSelectorTiles(Projects: { string }, StartX: number)
 			hoveringOverWip = i
 		end
 
-		if (lastnl - i) * 250 + 170 + 250 + StartX < windowSizeX - (170 * 2) - StartX then
+		if (lastnl - i) * 350 + 170 + 250 + 75 + startX > windowSizeX then
+			-- new row
+			_, cy = imgui.cursorposition()
+			imgui.setcursorposition(firstcx, cy + 10)
+			lastnl = i - 1
+		else
+			-- same row
 			imgui.setcursorposition(cx + 275 - 15, cy)
 			imgui.dummy(0, 0)
 			imgui.sameline()
-		else
-			lastnl = i-1
-			_, cy = imgui.cursorposition()
-			imgui.setcursorposition(firstcx, cy + 10)
 		end
 	end
 
 	SelectorHoveringOver = hoveringOverWip
 end
 
-local function renderRenderProjects(StartX: number)
+local function renderRenderProjects()
 	imgui.text("Recent")
 	local cx, cy = imgui.cursorposition()
 	imgui.setcursorposition(cx, cy + 10)
@@ -816,7 +894,7 @@ local function renderRenderProjects(StartX: number)
 	cx, cy = imgui.cursorposition()
 	imgui.setcursorposition(cx + 10, cy)
 
-	renderProjectSelectorTiles(RecentProjects, StartX)
+	renderProjectSelectorTiles(RecentProjects)
 	
 	if imgui.beginpopup("ProjectContextMenu") then
 		if imgui.menuitem("Remove from Recents") then
@@ -828,7 +906,7 @@ local function renderRenderProjects(StartX: number)
 	end
 end
 
-local function renderSavedProjects(StartX: number)
+local function renderSavedProjects()
 	if not SavedProjectsCache then
 		SavedProjectsCache = {}
 		assert(SavedProjectsCache)
@@ -850,7 +928,7 @@ local function renderSavedProjects(StartX: number)
 	cx, cy = imgui.cursorposition()
 	imgui.setcursorposition(cx + 10, cy)
 
-	renderProjectSelectorTiles(assert(SavedProjectsCache), StartX)
+	renderProjectSelectorTiles(assert(SavedProjectsCache))
 	
 	if imgui.beginpopup("ProjectContextMenu") then
 		if imgui.menuitem("Delete") then
@@ -986,8 +1064,7 @@ function Stages.ProjectEditing_Leave(NextStage)
 	engine.setexplorerroot(game)
 	engine.setexplorerselections({})
 
-	assert(Project.DataModel)
-	scene.save({ Project.DataModel }, "@projres/scenes/root.world")
+	saveProject()
 
 	Project.DataModel:Destroy()
 	Project.Name = "Should not be visible"

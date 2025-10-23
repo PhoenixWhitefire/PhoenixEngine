@@ -487,6 +487,13 @@
       "engine": {
         "Description": "Inspect and modify various parts of the Engine",
         "Members": {
+          "args": {
+            "Description": [
+              "Returns the list of launch arguments given to the Engine",
+              "The first item is always the path to the Engine executable"
+            ],
+            "Out": "{ string }"
+          },
           "binddatamodel": {
             "Description": [
               "Switches Data Models to the specified Object"
@@ -843,6 +850,17 @@
               ]
             ],
             "Out": "{ string }"
+          },
+          "promptopenfolder": {
+            "Description": [
+              "Prompts the user to select a folder",
+              "Returns `nil` if no selection was made"
+            ],
+            "In": [
+              "Title: string",
+              "DefaultDirectory: string?"
+            ],
+            "Out": "string?"
           },
           "promptsave": {
             "Description": [
