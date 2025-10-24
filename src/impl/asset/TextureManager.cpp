@@ -175,11 +175,6 @@ void TextureManager::Initialize(bool IsHeadless)
 
 	m_UploadTextureToGpu(missingTexture);
 
-	// First texture loaded will not work properly and using it in a
-	// material will spam "Invalid program texture usage" errors
-	// 30/11/2024
-	this->LoadTextureFromPath("textures/DONOTUSE.png", false);
-
 	s_Instance = this;
 }
 

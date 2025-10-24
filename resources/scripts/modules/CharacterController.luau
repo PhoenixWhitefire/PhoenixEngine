@@ -162,43 +162,19 @@ function Controller.getMoveDirection(self: Controller)
 end
 
 function Controller.getRotationVector(self: Controller) : (number, number)
-	if input.mousedown("l") then
+	if input.mousedown("l") and not input.guihandledm() then
 		self.isMouseLocked = true -- lock mouse with left-click
 		
 	elseif input.mousedown("r") then
 		self.isMouseLocked = false -- unlock mouse with right-click
 	end
 	input.setmousegrabbed(self.isMouseLocked)
-	input.setcursorvisible(not self.isMouseLocked)
 	
 	local rx, ry = 0, 0
 	local mouseX, mouseY = input.mouseposition()
 	
 	if self.isMouseLocked then
 		rx, ry = (mouseY - self.prevMouseY) / 400, (self.prevMouseX - mouseX) / 400
-		
-		local windowSizeX, windowSizeY = engine.windowsize()
-		
-		local newMouseX, newMouseY = mouseX, mouseY
-		
-		if mouseX <= 10 then
-			newMouseX = windowSizeX - 20
-		end
-		if mouseX >= windowSizeX - 10 then
-			newMouseX = 20
-		end
-		
-		if mouseY <= 10 then
-			newMouseY = windowSizeY - 20
-		end
-		if mouseY >= windowSizeY - 10 then
-			newMouseY = 20
-		end
-		
-		if (newMouseX ~= mouseX) or (newMouseY ~= mouseY) then
-			input.setmouseposition(newMouseX, newMouseY)
-			mouseX, mouseY = newMouseX, newMouseY -- assigned to `self.prevMouse*` below
-		end
 	end
 	
 	self.prevMouseX, self.prevMouseY = mouseX, mouseY
