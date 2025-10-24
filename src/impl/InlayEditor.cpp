@@ -1281,8 +1281,8 @@ static void renderMaterialEditor()
 }
 
 static std::vector<ObjectHandle> Selections;
-static std::vector<ObjectHandle> VisibleTree;
-static std::vector<ObjectHandle> VisibleTreeWip;
+static std::vector<ObjectRef> VisibleTree;
+static std::vector<ObjectRef> VisibleTreeWip;
 static ObjectHandle LastSelected;
 static ObjectHandle ObjectInsertionTarget = nullptr;
 static bool IsPickingObject = false;
@@ -1522,14 +1522,14 @@ static void onTreeItemClicked(GameObject* nodeClicked)
 			if (start > end)
 			{
 				// doesn't seem to work unless it is copied fsr
-				std::vector<ObjectHandle>::iterator temp = end;
+				std::vector<ObjectRef>::iterator temp = end;
 				end = start;
 				start = temp;
 			}
 
 			// 25/01/2025 this feels weird, like surely there's a better way
 			// to iterate between `start` and `end`
-			for (const ObjectHandle& middle : std::span<ObjectHandle>(start, end))
+			for (const ObjectRef& middle : std::span<ObjectRef>(start, end))
 				if (!isInSelections(middle))
 					Selections.push_back(middle);
 		}

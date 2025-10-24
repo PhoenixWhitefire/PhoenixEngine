@@ -38,17 +38,7 @@ static uint8_t MissingTextureBytes[] =
 	static_cast<uint8_t>(0xFFu),
 };
 
-static uint32_t s_Pbo = UINT32_MAX;
-static void* s_PboMapping = nullptr;
-
-static std::mutex s_PboWriteAvailable;
-static bool s_PboWriteGlobal = true;
 static bool s_TextureManagerShutdown = false;
-
-static bool isValidPboCandidate(const Texture* t)
-{
-	return (t->LoadedAsynchronously && t->NumColorChannels == 3 && t->Width <= 4096 && t->Height <= 4096);
-}
 
 void TextureManager::m_UploadTextureToGpu(Texture& texture)
 {
@@ -87,48 +77,18 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 	}
 
 	GLenum Format = 0;
+	const GLenum NumChannelsToFormat[] = { 0, GL_RED, GL_RG, GL_RGB, GL_RGBA };
 
-	switch (texture.NumColorChannels)
+	if (texture.NumColorChannels < 1 || texture.NumColorChannels > 4)
 	{
-
-	case 4:
-	{
-		Format = GL_RGBA;
-		break;
-	}
-
-	case 3:
-	{
-		Format = GL_RGB;
-		break;
-	}
-
-	case 2:
-	{
-		Format = GL_RG;
-		break;
-	}
-
-	case 1:
-	{
-		Format = GL_RED;
-		break;
-	}
-
-	[[unlikely]] default:
-	{
-		RAISE_RTF(
-			"Invalid ImageNumColorChannels (was '{}') for '{}'!",
+		Log::ErrorF(
+			"Unsupported number of color channels '{}' for texture '{}'",
 			texture.NumColorChannels, texture.ImagePath
 		);
-		
-		break;
+		return;
 	}
-
-	};
-
-	//if ((Format == GL_RGB) && TexturePtr->Usage == TextureType::SPECULAR)
-	//	Format = GL_RED;
+	else
+		Format = NumChannelsToFormat[texture.NumColorChannels];
 
 	glBindTexture(GL_TEXTURE_2D, texture.GpuId);
 
@@ -139,31 +99,8 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 	// 30/11/2024
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-	if (isValidPboCandidate(&texture))
 	{
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, s_Pbo);
-		glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
-
-		glTexImage2D(
-			GL_TEXTURE_2D,
-			0,
-			GL_RGBA,
-			texture.Width,
-			texture.Height,
-			0,
-			Format,
-			GL_UNSIGNED_BYTE,
-			0
-		);
-
-		s_PboMapping = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-
-		s_PboWriteGlobal = true;
-	}
-	else
-	{
-		ZoneScopedN("UnmappedPixelUpload");
+		ZoneScopedN("UploadData");
 
 		glTexImage2D(
 			GL_TEXTURE_2D,
@@ -210,17 +147,6 @@ void TextureManager::Initialize(bool IsHeadless)
 		s_Instance = this;
 		return;
 	}
-
-	glGenBuffers(1, &s_Pbo);
-	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, s_Pbo);
-	// 25/12/2024
-	// 4K PBO, 3 color channels
-	// 50 megs... oof
-	// you gotta do what you gotta do
-	glBufferData(GL_PIXEL_UNPACK_BUFFER, 4096ull * 4096ull * 3ull, NULL, GL_STREAM_DRAW);
-	s_PboMapping = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
-	
-	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
 	// ID 0 means no texture
 	m_Textures.emplace_back();
@@ -325,46 +251,6 @@ static void emloadTexture(
 
 	if (!data)
 		AsyncTexture->FailureReason = stbi_failure_reason();
-
-	else if (isValidPboCandidate(AsyncTexture))
-	{
-		{
-			ZoneScopedN("Mutex lock");
-			s_PboWriteAvailable.lock();
-		}
-
-		uint32_t totalTimeSlept = 0;
-
-		{
-			ZoneScopedN("Wait for s_PboWriteGlobal");
-
-			while (!s_PboWriteGlobal && !s_TextureManagerShutdown)
-			{
-				if (totalTimeSlept > 5000)
-				{
-					AsyncTexture->Status = Texture::LoadStatus::Failed;
-					AsyncTexture->FailureReason = " <POTENTIAL DEADLOCK>";
-					break; // 10/05/2025 deadlock problems
-				}
-
-				std::this_thread::sleep_for(std::chrono::milliseconds(5));
-				totalTimeSlept += 5;
-			}
-		}
-
-		s_PboWriteGlobal = false;
-
-		{
-			ZoneScopedN("memcpy");
-			memcpy(
-				s_PboMapping,
-				AsyncTexture->TMP_ImageByteData,
-				static_cast<size_t>(AsyncTexture->Width) * AsyncTexture->Height * AsyncTexture->NumColorChannels
-			);
-		}
-
-		s_PboWriteAvailable.unlock();
-	}
 }
 
 uint32_t TextureManager::Assign(const Texture& texture, const std::string& name)

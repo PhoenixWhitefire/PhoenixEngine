@@ -24,16 +24,45 @@ static int input_guihandled(lua_State* L)
     return 1;
 }
 
+static const std::unordered_map<char, int> s_KNameToCode =
+{
+    { 'w', GLFW_KEY_W },
+    { 'a', GLFW_KEY_A },
+    { 's', GLFW_KEY_S },
+    { 'd', GLFW_KEY_D },
+    { 'e', GLFW_KEY_E },
+    { 'f', GLFW_KEY_F },
+    { 'q', GLFW_KEY_Q },
+    { 'r', GLFW_KEY_R },
+    { 'm', GLFW_KEY_M },
+    { 'i', GLFW_KEY_I },
+    { 't', GLFW_KEY_T },
+    { 'p', GLFW_KEY_P },
+    { '1', GLFW_KEY_1 },
+    { '2', GLFW_KEY_2 },
+    { '3', GLFW_KEY_3 },
+    { ' ', GLFW_KEY_SPACE }
+};
+
 static int input_keypressed(lua_State* L)
 {
     if (lua_isstring(L, 1))
     {
-        const char* kname = luaL_checkstring(L, 1);
-        lua_pushboolean(L, UserInput::IsKeyDown((int)kname[0]));
+        size_t len = 0;
+        const char* kname = luaL_checklstring(L, 1, &len);
+
+        if (len != 1)
+            luaL_error(L, "Expected string of length 1, got %zi characters instead (String: '%s')", len, kname);
+
+        const auto& it = s_KNameToCode.find(kname[0]);
+        if (it == s_KNameToCode.end())
+            luaL_error(L, "Unsupported key '%c'", kname[0]);
+
+        lua_pushboolean(L, UserInput::IsKeyDown(it->second));
     }
     else if (lua_isnumber(L, 1))
     {
-        lua_pushboolean(L, UserInput::IsKeyDown((uint32_t)luaL_checkinteger(L, 1)));
+        lua_pushboolean(L, UserInput::IsKeyDown((int)luaL_checkinteger(L, 1)));
     }
     else
     {
