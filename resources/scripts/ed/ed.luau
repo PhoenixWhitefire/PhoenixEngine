@@ -236,9 +236,7 @@ local function createNewProject()
 	assert(fs.copy("@editres/materials", "@projres/materials"))
 	assert(fs.copy("@editres/textures/materials", "@projres/textures/materials"))
 
-	assert(fs.copy("@editres/textures/DONOTUSE.png", "@projres/textures/DONOTUSE.png"))
 	assert(fs.copy("@editres/textures/screendistort.jpg", "@projres/textures/screendistort.jpg"))
-	assert(fs.copy("@editres/textures/white.png", "@projres/textures/white.png"))
 
 	assert(fs.copy("@editres/textures/Sky1", "@projres/textures/Sky1"))
 
