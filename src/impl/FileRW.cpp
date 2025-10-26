@@ -121,9 +121,9 @@ bool FileRW::WriteFileCreateDirectories(
 
 	std::error_code ec;
 	
-	if (!createDirectoryRecursive(dirPath, ec))
+	if (!createDirectoryRecursive(dirPath, ec) && ErrorMessage)
 	{
-		*ErrorMessage = "Failed to recursively create directories: " + ec.message();
+		*ErrorMessage = std::format("Failed to recursively create directories to '{}': {}", path, ec.message());
 		return false;
 	}
 

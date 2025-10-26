@@ -254,7 +254,7 @@ std::string EcScript::GetSource(bool* IsInline, bool* Success)
 {
 	if (SourceFile.size() > 0 && SourceFile[0] == '!' && strcmp("!File:", SourceFile.c_str()) != 0)
 	{
-		if (strcmp("!InlineSource:", SourceFile.c_str()) == 0)
+		if (SourceFile.find("!InlineSource:") != std::string::npos)
 		{
 			if (Success)
 				*Success = true;

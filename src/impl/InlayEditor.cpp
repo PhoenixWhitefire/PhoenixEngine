@@ -1317,6 +1317,20 @@ typedef void(*ContextActionMenuHandlerFunc)(void);
 
 static std::vector<ObjectHandle> s_CreatingScriptFiles;
 
+static void tryOpenScriptForEditing(const ObjectHandle& scr)
+{
+	EcScript* s = scr->FindComponent<EcScript>();
+	assert(s);
+
+	if (s->SourceFile.size() > 0 && s->SourceFile.find("!InlineSource:") != std::string::npos)
+	{
+		if (std::find(s_CreatingScriptFiles.begin(), s_CreatingScriptFiles.end(), scr) == s_CreatingScriptFiles.end())
+			s_CreatingScriptFiles.push_back(scr);
+	}
+	else
+		invokeTextEditor(s->SourceFile);
+}
+
 static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] =
 {
 	[]()
@@ -1432,14 +1446,8 @@ static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] =
 	[]()
 	{
 		for (const ObjectHandle& sel : Selections)
-			if (EcScript* s = sel->FindComponent<EcScript>())
-			{
-				if (s->SourceFile.size() > 0 && strcmp("!InlineSource:", s->SourceFile.c_str()) == 0)
-					s_CreatingScriptFiles.push_back(sel);
-
-				else
-					invokeTextEditor(s->SourceFile);
-			}
+			if (sel->FindComponent<EcScript>())
+				tryOpenScriptForEditing(sel);
 	},
 
 	[]()
@@ -1672,6 +1680,7 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 		const ImGuiStyle& style = ImGui::GetStyle();
 
 		bool openInserter = false;
+		bool doubleClick = false;
 		bool isHovered = false;
 
 		bool open = ImGui::TreeNodeEx(&object->ObjectId, flags, "%s", "");
@@ -1703,12 +1712,10 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 			ImGui::EndDragDropTarget();
 		}
 
-		if (ImGui::IsItemClicked())
-			nodeClicked = object;
-		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
-			isHovered = true;
-		if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
-			openInserter = true;
+		nodeClicked = ImGui::IsItemClicked() ? object : nodeClicked;
+		openInserter = ImGui::IsItemClicked(ImGuiMouseButton_Right) ? true : openInserter;
+		isHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) ? true : isHovered;
+		doubleClick = ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
 
 		ImGui::SameLine();
 		ImGui::SetCursorPosX(ImGui::GetCursorPosX() - style.IndentSpacing * 0.6f + 1.5f);
@@ -1722,24 +1729,26 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 			ImVec4(),
 			object->Enabled ? ImVec4(1.f, 1.f, 1.f, 1.f) : ImVec4(.5f, .5f, .5f, 1.f)
 		);
-		if (ImGui::IsItemClicked())
-			nodeClicked = object;
-		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
-			isHovered = true;
-		if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
-			openInserter = true;
+		nodeClicked = ImGui::IsItemClicked() ? object : nodeClicked;
+		openInserter = ImGui::IsItemClicked(ImGuiMouseButton_Right) ? true : openInserter;
+		isHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) ? true : isHovered;
+		doubleClick = ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
 		
 		ImGui::SameLine();
 		ImGui::TextUnformatted(object->Name.c_str());
 
-		if (ImGui::IsItemClicked())
-			nodeClicked = object;
-		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
-			isHovered = true;
-		if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
-			openInserter = true;
+		nodeClicked = ImGui::IsItemClicked() ? object : nodeClicked;
+		openInserter = ImGui::IsItemClicked(ImGuiMouseButton_Right) ? true : openInserter;
+		isHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) ? true : isHovered;
+		doubleClick = ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
 
 		VisibleTreeWip.push_back(object);
+
+		if (nodeClicked == object && doubleClick) // double-click to edit script
+		{
+			if (object->FindComponent<EcScript>())
+				tryOpenScriptForEditing(object);
+		}
 
 		if (openInserter || ImGui::IsItemClicked(ImGuiMouseButton_Right))
 		{
@@ -2957,8 +2966,19 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 	renderProperties();
 	renderDocumentationViewer();
 
+	static bool wasCreatingScriptFile = false;
+	static char buffer[64]{};
+	static bool isNameTaken = false;
+
 	if (s_CreatingScriptFiles.size() > 0)
 	{
+		if (!wasCreatingScriptFile)
+		{
+			ImGui::OpenPopup("Create Script File");
+			wasCreatingScriptFile = true;
+			isNameTaken = false;
+		}
+
 		EcScript* script = static_cast<EcScript*>(s_CreatingScriptFiles[0]->FindComponent<EcScript>());
 
 		if (!script)
@@ -2968,51 +2988,54 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 			return;
 		}
 
-		ImGui::OpenPopup("Create Script File");
-		char buffer[64]{};
-		bool isNameTaken = false;
+		bool open = true;
 
-		while (true)
+		ImGui::SetNextWindowSize(ImVec2(320, 115), ImGuiCond_FirstUseEver);
+		if (!ImGui::BeginPopupModal("Create Script File", &open))
 		{
-			bool open = true;
+			Log::WarningF("Declined to create file for script '{}'", s_CreatingScriptFiles[0]->GetFullName());
+			s_CreatingScriptFiles.erase(s_CreatingScriptFiles.begin());
+			memset(buffer, 0, std::size(buffer));
+			wasCreatingScriptFile = false;
 
-			if (!ImGui::BeginPopupModal("Create Script File", &open))
-			{
-				s_CreatingScriptFiles.erase(s_CreatingScriptFiles.begin());
-				Log::WarningF("Declined to create file for script '{}'", s_CreatingScriptFiles[0]->GetFullName());
-				break;
-			}
-
-			ImGui::Text("Enter a name/path for the script:");
-
-			ImGui::Text("scripts/");
-			ImGui::SameLine();
-
-			std::string fullpath;
-
-			if (ImGui::InputText("##", buffer, std::size(buffer)))
-			{
-				fullpath = "scripts/" + std::string(buffer);
-
-				if (std::filesystem::is_regular_file(FileRW::MakePathCwdRelative(fullpath)))
-					isNameTaken = true;
-			}
-
-			if (isNameTaken)
-				ImGui::Text("The file at that path will be overwritten");
-
-			if (ImGui::Button("Confirm"))
-			{
-				ImGui::CloseCurrentPopup();
-				
-				EDCHECKEXPR(FileRW::WriteFileCreateDirectories(fullpath, script->GetSource()));
-
-				script->SourceFile = fullpath;
-				invokeTextEditor(fullpath);
-			}
-			
-			ImGui::EndPopup();
+			return;
 		}
+
+		ImGui::Text("Enter a name/path for the script:");
+
+		ImGui::Text("scripts/");
+		ImGui::SameLine();
+
+		static std::string fullpath;
+
+		if (ImGui::InputText("##", buffer, std::size(buffer)))
+		{
+			fullpath = "scripts/" + std::string(buffer);
+			isNameTaken = std::filesystem::is_regular_file(FileRW::MakePathCwdRelative(fullpath));
+		}
+
+		if (isNameTaken)
+			ImGui::Text("The file at that path will be overwritten");
+
+		if (ImGui::Button("Confirm"))
+		{
+			ImGui::CloseCurrentPopup();
+
+			std::string error;
+			bool success = FileRW::WriteFileCreateDirectories(fullpath, script->GetSource(), &error);
+
+			if (!success)
+				setErrorMessage(error);
+
+			script->SourceFile = fullpath;
+			invokeTextEditor(fullpath);
+
+			s_CreatingScriptFiles.erase(s_CreatingScriptFiles.begin());
+			memset(buffer, 0, std::size(buffer));
+			wasCreatingScriptFile = false;
+		}
+
+		ImGui::EndPopup();
 	}
 }
 
