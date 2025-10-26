@@ -144,13 +144,12 @@ static int base_loadthreadfromfile(lua_State* L)
 	const char* chname = luaL_optstring(L, 1, path);
 
 	bool readSuccess = false;
-	std::string readError;
-	std::string contents = FileRW::ReadFile(path, &readSuccess, &readError);
+	std::string contents = FileRW::ReadFile(path, &readSuccess);
 
 	if (!readSuccess)
 	{
 		lua_pushnil(L);
-		lua_pushlstring(L, readError.data(), readError.size());
+		lua_pushlstring(L, contents.data(), contents.size());
 	}
 	else
 	{

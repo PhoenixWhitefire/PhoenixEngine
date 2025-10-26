@@ -2,6 +2,7 @@
 #include <filesystem>
 #include <fstream>
 #include <format>
+#include <tracy/public/tracy/Tracy.hpp>
 
 #include "FileRW.hpp"
 #include "GlobalJsonConfig.hpp"
@@ -15,6 +16,8 @@
 //   false upon failure, and set the std::error_code & err accordingly.
 static bool createDirectoryRecursive(const std::string_view& dirName, std::error_code& err)
 {
+	ZoneScoped;
+
 	err.clear();
 	if (!std::filesystem::create_directories(dirName, err))
 	{
@@ -29,8 +32,10 @@ static bool createDirectoryRecursive(const std::string_view& dirName, std::error
 	return true;
 }
 
-std::string FileRW::ReadFile(const std::string& ShortPath, bool* Success, std::string* ErrorMessage)
+std::string FileRW::ReadFile(const std::string& ShortPath, bool* Success)
 {
+	ZoneScoped;
+
 	const std::string actualPath = FileRW::MakePathCwdRelative(ShortPath);
 
 	std::ifstream file;
@@ -66,10 +71,7 @@ std::string FileRW::ReadFile(const std::string& ShortPath, bool* Success, std::s
 		if (Success)
 			*Success = false;
 
-		if (ErrorMessage)
-			*ErrorMessage = error;
-
-		return "";
+		return error;
 	}
 }
 
@@ -79,6 +81,8 @@ bool FileRW::WriteFile(
 	std::string* ErrorMessage
 )
 {
+	ZoneScoped;
+
 	std::string path = FileRW::MakePathCwdRelative(ShortPath);
 	std::ofstream file(path.c_str(), std::ios::binary);
 
@@ -108,6 +112,8 @@ bool FileRW::WriteFileCreateDirectories(
 	std::string* ErrorMessage
 )
 {
+	ZoneScoped;
+
 	std::string path = FileRW::MakePathCwdRelative(ShortPath);
 
 	size_t containingDirLoc = path.find_last_of("/");

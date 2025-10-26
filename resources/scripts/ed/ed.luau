@@ -821,8 +821,6 @@ local ProjectContextMenuTarget = 0
 
 local function renderProjectSelectorTiles(Projects: { string })
 	local cx, cy = imgui.cursorposition()
-	local firstcx = cx + 10
-
 	local startX = cx
 
 	local windowSizeX, _ = engine.windowsize()
@@ -871,7 +869,7 @@ local function renderProjectSelectorTiles(Projects: { string })
 		if (lastnl - i) * 350 + 170 + 250 + 75 + startX > windowSizeX then
 			-- new row
 			_, cy = imgui.cursorposition()
-			imgui.setcursorposition(firstcx, cy + 10)
+			imgui.setcursorposition(startX, cy + 10)
 			lastnl = i - 1
 		else
 			-- same row

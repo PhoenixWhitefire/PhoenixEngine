@@ -36,13 +36,12 @@ static int scene_load(lua_State* L)
     const char* path = luaL_checkstring(L, 1);
 
 	bool readSuccess = true;
-	std::string readError;
-	std::string fileContents = FileRW::ReadFile(path, &readSuccess, &readError);
+	std::string fileContents = FileRW::ReadFile(path, &readSuccess);
 
 	if (!readSuccess)
 	{
 		lua_pushboolean(L, false);
-		lua_pushlstring(L, readError.data(), readError.size());
+		lua_pushlstring(L, fileContents.data(), fileContents.size());
 		return 2;
 	}
 

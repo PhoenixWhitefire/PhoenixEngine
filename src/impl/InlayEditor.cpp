@@ -1315,6 +1315,8 @@ static const char* ContextMenuActionStrings[] =
 
 typedef void(*ContextActionMenuHandlerFunc)(void);
 
+static std::vector<ObjectHandle> s_CreatingScriptFiles;
+
 static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] =
 {
 	[]()
@@ -1431,7 +1433,13 @@ static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] =
 	{
 		for (const ObjectHandle& sel : Selections)
 			if (EcScript* s = sel->FindComponent<EcScript>())
-				invokeTextEditor(s->SourceFile);
+			{
+				if (s->SourceFile.size() > 0 && strcmp("!InlineSource:", s->SourceFile.c_str()) == 0)
+					s_CreatingScriptFiles.push_back(sel);
+
+				else
+					invokeTextEditor(s->SourceFile);
+			}
 	},
 
 	[]()
@@ -2948,6 +2956,64 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 	renderExplorer();
 	renderProperties();
 	renderDocumentationViewer();
+
+	if (s_CreatingScriptFiles.size() > 0)
+	{
+		EcScript* script = static_cast<EcScript*>(s_CreatingScriptFiles[0]->FindComponent<EcScript>());
+
+		if (!script)
+		{
+			Log::WarningF("Object '{}' lost it's Script component, removing from `s_CreatingScriptFiles` queue", s_CreatingScriptFiles[0]->GetFullName());
+			s_CreatingScriptFiles.erase(s_CreatingScriptFiles.begin());
+			return;
+		}
+
+		ImGui::OpenPopup("Create Script File");
+		char buffer[64]{};
+		bool isNameTaken = false;
+
+		while (true)
+		{
+			bool open = true;
+
+			if (!ImGui::BeginPopupModal("Create Script File", &open))
+			{
+				s_CreatingScriptFiles.erase(s_CreatingScriptFiles.begin());
+				Log::WarningF("Declined to create file for script '{}'", s_CreatingScriptFiles[0]->GetFullName());
+				break;
+			}
+
+			ImGui::Text("Enter a name/path for the script:");
+
+			ImGui::Text("scripts/");
+			ImGui::SameLine();
+
+			std::string fullpath;
+
+			if (ImGui::InputText("##", buffer, std::size(buffer)))
+			{
+				fullpath = "scripts/" + std::string(buffer);
+
+				if (std::filesystem::is_regular_file(FileRW::MakePathCwdRelative(fullpath)))
+					isNameTaken = true;
+			}
+
+			if (isNameTaken)
+				ImGui::Text("The file at that path will be overwritten");
+
+			if (ImGui::Button("Confirm"))
+			{
+				ImGui::CloseCurrentPopup();
+				
+				EDCHECKEXPR(FileRW::WriteFileCreateDirectories(fullpath, script->GetSource()));
+
+				script->SourceFile = fullpath;
+				invokeTextEditor(fullpath);
+			}
+			
+			ImGui::EndPopup();
+		}
+	}
 }
 
 void InlayEditor::SetExplorerRoot(const ObjectHandle NewRoot)

@@ -43,8 +43,7 @@ static int fs_read(lua_State* L)
     const char* path = luaL_checkstring(L, 1);
 
     bool success = true;
-	std::string errorMessage;
-    std::string contents = FileRW::ReadFile(path, &success, &errorMessage);
+    std::string contents = FileRW::ReadFile(path, &success);
 
 	if (success)
 	{
@@ -54,7 +53,7 @@ static int fs_read(lua_State* L)
 	else
 	{
 		lua_pushnil(L);
-		lua_pushlstring(L, errorMessage.data(), errorMessage.size());
+		lua_pushlstring(L, contents.data(), contents.size());
 		return 2;
 	}
 }

@@ -250,6 +250,51 @@ bool EcScript::LoadScript(const std::string_view& scriptFile)
 	return false;
 }
 
+std::string EcScript::GetSource(bool* IsInline, bool* Success)
+{
+	if (SourceFile.size() > 0 && SourceFile[0] == '!' && strcmp("!File:", SourceFile.c_str()) != 0)
+	{
+		if (strcmp("!InlineSource:", SourceFile.c_str()) == 0)
+		{
+			if (Success)
+				*Success = true;
+
+			if (IsInline)
+				*IsInline = true;
+
+			size_t colonLoc = SourceFile.find_first_of(':');
+
+			if (colonLoc + 1 < SourceFile.size())
+				return SourceFile.substr(colonLoc + 1, SourceFile.size() - colonLoc - 1);
+			else
+				return "";
+		}
+		else
+		{
+			std::string error = std::format("Invalid SourceFile property '{}'", SourceFile);
+			Log::Error(error);
+
+			if (Success)
+				*Success = false;
+
+			return error;
+		}
+	}
+	else
+	{
+		bool success = true;
+		std::string contents = FileRW::ReadFile(SourceFile, &success);
+
+		if (Success)
+			*Success = success;
+
+		if (IsInline)
+			*IsInline = true;
+
+		return contents;
+	}
+}
+
 bool EcScript::Reload()
 {
 	ZoneScopedC(tracy::Color::LightSkyBlue);
@@ -261,9 +306,8 @@ bool EcScript::Reload()
 
 	ZoneTextF("Script: %s\nFile: %s", fullName.c_str(), this->SourceFile.c_str());
 
-	bool fileExists = true;
-	std::string fileError;
-	m_Source = FileRW::ReadFile(SourceFile, &fileExists, &fileError);
+	bool readSuccess = true;
+	std::string source = GetSource(nullptr, &readSuccess);
 
 	m_StaleSource = false;
 
@@ -274,13 +318,11 @@ bool EcScript::Reload()
 
 	luaL_sandboxthread(m_L);
 
-	if (!fileExists)
+	if (!readSuccess)
 	{
-		Log::Error(
-			std::format(
-				"Failed to load '{}' for Script {}: {}",
-				this->SourceFile, fullName, fileError
-			)
+		Log::ErrorF(
+			"Failed to load '{}' for Script {}: {}",
+			SourceFile, fullName, source // `source` will be the error message
 		);
 
 		return false;
@@ -289,7 +331,7 @@ bool EcScript::Reload()
 	ScriptEngine::L::PushGameObject(m_L, this->Object);
 	lua_setglobal(m_L, "script");
 
-	int result = ScriptEngine::CompileAndLoad(m_L, m_Source, "@" + FileRW::MakePathCwdRelative(SourceFile));
+	int result = ScriptEngine::CompileAndLoad(m_L, source, "@" + FileRW::MakePathCwdRelative(SourceFile));
 	
 	if (result == 0)
 	{

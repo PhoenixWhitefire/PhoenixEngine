@@ -1501,8 +1501,7 @@ static void requireConfigInit(luarequire_Configuration* config)
 			std::filesystem::path* curpath = (std::filesystem::path*)ctx;
 
 			bool success = true;
-			std::string error;
-			std::string contents = FileRW::ReadFile(((*curpath) / ".luaurc").string(), &success, &error);
+			std::string contents = FileRW::ReadFile(((*curpath) / ".luaurc").string(), &success);
 			*outSize = contents.size();
 
 			if (bufferSize < contents.size())
@@ -1528,8 +1527,7 @@ static void requireConfigInit(luarequire_Configuration* config)
 			luaL_sandboxthread(ML);
 
 			bool readSuccess = true;
-			std::string readError;
-			std::string contents = FileRW::ReadFile(curpath->string(), &readSuccess, &readError);
+			std::string contents = FileRW::ReadFile(curpath->string(), &readSuccess);
 
 			if (!readSuccess)
 			{

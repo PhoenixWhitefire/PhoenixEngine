@@ -11,12 +11,13 @@ struct EcScript
 	bool Reload();
 	void Update(double);
 
-	std::string SourceFile = "scripts/default.luau";
+	std::string GetSource(bool* IsInline = nullptr, bool* Success = nullptr);
+
+	std::string SourceFile = "!InlineSource:print(\"Hello, World!\")";
 	ObjectRef Object;
 	uint32_t EcId = UINT32_MAX;
 	bool Valid = true;
-
-	std::string m_Source;
+	
 	lua_State* m_L = nullptr;
 	bool m_StaleSource = true;
 

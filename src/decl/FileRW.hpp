@@ -12,7 +12,7 @@ namespace FileRW
 		@param Success An optional pointer to a bool used to indicate whether the file was read succesfully. Returns an empty string if unsuccessful
 		@param ErrorMessage An optional pointer to an string which will be filled with an error message upon failure
 	*/
-	std::string ReadFile(const std::string& ShortPath, bool* Success = nullptr, std::string* ErrorMessage = nullptr);
+	std::string ReadFile(const std::string& ShortPath, bool* Success = nullptr);
 
 	bool WriteFile(
 		const std::string& FilePath,
