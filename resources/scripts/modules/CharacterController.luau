@@ -77,11 +77,11 @@ function Controller.Update(self: Controller, DeltaTime: number)
 	
 	local charSize = self.Character.Size
 	
-	local floorRayHit = world.aabbcast(
+	local floorRayHit = #workspace:GetObjectsInAabb(
 		self.Character.Transform.Position - vector.create(0, charSize.Y / 4, 0),
 		vector.create(charSize.x * 1.2, charSize.Y / 2, charSize.z * 1.2),
 		{ self.Character }
-	)
+	) > 0
 	
 	local impulse = vector.create(
 		moveDirection.x * self.Acceleration * DeltaTime,

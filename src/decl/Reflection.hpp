@@ -148,6 +148,8 @@ static const Reflection::MethodMap& s_GetMethods()                              
 			cb({ __VA_ARGS__ }); \
 } \
 
+#define REFLECTION_OPTIONAL(t) (Reflection::ValueType)((uint8_t)t + (uint8_t)Reflection::ValueType::Null)
+
 namespace Reflection
 {
 	enum class ValueType : uint8_t

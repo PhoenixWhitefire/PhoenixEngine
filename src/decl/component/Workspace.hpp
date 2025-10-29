@@ -4,12 +4,25 @@
 
 #include "datatype/GameObject.hpp"
 
+struct SpatialCastResult
+{
+	GameObject* Object = nullptr;
+	glm::vec3 Position;
+	glm::vec3 Normal;
+	bool Occurred = false;
+};
+
 struct EcWorkspace
 {
+	void Update() const;
+
 	GameObject* GetSceneCamera() const;
 	void SetSceneCamera(GameObject*);
+
 	glm::vec3 ScreenPointToRay(double x, double y, float length, glm::vec3* origin) const;
-	void Update() const;
+
+	SpatialCastResult Raycast(const glm::vec3& Origin, const glm::vec3& Vector, const std::vector<GameObject*>& IgnoreList) const;
+	std::vector<GameObject*> GetObjectsInAabb(const glm::vec3& Position, const glm::vec3& Size, const std::vector<GameObject*>& IgnoreList) const;
 
 	uint32_t m_SceneCameraId = PHX_GAMEOBJECT_NULL_ID;
 	ObjectRef Object;

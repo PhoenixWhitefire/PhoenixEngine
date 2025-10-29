@@ -540,12 +540,12 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 	}
 	case Reflection::ValueType::Map:
 	{
-		std::span<Reflection::GenericValue> array = gv.AsArray();
+		std::span<Reflection::GenericValue> array = std::span((Reflection::GenericValue*)gv.Val.Ptr, gv.Size);
 
 		if (array.size() % 2 != 0)
 			RAISE_RT("GenericValue type was Map, but it does not have an even number of elements!");
 
-		lua_newtable(L);
+		lua_createtable(L, 0, array.size() / 2);
 
 		for (int index = 0; static_cast<size_t>(index) < array.size(); index++)
 		{

@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <float.h>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/component_wise.hpp>
 #include <tracy/Tracy.hpp>
@@ -79,41 +80,44 @@ IntersectionLib::Intersection IntersectionLib::LineAabb(
 {
 	Intersection result{};
 	result.Occurred = false;
-	
-	glm::vec3 minBound = BbPosition - (BbSize * 0.5f + Padding);
-	glm::vec3 maxBound = BbPosition + (BbSize * 0.5f + Padding);
 
-	glm::vec3 invDir = 1.0f / glm::max(glm::abs(Vector), glm::vec3(1e-6f));
-	glm::vec3 t1 = (minBound - Origin) * invDir * glm::sign(Vector);
-	glm::vec3 t2 = (maxBound - Origin) * invDir * glm::sign(Vector);
+	// games with gabe
+	// https://youtu.be/QxpgtVrjYrg?t=742
+	glm::vec3 invDirection = glm::vec3(
+		Vector.x != 0.f ? 1.f / Vector.x : FLT_MAX,
+		Vector.y != 0.f ? 1.f / Vector.y : FLT_MAX,
+		Vector.z != 0.f ? 1.f / Vector.z : FLT_MAX
+	);
 
-	glm::vec3 tmin = glm::min(t1, t2);
-	glm::vec3 tmax = glm::max(t1, t2);
+	glm::vec3 min = BbPosition - BbSize / 2.f - Padding;
+	glm::vec3 max = BbPosition + BbSize / 2.f + Padding;
 
-	float tNear = glm::compMax(tmin);
-	float tFar  = glm::compMin(tmax);
+	glm::vec3 t1 = (min - Origin) * invDirection;
+	glm::vec3 t2 = (max - Origin) * invDirection;
 
-	if (tFar < 0.f || tNear > tFar)
+	glm::vec3 tmin3 = glm::min(t1, t2);
+	glm::vec3 tmax3 = glm::max(t1, t2);
+
+	float tmin = std::max({ tmin3.x, tmin3.y, tmin3.z });
+	float tmax = std::min({ tmax3.x, tmax3.y, tmax3.z });
+
+	if (tmax < 0.f || tmin > tmax)
 		return result;
 
-	// segment is starting inside the object
-	if (tNear < 0)
+	float t = (tmin < 0.f) ? tmax : tmin;
+	if (t <= 0.f)
 		return result;
 
 	result.Occurred = true;
+	result.Position = Origin + Vector * t;
+	result.Time = t;
 
-	result.Time = std::clamp(tNear, 0.f, 1.f);
-	result.Position = Origin + (Vector * result.Time);
-	result.Depth = tFar - tNear;
-
-	if (tNear == tmin.x)
-		result.Normal = glm::vec3(Vector.x > 0 ? -1 : 1, 0, 0);
-
-	else if (tNear == tmin.y)
-		result.Normal = glm::vec3(0, Vector.y > 0 ? -1 : 1, 0);
-
-	else
-		result.Normal = glm::vec3(0, 0, Vector.z > 0 ? -1 : 1);
+	if (tmin == tmin3.x)
+		result.Normal.x = (invDirection.x < 0.f) ? 1.f : -1.f;
+	else if (tmin == tmin3.y)
+		result.Normal.y = (invDirection.y < 0.f) ? 1.f : -1.f;
+	else if (tmin == tmin3.z)
+		result.Normal.z = (invDirection.z < 0.f) ? 1.f : -1.f;
 
 	return result;
 }

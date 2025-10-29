@@ -1,8 +1,10 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "component/Workspace.hpp"
+#include "component/Transform.hpp"
 #include "component/Camera.hpp"
 #include "component/Sound.hpp"
+#include "IntersectionLib.hpp"
 #include "Engine.hpp"
 
 static ObjectHandle s_FallbackCamera;
@@ -41,7 +43,7 @@ public:
 			{
 				"SceneCamera",
 				{
-					(Reflection::ValueType)((uint8_t)Reflection::ValueType::GameObject + (uint8_t)Reflection::ValueType::Null),
+					REFLECTION_OPTIONAL(Reflection::ValueType::GameObject),
 					[](void* p)
 					-> Reflection::GenericValue
 					{
@@ -87,6 +89,85 @@ public:
 
 					return { w->ScreenPointToRay(x, y, length, nullptr) };
 				}
+			} },
+
+			{ "Raycast", {
+				{ Reflection::ValueType::Vector3, Reflection::ValueType::Vector3, REFLECTION_OPTIONAL(Reflection::ValueType::Array) },
+				{ REFLECTION_OPTIONAL(Reflection::ValueType::Map) },
+				[](void* p, const std::vector<Reflection::GenericValue>& inputs)
+				-> std::vector<Reflection::GenericValue>
+				{
+					const glm::vec3& origin = inputs[0].AsVector3();
+					const glm::vec3& vector = inputs[1].AsVector3();
+
+					std::vector<GameObject*> ignoreList;
+
+					if (inputs.size() > 2)
+					{
+						const std::span<Reflection::GenericValue>& ignorelistgv = inputs[2].AsArray();
+						ignoreList.reserve(ignorelistgv.size());
+
+						for (const Reflection::GenericValue& gv : ignorelistgv)
+							ignoreList.push_back(GameObject::FromGenericValue(gv));
+					}
+
+					SpatialCastResult result = static_cast<EcWorkspace*>(p)->Raycast(origin, vector, ignoreList);
+					
+					if (!result.Occurred)
+						return { Reflection::GenericValue() };
+
+					else
+					{
+						// TODO make datatypes easier to create
+						// this should definitely be a `SpatialCastResult` datatype
+						std::vector<Reflection::GenericValue> vals;
+						vals.reserve(6);
+
+						vals.emplace_back("Object");
+						vals.emplace_back(result.Object->ToGenericValue());
+
+						vals.emplace_back("Position");
+						vals.emplace_back(result.Position);
+
+						vals.emplace_back("Normal");
+						vals.emplace_back(result.Normal);
+
+						Reflection::GenericValue gv(vals);
+						gv.Type = Reflection::ValueType::Map;
+
+						return { gv };
+					}
+				}
+			} },
+
+			{ "GetObjectsInAabb", {
+				{ Reflection::ValueType::Vector3, Reflection::ValueType::Vector3, REFLECTION_OPTIONAL(Reflection::ValueType::Array) },
+				{ Reflection::ValueType::Array },
+				[](void* p, const std::vector<Reflection::GenericValue>& inputs)
+				-> std::vector<Reflection::GenericValue>
+				{
+					const glm::vec3& position = inputs[0].AsVector3();
+					const glm::vec3& origin = inputs[1].AsVector3();
+
+					std::vector<GameObject*> ignoreList;
+
+					if (inputs.size() > 2)
+					{
+						const std::span<Reflection::GenericValue>& ignorelistgv = inputs[2].AsArray();
+						ignoreList.reserve(ignorelistgv.size());
+
+						for (const Reflection::GenericValue& gv : ignorelistgv)
+							ignoreList.push_back(GameObject::FromGenericValue(gv));
+					}
+
+					std::vector<GameObject*> objects = static_cast<EcWorkspace*>(p)->GetObjectsInAabb(position, origin, ignoreList);
+
+					std::vector<Reflection::GenericValue> gv(objects.size());
+					for (size_t i = 0; i < objects.size(); i++)
+						gv[i] = objects[i]->ToGenericValue();
+
+					return { Reflection::GenericValue(gv) };
+				}
 			} }
 		};
         return funcs;
@@ -99,10 +180,13 @@ glm::vec3 EcWorkspace::ScreenPointToRay(double x, double y, float length, glm::v
 {
 	Engine* engine = Engine::Get();
 
+	x += engine->ViewportDockSpacePosition.x;
+	y -= engine->ViewportDockSpacePosition.y;
+
 	// thinmatrix 27/12/2024
 	// https://www.youtube.com/watch?v=DLKN0jExRIM
-	double nx = (2.f * x) / engine->WindowSizeX - 1;
-	double ny = -((2.f * y) / engine->WindowSizeY - 1);
+	double nx = (2.0 * x) / engine->ViewportDockSpaceSize.x - 1.0;
+	double ny = 1.0 - (2.0 * y) / engine->ViewportDockSpaceSize.y;
 
 	glm::vec4 clipCoords{ nx, ny, -1.f, 1.f };
 
@@ -128,8 +212,88 @@ glm::vec3 EcWorkspace::ScreenPointToRay(double x, double y, float length, glm::v
 	));
 
 	glm::vec3 rayVector = glm::normalize(glm::vec3(viewMatrixInv * eyeCoords)) * length;
-
 	return rayVector;
+}
+
+SpatialCastResult EcWorkspace::Raycast(const glm::vec3& Origin, const glm::vec3& Vector, const std::vector<GameObject*>& IgnoreList) const
+{
+	IntersectionLib::Intersection intersection;
+	GameObject* hitObject = nullptr;
+	float closestHit = FLT_MAX;
+
+	for (GameObject* p : Object->GetDescendants())
+	{
+		if (std::find(IgnoreList.begin(), IgnoreList.end(), p) != IgnoreList.end())
+			continue;
+    
+		EcMesh* object = p->FindComponent<EcMesh>();
+		EcTransform* ct = p->FindComponent<EcTransform>();
+    
+		if (object && ct)
+		{
+			glm::vec3 pos = ct->Transform[3];
+			glm::vec3 size = ct->Size;
+        
+			IntersectionLib::Intersection hit = IntersectionLib::LineAabb(
+				Origin,
+				Vector,
+				pos,
+				size
+			);
+        
+			if (hit.Occurred)
+				if (hit.Time < closestHit)
+				{
+					intersection = hit;
+					closestHit = hit.Depth;
+					hitObject = p;
+				}
+		}
+	}
+
+	SpatialCastResult result;
+
+	if (hitObject)
+	{
+		result.Occurred = true;
+		result.Object = hitObject;
+		result.Position = intersection.Position;
+		result.Normal = intersection.Normal;
+	}
+
+	return result;
+}
+
+std::vector<GameObject*> EcWorkspace::GetObjectsInAabb(const glm::vec3& Position, const glm::vec3& Size, const std::vector<GameObject*>& IgnoreList) const
+{
+	IntersectionLib::Intersection intersection;
+	std::vector<GameObject*> hits;
+
+	for (GameObject* p : Object->GetDescendants())
+	{
+		if (std::find(IgnoreList.begin(), IgnoreList.end(), p) != IgnoreList.end())
+			continue;
+    
+		EcTransform* object = p->FindComponent<EcTransform>();
+    
+		if (object)
+		{
+			glm::vec3 bpos = object->Transform[3];
+			glm::vec3 bsize = object->Size;
+        
+			IntersectionLib::Intersection hit = IntersectionLib::AabbAabb(
+				Position,
+				Size,
+				bpos,
+				bsize
+			);
+        
+			if (hit.Occurred)
+				hits.push_back(p);
+		}
+	}
+
+	return hits;
 }
 
 GameObject* EcWorkspace::GetSceneCamera() const

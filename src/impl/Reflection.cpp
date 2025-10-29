@@ -209,6 +209,12 @@ void Reflection::GenericValue::CopyInto(GenericValue& Target, const GenericValue
 		fromArray(Target, Source.AsArray());
 		break;
 	}
+	case ValueType::Map:
+	{
+		fromArray(Target, std::span((Reflection::GenericValue*)Source.Val.Ptr, Source.Size));
+		Target.Type = ValueType::Map;
+		break;
+	}
 
 	case ValueType::Boolean: case ValueType::Double: case ValueType::Integer:
 
@@ -448,43 +454,50 @@ std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> Reflectio
 
 #undef WRONG_TYPE
 
-void Reflection::GenericValue::Reset()
+static void deallocGv(Reflection::GenericValue* gv)
 {
+	using Reflection::ValueType;
+
 	// values actually being transmitted shouldnt ever have the optional flag,
 	// that's only for type definitions
-	assert((uint8_t)Type <= (uint8_t)Reflection::ValueType::Null);
+	assert((uint8_t)gv->Type <= (uint8_t)ValueType::Null);
 
-	switch (this->Type)
+	switch (gv->Type)
 	{
 	case ValueType::Matrix:
 	{
-		Memory::Free(this->Val.Ptr);
+		Memory::Free(gv->Val.Ptr);
 		break;
 	}
 	case ValueType::Array: case ValueType::Map:
 	{
-		for (uint32_t i = 0; i < this->Size; i++)
+		for (uint32_t i = 0; i < gv->Size; i++)
 			// de-alloc potential heap buffers of elements first
-			(((Reflection::GenericValue*)this->Val.Ptr)[i]).~GenericValue();
+			(((Reflection::GenericValue*)gv->Val.Ptr)[i]).~GenericValue();
 		
-		Memory::Free(this->Val.Ptr);
+		Memory::Free(gv->Val.Ptr);
 
 		break;
 	}
 	case ValueType::String:
 	{
-		if (this->Size > GV_SSO)
-			Memory::Free(this->Val.Str);
+		if (gv->Size > GV_SSO)
+			Memory::Free(gv->Val.Str);
 		break;
 	}
 	case ValueType::Function:
 	{
-		delete this->Val.Func;
+		delete gv->Val.Func;
 		break;
 	}
 
 	default: {}
 	}
+}
+
+void Reflection::GenericValue::Reset()
+{
+	deallocGv(this);
 
 	Type = Reflection::ValueType::Null;
 	Val = {};
@@ -493,7 +506,7 @@ void Reflection::GenericValue::Reset()
 
 Reflection::GenericValue::~GenericValue()
 {
-	Reset();
+	deallocGv(this);
 }
 
 bool Reflection::GenericValue::operator==(const Reflection::GenericValue& Other) const

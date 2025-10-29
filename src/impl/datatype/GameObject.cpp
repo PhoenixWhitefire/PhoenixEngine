@@ -286,11 +286,26 @@ void GameObject::s_AddObjectApi()
 	REFLECTION_DECLAREFUNC(
 		"FindChild",
 		{ Reflection::ValueType::String },
-		{ Reflection::ValueType((uint8_t)Reflection::ValueType::GameObject | (uint8_t)Reflection::ValueType::Null) },
+		{ REFLECTION_OPTIONAL(Reflection::ValueType::GameObject) },
 		[](void* p, const std::vector<Reflection::GenericValue>& inputs)
 		-> std::vector<Reflection::GenericValue>
 		{
 			return { static_cast<GameObject*>(p)->FindChild(inputs.at(0).AsStringView())->ToGenericValue() };
+		}
+	);
+
+	REFLECTION_DECLAREFUNC(
+		"FindChildWithComponent",
+		{ Reflection::ValueType::String },
+		{ REFLECTION_OPTIONAL(Reflection::ValueType::GameObject) },
+		[](void* p, const std::vector<Reflection::GenericValue>& inputs)
+		-> std::vector<Reflection::GenericValue>
+		{
+			const auto& it = s_ComponentNameToType.find(inputs[0].AsStringView());
+			if (it == s_ComponentNameToType.end())
+				RAISE_RTF("Invalid component type '{}'", inputs[0].AsStringView());
+
+			return { static_cast<GameObject*>(p)->FindChildWithComponent(it->second)->ToGenericValue() };
 		}
 	);
 

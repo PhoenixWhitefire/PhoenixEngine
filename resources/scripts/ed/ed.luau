@@ -79,6 +79,7 @@ end
 
 local Project = {
 	DataModel = nil :: (GameObject & DataModel)?,
+	Workspace = nil :: (GameObject & Workspace)?,
 	Name = "Should not be visible" :: string,
 	IsTempPath = false :: boolean
 }
@@ -180,8 +181,29 @@ local function openProject(ManualPath: string?)
 		return
 	end
 
-	Project.DataModel = (assert(objects[1]) :: any) :: GameObject & DataModel
-	EditorTl.Target = assert(Project.DataModel):FindChild("Workspace")
+	for _, v in objects do
+		if v:HasComponent("DataModel") then
+			Project.DataModel = v :: any
+			break
+		end
+	end
+
+	if not Project.DataModel then
+		Project.DataModel = GameObject.new("DataModel")
+		print("Re-created DataModel")
+	end
+
+	Project.Workspace = Project.DataModel:FindChildWithComponent("Workspace") :: any
+
+	if not Project.Workspace then
+		Project.Workspace = GameObject.new("Workspace")
+		Project.Workspace.SceneCamera = GameObject.new("Camera")
+		Project.Workspace.SceneCamera.Parent = Project.Workspace
+
+		print("Re-created Workspace")
+	end
+
+	EditorTl.Target = Project.Workspace
 	saveToRecents(path)
 
 	Project.Name = path
@@ -224,9 +246,7 @@ local function createNewProject()
 
 	assert(fs.mkdir("@projres"))
 	assert(fs.mkdir("@projres/materials"))
-	assert(fs.mkdir("@projres/meshes"))
 	assert(fs.mkdir("@projres/scenes"))
-	assert(fs.mkdir("@projres/scripts"))
 	assert(fs.mkdir("@projres/sounds"))
 	assert(fs.mkdir("@projres/textures"))
 	assert(fs.mkdir("@projres/textures/materials"))
@@ -236,12 +256,9 @@ local function createNewProject()
 	assert(fs.copy("@editres/materials", "@projres/materials"))
 	assert(fs.copy("@editres/textures/materials", "@projres/textures/materials"))
 
-	assert(fs.copy("@editres/textures/screendistort.jpg", "@projres/textures/screendistort.jpg"))
-
 	assert(fs.copy("@editres/textures/Sky1", "@projres/textures/Sky1"))
 
 	assert(fs.copy("@etextures/editor-icons/fallback.png", "@proj/icon.png"))
-	assert(fs.copy("@editres/scripts/default.luau", "@projres/scripts/default.luau"))
 
 	local dm = GameObject.new("DataModel") :: GameObject & DataModel
 	local projWp = GameObject.new("Workspace") :: GameObject & Workspace
@@ -361,8 +378,8 @@ local function homeTab(_: number)
 					return
 				end
 
-				assert(Project.DataModel)
-				imported.Parent = Project.DataModel.Workspace
+				assert(Project.Workspace)
+				imported.Parent = Project.Workspace
 				engine.setexplorerselections({ imported })
 			else
 				print("No model selected")
@@ -733,11 +750,30 @@ local function renderMainMenuBar(dt: number)
 	end
 end
 
---local IsHoveringViewportTitlebar = false
+local SelectionPart = GameObject.new("Mesh")
+SelectionPart.Material = "wireframe"
 
 local CommandBarCommand = ""
 
 local function renderViewport(DeltaTime: number)
+	if CurrentStage == "ProjectEditing" and Project.Workspace then
+		local mouseVec = Project.Workspace:ScreenPointToRay({ input.mouseposition() }, 100)
+		local rayresult = Project.Workspace:Raycast(EditorCam.Transform.Position, mouseVec, { SelectionPart })
+
+		if rayresult then
+			SelectionPart.Transform = rayresult.Object.Transform
+			SelectionPart.Size = rayresult.Object.Size
+			SelectionPart.Parent = workspace
+
+			if input.mousedown("l") and not input.guihandledm() then
+				engine.setexplorerselections({ rayresult.Object })
+			end
+		else
+			SelectionPart.Parent = nil
+			--print(mouseVec)
+		end
+	end
+
 	PluginManager.OnUpdate(DeltaTime, CurrentStage)
 
 	if BottomBarEnabled then
@@ -1031,16 +1067,16 @@ function Stages.ProjectEditing_Enter(DeltaTime)
 	assert(Project.DataModel)
 	engine.setexplorerroot(Project.DataModel)
 
-	local projWp = (Project.DataModel:FindChild("Workspace") :: any)
+	local projWp = Project.Workspace
 
-	if projWp and projWp.SceneCamera and (projWp.SceneCamera :: any):HasComponent("Camera") then
+	if projWp and projWp.SceneCamera and projWp.SceneCamera:HasComponent("Camera") then
 		projWp.SceneCamera.Transform = EditorCam.Transform
 		EditorCam.FieldOfView = projWp.SceneCamera.FieldOfView
 	end
 end
 
 function Stages.ProjectEditing(DeltaTime)
-	local projWp = (Project.DataModel:FindChild("Workspace") :: any) :: GameObject & Workspace
+	local projWp = Project.Workspace
 
 	-- sometimes this can get called after `ProjectEditing_Leave` or something somehow
 	if projWp and projWp.SceneCamera and projWp.SceneCamera:HasComponent("Camera") then
@@ -1063,6 +1099,7 @@ function Stages.ProjectEditing_Leave(NextStage)
 	saveProject()
 
 	Project.DataModel:Destroy()
+	Project.Workspace = nil
 	Project.Name = "Should not be visible"
 	Project.IsTempPath = true
 	Project.DataModel = nil
@@ -1075,9 +1112,7 @@ function Stages.ProjectPlaying_Enter()
 	restoreState = Project.DataModel
 	
 	assert(Project.DataModel)
-	Project.DataModel = (Project.DataModel:Duplicate() :: any) :: GameObject & DataModel
-	EditorTl.Target = Project.DataModel.Workspace
-	EditorTl.Scripting = true
+	Project.DataModel = Project.DataModel:Duplicate() :: any
 	
 	engine.physicstimescale(1)
 	engine.setexplorerroot(Project.DataModel)
@@ -1085,7 +1120,9 @@ function Stages.ProjectPlaying_Enter()
 	engine.binddatamodel(Project.DataModel) -- Set the `game` and `workspace` variables to the correct values in game scripts
 	engine.pushlvm("GameScripts")
 	
-	local projWp = Project.DataModel.Workspace
+	local projWp = Project.Workspace
+	assert(projWp)
+
 	if not projWp.SceneCamera then
 		projWp.SceneCamera = GameObject.new("Camera")
 		projWp.SceneCamera.Parent = projWp
@@ -1107,8 +1144,6 @@ function Stages.ProjectPlaying_Leave()
 
 	Project.DataModel:Destroy()
 	Project.DataModel = restoreState
-	EditorTl.Target = Project.DataModel.Workspace
-	EditorTl.Scripting = false
 	engine.setexplorerroot(Project.DataModel)
 	
 	engine.poplvm()

@@ -3003,8 +3003,12 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 
 		ImGui::Text("Enter a name/path for the script:");
 
+		ImVec2 start = ImGui::GetCursorPos();
+		ImGui::SetCursorPosY(start.x + ImGui::GetStyle().FramePadding.x);
+
 		ImGui::Text("scripts/");
 		ImGui::SameLine();
+		ImGui::SetCursorPosY(start.y);
 
 		static std::string fullpath;
 
@@ -3265,6 +3269,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 			ImGui::Text("Line: %i", ar->currentline);
 			ImGui::Text("In: %s", ar->name ? ar->name : "<anonymous function>");
 			ImGui::TextUnformatted(errorMessage.c_str());
+			ImGui::SetItemTooltip("%s", errorMessage.c_str());
 			ImGui::Text("VM: %s", vmName.c_str());
 
 			if (ImGui::Button("Resume (F5)") || ImGui::IsKeyDown(ImGuiKey_F5))
