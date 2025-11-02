@@ -7,10 +7,10 @@ local BASE_PATH = "./gh-assets/wiki"
 local apiDump = json.parse(assert(fs.read("./apidump.json")))
 local docComments = json.parse(assert(fs.read(BASE_PATH .. "/doc-comments.json")))
 
-local datatypesPrologue = fs.read(BASE_PATH .. "/datatypes-prologue.txt")
-local librariesPrologue = fs.read(BASE_PATH .. "/libraries-prologue.txt")
-local globalsPrologue = fs.read(BASE_PATH .. "/globals-prologue.txt")
-local componentsPrologue = fs.read(BASE_PATH .. "/components-prologue.txt")
+local datatypesPrologue = fs.read(BASE_PATH .. "/datatypes-prologue.md")
+local librariesPrologue = fs.read(BASE_PATH .. "/libraries-prologue.md")
+local globalsPrologue = fs.read(BASE_PATH .. "/globals-prologue.md")
+local componentsPrologue = fs.read(BASE_PATH .. "/components-prologue.md")
 
 assert(datatypesPrologue)
 assert(librariesPrologue)
@@ -553,11 +553,11 @@ end
 definitionsFile ..= "\n\n"
 
 local scriptenv = datatypesPrologue .. datatypes .. librariesPrologue .. libraries .. globalsPrologue .. globals
-fs.write(BASE_PATH .. "/scriptenv.txt", scriptenv)
+fs.write(BASE_PATH .. "/scriptenv.md", scriptenv)
 
-fs.write(BASE_PATH .. "/components.txt", components)
+fs.write(BASE_PATH .. "/components.md", components)
 
-fs.write("scripts/lsp-defs.d.luau", definitionsFile)
+fs.write("scripts/api.d.luau", definitionsFile)
 
 print("Docs CI finish\n\n\n\n\n")
 
