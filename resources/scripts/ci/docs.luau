@@ -195,6 +195,7 @@ local rtol: { [string]: string } = {
 	Double = "number",
 	String = "string",
 	Array = "{ any }",
+	Map = "{ [string]: any }",
 	Vector3 = "vector",
 	["->"] = ":",
 	READONLY = ""

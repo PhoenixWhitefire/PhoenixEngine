@@ -188,7 +188,7 @@ declare class Workspace
   SceneCamera: (GameObject & Camera)?
 
   function GetObjectsInAabb(self, Param_1: vector, Param_2: vector, Param_3: { any }?) : ({ any })
-  function Raycast(self, Param_1: vector, Param_2: vector, Param_3: { any }?) : (Map?)
+  function Raycast(self, Param_1: vector, Param_2: vector, Param_3: { any }?) : ({ [string]: any }?)
   function ScreenPointToRay(self, Param_1: { any }, Param_2: number) : (vector)
 end
 
