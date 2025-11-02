@@ -198,7 +198,8 @@ local rtol: { [string]: string } = {
 	Map = "{ [string]: any }",
 	Vector3 = "vector",
 	["->"] = ":",
-	READONLY = ""
+	READONLY = "",
+	RUNTIMEONLY = ""
 }
 
 local function rtolsub(str)
@@ -206,6 +207,7 @@ local function rtolsub(str)
 		str = string.gsub(str, p, s)
 	end
 	
+	-- to avoid the `->` being converted to a `:` (which, for function type declarations, is wrong)
 	str = string.gsub(str, "Function", "(any) -> (any)")
 	
 	return str

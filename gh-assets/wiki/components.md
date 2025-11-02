@@ -9,10 +9,10 @@ The Engine support an Entity Component System architecture, meaning that `GameOb
 * `Name: string`: The name of the Object, usually what was passed into `GameObject.new`
 * `ObjectId: number `: The ID of the Object, an integer. Remains the same throughout the session, but not guaranteed between sessions
 * `Parent: GameObject?`: The hierarchal parent of the Object, or `nil` if it does not have one
-* `Serializes: boolean`: Whether or not the Object should be saved with the scene if it is serialized with `scene_save`, and whether `:Duplicate` will duplicate (only applies to descendants)
+* `Serializes: boolean`: Whether or not the Object should be saved with the scene if it is serialized with `scene.save`, and whether `:Duplicate` will duplicate it (only applies to descendants)
 
 ### Methods:
-* `Destroy() : ()`: Marks the Object as "pending for destruction". This may or may not remove the Object from memory immediately, depending on whether the Engine is actively using the Object for some purpose
+* `Destroy() : ()`: Marks the Object as "pending for destruction". This may or may not remove the Object from memory immediately, depending on whether the Engine is keeping a internal reference to it
 * `Duplicate() : (GameObject)`: Creates a duplicate of the Object
 * `FindChild(string) : (GameObject?)`: Returns a child Object with the given name, or `nil` if one doesn't exist
 * `FindChildWithComponent(string) : (GameObject?)`: Returns a child Object which has the given component, or `nil` if one doesn't exist
@@ -109,7 +109,7 @@ The Engine support an Entity Component System architecture, meaning that `GameOb
 ### Properties:
 * `AngularVelocity: vector`: Its rotational velocity
 * `Asset: string`: The path to the underlying `.hxmesh` file, or a built-in identifier like `!Quad` or `!Cube`
-* `CastsShadows: boolean`: Whether it casts shadows (not functional currently)
+* `CastsShadows: boolean`: Whether it casts shadows
 * `CollisionFidelity: number`: 0 - `Aabb`: An axis-aligned bounding box. 1 - `AabbStaticSize`: An AABB which keeps the same size as the Object
 * `Density: number`: Its density (`Mass = Density * Size`)
 * `FaceCulling: number`: An integer. `0` means no culling, `1` to cull its "back" faces, and `2` to cull its "front" faces
@@ -146,7 +146,7 @@ No members defined
 ### Properties:
 * `Brightness: number`: How bright the Light is
 * `LightColor: Color`: The color of the Light
-* `Range: number`: How far light is emitted. **If `>= 0`, the Range is used and attenuation is linear, otherwise the formula `R = 1/D^2`, where `D` is the distance of any point in 3D space having its lighting calculated from the PointLight, is used for real-world attenuation**
+* `Range: number`: How far light is emitted. If `>= 0`, the Range is used and attenuation is linear, otherwise it uses the formula `F = 1/D^2 * B` to mirror real-world attenuation, where `F` is the final brightness, `D` is the distance of a point from the Light, and `B` is the `Brightness` property's value
 * `Shadows: boolean`: Whether the Light can render shadows
 
 ## `Script`
@@ -169,7 +169,7 @@ No members defined
 * `LoadSucceeded: boolean `: Whether or not the sound loaded successfully
 * `Looped: boolean`: Whether playback should loop once it reaches the end
 * `Playing: boolean`: Whether the Sound is currently playing (or requested to play, if `.Playing` is set to `true` by a `Script` before it has finished loading)
-* `Position: number`: Number of seconds from beginning of the file
+* `Position: number`: The time-position of playback in number of seconds from the beginning of the file
 * `SoundFile: string`: The sound file to be played
 * `Speed: number`: The speed at which the sound plays, within the range of 0.01 to 100
 * `Volume: number`: The volume at which the sound plays. Must be positive
@@ -190,7 +190,7 @@ No members defined
 
 ## `Transform`
 
-* Gives a physical position and size to Object
+* Gives a physical position and size to an Object
 
 ### Properties:
 * `Size: vector`: The Size of the Object influenced by the Component
@@ -199,7 +199,7 @@ No members defined
 ## `TreeLink`
 
 * The Engine, for rendering and physics, will pretend the children of this Object's `Target` are the children of the node
-* There is one very specific use-case for which this was implemented, this was designed around said use-case. It is *not* intended to act like a transparent proxy
+* This is *not* intended to act like a transparent proxy
 
 ### Properties:
 * `Scripting: boolean`: Whether Scripts which descend from the `Target` will run

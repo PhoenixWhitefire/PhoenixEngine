@@ -27,7 +27,7 @@ Additional types with methods and properties
 * Whether the Connection is connected or not
 
 #### `Disconnect(): nil`
-* Disconnects the Connection, causing the callback to no longer be invoked, may only be called once
+* Disconnects the Connection, causing the callback to no longer be invoked. May only be called once
 
 #### `.Signal: any`
 * The Event which `:Connect` was called upon to return this Connection
@@ -62,7 +62,7 @@ Additional types with methods and properties
 
 #### `Matrix.fromTranslation(Position: vector): Matrix`
 #### `Matrix.fromTranslation(X: number, Y: number, Z: number): Matrix`
-* Creates a Matrix which has been translated to the given coordinates (specified as either a `vector` or the individual X, Y, and Z component)
+* Creates a Matrix which has been translated to the given coordinates (specified as either a `vector` or the individual X, Y, and Z components)
 
 #### `Matrix.lookAt(Eye: vector, Target: vector): Matrix`
 * Creates a Matrix at position `Eye` oriented such that the `.Forward` vector moves toward `Target`
@@ -242,7 +242,7 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * Interacting with the player's filesystem
 
 #### `fs.makecwdaliasof(Alias: string): `
-* Changes the meaning of paths beginning with `.` to act as aliases to the given path instead of referring to the CWD
+* Changes the meaning of non-qualified paths (e.g.: not beginning with `.` or `C:` etc) to act as aliases to the given path instead of referring to the CWD
 
 #### `fs.write(Path: string, Contents: string, CreateDirectories: boolean? [ false ]): boolean, string?`
 * Overwrites/creates the file at `Path` with the provided `Contents`
@@ -275,7 +275,8 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 
 #### `fs.copy(From: string, To: string): boolean, string?`
 * Copies the file/directory at the given path to a new path
-* Returns whether the operation was successful. If unsuccessful, an error message is also returned
+* Returns whether the operation was successful
+* If unsuccessful, an error message is also returned
 
 #### `fs.mkdir(Path: string): boolean, string?`
 * Creates a directory at the given path
@@ -292,7 +293,7 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * Returns the path the player selected, or `nil` if they cancelled the dialog
 
 #### `fs.definealias(Alias: string, For: string): `
-* Defines an alias for the filesystem, such that `@<Alias>/` refers to `<Path>/` to the Engine
+* Defines an alias for the filesystem, such that `@<Alias>/` refers to `<For>/` to the Engine
 
 #### `fs.isdirectory(string): boolean`
 * Returns whether the specified Path refers to a directory
@@ -338,7 +339,7 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 
 #### `imgui.windowposition(): number, number`
 * Returns the position of the current Dear ImGui window (`ImGui::GetWindowPos`)
-* To *set* the position of the window, use `.setwindowposition`
+* To *set* the position of the window, use `.setnextwindowposition`
 
 #### `imgui.setnextwindowsize(Width: number, Height: number): `
 * `ImGui::SetNextWindowSize`
@@ -576,13 +577,15 @@ Additional global variables
 * The GameObject acting as the Data Model of the Engine
 
 #### `loadthread(Code: string, ChunkName: string?): ( thread?, string? )`
-* Like `loadstring` in *other* runtimes, however does not compromise Global Import optimizations and returns a coroutine instead of a function. If an error occurs, returns `nil` as the first value and the error message as the second value
+* Like `loadstring` in *other* runtimes, however does not compromise Global Import optimizations and returns a coroutine instead of a function
+* If an error occurs, returns `nil` as the first value and the error message as the second value
 
 #### `loadthreadfromfile(File: string, ChunkName: string?): ( thread?, string? )`
 * Similar to `loadthread`, however loads from a file instead of from a string directly
 
 #### `script: GameObject & Script`
 * The Script object the current coroutine is running as
+* In `require`'d modules, this is `nil`
 
 #### `sleep(SleepTime: number): ()`
 * Yields the thread for the specified number of seconds

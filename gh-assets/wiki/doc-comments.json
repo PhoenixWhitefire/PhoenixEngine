@@ -2,7 +2,7 @@
   "GameObject": {
     "Base": {
       "Methods": {
-        "Destroy": "Marks the Object as \"pending for destruction\". This may or may not remove the Object from memory immediately, depending on whether the Engine is actively using the Object for some purpose",
+        "Destroy": "Marks the Object as \"pending for destruction\". This may or may not remove the Object from memory immediately, depending on whether the Engine is keeping a internal reference to it",
         "Duplicate": "Creates a duplicate of the Object",
         "FindChild": "Returns a child Object with the given name, or `nil` if one doesn't exist",
         "FindChildWithComponent": "Returns a child Object which has the given component, or `nil` if one doesn't exist",
@@ -21,7 +21,7 @@
         "Name": "The name of the Object, usually what was passed into `GameObject.new`",
         "ObjectId": "The ID of the Object, an integer. Remains the same throughout the session, but not guaranteed between sessions",
         "Parent": "The hierarchal parent of the Object, or `nil` if it does not have one",
-        "Serializes": "Whether or not the Object should be saved with the scene if it is serialized with `scene_save`, and whether `:Duplicate` will duplicate (only applies to descendants)"
+        "Serializes": "Whether or not the Object should be saved with the scene if it is serialized with `scene.save`, and whether `:Duplicate` will duplicate it (only applies to descendants)"
       }
     },
     "Components": {
@@ -113,7 +113,7 @@
         "Properties": {
           "AngularVelocity": "Its rotational velocity",
           "Asset": "The path to the underlying `.hxmesh` file, or a built-in identifier like `!Quad` or `!Cube`",
-          "CastsShadows": "Whether it casts shadows (not functional currently)",
+          "CastsShadows": "Whether it casts shadows",
           "CollisionFidelity": "0 - `Aabb`: An axis-aligned bounding box. 1 - `AabbStaticSize`: An AABB which keeps the same size as the Object",
           "Density": "Its density (`Mass = Density * Size`)",
           "FaceCulling": "An integer. `0` means no culling, `1` to cull its \"back\" faces, and `2` to cull its \"front\" faces",
@@ -145,7 +145,7 @@
         "Properties": {
           "Brightness": "How bright the Light is",
           "LightColor": "The color of the Light",
-          "Range": "How far light is emitted. **If `>= 0`, the Range is used and attenuation is linear, otherwise the formula `R = 1/D^2`, where `D` is the distance of any point in 3D space having its lighting calculated from the PointLight, is used for real-world attenuation**",
+          "Range": "How far light is emitted. If `>= 0`, the Range is used and attenuation is linear, otherwise it uses the formula `F = 1/D^2 * B` to mirror real-world attenuation, where `F` is the final brightness, `D` is the distance of a point from the Light, and `B` is the `Brightness` property's value",
           "Shadows": "Whether the Light can render shadows"
         }
       },
@@ -169,7 +169,7 @@
           "LoadSucceeded": "Whether or not the sound loaded successfully",
           "Looped": "Whether playback should loop once it reaches the end",
           "Playing": "Whether the Sound is currently playing (or requested to play, if `.Playing` is set to `true` by a `Script` before it has finished loading)",
-          "Position": "Number of seconds from beginning of the file",
+          "Position": "The time-position of playback in number of seconds from the beginning of the file",
           "SoundFile": "The sound file to be played",
           "Speed": "The speed at which the sound plays, within the range of 0.01 to 100",
           "Volume": "The volume at which the sound plays. Must be positive"
@@ -186,7 +186,7 @@
         }
       },
       "Transform": {
-        "Description": "Gives a physical position and size to Object",
+        "Description": "Gives a physical position and size to an Object",
         "Properties": {
           "Size": "The Size of the Object influenced by the Component",
           "Transform": "The Transformation of the Object from the World"
@@ -195,7 +195,7 @@
       "TreeLink": {
         "Description": [
           "The Engine, for rendering and physics, will pretend the children of this Object's `Target` are the children of the node",
-          "There is one very specific use-case for which this was implemented, this was designed around said use-case. It is *not* intended to act like a transparent proxy"
+          "This is *not* intended to act like a transparent proxy"
         ],
         "Properties": {
           "Scripting": "Whether Scripts which descend from the `Target` will run",
@@ -251,7 +251,7 @@
         "Description": "A connection to an Event",
         "Members": {
           ":Disconnect": {
-            "Description": "Disconnects the Connection, causing the callback to no longer be invoked, may only be called once"
+            "Description": "Disconnects the Connection, causing the callback to no longer be invoked. May only be called once"
           },
           "Connected": {
             "Description": "Whether the Connection is connected or not",
@@ -306,7 +306,7 @@
             "Out": "Matrix"
           },
           "fromTranslation": {
-            "Description": "Creates a Matrix which has been translated to the given coordinates (specified as either a `vector` or the individual X, Y, and Z component)",
+            "Description": "Creates a Matrix which has been translated to the given coordinates (specified as either a `vector` or the individual X, Y, and Z components)",
             "In": "Position: vector",
             "Out": "Matrix",
             "Overloads": [
@@ -438,7 +438,10 @@
         "Description": "The GameObject acting as the Data Model of the Engine"
       },
       "loadthread": {
-        "Description": "Like `loadstring` in *other* runtimes, however does not compromise Global Import optimizations and returns a coroutine instead of a function. If an error occurs, returns `nil` as the first value and the error message as the second value",
+        "Description": [
+          "Like `loadstring` in *other* runtimes, however does not compromise Global Import optimizations and returns a coroutine instead of a function",
+          "If an error occurs, returns `nil` as the first value and the error message as the second value"
+        ],
         "In": "Code: string, ChunkName: string?",
         "Out": "( thread?, string? )"
       },
@@ -448,7 +451,10 @@
         "Out": "( thread?, string? )"
       },
       "script": {
-        "Description": "The Script object the current coroutine is running as"
+        "Description": [
+          "The Script object the current coroutine is running as",
+          "In `require`'d modules, this is `nil`"
+        ]
       },
       "sleep": {
         "Description": "Yields the thread for the specified number of seconds",
@@ -748,7 +754,8 @@
           "copy": {
             "Description": [
               "Copies the file/directory at the given path to a new path",
-              "Returns whether the operation was successful. If unsuccessful, an error message is also returned"
+              "Returns whether the operation was successful",
+              "If unsuccessful, an error message is also returned"
             ],
             "In": [
               "From: string",
@@ -764,7 +771,7 @@
           },
           "definealias": {
             "Description": [
-              "Defines an alias for the filesystem, such that `@<Alias>/` refers to `<Path>/` to the Engine"
+              "Defines an alias for the filesystem, such that `@<Alias>/` refers to `<For>/` to the Engine"
             ],
             "In": [
               "Alias: string",
@@ -812,7 +819,7 @@
           },
           "makecwdaliasof": {
             "Description": [
-              "Changes the meaning of paths beginning with `.` to act as aliases to the given path instead of referring to the CWD"
+              "Changes the meaning of non-qualified paths (e.g.: not beginning with `.` or `C:` etc) to act as aliases to the given path instead of referring to the CWD"
             ],
             "In": [
               "Alias: string"
@@ -1461,7 +1468,7 @@
           "windowposition": {
             "Description": [
               "Returns the position of the current Dear ImGui window (`ImGui::GetWindowPos`)",
-              "To *set* the position of the window, use `.setwindowposition`"
+              "To *set* the position of the window, use `.setnextwindowposition`"
             ],
             "Out": "number, number"
           }
