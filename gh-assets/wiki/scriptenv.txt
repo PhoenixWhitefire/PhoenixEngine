@@ -556,18 +556,6 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `scene.save(RootNodes: { GameObject }, Path: string): boolean`
 * Saves the list of `GameObject`s to the provided path, returning whether the operation succeeded
 
-### `world`
-* World queries
-
-#### `world.aabbcast(APos: vector, ASize: vector, IgnoreList: { GameObject }): { Object: GameObject, Position: vector, Normal: vector }?`
-* Cast an AABB
-
-#### `world.raycast(Origin: vector, CastVector: vector, IgnoreList: { GameObject }): { Object: GameObject, Position: vector, Normal: vector }?`
-* Cast a ray
-
-#### `world.aabbquery(APos: vector, ASize: vector, IgnoreList: { GameObject }): { GameObject }`
-* Query all objects within the provided AABB
-
 ## Globals
 
 Additional global variables

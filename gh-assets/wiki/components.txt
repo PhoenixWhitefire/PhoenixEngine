@@ -14,7 +14,8 @@ The Engine support an Entity Component System architecture, meaning that `GameOb
 ### Methods:
 * `Destroy() : ()`: Marks the Object as "pending for destruction". This may or may not remove the Object from memory immediately, depending on whether the Engine is actively using the Object for some purpose
 * `Duplicate() : (GameObject)`: Creates a duplicate of the Object
-* `FindChild(string) : (GameObject?)`: Returns the child Object with the given name, or `nil` if it doesn't exist
+* `FindChild(string) : (GameObject?)`: Returns a child Object with the given name, or `nil` if one doesn't exist
+* `FindChildWithComponent(string) : (GameObject?)`: Returns a child Object which has the given component, or `nil` if one doesn't exist
 * `ForEachChild((any) -> (any)) : ()`: For all children of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield
 * `GetChildren() : ({ any })`: Returns a list of the Object's direct children
 * `GetComponentNames() : ({ any })`: Returns a list of the names of all Components that the Object currently has
@@ -213,5 +214,7 @@ No members defined
 * `SceneCamera: GameObject?`: The `Camera` the Player sees the world through. If set to `nil`, a *fallback* is created at the origin.
 
 ### Methods:
+* `GetObjectsInAabb(vector, vector, { any }?) : ({ any })`: Get a list of Objects whose bounds are within the AABB
+* `Raycast(vector, vector, { any }?) : (Map?)`: Cast a ray
 * `ScreenPointToRay({ any }, number) : (vector)`: Converts the provided X and Y screen coordinates to a world-space vector, with the length provided or `1` by default
 

@@ -4,7 +4,8 @@
       "Methods": {
         "Destroy": "Marks the Object as \"pending for destruction\". This may or may not remove the Object from memory immediately, depending on whether the Engine is actively using the Object for some purpose",
         "Duplicate": "Creates a duplicate of the Object",
-        "FindChild": "Returns the child Object with the given name, or `nil` if it doesn't exist",
+        "FindChild": "Returns a child Object with the given name, or `nil` if one doesn't exist",
+        "FindChildWithComponent": "Returns a child Object which has the given component, or `nil` if one doesn't exist",
         "ForEachChild": "For all children of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield",
         "GetChildren": "Returns a list of the Object's direct children",
         "GetComponentNames": "Returns a list of the names of all Components that the Object currently has",
@@ -207,6 +208,9 @@
           "If this is `Destroy`'d, the application closes"
         ],
         "Methods": {
+          "AabbCast": "Cast an AABB",
+          "GetObjectsInAabb": "Get a list of Objects whose bounds are within the AABB",
+          "Raycast": "Cast a ray",
           "ScreenPointToRay": "Converts the provided X and Y screen coordinates to a world-space vector, with the length provided or `1` by default"
         },
         "Properties": {
@@ -1665,44 +1669,6 @@
               "Path: string"
             ],
             "Out": "boolean"
-          }
-        }
-      },
-      "world": {
-        "Description": "World queries",
-        "Members": {
-          "aabbcast": {
-            "Description": [
-              "Cast an AABB"
-            ],
-            "In": [
-              "APos: vector",
-              "ASize: vector",
-              "IgnoreList: { GameObject }"
-            ],
-            "Out": "{ Object: GameObject, Position: vector, Normal: vector }?"
-          },
-          "aabbquery": {
-            "Description": [
-              "Query all objects within the provided AABB"
-            ],
-            "In": [
-              "APos: vector",
-              "ASize: vector",
-              "IgnoreList: { GameObject }"
-            ],
-            "Out": "{ GameObject }"
-          },
-          "raycast": {
-            "Description": [
-              "Cast a ray"
-            ],
-            "In": [
-              "Origin: vector",
-              "CastVector: vector",
-              "IgnoreList: { GameObject }"
-            ],
-            "Out": "{ Object: GameObject, Position: vector, Normal: vector }?"
           }
         }
       }

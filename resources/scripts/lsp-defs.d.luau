@@ -63,6 +63,7 @@ declare class GameObject
   function Destroy(self) : ()
   function Duplicate(self) : (GameObject)
   function FindChild(self, Param_1: string) : (GameObject?)
+  function FindChildWithComponent(self, Param_1: string) : (GameObject?)
   function ForEachChild(self, Param_1: (any) -> (any)) : ()
   function GetChildren(self) : ({ any })
   function GetComponentNames(self) : ({ any })
@@ -186,6 +187,8 @@ end
 declare class Workspace
   SceneCamera: (GameObject & Camera)?
 
+  function GetObjectsInAabb(self, Param_1: vector, Param_2: vector, Param_3: { any }?) : ({ any })
+  function Raycast(self, Param_1: vector, Param_2: vector, Param_3: { any }?) : (Map?)
   function ScreenPointToRay(self, Param_1: { any }, Param_2: number) : (vector)
 end
 
@@ -326,11 +329,6 @@ declare model: {
 declare scene: {
   load: (( Path: string ) -> ({ GameObject }?, string?)),
   save: (( RootNodes: { GameObject }, Path: string ) -> (boolean))
-}
-declare world: {
-  aabbcast: (( APos: vector, ASize: vector, IgnoreList: { GameObject } ) -> ({ Object: GameObject, Position: vector, Normal: vector }?)),
-  raycast: (( Origin: vector, CastVector: vector, IgnoreList: { GameObject } ) -> ({ Object: GameObject, Position: vector, Normal: vector }?)),
-  aabbquery: (( APos: vector, ASize: vector, IgnoreList: { GameObject } ) -> ({ GameObject }))
 }
 
 

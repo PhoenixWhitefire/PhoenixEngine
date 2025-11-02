@@ -5,6 +5,7 @@
         "Destroy": "() -> ()",
         "Duplicate": "() -> (GameObject)",
         "FindChild": "(String) -> (GameObject?)",
+        "FindChildWithComponent": "(String) -> (GameObject?)",
         "ForEachChild": "(Function) -> ()",
         "GetChildren": "() -> (Array)",
         "GetComponentNames": "() -> (Array)",
@@ -169,6 +170,8 @@
       },
       "Workspace": {
         "Methods": {
+          "GetObjectsInAabb": "(Vector3, Vector3, Array?) -> (Array)",
+          "Raycast": "(Vector3, Vector3, Array?) -> (Map?)",
           "ScreenPointToRay": "(Array, Double) -> (Vector3)"
         },
         "Properties": {
@@ -368,11 +371,6 @@
       "scene": {
         "load": "function",
         "save": "function"
-      },
-      "world": {
-        "aabbcast": "function",
-        "aabbquery": "function",
-        "raycast": "function"
       }
     }
   }
