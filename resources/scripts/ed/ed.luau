@@ -86,8 +86,10 @@ local Project = {
 
 local RecentProjects: { string } = {}
 
+local EDITOR_RECENT_PROJECTS_PATH = "./editor/recent-projects.json"
+
 local function saveRecents()
-	if not fs.write("@editres/recent-projects.json", json.encode(RecentProjects)) then
+	if not fs.write(EDITOR_RECENT_PROJECTS_PATH, json.encode(RecentProjects)) then
 		print("Failed to save the Recent Projects list")
 	end
 end
@@ -253,7 +255,10 @@ local function createNewProject()
 
 	assert(fs.copy("@editres/shaders", "@projres/shaders"))
 
-	assert(fs.copy("@editres/materials", "@projres/materials"))
+	for _, v in { "brick", "error", "floortiles", "neon", "plastic", "smoothplastic", "wood", "woodplanks" } do
+		assert(fs.copy(`@editres/materials/{v}.mtl`, `@projres/materials/{v}.mtl`))
+	end
+
 	assert(fs.copy("@editres/textures/materials", "@projres/textures/materials"))
 
 	assert(fs.copy("@editres/textures/Sky1", "@projres/textures/Sky1"))
@@ -751,7 +756,8 @@ local function renderMainMenuBar(dt: number)
 end
 
 local SelectionPart = GameObject.new("Mesh")
-SelectionPart.Material = "wireframe"
+SelectionPart.Material = "boxframe"
+SelectionPart.Tint = Color.new(84/255, 150/255, 1)
 
 local CommandBarCommand = ""
 
@@ -830,15 +836,19 @@ local function renderViewport(DeltaTime: number)
 	]]
 end
 
+if not fs.isdirectory("./editor") then
+	fs.mkdir("./editor")
+end
+
 function Stages.SelectProject_Enter()
-	if not fs.isfile("@editres/recent-projects.json") then
-		assert(fs.write("@editres/recent-projects.json", "[]"))
+	if not fs.isfile(EDITOR_RECENT_PROJECTS_PATH) then
+		assert(fs.write(EDITOR_RECENT_PROJECTS_PATH, "[]"))
 	end
 
-	local rpstr, err = fs.read("@editres/recent-projects.json")
+	local rpstr, err = fs.read(EDITOR_RECENT_PROJECTS_PATH)
 
 	if not rpstr then
-		print("Couldn't read `recent-projects.json`:", err)
+		print(`Couldn't read {EDITOR_RECENT_PROJECTS_PATH}: {err}`)
 		return
 	end
 
@@ -931,7 +941,7 @@ local function renderRenderProjects()
 	if imgui.beginpopup("ProjectContextMenu") then
 		if imgui.menuitem("Remove from Recents") then
 			table.remove(RecentProjects, ProjectContextMenuTarget)
-			fs.write("recent-projects.json", json.encode(RecentProjects))
+			fs.write(EDITOR_RECENT_PROJECTS_PATH, json.encode(RecentProjects))
 		end
 	
 		imgui.endpopup()

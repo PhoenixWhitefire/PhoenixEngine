@@ -6,7 +6,7 @@ PHNXENGI
 {
   "ColorMap": "models/map/textures/Material.001_baseColor.png",
   "HasTranslucency": false,
-  "MetallicRoughnessMap": "textures/black.png",
+  "MetallicRoughnessMap": "!Black",
   "Shader": "worldUber",
   "Uniforms": null,
   "specExponent": 16.0,

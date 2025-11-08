@@ -80,7 +80,6 @@ target_link_libraries(PhoenixEngine PRIVATE
 	Luau.Ast
 	Luau.VM
 	Luau.Require
-	Luau.RequireNavigator
 	Luau.Config
 )
 
@@ -119,7 +118,6 @@ set_property(TARGET TracyClient PROPERTY FOLDER "Vendor")
 set_property(TARGET glm PROPERTY FOLDER "Vendor")
 set_property(TARGET miniaudio PROPERTY FOLDER "Vendor")
 
-set_property(TARGET Luau.RequireNavigator PROPERTY FOLDER "Vendor/Luau")
 set_property(TARGET Luau.Require PROPERTY FOLDER "Vendor/Luau")
 set_property(TARGET Luau.Compiler PROPERTY FOLDER "Vendor/Luau")
 set_property(TARGET Luau.Analysis PROPERTY FOLDER "Vendor/Luau")
@@ -143,7 +141,6 @@ add_dependencies(PhoenixEngine
 	glm
 	Luau.Compiler
 	Luau.Analysis
-	Luau.RequireNavigator
 	Luau.Require
 	Luau.VM
 	glfw

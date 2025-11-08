@@ -82,8 +82,7 @@ public:
 	Texture& GetTextureResource(uint32_t);
 
 	void UnloadTexture(uint32_t);
-
-private:
+	
 	void m_UploadTextureToGpu(Texture&);
 
 	Memory::vector<Texture, MEMCAT(Texture)> m_Textures;

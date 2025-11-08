@@ -5,7 +5,7 @@ PHNXENGI
 {
   "ColorMap": "resources/textures/models/EmbeddedTexture.glb/cupid-ref.jpeg",
   "HasTranslucency": false,
-  "MetallicRoughnessMap": "resources/textures/black.png",
+  "MetallicRoughnessMap": "!Black",
   "PolygonMode": 0,
   "Shader": "worldUber",
   "Uniforms": null,

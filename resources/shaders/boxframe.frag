@@ -83,12 +83,10 @@ in vec3 Frag_CameraPosition;
 
 out vec4 FragColor;
 
-const vec3 WHITE = vec3(1.f, 1.f, 1.f);
-
 void main()
 {
-	FragColor = vec4(texture(ColorMap, Frag_TextureUV));
-	
-	if (length(WHITE - FragColor.xyz) < 0.5f)
+	if (Frag_TextureUV.x < 0.05f || Frag_TextureUV.y < 0.05f || Frag_TextureUV.x > 0.95f || Frag_TextureUV.y > 0.95f)
+		FragColor = texture(ColorMap, Frag_TextureUV) * Frag_Paint;
+	else
 		discard;
 }

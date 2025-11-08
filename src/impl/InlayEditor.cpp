@@ -180,14 +180,14 @@ void InlayEditor::Initialize(Renderer* renderer)
 	}
 
 	bool prologueFound = true;
-	DatatypesDocPrologue = FileRW::ReadFile("@cwd/gh-assets/wiki/datatypes-prologue.txt", &prologueFound);
-	PHX_CHECK(prologueFound && "Datatypes prologue - @cwd/gh-assets/wiki/datatypes-prologue.txt");
+	DatatypesDocPrologue = FileRW::ReadFile("@cwd/gh-assets/wiki/datatypes-prologue.md", &prologueFound);
+	PHX_CHECK(prologueFound && "Datatypes prologue - @cwd/gh-assets/wiki/datatypes-prologue.md");
 
-	LibrariesDocPrologue = FileRW::ReadFile("@cwd/gh-assets/wiki/libraries-prologue.txt", &prologueFound);
-	PHX_CHECK(prologueFound && "Libraries prologue - @cwd/gh-assets/wiki/libraries-prologue.txt");
+	LibrariesDocPrologue = FileRW::ReadFile("@cwd/gh-assets/wiki/libraries-prologue.md", &prologueFound);
+	PHX_CHECK(prologueFound && "Libraries prologue - @cwd/gh-assets/wiki/libraries-prologue.md");
 
-	GlobalsDocPrologue = FileRW::ReadFile("@cwd/gh-assets/wiki/globals-prologue.txt", &prologueFound);
-	PHX_CHECK(prologueFound && "Globals prologue - @cwd/gh-assets/wiki/globals-prologue.txt");
+	GlobalsDocPrologue = FileRW::ReadFile("@cwd/gh-assets/wiki/globals-prologue.md", &prologueFound);
+	PHX_CHECK(prologueFound && "Globals prologue - @cwd/gh-assets/wiki/globals-prologue.md");
 
 	ScriptEngine::L::DebugBreak = &debugBreakHook;
 

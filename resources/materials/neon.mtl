@@ -1,5 +1,5 @@
 {
-  "albedo": "textures/white.png",
+  "albedo": "!White",
   "shaderprogram": "worldUber",
   "specExponent": 0.0,
   "specMultiply": 0.0,

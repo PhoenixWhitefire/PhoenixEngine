@@ -95,12 +95,6 @@ function Controller.Update(self: Controller, DeltaTime: number)
 			self.Character.LinearVelocity = vector.create(self.Character.LinearVelocity.x, 0, self.Character.LinearVelocity.z)
 			self.lastJumped = self.totalTime
 		end
-		
-		local sink = (self.Character.Transform.Position.Y - charSize.Y / 2) - floorRayHit.Position.y
-		
-		if sink > 0.2 and vector.magnitude(moveDirection) > 0 then
-			self.Character.Transform *= Matrix.fromTranslation(0, sink, 0)
-		end
 	else
 		impulse *= 0.3
 	end

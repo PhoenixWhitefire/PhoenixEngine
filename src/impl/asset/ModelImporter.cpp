@@ -929,7 +929,7 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 	TextureManager* texManager = TextureManager::Get();
 
 	ModelLoader::MeshMaterial material;
-	material.BaseColorTexture = texManager->LoadTextureFromPath("textures/white.png");
+	material.BaseColorTexture = texManager->LoadTextureFromPath("!White");
 
 	auto materialIdIt = Primitive.find("material");
 

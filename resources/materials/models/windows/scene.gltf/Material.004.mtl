@@ -5,11 +5,11 @@ PHNXENGI
 {
   "ColorMap": "resources/models/windows/diffuse.png",
   "HasTranslucency": true,
-  "MetallicRoughnessMap": "resources/textures/black.png",
+  "MetallicRoughnessMap": "!Black",
   "PolygonMode": 0,
   "Shader": "worldUber",
   "Uniforms": {
-    "EmissionStrength\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000": 0.5
+    "EmissionStrength": 0.5
   },
   "specExponent": 16.0,
   "specMultiply": 0.0

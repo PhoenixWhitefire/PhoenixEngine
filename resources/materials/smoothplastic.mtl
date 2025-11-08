@@ -3,7 +3,7 @@ PHNXENGI
 #Date 15-9-2025
 
 {
-  "ColorMap": "textures/white.png",
+  "ColorMap": "!White",
   "HasTranslucency": false,
   "MetallicRoughnessMap": "!Missing",
   "PolygonMode": 0,

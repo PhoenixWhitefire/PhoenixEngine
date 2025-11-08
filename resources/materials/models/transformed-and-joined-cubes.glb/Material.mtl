@@ -3,9 +3,9 @@ PHNXENGI
 #Date 10-6-2025
 
 {
-  "ColorMap": "resources/textures/white.png",
+  "ColorMap": "!White",
   "HasTranslucency": false,
-  "MetallicRoughnessMap": "resources/textures/black.png",
+  "MetallicRoughnessMap": ""!Black"",
   "PolygonMode": 0,
   "Shader": "worldUber",
   "Uniforms": null,

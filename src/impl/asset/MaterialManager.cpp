@@ -120,7 +120,7 @@ void RenderMaterial::Reload()
 	if (metallicRoughnessPath != "")
 		this->MetallicRoughnessMap = texManager->LoadTextureFromPath(metallicRoughnessPath, true, doBilinearFiltering);
 	else
-		this->MetallicRoughnessMap = texManager->LoadTextureFromPath("textures/white.png", true, doBilinearFiltering);
+		this->MetallicRoughnessMap = texManager->LoadTextureFromPath("!White", true, doBilinearFiltering);
 
 	if (normalPath != "")
 		this->NormalMap = texManager->LoadTextureFromPath(normalPath, true, doBilinearFiltering);

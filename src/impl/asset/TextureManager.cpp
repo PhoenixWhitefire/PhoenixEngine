@@ -38,6 +38,9 @@ static uint8_t MissingTextureBytes[] =
 	static_cast<uint8_t>(0xFFu),
 };
 
+static uint32_t WhiteTextureBytes = 0xFFFFFF;
+static uint32_t BlackTextureBytes = 0x000000;
+
 static bool s_TextureManagerShutdown = false;
 
 void TextureManager::m_UploadTextureToGpu(Texture& texture)
@@ -136,46 +139,48 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 
 static TextureManager* s_Instance = nullptr;
 
-void TextureManager::Initialize(bool IsHeadless)
+static void createAndUploadTextureData(const std::string& Name, uint8_t* Data, int Width, int Height)
 {
-	ZoneScoped;
-
-	m_IsHeadless = IsHeadless;
-
-	if (IsHeadless)
-	{
-		s_Instance = this;
-		return;
-	}
-
-	// ID 0 means no texture
-	m_Textures.emplace_back();
-
-	// checkboard missing texture is id 1
-	m_StringToTextureId.insert(std::pair("!Missing", 1));
+	s_Instance->m_StringToTextureId.insert(std::pair(Name, s_Instance->m_Textures.size()));
 
 	uint32_t newGpuId;
 	glGenTextures(1, &newGpuId);
 
-	m_Textures.emplace_back("!Missing", 1, newGpuId);
+	s_Instance->m_Textures.emplace_back("!Missing", s_Instance->m_Textures.size(), newGpuId);
 
-	Texture& missingTexture = m_Textures.at(1);
-	missingTexture.Width = 2;
-	missingTexture.Height = 2;
-	missingTexture.NumColorChannels = 3;
-	missingTexture.TMP_ImageByteData = MissingTextureBytes;
-	missingTexture.Status = Texture::LoadStatus::Succeeded;
+	Texture& tex = s_Instance->m_Textures.back();
+	tex.Width = Width;
+	tex.Height = Height;
+	tex.NumColorChannels = 3;
+	tex.TMP_ImageByteData = Data;
+	tex.Status = Texture::LoadStatus::Succeeded;
 
-	glBindTexture(GL_TEXTURE_2D, missingTexture.GpuId);
+	glBindTexture(GL_TEXTURE_2D, tex.GpuId);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-	m_UploadTextureToGpu(missingTexture);
+	s_Instance->m_UploadTextureToGpu(tex);
+}
 
+void TextureManager::Initialize(bool IsHeadless)
+{
+	ZoneScoped;
+
+	m_IsHeadless = IsHeadless;
 	s_Instance = this;
+
+	if (IsHeadless)
+		return;
+
+	// ID 0 means no texture
+	m_Textures.emplace_back();
+
+	createAndUploadTextureData("!Missing", MissingTextureBytes, 2, 2);
+	createAndUploadTextureData("!White", (uint8_t*)&WhiteTextureBytes, 1, 1);
+	createAndUploadTextureData("!Black", (uint8_t*)&BlackTextureBytes, 1, 1);
 }
 
 void TextureManager::Shutdown()

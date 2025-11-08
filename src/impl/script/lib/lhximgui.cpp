@@ -91,8 +91,10 @@ static int imgui_begin(lua_State* L)
 {
     const char* title = luaL_checkstring(L, 1);
     const char* flagsstr = luaL_optstring(L, 2, "");
+    bool hasCloseButton = luaL_optboolean(L, 3, false);
 
-	lua_pushboolean(L, ImGui::Begin(title, nullptr, strToWindowFlags(L, flagsstr)));
+    bool open = true;
+	lua_pushboolean(L, ImGui::Begin(title, hasCloseButton ? &open : nullptr, strToWindowFlags(L, flagsstr)) && open);
 
 	return 1;
 }

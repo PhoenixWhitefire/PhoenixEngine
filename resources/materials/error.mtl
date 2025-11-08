@@ -5,7 +5,7 @@ PHNXENGI
 {
   "ColorMap": "!Missing",
   "HasTranslucency": false,
-  "MetallicRoughnessMap": "textures/black.png",
+  "MetallicRoughnessMap": "!Black",
   "Shader": "worldUber",
   "Uniforms": {
     "EmissionStrength": 1.0

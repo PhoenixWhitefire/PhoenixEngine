@@ -6,7 +6,7 @@ PHNXENGI
 {
   "ColorMap": "models/scroll/textures/lambert4SG_baseColor.png",
   "HasTranslucency": true,
-  "MetallicRoughnessMap": "textures/black.png",
+  "MetallicRoughnessMap": "!Black",
   "Shader": "worldUber",
   "Uniforms": null,
   "specExponent": 16.0,

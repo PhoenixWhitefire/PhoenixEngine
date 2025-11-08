@@ -5,7 +5,7 @@ PHNXENGI
 {
   "ColorMap": "textures/models/glamfredward.glb/Image_0.png",
   "HasTranslucency": false,
-  "MetallicRoughnessMap": "textures/black.png",
+  "MetallicRoughnessMap": "!Black",
   "NormalMap": "textures/models/glamfredward.glb/Image_1.png",
   "Shader": "worldUber",
   "Uniforms": null,

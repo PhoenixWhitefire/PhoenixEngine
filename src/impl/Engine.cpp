@@ -333,7 +333,7 @@ static void traverseHierarchy(
 {
 	ZoneScopedC(tracy::Color::LightGoldenrod);
 
-	static uint32_t wireframeMaterial = MaterialManager::Get()->LoadFromPath("wireframe");
+	static uint32_t boxframeMaterial = MaterialManager::Get()->LoadFromPath("boxframe");
 	static uint32_t cubeMesh = MeshProvider::Get()->LoadFromPath("!Cube");
 
 	std::vector<GameObject*> objectsRaw = Root->GetChildren();
@@ -383,8 +383,8 @@ static void traverseHierarchy(
 					cubeMesh,
 					glm::translate(glm::mat4(1.f), (glm::vec3)object3D->CollisionAabb.Position),
 					object3D->CollisionAabb.Size,
-					wireframeMaterial,
-					object3D->Tint,
+					boxframeMaterial,
+					glm::vec3(1.f, 1.f, 0.f),
 					0.f,
 					0.f,
 					0.f,

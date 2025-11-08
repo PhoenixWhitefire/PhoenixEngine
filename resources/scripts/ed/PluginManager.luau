@@ -11,6 +11,8 @@ PluginManager.Plugins = {} :: { Plugin }
 local IsPluginManagementWindowOpen = false
 local PluginSettings: { [string]: { Enabled: boolean } } = {}
 
+local PLUGIN_SETTINGS_PATH = "./editor/plugin-settings.json"
+
 local function getPluginSettings(plugin: Plugin): index<typeof(PluginSettings), string>
     local settings = PluginSettings[plugin.Path]
     if not settings then
@@ -22,8 +24,9 @@ local function getPluginSettings(plugin: Plugin): index<typeof(PluginSettings), 
 end
 
 local function renderPluginManagement()
-    if not imgui.begin("Plugin Manager") then
+    if not imgui.begin("Plugin Manager", "", true) then
         imgui.endw()
+        IsPluginManagementWindowOpen = false
         return
     end
 
@@ -72,7 +75,7 @@ local function renderPluginManagement()
     imgui.endw()
 
     if pluginSettingsChanged then
-        fs.write("./plugin-settings.json", json.encode(PluginSettings))
+        fs.write(PLUGIN_SETTINGS_PATH, json.encode(PluginSettings))
     end
 end
 
@@ -111,8 +114,8 @@ function PluginManager.Load()
         return
     end
 
-    if fs.isfile("./plugin-settings.json") then
-        PluginSettings = json.parse(fs.read("./plugin-settings.json") or "") or {}
+    if fs.isfile(PLUGIN_SETTINGS_PATH) then
+        PluginSettings = json.parse(fs.read(PLUGIN_SETTINGS_PATH) or "") or {}
     end
 
     loadPluginsRecursive("./plugins")

@@ -1,5 +1,5 @@
 {
-  "Fragment": "shaders/wireframe.frag",
+  "Fragment": "shaders/boxframe.frag",
   "Geometry": "shaders/worldUber.geom",
   "InheritUniformsOf": "",
   "Vertex": "shaders/worldUber.vert"

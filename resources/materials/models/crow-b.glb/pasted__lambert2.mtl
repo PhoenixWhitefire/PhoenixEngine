@@ -5,7 +5,7 @@ PHNXENGI
 {
   "ColorMap": "resources/textures/models/crow-b.glb/diffuse.png",
   "HasTranslucency": false,
-  "MetallicRoughnessMap": "resources/textures/white.png",
+  "MetallicRoughnessMap": "!White",
   "PolygonMode": 0,
   "Shader": "worldUber",
   "Uniforms": null,

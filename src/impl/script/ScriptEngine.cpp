@@ -1,4 +1,4 @@
-#include <luau/Require/Runtime/include/Luau/Require.h>
+#include <luau/Require/include/Luau/Require.h>
 #include <luau/VM/include/lualib.h>
 #include <luau/VM/src/lstate.h>
 #include <Luau/Compiler.h>
@@ -1492,9 +1492,17 @@ static void requireConfigInit(luarequire_Configuration* config)
 		};
 	config->get_loadname = config->get_chunkname; // TODO what's a loadname
 	config->get_cache_key = config->get_chunkname;
-	config->is_config_present = [](lua_State*, void* ctx)
+	config->get_config_status = [](lua_State*, void* ctx)
 		{
-			return std::filesystem::is_regular_file(*(std::filesystem::path*)ctx / ".luaurc");
+			bool hasConfigScript = std::filesystem::is_regular_file(*(std::filesystem::path*)ctx / ".config.luau");
+			bool hasLuauRc = std::filesystem::is_regular_file(*(std::filesystem::path*)ctx / ".luaurc");
+			
+			if (hasConfigScript && hasLuauRc)
+				return CONFIG_AMBIGUOUS;
+			if (!hasConfigScript && !hasLuauRc)
+				return CONFIG_ABSENT;
+			
+			return hasConfigScript ? CONFIG_PRESENT_LUAU : CONFIG_PRESENT_JSON;
 		};
 	config->get_config = [](lua_State*, void* ctx, char* buffer, size_t bufferSize, size_t* outSize)
 		{

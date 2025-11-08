@@ -398,7 +398,7 @@ void ShaderProgram::SetTextureUniform(const std::string_view& UniformName, uint3
 	};
 
 	static TextureManager* texManager = TextureManager::Get();
-	static uint32_t WhiteTextureId = texManager->LoadTextureFromPath("textures/white.png");
+	static uint32_t WhiteTextureId = texManager->LoadTextureFromPath("!White");
 
 	if (TextureId == 0)
 		TextureId = WhiteTextureId;
