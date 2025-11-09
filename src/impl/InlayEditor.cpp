@@ -408,10 +408,11 @@ static void renderTextEditor()
 		float textYSize = ImGui::CalcTextSize("").y;
 		float textSpacing = textYSize + TextSpacingExtra;
 		float scrollY = std::max(textSpacing * (s_TextEdDebuggerJumpToLine - 15), 0.f);
+		bool open = true;
 
 		// force the window to the correct scroll position by adding content (`::Dummy`)
 		// `::SetScrollY` clamps :(
-		ImGui::Begin("Text Editor", 0, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_MenuBar);
+		ImGui::Begin("Text Editor", &open, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_MenuBar);
 		ImGui::BeginMenuBar();
 		ImGui::EndMenuBar();
 		ImGui::Dummy({ ImGui::GetContentRegionAvail().x, scrollY * 2.f });
@@ -421,7 +422,15 @@ static void renderTextEditor()
 		s_TextEdDebuggerJumpToLine = 0;
 	}
 
-	ImGui::Begin("Text Editor", 0, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_MenuBar);
+	bool open = true;
+	ImGui::Begin("Text Editor", &open, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_MenuBar);
+
+	if (!open)
+	{
+		TextEditorEnabled = false;
+		textEditorSaveFile();
+	}
+
 	ImGui::BeginMenuBar();
 
 	if (ImGui::BeginMenu("File"))
@@ -887,12 +896,17 @@ static void renderShaderPipelinesEditor()
 	if (EngineJsonConfig["Tool_Shaders"] == false)
 		return;
 
-	if (!ImGui::Begin("Shader Pipelines"))
+	bool open = true;
+
+	if (!ImGui::Begin("Shader Pipelines", &open))
 	{
 		ImGui::End();
 
 		return;
 	}
+
+	if (!open)
+		EngineJsonConfig["Tool_Shaders"] = false;
 
 	ShaderManager* shdManager = ShaderManager::Get();
 	std::vector<ShaderProgram>& shaders = shdManager->GetLoadedShaders();
@@ -1110,11 +1124,16 @@ static void renderMaterialEditor()
 	if (EngineJsonConfig["Tool_Materials"] == false)
 		return;
 
-	if (!ImGui::Begin("Materials"))
+	bool open = true;
+
+	if (!ImGui::Begin("Materials", &open))
 	{
 		ImGui::End();
 		return;
 	}
+
+	if (!open)
+		EngineJsonConfig["Tool_Materials"] = false;
 
 	MaterialManager* mtlManager = MaterialManager::Get();
 	TextureManager* texManager = TextureManager::Get();
@@ -2127,16 +2146,16 @@ static void renderDocumentationViewer()
 	if (!DocumentationViewerOpen)
 		return;
 
-	if (!ImGui::Begin("Documentation Viewer"))
+	bool open = true;
+
+	if (!ImGui::Begin("Documentation Viewer", &open))
 	{
 		ImGui::End();
+		DocumentationViewerOpen = open;
 		return;
 	}
 
 	ImGui::BeginChild(1983, ImGui::GetContentRegionAvail() * ImVec2(0.2f, 1.f), ImGuiChildFlags_Borders);
-
-	if (ImGui::Button("Close"))
-		DocumentationViewerOpen = false;
 
 	bool sectionOpen = ImGui::TreeNodeEx("Game Object", DocumentationViewerSection == 0 ? ImGuiTreeNodeFlags_Selected : 0);
 	if (ImGui::IsItemClicked())
@@ -2453,11 +2472,16 @@ static void renderExplorer()
 	if (EngineJsonConfig["Tool_Explorer"] == false)
 		return;
 
-	if ( !ImGui::Begin("Explorer"))
+	bool open = true;
+
+	if ( !ImGui::Begin("Explorer", &open))
 	{
 		ImGui::End();
 		return;
 	}
+
+	if (!open)
+		EngineJsonConfig["Tool_Explorer"] = false;
 
 	VisibleTreeWip.clear();
 	recursiveIterateTree(ExplorerRoot);
@@ -2489,11 +2513,16 @@ static void renderProperties()
 	if (EngineJsonConfig["Tool_Properties"] == false)
 		return;
 
-	if (!ImGui::Begin("Properties"))
+	bool open = true;
+
+	if (!ImGui::Begin("Properties", &open))
 	{
 		ImGui::End();
 		return;
 	}
+
+	if (!open)
+		EngineJsonConfig["Tool_Properties"] = false;
 
 	if (Selections.size() > 0)
 	{
@@ -2540,6 +2569,12 @@ static void renderProperties()
 			{
 				RemoveComponentPopupTarget = ec;
 				ImGui::OpenPopup("RemoveComponent");
+			}
+			else if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
+			{
+				DocumentationViewerOpen = true;
+				DocumentationViewerSection = 0;
+				DocumentationViewerSubPage = (int)ec;
 			}
 
 			ImGui::SameLine();
@@ -3051,6 +3086,11 @@ void InlayEditor::SetExplorerRoot(const ObjectHandle NewRoot)
 void InlayEditor::SetExplorerSelections(const std::vector<ObjectHandle>& NewSelections)
 {
 	Selections = NewSelections;
+}
+
+const std::vector<ObjectHandle>& InlayEditor::GetExplorerSelections()
+{
+	return Selections;
 }
 
 void InlayEditor::Shutdown()

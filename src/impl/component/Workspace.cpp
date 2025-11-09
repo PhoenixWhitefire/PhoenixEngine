@@ -180,13 +180,15 @@ glm::vec3 EcWorkspace::ScreenPointToRay(double x, double y, float length, glm::v
 {
 	Engine* engine = Engine::Get();
 
-	x += engine->ViewportDockSpacePosition.x;
-	y -= engine->ViewportDockSpacePosition.y;
+	x = x - engine->ViewportPosition.x;
+	y = y - engine->ViewportPosition.y;
+
+	ImVec2 viewportSize = engine->GetViewportSize();
 
 	// thinmatrix 27/12/2024
 	// https://www.youtube.com/watch?v=DLKN0jExRIM
-	double nx = (2.0 * x) / engine->ViewportDockSpaceSize.x - 1.0;
-	double ny = 1.0 - (2.0 * y) / engine->ViewportDockSpaceSize.y;
+	double nx = (2.0 * x) / viewportSize.x - 1.0;
+	double ny = 1.0 - (2.0 * y) / viewportSize.y;
 
 	glm::vec4 clipCoords{ nx, ny, -1.f, 1.f };
 

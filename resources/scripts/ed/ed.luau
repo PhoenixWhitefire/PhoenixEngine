@@ -459,7 +459,7 @@ local GITHUB_URL = "https://github.com/PhoenixWhitefire/PhoenixEngine"
 
 local HoveringOverMenuBar = false
 local HoveringOverRibbonTab = false
-local RibbonPopupDistance = 24
+local RibbonPopupDistance = 12
 
 local function exportProject()
 	saveProject()
@@ -700,7 +700,7 @@ local function renderMainMenuBar(dt: number)
 			end
 		end
 
-		if HoveringOverMenuBar or HoveringOverRibbonTab or TabButtonHovering ~= nil or WindowHovering then
+		if (HoveringOverMenuBar or HoveringOverRibbonTab or TabButtonHovering ~= nil or WindowHovering) and not input.mousedown('r') then
 			local windowWidth, _ = engine.windowsize()
 
 			local TAB_HEIGHT = 175
@@ -715,7 +715,7 @@ local function renderMainMenuBar(dt: number)
 
 			RibbonPopupDistance = TAB_HEIGHT -- fixes ribbon closing when enabling tools
 		else
-			RibbonPopupDistance = 24
+			RibbonPopupDistance = 12
 		end
 
 		TabButtonHovering = WipTabButtonHovering
@@ -755,11 +755,35 @@ local function renderMainMenuBar(dt: number)
 	end
 end
 
+local PrevSelections: { GameObject & Transform } = {}
+
 local SelectionPart = GameObject.new("Mesh")
 SelectionPart.Material = "boxframe"
-SelectionPart.Tint = Color.new(84/255, 150/255, 1)
+SelectionPart.Tint = Color.new(166/255, 200/255, 1)
 
 local CommandBarCommand = ""
+local IsHoveringViewportTitlebar = false
+local IsHoveringViewport = false
+local ViewportRight = 0
+local ViewportLeft = 0
+local ViewportTop = 0
+local ViewportBottom = 0
+
+local function isMouseWithinViewport()
+	local mx, my = input.mouseposition()
+
+	if mx >= ViewportLeft and mx <= ViewportRight then
+		if my >= ViewportTop and my < ViewportBottom then
+			IsHoveringViewport = true
+		else
+			IsHoveringViewport = false
+		end
+	else
+		IsHoveringViewport = false
+	end
+
+	return IsHoveringViewport
+end
 
 local function renderViewport(DeltaTime: number)
 	if CurrentStage == "ProjectEditing" and Project.Workspace then
@@ -771,12 +795,54 @@ local function renderViewport(DeltaTime: number)
 			SelectionPart.Size = rayresult.Object.Size
 			SelectionPart.Parent = workspace
 
-			if input.mousedown("l") and not input.guihandledm() then
-				engine.setexplorerselections({ rayresult.Object })
+			if input.mousedown("l") and isMouseWithinViewport() then
+				if input.keypressed(341) then -- left control
+					local sels = engine.explorerselections()
+					table.insert(sels, rayresult.Object :: GameObject)
+					engine.setexplorerselections(sels)
+				else
+					engine.setexplorerselections({ rayresult.Object })
+				end
 			end
 		else
 			SelectionPart.Parent = nil
 			--print(mouseVec)
+		end
+	else
+		engine.setexplorerselections({})
+		for _, v in PrevSelections do
+			v:Destroy()
+		end
+		PrevSelections = {}
+	end
+
+	local newSelections = engine.explorerselections()
+	local selmap: { [number]: GameObject } = {}
+	for _, sel_ in newSelections do
+		if not sel_:HasComponent("Transform") then
+			continue
+		end
+
+		local sel = (sel_ :: any) :: GameObject & Transform
+		selmap[sel.ObjectId] = sel
+
+		if not PrevSelections[sel.ObjectId] then
+			local new = SelectionPart:Duplicate()
+			new.Transform, new.Size = sel.Transform, sel.Size
+			new.Tint = Color.new(84/255, 150/255, 1)
+			new.Parent = workspace
+			PrevSelections[sel.ObjectId] = new
+		else
+			local box = PrevSelections[sel.ObjectId]
+			box.Transform, box.Size = sel.Transform, sel.Size
+		end
+	end
+
+	for id, box in PrevSelections do
+		local sel = selmap[id]
+		if not sel or not sel.Exists or not sel:HasComponent("Transform") then
+			box:Destroy()
+			PrevSelections[id] = nil
 		end
 	end
 
@@ -785,7 +851,6 @@ local function renderViewport(DeltaTime: number)
 	if BottomBarEnabled then
 		local wx, wy = engine.windowsize()
 
-		imgui.setviewportdockspace(0, 19, wx, wy - 55)
 		imgui.setnextwindowposition(0, wy - 35)
 		imgui.setnextwindowsize(wx, 35)
 		imgui.begin("Bottom Bar", "nt | nd | nr")
@@ -811,14 +876,25 @@ local function renderViewport(DeltaTime: number)
 		imgui.endw()
 	end
 
-	--[[
-	imgui.begin("Viewport", if IsHoveringViewportTitlebar then "" else "ni")
+	local canInteract = IsHoveringViewportTitlebar or (not IsHoveringViewport and imgui.windowhovered("a | b"))
+	
+	imgui.begin(Project.Name .. "###Viewport", if canInteract then "nb" else "ni | nb")
 
-	local mx, my = input.getmousepos()
-	local wx, wy = imgui.getwindowposition()
-	local wsx, wsy = imgui.getwindowsize()
+	local mx, my = input.mouseposition()
+	local wx, wy = imgui.windowposition()
+	local wsx, wsy = imgui.windowsize()
 
-	if mx >= wx and mx <= wx + wsx then
+	local ewsx, ewsy = engine.windowsize()
+
+	imgui.setviewportdockspace(0, 19, ewsx, ewsy - (if BottomBarEnabled then 54 else 19))
+	engine.setviewport(wx, wy, wsx, wsy)
+
+	ViewportLeft = wx - 15
+	ViewportRight = wx + wsx + 15
+	ViewportTop = wy
+	ViewportBottom = wy + wsy
+
+	if mx >= wx - 15 and mx <= wx + wsx + 15 then
 		if my >= wy and my < wy + 16 then
 			IsHoveringViewportTitlebar = true
 		else
@@ -827,13 +903,14 @@ local function renderViewport(DeltaTime: number)
 	else
 		IsHoveringViewportTitlebar = false
 	end
+	isMouseWithinViewport()
 
-	imgui.setcursorposition(0, 0)
+	imgui.setcursorposition(0, wsy - ewsy)
 
-	imgui.image("!Framebuffer:Main", { wsx, wsy }, true)
+	imgui.image("!Framebuffer:Main", nil, true)
 
 	imgui.endw()
-	]]
+	
 end
 
 if not fs.isdirectory("./editor") then
@@ -937,13 +1014,13 @@ local function renderRenderProjects()
 	imgui.setcursorposition(cx + 10, cy)
 
 	renderProjectSelectorTiles(RecentProjects)
-	
+
 	if imgui.beginpopup("ProjectContextMenu") then
 		if imgui.menuitem("Remove from Recents") then
 			table.remove(RecentProjects, ProjectContextMenuTarget)
 			fs.write(EDITOR_RECENT_PROJECTS_PATH, json.encode(RecentProjects))
 		end
-	
+
 		imgui.endpopup()
 	end
 end
@@ -973,7 +1050,7 @@ local function renderSavedProjects()
 	renderProjectSelectorTiles(assert(SavedProjectsCache))
 	
 	if imgui.beginpopup("ProjectContextMenu") then
-		if imgui.menuitem("Delete") then
+		if SavedProjectsCache and imgui.menuitem("Delete") then
 			local name = SavedProjectsCache[ProjectContextMenuTarget]
 
 			local buttonSelection = engine.showmessagebox(
@@ -1155,7 +1232,7 @@ function Stages.ProjectPlaying_Leave()
 	Project.DataModel:Destroy()
 	Project.DataModel = restoreState
 	engine.setexplorerroot(Project.DataModel)
-	
+
 	engine.poplvm()
 	engine.binddatamodel(game)
 	

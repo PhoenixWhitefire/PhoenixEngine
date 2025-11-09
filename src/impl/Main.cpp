@@ -186,10 +186,10 @@ static void launchTracy()
 
 static void handleInputs(double deltaTime)
 {
-	Engine* EngineInstance = Engine::Get();
+	Engine* engine = Engine::Get();
 
-	EcCamera* camera = EngineInstance->WorkspaceRef->FindComponent<EcWorkspace>()->GetSceneCamera()->FindComponent<EcCamera>();
-	GLFWwindow* window = EngineInstance->Window;
+	EcCamera* camera = engine->WorkspaceRef->FindComponent<EcWorkspace>()->GetSceneCamera()->FindComponent<EcCamera>();
+	GLFWwindow* window = engine->Window;
 
 	double mouseX;
 	double mouseY;
@@ -197,7 +197,16 @@ static void handleInputs(double deltaTime)
 	
 	if (camera->UseSimpleController)
 	{
-		bool rmbPressed = !GuiIO->WantCaptureMouse && UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT);
+		bool guiUsingMouse = !WasRmbPressed && GuiIO->WantCaptureMouse;
+		if (guiUsingMouse && engine->OverrideDefaultViewport)
+		{
+			ImVec2 viewportSize = engine->GetViewportSize();
+			if (mouseX >= engine->ViewportPosition.x && mouseX <= engine->ViewportPosition.x + viewportSize.x)
+				if (mouseY >= engine->ViewportPosition.y && mouseY <= engine->ViewportPosition.y + viewportSize.y)
+					guiUsingMouse = false;
+		}
+
+		bool rmbPressed = !guiUsingMouse && UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT);
 
 		static const glm::vec3 WorldUp{ 0.f, 1.f, 0.f };
 		glm::vec3 camForward = glm::vec3(camera->Transform[2]);
@@ -239,7 +248,7 @@ static void handleInputs(double deltaTime)
 		else if (!rmbPressed && WasRmbPressed)
 			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
-		WasRmbPressed = rmbPressed;
+		WasRmbPressed = !guiUsingMouse && rmbPressed;
 
 		if (rmbPressed)
 		{
@@ -271,7 +280,7 @@ static void handleInputs(double deltaTime)
 		if (!PreviouslyPressingF11)
 		{
 			PreviouslyPressingF11 = true;
-			EngineInstance->SetIsFullscreen(!EngineInstance->IsFullscreen);
+			engine->SetIsFullscreen(!engine->IsFullscreen);
 		}
 	}
 	else
@@ -296,13 +305,13 @@ static void drawDeveloperUI(double DeltaTime)
 {
 	ZoneScopedC(tracy::Color::DarkOliveGreen);
 
-	Engine* EngineInstance = Engine::Get();
+	Engine* engine = Engine::Get();
 
 	if (UserInput::IsKeyDown(GLFW_KEY_I) && !GuiIO->WantCaptureKeyboard)
 	{
 		Log::Info("Reloading configuration...");
 
-		EngineInstance->LoadConfiguration();
+		engine->LoadConfiguration();
 	}
 
 	if (UserInput::IsKeyDown(GLFW_KEY_K) && !GuiIO->WantCaptureKeyboard)
@@ -314,10 +323,18 @@ static void drawDeveloperUI(double DeltaTime)
 		Log::Info("Shaders reloaded");
 	}
 
-	bool infoDrawable = EngineJsonConfig["Tool_Info"] != false;
+	// We need to keep track of two different states,
+	// Whether we called `ImGui::Begin`, and whether the developer closed the window
+	// `ImGui::End` always needs to be called when `beganInfo` is `true`, even if
+	// `infoOpen` becomes `false`
+	bool beganInfo = EngineJsonConfig["Tool_Info"] != false;
+	bool infoOpen = beganInfo;
 
-	if (infoDrawable && ImGui::Begin("Info"))
+	if (beganInfo && ImGui::Begin("Info", &infoOpen))
 	{
+		if (!infoOpen)
+			EngineJsonConfig["Tool_Info"] = false;
+
 		constexpr size_t GraphDatapoints = 512;
 
 		static std::array<double[255], GraphDatapoints> TimersHist;
@@ -336,16 +353,16 @@ static void drawDeveloperUI(double DeltaTime)
 		static bool IsSamplingStats = false;
 		static std::string SampledCsv;
 
-		ImGui::Text("FPS: %d", EngineInstance->FramesPerSecond);
+		ImGui::Text("FPS: %d", engine->FramesPerSecond);
 		ImGui::Text("Frame time: %zims", frameTime);
-		ImGui::Text("Draw calls: %u", EngineInstance->RendererContext.AccumulatedDrawCallCount);
+		ImGui::Text("Draw calls: %u", engine->RendererContext.AccumulatedDrawCallCount);
 		
 		if (IsSamplingStats)
 			SampledCsv.append(std::format(
 				"{},{},{},",
-				EngineInstance->FramesPerSecond,
+				engine->FramesPerSecond,
 				frameTime,
-				EngineInstance->RendererContext.AccumulatedDrawCallCount
+				engine->RendererContext.AccumulatedDrawCallCount
 			));
 
 #ifdef TRACY_ENABLE
@@ -538,26 +555,28 @@ static void drawDeveloperUI(double DeltaTime)
 
 				SampledCsv += "\n";
 			}
-
 	}
-	if (infoDrawable)
+	if (beganInfo)
 		ImGui::End();
 
-	bool settingsDrawable = EngineJsonConfig["Tool_Settings"] != false;
+	bool beganSettings = EngineJsonConfig["Tool_Settings"] != false;
+	bool settingsOpen = beganSettings;
 
-	if (settingsDrawable && ImGui::Begin("Settings"))
+	if (beganSettings && ImGui::Begin("Settings", &settingsOpen))
 	{
-		ImGui::Checkbox("VSync", &EngineInstance->VSync);
+		if (!settingsOpen)
+			EngineJsonConfig["Tool_Settings"] = false;
 
-		bool wasFullscreen = EngineInstance->IsFullscreen;
+		ImGui::Checkbox("VSync", &engine->VSync);
 
-		ImGui::Checkbox("Fullscreen", &EngineInstance->IsFullscreen);
+		bool fullscreen = engine->IsFullscreen;
+		ImGui::Checkbox("Fullscreen", &fullscreen);
 
-		if (EngineInstance->IsFullscreen != wasFullscreen)
-			EngineInstance->SetIsFullscreen(EngineInstance->IsFullscreen);
+		if (engine->IsFullscreen != fullscreen)
+			engine->SetIsFullscreen(fullscreen);
 
-		if (!EngineInstance->VSync)
-			ImGui::InputInt("FPS limit", &EngineInstance->FpsCap, 1, 30);
+		if (!engine->VSync)
+			ImGui::InputInt("FPS limit", &engine->FpsCap, 1, 30);
 
 		bool postFxEnabled = EngineJsonConfig.value("postfx_enabled", false);
 
@@ -607,10 +626,10 @@ static void drawDeveloperUI(double DeltaTime)
 			Log::Info("The JSON Config overwrote the pre-existing 'phoenix.conf'.");
 		}
 
-		ImGui::Checkbox("Wireframe rendering", &EngineInstance->DebugWireframeRendering);
-		ImGui::Checkbox("Debug Collision AABBs", &EngineInstance->DebugAabbs);
+		ImGui::Checkbox("Wireframe rendering", &engine->DebugWireframeRendering);
+		ImGui::Checkbox("Debug Collision AABBs", &engine->DebugAabbs);
 	}
-	if (settingsDrawable)
+	if (beganSettings)
 		ImGui::End();
 
 	InlayEditor::UpdateAndRender(DeltaTime);
@@ -655,9 +674,9 @@ static void init()
 {
 	ZoneScoped;
 
-	Engine* EngineInstance = Engine::Get();
+	Engine* engine = Engine::Get();
 
-	if (!EngineInstance->IsHeadlessMode)
+	if (!engine->IsHeadlessMode)
 	{
 		Log::InfoF(
 			"Initializing Dear ImGui {}...",
@@ -678,18 +697,18 @@ static void init()
 		ImGui::GetStyle().ScaleAllSizes(displayScale);
 		ImGui::GetStyle().DisplayWindowPadding = ImVec2(19.f, 19.f);
 
-		PHX_ENSURE_MSG(ImGui_ImplGlfw_InitForOpenGL(EngineInstance->Window, true), "Failed to initialize Dear ImGui for GLFW");
+		PHX_ENSURE_MSG(ImGui_ImplGlfw_InitForOpenGL(engine->Window, true), "Failed to initialize Dear ImGui for GLFW");
 		PHX_ENSURE_MSG(ImGui_ImplOpenGL3_Init("#version 460"), "Failed to initialize Dear ImGui for OpenGL");
 	
 		Log::Info("Dear ImGui initialized");
 	
-		EngineInstance->OnFrameStart.Connect(handleInputs);
+		engine->OnFrameStart.Connect(handleInputs);
 	
 		if (EngineJsonConfig.value("Developer", false))
 		{
 			Log::Info("Developer-mode specific functionality");
-			InlayEditor::Initialize(&EngineInstance->RendererContext);
-			EngineInstance->OnFrameRenderGui.Connect(drawDeveloperUI);
+			InlayEditor::Initialize(&engine->RendererContext);
+			engine->OnFrameRenderGui.Connect(drawDeveloperUI);
 		}
 	}
 
@@ -739,7 +758,7 @@ static void init()
 	PHX_ENSURE_MSG(root->FindComponent<EcDataModel>(), "Root Object was not a DataModel!");
 
 	root->IncrementHardRefs();
-	EngineInstance->BindDataModel(root);
+	engine->BindDataModel(root);
 }
 
 static bool isBoolArgument(const char* v, const char* arg)

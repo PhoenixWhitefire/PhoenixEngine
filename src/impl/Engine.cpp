@@ -522,6 +522,11 @@ static GLuint startLoadingSkybox(std::vector<uint32_t>* skyboxFacesBeingLoaded)
 
 static ImGuiID ViewportNodeId = UINT32_MAX;
 
+ImVec2 Engine::GetViewportSize() const
+{
+	return OverrideDefaultViewport ? OverrideViewportSize : ImVec2{ (float)WindowSizeX, (float)WindowSizeY };
+}
+
 void Engine::m_Render(double deltaTime)
 {
 	ZoneScoped;
@@ -533,9 +538,9 @@ void Engine::m_Render(double deltaTime)
 		glfwSwapInterval(1);
 	else
 		glfwSwapInterval(0);
-	
-	ImGuiDockNode* viewportNode = ImGui::DockBuilderGetNode(ViewportNodeId)->CentralNode;
-	float aspectRatio = viewportNode->Size.x / viewportNode->Size.y;
+
+	ImVec2 viewportSize = GetViewportSize();
+	float aspectRatio = viewportSize.x / viewportSize.y;
 
 	ObjectHandle sceneCamObject = WorkspaceRef->FindComponent<EcWorkspace>()->GetSceneCamera();
 	EcCamera* sceneCamera = sceneCamObject->FindComponent<EcCamera>();
@@ -581,10 +586,8 @@ void Engine::m_Render(double deltaTime)
 	RendererContext.FrameBuffer.Bind();
 
 	glViewport(
-		(int)viewportNode->Pos.x,
-		(int)viewportNode->Pos.y,
-		(int)viewportNode->Size.x,
-		(int)viewportNode->Size.y
+		0, 0,
+		(int)viewportSize.x, (int)viewportSize.y
 	);
 
 	glClear(/*GL_COLOR_BUFFER_BIT |*/ GL_DEPTH_BUFFER_BIT);
@@ -614,7 +617,6 @@ void Engine::m_Render(double deltaTime)
 	glEnable(GL_DEPTH_TEST);
 
 	//Do framebuffer stuff after everything is drawn
-
 	RendererContext.FrameBuffer.Unbind();
 
 	glActiveTexture(GL_TEXTURE1);
@@ -880,12 +882,8 @@ void Engine::Start()
 			else
 			{
 				ImGuiViewport* viewport = ImGui::GetMainViewport();
-
-				if (ViewportDockSpacePosition.x != -1.f)
-					viewport->WorkPos = ViewportDockSpacePosition;
-
-				if (ViewportDockSpaceSize.x != 1.f)
-					viewport->WorkSize = ViewportDockSpaceSize;
+				viewport->WorkPos = OverrideViewportDockSpacePosition;
+				viewport->WorkSize = OverrideViewportDockSpaceSize;
 
 				ViewportNodeId = ImGui::DockSpaceOverViewport(0, viewport, ImGuiDockNodeFlags_PassthruCentralNode);
 			}

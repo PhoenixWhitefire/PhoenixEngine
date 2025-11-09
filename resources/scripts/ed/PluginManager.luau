@@ -24,9 +24,10 @@ local function getPluginSettings(plugin: Plugin): index<typeof(PluginSettings), 
 end
 
 local function renderPluginManagement()
-    if not imgui.begin("Plugin Manager", "", true) then
+    local render, open = imgui.begin("Plugin Manager", "", true)
+    if not render or not open then
         imgui.endw()
-        IsPluginManagementWindowOpen = false
+        IsPluginManagementWindowOpen = open
         return
     end
 

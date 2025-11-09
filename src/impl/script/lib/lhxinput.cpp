@@ -46,7 +46,11 @@ static const std::unordered_map<char, int> s_KNameToCode =
 
 static int input_keypressed(lua_State* L)
 {
-    if (lua_isstring(L, 1))
+    if (lua_isnumber(L, 1))
+    {
+        lua_pushboolean(L, UserInput::IsKeyDown((int)luaL_checkinteger(L, 1)));
+    }
+    else if (lua_isstring(L, 1))
     {
         size_t len = 0;
         const char* kname = luaL_checklstring(L, 1, &len);
@@ -59,10 +63,6 @@ static int input_keypressed(lua_State* L)
             luaL_error(L, "Unsupported key '%c'", kname[0]);
 
         lua_pushboolean(L, UserInput::IsKeyDown(it->second));
-    }
-    else if (lua_isnumber(L, 1))
-    {
-        lua_pushboolean(L, UserInput::IsKeyDown((int)luaL_checkinteger(L, 1)));
     }
     else
     {

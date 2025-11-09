@@ -31,6 +31,11 @@ static ImGuiWindowFlags strToWindowFlags(lua_State* L, const char* flagsstr)
                 flags |= ImGuiWindowFlags_NoResize;
                 break;
             }
+            case 'b': // nb!!
+            {
+                flags |= ImGuiWindowFlags_NoScrollbar;
+                break;
+            }
             case 'm':
             {
                 flags |= ImGuiWindowFlags_NoMove;
@@ -94,9 +99,10 @@ static int imgui_begin(lua_State* L)
     bool hasCloseButton = luaL_optboolean(L, 3, false);
 
     bool open = true;
-	lua_pushboolean(L, ImGui::Begin(title, hasCloseButton ? &open : nullptr, strToWindowFlags(L, flagsstr)) && open);
+	lua_pushboolean(L, ImGui::Begin(title, hasCloseButton ? &open : nullptr, strToWindowFlags(L, flagsstr)));
+    lua_pushboolean(L, open);
 
-	return 1;
+	return 2;
 }
 
 static int imgui_end(lua_State*)
@@ -143,7 +149,30 @@ static int imgui_anyitemactive(lua_State* L)
 
 static int imgui_windowhovered(lua_State* L)
 {
-    lua_pushboolean(L, ImGui::IsWindowHovered());
+    ImGuiHoveredFlags flags = 0;
+    const char* flagsstr = luaL_optstring(L, 1, "\0");
+
+    for (; *flagsstr; flagsstr++)
+    {
+        switch (*flagsstr)
+        {
+        case 'a':
+            flags |= ImGuiHoveredFlags_AnyWindow;
+            break;
+        case 'b':
+            flags |= ImGuiHoveredFlags_AllowWhenBlockedByActiveItem;
+            break;
+        case ' ':
+        case '|':
+            break;
+        default:
+        {
+            luaL_error(L, "Unknown flag  '%c'", *flagsstr);
+        }
+        }
+    }
+
+    lua_pushboolean(L, ImGui::IsWindowHovered(flags));
 
     return 1;
 }
@@ -700,9 +729,8 @@ static int imgui_windowsize(lua_State* L)
 static int imgui_setviewportdockspace(lua_State* L)
 {
     Engine* engine = Engine::Get();
-    engine->ViewportDockSpacePosition = { (float)luaL_checknumber(L, 1), (float)luaL_checknumber(L, 2) };
-    engine->ViewportDockSpaceSize = { (float)luaL_checknumber(L, 3), (float)luaL_checknumber(L, 4) };
-
+    engine->OverrideViewportDockSpacePosition = { (float)luaL_checknumber(L, 1), (float)luaL_checknumber(L, 2) };
+    engine->OverrideViewportDockSpaceSize = { (float)luaL_checknumber(L, 3), (float)luaL_checknumber(L, 4) };
     engine->OverrideDefaultGuiViewportDockSpace = true;
 
     return 0;
@@ -810,7 +838,7 @@ static luaL_Reg imgui_funcs[] =
     { "pushstylecolor", imgui_pushstylecolor },
     { "popstylecolor", imgui_popstylecolor },
     { "windowposition", imgui_windowposition },
-    { "setwindowsize", imgui_windowsize },
+    { "windowsize", imgui_windowsize },
     { "setviewportdockspace", imgui_setviewportdockspace },
     { "setviewportdockspacedefault", imgui_setviewportdockspacedefault },
     { "openpopup", imgui_openpopup },

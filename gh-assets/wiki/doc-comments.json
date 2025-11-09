@@ -543,6 +543,12 @@
               ]
             ]
           },
+          "explorerselections": {
+            "Description": [
+              "Returns what is currently selected in the Explorer"
+            ],
+            "Out": "{ GameObject }"
+          },
           "framerate": {
             "Description": [
               "Returns the current framerate"
@@ -632,6 +638,11 @@
               "VmName: string"
             ]
           },
+          "resetviewport": {
+            "Description": [
+              "Resets the state of the Viewport"
+            ]
+          },
           "setexplorerroot": {
             "Description": [
               "Changes the Root of the built-in Explorer's hierarchy view"
@@ -671,6 +682,17 @@
             "In": [
               "Tool: string",
               "Enabled: boolean"
+            ]
+          },
+          "setviewport": {
+            "Description": [
+              "Configures the Engine to act as though the Viewport is at the given position with the given size"
+            ],
+            "In": [
+              "PositionX: number",
+              "PositionY: number",
+              "Width: number",
+              "Height: number"
             ]
           },
           "setvsync": {
@@ -1471,6 +1493,12 @@
               "To *set* the position of the window, use `.setnextwindowposition`"
             ],
             "Out": "number, number"
+          },
+          "windowsize": {
+            "Description": [
+              "Returns the size of the current window"
+            ],
+            "Out": "number, number"
           }
         }
       },
@@ -1522,10 +1550,10 @@
           },
           "keypressed": {
             "Description": [
-              "Returns whether the specified key (as lowercase, e.g. `'a'`, `'b'`) is currently being pressed"
+              "Returns whether the specified key (as lowercase, e.g. `'a'`, `'b'`, or by GLFW Key ID) is currently being pressed"
             ],
             "In": [
-              "Key: string"
+              "Key: string | number"
             ],
             "Out": "boolean"
           },

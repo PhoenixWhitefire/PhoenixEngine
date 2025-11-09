@@ -42,6 +42,8 @@ public:
 	void LoadConfiguration();
 	void BindDataModel(GameObject*);
 	void Close();
+
+	ImVec2 GetViewportSize() const;
 	
 	// Use `BindDataModel` when switching DataModels
 	ObjectHandle DataModelRef;
@@ -56,9 +58,12 @@ public:
 
 	Scene CurrentScene;
 
-	ImVec2 ViewportDockSpacePosition{ -1.f, -1.f };
-	ImVec2 ViewportDockSpaceSize{ -1.f, -1.f };
+	ImVec2 OverrideViewportDockSpacePosition{ -1.f, -1.f };
+	ImVec2 OverrideViewportDockSpaceSize{ -1.f, -1.f };
+	ImVec2 OverrideViewportSize{ 1.f, 1.f };
+	ImVec2 ViewportPosition{ 0.f, 0.f };
 	bool OverrideDefaultGuiViewportDockSpace = false;
+	bool OverrideDefaultViewport = false;
 
 	bool IsHeadlessMode = false;
 	bool IsFullscreen = false;

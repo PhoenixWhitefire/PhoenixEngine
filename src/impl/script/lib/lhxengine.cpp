@@ -147,6 +147,8 @@ static int engine_setexplorerroot(lua_State* L)
 
 static int engine_setexplorerselections(lua_State* L)
 {
+    luaL_checktype(L, 1, LUA_TTABLE);
+
     std::vector<ObjectHandle> objects;
 
     lua_pushnil(L);
@@ -160,6 +162,21 @@ static int engine_setexplorerselections(lua_State* L)
     InlayEditor::SetExplorerSelections(objects);
 
     return 0;
+}
+
+static int engine_explorerselections(lua_State* L)
+{
+    const std::vector<ObjectHandle>& selections = InlayEditor::GetExplorerSelections();
+    lua_createtable(L, selections.size(), 0);
+
+    for (int i = 0; i < (int)selections.size(); i++)
+    {
+        lua_pushinteger(L, i + 1);
+        ScriptEngine::L::PushGameObject(L, selections[i].Dereference());
+        lua_settable(L, -3);
+    }
+
+    return 1;
 }
 
 static int engine_pushlvm(lua_State* L)
@@ -277,6 +294,25 @@ static int engine_args(lua_State* L)
     return 1;
 }
 
+static int engine_setviewport(lua_State* L)
+{
+    Engine* engine = Engine::Get();
+    engine->ViewportPosition = { (float)luaL_checknumber(L, 1), (float)luaL_checknumber(L, 2) };
+    engine->OverrideViewportSize = { (float)luaL_checknumber(L, 3), (float)luaL_checknumber(L, 4) };
+    engine->OverrideDefaultViewport = true;
+
+    return 0;
+}
+
+static int engine_resetviewport(lua_State* L)
+{
+    Engine* engine = Engine::Get();
+    engine->OverrideDefaultViewport = false;
+    engine->ViewportPosition = {};
+
+    return 0;
+}
+
 static luaL_Reg engine_funcs[] =
 {
     { "windowsize", engine_windowsize },
@@ -296,6 +332,7 @@ static luaL_Reg engine_funcs[] =
     { "physicstimescale", engine_physicstimescale },
     { "setexplorerroot", engine_setexplorerroot },
     { "setexplorerselections", engine_setexplorerselections },
+    { "explorerselections", engine_explorerselections },
     { "pushlvm", engine_pushlvm },
     { "poplvm", engine_poplvm },
     { "toolnames", engine_toolnames },
@@ -304,6 +341,8 @@ static luaL_Reg engine_funcs[] =
     { "showmessagebox", engine_showmessagebox },
     { "unloadtexture", engine_unloadtexture },
     { "args", engine_args },
+    { "setviewport", engine_setviewport },
+    { "resetviewport", engine_resetviewport },
     { NULL, NULL }
 };
 

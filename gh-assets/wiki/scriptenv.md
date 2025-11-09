@@ -160,6 +160,13 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * Returns the current size, in pixels, of the game window
 * To *set* the size of the window, use `.setwindowsize`
 
+#### `engine.unloadtexture(Path: string): `
+* Unloads the given texture from the Engine's cache
+
+#### `engine.pushlvm(VmName: string): `
+* Pushes a new Luau VM to the Luau VM stack. Scripts resumed past that point will run in the new VM
+* The `game` and `workspace` globals in the new VM will depend on the current bound datamodel
+
 #### `engine.daabbs(Enabled: boolean?): boolean`
 * Returns whether AABBs are drawn for all objects with collisions enabled (`.PhysicsCollisions == true`)
 * Optionally, the visualization can be enabled/disabled by passing in a boolean argument
@@ -170,11 +177,14 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * This is a blocking operation and no scripts or other parts of the Engine run until the message is dismissed
 * Avoid using quotes (`'` and `"`) or backticks (`\``) in the `Message`
 
-#### `engine.unloadtexture(Path: string): `
-* Unloads the given texture from the Engine's cache
+#### `engine.explorerselections(): { GameObject }`
+* Returns what is currently selected in the Explorer
 
-#### `engine.poplvm(): `
-* Pops the topmost Luau VM from the VM stack, causing the VM below it to be used for any Scripts resumed beyond that point
+#### `engine.setwindowsize(Width: number, Height: number): `
+* Sets the size of the window to the specified two Width and Height integers
+
+#### `engine.resetviewport(): `
+* Resets the state of the Viewport
 
 #### `engine.setvsync(VSyncEnabled: boolean): `
 * Enables/disables VSync
@@ -185,24 +195,23 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `engine.binddatamodel(NewDataModel: GameObject): `
 * Switches Data Models to the specified Object
 
-#### `engine.setwindowsize(Width: number, Height: number): `
-* Sets the size of the window to the specified two Width and Height integers
-
 #### `engine.settoolenabled(Tool: string, Enabled: boolean): `
 * Enables/disables the given tool
 
-#### `engine.setexplorerroot(Root: GameObject): `
-* Changes the Root of the built-in Explorer's hierarchy view
+#### `engine.setviewport(PositionX: number, PositionY: number, Width: number, Height: number): `
+* Configures the Engine to act as though the Viewport is at the given position with the given size
 
 #### `engine.exit(ExitCode: number? [ 0 ]): `
 * Shuts down the Engine and exits the process with the specified Exit Code (or 0 by default)
 
+#### `engine.poplvm(): `
+* Pops the topmost Luau VM from the VM stack, causing the VM below it to be used for any Scripts resumed beyond that point
+
 #### `engine.setfullscreen(Fullscreen: boolean): `
 * Enables/disables fullscreen mode
 
-#### `engine.pushlvm(VmName: string): `
-* Pushes a new Luau VM to the Luau VM stack. Scripts resumed past that point will run in the new VM
-* The `game` and `workspace` globals in the new VM will depend on the current bound datamodel
+#### `engine.setexplorerroot(Root: GameObject): `
+* Changes the Root of the built-in Explorer's hierarchy view
 
 #### `engine.setmaxframerate(MaxFramerate: number): `
 * Sets the maximum framerate the Engine will reach before self-limiting
@@ -337,9 +346,8 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `imgui.checkbox(Name: string, Value: boolean): boolean`
 * `ImGui::Checkbox`
 
-#### `imgui.windowposition(): number, number`
-* Returns the position of the current Dear ImGui window (`ImGui::GetWindowPos`)
-* To *set* the position of the window, use `.setnextwindowposition`
+#### `imgui.textlink(Text: string): boolean`
+* `ImGui::TextLink`
 
 #### `imgui.setnextwindowsize(Width: number, Height: number): `
 * `ImGui::SetNextWindowSize`
@@ -350,11 +358,12 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `imgui.setviewportdockspace(PositionX: number, PositionY: number, SizeX: number, SizeY: number): `
 * Sets the region of the window in which Dear ImGui windows can be docked
 
+#### `imgui.windowposition(): number, number`
+* Returns the position of the current Dear ImGui window (`ImGui::GetWindowPos`)
+* To *set* the position of the window, use `.setnextwindowposition`
+
 #### `imgui.windowhovered(): boolean`
 * `ImGui::IsWindowHovered`
-
-#### `imgui.sameline(): `
-* `ImGui::SameLine`
 
 #### `imgui.begin(WindowTitle: string, WindowFlags: string? [ "" ]): boolean`
 * `ImGui::Begin`
@@ -363,14 +372,14 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `imgui.inputnumber(Text: string, Value: number): number`
 * `ImGui::InputDouble`
 
-#### `imgui.treepop(): `
-* `ImGui::TreePop`
+#### `imgui.sameline(): `
+* `ImGui::SameLine`
 
 #### `imgui.separator(): `
 * `ImGui::Separator`
 
-#### `imgui.treenode(Text: string): boolean`
-* `ImGui::TreeNode`
+#### `imgui.treepop(): `
+* `ImGui::TreePop`
 
 #### `imgui.setnextwindowopen(Open: boolean? [ true ]): `
 * `ImGui::SetNextWindowCollapsed(!Open)`
@@ -381,14 +390,14 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `imgui.textsize(Text: string): number, number`
 * `ImGui::CalcTextSize`
 
-#### `imgui.textlink(Text: string): boolean`
-* `ImGui::TextLink`
+#### `imgui.treenode(Text: string): boolean`
+* `ImGui::TreeNode`
 
 #### `imgui.endw(): `
 * `ImGui::End`, `endw` and not `end` because `end` is a Luau keyword
 
-#### `imgui.text(Text: string): `
-* `ImGui::Text`
+#### `imgui.windowsize(): number, number`
+* Returns the size of the current window
 
 #### `imgui.combo(Text: string, Options: { string }, CurrentOption: number): number`
 * `ImGui::Combo`. Returns the selected option index
@@ -397,11 +406,11 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * Returns the current position of the Dear ImGui element cursor within the current window
 * To *set* the cursor position, use `.setcursorposition`
 
+#### `imgui.text(Text: string): `
+* `ImGui::Text`
+
 #### `imgui.stylecolors(Theme: 'l' | 'd'): `
 * `ImGui::StyleColorsDark`/`ImGui::StyleColorsLight`
-
-#### `imgui.setwindowsize(SizeX: number, SizeY: number): `
-* Sets the size of the current Dear ImGui window
 
 #### `imgui.setnextwindowfocus(): `
 * `ImGui::SetNextWindowFocus`
@@ -490,8 +499,8 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * Returns whether the mouse cursor is current visible
 * To *change* the visibility of the cursor, use `.setcursorvisible`
 
-#### `input.keypressed(Key: string): boolean`
-* Returns whether the specified key (as lowercase, e.g. `'a'`, `'b'`) is currently being pressed
+#### `input.keypressed(Key: string | number): boolean`
+* Returns whether the specified key (as lowercase, e.g. `'a'`, `'b'`, or by GLFW Key ID) is currently being pressed
 
 #### `input.setmousegrabbed(Grabbed: boolean): `
 * Grabs/ungrabs the mouse cursor
