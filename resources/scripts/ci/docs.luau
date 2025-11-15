@@ -47,6 +47,25 @@ declare class Vector2
 end
 ]]
 
+local function dumpCreatables()
+	local creatablesExtra = {
+		Mesh = " & Transform",
+		DirectionalLight = "& Transform",
+		SpotLight = " & Transform",
+		PointLight = " & Transform",
+		Model = " & Transform",
+		ParticleEmitter = " & Transform"
+	}
+
+	definitionsFile ..= "\ntype __Creatables = {\n"
+
+	for _, v in GameObject.validComponents do
+		definitionsFile ..= `\t{v}: {v}{if creatablesExtra[v] then creatablesExtra[v] else ""},\n`
+	end
+
+	definitionsFile ..= "}"
+end
+
 local function dumpFuncSignature(libname, funcname, In, Out, V)
 	local docargs = In or ""
 	local returns = Out or ""
@@ -86,41 +105,7 @@ local function dumpFuncSignature(libname, funcname, In, Out, V)
 		generics = `<{V.Generics}>`
 	end
 
-	local lspDef = `{generics}(( { defargs } ) -> ({ returns }))`
-
-	-- generates "Code too complex to typecheck" error in definitions file :(
-	--[[
-	if libname == "GameObject" and funcname == "new" then
-		local genericDef = lspDef -- aka the `(Component: string) -> (GameObject)` one
-		lspDef = ""
-
-		-- some components will automatically add other components to the Object if they
-		-- are not present
-		local EXTRA_COMPONENT_INITS = {
-			PointLight = { "Transform" },
-			DirectionalLight = { "Transform" },
-			SpotLight = { "Transform" },
-			Mesh = { "Transform" },
-			Model = { "Transform" },
-			ParticleEmitter = { "Transform" },
-		}
-
-		for _, v in GameObject.validComponents do
-			local finalComponents = v
-			local extra = EXTRA_COMPONENT_INITS[v]
-
-			if extra then
-				for _, e in extra do
-					finalComponents ..= ` & {e}`
-				end
-			end
-
-			lspDef ..= `(( Component: "{v}" ) -> ( GameObject & {finalComponents} )) & `
-		end
-
-		lspDef ..= genericDef
-	end
-	]]
+	local lspDef = `({generics}( { defargs } ) -> ({ returns }))`
 
 	return `#### \`{libname}.{ funcname }{generics}({ docargs }): { returns }\`\n`, lspDef
 end
@@ -162,7 +147,10 @@ local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, lib
 			definitionsFile = string.sub(definitionsFile, 1, #definitionsFile - 3)
 			definitionsFile ..= ",\n"
 		else
-			assert(v.Type and typeof(v.Type) == "string", k);
+			if not v.Type or typeof(v.Type) ~= "string" then
+				print("Error with member", k)
+				return str
+			end
 			str ..= `#### \`{libname}.{ k }: { v.Type }\`\n`
 			definitionsFile ..= `  { k }: { v.Type },\n`
 		end
@@ -502,6 +490,10 @@ for _, k in orderedComponents do
 end
 
 definitionsFile ..= "\n\n"
+
+dumpCreatables()
+
+definitionsFile ..= "\n"
 
 for _, name in orderedLibraries do
 	local lib = docComments.ScriptEnv.Libraries[name]

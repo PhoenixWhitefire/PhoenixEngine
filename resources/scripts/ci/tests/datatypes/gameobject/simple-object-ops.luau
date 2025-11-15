@@ -49,5 +49,23 @@ return function(describe, test: (string, () -> ()) -> (), expect: (any) -> (any)
 			game:FindChild(nil)
 		end):toThrow("invalid argument")
 	end)
+	test("__eq True", function()
+		expect((function()
+			local t = {
+				[game.Workspace] = false
+			}
+			t[game.Workspace] = true
+			return t[game.Workspace]
+		end)()):toBe(true)
+	end)
+	test("__eq False", function()
+		expect((function()
+			local t = {
+				[game.Workspace] = false
+			}
+			t[workspace.SceneCamera] = true
+			return t[game.Workspace]
+		end)()):toBe(false)
+	end)
 end
 

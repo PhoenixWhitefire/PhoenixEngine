@@ -172,7 +172,7 @@
         "Methods": {
           "GetObjectsInAabb": "(Vector3, Vector3, Array?) -> (Array)",
           "Raycast": "(Vector3, Vector3, Array?) -> (Map?)",
-          "ScreenPointToRay": "(Array, Double) -> (Vector3)"
+          "ScreenPointToRay": "(Double, Double, Double?) -> (Vector3)"
         },
         "Properties": {
           "SceneCamera": "GameObject?"
@@ -211,13 +211,17 @@
         "Library": {
           "fromEulerAnglesXYZ": "function",
           "fromTranslation": "function",
+          "identity": "userdata",
           "lookAt": "function",
           "new": "function"
         },
         "Metatable": {
+          "__add": "function",
+          "__eq": "function",
           "__index": "function",
           "__mul": "function",
           "__newindex": "function",
+          "__sub": "function",
           "__type": "string"
         }
       }
@@ -328,6 +332,7 @@
         "separatortext": "function",
         "setcursorposition": "function",
         "setitemtooltip": "function",
+        "setnextitemwidth": "function",
         "setnextwindowfocus": "function",
         "setnextwindowopen": "function",
         "setnextwindowposition": "function",

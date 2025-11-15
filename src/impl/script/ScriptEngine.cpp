@@ -582,11 +582,39 @@ void ScriptEngine::L::PushGameObject(lua_State* L, GameObject* obj)
 					o->DecrementHardRefs(); // removes the reference in `::Create`
 			}
 		);*/
+
+#define OBJECT_REG "OBJECT"
+
+		lua_getfield(L, LUA_REGISTRYINDEX, OBJECT_REG);
+		if (lua_isnil(L, -1))
+		{
+			lua_newtable(L);
+			lua_pushvalue(L, -1);
+			lua_setfield(L, LUA_REGISTRYINDEX, OBJECT_REG);
+			lua_setreadonly(L, -1, false);
+		}
+
+		lua_pushinteger(L, *(int32_t*)&obj->ObjectId);
+		lua_gettable(L, -2); // OBJECT_REG[ObjectId]
+
+		if (!lua_isnil(L, -1))
+		{
+			lua_remove(L, -2); // remove the registry sub-table
+			return; // object already in the registry, return the same value (only way to make table key hashing work afaik)
+		}
+		lua_pop(L, 1); // dont need that nil
+
 		uint32_t* ptrToObj = (uint32_t*)lua_newuserdata(L, sizeof(uint32_t));
+		lua_pushinteger(L, *(int32_t*)&obj->ObjectId);
+		lua_pushvalue(L, -2);
+
 		*ptrToObj = obj ? obj->ObjectId : PHX_GAMEOBJECT_NULL_ID;
 		
 		luaL_getmetatable(L, "GameObject");
 		lua_setmetatable(L, -2);
+
+		lua_settable(L, -4);
+		lua_remove(L, -2); // remove the registry sub-table
 	}
 }
 
@@ -1762,6 +1790,9 @@ lua_State* ScriptEngine::L::Create(const std::string& VmName)
 		);
 		lua_setfield(state, -2, "lookAt");
 
+		ScriptEngine::L::PushGenericValue(state, glm::mat4(1.f));
+		lua_setfield(state, -2, "identity");
+
 		lua_setglobal(state, "Matrix");
 
 		luaL_newmetatable(state, "Matrix");
@@ -1859,6 +1890,21 @@ lua_State* ScriptEngine::L::Create(const std::string& VmName)
 		);
 		lua_setfield(state, -2, "__newindex");
 
+		// TODO table key hashes?
+		lua_pushcfunction(
+			state,
+			[](lua_State* L)
+			{
+				const glm::mat4& a = *(glm::mat4*)luaL_checkudata(L, 1, "Matrix");
+				const glm::mat4& b = *(glm::mat4*)luaL_checkudata(L, 2, "Matrix");
+
+				lua_pushboolean(L, a == b);
+				return 1;
+			},
+			"Matrix.__eq"
+		);
+		lua_setfield(state, -2, "__eq");
+
 		lua_pushcfunction(
 			state,
 			[](lua_State* L)
@@ -1867,12 +1913,45 @@ lua_State* ScriptEngine::L::Create(const std::string& VmName)
 				glm::mat4& b = *(glm::mat4*)luaL_checkudata(L, 2, "Matrix");
 
 				ScriptEngine::L::PushGenericValue(L, a * b);
-
 				return 1;
 			},
 			"Matrix.__mul"
 		);
 		lua_setfield(state, -2, "__mul");
+
+		lua_pushcfunction(
+			state,
+			[](lua_State* L)
+			{
+				glm::mat4 a = *(glm::mat4*)luaL_checkudata(L, 1, "Matrix");
+				glm::vec3 v = glm::make_vec3(luaL_checkvector(L, 2));
+
+				glm::mat4 newMtx = a;
+				newMtx[3] += glm::vec4(v, 0.f);
+
+				ScriptEngine::L::PushGenericValue(L, newMtx);
+				return 1;
+			},
+			"Matrix.__add"
+		);
+		lua_setfield(state, -2, "__add");
+
+		lua_pushcfunction(
+			state,
+			[](lua_State* L)
+			{
+				glm::mat4 a = *(glm::mat4*)luaL_checkudata(L, 1, "Matrix");
+				glm::vec3 v = glm::make_vec3(luaL_checkvector(L, 2));
+
+				glm::mat4 newMtx = a;
+				newMtx[3] -= glm::vec4(v, 1.f);
+
+				ScriptEngine::L::PushGenericValue(L, newMtx);
+				return 1;
+			},
+			"Matrix.__sub"
+		);
+		lua_setfield(state, -2, "__sub");
 	}
 
 	// GameObject

@@ -10,16 +10,16 @@ static std::unordered_map<std::string, std::vector<uint32_t>> FreeSkinnedMeshPse
 static void tryMarkFreeSkinnedMeshPseudoAsset(EcMesh& mesh)
 {
 	if (Mesh& meshAsset = MeshProvider::Get()->GetMeshResource(mesh.RenderMeshId);
-			meshAsset.Bones.size() > 0
+		meshAsset.Bones.size() > 0
 	)
 	{
-			FreeSkinnedMeshPseudoAssets[mesh.Asset].push_back(mesh.RenderMeshId);
+		FreeSkinnedMeshPseudoAssets[mesh.Asset].push_back(mesh.RenderMeshId);
 
-			MeshProvider::GpuMesh& gpuMesh = MeshProvider::Get()->GetGpuMesh(meshAsset.GpuId);
+		MeshProvider::GpuMesh& gpuMesh = MeshProvider::Get()->GetGpuMesh(meshAsset.GpuId);
 
-			// reset all vertex transformations
-			for (glm::mat4& t : gpuMesh.SkinningData)
-				t = glm::mat4(1.f);
+		// reset all vertex transformations
+		for (glm::mat4& t : gpuMesh.SkinningData)
+			t = glm::mat4(1.f);
 	}
 }
 

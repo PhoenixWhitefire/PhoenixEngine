@@ -6,7 +6,7 @@ Additional types with methods and properties
 
 * An RGB color
 
-#### `Color.new(R: number, G: number, B: number): `
+#### `Color.new(R: number, G: number, B: number): Color`
 * Returns a Color with the provided R, G, and B values
 * Values are expected to be in the range 0 to 1
 
@@ -50,22 +50,25 @@ Additional types with methods and properties
 #### `GameObject.validComponents: { string }`
 * A list of all valid component names which can be passed into `.new`
 
-#### `GameObject.new(Component: string): any`
+#### `GameObject.new<T>(Component: T): GameObject & index<__Creatables, T>`
 * Creates a new GameObject with the provided Component
 
 ### `Matrix`
 
 * A 4x4 transformation matrix
 
-#### `Matrix.new(): Matrix`
-* Creates a new identity matrix
-
 #### `Matrix.fromTranslation(Position: vector): Matrix`
 #### `Matrix.fromTranslation(X: number, Y: number, Z: number): Matrix`
 * Creates a Matrix which has been translated to the given coordinates (specified as either a `vector` or the individual X, Y, and Z components)
 
+#### `Matrix.new(): Matrix`
+* Creates a new identity matrix
+
 #### `Matrix.lookAt(Eye: vector, Target: vector): Matrix`
 * Creates a Matrix at position `Eye` oriented such that the `.Forward` vector moves toward `Target`
+
+#### `Matrix.identity: Matrix`
+* An identity matrix, the same value as what gets returned with `.new()` with no arguments
 
 #### `Matrix.fromEulerAnglesXYZ(X: number, Y: number, Z: number): Matrix`
 * Creates a Matrix which has been rotated by the given Euler angles (in radians) with the rotation order X-Y-Z
@@ -346,8 +349,12 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `imgui.checkbox(Name: string, Value: boolean): boolean`
 * `ImGui::Checkbox`
 
-#### `imgui.textlink(Text: string): boolean`
-* `ImGui::TextLink`
+#### `imgui.text(Text: string): `
+* `ImGui::Text`
+
+#### `imgui.windowposition(): number, number`
+* Returns the position of the current Dear ImGui window (`ImGui::GetWindowPos`)
+* To *set* the position of the window, use `.setnextwindowposition`
 
 #### `imgui.setnextwindowsize(Width: number, Height: number): `
 * `ImGui::SetNextWindowSize`
@@ -358,12 +365,11 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `imgui.setviewportdockspace(PositionX: number, PositionY: number, SizeX: number, SizeY: number): `
 * Sets the region of the window in which Dear ImGui windows can be docked
 
-#### `imgui.windowposition(): number, number`
-* Returns the position of the current Dear ImGui window (`ImGui::GetWindowPos`)
-* To *set* the position of the window, use `.setnextwindowposition`
-
 #### `imgui.windowhovered(): boolean`
 * `ImGui::IsWindowHovered`
+
+#### `imgui.sameline(): `
+* `ImGui::SameLine`
 
 #### `imgui.begin(WindowTitle: string, WindowFlags: string? [ "" ]): boolean`
 * `ImGui::Begin`
@@ -372,14 +378,14 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `imgui.inputnumber(Text: string, Value: number): number`
 * `ImGui::InputDouble`
 
-#### `imgui.sameline(): `
-* `ImGui::SameLine`
+#### `imgui.treepop(): `
+* `ImGui::TreePop`
 
 #### `imgui.separator(): `
 * `ImGui::Separator`
 
-#### `imgui.treepop(): `
-* `ImGui::TreePop`
+#### `imgui.treenode(Text: string): boolean`
+* `ImGui::TreeNode`
 
 #### `imgui.setnextwindowopen(Open: boolean? [ true ]): `
 * `ImGui::SetNextWindowCollapsed(!Open)`
@@ -390,8 +396,8 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `imgui.textsize(Text: string): number, number`
 * `ImGui::CalcTextSize`
 
-#### `imgui.treenode(Text: string): boolean`
-* `ImGui::TreeNode`
+#### `imgui.textlink(Text: string): boolean`
+* `ImGui::TextLink`
 
 #### `imgui.endw(): `
 * `ImGui::End`, `endw` and not `end` because `end` is a Luau keyword
@@ -406,17 +412,17 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * Returns the current position of the Dear ImGui element cursor within the current window
 * To *set* the cursor position, use `.setcursorposition`
 
-#### `imgui.text(Text: string): `
-* `ImGui::Text`
-
 #### `imgui.stylecolors(Theme: 'l' | 'd'): `
 * `ImGui::StyleColorsDark`/`ImGui::StyleColorsLight`
 
-#### `imgui.setnextwindowfocus(): `
-* `ImGui::SetNextWindowFocus`
+#### `imgui.itemhovered(): boolean`
+* `ImGui::IsItemHovered`
 
 #### `imgui.setnextwindowposition(X: number, Y: number): `
 * `ImGui::SetNextWindowPos
+
+#### `imgui.setnextwindowfocus(): `
+* `ImGui::SetNextWindowFocus`
 
 #### `imgui.setviewportdockspacedefault(): `
 * Reverts the region of the window in which Dear ImGui windows can be docked to the default settings
@@ -453,8 +459,9 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `imgui.popstylecolor(): `
 * `ImGui::PopStyleColor`
 
-#### `imgui.itemhovered(): boolean`
-* `ImGui::IsItemHovered`
+#### `imgui.setnextitemwidth(Width: number): `
+* Sets the width of the next item
+* `ImGui::SetNextItemWidth`
 
 #### `imgui.endchild(): `
 * `ImGui::EndChild`

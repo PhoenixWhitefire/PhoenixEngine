@@ -1,16 +1,28 @@
 -- ed.luau, 14/09/2025
 local FALLBACK_IMAGE = "@etextures/editor-icons/fallback.png"
 
+local PluginManager = require("./PluginManager.luau")
+local CoreTools = require("./CoreTools.luau")
 local Types = require("./Types.luau")
 type Stage = Types.Stage
 
 local CurrentStage: Stage = "None"
 local StageUpdateSignal: EventConnection? = nil
 local Stages: { [string]: (any) -> () } = {}
-local PluginManager = require("./PluginManager.luau")
 
 local EditorCam = assert(workspace.SceneCamera)
-local EditorTl = GameObject.new("TreeLink") :: GameObject & TreeLink
+local EditorTl = GameObject.new("TreeLink" :: "TreeLink")
+
+local Project = {
+	DataModel = nil :: (GameObject & DataModel)?,
+	Workspace = nil :: (GameObject & Workspace)?,
+	Name = "Should not be visible" :: string,
+	IsTempPath = false :: boolean
+}
+
+local RecentProjects: { string } = {}
+
+local EDITOR_RECENT_PROJECTS_PATH = "./editor/recent-projects.json"
 
 EditorCam.UseSimpleController = true
 EditorTl.Parent = workspace
@@ -66,27 +78,18 @@ local function changeStageTo(NewStage: Stage)
 	end
 
 	PluginManager.OnEditorStageChanged(CurrentStage, NewStage)
+	CoreTools.OnEditorStageChanged(NewStage)
 	
 	CurrentStage = NewStage
 	StageUpdateSignal = targetDm.OnFrameBegin:Connect(function(DeltaTime)
 		MouseClick = (not WasHoldingDownM1) and input.mousedown("l")
+		CoreTools.Update(Project)
 
 		Stages[CurrentStage](DeltaTime)
 
 		WasHoldingDownM1 = input.mousedown("l")
 	end)
 end
-
-local Project = {
-	DataModel = nil :: (GameObject & DataModel)?,
-	Workspace = nil :: (GameObject & Workspace)?,
-	Name = "Should not be visible" :: string,
-	IsTempPath = false :: boolean
-}
-
-local RecentProjects: { string } = {}
-
-local EDITOR_RECENT_PROJECTS_PATH = "./editor/recent-projects.json"
 
 local function saveRecents()
 	if not fs.write(EDITOR_RECENT_PROJECTS_PATH, json.encode(RecentProjects)) then
@@ -191,15 +194,15 @@ local function openProject(ManualPath: string?)
 	end
 
 	if not Project.DataModel then
-		Project.DataModel = GameObject.new("DataModel")
+		Project.DataModel = GameObject.new("DataModel" :: "DataModel")
 		print("Re-created DataModel")
 	end
 
 	Project.Workspace = Project.DataModel:FindChildWithComponent("Workspace") :: any
 
 	if not Project.Workspace then
-		Project.Workspace = GameObject.new("Workspace")
-		Project.Workspace.SceneCamera = GameObject.new("Camera")
+		Project.Workspace = GameObject.new("Workspace" :: "Workspace")
+		Project.Workspace.SceneCamera = GameObject.new("Camera" :: "Camera")
 		Project.Workspace.SceneCamera.Parent = Project.Workspace
 
 		print("Re-created Workspace")
@@ -253,7 +256,20 @@ local function createNewProject()
 	assert(fs.mkdir("@projres/textures"))
 	assert(fs.mkdir("@projres/textures/materials"))
 
-	assert(fs.copy("@editres/shaders", "@projres/shaders"))
+	for _, v in { "error", "worldUber", "worldUberTriProjected", "worldUberSkinned", "skybox", "boxframe", "particle", "postprocessing" } do
+		if fs.isfile(v .. ".shp") then
+			fs.copy(`@editres/shaders/{v}.shp`, `@projres/shaders/{v}.shp`)
+		end
+		if fs.isfile(v .. ".vert") then
+			fs.copy(`@editres/shaders/{v}.vert`, `@projres/shaders/{v}.vert`)
+		end
+		if fs.isfile(v .. ".frag") then
+			fs.copy(`@editres/shaders/{v}.frag`, `@projres/shaders/{v}.frag`)
+		end
+		if fs.isfile(v .. ".geom") then
+			fs.copy(`@editres/shaders/{v}.geom`, `@projres/shaders/{v}.geom`)
+		end
+	end
 
 	for _, v in { "brick", "error", "floortiles", "neon", "plastic", "smoothplastic", "wood", "woodplanks" } do
 		assert(fs.copy(`@editres/materials/{v}.mtl`, `@projres/materials/{v}.mtl`))
@@ -265,10 +281,10 @@ local function createNewProject()
 
 	assert(fs.copy("@etextures/editor-icons/fallback.png", "@proj/icon.png"))
 
-	local dm = GameObject.new("DataModel") :: GameObject & DataModel
-	local projWp = GameObject.new("Workspace") :: GameObject & Workspace
-	local camera = GameObject.new("Camera") :: GameObject & Camera
-	GameObject.new("DirectionalLight").Parent = workspace
+	local dm = GameObject.new("DataModel" :: "DataModel")
+	local projWp = GameObject.new("Workspace" :: "Workspace")
+	local camera = GameObject.new("Camera" :: "Camera")
+	GameObject.new("DirectionalLight" :: "DirectionalLight").Parent = workspace
 
 	projWp.Parent = dm
 	camera.Parent = projWp
@@ -285,7 +301,7 @@ local TabButtonHovering: string? = nil
 local WipTabButtonHovering = TabButtonHovering
 local WindowHovering = false
 
-local function tabButton(Text: string, Icon: string, Enabled: boolean?, Lit: boolean?, Id: string?)
+local function tabButton(Text: string, Icon: string, Enabled: boolean?, Lit: boolean?, Id: string?): boolean
 	if Enabled == nil then
 		Enabled = true
 	end
@@ -391,6 +407,10 @@ local function homeTab(_: number)
 			end
 		end)
 	end
+
+	imgui.sameline()
+
+	CoreTools.RenderControls(tabButton)
 end
 
 local function toolsTab(_: number)
@@ -757,9 +777,10 @@ end
 
 local PrevSelections: { GameObject & Transform } = {}
 
-local SelectionPart = GameObject.new("Mesh")
+local SelectionPart = GameObject.new("Mesh" :: "Mesh")
 SelectionPart.Material = "boxframe"
 SelectionPart.Tint = Color.new(166/255, 200/255, 1)
+SelectionPart.PhysicsCollisions = false
 
 local CommandBarCommand = ""
 local IsHoveringViewportTitlebar = false
@@ -787,7 +808,7 @@ end
 
 local function renderViewport(DeltaTime: number)
 	if CurrentStage == "ProjectEditing" and Project.Workspace then
-		local mouseVec = Project.Workspace:ScreenPointToRay({ input.mouseposition() }, 100)
+		local mouseVec = Project.Workspace:ScreenPointToRay(input.mouseposition(), 100)
 		local rayresult = Project.Workspace:Raycast(EditorCam.Transform.Position, mouseVec, { SelectionPart })
 
 		if rayresult then
@@ -818,7 +839,7 @@ local function renderViewport(DeltaTime: number)
 
 	local newSelections = engine.explorerselections()
 	local selmap: { [number]: GameObject } = {}
-	for _, sel_ in newSelections do
+	for i, sel_ in newSelections do
 		if not sel_:HasComponent("Transform") then
 			continue
 		end
@@ -847,13 +868,14 @@ local function renderViewport(DeltaTime: number)
 	end
 
 	PluginManager.OnUpdate(DeltaTime, CurrentStage)
+	CoreTools.Update(Project)
 
 	if BottomBarEnabled then
 		local wx, wy = engine.windowsize()
 
 		imgui.setnextwindowposition(0, wy - 35)
 		imgui.setnextwindowsize(wx, 35)
-		imgui.begin("Bottom Bar", "nt | nd | nr")
+		imgui.begin("Bottom Bar", "nt | nd | nr | ns")
 
 		imgui.text("> ")
 		imgui.sameline()
@@ -1211,7 +1233,7 @@ function Stages.ProjectPlaying_Enter()
 	assert(projWp)
 
 	if not projWp.SceneCamera then
-		projWp.SceneCamera = GameObject.new("Camera")
+		projWp.SceneCamera = GameObject.new("Camera" :: "Camera")
 		projWp.SceneCamera.Parent = projWp
 	end
 

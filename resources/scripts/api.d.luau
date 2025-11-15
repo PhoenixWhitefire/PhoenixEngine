@@ -6,7 +6,7 @@ declare class Color
   B: number
 end
 declare Color: {
-  new: (( R: number, G: number, B: number ) -> ())
+  new: (( R: number, G: number, B: number ) -> (Color))
 }
 declare class EventConnection
   Connected: boolean
@@ -19,7 +19,7 @@ declare class EventSignal
 end
 declare GameObject: {
   validComponents: { string },
-  new: (( Component: string ) -> (any))
+  new: (<T>( Component: T ) -> (GameObject & index<__Creatables, T>))
 }
 declare class Matrix
   function __mul(self, Param_1: Matrix): ( Matrix )
@@ -45,9 +45,10 @@ declare class Matrix
   C4R4: number
 end
 declare Matrix: {
-  new: ((  ) -> (Matrix)),
   fromTranslation: (( Position: vector ) -> (Matrix)) & (( X: number, Y: number, Z: number ) -> (Matrix)),
+  new: ((  ) -> (Matrix)),
   lookAt: (( Eye: vector, Target: vector ) -> (Matrix)),
+  identity: Matrix,
   fromEulerAnglesXYZ: (( X: number, Y: number, Z: number ) -> (Matrix))
 }
 
@@ -189,10 +190,29 @@ declare class Workspace
 
   function GetObjectsInAabb(self, Param_1: vector, Param_2: vector, Param_3: { any }?) : ({ any })
   function Raycast(self, Param_1: vector, Param_2: vector, Param_3: { any }?) : ({ [string]: any }?)
-  function ScreenPointToRay(self, Param_1: { any }, Param_2: number) : (vector)
+  function ScreenPointToRay(self, Param_1: number, Param_2: number, Param_3: number?) : (vector)
 end
 
 
+
+type __Creatables = {
+	Transform: Transform,
+	Mesh: Mesh & Transform,
+	ParticleEmitter: ParticleEmitter & Transform,
+	Script: Script,
+	Sound: Sound,
+	Workspace: Workspace,
+	DataModel: DataModel,
+	PointLight: PointLight & Transform,
+	DirectionalLight: DirectionalLight& Transform,
+	SpotLight: SpotLight & Transform,
+	Camera: Camera,
+	Animation: Animation,
+	Model: Model & Transform,
+	Bone: Bone,
+	Example: Example,
+	TreeLink: TreeLink,
+}
 declare conf: {
   save: ((  ) -> (boolean)),
   set: (( Key: string, Value: any ) -> ()),
@@ -257,29 +277,30 @@ declare imgui: {
   menuitem: (( Text: string, Enabled: boolean? ) -> (boolean)),
   inputstring: (( Name: string, Value: string ) -> (string)),
   checkbox: (( Name: string, Value: boolean ) -> (boolean)),
-  textlink: (( Text: string ) -> (boolean)),
+  text: (( Text: string ) -> ()),
+  windowposition: ((  ) -> (number, number)),
   setnextwindowsize: (( Width: number, Height: number ) -> ()),
   endmenu: ((  ) -> ()),
   setviewportdockspace: (( PositionX: number, PositionY: number, SizeX: number, SizeY: number ) -> ()),
-  windowposition: ((  ) -> (number, number)),
   windowhovered: ((  ) -> (boolean)),
+  sameline: ((  ) -> ()),
   begin: (( WindowTitle: string, WindowFlags: string? ) -> (boolean)),
   inputnumber: (( Text: string, Value: number ) -> (number)),
-  sameline: ((  ) -> ()),
-  separator: ((  ) -> ()),
   treepop: ((  ) -> ()),
+  separator: ((  ) -> ()),
+  treenode: (( Text: string ) -> (boolean)),
   setnextwindowopen: (( Open: boolean? ) -> ()),
   endpopup: ((  ) -> ()),
   textsize: (( Text: string ) -> (number, number)),
-  treenode: (( Text: string ) -> (boolean)),
+  textlink: (( Text: string ) -> (boolean)),
   endw: ((  ) -> ()),
   windowsize: ((  ) -> (number, number)),
   combo: (( Text: string, Options: { string }, CurrentOption: number ) -> (number)),
   cursorposition: ((  ) -> (number, number)),
-  text: (( Text: string ) -> ()),
   stylecolors: (( Theme: 'l' | 'd' ) -> ()),
-  setnextwindowfocus: ((  ) -> ()),
+  itemhovered: ((  ) -> (boolean)),
   setnextwindowposition: (( X: number, Y: number ) -> ()),
+  setnextwindowfocus: ((  ) -> ()),
   setviewportdockspacedefault: ((  ) -> ()),
   setitemtooltip: (( Text: string ) -> ()),
   beginchild: (( Name: string, Width: number?, Height: number?, ChildFlags: string?, WindowFlags: string? ) -> (boolean)),
@@ -290,7 +311,7 @@ declare imgui: {
   beginmenu: (( Name: string, Enabled: boolean? ) -> (boolean)),
   pushid: (( Id: string ) -> ()),
   popstylecolor: ((  ) -> ()),
-  itemhovered: ((  ) -> (boolean)),
+  setnextitemwidth: (( Width: number ) -> ()),
   endchild: ((  ) -> ()),
   beginpopupmodal: (( Name: string, HasCloseButton: boolean? ) -> (boolean)),
   anyitemactive: ((  ) -> (boolean)),

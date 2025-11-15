@@ -1,6 +1,6 @@
 return {
     Hello = function()
         print("Hi from Module~")
-        GameObject.new("Example"):GiveUp()
+        GameObject.new("Example" :: "Example"):GiveUp()
     end
 }

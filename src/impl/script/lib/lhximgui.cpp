@@ -423,7 +423,7 @@ static int imgui_beginfullscreen(lua_State* L)
     lua_pushboolean(L, ImGui::Begin(
         luaL_optstring(L, 1, "FullscreenWindow"),
         nullptr,
-        ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove
+        ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings
     ));
     return 1;
 }
@@ -611,7 +611,7 @@ static int imgui_combo(lua_State* L)
         options.append(luaL_checkstring(L, -1));
         options.push_back('\0');
 
-        lua_pop(L, 2);
+        lua_pop(L, 1);
     }
 
     options.push_back('\0');
@@ -788,6 +788,12 @@ static int imgui_textsize(lua_State* L)
     return 2;
 }
 
+static int imgui_setnextitemwidth(lua_State* L)
+{
+    ImGui::SetNextItemWidth((float)luaL_checknumber(L, 1));
+    return 0;
+}
+
 static luaL_Reg imgui_funcs[] =
 {
     { "begin", imgui_begin },
@@ -847,6 +853,7 @@ static luaL_Reg imgui_funcs[] =
     { "endpopup", imgui_endpopup },
     { "beginpopupmodal", imgui_beginpopupmodal },
     { "textsize", imgui_textsize },
+    { "setnextitemwidth", imgui_setnextitemwidth },
     { NULL, NULL }
 };
 

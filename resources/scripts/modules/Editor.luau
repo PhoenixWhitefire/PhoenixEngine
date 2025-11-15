@@ -1,3 +1,5 @@
+-- NO LONGER USED!!!!!! 15/11/2025
+
 -- Editor.luau, 27/12/2024
 
 local LuaEditorEnabled = false
@@ -9,7 +11,7 @@ local mouseRayResult = {}
 local prevMouseRayResultPos = nil
 
 local function insertObject()
-	local new = GameObject.new("Primitive")
+	local new = GameObject.new("Mesh" :: "Mesh")
 	new.Parent = workspace.Level
 	CurrentSelection = new
 end

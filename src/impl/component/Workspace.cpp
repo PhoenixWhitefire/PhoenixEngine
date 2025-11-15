@@ -70,22 +70,20 @@ public:
         static const Reflection::StaticMethodMap funcs =
 		{
 			{ "ScreenPointToRay", {
-				{ Reflection::ValueType::Array, Reflection::ValueType::Double },
+				{ Reflection::ValueType::Double, Reflection::ValueType::Double, REFLECTION_OPTIONAL(Reflection::ValueType::Double) },
 				{ Reflection::ValueType::Vector3 },
 				[](void* p, const std::vector<Reflection::GenericValue>& inputs)
 				-> std::vector<Reflection::GenericValue>
 				{
 					EcWorkspace* w = static_cast<EcWorkspace*>(p);
-
-					std::span<Reflection::GenericValue> coordsgv = inputs[0].AsArray();
 					
-					double x = coordsgv[0].AsDouble();
-					double y = coordsgv[1].AsDouble();
+					double x = inputs[0].AsDouble();
+					double y = inputs[1].AsDouble();
 
 					float length = 1.f;
 
-					if (inputs.size() > 1)
-						length = static_cast<float>(inputs[1].AsDouble());
+					if (inputs.size() > 2)
+						length = static_cast<float>(inputs[2].AsDouble());
 
 					return { w->ScreenPointToRay(x, y, length, nullptr) };
 				}

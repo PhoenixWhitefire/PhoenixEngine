@@ -229,7 +229,8 @@
               "Returns a Color with the provided R, G, and B values",
               "Values are expected to be in the range 0 to 1"
             ],
-            "In": "R: number, G: number, B: number"
+            "In": "R: number, G: number, B: number",
+            "Out": "Color"
           }
         },
         "Members": {
@@ -285,8 +286,9 @@
         "Library": {
           "new": {
             "Description": "Creates a new GameObject with the provided Component",
-            "In": "Component: string",
-            "Out": "any"
+            "Generics": "T",
+            "In": "Component: T",
+            "Out": "GameObject & index<__Creatables, T>"
           },
           "validComponents": {
             "Description": "A list of all valid component names which can be passed into `.new`",
@@ -312,6 +314,10 @@
             "Overloads": [
               "X: number, Y: number, Z: number"
             ]
+          },
+          "identity": {
+            "Description": "An identity matrix, the same value as what gets returned with `.new()` with no arguments",
+            "Type": "Matrix"
           },
           "lookAt": {
             "Description": "Creates a Matrix at position `Eye` oriented such that the `.Forward` vector moves toward `Target`",
@@ -1349,6 +1355,15 @@
             ],
             "In": [
               "Text: string"
+            ]
+          },
+          "setnextitemwidth": {
+            "Description": [
+              "Sets the width of the next item",
+              "`ImGui::SetNextItemWidth`"
+            ],
+            "In": [
+              "Width: number"
             ]
           },
           "setnextwindowfocus": {

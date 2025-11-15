@@ -1,0 +1,5 @@
+{
+  "albedo": "!White",
+  "shaderprogram": "@editres/shaders/unlit",
+  "translucency": false
+}

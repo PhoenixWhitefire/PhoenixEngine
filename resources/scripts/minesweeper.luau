@@ -11,11 +11,11 @@ local CellColors = {
     Color.new(0.5, 0.5, 0.5)
 }
 
-local GridModel = GameObject.new("Model")
+local GridModel = GameObject.new("Model" :: "Model")
 GridModel.Name = "Grid"
 GridModel.Parent = workspace
 
-local CellTemplate = GameObject.new("Mesh")
+local CellTemplate = GameObject.new("Mesh" :: "Mesh")
 CellTemplate.Parent = GridModel
 
 workspace.SceneCamera.UseSimpleController = false
