@@ -2885,6 +2885,8 @@ static void renderProperties()
 
 			case Reflection::ValueType::Matrix:
 			{
+				ImGui::PushID(propNameCStr);
+
 				if (!doConflict)
 				{
 					glm::mat4 mat = curVal.AsMatrix();
@@ -2940,6 +2942,7 @@ static void renderProperties()
 					if (resetConflictedProperty(propNameCStr))
 						newVal = glm::mat4(1.f);
 
+				ImGui::PopID();
 				break;
 			}
 

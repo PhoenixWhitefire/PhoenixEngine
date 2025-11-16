@@ -21,9 +21,9 @@ struct EcPointLight : public EcLight
 struct EcDirectionalLight : public EcLight
 {
 	glm::vec3 ShadowViewOffset;
-	float ShadowViewDistance = 300.f;
-	float ShadowViewSizeH = 200.f;
-	float ShadowViewSizeV = 200.f;
+	float ShadowViewDistance = 200.f;
+	float ShadowViewSizeH = 100.f;
+	float ShadowViewSizeV = 100.f;
 	float ShadowViewFarPlane = 700.f;
 	float ShadowViewNearPlane = 0.1f;
 	bool ShadowViewMoveWithCamera = true;

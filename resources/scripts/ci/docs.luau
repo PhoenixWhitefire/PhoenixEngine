@@ -43,9 +43,17 @@ table.sort(orderedLibraries)
 table.sort(orderedGlobals)
 
 local definitionsFile = [[
-declare class Vector2
+declare extern type Vector2 with
 end
 ]]
+
+local GameObjectOverrides = {
+	new = "(<T>(ComponentName: T) -> GameObject & index<__Creatables, T>) & ((ComponentName: string) -> GameObject & any)",
+	HasComponent = "(self, ComponentName: keyof<__Creatables> | string): boolean",
+	-- cant figure out how to make the generic work in classes
+	--FindChildWithComponent = "<T>(self, ComponentName: keyof<__Creatables> & T): (GameObject & index<__Creatables, T>)?",
+	GetComponentNames = "(self): { keyof<__Creatables> }"
+}
 
 local function dumpCreatables()
 	local creatablesExtra = {
@@ -57,7 +65,7 @@ local function dumpCreatables()
 		ParticleEmitter = " & Transform"
 	}
 
-	definitionsFile ..= "\ntype __Creatables = {\n"
+	definitionsFile ..= "\ntype __Creatables = {\n\tstring: any,\n"
 
 	for _, v in GameObject.validComponents do
 		definitionsFile ..= `\t{v}: {v}{if creatablesExtra[v] then creatablesExtra[v] else ""},\n`
@@ -106,6 +114,10 @@ local function dumpFuncSignature(libname, funcname, In, Out, V)
 	end
 
 	local lspDef = `({generics}( { defargs } ) -> ({ returns }))`
+
+	if libname == "GameObject" then
+		lspDef = GameObjectOverrides[funcname] or lspDef
+	end
 
 	return `#### \`{libname}.{ funcname }{generics}({ docargs }): { returns }\`\n`, lspDef
 end
@@ -187,7 +199,8 @@ local rtol: { [string]: string } = {
 	Vector3 = "vector",
 	["->"] = ":",
 	READONLY = "",
-	RUNTIMEONLY = ""
+	RUNTIMEONLY = "",
+	GameObject = "(GameObject & any)"
 }
 
 local function rtolsub(str)
@@ -284,7 +297,8 @@ local function dumpReflectionApi(t, d, cn)
 					
 					subst = "(self, " .. subst
 				end
-				
+
+				subst = GameObjectOverrides[n] or subst
 				definitionsFile ..= `  function { n }{ subst }\n`
 			end
 		end
@@ -342,7 +356,7 @@ local function documentDatatype(name)
 	assert(dt, name)
 	
 	for _, t in (dt.TypeDependencies or {}) do
-		if not definitionsFile:find(`declare class { t }`) then
+		if not definitionsFile:find(`declare extern type { t } with`) then
 			documentDatatype(t)
 		end
 	end
@@ -356,7 +370,7 @@ local function documentDatatype(name)
 	local datatype = ""
 	
 	if name ~= "GameObject" then
-		definitionsFile ..= `declare class { name }\n`
+		definitionsFile ..= `declare extern type { name } with\n`
 	end
 	
 	dt.Members = dt.Members or {}
@@ -467,7 +481,7 @@ for _, k in orderedComponents do
 		vd = docComments.GameObject.Base
 	end
 	
-	definitionsFile ..= `declare class { k }\n`
+	definitionsFile ..= `declare extern type { k } with\n`
 	
 	components ..= `## \`{ k }\`\n\n`
 	

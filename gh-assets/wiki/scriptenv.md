@@ -50,7 +50,7 @@ Additional types with methods and properties
 #### `GameObject.validComponents: { string }`
 * A list of all valid component names which can be passed into `.new`
 
-#### `GameObject.new<T>(Component: T): GameObject & index<__Creatables, T>`
+#### `GameObject.new(Component: string): GameObject`
 * Creates a new GameObject with the provided Component
 
 ### `Matrix`

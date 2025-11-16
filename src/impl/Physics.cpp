@@ -133,6 +133,7 @@ static void resolveCollisions(Memory::vector<ObjectHandle, MEMCAT(Physics)>& Wor
 
 			am->LinearVelocity = am->LinearVelocity * velCoefficient + reactionForce;
 			at->Transform[3] += glm::vec4(glm::vec3(hit.Position * hit.Depth), 1.f);
+			at->SetWorldTransform(at->Transform);
 
 			am->RecomputeAabb();
 		}

@@ -1,6 +1,6 @@
-declare class Vector2
+declare extern type Vector2 with
 end
-declare class Color
+declare extern type Color with
   R: number
   G: number
   B: number
@@ -8,20 +8,20 @@ end
 declare Color: {
   new: (( R: number, G: number, B: number ) -> (Color))
 }
-declare class EventConnection
+declare extern type EventConnection with
   Connected: boolean
   function Disconnect(self): ( nil )
   Signal: any
 end
-declare class EventSignal
+declare extern type EventSignal with
   function Connect(self, Param_1: (any) -> (any)): ( EventConnection )
   function WaitUntil(self): ( any )
 end
 declare GameObject: {
   validComponents: { string },
-  new: (<T>( Component: T ) -> (GameObject & index<__Creatables, T>))
+  new: (<T>(ComponentName: T) -> GameObject & index<__Creatables, T>) & ((ComponentName: string) -> GameObject & any)
 }
-declare class Matrix
+declare extern type Matrix with
   function __mul(self, Param_1: Matrix): ( Matrix )
   Right: vector
   C1R1: number
@@ -53,49 +53,49 @@ declare Matrix: {
 }
 
 
-declare class GameObject
+declare extern type GameObject with
   Enabled: boolean
   Exists: boolean 
   Name: string
   ObjectId: number 
-  Parent: GameObject?
+  Parent: (GameObject & any)?
   Serializes: boolean
 
   function Destroy(self) : ()
-  function Duplicate(self) : (GameObject)
-  function FindChild(self, Param_1: string) : (GameObject?)
-  function FindChildWithComponent(self, Param_1: string) : (GameObject?)
+  function Duplicate(self) : ((GameObject & any))
+  function FindChild(self, Param_1: string) : ((GameObject & any)?)
+  function FindChildWithComponent(self, Param_1: string) : ((GameObject & any)?)
   function ForEachChild(self, Param_1: (any) -> (any)) : ()
   function GetChildren(self) : ({ any })
-  function GetComponentNames(self) : ({ any })
+  function GetComponentNames(self): { keyof<__Creatables> }
   function GetDescendants(self) : ({ any })
   function GetFullName(self) : (string)
-  function HasComponent(self, Param_1: string) : (boolean)
-  function MergeWith(self, Param_1: GameObject) : ()
+  function HasComponent(self, ComponentName: keyof<__Creatables> | string): boolean
+  function MergeWith(self, Param_1: (GameObject & any)) : ()
 end
-declare class Animation
+declare extern type Animation with
   Animation: string
   Looped: boolean
   Playing: boolean
   Ready: boolean 
   Weight: number
 end
-declare class Bone
+declare extern type Bone with
   IsActive: boolean 
   SkeletalBoneId: number 
   Transform: Matrix
 end
-declare class Camera
+declare extern type Camera with
   FieldOfView: number
   Transform: Matrix
   UseSimpleController: boolean
 end
-declare class DataModel
+declare extern type DataModel with
   Time: number 
 
   OnFrameBegin: EventSignal
 end
-declare class DirectionalLight
+declare extern type DirectionalLight with
   Brightness: number
   Direction: vector
   LightColor: Color
@@ -109,7 +109,7 @@ declare class DirectionalLight
   ShadowViewSizeV: number
   Shadows: boolean
 end
-declare class Example
+declare extern type Example with
   EvenMoreSecretMessage: string 
   SecretMessage: string 
   SomeInteger: number
@@ -121,7 +121,7 @@ declare class Example
 
   OnGreeted: EventSignal
 end
-declare class Mesh
+declare extern type Mesh with
   AngularVelocity: vector
   Asset: string
   CastsShadows: boolean
@@ -138,26 +138,26 @@ declare class Mesh
   Tint: Color
   Transparency: number
 end
-declare class Model
+declare extern type Model with
 end
-declare class ParticleEmitter
+declare extern type ParticleEmitter with
   Emitting: boolean
   Lifetime: Vector2
   ParticlesAreAttached: boolean
   Rate: number
 end
-declare class PointLight
+declare extern type PointLight with
   Brightness: number
   LightColor: Color
   Range: number
   Shadows: boolean
 end
-declare class Script
+declare extern type Script with
   SourceFile: string
 
   function Reload(self) : (boolean)
 end
-declare class Sound
+declare extern type Sound with
   FinishedLoading: boolean 
   Length: number 
   LoadSucceeded: boolean 
@@ -170,22 +170,24 @@ declare class Sound
 
   OnLoaded: EventSignal
 end
-declare class SpotLight
+declare extern type SpotLight with
   Angle: number
   Brightness: number
   LightColor: Color
   Range: number
   Shadows: boolean
 end
-declare class Transform
+declare extern type Transform with
+  LocalSize: vector 
+  LocalTransform: Matrix 
   Size: vector
   Transform: Matrix
 end
-declare class TreeLink
+declare extern type TreeLink with
   Scripting: boolean
-  Target: GameObject?
+  Target: (GameObject & any)?
 end
-declare class Workspace
+declare extern type Workspace with
   SceneCamera: (GameObject & Camera)?
 
   function GetObjectsInAabb(self, Param_1: vector, Param_2: vector, Param_3: { any }?) : ({ any })
@@ -196,6 +198,7 @@ end
 
 
 type __Creatables = {
+	string: any,
 	Transform: Transform,
 	Mesh: Mesh & Transform,
 	ParticleEmitter: ParticleEmitter & Transform,

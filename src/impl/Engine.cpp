@@ -325,10 +325,6 @@ static void traverseHierarchy(
 	double DeltaTime,
 	EcDirectionalLight** Sun,
 	bool ScriptsUpdate = true
-	/*
-	glm::mat4  AggregateTransform = glm::mat4(1.f),
-	Vector3 AggregateScale = Vector3(1.f, 1.f, 1.f)
-	*/
 )
 {
 	ZoneScopedC(tracy::Color::LightGoldenrod);
@@ -455,7 +451,8 @@ static void traverseHierarchy(
 				object,
 				SceneCamera,
 				DeltaTime,
-				Sun
+				Sun,
+				true
 			);
 		
 		if (EcParticleEmitter* emitter = object->FindComponent<EcParticleEmitter>())

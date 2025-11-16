@@ -188,8 +188,10 @@
       "Transform": {
         "Description": "Gives a physical position and size to an Object",
         "Properties": {
-          "Size": "The Size of the Object influenced by the Component",
-          "Transform": "The Transformation of the Object from the World"
+          "LocalTransform": "The Object's transformation, relative to it's nearest Transform ancestor",
+          "LocalSize": "The Object's scale factor, relative to it's nearest Transform ancestor",
+          "Size": "The Object's world-space scale factor",
+          "Transform": "The Object's world-space transformation"
         }
       },
       "TreeLink": {
@@ -286,9 +288,8 @@
         "Library": {
           "new": {
             "Description": "Creates a new GameObject with the provided Component",
-            "Generics": "T",
-            "In": "Component: T",
-            "Out": "GameObject & index<__Creatables, T>"
+            "In": "Component: string",
+            "Out": "GameObject"
           },
           "validComponents": {
             "Description": "A list of all valid component names which can be passed into `.new`",

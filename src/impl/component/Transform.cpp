@@ -1,6 +1,58 @@
+#include <tracy/Tracy.hpp>
+
 #include "component/Transform.hpp"
 #include "component/Mesh.hpp"
 #include "datatype/GameObject.hpp"
+
+static void recomputeAabbRecursive(GameObject* Object)
+{
+    if (EcMesh* cm = Object->FindComponent<EcMesh>())
+        cm->RecomputeAabb();
+
+    Object->ForEachChild([](GameObject* Child) -> bool
+    {
+        recomputeAabbRecursive(Child);
+        return true;
+    });
+}
+
+static void recomputeChildrenWorldTransformsRecursive(GameObject* Object)
+{
+    EcTransform* pct = Object->FindComponent<EcTransform>();
+
+    Object->ForEachChild([Object, pct](GameObject* Child) -> bool
+    {
+        if (EcTransform* ct = Child->FindComponent<EcTransform>())
+        {
+            ct->Transform = pct->Transform * ct->LocalTransform;
+            ct->Size = pct->Size * ct->LocalSize;
+        }
+
+        recomputeChildrenWorldTransformsRecursive(Child);
+        return true;
+    });
+}
+
+static void recomputeWorldTransforms(EcTransform* ct)
+{
+    ct->Transform = ct->LocalTransform;
+    ct->Size = ct->LocalSize;
+
+    GameObject* parent = ct->Object->GetParent();
+
+    while (parent)
+    {
+        if (EcTransform* pct = parent->FindComponent<EcTransform>())
+        {
+            ct->Transform = pct->Transform * ct->LocalTransform; // parent should already have up-to-date World Transforms
+            ct->Size = pct->Size * ct->LocalSize;
+            break;
+        }
+        parent = parent->GetParent();
+    }
+
+    recomputeChildrenWorldTransformsRecursive(ct->Object);
+}
 
 class TransformsManager : ComponentManager<EcTransform>
 {
@@ -23,11 +75,13 @@ public:
                 EC_GET_SIMPLE(EcTransform, Transform),
                 [](void* p, const Reflection::GenericValue& gv)
                 {
-                    EcTransform* ct = static_cast<EcTransform*>(p);
-                    ct->Transform = gv.AsMatrix();
+                    ZoneScoped;
 
-                    if (EcMesh* cm = ct->Object->FindComponent<EcMesh>())
-                        cm->RecomputeAabb();
+                    EcTransform* ct = static_cast<EcTransform*>(p);
+                    ct->SetWorldTransform(gv.AsMatrix());
+
+                    recomputeWorldTransforms(ct);
+                    recomputeAabbRecursive(ct->Object);
                 }
             ),
 
@@ -37,13 +91,53 @@ public:
                 EC_GET_SIMPLE(EcTransform, Size),
                 [](void* p, const Reflection::GenericValue& gv)
                 {
-                    EcTransform* ct = static_cast<EcTransform*>(p);
-                    ct->Size = gv.AsVector3();
+                    ZoneScoped;
 
-                    if (EcMesh* cm = ct->Object->FindComponent<EcMesh>())
-                        cm->RecomputeAabb();
+                    EcTransform* ct = static_cast<EcTransform*>(p);
+                    ct->SetWorldSize(gv.AsVector3());
+
+                    recomputeWorldTransforms(ct);
+                    recomputeAabbRecursive(ct->Object);
                 }
-            )
+            ),
+
+            { "LocalTransform", {
+                Reflection::ValueType::Matrix, 
+                (Reflection::PropertyGetter)[](void* p)->Reflection::GenericValue
+                {
+                    return static_cast<EcTransform*>(p)->LocalTransform;
+                },
+                (Reflection::PropertySetter)[](void* p, const Reflection::GenericValue& gv)
+                {
+                    ZoneScoped;
+                    
+                    EcTransform* ct = static_cast<EcTransform*>(p);
+                    ct->LocalTransform = gv.AsMatrix();
+                    
+                    recomputeWorldTransforms(ct);
+                    recomputeAabbRecursive(ct->Object);
+                },
+                false
+            } },
+
+            { "LocalSize", {
+                Reflection::ValueType::Vector3, 
+                (Reflection::PropertyGetter)[](void* p)->Reflection::GenericValue
+                {
+                    return static_cast<EcTransform*>(p)->LocalSize;
+                },
+                (Reflection::PropertySetter)[](void* p, const Reflection::GenericValue& gv)
+                {
+                    ZoneScoped;
+                    
+                    EcTransform* ct = static_cast<EcTransform*>(p);
+                    ct->LocalSize = gv.AsVector3();
+                    
+                    recomputeWorldTransforms(ct);
+                    recomputeAabbRecursive(ct->Object);
+                },
+                false
+            } }
         };
 
         return props;
@@ -51,3 +145,36 @@ public:
 };
 
 static inline TransformsManager Instance{};
+
+static EcTransform* findNearestAncestorTransform(GameObject* obj)
+{
+    if (!obj)
+        return nullptr;
+
+    GameObject* parent = obj->GetParent();
+    
+    while (parent)
+    {
+        if (EcTransform* ct = parent->FindComponent<EcTransform>())
+            return ct;
+        parent = parent->GetParent();
+    }
+
+    return nullptr;
+}
+
+void EcTransform::SetWorldTransform(glm::mat4& NewWorldTrans)
+{
+    EcTransform* ancestor = findNearestAncestorTransform(Object);
+
+    LocalTransform = NewWorldTrans * glm::inverse(ancestor ? ancestor->Transform : glm::mat4(1.f));
+    Transform = NewWorldTrans;
+}
+
+void EcTransform::SetWorldSize(glm::vec3& NewWorldSize)
+{
+    EcTransform* ancestor = findNearestAncestorTransform(Object);
+
+    LocalSize = NewWorldSize / (ancestor ? ancestor->Size : glm::vec3(1.f));
+    Size = NewWorldSize;
+}

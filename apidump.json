@@ -158,6 +158,8 @@
       },
       "Transform": {
         "Properties": {
+          "LocalSize": "Vector3 RUNTIMEONLY",
+          "LocalTransform": "Matrix RUNTIMEONLY",
           "Size": "Vector3",
           "Transform": "Matrix"
         }

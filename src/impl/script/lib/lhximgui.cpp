@@ -194,7 +194,7 @@ static int imgui_text(lua_State* L)
 static int imgui_image(lua_State* L)
 {
     TextureManager* texManager = TextureManager::Get();
-	uint32_t resId = texManager->LoadTextureFromPath(luaL_checkstring(L, 1));
+	uint32_t resId = texManager->LoadTextureFromPath(luaL_checkstring(L, 1), true, luaL_optboolean(L, 5, true));
 	const Texture& texture = texManager->GetTextureResource(resId);
 
     ImVec2 texSize = ImVec2(texture.Width, texture.Height);
@@ -253,7 +253,7 @@ static int imgui_image(lua_State* L)
 static int imgui_imagebutton(lua_State* L)
 {
     TextureManager* texManager = TextureManager::Get();
-	uint32_t resId = texManager->LoadTextureFromPath(luaL_checkstring(L, 2));
+	uint32_t resId = texManager->LoadTextureFromPath(luaL_checkstring(L, 2), true, luaL_optboolean(L, 4, true));
 	const Texture& texture = texManager->GetTextureResource(resId);
 
     ImVec2 imgSize = ImVec2(texture.Width, texture.Height);

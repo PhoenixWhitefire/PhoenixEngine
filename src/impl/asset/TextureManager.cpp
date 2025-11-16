@@ -298,6 +298,7 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 
 	auto it = m_StringToTextureId.find(ActualPath);
 	uint32_t forceResourceId = UINT32_MAX;
+	std::string assignName = ActualPath;
 	
 	if (it != m_StringToTextureId.end())
 	{
@@ -307,14 +308,16 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 		{
 			if (texture.DoBilinearSmoothing != DoBilinearSmoothing)
 			{
-				for (const Texture& other : m_Textures)
-				{
-					if (other.ImagePath == ActualPath && other.DoBilinearSmoothing == DoBilinearSmoothing)
-						return other.ResourceId;
-				}
+				assignName = ActualPath + (DoBilinearSmoothing ? "!B" : "!N");
+				const auto& vit = m_StringToTextureId.find(assignName);
+
+				if (vit != m_StringToTextureId.end())
+					return vit->second;
 
 				it = m_StringToTextureId.end();
 			}
+			else
+				return it->second;
 		}
 		else
 		{
@@ -334,7 +337,7 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 			glGenTextures(1, &newGpuId);
 
 			if (forceResourceId == UINT32_MAX)
-				newResourceId = this->Assign({ .ImagePath = ActualPath, .ResourceId = UINT32_MAX }, ActualPath);
+				newResourceId = this->Assign({ .ImagePath = ActualPath, .ResourceId = UINT32_MAX }, assignName);
 			else
 				newResourceId = forceResourceId;
 

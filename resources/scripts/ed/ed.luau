@@ -330,7 +330,7 @@ local function tabButton(Text: string, Icon: string, Enabled: boolean?, Lit: boo
 	local cx, cy = imgui.cursorposition()
 	imgui.setcursorposition(cx + 2, cy)
 
-	imgui.image(Icon, { 100, 100 }, false, tint)
+	imgui.image(Icon, { 100, 100 }, false, tint, false)
 	clicked, hovered = imgui.itemclicked(), imgui.itemhovered()
 	imgui.text(Text)
 	clicked, hovered = clicked or imgui.itemclicked(), hovered or imgui.itemhovered()
@@ -830,7 +830,6 @@ local function renderViewport(DeltaTime: number)
 			--print(mouseVec)
 		end
 	else
-		engine.setexplorerselections({})
 		for _, v in PrevSelections do
 			v:Destroy()
 		end
@@ -1175,6 +1174,8 @@ end
 function Stages.ProjectEditing_Enter(DeltaTime)
 	assert(Project.DataModel)
 	engine.setexplorerroot(Project.DataModel)
+	engine.setexplorerselections({})
+	engine.physicstimescale(0)
 
 	local projWp = Project.Workspace
 
@@ -1212,6 +1213,8 @@ function Stages.ProjectEditing_Leave(NextStage)
 	Project.Name = "Should not be visible"
 	Project.IsTempPath = true
 	Project.DataModel = nil
+
+	conf.save()
 end
 
 local restoreState = nil
@@ -1223,9 +1226,10 @@ function Stages.ProjectPlaying_Enter()
 	assert(Project.DataModel)
 	Project.DataModel = Project.DataModel:Duplicate() :: any
 	
-	engine.physicstimescale(1)
 	engine.setexplorerroot(Project.DataModel)
-	
+	engine.setexplorerselections({})
+	engine.physicstimescale(1)
+
 	engine.binddatamodel(Project.DataModel) -- Set the `game` and `workspace` variables to the correct values in game scripts
 	engine.pushlvm("GameScripts")
 	

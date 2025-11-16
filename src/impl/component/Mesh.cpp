@@ -1,3 +1,5 @@
+#include <tracy/Tracy.hpp>
+
 #include "component/Mesh.hpp"
 #include "component/Transform.hpp"
 
@@ -228,6 +230,8 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 
 void EcMesh::RecomputeAabb()
 {
+	ZoneScoped;
+
 	EcTransform* ct = this->Object->FindComponent<EcTransform>();
 	const glm::mat4& transform = ct->Transform;
 	const glm::vec3& glmsize = ct->Size;
@@ -263,3 +267,4 @@ void EcMesh::RecomputeAabb()
 		this->CollisionAabb.Size = glmsize;
 	}
 }
+

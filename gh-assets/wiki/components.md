@@ -8,21 +8,21 @@ The Engine support an Entity Component System architecture, meaning that `GameOb
 * `Exists: boolean `: Whether or not the Object still exists. Will be false after calling `:Destroy`
 * `Name: string`: The name of the Object, usually what was passed into `GameObject.new`
 * `ObjectId: number `: The ID of the Object, an integer. Remains the same throughout the session, but not guaranteed between sessions
-* `Parent: GameObject?`: The hierarchal parent of the Object, or `nil` if it does not have one
+* `Parent: (GameObject & any)?`: The hierarchal parent of the Object, or `nil` if it does not have one
 * `Serializes: boolean`: Whether or not the Object should be saved with the scene if it is serialized with `scene.save`, and whether `:Duplicate` will duplicate it (only applies to descendants)
 
 ### Methods:
 * `Destroy() : ()`: Marks the Object as "pending for destruction". This may or may not remove the Object from memory immediately, depending on whether the Engine is keeping a internal reference to it
-* `Duplicate() : (GameObject)`: Creates a duplicate of the Object
-* `FindChild(string) : (GameObject?)`: Returns a child Object with the given name, or `nil` if one doesn't exist
-* `FindChildWithComponent(string) : (GameObject?)`: Returns a child Object which has the given component, or `nil` if one doesn't exist
+* `Duplicate() : ((GameObject & any))`: Creates a duplicate of the Object
+* `FindChild(string) : ((GameObject & any)?)`: Returns a child Object with the given name, or `nil` if one doesn't exist
+* `FindChildWithComponent(string) : ((GameObject & any)?)`: Returns a child Object which has the given component, or `nil` if one doesn't exist
 * `ForEachChild((any) -> (any)) : ()`: For all children of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield
 * `GetChildren() : ({ any })`: Returns a list of the Object's direct children
 * `GetComponentNames() : ({ any })`: Returns a list of the names of all Components that the Object currently has
 * `GetDescendants() : ({ any })`: Returns all descendants of the Object (i.e. its children, and their children, etc)
 * `GetFullName() : (string)`: Returns the full, hierarchal path of the Object
 * `HasComponent(string) : (boolean)`: Returns whether or not the Object has the given Component
-* `MergeWith(GameObject) : ()`: Merges the Objects together, replacing descendants with the same name
+* `MergeWith((GameObject & any)) : ()`: Merges the Objects together, replacing descendants with the same name
 
 ## `Animation`
 
@@ -193,8 +193,10 @@ No members defined
 * Gives a physical position and size to an Object
 
 ### Properties:
-* `Size: vector`: The Size of the Object influenced by the Component
-* `Transform: Matrix`: The Transformation of the Object from the World
+* `LocalSize: vector `: The Object's scale factor, relative to it's nearest Transform ancestor
+* `LocalTransform: Matrix `: The Object's transformation, relative to it's nearest Transform ancestor
+* `Size: vector`: The Object's world-space scale factor
+* `Transform: Matrix`: The Object's world-space transformation
 
 ## `TreeLink`
 
@@ -203,7 +205,7 @@ No members defined
 
 ### Properties:
 * `Scripting: boolean`: Whether Scripts which descend from the `Target` will run
-* `Target: GameObject?`: The target to link
+* `Target: (GameObject & any)?`: The target to link
 
 ## `Workspace`
 
@@ -211,7 +213,7 @@ No members defined
 * If this is `Destroy`'d, the application closes
 
 ### Properties:
-* `SceneCamera: GameObject?`: The `Camera` the Player sees the world through. If set to `nil`, a *fallback* is created at the origin.
+* `SceneCamera: (GameObject & any)?`: The `Camera` the Player sees the world through. If set to `nil`, a *fallback* is created at the origin.
 
 ### Methods:
 * `GetObjectsInAabb(vector, vector, { any }?) : ({ any })`: Get a list of Objects whose bounds are within the AABB
