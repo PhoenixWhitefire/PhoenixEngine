@@ -604,24 +604,24 @@ Reflection::GenericValue& Reflection::GenericValue::operator=(const Reflection::
 
 static std::string_view BaseNames[] =
 {
-		"Boolean",
-		"Integer",
-		"Double",
-		"String",
+	"<ERROR_UNINITIALIZED>",
 
-		"Color",
-		"Vector2",
-		"Vector3",
-		"Matrix",
+	"Boolean",
+	"Integer",
+	"Double",
+	"String",
 
-		"GameObject",
-		"Function",
+	"Color",
+	"Vector2",
+	"Vector3",
+	"Matrix",
 
-		"Array",
-		"Map"
+	"GameObject",
+	"Function",
+
+	"Array",
+	"Map"
 };
-
-static const std::string_view TypeAsStringError = "<CANNOT_FIND_TYPE_NAME>";
 
 static_assert(
 	std::size(BaseNames) == (size_t)Reflection::ValueType::__lastBase,

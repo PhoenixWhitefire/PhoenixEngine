@@ -2918,6 +2918,13 @@ static void renderProperties()
 						glm::degrees(rotrads.z)
 					};
 
+					if (pos[0] != pos[0] || pos[1] != pos[1] || pos[2] != pos[2] || rotdegs[0] != rotdegs[0] || rotdegs[1] != rotdegs[1] || rotdegs[2] != rotdegs[2])
+					{
+						newVal = glm::mat4(1.f);
+						ImGui::PopID();
+						break;
+					}
+
 					ImGui::Indent();
 
 					ImGui::InputFloat3("Position", pos);

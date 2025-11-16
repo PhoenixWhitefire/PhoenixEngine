@@ -173,7 +173,7 @@
       "Workspace": {
         "Methods": {
           "GetObjectsInAabb": "(Vector3, Vector3, Array?) -> (Array)",
-          "Raycast": "(Vector3, Vector3, Array?) -> (Map?)",
+          "Raycast": "(Vector3, Vector3, Array?, Boolean?) -> (Map?)",
           "ScreenPointToRay": "(Double, Double, Double?) -> (Vector3)"
         },
         "Properties": {

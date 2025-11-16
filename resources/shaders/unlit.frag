@@ -29,7 +29,7 @@ void main()
 
 	if (Frag_Transparency > 0.1f)
 	{
-		FragColor = vec4(1.f, 1.f, 0.f, 1.f);
+		FragColor = vec4(1.f, 1.f, 0.f, Frag_Transparency);
 		gl_FragDepth = 0;
 	}
 }

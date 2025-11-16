@@ -90,7 +90,7 @@ public:
 			} },
 
 			{ "Raycast", {
-				{ Reflection::ValueType::Vector3, Reflection::ValueType::Vector3, REFLECTION_OPTIONAL(Reflection::ValueType::Array) },
+				{ Reflection::ValueType::Vector3, Reflection::ValueType::Vector3, REFLECTION_OPTIONAL(Reflection::ValueType::Array), REFLECTION_OPTIONAL(Reflection::ValueType::Boolean) },
 				{ REFLECTION_OPTIONAL(Reflection::ValueType::Map) },
 				[](void* p, const std::vector<Reflection::GenericValue>& inputs)
 				-> std::vector<Reflection::GenericValue>
@@ -98,18 +98,18 @@ public:
 					const glm::vec3& origin = inputs[0].AsVector3();
 					const glm::vec3& vector = inputs[1].AsVector3();
 
-					std::vector<GameObject*> ignoreList;
+					std::vector<GameObject*> filterList;
 
 					if (inputs.size() > 2)
 					{
-						const std::span<Reflection::GenericValue>& ignorelistgv = inputs[2].AsArray();
-						ignoreList.reserve(ignorelistgv.size());
+						const std::span<Reflection::GenericValue>& filterListGv = inputs[2].AsArray();
+						filterList.reserve(filterListGv.size());
 
-						for (const Reflection::GenericValue& gv : ignorelistgv)
-							ignoreList.push_back(GameObject::FromGenericValue(gv));
+						for (const Reflection::GenericValue& gv : filterListGv)
+							filterList.push_back(GameObject::FromGenericValue(gv));
 					}
 
-					SpatialCastResult result = static_cast<EcWorkspace*>(p)->Raycast(origin, vector, ignoreList);
+					SpatialCastResult result = static_cast<EcWorkspace*>(p)->Raycast(origin, vector, filterList, inputs.size() > 3 ? inputs[3].AsBoolean() : true);
 					
 					if (!result.Occurred)
 						return { Reflection::GenericValue() };
@@ -215,15 +215,15 @@ glm::vec3 EcWorkspace::ScreenPointToRay(double x, double y, float length, glm::v
 	return rayVector;
 }
 
-SpatialCastResult EcWorkspace::Raycast(const glm::vec3& Origin, const glm::vec3& Vector, const std::vector<GameObject*>& IgnoreList) const
+SpatialCastResult EcWorkspace::Raycast(const glm::vec3& Origin, const glm::vec3& Vector, const std::vector<GameObject*>& FilterList, bool FilterIsIgnoreList) const
 {
 	IntersectionLib::Intersection intersection;
 	GameObject* hitObject = nullptr;
 	float closestHit = FLT_MAX;
 
-	for (GameObject* p : Object->GetDescendants())
+	for (GameObject* p : (FilterIsIgnoreList ? Object->GetDescendants() : FilterList))
 	{
-		if (std::find(IgnoreList.begin(), IgnoreList.end(), p) != IgnoreList.end())
+		if (FilterIsIgnoreList ? std::find(FilterList.begin(), FilterList.end(), p) != FilterList.end() : false)
 			continue;
     
 		EcMesh* object = p->FindComponent<EcMesh>();

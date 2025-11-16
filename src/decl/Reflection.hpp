@@ -154,7 +154,7 @@ namespace Reflection
 {
 	enum class ValueType : uint8_t
 	{
-		Boolean = 0,
+		Boolean = 1, // first index MUST be 1!! for Null checking!!!
 		Integer,
 		Double,
 		String,

@@ -208,6 +208,8 @@ local function openProject(ManualPath: string?)
 		print("Re-created Workspace")
 	end
 
+	EditorCam.Transform = Project.Workspace.SceneCamera.Transform
+
 	EditorTl.Target = Project.Workspace
 	saveToRecents(path)
 

@@ -191,7 +191,7 @@ declare extern type Workspace with
   SceneCamera: (GameObject & Camera)?
 
   function GetObjectsInAabb(self, Param_1: vector, Param_2: vector, Param_3: { any }?) : ({ any })
-  function Raycast(self, Param_1: vector, Param_2: vector, Param_3: { any }?) : ({ [string]: any }?)
+  function Raycast(self, Param_1: vector, Param_2: vector, Param_3: { any }?, Param_4: boolean?) : ({ [string]: any }?)
   function ScreenPointToRay(self, Param_1: number, Param_2: number, Param_3: number?) : (vector)
 end
 

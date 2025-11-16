@@ -217,6 +217,6 @@ No members defined
 
 ### Methods:
 * `GetObjectsInAabb(vector, vector, { any }?) : ({ any })`: Get a list of Objects whose bounds are within the AABB
-* `Raycast(vector, vector, { any }?) : ({ [string]: any }?)`: Cast a ray
+* `Raycast(vector, vector, { any }?, boolean?) : ({ [string]: any }?)`: Cast a ray
 * `ScreenPointToRay(number, number, number?) : (vector)`: Converts the provided X and Y screen coordinates to a world-space vector, with the length provided or `1` by default
 
