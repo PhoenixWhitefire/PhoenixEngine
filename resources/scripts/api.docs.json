@@ -1,0 +1,854 @@
+{
+  "@luhx/global/Color": {
+    "documentation": "* An RGB color"
+  },
+  "@luhx/global/Color.new": {
+    "documentation": "* Returns a Color with the provided R, G, and B values\n* Values are expected to be in the range 0 to 1"
+  },
+  "@luhx/global/EventConnection": {
+    "documentation": "* A connection to an Event"
+  },
+  "@luhx/global/EventSignal": {
+    "documentation": "* An Event that can be connected to"
+  },
+  "@luhx/global/GameObject": {
+    "documentation": "* A Game Object\n* For organization, the members of this type will be on the Components wiki page"
+  },
+  "@luhx/global/GameObject.new": {
+    "documentation": "* Creates a new GameObject with the provided Component"
+  },
+  "@luhx/global/GameObject.validComponents": {
+    "documentation": "* A list of all valid component names which can be passed into `.new`"
+  },
+  "@luhx/global/Matrix": {
+    "documentation": "* A 4x4 transformation matrix"
+  },
+  "@luhx/global/Matrix.fromEulerAnglesXYZ": {
+    "documentation": "* Creates a Matrix which has been rotated by the given Euler angles (in radians) with the rotation order X-Y-Z"
+  },
+  "@luhx/global/Matrix.fromTranslation": {
+    "documentation": "* Creates a Matrix which has been translated to the given coordinates (specified as either a `vector` or the individual X, Y, and Z components)"
+  },
+  "@luhx/global/Matrix.identity": {
+    "documentation": "* An identity matrix, the same value as what gets returned with `.new()` with no arguments"
+  },
+  "@luhx/global/Matrix.lookAt": {
+    "documentation": "* Creates a Matrix at position `Eye` oriented such that the `.Forward` vector moves toward `Target`"
+  },
+  "@luhx/global/Matrix.new": {
+    "documentation": "* Creates a new identity matrix"
+  },
+  "@luhx/global/_VMNAME": {
+    "documentation": "* A non-unique identifier for the current Luau VM"
+  },
+  "@luhx/global/appendlog": {
+    "documentation": "* Same as `print`, but does not prefix the log message with `[INFO]`"
+  },
+  "@luhx/global/breakpoint": {
+    "documentation": "* Set a breakpoint at the given line"
+  },
+  "@luhx/global/conf": {
+    "documentation": "* Internal Engine configuration state, loaded from file (`phoenix.conf`) upon startup"
+  },
+  "@luhx/global/conf.get": {
+    "documentation": "* Read a specific value from the configuration"
+  },
+  "@luhx/global/conf.save": {
+    "documentation": "* Save the current state of the configuration to file (`phoenix.conf`), returning whether the file was successfully overwritten"
+  },
+  "@luhx/global/conf.set": {
+    "documentation": "* Change a specific value in the configuration"
+  },
+  "@luhx/global/defer": {
+    "documentation": "* Schedules the given function or coroutine to be resumed some number of seconds later, or as soon as possible"
+  },
+  "@luhx/global/engine": {
+    "documentation": "* Inspect and modify various parts of the Engine"
+  },
+  "@luhx/global/engine.args": {
+    "documentation": "* Returns the list of launch arguments given to the Engine\n* The first item is always the path to the Engine executable"
+  },
+  "@luhx/global/engine.binddatamodel": {
+    "documentation": "* Switches Data Models to the specified Object"
+  },
+  "@luhx/global/engine.daabbs": {
+    "documentation": "* Returns whether AABBs are drawn for all objects with collisions enabled (`.PhysicsCollisions == true`)\n* Optionally, the visualization can be enabled/disabled by passing in a boolean argument"
+  },
+  "@luhx/global/engine.dwireframes": {
+    "documentation": "* Returns whether all visible 3D objects are being rendered with wireframes\n* Optionally, the visualization can be enabled/disabled by passing in a boolean argument"
+  },
+  "@luhx/global/engine.exit": {
+    "documentation": "* Shuts down the Engine and exits the process with the specified Exit Code (or 0 by default)"
+  },
+  "@luhx/global/engine.explorerselections": {
+    "documentation": "* Returns what is currently selected in the Explorer"
+  },
+  "@luhx/global/engine.framerate": {
+    "documentation": "* Returns the current framerate"
+  },
+  "@luhx/global/engine.fullscreen": {
+    "documentation": "* Returns whether or not the window is currently fullscreened\n* To *set* whether the window is fullscreened, use `.setfullscreen`"
+  },
+  "@luhx/global/engine.getvsync": {
+    "documentation": "* Returns whether VSync is currently enabled"
+  },
+  "@luhx/global/engine.isheadless": {
+    "documentation": "* Returns whether the Engine is currently running Headless mode"
+  },
+  "@luhx/global/engine.maxframerate": {
+    "documentation": "* Returns the current maximum framerate setting\n* To *set* the maximum framerate, use `.setmaxframerate`"
+  },
+  "@luhx/global/engine.physicstimescale": {
+    "documentation": "* Sets the time scale factor of the physics simulation"
+  },
+  "@luhx/global/engine.poplvm": {
+    "documentation": "* Pops the topmost Luau VM from the VM stack, causing the VM below it to be used for any Scripts resumed beyond that point"
+  },
+  "@luhx/global/engine.pushlvm": {
+    "documentation": "* Pushes a new Luau VM to the Luau VM stack. Scripts resumed past that point will run in the new VM\n* The `game` and `workspace` globals in the new VM will depend on the current bound datamodel"
+  },
+  "@luhx/global/engine.resetviewport": {
+    "documentation": "* Resets the state of the Viewport"
+  },
+  "@luhx/global/engine.setexplorerroot": {
+    "documentation": "* Changes the Root of the built-in Explorer's hierarchy view"
+  },
+  "@luhx/global/engine.setexplorerselections": {
+    "documentation": "* Changes the built-in Explorer's Object selections to the specified Objects"
+  },
+  "@luhx/global/engine.setfullscreen": {
+    "documentation": "* Enables/disables fullscreen mode"
+  },
+  "@luhx/global/engine.setmaxframerate": {
+    "documentation": "* Sets the maximum framerate the Engine will reach before self-limiting"
+  },
+  "@luhx/global/engine.settoolenabled": {
+    "documentation": "* Enables/disables the given tool"
+  },
+  "@luhx/global/engine.setviewport": {
+    "documentation": "* Configures the Engine to act as though the Viewport is at the given position with the given size"
+  },
+  "@luhx/global/engine.setvsync": {
+    "documentation": "* Enables/disables VSync"
+  },
+  "@luhx/global/engine.setwindowsize": {
+    "documentation": "* Sets the size of the window to the specified two Width and Height integers"
+  },
+  "@luhx/global/engine.showmessagebox": {
+    "documentation": "* Shows a message to the player with the given specification\n* The returned number will be the selected option: `0` for Cancel/No, `1` for Ok/Yes, `2` for No in `yesnocancel`\n* This is a blocking operation and no scripts or other parts of the Engine run until the message is dismissed\n* Avoid using quotes (`'` and `\"`) or backticks (`\\``) in the `Message`"
+  },
+  "@luhx/global/engine.toolenabled": {
+    "documentation": "* Returns whether the given tool is currently enabled\n* To *enable* or *disable* the tool, use `.settoolenabled`"
+  },
+  "@luhx/global/engine.toolnames": {
+    "documentation": "* Returns a list of valid Engine tools"
+  },
+  "@luhx/global/engine.unloadtexture": {
+    "documentation": "* Unloads the given texture from the Engine's cache"
+  },
+  "@luhx/global/engine.windowsize": {
+    "documentation": "* Returns the current size, in pixels, of the game window\n* To *set* the size of the window, use `.setwindowsize`"
+  },
+  "@luhx/global/fs": {
+    "documentation": "* Interacting with the player's filesystem"
+  },
+  "@luhx/global/fs.copy": {
+    "documentation": "* Copies the file/directory at the given path to a new path\n* Returns whether the operation was successful\n* If unsuccessful, an error message is also returned"
+  },
+  "@luhx/global/fs.cwd": {
+    "documentation": "* Returns the Current Working Directory of the Engine"
+  },
+  "@luhx/global/fs.definealias": {
+    "documentation": "* Defines an alias for the filesystem, such that `@<Alias>/` refers to `<For>/` to the Engine"
+  },
+  "@luhx/global/fs.isdirectory": {
+    "documentation": "* Returns whether the specified Path refers to a directory"
+  },
+  "@luhx/global/fs.isfile": {
+    "documentation": "* Returns whether the specified Path refers to a file"
+  },
+  "@luhx/global/fs.listdir": {
+    "documentation": "* Returns a table of all the entries in the specified directory\n* The keys of the table is the path of the entry, while the values are the type of the entry\n* `f` is file, `d` is directory, and `a` is all"
+  },
+  "@luhx/global/fs.makecwdaliasof": {
+    "documentation": "* Changes the meaning of non-qualified paths (e.g.: not beginning with `.` or `C:` etc) to act as aliases to the given path instead of referring to the CWD"
+  },
+  "@luhx/global/fs.mkdir": {
+    "documentation": "* Creates a directory at the given path\n* Returns whether a directory was actually created\n* Will return false if the directory already exists, but the error message will be `nil`"
+  },
+  "@luhx/global/fs.promptopen": {
+    "documentation": "* Prompts the player to select a file to open\n* Returns the list of files the player selected, or an empty list if the player cancelled the dialog\n* If the operation fails, returns `nil` instead"
+  },
+  "@luhx/global/fs.promptopenfolder": {
+    "documentation": "* Prompts the user to select a folder\n* Returns `nil` if no selection was made"
+  },
+  "@luhx/global/fs.promptsave": {
+    "documentation": "* Prompts the player to select a path to save a file to\n* Returns the path the player selected, or `nil` if they cancelled the dialog"
+  },
+  "@luhx/global/fs.read": {
+    "documentation": "* Reads the file at the given address, and returns the contents\n* If the file could not be read, returns `nil` and an error message"
+  },
+  "@luhx/global/fs.remove": {
+    "documentation": "* Removes everything at the given path\n* On success, returns the number of items removed\n* On failure, returns `false` and an error message"
+  },
+  "@luhx/global/fs.rename": {
+    "documentation": "* Renames the file at the given `Path` to have the `NewName`"
+  },
+  "@luhx/global/fs.write": {
+    "documentation": "* Overwrites/creates the file at `Path` with the provided `Contents`\n* Returns whether the operation was successful\n* If `CreateDirectories` is `true`, will automatically create missing intermediate directories to the file"
+  },
+  "@luhx/global/game": {
+    "documentation": "* The GameObject acting as the Data Model of the Engine"
+  },
+  "@luhx/global/imgui": {
+    "documentation": "* UI with Dear ImGui"
+  },
+  "@luhx/global/imgui.anyitemactive": {
+    "documentation": "* `ImGui::IsAnyItemActive`"
+  },
+  "@luhx/global/imgui.begin": {
+    "documentation": "* `ImGui::Begin`\n* `WindowFlags` may be a combination of any of the following sequences, optionally separated by ' ' or '|' characters: `nt` (no titlebar), `nr` (no resize), `nm` (no move), `nc` (no collapse), `ns` (no saved settings), `ni` (no interact), `h` (horizontal scrolling)"
+  },
+  "@luhx/global/imgui.beginchild": {
+    "documentation": "* `ImGui::BeginChild`\n* `ChildFlags` may be a combination of any of the following sequences, optionally separated by ' ' or '|' characters: `b` (borders), `wp` (always use window padding), `rx` (resize X), `ry` (resize Y), `ax` (auto resize X), `ay` (auto resize Y), `f` (frame style)\n* `WindowFlags` may be a combination of any of the following sequences, optionally separated by ' ' or '|' characters: `nt` (no titlebar), `nr` (no resize), `nm` (no move), `nc` (no collapse), `ns` (no saved settings), `ni` (no interact), `h` (horizontal scrolling)"
+  },
+  "@luhx/global/imgui.beginfullscreen": {
+    "documentation": "* Creates a Dear ImGui window which takes up the entire screen"
+  },
+  "@luhx/global/imgui.beginmainmenubar": {
+    "documentation": "* `ImGui::BeginMainMenuBar`"
+  },
+  "@luhx/global/imgui.beginmenu": {
+    "documentation": "* `ImGui::BeginMenu`"
+  },
+  "@luhx/global/imgui.beginmenubar": {
+    "documentation": "* `ImGui::BeginMenuBar`"
+  },
+  "@luhx/global/imgui.beginpopup": {
+    "documentation": "* `ImGui::BeginPopup`"
+  },
+  "@luhx/global/imgui.beginpopupmodal": {
+    "documentation": "* `ImGui::BeginPopupModal`"
+  },
+  "@luhx/global/imgui.button": {
+    "documentation": "* `ImGui::Button`"
+  },
+  "@luhx/global/imgui.checkbox": {
+    "documentation": "* `ImGui::Checkbox`"
+  },
+  "@luhx/global/imgui.closecurrentpopup": {
+    "documentation": "* `ImGui::CloseCurrentPopup`"
+  },
+  "@luhx/global/imgui.combo": {
+    "documentation": "* `ImGui::Combo`. Returns the selected option index"
+  },
+  "@luhx/global/imgui.cursorposition": {
+    "documentation": "* Returns the current position of the Dear ImGui element cursor within the current window\n* To *set* the cursor position, use `.setcursorposition`"
+  },
+  "@luhx/global/imgui.dummy": {
+    "documentation": "* `ImGui::Dummy`"
+  },
+  "@luhx/global/imgui.endchild": {
+    "documentation": "* `ImGui::EndChild`"
+  },
+  "@luhx/global/imgui.endmainmenubar": {
+    "documentation": "* `ImGui::EndMainMenuBar`"
+  },
+  "@luhx/global/imgui.endmenu": {
+    "documentation": "* `ImGui::EndMenu`"
+  },
+  "@luhx/global/imgui.endmenubar": {
+    "documentation": "* `ImGui::EndMenuBar`"
+  },
+  "@luhx/global/imgui.endpopup": {
+    "documentation": "* `ImGui::EndPopup`"
+  },
+  "@luhx/global/imgui.endw": {
+    "documentation": "* `ImGui::End`, `endw` and not `end` because `end` is a Luau keyword"
+  },
+  "@luhx/global/imgui.getcontentregionavail": {
+    "documentation": "* `ImGui::GetContentRegionAvail`"
+  },
+  "@luhx/global/imgui.image": {
+    "documentation": "* `ImGui::Image`"
+  },
+  "@luhx/global/imgui.imagebutton": {
+    "documentation": "* `ImGui::ImageButton`"
+  },
+  "@luhx/global/imgui.indent": {
+    "documentation": "* `ImGui::Indent`"
+  },
+  "@luhx/global/imgui.inputnumber": {
+    "documentation": "* `ImGui::InputDouble`"
+  },
+  "@luhx/global/imgui.inputstring": {
+    "documentation": "* `ImGui::InputText`"
+  },
+  "@luhx/global/imgui.itemclicked": {
+    "documentation": "* `ImGui::IsItemClicked`"
+  },
+  "@luhx/global/imgui.itemhovered": {
+    "documentation": "* `ImGui::IsItemHovered`"
+  },
+  "@luhx/global/imgui.menuitem": {
+    "documentation": "* `ImGui::MenuItem`"
+  },
+  "@luhx/global/imgui.openpopup": {
+    "documentation": "* `ImGui::OpenPopup`"
+  },
+  "@luhx/global/imgui.popid": {
+    "documentation": "* `ImGui::PopID`"
+  },
+  "@luhx/global/imgui.popstylecolor": {
+    "documentation": "* `ImGui::PopStyleColor`"
+  },
+  "@luhx/global/imgui.pushid": {
+    "documentation": "* `ImGui::PushID`"
+  },
+  "@luhx/global/imgui.pushstylecolor": {
+    "documentation": "* `ImGui::PushStyleColor`\n* `Color` is an array with 4 numbers representing R, G, B, and A"
+  },
+  "@luhx/global/imgui.sameline": {
+    "documentation": "* `ImGui::SameLine`"
+  },
+  "@luhx/global/imgui.separator": {
+    "documentation": "* `ImGui::Separator`"
+  },
+  "@luhx/global/imgui.separatortext": {
+    "documentation": "* `ImGui::SeparatorText`"
+  },
+  "@luhx/global/imgui.setcursorposition": {
+    "documentation": "* Sets the position of the Dear ImGui element cursor within the current window"
+  },
+  "@luhx/global/imgui.setitemtooltip": {
+    "documentation": "* `ImGui::SetItemTooltip`"
+  },
+  "@luhx/global/imgui.setnextitemwidth": {
+    "documentation": "* Sets the width of the next item\n* `ImGui::SetNextItemWidth`"
+  },
+  "@luhx/global/imgui.setnextwindowfocus": {
+    "documentation": "* `ImGui::SetNextWindowFocus`"
+  },
+  "@luhx/global/imgui.setnextwindowopen": {
+    "documentation": "* `ImGui::SetNextWindowCollapsed(!Open)`"
+  },
+  "@luhx/global/imgui.setnextwindowposition": {
+    "documentation": "* `ImGui::SetNextWindowPos"
+  },
+  "@luhx/global/imgui.setnextwindowsize": {
+    "documentation": "* `ImGui::SetNextWindowSize`"
+  },
+  "@luhx/global/imgui.settooltip": {
+    "documentation": "* `ImGui::SetTooltip`"
+  },
+  "@luhx/global/imgui.setviewportdockspace": {
+    "documentation": "* Sets the region of the window in which Dear ImGui windows can be docked"
+  },
+  "@luhx/global/imgui.setviewportdockspacedefault": {
+    "documentation": "* Reverts the region of the window in which Dear ImGui windows can be docked to the default settings"
+  },
+  "@luhx/global/imgui.stylecolors": {
+    "documentation": "* `ImGui::StyleColorsDark`/`ImGui::StyleColorsLight`"
+  },
+  "@luhx/global/imgui.text": {
+    "documentation": "* `ImGui::Text`"
+  },
+  "@luhx/global/imgui.textlink": {
+    "documentation": "* `ImGui::TextLink`"
+  },
+  "@luhx/global/imgui.textsize": {
+    "documentation": "* `ImGui::CalcTextSize`"
+  },
+  "@luhx/global/imgui.treenode": {
+    "documentation": "* `ImGui::TreeNode`"
+  },
+  "@luhx/global/imgui.treepop": {
+    "documentation": "* `ImGui::TreePop`"
+  },
+  "@luhx/global/imgui.urllink": {
+    "documentation": "* Similar to `imgui.textlink`, however, will open the given URL upon being clicked\n* `Url` will be `Text` if not provided\n* `ImGui::TextLinkOpenUrl`"
+  },
+  "@luhx/global/imgui.windowhovered": {
+    "documentation": "* `ImGui::IsWindowHovered`"
+  },
+  "@luhx/global/imgui.windowposition": {
+    "documentation": "* Returns the position of the current Dear ImGui window (`ImGui::GetWindowPos`)\n* To *set* the position of the window, use `.setnextwindowposition`"
+  },
+  "@luhx/global/imgui.windowsize": {
+    "documentation": "* Returns the size of the current window"
+  },
+  "@luhx/global/input": {
+    "documentation": "* Checking player inputs"
+  },
+  "@luhx/global/input.cursorvisible": {
+    "documentation": "* Returns whether the mouse cursor is current visible\n* To *change* the visibility of the cursor, use `.setcursorvisible`"
+  },
+  "@luhx/global/input.guihandled": {
+    "documentation": "* Returns whether Dear ImGui is using the player's inputs at all"
+  },
+  "@luhx/global/input.guihandledk": {
+    "documentation": "* Returns whether Dear ImGui is using the player's keyboard inputs"
+  },
+  "@luhx/global/input.guihandledm": {
+    "documentation": "* Returns whether Dear ImGui is using the player's mouse inputs"
+  },
+  "@luhx/global/input.keypressed": {
+    "documentation": "* Returns whether the specified key (as lowercase, e.g. `'a'`, `'b'`, or by GLFW Key ID) is currently being pressed"
+  },
+  "@luhx/global/input.mousedown": {
+    "documentation": "* Returns whether the specified mouse button (`l`eft, `r`ight, or `e`ither) is currently being pressed"
+  },
+  "@luhx/global/input.mousegrabbed": {
+    "documentation": "* Returns whether the mouse is currently restricted to the game window\n* To *change* whether the mouse is grabbed, use `.setmousegrabbed`"
+  },
+  "@luhx/global/input.mouseposition": {
+    "documentation": "* Returns the current position of the mouse"
+  },
+  "@luhx/global/input.setcursorvisible": {
+    "documentation": "* Sets the visibility of the mouse cursor to the specified value"
+  },
+  "@luhx/global/input.setmousegrabbed": {
+    "documentation": "* Grabs/ungrabs the mouse cursor"
+  },
+  "@luhx/global/input.setmouseposition": {
+    "documentation": "* Moves the mouse to the given coordinates of the window"
+  },
+  "@luhx/global/json": {
+    "documentation": "* Encoding and decoding JSON files"
+  },
+  "@luhx/global/json.encode": {
+    "documentation": "* Encodes the provided value into a JSON string"
+  },
+  "@luhx/global/json.parse": {
+    "documentation": "* Decodes the JSON string and returns it as a value"
+  },
+  "@luhx/global/loadthread": {
+    "documentation": "* Like `loadstring` in *other* runtimes, however does not compromise Global Import optimizations and returns a coroutine instead of a function\n* If an error occurs, returns `nil` as the first value and the error message as the second value"
+  },
+  "@luhx/global/loadthreadfromfile": {
+    "documentation": "* Similar to `loadthread`, however loads from a file instead of from a string directly"
+  },
+  "@luhx/global/mesh": {
+    "documentation": "* Mesh assets"
+  },
+  "@luhx/global/mesh.get": {
+    "documentation": "* Returns the provided mesh data associated with the provided path"
+  },
+  "@luhx/global/mesh.save": {
+    "documentation": "* Saves the mesh data at the provided path to a file"
+  },
+  "@luhx/global/mesh.set": {
+    "documentation": "* Associates the provided mesh data with the provided path"
+  },
+  "@luhx/global/model": {
+    "documentation": "* `glTF` models"
+  },
+  "@luhx/global/model.import": {
+    "documentation": "* Imports the glTF model at the provided path and returns it as a `Model` GameObject"
+  },
+  "@luhx/global/scene": {
+    "documentation": "* Scene assets"
+  },
+  "@luhx/global/scene.load": {
+    "documentation": "* Loads `GameObject`s from the scene file at the provided path, returning a list of the root objects or `nil` and an error message upon failure"
+  },
+  "@luhx/global/scene.save": {
+    "documentation": "* Saves the list of `GameObject`s to the provided path, returning whether the operation succeeded"
+  },
+  "@luhx/global/script": {
+    "documentation": "* The Script object the current coroutine is running as\n* In `require`'d modules, this is `nil`"
+  },
+  "@luhx/global/sleep": {
+    "documentation": "* Yields the thread for the specified number of seconds"
+  },
+  "@luhx/global/workspace": {
+    "documentation": "* Shorthand for `game.Workspace`"
+  },
+  "@luhx/globaltype/Animation.Animation": {
+    "documentation": "The animation file"
+  },
+  "@luhx/globaltype/Animation.Looped": {
+    "documentation": "Whether the Animation should loop when it reaches the end"
+  },
+  "@luhx/globaltype/Animation.Playing": {
+    "documentation": "Whether the Animation is playing"
+  },
+  "@luhx/globaltype/Animation.Ready": {
+    "documentation": "Whether the Animation can be played"
+  },
+  "@luhx/globaltype/Animation.Weight": {
+    "documentation": "The influence the Animation has over the rig"
+  },
+  "@luhx/globaltype/Bone.IsActive": {
+    "documentation": "Whether or not the Bone Object is actively affecting a Mesh"
+  },
+  "@luhx/globaltype/Bone.SkeletalBoneId": {
+    "documentation": "The internal ID of the bone, valid range is 0-126"
+  },
+  "@luhx/globaltype/Bone.Transform": {
+    "documentation": "The transformation of the Bone"
+  },
+  "@luhx/globaltype/Camera.FieldOfView": {
+    "documentation": "The field-of-view. By default, `90`"
+  },
+  "@luhx/globaltype/Camera.Transform": {
+    "documentation": "Where it is in 3D space"
+  },
+  "@luhx/globaltype/Camera.UseSimpleController": {
+    "documentation": "Whether it is affected by the built-in controller (`W`/`A`/`S`/`D` horizontal movement, `Q`/`E` vertical, Mouse to look around)"
+  },
+  "@luhx/globaltype/Color.B": {
+    "documentation": "* The Blue channel\n"
+  },
+  "@luhx/globaltype/Color.G": {
+    "documentation": "* The Green channel\n"
+  },
+  "@luhx/globaltype/Color.R": {
+    "documentation": "* The Red channel\n"
+  },
+  "@luhx/globaltype/DataModel.OnFrameBegin": {
+    "documentation": "Fires at the beginning of a frame, passing in the time elapsed since the last frame (delta time)"
+  },
+  "@luhx/globaltype/DataModel.Time": {
+    "documentation": "Number of seconds since the Engine started running"
+  },
+  "@luhx/globaltype/DirectionalLight.Brightness": {
+    "documentation": "How bright the Light is"
+  },
+  "@luhx/globaltype/DirectionalLight.Direction": {
+    "documentation": "The direction light is emitted from"
+  },
+  "@luhx/globaltype/DirectionalLight.LightColor": {
+    "documentation": "The color of the Light"
+  },
+  "@luhx/globaltype/DirectionalLight.ShadowViewDistance": {
+    "documentation": "How far back the shadow view is offset from the focus"
+  },
+  "@luhx/globaltype/DirectionalLight.ShadowViewFarPlane": {
+    "documentation": "The Far Z plane of the shadow view. Should be greater than `ShadowViewNearPlane`"
+  },
+  "@luhx/globaltype/DirectionalLight.ShadowViewMoveWithCamera": {
+    "documentation": "Sets the focus of the shadow view to be the Scene Camera"
+  },
+  "@luhx/globaltype/DirectionalLight.ShadowViewNearPlane": {
+    "documentation": "The Near Z plane of the shadow view. Should be less than `ShadowViewFarPlane`. Shouldn't be `0`"
+  },
+  "@luhx/globaltype/DirectionalLight.ShadowViewOffset": {
+    "documentation": "Offset of the shadow view from the focus, after `ShadowViewDistance` is applied"
+  },
+  "@luhx/globaltype/DirectionalLight.ShadowViewSize": {
+    "documentation": "Size of the shadow view. Sets `ShadowViewSizeH` and `ShadowViewSizeV` to the assigned value if they are equal. Is `-1` if they are not equal"
+  },
+  "@luhx/globaltype/DirectionalLight.ShadowViewSizeH": {
+    "documentation": "Horizontal size of the shadow view"
+  },
+  "@luhx/globaltype/DirectionalLight.ShadowViewSizeV": {
+    "documentation": "Vertical size of the shadow view"
+  },
+  "@luhx/globaltype/DirectionalLight.Shadows": {
+    "documentation": "Whether the Light can render shadows"
+  },
+  "@luhx/globaltype/EventConnection.:Disconnect": {
+    "documentation": "* Disconnects the Connection, causing the callback to no longer be invoked. May only be called once\n"
+  },
+  "@luhx/globaltype/EventConnection.Connected": {
+    "documentation": "* Whether the Connection is connected or not\n"
+  },
+  "@luhx/globaltype/EventConnection.Signal": {
+    "documentation": "* The Event which `:Connect` was called upon to return this Connection\n"
+  },
+  "@luhx/globaltype/EventSignal.:Connect": {
+    "documentation": "* Connect a callback to the Event\n"
+  },
+  "@luhx/globaltype/EventSignal.:WaitUntil": {
+    "documentation": "* Yields the thread until the Event is fired\n"
+  },
+  "@luhx/globaltype/Example.EvenMoreSecretMessage": {
+    "documentation": "A secret message that's so, *so* secret that it cannot be read by Reflection-kun, almost like they're keeping a secret from her..."
+  },
+  "@luhx/globaltype/Example.GiveUp": {
+    "documentation": "Tells Engine-chan to kill herself and throws an exception"
+  },
+  "@luhx/globaltype/Example.Greet": {
+    "documentation": "Says hello to the given list of names. If the second argument is `true`, does so extra villainously"
+  },
+  "@luhx/globaltype/Example.OnGreeted": {
+    "documentation": "Fires when `:Greet` is called, and sends the response to the callback before the original caller of `:Greet` receives it"
+  },
+  "@luhx/globaltype/Example.SecretMessage": {
+    "documentation": "A secret message that's so important it's read-only"
+  },
+  "@luhx/globaltype/Example.SomeInteger": {
+    "documentation": "An integer"
+  },
+  "@luhx/globaltype/Example.SuperCoolBool": {
+    "documentation": "A boolean"
+  },
+  "@luhx/globaltype/Example.WhereIAm": {
+    "documentation": "A 3-dimensional vector quantity"
+  },
+  "@luhx/globaltype/GameObject.Destroy": {
+    "documentation": "Marks the Object as \"pending for destruction\". This may or may not remove the Object from memory immediately, depending on whether the Engine is keeping a internal reference to it"
+  },
+  "@luhx/globaltype/GameObject.Duplicate": {
+    "documentation": "Creates a duplicate of the Object"
+  },
+  "@luhx/globaltype/GameObject.Enabled": {
+    "documentation": "Whether the Engine updates and recognizes this Object, essentially freezing it if it is disabled"
+  },
+  "@luhx/globaltype/GameObject.Exists": {
+    "documentation": "Whether or not the Object still exists. Will be false after calling `:Destroy`"
+  },
+  "@luhx/globaltype/GameObject.FindChild": {
+    "documentation": "Returns a child Object with the given name, or `nil` if one doesn't exist"
+  },
+  "@luhx/globaltype/GameObject.FindChildWithComponent": {
+    "documentation": "Returns a child Object which has the given component, or `nil` if one doesn't exist"
+  },
+  "@luhx/globaltype/GameObject.ForEachChild": {
+    "documentation": "For all children of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield"
+  },
+  "@luhx/globaltype/GameObject.GetChildren": {
+    "documentation": "Returns a list of the Object's direct children"
+  },
+  "@luhx/globaltype/GameObject.GetComponentNames": {
+    "documentation": "Returns a list of the names of all Components that the Object currently has"
+  },
+  "@luhx/globaltype/GameObject.GetDescendants": {
+    "documentation": "Returns all descendants of the Object (i.e. its children, and their children, etc)"
+  },
+  "@luhx/globaltype/GameObject.GetFullName": {
+    "documentation": "Returns the full, hierarchal path of the Object"
+  },
+  "@luhx/globaltype/GameObject.HasComponent": {
+    "documentation": "Returns whether or not the Object has the given Component"
+  },
+  "@luhx/globaltype/GameObject.MergeWith": {
+    "documentation": "Merges the Objects together, replacing descendants with the same name"
+  },
+  "@luhx/globaltype/GameObject.Name": {
+    "documentation": "The name of the Object, usually what was passed into `GameObject.new`"
+  },
+  "@luhx/globaltype/GameObject.ObjectId": {
+    "documentation": "The ID of the Object, an integer. Remains the same throughout the session, but not guaranteed between sessions"
+  },
+  "@luhx/globaltype/GameObject.Parent": {
+    "documentation": "The hierarchal parent of the Object, or `nil` if it does not have one"
+  },
+  "@luhx/globaltype/GameObject.Serializes": {
+    "documentation": "Whether or not the Object should be saved with the scene if it is serialized with `scene.save`, and whether `:Duplicate` will duplicate it (only applies to descendants)"
+  },
+  "@luhx/globaltype/Matrix.:__mul": {
+    "documentation": "* Two Matrices may be multiplied together with the `*` operator\n"
+  },
+  "@luhx/globaltype/Matrix.C1R1": {
+    "documentation": "* The value at Column 1, Row 1\n"
+  },
+  "@luhx/globaltype/Matrix.C1R2": {
+    "documentation": "* The value at Column 1, Row 2\n"
+  },
+  "@luhx/globaltype/Matrix.C1R3": {
+    "documentation": "* The value at Column 1, Row 3\n"
+  },
+  "@luhx/globaltype/Matrix.C1R4": {
+    "documentation": "* The value at Column 1, Row 4\n"
+  },
+  "@luhx/globaltype/Matrix.C2R1": {
+    "documentation": "* The value at Column 2, Row 1\n"
+  },
+  "@luhx/globaltype/Matrix.C2R2": {
+    "documentation": "* The value at Column 2, Row 2\n"
+  },
+  "@luhx/globaltype/Matrix.C2R3": {
+    "documentation": "* The value at Column 2, Row 3\n"
+  },
+  "@luhx/globaltype/Matrix.C2R4": {
+    "documentation": "* The value at Column 2, Row 4\n"
+  },
+  "@luhx/globaltype/Matrix.C3R1": {
+    "documentation": "* The value at Column 3, Row 1\n"
+  },
+  "@luhx/globaltype/Matrix.C3R2": {
+    "documentation": "* The value at Column 3, Row 2\n"
+  },
+  "@luhx/globaltype/Matrix.C3R3": {
+    "documentation": "* The value at Column 3, Row 3\n"
+  },
+  "@luhx/globaltype/Matrix.C3R4": {
+    "documentation": "* The value at Column 3, Row 4\n"
+  },
+  "@luhx/globaltype/Matrix.C4R1": {
+    "documentation": "* The value at Column 4, Row 1\n"
+  },
+  "@luhx/globaltype/Matrix.C4R2": {
+    "documentation": "* The value at Column 4, Row 2\n"
+  },
+  "@luhx/globaltype/Matrix.C4R3": {
+    "documentation": "* The value at Column 4, Row 3\n"
+  },
+  "@luhx/globaltype/Matrix.C4R4": {
+    "documentation": "* The value at Column 4, Row 4\n"
+  },
+  "@luhx/globaltype/Matrix.Forward": {
+    "documentation": "* The forward vector of the Matrix\n"
+  },
+  "@luhx/globaltype/Matrix.Position": {
+    "documentation": "* The position of the Matrix in world-space\n"
+  },
+  "@luhx/globaltype/Matrix.Right": {
+    "documentation": "* The rightward vector of the Matrix\n"
+  },
+  "@luhx/globaltype/Matrix.Up": {
+    "documentation": "* The upward vector of the Matrix\n"
+  },
+  "@luhx/globaltype/Mesh.AngularVelocity": {
+    "documentation": "Its rotational velocity"
+  },
+  "@luhx/globaltype/Mesh.Asset": {
+    "documentation": "The path to the underlying `.hxmesh` file, or a built-in identifier like `!Quad` or `!Cube`"
+  },
+  "@luhx/globaltype/Mesh.CastsShadows": {
+    "documentation": "Whether it casts shadows"
+  },
+  "@luhx/globaltype/Mesh.CollisionFidelity": {
+    "documentation": "0 - `Aabb`: An axis-aligned bounding box. 1 - `AabbStaticSize`: An AABB which keeps the same size as the Object"
+  },
+  "@luhx/globaltype/Mesh.Density": {
+    "documentation": "Its density (`Mass = Density * Size`)"
+  },
+  "@luhx/globaltype/Mesh.FaceCulling": {
+    "documentation": "An integer. `0` means no culling, `1` to cull its \"back\" faces, and `2` to cull its \"front\" faces"
+  },
+  "@luhx/globaltype/Mesh.Friction": {
+    "documentation": "Fraction of Velocity it should lose per second while in contact with another object while `PhysicsDynamics` is `true`"
+  },
+  "@luhx/globaltype/Mesh.LinearVelocity": {
+    "documentation": "Its velocity"
+  },
+  "@luhx/globaltype/Mesh.Material": {
+    "documentation": "The name of the `.mtl` in the `resources/materials/` directory it should use"
+  },
+  "@luhx/globaltype/Mesh.MetallnessFactor": {
+    "documentation": "Metallness modifier"
+  },
+  "@luhx/globaltype/Mesh.PhysicsCollisions": {
+    "documentation": "Whether other physics objects can collide with it"
+  },
+  "@luhx/globaltype/Mesh.PhysicsDynamics": {
+    "documentation": "Whether the Physics Engine should apply forces to it"
+  },
+  "@luhx/globaltype/Mesh.RoughnessFactor": {
+    "documentation": "Roughness modifier"
+  },
+  "@luhx/globaltype/Mesh.Tint": {
+    "documentation": "The Color it should be tinted with"
+  },
+  "@luhx/globaltype/Mesh.Transparency": {
+    "documentation": "Its transparency/translucency"
+  },
+  "@luhx/globaltype/ParticleEmitter.Emitting": {
+    "documentation": "Whether the emitter should emit new particles"
+  },
+  "@luhx/globaltype/ParticleEmitter.Lifetime": {
+    "documentation": "The X and Y components act as a range of how long any particle can last, in seconds"
+  },
+  "@luhx/globaltype/ParticleEmitter.ParticlesAreAttached": {
+    "documentation": "Whether the particles are attached to and move with the emitter"
+  },
+  "@luhx/globaltype/ParticleEmitter.Rate": {
+    "documentation": "An integer indicating how many particles should be emitted per second (must be above or equal to `0`)"
+  },
+  "@luhx/globaltype/PointLight.Brightness": {
+    "documentation": "How bright the Light is"
+  },
+  "@luhx/globaltype/PointLight.LightColor": {
+    "documentation": "The color of the Light"
+  },
+  "@luhx/globaltype/PointLight.Range": {
+    "documentation": "How far light is emitted. If `>= 0`, the Range is used and attenuation is linear, otherwise it uses the formula `F = 1/D^2 * B` to mirror real-world attenuation, where `F` is the final brightness, `D` is the distance of a point from the Light, and `B` is the `Brightness` property's value"
+  },
+  "@luhx/globaltype/PointLight.Shadows": {
+    "documentation": "Whether the Light can render shadows"
+  },
+  "@luhx/globaltype/Script.Reload": {
+    "documentation": "Re-compiles the Source file and runs it from the beginning, returning whether the compilation and initial run were successful"
+  },
+  "@luhx/globaltype/Script.SourceFile": {
+    "documentation": "The File the Script is executing. Changing this to a valid File immediately reloads the Script if it is a descendant of the `DataModel` (i.e. `game`). To forcefully reload it, `:Reload` should be used"
+  },
+  "@luhx/globaltype/Sound.FinishedLoading": {
+    "documentation": "Whether the Sound has finished loading the `SoundFile`"
+  },
+  "@luhx/globaltype/Sound.Length": {
+    "documentation": "The length of the sound in seconds"
+  },
+  "@luhx/globaltype/Sound.LoadSucceeded": {
+    "documentation": "Whether or not the sound loaded successfully"
+  },
+  "@luhx/globaltype/Sound.Looped": {
+    "documentation": "Whether playback should loop once it reaches the end"
+  },
+  "@luhx/globaltype/Sound.OnLoaded": {
+    "documentation": "Fires when the Sound finishes loading, and whether it loaded successfully or not"
+  },
+  "@luhx/globaltype/Sound.Playing": {
+    "documentation": "Whether the Sound is currently playing (or requested to play, if `.Playing` is set to `true` by a `Script` before it has finished loading)"
+  },
+  "@luhx/globaltype/Sound.Position": {
+    "documentation": "The time-position of playback in number of seconds from the beginning of the file"
+  },
+  "@luhx/globaltype/Sound.SoundFile": {
+    "documentation": "The sound file to be played"
+  },
+  "@luhx/globaltype/Sound.Speed": {
+    "documentation": "The speed at which the sound plays, within the range of 0.01 to 100"
+  },
+  "@luhx/globaltype/Sound.Volume": {
+    "documentation": "The volume at which the sound plays. Must be positive"
+  },
+  "@luhx/globaltype/SpotLight.Angle": {
+    "documentation": "The Field-of-View (in radians) of light emission"
+  },
+  "@luhx/globaltype/SpotLight.Brightness": {
+    "documentation": "How bright the Light is"
+  },
+  "@luhx/globaltype/SpotLight.LightColor": {
+    "documentation": "The color of the Light"
+  },
+  "@luhx/globaltype/SpotLight.Range": {
+    "documentation": "How far light is emitted"
+  },
+  "@luhx/globaltype/SpotLight.Shadows": {
+    "documentation": "Whether the Light can render shadows"
+  },
+  "@luhx/globaltype/Transform.LocalSize": {
+    "documentation": "The Object's scale factor, relative to it's nearest Transform ancestor"
+  },
+  "@luhx/globaltype/Transform.LocalTransform": {
+    "documentation": "The Object's transformation, relative to it's nearest Transform ancestor"
+  },
+  "@luhx/globaltype/Transform.Size": {
+    "documentation": "The Object's world-space scale factor"
+  },
+  "@luhx/globaltype/Transform.Transform": {
+    "documentation": "The Object's world-space transformation"
+  },
+  "@luhx/globaltype/TreeLink.Scripting": {
+    "documentation": "Whether Scripts which descend from the `Target` will run"
+  },
+  "@luhx/globaltype/TreeLink.Target": {
+    "documentation": "The target to link"
+  },
+  "@luhx/globaltype/Workspace.GetObjectsInAabb": {
+    "documentation": "Get a list of Objects whose bounds are within the AABB"
+  },
+  "@luhx/globaltype/Workspace.Raycast": {
+    "documentation": "Cast a ray"
+  },
+  "@luhx/globaltype/Workspace.SceneCamera": {
+    "documentation": "The `Camera` the Player sees the world through. If set to `nil`, a *fallback* is created at the origin."
+  },
+  "@luhx/globaltype/Workspace.ScreenPointToRay": {
+    "documentation": "Converts the provided X and Y screen coordinates to a world-space vector, with the length provided or `1` by default"
+  }
+}

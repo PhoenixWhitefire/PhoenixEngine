@@ -94,7 +94,7 @@ function CoreTools.Update(Project)
     local mouseVector = workspace:ScreenPointToRay(mx, my, 1000)
     local gizmoHit = if input.mousedown('l') then workspace:Raycast(camPos, mouseVector, { GizmoContainer }, false) else nil
 
-    if input.mousedown('l') and not IsGizmoDragging then
+    if input.mousedown('l') and not IsGizmoDragging --[[ and not gizmoHit ]] then
         local worldHit = Project.Workspace:Raycast(camPos, mouseVector, { if IsSurfaceDragging then target else nil })
 
         if worldHit and (IsSurfaceDragging or worldHit.Object == target) then

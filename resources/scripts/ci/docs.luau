@@ -46,6 +46,7 @@ local definitionsFile = [[
 declare extern type Vector2 with
 end
 ]]
+local documentationData = {}
 
 local GameObjectOverrides = {
 	new = "(<T>(ComponentName: T) -> GameObject & index<__Creatables, T>) & ((ComponentName: string) -> GameObject & any)",
@@ -171,15 +172,23 @@ local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, lib
 		if not desc and typeof(v) == "string" then
 			desc = v
 		end
+
+		local totalcomment = ""
 		
 		for _, comment in (if typeof(desc) == "table" then desc else { desc }) do
 			if not comment then
 				print(`Missing doc comment for '{ k }'`)
 			end
-		
-			str ..= `* { comment }\n`
+
+			totalcomment ..= `* { comment }\n`
 		end
-		
+		totalcomment = totalcomment:sub(1, #totalcomment - 1)
+
+		documentationData[`@luhx/global/{libname}.{k}`] = {
+			documentation = totalcomment
+		}
+
+		str ..= totalcomment
 		str ..= "\n"
 	end
 	
@@ -207,10 +216,10 @@ local function rtolsub(str)
 	for p, s in rtol do
 		str = string.gsub(str, p, s)
 	end
-	
+
 	-- to avoid the `->` being converted to a `:` (which, for function type declarations, is wrong)
 	str = string.gsub(str, "Function", "(any) -> (any)")
-	
+
 	return str
 end
 
@@ -226,25 +235,28 @@ local function dumpReflectionApi(t, d, cn)
 	local hasProps = t.Properties and (count(t.Properties) > 0)
 	local hasFuncs = t.Methods and (count(t.Methods) > 0)
 	local hasEvnts = t.Events and (count(t.Events) > 0)
-	
+
 	local s = ""
-	
+
 	if hasProps or hasFuncs or hasEvnts then
 		if hasProps then
 			s = "### Properties:\n"
-			
+
 			local orderedProps = keysOf(t.Properties)
 			table.sort(orderedProps)
-			
+
 			for _, n in orderedProps do
 				local v = t.Properties[n]
-				
+
 				if not d.Properties or not d.Properties[n] then
 					print(`Missing doc comment for Property '{ cn }.{ n }'`)
 					continue
 				end
-				
+
 				s ..= `* \`{ n }: { rtolsub(v) }\`: { d.Properties[n] }\n`
+				documentationData[`@luhx/globaltype/{cn}.{n}`] = {
+					documentation = d.Properties[n]
+				}
 
 				if n == "SceneCamera" then
 					definitionsFile ..= `  { n }: { "(GameObject & Camera)?" }\n`
@@ -253,23 +265,26 @@ local function dumpReflectionApi(t, d, cn)
 				end
 			end
 		end
-		
+
 		if hasFuncs then
 			definitionsFile ..= "\n"
 			s ..= "\n### Methods:\n"
-			
+
 			local orderedFuncs = keysOf(t.Methods)
 			table.sort(orderedFuncs)
-			
+
 			for _, n in orderedFuncs do
 				local v = t.Methods[n]
-				
+
 				if not d.Methods or not d.Methods[n] then
 					print(`Missing doc comment for Method '{ cn }:{ n }'`)
 					continue
 				end
 
 				s ..= `* \`{ n }{ rtolsub(v) }\`: { d.Methods[n] }\n`
+				documentationData[`@luhx/globaltype/{cn}.{n}`] = {
+					documentation = d.Methods[n]
+				}
 				
 				local subst = rtolsub(v)
 				subst = string.sub(subst, 2, #subst)
@@ -317,8 +332,11 @@ local function dumpReflectionApi(t, d, cn)
 					print(`Missing doc comment for Event '{ cn }.{ n }'`)
 					continue
 				end
-				
+
 				s ..= `* \`{ n }{ rtolsub(v) }\`: { d.Events[n] }\n`
+				documentationData[`@luhx/globaltype/{cn}.{n}`] = {
+					documentation = d.Events[n]
+				}
 				definitionsFile ..= `  { n }: EventSignal\n`
 			end
 		end
@@ -362,10 +380,17 @@ local function documentDatatype(name)
 	end
 	
 	datatypes ..= `### \`{ name }\`\n\n`
-	
+
+	local totalcomment = ""
 	for _, d in (if typeof(dt.Description) == "table" then dt.Description else { dt.Description }) do
-		datatypes ..= `* { d }\n`
+		totalcomment ..= `* { d }\n`
 	end
+	totalcomment = totalcomment:sub(1, #totalcomment - 1)
+
+	datatypes ..= totalcomment
+	documentationData[`@luhx/global/{name}`] = {
+		documentation = totalcomment
+	}
 	
 	local datatype = ""
 	
@@ -442,15 +467,22 @@ local function documentDatatype(name)
 		if not v.Description then
 			print(`No description for { name }.{ k }`)
 		end
-		
+
+		local totalcomment = ""
 		for _, comment in (if typeof(v.Description) == "table" then v.Description else { v.Description }) do
 			if not comment then
 				print(`Missing doc comment for '{ k }'`)
 			end
-		
-			datatype ..= `* { comment }\n`
+
+			totalcomment ..= `* { comment }\n`
 		end
-		
+		totalcomment = totalcomment:sub(1, #totalcomment)
+
+		datatype ..= totalcomment
+		documentationData[`@luhx/globaltype/{name}.{k}`] = {
+			documentation = totalcomment
+		}
+
 		datatype ..= "\n"
 	end
 	
@@ -514,10 +546,17 @@ for _, name in orderedLibraries do
 	libraries ..= `### \`{ name }\`\n`
 	
 	assert(lib, name)
-	
+
+	local totalcomment = ""
 	for _, d in (if typeof(lib.Description) == "table" then lib.Description else { lib.Description }) do
-		libraries ..= `* { d }\n`
+		totalcomment ..= `* { d }\n`
 	end
+	totalcomment = totalcomment:sub(1, #totalcomment - 1)
+
+	libraries ..= totalcomment
+	documentationData[`@luhx/global/{name}`] = {
+		documentation = totalcomment
+	}
 	
 	libraries ..= "\n" .. dumpLibMembers(lib.Members, apiDump.ScriptEnv.Libraries[name], name)
 end
@@ -547,15 +586,22 @@ for _, name in orderedGlobals do
 		globals ..= `#### \`{ name }: { apiDump.ScriptEnv.Globals[name] }\`\n`
 		definitionsFile ..= `declare { name }: { apiDump.ScriptEnv.Globals[name] }\n`
 	end
-	
+
+	local totalcomment = ""
 	for _, comment in (if typeof(contents.Description) == "table" then contents.Description else { contents.Description }) do
 		if not comment then
 			print(`Missing doc comment for global '{ name }'`)
 		end
-		
-		globals ..= `* { comment }\n`
+
+		totalcomment ..= `* { comment }\n`
 	end
-	
+	totalcomment = totalcomment:sub(1, #totalcomment - 1)
+
+	globals ..= totalcomment
+	documentationData[`@luhx/global/{name}`] = {
+		documentation = totalcomment
+	}
+
 	globals ..= "\n"
 end
 
@@ -567,6 +613,7 @@ fs.write(BASE_PATH .. "/scriptenv.md", scriptenv)
 fs.write(BASE_PATH .. "/components.md", components)
 
 fs.write("scripts/api.d.luau", definitionsFile)
+fs.write("scripts/api.docs.json", json.encode(documentationData))
 
 print("Docs CI finish\n\n\n\n\n")
 
