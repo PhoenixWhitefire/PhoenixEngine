@@ -633,14 +633,18 @@ std::string Reflection::TypeAsString(ValueType vt)
 	if (vt == ValueType::Null)
 		return "Null";
 
-#define U8(t) (uint8_t)t
-
-	uint8_t t = U8(vt);
-
-	if (t < U8(ValueType::Null))
-		return std::string(BaseNames[t]);
+	if (vt < ValueType::Null)
+		return std::string(BaseNames[vt]);
 
 	// everything greater than Null means optional
 	// Null + Boolean = Boolean? (optional boolean)
-	return std::string(BaseNames[t - U8(ValueType::Null)]) + "?";
+	return std::string(BaseNames[vt - ValueType::Null]) + "?";
+}
+
+bool Reflection::TypeFits(ValueType Target, ValueType Value)
+{
+	assert(Target != ValueType::Null);
+	uint8_t base = Target & ~ValueType::Null;
+
+	return (Value == base) || ((Target & ValueType::Null) && Value == ValueType::Null);
 }

@@ -70,7 +70,7 @@ IntersectionLib::Intersection IntersectionLib::AabbAabb
 	return result;
 }
 
-IntersectionLib::Intersection IntersectionLib::LineAabb(
+IntersectionLib::Intersection IntersectionLib::RayAabb(
 	const glm::vec3& Origin,
 	const glm::vec3& Vector,
 	const glm::vec3& BbPosition,
@@ -144,7 +144,7 @@ IntersectionLib::SweptIntersection IntersectionLib::SweptAabbAabb(
 	glm::vec3 bSizeHalf = BSize / 2.f;
 	SweptIntersection sweep;
 
-	sweep.Hit = LineAabb(BPosition, Delta, APosition, ASize, bSizeHalf);
+	sweep.Hit = RayAabb(BPosition, Delta, APosition, ASize, bSizeHalf);
 
 	if (sweep.Hit.Occurred)
 	{

@@ -540,7 +540,7 @@ static std::vector<ObjectRef> LoadMapVersion2(const std::string& Contents, float
 			}
 
 			Reflection::ValueType propType = prop->Type;
-			propType = (Reflection::ValueType)((uint8_t)propType & ~(uint8_t)Reflection::ValueType::Null);
+			propType = Reflection::ValueType(propType & ~Reflection::ValueType::Null);
 
 			Reflection::GenericValue assignment;
 

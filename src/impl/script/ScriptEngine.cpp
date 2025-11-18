@@ -448,12 +448,12 @@ void ScriptEngine::L::CheckType(lua_State* L, Reflection::ValueType Type, int St
 {
 	ZoneScoped;
 
-	bool isOptional = (uint8_t)Type & (uint8_t)Reflection::ValueType::Null;
+	bool isOptional = Type & Reflection::ValueType::Null;
 	int givenType = lua_type(L, StackIndex);
 
 	if (!isOptional || givenType != LUA_TNIL)
 	{
-		Type = (Reflection::ValueType)((uint8_t)Type & ~(uint8_t)Reflection::ValueType::Null);
+		Type = Reflection::ValueType(Type & ~Reflection::ValueType::Null);
 		const auto& reflToLuaIt = ValueTypeToLuauType.find(Type);
 
 		if (reflToLuaIt == ValueTypeToLuauType.end())
@@ -637,7 +637,7 @@ int ScriptEngine::L::HandleMethodCall(
 	{
 		const Reflection::ValueType& param = paramTypes[i];
 
-		if (!((uint8_t)param & (uint8_t)Reflection::ValueType::Null))
+		if (!(param & Reflection::ValueType::Null))
 			minArgs++;
 		else
 			break;
@@ -708,16 +708,7 @@ int ScriptEngine::L::HandleMethodCall(
 	for (size_t i = 0; i < outputs.size(); i++)
 	{
 		const Reflection::GenericValue& output = outputs[i];
-
-#ifndef NDEBUG
-		Reflection::ValueType base = func->Outputs[i];
-		if ((uint8_t)base > (uint8_t)Reflection::ValueType::Null)
-			base = (Reflection::ValueType)((uint8_t)base - (uint8_t)Reflection::ValueType::Null);
-
-		assert(output.Type == base
-			|| ((uint8_t)func->Outputs[i] > (uint8_t)Reflection::ValueType::Null && output.Type == Reflection::ValueType::Null)
-		);
-#endif
+		assert(Reflection::TypeFits(func->Outputs[i], output.Type));
 
 		L::PushGenericValue(L, output);
 	}
@@ -978,16 +969,7 @@ static int api_gameobjindex(lua_State* L)
 	if (const Reflection::PropertyDescriptor* prop = obj->FindProperty(key, &ref))
 	{
 		Reflection::GenericValue gv = prop->Get(ref.Referred());
-
-#ifndef NDEBUG
-		Reflection::ValueType base = prop->Type;
-		if ((uint8_t)base > (uint8_t)Reflection::ValueType::Null)
-			base = (Reflection::ValueType)((uint8_t)base - (uint8_t)Reflection::ValueType::Null);
-
-		assert(gv.Type == base
-			|| ((uint8_t)prop->Type > (uint8_t)Reflection::ValueType::Null && gv.Type == Reflection::ValueType::Null)
-		);
-#endif
+		assert(Reflection::TypeFits(prop->Type, gv.Type));
 
 		ScriptEngine::L::PushGenericValue(L, gv);
 	}

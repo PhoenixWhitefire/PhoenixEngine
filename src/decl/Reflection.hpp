@@ -9,6 +9,7 @@
 #include <format>
 #include <span>
 #include <glm/mat4x4.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #define REFLECTION_INHERITAPI(base) {                                      \
 const Reflection::PropertyMap& props = Object_##base::s_GetProperties();   \
@@ -148,12 +149,13 @@ static const Reflection::MethodMap& s_GetMethods()                              
 			cb({ __VA_ARGS__ }); \
 } \
 
-#define REFLECTION_OPTIONAL(t) (Reflection::ValueType)((uint8_t)t + (uint8_t)Reflection::ValueType::Null)
+#define REFLECTION_OPTIONAL(ty) (Reflection::ValueType)(Reflection::ValueType::ty + Reflection::ValueType::Null)
 
 namespace Reflection
 {
-	enum class ValueType : uint8_t
+	struct ValueType_
 	{
+	enum VT : uint8_t {
 		Boolean = 1, // first index MUST be 1!! for Null checking!!!
 		Integer,
 		Double,
@@ -179,16 +181,21 @@ namespace Reflection
 
 		Null = 0b10000000
 	};
+	};
+	using ValueType = ValueType_::VT;
+
 	static_assert((uint8_t)ValueType::__lastBase < (uint8_t)ValueType::Null);
 
 	std::string TypeAsString(ValueType);
+	// `Target` is the documented definition, `Value` is the actual value
+	// e.g.: `GameObject | Null` and `GameObject`
+	bool TypeFits(ValueType Target, ValueType Value);
 
 	struct GenericValue;
 	typedef std::function<std::vector<Reflection::GenericValue>(const std::vector<Reflection::GenericValue>&)> GenericFunction;
 
 	struct GenericValue
 	{
-		Reflection::ValueType Type = Reflection::ValueType::Null;
 		union ValueData
 		{
 			bool Bool;
@@ -203,6 +210,7 @@ namespace Reflection
 		} Val = {};
 		// Array length or allocated memory for `Value`
 		size_t Size = 0;
+		Reflection::ValueType Type = Reflection::ValueType::Null; // at the end for better size
 
 		GenericValue();
 		~GenericValue();
@@ -263,12 +271,17 @@ namespace Reflection
 
 	struct PropertyDescriptor
 	{
-		Reflection::ValueType Type{};
-
 		PropertyGetter Get;
 		PropertySetter Set;
-		
+
+		Reflection::ValueType Type{}; // at the end for better size
 		bool Serializes = true;
+
+		PropertyDescriptor(Reflection::ValueType Ty, const PropertyGetter& Getter, const PropertySetter& Setter, bool Serializes = true)
+			: Get(Getter), Set(Setter), Type(Ty), Serializes(Serializes)
+		{
+		}
+		PropertyDescriptor() = default;
 	};
 
 	struct MethodDescriptor
@@ -307,5 +320,73 @@ namespace Reflection
 		PropertyMap Properties;
 		MethodMap Methods;
 		EventMap Events;
+	};
+}
+
+namespace std
+{
+	template <>
+	struct hash<Reflection::GenericValue>
+	{
+		size_t operator()(const Reflection::GenericValue& g) const noexcept
+		{
+			using Reflection::ValueType;
+
+			size_t h = std::hash<int>()(static_cast<int>(g.Type));
+
+			switch (g.Type)
+			{
+
+			case ValueType::Boolean:
+				return h ^ std::hash<bool>()(g.Val.Bool);
+			case ValueType::Integer:
+				return h ^ std::hash<int64_t>()(g.Val.Int);
+			case ValueType::Double:
+			    return h ^ std::hash<double>()(g.Val.Double);
+			case ValueType::String:
+			    return h ^ std::hash<std::string_view>()(g.AsStringView());
+			case ValueType::Color:
+			    return h
+			        ^ std::hash<float>()(g.Val.Vec3.x)
+			        ^ std::hash<float>()(g.Val.Vec3.y)
+			        ^ std::hash<float>()(g.Val.Vec3.z);
+			case ValueType::Vector2:
+			    return h
+			        ^ std::hash<float>()(g.Val.Vec2.x)
+			        ^ std::hash<float>()(g.Val.Vec2.y);
+			case ValueType::Vector3:
+			    return h
+			        ^ std::hash<float>()(g.Val.Vec3.x)
+			        ^ std::hash<float>()(g.Val.Vec3.y)
+			        ^ std::hash<float>()(g.Val.Vec3.z);
+			case ValueType::Matrix:
+			{
+				for (size_t i = 0; i < 4*4; i++)
+					h ^= std::hash<float>()(((float*)g.Val.Ptr)[i]);
+
+				return h;
+			}
+			case ValueType::GameObject:
+				return h ^ std::hash<int64_t>()(g.Val.Int);
+			case ValueType::Function:
+				return h ^ std::hash<void*>()((void*)g.Val.Func);
+			case ValueType::Array: case ValueType::Map:
+			{
+				for (uint32_t i = 0; i < g.Size; i++)
+					h ^= std::hash<Reflection::GenericValue>()(((Reflection::GenericValue*)g.Val.Ptr)[i]);
+
+				return h;
+			}
+			case ValueType::Null:
+				return h;
+
+			[[unlikely]] default:
+			{
+				assert(false);
+				return h;
+			}
+
+			}
+		}
 	};
 }

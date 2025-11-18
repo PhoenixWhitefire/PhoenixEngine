@@ -11,7 +11,7 @@ namespace IntersectionLib
 		glm::vec3 Position{};
 		glm::vec3 Normal{};
 		float Depth{};
-		float Time{}; // only used in `::LineAabb`
+		float Time{}; // only used in `::RayAabb`
 	};
 
 	struct SweptIntersection
@@ -28,7 +28,7 @@ namespace IntersectionLib
 		const glm::vec3& BSize
 	);
 
-	Intersection LineAabb(
+	Intersection RayAabb(
 		const glm::vec3& Origin,
 		const glm::vec3& Vector,
 		const glm::vec3& BbPosition,

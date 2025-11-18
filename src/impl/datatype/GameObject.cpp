@@ -144,9 +144,18 @@ void GameObject::s_AddObjectApi()
 	REFLECTION_DECLAREPROP_SIMPLE(GameObject, Enabled, Boolean);
 	REFLECTION_DECLAREPROP_SIMPLE(GameObject, Serializes, Boolean);
 	REFLECTION_DECLAREPROP_SIMPLE_READONLY(GameObject, ObjectId, Integer);
+	REFLECTION_DECLAREPROP(
+		"Exists",
+		Boolean,
+		[](void* p) -> Reflection::GenericValue
+		{
+			return true; // actual logic is handled in `api_gameobjindex`
+		},
+		nullptr
+	);
 	s_Api.Properties["Parent"] = Reflection::PropertyDescriptor
 	{
-		(Reflection::ValueType)((uint8_t)Reflection::ValueType::GameObject + (uint8_t)Reflection::ValueType::Null),
+		REFLECTION_OPTIONAL(GameObject),
 		[](void* p)
 		{
 			return static_cast<GameObject*>(p)->GetParent()->ToGenericValue();
@@ -156,17 +165,6 @@ void GameObject::s_AddObjectApi()
 			static_cast<GameObject*>(p)->SetParent(GameObject::FromGenericValue(gv));
 		}
 	};
-	s_Api.Properties["Exists"] = Reflection::PropertyDescriptor
-	{
-		Reflection::ValueType::Boolean,
-		[](void* p)
-		-> Reflection::GenericValue
-		{
-			return true; // actual logic is handled in `api_gameobjindex`
-		},
-		nullptr
-	};
-
 
 	REFLECTION_DECLAREFUNC(
 		"Destroy",
@@ -286,7 +284,7 @@ void GameObject::s_AddObjectApi()
 	REFLECTION_DECLAREFUNC(
 		"FindChild",
 		{ Reflection::ValueType::String },
-		{ REFLECTION_OPTIONAL(Reflection::ValueType::GameObject) },
+		{ REFLECTION_OPTIONAL(GameObject) },
 		[](void* p, const std::vector<Reflection::GenericValue>& inputs)
 		-> std::vector<Reflection::GenericValue>
 		{
@@ -297,7 +295,7 @@ void GameObject::s_AddObjectApi()
 	REFLECTION_DECLAREFUNC(
 		"FindChildWithComponent",
 		{ Reflection::ValueType::String },
-		{ REFLECTION_OPTIONAL(Reflection::ValueType::GameObject) },
+		{ REFLECTION_OPTIONAL(GameObject) },
 		[](void* p, const std::vector<Reflection::GenericValue>& inputs)
 		-> std::vector<Reflection::GenericValue>
 		{
@@ -783,16 +781,7 @@ Reflection::GenericValue GameObject::GetPropertyValue(const std::string_view& Pr
 	if (const Reflection::PropertyDescriptor* prop = FindProperty(PropName, &ref))
 	{
 		Reflection::GenericValue gv = prop->Get(ref.Referred());
-
-#ifndef NDEBUG
-		Reflection::ValueType base = prop->Type;
-		if ((uint8_t)base > (uint8_t)Reflection::ValueType::Null)
-			base = (Reflection::ValueType)((uint8_t)base - (uint8_t)Reflection::ValueType::Null);
-
-		assert(gv.Type == base
-			|| ((uint8_t)prop->Type > (uint8_t)Reflection::ValueType::Null && gv.Type == Reflection::ValueType::Null)
-		);
-#endif
+		assert(Reflection::TypeFits(prop->Type, gv.Type));
 
 		return prop->Get(ref.Referred());
 	}

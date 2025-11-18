@@ -40,26 +40,23 @@ public:
     {
         static const Reflection::StaticPropertyMap props = 
         {
-			{
-				"SceneCamera",
+			{ "SceneCamera", {
+				REFLECTION_OPTIONAL(GameObject),
+				[](void* p)
+				-> Reflection::GenericValue
 				{
-					REFLECTION_OPTIONAL(Reflection::ValueType::GameObject),
-					[](void* p)
-					-> Reflection::GenericValue
-					{
-						GameObject* cam = static_cast<EcWorkspace*>(p)->GetSceneCamera();
+					GameObject* cam = static_cast<EcWorkspace*>(p)->GetSceneCamera();
 
-						if (cam->ObjectId != s_FallbackCamera->ObjectId)
-							return cam->ToGenericValue();
-						else
-							return {}; // Null
-					},
-					[](void* p, const Reflection::GenericValue& gv)
-					{
-						static_cast<EcWorkspace*>(p)->SetSceneCamera(GameObject::FromGenericValue(gv));
-					}
+					if (cam->ObjectId != s_FallbackCamera->ObjectId)
+						return cam->ToGenericValue();
+					else
+						return {}; // Null
+				},
+				[](void* p, const Reflection::GenericValue& gv)
+				{
+					static_cast<EcWorkspace*>(p)->SetSceneCamera(GameObject::FromGenericValue(gv));
 				}
-			}
+			} }
         };
 
         return props;
@@ -70,13 +67,13 @@ public:
         static const Reflection::StaticMethodMap funcs =
 		{
 			{ "ScreenPointToRay", {
-				{ Reflection::ValueType::Double, Reflection::ValueType::Double, REFLECTION_OPTIONAL(Reflection::ValueType::Double) },
+				{ Reflection::ValueType::Double, Reflection::ValueType::Double, REFLECTION_OPTIONAL(Double) },
 				{ Reflection::ValueType::Vector3 },
 				[](void* p, const std::vector<Reflection::GenericValue>& inputs)
 				-> std::vector<Reflection::GenericValue>
 				{
 					EcWorkspace* w = static_cast<EcWorkspace*>(p);
-					
+
 					double x = inputs[0].AsDouble();
 					double y = inputs[1].AsDouble();
 
@@ -90,8 +87,8 @@ public:
 			} },
 
 			{ "Raycast", {
-				{ Reflection::ValueType::Vector3, Reflection::ValueType::Vector3, REFLECTION_OPTIONAL(Reflection::ValueType::Array), REFLECTION_OPTIONAL(Reflection::ValueType::Boolean) },
-				{ REFLECTION_OPTIONAL(Reflection::ValueType::Map) },
+				{ Reflection::ValueType::Vector3, Reflection::ValueType::Vector3, REFLECTION_OPTIONAL(Array), REFLECTION_OPTIONAL(Boolean) },
+				{ REFLECTION_OPTIONAL(Map) },
 				[](void* p, const std::vector<Reflection::GenericValue>& inputs)
 				-> std::vector<Reflection::GenericValue>
 				{
@@ -139,7 +136,7 @@ public:
 			} },
 
 			{ "GetObjectsInAabb", {
-				{ Reflection::ValueType::Vector3, Reflection::ValueType::Vector3, REFLECTION_OPTIONAL(Reflection::ValueType::Array) },
+				{ Reflection::ValueType::Vector3, Reflection::ValueType::Vector3, REFLECTION_OPTIONAL(Array) },
 				{ Reflection::ValueType::Array },
 				[](void* p, const std::vector<Reflection::GenericValue>& inputs)
 				-> std::vector<Reflection::GenericValue>
@@ -234,7 +231,7 @@ SpatialCastResult EcWorkspace::Raycast(const glm::vec3& Origin, const glm::vec3&
 			glm::vec3 pos = ct->Transform[3];
 			glm::vec3 size = ct->Size;
         
-			IntersectionLib::Intersection hit = IntersectionLib::LineAabb(
+			IntersectionLib::Intersection hit = IntersectionLib::RayAabb(
 				Origin,
 				Vector,
 				pos,
