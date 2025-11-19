@@ -24,8 +24,8 @@ table.insert(TestPlugin.ToolbarButtons, {
     Icon = "@editres/textures/niko.png"
 })
 
-function TestPlugin:OnEditorStageChanged(...)
-    print("Niko is travelling through the stages:", ...)
+function TestPlugin:OnEditorStageChanged(OldStage, NewStage)
+    print(`Niko is travelling through the stages: { OldStage } -> { NewStage }`)
 end
 
 function TestPlugin:OnLoad()

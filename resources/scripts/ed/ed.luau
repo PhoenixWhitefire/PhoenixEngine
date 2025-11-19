@@ -758,11 +758,9 @@ local function renderMainMenuBar(dt: number)
 		local cxavail, _ = imgui.getcontentregionavail()
 		local cursorx, cursory = imgui.cursorposition()
 
-		imgui.setcursorposition(cursorx + cxavail / 2 - 150, cursory)
+		imgui.setcursorposition(cursorx + cxavail / 2 - 150 / 2, cursory)
 
-		imgui.image("@etextures/niko.png", { 150, 150 })
-		imgui.sameline()
-		imgui.image("@etextures/yes.png", { 150, 150 })
+		imgui.image("@etextures/logo.png", { 150, 150 })
 
 		local ttsx, ttsy = imgui.textsize("Phoenix Engine Editor")
 		local utsx, _ = imgui.textsize(GITHUB_URL)
