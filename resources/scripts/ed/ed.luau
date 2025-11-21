@@ -1,5 +1,6 @@
 -- ed.luau, 14/09/2025
 local FALLBACK_IMAGE = "@etextures/editor-icons/fallback.png"
+local LOGO_IMAGE = "@etextures/logo.png"
 
 local PluginManager = require("./PluginManager.luau")
 local CoreTools = require("./CoreTools.luau")
@@ -48,6 +49,14 @@ local MouseClick = false
 
 fs.definealias("editres", "@cwd/resources")
 fs.definealias("etextures", "@editres/textures")
+
+if not fs.isdirectory("@cwd/editor") then
+	fs.mkdir("@cwd/editor")
+end
+
+if not fs.isdirectory("@cwd/projects") then
+	fs.mkdir("@cwd/projects")
+end
 
 local function assert(cond: any, err: string?, ...)
 	if not cond then
@@ -255,21 +264,22 @@ local function createNewProject()
 	assert(fs.mkdir("@projres/materials"))
 	assert(fs.mkdir("@projres/scenes"))
 	assert(fs.mkdir("@projres/sounds"))
+	assert(fs.mkdir("@projres/shaders"))
 	assert(fs.mkdir("@projres/textures"))
 	assert(fs.mkdir("@projres/textures/materials"))
 
 	for _, v in { "error", "worldUber", "worldUberTriProjected", "worldUberSkinned", "skybox", "boxframe", "particle", "postprocessing" } do
-		if fs.isfile(v .. ".shp") then
-			fs.copy(`@editres/shaders/{v}.shp`, `@projres/shaders/{v}.shp`)
+		if fs.isfile(`@editres/shaders/{v}.shp`) then
+			assert(fs.copy(`@editres/shaders/{v}.shp`, `@projres/shaders/{v}.shp`))
 		end
-		if fs.isfile(v .. ".vert") then
-			fs.copy(`@editres/shaders/{v}.vert`, `@projres/shaders/{v}.vert`)
+		if fs.isfile(`@editres/shaders/{v}.vert`) then
+			assert(fs.copy(`@editres/shaders/{v}.vert`, `@projres/shaders/{v}.vert`))
 		end
-		if fs.isfile(v .. ".frag") then
-			fs.copy(`@editres/shaders/{v}.frag`, `@projres/shaders/{v}.frag`)
+		if fs.isfile(`@editres/shaders/{v}.frag`) then
+			assert(fs.copy(`@editres/shaders/{v}.frag`, `@projres/shaders/{v}.frag`))
 		end
-		if fs.isfile(v .. ".geom") then
-			fs.copy(`@editres/shaders/{v}.geom`, `@projres/shaders/{v}.geom`)
+		if fs.isfile(`@editres/shaders/{v}.geom`) then
+			assert(fs.copy(`@editres/shaders/{v}.geom`, `@projres/shaders/{v}.geom`))
 		end
 	end
 
@@ -281,7 +291,7 @@ local function createNewProject()
 
 	assert(fs.copy("@editres/textures/Sky1", "@projres/textures/Sky1"))
 
-	assert(fs.copy("@etextures/editor-icons/fallback.png", "@proj/icon.png"))
+	assert(fs.copy(LOGO_IMAGE, "@proj/icon.png"))
 
 	local dm = GameObject.new("DataModel" :: "DataModel")
 	local projWp = GameObject.new("Workspace" :: "Workspace")
@@ -546,7 +556,7 @@ local function exportProject()
 			if fs.isdirectory(exportTo) then
 				local chosenOption = engine.showmessagebox(
 					"Export will overwrite",
-					`The directory:\n\n{ exportTo }\n\nalready exists. Are you sure you want to overwrite it? This will erase all of it's content!`,
+					`The directory:\n\n{ exportTo }\n\nalready exists. Are you sure you want to overwrite it? This will erase all of its content!`,
 					"yesno",
 					"warning"
 				)
@@ -760,7 +770,7 @@ local function renderMainMenuBar(dt: number)
 
 		imgui.setcursorposition(cursorx + cxavail / 2 - 150 / 2, cursory)
 
-		imgui.image("@etextures/logo.png", { 150, 150 })
+		imgui.image(LOGO_IMAGE, { 150, 150 })
 
 		local ttsx, ttsy = imgui.textsize("Phoenix Engine Editor")
 		local utsx, _ = imgui.textsize(GITHUB_URL)
@@ -932,10 +942,6 @@ local function renderViewport(DeltaTime: number)
 
 	imgui.endw()
 	
-end
-
-if not fs.isdirectory("./editor") then
-	fs.mkdir("./editor")
 end
 
 function Stages.SelectProject_Enter()

@@ -70,11 +70,14 @@ jobs:
           x64/Release
           resources/
           gh-assets/wiki/doc-comments.json
+          gh-assets/wiki/datatypes-prologue.md
+          gh-assets/wiki/libraries-prologue.md
+          gh-assets/wiki/globals-prologue.md
           api-dump.json
           imgui.ini
           debugger-layout.ini
           phoenix.conf
-        retention-days: 3
+        retention-days: 7
 
     - name: Test (Linux)
       shell: bash
