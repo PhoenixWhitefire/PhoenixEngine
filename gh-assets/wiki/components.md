@@ -18,10 +18,10 @@ The Engine support an Entity Component System architecture, meaning that `GameOb
 * `FindChildWithComponent(string) : ((GameObject & any)?)`: Returns a child Object which has the given component, or `nil` if one doesn't exist
 * `ForEachChild((any) -> (any)) : ()`: For all children of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield
 * `GetChildren() : ({ any })`: Returns a list of the Object's direct children
-* `GetComponentNames() : ({ any })`: Returns a list of the names of all Components that the Object currently has
+* `GetComponents() : (keyof<Creatables>)`: Returns a list of the names of all Components that the Object currently has
 * `GetDescendants() : ({ any })`: Returns all descendants of the Object (i.e. its children, and their children, etc)
 * `GetFullName() : (string)`: Returns the full, hierarchal path of the Object
-* `HasComponent(string) : (boolean)`: Returns whether or not the Object has the given Component
+* `HasComponent(keyof<Creatables> | string) : (boolean)`: Returns whether or not the Object has the given Component
 * `MergeWith((GameObject & any)) : ()`: Merges the Objects together, replacing descendants with the same name
 
 ## `Animation`
@@ -213,7 +213,7 @@ No members defined
 * If this is `Destroy`'d, the application closes
 
 ### Properties:
-* `SceneCamera: (GameObject & any)?`: The `Camera` the Player sees the world through. If set to `nil`, a *fallback* is created at the origin.
+* `SceneCamera: (GameObject & Camera)?`: The `Camera` the Player sees the world through. If set to `nil`, a *fallback* is created at the origin
 
 ### Methods:
 * `GetObjectsInAabb(vector, vector, { any }?) : ({ any })`: Get a list of Objects whose bounds are within the AABB

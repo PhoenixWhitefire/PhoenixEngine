@@ -19,7 +19,7 @@ declare extern type EventSignal with
 end
 declare GameObject: {
   validComponents: { string },
-  new: (<T>(ComponentName: T) -> GameObject & index<__Creatables, T>) & ((ComponentName: string) -> GameObject & any)
+  new: (<T>(ComponentName: T) -> GameObject & index<Creatables, T>) & ((ComponentName: string) -> GameObject & any)
 }
 declare extern type Matrix with
   function __mul(self, Param_1: Matrix): ( Matrix )
@@ -67,10 +67,10 @@ declare extern type GameObject with
   function FindChildWithComponent(self, Param_1: string) : ((GameObject & any)?)
   function ForEachChild(self, Param_1: (any) -> (any)) : ()
   function GetChildren(self) : ({ any })
-  function GetComponentNames(self): { keyof<__Creatables> }
+  function GetComponents(self) : (keyof<Creatables>)
   function GetDescendants(self) : ({ any })
   function GetFullName(self) : (string)
-  function HasComponent(self, ComponentName: keyof<__Creatables> | string): boolean
+  function HasComponent(self, ComponentName: keyof<Creatables> | string) : (boolean)
   function MergeWith(self, Param_1: (GameObject & any)) : ()
 end
 declare extern type Animation with
@@ -191,14 +191,13 @@ declare extern type Workspace with
   SceneCamera: (GameObject & Camera)?
 
   function GetObjectsInAabb(self, Param_1: vector, Param_2: vector, Param_3: { any }?) : ({ any })
-  function Raycast(self, Param_1: vector, Param_2: vector, Param_3: { any }?, Param_4: boolean?) : ({ [string]: any }?)
+  function Raycast(self, Origin: vector, CastVector: vector, FilterList: { any }?, FilterIsIgnoreList: boolean?) : ({ [string]: any }?)
   function ScreenPointToRay(self, Param_1: number, Param_2: number, Param_3: number?) : (vector)
 end
 
 
 
-type __Creatables = {
-	string: any,
+type Creatables = {
 	Transform: Transform,
 	Mesh: Mesh & Transform,
 	ParticleEmitter: ParticleEmitter & Transform,

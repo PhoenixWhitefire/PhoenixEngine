@@ -49,11 +49,9 @@ end
 local documentationData = {}
 
 local GameObjectOverrides = {
-	new = "(<T>(ComponentName: T) -> GameObject & index<__Creatables, T>) & ((ComponentName: string) -> GameObject & any)",
-	HasComponent = "(self, ComponentName: keyof<__Creatables> | string): boolean",
+	new = "(<T>(ComponentName: T) -> GameObject & index<Creatables, T>) & ((ComponentName: string) -> GameObject & any)"
 	-- cant figure out how to make the generic work in classes
-	--FindChildWithComponent = "<T>(self, ComponentName: keyof<__Creatables> & T): (GameObject & index<__Creatables, T>)?",
-	GetComponentNames = "(self): { keyof<__Creatables> }"
+	--FindChildWithComponent = "<T>(self, ComponentName: keyof<Creatables> & T): (GameObject & index<Creatables, T>)?",
 }
 
 local function dumpCreatables()
@@ -66,7 +64,7 @@ local function dumpCreatables()
 		ParticleEmitter = " & Transform"
 	}
 
-	definitionsFile ..= "\ntype __Creatables = {\n\tstring: any,\n"
+	definitionsFile ..= "\ntype Creatables = {\n"
 
 	for _, v in GameObject.validComponents do
 		definitionsFile ..= `\t{v}: {v}{if creatablesExtra[v] then creatablesExtra[v] else ""},\n`
@@ -253,16 +251,21 @@ local function dumpReflectionApi(t, d, cn)
 					continue
 				end
 
-				s ..= `* \`{ n }: { rtolsub(v) }\`: { d.Properties[n] }\n`
+				local luautype = rtolsub(v)
+				local docs: any = d.Properties[n]
+				local desc = docs
+
+				if typeof(docs) == "table" then
+					luautype = docs.Type or luautype
+					desc = docs.Description or desc
+				end
+
+				s ..= `* \`{ n }: { luautype }\`: { desc }\n`
 				documentationData[`@luhx/globaltype/{cn}.{n}`] = {
-					documentation = d.Properties[n]
+					documentation = desc
 				}
 
-				if n == "SceneCamera" then
-					definitionsFile ..= `  { n }: { "(GameObject & Camera)?" }\n`
-				else
-					definitionsFile ..= `  { n }: { rtolsub(v) }\n`
-				end
+				definitionsFile ..= `  { n }: { luautype }\n`
 			end
 		end
 
@@ -281,14 +284,22 @@ local function dumpReflectionApi(t, d, cn)
 					continue
 				end
 
-				s ..= `* \`{ n }{ rtolsub(v) }\`: { d.Methods[n] }\n`
-				documentationData[`@luhx/globaltype/{cn}.{n}`] = {
-					documentation = d.Methods[n]
-				}
-				
 				local subst = rtolsub(v)
+				local docs: any = d.Methods[n]
+				local desc = docs
+
+				if typeof(docs) == "table" then
+					subst = docs.Type or subst
+					desc = docs.Description or desc
+				end
+
+				s ..= `* \`{ n }{ subst }\`: { desc }\n`
+				documentationData[`@luhx/globaltype/{cn}.{n}`] = {
+					documentation = desc
+				}
+
 				subst = string.sub(subst, 2, #subst)
-				
+
 				if string.sub(subst, 1, 1) == ")" then -- ") : ()" when no inputs
 					local close = string.find(subst, ") :")
 					assert(close)
@@ -298,15 +309,20 @@ local function dumpReflectionApi(t, d, cn)
 				else
 					local close = string.find(subst, ") :")
 					assert(close)
-					
+
 					local inputsstr = string.sub(subst, 1, close)
 					local inputs = string.split(inputsstr, ", ")
 					local newinputs = {}
-					
+
 					for i, t in inputs do
-						table.insert(newinputs, `Param_{i}: {t}`)
+						if typeof(docs) == "string" or not docs.ParameterNames then
+							table.insert(newinputs, `Param_{i}: {t}`)
+						else
+							assert(typeof(docs.ParameterNames) == "table")
+							table.insert(newinputs, `{docs.ParameterNames[i]}: {t}`)
+						end
 					end
-					
+
 					subst = string.sub(subst, close + 1, #subst)
 					subst = table.concat(newinputs, ", ") .. subst
 					
@@ -317,17 +333,17 @@ local function dumpReflectionApi(t, d, cn)
 				definitionsFile ..= `  function { n }{ subst }\n`
 			end
 		end
-		
+
 		if hasEvnts then
 			definitionsFile ..= "\n"
 			s..= "\n### Events:\n"
 			
 			local orderedEvents = keysOf(t.Events)
 			table.sort(orderedEvents)
-			
+
 			for _, n in orderedEvents do
 				local v = t.Events[n]
-				
+
 				if not d.Events or not d.Events[n] then
 					print(`Missing doc comment for Event '{ cn }.{ n }'`)
 					continue
@@ -343,9 +359,9 @@ local function dumpReflectionApi(t, d, cn)
 	else
 		s = "No members defined\n"
 	end
-	
+
 	s ..= "\n"
-	
+
 	return s
 end
 

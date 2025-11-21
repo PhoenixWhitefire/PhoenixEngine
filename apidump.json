@@ -8,7 +8,7 @@
         "FindChildWithComponent": "(String) -> (GameObject?)",
         "ForEachChild": "(Function) -> ()",
         "GetChildren": "() -> (Array)",
-        "GetComponentNames": "() -> (Array)",
+        "GetComponents": "() -> (Array)",
         "GetDescendants": "() -> (Array)",
         "GetFullName": "() -> (String)",
         "HasComponent": "(String) -> (Boolean)",

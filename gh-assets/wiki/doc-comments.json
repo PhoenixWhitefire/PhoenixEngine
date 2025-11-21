@@ -8,11 +8,17 @@
         "FindChildWithComponent": "Returns a child Object which has the given component, or `nil` if one doesn't exist",
         "ForEachChild": "For all children of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield",
         "GetChildren": "Returns a list of the Object's direct children",
-        "GetComponentNames": "Returns a list of the names of all Components that the Object currently has",
+        "GetComponents": {
+          "Description": "Returns a list of the names of all Components that the Object currently has",
+          "Type": "() : (keyof<Creatables>)"
+        },
         "GetDescendants": "Returns all descendants of the Object (i.e. its children, and their children, etc)",
         "GetFullName": "Returns the full, hierarchal path of the Object",
-        "HasComponent": "Returns whether or not the Object has the given Component",
-        "IsA": "Equivalent to `:HasComponent`",
+        "HasComponent": {
+          "Description": "Returns whether or not the Object has the given Component",
+          "Type": "(keyof<Creatables> | string) : (boolean)",
+          "ParameterNames": [ "ComponentName" ]
+        },
         "MergeWith": "Merges the Objects together, replacing descendants with the same name"
       },
       "Properties": {
@@ -212,11 +218,18 @@
         "Methods": {
           "AabbCast": "Cast an AABB",
           "GetObjectsInAabb": "Get a list of Objects whose bounds are within the AABB",
-          "Raycast": "Cast a ray",
+          "Raycast": { 
+            "Description": "Cast a ray",
+            "Out": "{ Object: GameObject & Mesh & Transform, Position: vector, Normal: vector }?",
+            "ParameterNames": [ "Origin", "CastVector", "FilterList", "FilterIsIgnoreList" ]
+          },
           "ScreenPointToRay": "Converts the provided X and Y screen coordinates to a world-space vector, with the length provided or `1` by default"
         },
         "Properties": {
-          "SceneCamera": "The `Camera` the Player sees the world through. If set to `nil`, a *fallback* is created at the origin."
+          "SceneCamera": {
+            "Description": "The `Camera` the Player sees the world through. If set to `nil`, a *fallback* is created at the origin",
+            "Type": "(GameObject & Camera)?"
+          }
         }
       }
     }

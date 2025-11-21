@@ -172,7 +172,7 @@ public:
 	Reflection::GenericValue GetPropertyValue(const std::string_view&);
 	void SetPropertyValue(const std::string_view&, const Reflection::GenericValue&);
 
-	std::vector<Reflection::GenericValue> CallFunction(const std::string_view&, const std::vector<Reflection::GenericValue>&);
+	std::vector<Reflection::GenericValue> CallMethod(const std::string_view&, const std::vector<Reflection::GenericValue>&);
 
 	Reflection::PropertyMap GetProperties() const;
 	Reflection::MethodMap GetMethods() const;

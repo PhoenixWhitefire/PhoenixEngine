@@ -611,7 +611,7 @@
   "@luhx/globaltype/GameObject.GetChildren": {
     "documentation": "Returns a list of the Object's direct children"
   },
-  "@luhx/globaltype/GameObject.GetComponentNames": {
+  "@luhx/globaltype/GameObject.GetComponents": {
     "documentation": "Returns a list of the names of all Components that the Object currently has"
   },
   "@luhx/globaltype/GameObject.GetDescendants": {
@@ -846,7 +846,7 @@
     "documentation": "Cast a ray"
   },
   "@luhx/globaltype/Workspace.SceneCamera": {
-    "documentation": "The `Camera` the Player sees the world through. If set to `nil`, a *fallback* is created at the origin."
+    "documentation": "The `Camera` the Player sees the world through. If set to `nil`, a *fallback* is created at the origin"
   },
   "@luhx/globaltype/Workspace.ScreenPointToRay": {
     "documentation": "Converts the provided X and Y screen coordinates to a world-space vector, with the length provided or `1` by default"

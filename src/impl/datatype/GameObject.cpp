@@ -308,7 +308,7 @@ void GameObject::s_AddObjectApi()
 	);
 
 	REFLECTION_DECLAREFUNC(
-		"GetComponentNames",
+		"GetComponents",
 		{},
 		{ Reflection::ValueType::Array },
 		[](void* p, const std::vector<Reflection::GenericValue>&)
@@ -802,14 +802,14 @@ void GameObject::SetPropertyValue(const std::string_view& PropName, const Reflec
 	RAISE_RTF("Invalid property '{}' in SetPropertyValue", PropName);
 }
 
-std::vector<Reflection::GenericValue> GameObject::CallFunction(const std::string_view& FuncName, const std::vector<Reflection::GenericValue>& Inputs)
+std::vector<Reflection::GenericValue> GameObject::CallMethod(const std::string_view& FuncName, const std::vector<Reflection::GenericValue>& Inputs)
 {
 	ReflectorRef ref;
 
 	if (const Reflection::MethodDescriptor* func = FindMethod(FuncName, &ref))
 		return func->Func(ref.Referred(), Inputs);
 
-	RAISE_RTF("Invalid function '{}' in CallFunction", FuncName);
+	RAISE_RTF("Invalid function '{}' in CallMethod", FuncName);
 }
 
 Reflection::PropertyMap GameObject::GetProperties() const
