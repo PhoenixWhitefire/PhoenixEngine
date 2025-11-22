@@ -333,13 +333,53 @@ void GameObject::s_AddObjectApi()
 			std::string_view requested = inputs.at(0).AsStringView();
 
 			if (!GameObject::IsValidClass(requested))
-				RAISE_RT("Invalid component type");
+				RAISE_RT("Invalid component");
 			
 			for (const ReflectorRef& ref : static_cast<GameObject*>(p)->Components)
 				if (s_EntityComponentNames[(size_t)ref.Type] == requested)
 					return { true };
 			
 			return { false };
+		}
+	);
+
+	REFLECTION_DECLAREFUNC(
+		"AddComponent",
+		{ Reflection::ValueType::String },
+		{},
+		[](void* p, const std::vector<Reflection::GenericValue>& inputs)
+		-> std::vector<Reflection::GenericValue>
+		{
+			std::string_view requested = inputs.at(0).AsStringView();
+			const auto& it = s_ComponentNameToType.find(requested);
+
+			if (it == s_ComponentNameToType.end())
+				RAISE_RT("Invalid component");
+
+			GameObject* obj = static_cast<GameObject*>(p);
+			obj->AddComponent(it->second);
+
+			return {};
+		}
+	);
+
+	REFLECTION_DECLAREFUNC(
+		"RemoveComponent",
+		{ Reflection::ValueType::String },
+		{},
+		[](void* p, const std::vector<Reflection::GenericValue>& inputs)
+		-> std::vector<Reflection::GenericValue>
+		{
+			std::string_view requested = inputs.at(0).AsStringView();
+			const auto& it = s_ComponentNameToType.find(requested);
+
+			if (it == s_ComponentNameToType.end())
+				RAISE_RT("Invalid component");
+
+			GameObject* obj = static_cast<GameObject*>(p);
+			obj->RemoveComponent(it->second);
+
+			return {};
 		}
 	);
 }

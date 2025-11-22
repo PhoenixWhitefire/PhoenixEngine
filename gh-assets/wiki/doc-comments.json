@@ -2,6 +2,7 @@
   "GameObject": {
     "Base": {
       "Methods": {
+        "AddComponent": "Adds the specified Component to the Object. Will error if it already has it (use `:HasComponent` to check beforehand)",
         "Destroy": "Marks the Object as \"pending for destruction\". This may or may not remove the Object from memory immediately, depending on whether the Engine is keeping a internal reference to it",
         "Duplicate": "Creates a duplicate of the Object",
         "FindChild": "Returns a child Object with the given name, or `nil` if one doesn't exist",
@@ -19,7 +20,8 @@
           "Type": "(keyof<Creatables> | string) : (boolean)",
           "ParameterNames": [ "ComponentName" ]
         },
-        "MergeWith": "Merges the Objects together, replacing descendants with the same name"
+        "MergeWith": "Merges the Objects together, replacing descendants with the same name",
+        "RemoveComponent": "Removes the specified Component from the Object. Will error if does not have it (use `:HasComponent` to check beforehand)"
       },
       "Properties": {
         "Enabled": "Whether the Engine updates and recognizes this Object, essentially freezing it if it is disabled",

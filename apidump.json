@@ -2,6 +2,7 @@
   "GameObject": {
     "Base": {
       "Methods": {
+        "AddComponent": "(String) -> ()",
         "Destroy": "() -> ()",
         "Duplicate": "() -> (GameObject)",
         "FindChild": "(String) -> (GameObject?)",
@@ -12,7 +13,8 @@
         "GetDescendants": "() -> (Array)",
         "GetFullName": "() -> (String)",
         "HasComponent": "(String) -> (Boolean)",
-        "MergeWith": "(GameObject) -> ()"
+        "MergeWith": "(GameObject) -> ()",
+        "RemoveComponent": "(String) -> ()"
       },
       "Properties": {
         "Enabled": "Boolean",

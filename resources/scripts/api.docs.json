@@ -587,6 +587,9 @@
   "@luhx/globaltype/Example.WhereIAm": {
     "documentation": "A 3-dimensional vector quantity"
   },
+  "@luhx/globaltype/GameObject.AddComponent": {
+    "documentation": "Adds the specified Component to the Object. Will error if it already has it (use `:HasComponent` to check beforehand)"
+  },
   "@luhx/globaltype/GameObject.Destroy": {
     "documentation": "Marks the Object as \"pending for destruction\". This may or may not remove the Object from memory immediately, depending on whether the Engine is keeping a internal reference to it"
   },
@@ -634,6 +637,9 @@
   },
   "@luhx/globaltype/GameObject.Parent": {
     "documentation": "The hierarchal parent of the Object, or `nil` if it does not have one"
+  },
+  "@luhx/globaltype/GameObject.RemoveComponent": {
+    "documentation": "Removes the specified Component from the Object. Will error if does not have it (use `:HasComponent` to check beforehand)"
   },
   "@luhx/globaltype/GameObject.Serializes": {
     "documentation": "Whether or not the Object should be saved with the scene if it is serialized with `scene.save`, and whether `:Duplicate` will duplicate it (only applies to descendants)"

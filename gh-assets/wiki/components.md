@@ -12,6 +12,7 @@ The Engine support an Entity Component System architecture, meaning that `GameOb
 * `Serializes: boolean`: Whether or not the Object should be saved with the scene if it is serialized with `scene.save`, and whether `:Duplicate` will duplicate it (only applies to descendants)
 
 ### Methods:
+* `AddComponent(string) : ()`: Adds the specified Component to the Object. Will error if it already has it (use `:HasComponent` to check beforehand)
 * `Destroy() : ()`: Marks the Object as "pending for destruction". This may or may not remove the Object from memory immediately, depending on whether the Engine is keeping a internal reference to it
 * `Duplicate() : ((GameObject & any))`: Creates a duplicate of the Object
 * `FindChild(string) : ((GameObject & any)?)`: Returns a child Object with the given name, or `nil` if one doesn't exist
@@ -23,6 +24,7 @@ The Engine support an Entity Component System architecture, meaning that `GameOb
 * `GetFullName() : (string)`: Returns the full, hierarchal path of the Object
 * `HasComponent(keyof<Creatables> | string) : (boolean)`: Returns whether or not the Object has the given Component
 * `MergeWith((GameObject & any)) : ()`: Merges the Objects together, replacing descendants with the same name
+* `RemoveComponent(string) : ()`: Removes the specified Component from the Object. Will error if does not have it (use `:HasComponent` to check beforehand)
 
 ## `Animation`
 

@@ -61,6 +61,7 @@ declare extern type GameObject with
   Parent: (GameObject & any)?
   Serializes: boolean
 
+  function AddComponent(self, Param_1: string) : ()
   function Destroy(self) : ()
   function Duplicate(self) : ((GameObject & any))
   function FindChild(self, Param_1: string) : ((GameObject & any)?)
@@ -72,6 +73,7 @@ declare extern type GameObject with
   function GetFullName(self) : (string)
   function HasComponent(self, ComponentName: keyof<Creatables> | string) : (boolean)
   function MergeWith(self, Param_1: (GameObject & any)) : ()
+  function RemoveComponent(self, Param_1: string) : ()
 end
 declare extern type Animation with
   Animation: string
