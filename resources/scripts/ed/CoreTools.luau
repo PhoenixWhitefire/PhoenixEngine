@@ -114,7 +114,7 @@ function CoreTools.Update(Project: { Workspace: Workspace })
             IsSurfaceDragging = true
 
             if PrevDragMouseX ~= mx or PrevDragMouseY ~= my then
-               target.Transform = Matrix.fromTranslation(worldHit.Position + worldHit.Normal * worldHit.Object.Size / 2)
+               target.Transform = Matrix.fromTranslation(worldHit.Position + worldHit.Normal * target.Size / 2)
             end
         else
             IsSurfaceDragging = false
