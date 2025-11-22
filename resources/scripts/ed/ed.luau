@@ -818,12 +818,12 @@ end
 
 local function renderViewport(DeltaTime: number)
 	if CurrentStage == "ProjectEditing" and Project.Workspace then
-		local mouseVec = Project.Workspace:ScreenPointToRay(input.mouseposition(), 100)
+		local mouseVec = Project.Workspace:ScreenPointToRay(input.mouseposition(), 1000)
 		local rayresult = Project.Workspace:Raycast(EditorCam.Transform.Position, mouseVec, { SelectionPart })
 
 		if rayresult then
 			SelectionPart.Transform = rayresult.Object.Transform
-			SelectionPart.Size = rayresult.Object.Size
+			SelectionPart.Size = rayresult.Object.Size + vector.create(0.1, 0.1, 0.1)
 			SelectionPart.Parent = workspace
 
 			if input.mousedown("l") and isMouseWithinViewport() then
@@ -858,7 +858,7 @@ local function renderViewport(DeltaTime: number)
 
 		if not PrevSelections[sel.ObjectId] then
 			local new = SelectionPart:Duplicate()
-			new.Transform, new.Size = sel.Transform, sel.Size
+			new.Transform, new.Size = sel.Transform, sel.Size + vector.create(0.1, 0.1, 0.1)
 			new.Tint = Color.new(84/255, 150/255, 1)
 			new.Parent = workspace
 			PrevSelections[sel.ObjectId] = new

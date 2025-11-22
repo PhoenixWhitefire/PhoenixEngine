@@ -16,6 +16,7 @@ namespace ScriptEngine
 {
 	int CompileAndLoad(lua_State*, const std::string& SourceCode, const std::string& ChunkName);
 	nlohmann::json DumpApiToJson();
+	lua_Type ReflectionTypeToLuauType(Reflection::ValueType);
 	
 	struct YieldedCoroutine
 	{
@@ -28,11 +29,11 @@ namespace ScriptEngine
 			Polled // poll a function
 		};
 
+		std::string DebugString;
+
 		lua_State* Coroutine{};
 		int CoroutineReference{};
 		uint32_t ScriptId = PHX_GAMEOBJECT_NULL_ID;
-
-		ResumptionMode Mode = ResumptionMode::INVALID;
 
 		struct
 		{
@@ -43,11 +44,11 @@ namespace ScriptEngine
 		} RmSchedule;
 		std::shared_future<std::vector<Reflection::GenericValue>> RmFuture;
 		std::function<int(lua_State*)> RmPoll;
+
+		ResumptionMode Mode = ResumptionMode::INVALID;
 	};
 
-	extern std::vector<YieldedCoroutine> s_YieldedCoroutines;
-
-	extern const std::unordered_map<Reflection::ValueType, lua_Type> ValueTypeToLuauType;
+	inline std::vector<YieldedCoroutine> s_YieldedCoroutines;
 };
 
 namespace ScriptEngine::L

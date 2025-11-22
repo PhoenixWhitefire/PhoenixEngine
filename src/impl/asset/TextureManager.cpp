@@ -389,6 +389,7 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 				[promise, ActualPath, newResourceId]()
 				{
 					ZoneScopedN("AsyncTextureLoad");
+					ZoneText(ActualPath.data(), ActualPath.size());
 
 					Texture asyncTexture{};
 					asyncTexture.LoadedAsynchronously = true;
@@ -448,14 +449,17 @@ void TextureManager::FinalizeAsyncLoadedTextures()
 		if (!f.valid() || (f.wait_for(std::chrono::seconds(0)) != std::future_status::ready))
 			continue;
 
-		f.wait();
-
 		const Texture& loadedImage = f.get();
-
 		Texture& image = m_Textures.at(loadedImage.ResourceId);
 
+		ZoneScopedN("TextureReady");
+		ZoneText(image.ImagePath.data(), image.ImagePath.size());
+
 		if (image.Status != Texture::LoadStatus::InProgress)
+		{
+			assert(false); // TODO what is this condition
 			continue;
+		}
 
 		image.Status = loadedImage.Status;
 		image.Width = loadedImage.Width;

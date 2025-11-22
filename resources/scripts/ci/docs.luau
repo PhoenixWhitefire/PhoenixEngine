@@ -299,17 +299,16 @@ local function dumpReflectionApi(t, d, cn)
 				}
 
 				subst = string.sub(subst, 2, #subst)
+				local close = string.find(subst, ") :")
+				assert(close)
 
-				if string.sub(subst, 1, 1) == ")" then -- ") : ()" when no inputs
-					local close = string.find(subst, ") :")
-					assert(close)
-
-					subst = "(self)" .. string.sub(subst, close + 1, #subst)
-
+				if string.sub(subst, 1, 1) == ")" then -- ") : ([...])" when no inputs
+					if typeof(docs) == "table" and docs.Out and typeof(docs.Out) == "string" then
+						subst = "(self) : " .. docs.Out
+					else
+						subst = "(self)" .. string.sub(subst, close + 1, #subst)
+					end
 				else
-					local close = string.find(subst, ") :")
-					assert(close)
-
 					local inputsstr = string.sub(subst, 1, close)
 					local inputs = string.split(inputsstr, ", ")
 					local newinputs = {}
@@ -324,6 +323,11 @@ local function dumpReflectionApi(t, d, cn)
 					end
 
 					subst = string.sub(subst, close + 1, #subst)
+
+					if typeof(docs) == "table" and docs.Out and typeof(docs.Out) == "string" then
+						subst = " : " ..  docs.Out
+					end
+
 					subst = table.concat(newinputs, ", ") .. subst
 					
 					subst = "(self, " .. subst

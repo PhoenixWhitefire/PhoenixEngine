@@ -761,9 +761,9 @@ static void init()
 	engine->BindDataModel(root);
 }
 
-static bool isBoolArgument(const char* v, const char* arg)
+static bool isBoolArgument(const char* v, const char* param)
 {
-	return memcmp(v, arg, std::min(strlen(v), strlen(arg))) == 0;
+	return (strlen(param) == (strlen(v) - 2) || strlen(param) == strlen(v)) && memcmp(v, param, strlen(param)) == 0;
 }
 
 static bool checkBoolArgument(const char* v, const char* arg, bool defaultVal)

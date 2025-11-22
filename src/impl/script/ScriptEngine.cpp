@@ -16,27 +16,27 @@
 #include "FileRW.hpp"
 #include "Log.hpp"
 
-std::vector<ScriptEngine::YieldedCoroutine> ScriptEngine::s_YieldedCoroutines{};
-const std::unordered_map<Reflection::ValueType, lua_Type> ScriptEngine::ValueTypeToLuauType =
-{
-		{ Reflection::ValueType::Null,        lua_Type::LUA_TNIL       },
+// depends on the ordering of `Reflection::ValueType`!!
+static const lua_Type s_ValueTypeToLuauType[] = {
+	LUA_TNIL,
 
-		{ Reflection::ValueType::Boolean,     lua_Type::LUA_TBOOLEAN   },
-		{ Reflection::ValueType::Integer,     lua_Type::LUA_TNUMBER    },
-		{ Reflection::ValueType::Double,      lua_Type::LUA_TNUMBER    },
-		{ Reflection::ValueType::String,      lua_Type::LUA_TSTRING    },
-		{ Reflection::ValueType::Vector2,     lua_Type::LUA_TTABLE     },
-		{ Reflection::ValueType::Vector3,     lua_Type::LUA_TVECTOR    },
+	LUA_TBOOLEAN,
+	LUA_TNUMBER, // Integer
+	LUA_TNUMBER, // Double
+	LUA_TSTRING,
 
-		{ Reflection::ValueType::Color,       lua_Type::LUA_TUSERDATA  },
-		{ Reflection::ValueType::Matrix,      lua_Type::LUA_TUSERDATA  },
+	LUA_TUSERDATA, // Color
+	LUA_TUSERDATA, // Vector2
+	LUA_TVECTOR,   // Vector3
+	LUA_TUSERDATA, // Matrix
+	LUA_TUSERDATA, // GameObject
 
-		{ Reflection::ValueType::GameObject,  lua_Type::LUA_TUSERDATA  },
-		{ Reflection::ValueType::Function,    lua_Type::LUA_TFUNCTION  },
+	LUA_TFUNCTION,
 
-		{ Reflection::ValueType::Array,       lua_Type::LUA_TTABLE     },
-		{ Reflection::ValueType::Map,         lua_Type::LUA_TTABLE     }
+	LUA_TTABLE, // Array
+	LUA_TTABLE, // Map
 };
+static_assert(std::size(s_ValueTypeToLuauType) == Reflection::ValueType::__lastBase);
 
 static void pushVector3(lua_State* L, const glm::vec3& vec)
 {
@@ -60,6 +60,14 @@ static void pushMatrix(lua_State* L, const glm::mat4& Matrix)
 	luaL_getmetatable(L, "Matrix");
 	lua_setmetatable(L, -2);
 }
+
+lua_Type ScriptEngine::ReflectionTypeToLuauType(Reflection::ValueType rvt)
+{
+	assert(size_t(rvt & ~Reflection::ValueType::Null) < std::size(s_ValueTypeToLuauType));
+	return s_ValueTypeToLuauType[rvt & ~Reflection::ValueType::Null];
+}
+
+#define JSON_ENCODED_DATA_TAG "__HX_EncodedData"
 
 void ScriptEngine::L::PushJson(lua_State* L, const nlohmann::json& v)
 {
@@ -115,18 +123,44 @@ void ScriptEngine::L::PushJson(lua_State* L, const nlohmann::json& v)
 
 		for (auto it = v.begin(); it != v.end(); ++it)
 		{
-			PushJson(L, it.value());
-			lua_setfield(L, -2, it.key().c_str());
+			std::string key = it.key();
+			const nlohmann::json& data = it.value();
+
+			if (key == JSON_ENCODED_DATA_TAG)
+			{
+				const std::string& type = data["type"];
+				const nlohmann::json& encoded = data["data"];
+
+				if (type == "vector")
+				{
+					lua_pop(L, 1);
+					lua_pushvector(L, encoded[0], encoded[1], encoded[2]);
+					return;
+				}
+				else
+					luaL_error(L, "Unknown encoded datatype '%s'", type.c_str());
+			}
+			else
+				PushJson(L, data);
+
+			lua_setfield(L, -2, key.c_str());
 		}
 
 		break;
 	}
 	default:
 	{
-		lua_pushstring(L, (std::string("< JSON Value : ") + v.type_name() + " >").c_str());
+		assert(false);
+		lua_pushfstring(L, "< JSON Value : %s >", v.type_name());
 	}
 	}
 }
+
+#define ERROR_CONTEXTUALIZED_NVARARGS(e) { \
+if (Context.size() > 0) \
+	luaL_error(L, e " (serializing %s)", Context.c_str()); \
+else \
+	luaL_error(L, e); } \
 
 #define ERROR_CONTEXTUALIZED(e, ...) { \
 if (Context.size() > 0) \
@@ -232,8 +266,11 @@ nlohmann::json ScriptEngine::L::ToJson(lua_State* L, int StackIndex, std::string
 				assert(lua_type(L, -2) == LUA_TSTRING);
 				const char* key = luaL_checkstring(L, -2);
 
+				if (strcmp(key, JSON_ENCODED_DATA_TAG) == 0)
+					ERROR_CONTEXTUALIZED_NVARARGS("The table key '" JSON_ENCODED_DATA_TAG "' is reserved");
+
 				if (Context.size() == 0)
-					Context = "Object";
+					Context = "Dictionary";
 
 				t[key] = L::ToJson(L, -1, Context + "." + key);
 			}
@@ -243,6 +280,20 @@ nlohmann::json ScriptEngine::L::ToJson(lua_State* L, int StackIndex, std::string
 		lua_pop(L, 1);
 
 		return t;
+	}
+
+	case LUA_TVECTOR:
+	{
+		const float* vec = luaL_checkvector(L, StackIndex);
+
+		nlohmann::json value;
+		nlohmann::json& data = value[JSON_ENCODED_DATA_TAG];
+		data["type"] = "vector";
+		data["data"][0] = vec[0];
+		data["data"][1] = vec[1];
+		data["data"][2] = vec[2];
+
+		return value;
 	}
 
 	[[unlikely]] default:
@@ -453,22 +504,20 @@ void ScriptEngine::L::CheckType(lua_State* L, Reflection::ValueType Type, int St
 
 	if (!isOptional || givenType != LUA_TNIL)
 	{
-		Type = Reflection::ValueType(Type & ~Reflection::ValueType::Null);
-		const auto& reflToLuaIt = ValueTypeToLuauType.find(Type);
+		lua_Type lty = ReflectionTypeToLuauType(Type);
 
-		if (reflToLuaIt == ValueTypeToLuauType.end())
-			luaL_error(L,
-				"No defined mapping between a '%s' and a Luau type",
-				Reflection::TypeAsString(Type).c_str()
-			);
-
-		// the literal `if` check inside this function likes to take 190 microseconds in Debug mode for some reason
+		// the literal `if` check inside this function likes to take 190 microseconds sometimes in Debug mode for some reason
 		// probably some cache bullshit
 		// fuck
-		luaL_checktype(L, StackIndex, reflToLuaIt->second);
+		luaL_checktype(L, StackIndex, lty);
 
-		if (reflToLuaIt->second == LUA_TUSERDATA)
-			luaL_checkudata(L, StackIndex, Reflection::TypeAsString(Type).c_str());
+		if (lty == LUA_TUSERDATA)
+		{
+			// dont want the type name to end with `?`
+			// it needs to match with the metatable's `__type`
+			Reflection::ValueType baseTy = Reflection::ValueType(Type & ~Reflection::ValueType::Null);
+			luaL_checkudata(L, StackIndex, Reflection::TypeAsString(baseTy).c_str());
+		}
 	}
 }
 
@@ -728,6 +777,8 @@ int ScriptEngine::L::HandleMethodCall(
 
 void ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(YieldedCoroutine&)> Configure)
 {
+	ZoneScoped;
+
 	if (ImGuiContext* ctx = ImGui::GetCurrentContext(); ctx && ctx->CurrentWindowStack.Size > 1)
 	{
 		lua_Debug ar;
@@ -737,6 +788,9 @@ void ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yie
 			ar.name ? ar.name : "<unknown>"
 		);	
 	}
+
+	lua_Debug ar = {};
+	lua_getinfo(L, 1, "sln", &ar);
 
 	lua_getglobal(L, YIELDBLOCKERTRACKING);
 	if (lua_istable(L, -1) && lua_objlen(L, -1) > 0)
@@ -758,10 +812,8 @@ void ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yie
 			blockers.append("\n");
 		}
 
-		lua_Debug ar;
 		lua_Debug yieldar;
 		lua_getinfo(L, 0, "n", &yieldar);
-		lua_getinfo(L, 1, "sln", &ar);
 
 		RAISE_RTF(
 			"{}:{} in {}: Cannot yield right now with '{}', blocked by the following functions:\n{}",
@@ -774,8 +826,8 @@ void ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yie
 		// if a `lua_Exception` is thrown by `lua_yield`, we hit an assertion in
 		// `ldo.cpp` line 137
 		// LUAU_ASSERT(e.getThread() == L)
-		lua_Debug ar;
-		lua_getinfo(L, 0, "n", &ar);
+		lua_Debug yieldar;
+		lua_getinfo(L, 0, "n", &yieldar);
 		RAISE_RTF("Cannot yield with '{}' right now", ar.name ? ar.name : "<unknown>");
 	}
 
@@ -790,13 +842,15 @@ void ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yie
 	lua_yield(L, NumResults);
 	lua_pushthread(L);
 
-	YieldedCoroutine& yc = s_YieldedCoroutines.emplace_back(
-		L,
-		// make sure the coroutine doesn't get de-alloc'd before we resume it
-		lua_ref(L, -1),
-		scriptId,
-		YieldedCoroutine::ResumptionMode::INVALID
-	);
+	s_YieldedCoroutines.push_back(YieldedCoroutine{
+		.Coroutine = L,
+		.CoroutineReference = lua_ref(L, -1),
+		.ScriptId = scriptId,
+		.Mode = YieldedCoroutine::ResumptionMode::INVALID
+	});
+	YieldedCoroutine& yc = s_YieldedCoroutines.back();
+
+	yc.DebugString = std::format("{}:{} in {}", ar.short_src, ar.currentline, ar.name ? ar.name : "<anonymous>");
 
 	Configure(yc);
 	assert(yc.Mode != YieldedCoroutine::ResumptionMode::INVALID);

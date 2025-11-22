@@ -168,6 +168,9 @@ static void resumeYieldedCoroutines()
 
 		if (nretvals >= 0)
 		{
+			ZoneScopedN("Resume");
+			ZoneText(it->DebugString.data(), it->DebugString.size());
+
 			// make sure the script still exists
 			// modules don't have a `script` global, but they run on their own coroutine independent from
 			// where they are `require`'d from anyway

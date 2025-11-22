@@ -191,7 +191,7 @@ glm::vec3 EcWorkspace::ScreenPointToRay(double x, double y, float length, glm::v
 
 	glm::mat4 projectionMatrixInv = glm::inverse(glm::perspective(
 		glm::radians(cam->FieldOfView),
-		(float)engine->WindowSizeX / (float)engine->WindowSizeY,
+		viewportSize.x / viewportSize.y,
 		cam->NearPlane,
 		cam->FarPlane
 	));
@@ -223,26 +223,23 @@ SpatialCastResult EcWorkspace::Raycast(const glm::vec3& Origin, const glm::vec3&
 		if (FilterIsIgnoreList ? std::find(FilterList.begin(), FilterList.end(), p) != FilterList.end() : false)
 			continue;
     
-		EcMesh* object = p->FindComponent<EcMesh>();
+		EcMesh* cm = p->FindComponent<EcMesh>();
 		EcTransform* ct = p->FindComponent<EcTransform>();
     
-		if (object && ct)
+		if (cm && ct)
 		{
-			glm::vec3 pos = ct->Transform[3];
-			glm::vec3 size = ct->Size;
-        
 			IntersectionLib::Intersection hit = IntersectionLib::RayAabb(
 				Origin,
 				Vector,
-				pos,
-				size
+				cm->CollisionAabb.Position,
+				cm->CollisionAabb.Size - glm::vec3(2.f)
 			);
         
 			if (hit.Occurred)
 				if (hit.Time < closestHit)
 				{
 					intersection = hit;
-					closestHit = hit.Depth;
+					closestHit = hit.Time;
 					hitObject = p;
 				}
 		}

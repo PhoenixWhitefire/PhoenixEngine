@@ -254,12 +254,9 @@ void EcMesh::RecomputeAabb()
 			max = glm::max(max, v);
 			min = glm::min(min, v);
 		}
-		
-		glm::vec3 size = (max - min) / 2.f;
-		glm::vec3 center = (min + max) / 2.f;
 
-		this->CollisionAabb.Position = center;
-		this->CollisionAabb.Size = size;
+		this->CollisionAabb.Position = (min + max) / 2.f;
+		this->CollisionAabb.Size = (max - min) / 2.f;
 	}
 	else if (CollisionFidelity == CollisionFidelityMode::AabbStaticSize)
 	{

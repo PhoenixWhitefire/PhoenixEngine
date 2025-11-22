@@ -6,11 +6,27 @@ return function(describe, test, expect)
 		expect(json.parse('"Hello"')):toBe("Hello")
 	end)
 	test("Encode vector", function()
-		expect(function()
-			json.encode(vector.one)
-		end):toThrow()
+		expect(json.encode(vector.one)):toBe([[{
+  "__HX_EncodedData": {
+    "data": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "type": "vector"
+  }
+}]])
 	end)
-	
+	test("Decode vector", function()
+		expect(json.parse(json.encode(vector.one))):toBe(vector.one)
+	end)
+
+	test("Reserved table key", function()
+		expect(function()
+			json.encode({ __HX_EncodedData = true })
+		end):toThrow("is reserved")
+	end)
+
 	test("Encode array", function()
 		expect(json.encode({ 1, 2, 3 }, 0)):toBe("[\n1.0,\n2.0,\n3.0\n]")
 	end)

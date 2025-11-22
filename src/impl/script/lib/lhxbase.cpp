@@ -204,13 +204,13 @@ static int base_defer(lua_State* L)
 	{
 		.Coroutine = DL,
 		.CoroutineReference = ref,
-		.Mode = ScriptEngine::YieldedCoroutine::ResumptionMode::ScheduledTime,
 		.RmSchedule = {
 			.YieldedAt = GetRunningTime(),
 			.ResumeAt = GetRunningTime() + sleepTime,
 			.NumRetVals = numFnArgs,
 			.PushSleptTime = false
-		}
+		},
+		.Mode = ScriptEngine::YieldedCoroutine::ResumptionMode::ScheduledTime
 	};
 	ScriptEngine::s_YieldedCoroutines.push_back(yc);
 

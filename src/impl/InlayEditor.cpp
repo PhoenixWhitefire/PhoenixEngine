@@ -61,6 +61,8 @@ static std::string GlobalsDocPrologue;
 
 static std::unordered_map<std::string, std::string> ClassIcons{};
 
+static bool ExplorerShouldSeekToCurrentSelection = false;
+
 static GpuFrameBuffer MtlEditorPreview;
 static Scene MtlPreviewScene =
 {
@@ -1356,18 +1358,19 @@ static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] =
 	{
 		std::vector<ObjectHandle> newSelections;
 		newSelections.reserve(Selections.size());
-		
+
 		for (const ObjectHandle& sel : Selections)
 			newSelections.push_back(sel->Duplicate());
-	
+
 		Selections = newSelections;
+		ExplorerShouldSeekToCurrentSelection = true;
 	},
 
 	[]()
 	{
 		for (const ObjectHandle& sel : Selections)
 			sel->Destroy();
-				
+
 		Selections.clear();
 	},
 
@@ -1420,15 +1423,15 @@ static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] =
 		if (path)
 		{
 			std::string fullpath = path;
-	
+
 			// windows SMELLS :( 18/02/2025
 			size_t off = fullpath.find_first_of("\\");
-	
+
 			while (off != std::string::npos)
 				off = fullpath.replace(off, 1, "/").find_first_of("\\");
-	
+
 			size_t resDirOffset = fullpath.find("resources/");
-	
+
 			if (resDirOffset == std::string::npos)
 			{
 				setErrorMessage("Selection must be within the Project's `resources/` directory!");
@@ -1437,23 +1440,23 @@ static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] =
 			{
 				bool readSuccess = false;
 				std::string contents = FileRW::ReadFile(fullpath, &readSuccess);
-			
+
 				if (!readSuccess)
 				{
 					setErrorMessage("Couldn't read file " + fullpath);
 					return;
 				}
-			
+
 				std::vector<ObjectRef> roots = SceneFormat::Deserialize(contents, &readSuccess);
-			
+
 				if (!readSuccess)
 				{
 					setErrorMessage(SceneFormat::GetLastErrorString());
 					return;
 				}
-			
+
 				assert(Selections[0].Dereference());
-			
+
 				for (ObjectRef r : roots)
 					r->SetParent(Selections[0].Dereference());
 			}
@@ -1526,6 +1529,7 @@ static void onTreeItemClicked(GameObject* nodeClicked)
 
 		// restore prev selections
 		Selections = PickerTargets;
+		ExplorerShouldSeekToCurrentSelection = true;
 
 		IsPickingObject = false;
 		PickerTargets.clear();
@@ -1569,10 +1573,16 @@ static void onTreeItemClicked(GameObject* nodeClicked)
 					Selections.push_back(middle);
 		}
 		else
+		{
 			Selections = { nodeClicked };
+			ExplorerShouldSeekToCurrentSelection = true;
+		}
 	}
 	else
+	{
 		Selections = { nodeClicked };
+		ExplorerShouldSeekToCurrentSelection = true;
+	}
 
 	LastSelected = nodeClicked;
 }
@@ -1643,6 +1653,7 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 		if (ImGui::IsMouseDown(ImGuiMouseButton_Right))
 		{
 			Selections = PickerTargets;
+			ExplorerShouldSeekToCurrentSelection = true;
 
 			IsPickingObject = false;
 			PickerTargets.clear();
@@ -1681,8 +1692,6 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 		ReflectorRef primaryComponent = object->Components[0];
 		if (primaryComponent.Type == EntityComponent::Transform && object->Components.size() > 1)
 			primaryComponent = object->Components[1];
-		
-		Texture tex = getIconForComponent(primaryComponent.Type);
 
 		if (!didVisitCurSelection && Selections.size() > 0)
 		{
@@ -1692,6 +1701,8 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 				if (isInSelections(desc))
 				{
 					ImGui::SetNextItemOpen(true);
+					ExplorerShouldSeekToCurrentSelection = false;
+					didVisitCurSelection = true;
 					break;
 				}
 		}
@@ -1741,7 +1752,7 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 2.f); // not the faintest idea
 
 		ImGui::ImageWithBg(
-			tex.GpuId,
+			getIconForComponent(primaryComponent.Type).GpuId,
 			ImVec2(16.f, 16.f),
 			ImVec2(0.f, 0.f),
 			ImVec2(1.f, 1.f),
@@ -1752,7 +1763,7 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 		openInserter = ImGui::IsItemClicked(ImGuiMouseButton_Right) ? true : openInserter;
 		isHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) ? true : isHovered;
 		doubleClick = ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
-		
+
 		ImGui::SameLine();
 		ImGui::TextUnformatted(object->Name.c_str());
 
@@ -1832,6 +1843,7 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 						newObject->SetParent(ObjectInsertionTarget);
 						Selections = { newObject };
 
+						ExplorerShouldSeekToCurrentSelection = true;
 						ObjectInsertionTarget = nullptr;
 					}
 				}
@@ -1959,7 +1971,13 @@ static void propertyTooltip(const std::string_view& PropName, EntityComponent Co
 
 			if (found)
 			{
-				std::string tip = addLinebreaks(it.value(), 75);
+				std::string desc;
+				if (it.value().is_string())
+					desc = it.value();
+				else
+					desc = it.value().value("Description", "No description");
+
+				std::string tip = addLinebreaks(desc, 75);
 
 				PropTips[PropNameStr] = tip;
 				pcit = PropTips.find(PropNameStr);
@@ -2031,6 +2049,11 @@ static void renderDescription(const nlohmann::json& DescriptionJson, size_t nCha
 	if (DescriptionJson.is_string())
 	{
 		std::string desc = addLinebreaks(DescriptionJson, nCharsPerLine);
+		ImGui::Text("* %s", desc.c_str());
+	}
+	else if (DescriptionJson.is_object())
+	{
+		std::string desc = addLinebreaks(DescriptionJson.value("Description", "No description"), nCharsPerLine);
 		ImGui::Text("* %s", desc.c_str());
 	}
 	else if (DescriptionJson.is_array())
@@ -2157,6 +2180,9 @@ static void renderDocumentationViewer()
 
 	ImGui::BeginChild(1983, ImGui::GetContentRegionAvail() * ImVec2(0.2f, 1.f), ImGuiChildFlags_Borders);
 
+	if (DocumentationViewerSection == 0)
+		ImGui::SetNextItemOpen(true);
+
 	bool sectionOpen = ImGui::TreeNodeEx("Game Object", DocumentationViewerSection == 0 ? ImGuiTreeNodeFlags_Selected : 0);
 	if (ImGui::IsItemClicked())
 	{
@@ -2211,6 +2237,9 @@ static void renderDocumentationViewer()
 		ImGui::TreePop();
 	}
 
+	if (DocumentationViewerSection == 1)
+		ImGui::SetNextItemOpen(true);
+
 	sectionOpen = ImGui::TreeNodeEx("Datatypes", DocumentationViewerSection == 1 ? ImGuiTreeNodeFlags_Selected : 0);
 	if (ImGui::IsItemClicked())
 	{
@@ -2242,6 +2271,9 @@ static void renderDocumentationViewer()
 		ImGui::TreePop();
 	}
 
+	if (DocumentationViewerOpen)
+		ImGui::SetNextItemOpen(true);
+
 	sectionOpen = ImGui::TreeNodeEx("Libraries", DocumentationViewerSection == 2 ? ImGuiTreeNodeFlags_Selected : 0);
 	if (ImGui::IsItemClicked())
 	{
@@ -2272,6 +2304,9 @@ static void renderDocumentationViewer()
 
 		ImGui::TreePop();
 	}
+
+	if (DocumentationViewerSection == 3)
+		ImGui::SetNextItemOpen(true);
 
 	sectionOpen = ImGui::TreeNodeEx("Globals", ImGuiTreeNodeFlags_Leaf | (DocumentationViewerSection == 3 ? ImGuiTreeNodeFlags_Selected : 0));
 	if (ImGui::IsItemClicked())
@@ -2318,7 +2353,7 @@ static void renderDocumentationViewer()
 			for (auto ita = props.value().begin(); ita != props.value().end(); ita++)
 			{
 				renderPropertySignature(ita.key(), ita.value());
-				ImGui::Text("* %s", addLinebreaks(apiDocs["Properties"][ita.key()], nCharsPerLine).c_str());
+				renderDescription(apiDocs["Properties"][ita.key()], nCharsPerLine);
 			}
 		}
 
@@ -2336,7 +2371,7 @@ static void renderDocumentationViewer()
 				std::string out = type.substr(iut + 4, type.size() - (iut + 5));
 
 				renderFunctionSignature(ita, in, out);
-				ImGui::Text("* %s", addLinebreaks(apiDocs["Methods"][ita.key()], nCharsPerLine).c_str());
+				renderDescription(apiDocs["Methods"][ita.key()], nCharsPerLine);
 			}
 		}
 
@@ -2357,7 +2392,7 @@ static void renderDocumentationViewer()
 				ImGui::TextUnformatted(((std::string)ita.value()).c_str());
 				ImGui::PopStyleColor();
 
-				ImGui::Text("* %s", addLinebreaks(apiDocs["Events"][ita.key()], nCharsPerLine).c_str());
+				renderDescription(apiDocs["Events"][ita.key()], nCharsPerLine);
 			}
 		}
 
@@ -2816,6 +2851,7 @@ static void renderProperties()
 							{
 								GameObject* target = GameObject::FromGenericValue(newVal);
 								Selections = { target };
+								ExplorerShouldSeekToCurrentSelection = true;
 							}
 							else
 								Selections.clear();
@@ -3096,6 +3132,7 @@ void InlayEditor::SetExplorerRoot(const ObjectHandle NewRoot)
 void InlayEditor::SetExplorerSelections(const std::vector<ObjectHandle>& NewSelections)
 {
 	Selections = NewSelections;
+	ExplorerShouldSeekToCurrentSelection = true;
 }
 
 const std::vector<ObjectHandle>& InlayEditor::GetExplorerSelections()

@@ -79,9 +79,16 @@ local function resetGizmo()
     PrevDragMouseX, PrevDragMouseY = nil, nil
 end
 
-function CoreTools.Update(Project)
+function CoreTools.Update(Project: { Workspace: Workspace })
     local selections = engine.explorerselections()
     local target: (GameObject & Transform)? = (if selections[1] and selections[1]:HasComponent("Transform") then selections[1] else nil) :: any
+
+    if IsSurfaceDragging or IsGizmoDragging then
+        if GizmoPrevTarget and (not target or target ~= GizmoPrevTarget) then
+            engine.setexplorerselections({ GizmoPrevTarget })
+            target = GizmoPrevTarget
+        end
+    end
 
     if not target or not workspace.SceneCamera then
         resetGizmo()
@@ -98,6 +105,8 @@ function CoreTools.Update(Project)
         local worldHit = Project.Workspace:Raycast(camPos, mouseVector, { if IsSurfaceDragging then target else nil })
 
         if worldHit and (IsSurfaceDragging or worldHit.Object == target) then
+            assert(worldHit)
+
             if not IsSurfaceDragging then
                 PrevDragMouseX, PrevDragMouseY = mx, my
             end
@@ -105,7 +114,7 @@ function CoreTools.Update(Project)
             IsSurfaceDragging = true
 
             if PrevDragMouseX ~= mx or PrevDragMouseY ~= my then
-               target.Transform = Matrix.fromTranslation(worldHit.Position - worldHit.Normal * target.Size / 2) -- TODO why is it inverted??
+               target.Transform = Matrix.fromTranslation(worldHit.Position + worldHit.Normal * worldHit.Object.Size / 2)
             end
         else
             IsSurfaceDragging = false

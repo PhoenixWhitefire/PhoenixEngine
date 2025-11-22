@@ -19,3 +19,7 @@
 [submodule "Vendor/tinyfd"]
 	path = Vendor/tinyfd
 	url = https://github.com/PhoenixWhitefire/tinyfd
+[submodule "Vendor/imgui"]
+	path = Vendor/imgui
+	url = https://github.com/ocornut/imgui.git
+	branch = docking
