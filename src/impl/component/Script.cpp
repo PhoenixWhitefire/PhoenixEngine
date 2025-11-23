@@ -15,8 +15,6 @@
 #include "Memory.hpp"
 #include "Log.hpp"
 
-static lua_State* LVM = nullptr;
-
 class ScriptManager : public ComponentManager<EcScript>
 {
 public:
@@ -83,15 +81,6 @@ public:
 			} }
 		};
         return funcs;
-    }
-
-	void Shutdown() override
-    {
-		ComponentManager<EcScript>::Shutdown();
-
-		if (LVM)
-			ScriptEngine::L::Close(LVM);
-		LVM = nullptr;
     }
 };
 
@@ -168,9 +157,6 @@ bool EcScript::Reload()
 	std::string fullName = this->Object->GetFullName();
 	ZoneTextF("Script: %s\nFile: %s", fullName.c_str(), SourceFile.c_str());
 
-	if (!LVM)
-		LVM = ScriptEngine::L::Create("RootLVM");
-
 	ZoneTextF("Script: %s\nFile: %s", fullName.c_str(), SourceFile.c_str());
 
 	bool readSuccess = true;
@@ -181,7 +167,7 @@ bool EcScript::Reload()
 	if (m_L)
 		lua_resetthread(m_L);
 	else
-		m_L = lua_newthread(LVM);
+		m_L = lua_newthread(ScriptEngine::GetCurrentVM().MainThread);
 
 	luaL_sandboxthread(m_L);
 
@@ -236,26 +222,4 @@ bool EcScript::Reload()
 	}
 
 	return false;
-}
-
-static std::stack<lua_State*> s_LvmStack;
-
-void EcScript::PushLVM(const std::string& VmName)
-{
-	if (s_LvmStack.size() == 0)
-		s_LvmStack.push(LVM);
-	
-	s_LvmStack.push(ScriptEngine::L::Create(VmName));
-	LVM = s_LvmStack.top();
-}
-
-void EcScript::PopLVM()
-{
-	if (s_LvmStack.size() == 1)
-		RAISE_RT("Tried to pop Luau VMs with only 1 remaining");
-
-	ScriptEngine::L::Close(LVM);
-	
-	s_LvmStack.pop();
-	LVM = s_LvmStack.top();
 }

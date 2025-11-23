@@ -17,8 +17,10 @@
         "GetFullName": "Returns the full, hierarchal path of the Object",
         "HasComponent": {
           "Description": "Returns whether or not the Object has the given Component",
-          "Type": "(keyof<Creatables> | string) : (boolean)",
-          "ParameterNames": [ "ComponentName" ]
+          "ParameterNames": [
+            "ComponentName"
+          ],
+          "Type": "(keyof<Creatables> | string) : (boolean)"
         },
         "MergeWith": "Merges the Objects together, replacing descendants with the same name",
         "RemoveComponent": "Removes the specified Component from the Object. Will error if does not have it (use `:HasComponent` to check beforehand)"
@@ -196,8 +198,8 @@
       "Transform": {
         "Description": "Gives a physical position and size to an Object",
         "Properties": {
-          "LocalTransform": "The Object's transformation, relative to it's nearest Transform ancestor",
           "LocalSize": "The Object's scale factor, relative to it's nearest Transform ancestor",
+          "LocalTransform": "The Object's transformation, relative to it's nearest Transform ancestor",
           "Size": "The Object's world-space scale factor",
           "Transform": "The Object's world-space transformation"
         }
@@ -220,10 +222,15 @@
         "Methods": {
           "AabbCast": "Cast an AABB",
           "GetObjectsInAabb": "Get a list of Objects whose bounds are within the AABB",
-          "Raycast": { 
+          "Raycast": {
             "Description": "Cast a ray",
             "Out": "{ Object: GameObject & Mesh & Transform, Position: vector, Normal: vector }?",
-            "ParameterNames": [ "Origin", "CastVector", "FilterList", "FilterIsIgnoreList" ]
+            "ParameterNames": [
+              "Origin",
+              "CastVector",
+              "FilterList",
+              "FilterIsIgnoreList"
+            ]
           },
           "ScreenPointToRay": "Converts the provided X and Y screen coordinates to a world-space vector, with the length provided or `1` by default"
         },
@@ -534,6 +541,29 @@
               "NewDataModel: GameObject"
             ]
           },
+          "closevm": {
+            "Description": [
+              "Closes the Luau VM"
+            ],
+            "In": [
+              "VM: string"
+            ]
+          },
+          "createvm": {
+            "Description": [
+              "Creates a new Luau VM with the given name",
+              "The `workspace` and `game` globals of the VM are taken from the currently-bound Datamodel (see `engine.binddatamodel`)"
+            ],
+            "In": [
+              "Name: string"
+            ]
+          },
+          "currentvm": {
+            "Description": [
+              "Returns the name of the currently-bound VM"
+            ],
+            "Out": "string"
+          },
           "daabbs": {
             "Description": [
               "Returns whether AABBs are drawn for all objects with collisions enabled (`.PhysicsCollisions == true`)",
@@ -663,6 +693,27 @@
           "resetviewport": {
             "Description": [
               "Resets the state of the Viewport"
+            ]
+          },
+          "runinvm": {
+            "Description": [
+              "Runs the given code in the specified VM",
+              "Returns `false` and an error message upon compilation failure",
+              "Returns a status code otherwise, along with a status message",
+              "A status code of `0` means success"
+            ],
+            "In": [
+              "VM: string, Code: string, ChunkName: string?"
+            ],
+            "Out": "number | false, string"
+          },
+          "setcurrentvm": {
+            "Description": [
+              "Makes the given VM \"current\"",
+              "This causes all Scripts which load afterward to use the specified VM, it does *not* change the VM of any Scripts loaded beforehand"
+            ],
+            "In": [
+              "VM: string"
             ]
           },
           "setexplorerroot": {

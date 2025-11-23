@@ -25,6 +25,9 @@ local RecentProjects: { string } = {}
 
 local EDITOR_RECENT_PROJECTS_PATH = "./editor/recent-projects.json"
 
+local GameEditingVM = "GameEditingVM"
+local GameVM = "GameVM"
+
 EditorCam.UseSimpleController = true
 EditorTl.Parent = workspace
 EditorTl.Scripting = false
@@ -224,6 +227,10 @@ local function openProject(ManualPath: string?)
 
 	Project.Name = path
 	changeStageTo("ProjectEditing")
+
+	engine.binddatamodel(Project.DataModel)
+	engine.createvm(GameEditingVM)
+	engine.binddatamodel(game)
 end
 
 local SavedProjectsCache: { string }? = nil
@@ -897,13 +904,7 @@ local function renderViewport(DeltaTime: number)
 		imgui.sameline()
 
 		if imgui.button("Run") then
-			local thread, error = loadthread(CommandBarCommand, "CommandBar")
-
-			if not thread then
-				print(`Failed to run command, error: {error}`)
-			else
-				coroutine.resume(thread)
-			end
+			print(engine.runinvm(if CurrentStage == "ProjectEditing" then GameEditingVM else GameVM, CommandBarCommand, "=CommandBar"))
 		end
 		imgui.sameline()
 
@@ -1226,6 +1227,8 @@ function Stages.ProjectEditing_Leave(NextStage)
 	Project.DataModel = nil
 
 	conf.save()
+
+	engine.closevm(GameEditingVM)
 end
 
 local restoreState = nil
@@ -1242,7 +1245,8 @@ function Stages.ProjectPlaying_Enter()
 	engine.physicstimescale(1)
 
 	engine.binddatamodel(Project.DataModel) -- Set the `game` and `workspace` variables to the correct values in game scripts
-	engine.pushlvm("GameScripts")
+	engine.createvm(GameVM)
+	engine.setcurrentvm(GameVM)
 	
 	local projWp = Project.Workspace
 	assert(projWp)
@@ -1270,7 +1274,8 @@ function Stages.ProjectPlaying_Leave()
 	Project.DataModel = restoreState
 	engine.setexplorerroot(Project.DataModel)
 
-	engine.poplvm()
+	engine.setcurrentvm(_VMNAME)
+	engine.closevm(GameVM)
 	engine.binddatamodel(game)
 	
 	workspace.SceneCamera = EditorCam

@@ -113,7 +113,7 @@ static int base_loadthread(lua_State* L)
 {
 	const char* code = luaL_checkstring(L, 1);
 	const char* chname = luaL_optstring(L, 2, code);
-	
+
 	// module needs to run in a new thread, isolated from the rest
 	// note: we create ML on main thread so that it doesn't inherit environment of L
 	lua_State* GL = lua_mainthread(L);
@@ -122,7 +122,7 @@ static int base_loadthread(lua_State* L)
 
 	// new thread needs to have the globals sandboxed
 	luaL_sandboxthread(ML);
-	
+
 	if (ScriptEngine::CompileAndLoad(ML, code, chname) == 0)
 	{
 		lua_pushthread(ML);

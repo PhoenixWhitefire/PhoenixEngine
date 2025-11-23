@@ -145,9 +145,14 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * To *set* the size of the window, use `.setwindowsize`
 #### `engine.unloadtexture(Path: string): `
 * Unloads the given texture from the Engine's cache
-#### `engine.pushlvm(VmName: string): `
-* Pushes a new Luau VM to the Luau VM stack. Scripts resumed past that point will run in the new VM
-* The `game` and `workspace` globals in the new VM will depend on the current bound datamodel
+#### `engine.closevm(VM: string): `
+* Closes the Luau VM
+#### `engine.toolnames(): { string }`
+* Returns a list of valid Engine tools
+#### `engine.framerate(): number`
+* Returns the current framerate
+#### `engine.setwindowsize(Width: number, Height: number): `
+* Sets the size of the window to the specified two Width and Height integers
 #### `engine.daabbs(Enabled: boolean?): boolean`
 * Returns whether AABBs are drawn for all objects with collisions enabled (`.PhysicsCollisions == true`)
 * Optionally, the visualization can be enabled/disabled by passing in a boolean argument
@@ -156,32 +161,37 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * The returned number will be the selected option: `0` for Cancel/No, `1` for Ok/Yes, `2` for No in `yesnocancel`
 * This is a blocking operation and no scripts or other parts of the Engine run until the message is dismissed
 * Avoid using quotes (`'` and `"`) or backticks (`\``) in the `Message`
-#### `engine.explorerselections(): { GameObject }`
-* Returns what is currently selected in the Explorer
-#### `engine.setwindowsize(Width: number, Height: number): `
-* Sets the size of the window to the specified two Width and Height integers
+#### `engine.setmaxframerate(MaxFramerate: number): `
+* Sets the maximum framerate the Engine will reach before self-limiting
+#### `engine.currentvm(): string`
+* Returns the name of the currently-bound VM
 #### `engine.resetviewport(): `
 * Resets the state of the Viewport
 #### `engine.setvsync(VSyncEnabled: boolean): `
 * Enables/disables VSync
-#### `engine.toolnames(): { string }`
-* Returns a list of valid Engine tools
+#### `engine.createvm(Name: string): `
+* Creates a new Luau VM with the given name
+* The `workspace` and `game` globals of the VM are taken from the currently-bound Datamodel (see `engine.binddatamodel`)
 #### `engine.binddatamodel(NewDataModel: GameObject): `
 * Switches Data Models to the specified Object
 #### `engine.settoolenabled(Tool: string, Enabled: boolean): `
 * Enables/disables the given tool
 #### `engine.setviewport(PositionX: number, PositionY: number, Width: number, Height: number): `
 * Configures the Engine to act as though the Viewport is at the given position with the given size
-#### `engine.exit(ExitCode: number? [ 0 ]): `
-* Shuts down the Engine and exits the process with the specified Exit Code (or 0 by default)
-#### `engine.poplvm(): `
-* Pops the topmost Luau VM from the VM stack, causing the VM below it to be used for any Scripts resumed beyond that point
-#### `engine.setfullscreen(Fullscreen: boolean): `
-* Enables/disables fullscreen mode
 #### `engine.setexplorerroot(Root: GameObject): `
 * Changes the Root of the built-in Explorer's hierarchy view
-#### `engine.setmaxframerate(MaxFramerate: number): `
-* Sets the maximum framerate the Engine will reach before self-limiting
+#### `engine.exit(ExitCode: number? [ 0 ]): `
+* Shuts down the Engine and exits the process with the specified Exit Code (or 0 by default)
+#### `engine.setfullscreen(Fullscreen: boolean): `
+* Enables/disables fullscreen mode
+#### `engine.runinvm(VM: string, Code: string, ChunkName: string?): number | false, string`
+* Runs the given code in the specified VM
+* Returns `false` and an error message upon compilation failure
+* Returns a status code otherwise, along with a status message
+* A status code of `0` means success
+#### `engine.setcurrentvm(VM: string): `
+* Makes the given VM "current"
+* This causes all Scripts which load afterward to use the specified VM, it does *not* change the VM of any Scripts loaded beforehand
 #### `engine.physicstimescale(Timescale: number): `
 * Sets the time scale factor of the physics simulation
 #### `engine.setexplorerselections(Selections: { GameObject }): `
@@ -191,16 +201,16 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `engine.toolenabled(Tool: string): boolean`
 * Returns whether the given tool is currently enabled
 * To *enable* or *disable* the tool, use `.settoolenabled`
-#### `engine.args(): { string }`
-* Returns the list of launch arguments given to the Engine
-* The first item is always the path to the Engine executable
+#### `engine.explorerselections(): { GameObject }`
+* Returns what is currently selected in the Explorer
 #### `engine.dwireframes(Enabled: boolean?): boolean`
 * Returns whether all visible 3D objects are being rendered with wireframes
 * Optionally, the visualization can be enabled/disabled by passing in a boolean argument
 #### `engine.isheadless(): boolean`
 * Returns whether the Engine is currently running Headless mode
-#### `engine.framerate(): number`
-* Returns the current framerate
+#### `engine.args(): { string }`
+* Returns the list of launch arguments given to the Engine
+* The first item is always the path to the Engine executable
 #### `engine.maxframerate(): number`
 * Returns the current maximum framerate setting
 * To *set* the maximum framerate, use `.setmaxframerate`

@@ -38,6 +38,34 @@ static const lua_Type s_ValueTypeToLuauType[] = {
 };
 static_assert(std::size(s_ValueTypeToLuauType) == Reflection::ValueType::__lastBase);
 
+#define ROOT_LVM_NAME "RootLVM"
+
+void ScriptEngine::Initialize()
+{
+	RegisterNewVM(ROOT_LVM_NAME);
+	CurrentVM = ROOT_LVM_NAME;
+}
+
+const ScriptEngine::LuauVM& ScriptEngine::RegisterNewVM(const std::string& Name)
+{
+	const auto& it = VMs.find(Name);
+	if (it != VMs.end())
+		RAISE_RT("A VM already exists with that name");
+
+	VMs[Name] = {
+		.Name = Name,
+		.MainThread = L::Create(Name)
+	};
+
+	return VMs[Name];
+}
+
+const ScriptEngine::LuauVM& ScriptEngine::GetCurrentVM()
+{
+	assert(VMs.find(CurrentVM) != VMs.end());
+	return VMs[CurrentVM];
+}
+
 static void pushVector3(lua_State* L, const glm::vec3& vec)
 {
 	lua_pushvector(L, vec.x, vec.y, vec.z);
@@ -430,6 +458,7 @@ int ScriptEngine::CompileAndLoad(lua_State* L, const std::string& SourceCode, co
 	const char* mutableGlobals[] = 
 	{
 		"game", "workspace", "script",
+		"_CHUNKNAME",
 		NULL
 	};
 
@@ -445,7 +474,13 @@ int ScriptEngine::CompileAndLoad(lua_State* L, const std::string& SourceCode, co
 	if (result == 0)
 	{
 		lua_pushlstring(L, ChunkName.data(), ChunkName.size());
+
+		int wasReadOnly = lua_getreadonly(L, LUA_GLOBALSINDEX);
+		lua_setreadonly(L, LUA_GLOBALSINDEX, 0);
+
 		lua_setglobal(L, "_CHUNKNAME");
+
+		lua_setreadonly(L, LUA_GLOBALSINDEX, wasReadOnly);
 	}
 
 	return result;
@@ -541,7 +576,13 @@ Reflection::GenericValue ScriptEngine::L::ToGeneric(lua_State* L, int StackIndex
 					lua_pop(CL, 1); // pop nil value
 					lua_newtable(CL);
 					lua_pushvalue(CL, -1); // B
+
+					bool wasReadOnly = lua_getreadonly(CL, LUA_GLOBALSINDEX);
+					lua_setreadonly(CL, LUA_GLOBALSINDEX, false);
+
 					lua_setglobal(CL, YIELDBLOCKERTRACKING); // leaves same empty table at stack top after popping B
+
+					lua_setreadonly(CL, LUA_GLOBALSINDEX, wasReadOnly);
 				}
 
 				int ybsize = lua_objlen(CL, -1);

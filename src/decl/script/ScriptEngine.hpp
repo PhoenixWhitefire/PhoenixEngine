@@ -14,6 +14,8 @@
 
 namespace ScriptEngine
 {
+	void Initialize();
+
 	int CompileAndLoad(lua_State*, const std::string& SourceCode, const std::string& ChunkName);
 	nlohmann::json DumpApiToJson();
 	lua_Type ReflectionTypeToLuauType(Reflection::ValueType);
@@ -50,6 +52,18 @@ namespace ScriptEngine
 	};
 
 	inline std::vector<YieldedCoroutine> s_YieldedCoroutines;
+
+	struct LuauVM
+	{
+		std::string Name;
+		lua_State* MainThread = nullptr;
+	};
+
+	const LuauVM& GetCurrentVM();
+	const LuauVM& RegisterNewVM(const std::string& Name);
+
+	inline std::unordered_map<std::string, LuauVM> VMs;
+	inline std::string CurrentVM;
 };
 
 namespace ScriptEngine::L

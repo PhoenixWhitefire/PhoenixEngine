@@ -71,6 +71,15 @@
   "@luhx/global/engine.binddatamodel": {
     "documentation": "* Switches Data Models to the specified Object"
   },
+  "@luhx/global/engine.closevm": {
+    "documentation": "* Closes the Luau VM"
+  },
+  "@luhx/global/engine.createvm": {
+    "documentation": "* Creates a new Luau VM with the given name\n* The `workspace` and `game` globals of the VM are taken from the currently-bound Datamodel (see `engine.binddatamodel`)"
+  },
+  "@luhx/global/engine.currentvm": {
+    "documentation": "* Returns the name of the currently-bound VM"
+  },
   "@luhx/global/engine.daabbs": {
     "documentation": "* Returns whether AABBs are drawn for all objects with collisions enabled (`.PhysicsCollisions == true`)\n* Optionally, the visualization can be enabled/disabled by passing in a boolean argument"
   },
@@ -101,14 +110,14 @@
   "@luhx/global/engine.physicstimescale": {
     "documentation": "* Sets the time scale factor of the physics simulation"
   },
-  "@luhx/global/engine.poplvm": {
-    "documentation": "* Pops the topmost Luau VM from the VM stack, causing the VM below it to be used for any Scripts resumed beyond that point"
-  },
-  "@luhx/global/engine.pushlvm": {
-    "documentation": "* Pushes a new Luau VM to the Luau VM stack. Scripts resumed past that point will run in the new VM\n* The `game` and `workspace` globals in the new VM will depend on the current bound datamodel"
-  },
   "@luhx/global/engine.resetviewport": {
     "documentation": "* Resets the state of the Viewport"
+  },
+  "@luhx/global/engine.runinvm": {
+    "documentation": "* Runs the given code in the specified VM\n* Returns `false` and an error message upon compilation failure\n* Returns a status code otherwise, along with a status message\n* A status code of `0` means success"
+  },
+  "@luhx/global/engine.setcurrentvm": {
+    "documentation": "* Makes the given VM \"current\"\n* This causes all Scripts which load afterward to use the specified VM, it does *not* change the VM of any Scripts loaded beforehand"
   },
   "@luhx/global/engine.setexplorerroot": {
     "documentation": "* Changes the Root of the built-in Explorer's hierarchy view"

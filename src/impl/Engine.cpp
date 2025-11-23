@@ -728,6 +728,8 @@ void Engine::Start()
 
 	Log::Info("Final initializations...");
 
+	ScriptEngine::Initialize(); // can only do this after datamodel is bound
+
 	double RunningTime = GetRunningTime();
 
 	// `LastFrameBegan` is for deltatime

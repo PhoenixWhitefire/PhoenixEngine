@@ -179,18 +179,87 @@ static int engine_explorerselections(lua_State* L)
     return 1;
 }
 
-static int engine_pushlvm(lua_State* L)
+static int engine_createvm(lua_State* L)
 {
-    EcScript::PushLVM(luaL_checkstring(L, 1));
+    ScriptEngine::RegisterNewVM(luaL_checkstring(L, 1));
 
     return 0;
 }
 
-static int engine_poplvm(lua_State*)
+static int engine_closevm(lua_State* L)
 {
-    EcScript::PopLVM();
+    const auto& it = ScriptEngine::VMs.find(luaL_checkstring(L, 1));
+    if (it == ScriptEngine::VMs.end())
+        luaL_error(L, "Invalid VM");
+
+    ScriptEngine::L::Close(it->second.MainThread);
+    ScriptEngine::VMs.erase(it);
 
     return 0;
+}
+
+static int engine_currentvm(lua_State* L)
+{
+    lua_pushlstring(L, ScriptEngine::CurrentVM.data(), ScriptEngine::CurrentVM.size());
+    return 1;
+}
+
+static int engine_setcurrentvm(lua_State* L)
+{
+    std::string vm = luaL_checkstring(L, 1);
+    if (ScriptEngine::VMs.find(vm) == ScriptEngine::VMs.end())
+        luaL_error(L, "Invalid VM '%s'", vm.c_str());
+
+    ScriptEngine::CurrentVM = vm;
+
+    return 0;
+}
+
+static int engine_runinvm(lua_State* L)
+{
+    const char* vmName = luaL_checkstring(L, 1);
+
+    const auto& it = ScriptEngine::VMs.find(vmName);
+    if (it == ScriptEngine::VMs.end())
+        luaL_error(L, "Invalid VM '%s'", vmName);
+
+    const ScriptEngine::LuauVM& vm = it->second;
+
+    const char* code = luaL_checkstring(L, 2);
+	const char* chname = luaL_optstring(L, 3, code);
+
+	lua_State* ML = lua_newthread(vm.MainThread);
+
+    if (ScriptEngine::CompileAndLoad(ML, code, chname) == 0)
+	{
+		int result = lua_resume(ML, ML, 0);
+        lua_pushinteger(L, result);
+
+        const char* const ResultToMessage[] =
+        {
+            "ok",
+            "yield",
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            "break"
+        };
+
+        const char* message = ResultToMessage[result];
+
+        if (message)
+            lua_pushstring(L, message);
+        else
+            lua_pushstring(L, lua_tostring(ML, -1));
+	}
+	else
+	{
+        lua_pushboolean(L, false);
+        lua_pushstring(L, lua_tostring(ML, -1));
+	}
+
+    return 2;
 }
 
 #include "GlobalJsonConfig.hpp"
@@ -333,8 +402,11 @@ static luaL_Reg engine_funcs[] =
     { "setexplorerroot", engine_setexplorerroot },
     { "setexplorerselections", engine_setexplorerselections },
     { "explorerselections", engine_explorerselections },
-    { "pushlvm", engine_pushlvm },
-    { "poplvm", engine_poplvm },
+    { "createvm", engine_createvm },
+    { "closevm", engine_closevm },
+    { "currentvm", engine_currentvm },
+    { "setcurrentvm", engine_setcurrentvm },
+    { "runinvm", engine_runinvm },
     { "toolnames", engine_toolnames },
     { "settoolenabled", engine_settoolenabled },
     { "toolenabled", engine_toolenabled },
