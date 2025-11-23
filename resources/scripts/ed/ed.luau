@@ -500,6 +500,11 @@ local function exportProject()
 	local exportName = Project.Name
 	local exportDir = fs.promptopenfolder("Choose export directory")
 	local exportTo = `{exportDir}/{exportName}`
+
+	if not exportDir then
+		print("No export directory selected, export cancelled")
+		return
+	end
 	
 	local prevExportTo = ""
 

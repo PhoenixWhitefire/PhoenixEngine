@@ -3,7 +3,8 @@
 #include "datatype/GameObject.hpp"
 #include "datatype/Color.hpp"
 
-struct EcLight
+template <EntityComponent T>
+struct EcLight : Component<T>
 {
 	Color LightColor{ 1.f, 1.f, 1.f };
 	float Brightness = 1.f;
@@ -11,14 +12,12 @@ struct EcLight
 	bool Valid = true;
 };
 
-struct EcPointLight : public EcLight
+struct EcPointLight : public EcLight<EntityComponent::PointLight>
 {
 	float Range = 16.f;
-	
-	static inline EntityComponent Type = EntityComponent::PointLight;
 };
 
-struct EcDirectionalLight : public EcLight
+struct EcDirectionalLight : public EcLight<EntityComponent::DirectionalLight>
 {
 	glm::vec3 ShadowViewOffset;
 	float ShadowViewDistance = 200.f;
@@ -29,14 +28,10 @@ struct EcDirectionalLight : public EcLight
 	bool ShadowViewMoveWithCamera = true;
 
 	ObjectRef Object;
-
-	static inline EntityComponent Type = EntityComponent::DirectionalLight;
 };
 
-struct EcSpotLight : public EcLight
+struct EcSpotLight : public EcLight<EntityComponent::SpotLight>
 {
 	float Range = 16.f;
 	float Angle = 45.f;
-
-	static inline EntityComponent Type = EntityComponent::SpotLight;
 };

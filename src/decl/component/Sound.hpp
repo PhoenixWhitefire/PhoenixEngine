@@ -11,7 +11,7 @@
 
 #include "datatype/GameObject.hpp"
 
-struct EcSound
+struct EcSound : public Component<EntityComponent::Sound>
 {
 	void Update(double);
 	void Reload();
@@ -35,8 +35,6 @@ struct EcSound
 	
 	bool m_PlayRequested = false;
 	bool Valid = true;
-
-	static const EntityComponent Type = EntityComponent::Sound;
 };
 
 class SoundManager : public ComponentManager<EcSound>

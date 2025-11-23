@@ -4,14 +4,12 @@
 
 #include "datatype/GameObject.hpp"
 
-struct EcBone
+struct EcBone : public Component<EntityComponent::Bone>
 {
 	glm::mat4 Transform{ 1.f };
 	uint8_t SkeletalBoneId = UINT8_MAX;
 	ObjectRef Object;
 	bool Valid = true;
-
-	static const EntityComponent Type = EntityComponent::Bone;
 };
 
 /*

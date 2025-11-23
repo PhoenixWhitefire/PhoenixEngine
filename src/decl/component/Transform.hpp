@@ -4,7 +4,7 @@
 
 #include "datatype/GameObject.hpp"
 
-struct EcTransform
+struct EcTransform : public Component<EntityComponent::Transform>
 {
     void SetWorldTransform(glm::mat4&);
 	void SetWorldSize(glm::vec3&);
@@ -19,6 +19,4 @@ struct EcTransform
     
     ObjectRef Object;
     bool Valid = true;
-
-    static inline EntityComponent Type = EntityComponent::Transform;
 };

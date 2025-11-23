@@ -8,7 +8,7 @@
 #include "datatype/GameObject.hpp"
 #include "datatype/ValueGradient.hpp"
 
-struct EcParticleEmitter
+struct EcParticleEmitter : public Component<EntityComponent::ParticleEmitter>
 {
 	EcParticleEmitter();
 
@@ -28,8 +28,6 @@ struct EcParticleEmitter
 	ValueGradient<float> TransparencyOverTime;
 	ValueGradient<float> SizeOverTime;
 	ValueGradient<glm::vec3> VelocityOverTime;
-
-	static inline EntityComponent Type = EntityComponent::ParticleEmitter;
 
 	struct Particle
 	{

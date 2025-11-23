@@ -131,6 +131,12 @@ public:
 	virtual const Reflection::StaticEventMap& GetEvents() { static Reflection::StaticEventMap e{}; return e; };
 };
 
+template <EntityComponent T>
+struct Component
+{
+	static inline EntityComponent Type = T;
+};
+
 class GameObject
 {
 public:

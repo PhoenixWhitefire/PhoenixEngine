@@ -6,7 +6,7 @@
 
 #include "datatype/GameObject.hpp"
 
-struct EcExample
+struct EcExample : public Component<EntityComponent::Example>
 {
 	bool SuperCoolBool = true;
 	int64_t SomeInteger = 64;
@@ -19,6 +19,4 @@ struct EcExample
 
 	ObjectRef Object;
 	bool Valid = true;
-
-	static const EntityComponent Type = EntityComponent::Example;
 };

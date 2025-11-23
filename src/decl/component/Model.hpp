@@ -2,8 +2,7 @@
 
 #include "datatype/GameObject.hpp"
 
-struct EcModel
+struct EcModel : public Component<EntityComponent::Model>
 {
 	bool Valid = true;
-	static const EntityComponent Type = EntityComponent::Model;
 };

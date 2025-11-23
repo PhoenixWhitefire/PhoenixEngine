@@ -17,13 +17,14 @@ namespace ScriptEngine
 	int CompileAndLoad(lua_State*, const std::string& SourceCode, const std::string& ChunkName);
 	nlohmann::json DumpApiToJson();
 	lua_Type ReflectionTypeToLuauType(Reflection::ValueType);
-	
+	void StepScheduler();
+
 	struct YieldedCoroutine
 	{
 		enum class ResumptionMode : uint8_t
 		{
 			INVALID = 0,
-			
+
 			ScheduledTime, // resume at a specific time
 			Future, // check the status of an `std::shared_future`
 			Polled // poll a function

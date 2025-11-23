@@ -23,6 +23,7 @@
 #include "component/Script.hpp"
 #include "component/Sound.hpp"
 #include "component/Light.hpp"
+#include "script/ScriptEngine.hpp"
 #include "GlobalJsonConfig.hpp"
 #include "ThreadManager.hpp"
 #include "UserInput.hpp"
@@ -885,6 +886,8 @@ void Engine::Start()
 				ViewportNodeId = ImGui::DockSpaceOverViewport(0, viewport, ImGuiDockNodeFlags_PassthruCentralNode);
 			}
 		}
+
+		ScriptEngine::StepScheduler(); // scripts may try to draw Dear ImGui, this needs to be AFTER `ImGui::NewFrame`
 
 		EcWorkspace* workspaceComponent = WorkspaceRef->FindComponent<EcWorkspace>();
 		ObjectHandle sceneCamObject = workspaceComponent->GetSceneCamera();

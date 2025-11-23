@@ -12,7 +12,7 @@ struct SpatialCastResult
 	bool Occurred = false;
 };
 
-struct EcWorkspace
+struct EcWorkspace : public Component<EntityComponent::Workspace>
 {
 	void Update() const;
 
@@ -27,8 +27,6 @@ struct EcWorkspace
 	uint32_t m_SceneCameraId = PHX_GAMEOBJECT_NULL_ID;
 	ObjectRef Object;
 	bool Valid = true;
-
-	static inline EntityComponent Type = EntityComponent::Workspace;
 };
 
 /*

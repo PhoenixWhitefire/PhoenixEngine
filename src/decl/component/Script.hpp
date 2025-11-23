@@ -5,7 +5,7 @@
 
 #include "datatype/GameObject.hpp"
 
-struct EcScript
+struct EcScript : public Component<EntityComponent::Script>
 {
 	bool LoadScript(const std::string_view&);
 	bool Reload();
@@ -20,8 +20,6 @@ struct EcScript
 	
 	lua_State* m_L = nullptr;
 	bool m_StaleSource = true;
-
-	static inline EntityComponent Type = EntityComponent::Script;
 
 	static void PushLVM(const std::string& Name);
 	static void PopLVM();

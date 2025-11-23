@@ -67,6 +67,115 @@ lua_Type ScriptEngine::ReflectionTypeToLuauType(Reflection::ValueType rvt)
 	return s_ValueTypeToLuauType[rvt & ~Reflection::ValueType::Null];
 }
 
+static int shouldResume_Scheduled(
+	const ScriptEngine::YieldedCoroutine& CorInfo,
+	lua_State* L
+)
+{
+	if (double curTime = GetRunningTime(); curTime >= CorInfo.RmSchedule.ResumeAt)
+	{
+		if (CorInfo.RmSchedule.PushSleptTime)
+			lua_pushnumber(L, curTime - CorInfo.RmSchedule.YieldedAt);
+
+		return CorInfo.RmSchedule.NumRetVals;
+	}
+	else
+		return -1;
+}
+
+static int shouldResume_Future(const ScriptEngine::YieldedCoroutine& CorInfo, lua_State* L)
+{
+	const std::shared_future<std::vector<Reflection::GenericValue>>& future = CorInfo.RmFuture;
+
+	if ( future.valid()
+		 && future.wait_for(std::chrono::seconds(0)) == std::future_status::ready
+	)
+	{
+		std::vector<Reflection::GenericValue> returnVals = future.get();
+		for (const Reflection::GenericValue& v : returnVals)
+			ScriptEngine::L::PushGenericValue(L, v);
+
+		return (int)returnVals.size();
+	}
+	else
+		return -1;
+}
+
+static int shouldResume_Polled(const ScriptEngine::YieldedCoroutine& CorInfo, lua_State* L)
+{
+	return CorInfo.RmPoll(L);
+}
+
+typedef int(*ResumptionModeHandler)(const ScriptEngine::YieldedCoroutine&, lua_State*);
+
+static const ResumptionModeHandler s_ResumptionModeHandlers[] =
+{
+	nullptr,
+
+	shouldResume_Scheduled,
+	shouldResume_Future,
+	shouldResume_Polled
+};
+
+void ScriptEngine::StepScheduler()
+{
+	ZoneScopedC(tracy::Color::LightSkyBlue);
+
+	size_t size = s_YieldedCoroutines.size();
+
+	for (size_t i = 0; i < size; i++)
+	{
+		auto it = &s_YieldedCoroutines[i];
+
+		lua_State* coroutine = it->Coroutine;
+		int corRef = it->CoroutineReference;
+
+		uint8_t resHandlerIndex = static_cast<uint8_t>(it->Mode);
+		const ResumptionModeHandler handler = s_ResumptionModeHandlers[resHandlerIndex];
+		assert(handler);
+
+		int nretvals = handler(*it, coroutine);
+
+		if (nretvals >= 0)
+		{
+			ZoneScopedN("Resume");
+			ZoneText(it->DebugString.data(), it->DebugString.size());
+
+			// make sure the script still exists
+			// modules don't have a `script` global, but they run on their own coroutine independent from
+			// where they are `require`'d from anyway
+			if (it->ScriptId == PHX_GAMEOBJECT_NULL_ID || GameObject::GetObjectById(it->ScriptId))
+			{
+				int resumeStatus = lua_resume(coroutine, nullptr, nretvals);
+
+				if (resumeStatus != LUA_OK && resumeStatus != LUA_YIELD)
+				{
+					Log::ErrorF(
+						"Script resumption: {}",
+						lua_tostring(coroutine, -1)
+					);
+
+					L::DumpStacktrace(coroutine);
+				}
+			}
+
+			lua_unref(lua_mainthread(coroutine), corRef);
+
+			s_YieldedCoroutines.erase(s_YieldedCoroutines.begin() + i);
+		}
+
+		// https://stackoverflow.com/a/17956637
+		// asan was not happy about the iterator from
+		// `::erase` for some reason?? TODO
+		// 10/06/2025
+		if (size != s_YieldedCoroutines.size())
+		{
+			i--;
+			size = s_YieldedCoroutines.size();
+		}
+	}
+}
+
 #define JSON_ENCODED_DATA_TAG "__HX_EncodedData"
 
 void ScriptEngine::L::PushJson(lua_State* L, const nlohmann::json& v)

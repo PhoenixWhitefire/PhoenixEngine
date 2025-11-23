@@ -9,7 +9,7 @@
 enum class FaceCullingMode : uint8_t { None, BackFace, FrontFace };
 enum class CollisionFidelityMode : uint8_t { Aabb, AabbStaticSize };
 
-struct EcMesh
+struct EcMesh : public Component<EntityComponent::Mesh>
 {
 	void RecomputeAabb();
 	void SetRenderMesh(const std::string_view&);
@@ -47,6 +47,4 @@ struct EcMesh
 
 	ObjectRef Object;
 	bool Valid = true;
-
-	static inline EntityComponent Type = EntityComponent::Mesh;
 };

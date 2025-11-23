@@ -4,7 +4,7 @@
 
 #include "datatype/GameObject.hpp"
 
-struct EcAnimation
+struct EcAnimation : public Component<EntityComponent::Animation>
 {
     void SetAnimation(const std::string_view&);
 
@@ -15,7 +15,5 @@ struct EcAnimation
     bool Looped = false;
     bool Ready = false;
     bool Valid = true;
-
-    static const EntityComponent Type = EntityComponent::Animation;
 };
 

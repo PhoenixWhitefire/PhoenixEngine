@@ -6,12 +6,10 @@
 #include "component/Workspace.hpp"
 #include "Reflection.hpp"
 
-struct EcDataModel
+struct EcDataModel : public Component<EntityComponent::DataModel>
 {
 	uint32_t Workspace = UINT32_MAX;
 
 	std::vector<Reflection::EventCallback> OnFrameBeginCallbacks;
 	bool Valid = true;
-
-	static inline EntityComponent Type = EntityComponent::DataModel;
 };

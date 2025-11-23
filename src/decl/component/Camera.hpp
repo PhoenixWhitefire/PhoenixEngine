@@ -4,7 +4,7 @@
 
 #include "datatype/GameObject.hpp"
 
-struct EcCamera
+struct EcCamera : public Component<EntityComponent::Camera>
 {
 	// Given the camera's current position and rotation,
 	// get it's Matrix accounting for Projection (FoV, AspectRatio, NearPlane and FarPlane)
@@ -25,6 +25,4 @@ struct EcCamera
 	float MovementSpeed = 0.5f;
 	float MouseSensitivity = 100.f;
 	bool Valid = true;
-
-	static inline EntityComponent Type = EntityComponent::Camera;
 };

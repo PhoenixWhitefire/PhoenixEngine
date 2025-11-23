@@ -5,13 +5,11 @@
 
 #include "datatype/GameObject.hpp"
 
-struct EcTreeLink
+struct EcTreeLink : public Component<EntityComponent::TreeLink>
 {
     ObjectRef Target;
     bool Scripting = true;
 
     ObjectRef Object;
     bool Valid = true;
-    
-    static const EntityComponent Type = EntityComponent::TreeLink;
 };
