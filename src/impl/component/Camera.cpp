@@ -5,13 +5,40 @@
 #include <glm/gtx/vector_angle.hpp>
 
 #include "component/Camera.hpp"
+#include "component/Transform.hpp"
 #include "UserInput.hpp"
 
-glm::mat4 EcCamera::GetMatrixForAspectRatio(float AspectRatio) const
+class CameraManager : public ComponentManager<EcCamera>
 {
-	glm::vec3 position = glm::vec3(this->Transform[3]);
-	glm::vec3 forwardVec = glm::vec3(this->Transform[2]);
-    glm::vec3 upVec = glm::vec3(this->Transform[1]);
+public:
+	uint32_t CreateComponent(GameObject* Object) override
+	{
+		if (!Object->FindComponent<EcTransform>())
+			Object->AddComponent(EntityComponent::Transform);
+
+		m_Components.emplace_back();
+		m_Components.back().Object = Object;
+
+		return static_cast<uint32_t>(m_Components.size() - 1);
+	}
+
+    const Reflection::StaticPropertyMap& GetProperties() override
+    {
+        static const Reflection::StaticPropertyMap props = 
+        {
+			EC_PROP_SIMPLE(EcCamera, UseSimpleController, Boolean),
+			EC_PROP_SIMPLE(EcCamera, FieldOfView, Double)
+        };
+
+        return props;
+    }
+};
+
+static inline CameraManager Instance{};
+
+glm::mat4 EcCamera::GetRenderMatrix(float AspectRatio) const
+{
+	glm::mat4 trans = GetWorldTransform();
 
 	glm::mat4 projectionMatrix = glm::perspective(
 		glm::radians(this->FieldOfView),
@@ -20,28 +47,24 @@ glm::mat4 EcCamera::GetMatrixForAspectRatio(float AspectRatio) const
 		this->FarPlane
 	);
 	glm::mat4 viewMatrix = glm::lookAt(
-		position,
-		position + forwardVec,
-		upVec
+		glm::vec3(trans[3]),
+		glm::vec3(trans[3]) + glm::vec3(trans[2]),
+		glm::vec3(trans[1])
 	);
 
-	return projectionMatrix * viewMatrix;
+	return projectionMatrix * viewMatrix; /* glm::inverse(trans); */
 }
 
-class CameraManager : public ComponentManager<EcCamera>
+glm::mat4 EcCamera::GetWorldTransform() const
 {
-public:
-    const Reflection::StaticPropertyMap& GetProperties() override
-    {
-        static const Reflection::StaticPropertyMap props = 
-        {
-			EC_PROP_SIMPLE(EcCamera, UseSimpleController, Boolean),
-			EC_PROP_SIMPLE(EcCamera, FieldOfView, Double),
-			EC_PROP_SIMPLE(EcCamera, Transform, Matrix)
-        };
+	if (EcTransform* et = (Object.Referred() ? Object->FindComponent<EcTransform>() : nullptr))
+		return et->Transform;
+	else
+		return glm::mat4(1.f);
+}
 
-        return props;
-    }
-};
-
-static inline CameraManager Instance{};
+void EcCamera::SetWorldTransform(const glm::mat4& NewTrans)
+{
+	if (EcTransform* et = (Object.Referred() ? Object->FindComponent<EcTransform>() : nullptr))
+		et->SetWorldTransform(NewTrans);
+}

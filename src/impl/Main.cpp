@@ -208,9 +208,11 @@ static void handleInputs(double deltaTime)
 
 		bool rmbPressed = !guiUsingMouse && UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT);
 
+		glm::mat4 camTrans = camera->GetWorldTransform();
+
 		static const glm::vec3 WorldUp{ 0.f, 1.f, 0.f };
-		glm::vec3 camForward = glm::vec3(camera->Transform[2]);
-		glm::vec3 camUp = glm::vec3(camera->Transform[1]);
+		glm::vec3 camForward = glm::vec3(camTrans[2]);
+		glm::vec3 camUp = glm::vec3(camTrans[1]);
 
 		if (!GuiIO->WantCaptureKeyboard)
 		{
@@ -219,7 +221,7 @@ static void handleInputs(double deltaTime)
 			if (UserInput::IsKeyDown(GLFW_KEY_LEFT_SHIFT))
 				speed *= 0.5f;
 
-			glm::vec3 position = (glm::vec3)camera->Transform[3];
+			glm::vec3 position = (glm::vec3)camTrans[3];
 
 			if (UserInput::IsKeyDown(GLFW_KEY_W))
 				position += camForward * speed;
@@ -239,7 +241,7 @@ static void handleInputs(double deltaTime)
 			if (UserInput::IsKeyDown(GLFW_KEY_E))
 				position += camUp * speed;
 
-			camera->Transform[3] = glm::vec4(position, camera->Transform[3].w);
+			camTrans[3] = glm::vec4(position, 1.f);
 		}
 
 		if (rmbPressed && !WasRmbPressed)
@@ -268,8 +270,17 @@ static void handleInputs(double deltaTime)
 				camForward = newForward;
 
 			camForward = glm::rotate(camForward, -rotationY, WorldUp);
-			camera->Transform[2] = glm::vec4(camForward, camera->Transform[2].w);
+
+			glm::vec3 forward = camForward;
+			glm::vec3 right = glm::normalize(glm::cross(WorldUp, forward));
+			glm::vec3 up = glm::cross(forward, right);
+
+			camTrans[0] = glm::vec4(right, 0.f);
+			camTrans[1] = glm::vec4(up, 0.f);
+			camTrans[2] = glm::vec4(camForward, 0.f);
 		}
+
+		camera->SetWorldTransform(camTrans);
 	}
 
 	PrevMouseX = mouseX;
@@ -728,10 +739,13 @@ static void init()
 		ObjectRef dm = GameObject::Create(EntityComponent::DataModel);
 		ObjectRef wp = GameObject::Create(EntityComponent::Workspace);
 		ObjectRef cam = GameObject::Create(EntityComponent::Camera);
+		ObjectRef light = GameObject::Create(EntityComponent::DirectionalLight);
 
 		wp->SetParent(dm);
 		cam->SetParent(wp);
+		light->SetParent(wp);
 		wp->FindComponent<EcWorkspace>()->SetSceneCamera(cam);
+		cam->FindComponent<EcCamera>()->UseSimpleController = true;
 
 		GameObject* script = GameObject::Create(EntityComponent::Script);
 		script->FindComponent<EcScript>()->SourceFile = ScriptTool;

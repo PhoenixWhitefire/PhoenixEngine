@@ -401,7 +401,7 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * Returns whether Dear ImGui is using the player's mouse inputs
 #### `input.setmouseposition(MouseX: number, MouseY: number): `
 * Moves the mouse to the given coordinates of the window
-#### `input.mouseposition(): number, number`
+#### `input.mouseposition(): vector`
 * Returns the current position of the mouse
 #### `input.setcursorvisible(Visible: boolean): `
 * Sets the visibility of the mouse cursor to the specified value

@@ -61,7 +61,7 @@ function CoreTools.OnEditorStageChanged(NewStage)
     end
 end
 
-local PrevDragMouseX: number?, PrevDragMouseY: number? = nil, nil
+local PrevDragMousePos: vector? = nil
 local IsSurfaceDragging = false
 local IsGizmoDragging = false
 local GizmoDraggingDirection = vector.zero
@@ -76,7 +76,7 @@ local function resetGizmo()
     GizmoPrevTarget = nil
     GizmoPrevTargetTransform = Matrix.identity
     GizmoPrevTargetSize = vector.zero
-    PrevDragMouseX, PrevDragMouseY = nil, nil
+    PrevDragMousePos = nil
 end
 
 function CoreTools.Update(Project: { Workspace: Workspace })
@@ -96,9 +96,10 @@ function CoreTools.Update(Project: { Workspace: Workspace })
     end
 
     local camPos = workspace.SceneCamera.Transform.Position
-    local mx, my = input.mouseposition()
+    local mpos = input.mouseposition()
+    local mx, my = mpos.x, mpos.y
 
-    local mouseVector = workspace:ScreenPointToRay(mx, my, 1000)
+    local mouseVector = workspace:ScreenPointToVector(mpos, 1000)
     local gizmoHit = if input.mousedown('l') then workspace:Raycast(camPos, mouseVector, { GizmoContainer }, false) else nil
 
     if input.mousedown('l') and not IsGizmoDragging --[[ and not gizmoHit ]] then
@@ -108,12 +109,12 @@ function CoreTools.Update(Project: { Workspace: Workspace })
             assert(worldHit)
 
             if not IsSurfaceDragging then
-                PrevDragMouseX, PrevDragMouseY = mx, my
+                PrevDragMousePos = mpos
             end
 
             IsSurfaceDragging = true
 
-            if PrevDragMouseX ~= mx or PrevDragMouseY ~= my then
+            if PrevDragMousePos ~= mpos then
                target.Transform = Matrix.fromTranslation(worldHit.Position + worldHit.Normal * target.Size / 2)
             end
         else
@@ -147,7 +148,7 @@ function CoreTools.Update(Project: { Workspace: Workspace })
 
     if gizmoHit and input.mousedown('l') then
         if not IsGizmoDragging then
-            PrevDragMouseX, PrevDragMouseY = mx, my
+            PrevDragMousePos = mpos
             GizmoDraggingDirection = assert(GizmoPieceToDirection[gizmoHit.Object])
             GizmoDragHandle = gizmoHit.Object
 
@@ -172,7 +173,7 @@ function CoreTools.Update(Project: { Workspace: Workspace })
     if IsGizmoDragging then
         local dist = vector.magnitude(GizmoDragHandle.Transform.Position - camPos)
 
-        local oldMouseDir = workspace:ScreenPointToRay(PrevDragMouseX, PrevDragMouseY, dist)
+        local oldMouseDir = workspace:ScreenPointToVector(PrevDragMousePos, dist)
         local diff = (vector.normalize(mouseVector) * dist) - oldMouseDir
 
         target.Transform += vector.create(roundTo(diff.x, GizmoMoveIncrement), roundTo(diff.z, GizmoMoveIncrement), roundTo(diff.z, GizmoMoveIncrement)) * GizmoDraggingDirection

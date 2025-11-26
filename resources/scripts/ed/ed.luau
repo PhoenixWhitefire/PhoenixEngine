@@ -615,7 +615,7 @@ local function renderMainMenuBar(dt: number)
 	if not imgui.beginmainmenubar() then
 		return
 	end
-	local _, cursorY = input.mouseposition()
+	local cursorY = input.mouseposition().y
 	HoveringOverMenuBar = cursorY < RibbonPopupDistance
 
 	local openAboutWindow = false
@@ -813,10 +813,10 @@ local ViewportTop = 0
 local ViewportBottom = 0
 
 local function isMouseWithinViewport()
-	local mx, my = input.mouseposition()
+	local pos = input.mouseposition()
 
-	if mx >= ViewportLeft and mx <= ViewportRight then
-		if my >= ViewportTop and my < ViewportBottom then
+	if pos.x >= ViewportLeft and pos.x <= ViewportRight then
+		if pos.y >= ViewportTop and pos.y < ViewportBottom then
 			IsHoveringViewport = true
 		else
 			IsHoveringViewport = false
@@ -830,12 +830,12 @@ end
 
 local function renderViewport(DeltaTime: number)
 	if CurrentStage == "ProjectEditing" and Project.Workspace then
-		local mouseVec = Project.Workspace:ScreenPointToRay(input.mouseposition(), 1000)
+		local mouseVec = Project.Workspace:ScreenPointToVector(input.mouseposition(), 1000)
 		local rayresult = Project.Workspace:Raycast(EditorCam.Transform.Position, mouseVec, { SelectionPart })
 
 		if rayresult then
 			SelectionPart.Transform = rayresult.Object.Transform
-			SelectionPart.Size = rayresult.Object.Size + vector.create(0.1, 0.1, 0.1)
+			SelectionPart.Size = rayresult.Object.Size + vector.create(0.05, 0.05, 0.05)
 			SelectionPart.Parent = workspace
 
 			if input.mousedown("l") and isMouseWithinViewport() then
@@ -917,7 +917,8 @@ local function renderViewport(DeltaTime: number)
 	
 	imgui.begin(Project.Name .. "###Viewport", if canInteract then "nb" else "ni | nb")
 
-	local mx, my = input.mouseposition()
+	local mpos = input.mouseposition()
+	local mx, my = mpos.x, mpos.y
 	local wx, wy = imgui.windowposition()
 	local wsx, wsy = imgui.windowsize()
 

@@ -545,15 +545,15 @@ void Engine::m_Render(double deltaTime)
 
 	// we do this AFTER  `traverseHierarchy` in case any Scripts
 	// update the camera transform
-	glm::mat4 renderMatrix = sceneCamera->GetMatrixForAspectRatio(aspectRatio);
+	glm::mat4 renderMatrix = sceneCamera->GetRenderMatrix(aspectRatio);
 
-	glm::mat4 skyRenderMatrix{ 1.f };
+	glm::mat4 camTrans = sceneCamera->GetWorldTransform();
 
-	glm::vec3 camPos = glm::vec3(sceneCamera->Transform[3]);
-	glm::vec3 camForward = glm::vec3(sceneCamera->Transform[2]);
-	glm::vec3 camUp = glm::vec3(sceneCamera->Transform[1]);
-
-	glm::mat4 view = glm::lookAt(camPos, camPos + camForward, camUp);
+	glm::mat4 view = glm::lookAt(
+		glm::vec3(0.f),
+		glm::vec3(camTrans[2]),
+		glm::vec3(camTrans[1])
+	);
 	glm::mat4 projection = glm::perspective(
 		glm::radians(sceneCamera->FieldOfView),
 		aspectRatio,
@@ -561,19 +561,7 @@ void Engine::m_Render(double deltaTime)
 		sceneCamera->FarPlane
 	);
 
-	// "We make the mat4 into a mat3 and then a mat4 again in order to get rid of the last row and column
-	// The last row and column affect the translation of the skybox (which we don't want to affect)"
-	//view = glm::mat4(glm::mat3(glm::lookAt(camPos, camPos + camForward, glm::vec3(0.f, 1.f, 0.f))));
-	// ...
-	// ...
-	// ...
-	// Wow Mr Victor Gordan sir, that sounds really complicated.
-	// It's really too bad there isn't a way simpler, 300x more understandable way
-	// of zeroing-out the first 3 values of the last column of what is literally 4 `vec4`s that represent
-	// a 4x4 matrix...
-	view[3] = glm::vec4(0.f, 0.f, 0.f, 1.f);
-
-	skyRenderMatrix = projection * view;
+	glm::mat4 skyRenderMatrix = projection * view;
 
 	m_SkyboxShader.SetUniform("RenderMatrix", skyRenderMatrix);
 	m_SkyboxShader.SetUniform("Time", GetRunningTime());
@@ -603,7 +591,7 @@ void Engine::m_Render(double deltaTime)
 	glDepthFunc(GL_LESS);
 
 	//Main render pass
-	RendererContext.DrawScene(CurrentScene, renderMatrix, sceneCamera->Transform, GetRunningTime(), DebugWireframeRendering);
+	RendererContext.DrawScene(CurrentScene, renderMatrix, sceneCamera->GetWorldTransform(), GetRunningTime(), DebugWireframeRendering);
 
 	glViewport(0, 0, WindowSizeX, WindowSizeY);
 	glDisable(GL_DEPTH_TEST);
@@ -975,7 +963,7 @@ void Engine::Start()
 			);
 			sunView[3] = glm::vec4(glm::vec3(sunView[3]) + sun->ShadowViewOffset, 1.f);
 			if (sun->ShadowViewMoveWithCamera)
-				sunView[3] = glm::vec4(glm::vec3(sunView[3]) - glm::vec3(sceneCamera->Transform[3]), 1.f);
+				sunView[3] = glm::vec4(glm::vec3(sunView[3]) - glm::vec3(sceneCamera->GetWorldTransform()[3]), 1.f);
 
 			glm::mat4 sunRenderMatrix = sunOrtho * sunView;
 

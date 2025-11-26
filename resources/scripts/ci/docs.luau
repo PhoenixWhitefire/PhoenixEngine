@@ -42,10 +42,7 @@ table.sort(orderedDatatypes)
 table.sort(orderedLibraries)
 table.sort(orderedGlobals)
 
-local definitionsFile = [[
-declare extern type Vector2 with
-end
-]]
+local definitionsFile = ""
 local documentationData = {}
 
 local GameObjectOverrides = {
@@ -204,6 +201,7 @@ local rtol: { [string]: string } = {
 	Array = "{ any }",
 	Map = "{ [string]: any }",
 	Vector3 = "vector",
+	Vector2 = "vector",
 	["->"] = ":",
 	READONLY = "",
 	RUNTIMEONLY = "",

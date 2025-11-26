@@ -6,8 +6,8 @@
 
 struct EcTransform : public Component<EntityComponent::Transform>
 {
-    void SetWorldTransform(glm::mat4&);
-	void SetWorldSize(glm::vec3&);
+    void SetWorldTransform(const glm::mat4&);
+	void SetWorldSize(const glm::vec3&);
 
     // world-space
     glm::mat4 Transform{ 1.f };

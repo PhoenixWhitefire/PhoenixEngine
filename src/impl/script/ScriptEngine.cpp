@@ -26,7 +26,7 @@ static const lua_Type s_ValueTypeToLuauType[] = {
 	LUA_TSTRING,
 
 	LUA_TUSERDATA, // Color
-	LUA_TUSERDATA, // Vector2
+	LUA_TVECTOR,   // Vector2
 	LUA_TVECTOR,   // Vector3
 	LUA_TUSERDATA, // Matrix
 	LUA_TUSERDATA, // GameObject
@@ -668,6 +668,10 @@ void ScriptEngine::L::CheckType(lua_State* L, Reflection::ValueType Type, int St
 			Reflection::ValueType baseTy = Reflection::ValueType(Type & ~Reflection::ValueType::Null);
 			luaL_checkudata(L, StackIndex, Reflection::TypeAsString(baseTy).c_str());
 		}
+		else if (lty == LUA_TVECTOR && (Type & ~Reflection::ValueType::Null) == Reflection::ValueType::Vector2)
+		{
+			luaL_argcheck(L, luaL_checkvector(L, StackIndex)[2] == 0.f, StackIndex, "Z component must be 0");
+		}
 	}
 }
 
@@ -888,6 +892,9 @@ int ScriptEngine::L::HandleMethodCall(
 		ScriptEngine::L::CheckType(L, paramType, index + 1);
 		L->base--;
 		inputs.push_back(L::ToGeneric(L, index + 2));
+
+		if (paramType == Reflection::ValueType::Vector2)
+			inputs.back().Type = Reflection::ValueType::Vector2; // no native Vector2 type, but `vector` still works fine
 	}
 
 	// Now, onto the *REAL* business...

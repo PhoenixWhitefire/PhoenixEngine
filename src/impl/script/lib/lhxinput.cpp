@@ -112,15 +112,15 @@ static int input_mouseposition(lua_State* L)
     double my = 0;
 
     glfwGetCursorPos(glfwGetCurrentContext(), &mx, &my);
-    
-    lua_pushnumber(L, mx);
-    lua_pushnumber(L, my);
-    return 2;
+
+    lua_pushvector(L, (float)mx, (float)my, 0.f);
+    return 1;
 }
 
 static int input_setmouseposition(lua_State* L)
 {
-    glfwSetCursorPos(glfwGetCurrentContext(), luaL_checknumber(L, 1), luaL_checknumber(L, 2));
+    const float* v = luaL_checkvector(L, 1);
+    glfwSetCursorPos(glfwGetCurrentContext(), v[0], v[1]);
     return 0;
 }
 

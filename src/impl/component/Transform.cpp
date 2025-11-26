@@ -146,35 +146,18 @@ public:
 
 static inline TransformsManager Instance{};
 
-static EcTransform* findNearestAncestorTransform(GameObject* obj)
+void EcTransform::SetWorldTransform(const glm::mat4& NewWorldTrans)
 {
-    if (!obj)
-        return nullptr;
+    EcTransform* parent = Object->GetParent() ? Object->GetParent()->FindComponent<EcTransform>() : nullptr;
 
-    GameObject* parent = obj->GetParent();
-    
-    while (parent)
-    {
-        if (EcTransform* ct = parent->FindComponent<EcTransform>())
-            return ct;
-        parent = parent->GetParent();
-    }
-
-    return nullptr;
-}
-
-void EcTransform::SetWorldTransform(glm::mat4& NewWorldTrans)
-{
-    EcTransform* ancestor = findNearestAncestorTransform(Object);
-
-    LocalTransform = NewWorldTrans * glm::inverse(ancestor ? ancestor->Transform : glm::mat4(1.f));
+    LocalTransform = NewWorldTrans * glm::inverse(parent ? parent->Transform : glm::mat4(1.f));
     Transform = NewWorldTrans;
 }
 
-void EcTransform::SetWorldSize(glm::vec3& NewWorldSize)
+void EcTransform::SetWorldSize(const glm::vec3& NewWorldSize)
 {
-    EcTransform* ancestor = findNearestAncestorTransform(Object);
+    EcTransform* parent = Object->GetParent() ? Object->GetParent()->FindComponent<EcTransform>() : nullptr;
 
-    LocalSize = NewWorldSize / (ancestor ? ancestor->Size : glm::vec3(1.f));
+    LocalSize = NewWorldSize / (parent ? parent->Size : glm::vec3(1.f));
     Size = NewWorldSize;
 }

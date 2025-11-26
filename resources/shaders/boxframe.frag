@@ -85,7 +85,7 @@ out vec4 FragColor;
 
 void main()
 {
-	if (Frag_TextureUV.x < 0.05f || Frag_TextureUV.y < 0.05f || Frag_TextureUV.x > 0.95f || Frag_TextureUV.y > 0.95f)
+	if (Frag_TextureUV.x < 0.02f || Frag_TextureUV.y < 0.02f || Frag_TextureUV.x > 0.98f || Frag_TextureUV.y > 0.98f)
 		FragColor = texture(ColorMap, Frag_TextureUV) * Frag_Paint;
 	else
 		discard;

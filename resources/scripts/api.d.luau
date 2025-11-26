@@ -1,5 +1,3 @@
-declare extern type Vector2 with
-end
 declare extern type Color with
   R: number
   G: number
@@ -89,7 +87,6 @@ declare extern type Bone with
 end
 declare extern type Camera with
   FieldOfView: number
-  Transform: Matrix
   UseSimpleController: boolean
 end
 declare extern type DataModel with
@@ -144,7 +141,7 @@ declare extern type Model with
 end
 declare extern type ParticleEmitter with
   Emitting: boolean
-  Lifetime: Vector2
+  Lifetime: vector
   ParticlesAreAttached: boolean
   Rate: number
 end
@@ -194,7 +191,7 @@ declare extern type Workspace with
 
   function GetObjectsInAabb(self, Param_1: vector, Param_2: vector, Param_3: { any }?) : ({ any })
   function Raycast(self, Origin: vector, CastVector: vector, FilterList: { any }?, FilterIsIgnoreList: boolean?) : { Object: GameObject & Mesh & Transform, Position: vector, Normal: vector }?
-  function ScreenPointToRay(self, Param_1: number, Param_2: number, Param_3: number?) : (vector)
+  function ScreenPointToVector(self, ScreenPoint: vector, Length: number?) : (vector)
 end
 
 
@@ -338,7 +335,7 @@ declare input: {
   setmousegrabbed: (( Grabbed: boolean ) -> ()),
   guihandledm: ((  ) -> (boolean)),
   setmouseposition: (( MouseX: number, MouseY: number ) -> ()),
-  mouseposition: ((  ) -> (number, number)),
+  mouseposition: ((  ) -> (vector)),
   setcursorvisible: (( Visible: boolean ) -> ()),
   mousedown: (( Button: 'l' | 'r' | 'e' ) -> (boolean)),
   guihandled: ((  ) -> (boolean)),

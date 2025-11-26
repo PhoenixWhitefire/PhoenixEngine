@@ -500,9 +500,6 @@
   "@luhx/globaltype/Camera.FieldOfView": {
     "documentation": "The field-of-view. By default, `90`"
   },
-  "@luhx/globaltype/Camera.Transform": {
-    "documentation": "Where it is in 3D space"
-  },
   "@luhx/globaltype/Camera.UseSimpleController": {
     "documentation": "Whether it is affected by the built-in controller (`W`/`A`/`S`/`D` horizontal movement, `Q`/`E` vertical, Mouse to look around)"
   },
@@ -837,10 +834,10 @@
     "documentation": "Whether the Light can render shadows"
   },
   "@luhx/globaltype/Transform.LocalSize": {
-    "documentation": "The Object's scale factor, relative to it's nearest Transform ancestor"
+    "documentation": "The Object's scale factor, relative to it's parent Transform ancestor or the world origin"
   },
   "@luhx/globaltype/Transform.LocalTransform": {
-    "documentation": "The Object's transformation, relative to it's nearest Transform ancestor"
+    "documentation": "The Object's transformation, relative to it's parent Transform ancestor or the world origin"
   },
   "@luhx/globaltype/Transform.Size": {
     "documentation": "The Object's world-space scale factor"
@@ -863,7 +860,7 @@
   "@luhx/globaltype/Workspace.SceneCamera": {
     "documentation": "The `Camera` the Player sees the world through. If set to `nil`, a *fallback* is created at the origin"
   },
-  "@luhx/globaltype/Workspace.ScreenPointToRay": {
-    "documentation": "Converts the provided X and Y screen coordinates to a world-space vector, with the length provided or `1` by default"
+  "@luhx/globaltype/Workspace.ScreenPointToVector": {
+    "documentation": "Converts the provided screen coordinates to a world-space direction. `Length` is optional and `1.0` by default"
   }
 }

@@ -54,7 +54,6 @@ The Engine support an Entity Component System architecture, meaning that `GameOb
 
 ### Properties:
 * `FieldOfView: number`: The field-of-view. By default, `90`
-* `Transform: Matrix`: Where it is in 3D space
 * `UseSimpleController: boolean`: Whether it is affected by the built-in controller (`W`/`A`/`S`/`D` horizontal movement, `Q`/`E` vertical, Mouse to look around)
 
 ## `DataModel`
@@ -137,7 +136,7 @@ No members defined
 
 ### Properties:
 * `Emitting: boolean`: Whether the emitter should emit new particles
-* `Lifetime: Vector2`: The X and Y components act as a range of how long any particle can last, in seconds
+* `Lifetime: vector`: The X and Y components act as a range of how long any particle can last, in seconds
 * `ParticlesAreAttached: boolean`: Whether the particles are attached to and move with the emitter
 * `Rate: number`: An integer indicating how many particles should be emitted per second (must be above or equal to `0`)
 
@@ -195,8 +194,8 @@ No members defined
 * Gives a physical position and size to an Object
 
 ### Properties:
-* `LocalSize: vector `: The Object's scale factor, relative to it's nearest Transform ancestor
-* `LocalTransform: Matrix `: The Object's transformation, relative to it's nearest Transform ancestor
+* `LocalSize: vector `: The Object's scale factor, relative to it's parent Transform ancestor or the world origin
+* `LocalTransform: Matrix `: The Object's transformation, relative to it's parent Transform ancestor or the world origin
 * `Size: vector`: The Object's world-space scale factor
 * `Transform: Matrix`: The Object's world-space transformation
 
@@ -220,5 +219,5 @@ No members defined
 ### Methods:
 * `GetObjectsInAabb(vector, vector, { any }?) : ({ any })`: Get a list of Objects whose bounds are within the AABB
 * `Raycast(vector, vector, { any }?, boolean?) : ({ [string]: any }?)`: Cast a ray
-* `ScreenPointToRay(number, number, number?) : (vector)`: Converts the provided X and Y screen coordinates to a world-space vector, with the length provided or `1` by default
+* `ScreenPointToVector(vector, number?) : (vector)`: Converts the provided screen coordinates to a world-space direction. `Length` is optional and `1.0` by default
 

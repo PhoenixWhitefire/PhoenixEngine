@@ -75,7 +75,7 @@ local WasLmbPressed = false
 
 local function handleClick()
     local mouseX, mouseY = input.getmousepos()
-    local mouseRayVec = workspace:ScreenPointToRay({ mouseX, mouseY }, 100)
+    local mouseRayVec = workspace:ScreenPointToVector(mouseX, mouseY, 100)
     
     local hit = world.raycast(workspace.SceneCamera.Transform.Position, mouseRayVec, {})
 

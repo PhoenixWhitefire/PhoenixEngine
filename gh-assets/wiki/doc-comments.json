@@ -64,7 +64,6 @@
         "Description": "A 3D camera",
         "Properties": {
           "FieldOfView": "The field-of-view. By default, `90`",
-          "Transform": "Where it is in 3D space",
           "UseSimpleController": "Whether it is affected by the built-in controller (`W`/`A`/`S`/`D` horizontal movement, `Q`/`E` vertical, Mouse to look around)"
         }
       },
@@ -198,8 +197,8 @@
       "Transform": {
         "Description": "Gives a physical position and size to an Object",
         "Properties": {
-          "LocalSize": "The Object's scale factor, relative to it's nearest Transform ancestor",
-          "LocalTransform": "The Object's transformation, relative to it's nearest Transform ancestor",
+          "LocalSize": "The Object's scale factor, relative to it's parent Transform ancestor or the world origin",
+          "LocalTransform": "The Object's transformation, relative to it's parent Transform ancestor or the world origin",
           "Size": "The Object's world-space scale factor",
           "Transform": "The Object's world-space transformation"
         }
@@ -232,7 +231,13 @@
               "FilterIsIgnoreList"
             ]
           },
-          "ScreenPointToRay": "Converts the provided X and Y screen coordinates to a world-space vector, with the length provided or `1` by default"
+          "ScreenPointToVector": {
+            "Description": "Converts the provided screen coordinates to a world-space direction. `Length` is optional and `1.0` by default",
+            "ParameterNames": [
+              "ScreenPoint",
+              "Length"
+            ]
+          }
         },
         "Properties": {
           "SceneCamera": {
@@ -1659,7 +1664,7 @@
             "Description": [
               "Returns the current position of the mouse"
             ],
-            "Out": "number, number"
+            "Out": "vector"
           },
           "setcursorvisible": {
             "Description": [
@@ -1683,8 +1688,7 @@
             ],
             "Description:": "Sets the position of the mouse in the window",
             "In": [
-              "X: number",
-              "Y: number"
+              "Position: vector"
             ]
           },
           "setmouseposition": {

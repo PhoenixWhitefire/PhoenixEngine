@@ -135,7 +135,7 @@ void InlayEditor::Initialize(Renderer* renderer)
 	MtlPreviewCamera = GameObject::Create("Camera");
 
 	EcCamera* cc = MtlPreviewCamera->FindComponent<EcCamera>();
-	cc->Transform = MtlPreviewCamDefaultRotation * MtlPreviewCamOffset;
+	cc->SetWorldTransform(MtlPreviewCamDefaultRotation * MtlPreviewCamOffset);
 	cc->FieldOfView = 50.f;
 
 	try
@@ -1224,11 +1224,11 @@ static void renderMaterialEditor()
 			glm::radians(static_cast<float>((GetRunningTime() - PreviewRotStart) * 45.f)),
 			glm::vec3(0.f, 1.f, 0.f)
 		);
-		cc->Transform = transform * MtlPreviewCamOffset;
+		cc->SetWorldTransform(transform * MtlPreviewCamOffset);
 	}
 	else
 	{
-		cc->Transform = MtlPreviewCamDefaultRotation * MtlPreviewCamOffset;
+		cc->SetWorldTransform(MtlPreviewCamDefaultRotation * MtlPreviewCamOffset);
 		PreviewRotStart = 0.f;
 	}
 
@@ -1248,8 +1248,8 @@ static void renderMaterialEditor()
 
 	MtlPreviewRenderer->DrawScene(
 		MtlPreviewScene,
-		cc->GetMatrixForAspectRatio(1.f),
-		cc->Transform,
+		cc->GetRenderMatrix(1.f),
+		cc->GetWorldTransform(),
 		GetRunningTime()
 	);
 
@@ -2941,7 +2941,7 @@ static void renderProperties()
 					// 21/09/2024
 					glm::vec3 rotrads{};
 
-					glm::extractEulerAngleXYZ(mat, rotrads.x, rotrads.y, rotrads.z);
+					glm::extractEulerAngleYXZ(mat, rotrads.y, rotrads.x, rotrads.z);
 
 					//mat = glm::rotate(mat, -rotrads[0], glm::vec3(1.f, 0.f, 0.f));
 					//mat = glm::rotate(mat, -rotrads[1], glm::vec3(0.f, 1.f, 0.f));
@@ -2958,6 +2958,7 @@ static void renderProperties()
 					{
 						newVal = glm::mat4(1.f);
 						ImGui::PopID();
+						valueWasEditedManual = true;
 						break;
 					}
 
@@ -2977,7 +2978,7 @@ static void renderProperties()
 					mat[3][1] = pos[1];
 					mat[3][2] = pos[2];
 
-					mat *= glm::eulerAngleXYZ(glm::radians(rotdegs[0]), glm::radians(rotdegs[1]), glm::radians(rotdegs[2]));
+					mat *= glm::eulerAngleYXZ(glm::radians(rotdegs[1]), glm::radians(rotdegs[0]), glm::radians(rotdegs[2]));
 
 					newVal = mat;
 				}
@@ -3619,8 +3620,8 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 
 			engine->RendererContext.DrawScene(
 				engine->CurrentScene,
-				sceneCam->GetMatrixForAspectRatio((float)engine->WindowSizeX / engine->WindowSizeY),
-				sceneCam->Transform,
+				sceneCam->GetRenderMatrix((float)engine->WindowSizeX / engine->WindowSizeY),
+				sceneCam->GetWorldTransform(),
 				GetRunningTime(),
 				engine->DebugWireframeRendering
 			);

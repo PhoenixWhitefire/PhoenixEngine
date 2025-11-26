@@ -1,4 +1,5 @@
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/matrix_access.hpp>
 
 #include "component/Workspace.hpp"
 #include "component/Transform.hpp"
@@ -66,23 +67,21 @@ public:
     {
         static const Reflection::StaticMethodMap funcs =
 		{
-			{ "ScreenPointToRay", {
-				{ Reflection::ValueType::Double, Reflection::ValueType::Double, REFLECTION_OPTIONAL(Double) },
+			{ "ScreenPointToVector", {
+				{ Reflection::ValueType::Vector2, REFLECTION_OPTIONAL(Double) },
 				{ Reflection::ValueType::Vector3 },
 				[](void* p, const std::vector<Reflection::GenericValue>& inputs)
 				-> std::vector<Reflection::GenericValue>
 				{
 					EcWorkspace* w = static_cast<EcWorkspace*>(p);
 
-					double x = inputs[0].AsDouble();
-					double y = inputs[1].AsDouble();
-
+					glm::vec2 point = inputs[0].AsVector2();
 					float length = 1.f;
 
-					if (inputs.size() > 2)
-						length = static_cast<float>(inputs[2].AsDouble());
+					if (inputs.size() > 1)
+						length = (float)inputs[1].AsDouble();
 
-					return { w->ScreenPointToRay(x, y, length, nullptr) };
+					return { w->ScreenPointToVector(point, length) };
 				}
 			} },
 
@@ -171,10 +170,12 @@ public:
 
 static inline WorkspaceManager Instance{};
 
-glm::vec3 EcWorkspace::ScreenPointToRay(double x, double y, float length, glm::vec3* /* Origin */) const
+glm::vec3 EcWorkspace::ScreenPointToVector(glm::vec2 point, float length) const
 {
 	Engine* engine = Engine::Get();
 
+	float x = point.x;
+	float y = point.y;
 	x = x - engine->ViewportPosition.x;
 	y = y - engine->ViewportPosition.y;
 
@@ -185,9 +186,10 @@ glm::vec3 EcWorkspace::ScreenPointToRay(double x, double y, float length, glm::v
 	double nx = (2.0 * x) / viewportSize.x - 1.0;
 	double ny = 1.0 - (2.0 * y) / viewportSize.y;
 
-	glm::vec4 clipCoords{ nx, ny, -1.f, 1.f };
+	glm::vec4 clipCoords = { nx, ny, -1.f, 1.f };
 
 	EcCamera* cam = GetSceneCamera()->FindComponent<EcCamera>();
+	const glm::mat4& trans = cam->GetWorldTransform();
 
 	glm::mat4 projectionMatrixInv = glm::inverse(glm::perspective(
 		glm::radians(cam->FieldOfView),
@@ -199,17 +201,16 @@ glm::vec3 EcWorkspace::ScreenPointToRay(double x, double y, float length, glm::v
 	glm::vec4 eyeCoords = projectionMatrixInv * clipCoords;
 	eyeCoords.z = -1.f, eyeCoords.w = 0.f;
 
-	glm::vec3 position = glm::vec3(cam->Transform[3]);
-	glm::vec3 forwardVec = glm::vec3(cam->Transform[2]);
+	glm::vec3 position = glm::vec3(trans[3]);
+	glm::vec3 forwardVec = glm::vec3(trans[2]);
 
 	glm::mat4 viewMatrixInv = glm::inverse(glm::lookAt(
 		position,
 		position + forwardVec,
-		glm::vec3(cam->Transform[1])
+		glm::vec3(trans[1])
 	));
 
-	glm::vec3 rayVector = glm::normalize(glm::vec3(viewMatrixInv * eyeCoords)) * length;
-	return rayVector;
+	return glm::normalize(glm::vec3(viewMatrixInv * eyeCoords)) * length;
 }
 
 SpatialCastResult EcWorkspace::Raycast(const glm::vec3& Origin, const glm::vec3& Vector, const std::vector<GameObject*>& FilterList, bool FilterIsIgnoreList) const
@@ -324,5 +325,5 @@ void EcWorkspace::SetSceneCamera(GameObject* NewCam)
 void EcWorkspace::Update() const
 {
 	SoundManager& soundManager = SoundManager::Get();
-	soundManager.Update(GetSceneCamera()->FindComponent<EcCamera>()->Transform);
+	soundManager.Update(GetSceneCamera()->FindComponent<EcCamera>()->GetWorldTransform());
 }
