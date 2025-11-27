@@ -913,6 +913,25 @@ void Engine::Start()
 				&sun
 			);
 
+			if (DebugSpatialHeat)
+			{
+				workspaceComponent = WorkspaceRef->FindComponent<EcWorkspace>();
+				assert(workspaceComponent);
+
+				for (const auto& it : workspaceComponent->SpatialHash)
+				{
+					CurrentScene.RenderList.push_back(RenderItem{
+						.RenderMeshId = 0,
+						.Transform = glm::translate(glm::mat4(1.f), (glm::vec3)it.first),
+						.Size = glm::vec3(SPATIAL_HASH_GRID_SIZE),
+						.MaterialId = m_MaterialManager.LoadFromPath("neon"),
+						.TintColor = glm::vec3(1.f, 0.f, 0.f),
+						.Transparency = std::clamp(1.f - ((float)it.second.size() / 64.f), 0.2f, 1.f),
+						.FaceCulling = FaceCullingMode::None
+					});
+				}
+			}
+
 			sceneCamera = sceneCamObject->FindComponent<EcCamera>();
 		}
 		bool hasPhysics = false;

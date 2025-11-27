@@ -639,6 +639,7 @@ static void drawDeveloperUI(double DeltaTime)
 
 		ImGui::Checkbox("Wireframe rendering", &engine->DebugWireframeRendering);
 		ImGui::Checkbox("Debug Collision AABBs", &engine->DebugAabbs);
+		ImGui::Checkbox("Debug Spatial Heat", &engine->DebugSpatialHeat);
 	}
 	if (beganSettings)
 		ImGui::End();

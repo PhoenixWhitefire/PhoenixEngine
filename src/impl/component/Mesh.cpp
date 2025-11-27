@@ -5,6 +5,7 @@
 
 #include "asset/MaterialManager.hpp"
 #include "asset/MeshProvider.hpp"
+#include "component/Workspace.hpp"
 #include "component/Bone.hpp"
 
 static std::unordered_map<std::string, std::vector<uint32_t>> FreeSkinnedMeshPseudoAssets;
@@ -23,6 +24,68 @@ static void tryMarkFreeSkinnedMeshPseudoAsset(EcMesh& mesh)
 		for (glm::mat4& t : gpuMesh.SkinningData)
 			t = glm::mat4(1.f);
 	}
+}
+
+static float roundNToGrid(float x)
+{
+	return glm::round(x / SPATIAL_HASH_GRID_SIZE) * SPATIAL_HASH_GRID_SIZE;
+}
+
+static glm::vec3 roundToGrid(const glm::vec3& v)
+{
+	return glm::vec3(roundNToGrid(v.x), roundNToGrid(v.y), roundNToGrid(v.z));
+}
+
+static void updateSpatialHash(EcMesh* cm)
+{
+	if (GameObject* pw = cm->PrevWorkspace.Referred(); cm->SpatialHashPoints.size() > 0 && pw)
+		if (EcWorkspace* pcw = pw->FindComponent<EcWorkspace>())
+		{
+			for (const glm::vec3& point : cm->SpatialHashPoints)
+			{
+				auto& cell = pcw->SpatialHash[point];
+				auto it = std::find(cell.begin(), cell.end(), cm->Object->ObjectId);
+				assert(it != cell.end());
+
+				cell.erase(it);
+			}
+		}
+
+	cm->SpatialHashPoints.clear();
+
+	if (!cm->PhysicsCollisions)
+		return;
+
+	GameObject* ocw = GameObject::GetObjectById(cm->Object->OwningWorkspace);
+	EcWorkspace* cw = ocw ? ocw->FindComponent<EcWorkspace>() : nullptr;
+	cm->PrevWorkspace = ocw;
+
+	if (!cw)
+		return;
+
+	glm::vec3 min = cm->CollisionAabb.Position - cm->CollisionAabb.Size / 2.f;
+	glm::vec3 max = cm->CollisionAabb.Position + cm->CollisionAabb.Size / 2.f;
+	
+	min = roundToGrid(min);
+	max = roundToGrid(max);
+
+	if (min == max)
+	{
+		cw->SpatialHash[min].push_back(cm->Object.TargetId);
+		cm->SpatialHashPoints = { min };
+		return;
+	}
+
+	for (float x = min.x; x <= max.x; x += SPATIAL_HASH_GRID_SIZE)
+		for (float y = min.y; y <= max.y; y += SPATIAL_HASH_GRID_SIZE)
+			for (float z = min.z; z <= max.z; z += SPATIAL_HASH_GRID_SIZE)
+			{
+				glm::vec3 point = { x, y, z };
+				assert(roundToGrid(point) == point);
+
+				cw->SpatialHash[point].push_back(cm->Object.TargetId);
+				cm->SpatialHashPoints.push_back(point);
+			}
 }
 
 class MeshManager : public ComponentManager<EcMesh>
@@ -58,6 +121,18 @@ public:
             EC_PROP_SIMPLE(EcMesh, PhysicsDynamics, Boolean),
 			EC_PROP_SIMPLE(EcMesh, PhysicsCollisions, Boolean),
 			EC_PROP_SIMPLE(EcMesh, CastsShadows, Boolean),
+
+			EC_PROP(
+				"PhysicsCollisions",
+				Boolean,
+				EC_GET_SIMPLE(EcMesh, PhysicsCollisions),
+				[](void* p, const Reflection::GenericValue& gv)
+				{
+					EcMesh* cm = static_cast<EcMesh*>(p);
+					cm->PhysicsCollisions = gv.AsBoolean();
+					updateSpatialHash(cm);
+				}
+			),
 
 			EC_PROP(
 				"FaceCulling",
@@ -263,5 +338,7 @@ void EcMesh::RecomputeAabb()
 		this->CollisionAabb.Position = glm::vec3(transform[3]);
 		this->CollisionAabb.Size = glmsize;
 	}
+
+	updateSpatialHash(this);
 }
 

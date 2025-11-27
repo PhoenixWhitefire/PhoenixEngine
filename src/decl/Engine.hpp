@@ -78,6 +78,7 @@ public:
 
 	bool DebugWireframeRendering = false;
 	bool DebugAabbs = false;
+	bool DebugSpatialHeat = false;
 
 	bool IsWindowFocused = true;
 

@@ -79,9 +79,7 @@ public:
 
                     EcTransform* ct = static_cast<EcTransform*>(p);
                     ct->SetWorldTransform(gv.AsMatrix());
-
-                    recomputeWorldTransforms(ct);
-                    recomputeAabbRecursive(ct->Object);
+                    ct->RecomputeTransformTree();
                 }
             ),
 
@@ -95,9 +93,7 @@ public:
 
                     EcTransform* ct = static_cast<EcTransform*>(p);
                     ct->SetWorldSize(gv.AsVector3());
-
-                    recomputeWorldTransforms(ct);
-                    recomputeAabbRecursive(ct->Object);
+                    ct->RecomputeTransformTree();
                 }
             ),
 
@@ -113,9 +109,7 @@ public:
                     
                     EcTransform* ct = static_cast<EcTransform*>(p);
                     ct->LocalTransform = gv.AsMatrix();
-                    
-                    recomputeWorldTransforms(ct);
-                    recomputeAabbRecursive(ct->Object);
+                    ct->RecomputeTransformTree();
                 },
                 false
             } },
@@ -132,9 +126,7 @@ public:
                     
                     EcTransform* ct = static_cast<EcTransform*>(p);
                     ct->LocalSize = gv.AsVector3();
-                    
-                    recomputeWorldTransforms(ct);
-                    recomputeAabbRecursive(ct->Object);
+                    ct->RecomputeTransformTree();
                 },
                 false
             } }
@@ -160,4 +152,10 @@ void EcTransform::SetWorldSize(const glm::vec3& NewWorldSize)
 
     LocalSize = NewWorldSize / (parent ? parent->Size : glm::vec3(1.f));
     Size = NewWorldSize;
+}
+
+void EcTransform::RecomputeTransformTree()
+{
+    recomputeWorldTransforms(this);
+    recomputeAabbRecursive(Object);
 }

@@ -196,6 +196,7 @@ public:
 	// preferable to use this instead of `::GetChildren`/`::GetDescendants`
 	// because it does not require any memory allocations
 	void ForEachChild(const std::function<bool(GameObject*)>&);
+	bool ForEachDescendant(const std::function<bool(GameObject*)>&);
 	std::vector<GameObject*> GetChildren();
 	std::vector<GameObject*> GetDescendants();
 
@@ -220,17 +221,16 @@ public:
 	static Reflection::GenericValue s_ToGenericValue(const GameObject*);
 	Reflection::GenericValue ToGenericValue() const;
 
+	std::string Name = "GameObject";
+
 	uint32_t ObjectId = PHX_GAMEOBJECT_NULL_ID;
 	uint32_t Parent = PHX_GAMEOBJECT_NULL_ID;
-
-	std::string Name = "GameObject";
+	uint32_t OwningWorkspace = PHX_GAMEOBJECT_NULL_ID;
 
 	bool Enabled = true;
 	bool Serializes = true;
 	bool IsDestructionPending = false;
 	bool Valid = true;
-	bool InDataModel = false;
-	bool InWorkspace = false;
 
 	Memory::vector<uint32_t, MEMCAT(GameObject)> Children;
 	Memory::vector<ReflectorRef, MEMCAT(GameObject)> Components;

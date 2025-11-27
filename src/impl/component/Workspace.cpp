@@ -1,5 +1,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/matrix_access.hpp>
+#include <tracy/public/tracy/Tracy.hpp>
 
 #include "component/Workspace.hpp"
 #include "component/Transform.hpp"
@@ -213,38 +214,179 @@ glm::vec3 EcWorkspace::ScreenPointToVector(glm::vec2 point, float length) const
 	return glm::normalize(glm::vec3(viewMatrixInv * eyeCoords)) * length;
 }
 
+static int roundNToGrid(float x)
+{
+	return int(glm::round(x / SPATIAL_HASH_GRID_SIZE) * SPATIAL_HASH_GRID_SIZE);
+}
+
+static glm::ivec3 roundToGrid(const glm::vec3& v)
+{
+	return glm::ivec3(roundNToGrid(v.x), roundNToGrid(v.y), roundNToGrid(v.z));
+}
+
+static void addCubeAt(const EcWorkspace* cw, const glm::vec3& pos, const Color& col)
+{
+	if (glfwGetKey(glfwGetCurrentContext(), GLFW_KEY_T) != GLFW_PRESS)
+		return;
+
+	GameObject* g = GameObject::Create(EntityComponent::Mesh);
+	EcTransform* ct = g->FindComponent<EcTransform>();
+	EcMesh* cm = g->FindComponent<EcMesh>();
+
+	cm->MaterialId = MaterialManager::Get()->LoadFromPath("neon");
+	cm->Tint = col;
+	cm->Transparency = 0.7f;
+
+	ct->SetWorldTransform(glm::translate(glm::mat4(1.f), pos));
+	ct->SetWorldSize(glm::vec3(SPATIAL_HASH_GRID_SIZE));
+
+	g->SetParent(cw->Object);
+}
+
+static void hashTraceRay(
+	const EcWorkspace* cw,
+	const glm::vec3& rayStart,
+	const glm::ivec3& rayStartCell,
+	const glm::ivec3& rayEndCell,
+	const glm::vec3& rayVector,
+	const std::function<bool(const std::vector<uint32_t>&)> TestHits
+)
+{
+	ZoneScoped;
+
+	glm::ivec3 step = glm::sign(rayVector) * SPATIAL_HASH_GRID_SIZE;
+	glm::vec3 rayDir = glm::normalize(rayVector);
+
+	glm::vec3 tDelta = glm::vec3(
+		rayDir.x != 0.f ? std::abs(1.f / rayDir.x) * SPATIAL_HASH_GRID_SIZE : FLT_MAX,
+		rayDir.y != 0.f ? std::abs(1.f / rayDir.y) * SPATIAL_HASH_GRID_SIZE : FLT_MAX,
+		rayDir.z != 0.f ? std::abs(1.f / rayDir.z) * SPATIAL_HASH_GRID_SIZE : FLT_MAX
+	);
+
+	glm::vec3 tmax;
+
+	for (int i = 0; i < 3; i++)
+	{
+		if (step[i] > 0)
+			tmax[i] = ((rayStartCell[i] + 1) - rayStart[i]) / rayDir[i];
+		else if (step[i] < 0)
+			tmax[i] = (rayStartCell[i] - rayStart[i]) / rayDir[i];
+		else
+			tmax[i] = FLT_MAX;
+	}
+
+	glm::ivec3 currentCell = rayStartCell;
+	int depth = 0;
+
+	addCubeAt(cw, rayStartCell, Color(0.f, 1.f, 0.f));
+
+	while (true)
+	{
+		const auto& cellIt = cw->SpatialHash.find(currentCell);
+
+		if (cellIt != cw->SpatialHash.end() && TestHits(cellIt->second))
+			return; // hit something
+
+		if (currentCell == rayEndCell)
+			return;
+
+		if (tmax.x < tmax.y)
+        {
+			if (tmax.x < tmax.z)
+			{
+                currentCell.x += step.x;
+                tmax.x += tDelta.x;
+            }
+			else
+			{
+                currentCell.z += step.z;
+                tmax.z += tDelta.z;
+            }
+        }
+        else
+        {
+            if (tmax.y < tmax.z)
+			{
+                currentCell.y += step.y;
+                tmax.y += tDelta.y;
+            }
+			else
+			{
+                currentCell.z += step.z;
+                tmax.z += tDelta.z;
+            }
+        }
+
+		if (++depth > 1024)
+			return;
+
+		addCubeAt(cw, currentCell, Color(0.f, 0.f, 1.f));
+	}
+}
+
 SpatialCastResult EcWorkspace::Raycast(const glm::vec3& Origin, const glm::vec3& Vector, const std::vector<GameObject*>& FilterList, bool FilterIsIgnoreList) const
 {
+	ZoneScoped;
+
 	IntersectionLib::Intersection intersection;
 	GameObject* hitObject = nullptr;
 	float closestHit = FLT_MAX;
 
-	for (GameObject* p : (FilterIsIgnoreList ? Object->GetDescendants() : FilterList))
+	std::vector<GameObject*> objects;
+	if (FilterIsIgnoreList)
+		objects = Object->GetDescendants();
+	else
 	{
-		if (FilterIsIgnoreList ? std::find(FilterList.begin(), FilterList.end(), p) != FilterList.end() : false)
-			continue;
-    
-		EcMesh* cm = p->FindComponent<EcMesh>();
-		EcTransform* ct = p->FindComponent<EcTransform>();
-    
-		if (cm && ct)
+		objects = FilterList;
+		for (GameObject* p : FilterList)
 		{
-			IntersectionLib::Intersection hit = IntersectionLib::RayAabb(
-				Origin,
-				Vector,
-				cm->CollisionAabb.Position,
-				cm->CollisionAabb.Size - glm::vec3(2.f)
-			);
-        
-			if (hit.Occurred)
-				if (hit.Time < closestHit)
-				{
-					intersection = hit;
-					closestHit = hit.Time;
-					hitObject = p;
-				}
+			std::vector<GameObject*> descs = p->GetDescendants();
+			objects.insert(objects.end(), descs.begin(), descs.end());
 		}
 	}
+
+	hashTraceRay(this, Origin, roundToGrid(Origin), roundToGrid(Origin + Vector), Vector, [&](const std::vector<uint32_t>& CellObjects) -> bool
+	{
+		ZoneScopedN("VisitCell");
+
+		for (uint32_t oid : CellObjects)
+		{
+			GameObject* p = GameObject::GetObjectById(oid);
+			if (!p)
+				continue;
+
+			const auto& filterIt = std::find(FilterList.begin(), FilterList.end(), p);
+
+			if (FilterIsIgnoreList ? filterIt != FilterList.end() : filterIt == FilterList.end())
+				continue;
+
+			EcMesh* cm = p->FindComponent<EcMesh>();
+			EcTransform* ct = p->FindComponent<EcTransform>();
+
+			if (cm && ct)
+			{
+				IntersectionLib::Intersection hit = IntersectionLib::RayAabb(
+					Origin,
+					Vector,
+					cm->CollisionAabb.Position,
+					cm->CollisionAabb.Size - glm::vec3(2.f)
+				);
+
+				if (hit.Occurred)
+					if (hit.Time < closestHit)
+					{
+						intersection = hit;
+						closestHit = hit.Time;
+						hitObject = p;
+					}
+			}
+		}
+
+		if (hitObject)
+			return true; // hit something, no need to keep traversing the hash
+		else
+			return false; // keep checking for collisions further down our hash
+	});
 
 	SpatialCastResult result;
 

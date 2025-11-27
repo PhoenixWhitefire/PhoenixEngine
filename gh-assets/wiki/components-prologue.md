@@ -1,1 +1,1 @@
-The Engine support an Entity Component System architecture, meaning that `GameObject`s have their own "base" APIs, which can be extended by adding *Components*. These, as well as the base APIs, are all listed below.
+The Engine has a compositional object system. `GameObject`s have "base" APIs (properties, methods, events) that can be extended by giving them "components." These are transparent to scripts, adding a Component immediately makes their properties etc accessible via the Object. All components, as well as the base API, are described below.

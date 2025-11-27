@@ -1,6 +1,8 @@
 #include <tracy/Tracy.hpp>
 
 #include "datatype/GameObject.hpp"
+#include "component/Transform.hpp"
+#include "component/Workspace.hpp"
 #include "Log.hpp"
 
 // https://stackoverflow.com/a/75891310
@@ -521,6 +523,8 @@ bool GameObject::IsDescendantOf(GameObject* Object)
 
 void GameObject::SetParent(GameObject* newParent)
 {
+	ZoneScoped;
+
 	if (this->IsDestructionPending)
 		RAISE_RTF(
 			"Tried to re-parent '{}' (ID:{}) to '{}' (ID:{}), but it's Parent has been locked due to `::Destroy`",
@@ -559,7 +563,32 @@ void GameObject::SetParent(GameObject* newParent)
 		oldParent->RemoveChild(this->ObjectId);
 
 	if (!newParent)
+	{
+		this->ForEachDescendant([](GameObject* d) -> bool {
+			d->OwningWorkspace = PHX_GAMEOBJECT_NULL_ID;
+			return true;
+		});
+		this->OwningWorkspace = PHX_GAMEOBJECT_NULL_ID;
+
 		return;
+	}
+
+	uint32_t newOwningWorkspace = newParent->OwningWorkspace;
+
+	if (newParent->FindComponent<EcWorkspace>())
+		newOwningWorkspace = newParent->ObjectId;
+
+	if (newOwningWorkspace != this->OwningWorkspace)
+	{
+		this->ForEachDescendant([newOwningWorkspace](GameObject* d) -> bool {
+			d->OwningWorkspace = newOwningWorkspace;
+			return true;
+		});
+		this->OwningWorkspace = newOwningWorkspace;
+
+		if (EcTransform* ct = this->FindComponent<EcTransform>())
+			ct->RecomputeTransformTree();
+	}
 
 	this->Parent = newParent->ObjectId;
 	newParent->AddChild(this);
@@ -567,6 +596,8 @@ void GameObject::SetParent(GameObject* newParent)
 
 void GameObject::AddChild(GameObject* c)
 {
+	ZoneScoped;
+
 	if (c->ObjectId == this->ObjectId)
 		RAISE_RTF(
 			"::AddChild called on Object ID:{} (`{}`) with itself as the adopt'ed",
@@ -579,6 +610,9 @@ void GameObject::AddChild(GameObject* c)
 	{
 		Children.push_back(c->ObjectId);
 		//c->IncrementHardRefs();
+
+		if (EcTransform* ct = c->FindComponent<EcTransform>(); ct && this->FindComponent<EcTransform>())
+			ct->RecomputeTransformTree(); // the child is be affected by this object's transform
 	}
 }
 
@@ -627,6 +661,23 @@ void GameObject::ForEachChild(const std::function<bool(GameObject*)>& Callback)
 		if (bool shouldContinue = Callback(child); !shouldContinue)
 			break;
 	}
+}
+
+bool GameObject::ForEachDescendant(const std::function<bool(GameObject*)>& Callback)
+{
+	for (uint32_t id : Children)
+	{
+		GameObject* child = GameObject::GetObjectById(id);
+		assert(child);
+
+		if (bool shouldContinue = Callback(child); !shouldContinue)
+			return true;
+
+		if (child->ForEachDescendant(Callback))
+			return true;
+	}
+
+	return false;
 }
 
 std::vector<GameObject*> GameObject::GetChildren()

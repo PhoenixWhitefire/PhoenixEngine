@@ -45,6 +45,9 @@ struct EcMesh : public Component<EntityComponent::Mesh>
 	std::string Asset = "!Cube";
 	uint32_t GpuSkinningBuffer = UINT32_MAX;
 
+	std::vector<glm::vec3> SpatialHashPoints;
+	ObjectRef PrevWorkspace;
+
 	ObjectRef Object;
 	bool Valid = true;
 };

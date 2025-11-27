@@ -64,7 +64,7 @@ end
 local PrevDragMousePos: vector? = nil
 local IsSurfaceDragging = false
 local IsGizmoDragging = false
-local GizmoDraggingDirection = vector.zero
+local GizmoDragAxis = vector.zero
 local GizmoDragHandle = nil
 
 local function roundTo(n: number, x: number): number
@@ -97,12 +97,11 @@ function CoreTools.Update(Project: { Workspace: Workspace })
 
     local camPos = workspace.SceneCamera.Transform.Position
     local mpos = input.mouseposition()
-    local mx, my = mpos.x, mpos.y
 
     local mouseVector = workspace:ScreenPointToVector(mpos, 1000)
     local gizmoHit = if input.mousedown('l') then workspace:Raycast(camPos, mouseVector, { GizmoContainer }, false) else nil
 
-    if input.mousedown('l') and not IsGizmoDragging --[[ and not gizmoHit ]] then
+    if input.mousedown('l') and not IsGizmoDragging and not gizmoHit then
         local worldHit = Project.Workspace:Raycast(camPos, mouseVector, { if IsSurfaceDragging then target else nil })
 
         if worldHit and (IsSurfaceDragging or worldHit.Object == target) then
@@ -149,7 +148,7 @@ function CoreTools.Update(Project: { Workspace: Workspace })
     if gizmoHit and input.mousedown('l') then
         if not IsGizmoDragging then
             PrevDragMousePos = mpos
-            GizmoDraggingDirection = assert(GizmoPieceToDirection[gizmoHit.Object])
+            GizmoDragAxis = vector.abs(assert(GizmoPieceToDirection[gizmoHit.Object]))
             GizmoDragHandle = gizmoHit.Object
 
             for p, _ in GizmoPieceToDirection do
@@ -176,7 +175,9 @@ function CoreTools.Update(Project: { Workspace: Workspace })
         local oldMouseDir = workspace:ScreenPointToVector(PrevDragMousePos, dist)
         local diff = (vector.normalize(mouseVector) * dist) - oldMouseDir
 
-        target.Transform += vector.create(roundTo(diff.x, GizmoMoveIncrement), roundTo(diff.z, GizmoMoveIncrement), roundTo(diff.z, GizmoMoveIncrement)) * GizmoDraggingDirection
+        target.Transform += vector.create(roundTo(diff.x, GizmoMoveIncrement), roundTo(diff.y, GizmoMoveIncrement), roundTo(diff.z, GizmoMoveIncrement)) * GizmoDragAxis
+
+        PrevDragMousePos = mpos
     end
 end
 
