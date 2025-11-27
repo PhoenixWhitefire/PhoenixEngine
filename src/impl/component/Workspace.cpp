@@ -224,25 +224,6 @@ static glm::ivec3 roundToGrid(const glm::vec3& v)
 	return glm::ivec3(roundNToGrid(v.x), roundNToGrid(v.y), roundNToGrid(v.z));
 }
 
-static void addCubeAt(const EcWorkspace* cw, const glm::vec3& pos, const Color& col)
-{
-	if (glfwGetKey(glfwGetCurrentContext(), GLFW_KEY_T) != GLFW_PRESS)
-		return;
-
-	GameObject* g = GameObject::Create(EntityComponent::Mesh);
-	EcTransform* ct = g->FindComponent<EcTransform>();
-	EcMesh* cm = g->FindComponent<EcMesh>();
-
-	cm->MaterialId = MaterialManager::Get()->LoadFromPath("neon");
-	cm->Tint = col;
-	cm->Transparency = 0.7f;
-
-	ct->SetWorldTransform(glm::translate(glm::mat4(1.f), pos));
-	ct->SetWorldSize(glm::vec3(SPATIAL_HASH_GRID_SIZE));
-
-	g->SetParent(cw->Object);
-}
-
 static void hashTraceRay(
 	const EcWorkspace* cw,
 	const glm::vec3& rayStart,
@@ -277,8 +258,6 @@ static void hashTraceRay(
 
 	glm::ivec3 currentCell = rayStartCell;
 	int depth = 0;
-
-	addCubeAt(cw, rayStartCell, Color(0.f, 1.f, 0.f));
 
 	while (true)
 	{
@@ -319,8 +298,6 @@ static void hashTraceRay(
 
 		if (++depth > 1024)
 			return;
-
-		addCubeAt(cw, currentCell, Color(0.f, 0.f, 1.f));
 	}
 }
 
