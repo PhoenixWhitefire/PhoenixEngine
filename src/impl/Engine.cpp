@@ -320,7 +320,7 @@ static bool s_DebugCollisionAabbs = false;
 static void traverseHierarchy(
 	Memory::vector<RenderItem, MEMCAT(Rendering)>& RenderList,
 	Memory::vector<LightItem, MEMCAT(Rendering)>& LightList,
-	Memory::vector<ObjectHandle, MEMCAT(Physics)>& PhysicsList,
+	PhysicsWorld& PhysicsWorld,
 	const ObjectHandle& Root,
 	EcCamera* SceneCamera,
 	double DeltaTime,
@@ -354,8 +354,10 @@ static void traverseHierarchy(
 
 		if (object3D)
 		{
-			if (object3D->PhysicsDynamics || object3D->PhysicsCollisions)
-				PhysicsList.emplace_back(object);
+			if (object3D->PhysicsDynamics)
+				PhysicsWorld.Dynamics.emplace_back(object);
+			else if (object3D->PhysicsCollisions)
+				PhysicsWorld.Statics.emplace_back(object);
 
 			if (object3D->Transparency > .95f || Engine::Get()->IsHeadlessMode)
 				continue;
@@ -397,7 +399,7 @@ static void traverseHierarchy(
 			traverseHierarchy(
 				RenderList,
 				LightList,
-				PhysicsList,
+				PhysicsWorld,
 				link->Target,
 				SceneCamera,
 				DeltaTime,
@@ -448,7 +450,7 @@ static void traverseHierarchy(
 			traverseHierarchy(
 				RenderList,
 				LightList,
-				PhysicsList,
+				PhysicsWorld,
 				object,
 				SceneCamera,
 				DeltaTime,
@@ -740,6 +742,9 @@ void Engine::Start()
 	}, "!Framebuffer:Main");
 
 	CurrentScene.RenderList.reserve(50);
+
+	PhysicsWorld physWorld;
+
 	m_IsRunning = true;
 
 	Log::Info("Main engine loop start");
@@ -886,8 +891,6 @@ void Engine::Start()
 		if (!IsHeadlessMode)
 			workspaceComponent->Update();
 
-		Memory::vector<ObjectHandle, MEMCAT(Physics)> physicsList;
-
 		REFLECTION_SIGNAL(DataModelRef->FindComponent<EcDataModel>()->OnFrameBeginCallbacks, deltaTime);
 
 		// fetch the camera again because of potential CurrentScene changes that may have caused re-alloc'd
@@ -901,12 +904,14 @@ void Engine::Start()
 
 			CurrentScene.RenderList.clear();
 			CurrentScene.LightingList.clear();
+			physWorld.Dynamics.clear();
+			physWorld.Statics.clear();
 
 			// Aggregate mesh and light data into lists
 			traverseHierarchy(
 				CurrentScene.RenderList,
 				CurrentScene.LightingList,
-				physicsList,
+				physWorld,
 				WorkspaceRef,
 				sceneCamera,
 				deltaTime,
@@ -934,17 +939,9 @@ void Engine::Start()
 
 			sceneCamera = sceneCamObject->FindComponent<EcCamera>();
 		}
-		bool hasPhysics = false;
 
-		for (GameObject* object : physicsList)
-			if (object->FindComponent<EcMesh>()->PhysicsDynamics)
-			{
-				hasPhysics = true;
-				break;
-			}
-
-		if (hasPhysics)
-			Physics::Step(physicsList, deltaTime * PhysicsTimeScale);
+		if (physWorld.Dynamics.size() > 0)
+			Physics::Step(physWorld, deltaTime * PhysicsTimeScale);
 
 		if (!IsHeadlessMode)
 		{

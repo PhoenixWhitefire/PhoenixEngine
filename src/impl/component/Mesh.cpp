@@ -171,8 +171,24 @@ public:
 			EC_PROP_SIMPLE(EcMesh, LinearVelocity, Vector3),
 			EC_PROP_SIMPLE(EcMesh, AngularVelocity, Vector3),
 
-			EC_PROP_SIMPLE(EcMesh, Density, Double),
 			EC_PROP_SIMPLE(EcMesh, Friction, Double),
+
+			EC_PROP(
+				"Density",
+				Double,
+				EC_GET_SIMPLE(EcMesh, Density),
+				[](void* p, const Reflection::GenericValue& gv)
+				{
+					EcMesh* cm = static_cast<EcMesh*>(p);
+					float dens = (float)gv.AsDouble();
+
+					if (dens < 0.001f)
+						RAISE_RT("Minimum density is 0.001");
+
+					cm->Density = dens;
+					cm->Mass = dens * cm->CollisionAabb.Size.x * cm->CollisionAabb.Size.y * cm->CollisionAabb.Size.z;
+				}
+			),
 
 			EC_PROP(
 				"Asset",
@@ -340,5 +356,7 @@ void EcMesh::RecomputeAabb()
 	}
 
 	updateSpatialHash(this);
+
+	this->Mass = Density * CollisionAabb.Size.x * CollisionAabb.Size.y * CollisionAabb.Size.z;
 }
 

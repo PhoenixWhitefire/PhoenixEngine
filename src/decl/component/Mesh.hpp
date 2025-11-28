@@ -31,6 +31,7 @@ struct EcMesh : public Component<EntityComponent::Mesh>
 
 	glm::vec3 LinearVelocity;
 	glm::vec3 AngularVelocity;
+	glm::vec3 NetForce;
 	struct
 	{
 		glm::vec3 Position{};
@@ -38,9 +39,9 @@ struct EcMesh : public Component<EntityComponent::Mesh>
 	} CollisionAabb;
 	CollisionFidelityMode CollisionFidelity = CollisionFidelityMode::Aabb;
 
-	double Mass = 1.f;
-	double Density = 1.f;
-	double Friction = 0.3f;
+	float Mass = 1.f;
+	float Density = 1.f;
+	float Friction = 0.3f;
 
 	std::string Asset = "!Cube";
 	uint32_t GpuSkinningBuffer = UINT32_MAX;

@@ -142,7 +142,7 @@ void EcTransform::SetWorldTransform(const glm::mat4& NewWorldTrans)
 {
     EcTransform* parent = Object->GetParent() ? Object->GetParent()->FindComponent<EcTransform>() : nullptr;
 
-    LocalTransform = NewWorldTrans * glm::inverse(parent ? parent->Transform : glm::mat4(1.f));
+    LocalTransform = parent ? (NewWorldTrans * glm::inverse(parent->Transform)) : NewWorldTrans;
     Transform = NewWorldTrans;
 }
 
@@ -150,7 +150,7 @@ void EcTransform::SetWorldSize(const glm::vec3& NewWorldSize)
 {
     EcTransform* parent = Object->GetParent() ? Object->GetParent()->FindComponent<EcTransform>() : nullptr;
 
-    LocalSize = NewWorldSize / (parent ? parent->Size : glm::vec3(1.f));
+    LocalSize = parent ? (NewWorldSize / parent->Size) : NewWorldSize;
     Size = NewWorldSize;
 }
 
