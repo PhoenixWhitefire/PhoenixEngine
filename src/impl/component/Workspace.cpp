@@ -309,19 +309,6 @@ SpatialCastResult EcWorkspace::Raycast(const glm::vec3& Origin, const glm::vec3&
 	GameObject* hitObject = nullptr;
 	float closestHit = FLT_MAX;
 
-	std::vector<GameObject*> objects;
-	if (FilterIsIgnoreList)
-		objects = Object->GetDescendants();
-	else
-	{
-		objects = FilterList;
-		for (GameObject* p : FilterList)
-		{
-			std::vector<GameObject*> descs = p->GetDescendants();
-			objects.insert(objects.end(), descs.begin(), descs.end());
-		}
-	}
-
 	hashTraceRay(this, Origin, roundToGrid(Origin), roundToGrid(Origin + Vector), Vector, [&](const std::vector<uint32_t>& CellObjects) -> bool
 	{
 		ZoneScopedN("VisitCell");
@@ -332,10 +319,34 @@ SpatialCastResult EcWorkspace::Raycast(const glm::vec3& Origin, const glm::vec3&
 			if (!p)
 				continue;
 
-			const auto& filterIt = std::find(FilterList.begin(), FilterList.end(), p);
+			if (FilterIsIgnoreList)
+			{
+				bool skip = false;
 
-			if (FilterIsIgnoreList ? filterIt != FilterList.end() : filterIt == FilterList.end())
-				continue;
+				for (const GameObject* ignore : FilterList)
+					if (p->IsDescendantOf(ignore))
+					{
+						skip = true;
+						break;
+					}
+
+				if (skip)
+					continue;
+			}
+			else
+			{
+				bool found = false;
+
+				for (const GameObject* ignore : FilterList)
+					if (p->IsDescendantOf(ignore))
+					{
+						found = true;
+						break;
+					}
+
+				if (!found)
+					continue;
+			}
 
 			EcMesh* cm = p->FindComponent<EcMesh>();
 			EcTransform* ct = p->FindComponent<EcTransform>();

@@ -508,7 +508,7 @@ std::string GameObject::GetFullName() const
 
 static uint32_t NullGameObjectIdValue = PHX_GAMEOBJECT_NULL_ID;
 
-bool GameObject::IsDescendantOf(GameObject* Object)
+bool GameObject::IsDescendantOf(const GameObject* Object) const
 {
 	GameObject* current = this->GetParent();
 	while (current)

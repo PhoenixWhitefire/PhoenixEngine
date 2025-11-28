@@ -204,7 +204,7 @@ public:
 	GameObject* FindChild(const std::string_view&);
 	GameObject* FindChildWithComponent(EntityComponent);
 	
-	bool IsDescendantOf(GameObject*);
+	bool IsDescendantOf(const GameObject*) const;
 
 	std::string GetFullName() const;
 
