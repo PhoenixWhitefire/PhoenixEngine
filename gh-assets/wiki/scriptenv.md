@@ -42,7 +42,7 @@ Additional types with methods and properties
 
 * A Game Object
 * For organization, the members of this type will be on the Components wiki page
-#### `GameObject.validComponents: { string }`
+#### `GameObject.validcomponents: { string }`
 * A list of all valid component names which can be passed into `.new`
 #### `GameObject.new(Component: string): GameObject`
 * Creates a new GameObject with the provided Component

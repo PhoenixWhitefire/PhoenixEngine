@@ -27,7 +27,7 @@ static int model_import(lua_State* L)
 	return 1;
 }
 
-static luaL_Reg model_funcs[] =
+static const luaL_Reg model_funcs[] =
 {
 	{ "import", model_import },
 	{ NULL, NULL }

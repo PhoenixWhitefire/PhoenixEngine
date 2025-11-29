@@ -17,7 +17,7 @@
   "@luhx/global/GameObject.new": {
     "documentation": "* Creates a new GameObject with the provided Component"
   },
-  "@luhx/global/GameObject.validComponents": {
+  "@luhx/global/GameObject.validcomponents": {
     "documentation": "* A list of all valid component names which can be passed into `.new`"
   },
   "@luhx/global/Matrix": {

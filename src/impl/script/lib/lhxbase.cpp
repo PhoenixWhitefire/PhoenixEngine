@@ -217,7 +217,7 @@ static int base_defer(lua_State* L)
 	return 0;
 }
 
-static luaL_Reg base_funcs[] =
+static const luaL_Reg base_funcs[] =
 {
     { "print", base_print },
     { "appendlog", base_appendlog },

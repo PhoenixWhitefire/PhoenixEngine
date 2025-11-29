@@ -144,7 +144,7 @@ static int mesh_save(lua_State* L)
 	return 0;
 }
 
-static luaL_Reg mesh_funcs[] =
+static const luaL_Reg mesh_funcs[] =
 {
     { "get", mesh_get },
     { "set", mesh_set },

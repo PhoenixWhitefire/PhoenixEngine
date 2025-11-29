@@ -1,0 +1,15 @@
+return function(describe, test, expect)
+    test("Index R, G, B", function()
+        expect(Color.new(1, 0, 2).R):toBe(1)
+        expect(Color.new(1, 0, 2).G):toBe(0)
+        expect(Color.new(1, 0, 2).B):toBe(2)
+    end)
+    test("Index error", function()
+        expect(function()
+            return Color.new(1, 0, 1).Hello
+        end):toThrow("is not a valid member of")
+    end)
+    test("__tostring", function()
+        expect(tostring(Color.new(1, 0, 0))):toBe("1.00, 0.00, 0.00")
+    end)
+end

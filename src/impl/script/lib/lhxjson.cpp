@@ -22,7 +22,7 @@ static int json_encode(lua_State* L)
 	return 1;
 }
 
-static luaL_Reg json_funcs[] =
+static const luaL_Reg json_funcs[] =
 {
 	{ "parse", json_parse },
 	{ "encode", json_encode },

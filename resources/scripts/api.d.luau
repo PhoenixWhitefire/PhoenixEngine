@@ -16,7 +16,7 @@ declare extern type EventSignal with
   function WaitUntil(self): ( any )
 end
 declare GameObject: {
-  validComponents: { string },
+  validcomponents: { string },
   new: (<T>(ComponentName: T) -> GameObject & index<Creatables, T>) & ((ComponentName: string) -> GameObject & any)
 }
 declare extern type Matrix with

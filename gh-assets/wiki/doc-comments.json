@@ -318,7 +318,7 @@
             "In": "Component: string",
             "Out": "GameObject"
           },
-          "validComponents": {
+          "validcomponents": {
             "Description": "A list of all valid component names which can be passed into `.new`",
             "Type": "{ string }"
           }

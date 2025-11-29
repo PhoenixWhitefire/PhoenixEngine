@@ -8,6 +8,7 @@
 
 #include "component/Script.hpp"
 #include "script/ScriptEngine.hpp"
+#include "script/luhx.hpp"
 #include "datatype/Color.hpp"
 #include "UserInput.hpp"
 #include "Timing.hpp"
@@ -181,7 +182,7 @@ bool EcScript::Reload()
 		return false;
 	}
 
-	ScriptEngine::L::PushGameObject(m_L, this->Object);
+	luhx_pushgameobject(m_L, this->Object);
 	lua_setglobal(m_L, "script");
 
 	int result = ScriptEngine::CompileAndLoad(m_L, source, "@" + FileRW::MakePathCwdRelative(SourceFile));

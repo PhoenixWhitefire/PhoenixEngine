@@ -63,7 +63,7 @@ local function dumpCreatables()
 
 	definitionsFile ..= "\ntype Creatables = {\n"
 
-	for _, v in GameObject.validComponents do
+	for _, v in GameObject.validcomponents do
 		definitionsFile ..= `\t{v}: {v}{if creatablesExtra[v] then creatablesExtra[v] else ""},\n`
 	end
 

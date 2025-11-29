@@ -30,7 +30,7 @@ static int conf_save(lua_State* L)
 	return 1;
 }
 
-static luaL_Reg conf_funcs[] =
+static const luaL_Reg conf_funcs[] =
 {
     { "get", conf_get },
     { "set", conf_set },

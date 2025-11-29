@@ -67,7 +67,7 @@ static int scene_load(lua_State* L)
 	return 1;
 }
 
-static luaL_Reg scene_funcs[] =
+static const luaL_Reg scene_funcs[] =
 {
     { "save", scene_save },
     { "load", scene_load },

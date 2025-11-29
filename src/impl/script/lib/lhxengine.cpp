@@ -172,7 +172,7 @@ static int engine_explorerselections(lua_State* L)
     for (int i = 0; i < (int)selections.size(); i++)
     {
         lua_pushinteger(L, i + 1);
-        ScriptEngine::L::PushGameObject(L, selections[i].Dereference());
+        luhx_pushgameobject(L, selections[i].Dereference());
         lua_settable(L, -3);
     }
 
@@ -382,7 +382,7 @@ static int engine_resetviewport(lua_State* L)
     return 0;
 }
 
-static luaL_Reg engine_funcs[] =
+static const luaL_Reg engine_funcs[] =
 {
     { "windowsize", engine_windowsize },
     { "setwindowsize", engine_setwindowsize },
