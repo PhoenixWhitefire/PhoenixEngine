@@ -1,3 +1,5 @@
+--!optimize 0
+
 -- ed.luau, 14/09/2025
 local FALLBACK_IMAGE = "@etextures/editor-icons/fallback.png"
 local LOGO_IMAGE = "@etextures/logo.png"
@@ -839,7 +841,7 @@ local function renderViewport(DeltaTime: number)
 			SelectionPart.Parent = workspace
 
 			if input.mousedown("l") and isMouseWithinViewport() then
-				if input.keypressed(341) then -- left control
+				if input.keypressed(Enum.Key.LeftControl) then -- left control
 					local sels = engine.explorerselections()
 					table.insert(sels, rayresult.Object :: GameObject)
 					engine.setexplorerselections(sels)
@@ -1180,7 +1182,7 @@ function Stages.SelectProject(DeltaTime: number)
 		imgui.endchild()
 	end
 	imgui.endw()
-	
+
 	renderMainMenuBar(DeltaTime)
 end
 

@@ -50,7 +50,7 @@ game.OnFrameBegin:Connect(function()
         M2WasDown = false
     end
 
-    if input.keypressed(49) then
+    if input.keypressed(Enum.Key.One) then
         for _, part in Parts do
             part:Destroy()
         end

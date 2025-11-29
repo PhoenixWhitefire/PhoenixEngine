@@ -5,6 +5,12 @@
   "@luhx/global/Color.new": {
     "documentation": "* Returns a Color with the provided R, G, and B values\n* Values are expected to be in the range 0 to 1"
   },
+  "@luhx/global/Enum": {
+    "documentation": "* Contains enumerations"
+  },
+  "@luhx/global/Enum.Key": {
+    "documentation": "* Keys, which may be passed to `input.keypressed`"
+  },
   "@luhx/global/EventConnection": {
     "documentation": "* A connection to an Event"
   },

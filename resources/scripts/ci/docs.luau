@@ -562,7 +562,7 @@ definitionsFile ..= "\n"
 for _, name in orderedLibraries do
 	local lib = docComments.ScriptEnv.Libraries[name]
 	libraries ..= `### \`{ name }\`\n`
-	
+
 	assert(lib, name)
 
 	local totalcomment = ""

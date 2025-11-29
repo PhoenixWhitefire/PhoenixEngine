@@ -214,6 +214,9 @@ type Creatables = {
 	Example: Example,
 	TreeLink: TreeLink,
 }
+declare Enum: {
+  Key: { [string]: number }
+}
 declare conf: {
   save: ((  ) -> (boolean)),
   set: (( Key: string, Value: any ) -> ()),

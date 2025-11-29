@@ -10,6 +10,7 @@
 
 #include "script/ScriptEngine.hpp"
 #include "script/luhx.hpp"
+#include "script/enum/keys.hpp"
 #include "datatype/Color.hpp"
 #include "GlobalJsonConfig.hpp"
 #include "Engine.hpp"
@@ -1203,6 +1204,23 @@ static lua_State* getthread(lua_State* L, int* arg)
     }
 }
 
+static void openEnum(lua_State* L)
+{
+	lua_newtable(L);
+
+	lua_newtable(L);
+
+	for (int i = GLFW_KEY_SPACE; i <  GLFW_KEY_LAST; i++)
+	{
+		lua_pushinteger(L, i);
+		lua_setfield(L, -2, KeyNames[i]);
+	}
+
+	lua_setfield(L, -2, "Key");
+
+	lua_setglobal(L, "Enum");
+}
+
 lua_State* ScriptEngine::L::Create(const std::string& VmName)
 {
 	ZoneScopedC(tracy::Color::LightSkyBlue);
@@ -1212,6 +1230,8 @@ lua_State* ScriptEngine::L::Create(const std::string& VmName)
 	luaL_openlibs(state);
 	// Load runtime-specific libraries
 	luhx_openlibs(state);
+
+	openEnum(state);
 
 	std::filesystem::path* requirePath = new std::filesystem::path;
 	luaopen_require(
@@ -1246,6 +1266,7 @@ lua_State* ScriptEngine::L::Create(const std::string& VmName)
 		"hx_dumpStacktrace"
 	);
 	lua_setfield(state, -2, "traceback");
+	lua_pop(state, 1);
 
 	luhx_pushgameobject(state, GameObject::GetObjectById(GameObject::s_DataModel));
 	lua_setglobal(state, "game");

@@ -90,7 +90,7 @@ function Controller.Update(self: Controller, DeltaTime: number)
 	)
 	
 	if floorRayHit then
-		if input.keypressed(" ") and (self.totalTime - self.lastJumped) > self.JumpCooldown then
+		if input.keypressed(Enum.Key.Space) and (self.totalTime - self.lastJumped) > self.JumpCooldown then
 			impulse += vector.create(0, self.JumpImpulse, 0)
 			self.Character.LinearVelocity = vector.create(self.Character.LinearVelocity.x, 0, self.Character.LinearVelocity.z)
 			self.lastJumped = self.totalTime
@@ -132,8 +132,8 @@ function Controller.Update(self: Controller, DeltaTime: number)
 end
 
 function Controller.getMoveDirection(self: Controller)
-	local moveX = (if input.keypressed("a") then 1 else 0) - (if input.keypressed("d") then 1 else 0)
-	local moveZ = (if input.keypressed("w") then 1 else 0) - (if input.keypressed("s") then 1 else 0)
+	local moveX = (if input.keypressed(Enum.Key.A) then 1 else 0) - (if input.keypressed(Enum.Key.D) then 1 else 0)
+	local moveZ = (if input.keypressed(Enum.Key.W) then 1 else 0) - (if input.keypressed(Enum.Key.S) then 1 else 0)
 	
 	local trans = self.Camera.Transform * Matrix.fromEulerAnglesXYZ(-self.cameraPitch, 0, 0) * Matrix.fromTranslation(moveX, 0, moveZ)
 	

@@ -528,6 +528,15 @@
           }
         }
       },
+      "Enum": {
+        "Description": "Contains enumerations",
+        "Members": {
+          "Key": {
+            "Description": "Keys, which may be passed to `input.keypressed`",
+            "Type": "{ [string]: number }"
+          }
+        }
+      },
       "engine": {
         "Description": "Inspect and modify various parts of the Engine",
         "Members": {

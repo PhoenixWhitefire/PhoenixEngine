@@ -127,6 +127,10 @@ Additional types with methods and properties
 
 Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 
+### `Enum`
+* Contains enumerations
+#### `Enum.Key: { [string]: number }`
+* Keys, which may be passed to `input.keypressed`
 ### `conf`
 * Internal Engine configuration state, loaded from file (`phoenix.conf`) upon startup
 #### `conf.save(): boolean`

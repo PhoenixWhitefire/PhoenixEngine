@@ -188,7 +188,7 @@ local function update(DeltaTime)
 	Editor(DeltaTime)
 	--NodeEditor()
 
-	if input.keypressed('m') then
+	if input.keypressed(Enum.Key.M) then
 		local sweeping = GameObject.new("Script" :: "Script")
 		sweeping.SourceFile = "scripts/minesweeper.luau"
 		sweeping.Name = "MinesweeperMain"
@@ -206,7 +206,7 @@ end
 
 if not conf.get("Developer") then
 	update = function()
-		if input.keypressed('m') then
+		if input.keypressed(Enum.Key.M) then
 			local sweeping = GameObject.new("Script" :: "Script")
 			sweeping.SourceFile = "scripts/minesweeper.luau"
 			sweeping.Name = "MinesweeperMain"

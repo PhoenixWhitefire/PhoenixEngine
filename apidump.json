@@ -242,6 +242,9 @@
       "workspace": "GameObject & Workspace"
     },
     "Libraries": {
+      "Enum": {
+        "Key": "table"
+      },
       "conf": {
         "get": "function",
         "save": "function",
