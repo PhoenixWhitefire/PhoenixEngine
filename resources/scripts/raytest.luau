@@ -30,7 +30,7 @@ end
 --workspace.SceneCamera.Transform = Matrix.fromEulerAnglesXYZ(0, math.pi, 0)
 
 game.OnFrameBegin:Connect(function()
-    if input.mousedown('l') and not input.guihandledm() then
+    if input.mousedown(Enum.MouseButton.Left) and not input.guihandledm() then
         if not M1WasDown then
             debugMouseVector()
         end
@@ -40,7 +40,7 @@ game.OnFrameBegin:Connect(function()
         M1WasDown = false
     end
 
-    if input.mousedown('r') and not input.guihandledm() then
+    if input.mousedown(Enum.MouseButton.Right) and not input.guihandledm() then
         if not M2WasDown then
             debugCameraVector()
         end

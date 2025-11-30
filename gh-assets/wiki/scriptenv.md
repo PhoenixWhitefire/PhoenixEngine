@@ -131,6 +131,8 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * Contains enumerations
 #### `Enum.Key: { [string]: number }`
 * Keys, which may be passed to `input.keypressed`
+#### `Enum.MouseButton: { Left: number, Middle: number, Right: number }`
+* Mouse buttons, which may be passed to `input.mousedown`
 ### `conf`
 * Internal Engine configuration state, loaded from file (`phoenix.conf`) upon startup
 #### `conf.save(): boolean`
@@ -397,8 +399,8 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `input.cursorvisible(): boolean`
 * Returns whether the mouse cursor is current visible
 * To *change* the visibility of the cursor, use `.setcursorvisible`
-#### `input.keypressed(Key: string | number): boolean`
-* Returns whether the specified key (as lowercase, e.g. `'a'`, `'b'`, or by GLFW Key ID) is currently being pressed
+#### `input.keypressed(Key: number): boolean`
+* Returns whether the specified key (as lowercase, e.g. `Enum.Key.A`, `Enum.Key.One`) is currently being pressed
 #### `input.setmousegrabbed(Grabbed: boolean): `
 * Grabs/ungrabs the mouse cursor
 #### `input.guihandledm(): boolean`
@@ -409,8 +411,8 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * Returns the current position of the mouse
 #### `input.setcursorvisible(Visible: boolean): `
 * Sets the visibility of the mouse cursor to the specified value
-#### `input.mousedown(Button: 'l' | 'r' | 'e'): boolean`
-* Returns whether the specified mouse button (`l`eft, `r`ight, or `e`ither) is currently being pressed
+#### `input.mousedown(Button: number): boolean`
+* Returns whether the specified mouse button (`Enum.MouseButton.Left/Middle/Right`) is currently being pressed
 #### `input.guihandled(): boolean`
 * Returns whether Dear ImGui is using the player's inputs at all
 #### `input.mousegrabbed(): boolean`

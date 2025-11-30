@@ -534,6 +534,10 @@
           "Key": {
             "Description": "Keys, which may be passed to `input.keypressed`",
             "Type": "{ [string]: number }"
+          },
+          "MouseButton": {
+            "Description": "Mouse buttons, which may be passed to `input.mousedown`",
+            "Type": "{ Left: number, Middle: number, Right: number }"
           }
         }
       },
@@ -1646,19 +1650,19 @@
           },
           "keypressed": {
             "Description": [
-              "Returns whether the specified key (as lowercase, e.g. `'a'`, `'b'`, or by GLFW Key ID) is currently being pressed"
+              "Returns whether the specified key (as lowercase, e.g. `Enum.Key.A`, `Enum.Key.One`) is currently being pressed"
             ],
             "In": [
-              "Key: string | number"
+              "Key: number"
             ],
             "Out": "boolean"
           },
           "mousedown": {
             "Description": [
-              "Returns whether the specified mouse button (`l`eft, `r`ight, or `e`ither) is currently being pressed"
+              "Returns whether the specified mouse button (`Enum.MouseButton.Left/Middle/Right`) is currently being pressed"
             ],
             "In": [
-              "Button: 'l' | 'r' | 'e'"
+              "Button: number"
             ],
             "Out": "boolean"
           },

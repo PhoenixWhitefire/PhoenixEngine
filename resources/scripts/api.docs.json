@@ -11,6 +11,9 @@
   "@luhx/global/Enum.Key": {
     "documentation": "* Keys, which may be passed to `input.keypressed`"
   },
+  "@luhx/global/Enum.MouseButton": {
+    "documentation": "* Mouse buttons, which may be passed to `input.mousedown`"
+  },
   "@luhx/global/EventConnection": {
     "documentation": "* A connection to an Event"
   },
@@ -408,10 +411,10 @@
     "documentation": "* Returns whether Dear ImGui is using the player's mouse inputs"
   },
   "@luhx/global/input.keypressed": {
-    "documentation": "* Returns whether the specified key (as lowercase, e.g. `'a'`, `'b'`, or by GLFW Key ID) is currently being pressed"
+    "documentation": "* Returns whether the specified key (as lowercase, e.g. `Enum.Key.A`, `Enum.Key.One`) is currently being pressed"
   },
   "@luhx/global/input.mousedown": {
-    "documentation": "* Returns whether the specified mouse button (`l`eft, `r`ight, or `e`ither) is currently being pressed"
+    "documentation": "* Returns whether the specified mouse button (`Enum.MouseButton.Left/Middle/Right`) is currently being pressed"
   },
   "@luhx/global/input.mousegrabbed": {
     "documentation": "* Returns whether the mouse is currently restricted to the game window\n* To *change* whether the mouse is grabbed, use `.setmousegrabbed`"

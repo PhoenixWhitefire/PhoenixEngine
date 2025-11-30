@@ -99,9 +99,9 @@ function CoreTools.Update(Project: { Workspace: Workspace })
     local mpos = input.mouseposition()
 
     local mouseVector = workspace:ScreenPointToVector(mpos, 1000)
-    local gizmoHit = if input.mousedown('l') then workspace:Raycast(camPos, mouseVector, { GizmoContainer }, false) else nil
+    local gizmoHit = if input.mousedown(Enum.MouseButton.Left) then workspace:Raycast(camPos, mouseVector, { GizmoContainer }, false) else nil
 
-    if input.mousedown('l') and not IsGizmoDragging and not gizmoHit then
+    if input.mousedown(Enum.MouseButton.Left) and not IsGizmoDragging and not gizmoHit then
         local worldHit = Project.Workspace:Raycast(camPos, mouseVector, { if IsSurfaceDragging then target else nil })
 
         if worldHit and (IsSurfaceDragging or worldHit.Object == target) then
@@ -145,7 +145,7 @@ function CoreTools.Update(Project: { Workspace: Workspace })
     GizmoPrevTargetTransform = target.Transform
     GizmoPrevTargetSize = target.Size
 
-    if gizmoHit and input.mousedown('l') then
+    if gizmoHit and input.mousedown(Enum.MouseButton.Left) then
         if not IsGizmoDragging then
             PrevDragMousePos = mpos
             GizmoDragAxis = vector.abs(assert(GizmoPieceToDirection[gizmoHit.Object]))
@@ -160,7 +160,7 @@ function CoreTools.Update(Project: { Workspace: Workspace })
 
         IsGizmoDragging = true
 
-    elseif not input.mousedown('l') then
+    elseif not input.mousedown(Enum.MouseButton.Left) then
         IsGizmoDragging = false
 
         for _, pcs in GizmoPieces do

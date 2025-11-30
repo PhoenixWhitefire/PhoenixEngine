@@ -215,7 +215,8 @@ type Creatables = {
 	TreeLink: TreeLink,
 }
 declare Enum: {
-  Key: { [string]: number }
+  Key: { [string]: number },
+  MouseButton: { Left: number, Middle: number, Right: number }
 }
 declare conf: {
   save: ((  ) -> (boolean)),
@@ -334,13 +335,13 @@ declare imgui: {
 }
 declare input: {
   cursorvisible: ((  ) -> (boolean)),
-  keypressed: (( Key: string | number ) -> (boolean)),
+  keypressed: (( Key: number ) -> (boolean)),
   setmousegrabbed: (( Grabbed: boolean ) -> ()),
   guihandledm: ((  ) -> (boolean)),
   setmouseposition: (( MouseX: number, MouseY: number ) -> ()),
   mouseposition: ((  ) -> (vector)),
   setcursorvisible: (( Visible: boolean ) -> ()),
-  mousedown: (( Button: 'l' | 'r' | 'e' ) -> (boolean)),
+  mousedown: (( Button: number ) -> (boolean)),
   guihandled: ((  ) -> (boolean)),
   mousegrabbed: ((  ) -> (boolean)),
   guihandledk: ((  ) -> (boolean))

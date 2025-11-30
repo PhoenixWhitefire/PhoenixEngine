@@ -156,10 +156,10 @@ function Controller.getMoveDirection(self: Controller)
 end
 
 function Controller.getRotationVector(self: Controller) : (number, number)
-	if input.mousedown("l") and not input.guihandledm() then
+	if input.mousedown(Enum.MouseButton.Left) and not input.guihandledm() then
 		self.isMouseLocked = true -- lock mouse with left-click
 		
-	elseif input.mousedown("r") then
+	elseif input.mousedown(Enum.MouseButton.Right) then
 		self.isMouseLocked = false -- unlock mouse with right-click
 	end
 	input.setmousegrabbed(self.isMouseLocked)

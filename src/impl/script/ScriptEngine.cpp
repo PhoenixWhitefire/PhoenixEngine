@@ -1218,6 +1218,19 @@ static void openEnum(lua_State* L)
 
 	lua_setfield(L, -2, "Key");
 
+	lua_newtable(L);
+
+	lua_pushinteger(L, GLFW_MOUSE_BUTTON_LEFT);
+	lua_setfield(L, -2, "Left");
+
+	lua_pushinteger(L, GLFW_MOUSE_BUTTON_MIDDLE);
+	lua_setfield(L, -2, "Middle");
+
+	lua_pushinteger(L, GLFW_MOUSE_BUTTON_RIGHT);
+	lua_setfield(L, -2, "Right");
+
+	lua_setfield(L, -2, "MouseButton");
+
 	lua_setglobal(L, "Enum");
 }
 

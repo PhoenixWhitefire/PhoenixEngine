@@ -96,12 +96,12 @@ local function changeStageTo(NewStage: Stage)
 	
 	CurrentStage = NewStage
 	StageUpdateSignal = targetDm.OnFrameBegin:Connect(function(DeltaTime)
-		MouseClick = (not WasHoldingDownM1) and input.mousedown("l")
+		MouseClick = (not WasHoldingDownM1) and input.mousedown(Enum.MouseButton.Left)
 		CoreTools.Update(Project)
 
 		Stages[CurrentStage](DeltaTime)
 
-		WasHoldingDownM1 = input.mousedown("l")
+		WasHoldingDownM1 = input.mousedown(Enum.MouseButton.Left)
 	end)
 end
 
@@ -746,7 +746,7 @@ local function renderMainMenuBar(dt: number)
 			end
 		end
 
-		if (HoveringOverMenuBar or HoveringOverRibbonTab or TabButtonHovering ~= nil or WindowHovering) and not input.mousedown('r') then
+		if (HoveringOverMenuBar or HoveringOverRibbonTab or TabButtonHovering ~= nil or WindowHovering) and not input.mousedown(Enum.MouseButton.Right) then
 			local windowWidth, _ = engine.windowsize()
 
 			local TAB_HEIGHT = 175
@@ -840,10 +840,14 @@ local function renderViewport(DeltaTime: number)
 			SelectionPart.Size = rayresult.Object.Size + vector.create(0.05, 0.05, 0.05)
 			SelectionPart.Parent = workspace
 
-			if input.mousedown("l") and isMouseWithinViewport() then
+			if input.mousedown(Enum.MouseButton.Left) and isMouseWithinViewport() then
 				if input.keypressed(Enum.Key.LeftControl) then -- left control
 					local sels = engine.explorerselections()
-					table.insert(sels, rayresult.Object :: GameObject)
+
+					if not table.find(sels, rayresult.Object) then
+						table.insert(sels, rayresult.Object :: GameObject)
+					end
+
 					engine.setexplorerselections(sels)
 				else
 					engine.setexplorerselections({ rayresult.Object })
@@ -1005,7 +1009,7 @@ local function renderProjectSelectorTiles(Projects: { string })
 
 			imgui.popstylecolor()
 
-			if input.mousedown("r") then
+			if input.mousedown(Enum.MouseButton.Right) then
 				imgui.openpopup("ProjectContextMenu")
 				ProjectContextMenuTarget = i
 			end

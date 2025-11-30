@@ -88,7 +88,7 @@ local function handleClick()
 end
 
 function Update(DeltaTime)
-    if input.mousedown("l") then
+    if input.mousedown(Enum.MouseButton.Left) then
         if not WasLmbPressed then
             coroutine.wrap(handleClick)()
         end

@@ -243,7 +243,8 @@
     },
     "Libraries": {
       "Enum": {
-        "Key": "table"
+        "Key": "table",
+        "MouseButton": "table"
       },
       "conf": {
         "get": "function",
