@@ -215,6 +215,13 @@ static int base_defer(lua_State* L)
 	return 0;
 }
 
+#ifdef _WIN32
+
+#define popen _popen
+#define pclose _pclose
+
+#endif
+
 // 13/01/2025: https://stackoverflow.com/a/478960
 // 02/12/2025: copied from Main.cpp
 static std::string exec(const char* cmd)
@@ -233,13 +240,6 @@ static std::string exec(const char* cmd)
 
 	return result;
 }
-
-#ifdef _WIN32
-
-#define popen _popen
-#define pclose _pclose
-
-#endif
 
 static int base_shellexec(lua_State* L)
 {
