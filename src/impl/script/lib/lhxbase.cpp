@@ -234,6 +234,13 @@ static std::string exec(const char* cmd)
 	return result;
 }
 
+#ifdef _WIN32
+
+#define popen _popen
+#define pclose _pclose
+
+#endif
+
 static int base_shellexec(lua_State* L)
 {
 	const char* command = luaL_checkstring(L, 1);
