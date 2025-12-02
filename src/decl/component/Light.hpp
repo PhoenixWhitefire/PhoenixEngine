@@ -6,9 +6,8 @@
 template <EntityComponent T>
 struct EcLight : Component<T>
 {
-	Color LightColor{ 1.f, 1.f, 1.f };
+	Color LightColor = { 1.f, 1.f, 1.f };
 	float Brightness = 1.f;
-	bool Shadows = false;
 	bool Valid = true;
 };
 
@@ -26,6 +25,7 @@ struct EcDirectionalLight : public EcLight<EntityComponent::DirectionalLight>
 	float ShadowViewFarPlane = 700.f;
 	float ShadowViewNearPlane = 0.1f;
 	bool ShadowViewMoveWithCamera = true;
+	bool Shadows = false;
 
 	ObjectRef Object;
 };
@@ -33,5 +33,5 @@ struct EcDirectionalLight : public EcLight<EntityComponent::DirectionalLight>
 struct EcSpotLight : public EcLight<EntityComponent::SpotLight>
 {
 	float Range = 16.f;
-	float Angle = 45.f;
+	float Angle = 0.95f;
 };

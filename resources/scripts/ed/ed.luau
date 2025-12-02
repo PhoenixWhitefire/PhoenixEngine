@@ -24,6 +24,11 @@ local Project = {
 }
 
 local RecentProjects: { string } = {}
+local EditorPreferences = {
+	AutoLaunchCodeEditorOnProjectOpen = true,
+	CodeEditorPath = "code",
+	UseLightTheme = false
+}
 
 local EDITOR_RECENT_PROJECTS_PATH = "./editor/recent-projects.json"
 
@@ -233,6 +238,10 @@ local function openProject(ManualPath: string?)
 	engine.binddatamodel(Project.DataModel)
 	engine.createvm(GameEditingVM)
 	engine.binddatamodel(game)
+
+	if EditorPreferences.AutoLaunchCodeEditorOnProjectOpen then
+		print("Open code editor result: ", shellexec(`{ EditorPreferences.CodeEditorPath } "{ fs.cwd() }/projects/{ Project.Name }"`))
+	end
 end
 
 local SavedProjectsCache: { string }? = nil
@@ -274,6 +283,7 @@ local function createNewProject()
 	assert(fs.mkdir("@projres/scenes"))
 	assert(fs.mkdir("@projres/sounds"))
 	assert(fs.mkdir("@projres/shaders"))
+	assert(fs.mkdir("@projres/scripts"))
 	assert(fs.mkdir("@projres/textures"))
 	assert(fs.mkdir("@projres/textures/materials"))
 
@@ -493,7 +503,6 @@ local RibbonTabs: { { Name: string, Renderer: (number) -> () } } = {
 	}
 }
 
-local IsLightMode = false
 local CurrentRibbonTab: number = 1
 
 local GITHUB_URL = "https://github.com/PhoenixWhitefire/PhoenixEngine"
@@ -621,6 +630,7 @@ local function renderMainMenuBar(dt: number)
 	HoveringOverMenuBar = cursorY < RibbonPopupDistance
 
 	local openAboutWindow = false
+	local openSettingsWindow = false
 	
 	if imgui.beginmenu("File") then
 		if imgui.menuitem("Save", CurrentStage == "ProjectEditing") then
@@ -725,11 +735,9 @@ local function renderMainMenuBar(dt: number)
 			openAboutWindow = true
 		end
 
-		local lightMode = imgui.checkbox("Light", IsLightMode)
-		if lightMode ~= IsLightMode then
-			imgui.stylecolors(if lightMode then "l" else "d")
+		if imgui.menuitem("Settings") then
+			openSettingsWindow = true
 		end
-		IsLightMode = lightMode
 		
 		imgui.endmenu()
 	end
@@ -778,6 +786,10 @@ local function renderMainMenuBar(dt: number)
 		imgui.setnextwindowsize(375, 240, "once");
 	end
 
+	if openSettingsWindow then
+		imgui.openpopup("Settings")
+	end
+
 	if imgui.beginpopupmodal("About", true) then
 		local cxavail, _ = imgui.getcontentregionavail()
 		local cursorx, cursory = imgui.cursorposition()
@@ -797,7 +809,27 @@ local function renderMainMenuBar(dt: number)
 
 		imgui.endpopup()
 	end
+
+	if imgui.beginpopupmodal("Settings", true) then
+		local lightMode = imgui.checkbox("Light", EditorPreferences.UseLightTheme)
+		if lightMode ~= EditorPreferences.UseLightTheme then
+			imgui.stylecolors(if lightMode then "l" else "d")
+		end
+		EditorPreferences.UseLightTheme = lightMode
+
+		EditorPreferences.CodeEditorPath = imgui.inputstring("Code Editor path", EditorPreferences.CodeEditorPath)
+		EditorPreferences.AutoLaunchCodeEditorOnProjectOpen = imgui.checkbox("Launch code editor on project open", EditorPreferences.AutoLaunchCodeEditorOnProjectOpen)
+
+		if imgui.button("Save") then
+			assert(fs.write("./editor/settings.json", json.encode(EditorPreferences)))
+		end
+
+		imgui.endpopup()
+	end
 end
+
+EditorPreferences = if fs.isfile("./editor/settings.json") then json.parse(assert(fs.read("./editor/settings.json"))) else EditorPreferences
+imgui.stylecolors(if EditorPreferences.UseLightTheme then 'l' else 'd')
 
 local PrevSelections: { GameObject & Transform } = {}
 

@@ -4,8 +4,7 @@
 #include "component/Transform.hpp"
 
 #define LIGHT_APIS(t) EC_PROP_SIMPLE_NGV(t, LightColor, Color), \
-EC_PROP_SIMPLE(t, Brightness, Double), \
-EC_PROP_SIMPLE(t, Shadows, Boolean) \
+EC_PROP_SIMPLE(t, Brightness, Double) \
 
 class PointLightManager : public ComponentManager<EcPointLight>
 {
@@ -54,6 +53,8 @@ public:
         static const Reflection::StaticPropertyMap props = 
         {
             LIGHT_APIS(EcDirectionalLight),
+
+            EC_PROP_SIMPLE(EcDirectionalLight, Shadows, Boolean),
 
             EC_PROP(
                 "Direction",

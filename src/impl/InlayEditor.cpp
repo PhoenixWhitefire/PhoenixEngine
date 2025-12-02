@@ -1641,25 +1641,12 @@ static std::string getDescriptionForComponent(EntityComponent Ec)
 	return Descriptions[index];
 }
 
+// lifetiem of this value is just `recursiveIterateTree`, which does not create any objects
+static GameObject* InsertObjectButtonHoveredOver = nullptr;
+
 static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection = false)
 {
 	ZoneScopedC(tracy::Color::DarkSeaGreen);
-
-	if (IsPickingObject)
-	{
-		ErrorTooltipMessage = "Pick Object";
-		ErrorTooltipTimeRemaining = 0.1f;
-
-		if (ImGui::IsMouseDown(ImGuiMouseButton_Right))
-		{
-			Selections = PickerTargets;
-			ExplorerShouldSeekToCurrentSelection = true;
-
-			IsPickingObject = false;
-			PickerTargets.clear();
-			PickerTargetPropName.clear();
-		}
-	}
 
 	// https://github.com/ocornut/imgui/issues/581#issuecomment-216054349
 	// 07/10/2024
@@ -1668,7 +1655,6 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 	if (isInSelections(current))
 		didVisitCurSelection = true;
 
-	static GameObject* InsertObjectButtonHoveredOver = nullptr;
 	InsertObjectButtonHoveredOver = nullptr;
 
 	current->ForEachChild([&](GameObject* object)
@@ -1807,50 +1793,13 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 			if (ImGui::IsItemClicked())
 			{
 				ObjectInsertionTarget = object;
-				ImGui::OpenPopup("Object Insertion Window");
+				ImGui::OpenPopup(45);
 			}
 
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetItemTooltip("Insert new Object");
 				InsertObjectButtonHoveredOver = object;
-			}
-		}
-
-		if (object == (ObjectInsertionTarget.HasValue() ? ObjectInsertionTarget.Dereference() : nullptr))
-		{
-			if (ImGui::BeginPopup("Object Insertion Window"))
-			{
-				ImGui::SeparatorText("Insert");
-
-				// skip `<NONE>`
-				for (size_t i = 1; i < (size_t)EntityComponent::__count; i++)
-				{
-					std::string_view name = s_EntityComponentNames[i];
-					std::string tooltip;
-
-					bool clicked = ImGui::MenuItem(name.data());
-
-					if (ImGui::IsItemHovered())
-						tooltip = getDescriptionForComponent((EntityComponent)i);
-
-					if (tooltip.size() > 1)
-						ImGui::SetItemTooltip("%s", tooltip.c_str());
-
-					if (clicked)
-					{
-						GameObject* newObject = GameObject::Create(s_EntityComponentNames[i]);
-						newObject->SetParent(ObjectInsertionTarget);
-						Selections = { newObject };
-
-						ExplorerShouldSeekToCurrentSelection = true;
-						ObjectInsertionTarget = nullptr;
-					}
-				}
-
-				InsertObjectButtonHoveredOver = nullptr;
-
-				ImGui::EndPopup();
 			}
 		}
 
@@ -2518,11 +2467,63 @@ static void renderExplorer()
 	if (!open)
 		EngineJsonConfig["Tool_Explorer"] = false;
 
+	if (IsPickingObject)
+	{
+		ErrorTooltipMessage = "Pick Object";
+		ErrorTooltipTimeRemaining = 0.1f;
+
+		if (ImGui::IsMouseDown(ImGuiMouseButton_Right))
+		{
+			Selections = PickerTargets;
+			ExplorerShouldSeekToCurrentSelection = true;
+
+			IsPickingObject = false;
+			PickerTargets.clear();
+			PickerTargetPropName.clear();
+		}
+	}
+
 	VisibleTreeWip.clear();
 	recursiveIterateTree(ExplorerRoot);
-	
+
 	VisibleTree = VisibleTreeWip;
-	
+
+	if (ImGui::BeginPopupEx(45, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings))
+	{
+		ImGui::SeparatorText("Insert");
+
+		// skip `<NONE>`
+		for (size_t i = 1; i < (size_t)EntityComponent::__count; i++)
+		{
+			std::string_view name = s_EntityComponentNames[i];
+			std::string tooltip;
+
+			bool clicked = ImGui::MenuItem(name.data());
+
+			if (ImGui::IsItemHovered())
+				tooltip = getDescriptionForComponent((EntityComponent)i);
+
+			if (tooltip.size() > 1)
+				ImGui::SetItemTooltip("%s", tooltip.c_str());
+
+			if (clicked)
+			{
+				GameObject* newObject = GameObject::Create(s_EntityComponentNames[i]);
+				newObject->SetParent(ObjectInsertionTarget);
+				Selections = { newObject };
+			
+				ExplorerShouldSeekToCurrentSelection = true;
+				ObjectInsertionTarget.Clear();
+			}
+		}
+
+		InsertObjectButtonHoveredOver = nullptr;
+
+		ImGui::EndPopup();
+	}
+	else
+		ObjectInsertionTarget.Clear();
+
 	if (ImGui::BeginPopupEx(1979, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings))
 	{
 		ImGui::SeparatorText("Actions");

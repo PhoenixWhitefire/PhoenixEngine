@@ -846,7 +846,7 @@ int ScriptEngine::L::HandleMethodCall(
 
 #include <imgui_internal.h> // needed for `ImGuiContext`
 
-void ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(YieldedCoroutine&)> Configure)
+int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(YieldedCoroutine&)> Configure)
 {
 	ZoneScoped;
 
@@ -925,6 +925,8 @@ void ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yie
 
 	Configure(yc);
 	assert(yc.Mode != YieldedCoroutine::ResumptionMode::INVALID);
+
+	return -1; // like lua_yield
 }
 
 void ScriptEngine::L::PushMethod(lua_State* L, const Reflection::MethodDescriptor* Method, ReflectorRef Reflector)

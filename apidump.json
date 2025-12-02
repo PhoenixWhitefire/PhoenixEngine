@@ -120,8 +120,7 @@
         "Properties": {
           "Brightness": "Double",
           "LightColor": "Color",
-          "Range": "Double",
-          "Shadows": "Boolean"
+          "Range": "Double"
         }
       },
       "Script": {
@@ -153,8 +152,7 @@
           "Angle": "Double",
           "Brightness": "Double",
           "LightColor": "Color",
-          "Range": "Double",
-          "Shadows": "Boolean"
+          "Range": "Double"
         }
       },
       "Transform": {
@@ -238,6 +236,7 @@
       "loadthread": "function",
       "loadthreadfromfile": "function",
       "script": "GameObject & Script",
+      "shellexec": "function",
       "sleep": "function",
       "workspace": "GameObject & Workspace"
     },

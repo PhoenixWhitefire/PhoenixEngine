@@ -466,6 +466,8 @@ Additional global variables
 #### `script: GameObject & Script`
 * The Script object the current coroutine is running as
 * In `require`'d modules, this is `nil`
+#### `shellexec(Command: string): string`
+* Runs a shell command
 #### `sleep(SleepTime: number): ()`
 * Yields the thread for the specified number of seconds
 #### `workspace: GameObject & Workspace`

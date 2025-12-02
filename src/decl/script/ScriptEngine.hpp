@@ -95,8 +95,9 @@ namespace ScriptEngine::L
 	);
 
 	// This yields the given Luau thread (ensuring that we are in a yieldable context),
-	// and calls `Configure` to set the resumption mode and do any final preparations
-	void Yield(
+	// and calls `Configure` to set the resumption mode and do any final preparations.
+	// Like `lua_yield`, returns `-1`.
+	int Yield(
 		lua_State*,
 		int NumResults,
 		std::function<void(YieldedCoroutine&)> Configure

@@ -210,7 +210,7 @@ static int sig_namecall(lua_State* L)
 			}
 		);
 
-		ScriptEngine::L::Yield(
+		return ScriptEngine::L::Yield(
 			L,
 			rev->CallbackInputs.size(),
 			[resume, values, reflector, rev, cid](ScriptEngine::YieldedCoroutine& yc)
@@ -238,8 +238,6 @@ static int sig_namecall(lua_State* L)
 					};
 			}
 		);
-
-		return -1;
 	}
 	else
 		luaL_error(L, "No such method of Event Signal known as '%s'", L->namecall->data);

@@ -149,7 +149,6 @@ declare extern type PointLight with
   Brightness: number
   LightColor: Color
   Range: number
-  Shadows: boolean
 end
 declare extern type Script with
   SourceFile: string
@@ -174,7 +173,6 @@ declare extern type SpotLight with
   Brightness: number
   LightColor: Color
   Range: number
-  Shadows: boolean
 end
 declare extern type Transform with
   LocalSize: vector 
@@ -372,6 +370,7 @@ declare game: GameObject & DataModel
 declare function loadthread( Code: string, ChunkName: string? ): ( thread?, string? )
 declare function loadthreadfromfile( File: string, ChunkName: string? ): ( thread?, string? )
 declare script: GameObject & Script
+declare function shellexec( Command: string ): string
 declare function sleep( SleepTime: number ): ()
 declare workspace: GameObject & Workspace
 

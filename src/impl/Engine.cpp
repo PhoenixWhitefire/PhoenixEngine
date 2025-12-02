@@ -430,7 +430,7 @@ static void traverseHierarchy(
 		if (point)
 			LightList.emplace_back(
 				LightType::Point,
-				point->Shadows,
+				false, /* point->Shadows, */
 				(glm::vec3)ct->Transform[3],
 				point->LightColor * point->Brightness,
 				point->Range
@@ -439,7 +439,7 @@ static void traverseHierarchy(
 		if (spot)
 			LightList.emplace_back(
 				LightType::Spot,
-				spot->Shadows,
+				false, /* spot->Shadows, */
 				(glm::vec3)ct->Transform[3],
 				spot->LightColor * spot->Brightness,
 				spot->Range,

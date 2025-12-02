@@ -102,11 +102,11 @@ float PointLight(vec3 Direction, float Range)
 		return 1.f / (pow(Distance, 2.f));
 }
 
-float SpotLight(vec3 Direction, float OuterCone, float InnerCone)
+float SpotLight(vec3 Direction, float OuterCone, float InnerCone, float Range)
 {
 	float Angle = dot(vec3(0.0f, -1.0f, 0.0f), -normalize(Direction));
 
-	return clamp(Angle + (OuterCone / InnerCone) * (Angle * OuterCone), 0.0f, 1.0f);
+	return 1.f - clamp((Angle - OuterCone) / (InnerCone - OuterCone), 0.0f, 1.0f);
 }
 
 float LinearizeDepth(float d)
@@ -201,7 +201,26 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 	}
 	else
 	{
-		return vec3(1.0f, 0.0f, 1.0f);
+		vec3 LightToPosition = LightPosition - Frag_WorldPosition;
+		vec3 Incoming = normalize(LightToPosition);
+
+		float Diffuse = max(dot(Normal, Incoming), 0.0f);
+
+		float Specular = 0.0f;
+
+		if (Diffuse > 0.0f)
+		{
+			//vec3 Halfway = normalize(ViewDirection + LightDirection);
+
+			vec3 reflectionVector = reflect(-Incoming, Normal);
+
+			Specular = pow(max(dot(Outgoing, reflectionVector), 0.f), SpecularPower);
+		}
+
+		float Intensity = SpotLight(LightToPosition, Light.Angle, Light.Angle - 0.05f, Light.Range);
+		float SpecularTerm = SpecMapValue * Specular * SpecularMultiplier;
+
+		return ((Diffuse * Intensity) + SpecularTerm * Intensity) * LightColor;
 	}
 }
 

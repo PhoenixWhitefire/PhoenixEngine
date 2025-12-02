@@ -653,18 +653,25 @@ GameObject* GameObject::GetParent() const
 
 void GameObject::ForEachChild(const std::function<bool(GameObject*)>& Callback)
 {
+	size_t beforeSize = s_WorldArray.size();
+
 	for (uint32_t id : Children)
 	{
 		GameObject* child = GameObject::GetObjectById(id);
 		assert(child);
-		
+
 		if (bool shouldContinue = Callback(child); !shouldContinue)
 			break;
+
+		if (s_WorldArray.size() != beforeSize)
+			RAISE_RT("Callback cannot create objects"); // `this` may get re-allocated, very very bad
 	}
 }
 
 bool GameObject::ForEachDescendant(const std::function<bool(GameObject*)>& Callback)
 {
+	size_t beforeSize = s_WorldArray.size();
+
 	for (uint32_t id : Children)
 	{
 		GameObject* child = GameObject::GetObjectById(id);
@@ -672,6 +679,9 @@ bool GameObject::ForEachDescendant(const std::function<bool(GameObject*)>& Callb
 
 		if (bool shouldContinue = Callback(child); !shouldContinue)
 			return true;
+
+		if (s_WorldArray.size() != beforeSize)
+			RAISE_RT("Callback cannot create objects"); // `this` may get re-allocated, very very bad
 
 		if (child->ForEachDescendant(Callback))
 			return true;
@@ -886,7 +896,7 @@ void GameObject::SetPropertyValue(const std::string_view& PropName, const Reflec
 	if (const Reflection::PropertyDescriptor* prop = FindProperty(PropName, &ref))
 	{
 		prop->Set(ref.Referred(), Value);
-		
+
 		return;
 	}
 

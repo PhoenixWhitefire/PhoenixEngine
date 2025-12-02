@@ -490,6 +490,11 @@
           "In `require`'d modules, this is `nil`"
         ]
       },
+      "shellexec": {
+        "Description": "Runs a shell command",
+        "In": "Command: string",
+        "Out": "string"
+      },
       "sleep": {
         "Description": "Yields the thread for the specified number of seconds",
         "In": "SleepTime: number"

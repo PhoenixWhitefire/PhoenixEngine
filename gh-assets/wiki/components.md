@@ -148,7 +148,6 @@ No members defined
 * `Brightness: number`: How bright the Light is
 * `LightColor: Color`: The color of the Light
 * `Range: number`: How far light is emitted. If `>= 0`, the Range is used and attenuation is linear, otherwise it uses the formula `F = 1/D^2 * B` to mirror real-world attenuation, where `F` is the final brightness, `D` is the distance of a point from the Light, and `B` is the `Brightness` property's value
-* `Shadows: boolean`: Whether the Light can render shadows
 
 ## `Script`
 
@@ -187,7 +186,6 @@ No members defined
 * `Brightness: number`: How bright the Light is
 * `LightColor: Color`: The color of the Light
 * `Range: number`: How far light is emitted
-* `Shadows: boolean`: Whether the Light can render shadows
 
 ## `Transform`
 
