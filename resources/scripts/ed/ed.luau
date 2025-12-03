@@ -505,6 +505,7 @@ local RibbonTabs: { { Name: string, Renderer: (number) -> () } } = {
 
 local CurrentRibbonTab: number = 1
 
+local SPYWARE_SETTINGS_URL = "https://github.com/PhoenixWhitefire/PhoenixEngine/issues/30"
 local GITHUB_URL = "https://github.com/PhoenixWhitefire/PhoenixEngine"
 
 local HoveringOverMenuBar = false
@@ -822,6 +823,11 @@ local function renderMainMenuBar(dt: number)
 
 		if imgui.button("Save") then
 			assert(fs.write("./editor/settings.json", json.encode(EditorPreferences)))
+		end
+
+		if imgui.treenode("##") then
+			imgui.urllink("Configure spyware settings", SPYWARE_SETTINGS_URL)
+			imgui.treepop()
 		end
 
 		imgui.endpopup()
