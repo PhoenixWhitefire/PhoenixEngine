@@ -630,8 +630,8 @@ fs.write(BASE_PATH .. "/scriptenv.md", scriptenv)
 
 fs.write(BASE_PATH .. "/components.md", components)
 
-fs.write("scripts/api.d.luau", definitionsFile)
-fs.write("scripts/api.docs.json", json.encode(documentationData))
+fs.write("./lsp/api.d.luau", definitionsFile)
+fs.write("./lsp/api.docs.json", json.encode(documentationData))
 
 print("Docs CI finish\n\n\n\n\n")
 

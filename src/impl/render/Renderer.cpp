@@ -38,7 +38,7 @@ extern "C"
 #include "Timing.hpp"
 #include "Log.hpp"
 
-constexpr uint32_t SHADER_MAX_LIGHTS = 6;
+#define SHADER_MAX_LIGHTS 16
 
 static std::unordered_map<GLenum, std::string> GLEnumToStringMap =
 {
@@ -65,13 +65,14 @@ static std::unordered_map<GLenum, std::string> GLEnumToStringMap =
 	{ GL_DEBUG_TYPE_OTHER, "Other" }
 };
 
-const char* LightLocs[8] = { 0 };
-const char* LightPosLocs[8] = { 0 };
-const char* LightColLocs[8] = { 0 };
-const char* LightTypeLocs[8] = { 0 };
-const char* LightRangeLocs[8] = { 0 };
-const char* LightAngLocs[8] = { 0 };
-const char* LightShadowsLocs[8] = { 0 };
+const char* LightLocs[SHADER_MAX_LIGHTS] = { 0 };
+const char* LightPosLocs[SHADER_MAX_LIGHTS] = { 0 };
+const char* LightColLocs[SHADER_MAX_LIGHTS] = { 0 };
+const char* LightTypeLocs[SHADER_MAX_LIGHTS] = { 0 };
+const char* LightRangeLocs[SHADER_MAX_LIGHTS] = { 0 };
+const char* LightAngLocs[SHADER_MAX_LIGHTS] = { 0 };
+const char* LightDirLocs[SHADER_MAX_LIGHTS] = { 0 };
+const char* LightShadowsLocs[SHADER_MAX_LIGHTS] = { 0 };
 
 static std::string glEnumToString(GLenum Id)
 {
@@ -189,13 +190,14 @@ void Renderer::Initialize(uint32_t Width, uint32_t Height, GLFWwindow* MainWindo
 
 	glGenBuffers(1, &InstancingBuffer);
 
-#define SETLIGHTLOCS(i) LightLocs[i] = "Lights[" #i "]"; \
+#define SETLIGHTLOCS(i) { LightLocs[i] = "Lights[" #i "]"; \
 LightPosLocs[i] = "Lights[" #i "].Position";             \
 LightColLocs[i] = "Lights[" #i "].Color";                \
 LightTypeLocs[i] = "Lights[" #i "].Type";                \
 LightRangeLocs[i] = "Lights[" #i "].Range";              \
 LightAngLocs[i] = "Lights[" #i "].Angle";                \
-LightShadowsLocs[i] = "Lights[" #i "].Shadows";          \
+LightDirLocs[i] = "Lights[" #i "].SpotLightDirection";   \
+LightShadowsLocs[i] = "Lights[" #i "].Shadows";       }  \
 
 	SETLIGHTLOCS(0);
 	SETLIGHTLOCS(1);
@@ -205,6 +207,14 @@ LightShadowsLocs[i] = "Lights[" #i "].Shadows";          \
 	SETLIGHTLOCS(5);
 	SETLIGHTLOCS(6);
 	SETLIGHTLOCS(7);
+	SETLIGHTLOCS(8);
+	SETLIGHTLOCS(9);
+	SETLIGHTLOCS(10);
+	SETLIGHTLOCS(11);
+	SETLIGHTLOCS(12);
+	SETLIGHTLOCS(13);
+	SETLIGHTLOCS(14);
+	SETLIGHTLOCS(15);
 
 #undef SETLIGHTLOCS
 
@@ -296,35 +306,32 @@ void Renderer::DrawScene(
 				// TODO 05/09/2024
 				// Branching in shader VS separate array uniforms?
 				// Oh and uniform locations should probably be cached
-				for (size_t lightIndex = 0; lightIndex < SHADER_MAX_LIGHTS; lightIndex++)
+				for (int lightIndex = 0; lightIndex < std::min(SHADER_MAX_LIGHTS, (int)Scene.LightingList.size()); lightIndex++)
 				{
-					if (lightIndex + 1 > Scene.LightingList.size())
-						break;
-
 					const LightItem& lightData = Scene.LightingList.at(lightIndex);
 
-					shader.SetUniform(
-						LightPosLocs[lightIndex],
-						lightData.Position
-					);
-
-					shader.SetUniform(
-						LightColLocs[lightIndex],
-						lightData.LightColor
-					);
-
+					shader.SetUniform(LightPosLocs[lightIndex], lightData.Position);
+					shader.SetUniform(LightColLocs[lightIndex], lightData.LightColor);
 					shader.SetUniform(LightTypeLocs[lightIndex], (int)lightData.Type);
 
-					shader.SetUniform(LightRangeLocs[lightIndex], lightData.Range);
-					shader.SetUniform(LightAngLocs[lightIndex], lightData.Angle);
-					shader.SetUniform(LightShadowsLocs[lightIndex], lightData.Shadows);
+					if (lightData.Type == LightType::Directional)
+						shader.SetUniform(LightShadowsLocs[lightIndex], lightData.Shadows);
+					else
+					{
+						if (lightData.Type == LightType::Spot)
+						{
+							shader.SetUniform(LightAngLocs[lightIndex], lightData.Angle);
+							shader.SetUniform(LightDirLocs[lightIndex], lightData.SpotLightDirection);
+						}
+
+						shader.SetUniform(LightRangeLocs[lightIndex], lightData.Range);
+					}
 				}
 
 				shader.SetUniform(
 					"NumLights",
-					std::clamp(
-						static_cast<uint32_t>(Scene.LightingList.size()),
-						0u,
+					std::min(
+						static_cast<int>(Scene.LightingList.size()),
 						SHADER_MAX_LIGHTS
 					)
 				);

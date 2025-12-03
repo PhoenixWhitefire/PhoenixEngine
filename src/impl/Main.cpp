@@ -882,6 +882,10 @@ static void processCliArgs(int argc, char** argv)
 		{
 			EngineJsonConfig["Headless"] = checkBoolArgument(v, "-headless", true);
 		}
+		else if (strcmp(v, "-x11") == 0)
+		{
+			glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
+		}
 		else
 			Log::ErrorF("Unknown CLI argument '{}'", v);
 	}

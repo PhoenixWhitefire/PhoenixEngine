@@ -5,7 +5,7 @@
 
 #version 460 core
 
-const int MAX_LIGHTS = 6;
+const int MAX_LIGHTS = 16;
 
 /*
 LIGHT TYPE IDS:
@@ -27,6 +27,7 @@ struct LightObject
 	// point lights and spotlights
 	float Range;
 	// spotlights
+	vec3 SpotLightDirection;
 	float Angle;
 };
 
@@ -102,9 +103,9 @@ float PointLight(vec3 Direction, float Range)
 		return 1.f / (pow(Distance, 2.f));
 }
 
-float SpotLight(vec3 Direction, float OuterCone, float InnerCone, float Range)
+float SpotLight(vec3 LightToPosition, vec3 Direction, float OuterCone, float InnerCone, float Range)
 {
-	float Angle = dot(vec3(0.0f, -1.0f, 0.0f), -normalize(Direction));
+	float Angle = dot(Direction, -normalize(LightToPosition));
 
 	return 1.f - clamp((Angle - OuterCone) / (InnerCone - OuterCone), 0.0f, 1.0f);
 }
@@ -217,7 +218,7 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 			Specular = pow(max(dot(Outgoing, reflectionVector), 0.f), SpecularPower);
 		}
 
-		float Intensity = SpotLight(LightToPosition, Light.Angle, Light.Angle - 0.05f, Light.Range);
+		float Intensity = SpotLight(LightToPosition, Light.SpotLightDirection, Light.Angle, Light.Angle - 0.05f, Light.Range);
 		float SpecularTerm = SpecMapValue * Specular * SpecularMultiplier;
 
 		return ((Diffuse * Intensity) + SpecularTerm * Intensity) * LightColor;

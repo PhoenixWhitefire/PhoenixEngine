@@ -68,26 +68,25 @@ static Scene MtlPreviewScene =
 {
 	// cube
 	{
-		RenderItem
-		{
-			0u,
-			glm::mat4(1.f),
-			glm::vec3(1.f),
-			0u,
-			glm::vec3(1.f),
-			0.f,
-			0.f,
-			0.f,
-			FaceCullingMode::BackFace
+		RenderItem{
+			.RenderMeshId = 0u,
+			.Transform = glm::mat4(1.f),
+			.Size = glm::vec3(1.f),
+			.MaterialId = 0u,
+			.TintColor = glm::vec3(1.f),
+			.Transparency = 0.f,
+			.MetallnessFactor = 0.f,
+			.RoughnessFactor = 0.f,
+			.FaceCulling = FaceCullingMode::BackFace
 		}
 	},
 	// light source
 	{
-		{
-			LightType::Directional,
-			false,
-			glm::vec3{ 0.57f, 0.57f, 0.57f },
-			glm::vec3{ 1.f, 1.f, 1.f }
+		LightItem{
+			.Position = glm::vec3{ 0.57f, 0.57f, 0.57f },
+			.LightColor = glm::vec3{ 1.f, 1.f, 1.f },
+			.Type = LightType::Directional,
+			.Shadows = false
 		}
 	},
 	{} // used shaders

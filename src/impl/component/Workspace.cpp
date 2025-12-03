@@ -323,7 +323,7 @@ SpatialCastResult EcWorkspace::Raycast(const glm::vec3& Origin, const glm::vec3&
 				bool skip = false;
 
 				for (const GameObject* ignore : FilterList)
-					if (p->IsDescendantOf(ignore))
+					if (p == ignore || p->IsDescendantOf(ignore))
 					{
 						skip = true;
 						break;
@@ -336,8 +336,8 @@ SpatialCastResult EcWorkspace::Raycast(const glm::vec3& Origin, const glm::vec3&
 			{
 				bool found = false;
 
-				for (const GameObject* ignore : FilterList)
-					if (p->IsDescendantOf(ignore))
+				for (const GameObject* accept : FilterList)
+					if (p == accept || p->IsDescendantOf(accept))
 					{
 						found = true;
 						break;

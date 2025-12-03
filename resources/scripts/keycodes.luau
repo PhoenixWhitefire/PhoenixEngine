@@ -1,5 +1,5 @@
 local str = [[
-]] -- copy enums from GLFW. remove comments and whitespace newlines
+]] -- copy enums from `glfw3.h` line 396 onwards. remove comments and whitespace newlines
 
 local lastn = -1
 
@@ -16,6 +16,8 @@ local remap = {
 	[9] = "Nine"
 }
 
+local print = appendlog or print
+
 while #str > 1 do
 	local knstart = #("#define GLFW_KEY_") + 1
 	local keyname = str:sub(knstart, assert(str:find(" ", knstart + 1)) - 1)
@@ -24,7 +26,7 @@ while #str > 1 do
 
 	if lastn ~= (tonumber(num) - 1) then
 		for i = lastn + 1, tonumber(num) - 1 do
-			print(`    "",`)
+			print(`    nullptr,`)
 		end
 	end
 
@@ -52,3 +54,6 @@ while #str > 1 do
 	str = str:sub(str:find("\n") + 1, #str)
 end
 
+if engine.exit then
+	engine.exit()
+end

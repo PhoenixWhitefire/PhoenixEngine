@@ -1214,8 +1214,12 @@ static void openEnum(lua_State* L)
 
 	for (int i = GLFW_KEY_SPACE; i <  GLFW_KEY_LAST; i++)
 	{
+		const char* kn = KeyNames[i];
+		if (!kn)
+			continue;
+
 		lua_pushinteger(L, i);
-		lua_setfield(L, -2, KeyNames[i]);
+		lua_setfield(L, -2, kn);
 	}
 
 	lua_setfield(L, -2, "Key");

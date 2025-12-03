@@ -416,35 +416,36 @@ static void traverseHierarchy(
 		
 		if (directional)
 		{
-			LightList.emplace_back(
-				LightType::Directional,
-				directional->Shadows,
-				(glm::vec3)ct->Transform[3],
-				directional->LightColor * directional->Brightness
-			);
+			LightList.push_back(LightItem{
+				.Position = (glm::vec3)ct->Transform[3],
+				.LightColor = directional->LightColor * directional->Brightness,
+				.Type = LightType::Directional,
+				.Shadows = directional->Shadows
+			});
 
 			if (!*Sun && directional->Shadows)
 				*Sun = directional;
 		}
 
 		if (point)
-			LightList.emplace_back(
-				LightType::Point,
-				false, /* point->Shadows, */
-				(glm::vec3)ct->Transform[3],
-				point->LightColor * point->Brightness,
-				point->Range
-			);
+			LightList.push_back(LightItem{
+				.Position = (glm::vec3)ct->Transform[3],
+				.LightColor = point->LightColor * point->Brightness,
+				.Range = point->Range,
+				.Type = LightType::Point,
+				.Shadows = false, /* point->Shadows, */
+			});
 
 		if (spot)
-			LightList.emplace_back(
-				LightType::Spot,
-				false, /* spot->Shadows, */
-				(glm::vec3)ct->Transform[3],
-				spot->LightColor * spot->Brightness,
-				spot->Range,
-				spot->Angle
-			);
+			LightList.push_back(LightItem{
+				.Position = (glm::vec3)ct->Transform[3],
+				.LightColor = spot->LightColor * spot->Brightness,
+				.Range = spot->Range,
+				.SpotLightDirection = (glm::vec3)ct->Transform[2],
+				.Angle = spot->Angle,
+				.Type = LightType::Spot,
+				.Shadows = false, /* spot->Shadows, */
+			});
 
 		if (!object->GetChildren().empty())
 			traverseHierarchy(

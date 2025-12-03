@@ -9,14 +9,14 @@
 
 struct RenderItem
 {
-	uint32_t RenderMeshId{};
-	glm::mat4 Transform{};
+	uint32_t RenderMeshId = UINT32_MAX;
+	glm::mat4 Transform;
 	glm::vec3 Size;
-	uint32_t MaterialId{};
+	uint32_t MaterialId = UINT32_MAX;
 	glm::vec3 TintColor;
-	float Transparency{};
-	float MetallnessFactor{};
-	float RoughnessFactor{};
+	float Transparency = 0.f;
+	float MetallnessFactor = 0.f;
+	float RoughnessFactor = 0.f;
 
 	FaceCullingMode FaceCulling = FaceCullingMode::BackFace;
 	bool CastsShadows = false;
@@ -26,9 +26,6 @@ enum class LightType : uint8_t { Directional, Point, Spot };
 
 struct LightItem
 {
-	LightType Type = LightType::Point;
-	bool Shadows = false;
-
 	// acts as the direction for Directional Lights
 	glm::vec3 Position;
 	glm::vec3 LightColor;
@@ -36,7 +33,11 @@ struct LightItem
 	// spot & pointlights
 	float Range = 60.f;
 	// spotlights
+	glm::vec3 SpotLightDirection;
 	float Angle = 60.f;
+
+	LightType Type = LightType::Point;
+	bool Shadows = false;
 };
 
 struct Scene
