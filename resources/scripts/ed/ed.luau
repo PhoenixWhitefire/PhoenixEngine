@@ -817,7 +817,7 @@ local function renderMainMenuBar(dt: number)
 
 		imgui.setcursorposition(getCenteredX(cursorx, cxavail, vtsx), cursory)
 		imgui.text(engine.version())
-		cursory += ttsy + 10
+		cursory += ttsy + 15
 
 		imgui.setcursorposition(getCenteredX(cursorx, cxavail, utsx), cursory)
 		imgui.urllink(GITHUB_URL)
