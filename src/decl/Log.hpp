@@ -32,6 +32,6 @@ namespace Log
 	template <typename ...Args>
 	void AppendF(std::format_string<Args...> fmt, Args&&... args)
 	{
-		Error(std::format(fmt, std::forward<Args>(args)...));
+		Append(std::format(fmt, std::forward<Args>(args)...));
 	}
 };

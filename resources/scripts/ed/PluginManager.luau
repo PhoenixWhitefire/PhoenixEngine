@@ -39,7 +39,7 @@ local function renderPluginManagement()
 
         local cx, cy = imgui.cursorposition()
 
-        imgui.image(plugin.Icon or FALLBACK_IMAGE, { 150, 150 }, false, if settings.Enabled then { 1, 1, 1, 1 } else { 0.5, 0.5, 0.5, 1. })
+        imgui.image(plugin.Icon or FALLBACK_IMAGE, vector.create(150, 150), false, if settings.Enabled then { 1, 1, 1, 1 } else { 0.5, 0.5, 0.5, 1. })
 
         imgui.setcursorposition(cx + 175, cy)
 

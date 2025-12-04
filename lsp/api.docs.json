@@ -83,6 +83,9 @@
   "@luhx/global/engine.closevm": {
     "documentation": "* Closes the Luau VM"
   },
+  "@luhx/global/engine.commithash": {
+    "documentation": "* Returns the Git commit that was used to compile the Engine"
+  },
   "@luhx/global/engine.createvm": {
     "documentation": "* Creates a new Luau VM with the given name\n* The `workspace` and `game` globals of the VM are taken from the currently-bound Datamodel (see `engine.binddatamodel`)"
   },
@@ -163,6 +166,9 @@
   },
   "@luhx/global/engine.unloadtexture": {
     "documentation": "* Unloads the given texture from the Engine's cache"
+  },
+  "@luhx/global/engine.version": {
+    "documentation": "* Gets the version of the Engine build"
   },
   "@luhx/global/engine.windowsize": {
     "documentation": "* Returns the current size, in pixels, of the game window\n* To *set* the size of the window, use `.setwindowsize`"

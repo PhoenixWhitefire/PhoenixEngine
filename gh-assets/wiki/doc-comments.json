@@ -581,6 +581,10 @@
               "Name: string"
             ]
           },
+          "commithash": {
+            "Description": "Returns the Git commit that was used to compile the Engine",
+            "Out": "string"
+          },
           "currentvm": {
             "Description": [
               "Returns the name of the currently-bound VM"
@@ -856,6 +860,10 @@
             "In": [
               "Path: string"
             ]
+          },
+          "version": {
+            "Description":"Gets the version of the Engine build",
+            "Out": "string"
           },
           "windowsize": {
             "Description": [
@@ -1292,7 +1300,7 @@
             ],
             "In": [
               "ImagePath: string",
-              "Size: { number }?",
+              "Size: vector?",
               [
                 "FlipVertically: boolean?",
                 "false"
@@ -1310,7 +1318,7 @@
             "In": [
               "Name: string",
               "Image: string",
-              "Size: { number }?"
+              "Size: vector?"
             ],
             "Out": "boolean"
           },

@@ -361,7 +361,7 @@ local function tabButton(Text: string, Icon: string, Enabled: boolean?, Lit: boo
 	local cx, cy = imgui.cursorposition()
 	imgui.setcursorposition(cx + 2, cy)
 
-	imgui.image(Icon, { 100, 100 }, false, tint, false)
+	imgui.image(Icon, vector.create(100, 100), false, tint, false)
 	clicked, hovered = imgui.itemclicked(), imgui.itemhovered()
 	imgui.text(Text)
 	clicked, hovered = clicked or imgui.itemclicked(), hovered or imgui.itemhovered()
@@ -623,12 +623,16 @@ local function exportProject()
 	print("Export done")
 end
 
+local function getCenteredX(cursorx: number, cxavail: number, elementWidth: number)
+	return cursorx + cxavail / 2 - elementWidth / 2
+end
+
 local function renderMainMenuBar(dt: number)
 	if not imgui.beginmainmenubar() then
 		return
 	end
-	local cursorY = input.mouseposition().y
-	HoveringOverMenuBar = cursorY < RibbonPopupDistance
+	local mainMenuCursorY = input.mouseposition().y
+	HoveringOverMenuBar = mainMenuCursorY < RibbonPopupDistance
 
 	local openAboutWindow = false
 	local openSettingsWindow = false
@@ -684,7 +688,7 @@ local function renderMainMenuBar(dt: number)
 
 						imgui.text("Project icon:")
 
-						if imgui.imagebutton("Icon", "@proj/icon.png", { 150, 150 }) then
+						if imgui.imagebutton("Icon", "@proj/icon.png", vector.create(150, 150)) then
 							local buttonSelection = engine.showmessagebox(
 								"Change icon?",
 								"Change the project icon? Note that the original icon file will be overwritten!",
@@ -783,8 +787,8 @@ local function renderMainMenuBar(dt: number)
 
 		local wsx, wsy = engine.windowsize()
 
-		imgui.setnextwindowposition((wsx - 375) / 2, (wsy - 240) / 2 - 100, "once");
-		imgui.setnextwindowsize(375, 240, "once");
+		imgui.setnextwindowposition((wsx - 375) / 2, (wsy - 280) / 2 - 100, "once");
+		imgui.setnextwindowsize(375, 280, "once");
 	end
 
 	if openSettingsWindow then
@@ -795,18 +799,32 @@ local function renderMainMenuBar(dt: number)
 		local cxavail, _ = imgui.getcontentregionavail()
 		local cursorx, cursory = imgui.cursorposition()
 
-		imgui.setcursorposition(cursorx + cxavail / 2 - 150 / 2, cursory)
+		local LOGO_SIZE = 150
 
-		imgui.image(LOGO_IMAGE, { 150, 150 })
+		imgui.setcursorposition(getCenteredX(cursorx, cxavail, LOGO_SIZE), cursory)
+		imgui.image(LOGO_IMAGE, vector.create(LOGO_SIZE, LOGO_SIZE))
+
+		cursory += 160
 
 		local ttsx, ttsy = imgui.textsize("Phoenix Engine Editor")
+		local vtsx, _ = imgui.textsize(engine.version())
+		local ctsx, _ = imgui.textsize(engine.commithash():sub(1, 8))
 		local utsx, _ = imgui.textsize(GITHUB_URL)
 
-		imgui.setcursorposition(cursorx + (cxavail - ttsx) / 2, cursory + 160)
+		imgui.setcursorposition(getCenteredX(cursorx, cxavail, ttsx), cursory)
 		imgui.text("Phoenix Engine Editor")
+		cursory += ttsy + 2
 
-		imgui.setcursorposition(cursorx + (cxavail - utsx) / 2, cursory + 160 + ttsy + 10)
+		imgui.setcursorposition(getCenteredX(cursorx, cxavail, vtsx), cursory)
+		imgui.text(engine.version())
+		cursory += ttsy + 10
+
+		imgui.setcursorposition(getCenteredX(cursorx, cxavail, utsx), cursory)
 		imgui.urllink(GITHUB_URL)
+		cursory += ttsy + 2
+
+		imgui.setcursorposition(getCenteredX(cursorx, cxavail, ctsx), cursory)
+		imgui.urllink(engine.commithash():sub(1, 8), `https://github.com/PhoenixWhitefire/PhoenixEngine/commit/{ engine.commithash() }`)
 
 		imgui.endpopup()
 	end
@@ -1053,7 +1071,7 @@ local function renderProjectSelectorTiles(Projects: { string })
 			end
 		end
 
-		imgui.image(`@cwd/projects/{proj}/icon.png`, { 250, 250 })
+		imgui.image(`@cwd/projects/{proj}/icon.png`, vector.create(250, 250))
 		clicked, hovered = imgui.itemclicked(), imgui.itemhovered()
 		imgui.setcursorposition(cx, cy + 250)
 		imgui.text(proj)
@@ -1179,7 +1197,7 @@ function Stages.SelectProject(DeltaTime: number)
 			local cx, cy = imgui.cursorposition()
 			imgui.setcursorposition(cx - 4, cy)
 
-			if imgui.imagebutton("+", "@etextures/editor-icons/new.png", { 150, 150 }) then
+			if imgui.imagebutton("+", "@etextures/editor-icons/new.png", vector.create(150, 150)) then
 				defer(createNewProject)
 			end
 
@@ -1198,7 +1216,7 @@ function Stages.SelectProject(DeltaTime: number)
 
 				imgui.setcursorposition(cx - 4, cy)
 
-				if imgui.imagebutton(cat.Name, cat.Icon, { 150, 150 }) then
+				if imgui.imagebutton(cat.Name, cat.Icon, vector.create(150, 150)) then
 					SelectedProjectsCategory = i
 				end
 

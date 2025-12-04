@@ -104,6 +104,7 @@ catch (...)                                                                     
 #include "InlayEditor.hpp"
 #include "UserInput.hpp"
 #include "Utilities.hpp"
+#include "Version.hpp"
 #include "Timing.hpp"
 #include "Memory.hpp"
 #include "FileRW.hpp"
@@ -902,10 +903,13 @@ int main(int argc, char** argv)
 	Log::Info("Application startup");
 	
 	Log::InfoF("Phoenix Engine");
-	Log::Append(
-		"\tTarget platform: " PHX_TARGET_PLATFORM "\n\tTarget Compiler: " PHX_TARGET_COMPILER
+	Log::AppendF(
+		"\tVersion: " PHX_VERSION
+		"\n\tCommit: {}"
+		"\n\tTarget platform: " PHX_TARGET_PLATFORM "\n\tTarget Compiler: " PHX_TARGET_COMPILER
 		"\n\tBuild type: " PHX_BUILD_TYPE "\n\tMain.cpp last compiled: " __DATE__ " @ " __TIME__
-		"\n\tHeadless: " IS_HEADLESS_STR
+		"\n\tHeadless: " IS_HEADLESS_STR,
+		PhxGetCommitHash()
 	);
 
 	Log::Info("Command line: &&");

@@ -161,3 +161,22 @@ set_target_properties(Vendor
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Vendor/x64/${PHX_BUILD_TYPE}"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Vendor/x64/${PHX_BUILD_TYPE}"
 )
+
+# Get the full Git commit hash
+execute_process(
+    COMMAND git rev-parse HEAD
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_COMMIT_HASH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE GIT_COMMAND_RESULT
+)
+
+# Check if git command was successful
+if (NOT GIT_COMMAND_RESULT EQUAL 0)
+    message(WARNING "Unable to detect the current Engine Git commit hash.")
+    set(GIT_COMMIT_HASH "Unknown")
+endif()
+
+message("The Git commit hash is ${GIT_COMMIT_HASH}")
+
+set_property(SOURCE src/impl/Version.cpp PROPERTY COMPILE_DEFINITIONS "PHX_VERSION_HPP_ENGINE_GIT_COMMIT=\"${GIT_COMMIT_HASH}\"")

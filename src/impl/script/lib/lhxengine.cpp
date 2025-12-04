@@ -3,6 +3,7 @@
 #include "script/luhx.hpp"
 #include "script/ScriptEngine.hpp"
 #include "component/Script.hpp"
+#include "Version.hpp"
 #include "Engine.hpp"
 
 static int engine_windowsize(lua_State* L)
@@ -382,6 +383,18 @@ static int engine_resetviewport(lua_State* L)
     return 0;
 }
 
+static int engine_version(lua_State* L)
+{
+    lua_pushstring(L, PHX_VERSION);
+    return 1;
+}
+
+static int engine_commithash(lua_State* L)
+{
+    lua_pushstring(L, PhxGetCommitHash());
+    return 1;
+}
+
 static const luaL_Reg engine_funcs[] =
 {
     { "windowsize", engine_windowsize },
@@ -415,6 +428,8 @@ static const luaL_Reg engine_funcs[] =
     { "args", engine_args },
     { "setviewport", engine_setviewport },
     { "resetviewport", engine_resetviewport },
+    { "version", engine_version },
+    { "commithash", engine_commithash },
     { NULL, NULL }
 };
 

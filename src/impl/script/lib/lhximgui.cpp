@@ -203,17 +203,8 @@ static int imgui_image(lua_State* L)
 
     if (!lua_isnoneornil(L, 2))
     {
-        luaL_checktype(L, 2, LUA_TTABLE);
-        
-        lua_pushinteger(L, 1);
-        if (lua_gettable(L, 2) != LUA_TNIL)
-            texSize.x = luaL_checknumber(L, -1);
-
-        lua_pushinteger(L, 2);
-        if (lua_gettable(L, 2) != LUA_TNIL)
-            texSize.y = luaL_checknumber(L, -1);
-
-        lua_pop(L, 2);
+        const float* vec = luaL_checkvector(L, 2);
+        texSize = { vec[0], vec[1] };
     }
 
     ImVec4 tintcol = ImVec4(1.f, 1.f, 1.f, 1.f);
@@ -260,17 +251,8 @@ static int imgui_imagebutton(lua_State* L)
 
     if (!lua_isnoneornil(L, 3))
     {
-        luaL_checktype(L, 3, LUA_TTABLE);
-        
-        lua_pushinteger(L, 1);
-        if (lua_gettable(L, 3) != LUA_TNIL)
-            imgSize.x = luaL_checknumber(L, -1);
-
-        lua_pushinteger(L, 2);
-        if (lua_gettable(L, 3) != LUA_TNIL)
-            imgSize.y = luaL_checknumber(L, -1);
-
-        lua_pop(L, 2);
+        const float* vec = luaL_checkvector(L, 3);
+        imgSize = { vec[0], vec[1] };
     }
 
     lua_pushboolean(L, ImGui::ImageButton(

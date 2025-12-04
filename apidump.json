@@ -254,6 +254,7 @@
         "args": "function",
         "binddatamodel": "function",
         "closevm": "function",
+        "commithash": "function",
         "createvm": "function",
         "currentvm": "function",
         "daabbs": "function",
@@ -281,6 +282,7 @@
         "toolenabled": "function",
         "toolnames": "function",
         "unloadtexture": "function",
+        "version": "function",
         "windowsize": "function"
       },
       "fs": {
