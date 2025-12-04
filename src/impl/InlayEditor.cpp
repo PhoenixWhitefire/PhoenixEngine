@@ -3455,7 +3455,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 		if (ImGui::Begin("Watch"))
 		{
 			static int Section = 0;
-			ImGui::Combo("Variables", &Section, "Locals\0Upvalues\0Globals\0Environment\0Registry\0");
+			ImGui::Combo("Variables", &Section, "Locals\0Upvalues\0Environment\0Registry\0");
 
 			ImGui::BeginChild("VariablesSection", ImVec2(), ImGuiChildFlags_Borders);
 			L->status = LUA_OK; // avoid hitting assertion due to potential calls to `__tostring` metamethods
@@ -3516,27 +3516,6 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 					lua_pushstring(L, "(metatable)");
 					lua_pushvalue(L, -2);
 					debugVariable(L);
-
-					lua_pop(L, 3);
-				}
-
-				lua_pushnil(L);
-				while (lua_next(L, LUA_GLOBALSINDEX))
-				{
-					debugVariable(L);
-
-					lua_pop(L, 1);
-				}
-				
-				break;
-			}
-			case 3:
-			{
-				if (lua_getmetatable(L, -1))
-				{
-					lua_pushstring(L, "(metatable)");
-					lua_pushvalue(L, -2);
-					debugVariable(L);
 					
 					lua_pop(L, 3);
 				}
@@ -3551,7 +3530,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 
 				break;
 			}
-			case 4:
+			case 3:
 			{
 				if (lua_getmetatable(L, -1))
 				{

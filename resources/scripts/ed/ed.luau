@@ -1,5 +1,3 @@
---!optimize 0
-
 -- ed.luau, 14/09/2025
 local FALLBACK_IMAGE = "@etextures/editor-icons/fallback.png"
 local LOGO_IMAGE = "@etextures/logo.png"
