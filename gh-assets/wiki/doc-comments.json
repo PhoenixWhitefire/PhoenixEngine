@@ -310,7 +310,8 @@
       "GameObject": {
         "Description": [
           "A Game Object",
-          "For organization, the members of this type will be on the Components wiki page"
+          "Game Objects have a \"base\" API (properties, methods, and events) that can be extended by giving them Components",
+          "The base API will be documented on the Component APIs page"
         ],
         "Library": {
           "new": {

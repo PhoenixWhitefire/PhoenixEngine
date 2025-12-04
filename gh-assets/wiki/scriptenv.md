@@ -41,7 +41,8 @@ Additional types with methods and properties
 ### `GameObject`
 
 * A Game Object
-* For organization, the members of this type will be on the Components wiki page
+* Game Objects have a "base" API (properties, methods, and events) that can be extended by giving them Components
+* The base API will be documented on the Component APIs page
 #### `GameObject.validcomponents: { string }`
 * A list of all valid component names which can be passed into `.new`
 #### `GameObject.new(Component: string): GameObject`

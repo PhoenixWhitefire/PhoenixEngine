@@ -21,7 +21,7 @@
     "documentation": "* An Event that can be connected to"
   },
   "@luhx/global/GameObject": {
-    "documentation": "* A Game Object\n* For organization, the members of this type will be on the Components wiki page"
+    "documentation": "* A Game Object\n* Game Objects have a \"base\" API (properties, methods, and events) that can be extended by giving them Components\n* The base API will be documented on the Component APIs page"
   },
   "@luhx/global/GameObject.new": {
     "documentation": "* Creates a new GameObject with the provided Component"
