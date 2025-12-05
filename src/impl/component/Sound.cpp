@@ -281,5 +281,10 @@ void EcSound::Update(double)
 		Log::ErrorF("Failed to get playback position of sound '{}', error code: {}", Object->GetFullName(), (int)result);
 
 	if (EcTransform* trans = Object->FindComponent<EcTransform>())
+	{
+		ma_sound_set_spatialization_enabled(&SoundInstance, true);
 		ma_sound_set_position(&SoundInstance, trans->Transform[3][0], trans->Transform[3][1], trans->Transform[3][2]);
+	}
+	else
+		ma_sound_set_spatialization_enabled(&SoundInstance, false);
 }
