@@ -11,34 +11,12 @@ that SOMEHOW works without crashing atleast 50 times a frame.
 Anyway, here is a small tour:
 
 - "phoenix.conf" contains some configuration. Set "Developer" to "false" to disable the debug UIs.
-- WASD to move horizontally, Q/E to move down/up. Left-click to look around. Right-click to stop. LShift to move slower.
-- Press `L` to dump GameObject API.
+- WASD to move horizontally, Q/E to move down/up. Left-click+drag to look around. LShift to move slower.
 - `K` to reload all shaders, `I` to reload configuration
 - F11 to toggle fullscreen.
 
 https://github.com/Phoenixwhitefire/PhoenixEngine
 
-*/
-
-/*
-	
-	14/11/2024
-
-	This Main file is in the "Player" or "Application" layer in my head, so I don't really care
-	that it's messy.
-
-*/
-
-/*
-	
-	07/01/2025
-
-	When an exception is thrown, generally it is either always fatal, or fatal contextually.
-	For example, Luau APIs may throw exceptions, which are caught by Luau exception handlers,
-	terminating the Script thread without killing the Engine. APIs such as `GameObject.Parent`
-	from the Luau side, i.e. `GameObject::SetParent` from the Engine side, are fatal only to the
-	Engine, intentionally. `Log::Error` is not fatal.
-	
 */
 
 #define GLM_ENABLE_EXPERIMENTAL
@@ -146,13 +124,12 @@ static std::string exec(const char* cmd)
 	FILE* pipe = popen(cmd, "r");
 
 	if (!pipe)
-		throw std::runtime_error("popen() failed!");
+		RAISE_RT("popen() failed!");
 
 	while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe) != nullptr)
 		result += buffer.data();
 	
 	pclose(pipe);
-
 	return result;
 }
 
@@ -322,17 +299,13 @@ static void drawDeveloperUI(double DeltaTime)
 	if (UserInput::IsKeyDown(GLFW_KEY_I) && !GuiIO->WantCaptureKeyboard)
 	{
 		Log::Info("Reloading configuration...");
-
 		engine->LoadConfiguration();
 	}
 
 	if (UserInput::IsKeyDown(GLFW_KEY_K) && !GuiIO->WantCaptureKeyboard)
 	{
 		Log::Info("Reloading shaders...");
-
 		ShaderManager::Get()->ReloadAll();
-
-		Log::Info("Shaders reloaded");
 	}
 
 	// We need to keep track of two different states,
@@ -924,9 +897,9 @@ int main(int argc, char** argv)
 
 	for (int i = 0; i < argc; i++)
 		if (i < argc - 1)
-			Log::Append(" " + std::string(argv[i]) + "&&");
+			Log::AppendF(" {}&&", argv[i]);
 		else
-			Log::Append(" " + std::string(argv[i]));
+			Log::AppendF(" {}", argv[i]);
 
 	processCliArgs(argc, argv);
 
