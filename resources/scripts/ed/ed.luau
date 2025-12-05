@@ -785,12 +785,10 @@ local function renderMainMenuBar(dt: number)
 
 		local wsx, wsy = engine.windowsize()
 
-		imgui.setnextwindowposition((wsx - 375) / 2, (wsy - 280) / 2 - 100, "once");
-		imgui.setnextwindowsize(375, 280, "once");
-	end
+		local ABOUT_SIZE_X, ABOUT_SIZE_Y = 375, 280
 
-	if openSettingsWindow then
-		imgui.openpopup("Settings")
+		imgui.setnextwindowposition((wsx - ABOUT_SIZE_X) / 2, (wsy - ABOUT_SIZE_Y) / 2);
+		imgui.setnextwindowsize(ABOUT_SIZE_X, ABOUT_SIZE_Y);
 	end
 
 	if imgui.beginpopupmodal("About", true) then
@@ -825,6 +823,17 @@ local function renderMainMenuBar(dt: number)
 		imgui.urllink(engine.commithash():sub(1, 8), `https://github.com/PhoenixWhitefire/PhoenixEngine/commit/{ engine.commithash() }`)
 
 		imgui.endpopup()
+	end
+
+	if openSettingsWindow then
+		imgui.openpopup("Settings")
+
+		local SETTINGS_SIZE_X, SETTINGS_SIZE_Y = 420, 140
+
+		local wsx, wsy = engine.windowsize()
+
+		imgui.setnextwindowposition((wsx - SETTINGS_SIZE_X) / 2, (wsy - SETTINGS_SIZE_Y) / 2);
+		imgui.setnextwindowsize(SETTINGS_SIZE_X, SETTINGS_SIZE_Y);
 	end
 
 	if imgui.beginpopupmodal("Settings", true) then

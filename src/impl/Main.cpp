@@ -712,6 +712,14 @@ static void init()
 
 		PHX_ENSURE_MSG(ImGui_ImplGlfw_InitForOpenGL(engine->Window, true), "Failed to initialize Dear ImGui for GLFW");
 		PHX_ENSURE_MSG(ImGui_ImplOpenGL3_Init("#version 460"), "Failed to initialize Dear ImGui for OpenGL");
+
+		if (!std::filesystem::is_regular_file("imgui.ini"))
+		{
+			std::string defaultLayoutFile = EngineJsonConfig.value("DearImGuiDefaultLayoutFile", "default-layout.ini");
+
+			if (std::filesystem::is_regular_file(defaultLayoutFile))
+				std::filesystem::copy_file(defaultLayoutFile, "imgui.ini");
+		}
 	
 		Log::Info("Dear ImGui initialized");
 	
