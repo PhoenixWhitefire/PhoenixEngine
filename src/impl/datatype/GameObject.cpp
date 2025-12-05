@@ -790,8 +790,6 @@ void GameObject::RemoveComponent(EntityComponent Type)
 	for (auto it = Components.begin(); it < Components.end(); it++)
 		if (it->Type == Type)
 		{
-			Components.erase(it);
-
 			IComponentManager* manager = GameObject::s_ComponentManagers[(size_t)Type];
 			manager->DeleteComponent(it->Id);
 
@@ -810,6 +808,8 @@ void GameObject::RemoveComponent(EntityComponent Type)
 				ComponentApis.Events.erase(it2.first);
 				MemberToComponentMap.erase(it2.first);
 			}
+
+			Components.erase(it);
 
 			return;
 		}
