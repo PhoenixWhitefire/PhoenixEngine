@@ -1698,7 +1698,7 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 		bool doubleClick = false;
 		bool isHovered = false;
 
-		bool open = ImGui::TreeNodeEx(&object->ObjectId, flags, "%s", "");
+		bool open = ImGui::TreeNodeEx((const void*)nullptr, flags, "%s", "");
 
 		if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
 		{
