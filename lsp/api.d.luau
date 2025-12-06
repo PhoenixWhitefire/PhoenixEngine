@@ -111,7 +111,7 @@ declare extern type DirectionalLight with
   Shadows: boolean
 end
 declare extern type Engine with
-  CommitHash: boolean 
+  CommitHash: string 
   DebugCollisionAabbs: boolean
   DebugSpatialHeat: boolean
   DebugWireframeRendering: boolean
@@ -121,7 +121,7 @@ declare extern type Engine with
   IsHeadless: boolean 
   PhysicsTimescale: number
   VSync: boolean
-  Version: boolean 
+  Version: string 
   WindowSize: vector
 
   function BindDataModel(self, Param_1: (GameObject & any)) : ()

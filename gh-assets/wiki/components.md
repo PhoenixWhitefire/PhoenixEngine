@@ -92,7 +92,7 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * Inspect and manipulate various parts of the Engine
 
 ### Properties:
-* `CommitHash: boolean `: The Git commit that was used to produce this Engine build
+* `CommitHash: string `: The Git commit that was used to produce this Engine build
 * `DebugCollisionAabbs: boolean`: Whether physics collision AABBs are rendered
 * `DebugSpatialHeat: boolean`: Whether Spatial Heat (spatial hash density) debug rendering is enabled
 * `DebugWireframeRendering: boolean`: Whether the Wireframe rendering debug mode is enabled
@@ -102,7 +102,7 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * `IsHeadless: boolean `: Whether the Engine is currently running in headless mode
 * `PhysicsTimescale: number`: The current time-scale of the Physics engine (1.0 = 100%, normal speed)
 * `VSync: boolean`: Whether Vertical Synchronization is enabled
-* `Version: boolean `: The version of the Engine build
+* `Version: string `: The version of the Engine build
 * `WindowSize: vector`: The size of the window, in pixels
 
 ### Methods:

@@ -97,7 +97,7 @@
           "UnloadTexture": "(String) -> ()"
         },
         "Properties": {
-          "CommitHash": "Boolean READONLY",
+          "CommitHash": "String READONLY",
           "DebugCollisionAabbs": "Boolean",
           "DebugSpatialHeat": "Boolean",
           "DebugWireframeRendering": "Boolean",
@@ -107,7 +107,7 @@
           "IsHeadless": "Boolean READONLY",
           "PhysicsTimescale": "Double",
           "VSync": "Boolean",
-          "Version": "Boolean READONLY",
+          "Version": "String READONLY",
           "WindowSize": "Vector2"
         }
       },
