@@ -1,3 +1,5 @@
+local Engine = game:GetService("Engine")
+
 local CoreTools = {}
 CoreTools.EditorCanUseMouse = true
 
@@ -80,12 +82,12 @@ local function resetGizmo()
 end
 
 function CoreTools.Update(Project: { Workspace: Workspace })
-    local selections = engine.explorerselections()
+    local selections = Engine:GetExplorerSelections()
     local target: (GameObject & Transform)? = (if selections[1] and selections[1]:HasComponent("Transform") then selections[1] else nil) :: any
 
     if IsSurfaceDragging or IsGizmoDragging then
         if GizmoPrevTarget and (not target or target ~= GizmoPrevTarget) then
-            engine.setexplorerselections({ GizmoPrevTarget })
+            Engine:SetExplorerSelections({ GizmoPrevTarget })
             target = GizmoPrevTarget
         end
     end

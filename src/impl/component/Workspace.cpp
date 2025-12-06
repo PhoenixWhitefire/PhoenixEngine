@@ -168,7 +168,7 @@ public:
     }
 };
 
-static inline WorkspaceManager Instance{};
+static inline WorkspaceManager Instance;
 
 glm::vec3 EcWorkspace::ScreenPointToVector(glm::vec2 point, float length) const
 {

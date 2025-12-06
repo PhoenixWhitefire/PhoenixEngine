@@ -537,6 +537,7 @@ for _, k in orderedComponents do
 	
 	if not vd then
 		print(`No docs for Component '{ k }'`)
+		definitionsFile ..= "end\n"
 		continue
 	end
 	
@@ -637,5 +638,5 @@ print("Docs CI finish\n\n\n\n\n")
 
 if not conf.get("LspDefinitionsGeneratorDoNotShutdown") then
 	-- close when we're done
-	engine.exit()
+	game:GetService("Engine"):Exit()
 end

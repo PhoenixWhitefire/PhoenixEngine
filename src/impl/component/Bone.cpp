@@ -121,4 +121,4 @@ public:
     }
 };
 
-static BoneManager Instance{};
+static BoneManager Instance;

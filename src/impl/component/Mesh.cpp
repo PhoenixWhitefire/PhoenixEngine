@@ -226,7 +226,7 @@ public:
     }
 };
 
-static inline MeshManager Instance{};
+static inline MeshManager Instance;
 
 void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 {

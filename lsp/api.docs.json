@@ -71,108 +71,6 @@
   "@luhx/global/defer": {
     "documentation": "* Schedules the given function or coroutine to be resumed some number of seconds later, or as soon as possible"
   },
-  "@luhx/global/engine": {
-    "documentation": "* Inspect and modify various parts of the Engine"
-  },
-  "@luhx/global/engine.args": {
-    "documentation": "* Returns the list of launch arguments given to the Engine\n* The first item is always the path to the Engine executable"
-  },
-  "@luhx/global/engine.binddatamodel": {
-    "documentation": "* Switches Data Models to the specified Object"
-  },
-  "@luhx/global/engine.closevm": {
-    "documentation": "* Closes the Luau VM"
-  },
-  "@luhx/global/engine.commithash": {
-    "documentation": "* Returns the Git commit that was used to compile the Engine"
-  },
-  "@luhx/global/engine.createvm": {
-    "documentation": "* Creates a new Luau VM with the given name\n* The `workspace` and `game` globals of the VM are taken from the currently-bound Datamodel (see `engine.binddatamodel`)"
-  },
-  "@luhx/global/engine.currentvm": {
-    "documentation": "* Returns the name of the currently-bound VM"
-  },
-  "@luhx/global/engine.daabbs": {
-    "documentation": "* Returns whether AABBs are drawn for all objects with collisions enabled (`.PhysicsCollisions == true`)\n* Optionally, the visualization can be enabled/disabled by passing in a boolean argument"
-  },
-  "@luhx/global/engine.dwireframes": {
-    "documentation": "* Returns whether all visible 3D objects are being rendered with wireframes\n* Optionally, the visualization can be enabled/disabled by passing in a boolean argument"
-  },
-  "@luhx/global/engine.exit": {
-    "documentation": "* Shuts down the Engine and exits the process with the specified Exit Code (or 0 by default)"
-  },
-  "@luhx/global/engine.explorerselections": {
-    "documentation": "* Returns what is currently selected in the Explorer"
-  },
-  "@luhx/global/engine.framerate": {
-    "documentation": "* Returns the current framerate"
-  },
-  "@luhx/global/engine.fullscreen": {
-    "documentation": "* Returns whether or not the window is currently fullscreened\n* To *set* whether the window is fullscreened, use `.setfullscreen`"
-  },
-  "@luhx/global/engine.getvsync": {
-    "documentation": "* Returns whether VSync is currently enabled"
-  },
-  "@luhx/global/engine.isheadless": {
-    "documentation": "* Returns whether the Engine is currently running Headless mode"
-  },
-  "@luhx/global/engine.maxframerate": {
-    "documentation": "* Returns the current maximum framerate setting\n* To *set* the maximum framerate, use `.setmaxframerate`"
-  },
-  "@luhx/global/engine.physicstimescale": {
-    "documentation": "* Sets the time scale factor of the physics simulation"
-  },
-  "@luhx/global/engine.resetviewport": {
-    "documentation": "* Resets the state of the Viewport"
-  },
-  "@luhx/global/engine.runinvm": {
-    "documentation": "* Runs the given code in the specified VM\n* Returns `false` and an error message upon compilation failure\n* Returns a status code otherwise, along with a status message\n* A status code of `0` means success"
-  },
-  "@luhx/global/engine.setcurrentvm": {
-    "documentation": "* Makes the given VM \"current\"\n* This causes all Scripts which load afterward to use the specified VM, it does *not* change the VM of any Scripts loaded beforehand"
-  },
-  "@luhx/global/engine.setexplorerroot": {
-    "documentation": "* Changes the Root of the built-in Explorer's hierarchy view"
-  },
-  "@luhx/global/engine.setexplorerselections": {
-    "documentation": "* Changes the built-in Explorer's Object selections to the specified Objects"
-  },
-  "@luhx/global/engine.setfullscreen": {
-    "documentation": "* Enables/disables fullscreen mode"
-  },
-  "@luhx/global/engine.setmaxframerate": {
-    "documentation": "* Sets the maximum framerate the Engine will reach before self-limiting"
-  },
-  "@luhx/global/engine.settoolenabled": {
-    "documentation": "* Enables/disables the given tool"
-  },
-  "@luhx/global/engine.setviewport": {
-    "documentation": "* Configures the Engine to act as though the Viewport is at the given position with the given size"
-  },
-  "@luhx/global/engine.setvsync": {
-    "documentation": "* Enables/disables VSync"
-  },
-  "@luhx/global/engine.setwindowsize": {
-    "documentation": "* Sets the size of the window to the specified two Width and Height integers"
-  },
-  "@luhx/global/engine.showmessagebox": {
-    "documentation": "* Shows a message to the player with the given specification\n* The returned number will be the selected option: `0` for Cancel/No, `1` for Ok/Yes, `2` for No in `yesnocancel`\n* This is a blocking operation and no scripts or other parts of the Engine run until the message is dismissed\n* Avoid using quotes (`'` and `\"`) or backticks (`\\``) in the `Message`"
-  },
-  "@luhx/global/engine.toolenabled": {
-    "documentation": "* Returns whether the given tool is currently enabled\n* To *enable* or *disable* the tool, use `.settoolenabled`"
-  },
-  "@luhx/global/engine.toolnames": {
-    "documentation": "* Returns a list of valid Engine tools"
-  },
-  "@luhx/global/engine.unloadtexture": {
-    "documentation": "* Unloads the given texture from the Engine's cache"
-  },
-  "@luhx/global/engine.version": {
-    "documentation": "* Gets the version of the Engine build"
-  },
-  "@luhx/global/engine.windowsize": {
-    "documentation": "* Returns the current size, in pixels, of the game window\n* To *set* the size of the window, use `.setwindowsize`"
-  },
   "@luhx/global/fs": {
     "documentation": "* Interacting with the player's filesystem"
   },
@@ -530,6 +428,9 @@
   "@luhx/globaltype/Color.R": {
     "documentation": "* The Red channel\n"
   },
+  "@luhx/globaltype/DataModel.GetService": {
+    "documentation": "Gets the Object representing the specified Service. If it does not exist yet in the Data Model, it is created"
+  },
   "@luhx/globaltype/DataModel.OnFrameBegin": {
     "documentation": "Fires at the beginning of a frame, passing in the time elapsed since the last frame (delta time)"
   },
@@ -571,6 +472,96 @@
   },
   "@luhx/globaltype/DirectionalLight.Shadows": {
     "documentation": "Whether the Light can render shadows"
+  },
+  "@luhx/globaltype/Engine.BindDataModel": {
+    "documentation": "Switches Data Models to the specified Object"
+  },
+  "@luhx/globaltype/Engine.CloseVM": {
+    "documentation": "Closes the specified Luau VM, releasing its resources"
+  },
+  "@luhx/globaltype/Engine.CommitHash": {
+    "documentation": "The Git commit that was used to produce this Engine build"
+  },
+  "@luhx/globaltype/Engine.CreateVM": {
+    "documentation": "Creates a new Luau VM with the given name. The `workspace` and `game` globals of the VM are taken from the currently-bound DataModel"
+  },
+  "@luhx/globaltype/Engine.DebugCollisionAabbs": {
+    "documentation": "Whether physics collision AABBs are rendered"
+  },
+  "@luhx/globaltype/Engine.DebugSpatialHeat": {
+    "documentation": "Whether Spatial Heat (spatial hash density) debug rendering is enabled"
+  },
+  "@luhx/globaltype/Engine.DebugWireframeRendering": {
+    "documentation": "Whether the Wireframe rendering debug mode is enabled"
+  },
+  "@luhx/globaltype/Engine.Exit": {
+    "documentation": "Shuts down the Engine and exits the process with the specified Exit Code (or 0 by default)"
+  },
+  "@luhx/globaltype/Engine.Framerate": {
+    "documentation": "The Engine's current framerate"
+  },
+  "@luhx/globaltype/Engine.FramerateCap": {
+    "documentation": "The maximum framerate the Engine will reach before attempting to self-limit"
+  },
+  "@luhx/globaltype/Engine.GetCliArguments": {
+    "documentation": "Returns the list of launch arguments given to the Engine. The first item is always a path to the Engine executable"
+  },
+  "@luhx/globaltype/Engine.GetCurrentVM": {
+    "documentation": "Returns the name of the currently-bound VM"
+  },
+  "@luhx/globaltype/Engine.GetExplorerSelections": {
+    "documentation": "Returns what is currently selected in the Explorer"
+  },
+  "@luhx/globaltype/Engine.GetToolNames": {
+    "documentation": "Returns a list of valid Engine tools"
+  },
+  "@luhx/globaltype/Engine.IsFullscreen": {
+    "documentation": "Whether the Window is currently fullscreened"
+  },
+  "@luhx/globaltype/Engine.IsHeadless": {
+    "documentation": "Whether the Engine is currently running in headless mode"
+  },
+  "@luhx/globaltype/Engine.IsToolEnabled": {
+    "documentation": "Returns whether the given tool is enabled"
+  },
+  "@luhx/globaltype/Engine.PhysicsTimescale": {
+    "documentation": "The current time-scale of the Physics engine (1.0 = 100%, normal speed)"
+  },
+  "@luhx/globaltype/Engine.ResetViewport": {
+    "documentation": "Resets the Engine's understanding of where the viewport is on screen back to the default (occupying the entire window)"
+  },
+  "@luhx/globaltype/Engine.RunInVM": {
+    "documentation": "Runs the given code in the specified VM. Returns `false` and an error message upon failure or if the code does not finish executing (yield or break)"
+  },
+  "@luhx/globaltype/Engine.SetCurrentVM": {
+    "documentation": "Binds the given VM as the \"current\" one. This causes all Scripts which load afterward to use the specified VM, it does *not* change the VM of any Scripts loaded beforehand"
+  },
+  "@luhx/globaltype/Engine.SetExplorerRoot": {
+    "documentation": "Changes the Root of the built-in Explorer's hierarchy view"
+  },
+  "@luhx/globaltype/Engine.SetExplorerSelections": {
+    "documentation": "Changes the built-in Explorer's Object selections to the specified Objects"
+  },
+  "@luhx/globaltype/Engine.SetToolEnabled": {
+    "documentation": "Enabled/disables the given tool"
+  },
+  "@luhx/globaltype/Engine.SetViewport": {
+    "documentation": "Configures the Engine to act as through the Viewport is at the given position with the given size. Does *not* change where the viewport is actually rendered"
+  },
+  "@luhx/globaltype/Engine.ShowMessageBox": {
+    "documentation": "Shows a message box to the player with the given specification. The returned number with be the selected option: `0` for Cancel/No, `1` for Ok/Yes, `2` for No in `yesnocancel`. This isa blocking operation and no scripts or other parts of the Engine run until the message is dismissed. Avoid using quotes and backticks in the message"
+  },
+  "@luhx/globaltype/Engine.UnloadTexture": {
+    "documentation": "Removes the given texture from the Engine's cache, forcing it to be reloaded upon next use"
+  },
+  "@luhx/globaltype/Engine.VSync": {
+    "documentation": "Whether Vertical Synchronization is enabled"
+  },
+  "@luhx/globaltype/Engine.Version": {
+    "documentation": "The version of the Engine build"
+  },
+  "@luhx/globaltype/Engine.WindowSize": {
+    "documentation": "The size of the window, in pixels"
   },
   "@luhx/globaltype/EventConnection.:Disconnect": {
     "documentation": "* Disconnects the Connection, causing the callback to no longer be invoked. May only be called once\n"

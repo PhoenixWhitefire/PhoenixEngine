@@ -1,4 +1,6 @@
 -- ed.luau, 14/09/2025
+local Engine = (game:GetService("Engine") :: any) :: Engine
+
 local FALLBACK_IMAGE = "@etextures/editor-icons/fallback.png"
 local LOGO_IMAGE = "@etextures/logo.png"
 
@@ -36,7 +38,7 @@ local GameVM = "GameVM"
 EditorCam.UseSimpleController = true
 EditorTl.Parent = workspace
 EditorTl.Scripting = false
-engine.physicstimescale(0)
+Engine.PhysicsTimescale = 0
 
 local ToolOrder = {
 	"Tool_Explorer",
@@ -46,7 +48,7 @@ local ToolOrder = {
 local BottomBarEnabled = conf.get("Ed_Tool_BottomBarEnabled")
 assert(typeof(BottomBarEnabled) == "boolean" or typeof(BottomBarEnabled) == "nil")
 
-for _, tool in engine.toolnames() do
+for _, tool in Engine:GetToolNames() do
 	if not table.find(ToolOrder, tool) then
 		table.insert(ToolOrder, tool)
 	end
@@ -69,7 +71,7 @@ end
 local function assert(cond: any, err: string?, ...)
 	if not cond then
 		local em = "Assertion failed: " .. (err or "")
-		engine.showmessagebox("Editor error", debug.traceback(em, 1), "ok", "error")
+		Engine:ShowMessageBox("Editor error", debug.traceback(em, 1), "ok", "error")
 		error(em)
 	end
 
@@ -182,7 +184,7 @@ local function openProject(ManualPath: string?)
 		imgui.endpopup()
 
 		if not atLeastOneProject then
-			engine.showmessagebox("No projects", "You do not have any projects")
+			Engine:ShowMessageBox("No projects", "You do not have any projects")
 			return
 		end
 
@@ -198,7 +200,7 @@ local function openProject(ManualPath: string?)
 
 	if not objects then
 		error = error or "Unknown error"
-		engine.showmessagebox("Project Error", `Couldn't open project '{path}': {error}`, "ok", "error")
+		Engine:ShowMessageBox("Project Error", `Couldn't open project '{path}': {error}`, "ok", "error")
 
 		return
 	end
@@ -233,9 +235,9 @@ local function openProject(ManualPath: string?)
 	Project.Name = path
 	changeStageTo("ProjectEditing")
 
-	engine.binddatamodel(Project.DataModel)
-	engine.createvm(GameEditingVM)
-	engine.binddatamodel(game)
+	Engine:BindDataModel(Project.DataModel)
+	Engine:CreateVM(GameEditingVM)
+	Engine:BindDataModel(game)
 
 	if EditorPreferences.AutoLaunchCodeEditorOnProjectOpen then
 		print("Open code editor result: ", shellexec(`{ EditorPreferences.CodeEditorPath } "{ fs.cwd() }/projects/{ Project.Name }"`))
@@ -263,7 +265,7 @@ local function createNewProject()
 
 	local success, createError = fs.mkdir(fullPath)
 	if not success then
-		engine.showmessagebox("Failed to create project", `Failed to create project at '{fullPath}':\n{ assert(createError) }`)
+		Engine:ShowMessageBox("Failed to create project", `Failed to create project at '{fullPath}':\n{ assert(createError) }`)
 		return
 	end
 
@@ -405,13 +407,13 @@ local function homeTab(_: number)
 
 	if tabButton("Explorer to Project DM", "@etextures/editor-icons/ExplorerToProj.png") then
 		assert(Project.DataModel)
-		engine.setexplorerroot(Project.DataModel)
+		Engine:SetExplorerRoot(Project.DataModel)
 	end
 
 	imgui.sameline()
 	
 	if tabButton("Explorer to Editor DM", "@etextures/editor-icons/ExplorerToEdit.png") then
-		engine.setexplorerroot(game)
+		Engine:SetExplorerRoot(game)
 	end
 
 	imgui.sameline()
@@ -430,7 +432,7 @@ local function homeTab(_: number)
 
 				assert(Project.Workspace)
 				imported.Parent = Project.Workspace
-				engine.setexplorerselections({ imported })
+				Engine:SetExplorerSelections({ imported })
 			else
 				print("No model selected")
 			end
@@ -445,10 +447,10 @@ end
 local function toolsTab(_: number)
 	for _, tool in ToolOrder do
 		local name = tool:sub(#("Tool_") + 1, #tool)
-		local enabled = engine.toolenabled(tool)
+		local enabled = Engine:IsToolEnabled(tool)
 
 		if tabButton(name, `@etextures/editor-icons/{name}.png`, true, enabled) then
-			engine.settoolenabled(tool, not enabled)
+			Engine:SetToolEnabled(tool, not enabled)
 			conf.save()
 		end
 
@@ -576,7 +578,7 @@ local function exportProject()
 			print("Export button clicked")
 
 			if fs.isdirectory(exportTo) then
-				local chosenOption = engine.showmessagebox(
+				local chosenOption = Engine:ShowMessageBox(
 					"Export will overwrite",
 					`The directory:\n\n{ exportTo }\n\nalready exists. Are you sure you want to overwrite it? This will erase all of its content!`,
 					"yesno",
@@ -608,11 +610,11 @@ local function exportProject()
 	assert(fs.mkdir(exportTo))
 	assert(fs.copy("@proj", exportTo))
 
-	local execPath = engine.args()[1]
+	local execPath = Engine:GetCliArguments()[1]
 	assert(fs.copy(execPath, `{exportTo}/{Project.Name}{if execPath:find(".exe") then ".exe" else ""}`))
 
 	if execPath:find("x64/Debug") and execPath:find(".exe") then
-		engine.showmessagebox(
+		Engine:ShowMessageBox(
 			"Windows Debug build",
 			"Windows Debug builds cannot be distributed without additional dependencies"
 		)
@@ -659,7 +661,7 @@ local function renderMainMenuBar(dt: number)
 						end
 
 						if newProjectName ~= Project.Name and imgui.button("Save new name") then
-							local buttonSelection = engine.showmessagebox("Rename project?", "Are you sure you want to rename the project?", "yesno")
+							local buttonSelection = Engine:ShowMessageBox("Rename project?", "Are you sure you want to rename the project?", "yesno")
 
 							if buttonSelection == 1 then
 								local prevName = Project.Name
@@ -687,7 +689,7 @@ local function renderMainMenuBar(dt: number)
 						imgui.text("Project icon:")
 
 						if imgui.imagebutton("Icon", "@proj/icon.png", vector.create(150, 150)) then
-							local buttonSelection = engine.showmessagebox(
+							local buttonSelection = Engine:ShowMessageBox(
 								"Change icon?",
 								"Change the project icon? Note that the original icon file will be overwritten!",
 								"yesno",
@@ -701,7 +703,7 @@ local function renderMainMenuBar(dt: number)
 									if path then
 										assert(fs.remove("@proj/icon.png"))
 										assert(fs.copy(path, "@proj/icon.png"))
-										engine.unloadtexture("@proj/icon.png") -- force the texture to be reloaded
+										Engine:UnloadTexture("@proj/icon.png") -- force the texture to be reloaded
 									else
 										print("No icon selected")
 									end
@@ -758,7 +760,7 @@ local function renderMainMenuBar(dt: number)
 		end
 
 		if (HoveringOverMenuBar or HoveringOverRibbonTab or TabButtonHovering ~= nil or WindowHovering) and not input.mousedown(Enum.MouseButton.Right) then
-			local windowWidth, _ = engine.windowsize()
+			local windowWidth = Engine.WindowSize.x
 
 			local TAB_HEIGHT = 175
 
@@ -783,11 +785,11 @@ local function renderMainMenuBar(dt: number)
 	if openAboutWindow then
 		imgui.openpopup("About")
 
-		local wsx, wsy = engine.windowsize()
+		local ws = Engine.WindowSize
 
 		local ABOUT_SIZE_X, ABOUT_SIZE_Y = 375, 280
 
-		imgui.setnextwindowposition((wsx - ABOUT_SIZE_X) / 2, (wsy - ABOUT_SIZE_Y) / 2);
+		imgui.setnextwindowposition((ws.x - ABOUT_SIZE_X) / 2, (ws.y - ABOUT_SIZE_Y) / 2);
 		imgui.setnextwindowsize(ABOUT_SIZE_X, ABOUT_SIZE_Y);
 	end
 
@@ -803,8 +805,8 @@ local function renderMainMenuBar(dt: number)
 		cursory += 160
 
 		local ttsx, ttsy = imgui.textsize("Phoenix Engine Editor")
-		local vtsx, _ = imgui.textsize(engine.version())
-		local ctsx, _ = imgui.textsize(engine.commithash():sub(1, 8))
+		local vtsx, _ = imgui.textsize(Engine.Version)
+		local ctsx, _ = imgui.textsize(Engine.CommitHash:sub(1, 8))
 		local utsx, _ = imgui.textsize(GITHUB_URL)
 
 		imgui.setcursorposition(getCenteredX(cursorx, cxavail, ttsx), cursory)
@@ -812,7 +814,7 @@ local function renderMainMenuBar(dt: number)
 		cursory += ttsy + 2
 
 		imgui.setcursorposition(getCenteredX(cursorx, cxavail, vtsx), cursory)
-		imgui.text(engine.version())
+		imgui.text(Engine.Version)
 		cursory += ttsy + 15
 
 		imgui.setcursorposition(getCenteredX(cursorx, cxavail, utsx), cursory)
@@ -820,7 +822,7 @@ local function renderMainMenuBar(dt: number)
 		cursory += ttsy + 2
 
 		imgui.setcursorposition(getCenteredX(cursorx, cxavail, ctsx), cursory)
-		imgui.urllink(engine.commithash():sub(1, 8), `https://github.com/PhoenixWhitefire/PhoenixEngine/commit/{ engine.commithash() }`)
+		imgui.urllink(Engine.CommitHash:sub(1, 8), `https://github.com/PhoenixWhitefire/PhoenixEngine/commit/{ Engine.CommitHash }`)
 
 		imgui.endpopup()
 	end
@@ -830,9 +832,9 @@ local function renderMainMenuBar(dt: number)
 
 		local SETTINGS_SIZE_X, SETTINGS_SIZE_Y = 420, 140
 
-		local wsx, wsy = engine.windowsize()
+		local ws = Engine.WindowSize
 
-		imgui.setnextwindowposition((wsx - SETTINGS_SIZE_X) / 2, (wsy - SETTINGS_SIZE_Y) / 2);
+		imgui.setnextwindowposition((ws.x - SETTINGS_SIZE_X) / 2, (ws.y - SETTINGS_SIZE_Y) / 2);
 		imgui.setnextwindowsize(SETTINGS_SIZE_X, SETTINGS_SIZE_Y);
 	end
 
@@ -905,15 +907,15 @@ local function renderViewport(DeltaTime: number)
 
 			if input.mousedown(Enum.MouseButton.Left) and isMouseWithinViewport() then
 				if input.keypressed(Enum.Key.LeftControl) then -- left control
-					local sels = engine.explorerselections()
+					local sels = Engine:GetExplorerSelections()
 
 					if not table.find(sels, rayresult.Object) then
 						table.insert(sels, rayresult.Object :: GameObject)
 					end
 
-					engine.setexplorerselections(sels)
+					Engine:SetExplorerSelections(sels)
 				else
-					engine.setexplorerselections({ rayresult.Object })
+					Engine:SetExplorerSelections({ rayresult.Object })
 				end
 			end
 		else
@@ -927,7 +929,7 @@ local function renderViewport(DeltaTime: number)
 		PrevSelections = {}
 	end
 
-	local newSelections = engine.explorerselections()
+	local newSelections = Engine:GetExplorerSelections()
 	local selmap: { [number]: GameObject } = {}
 	for i, sel_ in newSelections do
 		if not sel_:HasComponent("Transform") then
@@ -961,10 +963,10 @@ local function renderViewport(DeltaTime: number)
 	CoreTools.Update(Project)
 
 	if BottomBarEnabled then
-		local wx, wy = engine.windowsize()
+		local w = Engine.WindowSize
 
-		imgui.setnextwindowposition(0, wy - 35)
-		imgui.setnextwindowsize(wx, 35)
+		imgui.setnextwindowposition(0, w.y - 35)
+		imgui.setnextwindowsize(w.x, 35)
 		imgui.begin("Bottom Bar", "nt | nd | nr | ns")
 
 		imgui.text("> ")
@@ -973,11 +975,11 @@ local function renderViewport(DeltaTime: number)
 		imgui.sameline()
 
 		if imgui.button("Run") then
-			print(engine.runinvm(if CurrentStage == "ProjectEditing" then GameEditingVM else GameVM, CommandBarCommand, "=CommandBar"))
+			print(Engine:RunInVM(if CurrentStage == "ProjectEditing" then GameEditingVM else GameVM, CommandBarCommand, "=CommandBar"))
 		end
 		imgui.sameline()
 
-		imgui.text(`{ Project.Name } | { engine.framerate() } FPS`)
+		imgui.text(`{ Project.Name } | { Engine.Framerate } FPS`)
 
 		imgui.endw()
 	end
@@ -991,10 +993,10 @@ local function renderViewport(DeltaTime: number)
 	local wx, wy = imgui.windowposition()
 	local wsx, wsy = imgui.windowsize()
 
-	local ewsx, ewsy = engine.windowsize()
+	local ews = Engine.WindowSize
 
-	imgui.setviewportdockspace(0, 19, ewsx, ewsy - (if BottomBarEnabled then 54 else 19))
-	engine.setviewport(wx, wy, wsx, wsy)
+	imgui.setviewportdockspace(0, 19, ews.x, ews.y - (if BottomBarEnabled then 54 else 19))
+	Engine:SetViewport(vector.create(wx, wy), vector.create(wsx, wsy))
 
 	ViewportLeft = wx - 15
 	ViewportRight = wx + wsx + 15
@@ -1012,7 +1014,7 @@ local function renderViewport(DeltaTime: number)
 	end
 	isMouseWithinViewport()
 
-	imgui.setcursorposition(0, wsy - ewsy)
+	imgui.setcursorposition(0, wsy - ews.y)
 
 	imgui.image("!Framebuffer:Main", nil, true)
 
@@ -1049,7 +1051,7 @@ local function renderProjectSelectorTiles(Projects: { string })
 	local cx, cy = imgui.cursorposition()
 	local startX = cx
 
-	local windowSizeX, _ = engine.windowsize()
+	local windowSizeX = Engine.WindowSize.x
 	local lastnl = #Projects
 	local hoveringOverWip = nil
 
@@ -1156,7 +1158,7 @@ local function renderSavedProjects()
 		if SavedProjectsCache and imgui.menuitem("Delete") then
 			local name = SavedProjectsCache[ProjectContextMenuTarget]
 
-			local buttonSelection = engine.showmessagebox(
+			local buttonSelection = Engine:ShowMessageBox(
 				"Are you sure?",
 				`Are you sure you want to delete '{name}'? This cannot be undone.`,
 				"yesno",
@@ -1255,9 +1257,9 @@ end
 
 function Stages.ProjectEditing_Enter(DeltaTime)
 	assert(Project.DataModel)
-	engine.setexplorerroot(Project.DataModel)
-	engine.setexplorerselections({})
-	engine.physicstimescale(0)
+	Engine:SetExplorerRoot(Project.DataModel)
+	Engine:SetExplorerSelections({})
+	Engine.PhysicsTimescale = 0
 
 	local projWp = Project.Workspace
 
@@ -1285,8 +1287,8 @@ function Stages.ProjectEditing_Leave(NextStage)
 		return
 	end
 	
-	engine.setexplorerroot(game)
-	engine.setexplorerselections({})
+	Engine:SetExplorerRoot(game)
+	Engine:SetExplorerSelections({})
 
 	saveProject()
 
@@ -1298,7 +1300,7 @@ function Stages.ProjectEditing_Leave(NextStage)
 
 	conf.save()
 
-	engine.closevm(GameEditingVM)
+	Engine:CloseVM(GameEditingVM)
 end
 
 local restoreState = nil
@@ -1310,13 +1312,13 @@ function Stages.ProjectPlaying_Enter()
 	assert(Project.DataModel)
 	Project.DataModel = Project.DataModel:Duplicate() :: any
 	
-	engine.setexplorerroot(Project.DataModel)
-	engine.setexplorerselections({})
-	engine.physicstimescale(1)
+	Engine:SetExplorerRoot(Project.DataModel)
+	Engine:SetExplorerSelections({})
+	Engine.PhysicsTimescale = 1
 
-	engine.binddatamodel(Project.DataModel) -- Set the `game` and `workspace` variables to the correct values in game scripts
-	engine.createvm(GameVM)
-	engine.setcurrentvm(GameVM)
+	Engine:BindDataModel(Project.DataModel) -- Set the `game` and `workspace` variables to the correct values in game scripts
+	Engine:CreateVM(GameVM)
+	Engine:SetCurrentVM(GameVM)
 	
 	local projWp = Project.Workspace
 	assert(projWp)
@@ -1342,11 +1344,11 @@ function Stages.ProjectPlaying_Leave()
 
 	Project.DataModel:Destroy()
 	Project.DataModel = restoreState
-	engine.setexplorerroot(Project.DataModel)
+	Engine:SetExplorerRoot(Project.DataModel)
 
-	engine.setcurrentvm(_VMNAME)
-	engine.closevm(GameVM)
-	engine.binddatamodel(game)
+	Engine:SetCurrentVM(_VMNAME)
+	Engine:CloseVM(GameVM)
+	Engine:BindDataModel(game)
 	
 	workspace.SceneCamera = EditorCam
 end

@@ -49,4 +49,4 @@ class TreeLinkManager : public ComponentManager<EcTreeLink>
         return props;
     }
 };
-static TreeLinkManager Instance{};
+static TreeLinkManager Instance;

@@ -15,4 +15,4 @@ public:
     }
 };
 
-static inline ModelManager Instance{};
+static inline ModelManager Instance;

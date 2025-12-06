@@ -6,6 +6,7 @@
 #include <future>
 #include <thread>
 #include <luau/Compiler/include/luacode.h>
+#include <lua.h>
 
 #include "Reflection.hpp"
 #include "datatype/GameObject.hpp"

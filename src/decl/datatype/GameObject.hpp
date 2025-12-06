@@ -44,6 +44,7 @@ enum class EntityComponent : uint8_t
 	Bone,
 	Example,
 	TreeLink,
+	Engine,
 	
 	__count
 };
@@ -86,7 +87,8 @@ static inline const std::string_view s_EntityComponentNames[] =
 	"Model",
 	"Bone",
 	"Example",
-	"TreeLink"
+	"TreeLink",
+	"Engine"
 };
 
 static inline const std::unordered_map<std::string_view, EntityComponent> s_ComponentNameToType = 
@@ -107,7 +109,8 @@ static inline const std::unordered_map<std::string_view, EntityComponent> s_Comp
 	{ "Model", EntityComponent::Model },
 	{ "Bone", EntityComponent::Bone },
 	{ "Example", EntityComponent::Example },
-	{ "TreeLink", EntityComponent::TreeLink }
+	{ "TreeLink", EntityComponent::TreeLink },
+	{ "Engine", EntityComponent::Engine }
 };
 
 static_assert(std::size(s_EntityComponentNames) == (size_t)EntityComponent::__count);

@@ -34,7 +34,7 @@ public:
     }
 };
 
-static inline CameraManager Instance{};
+static inline CameraManager Instance;
 
 glm::mat4 EcCamera::GetRenderMatrix(float AspectRatio) const
 {

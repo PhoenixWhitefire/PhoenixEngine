@@ -136,7 +136,7 @@ public:
     }
 };
 
-static inline TransformsManager Instance{};
+static inline TransformsManager Instance;
 
 void EcTransform::SetWorldTransform(const glm::mat4& NewWorldTrans)
 {

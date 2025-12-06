@@ -16,4 +16,3 @@ struct EcAnimation : public Component<EntityComponent::Animation>
     bool Ready = false;
     bool Valid = true;
 };
-

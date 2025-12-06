@@ -75,7 +75,7 @@ public:
     }
 };
 
-static inline ParticleEmitterManager Instance{};
+static inline ParticleEmitterManager Instance;
 
 EcParticleEmitter::EcParticleEmitter()
 {

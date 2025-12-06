@@ -92,6 +92,8 @@ end
 declare extern type DataModel with
   Time: number 
 
+  function GetService(self, Param_1: string) : ((GameObject & any))
+
   OnFrameBegin: EventSignal
 end
 declare extern type DirectionalLight with
@@ -107,6 +109,39 @@ declare extern type DirectionalLight with
   ShadowViewSizeH: number
   ShadowViewSizeV: number
   Shadows: boolean
+end
+declare extern type Engine with
+  CommitHash: boolean 
+  DebugCollisionAabbs: boolean
+  DebugSpatialHeat: boolean
+  DebugWireframeRendering: boolean
+  Framerate: number 
+  FramerateCap: number
+  IsFullscreen: boolean
+  IsHeadless: boolean 
+  PhysicsTimescale: number
+  VSync: boolean
+  Version: boolean 
+  WindowSize: vector
+
+  function BindDataModel(self, Param_1: (GameObject & any)) : ()
+  function CloseVM(self, Param_1: string) : ()
+  function CreateVM(self, Param_1: string) : ()
+  function Exit(self, Param_1: number?) : ()
+  function GetCliArguments(self) : ({ any })
+  function GetCurrentVM(self) : (string)
+  function GetExplorerSelections(self) : ({ any })
+  function GetToolNames(self) : ({ any })
+  function IsToolEnabled(self, Param_1: string) : (boolean)
+  function ResetViewport(self) : ()
+  function RunInVM(self, Param_1: string, Param_2: string, Param_3: string?) : (boolean, string?)
+  function SetCurrentVM(self, Param_1: string) : ()
+  function SetExplorerRoot(self, Param_1: (GameObject & any)) : ()
+  function SetExplorerSelections(self, Param_1: { any }) : ()
+  function SetToolEnabled(self, Param_1: string, Param_2: boolean) : ()
+  function SetViewport(self, Param_1: vector, Param_2: vector) : ()
+  function ShowMessageBox(self, Param_1: string, Param_2: string, Param_3: string?, Param_4: string?, Param_5: number?) : (number)
+  function UnloadTexture(self, Param_1: string) : ()
 end
 declare extern type Example with
   EvenMoreSecretMessage: string 
@@ -211,6 +246,7 @@ type Creatables = {
 	Bone: Bone,
 	Example: Example,
 	TreeLink: TreeLink,
+	Engine: Engine,
 }
 declare Enum: {
   Key: { [string]: number },
@@ -220,41 +256,6 @@ declare conf: {
   save: ((  ) -> (boolean)),
   set: (( Key: string, Value: any ) -> ()),
   get: (( Key: string ) -> (any))
-}
-declare engine: {
-  exit: (( ExitCode: number? ) -> ()),
-  framerate: ((  ) -> (number)),
-  showmessagebox: (( Title: string, Message: string, Buttons: ("ok" | "okcancel" | "yesno" | "yesnocancel")?, Icon: ("info" | "warning" | "error" | "question")?, DefaultButton: number? ) -> (number)),
-  runinvm: (( VM: string, Code: string, ChunkName: string? ) -> (number | false, string)),
-  resetviewport: ((  ) -> ()),
-  createvm: (( Name: string ) -> ()),
-  binddatamodel: (( NewDataModel: GameObject ) -> ()),
-  setviewport: (( PositionX: number, PositionY: number, Width: number, Height: number ) -> ()),
-  setfullscreen: (( Fullscreen: boolean ) -> ()),
-  setexplorerselections: (( Selections: { GameObject } ) -> ()),
-  settoolenabled: (( Tool: string, Enabled: boolean ) -> ()),
-  version: ((  ) -> (string)),
-  isheadless: ((  ) -> (boolean)),
-  maxframerate: ((  ) -> (number)),
-  windowsize: ((  ) -> (number, number)),
-  closevm: (( VM: string ) -> ()),
-  currentvm: ((  ) -> (string)),
-  setvsync: (( VSyncEnabled: boolean ) -> ()),
-  fullscreen: ((  ) -> (boolean)),
-  explorerselections: ((  ) -> ({ GameObject })),
-  toolnames: ((  ) -> ({ string })),
-  toolenabled: (( Tool: string ) -> (boolean)),
-  setwindowsize: (( Width: number, Height: number ) -> ()),
-  setcurrentvm: (( VM: string ) -> ()),
-  physicstimescale: (( Timescale: number ) -> ()),
-  daabbs: (( Enabled: boolean? ) -> (boolean)),
-  getvsync: ((  ) -> (boolean)),
-  commithash: ((  ) -> (string)),
-  args: ((  ) -> ({ string })),
-  dwireframes: (( Enabled: boolean? ) -> (boolean)),
-  setexplorerroot: (( Root: GameObject ) -> ()),
-  setmaxframerate: (( MaxFramerate: number ) -> ()),
-  unloadtexture: (( Path: string ) -> ())
 }
 declare fs: {
   makecwdaliasof: (( Alias: string ) -> ()),

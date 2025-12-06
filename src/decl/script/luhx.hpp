@@ -36,9 +36,6 @@ int luhxopen_model(lua_State*);
 #define LUHX_SCENELIBNAME "scene"
 int luhxopen_scene(lua_State*);
 
-#define LUHX_ENGINELIBNAME "engine"
-int luhxopen_engine(lua_State*);
-
 #define LUHX_COLORLIBNAME "Color"
 int luhxopen_Color(lua_State*);
 

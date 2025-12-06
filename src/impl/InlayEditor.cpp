@@ -2897,11 +2897,7 @@ static void renderProperties()
 						newVal = glm::vec2(0.f);
 				}
 				else
-				{
-					float f = static_cast<float>(newVal.Val.Double);
-					ImGui::InputFloat2(propNameCStr, &f);
-					newVal.Val.Double = f;
-				}
+					ImGui::InputFloat2(propNameCStr, &newVal.Val.Vec2.x);
 
 				break;
 			}

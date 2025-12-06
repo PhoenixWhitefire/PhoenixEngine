@@ -31,7 +31,7 @@ public:
     }
 };
 
-static inline AnimationManager Instance{};
+static inline AnimationManager Instance;
 
 void EcAnimation::SetAnimation(const std::string_view& Asset)
 {

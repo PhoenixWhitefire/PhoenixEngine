@@ -73,7 +73,8 @@
           "OnFrameBegin": "Fires at the beginning of a frame, passing in the time elapsed since the last frame (delta time)"
         },
         "Methods": {
-          "Close": "Closes the application with the specified exit code integer or 0"
+          "Close": "Closes the application with the specified exit code integer or 0",
+          "GetService": "Gets the Object representing the specified Service. If it does not exist yet in the Data Model, it is created"
         },
         "Properties": {
           "Time": "Number of seconds since the Engine started running"
@@ -94,6 +95,43 @@
           "ShadowViewSizeH": "Horizontal size of the shadow view",
           "ShadowViewSizeV": "Vertical size of the shadow view",
           "Shadows": "Whether the Light can render shadows"
+        }
+      },
+      "Engine": {
+        "Description": "Inspect and manipulate various parts of the Engine",
+        "Properties": {
+          "WindowSize": "The size of the window, in pixels",
+          "IsHeadless": "Whether the Engine is currently running in headless mode",
+          "IsFullscreen": "Whether the Window is currently fullscreened",
+          "VSync": "Whether Vertical Synchronization is enabled",
+          "Framerate": "The Engine's current framerate",
+          "FramerateCap": "The maximum framerate the Engine will reach before attempting to self-limit",
+          "DebugWireframeRendering": "Whether the Wireframe rendering debug mode is enabled",
+          "DebugCollisionAabbs": "Whether physics collision AABBs are rendered",
+          "DebugSpatialHeat": "Whether Spatial Heat (spatial hash density) debug rendering is enabled",
+          "PhysicsTimescale": "The current time-scale of the Physics engine (1.0 = 100%, normal speed)",
+          "Version": "The version of the Engine build",
+          "CommitHash": "The Git commit that was used to produce this Engine build"
+        },
+        "Methods": {
+          "Exit": "Shuts down the Engine and exits the process with the specified Exit Code (or 0 by default)",
+          "BindDataModel": "Switches Data Models to the specified Object",
+          "SetExplorerRoot": "Changes the Root of the built-in Explorer's hierarchy view",
+          "SetExplorerSelections": "Changes the built-in Explorer's Object selections to the specified Objects",
+          "GetExplorerSelections": "Returns what is currently selected in the Explorer",
+          "CreateVM": "Creates a new Luau VM with the given name. The `workspace` and `game` globals of the VM are taken from the currently-bound DataModel",
+          "CloseVM": "Closes the specified Luau VM, releasing its resources",
+          "GetCurrentVM": "Returns the name of the currently-bound VM",
+          "SetCurrentVM": "Binds the given VM as the \"current\" one. This causes all Scripts which load afterward to use the specified VM, it does *not* change the VM of any Scripts loaded beforehand",
+          "RunInVM": "Runs the given code in the specified VM. Returns `false` and an error message upon failure or if the code does not finish executing (yield or break)",
+          "GetToolNames": "Returns a list of valid Engine tools",
+          "IsToolEnabled": "Returns whether the given tool is enabled",
+          "SetToolEnabled": "Enabled/disables the given tool",
+          "ShowMessageBox": "Shows a message box to the player with the given specification. The returned number with be the selected option: `0` for Cancel/No, `1` for Ok/Yes, `2` for No in `yesnocancel`. This isa blocking operation and no scripts or other parts of the Engine run until the message is dismissed. Avoid using quotes and backticks in the message",
+          "UnloadTexture": "Removes the given texture from the Engine's cache, forcing it to be reloaded upon next use",
+          "GetCliArguments": "Returns the list of launch arguments given to the Engine. The first item is always a path to the Engine executable",
+          "SetViewport": "Configures the Engine to act as through the Viewport is at the given position with the given size. Does *not* change where the viewport is actually rendered",
+          "ResetViewport": "Resets the Engine's understanding of where the viewport is on screen back to the default (occupying the entire window)"
         }
       },
       "Example": {
@@ -544,334 +582,6 @@
           "MouseButton": {
             "Description": "Mouse buttons, which may be passed to `input.mousedown`",
             "Type": "{ Left: number, Middle: number, Right: number }"
-          }
-        }
-      },
-      "engine": {
-        "Description": "Inspect and modify various parts of the Engine",
-        "Members": {
-          "args": {
-            "Description": [
-              "Returns the list of launch arguments given to the Engine",
-              "The first item is always the path to the Engine executable"
-            ],
-            "Out": "{ string }"
-          },
-          "binddatamodel": {
-            "Description": [
-              "Switches Data Models to the specified Object"
-            ],
-            "In": [
-              "NewDataModel: GameObject"
-            ]
-          },
-          "closevm": {
-            "Description": [
-              "Closes the Luau VM"
-            ],
-            "In": [
-              "VM: string"
-            ]
-          },
-          "createvm": {
-            "Description": [
-              "Creates a new Luau VM with the given name",
-              "The `workspace` and `game` globals of the VM are taken from the currently-bound Datamodel (see `engine.binddatamodel`)"
-            ],
-            "In": [
-              "Name: string"
-            ]
-          },
-          "commithash": {
-            "Description": "Returns the Git commit that was used to compile the Engine",
-            "Out": "string"
-          },
-          "currentvm": {
-            "Description": [
-              "Returns the name of the currently-bound VM"
-            ],
-            "Out": "string"
-          },
-          "daabbs": {
-            "Description": [
-              "Returns whether AABBs are drawn for all objects with collisions enabled (`.PhysicsCollisions == true`)",
-              "Optionally, the visualization can be enabled/disabled by passing in a boolean argument"
-            ],
-            "In": [
-              "Enabled: boolean?"
-            ],
-            "Out": "boolean"
-          },
-          "dwireframes": {
-            "Description": [
-              "Returns whether all visible 3D objects are being rendered with wireframes",
-              "Optionally, the visualization can be enabled/disabled by passing in a boolean argument"
-            ],
-            "In": [
-              "Enabled: boolean?"
-            ],
-            "Out": "boolean"
-          },
-          "exit": {
-            "Description": [
-              "Shuts down the Engine and exits the process with the specified Exit Code (or 0 by default)"
-            ],
-            "In": [
-              [
-                "ExitCode: number?",
-                "0"
-              ]
-            ]
-          },
-          "explorerselections": {
-            "Description": [
-              "Returns what is currently selected in the Explorer"
-            ],
-            "Out": "{ GameObject }"
-          },
-          "framerate": {
-            "Description": [
-              "Returns the current framerate"
-            ],
-            "Out": "number"
-          },
-          "fullscreen": {
-            "Description": [
-              "Returns whether or not the window is currently fullscreened",
-              "To *set* whether the window is fullscreened, use `.setfullscreen`"
-            ],
-            "Out": "boolean"
-          },
-          "getfullscreen": {
-            "Description": [
-              "Returns whether the Engine is currently in fullscreen"
-            ],
-            "In": {},
-            "Out": "boolean"
-          },
-          "getmaxframerate": {
-            "Description": [
-              "Returns the current framerate cap"
-            ],
-            "Out": "number"
-          },
-          "gettoolnames": {
-            "Description": [
-              "Returns the list of valid tool names which can be passed into `.settoolenabled` and `.istoolenabled`"
-            ],
-            "Out": "{ string }"
-          },
-          "getvsync": {
-            "Description": [
-              "Returns whether VSync is currently enabled"
-            ],
-            "Out": "boolean"
-          },
-          "getwindowsize": {
-            "Description": [
-              "Returns the current size of the window as two integers"
-            ],
-            "Out": "number, number"
-          },
-          "isheadless": {
-            "Description": [
-              "Returns whether the Engine is currently running Headless mode"
-            ],
-            "Out": "boolean"
-          },
-          "istoolenabled": {
-            "Description": [
-              "Returns whether the given tool is enabled",
-              "If the given tool name is not valid, an error is thrown"
-            ],
-            "In": [
-              "Tool: string"
-            ],
-            "Out": "boolean"
-          },
-          "maxframerate": {
-            "Description": [
-              "Returns the current maximum framerate setting",
-              "To *set* the maximum framerate, use `.setmaxframerate`"
-            ],
-            "Out": "number"
-          },
-          "physicstimescale": {
-            "Description": [
-              "Sets the time scale factor of the physics simulation"
-            ],
-            "In": [
-              "Timescale: number"
-            ]
-          },
-          "poplvm": {
-            "Description": [
-              "Pops the topmost Luau VM from the VM stack, causing the VM below it to be used for any Scripts resumed beyond that point"
-            ]
-          },
-          "pushlvm": {
-            "Description": [
-              "Pushes a new Luau VM to the Luau VM stack. Scripts resumed past that point will run in the new VM",
-              "The `game` and `workspace` globals in the new VM will depend on the current bound datamodel"
-            ],
-            "In": [
-              "VmName: string"
-            ]
-          },
-          "resetviewport": {
-            "Description": [
-              "Resets the state of the Viewport"
-            ]
-          },
-          "runinvm": {
-            "Description": [
-              "Runs the given code in the specified VM",
-              "Returns `false` and an error message upon compilation failure",
-              "Returns a status code otherwise, along with a status message",
-              "A status code of `0` means success"
-            ],
-            "In": [
-              "VM: string, Code: string, ChunkName: string?"
-            ],
-            "Out": "number | false, string"
-          },
-          "setcurrentvm": {
-            "Description": [
-              "Makes the given VM \"current\"",
-              "This causes all Scripts which load afterward to use the specified VM, it does *not* change the VM of any Scripts loaded beforehand"
-            ],
-            "In": [
-              "VM: string"
-            ]
-          },
-          "setexplorerroot": {
-            "Description": [
-              "Changes the Root of the built-in Explorer's hierarchy view"
-            ],
-            "In": [
-              "Root: GameObject"
-            ]
-          },
-          "setexplorerselections": {
-            "Description": [
-              "Changes the built-in Explorer's Object selections to the specified Objects"
-            ],
-            "In": [
-              "Selections: { GameObject }"
-            ]
-          },
-          "setfullscreen": {
-            "Description": [
-              "Enables/disables fullscreen mode"
-            ],
-            "In": [
-              "Fullscreen: boolean"
-            ]
-          },
-          "setmaxframerate": {
-            "Description": [
-              "Sets the maximum framerate the Engine will reach before self-limiting"
-            ],
-            "In": [
-              "MaxFramerate: number"
-            ]
-          },
-          "settoolenabled": {
-            "Description": [
-              "Enables/disables the given tool"
-            ],
-            "In": [
-              "Tool: string",
-              "Enabled: boolean"
-            ]
-          },
-          "setviewport": {
-            "Description": [
-              "Configures the Engine to act as though the Viewport is at the given position with the given size"
-            ],
-            "In": [
-              "PositionX: number",
-              "PositionY: number",
-              "Width: number",
-              "Height: number"
-            ]
-          },
-          "setvsync": {
-            "Description": [
-              "Enables/disables VSync"
-            ],
-            "In": [
-              "VSyncEnabled: boolean"
-            ]
-          },
-          "setwindowsize": {
-            "Description": [
-              "Sets the size of the window to the specified two Width and Height integers"
-            ],
-            "In": [
-              "Width: number",
-              "Height: number"
-            ]
-          },
-          "showmessagebox": {
-            "Description": [
-              "Shows a message to the player with the given specification",
-              "The returned number will be the selected option: `0` for Cancel/No, `1` for Ok/Yes, `2` for No in `yesnocancel`",
-              "This is a blocking operation and no scripts or other parts of the Engine run until the message is dismissed",
-              "Avoid using quotes (`'` and `\"`) or backticks (`\\``) in the `Message`"
-            ],
-            "In": [
-              "Title: string",
-              "Message: string",
-              [
-                "Buttons: (\"ok\" | \"okcancel\" | \"yesno\" | \"yesnocancel\")?",
-                "\"ok\""
-              ],
-              [
-                "Icon: (\"info\" | \"warning\" | \"error\" | \"question\")?",
-                "\"info\""
-              ],
-              [
-                "DefaultButton: number?",
-                "1"
-              ]
-            ],
-            "Out": "number"
-          },
-          "toolenabled": {
-            "Description": [
-              "Returns whether the given tool is currently enabled",
-              "To *enable* or *disable* the tool, use `.settoolenabled`"
-            ],
-            "In": [
-              "Tool: string"
-            ],
-            "Out": "boolean"
-          },
-          "toolnames": {
-            "Description": [
-              "Returns a list of valid Engine tools"
-            ],
-            "Out": "{ string }"
-          },
-          "unloadtexture": {
-            "Description": [
-              "Unloads the given texture from the Engine's cache"
-            ],
-            "In": [
-              "Path: string"
-            ]
-          },
-          "version": {
-            "Description":"Gets the version of the Engine build",
-            "Out": "string"
-          },
-          "windowsize": {
-            "Description": [
-              "Returns the current size, in pixels, of the game window",
-              "To *set* the size of the window, use `.setwindowsize`"
-            ],
-            "Out": "number, number"
           }
         }
       },

@@ -2,7 +2,7 @@
 local docComments = json.parse(assert(fs.read("./gh-assets/wiki/doc-comments.json")));
 local apiDump = json.parse(assert(fs.read("./apidump.json")));
 
-assert(not engine.isheadless());
+assert(not game:GetService("Engine").IsHeadless);
 
 local function keysOf(t)
     local keys = {}

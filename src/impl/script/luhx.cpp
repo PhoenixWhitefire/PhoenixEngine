@@ -13,7 +13,6 @@ static const luaL_Reg luhxlibs[] =
     { LUHX_MESHLIBNAME, luhxopen_mesh },
     { LUHX_MODELLIBNAME, luhxopen_model },
     { LUHX_SCENELIBNAME, luhxopen_scene },
-    { LUHX_ENGINELIBNAME, luhxopen_engine },
 
     { LUHX_COLORLIBNAME, luhxopen_Color },
     { LUHX_MATRIXLIBNAME, luhxopen_Matrix },

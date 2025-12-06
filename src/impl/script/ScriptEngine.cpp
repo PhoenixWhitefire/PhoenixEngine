@@ -673,6 +673,11 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 		lua_pushlstring(L, gv.AsStringView().data(), gv.AsStringView().size());
 		break;
 	}
+	case Reflection::ValueType::Vector2:
+	{
+		luhx_pushvector3(L, glm::vec3(gv.AsVector2(), 0.f));
+		break;
+	}
 	case Reflection::ValueType::Vector3:
 	{
 		luhx_pushvector3(L, gv.AsVector3());

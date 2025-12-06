@@ -63,6 +63,9 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 ### Properties:
 * `Time: number `: Number of seconds since the Engine started running
 
+### Methods:
+* `GetService(string) : ((GameObject & any))`: Gets the Object representing the specified Service. If it does not exist yet in the Data Model, it is created
+
 ### Events:
 * `OnFrameBegin(number)`: Fires at the beginning of a frame, passing in the time elapsed since the last frame (delta time)
 
@@ -83,6 +86,44 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * `ShadowViewSizeH: number`: Horizontal size of the shadow view
 * `ShadowViewSizeV: number`: Vertical size of the shadow view
 * `Shadows: boolean`: Whether the Light can render shadows
+
+## `Engine`
+
+* Inspect and manipulate various parts of the Engine
+
+### Properties:
+* `CommitHash: boolean `: The Git commit that was used to produce this Engine build
+* `DebugCollisionAabbs: boolean`: Whether physics collision AABBs are rendered
+* `DebugSpatialHeat: boolean`: Whether Spatial Heat (spatial hash density) debug rendering is enabled
+* `DebugWireframeRendering: boolean`: Whether the Wireframe rendering debug mode is enabled
+* `Framerate: number `: The Engine's current framerate
+* `FramerateCap: number`: The maximum framerate the Engine will reach before attempting to self-limit
+* `IsFullscreen: boolean`: Whether the Window is currently fullscreened
+* `IsHeadless: boolean `: Whether the Engine is currently running in headless mode
+* `PhysicsTimescale: number`: The current time-scale of the Physics engine (1.0 = 100%, normal speed)
+* `VSync: boolean`: Whether Vertical Synchronization is enabled
+* `Version: boolean `: The version of the Engine build
+* `WindowSize: vector`: The size of the window, in pixels
+
+### Methods:
+* `BindDataModel((GameObject & any)) : ()`: Switches Data Models to the specified Object
+* `CloseVM(string) : ()`: Closes the specified Luau VM, releasing its resources
+* `CreateVM(string) : ()`: Creates a new Luau VM with the given name. The `workspace` and `game` globals of the VM are taken from the currently-bound DataModel
+* `Exit(number?) : ()`: Shuts down the Engine and exits the process with the specified Exit Code (or 0 by default)
+* `GetCliArguments() : ({ any })`: Returns the list of launch arguments given to the Engine. The first item is always a path to the Engine executable
+* `GetCurrentVM() : (string)`: Returns the name of the currently-bound VM
+* `GetExplorerSelections() : ({ any })`: Returns what is currently selected in the Explorer
+* `GetToolNames() : ({ any })`: Returns a list of valid Engine tools
+* `IsToolEnabled(string) : (boolean)`: Returns whether the given tool is enabled
+* `ResetViewport() : ()`: Resets the Engine's understanding of where the viewport is on screen back to the default (occupying the entire window)
+* `RunInVM(string, string, string?) : (boolean, string?)`: Runs the given code in the specified VM. Returns `false` and an error message upon failure or if the code does not finish executing (yield or break)
+* `SetCurrentVM(string) : ()`: Binds the given VM as the "current" one. This causes all Scripts which load afterward to use the specified VM, it does *not* change the VM of any Scripts loaded beforehand
+* `SetExplorerRoot((GameObject & any)) : ()`: Changes the Root of the built-in Explorer's hierarchy view
+* `SetExplorerSelections({ any }) : ()`: Changes the built-in Explorer's Object selections to the specified Objects
+* `SetToolEnabled(string, boolean) : ()`: Enabled/disables the given tool
+* `SetViewport(vector, vector) : ()`: Configures the Engine to act as through the Viewport is at the given position with the given size. Does *not* change where the viewport is actually rendered
+* `ShowMessageBox(string, string, string?, string?, number?) : (number)`: Shows a message box to the player with the given specification. The returned number with be the selected option: `0` for Cancel/No, `1` for Ok/Yes, `2` for No in `yesnocancel`. This isa blocking operation and no scripts or other parts of the Engine run until the message is dismissed. Avoid using quotes and backticks in the message
+* `UnloadTexture(string) : ()`: Removes the given texture from the Engine's cache, forcing it to be reloaded upon next use
 
 ## `Example`
 

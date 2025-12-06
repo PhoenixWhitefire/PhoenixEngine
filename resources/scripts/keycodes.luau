@@ -54,6 +54,6 @@ while #str > 1 do
 	str = str:sub(str:find("\n") + 1, #str)
 end
 
-if engine.exit then
-	engine.exit()
+if game then
+	game:GetService("Engine"):Exit()
 end

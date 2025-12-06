@@ -52,6 +52,9 @@
         "Events": {
           "OnFrameBegin": "(Double)"
         },
+        "Methods": {
+          "GetService": "(String) -> (GameObject)"
+        },
         "Properties": {
           "Time": "Double READONLY"
         }
@@ -70,6 +73,42 @@
           "ShadowViewSizeH": "Double",
           "ShadowViewSizeV": "Double",
           "Shadows": "Boolean"
+        }
+      },
+      "Engine": {
+        "Methods": {
+          "BindDataModel": "(GameObject) -> ()",
+          "CloseVM": "(String) -> ()",
+          "CreateVM": "(String) -> ()",
+          "Exit": "(Integer?) -> ()",
+          "GetCliArguments": "() -> (Array)",
+          "GetCurrentVM": "() -> (String)",
+          "GetExplorerSelections": "() -> (Array)",
+          "GetToolNames": "() -> (Array)",
+          "IsToolEnabled": "(String) -> (Boolean)",
+          "ResetViewport": "() -> ()",
+          "RunInVM": "(String, String, String?) -> (Boolean, String?)",
+          "SetCurrentVM": "(String) -> ()",
+          "SetExplorerRoot": "(GameObject) -> ()",
+          "SetExplorerSelections": "(Array) -> ()",
+          "SetToolEnabled": "(String, Boolean) -> ()",
+          "SetViewport": "(Vector2, Vector2) -> ()",
+          "ShowMessageBox": "(String, String, String?, String?, Integer?) -> (Integer)",
+          "UnloadTexture": "(String) -> ()"
+        },
+        "Properties": {
+          "CommitHash": "Boolean READONLY",
+          "DebugCollisionAabbs": "Boolean",
+          "DebugSpatialHeat": "Boolean",
+          "DebugWireframeRendering": "Boolean",
+          "Framerate": "Integer READONLY",
+          "FramerateCap": "Integer",
+          "IsFullscreen": "Boolean",
+          "IsHeadless": "Boolean READONLY",
+          "PhysicsTimescale": "Double",
+          "VSync": "Boolean",
+          "Version": "Boolean READONLY",
+          "WindowSize": "Vector2"
         }
       },
       "Example": {
@@ -249,41 +288,6 @@
         "get": "function",
         "save": "function",
         "set": "function"
-      },
-      "engine": {
-        "args": "function",
-        "binddatamodel": "function",
-        "closevm": "function",
-        "commithash": "function",
-        "createvm": "function",
-        "currentvm": "function",
-        "daabbs": "function",
-        "dwireframes": "function",
-        "exit": "function",
-        "explorerselections": "function",
-        "framerate": "function",
-        "fullscreen": "function",
-        "getvsync": "function",
-        "isheadless": "function",
-        "maxframerate": "function",
-        "physicstimescale": "function",
-        "resetviewport": "function",
-        "runinvm": "function",
-        "setcurrentvm": "function",
-        "setexplorerroot": "function",
-        "setexplorerselections": "function",
-        "setfullscreen": "function",
-        "setmaxframerate": "function",
-        "settoolenabled": "function",
-        "setviewport": "function",
-        "setvsync": "function",
-        "setwindowsize": "function",
-        "showmessagebox": "function",
-        "toolenabled": "function",
-        "toolnames": "function",
-        "unloadtexture": "function",
-        "version": "function",
-        "windowsize": "function"
       },
       "fs": {
         "copy": "function",

@@ -123,4 +123,4 @@ public:
 	}
 };
 
-static inline ExampleManager Instance{};
+static inline ExampleManager Instance;
