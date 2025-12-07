@@ -42,7 +42,12 @@ table.sort(orderedDatatypes)
 table.sort(orderedLibraries)
 table.sort(orderedGlobals)
 
-local definitionsFile = ""
+local definitionsFile = [[
+export type EventSignal<T...> = {
+	Connect: (self: EventSignal<T...>, Callback: (T...) -> ()) -> (),
+	WaitUntil: (self: EventSignal<T...>) -> (T...)
+}
+]]
 local documentationData = {}
 
 local GameObjectOverrides = {
@@ -298,7 +303,7 @@ local function dumpReflectionApi(t, d, cn)
 
 				subst = string.sub(subst, 2, #subst)
 				local close = string.find(subst, ") :")
-				assert(close)
+				assert(close, n)
 
 				if string.sub(subst, 1, 1) == ")" then -- ") : ([...])" when no inputs
 					if typeof(docs) == "table" and docs.Out and typeof(docs.Out) == "string" then
@@ -315,8 +320,7 @@ local function dumpReflectionApi(t, d, cn)
 						if typeof(docs) == "string" or not docs.ParameterNames then
 							table.insert(newinputs, `Param_{i}: {t}`)
 						else
-							assert(typeof(docs.ParameterNames) == "table")
-							table.insert(newinputs, `{docs.ParameterNames[i]}: {t}`)
+							table.insert(newinputs, `{if typeof(docs.ParameterNames) == "table" then docs.ParameterNames[i] else docs.ParameterNames}: {t}`)
 						end
 					end
 
@@ -346,16 +350,16 @@ local function dumpReflectionApi(t, d, cn)
 			for _, n in orderedEvents do
 				local v = t.Events[n]
 
-				if not d.Events or not d.Events[n] then
+				if not d.Events or not d.Events[n] or not d.Events[n].Description then
 					print(`Missing doc comment for Event '{ cn }.{ n }'`)
 					continue
 				end
 
-				s ..= `* \`{ n }{ rtolsub(v) }\`: { d.Events[n] }\n`
+				s ..= `* \`{ n }{ rtolsub(v) }\`: { d.Events[n].Description }\n`
 				documentationData[`@luhx/globaltype/{cn}.{n}`] = {
-					documentation = d.Events[n]
+					documentation = d.Events[n].Description
 				}
-				definitionsFile ..= `  { n }: EventSignal\n`
+				definitionsFile ..= `  { n }: EventSignal<{assert(d.Events[n].CallbackArguments, n)}>\n`
 			end
 		end
 	else
@@ -387,16 +391,16 @@ local function documentDatatype(name)
 		return
 	end
 	alreadyAdded[name] = true
-	
+
 	local dt = docComments.ScriptEnv.Datatypes[name]
 	assert(dt, name)
-	
+
 	for _, t in (dt.TypeDependencies or {}) do
 		if not definitionsFile:find(`declare extern type { t } with`) then
 			documentDatatype(t)
 		end
 	end
-	
+
 	datatypes ..= `### \`{ name }\`\n\n`
 
 	local totalcomment = ""
@@ -409,21 +413,21 @@ local function documentDatatype(name)
 	documentationData[`@luhx/global/{name}`] = {
 		documentation = totalcomment
 	}
-	
+
 	local datatype = ""
-	
-	if name ~= "GameObject" then
+
+	if name ~= "GameObject" and name ~= "EventSignal" then
 		definitionsFile ..= `declare extern type { name } with\n`
 	end
-	
+
 	dt.Members = dt.Members or {}
-	
+
 	--[[
 	for k, v in (apiDump.ScriptEnv.Datatypes[name].Metatable or {}) do
 		if not dt.Members[k] then
 			local formatString = descsForMetafields[k]
 			assert(formatString, k)
-			
+
 			if v == "function" then
 				local vIn = "...: any"
 				if k == "__index" or k == "__newindex" then
@@ -431,7 +435,7 @@ local function documentDatatype(name)
 				elseif k == "__tostring" then
 					vIn = ""
 				end
-				
+
 				dt.Members[":" .. k] = {
 			 		In = vIn,
 			 		Out = if k == "__tostring" then "string" else "any",
@@ -446,7 +450,7 @@ local function documentDatatype(name)
 		end
 	end
 	]]--
-	
+
 	for k, v in dt.Members do
 		assert(k and typeof(k) == "string")
 		if string.sub(k, 1, 1) == ":" then
@@ -454,26 +458,32 @@ local function documentDatatype(name)
 			local args = v.In or ""
 			local returns = v.Out or "nil"
 			local defargs = args
-			
+
 			if #args == 0 then
 				defargs = "self"
 			else
 				assert(args and typeof(args) == "string")
 				local inputs = string.split(args, ", ")
 				local newinputs = {}
-				
+
 				for i, t in inputs do
 					table.insert(newinputs, `Param_{i}: {t}`)
 				end
-				
+
 				defargs = "self, " .. table.concat(newinputs, ", ")
 			end
-			
+
 			datatype ..= `#### \`{ rk }({ args }): { returns }\`\n`
-			definitionsFile ..= `  function { rk }({ defargs }): ( { returns } )\n`
+
+			if name ~= "EventSignal" then
+				definitionsFile ..= `  function { rk }({ defargs }): ( { returns } )\n`
+			end
 		else
 			datatype ..= `#### \`.{ k }: { v.Type }\`\n`
-			definitionsFile ..= `  { k }: { v.Type }`
+
+			if name ~= "EventSignal" then
+				definitionsFile ..= `  { k }: { v.Type }`
+			end
 
 			if k == "SceneCamera" then
 				definitionsFile ..= "& Camera"
@@ -481,7 +491,7 @@ local function documentDatatype(name)
 
 			definitionsFile ..= "\n"
 		end
-		
+
 		if not v.Description then
 			print(`No description for { name }.{ k }`)
 		end
@@ -503,11 +513,11 @@ local function documentDatatype(name)
 
 		datatype ..= "\n"
 	end
-	
-	if name ~= "GameObject" then
+
+	if name ~= "GameObject" and name ~= "EventSignal" then
 		definitionsFile ..= "end\n"
 	end
-	
+
 	datatypes ..= "\n" .. dumpLibMembers(dt.Library, apiDump.ScriptEnv.Datatypes[name].Library, name)
 	datatypes ..= datatype
 end

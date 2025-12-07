@@ -41,7 +41,7 @@ EditorTl.Parent = workspace
 EditorTl.Scripting = false
 Engine.PhysicsTimescale = 0
 
-local ToolOrder: { string } = {
+local ToolOrder = {
 	"Tool_Explorer",
 	"Tool_Properties"
 }
@@ -49,7 +49,7 @@ local ToolOrder: { string } = {
 local BottomBarEnabled = conf.get("Ed_Tool_BottomBarEnabled")
 assert(typeof(BottomBarEnabled) == "boolean" or typeof(BottomBarEnabled) == "nil")
 
-for _, tool: string in Engine:GetToolNames() do
+for _, tool in Engine:GetToolNames() do
 	if not table.find(ToolOrder, tool) then
 		table.insert(ToolOrder, tool)
 	end
@@ -1096,7 +1096,7 @@ local function renderProjectSelectorTiles(Projects: { string })
 
 		if (lastnl - i) * 350 + 170 + 250 + 75 + startX > windowSizeX then
 			-- new row
-			_, cy = imgui.cursorposition()
+			cy = select(2, imgui.cursorposition())
 			imgui.setcursorposition(startX, cy + 10)
 			lastnl = i - 1
 		else
@@ -1308,10 +1308,10 @@ local restoreState = nil
 function Stages.ProjectPlaying_Enter()
 	assert(Project)
 	restoreState = Project.DataModel
-	
+
 	assert(Project.DataModel)
 	Project.DataModel = Project.DataModel:Duplicate() :: any
-	
+
 	Engine:SetExplorerRoot(Project.DataModel)
 	Engine:SetExplorerSelections({})
 	Engine.PhysicsTimescale = 1
@@ -1319,7 +1319,7 @@ function Stages.ProjectPlaying_Enter()
 	Engine:BindDataModel(Project.DataModel) -- Set the `game` and `workspace` variables to the correct values in game scripts
 	Engine:CreateVM(GameVM)
 	Engine:SetCurrentVM(GameVM)
-	
+
 	local projWp = Project.Workspace
 	assert(projWp)
 
@@ -1329,7 +1329,7 @@ function Stages.ProjectPlaying_Enter()
 	end
 
 	workspace.SceneCamera = projWp.SceneCamera
-	
+
 	return Project.DataModel -- Connect to the Project's datamodel `.OnFrameBegin`
 end
 

@@ -334,7 +334,7 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * Returns the provided mesh data associated with the provided path
 ### `model`
 * `glTF` models
-#### `model.import(Path: string): GameObject & Model`
+#### `model.import(Path: string): (GameObject & Model)?`
 * Imports the glTF model at the provided path and returns it as a `Model` GameObject
 ### `scene`
 * Scene assets

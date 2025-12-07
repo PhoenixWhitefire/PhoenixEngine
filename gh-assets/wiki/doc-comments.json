@@ -2,11 +2,20 @@
   "GameObject": {
     "Base": {
       "Methods": {
-        "AddComponent": "Adds the specified Component to the Object. Will error if it already has it (use `:HasComponent` to check beforehand)",
+        "AddComponent": {
+          "Description": "Adds the specified Component to the Object. Will error if it already has it (use `:HasComponent` to check beforehand)",
+          "ParameterNames": "Component"
+        },
         "Destroy": "Marks the Object as \"pending for destruction\". This may or may not remove the Object from memory immediately, depending on whether the Engine is keeping a internal reference to it",
         "Duplicate": "Creates a duplicate of the Object",
-        "FindChild": "Returns a child Object with the given name, or `nil` if one doesn't exist",
-        "FindChildWithComponent": "Returns a child Object which has the given component, or `nil` if one doesn't exist",
+        "FindChild": {
+          "Description": "Returns a child Object with the given name, or `nil` if one doesn't exist",
+          "ParameterNames": "ChildName"
+        },
+        "FindChildWithComponent": {
+          "Description": "Returns a child Object which has the given component, or `nil` if one doesn't exist",
+          "ParameterNames": "ComponentName"
+        },
         "ForEachChild": "For all children of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield",
         "GetChildren": "Returns a list of the Object's direct children",
         "GetComponents": {
@@ -23,7 +32,10 @@
           "Type": "(keyof<Creatables> | string) : (boolean)"
         },
         "MergeWith": "Merges the Objects together, replacing descendants with the same name",
-        "RemoveComponent": "Removes the specified Component from the Object. Will error if does not have it (use `:HasComponent` to check beforehand)"
+        "RemoveComponent": {
+          "Description": "Removes the specified Component from the Object. Will error if does not have it (use `:HasComponent` to check beforehand)",
+          "ParameterNames": [ "ComponentName" ]
+        }
       },
       "Properties": {
         "Enabled": "Whether the Engine updates and recognizes this Object, essentially freezing it if it is disabled",
@@ -70,11 +82,17 @@
       "DataModel": {
         "Description": "The root of the scene",
         "Events": {
-          "OnFrameBegin": "Fires at the beginning of a frame, passing in the time elapsed since the last frame (delta time)"
+          "OnFrameBegin": {
+            "Description": "Fires at the beginning of a frame, passing in the time elapsed since the last frame (delta time)",
+            "CallbackArguments": "number"
+          }
         },
         "Methods": {
           "Close": "Closes the application with the specified exit code integer or 0",
-          "GetService": "Gets the Object representing the specified Service. If it does not exist yet in the Data Model, it is created"
+          "GetService": {
+            "Description": "Gets the Object representing the specified Service. If it does not exist yet in the Data Model, it is created",
+            "ParameterNames": [ "ServiceName" ]
+          }
         },
         "Properties": {
           "Time": "Number of seconds since the Engine started running"
@@ -114,23 +132,70 @@
           "CommitHash": "The Git commit that was used to produce this Engine build"
         },
         "Methods": {
-          "Exit": "Shuts down the Engine and exits the process with the specified Exit Code (or 0 by default)",
-          "BindDataModel": "Switches Data Models to the specified Object",
-          "SetExplorerRoot": "Changes the Root of the built-in Explorer's hierarchy view",
-          "SetExplorerSelections": "Changes the built-in Explorer's Object selections to the specified Objects",
-          "GetExplorerSelections": "Returns what is currently selected in the Explorer",
-          "CreateVM": "Creates a new Luau VM with the given name. The `workspace` and `game` globals of the VM are taken from the currently-bound DataModel",
-          "CloseVM": "Closes the specified Luau VM, releasing its resources",
+          "Exit": {
+            "Description": "Shuts down the Engine and exits the process with the specified Exit Code (or 0 by default)",
+            "ParameterNames": [ "ExitCode" ]
+          },
+          "BindDataModel": {
+            "Description": "Switches Data Models to the specified Object",
+            "ParameterNames": [ "DataModel" ],
+            "Type": "( GameObject & DataModel ) : ()"
+          },
+          "SetExplorerRoot": {
+            "Description": "Changes the Root of the built-in Explorer's hierarchy view",
+            "ParameterNames": [ "Root" ]
+          },
+          "SetExplorerSelections": {
+            "Description": "Changes the built-in Explorer's Object selections to the specified Objects",
+            "ParameterNames": [ "Selections" ],
+            "Type": "({ GameObject }) : ()"
+          },
+          "GetExplorerSelections": {
+            "Description": "Returns what is currently selected in the Explorer",
+            "Type": "() : ({ GameObject })"
+          },
+          "CreateVM": {
+            "Description": "Creates a new Luau VM with the given name. The `workspace` and `game` globals of the VM are taken from the currently-bound DataModel",
+            "ParameterNames": "VmName"
+          },
+          "CloseVM": {
+            "Description": "Closes the specified Luau VM, releasing its resources",
+            "ParameterNames": "VmName"
+          },
           "GetCurrentVM": "Returns the name of the currently-bound VM",
-          "SetCurrentVM": "Binds the given VM as the \"current\" one. This causes all Scripts which load afterward to use the specified VM, it does *not* change the VM of any Scripts loaded beforehand",
-          "RunInVM": "Runs the given code in the specified VM. Returns `false` and an error message upon failure or if the code does not finish executing (yield or break)",
-          "GetToolNames": "Returns a list of valid Engine tools",
-          "IsToolEnabled": "Returns whether the given tool is enabled",
-          "SetToolEnabled": "Enabled/disables the given tool",
-          "ShowMessageBox": "Shows a message box to the player with the given specification. The returned number with be the selected option: `0` for Cancel/No, `1` for Ok/Yes, `2` for No in `yesnocancel`. This isa blocking operation and no scripts or other parts of the Engine run until the message is dismissed. Avoid using quotes and backticks in the message",
-          "UnloadTexture": "Removes the given texture from the Engine's cache, forcing it to be reloaded upon next use",
+          "SetCurrentVM": {
+            "Description": "Binds the given VM as the \"current\" one. This causes all Scripts which load afterward to use the specified VM, it does *not* change the VM of any Scripts loaded beforehand",
+            "ParameterNames": "VmName"
+          },
+          "RunInVM": {
+            "Description": "Runs the given code in the specified VM. Returns `false` and an error message upon failure or if the code does not finish executing (yield or break)",
+            "ParameterNames": [ "VmName", "Code", "ChunkName" ]
+          },
+          "GetToolNames": {
+            "Description": "Returns a list of valid Engine tools",
+            "Type": "() : { string }"
+          },
+          "IsToolEnabled": {
+            "Description": "Returns whether the given tool is enabled",
+            "ParameterNames": "ToolName"
+          },
+          "SetToolEnabled": {
+            "Description": "Enabled/disables the given tool",
+            "ParameterNames": [ "ToolName", "Enabled" ]
+          },
+          "ShowMessageBox": {
+            "Description": "Shows a message box to the player with the given specification. The returned number with be the selected option: `0` for Cancel/No, `1` for Ok/Yes, `2` for No in `yesnocancel`. This isa blocking operation and no scripts or other parts of the Engine run until the message is dismissed. Avoid using quotes and backticks in the message",
+            "ParameterNames": [ "Title", "Message", "Buttons", "Icon", "DefaultButton" ]
+          },
+          "UnloadTexture": {
+            "Description": "Removes the given texture from the Engine's cache, forcing it to be reloaded upon next use",
+            "ParameterNames": "Texture"
+          },
           "GetCliArguments": "Returns the list of launch arguments given to the Engine. The first item is always a path to the Engine executable",
-          "SetViewport": "Configures the Engine to act as through the Viewport is at the given position with the given size. Does *not* change where the viewport is actually rendered",
+          "SetViewport": {
+            "Description": "Configures the Engine to act as through the Viewport is at the given position with the given size. Does *not* change where the viewport is actually rendered",
+            "ParameterNames": [ "Position", "Size" ]
+          },
           "ResetViewport": "Resets the Engine's understanding of where the viewport is on screen back to the default (occupying the entire window)"
         }
       },
@@ -140,11 +205,18 @@
           "The least-popular kid in school no one remembers the name of"
         ],
         "Events": {
-          "OnGreeted": "Fires when `:Greet` is called, and sends the response to the callback before the original caller of `:Greet` receives it"
+          "OnGreeted": {
+            "Description": "Fires when `:Greet` is called, and sends the response to the callback before the original caller of `:Greet` receives it",
+            "CallbackArguments": "string"
+          }
         },
         "Methods": {
           "GiveUp": "Tells Engine-chan to kill herself and throws an exception",
-          "Greet": "Says hello to the given list of names. If the second argument is `true`, does so extra villainously"
+          "Greet": {
+            "Description": "Says hello to the given list of names. If the second argument is `true`, does so extra villainously",
+            "Type": "({ string }, boolean) : string",
+            "ParameterNames": [ "Names", "Villain" ]
+          }
         },
         "Properties": {
           "EvenMoreSecretMessage": "A secret message that's so, *so* secret that it cannot be read by Reflection-kun, almost like they're keeping a secret from her...",
@@ -163,8 +235,14 @@
           "IsMouseSunk": "Whether the Engine is currently using mouse input (such as for Dear ImGui). Do not process mouse input if this is `true`"
         },
         "Methods": {
-          "IsKeyPressed": "Returns whether the specified key (e.g. `Enum.Key.A`, `Enum.Key.One`) is currently being pressed",
-          "IsMouseButtonPressed": "Returns whether the specified mouse button (`Enum.MouseButton.Left/Middle/Right`) is currently being pressed",
+          "IsKeyPressed": {
+            "Description": "Returns whether the specified key (e.g. `Enum.Key.A`, `Enum.Key.One`) is currently being pressed",
+            "ParameterNames": "Key"
+          },
+          "IsMouseButtonPressed": {
+            "Description": "Returns whether the specified mouse button (`Enum.MouseButton.Left/Middle/Right`) is currently being pressed",
+            "ParameterNames": "MouseButton"
+          },
           "GetCursorPosition": "Returns the current position of the mouse cursor relative to the window as a `vector`"
         }
       },
@@ -221,7 +299,10 @@
       "Sound": {
         "Description": "A sound",
         "Events": {
-          "OnLoaded": "Fires when the Sound finishes loading, and whether it loaded successfully or not"
+          "OnLoaded": {
+            "Description": "Fires when the Sound finishes loading, and whether it loaded successfully or not",
+            "CallbackArguments": "string"
+          }
         },
         "Properties": {
           "FinishedLoading": "Whether the Sound has finished loading the `SoundFile`",
@@ -271,7 +352,11 @@
         ],
         "Methods": {
           "AabbCast": "Cast an AABB",
-          "GetObjectsInAabb": "Get a list of Objects whose bounds are within the AABB",
+          "GetObjectsInAabb": {
+            "Description": "Get a list of Objects whose bounds are within the AABB",
+            "ParameterNames": [ "Position", "Size", "IgnoreList" ],
+            "Out": "{ GameObject }"
+          },
           "Raycast": {
             "Description": "Cast a ray",
             "Out": "{ Object: GameObject & Mesh & Transform, Position: vector, Normal: vector }?",
@@ -374,10 +459,7 @@
             "Description": "A list of all valid component names which can be passed into `.new`",
             "Type": "{ string }"
           }
-        },
-        "TypeDependencies": [
-          "EventSignal"
-        ]
+        }
       },
       "Matrix": {
         "Description": "A 4x4 transformation matrix",
@@ -1408,7 +1490,7 @@
             "In": [
               "Path: string"
             ],
-            "Out": "GameObject & Model"
+            "Out": "(GameObject & Model)?"
           }
         }
       },

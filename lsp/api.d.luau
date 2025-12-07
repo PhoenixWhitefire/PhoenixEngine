@@ -1,3 +1,7 @@
+export type EventSignal<T...> = {
+	Connect: (self: EventSignal<T...>, Callback: (T...) -> ()) -> (),
+	WaitUntil: (self: EventSignal<T...>) -> (T...)
+}
 declare extern type Color with
   R: number
   G: number
@@ -10,10 +14,6 @@ declare extern type EventConnection with
   Connected: boolean
   function Disconnect(self): ( nil )
   Signal: any
-end
-declare extern type EventSignal with
-  function Connect(self, Param_1: (any) -> (any)): ( EventConnection )
-  function WaitUntil(self): ( any )
 end
 declare GameObject: {
   validcomponents: { string },
@@ -59,11 +59,11 @@ declare extern type GameObject with
   Parent: (GameObject & any)?
   Serializes: boolean
 
-  function AddComponent(self, Param_1: string) : ()
+  function AddComponent(self, Component: string) : ()
   function Destroy(self) : ()
   function Duplicate(self) : ((GameObject & any))
-  function FindChild(self, Param_1: string) : ((GameObject & any)?)
-  function FindChildWithComponent(self, Param_1: string) : ((GameObject & any)?)
+  function FindChild(self, ChildName: string) : ((GameObject & any)?)
+  function FindChildWithComponent(self, ComponentName: string) : ((GameObject & any)?)
   function ForEachChild(self, Param_1: (any) -> (any)) : ()
   function GetChildren(self) : ({ any })
   function GetComponents(self) : (keyof<Creatables>)
@@ -71,7 +71,7 @@ declare extern type GameObject with
   function GetFullName(self) : (string)
   function HasComponent(self, ComponentName: keyof<Creatables> | string) : (boolean)
   function MergeWith(self, Param_1: (GameObject & any)) : ()
-  function RemoveComponent(self, Param_1: string) : ()
+  function RemoveComponent(self, ComponentName: string) : ()
 end
 declare extern type Animation with
   Animation: string
@@ -92,9 +92,9 @@ end
 declare extern type DataModel with
   Time: number 
 
-  function GetService(self, Param_1: string) : ((GameObject & any))
+  function GetService(self, ServiceName: string) : ((GameObject & any))
 
-  OnFrameBegin: EventSignal
+  OnFrameBegin: EventSignal<number>
 end
 declare extern type DirectionalLight with
   Brightness: number
@@ -124,24 +124,24 @@ declare extern type Engine with
   Version: string 
   WindowSize: vector
 
-  function BindDataModel(self, Param_1: (GameObject & any)) : ()
-  function CloseVM(self, Param_1: string) : ()
-  function CreateVM(self, Param_1: string) : ()
-  function Exit(self, Param_1: number?) : ()
+  function BindDataModel(self, DataModel:  GameObject & DataModel ) : ()
+  function CloseVM(self, VmName: string) : ()
+  function CreateVM(self, VmName: string) : ()
+  function Exit(self, ExitCode: number?) : ()
   function GetCliArguments(self) : ({ any })
   function GetCurrentVM(self) : (string)
-  function GetExplorerSelections(self) : ({ any })
-  function GetToolNames(self) : ({ any })
-  function IsToolEnabled(self, Param_1: string) : (boolean)
+  function GetExplorerSelections(self) : ({ GameObject })
+  function GetToolNames(self) : { string }
+  function IsToolEnabled(self, ToolName: string) : (boolean)
   function ResetViewport(self) : ()
-  function RunInVM(self, Param_1: string, Param_2: string, Param_3: string?) : (boolean, string?)
-  function SetCurrentVM(self, Param_1: string) : ()
-  function SetExplorerRoot(self, Param_1: (GameObject & any)) : ()
-  function SetExplorerSelections(self, Param_1: { any }) : ()
-  function SetToolEnabled(self, Param_1: string, Param_2: boolean) : ()
-  function SetViewport(self, Param_1: vector, Param_2: vector) : ()
-  function ShowMessageBox(self, Param_1: string, Param_2: string, Param_3: string?, Param_4: string?, Param_5: number?) : (number)
-  function UnloadTexture(self, Param_1: string) : ()
+  function RunInVM(self, VmName: string, Code: string, ChunkName: string?) : (boolean, string?)
+  function SetCurrentVM(self, VmName: string) : ()
+  function SetExplorerRoot(self, Root: (GameObject & any)) : ()
+  function SetExplorerSelections(self, Selections: { GameObject }) : ()
+  function SetToolEnabled(self, ToolName: string, Enabled: boolean) : ()
+  function SetViewport(self, Position: vector, Size: vector) : ()
+  function ShowMessageBox(self, Title: string, Message: string, Buttons: string?, Icon: string?, DefaultButton: number?) : (number)
+  function UnloadTexture(self, Texture: string) : ()
 end
 declare extern type Example with
   EvenMoreSecretMessage: string 
@@ -151,9 +151,9 @@ declare extern type Example with
   WhereIAm: vector
 
   function GiveUp(self) : ()
-  function Greet(self, Param_1: { any }, Param_2: boolean) : (string, string)
+  function Greet(self, Names: { string }, Villain: boolean) : string
 
-  OnGreeted: EventSignal
+  OnGreeted: EventSignal<string>
 end
 declare extern type InputService with
   CursorMode: number
@@ -161,8 +161,8 @@ declare extern type InputService with
   IsMouseSunk: boolean 
 
   function GetCursorPosition(self) : (vector)
-  function IsKeyPressed(self, Param_1: number) : (boolean)
-  function IsMouseButtonPressed(self, Param_1: number) : (boolean)
+  function IsKeyPressed(self, Key: number) : (boolean)
+  function IsMouseButtonPressed(self, MouseButton: number) : (boolean)
 end
 declare extern type Mesh with
   AngularVelocity: vector
@@ -210,7 +210,7 @@ declare extern type Sound with
   Speed: number
   Volume: number
 
-  OnLoaded: EventSignal
+  OnLoaded: EventSignal<string>
 end
 declare extern type SpotLight with
   Angle: number
@@ -231,7 +231,7 @@ end
 declare extern type Workspace with
   SceneCamera: GameObject & Camera
 
-  function GetObjectsInAabb(self, Param_1: vector, Param_2: vector, Param_3: { any }?) : ({ any })
+  function GetObjectsInAabb(self, Position: vector, Size: vector, IgnoreList: { any }?) : { GameObject }
   function Raycast(self, Origin: vector, CastVector: vector, FilterList: { any }?, FilterIsIgnoreList: boolean?) : { Object: GameObject & Mesh & Transform, Position: vector, Normal: vector }?
   function ScreenPointToVector(self, ScreenPoint: vector, Length: number?) : (vector)
 end
@@ -355,7 +355,7 @@ declare mesh: {
   get: (( Id: string ) -> ({ Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } }))
 }
 declare model: {
-  import: (( Path: string ) -> (GameObject & Model))
+  import: (( Path: string ) -> ((GameObject & Model)?))
 }
 declare scene: {
   load: (( Path: string ) -> ({ GameObject }?, string?)),
