@@ -126,6 +126,7 @@ static void copyStringToBuffer(char* Buffer, const std::string_view& String, siz
 
 #include "script/ScriptEngine.hpp"
 static void debugBreakHook(lua_State*, lua_Debug*, bool HasError, bool);
+static void debuggerLeaveCallback();
 
 void InlayEditor::Initialize(Renderer* renderer)
 {
@@ -191,6 +192,7 @@ void InlayEditor::Initialize(Renderer* renderer)
 	PHX_CHECK(prologueFound && "Globals prologue - @cwd/gh-assets/wiki/globals-prologue.md");
 
 	ScriptEngine::L::DebugBreak = &debugBreakHook;
+	ScriptEngine::L::LeaveDebugger = debuggerLeaveCallback;
 
 	InlayEditor::DidInitialize = true;
 }
@@ -3269,12 +3271,17 @@ static void debugVariable(lua_State* L)
 	}
 }
 
+static bool InDebugger = false;
+static ImGuiContext* debuggerContext = nullptr;
+static ImGuiContext* prevContext = nullptr;
+static bool wasTextEdEnabled = false;
+static int prevCursorMode = GLFW_CURSOR_NORMAL;
+
 static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 {
 	ZoneScoped;
 
 	luaL_checkstack(L, 20, "debugger");
-	int initialStatus = L->status;
 
 	std::string errorMessage = HasError ? luaL_checkstring(L, -1) : "<No error message>";
 	std::string vmName;
@@ -3284,19 +3291,28 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 
 	Engine* engine = Engine::Get();
 
-	ImGuiContext* debuggerContext = ImGui::CreateContext();
-	ImGuiContext* prevContext = ImGui::GetCurrentContext();
+	if (!InDebugger)
+	{
+		prevContext = ImGui::GetCurrentContext();
+		debuggerContext = ImGui::CreateContext();
 
-	ImGuiIO& debuggerGuiIO = ImGui::GetIO(debuggerContext);
-	debuggerGuiIO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-	debuggerGuiIO.IniFilename = "debugger-layout.ini";
+		ImGuiIO& debuggerGuiIO = ImGui::GetIO(debuggerContext);
+		debuggerGuiIO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+		debuggerGuiIO.IniFilename = "debugger-layout.ini";
 
-	ImGui_ImplGlfw_Shutdown();
+		ImGui_ImplGlfw_Shutdown();
 
-	ImGui::SetCurrentContext(debuggerContext);
+		ImGui::SetCurrentContext(debuggerContext);
 
-	PHX_ENSURE_MSG(ImGui_ImplGlfw_InitForOpenGL(engine->Window, true), "Failed to initialize Dear ImGui for GLFW on Debugger init");
-	PHX_ENSURE_MSG(ImGui_ImplOpenGL3_Init("#version 460"), "Failed to initialize Dear ImGui for OpenGL on Debugger init");
+		PHX_ENSURE_MSG(ImGui_ImplGlfw_InitForOpenGL(engine->Window, true), "Failed to initialize Dear ImGui for GLFW on Debugger init");
+		PHX_ENSURE_MSG(ImGui_ImplOpenGL3_Init("#version 460"), "Failed to initialize Dear ImGui for OpenGL on Debugger init");
+
+		wasTextEdEnabled = TextEditorEnabled;
+		prevCursorMode = glfwGetInputMode(engine->Window, GLFW_CURSOR);
+		glfwSetInputMode(engine->Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+	}
+
+	InDebugger = true;
 
 	double debuggerLastSecond = GetRunningTime();
 	double debuggerLastFrame = GetRunningTime();
@@ -3305,10 +3321,6 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 	bool develUI = false;
 	bool quietBg = true;
 	bool running = true;
-
-	bool wasTextEdEnabled = TextEditorEnabled;
-	int prevCursorMode = glfwGetInputMode(engine->Window, GLFW_CURSOR);
-	glfwSetInputMode(engine->Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
 	int li = 0;
 	lua_getinfo(L, li, "slnfu", ar);
@@ -3357,7 +3369,10 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 			ImGui::Text("VM: %s", vmName.c_str());
 
 			if (ImGui::Button("Resume (F5)") || ImGui::IsKeyDown(ImGuiKey_F5))
+			{
+				L->global->cb.debugstep = nullptr;
 				running = false;
+			}
 
 			static bool s_WasF8Down = false;
 			bool isF8Down = ImGui::IsKeyDown(ImGuiKey_F8) && running;
@@ -3379,45 +3394,15 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 				s_TargetLine = ar->currentline + 1;
 				s_PrevLine = ar->currentline;
 
-				static int s_BreakOnNext = false;
-				s_BreakOnNext = false;
-
 				L->global->cb.debugstep = [](lua_State* L, lua_Debug* ar)
 					{
-						if (s_BreakOnNext)
-							lua_break(L);
-
-						if (ar->currentline >= s_TargetLine)
-							s_BreakOnNext = true;
-
-						if (ar->currentline < s_PrevLine)
+						if (ar->currentline >= s_TargetLine || ar->currentline < s_PrevLine)
 							lua_break(L);
 					};
 				
 				lua_singlestep(L, true);
-				L->status = LUA_BREAK;
-
-				if (lua_resume(L, L, 0) == LUA_OK)
-				{
-					// got to the end of the script
-					running = false;
-				}
-				
-				L->global->cb.debugstep = nullptr;
-				lua_singlestep(L, false);
-
-				li = 0;
-				lua_getinfo(L, li, "slnu", ar);
-				while (strcmp(ar->short_src, "[C]") == 0)
-				{
-					li++;
-				
-					if (!lua_getinfo(L, li, "slnu", ar))
-					{
-						lua_getinfo(L, 0, "slnu", ar);
-						break;
-					}
-				}
+				lua_break(L);
+				running = false;
 			}
 
 			ImGui::Checkbox("All Developer UIs", &develUI);
@@ -3454,6 +3439,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 			ImGui::Combo("Variables", &Section, "Locals\0Upvalues\0Environment\0Registry\0");
 
 			ImGui::BeginChild("VariablesSection", ImVec2(), ImGuiChildFlags_Borders);
+			int initialStatus = L->status;
 			L->status = LUA_OK; // avoid hitting assertion due to potential calls to `__tostring` metamethods
 			
 			switch (Section)
@@ -3617,8 +3603,14 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 		std::this_thread::sleep_for(std::chrono::duration<double>(std::clamp(0.01 - dt, 0.0, 0.01)));
 		Memory::FrameFinish();
 	}
+}
 
-	L->status = initialStatus;
+static void debuggerLeaveCallback()
+{
+	if (!InDebugger)
+		return;
+
+	Engine* engine = Engine::Get();
 
 	TextEditorEnabled = wasTextEdEnabled;
 	s_TextEdDebuggerCurrentLine = 0;
@@ -3629,5 +3621,10 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 	ImGui::SetCurrentContext(prevContext);
 	ImGui::DestroyContext(debuggerContext);
 
+	debuggerContext = nullptr;
+	prevContext = nullptr;
+
 	PHX_ENSURE_MSG(ImGui_ImplGlfw_InitForOpenGL(engine->Window, true), "Failed to initialize Dear ImGui for GLFW on Debugger shutdown");
+
+	InDebugger = false;
 }

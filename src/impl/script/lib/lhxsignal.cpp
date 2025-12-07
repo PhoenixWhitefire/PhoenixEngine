@@ -134,7 +134,7 @@ static int sig_namecall(lua_State* L)
 				// they added a "correct" way to do this, with continuations n stuff
 				// but i genuinely just could not be bothered
 				co->baseCcalls++;
-				int status = lua_pcall(co, static_cast<int32_t>(Inputs.size()), 0, 0);
+				int status = ScriptEngine::L::ProtectedCall(co, static_cast<int32_t>(Inputs.size()), 0, 0);
 				co->baseCcalls--;
 				// TODO 06/09/2025
 				// i dont even know
@@ -144,19 +144,12 @@ static int sig_namecall(lua_State* L)
 				// other times it doesnt matter
 				status = status == 0 ? co->status : status;
 
-				if (status != LUA_OK && status != LUA_YIELD && status != LUA_BREAK)
+				if (status != LUA_OK && status != LUA_YIELD)
 				{
 					luaL_checkstack(co, 2, "error string"); // tolstring may push a metatable temporarily as well
 					Log::ErrorF("Script event: {}", luaL_tolstring(co, -1, nullptr));
 					ScriptEngine::L::DumpStacktrace(co);
 					lua_pop(co, 2);
-				}
-
-				if (status == LUA_BREAK)
-				{
-					cn->CallbackYields = true;
-					while (co->status == LUA_BREAK)
-						lua_resume(co, nullptr, 0); // i dont knowwwwww
 				}
 
 				if (!cn->CallbackYields && status == LUA_YIELD)

@@ -197,9 +197,9 @@ bool EcScript::Reload()
 		// to prevent use-after-free on script error if we've gotten re-alloc'd
 		lua_State* thread = m_L;
 
-		int resumeResult = lua_resume(m_L, m_L, 0);
+		int resumeResult = ScriptEngine::L::Resume(m_L, m_L, 0);
 
-		if (resumeResult != LUA_OK && resumeResult != LUA_YIELD && resumeResult != LUA_BREAK)
+		if (resumeResult != LUA_OK && resumeResult != LUA_YIELD)
 		{
 			Log::ErrorF(
 				"Script init: {}",

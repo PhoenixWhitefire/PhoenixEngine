@@ -71,6 +71,9 @@ namespace ScriptEngine::L
 {
 	lua_State* Create(const std::string& VmName);
 	void Close(lua_State*);
+
+	lua_Status Resume(lua_State* L, lua_State* from, int narg);
+	lua_Status ProtectedCall(lua_State* L, int narg, int nret, int errfunc);
 	
 	Reflection::GenericValue ToGeneric(
 		lua_State*,
@@ -104,15 +107,6 @@ namespace ScriptEngine::L
 		std::function<void(YieldedCoroutine&)> Configure
 	);
 
-	struct GlobalFn
-	{
-		lua_CFunction Function;
-		int NumMinArgs = 0;
-	};
-
-	// TODO replace with `std::span` once engine is moved over to C++ 26
-	// (initializer lists cannot be used for spans before that)
-	extern std::pair<std::string_view, GlobalFn>* GlobalFunctions;
-
 	inline void(*DebugBreak)(lua_State*, lua_Debug*, bool, bool) = nullptr;
+	inline void(*LeaveDebugger)() = nullptr;
 };

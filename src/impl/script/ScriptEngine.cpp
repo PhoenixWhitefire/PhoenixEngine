@@ -152,7 +152,7 @@ void ScriptEngine::StepScheduler()
 			// where they are `require`'d from anyway
 			if (it->ScriptId == PHX_GAMEOBJECT_NULL_ID || GameObject::GetObjectById(it->ScriptId))
 			{
-				int resumeStatus = lua_resume(coroutine, nullptr, nretvals);
+				int resumeStatus = L::Resume(coroutine, nullptr, nretvals);
 
 				if (resumeStatus != LUA_OK && resumeStatus != LUA_YIELD)
 				{
@@ -436,7 +436,6 @@ int ScriptEngine::CompileAndLoad(lua_State* L, const std::string& SourceCode, co
 	const char* mutableGlobals[] = 
 	{
 		"game", "workspace", "script",
-		"_CHUNKNAME",
 		NULL
 	};
 
@@ -447,14 +446,11 @@ int ScriptEngine::CompileAndLoad(lua_State* L, const std::string& SourceCode, co
 
 	std::string bytecode = Luau::compile(SourceCode, compileOptions);
 
+	lua_setreadonly(L, LUA_GLOBALSINDEX, false);
+	lua_pushlstring(L, ChunkName.data(), ChunkName.size());
+	lua_setglobal(L, "_CHUNKNAME");
+
 	int result = luau_load(L, ChunkName.c_str(), bytecode.data(), bytecode.size(), 0);
-
-	if (result == 0)
-	{
-		lua_pushlstring(L, ChunkName.data(), ChunkName.size());
-		lua_setfield(L, LUA_ENVIRONINDEX, "_CHUNKNAME");
-	}
-
 	return result;
 }
 
@@ -558,7 +554,7 @@ Reflection::GenericValue ScriptEngine::L::ToGeneric(lua_State* L, int StackIndex
 				lua_settable(CL, -3);
 				lua_pop(CL, 1);
 
-				int status = lua_pcall(CL, (int)Inputs.size(), -1, 0);
+				int status = L::ProtectedCall(CL, (int)Inputs.size(), -1, 0);
 
 				lua_getglobal(CL, YIELDBLOCKERTRACKING);
 				luaL_checktype(CL, -1, LUA_TTABLE);
@@ -1167,7 +1163,7 @@ static void requireConfigInit(luarequire_Configuration* config)
 				lua_pushstring(ML, ldname);
 				lua_setglobal(ML, "_LOADNAME");
 
-				int status = lua_resume(ML, L, 0);
+				int status = ScriptEngine::L::Resume(ML, L, 0);
 
 				if (status == LUA_OK)
 				{
@@ -1336,6 +1332,34 @@ void ScriptEngine::L::Close(lua_State* L)
 	delete (std::filesystem::path*)lua_tolightuserdatatagged(L, -1, 67);
 	
 	lua_close(L);
+}
+
+lua_Status ScriptEngine::L::Resume(lua_State* L, lua_State* from, int narg)
+{
+	int status = lua_resume(L, from, narg);
+
+	while (status == LUA_BREAK)
+	{
+		status = lua_resume(L, nullptr, 0);
+	}
+
+	if (LeaveDebugger)
+		LeaveDebugger();
+
+	return (lua_Status)status;
+}
+
+lua_Status ScriptEngine::L::ProtectedCall(lua_State* L, int narg, int nret, int errfunc)
+{
+	int status = lua_pcall(L, narg, nret, errfunc);
+
+	while (status == LUA_BREAK)
+		status = lua_pcall(L, 0, nret, errfunc);
+
+	if (LeaveDebugger)
+		LeaveDebugger();
+
+	return (lua_Status)status;
 }
 
 nlohmann::json ScriptEngine::DumpApiToJson()
