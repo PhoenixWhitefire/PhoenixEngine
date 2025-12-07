@@ -317,24 +317,6 @@
   "@luhx/global/loadthreadfromfile": {
     "documentation": "* Similar to `loadthread`, however loads from a file instead of from a string directly"
   },
-  "@luhx/global/mesh": {
-    "documentation": "* Mesh assets"
-  },
-  "@luhx/global/mesh.get": {
-    "documentation": "* Returns the provided mesh data associated with the provided path"
-  },
-  "@luhx/global/mesh.save": {
-    "documentation": "* Saves the mesh data at the provided path to a file"
-  },
-  "@luhx/global/mesh.set": {
-    "documentation": "* Associates the provided mesh data with the provided path"
-  },
-  "@luhx/global/model": {
-    "documentation": "* `glTF` models"
-  },
-  "@luhx/global/model.import": {
-    "documentation": "* Imports the glTF model at the provided path and returns it as a `Model` GameObject"
-  },
   "@luhx/global/scene": {
     "documentation": "* Scene assets"
   },
@@ -370,6 +352,18 @@
   },
   "@luhx/globaltype/Animation.Weight": {
     "documentation": "The influence the Animation has over the rig"
+  },
+  "@luhx/globaltype/AssetService.GetMeshData": {
+    "documentation": "Returns the provided mesh data associated with the provided path"
+  },
+  "@luhx/globaltype/AssetService.ImportModel": {
+    "documentation": "Imports the glTF 2.0 model at the provided path and returns it as a `Model` GameObject"
+  },
+  "@luhx/globaltype/AssetService.SaveMesh": {
+    "documentation": "Saves the mesh data at the provided path to a file"
+  },
+  "@luhx/globaltype/AssetService.SetMeshData": {
+    "documentation": "Associates the provided mesh data with the provided path"
   },
   "@luhx/globaltype/Bone.IsActive": {
     "documentation": "Whether or not the Bone Object is actively affecting a Mesh"

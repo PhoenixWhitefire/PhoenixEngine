@@ -44,7 +44,8 @@ public:
                     const std::string_view Services[] = {
                         "Workspace",
                         "Engine",
-                        "InputService"
+                        "InputService",
+                        "AssetService"
                     };
 
                     std::string service = std::string(inputs[0].AsStringView());

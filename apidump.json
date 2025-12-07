@@ -35,6 +35,14 @@
           "Weight": "Double"
         }
       },
+      "AssetService": {
+        "Methods": {
+          "GetMeshData": "(String) -> (Map)",
+          "ImportModel": "(String) -> (GameObject)",
+          "SaveMesh": "(String, String) -> ()",
+          "SetMeshData": "(String, Map) -> ()"
+        }
+      },
       "Bone": {
         "Properties": {
           "IsActive": "Boolean READONLY",
@@ -382,14 +390,6 @@
       "json": {
         "encode": "function",
         "parse": "function"
-      },
-      "mesh": {
-        "get": "function",
-        "save": "function",
-        "set": "function"
-      },
-      "model": {
-        "import": "function"
       },
       "scene": {
         "load": "function",

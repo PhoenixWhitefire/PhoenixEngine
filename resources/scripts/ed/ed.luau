@@ -1,5 +1,6 @@
 -- ed.luau, 14/09/2025
 local InputService: InputService = game:GetService("InputService") :: any
+local AssetService: AssetService = game:GetService("AssetService") :: any
 local Engine: Engine = game:GetService("Engine") :: any
 
 local FALLBACK_IMAGE = "@etextures/editor-icons/fallback.png"
@@ -424,7 +425,7 @@ local function homeTab(_: number)
 			local paths = fs.promptopen("models/", { "*.gltf", "*.glb" }, "Models")
 
 			if paths[1] then
-				local imported = model.import(paths[1])
+				local imported = AssetService:ImportModel(paths[1])
 
 				if not imported then
 					print("Failed to import")

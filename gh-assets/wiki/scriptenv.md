@@ -324,18 +324,6 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * Encodes the provided value into a JSON string
 #### `json.parse(Json: string): any`
 * Decodes the JSON string and returns it as a value
-### `mesh`
-* Mesh assets
-#### `mesh.save(Id: string, SaveTo: string): `
-* Saves the mesh data at the provided path to a file
-#### `mesh.set(Id: string, Data: { Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } }): `
-* Associates the provided mesh data with the provided path
-#### `mesh.get(Id: string): { Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } }`
-* Returns the provided mesh data associated with the provided path
-### `model`
-* `glTF` models
-#### `model.import(Path: string): (GameObject & Model)?`
-* Imports the glTF model at the provided path and returns it as a `Model` GameObject
 ### `scene`
 * Scene assets
 #### `scene.load(Path: string): { GameObject }?, string?`

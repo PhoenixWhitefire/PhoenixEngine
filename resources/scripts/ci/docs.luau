@@ -311,7 +311,7 @@ local function dumpReflectionApi(t, d, cn)
 					else
 						subst = "(self)" .. string.sub(subst, close + 1, #subst)
 					end
-				else
+				elseif (docs.Type and docs.ParameterNames) or not docs.Type then
 					local inputsstr = string.sub(subst, 1, close)
 					local inputs = string.split(inputsstr, ", ")
 					local newinputs = {}
@@ -333,6 +333,9 @@ local function dumpReflectionApi(t, d, cn)
 					subst = table.concat(newinputs, ", ") .. subst
 					
 					subst = "(self, " .. subst
+				else
+					assert(docs.Type, n)
+					subst = docs.Type
 				end
 
 				subst = GameObjectOverrides[n] or subst

@@ -61,6 +61,29 @@
           "Weight": "The influence the Animation has over the rig"
         }
       },
+      "AssetService": {
+        "Description": "Used to manipulate assets within the Engine",
+        "Methods": {
+          "ImportModel": {
+            "Description": "Imports the glTF 2.0 model at the provided path and returns it as a `Model` GameObject",
+            "ParameterNames": "Path",
+            "Out": "GameObject & Model"
+          },
+          "GetMeshData": {
+            "Description": "Returns the provided mesh data associated with the provided path",
+            "Out": "{ Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } }",
+            "ParameterNames": "Id"
+          },
+          "SetMeshData": {
+            "Description": "Associates the provided mesh data with the provided path",
+            "Type": "(self, Id: string, MeshData: { Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } }) : ()"
+          },
+          "SaveMesh": {
+            "Description": "Saves the mesh data at the provided path to a file",
+            "ParameterNames": [ "Id", "Path" ]
+          }
+        }
+      },
       "Bone": {
         "Description": [
           "Represents a Bone of a Mesh",
@@ -1445,52 +1468,6 @@
               "Json: string"
             ],
             "Out": "any"
-          }
-        }
-      },
-      "mesh": {
-        "Description": "Mesh assets",
-        "Members": {
-          "get": {
-            "Description": [
-              "Returns the provided mesh data associated with the provided path"
-            ],
-            "In": [
-              "Id: string"
-            ],
-            "Out": "{ Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } }"
-          },
-          "save": {
-            "Description": [
-              "Saves the mesh data at the provided path to a file"
-            ],
-            "In": [
-              "Id: string",
-              "SaveTo: string"
-            ]
-          },
-          "set": {
-            "Description": [
-              "Associates the provided mesh data with the provided path"
-            ],
-            "In": [
-              "Id: string",
-              "Data: { Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } }"
-            ]
-          }
-        }
-      },
-      "model": {
-        "Description": "`glTF` models",
-        "Members": {
-          "import": {
-            "Description": [
-              "Imports the glTF model at the provided path and returns it as a `Model` GameObject"
-            ],
-            "In": [
-              "Path: string"
-            ],
-            "Out": "(GameObject & Model)?"
           }
         }
       },

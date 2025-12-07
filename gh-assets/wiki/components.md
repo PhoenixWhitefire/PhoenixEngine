@@ -38,6 +38,17 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * `Ready: boolean `: Whether the Animation can be played
 * `Weight: number`: The influence the Animation has over the rig
 
+## `AssetService`
+
+* Used to manipulate assets within the Engine
+
+
+### Methods:
+* `GetMeshData(string) : ({ [string]: any })`: Returns the provided mesh data associated with the provided path
+* `ImportModel(string) : ((GameObject & any))`: Imports the glTF 2.0 model at the provided path and returns it as a `Model` GameObject
+* `SaveMesh(string, string) : ()`: Saves the mesh data at the provided path to a file
+* `SetMeshData(self, Id: string, MeshData: { Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } }) : ()`: Associates the provided mesh data with the provided path
+
 ## `Bone`
 
 * Represents a Bone of a Mesh

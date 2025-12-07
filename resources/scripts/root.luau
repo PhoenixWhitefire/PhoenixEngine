@@ -1,5 +1,6 @@
 -- root.luau, 21/12/2024
 local InputService: InputService = game:GetService("InputService") :: any
+local AssetService: AssetService = game:GetService("AssetService") :: any
 
 local ModelImporterScale = 1
 
@@ -55,7 +56,7 @@ local function update(DeltaTime)
 			
 			local Path = fs.promptopen("models", "gltf;glb", "Models")[1]
 			if Path then
-				local parts = model.import(Path)
+				local parts = AssetService:ImportModel(Path)
 				--local model = GameObject.new("Model")
 				--model.Name = pathSplit[#pathSplit]
 				--model.Parent = workspace
@@ -177,7 +178,7 @@ local function update(DeltaTime)
 	local prevLightTheme = LightTheme
 	LightTheme = imgui.checkbox("Light-mode", LightTheme or false)
 	if LightTheme ~= prevLightTheme then
-		imgui.stylecolors(if LightTheme then "L" else "D")
+		imgui.stylecolors(if LightTheme then "l" else "d")
 	end
 	
 	imgui.endw()

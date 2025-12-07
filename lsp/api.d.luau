@@ -80,6 +80,13 @@ declare extern type Animation with
   Ready: boolean 
   Weight: number
 end
+declare extern type AssetService with
+
+  function GetMeshData(self, Id: string) : { Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } }
+  function ImportModel(self, Path: string) : GameObject & Model
+  function SaveMesh(self, Id: string, Path: string) : ()
+  function SetMeshData(self, Id: string, MeshData: { Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } }) : ()
+end
 declare extern type Bone with
   IsActive: boolean 
   SkeletalBoneId: number 
@@ -257,6 +264,7 @@ type Creatables = {
 	TreeLink: TreeLink,
 	Engine: Engine,
 	InputService: InputService,
+	AssetService: AssetService,
 }
 declare Enum: {
   MouseButton: { Left: number, Middle: number, Right: number },
@@ -348,14 +356,6 @@ declare imgui: {
 declare json: {
   encode: (( Value: any ) -> (string)),
   parse: (( Json: string ) -> (any))
-}
-declare mesh: {
-  save: (( Id: string, SaveTo: string ) -> ()),
-  set: (( Id: string, Data: { Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } } ) -> ()),
-  get: (( Id: string ) -> ({ Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } }))
-}
-declare model: {
-  import: (( Path: string ) -> ((GameObject & Model)?))
 }
 declare scene: {
   load: (( Path: string ) -> ({ GameObject }?, string?)),

@@ -24,12 +24,6 @@ int luhxopen_imgui(lua_State*);
 #define LUHX_JSONLIBNAME "json"
 int luhxopen_json(lua_State*);
 
-#define LUHX_MESHLIBNAME "mesh"
-int luhxopen_mesh(lua_State*);
-
-#define LUHX_MODELLIBNAME "model"
-int luhxopen_model(lua_State*);
-
 #define LUHX_SCENELIBNAME "scene"
 int luhxopen_scene(lua_State*);
 

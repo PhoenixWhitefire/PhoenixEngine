@@ -450,7 +450,14 @@ std::span<Reflection::GenericValue> Reflection::GenericValue::AsArray() const
 }
 std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> Reflection::GenericValue::AsMap() const
 {
-	RAISE_RT("GenericValue::AsMap not implemented");
+	if (Size % 2 != 0)
+		RAISE_RTF("Map had an uneven number of array elements ({})", Size);
+
+	std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> map;
+	for (uint32_t i = 0; i < Size; i += 2)
+		map[((Reflection::GenericValue*)Val.Ptr)[i]] = ((Reflection::GenericValue*)Val.Ptr)[i + 1];
+
+	return map;
 }
 
 #undef WRONG_TYPE
