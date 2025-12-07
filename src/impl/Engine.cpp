@@ -1064,7 +1064,7 @@ void Engine::Shutdown()
 	Log::Info("Shutting down Component Managers...");
 
 	// skip the first "None" component manager
-	for (size_t i = 1; i < std::size(s_EntityComponentNames); i++)
+	for (size_t i = 1; i < (size_t)EntityComponent::__count; i++)
 	{
 		ZoneScopedN("Shutdown Component");
 		ZoneText(s_EntityComponentNames[i].data(), s_EntityComponentNames[i].size());

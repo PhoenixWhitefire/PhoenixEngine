@@ -1,4 +1,5 @@
 -- modules/character-controller.luau, 23/09/2024
+local InputService: InputService = game:GetService("InputService") :: any
 
 local Controller = {}
 Controller.__index = Controller
@@ -90,7 +91,7 @@ function Controller.Update(self: Controller, DeltaTime: number)
 	)
 	
 	if floorRayHit then
-		if input.keypressed(Enum.Key.Space) and (self.totalTime - self.lastJumped) > self.JumpCooldown then
+		if InputService:IsKeyPressed(Enum.Key.Space) and (self.totalTime - self.lastJumped) > self.JumpCooldown then
 			impulse += vector.create(0, self.JumpImpulse, 0)
 			self.Character.LinearVelocity = vector.create(self.Character.LinearVelocity.x, 0, self.Character.LinearVelocity.z)
 			self.lastJumped = self.totalTime
@@ -132,8 +133,8 @@ function Controller.Update(self: Controller, DeltaTime: number)
 end
 
 function Controller.getMoveDirection(self: Controller)
-	local moveX = (if input.keypressed(Enum.Key.A) then 1 else 0) - (if input.keypressed(Enum.Key.D) then 1 else 0)
-	local moveZ = (if input.keypressed(Enum.Key.W) then 1 else 0) - (if input.keypressed(Enum.Key.S) then 1 else 0)
+	local moveX = (if InputService:IsKeyPressed(Enum.Key.A) then 1 else 0) - (if InputService:IsKeyPressed(Enum.Key.D) then 1 else 0)
+	local moveZ = (if InputService:IsKeyPressed(Enum.Key.W) then 1 else 0) - (if InputService:IsKeyPressed(Enum.Key.S) then 1 else 0)
 	
 	local trans = self.Camera.Transform * Matrix.fromEulerAnglesXYZ(-self.cameraPitch, 0, 0) * Matrix.fromTranslation(moveX, 0, moveZ)
 	
@@ -156,22 +157,22 @@ function Controller.getMoveDirection(self: Controller)
 end
 
 function Controller.getRotationVector(self: Controller) : (number, number)
-	if input.mousedown(Enum.MouseButton.Left) and not input.guihandledm() then
+	if InputService:IsMouseButtonPressed(Enum.MouseButton.Left) and not InputService.IsMouseSunk then
 		self.isMouseLocked = true -- lock mouse with left-click
 		
-	elseif input.mousedown(Enum.MouseButton.Right) then
+	elseif InputService:IsMouseButtonPressed(Enum.MouseButton.Right) then
 		self.isMouseLocked = false -- unlock mouse with right-click
 	end
-	input.setmousegrabbed(self.isMouseLocked)
+	InputService.CursorMode = if self.isMouseLocked then Enum.CursorMode.Disabled else Enum.CursorMode.Normal
 	
 	local rx, ry = 0, 0
-	local mouseX, mouseY = input.mouseposition()
+	local cursor = InputService:GetCursorPosition()
 	
 	if self.isMouseLocked then
-		rx, ry = (mouseY - self.prevMouseY) / 400, (self.prevMouseX - mouseX) / 400
+		rx, ry = (cursor.y - self.prevMouseY) / 400, (self.prevMouseX - cursor.x) / 400
 	end
 	
-	self.prevMouseX, self.prevMouseY = mouseX, mouseY
+	self.prevMouseX, self.prevMouseY = cursor.x, cursor.y
 	
 	return rx, ry
 end

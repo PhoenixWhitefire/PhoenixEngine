@@ -45,8 +45,32 @@ enum class EntityComponent : uint8_t
 	Example,
 	TreeLink,
 	Engine,
+	InputService,
 	
 	__count
+};
+
+static inline const std::string_view s_EntityComponentNames[] = 
+{
+	"<NONE>",
+	"Transform",
+	"Mesh",
+	"ParticleEmitter",
+	"Script",
+	"Sound",
+	"Workspace",
+	"DataModel",
+	"PointLight",
+	"DirectionalLight",
+	"SpotLight",
+	"Camera",
+	"Animation",
+	"Model",
+	"Bone",
+	"Example",
+	"TreeLink",
+	"Engine",
+	"InputService"
 };
 
 // component type and ID
@@ -69,49 +93,7 @@ struct ReflectorRef
 	}
 };
 
-static inline const std::string_view s_EntityComponentNames[] = 
-{
-	"<NONE>",
-	"Transform",
-	"Mesh",
-	"ParticleEmitter",
-	"Script",
-	"Sound",
-	"Workspace",
-	"DataModel",
-	"PointLight",
-	"DirectionalLight",
-	"SpotLight",
-	"Camera",
-	"Animation",
-	"Model",
-	"Bone",
-	"Example",
-	"TreeLink",
-	"Engine"
-};
-
-static inline const std::unordered_map<std::string_view, EntityComponent> s_ComponentNameToType = 
-{
-	{ "<NONE>", EntityComponent::None },
-	{ "Transform", EntityComponent::Transform },
-	{ "Mesh", EntityComponent::Mesh },
-	{ "ParticleEmitter", EntityComponent::ParticleEmitter },
-	{ "Script", EntityComponent::Script },
-	{ "Sound", EntityComponent::Sound },
-	{ "Workspace", EntityComponent::Workspace },
-	{ "DataModel", EntityComponent::DataModel },
-	{ "PointLight", EntityComponent::PointLight },
-	{ "DirectionalLight", EntityComponent::DirectionalLight },
-	{ "SpotLight", EntityComponent::SpotLight },
-	{ "Camera", EntityComponent::Camera },
-	{ "Animation", EntityComponent::Animation },
-	{ "Model", EntityComponent::Model },
-	{ "Bone", EntityComponent::Bone },
-	{ "Example", EntityComponent::Example },
-	{ "TreeLink", EntityComponent::TreeLink },
-	{ "Engine", EntityComponent::Engine }
-};
+extern const std::unordered_map<std::string_view, EntityComponent> s_ComponentNameToType;
 
 static_assert(std::size(s_EntityComponentNames) == (size_t)EntityComponent::__count);
 

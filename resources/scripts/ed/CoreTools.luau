@@ -1,4 +1,5 @@
-local Engine = game:GetService("Engine")
+local InputService: InputService = game:GetService("InputService") :: any
+local Engine: Engine = game:GetService("Engine") :: any
 
 local CoreTools = {}
 CoreTools.EditorCanUseMouse = true
@@ -98,22 +99,22 @@ function CoreTools.Update(Project: { Workspace: Workspace })
     end
 
     local camPos = workspace.SceneCamera.Transform.Position
-    local mpos = input.mouseposition()
+    local cpos = InputService:GetCursorPosition()
 
-    local mouseVector = workspace:ScreenPointToVector(mpos, 1000)
-    local gizmoHit = if input.mousedown(Enum.MouseButton.Left) then workspace:Raycast(camPos, mouseVector, { GizmoContainer }, false) else nil
+    local mouseVector = workspace:ScreenPointToVector(cpos, 1000)
+    local gizmoHit = if InputService:IsMouseButtonPressed(Enum.MouseButton.Left) then workspace:Raycast(camPos, mouseVector, { GizmoContainer }, false) else nil
 
-    if input.mousedown(Enum.MouseButton.Left) and not IsGizmoDragging and not gizmoHit then
+    if InputService:IsMouseButtonPressed(Enum.MouseButton.Left) and not IsGizmoDragging and not gizmoHit then
         local worldHit = Project.Workspace:Raycast(camPos, mouseVector, { if IsSurfaceDragging then target else nil })
 
         if worldHit and (IsSurfaceDragging or worldHit.Object == target) then
             assert(worldHit)
 
             if not IsSurfaceDragging then
-                PrevDragMousePos = mpos
+                PrevDragMousePos = cpos
             end
 
-            if PrevDragMousePos ~= mpos then
+            if PrevDragMousePos ~= cpos then
                target.Transform = Matrix.fromTranslation(worldHit.Position + worldHit.Normal * target.Size / 2)
             end
 
@@ -145,9 +146,9 @@ function CoreTools.Update(Project: { Workspace: Workspace })
     GizmoPrevTargetTransform = target.Transform
     GizmoPrevTargetSize = target.Size
 
-    if gizmoHit and input.mousedown(Enum.MouseButton.Left) then
+    if gizmoHit and InputService:IsMouseButtonPressed(Enum.MouseButton.Left) then
         if not IsGizmoDragging then
-            PrevDragMousePos = mpos
+            PrevDragMousePos = cpos
             GizmoDragAxis = vector.abs(assert(GizmoPieceToDirection[gizmoHit.Object]))
             GizmoDragHandle = gizmoHit.Object
 
@@ -160,7 +161,7 @@ function CoreTools.Update(Project: { Workspace: Workspace })
 
         IsGizmoDragging = true
 
-    elseif not input.mousedown(Enum.MouseButton.Left) then
+    elseif not InputService:IsMouseButtonPressed(Enum.MouseButton.Left) then
         IsGizmoDragging = false
 
         for _, pcs in GizmoPieces do
@@ -177,7 +178,7 @@ function CoreTools.Update(Project: { Workspace: Workspace })
 
         target.Transform += vector.create(roundTo(diff.x, GizmoMoveIncrement), roundTo(diff.y, GizmoMoveIncrement), roundTo(diff.z, GizmoMoveIncrement)) * GizmoDragAxis
 
-        PrevDragMousePos = mpos
+        PrevDragMousePos = cpos
     end
 end
 

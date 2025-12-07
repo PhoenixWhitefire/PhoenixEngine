@@ -21,14 +21,15 @@ static void fromString(Reflection::GenericValue& G, const char* Data)
 {
 	G.Type = Reflection::ValueType::String;
 
-	if (G.Size > GV_SSO)
+	if (G.Size + 1 > GV_SSO)
 	{
-		G.Val.Str = (char*)Memory::Alloc(G.Size, Memory::Category::Reflection);
+		G.Val.Str = (char*)Memory::Alloc(G.Size + 1, Memory::Category::Reflection);
 
 		if (!G.Val.Str)
 			RAISE_RTF("Failed to allocate {} bytes for string in fromString", G.Size);
 
 		memcpy(G.Val.Str, Data, G.Size);
+		G.Val.Str[G.Size] = 0;
 	}
 	else
 		// store it directly
@@ -261,7 +262,7 @@ std::string Reflection::GenericValue::ToString() const
 
 	case ValueType::String:
 	{
-		if (this->Size > GV_SSO)
+		if (this->Size + 1 > GV_SSO)
 			return std::string(Val.Str, this->Size);
 		else
 			return Val.StrSso;
@@ -380,7 +381,7 @@ std::string_view Reflection::GenericValue::AsStringView() const
 	if (Type != ValueType::String)
 		WRONG_TYPE();
 	else
-		if (Size > GV_SSO)
+		if (Size + 1 > GV_SSO)
 			return std::string_view(Val.Str, Size);
 		else
 			return std::string_view(Val.StrSso, Size);
@@ -481,7 +482,7 @@ static void deallocGv(Reflection::GenericValue* gv)
 	}
 	case ValueType::String:
 	{
-		if (gv->Size > GV_SSO)
+		if (gv->Size + 1 > GV_SSO)
 			Memory::Free(gv->Val.Str);
 		break;
 	}
@@ -523,7 +524,7 @@ bool Reflection::GenericValue::operator==(const Reflection::GenericValue& Other)
 
 	case ValueType::String:
 	{
-		if (this->Size > GV_SSO)
+		if (this->Size + 1 > GV_SSO)
 		{
 			for (size_t i = 0; i < this->Size; i++)
 				if (this->Val.Str[i] != Other.Val.Str[i])

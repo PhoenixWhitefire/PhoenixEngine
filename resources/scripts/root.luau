@@ -1,8 +1,5 @@
 -- root.luau, 21/12/2024
---!strict
-
--- local NodeEditor = nil --require("scripts/modules/NodeEditor.luau")
-local Editor = function() end--require("scripts/modules/Editor.luau")
+local InputService: InputService = game:GetService("InputService") :: any
 
 local ModelImporterScale = 1
 
@@ -184,11 +181,8 @@ local function update(DeltaTime)
 	end
 	
 	imgui.endw()
-	
-	Editor(DeltaTime)
-	--NodeEditor()
 
-	if input.keypressed(Enum.Key.M) then
+	if InputService:IsKeyPressed(Enum.Key.M) then
 		local sweeping = GameObject.new("Script" :: "Script")
 		sweeping.SourceFile = "scripts/minesweeper.luau"
 		sweeping.Name = "MinesweeperMain"
@@ -206,7 +200,7 @@ end
 
 if not conf.get("Developer") then
 	update = function()
-		if input.keypressed(Enum.Key.M) then
+		if InputService:IsKeyPressed(Enum.Key.M) then
 			local sweeping = GameObject.new("Script" :: "Script")
 			sweeping.SourceFile = "scripts/minesweeper.luau"
 			sweeping.Name = "MinesweeperMain"

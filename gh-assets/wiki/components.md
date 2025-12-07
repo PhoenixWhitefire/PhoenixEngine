@@ -144,6 +144,20 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 ### Events:
 * `OnGreeted(string, string)`: Fires when `:Greet` is called, and sends the response to the callback before the original caller of `:Greet` receives it
 
+## `InputService`
+
+* Checking player inputs
+
+### Properties:
+* `CursorMode: number`: The current mode/behaviour of the cursor. Refer to the `Enum.CursorMode` enumeration
+* `IsKeyboardSunk: boolean `: Whether the Engine is currently using keyboard input (such as for Dear ImGui). Do not process keyboard input if this is `true`
+* `IsMouseSunk: boolean `: Whether the Engine is currently using mouse input (such as for Dear ImGui). Do not process mouse input if this is `true`
+
+### Methods:
+* `GetCursorPosition() : (vector)`: Returns the current position of the mouse cursor relative to the window as a `vector`
+* `IsKeyPressed(number) : (boolean)`: Returns whether the specified key (e.g. `Enum.Key.A`, `Enum.Key.One`) is currently being pressed
+* `IsMouseButtonPressed(number) : (boolean)`: Returns whether the specified mouse button (`Enum.MouseButton.Left/Middle/Right`) is currently being pressed
+
 ## `Mesh`
 
 * A mesh composed of triangles
@@ -253,7 +267,7 @@ No members defined
 * If this is `Destroy`'d, the application closes
 
 ### Properties:
-* `SceneCamera: (GameObject & Camera)?`: The `Camera` the Player sees the world through. If set to `nil`, a *fallback* is created at the origin
+* `SceneCamera: GameObject & Camera`: The `Camera` the Player sees the world through. If set to `nil`, a *fallback* is created at the origin
 
 ### Methods:
 * `GetObjectsInAabb(vector, vector, { any }?) : ({ any })`: Get a list of Objects whose bounds are within the AABB

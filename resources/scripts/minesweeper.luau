@@ -1,4 +1,5 @@
 -- minesweeper.luau, 06/07/2025
+local InputService: InputService = game:GetService("InputService") :: any
 
 local CellColors = {
     Color.new(0, 0, 1),
@@ -19,7 +20,7 @@ local CellTemplate = GameObject.new("Mesh" :: "Mesh")
 CellTemplate.Parent = GridModel
 
 workspace.SceneCamera.UseSimpleController = false
-input.setmousegrabbed(false)
+InputService.CursorMode = Enum.CursorMode.Normal
 
 local Grid = {}
 local GRID_SIZE = 5
@@ -74,10 +75,10 @@ workspace.SceneCamera.Transform = Matrix.fromTranslation(GRID_SIZE / 2, GRID_SIZ
 local WasLmbPressed = false
 
 local function handleClick()
-    local mouseX, mouseY = input.getmousepos()
-    local mouseRayVec = workspace:ScreenPointToVector(mouseX, mouseY, 100)
+    local cursorPos = InputService:GetCursorPosition()
+    local mouseRayVec = workspace:ScreenPointToVector(cursorPos, 100)
     
-    local hit = world.raycast(workspace.SceneCamera.Transform.Position, mouseRayVec, {})
+    local hit = workspace:Raycast(workspace.SceneCamera.Transform.Position, mouseRayVec, {})
 
     if hit then
         local prevCol = hit.Object.Tint
@@ -87,8 +88,8 @@ local function handleClick()
     end
 end
 
-function Update(DeltaTime)
-    if input.mousedown(Enum.MouseButton.Left) then
+game.OnFrameBegin:Connect(function())
+    if InputService:IsMouseButtonPressed(Enum.MouseButton.Left) then
         if not WasLmbPressed then
             coroutine.wrap(handleClick)()
         end
@@ -97,4 +98,4 @@ function Update(DeltaTime)
     else
         WasLmbPressed = false
     end
-end
+end)

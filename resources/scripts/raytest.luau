@@ -1,3 +1,5 @@
+local InputService: InputService = game:GetService("InputService") :: any
+
 local M1WasDown = false
 local M2WasDown = false
 local Parts = {}
@@ -18,7 +20,7 @@ local function debugVector(v: vector, col: Color?)
 end
 
 local function debugMouseVector()
-    local mouseVec = workspace:ScreenPointToVector(input.mouseposition(), 100)
+    local mouseVec = workspace:ScreenPointToVector((), 100)
     debugVector(mouseVec, nil)
 end
 
@@ -30,7 +32,11 @@ end
 --workspace.SceneCamera.Transform = Matrix.fromEulerAnglesXYZ(0, math.pi, 0)
 
 game.OnFrameBegin:Connect(function()
-    if input.mousedown(Enum.MouseButton.Left) and not input.guihandledm() then
+    if InputService.IsKeyboardSunk or InputService.IsMouseSunk then
+        return
+    end
+
+    if InputService:IsMouseButtonPressed(Enum.MouseButton.Left) then
         if not M1WasDown then
             debugMouseVector()
         end
@@ -40,7 +46,7 @@ game.OnFrameBegin:Connect(function()
         M1WasDown = false
     end
 
-    if input.mousedown(Enum.MouseButton.Right) and not input.guihandledm() then
+    if InputService:IsMouseButtonPressed(Enum.MouseButton.Right) then
         if not M2WasDown then
             debugCameraVector()
         end
@@ -50,7 +56,7 @@ game.OnFrameBegin:Connect(function()
         M2WasDown = false
     end
 
-    if input.keypressed(Enum.Key.One) then
+    if InputService:IsMouseButtonPressed(Enum.Key.One) then
         for _, part in Parts do
             part:Destroy()
         end

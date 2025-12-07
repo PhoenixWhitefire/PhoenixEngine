@@ -8,11 +8,14 @@
   "@luhx/global/Enum": {
     "documentation": "* Contains enumerations"
   },
+  "@luhx/global/Enum.CursorMode": {
+    "documentation": "* The appearance and behaviour of the mouse cursor"
+  },
   "@luhx/global/Enum.Key": {
-    "documentation": "* Keys, which may be passed to `input.keypressed`"
+    "documentation": "* Keys, which may be passed to `InputService:IsKeyPressed`"
   },
   "@luhx/global/Enum.MouseButton": {
-    "documentation": "* Mouse buttons, which may be passed to `input.mousedown`"
+    "documentation": "* Mouse buttons, which may be passed to `InputService:IsMouseButtonPressed`"
   },
   "@luhx/global/EventConnection": {
     "documentation": "* A connection to an Event"
@@ -298,42 +301,6 @@
   },
   "@luhx/global/imgui.windowsize": {
     "documentation": "* Returns the size of the current window"
-  },
-  "@luhx/global/input": {
-    "documentation": "* Checking player inputs"
-  },
-  "@luhx/global/input.cursorvisible": {
-    "documentation": "* Returns whether the mouse cursor is current visible\n* To *change* the visibility of the cursor, use `.setcursorvisible`"
-  },
-  "@luhx/global/input.guihandled": {
-    "documentation": "* Returns whether Dear ImGui is using the player's inputs at all"
-  },
-  "@luhx/global/input.guihandledk": {
-    "documentation": "* Returns whether Dear ImGui is using the player's keyboard inputs"
-  },
-  "@luhx/global/input.guihandledm": {
-    "documentation": "* Returns whether Dear ImGui is using the player's mouse inputs"
-  },
-  "@luhx/global/input.keypressed": {
-    "documentation": "* Returns whether the specified key (as lowercase, e.g. `Enum.Key.A`, `Enum.Key.One`) is currently being pressed"
-  },
-  "@luhx/global/input.mousedown": {
-    "documentation": "* Returns whether the specified mouse button (`Enum.MouseButton.Left/Middle/Right`) is currently being pressed"
-  },
-  "@luhx/global/input.mousegrabbed": {
-    "documentation": "* Returns whether the mouse is currently restricted to the game window\n* To *change* whether the mouse is grabbed, use `.setmousegrabbed`"
-  },
-  "@luhx/global/input.mouseposition": {
-    "documentation": "* Returns the current position of the mouse"
-  },
-  "@luhx/global/input.setcursorvisible": {
-    "documentation": "* Sets the visibility of the mouse cursor to the specified value"
-  },
-  "@luhx/global/input.setmousegrabbed": {
-    "documentation": "* Grabs/ungrabs the mouse cursor"
-  },
-  "@luhx/global/input.setmouseposition": {
-    "documentation": "* Moves the mouse to the given coordinates of the window"
   },
   "@luhx/global/json": {
     "documentation": "* Encoding and decoding JSON files"
@@ -658,6 +625,24 @@
   },
   "@luhx/globaltype/GameObject.Serializes": {
     "documentation": "Whether or not the Object should be saved with the scene if it is serialized with `scene.save`, and whether `:Duplicate` will duplicate it (only applies to descendants)"
+  },
+  "@luhx/globaltype/InputService.CursorMode": {
+    "documentation": "The current mode/behaviour of the cursor. Refer to the `Enum.CursorMode` enumeration"
+  },
+  "@luhx/globaltype/InputService.GetCursorPosition": {
+    "documentation": "Returns the current position of the mouse cursor relative to the window as a `vector`"
+  },
+  "@luhx/globaltype/InputService.IsKeyPressed": {
+    "documentation": "Returns whether the specified key (e.g. `Enum.Key.A`, `Enum.Key.One`) is currently being pressed"
+  },
+  "@luhx/globaltype/InputService.IsKeyboardSunk": {
+    "documentation": "Whether the Engine is currently using keyboard input (such as for Dear ImGui). Do not process keyboard input if this is `true`"
+  },
+  "@luhx/globaltype/InputService.IsMouseButtonPressed": {
+    "documentation": "Returns whether the specified mouse button (`Enum.MouseButton.Left/Middle/Right`) is currently being pressed"
+  },
+  "@luhx/globaltype/InputService.IsMouseSunk": {
+    "documentation": "Whether the Engine is currently using mouse input (such as for Dear ImGui). Do not process mouse input if this is `true`"
   },
   "@luhx/globaltype/Matrix.:__mul": {
     "documentation": "* Two Matrices may be multiplied together with the `*` operator\n"

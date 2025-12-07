@@ -1,6 +1,8 @@
 -- devmap.luau, 10/07/2024
 --!strict
 
+local InputService = (game:GetService("InputService") :: any) :: InputService
+
 local TotalTime = 0
 
 local Camera = workspace.SceneCamera
@@ -58,25 +60,24 @@ game.OnFrameBegin:Connect(function(DeltaTime)
 		end
 	end
 	
-	if input.keypressed(Enum.Key.T) and TotalTime - lastSwitchedPerspectives > 0.5 then
+	if InputService:IsKeyPressed(Enum.Key.T) and TotalTime - lastSwitchedPerspectives > 0.5 then
 		reset()
 		lastSwitchedPerspectives = TotalTime
 	end
 	
-	if input.keypressed(Enum.Key.F) and TotalTime - lastSwitchedPerspectives > 0.5 then
+	if InputService:IsKeyPressed(Enum.Key.F) and TotalTime - lastSwitchedPerspectives > 0.5 then
 		lastSwitchedPerspectives = TotalTime
 		
 		InFreecam = not InFreecam
 		if InFreecam then
-			input.setmousegrabbed(false)
-			input.setcursorvisible(true)
+			InputService.CursorMode = Enum.CursorMode.Normal
 			SwitchToFreecamNextFrame = 2
 		else
 			Camera.UseSimpleController = false
 		end
 	end
 	
-	if input.keypressed(Enum.Key.P) and TotalTime - lastSwitchedPerspectives > 0.5 then
+	if InputService:IsKeyPressed(Enum.Key.P) and TotalTime - lastSwitchedPerspectives > 0.5 then
 		CharacterController.FirstPerson = not CharacterController.FirstPerson
 		lastSwitchedPerspectives = TotalTime
 		
@@ -92,7 +93,7 @@ game.OnFrameBegin:Connect(function(DeltaTime)
 		--CharacterController.CameraOffset = DefaultCameraOffset * Matrix.fromEulerAnglesXYZ(0, 0, Character.LinearVelocity.X)
 		CharacterController:Update(DeltaTime)
 		
-		if input.keypressed(Enum.Key.E) and TotalTime - lastSwitchedPerspectives > 0.25 then
+		if InputService:IsKeyPressed(Enum.Key.E) and TotalTime - lastSwitchedPerspectives > 0.25 then
 			if not blorbs then
 				blorbs = GameObject.new("Model" :: "Model")
 				assert(blorbs)

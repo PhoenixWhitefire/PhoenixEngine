@@ -5,6 +5,17 @@
 #include "component/Workspace.hpp"
 #include "Log.hpp"
 
+const std::unordered_map<std::string_view, EntityComponent> s_ComponentNameToType = []()
+{
+	std::unordered_map<std::string_view, EntityComponent> map;
+	map.reserve((size_t)EntityComponent::__count);
+
+	for (size_t i = 0; i < (size_t)EntityComponent::__count; i++)
+		map[s_EntityComponentNames[i]] = (EntityComponent)i;
+
+	return map;
+}();
+
 // https://stackoverflow.com/a/75891310
 struct RefHasher
 {

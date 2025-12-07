@@ -130,10 +130,12 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 
 ### `Enum`
 * Contains enumerations
-#### `Enum.Key: { [string]: number }`
-* Keys, which may be passed to `input.keypressed`
 #### `Enum.MouseButton: { Left: number, Middle: number, Right: number }`
-* Mouse buttons, which may be passed to `input.mousedown`
+* Mouse buttons, which may be passed to `InputService:IsMouseButtonPressed`
+#### `Enum.Key: { [string]: number }`
+* Keys, which may be passed to `InputService:IsKeyPressed`
+#### `Enum.CursorMode: { Normal: number, Hidden: number, Disabled: number, Unavailable: number, Captured: number }`
+* The appearance and behaviour of the mouse cursor
 ### `conf`
 * Internal Engine configuration state, loaded from file (`phoenix.conf`) upon startup
 #### `conf.save(): boolean`
@@ -316,32 +318,6 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * `ImGui::BeginMenuBar`
 #### `imgui.getcontentregionavail(): number, number`
 * `ImGui::GetContentRegionAvail`
-### `input`
-* Checking player inputs
-#### `input.cursorvisible(): boolean`
-* Returns whether the mouse cursor is current visible
-* To *change* the visibility of the cursor, use `.setcursorvisible`
-#### `input.keypressed(Key: number): boolean`
-* Returns whether the specified key (as lowercase, e.g. `Enum.Key.A`, `Enum.Key.One`) is currently being pressed
-#### `input.setmousegrabbed(Grabbed: boolean): `
-* Grabs/ungrabs the mouse cursor
-#### `input.guihandledm(): boolean`
-* Returns whether Dear ImGui is using the player's mouse inputs
-#### `input.setmouseposition(MouseX: number, MouseY: number): `
-* Moves the mouse to the given coordinates of the window
-#### `input.mouseposition(): vector`
-* Returns the current position of the mouse
-#### `input.setcursorvisible(Visible: boolean): `
-* Sets the visibility of the mouse cursor to the specified value
-#### `input.mousedown(Button: number): boolean`
-* Returns whether the specified mouse button (`Enum.MouseButton.Left/Middle/Right`) is currently being pressed
-#### `input.guihandled(): boolean`
-* Returns whether Dear ImGui is using the player's inputs at all
-#### `input.mousegrabbed(): boolean`
-* Returns whether the mouse is currently restricted to the game window
-* To *change* whether the mouse is grabbed, use `.setmousegrabbed`
-#### `input.guihandledk(): boolean`
-* Returns whether Dear ImGui is using the player's keyboard inputs
 ### `json`
 * Encoding and decoding JSON files
 #### `json.encode(Value: any): string`

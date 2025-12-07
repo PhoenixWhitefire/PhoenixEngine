@@ -1,5 +1,6 @@
 -- ed.luau, 14/09/2025
-local Engine = (game:GetService("Engine") :: any) :: Engine
+local InputService: InputService = game:GetService("InputService") :: any
+local Engine: Engine = game:GetService("Engine") :: any
 
 local FALLBACK_IMAGE = "@etextures/editor-icons/fallback.png"
 local LOGO_IMAGE = "@etextures/logo.png"
@@ -40,7 +41,7 @@ EditorTl.Parent = workspace
 EditorTl.Scripting = false
 Engine.PhysicsTimescale = 0
 
-local ToolOrder = {
+local ToolOrder: { string } = {
 	"Tool_Explorer",
 	"Tool_Properties"
 }
@@ -48,7 +49,7 @@ local ToolOrder = {
 local BottomBarEnabled = conf.get("Ed_Tool_BottomBarEnabled")
 assert(typeof(BottomBarEnabled) == "boolean" or typeof(BottomBarEnabled) == "nil")
 
-for _, tool in Engine:GetToolNames() do
+for _, tool: string in Engine:GetToolNames() do
 	if not table.find(ToolOrder, tool) then
 		table.insert(ToolOrder, tool)
 	end
@@ -101,12 +102,12 @@ local function changeStageTo(NewStage: Stage)
 	
 	CurrentStage = NewStage
 	StageUpdateSignal = targetDm.OnFrameBegin:Connect(function(DeltaTime)
-		MouseClick = (not WasHoldingDownM1) and input.mousedown(Enum.MouseButton.Left)
+		MouseClick = (not WasHoldingDownM1) and InputService:IsMouseButtonPressed(Enum.MouseButton.Left)
 		CoreTools.Update(Project)
 
 		Stages[CurrentStage](DeltaTime)
 
-		WasHoldingDownM1 = input.mousedown(Enum.MouseButton.Left)
+		WasHoldingDownM1 = InputService:IsMouseButtonPressed(Enum.MouseButton.Left)
 	end)
 end
 
@@ -631,7 +632,7 @@ local function renderMainMenuBar(dt: number)
 	if not imgui.beginmainmenubar() then
 		return
 	end
-	local mainMenuCursorY = input.mouseposition().y
+	local mainMenuCursorY = InputService:GetCursorPosition().y
 	HoveringOverMenuBar = mainMenuCursorY < RibbonPopupDistance
 
 	local openAboutWindow = false
@@ -759,7 +760,7 @@ local function renderMainMenuBar(dt: number)
 			end
 		end
 
-		if (HoveringOverMenuBar or HoveringOverRibbonTab or TabButtonHovering ~= nil or WindowHovering) and not input.mousedown(Enum.MouseButton.Right) then
+		if (HoveringOverMenuBar or HoveringOverRibbonTab or TabButtonHovering ~= nil or WindowHovering) and not InputService:IsMouseButtonPressed(Enum.MouseButton.Right) then
 			local windowWidth = Engine.WindowSize.x
 
 			local TAB_HEIGHT = 175
@@ -880,7 +881,7 @@ local ViewportTop = 0
 local ViewportBottom = 0
 
 local function isMouseWithinViewport()
-	local pos = input.mouseposition()
+	local pos = InputService:GetCursorPosition()
 
 	if pos.x >= ViewportLeft and pos.x <= ViewportRight then
 		if pos.y >= ViewportTop and pos.y < ViewportBottom then
@@ -897,7 +898,7 @@ end
 
 local function renderViewport(DeltaTime: number)
 	if CurrentStage == "ProjectEditing" and Project.Workspace then
-		local mouseVec = Project.Workspace:ScreenPointToVector(input.mouseposition(), 1000)
+		local mouseVec = Project.Workspace:ScreenPointToVector(InputService:GetCursorPosition(), 1000)
 		local rayresult = Project.Workspace:Raycast(EditorCam.Transform.Position, mouseVec, { SelectionPart })
 
 		if rayresult then
@@ -905,8 +906,8 @@ local function renderViewport(DeltaTime: number)
 			SelectionPart.Size = rayresult.Object.Size + vector.create(0.05, 0.05, 0.05)
 			SelectionPart.Parent = workspace
 
-			if input.mousedown(Enum.MouseButton.Left) and isMouseWithinViewport() then
-				if input.keypressed(Enum.Key.LeftControl) then -- left control
+			if InputService:IsMouseButtonPressed(Enum.MouseButton.Left) and isMouseWithinViewport() then
+				if InputService:IsKeyPressed(Enum.Key.LeftControl) then -- left control
 					local sels = Engine:GetExplorerSelections()
 
 					if not table.find(sels, rayresult.Object) then
@@ -988,8 +989,7 @@ local function renderViewport(DeltaTime: number)
 	
 	imgui.begin(Project.Name .. "###Viewport", if canInteract then "nb" else "ni | nb")
 
-	local mpos = input.mouseposition()
-	local mx, my = mpos.x, mpos.y
+	local cpos = InputService:GetCursorPosition()
 	local wx, wy = imgui.windowposition()
 	local wsx, wsy = imgui.windowsize()
 
@@ -1003,8 +1003,8 @@ local function renderViewport(DeltaTime: number)
 	ViewportTop = wy
 	ViewportBottom = wy + wsy
 
-	if mx >= wx - 15 and mx <= wx + wsx + 15 then
-		if my >= wy and my < wy + 16 then
+	if cpos.x >= wx - 15 and cpos.x <= wx + wsx + 15 then
+		if cpos.y >= wy and cpos.y < wy + 16 then
 			IsHoveringViewportTitlebar = true
 		else
 			IsHoveringViewportTitlebar = false
@@ -1074,7 +1074,7 @@ local function renderProjectSelectorTiles(Projects: { string })
 
 			imgui.popstylecolor()
 
-			if input.mousedown(Enum.MouseButton.Right) then
+			if InputService:IsMouseButtonPressed(Enum.MouseButton.Right) then
 				imgui.openpopup("ProjectContextMenu")
 				ProjectContextMenuTarget = i
 			end

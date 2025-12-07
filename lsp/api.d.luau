@@ -155,6 +155,15 @@ declare extern type Example with
 
   OnGreeted: EventSignal
 end
+declare extern type InputService with
+  CursorMode: number
+  IsKeyboardSunk: boolean 
+  IsMouseSunk: boolean 
+
+  function GetCursorPosition(self) : (vector)
+  function IsKeyPressed(self, Param_1: number) : (boolean)
+  function IsMouseButtonPressed(self, Param_1: number) : (boolean)
+end
 declare extern type Mesh with
   AngularVelocity: vector
   Asset: string
@@ -220,7 +229,7 @@ declare extern type TreeLink with
   Target: (GameObject & any)?
 end
 declare extern type Workspace with
-  SceneCamera: (GameObject & Camera)?
+  SceneCamera: GameObject & Camera
 
   function GetObjectsInAabb(self, Param_1: vector, Param_2: vector, Param_3: { any }?) : ({ any })
   function Raycast(self, Origin: vector, CastVector: vector, FilterList: { any }?, FilterIsIgnoreList: boolean?) : { Object: GameObject & Mesh & Transform, Position: vector, Normal: vector }?
@@ -247,10 +256,12 @@ type Creatables = {
 	Example: Example,
 	TreeLink: TreeLink,
 	Engine: Engine,
+	InputService: InputService,
 }
 declare Enum: {
+  MouseButton: { Left: number, Middle: number, Right: number },
   Key: { [string]: number },
-  MouseButton: { Left: number, Middle: number, Right: number }
+  CursorMode: { Normal: number, Hidden: number, Disabled: number, Unavailable: number, Captured: number }
 }
 declare conf: {
   save: ((  ) -> (boolean)),
@@ -333,19 +344,6 @@ declare imgui: {
   endmainmenubar: ((  ) -> ()),
   beginmenubar: ((  ) -> (boolean)),
   getcontentregionavail: ((  ) -> (number, number))
-}
-declare input: {
-  cursorvisible: ((  ) -> (boolean)),
-  keypressed: (( Key: number ) -> (boolean)),
-  setmousegrabbed: (( Grabbed: boolean ) -> ()),
-  guihandledm: ((  ) -> (boolean)),
-  setmouseposition: (( MouseX: number, MouseY: number ) -> ()),
-  mouseposition: ((  ) -> (vector)),
-  setcursorvisible: (( Visible: boolean ) -> ()),
-  mousedown: (( Button: number ) -> (boolean)),
-  guihandled: ((  ) -> (boolean)),
-  mousegrabbed: ((  ) -> (boolean)),
-  guihandledk: ((  ) -> (boolean))
 }
 declare json: {
   encode: (( Value: any ) -> (string)),

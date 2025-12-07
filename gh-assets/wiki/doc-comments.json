@@ -155,6 +155,19 @@
           "WhereIAm": "A 3-dimensional vector quantity"
         }
       },
+      "InputService": {
+        "Description": "Checking player inputs",
+        "Properties": {
+          "CursorMode": "The current mode/behaviour of the cursor. Refer to the `Enum.CursorMode` enumeration",
+          "IsKeyboardSunk": "Whether the Engine is currently using keyboard input (such as for Dear ImGui). Do not process keyboard input if this is `true`",
+          "IsMouseSunk": "Whether the Engine is currently using mouse input (such as for Dear ImGui). Do not process mouse input if this is `true`"
+        },
+        "Methods": {
+          "IsKeyPressed": "Returns whether the specified key (e.g. `Enum.Key.A`, `Enum.Key.One`) is currently being pressed",
+          "IsMouseButtonPressed": "Returns whether the specified mouse button (`Enum.MouseButton.Left/Middle/Right`) is currently being pressed",
+          "GetCursorPosition": "Returns the current position of the mouse cursor relative to the window as a `vector`"
+        }
+      },
       "Mesh": {
         "Description": "A mesh composed of triangles",
         "Properties": {
@@ -280,7 +293,7 @@
         "Properties": {
           "SceneCamera": {
             "Description": "The `Camera` the Player sees the world through. If set to `nil`, a *fallback* is created at the origin",
-            "Type": "(GameObject & Camera)?"
+            "Type": "GameObject & Camera"
           }
         }
       }
@@ -575,12 +588,16 @@
       "Enum": {
         "Description": "Contains enumerations",
         "Members": {
+          "CursorMode": {
+            "Description": "The appearance and behaviour of the mouse cursor",
+            "Type": "{ Normal: number, Hidden: number, Disabled: number, Unavailable: number, Captured: number }"
+          },
           "Key": {
-            "Description": "Keys, which may be passed to `input.keypressed`",
+            "Description": "Keys, which may be passed to `InputService:IsKeyPressed`",
             "Type": "{ [string]: number }"
           },
           "MouseButton": {
-            "Description": "Mouse buttons, which may be passed to `input.mousedown`",
+            "Description": "Mouse buttons, which may be passed to `InputService:IsMouseButtonPressed`",
             "Type": "{ Left: number, Middle: number, Right: number }"
           }
         }
@@ -1323,119 +1340,6 @@
               "Returns the size of the current window"
             ],
             "Out": "number, number"
-          }
-        }
-      },
-      "input": {
-        "Description": "Checking player inputs",
-        "Members": {
-          "cursorvisible": {
-            "Description": [
-              "Returns whether the mouse cursor is current visible",
-              "To *change* the visibility of the cursor, use `.setcursorvisible`"
-            ],
-            "Out": "boolean"
-          },
-          "getmousepos": {
-            "Description": [
-              "Returns the current position of the player's mouse cursor, offset from the top-right"
-            ],
-            "Out": "number, number"
-          },
-          "guihandled": {
-            "Description": [
-              "Returns whether Dear ImGui is using the player's inputs at all"
-            ],
-            "Out": "boolean"
-          },
-          "guihandledk": {
-            "Description": [
-              "Returns whether Dear ImGui is using the player's keyboard inputs"
-            ],
-            "Out": "boolean"
-          },
-          "guihandledm": {
-            "Description": [
-              "Returns whether Dear ImGui is using the player's mouse inputs"
-            ],
-            "Out": "boolean"
-          },
-          "iscursorvisible": {
-            "Description": [
-              "Returns whether the mouse cursor is currently visible"
-            ],
-            "Out": "boolean"
-          },
-          "ismousegrabbed": {
-            "Description": [
-              "Returns whether the mouse cursor is currently restricted to the window"
-            ],
-            "Out": "boolean"
-          },
-          "keypressed": {
-            "Description": [
-              "Returns whether the specified key (as lowercase, e.g. `Enum.Key.A`, `Enum.Key.One`) is currently being pressed"
-            ],
-            "In": [
-              "Key: number"
-            ],
-            "Out": "boolean"
-          },
-          "mousedown": {
-            "Description": [
-              "Returns whether the specified mouse button (`Enum.MouseButton.Left/Middle/Right`) is currently being pressed"
-            ],
-            "In": [
-              "Button: number"
-            ],
-            "Out": "boolean"
-          },
-          "mousegrabbed": {
-            "Description": [
-              "Returns whether the mouse is currently restricted to the game window",
-              "To *change* whether the mouse is grabbed, use `.setmousegrabbed`"
-            ],
-            "Out": "boolean"
-          },
-          "mouseposition": {
-            "Description": [
-              "Returns the current position of the mouse"
-            ],
-            "Out": "vector"
-          },
-          "setcursorvisible": {
-            "Description": [
-              "Sets the visibility of the mouse cursor to the specified value"
-            ],
-            "In": [
-              "Visible: boolean"
-            ]
-          },
-          "setmousegrabbed": {
-            "Description": [
-              "Grabs/ungrabs the mouse cursor"
-            ],
-            "In": [
-              "Grabbed: boolean"
-            ]
-          },
-          "setmousepos": {
-            "Description": [
-              "Sets the position of the mouse cursor in the window as an offset from the top-left corner"
-            ],
-            "Description:": "Sets the position of the mouse in the window",
-            "In": [
-              "Position: vector"
-            ]
-          },
-          "setmouseposition": {
-            "Description": [
-              "Moves the mouse to the given coordinates of the window"
-            ],
-            "In": [
-              "MouseX: number",
-              "MouseY: number"
-            ]
           }
         }
       },

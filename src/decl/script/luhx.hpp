@@ -21,9 +21,6 @@ int luhxopen_conf(lua_State*);
 #define LUHX_IMGUILIBNAME "imgui"
 int luhxopen_imgui(lua_State*);
 
-#define LUHX_INPUTLIBNAME "input"
-int luhxopen_input(lua_State*);
-
 #define LUHX_JSONLIBNAME "json"
 int luhxopen_json(lua_State*);
 

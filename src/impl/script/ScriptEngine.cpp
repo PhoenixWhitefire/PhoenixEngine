@@ -1238,6 +1238,25 @@ static void openEnum(lua_State* L)
 
 	lua_setfield(L, -2, "MouseButton");
 
+	lua_newtable(L);
+
+	lua_pushinteger(L, GLFW_CURSOR_CAPTURED);
+	lua_setfield(L, -2, "Captured");
+
+	lua_pushinteger(L, GLFW_CURSOR_DISABLED);
+	lua_setfield(L, -2, "Disabled");
+
+	lua_pushinteger(L, GLFW_CURSOR_HIDDEN);
+	lua_setfield(L, -2, "Hidden");
+
+	lua_pushinteger(L, GLFW_CURSOR_NORMAL);
+	lua_setfield(L, -2, "Normal");
+
+	lua_pushinteger(L, GLFW_CURSOR_UNAVAILABLE);
+	lua_setfield(L, -2, "Unavailable");
+
+	lua_setfield(L, -2, "CursorMode");
+
 	lua_setglobal(L, "Enum");
 }
 

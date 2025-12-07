@@ -8,7 +8,6 @@ static const luaL_Reg luhxlibs[] =
     { LUHX_FSLIBNAME, luhxopen_fs },
     { LUHX_CONFLIBNAME, luhxopen_conf },
     { LUHX_IMGUILIBNAME, luhxopen_imgui },
-    { LUHX_INPUTLIBNAME, luhxopen_input },
     { LUHX_JSONLIBNAME, luhxopen_json },
     { LUHX_MESHLIBNAME, luhxopen_mesh },
     { LUHX_MODELLIBNAME, luhxopen_model },

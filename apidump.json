@@ -127,6 +127,18 @@
           "WhereIAm": "Vector3"
         }
       },
+      "InputService": {
+        "Methods": {
+          "GetCursorPosition": "() -> (Vector2)",
+          "IsKeyPressed": "(Integer) -> (Boolean)",
+          "IsMouseButtonPressed": "(Integer) -> (Boolean)"
+        },
+        "Properties": {
+          "CursorMode": "Integer",
+          "IsKeyboardSunk": "Boolean READONLY",
+          "IsMouseSunk": "Boolean READONLY"
+        }
+      },
       "Mesh": {
         "Properties": {
           "AngularVelocity": "Vector3",
@@ -281,6 +293,7 @@
     },
     "Libraries": {
       "Enum": {
+        "CursorMode": "table",
         "Key": "table",
         "MouseButton": "table"
       },
@@ -365,19 +378,6 @@
         "windowhovered": "function",
         "windowposition": "function",
         "windowsize": "function"
-      },
-      "input": {
-        "cursorvisible": "function",
-        "guihandled": "function",
-        "guihandledk": "function",
-        "guihandledm": "function",
-        "keypressed": "function",
-        "mousedown": "function",
-        "mousegrabbed": "function",
-        "mouseposition": "function",
-        "setcursorvisible": "function",
-        "setmousegrabbed": "function",
-        "setmouseposition": "function"
       },
       "json": {
         "encode": "function",
