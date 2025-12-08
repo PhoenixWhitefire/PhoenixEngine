@@ -3070,7 +3070,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 
 		bool open = true;
 
-		ImGui::SetNextWindowSize(ImVec2(320, 115), ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowSize(ImVec2(370, 110), ImGuiCond_FirstUseEver);
 		if (!ImGui::BeginPopupModal("Create Script File", &open))
 		{
 			Log::WarningF("Declined to create file for script '{}'", s_CreatingScriptFiles[0]->GetFullName());
@@ -3081,10 +3081,10 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 			return;
 		}
 
-		ImGui::Text("Enter a name/path for the script:");
+		ImGui::Text("Enter a name or path for the script:");
 
 		ImVec2 start = ImGui::GetCursorPos();
-		ImGui::SetCursorPosY(start.x + ImGui::GetStyle().FramePadding.x);
+		ImGui::SetCursorPosY(start.y + ImGui::GetStyle().FramePadding.y);
 
 		ImGui::Text("scripts/");
 		ImGui::SameLine();
@@ -3094,9 +3094,12 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 
 		if (ImGui::InputText("##", buffer, std::size(buffer)))
 		{
-			fullpath = "scripts/" + std::string(buffer);
+			fullpath = "scripts/" + std::string(buffer) + ".luau";
 			isNameTaken = std::filesystem::is_regular_file(FileRW::MakePathCwdRelative(fullpath));
 		}
+
+		ImGui::SameLine();
+		ImGui::Text(".luau");
 
 		if (isNameTaken)
 			ImGui::Text("The file at that path will be overwritten");
