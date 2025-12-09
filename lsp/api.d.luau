@@ -220,6 +220,8 @@ declare extern type Sound with
   Speed: number
   Volume: number
 
+  function Play(self) : ()
+
   OnLoaded: EventSignal<string>
 end
 declare extern type SpotLight with
@@ -375,7 +377,7 @@ declare function loadthread( Code: string, ChunkName: string? ): ( thread?, stri
 declare function loadthreadfromfile( File: string, ChunkName: string? ): ( thread?, string? )
 declare script: GameObject & Script
 declare function shellexec( Command: string ): string
-declare function sleep( SleepTime: number ): ()
+declare function sleep( SleepTime: number ): number
 declare workspace: GameObject & Workspace
 
 

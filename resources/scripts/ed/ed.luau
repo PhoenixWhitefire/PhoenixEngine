@@ -58,6 +58,7 @@ end
 
 local WasHoldingDownM1 = false
 local MouseClick = false
+local WasHoldingF5 = false
 
 fs.definealias("editres", "@cwd/resources")
 fs.definealias("etextures", "@editres/textures")
@@ -104,6 +105,20 @@ local function changeStageTo(NewStage: Stage)
 	CurrentStage = NewStage
 	StageUpdateSignal = targetDm.OnFrameBegin:Connect(function(DeltaTime)
 		MouseClick = (not WasHoldingDownM1) and InputService:IsMouseButtonPressed(Enum.MouseButton.Left)
+		local f5 = InputService:IsKeyPressed(Enum.Key.F5)
+
+		if CurrentStage == "ProjectEditing" then
+			if f5 and not WasHoldingF5 then
+				changeStageTo("ProjectPlaying")
+			end
+		elseif CurrentStage == "ProjectPlaying" then
+			if f5 and not WasHoldingF5 then
+				changeStageTo("ProjectEditing")
+			end
+		end
+
+		WasHoldingF5 = f5
+
 		CoreTools.Update(Project)
 
 		Stages[CurrentStage](DeltaTime)
@@ -1350,6 +1365,8 @@ function Stages.ProjectPlaying_Leave()
 	Engine:SetCurrentVM(_VMNAME)
 	Engine:CloseVM(GameVM)
 	Engine:BindDataModel(game)
+
+	InputService.CursorMode = Enum.CursorMode.Normal
 	
 	workspace.SceneCamera = EditorCam
 end

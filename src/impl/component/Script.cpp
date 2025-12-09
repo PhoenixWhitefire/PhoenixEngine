@@ -36,11 +36,15 @@ public:
     void DeleteComponent(uint32_t Id) override
     {
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
+
+		// TODO very unstable
+		/*
 		if (lua_State** L = &m_Components[Id].m_L; *L)
 		{
 			lua_resetthread(*L);
 			*L = nullptr;
 		}
+		*/
 
 		ComponentManager<EcScript>::DeleteComponent(Id);
     }

@@ -240,6 +240,9 @@ No members defined
 * `Speed: number`: The speed at which the sound plays, within the range of 0.01 to 100
 * `Volume: number`: The volume at which the sound plays. Must be positive
 
+### Methods:
+* `Play() : ()`: Plays the Sound from the beginning
+
 ### Events:
 * `OnLoaded(boolean)`: Fires when the Sound finishes loading, and whether it loaded successfully or not
 

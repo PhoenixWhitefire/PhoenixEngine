@@ -797,6 +797,9 @@
   "@luhx/globaltype/Sound.OnLoaded": {
     "documentation": "Fires when the Sound finishes loading, and whether it loaded successfully or not"
   },
+  "@luhx/globaltype/Sound.Play": {
+    "documentation": "Plays the Sound from the beginning"
+  },
   "@luhx/globaltype/Sound.Playing": {
     "documentation": "Whether the Sound is currently playing (or requested to play, if `.Playing` is set to `true` by a `Script` before it has finished loading)"
   },

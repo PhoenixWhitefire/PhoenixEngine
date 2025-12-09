@@ -35,15 +35,13 @@ namespace Memory
 	};
 
 	// can only be de-alloc'd correctly by `::Free`
-	// ONLY UP TO `UINT32_MAX` IN SIZE IN REALITY!!
-	void* Alloc(size_t, Category MemCat = Category::Default);
+	void* Alloc(uint32_t Size, Category MemCat = Category::Default);
 	// can only be de-alloc'd correctly by `::Free`
-	// ONLY UP TO `UINT32_MAX` IN SIZE IN REALITY!!
-	void* ReAlloc(void*, size_t, Category MemCat = Category::Default);
+	void* ReAlloc(void*, uint32_t Size, Category MemCat = Category::Default);
 	// can only safely de-alloc pointers returned by `::Alloc`
 	void Free(void*);
 	// returns the pointer to the actual `malloc` block
-	void* GetPointerInfo(void*, size_t* Size = nullptr, uint8_t* Category = nullptr);
+	void* GetPointerInfo(void*, uint32_t* Size = nullptr, uint8_t* Category = nullptr);
 
 	void FrameFinish();
 

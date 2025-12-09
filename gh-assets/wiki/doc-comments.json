@@ -327,6 +327,9 @@
             "CallbackArguments": "string"
           }
         },
+        "Methods": {
+          "Play": "Plays the Sound from the beginning"
+        },
         "Properties": {
           "FinishedLoading": "Whether the Sound has finished loading the `SoundFile`",
           "Length": "The length of the sound in seconds",
@@ -682,7 +685,8 @@
       },
       "sleep": {
         "Description": "Yields the thread for the specified number of seconds",
-        "In": "SleepTime: number"
+        "In": "SleepTime: number",
+        "Out": "number"
       },
       "workspace": {
         "Description": "Shorthand for `game.Workspace`"

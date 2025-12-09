@@ -134,6 +134,26 @@ const Reflection::StaticPropertyMap& SoundManager::GetProperties()
 #pragma GCC diagnostic ignored "-Wstringop-overflow"
 #endif
 
+const Reflection::StaticMethodMap& SoundManager::GetMethods()
+{
+	static const Reflection::StaticMethodMap methods = {
+		{ "Play", Reflection::MethodDescriptor{
+			{},
+			{},
+			[](void* p, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+			{
+				EcSound* sound = static_cast<EcSound*>(p);
+				sound->NextRequestedPosition = 0.f;
+				sound->m_PlayRequested = true;
+
+				return {};
+			}
+		} }
+	};
+
+	return methods;
+}
+
 const Reflection::StaticEventMap& SoundManager::GetEvents()
 {
 	static const Reflection::StaticEventMap events =

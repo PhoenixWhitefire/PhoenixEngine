@@ -1,7 +1,3 @@
-local g: DataModel
-g.OnFrameBegin:Connect(function(a0: number)
-end)
-
 return function(describe, test, expect)
 	test("Min bounds", function()
 		expect(function()

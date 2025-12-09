@@ -45,6 +45,7 @@ public:
 	uint32_t CreateComponent(GameObject*) override;
 	void DeleteComponent(uint32_t) override;
 	const Reflection::StaticPropertyMap& GetProperties() override;
+	const Reflection::StaticMethodMap& GetMethods() override;
 	const Reflection::StaticEventMap& GetEvents() override;
 
 	void Initialize();

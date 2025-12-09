@@ -170,7 +170,7 @@ static void resolveCollisions(PhysicsWorld& World, float DeltaTime)
 		if (am->PhysicsDynamics && !bm->PhysicsDynamics)
 		{
 			// "Friction"
-			am->NetForce -= 2 * am->Friction * at->Size * (glm::vec3(1.f) - hit.Normal);
+			am->NetForce -= am->LinearVelocity * am->Friction * at->Size * (glm::vec3(1.f) - hit.Normal);
 			am->NetForce *= glm::vec3(1.f) - hit.Normal; // vertical forces cancel out
 
 			am->LinearVelocity = am->LinearVelocity * (glm::vec3(1.f) - hit.Normal) - am->LinearVelocity * (hit.Normal * Elasticity);

@@ -194,6 +194,9 @@
         "Events": {
           "OnLoaded": "(Boolean)"
         },
+        "Methods": {
+          "Play": "() -> ()"
+        },
         "Properties": {
           "FinishedLoading": "Boolean READONLY",
           "Length": "Double READONLY",

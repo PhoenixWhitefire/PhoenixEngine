@@ -366,7 +366,7 @@ Additional global variables
 * In `require`'d modules, this is `nil`
 #### `shellexec(Command: string): string`
 * Runs a shell command
-#### `sleep(SleepTime: number): ()`
+#### `sleep(SleepTime: number): number`
 * Yields the thread for the specified number of seconds
 #### `workspace: GameObject & Workspace`
 * Shorthand for `game.Workspace`
