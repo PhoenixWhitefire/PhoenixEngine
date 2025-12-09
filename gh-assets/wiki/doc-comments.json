@@ -623,6 +623,10 @@
           "Up": {
             "Description": "The upward vector of the Matrix",
             "Type": "vector"
+          },
+          ":ExtractAngles": {
+            "Description": "Extracts the orientation of the Matrix as euler angles in the YXZ rotation order",
+            "Out": "vector"
           }
         },
         "Operations": {

@@ -159,6 +159,23 @@ static int mtx_index(lua_State* L)
 	else if (strcmp(k, "Right") == 0)
 		luhx_pushvector3(L, glm::vec3(m[0]));
 
+	else if (strcmp(k, "ExtractAngles") == 0)
+	{
+		lua_pushcfunction(
+			L,
+			[](lua_State* L) -> int
+			{
+				const glm::mat4& m = *(glm::mat4*)luaL_checkudata(L, 1, LUHX_MATRIXLIBNAME);
+				glm::vec3 angles;
+				glm::extractEulerAngleYXZ(m, angles.y, angles.x, angles.z);
+
+				lua_pushvector(L, angles.x, angles.y, angles.z);
+				return 1;
+			},
+			"Matrix.ExtractAngles"
+		);
+	}
+
 	else if (klen == 4 && k[0] == 'C' && k[2] == 'R')
 	{
 		char col = k[1];

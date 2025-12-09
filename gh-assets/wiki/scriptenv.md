@@ -118,6 +118,9 @@ Additional types with methods and properties
 #### `.Forward: vector`
 * The forward vector of the Matrix
 
+#### `.C4R4: number`
+* The value at Column 4, Row 4
+
 #### `.Position: vector`
 * The position of the Matrix in world-space
 
@@ -130,8 +133,8 @@ Additional types with methods and properties
 #### `.C3R4: number`
 * The value at Column 3, Row 4
 
-#### `.C4R4: number`
-* The value at Column 4, Row 4
+#### `ExtractAngles(): vector`
+* Extracts the orientation of the Matrix as euler angles in the YXZ rotation order
 
 ## Libraries
 

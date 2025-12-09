@@ -530,19 +530,19 @@
   "@luhx/globaltype/Engine.WindowSize": {
     "documentation": "The size of the window, in pixels"
   },
-  "@luhx/globaltype/EventConnection.:Disconnect": {
-    "documentation": "* Disconnects the Connection, causing the callback to no longer be invoked. May only be called once\n"
-  },
   "@luhx/globaltype/EventConnection.Connected": {
     "documentation": "* Whether the Connection is connected or not\n"
+  },
+  "@luhx/globaltype/EventConnection.Disconnect": {
+    "documentation": "* Disconnects the Connection, causing the callback to no longer be invoked. May only be called once\n"
   },
   "@luhx/globaltype/EventConnection.Signal": {
     "documentation": "* The Event which `:Connect` was called upon to return this Connection\n"
   },
-  "@luhx/globaltype/EventSignal.:Connect": {
+  "@luhx/globaltype/EventSignal.Connect": {
     "documentation": "* Connect a callback to the Event\n"
   },
-  "@luhx/globaltype/EventSignal.:WaitUntil": {
+  "@luhx/globaltype/EventSignal.WaitUntil": {
     "documentation": "* Yields the thread until the Event is fired\n"
   },
   "@luhx/globaltype/Example.EvenMoreSecretMessage": {
@@ -644,9 +644,6 @@
   "@luhx/globaltype/InputService.IsMouseSunk": {
     "documentation": "Whether the Engine is currently using mouse input (such as for Dear ImGui). Do not process mouse input if this is `true`"
   },
-  "@luhx/globaltype/Matrix.:__mul": {
-    "documentation": "* Two Matrices may be multiplied together with the `*` operator\n"
-  },
   "@luhx/globaltype/Matrix.C1R1": {
     "documentation": "* The value at Column 1, Row 1\n"
   },
@@ -695,6 +692,9 @@
   "@luhx/globaltype/Matrix.C4R4": {
     "documentation": "* The value at Column 4, Row 4\n"
   },
+  "@luhx/globaltype/Matrix.ExtractAngles": {
+    "documentation": "* Extracts the orientation of the Matrix as euler angles in the YXZ rotation order\n"
+  },
   "@luhx/globaltype/Matrix.Forward": {
     "documentation": "* The forward vector of the Matrix\n"
   },
@@ -706,6 +706,9 @@
   },
   "@luhx/globaltype/Matrix.Up": {
     "documentation": "* The upward vector of the Matrix\n"
+  },
+  "@luhx/globaltype/Matrix.__mul": {
+    "documentation": "* Two Matrices may be multiplied together with the `*` operator\n"
   },
   "@luhx/globaltype/Mesh.AngularVelocity": {
     "documentation": "Its rotational velocity"

@@ -458,6 +458,7 @@ local function documentDatatype(name)
 		assert(k and typeof(k) == "string")
 		if string.sub(k, 1, 1) == ":" then
 			local rk = string.sub(k, 2, #k)
+			k = rk
 			local args = v.In or ""
 			local returns = v.Out or "nil"
 			local defargs = args

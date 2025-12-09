@@ -1,3 +1,7 @@
+local g: DataModel
+g.OnFrameBegin:Connect(function(a0: number)
+end)
+
 return function(describe, test, expect)
 	test("Min bounds", function()
 		expect(function()
@@ -18,5 +22,9 @@ return function(describe, test, expect)
 			assert(m.C1R4 == 5)
 		end).never:toThrow()
 	end)
-end
 
+	test("ExtractAngles", function()
+		local mtx = Matrix.fromAngles(vector.create(1, 0, 0))
+		expect(Matrix.fromAngles(mtx:ExtractAngles())):toBe(mtx)
+	end)
+end

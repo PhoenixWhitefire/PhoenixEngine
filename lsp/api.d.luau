@@ -36,11 +36,12 @@ declare extern type Matrix with
   C1R3: number
   C2R2: number
   Forward: vector
+  C4R4: number
   Position: vector
   C1R4: number
   C2R4: number
   C3R4: number
-  C4R4: number
+  function ExtractAngles(self): ( vector )
 end
 declare Matrix: {
   fromTranslation: (( Position: vector ) -> (Matrix)) & (( X: number, Y: number, Z: number ) -> (Matrix)),
