@@ -269,7 +269,9 @@
       },
       "Matrix": {
         "Library": {
+          "fromAngles": "function",
           "fromEulerAnglesXYZ": "function",
+          "fromEulerAnglesYXZ": "function",
           "fromTranslation": "function",
           "identity": "Matrix",
           "lookAt": "function",

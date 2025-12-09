@@ -53,13 +53,22 @@ Additional types with methods and properties
 #### `Matrix.fromTranslation(Position: vector): Matrix`
 #### `Matrix.fromTranslation(X: number, Y: number, Z: number): Matrix`
 * Creates a Matrix which has been translated to the given coordinates (specified as either a `vector` or the individual X, Y, and Z components)
+#### `Matrix.fromAngles(X: number, Y: number, Z: number): Matrix`
+#### `Matrix.fromAngles(Angles: vector): Matrix`
+* Alias of `.fromEulerAnglesYXZ`
 #### `Matrix.new(): Matrix`
+#### `Matrix.new(X: number, Y: number, Z: number): Matrix`
+#### `Matrix.new(Position: vector): Matrix`
 * Creates a new identity matrix
-#### `Matrix.lookAt(Eye: vector, Target: vector): Matrix`
-* Creates a Matrix at position `Eye` oriented such that the `.Forward` vector moves toward `Target`
 #### `Matrix.identity: Matrix`
 * An identity matrix, the same value as what gets returned with `.new()` with no arguments
+#### `Matrix.lookAt(Eye: vector, Target: vector): Matrix`
+* Creates a Matrix at position `Eye` oriented such that the `.Forward` vector moves toward `Target`
+#### `Matrix.fromEulerAnglesYXZ(X: number, Y: number, Z: number): Matrix`
+#### `Matrix.fromEulerAnglesYXZ(Angles: vector): Matrix`
+* Creates a Matrix which has been rotated by the given Euler angles (in radians) with the rotation order Y-X-Z
 #### `Matrix.fromEulerAnglesXYZ(X: number, Y: number, Z: number): Matrix`
+#### `Matrix.fromEulerAnglesXYZ(Angles: vector): Matrix`
 * Creates a Matrix which has been rotated by the given Euler angles (in radians) with the rotation order X-Y-Z
 #### `__mul(Matrix): Matrix`
 * Two Matrices may be multiplied together with the `*` operator

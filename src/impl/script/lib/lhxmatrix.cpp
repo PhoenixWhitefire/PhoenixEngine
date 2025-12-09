@@ -2,6 +2,9 @@
 #include <glm/mat4x4.hpp>
 #include <cstring>
 
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/euler_angles.hpp>
+
 #include "script/luhx.hpp"
 
 void luhx_pushmatrix(lua_State* L, const glm::mat4& mtx)
@@ -11,14 +14,6 @@ void luhx_pushmatrix(lua_State* L, const glm::mat4& mtx)
 
     luaL_getmetatable(L, LUHX_MATRIXLIBNAME);
     lua_setmetatable(L, -2);
-}
-
-static int matrix_new(lua_State* L)
-{
-    glm::mat4 matrix = glm::mat4(1.f);
-
-    luhx_pushmatrix(L, matrix);
-	return 1;
 }
 
 static int matrix_fromTranslation(lua_State* L)
@@ -59,6 +54,25 @@ static int matrix_fromTranslation(lua_State* L)
     return 1;
 }
 
+static int matrix_new(lua_State* L)
+{
+    int narg = lua_gettop(L);
+
+    if (narg == 0)
+    {
+        glm::mat4 matrix = glm::mat4(1.f);
+
+        luhx_pushmatrix(L, matrix);
+        return 1;
+    }
+    else if (narg == 1 || narg == 3)
+    {
+        return matrix_fromTranslation(L);
+    }
+
+    luaL_error(L, "Expected 0, 1 or 3 arguments to `Matrix.new`, got %i", narg);
+}
+
 static int matrix_fromEulerAnglesXYZ(lua_State* L)
 {
     glm::vec3 ang;
@@ -73,13 +87,31 @@ static int matrix_fromEulerAnglesXYZ(lua_State* L)
         ang.z = static_cast<float>(luaL_checknumber(L, 3));
     }
 
-	glm::mat4 m = glm::mat4(1.f);
-	m = glm::rotate(m, ang.x, glm::vec3(1.f, 0.f, 0.f));
-	m = glm::rotate(m, ang.y, glm::vec3(0.f, 1.f, 0.f));
-	m = glm::rotate(m, ang.z, glm::vec3(0.f, 0.f, 1.f));
-
-	luhx_pushmatrix(L, m);
+	luhx_pushmatrix(L, glm::eulerAngleXYZ(ang.x, ang.y, ang.z));
 	return 1;
+}
+
+static int matrix_fromEulerAnglesYXZ(lua_State* L)
+{
+    glm::vec3 ang;
+
+    if (const float* v = lua_tovector(L, 1))
+        ang = glm::make_vec3(v);
+
+    else
+    {
+        ang.x = static_cast<float>(luaL_checknumber(L, 1));
+        ang.y = static_cast<float>(luaL_checknumber(L, 2));
+        ang.z = static_cast<float>(luaL_checknumber(L, 3));
+    }
+
+	luhx_pushmatrix(L, glm::eulerAngleYXZ(ang.y, ang.x, ang.z));
+	return 1;
+}
+
+static int matrix_fromAngles(lua_State* L)
+{
+    return matrix_fromEulerAnglesYXZ(L);
 }
 
 static int matrix_lookAt(lua_State* L)
@@ -102,6 +134,8 @@ static const luaL_Reg matrix_funcs[] =
 	{ "new", matrix_new },
     { "fromTranslation", matrix_fromTranslation },
     { "fromEulerAnglesXYZ", matrix_fromEulerAnglesXYZ },
+	{ "fromEulerAnglesYXZ", matrix_fromEulerAnglesYXZ },
+	{ "fromAngles", matrix_fromAngles },
     { "lookAt", matrix_lookAt },
 
 	{ NULL, NULL }

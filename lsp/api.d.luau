@@ -44,10 +44,12 @@ declare extern type Matrix with
 end
 declare Matrix: {
   fromTranslation: (( Position: vector ) -> (Matrix)) & (( X: number, Y: number, Z: number ) -> (Matrix)),
-  new: ((  ) -> (Matrix)),
-  lookAt: (( Eye: vector, Target: vector ) -> (Matrix)),
+  fromAngles: (( X: number, Y: number, Z: number ) -> (Matrix)) & (( Angles: vector ) -> (Matrix)),
+  new: ((  ) -> (Matrix)) & (( X: number, Y: number, Z: number ) -> (Matrix)) & (( Position: vector ) -> (Matrix)),
   identity: Matrix,
-  fromEulerAnglesXYZ: (( X: number, Y: number, Z: number ) -> (Matrix))
+  lookAt: (( Eye: vector, Target: vector ) -> (Matrix)),
+  fromEulerAnglesYXZ: (( X: number, Y: number, Z: number ) -> (Matrix)) & (( Angles: vector ) -> (Matrix)),
+  fromEulerAnglesXYZ: (( X: number, Y: number, Z: number ) -> (Matrix)) & (( Angles: vector ) -> (Matrix))
 }
 
 

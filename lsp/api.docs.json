@@ -35,8 +35,14 @@
   "@luhx/global/Matrix": {
     "documentation": "* A 4x4 transformation matrix"
   },
+  "@luhx/global/Matrix.fromAngles": {
+    "documentation": "* Alias of `.fromEulerAnglesYXZ`"
+  },
   "@luhx/global/Matrix.fromEulerAnglesXYZ": {
     "documentation": "* Creates a Matrix which has been rotated by the given Euler angles (in radians) with the rotation order X-Y-Z"
+  },
+  "@luhx/global/Matrix.fromEulerAnglesYXZ": {
+    "documentation": "* Creates a Matrix which has been rotated by the given Euler angles (in radians) with the rotation order Y-X-Z"
   },
   "@luhx/global/Matrix.fromTranslation": {
     "documentation": "* Creates a Matrix which has been translated to the given coordinates (specified as either a `vector` or the individual X, Y, and Z components)"
