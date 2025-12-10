@@ -3,56 +3,56 @@ export type EventSignal<T...> = {
 	WaitUntil: (self: EventSignal<T...>) -> (T...)
 }
 declare extern type Color with
-  R: number
-  G: number
   B: number
+  G: number
+  R: number
 end
 declare Color: {
   new: (( R: number, G: number, B: number ) -> (Color))
 }
 declare extern type EventConnection with
-  Connected: boolean
   function Disconnect(self): ( nil )
+  Connected: boolean
   Signal: any
 end
 declare GameObject: {
-  validcomponents: { string },
-  new: (<T>(ComponentName: T) -> GameObject & index<Creatables, T>) & ((ComponentName: string) -> GameObject & any)
+  new: (<T>(ComponentName: T) -> GameObject & index<Creatables, T>) & ((ComponentName: string) -> GameObject & any),
+  validcomponents: { string }
 }
 declare extern type Matrix with
+  function ExtractAngles(self): ( vector )
   function Inverse(self): ( Matrix )
+  function Lerp(self, Target: Matrix, Delta: number): ( Matrix )
   function __mul(self, Param_1: Matrix): ( Matrix )
-  Right: vector
   C1R1: number
-  C3R3: number
-  C4R1: number
-  C3R1: number
+  C1R2: number
+  C1R3: number
+  C1R4: number
   C2R1: number
   C2R2: number
-  C3R2: number
-  C4R2: number
-  Up: vector
-  C4R3: number
-  function Lerp(self, Target: Matrix, Delta: number): ( Matrix )
   C2R3: number
-  C1R3: number
-  Forward: vector
-  C4R4: number
-  C1R2: number
-  Position: vector
-  C1R4: number
   C2R4: number
+  C3R1: number
+  C3R2: number
+  C3R3: number
   C3R4: number
-  function ExtractAngles(self): ( vector )
+  C4R1: number
+  C4R2: number
+  C4R3: number
+  C4R4: number
+  Forward: vector
+  Position: vector
+  Right: vector
+  Up: vector
 end
 declare Matrix: {
-  fromTranslation: (( Position: vector ) -> (Matrix)) & (( X: number, Y: number, Z: number ) -> (Matrix)),
   fromAngles: (( X: number, Y: number, Z: number ) -> (Matrix)) & (( Angles: vector ) -> (Matrix)),
-  new: ((  ) -> (Matrix)) & (( X: number, Y: number, Z: number ) -> (Matrix)) & (( Position: vector ) -> (Matrix)),
+  fromEulerAnglesXYZ: (( X: number, Y: number, Z: number ) -> (Matrix)) & (( Angles: vector ) -> (Matrix)),
+  fromEulerAnglesYXZ: (( X: number, Y: number, Z: number ) -> (Matrix)) & (( Angles: vector ) -> (Matrix)),
+  fromTranslation: (( Position: vector ) -> (Matrix)) & (( X: number, Y: number, Z: number ) -> (Matrix)),
   identity: Matrix,
   lookAt: (( Eye: vector, Target: vector ) -> (Matrix)),
-  fromEulerAnglesYXZ: (( X: number, Y: number, Z: number ) -> (Matrix)) & (( Angles: vector ) -> (Matrix)),
-  fromEulerAnglesXYZ: (( X: number, Y: number, Z: number ) -> (Matrix)) & (( Angles: vector ) -> (Matrix))
+  new: ((  ) -> (Matrix)) & (( X: number, Y: number, Z: number ) -> (Matrix)) & (( Position: vector ) -> (Matrix))
 }
 
 
@@ -275,91 +275,91 @@ type Creatables = {
 	AssetService: AssetService,
 }
 declare Enum: {
-  MouseButton: { Left: number, Middle: number, Right: number },
+  CursorMode: { Normal: number, Hidden: number, Disabled: number, Unavailable: number, Captured: number },
   Key: { [string]: number },
-  CursorMode: { Normal: number, Hidden: number, Disabled: number, Unavailable: number, Captured: number }
+  MouseButton: { Left: number, Middle: number, Right: number }
 }
 declare conf: {
+  get: (( Key: string ) -> (any)),
   save: ((  ) -> (boolean)),
-  set: (( Key: string, Value: any ) -> ()),
-  get: (( Key: string ) -> (any))
+  set: (( Key: string, Value: any ) -> ())
 }
 declare fs: {
-  makecwdaliasof: (( Alias: string ) -> ()),
-  write: (( Path: string, Contents: string, CreateDirectories: boolean? ) -> (boolean, string?)),
-  isfile: (( string ) -> (boolean)),
-  promptopenfolder: (( Title: string, DefaultDirectory: string? ) -> (string?)),
-  rename: (( Path: string, NewName: string ) -> (boolean, string?)),
-  remove: (( Path: string ) -> (number | false, string?)),
-  listdir: (( Path: string, Filter: ('a' | 'f' | 'd')? ) -> ({ [string]: 'f' | 'd' })),
-  read: (( Path: string ) -> (string?, string?)),
   copy: (( From: string, To: string ) -> (boolean, string?)),
-  mkdir: (( Path: string ) -> (boolean, string?)),
-  promptopen: (( DefaultLocation: string?, Filter: ( { string } | string)?, FilterName: string?, AllowMultipleFiles: boolean? ) -> ({ string })),
-  promptsave: (( DefaultLocation: string?, Filter: ( { string } | string)?, FilterName: string? ) -> (string)),
+  cwd: ((  ) -> (string)),
   definealias: (( Alias: string, For: string ) -> ()),
   isdirectory: (( string ) -> (boolean)),
-  cwd: ((  ) -> (string))
+  isfile: (( string ) -> (boolean)),
+  listdir: (( Path: string, Filter: ('a' | 'f' | 'd')? ) -> ({ [string]: 'f' | 'd' })),
+  makecwdaliasof: (( Alias: string ) -> ()),
+  mkdir: (( Path: string ) -> (boolean, string?)),
+  promptopen: (( DefaultLocation: string?, Filter: ( { string } | string)?, FilterName: string?, AllowMultipleFiles: boolean? ) -> ({ string })),
+  promptopenfolder: (( Title: string, DefaultDirectory: string? ) -> (string?)),
+  promptsave: (( DefaultLocation: string?, Filter: ( { string } | string)?, FilterName: string? ) -> (string)),
+  read: (( Path: string ) -> (string?, string?)),
+  remove: (( Path: string ) -> (number | false, string?)),
+  rename: (( Path: string, NewName: string ) -> (boolean, string?)),
+  write: (( Path: string, Contents: string, CreateDirectories: boolean? ) -> (boolean, string?))
 }
 declare imgui: {
-  setcursorposition: (( X: number, Y: number ) -> ()),
-  beginmainmenubar: ((  ) -> (boolean)),
-  endmenubar: ((  ) -> ()),
-  dummy: (( Width: number?, Height: number? ) -> ()),
-  image: (( ImagePath: string, Size: vector?, FlipVertically: boolean?, TintColor: { number }? ) -> ()),
-  openpopup: (( Name: string ) -> ()),
-  settooltip: (( Tooltip: string ) -> ()),
-  button: (( Text: string, Width: number?, Height: number? ) -> (boolean)),
-  menuitem: (( Text: string, Enabled: boolean? ) -> (boolean)),
-  inputstring: (( Name: string, Value: string ) -> (string)),
-  checkbox: (( Name: string, Value: boolean ) -> (boolean)),
-  text: (( Text: string ) -> ()),
-  windowposition: ((  ) -> (number, number)),
-  setnextwindowsize: (( Width: number, Height: number ) -> ()),
-  endmenu: ((  ) -> ()),
-  setviewportdockspace: (( PositionX: number, PositionY: number, SizeX: number, SizeY: number ) -> ()),
-  windowhovered: ((  ) -> (boolean)),
-  sameline: ((  ) -> ()),
+  anyitemactive: ((  ) -> (boolean)),
   begin: (( WindowTitle: string, WindowFlags: string? ) -> (boolean)),
-  inputnumber: (( Text: string, Value: number ) -> (number)),
-  treepop: ((  ) -> ()),
-  separator: ((  ) -> ()),
-  treenode: (( Text: string ) -> (boolean)),
-  setnextwindowopen: (( Open: boolean? ) -> ()),
-  endpopup: ((  ) -> ()),
-  textsize: (( Text: string ) -> (number, number)),
-  textlink: (( Text: string ) -> (boolean)),
-  endw: ((  ) -> ()),
-  windowsize: ((  ) -> (number, number)),
+  beginchild: (( Name: string, Width: number?, Height: number?, ChildFlags: string?, WindowFlags: string? ) -> (boolean)),
+  beginfullscreen: (( Name: string, OffsetX: number?, OffsetY: number? ) -> ()),
+  beginmainmenubar: ((  ) -> (boolean)),
+  beginmenu: (( Name: string, Enabled: boolean? ) -> (boolean)),
+  beginmenubar: ((  ) -> (boolean)),
+  beginpopup: (( Name: string ) -> (boolean)),
+  beginpopupmodal: (( Name: string, HasCloseButton: boolean? ) -> (boolean)),
+  button: (( Text: string, Width: number?, Height: number? ) -> (boolean)),
+  checkbox: (( Name: string, Value: boolean ) -> (boolean)),
+  closecurrentpopup: ((  ) -> ()),
   combo: (( Text: string, Options: { string }, CurrentOption: number ) -> (number)),
   cursorposition: ((  ) -> (number, number)),
-  stylecolors: (( Theme: 'l' | 'd' ) -> ()),
-  itemhovered: ((  ) -> (boolean)),
-  setnextwindowposition: (( X: number, Y: number ) -> ()),
-  setnextwindowfocus: ((  ) -> ()),
-  setviewportdockspacedefault: ((  ) -> ()),
-  setitemtooltip: (( Text: string ) -> ()),
-  beginchild: (( Name: string, Width: number?, Height: number?, ChildFlags: string?, WindowFlags: string? ) -> (boolean)),
-  popid: ((  ) -> ()),
-  separatortext: (( Text: string ) -> ()),
-  urllink: (( Text: string, Url: string? ) -> (boolean)),
-  pushstylecolor: (( StyleIndex: number, Color: { number } ) -> ()),
-  beginmenu: (( Name: string, Enabled: boolean? ) -> (boolean)),
-  pushid: (( Id: string ) -> ()),
-  popstylecolor: ((  ) -> ()),
-  setnextitemwidth: (( Width: number ) -> ()),
+  dummy: (( Width: number?, Height: number? ) -> ()),
   endchild: ((  ) -> ()),
-  beginpopupmodal: (( Name: string, HasCloseButton: boolean? ) -> (boolean)),
-  anyitemactive: ((  ) -> (boolean)),
-  itemclicked: ((  ) -> (boolean)),
-  beginpopup: (( Name: string ) -> (boolean)),
-  indent: (( Indent: number? ) -> ()),
-  closecurrentpopup: ((  ) -> ()),
-  imagebutton: (( Name: string, Image: string, Size: vector? ) -> (boolean)),
-  beginfullscreen: (( Name: string, OffsetX: number?, OffsetY: number? ) -> ()),
   endmainmenubar: ((  ) -> ()),
-  beginmenubar: ((  ) -> (boolean)),
-  getcontentregionavail: ((  ) -> (number, number))
+  endmenu: ((  ) -> ()),
+  endmenubar: ((  ) -> ()),
+  endpopup: ((  ) -> ()),
+  endw: ((  ) -> ()),
+  getcontentregionavail: ((  ) -> (number, number)),
+  image: (( ImagePath: string, Size: vector?, FlipVertically: boolean?, TintColor: { number }? ) -> ()),
+  imagebutton: (( Name: string, Image: string, Size: vector? ) -> (boolean)),
+  indent: (( Indent: number? ) -> ()),
+  inputnumber: (( Text: string, Value: number ) -> (number)),
+  inputstring: (( Name: string, Value: string ) -> (string)),
+  itemclicked: ((  ) -> (boolean)),
+  itemhovered: ((  ) -> (boolean)),
+  menuitem: (( Text: string, Enabled: boolean? ) -> (boolean)),
+  openpopup: (( Name: string ) -> ()),
+  popid: ((  ) -> ()),
+  popstylecolor: ((  ) -> ()),
+  pushid: (( Id: string ) -> ()),
+  pushstylecolor: (( StyleIndex: number, Color: { number } ) -> ()),
+  sameline: ((  ) -> ()),
+  separator: ((  ) -> ()),
+  separatortext: (( Text: string ) -> ()),
+  setcursorposition: (( X: number, Y: number ) -> ()),
+  setitemtooltip: (( Text: string ) -> ()),
+  setnextitemwidth: (( Width: number ) -> ()),
+  setnextwindowfocus: ((  ) -> ()),
+  setnextwindowopen: (( Open: boolean? ) -> ()),
+  setnextwindowposition: (( X: number, Y: number ) -> ()),
+  setnextwindowsize: (( Width: number, Height: number ) -> ()),
+  settooltip: (( Tooltip: string ) -> ()),
+  setviewportdockspace: (( PositionX: number, PositionY: number, SizeX: number, SizeY: number ) -> ()),
+  setviewportdockspacedefault: ((  ) -> ()),
+  stylecolors: (( Theme: 'l' | 'd' ) -> ()),
+  text: (( Text: string ) -> ()),
+  textlink: (( Text: string ) -> (boolean)),
+  textsize: (( Text: string ) -> (number, number)),
+  treenode: (( Text: string ) -> (boolean)),
+  treepop: ((  ) -> ()),
+  urllink: (( Text: string, Url: string? ) -> (boolean)),
+  windowhovered: ((  ) -> (boolean)),
+  windowposition: ((  ) -> (number, number)),
+  windowsize: ((  ) -> (number, number))
 }
 declare json: {
   encode: (( Value: any ) -> (string)),

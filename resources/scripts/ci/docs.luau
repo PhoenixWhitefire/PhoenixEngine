@@ -132,8 +132,13 @@ local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, lib
 	
 	local str = ""
 	local first = true
-	
-	for k, d in t do
+
+	local orderedMembers = keysOf(t)
+	table.sort(orderedMembers)
+
+	for _, k in orderedMembers do
+		local d = t[k]
+
 		if first then
 			definitionsFile = string.sub(definitionsFile, 1, #definitionsFile - 2)
 				
@@ -454,7 +459,12 @@ local function documentDatatype(name)
 	end
 	]]--
 
-	for k, v in dt.Members do
+	local orderedMembers = keysOf(dt.Members)
+	table.sort(orderedMembers)
+
+	for _, k in orderedMembers do
+		local v = dt.Members[k]
+
 		assert(k and typeof(k) == "string")
 		if string.sub(k, 1, 1) == ":" then
 			local rk = string.sub(k, 2, #k)
