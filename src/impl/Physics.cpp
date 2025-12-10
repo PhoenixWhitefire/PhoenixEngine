@@ -125,7 +125,7 @@ static void resolveCollisions(PhysicsWorld& World, float DeltaTime)
 				GameObject* b = GameObject::GetObjectById(oid);
 				EcMesh* bm = b ? b->FindComponent<EcMesh>() : nullptr;
 
-				if (!bm)
+				if (!bm || !bm->PhysicsCollisions)
 					continue;
 
 				const glm::vec3& bPos = bm->CollisionAabb.Position;
