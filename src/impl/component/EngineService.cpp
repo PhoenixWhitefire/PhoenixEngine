@@ -45,7 +45,7 @@ public:
     const Reflection::StaticPropertyMap& GetProperties() override
     {
         static const Reflection::StaticPropertyMap props = {
-            EC_PROP(
+            REFLECTION_PROPERTY(
                 "WindowSize",
                 Vector2,
                 [](void*) -> Reflection::GenericValue
@@ -61,7 +61,7 @@ public:
                     engine->ResizeWindow(size.x, size.y);
                 }
             ),
-            EC_PROP(
+            REFLECTION_PROPERTY(
                 "IsHeadless",
                 Boolean,
                 [](void*) -> Reflection::GenericValue
@@ -71,7 +71,7 @@ public:
                 },
                 nullptr
             ),
-            EC_PROP(
+            REFLECTION_PROPERTY(
                 "IsFullscreen",
                 Boolean,
                 [](void*) -> Reflection::GenericValue
@@ -85,7 +85,7 @@ public:
                     engine->SetIsFullscreen(gv.AsBoolean());
                 }
             ),
-            EC_PROP(
+            REFLECTION_PROPERTY(
                 "VSync",
                 Boolean,
                 [](void*) -> Reflection::GenericValue
@@ -99,7 +99,7 @@ public:
                     engine->VSync = gv.AsBoolean();
                 }
             ),
-            EC_PROP(
+            REFLECTION_PROPERTY(
                 "Framerate",
                 Integer,
                 [](void*) -> Reflection::GenericValue
@@ -109,7 +109,7 @@ public:
                 },
                 nullptr
             ),
-            EC_PROP(
+            REFLECTION_PROPERTY(
                 "FramerateCap",
                 Integer,
                 [](void*) -> Reflection::GenericValue
@@ -123,7 +123,7 @@ public:
                     engine->FpsCap = gv.AsInteger();
                 }
             ),
-            EC_PROP(
+            REFLECTION_PROPERTY(
                 "DebugWireframeRendering",
                 Boolean,
                 [](void*) -> Reflection::GenericValue
@@ -137,7 +137,7 @@ public:
                     engine->DebugWireframeRendering = gv.AsBoolean();
                 }
             ),
-            EC_PROP(
+            REFLECTION_PROPERTY(
                 "DebugCollisionAabbs",
                 Boolean,
                 [](void*) -> Reflection::GenericValue
@@ -151,7 +151,7 @@ public:
                     engine->DebugAabbs = gv.AsBoolean();
                 }
             ),
-            EC_PROP(
+            REFLECTION_PROPERTY(
                 "DebugSpatialHeat",
                 Boolean,
                 [](void*) -> Reflection::GenericValue
@@ -165,7 +165,7 @@ public:
                     engine->DebugSpatialHeat = gv.AsBoolean();
                 }
             ),
-            EC_PROP(
+            REFLECTION_PROPERTY(
                 "PhysicsTimescale",
                 Double,
                 [](void*) -> Reflection::GenericValue
@@ -179,7 +179,7 @@ public:
                     engine->PhysicsTimeScale = gv.AsDouble();
                 }
             ),
-            EC_PROP(
+            REFLECTION_PROPERTY(
                 "Version",
                 String,
                 [](void*) -> Reflection::GenericValue
@@ -188,7 +188,7 @@ public:
                 },
                 nullptr
             ),
-            EC_PROP(
+            REFLECTION_PROPERTY(
                 "CommitHash",
                 String,
                 [](void*) -> Reflection::GenericValue

@@ -34,10 +34,10 @@ const Reflection::StaticPropertyMap& SoundManager::GetProperties()
 {
     static const Reflection::StaticPropertyMap props = 
     {
-        EC_PROP(
+        REFLECTION_PROPERTY(
 			"SoundFile",
 			String,
-			EC_GET_SIMPLE(EcSound, SoundFile),
+			REFLECTION_PROPERTY_GET_SIMPLE(EcSound, SoundFile),
 			[](void* p, const Reflection::GenericValue& gv)
 			{
 				EcSound* sound = static_cast<EcSound*>(p);
@@ -52,7 +52,7 @@ const Reflection::StaticPropertyMap& SoundManager::GetProperties()
 			}
 		),
 
-		EC_PROP(
+		REFLECTION_PROPERTY(
 			"Playing",
 			Boolean,
 			[](void* p)
@@ -71,10 +71,10 @@ const Reflection::StaticPropertyMap& SoundManager::GetProperties()
 			}
 		),
 
-		EC_PROP(
+		REFLECTION_PROPERTY(
 			"Position",
 			Double,
-			EC_GET_SIMPLE(EcSound, Position),
+			REFLECTION_PROPERTY_GET_SIMPLE(EcSound, Position),
 			[](void* p, const Reflection::GenericValue& gv)
 			{
 				EcSound* sound = static_cast<EcSound*>(p);
@@ -87,11 +87,11 @@ const Reflection::StaticPropertyMap& SoundManager::GetProperties()
 			}
 		),
 
-		EC_PROP_SIMPLE(EcSound, Looped, Boolean),
-		EC_PROP(
+		REFLECTION_PROPERTY_SIMPLE(EcSound, Looped, Boolean),
+		REFLECTION_PROPERTY(
 			"Volume",
 			Double,
-			EC_GET_SIMPLE(EcSound, Volume),
+			REFLECTION_PROPERTY_GET_SIMPLE(EcSound, Volume),
 			[](void* p, const Reflection::GenericValue& gv)
 			{
 				float volume = static_cast<float>(gv.AsDouble());
@@ -101,10 +101,10 @@ const Reflection::StaticPropertyMap& SoundManager::GetProperties()
 				static_cast<EcSound*>(p)->Volume = volume;
 			}
 		),
-		EC_PROP(
+		REFLECTION_PROPERTY(
 			"Speed",
 			Double,
-			EC_GET_SIMPLE(EcSound, Speed),
+			REFLECTION_PROPERTY_GET_SIMPLE(EcSound, Speed),
 			[](void* p, const Reflection::GenericValue& gv)
 			{
 				float speed = static_cast<float>(gv.AsDouble());
@@ -118,10 +118,10 @@ const Reflection::StaticPropertyMap& SoundManager::GetProperties()
 			}
 		),
 
-		EC_PROP("Length", Double, EC_GET_SIMPLE(EcSound, Length), nullptr),
+		REFLECTION_PROPERTY("Length", Double, REFLECTION_PROPERTY_GET_SIMPLE(EcSound, Length), nullptr),
 
-		EC_PROP("FinishedLoading", Boolean, EC_GET_SIMPLE(EcSound, FinishedLoading), nullptr),
-		EC_PROP("LoadSucceeded", Boolean, EC_GET_SIMPLE(EcSound, LoadSucceeded), nullptr)
+		REFLECTION_PROPERTY("FinishedLoading", Boolean, REFLECTION_PROPERTY_GET_SIMPLE(EcSound, FinishedLoading), nullptr),
+		REFLECTION_PROPERTY("LoadSucceeded", Boolean, REFLECTION_PROPERTY_GET_SIMPLE(EcSound, LoadSucceeded), nullptr)
     };
 
     return props;
@@ -251,7 +251,7 @@ void EcSound::Reload()
 		return;
 	}
 
-	REFLECTION_SIGNAL(OnLoadedCallbacks, SoundFile);
+	REFLECTION_SIGNAL_EVENT(OnLoadedCallbacks, SoundFile);
 	FinishedLoading = true;
 	LoadSucceeded = true;
 }

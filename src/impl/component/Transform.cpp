@@ -69,10 +69,10 @@ public:
     {
         static const Reflection::StaticPropertyMap props = 
         {
-            EC_PROP(
+            REFLECTION_PROPERTY(
                 "Transform",
                 Matrix,
-                EC_GET_SIMPLE(EcTransform, Transform),
+                REFLECTION_PROPERTY_GET_SIMPLE(EcTransform, Transform),
                 [](void* p, const Reflection::GenericValue& gv)
                 {
                     ZoneScoped;
@@ -83,10 +83,10 @@ public:
                 }
             ),
 
-            EC_PROP(
+            REFLECTION_PROPERTY(
                 "Size",
                 Vector3,
-                EC_GET_SIMPLE(EcTransform, Size),
+                REFLECTION_PROPERTY_GET_SIMPLE(EcTransform, Size),
                 [](void* p, const Reflection::GenericValue& gv)
                 {
                     ZoneScoped;

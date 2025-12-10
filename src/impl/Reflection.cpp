@@ -12,11 +12,6 @@
 #define GV_SSO sizeof(Reflection::GenericValue::Val.StrSso)
 static_assert(GV_SSO == 12);
 
-Reflection::GenericValue::GenericValue()
-	: Type(ValueType::Null)
-{
-}
-
 static void fromString(Reflection::GenericValue& G, const char* Data)
 {
 	G.Type = Reflection::ValueType::String;
@@ -376,6 +371,16 @@ std::string Reflection::GenericValue::ToString() const
 // `::AsInteger` and `::AsDouble` have special errors
 #define WRONG_TYPE() RAISE_RTF("Called {} but Generic Value was a {}", __FUNCTION__, TypeAsString(Type))
 
+std::string Reflection::GenericValue::AsString() const
+{
+	if (Type != ValueType::String)
+		WRONG_TYPE();
+	else
+		if (Size + 1 > GV_SSO)
+			return std::string(Val.Str, Size);
+		else
+			return std::string(Val.StrSso, Size);
+}
 std::string_view Reflection::GenericValue::AsStringView() const
 {
 	if (Type != ValueType::String)

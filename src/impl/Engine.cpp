@@ -892,7 +892,7 @@ void Engine::Start()
 		if (!IsHeadlessMode)
 			workspaceComponent->Update();
 
-		REFLECTION_SIGNAL(DataModelRef->FindComponent<EcDataModel>()->OnFrameBeginCallbacks, deltaTime);
+		REFLECTION_SIGNAL_EVENT(DataModelRef->FindComponent<EcDataModel>()->OnFrameBeginCallbacks, deltaTime);
 
 		// fetch the camera again because of potential CurrentScene changes that may have caused re-alloc'd
 		// (really need a generic `Ref` system)

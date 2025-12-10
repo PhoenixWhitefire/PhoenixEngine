@@ -50,10 +50,8 @@ public:
 	
     const Reflection::StaticPropertyMap& GetProperties() override
     {
-        static const Reflection::StaticPropertyMap props =
-		{
-
-			EC_PROP(
+        static const Reflection::StaticPropertyMap props = {
+			REFLECTION_PROPERTY(
 				"Transform",
 				Matrix,
 				[](void* p)
@@ -93,7 +91,7 @@ public:
 				}
 			),
 
-			EC_PROP(
+			REFLECTION_PROPERTY(
 				"IsActive",
 				Boolean,
 				[](void* p)
@@ -104,7 +102,7 @@ public:
 				nullptr
 			),
 
-			EC_PROP(
+			REFLECTION_PROPERTY(
 				"SkeletalBoneId",
 				Integer,
 				[](void* p)
@@ -114,7 +112,6 @@ public:
 				},
 				nullptr
 			)
-
 		};
 
         return props;

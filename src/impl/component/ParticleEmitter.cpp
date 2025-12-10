@@ -29,10 +29,10 @@ public:
     {
         static const Reflection::StaticPropertyMap props = 
         {
-            EC_PROP_SIMPLE(EcParticleEmitter, Emitting, Boolean),
-			EC_PROP_SIMPLE(EcParticleEmitter, ParticlesAreAttached, Boolean),
+            REFLECTION_PROPERTY_SIMPLE(EcParticleEmitter, Emitting, Boolean),
+			REFLECTION_PROPERTY_SIMPLE(EcParticleEmitter, ParticlesAreAttached, Boolean),
 
-			EC_PROP(
+			REFLECTION_PROPERTY(
 				"Rate",
 				Integer,
 				[](void* g)
@@ -68,7 +68,7 @@ public:
 			);
 			*/
 
-			EC_PROP_SIMPLE(EcParticleEmitter, Lifetime, Vector2)
+			REFLECTION_PROPERTY_SIMPLE(EcParticleEmitter, Lifetime, Vector2)
         };
 
         return props;

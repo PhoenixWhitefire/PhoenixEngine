@@ -118,14 +118,14 @@ public:
     {
         static const Reflection::StaticPropertyMap props = 
         {
-            EC_PROP_SIMPLE(EcMesh, PhysicsDynamics, Boolean),
-			EC_PROP_SIMPLE(EcMesh, PhysicsCollisions, Boolean),
-			EC_PROP_SIMPLE(EcMesh, CastsShadows, Boolean),
+            REFLECTION_PROPERTY_SIMPLE(EcMesh, PhysicsDynamics, Boolean),
+			REFLECTION_PROPERTY_SIMPLE(EcMesh, PhysicsCollisions, Boolean),
+			REFLECTION_PROPERTY_SIMPLE(EcMesh, CastsShadows, Boolean),
 
-			EC_PROP(
+			REFLECTION_PROPERTY(
 				"PhysicsCollisions",
 				Boolean,
-				EC_GET_SIMPLE(EcMesh, PhysicsCollisions),
+				REFLECTION_PROPERTY_GET_SIMPLE(EcMesh, PhysicsCollisions),
 				[](void* p, const Reflection::GenericValue& gv)
 				{
 					EcMesh* cm = static_cast<EcMesh*>(p);
@@ -134,7 +134,7 @@ public:
 				}
 			),
 
-			EC_PROP(
+			REFLECTION_PROPERTY(
 				"FaceCulling",
 				Integer,
 				[](void* p)
@@ -148,7 +148,7 @@ public:
 				}
 			),
 
-			EC_PROP(
+			REFLECTION_PROPERTY(
 				"CollisionFidelity",
 				Integer,
 				[](void* p)
@@ -162,21 +162,21 @@ public:
 				}
 			),
 
-			EC_PROP_SIMPLE(EcMesh, Transparency, Double),
-			EC_PROP_SIMPLE(EcMesh, MetallnessFactor, Double),
-			EC_PROP_SIMPLE(EcMesh, RoughnessFactor, Double),
+			REFLECTION_PROPERTY_SIMPLE(EcMesh, Transparency, Double),
+			REFLECTION_PROPERTY_SIMPLE(EcMesh, MetallnessFactor, Double),
+			REFLECTION_PROPERTY_SIMPLE(EcMesh, RoughnessFactor, Double),
 
-			EC_PROP_SIMPLE_NGV(EcMesh, Tint, Color),
+			REFLECTION_PROPERTY_SIMPLE_NGV(EcMesh, Tint, Color),
 
-			EC_PROP_SIMPLE(EcMesh, LinearVelocity, Vector3),
-			EC_PROP_SIMPLE(EcMesh, AngularVelocity, Vector3),
+			REFLECTION_PROPERTY_SIMPLE(EcMesh, LinearVelocity, Vector3),
+			REFLECTION_PROPERTY_SIMPLE(EcMesh, AngularVelocity, Vector3),
 
-			EC_PROP_SIMPLE(EcMesh, Friction, Double),
+			REFLECTION_PROPERTY_SIMPLE(EcMesh, Friction, Double),
 
-			EC_PROP(
+			REFLECTION_PROPERTY(
 				"Density",
 				Double,
-				EC_GET_SIMPLE(EcMesh, Density),
+				REFLECTION_PROPERTY_GET_SIMPLE(EcMesh, Density),
 				[](void* p, const Reflection::GenericValue& gv)
 				{
 					EcMesh* cm = static_cast<EcMesh*>(p);
@@ -190,10 +190,10 @@ public:
 				}
 			),
 
-			EC_PROP(
+			REFLECTION_PROPERTY(
 				"Asset",
 				String,
-				EC_GET_SIMPLE(EcMesh, Asset),
+				REFLECTION_PROPERTY_GET_SIMPLE(EcMesh, Asset),
 				[](void* p, const Reflection::GenericValue& gv)
 				{
 					EcMesh* mesh = static_cast<EcMesh*>(p);
@@ -201,7 +201,7 @@ public:
 				}
 			),
 
-			EC_PROP(
+			REFLECTION_PROPERTY(
 				"Material",
 				String,
 				[](void* p)

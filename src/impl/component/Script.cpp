@@ -55,7 +55,7 @@ public:
         {
             { "SourceFile", {
 				Reflection::ValueType::String,
-				EC_GET_SIMPLE(EcScript, SourceFile),
+				REFLECTION_PROPERTY_GET_SIMPLE(EcScript, SourceFile),
 
 				[](void* p, const Reflection::GenericValue& gv)
 				{

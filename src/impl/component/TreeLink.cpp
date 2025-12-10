@@ -43,7 +43,7 @@ class TreeLinkManager : public ComponentManager<EcTreeLink>
                 }
             } },
 
-            EC_PROP_SIMPLE(EcTreeLink, Scripting, Boolean)
+            REFLECTION_PROPERTY_SIMPLE(EcTreeLink, Scripting, Boolean)
         };
 
         return props;

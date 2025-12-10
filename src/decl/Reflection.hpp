@@ -11,104 +11,15 @@
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#define REFLECTION_INHERITAPI(base) {                                      \
-const Reflection::PropertyMap& props = Object_##base::s_GetProperties();   \
-const Reflection::MethodMap& funcs = Object_##base::s_GetMethodss();       \
-s_Api.Properties.insert(                                                   \
-	props.begin(),                                                         \
-	props.end()                                                            \
-);                                                                         \
-s_Api.Methods.insert(                                                      \
-		funcs.begin(),                                                     \
-		funcs.end()                                                        \
-);                                                                         \
-auto& lin = Object_##base::s_GetLineage();                                 \
-std::copy(lin.begin(), lin.end(), std::back_inserter(s_Api.Lineage));      \
-s_Api.Lineage.push_back(#base);                                            \
-}                                                                          \
+#define REFLECTION_PROPERTY_GET_SIMPLE(c, n) [](void* p)->Reflection::GenericValue { return static_cast<c*>(p)->n; }
+#define REFLECTION_PROPERTY_GET_SIMPLE_TGN(c, n) [](void* p)->Reflection::GenericValue { return static_cast<c*>(p)->n.ToGenericValue(); }
+#define REFLECTION_PROPERTY_SET_SIMPLE(c, n, t) [](void* p, const Reflection::GenericValue& gv)->void { static_cast<c*>(p)->n = gv.As##t(); }
+#define REFLECTION_PROPERTY_SET_SIMPLE_CTOR(c, n, t) [](void* p, const Reflection::GenericValue& gv)->void { static_cast<c*>(p)->n = t(gv); }
 
-// Declare a property with a custom Getter and Setter
-#define REFLECTION_DECLAREPROP(strname, type, get, set) s_Api.Properties[strname] = Reflection::PropertyDescriptor  \
-	{	                                                                                                  \
-		Reflection::ValueType::type,                                                                      \
-		get,                                                                                              \
-		set                                                                                               \
-	}                                                                                                     \
+#define REFLECTION_PROPERTY(strn, t, g, s) { strn, { Reflection::ValueType::t, (Reflection::PropertyGetter)g, (Reflection::PropertySetter)s } }
 
-// Declare a property with the preset Getter (return x) and Setter (x = y)
-#define REFLECTION_DECLAREPROP_SIMPLE(c, name, type) REFLECTION_DECLAREPROP(   \
-	#name,                                                                     \
-	type,                                                                      \
-	[](void* p)                                                                \
-	{                                                                          \
-		return (Reflection::GenericValue)static_cast<c*>(p)->name;             \
-	},                                                                         \
-	[](void* p, const Reflection::GenericValue& gv)                            \
-	{                                                                          \
-		static_cast<c*>(p)->name = gv.As##type();                              \
-	}                                                                          \
-)                                                                              \
-
-// Declare a STRING property with the preset Getter (return x) and Setter (x = y)
-#define REFLECTION_DECLAREPROP_SIMPSTR(c, name)      REFLECTION_DECLAREPROP(   \
-	#name,                                                                     \
-	String,                                                                    \
-	[](void* p)                                                                \
-	{                                                                          \
-		return (Reflection::GenericValue)static_cast<c*>(p)->name;             \
-	},                                                                         \
-	[](void* p, const Reflection::GenericValue& gv)                            \
-	{                                                                          \
-		static_cast<c*>(p)->name = gv.AsStringView();                          \
-	}                                                                          \
-)                                                                              \
-
-// Declare a property with the preset Getter (return x) and Setter (x = y),
-// statically-casting `y` into `cast`. Useful for getting rid of "possible loss of data"
-// warnings when converting between similar types (like `double` and `float`)
-#define REFLECTION_DECLAREPROP_SIMPLE_STATICCAST(c, name, type, cast) REFLECTION_DECLAREPROP(    \
-	#name,                                                                                       \
-	type,                                                                                        \
-	[](void* p)                                                                                  \
-	{                                                                                            \
-		return (Reflection::GenericValue)static_cast<c*>(p)->name;                               \
-	},                                                                                           \
-	[](void* p, const Reflection::GenericValue& gv)                                              \
-	{                                                                                            \
-		static_cast<c*>(p)->name = static_cast<cast>(gv.As##type());                             \
-	}                                                                                            \
-)  
-
-// Same as above, but for Complex Types that use Pointer (Vector3 and Color)
-// Calls their `operator Reflection::GenericValue`
-#define REFLECTION_DECLAREPROP_SIMPLE_TYPECAST(c, name, type) REFLECTION_DECLAREPROP(    \
-	#name,                                                                               \
-	type,                                                                                \
-	[](void* p)                                                                          \
-	{                                                                                    \
-		return static_cast<c*>(p)->name.ToGenericValue();                                \
-	},                                                                                   \
-	[](void* p, const Reflection::GenericValue& gv)                                      \
-	{                                                                                    \
-		static_cast<c*>(p)->name = type(gv);                                             \
-	}                                                                                    \
-)                                                                                        \
-
-// Declare a property with the preset Getter, but no Setter
-#define REFLECTION_DECLAREPROP_SIMPLE_READONLY(c, name, type) REFLECTION_DECLAREPROP(    \
-	#name,                                                                               \
-	type,                                                                                \
-	[](void* p)                                                                          \
-	{                                                                                    \
-		return Reflection::GenericValue(static_cast<c*>(p)->name);                       \
-	},                                                                                   \
-	nullptr                                                                              \
-)                                                                                        \
-
-#define REFLECTION_DECLAREFUNC(strname, ...) s_Api.Methods[strname] = Reflection::MethodDescriptor    \
-	{                                                                                       \
-		__VA_ARGS__                                                                         \
-	}                                                                                       \
+#define REFLECTION_PROPERTY_SIMPLE(c, n, t) REFLECTION_PROPERTY(#n, t, REFLECTION_PROPERTY_GET_SIMPLE(c, n), REFLECTION_PROPERTY_SET_SIMPLE(c, n, t))
+#define REFLECTION_PROPERTY_SIMPLE_NGV(c, n, t) REFLECTION_PROPERTY(#n, t, REFLECTION_PROPERTY_GET_SIMPLE_TGN(c, n), REFLECTION_PROPERTY_SET_SIMPLE_CTOR(c, n, t))
 
 #define REFLECTION_EVENT(c, n, ...) { \
 	#n, \
@@ -129,21 +40,7 @@ s_Api.Lineage.push_back(#base);                                            \
 	} \
 } \
 
-// 01/09/2024:
-// MUST be added to the `public` section of *all* objects so
-// any APIs they declare can be found
-// 29/11/2024: moved into `Reflection.hpp` from `GameObject.hpp`
-#define REFLECTION_DECLAREAPI static const Reflection::PropertyMap& s_GetProperties()  \
-{                                                                                      \
-	return s_Api.Properties;                                                           \
-}                                                                                      \
-                                                                                       \
-static const Reflection::MethodMap& s_GetMethods()                                     \
-{                                                                                      \
-	return s_Api.Methods;                                                              \
-}                                                                                      \
-
-#define REFLECTION_SIGNAL(CbList, ...) { ZoneScopedN(#CbList); \
+#define REFLECTION_SIGNAL_EVENT(CbList, ...) { ZoneScopedN(#CbList); \
 	for (size_t i = 0; i < CbList.size(); i++) \
 		if (const Reflection::EventCallback& cb = CbList[i]; cb) \
 			cb({ __VA_ARGS__ }); \
@@ -209,10 +106,10 @@ namespace Reflection
 			void* Ptr;
 		} Val = {};
 		// Array length or allocated memory for `Value`
-		size_t Size = 0;
+		uint32_t Size = 0;
 		Reflection::ValueType Type = Reflection::ValueType::Null; // at the end for better size
 
-		GenericValue();
+		GenericValue() = default;
 		~GenericValue();
 
 		GenericValue(const std::string_view&);
@@ -241,6 +138,7 @@ namespace Reflection
 		std::string ToString() const;
 		
 		// Throws errors if the type does not match
+		std::string AsString() const;
 		std::string_view AsStringView() const;
 		bool AsBoolean() const;
 		double AsDouble() const;
@@ -274,7 +172,7 @@ namespace Reflection
 		PropertyGetter Get;
 		PropertySetter Set;
 
-		Reflection::ValueType Type{}; // at the end for better size
+		Reflection::ValueType Type = ValueType::Null; // at the end for better size
 		bool Serializes = true;
 
 		PropertyDescriptor(Reflection::ValueType Ty, const PropertyGetter& Getter, const PropertySetter& Setter, bool Serializes = true)

@@ -17,6 +17,7 @@
           "ParameterNames": "ComponentName"
         },
         "ForEachChild": "For all children of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield",
+        "ForEachDescendant": "For all descendants of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield",
         "GetChildren": "Returns a list of the Object's direct children",
         "GetComponents": {
           "Description": "Returns a list of the names of all Components that the Object currently has",

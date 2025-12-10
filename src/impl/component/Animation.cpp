@@ -10,22 +10,21 @@ class AnimationManager : public ComponentManager<EcAnimation>
 public:
     const Reflection::StaticPropertyMap& GetProperties() override
     {
-        static const Reflection::StaticPropertyMap props =
-        {
-            EC_PROP(
+        static const Reflection::StaticPropertyMap props = {
+            REFLECTION_PROPERTY(
                 "Animation",
                 String,
-                EC_GET_SIMPLE(EcAnimation, Animation),
+                REFLECTION_PROPERTY_GET_SIMPLE(EcAnimation, Animation),
                 [](void* p, const Reflection::GenericValue& gv)
                 {
                     static_cast<EcAnimation*>(p)->SetAnimation(gv.AsStringView());
                 }
             ),
 
-            EC_PROP_SIMPLE(EcAnimation, Weight, Double),
-            EC_PROP_SIMPLE(EcAnimation, Playing, Boolean),
-            EC_PROP_SIMPLE(EcAnimation, Looped, Boolean),
-            EC_PROP("Ready", Boolean, EC_GET_SIMPLE(EcAnimation, Ready), nullptr)
+            REFLECTION_PROPERTY_SIMPLE(EcAnimation, Weight, Double),
+            REFLECTION_PROPERTY_SIMPLE(EcAnimation, Playing, Boolean),
+            REFLECTION_PROPERTY_SIMPLE(EcAnimation, Looped, Boolean),
+            REFLECTION_PROPERTY("Ready", Boolean, REFLECTION_PROPERTY_GET_SIMPLE(EcAnimation, Ready), nullptr)
         };
         return props;
     }

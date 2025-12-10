@@ -18,7 +18,7 @@ public:
     const Reflection::StaticPropertyMap& GetProperties() override
     {
         static const Reflection::StaticPropertyMap props = {
-            EC_PROP(
+            REFLECTION_PROPERTY(
                 "Time",
                 Double,
                 [](void*)

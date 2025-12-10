@@ -3,8 +3,8 @@
 #include "component/Light.hpp"
 #include "component/Transform.hpp"
 
-#define LIGHT_APIS(t) EC_PROP_SIMPLE_NGV(t, LightColor, Color), \
-EC_PROP_SIMPLE(t, Brightness, Double) \
+#define LIGHT_APIS(t) REFLECTION_PROPERTY_SIMPLE_NGV(t, LightColor, Color), \
+REFLECTION_PROPERTY_SIMPLE(t, Brightness, Double) \
 
 class PointLightManager : public ComponentManager<EcPointLight>
 {
@@ -25,7 +25,7 @@ public:
         {
             LIGHT_APIS(EcPointLight),
 
-			EC_PROP_SIMPLE(EcPointLight, Range, Double)
+			REFLECTION_PROPERTY_SIMPLE(EcPointLight, Range, Double)
         };
 
         return props;
@@ -54,9 +54,9 @@ public:
         {
             LIGHT_APIS(EcDirectionalLight),
 
-            EC_PROP_SIMPLE(EcDirectionalLight, Shadows, Boolean),
+            REFLECTION_PROPERTY_SIMPLE(EcDirectionalLight, Shadows, Boolean),
 
-            EC_PROP(
+            REFLECTION_PROPERTY(
                 "Direction",
                 Vector3,
                 [](void* p)
@@ -71,15 +71,15 @@ public:
                 }
             ),
 
-            EC_PROP_SIMPLE(EcDirectionalLight, ShadowViewOffset, Vector3),
-            EC_PROP_SIMPLE(EcDirectionalLight, ShadowViewDistance, Double),
-            EC_PROP_SIMPLE(EcDirectionalLight, ShadowViewSizeH, Double),
-            EC_PROP_SIMPLE(EcDirectionalLight, ShadowViewSizeV, Double),
-			EC_PROP_SIMPLE(EcDirectionalLight, ShadowViewNearPlane, Double),
-			EC_PROP_SIMPLE(EcDirectionalLight, ShadowViewFarPlane, Double),
-			EC_PROP_SIMPLE(EcDirectionalLight, ShadowViewMoveWithCamera, Boolean),
+            REFLECTION_PROPERTY_SIMPLE(EcDirectionalLight, ShadowViewOffset, Vector3),
+            REFLECTION_PROPERTY_SIMPLE(EcDirectionalLight, ShadowViewDistance, Double),
+            REFLECTION_PROPERTY_SIMPLE(EcDirectionalLight, ShadowViewSizeH, Double),
+            REFLECTION_PROPERTY_SIMPLE(EcDirectionalLight, ShadowViewSizeV, Double),
+			REFLECTION_PROPERTY_SIMPLE(EcDirectionalLight, ShadowViewNearPlane, Double),
+			REFLECTION_PROPERTY_SIMPLE(EcDirectionalLight, ShadowViewFarPlane, Double),
+			REFLECTION_PROPERTY_SIMPLE(EcDirectionalLight, ShadowViewMoveWithCamera, Boolean),
 
-            EC_PROP(
+            REFLECTION_PROPERTY(
                 "ShadowViewSize",
                 Double,
                 [](void* p)
@@ -129,8 +129,8 @@ public:
         {
             LIGHT_APIS(EcSpotLight),
 
-			EC_PROP_SIMPLE(EcSpotLight, Range, Double),
-			EC_PROP_SIMPLE(EcSpotLight, Angle, Double)
+			REFLECTION_PROPERTY_SIMPLE(EcSpotLight, Range, Double),
+			REFLECTION_PROPERTY_SIMPLE(EcSpotLight, Angle, Double)
         };
 
         return props;

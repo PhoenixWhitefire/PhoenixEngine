@@ -9,7 +9,7 @@ public:
     const Reflection::StaticPropertyMap& GetProperties() override
     {
         static const Reflection::StaticPropertyMap props = {
-            EC_PROP(
+            REFLECTION_PROPERTY(
                 "CursorMode",
                 Integer,
                 [](void* p) -> Reflection::GenericValue
@@ -22,7 +22,7 @@ public:
                 }
             ),
 
-            EC_PROP(
+            REFLECTION_PROPERTY(
                 "IsKeyboardSunk",
                 Boolean,
                 [](void* p) -> Reflection::GenericValue
@@ -32,7 +32,7 @@ public:
                 nullptr
             ),
 
-            EC_PROP(
+            REFLECTION_PROPERTY(
                 "IsMouseSunk",
                 Boolean,
                 [](void* p) -> Reflection::GenericValue

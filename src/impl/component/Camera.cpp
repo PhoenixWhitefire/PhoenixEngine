@@ -24,10 +24,9 @@ public:
 
     const Reflection::StaticPropertyMap& GetProperties() override
     {
-        static const Reflection::StaticPropertyMap props = 
-        {
-			EC_PROP_SIMPLE(EcCamera, UseSimpleController, Boolean),
-			EC_PROP_SIMPLE(EcCamera, FieldOfView, Double)
+        static const Reflection::StaticPropertyMap props = {
+			REFLECTION_PROPERTY_SIMPLE(EcCamera, UseSimpleController, Boolean),
+			REFLECTION_PROPERTY_SIMPLE(EcCamera, FieldOfView, Double)
         };
 
         return props;

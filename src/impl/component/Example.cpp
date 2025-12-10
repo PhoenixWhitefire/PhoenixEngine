@@ -22,7 +22,7 @@ public:
     {
         static const Reflection::StaticPropertyMap props = 
         {
-            EC_PROP(
+            REFLECTION_PROPERTY(
                 "SuperCoolBool",
                 Boolean,
 				[](void* p)
@@ -39,12 +39,12 @@ public:
             ),
 
 			// Effectively equivalent to the above
-			EC_PROP_SIMPLE(EcExample, SomeInteger, Integer),
-			EC_PROP_SIMPLE(EcExample, WhereIAm, Vector3),
+			REFLECTION_PROPERTY_SIMPLE(EcExample, SomeInteger, Integer),
+			REFLECTION_PROPERTY_SIMPLE(EcExample, WhereIAm, Vector3),
 			// A read-only property
-			EC_PROP("SecretMessage", String, EC_GET_SIMPLE(EcExample, SecretMessage), nullptr),
+			REFLECTION_PROPERTY("SecretMessage", String, REFLECTION_PROPERTY_GET_SIMPLE(EcExample, SecretMessage), nullptr),
 			// A property
-			EC_PROP("EvenMoreSecretMessage", String, nullptr, nullptr)
+			REFLECTION_PROPERTY("EvenMoreSecretMessage", String, nullptr, nullptr)
         };
 
         return props;
@@ -89,7 +89,7 @@ public:
 						Reflection::GenericValue(result)
 					};
 
-					REFLECTION_SIGNAL(ex->OnGreetedCallbacks, returnVals);
+					REFLECTION_SIGNAL_EVENT(ex->OnGreetedCallbacks, returnVals);
 
 					return returnVals;
 				}

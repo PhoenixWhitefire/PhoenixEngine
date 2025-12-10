@@ -4,16 +4,6 @@
 
 #define PHX_GAMEOBJECT_NULL_ID UINT32_MAX
 
-#define EC_GET_SIMPLE(c, n) [](void* p)->Reflection::GenericValue { return static_cast<c*>(p)->n; }
-#define EC_GET_SIMPLE_TGN(c, n) [](void* p)->Reflection::GenericValue { return static_cast<c*>(p)->n.ToGenericValue(); }
-#define EC_SET_SIMPLE(c, n, t) [](void* p, const Reflection::GenericValue& gv)->void { static_cast<c*>(p)->n = gv.As##t(); }
-#define EC_SET_SIMPLE_CTOR(c, n, t) [](void* p, const Reflection::GenericValue& gv)->void { static_cast<c*>(p)->n = t(gv); }
-
-#define EC_PROP(strn, t, g, s) { strn, { Reflection::ValueType::t, (Reflection::PropertyGetter)g, (Reflection::PropertySetter)s } }
-
-#define EC_PROP_SIMPLE(c, n, t) EC_PROP(#n, t, EC_GET_SIMPLE(c, n), EC_SET_SIMPLE(c, n, t))
-#define EC_PROP_SIMPLE_NGV(c, n, t) EC_PROP(#n, t, EC_GET_SIMPLE_TGN(c, n), EC_SET_SIMPLE_CTOR(c, n, t))
-
 #include <unordered_map>
 #include <string_view>
 #include <functional>
@@ -127,11 +117,9 @@ struct Component
 class GameObject
 {
 public:
-	GameObject();
-
 	static GameObject* FromGenericValue(const Reflection::GenericValue&);
 
-	static bool IsValidClass(const std::string_view&);
+	static EntityComponent s_FindComponentTypeByName(const std::string_view&);
 	// create with a component
 	static GameObject* Create(EntityComponent);
 	static GameObject* Create(const std::string_view&);
@@ -221,16 +209,13 @@ public:
 
 	Memory::vector<uint32_t, MEMCAT(GameObject)> Children;
 	Memory::vector<ReflectorRef, MEMCAT(GameObject)> Components;
-	Reflection::Api ComponentApis{};
+	Reflection::Api ComponentApis;
 	Memory::unordered_map<std::string_view, ReflectorRef, MEMCAT(GameObject)> MemberToComponentMap;
 
 	static nlohmann::json DumpApiToJson();
+	static const Reflection::StaticApi s_Api;
 
 private:
-	static void s_AddObjectApi();
-
-	static inline Reflection::StaticApi s_Api{};
-
 	uint16_t m_HardRefCount = 0;
 };
 

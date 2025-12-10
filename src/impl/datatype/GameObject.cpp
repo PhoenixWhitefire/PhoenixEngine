@@ -16,6 +16,222 @@ const std::unordered_map<std::string_view, EntityComponent> s_ComponentNameToTyp
 	return map;
 }();
 
+const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
+	.Properties = {
+		REFLECTION_PROPERTY_SIMPLE(GameObject, Name, String),
+		REFLECTION_PROPERTY_SIMPLE(GameObject, Enabled, Boolean),
+		REFLECTION_PROPERTY_SIMPLE(GameObject, Serializes, Boolean),
+		REFLECTION_PROPERTY("ObjectId", Integer, REFLECTION_PROPERTY_GET_SIMPLE(GameObject, ObjectId), nullptr),
+
+		REFLECTION_PROPERTY(
+			"Exists",
+			Boolean,
+			[](void*) -> Reflection::GenericValue
+			{
+				return true; // actual logic is handled in `obj_index`
+			},
+			nullptr
+		),
+
+		{ "Parent", Reflection::PropertyDescriptor{
+			REFLECTION_OPTIONAL(GameObject),
+			[](void* p) -> Reflection::GenericValue
+			{
+				return static_cast<GameObject*>(p)->GetParent()->ToGenericValue();
+			},
+			[](void* p, const Reflection::GenericValue& gv)
+			{
+				static_cast<GameObject*>(p)->SetParent(GameObject::FromGenericValue(gv));
+			}
+		} }
+	},
+
+	.Methods = {
+		{ "Destroy", Reflection::MethodDescriptor{
+			{},
+			{},
+			[](void* p, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+			{
+				static_cast<GameObject*>(p)->Destroy();
+				return {};
+			}
+		} },
+
+		{ "GetFullName", Reflection::MethodDescriptor{
+			{},
+			{ Reflection::ValueType::String },
+			[](void* p, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+			{
+				return { static_cast<GameObject*>(p)->GetFullName() };
+			}
+		} },
+
+		{ "ForEachChild", Reflection::MethodDescriptor{
+			{ Reflection::ValueType::Function },
+			{},
+			[](void* p, const std::vector<Reflection::GenericValue>& gv) -> std::vector<Reflection::GenericValue>
+			{
+				const Reflection::GenericFunction& gf = gv.at(0).AsFunction(); // damn
+
+				static_cast<GameObject*>(p)->ForEachChild(
+					// damn
+					[gf](GameObject* g)
+					-> bool
+					{
+						std::vector<Reflection::GenericValue> rets = gf({ g->ToGenericValue() }); // damn
+						PHX_ENSURE_MSG(rets.size() <= 1, "`:ForEachChild` expects none or one return value");
+
+						if (rets.size() == 0)
+							return true;
+						else
+							return rets[0].AsBoolean();
+					}
+				);
+
+				return {};
+			}
+		} },
+
+		{ "GetChildren", Reflection::MethodDescriptor{
+			{},
+			{ Reflection::ValueType::Array },
+			[](void* p, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+			{
+				std::vector<Reflection::GenericValue> retval;
+				for (GameObject* g : static_cast<GameObject*>(p)->GetChildren())
+					retval.push_back(g->ToGenericValue());
+
+				// ctor for ValueType::Array
+				return { Reflection::GenericValue(retval) };
+			}
+		} },
+
+		{ "GetDescendants", Reflection::MethodDescriptor{
+			{},
+			{ Reflection::ValueType::Array },
+			[](void* p, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+			{
+				std::vector<Reflection::GenericValue> retval;
+				for (GameObject* g : static_cast<GameObject*>(p)->GetDescendants())
+					retval.push_back(g->ToGenericValue());
+
+				// ctor for ValueType::Array
+				return { Reflection::GenericValue(retval) };
+			}
+		} },
+
+		{ "Duplicate", Reflection::MethodDescriptor{
+			{},
+			{ Reflection::ValueType::GameObject },
+			[](void* p, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+			{
+				GameObject* g = static_cast<GameObject*>(p);
+				return { g->Duplicate()->ToGenericValue() };
+			}
+		} },
+
+		{ "MergeWith", Reflection::MethodDescriptor{
+			{ Reflection::ValueType::GameObject },
+			{},
+			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+			{
+				GameObject* g = static_cast<GameObject*>(p);
+				GameObject* o = GameObject::FromGenericValue(inputs[0]);
+
+				g->MergeWith(o);
+				return { g->ToGenericValue() };
+			}
+		} },
+
+		{ "FindChild", Reflection::MethodDescriptor{
+			{ Reflection::ValueType::String },
+			{ REFLECTION_OPTIONAL(GameObject) },
+			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+			{
+				GameObject* g = static_cast<GameObject*>(p);
+				return { g->FindChild(inputs[0].AsStringView())->ToGenericValue() };
+			}
+		} },
+
+		{ "FindChildWithComponent", Reflection::MethodDescriptor{
+			{ Reflection::ValueType::String },
+			{ REFLECTION_OPTIONAL(GameObject) },
+			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+			{
+				EntityComponent ec = GameObject::s_FindComponentTypeByName(inputs[0].AsStringView());
+				if (ec == EntityComponent::None)
+					RAISE_RTF("Invalid component type '{}'", inputs[0].AsStringView());
+
+				GameObject* g = static_cast<GameObject*>(p);
+				return { g->FindChildWithComponent(ec)->ToGenericValue() };
+			}
+		} },
+
+		{ "GetComponents", Reflection::MethodDescriptor{
+			{},
+			{ Reflection::ValueType::Array },
+			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+			{
+				std::vector<Reflection::GenericValue> ret;
+
+				for (const ReflectorRef& ref : static_cast<GameObject*>(p)->Components)
+					ret.emplace_back(s_EntityComponentNames[(size_t)ref.Type]);
+
+				return { ret };
+			}
+		} },
+
+		{ "HasComponent", Reflection::MethodDescriptor{
+			{ Reflection::ValueType::String },
+			{ Reflection::ValueType::Boolean },
+			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+			{
+				EntityComponent ec = GameObject::s_FindComponentTypeByName(inputs[0].AsStringView());
+				if (ec == EntityComponent::None)
+					RAISE_RT("Invalid component");
+
+				for (const ReflectorRef& ref : static_cast<GameObject*>(p)->Components)
+					if (ref.Type == ec)
+						return { true };
+
+				return { false };
+			}
+		} },
+
+		{ "AddComponent", Reflection::MethodDescriptor{
+			{ Reflection::ValueType::String },
+			{},
+			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+			{
+				EntityComponent ec = GameObject::s_FindComponentTypeByName(inputs[0].AsStringView());
+				if (ec == EntityComponent::None)
+					RAISE_RT("Invalid component");
+
+				GameObject* obj = static_cast<GameObject*>(p);
+				obj->AddComponent(ec);
+
+				return {};
+			}
+		} },
+
+		{ "RemoveComponent", Reflection::MethodDescriptor{
+			{ Reflection::ValueType::String },
+			{},
+			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+			{
+				EntityComponent ec = GameObject::s_FindComponentTypeByName(inputs[0].AsStringView());
+				if (ec == EntityComponent::None)
+					RAISE_RT("Invalid component");
+
+				GameObject* obj = static_cast<GameObject*>(p);
+				obj->RemoveComponent(ec);
+
+				return {};
+			}
+		} },
+	}
+};
+
 // https://stackoverflow.com/a/75891310
 struct RefHasher
 {
@@ -145,263 +361,6 @@ static void mergeRecursive(
 		}
 }
 
-void GameObject::s_AddObjectApi()
-{
-	static bool s_DidInitApi = false;
-
-	if (s_DidInitApi)
-		return;
-	s_DidInitApi = true;
-
-	REFLECTION_DECLAREPROP_SIMPSTR(GameObject, Name);
-	REFLECTION_DECLAREPROP_SIMPLE(GameObject, Enabled, Boolean);
-	REFLECTION_DECLAREPROP_SIMPLE(GameObject, Serializes, Boolean);
-	REFLECTION_DECLAREPROP_SIMPLE_READONLY(GameObject, ObjectId, Integer);
-	REFLECTION_DECLAREPROP(
-		"Exists",
-		Boolean,
-		[](void* p) -> Reflection::GenericValue
-		{
-			return true; // actual logic is handled in `api_gameobjindex`
-		},
-		nullptr
-	);
-	s_Api.Properties["Parent"] = Reflection::PropertyDescriptor
-	{
-		REFLECTION_OPTIONAL(GameObject),
-		[](void* p)
-		{
-			return static_cast<GameObject*>(p)->GetParent()->ToGenericValue();
-		},
-		[](void* p, const Reflection::GenericValue& gv)
-		{
-			static_cast<GameObject*>(p)->SetParent(GameObject::FromGenericValue(gv));
-		}
-	};
-
-	REFLECTION_DECLAREFUNC(
-		"Destroy",
-		{},
-		{},
-		[](void* p, const std::vector<Reflection::GenericValue>&)
-		-> std::vector<Reflection::GenericValue>
-		{
-			static_cast<GameObject*>(p)->Destroy();
-			return {};
-		}
-	);
-	REFLECTION_DECLAREFUNC(
-		"GetFullName",
-		{},
-		{ Reflection::ValueType::String },
-		[](void* p, const std::vector<Reflection::GenericValue>&)
-		-> std::vector<Reflection::GenericValue>
-		{
-			return { static_cast<GameObject*>(p)->GetFullName() };
-		}
-	);
-
-	REFLECTION_DECLAREFUNC(
-		"ForEachChild",
-		{ Reflection::ValueType::Function },
-		{},
-		[](void* p, const std::vector<Reflection::GenericValue>& gv)
-		-> std::vector<Reflection::GenericValue>
-		{
-			const Reflection::GenericFunction& gf = gv.at(0).AsFunction(); // damn
-
-			static_cast<GameObject*>(p)->ForEachChild(
-				// damn
-				[gf](GameObject* g)
-				-> bool
-				{
-					std::vector<Reflection::GenericValue> rets = gf({ g->ToGenericValue() }); // damn
-					PHX_ENSURE_MSG(rets.size() <= 1, "`:ForEachChild` expects none or one return value");
-
-					if (rets.size() == 0)
-						return true;
-					else
-						return rets[0].AsBoolean();
-				}
-			);
-
-			return {};
-		}
-	);
-
-	REFLECTION_DECLAREFUNC(
-		"GetChildren",
-		{},
-		{ Reflection::ValueType::Array },
-		[](void* p, const std::vector<Reflection::GenericValue>&)
-		-> std::vector<Reflection::GenericValue>
-		{
-			std::vector<Reflection::GenericValue> retval;
-			for (GameObject* g : static_cast<GameObject*>(p)->GetChildren())
-				retval.push_back(g->ToGenericValue());
-
-			// ctor for ValueType::Array
-			return { Reflection::GenericValue(retval) };
-		}
-	);
-
-	REFLECTION_DECLAREFUNC(
-		"GetDescendants",
-		{},
-		{ Reflection::ValueType::Array },
-		[](void* p, const std::vector<Reflection::GenericValue>&)
-		-> std::vector<Reflection::GenericValue>
-		{
-			std::vector<Reflection::GenericValue> retval;
-			for (GameObject* g : static_cast<GameObject*>(p)->GetDescendants())
-				retval.push_back(g->ToGenericValue());
-
-			// ctor for ValueType::Array
-			return { Reflection::GenericValue(retval) };
-		}
-	);
-
-	REFLECTION_DECLAREFUNC(
-		"Duplicate",
-		{},
-		{ Reflection::ValueType::GameObject },
-		[](void* p, const std::vector<Reflection::GenericValue>&)
-		-> std::vector<Reflection::GenericValue>
-		{
-			GameObject* g = static_cast<GameObject*>(p);
-
-			return { g->Duplicate()->ToGenericValue() };
-		}
-	);
-
-	REFLECTION_DECLAREFUNC(
-		"MergeWith",
-		{ Reflection::ValueType::GameObject },
-		{},
-		[](void* p, const std::vector<Reflection::GenericValue>& inputs)
-		-> std::vector<Reflection::GenericValue>
-		{
-			// copy everything over from the input object
-			// objects with the same name will have their properties
-			// copied over
-
-			GameObject* inputObject = GameObject::FromGenericValue(inputs.at(0));
-			GameObject* me = static_cast<GameObject*>(p);
-
-			me->MergeWith(inputObject);
-
-			return {};
-		}
-	);
-
-	REFLECTION_DECLAREFUNC(
-		"FindChild",
-		{ Reflection::ValueType::String },
-		{ REFLECTION_OPTIONAL(GameObject) },
-		[](void* p, const std::vector<Reflection::GenericValue>& inputs)
-		-> std::vector<Reflection::GenericValue>
-		{
-			return { static_cast<GameObject*>(p)->FindChild(inputs.at(0).AsStringView())->ToGenericValue() };
-		}
-	);
-
-	REFLECTION_DECLAREFUNC(
-		"FindChildWithComponent",
-		{ Reflection::ValueType::String },
-		{ REFLECTION_OPTIONAL(GameObject) },
-		[](void* p, const std::vector<Reflection::GenericValue>& inputs)
-		-> std::vector<Reflection::GenericValue>
-		{
-			const auto& it = s_ComponentNameToType.find(inputs[0].AsStringView());
-			if (it == s_ComponentNameToType.end())
-				RAISE_RTF("Invalid component type '{}'", inputs[0].AsStringView());
-
-			return { static_cast<GameObject*>(p)->FindChildWithComponent(it->second)->ToGenericValue() };
-		}
-	);
-
-	REFLECTION_DECLAREFUNC(
-		"GetComponents",
-		{},
-		{ Reflection::ValueType::Array },
-		[](void* p, const std::vector<Reflection::GenericValue>&)
-		-> std::vector<Reflection::GenericValue>
-		{
-			std::vector<Reflection::GenericValue> ret;
-
-			for (const ReflectorRef& ref : static_cast<GameObject*>(p)->Components)
-				ret.emplace_back(s_EntityComponentNames[(size_t)ref.Type]);
-			
-			return { ret };
-		}
-	);
-
-	REFLECTION_DECLAREFUNC(
-		"HasComponent",
-		{ Reflection::ValueType::String },
-		{ Reflection::ValueType::Boolean },
-		[](void* p, const std::vector<Reflection::GenericValue>& inputs)
-		-> std::vector<Reflection::GenericValue>
-		{
-			std::string_view requested = inputs.at(0).AsStringView();
-
-			if (!GameObject::IsValidClass(requested))
-				RAISE_RT("Invalid component");
-			
-			for (const ReflectorRef& ref : static_cast<GameObject*>(p)->Components)
-				if (s_EntityComponentNames[(size_t)ref.Type] == requested)
-					return { true };
-			
-			return { false };
-		}
-	);
-
-	REFLECTION_DECLAREFUNC(
-		"AddComponent",
-		{ Reflection::ValueType::String },
-		{},
-		[](void* p, const std::vector<Reflection::GenericValue>& inputs)
-		-> std::vector<Reflection::GenericValue>
-		{
-			std::string_view requested = inputs.at(0).AsStringView();
-			const auto& it = s_ComponentNameToType.find(requested);
-
-			if (it == s_ComponentNameToType.end())
-				RAISE_RT("Invalid component");
-
-			GameObject* obj = static_cast<GameObject*>(p);
-			obj->AddComponent(it->second);
-
-			return {};
-		}
-	);
-
-	REFLECTION_DECLAREFUNC(
-		"RemoveComponent",
-		{ Reflection::ValueType::String },
-		{},
-		[](void* p, const std::vector<Reflection::GenericValue>& inputs)
-		-> std::vector<Reflection::GenericValue>
-		{
-			std::string_view requested = inputs.at(0).AsStringView();
-			const auto& it = s_ComponentNameToType.find(requested);
-
-			if (it == s_ComponentNameToType.end())
-				RAISE_RT("Invalid component");
-
-			GameObject* obj = static_cast<GameObject*>(p);
-			obj->RemoveComponent(it->second);
-
-			return {};
-		}
-	);
-}
-
-GameObject::GameObject()
-{
-	s_AddObjectApi();
-}
-
 GameObject* GameObject::Duplicate()
 {
 	ZoneScoped;
@@ -435,13 +394,14 @@ GameObject* GameObject::FromGenericValue(const Reflection::GenericValue& gv)
 	return GameObject::GetObjectById(static_cast<uint32_t>(gv.Val.Int));
 }
 
-bool GameObject::IsValidClass(const std::string_view& ObjectClass)
+EntityComponent GameObject::s_FindComponentTypeByName(const std::string_view& Name)
 {
-	for (size_t i = 0; i < (size_t)EntityComponent::__count; i++)
-		if (s_EntityComponentNames[i] == ObjectClass)
-			return true;
+	const auto& it = s_ComponentNameToType.find(Name);
 
-	return false;
+	if (it == s_ComponentNameToType.end())
+		return EntityComponent::None;
+	else
+		return it->second;
 }
 
 GameObject* GameObject::GetObjectById(uint32_t Id)
@@ -1073,7 +1033,6 @@ nlohmann::json GameObject::DumpApiToJson()
 	nlohmann::json& gameObjectApi = dump["Base"];
 	nlohmann::json& componentApi = dump["Components"];
 
-	s_AddObjectApi(); // make sure we have the api
 	dumpProperties(s_Api.Properties, gameObjectApi);
 	dumpMethods(s_Api.Methods, gameObjectApi);
 	dumpEvents(s_Api.Events, gameObjectApi);
