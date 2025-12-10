@@ -593,6 +593,9 @@
   "@luhx/globaltype/GameObject.ForEachChild": {
     "documentation": "For all children of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield"
   },
+  "@luhx/globaltype/GameObject.ForEachDescendant": {
+    "documentation": "For all descendants of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield"
+  },
   "@luhx/globaltype/GameObject.GetChildren": {
     "documentation": "Returns a list of the Object's direct children"
   },

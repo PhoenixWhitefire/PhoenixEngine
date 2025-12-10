@@ -8,6 +8,7 @@
         "FindChild": "(String) -> (GameObject?)",
         "FindChildWithComponent": "(String) -> (GameObject?)",
         "ForEachChild": "(Function) -> ()",
+        "ForEachDescendant": "(Function) -> ()",
         "GetChildren": "() -> (Array)",
         "GetComponents": "() -> (Array)",
         "GetDescendants": "() -> (Array)",

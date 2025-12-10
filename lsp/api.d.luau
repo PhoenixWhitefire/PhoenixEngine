@@ -68,6 +68,7 @@ declare extern type GameObject with
   function FindChild(self, ChildName: string) : ((GameObject & any)?)
   function FindChildWithComponent(self, ComponentName: string) : ((GameObject & any)?)
   function ForEachChild(self, Param_1: (any) -> (any)) : ()
+  function ForEachDescendant(self, Param_1: (any) -> (any)) : ()
   function GetChildren(self) : ({ any })
   function GetComponents(self) : (keyof<Creatables>)
   function GetDescendants(self) : ({ any })

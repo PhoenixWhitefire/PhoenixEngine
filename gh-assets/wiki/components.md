@@ -18,6 +18,7 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * `FindChild(string) : ((GameObject & any)?)`: Returns a child Object with the given name, or `nil` if one doesn't exist
 * `FindChildWithComponent(string) : ((GameObject & any)?)`: Returns a child Object which has the given component, or `nil` if one doesn't exist
 * `ForEachChild((any) -> (any)) : ()`: For all children of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield
+* `ForEachDescendant((any) -> (any)) : ()`: For all descendants of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield
 * `GetChildren() : ({ any })`: Returns a list of the Object's direct children
 * `GetComponents() : (keyof<Creatables>)`: Returns a list of the names of all Components that the Object currently has
 * `GetDescendants() : ({ any })`: Returns all descendants of the Object (i.e. its children, and their children, etc)

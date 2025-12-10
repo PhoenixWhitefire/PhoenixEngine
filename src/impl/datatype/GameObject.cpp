@@ -92,6 +92,32 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 			}
 		} },
 
+		{ "ForEachDescendant", Reflection::MethodDescriptor{
+			{ Reflection::ValueType::Function },
+			{},
+			[](void* p, const std::vector<Reflection::GenericValue>& gv) -> std::vector<Reflection::GenericValue>
+			{
+				const Reflection::GenericFunction& gf = gv.at(0).AsFunction(); // damn
+
+				static_cast<GameObject*>(p)->ForEachDescendant(
+					// damn
+					[gf](GameObject* g)
+					-> bool
+					{
+						std::vector<Reflection::GenericValue> rets = gf({ g->ToGenericValue() }); // damn
+						PHX_ENSURE_MSG(rets.size() <= 1, "`:ForEachChild` expects none or one return value");
+
+						if (rets.size() == 0)
+							return true;
+						else
+							return rets[0].AsBoolean();
+					}
+				);
+
+				return {};
+			}
+		} },
+
 		{ "GetChildren", Reflection::MethodDescriptor{
 			{},
 			{ Reflection::ValueType::Array },
