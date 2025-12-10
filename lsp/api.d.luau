@@ -20,23 +20,25 @@ declare GameObject: {
   new: (<T>(ComponentName: T) -> GameObject & index<Creatables, T>) & ((ComponentName: string) -> GameObject & any)
 }
 declare extern type Matrix with
+  function Inverse(self): ( Matrix )
   function __mul(self, Param_1: Matrix): ( Matrix )
   Right: vector
   C1R1: number
+  C3R3: number
   C4R1: number
   C3R1: number
   C2R1: number
-  C1R2: number
+  C2R2: number
   C3R2: number
   C4R2: number
   Up: vector
   C4R3: number
-  C3R3: number
+  function Lerp(self, Target: Matrix, Delta: number): ( Matrix )
   C2R3: number
   C1R3: number
-  C2R2: number
   Forward: vector
   C4R4: number
+  C1R2: number
   Position: vector
   C1R4: number
   C2R4: number

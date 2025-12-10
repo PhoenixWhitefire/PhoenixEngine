@@ -474,7 +474,11 @@ local function documentDatatype(name)
 					table.insert(newinputs, `Param_{i}: {t}`)
 				end
 
-				defargs = "self, " .. table.concat(newinputs, ", ")
+				if not args:find(":") then
+					defargs = "self, " .. table.concat(newinputs, ", ")
+				else
+					defargs = "self, " .. args
+				end
 			end
 
 			datatype ..= `#### \`{ rk }({ args }): { returns }\`\n`

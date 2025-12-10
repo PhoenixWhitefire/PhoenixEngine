@@ -70,6 +70,9 @@ Additional types with methods and properties
 #### `Matrix.fromEulerAnglesXYZ(X: number, Y: number, Z: number): Matrix`
 #### `Matrix.fromEulerAnglesXYZ(Angles: vector): Matrix`
 * Creates a Matrix which has been rotated by the given Euler angles (in radians) with the rotation order X-Y-Z
+#### `Inverse(): Matrix`
+* Returns the inverse of the Matrix
+
 #### `__mul(Matrix): Matrix`
 * Two Matrices may be multiplied together with the `*` operator
 
@@ -78,6 +81,9 @@ Additional types with methods and properties
 
 #### `.C1R1: number`
 * The value at Column 1, Row 1
+
+#### `.C3R3: number`
+* The value at Column 3, Row 3
 
 #### `.C4R1: number`
 * The value at Column 4, Row 1
@@ -88,8 +94,8 @@ Additional types with methods and properties
 #### `.C2R1: number`
 * The value at Column 2, Row 1
 
-#### `.C1R2: number`
-* The value at Column 1, Row 2
+#### `.C2R2: number`
+* The value at Column 2, Row 2
 
 #### `.C3R2: number`
 * The value at Column 3, Row 2
@@ -103,8 +109,8 @@ Additional types with methods and properties
 #### `.C4R3: number`
 * The value at Column 4, Row 3
 
-#### `.C3R3: number`
-* The value at Column 3, Row 3
+#### `Lerp(Target: Matrix, Delta: number): Matrix`
+* Linearly interpolates to the given Matrix
 
 #### `.C2R3: number`
 * The value at Column 2, Row 3
@@ -112,14 +118,14 @@ Additional types with methods and properties
 #### `.C1R3: number`
 * The value at Column 1, Row 3
 
-#### `.C2R2: number`
-* The value at Column 2, Row 2
-
 #### `.Forward: vector`
 * The forward vector of the Matrix
 
 #### `.C4R4: number`
 * The value at Column 4, Row 4
+
+#### `.C1R2: number`
+* The value at Column 1, Row 2
 
 #### `.Position: vector`
 * The position of the Matrix in world-space

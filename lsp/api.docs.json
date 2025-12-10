@@ -701,6 +701,12 @@
   "@luhx/globaltype/Matrix.Forward": {
     "documentation": "* The forward vector of the Matrix\n"
   },
+  "@luhx/globaltype/Matrix.Inverse": {
+    "documentation": "* Returns the inverse of the Matrix\n"
+  },
+  "@luhx/globaltype/Matrix.Lerp": {
+    "documentation": "* Linearly interpolates to the given Matrix\n"
+  },
   "@luhx/globaltype/Matrix.Position": {
     "documentation": "* The position of the Matrix in world-space\n"
   },

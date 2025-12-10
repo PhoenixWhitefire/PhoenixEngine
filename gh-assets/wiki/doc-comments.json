@@ -631,6 +631,15 @@
           ":ExtractAngles": {
             "Description": "Extracts the orientation of the Matrix as euler angles in the YXZ rotation order",
             "Out": "vector"
+          },
+          ":Inverse": {
+            "Description": "Returns the inverse of the Matrix",
+            "Out": "Matrix"
+          },
+          ":Lerp": {
+            "Description": "Linearly interpolates to the given Matrix",
+            "In": "Target: Matrix, Delta: number",
+            "Out": "Matrix"
           }
         },
         "Operations": {

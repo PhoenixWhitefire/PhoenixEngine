@@ -4,6 +4,7 @@
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/euler_angles.hpp>
+#include <glm/gtx/matrix_interpolation.hpp>
 
 #include "script/luhx.hpp"
 
@@ -173,6 +174,37 @@ static int mtx_index(lua_State* L)
 				return 1;
 			},
 			"Matrix.ExtractAngles"
+		);
+	}
+
+	else if (strcmp(k, "Inverse") == 0)
+	{
+		lua_pushcfunction(
+			L,
+			[](lua_State* L) -> int
+			{
+				const glm::mat4& m = *(glm::mat4*)luaL_checkudata(L, 1, LUHX_MATRIXLIBNAME);
+
+				luhx_pushmatrix(L, glm::inverse(m));
+				return 1;
+			},
+			"Matrix.Inverse"
+		);
+	}
+
+	else if (strcmp(k, "Lerp") == 0)
+	{
+		lua_pushcfunction(
+			L,
+			[](lua_State* L) -> int
+			{
+				const glm::mat4& a = *(glm::mat4*)luaL_checkudata(L, 1, LUHX_MATRIXLIBNAME);
+				const glm::mat4& b = *(glm::mat4*)luaL_checkudata(L, 2, LUHX_MATRIXLIBNAME);
+
+				luhx_pushmatrix(L, glm::interpolate(a, b, (float)luaL_checknumber(L, 3)));
+				return 1;
+			},
+			"Matrix.Lerp"
 		);
 	}
 
