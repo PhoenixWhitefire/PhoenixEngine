@@ -51,8 +51,7 @@ public:
 
     const Reflection::StaticPropertyMap& GetProperties() override
     {
-        static const Reflection::StaticPropertyMap props = 
-        {
+        static const Reflection::StaticPropertyMap props = {
             { "SourceFile", {
 				Reflection::ValueType::String,
 				REFLECTION_PROPERTY_GET_SIMPLE(EcScript, SourceFile),
@@ -70,8 +69,7 @@ public:
 
     const Reflection::StaticMethodMap& GetMethods() override
     {
-        static const Reflection::StaticMethodMap funcs =
-		{
+        static const Reflection::StaticMethodMap funcs = {
 			{ "Reload", {
 				{},
 				{ Reflection::ValueType::Boolean },
@@ -85,6 +83,7 @@ public:
 				}
 			} }
 		};
+
         return funcs;
     }
 };

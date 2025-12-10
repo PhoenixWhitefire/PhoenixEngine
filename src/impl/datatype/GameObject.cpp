@@ -964,9 +964,7 @@ GameObject* GameObject::Create()
 #ifndef NDEBUG
 
 	// cause as many re-allocations as possible to catch stale pointers
-	//if (s_WorldArray.size() > 15)
-	//	s_WorldArray.shrink_to_fit();
-	// cant be bothered 29/05/2025
+	s_WorldArray.shrink_to_fit();
 
 #endif
 

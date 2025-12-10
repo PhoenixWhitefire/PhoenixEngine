@@ -139,7 +139,6 @@ add_dependencies(PhoenixEngine
 	TracyClient
 	glm
 	Luau.Compiler
-	Luau.Analysis
 	Luau.Require
 	Luau.VM
 	glfw

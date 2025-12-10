@@ -75,8 +75,7 @@ static int sig_namecall(lua_State* L)
 		uint32_t cnId = rev->Connect(
 			ev->Reflector.Referred(),
 
-			[eL, cL, rev, callerInfo](const std::vector<Reflection::GenericValue>& Inputs)
-			-> void
+			[eL, cL, rev, callerInfo](const std::vector<Reflection::GenericValue>& Inputs) -> void
 			{
 				ZoneScopedN("RunEventCallback");
 				ZoneText(callerInfo.data(), callerInfo.size());

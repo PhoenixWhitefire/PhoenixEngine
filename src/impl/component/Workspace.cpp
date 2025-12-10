@@ -438,17 +438,19 @@ GameObject* EcWorkspace::GetSceneCamera() const
 
 void EcWorkspace::SetSceneCamera(GameObject* NewCam)
 {
+	ObjectRef nc = NewCam;
+
 	if (NewCam && !NewCam->FindComponent<EcCamera>())
 		RAISE_RT("Must have a Camera component!");
 
 	if (GameObject* prevCam = GetSceneCamera())
-		if (prevCam != NewCam)
+		if (prevCam->ObjectId != nc->ObjectId)
 			prevCam->FindComponent<EcCamera>()->IsSceneCamera = false;
 
-	m_SceneCameraId = NewCam ? NewCam->ObjectId : UINT32_MAX;
+	m_SceneCameraId = nc ? nc->ObjectId : UINT32_MAX;
 
-	if (NewCam)
-		NewCam->FindComponent<EcCamera>()->IsSceneCamera = true;
+	if (nc.Referred())
+		nc->FindComponent<EcCamera>()->IsSceneCamera = true;
 }
 
 void EcWorkspace::Update() const
