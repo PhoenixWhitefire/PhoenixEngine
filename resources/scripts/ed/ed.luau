@@ -437,6 +437,10 @@ local function homeTab(_: number)
 
 	if tabButton("Import Model", "@etextures/editor-icons/Model.png") then
 		defer(function()
+			if not fs.isdirectory("models/") then
+				assert(fs.mkdir("models/"))
+			end
+
 			local paths = fs.promptopen("models/", { "*.gltf", "*.glb" }, "Models")
 
 			if paths[1] then
