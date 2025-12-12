@@ -28,7 +28,10 @@ static uint16_t readU16(const std::string_view& vec, size_t offset, bool* fileTo
 		return UINT16_MAX;
 	}
 
-	return *(const uint16_t*)&vec.at(offset);
+	uint16_t u16 = 0;
+	memcpy(&u16, vec.data() + offset, sizeof(uint16_t));
+
+	return u16;
 }
 
 static uint16_t readU16(const std::string_view& vec, size_t* offset, bool* fileTooSmallPtr)
@@ -47,7 +50,8 @@ static uint32_t readU32(const std::string_view& vec, size_t offset, bool* fileTo
 		return UINT32_MAX;
 	}
 
-	uint32_t u32 = *(const uint32_t*)&vec.at(offset);
+	uint32_t u32 = 0;
+	memcpy(&u32, vec.data() + offset, sizeof(uint32_t));
 
 	return u32;
 }
@@ -68,7 +72,9 @@ static float readF32(const std::string_view& vec, size_t* offset, bool* fileTooS
 		return FLT_MAX;
 	}
 
-	float f32 = *(const float*)&vec.at(*offset);
+	float f32 = 0.f;
+	memcpy(&f32, vec.data() + *offset, sizeof(float));
+
 	*offset += 4ull;
 
 	return f32;
@@ -82,7 +88,8 @@ static uint8_t readU8(const std::string_view& str, size_t* offset, bool* fileToo
 		return UINT8_MAX;
 	}
 
-	uint8_t u8 = *(const uint8_t*)&str.at(*offset);
+	uint8_t u8 = 0.f;
+	memcpy(&u8, str.data() + *offset, sizeof(uint8_t));
 	(*offset)++;
 
 	return u8;
@@ -90,16 +97,20 @@ static uint8_t readU8(const std::string_view& str, size_t* offset, bool* fileToo
 
 static void writeU16(std::string& vec, uint16_t v)
 {
-	vec.push_back(*(int8_t*)&v);
-	vec.push_back(*((int8_t*)&v + 1ull));
+	if (vec.capacity() - vec.size() < 2)
+		vec.reserve(vec.capacity());
+
+	vec.resize(vec.size() + 2);
+	memcpy(&vec[vec.size() - 4], &v, sizeof(uint16_t));
 }
 
 static void writeU32(std::string& vec, uint32_t v)
 {
-	vec.push_back(*(int8_t*)&v);
-	vec.push_back(*((int8_t*)&v + 1ull));
-	vec.push_back(*((int8_t*)&v + 2ull));
-	vec.push_back(*((int8_t*)&v + 3ull));
+	if (vec.capacity() - vec.size() < 4)
+		vec.reserve(vec.capacity());
+
+	vec.resize(vec.size() + 4);
+	memcpy(&vec[vec.size() - 4], &v, sizeof(uint32_t));
 }
 
 static void writeF32(std::string& vec, float v)
