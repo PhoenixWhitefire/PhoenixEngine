@@ -64,10 +64,9 @@ static std::unordered_map<std::string, std::string> ClassIcons{};
 static bool ExplorerShouldSeekToCurrentSelection = false;
 
 static GpuFrameBuffer MtlEditorPreview;
-static Scene MtlPreviewScene =
-{
+static Scene MtlPreviewScene = Scene{
 	// cube
-	{
+	.RenderList = {
 		RenderItem{
 			.RenderMeshId = 0u,
 			.Transform = glm::mat4(1.f),
@@ -81,7 +80,7 @@ static Scene MtlPreviewScene =
 		}
 	},
 	// light source
-	{
+	.LightingList = {
 		LightItem{
 			.Position = glm::vec3{ 0.57f, 0.57f, 0.57f },
 			.LightColor = glm::vec3{ 1.f, 1.f, 1.f },
@@ -89,7 +88,7 @@ static Scene MtlPreviewScene =
 			.Shadows = false
 		}
 	},
-	{} // used shaders
+	.UsedShaders = {} // used shaders
 };
 static Renderer* MtlPreviewRenderer = nullptr;
 static ObjectHandle MtlPreviewCamera;
@@ -2750,26 +2749,18 @@ static void renderProperties()
 				std::string_view str = curVal.AsStringView();
 
 				const size_t INPUT_TEXT_BUFFER_ADDITIONAL = 64;
-
 				size_t allocSize = str.size() + INPUT_TEXT_BUFFER_ADDITIONAL;
 
 				char* buf = BufferInitialize(
 					allocSize,
 					"<Initial Value 29/09/2024 Hey guys How we doing today>"
 				);
-
-				if (!doConflict)
-					memcpy(buf, str.data(), str.size());
-				else
-					CopyStringToBuffer(buf, allocSize);
-
-				buf[str.size()] = 0;
+				CopyStringToBuffer(buf, allocSize, doConflict ? "" : str);
 
 				ImGui::InputText(propNameCStr, buf, allocSize);
 				newVal = buf;
 
 				Memory::Free(buf);
-
 				break;
 			}
 

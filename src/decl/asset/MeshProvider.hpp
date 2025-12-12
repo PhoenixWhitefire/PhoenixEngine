@@ -8,7 +8,6 @@
 
 #include "datatype/Mesh.hpp"
 #include "render/GpuBuffers.hpp"
-#include "Memory.hpp"
 
 class MeshProvider
 {
@@ -66,8 +65,8 @@ private:
 	void m_CreateAndUploadGpuMesh(Mesh&);
 	void m_CreateAndUploadGpuMesh(uint32_t);
 
-	Memory::vector<Mesh, MEMCAT(Mesh)> m_Meshes;
-	Memory::unordered_map<std::string, uint32_t, MEMCAT(Mesh)> m_StringToMeshId;
+	std::vector<Mesh> m_Meshes;
+	std::unordered_map<std::string, uint32_t> m_StringToMeshId;
 
 	struct MeshLoadRequest
 	{
@@ -79,5 +78,5 @@ private:
 
 	std::vector<MeshLoadRequest> m_LoadingRequests;
 
-	Memory::vector<GpuMesh, MEMCAT(Mesh)> m_GpuMeshes;
+	std::vector<GpuMesh> m_GpuMeshes;
 };

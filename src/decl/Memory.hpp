@@ -69,31 +69,37 @@ namespace Memory
 	template <class T, Category C = Category::Default>
 	struct Allocator
 	{
-		typedef T value_type;
+		using value_type = T;
+
+		Allocator() noexcept = default;
 
 		T* allocate(size_t n)
 		{
-			return (T*)Alloc(n, C);
+			size_t bytes = sizeof(T) * n;
+			assert(bytes < (size_t)UINT32_MAX);
+			return (T*)Alloc((uint32_t)bytes, C);
 		}
 		void deallocate(T* p, size_t n)
 		{
 			Free((void*)p);
 		}
+
+		template <class U>
+		struct rebind
+		{
+			using other = Allocator<U, C>;
+		};
 	};
-	
-	template <class T, Category C = Category::Default>
-	using vector = std::vector<T>;
-	//using vector = std::vector<T, Allocator<T, C>>;
-
-	template <class T, Category C = Category::Default>
-	using unordered_set = std::unordered_set<T>;
-	//using unordered_set = std::unordered_set<T, std::hash<T>, std::equal_to<T>, Allocator<T, C>>;
-
-	template <class K, class V, Category C = Category::Default>
-	using unordered_map = std::unordered_map<K, V>;
-	//using unordered_map = std::unordered_map<K, V, std::hash<T>, std::equal_to<T>, Allocator<T, C>>;
-
-	template <Category C = Category::Default>
-	using string = std::string;
-	//using string = std::basic_string<char, std::char_traits<char>, Allocator<char, C>>;
 };
+
+template <class T, class U, Memory::Category C>
+bool operator ==(const Memory::Allocator<T, C>&, const Memory::Allocator<U, C>&) noexcept
+{
+	return true;
+}
+
+template <class T, class U, Memory::Category C>
+bool operator !=(const Memory::Allocator<T, C>&, const Memory::Allocator<U, C>&) noexcept
+{
+	return false;
+}

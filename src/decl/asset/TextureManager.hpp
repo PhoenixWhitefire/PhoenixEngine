@@ -3,8 +3,6 @@
 #include <vector>
 #include <future>
 
-#include "Memory.hpp"
-
 struct Texture
 {
 	enum class DimensionType : uint8_t
@@ -23,7 +21,7 @@ struct Texture
 		Unloaded
 	};
 
-	Memory::string<MEMCAT(Texture)> ImagePath{};
+	std::string ImagePath{};
 
 	uint32_t ResourceId = UINT32_MAX;
 	uint32_t GpuId = UINT32_MAX;
@@ -85,8 +83,8 @@ public:
 	
 	void m_UploadTextureToGpu(Texture&);
 
-	Memory::vector<Texture, MEMCAT(Texture)> m_Textures;
-	Memory::unordered_map<Memory::string<MEMCAT(Texture)>, uint32_t, MEMCAT(Texture)> m_StringToTextureId;
+	std::vector<Texture> m_Textures;
+	std::unordered_map<std::string, uint32_t> m_StringToTextureId;
 
 	std::vector<std::promise<Texture>*> m_TexPromises;
 	std::vector<std::shared_future<Texture>> m_TexFutures;

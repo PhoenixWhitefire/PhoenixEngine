@@ -176,7 +176,7 @@ void EcParticleEmitter::Update(double DeltaTime)
 	}
 }
 
-void EcParticleEmitter::AppendToRenderList(std::vector<RenderItem>& RenderList)
+void EcParticleEmitter::AppendToRenderList(hx::vector<RenderItem, MEMCAT(Rendering)>& RenderList)
 {
 	if (m_Particles.empty())
 		return;

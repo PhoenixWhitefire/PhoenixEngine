@@ -47,6 +47,8 @@ void* Memory::GetPointerInfo(void* Pointer, uint32_t* Size, uint8_t* Category)
 
 void* Memory::Alloc(uint32_t Size, Memory::Category MemCat)
 {
+	assert(Size != 0);
+
 	Size += sizeof(AllocHeader);
 	void* ptr = malloc(Size);
 
@@ -64,13 +66,16 @@ void* Memory::Alloc(uint32_t Size, Memory::Category MemCat)
 		Counters[memIndex] += Size;
 		s_ActivityWip[memIndex] += Size;
 
-		AllocHeader header{ static_cast<uint32_t>(Size), memIndex };
+		AllocHeader header = { .Size = Size, .Category = memIndex };
 		memcpy(ptr, &header, sizeof(AllocHeader));
 
 		return (void*)((uintptr_t)ptr + sizeof(AllocHeader));
 	}
 	else
-		return NULL;
+	{
+		assert(false);
+		return nullptr;
+	}
 }
 
 void* Memory::ReAlloc(void* Pointer, uint32_t Size, Memory::Category MemCat)
@@ -152,3 +157,26 @@ void Memory::FrameFinish()
 	Activity = s_ActivityWip;
 	s_ActivityWip.fill(0.f);
 }
+
+/*
+void* operator new(size_t size)
+{
+	assert(size < (size_t)UINT32_MAX);
+
+	void* ptr = Memory::Alloc((uint32_t)size);
+	if (!ptr)
+		throw std::bad_alloc();
+
+	return ptr;
+}
+
+void operator delete(void* ptr) noexcept
+{
+	Memory::Free(ptr);
+}
+
+void operator delete(void* ptr, size_t) noexcept
+{
+	Memory::Free(ptr);
+}
+*/

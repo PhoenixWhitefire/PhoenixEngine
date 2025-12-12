@@ -42,8 +42,8 @@ struct LightItem
 
 struct Scene
 {
-	Memory::vector<RenderItem, MEMCAT(Rendering)> RenderList;
-	Memory::vector<LightItem, MEMCAT(Rendering)> LightingList;
+	hx::vector<RenderItem, MEMCAT(Rendering)> RenderList;
+	hx::vector<LightItem, MEMCAT(Rendering)> LightingList;
 
-	Memory::unordered_set<uint32_t, MEMCAT(Rendering)> UsedShaders;
+	hx::unordered_set<uint32_t, MEMCAT(Rendering)> UsedShaders;
 };

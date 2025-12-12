@@ -31,6 +31,7 @@
 #include "Timing.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
+#include "Stl.hpp"
 
 static Engine* EngineInstance = nullptr;
 
@@ -318,8 +319,8 @@ Engine::Engine()
 static bool s_DebugCollisionAabbs = false;
 
 static void traverseHierarchy(
-	Memory::vector<RenderItem, MEMCAT(Rendering)>& RenderList,
-	Memory::vector<LightItem, MEMCAT(Rendering)>& LightList,
+	hx::vector<RenderItem, MEMCAT(Rendering)>& RenderList,
+	hx::vector<LightItem, MEMCAT(Rendering)>& LightList,
 	PhysicsWorld& PhysicsWorld,
 	const ObjectHandle& Root,
 	EcCamera* SceneCamera,

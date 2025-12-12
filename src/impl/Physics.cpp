@@ -5,6 +5,7 @@
 #include "Physics.hpp"
 #include "IntersectionLib.hpp"
 #include "Timing.hpp"
+#include "Stl.hpp"
 #include "component/Transform.hpp"
 #include "component/Workspace.hpp"
 #include "component/Mesh.hpp"
@@ -98,7 +99,7 @@ static void resolveCollisions(PhysicsWorld& World, float DeltaTime)
 {
 	ZoneScopedC(tracy::Color::AntiqueWhite);
 
-	Memory::vector<Collision, MEMCAT(Physics)> collisions;
+	hx::vector<Collision, MEMCAT(Physics)> collisions;
 
 	EcWorkspace* workspace = GameObject::GetObjectById(World.Dynamics[0]->OwningWorkspace)->FindComponent<EcWorkspace>();
 

@@ -123,6 +123,11 @@ static void fromArray(Reflection::GenericValue& G, std::span<const Reflection::G
 	G.Type = Reflection::ValueType::Array;
 
 	size_t allocSize = Array.size() * sizeof(G);
+	if (allocSize == 0)
+	{
+		G.Val.Ptr = nullptr;
+		return;
+	}
 
 	G.Val.Ptr = Memory::Alloc(allocSize, Memory::Category::Reflection);
 

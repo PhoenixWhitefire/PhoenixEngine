@@ -9,17 +9,18 @@ void CopyStringToBuffer(char* buf, size_t capacity, const std::string_view& stri
 {
 	for (size_t i = 0; i < capacity; i++)
 		buf[i] = i < string.length() ? string.at(i) : 0;
+
+	buf[capacity - 1] = 0;
 }
 
 char* BufferInitialize(size_t capacity, const std::string_view& value)
 {
-	char* buf = (char*)Memory::Alloc(capacity + 1);
+	char* buf = (char*)Memory::Alloc(capacity);
 
 	if (!buf)
 		RAISE_RTF("Failed to allocate {} bytes in BufferInitialize", capacity + 1);
 
-	buf[capacity] = 0;
-
+	buf[capacity - 1] = 0;
 	CopyStringToBuffer(buf, capacity, value);
 
 	return buf;

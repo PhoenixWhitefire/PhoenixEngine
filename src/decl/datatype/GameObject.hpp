@@ -12,7 +12,7 @@
 
 #include "Reflection.hpp"
 #include "Utilities.hpp"
-#include "Memory.hpp"
+#include "Stl.hpp"
 
 enum class EntityComponent : uint8_t
 {
@@ -85,6 +85,18 @@ struct ReflectorRef
 	}
 };
 
+namespace std
+{
+	template <>
+	struct hash<ReflectorRef>
+	{
+		size_t operator()(const ReflectorRef& r) const noexcept
+		{
+			return ((size_t)r.Id << 32) + (size_t)r.Type;
+		};
+	};
+}
+
 extern const std::unordered_map<std::string_view, EntityComponent> s_ComponentNameToType;
 
 static_assert(std::size(s_EntityComponentNames) == (size_t)EntityComponent::__count);
@@ -129,8 +141,8 @@ public:
 	static GameObject* GetObjectById(uint32_t);
 
 	static inline uint32_t s_DataModel = PHX_GAMEOBJECT_NULL_ID;
-	static inline Memory::vector<GameObject, MEMCAT(GameObject)> s_WorldArray{};
-	static inline std::array<IComponentManager*, (size_t)EntityComponent::__count> s_ComponentManagers{};
+	static inline hx::vector<GameObject, MEMCAT(GameObject)> s_WorldArray;
+	static inline std::array<IComponentManager*, (size_t)EntityComponent::__count> s_ComponentManagers;
 
 	template <class T>
 	T* FindComponent()
@@ -207,10 +219,10 @@ public:
 	bool IsDestructionPending = false;
 	bool Valid = true;
 
-	Memory::vector<uint32_t, MEMCAT(GameObject)> Children;
-	Memory::vector<ReflectorRef, MEMCAT(GameObject)> Components;
+	std::vector<uint32_t> Children;
+	std::vector<ReflectorRef> Components;
 	Reflection::Api ComponentApis;
-	Memory::unordered_map<std::string_view, ReflectorRef, MEMCAT(GameObject)> MemberToComponentMap;
+	std::unordered_map<std::string_view, ReflectorRef> MemberToComponentMap;
 
 	static nlohmann::json DumpApiToJson();
 	static const Reflection::StaticApi s_Api;

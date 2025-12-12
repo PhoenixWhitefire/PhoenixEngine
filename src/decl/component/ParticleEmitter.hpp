@@ -13,7 +13,7 @@ struct EcParticleEmitter : public Component<EntityComponent::ParticleEmitter>
 	EcParticleEmitter();
 
 	void Update(double);
-	void AppendToRenderList(std::vector<RenderItem>&);
+	void AppendToRenderList(hx::vector<RenderItem, MEMCAT(Rendering)>&);
 
 	ObjectRef Object;
 
