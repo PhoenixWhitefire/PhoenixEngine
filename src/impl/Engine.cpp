@@ -198,6 +198,24 @@ void Engine::m_InitVideo()
 
 	glfwSetErrorCallback(errorCallback);
 
+	GLFWallocator allocator = {
+		.allocate = [](size_t size, void*)
+			{
+				assert(size < UINT32_MAX);
+				return Memory::Alloc(size, MEMCAT(Glfw));
+			},
+		.reallocate = [](void* ptr, size_t size, void*)
+			{
+				assert(size < UINT32_MAX);
+				return Memory::ReAlloc(ptr, size, MEMCAT(Glfw));
+			},
+		.deallocate = [](void* ptr, void*)
+			{
+				Memory::Free(ptr);
+			}
+	};
+	glfwInitAllocator(&allocator);
+
 	if (!glfwInit())
 	{
 		const char* error = nullptr;
@@ -893,7 +911,15 @@ void Engine::Start()
 		if (!IsHeadlessMode)
 			workspaceComponent->Update();
 
-		REFLECTION_SIGNAL_EVENT(DataModelRef->FindComponent<EcDataModel>()->OnFrameBeginCallbacks, deltaTime);
+		{
+			ZoneScopedN("DataModelRef->FindComponent<EcDataModel>()->OnFrameBeginCallbacks");
+			std::vector<Reflection::EventCallback> CbList = DataModelRef->FindComponent<EcDataModel>()->OnFrameBeginCallbacks;
+			for (const Reflection::EventCallback& cb : CbList)
+				if ((bool)cb)
+					cb({ deltaTime });
+		}
+
+		//REFLECTION_SIGNAL_EVENT(, deltaTime);
 
 		// fetch the camera again because of potential CurrentScene changes that may have caused re-alloc'd
 		// (really need a generic `Ref` system)

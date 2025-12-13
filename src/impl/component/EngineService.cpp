@@ -184,7 +184,7 @@ public:
                 String,
                 [](void*) -> Reflection::GenericValue
                 {
-                    return PHX_VERSION;
+                    return GetEngineVersion();
                 },
                 nullptr
             ),
@@ -193,7 +193,7 @@ public:
                 String,
                 [](void*) -> Reflection::GenericValue
                 {
-                    return PhxGetCommitHash();
+                    return GetEngineCommitHash();
                 },
                 nullptr
             ),

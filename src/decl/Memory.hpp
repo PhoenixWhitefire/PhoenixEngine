@@ -30,6 +30,7 @@ namespace Memory
 		Physics,
 		Luau,
 		Sound,
+		Glfw,
 
 		__count
 	};
@@ -60,7 +61,8 @@ namespace Memory
 		"Material",
 		"Physics",
 		"Luau",
-		"Sound"
+		"Sound",
+		"Glfw"
 	};
 
 	static_assert(std::size(CategoryNames) == (uint8_t)Memory::Category::__count);

@@ -127,13 +127,6 @@ const Reflection::StaticPropertyMap& SoundManager::GetProperties()
     return props;
 }
 
-// stupid compiler false positive warnings
-#if defined(__GNUG__) && (__GNUG__ == 14)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Warray-bounds"
-#pragma GCC diagnostic ignored "-Wstringop-overflow"
-#endif
-
 const Reflection::StaticMethodMap& SoundManager::GetMethods()
 {
 	static const Reflection::StaticMethodMap methods = {
@@ -164,10 +157,6 @@ const Reflection::StaticEventMap& SoundManager::GetEvents()
 	return events;
 }
 
-#if defined(__GNUG__) && (__GNUG__ == 14)
-#pragma GCC diagnostic pop
-#endif
-	
 void SoundManager::Initialize()
 {
 	ZoneScoped;

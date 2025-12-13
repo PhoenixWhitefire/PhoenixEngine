@@ -19,6 +19,21 @@
 
 #include "Memory.hpp"
 
+#if !defined(NDEBUG) && defined(__GNUG__)
+
+#define ALLOC_ASAN_POISON_SIZE 16
+#include "sanitizer/asan_interface.h"
+
+#undef ASAN_POISON_MEMORY_REGION
+#undef ASAN_UNPOISON_MEMORY_REGION
+
+#define ASAN_POISON_MEMORY_REGION(addr, size) __asan_poison_memory_region((addr), (size))
+#define ASAN_UNPOISON_MEMORY_REGION(addr, size) __asan_unpoison_memory_region((addr), (size))
+
+#else
+#define ALLOC_ASAN_POISON_SIZE 0
+#endif
+
 struct AllocHeader
 {
 	uint32_t Size = UINT32_MAX;
@@ -30,9 +45,9 @@ static std::array<size_t, static_cast<size_t>(Memory::Category::__count)> s_Acti
 
 void* Memory::GetPointerInfo(void* Pointer, uint32_t* Size, uint8_t* Category)
 {
-	void* realPointer = (void*)((uintptr_t)Pointer - sizeof(AllocHeader));
+	AllocHeader* header = (AllocHeader*)((uintptr_t)Pointer - sizeof(AllocHeader));
+	void* realPointer = (void*)((uintptr_t)header - ALLOC_ASAN_POISON_SIZE);
 
-	AllocHeader* header = (AllocHeader*)realPointer;
 	// in case someone passes in a pointer that wasn't alloc'd by `::Alloc` and doesn't immediately segfault,
 	// hold their hand and tell them they're
 	assert(header->Check == 222);
@@ -50,7 +65,7 @@ void* Memory::Alloc(uint32_t Size, Memory::Category MemCat)
 	assert(Size != 0);
 
 	Size += sizeof(AllocHeader);
-	void* ptr = malloc(Size);
+	void* ptr = malloc(Size + ALLOC_ASAN_POISON_SIZE * 2);
 
 	if (ptr)
 	{
@@ -67,9 +82,15 @@ void* Memory::Alloc(uint32_t Size, Memory::Category MemCat)
 		s_ActivityWip[memIndex] += Size;
 
 		AllocHeader header = { .Size = Size, .Category = memIndex };
-		memcpy(ptr, &header, sizeof(AllocHeader));
+		memcpy((void*)((uintptr_t)ptr + ALLOC_ASAN_POISON_SIZE), &header, sizeof(AllocHeader));
 
-		return (void*)((uintptr_t)ptr + sizeof(AllocHeader));
+		if (ALLOC_ASAN_POISON_SIZE > 0)
+		{
+			ASAN_POISON_MEMORY_REGION(ptr, ALLOC_ASAN_POISON_SIZE);
+			ASAN_POISON_MEMORY_REGION((void*)((uintptr_t)ptr + ALLOC_ASAN_POISON_SIZE + Size), ALLOC_ASAN_POISON_SIZE);
+		}
+
+		return (void*)((uintptr_t)ptr + ALLOC_ASAN_POISON_SIZE + sizeof(AllocHeader));
 	}
 	else
 	{
@@ -102,7 +123,13 @@ void* Memory::ReAlloc(void* Pointer, uint32_t Size, Memory::Category MemCat)
 		TracyFree(Pointer);
 #endif
 
-	void* ptr = realloc(Pointer, Size);
+	if (ALLOC_ASAN_POISON_SIZE > 0)
+	{
+		//ASAN_UNPOISON_MEMORY_REGION(Pointer, ALLOC_ASAN_POISON_SIZE);
+		//ASAN_UNPOISON_MEMORY_REGION((void*)((uintptr_t)Pointer + ALLOC_ASAN_POISON_SIZE + prevSize), ALLOC_ASAN_POISON_SIZE);
+	}
+
+	void* ptr = realloc(Pointer, Size + ALLOC_ASAN_POISON_SIZE * 2);
 
 	if (ptr)
 	{
@@ -117,9 +144,15 @@ void* Memory::ReAlloc(void* Pointer, uint32_t Size, Memory::Category MemCat)
 		s_ActivityWip[memIndex] += prevSize + Size;
 
 		AllocHeader header = { .Size = Size, .Category = memIndex };
-		memcpy(ptr, &header, sizeof(AllocHeader));
+		memcpy((void*)((uintptr_t)ptr + ALLOC_ASAN_POISON_SIZE), &header, sizeof(AllocHeader));
 
-		return (void*)((uintptr_t)ptr + sizeof(AllocHeader));
+		if (ALLOC_ASAN_POISON_SIZE > 0)
+		{
+			ASAN_POISON_MEMORY_REGION(ptr, ALLOC_ASAN_POISON_SIZE);
+			ASAN_POISON_MEMORY_REGION((void*)((uintptr_t)ptr + ALLOC_ASAN_POISON_SIZE + Size), ALLOC_ASAN_POISON_SIZE);
+		}
+
+		return (void*)((uintptr_t)ptr + ALLOC_ASAN_POISON_SIZE + sizeof(AllocHeader));
 	}
 	else
 		return nullptr;
@@ -148,6 +181,12 @@ void Memory::Free(void* Pointer)
 	assert(Counters[memcat] > 0);
 	Counters[memcat] -= size;
 	s_ActivityWip[memcat] += size;
+
+	if (ALLOC_ASAN_POISON_SIZE > 0)
+	{
+		//ASAN_UNPOISON_MEMORY_REGION(Pointer, ALLOC_ASAN_POISON_SIZE);
+		//ASAN_UNPOISON_MEMORY_REGION((void*)((uintptr_t)Pointer + ALLOC_ASAN_POISON_SIZE + size), ALLOC_ASAN_POISON_SIZE);
+	}
 
 	free(Pointer);
 }

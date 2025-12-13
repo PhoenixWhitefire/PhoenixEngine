@@ -40,9 +40,10 @@
 	} \
 } \
 
-#define REFLECTION_SIGNAL_EVENT(CbList, ...) { ZoneScopedN(#CbList); \
-	for (size_t i = 0; i < CbList.size(); i++) \
-		if (const Reflection::EventCallback& cb = CbList[i]; cb) \
+#define REFLECTION_SIGNAL_EVENT(CbListOg, ...) { ZoneScopedN(#CbListOg); \
+	std::vector<Reflection::EventCallback> CbList = CbListOg; \
+	for (const Reflection::EventCallback& cb : CbList) \
+		if (cb) \
 			cb({ __VA_ARGS__ }); \
 } \
 

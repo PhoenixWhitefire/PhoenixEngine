@@ -54,8 +54,8 @@ static int sig_namecall(lua_State* L)
 		//    ara ara
 		// (tee hee)
 		lua_State* eL = lua_newthread(L);
-		lua_State* cL = lua_newthread(eL);
 		int threadRef = lua_ref(L, -1);
+		lua_State* cL = lua_newthread(eL);
 		lua_xpush(L, eL, 2);
 		luaL_sandboxthread(cL);
 
@@ -75,7 +75,7 @@ static int sig_namecall(lua_State* L)
 		uint32_t cnId = rev->Connect(
 			ev->Reflector.Referred(),
 
-			[eL, cL, rev, callerInfo](const std::vector<Reflection::GenericValue>& Inputs) -> void
+			[eL, ec, cL, rev, callerInfo](const std::vector<Reflection::GenericValue>& Inputs) -> void
 			{
 				ZoneScopedN("RunEventCallback");
 				ZoneText(callerInfo.data(), callerInfo.size());
@@ -85,18 +85,15 @@ static int sig_namecall(lua_State* L)
 
 				lua_pushlightuserdata(eL, eL);
 				lua_gettable(eL, LUA_ENVIRONINDEX);
-				EventConnectionData* cn = (EventConnectionData*)luaL_checkudata(eL, -1, "EventConnection");
 				lua_pop(eL, 1);
 
-				if (cn->Script.HasValue())
+				if (ec->Script.HasValue())
 				{
-					GameObject* scr = (GameObject*)cn->Script.Dereference();
+					GameObject* scr = ec->Script.Dereference();
 
 					if (!scr || !scr->FindComponentByType(EntityComponent::Script))
 					{
-						cn->Event->Disconnect(cn->Reflector.Referred(), cn->ConnectionId);
-						lua_resetthread(cL);
-						lua_resetthread(eL);
+						ec->Event->Disconnect(ec->Reflector.Referred(), ec->ConnectionId);
 
 						return;
 					}
@@ -108,7 +105,7 @@ static int sig_namecall(lua_State* L)
 				// there cannot be more than one instance of it
 				// running concurrently. thus, we can re-use a single thread
 				// instead of creating a new one for each invocation
-				if (cn->CallbackYields)
+				if (ec->CallbackYields)
 				{
 					lua_State* nL = lua_newthread(eL);
 					luaL_checkstack(nL, (int32_t)Inputs.size() + 1, "event connection callback args");
@@ -151,13 +148,13 @@ static int sig_namecall(lua_State* L)
 					lua_pop(co, 2);
 				}
 
-				if (!cn->CallbackYields && status == LUA_YIELD)
-					cn->CallbackYields = true;
+				if (!ec->CallbackYields && status == LUA_YIELD)
+					ec->CallbackYields = true;
 
-				if (status == LUA_OK && cn->CallbackYields && cL->status == LUA_OK)
+				if (status == LUA_OK && ec->CallbackYields && cL->status == LUA_OK)
 				{ // unmark the callback as yielding if we didnt yield and the original thread is ready to be re-used
 					lua_pop(cL, lua_gettop(cL)); // not entirely sure how these are piling up
-					cn->CallbackYields = false;
+					ec->CallbackYields = false;
 				}
 			}
 		);

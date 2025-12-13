@@ -885,12 +885,12 @@ int main(int argc, char** argv)
 	
 	Log::InfoF("Phoenix Engine");
 	Log::AppendF(
-		"\tVersion: " PHX_VERSION
+		"\tVersion: {}"
 		"\n\tCommit: {}"
 		"\n\tTarget platform: " PHX_TARGET_PLATFORM "\n\tTarget Compiler: " PHX_TARGET_COMPILER
 		"\n\tBuild type: " PHX_BUILD_TYPE "\n\tMain.cpp last compiled: " __DATE__ " @ " __TIME__
 		"\n\tHeadless: " IS_HEADLESS_STR,
-		PhxGetCommitHash()
+		GetEngineVersion(), GetEngineCommitHash()
 	);
 
 	Log::Info("Command line: &&");

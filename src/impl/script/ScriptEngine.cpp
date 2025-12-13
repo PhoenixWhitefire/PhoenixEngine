@@ -134,7 +134,7 @@ void ScriptEngine::StepScheduler()
 		auto it = &s_YieldedCoroutines[i];
 
 		lua_State* coroutine = it->Coroutine;
-		int corRef = it->CoroutineReference;
+		//int corRef = it->CoroutineReference;
 
 		uint8_t resHandlerIndex = static_cast<uint8_t>(it->Mode);
 		const ResumptionModeHandler handler = s_ResumptionModeHandlers[resHandlerIndex];
@@ -165,7 +165,7 @@ void ScriptEngine::StepScheduler()
 				}
 			}
 
-			lua_unref(lua_mainthread(coroutine), corRef);
+			//lua_unref(lua_mainthread(coroutine), corRef);
 
 			s_YieldedCoroutines.erase(s_YieldedCoroutines.begin() + i);
 		}

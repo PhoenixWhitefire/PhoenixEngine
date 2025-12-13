@@ -168,8 +168,8 @@ bool EcScript::Reload()
 
 	m_StaleSource = false;
 
-	if (m_L)
-		lua_resetthread(m_L);
+	if (m_L) {}
+		//lua_resetthread(m_L);
 	else
 		m_L = lua_newthread(ScriptEngine::GetCurrentVM().MainThread);
 

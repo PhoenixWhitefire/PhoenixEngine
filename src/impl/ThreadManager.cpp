@@ -86,7 +86,7 @@ void ThreadManager::Initialize(int NumThreadsOverride)
 	size_t numThreads = static_cast<size_t>(std::max(std::thread::hardware_concurrency() * 0.75f, 3.f));
 	numThreads = std::min(numThreads, static_cast<size_t>(8ull));
 
-	if (NumThreadsOverride > 0)
+	if (NumThreadsOverride > -1)
 		numThreads = static_cast<size_t>(NumThreadsOverride);
 
 	Log::InfoF("Creating {} parallel threads...", numThreads);
@@ -146,6 +146,12 @@ void ThreadManager::Dispatch(std::function<void()> Task, bool IsCritical)
 {
 	assert(s_Instance == this);
 	assert(!m_Stop);
+
+	if (m_Workers.size() == 0)
+	{
+		Task();
+		return;
+	}
 
 	{
 		std::unique_lock<std::mutex> lock{ m_TasksMutex };
