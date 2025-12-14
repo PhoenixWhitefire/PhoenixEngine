@@ -42,9 +42,9 @@
 
 #define REFLECTION_SIGNAL_EVENT(CbListOg, ...) { ZoneScopedN(#CbListOg); \
 	std::vector<Reflection::EventCallback> CbList = CbListOg; \
-	for (const Reflection::EventCallback& cb : CbList) \
-		if (cb) \
-			cb({ __VA_ARGS__ }); \
+	for (size_t cbi = 0; cbi < CbList.size(); cbi++) \
+		if (const Reflection::EventCallback& cb = CbList[cbi]) \
+			cb({ __VA_ARGS__ }, (uint32_t)cbi); \
 } \
 
 #define REFLECTION_OPTIONAL(ty) (Reflection::ValueType)(Reflection::ValueType::ty + Reflection::ValueType::Null)
@@ -164,7 +164,7 @@ namespace Reflection
 	typedef void(*PropertySetter)(void*, const Reflection::GenericValue&);
 	typedef std::vector<Reflection::GenericValue>(*MethodFunction)(void*, const std::vector<Reflection::GenericValue>&);
 
-	typedef std::function<void(const std::vector<Reflection::GenericValue>&)> EventCallback;
+	typedef std::function<void(const std::vector<Reflection::GenericValue>&, uint32_t)> EventCallback;
 	typedef uint32_t(*EventConnectFunction)(void*, EventCallback);
 	typedef void(*EventDisconnectFunction)(void*, uint32_t);
 

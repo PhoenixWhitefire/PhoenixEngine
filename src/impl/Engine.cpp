@@ -911,15 +911,7 @@ void Engine::Start()
 		if (!IsHeadlessMode)
 			workspaceComponent->Update();
 
-		{
-			ZoneScopedN("DataModelRef->FindComponent<EcDataModel>()->OnFrameBeginCallbacks");
-			std::vector<Reflection::EventCallback> CbList = DataModelRef->FindComponent<EcDataModel>()->OnFrameBeginCallbacks;
-			for (const Reflection::EventCallback& cb : CbList)
-				if ((bool)cb)
-					cb({ deltaTime });
-		}
-
-		//REFLECTION_SIGNAL_EVENT(, deltaTime);
+		REFLECTION_SIGNAL_EVENT(DataModelRef->FindComponent<EcDataModel>()->OnFrameBeginCallbacks, deltaTime);
 
 		// fetch the camera again because of potential CurrentScene changes that may have caused re-alloc'd
 		// (really need a generic `Ref` system)

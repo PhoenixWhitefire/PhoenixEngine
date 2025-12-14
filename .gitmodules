@@ -13,6 +13,7 @@
 [submodule "Vendor/miniaudio"]
 	path = Vendor/miniaudio
 	url = https://github.com/mackron/miniaudio.git
+	branch = master
 [submodule "Vendor/glfw"]
 	path = Vendor/glfw
 	url = https://github.com/glfw/glfw.git

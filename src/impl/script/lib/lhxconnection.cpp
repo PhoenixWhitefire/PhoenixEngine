@@ -19,7 +19,7 @@ static int conn_namecall(lua_State* L)
 		//lua_pushnil(L);
 		//lua_settable(L, LUA_ENVIRONINDEX); // remove stacktrace string
 
-		//lua_unref(ec->L, ec->ThreadRef);
+		lua_unref(ec->L, ec->ThreadRef);
 	}
 	else
 		luaL_error(L, "No such method of Event Connection known as '%s'", L->namecall->data);

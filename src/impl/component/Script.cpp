@@ -37,14 +37,11 @@ public:
     {
         // TODO id reuse with handles that have a counter per re-use to reduce memory growth
 
-		// TODO very unstable
-		/*
 		if (lua_State** L = &m_Components[Id].m_L; *L)
 		{
 			lua_resetthread(*L);
 			*L = nullptr;
 		}
-		*/
 
 		ComponentManager<EcScript>::DeleteComponent(Id);
     }
@@ -168,8 +165,8 @@ bool EcScript::Reload()
 
 	m_StaleSource = false;
 
-	if (m_L) {}
-		//lua_resetthread(m_L);
+	if (m_L)
+		lua_resetthread(m_L);
 	else
 		m_L = lua_newthread(ScriptEngine::GetCurrentVM().MainThread);
 

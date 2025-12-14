@@ -131,10 +131,34 @@ void ScriptEngine::StepScheduler()
 
 	for (size_t i = 0; i < size; i++)
 	{
-		auto it = &s_YieldedCoroutines[i];
+		YieldedCoroutine* it = &s_YieldedCoroutines[i];
+
+		// make sure the script still exists
+		// modules don't have a `script` global, but they run on their own coroutine independent from
+		// where they are `require`'d from anyway
+		if (it->ScriptId != PHX_GAMEOBJECT_NULL_ID)
+		{
+			GameObject* scr = GameObject::GetObjectById(it->ScriptId);
+			if (!scr || scr->IsDestructionPending || !scr->FindComponentByType(EntityComponent::Script))
+			{
+				s_YieldedCoroutines.erase(s_YieldedCoroutines.begin() + i);
+
+				// https://stackoverflow.com/a/17956637
+				// asan was not happy about the iterator from
+				// `::erase` for some reason?? TODO
+				// 10/06/2025
+				if (size != s_YieldedCoroutines.size())
+				{
+					i--;
+					size = s_YieldedCoroutines.size();
+				}
+
+				continue;
+			}
+		}
 
 		lua_State* coroutine = it->Coroutine;
-		//int corRef = it->CoroutineReference;
+		int corRef = it->CoroutineReference;
 
 		uint8_t resHandlerIndex = static_cast<uint8_t>(it->Mode);
 		const ResumptionModeHandler handler = s_ResumptionModeHandlers[resHandlerIndex];
@@ -147,25 +171,18 @@ void ScriptEngine::StepScheduler()
 			ZoneScopedN("Resume");
 			ZoneText(it->DebugString.data(), it->DebugString.size());
 
-			// make sure the script still exists
-			// modules don't have a `script` global, but they run on their own coroutine independent from
-			// where they are `require`'d from anyway
-			if (it->ScriptId == PHX_GAMEOBJECT_NULL_ID || GameObject::GetObjectById(it->ScriptId))
+			int resumeStatus = L::Resume(coroutine, nullptr, nretvals);
+			if (resumeStatus != LUA_OK && resumeStatus != LUA_YIELD)
 			{
-				int resumeStatus = L::Resume(coroutine, nullptr, nretvals);
+				Log::ErrorF(
+					"Script resumption: {}",
+					lua_tostring(coroutine, -1)
+				);
 
-				if (resumeStatus != LUA_OK && resumeStatus != LUA_YIELD)
-				{
-					Log::ErrorF(
-						"Script resumption: {}",
-						lua_tostring(coroutine, -1)
-					);
-
-					L::DumpStacktrace(coroutine);
-				}
+				L::DumpStacktrace(coroutine);
 			}
 
-			//lua_unref(lua_mainthread(coroutine), corRef);
+			lua_unref(lua_mainthread(coroutine), corRef);
 
 			s_YieldedCoroutines.erase(s_YieldedCoroutines.begin() + i);
 		}
@@ -1351,6 +1368,25 @@ void ScriptEngine::L::Close(lua_State* L)
 	delete (std::filesystem::path*)lua_tolightuserdatatagged(L, -1, 67);
 	
 	lua_close(L);
+
+	size_t size = s_YieldedCoroutines.size();
+
+	for (size_t i = 0; i < s_YieldedCoroutines.size(); i++)
+	{
+		YieldedCoroutine& yc = s_YieldedCoroutines[i];
+		if (lua_mainthread(yc.Coroutine) == L)
+			s_YieldedCoroutines.erase(s_YieldedCoroutines.begin() + i);
+
+		// https://stackoverflow.com/a/17956637
+		// asan was not happy about the iterator from
+		// `::erase` for some reason?? TODO
+		// 10/06/2025
+		if (size != s_YieldedCoroutines.size())
+		{
+			i--;
+			size = s_YieldedCoroutines.size();
+		}
+	}
 }
 
 lua_Status ScriptEngine::L::Resume(lua_State* L, lua_State* from, int narg)

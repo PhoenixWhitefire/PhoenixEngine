@@ -54,8 +54,8 @@ static int sig_namecall(lua_State* L)
 		//    ara ara
 		// (tee hee)
 		lua_State* eL = lua_newthread(L);
-		int threadRef = lua_ref(L, -1);
 		lua_State* cL = lua_newthread(eL);
+		int threadRef = lua_ref(L, -1);
 		lua_xpush(L, eL, 2);
 		luaL_sandboxthread(cL);
 
@@ -72,32 +72,45 @@ static int sig_namecall(lua_State* L)
 		lua_settable(eL, LUA_ENVIRONINDEX); // stack: ec
 		lua_pop(eL, 1);
 
+		lua_getglobal(L, "script");
+		Reflection::GenericValue scrgv = ScriptEngine::L::ToGeneric(L, -1);
+		if (scrgv.Type == Reflection::ValueType::GameObject)
+		{
+			GameObject* scr = GameObject::FromGenericValue(scrgv);
+			ec->Script = scr;
+		}
+		lua_pop(L, 1);
+
+		ObjectHandle scriptRef = ec->Script;
+		ReflectorRef reflector = ev->Reflector;
+
 		uint32_t cnId = rev->Connect(
 			ev->Reflector.Referred(),
 
-			[eL, ec, cL, rev, callerInfo](const std::vector<Reflection::GenericValue>& Inputs) -> void
+			[eL, ec, cL, rev, callerInfo, scriptRef, reflector](const std::vector<Reflection::GenericValue>& Inputs, uint32_t ConnectionId) -> void
 			{
 				ZoneScopedN("RunEventCallback");
 				ZoneText(callerInfo.data(), callerInfo.size());
 
-				assert(Inputs.size() == rev->CallbackInputs.size());
-				assert(lua_isfunction(eL, 2));
-
-				lua_pushlightuserdata(eL, eL);
-				lua_gettable(eL, LUA_ENVIRONINDEX);
-				lua_pop(eL, 1);
-
-				if (ec->Script.HasValue())
+				if (scriptRef.HasValue())
 				{
-					GameObject* scr = ec->Script.Dereference();
+					GameObject* scr = scriptRef.Dereference();
 
-					if (!scr || !scr->FindComponentByType(EntityComponent::Script))
+					if (!scr || scr->IsDestructionPending || !scr->FindComponentByType(EntityComponent::Script))
 					{
-						ec->Event->Disconnect(ec->Reflector.Referred(), ec->ConnectionId);
-
+						// TODO
+						// I'm Glad I finally figured out what was going on, but there's probably a more important
+						// architectural problem behind this as well
+						// 14/12/2025
+						if (reflector.Referred())
+							rev->Disconnect(reflector.Referred(), ConnectionId);
 						return;
 					}
 				}
+
+				assert(Inputs.size() == rev->CallbackInputs.size());
+				assert(lua_isfunction(eL, 2));
+
 				lua_State* co = cL;
 
 				// performance optimization:
@@ -166,16 +179,6 @@ static int sig_namecall(lua_State* L)
 		ec->Event = rev;
 		ec->L = L;
 
-		lua_getglobal(L, "script");
-		Reflection::GenericValue scrgv = ScriptEngine::L::ToGeneric(L, -1);
-		if (scrgv.Type == Reflection::ValueType::GameObject)
-		{
-			GameObject* scr = GameObject::FromGenericValue(scrgv);
-			ec->Script = scr;
-		}
-
-		lua_pop(L, 1);
-
 		return 1;
 	}
 	else if (strcmp(L->namecall->data, "WaitUntil") == 0)
@@ -191,7 +194,7 @@ static int sig_namecall(lua_State* L)
 		uint32_t cid = rev->Connect(
 			reflector.Referred(),
 
-			[ev, resume, reflector, rev, values](const std::vector<Reflection::GenericValue>& Values)
+			[ev, resume, reflector, rev, values](const std::vector<Reflection::GenericValue>& Values, uint32_t)
 			-> void
 			{
 				*values = Values;
