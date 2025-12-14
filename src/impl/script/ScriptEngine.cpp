@@ -41,10 +41,20 @@ static_assert(std::size(s_ValueTypeToLuauType) == Reflection::ValueType::__lastB
 
 #define ROOT_LVM_NAME "RootLVM"
 
+static int luauAssertHandler(const char* expression, const char* file, int line, const char* function)
+{
+	Log::ErrorF("Luau assertion failed:\n\tExpression: {}\n\tIn: {}:{} in {}", expression, file, line, function);
+
+	return 1;
+}
+
 void ScriptEngine::Initialize()
 {
 	RegisterNewVM(ROOT_LVM_NAME);
 	CurrentVM = ROOT_LVM_NAME;
+
+	// changing a reference to a static function variable
+	Luau::assertHandler() = luauAssertHandler;
 }
 
 const ScriptEngine::LuauVM& ScriptEngine::RegisterNewVM(const std::string& Name)

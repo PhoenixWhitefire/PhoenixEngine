@@ -161,7 +161,7 @@ void SoundManager::Initialize()
 {
 	ZoneScoped;
 
-	ma_engine_config config{};
+	ma_engine_config config = {};
 	config.allocationCallbacks.onMalloc = [](size_t Size, void*)
 		{
 			return Memory::Alloc(Size, MEMCAT(Sound));

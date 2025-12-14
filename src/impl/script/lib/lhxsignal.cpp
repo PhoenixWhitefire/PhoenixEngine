@@ -26,7 +26,7 @@ static int sig_namecall(lua_State* L)
 	{
 		luaL_checktype(L, 2, LUA_TFUNCTION);
 
-		lua_Debug callerAr{};
+		lua_Debug callerAr = {};
 		lua_getinfo(L, 1, "sln", &callerAr);
 		std::string callerInfo = std::format(
 			"{}:{} in {}",
@@ -53,11 +53,12 @@ static int sig_namecall(lua_State* L)
 		//    ARAARA
 		//    ara ara
 		// (tee hee)
-		lua_State* eL = lua_newthread(L);
+		lua_State* eL = lua_newthread(lua_mainthread(L));
+		luaL_sandboxthread(eL);
 		lua_State* cL = lua_newthread(eL);
-		int threadRef = lua_ref(L, -1);
-		lua_xpush(L, eL, 2);
-		luaL_sandboxthread(cL);
+		int threadRef = lua_ref(lua_mainthread(L), -1);
+		lua_xpush(L, eL, 2); // push callback onto eL
+		lua_pop(lua_mainthread(L), 1);
 
 		EventConnectionData* ec = (EventConnectionData*)lua_newuserdata(eL, sizeof(EventConnectionData));
 		ec->Script.Reference = nullptr; // zero-initialization breaks some assumptions that IDs which are not `PHX_GAMEOBJECT_NULL_ID` are valid
@@ -131,6 +132,10 @@ static int sig_namecall(lua_State* L)
 				else
 					lua_xpush(eL, cL, 2);
 
+				lua_pushthread(co);
+				int runnerRef = lua_ref(co, -1);
+				lua_pop(co, 1);
+
 				for (size_t i = 0; i < Inputs.size(); i++)
 				{
 					assert(Inputs[i].Type == rev->CallbackInputs[i]);
@@ -169,6 +174,8 @@ static int sig_namecall(lua_State* L)
 					lua_pop(cL, lua_gettop(cL)); // not entirely sure how these are piling up
 					ec->CallbackYields = false;
 				}
+
+				lua_unref(co, runnerRef);
 			}
 		);
 
