@@ -40,11 +40,6 @@ public:
         m_Components.emplace_back();
         m_Components.back().Object = Object;
 
-        if (!Object->FindComponent<EcTransform>())
-		    Object->AddComponent(EntityComponent::Transform);
-
-        Object->FindComponent<EcTransform>()->Transform[3] = glm::vec4(0.5f, 0.5f, 0.5f, 1.f);
-
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
     
@@ -62,12 +57,11 @@ public:
                 [](void* p)
                 -> Reflection::GenericValue
                 {
-                    return glm::vec3(static_cast<EcDirectionalLight*>(p)->Object->FindComponent<EcTransform>()->Transform[3]);
+                    return static_cast<EcDirectionalLight*>(p)->Direction;
                 },
                 [](void* p, const Reflection::GenericValue& gv)
                 {
-                    static_cast<EcDirectionalLight*>(p)
-                        ->Object->FindComponent<EcTransform>()->Transform[3] = glm::vec4(gv.AsVector3(), 1.f);
+                    static_cast<EcDirectionalLight*>(p)->Direction = gv.AsVector3();
                 }
             ),
 

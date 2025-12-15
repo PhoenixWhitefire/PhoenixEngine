@@ -426,9 +426,6 @@ static void traverseHierarchy(
 				link->Scripting
 			);
 
-		if (!ct)
-			continue; // lights require a Transform
-
 		EcDirectionalLight* directional = object->FindComponent<EcDirectionalLight>();
 		EcPointLight* point = object->FindComponent<EcPointLight>();
 		EcSpotLight* spot = object->FindComponent<EcSpotLight>();
@@ -436,7 +433,7 @@ static void traverseHierarchy(
 		if (directional)
 		{
 			LightList.push_back(LightItem{
-				.Position = (glm::vec3)ct->Transform[3],
+				.Position = directional->Direction,
 				.LightColor = directional->LightColor * directional->Brightness,
 				.Type = LightType::Directional,
 				.Shadows = directional->Shadows
@@ -446,25 +443,28 @@ static void traverseHierarchy(
 				*Sun = directional;
 		}
 
-		if (point)
-			LightList.push_back(LightItem{
-				.Position = (glm::vec3)ct->Transform[3],
-				.LightColor = point->LightColor * point->Brightness,
-				.Range = point->Range,
-				.Type = LightType::Point,
-				.Shadows = false, /* point->Shadows, */
-			});
+		if (ct)
+		{
+			if (point)
+				LightList.push_back(LightItem{
+					.Position = (glm::vec3)ct->Transform[3],
+					.LightColor = point->LightColor * point->Brightness,
+					.Range = point->Range,
+					.Type = LightType::Point,
+					.Shadows = false, /* point->Shadows, */
+				});
 
-		if (spot)
-			LightList.push_back(LightItem{
-				.Position = (glm::vec3)ct->Transform[3],
-				.LightColor = spot->LightColor * spot->Brightness,
-				.Range = spot->Range,
-				.SpotLightDirection = (glm::vec3)ct->Transform[2],
-				.Angle = spot->Angle,
-				.Type = LightType::Spot,
-				.Shadows = false, /* spot->Shadows, */
-			});
+			if (spot)
+				LightList.push_back(LightItem{
+					.Position = (glm::vec3)ct->Transform[3],
+					.LightColor = spot->LightColor * spot->Brightness,
+					.Range = spot->Range,
+					.SpotLightDirection = (glm::vec3)ct->Transform[2],
+					.Angle = spot->Angle,
+					.Type = LightType::Spot,
+					.Shadows = false, /* spot->Shadows, */
+				});
+		}
 
 		if (!object->GetChildren().empty())
 			traverseHierarchy(
@@ -987,7 +987,7 @@ void Engine::Start()
 					sunScene.RenderList.back().FaceCulling = FaceCullingMode::FrontFace;
 				}
 
-			glm::vec3 sunDirection = glm::vec3(sun->Object->FindComponent<EcTransform>()->Transform[3]);
+			glm::vec3 sunDirection = sun->Direction;
 			
 			glm::mat4 sunOrtho = glm::ortho(
 				-sun->ShadowViewSizeH, sun->ShadowViewSizeH, -sun->ShadowViewSizeV, sun->ShadowViewSizeV,
