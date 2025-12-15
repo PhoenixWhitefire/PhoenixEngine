@@ -59,7 +59,6 @@ local GameObjectOverrides = {
 local function dumpCreatables()
 	local creatablesExtra = {
 		Mesh = " & Transform",
-		DirectionalLight = "& Transform",
 		SpotLight = " & Transform",
 		PointLight = " & Transform",
 		Model = " & Transform",

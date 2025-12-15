@@ -262,7 +262,7 @@ type Creatables = {
 	Workspace: Workspace,
 	DataModel: DataModel,
 	PointLight: PointLight & Transform,
-	DirectionalLight: DirectionalLight& Transform,
+	DirectionalLight: DirectionalLight,
 	SpotLight: SpotLight & Transform,
 	Camera: Camera,
 	Animation: Animation,
