@@ -25,6 +25,8 @@ void Log::Save()
 	}
 
 	LogHandle << ProgramLog;
+	LogHandle.close();
+	LogHandle.open("./log.txt", std::ios_base::app);
 
 	ProgramLog.clear();
 }
