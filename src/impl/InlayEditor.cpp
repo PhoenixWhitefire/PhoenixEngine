@@ -1575,13 +1575,11 @@ static void onTreeItemClicked(GameObject* nodeClicked)
 		else
 		{
 			Selections = { nodeClicked };
-			ExplorerShouldSeekToCurrentSelection = true;
 		}
 	}
 	else
 	{
 		Selections = { nodeClicked };
-		ExplorerShouldSeekToCurrentSelection = true;
 	}
 
 	LastSelected = nodeClicked;
@@ -1644,7 +1642,7 @@ static std::string getDescriptionForComponent(EntityComponent Ec)
 // lifetiem of this value is just `recursiveIterateTree`, which does not create any objects
 static GameObject* InsertObjectButtonHoveredOver = nullptr;
 
-static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection = false)
+static void recursiveIterateTree(GameObject* current)
 {
 	ZoneScopedC(tracy::Color::DarkSeaGreen);
 
@@ -1652,8 +1650,11 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 	// 07/10/2024
 	GameObject* nodeClicked = nullptr;
 
-	if (isInSelections(current))
-		didVisitCurSelection = true;
+	if (ExplorerShouldSeekToCurrentSelection && isInSelections(current))
+	{
+		ExplorerShouldSeekToCurrentSelection = false;
+		ImGui::ScrollToItem();
+	}
 
 	InsertObjectButtonHoveredOver = nullptr;
 
@@ -1679,7 +1680,7 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 		if (primaryComponent.Type == EntityComponent::Transform && object->Components.size() > 1)
 			primaryComponent = object->Components[1];
 
-		if (!didVisitCurSelection && Selections.size() > 0)
+		if (ExplorerShouldSeekToCurrentSelection && Selections.size() > 0)
 		{
 			std::vector<GameObject*> descs = object->GetDescendants();
 
@@ -1687,8 +1688,6 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 				if (isInSelections(desc))
 				{
 					ImGui::SetNextItemOpen(true);
-					ExplorerShouldSeekToCurrentSelection = false;
-					didVisitCurSelection = true;
 					break;
 				}
 		}
@@ -1805,7 +1804,7 @@ static void recursiveIterateTree(GameObject* current, bool didVisitCurSelection 
 
 		if (open)
 		{
-			recursiveIterateTree(object, didVisitCurSelection);
+			recursiveIterateTree(object);
 			ImGui::TreePop();
 		}
 
