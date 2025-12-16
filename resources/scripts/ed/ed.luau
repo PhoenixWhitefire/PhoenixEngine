@@ -222,6 +222,9 @@ local function openProject(ManualPath: string?)
 		return
 	end
 
+	Project.Name = path
+	saveToRecents(Project.Name)
+
 	for _, v in objects do
 		if v:HasComponent("DataModel") then
 			Project.DataModel = v :: any
@@ -233,6 +236,8 @@ local function openProject(ManualPath: string?)
 		Project.DataModel = GameObject.new("DataModel" :: "DataModel")
 		print("Re-created DataModel")
 	end
+
+	Project.DataModel.Name = Project.Name;
 
 	Project.Workspace = Project.DataModel:FindChildWithComponent("Workspace") :: any
 
@@ -247,9 +252,7 @@ local function openProject(ManualPath: string?)
 	EditorCam.Transform = Project.Workspace.SceneCamera.Transform
 
 	EditorTl.Target = Project.Workspace
-	saveToRecents(path)
 
-	Project.Name = path
 	changeStageTo("ProjectEditing")
 
 	Engine:BindDataModel(Project.DataModel)

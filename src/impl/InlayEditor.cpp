@@ -2739,9 +2739,18 @@ static void renderProperties()
 						ImGui::TextUnformatted(curValStr.c_str());
 
 						ImGui::Unindent();
+
+						if (ImGui::BeginItemTooltip())
+						{
+							ImGui::TextUnformatted(curValStr.c_str());
+							ImGui::EndTooltip();
+						}
 					}
 					else
+					{
 						ImGui::Text("%s: %s", propNameCStr, curValStr.c_str());
+						ImGui::SetItemTooltip("%s", curValStr.c_str());
+					}
 				}
 
 				propertyTooltip(propName, propToComponent[propName], propDesc->Type);

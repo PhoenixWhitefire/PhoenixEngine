@@ -10,7 +10,7 @@ PHNXENGI
       "$_class": "DataModel",
       "$_objectId": 0,
       "Enabled": true,
-      "Name": "DataModel",
+      "Name": "EditorDataModel",
       "Serializes": true
     },
     {
