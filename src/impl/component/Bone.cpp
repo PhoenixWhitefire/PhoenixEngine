@@ -1,3 +1,6 @@
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/matrix_interpolation.hpp>
+
 #include "component/Bone.hpp"
 #include "component/Mesh.hpp"
 #include "datatype/GameObject.hpp"
@@ -20,21 +23,6 @@ static Bone* getUnderlyingBone(EcBone* BoneComponent)
 	}
 	else
 		return nullptr;
-}
-
-static float lerp(float a, float b, float t)
-{
-	return a + (b - a) * t;
-}
-
-static glm::mat4 lerpMatrix(const glm::mat4& a, const glm::mat4& b, float t)
-{
-	glm::mat4 result;
-	for (int i = 0; i < 4; ++i)
-		for (int j = 0; j < 4; ++j)
-			result[i][j] = lerp(a[i][j], b[i][j], t);
-	
-	return result;
 }
 
 class BoneManager : public ComponentManager<EcBone>
@@ -72,6 +60,8 @@ public:
 					
 					if (realBone)
 					{
+						ZoneNamed("UpdateSkinningTransforms");
+
 						realBone->Transform = gv.AsMatrix();
 
 						GameObject* meshObj = boneObj->Object->GetParent();
@@ -80,10 +70,34 @@ public:
 						Mesh& meshData = MeshProvider::Get()->GetMeshResource(mesh->RenderMeshId);
 						MeshProvider::GpuMesh& gpuMesh = MeshProvider::Get()->GetGpuMesh(meshData.GpuId);
 
+						glm::mat4 accumulatedTransform = { 1.f };
+						uint8_t parent = realBone->Parent;
+
+						while (parent != UINT8_MAX)
+						{
+							const Bone& parentBone = meshData.Bones[parent];
+							accumulatedTransform = parentBone.Transform * accumulatedTransform;
+							parent = parentBone.Parent;
+						}
+
 						for (auto [vi, ji] : realBone->TargetVertices)
 						{
 							const Vertex& v = meshData.Vertices[vi];
-							gpuMesh.SkinningData[vi] = lerpMatrix(glm::mat4(1.f), realBone->Transform, v.JointWeights[ji]);
+							gpuMesh.SkinningData[vi] = accumulatedTransform * glm::interpolate(glm::mat4(1.f), realBone->Transform, v.JointWeights[ji]);
+						}
+
+						accumulatedTransform *= realBone->Transform;
+
+						for (const Bone& childBone : meshData.Bones)
+						{
+							if (childBone.Parent != boneObj->SkeletalBoneId)
+								continue;
+
+							for (auto [vi, ji] : childBone.TargetVertices)
+							{
+								const Vertex& v = meshData.Vertices[vi];
+								gpuMesh.SkinningData[vi] = accumulatedTransform * glm::interpolate(glm::mat4(1.f), childBone.Transform, v.JointWeights[ji]);
+							}
 						}
 					}
 					else
