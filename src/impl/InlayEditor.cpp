@@ -3142,6 +3142,18 @@ void InlayEditor::SetExplorerSelections(const std::vector<ObjectHandle>& NewSele
 
 const std::vector<ObjectHandle>& InlayEditor::GetExplorerSelections()
 {
+	for (size_t i = 0; i < Selections.size(); i++)
+	{
+		ObjectHandle& handle = Selections[i];
+		if (!handle.HasValue() || !handle.Reference.Referred() || handle->IsDestructionPending)
+		{
+			Selections[i].Clear();
+			Selections[i] = Selections[Selections.size() - 1];
+			Selections.erase(Selections.end() - 1);
+			i--;
+		}
+	}
+
 	return Selections;
 }
 

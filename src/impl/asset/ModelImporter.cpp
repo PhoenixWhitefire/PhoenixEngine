@@ -230,10 +230,16 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 	{
 		ObjectRef object;
 
-		if (node.Type == ModelNode::NodeType::Container)
-			object = GameObject::Create("Model");
+		switch (node.Type)
+		{
 
-		else if (node.Type == ModelNode::NodeType::Primitive)
+		case ModelNode::NodeType::Container:
+		{
+			object = GameObject::Create("Model");
+			break;
+		}
+
+		case ModelNode::NodeType::Primitive:
 		{
 			// TODO: cleanup code
 			object = GameObject::Create("Mesh");
@@ -343,13 +349,24 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 			meshObject->MetallnessFactor = material.MetallicFactor;
 			meshObject->RoughnessFactor = material.RoughnessFactor;
 		}
-		else
+
+		case ModelNode::NodeType::Bone:
+		{
+			break;
+		}
+
+		default:
 		{
 			object = GameObject::Create("Mesh");
 			EcTransform* prim = object->FindComponent<EcTransform>();
 			prim->Transform = node.Transform;
 			prim->Size = node.Scale;
 		}
+
+		}
+
+		if (!object)
+			continue;
 
 		object->Name = node.Name;
 
