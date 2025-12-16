@@ -53,11 +53,12 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 ## `Bone`
 
 * Represents a Bone of a Mesh
-* Created automatically when the asset of a Mesh component finishes loading
+* Created automatically when the asset of a `Mesh` component finishes loading
 
 ### Properties:
-* `IsActive: boolean `: Whether or not the Bone Object is actively affecting a Mesh
-* `SkeletalBoneId: number `: The internal ID of the bone, valid range is 0-126
+* `IsActive: boolean `: Whether or not the Bone Object is actively affecting a `Mesh`
+* `SkeletalBoneId: number `: The internal ID of the bone, valid range is 0-255
+* `TargetMesh: (GameObject & any) `: The `Mesh` component containing Object the Bone is currently targeting. Note that this property is read-only, and will only either be equal to the Mesh that created the Bone, or `nil`
 * `Transform: Matrix`: The transformation of the Bone
 
 ## `Camera`

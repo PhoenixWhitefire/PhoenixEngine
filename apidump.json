@@ -48,6 +48,7 @@
         "Properties": {
           "IsActive": "Boolean READONLY",
           "SkeletalBoneId": "Integer READONLY",
+          "TargetMesh": "GameObject READONLY",
           "Transform": "Matrix"
         }
       },

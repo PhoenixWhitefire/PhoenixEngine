@@ -372,10 +372,13 @@
     "documentation": "Associates the provided mesh data with the provided path"
   },
   "@luhx/globaltype/Bone.IsActive": {
-    "documentation": "Whether or not the Bone Object is actively affecting a Mesh"
+    "documentation": "Whether or not the Bone Object is actively affecting a `Mesh`"
   },
   "@luhx/globaltype/Bone.SkeletalBoneId": {
-    "documentation": "The internal ID of the bone, valid range is 0-126"
+    "documentation": "The internal ID of the bone, valid range is 0-255"
+  },
+  "@luhx/globaltype/Bone.TargetMesh": {
+    "documentation": "The `Mesh` component containing Object the Bone is currently targeting. Note that this property is read-only, and will only either be equal to the Mesh that created the Bone, or `nil`"
   },
   "@luhx/globaltype/Bone.Transform": {
     "documentation": "The transformation of the Bone"

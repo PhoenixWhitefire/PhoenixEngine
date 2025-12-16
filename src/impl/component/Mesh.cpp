@@ -97,11 +97,16 @@ public:
 
 		if (!Object->FindComponent<EcTransform>())
 			Object->AddComponent(EntityComponent::Transform);
+
+		uint32_t id = static_cast<uint32_t>(m_Components.size() - 1);
+
+		EcMesh& cm = m_Components.back();
+		cm.MaterialId = MaterialManager::Get()->LoadFromPath("plastic");
+		cm.RenderMeshId = MeshProvider::Get()->LoadFromPath("!Cube");
+		cm.ComponentId = id;
+		cm.Object = Object;
 		
-		m_Components.back().MaterialId = MaterialManager::Get()->LoadFromPath("plastic");
-		m_Components.back().Object = Object;
-		
-        return static_cast<uint32_t>(m_Components.size() - 1);
+        return id;
     }
 
     void DeleteComponent(uint32_t Id) override
@@ -238,7 +243,7 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 
 	MeshProvider* meshProvider = MeshProvider::Get();
 	ObjectRef obj = Object;
-	std::string meshPathStr{ MeshPath };
+	std::string meshPathStr = std::string(MeshPath);
 
 	this->RenderMeshId = meshProvider->LoadFromPath(
 		std::string(MeshPath),
@@ -271,8 +276,9 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 				freelist.erase(freelist.begin() + freelist.size() - 1);
 			}
 
-			obj->FindComponent<EcMesh>()->RenderMeshId = meshId;
-			
+			EcMesh* cm = obj->FindComponent<EcMesh>();
+			cm->RenderMeshId = meshId;
+
 			for (GameObject* ch : obj->GetChildren())
 				if (ch->FindComponent<EcBone>())
 					ch->Destroy();
@@ -313,6 +319,7 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 				
 				bone->Transform = b.Transform;
 				bone->SkeletalBoneId = boneId;
+				bone->TargetMesh = cm->ComponentId;
 			}
 		}
 	);

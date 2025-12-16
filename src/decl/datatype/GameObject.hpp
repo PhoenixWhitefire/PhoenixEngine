@@ -422,7 +422,7 @@ public:
 	virtual void* GetComponent(uint32_t Id) override
 	{
 		T& component = m_Components.at(Id);
-		return component.Valid ? (void*)&component : nullptr;;
+		return component.Valid ? (void*)&component : nullptr;
 	}
 
 	virtual std::vector<void*> GetComponents() override

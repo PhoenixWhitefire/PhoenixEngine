@@ -7,18 +7,25 @@
 #include "datatype/GameObject.hpp"
 #include "asset/MeshProvider.hpp"
 
+static EcMesh* getTargetMesh(EcBone* Bone)
+{
+	if (Bone->TargetMesh != UINT32_MAX)
+		return (EcMesh*)GameObject::s_ComponentManagers[(size_t)EntityComponent::Mesh]->GetComponent(Bone->TargetMesh);
+	else
+		return nullptr;
+}
+
 static Bone* getUnderlyingBone(EcBone* BoneComponent)
 {
-	GameObject* meshObj = BoneComponent->Object->GetParent();
-	EcMesh* mesh = meshObj ? meshObj->FindComponent<EcMesh>() : nullptr;
+	EcMesh* cm = getTargetMesh(BoneComponent);
 
-	if (mesh)
+	if (cm)
 	{
-		Mesh& meshData = MeshProvider::Get()->GetMeshResource(mesh->RenderMeshId);
+		Mesh& meshData = MeshProvider::Get()->GetMeshResource(cm->RenderMeshId);
 		std::vector<Bone>& bones = meshData.Bones;
 
-		if (bones.size() >= (size_t)BoneComponent->SkeletalBoneId)
-			return &bones.at(BoneComponent->SkeletalBoneId);
+		if (bones.size() > (size_t)BoneComponent->SkeletalBoneId)
+			return &bones[BoneComponent->SkeletalBoneId];
 		else
 			return nullptr;
 	}
@@ -65,8 +72,7 @@ public:
 
 						realBone->Transform = gv.AsMatrix();
 
-						GameObject* meshObj = boneObj->Object->GetParent();
-						EcMesh* mesh = meshObj->FindComponent<EcMesh>();
+						EcMesh* mesh = getTargetMesh(boneObj);
 
 						Mesh& meshData = MeshProvider::Get()->GetMeshResource(mesh->RenderMeshId);
 						MeshProvider::GpuMesh& gpuMesh = MeshProvider::Get()->GetGpuMesh(meshData.GpuId);
@@ -124,6 +130,19 @@ public:
 				-> Reflection::GenericValue
 				{
 					return (uint32_t)static_cast<EcBone*>(p)->SkeletalBoneId;
+				},
+				nullptr
+			),
+
+			REFLECTION_PROPERTY(
+				"TargetMesh",
+				GameObject,
+				[](void* p) -> Reflection::GenericValue
+				{
+					if (EcMesh* cm = getTargetMesh(static_cast<EcBone*>(p)))
+						return cm->Object->ToGenericValue();
+					else
+						return GameObject::s_ToGenericValue(nullptr);
 				},
 				nullptr
 			)

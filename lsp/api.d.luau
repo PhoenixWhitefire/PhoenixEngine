@@ -96,6 +96,7 @@ end
 declare extern type Bone with
   IsActive: boolean 
   SkeletalBoneId: number 
+  TargetMesh: (GameObject & any) 
   Transform: Matrix
 end
 declare extern type Camera with

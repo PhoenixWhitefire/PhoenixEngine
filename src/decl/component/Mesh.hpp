@@ -20,8 +20,8 @@ struct EcMesh : public Component<EntityComponent::Mesh>
 
 	FaceCullingMode FaceCulling = FaceCullingMode::BackFace;
 
-	uint32_t RenderMeshId{};
-	uint32_t MaterialId{};
+	uint32_t RenderMeshId = UINT32_MAX;
+	uint32_t MaterialId = UINT32_MAX;
 
 	float Transparency = 0.f;
 	float MetallnessFactor = 1.f;
@@ -34,8 +34,8 @@ struct EcMesh : public Component<EntityComponent::Mesh>
 	glm::vec3 NetForce;
 	struct
 	{
-		glm::vec3 Position{};
-		glm::vec3 Size{ 1.f, 1.f, 1.f };
+		glm::vec3 Position;
+		glm::vec3 Size = { 1.f, 1.f, 1.f };
 	} CollisionAabb;
 	CollisionFidelityMode CollisionFidelity = CollisionFidelityMode::Aabb;
 
@@ -48,6 +48,8 @@ struct EcMesh : public Component<EntityComponent::Mesh>
 
 	std::vector<glm::vec3> SpatialHashPoints;
 	ObjectRef PrevWorkspace;
+
+	uint32_t ComponentId = UINT32_MAX;
 
 	ObjectRef Object;
 	bool Valid = true;
