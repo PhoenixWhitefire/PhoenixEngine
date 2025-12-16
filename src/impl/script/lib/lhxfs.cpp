@@ -276,7 +276,7 @@ static int fs_promptsave(lua_State* L)
 
 	const char* path = tinyfd_saveFileDialog(
 		"Save File",
-		defaultLocation.c_str(),
+		!lua_isnoneornil(L, 1) ? defaultLocation.c_str() : nullptr,
 		filters.size(),
 		filters.data(),
 		filterName
@@ -314,7 +314,7 @@ static int fs_promptopen(lua_State* L)
 
 	const char* filescstr = tinyfd_openFileDialog(
 		"Open File(s)",
-		defaultLocation.c_str(),
+		!lua_isnoneornil(L, 1) ? defaultLocation.c_str() : nullptr,
 		filters.size(),
 		filters.data(),
 		filterName,

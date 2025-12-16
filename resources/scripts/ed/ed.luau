@@ -437,11 +437,7 @@ local function homeTab(_: number)
 
 	if tabButton("Import Model", "@etextures/editor-icons/Model.png") then
 		defer(function()
-			if not fs.isdirectory("models/") then
-				assert(fs.mkdir("models/"))
-			end
-
-			local paths = fs.promptopen("models/", { "*.gltf", "*.glb" }, "Models")
+			local paths = fs.promptopen(nil, { "*.gltf", "*.glb" }, "Models")
 
 			if paths[1] then
 				local imported = AssetService:ImportModel(paths[1])
@@ -917,6 +913,18 @@ local function isMouseWithinViewport()
 end
 
 local function renderViewport(DeltaTime: number)
+	for index = 1, #PrevSelections do
+		if not PrevSelections[index] then
+			break
+		end
+
+		if not PrevSelections[index].Exists then
+			PrevSelections[index] = PrevSelections[#PrevSelections]
+			PrevSelections[#PrevSelections] = nil
+			index -= 1
+		end
+	end
+
 	if CurrentStage == "ProjectEditing" and Project.Workspace then
 		local mouseVec = Project.Workspace:ScreenPointToVector(InputService:GetCursorPosition(), 1000)
 		local rayresult = Project.Workspace:Raycast(EditorCam.Transform.Position, mouseVec, { SelectionPart })

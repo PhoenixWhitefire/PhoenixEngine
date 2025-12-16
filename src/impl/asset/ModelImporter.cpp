@@ -241,15 +241,17 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 			EcTransform* ct = object->FindComponent<EcTransform>();
 
 			std::string saveDir = AssetPath;
-			size_t whereRes = saveDir.find("resources/");
+			size_t assetNameCutoff = saveDir.find_last_of('/');
 
-			if (whereRes == std::string::npos)
-				Log::WarningF(
-					"ModelLoader cannot guarantee the mesh will be saved within the Resources directory (Path was: '{}')",
-					AssetPath
-				);
+			if (assetNameCutoff == std::string::npos)
+				assetNameCutoff = 0;
 			else
-				saveDir = saveDir.substr(whereRes + 10, saveDir.size() - whereRes);
+				assetNameCutoff++;
+
+			saveDir = saveDir.substr(assetNameCutoff, saveDir.size() - assetNameCutoff);
+
+			if (size_t extensionLoc = saveDir.find('.'); extensionLoc != std::string::npos)
+				saveDir = saveDir.substr(0, saveDir.size() - extensionLoc);
 
 			/*
 				When;
@@ -281,7 +283,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 
 			TextureManager* texManager = TextureManager::Get();
 
-			nlohmann::json materialJson{};
+			nlohmann::json materialJson;
 
 			const ModelLoader::MeshMaterial& material = node.Material;
 
@@ -325,7 +327,8 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 			materialJson["BilinearFiltering"] = colorTex.DoBilinearSmoothing;
 
 			// `models/EmbeddedTexture.glb/Material.001`
-			std::string materialName = saveDir
+			std::string materialName = "models/"
+				+ saveDir
 				+ "/"
 				+ material.Name;
 

@@ -1,5 +1,6 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/matrix_interpolation.hpp>
+#include <tracy/Tracy.hpp>
 
 #include "component/Bone.hpp"
 #include "component/Mesh.hpp"
@@ -60,7 +61,7 @@ public:
 					
 					if (realBone)
 					{
-						ZoneNamed("UpdateSkinningTransforms");
+						ZoneScopedN("UpdateSkinningTransforms");
 
 						realBone->Transform = gv.AsMatrix();
 
