@@ -81,7 +81,37 @@ local function assert(cond: any, err: string?, ...)
 	return cond, err, ...
 end
 
-local function changeStageTo(NewStage: Stage)
+local function onError(err)
+	local errorMessage = `An error occurred: { debug.traceback(err, 2) }`
+	print(errorMessage)
+	Engine:ShowMessageBox("Editor Error", errorMessage, "ok", "error")
+end
+
+local changeStageTo: (NewStage: Stage) -> ()
+
+local function editorFrame(DeltaTime)
+	MouseClick = (not WasHoldingDownM1) and InputService:IsMouseButtonPressed(Enum.MouseButton.Left)
+		local f5 = InputService:IsKeyPressed(Enum.Key.F5)
+
+		if CurrentStage == "ProjectEditing" then
+			if f5 and not WasHoldingF5 then
+				changeStageTo("ProjectPlaying")
+			end
+		elseif CurrentStage == "ProjectPlaying" then
+			if f5 and not WasHoldingF5 then
+				changeStageTo("ProjectEditing")
+			end
+		end
+
+		WasHoldingF5 = f5
+
+		CoreTools.Update(Project)
+		Stages[CurrentStage](DeltaTime)
+
+		WasHoldingDownM1 = InputService:IsMouseButtonPressed(Enum.MouseButton.Left)
+end
+
+changeStageTo = function(NewStage: Stage)
 	print(`Changing stage from { CurrentStage } to { NewStage }`)
 	
 	if StageUpdateSignal then
@@ -104,26 +134,13 @@ local function changeStageTo(NewStage: Stage)
 	
 	CurrentStage = NewStage
 	StageUpdateSignal = targetDm.OnFrameBegin:Connect(function(DeltaTime)
-		MouseClick = (not WasHoldingDownM1) and InputService:IsMouseButtonPressed(Enum.MouseButton.Left)
-		local f5 = InputService:IsKeyPressed(Enum.Key.F5)
+		local s, e = xpcall(function(dt)
+			editorFrame(dt)
+		end, onError, DeltaTime)
 
-		if CurrentStage == "ProjectEditing" then
-			if f5 and not WasHoldingF5 then
-				changeStageTo("ProjectPlaying")
-			end
-		elseif CurrentStage == "ProjectPlaying" then
-			if f5 and not WasHoldingF5 then
-				changeStageTo("ProjectEditing")
-			end
+		if not s then
+			print(`editorFrame error: {e}`)
 		end
-
-		WasHoldingF5 = f5
-
-		CoreTools.Update(Project)
-
-		Stages[CurrentStage](DeltaTime)
-
-		WasHoldingDownM1 = InputService:IsMouseButtonPressed(Enum.MouseButton.Left)
 	end)
 end
 
