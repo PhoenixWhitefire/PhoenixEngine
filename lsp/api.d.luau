@@ -174,9 +174,11 @@ declare extern type HistoryService with
   CurrentActionName: string? 
   CurrentWaypoint: number 
   IsRecordingAction: boolean 
+  TargetDataModel: (GameObject & any)
 
   function CanRedo(self) : (boolean)
   function CanUndo(self) : (boolean)
+  function ClearHistory(self) : ()
   function DiscardCurrentAction(self) : ()
   function EnableRecording(self) : ()
   function FinishCurrentAction(self) : ()
@@ -322,7 +324,7 @@ declare fs: {
 }
 declare imgui: {
   anyitemactive: ((  ) -> (boolean)),
-  begin: (( WindowTitle: string, WindowFlags: string? ) -> (boolean)),
+  begin: (( WindowTitle: string, WindowFlags: string?, HasCloseButton: boolean? ) -> (boolean, boolean)),
   beginchild: (( Name: string, Width: number?, Height: number?, ChildFlags: string?, WindowFlags: string? ) -> (boolean)),
   beginfullscreen: (( Name: string, OffsetX: number?, OffsetY: number? ) -> ()),
   beginmainmenubar: ((  ) -> (boolean)),
@@ -334,7 +336,8 @@ declare imgui: {
   checkbox: (( Name: string, Value: boolean ) -> (boolean)),
   closecurrentpopup: ((  ) -> ()),
   combo: (( Text: string, Options: { string }, CurrentOption: number ) -> (number)),
-  cursorposition: ((  ) -> (number, number)),
+  contentregionavail: ((  ) -> (vector)),
+  cursorposition: ((  ) -> (vector)),
   dummy: (( Width: number?, Height: number? ) -> ()),
   endchild: ((  ) -> ()),
   endmainmenubar: ((  ) -> ()),
@@ -342,7 +345,6 @@ declare imgui: {
   endmenubar: ((  ) -> ()),
   endpopup: ((  ) -> ()),
   endw: ((  ) -> ()),
-  getcontentregionavail: ((  ) -> (number, number)),
   image: (( ImagePath: string, Size: vector?, FlipVertically: boolean?, TintColor: { number }? ) -> ()),
   imagebutton: (( Name: string, Image: string, Size: vector? ) -> (boolean)),
   indent: (( Indent: number? ) -> ()),
@@ -372,13 +374,13 @@ declare imgui: {
   stylecolors: (( Theme: 'l' | 'd' ) -> ()),
   text: (( Text: string ) -> ()),
   textlink: (( Text: string ) -> (boolean)),
-  textsize: (( Text: string ) -> (number, number)),
+  textsize: (( Text: string ) -> (vector)),
   treenode: (( Text: string ) -> (boolean)),
   treepop: ((  ) -> ()),
   urllink: (( Text: string, Url: string? ) -> (boolean)),
   windowhovered: ((  ) -> (boolean)),
-  windowposition: ((  ) -> (number, number)),
-  windowsize: ((  ) -> (number, number))
+  windowposition: ((  ) -> (vector)),
+  windowsize: ((  ) -> (vector))
 }
 declare json: {
   encode: (( Value: any ) -> (string)),

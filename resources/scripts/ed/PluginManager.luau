@@ -37,11 +37,11 @@ local function renderPluginManagement()
         imgui.pushid(plugin.Path)
         local settings = getPluginSettings(plugin)
 
-        local cx, cy = imgui.cursorposition()
+        local cpos = imgui.cursorposition()
 
         imgui.image(plugin.Icon or FALLBACK_IMAGE, vector.create(150, 150), false, if settings.Enabled then { 1, 1, 1, 1 } else { 0.5, 0.5, 0.5, 1. })
 
-        imgui.setcursorposition(cx + 175, cy)
+        imgui.setcursorposition(cpos.x + 175, cpos.y)
 
         local wasEnabled = settings.Enabled
         settings.Enabled = imgui.checkbox("##", wasEnabled)
@@ -50,13 +50,13 @@ local function renderPluginManagement()
 
         imgui.text(plugin.Name)
 
-        imgui.setcursorposition(cx + 175, cy + 20)
+        imgui.setcursorposition(cpos.x + 175, cpos.y + 20)
         imgui.text(plugin.Description or "")
 
-        imgui.setcursorposition(cx + 175, cy + 140)
+        imgui.setcursorposition(cpos.x + 175, cpos.y + 140)
         imgui.text(plugin.Path)
 
-        imgui.setcursorposition(cx, cy + 160)
+        imgui.setcursorposition(cpos.x, cpos.y + 160)
         imgui.separator()
 
         imgui.popid()

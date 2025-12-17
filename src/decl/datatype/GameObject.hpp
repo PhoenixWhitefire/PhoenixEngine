@@ -214,6 +214,7 @@ public:
 
 	uint32_t ObjectId = PHX_GAMEOBJECT_NULL_ID;
 	uint32_t Parent = PHX_GAMEOBJECT_NULL_ID;
+	uint32_t OwningDataModel = PHX_GAMEOBJECT_NULL_ID;
 	uint32_t OwningWorkspace = PHX_GAMEOBJECT_NULL_ID;
 
 	bool Enabled = true;

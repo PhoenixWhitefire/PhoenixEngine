@@ -23,6 +23,7 @@ public:
     };
 
     void RecordEvent(const PropertyEvent&);
+    void ClearHistory();
 
     bool TryBeginAction(const std::string&);
     void FinishCurrentAction();
@@ -33,6 +34,7 @@ public:
     void Undo();
     void Redo();
 
+    uint32_t TargetDataModel = PHX_GAMEOBJECT_NULL_ID;
     bool IsRecordingEnabled = false;
 
     struct Action
@@ -47,7 +49,7 @@ public:
 
 private:
     std::optional<Action> m_CurrentAction;
-    std::vector<Action> m_ActionHistory;
+    std::vector<Action> m_ActionHistory = { { "<Initial Action>", {} } };
 
     size_t m_CurrentWaypoint = 0;
 };

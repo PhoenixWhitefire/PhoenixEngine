@@ -574,7 +574,7 @@ bool Reflection::GenericValue::operator==(const Reflection::GenericValue& Other)
 	{
 		return Val.Bool == Other.Val.Bool;
 	}
-	case ValueType::Integer:
+	case ValueType::Integer: case ValueType::GameObject:
 	{
 		return Val.Int == Other.Val.Int;
 	}
@@ -592,7 +592,7 @@ bool Reflection::GenericValue::operator==(const Reflection::GenericValue& Other)
 	}
 
 	default:
-		return memcmp(&Val, &Other.Val, sizeof(ValueData));
+		return memcmp(&Val, &Other.Val, sizeof(ValueData)) == 0;
 	}
 }
 

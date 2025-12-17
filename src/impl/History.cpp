@@ -15,6 +15,17 @@ void History::RecordEvent(const PropertyEvent& Event)
         return;
 
     m_CurrentAction->Events.push_back(Event);
+
+    // `TargetDataModel`/`OwningDataModel` checks are done in `GameObject::SetPropertyValue`
+}
+
+void History::ClearHistory()
+{
+    // We need to do this so that there's a waypoint to go *back* to when we Undo
+    m_ActionHistory = { { "<Initial Action>", {} } };
+
+    if (m_CurrentAction.has_value())
+        Log::WarningF("`History::ClearHistory` called while Action {} was ongoing", m_CurrentAction->Name);
 }
 
 bool History::TryBeginAction(const std::string& Name)
@@ -37,7 +48,7 @@ void History::FinishCurrentAction()
     if (m_CurrentWaypoint != m_ActionHistory.size() - 1)
     {
         // TODO multiple timelines
-        m_ActionHistory = std::vector<Action>(m_ActionHistory.begin(), m_ActionHistory.begin() + m_CurrentWaypoint);
+        m_ActionHistory = std::vector<Action>(m_ActionHistory.begin(), m_ActionHistory.begin() + m_CurrentWaypoint + 1);
     }
 
     m_ActionHistory.push_back(m_CurrentAction.value());
@@ -61,7 +72,7 @@ bool History::CanUndo() const
 
 bool History::CanRedo() const
 {
-    return m_ActionHistory.size() > m_CurrentWaypoint && !m_CurrentAction.has_value();
+    return m_ActionHistory.size() >= m_CurrentWaypoint + 2 && !m_CurrentAction.has_value();
 }
 
 void History::Undo()
@@ -77,6 +88,9 @@ void History::Undo()
 
         RAISE_RT("Cannot Undo right now");
     }
+
+    if (m_CurrentWaypoint > m_ActionHistory.size() - 1)
+        m_CurrentWaypoint = m_ActionHistory.size() - 1; // TODO not sure why this happens
 
     const Action& lastAction = m_ActionHistory[m_CurrentWaypoint];
 
@@ -114,7 +128,7 @@ void History::Redo()
 {
     if (!CanRedo())
     {
-        if (m_ActionHistory.size() <= m_CurrentWaypoint)
+        if (m_ActionHistory.size() < m_CurrentWaypoint + 2)
             RAISE_RT("Cannot Redo, no history recorded beyond this point");
         if (m_CurrentAction.has_value())
             RAISE_RTF("Cannot Redo, action '{}' is not complete", m_CurrentAction->Name);

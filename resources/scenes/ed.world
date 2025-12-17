@@ -26,7 +26,7 @@ PHNXENGI
       "$_class": "Camera",
       "$_objectId": 2,
       "Enabled": true,
-      "FieldOfView": 70.0,
+      "FieldOfView": 90.0,
       "Name": "Camera",
       "Parent": 1,
       "Serializes": true,

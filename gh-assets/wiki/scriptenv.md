@@ -213,7 +213,7 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * UI with Dear ImGui
 #### `imgui.anyitemactive(): boolean`
 * `ImGui::IsAnyItemActive`
-#### `imgui.begin(WindowTitle: string, WindowFlags: string? [ "" ]): boolean`
+#### `imgui.begin(WindowTitle: string, WindowFlags: string? [ "" ], HasCloseButton: boolean? [ false ]): boolean, boolean`
 * `ImGui::Begin`
 * `WindowFlags` may be a combination of any of the following sequences, optionally separated by ' ' or '|' characters: `nt` (no titlebar), `nr` (no resize), `nm` (no move), `nc` (no collapse), `ns` (no saved settings), `ni` (no interact), `h` (horizontal scrolling)
 #### `imgui.beginchild(Name: string, Width: number? [ 0 ], Height: number? [ 0 ], ChildFlags: string? [ "" ], WindowFlags: string? [ "" ]): boolean`
@@ -240,7 +240,9 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * `ImGui::CloseCurrentPopup`
 #### `imgui.combo(Text: string, Options: { string }, CurrentOption: number): number`
 * `ImGui::Combo`. Returns the selected option index
-#### `imgui.cursorposition(): number, number`
+#### `imgui.contentregionavail(): vector`
+* `ImGui::GetContentRegionAvail`
+#### `imgui.cursorposition(): vector`
 * Returns the current position of the Dear ImGui element cursor within the current window
 * To *set* the cursor position, use `.setcursorposition`
 #### `imgui.dummy(Width: number? [ 0 ], Height: number? [ 0 ]): `
@@ -257,8 +259,6 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * `ImGui::EndPopup`
 #### `imgui.endw(): `
 * `ImGui::End`, `endw` and not `end` because `end` is a Luau keyword
-#### `imgui.getcontentregionavail(): number, number`
-* `ImGui::GetContentRegionAvail`
 #### `imgui.image(ImagePath: string, Size: vector?, FlipVertically: boolean? [ false ], TintColor: { number }? [ { 1, 1, 1, 1 } ]): `
 * `ImGui::Image`
 #### `imgui.imagebutton(Name: string, Image: string, Size: vector?): boolean`
@@ -319,7 +319,7 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * `ImGui::Text`
 #### `imgui.textlink(Text: string): boolean`
 * `ImGui::TextLink`
-#### `imgui.textsize(Text: string): number, number`
+#### `imgui.textsize(Text: string): vector`
 * `ImGui::CalcTextSize`
 #### `imgui.treenode(Text: string): boolean`
 * `ImGui::TreeNode`
@@ -331,10 +331,10 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * `ImGui::TextLinkOpenUrl`
 #### `imgui.windowhovered(): boolean`
 * `ImGui::IsWindowHovered`
-#### `imgui.windowposition(): number, number`
+#### `imgui.windowposition(): vector`
 * Returns the position of the current Dear ImGui window (`ImGui::GetWindowPos`)
 * To *set* the position of the window, use `.setnextwindowposition`
-#### `imgui.windowsize(): number, number`
+#### `imgui.windowsize(): vector`
 * Returns the size of the current window
 ### `json`
 * Encoding and decoding JSON files

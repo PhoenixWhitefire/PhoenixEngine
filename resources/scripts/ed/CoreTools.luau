@@ -1,3 +1,4 @@
+local HistoryService: HistoryService = game:GetService("HistoryService") :: any
 local InputService: InputService = game:GetService("InputService") :: any
 local Engine: Engine = game:GetService("Engine") :: any
 
@@ -36,18 +37,18 @@ end
 
 GizmoContainer.Name = "GizmoContainer"
 
-function CoreTools.RenderControls(TabButtonControl: (string, string, boolean?, boolean?, string?) -> boolean)
+function CoreTools.RenderControls(TabButtonControl: (string, string, boolean?, boolean?, string?, string?) -> boolean)
     if TabButtonControl("Gizmo", "@etextures/editor-icons/Transform.png", true, GizmoActive) then
 		GizmoActive = not GizmoActive
 	end
 
 	imgui.sameline()
     imgui.setnextitemwidth(80)
-    local sx, sy = imgui.cursorposition()
+    local s = imgui.cursorposition()
 
 	GizmoMode = imgui.combo("Gizmo", { "Move", "Scale" }, GizmoMode)
 
-    imgui.setcursorposition(sx, sy + 24)
+    imgui.setcursorposition(s.x, s.y + 24)
     imgui.setnextitemwidth(80)
     GizmoMoveIncrement = imgui.inputnumber("Move Increment", GizmoMoveIncrement)
 end
@@ -116,16 +117,21 @@ function CoreTools.Update(Project: { Workspace: Workspace })
 
             if not IsSurfaceDragging then
                 PrevDragMousePos = cpos
+                HistoryService:TryBeginAction("SurfaceDrag")
             end
 
             if PrevDragMousePos ~= cpos then
-               target.Transform = Matrix.fromTranslation(worldHit.Position + worldHit.Normal * target.Size / 2)
+                target.Transform = Matrix.fromTranslation(worldHit.Position + worldHit.Normal * target.Size / 2)
             end
 
             IsSurfaceDragging = true
         end
     else
         IsSurfaceDragging = false
+
+        if HistoryService.CurrentActionName == "SurfaceDrag" then
+            HistoryService:FinishCurrentAction()
+        end
     end
 
     if IsSurfaceDragging then
@@ -172,6 +178,10 @@ function CoreTools.Update(Project: { Workspace: Workspace })
             pcs[1].Transparency = 0
             pcs[2].Transparency = 0.5
         end
+
+        if HistoryService.CurrentActionName == "GizmoDrag" then
+            HistoryService:FinishCurrentAction()
+        end
     end
 
     if IsGizmoDragging then
@@ -179,6 +189,7 @@ function CoreTools.Update(Project: { Workspace: Workspace })
 
         local oldMouseDir = workspace:ScreenPointToVector(PrevDragMousePos, dist)
         local diff = (vector.normalize(mouseVector) * dist) - oldMouseDir
+        HistoryService:TryBeginAction("GizmoDrag")
 
         target.Transform += vector.create(roundTo(diff.x, GizmoMoveIncrement), roundTo(diff.y, GizmoMoveIncrement), roundTo(diff.z, GizmoMoveIncrement)) * GizmoDragAxis
 

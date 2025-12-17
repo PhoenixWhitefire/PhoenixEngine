@@ -141,6 +141,7 @@
         "Methods": {
           "CanRedo": "() -> (Boolean)",
           "CanUndo": "() -> (Boolean)",
+          "ClearHistory": "() -> ()",
           "DiscardCurrentAction": "() -> ()",
           "EnableRecording": "() -> ()",
           "FinishCurrentAction": "() -> ()",
@@ -154,7 +155,8 @@
           "ActionHistorySize": "Integer READONLY",
           "CurrentActionName": "String? READONLY",
           "CurrentWaypoint": "Integer READONLY",
-          "IsRecordingAction": "Boolean READONLY"
+          "IsRecordingAction": "Boolean READONLY",
+          "TargetDataModel": "GameObject"
         }
       },
       "InputService": {
@@ -368,6 +370,7 @@
         "checkbox": "function",
         "closecurrentpopup": "function",
         "combo": "function",
+        "contentregionavail": "function",
         "cursorposition": "function",
         "dummy": "function",
         "endchild": "function",
@@ -376,7 +379,6 @@
         "endmenubar": "function",
         "endpopup": "function",
         "endw": "function",
-        "getcontentregionavail": "function",
         "image": "function",
         "imagebutton": "function",
         "indent": "function",

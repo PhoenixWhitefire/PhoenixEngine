@@ -173,6 +173,9 @@
   "@luhx/global/imgui.combo": {
     "documentation": "* `ImGui::Combo`. Returns the selected option index"
   },
+  "@luhx/global/imgui.contentregionavail": {
+    "documentation": "* `ImGui::GetContentRegionAvail`"
+  },
   "@luhx/global/imgui.cursorposition": {
     "documentation": "* Returns the current position of the Dear ImGui element cursor within the current window\n* To *set* the cursor position, use `.setcursorposition`"
   },
@@ -196,9 +199,6 @@
   },
   "@luhx/global/imgui.endw": {
     "documentation": "* `ImGui::End`, `endw` and not `end` because `end` is a Luau keyword"
-  },
-  "@luhx/global/imgui.getcontentregionavail": {
-    "documentation": "* `ImGui::GetContentRegionAvail`"
   },
   "@luhx/global/imgui.image": {
     "documentation": "* `ImGui::Image`"
@@ -641,6 +641,9 @@
   "@luhx/globaltype/HistoryService.CanUndo": {
     "documentation": "Returns whether `:Undo` will succeed"
   },
+  "@luhx/globaltype/HistoryService.ClearHistory": {
+    "documentation": "Clears all recorded history"
+  },
   "@luhx/globaltype/HistoryService.CurrentActionName": {
     "documentation": "The name of the Action currently being recorded, or `nil` if no recording is in progress"
   },
@@ -667,6 +670,9 @@
   },
   "@luhx/globaltype/HistoryService.Redo": {
     "documentation": "Forwards the state of the scene to how it was before the last Undo"
+  },
+  "@luhx/globaltype/HistoryService.TargetDataModel": {
+    "documentation": "The DataModel that History will track"
   },
   "@luhx/globaltype/HistoryService.TryBeginAction": {
     "documentation": "Attempts to begin an \"Action.\" May fail and return `false`. Only one Action may be active at a time"

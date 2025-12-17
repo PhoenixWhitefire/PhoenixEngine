@@ -1,4 +1,5 @@
 -- ed.luau, 14/09/2025
+local HistoryService: HistoryService = game:GetService("HistoryService") :: any
 local InputService: InputService = game:GetService("InputService") :: any
 local AssetService: AssetService = game:GetService("AssetService") :: any
 local Engine: Engine = game:GetService("Engine") :: any
@@ -7,13 +8,14 @@ local FALLBACK_IMAGE = "@etextures/editor-icons/fallback.png"
 local LOGO_IMAGE = "@etextures/logo.png"
 
 local PluginManager = require("./PluginManager.luau")
+local HistoryView = require("./HistoryView.luau")
 local CoreTools = require("./CoreTools.luau")
 local Types = require("./Types.luau")
 type Stage = Types.Stage
 
 local CurrentStage: Stage = "None"
 local StageUpdateSignal: EventConnection? = nil
-local Stages: { [string]: (any) -> () } = {}
+local Stages: { [string]: (number) -> ((GameObject & DataModel)?) & (...any) -> () } = {}
 
 local EditorCam = assert(workspace.SceneCamera)
 local EditorTl = GameObject.new("TreeLink" :: "TreeLink")
@@ -60,6 +62,8 @@ local WasHoldingDownM1 = false
 local MouseClick = false
 local WasHoldingF5 = false
 
+HistoryService:EnableRecording()
+
 fs.definealias("editres", "@cwd/resources")
 fs.definealias("etextures", "@editres/textures")
 
@@ -83,8 +87,14 @@ end
 
 local function onError(err)
 	local errorMessage = `An error occurred: { debug.traceback(err, 2) }`
+	if Project.DataModel then
+		errorMessage ..= "\n\nThe Editor will perform a save to the file 'resources/scenes/autosave.world', please ensure nothing important is stored at that location before proceeding."
+	end
+
 	print(errorMessage)
 	Engine:ShowMessageBox("Editor Error", errorMessage, "ok", "error")
+
+	scene.save({ Project.DataModel }, "scenes/autosave.world")
 end
 
 local changeStageTo: (NewStage: Stage) -> ()
@@ -93,13 +103,15 @@ local function editorFrame(DeltaTime)
 	MouseClick = (not WasHoldingDownM1) and InputService:IsMouseButtonPressed(Enum.MouseButton.Left)
 		local f5 = InputService:IsKeyPressed(Enum.Key.F5)
 
-		if CurrentStage == "ProjectEditing" then
-			if f5 and not WasHoldingF5 then
-				changeStageTo("ProjectPlaying")
-			end
-		elseif CurrentStage == "ProjectPlaying" then
-			if f5 and not WasHoldingF5 then
-				changeStageTo("ProjectEditing")
+		if not HistoryService.IsRecordingAction then
+			if CurrentStage == "ProjectEditing" then
+				if f5 and not WasHoldingF5 then
+					changeStageTo("ProjectPlaying")
+				end
+			elseif CurrentStage == "ProjectPlaying" then
+				if f5 and not WasHoldingF5 then
+					changeStageTo("ProjectEditing")
+				end
 			end
 		end
 
@@ -267,8 +279,10 @@ local function openProject(ManualPath: string?)
 	end
 
 	EditorCam.Transform = Project.Workspace.SceneCamera.Transform
-
 	EditorTl.Target = Project.Workspace
+
+	HistoryService:ClearHistory()
+	HistoryService.TargetDataModel = Project.DataModel
 
 	changeStageTo("ProjectEditing")
 
@@ -369,7 +383,7 @@ local TabButtonHovering: string? = nil
 local WipTabButtonHovering = TabButtonHovering
 local WindowHovering = false
 
-local function tabButton(Text: string, Icon: string, Enabled: boolean?, Lit: boolean?, Id: string?): boolean
+local function tabButton(Text: string, Icon: string, Enabled: boolean?, Lit: boolean?, Id: string?, Tooltip: string?): boolean
 	if Enabled == nil then
 		Enabled = true
 	end
@@ -395,8 +409,8 @@ local function tabButton(Text: string, Icon: string, Enabled: boolean?, Lit: boo
 	imgui.beginchild(Text .. "_Selection", 120, 150, "b")
 
 	local clicked, hovered = false, false
-	local cx, cy = imgui.cursorposition()
-	imgui.setcursorposition(cx + 2, cy)
+	local cpos = imgui.cursorposition()
+	imgui.setcursorposition(cpos.x + 2, cpos.y)
 
 	imgui.image(Icon, vector.create(100, 100), false, tint, false)
 	clicked, hovered = imgui.itemclicked(), imgui.itemhovered()
@@ -409,6 +423,10 @@ local function tabButton(Text: string, Icon: string, Enabled: boolean?, Lit: boo
 
 	if Enabled and (hovered or windowHovered) then
 		WipTabButtonHovering = Id
+	end
+
+	if hovered and Tooltip then
+		imgui.settooltip(Tooltip)
 	end
 
 	if Lit then
@@ -427,15 +445,24 @@ local function tabButton(Text: string, Icon: string, Enabled: boolean?, Lit: boo
 	return if Enabled then clicked else false
 end
 
+local function whyCannotUndoRedo()
+	return if HistoryService.IsRecordingAction
+		then `You can't until the {assert(HistoryService.CurrentActionName)} Action finishes`
+		else nil
+end
+
 local function homeTab(_: number)
+	local startY = imgui.cursorposition().y
+
 	local inPlaytest = CurrentStage == "ProjectPlaying"
+	local currentActionTooltip = whyCannotUndoRedo()
 
 	if inPlaytest then
-		if tabButton("Stop", "@etextures/editor-icons/stop.png") then
+		if tabButton("Stop", "@etextures/editor-icons/stop.png", not HistoryService.IsRecordingAction, nil, nil, currentActionTooltip) then
 			changeStageTo("ProjectEditing")
 		end
 	else
-		if tabButton("Start", "@etextures/editor-icons/start.png") then
+		if tabButton("Start", "@etextures/editor-icons/start.png", not HistoryService.IsRecordingAction, nil, nil, currentActionTooltip) then
 			changeStageTo("ProjectPlaying")
 		end
 	end
@@ -460,16 +487,21 @@ local function homeTab(_: number)
 			local paths = fs.promptopen(nil, { "*.gltf", "*.glb" }, "Models")
 
 			if paths[1] then
+				HistoryService:TryBeginAction("Import Model")
+
 				local imported = AssetService:ImportModel(paths[1])
 
 				if not imported then
 					print("Failed to import")
+					HistoryService:DiscardCurrentAction()
 					return
 				end
 
 				assert(Project.Workspace)
 				imported.Parent = Project.Workspace
 				Engine:SetExplorerSelections({ imported })
+
+				HistoryService:FinishCurrentAction()
 			else
 				print("No model selected")
 			end
@@ -479,6 +511,15 @@ local function homeTab(_: number)
 	imgui.sameline()
 
 	CoreTools.RenderControls(tabButton)
+
+	imgui.sameline()
+
+	local cx = imgui.cursorposition().x
+	imgui.setcursorposition(cx, startY)
+
+	if tabButton("History", FALLBACK_IMAGE, true, HistoryView.Open) then
+		HistoryView.Open = not HistoryView.Open
+	end
 end
 
 local function toolsTab(_: number)
@@ -607,9 +648,9 @@ local function exportProject()
 
 		imgui.sameline()
 
-		local cax, _ = imgui.getcontentregionavail()
-		local cx, cy = imgui.cursorposition()
-		imgui.setcursorposition(cx + cax - 50, cy)
+		local cax = imgui.contentregionavail().x
+		local cpos = imgui.cursorposition()
+		imgui.setcursorposition(cpos.x + cax - 50, cpos.y)
 
 		if imgui.button("Export") then
 			print("Export button clicked")
@@ -675,6 +716,24 @@ local function renderMainMenuBar(dt: number)
 	local openSettingsWindow = false
 	
 	if imgui.beginmenu("File") then
+		if CurrentStage == "ProjectEditing" then
+			local undoRedoDisabledReason = whyCannotUndoRedo()
+
+			if imgui.menuitem("Undo", HistoryService:CanUndo()) then
+				HistoryService:Undo()
+			end
+			if undoRedoDisabledReason then
+				imgui.setitemtooltip(undoRedoDisabledReason)
+			end
+
+			if imgui.menuitem("Redo", HistoryService:CanRedo()) then
+				HistoryService:Redo()
+			end
+			if undoRedoDisabledReason then
+				imgui.setitemtooltip(undoRedoDisabledReason)
+			end
+		end
+
 		if imgui.menuitem("Save", CurrentStage == "ProjectEditing") then
 			saveProject()
 		end
@@ -831,34 +890,34 @@ local function renderMainMenuBar(dt: number)
 	end
 
 	if imgui.beginpopupmodal("About", true) then
-		local cxavail, _ = imgui.getcontentregionavail()
-		local cursorx, cursory = imgui.cursorposition()
+		local cxavail = imgui.getcontentregionavail().x
+		local cursor = imgui.cursorposition()
 
 		local LOGO_SIZE = 150
 
-		imgui.setcursorposition(getCenteredX(cursorx, cxavail, LOGO_SIZE), cursory)
+		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, LOGO_SIZE), cursor.y)
 		imgui.image(LOGO_IMAGE, vector.create(LOGO_SIZE, LOGO_SIZE))
 
-		cursory += 160
+		cursor.y += 160
 
-		local ttsx, ttsy = imgui.textsize("Phoenix Engine Editor")
-		local vtsx, _ = imgui.textsize(Engine.Version)
-		local ctsx, _ = imgui.textsize(Engine.CommitHash:sub(1, 8))
-		local utsx, _ = imgui.textsize(GITHUB_URL)
+		local tts = imgui.textsize("Phoenix Engine Editor")
+		local vtsx = imgui.textsize(Engine.Version).x
+		local ctsx = imgui.textsize(Engine.CommitHash:sub(1, 8)).x
+		local utsx = imgui.textsize(GITHUB_URL).x
 
-		imgui.setcursorposition(getCenteredX(cursorx, cxavail, ttsx), cursory)
+		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, tts.x), cursor.y)
 		imgui.text("Phoenix Engine Editor")
-		cursory += ttsy + 2
+		cursor.y += tts.y + 2
 
-		imgui.setcursorposition(getCenteredX(cursorx, cxavail, vtsx), cursory)
+		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, vtsx), cursor.y)
 		imgui.text(Engine.Version)
-		cursory += ttsy + 15
+		cursor.y += tts.y + 15
 
-		imgui.setcursorposition(getCenteredX(cursorx, cxavail, utsx), cursory)
+		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, utsx), cursor.y)
 		imgui.urllink(GITHUB_URL)
-		cursory += ttsy + 2
+		cursor.y += tts.y + 2
 
-		imgui.setcursorposition(getCenteredX(cursorx, cxavail, ctsx), cursory)
+		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, ctsx), cursor.y)
 		imgui.urllink(Engine.CommitHash:sub(1, 8), `https://github.com/PhoenixWhitefire/PhoenixEngine/commit/{ Engine.CommitHash }`)
 
 		imgui.endpopup()
@@ -1038,21 +1097,21 @@ local function renderViewport(DeltaTime: number)
 	imgui.begin(Project.Name .. "###Viewport", if canInteract then "nb" else "ni | nb")
 
 	local cpos = InputService:GetCursorPosition()
-	local wx, wy = imgui.windowposition()
-	local wsx, wsy = imgui.windowsize()
+	local w = imgui.windowposition()
+	local ws = imgui.windowsize()
 
 	local ews = Engine.WindowSize
 
 	imgui.setviewportdockspace(0, 19, ews.x, ews.y - (if BottomBarEnabled then 54 else 19))
-	Engine:SetViewport(vector.create(wx, wy), vector.create(wsx, wsy))
+	Engine:SetViewport(vector.create(w.x, w.y), vector.create(ws.x, ws.y))
 
-	ViewportLeft = wx - 15
-	ViewportRight = wx + wsx + 15
-	ViewportTop = wy
-	ViewportBottom = wy + wsy
+	ViewportLeft = w.x - 15
+	ViewportRight = w.x + ws.x + 15
+	ViewportTop = w.y
+	ViewportBottom = w.y + ws.y
 
-	if cpos.x >= wx - 15 and cpos.x <= wx + wsx + 15 then
-		if cpos.y >= wy and cpos.y < wy + 16 then
+	if cpos.x >= w.x - 15 and cpos.x <= w.x + ws.x + 15 then
+		if cpos.y >= w.y and cpos.y < w.y + 16 then
 			IsHoveringViewportTitlebar = true
 		else
 			IsHoveringViewportTitlebar = false
@@ -1062,7 +1121,7 @@ local function renderViewport(DeltaTime: number)
 	end
 	isMouseWithinViewport()
 
-	imgui.setcursorposition(0, wsy - ews.y)
+	imgui.setcursorposition(0, ws.y - ews.y)
 
 	imgui.image("!Framebuffer:Main", nil, true)
 
@@ -1070,7 +1129,7 @@ local function renderViewport(DeltaTime: number)
 	
 end
 
-function Stages.SelectProject_Enter()
+function Stages.SelectProject_Enter(DeltaTime)
 	if not fs.isfile(EDITOR_RECENT_PROJECTS_PATH) then
 		assert(fs.write(EDITOR_RECENT_PROJECTS_PATH, "[]"))
 	end
@@ -1088,7 +1147,7 @@ function Stages.SelectProject_Enter()
 	PluginManager.Shutdown()
 end
 
-function Stages.SelectProject_Leave()
+function Stages.SelectProject_Leave(DeltaTime)
 	PluginManager.Load()
 end
 
@@ -1096,8 +1155,8 @@ local SelectorHoveringOver: number? = nil
 local ProjectContextMenuTarget = 0
 
 local function renderProjectSelectorTiles(Projects: { string })
-	local cx, cy = imgui.cursorposition()
-	local startX = cx
+	local cpos = imgui.cursorposition()
+	local startX = cpos.x
 
 	local windowSizeX = Engine.WindowSize.x
 	local lastnl = #Projects
@@ -1107,18 +1166,18 @@ local function renderProjectSelectorTiles(Projects: { string })
 		local proj = Projects[i]
 		local clicked = false
 		local hovered = false
-		cx, cy = imgui.cursorposition()
+		cpos = imgui.cursorposition()
 
 		imgui.dummy(300, 300)
-		imgui.setcursorposition(cx, cy)
+		imgui.setcursorposition(cpos.x, cpos.y)
 
 		if SelectorHoveringOver == i then
 			imgui.pushstylecolor(5, { 1, 1, 1, 1 })
 
-			imgui.setcursorposition(cx - 10, cy - 10)
+			imgui.setcursorposition(cpos.x - 10, cpos.y - 10)
 			imgui.beginchild(Project.Name .. "_Selection", 270, 280, "b", "ni")
 			imgui.endchild()
-			imgui.setcursorposition(cx, cy)
+			imgui.setcursorposition(cpos.x, cpos.y)
 
 			imgui.popstylecolor()
 
@@ -1130,7 +1189,7 @@ local function renderProjectSelectorTiles(Projects: { string })
 
 		imgui.image(`@cwd/projects/{proj}/icon.png`, vector.create(250, 250))
 		clicked, hovered = imgui.itemclicked(), imgui.itemhovered()
-		imgui.setcursorposition(cx, cy + 250)
+		imgui.setcursorposition(cpos.x, cpos.y + 250)
 		imgui.text(proj)
 		clicked, hovered = clicked or imgui.itemclicked(), hovered or imgui.itemhovered()
 
@@ -1144,12 +1203,12 @@ local function renderProjectSelectorTiles(Projects: { string })
 
 		if (lastnl - i) * 350 + 170 + 250 + 75 + startX > windowSizeX then
 			-- new row
-			cy = select(2, imgui.cursorposition())
-			imgui.setcursorposition(startX, cy + 10)
+			cpos = vector.create(imgui.cursorposition().x, cpos.y)
+			imgui.setcursorposition(startX, cpos.y + 10)
 			lastnl = i - 1
 		else
 			-- same row
-			imgui.setcursorposition(cx + 275 - 15, cy)
+			imgui.setcursorposition(cpos.x + 275 - 15, cpos.y)
 			imgui.dummy(0, 0)
 			imgui.sameline()
 		end
@@ -1160,11 +1219,11 @@ end
 
 local function renderRenderProjects()
 	imgui.text("Recent")
-	local cx, cy = imgui.cursorposition()
-	imgui.setcursorposition(cx, cy + 10)
+	local cpos = imgui.cursorposition()
+	imgui.setcursorposition(cpos.x, cpos.y + 10)
 
-	cx, cy = imgui.cursorposition()
-	imgui.setcursorposition(cx + 10, cy)
+	cpos = imgui.cursorposition()
+	imgui.setcursorposition(cpos.x + 10, cpos.y)
 
 	renderProjectSelectorTiles(RecentProjects)
 
@@ -1194,11 +1253,11 @@ local function renderSavedProjects()
 	end
 
 	imgui.text("All Projects")
-	local cx, cy = imgui.cursorposition()
-	imgui.setcursorposition(cx, cy + 10)
+	local cpos = imgui.cursorposition()
+	imgui.setcursorposition(cpos.x, cpos.y + 10)
 
-	cx, cy = imgui.cursorposition()
-	imgui.setcursorposition(cx + 10, cy)
+	cpos = imgui.cursorposition()
+	imgui.setcursorposition(cpos.x + 10, cpos.y)
 
 	renderProjectSelectorTiles(assert(SavedProjectsCache))
 	
@@ -1248,21 +1307,21 @@ local PrevSelectedProjectsCategory = 0
 
 function Stages.SelectProject(DeltaTime: number)
 	if imgui.beginfullscreen("Select Project", 0, 18) then
-		local startPosX, startPosY = imgui.cursorposition()
+		local startPos = imgui.cursorposition()
 
 		if imgui.beginchild("SidePanel", 165, 0, "b") then
-			local cx, cy = imgui.cursorposition()
-			imgui.setcursorposition(cx - 4, cy)
+			local cpos = imgui.cursorposition()
+			imgui.setcursorposition(cpos.x - 4, cpos.y)
 
 			if imgui.imagebutton("+", "@etextures/editor-icons/new.png", vector.create(150, 150)) then
 				defer(createNewProject)
 			end
 
-			cx, cy = imgui.cursorposition()
+			cpos = imgui.cursorposition()
 
 			for i, cat in ProjectCategories do
 				if SelectedProjectsCategory == i then
-					imgui.setcursorposition(cx - 5, cy - 2)
+					imgui.setcursorposition(cpos.x - 5, cpos.y - 2)
 					imgui.pushstylecolor(5, { 1, 1, 1, 1 })
 
 					imgui.beginchild("Selection", 160, 160, "b", "ni")
@@ -1271,13 +1330,13 @@ function Stages.SelectProject(DeltaTime: number)
 					imgui.popstylecolor()
 				end
 
-				imgui.setcursorposition(cx - 4, cy)
+				imgui.setcursorposition(cpos.x - 4, cpos.y)
 
 				if imgui.imagebutton(cat.Name, cat.Icon, vector.create(150, 150)) then
 					SelectedProjectsCategory = i
 				end
 
-				cx, cy = imgui.cursorposition()
+				cpos = imgui.cursorposition()
 			end
 
 			if PrevSelectedProjectsCategory ~= SelectedProjectsCategory then
@@ -1289,11 +1348,11 @@ function Stages.SelectProject(DeltaTime: number)
 		end
 		imgui.endchild()
 
-		imgui.setcursorposition(startPosX + 170, startPosY)
+		imgui.setcursorposition(startPos.x + 170, startPos.y)
 
 		imgui.beginchild("MainSection", 0, 0, "b")
 
-		ProjectCategories[SelectedProjectsCategory].Render(startPosX)
+		ProjectCategories[SelectedProjectsCategory].Render(startPos.x)
 
 		imgui.dummy()
 		imgui.endchild()
@@ -1308,26 +1367,12 @@ function Stages.ProjectEditing_Enter(DeltaTime)
 	Engine:SetExplorerRoot(Project.DataModel)
 	Engine:SetExplorerSelections({})
 	Engine.PhysicsTimescale = 0
-
-	local projWp = Project.Workspace
-
-	if projWp and projWp.SceneCamera and projWp.SceneCamera:HasComponent("Camera") then
-		projWp.SceneCamera.Transform = EditorCam.Transform
-		EditorCam.FieldOfView = projWp.SceneCamera.FieldOfView
-	end
 end
 
-function Stages.ProjectEditing(DeltaTime)
-	local projWp = Project.Workspace
-
-	-- sometimes this can get called after `ProjectEditing_Leave` or something somehow
-	if projWp and projWp.SceneCamera and projWp.SceneCamera:HasComponent("Camera") then
-		projWp.SceneCamera.Transform = EditorCam.Transform
-		EditorCam.FieldOfView = projWp.SceneCamera.FieldOfView
-	end
-
+function Stages.ProjectEditing(DeltaTime: number)
 	renderMainMenuBar(DeltaTime)
 	renderViewport(DeltaTime)
+	HistoryView.Render()
 end
 
 function Stages.ProjectEditing_Leave(NextStage)
@@ -1353,7 +1398,7 @@ end
 
 local restoreState = nil
 
-function Stages.ProjectPlaying_Enter()
+function Stages.ProjectPlaying_Enter(DeltaTime)
 	assert(Project)
 	restoreState = Project.DataModel
 
@@ -1386,7 +1431,7 @@ function Stages.ProjectPlaying(DeltaTime)
 	renderViewport(DeltaTime)
 end
 
-function Stages.ProjectPlaying_Leave()
+function Stages.ProjectPlaying_Leave(DeltaTime)
 	assert(restoreState)
 	assert(Project.DataModel)
 
@@ -1399,8 +1444,6 @@ function Stages.ProjectPlaying_Leave()
 	Engine:BindDataModel(game)
 
 	InputService.CursorMode = Enum.CursorMode.Normal
-	
-	workspace.SceneCamera = EditorCam
 end
 
 changeStageTo("SelectProject")

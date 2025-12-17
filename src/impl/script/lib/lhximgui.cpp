@@ -463,9 +463,8 @@ static int imgui_cursorposition(lua_State* L)
 {
     ImVec2 cpos = ImGui::GetCursorPos();
 
-    lua_pushnumber(L, cpos.x);
-    lua_pushnumber(L, cpos.y);
-    return 2;
+    lua_pushvector(L, cpos.x, cpos.y, 0.f);
+    return 1;
 }
 
 static int imgui_setcursorposition(lua_State* L)
@@ -644,9 +643,8 @@ static int imgui_contentregionavail(lua_State* L)
 {
     ImVec2 avail = ImGui::GetContentRegionAvail();
 
-    lua_pushnumber(L, avail.x);
-    lua_pushnumber(L, avail.y);
-    return 2;
+    lua_pushvector(L, avail.x, avail.y, 0.f);
+    return 1;
 }
 
 static int imgui_separator(lua_State*)
@@ -694,18 +692,16 @@ static int imgui_windowposition(lua_State* L)
 {
     ImVec2 pos = ImGui::GetWindowPos();
 
-    lua_pushnumber(L, pos.x);
-    lua_pushnumber(L, pos.y);
-    return 2;
+    lua_pushvector(L, pos.x, pos.y, 0.f);
+    return 1;
 }
 
 static int imgui_windowsize(lua_State* L)
 {
     ImVec2 size = ImGui::GetWindowSize();
 
-    lua_pushnumber(L, size.x);
-    lua_pushnumber(L, size.y);
-    return 2;
+    lua_pushvector(L, size.x, size.y, 0.f);
+    return 1;
 }
 
 static int imgui_setviewportdockspace(lua_State* L)
@@ -764,10 +760,9 @@ static int imgui_beginpopupmodal(lua_State* L)
 static int imgui_textsize(lua_State* L)
 {
     ImVec2 sz = ImGui::CalcTextSize(luaL_checkstring(L, 1));
-    
-    lua_pushnumber(L, sz.x);
-    lua_pushnumber(L, sz.y);
-    return 2;
+
+    lua_pushvector(L, sz.x, sz.y, 0.f);
+    return 1;
 }
 
 static int imgui_setnextitemwidth(lua_State* L)
@@ -820,7 +815,7 @@ static luaL_Reg imgui_funcs[] =
     { "popid", imgui_popid },
     { "sameline", imgui_sameline },
     { "setnextwindowopen", imgui_setnextwindowopen },
-    { "getcontentregionavail", imgui_contentregionavail },
+    { "contentregionavail", imgui_contentregionavail },
     { "separator", imgui_separator },
     { "separatortext", imgui_separatortext },
     { "pushstylecolor", imgui_pushstylecolor },

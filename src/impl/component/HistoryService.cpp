@@ -98,6 +98,26 @@ public:
                     return history->GetCurrentAction().has_value();
                 },
                 nullptr
+            ),
+
+            REFLECTION_PROPERTY(
+                "TargetDataModel",
+                GameObject,
+                [](void*) -> Reflection::GenericValue
+                {
+                    History* history = History::Get();
+                    return GameObject::GetObjectById(history->TargetDataModel)->ToGenericValue();
+                },
+                [](void*, const Reflection::GenericValue& gv)
+                {
+                    History* history = History::Get();
+                    GameObject* newTarget = GameObject::FromGenericValue(gv);
+
+                    if (!newTarget->FindComponentByType(EntityComponent::DataModel))
+                        RAISE_RTF("Object {} is not a DataModel!", newTarget->GetFullName());
+
+                    history->TargetDataModel = newTarget->ObjectId;
+                }
             )
         };
 
@@ -150,6 +170,18 @@ public:
                 {
                     History* history = History::Get();
                     history->DiscardCurrentAction();
+
+                    return {};
+                }
+            } },
+
+            { "ClearHistory", {
+                {},
+                {},
+                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                {
+                    History* history = History::Get();
+                    history->ClearHistory();
 
                     return {};
                 }

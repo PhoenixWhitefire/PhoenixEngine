@@ -2,6 +2,7 @@
 
 #include "datatype/GameObject.hpp"
 #include "component/Transform.hpp"
+#include "component/DataModel.hpp"
 #include "component/Workspace.hpp"
 #include "History.hpp"
 #include "Log.hpp"
@@ -418,7 +419,7 @@ GameObject* GameObject::FromGenericValue(const Reflection::GenericValue& gv)
 			"Tried to GameObject::FromGenericValue, but GenericValue had Type '{}' instead",
 			Reflection::TypeAsString(gv.Type)
 		);
-		
+
 	return GameObject::GetObjectById(static_cast<uint32_t>(gv.Val.Int));
 }
 
@@ -564,15 +565,21 @@ void GameObject::SetParent(GameObject* newParent)
 	if (!newParent)
 	{
 		this->ForEachDescendant([](GameObject* d) -> bool {
+			d->OwningDataModel = PHX_GAMEOBJECT_NULL_ID;
 			d->OwningWorkspace = PHX_GAMEOBJECT_NULL_ID;
 			return true;
 		});
+		this->OwningDataModel = PHX_GAMEOBJECT_NULL_ID;
 		this->OwningWorkspace = PHX_GAMEOBJECT_NULL_ID;
 
 		return;
 	}
 
+	uint32_t newOwningDataModel = newParent->OwningDataModel;
 	uint32_t newOwningWorkspace = newParent->OwningWorkspace;
+
+	if (newParent->FindComponent<EcDataModel>())
+		newOwningDataModel = newParent->ObjectId;
 
 	if (newParent->FindComponent<EcWorkspace>())
 		newOwningWorkspace = newParent->ObjectId;
@@ -584,6 +591,18 @@ void GameObject::SetParent(GameObject* newParent)
 			return true;
 		});
 		this->OwningWorkspace = newOwningWorkspace;
+
+		if (EcTransform* ct = this->FindComponent<EcTransform>())
+			ct->RecomputeTransformTree();
+	}
+
+	if (newOwningDataModel != this->OwningDataModel)
+	{
+		this->ForEachDescendant([newOwningDataModel](GameObject* d) -> bool {
+			d->OwningDataModel = newOwningDataModel;
+			return true;
+		});
+		this->OwningDataModel = newOwningDataModel;
 
 		if (EcTransform* ct = this->FindComponent<EcTransform>())
 			ct->RecomputeTransformTree();
@@ -888,24 +907,42 @@ Reflection::GenericValue GameObject::GetPropertyValue(const std::string_view& Pr
 
 	RAISE_RTF("Invalid property '{}' in GetPropertyValue", PropName);
 }
+static bool resultsInParentingToTargetDataModel(const std::string_view& PropName, const Reflection::GenericValue& Value, uint32_t Target)
+{
+	if (PropName == "Parent")
+	{
+		GameObject* newParent = GameObject::FromGenericValue(Value);
+
+		if (newParent && (newParent->ObjectId == Target || newParent->OwningDataModel == Target))
+			return true;
+	}
+
+	return false;
+}
 void GameObject::SetPropertyValue(const std::string_view& PropName, const Reflection::GenericValue& Value)
 {
 	ReflectorRef ref;
 
 	if (const Reflection::PropertyDescriptor* prop = FindProperty(PropName, &ref))
 	{
-		if (History* history = History::Get(); history->IsRecordingEnabled)
+		if (History* history = History::Get(); history->IsRecordingEnabled
+			&& ((OwningDataModel == history->TargetDataModel || ObjectId == history->TargetDataModel)
+				|| resultsInParentingToTargetDataModel(PropName, Value, history->TargetDataModel))
+		)
 		{
 			Reflection::GenericValue prevValue = prop->Get(ref.Referred());
 			prop->Set(ref.Referred(), Value);
 
-			history->RecordEvent({
-				.Target = ref,
-				.TargetObject = this,
-				.Property = prop,
-				.PreviousValue = prevValue,
-				.NewValue = Value
-			});
+			if (Value != prevValue)
+			{
+				history->RecordEvent({
+					.Target = ref,
+					.TargetObject = this,
+					.Property = prop,
+					.PreviousValue = prevValue,
+					.NewValue = Value
+				});
+			}
 		}
 		else
 		{

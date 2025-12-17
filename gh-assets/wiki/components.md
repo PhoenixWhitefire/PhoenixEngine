@@ -166,10 +166,12 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * `CurrentActionName: string? `: The name of the Action currently being recorded, or `nil` if no recording is in progress
 * `CurrentWaypoint: number `: The ID of the Action that was last finished
 * `IsRecordingAction: boolean `: Whether an Action is currently being recorded by History
+* `TargetDataModel: (GameObject & any)`: The DataModel that History will track
 
 ### Methods:
 * `CanRedo() : (boolean)`: Returns whether `:Redo` will succeed
 * `CanUndo() : (boolean)`: Returns whether `:Undo` will succeed
+* `ClearHistory() : ()`: Clears all recorded history
 * `DiscardCurrentAction() : ()`: Discards the Action currently being recorded
 * `EnableRecording() : ()`: Enables the main functionality of this service
 * `FinishCurrentAction() : ()`: Finishes the Action that was last started. Only one Action may be active at a time
