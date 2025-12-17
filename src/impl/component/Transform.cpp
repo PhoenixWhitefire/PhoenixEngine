@@ -98,6 +98,7 @@ public:
             ),
 
             { "LocalTransform", {
+                "LocalTransform",
                 Reflection::ValueType::Matrix, 
                 (Reflection::PropertyGetter)[](void* p)->Reflection::GenericValue
                 {
@@ -115,6 +116,7 @@ public:
             } },
 
             { "LocalSize", {
+                "LocalSize",
                 Reflection::ValueType::Vector3, 
                 (Reflection::PropertyGetter)[](void* p)->Reflection::GenericValue
                 {

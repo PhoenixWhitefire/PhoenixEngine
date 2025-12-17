@@ -17,7 +17,7 @@ void History::RecordEvent(const PropertyEvent& Event)
     m_CurrentAction->Events.push_back(Event);
 }
 
-bool History::StartAction(const std::string& Name)
+bool History::TryBeginAction(const std::string& Name)
 {
     if (!IsRecordingEnabled)
         RAISE_RT("History recording is not enabled!");
@@ -29,10 +29,16 @@ bool History::StartAction(const std::string& Name)
     return true;
 }
 
-void History::FinishAction()
+void History::FinishCurrentAction()
 {
     if (!m_CurrentAction.has_value())
-        RAISE_RT("Called `History::FinishAction` but no action was started!");
+        RAISE_RT("Called `History::FinishCurrentAction` but no action was started!");
+
+    if (m_CurrentWaypoint != m_ActionHistory.size() - 1)
+    {
+        // TODO multiple timelines
+        m_ActionHistory = std::vector<Action>(m_ActionHistory.begin(), m_ActionHistory.begin() + m_CurrentWaypoint);
+    }
 
     m_ActionHistory.push_back(m_CurrentAction.value());
     m_CurrentAction.reset();
@@ -40,12 +46,12 @@ void History::FinishAction()
     m_CurrentWaypoint++;
 }
 
-bool History::CanUndo()
+bool History::CanUndo() const
 {
     return m_ActionHistory.size() > 0 && m_CurrentWaypoint != 0 && !m_CurrentAction.has_value();
 }
 
-bool History::CanRedo()
+bool History::CanRedo() const
 {
     return m_ActionHistory.size() > m_CurrentWaypoint && !m_CurrentAction.has_value();
 }
@@ -66,7 +72,7 @@ void History::Undo()
 
     const Action& lastAction = m_ActionHistory[m_CurrentWaypoint];
 
-    for (size_t i = 0; i < lastAction.Events.size(); i++)
+    for (int64_t i = (size_t)lastAction.Events.size() - 1; i >= 0; i--)
     {
         const PropertyEvent& event = lastAction.Events[i];
 
@@ -138,4 +144,19 @@ void History::Redo()
     }
 
     m_CurrentWaypoint++;
+}
+
+const std::optional<History::Action>& History::GetCurrentAction() const
+{
+    return m_CurrentAction;
+}
+
+const std::vector<History::Action>& History::GetActionHistory() const
+{
+    return m_ActionHistory;
+}
+
+size_t History::GetCurrentWaypoint() const
+{
+    return m_CurrentWaypoint;
 }

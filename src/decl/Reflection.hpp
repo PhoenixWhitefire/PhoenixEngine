@@ -16,7 +16,7 @@
 #define REFLECTION_PROPERTY_SET_SIMPLE(c, n, t) [](void* p, const Reflection::GenericValue& gv)->void { static_cast<c*>(p)->n = gv.As##t(); }
 #define REFLECTION_PROPERTY_SET_SIMPLE_CTOR(c, n, t) [](void* p, const Reflection::GenericValue& gv)->void { static_cast<c*>(p)->n = t(gv); }
 
-#define REFLECTION_PROPERTY(strn, t, g, s) { strn, { Reflection::ValueType::t, (Reflection::PropertyGetter)g, (Reflection::PropertySetter)s } }
+#define REFLECTION_PROPERTY(strn, t, g, s) { strn, { strn, Reflection::ValueType::t, (Reflection::PropertyGetter)g, (Reflection::PropertySetter)s } }
 
 #define REFLECTION_PROPERTY_SIMPLE(c, n, t) REFLECTION_PROPERTY(#n, t, REFLECTION_PROPERTY_GET_SIMPLE(c, n), REFLECTION_PROPERTY_SET_SIMPLE(c, n, t))
 #define REFLECTION_PROPERTY_SIMPLE_NGV(c, n, t) REFLECTION_PROPERTY(#n, t, REFLECTION_PROPERTY_GET_SIMPLE_TGN(c, n), REFLECTION_PROPERTY_SET_SIMPLE_CTOR(c, n, t))
@@ -170,14 +170,15 @@ namespace Reflection
 
 	struct PropertyDescriptor
 	{
+		std::string_view Name;
 		PropertyGetter Get;
 		PropertySetter Set;
 
 		Reflection::ValueType Type = ValueType::Null; // at the end for better size
 		bool Serializes = true;
 
-		PropertyDescriptor(Reflection::ValueType Ty, const PropertyGetter& Getter, const PropertySetter& Setter, bool Serializes = true)
-			: Get(Getter), Set(Setter), Type(Ty), Serializes(Serializes)
+		PropertyDescriptor(std::string_view N, Reflection::ValueType Ty, const PropertyGetter& Getter, const PropertySetter& Setter, bool Serializes = true)
+			: Name(N), Get(Getter), Set(Setter), Type(Ty), Serializes(Serializes)
 		{
 		}
 		PropertyDescriptor() = default;

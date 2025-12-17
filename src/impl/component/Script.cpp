@@ -50,9 +50,9 @@ public:
     {
         static const Reflection::StaticPropertyMap props = {
             { "SourceFile", {
+				"SourceFile",
 				Reflection::ValueType::String,
 				REFLECTION_PROPERTY_GET_SIMPLE(EcScript, SourceFile),
-
 				[](void* p, const Reflection::GenericValue& gv)
 				{
 					EcScript* s = static_cast<EcScript*>(p);

@@ -45,7 +45,8 @@ public:
                         "Workspace",
                         "Engine",
                         "InputService",
-                        "AssetService"
+                        "AssetService",
+                        "HistoryService"
                     };
 
                     std::string service = std::string(inputs[0].AsStringView());

@@ -169,6 +169,21 @@ declare extern type Example with
 
   OnGreeted: EventSignal<string>
 end
+declare extern type HistoryService with
+  ActionHistorySize: number 
+  CurrentActionName: string? 
+  CurrentWaypoint: number 
+
+  function CanRedo(self) : (boolean)
+  function CanUndo(self) : (boolean)
+  function EnableRecording(self) : ()
+  function FinishCurrentAction(self) : ()
+  function GetActionData(self, Param_1: number) : ({ [string]: any })
+  function GetCurrentActionData(self) : ({ [string]: any }?)
+  function Redo(self) : ()
+  function TryBeginAction(self, Param_1: string) : (boolean)
+  function Undo(self) : ()
+end
 declare extern type InputService with
   CursorMode: number
   IsKeyboardSunk: boolean 
@@ -274,6 +289,7 @@ type Creatables = {
 	Engine: Engine,
 	InputService: InputService,
 	AssetService: AssetService,
+	HistoryService: HistoryService,
 }
 declare Enum: {
   CursorMode: { Normal: number, Hidden: number, Disabled: number, Unavailable: number, Captured: number },

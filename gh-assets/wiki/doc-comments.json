@@ -271,6 +271,25 @@
           "GetCursorPosition": "Returns the current position of the mouse cursor relative to the window as a `vector`"
         }
       },
+      "HistoryService": {
+        "Description": "Service for implementing Undo/Redo systems",
+        "Methods": {
+          "EnableRecording": "Enables the main functionality of this service",
+          "TryBeginAction": "Attempts to begin an \"Action.\" May fail and return `false`. Only one Action may be active at a time",
+          "FinishCurrentAction": "Finishes the Action that was last started. Only one Action may be active at a time",
+          "CanUndo": "Returns whether `:Undo` will succeed",
+          "CanRedo": "Returns whether `:Redo` will succeed",
+          "Undo": "Reverses the state of the scene to how it was before the last Action began",
+          "Redo": "Forwards the state of the scene to how it was before the last Undo",
+          "GetCurrentActionData": "Retrieves information about the current Action being recorded",
+          "GetActionData": "Retrives information about a previously-recorded Action by its ID (IDs are in the range 0 <= ID < `ActionHistorySize`)"
+        },
+        "Properties": {
+          "ActionHistorySize": "The total number of Actions that have finished being recorded",
+          "CurrentWaypoint": "The ID of the Action that was last finished",
+          "CurrentActionName": "The name of the Action currently being recorded, or `nil` if no recording is in progress"
+        }
+      },
       "Mesh": {
         "Description": "A mesh composed of triangles",
         "Properties": {

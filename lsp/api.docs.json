@@ -632,6 +632,42 @@
   "@luhx/globaltype/GameObject.Serializes": {
     "documentation": "Whether or not the Object should be saved with the scene if it is serialized with `scene.save`, and whether `:Duplicate` will duplicate it (only applies to descendants)"
   },
+  "@luhx/globaltype/HistoryService.ActionHistorySize": {
+    "documentation": "The total number of Actions that have finished being recorded"
+  },
+  "@luhx/globaltype/HistoryService.CanRedo": {
+    "documentation": "Returns whether `:Redo` will succeed"
+  },
+  "@luhx/globaltype/HistoryService.CanUndo": {
+    "documentation": "Returns whether `:Undo` will succeed"
+  },
+  "@luhx/globaltype/HistoryService.CurrentActionName": {
+    "documentation": "The name of the Action currently being recorded, or `nil` if no recording is in progress"
+  },
+  "@luhx/globaltype/HistoryService.CurrentWaypoint": {
+    "documentation": "The ID of the Action that was last finished"
+  },
+  "@luhx/globaltype/HistoryService.EnableRecording": {
+    "documentation": "Enables the main functionality of this service"
+  },
+  "@luhx/globaltype/HistoryService.FinishCurrentAction": {
+    "documentation": "Finishes the Action that was last started. Only one Action may be active at a time"
+  },
+  "@luhx/globaltype/HistoryService.GetActionData": {
+    "documentation": "Retrives information about a previously-recorded Action by its ID (IDs are in the range 0 <= ID < `ActionHistorySize`)"
+  },
+  "@luhx/globaltype/HistoryService.GetCurrentActionData": {
+    "documentation": "Retrieves information about the current Action being recorded"
+  },
+  "@luhx/globaltype/HistoryService.Redo": {
+    "documentation": "Forwards the state of the scene to how it was before the last Undo"
+  },
+  "@luhx/globaltype/HistoryService.TryBeginAction": {
+    "documentation": "Attempts to begin an \"Action.\" May fail and return `false`. Only one Action may be active at a time"
+  },
+  "@luhx/globaltype/HistoryService.Undo": {
+    "documentation": "Reverses the state of the scene to how it was before the last Action began"
+  },
   "@luhx/globaltype/InputService.CursorMode": {
     "documentation": "The current mode/behaviour of the cursor. Refer to the `Enum.CursorMode` enumeration"
   },

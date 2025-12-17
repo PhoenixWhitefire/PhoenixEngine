@@ -37,6 +37,7 @@ enum class EntityComponent : uint8_t
 	Engine,
 	InputService,
 	AssetService,
+	HistoryService,
 	
 	__count
 };
@@ -62,7 +63,8 @@ static inline const std::string_view s_EntityComponentNames[] =
 	"TreeLink",
 	"Engine",
 	"InputService",
-	"AssetService"
+	"AssetService",
+	"HistoryService"
 };
 
 // component type and ID

@@ -42,6 +42,7 @@ public:
         static const Reflection::StaticPropertyMap props = 
         {
 			{ "SceneCamera", {
+				"SceneCamera",
 				REFLECTION_OPTIONAL(GameObject),
 				[](void* p)
 				-> Reflection::GenericValue

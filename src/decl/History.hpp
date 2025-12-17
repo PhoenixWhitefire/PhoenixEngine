@@ -16,6 +16,7 @@ public:
     struct PropertyEvent
     {
         ReflectorRef Target;
+        ObjectRef TargetObject;
         const Reflection::PropertyDescriptor* Property = nullptr;
         Reflection::GenericValue PreviousValue;
         Reflection::GenericValue NewValue;
@@ -23,26 +24,29 @@ public:
 
     void RecordEvent(const PropertyEvent&);
 
-    bool StartAction(const std::string&);
-    void FinishAction();
+    bool TryBeginAction(const std::string&);
+    void FinishCurrentAction();
 
-    bool CanUndo();
-    bool CanRedo();
+    bool CanUndo() const;
+    bool CanRedo() const;
     void Undo();
     void Redo();
 
     bool IsRecordingEnabled = false;
 
-private:
     struct Action
     {
         std::string Name;
         std::vector<PropertyEvent> Events;
     };
 
+    const std::optional<Action>& GetCurrentAction() const;
+    const std::vector<Action>& GetActionHistory() const;
+    size_t GetCurrentWaypoint() const;
+
+private:
     std::optional<Action> m_CurrentAction;
     std::vector<Action> m_ActionHistory;
 
     size_t m_CurrentWaypoint = 0;
-    bool m_IsRecordingEnabled = false;
 };

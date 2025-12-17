@@ -137,6 +137,24 @@
           "WhereIAm": "Vector3"
         }
       },
+      "HistoryService": {
+        "Methods": {
+          "CanRedo": "() -> (Boolean)",
+          "CanUndo": "() -> (Boolean)",
+          "EnableRecording": "() -> ()",
+          "FinishCurrentAction": "() -> ()",
+          "GetActionData": "(Integer) -> (Map)",
+          "GetCurrentActionData": "() -> (Map?)",
+          "Redo": "() -> ()",
+          "TryBeginAction": "(String) -> (Boolean)",
+          "Undo": "() -> ()"
+        },
+        "Properties": {
+          "ActionHistorySize": "Integer READONLY",
+          "CurrentActionName": "String? READONLY",
+          "CurrentWaypoint": "Integer READONLY"
+        }
+      },
       "InputService": {
         "Methods": {
           "GetCursorPosition": "() -> (Vector2)",

@@ -157,6 +157,26 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 ### Events:
 * `OnGreeted(string, string)`: Fires when `:Greet` is called, and sends the response to the callback before the original caller of `:Greet` receives it
 
+## `HistoryService`
+
+* Service for implementing Undo/Redo systems
+
+### Properties:
+* `ActionHistorySize: number `: The total number of Actions that have finished being recorded
+* `CurrentActionName: string? `: The name of the Action currently being recorded, or `nil` if no recording is in progress
+* `CurrentWaypoint: number `: The ID of the Action that was last finished
+
+### Methods:
+* `CanRedo() : (boolean)`: Returns whether `:Redo` will succeed
+* `CanUndo() : (boolean)`: Returns whether `:Undo` will succeed
+* `EnableRecording() : ()`: Enables the main functionality of this service
+* `FinishCurrentAction() : ()`: Finishes the Action that was last started. Only one Action may be active at a time
+* `GetActionData(number) : ({ [string]: any })`: Retrives information about a previously-recorded Action by its ID (IDs are in the range 0 <= ID < `ActionHistorySize`)
+* `GetCurrentActionData() : ({ [string]: any }?)`: Retrieves information about the current Action being recorded
+* `Redo() : ()`: Forwards the state of the scene to how it was before the last Undo
+* `TryBeginAction(string) : (boolean)`: Attempts to begin an "Action." May fail and return `false`. Only one Action may be active at a time
+* `Undo() : ()`: Reverses the state of the scene to how it was before the last Action began
+
 ## `InputService`
 
 * Checking player inputs

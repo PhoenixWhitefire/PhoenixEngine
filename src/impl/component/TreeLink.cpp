@@ -15,6 +15,7 @@ class TreeLinkManager : public ComponentManager<EcTreeLink>
         static const Reflection::StaticPropertyMap props =
         {
             { "Target", {
+                "Target",
                 REFLECTION_OPTIONAL(GameObject),
                 [](void* p)
                 {

@@ -34,7 +34,8 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 			nullptr
 		),
 
-		{ "Parent", Reflection::PropertyDescriptor{
+		{ "Parent", Reflection::PropertyDescriptor(
+			"Parent",
 			REFLECTION_OPTIONAL(GameObject),
 			[](void* p) -> Reflection::GenericValue
 			{
@@ -44,7 +45,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 			{
 				static_cast<GameObject*>(p)->SetParent(GameObject::FromGenericValue(gv));
 			}
-		} }
+		) }
 	},
 
 	.Methods = {
@@ -900,6 +901,7 @@ void GameObject::SetPropertyValue(const std::string_view& PropName, const Reflec
 
 			history->RecordEvent({
 				.Target = ref,
+				.TargetObject = this,
 				.Property = prop,
 				.PreviousValue = prevValue,
 				.NewValue = Value
