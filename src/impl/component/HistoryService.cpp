@@ -87,6 +87,17 @@ public:
                     return (int64_t)history->GetActionHistory().size();
                 },
                 nullptr
+            ),
+
+            REFLECTION_PROPERTY(
+                "IsRecordingAction",
+                Boolean,
+                [](void*) -> Reflection::GenericValue
+                {
+                    History* history = History::Get();
+                    return history->GetCurrentAction().has_value();
+                },
+                nullptr
             )
         };
 

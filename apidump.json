@@ -152,7 +152,8 @@
         "Properties": {
           "ActionHistorySize": "Integer READONLY",
           "CurrentActionName": "String? READONLY",
-          "CurrentWaypoint": "Integer READONLY"
+          "CurrentWaypoint": "Integer READONLY",
+          "IsRecordingAction": "Boolean READONLY"
         }
       },
       "InputService": {

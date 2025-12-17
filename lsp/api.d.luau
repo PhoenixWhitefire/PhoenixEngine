@@ -173,6 +173,7 @@ declare extern type HistoryService with
   ActionHistorySize: number 
   CurrentActionName: string? 
   CurrentWaypoint: number 
+  IsRecordingAction: boolean 
 
   function CanRedo(self) : (boolean)
   function CanUndo(self) : (boolean)

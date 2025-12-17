@@ -287,7 +287,8 @@
         "Properties": {
           "ActionHistorySize": "The total number of Actions that have finished being recorded",
           "CurrentWaypoint": "The ID of the Action that was last finished",
-          "CurrentActionName": "The name of the Action currently being recorded, or `nil` if no recording is in progress"
+          "CurrentActionName": "The name of the Action currently being recorded, or `nil` if no recording is in progress",
+          "IsRecordingAction": "Whether an Action is currently being recorded by History"
         }
       },
       "Mesh": {

@@ -659,6 +659,9 @@
   "@luhx/globaltype/HistoryService.GetCurrentActionData": {
     "documentation": "Retrieves information about the current Action being recorded"
   },
+  "@luhx/globaltype/HistoryService.IsRecordingAction": {
+    "documentation": "Whether an Action is currently being recorded by History"
+  },
   "@luhx/globaltype/HistoryService.Redo": {
     "documentation": "Forwards the state of the scene to how it was before the last Undo"
   },

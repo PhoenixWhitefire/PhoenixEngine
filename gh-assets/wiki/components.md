@@ -165,6 +165,7 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * `ActionHistorySize: number `: The total number of Actions that have finished being recorded
 * `CurrentActionName: string? `: The name of the Action currently being recorded, or `nil` if no recording is in progress
 * `CurrentWaypoint: number `: The ID of the Action that was last finished
+* `IsRecordingAction: boolean `: Whether an Action is currently being recorded by History
 
 ### Methods:
 * `CanRedo() : (boolean)`: Returns whether `:Redo` will succeed
