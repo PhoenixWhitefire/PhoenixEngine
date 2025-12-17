@@ -3,6 +3,7 @@
 #include "datatype/GameObject.hpp"
 #include "component/Transform.hpp"
 #include "component/Workspace.hpp"
+#include "History.hpp"
 #include "Log.hpp"
 
 const std::unordered_map<std::string_view, EntityComponent> s_ComponentNameToType = []()
@@ -892,7 +893,22 @@ void GameObject::SetPropertyValue(const std::string_view& PropName, const Reflec
 
 	if (const Reflection::PropertyDescriptor* prop = FindProperty(PropName, &ref))
 	{
-		prop->Set(ref.Referred(), Value);
+		if (History* history = History::Get(); history->IsRecordingEnabled)
+		{
+			Reflection::GenericValue prevValue = prop->Get(ref.Referred());
+			prop->Set(ref.Referred(), Value);
+
+			history->RecordEvent({
+				.Target = ref,
+				.Property = prop,
+				.PreviousValue = prevValue,
+				.NewValue = Value
+			});
+		}
+		else
+		{
+			prop->Set(ref.Referred(), Value);
+		}
 
 		return;
 	}
