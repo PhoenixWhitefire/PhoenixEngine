@@ -143,6 +143,18 @@ public:
                 }
             } },
 
+            { "DiscardCurrentAction", {
+                {},
+                {},
+                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                {
+                    History* history = History::Get();
+                    history->DiscardCurrentAction();
+
+                    return {};
+                }
+            } },
+
             { "CanUndo", {
                 {},
                 { Reflection::ValueType::Boolean },

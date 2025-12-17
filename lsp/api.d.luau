@@ -177,6 +177,7 @@ declare extern type HistoryService with
 
   function CanRedo(self) : (boolean)
   function CanUndo(self) : (boolean)
+  function DiscardCurrentAction(self) : ()
   function EnableRecording(self) : ()
   function FinishCurrentAction(self) : ()
   function GetActionData(self, Param_1: number) : ({ [string]: any })

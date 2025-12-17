@@ -170,6 +170,7 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 ### Methods:
 * `CanRedo() : (boolean)`: Returns whether `:Redo` will succeed
 * `CanUndo() : (boolean)`: Returns whether `:Undo` will succeed
+* `DiscardCurrentAction() : ()`: Discards the Action currently being recorded
 * `EnableRecording() : ()`: Enables the main functionality of this service
 * `FinishCurrentAction() : ()`: Finishes the Action that was last started. Only one Action may be active at a time
 * `GetActionData(number) : ({ [string]: any })`: Retrives information about a previously-recorded Action by its ID (IDs are in the range 0 <= ID < `ActionHistorySize`)

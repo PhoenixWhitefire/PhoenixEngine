@@ -46,6 +46,14 @@ void History::FinishCurrentAction()
     m_CurrentWaypoint++;
 }
 
+void History::DiscardCurrentAction()
+{
+    if (!m_CurrentAction.has_value())
+        RAISE_RT("Called `History::DiscardCurrentAction` but no action was started!");
+
+    m_CurrentAction.reset();
+}
+
 bool History::CanUndo() const
 {
     return m_ActionHistory.size() > 0 && m_CurrentWaypoint != 0 && !m_CurrentAction.has_value();

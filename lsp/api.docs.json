@@ -647,6 +647,9 @@
   "@luhx/globaltype/HistoryService.CurrentWaypoint": {
     "documentation": "The ID of the Action that was last finished"
   },
+  "@luhx/globaltype/HistoryService.DiscardCurrentAction": {
+    "documentation": "Discards the Action currently being recorded"
+  },
   "@luhx/globaltype/HistoryService.EnableRecording": {
     "documentation": "Enables the main functionality of this service"
   },

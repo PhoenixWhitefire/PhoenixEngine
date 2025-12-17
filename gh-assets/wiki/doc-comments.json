@@ -274,6 +274,7 @@
       "HistoryService": {
         "Description": "Service for implementing Undo/Redo systems",
         "Methods": {
+          "DiscardCurrentAction": "Discards the Action currently being recorded",
           "EnableRecording": "Enables the main functionality of this service",
           "TryBeginAction": "Attempts to begin an \"Action.\" May fail and return `false`. Only one Action may be active at a time",
           "FinishCurrentAction": "Finishes the Action that was last started. Only one Action may be active at a time",

@@ -26,6 +26,7 @@ public:
 
     bool TryBeginAction(const std::string&);
     void FinishCurrentAction();
+    void DiscardCurrentAction();
 
     bool CanUndo() const;
     bool CanRedo() const;

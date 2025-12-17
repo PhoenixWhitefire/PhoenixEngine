@@ -141,6 +141,7 @@
         "Methods": {
           "CanRedo": "() -> (Boolean)",
           "CanUndo": "() -> (Boolean)",
+          "DiscardCurrentAction": "() -> ()",
           "EnableRecording": "() -> ()",
           "FinishCurrentAction": "() -> ()",
           "GetActionData": "(Integer) -> (Map)",
