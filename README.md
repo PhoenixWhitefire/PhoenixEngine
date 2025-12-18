@@ -6,6 +6,8 @@
 
 <img src="gh-assets/pretty1_13-06-2024_bsky.jpg"/>
 
+<small> [*Demo videos*](https://www.youtube.com/@pwf2k) </small>
+
 Personal 3D OpenGL "Game Engine" written in C++, that can:
 * Load, Save and Render Scenes
     * Multiple objects with materials (Color, Metallic-Roughness, Emission and Normal maps), other parameters and GPU instancing
@@ -44,6 +46,18 @@ Intended to be compatible with both Windows and Linux/Ubuntu.
     By the end, you should have a binary at the location `Vendor/tracy/profiler/build/tracy-profiler`.
 
 <img src="gh-assets/infooverload.png"/>
+
+<br>
+
+<img src="gh-assets/editor-obby-scene.png"/>
+
+<br>
+
+<img src="gh-assets/docviewer.png"/>
+
+<br>
+
+<img src="gh-assets/crossroads.png"/>
 
 # Attributions
 
