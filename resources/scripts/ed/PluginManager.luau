@@ -170,6 +170,7 @@ function PluginManager.GetToolbarButtons(CurrentStage: EditorStage): { ToolbarBu
     local buttons = {}
     table.insert(buttons, {
         Text = "Manage Plugins",
+        Icon = "@etextures/editor-icons/plugin-manager.png",
         Enabled = true,
         Lit = IsPluginManagementWindowOpen,
         OnClick = togglePluginManagement

@@ -576,7 +576,7 @@ local function homeTab(_: number)
 	local cx = imgui.cursorposition().x
 	imgui.setcursorposition(cx, startY)
 
-	if tabButton("History", FALLBACK_IMAGE, true, HistoryView.Open) then
+	if tabButton("History", "@etextures/editor-icons/history-viewer.png", true, HistoryView.Open) then
 		HistoryView.Open = not HistoryView.Open
 	end
 end
@@ -594,7 +594,7 @@ local function toolsTab(_: number)
 		imgui.sameline()
 	end
 
-	if tabButton("Bottom Bar", `@etextures/editor-icons/fallback.png`, true, BottomBarEnabled) then
+	if tabButton("Bottom Bar", `@etextures/editor-icons/command-bar.png`, true, BottomBarEnabled) then
 		BottomBarEnabled = not BottomBarEnabled
 		conf.set("Ed_Tool_BottomBarEnabled", BottomBarEnabled)
 		conf.save()
