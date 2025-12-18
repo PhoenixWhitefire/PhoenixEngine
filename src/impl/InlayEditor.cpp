@@ -26,6 +26,7 @@
 #include "GlobalJsonConfig.hpp"
 #include "Utilities.hpp"
 #include "UserInput.hpp"
+#include "History.hpp"
 #include "Memory.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
@@ -2503,6 +2504,10 @@ static void renderExplorer()
 	{
 		ImGui::SeparatorText("Insert");
 
+		History* history = History::Get();
+		bool began = history->TryBeginAction("InsertObject");
+		bool inserted = false;
+
 		// skip `<NONE>`
 		for (size_t i = 1; i < (size_t)EntityComponent::__count; i++)
 		{
@@ -2525,8 +2530,17 @@ static void renderExplorer()
 			
 				ExplorerShouldSeekToCurrentSelection = true;
 				ObjectInsertionTarget.Clear();
+
+				if (began)
+				{
+					history->FinishCurrentAction();
+					inserted = true;
+				}
 			}
 		}
+
+		if (began && !inserted)
+			history->DiscardCurrentAction();
 
 		InsertObjectButtonHoveredOver = nullptr;
 
@@ -2760,6 +2774,7 @@ static void renderProperties()
 			Reflection::GenericValue newVal = curVal;
 			bool canChangeValue = true;
 			bool valueWasEditedManual = false;
+			bool deactivatedAfterEdit = false;
 
 			switch (curVal.Type)
 			{
@@ -2976,6 +2991,7 @@ static void renderProperties()
 					ImGui::InputFloat3("Position", pos);
 					propertyTooltip(propName, propToComponent[propName], propDesc->Type);
 					valueWasEditedManual = ImGui::IsItemEdited();
+					deactivatedAfterEdit = ImGui::IsItemDeactivatedAfterEdit();
 
 					ImGui::InputFloat3("Rotation", rotdegs);
 					propertyTooltip(propName, propToComponent[propName], propDesc->Type);
@@ -3014,8 +3030,24 @@ static void renderProperties()
 
 			}
 
+			static std::vector<ObjectHandle> PrevEditSelections;
+			static std::string PrevEditPropName;
+			static Reflection::GenericValue PrevEditNewValue;
+			const char* const EditPropertyTempName = "EditProperty_TEMP";
+			History* history = History::Get();
+
 			if ((ImGui::IsItemEdited() || valueWasEditedManual) && canChangeValue)
 			{
+				// Awful and hacky
+				PrevEditSelections = Selections;
+				PrevEditPropName = propName;
+				PrevEditNewValue = newVal;
+
+				if (history->CanUndo() && history->GetActionHistory().back().Name == EditPropertyTempName)
+					history->Undo();
+
+				bool began = history->TryBeginAction(EditPropertyTempName);
+
 				try
 				{
 					for (const ObjectHandle& sel : Selections)
@@ -3025,10 +3057,46 @@ static void renderProperties()
 				{
 					setErrorMessage(Err.what());
 				}
+
+				if (began)
+					history->FinishCurrentAction();
 			}
 			else
 			{
 				propertyTooltip(propName, propToComponent[propName], propDesc->Type, curVal.Type == Reflection::ValueType::GameObject);
+			}
+
+			if (deactivatedAfterEdit || ImGui::IsItemDeactivatedAfterEdit())
+			{
+				if (history->CanUndo() && history->GetActionHistory().back().Name == EditPropertyTempName)
+				{
+					history->Undo();
+
+					if (history->TryBeginAction("EditProperty"))
+					{
+						try
+						{
+							for (const ObjectHandle& sel : PrevEditSelections)
+								sel->SetPropertyValue(PrevEditPropName, PrevEditNewValue);
+						}
+						catch (const std::runtime_error& Err)
+						{
+							setErrorMessage(Err.what());
+						}
+
+						if (history->GetCurrentAction()->Events.size() == 0)
+							setErrorMessage("Failed to record any History events for that property change to finish, Undo behaviour will be wrong");
+
+						history->FinishCurrentAction();
+					}
+					else
+					{
+						setErrorMessage(std::format(
+							"Could not begin History Action to re-apply properties after you finished interacting with {}{}",
+							PrevEditPropName, history->GetCurrentAction().has_value() ? std::format(". Blocked by the {} Action", history->GetCurrentAction()->Name) : ""
+						));
+					}
+				}
 			}
 		}
 		
@@ -3413,7 +3481,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 			else
 				s_WasF8Down = false;
 
-			if (ScriptEngine::L::DebugBreak && (ImGui::Button("Single-step (F8)") || isF8Down))
+			if (ScriptEngine::L::DebugBreak && !HasError && (ImGui::Button("Single-step (F8)") || isF8Down))
 			{
 				static int s_TargetLine = 0;
 				static int s_PrevLine = 0;

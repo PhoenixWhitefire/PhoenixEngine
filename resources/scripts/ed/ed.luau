@@ -61,6 +61,11 @@ end
 local WasHoldingDownM1 = false
 local MouseClick = false
 local WasHoldingF5 = false
+local WasHoldingCtrlKeyDown = false
+local WasHoldingZKeyDown = false
+local WasHoldingYKeyDown = false
+local ErrorMessage = ""
+local ErrorMessageTimeRemaining = 0
 
 HistoryService:EnableRecording()
 
@@ -85,6 +90,12 @@ local function assert(cond: any, err: string?, ...)
 	return cond, err, ...
 end
 
+local function setErrorNotification(Error)
+	ErrorMessage = Error
+	ErrorMessageTimeRemaining = 2
+	print(Error)
+end
+
 local function onError(err)
 	local errorMessage = `An error occurred: { debug.traceback(err, 2) }`
 	if Project.DataModel then
@@ -99,28 +110,76 @@ end
 
 local changeStageTo: (NewStage: Stage) -> ()
 
-local function editorFrame(DeltaTime)
-	MouseClick = (not WasHoldingDownM1) and InputService:IsMouseButtonPressed(Enum.MouseButton.Left)
-		local f5 = InputService:IsKeyPressed(Enum.Key.F5)
+local function handleUndoRedoKeybinds()
+	local ctrlKeyDown = InputService:IsKeyPressed(Enum.Key.LeftControl)
+	local zKeyDown = InputService:IsKeyPressed(Enum.Key.Z)
+	local yKeyDown = InputService:IsKeyPressed(Enum.Key.Y)
 
-		if not HistoryService.IsRecordingAction then
-			if CurrentStage == "ProjectEditing" then
-				if f5 and not WasHoldingF5 then
-					changeStageTo("ProjectPlaying")
-				end
-			elseif CurrentStage == "ProjectPlaying" then
-				if f5 and not WasHoldingF5 then
-					changeStageTo("ProjectEditing")
-				end
+	if ctrlKeyDown and zKeyDown then
+		if not WasHoldingCtrlKeyDown or not WasHoldingZKeyDown then
+			local success, error = pcall(function()
+				HistoryService:Undo()
+			end)
+
+			if not success then
+				local realError = error:sub(error:find(":"), #error)
+				realError = realError:sub(realError:find(" ") + 1, #realError)
+
+				setErrorNotification(realError)
 			end
 		end
+	end
 
-		WasHoldingF5 = f5
+	if ctrlKeyDown and yKeyDown then
+		if not WasHoldingCtrlKeyDown or not WasHoldingYKeyDown then
+			local success, error = pcall(function()
+				HistoryService:Redo()
+			end)
 
-		CoreTools.Update(Project)
-		Stages[CurrentStage](DeltaTime)
+			if not success then
+				local realError = error:sub(error:find(":"), #error)
+				realError = realError:sub(realError:find(" ") + 1, #realError)
 
-		WasHoldingDownM1 = InputService:IsMouseButtonPressed(Enum.MouseButton.Left)
+				setErrorNotification(realError)
+			end
+		end
+	end
+
+	WasHoldingCtrlKeyDown = ctrlKeyDown
+	WasHoldingZKeyDown = zKeyDown
+	WasHoldingYKeyDown = yKeyDown
+end
+
+local function editorFrame(DeltaTime)
+	MouseClick = (not WasHoldingDownM1) and InputService:IsMouseButtonPressed(Enum.MouseButton.Left)
+	local f5 = InputService:IsKeyPressed(Enum.Key.F5)
+
+	if not HistoryService.IsRecordingAction then
+		if CurrentStage == "ProjectEditing" then
+			if f5 and not WasHoldingF5 then
+				changeStageTo("ProjectPlaying")
+			end
+
+			handleUndoRedoKeybinds()
+
+		elseif CurrentStage == "ProjectPlaying" then
+			if f5 and not WasHoldingF5 then
+				changeStageTo("ProjectEditing")
+			end
+		end
+	end
+
+	WasHoldingF5 = f5
+
+	CoreTools.Update(Project)
+	Stages[CurrentStage](DeltaTime)
+
+	WasHoldingDownM1 = InputService:IsMouseButtonPressed(Enum.MouseButton.Left)
+
+	if ErrorMessageTimeRemaining > 0 then
+		imgui.settooltip(ErrorMessage)
+		ErrorMessageTimeRemaining -= DeltaTime
+	end
 end
 
 changeStageTo = function(NewStage: Stage)
@@ -890,34 +949,35 @@ local function renderMainMenuBar(dt: number)
 	end
 
 	if imgui.beginpopupmodal("About", true) then
-		local cxavail = imgui.getcontentregionavail().x
+		local cxavail = imgui.contentregionavail().x
 		local cursor = imgui.cursorposition()
+		local cursory = cursor.y
 
 		local LOGO_SIZE = 150
 
-		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, LOGO_SIZE), cursor.y)
+		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, LOGO_SIZE), cursory)
 		imgui.image(LOGO_IMAGE, vector.create(LOGO_SIZE, LOGO_SIZE))
 
-		cursor.y += 160
+		cursory += 160
 
 		local tts = imgui.textsize("Phoenix Engine Editor")
 		local vtsx = imgui.textsize(Engine.Version).x
 		local ctsx = imgui.textsize(Engine.CommitHash:sub(1, 8)).x
 		local utsx = imgui.textsize(GITHUB_URL).x
 
-		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, tts.x), cursor.y)
+		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, tts.x), cursory)
 		imgui.text("Phoenix Engine Editor")
-		cursor.y += tts.y + 2
+		cursory += tts.y + 2
 
-		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, vtsx), cursor.y)
+		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, vtsx), cursory)
 		imgui.text(Engine.Version)
-		cursor.y += tts.y + 15
+		cursory += tts.y + 15
 
-		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, utsx), cursor.y)
+		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, utsx), cursory)
 		imgui.urllink(GITHUB_URL)
-		cursor.y += tts.y + 2
+		cursory += tts.y + 2
 
-		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, ctsx), cursor.y)
+		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, ctsx), cursory)
 		imgui.urllink(Engine.CommitHash:sub(1, 8), `https://github.com/PhoenixWhitefire/PhoenixEngine/commit/{ Engine.CommitHash }`)
 
 		imgui.endpopup()
@@ -1005,8 +1065,8 @@ local function renderViewport(DeltaTime: number)
 	end
 
 	if CurrentStage == "ProjectEditing" and Project.Workspace then
-		local mouseVec = Project.Workspace:ScreenPointToVector(InputService:GetCursorPosition(), 1000)
-		local rayresult = Project.Workspace:Raycast(EditorCam.Transform.Position, mouseVec, { SelectionPart })
+		local mouseVec = workspace:ScreenPointToVector(InputService:GetCursorPosition(), 1000)
+		local rayresult = Project.Workspace:Raycast(workspace.SceneCamera.Transform.Position, mouseVec, { SelectionPart })
 
 		if rayresult then
 			SelectionPart.Transform = rayresult.Object.Transform
@@ -1083,7 +1143,13 @@ local function renderViewport(DeltaTime: number)
 		imgui.sameline()
 
 		if imgui.button("Run") then
+			local began = HistoryService:TryBeginAction("CommandBarCode")
+
 			print(Engine:RunInVM(if CurrentStage == "ProjectEditing" then GameEditingVM else GameVM, CommandBarCommand, "=CommandBar"))
+
+			if began then
+				HistoryService:FinishCurrentAction()
+			end
 		end
 		imgui.sameline()
 
@@ -1203,7 +1269,7 @@ local function renderProjectSelectorTiles(Projects: { string })
 
 		if (lastnl - i) * 350 + 170 + 250 + 75 + startX > windowSizeX then
 			-- new row
-			cpos = vector.create(imgui.cursorposition().x, cpos.y)
+			cpos = vector.create(imgui.cursorposition().x, cpos.y + 270)
 			imgui.setcursorposition(startX, cpos.y + 10)
 			lastnl = i - 1
 		else

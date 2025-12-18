@@ -1356,14 +1356,6 @@ lua_State* ScriptEngine::L::Create(const std::string& VmName)
 				Log::Info("Debug interrupt - MAYBE SHOULDN'T BE OCCURRING");
 				L::DebugBreak(L, ar, false, true);
 			};
-
-		state->global->cb.debugprotectederror = [](lua_State* L)
-			{
-				lua_Debug ar;
-				lua_getinfo(L, 1, "sln", &ar);
-				Log::Info("Debug protected error");
-				L::DebugBreak(L, &ar, true, false);
-			};
 	}
 
 	luaL_sandbox(state);
@@ -1404,8 +1396,13 @@ lua_Status ScriptEngine::L::Resume(lua_State* L, lua_State* from, int narg)
 	int status = lua_resume(L, from, narg);
 
 	while (status == LUA_BREAK)
-	{
 		status = lua_resume(L, nullptr, 0);
+
+	if (status == LUA_ERRRUN && L::DebugBreak)
+	{
+		lua_Debug ar = {};
+		lua_getinfo(L, 1, "sln", &ar);
+		L::DebugBreak(L, &ar, true, false);
 	}
 
 	if (LeaveDebugger)
@@ -1420,6 +1417,13 @@ lua_Status ScriptEngine::L::ProtectedCall(lua_State* L, int narg, int nret, int 
 
 	while (status == LUA_BREAK)
 		status = lua_pcall(L, 0, nret, errfunc);
+
+	if (status == LUA_ERRRUN && L::DebugBreak)
+	{
+		lua_Debug ar = {};
+		lua_getinfo(L, 1, "sln", &ar);
+		L::DebugBreak(L, &ar, true, false);
+	}
 
 	if (LeaveDebugger)
 		LeaveDebugger();

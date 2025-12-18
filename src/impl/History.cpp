@@ -34,7 +34,10 @@ bool History::TryBeginAction(const std::string& Name)
         RAISE_RT("History recording is not enabled!");
 
     if (m_CurrentAction.has_value())
+    {
+        Log::WarningF("`History::TryBeginAction` failed for {} because {} is still in progress", Name, m_CurrentAction->Name);
         return false;
+    }
 
     m_CurrentAction.emplace(Name);
     return true;

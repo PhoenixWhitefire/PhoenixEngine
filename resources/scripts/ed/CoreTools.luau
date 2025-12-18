@@ -27,6 +27,7 @@ for direction, piece in GizmoPieces do
     local col = Color.new(math.abs(direction.x), math.abs(direction.y), math.abs(direction.z))
     piece[1].Tint, piece[2].Tint = col, col
     piece[1].Material, piece[2].Material = "unlit", "unlit"
+    piece[1].Size, piece[2].Size = vector.one * 0.5, vector.one * 0.5
     piece[1].Parent, piece[2].Parent = GizmoContainer, GizmoContainer
     
     piece[2].Transparency = 0.5
@@ -70,6 +71,8 @@ local IsSurfaceDragging = false
 local IsGizmoDragging = false
 local GizmoDragAxis = vector.zero
 local GizmoDragHandle = nil
+local BeganSurfaceDragAction = false
+local BeganGizmoDragAction = false
 
 local function roundTo(n: number, x: number): number
     return math.round(n / x) * x
@@ -117,10 +120,13 @@ function CoreTools.Update(Project: { Workspace: Workspace })
 
             if not IsSurfaceDragging then
                 PrevDragMousePos = cpos
-                HistoryService:TryBeginAction("SurfaceDrag")
             end
 
             if PrevDragMousePos ~= cpos then
+                if not BeganSurfaceDragAction then
+                    BeganSurfaceDragAction = HistoryService:TryBeginAction("SurfaceDrag")
+                end
+
                 target.Transform = Matrix.fromTranslation(worldHit.Position + worldHit.Normal * target.Size / 2)
             end
 
@@ -129,8 +135,9 @@ function CoreTools.Update(Project: { Workspace: Workspace })
     else
         IsSurfaceDragging = false
 
-        if HistoryService.CurrentActionName == "SurfaceDrag" then
+        if BeganSurfaceDragAction or HistoryService.CurrentActionName == "SurfaceDrag" then
             HistoryService:FinishCurrentAction()
+            BeganSurfaceDragAction = false
         end
     end
 
@@ -147,7 +154,7 @@ function CoreTools.Update(Project: { Workspace: Workspace })
 
     if target ~= GizmoPrevTarget or target.Transform ~= GizmoPrevTargetTransform or target.Size ~= GizmoPrevTargetSize then
         for direction, piece in GizmoPieces do
-            local trans = target.Transform * Matrix.fromTranslation(direction * target.Size * 0.5 + direction * vector.create(2, 2, 2))
+            local trans = target.Transform * Matrix.fromTranslation(direction * target.Size * 0.5 + direction * vector.one)
             piece[1].Transform, piece[2].Transform = trans, trans
         end
     end
@@ -179,8 +186,9 @@ function CoreTools.Update(Project: { Workspace: Workspace })
             pcs[2].Transparency = 0.5
         end
 
-        if HistoryService.CurrentActionName == "GizmoDrag" then
+        if BeganGizmoDragAction or HistoryService.CurrentActionName == "GizmoDrag" then
             HistoryService:FinishCurrentAction()
+            BeganGizmoDragAction = false
         end
     end
 
@@ -189,10 +197,14 @@ function CoreTools.Update(Project: { Workspace: Workspace })
 
         local oldMouseDir = workspace:ScreenPointToVector(PrevDragMousePos, dist)
         local diff = (vector.normalize(mouseVector) * dist) - oldMouseDir
-        HistoryService:TryBeginAction("GizmoDrag")
 
-        target.Transform += vector.create(roundTo(diff.x, GizmoMoveIncrement), roundTo(diff.y, GizmoMoveIncrement), roundTo(diff.z, GizmoMoveIncrement)) * GizmoDragAxis
+        local move = vector.create(roundTo(diff.x, GizmoMoveIncrement), roundTo(diff.y, GizmoMoveIncrement), roundTo(diff.z, GizmoMoveIncrement)) * GizmoDragAxis
 
+        if vector.magnitude(move) > 0 and not BeganGizmoDragAction then
+            BeganGizmoDragAction = HistoryService:TryBeginAction("GizmoDrag")
+        end
+
+        target.Transform += move
         PrevDragMousePos = cpos
     end
 end

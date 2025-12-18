@@ -6,6 +6,7 @@ local Viewer = {}
 Viewer.Open = false
 
 local ActionDataCache = {}
+local ActionDataCacheWaypoint = 0
 
 local function renderAction(action, id)
     local open = imgui.treenode(`{action.Name}##{id}`)
@@ -45,9 +46,10 @@ function Viewer.Render()
 
     for i = HistoryService.ActionHistorySize - 1, 0, -1 do
         local data = ActionDataCache[i]
-        if not data then
+        if not data or ActionDataCacheWaypoint ~= HistoryService.CurrentWaypoint then
             data = HistoryService:GetActionData(i)
             ActionDataCache[i] = data
+            ActionDataCacheWaypoint = HistoryService.CurrentWaypoint
         end
 
         if i == HistoryService.CurrentWaypoint then
