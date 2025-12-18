@@ -1822,7 +1822,12 @@ static bool resetConflictedProperty(const char* PropName, char* Buf = nullptr)
 	char dbuf[2] = { 0 };
 	Buf = Buf ? Buf : dbuf;
 
-	bool reset = ImGui::InputText(PropName, Buf, 2);
+	ImGui::TextUnformatted(PropName);
+	ImGui::SameLine();
+
+	ImGui::SetCursorPosX(ImGui::GetContentRegionAvail().x / 2.f);
+	bool reset = ImGui::InputText("##", Buf, 2);
+
 	ImGui::SetItemTooltip("Start typing here to reset this conflicting property to a default");
 
 	return reset;
@@ -2727,6 +2732,11 @@ static void renderProperties()
 				return a.first < b.first;
 			});
 
+		float cavailX = ImGui::GetContentRegionAvail().x;
+		float halfWidth = cavailX / 2.f;
+
+		ImGui::Separator();
+
 		for (const PropsIteratorType& propIt : propsOrdered)
 		{
 			const std::pair<const Reflection::PropertyDescriptor*, Reflection::GenericValue> propItem = propIt.second;
@@ -2734,6 +2744,8 @@ static void renderProperties()
 			const std::string_view& propName = propIt.first;
 			const Reflection::PropertyDescriptor* propDesc = propItem.first;
 			const Reflection::GenericValue& curVal = propItem.second;
+
+			ImGui::PushID(propItem.first);
 
 			const char* propNameCStr = propName.data();
 
@@ -2745,7 +2757,13 @@ static void renderProperties()
 				// 07/07/2024
 
 				if (doConflict)
-					ImGui::Text("%s: <DIFFERENT>", propNameCStr);
+				{
+					ImGui::TextUnformatted(propNameCStr);
+					ImGui::SameLine();
+
+					ImGui::SetCursorPosX(halfWidth);
+					ImGui::TextUnformatted("<DIFFERENT>");
+				}
 				else
 				{
 					std::string curValStr = curVal.ToString();
@@ -2769,13 +2787,18 @@ static void renderProperties()
 					}
 					else
 					{
-						ImGui::Text("%s: %s", propNameCStr, curValStr.c_str());
-						ImGui::SetItemTooltip("%s", curValStr.c_str());
+						ImGui::TextUnformatted(propNameCStr);
+						ImGui::SameLine();
+
+						ImGui::SetCursorPosX(halfWidth);
+						ImGui::TextUnformatted(curValStr.c_str());
 					}
 				}
 
 				propertyTooltip(propName, propToComponent[propName], propDesc->Type);
 
+				ImGui::Separator();
+				ImGui::PopID();
 				continue;
 			}
 
@@ -2800,7 +2823,12 @@ static void renderProperties()
 				);
 				CopyStringToBuffer(buf, allocSize, doConflict ? "" : str);
 
-				ImGui::InputText(propNameCStr, buf, allocSize);
+				ImGui::TextUnformatted(propNameCStr);
+				ImGui::SameLine();
+
+				ImGui::SetCursorPosX(halfWidth);
+				ImGui::InputText("##", buf, allocSize);
+
 				newVal = buf;
 
 				Memory::Free(buf);
@@ -2815,7 +2843,13 @@ static void renderProperties()
 						newVal = false;
 				}
 				else
-					ImGui::Checkbox(propNameCStr, &newVal.Val.Bool);
+				{
+					ImGui::TextUnformatted(propNameCStr);
+					ImGui::SameLine();
+
+					ImGui::SetCursorPosX(halfWidth);
+					ImGui::Checkbox("##", &newVal.Val.Bool);
+				}
 
 				break;
 			}
@@ -2828,7 +2862,13 @@ static void renderProperties()
 						newVal = atof(buf);
 				}
 				else
-					ImGui::InputDouble(propNameCStr, &newVal.Val.Double);
+				{
+					ImGui::TextUnformatted(propNameCStr);
+					ImGui::SameLine();
+
+					ImGui::SetCursorPosX(halfWidth);
+					ImGui::InputDouble("##", &newVal.Val.Double);
+				}
 
 				break;
 			}
@@ -2843,7 +2883,13 @@ static void renderProperties()
 				else
 				{
 					int32_t i = static_cast<int32_t>(newVal.Val.Int);
-					ImGui::InputInt(propNameCStr, &i);
+
+					ImGui::TextUnformatted(propNameCStr);
+					ImGui::SameLine();
+
+					ImGui::SetCursorPosX(halfWidth);
+					ImGui::InputInt("##", &i);
+
 					newVal.Val.Int = i;
 				}
 
@@ -2852,11 +2898,14 @@ static void renderProperties()
 
 			case Reflection::ValueType::GameObject:
 			{
+				ImGui::TextUnformatted(propNameCStr);
+				ImGui::SameLine();
+
+				ImGui::SetCursorPosX(halfWidth);
+
 				if (doConflict)
 				{
 					bool pick = ImGui::Button(" ");
-					ImGui::SameLine();
-					ImGui::TextUnformatted(propNameCStr);
 
 					if (pick)
 					{
@@ -2877,7 +2926,7 @@ static void renderProperties()
 					if (referenced)
 						str = referenced->Name;
 
-					ImGui::InputText(propNameCStr, &str);
+					ImGui::InputText("##", &str);
 
 					if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
 					{
@@ -2920,7 +2969,13 @@ static void renderProperties()
 						newVal = Color(0.f, 0.f, 0.f).ToGenericValue();
 				}
 				else
-					ImGui::ColorEdit3(propNameCStr, &newVal.Val.Vec3.x);
+				{
+					ImGui::TextUnformatted(propNameCStr);
+					ImGui::SameLine();
+
+					ImGui::SetCursorPosX(halfWidth);
+					ImGui::ColorEdit3("##", &newVal.Val.Vec3.x);
+				}
 
 				break;
 			}
@@ -2933,7 +2988,13 @@ static void renderProperties()
 						newVal = glm::vec2(0.f);
 				}
 				else
-					ImGui::InputFloat2(propNameCStr, &newVal.Val.Vec2.x);
+				{
+					ImGui::TextUnformatted(propNameCStr);
+					ImGui::SameLine();
+
+					ImGui::SetCursorPosX(halfWidth);
+					ImGui::InputFloat2("##", &newVal.Val.Vec2.x);
+				}
 
 				break;
 			}
@@ -2946,7 +3007,13 @@ static void renderProperties()
 						newVal = glm::vec3(0.f);
 				}
 				else
-					ImGui::InputFloat3(propNameCStr, &newVal.Val.Vec3.x);
+				{
+					ImGui::TextUnformatted(propNameCStr);
+					ImGui::SameLine();
+
+					ImGui::SetCursorPosX(halfWidth);
+					ImGui::InputFloat3("##", &newVal.Val.Vec3.x);
+				}
 
 				break;
 			}
@@ -3037,6 +3104,9 @@ static void renderProperties()
 			}
 
 			}
+
+			ImGui::Separator();
+			ImGui::PopID();
 
 			static std::vector<ObjectHandle> PrevEditSelections;
 			static std::string PrevEditPropName;
