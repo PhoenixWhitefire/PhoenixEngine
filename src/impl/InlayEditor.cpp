@@ -2719,7 +2719,15 @@ static void renderProperties()
 			}
 		}
 
-		for (const auto& propIt : props)
+		using PropsIteratorType = std::pair<std::string_view, std::pair<const Reflection::PropertyDescriptor*, Reflection::GenericValue>>;
+
+		std::vector<PropsIteratorType> propsOrdered = std::vector<PropsIteratorType>(props.begin(), props.end());
+		std::sort(propsOrdered.begin(), propsOrdered.end(), [](const auto& a, const auto& b)
+			{
+				return a.first < b.first;
+			});
+
+		for (const PropsIteratorType& propIt : propsOrdered)
 		{
 			const std::pair<const Reflection::PropertyDescriptor*, Reflection::GenericValue> propItem = propIt.second;
 
