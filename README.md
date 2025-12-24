@@ -65,7 +65,7 @@ All 3rd-party code and submodules are located in the `Vendor` directory.
 
 The following third-party projects were used/referenced during this Engine's development:
 
-* Luau - [@Roblox/Luau](https://github.com/Roblox/Luau/)
+* Luau - [@luau-lang/Luau](https://github.com/luau-lang/Luau/)
 * Lute - [@luau-lang/lute](https://github.com/luau-lang/lute)
 * OpenGL - [Khronos Group](https://khronos.org/)
 * Glad - [glad.dav1d.de/](https://glad.dav1d.de/)
