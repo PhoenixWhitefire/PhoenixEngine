@@ -8,8 +8,14 @@
   "@luhx/global/Enum": {
     "documentation": "* Contains enumerations"
   },
+  "@luhx/global/Enum.CollisionFidelity": {
+    "documentation": "* The different modes for `Mesh.CollisionFidelity`\n* `Aabb`: An axis-aligned bounding box\n* `AabbStaticSize`: An AABB which keeps the same size as the Object"
+  },
   "@luhx/global/Enum.CursorMode": {
     "documentation": "* The appearance and behaviour of the mouse cursor"
+  },
+  "@luhx/global/Enum.FaceCulling": {
+    "documentation": "* Culling modes for `Mesh.FaceCulling`"
   },
   "@luhx/global/Enum.Key": {
     "documentation": "* Keys, which may be passed to `InputService:IsKeyPressed`"
@@ -780,13 +786,13 @@
     "documentation": "Whether it casts shadows"
   },
   "@luhx/globaltype/Mesh.CollisionFidelity": {
-    "documentation": "0 - `Aabb`: An axis-aligned bounding box. 1 - `AabbStaticSize`: An AABB which keeps the same size as the Object"
+    "documentation": "The fidelity at which collisions are detected. See the `CollisionFidelity` enum"
   },
   "@luhx/globaltype/Mesh.Density": {
     "documentation": "Its density (`Mass = Density * Size`)"
   },
   "@luhx/globaltype/Mesh.FaceCulling": {
-    "documentation": "An integer. `0` means no culling, `1` to cull its \"back\" faces, and `2` to cull its \"front\" faces"
+    "documentation": "Which faces of the mesh to cull based on viewing direction. See the `FaceCulling` enum"
   },
   "@luhx/globaltype/Mesh.Friction": {
     "documentation": "Fraction of Velocity it should lose per second while in contact with another object while `PhysicsDynamics` is `true`"

@@ -203,9 +203,9 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * `AngularVelocity: vector`: Its rotational velocity
 * `Asset: string`: The path to the underlying `.hxmesh` file, or a built-in identifier like `!Quad` or `!Cube`
 * `CastsShadows: boolean`: Whether it casts shadows
-* `CollisionFidelity: number`: 0 - `Aabb`: An axis-aligned bounding box. 1 - `AabbStaticSize`: An AABB which keeps the same size as the Object
+* `CollisionFidelity: number`: The fidelity at which collisions are detected. See the `CollisionFidelity` enum
 * `Density: number`: Its density (`Mass = Density * Size`)
-* `FaceCulling: number`: An integer. `0` means no culling, `1` to cull its "back" faces, and `2` to cull its "front" faces
+* `FaceCulling: number`: Which faces of the mesh to cull based on viewing direction. See the `FaceCulling` enum
 * `Friction: number`: Fraction of Velocity it should lose per second while in contact with another object while `PhysicsDynamics` is `true`
 * `LinearVelocity: vector`: Its velocity
 * `Material: string`: The name of the `.mtl` in the `resources/materials/` directory it should use

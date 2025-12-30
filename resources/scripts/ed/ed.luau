@@ -1022,10 +1022,11 @@ imgui.stylecolors(if EditorPreferences.UseLightTheme then 'l' else 'd')
 
 local PrevSelections: { GameObject & Transform } = {}
 
-local SelectionPart = GameObject.new("Mesh" :: "Mesh")
+local SelectionPart: GameObject & Mesh = GameObject.new("Mesh" :: "Mesh") :: any
 SelectionPart.Material = "boxframe"
 SelectionPart.Tint = Color.new(166/255, 200/255, 1)
 SelectionPart.PhysicsCollisions = false
+SelectionPart.FaceCulling = Enum.FaceCulling.None
 
 local CommandBarCommand = ""
 local IsHoveringViewportTitlebar = false

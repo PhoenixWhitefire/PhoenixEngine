@@ -330,7 +330,9 @@
     },
     "Libraries": {
       "Enum": {
+        "CollisionFidelity": "table",
         "CursorMode": "table",
+        "FaceCulling": "table",
         "Key": "table",
         "MouseButton": "table"
       },

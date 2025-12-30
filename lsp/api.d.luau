@@ -296,7 +296,9 @@ type Creatables = {
 	HistoryService: HistoryService,
 }
 declare Enum: {
+  CollisionFidelity: { Aabb: number, AabbStaticSize: number },
   CursorMode: { Normal: number, Hidden: number, Disabled: number, Unavailable: number, Captured: number },
+  FaceCulling: { None: number, Front: number, Back: number },
   Key: { [string]: number },
   MouseButton: { Left: number, Middle: number, Right: number }
 }

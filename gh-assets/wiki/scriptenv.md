@@ -148,8 +148,14 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 
 ### `Enum`
 * Contains enumerations
+#### `Enum.CollisionFidelity: { Aabb: number, AabbStaticSize: number }`
+* The different modes for `Mesh.CollisionFidelity`
+* `Aabb`: An axis-aligned bounding box
+* `AabbStaticSize`: An AABB which keeps the same size as the Object
 #### `Enum.CursorMode: { Normal: number, Hidden: number, Disabled: number, Unavailable: number, Captured: number }`
 * The appearance and behaviour of the mouse cursor
+#### `Enum.FaceCulling: { None: number, Front: number, Back: number }`
+* Culling modes for `Mesh.FaceCulling`
 #### `Enum.Key: { [string]: number }`
 * Keys, which may be passed to `InputService:IsKeyPressed`
 #### `Enum.MouseButton: { Left: number, Middle: number, Right: number }`

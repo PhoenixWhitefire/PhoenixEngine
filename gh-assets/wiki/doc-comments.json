@@ -334,9 +334,9 @@
           "AngularVelocity": "Its rotational velocity",
           "Asset": "The path to the underlying `.hxmesh` file, or a built-in identifier like `!Quad` or `!Cube`",
           "CastsShadows": "Whether it casts shadows",
-          "CollisionFidelity": "0 - `Aabb`: An axis-aligned bounding box. 1 - `AabbStaticSize`: An AABB which keeps the same size as the Object",
+          "CollisionFidelity": "The fidelity at which collisions are detected. See the `CollisionFidelity` enum",
           "Density": "Its density (`Mass = Density * Size`)",
-          "FaceCulling": "An integer. `0` means no culling, `1` to cull its \"back\" faces, and `2` to cull its \"front\" faces",
+          "FaceCulling": "Which faces of the mesh to cull based on viewing direction. See the `FaceCulling` enum",
           "Friction": "Fraction of Velocity it should lose per second while in contact with another object while `PhysicsDynamics` is `true`",
           "LinearVelocity": "Its velocity",
           "Material": "The name of the `.mtl` in the `resources/materials/` directory it should use",
@@ -768,9 +768,21 @@
       "Enum": {
         "Description": "Contains enumerations",
         "Members": {
+          "CollisionFidelity": {
+            "Description": [
+              "The different modes for `Mesh.CollisionFidelity`",
+              "`Aabb`: An axis-aligned bounding box",
+              "`AabbStaticSize`: An AABB which keeps the same size as the Object"
+            ],
+            "Type": "{ Aabb: number, AabbStaticSize: number }"
+          },
           "CursorMode": {
             "Description": "The appearance and behaviour of the mouse cursor",
             "Type": "{ Normal: number, Hidden: number, Disabled: number, Unavailable: number, Captured: number }"
+          },
+          "FaceCulling": {
+            "Description": "Culling modes for `Mesh.FaceCulling`",
+            "Type": "{ None: number, Front: number, Back: number }"
           },
           "Key": {
             "Description": "Keys, which may be passed to `InputService:IsKeyPressed`",

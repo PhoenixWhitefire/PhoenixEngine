@@ -1284,6 +1284,29 @@ static void openEnum(lua_State* L)
 
 	lua_setfield(L, -2, "CursorMode");
 
+	lua_newtable(L);
+
+	lua_pushinteger(L, 0);
+	lua_setfield(L, -2, "None");
+
+	lua_pushinteger(L, 1);
+	lua_setfield(L, -2, "Back");
+
+	lua_pushinteger(L, 2);
+	lua_setfield(L, -2, "Front");
+
+	lua_setfield(L, -2, "FaceCulling");
+
+	lua_newtable(L);
+
+	lua_pushinteger(L, 0);
+	lua_setfield(L, -2, "Aabb");
+
+	lua_pushinteger(L, 1);
+	lua_setfield(L, -2, "AabbStaticSize");
+
+	lua_setfield(L, -2, "CollisionFidelity");
+
 	lua_setglobal(L, "Enum");
 }
 
