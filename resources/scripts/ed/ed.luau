@@ -80,15 +80,7 @@ if not fs.isdirectory("@cwd/projects") then
 	fs.mkdir("@cwd/projects")
 end
 
-local function assert(cond: any, err: string?, ...)
-	if not cond then
-		local em = "Assertion failed: " .. (err or "")
-		Engine:ShowMessageBox("Editor error", debug.traceback(em, 1), "ok", "error")
-		error(em)
-	end
 
-	return cond, err, ...
-end
 
 local function setErrorNotification(Error)
 	ErrorMessage = Error
