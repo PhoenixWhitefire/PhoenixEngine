@@ -109,10 +109,6 @@ static int obj_index(lua_State* L)
 	else if (const Reflection::EventDescriptor* event = obj->FindEvent(key, &ref))
 		luhx_pushsignal(L, event, ref, key);
 
-	// Methods are lower because we prefer namecalls
-	else if (const Reflection::MethodDescriptor* func = obj->FindMethod(key, &ref))
-		ScriptEngine::L::PushMethod(L, func, ref);
-
 	else
 	{
 		GameObject* child = obj->FindChild(key);
