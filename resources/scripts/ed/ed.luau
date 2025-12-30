@@ -1487,7 +1487,7 @@ function Stages.ProjectPlaying_Enter(DeltaTime)
 		projWp.SceneCamera.Parent = projWp
 	end
 
-	workspace.SceneCamera = projWp.SceneCamera
+	workspace.SceneCamera = EditorCam
 
 	return Project.DataModel -- Connect to the Project's datamodel `.OnFrameBegin`
 end
