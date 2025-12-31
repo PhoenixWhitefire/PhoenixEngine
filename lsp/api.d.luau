@@ -364,6 +364,7 @@ declare imgui: {
   pushid: (( Id: string ) -> ()),
   pushstylecolor: (( StyleIndex: number, Color: { number } ) -> ()),
   sameline: ((  ) -> ()),
+  scrollherey: ((  ) -> ()),
   separator: ((  ) -> ()),
   separatortext: (( Text: string ) -> ()),
   setcursorposition: (( X: number, Y: number ) -> ()),

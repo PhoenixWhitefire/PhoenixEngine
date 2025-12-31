@@ -3,6 +3,26 @@
 #include "FileRW.hpp"
 #include "Log.hpp"
 
+static uint32_t* toObjectUserData(lua_State* L, int i)
+{
+	if (void* p = lua_touserdata(L, i))
+	{
+		// FROM: `luau/VM/src/laux.cpp` line 128
+
+		if (lua_getmetatable(L, i))
+        {                                                     // does it have a metatable?
+            lua_getfield(L, LUA_REGISTRYINDEX, "GameObject"); // get correct metatable
+            if (lua_rawequal(L, -1, -2))
+            {                  // does it have the correct mt?
+                lua_pop(L, 2); // remove both metatables
+                return (uint32_t*)p;
+			}
+		}
+	}
+
+	return nullptr;
+}
+
 static int base_print(lua_State* L)
 {
     // FROM:
@@ -10,11 +30,18 @@ static int base_print(lua_State* L)
 	// `Luau/VM/src/lbaselib.cpp`
 	// 11/11/2024
 
-	Log::Info("&&");
+	lua_Debug ar = {};
+	lua_getinfo(L, 1, "sln", &ar);
+
+	Log::Info("&&", std::format("ArName:{},ArShortSrc:{},ArLine:{}", ar.name ? ar.name : "<anonymous>", ar.short_src , ar.currentline));
 
 	int n = lua_gettop(L); // number of arguments
 	for (int i = 1; i <= n; i++)
 	{
+		std::string extraTag;
+		if (uint32_t* gid = toObjectUserData(L, i))
+			extraTag = std::format("Object:{}", *gid);
+
 		size_t l;
 		const char* s = luaL_tolstring(L, i, &l); // convert to string using __tostring et al
 
@@ -24,9 +51,9 @@ static int base_print(lua_State* L)
 			Log::Append("&&");
 
 		if (i < n)
-			Log::Append(std::string(s) + "&&");
+			Log::Append(std::string(s) + "&&", extraTag);
 		else
-			Log::Append(s);
+			Log::Append(s, extraTag);
 
 		lua_pop(L, 1); // pop result
 	}

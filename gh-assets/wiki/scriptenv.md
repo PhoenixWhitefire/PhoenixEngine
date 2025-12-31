@@ -296,6 +296,8 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * `Color` is an array with 4 numbers representing R, G, B, and A
 #### `imgui.sameline(): `
 * `ImGui::SameLine`
+#### `imgui.scrollherey(): `
+* `ImGui::SetScrollHereY`
 #### `imgui.separator(): `
 * `ImGui::Separator`
 #### `imgui.separatortext(Text: string): `

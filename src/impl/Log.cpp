@@ -77,8 +77,10 @@ static void appendToLog(const std::string_view& Message, bool NoNewline = false,
 // and when app shuts down
 // If the Message ends with `&&`, won't insert a newline automatically
 // 11/11/2024
-void Log::Append(const std::string_view& Message)
+void Log::Append(const std::string_view& Message, const std::string_view& ExtraTags)
 {
+	if (ExtraTags != "")
+		appendToLog(ExtraTags, true);
 	appendToLog(Message, false, true);
 
 	EcEngine::SignalNewLogMessage(LogMessageType::None, Message, "");

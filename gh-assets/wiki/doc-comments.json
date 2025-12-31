@@ -1363,6 +1363,9 @@
               "`ImGui::SameLine`"
             ]
           },
+          "scrollherey": {
+            "Description": "`ImGui::SetScrollHereY`"
+          },
           "separator": {
             "Description": [
               "`ImGui::Separator`"

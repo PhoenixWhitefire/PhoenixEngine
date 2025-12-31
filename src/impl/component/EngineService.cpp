@@ -350,6 +350,9 @@ public:
                     {
                         int result = lua_resume(ML, ML, 0);
 
+                        if (result == LUA_ERRERR || result == LUA_ERRRUN || result == LUA_ERRMEM)
+                            Log::Error(lua_tostring(ML, -1), std::format("SourceChunkName:{}", chname));
+
                         const char* const ResultToMessage[] =
                         {
                             "ok",
@@ -365,7 +368,11 @@ public:
                         return { result == LUA_OK, message };
 	                }
 	                else
+                    {
+                        Log::Error(lua_tostring(ML, -1), std::format("SourceChunkName:{}", chname));
+
                         return { false, lua_tostring(ML, -1) };
+                    }
                 }
             } },
 

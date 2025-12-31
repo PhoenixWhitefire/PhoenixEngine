@@ -400,6 +400,7 @@
         "pushid": "function",
         "pushstylecolor": "function",
         "sameline": "function",
+        "scrollherey": "function",
         "separator": "function",
         "separatortext": "function",
         "setcursorposition": "function",

@@ -30,6 +30,8 @@ local Project = {
 local RecentProjects: { string } = {}
 local EditorPreferences = {
 	AutoLaunchCodeEditorOnProjectOpen = true,
+	ClearOutputOnProjectOpen = true,
+	ClearOutputOnPlaytest = true,
 	CodeEditorPath = "code",
 	UseLightTheme = false
 }
@@ -49,8 +51,10 @@ local ToolOrder = {
 	"Tool_Properties"
 }
 
-local BottomBarEnabled = conf.get("Ed_Tool_BottomBarEnabled")
-assert(typeof(BottomBarEnabled) == "boolean" or typeof(BottomBarEnabled) == "nil")
+local BottomBarEnabled = conf.get("Ed_Tool_BottomBarEnabled") or false
+local OutputEnabled = conf.get("Ed_Tool_OutputEnabled") or false
+assert(typeof(BottomBarEnabled) == "boolean")
+assert(typeof(OutputEnabled) == "boolean")
 
 for _, tool in Engine:GetToolNames() do
 	if not table.find(ToolOrder, tool) then
@@ -173,8 +177,6 @@ local function editorFrame(DeltaTime)
 end
 
 changeStageTo = function(NewStage: Stage)
-	print(`Changing stage from { CurrentStage } to { NewStage }`)
-	
 	if StageUpdateSignal then
 		StageUpdateSignal:Disconnect()
 	end
@@ -589,6 +591,14 @@ local function toolsTab(_: number)
 		conf.set("Ed_Tool_BottomBarEnabled", BottomBarEnabled)
 		conf.save()
 	end
+
+	imgui.sameline()
+
+	if tabButton("Output", `@etextures/editor-icons/command-bar.png`, true, OutputEnabled) then
+		BottomBarEnabled = not BottomBarEnabled
+		conf.set("Ed_Tool_OutputEnabled", BottomBarEnabled)
+		conf.save()
+	end
 end
 
 local function pluginsTab(dt: number)
@@ -994,6 +1004,9 @@ local function renderMainMenuBar(dt: number)
 		EditorPreferences.CodeEditorPath = imgui.inputstring("Code Editor path", EditorPreferences.CodeEditorPath)
 		EditorPreferences.AutoLaunchCodeEditorOnProjectOpen = imgui.checkbox("Launch code editor on project open", EditorPreferences.AutoLaunchCodeEditorOnProjectOpen)
 
+		EditorPreferences.ClearOutputOnProjectOpen = imgui.checkbox("Clear Output on Project open", EditorPreferences.ClearOutputOnProjectOpen)
+		EditorPreferences.ClearOutputOnPlaytest = imgui.checkbox("Clear Output on Playtest", EditorPreferences.ClearOutputOnPlaytest)
+
 		if imgui.button("Save") then
 			assert(fs.write("./editor/settings.json", json.encode(EditorPreferences)))
 		end
@@ -1007,7 +1020,16 @@ local function renderMainMenuBar(dt: number)
 	end
 end
 
-EditorPreferences = if fs.isfile("./editor/settings.json") then json.parse(assert(fs.read("./editor/settings.json"))) else EditorPreferences
+local savedEditorPreferences = if fs.isfile("./editor/settings.json") then json.parse(assert(fs.read("./editor/settings.json"))) else EditorPreferences
+
+for k, v in EditorPreferences do
+	if savedEditorPreferences[k] == nil then
+		savedEditorPreferences[k] = v
+	end
+end
+
+EditorPreferences = savedEditorPreferences
+
 imgui.stylecolors(if EditorPreferences.UseLightTheme then 'l' else 'd')
 
 local PrevSelections: { GameObject & Transform } = {}
@@ -1025,6 +1047,43 @@ local ViewportRight = 0
 local ViewportLeft = 0
 local ViewportTop = 0
 local ViewportBottom = 0
+local Log: { { Closed: boolean, Message: { { Content: string, ExtraTags: string } }, Type: number, Time: string, Source: string? } } = {}
+local NewLogMessage = false
+
+Engine.OnMessageLogged:Connect(function(Type: number, Message: string, ExtraTags: string)
+	if Message:sub(-#("&&")) == "&&" then
+		Message = Message:sub(1, #Message - 2)
+	end
+
+	local lastLog = Log[#Log]
+	if lastLog and not lastLog.Closed then
+		if Type == Enum.LogType.None then
+			table.insert(lastLog.Message, {
+				Content = Message,
+				ExtraTags = ExtraTags
+			})
+
+			return
+		else
+			lastLog.Closed = true
+		end
+	end
+
+	local source = ExtraTags:match("ArShortSrc:.+,") or ExtraTags:match("SourceChunkName:.+,")
+	if source then
+		source = source:sub(#("ArShortSrc:") + 1, #source - 1)
+	end
+
+	table.insert(Log, {
+		Closed = false,
+		Message = { { Content = Message, ExtraTags = ExtraTags } },
+		Type = Type,
+		Time = os.date("%H:%M:%S"),
+		Source = source
+	})
+
+	NewLogMessage = true
+end)
 
 local function isMouseWithinViewport()
 	local pos = InputService:GetCursorPosition()
@@ -1136,7 +1195,7 @@ local function renderViewport(DeltaTime: number)
 		if imgui.button("Run") then
 			local began = HistoryService:TryBeginAction("CommandBarCode")
 
-			print(Engine:RunInVM(if CurrentStage == "ProjectEditing" then GameEditingVM else GameVM, CommandBarCommand, "=CommandBar"))
+			Engine:RunInVM(if CurrentStage == "ProjectEditing" then GameEditingVM else GameVM, CommandBarCommand, "=CommandBar")
 
 			if began then
 				HistoryService:FinishCurrentAction()
@@ -1145,6 +1204,51 @@ local function renderViewport(DeltaTime: number)
 		imgui.sameline()
 
 		imgui.text(`{ Project.Name } | { Engine.Framerate } FPS`)
+
+		imgui.endw()
+	end
+
+	if OutputEnabled then
+		imgui.begin("Output");
+
+		for _, message in Log do
+			imgui.pushstylecolor(0, { 0.25, 0.25, 0.25, 1 })
+
+			imgui.text(message.Time)
+
+			imgui.popstylecolor()
+
+			local LogColors = {
+				[2] = { 255 / 255, 171 / 255, 61 / 255, 1 }, -- warning
+				[3] = { 255 / 255, 61 / 255, 61 / 255, 1 }   -- error
+			}
+
+			local logColor = LogColors[message.Type]
+
+			if logColor then
+				imgui.pushstylecolor(0, logColor)
+			end
+
+			for _, subMessage in message.Message do
+				imgui.sameline()
+
+				imgui.text(subMessage.Content)
+
+				if #subMessage.ExtraTags > 0 then
+					imgui.setitemtooltip((if message.Source then `From { message.Source }\n\nContext:\n` else "Context:\n") .. subMessage.ExtraTags)
+				else
+					imgui.setitemtooltip((if message.Source then `From { message.Source }\n\nContext:\n` else "Context:\n") .. message.Message[1].ExtraTags)
+				end
+			end
+
+			if logColor then
+				imgui.popstylecolor()
+			end
+		end
+
+		if NewLogMessage then
+			imgui.scrollherey()
+		end
 
 		imgui.endw()
 	end
@@ -1206,6 +1310,10 @@ end
 
 function Stages.SelectProject_Leave(DeltaTime)
 	PluginManager.Load()
+
+	if EditorPreferences.ClearOutputOnProjectOpen then
+		Log = {}
+	end
 end
 
 local SelectorHoveringOver: number? = nil
@@ -1434,6 +1542,10 @@ end
 
 function Stages.ProjectEditing_Leave(NextStage)
 	if NextStage == "ProjectPlaying" then
+		if EditorPreferences.ClearOutputOnPlaytest then
+			Log = {}
+		end
+
 		return
 	end
 	

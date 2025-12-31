@@ -771,6 +771,12 @@ static int imgui_setnextitemwidth(lua_State* L)
     return 0;
 }
 
+static int imgui_scrollherey(lua_State* L)
+{
+    ImGui::SetScrollHereY();
+    return 0;
+}
+
 static luaL_Reg imgui_funcs[] =
 {
     { "begin", imgui_begin },
@@ -831,6 +837,7 @@ static luaL_Reg imgui_funcs[] =
     { "beginpopupmodal", imgui_beginpopupmodal },
     { "textsize", imgui_textsize },
     { "setnextitemwidth", imgui_setnextitemwidth },
+    { "scrollherey", imgui_scrollherey },
     { NULL, NULL }
 };
 

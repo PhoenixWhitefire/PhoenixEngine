@@ -251,6 +251,9 @@
   "@luhx/global/imgui.sameline": {
     "documentation": "* `ImGui::SameLine`"
   },
+  "@luhx/global/imgui.scrollherey": {
+    "documentation": "* `ImGui::SetScrollHereY`"
+  },
   "@luhx/global/imgui.separator": {
     "documentation": "* `ImGui::Separator`"
   },
