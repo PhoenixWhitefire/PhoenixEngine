@@ -88,7 +88,7 @@ public:
 	char** argv = nullptr;
 
 private:
-	void m_InitVideo();
+	void m_InitializeVideo();
 	void m_Render(double DeltaTime);
 
 	int m_DrawnFramesInSecond = -1;

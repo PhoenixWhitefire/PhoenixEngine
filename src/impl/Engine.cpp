@@ -143,8 +143,7 @@ void Engine::LoadConfiguration()
 			1
 		);
 
-		EngineJsonConfig =
-		{
+		EngineJsonConfig = {
 			{ "ResourcesDirectory", "resources/" }
 		};
 	}
@@ -186,7 +185,7 @@ static void errorCallback(int code, const char* message)
 	RAISE_RTF("Error occurred in GLFW:\nCode: {}, Message: {}", code, message);
 }
 
-void Engine::m_InitVideo()
+void Engine::m_InitializeVideo()
 {
 	ZoneScoped;
 
@@ -282,7 +281,7 @@ Engine::Engine()
 	EngineInstance = this;
 	
 	this->LoadConfiguration();
-	m_InitVideo();
+	m_InitializeVideo();
 
 	GameObject::s_WorldArray.reserve(32);
 	FileRW::DefineAlias("cwd", std::filesystem::current_path().string());

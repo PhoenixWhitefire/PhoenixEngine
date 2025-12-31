@@ -812,21 +812,40 @@ int ScriptEngine::L::HandleMethodCall(
 
 		return 0;
 	}
+	else if (numArgs > minArgs)
+	{
+		int clip = numArgs;
+
+		for (int arg = numArgs; arg > 0; arg--)
+		{
+			if (lua_isnil(L, arg + 1))
+				clip = arg - 1;
+			else
+				break;
+		}
+
+		numArgs = clip;
+	}
 	else if (numArgs > numParams)
 	{
-		Log::WarningF("Function received {} more arguments than necessary",
-			numArgs - numParams
+		lua_Debug ar = {};
+		lua_getinfo(L, 1, "sln", &ar);
+
+		// this is just so that the Output can attribute the log message to a script
+		std::string extraTags = std::format("ScriptFunctionName:{},TextDocument:{},DocumentLine:{}", ar.name ? ar.name : "<anonymous>", ar.short_src , ar.currentline);
+
+		Log::Warning(
+			std::format("Function received {} more arguments than necessary", numArgs - numParams),
+			extraTags
 		);
 	}
 
+	assert(luaL_checkudata(L, 1, "GameObject"));
 	std::vector<Reflection::GenericValue> inputs;
 
-	// This *entire* for-loop is just for handling input arguments
 	for (int index = 0; index < numArgs; index++)
 	{
 		Reflection::ValueType paramType = paramTypes[index];
-
-		assert(luaL_checkudata(L, 1, "GameObject"));
 
 		// offset the stack so the error message gives the correct argument number
 		// without this, the first argument would be reported as "argument #2"

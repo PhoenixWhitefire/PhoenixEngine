@@ -16,6 +16,7 @@ declare extern type EventConnection with
   Signal: any
 end
 declare GameObject: {
+  fromId: (( Id: number ) -> (GameObject?)),
   new: (<T>(ComponentName: T) -> GameObject & index<Creatables, T>) & ((ComponentName: string) -> GameObject & any),
   validcomponents: { string }
 }
@@ -147,6 +148,7 @@ declare extern type Engine with
   function GetExplorerSelections(self) : ({ GameObject })
   function GetToolNames(self) : { string }
   function IsToolEnabled(self, ToolName: string) : (boolean)
+  function OpenTextDocument(self, Path: string, Line: number?) : ()
   function ResetViewport(self) : ()
   function RunInVM(self, VmName: string, Code: string, ChunkName: string?) : (boolean, string?)
   function SetCurrentVM(self, VmName: string) : ()

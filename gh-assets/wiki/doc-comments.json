@@ -190,6 +190,10 @@
             "Description": "Returns whether the given tool is enabled",
             "ParameterNames": "ToolName"
           },
+          "OpenTextDocument": {
+            "Description": "Opens a text file",
+            "ParameterNames": [ "Path", "Line" ]
+          },
           "ResetViewport": "Resets the Engine's understanding of where the viewport is on screen back to the default (occupying the entire window)",
           "RunInVM": {
             "Description": "Runs the given code in the specified VM. Returns `false` and an error message upon failure or if the code does not finish executing (yield or break)",
@@ -544,6 +548,11 @@
           "The base API will be documented on the Component APIs page"
         ],
         "Library": {
+          "fromId": {
+            "Description": "Finds an Object by it's internal ID. Do not rely on the ID",
+            "In": "Id: number",
+            "Out": "GameObject?"
+          },
           "new": {
             "Description": "Creates a new GameObject with the provided Component",
             "In": "Component: string",

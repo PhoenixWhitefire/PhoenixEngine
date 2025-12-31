@@ -43,6 +43,8 @@ Additional types with methods and properties
 * A Game Object
 * Game Objects have a "base" API (properties, methods, and events) that can be extended by giving them Components
 * The base API will be documented on the Component APIs page
+#### `GameObject.fromId(Id: number): GameObject?`
+* Finds an Object by it's internal ID. Do not rely on the ID
 #### `GameObject.new(Component: string): GameObject`
 * Creates a new GameObject with the provided Component
 #### `GameObject.validcomponents: { string }`

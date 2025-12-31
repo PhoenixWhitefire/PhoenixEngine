@@ -35,6 +35,9 @@
   "@luhx/global/GameObject": {
     "documentation": "* A Game Object\n* Game Objects have a \"base\" API (properties, methods, and events) that can be extended by giving them Components\n* The base API will be documented on the Component APIs page"
   },
+  "@luhx/global/GameObject.fromId": {
+    "documentation": "* Finds an Object by it's internal ID. Do not rely on the ID"
+  },
   "@luhx/global/GameObject.new": {
     "documentation": "* Creates a new GameObject with the provided Component"
   },
@@ -511,6 +514,9 @@
   },
   "@luhx/globaltype/Engine.OnMessageLogged": {
     "documentation": "Fires whenever a Log Message is created"
+  },
+  "@luhx/globaltype/Engine.OpenTextDocument": {
+    "documentation": "Opens a text file"
   },
   "@luhx/globaltype/Engine.PhysicsTimescale": {
     "documentation": "The current time-scale of the Physics engine (1.0 = 100%, normal speed)"

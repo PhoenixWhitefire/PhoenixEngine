@@ -23,17 +23,20 @@ static uint32_t* toObjectUserData(lua_State* L, int i)
 	return nullptr;
 }
 
-static int base_print(lua_State* L)
+static std::string getScriptTraceExtraTags(lua_State* L)
 {
-    // FROM:
-	// `luaB_print`
-	// `Luau/VM/src/lbaselib.cpp`
-	// 11/11/2024
-
 	lua_Debug ar = {};
 	lua_getinfo(L, 1, "sln", &ar);
 
-	Log::Info("&&", std::format("ArName:{},ArShortSrc:{},ArLine:{}", ar.name ? ar.name : "<anonymous>", ar.short_src , ar.currentline));
+	return std::format("ScriptFunctionName:{},TextDocument:{},DocumentLine:{}", ar.name ? ar.name : "<anonymous>", ar.short_src , ar.currentline);
+}
+
+static void appendToLog(lua_State* L)
+{
+	// FROM:
+	// `luaB_print`
+	// `Luau/VM/src/lbaselib.cpp`
+	// 11/11/2024
 
 	int n = lua_gettop(L); // number of arguments
 	for (int i = 1; i <= n; i++)
@@ -57,61 +60,29 @@ static int base_print(lua_State* L)
 
 		lua_pop(L, 1); // pop result
 	}
+}
+
+static int base_print(lua_State* L)
+{
+	// this is just so that the Output can attribute the log message to a script
+	Log::Info("&&", getScriptTraceExtraTags(L));
+	appendToLog(L);
 
 	return 0;
 }
 
 static int base_warn(lua_State* L)
 {
-	Log::Warning("&&");
-
-	int n = lua_gettop(L); // number of arguments
-	for (int i = 1; i <= n; i++)
-	{
-		size_t l;
-		const char* s = luaL_tolstring(L, i, &l); // convert to string using __tostring et al
-
-		if (i > 1)
-			Log::Append(" &&");
-		else
-			Log::Append("&&");
-
-		if (i < n)
-			Log::Append(std::string(s) + "&&");
-		else
-			Log::Append(s);
-
-		lua_pop(L, 1); // pop result
-	}
+	Log::Warning("&&", getScriptTraceExtraTags(L));
+	appendToLog(L);
 
 	return 0;
 }
 
 static int base_appendlog(lua_State* L)
 {
-    // FROM:
-	// `luaB_print`
-	// `Luau/VM/src/lbaselib.cpp`
-	// 11/11/2024
-    
-	int n = lua_gettop(L); // number of arguments
-	for (int i = 1; i <= n; i++)
-	{
-		size_t l;
-		const char* s = luaL_tolstring(L, i, &l); // convert to string using __tostring et al
-    
-		if (i > 1)
-			Log::Append(" &&");
-		else
-			Log::Append("&&");
-    
-		if (i < n)
-			Log::Append(std::string(s) + "&&");
-		else
-			Log::Append(s);
-    
-		lua_pop(L, 1); // pop result
-	}
+	Log::Append("&&", getScriptTraceExtraTags(L));
+	appendToLog(L);
 
     return 0;
 }

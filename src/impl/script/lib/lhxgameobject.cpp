@@ -71,9 +71,18 @@ static int gameobject_new(lua_State* L)
 	return 1;
 }
 
+static int gameobject_fromId(lua_State* L)
+{
+	int oid = luaL_checkinteger(L, 1);
+	luhx_pushgameobject(L, GameObject::GetObjectById((uint32_t)oid));
+
+	return 1;
+}
+
 static const luaL_Reg gameobject_funcs[] =
 {
     { "new", gameobject_new },
+	{ "fromId", gameobject_fromId },
     { NULL, NULL }
 };
 

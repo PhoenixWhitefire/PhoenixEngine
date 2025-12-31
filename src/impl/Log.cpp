@@ -83,7 +83,7 @@ void Log::Append(const std::string_view& Message, const std::string_view& ExtraT
 		appendToLog(ExtraTags, true);
 	appendToLog(Message, false, true);
 
-	EcEngine::SignalNewLogMessage(LogMessageType::None, Message, "");
+	EcEngine::SignalNewLogMessage(LogMessageType::None, Message, ExtraTags);
 }
 
 void Log::Info(const std::string_view& Message, const std::string_view& ExtraTags)

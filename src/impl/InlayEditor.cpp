@@ -3311,6 +3311,12 @@ const std::vector<ObjectHandle>& InlayEditor::GetExplorerSelections()
 	return Selections;
 }
 
+void InlayEditor::OpenTextDocument(const std::string& Path, int Line)
+{
+	invokeTextEditor(Path);
+	s_TextEdDebuggerJumpToLine = Line;
+}
+
 void InlayEditor::Shutdown()
 {
 	MtlPreviewCamera = nullptr;

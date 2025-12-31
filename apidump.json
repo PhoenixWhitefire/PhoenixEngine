@@ -99,6 +99,7 @@
           "GetExplorerSelections": "() -> (Array)",
           "GetToolNames": "() -> (Array)",
           "IsToolEnabled": "(String) -> (Boolean)",
+          "OpenTextDocument": "(String, Integer?) -> ()",
           "ResetViewport": "() -> ()",
           "RunInVM": "(String, String, String?) -> (Boolean, String?)",
           "SetCurrentVM": "(String) -> ()",
@@ -286,6 +287,7 @@
       "EventSignal": {},
       "GameObject": {
         "Library": {
+          "fromId": "function",
           "new": "function",
           "validcomponents": "table"
         },

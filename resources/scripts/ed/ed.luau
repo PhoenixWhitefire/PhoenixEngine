@@ -1047,20 +1047,74 @@ local ViewportRight = 0
 local ViewportLeft = 0
 local ViewportTop = 0
 local ViewportBottom = 0
-local Log: { { Closed: boolean, Message: { { Content: string, ExtraTags: string } }, Type: number, Time: string, Source: string? } } = {}
+local Log: { { Closed: boolean, Message: { { Content: string, ExtraTags: string, CanInteract: boolean, Tooltip: string } }, Type: number, Time: string, Source: string? } } = {}
 local NewLogMessage = false
 
+local function canInteractWithLogSubMessage(ExtraTags: string): (boolean, string)
+	local objectId = ExtraTags:match("Object:%d+")
+
+	if objectId then
+		local object = GameObject.fromId(assert(tonumber(objectId:sub(#("Object:") + 1))))
+
+		return true, `Select { tostring(object) }`
+	end
+
+	local shortSrc = ExtraTags:match("TextDocument:.+,")
+
+	if shortSrc then
+		local lineMatch = ExtraTags:match("DocumentLine:%d+")
+
+		return true, `Open { shortSrc:sub(#("TextDocument:") + 1, #shortSrc - 1) }{ if lineMatch then lineMatch:sub(#("DocumentLine:"), #lineMatch) else "" }`
+	end
+
+	return false, ""
+end
+
+local function interactWithLogSubMessage(ExtraTags: string)
+	local objectId = ExtraTags:match("Object:%d+")
+
+	if objectId then
+		local object = GameObject.fromId(assert(tonumber(objectId:sub(#("Object:") + 1))))
+
+		if object then
+			Engine:SetExplorerSelections({ object })
+		end
+		return
+	end
+
+	local shortSrc = ExtraTags:match("TextDocument:.+,")
+
+	if shortSrc then
+		local lineMatch = ExtraTags:match("DocumentLine:%d+")
+
+		local line = lineMatch and tonumber(lineMatch:sub(#("DocumentLine:") + 1))
+		Engine:OpenTextDocument(shortSrc:sub(#("TextDocument:") + 1, #shortSrc - 1), line)
+
+		return
+	end
+
+	warn(`Failed to figure out the interaction for a log message with tags '{ExtraTags}'`)
+end
+
 Engine.OnMessageLogged:Connect(function(Type: number, Message: string, ExtraTags: string)
-	if Message:sub(-#("&&")) == "&&" then
+	if Message == " &&" then
+		Message = ""
+	end
+
+	if #Message >= 2 and Message:sub(-#("&&")) == "&&" then
 		Message = Message:sub(1, #Message - 2)
 	end
+
+	local canInteract, tooltip = canInteractWithLogSubMessage(ExtraTags)
 
 	local lastLog = Log[#Log]
 	if lastLog and not lastLog.Closed then
 		if Type == Enum.LogType.None then
 			table.insert(lastLog.Message, {
 				Content = Message,
-				ExtraTags = ExtraTags
+				ExtraTags = ExtraTags,
+				CanInteract = canInteract,
+				Tooltip = tooltip
 			})
 
 			return
@@ -1069,14 +1123,14 @@ Engine.OnMessageLogged:Connect(function(Type: number, Message: string, ExtraTags
 		end
 	end
 
-	local source = ExtraTags:match("ArShortSrc:.+,") or ExtraTags:match("SourceChunkName:.+,")
+	local source = ExtraTags:match("TextDocument:.+,") or ExtraTags:match("SourceChunkName:.+,")
 	if source then
-		source = source:sub(#("ArShortSrc:") + 1, #source - 1)
+		source = source:sub(#("TextDocument:") + 1, #source - 1)
 	end
 
 	table.insert(Log, {
 		Closed = false,
-		Message = { { Content = Message, ExtraTags = ExtraTags } },
+		Message = { { Content = Message, ExtraTags = ExtraTags, CanInteract = canInteract, Tooltip = tooltip } },
 		Type = Type,
 		Time = os.date("%H:%M:%S"),
 		Source = source
@@ -1100,6 +1154,8 @@ local function isMouseWithinViewport()
 
 	return IsHoveringViewport
 end
+
+local LogMessageHovering: number = -1
 
 local function renderViewport(DeltaTime: number)
 	for index = 1, #PrevSelections do
@@ -1138,7 +1194,6 @@ local function renderViewport(DeltaTime: number)
 			end
 		else
 			SelectionPart.Parent = nil
-			--print(mouseVec)
 		end
 	else
 		for _, v in PrevSelections do
@@ -1209,9 +1264,12 @@ local function renderViewport(DeltaTime: number)
 	end
 
 	if OutputEnabled then
-		imgui.begin("Output");
+		imgui.begin("Output")
 
-		for _, message in Log do
+		local logMessageHoveringWip: number = -1
+		local smid = 0
+
+		for mi, message in Log do
 			imgui.pushstylecolor(0, { 0.25, 0.25, 0.25, 1 })
 
 			imgui.text(message.Time)
@@ -1219,38 +1277,78 @@ local function renderViewport(DeltaTime: number)
 			imgui.popstylecolor()
 
 			local LogColors = {
+				[0] = { 1, 1, 1, 1 },
+				[1] = { 1, 1, 1, 1 },
 				[2] = { 255 / 255, 171 / 255, 61 / 255, 1 }, -- warning
 				[3] = { 255 / 255, 61 / 255, 61 / 255, 1 }   -- error
 			}
 
 			local logColor = LogColors[message.Type]
+			imgui.pushstylecolor(0, logColor)
+			imgui.pushstylecolor(52, logColor)
 
-			if logColor then
-				imgui.pushstylecolor(0, logColor)
-			end
+			for smi, subMessage in message.Message do
+				smid += 1
 
-			for _, subMessage in message.Message do
+				if #subMessage.Content == 0 then
+					continue
+				end
+
 				imgui.sameline()
 
-				imgui.text(subMessage.Content)
-
-				if #subMessage.ExtraTags > 0 then
-					imgui.setitemtooltip((if message.Source then `From { message.Source }\n\nContext:\n` else "Context:\n") .. subMessage.ExtraTags)
-				else
-					imgui.setitemtooltip((if message.Source then `From { message.Source }\n\nContext:\n` else "Context:\n") .. message.Message[1].ExtraTags)
+				local context = subMessage.ExtraTags
+				if #context == 0 then
+					context = message.Message[1].ExtraTags
 				end
+
+				if (message.Source or subMessage.CanInteract) and LogMessageHovering == smid then
+					if imgui.textlink(subMessage.Content) then
+						interactWithLogSubMessage(context)
+					end
+				else
+					imgui.text(subMessage.Content)
+				end
+
+				if imgui.itemhovered() then
+					logMessageHoveringWip = smid
+				end
+
+				local tooltip = subMessage.Tooltip
+				if #tooltip == 0 then
+					tooltip = message.Message[1].Tooltip
+				end
+
+				if #tooltip == 0 then
+					continue
+				end
+
+				imgui.setitemtooltip(tooltip)
 			end
 
-			if logColor then
-				imgui.popstylecolor()
-			end
+			imgui.popstylecolor()
+			imgui.popstylecolor()
 		end
 
 		if NewLogMessage then
 			imgui.scrollherey()
+			NewLogMessage = false
+		end
+
+		if imgui.windowhovered() and InputService:IsMouseButtonPressed(Enum.MouseButton.Right) then
+			imgui.openpopup("OutputContextMenu")
+		end
+
+		if imgui.beginpopup("OutputContextMenu") then
+			if imgui.menuitem("Clear Output") then
+				Log = {}
+			end
+
+			imgui.endpopup()
 		end
 
 		imgui.endw()
+
+		LogMessageHovering = logMessageHoveringWip
 	end
 
 	local canInteract = IsHoveringViewportTitlebar or (not IsHoveringViewport and imgui.windowhovered("a | b"))

@@ -12,7 +12,6 @@ Anyway, here is a small tour:
 
 - "phoenix.conf" contains some configuration. Set "Developer" to "false" to disable the debug UIs.
 - WASD to move horizontally, Q/E to move down/up. Left-click+drag to look around. LShift to move slower.
-- `K` to reload all shaders, `I` to reload configuration
 - F11 to toggle fullscreen.
 
 https://github.com/Phoenixwhitefire/PhoenixEngine
@@ -295,18 +294,6 @@ static void drawDeveloperUI(double DeltaTime)
 	ZoneScopedC(tracy::Color::DarkOliveGreen);
 
 	Engine* engine = Engine::Get();
-
-	if (UserInput::IsKeyDown(GLFW_KEY_I) && !GuiIO->WantCaptureKeyboard)
-	{
-		Log::Info("Reloading configuration...");
-		engine->LoadConfiguration();
-	}
-
-	if (UserInput::IsKeyDown(GLFW_KEY_K) && !GuiIO->WantCaptureKeyboard)
-	{
-		Log::Info("Reloading shaders...");
-		ShaderManager::Get()->ReloadAll();
-	}
 
 	// We need to keep track of two different states,
 	// Whether we called `ImGui::Begin`, and whether the developer closed the window

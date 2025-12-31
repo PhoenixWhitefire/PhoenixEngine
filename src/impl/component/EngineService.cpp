@@ -486,6 +486,20 @@ public:
                     return {};
                 }
             } },
+
+            { "OpenTextDocument", Reflection::MethodDescriptor{
+                { Reflection::ValueType::String, REFLECTION_OPTIONAL(Integer) },
+                {},
+                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                {
+                    InlayEditor::OpenTextDocument(
+                        inputs[0].AsString(),
+                        inputs.size() > 1 ? (int)inputs[1].AsInteger() : 1
+                    );
+
+                    return {};
+                }
+            } }
         };
 
         return methods;
