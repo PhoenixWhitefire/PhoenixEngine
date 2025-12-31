@@ -139,7 +139,7 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * `UnloadTexture(string) : ()`: Removes the given texture from the Engine's cache, forcing it to be reloaded upon next use
 
 ### Events:
-* `OnMessageLogged(string)`: Fires whenever a Log Message is created
+* `OnMessageLogged(number, string, string)`: Fires whenever a Log Message is created
 
 ## `Example`
 

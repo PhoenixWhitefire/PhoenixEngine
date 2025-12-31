@@ -1307,6 +1307,22 @@ static void openEnum(lua_State* L)
 
 	lua_setfield(L, -2, "CollisionFidelity");
 
+	lua_newtable(L);
+
+	lua_pushinteger(L, 0);
+	lua_setfield(L, -2, "None");
+
+	lua_pushinteger(L, 1);
+	lua_setfield(L, -2, "Info");
+
+	lua_pushinteger(L, 2);
+	lua_setfield(L, -2, "Warning");
+
+	lua_pushinteger(L, 3);
+	lua_setfield(L, -2, "Error");
+
+	lua_setfield(L, -2, "LogType");
+
 	lua_setglobal(L, "Enum");
 }
 

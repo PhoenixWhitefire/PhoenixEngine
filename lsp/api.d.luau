@@ -108,7 +108,7 @@ declare extern type DataModel with
 
   function GetService(self, ServiceName: string) : ((GameObject & any))
 
-  OnFrameBegin: EventSignal<number>
+  OnFrameBegin: EventSignal<(number)>
 end
 declare extern type DirectionalLight with
   Brightness: number
@@ -157,7 +157,7 @@ declare extern type Engine with
   function ShowMessageBox(self, Title: string, Message: string, Buttons: string?, Icon: string?, DefaultButton: number?) : (number)
   function UnloadTexture(self, Texture: string) : ()
 
-  OnMessageLogged: EventSignal<string>
+  OnMessageLogged: EventSignal<(number, string, string)>
 end
 declare extern type Example with
   EvenMoreSecretMessage: string 
@@ -169,7 +169,7 @@ declare extern type Example with
   function GiveUp(self) : ()
   function Greet(self, Names: { string }, Villain: boolean) : string
 
-  OnGreeted: EventSignal<string>
+  OnGreeted: EventSignal<(string, string)>
 end
 declare extern type HistoryService with
   ActionHistorySize: number 
@@ -247,7 +247,7 @@ declare extern type Sound with
 
   function Play(self) : ()
 
-  OnLoaded: EventSignal<string>
+  OnLoaded: EventSignal<(boolean)>
 end
 declare extern type SpotLight with
   Angle: number
@@ -302,6 +302,7 @@ declare Enum: {
   CursorMode: { Normal: number, Hidden: number, Disabled: number, Unavailable: number, Captured: number },
   FaceCulling: { None: number, Front: number, Back: number },
   Key: { [string]: number },
+  LogType: { None: number, Info: number, Warning: number, Error: number },
   MouseButton: { Left: number, Middle: number, Right: number }
 }
 declare conf: {

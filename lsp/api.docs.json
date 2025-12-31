@@ -20,6 +20,9 @@
   "@luhx/global/Enum.Key": {
     "documentation": "* Keys, which may be passed to `InputService:IsKeyPressed`"
   },
+  "@luhx/global/Enum.LogType": {
+    "documentation": "* The different types of log messages"
+  },
   "@luhx/global/Enum.MouseButton": {
     "documentation": "* Mouse buttons, which may be passed to `InputService:IsMouseButtonPressed`"
   },

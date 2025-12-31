@@ -487,7 +487,7 @@ public:
     const Reflection::StaticEventMap& GetEvents() override
     {
         static const Reflection::StaticEventMap events = {
-            REFLECTION_EVENT(EcEngine, OnMessageLogged, Reflection::ValueType::String)
+            REFLECTION_EVENT(EcEngine, OnMessageLogged, Reflection::ValueType::Integer, Reflection::ValueType::String, Reflection::ValueType::String)
         };
 
         return events;
@@ -496,11 +496,11 @@ public:
 
 static EngineServiceManager Instance;
 
-void EcEngine::SignalNewLogMessage(const std::string_view& Message)
+void EcEngine::SignalNewLogMessage(LogMessageType Type, const std::string_view& Message, const std::string_view& ExtraTags)
 {
     for (const EcEngine& ce : Instance.m_Components)
     {
         if (ce.Valid)
-            REFLECTION_SIGNAL_EVENT(ce.OnMessageLoggedCallbacks, Message);
+            REFLECTION_SIGNAL_EVENT(ce.OnMessageLoggedCallbacks, (int)Type, Message, ExtraTags);
     }
 }

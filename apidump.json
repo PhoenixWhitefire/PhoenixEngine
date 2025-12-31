@@ -87,7 +87,7 @@
       },
       "Engine": {
         "Events": {
-          "OnMessageLogged": "(String)"
+          "OnMessageLogged": "(Integer, String, String)"
         },
         "Methods": {
           "BindDataModel": "(GameObject) -> ()",
@@ -338,6 +338,7 @@
         "CursorMode": "table",
         "FaceCulling": "table",
         "Key": "table",
+        "LogType": "table",
         "MouseButton": "table"
       },
       "conf": {

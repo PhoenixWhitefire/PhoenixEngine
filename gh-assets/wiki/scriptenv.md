@@ -158,6 +158,8 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * Culling modes for `Mesh.FaceCulling`
 #### `Enum.Key: { [string]: number }`
 * Keys, which may be passed to `InputService:IsKeyPressed`
+#### `Enum.LogType: { None: number, Info: number, Warning: number, Error: number }`
+* The different types of log messages
 #### `Enum.MouseButton: { Left: number, Middle: number, Right: number }`
 * Mouse buttons, which may be passed to `InputService:IsMouseButtonPressed`
 ### `conf`

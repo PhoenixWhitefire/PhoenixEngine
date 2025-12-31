@@ -151,7 +151,6 @@
         "Description": "Inspect and manipulate various parts of the Engine",
         "Events": {
           "OnMessageLogged": {
-            "CallbackArguments": "string",
             "Description": "Fires whenever a Log Message is created"
           }
         },
@@ -797,6 +796,10 @@
           "Key": {
             "Description": "Keys, which may be passed to `InputService:IsKeyPressed`",
             "Type": "{ [string]: number }"
+          },
+          "LogType": {
+            "Description": "The different types of log messages",
+            "Type": "{ None: number, Info: number, Warning: number, Error: number }"
           },
           "MouseButton": {
             "Description": "Mouse buttons, which may be passed to `InputService:IsMouseButtonPressed`",

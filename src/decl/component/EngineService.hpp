@@ -6,9 +6,20 @@
 
 #include "datatype/GameObject.hpp"
 
+struct LogMessageType_ {
+    enum LMT {
+        None = 0,
+        Info,
+        Warning,
+        Error
+    };
+};
+
+using LogMessageType = LogMessageType_::LMT;
+
 struct EcEngine : public Component<EntityComponent::Engine>
 {
-    static void SignalNewLogMessage(const std::string_view&);
+    static void SignalNewLogMessage(LogMessageType Type, const std::string_view& Message, const std::string_view& ExtraTags);
 
     std::vector<Reflection::EventCallback> OnMessageLoggedCallbacks;
     bool Valid = true;

@@ -366,7 +366,7 @@ local function dumpReflectionApi(t, d, cn)
 				documentationData[`@luhx/globaltype/{cn}.{n}`] = {
 					documentation = d.Events[n].Description
 				}
-				definitionsFile ..= `  { n }: EventSignal<{assert(d.Events[n].CallbackArguments, n)}>\n`
+				definitionsFile ..= `  { n }: EventSignal<{rtolsub(v)}>\n`
 			end
 		end
 	else

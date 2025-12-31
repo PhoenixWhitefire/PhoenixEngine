@@ -32,10 +32,8 @@ void Log::Save()
 	ProgramLog.clear();
 }
 
-static void logAppend(const std::string_view& Message, bool NoNewline = false, bool ManageMutex = false)
+static void appendToLog(const std::string_view& Message, bool NoNewline = false, bool ManageMutex = false)
 {
-	EcEngine::SignalNewLogMessage(Message);
-
 	std::unique_lock<std::mutex> lock;
 
 	if (ManageMutex)
@@ -81,35 +79,43 @@ static void logAppend(const std::string_view& Message, bool NoNewline = false, b
 // 11/11/2024
 void Log::Append(const std::string_view& Message)
 {
-	logAppend(Message, false, true);
+	appendToLog(Message, false, true);
+
+	EcEngine::SignalNewLogMessage(LogMessageType::None, Message, "");
 }
 
 void Log::Info(const std::string_view& Message, const std::string_view& ExtraTags)
 {
 	std::unique_lock<std::mutex> lock{ LogMutex };
 
-	logAppend("[INFO]", true);
-	logAppend(ExtraTags, true);
-	logAppend(": ", true);
-	logAppend(Message);
+	appendToLog("[INFO]", true);
+	appendToLog(ExtraTags, true);
+	appendToLog(": ", true);
+	appendToLog(Message);
+
+	EcEngine::SignalNewLogMessage(LogMessageType::Info, Message, ExtraTags);
 }
 
 void Log::Warning(const std::string_view& Message, const std::string_view& ExtraTags)
 {
 	std::unique_lock<std::mutex> lock{ LogMutex };
 
-	logAppend("[WARN]", true);
-	logAppend(ExtraTags, true);
-	logAppend(": ", true);
-	logAppend(Message);
+	appendToLog("[WARN]", true);
+	appendToLog(ExtraTags, true);
+	appendToLog(": ", true);
+	appendToLog(Message);
+
+	EcEngine::SignalNewLogMessage(LogMessageType::Warning, Message, ExtraTags);
 }
 
 void Log::Error(const std::string_view& Message, const std::string_view& ExtraTags)
 {
 	std::unique_lock<std::mutex> lock{ LogMutex };
 
-	logAppend("[ERRR]", true);
-	logAppend(ExtraTags, true);
-	logAppend(": ", true);
-	logAppend(Message);
+	appendToLog("[ERRR]", true);
+	appendToLog(ExtraTags, true);
+	appendToLog(": ", true);
+	appendToLog(Message);
+
+	EcEngine::SignalNewLogMessage(LogMessageType::Error, Message, ExtraTags);
 }
