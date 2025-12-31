@@ -34,6 +34,32 @@ static int base_print(lua_State* L)
 	return 0;
 }
 
+static int base_warn(lua_State* L)
+{
+	Log::Warning("&&");
+
+	int n = lua_gettop(L); // number of arguments
+	for (int i = 1; i <= n; i++)
+	{
+		size_t l;
+		const char* s = luaL_tolstring(L, i, &l); // convert to string using __tostring et al
+
+		if (i > 1)
+			Log::Append(" &&");
+		else
+			Log::Append("&&");
+
+		if (i < n)
+			Log::Append(std::string(s) + "&&");
+		else
+			Log::Append(s);
+
+		lua_pop(L, 1); // pop result
+	}
+
+	return 0;
+}
+
 static int base_appendlog(lua_State* L)
 {
     // FROM:
@@ -274,6 +300,7 @@ static int base_shellexec(lua_State* L)
 static const luaL_Reg base_funcs[] =
 {
     { "print", base_print },
+	{ "warn", base_warn },
     { "appendlog", base_appendlog },
 	{ "sleep", base_sleep },
 	{ "breakpoint", base_breakpoint },

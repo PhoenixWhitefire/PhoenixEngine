@@ -1,6 +1,7 @@
 // Engine service GameObject component
 
 #include <tinyfiledialogs.h>
+#include <tracy/Tracy.hpp>
 
 #include "component/EngineService.hpp"
 #include "asset/TextureManager.hpp"
@@ -482,6 +483,24 @@ public:
 
         return methods;
     }
+
+    const Reflection::StaticEventMap& GetEvents() override
+    {
+        static const Reflection::StaticEventMap events = {
+            REFLECTION_EVENT(EcEngine, OnMessageLogged, Reflection::ValueType::String)
+        };
+
+        return events;
+    }
 };
 
 static EngineServiceManager Instance;
+
+void EcEngine::SignalNewLogMessage(const std::string_view& Message)
+{
+    for (const EcEngine& ce : Instance.m_Components)
+    {
+        if (ce.Valid)
+            REFLECTION_SIGNAL_EVENT(ce.OnMessageLoggedCallbacks, Message);
+    }
+}

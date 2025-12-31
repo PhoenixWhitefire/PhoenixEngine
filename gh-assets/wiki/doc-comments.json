@@ -149,6 +149,12 @@
       },
       "Engine": {
         "Description": "Inspect and manipulate various parts of the Engine",
+        "Events": {
+          "OnMessageLogged": {
+            "CallbackArguments": "string",
+            "Description": "Fires whenever a Log Message is created"
+          }
+        },
         "Methods": {
           "BindDataModel": {
             "Description": "Switches Data Models to the specified Object",
@@ -759,6 +765,10 @@
         "Description": "Yields the thread for the specified number of seconds",
         "In": "SleepTime: number",
         "Out": "number"
+      },
+      "warn": {
+        "Description": "Same as `print`, except generates a Warning message",
+        "In": "...: any"
       },
       "workspace": {
         "Description": "Shorthand for `game.Workspace`"

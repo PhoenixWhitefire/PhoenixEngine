@@ -80,8 +80,6 @@ if not fs.isdirectory("@cwd/projects") then
 	fs.mkdir("@cwd/projects")
 end
 
-
-
 local function setErrorNotification(Error)
 	ErrorMessage = Error
 	ErrorMessageTimeRemaining = 2

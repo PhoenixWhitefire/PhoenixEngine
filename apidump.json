@@ -86,6 +86,9 @@
         }
       },
       "Engine": {
+        "Events": {
+          "OnMessageLogged": "(String)"
+        },
         "Methods": {
           "BindDataModel": "(GameObject) -> ()",
           "CloseVM": "(String) -> ()",
@@ -326,6 +329,7 @@
       "script": "GameObject & Script",
       "shellexec": "function",
       "sleep": "function",
+      "warn": "function",
       "workspace": "GameObject & Workspace"
     },
     "Libraries": {

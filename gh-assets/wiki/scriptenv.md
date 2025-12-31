@@ -380,5 +380,7 @@ Additional global variables
 * Runs a shell command
 #### `sleep(SleepTime: number): number`
 * Yields the thread for the specified number of seconds
+#### `warn(...: any): ()`
+* Same as `print`, except generates a Warning message
 #### `workspace: GameObject & Workspace`
 * Shorthand for `game.Workspace`

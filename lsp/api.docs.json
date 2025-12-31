@@ -347,6 +347,9 @@
   "@luhx/global/sleep": {
     "documentation": "* Yields the thread for the specified number of seconds"
   },
+  "@luhx/global/warn": {
+    "documentation": "* Same as `print`, except generates a Warning message"
+  },
   "@luhx/global/workspace": {
     "documentation": "* Shorthand for `game.Workspace`"
   },
@@ -499,6 +502,9 @@
   },
   "@luhx/globaltype/Engine.IsToolEnabled": {
     "documentation": "Returns whether the given tool is enabled"
+  },
+  "@luhx/globaltype/Engine.OnMessageLogged": {
+    "documentation": "Fires whenever a Log Message is created"
   },
   "@luhx/globaltype/Engine.PhysicsTimescale": {
     "documentation": "The current time-scale of the Physics engine (1.0 = 100%, normal speed)"

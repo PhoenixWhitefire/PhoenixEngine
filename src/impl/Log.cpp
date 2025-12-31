@@ -4,6 +4,7 @@
 #include <mutex>
 
 #include "Log.hpp"
+#include "component/EngineService.hpp"
 #include "Utilities.hpp"
 #include "FileRW.hpp"
 
@@ -33,6 +34,8 @@ void Log::Save()
 
 static void logAppend(const std::string_view& Message, bool NoNewline = false, bool ManageMutex = false)
 {
+	EcEngine::SignalNewLogMessage(Message);
+
 	std::unique_lock<std::mutex> lock;
 
 	if (ManageMutex)

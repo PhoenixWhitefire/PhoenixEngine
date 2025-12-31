@@ -8,5 +8,8 @@
 
 struct EcEngine : public Component<EntityComponent::Engine>
 {
+    static void SignalNewLogMessage(const std::string_view&);
+
+    std::vector<Reflection::EventCallback> OnMessageLoggedCallbacks;
     bool Valid = true;
 };

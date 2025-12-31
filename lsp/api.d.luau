@@ -156,6 +156,8 @@ declare extern type Engine with
   function SetViewport(self, Position: vector, Size: vector) : ()
   function ShowMessageBox(self, Title: string, Message: string, Buttons: string?, Icon: string?, DefaultButton: number?) : (number)
   function UnloadTexture(self, Texture: string) : ()
+
+  OnMessageLogged: EventSignal<string>
 end
 declare extern type Example with
   EvenMoreSecretMessage: string 
@@ -404,6 +406,7 @@ declare function loadthreadfromfile( File: string, ChunkName: string? ): ( threa
 declare script: GameObject & Script
 declare function shellexec( Command: string ): string
 declare function sleep( SleepTime: number ): number
+declare function warn( ...: any ): ()
 declare workspace: GameObject & Workspace
 
 

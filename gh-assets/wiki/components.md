@@ -138,6 +138,9 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * `ShowMessageBox(string, string, string?, string?, number?) : (number)`: Shows a message box to the player with the given specification. The returned number with be the selected option: `0` for Cancel/No, `1` for Ok/Yes, `2` for No in `yesnocancel`. This isa blocking operation and no scripts or other parts of the Engine run until the message is dismissed. Avoid using quotes and backticks in the message
 * `UnloadTexture(string) : ()`: Removes the given texture from the Engine's cache, forcing it to be reloaded upon next use
 
+### Events:
+* `OnMessageLogged(string)`: Fires whenever a Log Message is created
+
 ## `Example`
 
 * An example to be made fun of and bullied
