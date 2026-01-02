@@ -63,5 +63,4 @@ struct EventConnectionData
 	uint32_t ConnectionId = UINT32_MAX;
 	int ThreadRef = LUA_NOREF;
 	int SignalRef = LUA_NOREF;
-	bool CallbackYields = false;
 };

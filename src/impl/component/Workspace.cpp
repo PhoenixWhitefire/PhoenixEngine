@@ -445,7 +445,7 @@ void EcWorkspace::SetSceneCamera(GameObject* NewCam)
 		RAISE_RT("Must have a Camera component!");
 
 	if (GameObject* prevCam = GetSceneCamera())
-		if (prevCam->ObjectId != nc->ObjectId)
+		if (ObjectRef(prevCam) != nc)
 			prevCam->FindComponent<EcCamera>()->IsSceneCamera = false;
 
 	m_SceneCameraId = nc ? nc->ObjectId : UINT32_MAX;

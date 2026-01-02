@@ -1,3 +1,5 @@
+#include <luau/VM/src/lstate.h>
+
 #include "script/luhx.hpp"
 #include "script/ScriptEngine.hpp"
 #include "FileRW.hpp"
@@ -221,6 +223,10 @@ static int base_defer(lua_State* L)
 
 		lua_xmove(L, DL, numFnArgs);
 	}
+
+	std::string* traceback = new std::string;
+	ScriptEngine::L::DumpStacktrace(L, traceback);
+	DL->userdata = traceback;
 
 	ScriptEngine::YieldedCoroutine yc =
 	{

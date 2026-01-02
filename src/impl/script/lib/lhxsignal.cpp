@@ -26,14 +26,8 @@ static int sig_namecall(lua_State* L)
 	{
 		luaL_checktype(L, 2, LUA_TFUNCTION);
 
-		lua_Debug callerAr = {};
-		lua_getinfo(L, 1, "sln", &callerAr);
-		std::string callerInfo = std::format(
-			"{}:{} in {}",
-			callerAr.short_src,
-			callerAr.currentline,
-			callerAr.name ? callerAr.name : "<anonymous>"
-		);
+		std::string* traceback = new std::string;
+		ScriptEngine::L::DumpStacktrace(L, traceback);
 
 		EventSignalData* ev = (EventSignalData*)luaL_checkudata(L, 1, "EventSignal");
 		const Reflection::EventDescriptor* rev = ev->Event;
@@ -56,9 +50,11 @@ static int sig_namecall(lua_State* L)
 		lua_State* eL = lua_newthread(lua_mainthread(L));
 		luaL_sandboxthread(eL);
 		lua_State* cL = lua_newthread(eL);
-		int threadRef = lua_ref(lua_mainthread(L), -1);
+		int threadRef = lua_ref(lua_mainthread(L), -1); // ref to eL
 		lua_xpush(L, eL, 2); // push callback onto eL
 		lua_pop(lua_mainthread(L), 1);
+
+		eL->userdata = traceback;
 
 		EventConnectionData* ec = (EventConnectionData*)lua_newuserdata(eL, sizeof(EventConnectionData));
 		ec->Script.Reference = nullptr; // zero-initialization breaks some assumptions that IDs which are not `PHX_GAMEOBJECT_NULL_ID` are valid
@@ -88,10 +84,10 @@ static int sig_namecall(lua_State* L)
 		uint32_t cnId = rev->Connect(
 			ev->Reflector.Referred(),
 
-			[eL, ec, cL, rev, callerInfo, scriptRef, reflector](const std::vector<Reflection::GenericValue>& Inputs, uint32_t ConnectionId) -> void
+			[eL, ec, cL, rev, scriptRef, reflector, traceback](const std::vector<Reflection::GenericValue>& Inputs, uint32_t ConnectionId) -> void
 			{
 				ZoneScopedN("RunEventCallback");
-				ZoneText(callerInfo.data(), callerInfo.size());
+				ZoneText(traceback->data(), traceback->size());
 
 				if (scriptRef.HasValue())
 				{
@@ -119,13 +115,9 @@ static int sig_namecall(lua_State* L)
 				// there cannot be more than one instance of it
 				// running concurrently. thus, we can re-use a single thread
 				// instead of creating a new one for each invocation
-				if (ec->CallbackYields)
+				if (cL->status == LUA_YIELD)
 				{
 					lua_State* nL = lua_newthread(eL);
-					luaL_checkstack(nL, (int32_t)Inputs.size() + 1, "event connection callback args");
-					lua_xpush(eL, nL, 2);
-					lua_pop(eL, 1); // pop nL off eL
-
 					luaL_sandboxthread(nL);
 					co = nL;
 				}
@@ -136,46 +128,32 @@ static int sig_namecall(lua_State* L)
 				int runnerRef = lua_ref(co, -1);
 				lua_pop(co, 1);
 
-				for (size_t i = 0; i < Inputs.size(); i++)
-				{
-					assert(Inputs[i].Type == rev->CallbackInputs[i]);
-					ScriptEngine::L::PushGenericValue(co, Inputs[i]);
-				}
+				if (co != cL)
+					lua_pop(eL, 1);
 
-				ZoneNamedN(pcallzone, "Do PCall", true);
+				ScriptEngine::s_YieldedCoroutines.push_back(ScriptEngine::YieldedCoroutine{
+					.DebugString = "DeferredEventResumption",
+					.Coroutine = co,
+					.CoroutineReference = runnerRef,
+					.RmPoll = [rev, Inputs, eL, traceback](lua_State* L) -> int
+						{
+							lua_resetthread(L);
 
-				// TODO 11/08/2025
-				// they added a "correct" way to do this, with continuations n stuff
-				// but i genuinely just could not be bothered
-				co->baseCcalls++;
-				int status = ScriptEngine::L::ProtectedCall(co, static_cast<int32_t>(Inputs.size()), 0, 0);
-				co->baseCcalls--;
-				// TODO 06/09/2025
-				// i dont even know
-				// is this intentional??
-				// only a problem when the status is YIELD or BREAK,
-				// in which case `lua_pcall` misleading returns `0`
-				// other times it doesnt matter
-				status = status == 0 ? co->status : status;
+							assert(lua_isfunction(eL, 2));
+							lua_xpush(eL, L, 2);
 
-				if (status != LUA_OK && status != LUA_YIELD)
-				{
-					luaL_checkstack(co, 2, "error string"); // tolstring may push a metatable temporarily as well
-					Log::ErrorF("Script event: {}", luaL_tolstring(co, -1, nullptr));
-					ScriptEngine::L::DumpStacktrace(co);
-					lua_pop(co, 2);
-				}
+							for (size_t i = 0; i < Inputs.size(); i++)
+							{
+								assert(Inputs[i].Type == rev->CallbackInputs[i]);
+								ScriptEngine::L::PushGenericValue(L, Inputs[i]);
+							}
 
-				if (!ec->CallbackYields && status == LUA_YIELD)
-					ec->CallbackYields = true;
+							L->userdata = new std::string(*traceback);
 
-				if (status == LUA_OK && ec->CallbackYields && cL->status == LUA_OK)
-				{ // unmark the callback as yielding if we didnt yield and the original thread is ready to be re-used
-					lua_pop(cL, lua_gettop(cL)); // not entirely sure how these are piling up
-					ec->CallbackYields = false;
-				}
-
-				lua_unref(co, runnerRef);
+							return (int)Inputs.size();
+						},
+					.Mode = ScriptEngine::YieldedCoroutine::ResumptionMode::Polled
+				});
 			}
 		);
 

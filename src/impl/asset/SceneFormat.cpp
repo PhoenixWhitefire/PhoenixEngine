@@ -685,16 +685,13 @@ static std::vector<ObjectRef> LoadMapVersion2(const std::string& Contents, float
 			else
 			{
 				SF_WARN(
-					"'{}' refers to invalid scene-relative Object ID {} for prop {}. To avoid UB, it will be NULL'd.",
+					"'{}' refers to invalid scene-relative Object ID {} for property {}",
 					object->Name,
 					sceneRelativeId,
 					propName
 				);
 
-				Reflection::GenericValue gv{ PHX_GAMEOBJECT_NULL_ID };
-				gv.Type = Reflection::ValueType::GameObject;
-
-				object->SetPropertyValue(propName, gv);
+				object->SetPropertyValue(propName, GameObject::s_ToGenericValue(nullptr));
 			}
 		}
 	}
@@ -846,7 +843,7 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 		{
 			GameObject* target = GameObject::FromGenericValue(value);
 
-			if (target)
+			if (target && !target->IsDestructionPending)
 				item[serializedAs] = target->ObjectId;
 			else
 				item[serializedAs] = PHX_GAMEOBJECT_NULL_ID;

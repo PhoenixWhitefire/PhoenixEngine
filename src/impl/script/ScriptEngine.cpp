@@ -968,7 +968,10 @@ int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yiel
 	});
 	YieldedCoroutine& yc = s_YieldedCoroutines.back();
 
-	yc.DebugString = std::format("{}:{} in {}", ar.short_src, ar.currentline, ar.name ? ar.name : "<anonymous>");
+	std::string traceback;
+	L::DumpStacktrace(L, &traceback);
+
+	yc.DebugString = traceback;
 
 	Configure(yc);
 	assert(yc.Mode != YieldedCoroutine::ResumptionMode::INVALID);
@@ -1415,6 +1418,18 @@ lua_State* ScriptEngine::L::Create(const std::string& VmName)
 				L::DebugBreak(L, ar, false, true);
 			};
 	}
+
+	state->global->cb.userthread = [](lua_State* LP, lua_State* L)
+		{
+			if (!LP)
+			{
+				if (L->userdata)
+				{
+					delete (std::string*)L->userdata; // assigned in `defer` for debugger :)
+					L->userdata = nullptr;
+				}
+			}
+		};
 
 	luaL_sandbox(state);
 	return state;

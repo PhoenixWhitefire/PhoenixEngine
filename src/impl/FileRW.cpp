@@ -144,7 +144,7 @@ void FileRW::MakeCwdAliasOf(const std::string& Alias)
 	s_CwdAliasing = Alias;
 }
 
-static std::string aliasResolveRecursive(std::string Path)
+static std::string resolveAliasRecursive(std::string Path)
 {
 	size_t aliasEnd = Path.find_first_of('/');
 	if (aliasEnd == std::string::npos)
@@ -162,7 +162,7 @@ static std::string aliasResolveRecursive(std::string Path)
 		Path = aliasIt->second + Path.substr(aliasEnd, Path.size() - aliasEnd);
 
 	if (Path[0] == '@')
-		Path = aliasResolveRecursive(Path);
+		Path = resolveAliasRecursive(Path);
 	
 	return Path;
 }
@@ -179,7 +179,7 @@ std::string FileRW::MakePathCwdRelative(std::string Path)
 		return Path;
 
 	if (Path[0] == '@')
-		Path = aliasResolveRecursive(Path);
+		Path = resolveAliasRecursive(Path);
 
 	std::string resdir = EngineJsonConfig.type() != nlohmann::json::value_t::null
 							? EngineJsonConfig.value("ResourcesDirectory", "resources/")
@@ -195,8 +195,7 @@ std::string FileRW::MakePathCwdRelative(std::string Path)
 	// 19/08/2025: `~` is a shortcut for `/home/<USERNAME>` on linux
 	size_t whereRes = Path.find(resdir);
 
-	if ((Path[0] != '.' && Path[0] != '/' && Path[0] != '~' && (Path.size() < 2 || Path[1] != ':'))
-	)
+	if ((Path[0] != '.' && Path[0] != '/' && Path[0] != '~' && (Path.size() < 2 || Path[1] != ':')))
 	{
 		if (whereRes == std::string::npos)
 			Path.insert(0, resdir);
@@ -205,12 +204,15 @@ std::string FileRW::MakePathCwdRelative(std::string Path)
 		{
 			Path.insert(0, s_CwdAliasing);
 			if (Path[0] == '@')
-				Path = aliasResolveRecursive(Path);
+				Path = resolveAliasRecursive(Path);
 		}
 	}
 	
 	if (std::string cwd = std::filesystem::current_path().string(); Path.find(cwd) != std::string::npos)
-		Path = "./" + Path.substr(cwd.size() + 1, Path.size() - cwd.size() - 1);
+		Path = Path.substr(cwd.size() + 1, Path.size() - cwd.size() - 1);
+
+	if (Path[0] != '.' && Path[0] != '/' && Path[0] != '~' && (Path.size() < 2 || Path[1] != ':'))
+		Path = "./" + Path;
 
 	return Path;
 }

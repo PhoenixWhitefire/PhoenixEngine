@@ -2807,7 +2807,7 @@ static void renderProperties()
 			bool valueWasEditedManual = false;
 			bool deactivatedAfterEdit = false;
 
-			switch (curVal.Type)
+			switch (propDesc->Type & ~Reflection::ValueType::Null)
 			{
 
 			case Reflection::ValueType::String:
@@ -3465,7 +3465,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 	std::string vmName;
 	lua_getglobal(L, "_VMNAME");
 	vmName = luaL_tolstring(L, -1, nullptr);
-	lua_pop(L, 1);
+	lua_pop(L, 2);
 
 	Engine* engine = Engine::Get();
 
@@ -3750,6 +3750,13 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 					ImGui::SetItemTooltip("Cannot view the source of functions defined in C++");
 				}
 			}
+
+			if (L->userdata)
+			{
+				const std::string* debugTrace = (std::string*)L->userdata;
+				ImGui::SeparatorText("Deferred from");
+				ImGui::TextUnformatted(debugTrace->c_str());
+			}
 		}
 		ImGui::End();
 
@@ -3781,6 +3788,8 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 		std::this_thread::sleep_for(std::chrono::duration<double>(std::clamp(0.01 - dt, 0.0, 0.01)));
 		Memory::FrameFinish();
 	}
+
+	lua_pop(L, 1); // pop our function from `lua_getinfo`
 }
 
 static void debuggerLeaveCallback()

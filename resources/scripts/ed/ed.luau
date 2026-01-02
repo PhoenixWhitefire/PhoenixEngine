@@ -244,7 +244,7 @@ local function openProject(ManualPath: string?)
 	end
 
 	while selecting do
-		local open = imgui.beginpopup("Select Project")
+		local open = imgui.beginpopupmodal("Select Project", true)
 
 		if not open then
 			print("Closed selector")
@@ -277,6 +277,8 @@ local function openProject(ManualPath: string?)
 				end
 			end
 		end
+
+		imgui.dummy()
 
 		imgui.endpopup()
 
@@ -327,6 +329,12 @@ local function openProject(ManualPath: string?)
 		Project.Workspace.SceneCamera.Parent = Project.Workspace
 
 		print("Re-created Workspace")
+	end
+
+	if not Project.Workspace.SceneCamera then
+		local cam = GameObject.new("Camera")
+		cam.Parent = Project.Workspace
+		Project.Workspace.SceneCamera = cam
 	end
 
 	EditorCam.Transform = Project.Workspace.SceneCamera.Transform
@@ -1569,7 +1577,7 @@ local SelectedProjectsCategory = 1
 local PrevSelectedProjectsCategory = 0
 
 function Stages.SelectProject(DeltaTime: number)
-	if imgui.beginfullscreen("Select Project", 0, 18) then
+	if imgui.beginfullscreen("Start Page", 0, 18) then
 		local startPos = imgui.cursorposition()
 
 		if imgui.beginchild("SidePanel", 165, 0, "b") then

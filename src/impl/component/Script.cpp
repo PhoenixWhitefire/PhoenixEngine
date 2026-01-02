@@ -186,7 +186,7 @@ bool EcScript::Reload()
 	lua_setglobal(m_L, "script");
 
 	int result = ScriptEngine::CompileAndLoad(m_L, source, "@" + FileRW::MakePathCwdRelative(SourceFile));
-	
+
 	if (result == 0)
 	{
 		// prevent ourselves from being deleted by the code we run.

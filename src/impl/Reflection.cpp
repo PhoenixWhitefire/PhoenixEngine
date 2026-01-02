@@ -622,7 +622,7 @@ Reflection::GenericValue& Reflection::GenericValue::operator=(const Reflection::
 
 static std::string_view BaseNames[] =
 {
-	"<ERROR_UNINITIALIZED>",
+	"<Erroneous>",
 
 	"Boolean",
 	"Integer",
