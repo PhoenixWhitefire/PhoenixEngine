@@ -146,6 +146,8 @@ void EcTransform::SetWorldTransform(const glm::mat4& NewWorldTrans)
 
     LocalTransform = parent ? (NewWorldTrans * glm::inverse(parent->Transform)) : NewWorldTrans;
     Transform = NewWorldTrans;
+
+    RecomputeTransformTree();
 }
 
 void EcTransform::SetWorldSize(const glm::vec3& NewWorldSize)
@@ -154,6 +156,8 @@ void EcTransform::SetWorldSize(const glm::vec3& NewWorldSize)
 
     LocalSize = parent ? (NewWorldSize / parent->Size) : NewWorldSize;
     Size = NewWorldSize;
+
+    RecomputeTransformTree();
 }
 
 void EcTransform::RecomputeTransformTree()

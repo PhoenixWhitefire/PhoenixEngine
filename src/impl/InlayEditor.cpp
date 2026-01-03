@@ -3105,6 +3105,8 @@ static void renderProperties()
 
 			}
 
+			bool wasEdited = ImGui::IsItemEdited();
+
 			ImGui::Separator();
 			ImGui::PopID();
 
@@ -3114,7 +3116,7 @@ static void renderProperties()
 			const char* const EditPropertyTempName = "EditProperty_TEMP";
 			History* history = History::Get();
 
-			if ((ImGui::IsItemEdited() || valueWasEditedManual) && canChangeValue)
+			if ((wasEdited || valueWasEditedManual) && canChangeValue)
 			{
 				// Awful and hacky
 				PrevEditSelections = Selections;

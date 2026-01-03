@@ -23,6 +23,7 @@ static uint32_t readU32(const std::string_view& vec, size_t offset)
 }
 
 static std::string getTexturePath(
+	const std::string& ModelPath,
 	const std::string& ModelName,
 	const nlohmann::json& JsonData,
 	const nlohmann::json& ImageJson,
@@ -74,15 +75,15 @@ static std::string getTexturePath(
 
 		if (!writeSucceeded)
 			Log::WarningF(
-				"Failed to extract image from Model '{}' to path: {}",
-				ModelName, filePath
+				"Failed to extract image from Model '{}' (taking name as '{}') to path: {}",
+				ModelPath, ModelName, filePath
 			);
 
 		return filePath;
 	}
 	else
 	{
-		std::string fileDirectory = ModelName.substr(0, ModelName.find_last_of('/') + 1);
+		std::string fileDirectory = ModelPath.substr(0, ModelPath.find_last_of('/') + 1);
 		return fileDirectory + (std::string)ImageJson["uri"];
 	}
 }
@@ -92,8 +93,24 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 	ZoneScoped;
 
 	std::string gltfFilePath = FileRW::MakePathCwdRelative(AssetPath);
-
 	m_File = gltfFilePath;
+	m_ModelName = m_File;
+
+	if (m_File.find("scene.gltf") != std::string::npos)
+	{
+		if (m_File.find_last_of('/') != std::string::npos)
+			m_ModelName = m_File.substr(0, m_File.find_last_of('/'));
+
+		if (m_ModelName.find_last_of('/') != std::string::npos)
+			m_ModelName = m_ModelName.substr(m_ModelName.find_last_of('/') + 1);
+	}
+	else
+	{
+		m_ModelName = m_File.substr(m_File.find_last_of('/') + 1);
+
+		if (m_ModelName.find(".glb") != std::string::npos)
+			m_ModelName = m_ModelName.substr(0, m_ModelName.size() - 4);
+	}
 
 	bool fileExists = true;
 	std::string textData = FileRW::ReadFile(gltfFilePath, &fileExists);
@@ -199,7 +216,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 		// actually load the model
 
 		m_Nodes.emplace_back(
-			AssetPath,
+			m_ModelName,
 			UINT32_MAX,
 			UINT32_MAX,
 			ModelNode::NodeType::Container
@@ -244,7 +261,6 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 			// TODO: cleanup code
 			object = GameObject::Create("Mesh");
 			EcMesh* meshObject = object->FindComponent<EcMesh>();
-			EcTransform* ct = object->FindComponent<EcTransform>();
 
 			std::string saveDir = AssetPath;
 			size_t assetNameCutoff = saveDir.find_last_of('/');
@@ -277,19 +293,16 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 									+ ".hxmesh";
 
 			meshProvider->Save(node.Data, meshPath);
-
 			meshObject->SetRenderMesh(meshPath);
-			ct->Transform = node.Transform;
-
-			//mo->Orientation = this->MeshRotations[MeshIndex];
-
-			ct->Size = node.Scale;
-
-			meshObject->RecomputeAabb();
 
 			TextureManager* texManager = TextureManager::Get();
 
 			nlohmann::json materialJson;
+
+			if (m_HasSkinning)
+				materialJson["Shader"] = "worldUberSkinned";
+			else
+				materialJson["Shader"] = "worldUber";
 
 			const ModelLoader::MeshMaterial& material = node.Material;
 
@@ -358,15 +371,25 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 		default:
 		{
 			object = GameObject::Create("Mesh");
-			EcTransform* prim = object->FindComponent<EcTransform>();
-			prim->Transform = node.Transform;
-			prim->Size = node.Scale;
 		}
 
 		}
 
 		if (!object)
 			continue;
+
+		if (node.LocalTransform != glm::mat4(1.f) || node.LocalScale != glm::vec3(1.f))
+		{
+			EcTransform* ct = object->FindComponent<EcTransform>();
+			if (!ct)
+			{
+				object->AddComponent(EntityComponent::Transform);
+				ct = object->FindComponent<EcTransform>();
+			}
+
+			ct->LocalTransform = node.LocalTransform;
+			ct->LocalSize = node.LocalScale;
+		}
 
 		object->Name = node.Name;
 
@@ -381,6 +404,9 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 				? LoadedObjs[parentIndex].Referred()
 				: GameObject::GetObjectById(Parent)
 			);
+
+		if (EcTransform* ct = object->FindComponent<EcTransform>())
+			ct->RecomputeTransformTree();
 	}
 
 	for (ObjectRef anim : m_Animations)
@@ -435,8 +461,8 @@ ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(
 	}
 
 	// normalize and center the mesh 11/01/2024
-	glm::vec3 extMax{};
-	glm::vec3 extMin{};
+	glm::vec3 extMax;
+	glm::vec3 extMin;
 
 	for (const glm::vec3& position : positions)
 	{
@@ -470,25 +496,24 @@ ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(
 	std::vector<Vertex> vertices = m_AssembleVertices(positions, normals, texUVs, cols, joints, weights);
 	std::vector<uint32_t> indices = m_GetUnsigned32s(accessors[indAccInd]);
 	
-	return
-	{
+	return ModelNode{
 		// e.g. "Cube", "Cube2" on 2nd prim, "_UNNAMED-0_" w/o name and 1st prim
-		MeshData.value(
+		.Name = MeshData.value(
 			"name",
 			"_UNNAMED-" + std::to_string(PrimitiveIndex) + "_"
 		) + (PrimitiveIndex > 0 ? std::to_string(PrimitiveIndex + 1) : ""),
-		UINT32_MAX,
-		0u,
-		ModelNode::NodeType::Primitive,
+		.NodeId = UINT32_MAX,
+		.Parent = 0u,
+		.Type= ModelNode::NodeType::Primitive,
 
-		Mesh{ vertices, indices },
-		m_GetMaterial(primitive),
-		Transform * glm::translate(glm::mat4(1.f), center),
-		Scale * size
+		.Data = Mesh{ vertices, indices },
+		.Material = m_GetMaterial(primitive),
+		.LocalTransform = Transform * glm::translate(glm::mat4(1.f), center),
+		.LocalScale = Scale * size
 	};
 }
 
-void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From, const glm::mat4& Transform)
+void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From)
 {
 	ZoneScoped;
 
@@ -496,7 +521,7 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From, const glm::m
 	const nlohmann::json& nodeJson = m_JsonData["nodes"][NodeIndex];
 
 	// Get translation if it exists
-	glm::vec3 translation{};
+	glm::vec3 translation;
 	if (const auto transIt = nodeJson.find("translation"); transIt != nodeJson.end())
 	{
 		const nlohmann::json& trans = transIt.value();
@@ -526,7 +551,7 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From, const glm::m
 		rotation = glm::make_quat(rotValues);
 	}
 	// Get scale if it exists
-	glm::vec3 scale{ 1.f, 1.f, 1.f };
+	glm::vec3 scale = { 1.f, 1.f, 1.f };
 	if (const auto scaleIt = nodeJson.find("scale"); scaleIt != nodeJson.end())
 	{
 		const nlohmann::json& sca = scaleIt.value();
@@ -549,7 +574,7 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From, const glm::m
 
 		const nlohmann::json& mat = matIt.value();
 
-		float matValues[16]{};
+		float matValues[16] = {};
 		for (uint32_t i = 0; i < std::min(mat.size(), (size_t)16); i++)
 			matValues[i] = mat[i];
 
@@ -561,9 +586,6 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From, const glm::m
 		glm::mat4 rot = glm::mat4_cast(rotation);
 		matLocal = trans * rot;
 	}
-
-	// Multiply all matrices together
-	glm::mat4 matNextNode = Transform * matLocal;
 
 	uint32_t myIndex = static_cast<uint32_t>(m_Nodes.size());
 	m_NodeIdToIndex[NodeIndex] = myIndex;
@@ -577,29 +599,28 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From, const glm::m
 
 		// 30/12/2024
 		// https://math.stackexchange.com/a/1463487
-		glm::vec3 embeddedScale
-		{
-			glm::length(glm::vec3(matNextNode[0][0], matNextNode[1][0], matNextNode[2][0])),
-			glm::length(glm::vec3(matNextNode[0][1], matNextNode[1][1], matNextNode[2][1])),
-			glm::length(glm::vec3(matNextNode[0][2], matNextNode[1][2], matNextNode[2][2]))
-		};
+		//glm::vec3 embeddedScale
+		//{
+		//	glm::length(glm::vec3(matNextNode[0][0], matNextNode[1][0], matNextNode[2][0])),
+		//	glm::length(glm::vec3(matNextNode[0][1], matNextNode[1][1], matNextNode[2][1])),
+		//	glm::length(glm::vec3(matNextNode[0][2], matNextNode[1][2], matNextNode[2][2]))
+		//};
 
-		scale *= embeddedScale;
+		//scale *= embeddedScale;
 
-		glm::mat4 thisNodeTransform = matNextNode * glm::scale(glm::mat4(1.f), 1.f / embeddedScale);
-
-		nlohmann::json skinJson{};
+		nlohmann::json skinJson;
 		bool isSkinned = false;
 
 		if (const auto skinIt = nodeJson.find("skin"); skinIt != nodeJson.end())
 		{
 			skinJson = m_JsonData["skins"][(int32_t)skinIt.value()];
 			isSkinned = true;
+			m_HasSkinning = true;
 		}
 
 		for (uint32_t i = 0; i < meshData["primitives"].size(); i++)
 		{
-			ModelNode node = m_LoadPrimitive(meshData, i, thisNodeTransform, scale);
+			ModelNode node = m_LoadPrimitive(meshData, i, matLocal, scale);
 			node.NodeId = NodeIndex;
 			node.Parent = From;
 
@@ -631,7 +652,7 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From, const glm::m
 			ModelNode::NodeType::Container
 		);
 
-	// Check if the node has children, and if it does, apply this function to them with the matNextNode
+	// traverse the node's children
 	if (const auto chIt = nodeJson.find("children"); chIt != nodeJson.end())
 	{
 		const nlohmann::json& children = chIt.value();
@@ -641,11 +662,11 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From, const glm::m
 			// 31/12/2024
 		{
 			m_Nodes.erase(m_Nodes.end() - 1);
-			m_TraverseNode(children[0], From, matNextNode);
+			m_TraverseNode(children[0], From);
 		}
 		else
 			for (const nlohmann::json& subnode : children)
-				m_TraverseNode(subnode, myIndex, matNextNode);
+				m_TraverseNode(subnode, myIndex);
 	}
 }
 
@@ -699,7 +720,7 @@ void ModelLoader::m_BuildRig()
 			node.Data.Bones.emplace_back(
 				jointNode.Name,
 				parentId,
-				jointNode.Transform,
+				jointNode.LocalTransform,
 				jointDesc.InvBindMatrix
 			);
 
@@ -1028,7 +1049,8 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 	
 	std::string baseColPath = getTexturePath(
 		// cut off `resources/`
-		m_File.substr(10, m_File.size() - 10),
+		m_File,
+		m_ModelName,
 		m_JsonData,
 		m_JsonData["images"][baseColSourceIndex],
 		m_Data
@@ -1046,6 +1068,7 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 	{
 		std::string metallicRoughnessPath = getTexturePath(
 			m_File,
+			m_ModelName,
 			m_JsonData,
 			m_JsonData["images"][(int)metallicRoughnessTex["source"]],
 			m_Data
@@ -1062,6 +1085,7 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 	{
 		std::string normalPath = getTexturePath(
 			m_File,
+			m_ModelName,
 			m_JsonData,
 			m_JsonData["images"][(int)normalTex["source"]],
 			m_Data
@@ -1078,6 +1102,7 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 	{
 		std::string emissivePath = getTexturePath(
 			m_File,
+			m_ModelName,
 			m_JsonData,
 			m_JsonData["images"][(int)emissiveTex["source"]],
 			m_Data

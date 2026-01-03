@@ -430,8 +430,6 @@ void Renderer::DrawScene(
 		{
 			ZoneNamedNC(uploadZoneSkinned, "UploadSkinningTransforms", tracy::Color::Khaki2, true);
 
-			mtlManager->GetMaterialResource(renderData.MaterialId).ShaderId = ShaderManager::Get()->LoadFromPath("worldUberSkinned");
-
 			glBindBuffer(GL_ARRAY_BUFFER, gpuMesh.SkinningBuffer);
 
 			glBufferData(

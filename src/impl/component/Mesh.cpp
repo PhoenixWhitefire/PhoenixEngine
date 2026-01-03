@@ -362,6 +362,15 @@ void EcMesh::RecomputeAabb()
 		this->CollisionAabb.Size = glmsize;
 	}
 
+	if (CollisionAabb.Size.x > 10000.f || CollisionAabb.Size.y > 10000.f || CollisionAabb.Size.z > 10000.f)
+	{
+		if (PhysicsCollisions)
+		{
+			Log::WarningF("Object '{}' had a Collision Size in one or more dimensions greater than 10,000. Collisions will be disabled", Object->GetFullName());
+			PhysicsCollisions = false;
+		}
+	}
+
 	updateSpatialHash(this);
 
 	this->Mass = Density * CollisionAabb.Size.x * CollisionAabb.Size.y * CollisionAabb.Size.z;

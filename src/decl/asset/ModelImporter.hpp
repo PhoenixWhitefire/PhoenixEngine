@@ -18,19 +18,19 @@ private:
 	{
 		enum class MaterialAlphaMode : uint8_t { Opaque, Mask, Blend };
 
-		std::string Name{};
+		std::string Name;
 
-		glm::vec4 BaseColorFactor{ 1.f, 1.f, 1.f, 1.f };
+		glm::vec4 BaseColorFactor = { 1.f, 1.f, 1.f, 1.f };
 		uint32_t BaseColorTexture{};
 
-		float MetallicFactor{ 1.f };
-		float RoughnessFactor{ 1.f };
+		float MetallicFactor = 1.f;
+		float RoughnessFactor = 1.f;
 
 		uint32_t MetallicRoughnessTexture{};
 		uint32_t NormalTexture{};
 		uint32_t EmissiveTexture{};
 
-		glm::vec3 EmissiveFactor{ 0.f, 0.f, 0.f };
+		glm::vec3 EmissiveFactor = { 0.f, 0.f, 0.f };
 
 		bool DoubleSided = false;
 
@@ -43,7 +43,7 @@ private:
 		struct BoneInfo
 		{
 			int32_t NodeId = UINT32_MAX;
-			glm::mat4 InvBindMatrix{ 1.f };
+			glm::mat4 InvBindMatrix = { 1.f };
 		};
 
 		enum class NodeType : uint8_t
@@ -54,15 +54,15 @@ private:
 		};
 
 		std::string Name;
-		uint32_t NodeId{ UINT32_MAX };
+		uint32_t NodeId = UINT32_MAX;
 		uint32_t Parent;
 
 		NodeType Type = NodeType::Primitive;
 
 		Mesh Data;
 		MeshMaterial Material;
-		glm::mat4 Transform;
-		glm::vec3 Scale{ 1.f, 1.f, 1.f };
+		glm::mat4 LocalTransform = { 1.f };
+		glm::vec3 LocalScale = { 1.f, 1.f, 1.f };
 		std::vector<BoneInfo> Bones;
 	};
 
@@ -75,7 +75,7 @@ private:
 		const glm::vec3& Scale
 	);
 
-	void m_TraverseNode(uint32_t NextNode, uint32_t From, const glm::mat4& Transform = glm::mat4(1.f));
+	void m_TraverseNode(uint32_t NextNode, uint32_t From);
 
 	void m_BuildRig();
 	std::string m_SerializeAnimation(const nlohmann::json&);
@@ -103,11 +103,13 @@ private:
 	std::vector<glm::tvec4<uint8_t>> m_GetAndGroupUBytesVec4(const nlohmann::json& Accessor);
 
 	std::string m_File;
+	std::string m_ModelName;
 	nlohmann::json m_JsonData;
 
 	std::vector<ModelNode> m_Nodes;
 	std::unordered_map<int32_t, uint32_t> m_NodeIdToIndex;
 	std::vector<ObjectRef> m_Animations;
+	bool m_HasSkinning = false;
 
 	std::string m_Data;
 };

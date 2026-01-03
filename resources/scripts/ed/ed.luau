@@ -1638,6 +1638,8 @@ function Stages.ProjectEditing_Enter(DeltaTime)
 	Engine:SetExplorerRoot(Project.DataModel)
 	Engine:SetExplorerSelections({})
 	Engine.PhysicsTimescale = 0
+	workspace.SceneCamera = Project.Workspace.SceneCamera
+	workspace.SceneCamera.UseSimpleController = true
 end
 
 function Stages.ProjectEditing(DeltaTime: number)
@@ -1696,7 +1698,7 @@ function Stages.ProjectPlaying_Enter(DeltaTime)
 		projWp.SceneCamera.Parent = projWp
 	end
 
-	workspace.SceneCamera = EditorCam
+	workspace.SceneCamera = projWp.SceneCamera
 
 	return Project.DataModel -- Connect to the Project's datamodel `.OnFrameBegin`
 end

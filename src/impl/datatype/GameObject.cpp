@@ -262,13 +262,15 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 };
 
 // https://stackoverflow.com/a/75891310
-struct RefHasher
+struct HandleHasher
 {
-	size_t operator()(const ObjectRef& a) const
+	size_t operator()(const ObjectHandle& a) const
     {
-        return a.TargetId;
+        return a.Reference.TargetId;
     }
 };
+
+
 
 void* ReflectorRef::Referred() const
 {
@@ -279,13 +281,13 @@ void* ReflectorRef::Referred() const
 }
 
 static GameObject* cloneRecursive(
-	ObjectRef Root,
+	ObjectHandle Root,
 	// u_m < og-child, vector < pair < clone-object-referencing-ogchild, property-referencing-ogchild > > >
-	std::unordered_map<ObjectRef, std::vector<std::pair<ObjectRef, std::string_view>>, RefHasher> OverwritesMap = {},
-	std::unordered_map<ObjectRef, ObjectRef, RefHasher> OriginalToCloneMap = {}
+	std::unordered_map<ObjectHandle, std::vector<std::pair<ObjectHandle, std::string_view>>, HandleHasher> OverwritesMap = {},
+	std::unordered_map<ObjectHandle, ObjectHandle, HandleHasher> OriginalToCloneMap = {}
 )
 {
-	ObjectRef newObj = GameObject::Create();
+	ObjectHandle newObj = GameObject::Create();
 
 	for (const ReflectorRef& ref : Root->Components)
 		newObj->AddComponent(ref.Type);
@@ -294,14 +296,19 @@ static GameObject* cloneRecursive(
 
 	if (overwritesIt != OverwritesMap.end())
 	{
-		for (const std::pair<ObjectRef, std::string_view>& overwrite : overwritesIt->second)
+		for (const std::pair<ObjectHandle, std::string_view>& overwrite : overwritesIt->second)
 			// change the reference to the OG object to it's clone
 			overwrite.first->SetPropertyValue(overwrite.second, newObj->ToGenericValue());
 
 		overwritesIt->second.clear();
 	}
 
-	const std::vector<GameObject*> rootDescs = Root->GetDescendants();
+	std::vector<GameObject*> rootDescsRaw = Root->GetDescendants();
+	std::vector<ObjectHandle> rootDescs;
+	rootDescs.reserve(rootDescsRaw.size());
+
+	for (GameObject* d : rootDescsRaw)
+		rootDescs.emplace_back(d);
 
 	for (auto& it : Root->GetProperties())
 	{
@@ -312,8 +319,8 @@ static GameObject* cloneRecursive(
 
 		if (rootVal.Type == Reflection::ValueType::GameObject)
 		{
-			GameObject* ref = GameObject::FromGenericValue(rootVal);
-			if (!ref)
+			ObjectHandle ref = GameObject::FromGenericValue(rootVal);
+			if (!ref.HasValue())
 				continue;
 
 			auto otcit = OriginalToCloneMap.find(ref);
@@ -329,11 +336,11 @@ static GameObject* cloneRecursive(
 		newObj->SetPropertyValue(it.first, rootVal);
 	}
 
-	std::vector<ObjectRef> chrefs;
+	std::vector<ObjectHandle> chrefs;
 	for (GameObject* ch : Root->GetChildren())
 		chrefs.emplace_back(ch);
 
-	for (ObjectRef ch : chrefs)
+	for (const ObjectHandle& ch : chrefs)
 	{
 		if (ch->Serializes)
 			cloneRecursive(ch, OverwritesMap, OriginalToCloneMap)->SetParent(newObj);
@@ -921,6 +928,9 @@ static bool resultsInParentingToTargetDataModel(const std::string_view& PropName
 }
 void GameObject::SetPropertyValue(const std::string_view& PropName, const Reflection::GenericValue& Value)
 {
+	ZoneScoped;
+	ZoneText(PropName.data(), PropName.size());
+
 	ReflectorRef ref;
 
 	if (const Reflection::PropertyDescriptor* prop = FindProperty(PropName, &ref))
