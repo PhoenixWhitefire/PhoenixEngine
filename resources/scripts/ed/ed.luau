@@ -603,8 +603,8 @@ local function toolsTab(_: number)
 	imgui.sameline()
 
 	if tabButton("Output", `@etextures/editor-icons/command-bar.png`, true, OutputEnabled) then
-		BottomBarEnabled = not BottomBarEnabled
-		conf.set("Ed_Tool_OutputEnabled", BottomBarEnabled)
+		OutputEnabled = not OutputEnabled
+		conf.set("Ed_Tool_OutputEnabled", OutputEnabled)
 		conf.save()
 	end
 end
