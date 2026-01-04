@@ -87,7 +87,7 @@ public:
 
 static inline ScriptManager ManagerInstance{};
 
-void EcScript::Update(double dt)
+void EcScript::Update(double /* dt */)
 {
 	if (m_StaleSource)
 		this->Reload();

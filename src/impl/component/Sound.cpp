@@ -164,11 +164,13 @@ void SoundManager::Initialize()
 	ma_engine_config config = {};
 	config.allocationCallbacks.onMalloc = [](size_t Size, void*)
 		{
-			return Memory::Alloc(Size, MEMCAT(Sound));
+			assert(Size <= UINT32_MAX);
+			return Memory::Alloc((uint32_t)Size, MEMCAT(Sound));
 		};
-	config.allocationCallbacks.onRealloc = [](void* P, size_t Size, void*)
+	config.allocationCallbacks.onRealloc = [](void* Pointer, size_t Size, void*)
 		{
-			return Memory::ReAlloc(P, Size, MEMCAT(Sound));
+			assert(Size <= UINT32_MAX);
+			return Memory::ReAlloc(Pointer, (uint32_t)Size, MEMCAT(Sound));
 		};
 	config.allocationCallbacks.onFree = [](void* P, void*)
 		{

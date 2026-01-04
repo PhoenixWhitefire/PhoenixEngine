@@ -170,12 +170,12 @@ void Engine::Close()
 	m_IsRunning = false;
 }
 
-static void windowResizeCallback(GLFWwindow* window, int newWidth, int newHeight)
+static void windowResizeCallback(GLFWwindow*, int newWidth, int newHeight)
 {
 	Engine::Get()->OnWindowResized(newWidth, newHeight);
 }
 
-static void windowFocusChangedCallback(GLFWwindow* window, int focused)
+static void windowFocusChangedCallback(GLFWwindow*, int focused)
 {
 	Engine::Get()->IsWindowFocused = (bool)focused;	
 }
@@ -201,12 +201,12 @@ void Engine::m_InitializeVideo()
 		.allocate = [](size_t size, void*)
 			{
 				assert(size < UINT32_MAX);
-				return Memory::Alloc(size, MEMCAT(Glfw));
+				return Memory::Alloc((uint32_t)size, MEMCAT(Glfw));
 			},
 		.reallocate = [](void* ptr, size_t size, void*)
 			{
 				assert(size < UINT32_MAX);
-				return Memory::ReAlloc(ptr, size, MEMCAT(Glfw));
+				return Memory::ReAlloc(ptr, (uint32_t)size, MEMCAT(Glfw));
 			},
 		.deallocate = [](void* ptr, void*)
 			{

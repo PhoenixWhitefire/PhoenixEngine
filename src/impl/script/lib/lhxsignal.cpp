@@ -189,7 +189,7 @@ static int sig_namecall(lua_State* L)
 
 		return ScriptEngine::L::Yield(
 			L,
-			rev->CallbackInputs.size(),
+			(int)rev->CallbackInputs.size(),
 			[resume, values, reflector, rev, cid](ScriptEngine::YieldedCoroutine& yc)
 			-> void
 			{

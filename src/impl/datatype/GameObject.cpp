@@ -199,7 +199,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		{ "GetComponents", Reflection::MethodDescriptor{
 			{},
 			{ Reflection::ValueType::Array },
-			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+			[](void* p, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
 			{
 				std::vector<Reflection::GenericValue> ret;
 

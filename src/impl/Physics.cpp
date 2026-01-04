@@ -17,7 +17,7 @@ struct Collision
 	IntersectionLib::Intersection Hit;
 };
 
-static void applyGlobalForces(PhysicsWorld& World, float DeltaTime)
+static void applyGlobalForces(PhysicsWorld& World, float)
 {
 	ZoneScopedC(tracy::Color::AntiqueWhite);
 
@@ -95,7 +95,7 @@ static void visitHashAabb(EcWorkspace* cw, const glm::vec3& min, const glm::vec3
 			}
 }
 
-static void resolveCollisions(PhysicsWorld& World, float DeltaTime)
+static void resolveCollisions(PhysicsWorld& World, float)
 {
 	ZoneScopedC(tracy::Color::AntiqueWhite);
 

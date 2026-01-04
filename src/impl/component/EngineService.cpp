@@ -263,7 +263,7 @@ public:
             { "GetExplorerSelections", Reflection::MethodDescriptor{
                 {},
                 { Reflection::ValueType::Array },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
                 {
                     const auto& sels = InlayEditor::GetExplorerSelections();
 
@@ -273,7 +273,7 @@ public:
                     for (const ObjectHandle& obj : sels)
                         out.push_back(obj->ToGenericValue());
 
-                    return { out };
+                    return { Reflection::GenericValue(out) };
                 }
             } },
 
@@ -307,7 +307,7 @@ public:
             { "GetCurrentVM", Reflection::MethodDescriptor{
                 {},
                 { Reflection::ValueType::String },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
                 {
                     return { ScriptEngine::CurrentVM };
                 }
@@ -379,7 +379,7 @@ public:
             { "GetToolNames", Reflection::MethodDescriptor{
                 {},
                 { Reflection::ValueType::Array },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
                 {
                     std::vector<Reflection::GenericValue> out;
                     out.reserve(std::size(Tools));
@@ -387,7 +387,7 @@ public:
                     for (const std::string_view& tool : Tools)
                         out.emplace_back(tool);
 
-                    return { out };
+                    return { Reflection::GenericValue(out) };
                 }
             } },
 
@@ -443,7 +443,7 @@ public:
             { "GetCliArguments", Reflection::MethodDescriptor{
                 {},
                 { Reflection::ValueType::Array },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
                 {
                     Engine* engine = Engine::Get();
 
@@ -453,7 +453,7 @@ public:
                     for (int i = 0; i < engine->argc; i++)
                         out.emplace_back(engine->argv[i]);
 
-                    return { out };
+                    return { Reflection::GenericValue(out) };
                 }
             } },
 
@@ -477,7 +477,7 @@ public:
             { "ResetViewport", Reflection::MethodDescriptor{
                 {},
                 {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
                 {
                     Engine* engine = Engine::Get();
                     engine->OverrideDefaultViewport = false;
@@ -517,11 +517,11 @@ public:
 
 static EngineServiceManager Instance;
 
-void EcEngine::SignalNewLogMessage(LogMessageType Type, const std::string_view& Message, const std::string_view& ExtraTags)
+void EcEngine::SignalNewLogMessage(LogMessageType MessageType, const std::string_view& Message, const std::string_view& ExtraTags)
 {
     for (const EcEngine& ce : Instance.m_Components)
     {
         if (ce.Valid)
-            REFLECTION_SIGNAL_EVENT(ce.OnMessageLoggedCallbacks, (int)Type, Message, ExtraTags);
+            REFLECTION_SIGNAL_EVENT(ce.OnMessageLoggedCallbacks, (int)MessageType, Message, ExtraTags);
     }
 }

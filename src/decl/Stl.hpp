@@ -10,8 +10,14 @@ namespace hx
     template <Memory::Category C>
     using string = std::basic_string<char, std::char_traits<char>, Memory::Allocator<char, C>>;
 
+    // TODO what
+#if !defined(_MSC_VER) || defined(NDEBUG)
     template <class T, Memory::Category C>
     using vector = std::vector<T, Memory::Allocator<T, C>>;
+#else
+    template <class T, Memory::Category>
+    using vector = std::vector<T>;
+#endif
 
     template <class K, class V, Memory::Category C>
     using unordered_map = std::unordered_map<K, V, std::hash<K>, std::equal_to<K>, std::allocator<std::pair<const K, V>>>;

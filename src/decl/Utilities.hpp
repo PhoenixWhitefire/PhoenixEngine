@@ -30,6 +30,6 @@
 
 #include "Log.hpp"
 
-void CopyStringToBuffer(char* buf, size_t capacity, const std::string_view& string = "");
-char* BufferInitialize(size_t capacity, const std::string_view& value = "");
+void CopyStringToBuffer(char* buf, uint32_t capacity, const std::string_view& string = "");
+char* BufferInitialize(uint32_t capacity, const std::string_view& value = "");
 double GetRunningTime();

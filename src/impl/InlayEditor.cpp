@@ -650,7 +650,7 @@ static void renderTextEditor()
 			TextEditorFileStream->read(&scriptContents[0], scriptContents.size());
 
 			TextEditorEntryBufferCapacity = scriptContents.size() + 256;
-			TextEditorEntryBuffer = (char*)Memory::Alloc(TextEditorEntryBufferCapacity);
+			TextEditorEntryBuffer = (char*)Memory::Alloc((uint32_t)TextEditorEntryBufferCapacity);
 			copyStringToBuffer(TextEditorEntryBuffer, scriptContents, TextEditorEntryBufferCapacity);
 
 			TextEditorFileModified = false;
@@ -2814,8 +2814,8 @@ static void renderProperties()
 			{
 				std::string_view str = curVal.AsStringView();
 
-				const size_t INPUT_TEXT_BUFFER_ADDITIONAL = 64;
-				size_t allocSize = str.size() + INPUT_TEXT_BUFFER_ADDITIONAL;
+				const uint32_t INPUT_TEXT_BUFFER_ADDITIONAL = 64;
+				uint32_t allocSize = (uint32_t)str.size() + INPUT_TEXT_BUFFER_ADDITIONAL;
 
 				char* buf = BufferInitialize(
 					allocSize,

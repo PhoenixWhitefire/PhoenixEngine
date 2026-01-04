@@ -11,12 +11,9 @@
 static std::string ProgramLog = "";
 static std::ofstream LogHandle;
 static bool DidInit = false;
-static std::mutex LogMutex;
 
 void Log::Save()
 {
-	std::unique_lock<std::mutex> lock{ LogMutex };
-
 	if (!DidInit)
 	{
 		PHX_CHECK(FileRW::WriteFile("./log.txt", ""));
@@ -32,13 +29,8 @@ void Log::Save()
 	ProgramLog.clear();
 }
 
-static void appendToLog(const std::string_view& Message, bool NoNewline = false, bool ManageMutex = false)
+static void appendToLog(const std::string_view& Message, bool NoNewline = false)
 {
-	std::unique_lock<std::mutex> lock;
-
-	if (ManageMutex)
-		lock = std::unique_lock<std::mutex>(LogMutex);
-
 	static bool ThrewLogCapacityExceededException = false;
 
 	if (ThrewLogCapacityExceededException)
@@ -73,6 +65,8 @@ static void appendToLog(const std::string_view& Message, bool NoNewline = false,
 	}
 }
 
+static bool s_WithinLogCallstack = false;
+
 // Append message to log, which is saved to file every second
 // and when app shuts down
 // If the Message ends with `&&`, won't insert a newline automatically
@@ -81,43 +75,60 @@ void Log::Append(const std::string_view& Message, const std::string_view& ExtraT
 {
 	if (ExtraTags != "")
 		appendToLog(ExtraTags, true);
-	appendToLog(Message, false, true);
+	appendToLog(Message, false);
 
-	EcEngine::SignalNewLogMessage(LogMessageType::None, Message, ExtraTags);
+	// If our logging becomes recursive then stop
+	// TODO Preferably the events are deferred instead of never reaching
+	// our callbacks
+	if (!s_WithinLogCallstack)
+	{
+		s_WithinLogCallstack = true;
+		EcEngine::SignalNewLogMessage(LogMessageType::None, Message, ExtraTags);
+		s_WithinLogCallstack = false;
+	}
 }
 
 void Log::Info(const std::string_view& Message, const std::string_view& ExtraTags)
 {
-	std::unique_lock<std::mutex> lock{ LogMutex };
-
 	appendToLog("[INFO]", true);
 	appendToLog(ExtraTags, true);
 	appendToLog(": ", true);
 	appendToLog(Message);
 
-	EcEngine::SignalNewLogMessage(LogMessageType::Info, Message, ExtraTags);
+	if (!s_WithinLogCallstack)
+	{
+		s_WithinLogCallstack = true;
+		EcEngine::SignalNewLogMessage(LogMessageType::Info, Message, ExtraTags);
+		s_WithinLogCallstack = false;
+	}
 }
 
 void Log::Warning(const std::string_view& Message, const std::string_view& ExtraTags)
 {
-	std::unique_lock<std::mutex> lock{ LogMutex };
-
 	appendToLog("[WARN]", true);
 	appendToLog(ExtraTags, true);
 	appendToLog(": ", true);
 	appendToLog(Message);
 
-	EcEngine::SignalNewLogMessage(LogMessageType::Warning, Message, ExtraTags);
+	if (!s_WithinLogCallstack)
+	{
+		s_WithinLogCallstack = true;
+		EcEngine::SignalNewLogMessage(LogMessageType::Warning, Message, ExtraTags);
+		s_WithinLogCallstack = false;
+	}
 }
 
 void Log::Error(const std::string_view& Message, const std::string_view& ExtraTags)
 {
-	std::unique_lock<std::mutex> lock{ LogMutex };
-
 	appendToLog("[ERRR]", true);
 	appendToLog(ExtraTags, true);
 	appendToLog(": ", true);
 	appendToLog(Message);
 
-	EcEngine::SignalNewLogMessage(LogMessageType::Error, Message, ExtraTags);
+	if (!s_WithinLogCallstack)
+	{
+		s_WithinLogCallstack = true;
+		EcEngine::SignalNewLogMessage(LogMessageType::Error, Message, ExtraTags);
+		s_WithinLogCallstack = false;
+	}
 }

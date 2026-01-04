@@ -34,21 +34,27 @@ static void fromString(Reflection::GenericValue& G, const char* Data)
 Reflection::GenericValue::GenericValue(const std::string_view& str)
 	: Type(ValueType::String)
 {
-	this->Size = str.size();
+	assert(str.size() <= UINT32_MAX);
+
+	this->Size = (uint32_t)str.size();
 	fromString(*this, str.data());
 }
 
 Reflection::GenericValue::GenericValue(const std::string& str)
 	: Type(ValueType::String)
 {
-	this->Size = str.size();
+	assert(str.size() <= UINT32_MAX);
+
+	this->Size = (uint32_t)str.size();
 	fromString(*this, str.data());
 }
 
 Reflection::GenericValue::GenericValue(const char* data)
 	: Type(ValueType::String)
 {
-	this->Size = strlen(data);
+	assert(strlen(data) <= UINT32_MAX);
+
+	this->Size = (uint32_t)strlen(data);
 	fromString(*this, data);
 }
 
@@ -118,7 +124,7 @@ Reflection::GenericValue::GenericValue(const Reflection::GenericFunction& gf) //
 	Val.Func = new GenericFunction(gf); // damm
 }
 
-static void fromArray(Reflection::GenericValue& G, std::span<const Reflection::GenericValue> Array)
+static void fromArray(Reflection::GenericValue& G, const std::span<const Reflection::GenericValue>& Array)
 {
 	G.Type = Reflection::ValueType::Array;
 
@@ -129,12 +135,13 @@ static void fromArray(Reflection::GenericValue& G, std::span<const Reflection::G
 		return;
 	}
 
-	G.Val.Ptr = Memory::Alloc(allocSize, Memory::Category::Reflection);
+	assert(allocSize <= UINT32_MAX);
+	G.Val.Ptr = Memory::Alloc((uint32_t)allocSize, Memory::Category::Reflection);
 
 	if (!G.Val.Ptr)
 		RAISE_RTF("Failed to allocate {} bytes in fromArray (length {}, GV Size {})", allocSize, Array.size(), sizeof(G));
 
-	for (uint32_t i = 0; i < Array.size(); i++)
+	for (size_t i = 0; i < Array.size(); i++)
 		// placement-new to avoid 1 excess layer of indirection
 		new (&((Reflection::GenericValue*)G.Val.Ptr)[i]) Reflection::GenericValue(Array[i]);
 
@@ -166,8 +173,9 @@ Reflection::GenericValue::GenericValue(const std::unordered_map<GenericValue, Ge
 	}
 
 	size_t allocSize = arr.size() * sizeof(GenericValue);
+	assert(allocSize <= UINT32_MAX);
 
-	this->Val.Ptr = (GenericValue*)Memory::Alloc(allocSize, Memory::Category::Reflection);
+	this->Val.Ptr = (GenericValue*)Memory::Alloc((uint32_t)allocSize, Memory::Category::Reflection);
 
 	if (!this->Val.Ptr)
 		RAISE_RTF("Failed to allocate {} bytes in construction from std::unordered_map (length {}, GV Size {})", allocSize, arr.size(), sizeof(GenericValue));

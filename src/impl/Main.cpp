@@ -89,6 +89,7 @@ catch (...)                                                                     
 
 static bool PreviouslyPressingF11 = false;
 static bool WasRmbPressed = false;
+static bool RmbTrigger = false;
 static const float MouseSensitivity = 400.f;
 static const float MovementSpeed = 15.f;
 static double PrevMouseX, PrevMouseY = 0;
@@ -221,6 +222,10 @@ static void handleInputs(double deltaTime)
 			camTrans[3] = glm::vec4(position, 1.f);
 		}
 
+		RmbTrigger = false;
+		if (rmbPressed && !WasRmbPressed)
+			RmbTrigger = true;
+
 		if (rmbPressed && !WasRmbPressed)
 			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
@@ -343,7 +348,6 @@ static void drawDeveloperUI(double DeltaTime)
 			launchTracy();
 #endif
 
-		static bool WasRmbPressed = false;
 		static bool AreGraphsPaused = false;
 
 		ImGui::BeginChild("Graphs", ImVec2(), ImGuiChildFlags_Borders);
@@ -367,13 +371,8 @@ static void drawDeveloperUI(double DeltaTime)
 
 		ImGui::Text("graphs");
 		
-		if (GuiIO->WantCaptureMouse && UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT))
-		{
-			if (!WasRmbPressed)
-				AreGraphsPaused = !AreGraphsPaused;
-			
-			WasRmbPressed = true;
-		}
+		if (GuiIO->WantCaptureMouse && RmbTrigger)
+			AreGraphsPaused = !AreGraphsPaused;
 		else
 			WasRmbPressed = false;
 

@@ -141,12 +141,12 @@ static TextureManager* s_Instance = nullptr;
 
 static void createAndUploadTextureData(const std::string& Name, uint8_t* Data, int Width, int Height)
 {
-	s_Instance->m_StringToTextureId.insert(std::pair(Name, s_Instance->m_Textures.size()));
+	s_Instance->m_StringToTextureId.insert(std::pair(Name, (uint32_t)s_Instance->m_Textures.size()));
 
 	uint32_t newGpuId;
 	glGenTextures(1, &newGpuId);
 
-	s_Instance->m_Textures.emplace_back("!Missing", s_Instance->m_Textures.size(), newGpuId);
+	s_Instance->m_Textures.emplace_back("!Missing", (uint32_t)s_Instance->m_Textures.size(), newGpuId);
 
 	Texture& tex = s_Instance->m_Textures.back();
 	tex.Width = Width;

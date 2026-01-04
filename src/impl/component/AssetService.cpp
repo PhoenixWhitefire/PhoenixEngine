@@ -53,7 +53,7 @@ public:
 
                     meshData["Vertices"] = vertices;
 
-                    return { meshData };
+                    return { Reflection::GenericValue(meshData) };
                 }
             } },
 

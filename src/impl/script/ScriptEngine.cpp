@@ -43,9 +43,7 @@ static_assert(std::size(s_ValueTypeToLuauType) == Reflection::ValueType::__lastB
 
 static int luauAssertHandler(const char* expression, const char* file, int line, const char* function)
 {
-	Log::ErrorF("Luau assertion failed:\n\tExpression: {}\n\tIn: {}:{} in {}", expression, file, line, function);
-
-	return 1;
+	RAISE_RTF("Luau assertion failed:\n\tExpression: {}\n\tIn: {}:{} in {}", expression, file, line, function);
 }
 
 void ScriptEngine::Initialize()
@@ -743,7 +741,7 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 		if (array.size() % 2 != 0)
 			RAISE_RT("GenericValue type was Map, but it does not have an even number of elements!");
 
-		lua_createtable(L, 0, array.size() / 2);
+		lua_createtable(L, 0, (uint32_t)array.size() / 2);
 
 		for (int index = 0; static_cast<size_t>(index) < array.size(); index++)
 		{
@@ -1082,13 +1080,15 @@ void ScriptEngine::L::DumpStacktrace(
 
 static void* l_alloc(void*, void* ptr, size_t, size_t nsize)
 {
+	assert(nsize <= UINT32_MAX);
+
 	if (nsize == 0)
 	{
 		Memory::Free(ptr);
 		return NULL;
 	}
 	else
-		return Memory::ReAlloc(ptr, nsize, Memory::Category::Luau);
+		return Memory::ReAlloc(ptr, (uint32_t)nsize, Memory::Category::Luau);
 }
 
 static void requireConfigInit(luarequire_Configuration* config)

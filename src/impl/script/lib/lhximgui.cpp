@@ -609,7 +609,7 @@ static int imgui_treenode(lua_State* L)
     return 1;
 }
 
-static int imgui_treepop(lua_State* L)
+static int imgui_treepop(lua_State*)
 {
     ImGui::TreePop();
     return 0;
@@ -621,13 +621,13 @@ static int imgui_pushid(lua_State* L)
     return 0;
 }
 
-static int imgui_popid(lua_State* L)
+static int imgui_popid(lua_State*)
 {
     ImGui::PopID();
     return 0;
 }
 
-static int imgui_sameline(lua_State* L)
+static int imgui_sameline(lua_State*)
 {
     ImGui::SameLine();
     return 0;
@@ -714,7 +714,7 @@ static int imgui_setviewportdockspace(lua_State* L)
     return 0;
 }
 
-static int imgui_setviewportdockspacedefault(lua_State* L)
+static int imgui_setviewportdockspacedefault(lua_State*)
 {
     Engine* engine = Engine::Get();
     engine->OverrideDefaultGuiViewportDockSpace = false;
@@ -728,7 +728,7 @@ static int imgui_openpopup(lua_State* L)
     return 0;
 }
 
-static int imgui_closecurrentpopup(lua_State* L)
+static int imgui_closecurrentpopup(lua_State*)
 {
     ImGui::CloseCurrentPopup();
     return 0;
@@ -740,7 +740,7 @@ static int imgui_beginpopup(lua_State* L)
     return 1;
 }
 
-static int imgui_endpopup(lua_State* L)
+static int imgui_endpopup(lua_State*)
 {
     ImGui::EndPopup();
     return 0;
@@ -771,7 +771,7 @@ static int imgui_setnextitemwidth(lua_State* L)
     return 0;
 }
 
-static int imgui_scrollherey(lua_State* L)
+static int imgui_scrollherey(lua_State*)
 {
     ImGui::SetScrollHereY();
     return 0;

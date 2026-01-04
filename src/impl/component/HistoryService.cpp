@@ -154,7 +154,7 @@ public:
             { "FinishCurrentAction", {
                 {},
                 {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
                 {
                     History* history = History::Get();
                     history->FinishCurrentAction();
@@ -166,7 +166,7 @@ public:
             { "DiscardCurrentAction", {
                 {},
                 {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
                 {
                     History* history = History::Get();
                     history->DiscardCurrentAction();
@@ -178,7 +178,7 @@ public:
             { "ClearHistory", {
                 {},
                 {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
                 {
                     History* history = History::Get();
                     history->ClearHistory();
@@ -190,7 +190,7 @@ public:
             { "CanUndo", {
                 {},
                 { Reflection::ValueType::Boolean },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
                 {
                     History* history = History::Get();
                     return { history->CanUndo() };
@@ -200,7 +200,7 @@ public:
             { "CanRedo", {
                 {},
                 { Reflection::ValueType::Boolean },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
                 {
                     History* history = History::Get();
                     return { history->CanRedo() };
@@ -210,7 +210,7 @@ public:
             { "Undo", {
                 {},
                 {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
                 {
                     History* history = History::Get();
                     history->Undo();
@@ -222,7 +222,7 @@ public:
             { "Redo", {
                 {},
                 {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
                 {
                     History* history = History::Get();
                     history->Redo();
@@ -242,8 +242,7 @@ public:
                     if (!action.has_value())
                         return { {} }; // Null
 
-                    Reflection::GenericValue data = dumpActionData(*action);
-                    return { data };
+                    return { dumpActionData(*action) };
                 }
             } },
 
@@ -255,8 +254,7 @@ public:
                     History* history = History::Get();
                     const History::Action& action = history->GetActionHistory().at(inputs[0].AsInteger());
 
-                    Reflection::GenericValue data = dumpActionData(action);
-                    return { data };
+                    return { dumpActionData(action) };
                 }
             } },
         };
