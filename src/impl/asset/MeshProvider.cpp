@@ -440,7 +440,7 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 	if (fileTooSmallError)
 	{
 		*ErrorMessagePtr = "Binary section of File was too small, and the loader reached the end of it while reading some data";
-		// return the mesh because whatever bro
+		// return the mesh because whatever vro
 	}
 
 	return mesh;
