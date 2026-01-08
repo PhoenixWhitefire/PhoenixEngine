@@ -8,7 +8,7 @@
 // TODO: Not sure why this happens 
 #ifndef TracyFiberEnter
 #define TracyFiberEnter(name) (void)name
-#endid
+#endif
 
 #ifndef TracyFiberLeave
 #define TracyFiberLeave (void)
