@@ -7,11 +7,11 @@
 
 // TODO: Not sure why this happens 
 #ifndef TracyFiberEnter
-#define TracyFiberEnter(name) (void)name
+#define TracyFiberEnter(name)
 #endif
 
 #ifndef TracyFiberLeave
-#define TracyFiberLeave (void)
+#define TracyFiberLeave
 #endif
 
 // https://stackoverflow.com/a/23899379
