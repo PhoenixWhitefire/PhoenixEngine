@@ -1,9 +1,18 @@
-#include <tracy/public/tracy/Tracy.hpp>
+#include <tracy/Tracy.hpp>
 #include <format>
 #include <assert.h>
 
 #include "ThreadManager.hpp"
 #include "Log.hpp"
+
+// TODO: Not sure why this happens 
+#ifndef TracyFiberEnter
+#define TracyFiberEnter(name) (void)name
+#endid
+
+#ifndef TracyFiberLeave
+#define TracyFiberLeave (void)
+#endif
 
 // https://stackoverflow.com/a/23899379
 #ifdef _WIN32
