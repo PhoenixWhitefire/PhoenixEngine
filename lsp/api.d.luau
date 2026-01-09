@@ -398,18 +398,21 @@ declare scene: {
   load: (( Path: string ) -> ({ GameObject }?, string?)),
   save: (( RootNodes: { GameObject }, Path: string ) -> (boolean))
 }
+declare task: {
+  defer: (<A...>( Task: ((A...) -> ()) | thread, A... ) -> ()),
+  delay: (<A...>( Delay: number, Task: ((A...) -> ()) | thread, A... ) -> ()),
+  wait: (( SleepTime: number ) -> (number))
+}
 
 
 declare _VMNAME: string
 declare function appendlog( ...: any ): ()
 declare function breakpoint( Line: number ): ()
-declare function defer<A...>( Task: ((A...) -> ()) | thread, SleepFor: number?, ...: A... ): ()
 declare game: GameObject & DataModel
 declare function loadthread( Code: string, ChunkName: string? ): ( thread?, string? )
 declare function loadthreadfromfile( File: string, ChunkName: string? ): ( thread?, string? )
 declare script: GameObject & Script
 declare function shellexec( Command: string ): string
-declare function sleep( SleepTime: number ): number
 declare function warn( ...: any ): ()
 declare workspace: GameObject & Workspace
 

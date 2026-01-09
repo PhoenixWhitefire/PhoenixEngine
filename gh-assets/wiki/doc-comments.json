@@ -737,11 +737,6 @@
         "Description": "Set a breakpoint at the given line",
         "In": "Line: number"
       },
-      "defer": {
-        "Description": "Schedules the given function or coroutine to be resumed some number of seconds later, or as soon as possible",
-        "Generics": "A...",
-        "In": "Task: ((A...) -> ()) | thread, SleepFor: number?, ...: A..."
-      },
       "game": {
         "Description": "The GameObject acting as the Data Model of the Engine"
       },
@@ -768,11 +763,6 @@
         "Description": "Runs a shell command",
         "In": "Command: string",
         "Out": "string"
-      },
-      "sleep": {
-        "Description": "Yields the thread for the specified number of seconds",
-        "In": "SleepTime: number",
-        "Out": "number"
       },
       "warn": {
         "Description": "Same as `print`, except generates a Warning message",
@@ -1616,6 +1606,26 @@
               "Path: string"
             ],
             "Out": "boolean"
+          }
+        }
+      },
+      "task": {
+        "Description": "Scheduling of tasks (coroutines or functions)",
+        "Members": {
+          "defer": {
+            "Description": "Schedules the given function or coroutine to be resumed at the next scheduler step",
+            "Generics": "A...",
+            "In": "Task: ((A...) -> ()) | thread, A..."
+          },
+          "delay": {
+            "Description": "Schedules the given function or coroutine to be resumed some number of seconds later",
+            "Generics": "A...",
+            "In": "Delay: number, Task: ((A...) -> ()) | thread, A..."
+          },
+          "wait": {
+            "Description": "Yields the thread for the specified number of seconds",
+            "In": "SleepTime: number",
+            "Out": "number"
           }
         }
       }

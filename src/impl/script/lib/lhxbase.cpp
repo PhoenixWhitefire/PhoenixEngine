@@ -89,22 +89,6 @@ static int base_appendlog(lua_State* L)
     return 0;
 }
 
-static int base_sleep(lua_State* L)
-{
-	double sleepTime = luaL_checknumber(L, 1);
-
-	return ScriptEngine::L::Yield(
-		L,
-		1,
-		[sleepTime](ScriptEngine::YieldedCoroutine& yc)
-		{
-			double curTime = GetRunningTime();
-			yc.Mode = ScriptEngine::YieldedCoroutine::ResumptionMode::ScheduledTime;
-			yc.RmSchedule = { curTime, curTime + sleepTime };
-		}
-	);
-}
-
 // FROM: `luau/tests/Conformance.test.cpp` line 1364 for `breakpoint` function
 static int base_breakpoint(lua_State* L)
 {
@@ -187,64 +171,6 @@ static int base_loadthreadfromfile(lua_State* L)
 	return 2;
 }
 
-static int base_defer(lua_State* L)
-{
-	luaL_argexpected(L, lua_type(L, 1) == LUA_TFUNCTION || lua_type(L, 1) == LUA_TTHREAD, 1, "function or thread (coroutine)");
-
-	int numArgs = lua_gettop(L);
-	int numFnArgs = numArgs > 2 ? numArgs - 2 : 0;
-
-	lua_State* DL = nullptr;
-	int ref = 0;
-
-	double sleepTime = luaL_optnumber(L, 2, 0.f);
-
-	if (lua_type(L, 1) == LUA_TFUNCTION)
-	{
-		DL = lua_newthread(L);
-		ref = lua_ref(L, -1);
-		lua_pop(L, 1);
-
-		if (numFnArgs > 0)
-		{
-			lua_remove(L, 2);
-			lua_xmove(L, DL, numFnArgs + 1); // L:           | DL: fn, args
-		}
-		else
-		{
-			lua_pushvalue(L, 1);
-			lua_xmove(L, DL, 1);
-		}
-	}
-	else
-	{
-		DL = lua_tothread(L, 1);
-		ref = lua_ref(L, 1);
-
-		lua_xmove(L, DL, numFnArgs);
-	}
-
-	std::string* traceback = new std::string;
-	ScriptEngine::L::DumpStacktrace(L, traceback);
-	DL->userdata = traceback;
-
-	ScriptEngine::YieldedCoroutine yc =
-	{
-		.Coroutine = DL,
-		.CoroutineReference = ref,
-		.RmSchedule = {
-			.YieldedAt = GetRunningTime(),
-			.ResumeAt = GetRunningTime() + sleepTime,
-			.NumRetVals = numFnArgs,
-			.PushSleptTime = false
-		},
-		.Mode = ScriptEngine::YieldedCoroutine::ResumptionMode::ScheduledTime
-	};
-	ScriptEngine::s_YieldedCoroutines.push_back(yc);
-
-	return 0;
-}
-
 #ifdef _WIN32
 
 #define popen _popen
@@ -306,12 +232,10 @@ static const luaL_Reg base_funcs[] =
     { "print", base_print },
 	{ "warn", base_warn },
     { "appendlog", base_appendlog },
-	{ "sleep", base_sleep },
 	{ "breakpoint", base_breakpoint },
 	//{ "loadstring", base_loadstring },
 	{ "loadthread", base_loadthread },
 	{ "loadthreadfromfile", base_loadthreadfromfile },
-	{ "defer", base_defer },
 	{ "shellexec", base_shellexec },
     { NULL, NULL }
 };

@@ -360,6 +360,14 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * Loads `GameObject`s from the scene file at the provided path, returning a list of the root objects or `nil` and an error message upon failure
 #### `scene.save(RootNodes: { GameObject }, Path: string): boolean`
 * Saves the list of `GameObject`s to the provided path, returning whether the operation succeeded
+### `task`
+* Scheduling of tasks (coroutines or functions)
+#### `task.defer<A...>(Task: ((A...) -> ()) | thread, A...): `
+* Schedules the given function or coroutine to be resumed at the next scheduler step
+#### `task.delay<A...>(Delay: number, Task: ((A...) -> ()) | thread, A...): `
+* Schedules the given function or coroutine to be resumed some number of seconds later
+#### `task.wait(SleepTime: number): number`
+* Yields the thread for the specified number of seconds
 ## Globals
 
 Additional global variables
@@ -370,8 +378,6 @@ Additional global variables
 * Same as `print`, but does not prefix the log message with `[INFO]`
 #### `breakpoint(Line: number): ()`
 * Set a breakpoint at the given line
-#### `defer<A...>(Task: ((A...) -> ()) | thread, SleepFor: number?, ...: A...): ()`
-* Schedules the given function or coroutine to be resumed some number of seconds later, or as soon as possible
 #### `game: GameObject & DataModel`
 * The GameObject acting as the Data Model of the Engine
 #### `loadthread(Code: string, ChunkName: string?): ( thread?, string? )`
@@ -384,8 +390,6 @@ Additional global variables
 * In `require`'d modules, this is `nil`
 #### `shellexec(Command: string): string`
 * Runs a shell command
-#### `sleep(SleepTime: number): number`
-* Yields the thread for the specified number of seconds
 #### `warn(...: any): ()`
 * Same as `print`, except generates a Warning message
 #### `workspace: GameObject & Workspace`

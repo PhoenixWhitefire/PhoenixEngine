@@ -324,13 +324,11 @@
       "_VMNAME": "string",
       "appendlog": "function",
       "breakpoint": "function",
-      "defer": "function",
       "game": "GameObject & DataModel",
       "loadthread": "function",
       "loadthreadfromfile": "function",
       "script": "GameObject & Script",
       "shellexec": "function",
-      "sleep": "function",
       "warn": "function",
       "workspace": "GameObject & Workspace"
     },
@@ -433,6 +431,11 @@
       "scene": {
         "load": "function",
         "save": "function"
+      },
+      "task": {
+        "defer": "function",
+        "delay": "function",
+        "wait": "function"
       }
     }
   }

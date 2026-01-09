@@ -2,7 +2,7 @@
 -- Simple testing engine
 
 -- Sleep for a little bit to avoid tests appearing to take several milliseconds due to initial slowdowns
-sleep(0.04)
+task.wait(0.04)
 
 local start = os.clock()
 
