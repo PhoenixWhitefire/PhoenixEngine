@@ -1,3 +1,8 @@
+// TODO Not sure why this happens
+#ifndef TRACY_FIBERS
+#define TRACY_FIBERS
+#endif
+
 #include <tracy/Tracy.hpp>
 #include <format>
 #include <assert.h>
@@ -5,13 +10,23 @@
 #include "ThreadManager.hpp"
 #include "Log.hpp"
 
-// TODO: Not sure why this happens 
 #ifndef TracyFiberEnter
-#define TracyFiberEnter(name)
+
+#define TracyFiberEnter
+
+#ifdef TracyFiberLeave
+#undef TracyFiberLeave
 #endif
 
-#ifndef TracyFiberLeave
 #define TracyFiberLeave
+
+// Specifically for the inner Worker lambda
+#ifdef ZoneScopedN
+#undef ZoneScopedN
+#endif
+
+#define ZoneScopedN
+
 #endif
 
 // https://stackoverflow.com/a/23899379
@@ -74,8 +89,7 @@ static void SetThreadName(std::thread* thread, const char* threadName)
 
 static ThreadManager* s_Instance;
 
-const char* s_WorkerFiberNames[] = 
-{
+const char* const s_WorkerFiberNames[] = {
 	"Phx_Worker1",
 	"Phx_Worker2",
 	"Phx_Worker3",
