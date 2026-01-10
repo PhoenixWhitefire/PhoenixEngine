@@ -17,7 +17,7 @@ declare extern type EventConnection with
 end
 declare GameObject: {
   fromId: (( Id: number ) -> (GameObject?)),
-  new: (<T>(ComponentName: T) -> GameObject & index<Creatables, T>) & ((ComponentName: string) -> GameObject & any),
+  new: (<T>(ComponentName: T | keyof<Creatables>) -> GameObject & index<Creatables, T>),
   validcomponents: { string }
 }
 declare extern type Matrix with

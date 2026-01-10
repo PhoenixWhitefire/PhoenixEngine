@@ -51,7 +51,7 @@ export type EventSignal<T...> = {
 local documentationData = {}
 
 local GameObjectOverrides = {
-	new = "(<T>(ComponentName: T) -> GameObject & index<Creatables, T>) & ((ComponentName: string) -> GameObject & any)"
+	new = "(<T>(ComponentName: T | keyof<Creatables>) -> GameObject & index<Creatables, T>)"
 	-- cant figure out how to make the generic work in classes
 	--FindChildWithComponent = "<T>(self, ComponentName: keyof<Creatables> & T): (GameObject & index<Creatables, T>)?",
 }
