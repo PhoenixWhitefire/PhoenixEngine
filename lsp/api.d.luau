@@ -352,7 +352,7 @@ declare imgui: {
   endmenubar: ((  ) -> ()),
   endpopup: ((  ) -> ()),
   endw: ((  ) -> ()),
-  image: (( ImagePath: string, Size: vector?, FlipVertically: boolean?, TintColor: { number }? ) -> ()),
+  image: (( ImagePath: string, Size: vector?, FlipVertically: boolean?, TintColor: { number }?, DoBilinearSmoothing: boolean? ) -> ()),
   imagebutton: (( Name: string, Image: string, Size: vector? ) -> (boolean)),
   indent: (( Indent: number? ) -> ()),
   inputnumber: (( Text: string, Value: number ) -> (number)),
@@ -386,7 +386,7 @@ declare imgui: {
   treenode: (( Text: string ) -> (boolean)),
   treepop: ((  ) -> ()),
   urllink: (( Text: string, Url: string? ) -> (boolean)),
-  windowhovered: ((  ) -> (boolean)),
+  windowhovered: (( Flags: string? ) -> (boolean)),
   windowposition: ((  ) -> (vector)),
   windowsize: ((  ) -> (vector))
 }

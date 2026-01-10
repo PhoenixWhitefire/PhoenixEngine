@@ -15,16 +15,16 @@ type Stage = Types.Stage
 
 local CurrentStage: Stage = "None"
 local StageUpdateSignal: EventConnection? = nil
-local Stages: { [string]: (number) -> ((GameObject & DataModel)?) & (...any) -> () } = {}
+local Stages: { [string]: ((number) -> ()) & ((string) -> (any)) } = {}
 
 local EditorCam = assert(workspace.SceneCamera)
 local EditorTl = GameObject.new("TreeLink")
 
-local Project = {
-	DataModel = nil :: (GameObject & DataModel)?,
-	Workspace = nil :: (GameObject & Workspace)?,
-	Name = "Should not be visible" :: string,
-	IsTempPath = false :: boolean
+local Project: Types.Project = {
+	DataModel = nil,
+	Workspace = nil,
+	Name = "Should not be visible",
+	IsTempPath = false
 }
 
 local RecentProjects: { string } = {}
@@ -99,7 +99,9 @@ local function onError(err)
 	print(errorMessage)
 	Engine:ShowMessageBox("Editor Error", errorMessage, "ok", "error")
 
-	scene.save({ Project.DataModel }, "scenes/autosave.world")
+	if Project.DataModel then
+		scene.save({ Project.DataModel }, "scenes/autosave.world")
+	end
 end
 
 local changeStageTo: (NewStage: Stage) -> ()
@@ -111,13 +113,15 @@ local function handleUndoRedoKeybinds()
 
 	if ctrlKeyDown and zKeyDown then
 		if not WasHoldingCtrlKeyDown or not WasHoldingZKeyDown then
-			local success, error = pcall(function()
+			local success: boolean, error: string? = (pcall::any)(function()
 				HistoryService:Undo()
 			end)
 
 			if not success then
-				local realError = error:sub(error:find(":"), #error)
-				realError = realError:sub(realError:find(" ") + 1, #realError)
+				assert(error)
+
+				local realError = error:sub(error:find(":") or 1, #error)
+				realError = realError:sub((realError:find(" ") or 0) + 1, #realError)
 
 				setErrorNotification(realError)
 			end
@@ -126,13 +130,15 @@ local function handleUndoRedoKeybinds()
 
 	if ctrlKeyDown and yKeyDown then
 		if not WasHoldingCtrlKeyDown or not WasHoldingYKeyDown then
-			local success, error = pcall(function()
+			local success: boolean, error: string? = (pcall::any)(function()
 				HistoryService:Redo()
 			end)
 
 			if not success then
-				local realError = error:sub(error:find(":"), #error)
-				realError = realError:sub(realError:find(" ") + 1, #realError)
+				assert(error)
+
+				local realError = error:sub(error:find(":") or 1, #error)
+				realError = realError:sub((realError:find(" ") or 0) + 1, #realError)
 
 				setErrorNotification(realError)
 			end
@@ -550,11 +556,12 @@ local function homeTab(_: number)
 
 				local imported = AssetService:ImportModel(paths[1])
 
-				if not imported then
-					print("Failed to import")
-					HistoryService:DiscardCurrentAction()
-					return
-				end
+				-- TODO type of `imported` becomes `nil` after this clause for some reason
+				--if not imported then
+				--	print("Failed to import")
+				--	HistoryService:DiscardCurrentAction()
+				--	return
+				--end
 
 				assert(Project.Workspace)
 				imported.Parent = Project.Workspace
@@ -892,7 +899,7 @@ local function renderMainMenuBar(dt: number)
 
 		if imgui.menuitem("Open", CurrentStage == "SelectProject") then
 			SavedProjectsCache = nil
-			task.defer(openProject)
+			task.defer(openProject, nil) -- TODO type error when `nil` is not supplied
 		end
 
 		if imgui.menuitem("New", CurrentStage == "SelectProject") then
@@ -1221,7 +1228,7 @@ local function renderViewport(DeltaTime: number)
 		selmap[sel.ObjectId] = sel
 
 		if not PrevSelections[sel.ObjectId] then
-			local new = SelectionPart:Duplicate()
+			local new: Mesh & Transform = SelectionPart:Duplicate() :: any
 			new.Transform, new.Size = sel.Transform, sel.Size + vector.create(0.1, 0.1, 0.1)
 			new.Tint = Color.new(84/255, 150/255, 1)
 			new.Parent = workspace
@@ -1576,7 +1583,9 @@ local ProjectCategories: { { Name: string, Icon: string, Render: (number) -> (),
 local SelectedProjectsCategory = 1
 local PrevSelectedProjectsCategory = 0
 
-function Stages.SelectProject(DeltaTime: number)
+function Stages.SelectProject(DeltaTime: any) -- TODO type error when annotating `DeltaTime` as `number`
+	assert(typeof(DeltaTime) == "number")
+
 	if imgui.beginfullscreen("Start Page", 0, 18) then
 		local startPos = imgui.cursorposition()
 
@@ -1633,8 +1642,10 @@ function Stages.SelectProject(DeltaTime: number)
 	renderMainMenuBar(DeltaTime)
 end
 
-function Stages.ProjectEditing_Enter(DeltaTime)
+function Stages.ProjectEditing_Enter()
 	assert(Project.DataModel)
+	assert(Project.Workspace)
+
 	Engine:SetExplorerRoot(Project.DataModel)
 	Engine:SetExplorerSelections({})
 	Engine.PhysicsTimescale = 0
@@ -1642,7 +1653,9 @@ function Stages.ProjectEditing_Enter(DeltaTime)
 	workspace.SceneCamera.UseSimpleController = true
 end
 
-function Stages.ProjectEditing(DeltaTime: number)
+function Stages.ProjectEditing(DeltaTime: any)
+	assert(typeof(DeltaTime) == "number")
+
 	renderMainMenuBar(DeltaTime)
 	renderViewport(DeltaTime)
 	HistoryView.Render()
@@ -1660,6 +1673,7 @@ function Stages.ProjectEditing_Leave(NextStage)
 	Engine:SetExplorerRoot(game)
 	Engine:SetExplorerSelections({})
 
+	assert(Project.DataModel)
 	saveProject()
 
 	Project.DataModel:Destroy()
@@ -1675,7 +1689,7 @@ end
 
 local restoreState = nil
 
-function Stages.ProjectPlaying_Enter(DeltaTime)
+function Stages.ProjectPlaying_Enter(DeltaTime: any)
 	assert(Project)
 	restoreState = Project.DataModel
 

@@ -269,7 +269,7 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * `ImGui::EndPopup`
 #### `imgui.endw(): `
 * `ImGui::End`, `endw` and not `end` because `end` is a Luau keyword
-#### `imgui.image(ImagePath: string, Size: vector?, FlipVertically: boolean? [ false ], TintColor: { number }? [ { 1, 1, 1, 1 } ]): `
+#### `imgui.image(ImagePath: string, Size: vector?, FlipVertically: boolean? [ false ], TintColor: { number }? [ { 1, 1, 1, 1 } ], DoBilinearSmoothing: boolean? [ true ]): `
 * `ImGui::Image`
 #### `imgui.imagebutton(Name: string, Image: string, Size: vector?): boolean`
 * `ImGui::ImageButton`
@@ -341,7 +341,7 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * Similar to `imgui.textlink`, however, will open the given URL upon being clicked
 * `Url` will be `Text` if not provided
 * `ImGui::TextLinkOpenUrl`
-#### `imgui.windowhovered(): boolean`
+#### `imgui.windowhovered(Flags: string? [ nil ]): boolean`
 * `ImGui::IsWindowHovered`
 #### `imgui.windowposition(): vector`
 * Returns the position of the current Dear ImGui window (`ImGui::GetWindowPos`)

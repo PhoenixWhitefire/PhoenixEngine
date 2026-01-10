@@ -5,6 +5,8 @@ local Engine: Engine = game:GetService("Engine") :: any
 local CoreTools = {}
 CoreTools.EditorCanUseMouse = true
 
+local Types = require("./Types.luau")
+
 local GizmoActive = true
 local GizmoMode = 1
 local GizmoMoveIncrement = 0.5
@@ -86,7 +88,9 @@ local function resetGizmo()
     PrevDragMousePos = nil
 end
 
-function CoreTools.Update(Project: { Workspace: Workspace })
+function CoreTools.Update(Project: Types.Project)
+    assert(Project.Workspace)
+
     local selections = Engine:GetExplorerSelections()
     local target: (GameObject & Transform)? = (if selections[1] and selections[1]:HasComponent("Transform") then selections[1] else nil) :: any
 
@@ -193,6 +197,8 @@ function CoreTools.Update(Project: { Workspace: Workspace })
     end
 
     if IsGizmoDragging then
+        assert(GizmoDragHandle)
+
         local dist = vector.magnitude(GizmoDragHandle.Transform.Position - camPos)
 
         local oldMouseDir = workspace:ScreenPointToVector(PrevDragMousePos, dist)

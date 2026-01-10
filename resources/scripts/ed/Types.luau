@@ -24,4 +24,11 @@ export type Plugin = {
     OnUpdate: ((Plugin, number) -> ())?
 }
 
+export type Project = {
+    DataModel: (GameObject & DataModel)?,
+    Workspace: (GameObject & Workspace)?,
+    Name: string,
+    IsTempPath: boolean
+}
+
 return true

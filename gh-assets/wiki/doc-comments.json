@@ -1254,6 +1254,10 @@
               [
                 "TintColor: { number }?",
                 "{ 1, 1, 1, 1 }"
+              ],
+              [
+                "DoBilinearSmoothing: boolean?",
+                "true"
               ]
             ]
           },
@@ -1546,6 +1550,12 @@
           "windowhovered": {
             "Description": [
               "`ImGui::IsWindowHovered`"
+            ],
+            "In": [
+              [
+                "Flags: string?",
+                "nil"
+              ]
             ],
             "Out": "boolean"
           },
