@@ -8,7 +8,7 @@ local ScriptExecutionFile = "scripts/mc.luau"
 
 local DefaultSubLevel = "scenes/dev_fmtv2.hxscene"
 
-local BackgroundAmbience = GameObject.new("Sound" :: "Sound")
+local BackgroundAmbience = GameObject.new("Sound")
 BackgroundAmbience.SoundFile = "sounds/pixabay_soft-wind-314945.mp3"
 BackgroundAmbience.Playing = true
 BackgroundAmbience.Looped = true
@@ -38,7 +38,7 @@ local function loadSubLevel(Path)
 		workspace.Level:Destroy()
 	end
 	
-	local lvl = GameObject.new("Model" :: "Model")
+	local lvl = GameObject.new("Model")
 	lvl.Name = "Level"
 	lvl.Parent = workspace
 	
@@ -184,7 +184,7 @@ local function update(DeltaTime)
 	imgui.endw()
 
 	if InputService:IsKeyPressed(Enum.Key.M) then
-		local sweeping = GameObject.new("Script" :: "Script")
+		local sweeping = GameObject.new("Script")
 		sweeping.SourceFile = "scripts/minesweeper.luau"
 		sweeping.Name = "MinesweeperMain"
 		sweeping.Parent = workspace
@@ -202,7 +202,7 @@ end
 if not conf.get("Developer") then
 	update = function()
 		if InputService:IsKeyPressed(Enum.Key.M) then
-			local sweeping = GameObject.new("Script" :: "Script")
+			local sweeping = GameObject.new("Script")
 			sweeping.SourceFile = "scripts/minesweeper.luau"
 			sweeping.Name = "MinesweeperMain"
 			sweeping.Parent = workspace

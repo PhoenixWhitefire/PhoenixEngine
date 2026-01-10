@@ -56,7 +56,7 @@ return function(describe, test, expect)
 	end)
 	test("Value types", function()
 		expect(function()
-			json.encode({ GameObject.new("Example" :: "Example"), vector.zero })
+			json.encode({ GameObject.new("Example"), vector.zero })
 		end):toThrow()
 	end)
 end

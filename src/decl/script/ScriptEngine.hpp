@@ -24,28 +24,38 @@ namespace ScriptEngine
 
 	struct YieldedCoroutine
 	{
-		enum class ResumptionMode : uint8_t
+		struct ResumptionMode_
 		{
-			INVALID = 0,
+			enum RM : uint8_t {
+				INVALID = 0,
 
-			ScheduledTime, // resume at a specific time
-			Future, // check the status of an `std::shared_future`
-			Polled // poll a function
+				Wait, // resume yielded thread at a specific time (`task.wait`)
+				Deferred, // resume arbitrary thread at a specific time and pass arguments
+				Future, // check the status of an `std::shared_future`
+				Polled // poll a function
+			};
 		};
+
+		using ResumptionMode = ResumptionMode_::RM;
 
 		std::string DebugString;
 
-		lua_State* Coroutine{};
-		int CoroutineReference{};
+		lua_State* Coroutine = nullptr;
+		int CoroutineReference = INT32_MAX;
 		uint32_t ScriptId = PHX_GAMEOBJECT_NULL_ID;
 
-		struct
-		{
-			double YieldedAt = 0.f;
-			double ResumeAt = 0.f;
-			int NumRetVals = 1;
-			bool PushSleptTime = true;
-		} RmSchedule;
+		union {
+			struct {
+				double YieldedAt = 0.f;
+				double ResumeAt = 0.f;
+			} RmWait;
+			struct {
+				double ResumeAt = 0.f;
+				lua_State* Arguments = nullptr;
+				int ArgumentsRef = 0;
+			} RmDeferred;
+		};
+
 		std::shared_future<std::vector<Reflection::GenericValue>> RmFuture;
 		std::function<int(lua_State*)> RmPoll;
 
@@ -107,6 +117,16 @@ namespace ScriptEngine::L
 		std::function<void(YieldedCoroutine&)> Configure
 	);
 
-	inline void(*DebugBreak)(lua_State*, lua_Debug*, bool, bool) = nullptr;
+	struct DebugBreakReason_ {
+		enum DBR {
+			BrokeIntoDebugger, // `lua_break` or generic reason for thread entering `LUA_BREAK` state
+			Breakpoint,        // `lua_breakpoint`
+			Interrupt,         // `interruptThread` of `coresumey` in `coroutine.resume` implementation
+			Error              // error message expected to be at the top of the stack
+		};
+	};
+	using DebugBreakReason = DebugBreakReason_::DBR;
+
+	inline void(*DebugBreak)(lua_State*, lua_Debug*, DebugBreakReason) = nullptr;
 	inline void(*LeaveDebugger)() = nullptr;
 };

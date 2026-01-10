@@ -125,7 +125,7 @@ static void copyStringToBuffer(char* Buffer, const std::string_view& String, siz
 }
 
 #include "script/ScriptEngine.hpp"
-static void debugBreakHook(lua_State*, lua_Debug*, bool HasError, bool);
+static void debugBreakHook(lua_State*, lua_Debug*, ScriptEngine::L::DebugBreakReason);
 static void debuggerLeaveCallback();
 
 void InlayEditor::Initialize(Renderer* renderer)
@@ -3457,13 +3457,37 @@ static ImGuiContext* prevContext = nullptr;
 static bool wasTextEdEnabled = false;
 static int prevCursorMode = GLFW_CURSOR_NORMAL;
 
-static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
+static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBreakReason Reason)
 {
+	using namespace ScriptEngine::L;
+
 	ZoneScoped;
 
 	luaL_checkstack(L, 20, "debugger");
 
-	std::string errorMessage = HasError ? luaL_checkstring(L, -1) : "<No error message>";
+	std::string_view breakReason;
+	std::string errorMessage;
+
+	const std::string_view BreakReasons[] = {
+		"Broke into Debugger",
+		"Breakpoint hit",
+		"Coroutine interrupted",
+		"Error occurred"
+	};
+
+	const std::string_view BreakExplanations[] = {
+		"Something caused the coroutine to enter a `BREAK` state, such as `breakpoint()`",
+		"The coroutine reached a breakpoint while running, such as one set by `breakpoint(line)`",
+		"The coroutine was interrupted by resuming another coroutine that entered a `BREAK` state"
+	};
+
+	breakReason = BreakReasons[Reason];
+
+	if (Reason == DebugBreakReason::Error)
+		errorMessage = lua_tostring(L, -1);
+	else
+		errorMessage = BreakExplanations[Reason];
+
 	std::string vmName;
 	lua_getglobal(L, "_VMNAME");
 	vmName = luaL_tolstring(L, -1, nullptr);
@@ -3536,11 +3560,8 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 
 		if (ImGui::Begin("Debugger"))
 		{
-			if (HasError)
-				ImGui::Text("Exception thrown");
-			else
-				ImGui::Text("Breakpoint hit");
-				
+			ImGui::TextUnformatted(breakReason.data());
+
 			ImGui::Text("Script: %s", ar->short_src);
 			ImGui::Text("Line: %i", ar->currentline);
 			ImGui::Text("In: %s", ar->name ? ar->name : "<anonymous function>");
@@ -3567,21 +3588,55 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 			else
 				s_WasF8Down = false;
 
-			if (ScriptEngine::L::DebugBreak && !HasError && (ImGui::Button("Single-step (F8)") || isF8Down))
+			if (ScriptEngine::L::DebugBreak && Reason != DebugBreakReason::Error && (ImGui::Button("Step over (F8)") || isF8Down))
+			{
+				static int s_TargetLine = 0;
+				static bool s_BreakNext = false;
+				s_TargetLine = ar->currentline + 1;
+
+				L->global->cb.debugstep = [](lua_State* L, lua_Debug* ar)
+					{
+						if (s_BreakNext)
+						{
+							lua_break(L);
+							lua_singlestep(L, false);
+							return;
+						}
+
+						if (ar->currentline >= s_TargetLine)
+							s_BreakNext = true;
+					};
+
+				lua_singlestep(L, true);
+				lua_break(L);
+				s_BreakNext = false;
+				running = false;
+			}
+
+			if (ScriptEngine::L::DebugBreak && Reason != DebugBreakReason::Error && ImGui::Button("Single-step"))
 			{
 				static int s_TargetLine = 0;
 				static int s_PrevLine = 0;
+				static bool s_BreakNext = false;
 				s_TargetLine = ar->currentline + 1;
 				s_PrevLine = ar->currentline;
 
 				L->global->cb.debugstep = [](lua_State* L, lua_Debug* ar)
 					{
-						if (ar->currentline >= s_TargetLine || ar->currentline < s_PrevLine)
+						if (s_BreakNext)
+						{
 							lua_break(L);
+							lua_singlestep(L, false);
+							return;
+						}
+
+						if (ar->currentline >= s_TargetLine || ar->currentline < s_PrevLine)
+							s_BreakNext = true;
 					};
-				
+
 				lua_singlestep(L, true);
 				lua_break(L);
+				s_BreakNext = false;
 				running = false;
 			}
 
@@ -3591,17 +3646,18 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 
 			if (ScriptEngine::L::DebugBreak)
 			{
-				if (ImGui::Button("Detach Debugger for this VM"))
+				if (ImGui::Button("Detach Debugger for this VM and all VMs created in the future"))
 				{
 					ScriptEngine::L::DebugBreak = nullptr;
 					L->global->cb.debugbreak = nullptr;
 					L->global->cb.debugprotectederror = nullptr;
 					L->global->cb.debugstep = nullptr;
+					L->global->cb.debuginterrupt = nullptr;
 				}
 			}
 			else
 			{
-				ImGui::Text("The Debugger has been detached for VM %s.", vmName.c_str());
+				ImGui::Text("The Debugger has been detached for VM %s and all future VMs.", vmName.c_str());
 			}
 		}
 		ImGui::End();
@@ -3726,6 +3782,8 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 			lua_Debug car;
 			for (int i = 0; lua_getinfo(L, i, "sln", &car); i++)
 			{
+				ImGui::PushID(i);
+
 				if (car.currentline > 0)
 				{
 					ImGui::PushStyleColor(
@@ -3751,6 +3809,8 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 					ImGui::Text("%s in %s", car.short_src, car.name);
 					ImGui::SetItemTooltip("Cannot view the source of functions defined in C++");
 				}
+
+				ImGui::PopID();
 			}
 
 			if (L->userdata)
@@ -3792,6 +3852,9 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, bool HasError, bool)
 	}
 
 	lua_pop(L, 1); // pop our function from `lua_getinfo`
+
+	if (glfwWindowShouldClose(engine->Window))
+		ScriptEngine::L::DebugBreak = nullptr;
 }
 
 static void debuggerLeaveCallback()

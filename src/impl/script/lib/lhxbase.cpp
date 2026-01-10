@@ -92,6 +92,9 @@ static int base_appendlog(lua_State* L)
 // FROM: `luau/tests/Conformance.test.cpp` line 1364 for `breakpoint` function
 static int base_breakpoint(lua_State* L)
 {
+	if (lua_gettop(L) == 0)
+		return lua_break(L);
+
 	int line = luaL_checkinteger(L, 1);
     bool enabled = luaL_optboolean(L, 2, true);
 

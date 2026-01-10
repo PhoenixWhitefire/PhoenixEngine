@@ -156,26 +156,26 @@ local function runTests(t, depth)
 	for index, entry in t do
 		if entry.IsTest then
 			local indent = string.rep("    ", depth)
-			
+
 			local printstr = `{indent}Test {index}: {entry.Name}... `
 			print(printstr, string.rep(" ", 60 - #printstr), "&&")
-			
+
 			local tstart = os.clock()
-			
+
 			local success, errd = xpcall(function()
 				entry.Callback()
 			end, errorStackTrace)
-			
+
 			totaltesttime += os.clock() - tstart
 			local mstime = (os.clock() - tstart) * 1000
 			local mstimestr = if mstime > 1 then math.ceil(mstime) .. "ms" else "<1ms"
-			
+
 			if success then
 				succeeded += 1
 				appendlog(`Succeeded ({mstimestr})`)
 			else
 				local failReasonStartPos = errd[1]:find("FAILTEST:")
-				
+
 				if failReasonStartPos then
 					appendlog(`FAILED ({mstimestr}): {string.sub(errd[1], failReasonStartPos + #("FAILTEST:"), #errd[1])}`)
 					failed += 1

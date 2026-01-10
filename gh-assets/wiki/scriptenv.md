@@ -376,8 +376,8 @@ Additional global variables
 * A non-unique identifier for the current Luau VM
 #### `appendlog(...: any): ()`
 * Same as `print`, but does not prefix the log message with `[INFO]`
-#### `breakpoint(Line: number): ()`
-* Set a breakpoint at the given line
+#### `breakpoint(Line: number?): ()`
+* Set a breakpoint at the given line. If a line is not specified, breaks into Debugger immediately if one is attached
 #### `game: GameObject & DataModel`
 * The GameObject acting as the Data Model of the Engine
 #### `loadthread(Code: string, ChunkName: string?): ( thread?, string? )`

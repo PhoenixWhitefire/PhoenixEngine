@@ -41,7 +41,7 @@ end
 
 mesh_set("$mcchunk_0-0", chunkMesh)
 
-local chunk = GameObject.new("Mesh" :: "Mesh")
+local chunk = GameObject.new("Mesh")
 chunk.Name = "mcchunk_0-0"
 chunk.Asset = "$mcchunk_0-0"
 chunk.Size = vector.create(10, 5, 10)

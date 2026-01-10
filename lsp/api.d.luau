@@ -407,7 +407,7 @@ declare task: {
 
 declare _VMNAME: string
 declare function appendlog( ...: any ): ()
-declare function breakpoint( Line: number ): ()
+declare function breakpoint( Line: number? ): ()
 declare game: GameObject & DataModel
 declare function loadthread( Code: string, ChunkName: string? ): ( thread?, string? )
 declare function loadthreadfromfile( File: string, ChunkName: string? ): ( thread?, string? )

@@ -81,17 +81,32 @@ lua_Type ScriptEngine::ReflectionTypeToLuauType(Reflection::ValueType rvt)
 	return s_ValueTypeToLuauType[rvt & ~Reflection::ValueType::Null];
 }
 
-static int shouldResume_Scheduled(
+static int shouldResume_Wait(
 	const ScriptEngine::YieldedCoroutine& CorInfo,
 	lua_State* L
 )
 {
-	if (double curTime = GetRunningTime(); curTime >= CorInfo.RmSchedule.ResumeAt)
+	if (double curTime = GetRunningTime(); curTime >= CorInfo.RmWait.ResumeAt)
 	{
-		if (CorInfo.RmSchedule.PushSleptTime)
-			lua_pushnumber(L, curTime - CorInfo.RmSchedule.YieldedAt);
+		lua_pushnumber(L, curTime - CorInfo.RmWait.YieldedAt);
+		return 1;
+	}
+	else
+		return -1;
+}
 
-		return CorInfo.RmSchedule.NumRetVals;
+static int shouldResume_Deferred(
+	const ScriptEngine::YieldedCoroutine& CorInfo,
+	lua_State* L
+)
+{
+	if (double curTime = GetRunningTime(); curTime >= CorInfo.RmWait.ResumeAt)
+	{
+		int narg = lua_gettop(CorInfo.RmDeferred.Arguments);
+		lua_xmove(CorInfo.RmDeferred.Arguments, L, narg);
+		lua_unref(L, CorInfo.RmDeferred.ArgumentsRef);
+
+		return narg;
 	}
 	else
 		return -1;
@@ -126,7 +141,8 @@ static const ResumptionModeHandler s_ResumptionModeHandlers[] =
 {
 	nullptr,
 
-	shouldResume_Scheduled,
+	shouldResume_Wait,
+	shouldResume_Deferred,
 	shouldResume_Future,
 	shouldResume_Polled
 };
@@ -168,8 +184,7 @@ void ScriptEngine::StepScheduler()
 		lua_State* coroutine = it->Coroutine;
 		int corRef = it->CoroutineReference;
 
-		uint8_t resHandlerIndex = static_cast<uint8_t>(it->Mode);
-		const ResumptionModeHandler handler = s_ResumptionModeHandlers[resHandlerIndex];
+		const ResumptionModeHandler handler = s_ResumptionModeHandlers[it->Mode];
 		assert(handler);
 
 		int nretvals = handler(*it, coroutine);
@@ -190,7 +205,7 @@ void ScriptEngine::StepScheduler()
 				L::DumpStacktrace(coroutine);
 			}
 
-			lua_unref(lua_mainthread(coroutine), corRef);
+			lua_unref(coroutine, corRef);
 
 			s_YieldedCoroutines.erase(s_YieldedCoroutines.begin() + i);
 		}
@@ -1076,6 +1091,19 @@ void ScriptEngine::L::DumpStacktrace(
 			Into->append("\n");
 		}
 	}
+
+	if (const std::string* deferredTrace = (const std::string*)L->userdata)
+	{
+		if (Into)
+		{
+			Into->append("-- Deferred from --\n");
+			Into->append(*deferredTrace);
+		}
+		else
+		{
+			Log::AppendF("-- Deferred from--\n{}", *deferredTrace);
+		}
+	}
 }
 
 static void* l_alloc(void*, void* ptr, size_t, size_t nsize)
@@ -1408,14 +1436,11 @@ lua_State* ScriptEngine::L::Create(const std::string& VmName)
 	{
 		state->global->cb.debugbreak = [](lua_State* L, lua_Debug* ar)
 			{
-				Log::Info("Debug breakpoint");
-				L::DebugBreak(L, ar, false, false);
+				L::DebugBreak(L, ar, DebugBreakReason::Breakpoint);
 			};
 		state->global->cb.debuginterrupt = [](lua_State* L, lua_Debug* ar)
 			{
-				assert(false); // TODO should this be triggering?
-				Log::Info("Debug interrupt - MAYBE SHOULDN'T BE OCCURRING");
-				L::DebugBreak(L, ar, false, true);
+				L::DebugBreak(L, ar, DebugBreakReason::Interrupt);
 			};
 	}
 
@@ -1464,19 +1489,31 @@ void ScriptEngine::L::Close(lua_State* L)
 	}
 }
 
-lua_Status ScriptEngine::L::Resume(lua_State* L, lua_State* from, int narg)
+static void breakHere(lua_State* L, ScriptEngine::L::DebugBreakReason Reason)
 {
-	int status = lua_resume(L, from, narg);
+	using namespace ScriptEngine;
 
-	while (status == LUA_BREAK)
-		status = lua_resume(L, nullptr, 0);
-
-	if (status == LUA_ERRRUN && L::DebugBreak)
+	if (L::DebugBreak)
 	{
 		lua_Debug ar = {};
 		lua_getinfo(L, 1, "sln", &ar);
-		L::DebugBreak(L, &ar, true, false);
+		L::DebugBreak(L, &ar, Reason);
 	}
+}
+
+static lua_Status finishCoroutine(lua_State* L, int status)
+{
+	using namespace ScriptEngine;
+	using namespace L;
+
+	while (status == LUA_BREAK)
+	{
+		breakHere(L, DebugBreakReason::BrokeIntoDebugger);
+		status = lua_resume(L, nullptr, 0);
+	}
+
+	if (status == LUA_ERRRUN)
+		breakHere(L, DebugBreakReason::Error);
 
 	if (LeaveDebugger)
 		LeaveDebugger();
@@ -1484,24 +1521,16 @@ lua_Status ScriptEngine::L::Resume(lua_State* L, lua_State* from, int narg)
 	return (lua_Status)status;
 }
 
+lua_Status ScriptEngine::L::Resume(lua_State* L, lua_State* from, int narg)
+{
+	int status = lua_resume(L, from, narg);
+	return finishCoroutine(L, status);
+}
+
 lua_Status ScriptEngine::L::ProtectedCall(lua_State* L, int narg, int nret, int errfunc)
 {
 	int status = lua_pcall(L, narg, nret, errfunc);
-
-	while (status == LUA_BREAK)
-		status = lua_pcall(L, 0, nret, errfunc);
-
-	if (status == LUA_ERRRUN && L::DebugBreak)
-	{
-		lua_Debug ar = {};
-		lua_getinfo(L, 1, "sln", &ar);
-		L::DebugBreak(L, &ar, true, false);
-	}
-
-	if (LeaveDebugger)
-		LeaveDebugger();
-
-	return (lua_Status)status;
+	return finishCoroutine(L, status);
 }
 
 nlohmann::json ScriptEngine::DumpApiToJson()

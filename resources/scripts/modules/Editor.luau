@@ -11,7 +11,7 @@ local mouseRayResult = {}
 local prevMouseRayResultPos = nil
 
 local function insertObject()
-	local new = GameObject.new("Mesh" :: "Mesh")
+	local new = GameObject.new("Mesh")
 	new.Parent = workspace.Level
 	CurrentSelection = new
 end

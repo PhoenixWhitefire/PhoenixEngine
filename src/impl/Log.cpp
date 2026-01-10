@@ -73,8 +73,8 @@ static bool s_WithinLogCallstack = false;
 // 11/11/2024
 void Log::Append(const std::string_view& Message, const std::string_view& ExtraTags)
 {
-	if (ExtraTags != "")
-		appendToLog(ExtraTags, true);
+	//if (ExtraTags != "")
+	//	appendToLog(ExtraTags, true);
 	appendToLog(Message, false);
 
 	// If our logging becomes recursive then stop
@@ -91,7 +91,7 @@ void Log::Append(const std::string_view& Message, const std::string_view& ExtraT
 void Log::Info(const std::string_view& Message, const std::string_view& ExtraTags)
 {
 	appendToLog("[INFO]", true);
-	appendToLog(ExtraTags, true);
+	//appendToLog(ExtraTags, true);
 	appendToLog(": ", true);
 	appendToLog(Message);
 
@@ -106,7 +106,7 @@ void Log::Info(const std::string_view& Message, const std::string_view& ExtraTag
 void Log::Warning(const std::string_view& Message, const std::string_view& ExtraTags)
 {
 	appendToLog("[WARN]", true);
-	appendToLog(ExtraTags, true);
+	//appendToLog(ExtraTags, true);
 	appendToLog(": ", true);
 	appendToLog(Message);
 
@@ -121,7 +121,7 @@ void Log::Warning(const std::string_view& Message, const std::string_view& Extra
 void Log::Error(const std::string_view& Message, const std::string_view& ExtraTags)
 {
 	appendToLog("[ERRR]", true);
-	appendToLog(ExtraTags, true);
+	//appendToLog(ExtraTags, true);
 	appendToLog(": ", true);
 	appendToLog(Message);
 

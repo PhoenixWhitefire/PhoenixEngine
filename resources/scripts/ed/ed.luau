@@ -18,7 +18,7 @@ local StageUpdateSignal: EventConnection? = nil
 local Stages: { [string]: (number) -> ((GameObject & DataModel)?) & (...any) -> () } = {}
 
 local EditorCam = assert(workspace.SceneCamera)
-local EditorTl = GameObject.new("TreeLink" :: "TreeLink")
+local EditorTl = GameObject.new("TreeLink")
 
 local Project = {
 	DataModel = nil :: (GameObject & DataModel)?,
@@ -315,7 +315,7 @@ local function openProject(ManualPath: string?)
 	end
 
 	if not Project.DataModel then
-		Project.DataModel = GameObject.new("DataModel" :: "DataModel")
+		Project.DataModel = GameObject.new("DataModel")
 		print("Re-created DataModel")
 	end
 
@@ -324,8 +324,8 @@ local function openProject(ManualPath: string?)
 	Project.Workspace = Project.DataModel:FindChildWithComponent("Workspace") :: any
 
 	if not Project.Workspace then
-		Project.Workspace = GameObject.new("Workspace" :: "Workspace")
-		Project.Workspace.SceneCamera = GameObject.new("Camera" :: "Camera")
+		Project.Workspace = GameObject.new("Workspace")
+		Project.Workspace.SceneCamera = GameObject.new("Camera")
 		Project.Workspace.SceneCamera.Parent = Project.Workspace
 
 		print("Re-created Workspace")
@@ -422,10 +422,10 @@ local function createNewProject()
 
 	assert(fs.copy(LOGO_IMAGE, "@proj/icon.png"))
 
-	local dm = GameObject.new("DataModel" :: "DataModel")
-	local projWp = GameObject.new("Workspace" :: "Workspace")
-	local camera = GameObject.new("Camera" :: "Camera")
-	GameObject.new("DirectionalLight" :: "DirectionalLight").Parent = workspace
+	local dm = GameObject.new("DataModel")
+	local projWp = GameObject.new("Workspace")
+	local camera = GameObject.new("Camera")
+	GameObject.new("DirectionalLight").Parent = workspace
 
 	projWp.Parent = dm
 	camera.Parent = projWp
@@ -542,7 +542,7 @@ local function homeTab(_: number)
 	imgui.sameline()
 
 	if tabButton("Import Model", "@etextures/editor-icons/Model.png") then
-		defer(function()
+		task.defer(function()
 			local paths = fs.promptopen(nil, { "*.gltf", "*.glb" }, "Models")
 
 			if paths[1] then
@@ -807,7 +807,7 @@ local function renderMainMenuBar(dt: number)
 
 		if CurrentStage == "ProjectEditing" then
 			if imgui.menuitem("Project Settings") then
-				defer(function()
+				task.defer(function()
 					imgui.openpopup("Project Settings")
 
 					local newProjectName = Project.Name
@@ -860,7 +860,7 @@ local function renderMainMenuBar(dt: number)
 							)
 
 							if buttonSelection == 1 then
-								defer(function()
+								task.defer(function()
 									local path = fs.promptopen("@etextures/", { "*.png" , "*.jpg", "*.jpeg" }, "Images")[1]
 
 									if path then
@@ -882,21 +882,21 @@ local function renderMainMenuBar(dt: number)
 			end
 
 			if imgui.menuitem("Export") then
-				defer(exportProject)
+				task.defer(exportProject)
 			end
 
 			if imgui.menuitem("Close") then
-				defer(changeStageTo, 0, "SelectProject" :: "SelectProject")
+				task.defer(changeStageTo, "SelectProject" :: "SelectProject")
 			end
 		end
 
 		if imgui.menuitem("Open", CurrentStage == "SelectProject") then
 			SavedProjectsCache = nil
-			defer(openProject)
+			task.defer(openProject)
 		end
 
 		if imgui.menuitem("New", CurrentStage == "SelectProject") then
-			defer(createNewProject)
+			task.defer(createNewProject)
 		end
 
 		if imgui.menuitem("About") then
@@ -1042,7 +1042,7 @@ imgui.stylecolors(if EditorPreferences.UseLightTheme then 'l' else 'd')
 
 local PrevSelections: { GameObject & Transform } = {}
 
-local SelectionPart: GameObject & Mesh = GameObject.new("Mesh" :: "Mesh") :: any
+local SelectionPart = GameObject.new("Mesh")
 SelectionPart.Material = "boxframe"
 SelectionPart.Tint = Color.new(166/255, 200/255, 1)
 SelectionPart.PhysicsCollisions = false
@@ -1465,7 +1465,7 @@ local function renderProjectSelectorTiles(Projects: { string })
 		clicked, hovered = clicked or imgui.itemclicked(), hovered or imgui.itemhovered()
 
 		if clicked then
-			defer(openProject, 0, proj)
+			task.defer(openProject, proj)
 		end
 
 		if hovered then
@@ -1585,7 +1585,7 @@ function Stages.SelectProject(DeltaTime: number)
 			imgui.setcursorposition(cpos.x - 4, cpos.y)
 
 			if imgui.imagebutton("+", "@etextures/editor-icons/new.png", vector.create(150, 150)) then
-				defer(createNewProject)
+				task.defer(createNewProject)
 			end
 
 			cpos = imgui.cursorposition()
@@ -1694,7 +1694,7 @@ function Stages.ProjectPlaying_Enter(DeltaTime)
 	assert(projWp)
 
 	if not projWp.SceneCamera then
-		projWp.SceneCamera = GameObject.new("Camera" :: "Camera")
+		projWp.SceneCamera = GameObject.new("Camera")
 		projWp.SceneCamera.Parent = projWp
 	end
 

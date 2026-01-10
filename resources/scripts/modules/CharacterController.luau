@@ -57,7 +57,7 @@ end
 function Controller.InitDefault(self: Controller, CharacterHeight)
 	CharacterHeight = CharacterHeight or 15
 	
-	local character = GameObject.new("Mesh" :: "Mesh")
+	local character = GameObject.new("Mesh")
 	character.Size = vector.create(CharacterHeight / 3, CharacterHeight, CharacterHeight / 3)
 	character.PhysicsDynamics = true
 	character.Friction = 4

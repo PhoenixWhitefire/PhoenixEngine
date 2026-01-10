@@ -734,8 +734,8 @@
         "In": "...: any"
       },
       "breakpoint": {
-        "Description": "Set a breakpoint at the given line",
-        "In": "Line: number"
+        "Description": "Set a breakpoint at the given line. If a line is not specified, breaks into Debugger immediately if one is attached",
+        "In": "Line: number?"
       },
       "game": {
         "Description": "The GameObject acting as the Data Model of the Engine"

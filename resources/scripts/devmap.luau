@@ -20,8 +20,8 @@ local lastSwitchedPerspectives = 0
 
 local SwitchToFreecamNextFrame = 0
 
-local SoundStinger = GameObject.new("Sound" :: "Sound")
-local RareSoundStinger = GameObject.new("Sound" :: "Sound")
+local SoundStinger = GameObject.new("Sound")
+local RareSoundStinger = GameObject.new("Sound")
 
 local TimesNormalStingerPlayed = 0
 
@@ -95,7 +95,7 @@ game.OnFrameBegin:Connect(function(DeltaTime)
 		
 		if InputService:IsKeyPressed(Enum.Key.E) and TotalTime - lastSwitchedPerspectives > 0.25 then
 			if not blorbs then
-				blorbs = GameObject.new("Model" :: "Model")
+				blorbs = GameObject.new("Model")
 				assert(blorbs)
 				blorbs.Name = "blorbs"
 				blorbs.Parent = workspace

@@ -5,7 +5,7 @@ local M2WasDown = false
 local Parts = {}
 
 local function debugVector(v: vector, col: Color?)
-    local mesh = GameObject.new("Mesh" :: "Mesh")
+    local mesh = GameObject.new("Mesh")
     mesh.Parent = workspace
     mesh.Transform = Matrix.lookAt(workspace.SceneCamera.Transform.Position, workspace.SceneCamera.Transform.Position + v) * Matrix.fromTranslation(0, 0, -vector.magnitude(v) / 2)
     mesh.Size = vector.create(1, 1, vector.magnitude(v))
