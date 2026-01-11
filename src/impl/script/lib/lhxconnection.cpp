@@ -19,9 +19,6 @@ static int conn_namecall(lua_State* L)
 		//lua_pushnil(L);
 		//lua_settable(L, LUA_ENVIRONINDEX); // remove stacktrace string
 
-		delete (std::string*)ec->L->userdata;
-		ec->L->userdata = nullptr;
-
 		lua_unref(ec->L, ec->ThreadRef);
 	}
 	else

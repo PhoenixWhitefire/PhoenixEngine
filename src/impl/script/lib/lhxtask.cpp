@@ -40,16 +40,12 @@ static void schedule(lua_State* L, double sleepTime, int taskStackIndex, int num
 		ref = lua_ref(L, taskStackIndex);
 	}
 
-	lua_State* arguments = lua_newthread(lua_mainthread(DL));
-	int argsRef = lua_ref(lua_mainthread(DL), -1);
-	lua_pop(lua_mainthread(DL), 1);
+	lua_State* arguments = lua_newthread(DL);
+	int argsRef = lua_ref(DL, -1);
+	lua_pop(DL, 1);
 
 	lua_xmove(L, arguments, numFnArgs);
 	assert(lua_gettop(arguments) == numFnArgs);
-
-	std::string* traceback = new std::string;
-	ScriptEngine::L::DumpStacktrace(L, traceback);
-	DL->userdata = traceback;
 
 	ScriptEngine::YieldedCoroutine yc = {
 		.Coroutine = DL,

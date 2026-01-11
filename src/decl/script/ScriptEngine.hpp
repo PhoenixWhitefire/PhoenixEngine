@@ -68,6 +68,7 @@ namespace ScriptEngine
 	{
 		std::string Name;
 		lua_State* MainThread = nullptr;
+		std::vector<lua_State*> Coroutines;
 	};
 
 	const LuauVM& GetCurrentVM();
@@ -117,7 +118,14 @@ namespace ScriptEngine::L
 		std::function<void(YieldedCoroutine&)> Configure
 	);
 
-	struct DebugBreakReason_ {
+	struct StateUserdata
+	{
+		std::string VM;
+		std::string SpawnTrace;
+	};
+
+	struct DebugBreakReason_
+	{
 		enum DBR {
 			BrokeIntoDebugger, // `lua_break` or generic reason for thread entering `LUA_BREAK` state
 			Breakpoint,        // `lua_breakpoint`

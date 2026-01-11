@@ -26,9 +26,6 @@ static int sig_namecall(lua_State* L)
 	{
 		luaL_checktype(L, 2, LUA_TFUNCTION);
 
-		std::string* traceback = new std::string;
-		ScriptEngine::L::DumpStacktrace(L, traceback);
-
 		EventSignalData* ev = (EventSignalData*)luaL_checkudata(L, 1, "EventSignal");
 		const Reflection::EventDescriptor* rev = ev->Event;
 		int signalRef = lua_ref(L, 1);
@@ -47,14 +44,12 @@ static int sig_namecall(lua_State* L)
 		//    ARAARA
 		//    ara ara
 		// (tee hee)
-		lua_State* eL = lua_newthread(lua_mainthread(L));
+		lua_State* eL = lua_newthread(L);
 		luaL_sandboxthread(eL);
 		lua_State* cL = lua_newthread(eL);
-		int threadRef = lua_ref(lua_mainthread(L), -1); // ref to eL
+		int threadRef = lua_ref(L, -1); // ref to eL
 		lua_xpush(L, eL, 2); // push callback onto eL
-		lua_pop(lua_mainthread(L), 1);
-
-		eL->userdata = traceback;
+		lua_pop(L, 1);
 
 		EventConnectionData* ec = (EventConnectionData*)lua_newuserdata(eL, sizeof(EventConnectionData));
 		ec->Script.Reference = nullptr; // zero-initialization breaks some assumptions that IDs which are not `PHX_GAMEOBJECT_NULL_ID` are valid
@@ -84,10 +79,13 @@ static int sig_namecall(lua_State* L)
 		uint32_t cnId = rev->Connect(
 			ev->Reflector.Referred(),
 
-			[eL, ec, cL, rev, scriptRef, reflector, traceback](const std::vector<Reflection::GenericValue>& Inputs, uint32_t ConnectionId) -> void
+			[eL, ec, cL, rev, scriptRef, reflector](const std::vector<Reflection::GenericValue>& Inputs, uint32_t ConnectionId) -> void
 			{
 				ZoneScopedN("RunEventCallback");
-				ZoneText(traceback->data(), traceback->size());
+
+				const std::string& spawnTrace = ((ScriptEngine::L::StateUserdata*)eL->userdata)->SpawnTrace;
+				ZoneText(spawnTrace.data(), spawnTrace.size());
+				(void)spawnTrace;
 
 				if (scriptRef.HasValue())
 				{
@@ -135,7 +133,7 @@ static int sig_namecall(lua_State* L)
 					.DebugString = "DeferredEventResumption",
 					.Coroutine = co,
 					.CoroutineReference = runnerRef,
-					.RmPoll = [rev, Inputs, eL, traceback](lua_State* L) -> int
+					.RmPoll = [rev, Inputs, eL](lua_State* L) -> int
 						{
 							lua_resetthread(L);
 
@@ -147,8 +145,6 @@ static int sig_namecall(lua_State* L)
 								assert(Inputs[i].Type == rev->CallbackInputs[i]);
 								ScriptEngine::L::PushGenericValue(L, Inputs[i]);
 							}
-
-							L->userdata = new std::string(*traceback);
 
 							return (int)Inputs.size();
 						},

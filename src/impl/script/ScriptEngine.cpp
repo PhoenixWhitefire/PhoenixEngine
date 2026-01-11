@@ -63,7 +63,8 @@ const ScriptEngine::LuauVM& ScriptEngine::RegisterNewVM(const std::string& Name)
 
 	VMs[Name] = {
 		.Name = Name,
-		.MainThread = L::Create(Name)
+		.MainThread = L::Create(Name),
+		.Coroutines = {}
 	};
 
 	return VMs[Name];
@@ -1092,18 +1093,21 @@ void ScriptEngine::L::DumpStacktrace(
 		}
 	}
 
-	if (const std::string* deferredTrace = (const std::string*)L->userdata)
+	if (StateUserdata* corUd = (StateUserdata*)L->userdata; corUd && corUd->SpawnTrace.size() > 0)
 	{
 		if (Into)
 		{
-			Into->append("-- Deferred from --\n");
-			Into->append(*deferredTrace);
+			Into->append("-- Spawning trace --\n");
+			Into->append(corUd->SpawnTrace);
 		}
 		else
 		{
-			Log::AppendF("-- Deferred from--\n{}", *deferredTrace);
+			Log::AppendF("-- Spawning trace --\n{}", corUd->SpawnTrace);
 		}
 	}
+
+	if (Into)
+		Into->shrink_to_fit();
 }
 
 static void* l_alloc(void*, void* ptr, size_t, size_t nsize)
@@ -1446,13 +1450,30 @@ lua_State* ScriptEngine::L::Create(const std::string& VmName)
 
 	state->global->cb.userthread = [](lua_State* LP, lua_State* L)
 		{
-			if (!LP)
+			if (LP)
 			{
-				if (L->userdata)
+				StateUserdata* ud = new StateUserdata;
+				DumpStacktrace(LP, &ud->SpawnTrace);
+				L->userdata = ud;
+
+				for (auto& [ name, lvm ] : VMs)
 				{
-					delete (std::string*)L->userdata; // assigned in `defer` for debugger :)
-					L->userdata = nullptr;
+					if (lvm.MainThread == lua_mainthread(LP))
+					{
+						lvm.Coroutines.push_back(L);
+						ud->VM = name;
+						break;
+					}
 				}
+			}
+			else
+			{
+				const auto& it = VMs.find(((StateUserdata*)L->userdata)->VM);
+
+				if (it != VMs.end())
+					it->second.Coroutines.erase(std::find(it->second.Coroutines.begin(), it->second.Coroutines.end(), L));
+
+				delete (StateUserdata*)L->userdata;
 			}
 		};
 

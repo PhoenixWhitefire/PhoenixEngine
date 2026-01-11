@@ -89,7 +89,9 @@ local function resetGizmo()
 end
 
 function CoreTools.Update(Project: Types.Project)
-    assert(Project.Workspace)
+    if not Project.Workspace then
+        return
+    end
 
     local selections = Engine:GetExplorerSelections()
     local target: (GameObject & Transform)? = (if selections[1] and selections[1]:HasComponent("Transform") then selections[1] else nil) :: any
