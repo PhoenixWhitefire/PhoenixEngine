@@ -17,8 +17,6 @@ on:
       - "gh-assets/**"
       - "*.md"
       - "api-dump.json"
-      - "imgui.ini"
-      - "debugger.layout.ini"
 
 jobs:
   build:
@@ -74,7 +72,7 @@ jobs:
           gh-assets/wiki/libraries-prologue.md
           gh-assets/wiki/globals-prologue.md
           api-dump.json
-          imgui.ini
+          default-layout.ini
           debugger-layout.ini
           phoenix.conf
         retention-days: 7

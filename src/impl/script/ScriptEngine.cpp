@@ -1273,21 +1273,6 @@ static void requireConfigInit(luarequire_Configuration* config)
 	assert(!config->get_alias);
 }
 
-// FROM: `ldblib.cpp` 15/08/2025
-static lua_State* getthread(lua_State* L, int* arg)
-{
-    if (lua_isthread(L, 1))
-    {
-        *arg = 1;
-        return lua_tothread(L, 1);
-    }
-    else
-    {
-        *arg = 0;
-        return L;
-    }
-}
-
 static void openEnum(lua_State* L)
 {
 	lua_newtable(L);
@@ -1405,28 +1390,6 @@ lua_State* ScriptEngine::L::Create(const std::string& VmName)
 	lua_settable(state, -3);
 	lua_pop(state, 1);
 
-	lua_getglobal(state, "debug");
-	lua_pushcfunction(
-		state,
-		[](lua_State* L)
-		{
-			int arg;
-    		lua_State* L1 = getthread(L, &arg);
-    		const char* msg = luaL_optstring(L, arg + 1, NULL);
-    		int level = luaL_optinteger(L, arg + 2, (L == L1) ? 1 : 0);
-    		luaL_argcheck(L, level >= 0, arg + 2, "level can't be negative");
-
-			std::string trace;
-			ScriptEngine::L::DumpStacktrace(L, &trace, level, msg);
-
-			lua_pushlstring(L, trace.data(), trace.size());
-			return 1;
-		},
-		"hx_dumpStacktrace"
-	);
-	lua_setfield(state, -2, "traceback");
-	lua_pop(state, 1);
-
 	luhx_pushgameobject(state, GameObject::GetObjectById(GameObject::s_DataModel));
 	lua_setglobal(state, "game");
 
@@ -1440,11 +1403,13 @@ lua_State* ScriptEngine::L::Create(const std::string& VmName)
 	{
 		state->global->cb.debugbreak = [](lua_State* L, lua_Debug* ar)
 			{
-				L::DebugBreak(L, ar, DebugBreakReason::Breakpoint);
+				if (L::DebugBreak)
+					L::DebugBreak(L, ar, DebugBreakReason::Breakpoint);
 			};
 		state->global->cb.debuginterrupt = [](lua_State* L, lua_Debug* ar)
 			{
-				L::DebugBreak(L, ar, DebugBreakReason::Interrupt);
+				if (L::DebugBreak)
+					L::DebugBreak(L, ar, DebugBreakReason::Interrupt);
 			};
 	}
 
@@ -1583,10 +1548,39 @@ nlohmann::json ScriptEngine::DumpApiToJson()
 			continue;
 		}
 
-		std::string k = luaL_checkstring(luhx, -2);
+		bool skip = false;
+		std::vector<std::string> librarySpecificMembers;
 
-		lua_getglobal(base, k.c_str());
-		if (lua_isnil(base, -1))
+		std::string k = luaL_checkstring(luhx, -2);
+		if (int ty = lua_getglobal(base, k.c_str()); ty != LUA_TNIL)
+		{
+			skip = true;
+
+			if (ty == LUA_TTABLE && k != "_G")
+			{
+				lua_pushnil(luhx);
+				while (lua_next(luhx, -2))
+				{
+					if (lua_type(luhx, -2) != LUA_TSTRING)
+					{
+						lua_pop(luhx, 1);
+						continue;
+					}
+
+					int vty = lua_getfield(base, -1, lua_tostring(luhx, -2));
+					if (vty == LUA_TNIL)
+					{
+						skip = false;
+						librarySpecificMembers.push_back(lua_tostring(luhx, -2));
+					}
+					lua_pop(base, 1);
+
+					lua_pop(luhx, 1);
+				}
+			}
+		}
+
+		if (!skip)
 		{
 			if (!lua_istable(luhx, -1))
 			{
@@ -1616,7 +1610,13 @@ nlohmann::json ScriptEngine::DumpApiToJson()
 				lua_pushnil(luhx);
 				while (lua_next(luhx, -2))
 				{
-					lib[luaL_checkstring(luhx, -2)] = luaL_typename(luhx, -1);
+					if ((librarySpecificMembers.size() > 0
+							&& std::find(librarySpecificMembers.begin(), librarySpecificMembers.end(), lua_tostring(luhx, -2)) != librarySpecificMembers.end()
+						) || librarySpecificMembers.size() == 0
+					)
+					{
+						lib[luaL_checkstring(luhx, -2)] = luaL_typename(luhx, -1);
+					}
 
 					lua_pop(luhx, 1);
 				}

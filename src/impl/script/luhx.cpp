@@ -11,6 +11,7 @@ static const luaL_Reg luhxlibs[] =
     { LUHX_JSONLIBNAME, luhxopen_json },
     { LUHX_SCENELIBNAME, luhxopen_scene },
     { LUHX_TASKLIBNAME, luhxopen_task },
+    { LUA_DBLIBNAME, luhxopen_debug},
 
     { LUHX_COLORLIBNAME, luhxopen_Color },
     { LUHX_MATRIXLIBNAME, luhxopen_Matrix },

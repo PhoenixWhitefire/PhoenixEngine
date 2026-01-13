@@ -172,6 +172,12 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * Save the current state of the configuration to file (`phoenix.conf`), returning whether the file was successfully overwritten
 #### `conf.set(Key: string, Value: any): `
 * Change a specific value in the configuration
+### `debug`
+* Extensions to the standard Luau `debug` library are documented below
+#### `debug.breakpoint((Line: number): number)) & (() -> ()`
+* Set a breakpoint at the closest possible line to the given target line within the calling function, returning the actual line the breakpoint landed on
+* If a line is not specified, breaks into Debugger immediately, and returns no values
+* If a Debugger is not attached (such as in non-developer mode or headless mode), has no effect
 ### `fs`
 * Interacting with the player's filesystem
 #### `fs.copy(From: string, To: string): boolean, string?`
@@ -376,8 +382,6 @@ Additional global variables
 * A non-unique identifier for the current Luau VM
 #### `appendlog(...: any): ()`
 * Same as `print`, but does not prefix the log message with `[INFO]`
-#### `breakpoint(Line: number?): ()`
-* Set a breakpoint at the given line. If a line is not specified, breaks into Debugger immediately if one is attached
 #### `game: GameObject & DataModel`
 * The GameObject acting as the Data Model of the Engine
 #### `loadthread(Code: string, ChunkName: string?): ( thread?, string? )`

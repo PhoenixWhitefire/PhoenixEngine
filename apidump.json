@@ -323,7 +323,6 @@
     "Globals": {
       "_VMNAME": "string",
       "appendlog": "function",
-      "breakpoint": "function",
       "game": "GameObject & DataModel",
       "loadthread": "function",
       "loadthreadfromfile": "function",
@@ -345,6 +344,9 @@
         "get": "function",
         "save": "function",
         "set": "function"
+      },
+      "debug": {
+        "breakpoint": "function"
       },
       "fs": {
         "copy": "function",

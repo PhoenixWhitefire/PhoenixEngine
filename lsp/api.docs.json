@@ -74,9 +74,6 @@
   "@luhx/global/appendlog": {
     "documentation": "* Same as `print`, but does not prefix the log message with `[INFO]`"
   },
-  "@luhx/global/breakpoint": {
-    "documentation": "* Set a breakpoint at the given line. If a line is not specified, breaks into Debugger immediately if one is attached"
-  },
   "@luhx/global/conf": {
     "documentation": "* Internal Engine configuration state, loaded from file (`phoenix.conf`) upon startup"
   },
@@ -88,6 +85,12 @@
   },
   "@luhx/global/conf.set": {
     "documentation": "* Change a specific value in the configuration"
+  },
+  "@luhx/global/debug": {
+    "documentation": "* Extensions to the standard Luau `debug` library are documented below"
+  },
+  "@luhx/global/debug.breakpoint": {
+    "documentation": "* Set a breakpoint at the closest possible line to the given target line within the calling function, returning the actual line the breakpoint landed on\n* If a line is not specified, breaks into Debugger immediately, and returns no values\n* If a Debugger is not attached (such as in non-developer mode or headless mode), has no effect"
   },
   "@luhx/global/fs": {
     "documentation": "* Interacting with the player's filesystem"

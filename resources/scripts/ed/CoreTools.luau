@@ -89,6 +89,8 @@ local function resetGizmo()
 end
 
 function CoreTools.Update(Project: Types.Project)
+    debug.breakpoint()
+
     if not Project.Workspace then
         return
     end

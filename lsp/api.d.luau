@@ -312,6 +312,9 @@ declare conf: {
   save: ((  ) -> (boolean)),
   set: (( Key: string, Value: any ) -> ())
 }
+declare debug: {
+  breakpoint: (( (Line: number ) -> (number)) & (() -> ()))
+}
 declare fs: {
   copy: (( From: string, To: string ) -> (boolean, string?)),
   cwd: ((  ) -> (string)),
@@ -407,7 +410,6 @@ declare task: {
 
 declare _VMNAME: string
 declare function appendlog( ...: any ): ()
-declare function breakpoint( Line: number? ): ()
 declare game: GameObject & DataModel
 declare function loadthread( Code: string, ChunkName: string? ): ( thread?, string? )
 declare function loadthreadfromfile( File: string, ChunkName: string? ): ( thread?, string? )

@@ -431,7 +431,7 @@ local function createNewProject()
 	local dm = GameObject.new("DataModel")
 	local projWp = GameObject.new("Workspace")
 	local camera = GameObject.new("Camera")
-	GameObject.new("DirectionalLight").Parent = workspace
+	GameObject.new("DirectionalLight").Parent = projWp
 
 	projWp.Parent = dm
 	camera.Parent = projWp

@@ -733,10 +733,6 @@
         "Description": "Same as `print`, but does not prefix the log message with `[INFO]`",
         "In": "...: any"
       },
-      "breakpoint": {
-        "Description": "Set a breakpoint at the given line. If a line is not specified, breaks into Debugger immediately if one is attached",
-        "In": "Line: number?"
-      },
       "game": {
         "Description": "The GameObject acting as the Data Model of the Engine"
       },
@@ -832,6 +828,20 @@
               "Key: string",
               "Value: any"
             ]
+          }
+        }
+      },
+      "debug": {
+        "Description": "Extensions to the standard Luau `debug` library are documented below",
+        "Members": {
+          "breakpoint": {
+            "Description": [
+              "Set a breakpoint at the closest possible line to the given target line within the calling function, returning the actual line the breakpoint landed on",
+              "If a line is not specified, breaks into Debugger immediately, and returns no values",
+              "If a Debugger is not attached (such as in non-developer mode or headless mode), has no effect"
+            ],
+            "In": "(Line: number",
+            "Out": "number)) & (() -> ()"
           }
         }
       },

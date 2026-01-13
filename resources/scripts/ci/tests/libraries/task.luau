@@ -8,6 +8,8 @@ return function(describe, test, expect)
 	end)
 
     test("defer function", function()
+        debug.breakpoint()
+
         local function deferTest()
             task.defer(function(c: thread, n)
                 coroutine.resume(c, n)

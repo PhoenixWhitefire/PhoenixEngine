@@ -30,6 +30,8 @@ int luhxopen_scene(lua_State*);
 #define LUHX_TASKLIBNAME "task"
 int luhxopen_task(lua_State*);
 
+int luhxopen_debug(lua_State*);
+
 #define LUHX_COLORLIBNAME "Color"
 int luhxopen_Color(lua_State*);
 

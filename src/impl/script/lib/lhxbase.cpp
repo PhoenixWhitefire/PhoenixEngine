@@ -89,22 +89,6 @@ static int base_appendlog(lua_State* L)
     return 0;
 }
 
-// FROM: `luau/tests/Conformance.test.cpp` line 1364 for `breakpoint` function
-static int base_breakpoint(lua_State* L)
-{
-	if (lua_gettop(L) == 0)
-		return lua_break(L);
-
-	int line = luaL_checkinteger(L, 1);
-    bool enabled = luaL_optboolean(L, 2, true);
-
-    lua_Debug ar = {};
-    lua_getinfo(L, lua_stackdepth(L) - 1, "f", &ar);
-
-    lua_breakpoint(L, -1, line, enabled);
-    return 0;
-}
-
 // `loadthread` preferred?
 /*
 static int base_loadstring(lua_State* L)
@@ -235,7 +219,6 @@ static const luaL_Reg base_funcs[] =
     { "print", base_print },
 	{ "warn", base_warn },
     { "appendlog", base_appendlog },
-	{ "breakpoint", base_breakpoint },
 	//{ "loadstring", base_loadstring },
 	{ "loadthread", base_loadthread },
 	{ "loadthreadfromfile", base_loadthreadfromfile },

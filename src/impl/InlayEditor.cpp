@@ -662,7 +662,7 @@ static void renderTextEditor()
 			TextureManager* texManager = TextureManager::Get();
 			ImGui::ImageWithBg(
 				texManager->GetTextureResource(1).GpuId,
-				ImVec2(textYSize * 2.2f, textYSize),
+				ImVec2(textYSize * 2.5f, textYSize),
 				{},
 				{},
 				{},
@@ -695,7 +695,7 @@ static void renderTextEditor()
 			}
 		}
 
-		ImGui::SetCursorPos(startPos + ImVec2(textYSize * 2.2, 0.f));
+		ImGui::SetCursorPos(startPos + ImVec2(textYSize * 2.5f, 0.f));
 
 		bool changed = ImGui::InputTextMultiline(
 			"##",
@@ -3502,13 +3502,16 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 		"Broke into Debugger",
 		"Breakpoint hit",
 		"Coroutine interrupted",
-		"Error occurred"
+		"Error occurred",
+		"Debug step"
 	};
 
 	const std::string_view BreakExplanations[] = {
-		"Something caused the coroutine to enter a `BREAK` state, such as `breakpoint()`",
-		"The coroutine reached a breakpoint while running, such as one set by `breakpoint(line)`",
-		"The coroutine was interrupted by resuming another coroutine that entered a `BREAK` state"
+		"Something caused the coroutine to enter a `BREAK` state, such as `debug.breakpoint()`",
+		"The coroutine reached a breakpoint while running, such as one set by `debug.breakpoint(line)`",
+		"The coroutine was interrupted by resuming another coroutine that entered a `BREAK` state",
+		"Error occurred (this should have been replaced with the actual error message)",
+		"You are stepping through the code"
 	};
 
 	breakReason = BreakReasons[Reason];
@@ -3559,6 +3562,8 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 	int li = 0;
 	bool getInfoSuccess = lua_getinfo(L, li, "slnfu", ar);
 
+	bool firstFrame = true;
+
 	while (!ar->short_src || (strcmp(ar->short_src, "[C]") == 0))
 	{
 		if (getInfoSuccess)
@@ -3577,7 +3582,10 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 
 	int currfuncindex = getInfoSuccess ? lua_gettop(L) : 0;
 	s_TextEdDebuggerJumpToLine = ar->currentline;
-	invokeTextEditor(ar->short_src);
+	invokeTextEditor(ar->short_src ? ar->short_src : "!InlineDocument:Unknown source");
+
+	static bool s_CallstackJumpToCurrentThread = false;
+	s_CallstackJumpToCurrentThread = true;
 
 	while (!glfwWindowShouldClose(engine->Window) && running)
 	{
@@ -3623,47 +3631,43 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 			else
 				s_WasF8Down = false;
 
-			if (ScriptEngine::L::DebugBreak && Reason != DebugBreakReason::Error && (ImGui::Button("Step over (F8)") || isF8Down))
+			if (ScriptEngine::L::DebugBreak && Reason != DebugBreakReason::Error && (ImGui::Button("Single-step (F8)") || isF8Down))
 			{
-				static int s_TargetLine = 0;
-				s_TargetLine = ar->currentline + 1;
+				ImGui::SaveIniSettingsToDisk("debugger-layout.ini");
 
-				L->global->cb.debugstep = [](lua_State* L, lua_Debug* ar)
-					{
-						if (ar->currentline >= s_TargetLine)
-						{
-							lua_break(L);
-							lua_singlestep(L, false);
-							return;
-						}
-					};
+				if (Reason == ScriptEngine::L::DebugBreakReason::DebuggerStep)
+				{
+					running = false;
+					ImGui::End();
+					ImGui::EndFrame();
 
-				lua_singlestep(L, true);
-				lua_break(L);
-				running = false;
-			}
+					assert((lua_gettop(L) == currfuncindex && lua_type(L, -1) == LUA_TFUNCTION) || currfuncindex == 0);
+					if (currfuncindex != 0)
+						lua_pop(L, 1); // pop our function from `lua_getinfo`
 
-			if (ScriptEngine::L::DebugBreak && Reason != DebugBreakReason::Error && ImGui::Button("Single-step"))
-			{
-				static int s_TargetLine = 0;
+					ImGui::SetCurrentContext(prevContext);
+
+					return;
+				}
+				else if (Reason == ScriptEngine::L::DebugBreakReason::Breakpoint)
+				{
+					lua_breakpoint(L, -1, ar->currentline, false); // please
+				}
+
 				static int s_PrevLine = 0;
-				static const char* s_Source = nullptr;
-				s_TargetLine = ar->currentline + 1;
 				s_PrevLine = ar->currentline;
 
 				L->global->cb.debugstep = [](lua_State* L, lua_Debug* ar)
 					{
-						if (ar->currentline >= s_TargetLine || ar->currentline < s_PrevLine || strcmp(s_Source, ar->short_src) != 0)
+						if (ar->currentline != s_PrevLine)
 						{
-							lua_break(L);
-							lua_singlestep(L, false);
-							return;
+							s_PrevLine = ar->currentline;
+							debugBreakHook(L, ar, ScriptEngine::L::DebugBreakReason::DebuggerStep);
 						}
 					};
 
 				lua_singlestep(L, true);
 				lua_break(L);
-				s_Source = ar->short_src;
 				running = false;
 			}
 
@@ -3689,7 +3693,8 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 		}
 		ImGui::End();
 
-		s_TextEdDebuggerCurrentLine = ar->currentline;
+		if (ar->currentline > 0)
+			s_TextEdDebuggerCurrentLine = ar->currentline;
 
 		if (develUI)
 			engine->OnFrameRenderGui.Fire(dt);
@@ -3819,51 +3824,6 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 
 		if (ImGui::Begin("Callstack"))
 		{
-			lua_Debug car;
-			for (int i = 0; lua_getinfo(L, i, "sln", &car); i++)
-			{
-				ImGui::PushID(i);
-
-				if (car.currentline > 0)
-				{
-					ImGui::PushStyleColor(
-						ImGuiCol_TextLink,
-						ImVec4(1.f, 1.f, 1.f, 1.f) - ImGui::GetStyleColorVec4(ImGuiCol_WindowBg) + ImVec4(0.f, 0.f, 0.f, 1.f)
-					);
-
-					if (ImGui::TextLink(std::format(
-						"{}:{} in {}",
-						car.short_src, car.currentline, car.name ? car.name : "<anonmyous>"
-					).c_str()))
-					{
-						s_TextEdDebuggerJumpToLine = car.currentline;
-						invokeTextEditor(car.short_src);
-						lua_getinfo(L, i, "sln", ar);
-					}
-
-					ImGui::SetItemTooltip("View source");
-					ImGui::PopStyleColor();
-				}
-				else
-				{
-					ImGui::Text("%s in %s", car.short_src, car.name);
-					ImGui::SetItemTooltip("Cannot view the source of functions defined in C++");
-				}
-
-				ImGui::PopID();
-			}
-
-			if (L->userdata)
-			{
-				const ScriptEngine::L::StateUserdata* ud = (const ScriptEngine::L::StateUserdata*)L->userdata;
-				ImGui::SeparatorText("Spawn trace");
-				ImGui::TextUnformatted(ud->SpawnTrace.c_str());
-			}
-		}
-		ImGui::End();
-
-		if (ImGui::Begin("Coroutines"))
-		{
 			std::vector<std::string_view> vmNames;
 			vmNames.reserve(ScriptEngine::VMs.size());
 
@@ -3933,8 +3893,13 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 					}
 				}
 
+				bool noSourceInformation = false;
+
 				if (identifier.size() == 2) // ":0"
+				{
 					identifier = "<coroutine>";
+					noSourceInformation = true;
+				}
 
 				if (size_t pathStartLoc = identifier.find("scripts/"); pathStartLoc != std::string::npos)
 					identifier = { identifier.begin() + pathStartLoc, identifier.end() };
@@ -3945,27 +3910,33 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 				if (!car.short_src && ud) // means we are showing the spawn trace and not the actual current call frame
 					identifier = "Spawned from " + identifier;
 
-				bool customColor = false;
+				bool customColor = true;
 
 				if (coroutine == L)
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 1.f, 1.f, 1.f));
+				else if (coroutine == vm.MainThread || noSourceInformation)
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5, 0.5, 0.5, 1.f));
+				else
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.75f, 0.75f, 0.75f, 1.f));
+
+				bool open = ImGui::TreeNodeEx(identifier.c_str(), ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_OpenOnArrow);
+				ImGui::SetItemTooltip("%s", identifier.c_str());
+
+				if (s_CallstackJumpToCurrentThread && coroutine == L)
 				{
-					ImGui::PushStyleColor(ImGuiCol_TextLink, ImVec4(0.f, 1.f, 0.f, 1.f));
-					customColor = true;
-				}
-				else if (coroutine == vm.MainThread)
-				{
-					ImGui::PushStyleColor(ImGuiCol_TextLink, ImVec4(0.5, 0.5, 0.5, 1.f));
-					customColor = true;
+					ImGui::SetScrollHereY();
+					s_CallstackJumpToCurrentThread = false;
 				}
 
-				if (ImGui::TextLink(identifier.c_str()))
+				if (ImGui::IsItemClicked())
 				{
-					assert((lua_gettop(L) == currfuncindex && lua_type(L, -1) == LUA_TFUNCTION) || currfuncindex == 0);
+					assert(currfuncindex == 0 || lua_type(L, -1) == LUA_TFUNCTION);
 					if (currfuncindex != 0)
-						lua_pop(L, 1); // pop off `currfuncindex`
+						lua_remove(L, currfuncindex);
 
 					L = coroutine;
 					currfuncindex = getInfoSuccess ? lua_gettop(L) : 0;
+					assert(currfuncindex == 0 || lua_type(L, currfuncindex) == LUA_TFUNCTION);
 					memcpy(ar, &car, sizeof(lua_Debug));
 
 					if (ud)
@@ -3989,12 +3960,69 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 						lua_pop(coroutine, 1); // pop our current function off to leave the stack balanced
 				}
 
+				if (open)
+				{
+					if (customColor)
+					{
+						ImGui::PopStyleColor();
+						customColor = false;
+					}
+
+					lua_Debug car;
+					int i = 0;
+
+					if (!lua_getinfo(coroutine, 0, "sln", &car))
+						i = 1;
+
+					for (i = 0; lua_getinfo(coroutine, i, "sln", &car); i++)
+					{
+						ImGui::PushID(i);
+
+						if (car.currentline > 0)
+						{
+							ImGui::PushStyleColor(
+								ImGuiCol_TextLink,
+								ImVec4(1.f, 1.f, 1.f, 1.f) - ImGui::GetStyleColorVec4(ImGuiCol_WindowBg) + ImVec4(0.f, 0.f, 0.f, 1.f)
+							);
+
+							if (ImGui::TextLink(std::format(
+								"{}:{} in {}",
+								car.short_src, car.currentline, car.name ? car.name : "<anonmyous>"
+							).c_str()))
+							{
+								s_TextEdDebuggerJumpToLine = car.currentline;
+								invokeTextEditor(car.short_src);
+								lua_getinfo(coroutine, i, "sln", ar);
+							}
+
+							ImGui::SetItemTooltip("View source");
+							ImGui::PopStyleColor();
+						}
+						else
+						{
+							ImGui::Text("%s in %s", car.short_src, car.name);
+							ImGui::SetItemTooltip("Cannot view the source of functions defined in C++");
+						}
+
+						ImGui::PopID();
+					}
+
+					if (L->userdata)
+					{
+						const ScriptEngine::L::StateUserdata* ud = (const ScriptEngine::L::StateUserdata*)coroutine->userdata;
+						ImGui::SeparatorText("Spawn trace");
+						ImGui::TextUnformatted(ud->SpawnTrace.c_str());
+					}
+
+					ImGui::TreePop();
+				}
+
 				if (customColor)
 					ImGui::PopStyleColor();
 
 				ImGui::SameLine();
 
-				ImGui::SetCursorPosX(ImGui::GetWindowSize().x / 2.f + ImGui::CalcTextSize("OK FIN").x);
+				ImGui::SetCursorPosX(ImGui::GetWindowSize().x * 0.75f + ImGui::CalcTextSize("OK FIN").x);
 
 				const LuauStatusDisplayInfo& lsdi = LuauStatuses[lua_status(coroutine)];
 				const LuauCoroutineStatusDisplayInfo& lcsdi = LuauCoroutineStatuses[lua_costatus(nullptr, coroutine)];
@@ -4035,7 +4063,12 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-		engine->RendererContext.SwapBuffers();
+
+		// there's this really obnoxious single-frame flash that occurs when single stepping :(
+		if (!firstFrame)
+			engine->RendererContext.SwapBuffers();
+		else
+			firstFrame = false;
 
 		framesInSecond++;
 		if (GetRunningTime() - debuggerLastSecond >= 1.f)
