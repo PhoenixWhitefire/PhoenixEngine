@@ -3381,20 +3381,21 @@ static void debugVariable(lua_State* L)
 	std::string varname;
 	switch (lua_type(L, -2))
 	{
-	case LUA_TLIGHTUSERDATA:
+	case LUA_TBOOLEAN: case LUA_TNUMBER: case LUA_TVECTOR:
 	{
-		varname = "(light userdata)";
+		varname = std::format("[{}]", luaL_tolstring(L, -2, nullptr));
+		lua_pop(L, 1);
 		break;
 	}
 	case LUA_TSTRING:
 	{
-		varname = luaL_checkstring(L, -2);
+		varname = lua_tostring(L, -2);
 		break;
 	}
 	default:
 	{
 		const char* ktn = luaL_typename(L, -2);
-		varname = std::format("{} ({})", luaL_tolstring(L, -2, nullptr), ktn);
+		varname = std::format("[{} ({})]", luaL_tolstring(L, -2, nullptr), ktn);
 		lua_pop(L, 1);
 	}
 	}
@@ -3406,7 +3407,7 @@ static void debugVariable(lua_State* L)
 	{
 	case LUA_TFUNCTION:
 	{
-		lua_Debug ar{};
+		lua_Debug ar = {};
 		lua_getinfo(L, -1, "sluan", &ar);
 		ar.name = ar.name ? ar.name : "<anonymous>";
 
@@ -3414,15 +3415,15 @@ static void debugVariable(lua_State* L)
 
 		if (ImGui::TreeNodeEx(varname.c_str(), NodeFlags, "%s: %s(function)", varname.c_str(), reassigned.c_str()))
 		{
-			ImGui::Text("%s function '%s'", ar.what, ar.name ? ar.name : "<anonymous>");
+			ImGui::Text("%s function '%s'", ar.what[0] == 'C' ? "C" : "Luau", ar.name ? ar.name : "<anonymous>");
 
 			if (ar.linedefined != -1 || strcmp(ar.short_src, "[C]") != 0 || !ar.isvararg || ar.nupvals != 0)
 			{
-				ImGui::Text("Defined at line %i", ar.linedefined);
-				ImGui::Text("Of %s", ar.short_src);
-				ImGui::Text("Is variadic: %s", ar.isvararg ? "true" : "false");
+				ImGui::Text("Defined %s:%i", ar.short_src, ar.linedefined);
 
-				if (!ar.isvararg)
+				if (ar.isvararg)
+					ImGui::TextUnformatted("# Parameters: Variadic");
+				else
 					ImGui::Text("# Parameters: %i", ar.nparams);
 				
 				ImGui::Text("# Upvalues: %i", ar.nupvals);
@@ -3469,15 +3470,40 @@ static void debugVariable(lua_State* L)
 
 	default:
 	{
+		std::string valueString;
+
+		switch (lua_type(L, -1))
+		{
+		case LUA_TNIL: // for Stack view only
+		{
+			valueString = "nil";
+			break;
+		}
+		case LUA_TBOOLEAN: case LUA_TNUMBER: case LUA_TVECTOR:
+		{
+			valueString = luaL_tolstring(L, -1, nullptr);
+			lua_pop(L, 1);
+			break;
+		}
+		case LUA_TSTRING:
+		{
+			valueString = std::format("\"{}\"", lua_tostring(L, -1));
+			break;
+		}
+		default:
+		{
+			valueString = std::format("{} ({})", luaL_tolstring(L, -1, nullptr), vtn);
+			lua_pop(L, 1);
+		}
+		}
+
 		if (ImGui::TreeNodeEx(
 			varname.c_str(),
 			NodeFlags | ImGuiTreeNodeFlags_Leaf,
-			"%s: %s (%s)",
-			varname.c_str(), luaL_tolstring(L, -1, nullptr), vtn
+			"%s: %s",
+			varname.c_str(), valueString.c_str()
 		))
 			ImGui::TreePop();
-			
-		lua_pop(L, 1);
 	}
 	}
 }
@@ -3487,11 +3513,67 @@ static ImGuiContext* debuggerContext = nullptr;
 static ImGuiContext* prevContext = nullptr;
 static bool wasTextEdEnabled = false;
 static int prevCursorMode = GLFW_CURSOR_NORMAL;
+static bool s_DebuggerShowedInterruptWarning = false;
 
 static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBreakReason Reason)
 {
 	using namespace ScriptEngine::L;
 	ZoneScoped;
+
+	Engine* engine = Engine::Get();
+
+	if (Reason == ScriptEngine::L::DebugBreakReason::Interrupt && !s_DebuggerShowedInterruptWarning)
+	{
+		bool canSaveDataModel = engine->DataModelRef.HasValue();
+
+		std::string message = std::format(
+			"The Debugger has received a _debuginterrupt_ signal.\n\n"
+				"The pattern of code that generates this signal usually results in an infinite loop in code outside the Debugger when attempting to resume script execution.\n"
+				"If this occurs, the Engine process will stall and can only be terminated externally (such as through Task Manager or equivalent). Sorry!{}",
+			canSaveDataModel ? "\n\nSave the current state of the bound datamodel to a file? This will also show a confirmation message upon success" : ""
+		);
+
+		int makeSave = tinyfd_messageBox(
+			"Uh Oh!",
+			message.c_str(),
+			canSaveDataModel ? "yesno" : "ok",
+			"warning",
+			1
+		);
+
+		if (canSaveDataModel && makeSave == 1)
+		{
+			std::string fileContents = SceneFormat::Serialize({ engine->DataModelRef.Dereference() }, std::format("DebuggerEmergencySave_{}", engine->DataModelRef->Name));
+
+			while (true)
+			{
+				const char* const patterns[] = { "*.world" };
+				char* path = tinyfd_saveFileDialog("Save Datamodel", nullptr, 1, patterns, "Worlds");
+
+				std::string errorMessage;
+				if (FileRW::WriteFile(path, fileContents, &errorMessage))
+				{
+					tinyfd_messageBox("Saved successfully", "Datamodel was successfully saved to the provided path", "ok", "info", 1);
+					break;
+				}
+				else
+				{
+					int retry = tinyfd_messageBox(
+						"Save failed",
+						std::format("Failed to save to\n{}\nError: {}\n\nRetry?", path, errorMessage).c_str(),
+						"yesno",
+						"error",
+						1
+					);
+
+					if (retry == 1)
+						continue;
+					else
+						break;
+				}
+			}
+		}
+	}
 
 	luaL_checkstack(L, 20, "debugger");
 
@@ -3522,7 +3604,6 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 		errorMessage = BreakExplanations[Reason];
 
 	ScriptEngine::L::StateUserdata* corUd = (ScriptEngine::L::StateUserdata*)L->userdata;
-	Engine* engine = Engine::Get();
 
 	if (!InDebugger)
 	{
@@ -3761,44 +3842,20 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 			}
 			case 2:
 			{
-				if (lua_getmetatable(L, LUA_ENVIRONINDEX))
-				{
-					lua_pushstring(L, "(metatable)");
-					lua_pushvalue(L, -2);
-					debugVariable(L);
-					
-					lua_pop(L, 3);
-				}
+				lua_pushstring(L, "Environment");
+				lua_pushvalue(L, LUA_ENVIRONINDEX);
+				debugVariable(L);
 
-				lua_pushnil(L);
-				while (lua_next(L, LUA_ENVIRONINDEX))
-				{
-					debugVariable(L);
-
-					lua_pop(L, 1);
-				}
-
+				lua_pop(L, 2);
 				break;
 			}
 			case 3:
 			{
-				if (lua_getmetatable(L, LUA_REGISTRYINDEX))
-				{
-					lua_pushstring(L, "(metatable)");
-					lua_pushvalue(L, -2);
-					debugVariable(L);
-					
-					lua_pop(L, 3);
-				}
+				lua_pushstring(L, "Registry");
+				lua_pushvalue(L, LUA_REGISTRYINDEX);
+				debugVariable(L);
 
-				lua_pushnil(L);
-				while (lua_next(L, LUA_REGISTRYINDEX))
-				{
-					debugVariable(L);
-
-					lua_pop(L, 1);
-				}
-
+				lua_pop(L, 2);
 				break;
 			}
 			case 4:
@@ -3919,8 +3976,27 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 				else
 					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.75f, 0.75f, 0.75f, 1.f));
 
-				bool open = ImGui::TreeNodeEx(identifier.c_str(), ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_OpenOnArrow);
+				bool open = ImGui::TreeNodeEx(coroutine, ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_OpenOnArrow, "%s", identifier.c_str());
 				ImGui::SetItemTooltip("%s", identifier.c_str());
+
+				ImGui::SameLine();
+
+				ImGui::SetCursorPosX(ImGui::GetWindowSize().x * 0.75f + ImGui::CalcTextSize("OK FIN").x);
+
+				const LuauStatusDisplayInfo& lsdi = LuauStatuses[lua_status(coroutine)];
+				const LuauCoroutineStatusDisplayInfo& lcsdi = LuauCoroutineStatuses[lua_costatus(nullptr, coroutine)];
+
+				ImGui::PushStyleColor(ImGuiCol_Text, lsdi.Color);
+				ImGui::TextUnformatted(lsdi.Id);
+				ImGui::PopStyleColor();
+				ImGui::SetItemTooltip("%s", lsdi.Description);
+
+				ImGui::SameLine();
+
+				ImGui::PushStyleColor(ImGuiCol_Text, lcsdi.Color);
+				ImGui::TextUnformatted(lcsdi.Id);
+				ImGui::PopStyleColor();
+				ImGui::SetItemTooltip("%s", lcsdi.Description);
 
 				if (s_CallstackJumpToCurrentThread && coroutine == L)
 				{
@@ -4019,25 +4095,6 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 
 				if (customColor)
 					ImGui::PopStyleColor();
-
-				ImGui::SameLine();
-
-				ImGui::SetCursorPosX(ImGui::GetWindowSize().x * 0.75f + ImGui::CalcTextSize("OK FIN").x);
-
-				const LuauStatusDisplayInfo& lsdi = LuauStatuses[lua_status(coroutine)];
-				const LuauCoroutineStatusDisplayInfo& lcsdi = LuauCoroutineStatuses[lua_costatus(nullptr, coroutine)];
-
-				ImGui::PushStyleColor(ImGuiCol_Text, lsdi.Color);
-				ImGui::TextUnformatted(lsdi.Id);
-				ImGui::PopStyleColor();
-				ImGui::SetItemTooltip("%s", lsdi.Description);
-
-				ImGui::SameLine();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, lcsdi.Color);
-				ImGui::TextUnformatted(lcsdi.Id);
-				ImGui::PopStyleColor();
-				ImGui::SetItemTooltip("%s", lcsdi.Description);
 
 				ImGui::PopID();
 			};

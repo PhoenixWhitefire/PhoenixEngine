@@ -153,7 +153,7 @@ static void launchTracy()
 
 	tinyfd_messageBox(
 		"Tracy Integration",
-		"Instrumentation was disabled for this build. You need to use a build with the `TRACY_ENABLE` macro defintion.",
+		"Instrumentation was disabled for this build. You need to use a build with the `TRACY_ENABLE` macro definition.",
 		"ok",
 		"info",
 		1
