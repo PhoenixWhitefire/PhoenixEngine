@@ -9,6 +9,7 @@
 #include <tracy/Tracy.hpp>
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
+#include <ImGuiColorTextEdit/TextEditor.h>
 #include <tinyfiledialogs.h>
 #include <fstream>
 #include <set>
@@ -38,13 +39,18 @@ constexpr uint32_t MATERIAL_NEW_NAME_BUFSIZE = 64;
 constexpr uint32_t MATERIAL_TEXTUREPATH_BUFSIZE = 128;
 constexpr char MATERIAL_NEW_NAME_DEFAULT[] = "newmaterial";
 
-static bool TextEditorEnabled = false;
-static char* TextEditorEntryBuffer = nullptr;
-static size_t TextEditorEntryBufferCapacity = 0;
-static std::fstream* TextEditorFileStream = nullptr;
-static std::set<std::string> TextEditorRecentFiles;
-static std::vector<std::string> TextEdOpenFiles;
-static size_t TextEdCurrentFileTab = 0;
+struct TextEditorTab
+{
+	TextEditor Editor;
+	std::string FilePath;
+	std::ifstream* FileStream = nullptr;
+	std::vector<int> Breakpoints;
+	int JumpToLine = 0; // line to jump to, `0` to not jump
+	int DebuggerCurrentLine = 0;
+	bool WasPreviouslyVisible = false;
+};
+static std::vector<TextEditorTab> s_TextEditors;
+static auto s_TextEditorLang = TextEditor::LanguageDefinition::Lua();
 
 static nlohmann::json DefaultNewMaterial = 
 {
@@ -60,7 +66,7 @@ static std::string DatatypesDocPrologue;
 static std::string LibrariesDocPrologue;
 static std::string GlobalsDocPrologue;
 
-static std::unordered_map<std::string, std::string> ClassIcons{};
+static std::unordered_map<std::string, std::string> ClassIcons;
 
 static bool ExplorerShouldSeekToCurrentSelection = false;
 
@@ -275,13 +281,6 @@ static bool textEditorAskSaveFileAs(
 	}
 	std::string savePath = FileRW::MakePathCwdRelative(saveTargetRaw);
 
-	if (TextEdOpenFiles[TextEdCurrentFileTab] == SAVINGTAG)
-		TextEdOpenFiles[TextEdCurrentFileTab] = savePath;
-	else
-		for (size_t i = 0; i < TextEdOpenFiles.size(); i++)
-			if (TextEdOpenFiles[TextEdCurrentFileTab] == SAVINGTAG)
-				TextEdOpenFiles[TextEdCurrentFileTab] = savePath;
-
 	std::string errMessage;
 	if (!FileRW::WriteFile(savePath, Contents, &errMessage))
 	{
@@ -293,36 +292,14 @@ static bool textEditorAskSaveFileAs(
 			true
 		);
 	}
-	else
-		TextEditorRecentFiles.insert(savePath);
 
 	return true;
 }
 
-static bool TextEditorFileModified = false;
-
-static void textEditorSaveFile(bool AskSave = true)
+static void textEditorSaveFile(TextEditorTab& Tab, bool AskSave = true)
 {
-	if (!TextEditorEntryBuffer)
-	{
-		setErrorMessage("Text Editor tried to save file, but had no text buffer");
-		return;
-	}
-
-	std::string contents = TextEditorEntryBuffer;
-
-	// always flush the buffer. if a new file is created (i.e. "<NEW>"/UNSAVEDTAG), and the
-	// `contents.empty` early-out triggers as the user opens another file, the new file
-	// will be overwritten with the empty contents
-	// 12/02/2024
-	Memory::Free(TextEditorEntryBuffer);
-	TextEditorEntryBuffer = nullptr;
-
-	if (!TextEditorFileModified)
-		return;
-	TextEditorFileModified = false;
-
-	std::string textEditorFile = TextEdOpenFiles[TextEdCurrentFileTab];
+	std::string contents = Tab.Editor.GetText();
+	std::string textEditorFile = Tab.FilePath;
 
 	if (textEditorFile == SAVINGTAG)
 	{
@@ -330,27 +307,25 @@ static void textEditorSaveFile(bool AskSave = true)
 		return;
 	}
 
-	if (TextEditorFileStream)
+	if (Tab.FileStream)
 	{
-		if (TextEditorFileStream->is_open())
-			TextEditorFileStream->close();
-		delete TextEditorFileStream;
-		TextEditorFileStream = nullptr;
+		if (Tab.FileStream->is_open())
+			Tab.FileStream->close();
+		delete Tab.FileStream;
+		Tab.FileStream = nullptr;
 	}
 
-	if (textEditorFile == UNSAVEDTAG)
+	if (textEditorFile == UNSAVEDTAG || textEditorFile.empty())
 	{
 		static uint32_t ErrCount = 0;
 		ErrCount++;
 
-		TextEdOpenFiles[TextEdCurrentFileTab] = SAVINGTAG;
+		Tab.FilePath = SAVINGTAG;
 		if (!textEditorAskSaveFileAs(AskSave, contents))
-			TextEdOpenFiles[TextEdCurrentFileTab] = UNSAVEDTAG;
+			Tab.FilePath = UNSAVEDTAG;
 	}
 	else
 	{
-		TextEditorRecentFiles.insert(textEditorFile);
-
 		std::string realSaveLoc = FileRW::MakePathCwdRelative(textEditorFile);
 
 		Log::InfoF("Saving file to {}", realSaveLoc);
@@ -367,346 +342,107 @@ static void textEditorSaveFile(bool AskSave = true)
 	}
 }
 
-static void invokeTextEditor(const std::string& File)
+static std::string textFileContentsFromPath(const std::string& Path, std::ifstream*& Stream)
 {
-	if (TextEditorEntryBuffer)
-		textEditorSaveFile();
-
-	TextEditorEnabled = true;
-
-	for (size_t i = 0; i < TextEdOpenFiles.size(); i++)
+	if (Path.find("!InlineDocument:") != std::string::npos)
 	{
-		if (TextEdOpenFiles[i] == File)
-		{
-			TextEdCurrentFileTab = i;
-			return;
-		}
+		return { Path.begin() + strlen("!InlineDocument:"), Path.end() };
 	}
 
-	TextEdOpenFiles.push_back(File);
-	TextEdCurrentFileTab = TextEdOpenFiles.size() - 1;
+	Stream = new std::ifstream(FileRW::MakePathCwdRelative(Path));
+
+	std::string scriptContents = "";
+
+	if (!(*Stream) || !Stream->is_open())
+	{
+		std::string error = std::format(
+			"File '{}' couldn't be read",
+			Path
+		);
+
+		setErrorMessage(error);
+		return error;
+	}
+	else
+	{
+		Stream->seekg(0, std::ios::end);
+		scriptContents.resize(Stream->tellg());
+		Stream->seekg(0, std::ios::beg);
+		Stream->read(&scriptContents[0], scriptContents.size());
+
+		return scriptContents;
+	}
 }
 
-static int s_TextEdDebuggerCurrentLine = 0;
-static int s_TextEdDebuggerJumpToLine = 0;
+static TextEditorTab& invokeTextEditor(const std::string& File)
+{
+	for (TextEditorTab& tab : s_TextEditors)
+		if (tab.FilePath == File)
+			return tab;
 
-static void renderTextEditor()
+	s_TextEditors.emplace_back();
+
+	TextEditorTab& tab = s_TextEditors.back();
+	tab.Editor.SetLanguageDefinition(s_TextEditorLang);
+	tab.FilePath = File;
+	tab.Editor.SetText(textFileContentsFromPath(File, tab.FileStream));
+
+	return tab;
+}
+
+static void renderTextEditors()
 {
 	ZoneScopedC(tracy::Color::DarkSeaGreen);
 
-	const float TextSpacingExtra = .01f;
-
-	if (!TextEditorEnabled)
+	for (int index = 0; index < (int)s_TextEditors.size(); index++)
 	{
-		if (TextEditorEntryBuffer)
-			textEditorSaveFile();
-		return;
-	}
+		TextEditorTab& tab = s_TextEditors[index];
 
-	bool open = true;
-	ImGui::Begin("Text Editor", &open, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_MenuBar);
+		if (tab.JumpToLine > 0)
+			ImGui::SetNextWindowFocus();
 
-	if (!open)
-	{
-		TextEditorEnabled = false;
-		textEditorSaveFile();
-	}
-
-	ImGui::BeginMenuBar();
-
-	if (ImGui::BeginMenu("File"))
-	{
-		if (ImGui::MenuItem("New"))
+		bool open = true;
+		if (!ImGui::Begin(std::format("{}###TextEditor_{}", tab.FilePath, index).c_str(), &open))
 		{
-			textEditorSaveFile();
-			TextEdOpenFiles.push_back(UNSAVEDTAG);
-			TextEdCurrentFileTab = TextEdOpenFiles.size() - 1;
-
-			TextEditorEntryBuffer = BufferInitialize(512);
-			TextEditorEntryBufferCapacity = 512;
-		}
-
-		if (ImGui::MenuItem("Open"))
-		{
-			TextEditorRecentFiles.insert(TextEdOpenFiles[TextEdCurrentFileTab]);
-			std::string curDir = getFileDirectory(TextEdOpenFiles[TextEdCurrentFileTab]);
-
-			const char* saveTarget = tinyfd_openFileDialog(
-				"Open Text Document",
-				nullptr,
-				0,
-				nullptr,
-				nullptr,
-				false
-			);
-
-			if (saveTarget)
-			{
-				textEditorSaveFile();
-				TextEditorRecentFiles.insert(TextEdOpenFiles[TextEdCurrentFileTab]);
-
-				TextEdOpenFiles.push_back(FileRW::MakePathCwdRelative(saveTarget));
-				TextEdCurrentFileTab = TextEdOpenFiles.size() - 1;
-			}
-			else
-				Log::Info("Did not select a Text Document to open");
-		}
-
-		std::string textEditorFile = TextEdOpenFiles[TextEdCurrentFileTab];
-
-		if (ImGui::MenuItem("Save", nullptr, nullptr))
-		{
-			TextEditorFileModified = true; // forces a save
-			textEditorSaveFile(false);
-		}
-
-		if (ImGui::BeginMenu("Recent", TextEditorRecentFiles.size() > 0) || ImGui::IsItemHovered())
-		{
-			std::set<std::string>::reverse_iterator rit;
-		
-			for (rit = TextEditorRecentFiles.rbegin(); rit != TextEditorRecentFiles.rend(); rit++)
-			{
-				std::string label = rit->data();
-				if (label.find("resources/") == 0)
-					label = label.substr(strlen("resources/"), label.size() - strlen("resources/"));
-
-				if (ImGui::MenuItem(label.c_str()))
-				{
-					textEditorSaveFile();
-					TextEdOpenFiles.push_back(rit->data());
-					TextEdCurrentFileTab = TextEdOpenFiles.size() - 1;
-				}
-			}
-
-			ImGui::EndMenu();
-		}
-
-		if (ImGui::MenuItem("Close"))
-		{
-			TextEditorEnabled = false;
-			textEditorSaveFile();
-		}
-
-		ImGui::EndMenu();
-	}
-
-	ImGui::Separator();
-
-	static size_t NextButtonHighlight = UINT64_MAX;
-	static size_t HoveredId = UINT64_MAX;
-	size_t wipNextButtonHighlight = UINT64_MAX;
-	size_t wipHoveredId = UINT64_MAX;
-
-	for (size_t i = 0; i < TextEdOpenFiles.size() + 1; i++)
-	{
-		ImGui::PushID((int)i);
-
-		std::string label = TextEdOpenFiles.size() > i ? TextEdOpenFiles[i] : "+";
-		if (size_t resLoc = label.find("resources/"); resLoc != std::string::npos)
-			label = label.substr(resLoc + strlen("resources/"), label.size() - resLoc);
-
-		if (i == TextEdCurrentFileTab && HoveredId == i && label.size() > 5)
-		{
-			label = label.substr(0, label.size() - 3);
-			label.append("... ");
-		}
-
-		if (ImGui::MenuItemEx(
-			label.c_str(),
-			nullptr,
-			nullptr,
-			(i == TextEdCurrentFileTab) && (HoveredId != i),
-			true
-		) && TextEdCurrentFileTab != i)
-		{
-			textEditorSaveFile();
-			TextEdCurrentFileTab = i;
-			TextEditorFileModified = false;
-
-			if (i == TextEdOpenFiles.size())
-				TextEdOpenFiles.push_back(UNSAVEDTAG);
-
-			Memory::Free(TextEditorEntryBuffer);
-			TextEditorEntryBuffer = nullptr;
-		}
-
-		bool hovered = ImGui::IsItemHovered();
-		if (hovered)
-			wipHoveredId = i;
-
-		if (i == TextEdCurrentFileTab && hovered)
-		{
-			ImGui::SetCursorPosX(ImGui::GetCursorPosX() - 20.f);
-
-			if (HoveredId == i)
-			{
-				if (i == NextButtonHighlight)
-					ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.f, 0.f, 1.f, 1.f));
-				else
-					ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.f, 0.f, 0.f, 1.f));
-				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.f, 0.f, 1.f, 1.f));
-			}
-
-			bool closeTab = ImGui::Button("X", ImVec2(16.f, 18.f)) || ImGui::IsItemClicked();
-
-			if (ImGui::IsItemHovered())
-			{
-				wipNextButtonHighlight = i;
-				wipHoveredId = i;
-			}
-
-			if (HoveredId == i)
-				ImGui::PopStyleColor(2);
-
-			if (closeTab || ImGui::IsItemClicked())
-			{
-				textEditorSaveFile();
-				TextEdOpenFiles.erase(TextEdOpenFiles.begin() + i);
-			}
-		}
-
-		ImGui::PopID();
-	}
-	NextButtonHighlight = wipNextButtonHighlight;
-	HoveredId = wipHoveredId;
-
-	ImGui::EndMenuBar();
-
-	if (!TextEditorEntryBuffer)
-	{
-		if (TextEditorFileStream)
-		{
-			TextEditorFileStream->close();
-			delete TextEditorFileStream;
-			TextEditorFileStream = nullptr;
-		}
-
-		if (TextEdCurrentFileTab >= TextEdOpenFiles.size())
-		{
-			if (TextEdOpenFiles.size() > 0)
-				TextEdCurrentFileTab = TextEdOpenFiles.size() - 1;
-			else
-			{
-				TextEdOpenFiles.push_back(UNSAVEDTAG);
-				TextEdCurrentFileTab = 0;
-			}
-		}
-
-		const std::string& curFile = TextEdOpenFiles[TextEdCurrentFileTab];
-
-		if (curFile.find("!InlineDocument:") != std::string::npos)
-		{
-			TextEditorEntryBuffer = BufferInitialize(curFile.size(), { curFile.begin() + strlen("!InlineDocument:"), curFile.end() });
-			TextEditorEntryBufferCapacity = curFile.size();
-
-			TextEdOpenFiles[TextEdCurrentFileTab] = UNSAVEDTAG;
-
 			ImGui::End();
-			return;
-		}
 
-		TextEditorFileStream = new std::fstream(FileRW::MakePathCwdRelative(curFile));
-		
-		std::string scriptContents = "";
-
-		if (!(*TextEditorFileStream) || !TextEditorFileStream->is_open())
-		{
-			TextEditorEntryBuffer = BufferInitialize(512);
-			TextEditorEntryBufferCapacity = 512;
-
-			if (curFile != UNSAVEDTAG)
+			if (tab.WasPreviouslyVisible)
 			{
-				std::string failedFileName = curFile;
-				if (strlen(TextEditorEntryBuffer) > 0)
-				{
-					TextEdOpenFiles.push_back(UNSAVEDTAG);
-					TextEdCurrentFileTab = TextEdOpenFiles.size() - 1;
-				}
-
-				copyStringToBuffer(
-					TextEditorEntryBuffer,
-					"Couldn't read file:\n" + failedFileName,
-					512
-				);
-				setErrorMessage(std::format(
-					"File '{}' couldn't be opened",
-					failedFileName
-				));
+				textEditorSaveFile(tab);
+				tab.WasPreviouslyVisible = false;
 			}
+
+			continue;
 		}
-		else
+
+		tab.WasPreviouslyVisible = true;
+
+		if (!open)
 		{
-			TextEditorFileStream->seekg(0, std::ios::end);
-			scriptContents.resize(TextEditorFileStream->tellg());
-			TextEditorFileStream->seekg(0, std::ios::beg);
-			TextEditorFileStream->read(&scriptContents[0], scriptContents.size());
+			textEditorSaveFile(tab);
+			ImGui::End();
 
-			TextEditorEntryBufferCapacity = scriptContents.size() + 256;
-			TextEditorEntryBuffer = (char*)Memory::Alloc((uint32_t)TextEditorEntryBufferCapacity);
-			copyStringToBuffer(TextEditorEntryBuffer, scriptContents, TextEditorEntryBufferCapacity);
+			s_TextEditors.erase(s_TextEditors.begin() + index);
+			index--;
 
-			TextEditorFileModified = false;
+			continue;
 		}
+
+		// "Breakpoints" just highlight the entire line in blue with the theme I've set for ImGuiColorTextEdit,
+		// use that for the current line and maybe re-use the previous current-line indicator (which put a red marker on the line number)
+		// as the breakpoint indicator
+		if (tab.DebuggerCurrentLine > 0)
+			tab.Editor.SetBreakpoints({ tab.DebuggerCurrentLine });
+
+		if (tab.JumpToLine > 0)
+		{
+			tab.Editor.SetCursorPosition({ tab.JumpToLine, 1 });
+			tab.JumpToLine = 0;
+		}
+
+		tab.Editor.Render("TextEditor");
+		ImGui::End();
 	}
-	
-	if (TextEditorEntryBuffer)
-	{
-		ImVec2 startPos = ImGui::GetCursorPos();
-		float textYSize = ImGui::CalcTextSize("").y;
-		float textSpacing = textYSize + TextSpacingExtra;
-
-		if (s_TextEdDebuggerCurrentLine != 0)
-		{
-			ImGui::SetCursorPos({ startPos.x, startPos.y + textSpacing * (s_TextEdDebuggerCurrentLine - 1) });
-
-			TextureManager* texManager = TextureManager::Get();
-			ImGui::ImageWithBg(
-				texManager->GetTextureResource(1).GpuId,
-				ImVec2(textYSize * 2.5f, textYSize),
-				{},
-				{},
-				{},
-				ImVec4(1.f, 0.f, 0.f, 1.f)
-			);
-		}
-
-		int line = 1;
-
-		ImGui::SetCursorPos({ startPos.x, startPos.y });
-		ImGui::Text("1");
-
-		for (size_t i = 0; i < TextEditorEntryBufferCapacity; i++)
-		{
-			if (TextEditorEntryBuffer[i] == '\0')
-				break;
-
-			if (TextEditorEntryBuffer[i] == '\n')
-			{
-				line++;
-				// set the position precisely to avoid inaccuracy from padding
-				ImGui::SetCursorPos({ startPos.x, startPos.y + textSpacing * (line - 1) });
-				ImGui::Text("%d", line);
-
-				if (line == s_TextEdDebuggerJumpToLine)
-				{
-					ImGui::SetScrollHereY();
-					s_TextEdDebuggerJumpToLine = 0;
-				}
-			}
-		}
-
-		ImGui::SetCursorPos(startPos + ImVec2(textYSize * 2.5f, 0.f));
-
-		bool changed = ImGui::InputTextMultiline(
-			"##",
-			TextEditorEntryBuffer,
-			TextEditorEntryBufferCapacity,
-			ImVec2(ImGui::GetContentRegionAvail().x, (line + 2) * textSpacing)
-		);
-		TextEditorFileModified = TextEditorFileModified || changed;
-	}
-
-	ImGui::End();
 }
 
 static void uniformsEditor(
@@ -3196,7 +2932,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 	if (ErrorTooltipTimeRemaining > 0.f)
 		ImGui::SetTooltip("%s", ErrorTooltipMessage.c_str());
 
-	renderTextEditor();
+	renderTextEditors();
 	renderShaderPipelinesEditor();
 	renderMaterialEditor();
 	renderExplorer();
@@ -3313,8 +3049,8 @@ const std::vector<ObjectHandle>& InlayEditor::GetExplorerSelections()
 
 void InlayEditor::OpenTextDocument(const std::string& Path, int Line)
 {
-	invokeTextEditor(Path);
-	s_TextEdDebuggerJumpToLine = Line;
+	TextEditorTab& tab = invokeTextEditor(Path);
+	tab.JumpToLine = Line;
 }
 
 void InlayEditor::Shutdown()
@@ -3328,8 +3064,18 @@ void InlayEditor::Shutdown()
 	LastSelected.Clear();
 	ObjectInsertionTarget.Clear();
 	
-	if (TextEditorEntryBuffer)
-		textEditorSaveFile();
+	for (TextEditorTab& tab : s_TextEditors)
+	{
+		textEditorSaveFile(tab);
+		if (tab.FileStream)
+		{
+			tab.FileStream->close();
+			delete tab.FileStream;
+			tab.FileStream = nullptr;
+		}
+	}
+
+	s_TextEditors.clear();
 }
 
 #include <imgui/backends/imgui_impl_opengl3.h>
@@ -3511,7 +3257,6 @@ static void debugVariable(lua_State* L)
 static bool InDebugger = false;
 static ImGuiContext* debuggerContext = nullptr;
 static ImGuiContext* prevContext = nullptr;
-static bool wasTextEdEnabled = false;
 static int prevCursorMode = GLFW_CURSOR_NORMAL;
 static bool s_DebuggerShowedInterruptWarning = false;
 
@@ -3621,7 +3366,6 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 		PHX_ENSURE_MSG(ImGui_ImplGlfw_InitForOpenGL(engine->Window, true), "Failed to initialize Dear ImGui for GLFW on Debugger init");
 		PHX_ENSURE_MSG(ImGui_ImplOpenGL3_Init("#version 460"), "Failed to initialize Dear ImGui for OpenGL on Debugger init");
 
-		wasTextEdEnabled = TextEditorEnabled;
 		prevCursorMode = glfwGetInputMode(engine->Window, GLFW_CURSOR);
 		glfwSetInputMode(engine->Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 	}
@@ -3662,8 +3406,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 	}
 
 	int currfuncindex = getInfoSuccess ? lua_gettop(L) : 0;
-	s_TextEdDebuggerJumpToLine = ar->currentline;
-	invokeTextEditor(ar->short_src ? ar->short_src : "!InlineDocument:Unknown source");
+	invokeTextEditor(ar->short_src ? ar->short_src : "!InlineDocument:Unknown source").JumpToLine = ar->currentline;
 
 	static bool s_CallstackJumpToCurrentThread = false;
 	s_CallstackJumpToCurrentThread = true;
@@ -3774,13 +3517,12 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 		}
 		ImGui::End();
 
-		if (ar->currentline > 0)
-			s_TextEdDebuggerCurrentLine = ar->currentline;
+		invokeTextEditor(ar->short_src ? ar->short_src : "!InlineDocument:Unknown source").DebuggerCurrentLine = ar->currentline;
 
 		if (develUI)
 			engine->OnFrameRenderGui.Fire(dt);
 		else
-			renderTextEditor();
+			renderTextEditors();
 
 		if (ImGui::Begin("Watch"))
 		{
@@ -4015,20 +3757,22 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 					assert(currfuncindex == 0 || lua_type(L, currfuncindex) == LUA_TFUNCTION);
 					memcpy(ar, &car, sizeof(lua_Debug));
 
+					TextEditorTab* tab = nullptr;
+
 					if (ud)
 					{
-						invokeTextEditor(identifier != "<coroutine>" ? targetFile : std::format(
+						tab = &invokeTextEditor(identifier != "<coroutine>" ? targetFile : std::format(
 							"!InlineDocument:Coroutine is not inside a function\n\nVM: {}\nSpawn trace:\n{}",
 							ud->VM, ud->SpawnTrace
 						));
 					}
 					else
 					{
-						invokeTextEditor(std::format("!InlineDocument:Coroutine is the main thread for VM {}", vmNames[CurrentVMIndex]));
+						tab = &invokeTextEditor(std::format("!InlineDocument:Coroutine is the main thread for VM {}", vmNames[CurrentVMIndex]));
 					}
 
-					s_TextEdDebuggerCurrentLine = targetLine;
-					s_TextEdDebuggerJumpToLine = targetLine;
+					tab->DebuggerCurrentLine = targetLine;
+					tab->JumpToLine = targetLine;
 				}
 				else
 				{
@@ -4066,8 +3810,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 								car.short_src, car.currentline, car.name ? car.name : "<anonmyous>"
 							).c_str()))
 							{
-								s_TextEdDebuggerJumpToLine = car.currentline;
-								invokeTextEditor(car.short_src);
+								invokeTextEditor(car.short_src).JumpToLine = car.currentline;
 								lua_getinfo(coroutine, i, "sln", ar);
 							}
 
@@ -4158,8 +3901,8 @@ static void debuggerLeaveCallback()
 
 	Engine* engine = Engine::Get();
 
-	TextEditorEnabled = wasTextEdEnabled;
-	s_TextEdDebuggerCurrentLine = 0;
+	for (TextEditorTab& tab : s_TextEditors)
+		tab.DebuggerCurrentLine = 0;
 	glfwSetInputMode(engine->Window, GLFW_CURSOR, prevCursorMode);
 
 	ImGui_ImplOpenGL3_Shutdown();

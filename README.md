@@ -36,7 +36,7 @@ Intended to be compatible with both Windows and Linux/Ubuntu.
 	* `Debug`: Standard Debug build, no optimizations, Address Sanitizer and Tracy
 	* `Release`: All optimizations, including Link-Time/Whole-Program optimization, no Address Sanitizer or Tracy
 	* `RelTracy`: Same as `Release`, but with Tracy instrumentation enabled, which carries it's own overhead
-5. Run.
+5. Run it in the root directory with a command such as `x64/Release/PhoenixEngine` (Linux Bash), `. "x64/Release/PhoenixEngine"` (Windows Terminal), or `"x64/Release/PhoenixEngine"` (Windows Command Prompt)
 
 6. (Optional) I have not configured the Tracy Profiler standalone application to build along with the rest of the Engine, you will need to build it manually. The "Start Profiling" button in the Info widget, as well as the `-tracyim` launch argument, all assume you have built the Profiler yourself and that it is in the expected directory. You can do this with the following commands:
     * `cd Vendor/tracy/profiler`
@@ -77,6 +77,7 @@ The following third-party projects were used/referenced during this Engine's dev
 * `miniaudio` - [@mackron/miniaudio](https://github.com/mackron/miniaudio)
 * GLFW - [@glfw/glfw](https://github.com/glfw/glfw)
 * tinyfiledialogs - [Guillaume Vareille/tinyfiledialogs|@PhoenixWhitefire/tinyfd](https://github.com/PhoenixWhitefire/tinyfd)
+* ImGuiColorTextEdit - [@BalazsJako/ImGuiColorTextEdit](https://github.com/BalazsJako/ImGuiColorTextEdit)
 
 The [OpenGL YouTube tutorials](https://youtube.com/watch?v=XpBGwZNyUh0&list=PLPaoO-vpZnumdcb4tZc4x5Q-v7CkrQ6M-) of [Victor Gordan](https://github.com/VictorGordan/) (who I occasionally make fun of in the code comments) were referenced heavily during the creation of the rendering systems of this engine.
 Initially, this started out as a 1-to-1 follow-along of what he did, but I rewrote the entire thing to work in a better "Game Engine"-style architecture, as the tutorial had a simpler Model Viewer architecture that was not suitable for a Game Engine.

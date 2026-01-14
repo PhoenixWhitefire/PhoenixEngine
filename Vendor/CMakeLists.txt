@@ -29,6 +29,8 @@ set(VEND_SRCS
 	"imgui/misc/cpp/imgui_stdlib.h"
 	"imgui/misc/cpp/imgui_stdlib.cpp"
 
+	"ImGuiColorTextEdit/TextEditor.cpp"
+
 	"tinyfd/tinyfiledialogs.c"
 )
 
@@ -39,6 +41,7 @@ source_group(TREE ./ FILES ${VEND_SRCS})
 target_include_directories(Vendor PUBLIC
 	"./"
 	"imgui"
+	"ImGuiColorTextEdit"
 	"glfw/include"
 	"tinyfd"
 )

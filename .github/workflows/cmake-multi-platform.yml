@@ -68,9 +68,11 @@ jobs:
           x64/Release
           resources/
           gh-assets/wiki/doc-comments.json
+          gh-assets/wiki/components-prologue.md
           gh-assets/wiki/datatypes-prologue.md
           gh-assets/wiki/libraries-prologue.md
           gh-assets/wiki/globals-prologue.md
+          lsp/
           api-dump.json
           default-layout.ini
           debugger-layout.ini
