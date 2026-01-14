@@ -10,9 +10,10 @@ tab[1] = var1
 local dict = { ThisIsADictionary = true }
 dict.Table = tab
 
-local function foo()
-	dict.Table[2] = "Hello, World!"
+local function foo(val)
+	dict.Table[2] = val
 end
 
-foo()
+foo("Hello, World!")
 print("Done")
+

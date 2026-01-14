@@ -3204,7 +3204,7 @@ static bool debugVariable(lua_State* L, bool CanEdit = true)
 				if (debugVariable(L, !isReadOnly))
 				{
 					lua_pushvalue(L, -2);
-					lua_pushvalue(L, -1);
+					lua_pushvalue(L, -2);
 					lua_settable(L, tableIndex);
 				}
 				lua_pop(L, 1);
@@ -3286,9 +3286,8 @@ static bool debugVariable(lua_State* L, bool CanEdit = true)
 			case LUA_TBOOLEAN:
 			{
 				bool value = lua_toboolean(L, -1);
-				value = ImGui::Checkbox("##", &value);
 
-				if (ImGui::IsItemEdited())
+				if (ImGui::Checkbox("##", &value))
 				{
 					lua_pop(L, 1);
 					lua_pushboolean(L, value);
@@ -3494,7 +3493,9 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 				running = false;
 			}
 
+			static bool s_WasF7Down = false;
 			static bool s_WasF8Down = false;
+			bool isF7Down = ImGui::IsKeyDown(ImGuiKey_F7) && running;
 			bool isF8Down = ImGui::IsKeyDown(ImGuiKey_F8) && running;
 
 			if (isF8Down)
@@ -3506,6 +3507,49 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 			}
 			else
 				s_WasF8Down = false;
+
+			if (ScriptEngine::L::DebugBreak && Reason != DebugBreakReason::Error && (ImGui::Button("Step over (F7)") || (isF7Down && !s_WasF7Down)))
+			{
+				ImGui::SaveIniSettingsToDisk("debugger-layout.ini");
+
+				if (Reason == ScriptEngine::L::DebugBreakReason::DebuggerStep)
+				{
+					running = false;
+					ImGui::End();
+					ImGui::EndFrame();
+
+					assert((lua_gettop(L) == currfuncindex && lua_type(L, -1) == LUA_TFUNCTION) || currfuncindex == 0);
+					if (currfuncindex != 0)
+						lua_pop(L, 1); // pop our function from `lua_getinfo`
+
+					ImGui::SetCurrentContext(prevContext);
+
+					s_WasF7Down = true;
+					return;
+				}
+				else if (Reason == ScriptEngine::L::DebugBreakReason::Breakpoint)
+				{
+					lua_breakpoint(L, -1, ar->currentline, false); // please
+				}
+
+				static int s_PrevLine = 0;
+				s_PrevLine = ar->currentline;
+
+				lua_callbacks(L)->debugstep = [](lua_State* L, lua_Debug* ar)
+					{
+						if (ar->currentline > s_PrevLine)
+						{
+							s_PrevLine = ar->currentline;
+							debugBreakHook(L, ar, ScriptEngine::L::DebugBreakReason::DebuggerStep);
+						}
+					};
+
+				lua_singlestep(L, true);
+				lua_break(L);
+				running = false;
+			}
+
+			s_WasF7Down = isF7Down;
 
 			if (ScriptEngine::L::DebugBreak && Reason != DebugBreakReason::Error && (ImGui::Button("Single-step (F8)") || isF8Down))
 			{
@@ -3894,7 +3938,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 						ImGui::PopID();
 					}
 
-					if (L->userdata)
+					if (coroutine->userdata)
 					{
 						const ScriptEngine::L::StateUserdata* ud = (const ScriptEngine::L::StateUserdata*)coroutine->userdata;
 						ImGui::SeparatorText("Spawn trace");
