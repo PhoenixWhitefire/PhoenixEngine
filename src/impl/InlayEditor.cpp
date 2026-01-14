@@ -3119,7 +3119,7 @@ const LuauCoroutineStatusDisplayInfo LuauCoroutineStatuses[] = {
 	{ "ERR",   "ERR\nFinished with error",                       ImVec4(1.f, 0.f, 0.f, 1.f) }
 };
 
-static void debugVariable(lua_State* L)
+static bool debugVariable(lua_State* L, bool CanEdit = true)
 {
 	ZoneScoped;
 	luaL_checkstack(L, 2, "debugVariable");
@@ -3148,6 +3148,7 @@ static void debugVariable(lua_State* L)
 
 	const char* vtn = luaL_typename(L, -1);
 	constexpr ImGuiTreeNodeFlags NodeFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DrawLinesFull;
+	bool changed = false;
 
 	switch (lua_type(L, -1))
 	{
@@ -3194,11 +3195,18 @@ static void debugVariable(lua_State* L)
 				lua_pop(L, 3);
 			}
 
+			int tableIndex = lua_gettop(L);
+			bool isReadOnly = lua_getreadonly(L, -1);
+
 			lua_pushnil(L);
 			while (lua_next(L, -2))
 			{
-				debugVariable(L);
-
+				if (debugVariable(L, !isReadOnly))
+				{
+					lua_pushvalue(L, -2);
+					lua_pushvalue(L, -1);
+					lua_settable(L, tableIndex);
+				}
 				lua_pop(L, 1);
 			}
 
@@ -3217,6 +3225,7 @@ static void debugVariable(lua_State* L)
 	default:
 	{
 		std::string valueString;
+		bool editableValue = false;
 
 		switch (lua_type(L, -1))
 		{
@@ -3225,15 +3234,30 @@ static void debugVariable(lua_State* L)
 			valueString = "nil";
 			break;
 		}
-		case LUA_TBOOLEAN: case LUA_TNUMBER: case LUA_TVECTOR:
+		case LUA_TBOOLEAN: case LUA_TNUMBER: case LUA_TSTRING: case LUA_TVECTOR:
 		{
-			valueString = luaL_tolstring(L, -1, nullptr);
-			lua_pop(L, 1);
-			break;
-		}
-		case LUA_TSTRING:
-		{
-			valueString = std::format("\"{}\"", lua_tostring(L, -1));
+			if (!CanEdit)
+			{
+				switch (lua_type(L, -1))
+				{
+				case LUA_TBOOLEAN: case LUA_TNUMBER: case LUA_TVECTOR:
+				{
+					valueString = luaL_tolstring(L, -1, nullptr);
+					lua_pop(L, 1);
+					break;
+				}
+				default:
+				{
+					assert(lua_type(L, -1) == LUA_TSTRING);
+					valueString = std::format("\"{}\"", lua_tostring(L, -1));
+				}
+				}
+			}
+			else
+			{
+				editableValue = true;
+			}
+
 			break;
 		}
 		default:
@@ -3243,6 +3267,8 @@ static void debugVariable(lua_State* L)
 		}
 		}
 
+		ImGui::PushID(varname.c_str());
+
 		if (ImGui::TreeNodeEx(
 			varname.c_str(),
 			NodeFlags | ImGuiTreeNodeFlags_Leaf,
@@ -3250,75 +3276,101 @@ static void debugVariable(lua_State* L)
 			varname.c_str(), valueString.c_str()
 		))
 			ImGui::TreePop();
+
+		if (editableValue)
+		{
+			ImGui::SameLine();
+
+			switch (lua_type(L, -1))
+			{
+			case LUA_TBOOLEAN:
+			{
+				bool value = lua_toboolean(L, -1);
+				value = ImGui::Checkbox("##", &value);
+
+				if (ImGui::IsItemEdited())
+				{
+					lua_pop(L, 1);
+					lua_pushboolean(L, value);
+					changed = true;
+				}
+				break;
+			}
+			case LUA_TNUMBER:
+			{
+				double value = lua_tonumber(L, -1);
+
+				if (ImGui::InputDouble("##", &value))
+				{
+					lua_pop(L, 1);
+					lua_pushnumber(L, value);
+					changed = true;
+				}
+				break;
+			}
+			case LUA_TSTRING:
+			{
+				size_t len = 0;
+				const char* str = lua_tolstring(L, -1, &len);
+
+				char* buf = (char*)malloc(len + 64);
+				memcpy(buf, str, len);
+				buf[len + 63] = 0;
+				buf[len] = 0;
+
+				if (ImGui::InputText("##", buf, len + 64))
+				{
+					lua_pop(L, 1);
+					lua_pushstring(L, buf);
+					changed = true;
+				}
+				break;
+			}
+			case LUA_TVECTOR:
+			{
+				const float* vec = lua_tovector(L, -1);
+				float buf[3] = {};
+				memcpy(buf, vec, sizeof(float) * 3);
+
+				if (ImGui::InputFloat3("##", buf))
+				{
+					lua_pop(L, 1);
+					lua_pushvector(L, buf[0], buf[1], buf[2]);
+					changed = true;
+				}
+				break;
+			}
+			default: assert(false);
+			}
+		}
+
+		ImGui::PopID();
 	}
 	}
+
+	assert(!changed || CanEdit);
+	return changed;
 }
 
 static bool InDebugger = false;
 static ImGuiContext* debuggerContext = nullptr;
 static ImGuiContext* prevContext = nullptr;
 static int prevCursorMode = GLFW_CURSOR_NORMAL;
-static bool s_DebuggerShowedInterruptWarning = false;
 
 static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBreakReason Reason)
 {
 	using namespace ScriptEngine::L;
 	ZoneScoped;
 
-	Engine* engine = Engine::Get();
-
-	if (Reason == ScriptEngine::L::DebugBreakReason::Interrupt && !s_DebuggerShowedInterruptWarning)
+	if (Reason == ScriptEngine::L::DebugBreakReason::Interrupt)
 	{
-		bool canSaveDataModel = engine->DataModelRef.HasValue();
+		lua_State* co = (lua_State*)ar->userdata;
+		assert(co);
 
-		std::string message = std::format(
-			"The Debugger has received a _debuginterrupt_ signal.\n\n"
-				"The pattern of code that generates this signal usually results in an infinite loop in code outside the Debugger when attempting to resume script execution.\n"
-				"If this occurs, the Engine process will stall and can only be terminated externally (such as through Task Manager or equivalent). Sorry!{}",
-			canSaveDataModel ? "\n\nSave the current state of the bound datamodel to a file? This will also show a confirmation message upon success" : ""
-		);
-
-		int makeSave = tinyfd_messageBox(
-			"Uh Oh!",
-			message.c_str(),
-			canSaveDataModel ? "yesno" : "ok",
-			"warning",
-			1
-		);
-
-		if (canSaveDataModel && makeSave == 1)
-		{
-			std::string fileContents = SceneFormat::Serialize({ engine->DataModelRef.Dereference() }, std::format("DebuggerEmergencySave_{}", engine->DataModelRef->Name));
-
-			while (true)
-			{
-				const char* const patterns[] = { "*.world" };
-				char* path = tinyfd_saveFileDialog("Save Datamodel", nullptr, 1, patterns, "Worlds");
-
-				std::string errorMessage;
-				if (FileRW::WriteFile(path, fileContents, &errorMessage))
-				{
-					tinyfd_messageBox("Saved successfully", "Datamodel was successfully saved to the provided path", "ok", "info", 1);
-					break;
-				}
-				else
-				{
-					int retry = tinyfd_messageBox(
-						"Save failed",
-						std::format("Failed to save to\n{}\nError: {}\n\nRetry?", path, errorMessage).c_str(),
-						"yesno",
-						"error",
-						1
-					);
-
-					if (retry == 1)
-						continue;
-					else
-						break;
-				}
-			}
-		}
+		lua_resume(co, nullptr, 0);
 	}
+
+	Engine* engine = Engine::Get();
 
 	luaL_checkstack(L, 20, "debugger");
 
@@ -3438,7 +3490,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 
 			if (ImGui::Button("Resume (F5)") || ImGui::IsKeyDown(ImGuiKey_F5))
 			{
-				L->global->cb.debugstep = nullptr;
+				lua_callbacks(L)->debugstep = nullptr;
 				running = false;
 			}
 
@@ -3481,7 +3533,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 				static int s_PrevLine = 0;
 				s_PrevLine = ar->currentline;
 
-				L->global->cb.debugstep = [](lua_State* L, lua_Debug* ar)
+				lua_callbacks(L)->debugstep = [](lua_State* L, lua_Debug* ar)
 					{
 						if (ar->currentline != s_PrevLine)
 						{
@@ -3503,11 +3555,16 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 			{
 				if (ImGui::Button("Detach Debugger for this VM and all VMs created in the future"))
 				{
+					lua_Callbacks* cb = lua_callbacks(L);
 					ScriptEngine::L::DebugBreak = nullptr;
-					L->global->cb.debugbreak = nullptr;
-					L->global->cb.debugprotectederror = nullptr;
-					L->global->cb.debugstep = nullptr;
-					L->global->cb.debuginterrupt = nullptr;
+
+					cb->debugbreak = nullptr;
+					cb->debugprotectederror = nullptr;
+					cb->debugstep = nullptr;
+					cb->debuginterrupt = [](lua_State*, lua_Debug* ar)
+						{
+							lua_resume((lua_State*)ar->userdata, nullptr, 0);
+						};
 				}
 			}
 			else
@@ -3552,8 +3609,11 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 
 						lua_pushstring(L, name);
 						lua_pushvalue(L, -2);
-						debugVariable(L);
-						lua_pop(L, 2);
+
+						if (debugVariable(L) && lua_setlocal(L, l, i))
+							lua_pop(L, 1);
+						else
+							lua_pop(L, 2);
 
 						lua_pop(L, 1);
 					};
@@ -3574,8 +3634,11 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 				
 					lua_pushstring(L, name);
 					lua_pushvalue(L, -2);
-					debugVariable(L);
-					lua_pop(L, 2);
+
+					if (debugVariable(L) && lua_setupvalue(L, currfuncindex, i))
+						lua_pop(L, 1);
+					else
+						lua_pop(L, 2);
 				
 					lua_pop(L, 1);
 				}
@@ -3606,7 +3669,11 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 				{
 					lua_pushinteger(L, i);
 					lua_pushvalue(L, i);
-					debugVariable(L);
+					if (debugVariable(L))
+					{
+						lua_remove(L, -2);
+						lua_remove(L, -2);
+					}
 
 					lua_pop(L, 2);
 				}
@@ -3641,7 +3708,11 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 
 			const ScriptEngine::LuauVM& vm = ScriptEngine::VMs[std::string(vmNames[CurrentVMIndex])];
 
-			const auto renderCoroutine = [&L, ar, vm, vmNames, &currfuncindex](lua_State* coroutine)
+			size_t numCoroutineIdChars = size_t((ImGui::GetContentRegionAvail().x * 1.2f) / ImGui::CalcTextSize("").y);
+			if (numCoroutineIdChars < 3)
+				numCoroutineIdChars = 3;
+
+			const auto renderCoroutine = [&L, ar, vm, vmNames, &currfuncindex, numCoroutineIdChars](lua_State* coroutine)
 			{
 				ImGui::PushID(coroutine);
 
@@ -3709,8 +3780,6 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 				if (!car.short_src && ud) // means we are showing the spawn trace and not the actual current call frame
 					identifier = "Spawned from " + identifier;
 
-				bool customColor = true;
-
 				if (coroutine == L)
 					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 1.f, 1.f, 1.f));
 				else if (coroutine == vm.MainThread || noSourceInformation)
@@ -3718,7 +3787,12 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 				else
 					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.75f, 0.75f, 0.75f, 1.f));
 
-				bool open = ImGui::TreeNodeEx(coroutine, ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_OpenOnArrow, "%s", identifier.c_str());
+				std::string treeNodeIdentifier = identifier;
+				if (treeNodeIdentifier.size() > numCoroutineIdChars)
+					treeNodeIdentifier = std::string(treeNodeIdentifier.begin(), treeNodeIdentifier.begin() + numCoroutineIdChars - 3) + "...";
+
+				bool open = ImGui::TreeNodeEx(coroutine, ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_OpenOnArrow, "%s", treeNodeIdentifier.c_str());
+				ImGui::PopStyleColor();
 				ImGui::SetItemTooltip("%s", identifier.c_str());
 
 				ImGui::SameLine();
@@ -3782,12 +3856,6 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 
 				if (open)
 				{
-					if (customColor)
-					{
-						ImGui::PopStyleColor();
-						customColor = false;
-					}
-
 					lua_Debug car;
 					int i = 0;
 
@@ -3835,9 +3903,6 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 
 					ImGui::TreePop();
 				}
-
-				if (customColor)
-					ImGui::PopStyleColor();
 
 				ImGui::PopID();
 			};

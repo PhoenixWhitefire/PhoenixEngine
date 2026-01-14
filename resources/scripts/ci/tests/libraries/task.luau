@@ -1,5 +1,3 @@
---!optimize 0
-
 return function(describe, test, expect)
     test("wait", function()
 		expect(function()
@@ -37,3 +35,11 @@ return function(describe, test, expect)
         expect(delayTest()):toBe(64)
     end)
 end
+
+
+
+
+
+
+
+

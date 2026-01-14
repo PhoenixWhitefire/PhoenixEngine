@@ -1399,21 +1399,23 @@ lua_State* ScriptEngine::L::Create(const std::string& VmName)
 	lua_pushlstring(state, VmName.data(), VmName.size());
 	lua_setglobal(state, "_VMNAME");
 
+	lua_Callbacks* cb = lua_callbacks(state);
+
 	if (L::DebugBreak)
 	{
-		state->global->cb.debugbreak = [](lua_State* L, lua_Debug* ar)
+		cb->debugbreak = [](lua_State* L, lua_Debug* ar)
 			{
 				if (L::DebugBreak)
 					L::DebugBreak(L, ar, DebugBreakReason::Breakpoint);
 			};
-		state->global->cb.debuginterrupt = [](lua_State* L, lua_Debug* ar)
+		cb->debuginterrupt = [](lua_State* L, lua_Debug* ar)
 			{
 				if (L::DebugBreak)
 					L::DebugBreak(L, ar, DebugBreakReason::Interrupt);
 			};
 	}
 
-	state->global->cb.userthread = [](lua_State* LP, lua_State* L)
+	cb->userthread = [](lua_State* LP, lua_State* L)
 		{
 			if (LP)
 			{
