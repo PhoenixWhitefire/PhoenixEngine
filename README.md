@@ -29,6 +29,7 @@ Intended to be compatible with both Windows and Linux/Ubuntu.
     * `--depth 1` causes only the current commit to be fetched, reducing download times
 2. `cmake -B "./"` in the root directory
     * On Linux/with Ninja, I use `cmake -B "./" -G "Ninja Multi-Config"` specifically
+        - You may need to install the `libwayland-dev` packages. Alternatively, you may also use the `-DGLFW_BUILD_WAYLAND=OFF` option when configuring
     * When using Visual Studio Code, set the Generator to "Ninja Multi-Config", and change the "Build Directory" setting to just `${workspaceFolder}`
     
 3. Open the resulting project in your IDE of choice
