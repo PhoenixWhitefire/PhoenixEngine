@@ -79,7 +79,7 @@ jobs:
           phoenix.conf
         retention-days: 7
 
-    - name: Test (Linux)
+    - name: Test
       shell: bash
-      if: runner.os == 'Linux'
-      run: "./x64/Debug/PhoenixEngine -headless -tool scripts/ci/tests.luau"
+      if: runner.os == 'Windows'
+      run: "x64/Debug/PhoenixEngine.exe -headless -tool scripts/ci/tests.luau"
