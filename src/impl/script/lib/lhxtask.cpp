@@ -47,9 +47,14 @@ static void schedule(lua_State* L, double sleepTime, int taskStackIndex, int num
 	lua_xmove(L, arguments, numFnArgs);
 	assert(lua_gettop(arguments) == numFnArgs);
 
+	lua_getglobal(L, "game");
+	Reflection::GenericValue dmgv = ScriptEngine::L::ToGeneric(L, -1);
+	GameObject* dm = GameObject::FromGenericValue(dmgv);
+
 	ScriptEngine::YieldedCoroutine yc = {
 		.Coroutine = DL,
 		.CoroutineReference = ref,
+		.DataModel = dm,
 		.RmDeferred = {
 			.ResumeAt = GetRunningTime() + sleepTime,
 			.Arguments = arguments,

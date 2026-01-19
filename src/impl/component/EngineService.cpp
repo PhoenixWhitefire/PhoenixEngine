@@ -198,6 +198,16 @@ public:
                 },
                 nullptr
             ),
+            REFLECTION_PROPERTY(
+                "BoundDataModel",
+                GameObject,
+                [](void*) -> Reflection::GenericValue
+                {
+                    Engine* engine = Engine::Get();
+                    return engine->DataModelRef->ToGenericValue();
+                },
+                nullptr
+            )
         };
 
         return props;

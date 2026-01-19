@@ -52,7 +52,7 @@ static int sig_namecall(lua_State* L)
 		lua_pop(L, 1);
 
 		EventConnectionData* ec = (EventConnectionData*)lua_newuserdata(eL, sizeof(EventConnectionData));
-		ec->Script.Reference = nullptr; // zero-initialization breaks some assumptions that IDs which are not `PHX_GAMEOBJECT_NULL_ID` are valid
+		ec->DataModel.Reference = nullptr; // zero-initialization breaks some assumptions that IDs which are not `PHX_GAMEOBJECT_NULL_ID` are valid
 		luaL_getmetatable(eL, "EventConnection"); // stack: ec, mt
 		lua_setmetatable(eL, -2); // stack: ec
 		lua_xpush(eL, L, -1);
@@ -64,22 +64,24 @@ static int sig_namecall(lua_State* L)
 		lua_settable(eL, LUA_ENVIRONINDEX); // stack: ec
 		lua_pop(eL, 1);
 
-		lua_getglobal(L, "script");
-		Reflection::GenericValue scrgv = ScriptEngine::L::ToGeneric(L, -1);
-		if (scrgv.Type == Reflection::ValueType::GameObject)
+		lua_getglobal(L, "game");
+		Reflection::GenericValue dmgv = ScriptEngine::L::ToGeneric(L, -1);
+		if (dmgv.Type == Reflection::ValueType::GameObject)
 		{
-			GameObject* scr = GameObject::FromGenericValue(scrgv);
-			ec->Script = scr;
+			GameObject* dm = GameObject::FromGenericValue(dmgv);
+			ec->DataModel = dm;
 		}
 		lua_pop(L, 1);
 
-		ObjectHandle scriptRef = ec->Script;
 		ReflectorRef reflector = ev->Reflector;
+		ObjectHandle dmRef = ec->DataModel;
+
+		lua_xpush(eL, cL, 2);
 
 		uint32_t cnId = rev->Connect(
 			ev->Reflector.Referred(),
 
-			[eL, ec, cL, rev, scriptRef, reflector](const std::vector<Reflection::GenericValue>& Inputs, uint32_t ConnectionId) -> void
+			[eL, ec, cL, rev, dmRef, reflector](const std::vector<Reflection::GenericValue>& Inputs, uint32_t ConnectionId) -> void
 			{
 				ZoneScopedN("RunEventCallback");
 
@@ -87,11 +89,11 @@ static int sig_namecall(lua_State* L)
 				ZoneText(spawnTrace.data(), spawnTrace.size());
 				(void)spawnTrace;
 
-				if (scriptRef.HasValue())
+				if (dmRef.HasValue())
 				{
-					GameObject* scr = scriptRef.Dereference();
+					GameObject* dm = dmRef.Dereference();
 
-					if (!scr || scr->IsDestructionPending || !scr->FindComponentByType(EntityComponent::Script))
+					if (!dm || dm->IsDestructionPending || !dm->FindComponentByType(EntityComponent::DataModel))
 					{
 						// TODO
 						// I'm Glad I finally figured out what was going on, but there's probably a more important
@@ -117,10 +119,9 @@ static int sig_namecall(lua_State* L)
 				{
 					lua_State* nL = lua_newthread(eL);
 					luaL_sandboxthread(nL);
+					lua_xpush(eL, nL, 2);
 					co = nL;
 				}
-				else
-					lua_xpush(eL, cL, 2);
 
 				lua_pushthread(co);
 				int runnerRef = lua_ref(co, -1);
@@ -133,6 +134,7 @@ static int sig_namecall(lua_State* L)
 					.DebugString = "DeferredEventResumption",
 					.Coroutine = co,
 					.CoroutineReference = runnerRef,
+					.DataModel = dmRef.Reference,
 					.RmPoll = [rev, Inputs, eL](lua_State* L) -> int
 						{
 							lua_resetthread(L);

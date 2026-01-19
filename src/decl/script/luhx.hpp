@@ -62,7 +62,7 @@ struct EventSignalData
 struct EventConnectionData
 {
 	ReflectorRef Reflector;
-	ObjectHandle Script;
+	ObjectHandle DataModel;
 	const Reflection::EventDescriptor* Event = nullptr;
 	lua_State* L = nullptr;
 	uint32_t ConnectionId = UINT32_MAX;

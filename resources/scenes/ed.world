@@ -11,7 +11,8 @@ PHNXENGI
       "$_objectId": 0,
       "Enabled": true,
       "Name": "EditorDataModel",
-      "Serializes": true
+      "Serializes": true,
+      "Module": "scripts/ed/ed.luau"
     },
     {
       "$_class": "Workspace",
@@ -57,15 +58,6 @@ PHNXENGI
         ]
       ],
       "UseSimpleController": true
-    },
-    {
-      "$_class": "Script",
-      "$_objectId": 4,
-      "Enabled": true,
-      "Name": "Editor",
-      "Parent": 1,
-      "Serializes": true,
-      "SourceFile": "scripts/ed/ed.luau"
     }
   ],
   "SceneName": "scenes/ed.world"

@@ -158,28 +158,23 @@ void ScriptEngine::StepScheduler()
 	{
 		YieldedCoroutine* it = &s_YieldedCoroutines[i];
 
-		// make sure the script still exists
-		// modules don't have a `script` global, but they run on their own coroutine independent from
-		// where they are `require`'d from anyway
-		if (it->ScriptId != PHX_GAMEOBJECT_NULL_ID)
+		// make sure the datamodel still exists
+		GameObject* dm = it->DataModel.Referred();
+		if (!dm || dm->IsDestructionPending || !dm->FindComponentByType(EntityComponent::DataModel))
 		{
-			GameObject* scr = GameObject::GetObjectById(it->ScriptId);
-			if (!scr || scr->IsDestructionPending || !scr->FindComponentByType(EntityComponent::Script))
+			s_YieldedCoroutines.erase(s_YieldedCoroutines.begin() + i);
+
+			// https://stackoverflow.com/a/17956637
+			// asan was not happy about the iterator from
+			// `::erase` for some reason?? TODO
+			// 10/06/2025
+			if (size != s_YieldedCoroutines.size())
 			{
-				s_YieldedCoroutines.erase(s_YieldedCoroutines.begin() + i);
-
-				// https://stackoverflow.com/a/17956637
-				// asan was not happy about the iterator from
-				// `::erase` for some reason?? TODO
-				// 10/06/2025
-				if (size != s_YieldedCoroutines.size())
-				{
-					i--;
-					size = s_YieldedCoroutines.size();
-				}
-
-				continue;
+				i--;
+				size = s_YieldedCoroutines.size();
 			}
+
+			continue;
 		}
 
 		lua_State* coroutine = it->Coroutine;
@@ -963,12 +958,11 @@ int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yiel
 		RAISE_RTF("Cannot yield with '{}' right now", ar.name ? ar.name : "<unknown>");
 	}
 
-	// TODO a kind of hack to get what script we're running as?
-	lua_getglobal(L, "script");
-	Reflection::GenericValue script = ScriptEngine::L::ToGeneric(L, -1);
-	GameObject* scriptObject = GameObject::FromGenericValue(script);
-	// modules currently do not have a `script` global
-	uint32_t scriptId = scriptObject ? scriptObject->ObjectId : PHX_GAMEOBJECT_NULL_ID;
+	// TODO a kind of hack to get what datamodel we're in
+	lua_getglobal(L, "game");
+	Reflection::GenericValue datamodelVal = ScriptEngine::L::ToGeneric(L, -1);
+	GameObject* dmObject = GameObject::FromGenericValue(datamodelVal);
+	assert(dmObject);
 	// need to do that before `lua_yield` because of thread chicanery idk how it works
 
 	lua_yield(L, NumResults);
@@ -977,7 +971,7 @@ int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yiel
 	s_YieldedCoroutines.push_back(YieldedCoroutine{
 		.Coroutine = L,
 		.CoroutineReference = lua_ref(L, -1),
-		.ScriptId = scriptId,
+		.DataModel = dmObject,
 		.Mode = YieldedCoroutine::ResumptionMode::INVALID
 	});
 	YieldedCoroutine& yc = s_YieldedCoroutines.back();

@@ -504,8 +504,6 @@ std::string GameObject::GetFullName() const
 
 	while (GameObject* parent = curObject->GetParent())
 	{
-		if (parent->ObjectId == GameObject::s_DataModel)
-			break;
 		fullName = parent->Name + "." + fullName;
 		curObject = parent;
 	}

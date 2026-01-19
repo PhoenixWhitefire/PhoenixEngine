@@ -145,7 +145,7 @@ std::string EcScript::GetSource(bool* IsInline, bool* Success)
 			*Success = success;
 
 		if (IsInline)
-			*IsInline = true;
+			*IsInline = false;
 
 		return contents;
 	}
@@ -156,8 +156,6 @@ bool EcScript::Reload()
 	ZoneScopedC(tracy::Color::LightSkyBlue);
 
 	std::string fullName = this->Object->GetFullName();
-	ZoneTextF("Script: %s\nFile: %s", fullName.c_str(), SourceFile.c_str());
-
 	ZoneTextF("Script: %s\nFile: %s", fullName.c_str(), SourceFile.c_str());
 
 	bool readSuccess = true;

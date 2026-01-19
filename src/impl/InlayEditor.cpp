@@ -1577,6 +1577,9 @@ static std::string addLinebreaks(std::string String, const size_t MaxCharactersB
 	if (String.size() < MaxCharactersBeforeLinebreak)
 		return String;
 
+	if (MaxCharactersBeforeLinebreak < 10)
+		return String;
+
 	size_t sinceLinebreak = 0;
 
 	for (size_t i = 0; i < String.size(); i++)
@@ -2247,10 +2250,22 @@ static void renderExplorer()
 		bool began = history->TryBeginAction("InsertObject");
 		bool inserted = false;
 
-		// skip `<NONE>`
-		for (size_t i = 1; i < (size_t)EntityComponent::__count; i++)
+		const std::string_view Creatables[] = {
+			"Animation",
+			"Camera",
+			"DirectionalLight",
+			"PointLight",
+			"SpotLight",
+			"Mesh",
+			"Model",
+			"ParticleEmitter",
+			"Sound",
+			"Transform"
+		};
+
+		for (size_t i = 0; i < std::size(Creatables); i++)
 		{
-			std::string_view name = s_EntityComponentNames[i];
+			std::string_view name = Creatables[i];
 			std::string tooltip;
 
 			bool clicked = ImGui::MenuItem(name.data());
@@ -2263,7 +2278,7 @@ static void renderExplorer()
 
 			if (clicked)
 			{
-				GameObject* newObject = GameObject::Create(s_EntityComponentNames[i]);
+				GameObject* newObject = GameObject::Create(name);
 				newObject->SetParent(ObjectInsertionTarget);
 				Selections = { newObject };
 			

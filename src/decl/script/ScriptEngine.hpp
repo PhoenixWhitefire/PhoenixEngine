@@ -42,7 +42,7 @@ namespace ScriptEngine
 
 		lua_State* Coroutine = nullptr;
 		int CoroutineReference = INT32_MAX;
-		uint32_t ScriptId = PHX_GAMEOBJECT_NULL_ID;
+		ObjectRef DataModel;
 
 		union {
 			struct {

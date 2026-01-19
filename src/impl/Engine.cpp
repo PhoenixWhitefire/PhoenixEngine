@@ -727,7 +727,8 @@ void Engine::BindDataModel(GameObject* NewDataModel)
 	WorkspaceRef = NewDataModel->FindChild("Workspace");
 	assert(WorkspaceRef.Dereference());
 
-	GameObject::s_DataModel = DataModelRef->ObjectId;
+	GameObject::s_DataModel = NewDataModel->ObjectId;
+	NewDataModel->FindComponent<EcDataModel>()->Bind();
 }
 
 void Engine::Start()
@@ -736,8 +737,6 @@ void Engine::Start()
 	ensureDataModelValid(DataModelRef.Dereference());
 
 	Log::Info("Final initializations...");
-
-	ScriptEngine::Initialize(); // can only do this after datamodel is bound
 
 	double RunningTime = GetRunningTime();
 

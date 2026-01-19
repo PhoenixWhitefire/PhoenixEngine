@@ -351,9 +351,14 @@ local function openProject(ManualPath: string?)
 
 	changeStageTo("ProjectEditing")
 
+	local module = Project.DataModel.Module
+	Project.DataModel.Module = ""
+
 	Engine:BindDataModel(Project.DataModel)
 	Engine:CreateVM(GameEditingVM)
 	Engine:BindDataModel(game)
+
+	Project.DataModel.Module = module
 
 	if EditorPreferences.AutoLaunchCodeEditorOnProjectOpen then
 		print("Open code editor result: ", shellexec(`{ EditorPreferences.CodeEditorPath } "{ fs.cwd() }/projects/{ Project.Name }"`))
@@ -402,6 +407,8 @@ local function createNewProject()
 	assert(fs.mkdir("@projres/scripts"))
 	assert(fs.mkdir("@projres/textures"))
 	assert(fs.mkdir("@projres/textures/materials"))
+
+	assert(fs.write("@projres/scripts/Main.luau", "print(\"Hello, World!\")"))
 
 	for _, v in { "error", "worldUber", "worldUberTriProjected", "worldUberSkinned", "skybox", "boxframe", "particle", "postprocessing" } do
 		if fs.isfile(`@editres/shaders/{v}.shp`) then

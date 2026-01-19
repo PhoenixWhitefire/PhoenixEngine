@@ -716,10 +716,7 @@ static void init()
 		wp->FindComponent<EcWorkspace>()->SetSceneCamera(cam);
 		cam->FindComponent<EcCamera>()->UseSimpleController = true;
 
-		GameObject* script = GameObject::Create(EntityComponent::Script);
-		script->FindComponent<EcScript>()->SourceFile = ScriptTool;
-		script->Name = "Tool";
-		script->SetParent(wp);
+		dm->FindComponent<EcDataModel>()->Module = ScriptTool;
 
 		roots.push_back(dm);
 	}
@@ -741,6 +738,9 @@ static void init()
 	PHX_ENSURE_MSG(root->FindComponent<EcDataModel>(), "Root Object was not a DataModel!");
 
 	root->IncrementHardRefs();
+
+	GameObject::s_DataModel = root->ObjectId;
+	ScriptEngine::Initialize();
 	engine->BindDataModel(root);
 }
 
@@ -844,7 +844,7 @@ static void processCliArgs(int argc, char** argv)
 				i++;
 			}
 			else
-				Log::Error("'-script' argument from command-line was not followed by the desired File");
+				Log::Error("'-tool' argument from command-line was not followed by the desired File");
 		}
 		else if (isBoolArgument(v, "-headless"))
 		{
@@ -854,8 +854,6 @@ static void processCliArgs(int argc, char** argv)
 		{
 			glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
 		}
-		else
-			Log::ErrorF("Unknown CLI argument '{}'", v);
 	}
 }
 

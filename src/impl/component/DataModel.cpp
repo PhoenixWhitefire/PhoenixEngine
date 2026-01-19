@@ -1,7 +1,13 @@
 // The Hierarchy Root
 // 13/08/2024
 
+#include <lua.h>
+#include <lualib.h>
+#include <tracy/Tracy.hpp>
+
 #include "component/DataModel.hpp"
+#include "script/ScriptEngine.hpp"
+#include "FileRW.hpp"
 #include "Log.hpp"
 
 class DataModelManager : public ComponentManager<EcDataModel>
@@ -15,6 +21,18 @@ public:
         return id;
     }
 
+    void DeleteComponent(uint32_t Id) override
+    {
+        EcDataModel& dm = m_Components.at(Id);
+        if (dm.ModuleData)
+        {
+            lua_resetthread(dm.ModuleData);
+            dm.ModuleData = nullptr;
+        }
+
+		ComponentManager<EcDataModel>::DeleteComponent(Id);
+    }
+
     const Reflection::StaticPropertyMap& GetProperties() override
     {
         static const Reflection::StaticPropertyMap props = {
@@ -25,6 +43,33 @@ public:
                 -> Reflection::GenericValue
                 {
                     return GetRunningTime();
+                },
+                nullptr
+            ),
+
+            REFLECTION_PROPERTY(
+                "Module",
+                String,
+                [](void* p) -> Reflection::GenericValue
+                {
+                    return static_cast<EcDataModel*>(p)->Module;
+                },
+                [](void* p, const Reflection::GenericValue& gv)
+                {
+                    EcDataModel* dm = static_cast<EcDataModel*>(p);
+                    if (dm->ModuleData)
+                        RAISE_RT("Module of a DataModel cannot be changed after it is bound!");
+
+                    dm->Module = gv.AsString();
+                }
+            ),
+
+            REFLECTION_PROPERTY(
+                "IsModuleBound",
+                Boolean,
+                [](void* p) -> Reflection::GenericValue
+                {
+                    return static_cast<EcDataModel*>(p)->ModuleData != nullptr;
                 },
                 nullptr
             )
@@ -93,3 +138,78 @@ public:
 };
 
 static inline DataModelManager Instance;
+
+void EcDataModel::Bind()
+{
+	ZoneScopedC(tracy::Color::LightSkyBlue);
+
+    if (ModuleData || Module.empty())
+    {
+        return;
+    }
+
+	std::string fullName = Object->GetFullName();
+	ZoneTextF("DataModel: %s\nModule: %s", fullName.c_str(), Module.c_str());
+
+	bool readSuccess = true;
+	std::string source = FileRW::ReadFile(Module, &readSuccess);
+
+    assert(ModuleData == nullptr);
+    lua_State* L = lua_newthread(ScriptEngine::GetCurrentVM().MainThread);
+
+	luaL_sandboxthread(L);
+
+	if (!readSuccess)
+	{
+		Log::ErrorF(
+			"Failed to load '{}' for DataModel {}: {}",
+			Module, fullName, source // `source` will be the error message
+		);
+
+		return;
+	}
+
+	int result = ScriptEngine::CompileAndLoad(L, source, "@" + FileRW::MakePathCwdRelative(Module));
+
+	if (result == 0)
+	{
+		// prevent ourselves from being deleted by the code we run.
+		// if that code errors, it'll be a use-after-free as we try
+		// to access `m_L` to get the error message
+		// 24/12/2024
+		ObjectHandle dontKillMePlease = this->Object;
+
+        ScriptEngine::L::PushGenericValue(L, Object->ToGenericValue());
+        lua_setglobal(L, "game");
+
+        if (GameObject* wp = Object->FindChildWithComponent(EntityComponent::Workspace))
+        {
+            ScriptEngine::L::PushGenericValue(L, wp->ToGenericValue());
+            lua_setglobal(L, "workspace");
+        }
+
+		int resumeResult = ScriptEngine::L::Resume(L, nullptr, 0);
+
+		if (resumeResult != LUA_OK && resumeResult != LUA_YIELD)
+		{
+			Log::ErrorF(
+				"DataModel Module init: {}",
+				lua_tostring(L, -1)
+			);
+			ScriptEngine::L::DumpStacktrace(L);
+
+            lua_resetthread(L);
+		}
+        else
+            ModuleData = L;
+	}
+	else
+	{
+		Log::ErrorF(
+			"DataModel Module compilation: {}",
+			lua_tostring(L, -1)
+		);
+
+		lua_resetthread(L);
+	}
+}
