@@ -80,6 +80,6 @@ jobs:
         retention-days: 7
 
     - name: Test
-      shell: bash
+      shell: pwsh
       if: runner.os == 'Windows'
-      run: "${{ github.workspace }}/x64/${{ matrix.build_type }}/PhoenixEngine.exe -headless -tool scripts/ci/tests.luau"
+      run: ". \"x64\\${{ matrix.build_type }}\\PhoenixEngine.exe\" -headless -tool scripts\\ci\\tests.luau"
