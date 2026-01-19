@@ -56,7 +56,7 @@ jobs:
 
     - name: Build
       # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
-      run: cmake --build ./ --config ${{ matrix.build_type }}
+      run: cmake --build ./ -j8 --config ${{ matrix.build_type }}
 
     - name: Upload build artifact (Windows)
       if: runner.os == 'Windows'
@@ -82,4 +82,4 @@ jobs:
     - name: Test
       shell: bash
       if: runner.os == 'Windows'
-      run: "x64/Debug/PhoenixEngine.exe -headless -tool scripts/ci/tests.luau"
+      run: "${{ github.workspace }}/x64/${{ matrix.build_type }}/PhoenixEngine.exe -headless -tool scripts/ci/tests.luau"
