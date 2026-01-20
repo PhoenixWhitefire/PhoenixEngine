@@ -739,8 +739,6 @@ static void init()
 
 	root->IncrementHardRefs();
 
-	GameObject::s_DataModel = root->ObjectId;
-	ScriptEngine::Initialize();
 	engine->BindDataModel(root);
 }
 

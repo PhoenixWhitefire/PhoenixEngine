@@ -1625,7 +1625,7 @@ static std::string DocumentationViewerSubPageName = "";
 
 static std::string_view ForceRenderingTooltip = "";
 
-static void propertyTooltip(const std::string_view& PropName, EntityComponent Component, Reflection::ValueType Type, bool IsCurrentlyObject = false)
+static void propertyTooltip(const std::string_view& PropName, EntityComponent Component, Reflection::ValueType Type)
 {
 	static std::unordered_map<std::string, std::string> PropTips;
 
@@ -1675,7 +1675,7 @@ static void propertyTooltip(const std::string_view& PropName, EntityComponent Co
 			}
 		}
 
-		std::string fulltip = IsCurrentlyObject ? "\n(CTRL+LClick to select, CTRL+RClick to set to nil)" : "";
+		std::string fulltip = Reflection::TypeFits(Type, Reflection::ValueType::GameObject) ? "\n(CTRL+LClick to select, CTRL+RClick to set to nil)" : "";
 		
 		if (pcit != PropTips.end())
 			fulltip = pcit->second + fulltip;
@@ -2223,7 +2223,7 @@ static void renderExplorer()
 
 	if (IsPickingObject)
 	{
-		ErrorTooltipMessage = "Pick Object";
+		ErrorTooltipMessage = "Pick Object\nRight-click to cancel";
 		ErrorTooltipTimeRemaining = 0.1f;
 
 		if (ImGui::IsMouseDown(ImGuiMouseButton_Right))
@@ -2509,6 +2509,7 @@ static void renderProperties()
 				{
 					ImGui::TextUnformatted(propNameCStr);
 					ImGui::SameLine();
+					propertyTooltip(propName, propToComponent[propName], propDesc->Type);
 
 					ImGui::SetCursorPosX(halfWidth);
 					ImGui::TextUnformatted("<DIFFERENT>");
@@ -2538,13 +2539,12 @@ static void renderProperties()
 					{
 						ImGui::TextUnformatted(propNameCStr);
 						ImGui::SameLine();
+						propertyTooltip(propName, propToComponent[propName], propDesc->Type);
 
 						ImGui::SetCursorPosX(halfWidth);
 						ImGui::TextUnformatted(curValStr.c_str());
 					}
 				}
-
-				propertyTooltip(propName, propToComponent[propName], propDesc->Type);
 
 				ImGui::Separator();
 				ImGui::PopID();
@@ -2555,6 +2555,12 @@ static void renderProperties()
 			bool canChangeValue = true;
 			bool valueWasEditedManual = false;
 			bool deactivatedAfterEdit = false;
+
+			ImGui::TextUnformatted(propNameCStr);
+			ImGui::SameLine();
+
+			if (!doConflict)
+				propertyTooltip(propName, propToComponent[propName], propDesc->Type);
 
 			switch (propDesc->Type & ~Reflection::ValueType::Null)
 			{
@@ -2571,9 +2577,6 @@ static void renderProperties()
 					"<Initial Value 29/09/2024 Hey guys How we doing today>"
 				);
 				CopyStringToBuffer(buf, allocSize, doConflict ? "" : str);
-
-				ImGui::TextUnformatted(propNameCStr);
-				ImGui::SameLine();
 
 				ImGui::SetCursorPosX(halfWidth);
 				ImGui::InputText("##", buf, allocSize);
@@ -2593,9 +2596,6 @@ static void renderProperties()
 				}
 				else
 				{
-					ImGui::TextUnformatted(propNameCStr);
-					ImGui::SameLine();
-
 					ImGui::SetCursorPosX(halfWidth);
 					ImGui::Checkbox("##", &newVal.Val.Bool);
 				}
@@ -2612,9 +2612,6 @@ static void renderProperties()
 				}
 				else
 				{
-					ImGui::TextUnformatted(propNameCStr);
-					ImGui::SameLine();
-
 					ImGui::SetCursorPosX(halfWidth);
 					ImGui::InputDouble("##", &newVal.Val.Double);
 				}
@@ -2633,9 +2630,6 @@ static void renderProperties()
 				{
 					int32_t i = static_cast<int32_t>(newVal.Val.Int);
 
-					ImGui::TextUnformatted(propNameCStr);
-					ImGui::SameLine();
-
 					ImGui::SetCursorPosX(halfWidth);
 					ImGui::InputInt("##", &i);
 
@@ -2647,9 +2641,6 @@ static void renderProperties()
 
 			case Reflection::ValueType::GameObject:
 			{
-				ImGui::TextUnformatted(propNameCStr);
-				ImGui::SameLine();
-
 				ImGui::SetCursorPosX(halfWidth);
 
 				if (doConflict)
@@ -2719,9 +2710,6 @@ static void renderProperties()
 				}
 				else
 				{
-					ImGui::TextUnformatted(propNameCStr);
-					ImGui::SameLine();
-
 					ImGui::SetCursorPosX(halfWidth);
 					ImGui::ColorEdit3("##", &newVal.Val.Vec3.x);
 				}
@@ -2738,9 +2726,6 @@ static void renderProperties()
 				}
 				else
 				{
-					ImGui::TextUnformatted(propNameCStr);
-					ImGui::SameLine();
-
 					ImGui::SetCursorPosX(halfWidth);
 					ImGui::InputFloat2("##", &newVal.Val.Vec2.x);
 				}
@@ -2757,9 +2742,6 @@ static void renderProperties()
 				}
 				else
 				{
-					ImGui::TextUnformatted(propNameCStr);
-					ImGui::SameLine();
-
 					ImGui::SetCursorPosX(halfWidth);
 					ImGui::InputFloat3("##", &newVal.Val.Vec3.x);
 				}
@@ -2774,9 +2756,6 @@ static void renderProperties()
 				if (!doConflict)
 				{
 					glm::mat4 mat = curVal.AsMatrix();
-
-					ImGui::Text("%s:", propNameCStr);
-					propertyTooltip(propName, propToComponent[propName], propDesc->Type);
 
 					float pos[3] =
 					{
@@ -2813,12 +2792,10 @@ static void renderProperties()
 					ImGui::Indent();
 
 					ImGui::InputFloat3("Position", pos);
-					propertyTooltip(propName, propToComponent[propName], propDesc->Type);
 					valueWasEditedManual = ImGui::IsItemEdited();
 					deactivatedAfterEdit = ImGui::IsItemDeactivatedAfterEdit();
 
 					ImGui::InputFloat3("Rotation", rotdegs);
-					propertyTooltip(propName, propToComponent[propName], propDesc->Type);
 					ImGui::Unindent();
 
 					mat = glm::mat4(1.f);
@@ -2854,18 +2831,13 @@ static void renderProperties()
 
 			}
 
-			bool wasEdited = ImGui::IsItemEdited();
-
-			ImGui::Separator();
-			ImGui::PopID();
-
 			static std::vector<ObjectHandle> PrevEditSelections;
 			static std::string PrevEditPropName;
 			static Reflection::GenericValue PrevEditNewValue;
 			const char* const EditPropertyTempName = "EditProperty_TEMP";
 			History* history = History::Get();
 
-			if ((wasEdited || valueWasEditedManual) && canChangeValue)
+			if ((ImGui::IsItemEdited() || valueWasEditedManual) && canChangeValue)
 			{
 				// Awful and hacky
 				PrevEditSelections = Selections;
@@ -2889,10 +2861,6 @@ static void renderProperties()
 
 				if (began)
 					history->FinishCurrentAction();
-			}
-			else
-			{
-				propertyTooltip(propName, propToComponent[propName], propDesc->Type, curVal.Type == Reflection::ValueType::GameObject);
 			}
 
 			if (deactivatedAfterEdit || ImGui::IsItemDeactivatedAfterEdit())
@@ -2927,6 +2895,9 @@ static void renderProperties()
 					}
 				}
 			}
+
+			ImGui::Separator();
+			ImGui::PopID();
 		}
 		
 		ImGui::PopID();

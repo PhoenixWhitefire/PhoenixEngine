@@ -61,6 +61,7 @@ public:
                         RAISE_RT("Module of a DataModel cannot be changed after it is bound!");
 
                     dm->Module = gv.AsString();
+                    dm->CanLoadModule = true;
                 }
             ),
 
@@ -143,7 +144,7 @@ void EcDataModel::Bind()
 {
 	ZoneScopedC(tracy::Color::LightSkyBlue);
 
-    if (ModuleData || Module.empty())
+    if (ModuleData || Module.empty() || !CanLoadModule)
     {
         return;
     }
@@ -154,20 +155,19 @@ void EcDataModel::Bind()
 	bool readSuccess = true;
 	std::string source = FileRW::ReadFile(Module, &readSuccess);
 
-    assert(ModuleData == nullptr);
-    lua_State* L = lua_newthread(ScriptEngine::GetCurrentVM().MainThread);
-
-	luaL_sandboxthread(L);
-
 	if (!readSuccess)
 	{
 		Log::ErrorF(
 			"Failed to load '{}' for DataModel {}: {}",
 			Module, fullName, source // `source` will be the error message
 		);
+        CanLoadModule = false;
 
 		return;
 	}
+
+    lua_State* L = lua_newthread(ScriptEngine::GetCurrentVM().MainThread);
+	luaL_sandboxthread(L);
 
 	int result = ScriptEngine::CompileAndLoad(L, source, "@" + FileRW::MakePathCwdRelative(Module));
 

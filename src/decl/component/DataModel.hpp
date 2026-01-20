@@ -18,5 +18,6 @@ struct EcDataModel : public Component<EntityComponent::DataModel>
 
 	std::vector<Reflection::EventCallback> OnFrameBeginCallbacks;
 	lua_State* ModuleData = nullptr;
+	bool CanLoadModule = true;
 	bool Valid = true;
 };

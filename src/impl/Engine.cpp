@@ -728,7 +728,6 @@ void Engine::BindDataModel(GameObject* NewDataModel)
 	assert(WorkspaceRef.Dereference());
 
 	GameObject::s_DataModel = NewDataModel->ObjectId;
-	NewDataModel->FindComponent<EcDataModel>()->Bind();
 }
 
 void Engine::Start()
@@ -737,6 +736,8 @@ void Engine::Start()
 	ensureDataModelValid(DataModelRef.Dereference());
 
 	Log::Info("Final initializations...");
+
+	ScriptEngine::Initialize(); // can only do this after datamodel is bound
 
 	double RunningTime = GetRunningTime();
 
@@ -783,6 +784,8 @@ void Engine::Start()
 			Log::Warning("`::Destroy` called on Workspace, shutting down");
 			break;
 		}
+
+		DataModelRef->FindComponent<EcDataModel>()->Bind();
 
 		RunningTime = GetRunningTime();
 		RendererContext.AccumulatedDrawCallCount = 0;

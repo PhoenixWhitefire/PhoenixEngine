@@ -511,8 +511,6 @@ std::string GameObject::GetFullName() const
 	return fullName;
 }
 
-static uint32_t NullGameObjectIdValue = PHX_GAMEOBJECT_NULL_ID;
-
 bool GameObject::IsDescendantOf(const GameObject* Object) const
 {
 	GameObject* current = this->GetParent();
@@ -532,26 +530,24 @@ void GameObject::SetParent(GameObject* newParent)
 
 	if (this->IsDestructionPending)
 		RAISE_RTF(
-			"Tried to re-parent '{}' (ID:{}) to '{}' (ID:{}), but it's Parent has been locked due to `::Destroy`",
+			"Tried to re-parent {} to {}, but its Parent has been locked due to `:Destroy`",
 
 			GetFullName(),
-			this->ObjectId,
-			newParent ? newParent->GetFullName() : "<NULL>",
-			newParent ? newParent->ObjectId : NullGameObjectIdValue
+			newParent ? newParent->GetFullName() : "nil"
 		);
 	
 	if (newParent != this)
 	{
 		if (newParent && newParent->IsDescendantOf(this))
 			RAISE_RTF(
-				"Tried to make object ID:{} ('{}') a descendant of itself",
-				this->ObjectId, GetFullName()
+				"Tried to make {} a descendant of itself",
+				GetFullName()
 			);
 	}
 	else
 		RAISE_RTF(
-			"Tried to make object ID:{} ('{}') it's own parent",
-			this->ObjectId, GetFullName()
+			"Tried to make {} its own parent",
+			GetFullName()
 		);
 
 	GameObject* oldParent = GetObjectById(Parent);
