@@ -1,4 +1,4 @@
-local InputService: InputService = game:GetService("InputService") :: any
+local InputService: PlayerInput = game:GetService("PlayerInput") :: any
 
 local M1WasDown = false
 local M2WasDown = false

@@ -39,7 +39,7 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * `Ready: boolean `: Whether the Animation can be played
 * `Weight: number`: The influence the Animation has over the rig
 
-## `AssetService`
+## `AssetManager`
 
 * Used to manipulate assets within the Engine
 
@@ -74,6 +74,8 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * The root of the scene
 
 ### Properties:
+* `IsModuleBound: boolean `: If this is `true`, attempting to change `.Module` will throw an error
+* `Module: string`: The Module associated with the DataModel that will be run upon the DataModel being bound
 * `Time: number `: Number of seconds since the Engine started running
 
 ### Methods:
@@ -105,6 +107,7 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * Inspect and manipulate various parts of the Engine
 
 ### Properties:
+* `BoundDataModel: (GameObject & any) `: The DataModel object that is currently bound
 * `CommitHash: string `: The Git commit that was used to produce this Engine build
 * `DebugCollisionAabbs: boolean`: Whether physics collision AABBs are rendered
 * `DebugSpatialHeat: boolean`: Whether Spatial Heat (spatial hash density) debug rendering is enabled
@@ -161,7 +164,7 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 ### Events:
 * `OnGreeted(string, string)`: Fires when `:Greet` is called, and sends the response to the callback before the original caller of `:Greet` receives it
 
-## `HistoryService`
+## `History`
 
 * Service for implementing Undo/Redo systems
 
@@ -184,20 +187,6 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * `Redo() : ()`: Forwards the state of the scene to how it was before the last Undo
 * `TryBeginAction(string) : (boolean)`: Attempts to begin an "Action." May fail and return `false`. Only one Action may be active at a time
 * `Undo() : ()`: Reverses the state of the scene to how it was before the last Action began
-
-## `InputService`
-
-* Checking player inputs
-
-### Properties:
-* `CursorMode: number`: The current mode/behaviour of the cursor. Refer to the `Enum.CursorMode` enumeration
-* `IsKeyboardSunk: boolean `: Whether the Engine is currently using keyboard input (such as for Dear ImGui). Do not process keyboard input if this is `true`
-* `IsMouseSunk: boolean `: Whether the Engine is currently using mouse input (such as for Dear ImGui). Do not process mouse input if this is `true`
-
-### Methods:
-* `GetCursorPosition() : (vector)`: Returns the current position of the mouse cursor relative to the window as a `vector`
-* `IsKeyPressed(number) : (boolean)`: Returns whether the specified key (e.g. `Enum.Key.A`, `Enum.Key.One`) is currently being pressed
-* `IsMouseButtonPressed(number) : (boolean)`: Returns whether the specified mouse button (`Enum.MouseButton.Left/Middle/Right`) is currently being pressed
 
 ## `Mesh`
 
@@ -236,6 +225,20 @@ No members defined
 * `ParticlesAreAttached: boolean`: Whether the particles are attached to and move with the emitter
 * `Rate: number`: An integer indicating how many particles should be emitted per second (must be above or equal to `0`)
 
+## `PlayerInput`
+
+* Checking player inputs
+
+### Properties:
+* `CursorMode: number`: The current mode/behaviour of the cursor. Refer to the `Enum.CursorMode` enumeration
+* `IsKeyboardSunk: boolean `: Whether the Engine is currently using keyboard input (such as for Dear ImGui). Do not process keyboard input if this is `true`
+* `IsMouseSunk: boolean `: Whether the Engine is currently using mouse input (such as for Dear ImGui). Do not process mouse input if this is `true`
+
+### Methods:
+* `GetCursorPosition() : (vector)`: Returns the current position of the mouse cursor relative to the window as a `vector`
+* `IsKeyPressed(number) : (boolean)`: Returns whether the specified key (e.g. `Enum.Key.A`, `Enum.Key.One`) is currently being pressed
+* `IsMouseButtonPressed(number) : (boolean)`: Returns whether the specified mouse button (`Enum.MouseButton.Left/Middle/Right`) is currently being pressed
+
 ## `PointLight`
 
 * A light source emitting light omnidirectionally from its `Transform`
@@ -244,16 +247,6 @@ No members defined
 * `Brightness: number`: How bright the Light is
 * `LightColor: Color`: The color of the Light
 * `Range: number`: How far light is emitted. If `>= 0`, the Range is used and attenuation is linear, otherwise it uses the formula `F = 1/D^2 * B` to mirror real-world attenuation, where `F` is the final brightness, `D` is the distance of a point from the Light, and `B` is the `Brightness` property's value
-
-## `Script`
-
-* A Luau script
-
-### Properties:
-* `SourceFile: string`: The File the Script is executing. Changing this to a valid File immediately reloads the Script if it is a descendant of the `DataModel` (i.e. `game`). To forcefully reload it, `:Reload` should be used
-
-### Methods:
-* `Reload() : (boolean)`: Re-compiles the Source file and runs it from the beginning, returning whether the compilation and initial run were successful
 
 ## `Sound`
 
@@ -302,7 +295,6 @@ No members defined
 * This is *not* intended to act like a transparent proxy
 
 ### Properties:
-* `Scripting: boolean`: Whether Scripts which descend from the `Target` will run
 * `Target: (GameObject & any)?`: The target to link
 
 ## `Workspace`

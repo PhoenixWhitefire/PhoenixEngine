@@ -64,7 +64,7 @@
           "Weight": "The influence the Animation has over the rig"
         }
       },
-      "AssetService": {
+      "AssetManager": {
         "Description": "Used to manipulate assets within the Engine",
         "Methods": {
           "GetMeshData": {
@@ -127,6 +127,8 @@
           }
         },
         "Properties": {
+          "IsModuleBound": "If this is `true`, attempting to change `.Module` will throw an error",
+          "Module": "The Module associated with the DataModel that will be run upon the DataModel being bound",
           "Time": "Number of seconds since the Engine started running"
         }
       },
@@ -192,7 +194,10 @@
           },
           "OpenTextDocument": {
             "Description": "Opens a text file",
-            "ParameterNames": [ "Path", "Line" ]
+            "ParameterNames": [
+              "Path",
+              "Line"
+            ]
           },
           "ResetViewport": "Resets the Engine's understanding of where the viewport is on screen back to the default (occupying the entire window)",
           "RunInVM": {
@@ -250,6 +255,7 @@
           }
         },
         "Properties": {
+          "BoundDataModel": "The DataModel object that is currently bound",
           "CommitHash": "The Git commit that was used to produce this Engine build",
           "DebugCollisionAabbs": "Whether physics collision AABBs are rendered",
           "DebugSpatialHeat": "Whether Spatial Heat (spatial hash density) debug rendering is enabled",
@@ -295,7 +301,7 @@
           "WhereIAm": "A 3-dimensional vector quantity"
         }
       },
-      "HistoryService": {
+      "History": {
         "Description": "Service for implementing Undo/Redo systems",
         "Methods": {
           "CanRedo": "Returns whether `:Redo` will succeed",
@@ -316,25 +322,6 @@
           "CurrentWaypoint": "The ID of the Action that was last finished",
           "IsRecordingAction": "Whether an Action is currently being recorded by History",
           "TargetDataModel": "The DataModel that History will track"
-        }
-      },
-      "InputService": {
-        "Description": "Checking player inputs",
-        "Methods": {
-          "GetCursorPosition": "Returns the current position of the mouse cursor relative to the window as a `vector`",
-          "IsKeyPressed": {
-            "Description": "Returns whether the specified key (e.g. `Enum.Key.A`, `Enum.Key.One`) is currently being pressed",
-            "ParameterNames": "Key"
-          },
-          "IsMouseButtonPressed": {
-            "Description": "Returns whether the specified mouse button (`Enum.MouseButton.Left/Middle/Right`) is currently being pressed",
-            "ParameterNames": "MouseButton"
-          }
-        },
-        "Properties": {
-          "CursorMode": "The current mode/behaviour of the cursor. Refer to the `Enum.CursorMode` enumeration",
-          "IsKeyboardSunk": "Whether the Engine is currently using keyboard input (such as for Dear ImGui). Do not process keyboard input if this is `true`",
-          "IsMouseSunk": "Whether the Engine is currently using mouse input (such as for Dear ImGui). Do not process mouse input if this is `true`"
         }
       },
       "Mesh": {
@@ -367,6 +354,25 @@
           "Lifetime": "The X and Y components act as a range of how long any particle can last, in seconds",
           "ParticlesAreAttached": "Whether the particles are attached to and move with the emitter",
           "Rate": "An integer indicating how many particles should be emitted per second (must be above or equal to `0`)"
+        }
+      },
+      "PlayerInput": {
+        "Description": "Checking player inputs",
+        "Methods": {
+          "GetCursorPosition": "Returns the current position of the mouse cursor relative to the window as a `vector`",
+          "IsKeyPressed": {
+            "Description": "Returns whether the specified key (e.g. `Enum.Key.A`, `Enum.Key.One`) is currently being pressed",
+            "ParameterNames": "Key"
+          },
+          "IsMouseButtonPressed": {
+            "Description": "Returns whether the specified mouse button (`Enum.MouseButton.Left/Middle/Right`) is currently being pressed",
+            "ParameterNames": "MouseButton"
+          }
+        },
+        "Properties": {
+          "CursorMode": "The current mode/behaviour of the cursor. Refer to the `Enum.CursorMode` enumeration",
+          "IsKeyboardSunk": "Whether the Engine is currently using keyboard input (such as for Dear ImGui). Do not process keyboard input if this is `true`",
+          "IsMouseSunk": "Whether the Engine is currently using mouse input (such as for Dear ImGui). Do not process mouse input if this is `true`"
         }
       },
       "PointLight": {
@@ -789,7 +795,7 @@
             "Type": "{ None: number, Front: number, Back: number }"
           },
           "Key": {
-            "Description": "Keys, which may be passed to `InputService:IsKeyPressed`",
+            "Description": "Keys, which may be passed to `PlayerInput:IsKeyPressed`",
             "Type": "{ [string]: number }"
           },
           "LogType": {
@@ -797,7 +803,7 @@
             "Type": "{ None: number, Info: number, Warning: number, Error: number }"
           },
           "MouseButton": {
-            "Description": "Mouse buttons, which may be passed to `InputService:IsMouseButtonPressed`",
+            "Description": "Mouse buttons, which may be passed to `PlayerInput:IsMouseButtonPressed`",
             "Type": "{ Left: number, Middle: number, Right: number }"
           }
         }
@@ -1192,6 +1198,12 @@
             ],
             "Out": "number"
           },
+          "contentregionavail": {
+            "Description": [
+              "`ImGui::GetContentRegionAvail`"
+            ],
+            "Out": "vector"
+          },
           "cursorposition": {
             "Description": [
               "Returns the current position of the Dear ImGui element cursor within the current window",
@@ -1243,12 +1255,6 @@
             "Description": [
               "`ImGui::End`, `endw` and not `end` because `end` is a Luau keyword"
             ]
-          },
-          "contentregionavail": {
-            "Description": [
-              "`ImGui::GetContentRegionAvail`"
-            ],
-            "Out": "vector"
           },
           "image": {
             "Description": [

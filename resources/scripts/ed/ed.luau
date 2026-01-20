@@ -1,7 +1,7 @@
 -- ed.luau, 14/09/2025
-local HistoryService: HistoryService = game:GetService("HistoryService") :: any
-local InputService: InputService = game:GetService("InputService") :: any
-local AssetService: AssetService = game:GetService("AssetService") :: any
+local AssetManager: AssetManager = game:GetService("AssetManager") :: any
+local PlayerInput: PlayerInput = game:GetService("PlayerInput") :: any
+local History: History = game:GetService("History") :: any
 local Engine: Engine = game:GetService("Engine") :: any
 
 local FALLBACK_IMAGE = "@etextures/editor-icons/fallback.png"
@@ -43,7 +43,7 @@ local GameVM = "GameVM"
 
 EditorCam.UseSimpleController = true
 EditorTl.Parent = workspace
-EditorTl.Scripting = false
+-- EditorTl.Scripting = false -- TODO was not generated a type error for some reason
 Engine.PhysicsTimescale = 0
 
 local ToolOrder = {
@@ -71,7 +71,7 @@ local WasHoldingYKeyDown = false
 local ErrorMessage = ""
 local ErrorMessageTimeRemaining = 0
 
-HistoryService:EnableRecording()
+History:EnableRecording()
 
 fs.definealias("editres", "@cwd/resources")
 fs.definealias("etextures", "@editres/textures")
@@ -107,14 +107,14 @@ end
 local changeStageTo: (NewStage: Stage) -> ()
 
 local function handleUndoRedoKeybinds()
-	local ctrlKeyDown = InputService:IsKeyPressed(Enum.Key.LeftControl)
-	local zKeyDown = InputService:IsKeyPressed(Enum.Key.Z)
-	local yKeyDown = InputService:IsKeyPressed(Enum.Key.Y)
+	local ctrlKeyDown = PlayerInput:IsKeyPressed(Enum.Key.LeftControl)
+	local zKeyDown = PlayerInput:IsKeyPressed(Enum.Key.Z)
+	local yKeyDown = PlayerInput:IsKeyPressed(Enum.Key.Y)
 
 	if ctrlKeyDown and zKeyDown then
 		if not WasHoldingCtrlKeyDown or not WasHoldingZKeyDown then
 			local success: boolean, error: string? = (pcall::any)(function()
-				HistoryService:Undo()
+				History:Undo()
 			end)
 
 			if not success then
@@ -131,7 +131,7 @@ local function handleUndoRedoKeybinds()
 	if ctrlKeyDown and yKeyDown then
 		if not WasHoldingCtrlKeyDown or not WasHoldingYKeyDown then
 			local success: boolean, error: string? = (pcall::any)(function()
-				HistoryService:Redo()
+				History:Redo()
 			end)
 
 			if not success then
@@ -151,10 +151,10 @@ local function handleUndoRedoKeybinds()
 end
 
 local function editorFrame(DeltaTime)
-	MouseClick = (not WasHoldingDownM1) and InputService:IsMouseButtonPressed(Enum.MouseButton.Left)
-	local f5 = InputService:IsKeyPressed(Enum.Key.F5)
+	MouseClick = (not WasHoldingDownM1) and PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Left)
+	local f5 = PlayerInput:IsKeyPressed(Enum.Key.F5)
 
-	if not HistoryService.IsRecordingAction then
+	if not History.IsRecordingAction then
 		if CurrentStage == "ProjectEditing" then
 			if f5 and not WasHoldingF5 then
 				changeStageTo("ProjectPlaying")
@@ -174,7 +174,7 @@ local function editorFrame(DeltaTime)
 	CoreTools.Update(Project)
 	Stages[CurrentStage](DeltaTime)
 
-	WasHoldingDownM1 = InputService:IsMouseButtonPressed(Enum.MouseButton.Left)
+	WasHoldingDownM1 = PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Left)
 
 	if ErrorMessageTimeRemaining > 0 then
 		imgui.settooltip(ErrorMessage)
@@ -203,7 +203,7 @@ changeStageTo = function(NewStage: Stage)
 	
 	CurrentStage = NewStage
 	StageUpdateSignal = targetDm.OnFrameBegin:Connect(function(DeltaTime)
-		local s, e = xpcall(function(dt)
+		local s, e = (xpcall::any)(function(dt)
 			editorFrame(dt)
 		end, onError, DeltaTime)
 
@@ -346,8 +346,8 @@ local function openProject(ManualPath: string?)
 	EditorCam.Transform = Project.Workspace.SceneCamera.Transform
 	EditorTl.Target = Project.Workspace
 
-	HistoryService:ClearHistory()
-	HistoryService.TargetDataModel = Project.DataModel
+	History:ClearHistory()
+	History.TargetDataModel = Project.DataModel
 
 	changeStageTo("ProjectEditing")
 
@@ -518,8 +518,8 @@ local function tabButton(Text: string, Icon: string, Enabled: boolean?, Lit: boo
 end
 
 local function whyCannotUndoRedo()
-	return if HistoryService.IsRecordingAction
-		then `You can't until the {assert(HistoryService.CurrentActionName)} Action finishes`
+	return if History.IsRecordingAction
+		then `You can't until the {assert(History.CurrentActionName)} Action finishes`
 		else nil
 end
 
@@ -530,11 +530,11 @@ local function homeTab(_: number)
 	local currentActionTooltip = whyCannotUndoRedo()
 
 	if inPlaytest then
-		if tabButton("Stop", "@etextures/editor-icons/stop.png", not HistoryService.IsRecordingAction, nil, nil, currentActionTooltip) then
+		if tabButton("Stop", "@etextures/editor-icons/stop.png", not History.IsRecordingAction, nil, nil, currentActionTooltip) then
 			changeStageTo("ProjectEditing")
 		end
 	else
-		if tabButton("Start", "@etextures/editor-icons/start.png", not HistoryService.IsRecordingAction, nil, nil, currentActionTooltip) then
+		if tabButton("Start", "@etextures/editor-icons/start.png", not History.IsRecordingAction, nil, nil, currentActionTooltip) then
 			changeStageTo("ProjectPlaying")
 		end
 	end
@@ -559,14 +559,14 @@ local function homeTab(_: number)
 			local paths = fs.promptopen(nil, { "*.gltf", "*.glb" }, "Models")
 
 			if paths[1] then
-				HistoryService:TryBeginAction("Import Model")
+				History:TryBeginAction("Import Model")
 
-				local imported = AssetService:ImportModel(paths[1])
+				local imported = AssetManager:ImportModel(paths[1])
 
 				-- TODO type of `imported` becomes `nil` after this clause for some reason
 				--if not imported then
 				--	print("Failed to import")
-				--	HistoryService:DiscardCurrentAction()
+				--	History:DiscardCurrentAction()
 				--	return
 				--end
 
@@ -574,7 +574,7 @@ local function homeTab(_: number)
 				imported.Parent = Project.Workspace
 				Engine:SetExplorerSelections({ imported })
 
-				HistoryService:FinishCurrentAction()
+				History:FinishCurrentAction()
 			else
 				print("No model selected")
 			end
@@ -790,7 +790,7 @@ local function renderMainMenuBar(dt: number)
 	if not imgui.beginmainmenubar() then
 		return
 	end
-	local mainMenuCursorY = InputService:GetCursorPosition().y
+	local mainMenuCursorY = PlayerInput:GetCursorPosition().y
 	HoveringOverMenuBar = mainMenuCursorY < RibbonPopupDistance
 
 	local openAboutWindow = false
@@ -800,15 +800,15 @@ local function renderMainMenuBar(dt: number)
 		if CurrentStage == "ProjectEditing" then
 			local undoRedoDisabledReason = whyCannotUndoRedo()
 
-			if imgui.menuitem("Undo", HistoryService:CanUndo()) then
-				HistoryService:Undo()
+			if imgui.menuitem("Undo", History:CanUndo()) then
+				History:Undo()
 			end
 			if undoRedoDisabledReason then
 				imgui.setitemtooltip(undoRedoDisabledReason)
 			end
 
-			if imgui.menuitem("Redo", HistoryService:CanRedo()) then
-				HistoryService:Redo()
+			if imgui.menuitem("Redo", History:CanRedo()) then
+				History:Redo()
 			end
 			if undoRedoDisabledReason then
 				imgui.setitemtooltip(undoRedoDisabledReason)
@@ -936,7 +936,7 @@ local function renderMainMenuBar(dt: number)
 			end
 		end
 
-		if (HoveringOverMenuBar or HoveringOverRibbonTab or TabButtonHovering ~= nil or WindowHovering) and not InputService:IsMouseButtonPressed(Enum.MouseButton.Right) then
+		if (HoveringOverMenuBar or HoveringOverRibbonTab or TabButtonHovering ~= nil or WindowHovering) and not PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Right) then
 			local windowWidth = Engine.WindowSize.x
 
 			local TAB_HEIGHT = 175
@@ -1162,7 +1162,7 @@ Engine.OnMessageLogged:Connect(function(Type: number, Message: string, ExtraTags
 end)
 
 local function isMouseWithinViewport()
-	local pos = InputService:GetCursorPosition()
+	local pos = PlayerInput:GetCursorPosition()
 
 	if pos.x >= ViewportLeft and pos.x <= ViewportRight then
 		if pos.y >= ViewportTop and pos.y < ViewportBottom then
@@ -1193,7 +1193,7 @@ local function renderViewport(DeltaTime: number)
 	end
 
 	if CurrentStage == "ProjectEditing" and Project.Workspace then
-		local mouseVec = workspace:ScreenPointToVector(InputService:GetCursorPosition(), 1000)
+		local mouseVec = workspace:ScreenPointToVector(PlayerInput:GetCursorPosition(), 1000)
 		local rayresult = Project.Workspace:Raycast(workspace.SceneCamera.Transform.Position, mouseVec, { SelectionPart })
 
 		if rayresult then
@@ -1201,8 +1201,8 @@ local function renderViewport(DeltaTime: number)
 			SelectionPart.Size = rayresult.Object.Size + vector.create(0.05, 0.05, 0.05)
 			SelectionPart.Parent = workspace
 
-			if InputService:IsMouseButtonPressed(Enum.MouseButton.Left) and isMouseWithinViewport() then
-				if InputService:IsKeyPressed(Enum.Key.LeftControl) then -- left control
+			if PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Left) and isMouseWithinViewport() then
+				if PlayerInput:IsKeyPressed(Enum.Key.LeftControl) then -- left control
 					local sels = Engine:GetExplorerSelections()
 
 					if not table.find(sels, rayresult.Object) then
@@ -1270,12 +1270,12 @@ local function renderViewport(DeltaTime: number)
 		imgui.sameline()
 
 		if imgui.button("Run") then
-			local began = HistoryService:TryBeginAction("CommandBarCode")
+			local began = History:TryBeginAction("CommandBarCode")
 
 			Engine:RunInVM(if CurrentStage == "ProjectEditing" then GameEditingVM else GameVM, CommandBarCommand, "=CommandBar")
 
 			if began then
-				HistoryService:FinishCurrentAction()
+				History:FinishCurrentAction()
 			end
 		end
 		imgui.sameline()
@@ -1356,7 +1356,7 @@ local function renderViewport(DeltaTime: number)
 			NewLogMessage = false
 		end
 
-		if imgui.windowhovered() and InputService:IsMouseButtonPressed(Enum.MouseButton.Right) then
+		if imgui.windowhovered() and PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Right) then
 			imgui.openpopup("OutputContextMenu")
 		end
 
@@ -1377,7 +1377,7 @@ local function renderViewport(DeltaTime: number)
 	
 	imgui.begin(Project.Name .. "###Viewport", if canInteract then "nb" else "ni | nb")
 
-	local cpos = InputService:GetCursorPosition()
+	local cpos = PlayerInput:GetCursorPosition()
 	local w = imgui.windowposition()
 	local ws = imgui.windowsize()
 
@@ -1466,7 +1466,7 @@ local function renderProjectSelectorTiles(Projects: { string })
 
 			imgui.popstylecolor()
 
-			if InputService:IsMouseButtonPressed(Enum.MouseButton.Right) then
+			if PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Right) then
 				imgui.openpopup("ProjectContextMenu")
 				ProjectContextMenuTarget = i
 			end
@@ -1741,7 +1741,12 @@ function Stages.ProjectPlaying_Leave(DeltaTime)
 	Engine:CloseVM(GameVM)
 	Engine:BindDataModel(game)
 
-	InputService.CursorMode = Enum.CursorMode.Normal
+	PlayerInput.CursorMode = Enum.CursorMode.Normal
 end
 
 changeStageTo("SelectProject")
+
+
+
+
+

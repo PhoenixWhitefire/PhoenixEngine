@@ -101,7 +101,7 @@ static int shouldResume_Deferred(
 	lua_State* L
 )
 {
-	if (double curTime = GetRunningTime(); curTime >= CorInfo.RmWait.ResumeAt)
+	if (double curTime = GetRunningTime(); curTime >= CorInfo.RmDeferred.ResumeAt)
 	{
 		int narg = lua_gettop(CorInfo.RmDeferred.Arguments);
 		lua_xmove(CorInfo.RmDeferred.Arguments, L, narg);
@@ -1643,8 +1643,6 @@ nlohmann::json ScriptEngine::DumpApiToJson()
 	eventSignal = nlohmann::json::object();
 	nlohmann::json& eventConnection = json["Datatypes"]["EventConnection"];
 	eventConnection = nlohmann::json::object();
-
-	json["Globals"]["script"] = "GameObject & Script";
 
 	lua_getglobal(luhx, "_G");
 	lua_pushinteger(luhx, 67);

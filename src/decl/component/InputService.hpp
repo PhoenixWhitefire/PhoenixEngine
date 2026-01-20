@@ -6,7 +6,7 @@
 
 #include "datatype/GameObject.hpp"
 
-struct EcInputService : public Component<EntityComponent::InputService>
+struct EcPlayerInput : public Component<EntityComponent::PlayerInput>
 {
     bool Valid = true;
 };

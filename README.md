@@ -23,13 +23,13 @@ Intended to be compatible with both Windows and Linux/Ubuntu.
 * Minimum CMake version of `3.28` (arbitrary, the one I use on Linux. I use `3.30` on Windows)
 * Compiler which supports C++ Standard `20` and C Standard `17` (G++/MSVC are intentionally supported)
 * For Windows, Visual Studio 2022 platform toolset `v143`
+* For Linux, ensure you have the `libwayland-dev` and `libxkbcommon-dev` packages installed
 
 1. `git clone https://github.com/PhoenixWhitefire/PhoenixEngine --recursive --depth=1`, or just use the `Code <>` button
     * `--recursive` clones submodules as well (check the `Vendor` directory)
     * `--depth 1` causes only the current commit to be fetched, reducing download times
 2. `cmake -B "./"` in the root directory
     * On Linux/with Ninja, I use `cmake -B "./" -G "Ninja Multi-Config"` specifically
-        - You may need to install the `libwayland-dev` packages. Alternatively, you may also use the `-DGLFW_BUILD_WAYLAND=OFF` option when configuring
     * When using Visual Studio Code, set the Generator to "Ninja Multi-Config", and change the "Build Directory" setting to just `${workspaceFolder}`
     
 3. Open the resulting project in your IDE of choice
@@ -45,6 +45,8 @@ Intended to be compatible with both Windows and Linux/Ubuntu.
     * `cmake --build build --config Release`
     
     By the end, you should have a binary at the location `Vendor/tracy/profiler/build/tracy-profiler`.
+
+Please note that LSP definition files depend on Luau's New Type Solver. Enabling that option in Luau LSP is required for them to work.
 
 <img src="gh-assets/infooverload.png"/>
 

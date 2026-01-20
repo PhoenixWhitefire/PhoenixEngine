@@ -1,7 +1,7 @@
 -- devmap.luau, 10/07/2024
 --!strict
 
-local InputService = (game:GetService("InputService") :: any) :: InputService
+local InputService: PlayerInput = game:GetService("PlayerInput") :: any
 
 local TotalTime = 0
 

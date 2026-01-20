@@ -74,7 +74,6 @@ catch (...)                                                                     
 
 #include "asset/SceneFormat.hpp"
 #include "component/Camera.hpp"
-#include "component/Script.hpp"
 #include "script/ScriptEngine.hpp"
 
 #include "GlobalJsonConfig.hpp"

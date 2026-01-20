@@ -21,7 +21,6 @@ enum class EntityComponent : uint8_t
 	Transform,
 	Mesh,
 	ParticleEmitter,
-	Script,
 	Sound,
 	Workspace,
 	DataModel,
@@ -35,9 +34,9 @@ enum class EntityComponent : uint8_t
 	Example,
 	TreeLink,
 	Engine,
-	InputService,
-	AssetService,
-	HistoryService,
+	PlayerInput,
+	AssetManager,
+	History,
 	
 	__count
 };
@@ -48,7 +47,6 @@ static inline const std::string_view s_EntityComponentNames[] =
 	"Transform",
 	"Mesh",
 	"ParticleEmitter",
-	"Script",
 	"Sound",
 	"Workspace",
 	"DataModel",
@@ -62,9 +60,17 @@ static inline const std::string_view s_EntityComponentNames[] =
 	"Example",
 	"TreeLink",
 	"Engine",
-	"InputService",
-	"AssetService",
-	"HistoryService"
+	"PlayerInput",
+	"AssetManager",
+	"History"
+};
+
+const std::string_view s_DataModelServices[] = {
+    "Workspace",
+    "Engine",
+    "PlayerInput",
+    "AssetManager",
+    "History"
 };
 
 // component type and ID
@@ -110,16 +116,16 @@ class IComponentManager
 {
 public:
 	virtual uint32_t CreateComponent(GameObject* /* Object */) = 0;
-	virtual void UpdateComponent(uint32_t, double) {};
 	virtual std::vector<void*> GetComponents() = 0;
 	virtual void ForEachComponent(const std::function<bool(void*)>) = 0;
 	virtual void* GetComponent(uint32_t) = 0;
 	virtual void DeleteComponent(uint32_t /* ComponentId */) = 0;
-	virtual void Shutdown() {};
+	virtual void Shutdown() = 0;
 
 	virtual const Reflection::StaticPropertyMap& GetProperties() = 0;
 	virtual const Reflection::StaticMethodMap& GetMethods() = 0;
-	virtual const Reflection::StaticEventMap& GetEvents() { static Reflection::StaticEventMap e{}; return e; };
+	virtual const Reflection::StaticEventMap& GetEvents() = 0;
+	virtual Reflection::GenericValue GetDefaultPropertyValue(const std::string_view&) = 0;
 };
 
 template <EntityComponent T>
@@ -447,8 +453,6 @@ public:
 				break;
 	}
 
-	virtual void UpdateComponent(uint32_t, double) override {};
-
 	virtual void DeleteComponent(uint32_t Id) override
 	{
 		T& component = m_Components.at(Id);
@@ -476,6 +480,12 @@ public:
 	{
 		static const Reflection::StaticEventMap events;
 		return events;
+	}
+
+	virtual Reflection::GenericValue GetDefaultPropertyValue(const std::string_view& Property) override
+	{
+		static T Defaults;
+		return GetProperties().at(Property).Get((void*)&Defaults);
 	}
 
 	ComponentManager()

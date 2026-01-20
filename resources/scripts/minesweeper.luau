@@ -1,5 +1,5 @@
 -- minesweeper.luau, 06/07/2025
-local InputService: InputService = game:GetService("InputService") :: any
+local InputService: PlayerInput = game:GetService("PlayerInput") :: any
 
 local CellColors = {
     Color.new(0, 0, 1),

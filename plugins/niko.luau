@@ -16,10 +16,10 @@ table.insert(TestPlugin.ToolbarButtons, {
         Button.Enabled = false
         print("Hello!")
 
-        defer(function()
+        task.delay(1, function()
             Button.Enabled = true
             Button.Lit = true
-        end, 1)
+        end)
     end,
     Icon = "@editres/textures/niko.png"
 })

@@ -87,7 +87,7 @@ declare extern type Animation with
   Ready: boolean 
   Weight: number
 end
-declare extern type AssetService with
+declare extern type AssetManager with
 
   function GetMeshData(self, Id: string) : { Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } }
   function ImportModel(self, Path: string) : GameObject & Model
@@ -105,6 +105,8 @@ declare extern type Camera with
   UseSimpleController: boolean
 end
 declare extern type DataModel with
+  IsModuleBound: boolean 
+  Module: string
   Time: number 
 
   function GetService(self, ServiceName: string) : ((GameObject & any))
@@ -126,6 +128,7 @@ declare extern type DirectionalLight with
   Shadows: boolean
 end
 declare extern type Engine with
+  BoundDataModel: (GameObject & any) 
   CommitHash: string 
   DebugCollisionAabbs: boolean
   DebugSpatialHeat: boolean
@@ -173,7 +176,7 @@ declare extern type Example with
 
   OnGreeted: EventSignal<(string, string)>
 end
-declare extern type HistoryService with
+declare extern type History with
   ActionHistorySize: number 
   CurrentActionName: string? 
   CurrentWaypoint: number 
@@ -191,15 +194,6 @@ declare extern type HistoryService with
   function Redo(self) : ()
   function TryBeginAction(self, Param_1: string) : (boolean)
   function Undo(self) : ()
-end
-declare extern type InputService with
-  CursorMode: number
-  IsKeyboardSunk: boolean 
-  IsMouseSunk: boolean 
-
-  function GetCursorPosition(self) : (vector)
-  function IsKeyPressed(self, Key: number) : (boolean)
-  function IsMouseButtonPressed(self, MouseButton: number) : (boolean)
 end
 declare extern type Mesh with
   AngularVelocity: vector
@@ -226,15 +220,19 @@ declare extern type ParticleEmitter with
   ParticlesAreAttached: boolean
   Rate: number
 end
+declare extern type PlayerInput with
+  CursorMode: number
+  IsKeyboardSunk: boolean 
+  IsMouseSunk: boolean 
+
+  function GetCursorPosition(self) : (vector)
+  function IsKeyPressed(self, Key: number) : (boolean)
+  function IsMouseButtonPressed(self, MouseButton: number) : (boolean)
+end
 declare extern type PointLight with
   Brightness: number
   LightColor: Color
   Range: number
-end
-declare extern type Script with
-  SourceFile: string
-
-  function Reload(self) : (boolean)
 end
 declare extern type Sound with
   FinishedLoading: boolean 
@@ -264,7 +262,6 @@ declare extern type Transform with
   Transform: Matrix
 end
 declare extern type TreeLink with
-  Scripting: boolean
   Target: (GameObject & any)?
 end
 declare extern type Workspace with
@@ -281,7 +278,6 @@ type Creatables = {
 	Transform: Transform,
 	Mesh: Mesh & Transform,
 	ParticleEmitter: ParticleEmitter & Transform,
-	Script: Script,
 	Sound: Sound,
 	Workspace: Workspace,
 	DataModel: DataModel,
@@ -295,9 +291,9 @@ type Creatables = {
 	Example: Example,
 	TreeLink: TreeLink,
 	Engine: Engine,
-	InputService: InputService,
-	AssetService: AssetService,
-	HistoryService: HistoryService,
+	PlayerInput: PlayerInput,
+	AssetManager: AssetManager,
+	History: History,
 }
 declare Enum: {
   CollisionFidelity: { Aabb: number, AabbStaticSize: number },
@@ -313,6 +309,8 @@ declare conf: {
   set: (( Key: string, Value: any ) -> ())
 }
 declare debug: {
+	traceback: (msg: string?, level: number?) -> string,
+	info: (level: number, s: string) -> string,
   breakpoint: (( (Line: number ) -> (number)) & (() -> ()))
 }
 declare fs: {
@@ -413,7 +411,6 @@ declare function appendlog( ...: any ): ()
 declare game: GameObject & DataModel
 declare function loadthread( Code: string, ChunkName: string? ): ( thread?, string? )
 declare function loadthreadfromfile( File: string, ChunkName: string? ): ( thread?, string? )
-declare script: GameObject & Script
 declare function shellexec( Command: string ): string
 declare function warn( ...: any ): ()
 declare workspace: GameObject & Workspace

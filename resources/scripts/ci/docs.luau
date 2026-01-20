@@ -126,11 +126,19 @@ local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, lib
 	if not t then
 		return ""
 	end
-	
+
 	definitionsFile ..= `declare { libname }: \{\n,\n`
-	
+
 	local str = ""
 	local first = true
+
+	if libname == "debug" then
+		definitionsFile = string.sub(definitionsFile, 1, #definitionsFile - 2)
+		first = false
+
+		definitionsFile ..= "\ttraceback: (msg: string?, level: number?) -> string,\n"
+							.. "\tinfo: (level: number, s: string) -> string,\n"
+	end
 
 	local orderedMembers = keysOf(t)
 	table.sort(orderedMembers)
@@ -143,24 +151,24 @@ local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, lib
 				
 			first = false
 		end
-		
+
 		local v = libm[k]
-		
+
 		if not v or not v.Description then
 			print(`Missing docs for { libname }.{ k }`)
 		end
-		
+
 		v = v or {}
-		
+
 		if t[k] == "function" then
 			definitionsFile ..= `  { k }: `
-			
+
 			for _, vIn in { v.In or "", table.unpack(v.Overloads or {}) } do
 				local docsig, defsig = dumpFuncSignature(libname, k, vIn, v.Out or "", v)
 				str ..= docsig
 				definitionsFile ..= `{ defsig } & `
 			end
-			
+
 			definitionsFile = string.sub(definitionsFile, 1, #definitionsFile - 3)
 			definitionsFile ..= ",\n"
 		else
@@ -171,14 +179,14 @@ local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, lib
 			str ..= `#### \`{libname}.{ k }: { v.Type }\`\n`
 			definitionsFile ..= `  { k }: { v.Type },\n`
 		end
-		
+
 		local desc = v.Description
 		if not desc and typeof(v) == "string" then
 			desc = v
 		end
 
 		local totalcomment = ""
-		
+
 		for _, comment in (if typeof(desc) == "table" then desc else { desc }) do
 			if not comment then
 				print(`Missing doc comment for '{ k }'`)
@@ -195,10 +203,10 @@ local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, lib
 		str ..= totalcomment
 		str ..= "\n"
 	end
-	
+
 	definitionsFile = string.sub(definitionsFile, 1, #definitionsFile - 2)
 	definitionsFile ..= `\n}\n`
-	
+
 	return str
 end
 

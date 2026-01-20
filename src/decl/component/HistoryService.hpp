@@ -2,7 +2,7 @@
 
 #include "datatype/GameObject.hpp"
 
-struct EcHistoryService : Component<EntityComponent::HistoryService>
+struct EcHistoryService : Component<EntityComponent::History>
 {
     bool Valid = true;
 };

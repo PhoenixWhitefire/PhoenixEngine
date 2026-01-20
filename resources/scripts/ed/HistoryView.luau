@@ -1,6 +1,5 @@
 -- HistoryView.luau, 17/12/2025
-
-local HistoryService: HistoryService = game:GetService("HistoryService") :: any
+local History: History = game:GetService("History") :: any
 
 local Viewer = {}
 Viewer.Open = false
@@ -34,31 +33,31 @@ function Viewer.Render()
 
     Viewer.Open = open
 
-    local currentAction = HistoryService:GetCurrentActionData()
+    local currentAction = History:GetCurrentActionData()
 
     if currentAction then
         imgui.pushstylecolor(0, { 1, 0, 0, 1 })
 
-        renderAction(HistoryService:GetCurrentActionData(), -1)
+        renderAction(History:GetCurrentActionData(), -1)
 
         imgui.popstylecolor()
     end
 
-    for i = HistoryService.ActionHistorySize - 1, 0, -1 do
+    for i = History.ActionHistorySize - 1, 0, -1 do
         local data = ActionDataCache[i]
-        if not data or ActionDataCacheWaypoint ~= HistoryService.CurrentWaypoint then
-            data = HistoryService:GetActionData(i)
+        if not data or ActionDataCacheWaypoint ~= History.CurrentWaypoint then
+            data = History:GetActionData(i)
             ActionDataCache[i] = data
-            ActionDataCacheWaypoint = HistoryService.CurrentWaypoint
+            ActionDataCacheWaypoint = History.CurrentWaypoint
         end
 
-        if i == HistoryService.CurrentWaypoint then
+        if i == History.CurrentWaypoint then
             imgui.pushstylecolor(0, { 0, 1, 0, 1 })
         end
 
         renderAction(data, i)
 
-        if i == HistoryService.CurrentWaypoint then
+        if i == History.CurrentWaypoint then
             imgui.popstylecolor()
         end
     end

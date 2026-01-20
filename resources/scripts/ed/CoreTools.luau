@@ -1,5 +1,5 @@
-local HistoryService: HistoryService = game:GetService("HistoryService") :: any
-local InputService: InputService = game:GetService("InputService") :: any
+local InputService: InputService = game:GetService("PlayerInput") :: any
+local HistoryService: History = game:GetService("History") :: any
 local Engine: Engine = game:GetService("Engine") :: any
 
 local CoreTools = {}

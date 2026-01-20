@@ -1,6 +1,6 @@
 -- root.luau, 21/12/2024
-local InputService: InputService = game:GetService("InputService") :: any
-local AssetService: AssetService = game:GetService("AssetService") :: any
+local InputService: PlayerInput = game:GetService("PlayerInput") :: any
+local AssetService: AssetManager = game:GetService("AssetManager") :: any
 
 local ModelImporterScale = 1
 

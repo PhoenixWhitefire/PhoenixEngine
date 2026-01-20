@@ -20,7 +20,6 @@
 #include "component/Transform.hpp"
 #include "component/TreeLink.hpp"
 #include "component/Camera.hpp"
-#include "component/Script.hpp"
 #include "component/Sound.hpp"
 #include "component/Light.hpp"
 #include "script/ScriptEngine.hpp"
@@ -342,8 +341,7 @@ static void traverseHierarchy(
 	const ObjectHandle& Root,
 	EcCamera* SceneCamera,
 	double DeltaTime,
-	EcDirectionalLight** Sun,
-	bool ScriptsUpdate = true
+	EcDirectionalLight** Sun
 )
 {
 	ZoneScopedC(tracy::Color::LightGoldenrod);
@@ -410,9 +408,6 @@ static void traverseHierarchy(
 				);
 		}
 
-		if (EcScript* scr = object->FindComponent<EcScript>(); ScriptsUpdate && scr)
-			scr->Update(DeltaTime);
-
 		if (EcTreeLink* link = object->FindComponent<EcTreeLink>(); link && link->Target.IsValid())
 			traverseHierarchy(
 				RenderList,
@@ -421,8 +416,7 @@ static void traverseHierarchy(
 				link->Target,
 				SceneCamera,
 				DeltaTime,
-				Sun,
-				link->Scripting
+				Sun
 			);
 
 		EcDirectionalLight* directional = object->FindComponent<EcDirectionalLight>();
@@ -473,8 +467,7 @@ static void traverseHierarchy(
 				object,
 				SceneCamera,
 				DeltaTime,
-				Sun,
-				true
+				Sun
 			);
 		
 		if (EcParticleEmitter* emitter = object->FindComponent<EcParticleEmitter>())

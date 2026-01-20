@@ -159,11 +159,11 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `Enum.FaceCulling: { None: number, Front: number, Back: number }`
 * Culling modes for `Mesh.FaceCulling`
 #### `Enum.Key: { [string]: number }`
-* Keys, which may be passed to `InputService:IsKeyPressed`
+* Keys, which may be passed to `PlayerInput:IsKeyPressed`
 #### `Enum.LogType: { None: number, Info: number, Warning: number, Error: number }`
 * The different types of log messages
 #### `Enum.MouseButton: { Left: number, Middle: number, Right: number }`
-* Mouse buttons, which may be passed to `InputService:IsMouseButtonPressed`
+* Mouse buttons, which may be passed to `PlayerInput:IsMouseButtonPressed`
 ### `conf`
 * Internal Engine configuration state, loaded from file (`phoenix.conf`) upon startup
 #### `conf.get(Key: string): any`
@@ -389,9 +389,6 @@ Additional global variables
 * If an error occurs, returns `nil` as the first value and the error message as the second value
 #### `loadthreadfromfile(File: string, ChunkName: string?): ( thread?, string? )`
 * Similar to `loadthread`, however loads from a file instead of from a string directly
-#### `script: GameObject & Script`
-* The Script object the current coroutine is running as
-* In `require`'d modules, this is `nil`
 #### `shellexec(Command: string): string`
 * Runs a shell command
 #### `warn(...: any): ()`

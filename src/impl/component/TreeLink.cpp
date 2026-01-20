@@ -42,9 +42,7 @@ class TreeLinkManager : public ComponentManager<EcTreeLink>
 
                     tl->Target = GameObject::FromGenericValue(gv);
                 }
-            } },
-
-            REFLECTION_PROPERTY_SIMPLE(EcTreeLink, Scripting, Boolean)
+            } }
         };
 
         return props;

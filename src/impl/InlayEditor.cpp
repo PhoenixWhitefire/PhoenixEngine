@@ -10,6 +10,7 @@
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <ImGuiColorTextEdit/TextEditor.h>
+#include <luau/VM/src/lstate.h>
 #include <tinyfiledialogs.h>
 #include <fstream>
 #include <set>
@@ -22,7 +23,6 @@
 #include "asset/MeshProvider.hpp"
 
 #include "component/Camera.hpp"
-#include "component/Script.hpp"
 
 #include "GlobalJsonConfig.hpp"
 #include "Utilities.hpp"
@@ -1071,22 +1071,6 @@ static const char* ContextMenuActionStrings[] =
 
 typedef void(*ContextActionMenuHandlerFunc)(void);
 
-static std::vector<ObjectHandle> s_CreatingScriptFiles;
-
-static void tryOpenScriptForEditing(const ObjectHandle& scr)
-{
-	EcScript* s = scr->FindComponent<EcScript>();
-	assert(s);
-
-	if (s->SourceFile.size() > 0 && s->SourceFile.find("!InlineSource:") != std::string::npos)
-	{
-		if (std::find(s_CreatingScriptFiles.begin(), s_CreatingScriptFiles.end(), scr) == s_CreatingScriptFiles.end())
-			s_CreatingScriptFiles.push_back(scr);
-	}
-	else
-		invokeTextEditor(s->SourceFile);
-}
-
 static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] =
 {
 	[]()
@@ -1198,20 +1182,6 @@ static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] =
 		}
 		else
 			Log::Info("No file selected to insert object from");
-	},
-
-	[]()
-	{
-		for (const ObjectHandle& sel : Selections)
-			if (sel->FindComponent<EcScript>())
-				tryOpenScriptForEditing(sel);
-	},
-
-	[]()
-	{
-		for (const ObjectHandle& sel : Selections)
-			if (EcScript* s = sel->FindComponent<EcScript>())
-				s->Reload();
 	}
 };
 
@@ -1224,21 +1194,6 @@ static std::vector<ContextMenuAction> getPossibleActionsForSelections()
 {
 	std::vector<ContextMenuAction> actions;
 	actions.reserve(4);
-
-	bool gotScript = false;
-
-	for (const ObjectHandle& sel : Selections)
-	{
-		if (!gotScript)
-			if (sel->FindComponent<EcScript>())
-			{
-				actions.push_back(ContextMenuAction::EditScript);
-				actions.push_back(ContextMenuAction::ReloadScript);
-				actions.push_back(ContextMenuAction::__sectionSeparator);
-
-				break;
-			}
-	}
 
 	actions.push_back(ContextMenuAction::Duplicate);
 	actions.push_back(ContextMenuAction::Delete);
@@ -1430,7 +1385,6 @@ static void recursiveIterateTree(GameObject* current)
 		const ImGuiStyle& style = ImGui::GetStyle();
 
 		bool openInserter = false;
-		bool doubleClick = false;
 		bool isHovered = false;
 
 		bool open = ImGui::TreeNodeEx((const void*)nullptr, flags, "%s", "");
@@ -1465,7 +1419,6 @@ static void recursiveIterateTree(GameObject* current)
 		nodeClicked = ImGui::IsItemClicked() ? object : nodeClicked;
 		openInserter = ImGui::IsItemClicked(ImGuiMouseButton_Right) ? true : openInserter;
 		isHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) ? true : isHovered;
-		doubleClick = ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
 
 		ImGui::SameLine();
 		ImGui::SetCursorPosX(ImGui::GetCursorPosX() - style.IndentSpacing * 0.6f + 1.5f);
@@ -1482,7 +1435,6 @@ static void recursiveIterateTree(GameObject* current)
 		nodeClicked = ImGui::IsItemClicked() ? object : nodeClicked;
 		openInserter = ImGui::IsItemClicked(ImGuiMouseButton_Right) ? true : openInserter;
 		isHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) ? true : isHovered;
-		doubleClick = ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
 
 		ImGui::SameLine();
 		ImGui::TextUnformatted(object->Name.c_str());
@@ -1490,15 +1442,8 @@ static void recursiveIterateTree(GameObject* current)
 		nodeClicked = ImGui::IsItemClicked() ? object : nodeClicked;
 		openInserter = ImGui::IsItemClicked(ImGuiMouseButton_Right) ? true : openInserter;
 		isHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) ? true : isHovered;
-		doubleClick = ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
 
 		VisibleTreeWip.push_back(object);
-
-		if (nodeClicked == object && doubleClick) // double-click to edit script
-		{
-			if (object->FindComponent<EcScript>())
-				tryOpenScriptForEditing(object);
-		}
 
 		if (openInserter || ImGui::IsItemClicked(ImGuiMouseButton_Right))
 		{
@@ -2924,85 +2869,6 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 	renderExplorer();
 	renderProperties();
 	renderDocumentationViewer();
-
-	static bool wasCreatingScriptFile = false;
-	static char buffer[64]{};
-	static bool isNameTaken = false;
-
-	if (s_CreatingScriptFiles.size() > 0)
-	{
-		if (!wasCreatingScriptFile)
-		{
-			ImGui::OpenPopup("Create Script File");
-			wasCreatingScriptFile = true;
-			isNameTaken = false;
-		}
-
-		EcScript* script = static_cast<EcScript*>(s_CreatingScriptFiles[0]->FindComponent<EcScript>());
-
-		if (!script)
-		{
-			Log::WarningF("Object '{}' lost it's Script component, removing from `s_CreatingScriptFiles` queue", s_CreatingScriptFiles[0]->GetFullName());
-			s_CreatingScriptFiles.erase(s_CreatingScriptFiles.begin());
-			return;
-		}
-
-		bool open = true;
-
-		ImGui::SetNextWindowSize(ImVec2(370, 110), ImGuiCond_FirstUseEver);
-		if (!ImGui::BeginPopupModal("Create Script File", &open))
-		{
-			Log::WarningF("Declined to create file for script '{}'", s_CreatingScriptFiles[0]->GetFullName());
-			s_CreatingScriptFiles.erase(s_CreatingScriptFiles.begin());
-			memset(buffer, 0, std::size(buffer));
-			wasCreatingScriptFile = false;
-
-			return;
-		}
-
-		ImGui::Text("Enter a name or path for the script:");
-
-		ImVec2 start = ImGui::GetCursorPos();
-		ImGui::SetCursorPosY(start.y + ImGui::GetStyle().FramePadding.y);
-
-		ImGui::Text("scripts/");
-		ImGui::SameLine();
-		ImGui::SetCursorPosY(start.y);
-
-		static std::string fullpath;
-
-		if (ImGui::InputText("##", buffer, std::size(buffer)))
-		{
-			fullpath = "scripts/" + std::string(buffer) + ".luau";
-			isNameTaken = std::filesystem::is_regular_file(FileRW::MakePathCwdRelative(fullpath));
-		}
-
-		ImGui::SameLine();
-		ImGui::Text(".luau");
-
-		if (isNameTaken)
-			ImGui::Text("The file at that path will be overwritten");
-
-		if (ImGui::Button("Confirm"))
-		{
-			ImGui::CloseCurrentPopup();
-
-			std::string error;
-			bool success = FileRW::WriteFileCreateDirectories(fullpath, script->GetSource(), &error);
-
-			if (!success)
-				setErrorMessage(error);
-
-			script->SourceFile = fullpath;
-			invokeTextEditor(fullpath);
-
-			s_CreatingScriptFiles.erase(s_CreatingScriptFiles.begin());
-			memset(buffer, 0, std::size(buffer));
-			wasCreatingScriptFile = false;
-		}
-
-		ImGui::EndPopup();
-	}
 }
 
 void InlayEditor::SetExplorerRoot(const ObjectHandle NewRoot)
@@ -3405,6 +3271,8 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 
 		prevCursorMode = glfwGetInputMode(engine->Window, GLFW_CURSOR);
 		glfwSetInputMode(engine->Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+
+		engine->RendererContext.FrameBuffer.Unbind();
 	}
 	else
 	{
@@ -3617,14 +3485,14 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 			ImGui::Combo("Variables", &Section, "Locals\0Upvalues\0Environment\0Registry\0Stack\0");
 
 			ImGui::BeginChild("VariablesSection", ImVec2(), ImGuiChildFlags_Borders);
-			int initialStatus = L->status;
+			int initialStatus = lua_status(L);
 			L->status = LUA_OK; // avoid hitting assertion due to potential calls to `__tostring` metamethods
 			
 			switch (Section)
 			{
 			case 0:
 			{
-				for (int l = 0; l < L->ci - L->base_ci; l++)
+				for (int l = 0; l < lua_stackdepth(L); l++)
 				{
 					ImGui::Text("---LEVEL %i---", l);
 					ImGui::PushID(l);

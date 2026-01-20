@@ -3,7 +3,7 @@
 #include "component/InputService.hpp"
 #include "UserInput.hpp"
 
-class InputServiceManager : public ComponentManager<EcInputService>
+class InputServiceManager : public ComponentManager<EcPlayerInput>
 {
 public:
     const Reflection::StaticPropertyMap& GetProperties() override

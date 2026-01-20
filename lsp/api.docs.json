@@ -18,13 +18,13 @@
     "documentation": "* Culling modes for `Mesh.FaceCulling`"
   },
   "@luhx/global/Enum.Key": {
-    "documentation": "* Keys, which may be passed to `InputService:IsKeyPressed`"
+    "documentation": "* Keys, which may be passed to `PlayerInput:IsKeyPressed`"
   },
   "@luhx/global/Enum.LogType": {
     "documentation": "* The different types of log messages"
   },
   "@luhx/global/Enum.MouseButton": {
-    "documentation": "* Mouse buttons, which may be passed to `InputService:IsMouseButtonPressed`"
+    "documentation": "* Mouse buttons, which may be passed to `PlayerInput:IsMouseButtonPressed`"
   },
   "@luhx/global/EventConnection": {
     "documentation": "* A connection to an Event"
@@ -347,9 +347,6 @@
   "@luhx/global/scene.save": {
     "documentation": "* Saves the list of `GameObject`s to the provided path, returning whether the operation succeeded"
   },
-  "@luhx/global/script": {
-    "documentation": "* The Script object the current coroutine is running as\n* In `require`'d modules, this is `nil`"
-  },
   "@luhx/global/shellexec": {
     "documentation": "* Runs a shell command"
   },
@@ -386,16 +383,16 @@
   "@luhx/globaltype/Animation.Weight": {
     "documentation": "The influence the Animation has over the rig"
   },
-  "@luhx/globaltype/AssetService.GetMeshData": {
+  "@luhx/globaltype/AssetManager.GetMeshData": {
     "documentation": "Returns the provided mesh data associated with the provided path"
   },
-  "@luhx/globaltype/AssetService.ImportModel": {
+  "@luhx/globaltype/AssetManager.ImportModel": {
     "documentation": "Imports the glTF 2.0 model at the provided path and returns it as a `Model` GameObject"
   },
-  "@luhx/globaltype/AssetService.SaveMesh": {
+  "@luhx/globaltype/AssetManager.SaveMesh": {
     "documentation": "Saves the mesh data at the provided path to a file"
   },
-  "@luhx/globaltype/AssetService.SetMeshData": {
+  "@luhx/globaltype/AssetManager.SetMeshData": {
     "documentation": "Associates the provided mesh data with the provided path"
   },
   "@luhx/globaltype/Bone.IsActive": {
@@ -427,6 +424,12 @@
   },
   "@luhx/globaltype/DataModel.GetService": {
     "documentation": "Gets the Object representing the specified Service. If it does not exist yet in the Data Model, it is created"
+  },
+  "@luhx/globaltype/DataModel.IsModuleBound": {
+    "documentation": "If this is `true`, attempting to change `.Module` will throw an error"
+  },
+  "@luhx/globaltype/DataModel.Module": {
+    "documentation": "The Module associated with the DataModel that will be run upon the DataModel being bound"
   },
   "@luhx/globaltype/DataModel.OnFrameBegin": {
     "documentation": "Fires at the beginning of a frame, passing in the time elapsed since the last frame (delta time)"
@@ -472,6 +475,9 @@
   },
   "@luhx/globaltype/Engine.BindDataModel": {
     "documentation": "Switches Data Models to the specified Object"
+  },
+  "@luhx/globaltype/Engine.BoundDataModel": {
+    "documentation": "The DataModel object that is currently bound"
   },
   "@luhx/globaltype/Engine.CloseVM": {
     "documentation": "Closes the specified Luau VM, releasing its resources"
@@ -665,71 +671,53 @@
   "@luhx/globaltype/GameObject.Serializes": {
     "documentation": "Whether or not the Object should be saved with the scene if it is serialized with `scene.save`, and whether `:Duplicate` will duplicate it (only applies to descendants)"
   },
-  "@luhx/globaltype/HistoryService.ActionHistorySize": {
+  "@luhx/globaltype/History.ActionHistorySize": {
     "documentation": "The total number of Actions that have finished being recorded"
   },
-  "@luhx/globaltype/HistoryService.CanRedo": {
+  "@luhx/globaltype/History.CanRedo": {
     "documentation": "Returns whether `:Redo` will succeed"
   },
-  "@luhx/globaltype/HistoryService.CanUndo": {
+  "@luhx/globaltype/History.CanUndo": {
     "documentation": "Returns whether `:Undo` will succeed"
   },
-  "@luhx/globaltype/HistoryService.ClearHistory": {
+  "@luhx/globaltype/History.ClearHistory": {
     "documentation": "Clears all recorded history"
   },
-  "@luhx/globaltype/HistoryService.CurrentActionName": {
+  "@luhx/globaltype/History.CurrentActionName": {
     "documentation": "The name of the Action currently being recorded, or `nil` if no recording is in progress"
   },
-  "@luhx/globaltype/HistoryService.CurrentWaypoint": {
+  "@luhx/globaltype/History.CurrentWaypoint": {
     "documentation": "The ID of the Action that was last finished"
   },
-  "@luhx/globaltype/HistoryService.DiscardCurrentAction": {
+  "@luhx/globaltype/History.DiscardCurrentAction": {
     "documentation": "Discards the Action currently being recorded"
   },
-  "@luhx/globaltype/HistoryService.EnableRecording": {
+  "@luhx/globaltype/History.EnableRecording": {
     "documentation": "Enables the main functionality of this service"
   },
-  "@luhx/globaltype/HistoryService.FinishCurrentAction": {
+  "@luhx/globaltype/History.FinishCurrentAction": {
     "documentation": "Finishes the Action that was last started. Only one Action may be active at a time"
   },
-  "@luhx/globaltype/HistoryService.GetActionData": {
+  "@luhx/globaltype/History.GetActionData": {
     "documentation": "Retrives information about a previously-recorded Action by its ID (IDs are in the range 0 <= ID < `ActionHistorySize`)"
   },
-  "@luhx/globaltype/HistoryService.GetCurrentActionData": {
+  "@luhx/globaltype/History.GetCurrentActionData": {
     "documentation": "Retrieves information about the current Action being recorded"
   },
-  "@luhx/globaltype/HistoryService.IsRecordingAction": {
+  "@luhx/globaltype/History.IsRecordingAction": {
     "documentation": "Whether an Action is currently being recorded by History"
   },
-  "@luhx/globaltype/HistoryService.Redo": {
+  "@luhx/globaltype/History.Redo": {
     "documentation": "Forwards the state of the scene to how it was before the last Undo"
   },
-  "@luhx/globaltype/HistoryService.TargetDataModel": {
+  "@luhx/globaltype/History.TargetDataModel": {
     "documentation": "The DataModel that History will track"
   },
-  "@luhx/globaltype/HistoryService.TryBeginAction": {
+  "@luhx/globaltype/History.TryBeginAction": {
     "documentation": "Attempts to begin an \"Action.\" May fail and return `false`. Only one Action may be active at a time"
   },
-  "@luhx/globaltype/HistoryService.Undo": {
+  "@luhx/globaltype/History.Undo": {
     "documentation": "Reverses the state of the scene to how it was before the last Action began"
-  },
-  "@luhx/globaltype/InputService.CursorMode": {
-    "documentation": "The current mode/behaviour of the cursor. Refer to the `Enum.CursorMode` enumeration"
-  },
-  "@luhx/globaltype/InputService.GetCursorPosition": {
-    "documentation": "Returns the current position of the mouse cursor relative to the window as a `vector`"
-  },
-  "@luhx/globaltype/InputService.IsKeyPressed": {
-    "documentation": "Returns whether the specified key (e.g. `Enum.Key.A`, `Enum.Key.One`) is currently being pressed"
-  },
-  "@luhx/globaltype/InputService.IsKeyboardSunk": {
-    "documentation": "Whether the Engine is currently using keyboard input (such as for Dear ImGui). Do not process keyboard input if this is `true`"
-  },
-  "@luhx/globaltype/InputService.IsMouseButtonPressed": {
-    "documentation": "Returns whether the specified mouse button (`Enum.MouseButton.Left/Middle/Right`) is currently being pressed"
-  },
-  "@luhx/globaltype/InputService.IsMouseSunk": {
-    "documentation": "Whether the Engine is currently using mouse input (such as for Dear ImGui). Do not process mouse input if this is `true`"
   },
   "@luhx/globaltype/Matrix.C1R1": {
     "documentation": "* The value at Column 1, Row 1\n"
@@ -860,6 +848,24 @@
   "@luhx/globaltype/ParticleEmitter.Rate": {
     "documentation": "An integer indicating how many particles should be emitted per second (must be above or equal to `0`)"
   },
+  "@luhx/globaltype/PlayerInput.CursorMode": {
+    "documentation": "The current mode/behaviour of the cursor. Refer to the `Enum.CursorMode` enumeration"
+  },
+  "@luhx/globaltype/PlayerInput.GetCursorPosition": {
+    "documentation": "Returns the current position of the mouse cursor relative to the window as a `vector`"
+  },
+  "@luhx/globaltype/PlayerInput.IsKeyPressed": {
+    "documentation": "Returns whether the specified key (e.g. `Enum.Key.A`, `Enum.Key.One`) is currently being pressed"
+  },
+  "@luhx/globaltype/PlayerInput.IsKeyboardSunk": {
+    "documentation": "Whether the Engine is currently using keyboard input (such as for Dear ImGui). Do not process keyboard input if this is `true`"
+  },
+  "@luhx/globaltype/PlayerInput.IsMouseButtonPressed": {
+    "documentation": "Returns whether the specified mouse button (`Enum.MouseButton.Left/Middle/Right`) is currently being pressed"
+  },
+  "@luhx/globaltype/PlayerInput.IsMouseSunk": {
+    "documentation": "Whether the Engine is currently using mouse input (such as for Dear ImGui). Do not process mouse input if this is `true`"
+  },
   "@luhx/globaltype/PointLight.Brightness": {
     "documentation": "How bright the Light is"
   },
@@ -868,12 +874,6 @@
   },
   "@luhx/globaltype/PointLight.Range": {
     "documentation": "How far light is emitted. If `>= 0`, the Range is used and attenuation is linear, otherwise it uses the formula `F = 1/D^2 * B` to mirror real-world attenuation, where `F` is the final brightness, `D` is the distance of a point from the Light, and `B` is the `Brightness` property's value"
-  },
-  "@luhx/globaltype/Script.Reload": {
-    "documentation": "Re-compiles the Source file and runs it from the beginning, returning whether the compilation and initial run were successful"
-  },
-  "@luhx/globaltype/Script.SourceFile": {
-    "documentation": "The File the Script is executing. Changing this to a valid File immediately reloads the Script if it is a descendant of the `DataModel` (i.e. `game`). To forcefully reload it, `:Reload` should be used"
   },
   "@luhx/globaltype/Sound.FinishedLoading": {
     "documentation": "Whether the Sound has finished loading the `SoundFile`"
@@ -931,9 +931,6 @@
   },
   "@luhx/globaltype/Transform.Transform": {
     "documentation": "The Object's world-space transformation"
-  },
-  "@luhx/globaltype/TreeLink.Scripting": {
-    "documentation": "Whether Scripts which descend from the `Target` will run"
   },
   "@luhx/globaltype/TreeLink.Target": {
     "documentation": "The target to link"

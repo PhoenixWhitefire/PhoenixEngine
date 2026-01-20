@@ -87,18 +87,10 @@ public:
                 { Reflection::ValueType::GameObject },
                 [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
                 {
-                    const std::string_view Services[] = {
-                        "Workspace",
-                        "Engine",
-                        "InputService",
-                        "AssetService",
-                        "HistoryService"
-                    };
-
                     std::string service = std::string(inputs[0].AsStringView());
                     bool validService = false;
 
-                    for (const std::string_view& serv : Services)
+                    for (const std::string_view& serv : s_DataModelServices)
                         if (serv == service)
                         {
                             validService = true;
@@ -166,7 +158,8 @@ void EcDataModel::Bind()
 		return;
 	}
 
-    lua_State* L = lua_newthread(ScriptEngine::GetCurrentVM().MainThread);
+    lua_State* mainThread = ScriptEngine::GetCurrentVM().MainThread;
+    lua_State* L = lua_newthread(mainThread);
 	luaL_sandboxthread(L);
 
 	int result = ScriptEngine::CompileAndLoad(L, source, "@" + FileRW::MakePathCwdRelative(Module));
@@ -199,6 +192,9 @@ void EcDataModel::Bind()
 			ScriptEngine::L::DumpStacktrace(L);
 
             lua_resetthread(L);
+            lua_pop(mainThread, 1);
+            
+            CanLoadModule = false;
 		}
         else
             ModuleData = L;
@@ -211,5 +207,8 @@ void EcDataModel::Bind()
 		);
 
 		lua_resetthread(L);
+        lua_pop(mainThread, 1);
+
+        CanLoadModule = false;
 	}
 }

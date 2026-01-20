@@ -36,7 +36,7 @@
           "Weight": "Double"
         }
       },
-      "AssetService": {
+      "AssetManager": {
         "Methods": {
           "GetMeshData": "(String) -> (Map)",
           "ImportModel": "(String) -> (GameObject)",
@@ -66,6 +66,8 @@
           "GetService": "(String) -> (GameObject)"
         },
         "Properties": {
+          "IsModuleBound": "Boolean READONLY",
+          "Module": "String",
           "Time": "Double READONLY"
         }
       },
@@ -111,6 +113,7 @@
           "UnloadTexture": "(String) -> ()"
         },
         "Properties": {
+          "BoundDataModel": "GameObject READONLY",
           "CommitHash": "String READONLY",
           "DebugCollisionAabbs": "Boolean",
           "DebugSpatialHeat": "Boolean",
@@ -141,7 +144,7 @@
           "WhereIAm": "Vector3"
         }
       },
-      "HistoryService": {
+      "History": {
         "Methods": {
           "CanRedo": "() -> (Boolean)",
           "CanUndo": "() -> (Boolean)",
@@ -161,18 +164,6 @@
           "CurrentWaypoint": "Integer READONLY",
           "IsRecordingAction": "Boolean READONLY",
           "TargetDataModel": "GameObject"
-        }
-      },
-      "InputService": {
-        "Methods": {
-          "GetCursorPosition": "() -> (Vector2)",
-          "IsKeyPressed": "(Integer) -> (Boolean)",
-          "IsMouseButtonPressed": "(Integer) -> (Boolean)"
-        },
-        "Properties": {
-          "CursorMode": "Integer",
-          "IsKeyboardSunk": "Boolean READONLY",
-          "IsMouseSunk": "Boolean READONLY"
         }
       },
       "Mesh": {
@@ -203,19 +194,23 @@
           "Rate": "Integer"
         }
       },
+      "PlayerInput": {
+        "Methods": {
+          "GetCursorPosition": "() -> (Vector2)",
+          "IsKeyPressed": "(Integer) -> (Boolean)",
+          "IsMouseButtonPressed": "(Integer) -> (Boolean)"
+        },
+        "Properties": {
+          "CursorMode": "Integer",
+          "IsKeyboardSunk": "Boolean READONLY",
+          "IsMouseSunk": "Boolean READONLY"
+        }
+      },
       "PointLight": {
         "Properties": {
           "Brightness": "Double",
           "LightColor": "Color",
           "Range": "Double"
-        }
-      },
-      "Script": {
-        "Methods": {
-          "Reload": "() -> (Boolean)"
-        },
-        "Properties": {
-          "SourceFile": "String"
         }
       },
       "Sound": {
@@ -255,7 +250,6 @@
       },
       "TreeLink": {
         "Properties": {
-          "Scripting": "Boolean",
           "Target": "GameObject?"
         }
       },
@@ -326,7 +320,6 @@
       "game": "GameObject & DataModel",
       "loadthread": "function",
       "loadthreadfromfile": "function",
-      "script": "GameObject & Script",
       "shellexec": "function",
       "warn": "function",
       "workspace": "GameObject & Workspace"
