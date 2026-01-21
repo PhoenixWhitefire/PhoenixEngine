@@ -193,7 +193,7 @@ void EcDataModel::Bind()
 
             lua_resetthread(L);
             lua_pop(mainThread, 1);
-            
+
             CanLoadModule = false;
 		}
         else

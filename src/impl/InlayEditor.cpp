@@ -2696,10 +2696,10 @@ static void renderProperties()
 
 			case Reflection::ValueType::Matrix:
 			{
-				ImGui::PushID(propNameCStr);
-
 				if (!doConflict)
 				{
+					ImGui::NewLine(); // need to put this on a new line to prevent UI overlapping
+
 					glm::mat4 mat = curVal.AsMatrix();
 
 					float pos[3] =
@@ -2757,7 +2757,6 @@ static void renderProperties()
 					if (resetConflictedProperty(propNameCStr))
 						newVal = glm::mat4(1.f);
 
-				ImGui::PopID();
 				break;
 			}
 

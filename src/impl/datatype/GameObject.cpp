@@ -908,6 +908,7 @@ Reflection::GenericValue GameObject::GetPropertyValue(const std::string_view& Pr
 
 	RAISE_RTF("Invalid property '{}' in GetPropertyValue", PropName);
 }
+
 static bool resultsInParentingToTargetDataModel(const std::string_view& PropName, const Reflection::GenericValue& Value, uint32_t Target)
 {
 	if (PropName == "Parent")
@@ -920,6 +921,7 @@ static bool resultsInParentingToTargetDataModel(const std::string_view& PropName
 
 	return false;
 }
+
 void GameObject::SetPropertyValue(const std::string_view& PropName, const Reflection::GenericValue& Value)
 {
 	ZoneScoped;
@@ -957,6 +959,28 @@ void GameObject::SetPropertyValue(const std::string_view& PropName, const Reflec
 	}
 
 	RAISE_RTF("Invalid property '{}' in SetPropertyValue", PropName);
+}
+
+Reflection::GenericValue GameObject::GetDefaultPropertyValue(const std::string_view& PropName)
+{
+	ZoneScoped;
+	ZoneText(PropName.data(), PropName.size());
+
+	ReflectorRef ref;
+	if (const Reflection::PropertyDescriptor* prop = FindProperty(PropName, &ref))
+	{
+		if (ref.Type == EntityComponent::None)
+		{
+			static GameObject Defaults;
+			return prop->Get((void*)&Defaults);
+		}
+		else
+		{
+			return s_ComponentManagers[(size_t)ref.Type]->GetDefaultPropertyValue(PropName);
+		}
+	}
+
+	RAISE_RTF("Invalid property '{}' in GetDefaultPropertyValue", PropName);
 }
 
 std::vector<Reflection::GenericValue> GameObject::CallMethod(const std::string_view& FuncName, const std::vector<Reflection::GenericValue>& Inputs)

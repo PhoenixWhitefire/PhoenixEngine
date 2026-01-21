@@ -24,9 +24,7 @@ public:
     uint32_t CreateComponent(GameObject* Object) override
     {
         m_Components.emplace_back();
-
 		m_Components.back().Object = Object;
-		m_Components.back().m_SceneCameraId = PHX_GAMEOBJECT_NULL_ID;
 
         return static_cast<uint32_t>(m_Components.size() - 1);
     }

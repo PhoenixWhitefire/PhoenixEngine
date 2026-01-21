@@ -126,6 +126,7 @@ public:
 	virtual const Reflection::StaticMethodMap& GetMethods() = 0;
 	virtual const Reflection::StaticEventMap& GetEvents() = 0;
 	virtual Reflection::GenericValue GetDefaultPropertyValue(const std::string_view&) = 0;
+	virtual Reflection::GenericValue GetDefaultPropertyValue(const Reflection::PropertyDescriptor*) = 0;
 };
 
 template <EntityComponent T>
@@ -172,6 +173,7 @@ public:
 
 	Reflection::GenericValue GetPropertyValue(const std::string_view&);
 	void SetPropertyValue(const std::string_view&, const Reflection::GenericValue&);
+	Reflection::GenericValue GetDefaultPropertyValue(const std::string_view&);
 
 	std::vector<Reflection::GenericValue> CallMethod(const std::string_view&, const std::vector<Reflection::GenericValue>&);
 
@@ -484,8 +486,13 @@ public:
 
 	virtual Reflection::GenericValue GetDefaultPropertyValue(const std::string_view& Property) override
 	{
+		return GetDefaultPropertyValue(&GetProperties().at(Property));
+	}
+
+	virtual Reflection::GenericValue GetDefaultPropertyValue(const Reflection::PropertyDescriptor* Property) override
+	{
 		static T Defaults;
-		return GetProperties().at(Property).Get((void*)&Defaults);
+		return Property->Get((void*)&Defaults);
 	}
 
 	ComponentManager()

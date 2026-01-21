@@ -119,6 +119,20 @@ public:
 		ComponentManager<EcMesh>::DeleteComponent(Id);
     }
 
+	virtual Reflection::GenericValue GetDefaultPropertyValue(const std::string_view& Property) override
+	{
+		return GetDefaultPropertyValue(&GetProperties().at(Property));
+	}
+
+	virtual Reflection::GenericValue GetDefaultPropertyValue(const Reflection::PropertyDescriptor* Property) override
+	{
+		static EcMesh Defaults;
+		Defaults.MaterialId = MaterialManager::Get()->LoadFromPath("plastic");
+		Defaults.RenderMeshId = MeshProvider::Get()->LoadFromPath("!Cube");
+
+		return Property->Get((void*)&Defaults);
+	}
+
     const Reflection::StaticPropertyMap& GetProperties() override
     {
         static const Reflection::StaticPropertyMap props = 

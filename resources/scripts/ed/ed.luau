@@ -595,6 +595,8 @@ local function homeTab(_: number)
 	end
 end
 
+local WasToolEnabled = {}
+
 local function toolsTab(_: number)
 	for _, tool in ToolOrder do
 		local name = tool:sub(#("Tool_") + 1, #tool)
@@ -604,6 +606,14 @@ local function toolsTab(_: number)
 			Engine:SetToolEnabled(tool, not enabled)
 			conf.save()
 		end
+
+		if WasToolEnabled[tool] ~= nil then
+			if WasToolEnabled[tool] ~= enabled then
+				conf.save()
+			end
+		end
+
+		WasToolEnabled[tool] = enabled
 
 		imgui.sameline()
 	end
@@ -1745,8 +1755,3 @@ function Stages.ProjectPlaying_Leave(DeltaTime)
 end
 
 changeStageTo("SelectProject")
-
-
-
-
-

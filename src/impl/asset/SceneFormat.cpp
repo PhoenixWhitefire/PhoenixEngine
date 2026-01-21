@@ -363,12 +363,19 @@ static std::vector<ObjectRef> LoadMapVersion1(
 		GameObject* Object = GameObject::Create(LightType);
 		Objects.push_back(Object);
 
-		EcTransform* ct = Object->FindComponent<EcTransform>();
+		if (LightType != "DirectionalLight")
+		{
+			EcTransform* ct = Object->FindComponent<EcTransform>();
 
-		ct->Transform = glm::translate(
-			glm::mat4(1.f),
-			(glm::vec3)GetVector3FromJson(LightObject["position"])
-		);
+			ct->Transform = glm::translate(
+				glm::mat4(1.f),
+				(glm::vec3)GetVector3FromJson(LightObject["position"])
+			);
+		}
+		else
+		{
+			Object->FindComponent<EcDirectionalLight>()->Direction = GetVector3FromJson(LightObject["position"]);
+		}
 
 		//Light->LightColor = GetColorFromJson(LightObject["color"]);
 
@@ -780,6 +787,9 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 			serializedAs = "$_objectId";
 
 		Reflection::GenericValue value = Object->GetPropertyValue(propName);
+
+		if (Object->GetDefaultPropertyValue(propName) == value)
+			continue; // don't serialize properties that haven't changed
 
 		switch (value.Type)
 		{

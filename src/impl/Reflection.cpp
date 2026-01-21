@@ -563,7 +563,7 @@ bool Reflection::GenericValue::operator==(const Reflection::GenericValue& Other)
 
 	case ValueType::Matrix:
 	{
-		return memcmp(this->Val.Ptr, Other.Val.Ptr, sizeof(glm::mat4));
+		return this->AsMatrix() == Other.AsMatrix();
 	}
 
 	case ValueType::Array:

@@ -183,7 +183,7 @@ MaterialManager* MaterialManager::Get()
 
 uint32_t MaterialManager::LoadFromPath(const std::string_view& Name)
 {
-	std::string namedyn{ Name };
+	std::string namedyn = std::string(Name);
 
 	auto it = m_StringToMaterialId.find(namedyn);
 
@@ -212,7 +212,10 @@ uint32_t MaterialManager::LoadFromPath(const std::string_view& Name)
 			if (Name == "error")
 				RAISE_RT("Failed to load the 'error' material. It is required due to technical reasons (I'm lazy)");
 
-			return this->LoadFromPath("error");
+			uint32_t id = LoadFromPath("error");
+			m_StringToMaterialId.emplace(Name, id);
+
+			return id;
 		}
 	}
 	else
