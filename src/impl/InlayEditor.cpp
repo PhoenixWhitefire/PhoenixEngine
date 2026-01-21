@@ -12,6 +12,7 @@
 #include <ImGuiColorTextEdit/TextEditor.h>
 #include <luau/VM/src/lstate.h>
 #include <tinyfiledialogs.h>
+#include <lualib.h>
 #include <fstream>
 #include <set>
 
@@ -134,6 +135,121 @@ static void copyStringToBuffer(char* Buffer, const std::string_view& String, siz
 static void debugBreakHook(lua_State*, lua_Debug*, ScriptEngine::L::DebugBreakReason);
 static void debuggerLeaveCallback();
 
+static bool canBreakLineAtChar(char c)
+{
+	return c == ' ' || c == ',' || c == '.' || c == '!' || c == '?';
+}
+
+static std::string addLinebreaks(std::string String, const size_t MaxCharactersBeforeLinebreak)
+{
+	if (String.size() < MaxCharactersBeforeLinebreak)
+		return String;
+
+	if (MaxCharactersBeforeLinebreak < 10)
+		return String;
+
+	size_t sinceLinebreak = 0;
+
+	for (size_t i = 0; i < String.size(); i++)
+	{
+		if (sinceLinebreak == MaxCharactersBeforeLinebreak)
+		{
+			if (canBreakLineAtChar(String[i]))
+				String.insert(String.begin() + i, '\n');
+			else
+			{
+				bool didBreak = false;
+
+				for (size_t j = i; j > 0; j--)
+					if (canBreakLineAtChar(String[j]))
+					{
+						String.insert(String.begin() + j, '\n');
+						didBreak = true;
+						break;
+					}
+
+				if (!didBreak)
+					String.insert(i, "-\n");
+			}
+
+			sinceLinebreak = 0;
+		}
+
+		sinceLinebreak++;
+	}
+
+	return String;
+}
+
+static std::string getDescriptionAsString(const nlohmann::json& DescriptionJson, size_t nCharsPerLine)
+{
+	if (DescriptionJson.is_string())
+	{
+		return addLinebreaks(DescriptionJson, nCharsPerLine);
+	}
+	else if (DescriptionJson.is_object())
+	{
+		return getDescriptionAsString(DescriptionJson["Description"], nCharsPerLine);
+	}
+	else if (DescriptionJson.is_array())
+	{
+		std::string desc;
+
+		for (auto descit = DescriptionJson.begin(); descit != DescriptionJson.end(); descit++)
+			desc += "* " + addLinebreaks(descit.value(), nCharsPerLine) + "\n";
+
+		desc = desc.substr(0, desc.size() - 1);
+
+		return desc;
+	}
+	else if (DescriptionJson.is_null())
+		return "Standard Luau";
+
+	else
+		return std::format("Unexpected description type '{}'", DescriptionJson.type_name());
+}
+
+static std::string findLuauTypeFromDocumentation(const nlohmann::json& Docs, const std::string& RuntimeType)
+{
+	if (!Docs.is_object())
+		return RuntimeType;
+
+	if (const auto& it = Docs.find("In"); it != Docs.end())
+	{
+		std::string inStr;
+		if (it.value().is_string())
+		{
+			inStr = (std::string)it.value();
+		}
+		else
+		{
+			for (size_t i = 0; i < it.value().size(); i++)
+			{
+				const nlohmann::json& v = it.value()[i];
+				std::string vstr = v.is_string() ? (std::string)v : (std::string)v[0];
+				inStr = vstr + ", ";
+			}
+
+			inStr = inStr.substr(0, inStr.size() - 2);
+		}
+
+		std::string ty = "( " + inStr + " )";
+
+		if (const auto& oit = Docs.find("Out"); oit != Docs.end())
+			ty += " -> ( " + (std::string)oit.value() + " )";
+
+		return ty;
+	}
+
+	if (const auto& it = Docs.find("Out"); it != Docs.end())
+		return "() -> ( " + (std::string)it.value() + " )";
+
+	if (const auto& it = Docs.find("Type"); it != Docs.end())
+		return (std::string)it.value();
+
+	return RuntimeType;
+}
+
 void InlayEditor::Initialize(Renderer* renderer)
 {
 	MtlEditorPreview.Initialize(256, 256);
@@ -199,6 +315,87 @@ void InlayEditor::Initialize(Renderer* renderer)
 
 	ScriptEngine::L::DebugBreak = &debugBreakHook;
 	ScriptEngine::L::LeaveDebugger = debuggerLeaveCallback;
+
+	ObjectRef tempdm = GameObject::Create("DataModel");
+	ObjectRef tempwp = GameObject::Create("Workspace");
+	tempwp->SetParent(tempdm);
+	GameObject::s_DataModel = tempdm->ObjectId;
+
+	s_TextEditorLang.mTokenRegexStrings[5].first = "[a-zA-Z_][a-zA-Z0-9_\\.]*"; // allow identifiers to have `.` so that `task.defer` etc can match as one single token
+	s_TextEditorLang.mTokenRegexStrings.push_back({ "\\`(?:\\.|[^\\`{]|\\{[^}]*\\})*\\`", TextEditor::PaletteIndex::String }); // string interpolation
+
+	s_TextEditorLang.mKeywords.emplace("continue");
+	s_TextEditorLang.mIdentifiers.clear();
+	s_TextEditorLang.mName = "Luau";
+
+	const nlohmann::json& scriptEnv = ApiDumpJson.value("ScriptEnv", nlohmann::json::object());
+	const nlohmann::json& scriptEnvDocs = DocumentationJson.value("ScriptEnv", nlohmann::json::object());
+
+	const nlohmann::json& datatypesDocs = scriptEnvDocs.value("Datatypes", nlohmann::json::object());
+	const nlohmann::json& librariesDocs = scriptEnvDocs.value("Libraries", nlohmann::json::object());
+	const nlohmann::json& globalsDocs = scriptEnvDocs.value("Globals", nlohmann::json::object());
+
+	lua_State* L = ScriptEngine::L::Create("EnvironmentScraper");
+	lua_pushnil(L);
+
+	while (lua_next(L, LUA_ENVIRONINDEX))
+	{
+		std::string name = luaL_tolstring(L, -2, nullptr);
+		lua_pop(L, 1);
+
+		nlohmann::json mainDescriptionData = globalsDocs.find(name) != globalsDocs.end() ? globalsDocs[name]
+												: librariesDocs.find(name) != librariesDocs.end() ? librariesDocs[name]
+												: datatypesDocs.find(name) != datatypesDocs.end() ? datatypesDocs[name]
+												: "Standard Luau";
+
+		s_TextEditorLang.mIdentifiers[name] = TextEditor::Identifier{
+			.mDeclaration = std::format("{}: {}\n{}", name, findLuauTypeFromDocumentation(mainDescriptionData, luaL_typename(L, -1)), getDescriptionAsString(mainDescriptionData, 64))
+		};
+
+		if (lua_type(L, -1) == LUA_TTABLE && name != "_G")
+		{
+			auto it = librariesDocs.find(name);
+			bool hasAnyDocs = true;
+			bool isLibrary = true;
+
+			if (it == librariesDocs.end())
+			{
+				it = datatypesDocs.find(name);
+				isLibrary = false;
+
+				if (it == datatypesDocs.end())
+					hasAnyDocs = false;
+			}
+
+			lua_pushnil(L);
+			while (lua_next(L, -2))
+			{
+				std::string innerName = luaL_tolstring(L, -2, nullptr);
+				lua_pop(L, 1);
+
+				const nlohmann::json& docs = hasAnyDocs ? (
+					isLibrary ? it.value()["Members"] : it.value()["Library"]
+				) : nlohmann::json::object();
+
+				nlohmann::json descriptionData = docs.value(innerName, nlohmann::json{{ "Description", "Standard Luau" }});
+
+				std::string fullName = std::format("{}.{}", name, innerName);
+
+				s_TextEditorLang.mIdentifiers[fullName] = TextEditor::Identifier{
+					.mDeclaration = std::format("{}: {}\n{}", fullName, findLuauTypeFromDocumentation(descriptionData, luaL_typename(L, -1)), getDescriptionAsString(descriptionData, 64))
+				};
+
+				lua_pop(L, 1);
+			}
+		}
+
+		lua_pop(L, 1);
+	}
+
+	ScriptEngine::L::Close(L);
+
+	tempwp->Destroy();
+	tempdm->Destroy();
 
 	InlayEditor::DidInitialize = true;
 }
@@ -1512,52 +1709,6 @@ static bool resetConflictedProperty(const char* PropName, char* Buf = nullptr)
 	return reset;
 }
 
-static bool canBreakLineAtChar(char c)
-{
-	return c == ' ' || c == ',' || c == '.' || c == '!' || c == '?';
-}
-
-static std::string addLinebreaks(std::string String, const size_t MaxCharactersBeforeLinebreak)
-{
-	if (String.size() < MaxCharactersBeforeLinebreak)
-		return String;
-
-	if (MaxCharactersBeforeLinebreak < 10)
-		return String;
-
-	size_t sinceLinebreak = 0;
-
-	for (size_t i = 0; i < String.size(); i++)
-	{
-		if (sinceLinebreak == MaxCharactersBeforeLinebreak)
-		{
-			if (canBreakLineAtChar(String[i]))
-				String.insert(String.begin() + i, '\n');
-			else
-			{
-				bool didBreak = false;
-
-				for (size_t j = i; j > 0; j--)
-					if (canBreakLineAtChar(String[j]))
-					{
-						String.insert(String.begin() + j, '\n');
-						didBreak = true;
-						break;
-					}
-
-				if (!didBreak)
-					String.insert(i, "-\n");
-			}
-
-			sinceLinebreak = 0;
-		}
-
-		sinceLinebreak++;
-	}
-
-	return String;
-}
-
 static const ImVec4 ApiPropertyColor = ImVec4(.52f, .69f, 1.f, 1.f);
 static const ImVec4 ApiFunctionColor = ImVec4(.91f, .41f, .12f, 1.f);
 static const ImVec4 ApiEventColor = ImVec4(1.f, .93f, 0.f, 1.f);
@@ -1689,8 +1840,7 @@ static void renderDescription(const nlohmann::json& DescriptionJson, size_t nCha
 	}
 	else if (DescriptionJson.is_object())
 	{
-		std::string desc = addLinebreaks(DescriptionJson.value("Description", "No description"), nCharsPerLine);
-		ImGui::Text("* %s", desc.c_str());
+		renderDescription(DescriptionJson["Description"], nCharsPerLine);
 	}
 	else if (DescriptionJson.is_array())
 	{
@@ -2931,7 +3081,6 @@ void InlayEditor::Shutdown()
 
 #include <imgui/backends/imgui_impl_opengl3.h>
 #include <imgui/backends/imgui_impl_glfw.h>
-#include <lualib.h>
 #include <thread>
 #include <cmath>
 

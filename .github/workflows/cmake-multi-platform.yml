@@ -64,8 +64,8 @@ jobs:
       with:
         name: "Engine_${{ runner.os }}-${{ matrix.build_type }}"
         path: |
-          x64/Debug
-          x64/Release
+          x64/Debug/PhoenixEngine.exe
+          x64/Release/PhoenixEngine.exe
           resources/
           gh-assets/wiki/doc-comments.json
           gh-assets/wiki/components-prologue.md
@@ -73,7 +73,7 @@ jobs:
           gh-assets/wiki/libraries-prologue.md
           gh-assets/wiki/globals-prologue.md
           lsp/
-          api-dump.json
+          apidump.json
           default-layout.ini
           debugger-layout.ini
           phoenix.conf
@@ -81,5 +81,5 @@ jobs:
 
     - name: Test
       shell: pwsh
-      if: runner.os == 'Windows'
+      if: matrix.build_type == 'Release'
       run: ". \"x64\\${{ matrix.build_type }}\\PhoenixEngine.exe\" -headless -tool scripts\\ci\\tests.luau"
