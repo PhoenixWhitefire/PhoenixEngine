@@ -37,7 +37,8 @@ enum class EntityComponent : uint8_t
 	PlayerInput,
 	AssetManager,
 	History,
-	
+	RigidBody,
+
 	__count
 };
 
@@ -62,7 +63,8 @@ static inline const std::string_view s_EntityComponentNames[] =
 	"Engine",
 	"PlayerInput",
 	"AssetManager",
-	"History"
+	"History",
+	"RigidBody"
 };
 
 const std::string_view s_DataModelServices[] = {
@@ -78,6 +80,13 @@ const std::string_view s_DataModelServices[] = {
 struct ReflectorRef
 {
 	void* Referred() const;
+
+	template <class T>
+	T* Get()
+	{
+		assert(T::Type == Type);
+		return (T*)Referred();
+	}
 
 	uint32_t Id = UINT32_MAX;
 	EntityComponent Type = EntityComponent::None;

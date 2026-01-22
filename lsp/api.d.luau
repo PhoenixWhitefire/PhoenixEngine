@@ -196,18 +196,11 @@ declare extern type History with
   function Undo(self) : ()
 end
 declare extern type Mesh with
-  AngularVelocity: vector
   Asset: string
   CastsShadows: boolean
-  CollisionFidelity: number
-  Density: number
   FaceCulling: number
-  Friction: number
-  LinearVelocity: vector
   Material: string
   MetallnessFactor: number
-  PhysicsCollisions: boolean
-  PhysicsDynamics: boolean
   RoughnessFactor: number
   Tint: Color
   Transparency: number
@@ -233,6 +226,8 @@ declare extern type PointLight with
   Brightness: number
   LightColor: Color
   Range: number
+end
+declare extern type RigidBody with
 end
 declare extern type Sound with
   FinishedLoading: boolean 
@@ -294,6 +289,7 @@ type Creatables = {
 	PlayerInput: PlayerInput,
 	AssetManager: AssetManager,
 	History: History,
+	RigidBody: RigidBody,
 }
 declare Enum: {
   CollisionFidelity: { Aabb: number, AabbStaticSize: number },

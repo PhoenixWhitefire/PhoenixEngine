@@ -791,41 +791,20 @@
   "@luhx/globaltype/Matrix.__mul": {
     "documentation": "* Two Matrices may be multiplied together with the `*` operator\n"
   },
-  "@luhx/globaltype/Mesh.AngularVelocity": {
-    "documentation": "Its rotational velocity"
-  },
   "@luhx/globaltype/Mesh.Asset": {
     "documentation": "The path to the underlying `.hxmesh` file, or a built-in identifier like `!Quad` or `!Cube`"
   },
   "@luhx/globaltype/Mesh.CastsShadows": {
     "documentation": "Whether it casts shadows"
   },
-  "@luhx/globaltype/Mesh.CollisionFidelity": {
-    "documentation": "The fidelity at which collisions are detected. See the `CollisionFidelity` enum"
-  },
-  "@luhx/globaltype/Mesh.Density": {
-    "documentation": "Its density (`Mass = Density * Size`)"
-  },
   "@luhx/globaltype/Mesh.FaceCulling": {
     "documentation": "Which faces of the mesh to cull based on viewing direction. See the `FaceCulling` enum"
-  },
-  "@luhx/globaltype/Mesh.Friction": {
-    "documentation": "Fraction of Velocity it should lose per second while in contact with another object while `PhysicsDynamics` is `true`"
-  },
-  "@luhx/globaltype/Mesh.LinearVelocity": {
-    "documentation": "Its velocity"
   },
   "@luhx/globaltype/Mesh.Material": {
     "documentation": "The name of the `.mtl` in the `resources/materials/` directory it should use"
   },
   "@luhx/globaltype/Mesh.MetallnessFactor": {
     "documentation": "Metallness modifier"
-  },
-  "@luhx/globaltype/Mesh.PhysicsCollisions": {
-    "documentation": "Whether other physics objects can collide with it"
-  },
-  "@luhx/globaltype/Mesh.PhysicsDynamics": {
-    "documentation": "Whether the Physics Engine should apply forces to it"
   },
   "@luhx/globaltype/Mesh.RoughnessFactor": {
     "documentation": "Roughness modifier"

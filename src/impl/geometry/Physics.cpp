@@ -2,19 +2,19 @@
 #include <tracy/Tracy.hpp>
 #include <math.h>
 
-#include "Physics.hpp"
-#include "IntersectionLib.hpp"
+#include "geometry/Physics.hpp"
+#include "geometry/IntersectionLib.hpp"
 #include "Timing.hpp"
 #include "Stl.hpp"
 #include "component/Transform.hpp"
 #include "component/Workspace.hpp"
-#include "component/Mesh.hpp"
+#include "component/RigidBody.hpp"
 
 struct Collision
 {
 	GameObject* A;
 	GameObject* B;
-	IntersectionLib::Intersection Hit;
+	IntersectionLib::CollisionPoints Points;
 };
 
 static void applyGlobalForces(PhysicsWorld& World, float)
@@ -23,20 +23,20 @@ static void applyGlobalForces(PhysicsWorld& World, float)
 
 	for (ObjectHandle& object : World.Dynamics)
 	{
-		EcMesh* cm = object->FindComponent<EcMesh>();
-		assert(cm->Mass == cm->CollisionAabb.Size.x * cm->CollisionAabb.Size.y * cm->CollisionAabb.Size.z * cm->Density);
+		EcRigidBody* crb = object->FindComponent<EcRigidBody>();
+		assert(crb->Mass == crb->CollisionAabb.Size.x * crb->CollisionAabb.Size.y * crb->CollisionAabb.Size.z * crb->Density);
 
 		const glm::vec3 Gfs = { 0.f, -50.f, 0.f };
 
 		// 19/09/2024 https://www.youtube.com/watch?v=-_IspRG548E
-		glm::vec3 weight = Gfs * cm->Mass;
+		glm::vec3 weight = Gfs * crb->Mass;
 
 		const float AirDensity = 0.15f;
 		const float DragCoefficient = 0.01f;
-		float csarea = cm->CollisionAabb.Size.x * cm->CollisionAabb.Size.z;
-		glm::vec3 drag = .5f * AirDensity * (cm->LinearVelocity * cm->LinearVelocity) * DragCoefficient * csarea;
+		float csarea = crb->CollisionAabb.Size.x * crb->CollisionAabb.Size.z;
+		glm::vec3 drag = .5f * AirDensity * (crb->LinearVelocity * crb->LinearVelocity) * DragCoefficient * csarea;
 
-		cm->NetForce = weight + drag;
+		crb->NetForce = weight + drag;
 	}
 }
 
@@ -46,22 +46,22 @@ static void moveDynamics(PhysicsWorld& World, float DeltaTime)
 
 	for (ObjectHandle& object : World.Dynamics)
 	{
-		EcMesh* cm = object->FindComponent<EcMesh>();
+		EcRigidBody* crb = object->FindComponent<EcRigidBody>();
 		EcTransform* ct = object->FindComponent<EcTransform>();
 
-		glm::vec3 acceleration = cm->NetForce / cm->Mass;
-		cm->LinearVelocity += acceleration * DeltaTime;
-		if (!isfinite(cm->LinearVelocity.x) || !isfinite(cm->LinearVelocity.y) || !isfinite(cm->LinearVelocity.z) || glm::length(cm->LinearVelocity) > 10000.f)
-			cm->LinearVelocity = glm::vec3(0.f);
+		glm::vec3 acceleration = crb->NetForce / crb->Mass;
+		crb->LinearVelocity += acceleration * DeltaTime;
+		if (!isfinite(crb->LinearVelocity.x) || !isfinite(crb->LinearVelocity.y) || !isfinite(crb->LinearVelocity.z) || glm::length(crb->LinearVelocity) > 10000.f)
+			crb->LinearVelocity = glm::vec3(0.f);
 
 		glm::mat4 curTrans = ct->Transform;
-		curTrans[3] += glm::vec4(cm->LinearVelocity * DeltaTime, 0.f);
+		curTrans[3] += glm::vec4(crb->LinearVelocity * DeltaTime, 0.f);
 
 		if (!isfinite(curTrans[3].x) || !isfinite(curTrans[3].y) || !isfinite(curTrans[3].z))
 			curTrans[3] = glm::vec4(0.f, 0.f, 0.f, 1.f);
 
 		ct->SetWorldTransform(curTrans);
-		cm->RecomputeAabb();
+		crb->RecomputeAabb();
 	}
 }
 
@@ -79,6 +79,9 @@ typedef std::unordered_map<glm::ivec3, std::vector<uint32_t>>::iterator VisitIte
 
 static void visitHashAabb(EcWorkspace* cw, const glm::vec3& min, const glm::vec3& max, const std::function<bool(VisitIterator)> Visit)
 {
+	if (abs(min.x) + abs(min.y) + abs(min.z) > 1e6)
+		return;
+
 	for (float x = min.x; x <= max.x; x++)
 		for (float y = min.y; y <= max.y; y++)
 			for (float z = min.z; z <= max.z; z++)
@@ -106,13 +109,14 @@ static void resolveCollisions(PhysicsWorld& World, float)
 	for (size_t aid = 0; aid < World.Dynamics.size(); aid++)
 	{
 		ObjectHandle& a = World.Dynamics[aid];;
-		EcMesh* am = a->FindComponent<EcMesh>();
+		EcRigidBody* arb = a->FindComponent<EcRigidBody>();
 
-		if (!am->PhysicsCollisions)
+		if (!arb->PhysicsCollisions)
 			continue;
 
-		const glm::vec3& aPos = am->CollisionAabb.Position;
-		const glm::vec3& aSize = am->CollisionAabb.Size;
+		arb->CurTransform = a->FindComponent<EcTransform>();
+		const glm::vec3& aPos = arb->CollisionAabb.Position;
+		const glm::vec3& aSize = arb->CollisionAabb.Size;
 
 		glm::vec3 min = aPos - aSize / 2.f;
 		glm::vec3 max = aPos - aSize / 2.f;
@@ -123,31 +127,32 @@ static void resolveCollisions(PhysicsWorld& World, float)
 		{
 			for (uint32_t oid : it->second)
 			{
-				GameObject* b = GameObject::GetObjectById(oid);
-				EcMesh* bm = b ? b->FindComponent<EcMesh>() : nullptr;
-
-				if (!bm || !bm->PhysicsCollisions)
+				if (oid == a->ObjectId)
 					continue;
 
-				const glm::vec3& bPos = bm->CollisionAabb.Position;
-				const glm::vec3& bSize = bm->CollisionAabb.Size;
+				GameObject* b = GameObject::GetObjectById(oid);
+				EcRigidBody* brb = b ? b->FindComponent<EcRigidBody>() : nullptr;
 
-				IntersectionLib::Intersection intersection = IntersectionLib::AabbAabb(
-					aPos,
-					aSize,
-					bPos,
-					bSize
-				);
+				if (!brb || !brb->PhysicsCollisions)
+					continue;
 
-				if (intersection.Occurred)
-					collisions.emplace_back(a, b, intersection);
+				brb->CurTransform = b->FindComponent<EcTransform>();
+
+				IntersectionLib::CollisionPoints collisionPoints = IntersectionLib::Gjk(arb, brb);
+
+				if (collisionPoints.HasCollision)
+					collisions.emplace_back(a, b, collisionPoints);
+
+				brb->CurTransform = nullptr;
 			}
 
 			return false; // process all collisions
 		});
+
+		arb->CurTransform = nullptr;
 	}
 
-	for (Collision& collision : collisions)
+	for (const Collision& collision : collisions)
 	{
 		// 24/09/2024
 		// ugly
@@ -160,31 +165,33 @@ static void resolveCollisions(PhysicsWorld& World, float)
 		// this much velocity is lost completely, pushing on neither objects
 		float Elasticity = 0.2f;
 
-		IntersectionLib::Intersection& hit = collision.Hit;
+		const IntersectionLib::CollisionPoints& points = collision.Points;
 
-		glm::vec3 reactionForce = hit.Position * hit.Depth * Elasticity;
+		glm::vec3 reactionForce = points.Normal * points.PenetrationDepth * Elasticity;
 
-		EcMesh* am = collision.A->FindComponent<EcMesh>();
-		EcMesh* bm = collision.B->FindComponent<EcMesh>();
+		EcRigidBody* arb = collision.A->FindComponent<EcRigidBody>();
+		EcRigidBody* brb = collision.B->FindComponent<EcRigidBody>();
 		EcTransform* at = collision.A->FindComponent<EcTransform>();
 
-		if (am->PhysicsDynamics && !bm->PhysicsDynamics)
+		if (arb->PhysicsDynamics && !brb->PhysicsDynamics)
 		{
+			arb->LinearVelocity = glm::vec3();
+
 			// "Friction"
-			am->NetForce -= am->LinearVelocity * am->Friction * at->Size * (glm::vec3(1.f) - hit.Normal);
-			am->NetForce *= glm::vec3(1.f) - hit.Normal; // vertical forces cancel out
+			arb->NetForce -= arb->LinearVelocity * arb->Friction * at->Size * (glm::vec3(1.f) - points.Normal);
+			arb->NetForce *= glm::vec3(1.f) - points.Normal; // vertical forces cancel out
 
-			am->LinearVelocity = am->LinearVelocity * (glm::vec3(1.f) - hit.Normal) - am->LinearVelocity * (hit.Normal * Elasticity);
+			arb->LinearVelocity = arb->LinearVelocity * (glm::vec3(1.f) - points.Normal) - arb->LinearVelocity * (points.Normal * Elasticity);
 
-			if (-hit.Depth < 0.01f)
+			if (-points.PenetrationDepth < 0.01f)
 			{
-				am->LinearVelocity *= glm::vec3(1.f) - hit.Normal;
-				at->Transform[3] += glm::vec4(glm::vec3(hit.Normal * -hit.Depth), 1.f);
+				arb->LinearVelocity *= glm::vec3(1.f) - points.Normal;
+				at->Transform[3] += glm::vec4(glm::vec3(points.Normal * -points.PenetrationDepth), 1.f);
 			}
 
 			at->SetWorldTransform(at->Transform);
 
-			am->RecomputeAabb();
+			arb->RecomputeAabb();
 		}
 		else
 		{
@@ -194,11 +201,11 @@ static void resolveCollisions(PhysicsWorld& World, float)
 			//collision.A->LinearVelocity = collision.A->LinearVelocity / 2.f;
 			//collision.B->LinearVelocity = collision.B->LinearVelocity / 2.f;
 
-			am->LinearVelocity += reactionForce;
+			arb->LinearVelocity += reactionForce;
 
-			am->RecomputeAabb();
+			arb->RecomputeAabb();
 		}
-		assert(am->PhysicsDynamics); // `A` should always be the dynamic one, unless it's D v D where both are dynamic
+		assert(arb->PhysicsDynamics); // `A` should always be the dynamic one, unless it's D v D where both are dynamic
 
 		// 24/09/2024
 		// ugly

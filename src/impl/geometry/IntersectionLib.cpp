@@ -4,7 +4,8 @@
 #include <glm/gtx/component_wise.hpp>
 #include <tracy/Tracy.hpp>
 
-#include "IntersectionLib.hpp"
+#include "geometry/IntersectionLib.hpp"
+#include "geometry/Gjk.hpp"
 
 static const float EPSILON = 1e-8f;
 
@@ -166,4 +167,157 @@ IntersectionLib::SweptIntersection IntersectionLib::SweptAabbAabb(
 	}
 
 	return sweep;
+}
+
+// https://winter.dev/articles/epa-algorithm
+
+static std::pair<std::vector<glm::vec4>, size_t> getFaceNormals(const std::vector<glm::vec3>& polytope, const std::vector<size_t>& faces)
+{
+	std::vector<glm::vec4> normals;
+	size_t minTriangle = 0;
+	float  minDistance = FLT_MAX;
+
+	for (size_t i = 0; i < faces.size(); i += 3)
+	{
+		glm::vec3 a = polytope[faces[i]];
+		glm::vec3 b = polytope[faces[i + 1]];
+		glm::vec3 c = polytope[faces[i + 2]];
+
+		glm::vec3 normal = glm::normalize(glm::cross(b - a, c - a));
+		float distance = glm::dot(normal, a);
+
+		if (distance < 0)
+		{
+			distance *= -1;
+			normal *= -1;
+		}
+
+		normals.emplace_back(normal, distance);
+
+		if (distance < minDistance)
+		{
+			minDistance = distance;
+			minTriangle = i / 3;
+		}
+	}
+
+	return { normals, minTriangle };
+}
+
+static void addIfUniqueEdge(
+	std::vector<std::pair<size_t, size_t>>& edges,
+	const std::vector<size_t>& faces,
+	size_t a,
+	size_t b
+)
+{
+	auto reverse = std::find(                       //      0--<--3
+		edges.begin(),                              //     / \ B /   A: 2-0
+		edges.end(),                                //    / A \ /    B: 0-2
+		std::make_pair(faces[b], faces[a]) //   1-->--2
+	);
+
+	if (reverse != edges.end())
+		edges.erase(reverse);
+
+	else
+		edges.emplace_back(faces[a], faces[b]);
+}
+
+static IntersectionLib::CollisionPoints epa(const Gjk::Simplex& Simp, const EcRigidBody* A, const EcRigidBody* B)
+{
+	std::vector<glm::vec3> polytope = { Simp.begin(), Simp.end() };
+	std::vector<size_t> faces = {
+		0, 1, 2,
+		0, 3, 1,
+		0, 2, 3,
+		1, 3, 2
+	};
+
+	auto [normals, minFace] = getFaceNormals(polytope, faces);
+
+	glm::vec3 minNormal;
+	float minDistance = -FLT_MAX;
+
+	while (minDistance == -FLT_MAX)
+	{
+		minNormal = glm::vec3(normals[minFace]);
+		minDistance = normals[minFace].w;
+
+		glm::vec3 support = Gjk::Support(A, B, minNormal);
+		float sDistance = glm::dot(minNormal, support);
+
+		if (abs(sDistance - minDistance) > 0.001f)
+		{
+			minDistance = FLT_MAX;
+
+			std::vector<std::pair<size_t, size_t>> uniqueEdges;
+
+			for (size_t i = 0; i < normals.size(); i++)
+			{
+				if (Gjk::SameDirection(normals[i], support))
+				{
+					size_t f = i * 3;
+
+					addIfUniqueEdge(uniqueEdges, faces, f,     f + 1);
+					addIfUniqueEdge(uniqueEdges, faces, f + 1, f + 2);
+					addIfUniqueEdge(uniqueEdges, faces, f + 2, f   );
+
+					faces[f + 2] = faces.back(); faces.pop_back();
+					faces[f + 1] = faces.back(); faces.pop_back();
+					faces[f]     = faces.back(); faces.pop_back();
+
+					normals[i] = normals.back();
+					normals.pop_back();
+
+					i--;
+				}
+			}
+
+			std::vector<size_t> newFaces;
+			for (auto [edgeIndex1, edgeIndex2] : uniqueEdges)
+			{
+				newFaces.push_back(edgeIndex1);
+				newFaces.push_back(edgeIndex2);
+				newFaces.push_back(polytope.size());
+			}
+
+			polytope.push_back(support);
+
+			auto [newNormals, newMinFace] = getFaceNormals(polytope, newFaces);
+
+			float oldMinDistance = FLT_MAX;
+			for (size_t i = 0; i < normals.size(); i++)
+			{
+				if (float dist = normals[i].w; dist < oldMinDistance)
+				{
+					oldMinDistance = dist;
+					minFace = i;
+				}
+			}
+
+			if (newNormals[newMinFace].w < oldMinDistance)
+				minFace = newMinFace + normals.size();
+
+			faces.insert(faces.end(), newFaces.begin(), newFaces.end());
+			normals.insert(normals.end(), newNormals.begin(), newNormals.end());
+		}
+	}
+
+	IntersectionLib::CollisionPoints points;
+	points.Normal = minNormal;
+	points.PenetrationDepth = minDistance + 0.001f;
+	points.HasCollision = true;
+
+	return points;
+}
+
+IntersectionLib::CollisionPoints IntersectionLib::Gjk(const EcRigidBody* A, const EcRigidBody* B)
+{
+	Gjk::Result result = Gjk::FindIntersection(A, B);
+
+	if (!result.HasIntersection)
+		return CollisionPoints{ .HasCollision = false };
+	else
+		return epa(result.Simp, A, B);
 }

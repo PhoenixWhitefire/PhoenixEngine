@@ -6,6 +6,7 @@
 #include "asset/MaterialManager.hpp"
 #include "asset/MeshProvider.hpp"
 #include "component/Workspace.hpp"
+#include "component/RigidBody.hpp"
 #include "component/Bone.hpp"
 
 static std::unordered_map<std::string, std::vector<uint32_t>> FreeSkinnedMeshPseudoAssets;
@@ -26,68 +27,6 @@ static void tryMarkFreeSkinnedMeshPseudoAsset(EcMesh& mesh)
 	}
 }
 
-static float roundNToGrid(float x)
-{
-	return glm::round(x / SPATIAL_HASH_GRID_SIZE) * SPATIAL_HASH_GRID_SIZE;
-}
-
-static glm::vec3 roundToGrid(const glm::vec3& v)
-{
-	return glm::vec3(roundNToGrid(v.x), roundNToGrid(v.y), roundNToGrid(v.z));
-}
-
-static void updateSpatialHash(EcMesh* cm)
-{
-	if (GameObject* pw = cm->PrevWorkspace.Referred(); cm->SpatialHashPoints.size() > 0 && pw)
-		if (EcWorkspace* pcw = pw->FindComponent<EcWorkspace>())
-		{
-			for (const glm::vec3& point : cm->SpatialHashPoints)
-			{
-				auto& cell = pcw->SpatialHash[point];
-				auto it = std::find(cell.begin(), cell.end(), cm->Object->ObjectId);
-				assert(it != cell.end());
-
-				cell.erase(it);
-			}
-		}
-
-	cm->SpatialHashPoints.clear();
-
-	if (!cm->PhysicsCollisions)
-		return;
-
-	GameObject* ocw = GameObject::GetObjectById(cm->Object->OwningWorkspace);
-	EcWorkspace* cw = ocw ? ocw->FindComponent<EcWorkspace>() : nullptr;
-	cm->PrevWorkspace = ocw;
-
-	if (!cw)
-		return;
-
-	glm::vec3 min = cm->CollisionAabb.Position - cm->CollisionAabb.Size / 2.f;
-	glm::vec3 max = cm->CollisionAabb.Position + cm->CollisionAabb.Size / 2.f;
-	
-	min = roundToGrid(min);
-	max = roundToGrid(max);
-
-	if (min == max)
-	{
-		cw->SpatialHash[min].push_back(cm->Object.TargetId);
-		cm->SpatialHashPoints = { min };
-		return;
-	}
-
-	for (float x = min.x; x <= max.x; x += SPATIAL_HASH_GRID_SIZE)
-		for (float y = min.y; y <= max.y; y += SPATIAL_HASH_GRID_SIZE)
-			for (float z = min.z; z <= max.z; z += SPATIAL_HASH_GRID_SIZE)
-			{
-				glm::vec3 point = { x, y, z };
-				assert(roundToGrid(point) == point);
-
-				cw->SpatialHash[point].push_back(cm->Object.TargetId);
-				cm->SpatialHashPoints.push_back(point);
-			}
-}
-
 class MeshManager : public ComponentManager<EcMesh>
 {
 public:
@@ -97,6 +36,9 @@ public:
 
 		if (!Object->FindComponent<EcTransform>())
 			Object->AddComponent(EntityComponent::Transform);
+
+		if (!Object->FindComponent<EcRigidBody>())
+			Object->AddComponent(EntityComponent::RigidBody);
 
 		uint32_t id = static_cast<uint32_t>(m_Components.size() - 1);
 
@@ -137,21 +79,7 @@ public:
     {
         static const Reflection::StaticPropertyMap props = 
         {
-            REFLECTION_PROPERTY_SIMPLE(EcMesh, PhysicsDynamics, Boolean),
-			REFLECTION_PROPERTY_SIMPLE(EcMesh, PhysicsCollisions, Boolean),
 			REFLECTION_PROPERTY_SIMPLE(EcMesh, CastsShadows, Boolean),
-
-			REFLECTION_PROPERTY(
-				"PhysicsCollisions",
-				Boolean,
-				REFLECTION_PROPERTY_GET_SIMPLE(EcMesh, PhysicsCollisions),
-				[](void* p, const Reflection::GenericValue& gv)
-				{
-					EcMesh* cm = static_cast<EcMesh*>(p);
-					cm->PhysicsCollisions = gv.AsBoolean();
-					updateSpatialHash(cm);
-				}
-			),
 
 			REFLECTION_PROPERTY(
 				"FaceCulling",
@@ -167,47 +95,10 @@ public:
 				}
 			),
 
-			REFLECTION_PROPERTY(
-				"CollisionFidelity",
-				Integer,
-				[](void* p)
-				-> Reflection::GenericValue
-				{
-					return static_cast<uint32_t>(static_cast<EcMesh*>(p)->CollisionFidelity);
-				},
-				[](void* p, const Reflection::GenericValue& gv)
-				{
-					static_cast<EcMesh*>(p)->CollisionFidelity = static_cast<CollisionFidelityMode>(gv.AsInteger());
-				}
-			),
-
 			REFLECTION_PROPERTY_SIMPLE(EcMesh, Transparency, Double),
 			REFLECTION_PROPERTY_SIMPLE(EcMesh, MetallnessFactor, Double),
 			REFLECTION_PROPERTY_SIMPLE(EcMesh, RoughnessFactor, Double),
-
 			REFLECTION_PROPERTY_SIMPLE_NGV(EcMesh, Tint, Color),
-
-			REFLECTION_PROPERTY_SIMPLE(EcMesh, LinearVelocity, Vector3),
-			REFLECTION_PROPERTY_SIMPLE(EcMesh, AngularVelocity, Vector3),
-
-			REFLECTION_PROPERTY_SIMPLE(EcMesh, Friction, Double),
-
-			REFLECTION_PROPERTY(
-				"Density",
-				Double,
-				REFLECTION_PROPERTY_GET_SIMPLE(EcMesh, Density),
-				[](void* p, const Reflection::GenericValue& gv)
-				{
-					EcMesh* cm = static_cast<EcMesh*>(p);
-					float dens = (float)gv.AsDouble();
-
-					if (dens < 0.001f)
-						RAISE_RT("Minimum density is 0.001");
-
-					cm->Density = dens;
-					cm->Mass = dens * cm->CollisionAabb.Size.x * cm->CollisionAabb.Size.y * cm->CollisionAabb.Size.z;
-				}
-			),
 
 			REFLECTION_PROPERTY(
 				"Asset",
@@ -339,54 +230,3 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 	);
 	this->Asset = MeshPath;
 }
-
-void EcMesh::RecomputeAabb()
-{
-	ZoneScoped;
-
-	EcTransform* ct = this->Object->FindComponent<EcTransform>();
-	const glm::mat4& transform = ct->Transform;
-	const glm::vec3& glmsize = ct->Size;
-
-	if (CollisionFidelity == CollisionFidelityMode::Aabb)
-	{
-		std::array<glm::vec3, 8> verts;
-		
-		int i = 0;
-		for (int x : {-1, 1})
-			for (int y : {-1, 1})
-				for (int z : {-1, 1})
-					verts[i++] = transform * glm::vec4(glmsize * glm::vec3(x, y, z), 1.f);
-
-		glm::vec3 max( -FLT_MAX );
-		glm::vec3 min(  FLT_MAX );
-
-		for (const glm::vec3& v : verts)
-		{
-			max = glm::max(max, v);
-			min = glm::min(min, v);
-		}
-
-		this->CollisionAabb.Position = (min + max) / 2.f;
-		this->CollisionAabb.Size = (max - min) / 2.f;
-	}
-	else if (CollisionFidelity == CollisionFidelityMode::AabbStaticSize)
-	{
-		this->CollisionAabb.Position = glm::vec3(transform[3]);
-		this->CollisionAabb.Size = glmsize;
-	}
-
-	if (CollisionAabb.Size.x > 10000.f || CollisionAabb.Size.y > 10000.f || CollisionAabb.Size.z > 10000.f)
-	{
-		if (PhysicsCollisions)
-		{
-			Log::WarningF("Object '{}' had a Collision Size in one or more dimensions greater than 10,000. Collisions will be disabled", Object->GetFullName());
-			PhysicsCollisions = false;
-		}
-	}
-
-	updateSpatialHash(this);
-
-	this->Mass = Density * CollisionAabb.Size.x * CollisionAabb.Size.y * CollisionAabb.Size.z;
-}
-

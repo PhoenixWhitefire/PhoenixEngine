@@ -193,18 +193,11 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * A mesh composed of triangles
 
 ### Properties:
-* `AngularVelocity: vector`: Its rotational velocity
 * `Asset: string`: The path to the underlying `.hxmesh` file, or a built-in identifier like `!Quad` or `!Cube`
 * `CastsShadows: boolean`: Whether it casts shadows
-* `CollisionFidelity: number`: The fidelity at which collisions are detected. See the `CollisionFidelity` enum
-* `Density: number`: Its density (`Mass = Density * Size`)
 * `FaceCulling: number`: Which faces of the mesh to cull based on viewing direction. See the `FaceCulling` enum
-* `Friction: number`: Fraction of Velocity it should lose per second while in contact with another object while `PhysicsDynamics` is `true`
-* `LinearVelocity: vector`: Its velocity
 * `Material: string`: The name of the `.mtl` in the `resources/materials/` directory it should use
 * `MetallnessFactor: number`: Metallness modifier
-* `PhysicsCollisions: boolean`: Whether other physics objects can collide with it
-* `PhysicsDynamics: boolean`: Whether the Physics Engine should apply forces to it
 * `RoughnessFactor: number`: Roughness modifier
 * `Tint: Color`: The Color it should be tinted with
 * `Transparency: number`: Its transparency/translucency
@@ -247,6 +240,8 @@ No members defined
 * `Brightness: number`: How bright the Light is
 * `LightColor: Color`: The color of the Light
 * `Range: number`: How far light is emitted. If `>= 0`, the Range is used and attenuation is linear, otherwise it uses the formula `F = 1/D^2 * B` to mirror real-world attenuation, where `F` is the final brightness, `D` is the distance of a point from the Light, and `B` is the `Brightness` property's value
+
+## `RigidBody`
 
 ## `Sound`
 

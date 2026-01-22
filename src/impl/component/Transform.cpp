@@ -1,13 +1,13 @@
 #include <tracy/Tracy.hpp>
 
 #include "component/Transform.hpp"
-#include "component/Mesh.hpp"
+#include "component/RigidBody.hpp"
 #include "datatype/GameObject.hpp"
 
 static void recomputeAabbRecursive(GameObject* Object)
 {
-    if (EcMesh* cm = Object->FindComponent<EcMesh>())
-        cm->RecomputeAabb();
+    if (EcRigidBody* crb = Object->FindComponent<EcRigidBody>())
+        crb->RecomputeAabb();
 
     Object->ForEachChild([](GameObject* Child) -> bool
     {

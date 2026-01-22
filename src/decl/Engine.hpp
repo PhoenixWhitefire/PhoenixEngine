@@ -17,7 +17,7 @@
 #include "component/Workspace.hpp"
 
 #include "datatype/Event.hpp"
-#include "Physics.hpp"
+#include "geometry/Physics.hpp"
 
 // TODO: cleanup structure of public vs private
 class Engine

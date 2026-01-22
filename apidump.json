@@ -168,18 +168,11 @@
       },
       "Mesh": {
         "Properties": {
-          "AngularVelocity": "Vector3",
           "Asset": "String",
           "CastsShadows": "Boolean",
-          "CollisionFidelity": "Integer",
-          "Density": "Double",
           "FaceCulling": "Integer",
-          "Friction": "Double",
-          "LinearVelocity": "Vector3",
           "Material": "String",
           "MetallnessFactor": "Double",
-          "PhysicsCollisions": "Boolean",
-          "PhysicsDynamics": "Boolean",
           "RoughnessFactor": "Double",
           "Tint": "Color",
           "Transparency": "Double"
@@ -211,6 +204,17 @@
           "Brightness": "Double",
           "LightColor": "Color",
           "Range": "Double"
+        }
+      },
+      "RigidBody": {
+        "Properties": {
+          "AngularVelocity": "Vector3",
+          "CollisionFidelity": "Integer",
+          "Density": "Double",
+          "Friction": "Double",
+          "LinearVelocity": "Vector3",
+          "PhysicsCollisions": "Boolean",
+          "PhysicsDynamics": "Boolean"
         }
       },
       "Sound": {

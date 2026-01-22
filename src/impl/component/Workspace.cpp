@@ -3,9 +3,10 @@
 
 #include "component/Workspace.hpp"
 #include "component/Transform.hpp"
+#include "component/RigidBody.hpp"
 #include "component/Camera.hpp"
 #include "component/Sound.hpp"
-#include "IntersectionLib.hpp"
+#include "geometry/IntersectionLib.hpp"
 #include "Engine.hpp"
 
 static ObjectHandle s_FallbackCamera;
@@ -346,16 +347,16 @@ SpatialCastResult EcWorkspace::Raycast(const glm::vec3& Origin, const glm::vec3&
 					continue;
 			}
 
-			EcMesh* cm = p->FindComponent<EcMesh>();
 			EcTransform* ct = p->FindComponent<EcTransform>();
+			EcRigidBody* crb = ct ? p->FindComponent<EcRigidBody>() : nullptr;
 
-			if (cm && ct)
+			if (crb)
 			{
 				IntersectionLib::Intersection hit = IntersectionLib::RayAabb(
 					Origin,
 					Vector,
-					cm->CollisionAabb.Position,
-					cm->CollisionAabb.Size - glm::vec3(2.f)
+					crb->CollisionAabb.Position,
+					crb->CollisionAabb.Size - glm::vec3(2.f)
 				);
 
 				if (hit.Occurred)

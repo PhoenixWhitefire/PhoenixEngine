@@ -471,7 +471,7 @@ int ScriptEngine::CompileAndLoad(lua_State* L, const std::string& SourceCode, co
 	// once and cache the result
 	const char* mutableGlobals[] = 
 	{
-		"game", "workspace", "script",
+		"game", "workspace",
 		NULL
 	};
 

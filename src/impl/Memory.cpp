@@ -162,25 +162,33 @@ void Memory::FrameFinish()
 }
 
 // TODO: causes crash in GLFW init: _glfwInitEgl -> eglQueryString -> ...
-/*
+
 void* operator new(size_t size)
 {
 	assert(size < (size_t)UINT32_MAX);
 
-	void* ptr = Memory::Alloc((uint32_t)size);
+	//void* ptr = Memory::Alloc((uint32_t)size);
+	//if (!ptr)
+	//	throw std::bad_alloc();
+
+	void* ptr = malloc(size);
 	if (!ptr)
 		throw std::bad_alloc();
 
+	TracyAlloc(ptr, size);
 	return ptr;
 }
 
 void operator delete(void* ptr) noexcept
 {
-	Memory::Free(ptr);
+	//Memory::Free(ptr);
+	TracyFree(ptr);
+	free(ptr);
 }
 
 void operator delete(void* ptr, size_t) noexcept
 {
-	Memory::Free(ptr);
+	//Memory::Free(ptr);
+	TracyFree(ptr);
+	free(ptr);
 }
-*/

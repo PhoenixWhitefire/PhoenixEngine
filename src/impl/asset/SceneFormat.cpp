@@ -11,6 +11,7 @@
 #include "asset/MaterialManager.hpp"
 #include "asset/ModelImporter.hpp"
 #include "component/Transform.hpp"
+#include "component/RigidBody.hpp"
 #include "component/Light.hpp"
 #include "component/Mesh.hpp"
 #include "FileRW.hpp"
@@ -276,7 +277,8 @@ static std::vector<ObjectRef> LoadMapVersion1(
 					prop_3d->FaceCulling = FaceCullingMode::BackFace;
 			}
 
-			prop_3d->PhysicsDynamics = PropObject.value("computePhysics", 0) == 1 ? true : false;
+			if (EcRigidBody* crb = obj->FindComponent<EcRigidBody>())
+				crb->PhysicsDynamics = PropObject.value("computePhysics", 0) == 1 ? true : false;
 		}
 	}
 
@@ -345,13 +347,11 @@ static std::vector<ObjectRef> LoadMapVersion1(
 
 		}
 
-		cm->PhysicsDynamics = Object.value("computePhysics", 0) == 1 ? true : false;
+		if (!NewObject->FindComponent<EcRigidBody>())
+			NewObject->AddComponent(EntityComponent::RigidBody);
 
-		std::string NewTitle = std::to_string(Index)
-								+ "/"
-								+ std::to_string(PartsNode.size())
-								+ " - "
-								+ std::to_string((float)Index / (float)PartsNode.size());
+		EcRigidBody* crb = NewObject->FindComponent<EcRigidBody>();
+		crb->PhysicsDynamics = Object.value("computePhysics", 0) == 1 ? true : false;
 	}
 
 	for (uint32_t LightIndex = 0; LightIndex < LightsNode.size(); LightIndex++)

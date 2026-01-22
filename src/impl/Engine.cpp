@@ -18,6 +18,7 @@
 
 #include "component/ParticleEmitter.hpp"
 #include "component/Transform.hpp"
+#include "component/RigidBody.hpp"
 #include "component/TreeLink.hpp"
 #include "component/Camera.hpp"
 #include "component/Sound.hpp"
@@ -367,14 +368,32 @@ static void traverseHierarchy(
 			
 		EcMesh* object3D = object->FindComponent<EcMesh>();
 		EcTransform* ct = object->FindComponent<EcTransform>();
+		EcRigidBody* rb = ct ? object->FindComponent<EcRigidBody>() : nullptr;
+
+		if (rb)
+		{
+			if (rb->PhysicsDynamics)
+				PhysicsWorld.Dynamics.emplace_back(object);
+			else if (rb->PhysicsCollisions)
+				PhysicsWorld.Statics.emplace_back(object);
+
+			if (s_DebugCollisionAabbs && rb->PhysicsCollisions)
+				RenderList.emplace_back(
+					cubeMesh,
+					glm::translate(glm::mat4(1.f), rb->CollisionAabb.Position),
+					rb->CollisionAabb.Size,
+					boxframeMaterial,
+					glm::vec3(1.f, 1.f, 0.f),
+					0.f,
+					0.f,
+					0.f,
+					FaceCullingMode::None,
+					false
+				);
+		}
 
 		if (object3D)
 		{
-			if (object3D->PhysicsDynamics)
-				PhysicsWorld.Dynamics.emplace_back(object);
-			else if (object3D->PhysicsCollisions)
-				PhysicsWorld.Statics.emplace_back(object);
-
 			if (object3D->Transparency > .95f || Engine::Get()->IsHeadlessMode)
 				continue;
 
@@ -392,20 +411,6 @@ static void traverseHierarchy(
 				object3D->FaceCulling,
 				object3D->CastsShadows
 			);
-
-			if (s_DebugCollisionAabbs && object3D->PhysicsCollisions)
-				RenderList.emplace_back(
-					cubeMesh,
-					glm::translate(glm::mat4(1.f), (glm::vec3)object3D->CollisionAabb.Position),
-					object3D->CollisionAabb.Size,
-					boxframeMaterial,
-					glm::vec3(1.f, 1.f, 0.f),
-					0.f,
-					0.f,
-					0.f,
-					FaceCullingMode::None,
-					false
-				);
 		}
 
 		if (EcTreeLink* link = object->FindComponent<EcTreeLink>(); link && link->Target.IsValid())

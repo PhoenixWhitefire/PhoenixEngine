@@ -1698,12 +1698,7 @@ static bool resetConflictedProperty(const char* PropName, char* Buf = nullptr)
 	char dbuf[2] = { 0 };
 	Buf = Buf ? Buf : dbuf;
 
-	ImGui::TextUnformatted(PropName);
-	ImGui::SameLine();
-
-	ImGui::SetCursorPosX(ImGui::GetContentRegionAvail().x / 2.f);
 	bool reset = ImGui::InputText("##", Buf, 2);
-
 	ImGui::SetItemTooltip("Start typing here to reset this conflicting property to a default");
 
 	return reset;
@@ -2654,6 +2649,9 @@ static void renderProperties()
 			ImGui::TextUnformatted(propNameCStr);
 			ImGui::SameLine();
 
+			ImVec2 cursorStart = ImGui::GetCursorPos();
+			ImGui::SetCursorPosX(halfWidth);
+
 			if (!doConflict)
 				propertyTooltip(propName, propToComponent[propName], propDesc->Type);
 
@@ -2690,10 +2688,7 @@ static void renderProperties()
 						newVal = false;
 				}
 				else
-				{
-					ImGui::SetCursorPosX(halfWidth);
 					ImGui::Checkbox("##", &newVal.Val.Bool);
-				}
 
 				break;
 			}
@@ -2706,10 +2701,7 @@ static void renderProperties()
 						newVal = atof(buf);
 				}
 				else
-				{
-					ImGui::SetCursorPosX(halfWidth);
 					ImGui::InputDouble("##", &newVal.Val.Double);
-				}
 
 				break;
 			}
@@ -2724,10 +2716,7 @@ static void renderProperties()
 				else
 				{
 					int32_t i = static_cast<int32_t>(newVal.Val.Int);
-
-					ImGui::SetCursorPosX(halfWidth);
 					ImGui::InputInt("##", &i);
-
 					newVal.Val.Int = i;
 				}
 
@@ -2736,8 +2725,6 @@ static void renderProperties()
 
 			case Reflection::ValueType::GameObject:
 			{
-				ImGui::SetCursorPosX(halfWidth);
-
 				if (doConflict)
 				{
 					bool pick = ImGui::Button(" ");
@@ -2804,10 +2791,7 @@ static void renderProperties()
 						newVal = Color(0.f, 0.f, 0.f).ToGenericValue();
 				}
 				else
-				{
-					ImGui::SetCursorPosX(halfWidth);
 					ImGui::ColorEdit3("##", &newVal.Val.Vec3.x);
-				}
 
 				break;
 			}
@@ -2820,10 +2804,7 @@ static void renderProperties()
 						newVal = glm::vec2(0.f);
 				}
 				else
-				{
-					ImGui::SetCursorPosX(halfWidth);
 					ImGui::InputFloat2("##", &newVal.Val.Vec2.x);
-				}
 
 				break;
 			}
@@ -2836,10 +2817,7 @@ static void renderProperties()
 						newVal = glm::vec3(0.f);
 				}
 				else
-				{
-					ImGui::SetCursorPosX(halfWidth);
 					ImGui::InputFloat3("##", &newVal.Val.Vec3.x);
-				}
 
 				break;
 			}
@@ -2848,6 +2826,7 @@ static void renderProperties()
 			{
 				if (!doConflict)
 				{
+					ImGui::SetCursorPos(cursorStart);
 					ImGui::NewLine(); // need to put this on a new line to prevent UI overlapping
 
 					glm::mat4 mat = curVal.AsMatrix();

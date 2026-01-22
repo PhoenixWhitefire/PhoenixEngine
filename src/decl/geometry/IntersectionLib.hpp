@@ -2,23 +2,32 @@
 
 #include <glm/matrix.hpp>
 
+#include "component/RigidBody.hpp"
+
 namespace IntersectionLib
 {
 	struct Intersection
 	{
 		bool Occurred = false;
 
-		glm::vec3 Position{};
-		glm::vec3 Normal{};
-		float Depth{};
-		float Time{}; // only used in `::RayAabb`
+		glm::vec3 Position;
+		glm::vec3 Normal;
+		float Depth;
+		float Time; // only used in `::RayAabb`
 	};
 
 	struct SweptIntersection
 	{
-		glm::vec3 Position{};
-		Intersection Hit{};
-		float Time{};
+		glm::vec3 Position;
+		Intersection Hit;
+		float Time;
+	};
+
+	struct CollisionPoints
+	{
+		glm::vec3 Normal;
+		float PenetrationDepth;
+		bool HasCollision = false;
 	};
 
 	Intersection AabbAabb(
@@ -43,4 +52,6 @@ namespace IntersectionLib
 		const glm::vec3& BSize,
 		const glm::vec3& Delta
 	);
+
+	CollisionPoints Gjk(const EcRigidBody* A, const EcRigidBody* B);
 }
