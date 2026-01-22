@@ -12,20 +12,20 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * `Serializes: boolean`: Whether or not the Object should be saved with the scene if it is serialized with `scene.save`, and whether `:Duplicate` will duplicate it (only applies to descendants)
 
 ### Methods:
-* `AddComponent(string) : ()`: Adds the specified Component to the Object. Will error if it already has it (use `:HasComponent` to check beforehand)
+* `AddComponent(keyof<Creatables>) : ()`: Adds the specified Component to the Object. Will error if it already has it (use `:HasComponent` to check beforehand)
 * `Destroy() : ()`: Marks the Object as "pending for destruction". This may or may not remove the Object from memory immediately, depending on whether the Engine is keeping a internal reference to it
 * `Duplicate() : ((GameObject & any))`: Creates a duplicate of the Object
 * `FindChild(string) : ((GameObject & any)?)`: Returns a child Object with the given name, or `nil` if one doesn't exist
-* `FindChildWithComponent(string) : ((GameObject & any)?)`: Returns a child Object which has the given component, or `nil` if one doesn't exist
+* `FindChildWithComponent(keyof<Creatables>) : (GameObject & any)`: Returns a child Object which has the given component, or `nil` if one doesn't exist
 * `ForEachChild((any) -> (any)) : ()`: For all children of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield
 * `ForEachDescendant((any) -> (any)) : ()`: For all descendants of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield
 * `GetChildren() : ({ any })`: Returns a list of the Object's direct children
 * `GetComponents() : (keyof<Creatables>)`: Returns a list of the names of all Components that the Object currently has
 * `GetDescendants() : ({ any })`: Returns all descendants of the Object (i.e. its children, and their children, etc)
 * `GetFullName() : (string)`: Returns the full, hierarchal path of the Object
-* `HasComponent(keyof<Creatables> | string) : (boolean)`: Returns whether or not the Object has the given Component
+* `HasComponent(keyof<Creatables>) : (boolean)`: Returns whether or not the Object has the given Component
 * `MergeWith((GameObject & any)) : ()`: Merges the Objects together, replacing descendants with the same name
-* `RemoveComponent(string) : ()`: Removes the specified Component from the Object. Will error if does not have it (use `:HasComponent` to check beforehand)
+* `RemoveComponent(keyof<Creatables>) : ()`: Removes the specified Component from the Object. Will error if does not have it (use `:HasComponent` to check beforehand)
 
 ## `Animation`
 
@@ -193,10 +193,10 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * A mesh composed of triangles
 
 ### Properties:
-* `Asset: string`: The path to the underlying `.hxmesh` file, or a built-in identifier like `!Quad` or `!Cube`
 * `CastsShadows: boolean`: Whether it casts shadows
 * `FaceCulling: number`: Which faces of the mesh to cull based on viewing direction. See the `FaceCulling` enum
 * `Material: string`: The name of the `.mtl` in the `resources/materials/` directory it should use
+* `MeshAsset: string`: The path to the underlying `.hxmesh` file, or a built-in identifier like `!Quad` or `!Cube`
 * `MetallnessFactor: number`: Metallness modifier
 * `RoughnessFactor: number`: Roughness modifier
 * `Tint: Color`: The Color it should be tinted with
@@ -242,6 +242,17 @@ No members defined
 * `Range: number`: How far light is emitted. If `>= 0`, the Range is used and attenuation is linear, otherwise it uses the formula `F = 1/D^2 * B` to mirror real-world attenuation, where `F` is the final brightness, `D` is the distance of a point from the Light, and `B` is the `Brightness` property's value
 
 ## `RigidBody`
+
+* Something rigid that participates in the Physics simulation
+
+### Properties:
+* `AngularVelocity: vector`: Its rotational velocity
+* `CollisionFidelity: number`: The fidelity at which collisions are detected. See the `CollisionFidelity` enum
+* `Density: number`: Its density (`Mass = Density * Size`)
+* `Friction: number`: Fraction of Velocity it should lose per second while in contact with another object while `PhysicsDynamics` is `true`
+* `LinearVelocity: vector`: Its velocity
+* `PhysicsCollisions: boolean`: Whether other physics objects can collide with it
+* `PhysicsDynamics: boolean`: Whether the Physics engine should apply forces to it
 
 ## `Sound`
 

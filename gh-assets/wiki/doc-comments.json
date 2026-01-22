@@ -4,7 +4,8 @@
       "Methods": {
         "AddComponent": {
           "Description": "Adds the specified Component to the Object. Will error if it already has it (use `:HasComponent` to check beforehand)",
-          "ParameterNames": "Component"
+          "ParameterNames": "Component",
+          "Type": "(keyof<Creatables>) : ()"
         },
         "Destroy": "Marks the Object as \"pending for destruction\". This may or may not remove the Object from memory immediately, depending on whether the Engine is keeping a internal reference to it",
         "Duplicate": "Creates a duplicate of the Object",
@@ -14,7 +15,8 @@
         },
         "FindChildWithComponent": {
           "Description": "Returns a child Object which has the given component, or `nil` if one doesn't exist",
-          "ParameterNames": "ComponentName"
+          "ParameterNames": "Component",
+          "Type": "(keyof<Creatables>) : (GameObject & any)"
         },
         "ForEachChild": "For all children of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield",
         "ForEachDescendant": "For all descendants of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield",
@@ -27,17 +29,14 @@
         "GetFullName": "Returns the full, hierarchal path of the Object",
         "HasComponent": {
           "Description": "Returns whether or not the Object has the given Component",
-          "ParameterNames": [
-            "ComponentName"
-          ],
-          "Type": "(keyof<Creatables> | string) : (boolean)"
+          "ParameterNames": "Component",
+          "Type": "(keyof<Creatables>) : (boolean)"
         },
         "MergeWith": "Merges the Objects together, replacing descendants with the same name",
         "RemoveComponent": {
           "Description": "Removes the specified Component from the Object. Will error if does not have it (use `:HasComponent` to check beforehand)",
-          "ParameterNames": [
-            "ComponentName"
-          ]
+          "ParameterNames": "Component",
+          "Type": "(keyof<Creatables>) : ()"
         }
       },
       "Properties": {
@@ -327,18 +326,11 @@
       "Mesh": {
         "Description": "A mesh composed of triangles",
         "Properties": {
-          "AngularVelocity": "Its rotational velocity",
-          "Asset": "The path to the underlying `.hxmesh` file, or a built-in identifier like `!Quad` or `!Cube`",
+          "MeshAsset": "The path to the underlying `.hxmesh` file, or a built-in identifier like `!Quad` or `!Cube`",
           "CastsShadows": "Whether it casts shadows",
-          "CollisionFidelity": "The fidelity at which collisions are detected. See the `CollisionFidelity` enum",
-          "Density": "Its density (`Mass = Density * Size`)",
           "FaceCulling": "Which faces of the mesh to cull based on viewing direction. See the `FaceCulling` enum",
-          "Friction": "Fraction of Velocity it should lose per second while in contact with another object while `PhysicsDynamics` is `true`",
-          "LinearVelocity": "Its velocity",
           "Material": "The name of the `.mtl` in the `resources/materials/` directory it should use",
           "MetallnessFactor": "Metallness modifier",
-          "PhysicsCollisions": "Whether other physics objects can collide with it",
-          "PhysicsDynamics": "Whether the Physics Engine should apply forces to it",
           "RoughnessFactor": "Roughness modifier",
           "Tint": "The Color it should be tinted with",
           "Transparency": "Its transparency/translucency"
@@ -382,6 +374,18 @@
           "LightColor": "The color of the Light",
           "Range": "How far light is emitted. If `>= 0`, the Range is used and attenuation is linear, otherwise it uses the formula `F = 1/D^2 * B` to mirror real-world attenuation, where `F` is the final brightness, `D` is the distance of a point from the Light, and `B` is the `Brightness` property's value",
           "Shadows": "Whether the Light can render shadows"
+        }
+      },
+      "RigidBody": {
+        "Description": "Something rigid that participates in the Physics simulation",
+        "Properties": {
+          "AngularVelocity": "Its rotational velocity",
+          "CollisionFidelity": "The fidelity at which collisions are detected. See the `CollisionFidelity` enum",
+          "Density": "Its density (`Mass = Density * Size`)",
+          "Friction":"Fraction of Velocity it should lose per second while in contact with another object while `PhysicsDynamics` is `true`",
+          "LinearVelocity": "Its velocity",
+          "PhysicsCollisions":"Whether other physics objects can collide with it",
+          "PhysicsDynamics":"Whether the Physics engine should apply forces to it"
         }
       },
       "Sound": {

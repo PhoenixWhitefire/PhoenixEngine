@@ -2346,7 +2346,8 @@ static void renderExplorer()
 			"DirectionalLight",
 			"PointLight",
 			"SpotLight",
-			"Mesh",
+			"Mesh (Physics)",
+			"Mesh (Static)",
 			"Model",
 			"ParticleEmitter",
 			"Sound",
@@ -2361,14 +2362,30 @@ static void renderExplorer()
 			bool clicked = ImGui::MenuItem(name.data());
 
 			if (ImGui::IsItemHovered())
-				tooltip = getDescriptionForComponent((EntityComponent)i);
+			{
+				if (name == "Mesh (Physics)")
+					tooltip = "An Object with a Mesh and RigidBody component, allowing it to interact with Physics";
+
+				else if (name == "Mesh (Static)")
+					tooltip = "An Object with a Mesh, but no RigidBody component. It cannot interact with Physics";
+				else
+					tooltip = getDescriptionForComponent(s_ComponentNameToType.at(name));
+			}
 
 			if (tooltip.size() > 1)
 				ImGui::SetItemTooltip("%s", tooltip.c_str());
 
 			if (clicked)
 			{
-				GameObject* newObject = GameObject::Create(name);
+				std::string_view createName = name;
+				if (name == "Mesh (Physics)" || name == "Mesh (Static)")
+					createName = "Mesh";
+
+				GameObject* newObject = GameObject::Create(createName);
+
+				if (name == "Mesh (Physics)")
+					newObject->AddComponent(EntityComponent::RigidBody);
+
 				newObject->SetParent(ObjectInsertionTarget);
 				Selections = { newObject };
 			

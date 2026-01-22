@@ -168,10 +168,10 @@
       },
       "Mesh": {
         "Properties": {
-          "Asset": "String",
           "CastsShadows": "Boolean",
           "FaceCulling": "Integer",
           "Material": "String",
+          "MeshAsset": "String",
           "MetallnessFactor": "Double",
           "RoughnessFactor": "Double",
           "Tint": "Color",

@@ -175,18 +175,16 @@ static void resolveCollisions(PhysicsWorld& World, float)
 
 		if (arb->PhysicsDynamics && !brb->PhysicsDynamics)
 		{
-			arb->LinearVelocity = glm::vec3();
-
 			// "Friction"
-			arb->NetForce -= arb->LinearVelocity * arb->Friction * at->Size * (glm::vec3(1.f) - points.Normal);
-			arb->NetForce *= glm::vec3(1.f) - points.Normal; // vertical forces cancel out
+			arb->NetForce -= arb->LinearVelocity * arb->Friction * at->Size * (glm::vec3(1.f) - -points.Normal);
+			arb->NetForce *= glm::vec3(1.f) - -points.Normal; // vertical forces cancel out
 
-			arb->LinearVelocity = arb->LinearVelocity * (glm::vec3(1.f) - points.Normal) - arb->LinearVelocity * (points.Normal * Elasticity);
+			arb->LinearVelocity = arb->LinearVelocity * (glm::vec3(1.f) - -points.Normal) - arb->LinearVelocity * (-points.Normal * Elasticity);
 
-			if (-points.PenetrationDepth < 0.01f)
+			if (points.PenetrationDepth < 0.01f)
 			{
-				arb->LinearVelocity *= glm::vec3(1.f) - points.Normal;
-				at->Transform[3] += glm::vec4(glm::vec3(points.Normal * -points.PenetrationDepth), 1.f);
+				arb->LinearVelocity *= glm::vec3(1.f) - -points.Normal;
+				at->Transform[3] += glm::vec4(glm::vec3(points.Normal * points.PenetrationDepth * -1.5f), 1.f);
 			}
 
 			at->SetWorldTransform(at->Transform);

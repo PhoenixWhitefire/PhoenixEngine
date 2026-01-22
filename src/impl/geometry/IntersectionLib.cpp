@@ -226,6 +226,8 @@ static void addIfUniqueEdge(
 
 static IntersectionLib::CollisionPoints epa(const Gjk::Simplex& Simp, const EcRigidBody* A, const EcRigidBody* B)
 {
+	ZoneScoped;
+
 	std::vector<glm::vec3> polytope = { Simp.begin(), Simp.end() };
 	std::vector<size_t> faces = {
 		0, 1, 2,
@@ -309,11 +311,16 @@ static IntersectionLib::CollisionPoints epa(const Gjk::Simplex& Simp, const EcRi
 	points.PenetrationDepth = minDistance + 0.001f;
 	points.HasCollision = true;
 
+	if (points.PenetrationDepth == FLT_MAX)
+		points.PenetrationDepth = 0.001f;
+
 	return points;
 }
 
 IntersectionLib::CollisionPoints IntersectionLib::Gjk(const EcRigidBody* A, const EcRigidBody* B)
 {
+	ZoneScoped;
+
 	Gjk::Result result = Gjk::FindIntersection(A, B);
 
 	if (!result.HasIntersection)

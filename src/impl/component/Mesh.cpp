@@ -37,9 +37,6 @@ public:
 		if (!Object->FindComponent<EcTransform>())
 			Object->AddComponent(EntityComponent::Transform);
 
-		if (!Object->FindComponent<EcRigidBody>())
-			Object->AddComponent(EntityComponent::RigidBody);
-
 		uint32_t id = static_cast<uint32_t>(m_Components.size() - 1);
 
 		EcMesh& cm = m_Components.back();
@@ -101,7 +98,7 @@ public:
 			REFLECTION_PROPERTY_SIMPLE_NGV(EcMesh, Tint, Color),
 
 			REFLECTION_PROPERTY(
-				"Asset",
+				"MeshAsset",
 				String,
 				REFLECTION_PROPERTY_GET_SIMPLE(EcMesh, Asset),
 				[](void* p, const Reflection::GenericValue& gv)

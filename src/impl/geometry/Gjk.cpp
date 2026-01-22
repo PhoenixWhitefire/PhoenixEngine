@@ -1,6 +1,7 @@
 // G-J-K, 22/01/2026
 // https://winter.dev/articles/gjk-algorithm
 
+#include <tracy/Tracy.hpp>
 #include <cassert>
 #include <array>
 #include <cfloat>
@@ -29,7 +30,7 @@ static glm::vec3 findFurthestPoint(const EcRigidBody* Rb, glm::vec3 Direction)
 
     for (const glm::vec3& v : CubePoints)
     {
-		glm::vec3 vworld = v * ct->Size + glm::vec3(ct->Transform[3]);
+		glm::vec3 vworld = glm::vec3(ct->Transform * glm::vec4(v * ct->Size, 1.f));
         float distance = glm::dot(vworld, Direction);
 
         if (distance > maxDistance)
@@ -168,6 +169,8 @@ static bool nextSimplex(Simplex& simp, glm::vec3& direction)
 
 Result Gjk::FindIntersection(const EcRigidBody* A, const EcRigidBody* B)
 {
+	ZoneScoped;
+
     glm::vec3 s = Support(A, B, glm::vec3(1.f, 0.f, 0.f));
 
 	Result result;

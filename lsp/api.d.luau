@@ -65,20 +65,20 @@ declare extern type GameObject with
   Parent: (GameObject & any)?
   Serializes: boolean
 
-  function AddComponent(self, Component: string) : ()
+  function AddComponent(self, Component: keyof<Creatables>) : ()
   function Destroy(self) : ()
   function Duplicate(self) : ((GameObject & any))
   function FindChild(self, ChildName: string) : ((GameObject & any)?)
-  function FindChildWithComponent(self, ComponentName: string) : ((GameObject & any)?)
+  function FindChildWithComponent(self, Component: keyof<Creatables>) : (GameObject & any)
   function ForEachChild(self, Param_1: (any) -> (any)) : ()
   function ForEachDescendant(self, Param_1: (any) -> (any)) : ()
   function GetChildren(self) : ({ any })
   function GetComponents(self) : (keyof<Creatables>)
   function GetDescendants(self) : ({ any })
   function GetFullName(self) : (string)
-  function HasComponent(self, ComponentName: keyof<Creatables> | string) : (boolean)
+  function HasComponent(self, Component: keyof<Creatables>) : (boolean)
   function MergeWith(self, Param_1: (GameObject & any)) : ()
-  function RemoveComponent(self, ComponentName: string) : ()
+  function RemoveComponent(self, Component: keyof<Creatables>) : ()
 end
 declare extern type Animation with
   Animation: string
@@ -196,10 +196,10 @@ declare extern type History with
   function Undo(self) : ()
 end
 declare extern type Mesh with
-  Asset: string
   CastsShadows: boolean
   FaceCulling: number
   Material: string
+  MeshAsset: string
   MetallnessFactor: number
   RoughnessFactor: number
   Tint: Color
@@ -228,6 +228,13 @@ declare extern type PointLight with
   Range: number
 end
 declare extern type RigidBody with
+  AngularVelocity: vector
+  CollisionFidelity: number
+  Density: number
+  Friction: number
+  LinearVelocity: vector
+  PhysicsCollisions: boolean
+  PhysicsDynamics: boolean
 end
 declare extern type Sound with
   FinishedLoading: boolean 

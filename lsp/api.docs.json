@@ -791,9 +791,6 @@
   "@luhx/globaltype/Matrix.__mul": {
     "documentation": "* Two Matrices may be multiplied together with the `*` operator\n"
   },
-  "@luhx/globaltype/Mesh.Asset": {
-    "documentation": "The path to the underlying `.hxmesh` file, or a built-in identifier like `!Quad` or `!Cube`"
-  },
   "@luhx/globaltype/Mesh.CastsShadows": {
     "documentation": "Whether it casts shadows"
   },
@@ -802,6 +799,9 @@
   },
   "@luhx/globaltype/Mesh.Material": {
     "documentation": "The name of the `.mtl` in the `resources/materials/` directory it should use"
+  },
+  "@luhx/globaltype/Mesh.MeshAsset": {
+    "documentation": "The path to the underlying `.hxmesh` file, or a built-in identifier like `!Quad` or `!Cube`"
   },
   "@luhx/globaltype/Mesh.MetallnessFactor": {
     "documentation": "Metallness modifier"
@@ -853,6 +853,27 @@
   },
   "@luhx/globaltype/PointLight.Range": {
     "documentation": "How far light is emitted. If `>= 0`, the Range is used and attenuation is linear, otherwise it uses the formula `F = 1/D^2 * B` to mirror real-world attenuation, where `F` is the final brightness, `D` is the distance of a point from the Light, and `B` is the `Brightness` property's value"
+  },
+  "@luhx/globaltype/RigidBody.AngularVelocity": {
+    "documentation": "Its rotational velocity"
+  },
+  "@luhx/globaltype/RigidBody.CollisionFidelity": {
+    "documentation": "The fidelity at which collisions are detected. See the `CollisionFidelity` enum"
+  },
+  "@luhx/globaltype/RigidBody.Density": {
+    "documentation": "Its density (`Mass = Density * Size`)"
+  },
+  "@luhx/globaltype/RigidBody.Friction": {
+    "documentation": "Fraction of Velocity it should lose per second while in contact with another object while `PhysicsDynamics` is `true`"
+  },
+  "@luhx/globaltype/RigidBody.LinearVelocity": {
+    "documentation": "Its velocity"
+  },
+  "@luhx/globaltype/RigidBody.PhysicsCollisions": {
+    "documentation": "Whether other physics objects can collide with it"
+  },
+  "@luhx/globaltype/RigidBody.PhysicsDynamics": {
+    "documentation": "Whether the Physics engine should apply forces to it"
   },
   "@luhx/globaltype/Sound.FinishedLoading": {
     "documentation": "Whether the Sound has finished loading the `SoundFile`"

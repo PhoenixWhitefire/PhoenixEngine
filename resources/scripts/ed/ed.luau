@@ -1066,7 +1066,8 @@ imgui.stylecolors(if EditorPreferences.UseLightTheme then 'l' else 'd')
 
 local PrevSelections: { GameObject & Transform } = {}
 
-local SelectionPart = GameObject.new("Mesh")
+local SelectionPart: GameObject & Mesh & RigidBody & Transform = GameObject.new("Mesh") :: any
+SelectionPart:AddComponent("RigidBody")
 SelectionPart.Material = "boxframe"
 SelectionPart.Tint = Color.new(166/255, 200/255, 1)
 SelectionPart.PhysicsCollisions = false

@@ -421,13 +421,25 @@ static ObjectRef createObjectFromJsonItem(const nlohmann::json& Item, uint32_t I
 		}
 
 		ObjectRef object = GameObject::Create();
+		bool hasMeshComponent = false;
 
 		for (auto it = components.value().begin(); it != components.value().end(); it++)
 		{
 			std::string name = it.value();
 
 			if (EntityComponent type = s_ComponentNameToType.at(name); !object->FindComponentByType(type))
+			{
 				object->AddComponent(type);
+
+				if (type == EntityComponent::Mesh)
+					hasMeshComponent = true;
+			}
+		}
+
+		if (Version < 2.11f)
+		{
+			if (hasMeshComponent && !object->FindComponent<EcRigidBody>())
+				object->AddComponent(EntityComponent::RigidBody);
 		}
 
 		return object;
@@ -521,6 +533,9 @@ static std::vector<ObjectRef> LoadMapVersion2(const std::string& Contents, float
 			// reserved prefix for data which needs to be saved but isn't a property
 			if (propName[0] == '$' && propName[1] == '_')
 				continue;
+
+			if (Version < 2.11f && propName == "Asset")
+				propName = "MeshAsset";
 
 			const nlohmann::json& memberValue = propIt.value();
 
@@ -913,7 +928,7 @@ std::string SceneFormat::Serialize(std::vector<GameObject*> Objects, const std::
 							+ std::to_string((int32_t)ymd.year());
 	
 	std::string contents = std::string("PHNXENGI\n")
-							+ "#Version 2.10\n"
+							+ "#Version 2.11\n"
 							+ "#Asset Scene\n"
 							+ "#Date " + dateStr + "\n"
 							+ "#SceneName " + SceneName + "\n"
