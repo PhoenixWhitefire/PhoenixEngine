@@ -2,6 +2,9 @@
 #include <tracy/Tracy.hpp>
 #include <math.h>
 
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/orthonormalize.hpp>
+
 #include "geometry/Physics.hpp"
 #include "geometry/IntersectionLib.hpp"
 #include "Timing.hpp"
@@ -84,6 +87,23 @@ static void moveDynamics(Physics::World& World, float DeltaTime)
 		if (!isfinite(curTrans[3].x) || !isfinite(curTrans[3].y) || !isfinite(curTrans[3].z))
 			curTrans[3] = glm::vec4(0.f, 0.f, 0.f, 1.f);
 
+		const glm::vec3& w = crb->AngularVelocity;
+
+		glm::mat3 skew = glm::mat3(
+			0,   -w.z, w.y,
+			w.z,  0,  -w.x,
+			-w.y, w.x, 0
+		);
+
+		glm::mat3 rot = glm::mat3(curTrans);
+		rot += skew * rot * DeltaTime;
+		rot = glm::orthonormalize(rot);
+
+		glm::vec3 pos = glm::vec3(curTrans[3]);
+
+		curTrans = glm::mat4(rot);
+		curTrans[3] = glm::vec4(pos, 1.f);
+
 		ct->SetWorldTransform(curTrans);
 		crb->RecomputeAabb();
 	}
@@ -124,7 +144,7 @@ static void visitHashAabb(EcWorkspace* cw, const glm::vec3& min, const glm::vec3
 
 #include "Engine.hpp"
 
-static void resolveCollisions(Physics::World& World, float, Physics* phys)
+static void resolveCollisions(Physics::World& World, float DeltaTime, Physics* phys)
 {
 	ZoneScopedC(tracy::Color::AntiqueWhite);
 
@@ -189,33 +209,30 @@ static void resolveCollisions(Physics::World& World, float, Physics* phys)
 		if (arb->PhysicsDynamics && !brb->PhysicsDynamics)
 		{
 			glm::vec3 v = arb->LinearVelocity;
-			float vn = dot(v, points.Normal);
+			float vn = glm::dot(v, points.Normal);
 
-			if (vn < 0.f)
+			if (vn > 0.f)
 			{
 			    float j = -(1.f + arb->Restitution) * vn;
 			    j /= (1.f / arb->Mass);
 
 			    arb->LinearVelocity += (j / arb->Mass) * points.Normal;
+
+				//glm::vec3 impulse = j * points.Normal;
+
+				glm::vec3 r = points.A - arb->CollisionAabb.Position; // lever arm
+				arb->AngularVelocity += glm::cross(r, points.Normal) * points.PenetrationDepth * 10.f;
 			}
 
 			// position correction to prevent sinking
 			if (points.PenetrationDepth < 0.1f)
-				at->Transform[3] += glm::vec4(points.Normal * -points.PenetrationDepth * 2.f, 0.f);;
+				at->Transform[3] += glm::vec4(points.Normal * -points.PenetrationDepth * 1.1f, 0.f);;
 
 			arb->NetForce *= glm::vec3(1.f) - points.Normal;
 			arb->NetForce -= arb->LinearVelocity * (glm::vec3(1.f) - points.Normal) * arb->Friction;
 			arb->LinearVelocity += points.Normal * arb->LinearVelocity * arb->Elasticity;
 
-			/*
-			const float Slop = 0.01f;
-			const float Percent = 0.8f;
-
-			float correctionMag = std::max(points.PenetrationDepth - Slop, 0.f);
-			glm::vec3 correction = correctionMag * Percent * points.Normal;
-
-			at->Transform[3] += glm::vec4(correction, 0.f);
-			*/
+			arb->AngularVelocity -= arb->AngularVelocity * arb->Friction * DeltaTime;
 
 			at->SetWorldTransform(at->Transform);
 			arb->RecomputeAabb();
@@ -251,7 +268,6 @@ static void resolveCollisions(Physics::World& World, float, Physics* phys)
 
 static void step(Physics::World& World, float DeltaTime, Physics* phys)
 {
-	TIME_SCOPE_AS("Physics");
 	ZoneScopedC(tracy::Color::AntiqueWhite);
 
 	applyGlobalForces(World, DeltaTime, phys);
@@ -263,7 +279,10 @@ static void step(Physics::World& World, float DeltaTime, Physics* phys)
 
 void Physics::Step(Physics::World& World, double DeltaTime)
 {
-	static double MaximumDeltaTime = 1.f / 240.f;
+	TIME_SCOPE_AS("Physics");
+	ZoneScopedC(tracy::Color::AntiqueWhite);
+
+	static double MaximumDeltaTime = 1.0 / 480.0;
 
 	if (DeltaTime <= MaximumDeltaTime)
 		step(World, DeltaTime, this);
@@ -271,19 +290,19 @@ void Physics::Step(Physics::World& World, double DeltaTime)
 	{
 		double timeRemaining = DeltaTime;
 
-		static size_t MaxMiniSteps = 32;
-		size_t numMiniSteps = 0;
+		static size_t MaxSubsteps = 32;
+		size_t numSubsteps = 0;
 
-		while (timeRemaining > MaximumDeltaTime && numMiniSteps < MaxMiniSteps)
+		while (timeRemaining > MaximumDeltaTime && numSubsteps < MaxSubsteps)
 		{
-			numMiniSteps++;
+			numSubsteps++;
 
-			double miniStep = MaximumDeltaTime;
-			timeRemaining -= miniStep;
+			double substep = MaximumDeltaTime;
+			timeRemaining -= substep;
 
-			step(World, miniStep, this);
+			step(World, substep, this);
 		}
 
-		step(World, std::clamp(timeRemaining, 0.0, 1.0/240.0), this);
+		step(World, std::clamp(timeRemaining, 0.0, MaximumDeltaTime), this);
 	}
 }

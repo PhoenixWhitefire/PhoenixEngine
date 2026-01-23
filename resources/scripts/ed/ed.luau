@@ -1292,7 +1292,7 @@ local function renderViewport(DeltaTime: number)
 		end
 		imgui.sameline()
 
-		imgui.text(`{ Project.Name } | { Engine.Framerate } FPS`)
+		imgui.text(`{ Project.Name } | { Engine.Framerate } FPS ({ CurrentStage })`)
 
 		imgui.endw()
 	end
@@ -1386,7 +1386,7 @@ local function renderViewport(DeltaTime: number)
 	end
 
 	local canInteract = IsHoveringViewportTitlebar or (not IsHoveringViewport and imgui.windowhovered("a | b"))
-	
+
 	imgui.begin(Project.Name .. "###Viewport", if canInteract then "nb" else "ni | nb")
 
 	local cpos = PlayerInput:GetCursorPosition()

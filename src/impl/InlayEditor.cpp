@@ -2900,7 +2900,6 @@ static void renderProperties()
 					if (pos[0] != pos[0] || pos[1] != pos[1] || pos[2] != pos[2] || rotdegs[0] != rotdegs[0] || rotdegs[1] != rotdegs[1] || rotdegs[2] != rotdegs[2])
 					{
 						newVal = glm::mat4(1.f);
-						ImGui::PopID();
 						valueWasEditedManual = true;
 						break;
 					}
