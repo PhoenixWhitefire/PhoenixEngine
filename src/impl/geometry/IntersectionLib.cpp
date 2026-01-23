@@ -171,7 +171,7 @@ IntersectionLib::SweptIntersection IntersectionLib::SweptAabbAabb(
 
 // https://winter.dev/articles/epa-algorithm
 
-static std::pair<std::vector<glm::vec4>, size_t> getFaceNormals(const std::vector<glm::vec3>& polytope, const std::vector<size_t>& faces)
+static std::pair<std::vector<glm::vec4>, size_t> getFaceNormals(const std::vector<Gjk::SupportPoint>& polytope, const std::vector<size_t>& faces)
 {
 	std::vector<glm::vec4> normals;
 	size_t minTriangle = 0;
@@ -179,9 +179,9 @@ static std::pair<std::vector<glm::vec4>, size_t> getFaceNormals(const std::vecto
 
 	for (size_t i = 0; i < faces.size(); i += 3)
 	{
-		glm::vec3 a = polytope[faces[i]];
-		glm::vec3 b = polytope[faces[i + 1]];
-		glm::vec3 c = polytope[faces[i + 2]];
+		glm::vec3 a = polytope[faces[i]].P;
+		glm::vec3 b = polytope[faces[i + 1]].P;
+		glm::vec3 c = polytope[faces[i + 2]].P;
 
 		glm::vec3 normal = glm::normalize(glm::cross(b - a, c - a));
 		float distance = glm::dot(normal, a);
@@ -228,7 +228,7 @@ static IntersectionLib::CollisionPoints epa(const Gjk::Simplex& Simp, const EcRi
 {
 	ZoneScoped;
 
-	std::vector<glm::vec3> polytope = { Simp.begin(), Simp.end() };
+	std::vector<Gjk::SupportPoint> polytope = { Simp.begin(), Simp.end() };
 	std::vector<size_t> faces = {
 		0, 1, 2,
 		0, 3, 1,
@@ -246,8 +246,8 @@ static IntersectionLib::CollisionPoints epa(const Gjk::Simplex& Simp, const EcRi
 		minNormal = glm::vec3(normals[minFace]);
 		minDistance = normals[minFace].w;
 
-		glm::vec3 support = Gjk::Support(A, B, minNormal);
-		float sDistance = glm::dot(minNormal, support);
+		Gjk::SupportPoint support = Gjk::Support(A, B, minNormal);
+		float sDistance = glm::dot(minNormal, support.P);
 
 		if (abs(sDistance - minDistance) > 0.001f)
 		{
@@ -257,7 +257,7 @@ static IntersectionLib::CollisionPoints epa(const Gjk::Simplex& Simp, const EcRi
 
 			for (size_t i = 0; i < normals.size(); i++)
 			{
-				if (Gjk::SameDirection(normals[i], support))
+				if (glm::dot(glm::vec3(normals[i]), support.P) > glm::dot(glm::vec3(normals[i]), polytope[faces[i * 3]].P))
 				{
 					size_t f = i * 3;
 
@@ -306,7 +306,37 @@ static IntersectionLib::CollisionPoints epa(const Gjk::Simplex& Simp, const EcRi
 		}
 	}
 
+	size_t f = minFace * 3;
+	size_t i0 = faces[f];
+	size_t i1 = faces[f + 1];
+	size_t i2 = faces[f + 2];
+
+	const Gjk::SupportPoint& a = polytope[i0];
+	const Gjk::SupportPoint& b = polytope[i1];
+	const Gjk::SupportPoint& c = polytope[i2];
+
+	glm::vec3 v0 = b.P - a.P;
+	glm::vec3 v1 = c.P - a.P;
+	glm::vec3 v2 = -a.P;
+
+	float d00 = glm::dot(v0, v0);
+	float d01 = glm::dot(v0, v1);
+	float d11 = glm::dot(v1, v1);
+	float d20 = glm::dot(v2, v0);
+	float d21 = glm::dot(v2, v1);
+
+	float denom = d00 * d11 - d01 * d01;
+
+	float v = (d11 * d20 - d01 * d21) / denom;
+	float w = (d00 * d21 - d01 * d20) / denom;
+	float u = 1.f - v - w;
+
+	glm::vec3 contactA = (u * a.A) + (v * b.A) + (w * c.A);
+	glm::vec3 contactB = (u * a.B) + (v * b.B) + (w * c.B);
+
 	IntersectionLib::CollisionPoints points;
+	points.A = contactA;
+	points.B = contactB;
 	points.Normal = minNormal;
 	points.PenetrationDepth = minDistance + 0.001f;
 	points.HasCollision = true;

@@ -139,48 +139,6 @@ public:
                 }
             ),
             REFLECTION_PROPERTY(
-                "DebugCollisionAabbs",
-                Boolean,
-                [](void*) -> Reflection::GenericValue
-                {
-                    Engine* engine = Engine::Get();
-                    return engine->DebugAabbs;
-                },
-                [](void*, const Reflection::GenericValue& gv)
-                {
-                    Engine* engine = Engine::Get();
-                    engine->DebugAabbs = gv.AsBoolean();
-                }
-            ),
-            REFLECTION_PROPERTY(
-                "DebugSpatialHeat",
-                Boolean,
-                [](void*) -> Reflection::GenericValue
-                {
-                    Engine* engine = Engine::Get();
-                    return engine->DebugSpatialHeat;
-                },
-                [](void*, const Reflection::GenericValue& gv)
-                {
-                    Engine* engine = Engine::Get();
-                    engine->DebugSpatialHeat = gv.AsBoolean();
-                }
-            ),
-            REFLECTION_PROPERTY(
-                "PhysicsTimescale",
-                Double,
-                [](void*) -> Reflection::GenericValue
-                {
-                    Engine* engine = Engine::Get();
-                    return engine->PhysicsTimeScale;
-                },
-                [](void*, const Reflection::GenericValue& gv)
-                {
-                    Engine* engine = Engine::Get();
-                    engine->PhysicsTimeScale = gv.AsDouble();
-                }
-            ),
-            REFLECTION_PROPERTY(
                 "Version",
                 String,
                 [](void*) -> Reflection::GenericValue

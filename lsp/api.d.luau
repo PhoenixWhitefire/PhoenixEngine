@@ -130,14 +130,11 @@ end
 declare extern type Engine with
   BoundDataModel: (GameObject & any) 
   CommitHash: string 
-  DebugCollisionAabbs: boolean
-  DebugSpatialHeat: boolean
   DebugWireframeRendering: boolean
   Framerate: number 
   FramerateCap: number
   IsFullscreen: boolean
   IsHeadless: boolean 
-  PhysicsTimescale: number
   VSync: boolean
   Version: string 
   WindowSize: vector
@@ -213,6 +210,14 @@ declare extern type ParticleEmitter with
   ParticlesAreAttached: boolean
   Rate: number
 end
+declare extern type Physics with
+  DebugCollisionAabbs: boolean
+  DebugContactPoints: boolean
+  DebugSpatialHeat: boolean
+  Gravity: vector
+  Simulating: boolean
+  Timescale: number 
+end
 declare extern type PlayerInput with
   CursorMode: number
   IsKeyboardSunk: boolean 
@@ -231,10 +236,13 @@ declare extern type RigidBody with
   AngularVelocity: vector
   CollisionFidelity: number
   Density: number
+  Elasticity: number
   Friction: number
+  GravityFactor: number
   LinearVelocity: vector
   PhysicsCollisions: boolean
   PhysicsDynamics: boolean
+  Restitution: number
 end
 declare extern type Sound with
   FinishedLoading: boolean 
@@ -297,6 +305,7 @@ type Creatables = {
 	AssetManager: AssetManager,
 	History: History,
 	RigidBody: RigidBody,
+	Physics: Physics,
 }
 declare Enum: {
   CollisionFidelity: { Aabb: number, AabbStaticSize: number },

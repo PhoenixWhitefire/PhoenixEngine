@@ -2302,14 +2302,37 @@ static void renderExplorer()
 
 	bool open = true;
 
-	if ( !ImGui::Begin("Explorer", &open))
+	if (!ImGui::Begin("Explorer", &open))
 	{
 		ImGui::End();
+
+		if (!open)
+			EngineJsonConfig["Tool_Explorer"] = false;
+
 		return;
 	}
 
 	if (!open)
 		EngineJsonConfig["Tool_Explorer"] = false;
+
+	if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered() && !ImGui::IsAnyItemActive() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+		ImGui::OpenPopup("InsertService");
+
+	if (ImGui::BeginPopup("InsertService"))
+	{
+		for (const std::string_view& serv : s_DataModelServices)
+		{
+			EntityComponent ec = s_ComponentNameToType.at(serv);
+
+			if (!ExplorerRoot->FindChildWithComponent(ec) && ImGui::MenuItem(serv.data()))
+			{
+				GameObject* newServ = GameObject::Create(ec);
+				newServ->SetParent(ExplorerRoot);
+			}
+		}
+
+		ImGui::EndPopup();
+	}
 
 	if (IsPickingObject)
 	{

@@ -27,9 +27,9 @@ void main()
 
 	FragColor = vec4(Frag_Paint.xyz, 1.f - Frag_Transparency);
 
-	if (Frag_Transparency > 0.1f)
+	if (Frag_Transparency > 0.f)
 	{
-		FragColor = vec4(1.f, 1.f, 0.f, Frag_Transparency);
+		FragColor = vec4(Frag_Paint.xyz, 1.f - Frag_Transparency);
 		gl_FragDepth = 0;
 	}
 }

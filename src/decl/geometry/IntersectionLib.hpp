@@ -25,6 +25,8 @@ namespace IntersectionLib
 
 	struct CollisionPoints
 	{
+		glm::vec3 A; // Contact point (or furthest point) of A into B
+		glm::vec3 B; // Contact point (or furthest point) of B into A
 		glm::vec3 Normal;
 		float PenetrationDepth;
 		bool HasCollision = false;

@@ -8,11 +8,12 @@
 
 namespace Gjk
 {
-    struct Cube
-    {
-        glm::vec3 Position;
-        glm::vec3 Size;
-    };
+    struct SupportPoint
+	{
+		glm::vec3 P;  // Minkowski (A - B)
+		glm::vec3 A;  // Point on A
+		glm::vec3 B;  // Point on B
+	};
 
     struct Simplex
     {
@@ -21,29 +22,29 @@ namespace Gjk
 	    {
 		}
 
-	    Simplex& operator=(std::initializer_list<glm::vec3> list)
+	    Simplex& operator=(std::initializer_list<SupportPoint> list)
 	    {
 			Size = 0;
 
-			for (glm::vec3 point : list)
+			for (const SupportPoint& point : list)
 				Points[Size++] = point;
 
 			return *this;
 	    }
 
-	    void push_front(glm::vec3 point)
+	    void push_front(const SupportPoint& point)
 	    {
 			Points = { point, Points[0], Points[1], Points[2] };
 			Size = std::min(Size + 1, 4);
 	    }
 
-	    glm::vec3& operator[](int i) { return Points[i]; }
+	    SupportPoint& operator[](int i) { return Points[i]; }
 	    size_t size() const { return Size; }
 
 	    auto begin() const { return Points.begin(); }
 	    auto end() const { return Points.end() - (4 - Size); }
 
-	    std::array<glm::vec3, 4> Points;
+	    std::array<SupportPoint, 4> Points;
 	    int Size;
     };
 
@@ -53,7 +54,7 @@ namespace Gjk
         bool HasIntersection = false;
     };
 
-    glm::vec3 Support(const EcRigidBody* A, const EcRigidBody* B, const glm::vec3& Direction);
+    SupportPoint Support(const EcRigidBody* A, const EcRigidBody* B, const glm::vec3& Direction);
     bool SameDirection(const glm::vec3& A, const glm::vec3& B);
     Result FindIntersection(const EcRigidBody* A, const EcRigidBody* B);
 };

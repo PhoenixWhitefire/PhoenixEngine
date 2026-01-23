@@ -115,14 +115,11 @@
         "Properties": {
           "BoundDataModel": "GameObject READONLY",
           "CommitHash": "String READONLY",
-          "DebugCollisionAabbs": "Boolean",
-          "DebugSpatialHeat": "Boolean",
           "DebugWireframeRendering": "Boolean",
           "Framerate": "Integer READONLY",
           "FramerateCap": "Integer",
           "IsFullscreen": "Boolean",
           "IsHeadless": "Boolean READONLY",
-          "PhysicsTimescale": "Double",
           "VSync": "Boolean",
           "Version": "String READONLY",
           "WindowSize": "Vector2"
@@ -187,6 +184,16 @@
           "Rate": "Integer"
         }
       },
+      "Physics": {
+        "Properties": {
+          "DebugCollisionAabbs": "Boolean",
+          "DebugContactPoints": "Boolean",
+          "DebugSpatialHeat": "Boolean",
+          "Gravity": "Vector3",
+          "Simulating": "Boolean",
+          "Timescale": "Double READONLY"
+        }
+      },
       "PlayerInput": {
         "Methods": {
           "GetCursorPosition": "() -> (Vector2)",
@@ -211,10 +218,13 @@
           "AngularVelocity": "Vector3",
           "CollisionFidelity": "Integer",
           "Density": "Double",
+          "Elasticity": "Double",
           "Friction": "Double",
+          "GravityFactor": "Double",
           "LinearVelocity": "Vector3",
           "PhysicsCollisions": "Boolean",
-          "PhysicsDynamics": "Boolean"
+          "PhysicsDynamics": "Boolean",
+          "Restitution": "Double"
         }
       },
       "Sound": {

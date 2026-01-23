@@ -2,6 +2,7 @@
 local AssetManager: AssetManager = game:GetService("AssetManager") :: any
 local PlayerInput: PlayerInput = game:GetService("PlayerInput") :: any
 local History: History = game:GetService("History") :: any
+local Physics: Physics = game:GetService("Physics") :: any
 local Engine: Engine = game:GetService("Engine") :: any
 
 local FALLBACK_IMAGE = "@etextures/editor-icons/fallback.png"
@@ -44,7 +45,7 @@ local GameVM = "GameVM"
 EditorCam.UseSimpleController = true
 EditorTl.Parent = workspace
 -- EditorTl.Scripting = false -- TODO was not generated a type error for some reason
-Engine.PhysicsTimescale = 0
+Physics.Simulating = false
 
 local ToolOrder = {
 	"Tool_Explorer",
@@ -1666,7 +1667,7 @@ function Stages.ProjectEditing_Enter()
 
 	Engine:SetExplorerRoot(Project.DataModel)
 	Engine:SetExplorerSelections({})
-	Engine.PhysicsTimescale = 0
+	Physics.Simulating = false
 	workspace.SceneCamera = Project.Workspace.SceneCamera
 	workspace.SceneCamera.UseSimpleController = true
 end
@@ -1716,7 +1717,7 @@ function Stages.ProjectPlaying_Enter(DeltaTime: any)
 
 	Engine:SetExplorerRoot(Project.DataModel)
 	Engine:SetExplorerSelections({})
-	Engine.PhysicsTimescale = 1
+	Physics.Simulating = true
 
 	Engine:BindDataModel(Project.DataModel) -- Set the `game` and `workspace` variables to the correct values in game scripts
 	Engine:CreateVM(GameVM)
@@ -1756,4 +1757,3 @@ function Stages.ProjectPlaying_Leave(DeltaTime)
 end
 
 changeStageTo("SelectProject")
-

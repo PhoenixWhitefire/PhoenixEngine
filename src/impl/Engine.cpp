@@ -338,7 +338,7 @@ static bool s_DebugCollisionAabbs = false;
 static void traverseHierarchy(
 	hx::vector<RenderItem, MEMCAT(Rendering)>& RenderList,
 	hx::vector<LightItem, MEMCAT(Rendering)>& LightList,
-	PhysicsWorld& PhysicsWorld,
+	Physics::World& PhysicsWorld,
 	const ObjectHandle& Root,
 	EcCamera* SceneCamera,
 	double DeltaTime,
@@ -760,7 +760,7 @@ void Engine::Start()
 
 	CurrentScene.RenderList.reserve(50);
 
-	PhysicsWorld physWorld;
+	Physics::World physWorld;
 
 	m_IsRunning = true;
 
@@ -916,7 +916,7 @@ void Engine::Start()
 		// (really need a generic `Ref` system)
 		sceneCamera = sceneCamObject->FindComponent<EcCamera>();
 
-		s_DebugCollisionAabbs = this->DebugAabbs;
+		s_DebugCollisionAabbs = m_Physics.DebugCollisionAabbs;
 		EcDirectionalLight* sun = nullptr;
 		{
 			TIME_SCOPE_AS("TraverseHierarchy");
@@ -937,7 +937,7 @@ void Engine::Start()
 				&sun
 			);
 
-			if (DebugSpatialHeat)
+			if (m_Physics.DebugSpatialHeat)
 			{
 				workspaceComponent = WorkspaceRef->FindComponent<EcWorkspace>();
 				assert(workspaceComponent);
@@ -959,8 +959,8 @@ void Engine::Start()
 			sceneCamera = sceneCamObject->FindComponent<EcCamera>();
 		}
 
-		if (physWorld.Dynamics.size() > 0)
-			Physics::Step(physWorld, deltaTime * PhysicsTimeScale);
+		if (m_Physics.Simulating && physWorld.Dynamics.size() > 0)
+			m_Physics.Step(physWorld, deltaTime * m_Physics.Timescale);
 
 		if (!IsHeadlessMode)
 		{
@@ -975,7 +975,7 @@ void Engine::Start()
 			TIME_SCOPE_AS("Shadows");
 			ZoneScopedN("Shadows");
 
-			Scene sunScene{};
+			Scene sunScene;
 			sunScene.RenderList.reserve(CurrentScene.RenderList.size());
 			sunScene.UsedShaders = CurrentScene.UsedShaders;
 

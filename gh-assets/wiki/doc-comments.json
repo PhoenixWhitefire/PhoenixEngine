@@ -256,14 +256,11 @@
         "Properties": {
           "BoundDataModel": "The DataModel object that is currently bound",
           "CommitHash": "The Git commit that was used to produce this Engine build",
-          "DebugCollisionAabbs": "Whether physics collision AABBs are rendered",
-          "DebugSpatialHeat": "Whether Spatial Heat (spatial hash density) debug rendering is enabled",
           "DebugWireframeRendering": "Whether the Wireframe rendering debug mode is enabled",
           "Framerate": "The Engine's current framerate",
           "FramerateCap": "The maximum framerate the Engine will reach before attempting to self-limit",
           "IsFullscreen": "Whether the Window is currently fullscreened",
           "IsHeadless": "Whether the Engine is currently running in headless mode",
-          "PhysicsTimescale": "The current time-scale of the Physics engine (1.0 = 100%, normal speed)",
           "VSync": "Whether Vertical Synchronization is enabled",
           "Version": "The version of the Engine build",
           "WindowSize": "The size of the window, in pixels"
@@ -348,6 +345,17 @@
           "Rate": "An integer indicating how many particles should be emitted per second (must be above or equal to `0`)"
         }
       },
+      "Physics": {
+        "Description": "Manipulate the Physics simulation of the Engine",
+        "Properties": {
+          "DebugCollisionAabbs": "Whether physics collision AABBs are rendered",
+          "DebugContactPoints": "Whether Contact Points are rendered",
+          "DebugSpatialHeat": "Whether Spatial Heat (spatial hash density) debug rendering is enabled",
+          "Gravity": "The gravitational field strength",
+          "Timescale": "Slow-down or speed-up the simulation by changing this value from `1`",
+          "Simulating": "Whether the Physics simulation is running. IMPORTANT: The Editor sets this value to `true` and `false` when starting/stopping playtests"
+        }
+      },
       "PlayerInput": {
         "Description": "Checking player inputs",
         "Methods": {
@@ -382,10 +390,13 @@
           "AngularVelocity": "Its rotational velocity",
           "CollisionFidelity": "The fidelity at which collisions are detected. See the `CollisionFidelity` enum",
           "Density": "Its density (`Mass = Density * Size`)",
-          "Friction":"Fraction of Velocity it should lose per second while in contact with another object while `PhysicsDynamics` is `true`",
+          "Elasticity": "Elasticity",
+          "Friction": "Fraction of Velocity it should lose per second while in contact with another object while `PhysicsDynamics` is `true`",
+          "GravityFactor": "Influence of the force of gravity",
           "LinearVelocity": "Its velocity",
-          "PhysicsCollisions":"Whether other physics objects can collide with it",
-          "PhysicsDynamics":"Whether the Physics engine should apply forces to it"
+          "PhysicsCollisions": "Whether other physics objects can collide with it",
+          "PhysicsDynamics": "Whether the Physics engine should apply forces to it",
+          "Restitution": "Restitution"
         }
       },
       "Sound": {

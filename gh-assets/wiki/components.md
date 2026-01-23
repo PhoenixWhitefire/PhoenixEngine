@@ -109,14 +109,11 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 ### Properties:
 * `BoundDataModel: (GameObject & any) `: The DataModel object that is currently bound
 * `CommitHash: string `: The Git commit that was used to produce this Engine build
-* `DebugCollisionAabbs: boolean`: Whether physics collision AABBs are rendered
-* `DebugSpatialHeat: boolean`: Whether Spatial Heat (spatial hash density) debug rendering is enabled
 * `DebugWireframeRendering: boolean`: Whether the Wireframe rendering debug mode is enabled
 * `Framerate: number `: The Engine's current framerate
 * `FramerateCap: number`: The maximum framerate the Engine will reach before attempting to self-limit
 * `IsFullscreen: boolean`: Whether the Window is currently fullscreened
 * `IsHeadless: boolean `: Whether the Engine is currently running in headless mode
-* `PhysicsTimescale: number`: The current time-scale of the Physics engine (1.0 = 100%, normal speed)
 * `VSync: boolean`: Whether Vertical Synchronization is enabled
 * `Version: string `: The version of the Engine build
 * `WindowSize: vector`: The size of the window, in pixels
@@ -218,6 +215,18 @@ No members defined
 * `ParticlesAreAttached: boolean`: Whether the particles are attached to and move with the emitter
 * `Rate: number`: An integer indicating how many particles should be emitted per second (must be above or equal to `0`)
 
+## `Physics`
+
+* Manipulate the Physics simulation of the Engine
+
+### Properties:
+* `DebugCollisionAabbs: boolean`: Whether physics collision AABBs are rendered
+* `DebugContactPoints: boolean`: Whether Contact Points are rendered
+* `DebugSpatialHeat: boolean`: Whether Spatial Heat (spatial hash density) debug rendering is enabled
+* `Gravity: vector`: The gravitational field strength
+* `Simulating: boolean`: Whether the Physics simulation is running. IMPORTANT: The Editor sets this value to `true` and `false` when starting/stopping playtests
+* `Timescale: number `: Slow-down or speed-up the simulation by changing this value from `1`
+
 ## `PlayerInput`
 
 * Checking player inputs
@@ -249,10 +258,13 @@ No members defined
 * `AngularVelocity: vector`: Its rotational velocity
 * `CollisionFidelity: number`: The fidelity at which collisions are detected. See the `CollisionFidelity` enum
 * `Density: number`: Its density (`Mass = Density * Size`)
+* `Elasticity: number`: Elasticity
 * `Friction: number`: Fraction of Velocity it should lose per second while in contact with another object while `PhysicsDynamics` is `true`
+* `GravityFactor: number`: Influence of the force of gravity
 * `LinearVelocity: vector`: Its velocity
 * `PhysicsCollisions: boolean`: Whether other physics objects can collide with it
 * `PhysicsDynamics: boolean`: Whether the Physics engine should apply forces to it
+* `Restitution: number`: Restitution
 
 ## `Sound`
 

@@ -50,18 +50,18 @@ public:
 	ObjectHandle WorkspaceRef;
 
 	Renderer RendererContext;
-	GLFWwindow* Window{};
+	GLFWwindow* Window = nullptr;
 
-	EventSignal<double> OnFrameStart{};
-	EventSignal<double> OnFrameRenderGui{};
-	EventSignal<double> OnFrameEnd{};
+	EventSignal<double> OnFrameStart;
+	EventSignal<double> OnFrameRenderGui;
+	EventSignal<double> OnFrameEnd;
 
 	Scene CurrentScene;
 
-	ImVec2 OverrideViewportDockSpacePosition{ -1.f, -1.f };
-	ImVec2 OverrideViewportDockSpaceSize{ -1.f, -1.f };
-	ImVec2 OverrideViewportSize{ 1.f, 1.f };
-	ImVec2 ViewportPosition{ 0.f, 0.f };
+	ImVec2 OverrideViewportDockSpacePosition = { -1.f, -1.f };
+	ImVec2 OverrideViewportDockSpaceSize = { -1.f, -1.f };
+	ImVec2 OverrideViewportSize = { 1.f, 1.f };
+	ImVec2 ViewportPosition = { 0.f, 0.f };
 	bool OverrideDefaultGuiViewportDockSpace = false;
 	bool OverrideDefaultViewport = false;
 
@@ -69,16 +69,13 @@ public:
 	bool IsFullscreen = false;
 	bool VSync = false;
 
-	int WindowSizeX{};
-	int WindowSizeY{};
+	int WindowSizeX = 0;
+	int WindowSizeY = 0;
 	
 	int FramesPerSecond = 0;
 	int FpsCap = 60;
-	float PhysicsTimeScale = 1.f;
 
 	bool DebugWireframeRendering = false;
-	bool DebugAabbs = false;
-	bool DebugSpatialHeat = false;
 
 	bool IsWindowFocused = true;
 
@@ -104,6 +101,7 @@ private:
 	TextureManager m_TextureManager;
 	ShaderManager m_ShaderManager;
 	MeshProvider m_MeshProvider;
+	Physics m_Physics;
 
 	ShaderProgram m_PostFxShader;
 	ShaderProgram m_SkyboxShader;

@@ -17,7 +17,27 @@ struct Collision
 	IntersectionLib::CollisionPoints Points;
 };
 
-static void applyGlobalForces(PhysicsWorld& World, float)
+static Physics* Instance;
+
+Physics::Physics()
+{
+	assert(!Instance);
+	Instance = this;
+}
+
+Physics::~Physics()
+{
+	assert(Instance);
+	Instance = nullptr;
+}
+
+Physics* Physics::Get()
+{
+	assert(Instance);
+	return Instance;
+}
+
+static void applyGlobalForces(Physics::World& World, float, Physics* phys)
 {
 	ZoneScopedC(tracy::Color::AntiqueWhite);
 
@@ -26,21 +46,25 @@ static void applyGlobalForces(PhysicsWorld& World, float)
 		EcRigidBody* crb = object->FindComponent<EcRigidBody>();
 		assert(crb->Mass == crb->CollisionAabb.Size.x * crb->CollisionAabb.Size.y * crb->CollisionAabb.Size.z * crb->Density);
 
-		const glm::vec3 Gfs = { 0.f, -50.f, 0.f };
-
 		// 19/09/2024 https://www.youtube.com/watch?v=-_IspRG548E
-		glm::vec3 weight = Gfs * crb->Mass;
+		glm::vec3 weight = phys->Gravity * crb->Mass;
 
 		const float AirDensity = 0.15f;
 		const float DragCoefficient = 0.01f;
 		float csarea = crb->CollisionAabb.Size.x * crb->CollisionAabb.Size.z;
-		glm::vec3 drag = .5f * AirDensity * (crb->LinearVelocity * crb->LinearVelocity) * DragCoefficient * csarea;
+
+		glm::vec3 v = crb->LinearVelocity;
+		float speed = glm::length(v);
+
+		glm::vec3 drag = speed > 0.f
+		    ? -glm::normalize(v) * 0.5f * AirDensity * speed * speed * DragCoefficient * csarea
+		    : glm::vec3(0.f);
 
 		crb->NetForce = weight + drag;
 	}
 }
 
-static void moveDynamics(PhysicsWorld& World, float DeltaTime)
+static void moveDynamics(Physics::World& World, float DeltaTime)
 {
 	ZoneScopedC(tracy::Color::AntiqueWhite);
 
@@ -82,9 +106,9 @@ static void visitHashAabb(EcWorkspace* cw, const glm::vec3& min, const glm::vec3
 	if (abs(min.x) + abs(min.y) + abs(min.z) > 1e6)
 		return;
 
-	for (float x = min.x; x <= max.x; x++)
-		for (float y = min.y; y <= max.y; y++)
-			for (float z = min.z; z <= max.z; z++)
+	for (float x = min.x; x <= max.x; x += SPATIAL_HASH_GRID_SIZE)
+		for (float y = min.y; y <= max.y; y += SPATIAL_HASH_GRID_SIZE)
+			for (float z = min.z; z <= max.z; z += SPATIAL_HASH_GRID_SIZE)
 			{
 				glm::ivec3 point = { x, y, z };
 				assert(roundToGrid(point) == point);
@@ -98,7 +122,9 @@ static void visitHashAabb(EcWorkspace* cw, const glm::vec3& min, const glm::vec3
 			}
 }
 
-static void resolveCollisions(PhysicsWorld& World, float)
+#include "Engine.hpp"
+
+static void resolveCollisions(Physics::World& World, float, Physics* phys)
 {
 	ZoneScopedC(tracy::Color::AntiqueWhite);
 
@@ -119,7 +145,7 @@ static void resolveCollisions(PhysicsWorld& World, float)
 		const glm::vec3& aSize = arb->CollisionAabb.Size;
 
 		glm::vec3 min = aPos - aSize / 2.f;
-		glm::vec3 max = aPos - aSize / 2.f;
+		glm::vec3 max = aPos + aSize / 2.f;
 		min = roundToGrid(min);
 		max = roundToGrid(max);
 
@@ -154,20 +180,7 @@ static void resolveCollisions(PhysicsWorld& World, float)
 
 	for (const Collision& collision : collisions)
 	{
-		// 24/09/2024
-		// ugly
-		// (another ugly at the end of this cycle)
-		// Do this because otherwise, objects colliding will
-		// move twice as fast
-		//std::vector<Object_Base3D*> us = { collision.A, collision.B };
-		//moveDynamics(us, -DeltaTime);
-
-		// this much velocity is lost completely, pushing on neither objects
-		float Elasticity = 0.2f;
-
 		const IntersectionLib::CollisionPoints& points = collision.Points;
-
-		glm::vec3 reactionForce = points.Normal * points.PenetrationDepth * Elasticity;
 
 		EcRigidBody* arb = collision.A->FindComponent<EcRigidBody>();
 		EcRigidBody* brb = collision.B->FindComponent<EcRigidBody>();
@@ -175,23 +188,52 @@ static void resolveCollisions(PhysicsWorld& World, float)
 
 		if (arb->PhysicsDynamics && !brb->PhysicsDynamics)
 		{
-			// "Friction"
-			arb->NetForce -= arb->LinearVelocity * arb->Friction * at->Size * (glm::vec3(1.f) - -points.Normal);
-			arb->NetForce *= glm::vec3(1.f) - -points.Normal; // vertical forces cancel out
+			glm::vec3 v = arb->LinearVelocity;
+			float vn = dot(v, points.Normal);
 
-			arb->LinearVelocity = arb->LinearVelocity * (glm::vec3(1.f) - -points.Normal) - arb->LinearVelocity * (-points.Normal * Elasticity);
-
-			if (points.PenetrationDepth < 0.05f)
+			if (vn < 0.f)
 			{
-				arb->LinearVelocity *= glm::vec3(1.f) - -points.Normal;
-				at->Transform[3] += glm::vec4(glm::vec3(points.Normal * points.PenetrationDepth * -2.f), 1.f);
+			    float j = -(1.f + arb->Restitution) * vn;
+			    j /= (1.f / arb->Mass);
+
+			    arb->LinearVelocity += (j / arb->Mass) * points.Normal;
 			}
 
-			at->SetWorldTransform(at->Transform);
+			// position correction to prevent sinking
+			if (points.PenetrationDepth < 0.1f)
+				at->Transform[3] += glm::vec4(points.Normal * -points.PenetrationDepth * 2.f, 0.f);;
 
+			arb->NetForce *= glm::vec3(1.f) - points.Normal;
+			arb->NetForce -= arb->LinearVelocity * (glm::vec3(1.f) - points.Normal) * arb->Friction;
+			arb->LinearVelocity += points.Normal * arb->LinearVelocity * arb->Elasticity;
+
+			/*
+			const float Slop = 0.01f;
+			const float Percent = 0.8f;
+
+			float correctionMag = std::max(points.PenetrationDepth - Slop, 0.f);
+			glm::vec3 correction = correctionMag * Percent * points.Normal;
+
+			at->Transform[3] += glm::vec4(correction, 0.f);
+			*/
+
+			at->SetWorldTransform(at->Transform);
 			arb->RecomputeAabb();
+
+			if (phys->DebugContactPoints)
+			{
+				Engine::Get()->CurrentScene.RenderList.push_back(RenderItem{
+					.RenderMeshId = 0,
+					.Transform = glm::translate(glm::mat4(1.f), points.B),
+					.Size = glm::vec3(0.2f),
+					.MaterialId = MaterialManager::Get()->LoadFromPath("unlit"),
+					.TintColor = glm::vec3(1.f, 0.f, 0.f),
+					.Transparency = 0.1f,
+					.FaceCulling = FaceCullingMode::None
+				});
+			}
 		}
-		else
+		else // Not finished yet
 		{
 			// Transfer of velocity
 			//collision.A->LinearVelocity += collision.B->LinearVelocity / 2.f;
@@ -199,59 +241,49 @@ static void resolveCollisions(PhysicsWorld& World, float)
 			//collision.A->LinearVelocity = collision.A->LinearVelocity / 2.f;
 			//collision.B->LinearVelocity = collision.B->LinearVelocity / 2.f;
 
-			arb->LinearVelocity += reactionForce;
+			//arb->LinearVelocity += reactionForce;
 
 			arb->RecomputeAabb();
 		}
 		assert(arb->PhysicsDynamics); // `A` should always be the dynamic one, unless it's D v D where both are dynamic
-
-		// 24/09/2024
-		// ugly
-		
-		//moveDynamics(us, DeltaTime);
 	}
 }
 
-static void step(PhysicsWorld& World, float DeltaTime)
+static void step(Physics::World& World, float DeltaTime, Physics* phys)
 {
 	TIME_SCOPE_AS("Physics");
 	ZoneScopedC(tracy::Color::AntiqueWhite);
 
-	applyGlobalForces(World, DeltaTime);
+	applyGlobalForces(World, DeltaTime, phys);
 
-	resolveCollisions(World, DeltaTime);
+	resolveCollisions(World, DeltaTime, phys);
 
 	moveDynamics(World, DeltaTime);
 }
 
-void Physics::Step(PhysicsWorld& World, double DeltaTime)
+void Physics::Step(Physics::World& World, double DeltaTime)
 {
-	step(World, std::clamp(static_cast<float>(DeltaTime), 0.f, 1.f/30.f));
-
-	/*
 	static double MaximumDeltaTime = 1.f / 240.f;
 
 	if (DeltaTime <= MaximumDeltaTime)
-		step(World, DeltaTime);
+		step(World, DeltaTime, this);
 	else
 	{
 		double timeRemaining = DeltaTime;
 
-		uint32_t numMiniSteps = 0;
-
-		static uint32_t MaxMiniSteps = 32;
+		static size_t MaxMiniSteps = 32;
+		size_t numMiniSteps = 0;
 
 		while (timeRemaining > MaximumDeltaTime && numMiniSteps < MaxMiniSteps)
 		{
 			numMiniSteps++;
 
-			double miniStep = timeRemaining - MaximumDeltaTime;
+			double miniStep = MaximumDeltaTime;
 			timeRemaining -= miniStep;
 
-			step(World, miniStep);
+			step(World, miniStep, this);
 		}
 
-		step(World, MaximumDeltaTime);
+		step(World, std::clamp(timeRemaining, 0.0, 1.0/240.0), this);
 	}
-	*/
 }

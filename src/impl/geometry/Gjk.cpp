@@ -45,9 +45,12 @@ static glm::vec3 findFurthestPoint(const EcRigidBody* Rb, glm::vec3 Direction)
 
 using namespace Gjk;
 
-glm::vec3 Gjk::Support(const EcRigidBody* A, const EcRigidBody* B, const glm::vec3& Direction)
+SupportPoint Gjk::Support(const EcRigidBody* A, const EcRigidBody* B, const glm::vec3& Direction)
 {
-    return findFurthestPoint(A, Direction) - findFurthestPoint(B, -Direction);
+	glm::vec3 pA = findFurthestPoint(A, Direction);
+	glm::vec3 pB = findFurthestPoint(B, -Direction);
+
+    return SupportPoint{ .P = pA - pB, .A = pA, .B = pB };
 }
 
 bool Gjk::SameDirection(const glm::vec3& direction, const glm::vec3& ao)
@@ -57,11 +60,11 @@ bool Gjk::SameDirection(const glm::vec3& direction, const glm::vec3& ao)
 
 static bool line(Simplex& simp, glm::vec3& direction)
 {
-    glm::vec3 a = simp[0];
-	glm::vec3 b = simp[1];
+    const SupportPoint& a = simp[0];
+	const SupportPoint& b = simp[1];
 
-	glm::vec3 ab = b - a;
-	glm::vec3 ao = -a;
+	glm::vec3 ab = b.P - a.P;
+	glm::vec3 ao = -a.P;
 
 	if (SameDirection(ab, ao))
 		direction = glm::cross(glm::cross(ab, ao), ab);
@@ -77,13 +80,13 @@ static bool line(Simplex& simp, glm::vec3& direction)
 
 static bool triangle(Simplex& simp, glm::vec3& direction)
 {
-    glm::vec3 a = simp[0];
-	glm::vec3 b = simp[1];
-	glm::vec3 c = simp[2];
+    const SupportPoint& a = simp[0];
+	const SupportPoint& b = simp[1];
+	const SupportPoint& c = simp[2];
 
-	glm::vec3 ab = b - a;
-	glm::vec3 ac = c - a;
-	glm::vec3 ao =   - a;
+	glm::vec3 ab = b.P - a.P;
+	glm::vec3 ac = c.P - a.P;
+	glm::vec3 ao =  -a.P;
 
 	glm::vec3 abc = glm::cross(ab, ac);
 
@@ -124,15 +127,15 @@ static bool triangle(Simplex& simp, glm::vec3& direction)
 
 static bool tetrahedron(Simplex& simp, glm::vec3& direction)
 {
-    glm::vec3 a = simp[0];
-	glm::vec3 b = simp[1];
-	glm::vec3 c = simp[2];
-	glm::vec3 d = simp[3];
+    const SupportPoint& a = simp[0];
+	const SupportPoint& b = simp[1];
+	const SupportPoint& c = simp[2];
+	const SupportPoint& d = simp[3];
 
-	glm::vec3 ab = b - a;
-	glm::vec3 ac = c - a;
-	glm::vec3 ad = d - a;
-	glm::vec3 ao =   - a;
+	glm::vec3 ab = b.P - a.P;
+	glm::vec3 ac = c.P - a.P;
+	glm::vec3 ad = d.P - a.P;
+	glm::vec3 ao = -a.P;
 
 	glm::vec3 abc = glm::cross(ab, ac);
 	glm::vec3 acd = glm::cross(ac, ad);
@@ -171,18 +174,18 @@ Result Gjk::FindIntersection(const EcRigidBody* A, const EcRigidBody* B)
 {
 	ZoneScoped;
 
-    glm::vec3 s = Support(A, B, glm::vec3(1.f, 0.f, 0.f));
+    SupportPoint s = Support(A, B, glm::vec3(1.f, 0.f, 0.f));
 
 	Result result;
     result.Simp.push_front(s);
 
-    glm::vec3 direction = -s;
+    glm::vec3 direction = -s.P;
 
     while (true)
     {
         s = Support(A, B, direction);
 
-        if (glm::dot(s, direction) <= 0)
+        if (glm::dot(s.P, direction) <= 0)
 		{
 			result.HasIntersection = false;
             return result; // no intersection

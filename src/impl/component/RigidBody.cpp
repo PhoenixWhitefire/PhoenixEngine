@@ -116,6 +116,9 @@ public:
 			REFLECTION_PROPERTY_SIMPLE(EcRigidBody, LinearVelocity, Vector3),
 			REFLECTION_PROPERTY_SIMPLE(EcRigidBody, AngularVelocity, Vector3),
 			REFLECTION_PROPERTY_SIMPLE(EcRigidBody, Friction, Double),
+			REFLECTION_PROPERTY_SIMPLE(EcRigidBody, Restitution, Double),
+			REFLECTION_PROPERTY_SIMPLE(EcRigidBody, Elasticity, Double),
+			REFLECTION_PROPERTY_SIMPLE(EcRigidBody, GravityFactor, Double),
 
 			REFLECTION_PROPERTY(
 				"Density",

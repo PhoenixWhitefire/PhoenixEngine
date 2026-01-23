@@ -308,9 +308,6 @@ static void drawDeveloperUI(double DeltaTime)
 
 	if (beganInfo && ImGui::Begin("Info", &infoOpen))
 	{
-		if (!infoOpen)
-			EngineJsonConfig["Tool_Info"] = false;
-
 		constexpr size_t GraphDatapoints = 512;
 
 		static std::array<double[255], GraphDatapoints> TimersHist;
@@ -529,14 +526,14 @@ static void drawDeveloperUI(double DeltaTime)
 	if (beganInfo)
 		ImGui::End();
 
+	if (!infoOpen)
+		EngineJsonConfig["Tool_Info"] = false;
+
 	bool beganSettings = EngineJsonConfig["Tool_Settings"] != false;
 	bool settingsOpen = beganSettings;
 
 	if (beganSettings && ImGui::Begin("Settings", &settingsOpen))
 	{
-		if (!settingsOpen)
-			EngineJsonConfig["Tool_Settings"] = false;
-
 		ImGui::Checkbox("VSync", &engine->VSync);
 
 		bool fullscreen = engine->IsFullscreen;
@@ -597,11 +594,15 @@ static void drawDeveloperUI(double DeltaTime)
 		}
 
 		ImGui::Checkbox("Wireframe rendering", &engine->DebugWireframeRendering);
-		ImGui::Checkbox("Debug Collision AABBs", &engine->DebugAabbs);
-		ImGui::Checkbox("Debug Spatial Heat", &engine->DebugSpatialHeat);
+		ImGui::Checkbox("Debug Collision AABBs", &Physics::Get()->DebugCollisionAabbs);
+		ImGui::Checkbox("Debug Spatial Heat", &Physics::Get()->DebugSpatialHeat);
+		ImGui::Checkbox("Debug Contact Points", &Physics::Get()->DebugContactPoints);
 	}
 	if (beganSettings)
 		ImGui::End();
+
+	if (!settingsOpen)
+		EngineJsonConfig["Tool_Settings"] = false;
 
 	InlayEditor::UpdateAndRender(DeltaTime);
 }

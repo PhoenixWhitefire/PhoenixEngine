@@ -488,12 +488,6 @@
   "@luhx/globaltype/Engine.CreateVM": {
     "documentation": "Creates a new Luau VM with the given name. The `workspace` and `game` globals of the VM are taken from the currently-bound DataModel"
   },
-  "@luhx/globaltype/Engine.DebugCollisionAabbs": {
-    "documentation": "Whether physics collision AABBs are rendered"
-  },
-  "@luhx/globaltype/Engine.DebugSpatialHeat": {
-    "documentation": "Whether Spatial Heat (spatial hash density) debug rendering is enabled"
-  },
   "@luhx/globaltype/Engine.DebugWireframeRendering": {
     "documentation": "Whether the Wireframe rendering debug mode is enabled"
   },
@@ -532,9 +526,6 @@
   },
   "@luhx/globaltype/Engine.OpenTextDocument": {
     "documentation": "Opens a text file"
-  },
-  "@luhx/globaltype/Engine.PhysicsTimescale": {
-    "documentation": "The current time-scale of the Physics engine (1.0 = 100%, normal speed)"
   },
   "@luhx/globaltype/Engine.ResetViewport": {
     "documentation": "Resets the Engine's understanding of where the viewport is on screen back to the default (occupying the entire window)"
@@ -827,6 +818,24 @@
   "@luhx/globaltype/ParticleEmitter.Rate": {
     "documentation": "An integer indicating how many particles should be emitted per second (must be above or equal to `0`)"
   },
+  "@luhx/globaltype/Physics.DebugCollisionAabbs": {
+    "documentation": "Whether physics collision AABBs are rendered"
+  },
+  "@luhx/globaltype/Physics.DebugContactPoints": {
+    "documentation": "Whether Contact Points are rendered"
+  },
+  "@luhx/globaltype/Physics.DebugSpatialHeat": {
+    "documentation": "Whether Spatial Heat (spatial hash density) debug rendering is enabled"
+  },
+  "@luhx/globaltype/Physics.Gravity": {
+    "documentation": "The gravitational field strength"
+  },
+  "@luhx/globaltype/Physics.Simulating": {
+    "documentation": "Whether the Physics simulation is running. IMPORTANT: The Editor sets this value to `true` and `false` when starting/stopping playtests"
+  },
+  "@luhx/globaltype/Physics.Timescale": {
+    "documentation": "Slow-down or speed-up the simulation by changing this value from `1`"
+  },
   "@luhx/globaltype/PlayerInput.CursorMode": {
     "documentation": "The current mode/behaviour of the cursor. Refer to the `Enum.CursorMode` enumeration"
   },
@@ -863,8 +872,14 @@
   "@luhx/globaltype/RigidBody.Density": {
     "documentation": "Its density (`Mass = Density * Size`)"
   },
+  "@luhx/globaltype/RigidBody.Elasticity": {
+    "documentation": "Elasticity"
+  },
   "@luhx/globaltype/RigidBody.Friction": {
     "documentation": "Fraction of Velocity it should lose per second while in contact with another object while `PhysicsDynamics` is `true`"
+  },
+  "@luhx/globaltype/RigidBody.GravityFactor": {
+    "documentation": "Influence of the force of gravity"
   },
   "@luhx/globaltype/RigidBody.LinearVelocity": {
     "documentation": "Its velocity"
@@ -874,6 +889,9 @@
   },
   "@luhx/globaltype/RigidBody.PhysicsDynamics": {
     "documentation": "Whether the Physics engine should apply forces to it"
+  },
+  "@luhx/globaltype/RigidBody.Restitution": {
+    "documentation": "Restitution"
   },
   "@luhx/globaltype/Sound.FinishedLoading": {
     "documentation": "Whether the Sound has finished loading the `SoundFile`"
