@@ -84,14 +84,14 @@ local function loadPluginsRecursive(ParentPath)
     for path, type in fs.listdir(ParentPath) do
         if type == "f" then
             if path:sub(#path - 4, #path) == ".luau" then
-                local co, err = loadthreadfromfile(path)
+                local co, err = task.loadfile(path)
 
                 if co then
                     local success, data: Plugin = coroutine.resume(co)
 
                     if success then
                         data.Path = path:sub(assert((path:find("/plugins"))) + 1, #path)
-                        table.freeze(data)
+                        --table.freeze(data)
                         table.insert(PluginManager.Plugins, data)
 
                         if getPluginSettings(data).Enabled and data.OnLoad then

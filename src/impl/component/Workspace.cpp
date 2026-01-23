@@ -15,6 +15,7 @@ static GameObject* createCamera()
 {
 	GameObject* camera = GameObject::Create("Camera");
 	camera->FindComponent<EcCamera>()->UseSimpleController = true;
+	camera->Name = "FallbackCamera";
 
 	return camera;
 }
@@ -32,7 +33,7 @@ public:
 	
 	void Shutdown() override
 	{
-		s_FallbackCamera.Reference = nullptr; // Reference is not valid at this point
+		s_FallbackCamera.Clear();
 		ComponentManager<EcWorkspace>::Shutdown();
 	}
 

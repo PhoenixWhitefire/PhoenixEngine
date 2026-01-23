@@ -89,75 +89,6 @@ static int base_appendlog(lua_State* L)
     return 0;
 }
 
-// `loadthread` preferred?
-/*
-static int base_loadstring(lua_State* L)
-{
-	const char* code = luaL_checkstring(L, 1);
-	const char* chname = luaL_optstring(L, 2, code);
-	
-	if (ScriptEngine::CompileAndLoad(L, code, chname) == 0)
-		return 1; // return callable function
-
-	else
-		luaL_error(L, "loadstring: %s", luaL_checkstring(L, -1));
-}
-*/
-
-static int base_loadthread(lua_State* L)
-{
-	const char* code = luaL_checkstring(L, 1);
-	const char* chname = luaL_optstring(L, 2, code);
-
-	// module needs to run in a new thread, isolated from the rest
-	// note: we create ML on main thread so that it doesn't inherit environment of L
-	lua_State* GL = lua_mainthread(L);
-	lua_State* ML = lua_newthread(GL);
-	lua_xmove(GL, L, 1);
-
-	// new thread needs to have the globals sandboxed
-	luaL_sandboxthread(ML);
-
-	if (ScriptEngine::CompileAndLoad(ML, code, chname) == 0)
-	{
-		lua_pushthread(ML);
-		lua_xmove(ML, L, 1);
-		lua_pushnil(L); // error message is nil
-	}
-	else
-	{
-		lua_pushnil(L); // thread is nil
-		lua_xmove(ML, L, 1); // move error onto L
-	}
-
-	return 2;
-}
-
-static int base_loadthreadfromfile(lua_State* L)
-{
-	const char* path = luaL_checkstring(L, 1);
-	const char* chname = luaL_optstring(L, 1, path);
-
-	bool readSuccess = false;
-	std::string contents = FileRW::ReadFile(path, &readSuccess);
-
-	if (!readSuccess)
-	{
-		lua_pushnil(L);
-		lua_pushlstring(L, contents.data(), contents.size());
-	}
-	else
-	{
-		lua_getglobal(L, "loadthread");
-		lua_pushlstring(L, contents.data(), contents.size());
-		lua_pushstring(L, (std::string("@") + chname).c_str());
-
-		lua_call(L, 2, 2);
-	}
-
-	return 2;
-}
-
 #ifdef _WIN32
 
 #define popen _popen
@@ -219,9 +150,6 @@ static const luaL_Reg base_funcs[] =
     { "print", base_print },
 	{ "warn", base_warn },
     { "appendlog", base_appendlog },
-	//{ "loadstring", base_loadstring },
-	{ "loadthread", base_loadthread },
-	{ "loadthreadfromfile", base_loadthreadfromfile },
 	{ "shellexec", base_shellexec },
     { NULL, NULL }
 };

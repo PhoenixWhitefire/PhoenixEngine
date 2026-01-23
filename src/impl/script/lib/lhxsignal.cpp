@@ -45,7 +45,6 @@ static int sig_namecall(lua_State* L)
 		//    ara ara
 		// (tee hee)
 		lua_State* eL = lua_newthread(L);
-		luaL_sandboxthread(eL);
 		lua_State* cL = lua_newthread(eL);
 		int threadRef = lua_ref(L, -1); // ref to eL
 		lua_xpush(L, eL, 2); // push callback onto eL

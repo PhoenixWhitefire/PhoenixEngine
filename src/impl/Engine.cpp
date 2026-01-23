@@ -1067,17 +1067,11 @@ void Engine::Shutdown()
 
 	Log::Save();
 
-#ifdef NDEBUG
-	Log::Info("Clearing World Array...");
-	GameObject::s_WorldArray.clear();
-#else
-	// Helps ensure correctness, but slower
 	Log::Info("Destroying DataModel...");
 	DataModelRef->Destroy();
 	WorkspaceRef->Destroy();
 	DataModelRef.Clear();
 	WorkspaceRef.Clear();
-#endif
 
 	Log::Info("Shutting down Component Managers...");
 

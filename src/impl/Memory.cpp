@@ -63,9 +63,6 @@ void* Memory::Alloc(uint32_t Size, Memory::Category MemCat)
 			TracyAlloc(ptr, Size);
 #endif
 
-		if (MemCat == Category::Sound)
-			memset(ptr, 0, Size); // workaround for https://github.com/mackron/miniaudio/issues/1079
-
 		Counters[memIndex] += Size;
 		s_ActivityWip[memIndex] += Size;
 

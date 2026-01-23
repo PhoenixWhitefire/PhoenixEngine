@@ -31,7 +31,7 @@ struct EcSound : public Component<EntityComponent::Sound>
 	uint32_t EcId = PHX_GAMEOBJECT_NULL_ID;
 
 	std::vector<Reflection::EventCallback> OnLoadedCallbacks;
-	ma_sound SoundInstance{};
+	ma_sound* SoundInstance;
 	
 	bool m_PlayRequested = false;
 	bool Valid = true;
@@ -52,10 +52,9 @@ public:
 	void Update(const glm::mat4& CameraTransform);
 	void Shutdown() override;
 
-	ma_engine AudioEngine{};
+	ma_engine AudioEngine;
 	double LastTick = 0.f;
 
 private:
-
 	bool m_DidInit = false;
 };

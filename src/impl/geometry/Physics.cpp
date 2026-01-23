@@ -181,10 +181,10 @@ static void resolveCollisions(PhysicsWorld& World, float)
 
 			arb->LinearVelocity = arb->LinearVelocity * (glm::vec3(1.f) - -points.Normal) - arb->LinearVelocity * (-points.Normal * Elasticity);
 
-			if (points.PenetrationDepth < 0.01f)
+			if (points.PenetrationDepth < 0.05f)
 			{
 				arb->LinearVelocity *= glm::vec3(1.f) - -points.Normal;
-				at->Transform[3] += glm::vec4(glm::vec3(points.Normal * points.PenetrationDepth * -1.5f), 1.f);
+				at->Transform[3] += glm::vec4(glm::vec3(points.Normal * points.PenetrationDepth * -2.f), 1.f);
 			}
 
 			at->SetWorldTransform(at->Transform);

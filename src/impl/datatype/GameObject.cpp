@@ -1037,6 +1037,7 @@ GameObject* GameObject::Create()
 	{
 		s_WorldArray.emplace_back();
 		s_WorldArray[0].Name = "<RESERVED INVALID SLOT>";
+		s_WorldArray[0].Valid = false;
 	}
 
 	uint32_t numObjects = static_cast<uint32_t>(s_WorldArray.size());

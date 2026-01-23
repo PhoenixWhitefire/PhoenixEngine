@@ -34,11 +34,17 @@ static inline AnimationManager Instance;
 
 void EcAnimation::SetAnimation(const std::string_view& Asset)
 {
+    if (Asset.size() == 0)
+        return;
+
     bool found = false;
     std::string animFileContents = FileRW::ReadFile(std::string(Asset), &found);
 
     if (!found)
-        RAISE_RTF("Cannot find animation file '{}'", Asset);
+    {
+        Log::ErrorF("Cannot find animation file '{}'", Asset);
+        return;
+    }
 
     nlohmann::json json;
     try
@@ -47,7 +53,8 @@ void EcAnimation::SetAnimation(const std::string_view& Asset)
     }
     catch(const nlohmann::json::parse_error& e)
     {
-        RAISE_RTF("Cannot parse animation file '{}': {}", Asset, e.what());
+        Log::ErrorF("Cannot parse animation file '{}': {}", Asset, e.what());
+        return;
     }
     
     

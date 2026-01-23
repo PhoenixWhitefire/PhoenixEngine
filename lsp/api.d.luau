@@ -405,6 +405,8 @@ declare scene: {
 declare task: {
   defer: (<A...>( Task: ((A...) -> ()) | thread, A... ) -> ()),
   delay: (<A...>( Delay: number, Task: ((A...) -> ()) | thread, A... ) -> ()),
+  load: (( Code: string, ChunkName: string? ) -> (thread?, string?)),
+  loadfile: (( File: string, ChunkName: string? ) -> (thread?, string?)),
   wait: (( SleepTime: number ) -> (number))
 }
 
@@ -412,8 +414,6 @@ declare task: {
 declare _VMNAME: string
 declare function appendlog( ...: any ): ()
 declare game: GameObject & DataModel
-declare function loadthread( Code: string, ChunkName: string? ): ( thread?, string? )
-declare function loadthreadfromfile( File: string, ChunkName: string? ): ( thread?, string? )
 declare function shellexec( Command: string ): string
 declare function warn( ...: any ): ()
 declare workspace: GameObject & Workspace

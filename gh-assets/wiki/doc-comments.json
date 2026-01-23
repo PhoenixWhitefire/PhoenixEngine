@@ -737,19 +737,6 @@
       "game": {
         "Description": "The GameObject acting as the Data Model of the Engine"
       },
-      "loadthread": {
-        "Description": [
-          "Like `loadstring` in *other* runtimes, however does not compromise Global Import optimizations and returns a coroutine instead of a function",
-          "If an error occurs, returns `nil` as the first value and the error message as the second value"
-        ],
-        "In": "Code: string, ChunkName: string?",
-        "Out": "( thread?, string? )"
-      },
-      "loadthreadfromfile": {
-        "Description": "Similar to `loadthread`, however loads from a file instead of from a string directly",
-        "In": "File: string, ChunkName: string?",
-        "Out": "( thread?, string? )"
-      },
       "shellexec": {
         "Description": "Runs a shell command",
         "In": "Command: string",
@@ -1636,6 +1623,19 @@
             "Description": "Schedules the given function or coroutine to be resumed some number of seconds later",
             "Generics": "A...",
             "In": "Delay: number, Task: ((A...) -> ()) | thread, A..."
+          },
+          "load": {
+            "Description": [
+              "Like `loadstring` in *other* runtimes, however does not compromise Global Import optimizations and returns a coroutine instead of a function",
+              "If an error occurs, returns `nil` as the first value and the error message as the second value"
+            ],
+            "In": "Code: string, ChunkName: string?",
+            "Out": "thread?, string?"
+          },
+          "loadfile": {
+            "Description": "Similar to `loadthread`, however loads from a file instead of from a string directly",
+            "In": "File: string, ChunkName: string?",
+            "Out": "thread?, string?"
           },
           "wait": {
             "Description": "Yields the thread for the specified number of seconds",

@@ -2428,6 +2428,8 @@ static void renderExplorer()
 	ImGui::End();
 }
 
+static std::vector<ObjectHandle> PrevEditSelections;
+
 static void renderProperties()
 {
 	ZoneScoped;
@@ -2921,7 +2923,6 @@ static void renderProperties()
 
 			}
 
-			static std::vector<ObjectHandle> PrevEditSelections;
 			static std::string PrevEditPropName;
 			static Reflection::GenericValue PrevEditNewValue;
 			const char* const EditPropertyTempName = "EditProperty_TEMP";
@@ -3060,6 +3061,7 @@ void InlayEditor::Shutdown()
 	PickerTargets.clear();
 	LastSelected.Clear();
 	ObjectInsertionTarget.Clear();
+	PrevEditSelections.clear();
 	
 	for (TextEditorTab& tab : s_TextEditors)
 	{

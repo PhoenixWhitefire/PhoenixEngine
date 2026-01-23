@@ -1222,6 +1222,7 @@ static void requireConfigInit(luarequire_Configuration* config)
 
 			// new thread needs to have the globals sandboxed
 			luaL_sandboxthread(ML);
+			ScriptEngine::L::DumpStacktrace(L, &((ScriptEngine::L::StateUserdata*)ML->userdata)->SpawnTrace);
 
 			bool readSuccess = true;
 			std::string contents = FileRW::ReadFile(curpath->string(), &readSuccess);

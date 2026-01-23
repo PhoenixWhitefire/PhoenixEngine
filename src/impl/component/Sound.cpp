@@ -24,8 +24,9 @@ void SoundManager::DeleteComponent(uint32_t Id)
 {
     // TODO id reuse with handles that have a counter per re-use to reduce memory growth
 	EcSound& sound = m_Components[Id];
-	if (sound.SoundInstance.pDataSource)
-		ma_sound_uninit(&sound.SoundInstance);
+	if (sound.SoundInstance)
+		ma_sound_uninit(sound.SoundInstance);
+	sound.SoundInstance = nullptr;
 
 	ComponentManager<EcSound>::DeleteComponent(Id);
 }
@@ -217,15 +218,18 @@ void EcSound::Reload()
 
 	std::string filePath = FileRW::MakePathCwdRelative(SoundFile);
 
-	if (SoundInstance.pDataSource)
-		ma_sound_uninit(&SoundInstance);
-	SoundInstance = ma_sound();
+	if (SoundInstance)
+	{
+		ma_sound_uninit(SoundInstance);
+		delete SoundInstance;
+	}
+	SoundInstance = new ma_sound;
 
 	FinishedLoading = false;
 	LoadSucceeded = false;
 	Length = 0.f;
 
-	if (ma_result result = ma_sound_init_from_file(&Manager.AudioEngine, filePath.c_str(), 0, NULL, NULL, &SoundInstance);
+	if (ma_result result = ma_sound_init_from_file(&Manager.AudioEngine, filePath.c_str(), 0, NULL, NULL, SoundInstance);
 		result != MA_SUCCESS
 	)
 	{
@@ -236,7 +240,7 @@ void EcSound::Reload()
 
 	FinishedLoading = true;
 
-	if (ma_result result = ma_sound_get_length_in_seconds(&SoundInstance, &Length); result != MA_SUCCESS)
+	if (ma_result result = ma_sound_get_length_in_seconds(SoundInstance, &Length); result != MA_SUCCESS)
 	{
 		Log::ErrorF("Failed to get length of sound '{}', error code: {}", Object->GetFullName(), (int)result);
 		return;
@@ -251,36 +255,36 @@ void EcSound::Update(double)
 {
 	ZoneScoped;
 
-	if (!SoundInstance.pDataSource)
+	if (!SoundInstance)
 		return;
 
-	bool playing = ma_sound_is_playing(&SoundInstance);
+	bool playing = ma_sound_is_playing(SoundInstance);
 
 	if (!Object->Enabled && playing)
 	{
-		if (ma_result result = ma_sound_stop(&SoundInstance); result != MA_SUCCESS)
+		if (ma_result result = ma_sound_stop(SoundInstance); result != MA_SUCCESS)
 			Log::ErrorF("Failed to stop sound '{}' (disabled object), error code: {}", Object->GetFullName(), (int)result);
 		return;
 	}
 
 	if (playing && !m_PlayRequested)
 	{
-		if (ma_result result = ma_sound_stop(&SoundInstance); result != MA_SUCCESS)
+		if (ma_result result = ma_sound_stop(SoundInstance); result != MA_SUCCESS)
 			Log::ErrorF("Failed to play sound '{}', error code: {}", Object->GetFullName(), (int)result);
 	}
 	else if (!playing && m_PlayRequested)
-		if (ma_result result = ma_sound_start(&SoundInstance); result != MA_SUCCESS)
+		if (ma_result result = ma_sound_start(SoundInstance); result != MA_SUCCESS)
 			Log::ErrorF("Failed to stop sound '{}', error code: {}", Object->GetFullName(), (int)result);
 
-	ma_sound_set_looping(&SoundInstance, Looped); // TODO doesn't work
+	ma_sound_set_looping(SoundInstance, Looped); // TODO doesn't work
 	if (!Looped && Length - Position < 0.05f)
 		m_PlayRequested = false;
 
-	ma_sound_set_volume(&SoundInstance, Volume);
+	ma_sound_set_volume(SoundInstance, Volume);
 	
 	if (NextRequestedPosition >= 0.f)
 	{
-		if (ma_result result = ma_sound_seek_to_second(&SoundInstance, NextRequestedPosition); result != MA_SUCCESS)
+		if (ma_result result = ma_sound_seek_to_second(SoundInstance, NextRequestedPosition); result != MA_SUCCESS)
 			Log::ErrorF(
 				"Failed to seek to position {} (in seconds) for sound '{}', error code: {}",
 				NextRequestedPosition, Object->GetFullName(), (int)result
@@ -288,14 +292,14 @@ void EcSound::Update(double)
 		NextRequestedPosition = -1.f;
 	}
 
-	if (ma_result result = ma_sound_get_cursor_in_seconds(&SoundInstance, &Position); result != MA_SUCCESS)
+	if (ma_result result = ma_sound_get_cursor_in_seconds(SoundInstance, &Position); result != MA_SUCCESS)
 		Log::ErrorF("Failed to get playback position of sound '{}', error code: {}", Object->GetFullName(), (int)result);
 
 	if (EcTransform* trans = Object->FindComponent<EcTransform>())
 	{
-		ma_sound_set_spatialization_enabled(&SoundInstance, true);
-		ma_sound_set_position(&SoundInstance, trans->Transform[3][0], trans->Transform[3][1], trans->Transform[3][2]);
+		ma_sound_set_spatialization_enabled(SoundInstance, true);
+		ma_sound_set_position(SoundInstance, trans->Transform[3][0], trans->Transform[3][1], trans->Transform[3][2]);
 	}
 	else
-		ma_sound_set_spatialization_enabled(&SoundInstance, false);
+		ma_sound_set_spatialization_enabled(SoundInstance, false);
 }

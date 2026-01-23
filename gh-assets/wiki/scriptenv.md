@@ -372,6 +372,11 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * Schedules the given function or coroutine to be resumed at the next scheduler step
 #### `task.delay<A...>(Delay: number, Task: ((A...) -> ()) | thread, A...): `
 * Schedules the given function or coroutine to be resumed some number of seconds later
+#### `task.load(Code: string, ChunkName: string?): thread?, string?`
+* Like `loadstring` in *other* runtimes, however does not compromise Global Import optimizations and returns a coroutine instead of a function
+* If an error occurs, returns `nil` as the first value and the error message as the second value
+#### `task.loadfile(File: string, ChunkName: string?): thread?, string?`
+* Similar to `loadthread`, however loads from a file instead of from a string directly
 #### `task.wait(SleepTime: number): number`
 * Yields the thread for the specified number of seconds
 ## Globals
@@ -384,11 +389,6 @@ Additional global variables
 * Same as `print`, but does not prefix the log message with `[INFO]`
 #### `game: GameObject & DataModel`
 * The GameObject acting as the Data Model of the Engine
-#### `loadthread(Code: string, ChunkName: string?): ( thread?, string? )`
-* Like `loadstring` in *other* runtimes, however does not compromise Global Import optimizations and returns a coroutine instead of a function
-* If an error occurs, returns `nil` as the first value and the error message as the second value
-#### `loadthreadfromfile(File: string, ChunkName: string?): ( thread?, string? )`
-* Similar to `loadthread`, however loads from a file instead of from a string directly
 #### `shellexec(Command: string): string`
 * Runs a shell command
 #### `warn(...: any): ()`

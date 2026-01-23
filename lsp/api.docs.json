@@ -332,12 +332,6 @@
   "@luhx/global/json.parse": {
     "documentation": "* Decodes the JSON string and returns it as a value"
   },
-  "@luhx/global/loadthread": {
-    "documentation": "* Like `loadstring` in *other* runtimes, however does not compromise Global Import optimizations and returns a coroutine instead of a function\n* If an error occurs, returns `nil` as the first value and the error message as the second value"
-  },
-  "@luhx/global/loadthreadfromfile": {
-    "documentation": "* Similar to `loadthread`, however loads from a file instead of from a string directly"
-  },
   "@luhx/global/scene": {
     "documentation": "* Scene assets"
   },
@@ -358,6 +352,12 @@
   },
   "@luhx/global/task.delay": {
     "documentation": "* Schedules the given function or coroutine to be resumed some number of seconds later"
+  },
+  "@luhx/global/task.load": {
+    "documentation": "* Like `loadstring` in *other* runtimes, however does not compromise Global Import optimizations and returns a coroutine instead of a function\n* If an error occurs, returns `nil` as the first value and the error message as the second value"
+  },
+  "@luhx/global/task.loadfile": {
+    "documentation": "* Similar to `loadthread`, however loads from a file instead of from a string directly"
   },
   "@luhx/global/task.wait": {
     "documentation": "* Yields the thread for the specified number of seconds"
