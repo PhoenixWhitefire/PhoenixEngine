@@ -437,6 +437,7 @@ local function createNewProject_()
 
 	fs.copy("@editres/textures/materials", "@projres/textures/materials")
 	fs.copy("@editres/textures/Sky1", "@projres/textures/Sky1")
+	fs.copy("@editres/scripts/.luaurc", "@projres/scripts/.luaurc")
 	fs.copy(LOGO_IMAGE, "@proj/icon.png")
 
 	local dm = GameObject.new("DataModel")
@@ -1776,8 +1777,8 @@ function Stages.ProjectPlaying_Leave(DeltaTime)
 	Engine:SetExplorerRoot(Project.DataModel)
 
 	Engine:SetCurrentVM(_VMNAME)
-	Engine:CloseVM(GameVM)
 	Engine:BindDataModel(game)
+	Engine:CloseVM(GameVM)
 
 	PlayerInput.CursorMode = Enum.CursorMode.Normal
 end

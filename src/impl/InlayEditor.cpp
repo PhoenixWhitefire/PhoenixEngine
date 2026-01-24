@@ -328,7 +328,6 @@ void InlayEditor::Initialize(Renderer* renderer)
 	s_TextEditorLang.mIdentifiers.clear();
 	s_TextEditorLang.mName = "Luau";
 
-	const nlohmann::json& scriptEnv = ApiDumpJson.value("ScriptEnv", nlohmann::json::object());
 	const nlohmann::json& scriptEnvDocs = DocumentationJson.value("ScriptEnv", nlohmann::json::object());
 
 	const nlohmann::json& datatypesDocs = scriptEnvDocs.value("Datatypes", nlohmann::json::object());
@@ -1722,7 +1721,7 @@ static void propertyTooltip(const std::string_view& PropName, EntityComponent Co
 {
 	static std::unordered_map<std::string, std::string> PropTips;
 
-	if (ForceRenderingTooltip.size() > 0 && PropName.begin() != ForceRenderingTooltip.begin())
+	if (ForceRenderingTooltip.size() > 0 && PropName != ForceRenderingTooltip)
 		return;
 
 	if ((ImGui::IsItemHovered() && !ImGui::GetIO().WantCaptureKeyboard) || ForceRenderingTooltip.size() > 0)
@@ -3926,7 +3925,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 
 				if (open)
 				{
-					lua_Debug car;
+					lua_Debug car = {};
 					int i = 0;
 
 					if (!lua_getinfo(coroutine, 0, "sln", &car))

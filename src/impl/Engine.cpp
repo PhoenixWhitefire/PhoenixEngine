@@ -310,6 +310,7 @@ Engine::Engine()
 		glClearColor(0.07f, 0.13f, 0.17f, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT);
 		RendererContext.SwapBuffers();
+		glfwMaximizeWindow(Window); // Can only maximize after Texture Manager is initialized
 
 		ZoneNamedN(miscshaders, "Misc shader load", true);
 

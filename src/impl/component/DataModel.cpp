@@ -227,7 +227,7 @@ void EcDataModel::Bind()
         {
             if (std::filesystem::is_regular_file(entry))
             {
-                lua_State* script = loadModule(entry.path(), Object);
+                lua_State* script = loadModule(entry.path().string(), Object);
                 if (script)
                     Modules.push_back(script);
             }

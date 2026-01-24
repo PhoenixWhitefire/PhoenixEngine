@@ -145,7 +145,8 @@ static void fromArray(Reflection::GenericValue& G, const std::span<const Reflect
 		// placement-new to avoid 1 excess layer of indirection
 		new (&((Reflection::GenericValue*)G.Val.Ptr)[i]) Reflection::GenericValue(Array[i]);
 
-	G.Size = Array.size();
+	assert(Array.size() <= UINT32_MAX);
+	G.Size = (uint32_t)Array.size();
 }
 
 Reflection::GenericValue::GenericValue(const std::span<GenericValue>& array)
