@@ -327,21 +327,21 @@ declare debug: {
   breakpoint: (( (Line: number ) -> (number)) & (() -> ()))
 }
 declare fs: {
-  copy: (( From: string, To: string ) -> (boolean, string?)),
+  copy: (( From: string, To: string ) -> ()),
   cwd: ((  ) -> (string)),
   definealias: (( Alias: string, For: string ) -> ()),
   isdirectory: (( string ) -> (boolean)),
   isfile: (( string ) -> (boolean)),
   listdir: (( Path: string, Filter: ('a' | 'f' | 'd')? ) -> ({ [string]: 'f' | 'd' })),
   makecwdaliasof: (( Alias: string ) -> ()),
-  mkdir: (( Path: string ) -> (boolean, string?)),
+  mkdir: (( Path: string ) -> ()),
   promptopen: (( DefaultLocation: string?, Filter: ( { string } | string)?, FilterName: string?, AllowMultipleFiles: boolean? ) -> ({ string })),
   promptopenfolder: (( Title: string, DefaultDirectory: string? ) -> (string?)),
   promptsave: (( DefaultLocation: string?, Filter: ( { string } | string)?, FilterName: string? ) -> (string)),
   read: (( Path: string ) -> (string?, string?)),
-  remove: (( Path: string ) -> (number | false, string?)),
-  rename: (( Path: string, NewName: string ) -> (boolean, string?)),
-  write: (( Path: string, Contents: string, CreateDirectories: boolean? ) -> (boolean, string?))
+  remove: (( Path: string ) -> ()),
+  rename: (( Path: string, NewName: string ) -> ()),
+  write: (( Path: string, Contents: string, CreateDirectories: boolean? ) -> ())
 }
 declare imgui: {
   anyitemactive: ((  ) -> (boolean)),

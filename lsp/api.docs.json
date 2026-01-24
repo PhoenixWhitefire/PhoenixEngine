@@ -96,7 +96,7 @@
     "documentation": "* Interacting with the player's filesystem"
   },
   "@luhx/global/fs.copy": {
-    "documentation": "* Copies the file/directory at the given path to a new path\n* Returns whether the operation was successful\n* If unsuccessful, an error message is also returned"
+    "documentation": "* Copies the file/directory at the given path to a new path\n* If unsuccessfully, throws an error message"
   },
   "@luhx/global/fs.cwd": {
     "documentation": "* Returns the Current Working Directory of the Engine"
@@ -117,7 +117,7 @@
     "documentation": "* Changes the meaning of non-qualified paths (e.g.: not beginning with `.` or `C:` etc) to act as aliases to the given path instead of referring to the CWD"
   },
   "@luhx/global/fs.mkdir": {
-    "documentation": "* Creates a directory at the given path\n* Returns whether a directory was actually created\n* Will return false if the directory already exists, but the error message will be `nil`"
+    "documentation": "* Creates a directory at the given path\n* Throws an error upon failure"
   },
   "@luhx/global/fs.promptopen": {
     "documentation": "* Prompts the player to select a file to open\n* Returns the list of files the player selected, or an empty list if the player cancelled the dialog\n* If the operation fails, returns `nil` instead"
@@ -132,13 +132,13 @@
     "documentation": "* Reads the file at the given address, and returns the contents\n* If the file could not be read, returns `nil` and an error message"
   },
   "@luhx/global/fs.remove": {
-    "documentation": "* Removes everything at the given path\n* On success, returns the number of items removed\n* On failure, returns `false` and an error message"
+    "documentation": "* Removes everything at the given path\n* Throws an error upon failure"
   },
   "@luhx/global/fs.rename": {
-    "documentation": "* Renames the file at the given `Path` to have the `NewName`"
+    "documentation": "* Renames the file at the given `Path` to have the `NewName`\n* Throws an error upon failure"
   },
   "@luhx/global/fs.write": {
-    "documentation": "* Overwrites/creates the file at `Path` with the provided `Contents`\n* Returns whether the operation was successful\n* If `CreateDirectories` is `true`, will automatically create missing intermediate directories to the file"
+    "documentation": "* Overwrites/creates the file at `Path` with the provided `Contents`\n* Throws an error upon failure\n* If `CreateDirectories` is `true`, will automatically create missing intermediate directories to the file"
   },
   "@luhx/global/game": {
     "documentation": "* The GameObject acting as the Data Model of the Engine"

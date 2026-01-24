@@ -845,14 +845,12 @@
           "copy": {
             "Description": [
               "Copies the file/directory at the given path to a new path",
-              "Returns whether the operation was successful",
-              "If unsuccessful, an error message is also returned"
+              "If unsuccessfully, throws an error message"
             ],
             "In": [
               "From: string",
               "To: string"
-            ],
-            "Out": "boolean, string?"
+            ]
           },
           "cwd": {
             "Description": [
@@ -889,7 +887,7 @@
           },
           "ispromptactive": {
             "Description": [
-              "Returns whether a File Dialog is currently visible to the player and blocking any more file dialogs from being opened"
+              "Returns whether a File Dialog is currently visible to the Player and blocking any more file dialogs from being opened"
             ],
             "Out": "boolean"
           },
@@ -919,13 +917,11 @@
           "mkdir": {
             "Description": [
               "Creates a directory at the given path",
-              "Returns whether a directory was actually created",
-              "Will return false if the directory already exists, but the error message will be `nil`"
+              "Throws an error upon failure"
             ],
             "In": [
               "Path: string"
-            ],
-            "Out": "boolean, string?"
+            ]
           },
           "promptopen": {
             "Description": [
@@ -998,28 +994,26 @@
           "remove": {
             "Description": [
               "Removes everything at the given path",
-              "On success, returns the number of items removed",
-              "On failure, returns `false` and an error message"
+              "Throws an error upon failure"
             ],
             "In": [
               "Path: string"
-            ],
-            "Out": "number | false, string?"
+            ]
           },
           "rename": {
             "Description": [
-              "Renames the file at the given `Path` to have the `NewName`"
+              "Renames the file at the given `Path` to have the `NewName`",
+              "Throws an error upon failure"
             ],
             "In": [
               "Path: string",
               "NewName: string"
-            ],
-            "Out": "boolean, string?"
+            ]
           },
           "write": {
             "Description": [
               "Overwrites/creates the file at `Path` with the provided `Contents`",
-              "Returns whether the operation was successful",
+              "Throws an error upon failure",
               "If `CreateDirectories` is `true`, will automatically create missing intermediate directories to the file"
             ],
             "In": [
@@ -1029,8 +1023,7 @@
                 "CreateDirectories: boolean?",
                 "false"
               ]
-            ],
-            "Out": "boolean, string?"
+            ]
           }
         }
       },

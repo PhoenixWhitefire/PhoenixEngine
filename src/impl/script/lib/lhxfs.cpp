@@ -25,17 +25,11 @@ static int fs_write(lua_State* L)
 					FileRW::WriteFileCreateDirectories(path, contents, &errorMessage)
 					: FileRW::WriteFile(path, contents, &errorMessage);
 
-	if (success)
-	{
-    	lua_pushboolean(L, true);
-		return 1;
-	}
-	else
-	{
-		lua_pushboolean(L, false);
-		lua_pushlstring(L, errorMessage.data(), errorMessage.size());
-		return 2;
-	}
+
+	if (!success)
+		luaL_error(L, "%s", errorMessage.c_str());
+
+	return 0;
 }
 
 static int fs_read(lua_State* L)
@@ -168,16 +162,9 @@ static int fs_copy(lua_State* L)
 	);
 
 	if (ec)
-	{
-		lua_pushboolean(L, false);
-		lua_pushfstring(L, "'%s' -> '%s': %s", from.c_str(), to.c_str(), ec.message().c_str());
-		return 2;
-	}
-	else
-	{
-		lua_pushboolean(L, true);
-		return 1;
-	}
+		luaL_error(L, "'%s' -> '%s': %s", from.c_str(), to.c_str(), ec.message().c_str());
+
+	return 0;
 }
 
 static int fs_mkdir(lua_State* L)
@@ -187,16 +174,9 @@ static int fs_mkdir(lua_State* L)
 	std::filesystem::create_directory(realPath, ec);
 
 	if (ec)
-	{
-		lua_pushboolean(L, false);
-		lua_pushfstring(L, "'%s': %s", realPath.c_str(), ec.message().c_str());
-		return 2;
-	}
-	else
-	{
-		lua_pushboolean(L, true);
-		return 1;
-	}
+		luaL_error(L, "'%s': %s", realPath.c_str(), ec.message().c_str());
+
+	return 0;
 }
 
 static int fs_rename(lua_State* L)
@@ -210,16 +190,9 @@ static int fs_rename(lua_State* L)
 	std::filesystem::rename(path, fullnewpath, ec);
 
 	if (ec)
-	{
-		lua_pushboolean(L, false);
-		lua_pushfstring(L, "'%s' ren '%s': %s", path.c_str(), fullnewpath.c_str(), ec.message().c_str());
-		return 3;
-	}
-	else
-	{
-		lua_pushboolean(L, true);
-		return 1;
-	}
+		luaL_error(L, "'%s' ren '%s': %s", path.c_str(), fullnewpath.c_str(), ec.message().c_str());
+
+	return 0;
 }
 
 static int fs_remove(lua_State* L)
@@ -228,11 +201,7 @@ static int fs_remove(lua_State* L)
 	int numRemoved = (int)std::filesystem::remove_all(FileRW::MakePathCwdRelative(luaL_checkstring(L, 1)), ec);
 
 	if (ec)
-	{
-		lua_pushboolean(L, false);
-		lua_pushstring(L, ec.message().c_str());
-		return 2;
-	}
+		luaL_error(L, "%s", ec.message().c_str());
 	else
 	{
 		lua_pushinteger(L, numRemoved);

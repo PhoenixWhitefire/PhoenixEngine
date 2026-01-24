@@ -180,10 +180,9 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * If a Debugger is not attached (such as in non-developer mode or headless mode), has no effect
 ### `fs`
 * Interacting with the player's filesystem
-#### `fs.copy(From: string, To: string): boolean, string?`
+#### `fs.copy(From: string, To: string): `
 * Copies the file/directory at the given path to a new path
-* Returns whether the operation was successful
-* If unsuccessful, an error message is also returned
+* If unsuccessfully, throws an error message
 #### `fs.cwd(): string`
 * Returns the Current Working Directory of the Engine
 #### `fs.definealias(Alias: string, For: string): `
@@ -198,10 +197,9 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * `f` is file, `d` is directory, and `a` is all
 #### `fs.makecwdaliasof(Alias: string): `
 * Changes the meaning of non-qualified paths (e.g.: not beginning with `.` or `C:` etc) to act as aliases to the given path instead of referring to the CWD
-#### `fs.mkdir(Path: string): boolean, string?`
+#### `fs.mkdir(Path: string): `
 * Creates a directory at the given path
-* Returns whether a directory was actually created
-* Will return false if the directory already exists, but the error message will be `nil`
+* Throws an error upon failure
 #### `fs.promptopen(DefaultLocation: string? [ './'  ], Filter: ( { string } | string)? [ '*.*' ], FilterName: string? [ 'All files' ], AllowMultipleFiles: boolean? [ false ]): { string }`
 * Prompts the player to select a file to open
 * Returns the list of files the player selected, or an empty list if the player cancelled the dialog
@@ -215,15 +213,15 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `fs.read(Path: string): string?, string?`
 * Reads the file at the given address, and returns the contents
 * If the file could not be read, returns `nil` and an error message
-#### `fs.remove(Path: string): number | false, string?`
+#### `fs.remove(Path: string): `
 * Removes everything at the given path
-* On success, returns the number of items removed
-* On failure, returns `false` and an error message
-#### `fs.rename(Path: string, NewName: string): boolean, string?`
+* Throws an error upon failure
+#### `fs.rename(Path: string, NewName: string): `
 * Renames the file at the given `Path` to have the `NewName`
-#### `fs.write(Path: string, Contents: string, CreateDirectories: boolean? [ false ]): boolean, string?`
+* Throws an error upon failure
+#### `fs.write(Path: string, Contents: string, CreateDirectories: boolean? [ false ]): `
 * Overwrites/creates the file at `Path` with the provided `Contents`
-* Returns whether the operation was successful
+* Throws an error upon failure
 * If `CreateDirectories` is `true`, will automatically create missing intermediate directories to the file
 ### `imgui`
 * UI with Dear ImGui

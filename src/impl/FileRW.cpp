@@ -62,16 +62,17 @@ std::string FileRW::ReadFile(const std::string& ShortPath, bool* Success)
 	}
 	else
 	{
-		std::string error = std::strerror(errno);
+		std::string shortError = std::strerror(errno);
 		if (std::filesystem::is_directory(actualPath))
-			error += " Not a file"; // "Succeeds" on Linux for some reason
+			shortError += " Not a file"; // "Succeeds" on Linux for some reason
 
-		Log::ErrorF("Failed to read file '{}': {}", actualPath, error);
+		std::string fullError = std::format("Failed to read file '{}': {}", actualPath, shortError);
+		Log::Error(fullError);
 
 		if (Success)
 			*Success = false;
 
-		return error;
+		return fullError;
 	}
 }
 
@@ -95,12 +96,12 @@ bool FileRW::WriteFile(
 	}
 	else
 	{
-		std::string error = std::strerror(errno);
-
-		Log::ErrorF("Failed to write {} bytes to file '{}': {}", Contents.size(), path, error);
+		std::string shortError = std::strerror(errno);
+		std::string fullError = std::format("Failed to write {} bytes to file '{}': {}", Contents.size(), path, shortError);
+		Log::Error(fullError);
 
 		if (ErrorMessage)
-			*ErrorMessage = error;
+			*ErrorMessage = fullError;
 
 		return false;
 	} 

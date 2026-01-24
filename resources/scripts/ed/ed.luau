@@ -216,9 +216,7 @@ changeStageTo = function(NewStage: Stage)
 end
 
 local function saveRecents()
-	if not fs.write(EDITOR_RECENT_PROJECTS_PATH, json.encode(RecentProjects)) then
-		print("Failed to save the Recent Projects list")
-	end
+	fs.write(EDITOR_RECENT_PROJECTS_PATH, json.encode(RecentProjects))
 end
 
 local function saveToRecents(Path: string)
@@ -246,7 +244,7 @@ local function openCodeEditor()
 	print("Open code editor result: ", shellexec(`{ EditorPreferences.CodeEditorPath } "{ fs.cwd() }/projects/{ Project.Name }"`))
 end
 
-local function openProject(ManualPath: string?)
+local function openProject_(ManualPath: string?)
 	local path = ManualPath
 	local selecting = not path
 	local atLeastOneProject = false
@@ -371,11 +369,17 @@ local function openProject(ManualPath: string?)
 	end
 end
 
+local function openProject(ManualPath: string?)
+	xpcall(openProject_, function(err)
+		Engine:ShowMessageBox("Failed to open project", "Failed to open project: " .. tostring(err), "ok", "error")
+	end, ManualPath)
+end
+
 local SavedProjectsCache: { string }? = nil
 
-local function createNewProject()
+local function createNewProject_()
 	if not fs.isdirectory("@cwd/projects") then
-		assert(fs.mkdir("@cwd/projects"))
+		fs.mkdir("@cwd/projects")
 	end
 
 	local name = "New Project "
@@ -389,58 +393,51 @@ local function createNewProject()
 	Project.IsTempPath = true
 
 	local fullPath = "@cwd/projects/" .. assert(Project.Name)
-
-	local success, createError = fs.mkdir(fullPath)
-	if not success then
-		Engine:ShowMessageBox("Failed to create project", `Failed to create project at '{fullPath}':\n{ assert(createError) }`)
-		return
-	end
+	fs.mkdir(fullPath)
 
 	fs.definealias("proj", fullPath)
 	fs.definealias("projres", "@proj/resources")
 
-	assert(fs.write(fullPath .. "/phoenix.conf", json.encode({
+	fs.write(fullPath .. "/phoenix.conf", json.encode({
 		GameTitle = Project.Name,
 		ResourcesDirectory = "resources/",
 		RootScene = "scenes/root.world"
-	})))
+	}))
 
-	assert(fs.mkdir("@projres"))
-	assert(fs.mkdir("@projres/materials"))
-	assert(fs.mkdir("@projres/scenes"))
-	assert(fs.mkdir("@projres/sounds"))
-	assert(fs.mkdir("@projres/shaders"))
-	assert(fs.mkdir("@projres/scripts"))
-	assert(fs.mkdir("@projres/textures"))
-	assert(fs.mkdir("@projres/textures/materials"))
+	fs.mkdir("@projres")
+	fs.mkdir("@projres/materials")
+	fs.mkdir("@projres/scenes")
+	fs.mkdir("@projres/sounds")
+	fs.mkdir("@projres/shaders")
+	fs.mkdir("@projres/scripts")
+	fs.mkdir("@projres/textures")
+	fs.mkdir("@projres/textures/materials")
 
-	assert(fs.mkdir("@projres/scripts/live"))
-	assert(fs.write("@projres/scripts/live/Main.luau", "print(\"Hello, World!\")"))
+	fs.mkdir("@projres/scripts/live")
+	fs.write("@projres/scripts/live/Main.luau", "print(\"Hello, World!\")")
 
 	for _, v in { "error", "worldUber", "worldUberTriProjected", "worldUberSkinned", "skybox", "boxframe", "particle", "postprocessing" } do
 		if fs.isfile(`@editres/shaders/{v}.shp`) then
-			assert(fs.copy(`@editres/shaders/{v}.shp`, `@projres/shaders/{v}.shp`))
+			fs.copy(`@editres/shaders/{v}.shp`, `@projres/shaders/{v}.shp`)
 		end
 		if fs.isfile(`@editres/shaders/{v}.vert`) then
-			assert(fs.copy(`@editres/shaders/{v}.vert`, `@projres/shaders/{v}.vert`))
+			fs.copy(`@editres/shaders/{v}.vert`, `@projres/shaders/{v}.vert`)
 		end
 		if fs.isfile(`@editres/shaders/{v}.frag`) then
-			assert(fs.copy(`@editres/shaders/{v}.frag`, `@projres/shaders/{v}.frag`))
+			fs.copy(`@editres/shaders/{v}.frag`, `@projres/shaders/{v}.frag`)
 		end
 		if fs.isfile(`@editres/shaders/{v}.geom`) then
-			assert(fs.copy(`@editres/shaders/{v}.geom`, `@projres/shaders/{v}.geom`))
+			fs.copy(`@editres/shaders/{v}.geom`, `@projres/shaders/{v}.geom`)
 		end
 	end
 
 	for _, v in { "brick", "error", "neon", "plastic", "smoothplastic", "wood", "woodplanks" } do
-		assert(fs.copy(`@editres/materials/{v}.mtl`, `@projres/materials/{v}.mtl`))
+		fs.copy(`@editres/materials/{v}.mtl`, `@projres/materials/{v}.mtl`)
 	end
 
-	assert(fs.copy("@editres/textures/materials", "@projres/textures/materials"))
-
-	assert(fs.copy("@editres/textures/Sky1", "@projres/textures/Sky1"))
-
-	assert(fs.copy(LOGO_IMAGE, "@proj/icon.png"))
+	fs.copy("@editres/textures/materials", "@projres/textures/materials")
+	fs.copy("@editres/textures/Sky1", "@projres/textures/Sky1")
+	fs.copy(LOGO_IMAGE, "@proj/icon.png")
 
 	local dm = GameObject.new("DataModel")
 	local projWp = GameObject.new("Workspace")
@@ -456,6 +453,12 @@ local function createNewProject()
 	openProject(Project.Name)
 
 	SavedProjectsCache = nil
+end
+
+local function createNewProject()
+	xpcall(createNewProject_, function(err)
+		Engine:ShowMessageBox("Failed to create project", "Failed to create new project: " .. tostring(err), "ok", "error")
+	end)
 end
 
 local TabButtonHovering: string? = nil
@@ -791,11 +794,11 @@ local function exportProject()
 
 	print("Exporting")
 
-	assert(fs.mkdir(exportTo))
-	assert(fs.copy("@proj", exportTo))
+	fs.mkdir(exportTo)
+	fs.copy("@proj", exportTo)
 
 	local execPath = Engine:GetCliArguments()[1]
-	assert(fs.copy(execPath, `{exportTo}/{Project.Name}{if execPath:find(".exe") then ".exe" else ""}`))
+	fs.copy(execPath, `{exportTo}/{Project.Name}{if execPath:find(".exe") then ".exe" else ""}`)
 
 	if execPath:find("x64/Debug") and execPath:find(".exe") then
 		Engine:ShowMessageBox(
@@ -872,7 +875,7 @@ local function renderMainMenuBar(dt: number)
 							if buttonSelection == 1 then
 								local prevName = Project.Name
 
-								assert(fs.rename("@cwd/projects/" .. Project.Name, newProjectName))
+								fs.rename("@cwd/projects/" .. Project.Name, newProjectName)
 								fs.definealias("proj", "@cwd/projects/" .. newProjectName)
 
 								Project.Name = newProjectName
@@ -880,10 +883,10 @@ local function renderMainMenuBar(dt: number)
 								local conf = json.parse(assert(fs.read("@proj/phoenix.conf")))
 								conf.GameTitle = newProjectName
 
-								assert(fs.write(
+								fs.write(
 									"@proj/phoenix.conf",
 									json.encode(conf)
-								))
+								)
 
 								table.remove(RecentProjects, table.find(RecentProjects, prevName))
 								saveToRecents(newProjectName)
@@ -907,8 +910,8 @@ local function renderMainMenuBar(dt: number)
 									local path = fs.promptopen("@etextures/", { "*.png" , "*.jpg", "*.jpeg" }, "Images")[1]
 
 									if path then
-										assert(fs.remove("@proj/icon.png"))
-										assert(fs.copy(path, "@proj/icon.png"))
+										fs.remove("@proj/icon.png")
+										fs.copy(path, "@proj/icon.png")
 										Engine:UnloadTexture("@proj/icon.png") -- force the texture to be reloaded
 									else
 										print("No icon selected")
@@ -1061,7 +1064,7 @@ local function renderMainMenuBar(dt: number)
 		EditorPreferences.Gamma = imgui.inputnumber("Gamma Correction", EditorPreferences.Gamma)
 
 		if imgui.button("Save") then
-			assert(fs.write("./editor/settings.json", json.encode(EditorPreferences)))
+			fs.write("./editor/settings.json", json.encode(EditorPreferences))
 			conf.set("postfx_gamma", EditorPreferences.Gamma)
 		end
 
@@ -1305,12 +1308,12 @@ local function renderViewport(DeltaTime: number)
 		imgui.sameline()
 
 		if imgui.button("Run") then
-			local began = History:TryBeginAction("CommandBarCode")
+			local commandBarAction = History:TryBeginAction("CommandBarCode")
 
 			Engine:RunInVM(if CurrentStage == "ProjectEditing" then GameEditingVM else GameVM, CommandBarCommand, "=CommandBar")
 
-			if began then
-				History:FinishCurrentAction()
+			if commandBarAction then
+				History:FinishAction(commandBarAction)
 			end
 		end
 		imgui.sameline()
@@ -1447,7 +1450,7 @@ end
 
 function Stages.SelectProject_Enter(DeltaTime)
 	if not fs.isfile(EDITOR_RECENT_PROJECTS_PATH) then
-		assert(fs.write(EDITOR_RECENT_PROJECTS_PATH, "[]"))
+		fs.write(EDITOR_RECENT_PROJECTS_PATH, "[]")
 	end
 
 	local rpstr, err = fs.read(EDITOR_RECENT_PROJECTS_PATH)
@@ -1593,7 +1596,7 @@ local function renderSavedProjects()
 			)
 
 			if buttonSelection == 1 then
-				assert(fs.remove(`@cwd/projects/{name}`))
+				fs.remove(`@cwd/projects/{name}`)
 
 				table.remove(RecentProjects, table.find(RecentProjects, name))
 				saveRecents()
