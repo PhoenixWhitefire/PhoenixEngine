@@ -216,7 +216,7 @@ declare extern type Physics with
   DebugSpatialHeat: boolean
   Gravity: vector
   Simulating: boolean
-  Timescale: number 
+  Timescale: number
 end
 declare extern type PlayerInput with
   CursorMode: number
@@ -242,6 +242,7 @@ declare extern type RigidBody with
   LinearVelocity: vector
   PhysicsCollisions: boolean
   PhysicsDynamics: boolean
+  PhysicsRotations: boolean
   Restitution: number
 end
 declare extern type Sound with

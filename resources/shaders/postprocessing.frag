@@ -22,7 +22,7 @@ uniform float BlurVignetteDistMul = 2.5f;
 uniform float BlurVignetteDistExp = 16.f;
 uniform int BlurVignetteSampleRadius = 4;
 
-uniform float Gamma = 1.f;
+uniform float Gamma = 2.2f;
 
 uniform float Time = 0.f;
 
@@ -51,6 +51,7 @@ void main()
 	if (!PostFxEnabled)
 	{
 		FragColor = texture(Texture, Frag_UV);
+		FragColor.rgb = pow(FragColor.rgb, vec3(1.f / Gamma));
 		return;
 	}
 

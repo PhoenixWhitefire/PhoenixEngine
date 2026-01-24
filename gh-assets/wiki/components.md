@@ -225,7 +225,7 @@ No members defined
 * `DebugSpatialHeat: boolean`: Whether Spatial Heat (spatial hash density) debug rendering is enabled
 * `Gravity: vector`: The gravitational field strength
 * `Simulating: boolean`: Whether the Physics simulation is running. IMPORTANT: The Editor sets this value to `true` and `false` when starting/stopping playtests
-* `Timescale: number `: Slow-down or speed-up the simulation by changing this value from `1`
+* `Timescale: number`: Slow-down or speed-up the simulation by changing this value from `1`
 
 ## `PlayerInput`
 
@@ -264,6 +264,7 @@ No members defined
 * `LinearVelocity: vector`: Its velocity
 * `PhysicsCollisions: boolean`: Whether other physics objects can collide with it
 * `PhysicsDynamics: boolean`: Whether the Physics engine should apply forces to it
+* `PhysicsRotations: boolean`: Whether the Physics engine will apply angular impulses to rotate the object on collisions
 * `Restitution: number`: Restitution
 
 ## `Sound`

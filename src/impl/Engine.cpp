@@ -622,7 +622,7 @@ void Engine::m_Render(double deltaTime)
 	glEnable(GL_DEPTH_TEST);
 
 	//Do framebuffer stuff after everything is drawn
-	RendererContext.FrameBuffer.Unbind();
+	//RendererContext.FrameBuffer.Unbind();
 
 	glActiveTexture(GL_TEXTURE1);
 	RendererContext.FrameBuffer.BindTexture();
@@ -688,6 +688,17 @@ void Engine::m_Render(double deltaTime)
 
 	{
 		ZoneScopedN("MainPostProcessing");
+		RendererContext.DrawMesh(
+			quadMesh,
+			m_PostFxShader,
+			{ 2.f, 2.f, 2.f },
+			glm::mat4(1.f),
+			FaceCullingMode::BackFace,
+			0
+		);
+
+		RendererContext.FrameBuffer.Unbind();
+		m_PostFxShader.SetUniform("PostFxEnabled", 0);
 		RendererContext.DrawMesh(
 			quadMesh,
 			m_PostFxShader,

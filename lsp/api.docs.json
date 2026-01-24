@@ -890,6 +890,9 @@
   "@luhx/globaltype/RigidBody.PhysicsDynamics": {
     "documentation": "Whether the Physics engine should apply forces to it"
   },
+  "@luhx/globaltype/RigidBody.PhysicsRotations": {
+    "documentation": "Whether the Physics engine will apply angular impulses to rotate the object on collisions"
+  },
   "@luhx/globaltype/RigidBody.Restitution": {
     "documentation": "Restitution"
   },

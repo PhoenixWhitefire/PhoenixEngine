@@ -86,6 +86,7 @@ public:
 	{
 		static const Reflection::StaticPropertyMap props = {
 			REFLECTION_PROPERTY_SIMPLE(EcRigidBody, PhysicsDynamics, Boolean),
+			REFLECTION_PROPERTY_SIMPLE(EcRigidBody, PhysicsRotations, Boolean),
 
 			REFLECTION_PROPERTY(
 				"PhysicsCollisions",

@@ -1,5 +1,5 @@
 -- modules/character-controller.luau, 23/09/2024
-local InputService: InputService = game:GetService("PlayerInput") :: any
+local InputService: PlayerInput = game:GetService("PlayerInput") :: any
 
 local Controller = {}
 Controller.__index = Controller
@@ -57,12 +57,13 @@ end
 function Controller.InitDefault(self: Controller, CharacterHeight)
 	CharacterHeight = CharacterHeight or 15
 	
-	local character = GameObject.new("Mesh")
+	local character: GameObject & Mesh & Transform & RigidBody = GameObject.new("Mesh") :: any
 	character:AddComponent("RigidBody")
 	character.Size = vector.create(CharacterHeight / 3, CharacterHeight, CharacterHeight / 3)
 	character.PhysicsDynamics = true
-	character.Friction = 4
-	character.CollisionFidelity = 1 -- AabbStaticSize
+	character.PhysicsRotations = false
+	character.Restitution = 0
+	character.Friction = 125
 	character.Parent = workspace
 	
 	self.Character = character

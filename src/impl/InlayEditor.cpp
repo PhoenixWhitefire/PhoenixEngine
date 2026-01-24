@@ -1262,8 +1262,7 @@ static const char* ContextMenuActionStrings[] =
 	"Delete",
 	"Save to File",
 	"Insert from File",
-	"Edit",
-	"Reload"
+	"Insert service"
 };
 
 typedef void(*ContextActionMenuHandlerFunc)(void);
@@ -1379,7 +1378,7 @@ static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] =
 		}
 		else
 			Log::Info("No file selected to insert object from");
-	}
+	},
 };
 
 static bool isInSelections(const ObjectHandle& obj)
@@ -1392,10 +1391,13 @@ static std::vector<ContextMenuAction> getPossibleActionsForSelections()
 	std::vector<ContextMenuAction> actions;
 	actions.reserve(4);
 
-	actions.push_back(ContextMenuAction::Duplicate);
-	actions.push_back(ContextMenuAction::Delete);
-	actions.push_back(ContextMenuAction::SaveToFile);
-	actions.push_back(ContextMenuAction::LoadFromFile);
+	if (Selections.size() > 0)
+	{
+		actions.push_back(ContextMenuAction::Duplicate);
+		actions.push_back(ContextMenuAction::Delete);
+		actions.push_back(ContextMenuAction::SaveToFile);
+		actions.push_back(ContextMenuAction::LoadFromFile);
+	}
 
 	return actions;
 }
@@ -2315,24 +2317,8 @@ static void renderExplorer()
 	if (!open)
 		EngineJsonConfig["Tool_Explorer"] = false;
 
-	if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered() && !ImGui::IsAnyItemActive() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
-		ImGui::OpenPopup("InsertService");
-
-	if (ImGui::BeginPopup("InsertService"))
-	{
-		for (const std::string_view& serv : s_DataModelServices)
-		{
-			EntityComponent ec = s_ComponentNameToType.at(serv);
-
-			if (!ExplorerRoot->FindChildWithComponent(ec) && ImGui::MenuItem(serv.data()))
-			{
-				GameObject* newServ = GameObject::Create(ec);
-				newServ->SetParent(ExplorerRoot);
-			}
-		}
-
-		ImGui::EndPopup();
-	}
+	if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+		ImGui::OpenPopup(1979); // the mimic!!;
 
 	if (IsPickingObject)
 	{
@@ -2435,14 +2421,31 @@ static void renderExplorer()
 
 	if (ImGui::BeginPopupEx(1979, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings))
 	{
-		ImGui::SeparatorText("Actions");
-
 		for (ContextMenuAction action : ContextActionsForSelection)
+		{
 			if (action == ContextMenuAction::__sectionSeparator)
 				ImGui::Separator();
 
 			else if (ImGui::MenuItem(ContextMenuActionStrings[(uint8_t)action]))
 				ContextMenuActionHandlers[(uint8_t)action]();
+		}
+
+		if (ImGui::BeginMenu("Insert service"))
+		{
+			for (const std::string_view& serv : s_DataModelServices)
+			{
+				EntityComponent ec = s_ComponentNameToType.at(serv);
+
+				if (!ExplorerRoot->FindChildWithComponent(ec) && ImGui::MenuItem(serv.data()))
+				{
+					GameObject* newServ = GameObject::Create(ec);
+					newServ->SetParent(ExplorerRoot);
+					Selections = { newServ };
+				}
+			}
+
+			ImGui::EndMenu();
+		}
 
 		ImGui::EndPopup();
 	}

@@ -36,6 +36,7 @@ struct EcRigidBody : public Component<EntityComponent::RigidBody>
 
     bool PhysicsDynamics = false;
 	bool PhysicsCollisions = true;
+    bool PhysicsRotations = true;
 
     bool Valid = true;
 };

@@ -34,7 +34,8 @@ local EditorPreferences = {
 	ClearOutputOnProjectOpen = true,
 	ClearOutputOnPlaytest = true,
 	CodeEditorPath = "code",
-	UseLightTheme = false
+	UseLightTheme = false,
+	Gamma = 2.2
 }
 
 local EDITOR_RECENT_PROJECTS_PATH = "./editor/recent-projects.json"
@@ -241,6 +242,10 @@ local function saveProject()
 	scene.save({ assert(Project.DataModel) }, "@projres/scenes/root.world")
 end
 
+local function openCodeEditor()
+	print("Open code editor result: ", shellexec(`{ EditorPreferences.CodeEditorPath } "{ fs.cwd() }/projects/{ Project.Name }"`))
+end
+
 local function openProject(ManualPath: string?)
 	local path = ManualPath
 	local selecting = not path
@@ -362,7 +367,7 @@ local function openProject(ManualPath: string?)
 	Project.DataModel.Module = module
 
 	if EditorPreferences.AutoLaunchCodeEditorOnProjectOpen then
-		print("Open code editor result: ", shellexec(`{ EditorPreferences.CodeEditorPath } "{ fs.cwd() }/projects/{ Project.Name }"`))
+		openCodeEditor()
 	end
 end
 
@@ -426,7 +431,7 @@ local function createNewProject()
 		end
 	end
 
-	for _, v in { "brick", "error", "floortiles", "neon", "plastic", "smoothplastic", "wood", "woodplanks" } do
+	for _, v in { "brick", "error", "neon", "plastic", "smoothplastic", "wood", "woodplanks" } do
 		assert(fs.copy(`@editres/materials/{v}.mtl`, `@projres/materials/{v}.mtl`))
 	end
 
@@ -594,6 +599,8 @@ local function homeTab(_: number)
 	if tabButton("History", "@etextures/editor-icons/history-viewer.png", true, HistoryView.Open) then
 		HistoryView.Open = not HistoryView.Open
 	end
+
+	imgui.dummy()
 end
 
 local WasToolEnabled = {}
@@ -632,6 +639,8 @@ local function toolsTab(_: number)
 		conf.set("Ed_Tool_OutputEnabled", OutputEnabled)
 		conf.save()
 	end
+
+	imgui.dummy()
 end
 
 local function pluginsTab(dt: number)
@@ -656,6 +665,8 @@ local function pluginsTab(dt: number)
 
 		imgui.sameline()
 	end
+
+	imgui.dummy()
 end
 
 local RibbonTabs: { { Name: string, Renderer: (number) -> () } } = {
@@ -823,6 +834,10 @@ local function renderMainMenuBar(dt: number)
 			end
 			if undoRedoDisabledReason then
 				imgui.setitemtooltip(undoRedoDisabledReason)
+			end
+
+			if imgui.menuitem("Open in Code Editor") then
+				task.defer(openCodeEditor)
 			end
 		end
 
@@ -1017,7 +1032,7 @@ local function renderMainMenuBar(dt: number)
 	end
 
 	if openSettingsWindow then
-		imgui.openpopup("Settings")
+		imgui.openpopup("Editor Settings")
 
 		local SETTINGS_SIZE_X, SETTINGS_SIZE_Y = 420, 140
 
@@ -1027,7 +1042,7 @@ local function renderMainMenuBar(dt: number)
 		imgui.setnextwindowsize(SETTINGS_SIZE_X, SETTINGS_SIZE_Y);
 	end
 
-	if imgui.beginpopupmodal("Settings", true) then
+	if imgui.beginpopupmodal("Editor Settings", true) then
 		local lightMode = imgui.checkbox("Light", EditorPreferences.UseLightTheme)
 		if lightMode ~= EditorPreferences.UseLightTheme then
 			imgui.stylecolors(if lightMode then "l" else "d")
@@ -1040,8 +1055,11 @@ local function renderMainMenuBar(dt: number)
 		EditorPreferences.ClearOutputOnProjectOpen = imgui.checkbox("Clear Output on Project open", EditorPreferences.ClearOutputOnProjectOpen)
 		EditorPreferences.ClearOutputOnPlaytest = imgui.checkbox("Clear Output on Playtest", EditorPreferences.ClearOutputOnPlaytest)
 
+		EditorPreferences.Gamma = imgui.inputnumber("Gamma Correction", EditorPreferences.Gamma)
+
 		if imgui.button("Save") then
 			assert(fs.write("./editor/settings.json", json.encode(EditorPreferences)))
+			conf.set("postfx_gamma", EditorPreferences.Gamma)
 		end
 
 		if imgui.treenode("##") then
@@ -1062,6 +1080,8 @@ for k, v in EditorPreferences do
 end
 
 EditorPreferences = savedEditorPreferences
+
+conf.set("postfx_gamma", EditorPreferences.Gamma)
 
 imgui.stylecolors(if EditorPreferences.UseLightTheme then 'l' else 'd')
 

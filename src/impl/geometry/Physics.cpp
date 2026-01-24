@@ -220,8 +220,11 @@ static void resolveCollisions(Physics::World& World, float DeltaTime, Physics* p
 
 				//glm::vec3 impulse = j * points.Normal;
 
-				glm::vec3 r = points.A - arb->CollisionAabb.Position; // lever arm
-				arb->AngularVelocity += glm::cross(r, points.Normal) * points.PenetrationDepth * 10.f;
+				if (arb->PhysicsRotations)
+				{
+					glm::vec3 r = points.A - arb->CollisionAabb.Position; // lever arm
+					arb->AngularVelocity += glm::cross(r, points.Normal) * points.PenetrationDepth * 10.f;
+				}
 			}
 
 			// position correction to prevent sinking

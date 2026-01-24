@@ -191,7 +191,7 @@
           "DebugSpatialHeat": "Boolean",
           "Gravity": "Vector3",
           "Simulating": "Boolean",
-          "Timescale": "Double READONLY"
+          "Timescale": "Double"
         }
       },
       "PlayerInput": {
@@ -224,6 +224,7 @@
           "LinearVelocity": "Vector3",
           "PhysicsCollisions": "Boolean",
           "PhysicsDynamics": "Boolean",
+          "PhysicsRotations": "Boolean",
           "Restitution": "Double"
         }
       },

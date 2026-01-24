@@ -396,6 +396,7 @@
           "LinearVelocity": "Its velocity",
           "PhysicsCollisions": "Whether other physics objects can collide with it",
           "PhysicsDynamics": "Whether the Physics engine should apply forces to it",
+          "PhysicsRotations": "Whether the Physics engine will apply angular impulses to rotate the object on collisions",
           "Restitution": "Restitution"
         }
       },
