@@ -287,6 +287,8 @@ Engine::Engine()
 	FileRW::DefineAlias("cwd", std::filesystem::current_path().string());
 	FileRW::DefineAlias("editres", "resources/");
 	FileRW::DefineAlias("projres", "resources/");
+	FileRW::DefineAlias("scripts", "resources/scripts");
+	FileRW::DefineAlias("modules", "resources/scripts/modules");
 
 	Log::Info("Initializing managers...");
 

@@ -716,7 +716,7 @@ static void init()
 		wp->FindComponent<EcWorkspace>()->SetSceneCamera(cam);
 		cam->FindComponent<EcCamera>()->UseSimpleController = true;
 
-		dm->FindComponent<EcDataModel>()->Module = ScriptTool;
+		dm->FindComponent<EcDataModel>()->LiveScripts = ScriptTool;
 
 		roots.push_back(dm);
 	}

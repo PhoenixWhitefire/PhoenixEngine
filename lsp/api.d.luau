@@ -105,8 +105,8 @@ declare extern type Camera with
   UseSimpleController: boolean
 end
 declare extern type DataModel with
-  IsModuleBound: boolean 
-  Module: string
+  AreScriptsBound: boolean 
+  LiveScripts: string
   Time: number 
 
   function GetService(self, ServiceName: string) : ((GameObject & any))

@@ -12,7 +12,7 @@ PHNXENGI
       "Enabled": true,
       "Name": "EditorDataModel",
       "Serializes": true,
-      "Module": "scripts/ed/ed.luau"
+      "LiveScripts": "scripts/ed/ed.luau"
     },
     {
       "$_class": "Workspace",

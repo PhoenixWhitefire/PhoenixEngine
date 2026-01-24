@@ -8,10 +8,10 @@ local Engine: Engine = game:GetService("Engine") :: any
 local FALLBACK_IMAGE = "@etextures/editor-icons/fallback.png"
 local LOGO_IMAGE = "@etextures/logo.png"
 
-local PluginManager = require("./PluginManager.luau")
-local HistoryView = require("./HistoryView.luau")
-local CoreTools = require("./CoreTools.luau")
-local Types = require("./Types.luau")
+local PluginManager = require("../ed/PluginManager.luau")
+local HistoryView = require("../ed/HistoryView.luau")
+local CoreTools = require("../ed/CoreTools.luau")
+local Types = require("../ed/Types.luau")
 type Stage = Types.Stage
 
 local CurrentStage: Stage = "None"
@@ -357,14 +357,14 @@ local function openProject(ManualPath: string?)
 
 	changeStageTo("ProjectEditing")
 
-	local module = Project.DataModel.Module
-	Project.DataModel.Module = ""
+	local module = Project.DataModel.LiveScripts
+	Project.DataModel.LiveScripts = ""
 
 	Engine:BindDataModel(Project.DataModel)
 	Engine:CreateVM(GameEditingVM)
 	Engine:BindDataModel(game)
 
-	Project.DataModel.Module = module
+	Project.DataModel.LiveScripts = module
 
 	if EditorPreferences.AutoLaunchCodeEditorOnProjectOpen then
 		openCodeEditor()
@@ -414,7 +414,8 @@ local function createNewProject()
 	assert(fs.mkdir("@projres/textures"))
 	assert(fs.mkdir("@projres/textures/materials"))
 
-	assert(fs.write("@projres/scripts/Main.luau", "print(\"Hello, World!\")"))
+	assert(fs.mkdir("@projres/scripts/live"))
+	assert(fs.write("@projres/scripts/live/Main.luau", "print(\"Hello, World!\")"))
 
 	for _, v in { "error", "worldUber", "worldUberTriProjected", "worldUberSkinned", "skybox", "boxframe", "particle", "postprocessing" } do
 		if fs.isfile(`@editres/shaders/{v}.shp`) then

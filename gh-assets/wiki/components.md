@@ -74,8 +74,8 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * The root of the scene
 
 ### Properties:
-* `IsModuleBound: boolean `: If this is `true`, attempting to change `.Module` will throw an error
-* `Module: string`: The Module associated with the DataModel that will be run upon the DataModel being bound
+* `AreScriptsBound: boolean `: If this is `true`, attempting to change `.LiveScripts` will throw an error
+* `LiveScripts: string`: May either refer to a directory of Scripts, or a single Script, to run when the DataModel is bound
 * `Time: number `: Number of seconds since the Engine started running
 
 ### Methods:

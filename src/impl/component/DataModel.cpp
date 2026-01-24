@@ -24,11 +24,10 @@ public:
     void DeleteComponent(uint32_t Id) override
     {
         EcDataModel& dm = m_Components.at(Id);
-        if (dm.ModuleData)
-        {
-            lua_resetthread(dm.ModuleData);
-            dm.ModuleData = nullptr;
-        }
+
+        for (lua_State* L : dm.Modules)
+            lua_resetthread(L);
+        dm.Modules.clear();
 
 		ComponentManager<EcDataModel>::DeleteComponent(Id);
     }
@@ -48,29 +47,29 @@ public:
             ),
 
             REFLECTION_PROPERTY(
-                "Module",
+                "LiveScripts",
                 String,
                 [](void* p) -> Reflection::GenericValue
                 {
-                    return static_cast<EcDataModel*>(p)->Module;
+                    return static_cast<EcDataModel*>(p)->LiveScripts;
                 },
                 [](void* p, const Reflection::GenericValue& gv)
                 {
                     EcDataModel* dm = static_cast<EcDataModel*>(p);
-                    if (dm->ModuleData)
-                        RAISE_RT("Module of a DataModel cannot be changed after it is bound!");
+                    if (dm->Modules.size() > 0)
+                        RAISE_RT("`LiveScripts` of a DataModel cannot be changed after it is bound!");
 
-                    dm->Module = gv.AsString();
-                    dm->CanLoadModule = true;
+                    dm->LiveScripts = gv.AsString();
+                    dm->CanLoadModules = true;
                 }
             ),
 
             REFLECTION_PROPERTY(
-                "IsModuleBound",
+                "AreScriptsBound",
                 Boolean,
                 [](void* p) -> Reflection::GenericValue
                 {
-                    return static_cast<EcDataModel*>(p)->ModuleData != nullptr;
+                    return static_cast<EcDataModel*>(p)->Modules.size() > 0;
                 },
                 nullptr
             )
@@ -132,30 +131,19 @@ public:
 
 static inline DataModelManager Instance;
 
-void EcDataModel::Bind()
+static lua_State* loadModule(const std::string& Module, GameObject* Object)
 {
-	ZoneScopedC(tracy::Color::LightSkyBlue);
-
-    if (ModuleData || Module.empty() || !CanLoadModule)
-    {
-        return;
-    }
-
-	std::string fullName = Object->GetFullName();
-	ZoneTextF("DataModel: %s\nModule: %s", fullName.c_str(), Module.c_str());
-
-	bool readSuccess = true;
+    bool readSuccess = true;
 	std::string source = FileRW::ReadFile(Module, &readSuccess);
 
 	if (!readSuccess)
 	{
 		Log::ErrorF(
-			"Failed to load '{}' for DataModel {}: {}",
-			Module, fullName, source // `source` will be the error message
+			"Failed to load '{}': {}",
+			Module, source // `source` will be the error message
 		);
-        CanLoadModule = false;
 
-		return;
+		return nullptr;
 	}
 
     lua_State* mainThread = ScriptEngine::GetCurrentVM().MainThread;
@@ -166,12 +154,6 @@ void EcDataModel::Bind()
 
 	if (result == 0)
 	{
-		// prevent ourselves from being deleted by the code we run.
-		// if that code errors, it'll be a use-after-free as we try
-		// to access `m_L` to get the error message
-		// 24/12/2024
-		ObjectHandle dontKillMePlease = this->Object;
-
         ScriptEngine::L::PushGenericValue(L, Object->ToGenericValue());
         lua_setglobal(L, "game");
 
@@ -194,21 +176,66 @@ void EcDataModel::Bind()
             lua_resetthread(L);
             lua_pop(mainThread, 1);
 
-            CanLoadModule = false;
+            return nullptr;
 		}
         else
-            ModuleData = L;
+            return L;
 	}
 	else
 	{
 		Log::ErrorF(
-			"DataModel Module compilation: {}",
+			"DataModel Script compilation: {}",
 			lua_tostring(L, -1)
 		);
 
 		lua_resetthread(L);
         lua_pop(mainThread, 1);
 
-        CanLoadModule = false;
+        return nullptr;
 	}
+}
+
+void EcDataModel::Bind()
+{
+	ZoneScopedC(tracy::Color::LightSkyBlue);
+
+    if (Modules.size() > 0 || LiveScripts.empty() || !CanLoadModules)
+    {
+        return;
+    }
+
+	std::string fullName = Object->GetFullName();
+	ZoneTextF("DataModel: %s\nScripts: %s", fullName.c_str(), LiveScripts.c_str());
+
+	// prevent ourselves from being deleted by the code we run.
+	// if that code errors, it'll be a use-after-free as we try
+	// to access `m_L` to get the error message
+	// 24/12/2024
+	ObjectHandle dontKillMePlease = this->Object;
+
+    std::string path = FileRW::MakePathCwdRelative(LiveScripts);
+
+    if (std::filesystem::is_regular_file(path))
+    {
+        lua_State* script = loadModule(path, Object);
+        if (script)
+            Modules.push_back(script);
+    }
+    else if (std::filesystem::is_directory(path))
+    {
+        for (const auto& entry : std::filesystem::directory_iterator(path))
+        {
+            if (std::filesystem::is_regular_file(entry))
+            {
+                lua_State* script = loadModule(entry.path(), Object);
+                if (script)
+                    Modules.push_back(script);
+            }
+        }
+    }
+    else
+    {
+        Log::ErrorF("Invalid `LiveScripts` path '{}' ({}), expected to be a file or directory", LiveScripts, path);
+        CanLoadModules = false;
+    }
 }

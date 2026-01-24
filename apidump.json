@@ -66,8 +66,8 @@
           "GetService": "(String) -> (GameObject)"
         },
         "Properties": {
-          "IsModuleBound": "Boolean READONLY",
-          "Module": "String",
+          "AreScriptsBound": "Boolean READONLY",
+          "LiveScripts": "String",
           "Time": "Double READONLY"
         }
       },

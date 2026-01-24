@@ -12,12 +12,12 @@ struct EcDataModel : public Component<EntityComponent::DataModel>
 {
 	void Bind();
 
-	std::string Module = "scripts/Main.luau";
+	std::string LiveScripts = "scripts/live";
 	uint32_t Workspace = UINT32_MAX;
 	ObjectRef Object;
 
 	std::vector<Reflection::EventCallback> OnFrameBeginCallbacks;
-	lua_State* ModuleData = nullptr;
-	bool CanLoadModule = true;
+	std::vector<lua_State*> Modules;
+	bool CanLoadModules = true;
 	bool Valid = true;
 };

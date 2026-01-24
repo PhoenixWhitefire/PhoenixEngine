@@ -422,14 +422,14 @@
   "@luhx/globaltype/Color.R": {
     "documentation": "* The Red channel\n"
   },
+  "@luhx/globaltype/DataModel.AreScriptsBound": {
+    "documentation": "If this is `true`, attempting to change `.LiveScripts` will throw an error"
+  },
   "@luhx/globaltype/DataModel.GetService": {
     "documentation": "Gets the Object representing the specified Service. If it does not exist yet in the Data Model, it is created"
   },
-  "@luhx/globaltype/DataModel.IsModuleBound": {
-    "documentation": "If this is `true`, attempting to change `.Module` will throw an error"
-  },
-  "@luhx/globaltype/DataModel.Module": {
-    "documentation": "The Module associated with the DataModel that will be run upon the DataModel being bound"
+  "@luhx/globaltype/DataModel.LiveScripts": {
+    "documentation": "May either refer to a directory of Scripts, or a single Script, to run when the DataModel is bound"
   },
   "@luhx/globaltype/DataModel.OnFrameBegin": {
     "documentation": "Fires at the beginning of a frame, passing in the time elapsed since the last frame (delta time)"
