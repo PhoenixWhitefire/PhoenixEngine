@@ -141,35 +141,38 @@ public:
 
             { "TryBeginAction", {
                 { Reflection::ValueType::String },
-                { Reflection::ValueType::Boolean },
+                { REFLECTION_OPTIONAL(Integer) },
                 [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
                 {
                     History* history = History::Get();
-                    bool succeeded = history->TryBeginAction(inputs[0].AsString());
+                    size_t actionId = history->TryBeginAction(inputs[0].AsString());
 
-                    return { succeeded };
+                    if (actionId == 0)
+                        return { {} }; // nil
+                    else
+                        return { (uint32_t)actionId };
                 }
             } },
 
-            { "FinishCurrentAction", {
+            { "FinishAction", {
+                { Reflection::ValueType::Integer },
                 {},
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
                 {
                     History* history = History::Get();
-                    history->FinishCurrentAction();
+                    history->FinishAction((size_t)inputs[0].AsInteger());
 
                     return {};
                 }
             } },
 
-            { "DiscardCurrentAction", {
+            { "DiscardAction", {
+                { Reflection::ValueType::Integer },
                 {},
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
                 {
                     History* history = History::Get();
-                    history->DiscardCurrentAction();
+                    history->DiscardAction((size_t)inputs[0].AsInteger());
 
                     return {};
                 }

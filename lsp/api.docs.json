@@ -680,14 +680,14 @@
   "@luhx/globaltype/History.CurrentWaypoint": {
     "documentation": "The ID of the Action that was last finished"
   },
-  "@luhx/globaltype/History.DiscardCurrentAction": {
-    "documentation": "Discards the Action currently being recorded"
+  "@luhx/globaltype/History.DiscardAction": {
+    "documentation": "Discards the Action by its ID"
   },
   "@luhx/globaltype/History.EnableRecording": {
     "documentation": "Enables the main functionality of this service"
   },
-  "@luhx/globaltype/History.FinishCurrentAction": {
-    "documentation": "Finishes the Action that was last started. Only one Action may be active at a time"
+  "@luhx/globaltype/History.FinishAction": {
+    "documentation": "Finishes the Action by its ID. Only one Action may be active at a time"
   },
   "@luhx/globaltype/History.GetActionData": {
     "documentation": "Retrives information about a previously-recorded Action by its ID (IDs are in the range 0 <= ID < `ActionHistorySize`)"
@@ -705,7 +705,7 @@
     "documentation": "The DataModel that History will track"
   },
   "@luhx/globaltype/History.TryBeginAction": {
-    "documentation": "Attempts to begin an \"Action.\" May fail and return `false`. Only one Action may be active at a time"
+    "documentation": "Attempts to begin an \"Action.\" Returns the ID of the action. May fail and return `nil`. Only one Action may be active at a time"
   },
   "@luhx/globaltype/History.Undo": {
     "documentation": "Reverses the state of the scene to how it was before the last Action began"

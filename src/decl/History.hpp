@@ -25,9 +25,9 @@ public:
     void RecordEvent(const PropertyEvent&);
     void ClearHistory();
 
-    bool TryBeginAction(const std::string&);
-    void FinishCurrentAction();
-    void DiscardCurrentAction();
+    size_t TryBeginAction(const std::string&);
+    void FinishAction(size_t);
+    void DiscardAction(size_t);
 
     bool CanUndo() const;
     bool CanRedo() const;

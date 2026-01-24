@@ -1,4 +1,4 @@
-local InputService: InputService = game:GetService("PlayerInput") :: any
+local InputService: PlayerInput = game:GetService("PlayerInput") :: any
 local HistoryService: History = game:GetService("History") :: any
 local Engine: Engine = game:GetService("Engine") :: any
 
@@ -36,6 +36,9 @@ for direction, piece in GizmoPieces do
 
     GizmoPieceToDirection[piece[1]] = direction
     GizmoPieceToDirection[piece[2]] = direction
+
+    piece[1]:AddComponent("RigidBody")
+    piece[2]:AddComponent("RigidBody")
 end
 
 GizmoContainer.Name = "GizmoContainer"
@@ -73,8 +76,8 @@ local IsSurfaceDragging = false
 local IsGizmoDragging = false
 local GizmoDragAxis = vector.zero
 local GizmoDragHandle = nil
-local BeganSurfaceDragAction = false
-local BeganGizmoDragAction = false
+local BeganSurfaceDragAction: number? = nil
+local BeganGizmoDragAction: number? = nil
 
 local function roundTo(n: number, x: number): number
     return math.round(n / x) * x
@@ -141,9 +144,9 @@ function CoreTools.Update(Project: Types.Project)
     else
         IsSurfaceDragging = false
 
-        if BeganSurfaceDragAction or HistoryService.CurrentActionName == "SurfaceDrag" then
-            HistoryService:FinishCurrentAction()
-            BeganSurfaceDragAction = false
+        if BeganSurfaceDragAction then
+            HistoryService:FinishAction(BeganSurfaceDragAction)
+            BeganSurfaceDragAction = nil
         end
     end
 
@@ -192,9 +195,9 @@ function CoreTools.Update(Project: Types.Project)
             pcs[2].Transparency = 0.5
         end
 
-        if BeganGizmoDragAction or HistoryService.CurrentActionName == "GizmoDrag" then
-            HistoryService:FinishCurrentAction()
-            BeganGizmoDragAction = false
+        if BeganGizmoDragAction then
+            HistoryService:FinishAction(BeganGizmoDragAction)
+            BeganGizmoDragAction = nil
         end
     end
 

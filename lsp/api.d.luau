@@ -183,13 +183,13 @@ declare extern type History with
   function CanRedo(self) : (boolean)
   function CanUndo(self) : (boolean)
   function ClearHistory(self) : ()
-  function DiscardCurrentAction(self) : ()
+  function DiscardAction(self, Param_1: number) : ()
   function EnableRecording(self) : ()
-  function FinishCurrentAction(self) : ()
+  function FinishAction(self, Param_1: number) : ()
   function GetActionData(self, Param_1: number) : ({ [string]: any })
   function GetCurrentActionData(self) : ({ [string]: any }?)
   function Redo(self) : ()
-  function TryBeginAction(self, Param_1: string) : (boolean)
+  function TryBeginAction(self, Param_1: string) : (number?)
   function Undo(self) : ()
 end
 declare extern type Mesh with

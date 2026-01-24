@@ -565,7 +565,7 @@ local function homeTab(_: number)
 			local paths = fs.promptopen(nil, { "*.gltf", "*.glb" }, "Models")
 
 			if paths[1] then
-				History:TryBeginAction("Import Model")
+				local importAction = History:TryBeginAction("Import Model")
 
 				local imported = AssetManager:ImportModel(paths[1])
 
@@ -580,7 +580,9 @@ local function homeTab(_: number)
 				imported.Parent = Project.Workspace
 				Engine:SetExplorerSelections({ imported })
 
-				History:FinishCurrentAction()
+				if importAction then
+					History:FinishAction(importAction)
+				end
 			else
 				print("No model selected")
 			end

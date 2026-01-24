@@ -176,13 +176,13 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * `CanRedo() : (boolean)`: Returns whether `:Redo` will succeed
 * `CanUndo() : (boolean)`: Returns whether `:Undo` will succeed
 * `ClearHistory() : ()`: Clears all recorded history
-* `DiscardCurrentAction() : ()`: Discards the Action currently being recorded
+* `DiscardAction(number) : ()`: Discards the Action by its ID
 * `EnableRecording() : ()`: Enables the main functionality of this service
-* `FinishCurrentAction() : ()`: Finishes the Action that was last started. Only one Action may be active at a time
+* `FinishAction(number) : ()`: Finishes the Action by its ID. Only one Action may be active at a time
 * `GetActionData(number) : ({ [string]: any })`: Retrives information about a previously-recorded Action by its ID (IDs are in the range 0 <= ID < `ActionHistorySize`)
 * `GetCurrentActionData() : ({ [string]: any }?)`: Retrieves information about the current Action being recorded
 * `Redo() : ()`: Forwards the state of the scene to how it was before the last Undo
-* `TryBeginAction(string) : (boolean)`: Attempts to begin an "Action." May fail and return `false`. Only one Action may be active at a time
+* `TryBeginAction(string) : (number?)`: Attempts to begin an "Action." Returns the ID of the action. May fail and return `nil`. Only one Action may be active at a time
 * `Undo() : ()`: Reverses the state of the scene to how it was before the last Action began
 
 ## `Mesh`

@@ -28,7 +28,7 @@ void History::ClearHistory()
         Log::WarningF("`History::ClearHistory` called while Action {} was ongoing", m_CurrentAction->Name);
 }
 
-bool History::TryBeginAction(const std::string& Name)
+size_t History::TryBeginAction(const std::string& Name)
 {
     if (!IsRecordingEnabled)
         RAISE_RT("History recording is not enabled!");
@@ -36,17 +36,20 @@ bool History::TryBeginAction(const std::string& Name)
     if (m_CurrentAction.has_value())
     {
         Log::WarningF("`History::TryBeginAction` failed for {} because {} is still in progress", Name, m_CurrentAction->Name);
-        return false;
+        return 0;
     }
 
     m_CurrentAction.emplace(Name);
-    return true;
+    return m_CurrentWaypoint + 1;
 }
 
-void History::FinishCurrentAction()
+void History::FinishAction(size_t Id)
 {
+    if (m_CurrentWaypoint + 1 != Id)
+        RAISE_RTF("Action ID {} was not valid in `History::FinishAction`", Id);
+
     if (!m_CurrentAction.has_value())
-        RAISE_RT("Called `History::FinishCurrentAction` but no action was started!");
+        RAISE_RT("Called `History::FinishAction` but no action was started!");
 
     if (m_CurrentWaypoint != m_ActionHistory.size() - 1)
     {
@@ -60,10 +63,13 @@ void History::FinishCurrentAction()
     m_CurrentWaypoint++;
 }
 
-void History::DiscardCurrentAction()
+void History::DiscardAction(size_t Id)
 {
+    if (m_CurrentWaypoint + 1 != Id)
+        RAISE_RTF("Action ID {} was not valid in `History::DiscardAction`", Id);
+
     if (!m_CurrentAction.has_value())
-        RAISE_RT("Called `History::DiscardCurrentAction` but no action was started!");
+        RAISE_RT("Called `History::DiscardAction` but no action was started!");
 
     m_CurrentAction.reset();
 }

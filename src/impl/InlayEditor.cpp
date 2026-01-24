@@ -2346,7 +2346,7 @@ static void renderExplorer()
 		ImGui::SeparatorText("Insert");
 
 		History* history = History::Get();
-		bool began = history->TryBeginAction("InsertObject");
+		size_t began = history->TryBeginAction("InsertObject");
 		bool inserted = false;
 
 		const std::string_view Creatables[] = {
@@ -2401,16 +2401,16 @@ static void renderExplorer()
 				ExplorerShouldSeekToCurrentSelection = true;
 				ObjectInsertionTarget.Clear();
 
-				if (began)
+				if (began != 0)
 				{
-					history->FinishCurrentAction();
+					history->FinishAction(began);
 					inserted = true;
 				}
 			}
 		}
 
-		if (began && !inserted)
-			history->DiscardCurrentAction();
+		if (began != 0 && !inserted)
+			history->DiscardAction(began);
 
 		InsertObjectButtonHoveredOver = nullptr;
 
@@ -2449,7 +2449,6 @@ static void renderExplorer()
 
 		ImGui::EndPopup();
 	}
-
 
 	ImGui::End();
 }
@@ -2948,6 +2947,8 @@ static void renderProperties()
 
 			}
 
+			static size_t BeganPropertyEditingAction = 0;
+
 			static std::string PrevEditPropName;
 			static Reflection::GenericValue PrevEditNewValue;
 			const char* const EditPropertyTempName = "EditProperty_TEMP";
@@ -2963,7 +2964,7 @@ static void renderProperties()
 				if (history->CanUndo() && history->GetActionHistory().back().Name == EditPropertyTempName)
 					history->Undo();
 
-				bool began = history->TryBeginAction(EditPropertyTempName);
+				BeganPropertyEditingAction = history->TryBeginAction(EditPropertyTempName);
 
 				try
 				{
@@ -2975,8 +2976,8 @@ static void renderProperties()
 					setErrorMessage(Err.what());
 				}
 
-				if (began)
-					history->FinishCurrentAction();
+				if (BeganPropertyEditingAction != 0)
+					history->FinishAction(BeganPropertyEditingAction);
 			}
 
 			if (deactivatedAfterEdit || ImGui::IsItemDeactivatedAfterEdit())
@@ -2985,7 +2986,7 @@ static void renderProperties()
 				{
 					history->Undo();
 
-					if (history->TryBeginAction("EditProperty"))
+					if (size_t began = history->TryBeginAction("EditProperty"); began != 0)
 					{
 						try
 						{
@@ -3000,7 +3001,7 @@ static void renderProperties()
 						if (history->GetCurrentAction()->Events.size() == 0)
 							setErrorMessage("Failed to record any History events for that property change to finish, Undo behaviour will be wrong");
 
-						history->FinishCurrentAction();
+						history->FinishAction(began);
 					}
 					else
 					{

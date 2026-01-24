@@ -146,13 +146,13 @@
           "CanRedo": "() -> (Boolean)",
           "CanUndo": "() -> (Boolean)",
           "ClearHistory": "() -> ()",
-          "DiscardCurrentAction": "() -> ()",
+          "DiscardAction": "(Integer) -> ()",
           "EnableRecording": "() -> ()",
-          "FinishCurrentAction": "() -> ()",
+          "FinishAction": "(Integer) -> ()",
           "GetActionData": "(Integer) -> (Map)",
           "GetCurrentActionData": "() -> (Map?)",
           "Redo": "() -> ()",
-          "TryBeginAction": "(String) -> (Boolean)",
+          "TryBeginAction": "(String) -> (Integer?)",
           "Undo": "() -> ()"
         },
         "Properties": {
