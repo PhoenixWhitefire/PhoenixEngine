@@ -23,7 +23,9 @@ Intended to be compatible with both Windows and Linux/Ubuntu.
 * Minimum CMake version of `3.28` (arbitrary, the one I use on Linux. I use `3.30` on Windows)
 * Compiler which supports C++ Standard `20` and C Standard `17` (G++/MSVC are intentionally supported)
 * For Windows, Visual Studio 2022 platform toolset `v143`
-* For Linux, ensure you have the `libwayland-dev` and `libxkbcommon-dev` packages installed
+* For Linux, ensure you have the `libwayland-dev`, `libxkbcommon-dev`, and `xorg-dev` packages installed
+    - For more information, visit [Dependencies for Wayland and X11](https://www.glfw.org/docs/latest/compile.html#compile_deps_wayland)
+
 
 1. `git clone https://github.com/PhoenixWhitefire/PhoenixEngine --recursive --depth=1`, or just use the `Code <>` button
     * `--recursive` clones submodules as well (check the `Vendor` directory)
