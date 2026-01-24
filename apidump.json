@@ -218,7 +218,6 @@
           "AngularVelocity": "Vector3",
           "CollisionFidelity": "Integer",
           "Density": "Double",
-          "Elasticity": "Double",
           "Friction": "Double",
           "GravityFactor": "Double",
           "LinearVelocity": "Vector3",

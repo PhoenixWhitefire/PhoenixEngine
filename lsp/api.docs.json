@@ -872,9 +872,6 @@
   "@luhx/globaltype/RigidBody.Density": {
     "documentation": "Its density (`Mass = Density * Size`)"
   },
-  "@luhx/globaltype/RigidBody.Elasticity": {
-    "documentation": "Elasticity"
-  },
   "@luhx/globaltype/RigidBody.Friction": {
     "documentation": "Fraction of Velocity it should lose per second while in contact with another object while `PhysicsDynamics` is `true`"
   },

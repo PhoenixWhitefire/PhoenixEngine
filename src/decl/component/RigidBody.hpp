@@ -19,7 +19,6 @@ struct EcRigidBody : public Component<EntityComponent::RigidBody>
 	float Density = 1.f;
 	float Friction = 50.f;
     float Restitution = 0.2f;
-    float Elasticity = 1.2f;
     float GravityFactor = 1.f;
 
     struct

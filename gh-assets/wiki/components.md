@@ -258,7 +258,6 @@ No members defined
 * `AngularVelocity: vector`: Its rotational velocity
 * `CollisionFidelity: number`: The fidelity at which collisions are detected. See the `CollisionFidelity` enum
 * `Density: number`: Its density (`Mass = Density * Size`)
-* `Elasticity: number`: Elasticity
 * `Friction: number`: Fraction of Velocity it should lose per second while in contact with another object while `PhysicsDynamics` is `true`
 * `GravityFactor: number`: Influence of the force of gravity
 * `LinearVelocity: vector`: Its velocity

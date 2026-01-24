@@ -206,19 +206,17 @@ static void resolveCollisions(Physics::World& World, float DeltaTime, Physics* p
 		EcRigidBody* brb = collision.B->FindComponent<EcRigidBody>();
 		EcTransform* at = collision.A->FindComponent<EcTransform>();
 
+		glm::vec3 vRel = arb->LinearVelocity - (brb->PhysicsDynamics ? brb->LinearVelocity : glm::vec3(0.f));
+		float vn = glm::dot(vRel, points.Normal);
+
 		if (arb->PhysicsDynamics && !brb->PhysicsDynamics)
 		{
-			glm::vec3 v = arb->LinearVelocity;
-			float vn = glm::dot(v, points.Normal);
-
 			if (vn > 0.f)
 			{
 			    float j = -(1.f + arb->Restitution) * vn;
 			    j /= (1.f / arb->Mass);
 
 			    arb->LinearVelocity += (j / arb->Mass) * points.Normal;
-
-				//glm::vec3 impulse = j * points.Normal;
 
 				if (arb->PhysicsRotations)
 				{
@@ -229,13 +227,12 @@ static void resolveCollisions(Physics::World& World, float DeltaTime, Physics* p
 
 			// position correction to prevent sinking
 			if (points.PenetrationDepth < 0.1f)
-				at->Transform[3] += glm::vec4(points.Normal * -points.PenetrationDepth * 1.1f, 0.f);;
+				at->Transform[3] += glm::vec4(points.Normal * -points.PenetrationDepth * 2.f, 0.f);;
 
 			arb->NetForce *= glm::vec3(1.f) - points.Normal;
 			arb->NetForce -= arb->LinearVelocity * (glm::vec3(1.f) - points.Normal) * arb->Friction;
-			arb->LinearVelocity += points.Normal * arb->LinearVelocity * arb->Elasticity;
 
-			arb->AngularVelocity -= arb->AngularVelocity * arb->Friction * DeltaTime;
+			arb->AngularVelocity -= arb->AngularVelocity * arb->Friction * 0.1f * DeltaTime;
 
 			at->SetWorldTransform(at->Transform);
 			arb->RecomputeAabb();
@@ -285,7 +282,7 @@ void Physics::Step(Physics::World& World, double DeltaTime)
 	TIME_SCOPE_AS("Physics");
 	ZoneScopedC(tracy::Color::AntiqueWhite);
 
-	static double MaximumDeltaTime = 1.0 / 480.0;
+	static double MaximumDeltaTime = 1.0 / 240.0;
 
 	if (DeltaTime <= MaximumDeltaTime)
 		step(World, DeltaTime, this);
@@ -293,7 +290,7 @@ void Physics::Step(Physics::World& World, double DeltaTime)
 	{
 		double timeRemaining = DeltaTime;
 
-		static size_t MaxSubsteps = 32;
+		static size_t MaxSubsteps = 16;
 		size_t numSubsteps = 0;
 
 		while (timeRemaining > MaximumDeltaTime && numSubsteps < MaxSubsteps)

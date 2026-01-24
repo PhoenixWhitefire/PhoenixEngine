@@ -181,6 +181,8 @@ Result Gjk::FindIntersection(const EcRigidBody* A, const EcRigidBody* B)
 
     glm::vec3 direction = -s.P;
 
+	size_t numIterations = 0;
+
     while (true)
     {
         s = Support(A, B, direction);
@@ -197,6 +199,16 @@ Result Gjk::FindIntersection(const EcRigidBody* A, const EcRigidBody* B)
 		{
 			result.HasIntersection = true;
             return result; // intersection
+		}
+
+		numIterations++;
+
+		if (numIterations > 1e5)
+		{
+			result.HasIntersection = false;
+			Log::Warning("Too many iterations!", "Physics Gjk::FindIntersection");
+
+			return result;
 		}
     }
 }

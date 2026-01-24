@@ -390,7 +390,6 @@
           "AngularVelocity": "Its rotational velocity",
           "CollisionFidelity": "The fidelity at which collisions are detected. See the `CollisionFidelity` enum",
           "Density": "Its density (`Mass = Density * Size`)",
-          "Elasticity": "Elasticity",
           "Friction": "Fraction of Velocity it should lose per second while in contact with another object while `PhysicsDynamics` is `true`",
           "GravityFactor": "Influence of the force of gravity",
           "LinearVelocity": "Its velocity",

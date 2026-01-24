@@ -236,7 +236,6 @@ declare extern type RigidBody with
   AngularVelocity: vector
   CollisionFidelity: number
   Density: number
-  Elasticity: number
   Friction: number
   GravityFactor: number
   LinearVelocity: vector
