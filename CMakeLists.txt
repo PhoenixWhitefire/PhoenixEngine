@@ -94,10 +94,18 @@ add_compile_definitions($<$<CONFIG:RelTracy>:TRACY_FIBERS>)
 if (MSVC)
 	include(cmake/cmake-msvc.txt)
 	target_compile_definitions(PhoenixEngine PRIVATE PHX_TARGET_COMPILER="MSVC")
-else() # assume G++
+
+	message(STATUS "Recognized compiler as MSVC")
+
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 	include(cmake/cmake-gnug.txt)
 	target_compile_definitions(PhoenixEngine PRIVATE PHX_TARGET_COMPILER="G++")
 	target_link_libraries(PhoenixEngine PRIVATE X11) # audible sigh when i checked `imgui_impl_glfw.cpp` line 1266
+
+	message(STATUS "Recognized compiler as G++")
+
+else()
+	message(WARNING "Unsupported compiler - expected either MSVC or GNU (G++)")
 endif()
 
 # remove unnecessary projects

@@ -220,6 +220,8 @@ void EcDataModel::Bind()
         lua_State* script = loadModule(path, Object);
         if (script)
             Modules.push_back(script);
+        else
+            CanLoadModules = false;
     }
     else if (std::filesystem::is_directory(path))
     {
@@ -230,6 +232,8 @@ void EcDataModel::Bind()
                 lua_State* script = loadModule(entry.path().string(), Object);
                 if (script)
                     Modules.push_back(script);
+                else
+                    CanLoadModules = false;
             }
         }
     }

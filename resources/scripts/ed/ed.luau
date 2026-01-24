@@ -8,10 +8,10 @@ local Engine: Engine = game:GetService("Engine") :: any
 local FALLBACK_IMAGE = "@etextures/editor-icons/fallback.png"
 local LOGO_IMAGE = "@etextures/logo.png"
 
-local PluginManager = require("../ed/PluginManager.luau")
-local HistoryView = require("../ed/HistoryView.luau")
-local CoreTools = require("../ed/CoreTools.luau")
-local Types = require("../ed/Types.luau")
+local PluginManager = require("./PluginManager.luau")
+local HistoryView = require("./HistoryView.luau")
+local CoreTools = require("./CoreTools.luau")
+local Types = require("./Types.luau")
 type Stage = Types.Stage
 
 local CurrentStage: Stage = "None"
@@ -413,8 +413,9 @@ local function createNewProject_()
 	fs.mkdir("@projres/textures")
 	fs.mkdir("@projres/textures/materials")
 
+	fs.mkdir("@projres/scripts/modules")
 	fs.mkdir("@projres/scripts/live")
-	fs.write("@projres/scripts/live/Main.luau", "print(\"Hello, World!\")")
+	fs.write("@projres/scripts/live/Main.luau", "print(\"Hello, World!\")\n")
 
 	for _, v in { "error", "worldUber", "worldUberTriProjected", "worldUberSkinned", "skybox", "boxframe", "particle", "postprocessing" } do
 		if fs.isfile(`@editres/shaders/{v}.shp`) then
@@ -437,7 +438,7 @@ local function createNewProject_()
 
 	fs.copy("@editres/textures/materials", "@projres/textures/materials")
 	fs.copy("@editres/textures/Sky1", "@projres/textures/Sky1")
-	fs.copy("@editres/scripts/.luaurc", "@projres/scripts/.luaurc")
+	fs.copy("@editres/scripts/.config.luau", "@projres/scripts/.config.luau")
 	fs.copy(LOGO_IMAGE, "@proj/icon.png")
 
 	local dm = GameObject.new("DataModel")
@@ -1108,7 +1109,7 @@ local ViewportRight = 0
 local ViewportLeft = 0
 local ViewportTop = 0
 local ViewportBottom = 0
-local Log: { { Closed: boolean, Message: { { Content: string, ExtraTags: string, CanInteract: boolean, Tooltip: string } }, Type: number, Time: string, Source: string? } } = {}
+local Log: { { Closed: boolean, Message: { { Content: string, Newline: boolean, ExtraTags: string, CanInteract: boolean, Tooltip: string } }, Type: number, Time: string, Source: string? } } = {}
 local NewLogMessage = false
 
 local function canInteractWithLogSubMessage(ExtraTags: string): (boolean, string)
@@ -1158,12 +1159,16 @@ local function interactWithLogSubMessage(ExtraTags: string)
 end
 
 Engine.OnMessageLogged:Connect(function(Type: number, Message: string, ExtraTags: string)
+	local createsNewline = false
+
 	if Message == " &&" then
 		Message = ""
+		createsNewline = true
 	end
 
 	if #Message >= 2 and Message:sub(-#("&&")) == "&&" then
 		Message = Message:sub(1, #Message - 2)
+		createsNewline = true
 	end
 
 	local canInteract, tooltip = canInteractWithLogSubMessage(ExtraTags)
@@ -1175,7 +1180,8 @@ Engine.OnMessageLogged:Connect(function(Type: number, Message: string, ExtraTags
 				Content = Message,
 				ExtraTags = ExtraTags,
 				CanInteract = canInteract,
-				Tooltip = tooltip
+				Tooltip = tooltip,
+				Newline = createsNewline
 			})
 
 			return
@@ -1191,7 +1197,7 @@ Engine.OnMessageLogged:Connect(function(Type: number, Message: string, ExtraTags
 
 	table.insert(Log, {
 		Closed = false,
-		Message = { { Content = Message, ExtraTags = ExtraTags, CanInteract = canInteract, Tooltip = tooltip } },
+		Message = { { Content = Message, ExtraTags = ExtraTags, CanInteract = canInteract, Tooltip = tooltip, Newline = createsNewline } },
 		Type = Type,
 		Time = os.date("%H:%M:%S"),
 		Source = source
@@ -1355,7 +1361,10 @@ local function renderViewport(DeltaTime: number)
 					continue
 				end
 
-				imgui.sameline()
+				local prev = message.Message[smi - 1]
+				if not prev or prev.Newline then
+					imgui.sameline()
+				end
 
 				local context = subMessage.ExtraTags
 				if #context == 0 then

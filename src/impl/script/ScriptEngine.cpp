@@ -1149,17 +1149,26 @@ static void requireConfigInit(luarequire_Configuration* config)
 	config->to_child = [](lua_State*, void* ctx, const char* name)
 		{
 			std::filesystem::path* curpath = (std::filesystem::path*)ctx;
-			if (!std::filesystem::exists(*curpath / name))
-				return NAVIGATE_NOT_FOUND;
+			std::filesystem::path child = *curpath / name;
 
-			*curpath /= name;
+			if (!std::filesystem::exists(child))
+			{
+				std::string directModule = child.string() + ".luau";
+
+				if (!std::filesystem::exists(directModule))
+					return NAVIGATE_NOT_FOUND;
+				else
+					child = directModule;
+			}
+
+			*curpath = child;
 			return NAVIGATE_SUCCESS;
 		};
 	config->is_module_present = [](lua_State*, void* ctx)
 		{
 			std::filesystem::path* curpath = (std::filesystem::path*)ctx;
 
-			if (std::filesystem::is_regular_file(*curpath))
+			if (std::filesystem::is_regular_file(*curpath) || std::filesystem::is_regular_file(*curpath / "init.luau"))
 				return true;
 			else
 				return false;
@@ -1196,9 +1205,12 @@ static void requireConfigInit(luarequire_Configuration* config)
 	config->get_config = [](lua_State*, void* ctx, char* buffer, size_t bufferSize, size_t* outSize)
 		{
 			std::filesystem::path* curpath = (std::filesystem::path*)ctx;
+			const std::string& configPath = (std::filesystem::is_regular_file(*curpath / ".config.luau")
+										? *curpath / ".config.luau"
+										: *curpath / ".luaurc").string();
 
 			bool success = true;
-			std::string contents = FileRW::ReadFile(((*curpath) / ".luaurc").string(), &success);
+			std::string contents = FileRW::ReadFile(configPath, &success);
 			*outSize = contents.size();
 
 			if (bufferSize < contents.size())
@@ -1211,6 +1223,12 @@ static void requireConfigInit(luarequire_Configuration* config)
 	config->load = [](lua_State* L, void* ctx, const char* /* path */, const char* chname, const char* ldname)
 		{
 			std::filesystem::path* curpath = (std::filesystem::path*)ctx;
+			std::string modulePath;
+
+			if (std::filesystem::is_regular_file(*curpath))
+				modulePath = curpath->string();
+			else
+				modulePath = (*curpath / "init.luau").string();
 
 			// from `Luau/CLI/src/ReplRequirer.cpp` 13/08/2025
 
@@ -1225,7 +1243,7 @@ static void requireConfigInit(luarequire_Configuration* config)
 			ScriptEngine::L::DumpStacktrace(L, &((ScriptEngine::L::StateUserdata*)ML->userdata)->SpawnTrace);
 
 			bool readSuccess = true;
-			std::string contents = FileRW::ReadFile(curpath->string(), &readSuccess);
+			std::string contents = FileRW::ReadFile(modulePath, &readSuccess);
 
 			if (!readSuccess)
 			{
@@ -1255,7 +1273,7 @@ static void requireConfigInit(luarequire_Configuration* config)
 			
 			// add ML result to L stack
     		lua_xmove(ML, L, 1);
-    		if (lua_isstring(L, -1))
+			if (lua_status(ML) != LUA_OK)
     		    lua_error(L);
 
     		// remove ML thread from L stack
