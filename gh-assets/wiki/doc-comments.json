@@ -192,7 +192,7 @@
             "ParameterNames": "ToolName"
           },
           "OpenTextDocument": {
-            "Description": "Opens a text file",
+            "Description": "Opens a text file. This requires Developer Mode to be enabled to have any effect",
             "ParameterNames": [
               "Path",
               "Line"
@@ -396,7 +396,7 @@
           "LinearVelocity": "Its velocity",
           "PhysicsCollisions": "Whether other physics objects can collide with it",
           "PhysicsDynamics": "Whether the Physics engine should apply forces to it",
-          "PhysicsRotations": "Whether the Physics engine will apply angular impulses to rotate the object on collisions",
+          "PhysicsRotations": "Whether the Physics engine will apply angular impulses to rotate the object on collisions. Prefer to keep this at `false` as the simulation is not very precise",
           "Restitution": "Restitution"
         }
       },

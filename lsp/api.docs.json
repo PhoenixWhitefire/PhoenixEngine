@@ -525,7 +525,7 @@
     "documentation": "Fires whenever a Log Message is created"
   },
   "@luhx/globaltype/Engine.OpenTextDocument": {
-    "documentation": "Opens a text file"
+    "documentation": "Opens a text file. This requires Developer Mode to be enabled to have any effect"
   },
   "@luhx/globaltype/Engine.ResetViewport": {
     "documentation": "Resets the Engine's understanding of where the viewport is on screen back to the default (occupying the entire window)"
@@ -891,7 +891,7 @@
     "documentation": "Whether the Physics engine should apply forces to it"
   },
   "@luhx/globaltype/RigidBody.PhysicsRotations": {
-    "documentation": "Whether the Physics engine will apply angular impulses to rotate the object on collisions"
+    "documentation": "Whether the Physics engine will apply angular impulses to rotate the object on collisions. Prefer to keep this at `false` as the simulation is not very precise"
   },
   "@luhx/globaltype/RigidBody.Restitution": {
     "documentation": "Restitution"

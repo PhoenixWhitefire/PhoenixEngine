@@ -124,12 +124,12 @@ Mesh PrimitiveMeshes::Sphere()
 			    sin(phi) * sin(theta)
 			));
 
-			vertices.emplace_back(
-			    pos * 0.5f,
-			    pos,
-			    White,
-				glm::vec2(u, 1.f - v)
-			);
+			vertices.push_back(Vertex{
+			    .Position = pos * 0.5f,
+			    .Normal = pos,
+			    .Paint = White,
+				.TextureUV = glm::vec2(u, 1.f - v)
+			});
 		}
 	}
 

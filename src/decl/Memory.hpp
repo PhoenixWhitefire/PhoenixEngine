@@ -46,11 +46,10 @@ namespace Memory
 
 	void FrameFinish();
 
-	inline std::array<size_t, static_cast<size_t>(Category::__count)> Counters{ 0 };
-	inline std::array<size_t, static_cast<size_t>(Category::__count)> Activity{ 0 };
+	inline std::array<size_t, static_cast<size_t>(Category::__count)> Counters;
+	inline std::array<size_t, static_cast<size_t>(Category::__count)> Activity;
 
-	static inline const char* CategoryNames[] =
-	{
+	static inline const char* CategoryNames[] = {
 		"Default",
 		"GameObject",
 		"Reflection",
@@ -81,7 +80,7 @@ namespace Memory
 			assert(bytes < (size_t)UINT32_MAX);
 			return (T*)Alloc((uint32_t)bytes, C);
 		}
-		void deallocate(T* p, size_t n)
+		void deallocate(T* p, size_t)
 		{
 			Free((void*)p);
 		}

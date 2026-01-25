@@ -128,7 +128,7 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * `GetExplorerSelections() : ({ GameObject })`: Returns what is currently selected in the Explorer
 * `GetToolNames() : { string }`: Returns a list of valid Engine tools
 * `IsToolEnabled(string) : (boolean)`: Returns whether the given tool is enabled
-* `OpenTextDocument(string, number?) : ()`: Opens a text file
+* `OpenTextDocument(string, number?) : ()`: Opens a text file. This requires Developer Mode to be enabled to have any effect
 * `ResetViewport() : ()`: Resets the Engine's understanding of where the viewport is on screen back to the default (occupying the entire window)
 * `RunInVM(string, string, string?) : (boolean, string?)`: Runs the given code in the specified VM. Returns `false` and an error message upon failure or if the code does not finish executing (yield or break)
 * `SetCurrentVM(string) : ()`: Binds the given VM as the "current" one. This causes all Scripts which load afterward to use the specified VM, it does *not* change the VM of any Scripts loaded beforehand
@@ -264,7 +264,7 @@ No members defined
 * `LinearVelocity: vector`: Its velocity
 * `PhysicsCollisions: boolean`: Whether other physics objects can collide with it
 * `PhysicsDynamics: boolean`: Whether the Physics engine should apply forces to it
-* `PhysicsRotations: boolean`: Whether the Physics engine will apply angular impulses to rotate the object on collisions
+* `PhysicsRotations: boolean`: Whether the Physics engine will apply angular impulses to rotate the object on collisions. Prefer to keep this at `false` as the simulation is not very precise
 * `Restitution: number`: Restitution
 
 ## `Sound`

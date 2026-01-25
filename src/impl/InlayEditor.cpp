@@ -51,7 +51,7 @@ struct TextEditorTab
 	bool WasPreviouslyVisible = false;
 };
 static std::vector<TextEditorTab> s_TextEditors;
-static auto s_TextEditorLang = TextEditor::LanguageDefinition::Lua();
+static auto s_EditorLuauLang = TextEditor::LanguageDefinition::Lua();
 
 static nlohmann::json DefaultNewMaterial = 
 {
@@ -321,12 +321,12 @@ void InlayEditor::Initialize(Renderer* renderer)
 	tempwp->SetParent(tempdm);
 	GameObject::s_DataModel = tempdm->ObjectId;
 
-	s_TextEditorLang.mTokenRegexStrings[5].first = "[a-zA-Z_][a-zA-Z0-9_\\.]*"; // allow identifiers to have `.` so that `task.defer` etc can match as one single token
-	s_TextEditorLang.mTokenRegexStrings.push_back({ "\\`(?:\\.|[^\\`{]|\\{[^}]*\\})*\\`", TextEditor::PaletteIndex::String }); // string interpolation
+	s_EditorLuauLang.mTokenRegexStrings[5].first = "[a-zA-Z_][a-zA-Z0-9_\\.]*"; // allow identifiers to have `.` so that `task.defer` etc can match as one single token
+	s_EditorLuauLang.mTokenRegexStrings.push_back({ "\\`(?:\\.|[^\\`{]|\\{[^}]*\\})*\\`", TextEditor::PaletteIndex::String }); // string interpolation
 
-	s_TextEditorLang.mKeywords.emplace("continue");
-	s_TextEditorLang.mIdentifiers.clear();
-	s_TextEditorLang.mName = "Luau";
+	s_EditorLuauLang.mKeywords.emplace("continue");
+	s_EditorLuauLang.mIdentifiers.clear();
+	s_EditorLuauLang.mName = "Luau";
 
 	const nlohmann::json& scriptEnvDocs = DocumentationJson.value("ScriptEnv", nlohmann::json::object());
 
@@ -347,7 +347,7 @@ void InlayEditor::Initialize(Renderer* renderer)
 												: datatypesDocs.find(name) != datatypesDocs.end() ? datatypesDocs[name]
 												: "Standard Luau";
 
-		s_TextEditorLang.mIdentifiers[name] = TextEditor::Identifier{
+		s_EditorLuauLang.mIdentifiers[name] = TextEditor::Identifier{
 			.mDeclaration = std::format("{}: {}\n{}", name, findLuauTypeFromDocumentation(mainDescriptionData, luaL_typename(L, -1)), getDescriptionAsString(mainDescriptionData, 64))
 		};
 
@@ -380,7 +380,7 @@ void InlayEditor::Initialize(Renderer* renderer)
 
 				std::string fullName = std::format("{}.{}", name, innerName);
 
-				s_TextEditorLang.mIdentifiers[fullName] = TextEditor::Identifier{
+				s_EditorLuauLang.mIdentifiers[fullName] = TextEditor::Identifier{
 					.mDeclaration = std::format("{}: {}\n{}", fullName, findLuauTypeFromDocumentation(descriptionData, luaL_typename(L, -1)), getDescriptionAsString(descriptionData, 64))
 				};
 
@@ -448,7 +448,6 @@ static bool textEditorAskSaveFileAs(
 			Contents.size(), Contents.substr(0, std::min((size_t)50ull, Contents.size())),
 			Contents.size() > (size_t)50ull ? "\n... (truncated)" : ""
 		);
-		Log::InfoF("`textEditorAskSaveFileAs` prompting: {}", message);
 
 		int choice = tinyfd_messageBox(
 			"Save File?",
@@ -524,8 +523,6 @@ static void textEditorSaveFile(TextEditorTab& Tab, bool AskSave = true)
 	{
 		std::string realSaveLoc = FileRW::MakePathCwdRelative(textEditorFile);
 
-		Log::InfoF("Saving file to {}", realSaveLoc);
-		
 		std::string error;
 		if (!FileRW::WriteFile(realSaveLoc, contents, &error))
 		{
@@ -541,15 +538,24 @@ static void textEditorSaveFile(TextEditorTab& Tab, bool AskSave = true)
 static std::string textFileContentsFromPath(const std::string& Path, std::ifstream*& Stream)
 {
 	if (Path.find("!InlineDocument:") != std::string::npos)
-	{
 		return { Path.begin() + strlen("!InlineDocument:"), Path.end() };
+
+	if (std::filesystem::is_directory(FileRW::MakePathCwdRelative(Path)))
+	{
+		std::string error = std::format(
+			"File '{}' couldn't be read, it is a directory",
+			Path
+		);
+
+		setErrorMessage(error);
+		return error;
 	}
 
 	Stream = new std::ifstream(FileRW::MakePathCwdRelative(Path));
 
 	std::string scriptContents = "";
 
-	if (!(*Stream) || !Stream->is_open())
+	if (!(*Stream) || !Stream->is_open() || Stream->bad() || Stream->fail() || Stream->tellg() > 100e6)
 	{
 		std::string error = std::format(
 			"File '{}' couldn't be read",
@@ -579,7 +585,16 @@ static TextEditorTab& invokeTextEditor(const std::string& File)
 	s_TextEditors.emplace_back();
 
 	TextEditorTab& tab = s_TextEditors.back();
-	tab.Editor.SetLanguageDefinition(s_TextEditorLang);
+
+	if (File.find(".luau") != std::string::npos)
+		tab.Editor.SetLanguageDefinition(s_EditorLuauLang);
+
+	else if (File.find(".vert") != std::string::npos || File.find(".frag") != std::string::npos || File.find(".geom") != std::string::npos || File.find(".glsl") != std::string::npos)
+		tab.Editor.SetLanguageDefinition(TextEditor::LanguageDefinition::GLSL());
+
+	else if (File.find(".cpp") != std::string::npos || File.find(".hpp") != std::string::npos)
+		tab.Editor.SetLanguageDefinition(TextEditor::LanguageDefinition::CPlusPlus());
+
 	tab.FilePath = File;
 	tab.Editor.SetText(textFileContentsFromPath(File, tab.FileStream));
 
@@ -598,7 +613,7 @@ static void renderTextEditors()
 			ImGui::SetNextWindowFocus();
 
 		bool open = true;
-		if (!ImGui::Begin(std::format("{}###TextEditor_{}", tab.FilePath, index).c_str(), &open))
+		if (!ImGui::Begin(std::format("{}###TextEditor_{}", std::filesystem::path(tab.FilePath).filename().string(), index).c_str(), &open))
 		{
 			ImGui::End();
 
@@ -1665,7 +1680,7 @@ static void recursiveIterateTree(GameObject* current)
 			ImGui::SameLine();
 
 			ImVec2 defLabelSize = ImGui::CalcTextSize("+", NULL, true);
-			ImVec2 defaultSize{ defLabelSize.x + style.FramePadding.x * 2.f, defLabelSize.y + style.FramePadding.y * 2.f };
+			ImVec2 defaultSize = { defLabelSize.x + style.FramePadding.x * 2.f, defLabelSize.y + style.FramePadding.y * 2.f };
 
 			// make it the same size on both axes
 			ImGui::Button("+", ImVec2(defaultSize.y, defaultSize.y));
@@ -2308,19 +2323,16 @@ static void renderExplorer()
 		return;
 
 	bool open = true;
-
-	if (!ImGui::Begin("Explorer", &open))
-	{
-		ImGui::End();
-
-		if (!open)
-			EngineJsonConfig["Tool_Explorer"] = false;
-
-		return;
-	}
+	bool render = ImGui::Begin("Explorer", &open);
 
 	if (!open)
 		EngineJsonConfig["Tool_Explorer"] = false;
+
+	if (!render)
+	{
+		ImGui::End();
+		return;
+	}
 
 	if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
 		ImGui::OpenPopup(1979); // the mimic!!;
@@ -2375,13 +2387,13 @@ static void renderExplorer()
 		bool inserted = false;
 
 		const std::string_view Creatables[] = {
+			"Empty Object",
 			"Animation",
 			"Camera",
 			"DirectionalLight",
 			"PointLight",
 			"SpotLight",
-			"Mesh (Physics)",
-			"Mesh (Static)",
+			"Mesh",
 			"Model",
 			"ParticleEmitter",
 			"Sound",
@@ -2395,30 +2407,23 @@ static void renderExplorer()
 
 			bool clicked = ImGui::MenuItem(name.data());
 
-			if (ImGui::IsItemHovered())
-			{
-				if (name == "Mesh (Physics)")
-					tooltip = "An Object with a Mesh and RigidBody component, allowing it to interact with Physics";
-
-				else if (name == "Mesh (Static)")
-					tooltip = "An Object with a Mesh, but no RigidBody component. It cannot interact with Physics";
-				else
-					tooltip = getDescriptionForComponent(s_ComponentNameToType.at(name));
-			}
-
 			if (tooltip.size() > 1)
 				ImGui::SetItemTooltip("%s", tooltip.c_str());
 
 			if (clicked)
 			{
-				std::string_view createName = name;
-				if (name == "Mesh (Physics)" || name == "Mesh (Static)")
-					createName = "Mesh";
+				GameObject* newObject = nullptr;
 
-				GameObject* newObject = GameObject::Create(createName);
+				if (name == "Empty Object")
+					newObject = GameObject::Create();
 
-				if (name == "Mesh (Physics)")
-					newObject->AddComponent(EntityComponent::RigidBody);
+				else
+				{
+					newObject = GameObject::Create(name);
+
+					if (name == "Mesh")
+						newObject->AddComponent(EntityComponent::RigidBody);
+				}
 
 				newObject->SetParent(ObjectInsertionTarget);
 				Selections = { newObject };
@@ -2491,6 +2496,340 @@ static void renderExplorer()
 	ImGui::End();
 }
 
+struct FilesystemNode // Either a file or a directory
+{
+	std::map<std::string, FilesystemNode> DirectoryContents;
+	std::filesystem::path Path;
+	std::string Name;
+	bool IsDirectory = false;
+};
+
+static double FilesViewLastRefreshed = 0.0;
+static FilesystemNode FilesViewerRoot = { .Name = "scripts", .IsDirectory = true };
+static std::string FilesViewerRootPath = "scripts";
+static std::filesystem::path RenameTarget;
+static std::string RenameNewValue;
+static bool RenameFocusFirstFrame = true;
+
+static void refreshFilesystemNode(FilesystemNode& Node)
+{
+	ZoneScoped;
+
+	Node.DirectoryContents.clear();
+
+	for (const auto& it : std::filesystem::directory_iterator(Node.Path))
+	{
+		if (std::filesystem::is_regular_file(it.path()))
+		{
+			if (it.path().filename().string() == Node.Name)
+				continue; // not sure
+
+			Node.DirectoryContents[it.path().filename().string()] = { .Path = FileRW::MakePathCwdRelative(it.path()), .Name = it.path().filename().string(), .IsDirectory = false };
+		}
+		else if (std::filesystem::is_directory(it.path()))
+		{
+			FilesystemNode newNode = {
+				.Path = it.path(),
+				.Name = it.path().filename().string(),
+				.IsDirectory = true,
+			};
+
+			refreshFilesystemNode(newNode);
+
+			Node.DirectoryContents[it.path().filename().string()] = newNode;
+		}
+	}
+}
+
+static void createFileOrDirectory(FilesystemNode Parent, bool Directory)
+{
+	int index = 1;
+
+	while (true)
+	{
+		std::filesystem::path path = Parent.Path / std::vformat(Directory ? "Folder{}" : "Script{}.luau", std::make_format_args(index));
+		if (!(Directory ? std::filesystem::is_directory(path) : std::filesystem::is_regular_file(path)))
+		{
+			std::string errorMessage;
+			bool success = true;
+
+			if (Directory)
+			{
+				std::error_code ec;
+				std::filesystem::create_directory(path, ec);
+
+				if (ec)
+				{
+					success = false;
+					errorMessage = ec.message();
+				}
+			}
+			else
+			{
+				success = FileRW::WriteFile(path.string(), "print(\"Hello, World!\")\n", &errorMessage);
+			}
+
+			if (!success)
+				setErrorMessage(std::format("Failed to create '{}': {}", path.string(), errorMessage));
+
+			else
+			{
+				RenameTarget = path;
+				RenameNewValue = path.filename().string();
+				RenameNewValue.reserve(32);
+				RenameFocusFirstFrame = true;
+			}
+
+			break;
+		}
+		else
+			index++;
+
+		if (index > 99)
+		{
+			setErrorMessage("Failed to create");
+			break;
+		}
+	}
+
+	FilesViewLastRefreshed = 0.0;
+}
+
+static void recursiveRenderFilesystemNode(FilesystemNode& Node)
+{
+	TextureManager* texManager = TextureManager::Get();
+	static uint32_t ScriptIconResource = texManager->LoadTextureFromPath("./resources/textures/editor-icons/Script.png", false, false);
+	static uint32_t FolderOpenIconResource = texManager->LoadTextureFromPath("./resources/textures/editor-icons/Folder_Open.png", false, false);
+	static uint32_t FolderClosedIconResource = texManager->LoadTextureFromPath("./resources/textures/editor-icons/Folder_Closed.png", false, false);
+
+	ImGui::PushID(Node.Path.string().c_str());
+
+	const ImGuiStyle& style = ImGui::GetStyle();
+
+	static std::filesystem::path ContextMenuTarget;
+
+	ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow
+			| ImGuiTreeNodeFlags_AllowOverlap
+			| ImGuiTreeNodeFlags_SpanAvailWidth
+			| ImGuiTreeNodeFlags_DrawLinesFull
+			| ImGuiTreeNodeFlags_FramePadding;
+	flags |= !Node.IsDirectory ? ImGuiTreeNodeFlags_Leaf : 0;
+
+	if (ContextMenuTarget == Node.Path || RenameTarget == Node.Path)
+		flags |= ImGuiTreeNodeFlags_Selected;
+
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5.f, 4.f));
+
+	std::string displayedNodeName = RenameTarget != Node.Path ? Node.Name : " ";
+
+	bool open = ImGui::TreeNodeEx((const void*)nullptr, flags, "   %s", displayedNodeName.c_str());
+	bool openScript = ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered();
+	bool hovered = ImGui::IsItemHovered();
+
+	ImGui::PopStyleVar();
+
+	ImGui::SameLine();
+	ImVec2 afterNodePos = ImGui::GetCursorPos();
+
+	if (RenameTarget == Node.Path)
+	{
+		openScript = false;
+		hovered = false;
+
+		ImGui::SetCursorPosX(afterNodePos.x - ImGui::CalcTextSize("  ").x);
+
+		if (RenameFocusFirstFrame)
+			ImGui::SetKeyboardFocusHere();
+
+		ImGui::InputText("##", &RenameNewValue);
+
+		if (!ImGui::IsItemActive() && !RenameFocusFirstFrame)
+		{
+			std::filesystem::path renamed = Node.Path.parent_path() / RenameNewValue;
+
+			if (renamed.filename() != Node.Path.filename() && std::filesystem::is_regular_file(renamed))
+				setErrorMessage("A file already exists in the folder with that name");
+
+			else
+			{
+				std::error_code ec;
+				std::filesystem::rename(Node.Path, renamed, ec);
+
+				if (ec)
+					setErrorMessage(ec.message());
+			}
+
+			RenameTarget.clear();
+			FilesViewLastRefreshed = 0.0;
+		}
+
+		RenameFocusFirstFrame = false;
+		ImGui::SetCursorPos(afterNodePos);
+	}
+
+	ImGui::SetCursorPosX(ImGui::GetCursorPosX() - ImGui::CalcTextSize((" " + displayedNodeName).c_str()).x - style.IndentSpacing);
+	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 2.f); // not the faintest idea
+
+	ImGui::Image(
+		texManager->GetTextureResource(Node.IsDirectory ? (open ? FolderOpenIconResource : FolderClosedIconResource) : ScriptIconResource).GpuId,
+		ImVec2(16.f, 16.f)
+	);
+	openScript = openScript || (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered());
+	hovered = hovered || ImGui::IsItemHovered();
+
+	if (hovered && ImGui::IsMouseDown(ImGuiMouseButton_Right))
+		ImGui::OpenPopup("FileContextMenu");
+
+	if (ImGui::BeginPopup("FileContextMenu"))
+	{
+		ContextMenuTarget = Node.Path;
+
+		if (ImGui::MenuItem("Rename"))
+		{
+			RenameTarget = Node.Path;
+			RenameNewValue = Node.Name;
+			RenameNewValue.reserve(32);
+			RenameFocusFirstFrame = true;
+		}
+
+		if (Node.IsDirectory)
+		{
+			if (ImGui::MenuItem("Focus"))
+			{
+				FilesViewerRootPath = Node.Path.string();
+				FilesViewLastRefreshed = 0.0;
+			}
+		}
+
+		if (ImGui::MenuItem("Delete"))
+		{
+			std::error_code ec;
+			std::filesystem::remove_all(Node.Path, ec);
+
+			if (ec)
+				setErrorMessage(ec.message());
+
+			FilesViewLastRefreshed = 0.0;
+		}
+
+		ImGui::EndPopup();
+	}
+
+	if (Node.Path == ContextMenuTarget && !ImGui::IsPopupOpen("FileContextMenu"))
+		ContextMenuTarget.clear();
+
+	if (!Node.IsDirectory && openScript && ImGui::IsWindowFocused())
+		invokeTextEditor(Node.Path);
+
+	ImGui::SetCursorPos(afterNodePos);
+
+	if (Node.IsDirectory && hovered)
+	{
+		if (ImGui::Button("+", ImVec2(16.f, 16.f)) || (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left)))
+		{
+			ImGui::OpenPopup("CreateFileOrDirectory");
+			ContextMenuTarget = Node.Path;
+		}
+	}
+	else
+		ImGui::Dummy({ 16.f, 16.f });
+
+	bool wasCreatorOpen = false;
+
+	if (ImGui::BeginPopup("CreateFileOrDirectory"))
+	{
+		wasCreatorOpen = true;
+
+		if (ImGui::MenuItem("File"))
+		{
+			createFileOrDirectory(Node, false);
+			ContextMenuTarget.clear();
+		}
+		if (ImGui::MenuItem("Folder"))
+		{
+			createFileOrDirectory(Node, true);
+			ContextMenuTarget.clear();
+		}
+
+		ImGui::EndPopup();
+	}
+
+	if (wasCreatorOpen && !ImGui::IsPopupOpen("CreateFileOrDirectory"))
+		ContextMenuTarget.clear();
+
+	if (open)
+	{
+		if (Node.IsDirectory)
+		{
+			for (auto& it : Node.DirectoryContents)
+				recursiveRenderFilesystemNode(it.second);
+		}
+
+		ImGui::TreePop();
+	}
+
+	ImGui::PopID();
+}
+
+static void renderFilesViewer()
+{
+	if (EngineJsonConfig["Tool_ScriptExplorer"] == false)
+		return;
+
+	std::string name = FilesViewerRoot.Name;
+	name[0] = toupper(name[0]);
+
+	bool open = true;
+	bool render = ImGui::Begin(std::format("{}###FilesViewer", name).c_str(), &open);
+
+	if (!open)
+		EngineJsonConfig["Tool_ScriptExplorer"] = false;
+
+	if (!render)
+	{
+		ImGui::End();
+		return;
+	}
+
+	if (GetRunningTime() - FilesViewLastRefreshed > 1.f)
+	{
+		FilesViewerRoot.Path = std::filesystem::path(FileRW::MakePathCwdRelative(FilesViewerRootPath));
+		FilesViewerRoot.Name = FilesViewerRoot.Path.filename().string();
+		refreshFilesystemNode(FilesViewerRoot);
+		FilesViewLastRefreshed = GetRunningTime();
+	}
+
+	for (auto& nodeIt : FilesViewerRoot.DirectoryContents)
+		recursiveRenderFilesystemNode(nodeIt.second);
+
+	if (ImGui::IsMouseClicked(ImGuiMouseButton_Right) && ImGui::IsWindowHovered() && !ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemHovered())
+		ImGui::OpenPopup("ViewerContextMenu");
+
+	if (ImGui::BeginPopup("ViewerContextMenu"))
+	{
+		if (ImGui::BeginMenu("New"))
+		{
+			if (ImGui::MenuItem("File"))
+				createFileOrDirectory(FilesViewerRoot, false);
+
+			if (ImGui::MenuItem("Folder"))
+				createFileOrDirectory(FilesViewerRoot, true);
+
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::MenuItem("Focus parent"))
+		{
+			FilesViewerRootPath = std::filesystem::absolute(FileRW::MakePathCwdRelative(FilesViewerRootPath)).parent_path().string();
+			FilesViewLastRefreshed = 0.0;
+		}
+
+		ImGui::EndPopup();
+	}
+
+	ImGui::End();
+}
+
 static std::vector<ObjectHandle> PrevEditSelections;
 
 static void renderProperties()
@@ -2501,15 +2840,16 @@ static void renderProperties()
 		return;
 
 	bool open = true;
+	bool render = ImGui::Begin("Properties", &open, ImGuiWindowFlags_HorizontalScrollbar);
 
-	if (!ImGui::Begin("Properties", &open, ImGuiWindowFlags_HorizontalScrollbar))
+	if (!open)
+		EngineJsonConfig["Tool_Properties"] = false;
+
+	if (!render)
 	{
 		ImGui::End();
 		return;
 	}
-
-	if (!open)
-		EngineJsonConfig["Tool_Properties"] = false;
 
 	if (Selections.size() > 0)
 	{
@@ -3091,6 +3431,7 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 	renderShaderPipelinesEditor();
 	renderMaterialEditor();
 	renderExplorer();
+	renderFilesViewer();
 	renderProperties();
 	renderDocumentationViewer();
 }
