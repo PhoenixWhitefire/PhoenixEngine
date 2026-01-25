@@ -1,10 +1,13 @@
 // RigidBody.cpp, 22/01/2026
 
 #include <tracy/Tracy.hpp>
+#include <nljson.hpp>
 #include <cfloat>
 
 #include "component/RigidBody.hpp"
 #include "component/Workspace.hpp"
+#include "asset/MeshProvider.hpp"
+#include "FileRW.hpp"
 
 static float roundNToGrid(float x)
 {
@@ -101,16 +104,16 @@ public:
 			),
 
 			REFLECTION_PROPERTY(
-				"CollisionFidelity",
+				"CollisionType",
 				Integer,
 				[](void* p)
 				-> Reflection::GenericValue
 				{
-					return static_cast<uint32_t>(static_cast<EcRigidBody*>(p)->CollisionMode);
+					return static_cast<uint32_t>(static_cast<EcRigidBody*>(p)->CollisionType);
 				},
 				[](void* p, const Reflection::GenericValue& gv)
 				{
-					static_cast<EcRigidBody*>(p)->CollisionMode = static_cast<EnCollisionMode>(gv.AsInteger());
+					static_cast<EcRigidBody*>(p)->CollisionType = static_cast<EnCollisionType>(gv.AsInteger());
 				}
 			),
 
@@ -136,6 +139,17 @@ public:
 					crb->Mass = dens * crb->CollisionAabb.Size.x * crb->CollisionAabb.Size.y * crb->CollisionAabb.Size.z;
 				}
 			),
+
+			REFLECTION_PROPERTY(
+				"HullsFile",
+				String,
+				REFLECTION_PROPERTY_GET_SIMPLE(EcRigidBody, HullsFile),
+				[](void* p, const Reflection::GenericValue& gv)
+				{
+					EcRigidBody* crb = static_cast<EcRigidBody*>(p);
+					crb->SetHullsFile(gv.AsString());
+				}
+			)
 		};
 
 		return props;
@@ -184,4 +198,56 @@ void EcRigidBody::RecomputeAabb()
 	updateSpatialHash(this);
 
 	this->Mass = Density * CollisionAabb.Size.x * CollisionAabb.Size.y * CollisionAabb.Size.z;
+}
+
+static void loadHullsFile(EcRigidBody* rb, const nlohmann::json& data)
+{
+	MeshProvider* meshProv = MeshProvider::Get();
+
+	for (size_t index = 0; index < data["Hulls"].size(); index++)
+		rb->HullMeshIds.push_back(meshProv->LoadFromPath((std::string)data["Hulls"][index]));
+}
+
+void EcRigidBody::SetHullsFile(const std::string& NewFile)
+{
+	if (HullsFile == NewFile)
+		return;
+
+	HullsFile = NewFile;
+	HullMeshIds.clear();
+
+	if (HullsFile.empty())
+		return;
+
+	bool readSuccess = true;
+	const std::string& hullsContent = FileRW::ReadFile(NewFile, &readSuccess);
+
+	if (!readSuccess)
+	{
+		Log::ErrorF("Failed to read Hulls File '{}' for {}: {}", HullsFile, Object->GetFullName(), hullsContent);
+		return;
+	}
+
+	nlohmann::json hullsData;
+
+	try
+	{
+		hullsData = nlohmann::json::parse(hullsContent);
+	}
+	catch (const nlohmann::json::parse_error& err)
+	{
+		Log::ErrorF("Failed to parse Hulls File '{}' for {}: {}", HullsFile, Object->GetFullName(), err.what());
+		return;
+	}
+
+	try
+	{
+		loadHullsFile(this, hullsData);
+	}
+	catch (const nlohmann::json::type_error& err)
+	{
+		Log::ErrorF("Error while loading Hulls File '{}' for {}: {}", HullsFile, Object->GetFullName(), err.what());
+		HullMeshIds.clear();
+		return;
+	}
 }

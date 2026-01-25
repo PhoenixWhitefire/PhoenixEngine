@@ -8,4 +8,5 @@ namespace PrimitiveMeshes
 {
 	Mesh Cube();
 	Mesh Quad();
+	Mesh Sphere();
 }

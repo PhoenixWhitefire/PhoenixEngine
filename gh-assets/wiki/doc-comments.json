@@ -388,10 +388,11 @@
         "Description": "Something rigid that participates in the Physics simulation",
         "Properties": {
           "AngularVelocity": "Its rotational velocity",
-          "CollisionFidelity": "The fidelity at which collisions are detected. See the `CollisionFidelity` enum",
+          "CollisionType": "Determines how collisions are detected. See the `CollisionType` enum",
           "Density": "Its density (`Mass = Density * Size`)",
           "Friction": "Fraction of Velocity it should lose per second while in contact with another object while `PhysicsDynamics` is `true`",
           "GravityFactor": "Influence of the force of gravity",
+          "HullsFile": "The file containing a set of convex hull meshes to load. Used for when `.CollisionType` is `Hulls`",
           "LinearVelocity": "Its velocity",
           "PhysicsCollisions": "Whether other physics objects can collide with it",
           "PhysicsDynamics": "Whether the Physics engine should apply forces to it",
@@ -765,13 +766,15 @@
       "Enum": {
         "Description": "Contains enumerations",
         "Members": {
-          "CollisionFidelity": {
+          "CollisionType": {
             "Description": [
-              "The different modes for `Mesh.CollisionFidelity`",
-              "`Aabb`: An axis-aligned bounding box",
-              "`AabbStaticSize`: An AABB which keeps the same size as the Object"
+              "The different modes for `RigidBody.CollisionType`",
+              "`Cube`: A cube collision model",
+              "`Sphere`: A sphere collision model",
+              "`Hulls`: Load a set of convex hulls from `RigidBody.HullsFile`",
+              "`MeshComponent`: Use the mesh of the `Mesh` component attached to the same object as the `RigidBody`. Usually a bad idea unless the mesh is convex"
             ],
-            "Type": "{ Aabb: number, AabbStaticSize: number }"
+            "Type": "{ Cube: number, Sphere: number, Hulls: number, MeshComponent: number }"
           },
           "CursorMode": {
             "Description": "The appearance and behaviour of the mouse cursor",

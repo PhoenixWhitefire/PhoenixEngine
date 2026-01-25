@@ -234,10 +234,11 @@ declare extern type PointLight with
 end
 declare extern type RigidBody with
   AngularVelocity: vector
-  CollisionFidelity: number
+  CollisionType: number
   Density: number
   Friction: number
   GravityFactor: number
+  HullsFile: string
   LinearVelocity: vector
   PhysicsCollisions: boolean
   PhysicsDynamics: boolean
@@ -308,7 +309,7 @@ type Creatables = {
 	Physics: Physics,
 }
 declare Enum: {
-  CollisionFidelity: { Aabb: number, AabbStaticSize: number },
+  CollisionType: { Cube: number, Sphere: number, Hulls: number, MeshComponent: number },
   CursorMode: { Normal: number, Hidden: number, Disabled: number, Unavailable: number, Captured: number },
   FaceCulling: { None: number, Front: number, Back: number },
   Key: { [string]: number },

@@ -256,10 +256,11 @@ No members defined
 
 ### Properties:
 * `AngularVelocity: vector`: Its rotational velocity
-* `CollisionFidelity: number`: The fidelity at which collisions are detected. See the `CollisionFidelity` enum
+* `CollisionType: number`: Determines how collisions are detected. See the `CollisionType` enum
 * `Density: number`: Its density (`Mass = Density * Size`)
 * `Friction: number`: Fraction of Velocity it should lose per second while in contact with another object while `PhysicsDynamics` is `true`
 * `GravityFactor: number`: Influence of the force of gravity
+* `HullsFile: string`: The file containing a set of convex hull meshes to load. Used for when `.CollisionType` is `Hulls`
 * `LinearVelocity: vector`: Its velocity
 * `PhysicsCollisions: boolean`: Whether other physics objects can collide with it
 * `PhysicsDynamics: boolean`: Whether the Physics engine should apply forces to it

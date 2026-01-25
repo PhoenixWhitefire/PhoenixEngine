@@ -150,10 +150,12 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 
 ### `Enum`
 * Contains enumerations
-#### `Enum.CollisionFidelity: { Aabb: number, AabbStaticSize: number }`
-* The different modes for `Mesh.CollisionFidelity`
-* `Aabb`: An axis-aligned bounding box
-* `AabbStaticSize`: An AABB which keeps the same size as the Object
+#### `Enum.CollisionType: { Cube: number, Sphere: number, Hulls: number, MeshComponent: number }`
+* The different modes for `RigidBody.CollisionType`
+* `Cube`: A cube collision model
+* `Sphere`: A sphere collision model
+* `Hulls`: Load a set of convex hulls from `RigidBody.HullsFile`
+* `MeshComponent`: Use the mesh of the `Mesh` component attached to the same object as the `RigidBody`. Usually a bad idea unless the mesh is convex
 #### `Enum.CursorMode: { Normal: number, Hidden: number, Disabled: number, Unavailable: number, Captured: number }`
 * The appearance and behaviour of the mouse cursor
 #### `Enum.FaceCulling: { None: number, Front: number, Back: number }`

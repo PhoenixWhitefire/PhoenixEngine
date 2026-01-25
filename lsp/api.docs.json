@@ -8,8 +8,8 @@
   "@luhx/global/Enum": {
     "documentation": "* Contains enumerations"
   },
-  "@luhx/global/Enum.CollisionFidelity": {
-    "documentation": "* The different modes for `Mesh.CollisionFidelity`\n* `Aabb`: An axis-aligned bounding box\n* `AabbStaticSize`: An AABB which keeps the same size as the Object"
+  "@luhx/global/Enum.CollisionType": {
+    "documentation": "* The different modes for `RigidBody.CollisionType`\n* `Cube`: A cube collision model\n* `Sphere`: A sphere collision model\n* `Hulls`: Load a set of convex hulls from `RigidBody.HullsFile`\n* `MeshComponent`: Use the mesh of the `Mesh` component attached to the same object as the `RigidBody`. Usually a bad idea unless the mesh is convex"
   },
   "@luhx/global/Enum.CursorMode": {
     "documentation": "* The appearance and behaviour of the mouse cursor"
@@ -866,8 +866,8 @@
   "@luhx/globaltype/RigidBody.AngularVelocity": {
     "documentation": "Its rotational velocity"
   },
-  "@luhx/globaltype/RigidBody.CollisionFidelity": {
-    "documentation": "The fidelity at which collisions are detected. See the `CollisionFidelity` enum"
+  "@luhx/globaltype/RigidBody.CollisionType": {
+    "documentation": "Determines how collisions are detected. See the `CollisionType` enum"
   },
   "@luhx/globaltype/RigidBody.Density": {
     "documentation": "Its density (`Mass = Density * Size`)"
@@ -877,6 +877,9 @@
   },
   "@luhx/globaltype/RigidBody.GravityFactor": {
     "documentation": "Influence of the force of gravity"
+  },
+  "@luhx/globaltype/RigidBody.HullsFile": {
+    "documentation": "The file containing a set of convex hull meshes to load. Used for when `.CollisionType` is `Hulls`"
   },
   "@luhx/globaltype/RigidBody.LinearVelocity": {
     "documentation": "Its velocity"

@@ -5,11 +5,18 @@
 #include "datatype/GameObject.hpp"
 #include "component/Transform.hpp"
 
-enum class EnCollisionMode : uint8_t { Cube, MeshComponent };
+enum class EnCollisionType : uint8_t
+{
+    Cube,          // Cube
+    Sphere,        // Sphere
+    Hulls,         // Hulls file
+    MeshComponent  // Use the mesh from the attached `Mesh` component directly (usually a bad idea)
+};
 
 struct EcRigidBody : public Component<EntityComponent::RigidBody>
 {
     void RecomputeAabb();
+    void SetHullsFile(const std::string&);
 
     glm::vec3 LinearVelocity;
     glm::vec3 AngularVelocity;
@@ -26,16 +33,20 @@ struct EcRigidBody : public Component<EntityComponent::RigidBody>
 		glm::vec3 Position;
 		glm::vec3 Size = { 1.f, 1.f, 1.f };
 	} CollisionAabb;
-	EnCollisionMode CollisionMode = EnCollisionMode::Cube;
 
     std::vector<glm::vec3> SpatialHashPoints;
 	ObjectRef PrevWorkspace;
     ObjectRef Object;
     EcTransform* CurTransform; // Only used during the Physics phase
 
+    std::string HullsFile;
+    std::vector<uint32_t> HullMeshIds;
+
+    EnCollisionType CollisionType = EnCollisionType::Cube;
+
     bool PhysicsDynamics = false;
 	bool PhysicsCollisions = true;
-    bool PhysicsRotations = true;
+    bool PhysicsRotations = false;
 
     bool Valid = true;
 };

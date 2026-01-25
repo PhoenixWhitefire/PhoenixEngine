@@ -216,10 +216,11 @@
       "RigidBody": {
         "Properties": {
           "AngularVelocity": "Vector3",
-          "CollisionFidelity": "Integer",
+          "CollisionType": "Integer",
           "Density": "Double",
           "Friction": "Double",
           "GravityFactor": "Double",
+          "HullsFile": "String",
           "LinearVelocity": "Vector3",
           "PhysicsCollisions": "Boolean",
           "PhysicsDynamics": "Boolean",
@@ -338,7 +339,7 @@
     },
     "Libraries": {
       "Enum": {
-        "CollisionFidelity": "table",
+        "CollisionType": "table",
         "CursorMode": "table",
         "FaceCulling": "table",
         "Key": "table",

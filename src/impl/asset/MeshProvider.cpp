@@ -455,8 +455,9 @@ void MeshProvider::Initialize(bool InitIsHeadless)
 
 	this->IsHeadless = InitIsHeadless;
 
-	this->Assign(PrimitiveMeshes::Cube(), "!Cube", true);
+	this->Assign(PrimitiveMeshes::Cube(), "!Cube", true); // Cube expected to be at index 1
 	this->Assign(PrimitiveMeshes::Quad(), "!Quad", true);
+	this->Assign(PrimitiveMeshes::Sphere(), "!Sphere", true);
 
 	s_Instance = this;
 }
@@ -926,6 +927,7 @@ static void finishAndUploadMesh(Mesh& mesh, MeshProvider::GpuMesh& gpuMesh, bool
 
 	gpuMesh.NumIndices = static_cast<uint32_t>(mesh.Indices.size());
 
+	/*
 	if (!mesh.MeshDataPreserved && mesh.Bones.size() == 0)
 	{
 		mesh.Vertices.clear();
@@ -935,6 +937,11 @@ static void finishAndUploadMesh(Mesh& mesh, MeshProvider::GpuMesh& gpuMesh, bool
 	}
 	else
 		mesh.MeshDataPreserved = true; // preserve for CPU skinning
+	*/
+
+	mesh.MeshDataPreserved = true;
+	mesh.Vertices.shrink_to_fit();
+	mesh.Indices.shrink_to_fit();
 }
 
 uint32_t MeshProvider::Assign(Mesh mesh, const std::string& InternalName, bool UploadToGpu)

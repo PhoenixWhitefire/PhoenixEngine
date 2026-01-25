@@ -1352,12 +1352,18 @@ static void openEnum(lua_State* L)
 	lua_newtable(L);
 
 	lua_pushinteger(L, 0);
-	lua_setfield(L, -2, "Aabb");
+	lua_setfield(L, -2, "Cube");
 
 	lua_pushinteger(L, 1);
-	lua_setfield(L, -2, "AabbStaticSize");
+	lua_setfield(L, -2, "Sphere");
 
-	lua_setfield(L, -2, "CollisionFidelity");
+	lua_pushinteger(L, 2);
+	lua_setfield(L, -2, "Hulls");
+
+	lua_pushinteger(L, 3);
+	lua_setfield(L, -2, "MeshComponent");
+
+	lua_setfield(L, -2, "CollisionType");
 
 	lua_newtable(L);
 

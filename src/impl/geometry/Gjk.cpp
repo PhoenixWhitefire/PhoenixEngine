@@ -7,6 +7,8 @@
 #include <cfloat>
 
 #include "geometry/Gjk.hpp"
+#include "component/Mesh.hpp"
+#include "asset/MeshProvider.hpp"
 
 static const glm::vec3 CubePoints[] = {
     glm::vec3(-0.5f, -0.5f, -0.5f),
@@ -20,27 +22,97 @@ static const glm::vec3 CubePoints[] = {
     glm::vec3(-0.5f,  0.5f,  0.5f),
 };
 
-static glm::vec3 findFurthestPoint(const EcRigidBody* Rb, glm::vec3 Direction)
+static glm::vec3 findFurthestPoint_Mesh(const EcRigidBody* Rb, glm::vec3 Direction, const Mesh& mesh, float* maxDistance, glm::vec3 maxPoint)
 {
-    glm::vec3 maxPoint;
-    float maxDistance = -FLT_MAX;
+	assert(mesh.MeshDataPreserved);
 
 	EcTransform* ct = Rb->CurTransform;
 	assert(ct);
 
-    for (const glm::vec3& v : CubePoints)
-    {
-		glm::vec3 vworld = glm::vec3(ct->Transform * glm::vec4(v * ct->Size, 1.f));
+	for (uint32_t ind : mesh.Indices)
+	{
+		const Vertex& v = mesh.Vertices[ind];
+
+		glm::vec3 vworld = glm::vec3(ct->Transform * glm::vec4(v.Position * ct->Size, 1.f));
         float distance = glm::dot(vworld, Direction);
 
-        if (distance > maxDistance)
+        if (distance > *maxDistance)
         {
-            maxDistance = distance;
+            *maxDistance = distance;
             maxPoint = vworld;
         }
     }
 
     return maxPoint;
+}
+
+static glm::vec3 findFurthestPoint_MeshComponent(const EcRigidBody* Rb, glm::vec3 Direction)
+{
+	EcMesh* cm = Rb->Object->FindComponent<EcMesh>();
+
+	uint32_t meshId = cm ? cm->RenderMeshId : 0;
+	const Mesh& mesh = MeshProvider::Get()->GetMeshResource(meshId);
+
+	float maxDistance = -FLT_MAX;
+	return findFurthestPoint_Mesh(Rb, Direction, mesh, &maxDistance, glm::vec3(0.f));
+}
+
+static glm::vec3 findFurthestPoint_Cube(const EcRigidBody* Rb, glm::vec3 Direction)
+{
+	glm::mat3 rotation = glm::mat3(Rb->CurTransform->Transform);
+
+	glm::vec3 localDir = glm::transpose(rotation) * Direction;
+	glm::vec3 result;
+
+	glm::vec3 halfSize = Rb->CurTransform->Size / 2.f;
+
+	result.x = (localDir.x > 0) ? halfSize.x : -halfSize.x;
+	result.y = (localDir.y > 0) ? halfSize.y : -halfSize.y;
+	result.z = (localDir.z > 0) ? halfSize.z : -halfSize.z;
+
+	return rotation * result + glm::vec3(Rb->CurTransform->Transform[3]);
+}
+
+static glm::vec3 findFurthestPoint_Sphere(const EcRigidBody* Rb, glm::vec3 Direction)
+{
+	glm::vec3 center = glm::vec3(Rb->CurTransform->Transform[3]);
+
+	if (glm::length(Direction) < 0.0001f)
+		return center;
+	return center + glm::normalize(Direction) * (Rb->CurTransform->Size.x / 2.f);
+}
+
+static glm::vec3 findFurthestPoint_Hulls(const EcRigidBody* Rb, glm::vec3 Direction)
+{
+	MeshProvider* meshProv = MeshProvider::Get();
+	float maxDistance = -FLT_MAX;
+	glm::vec3 maxPoint;
+
+	for (uint32_t meshId : Rb->HullMeshIds)
+	{
+		const Mesh& mesh = meshProv->GetMeshResource(meshId);
+		maxPoint = findFurthestPoint_Mesh(Rb, Direction, mesh, &maxDistance, maxPoint);
+	}
+
+	return maxPoint;
+}
+
+static glm::vec3 findFurthestPoint(const EcRigidBody* Rb, glm::vec3 Direction)
+{
+	switch (Rb->CollisionType)
+	{
+	case EnCollisionType::Sphere:
+		return findFurthestPoint_Sphere(Rb, Direction);
+
+	case EnCollisionType::Hulls:
+		return findFurthestPoint_Hulls(Rb, Direction);
+
+	case EnCollisionType::MeshComponent:
+		return  findFurthestPoint_MeshComponent(Rb, Direction);
+
+	case EnCollisionType::Cube: default:
+		return findFurthestPoint_Cube(Rb, Direction);
+	}
 }
 
 using namespace Gjk;

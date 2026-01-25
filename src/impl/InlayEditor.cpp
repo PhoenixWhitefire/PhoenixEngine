@@ -1240,6 +1240,7 @@ static ObjectHandle ObjectInsertionTarget = nullptr;
 static bool IsPickingObject = false;
 static std::vector<ObjectHandle> PickerTargets;
 static std::string PickerTargetPropName;
+static bool FocusRenameSelection = false;
 
 enum class ContextMenuAction : uint8_t
 {
@@ -1247,8 +1248,7 @@ enum class ContextMenuAction : uint8_t
 	Delete,
 	SaveToFile,
 	LoadFromFile,
-	EditScript,
-	ReloadScript,
+	Rename,
 
 	__sectionSeparator
 };
@@ -1261,7 +1261,7 @@ static const char* ContextMenuActionStrings[] =
 	"Delete",
 	"Save to File",
 	"Insert from File",
-	"Insert service"
+	"Rename"
 };
 
 typedef void(*ContextActionMenuHandlerFunc)(void);
@@ -1283,7 +1283,7 @@ static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] =
 	[]()
 	{
 		for (const ObjectHandle& sel : Selections)
-			sel->Destroy();
+			sel->SetParent(nullptr); // We can't actually `::Destroy` it because then we won't be able to Undo it back
 
 		Selections.clear();
 	},
@@ -1378,6 +1378,11 @@ static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] =
 		else
 			Log::Info("No file selected to insert object from");
 	},
+
+	[]()
+	{
+		FocusRenameSelection = true;
+	}
 };
 
 static bool isInSelections(const ObjectHandle& obj)
@@ -1392,6 +1397,7 @@ static std::vector<ContextMenuAction> getPossibleActionsForSelections()
 
 	if (Selections.size() > 0)
 	{
+		actions.push_back(ContextMenuAction::Rename);
 		actions.push_back(ContextMenuAction::Duplicate);
 		actions.push_back(ContextMenuAction::Delete);
 		actions.push_back(ContextMenuAction::SaveToFile);
@@ -2319,6 +2325,26 @@ static void renderExplorer()
 	if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
 		ImGui::OpenPopup(1979); // the mimic!!;
 
+	if (ImGui::IsWindowFocused())
+	{
+		if (ImGui::IsKeyDown(ImGuiKey_F2) && Selections.size() > 0)
+			FocusRenameSelection = true;
+
+		if (ImGui::IsKeyDown(ImGuiKey_Delete) && Selections.size() > 0)
+		{
+			History* history = History::Get();
+			size_t id = history->TryBeginAction("Delete by hotkey");
+
+			for (const ObjectHandle& sel : Selections)
+				sel->SetParent(nullptr); // We can't actually `::Destroy` it because then we won't be able to Undo it back
+
+			Selections.clear();
+
+			if (id != 0)
+				history->FinishAction(id);
+		}
+	}
+
 	if (IsPickingObject)
 	{
 		ErrorTooltipMessage = "Pick Object\nRight-click to cancel";
@@ -2425,8 +2451,21 @@ static void renderExplorer()
 			if (action == ContextMenuAction::__sectionSeparator)
 				ImGui::Separator();
 
-			else if (ImGui::MenuItem(ContextMenuActionStrings[(uint8_t)action]))
-				ContextMenuActionHandlers[(uint8_t)action]();
+			else
+			{
+				const char* name = ContextMenuActionStrings[(uint8_t)action];
+
+				if (ImGui::MenuItem(name))
+				{
+					History* history = History::Get();
+					size_t id = action != ContextMenuAction::Rename ? history->TryBeginAction(name) : 0;
+
+					ContextMenuActionHandlers[(uint8_t)action]();
+
+					if (id != 0)
+						history->FinishAction(id);
+				}
+			}
 		}
 
 		if (ImGui::BeginMenu("Insert service"))
@@ -2463,7 +2502,7 @@ static void renderProperties()
 
 	bool open = true;
 
-	if (!ImGui::Begin("Properties", &open))
+	if (!ImGui::Begin("Properties", &open, ImGuiWindowFlags_HorizontalScrollbar))
 	{
 		ImGui::End();
 		return;
@@ -2619,8 +2658,9 @@ static void renderProperties()
 
 		ImGui::Separator();
 
-		for (const PropsIteratorType& propIt : propsOrdered)
+		for (size_t propIndex = 0; propIndex < propsOrdered.size(); propIndex++)
 		{
+			const PropsIteratorType& propIt = propsOrdered[propIndex];
 			const std::pair<const Reflection::PropertyDescriptor*, Reflection::GenericValue> propItem = propIt.second;
 
 			const std::string_view& propName = propIt.first;
@@ -2714,8 +2754,19 @@ static void renderProperties()
 				);
 				CopyStringToBuffer(buf, allocSize, doConflict ? "" : str);
 
+				bool focused = false;
+				if (FocusRenameSelection && propName == "Name")
+				{
+					FocusRenameSelection = false;
+					ImGui::SetKeyboardFocusHere();
+					focused = true;
+				}
+
 				ImGui::SetCursorPosX(halfWidth);
 				ImGui::InputText("##", buf, allocSize);
+
+				if (focused)
+					ImGui::SetScrollX(0.f);
 
 				newVal = buf;
 
@@ -2998,9 +3049,9 @@ static void renderProperties()
 						}
 
 						if (history->GetCurrentAction()->Events.size() == 0)
-							setErrorMessage("Failed to record any History events for that property change to finish, Undo behaviour will be wrong");
-
-						history->FinishAction(began);
+							history->DiscardAction(began); // started typing, but didn't actually change the value in the end
+						else
+							history->FinishAction(began);
 					}
 					else
 					{
@@ -3012,7 +3063,9 @@ static void renderProperties()
 				}
 			}
 
-			ImGui::Separator();
+			if (propIndex != propsOrdered.size() - 1)
+				ImGui::Separator();
+
 			ImGui::PopID();
 		}
 		

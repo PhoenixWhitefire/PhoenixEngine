@@ -563,6 +563,20 @@ void GameObject::SetParent(GameObject* newParent)
 	if (oldParent)
 		oldParent->RemoveChild(this->ObjectId);
 
+	if (History* history = History::Get(); history->IsRecordingEnabled)
+	{
+		if (history->TargetDataModel == OwningDataModel || (newParent && (history->TargetDataModel == newParent->ObjectId || history->TargetDataModel == newParent->OwningDataModel)))
+		{
+			history->RecordEvent({
+				.Target = { .Id = ObjectId, .Type = EntityComponent::None },
+				.TargetObject = this,
+				.Property = &s_Api.Properties.at("Parent"),
+				.PreviousValue = GameObject::s_ToGenericValue(oldParent),
+				.NewValue = GameObject::s_ToGenericValue(newParent)
+			});
+		}
+	}
+
 	if (!newParent)
 	{
 		this->ForEachDescendant([](GameObject* d) -> bool {
@@ -909,19 +923,6 @@ Reflection::GenericValue GameObject::GetPropertyValue(const std::string_view& Pr
 	RAISE_RTF("Invalid property '{}' in GetPropertyValue", PropName);
 }
 
-static bool resultsInParentingToTargetDataModel(const std::string_view& PropName, const Reflection::GenericValue& Value, uint32_t Target)
-{
-	if (PropName == "Parent")
-	{
-		GameObject* newParent = GameObject::FromGenericValue(Value);
-
-		if (newParent && (newParent->ObjectId == Target || newParent->OwningDataModel == Target))
-			return true;
-	}
-
-	return false;
-}
-
 void GameObject::SetPropertyValue(const std::string_view& PropName, const Reflection::GenericValue& Value)
 {
 	ZoneScoped;
@@ -932,8 +933,7 @@ void GameObject::SetPropertyValue(const std::string_view& PropName, const Reflec
 	if (const Reflection::PropertyDescriptor* prop = FindProperty(PropName, &ref))
 	{
 		if (History* history = History::Get(); history->IsRecordingEnabled
-			&& ((OwningDataModel == history->TargetDataModel || ObjectId == history->TargetDataModel)
-				|| resultsInParentingToTargetDataModel(PropName, Value, history->TargetDataModel))
+			&& (OwningDataModel == history->TargetDataModel || ObjectId == history->TargetDataModel)
 		)
 		{
 			Reflection::GenericValue prevValue = prop->Get(ref.Referred());
