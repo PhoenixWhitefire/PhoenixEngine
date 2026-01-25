@@ -2524,7 +2524,7 @@ static void refreshFilesystemNode(FilesystemNode& Node)
 			if (it.path().filename().string() == Node.Name)
 				continue; // not sure
 
-			Node.DirectoryContents[it.path().filename().string()] = { .Path = FileRW::MakePathCwdRelative(it.path()), .Name = it.path().filename().string(), .IsDirectory = false };
+			Node.DirectoryContents[it.path().filename().string()] = { .Path = FileRW::MakePathCwdRelative(it.path().string()), .Name = it.path().filename().string(), .IsDirectory = false };
 		}
 		else if (std::filesystem::is_directory(it.path()))
 		{
@@ -2719,7 +2719,7 @@ static void recursiveRenderFilesystemNode(FilesystemNode& Node)
 		ContextMenuTarget.clear();
 
 	if (!Node.IsDirectory && openScript && ImGui::IsWindowFocused())
-		invokeTextEditor(Node.Path);
+		invokeTextEditor(Node.Path.string());
 
 	ImGui::SetCursorPos(afterNodePos);
 
