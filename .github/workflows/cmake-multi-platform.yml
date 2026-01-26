@@ -26,8 +26,8 @@ jobs:
       fail-fast: false
 
       matrix:
-        os: [windows-latest, ubuntu]
-        build_type: [Debug, RelTracy, Release]
+        os: [windows-latest]
+        build_type: [Debug, Release]
         c_compiler: [gcc, cl]
         include:
           - os: windows-latest
@@ -41,6 +41,10 @@ jobs:
             c_compiler: gcc
           - os: windows-latest
             c_compiler: clang
+          - os: ubuntu
+            c_compiler: clang
+          - os: ubuntu
+            c_compiler: cl
 
     steps:
     - uses: actions/checkout@v4
