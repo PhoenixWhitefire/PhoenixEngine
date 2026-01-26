@@ -44,7 +44,7 @@ namespace Gjk
 	    auto begin() const { return Points.begin(); }
 	    auto end() const { return Points.end() - (4 - Size); }
 
-	    std::array<SupportPoint, 4> Points;
+	    std::array<SupportPoint, 4> Points = {};
 	    int Size;
     };
 

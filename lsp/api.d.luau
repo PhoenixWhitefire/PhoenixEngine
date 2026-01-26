@@ -299,7 +299,6 @@ type Creatables = {
 	Animation: Animation,
 	Model: Model & Transform,
 	Bone: Bone,
-	Example: Example,
 	TreeLink: TreeLink,
 	Engine: Engine,
 	PlayerInput: PlayerInput,

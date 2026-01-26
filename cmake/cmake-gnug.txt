@@ -2,7 +2,7 @@
 
 set(PHX_TRACY_LIB_PATH Vendor/tracy/${PHX_BUILD_TYPE}/TracyClient)
 
-target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:-O2 -g>)
+target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:-O2 -g3>)
 target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Release>:-O2>)
 target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:-O0>)
 target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:-g3>)
@@ -20,15 +20,18 @@ target_compile_options(PhoenixEngine PRIVATE
 	-Wno-shadow -Wstrict-aliasing=3 -Wno-missing-field-initializers
 	-Wno-maybe-uninitialized -Wno-unused-parameter
 	-Wno-sign-compare
+	-Wuninitialized
+	-Wno-format-truncation
 )
 
 target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:-fsanitize=address,undefined>)
 
-target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:-flto>)
+target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:-flto -fsanitize=address,undefined>)
 target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:Release>:-flto>)
 target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:-fsanitize=address,undefined>)
 
 add_compile_options($<$<CONFIG:RelTracy>:-O2>)
+add_compile_options($<$<CONFIG:RelTracy>:-g3>)
 add_compile_options($<$<CONFIG:Release>:-O2>)
 add_compile_options($<$<CONFIG:Debug>:-O0>)
 add_compile_options($<$<CONFIG:Debug>:-g3>)
@@ -38,4 +41,3 @@ add_compile_options(-MP)
 # incremental warning with LTCG
 add_link_options($<$<CONFIG:RelTracy>:-flto>)
 add_link_options($<$<CONFIG:Release>:-flto>)
-

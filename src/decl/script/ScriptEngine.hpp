@@ -16,6 +16,7 @@
 namespace ScriptEngine
 {
 	void Initialize();
+	void Shutdown();
 
 	int CompileAndLoad(lua_State*, const std::string& SourceCode, const std::string& ChunkName);
 	nlohmann::json DumpApiToJson();

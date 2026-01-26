@@ -1239,7 +1239,9 @@ local function renderViewport(DeltaTime: number)
 
 	if CurrentStage == "ProjectEditing" and Project.Workspace then
 		local mouseVec = workspace:ScreenPointToVector(PlayerInput:GetCursorPosition(), 1000)
-		local rayresult = Project.Workspace:Raycast(workspace.SceneCamera.Transform.Position, mouseVec, { SelectionPart })
+		local rayresult = if not PlayerInput.IsMouseSunk
+							then Project.Workspace:Raycast(workspace.SceneCamera.Transform.Position, mouseVec, { SelectionPart })
+							else nil
 
 		if rayresult then
 			SelectionPart.Transform = rayresult.Object.Transform

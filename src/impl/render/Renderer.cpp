@@ -230,7 +230,7 @@ Renderer* Renderer::Get()
 	return s_Instance;
 }
 
-Renderer::~Renderer()
+void Renderer::Shutdown()
 {
 	if (!s_Instance)
 		return; // never initialized
@@ -245,6 +245,12 @@ Renderer::~Renderer()
 	FrameBuffer.Delete();
 
 	Window = nullptr;
+}
+
+Renderer::~Renderer()
+{
+	assert(!s_Instance);
+	assert(!Window);
 }
 
 void Renderer::ChangeResolution(uint32_t Width, uint32_t Height)

@@ -1079,7 +1079,8 @@ void Engine::Shutdown()
 
 	Log::Info("Engine destructing...");
 
-	Log::Save();
+	Log::Info("Shutting down Script Engine...");
+	ScriptEngine::Shutdown();
 
 	Log::Info("Destroying DataModel...");
 	DataModelRef->Destroy();
@@ -1114,7 +1115,7 @@ void Engine::Shutdown()
 		ImGui_ImplOpenGL3_Shutdown();
 		ImGui_ImplGlfw_Shutdown();
 	}
-	
+
 	if (Window)
 		glfwDestroyWindow(Window);
 	glfwTerminate();

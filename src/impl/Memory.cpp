@@ -16,15 +16,47 @@
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
+#include <stdexcept>
 
 #include "Memory.hpp"
 
-struct AllocHeader
+struct alignas(std::max_align_t) AllocHeader
 {
 	uint32_t Size = UINT32_MAX;
 	uint8_t Category = UINT8_MAX;
 	uint8_t Check = 222; // you probably do not know what this in reference to
+	uint8_t Padding[sizeof(std::max_align_t) - 6];
 };
+
+static_assert(sizeof(AllocHeader) % alignof(std::max_align_t) == 0);
+
+#if 0
+
+void* Memory::GetPointerInfo(void* Ptr, uint32_t*, uint8_t*)
+{
+	return Ptr;
+}
+
+void* Memory::Alloc(uint32_t n, Memory::Category)
+{
+	return malloc(n);
+}
+
+void Memory::Free(void* Ptr)
+{
+	free(Ptr);
+}
+
+void* Memory::ReAlloc(void* Ptr, uint32_t N, Memory::Category)
+{
+	return realloc(Ptr, N);
+}
+
+void Memory::FrameFinish()
+{
+}
+
+#else
 
 static std::array<size_t, static_cast<size_t>(Memory::Category::__count)> s_ActivityWip{ 0 };
 
@@ -35,7 +67,8 @@ void* Memory::GetPointerInfo(void* Pointer, uint32_t* Size, uint8_t* Category)
 
 	// in case someone passes in a pointer that wasn't alloc'd by `::Alloc` and doesn't immediately segfault,
 	// hold their hand and tell them they're
-	assert(header->Check == 222);
+	if (header->Check != 222)
+		throw std::runtime_error("Tried `::GetPointerInfo` on an address not allocated by the Memory tracker");
 
 	if (Size)
 		*Size = header->Size;
@@ -50,7 +83,7 @@ void* Memory::Alloc(uint32_t Size, Memory::Category MemCat)
 	assert(Size != 0);
 
 	Size += sizeof(AllocHeader);
-	void* ptr = malloc(Size * 2);
+	void* ptr = malloc(Size);
 
 	if (ptr)
 	{
@@ -66,8 +99,7 @@ void* Memory::Alloc(uint32_t Size, Memory::Category MemCat)
 		Counters[memIndex] += Size;
 		s_ActivityWip[memIndex] += Size;
 
-		AllocHeader header = { .Size = Size, .Category = memIndex };
-		memcpy((void*)((uintptr_t)ptr), &header, sizeof(AllocHeader));
+		*(AllocHeader*)ptr = { .Size = Size, .Category = memIndex };
 
 		return (void*)((uintptr_t)ptr + sizeof(AllocHeader));
 	}
@@ -85,15 +117,20 @@ void* Memory::ReAlloc(void* Pointer, uint32_t Size, Memory::Category MemCat)
 
 	Size += sizeof(AllocHeader);
 
+	uint8_t memIndex = static_cast<uint8_t>(MemCat);
+
 	uint32_t prevSize = UINT32_MAX;
-	Pointer = GetPointerInfo(Pointer, &prevSize);
+	uint8_t prevMemCat = 0;
+	Pointer = GetPointerInfo(Pointer, &prevSize, &prevMemCat);
+
+	if (prevMemCat != memIndex)
+		throw std::runtime_error("Tried to `::ReAlloc` into a different memory category");
 
 	// stupid g++ with stupid "may be used after `void* realloc"
 	// SHUT UP
 	// I KNOW WHAT I'M DOING
 	// TODO HOW TO FIX THAT
 	// 18/05/2025
-	uint8_t memIndex = static_cast<uint8_t>(MemCat);
 		
 #ifdef TRACY_ENABLE
 	if (MemCat != Category::Default)
@@ -102,7 +139,7 @@ void* Memory::ReAlloc(void* Pointer, uint32_t Size, Memory::Category MemCat)
 		TracyFree(Pointer);
 #endif
 
-	void* ptr = realloc(Pointer, Size * 2);
+	void* ptr = realloc(Pointer, Size);
 
 	if (ptr)
 	{
@@ -116,8 +153,7 @@ void* Memory::ReAlloc(void* Pointer, uint32_t Size, Memory::Category MemCat)
 		Counters[memIndex] += Size;
 		s_ActivityWip[memIndex] += prevSize + Size;
 
-		AllocHeader header = { .Size = Size, .Category = memIndex };
-		memcpy((void*)((uintptr_t)ptr), &header, sizeof(AllocHeader));
+		*(AllocHeader*)ptr = { .Size = Size, .Category = memIndex };
 
 		return (void*)((uintptr_t)ptr + sizeof(AllocHeader));
 	}
@@ -155,20 +191,14 @@ void Memory::Free(void* Pointer)
 void Memory::FrameFinish()
 {
 	Activity = s_ActivityWip;
-	s_ActivityWip.fill(0.f);
+	s_ActivityWip.fill(0);
 }
-
-// TODO: causes crash in GLFW init: _glfwInitEgl -> eglQueryString -> ...
 
 void* operator new(size_t size)
 {
 	assert(size < (size_t)UINT32_MAX);
 
-	//void* ptr = Memory::Alloc((uint32_t)size);
-	//if (!ptr)
-	//	throw std::bad_alloc();
-
-	void* ptr = malloc(size);
+	void* ptr = Memory::Alloc((uint32_t)size);
 	if (!ptr)
 		throw std::bad_alloc();
 
@@ -178,14 +208,14 @@ void* operator new(size_t size)
 
 void operator delete(void* ptr) noexcept
 {
-	//Memory::Free(ptr);
 	TracyFree(ptr);
-	free(ptr);
+	Memory::Free(ptr);
 }
 
 void operator delete(void* ptr, size_t) noexcept
 {
-	//Memory::Free(ptr);
 	TracyFree(ptr);
-	free(ptr);
+	Memory::Free(ptr);
 }
+
+#endif

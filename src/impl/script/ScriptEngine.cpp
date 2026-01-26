@@ -55,6 +55,15 @@ void ScriptEngine::Initialize()
 	Luau::assertHandler() = luauAssertHandler;
 }
 
+void ScriptEngine::Shutdown()
+{
+	for (auto& [_, vm] : VMs)
+		L::Close(vm.MainThread);
+
+	CurrentVM.clear();
+	VMs.clear();
+}
+
 const ScriptEngine::LuauVM& ScriptEngine::RegisterNewVM(const std::string& Name)
 {
 	const auto& it = VMs.find(Name);
@@ -1402,12 +1411,10 @@ lua_State* ScriptEngine::L::Create(const std::string& VmName)
 		requireConfigInit,
 		requirePath
 	);
-	
-	lua_getglobal(state, "_G");
+
 	lua_pushinteger(state, 67);
 	lua_pushlightuserdatatagged(state, requirePath, 67);
-	lua_settable(state, -3);
-	lua_pop(state, 1);
+	lua_settable(state, LUA_ENVIRONINDEX);
 
 	luhx_pushgameobject(state, GameObject::GetObjectById(GameObject::s_DataModel));
 	lua_setglobal(state, "game");
@@ -1469,9 +1476,8 @@ lua_State* ScriptEngine::L::Create(const std::string& VmName)
 
 void ScriptEngine::L::Close(lua_State* L)
 {
-	lua_getglobal(L, "_G");
 	lua_pushinteger(L, 67);
-	lua_gettable(L, -2);
+	lua_gettable(L, LUA_ENVIRONINDEX);
 	delete (std::filesystem::path*)lua_tolightuserdatatagged(L, -1, 67);
 	
 	lua_close(L);

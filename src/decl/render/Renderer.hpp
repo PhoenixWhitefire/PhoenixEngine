@@ -14,6 +14,7 @@ class Renderer
 public:
 	Renderer() = default;
 	Renderer(uint32_t Width, uint32_t Height, GLFWwindow* Window);
+	void Shutdown();
 	~Renderer();
 
 	static Renderer* Get();
