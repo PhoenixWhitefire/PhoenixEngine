@@ -174,15 +174,7 @@ static void handleInputs(double deltaTime)
 	
 	if (camera->UseSimpleController)
 	{
-		bool guiUsingMouse = !WasRmbPressed && GuiIO->WantCaptureMouse;
-		if (guiUsingMouse && engine->OverrideDefaultViewport)
-		{
-			ImVec2 viewportSize = engine->GetViewportSize();
-			if (mouseX >= engine->ViewportPosition.x && mouseX <= engine->ViewportPosition.x + viewportSize.x)
-				if (mouseY >= engine->ViewportPosition.y && mouseY <= engine->ViewportPosition.y + viewportSize.y)
-					guiUsingMouse = false;
-		}
-
+		bool guiUsingMouse = !WasRmbPressed && (GuiIO->WantCaptureMouse && !UserInput::ShouldIgnoreUIInputSinking());
 		bool rmbPressed = !guiUsingMouse && UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT);
 
 		glm::mat4 camTrans = camera->GetWorldTransform();

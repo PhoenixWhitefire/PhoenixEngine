@@ -162,7 +162,7 @@ function Controller.getRotationVector(self: Controller) : (number, number)
 	if InputService:IsMouseButtonPressed(Enum.MouseButton.Left) and not InputService.IsMouseSunk then
 		self.isMouseLocked = true -- lock mouse with left-click
 		
-	elseif InputService:IsMouseButtonPressed(Enum.MouseButton.Right) then
+	elseif InputService:IsMouseButtonPressed(Enum.MouseButton.Right) and not InputService.IsMouseSunk then
 		self.isMouseLocked = false -- unlock mouse with right-click
 	end
 	InputService.CursorMode = if self.isMouseLocked then Enum.CursorMode.Disabled else Enum.CursorMode.Normal
@@ -180,4 +180,3 @@ function Controller.getRotationVector(self: Controller) : (number, number)
 end
 
 return Controller
-

@@ -1,4 +1,5 @@
 #include <imgui.h>
+#include <imgui_internal.h>
 
 #include "component/InputService.hpp"
 #include "UserInput.hpp"
@@ -27,7 +28,7 @@ public:
                 Boolean,
                 [](void*) -> Reflection::GenericValue
                 {
-                    return { ImGui::GetIO().WantCaptureKeyboard };
+                    return { UserInput::ShouldIgnoreUIInputSinking() ? false : ImGui::GetIO().WantCaptureKeyboard };
                 },
                 nullptr
             ),
@@ -37,7 +38,7 @@ public:
                 Boolean,
                 [](void*) -> Reflection::GenericValue
                 {
-                    return { ImGui::GetIO().WantCaptureMouse };
+                    return { UserInput::ShouldIgnoreUIInputSinking() ? false : ImGui::GetIO().WantCaptureMouse };
                 },
                 nullptr
             )

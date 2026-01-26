@@ -118,10 +118,14 @@ function CoreTools.Update(Project: Types.Project)
     local camPos = workspace.SceneCamera.Transform.Position
     local cpos = InputService:GetCursorPosition()
 
-    local mouseVector = workspace:ScreenPointToVector(cpos, 1000)
-    local gizmoHit = if InputService:IsMouseButtonPressed(Enum.MouseButton.Left) then workspace:Raycast(camPos, mouseVector, { GizmoContainer }, false) else nil
+    local tryingToInteract = not InputService.IsMouseSunk and InputService:IsMouseButtonPressed(Enum.MouseButton.Left)
 
-    if InputService:IsMouseButtonPressed(Enum.MouseButton.Left) and not IsGizmoDragging and not gizmoHit then
+    local mouseVector = workspace:ScreenPointToVector(cpos, 1000)
+    local gizmoHit = if tryingToInteract
+                        then workspace:Raycast(camPos, mouseVector, { GizmoContainer }, false)
+                        else nil
+
+    if tryingToInteract and not IsGizmoDragging and not gizmoHit then
         local worldHit = Project.Workspace:Raycast(camPos, mouseVector, { if IsSurfaceDragging then target else nil })
 
         if worldHit and (IsSurfaceDragging or worldHit.Object == target) then
@@ -172,7 +176,7 @@ function CoreTools.Update(Project: Types.Project)
     GizmoPrevTargetTransform = target.Transform
     GizmoPrevTargetSize = target.Size
 
-    if gizmoHit and InputService:IsMouseButtonPressed(Enum.MouseButton.Left) then
+    if gizmoHit then
         if not IsGizmoDragging then
             PrevDragMousePos = cpos
             GizmoDragAxis = vector.abs(assert(GizmoPieceToDirection[gizmoHit.Object]))
@@ -187,7 +191,7 @@ function CoreTools.Update(Project: Types.Project)
 
         IsGizmoDragging = true
 
-    elseif not InputService:IsMouseButtonPressed(Enum.MouseButton.Left) then
+    elseif not tryingToInteract then
         IsGizmoDragging = false
 
         for _, pcs in GizmoPieces do

@@ -26,13 +26,16 @@ jobs:
       fail-fast: false
 
       matrix:
-        os: [windows-latest]
-        build_type: [Debug, Release]
-        c_compiler: [cl]
+        os: [windows-latest, ubuntu]
+        build_type: [Debug, RelTracy, Release]
+        c_compiler: [gcc, cl]
         include:
           - os: windows-latest
             c_compiler: cl
             cpp_compiler: cl
+          - os: ubuntu-latest
+            c_compiler: gcc
+            cpp_compiler: g++
         exclude:
           - os: windows-latest
             c_compiler: gcc
@@ -65,6 +68,7 @@ jobs:
         name: "Engine_${{ runner.os }}-${{ matrix.build_type }}"
         path: |
           x64/Debug/PhoenixEngine.exe
+          x64/RelTracy/PhoenixEngine.exe
           x64/Release/PhoenixEngine.exe
           resources/
           gh-assets/wiki/doc-comments.json
@@ -79,7 +83,34 @@ jobs:
           phoenix.conf
         retention-days: 7
 
-    - name: Test
+    - name: Upload build artifact (Ubuntu)
+      if: runner.os == 'Ubuntu'
+      uses: actions/upload-artifact@v4
+      with:
+        name: "Engine_${{ runner.os }}-${{ matrix.build_type }}"
+        path: |
+          x64/Debug/PhoenixEngine
+          x64/RelTracy/PhoenixEngine
+          x64/Release/PhoenixEngine
+          resources/
+          gh-assets/wiki/doc-comments.json
+          gh-assets/wiki/components-prologue.md
+          gh-assets/wiki/datatypes-prologue.md
+          gh-assets/wiki/libraries-prologue.md
+          gh-assets/wiki/globals-prologue.md
+          lsp/
+          apidump.json
+          default-layout.ini
+          debugger-layout.ini
+          phoenix.conf
+        retention-days: 7
+
+    - name: Test (Windows)
+      if: runner.os == 'Windows' && matrix.build_type != 'Debug'
       shell: pwsh
-      if: matrix.build_type == 'Release'
       run: ". \"x64\\${{ matrix.build_type }}\\PhoenixEngine.exe\" -headless -tool scripts\\ci\\tests.luau"
+
+    - name: Test (Ubuntu)
+      if: matrix.os == 'ubuntu'
+      shell: bash
+      run: "x64/${{ matrix.build_type }}/PhoenixEngine -headless -tool scripts/ci/tests.luau"
