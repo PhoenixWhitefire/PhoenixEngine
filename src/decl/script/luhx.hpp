@@ -1,6 +1,8 @@
 // luhx.hpp
 // Phoenix Engine specific Luau libraries
 
+#pragma once
+
 #include <lua.h>
 #include <lualib.h>
 #include <glm/mat4x4.hpp>

@@ -1476,6 +1476,7 @@ function Stages.SelectProject_Enter(DeltaTime)
 	SavedProjectsCache = nil
 
 	PluginManager.Shutdown()
+	fs.makecwdaliasof("")
 end
 
 function Stages.SelectProject_Leave(DeltaTime)

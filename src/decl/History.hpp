@@ -41,6 +41,7 @@ public:
     {
         std::string Name;
         std::vector<PropertyEvent> Events;
+        size_t Id = 0;
     };
 
     const std::optional<Action>& GetCurrentAction() const;

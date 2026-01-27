@@ -72,8 +72,7 @@ const ScriptEngine::LuauVM& ScriptEngine::RegisterNewVM(const std::string& Name)
 
 	VMs[Name] = {
 		.Name = Name,
-		.MainThread = L::Create(Name),
-		.Coroutines = {}
+		.MainThread = L::Create(Name)
 	};
 
 	return VMs[Name];
@@ -775,7 +774,7 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 	}
 	default:
 	{
-		std::string_view typeName = Reflection::TypeAsString(gv.Type);
+		std::string typeName = Reflection::TypeAsString(gv.Type);
 		luaL_error(L, "Cannot reflect values of type '%s'", typeName.data());
 	}
 	}
@@ -1449,26 +1448,20 @@ lua_State* ScriptEngine::L::Create(const std::string& VmName)
 				DumpStacktrace(LP, &ud->SpawnTrace);
 				L->userdata = ud;
 
-				for (auto& [ name, lvm ] : VMs)
-				{
-					if (lvm.MainThread == lua_mainthread(LP))
-					{
-						lvm.Coroutines.push_back(L);
-						ud->VM = name;
-						break;
-					}
-				}
+				StateUserdata* vmud = (StateUserdata*)lua_mainthread(L)->userdata;
+				vmud->Coroutines.push_back(L);
+				ud->VM = vmud->VM;
 			}
 			else
 			{
-				const auto& it = VMs.find(((StateUserdata*)L->userdata)->VM);
-
-				if (it != VMs.end())
-					it->second.Coroutines.erase(std::find(it->second.Coroutines.begin(), it->second.Coroutines.end(), L));
-
-				delete (StateUserdata*)L->userdata;
+				StateUserdata* ud = (StateUserdata*)lua_mainthread(L)->userdata;
+				ud->Coroutines.erase(std::find(ud->Coroutines.begin(), ud->Coroutines.end(), L));
 			}
 		};
+
+	StateUserdata* ud = new StateUserdata;
+	ud->VM = VmName;
+	state->userdata = (void*)ud;
 
 	luaL_sandbox(state);
 	return state;
@@ -1479,8 +1472,6 @@ void ScriptEngine::L::Close(lua_State* L)
 	lua_pushinteger(L, 67);
 	lua_gettable(L, LUA_ENVIRONINDEX);
 	delete (std::filesystem::path*)lua_tolightuserdatatagged(L, -1, 67);
-	
-	lua_close(L);
 
 	size_t size = s_YieldedCoroutines.size();
 
@@ -1500,6 +1491,23 @@ void ScriptEngine::L::Close(lua_State* L)
 			size = s_YieldedCoroutines.size();
 		}
 	}
+
+	StateUserdata* vmud = (StateUserdata*)L->userdata;
+
+	for (lua_State* co : vmud->Coroutines)
+	{
+		StateUserdata* ud = (StateUserdata*)co->userdata;
+		for (EventConnectionData* ec : ud->EventConnections)
+		{
+			assert(ec->ConnectionId != UINT32_MAX);
+
+			if (void* referred = ec->Reflector.Referred())
+				ec->Event->Disconnect(referred, ec->ConnectionId);
+		}
+	}
+
+	lua_close(L);
+	delete vmud; // delete after closing VM due to `userthread` callback
 }
 
 static void breakHere(lua_State* L, ScriptEngine::L::DebugBreakReason Reason)

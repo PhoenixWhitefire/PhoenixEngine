@@ -161,6 +161,8 @@ static int sig_namecall(lua_State* L)
 		ec->Event = rev;
 		ec->L = L;
 
+		((ScriptEngine::L::StateUserdata*)L->userdata)->EventConnections.push_back(ec);
+
 		return 1;
 	}
 	else if (strcmp(L->namecall->data, "WaitUntil") == 0)

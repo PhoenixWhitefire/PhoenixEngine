@@ -687,6 +687,10 @@ void Engine::m_Render(double deltaTime)
 			"HdrEnabled",
 			false
 		);
+		m_PostFxShader.SetUniform(
+			"Gamma",
+			EngineJsonConfig.value("postfx_gamma", 1.f)
+		);
 	}
 
 	{
@@ -1079,14 +1083,14 @@ void Engine::Shutdown()
 
 	Log::Info("Engine destructing...");
 
-	Log::Info("Shutting down Script Engine...");
-	ScriptEngine::Shutdown();
-
 	Log::Info("Destroying DataModel...");
 	DataModelRef->Destroy();
 	WorkspaceRef->Destroy();
 	DataModelRef.Clear();
 	WorkspaceRef.Clear();
+
+	Log::Info("Shutting down script engine...");
+	ScriptEngine::Shutdown();
 
 	Log::Info("Shutting down Component Managers...");
 
@@ -1115,6 +1119,8 @@ void Engine::Shutdown()
 		ImGui_ImplOpenGL3_Shutdown();
 		ImGui_ImplGlfw_Shutdown();
 	}
+
+	Log::Info("Shutting down GLFW...");
 
 	if (Window)
 		glfwDestroyWindow(Window);

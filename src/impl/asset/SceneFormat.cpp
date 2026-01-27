@@ -421,24 +421,25 @@ static ObjectRef createObjectFromJsonItem(const nlohmann::json& Item, uint32_t I
 		}
 
 		ObjectRef object = GameObject::Create();
-		bool hasMeshComponent = false;
 
 		for (auto it = components.value().begin(); it != components.value().end(); it++)
 		{
 			std::string name = it.value();
+			const auto& tyIt = s_ComponentNameToType.find(name);
 
-			if (EntityComponent type = s_ComponentNameToType.at(name); !object->FindComponentByType(type))
+			if (tyIt == s_ComponentNameToType.end())
 			{
-				object->AddComponent(type);
-
-				if (type == EntityComponent::Mesh)
-					hasMeshComponent = true;
+				SF_WARN("Object #{} with name '{}' had invalid component '{}'", ItemIndex, Item.value("Name", "<UNNAMED>"), name);
+				continue;
 			}
+
+			if (!object->FindComponentByType(tyIt->second))
+				object->AddComponent(tyIt->second);
 		}
 
 		if (Version < 2.11f)
 		{
-			if (hasMeshComponent && !object->FindComponent<EcRigidBody>())
+			if (object->FindComponent<EcMesh>() && !object->FindComponent<EcRigidBody>())
 				object->AddComponent(EntityComponent::RigidBody);
 		}
 

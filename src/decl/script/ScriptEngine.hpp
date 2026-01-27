@@ -10,6 +10,7 @@
 
 #include "Reflection.hpp"
 #include "datatype/GameObject.hpp"
+#include "script/luhx.hpp"
 
 #define LUA_ASSERT(res, err, ...) { if (!(res)) { luaL_errorL(L, err, __VA_ARGS__); } }
 
@@ -69,7 +70,6 @@ namespace ScriptEngine
 	{
 		std::string Name;
 		lua_State* MainThread = nullptr;
-		std::vector<lua_State*> Coroutines;
 	};
 
 	const LuauVM& GetCurrentVM();
@@ -123,6 +123,8 @@ namespace ScriptEngine::L
 	{
 		std::string VM;
 		std::string SpawnTrace;
+		std::vector<EventConnectionData*> EventConnections;
+		std::vector<lua_State*> Coroutines; // Only populated for the main thread
 	};
 
 	struct DebugBreakReason_

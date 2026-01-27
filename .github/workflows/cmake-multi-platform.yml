@@ -28,14 +28,11 @@ jobs:
       matrix:
         os: [windows-latest]
         build_type: [Debug, Release]
-        c_compiler: [gcc, cl]
+        c_compiler: [cl]
         include:
           - os: windows-latest
             c_compiler: cl
             cpp_compiler: cl
-          - os: ubuntu-latest
-            c_compiler: gcc
-            cpp_compiler: g++
         exclude:
           - os: windows-latest
             c_compiler: gcc

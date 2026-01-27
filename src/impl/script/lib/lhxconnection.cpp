@@ -1,6 +1,7 @@
 #include <luau/VM/src/lstate.h>
 
 #include "script/luhx.hpp"
+#include "script/ScriptEngine.hpp"
 
 static int conn_namecall(lua_State* L)
 {
@@ -18,6 +19,14 @@ static int conn_namecall(lua_State* L)
 		//lua_pushlightuserdata(L, L);
 		//lua_pushnil(L);
 		//lua_settable(L, LUA_ENVIRONINDEX); // remove stacktrace string
+
+		ScriptEngine::L::StateUserdata* ud = (ScriptEngine::L::StateUserdata*)ec->L->userdata;
+		if (ud->EventConnections.size() > 0)
+		{
+			const auto& it = std::find(ud->EventConnections.begin(), ud->EventConnections.end(), ec);
+			assert(it != ud->EventConnections.end());
+			ud->EventConnections.erase(it);
+		}
 
 		lua_unref(ec->L, ec->ThreadRef);
 	}

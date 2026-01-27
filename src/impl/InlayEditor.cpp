@@ -1498,7 +1498,11 @@ static Texture getIconForComponent(EntityComponent Ec)
 {
 	TextureManager* texManager = TextureManager::Get();
 
-	std::string classIconPath = "@editres/textures/editor-icons/" + std::string(s_EntityComponentNames[(size_t)Ec]) + ".png";
+	std::string componentName = std::string(s_EntityComponentNames[(size_t)Ec]);
+	if (Ec == EntityComponent::None)
+		componentName = "Empty";
+
+	std::string classIconPath = "@editres/textures/editor-icons/" + componentName + ".png";
 	Texture tex = texManager->GetTextureResource(texManager->LoadTextureFromPath(classIconPath, true, false));
 
 	if (tex.Status == Texture::LoadStatus::Failed && tex.ImagePath.find("fallback") == std::string::npos)
@@ -1585,7 +1589,7 @@ static void recursiveIterateTree(GameObject* current)
 
 		ImGui::AlignTextToFramePadding();
 
-		ReflectorRef primaryComponent = object->Components[0];
+		ReflectorRef primaryComponent = object->Components.size() > 0 ? object->Components[0] : ReflectorRef();
 		if (primaryComponent.Type == EntityComponent::Transform && object->Components.size() > 1)
 			primaryComponent = object->Components[1];
 
@@ -2514,10 +2518,10 @@ static bool RenameFocusFirstFrame = true;
 static void refreshFilesystemNode(FilesystemNode& Node)
 {
 	ZoneScoped;
-
 	Node.DirectoryContents.clear();
 
-	for (const auto& it : std::filesystem::directory_iterator(Node.Path))
+	std::error_code ec;
+	for (const auto& it : std::filesystem::directory_iterator(Node.Path, ec))
 	{
 		if (std::filesystem::is_regular_file(it.path()))
 		{
@@ -2538,6 +2542,12 @@ static void refreshFilesystemNode(FilesystemNode& Node)
 
 			Node.DirectoryContents[it.path().filename().string()] = newNode;
 		}
+	}
+
+	if (ec)
+	{
+		setErrorMessage(ec.message());
+		FilesViewerRoot = FilesystemNode{ .Path = "scripts/", .Name = "Scripts" };
 	}
 }
 
@@ -2789,6 +2799,14 @@ static void renderFilesViewer()
 	{
 		ImGui::End();
 		return;
+	}
+
+	static std::string PreviousNonqualifiedRoot;
+	if (std::string newRoot = FileRW::MakePathCwdRelative("dummy"); newRoot != PreviousNonqualifiedRoot)
+	{
+		FilesViewLastRefreshed = 0.0;
+		FilesViewerRoot = FilesystemNode{ .Path = "scripts/", .Name = "Scripts" };
+		PreviousNonqualifiedRoot = newRoot;
 	}
 
 	if (GetRunningTime() - FilesViewLastRefreshed > 1.f)
@@ -3729,7 +3747,7 @@ static bool debugVariable(lua_State* L, bool CanEdit = true)
 				size_t len = 0;
 				const char* str = lua_tolstring(L, -1, &len);
 
-				char* buf = (char*)malloc(len + 64);
+				char* buf = new char[len + 64];
 				memcpy(buf, str, len);
 				buf[len + 63] = 0;
 				buf[len] = 0;
@@ -3740,6 +3758,8 @@ static bool debugVariable(lua_State* L, bool CanEdit = true)
 					lua_pushstring(L, buf);
 					changed = true;
 				}
+
+				delete[] buf;
 				break;
 			}
 			case LUA_TVECTOR:
@@ -4371,7 +4391,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 			};
 
 			renderCoroutine(vm.MainThread);
-			for (lua_State* coroutine : vm.Coroutines)
+			for (lua_State* coroutine : ((ScriptEngine::L::StateUserdata*)vm.MainThread->userdata)->Coroutines)
 				renderCoroutine(coroutine);
 		}
 		ImGui::End();

@@ -39,21 +39,33 @@ size_t History::TryBeginAction(const std::string& Name)
         return 0;
     }
 
-    m_CurrentAction.emplace(Name);
-    return m_CurrentWaypoint + 1;
+    static size_t ActionIdCounter = 0;
+    ActionIdCounter++; // Should never be 0, we use 0 to indicate that we couldn't start an action
+
+    m_CurrentAction.emplace(Name, std::vector<PropertyEvent>(), ActionIdCounter);
+    return ActionIdCounter;
 }
 
 void History::FinishAction(size_t Id)
 {
-    if (m_CurrentWaypoint + 1 != Id)
-        RAISE_RTF("Action ID {} was not valid in `History::FinishAction`", Id);
-
     if (!m_CurrentAction.has_value())
         RAISE_RT("Called `History::FinishAction` but no action was started!");
+
+    if (m_CurrentAction->Id != Id)
+        RAISE_RTF("Action ID {} was not valid in `History::FinishAction`", Id);
+
+    if (m_CurrentAction->Events.size() == 0)
+    {
+        // It's not very useful to store actions that did nothing in History, and can cause
+        // more confusion when Undo does not visibly do anything
+        m_CurrentAction.reset();
+        return;
+    }
 
     if (m_CurrentWaypoint != m_ActionHistory.size() - 1)
     {
         // TODO multiple timelines
+        // TODO Why does it need `+ 1`??
         m_ActionHistory = std::vector<Action>(m_ActionHistory.begin(), m_ActionHistory.begin() + m_CurrentWaypoint + 1);
     }
 
@@ -65,11 +77,11 @@ void History::FinishAction(size_t Id)
 
 void History::DiscardAction(size_t Id)
 {
-    if (m_CurrentWaypoint + 1 != Id)
-        RAISE_RTF("Action ID {} was not valid in `History::DiscardAction`", Id);
-
     if (!m_CurrentAction.has_value())
         RAISE_RT("Called `History::DiscardAction` but no action was started!");
+
+    if (m_CurrentAction->Id != Id)
+        RAISE_RTF("Action ID {} was not valid in `History::FinishAction`", Id);
 
     m_CurrentAction.reset();
 }
@@ -91,7 +103,7 @@ void History::Undo()
         if (m_ActionHistory.size() == 0)
             RAISE_RT("Cannot Undo, no history recorded");
         if (m_CurrentWaypoint == 0)
-            RAISE_RT("Cannot Undo, at waypoint 0");
+            RAISE_RT("Cannot Undo, at the beginning of history");
         if (m_CurrentAction.has_value())
             RAISE_RTF("Cannot Undo, action '{}' is not complete", m_CurrentAction->Name);
 
