@@ -6,10 +6,8 @@ static const luaL_Reg luhxlibs[] =
 {
     { "", luhxopen_base },
     { LUHX_FSLIBNAME, luhxopen_fs },
-    { LUHX_CONFLIBNAME, luhxopen_conf },
     { LUHX_IMGUILIBNAME, luhxopen_imgui },
     { LUHX_JSONLIBNAME, luhxopen_json },
-    { LUHX_SCENELIBNAME, luhxopen_scene },
     { LUHX_TASKLIBNAME, luhxopen_task },
     { LUA_DBLIBNAME, luhxopen_debug},
 

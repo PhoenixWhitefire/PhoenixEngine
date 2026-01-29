@@ -448,8 +448,8 @@ local function libTools()
 end
 
 local function runDocGen()
-    conf.set("LspDefinitionsGeneratorDoNotShutdown", true);
-    local co, err = loadthreadfromfile("scripts/ci/docs.luau", "DocumentationGenerator")
+    _G.LspDefinitionsGeneratorDoNotShutdown = true
+    local co, err = task.loadfile("scripts/ci/docs.luau", "DocumentationGenerator")
     assert(co, err)
 
     coroutine.resume(co)

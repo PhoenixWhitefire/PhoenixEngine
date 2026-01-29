@@ -226,6 +226,7 @@ void ScriptEngine::StepScheduler()
 	}
 }
 
+// Also in `EngineService.cpp`!!
 #define JSON_ENCODED_DATA_TAG "__HX_EncodedData"
 
 void ScriptEngine::L::PushJson(lua_State* L, const nlohmann::json& v)
@@ -755,7 +756,7 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 	}
 	case Reflection::ValueType::Map:
 	{
-		std::span<Reflection::GenericValue> array = std::span((Reflection::GenericValue*)gv.Val.Ptr, gv.Size);
+		std::span<Reflection::GenericValue> array = gv.AsArray();
 
 		if (array.size() % 2 != 0)
 			RAISE_RT("GenericValue type was Map, but it does not have an even number of elements!");
@@ -1454,8 +1455,10 @@ lua_State* ScriptEngine::L::Create(const std::string& VmName)
 			}
 			else
 			{
-				StateUserdata* ud = (StateUserdata*)lua_mainthread(L)->userdata;
-				ud->Coroutines.erase(std::find(ud->Coroutines.begin(), ud->Coroutines.end(), L));
+				StateUserdata* vmud = (StateUserdata*)lua_mainthread(L)->userdata;
+				vmud->Coroutines.erase(std::find(vmud->Coroutines.begin(), vmud->Coroutines.end(), L));
+
+				delete (StateUserdata*)L->userdata;
 			}
 		};
 

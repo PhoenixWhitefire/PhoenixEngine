@@ -18,7 +18,7 @@ end
 declare GameObject: {
   fromId: (( Id: number ) -> (GameObject?)),
   new: (<T>(ComponentName: T | keyof<Creatables>) -> GameObject & index<Creatables, T>),
-  validcomponents: { string }
+  validComponents: { string }
 }
 declare extern type Matrix with
   function ExtractAngles(self): ( vector )
@@ -62,22 +62,22 @@ declare extern type GameObject with
   Exists: boolean 
   Name: string
   ObjectId: number 
-  Parent: (GameObject & any)?
+  Parent: (GameObject & {})?
   Serializes: boolean
 
   function AddComponent(self, Component: keyof<Creatables>) : ()
   function Destroy(self) : ()
-  function Duplicate(self) : ((GameObject & any))
-  function FindChild(self, ChildName: string) : ((GameObject & any)?)
+  function Duplicate(self) : ((GameObject & {}))
+  function FindChild(self, ChildName: string) : ((GameObject & {})?)
   function FindChildWithComponent(self, Component: keyof<Creatables>) : (GameObject & any)
-  function ForEachChild(self, Param_1: (any) -> (any)) : ()
-  function ForEachDescendant(self, Param_1: (any) -> (any)) : ()
+  function ForEachChild(self, Callback: (any) -> (any)) : ()
+  function ForEachDescendant(self, Callback: (any) -> (any)) : ()
   function GetChildren(self) : ({ any })
   function GetComponents(self) : (keyof<Creatables>)
   function GetDescendants(self) : ({ any })
   function GetFullName(self) : (string)
   function HasComponent(self, Component: keyof<Creatables>) : (boolean)
-  function MergeWith(self, Param_1: (GameObject & any)) : ()
+  function MergeWith(self, With: (GameObject & {})) : ()
   function RemoveComponent(self, Component: keyof<Creatables>) : ()
 end
 declare extern type Animation with
@@ -91,13 +91,15 @@ declare extern type AssetManager with
 
   function GetMeshData(self, Id: string) : { Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } }
   function ImportModel(self, Path: string) : GameObject & Model
+  function LoadScene(self, Path: string) : ({ GameObject & {} }?, string)
   function SaveMesh(self, Id: string, Path: string) : ()
+  function SaveScene(self, RootNodes: { GameObject }, Path: string) : (boolean, string?)
   function SetMeshData(self, Id: string, MeshData: { Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } }) : ()
 end
 declare extern type Bone with
   IsActive: boolean 
   SkeletalBoneId: number 
-  TargetMesh: (GameObject & any) 
+  TargetMesh: (GameObject & {}) 
   Transform: Matrix
 end
 declare extern type Camera with
@@ -109,7 +111,7 @@ declare extern type DataModel with
   LiveScripts: string
   Time: number 
 
-  function GetService(self, ServiceName: string) : ((GameObject & any))
+  function GetService(self, ServiceName: string) : ((GameObject & {}))
 
   OnFrameBegin: EventSignal<(number)>
 end
@@ -128,7 +130,7 @@ declare extern type DirectionalLight with
   Shadows: boolean
 end
 declare extern type Engine with
-  BoundDataModel: (GameObject & any) 
+  BoundDataModel: (GameObject & {}) 
   CommitHash: string 
   DebugWireframeRendering: boolean
   Framerate: number 
@@ -144,6 +146,7 @@ declare extern type Engine with
   function CreateVM(self, VmName: string) : ()
   function Exit(self, ExitCode: number?) : ()
   function GetCliArguments(self) : ({ any })
+  function GetConfigValue(self, Key: string) : (unknown)
   function GetCurrentVM(self) : (string)
   function GetExplorerSelections(self) : ({ GameObject })
   function GetToolNames(self) : { string }
@@ -151,8 +154,10 @@ declare extern type Engine with
   function OpenTextDocument(self, Path: string, Line: number?) : ()
   function ResetViewport(self) : ()
   function RunInVM(self, VmName: string, Code: string, ChunkName: string?) : (boolean, string?)
+  function SaveConfig(self) : (boolean, string)
+  function SetConfigValue(self, Key: string, Value: unknown) : ()
   function SetCurrentVM(self, VmName: string) : ()
-  function SetExplorerRoot(self, Root: (GameObject & any)) : ()
+  function SetExplorerRoot(self, Root: (GameObject & {})) : ()
   function SetExplorerSelections(self, Selections: { GameObject }) : ()
   function SetToolEnabled(self, ToolName: string, Enabled: boolean) : ()
   function SetViewport(self, Position: vector, Size: vector) : ()
@@ -161,35 +166,23 @@ declare extern type Engine with
 
   OnMessageLogged: EventSignal<(number, string, string)>
 end
-declare extern type Example with
-  EvenMoreSecretMessage: string 
-  SecretMessage: string 
-  SomeInteger: number
-  SuperCoolBool: boolean
-  WhereIAm: vector
-
-  function GiveUp(self) : ()
-  function Greet(self, Names: { string }, Villain: boolean) : string
-
-  OnGreeted: EventSignal<(string, string)>
-end
 declare extern type History with
   ActionHistorySize: number 
   CurrentActionName: string? 
   CurrentWaypoint: number 
   IsRecordingAction: boolean 
-  TargetDataModel: (GameObject & any)
+  TargetDataModel: (GameObject & {})
 
   function CanRedo(self) : (boolean)
   function CanUndo(self) : (boolean)
   function ClearHistory(self) : ()
-  function DiscardAction(self, Param_1: number) : ()
+  function DiscardAction(self, Id: number) : ()
   function EnableRecording(self) : ()
-  function FinishAction(self, Param_1: number) : ()
-  function GetActionData(self, Param_1: number) : ({ [string]: any })
+  function FinishAction(self, Id: number) : ()
+  function GetActionData(self, Index: number) : ({ [string]: any })
   function GetCurrentActionData(self) : ({ [string]: any }?)
   function Redo(self) : ()
-  function TryBeginAction(self, Param_1: string) : (number?)
+  function TryBeginAction(self, Name: string) : (number?)
   function Undo(self) : ()
 end
 declare extern type Mesh with
@@ -232,6 +225,8 @@ declare extern type PointLight with
   LightColor: Color
   Range: number
 end
+declare extern type Renderer with
+end
 declare extern type RigidBody with
   AngularVelocity: vector
   CollisionType: number
@@ -273,7 +268,7 @@ declare extern type Transform with
   Transform: Matrix
 end
 declare extern type TreeLink with
-  Target: (GameObject & any)?
+  Target: (GameObject & {})?
 end
 declare extern type Workspace with
   SceneCamera: GameObject & Camera
@@ -287,7 +282,7 @@ end
 
 type Creatables = {
 	Transform: Transform,
-	Mesh: Mesh & Transform,
+	Mesh: Mesh & Transform & RigidBody,
 	ParticleEmitter: ParticleEmitter & Transform,
 	Sound: Sound,
 	Workspace: Workspace,
@@ -306,6 +301,7 @@ type Creatables = {
 	History: History,
 	RigidBody: RigidBody,
 	Physics: Physics,
+	Renderer: Renderer,
 }
 declare Enum: {
   CollisionType: { Cube: number, Sphere: number, Hulls: number, MeshComponent: number },
@@ -314,11 +310,6 @@ declare Enum: {
   Key: { [string]: number },
   LogType: { None: number, Info: number, Warning: number, Error: number },
   MouseButton: { Left: number, Middle: number, Right: number }
-}
-declare conf: {
-  get: (( Key: string ) -> (any)),
-  save: ((  ) -> (boolean)),
-  set: (( Key: string, Value: any ) -> ())
 }
 declare debug: {
 	traceback: (msg: string?, level: number?) -> string,
@@ -332,7 +323,6 @@ declare fs: {
   isdirectory: (( string ) -> (boolean)),
   isfile: (( string ) -> (boolean)),
   listdir: (( Path: string, Filter: ('a' | 'f' | 'd')? ) -> ({ [string]: 'f' | 'd' })),
-  makecwdaliasof: (( Alias: string ) -> ()),
   mkdir: (( Path: string ) -> ()),
   promptopen: (( DefaultLocation: string?, Filter: ( { string } | string)?, FilterName: string?, AllowMultipleFiles: boolean? ) -> ({ string })),
   promptopenfolder: (( Title: string, DefaultDirectory: string? ) -> (string?)),
@@ -340,6 +330,7 @@ declare fs: {
   read: (( Path: string ) -> (string?, string?)),
   remove: (( Path: string ) -> ()),
   rename: (( Path: string, NewName: string ) -> ()),
+  setunqualifiedroot: (( Alias: string ) -> ()),
   write: (( Path: string, Contents: string, CreateDirectories: boolean? ) -> ())
 }
 declare imgui: {
@@ -406,10 +397,6 @@ declare imgui: {
 declare json: {
   encode: (( Value: any ) -> (string)),
   parse: (( Json: string ) -> (any))
-}
-declare scene: {
-  load: (( Path: string ) -> ({ GameObject }?, string?)),
-  save: (( RootNodes: { GameObject }, Path: string ) -> (boolean))
 }
 declare task: {
   defer: (<A...>( Task: ((A...) -> ()) | thread, A... ) -> ()),

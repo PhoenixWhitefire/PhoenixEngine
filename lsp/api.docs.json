@@ -39,9 +39,9 @@
     "documentation": "* Finds an Object by it's internal ID. Do not rely on the ID"
   },
   "@luhx/global/GameObject.new": {
-    "documentation": "* Creates a new GameObject with the provided Component"
+    "documentation": "* Creates a new GameObject with the provided Components, such as `GameObject.new(\"Mesh\")` or `GameObject.new(\"Model\", \"Animation\")`"
   },
-  "@luhx/global/GameObject.validcomponents": {
+  "@luhx/global/GameObject.validComponents": {
     "documentation": "* A list of all valid component names which can be passed into `.new`"
   },
   "@luhx/global/Matrix": {
@@ -74,18 +74,6 @@
   "@luhx/global/appendlog": {
     "documentation": "* Same as `print`, but does not prefix the log message with `[INFO]`"
   },
-  "@luhx/global/conf": {
-    "documentation": "* Internal Engine configuration state, loaded from file (`phoenix.conf`) upon startup"
-  },
-  "@luhx/global/conf.get": {
-    "documentation": "* Read a specific value from the configuration"
-  },
-  "@luhx/global/conf.save": {
-    "documentation": "* Save the current state of the configuration to file (`phoenix.conf`), returning whether the file was successfully overwritten"
-  },
-  "@luhx/global/conf.set": {
-    "documentation": "* Change a specific value in the configuration"
-  },
   "@luhx/global/debug": {
     "documentation": "* Extensions to the standard Luau `debug` library are documented below"
   },
@@ -113,9 +101,6 @@
   "@luhx/global/fs.listdir": {
     "documentation": "* Returns a table of all the entries in the specified directory\n* The keys of the table is the path of the entry, while the values are the type of the entry\n* `f` is file, `d` is directory, and `a` is all"
   },
-  "@luhx/global/fs.makecwdaliasof": {
-    "documentation": "* Changes the meaning of non-qualified paths (e.g.: not beginning with `.` or `C:` etc) to act as aliases to the given path instead of referring to the CWD"
-  },
   "@luhx/global/fs.mkdir": {
     "documentation": "* Creates a directory at the given path\n* Throws an error upon failure"
   },
@@ -136,6 +121,9 @@
   },
   "@luhx/global/fs.rename": {
     "documentation": "* Renames the file at the given `Path` to have the `NewName`\n* Throws an error upon failure"
+  },
+  "@luhx/global/fs.setunqualifiedroot": {
+    "documentation": "* Changes the meaning of non-qualified paths (e.g.: not beginning with `.` or `C:` etc) to act as aliases to the given path + `resources/` instead of referring to the CWD"
   },
   "@luhx/global/fs.write": {
     "documentation": "* Overwrites/creates the file at `Path` with the provided `Contents`\n* Throws an error upon failure\n* If `CreateDirectories` is `true`, will automatically create missing intermediate directories to the file"
@@ -332,15 +320,6 @@
   "@luhx/global/json.parse": {
     "documentation": "* Decodes the JSON string and returns it as a value"
   },
-  "@luhx/global/scene": {
-    "documentation": "* Scene assets"
-  },
-  "@luhx/global/scene.load": {
-    "documentation": "* Loads `GameObject`s from the scene file at the provided path, returning a list of the root objects or `nil` and an error message upon failure"
-  },
-  "@luhx/global/scene.save": {
-    "documentation": "* Saves the list of `GameObject`s to the provided path, returning whether the operation succeeded"
-  },
   "@luhx/global/shellexec": {
     "documentation": "* Runs a shell command"
   },
@@ -389,8 +368,14 @@
   "@luhx/globaltype/AssetManager.ImportModel": {
     "documentation": "Imports the glTF 2.0 model at the provided path and returns it as a `Model` GameObject"
   },
+  "@luhx/globaltype/AssetManager.LoadScene": {
+    "documentation": "Loads `GameObject`s from the scene file at the provided path, returning a list of the root objects or `nil` and an error message upon failure"
+  },
   "@luhx/globaltype/AssetManager.SaveMesh": {
     "documentation": "Saves the mesh data at the provided path to a file"
+  },
+  "@luhx/globaltype/AssetManager.SaveScene": {
+    "documentation": "Saves the list of `GameObject`s to the provided path, returning whether the operation succeeded"
   },
   "@luhx/globaltype/AssetManager.SetMeshData": {
     "documentation": "Associates the provided mesh data with the provided path"
@@ -503,6 +488,9 @@
   "@luhx/globaltype/Engine.GetCliArguments": {
     "documentation": "Returns the list of launch arguments given to the Engine. The first item is always a path to the Engine executable"
   },
+  "@luhx/globaltype/Engine.GetConfigValue": {
+    "documentation": "Returns the value associated with the given Key in the Engine's loaded configuration (`phoenix.conf`)"
+  },
   "@luhx/globaltype/Engine.GetCurrentVM": {
     "documentation": "Returns the name of the currently-bound VM"
   },
@@ -533,6 +521,12 @@
   "@luhx/globaltype/Engine.RunInVM": {
     "documentation": "Runs the given code in the specified VM. Returns `false` and an error message upon failure or if the code does not finish executing (yield or break)"
   },
+  "@luhx/globaltype/Engine.SaveConfig": {
+    "documentation": "Saves the Engine's current configuration state to the configuration file (`phoenix.conf`)"
+  },
+  "@luhx/globaltype/Engine.SetConfigValue": {
+    "documentation": "Sets `Key` to `Value` in the Engine's loaded configuration without saving it to file"
+  },
   "@luhx/globaltype/Engine.SetCurrentVM": {
     "documentation": "Binds the given VM as the \"current\" one. This causes all Scripts which load afterward to use the specified VM, it does *not* change the VM of any Scripts loaded beforehand"
   },
@@ -549,7 +543,7 @@
     "documentation": "Configures the Engine to act as through the Viewport is at the given position with the given size. Does *not* change where the viewport is actually rendered"
   },
   "@luhx/globaltype/Engine.ShowMessageBox": {
-    "documentation": "Shows a message box to the player with the given specification. The returned number with be the selected option: `0` for Cancel/No, `1` for Ok/Yes, `2` for No in `yesnocancel`. This isa blocking operation and no scripts or other parts of the Engine run until the message is dismissed. Avoid using quotes and backticks in the message"
+    "documentation": "Shows a message box to the player with the given specification. The returned number with be the selected option: `0` for Cancel/No, `1` for Ok/Yes, `2` for No in `yesnocancel`. This is a blocking operation and no scripts or other parts of the Engine run until the message is dismissed. Avoid using quotes and backticks in the message"
   },
   "@luhx/globaltype/Engine.UnloadTexture": {
     "documentation": "Removes the given texture from the Engine's cache, forcing it to be reloaded upon next use"
@@ -577,30 +571,6 @@
   },
   "@luhx/globaltype/EventSignal.WaitUntil": {
     "documentation": "* Yields the thread until the Event is fired\n"
-  },
-  "@luhx/globaltype/Example.EvenMoreSecretMessage": {
-    "documentation": "A secret message that's so, *so* secret that it cannot be read by Reflection-kun, almost like they're keeping a secret from her..."
-  },
-  "@luhx/globaltype/Example.GiveUp": {
-    "documentation": "Tells Engine-chan to kill herself and throws an exception"
-  },
-  "@luhx/globaltype/Example.Greet": {
-    "documentation": "Says hello to the given list of names. If the second argument is `true`, does so extra villainously"
-  },
-  "@luhx/globaltype/Example.OnGreeted": {
-    "documentation": "Fires when `:Greet` is called, and sends the response to the callback before the original caller of `:Greet` receives it"
-  },
-  "@luhx/globaltype/Example.SecretMessage": {
-    "documentation": "A secret message that's so important it's read-only"
-  },
-  "@luhx/globaltype/Example.SomeInteger": {
-    "documentation": "An integer"
-  },
-  "@luhx/globaltype/Example.SuperCoolBool": {
-    "documentation": "A boolean"
-  },
-  "@luhx/globaltype/Example.WhereIAm": {
-    "documentation": "A 3-dimensional vector quantity"
   },
   "@luhx/globaltype/GameObject.AddComponent": {
     "documentation": "Adds the specified Component to the Object. Will error if it already has it (use `:HasComponent` to check beforehand)"
@@ -690,7 +660,7 @@
     "documentation": "Finishes the Action by its ID. Only one Action may be active at a time"
   },
   "@luhx/globaltype/History.GetActionData": {
-    "documentation": "Retrives information about a previously-recorded Action by its ID (IDs are in the range 0 <= ID < `ActionHistorySize`)"
+    "documentation": "Retrives information about a previously-recorded Action by its Index (Indexes, separate from IDs, are in the range 0 <= Index < `ActionHistorySize`)"
   },
   "@luhx/globaltype/History.GetCurrentActionData": {
     "documentation": "Retrieves information about the current Action being recorded"

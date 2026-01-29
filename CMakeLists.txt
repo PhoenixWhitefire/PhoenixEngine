@@ -73,7 +73,7 @@ target_link_libraries(PhoenixEngine PRIVATE
 	Vendor
 	glm
 	miniaudio
-	glfw
+	$<IF:$<BOOL:${PHX_HEADLESS}>,,glfw>
 	$<IF:$<CONFIG:Release>,,TracyClient> # TODO: figure out how to not build this if we dont link it
 
 	Luau.Compiler
@@ -149,8 +149,11 @@ add_dependencies(PhoenixEngine
 	Luau.Compiler
 	Luau.Require
 	Luau.VM
-	glfw
 )
+
+if (!PHX_HEADLESS)
+	add_dependencies(PhoenixEngine glfw)
+endif()
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT PhoenixEngine)
 

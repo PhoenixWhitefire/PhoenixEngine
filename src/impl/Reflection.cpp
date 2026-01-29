@@ -91,13 +91,13 @@ Reflection::GenericValue::GenericValue(int i)
 static void fromMatrix(Reflection::GenericValue& G, const glm::mat4& M)
 {
 	G.Type = Reflection::ValueType::Matrix;
-	G.Val.Ptr = Memory::Alloc(sizeof(M), Memory::Category::Reflection);
+	G.Val.Mat = (glm::mat4*)Memory::Alloc(sizeof(M), Memory::Category::Reflection);
 	G.Size = sizeof(M);
 
-	if (!G.Val.Ptr)
+	if (!G.Val.Mat)
 		RAISE_RTF("Failed to allocate {} bytes in fromMatrix", sizeof(M));
 
-	memcpy(G.Val.Ptr, &M, sizeof(M));
+	memcpy(G.Val.Mat, &M, sizeof(M));
 }
 
 Reflection::GenericValue::GenericValue(glm::vec2 v)
@@ -131,19 +131,19 @@ static void fromArray(Reflection::GenericValue& G, const std::span<const Reflect
 	size_t allocSize = Array.size() * sizeof(G);
 	if (allocSize == 0)
 	{
-		G.Val.Ptr = nullptr;
+		G.Val.Array = nullptr;
 		return;
 	}
 
 	assert(allocSize <= UINT32_MAX);
-	G.Val.Ptr = Memory::Alloc((uint32_t)allocSize, Memory::Category::Reflection);
+	G.Val.Array = (Reflection::GenericValue*)Memory::Alloc((uint32_t)allocSize, Memory::Category::Reflection);
 
-	if (!G.Val.Ptr)
+	if (!G.Val.Array)
 		RAISE_RTF("Failed to allocate {} bytes in fromArray (length {}, GV Size {})", allocSize, Array.size(), sizeof(G));
 
 	for (size_t i = 0; i < Array.size(); i++)
 		// placement-new to avoid 1 excess layer of indirection
-		new (&((Reflection::GenericValue*)G.Val.Ptr)[i]) Reflection::GenericValue(Array[i]);
+		new (&G.Val.Array[i]) Reflection::GenericValue(Array[i]);
 
 	assert(Array.size() <= UINT32_MAX);
 	G.Size = (uint32_t)Array.size();
@@ -162,7 +162,6 @@ Reflection::GenericValue::GenericValue(const std::vector<GenericValue>& array)
 }
 
 Reflection::GenericValue::GenericValue(const std::unordered_map<GenericValue, GenericValue>& map)
-	: Type(ValueType::Map)
 {
 	std::vector<GenericValue> arr;
 	arr.reserve(map.size() * 2);
@@ -173,17 +172,13 @@ Reflection::GenericValue::GenericValue(const std::unordered_map<GenericValue, Ge
 		arr.push_back(it.second);
 	}
 
-	size_t allocSize = arr.size() * sizeof(GenericValue);
-	assert(allocSize <= UINT32_MAX);
+	fromArray(*this, arr);
+	this->Type = ValueType::Map;
+}
 
-	this->Val.Ptr = (GenericValue*)Memory::Alloc((uint32_t)allocSize, Memory::Category::Reflection);
-
-	if (!this->Val.Ptr)
-		RAISE_RTF("Failed to allocate {} bytes in construction from std::unordered_map (length {}, GV Size {})", allocSize, arr.size(), sizeof(GenericValue));
-
-	memcpy(this->Val.Ptr, arr.data(), allocSize);
-
-	this->Size = static_cast<uint32_t>(arr.size());
+Reflection::GenericValue Reflection::GenericValue::Null()
+{
+	return {};
 }
 
 void Reflection::GenericValue::CopyInto(GenericValue& Target, const GenericValue& Source)
@@ -221,15 +216,31 @@ void Reflection::GenericValue::CopyInto(GenericValue& Target, const GenericValue
 	}
 	case ValueType::Map:
 	{
-		fromArray(Target, std::span((Reflection::GenericValue*)Source.Val.Ptr, Source.Size));
+		fromArray(Target, std::span(Source.Val.Array, Source.Size));
 		Target.Type = ValueType::Map;
 		break;
 	}
 
-	case ValueType::Boolean: case ValueType::Double: case ValueType::Integer:
-
+	case ValueType::Boolean:
+	{
+		Target.Val.Bool = Source.Val.Bool;
+		break;
+	}
+	case ValueType::Double:
+	{
+		Target.Val.Double = Source.Val.Double;
+		break;
+	}
+	case ValueType::Integer: case ValueType::GameObject:
+	{
+		Target.Val.Int = Source.Val.Int;
+		break;
+	}
 	default:
+	{
+		assert(false);
 		Target.Val.Ptr = Source.Val.Ptr;
+	}
 	}
 }
 
@@ -447,10 +458,8 @@ glm::vec3& Reflection::GenericValue::AsVector3() const
 }
 glm::mat4& Reflection::GenericValue::AsMatrix() const
 {
-	glm::mat4* mptr = (glm::mat4*)this->Val.Ptr;
-
 	return Type == ValueType::Matrix
-		? *mptr
+		? *Val.Mat
 		: WRONG_TYPE();
 }
 Reflection::GenericFunction& Reflection::GenericValue::AsFunction() const
@@ -463,9 +472,8 @@ std::span<Reflection::GenericValue> Reflection::GenericValue::AsArray() const
 {
 	if (this->Type != Reflection::ValueType::Array)
 		RAISE_RTF("GenericValue was not an Array, but instead a {}", TypeAsString(Type));
-	
-	Reflection::GenericValue* first = (Reflection::GenericValue*)this->Val.Ptr;
-	return std::span(first, Size);
+
+	return std::span(Val.Array, Size);
 }
 std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> Reflection::GenericValue::AsMap() const
 {
@@ -474,7 +482,7 @@ std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> Reflectio
 
 	std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> map;
 	for (uint32_t i = 0; i < Size; i += 2)
-		map[((Reflection::GenericValue*)Val.Ptr)[i]] = ((Reflection::GenericValue*)Val.Ptr)[i + 1];
+		map[Val.Array[i]] = Val.Array[i + 1];
 
 	return map;
 }
@@ -493,17 +501,16 @@ static void deallocGv(Reflection::GenericValue* gv)
 	{
 	case ValueType::Matrix:
 	{
-		Memory::Free(gv->Val.Ptr);
+		Memory::Free(gv->Val.Mat);
 		break;
 	}
 	case ValueType::Array: case ValueType::Map:
 	{
 		for (uint32_t i = 0; i < gv->Size; i++)
 			// de-alloc potential heap buffers of elements first
-			(((Reflection::GenericValue*)gv->Val.Ptr)[i]).~GenericValue();
+			gv->Val.Array[i].~GenericValue();
 		
-		Memory::Free(gv->Val.Ptr);
-
+		Memory::Free(gv->Val.Array);
 		break;
 	}
 	case ValueType::String:
@@ -660,6 +667,9 @@ std::string Reflection::TypeAsString(ValueType vt)
 	if (vt == ValueType::Null)
 		return "Null";
 
+	if (vt == ValueType::Any)
+		return "Any";
+
 	if (vt < ValueType::Null)
 		return std::string(BaseNames[vt]);
 
@@ -673,5 +683,5 @@ bool Reflection::TypeFits(ValueType Target, ValueType Value)
 	assert(Target != ValueType::Null);
 	uint8_t base = Target & ~ValueType::Null;
 
-	return (Value == base) || ((Target & ValueType::Null) && Value == ValueType::Null);
+	return (Value == base) || ((Target & ValueType::Null) && Value == ValueType::Null) || Target == ValueType::Any;
 }

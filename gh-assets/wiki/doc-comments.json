@@ -18,8 +18,14 @@
           "ParameterNames": "Component",
           "Type": "(keyof<Creatables>) : (GameObject & any)"
         },
-        "ForEachChild": "For all children of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield",
-        "ForEachDescendant": "For all descendants of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield",
+        "ForEachChild": {
+          "Description": "For all children of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield",
+          "ParameterNames": "Callback"
+        },
+        "ForEachDescendant": {
+          "Description": "For all descendants of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield",
+          "ParameterNames": "Callback"
+        },
         "GetChildren": "Returns a list of the Object's direct children",
         "GetComponents": {
           "Description": "Returns a list of the names of all Components that the Object currently has",
@@ -32,7 +38,10 @@
           "ParameterNames": "Component",
           "Type": "(keyof<Creatables>) : (boolean)"
         },
-        "MergeWith": "Merges the Objects together, replacing descendants with the same name",
+        "MergeWith": {
+          "Description": "Merges the Objects together, replacing descendants with the same name",
+          "ParameterNames": "With"
+        },
         "RemoveComponent": {
           "Description": "Removes the specified Component from the Object. Will error if does not have it (use `:HasComponent` to check beforehand)",
           "ParameterNames": "Component",
@@ -76,6 +85,11 @@
             "Out": "GameObject & Model",
             "ParameterNames": "Path"
           },
+          "LoadScene": {
+            "Description": "Loads `GameObject`s from the scene file at the provided path, returning a list of the root objects or `nil` and an error message upon failure",
+            "Out": "({ GameObject & {} }?, string)",
+            "ParameterNames": "Path"
+          },
           "SaveMesh": {
             "Description": "Saves the mesh data at the provided path to a file",
             "ParameterNames": [
@@ -86,6 +100,10 @@
           "SetMeshData": {
             "Description": "Associates the provided mesh data with the provided path",
             "Type": "(self, Id: string, MeshData: { Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } }) : ()"
+          },
+          "SaveScene": {
+            "Description": "Saves the list of `GameObject`s to the provided path, returning whether the operation succeeded",
+            "Type": "(self, RootNodes: { GameObject }, Path: string) : (boolean, string?)"
           }
         }
       },
@@ -183,6 +201,12 @@
             "Description": "Returns what is currently selected in the Explorer",
             "Type": "() : ({ GameObject })"
           },
+          "GetConfigValue": {
+            "Description": "Returns the value associated with the given Key in the Engine's loaded configuration (`phoenix.conf`)",
+            "ParameterNames": [
+              "Key"
+            ]
+          },
           "GetToolNames": {
             "Description": "Returns a list of valid Engine tools",
             "Type": "() : { string }"
@@ -205,6 +229,14 @@
               "VmName",
               "Code",
               "ChunkName"
+            ]
+          },
+          "SaveConfig": "Saves the Engine's current configuration state to the configuration file (`phoenix.conf`)",
+          "SetConfigValue": {
+            "Description": "Sets `Key` to `Value` in the Engine's loaded configuration without saving it to file",
+            "ParameterNames": [
+              "Key",
+              "Value"
             ]
           },
           "SetCurrentVM": {
@@ -239,7 +271,7 @@
             ]
           },
           "ShowMessageBox": {
-            "Description": "Shows a message box to the player with the given specification. The returned number with be the selected option: `0` for Cancel/No, `1` for Ok/Yes, `2` for No in `yesnocancel`. This isa blocking operation and no scripts or other parts of the Engine run until the message is dismissed. Avoid using quotes and backticks in the message",
+            "Description": "Shows a message box to the player with the given specification. The returned number with be the selected option: `0` for Cancel/No, `1` for Ok/Yes, `2` for No in `yesnocancel`. This is a blocking operation and no scripts or other parts of the Engine run until the message is dismissed. Avoid using quotes and backticks in the message",
             "ParameterNames": [
               "Title",
               "Message",
@@ -303,13 +335,25 @@
           "CanRedo": "Returns whether `:Redo` will succeed",
           "CanUndo": "Returns whether `:Undo` will succeed",
           "ClearHistory": "Clears all recorded history",
-          "DiscardAction": "Discards the Action by its ID",
+          "DiscardAction": {
+            "Description": "Discards the Action by its ID",
+            "ParameterNames": "Id"
+          },
           "EnableRecording": "Enables the main functionality of this service",
-          "FinishAction": "Finishes the Action by its ID. Only one Action may be active at a time",
-          "GetActionData": "Retrives information about a previously-recorded Action by its ID (IDs are in the range 0 <= ID < `ActionHistorySize`)",
+          "FinishAction": {
+            "Description": "Finishes the Action by its ID. Only one Action may be active at a time",
+            "ParameterNames": "Id"
+          },
+          "GetActionData": {
+            "Description": "Retrives information about a previously-recorded Action by its Index (Indexes, separate from IDs, are in the range 0 <= Index < `ActionHistorySize`)",
+            "ParameterNames": "Index"
+          },
           "GetCurrentActionData": "Retrieves information about the current Action being recorded",
           "Redo": "Forwards the state of the scene to how it was before the last Undo",
-          "TryBeginAction": "Attempts to begin an \"Action.\" Returns the ID of the action. May fail and return `nil`. Only one Action may be active at a time",
+          "TryBeginAction": {
+            "Description": "Attempts to begin an \"Action.\" Returns the ID of the action. May fail and return `nil`. Only one Action may be active at a time",
+            "ParameterNames": "Name"
+          },
           "Undo": "Reverses the state of the scene to how it was before the last Action began"
         },
         "Properties": {
@@ -383,6 +427,9 @@
           "Range": "How far light is emitted. If `>= 0`, the Range is used and attenuation is linear, otherwise it uses the formula `F = 1/D^2 * B` to mirror real-world attenuation, where `F` is the final brightness, `D` is the distance of a point from the Light, and `B` is the `Brightness` property's value",
           "Shadows": "Whether the Light can render shadows"
         }
+      },
+      "Renderer": {
+        "Description": "Interfacing with the Engine's rendering systems"
       },
       "RigidBody": {
         "Description": "Something rigid that participates in the Physics simulation",
@@ -567,11 +614,11 @@
             "Out": "GameObject?"
           },
           "new": {
-            "Description": "Creates a new GameObject with the provided Component",
-            "In": "Component: string",
+            "Description": "Creates a new GameObject with the provided Components, such as `GameObject.new(\"Mesh\")` or `GameObject.new(\"Model\", \"Animation\")`",
+            "In": "...: string",
             "Out": "GameObject"
           },
-          "validcomponents": {
+          "validComponents": {
             "Description": "A list of all valid component names which can be passed into `.new`",
             "Type": "{ string }"
           }
@@ -798,35 +845,6 @@
           }
         }
       },
-      "conf": {
-        "Description": "Internal Engine configuration state, loaded from file (`phoenix.conf`) upon startup",
-        "Members": {
-          "get": {
-            "Description": [
-              "Read a specific value from the configuration"
-            ],
-            "In": [
-              "Key: string"
-            ],
-            "Out": "any"
-          },
-          "save": {
-            "Description": [
-              "Save the current state of the configuration to file (`phoenix.conf`), returning whether the file was successfully overwritten"
-            ],
-            "Out": "boolean"
-          },
-          "set": {
-            "Description": [
-              "Change a specific value in the configuration"
-            ],
-            "In": [
-              "Key: string",
-              "Value: any"
-            ]
-          }
-        }
-      },
       "debug": {
         "Description": "Extensions to the standard Luau `debug` library are documented below",
         "Members": {
@@ -908,9 +926,9 @@
             ],
             "Out": "{ [string]: 'f' | 'd' }"
           },
-          "makecwdaliasof": {
+          "setunqualifiedroot": {
             "Description": [
-              "Changes the meaning of non-qualified paths (e.g.: not beginning with `.` or `C:` etc) to act as aliases to the given path instead of referring to the CWD"
+              "Changes the meaning of non-qualified paths (e.g.: not beginning with `.` or `C:` etc) to act as aliases to the given path + `resources/` instead of referring to the CWD"
             ],
             "In": [
               "Alias: string"
@@ -1593,28 +1611,6 @@
               "Json: string"
             ],
             "Out": "any"
-          }
-        }
-      },
-      "scene": {
-        "Description": "Scene assets",
-        "Members": {
-          "load": {
-            "Description": [
-              "Loads `GameObject`s from the scene file at the provided path, returning a list of the root objects or `nil` and an error message upon failure"
-            ],
-            "In": [
-              "Path: string"
-            ],
-            "Out": "{ GameObject }?, string?"
-          },
-          "save": {
-            "Description": "Saves the list of `GameObject`s to the provided path, returning whether the operation succeeded",
-            "In": [
-              "RootNodes: { GameObject }",
-              "Path: string"
-            ],
-            "Out": "boolean"
           }
         }
       },

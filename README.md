@@ -1,6 +1,6 @@
 # PhoenixEngine
 
-*✨ garbaj spaghett ✨*
+*✨ core dumped ✨*
 
 <hr>
 

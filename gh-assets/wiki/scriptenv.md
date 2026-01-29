@@ -45,9 +45,9 @@ Additional types with methods and properties
 * The base API will be documented on the Component APIs page
 #### `GameObject.fromId(Id: number): GameObject?`
 * Finds an Object by it's internal ID. Do not rely on the ID
-#### `GameObject.new(Component: string): GameObject`
-* Creates a new GameObject with the provided Component
-#### `GameObject.validcomponents: { string }`
+#### `GameObject.new(...: string): GameObject`
+* Creates a new GameObject with the provided Components, such as `GameObject.new("Mesh")` or `GameObject.new("Model", "Animation")`
+#### `GameObject.validComponents: { string }`
 * A list of all valid component names which can be passed into `.new`
 ### `Matrix`
 
@@ -166,14 +166,6 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * The different types of log messages
 #### `Enum.MouseButton: { Left: number, Middle: number, Right: number }`
 * Mouse buttons, which may be passed to `PlayerInput:IsMouseButtonPressed`
-### `conf`
-* Internal Engine configuration state, loaded from file (`phoenix.conf`) upon startup
-#### `conf.get(Key: string): any`
-* Read a specific value from the configuration
-#### `conf.save(): boolean`
-* Save the current state of the configuration to file (`phoenix.conf`), returning whether the file was successfully overwritten
-#### `conf.set(Key: string, Value: any): `
-* Change a specific value in the configuration
 ### `debug`
 * Extensions to the standard Luau `debug` library are documented below
 #### `debug.breakpoint((Line: number): number)) & (() -> ()`
@@ -197,8 +189,6 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * Returns a table of all the entries in the specified directory
 * The keys of the table is the path of the entry, while the values are the type of the entry
 * `f` is file, `d` is directory, and `a` is all
-#### `fs.makecwdaliasof(Alias: string): `
-* Changes the meaning of non-qualified paths (e.g.: not beginning with `.` or `C:` etc) to act as aliases to the given path instead of referring to the CWD
 #### `fs.mkdir(Path: string): `
 * Creates a directory at the given path
 * Throws an error upon failure
@@ -221,6 +211,8 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 #### `fs.rename(Path: string, NewName: string): `
 * Renames the file at the given `Path` to have the `NewName`
 * Throws an error upon failure
+#### `fs.setunqualifiedroot(Alias: string): `
+* Changes the meaning of non-qualified paths (e.g.: not beginning with `.` or `C:` etc) to act as aliases to the given path + `resources/` instead of referring to the CWD
 #### `fs.write(Path: string, Contents: string, CreateDirectories: boolean? [ false ]): `
 * Overwrites/creates the file at `Path` with the provided `Contents`
 * Throws an error upon failure
@@ -360,12 +352,6 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * Encodes the provided value into a JSON string
 #### `json.parse(Json: string): any`
 * Decodes the JSON string and returns it as a value
-### `scene`
-* Scene assets
-#### `scene.load(Path: string): { GameObject }?, string?`
-* Loads `GameObject`s from the scene file at the provided path, returning a list of the root objects or `nil` and an error message upon failure
-#### `scene.save(RootNodes: { GameObject }, Path: string): boolean`
-* Saves the list of `GameObject`s to the provided path, returning whether the operation succeeded
 ### `task`
 * Scheduling of tasks (coroutines or functions)
 #### `task.defer<A...>(Task: ((A...) -> ()) | thread, A...): `

@@ -148,7 +148,7 @@ public:
                     size_t actionId = history->TryBeginAction(inputs[0].AsString());
 
                     if (actionId == 0)
-                        return { {} }; // nil
+                        return { Reflection::GenericValue::Null() };
                     else
                         return { (uint32_t)actionId };
                 }
@@ -243,7 +243,7 @@ public:
                     const std::optional<History::Action>& action = history->GetCurrentAction();
 
                     if (!action.has_value())
-                        return { {} }; // Null
+                        return { Reflection::GenericValue::Null() };
 
                     return { dumpActionData(*action) };
                 }

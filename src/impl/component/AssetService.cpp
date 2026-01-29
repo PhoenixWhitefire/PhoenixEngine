@@ -1,6 +1,8 @@
 #include "component/AssetService.hpp"
 #include "asset/ModelImporter.hpp"
 #include "asset/MeshProvider.hpp"
+#include "asset/SceneFormat.hpp"
+#include "FileRW.hpp"
 
 class AssetServiceManager : public ComponentManager<EcAssetService>
 {
@@ -119,7 +121,56 @@ public:
 
                     return { loaded.at(0)->ToGenericValue() };
                 }
-            } }
+            } },
+
+            { "LoadScene", Reflection::MethodDescriptor{
+                { Reflection::ValueType::String },
+                { REFLECTION_OPTIONAL(Array), REFLECTION_OPTIONAL(String) },
+                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                {
+                    bool readSuccess = true;
+                    std::string contents = FileRW::ReadFile(inputs[0].AsString(), &readSuccess);
+
+                    if (!readSuccess)
+                        return { Reflection::GenericValue::Null(), contents };
+
+                    std::vector<ObjectRef> objects = SceneFormat::Deserialize(contents, &readSuccess);
+
+                    if (!readSuccess)
+                        return { Reflection::GenericValue::Null(), SceneFormat::GetLastErrorString() };
+
+                    std::vector<Reflection::GenericValue> returnArray;
+                    returnArray.reserve(objects.size());
+
+                    for (const ObjectRef& obj : objects)
+                        returnArray.push_back(obj->ToGenericValue());
+
+                    return { Reflection::GenericValue(returnArray) };
+                }
+            } },
+
+            { "SaveScene", Reflection::MethodDescriptor{
+                { Reflection::ValueType::Array, Reflection::ValueType::String },
+                { Reflection::ValueType::Boolean, REFLECTION_OPTIONAL(String) },
+                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                {
+                    std::vector<GameObject*> objects;
+                    objects.reserve(inputs[0].Size);
+
+                    for (const Reflection::GenericValue& gv : inputs[0].AsArray())
+                        objects.push_back(GameObject::FromGenericValue(gv));
+
+                    std::string ser = SceneFormat::Serialize(objects, inputs[1].AsString());
+
+                    std::string error;
+                    bool writeSuccess = FileRW::WriteFileCreateDirectories(inputs[1].AsString(), ser, &error);
+
+                    if (!writeSuccess)
+                        return { false, error };
+                    else
+                        return { true };
+                }
+            } },
         };
 
         return methods;

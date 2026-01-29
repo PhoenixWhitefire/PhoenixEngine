@@ -38,6 +38,7 @@ enum class EntityComponent : uint8_t
 	History,
 	RigidBody,
 	PhysicsService,
+	Renderer,
 
 	__count
 };
@@ -64,7 +65,8 @@ static inline const std::string_view s_EntityComponentNames[] =
 	"AssetManager",
 	"History",
 	"RigidBody",
-	"Physics"
+	"Physics",
+	"Renderer"
 };
 
 const std::string_view s_DataModelServices[] = {
@@ -73,7 +75,8 @@ const std::string_view s_DataModelServices[] = {
     "PlayerInput",
     "AssetManager",
     "History",
-	"Physics"
+	"Physics",
+	"Renderer"
 };
 
 // component type and ID

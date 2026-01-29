@@ -40,7 +40,9 @@
         "Methods": {
           "GetMeshData": "(String) -> (Map)",
           "ImportModel": "(String) -> (GameObject)",
+          "LoadScene": "(String) -> (Array?, String?)",
           "SaveMesh": "(String, String) -> ()",
+          "SaveScene": "(Array, String) -> (Boolean, String?)",
           "SetMeshData": "(String, Map) -> ()"
         }
       },
@@ -97,6 +99,7 @@
           "CreateVM": "(String) -> ()",
           "Exit": "(Integer?) -> ()",
           "GetCliArguments": "() -> (Array)",
+          "GetConfigValue": "(String) -> (Any)",
           "GetCurrentVM": "() -> (String)",
           "GetExplorerSelections": "() -> (Array)",
           "GetToolNames": "() -> (Array)",
@@ -104,6 +107,8 @@
           "OpenTextDocument": "(String, Integer?) -> ()",
           "ResetViewport": "() -> ()",
           "RunInVM": "(String, String, String?) -> (Boolean, String?)",
+          "SaveConfig": "() -> (Boolean, String)",
+          "SetConfigValue": "(String, Any) -> ()",
           "SetCurrentVM": "(String) -> ()",
           "SetExplorerRoot": "(GameObject) -> ()",
           "SetExplorerSelections": "(Array) -> ()",
@@ -123,22 +128,6 @@
           "VSync": "Boolean",
           "Version": "String READONLY",
           "WindowSize": "Vector2"
-        }
-      },
-      "Example": {
-        "Events": {
-          "OnGreeted": "(String, String)"
-        },
-        "Methods": {
-          "GiveUp": "() -> ()",
-          "Greet": "(Array, Boolean) -> (String, String)"
-        },
-        "Properties": {
-          "EvenMoreSecretMessage": "String READONLY",
-          "SecretMessage": "String READONLY",
-          "SomeInteger": "Integer",
-          "SuperCoolBool": "Boolean",
-          "WhereIAm": "Vector3"
         }
       },
       "History": {
@@ -213,6 +202,7 @@
           "Range": "Double"
         }
       },
+      "Renderer": {},
       "RigidBody": {
         "Properties": {
           "AngularVelocity": "Vector3",
@@ -298,7 +288,7 @@
         "Library": {
           "fromId": "function",
           "new": "function",
-          "validcomponents": "table"
+          "validComponents": "table"
         },
         "Metatable": {
           "__index": "function",
@@ -346,11 +336,6 @@
         "LogType": "table",
         "MouseButton": "table"
       },
-      "conf": {
-        "get": "function",
-        "save": "function",
-        "set": "function"
-      },
       "debug": {
         "breakpoint": "function"
       },
@@ -361,7 +346,6 @@
         "isdirectory": "function",
         "isfile": "function",
         "listdir": "function",
-        "makecwdaliasof": "function",
         "mkdir": "function",
         "promptopen": "function",
         "promptopenfolder": "function",
@@ -369,6 +353,7 @@
         "read": "function",
         "remove": "function",
         "rename": "function",
+        "setunqualifiedroot": "function",
         "write": "function"
       },
       "imgui": {
@@ -435,10 +420,6 @@
       "json": {
         "encode": "function",
         "parse": "function"
-      },
-      "scene": {
-        "load": "function",
-        "save": "function"
       },
       "task": {
         "defer": "function",

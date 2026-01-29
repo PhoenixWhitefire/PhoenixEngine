@@ -187,6 +187,8 @@ static void errorCallback(int code, const char* message)
 
 void Engine::m_InitializeVideo()
 {
+#if !PHX_HEADLESS_BUILD
+
 	ZoneScoped;
 
 	if (PHX_HEADLESS_BUILD || readFromConfiguration("Headless", false))
@@ -269,6 +271,10 @@ void Engine::m_InitializeVideo()
 	glfwSetWindowFocusCallback(Window, windowFocusChangedCallback);
 
 	Log::Info("Finished initializing video");
+
+#else
+	Log::Info("Skipping video initialization (headless build)");
+#endif
 }
 
 const int32_t SunShadowMapResolutionSq = 2048;
@@ -1118,6 +1124,7 @@ void Engine::Shutdown()
 	{
 		ImGui_ImplOpenGL3_Shutdown();
 		ImGui_ImplGlfw_Shutdown();
+		RendererContext.Shutdown();
 	}
 
 	Log::Info("Shutting down GLFW...");

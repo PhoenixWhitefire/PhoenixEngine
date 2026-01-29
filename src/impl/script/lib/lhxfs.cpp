@@ -62,9 +62,10 @@ static int fs_listdir(lua_State* L)
     char filter = filterstr[0];
     luaL_argcheck(L, filter == 'a' || filter == 'f' || filter == 'd', 2, "expected 'a', 'f', or 'd'");
 
+	std::error_code ec;
 	lua_newtable(L);
 
-	for (const auto& entry : std::filesystem::directory_iterator(FileRW::MakePathCwdRelative(path)))
+	for (const auto& entry : std::filesystem::directory_iterator(FileRW::MakePathCwdRelative(path), ec))
 	{
 		switch (filter)
 		{
@@ -106,6 +107,9 @@ static int fs_listdir(lua_State* L)
 		}
 	}
 
+	if (ec)
+		luaL_error(L, "listdir '%s': %s", FileRW::MakePathCwdRelative(path).c_str(), ec.message().c_str());
+
 	return 1;
 }
 
@@ -135,7 +139,7 @@ static int fs_definealias(lua_State* L)
 	return 0;
 }
 
-static int fs_makecwdaliasof(lua_State* L)
+static int fs_setunqualifiedroot(lua_State* L)
 {
 	FileRW::MakeCwdAliasOf(luaL_checkstring(L, 1));
 	return 1;
@@ -351,7 +355,7 @@ static const luaL_Reg fs_funcs[] =
     { "isfile", fs_isfile },
     { "isdirectory", fs_isdirectory },
 	{ "definealias", fs_definealias },
-	{ "makecwdaliasof", fs_makecwdaliasof },
+	{ "setunqualifiedroot", fs_setunqualifiedroot },
 	{ "cwd", fs_cwd },
 	{ "copy", fs_copy },
 	{ "mkdir", fs_mkdir },

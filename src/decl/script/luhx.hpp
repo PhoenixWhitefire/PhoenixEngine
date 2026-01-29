@@ -17,17 +17,11 @@ int luhxopen_base(lua_State*);
 #define LUHX_FSLIBNAME "fs"
 int luhxopen_fs(lua_State*);
 
-#define LUHX_CONFLIBNAME "conf"
-int luhxopen_conf(lua_State*);
-
 #define LUHX_IMGUILIBNAME "imgui"
 int luhxopen_imgui(lua_State*);
 
 #define LUHX_JSONLIBNAME "json"
 int luhxopen_json(lua_State*);
-
-#define LUHX_SCENELIBNAME "scene"
-int luhxopen_scene(lua_State*);
 
 #define LUHX_TASKLIBNAME "task"
 int luhxopen_task(lua_State*);

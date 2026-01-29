@@ -8,7 +8,7 @@ return function(describe, test: (string, () -> ()) -> (), expect: (any) -> (any)
 		workspace.SceneCamera.FieldOfView = 90
 	end)
 	test("Component check", function()
-		local new = GameObject.new("SpotLight")
+		local new = GameObject.new("SpotLight", "Animation")
 		expect(new:HasComponent("SpotLight") and new:HasComponent("Transform")):toBe(true)
 		new:Destroy()
 	end)

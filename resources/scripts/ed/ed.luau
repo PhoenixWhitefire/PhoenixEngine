@@ -53,8 +53,8 @@ local ToolOrder = {
 	"Tool_Properties"
 }
 
-local BottomBarEnabled = conf.get("Ed_Tool_BottomBarEnabled") or false
-local OutputEnabled = conf.get("Ed_Tool_OutputEnabled") or false
+local BottomBarEnabled = Engine:GetConfigValue("Ed_Tool_BottomBarEnabled") or false
+local OutputEnabled = Engine:GetConfigValue("Ed_Tool_OutputEnabled") or false
 assert(typeof(BottomBarEnabled) == "boolean")
 assert(typeof(OutputEnabled) == "boolean")
 
@@ -102,7 +102,8 @@ local function onError(err)
 	Engine:ShowMessageBox("Editor Error", errorMessage, "ok", "error")
 
 	if Project.DataModel then
-		scene.save({ Project.DataModel }, "scenes/autosave.world")
+		local s, e = AssetManager:SaveScene({ Project.DataModel }, "scenes/autosave.world")
+		assert(s, `Failed to save: {e}`)
 	end
 end
 
@@ -237,7 +238,7 @@ local function saveToRecents(Path: string)
 end
 
 local function saveProject()
-	scene.save({ assert(Project.DataModel) }, "@projres/scenes/root.world")
+	assert(AssetManager:SaveScene({ assert(Project.DataModel) }, "@projres/scenes/root.world"))
 end
 
 local function openCodeEditor()
@@ -302,10 +303,10 @@ local function openProject_(ManualPath: string?)
 
 	fs.definealias("proj", "@cwd/projects/" .. assert(path))
 	fs.definealias("projres", "@proj/resources")
-	fs.makecwdaliasof("@proj/")
+	fs.setunqualifiedroot("@proj/")
 
 	assert(path)
-	local objects, error = scene.load("@projres/scenes/root.world")
+	local objects, error = AssetManager:LoadScene("@projres/scenes/root.world")
 
 	if not objects then
 		error = error or "Unknown error"
@@ -620,12 +621,12 @@ local function toolsTab(_: number)
 
 		if tabButton(name, `@etextures/editor-icons/{name}.png`, true, enabled) then
 			Engine:SetToolEnabled(tool, not enabled)
-			conf.save()
+			Engine:SaveConfig()
 		end
 
 		if WasToolEnabled[tool] ~= nil then
 			if WasToolEnabled[tool] ~= enabled then
-				conf.save()
+				Engine:SaveConfig()
 			end
 		end
 
@@ -636,16 +637,16 @@ local function toolsTab(_: number)
 
 	if tabButton("Bottom Bar", `@etextures/editor-icons/command-bar.png`, true, BottomBarEnabled) then
 		BottomBarEnabled = not BottomBarEnabled
-		conf.set("Ed_Tool_BottomBarEnabled", BottomBarEnabled)
-		conf.save()
+		Engine:SetConfigValue("Ed_Tool_BottomBarEnabled", BottomBarEnabled)
+		Engine:SaveConfig()
 	end
 
 	imgui.sameline()
 
 	if tabButton("Output", `@etextures/editor-icons/command-bar.png`, true, OutputEnabled) then
 		OutputEnabled = not OutputEnabled
-		conf.set("Ed_Tool_OutputEnabled", OutputEnabled)
-		conf.save()
+		Engine:SetConfigValue("Ed_Tool_OutputEnabled", OutputEnabled)
+		Engine:SaveConfig()
 	end
 
 	imgui.dummy()
@@ -1067,7 +1068,8 @@ local function renderMainMenuBar(dt: number)
 
 		if imgui.button("Save") then
 			fs.write("./editor/settings.json", json.encode(EditorPreferences))
-			conf.set("postfx_gamma", EditorPreferences.Gamma)
+			Engine:SetConfigValue("postfx_gamma", EditorPreferences.Gamma)
+			Engine:SaveConfig()
 		end
 
 		if imgui.treenode("##") then
@@ -1089,7 +1091,7 @@ end
 
 EditorPreferences = savedEditorPreferences
 
-conf.set("postfx_gamma", EditorPreferences.Gamma)
+Engine:SetConfigValue("postfx_gamma", EditorPreferences.Gamma)
 
 imgui.stylecolors(if EditorPreferences.UseLightTheme then 'l' else 'd')
 
@@ -1476,7 +1478,7 @@ function Stages.SelectProject_Enter(DeltaTime)
 	SavedProjectsCache = nil
 
 	PluginManager.Shutdown()
-	fs.makecwdaliasof("")
+	fs.setunqualifiedroot("")
 end
 
 function Stages.SelectProject_Leave(DeltaTime)
@@ -1740,8 +1742,7 @@ function Stages.ProjectEditing_Leave(NextStage)
 	Project.IsTempPath = true
 	Project.DataModel = nil
 
-	conf.save()
-
+	Engine:SaveConfig()
 	Engine:CloseVM(GameEditingVM)
 end
 

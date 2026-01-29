@@ -58,7 +58,7 @@ local GameObjectOverrides = {
 
 local function dumpCreatables()
 	local creatablesExtra = {
-		Mesh = " & Transform",
+		Mesh = " & Transform & RigidBody",
 		SpotLight = " & Transform",
 		PointLight = " & Transform",
 		Model = " & Transform",
@@ -67,7 +67,7 @@ local function dumpCreatables()
 
 	definitionsFile ..= "\ntype Creatables = {\n"
 
-	for _, v in GameObject.validcomponents do
+	for _, v in GameObject.validComponents do
 		definitionsFile ..= `\t{v}: {v}{if creatablesExtra[v] then creatablesExtra[v] else ""},\n`
 	end
 
@@ -222,7 +222,8 @@ local rtol: { [string]: string } = {
 	["->"] = ":",
 	READONLY = "",
 	RUNTIMEONLY = "",
-	GameObject = "(GameObject & any)"
+	GameObject = "(GameObject & {})",
+	Any = "unknown"
 }
 
 local function rtolsub(str)
@@ -331,8 +332,15 @@ local function dumpReflectionApi(t, d, cn)
 					for i, t in inputs do
 						if typeof(docs) == "string" or not docs.ParameterNames then
 							table.insert(newinputs, `Param_{i}: {t}`)
+							warn(`No parameter names for {cn}.{n}`)
 						else
-							table.insert(newinputs, `{if typeof(docs.ParameterNames) == "table" then docs.ParameterNames[i] else docs.ParameterNames}: {t}`)
+							local name = if typeof(docs.ParameterNames) == "table" then docs.ParameterNames[i] else docs.ParameterNames
+							if not name then
+								warn(`Missing parameter name for parameter {i} of {cn}.{n}`)
+								name = `Param_{i}`
+							end
+
+							table.insert(newinputs, `{name}: {t}`)
 						end
 					end
 
@@ -347,6 +355,10 @@ local function dumpReflectionApi(t, d, cn)
 					subst = "(self, " .. subst
 				else
 					assert(docs.Type, n)
+					if not docs.Type:find("self") then
+						warn(`In {cn}.{n}, 'self' must be the first parameter!`)
+					end
+
 					subst = docs.Type
 				end
 
@@ -671,7 +683,7 @@ fs.write("./lsp/api.docs.json", json.encode(documentationData))
 
 print("Docs CI finish\n\n\n\n\n")
 
-if not conf.get("LspDefinitionsGeneratorDoNotShutdown") then
+if not _G.LspDefinitionsGeneratorDoNotShutdown then
 	-- close when we're done
 	game:GetService("Engine"):Exit()
 end

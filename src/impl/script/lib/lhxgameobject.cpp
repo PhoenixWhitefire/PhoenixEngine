@@ -65,9 +65,20 @@ GameObject* luhx_checkgameobject(lua_State* L, int StackIndex)
 
 static int gameobject_new(lua_State* L)
 {
-    GameObject* newObject = GameObject::Create(luaL_checkstring(L, 1));
-    luhx_pushgameobject(L, newObject);
+    GameObject* newObject = GameObject::Create();
 
+	for (int i = 1; i <= lua_gettop(L); i++)
+	{
+		const char* n = luaL_checkstring(L, i);
+
+		const auto& it = s_ComponentNameToType.find(n);
+		if (it == s_ComponentNameToType.end())
+			luaL_error(L, "Invalid component '%s'", n);
+
+		newObject->AddComponent(it->second);
+	}
+
+    luhx_pushgameobject(L, newObject);
 	return 1;
 }
 
@@ -277,7 +288,7 @@ int luhxopen_GameObject(lua_State* L)
 		lua_settable(L, -3);
 	}
 
-	lua_setfield(L, -2, "validcomponents");
+	lua_setfield(L, -2, "validComponents");
 
     return 1;
 }

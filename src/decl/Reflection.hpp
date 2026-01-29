@@ -77,7 +77,8 @@ namespace Reflection
 		// BEFORE Null
 		__lastBase,
 
-		Null = 0b10000000
+		Null = 0b01000000,
+		Any = 0b10000000 // Only for type definitions
 	};
 	};
 	using ValueType = ValueType_::VT;
@@ -104,6 +105,8 @@ namespace Reflection
 			glm::vec2 Vec2;
 			glm::vec3 Vec3;
 			GenericFunction* Func;
+			GenericValue* Array;
+			glm::mat4* Mat;
 			void* Ptr;
 		} Val = {};
 		// Array length or allocated memory for `Value`
@@ -133,6 +136,7 @@ namespace Reflection
 		GenericValue(GenericValue&&);
 
 		static void CopyInto(GenericValue&, const GenericValue&);
+		static GenericValue Null();
 
 		void Reset();
 
@@ -262,7 +266,7 @@ namespace std
 			case ValueType::Matrix:
 			{
 				for (size_t i = 0; i < 4*4; i++)
-					h ^= std::hash<float>()(((float*)g.Val.Ptr)[i]);
+					h ^= std::hash<float>()(((float*)g.Val.Mat)[i]);
 
 				return h;
 			}
@@ -273,7 +277,7 @@ namespace std
 			case ValueType::Array: case ValueType::Map:
 			{
 				for (uint32_t i = 0; i < g.Size; i++)
-					h ^= std::hash<Reflection::GenericValue>()(((Reflection::GenericValue*)g.Val.Ptr)[i]);
+					h ^= std::hash<Reflection::GenericValue>()(g.Val.Array[i]);
 
 				return h;
 			}
