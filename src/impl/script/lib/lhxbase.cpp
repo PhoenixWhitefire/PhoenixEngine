@@ -89,13 +89,6 @@ static int base_appendlog(lua_State* L)
     return 0;
 }
 
-#ifdef _WIN32
-
-#define popen _popen
-#define pclose _pclose
-
-#endif
-
 static const luaL_Reg base_funcs[] =
 {
     { "print", base_print },

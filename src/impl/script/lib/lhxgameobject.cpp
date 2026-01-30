@@ -66,6 +66,8 @@ GameObject* luhx_checkgameobject(lua_State* L, int StackIndex)
 static int gameobject_new(lua_State* L)
 {
     GameObject* newObject = GameObject::Create();
+	if (lua_gettop(L) >= 1)
+		newObject->Name = luaL_checkstring(L, 1);
 
 	for (int i = 1; i <= lua_gettop(L); i++)
 	{

@@ -349,6 +349,12 @@ static int fs_promptopenfolder(lua_State* L)
 
 // 13/01/2025: https://stackoverflow.com/a/478960
 // 02/12/2025: copied from Main.cpp
+#ifdef _WIN32
+
+#define popen _popen
+#define pclose _pclose
+
+#endif
 static std::string exec(const char* cmd)
 {
 	std::array<char, 128> buffer{ 0 };

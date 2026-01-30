@@ -145,7 +145,7 @@ public:
                     for (const ObjectRef& obj : objects)
                         returnArray.push_back(obj->ToGenericValue());
 
-                    return { Reflection::GenericValue(returnArray) };
+                    return { Reflection::GenericValue(returnArray), "" };
                 }
             } },
 
@@ -168,7 +168,7 @@ public:
                     if (!writeSuccess)
                         return { false, error };
                     else
-                        return { true };
+                        return { true, "" };
                 }
             } },
         };

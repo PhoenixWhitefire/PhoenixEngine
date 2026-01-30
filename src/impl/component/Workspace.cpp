@@ -109,7 +109,7 @@ public:
 					SpatialCastResult result = static_cast<EcWorkspace*>(p)->Raycast(origin, vector, filterList, inputs.size() > 3 ? inputs[3].AsBoolean() : true);
 					
 					if (!result.Occurred)
-						return { Reflection::GenericValue() };
+						return { Reflection::GenericValue::Null()};
 
 					else
 					{

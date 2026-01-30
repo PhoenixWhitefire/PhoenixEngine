@@ -86,6 +86,12 @@ const ScriptEngine::LuauVM& ScriptEngine::GetCurrentVM()
 
 lua_Type ScriptEngine::ReflectionTypeToLuauType(Reflection::ValueType rvt)
 {
+	if (rvt == Reflection::ValueType::Any)
+	{
+		assert(false);
+		return LUA_TNIL;
+	}
+
 	assert(size_t(rvt & ~Reflection::ValueType::Null) < std::size(s_ValueTypeToLuauType));
 	return s_ValueTypeToLuauType[rvt & ~Reflection::ValueType::Null];
 }
@@ -657,6 +663,9 @@ void ScriptEngine::L::CheckType(lua_State* L, Reflection::ValueType Type, int St
 {
 	ZoneScoped;
 
+	if (Type == Reflection::ValueType::Any)
+		return; // Nothing to check
+
 	bool isOptional = Type & Reflection::ValueType::Null;
 	int givenType = lua_type(L, StackIndex);
 
@@ -756,7 +765,8 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 	}
 	case Reflection::ValueType::Map:
 	{
-		std::span<Reflection::GenericValue> array = gv.AsArray();
+		// NOTE Using `::AsArray` will throw an exception because Type != Array!!
+		std::span<Reflection::GenericValue> array = { gv.Val.Array, gv.Size };
 
 		if (array.size() % 2 != 0)
 			RAISE_RT("GenericValue type was Map, but it does not have an even number of elements!");
@@ -1458,6 +1468,16 @@ lua_State* ScriptEngine::L::Create(const std::string& VmName)
 				StateUserdata* vmud = (StateUserdata*)lua_mainthread(L)->userdata;
 				vmud->Coroutines.erase(std::find(vmud->Coroutines.begin(), vmud->Coroutines.end(), L));
 
+				StateUserdata* ud = (StateUserdata*)L->userdata;
+				for (EventConnectionData* ec : ud->EventConnections)
+				{
+					assert(ec->ConnectionId != UINT32_MAX);
+
+					if (void* referred = ec->Reflector.Referred())
+						ec->Event->Disconnect(referred, ec->ConnectionId);
+				}
+
+				ud->EventConnections.clear();
 				delete (StateUserdata*)L->userdata;
 			}
 		};
@@ -1507,6 +1527,8 @@ void ScriptEngine::L::Close(lua_State* L)
 			if (void* referred = ec->Reflector.Referred())
 				ec->Event->Disconnect(referred, ec->ConnectionId);
 		}
+
+		ud->EventConnections.clear();
 	}
 
 	lua_close(L);

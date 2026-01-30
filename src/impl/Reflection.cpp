@@ -188,20 +188,22 @@ void Reflection::GenericValue::CopyInto(GenericValue& Target, const GenericValue
 
 	switch (Target.Type)
 	{
+	case ValueType::Null:
+		return;
 	case ValueType::String:
 	{
 		std::string_view str = Source.AsStringView();
 		fromString(Target, str.data());
 		break;
 	}
-	case ValueType::Color:
+	case ValueType::Color: case ValueType::Vector3:
 	{
 		Target.Val.Vec3 = Source.Val.Vec3;
 		break;
 	}
-	case ValueType::Vector3:
+	case ValueType::Vector2:
 	{
-		Target.Val.Vec3 = Source.Val.Vec3;
+		Target.Val.Vec2 = Source.Val.Vec2;
 		break;
 	}
 	case ValueType::Matrix:

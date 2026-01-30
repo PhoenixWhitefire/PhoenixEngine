@@ -15,11 +15,6 @@ static int conn_namecall(lua_State* L)
 		ec->Event->Disconnect(ec->Reflector.Referred(), ec->ConnectionId);
 		ec->ConnectionId = UINT32_MAX;
 
-		// errors with `attempt to modify readonly table`
-		//lua_pushlightuserdata(L, L);
-		//lua_pushnil(L);
-		//lua_settable(L, LUA_ENVIRONINDEX); // remove stacktrace string
-
 		ScriptEngine::L::StateUserdata* ud = (ScriptEngine::L::StateUserdata*)ec->L->userdata;
 		if (ud->EventConnections.size() > 0)
 		{
@@ -28,7 +23,9 @@ static int conn_namecall(lua_State* L)
 			ud->EventConnections.erase(it);
 		}
 
-		lua_unref(ec->L, ec->ThreadRef);
+		assert(lua_mainthread(L) == lua_mainthread(ec->L));
+		lua_unref(L, ec->ThreadRef);
+		lua_unref(L, ec->SpawningThreadRef);
 	}
 	else
 		luaL_error(L, "No such method of Event Connection known as '%s'", L->namecall->data);

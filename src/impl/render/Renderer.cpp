@@ -255,6 +255,9 @@ Renderer::~Renderer()
 
 void Renderer::ChangeResolution(uint32_t Width, uint32_t Height)
 {
+	if (Width == 0 || Height == 0)
+		return;
+
 	Log::InfoF(
 		"Changing window resolution: ({}, {}) -> ({}, {})",
 		m_Width,

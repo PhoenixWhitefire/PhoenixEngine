@@ -52,6 +52,8 @@ void Engine::ResizeWindow(int NewSizeX, int NewSizeY)
 void Engine::OnWindowResized(int NewSizeX, int NewSizeY)
 {
 	ZoneScoped;
+	if (NewSizeX == 0 || NewSizeY == 0)
+		return;
 
 	this->WindowSizeX = NewSizeX;
 	this->WindowSizeY = NewSizeY;

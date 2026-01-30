@@ -161,6 +161,10 @@ static int sig_namecall(lua_State* L)
 		ec->Event = rev;
 		ec->L = L;
 
+		lua_pushthread(L);
+		ec->SpawningThreadRef = lua_ref(L, -1);
+		lua_pop(L, 1);
+
 		((ScriptEngine::L::StateUserdata*)L->userdata)->EventConnections.push_back(ec);
 
 		return 1;

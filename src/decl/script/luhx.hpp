@@ -62,6 +62,7 @@ struct EventConnectionData
 	const Reflection::EventDescriptor* Event = nullptr;
 	lua_State* L = nullptr;
 	uint32_t ConnectionId = UINT32_MAX;
+	int SpawningThreadRef = LUA_NOREF;
 	int ThreadRef = LUA_NOREF;
 	int SignalRef = LUA_NOREF;
 };

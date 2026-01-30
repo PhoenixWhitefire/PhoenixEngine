@@ -647,7 +647,7 @@ static void renderTextEditors()
 
 		if (tab.JumpToLine > 0)
 		{
-			tab.Editor.SetCursorPosition({ tab.JumpToLine, 1 });
+			tab.Editor.SetCursorPosition({ tab.JumpToLine > 0 ? tab.JumpToLine - 1 : 0, 1 });
 			tab.JumpToLine = 0;
 		}
 
@@ -1719,7 +1719,7 @@ static void recursiveIterateTree(GameObject* current)
 		onTreeItemClicked(nodeClicked);
 }
 
-static bool resetConflictedProperty(const char* PropName, char* Buf = nullptr)
+static bool resetConflictedProperty(const char* /* PropName */, char* Buf = nullptr)
 {
 	char dbuf[2] = { 0 };
 	Buf = Buf ? Buf : dbuf;
@@ -3901,6 +3901,15 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 	static bool s_CallstackJumpToCurrentThread = false;
 	s_CallstackJumpToCurrentThread = true;
 
+	static int CurrentVMIndex = 0;
+
+	for (auto it = ScriptEngine::VMs.begin(); it != ScriptEngine::VMs.end(); it++)
+	{
+		if (it->first == corUd->VM)
+			break;
+		CurrentVMIndex++;
+	}
+
 	while (!glfwWindowShouldClose(engine->Window) && running)
 	{
 		ZoneScopedN("DebuggerFrame");
@@ -4179,7 +4188,6 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 			for (auto& [ name, _ ] : ScriptEngine::VMs)
 				vmNames.emplace_back(name);
 
-			static int CurrentVMIndex = 0;
 			if (CurrentVMIndex >= (int)vmNames.size())
 				CurrentVMIndex = 0;
 
