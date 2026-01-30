@@ -647,7 +647,7 @@ static void renderTextEditors()
 
 		if (tab.JumpToLine > 0)
 		{
-			tab.Editor.SetCursorPosition({ tab.JumpToLine > 0 ? tab.JumpToLine - 1 : 0, 1 });
+			tab.Editor.SetCursorPosition({ tab.JumpToLine > 0 ? tab.JumpToLine - 1 : 0, 0 });
 			tab.JumpToLine = 0;
 		}
 

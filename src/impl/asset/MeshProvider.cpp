@@ -1149,7 +1149,8 @@ void MeshProvider::FinalizeAsyncLoadedMeshes()
 		mesh->Indices = loadedMesh.Indices;
 		mesh->Bones = loadedMesh.Bones;
 
-		it->PostLoadCallback(*mesh);
+		if (it->PostLoadCallback)
+			it->PostLoadCallback(*mesh);
 		mesh = &m_Meshes.at(it->ResourceId);
 
 		if (!IsHeadless)
