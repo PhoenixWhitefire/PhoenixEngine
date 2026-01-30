@@ -347,6 +347,55 @@ static int fs_promptopenfolder(lua_State* L)
 	return 1;
 }
 
+// 13/01/2025: https://stackoverflow.com/a/478960
+// 02/12/2025: copied from Main.cpp
+static std::string exec(const char* cmd)
+{
+	std::array<char, 128> buffer{ 0 };
+	std::string result;
+	FILE* pipe = popen(cmd, "r");
+
+	if (!pipe)
+		throw std::runtime_error("popen() failed!");
+
+	while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe) != nullptr)
+		result += buffer.data();
+
+	pclose(pipe);
+
+	return result;
+}
+
+static int fs_execute(lua_State* L)
+{
+	const char* command = luaL_checkstring(L, 1);
+
+	return ScriptEngine::L::Yield(
+		L,
+		1,
+		[command](ScriptEngine::YieldedCoroutine& yc)
+		{
+			std::shared_future<std::string> f = std::async(std::launch::async, [command]()
+			{
+				std::string result = exec(command);
+				return result;
+			}).share();
+
+			yc.RmPoll = [f](lua_State* L) -> int
+			{
+				if (!f.valid() || (f.wait_for(std::chrono::seconds(0)) != std::future_status::ready))
+					return -1;
+
+				const std::string& ret = f.get();
+				lua_pushlstring(L, ret.data(), ret.size());
+
+				return 1;
+			};
+			yc.Mode = ScriptEngine::YieldedCoroutine::ResumptionMode::Polled;
+		}
+	);
+}
+
 static const luaL_Reg fs_funcs[] =
 {
     { "write", fs_write },
@@ -361,6 +410,7 @@ static const luaL_Reg fs_funcs[] =
 	{ "mkdir", fs_mkdir },
 	{ "rename", fs_rename },
 	{ "remove", fs_remove },
+	{ "execute", fs_execute },
 
     { "promptsave", fs_promptsave },
     { "promptopen", fs_promptopen },

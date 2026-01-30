@@ -71,7 +71,8 @@ Additional types with methods and properties
 * Creates a Matrix at position `Eye` oriented such that the `.Forward` vector moves toward `Target`
 #### `Matrix.new(): Matrix`
 #### `Matrix.new(X: number, Y: number, Z: number): Matrix`
-* Creates a new identity matrix
+#### `Matrix.new(Position: vector): Matrix`
+* Creates a new identity matrix when given no arguments, or a translated matrix otherwise (like `.fromTranslation`)
 #### `ExtractAngles(): vector`
 * Extracts the orientation of the Matrix as euler angles in the YXZ rotation order
 
@@ -133,16 +134,16 @@ Additional types with methods and properties
 * The value at Column 4, Row 4
 
 #### `.Forward: vector`
-* The forward vector of the Matrix
+* The Forward basis vector of the Matrix
 
 #### `.Position: vector`
 * The position of the Matrix in world-space
 
 #### `.Right: vector`
-* The rightward vector of the Matrix
+* The Right basis vector of the Matrix
 
 #### `.Up: vector`
-* The upward vector of the Matrix
+* The Up basis vector of the Matrix
 
 ## Libraries
 
@@ -181,6 +182,8 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * Returns the Current Working Directory of the Engine
 #### `fs.definealias(Alias: string, For: string): `
 * Defines an alias for the filesystem, such that `@<Alias>/` refers to `<For>/` to the Engine
+#### `fs.execute(Command: string): string`
+* Executes a shell command
 #### `fs.isdirectory(string): boolean`
 * Returns whether the specified Path refers to a directory
 #### `fs.isfile(string): boolean`
@@ -375,8 +378,6 @@ Additional global variables
 * Same as `print`, but does not prefix the log message with `[INFO]`
 #### `game: GameObject & DataModel`
 * The GameObject acting as the Data Model of the Engine
-#### `shellexec(Command: string): string`
-* Runs a shell command
 #### `warn(...: any): ()`
 * Same as `print`, except generates a Warning message
 #### `workspace: GameObject & Workspace`

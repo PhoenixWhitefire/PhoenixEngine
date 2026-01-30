@@ -670,7 +670,7 @@
             "Out": "Matrix"
           },
           "new": {
-            "Description": "Creates a new identity matrix",
+            "Description": "Creates a new identity matrix when given no arguments, or a translated matrix otherwise (like `.fromTranslation`)",
             "In": "",
             "Out": "Matrix",
             "Overloads": [
@@ -763,7 +763,7 @@
             "Type": "number"
           },
           "Forward": {
-            "Description": "The forward vector of the Matrix",
+            "Description": "The Forward basis vector of the Matrix",
             "Type": "vector"
           },
           "Position": {
@@ -771,11 +771,11 @@
             "Type": "vector"
           },
           "Right": {
-            "Description": "The rightward vector of the Matrix",
+            "Description": "The Right basis vector of the Matrix",
             "Type": "vector"
           },
           "Up": {
-            "Description": "The upward vector of the Matrix",
+            "Description": "The Up basis vector of the Matrix",
             "Type": "vector"
           }
         },
@@ -796,11 +796,6 @@
       },
       "game": {
         "Description": "The GameObject acting as the Data Model of the Engine"
-      },
-      "shellexec": {
-        "Description": "Runs a shell command",
-        "In": "Command: string",
-        "Out": "string"
       },
       "warn": {
         "Description": "Same as `print`, except generates a Warning message",
@@ -887,6 +882,11 @@
               "Alias: string",
               "For: string"
             ]
+          },
+          "execute": {
+            "Description": "Executes a shell command",
+            "In": "Command: string",
+            "Out": "string"
           },
           "isdirectory": {
             "Description": [

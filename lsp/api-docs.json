@@ -66,7 +66,7 @@
     "documentation": "* Creates a Matrix at position `Eye` oriented such that the `.Forward` vector moves toward `Target`"
   },
   "@luhx/global/Matrix.new": {
-    "documentation": "* Creates a new identity matrix"
+    "documentation": "* Creates a new identity matrix when given no arguments, or a translated matrix otherwise (like `.fromTranslation`)"
   },
   "@luhx/global/_VMNAME": {
     "documentation": "* A non-unique identifier for the current Luau VM"
@@ -91,6 +91,9 @@
   },
   "@luhx/global/fs.definealias": {
     "documentation": "* Defines an alias for the filesystem, such that `@<Alias>/` refers to `<For>/` to the Engine"
+  },
+  "@luhx/global/fs.execute": {
+    "documentation": "* Executes a shell command"
   },
   "@luhx/global/fs.isdirectory": {
     "documentation": "* Returns whether the specified Path refers to a directory"
@@ -319,9 +322,6 @@
   },
   "@luhx/global/json.parse": {
     "documentation": "* Decodes the JSON string and returns it as a value"
-  },
-  "@luhx/global/shellexec": {
-    "documentation": "* Runs a shell command"
   },
   "@luhx/global/task": {
     "documentation": "* Scheduling of tasks (coroutines or functions)"
@@ -732,7 +732,7 @@
     "documentation": "* Extracts the orientation of the Matrix as euler angles in the YXZ rotation order\n"
   },
   "@luhx/globaltype/Matrix.Forward": {
-    "documentation": "* The forward vector of the Matrix\n"
+    "documentation": "* The Forward basis vector of the Matrix\n"
   },
   "@luhx/globaltype/Matrix.Inverse": {
     "documentation": "* Returns the inverse of the Matrix\n"
@@ -744,10 +744,10 @@
     "documentation": "* The position of the Matrix in world-space\n"
   },
   "@luhx/globaltype/Matrix.Right": {
-    "documentation": "* The rightward vector of the Matrix\n"
+    "documentation": "* The Right basis vector of the Matrix\n"
   },
   "@luhx/globaltype/Matrix.Up": {
-    "documentation": "* The upward vector of the Matrix\n"
+    "documentation": "* The Up basis vector of the Matrix\n"
   },
   "@luhx/globaltype/Matrix.__mul": {
     "documentation": "* Two Matrices may be multiplied together with the `*` operator\n"

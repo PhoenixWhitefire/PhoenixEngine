@@ -1,4 +1,18 @@
 return function(describe, test, expect)
+	test("Individual component new", function()
+		expect(Matrix.new(10, 19, 8).Position):toBe(vector.create(10, 19, 8))
+	end)
+	test("vector ctor", function()
+		expect(Matrix.new(vector.create(10, 19, 8)).Position):toBe(vector.create(10, 19, 8))
+	end)
+	test("identify", function()
+		expect(Matrix.new() == Matrix.identity):toBe(true)
+	end)
+
+	test("fromAngles alias", function()
+		expect(Matrix.fromAngles(0, math.rad(10), math.rad(19))):toBe(Matrix.fromEulerAnglesYXZ(0, math.rad(10), math.rad(19)))
+	end)
+
 	test("Min bounds", function()
 		expect(function()
 			local m = Matrix.new()

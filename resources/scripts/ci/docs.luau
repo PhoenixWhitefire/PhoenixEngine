@@ -136,7 +136,7 @@ local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, lib
 		definitionsFile = string.sub(definitionsFile, 1, #definitionsFile - 2)
 		first = false
 
-		definitionsFile ..= "\ttraceback: (msg: string?, level: number?) -> string,\n"
+		definitionsFile ..= "\ttraceback: ((msg: string?, level: number?) -> string) & (co: thread, msg: string?, level: number?) -> string,\n"
 							.. "\tinfo: (level: number, s: string) -> string,\n"
 	end
 
@@ -162,7 +162,16 @@ local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, lib
 			definitionsFile ..= `  { k }: `
 			assert(not v.Overloads or typeof(v.Overloads) == "string" or typeof(v.Overloads) == "table")
 
-			for _, vIn in { v.In or "", if typeof(v.Overloads) == "string" then v.Overloads else table.unpack(v.Overloads or {}) } do
+			local ins = { v.In or "" }
+			if typeof(v.Overloads) == "string" then
+				table.insert(ins, v.Overloads)
+
+			elseif v.Overloads then
+				assert(typeof(v.Overloads) == "table")
+				table.move(v.Overloads, 1, #v.Overloads, #ins + 1, ins)
+			end
+
+			for _, vIn in ins do
 				local docsig, defsig = dumpFuncSignature(libname, k, vIn, v.Out or "", v)
 				str ..= docsig
 				definitionsFile ..= `{ defsig } & `

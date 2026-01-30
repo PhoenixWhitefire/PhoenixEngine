@@ -110,11 +110,6 @@ static int matrix_fromEulerAnglesYXZ(lua_State* L)
 	return 1;
 }
 
-static int matrix_fromAngles(lua_State* L)
-{
-    return matrix_fromEulerAnglesYXZ(L);
-}
-
 static int matrix_lookAt(lua_State* L)
 {
     const float updefault[3] = { 0.f, 1.f, 0.f };
@@ -136,7 +131,7 @@ static const luaL_Reg matrix_funcs[] =
     { "fromTranslation", matrix_fromTranslation },
     { "fromEulerAnglesXYZ", matrix_fromEulerAnglesXYZ },
 	{ "fromEulerAnglesYXZ", matrix_fromEulerAnglesYXZ },
-	{ "fromAngles", matrix_fromAngles },
+	{ "fromAngles", matrix_fromEulerAnglesYXZ },
     { "lookAt", matrix_lookAt },
 
 	{ NULL, NULL }

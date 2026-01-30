@@ -324,7 +324,6 @@
       "_VMNAME": "string",
       "appendlog": "function",
       "game": "GameObject & DataModel",
-      "shellexec": "function",
       "warn": "function",
       "workspace": "GameObject & Workspace"
     },
@@ -344,6 +343,7 @@
         "copy": "function",
         "cwd": "function",
         "definealias": "function",
+        "execute": "function",
         "isdirectory": "function",
         "isfile": "function",
         "listdir": "function",

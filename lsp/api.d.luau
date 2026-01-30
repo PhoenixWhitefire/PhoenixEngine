@@ -53,7 +53,7 @@ declare Matrix: {
   fromTranslation: (( Position: vector ) -> (Matrix)) & (( X: number, Y: number, Z: number ) -> (Matrix)),
   identity: Matrix,
   lookAt: (( Eye: vector, Target: vector ) -> (Matrix)),
-  new: ((  ) -> (Matrix)) & (( X: number, Y: number, Z: number ) -> (Matrix))
+  new: ((  ) -> (Matrix)) & (( X: number, Y: number, Z: number ) -> (Matrix)) & (( Position: vector ) -> (Matrix))
 }
 
 
@@ -312,7 +312,7 @@ declare Enum: {
   MouseButton: { Left: number, Middle: number, Right: number }
 }
 declare debug: {
-	traceback: (msg: string?, level: number?) -> string,
+	traceback: ((msg: string?, level: number?) -> string) & (co: thread, msg: string?, level: number?) -> string,
 	info: (level: number, s: string) -> string,
   breakpoint: (( (Line: number ) -> (number)) & (() -> ()))
 }
@@ -320,6 +320,7 @@ declare fs: {
   copy: (( From: string, To: string ) -> ()),
   cwd: ((  ) -> (string)),
   definealias: (( Alias: string, For: string ) -> ()),
+  execute: (( Command: string ) -> (string)),
   isdirectory: (( string ) -> (boolean)),
   isfile: (( string ) -> (boolean)),
   listdir: (( Path: string, Filter: ('a' | 'f' | 'd')? ) -> ({ [string]: 'f' | 'd' })),
@@ -410,7 +411,6 @@ declare task: {
 declare _VMNAME: string
 declare function appendlog( ...: any ): ()
 declare game: GameObject & DataModel
-declare function shellexec( Command: string ): string
 declare function warn( ...: any ): ()
 declare workspace: GameObject & Workspace
 

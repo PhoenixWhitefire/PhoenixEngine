@@ -242,7 +242,7 @@ local function saveProject()
 end
 
 local function openCodeEditor()
-	print("Open code editor result: ", shellexec(`{ EditorPreferences.CodeEditorPath } "{ fs.cwd() }/projects/{ Project.Name }"`))
+	print("Open code editor result: ", fs.execute(`{ EditorPreferences.CodeEditorPath } "{ fs.cwd() }/projects/{ Project.Name }"`))
 end
 
 local function openProject_(ManualPath: string?)
