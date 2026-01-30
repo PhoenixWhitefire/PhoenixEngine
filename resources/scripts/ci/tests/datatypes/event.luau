@@ -1,0 +1,46 @@
+return function(describe, test, expect)
+    test("Connect and disconnect", function()
+        local count = 0
+        local function func()
+            count += 1
+        end
+
+        local connection = nil :: EventConnection?
+
+        expect(function()
+            connection = game.OnFrameBegin:Connect(func)
+        end).never:toThrow()
+
+        game.OnFrameBegin:WaitUntil()
+        task.defer(coroutine.running())
+        coroutine.yield()
+        expect(count):toBe(1)
+
+        assert(connection)
+        connection:Disconnect()
+
+        game.OnFrameBegin:WaitUntil()
+        task.defer(coroutine.running())
+        coroutine.yield()
+        expect(count):toBe(1)
+    end)
+    test("WaitUntil", function()
+        local n = game.OnFrameBegin:WaitUntil()
+        local correct = n and typeof(n) == "number" and n > 0
+        expect(correct):toBe(true)
+    end)
+    test(".Connected", function()
+        local conn = game.OnFrameBegin:Connect(function() end)
+        expect(conn.Connected):toBe(true)
+        conn:Disconnect()
+        expect(conn.Connected):toBe(false)
+        expect(function()
+            conn:Disconnect()
+        end):toThrow("already ")
+    end)
+    test(".Signal", function()
+        local conn = game.OnFrameBegin:Connect(function() end)
+        expect(conn.Signal):toBe(game.OnFrameBegin)
+        conn:Disconnect()
+    end)
+end

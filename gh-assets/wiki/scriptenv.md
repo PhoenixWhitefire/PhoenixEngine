@@ -6,6 +6,7 @@ Additional types with methods and properties
 
 * An RGB color
 #### `Color.new(R: number, G: number, B: number): Color`
+#### `Color.new(Color: vector): Color`
 * Returns a Color with the provided R, G, and B values
 * Values are expected to be in the range 0 to 1
 #### `.B: number`
@@ -20,7 +21,7 @@ Additional types with methods and properties
 ### `EventConnection`
 
 * A connection to an Event
-#### `Disconnect(): nil`
+#### `Disconnect()`
 * Disconnects the Connection, causing the callback to no longer be invoked. May only be called once
 
 #### `.Connected: boolean`
@@ -70,7 +71,6 @@ Additional types with methods and properties
 * Creates a Matrix at position `Eye` oriented such that the `.Forward` vector moves toward `Target`
 #### `Matrix.new(): Matrix`
 #### `Matrix.new(X: number, Y: number, Z: number): Matrix`
-#### `Matrix.new(Position: vector): Matrix`
 * Creates a new identity matrix
 #### `ExtractAngles(): vector`
 * Extracts the orientation of the Matrix as euler angles in the YXZ rotation order

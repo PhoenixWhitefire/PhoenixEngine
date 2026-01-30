@@ -44,7 +44,7 @@ table.sort(orderedGlobals)
 
 local definitionsFile = [[
 export type EventSignal<T...> = {
-	Connect: (self: EventSignal<T...>, Callback: (T...) -> ()) -> (),
+	Connect: (self: EventSignal<T...>, Callback: (T...) -> ()) -> (EventConnection),
 	WaitUntil: (self: EventSignal<T...>) -> (T...)
 }
 ]]
@@ -144,8 +144,6 @@ local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, lib
 	table.sort(orderedMembers)
 
 	for _, k in orderedMembers do
-		local d = t[k]
-
 		if first then
 			definitionsFile = string.sub(definitionsFile, 1, #definitionsFile - 2)
 				
@@ -162,8 +160,9 @@ local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, lib
 
 		if t[k] == "function" then
 			definitionsFile ..= `  { k }: `
+			assert(not v.Overloads or typeof(v.Overloads) == "string" or typeof(v.Overloads) == "table")
 
-			for _, vIn in { v.In or "", table.unpack(v.Overloads or {}) } do
+			for _, vIn in { v.In or "", if typeof(v.Overloads) == "string" then v.Overloads else table.unpack(v.Overloads or {}) } do
 				local docsig, defsig = dumpFuncSignature(libname, k, vIn, v.Out or "", v)
 				str ..= docsig
 				definitionsFile ..= `{ defsig } & `
@@ -489,7 +488,7 @@ local function documentDatatype(name)
 			local rk = string.sub(k, 2, #k)
 			k = rk
 			local args = v.In or ""
-			local returns = v.Out or "nil"
+			local returns = v.Out or nil
 			local defargs = args
 
 			if #args == 0 then
@@ -510,10 +509,10 @@ local function documentDatatype(name)
 				end
 			end
 
-			datatype ..= `#### \`{ rk }({ args }): { returns }\`\n`
+			datatype ..= `#### \`{ rk }({ args }){ if returns then ": " .. returns else "" }\`\n`
 
 			if name ~= "EventSignal" then
-				definitionsFile ..= `  function { rk }({ defargs }): ( { returns } )\n`
+				definitionsFile ..= `  function { rk }({ defargs }): ( { returns or "" } )\n`
 			end
 		else
 			datatype ..= `#### \`.{ k }: { v.Type }\`\n`

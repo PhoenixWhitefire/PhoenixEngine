@@ -252,7 +252,7 @@ static void createmetatable(lua_State* L)
 	lua_setfield(L, -2, "__namecall");
 
 	lua_pushcfunction(L, sig_eq, "EventSignal.__eq");
-	lua_setfield(L, -2, "EventSignal.__eq");
+	lua_setfield(L, -2, "__eq");
 
 	lua_pushcfunction(L, sig_tostring, "EventSignal.__tostring");
 	lua_setfield(L, -2, "__tostring");

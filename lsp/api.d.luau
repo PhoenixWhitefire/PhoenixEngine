@@ -1,5 +1,5 @@
 export type EventSignal<T...> = {
-	Connect: (self: EventSignal<T...>, Callback: (T...) -> ()) -> (),
+	Connect: (self: EventSignal<T...>, Callback: (T...) -> ()) -> (EventConnection),
 	WaitUntil: (self: EventSignal<T...>) -> (T...)
 }
 declare extern type Color with
@@ -8,10 +8,10 @@ declare extern type Color with
   R: number
 end
 declare Color: {
-  new: (( R: number, G: number, B: number ) -> (Color))
+  new: (( R: number, G: number, B: number ) -> (Color)) & (( Color: vector ) -> (Color))
 }
 declare extern type EventConnection with
-  function Disconnect(self): ( nil )
+  function Disconnect(self): (  )
   Connected: boolean
   Signal: any
 end
@@ -53,7 +53,7 @@ declare Matrix: {
   fromTranslation: (( Position: vector ) -> (Matrix)) & (( X: number, Y: number, Z: number ) -> (Matrix)),
   identity: Matrix,
   lookAt: (( Eye: vector, Target: vector ) -> (Matrix)),
-  new: ((  ) -> (Matrix)) & (( X: number, Y: number, Z: number ) -> (Matrix)) & (( Position: vector ) -> (Matrix))
+  new: ((  ) -> (Matrix)) & (( X: number, Y: number, Z: number ) -> (Matrix))
 }
 
 

@@ -277,6 +277,7 @@
           "new": "function"
         },
         "Metatable": {
+          "__eq": "function",
           "__index": "function",
           "__tostring": "function",
           "__type": "string"

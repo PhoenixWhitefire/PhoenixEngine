@@ -78,6 +78,15 @@ static int col_tostring(lua_State* L)
 	return 1;
 };
 
+static int col_eq(lua_State* L)
+{
+	Color* a = (Color*)luaL_checkudata(L, 1, LUHX_COLORLIBNAME);
+	Color* b = (Color*)luaL_checkudata(L, 2, LUHX_COLORLIBNAME);
+
+	lua_pushboolean(L, a->R == b->R && a->G == b->G && a->B == b->B);
+	return 1;
+}
+
 static void createmetatable(lua_State* L)
 {
     luaL_newmetatable(L, LUHX_COLORLIBNAME);
@@ -87,6 +96,9 @@ static void createmetatable(lua_State* L)
 
 	lua_pushcfunction(L, col_tostring, "Color.__tostring");
 	lua_setfield(L, -2, "__tostring");
+
+	lua_pushcfunction(L, col_eq, "Color.__eq");
+	lua_setfield(L, -2, "__eq");
 
 	lua_pushstring(L, LUHX_COLORLIBNAME);
 	lua_setfield(L, -2, "__type");

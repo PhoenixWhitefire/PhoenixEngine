@@ -72,6 +72,20 @@ static int conn_tostring(lua_State* L)
     return 1;
 }
 
+static int conn_eq(lua_State* L)
+{
+	EventConnectionData* a = (EventConnectionData*)luaL_checkudata(L, 1, "EventConnection");
+	EventConnectionData* b = (EventConnectionData*)luaL_checkudata(L, 2, "EventConnection");
+
+	lua_pushboolean(
+		L,
+		a->Reflector == b->Reflector
+			&& a->ConnectionId == b->ConnectionId
+			&& a->Event == b->Event
+	);
+	return 1;
+}
+
 static void createmetatable(lua_State* L)
 {
     luaL_newmetatable(L, "EventConnection");
@@ -87,6 +101,9 @@ static void createmetatable(lua_State* L)
 
 	lua_pushcfunction(L, conn_tostring, "EventConnection.__tostring");
 	lua_setfield(L, -2, "__tostring");
+
+	lua_pushcfunction(L, conn_eq, "EventConnection.__eq");
+	lua_setfield(L, -2, "__eq");
 
 	lua_pop(L, 1);
 }
