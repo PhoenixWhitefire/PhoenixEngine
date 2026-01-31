@@ -12,24 +12,20 @@ return function(describe, test, expect)
         end).never:toThrow()
 
         game.OnFrameBegin:WaitUntil()
-        task.wait(0)
-        -- TODO
-        -- uhhhhh
-        -- this should work actually, but i don't feel like dealing with
-        -- failing CI right now
-        --expect(count):toBe(1)
+        task.wait() -- We might be earlier in the resumption queue, so wait until the next resumption point
+        expect(count):toBe(1)
 
         assert(connection)
         connection:Disconnect()
 
         game.OnFrameBegin:WaitUntil()
-        task.wait(0)
+        task.wait()
         expect(count):toBe(1)
     end)
     test("WaitUntil", function()
         local n = game.OnFrameBegin:WaitUntil()
-        local correct = n and typeof(n) == "number" and n > 0
-        expect(correct):toBe(true)
+        expect(typeof(n)):toBe("number")
+        expect(n > 0):toBe(true)
     end)
     test(".Connected", function()
         local conn = game.OnFrameBegin:Connect(function() end)

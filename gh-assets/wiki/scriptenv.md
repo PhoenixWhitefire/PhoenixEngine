@@ -22,7 +22,7 @@ Additional types with methods and properties
 
 * A connection to an Event
 #### `Disconnect()`
-* Disconnects the Connection, causing the callback to no longer be invoked. May only be called once
+* Disconnects the Connection, causing the callback to no longer be queued for resumption. May only be called once. Please note that the callback may still be invoked afterward if the Event occurred before `Disconnect`ing
 
 #### `.Connected: boolean`
 * Whether the Connection is connected or not
@@ -366,8 +366,8 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * If an error occurs, returns `nil` as the first value and the error message as the second value
 #### `task.loadfile(File: string, ChunkName: string?): thread?, string?`
 * Similar to `loadthread`, however loads from a file instead of from a string directly
-#### `task.wait(SleepTime: number): number`
-* Yields the thread for the specified number of seconds
+#### `task.wait(SleepTime: number?): number`
+* Yields the thread for the specified number of seconds. Default is `0`
 ## Globals
 
 Additional global variables

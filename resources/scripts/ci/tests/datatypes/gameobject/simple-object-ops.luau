@@ -44,7 +44,10 @@ return function(describe, test: (string, () -> ()) -> (), expect: (any) -> (any)
 			game:FindChild(nil)
 		end):toThrow("invalid argument")
 	end)
-	test("__eq True", function()
+	test("__eq", function()
+		expect(game.Workspace == workspace and game.Workspace ~= game):toBe(true)
+	end)
+	test("rawequal true", function()
 		expect((function()
 			local t = {
 				[game.Workspace] = false
@@ -53,7 +56,7 @@ return function(describe, test: (string, () -> ()) -> (), expect: (any) -> (any)
 			return t[game.Workspace]
 		end)()):toBe(true)
 	end)
-	test("__eq False", function()
+	test("rawequal false", function()
 		expect((function()
 			local t = {
 				[game.Workspace] = false

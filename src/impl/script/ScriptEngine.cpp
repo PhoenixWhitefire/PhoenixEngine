@@ -159,33 +159,36 @@ static const ResumptionModeHandler s_ResumptionModeHandlers[] =
 	shouldResume_Wait,
 	shouldResume_Deferred,
 	shouldResume_Future,
+	shouldResume_Polled,
 	shouldResume_Polled
 };
 
 void ScriptEngine::StepScheduler()
 {
 	ZoneScopedC(tracy::Color::LightSkyBlue);
+	std::vector<YieldedCoroutine> ycs = s_YieldedCoroutines;
+	s_YieldedCoroutines.clear();
 
-	size_t size = s_YieldedCoroutines.size();
+	size_t size = ycs.size();
 
 	for (size_t i = 0; i < size; i++)
 	{
-		YieldedCoroutine* it = &s_YieldedCoroutines[i];
+		YieldedCoroutine* it = &ycs[i];
 
 		// make sure the datamodel still exists
 		GameObject* dm = it->DataModel.Referred();
 		if (!dm || dm->IsDestructionPending || !dm->FindComponentByType(EntityComponent::DataModel))
 		{
-			s_YieldedCoroutines.erase(s_YieldedCoroutines.begin() + i);
+			ycs.erase(ycs.begin() + i);
 
 			// https://stackoverflow.com/a/17956637
 			// asan was not happy about the iterator from
 			// `::erase` for some reason?? TODO
 			// 10/06/2025
-			if (size != s_YieldedCoroutines.size())
+			if (size != ycs.size())
 			{
 				i--;
-				size = s_YieldedCoroutines.size();
+				size = ycs.size();
 			}
 
 			continue;
@@ -217,19 +220,21 @@ void ScriptEngine::StepScheduler()
 
 			lua_unref(coroutine, corRef);
 
-			s_YieldedCoroutines.erase(s_YieldedCoroutines.begin() + i);
+			ycs.erase(ycs.begin() + i);
 		}
 
 		// https://stackoverflow.com/a/17956637
 		// asan was not happy about the iterator from
 		// `::erase` for some reason?? TODO
 		// 10/06/2025
-		if (size != s_YieldedCoroutines.size())
+		if (size != ycs.size())
 		{
 			i--;
-			size = s_YieldedCoroutines.size();
+			size = ycs.size();
 		}
 	}
+
+	s_YieldedCoroutines.insert(s_YieldedCoroutines.begin(), ycs.begin(), ycs.end());
 }
 
 // Also in `EngineService.cpp`!!

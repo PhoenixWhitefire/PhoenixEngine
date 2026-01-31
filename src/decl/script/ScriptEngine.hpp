@@ -34,7 +34,8 @@ namespace ScriptEngine
 				Wait, // resume yielded thread at a specific time (`task.wait`)
 				Deferred, // resume arbitrary thread at a specific time and pass arguments
 				Future, // check the status of an `std::shared_future`
-				Polled // poll a function
+				Polled, // poll a function,
+				DeferredEventResumption // poll a function
 			};
 		};
 
@@ -56,6 +57,10 @@ namespace ScriptEngine
 				lua_State* Arguments = nullptr;
 				int ArgumentsRef = 0;
 			} RmDeferred;
+			struct {
+				const Reflection::EventDescriptor* Event = nullptr;
+				ReflectorRef Reflector;
+			} RmEventCallback;
 		};
 
 		std::shared_future<std::vector<Reflection::GenericValue>> RmFuture;

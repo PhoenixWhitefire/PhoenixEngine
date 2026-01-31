@@ -134,6 +134,10 @@ static int sig_namecall(lua_State* L)
 					.Coroutine = co,
 					.CoroutineReference = runnerRef,
 					.DataModel = dmRef.Reference,
+					.RmEventCallback = {
+						.Event = rev,
+						.Reflector = reflector
+					},
 					.RmPoll = [rev, Inputs, eL](lua_State* L) -> int
 						{
 							lua_resetthread(L);

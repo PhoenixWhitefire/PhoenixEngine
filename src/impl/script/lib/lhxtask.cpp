@@ -6,7 +6,7 @@
 
 static int task_wait(lua_State* L)
 {
-	double sleepTime = luaL_checknumber(L, 1);
+	double sleepTime = luaL_optnumber(L, 1, 0.f);
 
 	return ScriptEngine::L::Yield(
 		L,

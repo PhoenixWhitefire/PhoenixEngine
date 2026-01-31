@@ -1,941 +1,941 @@
 {
-  "@luhx/global/Color": {
+  "@phoenix/global/Color": {
     "documentation": "* An RGB color"
   },
-  "@luhx/global/Color.new": {
+  "@phoenix/global/Color.new": {
     "documentation": "* Returns a Color with the provided R, G, and B values\n* Values are expected to be in the range 0 to 1"
   },
-  "@luhx/global/Enum": {
+  "@phoenix/global/Enum": {
     "documentation": "* Contains enumerations"
   },
-  "@luhx/global/Enum.CollisionType": {
+  "@phoenix/global/Enum.CollisionType": {
     "documentation": "* The different modes for `RigidBody.CollisionType`\n* `Cube`: A cube collision model\n* `Sphere`: A sphere collision model\n* `Hulls`: Load a set of convex hulls from `RigidBody.HullsFile`\n* `MeshComponent`: Use the mesh of the `Mesh` component attached to the same object as the `RigidBody`. Usually a bad idea unless the mesh is convex"
   },
-  "@luhx/global/Enum.CursorMode": {
+  "@phoenix/global/Enum.CursorMode": {
     "documentation": "* The appearance and behaviour of the mouse cursor"
   },
-  "@luhx/global/Enum.FaceCulling": {
+  "@phoenix/global/Enum.FaceCulling": {
     "documentation": "* Culling modes for `Mesh.FaceCulling`"
   },
-  "@luhx/global/Enum.Key": {
+  "@phoenix/global/Enum.Key": {
     "documentation": "* Keys, which may be passed to `PlayerInput:IsKeyPressed`"
   },
-  "@luhx/global/Enum.LogType": {
+  "@phoenix/global/Enum.LogType": {
     "documentation": "* The different types of log messages"
   },
-  "@luhx/global/Enum.MouseButton": {
+  "@phoenix/global/Enum.MouseButton": {
     "documentation": "* Mouse buttons, which may be passed to `PlayerInput:IsMouseButtonPressed`"
   },
-  "@luhx/global/EventConnection": {
+  "@phoenix/global/EventConnection": {
     "documentation": "* A connection to an Event"
   },
-  "@luhx/global/EventSignal": {
+  "@phoenix/global/EventSignal": {
     "documentation": "* An Event that can be connected to"
   },
-  "@luhx/global/GameObject": {
+  "@phoenix/global/GameObject": {
     "documentation": "* A Game Object\n* Game Objects have a \"base\" API (properties, methods, and events) that can be extended by giving them Components\n* The base API will be documented on the Component APIs page"
   },
-  "@luhx/global/GameObject.fromId": {
+  "@phoenix/global/GameObject.fromId": {
     "documentation": "* Finds an Object by it's internal ID. Do not rely on the ID"
   },
-  "@luhx/global/GameObject.new": {
+  "@phoenix/global/GameObject.new": {
     "documentation": "* Creates a new GameObject with the provided Components, such as `GameObject.new(\"Mesh\")` or `GameObject.new(\"Model\", \"Animation\")`"
   },
-  "@luhx/global/GameObject.validComponents": {
+  "@phoenix/global/GameObject.validComponents": {
     "documentation": "* A list of all valid component names which can be passed into `.new`"
   },
-  "@luhx/global/Matrix": {
+  "@phoenix/global/Matrix": {
     "documentation": "* A 4x4 transformation matrix"
   },
-  "@luhx/global/Matrix.fromAngles": {
+  "@phoenix/global/Matrix.fromAngles": {
     "documentation": "* Alias of `.fromEulerAnglesYXZ`"
   },
-  "@luhx/global/Matrix.fromEulerAnglesXYZ": {
+  "@phoenix/global/Matrix.fromEulerAnglesXYZ": {
     "documentation": "* Creates a Matrix which has been rotated by the given Euler angles (in radians) with the rotation order X-Y-Z"
   },
-  "@luhx/global/Matrix.fromEulerAnglesYXZ": {
+  "@phoenix/global/Matrix.fromEulerAnglesYXZ": {
     "documentation": "* Creates a Matrix which has been rotated by the given Euler angles (in radians) with the rotation order Y-X-Z"
   },
-  "@luhx/global/Matrix.fromTranslation": {
+  "@phoenix/global/Matrix.fromTranslation": {
     "documentation": "* Creates a Matrix which has been translated to the given coordinates (specified as either a `vector` or the individual X, Y, and Z components)"
   },
-  "@luhx/global/Matrix.identity": {
+  "@phoenix/global/Matrix.identity": {
     "documentation": "* An identity matrix, the same value as what gets returned with `.new()` with no arguments"
   },
-  "@luhx/global/Matrix.lookAt": {
+  "@phoenix/global/Matrix.lookAt": {
     "documentation": "* Creates a Matrix at position `Eye` oriented such that the `.Forward` vector moves toward `Target`"
   },
-  "@luhx/global/Matrix.new": {
+  "@phoenix/global/Matrix.new": {
     "documentation": "* Creates a new identity matrix when given no arguments, or a translated matrix otherwise (like `.fromTranslation`)"
   },
-  "@luhx/global/_VMNAME": {
+  "@phoenix/global/_VMNAME": {
     "documentation": "* A non-unique identifier for the current Luau VM"
   },
-  "@luhx/global/appendlog": {
+  "@phoenix/global/appendlog": {
     "documentation": "* Same as `print`, but does not prefix the log message with `[INFO]`"
   },
-  "@luhx/global/debug": {
+  "@phoenix/global/debug": {
     "documentation": "* Extensions to the standard Luau `debug` library are documented below"
   },
-  "@luhx/global/debug.breakpoint": {
+  "@phoenix/global/debug.breakpoint": {
     "documentation": "* Set a breakpoint at the closest possible line to the given target line within the calling function, returning the actual line the breakpoint landed on\n* If a line is not specified, breaks into Debugger immediately, and returns no values\n* If a Debugger is not attached (such as in non-developer mode or headless mode), has no effect"
   },
-  "@luhx/global/fs": {
+  "@phoenix/global/fs": {
     "documentation": "* Interacting with the player's filesystem"
   },
-  "@luhx/global/fs.copy": {
+  "@phoenix/global/fs.copy": {
     "documentation": "* Copies the file/directory at the given path to a new path\n* If unsuccessfully, throws an error message"
   },
-  "@luhx/global/fs.cwd": {
+  "@phoenix/global/fs.cwd": {
     "documentation": "* Returns the Current Working Directory of the Engine"
   },
-  "@luhx/global/fs.definealias": {
+  "@phoenix/global/fs.definealias": {
     "documentation": "* Defines an alias for the filesystem, such that `@<Alias>/` refers to `<For>/` to the Engine"
   },
-  "@luhx/global/fs.execute": {
+  "@phoenix/global/fs.execute": {
     "documentation": "* Executes a shell command"
   },
-  "@luhx/global/fs.isdirectory": {
+  "@phoenix/global/fs.isdirectory": {
     "documentation": "* Returns whether the specified Path refers to a directory"
   },
-  "@luhx/global/fs.isfile": {
+  "@phoenix/global/fs.isfile": {
     "documentation": "* Returns whether the specified Path refers to a file"
   },
-  "@luhx/global/fs.listdir": {
+  "@phoenix/global/fs.listdir": {
     "documentation": "* Returns a table of all the entries in the specified directory\n* The keys of the table is the path of the entry, while the values are the type of the entry\n* `f` is file, `d` is directory, and `a` is all"
   },
-  "@luhx/global/fs.mkdir": {
+  "@phoenix/global/fs.mkdir": {
     "documentation": "* Creates a directory at the given path\n* Throws an error upon failure"
   },
-  "@luhx/global/fs.promptopen": {
+  "@phoenix/global/fs.promptopen": {
     "documentation": "* Prompts the player to select a file to open\n* Returns the list of files the player selected, or an empty list if the player cancelled the dialog\n* If the operation fails, returns `nil` instead"
   },
-  "@luhx/global/fs.promptopenfolder": {
+  "@phoenix/global/fs.promptopenfolder": {
     "documentation": "* Prompts the user to select a folder\n* Returns `nil` if no selection was made"
   },
-  "@luhx/global/fs.promptsave": {
+  "@phoenix/global/fs.promptsave": {
     "documentation": "* Prompts the player to select a path to save a file to\n* Returns the path the player selected, or `nil` if they cancelled the dialog"
   },
-  "@luhx/global/fs.read": {
+  "@phoenix/global/fs.read": {
     "documentation": "* Reads the file at the given address, and returns the contents\n* If the file could not be read, returns `nil` and an error message"
   },
-  "@luhx/global/fs.remove": {
+  "@phoenix/global/fs.remove": {
     "documentation": "* Removes everything at the given path\n* Throws an error upon failure"
   },
-  "@luhx/global/fs.rename": {
+  "@phoenix/global/fs.rename": {
     "documentation": "* Renames the file at the given `Path` to have the `NewName`\n* Throws an error upon failure"
   },
-  "@luhx/global/fs.setunqualifiedroot": {
+  "@phoenix/global/fs.setunqualifiedroot": {
     "documentation": "* Changes the meaning of non-qualified paths (e.g.: not beginning with `.` or `C:` etc) to act as aliases to the given path + `resources/` instead of referring to the CWD"
   },
-  "@luhx/global/fs.write": {
+  "@phoenix/global/fs.write": {
     "documentation": "* Overwrites/creates the file at `Path` with the provided `Contents`\n* Throws an error upon failure\n* If `CreateDirectories` is `true`, will automatically create missing intermediate directories to the file"
   },
-  "@luhx/global/game": {
+  "@phoenix/global/game": {
     "documentation": "* The GameObject acting as the Data Model of the Engine"
   },
-  "@luhx/global/imgui": {
+  "@phoenix/global/imgui": {
     "documentation": "* UI with Dear ImGui"
   },
-  "@luhx/global/imgui.anyitemactive": {
+  "@phoenix/global/imgui.anyitemactive": {
     "documentation": "* `ImGui::IsAnyItemActive`"
   },
-  "@luhx/global/imgui.begin": {
+  "@phoenix/global/imgui.begin": {
     "documentation": "* `ImGui::Begin`\n* `WindowFlags` may be a combination of any of the following sequences, optionally separated by ' ' or '|' characters: `nt` (no titlebar), `nr` (no resize), `nm` (no move), `nc` (no collapse), `ns` (no saved settings), `ni` (no interact), `h` (horizontal scrolling)"
   },
-  "@luhx/global/imgui.beginchild": {
+  "@phoenix/global/imgui.beginchild": {
     "documentation": "* `ImGui::BeginChild`\n* `ChildFlags` may be a combination of any of the following sequences, optionally separated by ' ' or '|' characters: `b` (borders), `wp` (always use window padding), `rx` (resize X), `ry` (resize Y), `ax` (auto resize X), `ay` (auto resize Y), `f` (frame style)\n* `WindowFlags` may be a combination of any of the following sequences, optionally separated by ' ' or '|' characters: `nt` (no titlebar), `nr` (no resize), `nm` (no move), `nc` (no collapse), `ns` (no saved settings), `ni` (no interact), `h` (horizontal scrolling)"
   },
-  "@luhx/global/imgui.beginfullscreen": {
+  "@phoenix/global/imgui.beginfullscreen": {
     "documentation": "* Creates a Dear ImGui window which takes up the entire screen"
   },
-  "@luhx/global/imgui.beginmainmenubar": {
+  "@phoenix/global/imgui.beginmainmenubar": {
     "documentation": "* `ImGui::BeginMainMenuBar`"
   },
-  "@luhx/global/imgui.beginmenu": {
+  "@phoenix/global/imgui.beginmenu": {
     "documentation": "* `ImGui::BeginMenu`"
   },
-  "@luhx/global/imgui.beginmenubar": {
+  "@phoenix/global/imgui.beginmenubar": {
     "documentation": "* `ImGui::BeginMenuBar`"
   },
-  "@luhx/global/imgui.beginpopup": {
+  "@phoenix/global/imgui.beginpopup": {
     "documentation": "* `ImGui::BeginPopup`"
   },
-  "@luhx/global/imgui.beginpopupmodal": {
+  "@phoenix/global/imgui.beginpopupmodal": {
     "documentation": "* `ImGui::BeginPopupModal`"
   },
-  "@luhx/global/imgui.button": {
+  "@phoenix/global/imgui.button": {
     "documentation": "* `ImGui::Button`"
   },
-  "@luhx/global/imgui.checkbox": {
+  "@phoenix/global/imgui.checkbox": {
     "documentation": "* `ImGui::Checkbox`"
   },
-  "@luhx/global/imgui.closecurrentpopup": {
+  "@phoenix/global/imgui.closecurrentpopup": {
     "documentation": "* `ImGui::CloseCurrentPopup`"
   },
-  "@luhx/global/imgui.combo": {
+  "@phoenix/global/imgui.combo": {
     "documentation": "* `ImGui::Combo`. Returns the selected option index"
   },
-  "@luhx/global/imgui.contentregionavail": {
+  "@phoenix/global/imgui.contentregionavail": {
     "documentation": "* `ImGui::GetContentRegionAvail`"
   },
-  "@luhx/global/imgui.cursorposition": {
+  "@phoenix/global/imgui.cursorposition": {
     "documentation": "* Returns the current position of the Dear ImGui element cursor within the current window\n* To *set* the cursor position, use `.setcursorposition`"
   },
-  "@luhx/global/imgui.dummy": {
+  "@phoenix/global/imgui.dummy": {
     "documentation": "* `ImGui::Dummy`"
   },
-  "@luhx/global/imgui.endchild": {
+  "@phoenix/global/imgui.endchild": {
     "documentation": "* `ImGui::EndChild`"
   },
-  "@luhx/global/imgui.endmainmenubar": {
+  "@phoenix/global/imgui.endmainmenubar": {
     "documentation": "* `ImGui::EndMainMenuBar`"
   },
-  "@luhx/global/imgui.endmenu": {
+  "@phoenix/global/imgui.endmenu": {
     "documentation": "* `ImGui::EndMenu`"
   },
-  "@luhx/global/imgui.endmenubar": {
+  "@phoenix/global/imgui.endmenubar": {
     "documentation": "* `ImGui::EndMenuBar`"
   },
-  "@luhx/global/imgui.endpopup": {
+  "@phoenix/global/imgui.endpopup": {
     "documentation": "* `ImGui::EndPopup`"
   },
-  "@luhx/global/imgui.endw": {
+  "@phoenix/global/imgui.endw": {
     "documentation": "* `ImGui::End`, `endw` and not `end` because `end` is a Luau keyword"
   },
-  "@luhx/global/imgui.image": {
+  "@phoenix/global/imgui.image": {
     "documentation": "* `ImGui::Image`"
   },
-  "@luhx/global/imgui.imagebutton": {
+  "@phoenix/global/imgui.imagebutton": {
     "documentation": "* `ImGui::ImageButton`"
   },
-  "@luhx/global/imgui.indent": {
+  "@phoenix/global/imgui.indent": {
     "documentation": "* `ImGui::Indent`"
   },
-  "@luhx/global/imgui.inputnumber": {
+  "@phoenix/global/imgui.inputnumber": {
     "documentation": "* `ImGui::InputDouble`"
   },
-  "@luhx/global/imgui.inputstring": {
+  "@phoenix/global/imgui.inputstring": {
     "documentation": "* `ImGui::InputText`"
   },
-  "@luhx/global/imgui.itemclicked": {
+  "@phoenix/global/imgui.itemclicked": {
     "documentation": "* `ImGui::IsItemClicked`"
   },
-  "@luhx/global/imgui.itemhovered": {
+  "@phoenix/global/imgui.itemhovered": {
     "documentation": "* `ImGui::IsItemHovered`"
   },
-  "@luhx/global/imgui.menuitem": {
+  "@phoenix/global/imgui.menuitem": {
     "documentation": "* `ImGui::MenuItem`"
   },
-  "@luhx/global/imgui.openpopup": {
+  "@phoenix/global/imgui.openpopup": {
     "documentation": "* `ImGui::OpenPopup`"
   },
-  "@luhx/global/imgui.popid": {
+  "@phoenix/global/imgui.popid": {
     "documentation": "* `ImGui::PopID`"
   },
-  "@luhx/global/imgui.popstylecolor": {
+  "@phoenix/global/imgui.popstylecolor": {
     "documentation": "* `ImGui::PopStyleColor`"
   },
-  "@luhx/global/imgui.pushid": {
+  "@phoenix/global/imgui.pushid": {
     "documentation": "* `ImGui::PushID`"
   },
-  "@luhx/global/imgui.pushstylecolor": {
+  "@phoenix/global/imgui.pushstylecolor": {
     "documentation": "* `ImGui::PushStyleColor`\n* `Color` is an array with 4 numbers representing R, G, B, and A"
   },
-  "@luhx/global/imgui.sameline": {
+  "@phoenix/global/imgui.sameline": {
     "documentation": "* `ImGui::SameLine`"
   },
-  "@luhx/global/imgui.scrollherey": {
+  "@phoenix/global/imgui.scrollherey": {
     "documentation": "* `ImGui::SetScrollHereY`"
   },
-  "@luhx/global/imgui.separator": {
+  "@phoenix/global/imgui.separator": {
     "documentation": "* `ImGui::Separator`"
   },
-  "@luhx/global/imgui.separatortext": {
+  "@phoenix/global/imgui.separatortext": {
     "documentation": "* `ImGui::SeparatorText`"
   },
-  "@luhx/global/imgui.setcursorposition": {
+  "@phoenix/global/imgui.setcursorposition": {
     "documentation": "* Sets the position of the Dear ImGui element cursor within the current window"
   },
-  "@luhx/global/imgui.setitemtooltip": {
+  "@phoenix/global/imgui.setitemtooltip": {
     "documentation": "* `ImGui::SetItemTooltip`"
   },
-  "@luhx/global/imgui.setnextitemwidth": {
+  "@phoenix/global/imgui.setnextitemwidth": {
     "documentation": "* Sets the width of the next item\n* `ImGui::SetNextItemWidth`"
   },
-  "@luhx/global/imgui.setnextwindowfocus": {
+  "@phoenix/global/imgui.setnextwindowfocus": {
     "documentation": "* `ImGui::SetNextWindowFocus`"
   },
-  "@luhx/global/imgui.setnextwindowopen": {
+  "@phoenix/global/imgui.setnextwindowopen": {
     "documentation": "* `ImGui::SetNextWindowCollapsed(!Open)`"
   },
-  "@luhx/global/imgui.setnextwindowposition": {
+  "@phoenix/global/imgui.setnextwindowposition": {
     "documentation": "* `ImGui::SetNextWindowPos"
   },
-  "@luhx/global/imgui.setnextwindowsize": {
+  "@phoenix/global/imgui.setnextwindowsize": {
     "documentation": "* `ImGui::SetNextWindowSize`"
   },
-  "@luhx/global/imgui.settooltip": {
+  "@phoenix/global/imgui.settooltip": {
     "documentation": "* `ImGui::SetTooltip`"
   },
-  "@luhx/global/imgui.setviewportdockspace": {
+  "@phoenix/global/imgui.setviewportdockspace": {
     "documentation": "* Sets the region of the window in which Dear ImGui windows can be docked"
   },
-  "@luhx/global/imgui.setviewportdockspacedefault": {
+  "@phoenix/global/imgui.setviewportdockspacedefault": {
     "documentation": "* Reverts the region of the window in which Dear ImGui windows can be docked to the default settings"
   },
-  "@luhx/global/imgui.stylecolors": {
+  "@phoenix/global/imgui.stylecolors": {
     "documentation": "* `ImGui::StyleColorsDark`/`ImGui::StyleColorsLight`"
   },
-  "@luhx/global/imgui.text": {
+  "@phoenix/global/imgui.text": {
     "documentation": "* `ImGui::Text`"
   },
-  "@luhx/global/imgui.textlink": {
+  "@phoenix/global/imgui.textlink": {
     "documentation": "* `ImGui::TextLink`"
   },
-  "@luhx/global/imgui.textsize": {
+  "@phoenix/global/imgui.textsize": {
     "documentation": "* `ImGui::CalcTextSize`"
   },
-  "@luhx/global/imgui.treenode": {
+  "@phoenix/global/imgui.treenode": {
     "documentation": "* `ImGui::TreeNode`"
   },
-  "@luhx/global/imgui.treepop": {
+  "@phoenix/global/imgui.treepop": {
     "documentation": "* `ImGui::TreePop`"
   },
-  "@luhx/global/imgui.urllink": {
+  "@phoenix/global/imgui.urllink": {
     "documentation": "* Similar to `imgui.textlink`, however, will open the given URL upon being clicked\n* `Url` will be `Text` if not provided\n* `ImGui::TextLinkOpenUrl`"
   },
-  "@luhx/global/imgui.windowhovered": {
+  "@phoenix/global/imgui.windowhovered": {
     "documentation": "* `ImGui::IsWindowHovered`"
   },
-  "@luhx/global/imgui.windowposition": {
+  "@phoenix/global/imgui.windowposition": {
     "documentation": "* Returns the position of the current Dear ImGui window (`ImGui::GetWindowPos`)\n* To *set* the position of the window, use `.setnextwindowposition`"
   },
-  "@luhx/global/imgui.windowsize": {
+  "@phoenix/global/imgui.windowsize": {
     "documentation": "* Returns the size of the current window"
   },
-  "@luhx/global/json": {
+  "@phoenix/global/json": {
     "documentation": "* Encoding and decoding JSON files"
   },
-  "@luhx/global/json.encode": {
+  "@phoenix/global/json.encode": {
     "documentation": "* Encodes the provided value into a JSON string"
   },
-  "@luhx/global/json.parse": {
+  "@phoenix/global/json.parse": {
     "documentation": "* Decodes the JSON string and returns it as a value"
   },
-  "@luhx/global/task": {
+  "@phoenix/global/task": {
     "documentation": "* Scheduling of tasks (coroutines or functions)"
   },
-  "@luhx/global/task.defer": {
+  "@phoenix/global/task.defer": {
     "documentation": "* Schedules the given function or coroutine to be resumed at the next scheduler step"
   },
-  "@luhx/global/task.delay": {
+  "@phoenix/global/task.delay": {
     "documentation": "* Schedules the given function or coroutine to be resumed some number of seconds later"
   },
-  "@luhx/global/task.load": {
+  "@phoenix/global/task.load": {
     "documentation": "* Like `loadstring` in *other* runtimes, however does not compromise Global Import optimizations and returns a coroutine instead of a function\n* If an error occurs, returns `nil` as the first value and the error message as the second value"
   },
-  "@luhx/global/task.loadfile": {
+  "@phoenix/global/task.loadfile": {
     "documentation": "* Similar to `loadthread`, however loads from a file instead of from a string directly"
   },
-  "@luhx/global/task.wait": {
-    "documentation": "* Yields the thread for the specified number of seconds"
+  "@phoenix/global/task.wait": {
+    "documentation": "* Yields the thread for the specified number of seconds. Default is `0`"
   },
-  "@luhx/global/warn": {
+  "@phoenix/global/warn": {
     "documentation": "* Same as `print`, except generates a Warning message"
   },
-  "@luhx/global/workspace": {
+  "@phoenix/global/workspace": {
     "documentation": "* Shorthand for `game.Workspace`"
   },
-  "@luhx/globaltype/Animation.Animation": {
+  "@phoenix/globaltype/Animation.Animation": {
     "documentation": "The animation file"
   },
-  "@luhx/globaltype/Animation.Looped": {
+  "@phoenix/globaltype/Animation.Looped": {
     "documentation": "Whether the Animation should loop when it reaches the end"
   },
-  "@luhx/globaltype/Animation.Playing": {
+  "@phoenix/globaltype/Animation.Playing": {
     "documentation": "Whether the Animation is playing"
   },
-  "@luhx/globaltype/Animation.Ready": {
+  "@phoenix/globaltype/Animation.Ready": {
     "documentation": "Whether the Animation can be played"
   },
-  "@luhx/globaltype/Animation.Weight": {
+  "@phoenix/globaltype/Animation.Weight": {
     "documentation": "The influence the Animation has over the rig"
   },
-  "@luhx/globaltype/AssetManager.GetMeshData": {
+  "@phoenix/globaltype/AssetManager.GetMeshData": {
     "documentation": "Returns the provided mesh data associated with the provided path"
   },
-  "@luhx/globaltype/AssetManager.ImportModel": {
+  "@phoenix/globaltype/AssetManager.ImportModel": {
     "documentation": "Imports the glTF 2.0 model at the provided path and returns it as a `Model` GameObject"
   },
-  "@luhx/globaltype/AssetManager.LoadScene": {
+  "@phoenix/globaltype/AssetManager.LoadScene": {
     "documentation": "Loads `GameObject`s from the scene file at the provided path, returning a list of the root objects or `nil` and an error message upon failure"
   },
-  "@luhx/globaltype/AssetManager.SaveMesh": {
+  "@phoenix/globaltype/AssetManager.SaveMesh": {
     "documentation": "Saves the mesh data at the provided path to a file"
   },
-  "@luhx/globaltype/AssetManager.SaveScene": {
+  "@phoenix/globaltype/AssetManager.SaveScene": {
     "documentation": "Saves the list of `GameObject`s to the provided path, returning whether the operation succeeded"
   },
-  "@luhx/globaltype/AssetManager.SetMeshData": {
+  "@phoenix/globaltype/AssetManager.SetMeshData": {
     "documentation": "Associates the provided mesh data with the provided path"
   },
-  "@luhx/globaltype/Bone.IsActive": {
+  "@phoenix/globaltype/Bone.IsActive": {
     "documentation": "Whether or not the Bone Object is actively affecting a `Mesh`"
   },
-  "@luhx/globaltype/Bone.SkeletalBoneId": {
+  "@phoenix/globaltype/Bone.SkeletalBoneId": {
     "documentation": "The internal ID of the bone, valid range is 0-255"
   },
-  "@luhx/globaltype/Bone.TargetMesh": {
+  "@phoenix/globaltype/Bone.TargetMesh": {
     "documentation": "The `Mesh` component containing Object the Bone is currently targeting. Note that this property is read-only, and will only either be equal to the Mesh that created the Bone, or `nil`"
   },
-  "@luhx/globaltype/Bone.Transform": {
+  "@phoenix/globaltype/Bone.Transform": {
     "documentation": "The transformation of the Bone"
   },
-  "@luhx/globaltype/Camera.FieldOfView": {
+  "@phoenix/globaltype/Camera.FieldOfView": {
     "documentation": "The field-of-view. By default, `90`"
   },
-  "@luhx/globaltype/Camera.UseSimpleController": {
+  "@phoenix/globaltype/Camera.UseSimpleController": {
     "documentation": "Whether it is affected by the built-in controller (`W`/`A`/`S`/`D` horizontal movement, `Q`/`E` vertical, Mouse to look around)"
   },
-  "@luhx/globaltype/Color.B": {
+  "@phoenix/globaltype/Color.B": {
     "documentation": "* The Blue channel\n"
   },
-  "@luhx/globaltype/Color.G": {
+  "@phoenix/globaltype/Color.G": {
     "documentation": "* The Green channel\n"
   },
-  "@luhx/globaltype/Color.R": {
+  "@phoenix/globaltype/Color.R": {
     "documentation": "* The Red channel\n"
   },
-  "@luhx/globaltype/DataModel.AreScriptsBound": {
+  "@phoenix/globaltype/DataModel.AreScriptsBound": {
     "documentation": "If this is `true`, attempting to change `.LiveScripts` will throw an error"
   },
-  "@luhx/globaltype/DataModel.GetService": {
+  "@phoenix/globaltype/DataModel.GetService": {
     "documentation": "Gets the Object representing the specified Service. If it does not exist yet in the Data Model, it is created"
   },
-  "@luhx/globaltype/DataModel.LiveScripts": {
+  "@phoenix/globaltype/DataModel.LiveScripts": {
     "documentation": "May either refer to a directory of Scripts, or a single Script, to run when the DataModel is bound"
   },
-  "@luhx/globaltype/DataModel.OnFrameBegin": {
+  "@phoenix/globaltype/DataModel.OnFrameBegin": {
     "documentation": "Fires at the beginning of a frame, passing in the time elapsed since the last frame (delta time)"
   },
-  "@luhx/globaltype/DataModel.Time": {
+  "@phoenix/globaltype/DataModel.Time": {
     "documentation": "Number of seconds since the Engine started running"
   },
-  "@luhx/globaltype/DirectionalLight.Brightness": {
+  "@phoenix/globaltype/DirectionalLight.Brightness": {
     "documentation": "How bright the Light is"
   },
-  "@luhx/globaltype/DirectionalLight.Direction": {
+  "@phoenix/globaltype/DirectionalLight.Direction": {
     "documentation": "The direction light is emitted from"
   },
-  "@luhx/globaltype/DirectionalLight.LightColor": {
+  "@phoenix/globaltype/DirectionalLight.LightColor": {
     "documentation": "The color of the Light"
   },
-  "@luhx/globaltype/DirectionalLight.ShadowViewDistance": {
+  "@phoenix/globaltype/DirectionalLight.ShadowViewDistance": {
     "documentation": "How far back the shadow view is offset from the focus"
   },
-  "@luhx/globaltype/DirectionalLight.ShadowViewFarPlane": {
+  "@phoenix/globaltype/DirectionalLight.ShadowViewFarPlane": {
     "documentation": "The Far Z plane of the shadow view. Should be greater than `ShadowViewNearPlane`"
   },
-  "@luhx/globaltype/DirectionalLight.ShadowViewMoveWithCamera": {
+  "@phoenix/globaltype/DirectionalLight.ShadowViewMoveWithCamera": {
     "documentation": "Sets the focus of the shadow view to be the Scene Camera"
   },
-  "@luhx/globaltype/DirectionalLight.ShadowViewNearPlane": {
+  "@phoenix/globaltype/DirectionalLight.ShadowViewNearPlane": {
     "documentation": "The Near Z plane of the shadow view. Should be less than `ShadowViewFarPlane`. Shouldn't be `0`"
   },
-  "@luhx/globaltype/DirectionalLight.ShadowViewOffset": {
+  "@phoenix/globaltype/DirectionalLight.ShadowViewOffset": {
     "documentation": "Offset of the shadow view from the focus, after `ShadowViewDistance` is applied"
   },
-  "@luhx/globaltype/DirectionalLight.ShadowViewSize": {
+  "@phoenix/globaltype/DirectionalLight.ShadowViewSize": {
     "documentation": "Size of the shadow view. Sets `ShadowViewSizeH` and `ShadowViewSizeV` to the assigned value if they are equal. Is `-1` if they are not equal"
   },
-  "@luhx/globaltype/DirectionalLight.ShadowViewSizeH": {
+  "@phoenix/globaltype/DirectionalLight.ShadowViewSizeH": {
     "documentation": "Horizontal size of the shadow view"
   },
-  "@luhx/globaltype/DirectionalLight.ShadowViewSizeV": {
+  "@phoenix/globaltype/DirectionalLight.ShadowViewSizeV": {
     "documentation": "Vertical size of the shadow view"
   },
-  "@luhx/globaltype/DirectionalLight.Shadows": {
+  "@phoenix/globaltype/DirectionalLight.Shadows": {
     "documentation": "Whether the Light can render shadows"
   },
-  "@luhx/globaltype/Engine.BindDataModel": {
+  "@phoenix/globaltype/Engine.BindDataModel": {
     "documentation": "Switches Data Models to the specified Object"
   },
-  "@luhx/globaltype/Engine.BoundDataModel": {
+  "@phoenix/globaltype/Engine.BoundDataModel": {
     "documentation": "The DataModel object that is currently bound"
   },
-  "@luhx/globaltype/Engine.CloseVM": {
+  "@phoenix/globaltype/Engine.CloseVM": {
     "documentation": "Closes the specified Luau VM, releasing its resources"
   },
-  "@luhx/globaltype/Engine.CommitHash": {
+  "@phoenix/globaltype/Engine.CommitHash": {
     "documentation": "The Git commit that was used to produce this Engine build"
   },
-  "@luhx/globaltype/Engine.CreateVM": {
+  "@phoenix/globaltype/Engine.CreateVM": {
     "documentation": "Creates a new Luau VM with the given name. The `workspace` and `game` globals of the VM are taken from the currently-bound DataModel"
   },
-  "@luhx/globaltype/Engine.DebugWireframeRendering": {
+  "@phoenix/globaltype/Engine.DebugWireframeRendering": {
     "documentation": "Whether the Wireframe rendering debug mode is enabled"
   },
-  "@luhx/globaltype/Engine.Exit": {
+  "@phoenix/globaltype/Engine.Exit": {
     "documentation": "Shuts down the Engine and exits the process with the specified Exit Code (or 0 by default)"
   },
-  "@luhx/globaltype/Engine.Framerate": {
+  "@phoenix/globaltype/Engine.Framerate": {
     "documentation": "The Engine's current framerate"
   },
-  "@luhx/globaltype/Engine.FramerateCap": {
+  "@phoenix/globaltype/Engine.FramerateCap": {
     "documentation": "The maximum framerate the Engine will reach before attempting to self-limit"
   },
-  "@luhx/globaltype/Engine.GetCliArguments": {
+  "@phoenix/globaltype/Engine.GetCliArguments": {
     "documentation": "Returns the list of launch arguments given to the Engine. The first item is always a path to the Engine executable"
   },
-  "@luhx/globaltype/Engine.GetConfigValue": {
+  "@phoenix/globaltype/Engine.GetConfigValue": {
     "documentation": "Returns the value associated with the given Key in the Engine's loaded configuration (`phoenix.conf`)"
   },
-  "@luhx/globaltype/Engine.GetCurrentVM": {
+  "@phoenix/globaltype/Engine.GetCurrentVM": {
     "documentation": "Returns the name of the currently-bound VM"
   },
-  "@luhx/globaltype/Engine.GetExplorerSelections": {
+  "@phoenix/globaltype/Engine.GetExplorerSelections": {
     "documentation": "Returns what is currently selected in the Explorer"
   },
-  "@luhx/globaltype/Engine.GetToolNames": {
+  "@phoenix/globaltype/Engine.GetToolNames": {
     "documentation": "Returns a list of valid Engine tools"
   },
-  "@luhx/globaltype/Engine.IsFullscreen": {
+  "@phoenix/globaltype/Engine.IsFullscreen": {
     "documentation": "Whether the Window is currently fullscreened"
   },
-  "@luhx/globaltype/Engine.IsHeadless": {
+  "@phoenix/globaltype/Engine.IsHeadless": {
     "documentation": "Whether the Engine is currently running in headless mode"
   },
-  "@luhx/globaltype/Engine.IsToolEnabled": {
+  "@phoenix/globaltype/Engine.IsToolEnabled": {
     "documentation": "Returns whether the given tool is enabled"
   },
-  "@luhx/globaltype/Engine.OnMessageLogged": {
+  "@phoenix/globaltype/Engine.OnMessageLogged": {
     "documentation": "Fires whenever a Log Message is created"
   },
-  "@luhx/globaltype/Engine.OpenTextDocument": {
+  "@phoenix/globaltype/Engine.OpenTextDocument": {
     "documentation": "Opens a text file. This requires Developer Mode to be enabled to have any effect"
   },
-  "@luhx/globaltype/Engine.ResetViewport": {
+  "@phoenix/globaltype/Engine.ResetViewport": {
     "documentation": "Resets the Engine's understanding of where the viewport is on screen back to the default (occupying the entire window)"
   },
-  "@luhx/globaltype/Engine.RunInVM": {
+  "@phoenix/globaltype/Engine.RunInVM": {
     "documentation": "Runs the given code in the specified VM. Returns `false` and an error message upon failure or if the code does not finish executing (yield or break)"
   },
-  "@luhx/globaltype/Engine.SaveConfig": {
+  "@phoenix/globaltype/Engine.SaveConfig": {
     "documentation": "Saves the Engine's current configuration state to the configuration file (`phoenix.conf`)"
   },
-  "@luhx/globaltype/Engine.SetConfigValue": {
+  "@phoenix/globaltype/Engine.SetConfigValue": {
     "documentation": "Sets `Key` to `Value` in the Engine's loaded configuration without saving it to file"
   },
-  "@luhx/globaltype/Engine.SetCurrentVM": {
+  "@phoenix/globaltype/Engine.SetCurrentVM": {
     "documentation": "Binds the given VM as the \"current\" one. This causes all Scripts which load afterward to use the specified VM, it does *not* change the VM of any Scripts loaded beforehand"
   },
-  "@luhx/globaltype/Engine.SetExplorerRoot": {
+  "@phoenix/globaltype/Engine.SetExplorerRoot": {
     "documentation": "Changes the Root of the built-in Explorer's hierarchy view"
   },
-  "@luhx/globaltype/Engine.SetExplorerSelections": {
+  "@phoenix/globaltype/Engine.SetExplorerSelections": {
     "documentation": "Changes the built-in Explorer's Object selections to the specified Objects"
   },
-  "@luhx/globaltype/Engine.SetToolEnabled": {
+  "@phoenix/globaltype/Engine.SetToolEnabled": {
     "documentation": "Enabled/disables the given tool"
   },
-  "@luhx/globaltype/Engine.SetViewport": {
+  "@phoenix/globaltype/Engine.SetViewport": {
     "documentation": "Configures the Engine to act as through the Viewport is at the given position with the given size. Does *not* change where the viewport is actually rendered"
   },
-  "@luhx/globaltype/Engine.ShowMessageBox": {
+  "@phoenix/globaltype/Engine.ShowMessageBox": {
     "documentation": "Shows a message box to the player with the given specification. The returned number with be the selected option: `0` for Cancel/No, `1` for Ok/Yes, `2` for No in `yesnocancel`. This is a blocking operation and no scripts or other parts of the Engine run until the message is dismissed. Avoid using quotes and backticks in the message"
   },
-  "@luhx/globaltype/Engine.UnloadTexture": {
+  "@phoenix/globaltype/Engine.UnloadTexture": {
     "documentation": "Removes the given texture from the Engine's cache, forcing it to be reloaded upon next use"
   },
-  "@luhx/globaltype/Engine.VSync": {
+  "@phoenix/globaltype/Engine.VSync": {
     "documentation": "Whether Vertical Synchronization is enabled"
   },
-  "@luhx/globaltype/Engine.Version": {
+  "@phoenix/globaltype/Engine.Version": {
     "documentation": "The version of the Engine build"
   },
-  "@luhx/globaltype/Engine.WindowSize": {
+  "@phoenix/globaltype/Engine.WindowSize": {
     "documentation": "The size of the window, in pixels"
   },
-  "@luhx/globaltype/EventConnection.Connected": {
+  "@phoenix/globaltype/EventConnection.Connected": {
     "documentation": "* Whether the Connection is connected or not\n"
   },
-  "@luhx/globaltype/EventConnection.Disconnect": {
-    "documentation": "* Disconnects the Connection, causing the callback to no longer be invoked. May only be called once\n"
+  "@phoenix/globaltype/EventConnection.Disconnect": {
+    "documentation": "* Disconnects the Connection, causing the callback to no longer be queued for resumption. May only be called once. Please note that the callback may still be invoked afterward if the Event occurred before `Disconnect`ing\n"
   },
-  "@luhx/globaltype/EventConnection.Signal": {
+  "@phoenix/globaltype/EventConnection.Signal": {
     "documentation": "* The Event which `:Connect` was called upon to return this Connection\n"
   },
-  "@luhx/globaltype/EventSignal.Connect": {
+  "@phoenix/globaltype/EventSignal.Connect": {
     "documentation": "* Connect a callback to the Event\n"
   },
-  "@luhx/globaltype/EventSignal.WaitUntil": {
+  "@phoenix/globaltype/EventSignal.WaitUntil": {
     "documentation": "* Yields the thread until the Event is fired\n"
   },
-  "@luhx/globaltype/GameObject.AddComponent": {
+  "@phoenix/globaltype/GameObject.AddComponent": {
     "documentation": "Adds the specified Component to the Object. Will error if it already has it (use `:HasComponent` to check beforehand)"
   },
-  "@luhx/globaltype/GameObject.Destroy": {
+  "@phoenix/globaltype/GameObject.Destroy": {
     "documentation": "Marks the Object as \"pending for destruction\". This may or may not remove the Object from memory immediately, depending on whether the Engine is keeping a internal reference to it"
   },
-  "@luhx/globaltype/GameObject.Duplicate": {
+  "@phoenix/globaltype/GameObject.Duplicate": {
     "documentation": "Creates a duplicate of the Object"
   },
-  "@luhx/globaltype/GameObject.Enabled": {
+  "@phoenix/globaltype/GameObject.Enabled": {
     "documentation": "Whether the Engine updates and recognizes this Object, essentially freezing it if it is disabled"
   },
-  "@luhx/globaltype/GameObject.Exists": {
+  "@phoenix/globaltype/GameObject.Exists": {
     "documentation": "Whether or not the Object still exists. Will be false after calling `:Destroy`"
   },
-  "@luhx/globaltype/GameObject.FindChild": {
+  "@phoenix/globaltype/GameObject.FindChild": {
     "documentation": "Returns a child Object with the given name, or `nil` if one doesn't exist"
   },
-  "@luhx/globaltype/GameObject.FindChildWithComponent": {
+  "@phoenix/globaltype/GameObject.FindChildWithComponent": {
     "documentation": "Returns a child Object which has the given component, or `nil` if one doesn't exist"
   },
-  "@luhx/globaltype/GameObject.ForEachChild": {
+  "@phoenix/globaltype/GameObject.ForEachChild": {
     "documentation": "For all children of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield"
   },
-  "@luhx/globaltype/GameObject.ForEachDescendant": {
+  "@phoenix/globaltype/GameObject.ForEachDescendant": {
     "documentation": "For all descendants of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield"
   },
-  "@luhx/globaltype/GameObject.GetChildren": {
+  "@phoenix/globaltype/GameObject.GetChildren": {
     "documentation": "Returns a list of the Object's direct children"
   },
-  "@luhx/globaltype/GameObject.GetComponents": {
+  "@phoenix/globaltype/GameObject.GetComponents": {
     "documentation": "Returns a list of the names of all Components that the Object currently has"
   },
-  "@luhx/globaltype/GameObject.GetDescendants": {
+  "@phoenix/globaltype/GameObject.GetDescendants": {
     "documentation": "Returns all descendants of the Object (i.e. its children, and their children, etc)"
   },
-  "@luhx/globaltype/GameObject.GetFullName": {
+  "@phoenix/globaltype/GameObject.GetFullName": {
     "documentation": "Returns the full, hierarchal path of the Object"
   },
-  "@luhx/globaltype/GameObject.HasComponent": {
+  "@phoenix/globaltype/GameObject.HasComponent": {
     "documentation": "Returns whether or not the Object has the given Component"
   },
-  "@luhx/globaltype/GameObject.MergeWith": {
+  "@phoenix/globaltype/GameObject.MergeWith": {
     "documentation": "Merges the Objects together, replacing descendants with the same name"
   },
-  "@luhx/globaltype/GameObject.Name": {
+  "@phoenix/globaltype/GameObject.Name": {
     "documentation": "The name of the Object, usually what was passed into `GameObject.new`"
   },
-  "@luhx/globaltype/GameObject.ObjectId": {
+  "@phoenix/globaltype/GameObject.ObjectId": {
     "documentation": "The ID of the Object, an integer. Remains the same throughout the session, but not guaranteed between sessions"
   },
-  "@luhx/globaltype/GameObject.Parent": {
+  "@phoenix/globaltype/GameObject.Parent": {
     "documentation": "The hierarchal parent of the Object, or `nil` if it does not have one"
   },
-  "@luhx/globaltype/GameObject.RemoveComponent": {
+  "@phoenix/globaltype/GameObject.RemoveComponent": {
     "documentation": "Removes the specified Component from the Object. Will error if does not have it (use `:HasComponent` to check beforehand)"
   },
-  "@luhx/globaltype/GameObject.Serializes": {
+  "@phoenix/globaltype/GameObject.Serializes": {
     "documentation": "Whether or not the Object should be saved with the scene if it is serialized with `scene.save`, and whether `:Duplicate` will duplicate it (only applies to descendants)"
   },
-  "@luhx/globaltype/History.ActionHistorySize": {
+  "@phoenix/globaltype/History.ActionHistorySize": {
     "documentation": "The total number of Actions that have finished being recorded"
   },
-  "@luhx/globaltype/History.CanRedo": {
+  "@phoenix/globaltype/History.CanRedo": {
     "documentation": "Returns whether `:Redo` will succeed"
   },
-  "@luhx/globaltype/History.CanUndo": {
+  "@phoenix/globaltype/History.CanUndo": {
     "documentation": "Returns whether `:Undo` will succeed"
   },
-  "@luhx/globaltype/History.ClearHistory": {
+  "@phoenix/globaltype/History.ClearHistory": {
     "documentation": "Clears all recorded history"
   },
-  "@luhx/globaltype/History.CurrentActionName": {
+  "@phoenix/globaltype/History.CurrentActionName": {
     "documentation": "The name of the Action currently being recorded, or `nil` if no recording is in progress"
   },
-  "@luhx/globaltype/History.CurrentWaypoint": {
+  "@phoenix/globaltype/History.CurrentWaypoint": {
     "documentation": "The ID of the Action that was last finished"
   },
-  "@luhx/globaltype/History.DiscardAction": {
+  "@phoenix/globaltype/History.DiscardAction": {
     "documentation": "Discards the Action by its ID"
   },
-  "@luhx/globaltype/History.EnableRecording": {
+  "@phoenix/globaltype/History.EnableRecording": {
     "documentation": "Enables the main functionality of this service"
   },
-  "@luhx/globaltype/History.FinishAction": {
+  "@phoenix/globaltype/History.FinishAction": {
     "documentation": "Finishes the Action by its ID. Only one Action may be active at a time"
   },
-  "@luhx/globaltype/History.GetActionData": {
+  "@phoenix/globaltype/History.GetActionData": {
     "documentation": "Retrives information about a previously-recorded Action by its Index (Indexes, separate from IDs, are in the range 0 <= Index < `ActionHistorySize`)"
   },
-  "@luhx/globaltype/History.GetCurrentActionData": {
+  "@phoenix/globaltype/History.GetCurrentActionData": {
     "documentation": "Retrieves information about the current Action being recorded"
   },
-  "@luhx/globaltype/History.IsRecordingAction": {
+  "@phoenix/globaltype/History.IsRecordingAction": {
     "documentation": "Whether an Action is currently being recorded by History"
   },
-  "@luhx/globaltype/History.Redo": {
+  "@phoenix/globaltype/History.Redo": {
     "documentation": "Forwards the state of the scene to how it was before the last Undo"
   },
-  "@luhx/globaltype/History.TargetDataModel": {
+  "@phoenix/globaltype/History.TargetDataModel": {
     "documentation": "The DataModel that History will track"
   },
-  "@luhx/globaltype/History.TryBeginAction": {
+  "@phoenix/globaltype/History.TryBeginAction": {
     "documentation": "Attempts to begin an \"Action.\" Returns the ID of the action. May fail and return `nil`. Only one Action may be active at a time"
   },
-  "@luhx/globaltype/History.Undo": {
+  "@phoenix/globaltype/History.Undo": {
     "documentation": "Reverses the state of the scene to how it was before the last Action began"
   },
-  "@luhx/globaltype/Matrix.C1R1": {
+  "@phoenix/globaltype/Matrix.C1R1": {
     "documentation": "* The value at Column 1, Row 1\n"
   },
-  "@luhx/globaltype/Matrix.C1R2": {
+  "@phoenix/globaltype/Matrix.C1R2": {
     "documentation": "* The value at Column 1, Row 2\n"
   },
-  "@luhx/globaltype/Matrix.C1R3": {
+  "@phoenix/globaltype/Matrix.C1R3": {
     "documentation": "* The value at Column 1, Row 3\n"
   },
-  "@luhx/globaltype/Matrix.C1R4": {
+  "@phoenix/globaltype/Matrix.C1R4": {
     "documentation": "* The value at Column 1, Row 4\n"
   },
-  "@luhx/globaltype/Matrix.C2R1": {
+  "@phoenix/globaltype/Matrix.C2R1": {
     "documentation": "* The value at Column 2, Row 1\n"
   },
-  "@luhx/globaltype/Matrix.C2R2": {
+  "@phoenix/globaltype/Matrix.C2R2": {
     "documentation": "* The value at Column 2, Row 2\n"
   },
-  "@luhx/globaltype/Matrix.C2R3": {
+  "@phoenix/globaltype/Matrix.C2R3": {
     "documentation": "* The value at Column 2, Row 3\n"
   },
-  "@luhx/globaltype/Matrix.C2R4": {
+  "@phoenix/globaltype/Matrix.C2R4": {
     "documentation": "* The value at Column 2, Row 4\n"
   },
-  "@luhx/globaltype/Matrix.C3R1": {
+  "@phoenix/globaltype/Matrix.C3R1": {
     "documentation": "* The value at Column 3, Row 1\n"
   },
-  "@luhx/globaltype/Matrix.C3R2": {
+  "@phoenix/globaltype/Matrix.C3R2": {
     "documentation": "* The value at Column 3, Row 2\n"
   },
-  "@luhx/globaltype/Matrix.C3R3": {
+  "@phoenix/globaltype/Matrix.C3R3": {
     "documentation": "* The value at Column 3, Row 3\n"
   },
-  "@luhx/globaltype/Matrix.C3R4": {
+  "@phoenix/globaltype/Matrix.C3R4": {
     "documentation": "* The value at Column 3, Row 4\n"
   },
-  "@luhx/globaltype/Matrix.C4R1": {
+  "@phoenix/globaltype/Matrix.C4R1": {
     "documentation": "* The value at Column 4, Row 1\n"
   },
-  "@luhx/globaltype/Matrix.C4R2": {
+  "@phoenix/globaltype/Matrix.C4R2": {
     "documentation": "* The value at Column 4, Row 2\n"
   },
-  "@luhx/globaltype/Matrix.C4R3": {
+  "@phoenix/globaltype/Matrix.C4R3": {
     "documentation": "* The value at Column 4, Row 3\n"
   },
-  "@luhx/globaltype/Matrix.C4R4": {
+  "@phoenix/globaltype/Matrix.C4R4": {
     "documentation": "* The value at Column 4, Row 4\n"
   },
-  "@luhx/globaltype/Matrix.ExtractAngles": {
+  "@phoenix/globaltype/Matrix.ExtractAngles": {
     "documentation": "* Extracts the orientation of the Matrix as euler angles in the YXZ rotation order\n"
   },
-  "@luhx/globaltype/Matrix.Forward": {
+  "@phoenix/globaltype/Matrix.Forward": {
     "documentation": "* The Forward basis vector of the Matrix\n"
   },
-  "@luhx/globaltype/Matrix.Inverse": {
+  "@phoenix/globaltype/Matrix.Inverse": {
     "documentation": "* Returns the inverse of the Matrix\n"
   },
-  "@luhx/globaltype/Matrix.Lerp": {
+  "@phoenix/globaltype/Matrix.Lerp": {
     "documentation": "* Linearly interpolates to the given Matrix\n"
   },
-  "@luhx/globaltype/Matrix.Position": {
+  "@phoenix/globaltype/Matrix.Position": {
     "documentation": "* The position of the Matrix in world-space\n"
   },
-  "@luhx/globaltype/Matrix.Right": {
+  "@phoenix/globaltype/Matrix.Right": {
     "documentation": "* The Right basis vector of the Matrix\n"
   },
-  "@luhx/globaltype/Matrix.Up": {
+  "@phoenix/globaltype/Matrix.Up": {
     "documentation": "* The Up basis vector of the Matrix\n"
   },
-  "@luhx/globaltype/Matrix.__mul": {
+  "@phoenix/globaltype/Matrix.__mul": {
     "documentation": "* Two Matrices may be multiplied together with the `*` operator\n"
   },
-  "@luhx/globaltype/Mesh.CastsShadows": {
+  "@phoenix/globaltype/Mesh.CastsShadows": {
     "documentation": "Whether it casts shadows"
   },
-  "@luhx/globaltype/Mesh.FaceCulling": {
+  "@phoenix/globaltype/Mesh.FaceCulling": {
     "documentation": "Which faces of the mesh to cull based on viewing direction. See the `FaceCulling` enum"
   },
-  "@luhx/globaltype/Mesh.Material": {
+  "@phoenix/globaltype/Mesh.Material": {
     "documentation": "The name of the `.mtl` in the `resources/materials/` directory it should use"
   },
-  "@luhx/globaltype/Mesh.MeshAsset": {
+  "@phoenix/globaltype/Mesh.MeshAsset": {
     "documentation": "The path to the underlying `.hxmesh` file, or a built-in identifier like `!Quad` or `!Cube`"
   },
-  "@luhx/globaltype/Mesh.MetallnessFactor": {
+  "@phoenix/globaltype/Mesh.MetallnessFactor": {
     "documentation": "Metallness modifier"
   },
-  "@luhx/globaltype/Mesh.RoughnessFactor": {
+  "@phoenix/globaltype/Mesh.RoughnessFactor": {
     "documentation": "Roughness modifier"
   },
-  "@luhx/globaltype/Mesh.Tint": {
+  "@phoenix/globaltype/Mesh.Tint": {
     "documentation": "The Color it should be tinted with"
   },
-  "@luhx/globaltype/Mesh.Transparency": {
+  "@phoenix/globaltype/Mesh.Transparency": {
     "documentation": "Its transparency/translucency"
   },
-  "@luhx/globaltype/ParticleEmitter.Emitting": {
+  "@phoenix/globaltype/ParticleEmitter.Emitting": {
     "documentation": "Whether the emitter should emit new particles"
   },
-  "@luhx/globaltype/ParticleEmitter.Lifetime": {
+  "@phoenix/globaltype/ParticleEmitter.Lifetime": {
     "documentation": "The X and Y components act as a range of how long any particle can last, in seconds"
   },
-  "@luhx/globaltype/ParticleEmitter.ParticlesAreAttached": {
+  "@phoenix/globaltype/ParticleEmitter.ParticlesAreAttached": {
     "documentation": "Whether the particles are attached to and move with the emitter"
   },
-  "@luhx/globaltype/ParticleEmitter.Rate": {
+  "@phoenix/globaltype/ParticleEmitter.Rate": {
     "documentation": "An integer indicating how many particles should be emitted per second (must be above or equal to `0`)"
   },
-  "@luhx/globaltype/Physics.DebugCollisionAabbs": {
+  "@phoenix/globaltype/Physics.DebugCollisionAabbs": {
     "documentation": "Whether physics collision AABBs are rendered"
   },
-  "@luhx/globaltype/Physics.DebugContactPoints": {
+  "@phoenix/globaltype/Physics.DebugContactPoints": {
     "documentation": "Whether Contact Points are rendered"
   },
-  "@luhx/globaltype/Physics.DebugSpatialHeat": {
+  "@phoenix/globaltype/Physics.DebugSpatialHeat": {
     "documentation": "Whether Spatial Heat (spatial hash density) debug rendering is enabled"
   },
-  "@luhx/globaltype/Physics.Gravity": {
+  "@phoenix/globaltype/Physics.Gravity": {
     "documentation": "The gravitational field strength"
   },
-  "@luhx/globaltype/Physics.Simulating": {
+  "@phoenix/globaltype/Physics.Simulating": {
     "documentation": "Whether the Physics simulation is running. IMPORTANT: The Editor sets this value to `true` and `false` when starting/stopping playtests"
   },
-  "@luhx/globaltype/Physics.Timescale": {
+  "@phoenix/globaltype/Physics.Timescale": {
     "documentation": "Slow-down or speed-up the simulation by changing this value from `1`"
   },
-  "@luhx/globaltype/PlayerInput.CursorMode": {
+  "@phoenix/globaltype/PlayerInput.CursorMode": {
     "documentation": "The current mode/behaviour of the cursor. Refer to the `Enum.CursorMode` enumeration"
   },
-  "@luhx/globaltype/PlayerInput.GetCursorPosition": {
+  "@phoenix/globaltype/PlayerInput.GetCursorPosition": {
     "documentation": "Returns the current position of the mouse cursor relative to the window as a `vector`"
   },
-  "@luhx/globaltype/PlayerInput.IsKeyPressed": {
+  "@phoenix/globaltype/PlayerInput.IsKeyPressed": {
     "documentation": "Returns whether the specified key (e.g. `Enum.Key.A`, `Enum.Key.One`) is currently being pressed"
   },
-  "@luhx/globaltype/PlayerInput.IsKeyboardSunk": {
+  "@phoenix/globaltype/PlayerInput.IsKeyboardSunk": {
     "documentation": "Whether the Engine is currently using keyboard input (such as for Dear ImGui). Do not process keyboard input if this is `true`"
   },
-  "@luhx/globaltype/PlayerInput.IsMouseButtonPressed": {
+  "@phoenix/globaltype/PlayerInput.IsMouseButtonPressed": {
     "documentation": "Returns whether the specified mouse button (`Enum.MouseButton.Left/Middle/Right`) is currently being pressed"
   },
-  "@luhx/globaltype/PlayerInput.IsMouseSunk": {
+  "@phoenix/globaltype/PlayerInput.IsMouseSunk": {
     "documentation": "Whether the Engine is currently using mouse input (such as for Dear ImGui). Do not process mouse input if this is `true`"
   },
-  "@luhx/globaltype/PointLight.Brightness": {
+  "@phoenix/globaltype/PointLight.Brightness": {
     "documentation": "How bright the Light is"
   },
-  "@luhx/globaltype/PointLight.LightColor": {
+  "@phoenix/globaltype/PointLight.LightColor": {
     "documentation": "The color of the Light"
   },
-  "@luhx/globaltype/PointLight.Range": {
+  "@phoenix/globaltype/PointLight.Range": {
     "documentation": "How far light is emitted. If `>= 0`, the Range is used and attenuation is linear, otherwise it uses the formula `F = 1/D^2 * B` to mirror real-world attenuation, where `F` is the final brightness, `D` is the distance of a point from the Light, and `B` is the `Brightness` property's value"
   },
-  "@luhx/globaltype/RigidBody.AngularVelocity": {
+  "@phoenix/globaltype/RigidBody.AngularVelocity": {
     "documentation": "Its rotational velocity"
   },
-  "@luhx/globaltype/RigidBody.CollisionType": {
+  "@phoenix/globaltype/RigidBody.CollisionType": {
     "documentation": "Determines how collisions are detected. See the `CollisionType` enum"
   },
-  "@luhx/globaltype/RigidBody.Density": {
+  "@phoenix/globaltype/RigidBody.Density": {
     "documentation": "Its density (`Mass = Density * Size`)"
   },
-  "@luhx/globaltype/RigidBody.Friction": {
+  "@phoenix/globaltype/RigidBody.Friction": {
     "documentation": "Fraction of Velocity it should lose per second while in contact with another object while `PhysicsDynamics` is `true`"
   },
-  "@luhx/globaltype/RigidBody.GravityFactor": {
+  "@phoenix/globaltype/RigidBody.GravityFactor": {
     "documentation": "Influence of the force of gravity"
   },
-  "@luhx/globaltype/RigidBody.HullsFile": {
+  "@phoenix/globaltype/RigidBody.HullsFile": {
     "documentation": "The file containing a set of convex hull meshes to load. Used for when `.CollisionType` is `Hulls`"
   },
-  "@luhx/globaltype/RigidBody.LinearVelocity": {
+  "@phoenix/globaltype/RigidBody.LinearVelocity": {
     "documentation": "Its velocity"
   },
-  "@luhx/globaltype/RigidBody.PhysicsCollisions": {
+  "@phoenix/globaltype/RigidBody.PhysicsCollisions": {
     "documentation": "Whether other physics objects can collide with it"
   },
-  "@luhx/globaltype/RigidBody.PhysicsDynamics": {
+  "@phoenix/globaltype/RigidBody.PhysicsDynamics": {
     "documentation": "Whether the Physics engine should apply forces to it"
   },
-  "@luhx/globaltype/RigidBody.PhysicsRotations": {
+  "@phoenix/globaltype/RigidBody.PhysicsRotations": {
     "documentation": "Whether the Physics engine will apply angular impulses to rotate the object on collisions. Prefer to keep this at `false` as the simulation is not very precise"
   },
-  "@luhx/globaltype/RigidBody.Restitution": {
+  "@phoenix/globaltype/RigidBody.Restitution": {
     "documentation": "Restitution"
   },
-  "@luhx/globaltype/Sound.FinishedLoading": {
+  "@phoenix/globaltype/Sound.FinishedLoading": {
     "documentation": "Whether the Sound has finished loading the `SoundFile`"
   },
-  "@luhx/globaltype/Sound.Length": {
+  "@phoenix/globaltype/Sound.Length": {
     "documentation": "The length of the sound in seconds"
   },
-  "@luhx/globaltype/Sound.LoadSucceeded": {
+  "@phoenix/globaltype/Sound.LoadSucceeded": {
     "documentation": "Whether or not the sound loaded successfully"
   },
-  "@luhx/globaltype/Sound.Looped": {
+  "@phoenix/globaltype/Sound.Looped": {
     "documentation": "Whether playback should loop once it reaches the end"
   },
-  "@luhx/globaltype/Sound.OnLoaded": {
+  "@phoenix/globaltype/Sound.OnLoaded": {
     "documentation": "Fires when the Sound finishes loading, and whether it loaded successfully or not"
   },
-  "@luhx/globaltype/Sound.Play": {
+  "@phoenix/globaltype/Sound.Play": {
     "documentation": "Plays the Sound from the beginning"
   },
-  "@luhx/globaltype/Sound.Playing": {
+  "@phoenix/globaltype/Sound.Playing": {
     "documentation": "Whether the Sound is currently playing (or requested to play, if `.Playing` is set to `true` by a `Script` before it has finished loading)"
   },
-  "@luhx/globaltype/Sound.Position": {
+  "@phoenix/globaltype/Sound.Position": {
     "documentation": "The time-position of playback in number of seconds from the beginning of the file"
   },
-  "@luhx/globaltype/Sound.SoundFile": {
+  "@phoenix/globaltype/Sound.SoundFile": {
     "documentation": "The sound file to be played"
   },
-  "@luhx/globaltype/Sound.Speed": {
+  "@phoenix/globaltype/Sound.Speed": {
     "documentation": "The speed at which the sound plays, within the range of 0.01 to 100"
   },
-  "@luhx/globaltype/Sound.Volume": {
+  "@phoenix/globaltype/Sound.Volume": {
     "documentation": "The volume at which the sound plays. Must be positive"
   },
-  "@luhx/globaltype/SpotLight.Angle": {
+  "@phoenix/globaltype/SpotLight.Angle": {
     "documentation": "The Field-of-View (in radians) of light emission"
   },
-  "@luhx/globaltype/SpotLight.Brightness": {
+  "@phoenix/globaltype/SpotLight.Brightness": {
     "documentation": "How bright the Light is"
   },
-  "@luhx/globaltype/SpotLight.LightColor": {
+  "@phoenix/globaltype/SpotLight.LightColor": {
     "documentation": "The color of the Light"
   },
-  "@luhx/globaltype/SpotLight.Range": {
+  "@phoenix/globaltype/SpotLight.Range": {
     "documentation": "How far light is emitted"
   },
-  "@luhx/globaltype/Transform.LocalSize": {
+  "@phoenix/globaltype/Transform.LocalSize": {
     "documentation": "The Object's scale factor, relative to it's parent Transform ancestor or the world origin"
   },
-  "@luhx/globaltype/Transform.LocalTransform": {
+  "@phoenix/globaltype/Transform.LocalTransform": {
     "documentation": "The Object's transformation, relative to it's parent Transform ancestor or the world origin"
   },
-  "@luhx/globaltype/Transform.Size": {
+  "@phoenix/globaltype/Transform.Size": {
     "documentation": "The Object's world-space scale factor"
   },
-  "@luhx/globaltype/Transform.Transform": {
+  "@phoenix/globaltype/Transform.Transform": {
     "documentation": "The Object's world-space transformation"
   },
-  "@luhx/globaltype/TreeLink.Target": {
+  "@phoenix/globaltype/TreeLink.Target": {
     "documentation": "The target to link"
   },
-  "@luhx/globaltype/Workspace.GetObjectsInAabb": {
+  "@phoenix/globaltype/Workspace.GetObjectsInAabb": {
     "documentation": "Get a list of Objects whose bounds are within the AABB"
   },
-  "@luhx/globaltype/Workspace.Raycast": {
+  "@phoenix/globaltype/Workspace.Raycast": {
     "documentation": "Cast a ray"
   },
-  "@luhx/globaltype/Workspace.SceneCamera": {
+  "@phoenix/globaltype/Workspace.SceneCamera": {
     "documentation": "The `Camera` the Player sees the world through. If set to `nil`, a *fallback* is created at the origin"
   },
-  "@luhx/globaltype/Workspace.ScreenPointToVector": {
+  "@phoenix/globaltype/Workspace.ScreenPointToVector": {
     "documentation": "Converts the provided screen coordinates to a world-space direction. `Length` is optional and `1.0` by default"
   }
 }

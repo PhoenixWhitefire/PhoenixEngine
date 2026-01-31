@@ -879,7 +879,7 @@ int main(int argc, char** argv)
 
 	try
 	{
-		Engine engine{};
+		Engine engine;
 		if (DoApiDump)
 			doApiDump();
 

@@ -3,6 +3,7 @@
 print("Docs CI begin\n\n\n\n\n")
 
 local BASE_PATH = "./gh-assets/wiki"
+local DOCS_PREFIX = "phoenix"
 
 local apiDump = json.parse(assert(fs.read("./apidump.json")))
 local docComments = json.parse(assert(fs.read(BASE_PATH .. "/doc-comments.json")))
@@ -204,7 +205,7 @@ local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, lib
 		end
 		totalcomment = totalcomment:sub(1, #totalcomment - 1)
 
-		documentationData[`@luhx/global/{libname}.{k}`] = {
+		documentationData[`@{DOCS_PREFIX}/global/{libname}.{k}`] = {
 			documentation = totalcomment
 		}
 
@@ -285,7 +286,7 @@ local function dumpReflectionApi(t, d, cn)
 				end
 
 				s ..= `* \`{ n }: { luautype }\`: { desc }\n`
-				documentationData[`@luhx/globaltype/{cn}.{n}`] = {
+				documentationData[`@{DOCS_PREFIX}/globaltype/{cn}.{n}`] = {
 					documentation = desc
 				}
 
@@ -318,7 +319,7 @@ local function dumpReflectionApi(t, d, cn)
 				end
 
 				s ..= `* \`{ n }{ subst }\`: { desc }\n`
-				documentationData[`@luhx/globaltype/{cn}.{n}`] = {
+				documentationData[`@{DOCS_PREFIX}/globaltype/{cn}.{n}`] = {
 					documentation = desc
 				}
 
@@ -391,7 +392,7 @@ local function dumpReflectionApi(t, d, cn)
 				end
 
 				s ..= `* \`{ n }{ rtolsub(v) }\`: { d.Events[n].Description }\n`
-				documentationData[`@luhx/globaltype/{cn}.{n}`] = {
+				documentationData[`@{DOCS_PREFIX}/globaltype/{cn}.{n}`] = {
 					documentation = d.Events[n].Description
 				}
 				definitionsFile ..= `  { n }: EventSignal<{rtolsub(v)}>\n`
@@ -445,7 +446,7 @@ local function documentDatatype(name)
 	totalcomment = totalcomment:sub(1, #totalcomment - 1)
 
 	datatypes ..= totalcomment
-	documentationData[`@luhx/global/{name}`] = {
+	documentationData[`@{DOCS_PREFIX}/global/{name}`] = {
 		documentation = totalcomment
 	}
 
@@ -552,7 +553,7 @@ local function documentDatatype(name)
 		totalcomment = totalcomment:sub(1, #totalcomment)
 
 		datatype ..= totalcomment
-		documentationData[`@luhx/globaltype/{name}.{k}`] = {
+		documentationData[`@{DOCS_PREFIX}/globaltype/{name}.{k}`] = {
 			documentation = totalcomment
 		}
 
@@ -628,7 +629,7 @@ for _, name in orderedLibraries do
 	totalcomment = totalcomment:sub(1, #totalcomment - 1)
 
 	libraries ..= totalcomment
-	documentationData[`@luhx/global/{name}`] = {
+	documentationData[`@{DOCS_PREFIX}/global/{name}`] = {
 		documentation = totalcomment
 	}
 	
@@ -672,7 +673,7 @@ for _, name in orderedGlobals do
 	totalcomment = totalcomment:sub(1, #totalcomment - 1)
 
 	globals ..= totalcomment
-	documentationData[`@luhx/global/{name}`] = {
+	documentationData[`@{DOCS_PREFIX}/global/{name}`] = {
 		documentation = totalcomment
 	}
 
@@ -687,7 +688,7 @@ fs.write(BASE_PATH .. "/scriptenv.md", scriptenv)
 fs.write(BASE_PATH .. "/components.md", components)
 
 fs.write("./lsp/api.d.luau", definitionsFile)
-fs.write("./lsp/api.docs.json", json.encode(documentationData))
+fs.write("./lsp/api-docs.json", json.encode(documentationData))
 
 print("Docs CI finish\n\n\n\n\n")
 

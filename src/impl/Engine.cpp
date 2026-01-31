@@ -809,8 +809,6 @@ void Engine::Start()
 			break;
 		}
 
-		DataModelRef->FindComponent<EcDataModel>()->Bind();
-
 		RunningTime = GetRunningTime();
 		RendererContext.AccumulatedDrawCallCount = 0;
 
@@ -836,6 +834,8 @@ void Engine::Start()
 		}
 
 		TIME_SCOPE_AS("FrameWork");
+
+		DataModelRef->FindComponent<EcDataModel>()->Bind();
 
 		if (!IsHeadlessMode)
 			m_TextureManager.FinalizeAsyncLoadedTextures();
@@ -927,8 +927,6 @@ void Engine::Start()
 			}
 		}
 
-		ScriptEngine::StepScheduler(); // scripts may try to draw Dear ImGui, this needs to be AFTER `ImGui::NewFrame`
-
 		EcWorkspace* workspaceComponent = WorkspaceRef->FindComponent<EcWorkspace>();
 		ObjectHandle sceneCamObject = workspaceComponent->GetSceneCamera();
 		EcCamera* sceneCamera = sceneCamObject->FindComponent<EcCamera>();
@@ -937,6 +935,7 @@ void Engine::Start()
 			workspaceComponent->Update();
 
 		REFLECTION_SIGNAL_EVENT(DataModelRef->FindComponent<EcDataModel>()->OnFrameBeginCallbacks, deltaTime);
+		ScriptEngine::StepScheduler(); // scripts may try to draw Dear ImGui, this needs to be AFTER `ImGui::NewFrame`
 
 		// fetch the camera again because of potential CurrentScene changes that may have caused re-alloc'd
 		// (really need a generic `Ref` system)
@@ -1057,6 +1056,8 @@ void Engine::Start()
 			m_Render(deltaTime);
 			RendererContext.SwapBuffers();
 		}
+
+		ScriptEngine::StepScheduler();
 
 		// End of frame
 		RunningTime = GetRunningTime();

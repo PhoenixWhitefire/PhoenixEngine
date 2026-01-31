@@ -404,7 +404,7 @@ declare task: {
   delay: (<A...>( Delay: number, Task: ((A...) -> ()) | thread, A... ) -> ()),
   load: (( Code: string, ChunkName: string? ) -> (thread?, string?)),
   loadfile: (( File: string, ChunkName: string? ) -> (thread?, string?)),
-  wait: (( SleepTime: number ) -> (number))
+  wait: (( SleepTime: number? ) -> (number))
 }
 
 

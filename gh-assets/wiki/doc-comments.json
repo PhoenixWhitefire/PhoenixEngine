@@ -576,7 +576,7 @@
         "Description": "A connection to an Event",
         "Members": {
           ":Disconnect": {
-            "Description": "Disconnects the Connection, causing the callback to no longer be invoked. May only be called once"
+            "Description": "Disconnects the Connection, causing the callback to no longer be queued for resumption. May only be called once. Please note that the callback may still be invoked afterward if the Event occurred before `Disconnect`ing"
           },
           "Connected": {
             "Description": "Whether the Connection is connected or not",
@@ -1642,8 +1642,8 @@
             "Out": "thread?, string?"
           },
           "wait": {
-            "Description": "Yields the thread for the specified number of seconds",
-            "In": "SleepTime: number",
+            "Description": "Yields the thread for the specified number of seconds. Default is `0`",
+            "In": "SleepTime: number?",
             "Out": "number"
           }
         }
