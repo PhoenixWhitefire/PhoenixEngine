@@ -1,4 +1,4 @@
-#include "datatype/GameObject.hpp"
+#include "datatype/ComponentBase.hpp"
 
 struct EcAssetService : Component<EntityComponent::AssetManager>
 {

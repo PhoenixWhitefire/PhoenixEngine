@@ -425,16 +425,16 @@ static ObjectRef createObjectFromJsonItem(const nlohmann::json& Item, uint32_t I
 		for (auto it = components.value().begin(); it != components.value().end(); it++)
 		{
 			std::string name = it.value();
-			const auto& tyIt = s_ComponentNameToType.find(name);
+			EntityComponent ec = FindComponentTypeByName(name);
 
-			if (tyIt == s_ComponentNameToType.end())
+			if (ec == EntityComponent::None)
 			{
 				SF_WARN("Object #{} with name '{}' had invalid component '{}'", ItemIndex, Item.value("Name", "<UNNAMED>"), name);
 				continue;
 			}
 
-			if (!object->FindComponentByType(tyIt->second))
-				object->AddComponent(tyIt->second);
+			if (!object->FindComponentByType(ec))
+				object->AddComponent(ec);
 		}
 
 		if (Version < 2.11f)

@@ -66,6 +66,7 @@ declare extern type GameObject with
   Serializes: boolean
 
   function AddComponent(self, Component: keyof<Creatables>) : ()
+  function AddTag(self, Tag: string) : ()
   function Destroy(self) : ()
   function Duplicate(self) : ((GameObject & {}))
   function FindChild(self, ChildName: string) : ((GameObject & {})?)
@@ -76,9 +77,15 @@ declare extern type GameObject with
   function GetComponents(self) : (keyof<Creatables>)
   function GetDescendants(self) : ({ any })
   function GetFullName(self) : (string)
+  function GetTags(self) : { string }
   function HasComponent(self, Component: keyof<Creatables>) : (boolean)
+  function HasTag(self, Tag: string) : (boolean)
   function MergeWith(self, With: (GameObject & {})) : ()
   function RemoveComponent(self, Component: keyof<Creatables>) : ()
+  function RemoveTag(self, Tag: string) : ()
+
+  OnTagAdded: EventSignal<(string)>
+  OnTagRemoved: EventSignal<(string)>
 end
 declare extern type Animation with
   Animation: string
@@ -106,12 +113,19 @@ declare extern type Camera with
   FieldOfView: number
   UseSimpleController: boolean
 end
+declare extern type Collections with
+
+  function GetCollections(self) : { string }
+  function GetTagAddedSignal(self, Tag: string) : EventSignal<GameObject & {}>
+  function GetTagRemovedSignal(self, Tag: string) : EventSignal<GameObject & {}>
+  function GetTagged(self, Tag: string) : { GameObject & {} }
+end
 declare extern type DataModel with
   AreScriptsBound: boolean 
   LiveScripts: string
   Time: number 
 
-  function GetService(self, ServiceName: string) : ((GameObject & {}))
+  function GetService(self, Service: 'Workspace' | 'Engine' | 'PlayerInput' | 'AssetManager' | 'History' | 'Physics' | 'Renderer' | 'Collections') : (GameObject & {})
 
   OnFrameBegin: EventSignal<(number)>
 end
@@ -282,7 +296,7 @@ end
 
 type Creatables = {
 	Transform: Transform,
-	Mesh: Mesh & Transform & RigidBody,
+	Mesh: Mesh & Transform,
 	ParticleEmitter: ParticleEmitter & Transform,
 	Sound: Sound,
 	Workspace: Workspace,
@@ -302,6 +316,7 @@ type Creatables = {
 	RigidBody: RigidBody,
 	Physics: Physics,
 	Renderer: Renderer,
+	Collections: Collections,
 }
 declare Enum: {
   CollisionType: { Cube: number, Sphere: number, Hulls: number, MeshComponent: number },
@@ -396,7 +411,7 @@ declare imgui: {
   windowsize: ((  ) -> (vector))
 }
 declare json: {
-  encode: (( Value: any ) -> (string)),
+  encode: (( Value: any, Indent: number? ) -> (string)),
   parse: (( Json: string ) -> (any))
 }
 declare task: {

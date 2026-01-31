@@ -82,7 +82,10 @@ static int sig_namecall(lua_State* L)
 
 			[eL, ec, cL, rev, dmRef, reflector](const std::vector<Reflection::GenericValue>& Inputs, uint32_t ConnectionId) -> void
 			{
-				ZoneScopedN("RunEventCallback");
+				ZoneScopedN("QueueEvent");
+
+				if (ec->ConnectionId == UINT32_MAX)
+					return; // Event has been disconnected, so our various threads may have been de-allocated
 
 				const std::string& spawnTrace = ((ScriptEngine::L::StateUserdata*)eL->userdata)->SpawnTrace;
 				ZoneText(spawnTrace.data(), spawnTrace.size());
@@ -136,7 +139,8 @@ static int sig_namecall(lua_State* L)
 					.DataModel = dmRef.Reference,
 					.RmEventCallback = {
 						.Event = rev,
-						.Reflector = reflector
+						.Reflector = reflector,
+						.ConnectionId = ec->ConnectionId
 					},
 					.RmPoll = [rev, Inputs, eL](lua_State* L) -> int
 						{
@@ -153,7 +157,7 @@ static int sig_namecall(lua_State* L)
 
 							return (int)Inputs.size();
 						},
-					.Mode = ScriptEngine::YieldedCoroutine::ResumptionMode::Polled
+					.Mode = ScriptEngine::YieldedCoroutine::ResumptionMode::DeferredEventResumption
 				});
 			}
 		);

@@ -73,11 +73,11 @@ static int gameobject_new(lua_State* L)
 	{
 		const char* n = luaL_checkstring(L, i);
 
-		const auto& it = s_ComponentNameToType.find(n);
-		if (it == s_ComponentNameToType.end())
+		EntityComponent it = FindComponentTypeByName(n);
+		if (it == EntityComponent::None)
 			luaL_error(L, "Invalid component '%s'", n);
 
-		newObject->AddComponent(it->second);
+		newObject->AddComponent(it);
 	}
 
     luhx_pushgameobject(L, newObject);

@@ -351,8 +351,8 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * Returns the size of the current window
 ### `json`
 * Encoding and decoding JSON files
-#### `json.encode(Value: any): string`
-* Encodes the provided value into a JSON string
+#### `json.encode(Value: any, Indent: number?): string`
+* Encodes the provided value into a JSON string. The default indentiation is 2 spaces
 #### `json.parse(Json: string): any`
 * Decodes the JSON string and returns it as a value
 ### `task`

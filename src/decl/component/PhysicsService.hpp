@@ -3,7 +3,7 @@
 #pragma once
 
 #include "geometry/Physics.hpp"
-#include "datatype/GameObject.hpp"
+#include "datatype/ComponentBase.hpp"
 
 struct EcPhysicsService : Component<EntityComponent::PhysicsService>
 {

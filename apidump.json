@@ -1,8 +1,13 @@
 {
   "GameObject": {
     "Base": {
+      "Events": {
+        "OnTagAdded": "(String)",
+        "OnTagRemoved": "(String)"
+      },
       "Methods": {
         "AddComponent": "(String) -> ()",
+        "AddTag": "(String) -> ()",
         "Destroy": "() -> ()",
         "Duplicate": "() -> (GameObject)",
         "FindChild": "(String) -> (GameObject?)",
@@ -13,9 +18,12 @@
         "GetComponents": "() -> (Array)",
         "GetDescendants": "() -> (Array)",
         "GetFullName": "() -> (String)",
+        "GetTags": "() -> (Array)",
         "HasComponent": "(String) -> (Boolean)",
+        "HasTag": "(String) -> (Boolean)",
         "MergeWith": "(GameObject) -> ()",
-        "RemoveComponent": "(String) -> ()"
+        "RemoveComponent": "(String) -> ()",
+        "RemoveTag": "(String) -> ()"
       },
       "Properties": {
         "Enabled": "Boolean",
@@ -58,6 +66,14 @@
         "Properties": {
           "FieldOfView": "Double",
           "UseSimpleController": "Boolean"
+        }
+      },
+      "Collections": {
+        "Methods": {
+          "GetCollections": "() -> (Array)",
+          "GetTagAddedSignal": "(String) -> (EventSignal)",
+          "GetTagRemovedSignal": "(String) -> (EventSignal)",
+          "GetTagged": "(String) -> (Array)"
         }
       },
       "DataModel": {

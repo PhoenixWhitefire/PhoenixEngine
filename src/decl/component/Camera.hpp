@@ -3,6 +3,7 @@
 #include <glm/mat4x4.hpp>
 
 #include "datatype/GameObject.hpp"
+#include "datatype/ComponentBase.hpp"
 
 struct EcCamera : public Component<EntityComponent::Camera>
 {

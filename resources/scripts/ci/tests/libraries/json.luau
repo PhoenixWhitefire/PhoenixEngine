@@ -1,4 +1,10 @@
-return function(describe, test, expect)
+type expectTable<T...> = {
+    toBe: (any, T...) -> (),
+    toBeNil: (any) -> (),
+    toThrow: (any, string?) -> ()
+}
+
+return function(describe, test: (string, () -> ()) -> (), expect: <T...>(T...) -> expectTable<T...> & { never: expectTable<T...> })
 	test("Encode string", function()
 		expect(json.encode("Hello")):toBe('"Hello"')
 	end)
@@ -56,9 +62,7 @@ return function(describe, test, expect)
 	end)
 	test("Value types", function()
 		expect(function()
-			json.encode({ GameObject.new("Example"), vector.zero })
-		end):toThrow()
+			json.encode({ GameObject.new("Animation"), vector.zero })
+		end):toThrow("Cannot convert 'Animation'")
 	end)
 end
-
-

@@ -1,4 +1,10 @@
-return function(describe, test, expect)
+type expectTable<T...> = {
+    toBe: (any, T...) -> (),
+    toBeNil: (any) -> (),
+    toThrow: (any, string?) -> ()
+}
+
+return function(describe, test: (string, () -> ()) -> (), expect: <T...>(T...) -> expectTable<T...> & { never: expectTable<T...> })
     test("Index R, G, B", function()
         expect(Color.new(1, 0, 2).R):toBe(1)
         expect(Color.new(1, 0, 2).G):toBe(0)

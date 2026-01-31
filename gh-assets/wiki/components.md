@@ -13,6 +13,7 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 
 ### Methods:
 * `AddComponent(keyof<Creatables>) : ()`: Adds the specified Component to the Object. Will error if it already has it (use `:HasComponent` to check beforehand)
+* `AddTag(string) : ()`: Adds a `Collections` tag to the Object. Has no effect if the Object already has the tag
 * `Destroy() : ()`: Marks the Object as "pending for destruction". This may or may not remove the Object from memory immediately, depending on whether the Engine is keeping a internal reference to it
 * `Duplicate() : ((GameObject & {}))`: Creates a duplicate of the Object
 * `FindChild(string) : ((GameObject & {})?)`: Returns a child Object with the given name, or `nil` if one doesn't exist
@@ -23,9 +24,16 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * `GetComponents() : (keyof<Creatables>)`: Returns a list of the names of all Components that the Object currently has
 * `GetDescendants() : ({ any })`: Returns all descendants of the Object (i.e. its children, and their children, etc)
 * `GetFullName() : (string)`: Returns the full, hierarchal path of the Object
+* `GetTags() : ({ any })`: Returns a list of all tags the Object has
 * `HasComponent(keyof<Creatables>) : (boolean)`: Returns whether or not the Object has the given Component
+* `HasTag(string) : (boolean)`: Returns whether or not the Object has the given `Collections` tag
 * `MergeWith((GameObject & {})) : ()`: Merges the Objects together, replacing descendants with the same name
 * `RemoveComponent(keyof<Creatables>) : ()`: Removes the specified Component from the Object. Will error if does not have it (use `:HasComponent` to check beforehand)
+* `RemoveTag(string) : ()`: Removes the given `Collections` tag from the Object. Has no effect if the Object does not have the tag
+
+### Events:
+* `OnTagAdded(string)`: Fires when the Object receives a new tag, passing the tag to the callback
+* `OnTagRemoved(string)`: Fires when the Object loses a tag, passing the tag to the callback
 
 ## `Animation`
 
@@ -71,6 +79,19 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * `FieldOfView: number`: The field-of-view. By default, `90`
 * `UseSimpleController: boolean`: Whether it is affected by the built-in controller (`W`/`A`/`S`/`D` horizontal movement, `Q`/`E` vertical, Mouse to look around)
 
+## `Collections`
+
+* Manage Collections of Objects with tags
+* An Object can have any number of tags
+* Tags can be added to Objects with `Object:AddTag`, removed with `Object:RemoveTag`, and checked with `Object:HasTag`
+
+
+### Methods:
+* `GetCollections() : ({ any })`: Returns a list of all collections that the Collections system has recognized. They may be empty
+* `GetTagAddedSignal(string) : (EventSignal)`: Returns a signal that fires when the given tag is added to any Objects
+* `GetTagRemovedSignal(string) : (EventSignal)`: Returns a signal that fires when the given tag is removed from any Objects, including when an Object with a tag is `:Destroy`'d
+* `GetTagged(string) : ({ any })`: Returns a list containing all Objects with the given tag
+
 ## `DataModel`
 
 * The root of the scene
@@ -81,7 +102,7 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * `Time: number `: Number of seconds since the Engine started running
 
 ### Methods:
-* `GetService(string) : ((GameObject & {}))`: Gets the Object representing the specified Service. If it does not exist yet in the Data Model, it is created
+* `GetService('Workspace' | 'Engine' | 'PlayerInput' | 'AssetManager' | 'History' | 'Physics' | 'Renderer' | 'Collections') : (GameObject & {})`: Gets the Object representing the specified Service. If it does not exist yet in the Data Model, it is created
 
 ### Events:
 * `OnFrameBegin(number)`: Fires at the beginning of a frame, passing in the time elapsed since the last frame (delta time)

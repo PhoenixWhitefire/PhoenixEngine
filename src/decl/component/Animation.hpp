@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "datatype/GameObject.hpp"
+#include "datatype/ComponentBase.hpp"
 
 struct EcAnimation : public Component<EntityComponent::Animation>
 {

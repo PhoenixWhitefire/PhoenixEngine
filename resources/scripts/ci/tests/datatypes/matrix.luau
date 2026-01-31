@@ -1,4 +1,10 @@
-return function(describe, test, expect)
+type expectTable<T...> = {
+    toBe: (any, T...) -> (),
+    toBeNil: (any) -> (),
+    toThrow: (any, string?) -> ()
+}
+
+return function(describe, test: (string, () -> ()) -> (), expect: <T...>(T...) -> expectTable<T...> & { never: expectTable<T...> })
 	test("Individual component new", function()
 		expect(Matrix.new(10, 19, 8).Position):toBe(vector.create(10, 19, 8))
 	end)

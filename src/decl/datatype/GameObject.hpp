@@ -14,146 +14,14 @@
 #include "Utilities.hpp"
 #include "Stl.hpp"
 
-enum class EntityComponent : uint8_t
-{
-	None,
-
-	Transform,
-	Mesh,
-	ParticleEmitter,
-	Sound,
-	Workspace,
-	DataModel,
-	PointLight,
-	DirectionalLight,
-	SpotLight,
-	Camera,
-	Animation,
-	Model,
-	Bone,
-	TreeLink,
-	Engine,
-	PlayerInput,
-	AssetManager,
-	History,
-	RigidBody,
-	PhysicsService,
-	Renderer,
-
-	__count
-};
-
-static inline const std::string_view s_EntityComponentNames[] = 
-{
-	"<NONE>",
-	"Transform",
-	"Mesh",
-	"ParticleEmitter",
-	"Sound",
-	"Workspace",
-	"DataModel",
-	"PointLight",
-	"DirectionalLight",
-	"SpotLight",
-	"Camera",
-	"Animation",
-	"Model",
-	"Bone",
-	"TreeLink",
-	"Engine",
-	"PlayerInput",
-	"AssetManager",
-	"History",
-	"RigidBody",
-	"Physics",
-	"Renderer"
-};
-
-const std::string_view s_DataModelServices[] = {
-    "Workspace",
-    "Engine",
-    "PlayerInput",
-    "AssetManager",
-    "History",
-	"Physics",
-	"Renderer"
-};
-
-// component type and ID
-// if type is "None", the ID is a Game Object ID
-struct ReflectorRef
-{
-	void* Referred() const;
-
-	template <class T>
-	T* Get()
-	{
-		assert(T::Type == Type);
-		return (T*)Referred();
-	}
-
-	uint32_t Id = UINT32_MAX;
-	EntityComponent Type = EntityComponent::None;
-
-	bool operator == (const ReflectorRef& Other) const
-	{
-		return Type == Other.Type && Id == Other.Id;
-	}
-
-	bool operator != (const ReflectorRef& Other) const
-	{
-		return !(*this == Other);
-	}
-};
-
-namespace std
-{
-	template <>
-	struct hash<ReflectorRef>
-	{
-		size_t operator()(const ReflectorRef& r) const noexcept
-		{
-			return ((size_t)r.Id << 32) + (size_t)r.Type;
-		};
-	};
-}
-
-extern const std::unordered_map<std::string_view, EntityComponent> s_ComponentNameToType;
-
-static_assert(std::size(s_EntityComponentNames) == (size_t)EntityComponent::__count);
-
-class GameObject;
-
-// Check `ComponentManager` at the bottom of this file
-class IComponentManager
-{
-public:
-	virtual uint32_t CreateComponent(GameObject* /* Object */) = 0;
-	virtual std::vector<void*> GetComponents() = 0;
-	virtual void ForEachComponent(const std::function<bool(void*)>) = 0;
-	virtual void* GetComponent(uint32_t) = 0;
-	virtual void DeleteComponent(uint32_t /* ComponentId */) = 0;
-	virtual void Shutdown() = 0;
-
-	virtual const Reflection::StaticPropertyMap& GetProperties() = 0;
-	virtual const Reflection::StaticMethodMap& GetMethods() = 0;
-	virtual const Reflection::StaticEventMap& GetEvents() = 0;
-	virtual Reflection::GenericValue GetDefaultPropertyValue(const std::string_view&) = 0;
-	virtual Reflection::GenericValue GetDefaultPropertyValue(const Reflection::PropertyDescriptor*) = 0;
-};
-
-template <EntityComponent T>
-struct Component
-{
-	static inline EntityComponent Type = T;
-};
+#include "datatype/EntityComponent.hpp"
+#include "datatype/ComponentBase.hpp"
 
 class GameObject
 {
 public:
 	static GameObject* FromGenericValue(const Reflection::GenericValue&);
 
-	static EntityComponent s_FindComponentTypeByName(const std::string_view&);
 	// create with a component
 	static GameObject* Create(EntityComponent);
 	static GameObject* Create(const std::string_view&);
@@ -165,6 +33,25 @@ public:
 	static inline uint32_t s_DataModel = PHX_GAMEOBJECT_NULL_ID;
 	static inline hx::vector<GameObject, MEMCAT(GameObject)> s_WorldArray;
 	static inline std::array<IComponentManager*, (size_t)EntityComponent::__count> s_ComponentManagers;
+
+	struct Collection
+	{
+		std::string Name;
+		std::vector<uint32_t> Items;
+
+		struct Event
+		{
+			// We want these to exist in the same memory location for the entire lifetime of the Engine
+			Reflection::EventDescriptor* Descriptor = nullptr;
+			std::vector<Reflection::EventCallback> Callbacks;
+		};
+
+		Event AddedEvent;
+		Event RemovedEvent;
+	};
+
+	static inline std::vector<Collection> s_Collections;
+	static inline std::unordered_map<std::string, uint16_t> s_CollectionNameToId;
 
 	template <class T>
 	T* FindComponent()
@@ -179,6 +66,10 @@ public:
 	uint32_t AddComponent(EntityComponent Type);
 	void RemoveComponent(EntityComponent Type);
 	void* FindComponentByType(EntityComponent);
+
+	void AddTag(const std::string&);
+	void RemoveTag(const std::string&);
+	bool HasTag(const std::string&);
 
 	const Reflection::PropertyDescriptor* FindProperty(const std::string_view&, ReflectorRef* Reflector = nullptr);
 	const Reflection::MethodDescriptor* FindMethod(const std::string_view&, ReflectorRef* Reflector = nullptr);
@@ -247,6 +138,9 @@ public:
 	std::vector<ReflectorRef> Components;
 	Reflection::Api ComponentApis;
 	std::unordered_map<std::string_view, ReflectorRef> MemberToComponentMap;
+	std::vector<uint16_t> Tags;
+	std::vector<Reflection::EventCallback> OnTagAddedCallbacks;
+	std::vector<Reflection::EventCallback> OnTagRemovedCallbacks;
 
 	static nlohmann::json DumpApiToJson();
 	static const Reflection::StaticApi s_Api;
@@ -430,88 +324,4 @@ struct ObjectHandle
 	{
 		return Dereference();
 	}
-};
-
-template <class T>
-class ComponentManager : public IComponentManager
-{
-public:
-	virtual uint32_t CreateComponent(GameObject*) override
-	{
-		m_Components.emplace_back();
-		assert(m_Components.back().Valid);
-		return static_cast<uint32_t>(m_Components.size() - 1);
-	}
-
-	virtual void* GetComponent(uint32_t Id) override
-	{
-		T& component = m_Components.at(Id);
-		return component.Valid ? (void*)&component : nullptr;
-	}
-
-	virtual std::vector<void*> GetComponents() override
-	{
-		std::vector<void*> v;
-        v.reserve(m_Components.size());
-
-        for (T& component : m_Components)
-			if (component.Valid)
-            	v.push_back((void*)&component);
-        
-        return v;
-	}
-
-	virtual void ForEachComponent(const std::function<bool(void*)> Continue) override
-	{
-		for (T& component : m_Components)
-			if (component.Valid && !Continue((void*)&component))
-				break;
-	}
-
-	virtual void DeleteComponent(uint32_t Id) override
-	{
-		T& component = m_Components.at(Id);
-		component.Valid = false;
-	}
-
-	virtual void Shutdown() override
-	{
-		m_Components.clear();
-	}
-
-	virtual const Reflection::StaticPropertyMap& GetProperties() override
-	{
-		static const Reflection::StaticPropertyMap properties;
-		return properties;
-	}
-
-	virtual const Reflection::StaticMethodMap& GetMethods() override
-	{
-		static const Reflection::StaticMethodMap methods;
-		return methods;
-	}
-
-	virtual const Reflection::StaticEventMap& GetEvents() override
-	{
-		static const Reflection::StaticEventMap events;
-		return events;
-	}
-
-	virtual Reflection::GenericValue GetDefaultPropertyValue(const std::string_view& Property) override
-	{
-		return GetDefaultPropertyValue(&GetProperties().at(Property));
-	}
-
-	virtual Reflection::GenericValue GetDefaultPropertyValue(const Reflection::PropertyDescriptor* Property) override
-	{
-		static T Defaults;
-		return Property->Get((void*)&Defaults);
-	}
-
-	ComponentManager()
-	{
-		GameObject::s_ComponentManagers[(size_t)T::Type] = this;
-	}
-
-	std::vector<T> m_Components;
 };

@@ -21,7 +21,7 @@ struct EcParticleEmitter : public Component<EntityComponent::ParticleEmitter>
 	bool ParticlesAreAttached = false;
 
 	uint32_t Rate = 50; //Particles to be spawned every second
-	glm::vec2 Lifetime{ 1.5f, 2.f }; // Randomly chosen between the range X - Y;
+	glm::vec2 Lifetime = { 1.5f, 2.f }; // Randomly chosen between the range X - Y;
 
 	std::vector<uint32_t> PossibleImages; //A random one is chosen every time a particle needs to be spawned
 
@@ -36,9 +36,9 @@ struct EcParticleEmitter : public Component<EntityComponent::ParticleEmitter>
 		float Size = 1.f;
 		float Transparency = 0.f;
 
-		uint32_t Image{};
+		uint32_t Image = 0;
 
-		glm::vec3 Position{};
+		glm::vec3 Position;
 	};
 
 	size_t m_GetUsableParticleIndex();

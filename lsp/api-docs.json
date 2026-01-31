@@ -318,7 +318,7 @@
     "documentation": "* Encoding and decoding JSON files"
   },
   "@phoenix/global/json.encode": {
-    "documentation": "* Encodes the provided value into a JSON string"
+    "documentation": "* Encodes the provided value into a JSON string. The default indentiation is 2 spaces"
   },
   "@phoenix/global/json.parse": {
     "documentation": "* Decodes the JSON string and returns it as a value"
@@ -397,6 +397,18 @@
   },
   "@phoenix/globaltype/Camera.UseSimpleController": {
     "documentation": "Whether it is affected by the built-in controller (`W`/`A`/`S`/`D` horizontal movement, `Q`/`E` vertical, Mouse to look around)"
+  },
+  "@phoenix/globaltype/Collections.GetCollections": {
+    "documentation": "Returns a list of all collections that the Collections system has recognized. They may be empty"
+  },
+  "@phoenix/globaltype/Collections.GetTagAddedSignal": {
+    "documentation": "Returns a signal that fires when the given tag is added to any Objects"
+  },
+  "@phoenix/globaltype/Collections.GetTagRemovedSignal": {
+    "documentation": "Returns a signal that fires when the given tag is removed from any Objects, including when an Object with a tag is `:Destroy`'d"
+  },
+  "@phoenix/globaltype/Collections.GetTagged": {
+    "documentation": "Returns a list containing all Objects with the given tag"
   },
   "@phoenix/globaltype/Color.B": {
     "documentation": "* The Blue channel\n"
@@ -575,6 +587,9 @@
   "@phoenix/globaltype/GameObject.AddComponent": {
     "documentation": "Adds the specified Component to the Object. Will error if it already has it (use `:HasComponent` to check beforehand)"
   },
+  "@phoenix/globaltype/GameObject.AddTag": {
+    "documentation": "Adds a `Collections` tag to the Object. Has no effect if the Object already has the tag"
+  },
   "@phoenix/globaltype/GameObject.Destroy": {
     "documentation": "Marks the Object as \"pending for destruction\". This may or may not remove the Object from memory immediately, depending on whether the Engine is keeping a internal reference to it"
   },
@@ -611,8 +626,14 @@
   "@phoenix/globaltype/GameObject.GetFullName": {
     "documentation": "Returns the full, hierarchal path of the Object"
   },
+  "@phoenix/globaltype/GameObject.GetTags": {
+    "documentation": "Returns a list of all tags the Object has"
+  },
   "@phoenix/globaltype/GameObject.HasComponent": {
     "documentation": "Returns whether or not the Object has the given Component"
+  },
+  "@phoenix/globaltype/GameObject.HasTag": {
+    "documentation": "Returns whether or not the Object has the given `Collections` tag"
   },
   "@phoenix/globaltype/GameObject.MergeWith": {
     "documentation": "Merges the Objects together, replacing descendants with the same name"
@@ -623,11 +644,20 @@
   "@phoenix/globaltype/GameObject.ObjectId": {
     "documentation": "The ID of the Object, an integer. Remains the same throughout the session, but not guaranteed between sessions"
   },
+  "@phoenix/globaltype/GameObject.OnTagAdded": {
+    "documentation": "Fires when the Object receives a new tag, passing the tag to the callback"
+  },
+  "@phoenix/globaltype/GameObject.OnTagRemoved": {
+    "documentation": "Fires when the Object loses a tag, passing the tag to the callback"
+  },
   "@phoenix/globaltype/GameObject.Parent": {
     "documentation": "The hierarchal parent of the Object, or `nil` if it does not have one"
   },
   "@phoenix/globaltype/GameObject.RemoveComponent": {
     "documentation": "Removes the specified Component from the Object. Will error if does not have it (use `:HasComponent` to check beforehand)"
+  },
+  "@phoenix/globaltype/GameObject.RemoveTag": {
+    "documentation": "Removes the given `Collections` tag from the Object. Has no effect if the Object does not have the tag"
   },
   "@phoenix/globaltype/GameObject.Serializes": {
     "documentation": "Whether or not the Object should be saved with the scene if it is serialized with `scene.save`, and whether `:Duplicate` will duplicate it (only applies to descendants)"

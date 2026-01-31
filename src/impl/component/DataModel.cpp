@@ -100,15 +100,15 @@ public:
                         RAISE_RTF("'{}' is not a valid Service!", service);
 
                     EcDataModel* dm = static_cast<EcDataModel*>(p);
-                    const auto& it = s_ComponentNameToType.find(service);
+                    EntityComponent it = FindComponentTypeByName(service);
 
-                    if (it == s_ComponentNameToType.end())
+                    if (it == EntityComponent::None)
                         RAISE_RTF("Could not map Service name '{}' to a Component", service);
 
-                    if (GameObject* preExisting = dm->Object->FindChildWithComponent(it->second))
+                    if (GameObject* preExisting = dm->Object->FindChildWithComponent(it))
                         return { preExisting->ToGenericValue() };
 
-                    GameObject* newObject = GameObject::Create(it->second);
+                    GameObject* newObject = GameObject::Create(it);
                     newObject->SetParent(dm->Object);
 
                     return { newObject->ToGenericValue() };

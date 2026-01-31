@@ -60,6 +60,7 @@ namespace ScriptEngine
 			struct {
 				const Reflection::EventDescriptor* Event = nullptr;
 				ReflectorRef Reflector;
+				uint32_t ConnectionId = UINT32_MAX;
 			} RmEventCallback;
 		};
 
@@ -70,6 +71,7 @@ namespace ScriptEngine
 	};
 
 	inline std::vector<YieldedCoroutine> s_YieldedCoroutines;
+	inline std::vector<YieldedCoroutine> s_YieldedCoroutinesProcessing;
 
 	struct LuauVM
 	{

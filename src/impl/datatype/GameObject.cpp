@@ -7,17 +7,6 @@
 #include "History.hpp"
 #include "Log.hpp"
 
-const std::unordered_map<std::string_view, EntityComponent> s_ComponentNameToType = []()
-{
-	std::unordered_map<std::string_view, EntityComponent> map;
-	map.reserve((size_t)EntityComponent::__count);
-
-	for (size_t i = 0; i < (size_t)EntityComponent::__count; i++)
-		map[s_EntityComponentNames[i]] = (EntityComponent)i;
-
-	return map;
-}();
-
 const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 	.Properties = {
 		REFLECTION_PROPERTY_SIMPLE(GameObject, Name, String),
@@ -187,7 +176,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 			{ REFLECTION_OPTIONAL(GameObject) },
 			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
 			{
-				EntityComponent ec = GameObject::s_FindComponentTypeByName(inputs[0].AsStringView());
+				EntityComponent ec = FindComponentTypeByName(inputs[0].AsStringView());
 				if (ec == EntityComponent::None)
 					RAISE_RTF("Invalid component type '{}'", inputs[0].AsStringView());
 
@@ -215,7 +204,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 			{ Reflection::ValueType::Boolean },
 			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
 			{
-				EntityComponent ec = GameObject::s_FindComponentTypeByName(inputs[0].AsStringView());
+				EntityComponent ec = FindComponentTypeByName(inputs[0].AsStringView());
 				if (ec == EntityComponent::None)
 					RAISE_RT("Invalid component");
 
@@ -232,7 +221,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 			{},
 			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
 			{
-				EntityComponent ec = GameObject::s_FindComponentTypeByName(inputs[0].AsStringView());
+				EntityComponent ec = FindComponentTypeByName(inputs[0].AsStringView());
 				if (ec == EntityComponent::None)
 					RAISE_RT("Invalid component");
 
@@ -248,7 +237,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 			{},
 			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
 			{
-				EntityComponent ec = GameObject::s_FindComponentTypeByName(inputs[0].AsStringView());
+				EntityComponent ec = FindComponentTypeByName(inputs[0].AsStringView());
 				if (ec == EntityComponent::None)
 					RAISE_RT("Invalid component");
 
@@ -258,6 +247,58 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 				return {};
 			}
 		} },
+
+		{ "AddTag", Reflection::MethodDescriptor{
+			{ Reflection::ValueType::String },
+			{},
+			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+			{
+				GameObject* obj = static_cast<GameObject*>(p);
+				obj->AddTag(inputs[0].AsString());
+
+				return {};
+			}
+		} },
+		{ "RemoveTag", Reflection::MethodDescriptor{
+			{ Reflection::ValueType::String },
+			{},
+			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+			{
+				GameObject* obj = static_cast<GameObject*>(p);
+				obj->RemoveTag(inputs[0].AsString());
+
+				return {};
+			}
+		} },
+		{ "HasTag", Reflection::MethodDescriptor{
+			{ Reflection::ValueType::String },
+			{ Reflection::ValueType::Boolean },
+			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+			{
+				GameObject* obj = static_cast<GameObject*>(p);
+
+				return { obj->HasTag(inputs[0].AsString()) };
+			}
+		} },
+		{ "GetTags", Reflection::MethodDescriptor{
+			{},
+			{ Reflection::ValueType::Array },
+			[](void* p, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+			{
+				GameObject* obj = static_cast<GameObject*>(p);
+				std::vector<Reflection::GenericValue> tags;
+
+				for (uint16_t tagId : obj->Tags)
+					tags.emplace_back(s_Collections[tagId].Name);
+
+				return { Reflection::GenericValue(tags) };
+			}
+		} }
+	},
+
+	.Events = {
+		REFLECTION_EVENT(GameObject, OnTagAdded, Reflection::ValueType::String),
+		REFLECTION_EVENT(GameObject, OnTagRemoved, Reflection::ValueType::String)
 	}
 };
 
@@ -269,8 +310,6 @@ struct HandleHasher
         return a.Reference.TargetId;
     }
 };
-
-
 
 void* ReflectorRef::Referred() const
 {
@@ -430,16 +469,6 @@ GameObject* GameObject::FromGenericValue(const Reflection::GenericValue& gv)
 	return GameObject::GetObjectById(static_cast<uint32_t>(gv.Val.Int));
 }
 
-EntityComponent GameObject::s_FindComponentTypeByName(const std::string_view& Name)
-{
-	const auto& it = s_ComponentNameToType.find(Name);
-
-	if (it == s_ComponentNameToType.end())
-		return EntityComponent::None;
-	else
-		return it->second;
-}
-
 GameObject* GameObject::GetObjectById(uint32_t Id)
 {
 	if (Id == PHX_GAMEOBJECT_NULL_ID || Id == 0 || Id >= s_WorldArray.size())
@@ -477,6 +506,15 @@ void GameObject::Destroy()
 
 	if (!IsDestructionPending)
 	{
+		for (uint16_t tagId : Tags)
+		{
+			Collection& collection = s_Collections[tagId];
+			collection.Items.erase(std::find(collection.Items.begin(), collection.Items.end(), ObjectId));
+			REFLECTION_SIGNAL_EVENT(collection.RemovedEvent.Callbacks, this->ToGenericValue());
+			REFLECTION_SIGNAL_EVENT(OnTagRemovedCallbacks, s_Collections[tagId].Name);
+		}
+		Tags.clear();
+
 		this->SetParent(nullptr);
 		this->IsDestructionPending = true;
 
@@ -1080,12 +1118,101 @@ GameObject* GameObject::Create(const std::string_view& FirstComponent)
 	if (FirstComponent == "Primitive")
 		return GameObject::Create("Mesh");
 
-	auto it = s_ComponentNameToType.find(FirstComponent);
+	EntityComponent it = FindComponentTypeByName(FirstComponent);
 
-	if (it == s_ComponentNameToType.end())
+	if (it == EntityComponent::None)
 		RAISE_RTF("Invalid Component Name '{}'", FirstComponent);
 	else
-		return GameObject::Create(it->second);
+		return GameObject::Create(it);
+}
+
+void GameObject::AddTag(const std::string& Tag)
+{
+	if (IsDestructionPending)
+		RAISE_RTF("Cannot call `:AddTag` on Object {} which was destroyed", GetFullName());
+
+	const auto& it = s_CollectionNameToId.find(Tag);
+
+	if (it == s_CollectionNameToId.end())
+	{
+		if (s_Collections.size() >= UINT16_MAX)
+			RAISE_RTF("Cannot create collection '{}' because we have reached the limit of 2^16", Tag);
+
+		uint16_t id = s_Collections.size();
+		s_CollectionNameToId[Tag] = id;
+		s_Collections.push_back(Collection{ .AddedEvent = { .Descriptor = new Reflection::EventDescriptor }, .RemovedEvent = { .Descriptor = new Reflection::EventDescriptor } });
+
+		Collection& collection = s_Collections[id];
+		collection.Name = Tag;
+		collection.Items.push_back(ObjectId);
+
+		collection.AddedEvent.Descriptor->CallbackInputs = { Reflection::ValueType::GameObject };
+		collection.RemovedEvent.Descriptor->CallbackInputs = { Reflection::ValueType::GameObject };
+		collection.AddedEvent.Descriptor->Connect = [id](void*, Reflection::EventCallback Callback) -> uint32_t
+		{
+			s_Collections[id].AddedEvent.Callbacks.push_back(Callback);
+			return (uint32_t)s_Collections[id].AddedEvent.Callbacks.size() - 1;
+		};
+		collection.AddedEvent.Descriptor->Disconnect = [id](void*, uint32_t ConnectionId)
+		{
+			s_Collections[id].AddedEvent.Callbacks[ConnectionId] = nullptr;
+		};
+		collection.RemovedEvent.Descriptor->Connect = [id](void*, Reflection::EventCallback Callback) -> uint32_t
+		{
+			s_Collections[id].RemovedEvent.Callbacks.push_back(Callback);
+			return (uint32_t)s_Collections[id].RemovedEvent.Callbacks.size() - 1;
+		};
+		collection.RemovedEvent.Descriptor->Disconnect = [id](void*, uint32_t ConnectionId)
+		{
+			s_Collections[id].RemovedEvent.Callbacks[ConnectionId] = nullptr;
+		};
+
+		Tags.push_back(id);
+		REFLECTION_SIGNAL_EVENT(OnTagAddedCallbacks, Tag);
+	}
+	else
+	{
+		bool alreadyHave = std::find(Tags.begin(), Tags.end(), it->second) != Tags.end();
+
+		if (!alreadyHave)
+		{
+			Tags.push_back(it->second);
+			s_Collections[it->second].Items.push_back(ObjectId);
+
+			REFLECTION_SIGNAL_EVENT(s_Collections[it->second].AddedEvent.Callbacks, this->ToGenericValue());
+			REFLECTION_SIGNAL_EVENT(OnTagAddedCallbacks, Tag);
+		}
+	}
+}
+
+void GameObject::RemoveTag(const std::string& Tag)
+{
+	const auto& it = s_CollectionNameToId.find(Tag);
+
+	if (it == s_CollectionNameToId.end())
+		return;
+
+	const auto& tagIt = std::find(Tags.begin(), Tags.end(), it->second);
+	if (tagIt != Tags.end())
+	{
+		Tags.erase(tagIt);
+
+		Collection& collection = s_Collections[it->second];
+		collection.Items.erase(std::find(collection.Items.begin(), collection.Items.end(), ObjectId));
+		REFLECTION_SIGNAL_EVENT(collection.RemovedEvent.Callbacks, this->ToGenericValue());
+		REFLECTION_SIGNAL_EVENT(OnTagRemovedCallbacks, Tag);
+	}
+}
+
+bool GameObject::HasTag(const std::string& Tag)
+{
+	const auto& it = s_CollectionNameToId.find(Tag);
+
+	if (it == s_CollectionNameToId.end())
+		return false;
+
+	const auto& tagIt = std::find(Tags.begin(), Tags.end(), it->second);
+	return tagIt != Tags.end();
 }
 
 static void dumpProperties(const Reflection::StaticPropertyMap& Properties, nlohmann::json& Json)

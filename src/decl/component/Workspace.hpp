@@ -2,6 +2,7 @@
 
 #include <glm/vec3.hpp>
 
+#include "datatype/ComponentBase.hpp"
 #include "datatype/GameObject.hpp"
 
 #define SPATIAL_HASH_GRID_SIZE 32.f

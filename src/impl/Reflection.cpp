@@ -238,6 +238,11 @@ void Reflection::GenericValue::CopyInto(GenericValue& Target, const GenericValue
 		Target.Val.Int = Source.Val.Int;
 		break;
 	}
+	case ValueType::EventSignal:
+	{
+		Target.Val.Event = Source.Val.Event;
+		break;
+	}
 	default:
 	{
 		assert(false);
@@ -656,7 +661,9 @@ static std::string_view BaseNames[] =
 	"Function",
 
 	"Array",
-	"Map"
+	"Map",
+
+	"EventSignal"
 };
 
 static_assert(

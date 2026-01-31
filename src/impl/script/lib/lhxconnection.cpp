@@ -12,7 +12,10 @@ static int conn_namecall(lua_State* L)
 		if (ec->ConnectionId == UINT32_MAX)
 			luaL_error(L, "Event Connection was already disconnected!");
 
-		ec->Event->Disconnect(ec->Reflector.Referred(), ec->ConnectionId);
+		uint32_t connectionId = ec->ConnectionId;
+
+		if (void* p = ec->Reflector.Referred())
+			ec->Event->Disconnect(p, ec->ConnectionId);
 		ec->ConnectionId = UINT32_MAX;
 
 		ScriptEngine::L::StateUserdata* ud = (ScriptEngine::L::StateUserdata*)ec->L->userdata;
@@ -21,6 +24,36 @@ static int conn_namecall(lua_State* L)
 			const auto& it = std::find(ud->EventConnections.begin(), ud->EventConnections.end(), ec);
 			assert(it != ud->EventConnections.end());
 			ud->EventConnections.erase(it);
+		}
+
+		size_t size = ScriptEngine::s_YieldedCoroutines.size();
+		for (size_t i = 0; i < size; i++)
+		{
+			const ScriptEngine::YieldedCoroutine& yc = ScriptEngine::s_YieldedCoroutines[i];
+			if (yc.Mode != ScriptEngine::YieldedCoroutine::ResumptionMode::DeferredEventResumption)
+				continue;
+
+			if (yc.RmEventCallback.Event == ec->Event && yc.RmEventCallback.Reflector == ec->Reflector && yc.RmEventCallback.ConnectionId == connectionId)
+			{
+				ScriptEngine::s_YieldedCoroutines.erase(ScriptEngine::s_YieldedCoroutines.begin() + i);
+				i--;
+				size = ScriptEngine::s_YieldedCoroutines.size();
+			}
+		}
+
+		size = ScriptEngine::s_YieldedCoroutinesProcessing.size();
+		for (size_t i = 0; i < size; i++)
+		{
+			const ScriptEngine::YieldedCoroutine& yc = ScriptEngine::s_YieldedCoroutinesProcessing[i];
+			if (yc.Mode != ScriptEngine::YieldedCoroutine::ResumptionMode::DeferredEventResumption)
+				continue;
+
+			if (yc.RmEventCallback.Event == ec->Event && yc.RmEventCallback.Reflector == ec->Reflector && yc.RmEventCallback.ConnectionId == connectionId)
+			{
+				ScriptEngine::s_YieldedCoroutinesProcessing.erase(ScriptEngine::s_YieldedCoroutinesProcessing.begin() + i);
+				i--;
+				size = ScriptEngine::s_YieldedCoroutinesProcessing.size();
+			}
 		}
 
 		assert(lua_mainthread(L) == lua_mainthread(ec->L));

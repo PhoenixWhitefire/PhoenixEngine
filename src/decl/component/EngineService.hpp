@@ -4,7 +4,7 @@
 
 #include <string>
 
-#include "datatype/GameObject.hpp"
+#include "datatype/ComponentBase.hpp"
 
 struct LogMessageType_ {
     enum LMT {

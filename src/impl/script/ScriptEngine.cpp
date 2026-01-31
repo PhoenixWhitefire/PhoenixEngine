@@ -35,7 +35,9 @@ static const lua_Type s_ValueTypeToLuauType[] = {
 	LUA_TFUNCTION,
 
 	LUA_TTABLE, // Array
-	LUA_TTABLE, // Map
+	LUA_TTABLE, // Map,
+
+	LUA_TUSERDATA // EventSignal
 };
 static_assert(std::size(s_ValueTypeToLuauType) == Reflection::ValueType::__lastBase);
 
@@ -166,46 +168,47 @@ static const ResumptionModeHandler s_ResumptionModeHandlers[] =
 void ScriptEngine::StepScheduler()
 {
 	ZoneScopedC(tracy::Color::LightSkyBlue);
-	std::vector<YieldedCoroutine> ycs = s_YieldedCoroutines;
+	s_YieldedCoroutinesProcessing = s_YieldedCoroutines;
 	s_YieldedCoroutines.clear();
 
-	size_t size = ycs.size();
+	size_t size = s_YieldedCoroutinesProcessing.size();
 
 	for (size_t i = 0; i < size; i++)
 	{
-		YieldedCoroutine* it = &ycs[i];
+		// copy is intentional
+		// outside, `EventConnection:Disconnect` in `lhxconnection.cpp` might want to remove
+		// queued callbacks from `s_YieldedCoroutinesProcessing`
+		// don't it de-allocate something we need from under us
+		YieldedCoroutine yc = s_YieldedCoroutinesProcessing[i];
 
 		// make sure the datamodel still exists
-		GameObject* dm = it->DataModel.Referred();
+		GameObject* dm = yc.DataModel.Referred();
 		if (!dm || dm->IsDestructionPending || !dm->FindComponentByType(EntityComponent::DataModel))
 		{
-			ycs.erase(ycs.begin() + i);
+			s_YieldedCoroutinesProcessing.erase(s_YieldedCoroutinesProcessing.begin() + i);
 
 			// https://stackoverflow.com/a/17956637
 			// asan was not happy about the iterator from
 			// `::erase` for some reason?? TODO
 			// 10/06/2025
-			if (size != ycs.size())
-			{
-				i--;
-				size = ycs.size();
-			}
+			i--;
+			size = s_YieldedCoroutinesProcessing.size();
 
 			continue;
 		}
 
-		lua_State* coroutine = it->Coroutine;
-		int corRef = it->CoroutineReference;
+		lua_State* coroutine = yc.Coroutine;
+		int corRef = yc.CoroutineReference;
 
-		const ResumptionModeHandler handler = s_ResumptionModeHandlers[it->Mode];
+		const ResumptionModeHandler handler = s_ResumptionModeHandlers[yc.Mode];
 		assert(handler);
 
-		int nretvals = handler(*it, coroutine);
+		int nretvals = handler(yc, coroutine);
 
 		if (nretvals >= 0)
 		{
 			ZoneScopedN("Resume");
-			ZoneText(it->DebugString.data(), it->DebugString.size());
+			ZoneText(yc.DebugString.data(), yc.DebugString.size());
 
 			int resumeStatus = L::Resume(coroutine, nullptr, nretvals);
 			if (resumeStatus != LUA_OK && resumeStatus != LUA_YIELD)
@@ -220,21 +223,27 @@ void ScriptEngine::StepScheduler()
 
 			lua_unref(coroutine, corRef);
 
-			ycs.erase(ycs.begin() + i);
+			// check, we may have been removed by `:Disconnect` in lhxconnection.cpp
+			if (s_YieldedCoroutinesProcessing.size() > i && s_YieldedCoroutinesProcessing[i].Coroutine == yc.Coroutine)
+			{
+				s_YieldedCoroutinesProcessing.erase(s_YieldedCoroutinesProcessing.begin() + i);
+				// https://stackoverflow.com/a/17956637
+				// asan was not happy about the iterator from
+				// `::erase` for some reason?? TODO
+				// 10/06/2025
+				i--;
+				size = s_YieldedCoroutinesProcessing.size();
+			}
 		}
 
-		// https://stackoverflow.com/a/17956637
-		// asan was not happy about the iterator from
-		// `::erase` for some reason?? TODO
-		// 10/06/2025
-		if (size != ycs.size())
+		if (size != s_YieldedCoroutinesProcessing.size())
 		{
 			i--;
-			size = ycs.size();
+			size = s_YieldedCoroutinesProcessing.size();
 		}
 	}
 
-	s_YieldedCoroutines.insert(s_YieldedCoroutines.begin(), ycs.begin(), ycs.end());
+	s_YieldedCoroutines.insert(s_YieldedCoroutines.begin(), s_YieldedCoroutinesProcessing.begin(), s_YieldedCoroutinesProcessing.end());
 }
 
 // Also in `EngineService.cpp`!!
@@ -785,6 +794,17 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 			if ((index + 1) % 2 == 0)
 				lua_settable(L, -3);
 		}
+
+		break;
+	}
+	case Reflection::ValueType::EventSignal:
+	{
+		luhx_pushsignal(
+			L,
+			gv.Val.Event.Descriptor,
+			gv.Val.Event.Reflector,
+			gv.Val.Event.Name
+		);
 
 		break;
 	}

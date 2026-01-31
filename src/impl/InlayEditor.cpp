@@ -2481,7 +2481,7 @@ static void renderExplorer()
 		{
 			for (const std::string_view& serv : s_DataModelServices)
 			{
-				EntityComponent ec = s_ComponentNameToType.at(serv);
+				EntityComponent ec = FindComponentTypeByName(serv);
 
 				if (!ExplorerRoot->FindChildWithComponent(ec) && ImGui::MenuItem(serv.data()))
 				{

@@ -1,4 +1,10 @@
-return function(describe, test, expect)
+type expectTable<T...> = {
+    toBe: (any, T...) -> (),
+    toBeNil: (any) -> (),
+    toThrow: (any, string?) -> ()
+}
+
+return function(describe, test: (string, () -> ()) -> (), expect: <T...>(T...) -> expectTable<T...> & { never: expectTable<T...> })
     test("Connect and disconnect", function()
         local count = 0
         local function func()

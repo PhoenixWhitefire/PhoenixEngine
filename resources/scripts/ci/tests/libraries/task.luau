@@ -1,4 +1,10 @@
-return function(describe, test, expect)
+type expectTable<T...> = {
+    toBe: (any, T...) -> (),
+    toBeNil: (any) -> (),
+    toThrow: (any, string?) -> ()
+}
+
+return function(describe, test: (string, () -> ()) -> (), expect: <T...>(T...) -> expectTable<T...> & { never: expectTable<T...> })
     test("wait", function()
 		expect(function()
 			task.wait(0)

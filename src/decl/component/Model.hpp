@@ -1,6 +1,6 @@
 #pragma once
 
-#include "datatype/GameObject.hpp"
+#include "datatype/ComponentBase.hpp"
 
 struct EcModel : public Component<EntityComponent::Model>
 {

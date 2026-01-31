@@ -1057,7 +1057,7 @@ void Engine::Start()
 			RendererContext.SwapBuffers();
 		}
 
-		ScriptEngine::StepScheduler();
+		//ScriptEngine::StepScheduler();
 
 		// End of frame
 		RunningTime = GetRunningTime();
@@ -1097,6 +1097,14 @@ void Engine::Shutdown()
 	WorkspaceRef->Destroy();
 	DataModelRef.Clear();
 	WorkspaceRef.Clear();
+
+	for (GameObject::Collection& collection : GameObject::s_Collections)
+	{
+		delete collection.AddedEvent.Descriptor;
+		delete collection.RemovedEvent.Descriptor;
+		collection.AddedEvent.Descriptor = nullptr;
+		collection.RemovedEvent.Descriptor = nullptr;
+	}
 
 	Log::Info("Shutting down script engine...");
 	ScriptEngine::Shutdown();

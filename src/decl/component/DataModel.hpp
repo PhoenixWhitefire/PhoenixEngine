@@ -4,7 +4,6 @@
 #pragma once
 
 #include "component/Workspace.hpp"
-#include "Reflection.hpp"
 
 struct lua_State;
 

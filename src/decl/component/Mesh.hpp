@@ -4,6 +4,7 @@
 #include <glm/vec3.hpp>
 
 #include "datatype/GameObject.hpp"
+#include "datatype/ComponentBase.hpp"
 #include "datatype/Color.hpp"
 
 enum class FaceCullingMode : uint8_t { None, BackFace, FrontFace };

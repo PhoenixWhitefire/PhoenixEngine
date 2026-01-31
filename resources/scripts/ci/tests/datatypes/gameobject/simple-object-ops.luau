@@ -1,4 +1,10 @@
-return function(describe, test: (string, () -> ()) -> (), expect: (any) -> (any))
+type expectTable<T...> = {
+    toBe: (any, T...) -> (),
+    toBeNil: (any) -> (),
+    toThrow: (any, string?) -> ()
+}
+
+return function(describe, test: (string, () -> ()) -> (), expect: <T...>(T...) -> expectTable<T...> & { never: expectTable<T...> })
 	test("Read property", function()
 		expect(workspace.Name):toBe("Workspace")
 	end)

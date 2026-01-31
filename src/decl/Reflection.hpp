@@ -11,6 +11,8 @@
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "datatype/EntityComponent.hpp"
+
 #define REFLECTION_PROPERTY_GET_SIMPLE(c, n) [](void* p)->Reflection::GenericValue { return static_cast<c*>(p)->n; }
 #define REFLECTION_PROPERTY_GET_SIMPLE_TGN(c, n) [](void* p)->Reflection::GenericValue { return static_cast<c*>(p)->n.ToGenericValue(); }
 #define REFLECTION_PROPERTY_SET_SIMPLE(c, n, t) [](void* p, const Reflection::GenericValue& gv)->void { static_cast<c*>(p)->n = gv.As##t(); }
@@ -74,6 +76,8 @@ namespace Reflection
 		// Keys will be Strings. Odd items of GenericValue.Array will be the keys, even items will be the values
 		Map,
 
+		EventSignal,
+
 		// BEFORE Null
 		__lastBase,
 
@@ -93,6 +97,14 @@ namespace Reflection
 	struct GenericValue;
 	typedef std::function<std::vector<Reflection::GenericValue>(const std::vector<Reflection::GenericValue>&)> GenericFunction;
 
+	struct EventDescriptor;
+	struct EventSignal
+	{
+		EventDescriptor* Descriptor = nullptr;
+		ReflectorRef Reflector;
+		const char* Name = nullptr;
+	};
+
 	struct GenericValue
 	{
 		union ValueData
@@ -107,6 +119,7 @@ namespace Reflection
 			GenericFunction* Func;
 			GenericValue* Array;
 			glm::mat4* Mat;
+			EventSignal Event;
 			void* Ptr;
 		} Val = {};
 		// Array length or allocated memory for `Value`
@@ -168,9 +181,9 @@ namespace Reflection
 	typedef void(*PropertySetter)(void*, const Reflection::GenericValue&);
 	typedef std::vector<Reflection::GenericValue>(*MethodFunction)(void*, const std::vector<Reflection::GenericValue>&);
 
-	typedef std::function<void(const std::vector<Reflection::GenericValue>&, uint32_t)> EventCallback;
-	typedef uint32_t(*EventConnectFunction)(void*, EventCallback);
-	typedef void(*EventDisconnectFunction)(void*, uint32_t);
+	using EventCallback = std::function<void(const std::vector<Reflection::GenericValue>&, uint32_t)>;
+	using EventConnectFunction = std::function<uint32_t(void*, EventCallback)>;
+	using EventDisconnectFunction = std::function<void(void*, uint32_t)>;
 
 	struct PropertyDescriptor
 	{

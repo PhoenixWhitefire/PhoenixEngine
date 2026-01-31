@@ -1,11 +1,25 @@
 {
   "GameObject": {
     "Base": {
+      "Events": {
+        "OnTagAdded": {
+          "CallbackArguments": "string",
+          "Description": "Fires when the Object receives a new tag, passing the tag to the callback"
+        },
+        "OnTagRemoved": {
+          "CallbackArguments": "string",
+          "Description": "Fires when the Object loses a tag, passing the tag to the callback"
+        }
+      },
       "Methods": {
         "AddComponent": {
           "Description": "Adds the specified Component to the Object. Will error if it already has it (use `:HasComponent` to check beforehand)",
           "ParameterNames": "Component",
           "Type": "(keyof<Creatables>) : ()"
+        },
+        "AddTag": {
+          "Description": "Adds a `Collections` tag to the Object. Has no effect if the Object already has the tag",
+          "ParameterNames": "Tag"
         },
         "Destroy": "Marks the Object as \"pending for destruction\". This may or may not remove the Object from memory immediately, depending on whether the Engine is keeping a internal reference to it",
         "Duplicate": "Creates a duplicate of the Object",
@@ -33,10 +47,18 @@
         },
         "GetDescendants": "Returns all descendants of the Object (i.e. its children, and their children, etc)",
         "GetFullName": "Returns the full, hierarchal path of the Object",
+        "GetTags": {
+          "Description": "Returns a list of all tags the Object has",
+          "Out": "{ string }"
+        },
         "HasComponent": {
           "Description": "Returns whether or not the Object has the given Component",
           "ParameterNames": "Component",
           "Type": "(keyof<Creatables>) : (boolean)"
+        },
+        "HasTag": {
+          "Description": "Returns whether or not the Object has the given `Collections` tag",
+          "ParameterNames": "Tag"
         },
         "MergeWith": {
           "Description": "Merges the Objects together, replacing descendants with the same name",
@@ -46,6 +68,10 @@
           "Description": "Removes the specified Component from the Object. Will error if does not have it (use `:HasComponent` to check beforehand)",
           "ParameterNames": "Component",
           "Type": "(keyof<Creatables>) : ()"
+        },
+        "RemoveTag": {
+          "Description": "Removes the given `Collections` tag from the Object. Has no effect if the Object does not have the tag",
+          "ParameterNames": "Tag"
         }
       },
       "Properties": {
@@ -126,6 +152,34 @@
           "UseSimpleController": "Whether it is affected by the built-in controller (`W`/`A`/`S`/`D` horizontal movement, `Q`/`E` vertical, Mouse to look around)"
         }
       },
+      "Collections": {
+        "Description": [
+          "Manage Collections of Objects with tags",
+          "An Object can have any number of tags",
+          "Tags can be added to Objects with `Object:AddTag`, removed with `Object:RemoveTag`, and checked with `Object:HasTag`"
+        ],
+        "Methods": {
+          "GetTagAddedSignal": {
+            "Description": "Returns a signal that fires when the given tag is added to any Objects",
+            "Out": "EventSignal<GameObject & {}>",
+            "ParameterNames": "Tag"
+          },
+          "GetTagRemovedSignal": {
+            "Description": "Returns a signal that fires when the given tag is removed from any Objects, including when an Object with a tag is `:Destroy`'d",
+            "Out": "EventSignal<GameObject & {}>",
+            "ParameterNames": "Tag"
+          },
+          "GetTagged": {
+            "Description": "Returns a list containing all Objects with the given tag",
+            "Out": "{ GameObject & {} }",
+            "ParameterNames": "Tag"
+          },
+          "GetCollections": {
+            "Description": "Returns a list of all collections that the Collections system has recognized. They may be empty",
+            "Out": "{ string }"
+          }
+        }
+      },
       "DataModel": {
         "Description": "The root of the scene",
         "Events": {
@@ -138,9 +192,8 @@
           "Close": "Closes the application with the specified exit code integer or 0",
           "GetService": {
             "Description": "Gets the Object representing the specified Service. If it does not exist yet in the Data Model, it is created",
-            "ParameterNames": [
-              "ServiceName"
-            ]
+            "ParameterNames": "Service",
+            "Type": "('Workspace' | 'Engine' | 'PlayerInput' | 'AssetManager' | 'History' | 'Physics' | 'Renderer' | 'Collections') : (GameObject & {})"
           }
         },
         "Properties": {
@@ -1596,11 +1649,10 @@
         "Description": "Encoding and decoding JSON files",
         "Members": {
           "encode": {
-            "Description": [
-              "Encodes the provided value into a JSON string"
-            ],
+            "Description": "Encodes the provided value into a JSON string. The default indentiation is 2 spaces",
             "In": [
-              "Value: any"
+              "Value: any",
+              "Indent: number?"
             ],
             "Out": "string"
           },
