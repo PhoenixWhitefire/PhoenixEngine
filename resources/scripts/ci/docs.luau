@@ -224,14 +224,11 @@ local rtol: { [string]: string } = {
 	Integer = "number",
 	Double = "number",
 	String = "string",
-	Array = "{ any }",
-	Map = "{ [string]: any }",
 	Vector3 = "vector",
 	Vector2 = "vector",
 	["->"] = ":",
 	READONLY = "",
 	RUNTIMEONLY = "",
-	GameObject = "(GameObject & {})",
 	Any = "unknown"
 }
 
@@ -285,6 +282,10 @@ local function dumpReflectionApi(t, d, cn)
 					desc = docs.Description or desc
 				end
 
+				if luautype:find("Array") or luautype:find("Map") then
+					warn(`Type '{luautype}' has Array or Map, for {cn}.{n}`)
+				end
+
 				s ..= `* \`{ n }: { luautype }\`: { desc }\n`
 				documentationData[`@{DOCS_PREFIX}/globaltype/{cn}.{n}`] = {
 					documentation = desc
@@ -316,6 +317,21 @@ local function dumpReflectionApi(t, d, cn)
 				if typeof(docs) == "table" then
 					subst = docs.Type or subst
 					desc = docs.Description or desc
+
+					if docs.Out then
+						assert(not docs.Type, `{cn}.{n} has both a .Out and a .Type`)
+
+						subst = subst:sub(1, assert((subst:find(":"))))
+						subst ..= ` {docs.Out}`
+					end
+
+					if docs.In then
+						assert(not docs.Type, `{cn}.{n} has both a .In and a .Type`)
+						assert(typeof(docs.In) == "string")
+
+						subst = subst:sub(assert((subst:find(":"))) - 1, #subst)
+						subst = " (" .. docs.In .. ")" .. subst
+					end
 				end
 
 				s ..= `* \`{ n }{ subst }\`: { desc }\n`
@@ -325,7 +341,7 @@ local function dumpReflectionApi(t, d, cn)
 
 				subst = string.sub(subst, 2, #subst)
 				local close = string.find(subst, ") :")
-				assert(close, n)
+				assert(close, `{cn}.{n} improper formatting of type, missing ') :'. Got {subst}`)
 
 				if string.sub(subst, 1, 1) == ")" then -- ") : ([...])" when no inputs
 					if typeof(docs) == "table" and docs.Out and typeof(docs.Out) == "string" then
@@ -333,15 +349,18 @@ local function dumpReflectionApi(t, d, cn)
 					else
 						subst = "(self)" .. string.sub(subst, close + 1, #subst)
 					end
-				elseif (docs.Type and docs.ParameterNames) or not docs.Type then
+				elseif ((docs.Type and docs.ParameterNames) or not docs.Type) and not docs.In then
 					local inputsstr = string.sub(subst, 1, close)
 					local inputs = string.split(inputsstr, ", ")
 					local newinputs = {}
 
+					if typeof(docs) == "string" or not docs.ParameterNames then
+						warn(`No parameter names for {cn}.{n}`)
+					end
+
 					for i, t in inputs do
 						if typeof(docs) == "string" or not docs.ParameterNames then
 							table.insert(newinputs, `Param_{i}: {t}`)
-							warn(`No parameter names for {cn}.{n}`)
 						else
 							local name = if typeof(docs.ParameterNames) == "table" then docs.ParameterNames[i] else docs.ParameterNames
 							if not name then
@@ -362,17 +381,23 @@ local function dumpReflectionApi(t, d, cn)
 					subst = table.concat(newinputs, ", ") .. subst
 					
 					subst = "(self, " .. subst
-				else
+				elseif not docs.In then
 					assert(docs.Type, n)
 					if not docs.Type:find("self") then
 						warn(`In {cn}.{n}, 'self' must be the first parameter!`)
 					end
 
 					subst = docs.Type
+				elseif docs.In then
+					subst = `(self, ` .. subst:sub(2, #subst)
 				end
 
 				subst = GameObjectOverrides[n] or subst
 				definitionsFile ..= `  function { n }{ subst }\n`
+
+				if subst:find("Array") or subst:find("Map") then
+					warn(`Type '{subst}' has Array or Map, for {cn}.{n}`)
+				end
 			end
 		end
 

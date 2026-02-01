@@ -10,6 +10,7 @@ local LOGO_IMAGE = "@etextures/logo.png"
 
 local PluginManager = require("./PluginManager.luau")
 local HistoryView = require("./HistoryView.luau")
+local TagViewer = require("./TagEditor.luau")
 local CoreTools = require("./CoreTools.luau")
 local Types = require("./Types.luau")
 type Stage = Types.Stage
@@ -601,12 +602,19 @@ local function homeTab(_: number)
 	CoreTools.RenderControls(tabButton)
 
 	imgui.sameline()
-
 	local cx = imgui.cursorposition().x
 	imgui.setcursorposition(cx, startY)
 
 	if tabButton("History", "@etextures/editor-icons/history-viewer.png", true, HistoryView.Open) then
 		HistoryView.Open = not HistoryView.Open
+	end
+
+	imgui.sameline()
+	cx = imgui.cursorposition().x
+	imgui.setcursorposition(cx, startY)
+
+	if tabButton("Collections", `@etextures/editor-icons/Folder_{if TagViewer.Open then "Open" else "Closed"}.png`, true, TagViewer.Open) then
+		TagViewer.Open = not TagViewer.Open
 	end
 
 	imgui.dummy()
@@ -1305,6 +1313,8 @@ local function renderViewport(DeltaTime: number)
 
 	PluginManager.OnUpdate(DeltaTime, CurrentStage)
 	CoreTools.Update(Project)
+	HistoryView.Render()
+	TagViewer.Render()
 
 	if BottomBarEnabled then
 		local w = Engine.WindowSize
@@ -1718,7 +1728,6 @@ function Stages.ProjectEditing(DeltaTime: any)
 
 	renderMainMenuBar(DeltaTime)
 	renderViewport(DeltaTime)
-	HistoryView.Render()
 end
 
 function Stages.ProjectEditing_Leave(NextStage)

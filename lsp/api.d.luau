@@ -62,25 +62,25 @@ declare extern type GameObject with
   Exists: boolean 
   Name: string
   ObjectId: number 
-  Parent: (GameObject & {})?
+  Parent: GameObject?
   Serializes: boolean
 
   function AddComponent(self, Component: keyof<Creatables>) : ()
   function AddTag(self, Tag: string) : ()
   function Destroy(self) : ()
-  function Duplicate(self) : ((GameObject & {}))
-  function FindChild(self, ChildName: string) : ((GameObject & {})?)
+  function Duplicate(self) : (GameObject)
+  function FindChild(self, ChildName: string) : (GameObject?)
   function FindChildWithComponent(self, Component: keyof<Creatables>) : (GameObject & any)
   function ForEachChild(self, Callback: (any) -> (any)) : ()
   function ForEachDescendant(self, Callback: (any) -> (any)) : ()
-  function GetChildren(self) : ({ any })
-  function GetComponents(self) : (keyof<Creatables>)
-  function GetDescendants(self) : ({ any })
+  function GetChildren(self) : { GameObject }
+  function GetComponents(self) : keyof<Creatables>
+  function GetDescendants(self) : { GameObject }
   function GetFullName(self) : (string)
   function GetTags(self) : { string }
   function HasComponent(self, Component: keyof<Creatables>) : (boolean)
   function HasTag(self, Tag: string) : (boolean)
-  function MergeWith(self, With: (GameObject & {})) : ()
+  function MergeWith(self, With: GameObject) : ()
   function RemoveComponent(self, Component: keyof<Creatables>) : ()
   function RemoveTag(self, Tag: string) : ()
 
@@ -98,7 +98,7 @@ declare extern type AssetManager with
 
   function GetMeshData(self, Id: string) : { Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } }
   function ImportModel(self, Path: string) : GameObject & Model
-  function LoadScene(self, Path: string) : ({ GameObject & {} }?, string)
+  function LoadScene(self, Path: string) : ({ GameObject }?, string)
   function SaveMesh(self, Id: string, Path: string) : ()
   function SaveScene(self, RootNodes: { GameObject }, Path: string) : (boolean, string?)
   function SetMeshData(self, Id: string, MeshData: { Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } }) : ()
@@ -106,7 +106,7 @@ end
 declare extern type Bone with
   IsActive: boolean 
   SkeletalBoneId: number 
-  TargetMesh: (GameObject & {}) 
+  TargetMesh: GameObject 
   Transform: Matrix
 end
 declare extern type Camera with
@@ -116,16 +116,16 @@ end
 declare extern type Collections with
 
   function GetCollections(self) : { string }
-  function GetTagAddedSignal(self, Tag: string) : EventSignal<GameObject & {}>
-  function GetTagRemovedSignal(self, Tag: string) : EventSignal<GameObject & {}>
-  function GetTagged(self, Tag: string) : { GameObject & {} }
+  function GetTagAddedSignal(self, Tag: string) : EventSignal<GameObject>
+  function GetTagRemovedSignal(self, Tag: string) : EventSignal<GameObject>
+  function GetTagged(self, Tag: string) : { GameObject }
 end
 declare extern type DataModel with
   AreScriptsBound: boolean 
   LiveScripts: string
   Time: number 
 
-  function GetService(self, Service: 'Workspace' | 'Engine' | 'PlayerInput' | 'AssetManager' | 'History' | 'Physics' | 'Renderer' | 'Collections') : (GameObject & {})
+  function GetService(self, Service: 'Workspace' | 'Engine' | 'PlayerInput' | 'AssetManager' | 'History' | 'Physics' | 'Renderer' | 'Collections') : GameObject
 
   OnFrameBegin: EventSignal<(number)>
 end
@@ -144,7 +144,7 @@ declare extern type DirectionalLight with
   Shadows: boolean
 end
 declare extern type Engine with
-  BoundDataModel: (GameObject & {}) 
+  BoundDataModel: GameObject 
   CommitHash: string 
   DebugWireframeRendering: boolean
   Framerate: number 
@@ -159,7 +159,7 @@ declare extern type Engine with
   function CloseVM(self, VmName: string) : ()
   function CreateVM(self, VmName: string) : ()
   function Exit(self, ExitCode: number?) : ()
-  function GetCliArguments(self) : ({ any })
+  function GetCliArguments(self) : { string }
   function GetConfigValue(self, Key: string) : (unknown)
   function GetCurrentVM(self) : (string)
   function GetExplorerSelections(self) : ({ GameObject })
@@ -171,7 +171,7 @@ declare extern type Engine with
   function SaveConfig(self) : (boolean, string)
   function SetConfigValue(self, Key: string, Value: unknown) : ()
   function SetCurrentVM(self, VmName: string) : ()
-  function SetExplorerRoot(self, Root: (GameObject & {})) : ()
+  function SetExplorerRoot(self, Root: GameObject) : ()
   function SetExplorerSelections(self, Selections: { GameObject }) : ()
   function SetToolEnabled(self, ToolName: string, Enabled: boolean) : ()
   function SetViewport(self, Position: vector, Size: vector) : ()
@@ -185,7 +185,7 @@ declare extern type History with
   CurrentActionName: string? 
   CurrentWaypoint: number 
   IsRecordingAction: boolean 
-  TargetDataModel: (GameObject & {})
+  TargetDataModel: GameObject
 
   function CanRedo(self) : (boolean)
   function CanUndo(self) : (boolean)
@@ -193,8 +193,8 @@ declare extern type History with
   function DiscardAction(self, Id: number) : ()
   function EnableRecording(self) : ()
   function FinishAction(self, Id: number) : ()
-  function GetActionData(self, Index: number) : ({ [string]: any })
-  function GetCurrentActionData(self) : ({ [string]: any }?)
+  function GetActionData(self, Index: number) : { Name: string, Events: { { Target: GameObject, Property: string, NewValue: unknown, PreviousValue: unknown } } }
+  function GetCurrentActionData(self) : { Name: string, Events: { { Target: GameObject, Property: string, NewValue: unknown, PreviousValue: unknown } } }?
   function Redo(self) : ()
   function TryBeginAction(self, Name: string) : (number?)
   function Undo(self) : ()
@@ -282,13 +282,13 @@ declare extern type Transform with
   Transform: Matrix
 end
 declare extern type TreeLink with
-  Target: (GameObject & {})?
+  Target: GameObject?
 end
 declare extern type Workspace with
   SceneCamera: GameObject & Camera
 
-  function GetObjectsInAabb(self, Position: vector, Size: vector, IgnoreList: { any }?) : { GameObject }
-  function Raycast(self, Origin: vector, CastVector: vector, FilterList: { any }?, FilterIsIgnoreList: boolean?) : { Object: GameObject & Mesh & Transform, Position: vector, Normal: vector }?
+  function GetObjectsInAabb(self, Position: vector, Size: vector, IgnoreList: { GameObject }?) : { GameObject & RigidBody & Transform }
+  function Raycast(self, Origin: vector, CastVector: vector, FilterList: { GameObject }?, FilterIsIgnoreList: boolean?) : { Object: GameObject & RigidBody & Transform, Position: vector, Normal: vector }?
   function ScreenPointToVector(self, ScreenPoint: vector, Length: number?) : (vector)
 end
 
@@ -403,7 +403,7 @@ declare imgui: {
   text: (( Text: string ) -> ()),
   textlink: (( Text: string ) -> (boolean)),
   textsize: (( Text: string ) -> (vector)),
-  treenode: (( Text: string ) -> (boolean)),
+  treenode: (( Text: string, Flags: string? ) -> (boolean)),
   treepop: ((  ) -> ()),
   urllink: (( Text: string, Url: string? ) -> (boolean)),
   windowhovered: (( Flags: string? ) -> (boolean)),

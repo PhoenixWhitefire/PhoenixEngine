@@ -443,6 +443,12 @@ static ObjectRef createObjectFromJsonItem(const nlohmann::json& Item, uint32_t I
 				object->AddComponent(EntityComponent::RigidBody);
 		}
 
+		if (const auto& tagIt = Item.find("$_tags"); tagIt != Item.end())
+		{
+			for (size_t i = 0; i < tagIt.value().size(); i++)
+				object->AddTag(tagIt.value()[i]);
+		}
+
 		return object;
 	}
 }
@@ -772,7 +778,7 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 {
 	ZoneScoped;
 
-	nlohmann::json item{};
+	nlohmann::json item;
 	item["$_components"] = nlohmann::json::array();
 
 	for (const ReflectorRef& handle : Object->Components)
@@ -895,6 +901,13 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 		}
 
 		}
+	}
+
+	if (Object->Tags.size() > 0)
+	{
+		item["$_tags"] = nlohmann::json::array();
+		for (uint16_t tagId : Object->Tags)
+			item["$_tags"].push_back(GameObject::s_Collections[tagId].Name);
 	}
 
 	return item;

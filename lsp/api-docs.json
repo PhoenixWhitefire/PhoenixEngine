@@ -297,7 +297,7 @@
     "documentation": "* `ImGui::CalcTextSize`"
   },
   "@phoenix/global/imgui.treenode": {
-    "documentation": "* `ImGui::TreeNode`"
+    "documentation": "* `ImGui::TreeNode`\n* Accepts flags: `sl` - Selected, `sc` - Span All Columns, `fr` - Framed, `fw` - Span Full Width, `ao` - Allow Overlap, `ar` - Open on Arrow, `aw` - Span Available Width, `np` - No Tree Push On Open, `do` - Default Open, `dc` - Open On Double Click, `dlx` - Draw Lines None, `dln` - Draw Lines to Nodes, `dlf` - Draw Lines Full, `lf` - Leaf, `lw` - Span Label Width, `lsc` - Span All Columns, `b` - Bullet, `p` - Frame Padding, `c` - Collapsing Header. ` ` and `|` are considered whitespace"
   },
   "@phoenix/global/imgui.treepop": {
     "documentation": "* `ImGui::TreePop`"

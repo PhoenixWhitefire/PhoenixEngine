@@ -334,8 +334,9 @@ Libraries specific to the Phoenix Engine Luau runtime (Luhx)
 * `ImGui::TextLink`
 #### `imgui.textsize(Text: string): vector`
 * `ImGui::CalcTextSize`
-#### `imgui.treenode(Text: string): boolean`
+#### `imgui.treenode(Text: string, Flags: string?): boolean`
 * `ImGui::TreeNode`
+* Accepts flags: `sl` - Selected, `sc` - Span All Columns, `fr` - Framed, `fw` - Span Full Width, `ao` - Allow Overlap, `ar` - Open on Arrow, `aw` - Span Available Width, `np` - No Tree Push On Open, `do` - Default Open, `dc` - Open On Double Click, `dlx` - Draw Lines None, `dln` - Draw Lines to Nodes, `dlf` - Draw Lines Full, `lf` - Leaf, `lw` - Span Label Width, `lsc` - Span All Columns, `b` - Bullet, `p` - Frame Padding, `c` - Collapsing Header. ` ` and `|` are considered whitespace
 #### `imgui.treepop(): `
 * `ImGui::TreePop`
 #### `imgui.urllink(Text: string, Url: string? [ Text ]): boolean`

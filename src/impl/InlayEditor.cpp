@@ -2677,12 +2677,12 @@ static void recursiveRenderFilesystemNode(FilesystemNode& Node)
 		ImGui::SetCursorPos(afterNodePos);
 	}
 
-	ImGui::SetCursorPosX(ImGui::GetCursorPosX() - ImGui::CalcTextSize((" " + displayedNodeName).c_str()).x - style.IndentSpacing);
+	ImGui::SetCursorPosX(ImGui::GetCursorPosX() - ImGui::CalcTextSize((" " + displayedNodeName).c_str()).x - style.IndentSpacing - 4.f);
 	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 2.f); // not the faintest idea
 
 	ImGui::Image(
 		texManager->GetTextureResource(Node.IsDirectory ? (open ? FolderOpenIconResource : FolderClosedIconResource) : ScriptIconResource).GpuId,
-		ImVec2(16.f, 16.f)
+		ImVec2(18.f, 16.f)
 	);
 	openScript = openScript || (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered());
 	hovered = hovered || ImGui::IsItemHovered();
@@ -2967,6 +2967,7 @@ static void renderProperties()
 		std::unordered_map<std::string_view, std::pair<const Reflection::PropertyDescriptor*, Reflection::GenericValue>> props;
 		std::unordered_map<std::string_view, bool> conflictingProps;
 		std::unordered_map<std::string_view, EntityComponent> propToComponent;
+		std::vector<std::string_view> tags;
 
 		for (const ObjectHandle& sel : Selections)
 		{
@@ -3001,6 +3002,9 @@ static void renderProperties()
 				else
 					propToComponent[pname] = sel->MemberToComponentMap[pname].Type;
 			}
+
+			for (uint16_t tag : sel->Tags)
+				tags.push_back(GameObject::s_Collections[tag].Name);
 		}
 
 		using PropsIteratorType = std::pair<std::string_view, std::pair<const Reflection::PropertyDescriptor*, Reflection::GenericValue>>;
@@ -3010,6 +3014,7 @@ static void renderProperties()
 			{
 				return a.first < b.first;
 			});
+		std::sort(tags.begin(), tags.end());
 
 		float cavailX = ImGui::GetContentRegionAvail().x;
 		float halfWidth = cavailX / 2.f;
@@ -3421,12 +3426,69 @@ static void renderProperties()
 				}
 			}
 
-			if (propIndex != propsOrdered.size() - 1)
-				ImGui::Separator();
+			ImGui::Separator();
 
 			ImGui::PopID();
 		}
-		
+
+		ImGui::TextUnformatted("Tags");
+		ImGui::SameLine();
+		ImGui::SetCursorPosX(halfWidth);
+
+		for (const std::string_view& tag : tags)
+		{
+			ImGui::SetCursorPosX(halfWidth);
+			ImGui::PushID(tag.data());
+
+			if (ImGui::Button("X", ImVec2(16.f, 16.f)))
+			{
+				for (const ObjectHandle& sel : Selections)
+					sel->RemoveTag(std::string(tag));
+			}
+
+			ImGui::PopID();
+			ImGui::SameLine();
+			ImGui::TextUnformatted(tag.data());
+		}
+
+		ImGui::SetCursorPosX(halfWidth);
+		if (ImGui::Button("+"))
+			ImGui::OpenPopup("AddTags");
+
+		if (ImGui::BeginPopup("AddTags"))
+		{
+			static char EntryBuffer[64] = { 0 };
+			ImGui::InputText("##", EntryBuffer, 64);
+
+			if (ImGui::IsItemDeactivatedAfterEdit() && strlen(EntryBuffer) > 0)
+			{
+				for (const ObjectHandle& sel : Selections)
+					sel->AddTag(std::string(EntryBuffer));
+
+				ImGui::CloseCurrentPopup();
+			}
+
+			std::vector<std::string_view> collectionNames;
+			collectionNames.reserve(GameObject::s_Collections.size());
+			for (const GameObject::Collection& collection : GameObject::s_Collections)
+				collectionNames.emplace_back(collection.Name);
+
+			std::sort(collectionNames.begin(), collectionNames.end());
+
+			for (const std::string_view& name : collectionNames)
+			{
+				if (ImGui::MenuItem(name.data()))
+				{
+					for (const ObjectHandle& sel : Selections)
+						sel->AddTag(std::string(name));
+
+					ImGui::CloseCurrentPopup();
+				}
+			}
+
+			ImGui::EndPopup();
+		}
+
 		ImGui::PopID();
 	}
 

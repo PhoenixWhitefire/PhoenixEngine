@@ -605,7 +605,122 @@ static int imgui_combo(lua_State* L)
 
 static int imgui_treenode(lua_State* L)
 {
-    lua_pushboolean(L, ImGui::TreeNode(luaL_checkstring(L, 1)));
+    ImGuiTreeNodeFlags flags = 0;
+    const char* flagsStr = luaL_optstring(L, 2, "");
+
+    for (; *flagsStr; flagsStr++)
+    {
+        switch (*flagsStr)
+        {
+        case 's':
+        {
+            flagsStr++;
+            if (*flagsStr == 'l')
+                flags |= ImGuiTreeNodeFlags_Selected;
+            else if (*flagsStr == 'c')
+                flags |= ImGuiTreeNodeFlags_SpanAllColumns;
+            else
+                luaL_error(L, "Invalid argument '%c' to Tree Node flag 's'", *flagsStr);
+            break;
+        }
+        case 'f':
+        {
+            flagsStr++;
+            if (*flagsStr == 'r')
+                flags |= ImGuiTreeNodeFlags_Framed;
+            else if (*flagsStr == 'w')
+                flags |= ImGuiTreeNodeFlags_SpanFullWidth;
+            else
+                luaL_error(L, "Invalid argument '%c' to Tree Node flag 'f'", *flagsStr);
+            break;
+        }
+        case 'a':
+        {
+            flagsStr++;
+            if (*flagsStr == 'o')
+                flags |= ImGuiTreeNodeFlags_AllowOverlap;
+            else if (*flagsStr == 'r')
+                flags |= ImGuiTreeNodeFlags_OpenOnArrow;
+            else if (*flagsStr == 'w')
+                flags |= ImGuiTreeNodeFlags_SpanAvailWidth;
+            else
+                luaL_error(L, "Invalid argument '%c' to Tree Node flag 'a'", *flagsStr);
+            break;
+        }
+        case 'n':
+        {
+            flagsStr++;
+            if (*flagsStr == 'p')
+                flags |= ImGuiTreeNodeFlags_NoTreePushOnOpen;
+            else
+                luaL_error(L, "Invalid argument '%c' to Tree Node flag 'n'", *flagsStr);
+            break;
+        }
+        case 'd':
+        {
+            flagsStr++;
+            if (*flagsStr == 'o')
+                flags |= ImGuiTreeNodeFlags_DefaultOpen;
+            else if (*flagsStr == 'c')
+                flags |= ImGuiTreeNodeFlags_OpenOnDoubleClick;
+            else if (*flagsStr == 'l')
+            {
+                flagsStr++;
+                if (*flagsStr == 'x')
+                    flags |= ImGuiTreeNodeFlags_DrawLinesNone;
+                else if (*flagsStr == 'n')
+                    flags |= ImGuiTreeNodeFlags_DrawLinesToNodes;
+                else if (*flagsStr == 'f')
+                    flags |= ImGuiTreeNodeFlags_DrawLinesFull;
+                else
+                    luaL_error(L, "Expect 'x', 'n', or 'f' to follow 'dl', got '%c'", *flagsStr);
+            }
+            else
+                luaL_error(L, "Invalid argument '%c' to Tree Node flag 'd'", *flagsStr);
+            break;
+        }
+        case 'l':
+        {
+            flagsStr++;
+            if (*flagsStr == 'f')
+                flags |= ImGuiTreeNodeFlags_Leaf;
+            else if (*flagsStr == 'w')
+                flags |= ImGuiTreeNodeFlags_SpanLabelWidth;
+            else if (*flagsStr == 's')
+            {
+                flagsStr++;
+                if (*flagsStr == 'c')
+                    flags |= ImGuiTreeNodeFlags_LabelSpanAllColumns;
+                else
+                    luaL_error(L, "Expected 'c' to follow 'l' and 's' for `LabelSpanAllColumns`, got %c", *flagsStr);
+            }
+            else
+                luaL_error(L, "Invalid argument '%c' to Tree Node flag 'l'", *flagsStr);
+            break;
+        }
+        case 'b':
+        {
+            flags |= ImGuiTreeNodeFlags_Bullet;
+            break;
+        }
+        case 'p':
+        {
+            flags |= ImGuiTreeNodeFlags_FramePadding;
+            break;
+        }
+        case 'c':
+        {
+            flags |= ImGuiTreeNodeFlags_CollapsingHeader;
+            break;
+        }
+        case ' ': case '|':
+            continue;
+        default:
+            luaL_error(L, "Invalid Tree Node flag '%c'", *flagsStr);
+        }
+    }
+
+    lua_pushboolean(L, ImGui::TreeNodeEx(luaL_checkstring(L, 1), flags));
     return 1;
 }
 

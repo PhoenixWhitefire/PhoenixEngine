@@ -8,26 +8,26 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * `Exists: boolean `: Whether or not the Object still exists. Will be false after calling `:Destroy`
 * `Name: string`: The name of the Object, usually what was passed into `GameObject.new`
 * `ObjectId: number `: The ID of the Object, an integer. Remains the same throughout the session, but not guaranteed between sessions
-* `Parent: (GameObject & {})?`: The hierarchal parent of the Object, or `nil` if it does not have one
+* `Parent: GameObject?`: The hierarchal parent of the Object, or `nil` if it does not have one
 * `Serializes: boolean`: Whether or not the Object should be saved with the scene if it is serialized with `scene.save`, and whether `:Duplicate` will duplicate it (only applies to descendants)
 
 ### Methods:
 * `AddComponent(keyof<Creatables>) : ()`: Adds the specified Component to the Object. Will error if it already has it (use `:HasComponent` to check beforehand)
 * `AddTag(string) : ()`: Adds a `Collections` tag to the Object. Has no effect if the Object already has the tag
 * `Destroy() : ()`: Marks the Object as "pending for destruction". This may or may not remove the Object from memory immediately, depending on whether the Engine is keeping a internal reference to it
-* `Duplicate() : ((GameObject & {}))`: Creates a duplicate of the Object
-* `FindChild(string) : ((GameObject & {})?)`: Returns a child Object with the given name, or `nil` if one doesn't exist
+* `Duplicate() : (GameObject)`: Creates a duplicate of the Object
+* `FindChild(string) : (GameObject?)`: Returns a child Object with the given name, or `nil` if one doesn't exist
 * `FindChildWithComponent(keyof<Creatables>) : (GameObject & any)`: Returns a child Object which has the given component, or `nil` if one doesn't exist
 * `ForEachChild((any) -> (any)) : ()`: For all children of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield
 * `ForEachDescendant((any) -> (any)) : ()`: For all descendants of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield
-* `GetChildren() : ({ any })`: Returns a list of the Object's direct children
-* `GetComponents() : (keyof<Creatables>)`: Returns a list of the names of all Components that the Object currently has
-* `GetDescendants() : ({ any })`: Returns all descendants of the Object (i.e. its children, and their children, etc)
+* `GetChildren() : { GameObject }`: Returns a list of the Object's direct children
+* `GetComponents() : keyof<Creatables>`: Returns a list of the names of all Components that the Object currently has
+* `GetDescendants() : { GameObject }`: Returns all descendants of the Object (i.e. its children, and their children, etc)
 * `GetFullName() : (string)`: Returns the full, hierarchal path of the Object
-* `GetTags() : ({ any })`: Returns a list of all tags the Object has
+* `GetTags() : { string }`: Returns a list of all tags the Object has
 * `HasComponent(keyof<Creatables>) : (boolean)`: Returns whether or not the Object has the given Component
 * `HasTag(string) : (boolean)`: Returns whether or not the Object has the given `Collections` tag
-* `MergeWith((GameObject & {})) : ()`: Merges the Objects together, replacing descendants with the same name
+* `MergeWith(GameObject) : ()`: Merges the Objects together, replacing descendants with the same name
 * `RemoveComponent(keyof<Creatables>) : ()`: Removes the specified Component from the Object. Will error if does not have it (use `:HasComponent` to check beforehand)
 * `RemoveTag(string) : ()`: Removes the given `Collections` tag from the Object. Has no effect if the Object does not have the tag
 
@@ -53,9 +53,9 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 
 
 ### Methods:
-* `GetMeshData(string) : ({ [string]: any })`: Returns the provided mesh data associated with the provided path
-* `ImportModel(string) : ((GameObject & {}))`: Imports the glTF 2.0 model at the provided path and returns it as a `Model` GameObject
-* `LoadScene(string) : ({ any }?, string?)`: Loads `GameObject`s from the scene file at the provided path, returning a list of the root objects or `nil` and an error message upon failure
+* `GetMeshData(string) : { Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } }`: Returns the provided mesh data associated with the provided path
+* `ImportModel(string) : GameObject & Model`: Imports the glTF 2.0 model at the provided path and returns it as a `Model` GameObject
+* `LoadScene(string) : ({ GameObject }?, string)`: Loads `GameObject`s from the scene file at the provided path, returning a list of the root objects or `nil` and an error message upon failure
 * `SaveMesh(string, string) : ()`: Saves the mesh data at the provided path to a file
 * `SaveScene(self, RootNodes: { GameObject }, Path: string) : (boolean, string?)`: Saves the list of `GameObject`s to the provided path, returning whether the operation succeeded
 * `SetMeshData(self, Id: string, MeshData: { Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } }) : ()`: Associates the provided mesh data with the provided path
@@ -68,7 +68,7 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 ### Properties:
 * `IsActive: boolean `: Whether or not the Bone Object is actively affecting a `Mesh`
 * `SkeletalBoneId: number `: The internal ID of the bone, valid range is 0-255
-* `TargetMesh: (GameObject & {}) `: The `Mesh` component containing Object the Bone is currently targeting. Note that this property is read-only, and will only either be equal to the Mesh that created the Bone, or `nil`
+* `TargetMesh: GameObject `: The `Mesh` component containing Object the Bone is currently targeting. Note that this property is read-only, and will only either be equal to the Mesh that created the Bone, or `nil`
 * `Transform: Matrix`: The transformation of the Bone
 
 ## `Camera`
@@ -87,10 +87,10 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 
 
 ### Methods:
-* `GetCollections() : ({ any })`: Returns a list of all collections that the Collections system has recognized. They may be empty
-* `GetTagAddedSignal(string) : (EventSignal)`: Returns a signal that fires when the given tag is added to any Objects
-* `GetTagRemovedSignal(string) : (EventSignal)`: Returns a signal that fires when the given tag is removed from any Objects, including when an Object with a tag is `:Destroy`'d
-* `GetTagged(string) : ({ any })`: Returns a list containing all Objects with the given tag
+* `GetCollections() : { string }`: Returns a list of all collections that the Collections system has recognized. They may be empty
+* `GetTagAddedSignal(string) : EventSignal<GameObject>`: Returns a signal that fires when the given tag is added to any Objects
+* `GetTagRemovedSignal(string) : EventSignal<GameObject>`: Returns a signal that fires when the given tag is removed from any Objects, including when an Object with a tag is `:Destroy`'d
+* `GetTagged(string) : { GameObject }`: Returns a list containing all Objects with the given tag
 
 ## `DataModel`
 
@@ -102,7 +102,7 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * `Time: number `: Number of seconds since the Engine started running
 
 ### Methods:
-* `GetService('Workspace' | 'Engine' | 'PlayerInput' | 'AssetManager' | 'History' | 'Physics' | 'Renderer' | 'Collections') : (GameObject & {})`: Gets the Object representing the specified Service. If it does not exist yet in the Data Model, it is created
+* `GetService('Workspace' | 'Engine' | 'PlayerInput' | 'AssetManager' | 'History' | 'Physics' | 'Renderer' | 'Collections') : GameObject`: Gets the Object representing the specified Service. If it does not exist yet in the Data Model, it is created
 
 ### Events:
 * `OnFrameBegin(number)`: Fires at the beginning of a frame, passing in the time elapsed since the last frame (delta time)
@@ -130,7 +130,7 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * Inspect and manipulate various parts of the Engine
 
 ### Properties:
-* `BoundDataModel: (GameObject & {}) `: The DataModel object that is currently bound
+* `BoundDataModel: GameObject `: The DataModel object that is currently bound
 * `CommitHash: string `: The Git commit that was used to produce this Engine build
 * `DebugWireframeRendering: boolean`: Whether the Wireframe rendering debug mode is enabled
 * `Framerate: number `: The Engine's current framerate
@@ -146,7 +146,7 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * `CloseVM(string) : ()`: Closes the specified Luau VM, releasing its resources
 * `CreateVM(string) : ()`: Creates a new Luau VM with the given name. The `workspace` and `game` globals of the VM are taken from the currently-bound DataModel
 * `Exit(number?) : ()`: Shuts down the Engine and exits the process with the specified Exit Code (or 0 by default)
-* `GetCliArguments() : ({ any })`: Returns the list of launch arguments given to the Engine. The first item is always a path to the Engine executable
+* `GetCliArguments() : { string }`: Returns the list of launch arguments given to the Engine. The first item is always a path to the Engine executable
 * `GetConfigValue(string) : (unknown)`: Returns the value associated with the given Key in the Engine's loaded configuration (`phoenix.conf`)
 * `GetCurrentVM() : (string)`: Returns the name of the currently-bound VM
 * `GetExplorerSelections() : ({ GameObject })`: Returns what is currently selected in the Explorer
@@ -158,7 +158,7 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * `SaveConfig() : (boolean, string)`: Saves the Engine's current configuration state to the configuration file (`phoenix.conf`)
 * `SetConfigValue(string, unknown) : ()`: Sets `Key` to `Value` in the Engine's loaded configuration without saving it to file
 * `SetCurrentVM(string) : ()`: Binds the given VM as the "current" one. This causes all Scripts which load afterward to use the specified VM, it does *not* change the VM of any Scripts loaded beforehand
-* `SetExplorerRoot((GameObject & {})) : ()`: Changes the Root of the built-in Explorer's hierarchy view
+* `SetExplorerRoot(GameObject) : ()`: Changes the Root of the built-in Explorer's hierarchy view
 * `SetExplorerSelections({ GameObject }) : ()`: Changes the built-in Explorer's Object selections to the specified Objects
 * `SetToolEnabled(string, boolean) : ()`: Enabled/disables the given tool
 * `SetViewport(vector, vector) : ()`: Configures the Engine to act as through the Viewport is at the given position with the given size. Does *not* change where the viewport is actually rendered
@@ -177,7 +177,7 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * `CurrentActionName: string? `: The name of the Action currently being recorded, or `nil` if no recording is in progress
 * `CurrentWaypoint: number `: The ID of the Action that was last finished
 * `IsRecordingAction: boolean `: Whether an Action is currently being recorded by History
-* `TargetDataModel: (GameObject & {})`: The DataModel that History will track
+* `TargetDataModel: GameObject`: The DataModel that History will track
 
 ### Methods:
 * `CanRedo() : (boolean)`: Returns whether `:Redo` will succeed
@@ -186,8 +186,8 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 * `DiscardAction(number) : ()`: Discards the Action by its ID
 * `EnableRecording() : ()`: Enables the main functionality of this service
 * `FinishAction(number) : ()`: Finishes the Action by its ID. Only one Action may be active at a time
-* `GetActionData(number) : ({ [string]: any })`: Retrives information about a previously-recorded Action by its Index (Indexes, separate from IDs, are in the range 0 <= Index < `ActionHistorySize`)
-* `GetCurrentActionData() : ({ [string]: any }?)`: Retrieves information about the current Action being recorded
+* `GetActionData(number) : { Name: string, Events: { { Target: GameObject, Property: string, NewValue: unknown, PreviousValue: unknown } } }`: Retrives information about a previously-recorded Action by its Index (Indexes, separate from IDs, are in the range 0 <= Index < `ActionHistorySize`)
+* `GetCurrentActionData() : { Name: string, Events: { { Target: GameObject, Property: string, NewValue: unknown, PreviousValue: unknown } } }?`: Retrieves information about the current Action being recorded
 * `Redo() : ()`: Forwards the state of the scene to how it was before the last Undo
 * `TryBeginAction(string) : (number?)`: Attempts to begin an "Action." Returns the ID of the action. May fail and return `nil`. Only one Action may be active at a time
 * `Undo() : ()`: Reverses the state of the scene to how it was before the last Action began
@@ -327,7 +327,7 @@ No members defined
 * This is *not* intended to act like a transparent proxy
 
 ### Properties:
-* `Target: (GameObject & {})?`: The target to link
+* `Target: GameObject?`: The target to link
 
 ## `Workspace`
 
@@ -338,7 +338,7 @@ No members defined
 * `SceneCamera: GameObject & Camera`: The `Camera` the Player sees the world through. If set to `nil`, a *fallback* is created at the origin
 
 ### Methods:
-* `GetObjectsInAabb(vector, vector, { any }?) : ({ any })`: Get a list of Objects whose bounds are within the AABB
-* `Raycast(vector, vector, { any }?, boolean?) : ({ [string]: any }?)`: Cast a ray
+* `GetObjectsInAabb (Position: vector, Size: vector, IgnoreList: { GameObject }?) : { GameObject & RigidBody & Transform }`: Get a list of Objects whose bounds are within the AABB
+* `Raycast (Origin: vector, CastVector: vector, FilterList: { GameObject }?, FilterIsIgnoreList: boolean?) : { Object: GameObject & RigidBody & Transform, Position: vector, Normal: vector }?`: Cast a ray
 * `ScreenPointToVector(vector, number?) : (vector)`: Converts the provided screen coordinates to a world-space direction. `Length` is optional and `1.0` by default
 

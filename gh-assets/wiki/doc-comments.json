@@ -40,12 +40,18 @@
           "Description": "For all descendants of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield",
           "ParameterNames": "Callback"
         },
-        "GetChildren": "Returns a list of the Object's direct children",
+        "GetChildren": {
+          "Description": "Returns a list of the Object's direct children",
+          "Out": "{ GameObject }"
+        },
         "GetComponents": {
           "Description": "Returns a list of the names of all Components that the Object currently has",
-          "Type": "() : (keyof<Creatables>)"
+          "Out": "keyof<Creatables>"
         },
-        "GetDescendants": "Returns all descendants of the Object (i.e. its children, and their children, etc)",
+        "GetDescendants": {
+          "Description": "Returns all descendants of the Object (i.e. its children, and their children, etc)",
+          "Out": "{ GameObject }"
+        },
         "GetFullName": "Returns the full, hierarchal path of the Object",
         "GetTags": {
           "Description": "Returns a list of all tags the Object has",
@@ -113,7 +119,7 @@
           },
           "LoadScene": {
             "Description": "Loads `GameObject`s from the scene file at the provided path, returning a list of the root objects or `nil` and an error message upon failure",
-            "Out": "({ GameObject & {} }?, string)",
+            "Out": "({ GameObject }?, string)",
             "ParameterNames": "Path"
           },
           "SaveMesh": {
@@ -161,17 +167,17 @@
         "Methods": {
           "GetTagAddedSignal": {
             "Description": "Returns a signal that fires when the given tag is added to any Objects",
-            "Out": "EventSignal<GameObject & {}>",
+            "Out": "EventSignal<GameObject>",
             "ParameterNames": "Tag"
           },
           "GetTagRemovedSignal": {
             "Description": "Returns a signal that fires when the given tag is removed from any Objects, including when an Object with a tag is `:Destroy`'d",
-            "Out": "EventSignal<GameObject & {}>",
+            "Out": "EventSignal<GameObject>",
             "ParameterNames": "Tag"
           },
           "GetTagged": {
             "Description": "Returns a list containing all Objects with the given tag",
-            "Out": "{ GameObject & {} }",
+            "Out": "{ GameObject }",
             "ParameterNames": "Tag"
           },
           "GetCollections": {
@@ -193,7 +199,7 @@
           "GetService": {
             "Description": "Gets the Object representing the specified Service. If it does not exist yet in the Data Model, it is created",
             "ParameterNames": "Service",
-            "Type": "('Workspace' | 'Engine' | 'PlayerInput' | 'AssetManager' | 'History' | 'Physics' | 'Renderer' | 'Collections') : (GameObject & {})"
+            "Type": "('Workspace' | 'Engine' | 'PlayerInput' | 'AssetManager' | 'History' | 'Physics' | 'Renderer' | 'Collections') : GameObject"
           }
         },
         "Properties": {
@@ -248,7 +254,10 @@
               "ExitCode"
             ]
           },
-          "GetCliArguments": "Returns the list of launch arguments given to the Engine. The first item is always a path to the Engine executable",
+          "GetCliArguments": {
+            "Description": "Returns the list of launch arguments given to the Engine. The first item is always a path to the Engine executable",
+            "Out": "{ string }"
+          },
           "GetCurrentVM": "Returns the name of the currently-bound VM",
           "GetExplorerSelections": {
             "Description": "Returns what is currently selected in the Explorer",
@@ -399,9 +408,13 @@
           },
           "GetActionData": {
             "Description": "Retrives information about a previously-recorded Action by its Index (Indexes, separate from IDs, are in the range 0 <= Index < `ActionHistorySize`)",
-            "ParameterNames": "Index"
+            "ParameterNames": "Index",
+            "Out": "{ Name: string, Events: { { Target: GameObject, Property: string, NewValue: unknown, PreviousValue: unknown } } }"
           },
-          "GetCurrentActionData": "Retrieves information about the current Action being recorded",
+          "GetCurrentActionData": {
+            "Description": "Retrieves information about the current Action being recorded",
+            "Out": "{ Name: string, Events: { { Target: GameObject, Property: string, NewValue: unknown, PreviousValue: unknown } } }?"
+          },
           "Redo": "Forwards the state of the scene to how it was before the last Undo",
           "TryBeginAction": {
             "Description": "Attempts to begin an \"Action.\" Returns the ID of the action. May fail and return `nil`. Only one Action may be active at a time",
@@ -561,22 +574,13 @@
           "AabbCast": "Cast an AABB",
           "GetObjectsInAabb": {
             "Description": "Get a list of Objects whose bounds are within the AABB",
-            "Out": "{ GameObject }",
-            "ParameterNames": [
-              "Position",
-              "Size",
-              "IgnoreList"
-            ]
+            "In": "Position: vector, Size: vector, IgnoreList: { GameObject }?",
+            "Out": "{ GameObject & RigidBody & Transform }"
           },
           "Raycast": {
             "Description": "Cast a ray",
-            "Out": "{ Object: GameObject & Mesh & Transform, Position: vector, Normal: vector }?",
-            "ParameterNames": [
-              "Origin",
-              "CastVector",
-              "FilterList",
-              "FilterIsIgnoreList"
-            ]
+            "In": "Origin: vector, CastVector: vector, FilterList: { GameObject }?, FilterIsIgnoreList: boolean?",
+            "Out": "{ Object: GameObject & RigidBody & Transform, Position: vector, Normal: vector }?"
           },
           "ScreenPointToVector": {
             "Description": "Converts the provided screen coordinates to a world-space direction. `Length` is optional and `1.0` by default",
@@ -1591,10 +1595,12 @@
           },
           "treenode": {
             "Description": [
-              "`ImGui::TreeNode`"
+              "`ImGui::TreeNode`",
+              "Accepts flags: `sl` - Selected, `sc` - Span All Columns, `fr` - Framed, `fw` - Span Full Width, `ao` - Allow Overlap, `ar` - Open on Arrow, `aw` - Span Available Width, `np` - No Tree Push On Open, `do` - Default Open, `dc` - Open On Double Click, `dlx` - Draw Lines None, `dln` - Draw Lines to Nodes, `dlf` - Draw Lines Full, `lf` - Leaf, `lw` - Span Label Width, `lsc` - Span All Columns, `b` - Bullet, `p` - Frame Padding, `c` - Collapsing Header. ` ` and `|` are considered whitespace"
             ],
             "In": [
-              "Text: string"
+              "Text: string",
+              "Flags: string?"
             ],
             "Out": "boolean"
           },
