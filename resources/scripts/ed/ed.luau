@@ -1074,6 +1074,8 @@ local function renderMainMenuBar(dt: number)
 
 		EditorPreferences.Gamma = imgui.inputnumber("Gamma Correction", EditorPreferences.Gamma)
 
+		imgui.urllink("https://youtu.be/YCjNT9qGjh4?t=7193")
+
 		if imgui.button("Save") then
 			fs.write("./editor/settings.json", json.encode(EditorPreferences))
 			Engine:SetConfigValue("postfx_gamma", EditorPreferences.Gamma)

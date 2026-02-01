@@ -81,7 +81,7 @@
         }
       },
       "Properties": {
-        "Enabled": "Whether the Engine updates and recognizes this Object, essentially freezing it if it is disabled",
+        "Enabled": "If this is `false`, the Engine will not render, compute physics for or otherwise update this Object and its subtree",
         "Exists": "Whether or not the Object still exists. Will be false after calling `:Destroy`",
         "Name": "The name of the Object, usually what was passed into `GameObject.new`",
         "ObjectId": "The ID of the Object, an integer. Remains the same throughout the session, but not guaranteed between sessions",

@@ -597,7 +597,7 @@
     "documentation": "Creates a duplicate of the Object"
   },
   "@phoenix/globaltype/GameObject.Enabled": {
-    "documentation": "Whether the Engine updates and recognizes this Object, essentially freezing it if it is disabled"
+    "documentation": "If this is `false`, the Engine will not render, compute physics for or otherwise update this Object and its subtree"
   },
   "@phoenix/globaltype/GameObject.Exists": {
     "documentation": "Whether or not the Object still exists. Will be false after calling `:Destroy`"

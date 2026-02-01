@@ -4,7 +4,7 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 ## `GameObject`
 
 ### Properties:
-* `Enabled: boolean`: Whether the Engine updates and recognizes this Object, essentially freezing it if it is disabled
+* `Enabled: boolean`: If this is `false`, the Engine will not render, compute physics for or otherwise update this Object and its subtree
 * `Exists: boolean `: Whether or not the Object still exists. Will be false after calling `:Destroy`
 * `Name: string`: The name of the Object, usually what was passed into `GameObject.new`
 * `ObjectId: number `: The ID of the Object, an integer. Remains the same throughout the session, but not guaranteed between sessions
