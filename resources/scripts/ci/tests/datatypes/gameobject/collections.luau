@@ -1,12 +1,7 @@
 local Collections: Collections = game:GetService("Collections") :: any
+local Types = require("@ci/test-types.luau")
 
-type expectTable<T...> = {
-    toBe: (any, T...) -> (),
-    toBeNil: (any) -> (),
-    toThrow: (any, string?) -> ()
-}
-
-return function(describe, test: (string, () -> ()) -> (), expect: <T...>(T...) -> expectTable<T...> & { never: expectTable<T...> })
+return function(test: Types.Test, expect: Types.Expect)
     test("GetTagged", function()
         game:AddTag("Test1")
         expect(Collections:GetTagged("Test1")[1]):toBe(game)
@@ -37,7 +32,7 @@ return function(describe, test: (string, () -> ()) -> (), expect: <T...>(T...) -
             if t == "Test1" then
                 t1addedobj = true
             else
-                expect(t):toBe("Test3")
+                expect(t):toBe("Test3" :: "Test3")
                 t3addedobj =true
             end
         end)

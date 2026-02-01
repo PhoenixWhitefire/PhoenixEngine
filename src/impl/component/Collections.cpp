@@ -49,27 +49,12 @@ public:
                 { Reflection::ValueType::EventSignal },
                 [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
                 {
-                    const auto& it = GameObject::s_CollectionNameToId.find(inputs[0].AsString());
-                    GameObject::Collection* collection = nullptr;
-
-                    if (it == GameObject::s_CollectionNameToId.end())
-                    {
-                        // TODO hack
-                        // create and initialize the collection
-                        GameObject* dm = GameObject::GetObjectById(GameObject::s_DataModel);
-                        dm->AddTag(inputs[0].AsString());
-                        dm->RemoveTag(inputs[0].AsString());
-
-                        collection = &GameObject::s_Collections[GameObject::s_CollectionNameToId.at(inputs[0].AsString())];
-                    }
-                    else
-                    {
-                        collection = &GameObject::s_Collections[it->second];
-                    }
+                    const std::string tag = inputs[0].AsString();
+                    const GameObject::Collection& collection = GameObject::GetCollection(tag);
 
                     Reflection::GenericValue gv;
                     gv.Val.Event = {
-                        .Descriptor = collection->AddedEvent.Descriptor,
+                        .Descriptor = collection.AddedEvent.Descriptor,
                         .Reflector = static_cast<EcCollections*>(p)->Reference,
                         .Name = "CollectionsService:GetTagAddedSignal() -> Event"
                     };
@@ -84,27 +69,12 @@ public:
                 { Reflection::ValueType::EventSignal },
                 [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
                 {
-                    const auto& it = GameObject::s_CollectionNameToId.find(inputs[0].AsString());
-                    GameObject::Collection* collection = nullptr;
-
-                    if (it == GameObject::s_CollectionNameToId.end())
-                    {
-                        // TODO hack
-                        // create and initialize the collection
-                        GameObject* dm = GameObject::GetObjectById(GameObject::s_DataModel);
-                        dm->AddTag(inputs[0].AsString());
-                        dm->RemoveTag(inputs[0].AsString());
-
-                        collection = &GameObject::s_Collections[GameObject::s_CollectionNameToId.at(inputs[0].AsString())];
-                    }
-                    else
-                    {
-                        collection = &GameObject::s_Collections[it->second];
-                    }
+                    const std::string tag = inputs[0].AsString();
+                    const GameObject::Collection& collection = GameObject::GetCollection(tag);
 
                     Reflection::GenericValue gv;
                     gv.Val.Event = {
-                        .Descriptor = collection->RemovedEvent.Descriptor,
+                        .Descriptor = collection.RemovedEvent.Descriptor,
                         .Reflector = static_cast<EcCollections*>(p)->Reference,
                         .Name = "CollectionsService:GetTagRemovedSignal() -> Event"
                     };

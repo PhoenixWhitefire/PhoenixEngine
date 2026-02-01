@@ -1,10 +1,6 @@
-type expectTable<T...> = {
-    toBe: (any, T...) -> (),
-    toBeNil: (any) -> (),
-    toThrow: (any, string?) -> ()
-}
+local Types = require("@ci/test-types.luau")
 
-return function(describe, test: (string, () -> ()) -> (), expect: <T...>(T...) -> expectTable<T...> & { never: expectTable<T...> })
+return function(test: Types.Test, expect: Types.Expect)
     test("wait", function()
 		expect(function()
 			task.wait(0)
@@ -41,11 +37,3 @@ return function(describe, test: (string, () -> ()) -> (), expect: <T...>(T...) -
         expect(delayTest()):toBe(64)
     end)
 end
-
-
-
-
-
-
-
-

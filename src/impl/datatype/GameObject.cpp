@@ -1126,25 +1126,22 @@ GameObject* GameObject::Create(const std::string_view& FirstComponent)
 		return GameObject::Create(it);
 }
 
-void GameObject::AddTag(const std::string& Tag)
+GameObject::Collection& GameObject::GetCollection(const std::string& Name)
 {
-	if (IsDestructionPending)
-		RAISE_RTF("Cannot call `:AddTag` on Object {} which was destroyed", GetFullName());
-
-	const auto& it = s_CollectionNameToId.find(Tag);
+	const auto& it = s_CollectionNameToId.find(Name);
 
 	if (it == s_CollectionNameToId.end())
 	{
 		if (s_Collections.size() >= UINT16_MAX)
-			RAISE_RTF("Cannot create collection '{}' because we have reached the limit of 2^16", Tag);
+			RAISE_RTF("Cannot create collection '{}' because we have reached the limit of 2^16", Name);
 
-		uint16_t id = s_Collections.size();
-		s_CollectionNameToId[Tag] = id;
+		uint16_t id = static_cast<uint16_t>(s_Collections.size());
+		s_CollectionNameToId[Name] = id;
 		s_Collections.push_back(Collection{ .AddedEvent = { .Descriptor = new Reflection::EventDescriptor }, .RemovedEvent = { .Descriptor = new Reflection::EventDescriptor } });
 
 		Collection& collection = s_Collections[id];
-		collection.Name = Tag;
-		collection.Items.push_back(ObjectId);
+		collection.Name = Name;
+		collection.Id = id;
 
 		collection.AddedEvent.Descriptor->CallbackInputs = { Reflection::ValueType::GameObject };
 		collection.RemovedEvent.Descriptor->CallbackInputs = { Reflection::ValueType::GameObject };
@@ -1167,21 +1164,27 @@ void GameObject::AddTag(const std::string& Tag)
 			s_Collections[id].RemovedEvent.Callbacks[ConnectionId] = nullptr;
 		};
 
-		Tags.push_back(id);
-		REFLECTION_SIGNAL_EVENT(OnTagAddedCallbacks, Tag);
+		return collection;
 	}
 	else
+		return s_Collections[it->second];
+}
+
+void GameObject::AddTag(const std::string& Tag)
+{
+	if (IsDestructionPending)
+		RAISE_RTF("Cannot call `:AddTag` on Object {} which was destroyed", GetFullName());
+
+	Collection& collection = GetCollection(Tag);
+	bool alreadyHave = std::find(Tags.begin(), Tags.end(), collection.Id) != Tags.end();
+
+	if (!alreadyHave)
 	{
-		bool alreadyHave = std::find(Tags.begin(), Tags.end(), it->second) != Tags.end();
+		Tags.push_back(collection.Id);
+		collection.Items.push_back(ObjectId);
 
-		if (!alreadyHave)
-		{
-			Tags.push_back(it->second);
-			s_Collections[it->second].Items.push_back(ObjectId);
-
-			REFLECTION_SIGNAL_EVENT(s_Collections[it->second].AddedEvent.Callbacks, this->ToGenericValue());
-			REFLECTION_SIGNAL_EVENT(OnTagAddedCallbacks, Tag);
-		}
+		REFLECTION_SIGNAL_EVENT(collection.AddedEvent.Callbacks, this->ToGenericValue());
+		REFLECTION_SIGNAL_EVENT(OnTagAddedCallbacks, Tag);
 	}
 }
 

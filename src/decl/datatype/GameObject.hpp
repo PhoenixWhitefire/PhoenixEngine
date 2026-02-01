@@ -48,10 +48,15 @@ public:
 
 		Event AddedEvent;
 		Event RemovedEvent;
+
+		uint16_t Id = UINT16_MAX;
 	};
 
 	static inline std::vector<Collection> s_Collections;
 	static inline std::unordered_map<std::string, uint16_t> s_CollectionNameToId;
+
+	// Returns a reference to a Collection, creating one if it does not exist
+	static Collection& GetCollection(const std::string&);
 
 	template <class T>
 	T* FindComponent()

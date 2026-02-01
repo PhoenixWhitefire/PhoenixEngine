@@ -1,10 +1,6 @@
-type expectTable<T...> = {
-    toBe: (any, T...) -> (),
-    toBeNil: (any) -> (),
-    toThrow: (any, string?) -> ()
-}
+local Types = require("@ci/test-types.luau")
 
-return function(describe, test: (string, () -> ()) -> (), expect: <T...>(T...) -> expectTable<T...> & { never: expectTable<T...> })
+return function(test: Types.Test, expect: Types.Expect)
     test("Index R, G, B", function()
         expect(Color.new(1, 0, 2).R):toBe(1)
         expect(Color.new(1, 0, 2).G):toBe(0)

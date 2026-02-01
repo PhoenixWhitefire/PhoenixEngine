@@ -1,10 +1,6 @@
-type expectTable<T...> = {
-    toBe: (any, T...) -> (),
-    toBeNil: (any) -> (),
-    toThrow: (any, string?) -> ()
-}
+local Types = require("@ci/test-types.luau")
 
-return function(describe, test: (string, () -> ()) -> (), expect: <T...>(T...) -> expectTable<T...> & { never: expectTable<T...> })
+return function(test: Types.Test, expect: Types.Expect)
     test("new", function()
 		local new = GameObject.new("SpotLight", "Animation")
 		expect(new:HasComponent("SpotLight") and new:HasComponent("Transform") and new:HasComponent("Animation")):toBe(true)

@@ -1,10 +1,6 @@
-type expectTable<T...> = {
-    toBe: (any, T...) -> (),
-    toBeNil: (any) -> (),
-    toThrow: (any, string?) -> ()
-}
+local Types = require("@ci/test-types.luau")
 
-return function(describe, test: (string, () -> ()) -> (), expect: <T...>(T...) -> expectTable<T...> & { never: expectTable<T...> })
+return function(test: Types.Test, expect: Types.Expect)
 	test("Individual component new", function()
 		expect(Matrix.new(10, 19, 8).Position):toBe(vector.create(10, 19, 8))
 	end)

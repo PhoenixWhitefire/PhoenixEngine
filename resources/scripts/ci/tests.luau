@@ -6,10 +6,18 @@ task.wait(0.04)
 
 local start = os.clock()
 
+local Types = require("./test-types")
+
 local testEntries = fs.listdir("scripts/ci/tests")
 
-local tests = {}
-local curGroup = nil
+type TestsNode = {
+	IsTest: true,
+	Name: string,
+	Callback: () -> ()
+} | { IsTest: nil, [number]: TestsNode }
+
+local tests: TestsNode = { IsTest = nil }
+local curGroup: TestsNode? = nil
 local testCount = 0
 
 local function contextify(v)
@@ -20,12 +28,15 @@ local function contextify(v)
 	end
 end
 
-local function testAreDeepEqual(selfv, expectedv, context: string?)
+local function testAreDeepEqual(selfv: unknown, expectedv: unknown, context: string?)
 	context = context or ""
 	
 	if typeof(selfv) ~= typeof(expectedv) or typeof(selfv) ~= "table" then
 		assert(selfv == expectedv, `FAILTEST:Value{context} was '{selfv}' ({ typeof(selfv) }) and not '{expectedv}' ({typeof(expectedv)})`)
 	else
+		assert(typeof(selfv) == "table")
+		assert(typeof(expectedv) == "table")
+
 		for i, v in expectedv do
 			testAreDeepEqual(selfv[i], v, context .. contextify(i))
 		end
@@ -89,27 +100,18 @@ function expectNeverMt.__index(self, check)
 			error(errstr)
 		else
 			assert(err:find("FAILTEST:"), err)
-			-- the test SHOULD have failed for `:never` to succeed
+			-- the test SHOULD have failed for `.never` to succeed
 		end
 	end
 end
 
-local function describe(group, callback)
-	local prevGroup = curGroup
-	curGroup[group] = {}
-	curGroup = curGroup[group]
-	
-	callback()
-	
-	curGroup = prevGroup
-end
+local test: Types.Test = function(name: string, callback)
+	assert(curGroup)
+	assert(not curGroup.IsTest)
 
-local function test(name, callback)
-	table.insert(curGroup, { IsTest = true, Callback = callback, Name = name })
+	table.insert(curGroup, { IsTest = true :: true, Callback = callback, Name = name })
 	testCount += 1
 end
-
-local it = test
 
 local function expect(val)
 	return setmetatable(
@@ -121,19 +123,20 @@ local function expect(val)
 	)
 end
 
-local function discoverTests(t, parent)
+local function discoverTests(t, parent: TestsNode)
 	for k: string, v in t do
-		local lastSlash = #k - string.find(string.reverse(k), "/")
+		local lastSlash = #k - assert((string.find(string.reverse(k), "/")))
 		local groupName = string.sub(k, lastSlash + 2, #k)
-		parent[groupName] = {}
+		parent[groupName] = { IsTest = nil }
 		curGroup = parent[groupName]
-		
+
 		if v == "f" then
 			assert(k:find("tests/"), k)
-			local m = require("./" .. k:sub(k:find("tests/"), #k))
-			m(describe, it, expect)
-			
+			local m = require("./" .. k:sub(assert((k:find("tests/"))), #k)) :: any
+			m(test, expect)
+
 		elseif v == "d" then
+			assert(curGroup)
 			discoverTests(fs.listdir(k), curGroup)
 		end
 	end
@@ -152,7 +155,7 @@ local function errorStackTrace(errm)
 	return { errm, debug.traceback(errm, 2) }
 end
 
-local function runTests(t, depth)
+local function runTests(t: TestsNode, depth)
 	for index, entry in t do
 		if entry.IsTest then
 			local indent = string.rep("    ", depth)
@@ -162,7 +165,7 @@ local function runTests(t, depth)
 
 			local tstart = os.clock()
 
-			local success, errd = xpcall(function()
+			local success, errd = (xpcall :: any)(function()
 				entry.Callback()
 			end, errorStackTrace)
 
@@ -212,6 +215,6 @@ end
 appendlog("\n\n")
 print(`Testing session took { os.clock() - start } seconds. Tests themselves took { totaltesttime } seconds in total`)
 
-appendlog("\n\n\n")
+appendlog("\n\n\n");
 
-game:GetService("Engine"):Exit(if failed == 0 then 0 else 1)
+((game:GetService("Engine") :: any) :: Engine):Exit(if failed == 0 then 0 else 1)
