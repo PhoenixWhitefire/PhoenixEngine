@@ -87,7 +87,7 @@ The Engine has a compositional object system. `GameObject`s have "base" APIs (pr
 
 
 ### Methods:
-* `GetCollections() : { string }`: Returns a list of all collections that the Collections system has recognized. They may be empty
+* `GetCollections() : { string }`: Returns a list of all collections that the Collections system has recognized. They may be empty. Order is *not* guaranteed
 * `GetTagAddedSignal(string) : EventSignal<GameObject>`: Returns a signal that fires when the given tag is added to any Objects
 * `GetTagRemovedSignal(string) : EventSignal<GameObject>`: Returns a signal that fires when the given tag is removed from any Objects, including when an Object with a tag is `:Destroy`'d
 * `GetTagged(string) : { GameObject }`: Returns a list containing all Objects with the given tag

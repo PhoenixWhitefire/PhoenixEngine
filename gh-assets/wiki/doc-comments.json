@@ -181,7 +181,7 @@
             "ParameterNames": "Tag"
           },
           "GetCollections": {
-            "Description": "Returns a list of all collections that the Collections system has recognized. They may be empty",
+            "Description": "Returns a list of all collections that the Collections system has recognized. They may be empty. Order is *not* guaranteed",
             "Out": "{ string }"
           }
         }

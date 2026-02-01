@@ -399,7 +399,7 @@
     "documentation": "Whether it is affected by the built-in controller (`W`/`A`/`S`/`D` horizontal movement, `Q`/`E` vertical, Mouse to look around)"
   },
   "@phoenix/globaltype/Collections.GetCollections": {
-    "documentation": "Returns a list of all collections that the Collections system has recognized. They may be empty"
+    "documentation": "Returns a list of all collections that the Collections system has recognized. They may be empty. Order is *not* guaranteed"
   },
   "@phoenix/globaltype/Collections.GetTagAddedSignal": {
     "documentation": "Returns a signal that fires when the given tag is added to any Objects"
