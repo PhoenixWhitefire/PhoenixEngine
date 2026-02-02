@@ -17,6 +17,7 @@ static const luaL_Reg luhxlibs[] =
 
     { "", luhxopen_EventSignal },
     { "", luhxopen_EventConnection },
+    { "", luhxopen_InputEvent },
 
     { NULL, NULL }
 };

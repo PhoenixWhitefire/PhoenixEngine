@@ -182,6 +182,21 @@ static void windowFocusChangedCallback(GLFWwindow*, int focused)
 	Engine::Get()->IsWindowFocused = (bool)focused;	
 }
 
+static void windowKeyCallback(GLFWwindow*, int key, int scancode, int action, int mods)
+{
+
+}
+
+static void windowMouseCallback(GLFWwindow*, int button, int action, int mods)
+{
+
+}
+
+static void windowScrollCallback(GLFWwindow*, double xoffset, double yoffset)
+{
+
+}
+
 static void errorCallback(int code, const char* message)
 {
 	RAISE_RTF("Error occurred in GLFW:\nCode: {}, Message: {}", code, message);
@@ -271,6 +286,9 @@ void Engine::m_InitializeVideo()
 
 	glfwSetWindowSizeCallback(Window, windowResizeCallback);
 	glfwSetWindowFocusCallback(Window, windowFocusChangedCallback);
+	glfwSetKeyCallback(Window, windowKeyCallback);
+	glfwSetMouseButtonCallback(Window, windowMouseCallback);
+	glfwSetScrollCallback(Window, windowScrollCallback);
 
 	Log::Info("Finished initializing video");
 

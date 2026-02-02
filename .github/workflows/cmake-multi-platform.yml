@@ -6,17 +6,18 @@ on:
   push:
     branches: [ "main" ]
     paths-ignore:
-      - "gh-assets/**"
+      - ".github/**"
+      - "wikigen/**"
       - "*.md"
-      - "api-dump.json"
+      - "apidump.json"
       - "imgui.ini"
       - "debugger.layout.ini"
   pull_request:
     branches: [ "main" ]
     paths-ignore:
-      - "gh-assets/**"
+      - "wikigen/**"
       - "*.md"
-      - "api-dump.json"
+      - "apidump.json"
 
 jobs:
   build:
@@ -72,11 +73,8 @@ jobs:
           x64/RelTracy/PhoenixEngine.exe
           x64/Release/PhoenixEngine.exe
           resources/
-          gh-assets/wiki/doc-comments.json
-          gh-assets/wiki/components-prologue.md
-          gh-assets/wiki/datatypes-prologue.md
-          gh-assets/wiki/libraries-prologue.md
-          gh-assets/wiki/globals-prologue.md
+          wikigen/
+          .github/
           lsp/
           apidump.json
           default-layout.ini
@@ -94,11 +92,8 @@ jobs:
           x64/RelTracy/PhoenixEngine
           x64/Release/PhoenixEngine
           resources/
-          gh-assets/wiki/doc-comments.json
-          gh-assets/wiki/components-prologue.md
-          gh-assets/wiki/datatypes-prologue.md
-          gh-assets/wiki/libraries-prologue.md
-          gh-assets/wiki/globals-prologue.md
+          wikigen/
+          .github/
           lsp/
           apidump.json
           default-layout.ini

@@ -77,6 +77,7 @@ namespace Reflection
 		Map,
 
 		EventSignal,
+		InputEvent,
 
 		// BEFORE Null
 		__lastBase,
@@ -87,7 +88,7 @@ namespace Reflection
 	};
 	using ValueType = ValueType_::VT;
 
-	static_assert((uint8_t)ValueType::__lastBase < (uint8_t)ValueType::Null);
+	static_assert(ValueType::__lastBase < ValueType::Null);
 
 	std::string TypeAsString(ValueType);
 	// `Target` is the documented definition, `Value` is the actual value
@@ -105,6 +106,37 @@ namespace Reflection
 		const char* Name = nullptr;
 	};
 
+	enum class InputEventType : uint8_t
+	{
+		NONE,
+		Key,
+		MouseButton,
+		Scroll
+	};
+
+	struct InputEvent
+	{
+		union {
+			struct {
+				int Button = 0;
+				int Scancode = 0;
+				int Action = 0;
+				int Modifiers = 0;
+			} Key;
+			struct {
+				int Button = 0;
+				int Action = 0;
+				int Modifiers = 0;
+			} MouseButton;
+			struct {
+				double XOffset = 0.0f;
+				double YOffset = 0.0f;
+			} Scroll;
+		};
+
+		InputEventType Type = InputEventType::NONE;
+	};
+
 	struct GenericValue
 	{
 		union ValueData
@@ -113,13 +145,14 @@ namespace Reflection
 			int64_t Int;
 			double Double;
 			char* Str;
-			char StrSso[12]; // small string optimization. largest elem is glm::vec3 of 12 bytes
+			char StrSso[sizeof(InputEvent)]; // small string optimization. largest elem is InputAction
 			glm::vec2 Vec2;
 			glm::vec3 Vec3;
 			GenericFunction* Func;
 			GenericValue* Array;
 			glm::mat4* Mat;
 			EventSignal Event;
+			InputEvent Input;
 			void* Ptr;
 		} Val = {};
 		// Array length or allocated memory for `Value`

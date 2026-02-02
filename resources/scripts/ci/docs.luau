@@ -2,8 +2,9 @@
 
 print("Docs CI begin\n\n\n\n\n")
 
-local BASE_PATH = "./gh-assets/wiki"
+local BASE_PATH = "./wikigen"
 local DOCS_PREFIX = "phoenix"
+local WIKI_PATH = ".github/wiki"
 
 local apiDump = json.parse(assert(fs.read("./apidump.json")))
 local docComments = json.parse(assert(fs.read(BASE_PATH .. "/doc-comments.json")))
@@ -708,9 +709,9 @@ end
 definitionsFile ..= "\n\n"
 
 local scriptenv = datatypesPrologue .. datatypes .. librariesPrologue .. libraries .. globalsPrologue .. globals
-fs.write(BASE_PATH .. "/scriptenv.md", scriptenv)
 
-fs.write(BASE_PATH .. "/components.md", components)
+fs.write(WIKI_PATH .. "/API:-Script-Environment.md", scriptenv)
+fs.write(WIKI_PATH .. "/API:-Components.md", components)
 
 fs.write("./lsp/api.d.luau", definitionsFile)
 fs.write("./lsp/api-docs.json", json.encode(documentationData))

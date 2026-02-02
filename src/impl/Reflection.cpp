@@ -243,6 +243,11 @@ void Reflection::GenericValue::CopyInto(GenericValue& Target, const GenericValue
 		Target.Val.Event = Source.Val.Event;
 		break;
 	}
+	case ValueType::InputEvent:
+	{
+		Target.Val.Input = Source.Val.Input;
+		break;
+	}
 	default:
 	{
 		assert(false);
@@ -393,10 +398,10 @@ std::string Reflection::GenericValue::ToString() const
 	}
 
 	default:
-		return std::format(
-			"ToString case not implemented for Type '{}'",
-			TypeAsString(Type)
-		);
+	{
+		assert(false);
+		return TypeAsString(Type);
+	}
 	}
 }
 

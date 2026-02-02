@@ -39,6 +39,7 @@ int luhxopen_GameObject(lua_State*);
 
 int luhxopen_EventSignal(lua_State*);
 int luhxopen_EventConnection(lua_State*);
+int luhxopen_InputEvent(lua_State*);
 
 void luhx_pushgameobject(lua_State*, const GameObject*);
 void luhx_pushvector3(lua_State*, const glm::vec3&);

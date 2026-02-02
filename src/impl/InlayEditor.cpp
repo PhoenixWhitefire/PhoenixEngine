@@ -263,7 +263,7 @@ void InlayEditor::Initialize(Renderer* renderer)
 	try
 	{
 		bool readSuccess = true;
-		std::string contents = FileRW::ReadFile("@cwd/gh-assets/wiki/doc-comments.json", &readSuccess);
+		std::string contents = FileRW::ReadFile("@cwd/wikigen/doc-comments.json", &readSuccess);
 
 		if (readSuccess)
 			DocumentationJson = nlohmann::json::parse(contents);
@@ -304,14 +304,14 @@ void InlayEditor::Initialize(Renderer* renderer)
 	}
 
 	bool prologueFound = true;
-	DatatypesDocPrologue = FileRW::ReadFile("@cwd/gh-assets/wiki/datatypes-prologue.md", &prologueFound);
-	PHX_CHECK(prologueFound && "Datatypes prologue - @cwd/gh-assets/wiki/datatypes-prologue.md");
+	DatatypesDocPrologue = FileRW::ReadFile("@cwd/wikigen/datatypes-prologue.md", &prologueFound);
+	PHX_CHECK(prologueFound && "Datatypes prologue - @cwd/wikigen/datatypes-prologue.md");
 
-	LibrariesDocPrologue = FileRW::ReadFile("@cwd/gh-assets/wiki/libraries-prologue.md", &prologueFound);
-	PHX_CHECK(prologueFound && "Libraries prologue - @cwd/gh-assets/wiki/libraries-prologue.md");
+	LibrariesDocPrologue = FileRW::ReadFile("@cwd/wikigen/libraries-prologue.md", &prologueFound);
+	PHX_CHECK(prologueFound && "Libraries prologue - @cwd/wikigen/libraries-prologue.md");
 
-	GlobalsDocPrologue = FileRW::ReadFile("@cwd/gh-assets/wiki/globals-prologue.md", &prologueFound);
-	PHX_CHECK(prologueFound && "Globals prologue - @cwd/gh-assets/wiki/globals-prologue.md");
+	GlobalsDocPrologue = FileRW::ReadFile("@cwd/wikigen/globals-prologue.md", &prologueFound);
+	PHX_CHECK(prologueFound && "Globals prologue - @cwd/wikigen/globals-prologue.md");
 
 	ScriptEngine::L::DebugBreak = &debugBreakHook;
 	ScriptEngine::L::LeaveDebugger = debuggerLeaveCallback;

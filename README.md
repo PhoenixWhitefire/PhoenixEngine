@@ -4,7 +4,7 @@
 
 <hr>
 
-<img src="gh-assets/pretty1_13-06-2024_bsky.jpg"/>
+<img src=".github/assets/pretty1_13-06-2024_bsky.jpg"/>
 
 <small> [*Demo videos*](https://www.youtube.com/@pwf2k) </small>
 
@@ -50,19 +50,19 @@ Intended to be compatible with both Windows and Linux/Ubuntu.
 
 Please note that LSP definition files depend on Luau's New Type Solver. Enabling that option in Luau LSP is required for them to work.
 
-<img src="gh-assets/infooverload.png"/>
+<img src=".github/assets/infooverload.png"/>
 
 <br>
 
-<img src="gh-assets/editor-obby-scene.png"/>
+<img src=".github/assets/editor-obby-scene.png"/>
 
 <br>
 
-<img src="gh-assets/docviewer.png"/>
+<img src=".github/assets/docviewer.png"/>
 
 <br>
 
-<img src="gh-assets/crossroads.png"/>
+<img src=".github/assets/crossroads.png"/>
 
 # Attributions
 
@@ -91,4 +91,4 @@ Additionally, I referred to ["Dave Poo"'s C++ Lua embedding tutorials](https://w
 
 End of README.
 
-<img src="gh-assets/texteditorclose.png">
+<img src=".github/assets/texteditorclose.png">

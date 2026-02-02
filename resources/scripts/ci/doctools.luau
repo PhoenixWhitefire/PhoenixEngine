@@ -1,5 +1,5 @@
 -- doctools.luau, 22/09/2025
-local docComments = json.parse(assert(fs.read("./gh-assets/wiki/doc-comments.json")));
+local docComments = json.parse(assert(fs.read("./wikigen/doc-comments.json")));
 local apiDump = json.parse(assert(fs.read("./apidump.json")));
 
 assert(not game:GetService("Engine").IsHeadless);
@@ -458,7 +458,7 @@ end
 game.OnFrameBegin:Connect(function()
     if imgui.begin("Documentation Tools") then
         if imgui.button("Save") then
-            fs.write("./gh-assets/wiki/doc-comments.json", json.encode(docComments))
+            fs.write("./wikigen/doc-comments.json", json.encode(docComments))
             runDocGen()
         end
     end
