@@ -728,8 +728,8 @@ definitionsFile ..= "\n\n"
 
 local scriptenv = datatypesPrologue .. datatypes .. librariesPrologue .. libraries .. globalsPrologue .. globals
 
-fs.write(WIKI_PATH .. "/API:-Script-Environment.md", scriptenv)
-fs.write(WIKI_PATH .. "/API:-Components.md", components)
+fs.write(WIKI_PATH .. "/API-‐-Script-Environment.md", scriptenv)
+fs.write(WIKI_PATH .. "/API-‐-Components.md", components)
 
 fs.write("./lsp/api.d.luau", definitionsFile)
 fs.write("./lsp/api-docs.json", json.encode(documentationData))
