@@ -17,6 +17,9 @@
   "@phoenix/global/Enum.FaceCulling": {
     "documentation": "* Culling modes for `Mesh.FaceCulling`"
   },
+  "@phoenix/global/Enum.InputAction": {
+    "documentation": "* The action that caused an Input Event (such as `PlayerInput.KeyEvent`) to fire"
+  },
   "@phoenix/global/Enum.Key": {
     "documentation": "* Keys, which may be passed to `PlayerInput:IsKeyPressed`"
   },
@@ -853,6 +856,15 @@
   },
   "@phoenix/globaltype/PlayerInput.IsMouseSunk": {
     "documentation": "Whether the Engine is currently using mouse input (such as for Dear ImGui). Do not process mouse input if this is `true`"
+  },
+  "@phoenix/globaltype/PlayerInput.KeyEvent": {
+    "documentation": "Fires whenever a key-related event occurs"
+  },
+  "@phoenix/globaltype/PlayerInput.MouseButtonEvent": {
+    "documentation": "Fires whenever a mouse-button-related event occurs"
+  },
+  "@phoenix/globaltype/PlayerInput.ScrollEvent": {
+    "documentation": "Fires whenever the player scrolls with a scroll device (such as the mouse wheel)"
   },
   "@phoenix/globaltype/PointLight.Brightness": {
     "documentation": "How bright the Light is"

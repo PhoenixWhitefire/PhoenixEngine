@@ -9,6 +9,7 @@
 
 #include "datatype/GameObject.hpp"
 #include "datatype/Color.hpp"
+#include "script/InputEvent.hpp"
 
 void luhx_openlibs(lua_State*);
 
@@ -46,6 +47,7 @@ void luhx_pushvector3(lua_State*, const glm::vec3&);
 void luhx_pushmatrix(lua_State*, const glm::mat4&);
 void luhx_pushcolor(lua_State*, const Color&);
 void luhx_pushsignal(lua_State*, const Reflection::EventDescriptor*, const ReflectorRef&, const char*);
+void luhx_pushinputevent(lua_State*, const InputEvent&);
 
 GameObject* luhx_checkgameobject(lua_State*, int);
 

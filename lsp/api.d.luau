@@ -2,6 +2,24 @@ export type EventSignal<T...> = {
 	Connect: (self: EventSignal<T...>, Callback: (T...) -> ()) -> (EventConnection),
 	WaitUntil: (self: EventSignal<T...>) -> (T...)
 }
+
+declare extern type KeyInputEvent with
+	Key: index<typeof(Enum.Key), keyof<typeof(Enum.Key)>>
+	Scancode: number
+	Action: index<typeof(Enum.InputAction), keyof<typeof(Enum.InputAction)>>
+	Modifiers: number
+end
+
+declare extern type MouseButtonInputEvent with
+	Button: index<typeof(Enum.MouseButton), keyof<typeof(Enum.MouseButton)>>
+	Action: index<typeof(Enum.InputAction), keyof<typeof(Enum.InputAction)>>
+	Modifiers: number
+end
+
+declare extern type ScrollInputEvent with
+	X: number
+	Y: number
+end
 declare extern type Color with
   B: number
   G: number
@@ -233,6 +251,10 @@ declare extern type PlayerInput with
   function GetCursorPosition(self) : (vector)
   function IsKeyPressed(self, Key: number) : (boolean)
   function IsMouseButtonPressed(self, MouseButton: number) : (boolean)
+
+  KeyEvent: EventSignal<KeyInputEvent>
+  MouseButtonEvent: EventSignal<MouseButtonInputEvent>
+  ScrollEvent: EventSignal<ScrollInputEvent>
 end
 declare extern type PointLight with
   Brightness: number
@@ -322,6 +344,7 @@ declare Enum: {
   CollisionType: { Cube: number, Sphere: number, Hulls: number, MeshComponent: number },
   CursorMode: { Normal: number, Hidden: number, Disabled: number, Unavailable: number, Captured: number },
   FaceCulling: { None: number, Front: number, Back: number },
+  InputAction: { Release: number, Press: number, Repeat: number },
   Key: { [string]: number },
   LogType: { None: number, Info: number, Warning: number, Error: number },
   MouseButton: { Left: number, Middle: number, Right: number }

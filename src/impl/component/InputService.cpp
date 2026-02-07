@@ -84,6 +84,17 @@ public:
 
         return methods;
     }
+
+    const Reflection::StaticEventMap& GetEvents() override
+    {
+        static const Reflection::StaticEventMap events = {
+            REFLECTION_EVENT(EcPlayerInput, KeyEvent, Reflection::ValueType::InputEvent),
+            REFLECTION_EVENT(EcPlayerInput, MouseButtonEvent, Reflection::ValueType::InputEvent),
+            REFLECTION_EVENT(EcPlayerInput, ScrollEvent, Reflection::ValueType::InputEvent)
+        };
+
+        return events;
+    }
 };
 
 static InputServiceManager Instance;

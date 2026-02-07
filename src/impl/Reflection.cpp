@@ -9,14 +9,13 @@
 #include "datatype/Color.hpp"
 #include "Memory.hpp"
 
-#define GV_SSO sizeof(Reflection::GenericValue::Val.StrSso)
-static_assert(GV_SSO == 12);
+static_assert(REFLECTION_GV_SSO > 12);
 
 static void fromString(Reflection::GenericValue& G, const char* Data)
 {
 	G.Type = Reflection::ValueType::String;
 
-	if (G.Size + 1 > GV_SSO)
+	if (G.Size + 1 > REFLECTION_GV_SSO)
 	{
 		G.Val.Str = (char*)Memory::Alloc(G.Size + 1, Memory::Category::Reflection);
 
@@ -162,6 +161,7 @@ Reflection::GenericValue::GenericValue(const std::vector<GenericValue>& array)
 }
 
 Reflection::GenericValue::GenericValue(const std::unordered_map<GenericValue, GenericValue>& map)
+	: Type(ValueType::Map)
 {
 	std::vector<GenericValue> arr;
 	arr.reserve(map.size() * 2);
@@ -173,7 +173,12 @@ Reflection::GenericValue::GenericValue(const std::unordered_map<GenericValue, Ge
 	}
 
 	fromArray(*this, arr);
-	this->Type = ValueType::Map;
+}
+
+Reflection::GenericValue::GenericValue(const InputEvent& ie)
+	: Type(ValueType::InputEvent)
+{
+	Val.Input = ie;
 }
 
 Reflection::GenericValue Reflection::GenericValue::Null()
@@ -294,7 +299,7 @@ std::string Reflection::GenericValue::ToString() const
 
 	case ValueType::String:
 	{
-		if (this->Size + 1 > GV_SSO)
+		if (this->Size + 1 > REFLECTION_GV_SSO)
 			return std::string(Val.Str, this->Size);
 		else
 			return Val.StrSso;
@@ -413,7 +418,7 @@ std::string Reflection::GenericValue::AsString() const
 	if (Type != ValueType::String)
 		WRONG_TYPE();
 	else
-		if (Size + 1 > GV_SSO)
+		if (Size + 1 > REFLECTION_GV_SSO)
 			return std::string(Val.Str, Size);
 		else
 			return std::string(Val.StrSso, Size);
@@ -423,7 +428,7 @@ std::string_view Reflection::GenericValue::AsStringView() const
 	if (Type != ValueType::String)
 		WRONG_TYPE();
 	else
-		if (Size + 1 > GV_SSO)
+		if (Size + 1 > REFLECTION_GV_SSO)
 			return std::string_view(Val.Str, Size);
 		else
 			return std::string_view(Val.StrSso, Size);
@@ -527,7 +532,7 @@ static void deallocGv(Reflection::GenericValue* gv)
 	}
 	case ValueType::String:
 	{
-		if (gv->Size + 1 > GV_SSO)
+		if (gv->Size + 1 > REFLECTION_GV_SSO)
 			Memory::Free(gv->Val.Str);
 		break;
 	}
@@ -569,7 +574,7 @@ bool Reflection::GenericValue::operator==(const Reflection::GenericValue& Other)
 
 	case ValueType::String:
 	{
-		if (this->Size + 1 > GV_SSO)
+		if (this->Size + 1 > REFLECTION_GV_SSO)
 		{
 			for (size_t i = 0; i < this->Size; i++)
 				if (this->Val.Str[i] != Other.Val.Str[i])
@@ -578,7 +583,7 @@ bool Reflection::GenericValue::operator==(const Reflection::GenericValue& Other)
 			return true;
 		}
 		else
-			return memcmp(this->Val.StrSso, Other.Val.StrSso, GV_SSO) == 0;
+			return memcmp(this->Val.StrSso, Other.Val.StrSso, REFLECTION_GV_SSO) == 0;
 	}
 
 	case ValueType::Matrix:
@@ -668,7 +673,8 @@ static std::string_view BaseNames[] =
 	"Array",
 	"Map",
 
-	"EventSignal"
+	"EventSignal",
+	"InputEvent"
 };
 
 static_assert(

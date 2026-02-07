@@ -468,6 +468,23 @@
       },
       "PlayerInput": {
         "Description": "Checking player inputs",
+        "Events": {
+          "KeyEvent": {
+            "ArgumentTypes": "KeyInputEvent",
+            "CallbackArguments": "KeyInputEvent",
+            "Description": "Fires whenever a key-related event occurs"
+          },
+          "MouseButtonEvent": {
+            "ArgumentTypes": "MouseButtonInputEvent",
+            "CallbackArguments": "MouseButtonInputEvent",
+            "Description": "Fires whenever a mouse-button-related event occurs"
+          },
+          "ScrollEvent": {
+            "ArgumentTypes": "ScrollInputEvent",
+            "CallbackArguments": "ScrollInputEvent",
+            "Description": "Fires whenever the player scrolls with a scroll device (such as the mouse wheel)"
+          }
+        },
         "Methods": {
           "GetCursorPosition": "Returns the current position of the mouse cursor relative to the window as a `vector`",
           "IsKeyPressed": {
@@ -883,6 +900,10 @@
           "FaceCulling": {
             "Description": "Culling modes for `Mesh.FaceCulling`",
             "Type": "{ None: number, Front: number, Back: number }"
+          },
+          "InputAction": {
+            "Description": "The action that caused an Input Event (such as `PlayerInput.KeyEvent`) to fire",
+            "Type": "{ Release: number, Press: number, Repeat: number }"
           },
           "Key": {
             "Description": "Keys, which may be passed to `PlayerInput:IsKeyPressed`",

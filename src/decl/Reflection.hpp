@@ -12,6 +12,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "datatype/EntityComponent.hpp"
+#include "script/InputEvent.hpp"
 
 #define REFLECTION_PROPERTY_GET_SIMPLE(c, n) [](void* p)->Reflection::GenericValue { return static_cast<c*>(p)->n; }
 #define REFLECTION_PROPERTY_GET_SIMPLE_TGN(c, n) [](void* p)->Reflection::GenericValue { return static_cast<c*>(p)->n.ToGenericValue(); }
@@ -50,6 +51,8 @@
 } \
 
 #define REFLECTION_OPTIONAL(ty) (Reflection::ValueType)(Reflection::ValueType::ty + Reflection::ValueType::Null)
+
+#define REFLECTION_GV_SSO sizeof(InputEvent)
 
 namespace Reflection
 {
@@ -106,37 +109,6 @@ namespace Reflection
 		const char* Name = nullptr;
 	};
 
-	enum class InputEventType : uint8_t
-	{
-		NONE,
-		Key,
-		MouseButton,
-		Scroll
-	};
-
-	struct InputEvent
-	{
-		union {
-			struct {
-				int Button = 0;
-				int Scancode = 0;
-				int Action = 0;
-				int Modifiers = 0;
-			} Key;
-			struct {
-				int Button = 0;
-				int Action = 0;
-				int Modifiers = 0;
-			} MouseButton;
-			struct {
-				double XOffset = 0.0f;
-				double YOffset = 0.0f;
-			} Scroll;
-		};
-
-		InputEventType Type = InputEventType::NONE;
-	};
-
 	struct GenericValue
 	{
 		union ValueData
@@ -145,7 +117,7 @@ namespace Reflection
 			int64_t Int;
 			double Double;
 			char* Str;
-			char StrSso[sizeof(InputEvent)]; // small string optimization. largest elem is InputAction
+			char StrSso[REFLECTION_GV_SSO]; // small string optimization. largest elem is InputAction
 			glm::vec2 Vec2;
 			glm::vec3 Vec3;
 			GenericFunction* Func;
@@ -177,6 +149,7 @@ namespace Reflection
 		GenericValue(const std::span<GenericValue>&);
 		GenericValue(const std::vector<GenericValue>&);
 		GenericValue(const std::unordered_map<GenericValue, GenericValue>&);
+		GenericValue(const InputEvent&);
 
 		GenericValue(const GenericValue&);
 		GenericValue(GenericValue&&);

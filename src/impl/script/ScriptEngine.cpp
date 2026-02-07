@@ -10,6 +10,7 @@
 
 #include "script/ScriptEngine.hpp"
 #include "script/luhx.hpp"
+#include "script/InputEvent.hpp"
 #include "script/enum/keys.hpp"
 #include "datatype/Color.hpp"
 #include "GlobalJsonConfig.hpp"
@@ -37,7 +38,8 @@ static const lua_Type s_ValueTypeToLuauType[] = {
 	LUA_TTABLE, // Array
 	LUA_TTABLE, // Map,
 
-	LUA_TUSERDATA // EventSignal
+	LUA_TUSERDATA, // EventSignal
+	LUA_TUSERDATA  // InputEvent
 };
 static_assert(std::size(s_ValueTypeToLuauType) == Reflection::ValueType::__lastBase);
 
@@ -808,6 +810,11 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 
 		break;
 	}
+	case Reflection::ValueType::InputEvent:
+	{
+		luhx_pushinputevent(L, gv.Val.Input);
+		break;
+	}
 	default:
 	{
 		std::string typeName = Reflection::TypeAsString(gv.Type);
@@ -1424,6 +1431,19 @@ static void openEnum(lua_State* L)
 	lua_setfield(L, -2, "Error");
 
 	lua_setfield(L, -2, "LogType");
+
+	lua_newtable(L);
+
+	lua_pushinteger(L, GLFW_RELEASE);
+	lua_setfield(L, -2, "Release");
+
+	lua_pushinteger(L, GLFW_PRESS);
+	lua_setfield(L, -2, "Press");
+
+	lua_pushinteger(L, GLFW_REPEAT);
+	lua_setfield(L, -2, "Repeat");
+
+	lua_setfield(L, -2, "InputAction");
 
 	lua_setglobal(L, "Enum");
 }

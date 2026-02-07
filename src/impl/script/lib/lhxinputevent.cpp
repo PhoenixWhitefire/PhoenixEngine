@@ -1,12 +1,22 @@
 // lhxinputevent.cpp, 02/01/2026
 #include "script/luhx.hpp"
+#include "script/InputEvent.hpp"
 #include "Reflection.hpp"
 
 #define IE_TYPENAME "InputEvent"
 
+void luhx_pushinputevent(lua_State* L, const InputEvent& ie)
+{
+    void* ptr = lua_newuserdata(L, sizeof(InputEvent));
+    memcpy(ptr, &ie, sizeof(InputEvent));
+
+    luaL_getmetatable(L, IE_TYPENAME);
+    lua_setmetatable(L, -2);
+}
+
 static int ie_index(lua_State* L)
 {
-    const Reflection::InputEvent* ie = static_cast<Reflection::InputEvent*>(luaL_checkudata(L, 1, IE_TYPENAME));
+    const InputEvent* ie = static_cast<InputEvent*>(luaL_checkudata(L, 1, IE_TYPENAME));
     const char* k = luaL_checkstring(L, 2);
 
     if (strcmp(k, "Type") == 0)
@@ -17,10 +27,7 @@ static int ie_index(lua_State* L)
 
     switch (ie->Type)
     {
-    case Reflection::InputEventType::NONE:
-        luaL_error(L, "Bad input event");
-
-    case Reflection::InputEventType::Key:
+    case InputEventType::Key:
     {
         if (strcmp(k, "Key") == 0)
             lua_pushinteger(L, ie->Key.Button);
@@ -32,9 +39,10 @@ static int ie_index(lua_State* L)
             lua_pushinteger(L, ie->Key.Modifiers);
         else
             luaL_error(L, "Invalid property '%s' for Key input", k);
+        break;
     }
 
-    case Reflection::InputEventType::MouseButton:
+    case InputEventType::MouseButton:
     {
         if (strcmp(k, "Button") == 0)
             lua_pushinteger(L, ie->MouseButton.Button);
@@ -44,14 +52,16 @@ static int ie_index(lua_State* L)
             lua_pushinteger(L, ie->MouseButton.Modifiers);
         else
             luaL_error(L, "Invalid property '%s' for Mouse Button input", k);
+        break;
     }
 
-    case Reflection::InputEventType::Scroll:
+    case InputEventType::Scroll:
     {
         if (strcmp(k, "Delta") == 0)
             lua_pushvector(L, ie->Scroll.XOffset, ie->Scroll.YOffset, 0.f);
         else
             luaL_error(L, "Invalid property '%s' for Scroll input", k);
+        break;
     }
 
     default:
@@ -61,7 +71,7 @@ static int ie_index(lua_State* L)
     return 1;
 }
 
-void createmetatable(lua_State* L)
+static void createmetatable(lua_State* L)
 {
     luaL_newmetatable(L, IE_TYPENAME);
 
@@ -74,7 +84,7 @@ void createmetatable(lua_State* L)
     lua_pop(L, 1);
 }
 
-int luhxopen_inputevent(lua_State* L)
+int luhxopen_InputEvent(lua_State* L)
 {
     createmetatable(L);
     return 0;

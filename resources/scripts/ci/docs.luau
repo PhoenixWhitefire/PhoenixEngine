@@ -49,6 +49,24 @@ export type EventSignal<T...> = {
 	Connect: (self: EventSignal<T...>, Callback: (T...) -> ()) -> (EventConnection),
 	WaitUntil: (self: EventSignal<T...>) -> (T...)
 }
+
+declare extern type KeyInputEvent with
+	Key: index<typeof(Enum.Key), keyof<typeof(Enum.Key)>>
+	Scancode: number
+	Action: index<typeof(Enum.InputAction), keyof<typeof(Enum.InputAction)>>
+	Modifiers: number
+end
+
+declare extern type MouseButtonInputEvent with
+	Button: index<typeof(Enum.MouseButton), keyof<typeof(Enum.MouseButton)>>
+	Action: index<typeof(Enum.InputAction), keyof<typeof(Enum.InputAction)>>
+	Modifiers: number
+end
+
+declare extern type ScrollInputEvent with
+	X: number
+	Y: number
+end
 ]]
 local documentationData = {}
 
@@ -421,7 +439,7 @@ local function dumpReflectionApi(t, d, cn)
 				documentationData[`@{DOCS_PREFIX}/globaltype/{cn}.{n}`] = {
 					documentation = d.Events[n].Description
 				}
-				definitionsFile ..= `  { n }: EventSignal<{rtolsub(v)}>\n`
+				definitionsFile ..= `  { n }: EventSignal<{d.Events[n].ArgumentTypes or rtolsub(v)}>\n`
 			end
 		end
 	else

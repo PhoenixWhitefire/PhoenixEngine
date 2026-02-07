@@ -200,6 +200,11 @@
         }
       },
       "PlayerInput": {
+        "Events": {
+          "KeyEvent": "(InputEvent)",
+          "MouseButtonEvent": "(InputEvent)",
+          "ScrollEvent": "(InputEvent)"
+        },
         "Methods": {
           "GetCursorPosition": "() -> (Vector2)",
           "IsKeyPressed": "(Integer) -> (Boolean)",
@@ -348,6 +353,7 @@
         "CollisionType": "table",
         "CursorMode": "table",
         "FaceCulling": "table",
+        "InputAction": "table",
         "Key": "table",
         "LogType": "table",
         "MouseButton": "table"

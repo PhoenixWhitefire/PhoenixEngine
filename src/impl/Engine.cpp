@@ -17,6 +17,7 @@
 #include "Engine.hpp"
 
 #include "component/ParticleEmitter.hpp"
+#include "component/InputService.hpp"
 #include "component/Transform.hpp"
 #include "component/RigidBody.hpp"
 #include "component/TreeLink.hpp"
@@ -184,17 +185,38 @@ static void windowFocusChangedCallback(GLFWwindow*, int focused)
 
 static void windowKeyCallback(GLFWwindow*, int key, int scancode, int action, int mods)
 {
-
+	REFLECTION_SIGNAL_EVENT(EcPlayerInput::KeyEventCallbacks, InputEvent{
+		.Key = {
+			.Button = key,
+			.Scancode = scancode,
+			.Action = action,
+			.Modifiers = mods
+		},
+		.Type = InputEventType::Key
+	});
 }
 
 static void windowMouseCallback(GLFWwindow*, int button, int action, int mods)
 {
-
+	REFLECTION_SIGNAL_EVENT(EcPlayerInput::KeyEventCallbacks, InputEvent{
+		.MouseButton = {
+			.Button = button,
+			.Action = action,
+			.Modifiers = mods
+		},
+		.Type = InputEventType::MouseButton
+	});
 }
 
 static void windowScrollCallback(GLFWwindow*, double xoffset, double yoffset)
 {
-
+	REFLECTION_SIGNAL_EVENT(EcPlayerInput::KeyEventCallbacks, InputEvent{
+		.Scroll = {
+			.XOffset = xoffset,
+			.YOffset = yoffset
+		},
+		.Type = InputEventType::Scroll
+	});
 }
 
 static void errorCallback(int code, const char* message)
