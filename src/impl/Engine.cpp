@@ -198,7 +198,7 @@ static void windowKeyCallback(GLFWwindow*, int key, int scancode, int action, in
 
 static void windowMouseCallback(GLFWwindow*, int button, int action, int mods)
 {
-	REFLECTION_SIGNAL_EVENT(EcPlayerInput::KeyEventCallbacks, InputEvent{
+	REFLECTION_SIGNAL_EVENT(EcPlayerInput::MouseButtonEventCallbacks, InputEvent{
 		.MouseButton = {
 			.Button = button,
 			.Action = action,
@@ -210,7 +210,7 @@ static void windowMouseCallback(GLFWwindow*, int button, int action, int mods)
 
 static void windowScrollCallback(GLFWwindow*, double xoffset, double yoffset)
 {
-	REFLECTION_SIGNAL_EVENT(EcPlayerInput::KeyEventCallbacks, InputEvent{
+	REFLECTION_SIGNAL_EVENT(EcPlayerInput::ScrollEventCallbacks, InputEvent{
 		.Scroll = {
 			.XOffset = xoffset,
 			.YOffset = yoffset
