@@ -833,6 +833,7 @@ GameObject* GameObject::FindChildWithComponent(EntityComponent Component)
 uint32_t GameObject::AddComponent(EntityComponent Type)
 {
 	PHX_ENSURE(Valid);
+	assert(Type != EntityComponent::None);
 
 	if (FindComponentByType(Type))
 		RAISE_RT("Already have that component");
@@ -863,6 +864,8 @@ uint32_t GameObject::AddComponent(EntityComponent Type)
 
 void GameObject::RemoveComponent(EntityComponent Type)
 {
+	assert(Type != EntityComponent::None);
+
 	for (auto it = Components.begin(); it < Components.end(); it++)
 		if (it->Type == Type)
 		{
@@ -1067,6 +1070,8 @@ Reflection::EventMap GameObject::GetEvents() const
 
 void* GameObject::FindComponentByType(EntityComponent Type)
 {
+	assert(Type != EntityComponent::None);
+
 	for (const ReflectorRef& ref : Components)
 		if (ref.Type == Type)
 			return GameObject::s_ComponentManagers[(size_t)Type]->GetComponent(ref.Id);

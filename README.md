@@ -48,7 +48,9 @@ Intended to be compatible with both Windows and Linux/Ubuntu.
     
     By the end, you should have a binary at the location `Vendor/tracy/profiler/build/tracy-profiler`.
 
-Please note that LSP definition files depend on Luau's New Type Solver. Enabling that option in Luau LSP is required for them to work.
+Remember to check out the [Getting Started](https://github.com/PhoenixWhitefire/PhoenixEngine/wiki/Getting-Started) page on the Wiki.
+
+Please note that LSP definition files depend on Luau's New Type Solver. Enabling that option in Luau LSP is required for them to work. For more information please read [Integration with Luau LSP](https://github.com/PhoenixWhitefire/PhoenixEngine/wiki/Getting-Started#integration-with-luau-lsp).
 
 <img src=".github/assets/infooverload.png"/>
 

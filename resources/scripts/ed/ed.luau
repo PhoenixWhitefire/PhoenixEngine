@@ -1668,6 +1668,7 @@ function Stages.SelectProject(DeltaTime: any) -- TODO type error when annotating
 			if imgui.imagebutton("+", "@etextures/editor-icons/new.png", vector.create(150, 150)) then
 				task.defer(createNewProject)
 			end
+			imgui.setitemtooltip("Create new Project")
 
 			cpos = imgui.cursorposition()
 
@@ -1687,6 +1688,7 @@ function Stages.SelectProject(DeltaTime: any) -- TODO type error when annotating
 				if imgui.imagebutton(cat.Name, cat.Icon, vector.create(150, 150)) then
 					SelectedProjectsCategory = i
 				end
+				imgui.setitemtooltip(cat.Name)
 
 				cpos = imgui.cursorposition()
 			end

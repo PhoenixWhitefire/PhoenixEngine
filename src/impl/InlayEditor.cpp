@@ -53,6 +53,19 @@ struct TextEditorTab
 static std::vector<TextEditorTab> s_TextEditors;
 static auto s_EditorLuauLang = TextEditor::LanguageDefinition::Lua();
 
+static const std::string_view AddableComponents[] = {
+	"Animation",
+	"Camera",
+	"DirectionalLight",
+	"PointLight",
+	"SpotLight",
+	"Mesh",
+	"Model",
+	"ParticleEmitter",
+	"Sound",
+	"Transform"
+};
+
 static nlohmann::json DefaultNewMaterial = 
 {
 	{ "ColorMap", "textures/materials/plastic.png" },
@@ -2390,23 +2403,16 @@ static void renderExplorer()
 		size_t began = history->TryBeginAction("InsertObject");
 		bool inserted = false;
 
-		const std::string_view Creatables[] = {
-			"Empty Object",
-			"Animation",
-			"Camera",
-			"DirectionalLight",
-			"PointLight",
-			"SpotLight",
-			"Mesh",
-			"Model",
-			"ParticleEmitter",
-			"Sound",
-			"Transform"
-		};
-
-		for (size_t i = 0; i < std::size(Creatables); i++)
+		if (ImGui::MenuItem("Empty Object"))
 		{
-			std::string_view name = Creatables[i];
+			GameObject* newObject = GameObject::Create();
+			newObject->SetParent(ObjectInsertionTarget);
+			Selections = { newObject };
+		}
+
+		for (size_t i = 0; i < std::size(AddableComponents); i++)
+		{
+			std::string_view name = AddableComponents[i];
 			std::string tooltip;
 
 			bool clicked = ImGui::MenuItem(name.data());
@@ -2418,16 +2424,10 @@ static void renderExplorer()
 			{
 				GameObject* newObject = nullptr;
 
-				if (name == "Empty Object")
-					newObject = GameObject::Create();
+				newObject = GameObject::Create(name);
 
-				else
-				{
-					newObject = GameObject::Create(name);
-
-					if (name == "Mesh")
-						newObject->AddComponent(EntityComponent::RigidBody);
-				}
+				if (name == "Mesh")
+					newObject->AddComponent(EntityComponent::RigidBody);
 
 				newObject->SetParent(ObjectInsertionTarget);
 				Selections = { newObject };
@@ -2930,12 +2930,17 @@ static void renderProperties()
 
 		if (ImGui::BeginPopup("AddComponent"))
 		{
-			for (size_t i = 1; i < (size_t)EntityComponent::__count; i++)
-				if (ImGui::MenuItem(s_EntityComponentNames[i].data()))
+			for (const std::string_view& comp : AddableComponents)
+				if (ImGui::MenuItem(comp.data()))
 				{
+					EntityComponent ec = FindComponentTypeByName(comp);
+					assert(ec != EntityComponent::None);
+
 					for (const ObjectHandle& obj : Selections)
-						if (!obj->FindComponentByType((EntityComponent)i))
-							obj->AddComponent((EntityComponent)i);
+					{
+						if (!obj->FindComponentByType(ec))
+							obj->AddComponent(ec);
+					}
 				}
 
 			ImGui::EndPopup();
