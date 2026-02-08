@@ -86,8 +86,11 @@ public:
     }
 
 // TODO: report bug
+#ifdef __GNUG__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
 
     const Reflection::StaticEventMap& GetEvents() override
     {
@@ -100,7 +103,10 @@ public:
         return events;
     }
 
+#ifdef __GNUG__
 #pragma GCC diagnostic pop
+#pragma GCC diagnostic pop
+#endif
 };
 
 static InputServiceManager Instance;
