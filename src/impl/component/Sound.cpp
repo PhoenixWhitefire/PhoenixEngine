@@ -148,6 +148,13 @@ const Reflection::StaticMethodMap& SoundManager::GetMethods()
 	return methods;
 }
 
+// TODO: report bug
+#ifdef __GNUG__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
+
 const Reflection::StaticEventMap& SoundManager::GetEvents()
 {
 	static const Reflection::StaticEventMap events =
@@ -157,6 +164,11 @@ const Reflection::StaticEventMap& SoundManager::GetEvents()
 
 	return events;
 }
+
+#ifdef __GNUG__
+#pragma GCC diagnostic pop
+#pragma GCC diagnostic pop
+#endif
 
 void SoundManager::Initialize()
 {
