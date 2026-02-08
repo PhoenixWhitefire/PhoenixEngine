@@ -27,27 +27,35 @@ jobs:
       fail-fast: false
 
       matrix:
-        os: [windows-latest]
+        os: [windows-latest, ubuntu-latest]
         build_type: [Debug, Release]
-        c_compiler: [cl]
+        c_compiler: [cl, gcc]
         include:
           - os: windows-latest
             c_compiler: cl
             cpp_compiler: cl
+          - os: ubuntu-latest
+            c_compiler: gcc
+            cpp_compiler: gcc
         exclude:
           - os: windows-latest
             c_compiler: gcc
           - os: windows-latest
             c_compiler: clang
-          - os: ubuntu
+          - os: ubuntu-latest
             c_compiler: clang
-          - os: ubuntu
+          - os: ubuntu-latest
             c_compiler: cl
 
     steps:
     - uses: actions/checkout@v4
       with:
         submodules: true
+
+    - name: Install Wayland dependencies (Ubuntu)
+      run: |
+        sudo apt update
+        sudo apt install libwayland-dev libwayland-bin wayland-protocols libxkbcommon-dev extra-cmake-modules
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
@@ -111,12 +119,12 @@ jobs:
       shell: pwsh
       run: ". \"x64\\${{ matrix.build_type }}\\PhoenixEngine.exe\" -headless -tool scripts\\ci\\tests.luau"
 
-    - name: Test (Ubuntu)
-      if: matrix.os == 'ubuntu'
-      shell: bash
-      run: "x64/${{ matrix.build_type }}/PhoenixEngine -headless -tool scripts/ci/tests.luau"
-
     - name: Doc Gen (Ubuntu)
-      if: matrix.os == 'ubuntu'
+      if: runner.os == 'Ubuntu'
       shell: bash
       run: "x64/${{ matrix.build_type }}/PhoenixEngine -headless -tool scripts/ci/docs.luau"
+
+    - name: Test (Ubuntu)
+      if: runner.os == 'Ubuntu'
+      shell: bash
+      run: "x64/${{ matrix.build_type }}/PhoenixEngine -headless -tool scripts/ci/tests.luau"

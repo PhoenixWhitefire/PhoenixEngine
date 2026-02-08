@@ -394,8 +394,6 @@
       "History": {
         "Description": "Service for implementing Undo/Redo systems",
         "Methods": {
-          "CanRedo": "Returns whether `:Redo` will succeed",
-          "CanUndo": "Returns whether `:Undo` will succeed",
           "ClearHistory": "Clears all recorded history",
           "DiscardAction": {
             "Description": "Discards the Action by its ID",
@@ -411,19 +409,23 @@
             "ParameterNames": "Index",
             "Out": "{ Name: string, Events: { { Target: GameObject, Property: string, NewValue: unknown, PreviousValue: unknown } } }"
           },
+          "GetCannotRedoReason": "Returns a message explaining why `.CanRedo` is `false`",
+          "GetCannotUndoReason": "Returns a message explaining why `.CanUndo` is `false`",
           "GetCurrentActionData": {
             "Description": "Retrieves information about the current Action being recorded",
             "Out": "{ Name: string, Events: { { Target: GameObject, Property: string, NewValue: unknown, PreviousValue: unknown } } }?"
           },
-          "Redo": "Forwards the state of the scene to how it was before the last Undo",
+          "Redo": "Forwards the state of the scene to how it was before the last Undo. If `.CanRedo` is `false`, will throw an error",
           "TryBeginAction": {
             "Description": "Attempts to begin an \"Action.\" Returns the ID of the action. May fail and return `nil`. Only one Action may be active at a time",
             "ParameterNames": "Name"
           },
-          "Undo": "Reverses the state of the scene to how it was before the last Action began"
+          "Undo": "Reverses the state of the scene to how it was before the last Action began. If `.CanUndo` is `false`, will throw an error"
         },
         "Properties": {
           "ActionHistorySize": "The total number of Actions that have finished being recorded",
+          "CanRedo": "Whether `:Redo` will succeed",
+          "CanUndo": "Whether `:Undo` will succeed",
           "CurrentActionName": "The name of the Action currently being recorded, or `nil` if no recording is in progress",
           "CurrentWaypoint": "The ID of the Action that was last finished",
           "IsRecordingAction": "Whether an Action is currently being recorded by History",

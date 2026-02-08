@@ -25,9 +25,12 @@ public:
     void RecordEvent(const PropertyEvent&);
     void ClearHistory();
 
-    size_t TryBeginAction(const std::string&);
+    std::optional<size_t> TryBeginAction(const std::string&);
     void FinishAction(size_t);
     void DiscardAction(size_t);
+
+    std::string GetCannotUndoReason() const;
+    std::string GetCannotRedoReason() const;
 
     bool CanUndo() const;
     bool CanRedo() const;

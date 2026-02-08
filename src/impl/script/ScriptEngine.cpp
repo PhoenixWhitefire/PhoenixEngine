@@ -1753,14 +1753,8 @@ nlohmann::json ScriptEngine::DumpApiToJson()
 	nlohmann::json& eventConnection = json["Datatypes"]["EventConnection"];
 	eventConnection = nlohmann::json::object();
 
-	lua_getglobal(luhx, "_G");
-	lua_pushinteger(luhx, 67);
-	lua_gettable(luhx, -2);
-	delete (std::filesystem::path*)lua_tolightuserdatatagged(luhx, -1, 67);
-	lua_pop(luhx, 1);
-
+	L::Close(luhx);
 	lua_close(base);
-	lua_close(luhx);
 
 	GameObject::s_DataModel = PHX_GAMEOBJECT_NULL_ID;
 	tempdm->Destroy();

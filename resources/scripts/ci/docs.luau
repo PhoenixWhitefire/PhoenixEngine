@@ -2,6 +2,11 @@
 
 print("Docs CI begin\n\n\n\n\n")
 
+task.delay(5, function()
+	warn("Docgen appears to have hung - exiting")
+	game:GetService("Engine"):Exit(1)
+end)
+
 local BASE_PATH = "./wikigen"
 local DOCS_PREFIX = "phoenix"
 local WIKI_PATH = ".github/wiki"

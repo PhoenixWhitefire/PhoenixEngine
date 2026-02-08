@@ -148,13 +148,13 @@
       },
       "History": {
         "Methods": {
-          "CanRedo": "() -> (Boolean)",
-          "CanUndo": "() -> (Boolean)",
           "ClearHistory": "() -> ()",
           "DiscardAction": "(Integer) -> ()",
           "EnableRecording": "() -> ()",
           "FinishAction": "(Integer) -> ()",
           "GetActionData": "(Integer) -> (Map)",
+          "GetCannotRedoReason": "() -> (String)",
+          "GetCannotUndoReason": "() -> (String)",
           "GetCurrentActionData": "() -> (Map?)",
           "Redo": "() -> ()",
           "TryBeginAction": "(String) -> (Integer?)",
@@ -162,6 +162,8 @@
         },
         "Properties": {
           "ActionHistorySize": "Integer READONLY",
+          "CanRedo": "Boolean READONLY",
+          "CanUndo": "Boolean READONLY",
           "CurrentActionName": "String? READONLY",
           "CurrentWaypoint": "Integer READONLY",
           "IsRecordingAction": "Boolean READONLY",

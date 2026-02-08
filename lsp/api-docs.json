@@ -669,10 +669,10 @@
     "documentation": "The total number of Actions that have finished being recorded"
   },
   "@phoenix/globaltype/History.CanRedo": {
-    "documentation": "Returns whether `:Redo` will succeed"
+    "documentation": "Whether `:Redo` will succeed"
   },
   "@phoenix/globaltype/History.CanUndo": {
-    "documentation": "Returns whether `:Undo` will succeed"
+    "documentation": "Whether `:Undo` will succeed"
   },
   "@phoenix/globaltype/History.ClearHistory": {
     "documentation": "Clears all recorded history"
@@ -695,6 +695,12 @@
   "@phoenix/globaltype/History.GetActionData": {
     "documentation": "Retrives information about a previously-recorded Action by its Index (Indexes, separate from IDs, are in the range 0 <= Index < `ActionHistorySize`)"
   },
+  "@phoenix/globaltype/History.GetCannotRedoReason": {
+    "documentation": "Returns a message explaining why `.CanRedo` is `false`"
+  },
+  "@phoenix/globaltype/History.GetCannotUndoReason": {
+    "documentation": "Returns a message explaining why `.CanUndo` is `false`"
+  },
   "@phoenix/globaltype/History.GetCurrentActionData": {
     "documentation": "Retrieves information about the current Action being recorded"
   },
@@ -702,7 +708,7 @@
     "documentation": "Whether an Action is currently being recorded by History"
   },
   "@phoenix/globaltype/History.Redo": {
-    "documentation": "Forwards the state of the scene to how it was before the last Undo"
+    "documentation": "Forwards the state of the scene to how it was before the last Undo. If `.CanRedo` is `false`, will throw an error"
   },
   "@phoenix/globaltype/History.TargetDataModel": {
     "documentation": "The DataModel that History will track"
@@ -711,7 +717,7 @@
     "documentation": "Attempts to begin an \"Action.\" Returns the ID of the action. May fail and return `nil`. Only one Action may be active at a time"
   },
   "@phoenix/globaltype/History.Undo": {
-    "documentation": "Reverses the state of the scene to how it was before the last Action began"
+    "documentation": "Reverses the state of the scene to how it was before the last Action began. If `.CanUndo` is `false`, will throw an error"
   },
   "@phoenix/globaltype/Matrix.C1R1": {
     "documentation": "* The value at Column 1, Row 1\n"

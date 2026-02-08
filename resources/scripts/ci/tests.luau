@@ -4,6 +4,11 @@
 -- Sleep for a little bit to avoid tests appearing to take several milliseconds due to initial slowdowns
 task.wait(0.04)
 
+task.delay(5, function()
+	warn("Tests appear to have hung - exiting")
+	game:GetService("Engine"):Exit(1)
+end)
+
 local start = os.clock()
 
 local Types = require("./test-types")

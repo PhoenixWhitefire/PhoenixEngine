@@ -2362,15 +2362,15 @@ static void renderExplorer()
 		if (ImGui::IsKeyDown(ImGuiKey_Delete) && Selections.size() > 0)
 		{
 			History* history = History::Get();
-			size_t id = history->TryBeginAction("Delete by hotkey");
+			std::optional<size_t> id = history->TryBeginAction("Delete by hotkey");
 
 			for (const ObjectHandle& sel : Selections)
 				sel->SetParent(nullptr); // We can't actually `::Destroy` it because then we won't be able to Undo it back
 
 			Selections.clear();
 
-			if (id != 0)
-				history->FinishAction(id);
+			if (id)
+				history->FinishAction(id.value());
 		}
 	}
 
@@ -2400,7 +2400,7 @@ static void renderExplorer()
 		ImGui::SeparatorText("Insert");
 
 		History* history = History::Get();
-		size_t began = history->TryBeginAction("InsertObject");
+		std::optional<size_t> began = history->TryBeginAction("InsertObject");
 		bool inserted = false;
 
 		if (ImGui::MenuItem("Empty Object"))
@@ -2408,19 +2408,15 @@ static void renderExplorer()
 			GameObject* newObject = GameObject::Create();
 			newObject->SetParent(ObjectInsertionTarget);
 			Selections = { newObject };
+			inserted = true;
 		}
+		ImGui::SetItemTooltip("An Object with no Components");
 
 		for (size_t i = 0; i < std::size(AddableComponents); i++)
 		{
 			std::string_view name = AddableComponents[i];
-			std::string tooltip;
 
-			bool clicked = ImGui::MenuItem(name.data());
-
-			if (tooltip.size() > 1)
-				ImGui::SetItemTooltip("%s", tooltip.c_str());
-
-			if (clicked)
+			if (ImGui::MenuItem(name.data()))
 			{
 				GameObject* newObject = nullptr;
 
@@ -2435,16 +2431,24 @@ static void renderExplorer()
 				ExplorerShouldSeekToCurrentSelection = true;
 				ObjectInsertionTarget.Clear();
 
-				if (began != 0)
-				{
-					history->FinishAction(began);
+				if (began)
 					inserted = true;
-				}
 			}
+			std::string tooltip = getDescriptionAsString(
+				ObjectDocCommentsJson.value("Components", nlohmann::json::object()).value(name, nlohmann::json::object())["Description"],
+				32
+			);
+			if (tooltip.size() > 1)
+				ImGui::SetItemTooltip("%s", tooltip.c_str());
 		}
 
-		if (began != 0 && !inserted)
-			history->DiscardAction(began);
+		if (began)
+		{
+			if (inserted)
+				history->FinishAction(began.value());
+			else
+				history->DiscardAction(began.value());
+		}
 
 		InsertObjectButtonHoveredOver = nullptr;
 
@@ -2467,12 +2471,12 @@ static void renderExplorer()
 				if (ImGui::MenuItem(name))
 				{
 					History* history = History::Get();
-					size_t id = action != ContextMenuAction::Rename ? history->TryBeginAction(name) : 0;
+					std::optional<size_t> id = action != ContextMenuAction::Rename ? history->TryBeginAction(name) : 0;
 
 					ContextMenuActionHandlers[(uint8_t)action]();
 
-					if (id != 0)
-						history->FinishAction(id);
+					if (id)
+						history->FinishAction(id.value());
 				}
 			}
 		}
@@ -2931,6 +2935,7 @@ static void renderProperties()
 		if (ImGui::BeginPopup("AddComponent"))
 		{
 			for (const std::string_view& comp : AddableComponents)
+			{
 				if (ImGui::MenuItem(comp.data()))
 				{
 					EntityComponent ec = FindComponentTypeByName(comp);
@@ -2942,6 +2947,14 @@ static void renderProperties()
 							obj->AddComponent(ec);
 					}
 				}
+
+				std::string tooltip = getDescriptionAsString(
+					ObjectDocCommentsJson.value("Components", nlohmann::json::object()).value(comp, nlohmann::json::object())["Description"],
+					32
+				);
+				if (tooltip.size() > 1)
+					ImGui::SetItemTooltip("%s", tooltip.c_str());
+			}
 
 			ImGui::EndPopup();
 		}
@@ -3365,7 +3378,7 @@ static void renderProperties()
 
 			}
 
-			static size_t BeganPropertyEditingAction = 0;
+			static std::optional<size_t> BeganPropertyEditingAction;
 
 			static std::string PrevEditPropName;
 			static Reflection::GenericValue PrevEditNewValue;
@@ -3394,8 +3407,8 @@ static void renderProperties()
 					setErrorMessage(Err.what());
 				}
 
-				if (BeganPropertyEditingAction != 0)
-					history->FinishAction(BeganPropertyEditingAction);
+				if (BeganPropertyEditingAction)
+					history->FinishAction(BeganPropertyEditingAction.value());
 			}
 
 			if (deactivatedAfterEdit || ImGui::IsItemDeactivatedAfterEdit())
@@ -3404,7 +3417,7 @@ static void renderProperties()
 				{
 					history->Undo();
 
-					if (size_t began = history->TryBeginAction("EditProperty"); began != 0)
+					if (std::optional<size_t> began = history->TryBeginAction("EditProperty"))
 					{
 						try
 						{
@@ -3417,9 +3430,9 @@ static void renderProperties()
 						}
 
 						if (history->GetCurrentAction()->Events.size() == 0)
-							history->DiscardAction(began); // started typing, but didn't actually change the value in the end
+							history->DiscardAction(began.value()); // started typing, but didn't actually change the value in the end
 						else
-							history->FinishAction(began);
+							history->FinishAction(began.value());
 					}
 					else
 					{

@@ -200,18 +200,20 @@ declare extern type Engine with
 end
 declare extern type History with
   ActionHistorySize: number 
+  CanRedo: boolean 
+  CanUndo: boolean 
   CurrentActionName: string? 
   CurrentWaypoint: number 
   IsRecordingAction: boolean 
   TargetDataModel: GameObject
 
-  function CanRedo(self) : (boolean)
-  function CanUndo(self) : (boolean)
   function ClearHistory(self) : ()
   function DiscardAction(self, Id: number) : ()
   function EnableRecording(self) : ()
   function FinishAction(self, Id: number) : ()
   function GetActionData(self, Index: number) : { Name: string, Events: { { Target: GameObject, Property: string, NewValue: unknown, PreviousValue: unknown } } }
+  function GetCannotRedoReason(self) : (string)
+  function GetCannotUndoReason(self) : (string)
   function GetCurrentActionData(self) : { Name: string, Events: { { Target: GameObject, Property: string, NewValue: unknown, PreviousValue: unknown } } }?
   function Redo(self) : ()
   function TryBeginAction(self, Name: string) : (number?)

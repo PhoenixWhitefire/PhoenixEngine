@@ -28,7 +28,7 @@ void History::ClearHistory()
         Log::WarningF("`History::ClearHistory` called while Action {} was ongoing", m_CurrentAction->Name);
 }
 
-size_t History::TryBeginAction(const std::string& Name)
+std::optional<size_t> History::TryBeginAction(const std::string& Name)
 {
     if (!IsRecordingEnabled)
         RAISE_RT("History recording is not enabled!");
@@ -36,7 +36,7 @@ size_t History::TryBeginAction(const std::string& Name)
     if (m_CurrentAction.has_value())
     {
         Log::WarningF("`History::TryBeginAction` failed for {} because {} is still in progress", Name, m_CurrentAction->Name);
-        return 0;
+        return std::nullopt;
     }
 
     static size_t ActionIdCounter = 0;
@@ -86,6 +86,33 @@ void History::DiscardAction(size_t Id)
     m_CurrentAction.reset();
 }
 
+std::string History::GetCannotUndoReason() const
+{
+    if (!CanUndo())
+    {
+        if (m_ActionHistory.size() == 0)
+            return "No history recorded";
+        if (m_CurrentWaypoint == 0)
+            return "At the beginning of history";
+        if (m_CurrentAction.has_value())
+            return std::format("Action '{}' is not complete", m_CurrentAction->Name);
+
+        return "Cannot Undo right now";
+    }
+    else
+        return "Can Undo";
+}
+
+std::string History::GetCannotRedoReason() const
+{
+    if (m_ActionHistory.size() < m_CurrentWaypoint + 2)
+        return "No history recorded beyond this point";
+    if (m_CurrentAction.has_value())
+        return std::format("Cannot Redo, action '{}' is not complete", m_CurrentAction->Name);
+
+    return "Cannot Redo right now";
+}
+
 bool History::CanUndo() const
 {
     return m_ActionHistory.size() > 0 && m_CurrentWaypoint != 0 && !m_CurrentAction.has_value();
@@ -99,16 +126,7 @@ bool History::CanRedo() const
 void History::Undo()
 {
     if (!CanUndo())
-    {
-        if (m_ActionHistory.size() == 0)
-            RAISE_RT("Cannot Undo, no history recorded");
-        if (m_CurrentWaypoint == 0)
-            RAISE_RT("Cannot Undo, at the beginning of history");
-        if (m_CurrentAction.has_value())
-            RAISE_RTF("Cannot Undo, action '{}' is not complete", m_CurrentAction->Name);
-
-        RAISE_RT("Cannot Undo right now");
-    }
+        RAISE_RT(GetCannotUndoReason());
 
     if (m_CurrentWaypoint > m_ActionHistory.size() - 1)
         m_CurrentWaypoint = m_ActionHistory.size() - 1; // TODO not sure why this happens
@@ -148,14 +166,7 @@ void History::Undo()
 void History::Redo()
 {
     if (!CanRedo())
-    {
-        if (m_ActionHistory.size() < m_CurrentWaypoint + 2)
-            RAISE_RT("Cannot Redo, no history recorded beyond this point");
-        if (m_CurrentAction.has_value())
-            RAISE_RTF("Cannot Redo, action '{}' is not complete", m_CurrentAction->Name);
-
-        RAISE_RT("Cannot Redo right now");
-    }
+        RAISE_RT(GetCannotRedoReason());
 
     const Action& nextAction = m_ActionHistory[m_CurrentWaypoint + 1];
 

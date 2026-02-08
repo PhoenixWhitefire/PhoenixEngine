@@ -90,7 +90,7 @@ end
 local function setErrorNotification(Error)
 	ErrorMessage = Error
 	ErrorMessageTimeRemaining = 2
-	print(Error)
+	warn("Undo/Redo operation failed:", Error)
 end
 
 local function onError(err)
@@ -531,7 +531,7 @@ local function tabButton(Text: string, Icon: string, Enabled: boolean?, Lit: boo
 	return if Enabled then clicked else false
 end
 
-local function whyCannotUndoRedo()
+local function whyCannotPlaytest()
 	return if History.IsRecordingAction
 		then `You can't until the {assert(History.CurrentActionName)} Action finishes`
 		else nil
@@ -541,7 +541,7 @@ local function homeTab(_: number)
 	local startY = imgui.cursorposition().y
 
 	local inPlaytest = CurrentStage == "ProjectPlaying"
-	local currentActionTooltip = whyCannotUndoRedo()
+	local currentActionTooltip = whyCannotPlaytest()
 
 	if inPlaytest then
 		if tabButton("Stop", "@etextures/editor-icons/stop.png", not History.IsRecordingAction, nil, nil, currentActionTooltip) then
@@ -837,20 +837,18 @@ local function renderMainMenuBar(dt: number)
 	
 	if imgui.beginmenu("File") then
 		if CurrentStage == "ProjectEditing" then
-			local undoRedoDisabledReason = whyCannotUndoRedo()
-
-			if imgui.menuitem("Undo", History:CanUndo()) then
+			if imgui.menuitem("Undo", History.CanUndo) then
 				History:Undo()
 			end
-			if undoRedoDisabledReason then
-				imgui.setitemtooltip(undoRedoDisabledReason)
+			if not History.CanUndo then
+				imgui.setitemtooltip(History:GetCannotUndoReason())
 			end
 
-			if imgui.menuitem("Redo", History:CanRedo()) then
+			if imgui.menuitem("Redo", History.CanRedo) then
 				History:Redo()
 			end
-			if undoRedoDisabledReason then
-				imgui.setitemtooltip(undoRedoDisabledReason)
+			if not History.CanRedo then
+				imgui.setitemtooltip(History:GetCannotRedoReason())
 			end
 
 			if imgui.menuitem("Open in Code Editor") then

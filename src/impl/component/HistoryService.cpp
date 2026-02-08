@@ -118,6 +118,27 @@ public:
 
                     history->TargetDataModel = newTarget->ObjectId;
                 }
+            ),
+
+            REFLECTION_PROPERTY(
+                "CanUndo",
+                Boolean,
+                [](void*) -> Reflection::GenericValue
+                {
+                    History* history = History::Get();
+                    return history->CanUndo();
+                },
+                nullptr
+            ),
+            REFLECTION_PROPERTY(
+                "CanRedo",
+                Boolean,
+                [](void*) -> Reflection::GenericValue
+                {
+                    History* history = History::Get();
+                    return history->CanRedo();
+                },
+                nullptr
             )
         };
 
@@ -145,12 +166,12 @@ public:
                 [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
                 {
                     History* history = History::Get();
-                    size_t actionId = history->TryBeginAction(inputs[0].AsString());
+                    std::optional<size_t> actionId = history->TryBeginAction(inputs[0].AsString());
 
-                    if (actionId == 0)
+                    if (!actionId)
                         return { Reflection::GenericValue::Null() };
                     else
-                        return { (uint32_t)actionId };
+                        return { (uint32_t)actionId.value() };
                 }
             } },
 
@@ -190,23 +211,23 @@ public:
                 }
             } },
 
-            { "CanUndo", {
+            { "GetCannotUndoReason", {
                 {},
-                { Reflection::ValueType::Boolean },
+                { Reflection::ValueType::String },
                 [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
                 {
                     History* history = History::Get();
-                    return { history->CanUndo() };
+                    return { history->GetCannotUndoReason() };
                 }
             } },
 
-            { "CanRedo", {
+            { "GetCannotRedoReason", {
                 {},
-                { Reflection::ValueType::Boolean },
+                { Reflection::ValueType::String },
                 [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
                 {
                     History* history = History::Get();
-                    return { history->CanRedo() };
+                    return { history->GetCannotRedoReason() };
                 }
             } },
 
