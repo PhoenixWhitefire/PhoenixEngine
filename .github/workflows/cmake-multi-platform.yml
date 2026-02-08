@@ -53,9 +53,11 @@ jobs:
         submodules: true
 
     - name: Install Wayland dependencies (Ubuntu)
+      if: runner.os == 'Ubuntu'
       run: |
         sudo apt update
         sudo apt install libwayland-dev libwayland-bin wayland-protocols libxkbcommon-dev extra-cmake-modules
+        sudo apt install xorg-dev
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
