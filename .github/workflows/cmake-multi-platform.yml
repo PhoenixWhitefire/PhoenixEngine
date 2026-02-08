@@ -54,7 +54,7 @@ jobs:
         submodules: true
 
     - name: Install Wayland dependencies (Ubuntu)
-      if: runner.os == 'Ubuntu'
+      if: runner.os == 'Linux'
       run: |
         sudo apt update
         sudo apt install libwayland-dev libwayland-bin wayland-protocols libxkbcommon-dev extra-cmake-modules
@@ -94,7 +94,7 @@ jobs:
         retention-days: 7
 
     - name: Upload build artifact (Ubuntu)
-      if: runner.os == 'Ubuntu'
+      if: runner.os == 'Linux'
       uses: actions/upload-artifact@v4
       with:
         name: "Engine_${{ runner.os }}-${{ matrix.build_type }}"
@@ -123,11 +123,11 @@ jobs:
       run: ". \"x64\\${{ matrix.build_type }}\\PhoenixEngine.exe\" -headless -tool scripts\\ci\\tests.luau"
 
     - name: Doc Gen (Ubuntu)
-      if: runner.os == 'Ubuntu'
+      if: runner.os == 'Linux'
       shell: bash
       run: "x64/${{ matrix.build_type }}/PhoenixEngine -headless -tool scripts/ci/docs.luau"
 
     - name: Test (Ubuntu)
-      if: runner.os == 'Ubuntu'
+      if: runner.os == 'Linux'
       shell: bash
       run: "x64/${{ matrix.build_type }}/PhoenixEngine -headless -tool scripts/ci/tests.luau"
