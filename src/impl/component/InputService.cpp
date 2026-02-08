@@ -85,6 +85,10 @@ public:
         return methods;
     }
 
+// TODO: report bug
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+
     const Reflection::StaticEventMap& GetEvents() override
     {
         static const Reflection::StaticEventMap events = {
@@ -95,6 +99,8 @@ public:
 
         return events;
     }
+
+#pragma GCC diagnostic pop
 };
 
 static InputServiceManager Instance;

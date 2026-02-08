@@ -30,6 +30,8 @@ target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:-flto -fsanitize=
 target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:Release>:-flto>)
 target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:-fsanitize=address,undefined>)
 
+target_link_libraries(PhoenixEngine PRIVATE stdc++)
+
 add_compile_options($<$<CONFIG:RelTracy>:-O2>)
 add_compile_options($<$<CONFIG:RelTracy>:-g3>)
 add_compile_options($<$<CONFIG:Release>:-O2>)
