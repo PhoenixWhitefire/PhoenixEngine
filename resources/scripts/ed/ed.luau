@@ -843,7 +843,7 @@ local function renderMainMenuBar(dt: number)
 	local pushedCol = CurrentStage == "ProjectPlaying"
 
 	if pushedCol then
-		imgui.pushstylecolor(13, {0, 56/255, 15/255, 1})
+		imgui.pushstylecolor(13, {0, 56/270, 15/270, 1})
 	end
 
 	local render = imgui.beginmainmenubar()
@@ -1068,7 +1068,7 @@ local function renderMainMenuBar(dt: number)
 		cursory += tts.y + 2
 
 		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, ctsx), cursory)
-		imgui.urllink(Engine.CommitHash:sub(1, 8), `https://github.com/PhoenixWhitefire/PhoenixEngine/commit/{ Engine.CommitHash }`)
+		imgui.urllink(Engine.CommitHash:sub(1, 8), `{ GITHUB_URL }/commit/{ Engine.CommitHash }`)
 
 		imgui.endpopup()
 	end
@@ -1366,7 +1366,9 @@ local function renderViewport(DeltaTime: number)
 		end
 		imgui.sameline()
 
-		imgui.text(`{ Project.Name } | { Engine.Framerate } FPS ({ CurrentStage })`)
+		local noteStr = `{ Engine.Framerate } FPS ({ CurrentStage }) | { Project.Name }`
+		imgui.text(noteStr)
+		imgui.setitemtooltip(noteStr)
 
 		imgui.endw()
 	end
@@ -1463,23 +1465,7 @@ local function renderViewport(DeltaTime: number)
 	end
 
 	local canInteract = IsHoveringViewportTitlebar or (not IsHoveringViewport and imgui.windowhovered("a | b"))
-
-	if CurrentStage == "ProjectPlaying" then
-		-- TODO: docked tab header color
-		-- apparently this is not possible to style right now
-		-- https://github.com/ocornut/imgui/issues/8413
-		imgui.pushstylecolor(34, {36/270, 255/270, 94/270, 1})
-		imgui.pushstylecolor(39, {20/270, 199/270, 68/270, 1})
-		imgui.pushstylecolor(2, {0, 1, 0, 1})
-	end
-
 	imgui.begin(Project.Name .. "###Viewport", if canInteract then "nb" else "ni | nb")
-
-	if CurrentStage == "ProjectPlaying" then
-		imgui.popstylecolor()
-		imgui.popstylecolor()
-		imgui.popstylecolor()
-	end
 
 	local cpos = PlayerInput:GetCursorPosition()
 	local w = imgui.windowposition()
