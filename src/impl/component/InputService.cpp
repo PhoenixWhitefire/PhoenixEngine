@@ -3,6 +3,10 @@
 
 #include "component/InputService.hpp"
 #include "UserInput.hpp"
+#include "Utilities.hpp"
+
+static GLFWcursor* DevCursor = nullptr;
+static int DevCursorId = GLFW_ARROW_CURSOR;
 
 class InputServiceManager : public ComponentManager<EcPlayerInput>
 {
@@ -41,6 +45,32 @@ public:
                     return { UserInput::ShouldIgnoreUIInputSinking() ? false : ImGui::GetIO().WantCaptureMouse };
                 },
                 nullptr
+            ),
+
+            REFLECTION_PROPERTY(
+                "Cursor",
+                Integer,
+                [](void*) -> Reflection::GenericValue
+                {
+                    return DevCursorId;
+                },
+                [](void*, const Reflection::GenericValue& gv)
+                {
+                    int cursor = (int)gv.AsInteger();
+                    if (cursor < GLFW_ARROW_CURSOR || cursor > GLFW_NOT_ALLOWED_CURSOR)
+                        RAISE_RTF("Invalid cursor '{}'", cursor);
+
+                    GLFWwindow* context = glfwGetCurrentContext();
+                    if (!context)
+                        return;
+
+                    if (DevCursor)
+                        glfwDestroyCursor(DevCursor);
+
+                    DevCursor = glfwCreateStandardCursor(cursor);
+                    glfwSetCursor(context, DevCursor);
+                    DevCursorId = cursor;
+                }
             )
         };
 
@@ -107,6 +137,15 @@ public:
 #pragma GCC diagnostic pop
 #pragma GCC diagnostic pop
 #endif
+
+    void Shutdown() override
+    {
+        if (DevCursor)
+        {
+            glfwDestroyCursor(DevCursor);
+            DevCursor = nullptr;
+        }
+    }
 };
 
 static InputServiceManager Instance;

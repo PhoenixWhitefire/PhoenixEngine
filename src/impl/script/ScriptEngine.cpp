@@ -1370,20 +1370,17 @@ static void openEnum(lua_State* L)
 
 	lua_newtable(L);
 
+	lua_pushinteger(L, GLFW_CURSOR_NORMAL);
+	lua_setfield(L, -2, "Normal");
+
+	lua_pushinteger(L, GLFW_CURSOR_HIDDEN);
+	lua_setfield(L, -2, "Hidden");
+
 	lua_pushinteger(L, GLFW_CURSOR_CAPTURED);
 	lua_setfield(L, -2, "Captured");
 
 	lua_pushinteger(L, GLFW_CURSOR_DISABLED);
 	lua_setfield(L, -2, "Disabled");
-
-	lua_pushinteger(L, GLFW_CURSOR_HIDDEN);
-	lua_setfield(L, -2, "Hidden");
-
-	lua_pushinteger(L, GLFW_CURSOR_NORMAL);
-	lua_setfield(L, -2, "Normal");
-
-	lua_pushinteger(L, GLFW_CURSOR_UNAVAILABLE);
-	lua_setfield(L, -2, "Unavailable");
 
 	lua_setfield(L, -2, "CursorMode");
 
@@ -1444,6 +1441,41 @@ static void openEnum(lua_State* L)
 	lua_setfield(L, -2, "Repeat");
 
 	lua_setfield(L, -2, "InputAction");
+
+	lua_newtable(L);
+
+	// TODO: Of course, GLFW does not have a throbber cursor. Perfect.
+	lua_pushinteger(L, GLFW_ARROW_CURSOR);
+	lua_setfield(L, -2, "Arrow");
+
+	lua_pushinteger(L, GLFW_IBEAM_CURSOR);
+	lua_setfield(L, -2, "TextInput");
+
+	lua_pushinteger(L, GLFW_POINTING_HAND_CURSOR);
+	lua_setfield(L, -2, "PointingHand");
+
+	lua_pushinteger(L, GLFW_CROSSHAIR_CURSOR);
+	lua_setfield(L, -2, "Crosshair");
+
+	lua_pushinteger(L, GLFW_RESIZE_EW_CURSOR);
+	lua_setfield(L, -2, "ResizeHorizontal");
+
+	lua_pushinteger(L, GLFW_RESIZE_NS_CURSOR);
+	lua_setfield(L, -2, "ResizeVertical");
+
+	lua_pushinteger(L, GLFW_RESIZE_NWSE_CURSOR);
+	lua_setfield(L, -2, "ResizeNWSE");
+
+	lua_pushinteger(L, GLFW_RESIZE_NESW_CURSOR);
+	lua_setfield(L, -2, "ResizeNESW");
+
+	lua_pushinteger(L, GLFW_RESIZE_ALL_CURSOR);
+	lua_setfield(L, -2, "ResizeAll");
+
+	lua_pushinteger(L, GLFW_NOT_ALLOWED_CURSOR);
+	lua_setfield(L, -2, "NotAllowed");
+
+	lua_setfield(L, -2, "Cursor");
 
 	lua_setglobal(L, "Enum");
 }

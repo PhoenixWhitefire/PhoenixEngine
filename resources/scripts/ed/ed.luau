@@ -190,13 +190,13 @@ changeStageTo = function(NewStage: Stage)
 	if StageUpdateSignal then
 		StageUpdateSignal:Disconnect()
 	end
-	
+
 	assert(Stages[NewStage])
-	
+
 	if Stages[CurrentStage .. "_Leave"] then
 		Stages[CurrentStage .. "_Leave"](NewStage)
 	end
-	
+
 	local targetDm = game
 	if Stages[NewStage .. "_Enter"] then
 		targetDm = Stages[NewStage .. "_Enter"](CurrentStage) or targetDm
@@ -204,7 +204,7 @@ changeStageTo = function(NewStage: Stage)
 
 	PluginManager.OnEditorStageChanged(CurrentStage, NewStage)
 	CoreTools.OnEditorStageChanged(NewStage)
-	
+
 	CurrentStage = NewStage
 	StageUpdateSignal = targetDm.OnFrameBegin:Connect(function(DeltaTime)
 		local s, e = (xpcall::any)(function(dt)
@@ -372,9 +372,14 @@ local function openProject_(ManualPath: string?)
 end
 
 local function openProject(ManualPath: string?)
+	PlayerInput.Cursor = Enum.Cursor.NotAllowed
+	Engine:PollEvents()
+
 	xpcall(openProject_, function(err)
 		Engine:ShowMessageBox("Failed to open project", "Failed to open project: " .. tostring(err), "ok", "error")
 	end, ManualPath)
+
+	PlayerInput.Cursor = Enum.Cursor.Arrow
 end
 
 local SavedProjectsCache: { string }? = nil
@@ -389,6 +394,10 @@ local function createNewProject_()
 
 	while fs.isdirectory("@cwd/projects/" .. name .. nameIndex) do
 		nameIndex += 1
+
+		if nameIndex > 99 then
+			error("Tried 99 times to create a project, you need to clean up your Projects folder")
+		end
 	end
 
 	Project.Name = name .. nameIndex
@@ -460,9 +469,14 @@ local function createNewProject_()
 end
 
 local function createNewProject()
+	PlayerInput.Cursor = Enum.Cursor.NotAllowed
+	Engine:PollEvents()
+
 	xpcall(createNewProject_, function(err)
 		Engine:ShowMessageBox("Failed to create project", "Failed to create new project: " .. tostring(err), "ok", "error")
 	end)
+
+	PlayerInput.Cursor = Enum.Cursor.Arrow
 end
 
 local TabButtonHovering: string? = nil
@@ -1760,6 +1774,9 @@ end
 local restoreState = nil
 
 function Stages.ProjectPlaying_Enter(DeltaTime: any)
+	PlayerInput.Cursor = Enum.Cursor.NotAllowed
+	Engine:PollEvents() -- cursor will not appear until we've responded to the OS
+
 	assert(Project)
 	restoreState = Project.DataModel
 
@@ -1784,6 +1801,7 @@ function Stages.ProjectPlaying_Enter(DeltaTime: any)
 
 	workspace.SceneCamera = projWp.SceneCamera
 
+	PlayerInput.Cursor = Enum.Cursor.Arrow
 	return Project.DataModel -- Connect to the Project's datamodel `.OnFrameBegin`
 end
 

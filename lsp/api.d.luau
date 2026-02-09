@@ -184,6 +184,7 @@ declare extern type Engine with
   function GetToolNames(self) : { string }
   function IsToolEnabled(self, ToolName: string) : (boolean)
   function OpenTextDocument(self, Path: string, Line: number?) : ()
+  function PollEvents(self) : ()
   function ResetViewport(self) : ()
   function RunInVM(self, VmName: string, Code: string, ChunkName: string?) : (boolean, string?)
   function SaveConfig(self) : (boolean, string)
@@ -246,6 +247,7 @@ declare extern type Physics with
   Timescale: number
 end
 declare extern type PlayerInput with
+  Cursor: number
   CursorMode: number
   IsKeyboardSunk: boolean 
   IsMouseSunk: boolean 
@@ -344,6 +346,7 @@ type Creatables = {
 }
 declare Enum: {
   CollisionType: { Cube: number, Sphere: number, Hulls: number, MeshComponent: number },
+  Cursor: { Arrow: number, TextInput: number, ResizeAll: number, PointingHand: number, Crosshair: number, ResizeHorizontal: number, ResizeVertical: number, ResizeNWSE: number, ResizeNESW: number, ResizeAll: number, NotAllowed: number },
   CursorMode: { Normal: number, Hidden: number, Disabled: number, Unavailable: number, Captured: number },
   FaceCulling: { None: number, Front: number, Back: number },
   InputAction: { Release: number, Press: number, Repeat: number },

@@ -11,8 +11,11 @@
   "@phoenix/global/Enum.CollisionType": {
     "documentation": "* The different modes for `RigidBody.CollisionType`\n* `Cube`: A cube collision model\n* `Sphere`: A sphere collision model\n* `Hulls`: Load a set of convex hulls from `RigidBody.HullsFile`\n* `MeshComponent`: Use the mesh of the `Mesh` component attached to the same object as the `RigidBody`. Usually a bad idea unless the mesh is convex"
   },
+  "@phoenix/global/Enum.Cursor": {
+    "documentation": "* The specific icon of the mouse cursor"
+  },
   "@phoenix/global/Enum.CursorMode": {
-    "documentation": "* The appearance and behaviour of the mouse cursor"
+    "documentation": "* The behaviour of the mouse cursor"
   },
   "@phoenix/global/Enum.FaceCulling": {
     "documentation": "* Culling modes for `Mesh.FaceCulling`"
@@ -530,6 +533,9 @@
   "@phoenix/globaltype/Engine.OpenTextDocument": {
     "documentation": "Opens a text file. This requires Developer Mode to be enabled to have any effect"
   },
+  "@phoenix/globaltype/Engine.PollEvents": {
+    "documentation": "Responds to signals sent to the application by the OS. This is done automatically at the start of each frame as well"
+  },
   "@phoenix/globaltype/Engine.ResetViewport": {
     "documentation": "Resets the Engine's understanding of where the viewport is on screen back to the default (occupying the entire window)"
   },
@@ -844,6 +850,9 @@
   },
   "@phoenix/globaltype/Physics.Timescale": {
     "documentation": "Slow-down or speed-up the simulation by changing this value from `1`"
+  },
+  "@phoenix/globaltype/PlayerInput.Cursor": {
+    "documentation": "The look of the cursor. See `Enum.Cursor`"
   },
   "@phoenix/globaltype/PlayerInput.CursorMode": {
     "documentation": "The current mode/behaviour of the cursor. Refer to the `Enum.CursorMode` enumeration"

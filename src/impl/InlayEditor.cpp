@@ -2622,11 +2622,12 @@ static void recursiveRenderFilesystemNode(FilesystemNode& Node)
 
 	static std::filesystem::path ContextMenuTarget;
 
-	ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow
-			| ImGuiTreeNodeFlags_AllowOverlap
-			| ImGuiTreeNodeFlags_SpanAvailWidth
-			| ImGuiTreeNodeFlags_DrawLinesFull
-			| ImGuiTreeNodeFlags_FramePadding;
+	ImGuiTreeNodeFlags flags = 0
+		| ImGuiTreeNodeFlags_OpenOnArrow
+		| ImGuiTreeNodeFlags_AllowOverlap
+		| ImGuiTreeNodeFlags_SpanAvailWidth
+		| ImGuiTreeNodeFlags_DrawLinesFull
+		| ImGuiTreeNodeFlags_FramePadding;
 	flags |= !Node.IsDirectory ? ImGuiTreeNodeFlags_Leaf : 0;
 
 	if (ContextMenuTarget == Node.Path || RenameTarget == Node.Path)
@@ -2635,6 +2636,9 @@ static void recursiveRenderFilesystemNode(FilesystemNode& Node)
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5.f, 4.f));
 
 	std::string displayedNodeName = RenameTarget != Node.Path ? Node.Name : " ";
+
+	if (RenameTarget.parent_path() == Node.Path)
+		ImGui::SetNextItemOpen(true);
 
 	bool open = ImGui::TreeNodeEx((const void*)nullptr, flags, "   %s", displayedNodeName.c_str());
 	bool openScript = ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered();
@@ -2813,7 +2817,7 @@ static void renderFilesViewer()
 		PreviousNonqualifiedRoot = newRoot;
 	}
 
-	if (GetRunningTime() - FilesViewLastRefreshed > 1.f)
+	if (GetRunningTime() - FilesViewLastRefreshed > 2.f)
 	{
 		FilesViewerRoot.Path = std::filesystem::path(FileRW::MakePathCwdRelative(FilesViewerRootPath));
 		FilesViewerRoot.Name = FilesViewerRoot.Path.filename().string();

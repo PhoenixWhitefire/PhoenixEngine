@@ -284,6 +284,7 @@
               "Line"
             ]
           },
+          "PollEvents": "Responds to signals sent to the application by the OS. This is done automatically at the start of each frame as well",
           "ResetViewport": "Resets the Engine's understanding of where the viewport is on screen back to the default (occupying the entire window)",
           "RunInVM": {
             "Description": "Runs the given code in the specified VM. Returns `false` and an error message upon failure or if the code does not finish executing (yield or break)",
@@ -499,6 +500,7 @@
           }
         },
         "Properties": {
+          "Cursor": "The look of the cursor. See `Enum.Cursor`",
           "CursorMode": "The current mode/behaviour of the cursor. Refer to the `Enum.CursorMode` enumeration",
           "IsKeyboardSunk": "Whether the Engine is currently using keyboard input (such as for Dear ImGui). Do not process keyboard input if this is `true`",
           "IsMouseSunk": "Whether the Engine is currently using mouse input (such as for Dear ImGui). Do not process mouse input if this is `true`"
@@ -895,8 +897,12 @@
             ],
             "Type": "{ Cube: number, Sphere: number, Hulls: number, MeshComponent: number }"
           },
+          "Cursor": {
+            "Description": "The specific icon of the mouse cursor",
+            "Type": "{ Arrow: number, TextInput: number, ResizeAll: number, PointingHand: number, Crosshair: number, ResizeHorizontal: number, ResizeVertical: number, ResizeNWSE: number, ResizeNESW: number, ResizeAll: number, NotAllowed: number }"
+          },
           "CursorMode": {
-            "Description": "The appearance and behaviour of the mouse cursor",
+            "Description": "The behaviour of the mouse cursor",
             "Type": "{ Normal: number, Hidden: number, Disabled: number, Unavailable: number, Captured: number }"
           },
           "FaceCulling": {

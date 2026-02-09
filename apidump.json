@@ -121,6 +121,7 @@
           "GetToolNames": "() -> (Array)",
           "IsToolEnabled": "(String) -> (Boolean)",
           "OpenTextDocument": "(String, Integer?) -> ()",
+          "PollEvents": "() -> ()",
           "ResetViewport": "() -> ()",
           "RunInVM": "(String, String, String?) -> (Boolean, String?)",
           "SaveConfig": "() -> (Boolean, String)",
@@ -213,6 +214,7 @@
           "IsMouseButtonPressed": "(Integer) -> (Boolean)"
         },
         "Properties": {
+          "Cursor": "Integer",
           "CursorMode": "Integer",
           "IsKeyboardSunk": "Boolean READONLY",
           "IsMouseSunk": "Boolean READONLY"
@@ -353,6 +355,7 @@
     "Libraries": {
       "Enum": {
         "CollisionType": "table",
+        "Cursor": "table",
         "CursorMode": "table",
         "FaceCulling": "table",
         "InputAction": "table",
