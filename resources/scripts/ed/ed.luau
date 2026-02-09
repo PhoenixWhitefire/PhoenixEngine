@@ -840,9 +840,22 @@ local function getCenteredX(cursorx: number, cxavail: number, elementWidth: numb
 end
 
 local function renderMainMenuBar(dt: number)
-	if not imgui.beginmainmenubar() then
+	local pushedCol = CurrentStage == "ProjectPlaying"
+
+	if pushedCol then
+		imgui.pushstylecolor(13, {0, 56/255, 15/255, 1})
+	end
+
+	local render = imgui.beginmainmenubar()
+
+	if pushedCol then
+		imgui.popstylecolor()
+	end
+
+	if not render then
 		return
 	end
+
 	local mainMenuCursorY = PlayerInput:GetCursorPosition().y
 	HoveringOverMenuBar = mainMenuCursorY < RibbonPopupDistance
 
@@ -1451,7 +1464,22 @@ local function renderViewport(DeltaTime: number)
 
 	local canInteract = IsHoveringViewportTitlebar or (not IsHoveringViewport and imgui.windowhovered("a | b"))
 
+	if CurrentStage == "ProjectPlaying" then
+		-- TODO: docked tab header color
+		-- apparently this is not possible to style right now
+		-- https://github.com/ocornut/imgui/issues/8413
+		imgui.pushstylecolor(34, {36/270, 255/270, 94/270, 1})
+		imgui.pushstylecolor(39, {20/270, 199/270, 68/270, 1})
+		imgui.pushstylecolor(2, {0, 1, 0, 1})
+	end
+
 	imgui.begin(Project.Name .. "###Viewport", if canInteract then "nb" else "ni | nb")
+
+	if CurrentStage == "ProjectPlaying" then
+		imgui.popstylecolor()
+		imgui.popstylecolor()
+		imgui.popstylecolor()
+	end
 
 	local cpos = PlayerInput:GetCursorPosition()
 	local w = imgui.windowposition()

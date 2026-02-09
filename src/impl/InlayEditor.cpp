@@ -73,9 +73,9 @@ static nlohmann::json DefaultNewMaterial =
 	{ "specMultiply", 0.5f }
 };
 
-static nlohmann::json DocumentationJson;
-static nlohmann::json ObjectDocCommentsJson;
-static nlohmann::json ApiDumpJson;
+static nlohmann::json DocumentationJson = nlohmann::json::object();
+static nlohmann::json ObjectDocCommentsJson = nlohmann::json::object();
+static nlohmann::json ApiDumpJson = nlohmann::json::object();
 static std::string DatatypesDocPrologue;
 static std::string LibrariesDocPrologue;
 static std::string GlobalsDocPrologue;
