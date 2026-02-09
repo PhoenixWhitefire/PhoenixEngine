@@ -569,19 +569,6 @@ local function homeTab(_: number)
 
 	imgui.sameline()
 
-	if tabButton("Explorer to Project DM", "@etextures/editor-icons/ExplorerToProj.png") then
-		assert(Project.DataModel)
-		Engine:SetExplorerRoot(Project.DataModel)
-	end
-
-	imgui.sameline()
-	
-	if tabButton("Explorer to Editor DM", "@etextures/editor-icons/ExplorerToEdit.png") then
-		Engine:SetExplorerRoot(game)
-	end
-
-	imgui.sameline()
-
 	if tabButton("Import Model", "@etextures/editor-icons/Model.png") then
 		task.defer(function()
 			local paths = fs.promptopen(nil, { "*.gltf", "*.glb" }, "Models")
