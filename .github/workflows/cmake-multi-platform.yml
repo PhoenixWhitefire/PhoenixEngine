@@ -82,7 +82,7 @@ jobs:
 
     - name: Build Profiler
       if: matrix.build_type == 'Release'
-      run: cmake --build Vendor/tracy/profiler/build --config Release -j8
+      run: cmake --build Vendor/tracy/profiler/build --config Release -j8 -t tracy-profiler
 
     - name: Upload build artifact (Windows)
       if: runner.os == 'Windows'
