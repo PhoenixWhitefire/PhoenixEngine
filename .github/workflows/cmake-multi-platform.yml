@@ -78,7 +78,7 @@ jobs:
 
     - name: Configure CMake for Profiler
       if: matrix.build_type == 'Release'
-      run: cmake -B Vendor/tracy/profiler/build
+      run: cmake -B Vendor/tracy/profiler/build -S Vendor/tracy/profiler
 
     - name: Build Profiler
       if: matrix.build_type == 'Release'
