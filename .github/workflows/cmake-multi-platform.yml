@@ -56,10 +56,9 @@ jobs:
     - name: Install Ubuntu dependencies
       if: runner.os == 'Linux'
       run: |
-        sudo apt update
-        sudo apt install libwayland-dev libwayland-bin wayland-protocols libxkbcommon-dev extra-cmake-modules
+        sudo apt install libwayland-dev libwayland-bin wayland-protocols libxkbcommon-dev
         sudo apt install xorg-dev
-        sudo apt install libdbus-1-dev pkg-config
+        sudo apt install libdbus-1-dev
 
     - name: Configure CMake
       env:
