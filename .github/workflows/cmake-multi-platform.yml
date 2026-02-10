@@ -57,7 +57,7 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt update
-        sudo apt install libwayland-dev libwayland-bin wayland-protocols libxkbcommon-dev
+        sudo apt install libwayland-dev=1.24.0-1build1 libwayland-bin wayland-protocols libxkbcommon-dev
         sudo apt install xorg-dev
         sudo apt install libdbus-1-dev
         sudo apt install libegl1-mesa-dev libgl1-mesa-dev libwayland-egl1
