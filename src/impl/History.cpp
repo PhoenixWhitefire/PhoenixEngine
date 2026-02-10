@@ -64,9 +64,14 @@ void History::FinishAction(size_t Id)
 
     if (m_CurrentWaypoint != m_ActionHistory.size() - 1)
     {
-        // TODO multiple timelines
-        // TODO Why does it need `+ 1`??
-        m_ActionHistory = std::vector<Action>(m_ActionHistory.begin(), m_ActionHistory.begin() + m_CurrentWaypoint + 1);
+        if (m_ActionHistory.size() >= m_CurrentWaypoint + 1)
+        {
+            // TODO multiple timelines
+            // TODO Why does it need `+ 1`??
+            m_ActionHistory = std::vector<Action>(m_ActionHistory.begin(), m_ActionHistory.begin() + m_CurrentWaypoint + 1);
+        }
+        else
+            Log::Warning("Failed to overwrite History - Please report this bug if you figure out a consistent repro!");
     }
 
     m_ActionHistory.push_back(m_CurrentAction.value());

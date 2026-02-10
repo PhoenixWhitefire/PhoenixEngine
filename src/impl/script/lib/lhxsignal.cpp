@@ -120,7 +120,6 @@ static int sig_namecall(lua_State* L)
 				if (cL->status == LUA_YIELD)
 				{
 					lua_State* nL = lua_newthread(eL);
-					luaL_sandboxthread(nL);
 					lua_xpush(eL, nL, 2);
 					co = nL;
 				}

@@ -86,7 +86,8 @@
         "Properties": {
           "AreScriptsBound": "Boolean READONLY",
           "LiveScripts": "String",
-          "Time": "Double READONLY"
+          "Time": "Double READONLY",
+          "VM": "String"
         }
       },
       "DirectionalLight": {
@@ -116,7 +117,6 @@
           "Exit": "(Integer?) -> ()",
           "GetCliArguments": "() -> (Array)",
           "GetConfigValue": "(String) -> (Any)",
-          "GetCurrentVM": "() -> (String)",
           "GetExplorerSelections": "() -> (Array)",
           "GetToolNames": "() -> (Array)",
           "IsToolEnabled": "(String) -> (Boolean)",
@@ -126,7 +126,6 @@
           "RunInVM": "(String, String, String?) -> (Boolean, String?)",
           "SaveConfig": "() -> (Boolean, String)",
           "SetConfigValue": "(String, Any) -> ()",
-          "SetCurrentVM": "(String) -> ()",
           "SetExplorerRoot": "(GameObject) -> ()",
           "SetExplorerSelections": "(Array) -> ()",
           "SetToolEnabled": "(String, Boolean) -> ()",

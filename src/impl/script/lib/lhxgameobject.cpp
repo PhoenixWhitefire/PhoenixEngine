@@ -30,7 +30,6 @@ void luhx_pushgameobject(lua_State* L, const GameObject* Object)
 			lua_newtable(L);
 			lua_pushvalue(L, -1);
 			lua_setfield(L, LUA_REGISTRYINDEX, OBJECT_REG);
-			lua_setreadonly(L, -1, false);
 		}
 
 		lua_pushinteger(L, *(const int32_t*)&Object->ObjectId);

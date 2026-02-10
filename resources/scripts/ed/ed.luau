@@ -1788,9 +1788,9 @@ function Stages.ProjectPlaying_Enter(DeltaTime: any)
 	Engine:SetExplorerSelections({})
 	Physics.Simulating = true
 
+	Project.DataModel.VM = GameVM
 	Engine:BindDataModel(Project.DataModel) -- Set the `game` and `workspace` variables to the correct values in game scripts
 	Engine:CreateVM(GameVM)
-	Engine:SetCurrentVM(GameVM)
 
 	local projWp = Project.Workspace
 	assert(projWp)
@@ -1819,7 +1819,6 @@ function Stages.ProjectPlaying_Leave(DeltaTime)
 	Project.DataModel = restoreState
 	Engine:SetExplorerRoot(Project.DataModel)
 
-	Engine:SetCurrentVM(_VMNAME)
 	Engine:BindDataModel(game)
 	Engine:CloseVM(GameVM)
 

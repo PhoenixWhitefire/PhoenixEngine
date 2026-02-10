@@ -43,8 +43,6 @@ static const lua_Type s_ValueTypeToLuauType[] = {
 };
 static_assert(std::size(s_ValueTypeToLuauType) == Reflection::ValueType::__lastBase);
 
-#define ROOT_LVM_NAME "RootLVM"
-
 static int luauAssertHandler(const char* expression, const char* file, int line, const char* function)
 {
 	RAISE_RTF("Luau assertion failed:\n\tExpression: {}\n\tIn: {}:{} in {}", expression, file, line, function);
@@ -53,7 +51,6 @@ static int luauAssertHandler(const char* expression, const char* file, int line,
 void ScriptEngine::Initialize()
 {
 	RegisterNewVM(ROOT_LVM_NAME);
-	CurrentVM = ROOT_LVM_NAME;
 
 	// changing a reference to a static function variable
 	Luau::assertHandler() = luauAssertHandler;
@@ -64,7 +61,6 @@ void ScriptEngine::Shutdown()
 	for (auto& [_, vm] : VMs)
 		L::Close(vm.MainThread);
 
-	CurrentVM.clear();
 	VMs.clear();
 }
 
@@ -80,12 +76,6 @@ const ScriptEngine::LuauVM& ScriptEngine::RegisterNewVM(const std::string& Name)
 	};
 
 	return VMs[Name];
-}
-
-const ScriptEngine::LuauVM& ScriptEngine::GetCurrentVM()
-{
-	assert(VMs.find(CurrentVM) != VMs.end());
-	return VMs[CurrentVM];
 }
 
 lua_Type ScriptEngine::ReflectionTypeToLuauType(Reflection::ValueType rvt)
@@ -512,10 +502,6 @@ int ScriptEngine::CompileAndLoad(lua_State* L, const std::string& SourceCode, co
 	compileOptions.mutableGlobals = mutableGlobals;
 
 	std::string bytecode = Luau::compile(SourceCode, compileOptions);
-
-	lua_setreadonly(L, LUA_GLOBALSINDEX, false);
-	lua_pushlstring(L, ChunkName.data(), ChunkName.size());
-	lua_setglobal(L, "_CHUNKNAME");
 
 	int result = luau_load(L, ChunkName.c_str(), bytecode.data(), bytecode.size(), 0);
 	return result;

@@ -13,6 +13,7 @@
 #include "script/luhx.hpp"
 
 #define LUA_ASSERT(res, err, ...) { if (!(res)) { luaL_errorL(L, err, __VA_ARGS__); } }
+#define ROOT_LVM_NAME "RootLVM"
 
 namespace ScriptEngine
 {
@@ -79,11 +80,9 @@ namespace ScriptEngine
 		lua_State* MainThread = nullptr;
 	};
 
-	const LuauVM& GetCurrentVM();
 	const LuauVM& RegisterNewVM(const std::string& Name);
 
 	inline std::unordered_map<std::string, LuauVM> VMs;
-	inline std::string CurrentVM;
 };
 
 namespace ScriptEngine::L

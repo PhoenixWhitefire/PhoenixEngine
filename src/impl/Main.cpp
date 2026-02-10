@@ -183,7 +183,7 @@ static void handleInputs(double deltaTime)
 		glm::vec3 camForward = glm::vec3(camTrans[2]);
 		glm::vec3 camUp = glm::vec3(camTrans[1]);
 
-		if (!GuiIO->WantCaptureKeyboard)
+		if (!GuiIO->WantCaptureKeyboard || UserInput::ShouldIgnoreUIInputSinking())
 		{
 			float speed = MovementSpeed * static_cast<float>(deltaTime);
 
@@ -654,6 +654,7 @@ static void init()
 		GuiIO = &ImGui::GetIO();
 		ImGui::StyleColorsDark();
 		GuiIO->ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+		GuiIO->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
 		float displayScale = 0.f;
 		glfwGetMonitorContentScale(glfwGetPrimaryMonitor(), &displayScale, nullptr);

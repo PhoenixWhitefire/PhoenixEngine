@@ -205,7 +205,8 @@
         "Properties": {
           "AreScriptsBound": "If this is `true`, attempting to change `.LiveScripts` will throw an error",
           "LiveScripts": "May either refer to a directory of Scripts, or a single Script, to run when the DataModel is bound",
-          "Time": "Number of seconds since the Engine started running"
+          "Time": "Number of seconds since the Engine started running",
+          "VM": "The Luau Virtual Machine that Scripts bound to this Data Model will run in"
         }
       },
       "DirectionalLight": {

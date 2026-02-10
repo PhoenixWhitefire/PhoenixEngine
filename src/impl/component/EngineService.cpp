@@ -455,30 +455,6 @@ public:
                 }
             } },
 
-            { "GetCurrentVM", Reflection::MethodDescriptor{
-                {},
-                { Reflection::ValueType::String },
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
-                {
-                    return { ScriptEngine::CurrentVM };
-                }
-            } },
-
-            { "SetCurrentVM", Reflection::MethodDescriptor{
-                { Reflection::ValueType::String },
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    const std::string vm = std::string(inputs[0].AsStringView());
-                    if (ScriptEngine::VMs.find(vm) == ScriptEngine::VMs.end())
-                        RAISE_RTF("Invalid VM {}", vm);
-
-                    ScriptEngine::CurrentVM = vm;
-
-                    return {};
-                }
-            } },
-
             { "RunInVM", Reflection::MethodDescriptor{
                 { Reflection::ValueType::String, Reflection::ValueType::String, REFLECTION_OPTIONAL(String) },
                 { Reflection::ValueType::Boolean, REFLECTION_OPTIONAL(String) },

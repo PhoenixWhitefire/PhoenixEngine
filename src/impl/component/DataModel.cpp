@@ -72,6 +72,23 @@ public:
                     return static_cast<EcDataModel*>(p)->Modules.size() > 0;
                 },
                 nullptr
+            ),
+
+            REFLECTION_PROPERTY(
+                "VM",
+                String,
+                [](void* p) -> Reflection::GenericValue
+                {
+                    return static_cast<EcDataModel*>(p)->VM;
+                },
+                [](void* p, const Reflection::GenericValue& gv)
+                {
+                    EcDataModel* dm = static_cast<EcDataModel*>(p);
+                    if (dm->Modules.size() > 0)
+                        RAISE_RTF("Cannot change the VM of {} because Scripts have already been bound!", dm->Object->GetFullName());
+
+                    dm->VM = gv.AsString();
+                }
             )
         };
 
@@ -143,7 +160,7 @@ public:
 
 static inline DataModelManager Instance;
 
-static lua_State* loadModule(const std::string& Module, GameObject* Object)
+static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
 {
     bool readSuccess = true;
 	std::string source = FileRW::ReadFile(Module, &readSuccess);
@@ -158,7 +175,7 @@ static lua_State* loadModule(const std::string& Module, GameObject* Object)
 		return nullptr;
 	}
 
-    lua_State* mainThread = ScriptEngine::GetCurrentVM().MainThread;
+    lua_State* mainThread = ScriptEngine::VMs.at(Dm->VM).MainThread;
     lua_State* L = lua_newthread(mainThread);
 	luaL_sandboxthread(L);
 
@@ -166,10 +183,10 @@ static lua_State* loadModule(const std::string& Module, GameObject* Object)
 
 	if (result == 0)
 	{
-        ScriptEngine::L::PushGenericValue(L, Object->ToGenericValue());
+        ScriptEngine::L::PushGenericValue(L, Dm->Object->ToGenericValue());
         lua_setglobal(L, "game");
 
-        if (GameObject* wp = Object->FindChildWithComponent(EntityComponent::Workspace))
+        if (GameObject* wp = Dm->Object->FindChildWithComponent(EntityComponent::Workspace))
         {
             ScriptEngine::L::PushGenericValue(L, wp->ToGenericValue());
             lua_setglobal(L, "workspace");
@@ -180,7 +197,7 @@ static lua_State* loadModule(const std::string& Module, GameObject* Object)
 		if (resumeResult != LUA_OK && resumeResult != LUA_YIELD)
 		{
 			Log::ErrorF(
-				"DataModel Module init: {}",
+				"DataModel Script init: {}",
 				lua_tostring(L, -1)
 			);
 			ScriptEngine::L::DumpStacktrace(L);
@@ -229,7 +246,7 @@ void EcDataModel::Bind()
 
     if (std::filesystem::is_regular_file(path))
     {
-        lua_State* script = loadModule(path, Object);
+        lua_State* script = loadModule(path, this);
         if (script)
             Modules.push_back(script);
         else
@@ -241,7 +258,7 @@ void EcDataModel::Bind()
         {
             if (std::filesystem::is_regular_file(entry))
             {
-                lua_State* script = loadModule(entry.path().string(), Object);
+                lua_State* script = loadModule(entry.path().string(), this);
                 if (script)
                     Modules.push_back(script);
                 else

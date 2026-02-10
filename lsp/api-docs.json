@@ -440,6 +440,9 @@
   "@phoenix/globaltype/DataModel.Time": {
     "documentation": "Number of seconds since the Engine started running"
   },
+  "@phoenix/globaltype/DataModel.VM": {
+    "documentation": "The Luau Virtual Machine that Scripts bound to this Data Model will run in"
+  },
   "@phoenix/globaltype/DirectionalLight.Brightness": {
     "documentation": "How bright the Light is"
   },
@@ -509,9 +512,6 @@
   "@phoenix/globaltype/Engine.GetConfigValue": {
     "documentation": "Returns the value associated with the given Key in the Engine's loaded configuration (`phoenix.conf`)"
   },
-  "@phoenix/globaltype/Engine.GetCurrentVM": {
-    "documentation": "Returns the name of the currently-bound VM"
-  },
   "@phoenix/globaltype/Engine.GetExplorerSelections": {
     "documentation": "Returns what is currently selected in the Explorer"
   },
@@ -547,9 +547,6 @@
   },
   "@phoenix/globaltype/Engine.SetConfigValue": {
     "documentation": "Sets `Key` to `Value` in the Engine's loaded configuration without saving it to file"
-  },
-  "@phoenix/globaltype/Engine.SetCurrentVM": {
-    "documentation": "Binds the given VM as the \"current\" one. This causes all Scripts which load afterward to use the specified VM, it does *not* change the VM of any Scripts loaded beforehand"
   },
   "@phoenix/globaltype/Engine.SetExplorerRoot": {
     "documentation": "Changes the Root of the built-in Explorer's hierarchy view"

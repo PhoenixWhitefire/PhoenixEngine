@@ -142,6 +142,7 @@ declare extern type DataModel with
   AreScriptsBound: boolean 
   LiveScripts: string
   Time: number 
+  VM: string
 
   function GetService(self, Service: 'Workspace' | 'Engine' | 'PlayerInput' | 'AssetManager' | 'History' | 'Physics' | 'Renderer' | 'Collections') : GameObject
 
@@ -179,7 +180,6 @@ declare extern type Engine with
   function Exit(self, ExitCode: number?) : ()
   function GetCliArguments(self) : { string }
   function GetConfigValue(self, Key: string) : (unknown)
-  function GetCurrentVM(self) : (string)
   function GetExplorerSelections(self) : ({ GameObject })
   function GetToolNames(self) : { string }
   function IsToolEnabled(self, ToolName: string) : (boolean)
@@ -189,7 +189,6 @@ declare extern type Engine with
   function RunInVM(self, VmName: string, Code: string, ChunkName: string?) : (boolean, string?)
   function SaveConfig(self) : (boolean, string)
   function SetConfigValue(self, Key: string, Value: unknown) : ()
-  function SetCurrentVM(self, VmName: string) : ()
   function SetExplorerRoot(self, Root: GameObject) : ()
   function SetExplorerSelections(self, Selections: { GameObject }) : ()
   function SetToolEnabled(self, ToolName: string, Enabled: boolean) : ()
