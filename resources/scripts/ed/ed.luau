@@ -31,7 +31,7 @@ local Project: Types.Project = {
 
 local RecentProjects: { string } = {}
 local EditorPreferences = {
-	AutoLaunchCodeEditorOnProjectOpen = true,
+	AutoLaunchCodeEditorOnProjectOpen = false,
 	ClearOutputOnProjectOpen = true,
 	ClearOutputOnPlaytest = true,
 	CodeEditorPath = "code",

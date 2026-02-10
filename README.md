@@ -37,8 +37,7 @@ Intended to be compatible with both Windows and Linux/Ubuntu.
 3. Open the resulting project in your IDE of choice
 4. Build with `cmake --build . --config <CONFIG>` or equivalent in your IDE, with `CONFIG` being one of:
 	* `Debug`: Standard Debug build, no optimizations, Address Sanitizer and Tracy
-	* `Release`: All optimizations, including Link-Time/Whole-Program optimization, no Address Sanitizer or Tracy
-	* `RelTracy`: Same as `Release`, but with Tracy instrumentation enabled, which carries it's own overhead
+	* `Release`: All optimizations, including Link-Time/Whole-Program optimization, no Address Sanitizer, Tracy in `ON_DEMAND` mode
 5. Run it in the root directory with a command such as `x64/Release/PhoenixEngine` (Linux Bash), `. "x64/Release/PhoenixEngine"` (Windows Terminal), or `"x64/Release/PhoenixEngine"` (Windows Command Prompt)
 
 6. (Optional) I have not configured the Tracy Profiler standalone application to build along with the rest of the Engine, you will need to build it manually. The "Start Profiling" button in the Info widget, as well as the `-tracyim` launch argument, all assume you have built the Profiler yourself and that it is in the expected directory. You can do this with the following commands:

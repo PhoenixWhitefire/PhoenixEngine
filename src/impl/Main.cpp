@@ -796,10 +796,6 @@ static void processCliArgs(int argc, char** argv)
 		else if (strcmp(v, "-tracyim") == 0)
 		{
 			launchTracy();
-
-			// took ~220ms on my machine for tracy to launch, double it and give it to the next person
-			// 13/01/2025
-			std::this_thread::sleep_for(std::chrono::milliseconds(400));
 		}
 		else if (strcmp(v, "-apidump") == 0)
 		{

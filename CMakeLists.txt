@@ -12,12 +12,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # Debug: Standard debug mode. Incremental linking. Tracy and ASan enabled
-# Release: Optimizations, LTCG, no Incremental linking, Tracy and ASan disabled
-# RelTracy: Exact same as `Release`, but with Tracy instrumentation enabled
-# My plan is for the standalone Editor to use `RelTracy` for easy performance debugging,
+# Release: Optimizations, LTCG, no Incremental linking, ASan disabled, Tracy in ON_DEMAND mode
 # but for distribution binaries to be `Release` for best performance (because Tracy introduces it's own overhead)
 # 19/01/2025
-set(CMAKE_CONFIGURATION_TYPES "Debug;RelTracy;Release")
+set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
 
 project(PhoenixEngine LANGUAGES C CXX)
 
@@ -33,10 +31,8 @@ target_sources(PhoenixEngine PRIVATE README.md phoenix.conf)
 
 set_target_properties(PhoenixEngine PROPERTIES OUTPUT_NAME PhoenixEngine)
 
-target_compile_definitions(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:TRACY_ENABLE TRACY_FIBERS>)
-target_compile_definitions(PhoenixEngine PRIVATE $<$<CONFIG:Release>:NDEBUG>)
-target_compile_definitions(PhoenixEngine PRIVATE $<$<CONFIG:RelTracy>:NDEBUG TRACY_ENABLE TRACY_FIBERS>)
-target_compile_definitions(PhoenixEngine PRIVATE PHX_TARGET_PLATFORM="${CMAKE_SYSTEM_NAME}")
+target_compile_definitions(PhoenixEngine PRIVATE $<$<CONFIG:Release>:NDEBUG TRACY_ON_DEMAND>)
+target_compile_definitions(PhoenixEngine PRIVATE PHX_TARGET_PLATFORM="${CMAKE_SYSTEM_NAME}" TRACY_ENABLE TRACY_FIBERS)
 
 option(PHX_HEADLESS "Build in Headless mode" OFF)
 
@@ -74,7 +70,7 @@ target_link_libraries(PhoenixEngine PRIVATE
 	glm
 	miniaudio
 	$<IF:$<BOOL:${PHX_HEADLESS}>,,glfw>
-	$<IF:$<CONFIG:Release>,,TracyClient> # TODO: figure out how to not build this if we dont link it
+	TracyClient
 
 	Luau.Compiler
 	Luau.Ast
@@ -84,12 +80,9 @@ target_link_libraries(PhoenixEngine PRIVATE
 )
 
 # not letting me put multiple definitions in the same expression waaa
-add_compile_definitions($<$<CONFIG:Debug>:TRACY_ENABLE>)
-add_compile_definitions($<$<CONFIG:Debug>:TRACY_FIBERS>)
+add_compile_definitions(TRACY_ENABLE TRACY_FIBERS)
 add_compile_definitions($<$<CONFIG:Release>:NDEBUG>)
-add_compile_definitions($<$<CONFIG:RelTracy>:NDEBUG>)
-add_compile_definitions($<$<CONFIG:RelTracy>:TRACY_ENABLE>)
-add_compile_definitions($<$<CONFIG:RelTracy>:TRACY_FIBERS>)
+add_compile_definitions($<$<CONFIG:Release>:TRACY_ON_DEMAND>)
 
 if (MSVC)
 	include(cmake/cmake-msvc.txt)

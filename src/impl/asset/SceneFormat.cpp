@@ -501,8 +501,6 @@ static std::vector<ObjectRef> LoadMapVersion2(const std::string& Contents, float
 
 	for (uint32_t itemIndex = 0; itemIndex < gameObjectsNode.size(); itemIndex++)
 	{
-		ZoneScopedN("DeserializeItem");
-
 		const nlohmann::json& item = gameObjectsNode[itemIndex];
 
 		ObjectRef newObject = createObjectFromJsonItem(item, itemIndex, Version);
@@ -529,8 +527,6 @@ static std::vector<ObjectRef> LoadMapVersion2(const std::string& Contents, float
 		}
 
 		objectProps[newObject->ObjectId] = {};
-
-		ZoneName("DeserializeProperties", 21);
 
 		// https://json.nlohmann.me/features/iterators/#access-object-key-during-iteration
 		for (auto propIt = item.begin(); propIt != item.end(); propIt++)

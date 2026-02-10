@@ -37,6 +37,8 @@ std::string FileRW::ReadFile(const std::string& ShortPath, bool* Success)
 	ZoneScoped;
 
 	const std::string actualPath = FileRW::MakePathCwdRelative(ShortPath);
+	ZoneText(ShortPath.data(), ShortPath.size());
+	ZoneText(actualPath.data(), actualPath.size());
 
 	std::ifstream file;
 	std::string contents;
@@ -85,6 +87,9 @@ bool FileRW::WriteFile(
 	ZoneScoped;
 
 	std::string path = FileRW::MakePathCwdRelative(ShortPath);
+	ZoneText(ShortPath.data(), ShortPath.size());
+	ZoneText(path.data(), path.size());
+
 	std::ofstream file(path.c_str(), std::ios::binary);
 
 	if (file && file.is_open())
@@ -116,6 +121,8 @@ bool FileRW::WriteFileCreateDirectories(
 	ZoneScoped;
 
 	std::string path = FileRW::MakePathCwdRelative(ShortPath);
+	ZoneText(ShortPath.data(), ShortPath.size());
+	ZoneText(path.data(), path.size());
 
 	size_t containingDirLoc = path.find_last_of("/");
 	std::string dirPath = path.substr(0, containingDirLoc);

@@ -62,12 +62,12 @@ static const std::string_view AddableComponents[] = {
 	"Mesh",
 	"Model",
 	"ParticleEmitter",
+	"RigidBody",
 	"Sound",
 	"Transform"
 };
 
-static nlohmann::json DefaultNewMaterial = 
-{
+static nlohmann::json DefaultNewMaterial =  {
 	{ "ColorMap", "textures/materials/plastic.png" },
 	{ "specExponent", 32.f },
 	{ "specMultiply", 0.5f }

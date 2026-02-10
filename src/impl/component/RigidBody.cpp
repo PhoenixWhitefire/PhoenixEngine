@@ -80,6 +80,10 @@ public:
 	{
 		uint32_t id = ComponentManager<EcRigidBody>::CreateComponent(Object);
 		m_Components[id].Object = Object;
+
+		if (!Object->FindComponent<EcTransform>())
+			Object->AddComponent(EntityComponent::Transform);
+
 		updateSpatialHash(&m_Components[id]);
 
 		return id;
@@ -163,6 +167,9 @@ void EcRigidBody::RecomputeAabb()
 	ZoneScoped;
 
 	EcTransform* ct = this->Object->FindComponent<EcTransform>();
+	if (!ct)
+		return;
+
 	const glm::mat4& transform = ct->Transform;
 	const glm::vec3& glmsize = ct->Size;
 
