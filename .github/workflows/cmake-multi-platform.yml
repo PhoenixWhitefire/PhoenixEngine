@@ -133,7 +133,7 @@ jobs:
     - name: Test (Windows)
       if: runner.os == 'Windows' && matrix.build_type != 'Debug'
       shell: pwsh
-      run: >
+      run: |
         . "x64\\${{ matrix.build_type }}\\PhoenixEngine.exe" -headless -tool scripts\\ci\\tests.luau
         . "x64\\${{ matrix.build_type }}\\PhoenixEngine.exe" -headless -ed_ci
 
@@ -145,6 +145,6 @@ jobs:
     - name: Test (Ubuntu)
       if: runner.os == 'Linux'
       shell: bash
-      run: >
+      run: |
         x64/${{ matrix.build_type }}/PhoenixEngine -headless -tool scripts/ci/tests.luau
         x64/${{ matrix.build_type }}/PhoenixEngine -headless -ed_ci
