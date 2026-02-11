@@ -449,7 +449,7 @@ local function createNewProject_()
 
 	fs.copy("@editres/textures/materials", "@projres/textures/materials")
 	fs.copy("@editres/textures/Sky1", "@projres/textures/Sky1")
-	fs.copy("@editres/scripts/.config.luau", "@projres/scripts/.config.luau")
+	fs.copy("@editres/scripts/defaultconfig.luau", "@projres/scripts/.config.luau")
 	fs.copy(LOGO_IMAGE, "@proj/icon.png")
 
 	local dm = GameObject.new("DataModel")
@@ -1115,7 +1115,9 @@ EditorPreferences = savedEditorPreferences
 
 Engine:SetConfigValue("postfx_gamma", EditorPreferences.Gamma)
 
-imgui.stylecolors(if EditorPreferences.UseLightTheme then 'l' else 'd')
+if not Engine.IsHeadless then
+	imgui.stylecolors(if EditorPreferences.UseLightTheme then 'l' else 'd')
+end
 
 local PrevSelections: { GameObject & Transform } = {}
 
@@ -1826,3 +1828,32 @@ function Stages.ProjectPlaying_Leave(DeltaTime)
 end
 
 changeStageTo("SelectProject")
+
+if table.find(Engine:GetCliArguments(), "-ed_ci") then
+	if StageUpdateSignal then
+		StageUpdateSignal:Disconnect()
+		StageUpdateSignal = nil
+	end
+
+	task.defer(function()
+		warn("Running Editor CI checks")
+
+		task.delay(5, function()
+			warn("Potential CI stall - Exiting")
+			Engine:Exit(1)
+		end)
+
+		local success = xpcall(createNewProject_, function(err)
+			warn(debug.traceback(err, 1))
+		end)
+
+		if not success then
+			warn("Failed to create new project!")
+			Engine:Exit(1)
+			return
+		end
+
+		warn("Editor CI checks done")
+		Engine:Exit()
+	end)
+end

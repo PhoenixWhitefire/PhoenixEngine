@@ -363,9 +363,13 @@ public:
                 [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
                 {
                     Engine* engine = Engine::Get();
-                    engine->ExitCode = inputs.size() > 0 ? inputs[0].AsInteger() : 0;
-                    engine->Close();
 
+                    int64_t exitCode = inputs.size() > 0 ? inputs[0].AsInteger() : 0;
+                    // don't overwite a "failure" code with an 'ok' code
+                    if (engine->ExitCode == 0)
+                        engine->ExitCode = exitCode;
+
+                    engine->Close();
                     return {};
                 }
             } },

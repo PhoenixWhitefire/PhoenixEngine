@@ -28,14 +28,14 @@ jobs:
       fail-fast: false
 
       matrix:
-        os: [windows-latest, ubuntu-25.10]
+        os: [windows-latest, ubuntu-latest]
         build_type: [Debug, Release]
         c_compiler: [cl, gcc]
         include:
           - os: windows-latest
             c_compiler: cl
             cpp_compiler: cl
-          - os: ubuntu-25.10
+          - os: ubuntu-latest
             c_compiler: gcc
             cpp_compiler: gcc
         exclude:
@@ -43,9 +43,9 @@ jobs:
             c_compiler: gcc
           - os: windows-latest
             c_compiler: clang
-          - os: ubuntu-25.10
+          - os: ubuntu-latest
             c_compiler: clang
-          - os: ubuntu-25.10
+          - os: ubuntu-latest
             c_compiler: cl
 
     steps:
@@ -80,11 +80,11 @@ jobs:
       run: cmake --build ./ -j8 --config ${{ matrix.build_type }}
 
     - name: Configure CMake for Profiler
-      if: matrix.build_type == 'Release'
+      if: matrix.build_type == 'Release' && runner.os == 'Windows'
       run: cmake -B Vendor/tracy/profiler/build -S Vendor/tracy/profiler
 
     - name: Build Profiler
-      if: matrix.build_type == 'Release'
+      if: matrix.build_type == 'Release' && runner.os == 'Windows'
       run: cmake --build Vendor/tracy/profiler/build --config Release -j8 -t tracy-profiler
 
     - name: Upload build artifact (Windows)
@@ -133,7 +133,9 @@ jobs:
     - name: Test (Windows)
       if: runner.os == 'Windows' && matrix.build_type != 'Debug'
       shell: pwsh
-      run: ". \"x64\\${{ matrix.build_type }}\\PhoenixEngine.exe\" -headless -tool scripts\\ci\\tests.luau"
+      run: >
+        . "x64\\${{ matrix.build_type }}\\PhoenixEngine.exe" -headless -tool scripts\\ci\\tests.luau
+        . "x64\\${{ matrix.build_type }}\\PhoenixEngine.exe" -headless -ed_ci
 
     - name: Doc Gen (Ubuntu)
       if: runner.os == 'Linux'
@@ -143,4 +145,6 @@ jobs:
     - name: Test (Ubuntu)
       if: runner.os == 'Linux'
       shell: bash
-      run: "x64/${{ matrix.build_type }}/PhoenixEngine -headless -tool scripts/ci/tests.luau"
+      run: >
+        x64/${{ matrix.build_type }}/PhoenixEngine -headless -tool scripts/ci/tests.luau
+        x64/${{ matrix.build_type }}/PhoenixEngine -headless -ed_ci
