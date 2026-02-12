@@ -1,6 +1,7 @@
 -- ed.luau, 14/09/2025
 local AssetManager: AssetManager = game:GetService("AssetManager") :: any
 local PlayerInput: PlayerInput = game:GetService("PlayerInput") :: any
+local Renderer: Renderer = game:GetService("Renderer") :: any
 local History: History = game:GetService("History") :: any
 local Physics: Physics = game:GetService("Physics") :: any
 local Engine: Engine = game:GetService("Engine") :: any
@@ -373,7 +374,7 @@ end
 
 local function openProject(ManualPath: string?)
 	PlayerInput.Cursor = Enum.Cursor.NotAllowed
-	Engine:PollEvents()
+	Engine:PollSystemEvents()
 
 	xpcall(openProject_, function(err)
 		Engine:ShowMessageBox("Failed to open project", "Failed to open project: " .. tostring(err), "ok", "error")
@@ -470,7 +471,7 @@ end
 
 local function createNewProject()
 	PlayerInput.Cursor = Enum.Cursor.NotAllowed
-	Engine:PollEvents()
+	Engine:PollSystemEvents()
 
 	xpcall(createNewProject_, function(err)
 		Engine:ShowMessageBox("Failed to create project", "Failed to create new project: " .. tostring(err), "ok", "error")
@@ -935,7 +936,7 @@ local function renderMainMenuBar(dt: number)
 									if path then
 										fs.remove("@proj/icon.png")
 										fs.copy(path, "@proj/icon.png")
-										Engine:UnloadTexture("@proj/icon.png") -- force the texture to be reloaded
+										Renderer:UnloadTexture("@proj/icon.png") -- force the texture to be reloaded
 									else
 										print("No icon selected")
 									end
@@ -992,7 +993,7 @@ local function renderMainMenuBar(dt: number)
 		end
 
 		if (HoveringOverMenuBar or HoveringOverRibbonTab or TabButtonHovering ~= nil or WindowHovering) and not PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Right) then
-			local windowWidth = Engine.WindowSize.x
+			local windowWidth = Renderer.Resolution.x
 
 			local TAB_HEIGHT = 175
 
@@ -1017,7 +1018,7 @@ local function renderMainMenuBar(dt: number)
 	if openAboutWindow then
 		imgui.openpopup("About")
 
-		local ws = Engine.WindowSize
+		local ws = Renderer.Resolution
 
 		local ABOUT_SIZE_X, ABOUT_SIZE_Y = 375, 280
 
@@ -1065,7 +1066,7 @@ local function renderMainMenuBar(dt: number)
 
 		local SETTINGS_SIZE_X, SETTINGS_SIZE_Y = 420, 140
 
-		local ws = Engine.WindowSize
+		local ws = Renderer.Resolution
 
 		imgui.setnextwindowposition((ws.x - SETTINGS_SIZE_X) / 2, (ws.y - SETTINGS_SIZE_Y) / 2);
 		imgui.setnextwindowsize(SETTINGS_SIZE_X, SETTINGS_SIZE_Y);
@@ -1333,7 +1334,7 @@ local function renderViewport(DeltaTime: number)
 	TagViewer.Render()
 
 	if BottomBarEnabled then
-		local w = Engine.WindowSize
+		local w = Renderer.Resolution
 
 		imgui.setnextwindowposition(0, w.y - 35)
 		imgui.setnextwindowsize(w.x, 35)
@@ -1460,10 +1461,10 @@ local function renderViewport(DeltaTime: number)
 	local w = imgui.windowposition()
 	local ws = imgui.windowsize()
 
-	local ews = Engine.WindowSize
+	local ews = Renderer.Resolution
 
 	imgui.setviewportdockspace(0, 19, ews.x, ews.y - (if BottomBarEnabled then 54 else 19))
-	Engine:SetViewport(vector.create(w.x, w.y), vector.create(ws.x, ws.y))
+	Engine:SetViewportInputRect(vector.create(w.x, w.y), vector.create(ws.x, ws.y))
 
 	ViewportLeft = w.x - 15
 	ViewportRight = w.x + ws.x + 15
@@ -1523,7 +1524,7 @@ local function renderProjectSelectorTiles(Projects: { string })
 	local cpos = imgui.cursorposition()
 	local startX = cpos.x
 
-	local windowSizeX = Engine.WindowSize.x
+	local windowSizeX = Renderer.Resolution.x
 	local lastnl = #Projects
 	local hoveringOverWip = nil
 
@@ -1778,7 +1779,7 @@ local restoreState = nil
 
 function Stages.ProjectPlaying_Enter(DeltaTime: any)
 	PlayerInput.Cursor = Enum.Cursor.NotAllowed
-	Engine:PollEvents() -- cursor will not appear until we've responded to the OS
+	Engine:PollSystemEvents() -- cursor will not appear until we've responded to the OS
 
 	assert(Project)
 	restoreState = Project.DataModel

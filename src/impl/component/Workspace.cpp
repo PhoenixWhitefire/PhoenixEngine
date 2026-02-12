@@ -177,10 +177,10 @@ glm::vec3 EcWorkspace::ScreenPointToVector(glm::vec2 point, float length) const
 
 	float x = point.x;
 	float y = point.y;
-	x = x - engine->ViewportPosition.x;
-	y = y - engine->ViewportPosition.y;
+	x = x - engine->ViewportInputPosition.x;
+	y = y - engine->ViewportInputPosition.y;
 
-	ImVec2 viewportSize = engine->GetViewportSize();
+	ImVec2 viewportSize = engine->GetViewportInputRectSize();
 
 	// thinmatrix 27/12/2024
 	// https://www.youtube.com/watch?v=DLKN0jExRIM

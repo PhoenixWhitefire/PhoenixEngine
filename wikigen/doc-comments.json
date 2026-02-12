@@ -285,8 +285,8 @@
               "Line"
             ]
           },
-          "PollEvents": "Responds to signals sent to the application by the OS. This is done automatically at the start of each frame as well",
-          "ResetViewport": "Resets the Engine's understanding of where the viewport is on screen back to the default (occupying the entire window)",
+          "PollSystemEvents": "Responds to signals sent to the application by the OS. This is done automatically at the start of each frame as well",
+          "ResetViewportInputRect": "Resets the Engine's understanding of where the viewport is on screen back to the default (occupying the entire window)",
           "RunInVM": {
             "Description": "Runs the given code in the specified VM. Returns `false` and an error message upon failure or if the code does not finish executing (yield or break)",
             "ParameterNames": [
@@ -327,7 +327,7 @@
               "Enabled"
             ]
           },
-          "SetViewport": {
+          "SetViewportInputRect": {
             "Description": "Configures the Engine to act as through the Viewport is at the given position with the given size. Does *not* change where the viewport is actually rendered",
             "ParameterNames": [
               "Position",
@@ -343,23 +343,15 @@
               "Icon",
               "DefaultButton"
             ]
-          },
-          "UnloadTexture": {
-            "Description": "Removes the given texture from the Engine's cache, forcing it to be reloaded upon next use",
-            "ParameterNames": "Texture"
           }
         },
         "Properties": {
           "BoundDataModel": "The DataModel object that is currently bound",
           "CommitHash": "The Git commit that was used to produce this Engine build",
-          "DebugWireframeRendering": "Whether the Wireframe rendering debug mode is enabled",
           "Framerate": "The Engine's current framerate",
           "FramerateCap": "The maximum framerate the Engine will reach before attempting to self-limit",
-          "IsFullscreen": "Whether the Window is currently fullscreened",
           "IsHeadless": "Whether the Engine is currently running in headless mode",
-          "VSync": "Whether Vertical Synchronization is enabled",
-          "Version": "The version of the Engine build",
-          "WindowSize": "The size of the window, in pixels"
+          "Version": "The version of the Engine build"
         }
       },
       "Example": {
@@ -517,7 +509,31 @@
         }
       },
       "Renderer": {
-        "Description": "Interfacing with the Engine's rendering systems"
+        "Description": "Interfacing with the Engine's rendering systems",
+        "Methods": {
+          "SetShaderVariable": {
+            "Type": "(self, Shader: string, Variable: string, Value: boolean | number | vector | Color | Matrix, Type: number?) : ()",
+            "Description": "Sets a variable in a shader program. The program will be loaded if it is not already in memory. `Type` is required when passing a `vector`, to differentiate between `Vector2` and `Vector3`. See `Enum.ValueType`"
+          },
+          "SetShaderTextureVariable": {
+            "ParameterNames": [ "Shader", "Variable", "TexturePath" ],
+            "Description": "Sets a variable in a shader program to a 2D texture sampler for the provided image. The program will be loaded if it is not already in memory"
+          },
+          "SetViewport": {
+            "ParameterNames": [ "Position", "Size" ],
+            "Description": "Changes the location and size of where the viewport will be rendered-to on screen"
+          },
+          "UnloadTexture": {
+            "Description": "Removes the given texture from the Engine's cache, forcing it to be reloaded upon next use",
+            "ParameterNames": "Texture"
+          }
+        },
+        "Properties": {
+          "DebugWireframeRendering": "Whether the Wireframe rendering debug mode is enabled",
+          "IsFullscreen": "Whether the Window is currently fullscreened",
+          "Resolution": "The size of the window, in pixels",
+          "VSync": "Whether Vertical Synchronization is enabled"
+        }
       },
       "RigidBody": {
         "Description": "Something rigid that participates in the Physics simulation",
@@ -925,6 +941,10 @@
           "MouseButton": {
             "Description": "Mouse buttons, which may be passed to `PlayerInput:IsMouseButtonPressed`",
             "Type": "{ Left: number, Middle: number, Right: number }"
+          },
+          "ValueType": {
+            "Description": "The types of value variants the Engine internally recognizes",
+            "Type": "{ Boolean: number, Integer: number, Double: number, String: number, Color: number, Vector2: number, Vector3: number, Matrix: number, GameObject: number, Function: number, Array: number, Map: number, EventSignal: number, InputEvent: number, Null: number, Any: number }"
           }
         }
       },

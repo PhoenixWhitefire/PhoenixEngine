@@ -121,29 +121,24 @@
           "GetToolNames": "() -> (Array)",
           "IsToolEnabled": "(String) -> (Boolean)",
           "OpenTextDocument": "(String, Integer?) -> ()",
-          "PollEvents": "() -> ()",
-          "ResetViewport": "() -> ()",
+          "PollSystemEvents": "() -> ()",
+          "ResetViewportInputRect": "() -> ()",
           "RunInVM": "(String, String, String?) -> (Boolean, String?)",
           "SaveConfig": "() -> (Boolean, String)",
           "SetConfigValue": "(String, Any) -> ()",
           "SetExplorerRoot": "(GameObject) -> ()",
           "SetExplorerSelections": "(Array) -> ()",
           "SetToolEnabled": "(String, Boolean) -> ()",
-          "SetViewport": "(Vector2, Vector2) -> ()",
-          "ShowMessageBox": "(String, String, String?, String?, Integer?) -> (Integer)",
-          "UnloadTexture": "(String) -> ()"
+          "SetViewportInputRect": "(Vector2, Vector2) -> ()",
+          "ShowMessageBox": "(String, String, String?, String?, Integer?) -> (Integer)"
         },
         "Properties": {
           "BoundDataModel": "GameObject READONLY",
           "CommitHash": "String READONLY",
-          "DebugWireframeRendering": "Boolean",
           "Framerate": "Integer READONLY",
           "FramerateCap": "Integer",
-          "IsFullscreen": "Boolean",
           "IsHeadless": "Boolean READONLY",
-          "VSync": "Boolean",
-          "Version": "String READONLY",
-          "WindowSize": "Vector2"
+          "Version": "String READONLY"
         }
       },
       "History": {
@@ -226,7 +221,20 @@
           "Range": "Double"
         }
       },
-      "Renderer": {},
+      "Renderer": {
+        "Methods": {
+          "SetShaderTextureVariable": "(String, String, String) -> ()",
+          "SetShaderVariable": "(String, String, Any, Integer?) -> ()",
+          "SetViewport": "(Vector2, Vector2) -> ()",
+          "UnloadTexture": "(String) -> ()"
+        },
+        "Properties": {
+          "DebugWireframeRendering": "Boolean",
+          "IsFullscreen": "Boolean",
+          "Resolution": "Vector2",
+          "VSync": "Boolean"
+        }
+      },
       "RigidBody": {
         "Properties": {
           "AngularVelocity": "Vector3",
@@ -360,7 +368,8 @@
         "InputAction": "table",
         "Key": "table",
         "LogType": "table",
-        "MouseButton": "table"
+        "MouseButton": "table",
+        "ValueType": "table"
       },
       "debug": {
         "breakpoint": "function"

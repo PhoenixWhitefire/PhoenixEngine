@@ -542,8 +542,7 @@ static GLuint startLoadingSkybox(std::vector<uint32_t>* skyboxFacesBeingLoaded)
 		return 0;
 
 	const std::string_view SkyPath = "textures/Sky1/";
-	const std::string_view SkyboxCubemapImages[6] =
-	{
+	const std::string_view SkyboxCubemapImages[6] = {
 		"right",
 		"left",
 		"top",
@@ -590,9 +589,9 @@ static GLuint startLoadingSkybox(std::vector<uint32_t>* skyboxFacesBeingLoaded)
 
 static ImGuiID ViewportNodeId = UINT32_MAX;
 
-ImVec2 Engine::GetViewportSize() const
+ImVec2 Engine::GetViewportInputRectSize() const
 {
-	return OverrideDefaultViewport ? OverrideViewportSize : ImVec2{ (float)WindowSizeX, (float)WindowSizeY };
+	return OverrideDefaultViewportInputRect ? OverrideViewportInputSize : ImVec2{ (float)WindowSizeX, (float)WindowSizeY };
 }
 
 void Engine::m_Render(double deltaTime)
@@ -607,7 +606,7 @@ void Engine::m_Render(double deltaTime)
 	else
 		glfwSwapInterval(0);
 
-	ImVec2 viewportSize = GetViewportSize();
+	ImVec2 viewportSize = GetViewportInputRectSize();
 	float aspectRatio = viewportSize.x / viewportSize.y;
 
 	ObjectHandle sceneCamObject = WorkspaceRef->FindComponent<EcWorkspace>()->GetSceneCamera();

@@ -7,7 +7,7 @@ struct Texture
 {
 	enum class DimensionType : uint8_t
 	{
-		Texture2D,
+		Texture2D = 0,
 		Texture3D,
 		TextureCube
 	};
@@ -21,7 +21,7 @@ struct Texture
 		Unloaded
 	};
 
-	std::string ImagePath{};
+	std::string ImagePath;
 
 	uint32_t ResourceId = UINT32_MAX;
 	uint32_t GpuId = UINT32_MAX;
@@ -35,10 +35,10 @@ struct Texture
 	bool LoadedAsynchronously = false;
 
 	// De-allocated after the Texture is uploaded to the GPU
-	uint8_t* TMP_ImageByteData{};
+	uint8_t* TMP_ImageByteData = nullptr;
 	// If image loading fails, set to the `const char*` returned by
 	// `stbi_failure_reason`
-	const char* FailureReason{};
+	const char* FailureReason = nullptr;
 };
 
 class TextureManager

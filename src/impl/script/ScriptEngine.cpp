@@ -1463,6 +1463,21 @@ static void openEnum(lua_State* L)
 
 	lua_setfield(L, -2, "Cursor");
 
+	lua_newtable(L);
+
+	for (int i = Reflection::ValueType::Boolean; i < Reflection::ValueType::__lastBase; i++)
+	{
+		lua_pushinteger(L, i);
+		lua_setfield(L, -2, Reflection::TypeAsString((Reflection::ValueType)i).c_str());
+	}
+
+	lua_pushinteger(L, Reflection::ValueType::Any);
+	lua_setfield(L, -2, "Any");
+	lua_pushinteger(L, Reflection::ValueType::Null);
+	lua_setfield(L, -2, "Null");
+
+	lua_setfield(L, -2, "ValueType");
+
 	lua_setglobal(L, "Enum");
 }
 

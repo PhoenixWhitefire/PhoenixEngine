@@ -230,22 +230,6 @@ public:
     {
         static const Reflection::StaticPropertyMap props = {
             REFLECTION_PROPERTY(
-                "WindowSize",
-                Vector2,
-                [](void*) -> Reflection::GenericValue
-                {
-                    Engine* engine = Engine::Get();
-                    return glm::vec2(engine->WindowSizeX, engine->WindowSizeY);
-                },
-                [](void*, const Reflection::GenericValue& gv)
-                {
-                    Engine* engine = Engine::Get();
-                    const glm::vec2& size = gv.AsVector2();
-
-                    engine->ResizeWindow(size.x, size.y);
-                }
-            ),
-            REFLECTION_PROPERTY(
                 "IsHeadless",
                 Boolean,
                 [](void*) -> Reflection::GenericValue
@@ -254,34 +238,6 @@ public:
                     return engine->IsHeadlessMode;
                 },
                 nullptr
-            ),
-            REFLECTION_PROPERTY(
-                "IsFullscreen",
-                Boolean,
-                [](void*) -> Reflection::GenericValue
-                {
-                    Engine* engine = Engine::Get();
-                    return engine->IsFullscreen;
-                },
-                [](void*, const Reflection::GenericValue& gv)
-                {
-                    Engine* engine = Engine::Get();
-                    engine->SetIsFullscreen(gv.AsBoolean());
-                }
-            ),
-            REFLECTION_PROPERTY(
-                "VSync",
-                Boolean,
-                [](void*) -> Reflection::GenericValue
-                {
-                    Engine* engine = Engine::Get();
-                    return engine->VSync;
-                },
-                [](void*, const Reflection::GenericValue& gv)
-                {
-                    Engine* engine = Engine::Get();
-                    engine->VSync = gv.AsBoolean();
-                }
             ),
             REFLECTION_PROPERTY(
                 "Framerate",
@@ -305,20 +261,6 @@ public:
                 {
                     Engine* engine = Engine::Get();
                     engine->FpsCap = gv.AsInteger();
-                }
-            ),
-            REFLECTION_PROPERTY(
-                "DebugWireframeRendering",
-                Boolean,
-                [](void*) -> Reflection::GenericValue
-                {
-                    Engine* engine = Engine::Get();
-                    return engine->DebugWireframeRendering;
-                },
-                [](void*, const Reflection::GenericValue& gv)
-                {
-                    Engine* engine = Engine::Get();
-                    engine->DebugWireframeRendering = gv.AsBoolean();
                 }
             ),
             REFLECTION_PROPERTY(
@@ -561,19 +503,6 @@ public:
                 }
             } },
 
-            { "UnloadTexture", Reflection::MethodDescriptor{
-                { Reflection::ValueType::String },
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    TextureManager* texManager = TextureManager::Get();
-                    uint32_t resId = texManager->LoadTextureFromPath(std::string(inputs[0].AsStringView()), false);
-                    texManager->UnloadTexture(resId);
-
-                    return {};
-                }
-            } },
-
             { "GetCliArguments", Reflection::MethodDescriptor{
                 {},
                 { Reflection::ValueType::Array },
@@ -591,7 +520,7 @@ public:
                 }
             } },
 
-            { "SetViewport", Reflection::MethodDescriptor{
+            { "SetViewportInputRect", Reflection::MethodDescriptor{
                 { Reflection::ValueType::Vector2, Reflection::ValueType::Vector2 },
                 {},
                 [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
@@ -600,22 +529,22 @@ public:
                     glm::vec2 viewportPosition = inputs[0].AsVector2();
                     glm::vec2 viewportSize = inputs[1].AsVector2();
 
-                    engine->ViewportPosition = { viewportPosition.x, viewportPosition.y };
-                    engine->OverrideViewportSize = { viewportSize.x, viewportSize.y };
-                    engine->OverrideDefaultViewport = true;
+                    engine->ViewportInputPosition = { viewportPosition.x, viewportPosition.y };
+                    engine->OverrideViewportInputSize = { viewportSize.x, viewportSize.y };
+                    engine->OverrideDefaultViewportInputRect = true;
 
                     return {};
                 }
             } },
 
-            { "ResetViewport", Reflection::MethodDescriptor{
+            { "ResetViewportInputRect", Reflection::MethodDescriptor{
                 {},
                 {},
                 [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
                 {
                     Engine* engine = Engine::Get();
-                    engine->OverrideDefaultViewport = false;
-                    engine->ViewportPosition = {};
+                    engine->OverrideDefaultViewportInputRect = false;
+                    engine->ViewportInputPosition = {};
 
                     return {};
                 }
@@ -667,7 +596,7 @@ public:
                 }
             } },
 
-            { "PollEvents", Reflection::MethodDescriptor{
+            { "PollSystemEvents", Reflection::MethodDescriptor{
                 {},
                 {},
                 [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>

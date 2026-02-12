@@ -165,14 +165,10 @@ end
 declare extern type Engine with
   BoundDataModel: GameObject 
   CommitHash: string 
-  DebugWireframeRendering: boolean
   Framerate: number 
   FramerateCap: number
-  IsFullscreen: boolean
   IsHeadless: boolean 
-  VSync: boolean
   Version: string 
-  WindowSize: vector
 
   function BindDataModel(self, DataModel:  GameObject & DataModel ) : ()
   function CloseVM(self, VmName: string) : ()
@@ -184,17 +180,16 @@ declare extern type Engine with
   function GetToolNames(self) : { string }
   function IsToolEnabled(self, ToolName: string) : (boolean)
   function OpenTextDocument(self, Path: string, Line: number?) : ()
-  function PollEvents(self) : ()
-  function ResetViewport(self) : ()
+  function PollSystemEvents(self) : ()
+  function ResetViewportInputRect(self) : ()
   function RunInVM(self, VmName: string, Code: string, ChunkName: string?) : (boolean, string?)
   function SaveConfig(self) : (boolean, string)
   function SetConfigValue(self, Key: string, Value: unknown) : ()
   function SetExplorerRoot(self, Root: GameObject) : ()
   function SetExplorerSelections(self, Selections: { GameObject }) : ()
   function SetToolEnabled(self, ToolName: string, Enabled: boolean) : ()
-  function SetViewport(self, Position: vector, Size: vector) : ()
+  function SetViewportInputRect(self, Position: vector, Size: vector) : ()
   function ShowMessageBox(self, Title: string, Message: string, Buttons: string?, Icon: string?, DefaultButton: number?) : (number)
-  function UnloadTexture(self, Texture: string) : ()
 
   OnMessageLogged: EventSignal<(number, string, string)>
 end
@@ -265,6 +260,15 @@ declare extern type PointLight with
   Range: number
 end
 declare extern type Renderer with
+  DebugWireframeRendering: boolean
+  IsFullscreen: boolean
+  Resolution: vector
+  VSync: boolean
+
+  function SetShaderTextureVariable(self, Shader: string, Variable: string, TexturePath: string) : ()
+  function SetShaderVariable(self, Shader: string, Variable: string, Value: boolean | number | vector | Color | Matrix, Type: number?) : ()
+  function SetViewport(self, Position: vector, Size: vector) : ()
+  function UnloadTexture(self, Texture: string) : ()
 end
 declare extern type RigidBody with
   AngularVelocity: vector
@@ -351,7 +355,8 @@ declare Enum: {
   InputAction: { Release: number, Press: number, Repeat: number },
   Key: { [string]: number },
   LogType: { None: number, Info: number, Warning: number, Error: number },
-  MouseButton: { Left: number, Middle: number, Right: number }
+  MouseButton: { Left: number, Middle: number, Right: number },
+  ValueType: { Boolean: number, Integer: number, Double: number, String: number, Color: number, Vector2: number, Vector3: number, Matrix: number, GameObject: number, Function: number, Array: number, Map: number, EventSignal: number, InputEvent: number, Null: number, Any: number }
 }
 declare debug: {
 	traceback: ((msg: string?, level: number?) -> string) & (co: thread, msg: string?, level: number?) -> string,

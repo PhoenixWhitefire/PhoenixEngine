@@ -32,6 +32,9 @@
   "@phoenix/global/Enum.MouseButton": {
     "documentation": "* Mouse buttons, which may be passed to `PlayerInput:IsMouseButtonPressed`"
   },
+  "@phoenix/global/Enum.ValueType": {
+    "documentation": "* The types of value variants the Engine internally recognizes"
+  },
   "@phoenix/global/EventConnection": {
     "documentation": "* A connection to an Event"
   },
@@ -494,9 +497,6 @@
   "@phoenix/globaltype/Engine.CreateVM": {
     "documentation": "Creates a new Luau VM with the given name. The `workspace` and `game` globals of the VM are taken from the currently-bound DataModel"
   },
-  "@phoenix/globaltype/Engine.DebugWireframeRendering": {
-    "documentation": "Whether the Wireframe rendering debug mode is enabled"
-  },
   "@phoenix/globaltype/Engine.Exit": {
     "documentation": "Shuts down the Engine and exits the process with the specified Exit Code (or 0 by default)"
   },
@@ -518,9 +518,6 @@
   "@phoenix/globaltype/Engine.GetToolNames": {
     "documentation": "Returns a list of valid Engine tools"
   },
-  "@phoenix/globaltype/Engine.IsFullscreen": {
-    "documentation": "Whether the Window is currently fullscreened"
-  },
   "@phoenix/globaltype/Engine.IsHeadless": {
     "documentation": "Whether the Engine is currently running in headless mode"
   },
@@ -533,10 +530,10 @@
   "@phoenix/globaltype/Engine.OpenTextDocument": {
     "documentation": "Opens a text file. This requires Developer Mode to be enabled to have any effect"
   },
-  "@phoenix/globaltype/Engine.PollEvents": {
+  "@phoenix/globaltype/Engine.PollSystemEvents": {
     "documentation": "Responds to signals sent to the application by the OS. This is done automatically at the start of each frame as well"
   },
-  "@phoenix/globaltype/Engine.ResetViewport": {
+  "@phoenix/globaltype/Engine.ResetViewportInputRect": {
     "documentation": "Resets the Engine's understanding of where the viewport is on screen back to the default (occupying the entire window)"
   },
   "@phoenix/globaltype/Engine.RunInVM": {
@@ -557,23 +554,14 @@
   "@phoenix/globaltype/Engine.SetToolEnabled": {
     "documentation": "Enabled/disables the given tool"
   },
-  "@phoenix/globaltype/Engine.SetViewport": {
+  "@phoenix/globaltype/Engine.SetViewportInputRect": {
     "documentation": "Configures the Engine to act as through the Viewport is at the given position with the given size. Does *not* change where the viewport is actually rendered"
   },
   "@phoenix/globaltype/Engine.ShowMessageBox": {
     "documentation": "Shows a message box to the player with the given specification. The returned number with be the selected option: `0` for Cancel/No, `1` for Ok/Yes, `2` for No in `yesnocancel`. This is a blocking operation and no scripts or other parts of the Engine run until the message is dismissed. Avoid using quotes and backticks in the message"
   },
-  "@phoenix/globaltype/Engine.UnloadTexture": {
-    "documentation": "Removes the given texture from the Engine's cache, forcing it to be reloaded upon next use"
-  },
-  "@phoenix/globaltype/Engine.VSync": {
-    "documentation": "Whether Vertical Synchronization is enabled"
-  },
   "@phoenix/globaltype/Engine.Version": {
     "documentation": "The version of the Engine build"
-  },
-  "@phoenix/globaltype/Engine.WindowSize": {
-    "documentation": "The size of the window, in pixels"
   },
   "@phoenix/globaltype/EventConnection.Connected": {
     "documentation": "* Whether the Connection is connected or not\n"
@@ -886,6 +874,30 @@
   },
   "@phoenix/globaltype/PointLight.Range": {
     "documentation": "How far light is emitted. If `>= 0`, the Range is used and attenuation is linear, otherwise it uses the formula `F = 1/D^2 * B` to mirror real-world attenuation, where `F` is the final brightness, `D` is the distance of a point from the Light, and `B` is the `Brightness` property's value"
+  },
+  "@phoenix/globaltype/Renderer.DebugWireframeRendering": {
+    "documentation": "Whether the Wireframe rendering debug mode is enabled"
+  },
+  "@phoenix/globaltype/Renderer.IsFullscreen": {
+    "documentation": "Whether the Window is currently fullscreened"
+  },
+  "@phoenix/globaltype/Renderer.Resolution": {
+    "documentation": "The size of the window, in pixels"
+  },
+  "@phoenix/globaltype/Renderer.SetShaderTextureVariable": {
+    "documentation": "Sets a variable in a shader program to a 2D texture sampler for the provided image. The program will be loaded if it is not already in memory"
+  },
+  "@phoenix/globaltype/Renderer.SetShaderVariable": {
+    "documentation": "Sets a variable in a shader program. The program will be loaded if it is not already in memory. `Type` is required when passing a `vector`, to differentiate between `Vector2` and `Vector3`. See `Enum.ValueType`"
+  },
+  "@phoenix/globaltype/Renderer.SetViewport": {
+    "documentation": "Changes the location and size of where the viewport will be rendered-to on screen"
+  },
+  "@phoenix/globaltype/Renderer.UnloadTexture": {
+    "documentation": "Removes the given texture from the Engine's cache, forcing it to be reloaded upon next use"
+  },
+  "@phoenix/globaltype/Renderer.VSync": {
+    "documentation": "Whether Vertical Synchronization is enabled"
   },
   "@phoenix/globaltype/RigidBody.AngularVelocity": {
     "documentation": "Its rotational velocity"

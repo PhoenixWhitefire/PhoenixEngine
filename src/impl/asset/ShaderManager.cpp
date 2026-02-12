@@ -70,6 +70,12 @@ void ShaderProgram::Activate()
 				glUniform1f(uniformLoc, static_cast<float>(value.AsDouble()));
 				break;
 			}
+			case Reflection::ValueType::Vector2:
+			{
+				const glm::vec2& vec = value.AsVector2();
+				glUniform2f(uniformLoc, vec.x, vec.y);
+				break;
+			}
 			case Reflection::ValueType::Vector3:
 			{
 				glm::vec3& vec = value.AsVector3();
@@ -390,11 +396,10 @@ void ShaderProgram::SetUniform(const std::string_view& UniformName, const Reflec
 
 void ShaderProgram::SetTextureUniform(const std::string_view& UniformName, uint32_t TextureId, Texture::DimensionType Type)
 {
-	static std::unordered_map<Texture::DimensionType, GLenum> DimensionTypeToGLDimension =
-	{
-		{ Texture::DimensionType::Texture2D, GL_TEXTURE_2D },
-		{ Texture::DimensionType::Texture3D, GL_TEXTURE_3D },
-		{ Texture::DimensionType::TextureCube, GL_TEXTURE_CUBE_MAP }
+	static GLenum DimensionTypeToGLDimension[] = {
+		GL_TEXTURE_2D,
+		GL_TEXTURE_3D,
+		GL_TEXTURE_CUBE_MAP
 	};
 
 	static TextureManager* texManager = TextureManager::Get();
@@ -413,7 +418,7 @@ void ShaderProgram::SetTextureUniform(const std::string_view& UniformName, uint3
 
 	glActiveTexture(GL_TEXTURE0 + slot);
 	glBindTexture(
-		DimensionTypeToGLDimension.at(Type),
+		DimensionTypeToGLDimension[(uint8_t)Type],
 		gpuId
 	);
 }
