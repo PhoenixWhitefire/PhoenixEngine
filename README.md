@@ -18,6 +18,9 @@ Personal 3D OpenGL "Game Engine" written in C++, that can:
 
 Intended to be compatible with both Windows and Linux/Ubuntu.
 
+# Downloading
+You can download binaries from [Actions](https://github.com/PhoenixWhitefire/PhoenixEngine/actions). Pick one at the top with a checkmark, and choose the Release build for your system to [get started](https://github.com/PhoenixWhitefire/PhoenixEngine/wiki/Getting-Started).
+
 # Building
 
 * Minimum CMake version of `3.28` (arbitrary, the one I use on Linux. I use `3.30` on Windows)
