@@ -191,6 +191,9 @@
   "@phoenix/global/imgui.cursorposition": {
     "documentation": "* Returns the current position of the Dear ImGui element cursor within the current window\n* To *set* the cursor position, use `.setcursorposition`"
   },
+  "@phoenix/global/imgui.demowindow": {
+    "documentation": "* Renders the Dear ImGui demo window (`ImGui::ShowDemoWindow`)"
+  },
   "@phoenix/global/imgui.dummy": {
     "documentation": "* `ImGui::Dummy`"
   },
@@ -884,14 +887,8 @@
   "@phoenix/globaltype/Renderer.Resolution": {
     "documentation": "The size of the window, in pixels"
   },
-  "@phoenix/globaltype/Renderer.SetShaderTextureVariable": {
-    "documentation": "Sets a variable in a shader program to a 2D texture sampler for the provided image. The program will be loaded if it is not already in memory"
-  },
   "@phoenix/globaltype/Renderer.SetShaderVariable": {
-    "documentation": "Sets a variable in a shader program. The program will be loaded if it is not already in memory. `Type` is required when passing a `vector`, to differentiate between `Vector2` and `Vector3`. See `Enum.ValueType`"
-  },
-  "@phoenix/globaltype/Renderer.SetViewport": {
-    "documentation": "Changes the location and size of where the viewport will be rendered-to on screen"
+    "documentation": "Sets a variable in a shader program (qualified `uniform`). The program will be loaded if it is not already in memory. `Type` is required when passing a `vector`, to differentiate between `Vector2` and `Vector3`. See `Enum.ValueType`"
   },
   "@phoenix/globaltype/Renderer.UnloadTexture": {
     "documentation": "Removes the given texture from the Engine's cache, forcing it to be reloaded upon next use"

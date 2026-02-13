@@ -417,7 +417,12 @@ local function dumpReflectionApi(t, d, cn)
 				end
 
 				subst = GameObjectOverrides[n] or subst
-				definitionsFile ..= `  function { n }{ subst }\n`
+
+				if n ~= "SetShaderVariable" then
+					definitionsFile ..= `  function { n }{ subst }\n`
+				else
+					definitionsFile ..= "  SetShaderVariable: ((_: Renderer, Shader: string, Variable: string, Value: boolean | number | Color | Matrix, Type: number?) -> ()) & ((_: Renderer, Shader: string, Variable: string, Value: vector, Type: number) -> ())"
+				end
 
 				if subst:find("Array") or subst:find("Map") then
 					warn(`Type '{subst}' has Array or Map, for {cn}.{n}`)

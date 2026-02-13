@@ -141,6 +141,7 @@ class RendererServiceManager : public ComponentManager<EcRendererService>
                 }
             } },
 
+            /*
             { "SetShaderTextureVariable", Reflection::MethodDescriptor{
                 // Name of shader program, name of uniform, value, path to texture
                 { Reflection::ValueType::String, Reflection::ValueType::String, Reflection::ValueType::String },
@@ -153,7 +154,7 @@ class RendererServiceManager : public ComponentManager<EcRendererService>
                     shader.SetTextureUniform(inputs[1].AsString(), TextureManager::Get()->LoadTextureFromPath(inputs[2].AsString()));
                     return {};
                 }
-            } },
+            } },*/
 
             // SetMaterialVariable
         };

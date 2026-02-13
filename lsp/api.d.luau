@@ -265,10 +265,7 @@ declare extern type Renderer with
   Resolution: vector
   VSync: boolean
 
-  function SetShaderTextureVariable(self, Shader: string, Variable: string, TexturePath: string) : ()
-  function SetShaderVariable(self, Shader: string, Variable: string, Value: boolean | number | vector | Color | Matrix, Type: number?) : ()
-  function SetViewport(self, Position: vector, Size: vector) : ()
-  function UnloadTexture(self, Texture: string) : ()
+  SetShaderVariable: ((_: Renderer, Shader: string, Variable: string, Value: boolean | number | Color | Matrix, Type: number?) -> ()) & ((_: Renderer, Shader: string, Variable: string, Value: vector, Type: number) -> ())  function UnloadTexture(self, Texture: string) : ()
 end
 declare extern type RigidBody with
   AngularVelocity: vector
@@ -397,6 +394,7 @@ declare imgui: {
   combo: (( Text: string, Options: { string }, CurrentOption: number ) -> (number)),
   contentregionavail: ((  ) -> (vector)),
   cursorposition: ((  ) -> (vector)),
+  demowindow: (( HasCloseButton: boolean? ) -> (boolean)),
   dummy: (( Width: number?, Height: number? ) -> ()),
   endchild: ((  ) -> ()),
   endmainmenubar: ((  ) -> ()),

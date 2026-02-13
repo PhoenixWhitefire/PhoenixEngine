@@ -513,7 +513,7 @@
         "Methods": {
           "SetShaderVariable": {
             "Type": "(self, Shader: string, Variable: string, Value: boolean | number | vector | Color | Matrix, Type: number?) : ()",
-            "Description": "Sets a variable in a shader program. The program will be loaded if it is not already in memory. `Type` is required when passing a `vector`, to differentiate between `Vector2` and `Vector3`. See `Enum.ValueType`"
+            "Description": "Sets a variable in a shader program (qualified `uniform`). The program will be loaded if it is not already in memory. `Type` is required when passing a `vector`, to differentiate between `Vector2` and `Vector3`. See `Enum.ValueType`"
           },
           "SetShaderTextureVariable": {
             "ParameterNames": [ "Shader", "Variable", "TexturePath" ],
@@ -1319,6 +1319,11 @@
               "To *set* the cursor position, use `.setcursorposition`"
             ],
             "Out": "vector"
+          },
+          "demowindow": {
+            "Description": "Renders the Dear ImGui demo window (`ImGui::ShowDemoWindow`)",
+            "In": "HasCloseButton: boolean?",
+            "Out": "boolean"
           },
           "dummy": {
             "Description": [

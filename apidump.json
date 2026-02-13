@@ -223,9 +223,7 @@
       },
       "Renderer": {
         "Methods": {
-          "SetShaderTextureVariable": "(String, String, String) -> ()",
           "SetShaderVariable": "(String, String, Any, Integer?) -> ()",
-          "SetViewport": "(Vector2, Vector2) -> ()",
           "UnloadTexture": "(String) -> ()"
         },
         "Properties": {
@@ -408,6 +406,7 @@
         "combo": "function",
         "contentregionavail": "function",
         "cursorposition": "function",
+        "demowindow": "function",
         "dummy": "function",
         "endchild": "function",
         "endmainmenubar": "function",

@@ -892,6 +892,15 @@ static int imgui_scrollherey(lua_State*)
     return 0;
 }
 
+static int imgui_demowindow(lua_State* L)
+{
+    bool open = true;
+    ImGui::ShowDemoWindow(luaL_optboolean(L, 1, false) ? &open : nullptr);
+
+    lua_pushboolean(L, open);
+    return 1;
+}
+
 static luaL_Reg imgui_funcs[] =
 {
     { "begin", imgui_begin },
@@ -953,6 +962,7 @@ static luaL_Reg imgui_funcs[] =
     { "textsize", imgui_textsize },
     { "setnextitemwidth", imgui_setnextitemwidth },
     { "scrollherey", imgui_scrollherey },
+    { "demowindow", imgui_demowindow },
     { NULL, NULL }
 };
 
