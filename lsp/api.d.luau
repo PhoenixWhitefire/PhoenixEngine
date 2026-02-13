@@ -20,6 +20,8 @@ declare extern type ScrollInputEvent with
 	X: number
 	Y: number
 end
+
+export type JsonSerializable = nil | boolean | number | string | vector | { JsonSerializable } | { [string]: JsonSerializable }
 declare extern type Color with
   B: number
   G: number
@@ -31,7 +33,7 @@ declare Color: {
 declare extern type EventConnection with
   function Disconnect(self): (  )
   Connected: boolean
-  Signal: any
+  Signal: unknown
 end
 declare GameObject: {
   fromId: (( Id: number ) -> (GameObject?)),
@@ -88,9 +90,9 @@ declare extern type GameObject with
   function Destroy(self) : ()
   function Duplicate(self) : (GameObject)
   function FindChild(self, ChildName: string) : (GameObject?)
-  function FindChildWithComponent(self, Component: keyof<Creatables>) : (GameObject & any)
-  function ForEachChild(self, Callback: (any) -> (any)) : ()
-  function ForEachDescendant(self, Callback: (any) -> (any)) : ()
+  function FindChildWithComponent(self, Component: keyof<Creatables>) : (GameObject)
+  function ForEachChild(self, Callback: (unknown) -> (unknown)) : ()
+  function ForEachDescendant(self, Callback: (unknown) -> (unknown)) : ()
   function GetChildren(self) : { GameObject }
   function GetComponents(self) : keyof<Creatables>
   function GetDescendants(self) : { GameObject }
@@ -175,7 +177,7 @@ declare extern type Engine with
   function CreateVM(self, VmName: string) : ()
   function Exit(self, ExitCode: number?) : ()
   function GetCliArguments(self) : { string }
-  function GetConfigValue(self, Key: string) : (unknown)
+  function GetConfigValue(self, Key: string) : (JsonSerializable)
   function GetExplorerSelections(self) : ({ GameObject })
   function GetToolNames(self) : { string }
   function IsToolEnabled(self, ToolName: string) : (boolean)
@@ -184,7 +186,7 @@ declare extern type Engine with
   function ResetViewportInputRect(self) : ()
   function RunInVM(self, VmName: string, Code: string, ChunkName: string?) : (boolean, string?)
   function SaveConfig(self) : (boolean, string)
-  function SetConfigValue(self, Key: string, Value: unknown) : ()
+  function SetConfigValue(self, Key: string, Value: JsonSerializable) : ()
   function SetExplorerRoot(self, Root: GameObject) : ()
   function SetExplorerSelections(self, Selections: { GameObject }) : ()
   function SetToolEnabled(self, ToolName: string, Enabled: boolean) : ()
@@ -441,8 +443,8 @@ declare imgui: {
   windowsize: ((  ) -> (vector))
 }
 declare json: {
-  encode: (( Value: any, Indent: number? ) -> (string)),
-  parse: (( Json: string ) -> (any))
+  encode: (( Value: JsonSerializable, Indent: number? ) -> (string)),
+  parse: (( Json: string ) -> (JsonSerializable))
 }
 declare task: {
   defer: (<A...>( Task: ((A...) -> ()) | thread, A... ) -> ()),
@@ -454,9 +456,9 @@ declare task: {
 
 
 declare _VMNAME: string
-declare function appendlog( ...: any ): ()
+declare function appendlog( ...: unknown ): ()
 declare game: GameObject & DataModel
-declare function warn( ...: any ): ()
+declare function warn( ...: unknown ): ()
 declare workspace: GameObject & Workspace
 
 

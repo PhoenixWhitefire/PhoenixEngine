@@ -40,6 +40,8 @@ local EditorPreferences = {
 	Gamma = 2.2
 }
 
+EditorPreferences = EditorPreferences :: { [keyof<typeof(EditorPreferences)>]: index<typeof(EditorPreferences), keyof<typeof(EditorPreferences)>> } & typeof(EditorPreferences)
+
 local EDITOR_RECENT_PROJECTS_PATH = "./editor/recent-projects.json"
 
 local GameEditingVM = "GameEditingVM"
@@ -76,6 +78,24 @@ local ErrorMessage = ""
 local ErrorMessageTimeRemaining = 0
 
 History:EnableRecording()
+
+local savedEditorPreferences = if fs.isfile("./editor/settings.json") then json.parse(assert(fs.read("./editor/settings.json"))) else EditorPreferences
+assert(typeof(savedEditorPreferences) == "table")
+savedEditorPreferences = savedEditorPreferences :: { [string | number]: JsonSerializable }
+
+for k: keyof<typeof(EditorPreferences)>, v in EditorPreferences do
+	if savedEditorPreferences[k] == nil then
+		savedEditorPreferences[k] = v
+	end
+end
+
+EditorPreferences = savedEditorPreferences :: typeof(EditorPreferences)
+
+Engine:SetConfigValue("postfx_gamma", EditorPreferences.Gamma)
+
+if not Engine.IsHeadless then
+	imgui.stylecolors(if EditorPreferences.UseLightTheme then 'l' else 'd')
+end
 
 fs.definealias("editres", "@cwd/resources")
 fs.definealias("etextures", "@editres/textures")
@@ -219,7 +239,8 @@ changeStageTo = function(NewStage: Stage)
 end
 
 local function saveRecents()
-	fs.write(EDITOR_RECENT_PROJECTS_PATH, json.encode(RecentProjects))
+	-- TODO: fix cast
+	fs.write(EDITOR_RECENT_PROJECTS_PATH, json.encode(RecentProjects :: { JsonSerializable }))
 end
 
 local function saveToRecents(Path: string)
@@ -275,7 +296,12 @@ local function openProject_(ManualPath: string?)
 			local name: string? = nil
 
 			if conf then
-				name = json.parse(conf).GameTitle
+				local confdata = json.parse(conf)
+				-- TODO: fix cast
+				assert(typeof(confdata) == "table")
+				local title = confdata["GameTitle" :: string]
+				assert(typeof(title) == "string")
+				name = title
 			end
 
 			if name then
@@ -332,7 +358,8 @@ local function openProject_(ManualPath: string?)
 		print("Re-created DataModel")
 	end
 
-	Project.DataModel.Name = Project.Name;
+	-- TODO: creating another binding and adding an `assert(dm)` causes the type state to become `*error-type*`
+	Project.DataModel.Name = Project.Name
 
 	Project.Workspace = Project.DataModel:FindChildWithComponent("Workspace") :: any
 
@@ -905,7 +932,9 @@ local function renderMainMenuBar(dt: number)
 								Project.Name = newProjectName
 
 								local conf = json.parse(assert(fs.read("@proj/phoenix.conf")))
-								conf.GameTitle = newProjectName
+								assert(typeof(conf) == "table")
+								-- TODO: fix cast
+								conf["GameTitle" :: string] = newProjectName
 
 								fs.write(
 									"@proj/phoenix.conf",
@@ -1102,22 +1131,6 @@ local function renderMainMenuBar(dt: number)
 
 		imgui.endpopup()
 	end
-end
-
-local savedEditorPreferences = if fs.isfile("./editor/settings.json") then json.parse(assert(fs.read("./editor/settings.json"))) else EditorPreferences
-
-for k, v in EditorPreferences do
-	if savedEditorPreferences[k] == nil then
-		savedEditorPreferences[k] = v
-	end
-end
-
-EditorPreferences = savedEditorPreferences
-
-Engine:SetConfigValue("postfx_gamma", EditorPreferences.Gamma)
-
-if not Engine.IsHeadless then
-	imgui.stylecolors(if EditorPreferences.UseLightTheme then 'l' else 'd')
 end
 
 local PrevSelections: { GameObject & Transform } = {}
@@ -1502,7 +1515,10 @@ function Stages.SelectProject_Enter(DeltaTime)
 		return
 	end
 
-	RecentProjects = json.parse(rpstr)
+	local rpjson = json.parse(rpstr)
+	assert(typeof(rpjson) == "table")
+
+	RecentProjects = rpjson :: typeof(RecentProjects)
 	SavedProjectsCache = nil
 
 	PluginManager.Shutdown()
@@ -1596,7 +1612,8 @@ local function renderRenderProjects()
 	if imgui.beginpopup("ProjectContextMenu") then
 		if imgui.menuitem("Remove from Recents") then
 			table.remove(RecentProjects, ProjectContextMenuTarget)
-			fs.write(EDITOR_RECENT_PROJECTS_PATH, json.encode(RecentProjects))
+			-- TODO: fix cast
+			fs.write(EDITOR_RECENT_PROJECTS_PATH, json.encode(RecentProjects :: JsonSerializable))
 		end
 
 		imgui.endpopup()
@@ -1611,9 +1628,11 @@ local function renderSavedProjects()
 		for path, type in fs.listdir("@cwd/projects") do
 			if type == "d" and fs.isfile(path .. "/phoenix.conf") then
 				local conf = json.parse(assert(fs.read(path .. "/phoenix.conf")))
-				assert(typeof(conf.GameTitle == "string"))
+				assert(typeof(conf) == "table")
+				local title = conf["GameTitle" :: string]
+				assert(typeof(title == "string"))
 
-				table.insert(SavedProjectsCache, conf.GameTitle)
+				table.insert(SavedProjectsCache, title)
 			end
 		end
 	end

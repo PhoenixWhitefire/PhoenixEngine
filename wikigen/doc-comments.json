@@ -30,7 +30,7 @@
         "FindChildWithComponent": {
           "Description": "Returns a child Object which has the given component, or `nil` if one doesn't exist",
           "ParameterNames": "Component",
-          "Type": "(keyof<Creatables>) : (GameObject & any)"
+          "Type": "(keyof<Creatables>) : (GameObject)"
         },
         "ForEachChild": {
           "Description": "For all children of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield",
@@ -266,9 +266,7 @@
           },
           "GetConfigValue": {
             "Description": "Returns the value associated with the given Key in the Engine's loaded configuration (`phoenix.conf`)",
-            "ParameterNames": [
-              "Key"
-            ]
+            "Type": "(self, Key: string) : (JsonSerializable)"
           },
           "GetToolNames": {
             "Description": "Returns a list of valid Engine tools",
@@ -298,10 +296,7 @@
           "SaveConfig": "Saves the Engine's current configuration state to the configuration file (`phoenix.conf`)",
           "SetConfigValue": {
             "Description": "Sets `Key` to `Value` in the Engine's loaded configuration without saving it to file",
-            "ParameterNames": [
-              "Key",
-              "Value"
-            ]
+            "Type": "(self, Key: string, Value: JsonSerializable) : ()"
           },
           "SetCurrentVM": {
             "Description": "Binds the given VM as the \"current\" one. This causes all Scripts which load afterward to use the specified VM, it does *not* change the VM of any Scripts loaded beforehand",
@@ -679,7 +674,7 @@
           },
           "Signal": {
             "Description": "The Event which `:Connect` was called upon to return this Connection",
-            "Type": "any"
+            "Type": "unknown"
           }
         }
       },
@@ -688,12 +683,12 @@
         "Members": {
           ":Connect": {
             "Description": "Connect a callback to the Event",
-            "In": "(any) -> (any)",
+            "In": "(uknown) -> (unknown)",
             "Out": "EventConnection"
           },
           ":WaitUntil": {
             "Description": "Yields the thread until the Event is fired",
-            "Out": "any"
+            "Out": "unknown"
           }
         }
       },
@@ -887,14 +882,14 @@
       },
       "appendlog": {
         "Description": "Same as `print`, but does not prefix the log message with `[INFO]`",
-        "In": "...: any"
+        "In": "...: unknown"
       },
       "game": {
         "Description": "The GameObject acting as the Data Model of the Engine"
       },
       "warn": {
         "Description": "Same as `print`, except generates a Warning message",
-        "In": "...: any"
+        "In": "...: unknown"
       },
       "workspace": {
         "Description": "Shorthand for `game.Workspace`"
@@ -1712,7 +1707,7 @@
           "encode": {
             "Description": "Encodes the provided value into a JSON string. The default indentiation is 2 spaces",
             "In": [
-              "Value: any",
+              "Value: JsonSerializable",
               "Indent: number?"
             ],
             "Out": "string"
@@ -1724,7 +1719,7 @@
             "In": [
               "Json: string"
             ],
-            "Out": "any"
+            "Out": "JsonSerializable"
           }
         }
       },

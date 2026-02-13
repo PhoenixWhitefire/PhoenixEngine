@@ -72,6 +72,8 @@ declare extern type ScrollInputEvent with
 	X: number
 	Y: number
 end
+
+export type JsonSerializable = nil | boolean | number | string | vector | { JsonSerializable } | { [string]: JsonSerializable }
 ]]
 local documentationData = {}
 
@@ -262,7 +264,7 @@ local function rtolsub(str)
 	end
 
 	-- to avoid the `->` being converted to a `:` (which, for function type declarations, is wrong)
-	str = string.gsub(str, "Function", "(any) -> (any)")
+	str = string.gsub(str, "Function", "(unknown) -> (unknown)")
 
 	return str
 end
