@@ -15,19 +15,19 @@ struct RenderMaterial
 	// Reload the material from File
 	void Reload();
 
-	std::string Name{};
-	uint32_t ShaderId{};
+	std::string Name;
+	uint32_t ShaderId = UINT32_MAX;
 
 	// Resource IDs for the `TextureManager` to resolve into a 
 	// Graphics Texture ID
-	uint32_t ColorMap{};
-	uint32_t MetallicRoughnessMap{};
-	uint32_t NormalMap{};
-	uint32_t EmissionMap{};
+	uint32_t ColorMap = 0;
+	uint32_t MetallicRoughnessMap = 0;
+	uint32_t NormalMap = 0;
+	uint32_t EmissionMap = 0;
 
 	bool HasTranslucency = false;
-	float SpecExponent{};
-	float SpecMultiply{};
+	float SpecExponent = 0.f;
+	float SpecMultiply = 0.f;
 
 	enum class MaterialPolygonMode : uint8_t
 	{

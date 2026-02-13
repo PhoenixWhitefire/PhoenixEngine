@@ -281,7 +281,7 @@ void MaterialManager::SaveToPath(const RenderMaterial& material, const std::stri
 		}
 	}
 
-	std::string namedyn{ Name };
+	std::string namedyn = std::string(Name);
 
 	std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
 	std::chrono::year_month_day ymd = std::chrono::floor<std::chrono::days>(now);

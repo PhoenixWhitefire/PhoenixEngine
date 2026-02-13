@@ -98,7 +98,7 @@ class RendererServiceManager : public ComponentManager<EcRendererService>
                     ShaderProgram& shader = shaderManager->GetShaderResource(shaderManager->LoadFromPath(inputs[0].AsString()));
 
                     Reflection::GenericValue val = inputs[2];
-                    Reflection::ValueType vt = inputs.size() >= 4 ? (Reflection::ValueType)inputs[3].AsInteger() : Reflection::ValueType::Null;
+                    Reflection::ValueType vt = inputs.size() >= 4 ? (Reflection::ValueType)inputs[3].AsInteger() : val.Type;
 
                     if (val.Type == Reflection::ValueType::Vector3)
                     {
@@ -136,7 +136,7 @@ class RendererServiceManager : public ComponentManager<EcRendererService>
                     if (!allowed)
                         RAISE_RTF("{}s are not an allowed shader variable type!", Reflection::TypeAsString(vt));
 
-                    shader.SetUniform(inputs[1].AsString(), val);
+                    shader.DefaultUniforms[inputs[1].AsString()] = val;
                     return {};
                 }
             } },
@@ -154,6 +154,8 @@ class RendererServiceManager : public ComponentManager<EcRendererService>
                     return {};
                 }
             } },
+
+            // SetMaterialVariable
         };
 
         return methods;
