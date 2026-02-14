@@ -74,13 +74,14 @@ All 3rd-party code and submodules are located in the `Vendor` directory.
 
 The following third-party projects were used/referenced during this Engine's development:
 
-* Luau - [@luau-lang/luau](https://github.com/luau-lang/luau/)
+* Luau - [@luau-lang/luau](https://github.com/luau-lang/luau)
 * Lute - [@luau-lang/lute](https://github.com/luau-lang/lute)
-* OpenGL - [Khronos Group](https://khronos.org/)
-* Glad - [glad.dav1d.de/](https://glad.dav1d.de/)
-* GLM - [@g-truc/glm](https://github.com/g-truc/glm/)
-* `nlohmann::json` - [@nlohmann/json](https://github.com/nlohmann/json/)
-* Dear ImGui - [@ocornut/ImGui](https://github.com/ocornut/imgui/)
+* Luau LSP - [@JohnnyMorganz](https://github.com/JohnnyMorganz/luau-lsp)
+* OpenGL - [Khronos Group](https://khronos.org)
+* Glad - [glad.dav1d.de/](https://glad.dav1d.de)
+* GLM - [@g-truc/glm](https://github.com/g-truc/glm)
+* `nlohmann::json` - [@nlohmann/json](https://github.com/nlohmann/json)
+* Dear ImGui - [@ocornut/ImGui](https://github.com/ocornut/imgui)
 * STB Image - [@nothings/stb](https://github.com/nothings/stb)
 * Tracy - [@wolfpld/Tracy](https://github.com/wolfpld/tracy)
 * `miniaudio` - [@mackron/miniaudio](https://github.com/mackron/miniaudio)

@@ -490,8 +490,7 @@ int ScriptEngine::CompileAndLoad(lua_State* L, const std::string& SourceCode, co
 	// Tell Luau that these are mutable. Otherwise, GETIMPORT optimizations
 	// will cause them to be treated as constants and only invoke their `__index` functions
 	// once and cache the result
-	const char* mutableGlobals[] = 
-	{
+	const char* mutableGlobals[] = {
 		"game", "workspace",
 		NULL
 	};
@@ -1418,13 +1417,13 @@ static void openEnum(lua_State* L)
 	lua_newtable(L);
 
 	lua_pushinteger(L, GLFW_RELEASE);
-	lua_setfield(L, -2, "Release");
+	lua_setfield(L, -2, "Released");
 
 	lua_pushinteger(L, GLFW_PRESS);
-	lua_setfield(L, -2, "Press");
+	lua_setfield(L, -2, "Pressed");
 
 	lua_pushinteger(L, GLFW_REPEAT);
-	lua_setfield(L, -2, "Repeat");
+	lua_setfield(L, -2, "Repeated");
 
 	lua_setfield(L, -2, "InputAction");
 

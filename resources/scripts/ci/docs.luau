@@ -2,17 +2,19 @@
 
 print("Docs CI begin\n\n\n\n\n")
 
+local Engine: Engine = game:GetService("Engine") :: any
+
 task.delay(5, function()
 	warn("Docgen appears to have hung - exiting")
-	game:GetService("Engine"):Exit(1)
+	Engine:Exit(1)
 end)
 
 local BASE_PATH = "./wikigen"
 local DOCS_PREFIX = "phoenix"
 local WIKI_PATH = ".github/wiki"
 
-local apiDump = json.parse(assert(fs.read("./apidump.json")))
-local docComments = json.parse(assert(fs.read(BASE_PATH .. "/doc-comments.json")))
+local apiDump = json.parse(assert(fs.read("./apidump.json"))) :: { [string]: any }
+local docComments = json.parse(assert(fs.read(BASE_PATH .. "/doc-comments.json"))) :: { [string]: any }
 
 local datatypesPrologue = fs.read(BASE_PATH .. "/datatypes-prologue.md")
 local librariesPrologue = fs.read(BASE_PATH .. "/libraries-prologue.md")
@@ -56,15 +58,15 @@ export type EventSignal<T...> = {
 }
 
 declare extern type KeyInputEvent with
-	Key: index<typeof(Enum.Key), keyof<typeof(Enum.Key)>>
+	Key: EnumKey
 	Scancode: number
-	Action: index<typeof(Enum.InputAction), keyof<typeof(Enum.InputAction)>>
+	Action: EnumInputAction
 	Modifiers: number
 end
 
 declare extern type MouseButtonInputEvent with
-	Button: index<typeof(Enum.MouseButton), keyof<typeof(Enum.MouseButton)>>
-	Action: index<typeof(Enum.InputAction), keyof<typeof(Enum.InputAction)>>
+	Button: EnumMouseButton
+	Action: EnumInputAction
 	Modifiers: number
 end
 
@@ -74,6 +76,12 @@ declare extern type ScrollInputEvent with
 end
 
 export type JsonSerializable = nil | boolean | number | string | vector | { JsonSerializable } | { [string]: JsonSerializable }
+
+declare extern type Enum with
+end
+
+declare extern type EnumItem with
+end
 ]]
 local documentationData = {}
 
@@ -264,7 +272,7 @@ local function rtolsub(str)
 	end
 
 	-- to avoid the `->` being converted to a `:` (which, for function type declarations, is wrong)
-	str = string.gsub(str, "Function", "(unknown) -> (unknown)")
+	str = string.gsub(str, "Function", "(...unknown) -> (...unknown)")
 
 	return str
 end
@@ -423,7 +431,7 @@ local function dumpReflectionApi(t, d, cn)
 				if n ~= "SetShaderVariable" then
 					definitionsFile ..= `  function { n }{ subst }\n`
 				else
-					definitionsFile ..= "  SetShaderVariable: ((_: Renderer, Shader: string, Variable: string, Value: boolean | number | Color | Matrix, Type: number?) -> ()) & ((_: Renderer, Shader: string, Variable: string, Value: vector, Type: number) -> ())"
+					definitionsFile ..= "  SetShaderVariable: ((_: Renderer, Shader: string, Variable: string, Value: boolean | number | Color | Matrix, Type: EnumValueType?) -> ()) & ((_: Renderer, Shader: string, Variable: string, Value: vector, Type: EnumValueType) -> ())"
 				end
 
 				if subst:find("Array") or subst:find("Map") then
@@ -688,8 +696,76 @@ for _, name in orderedLibraries do
 	documentationData[`@{DOCS_PREFIX}/global/{name}`] = {
 		documentation = totalcomment
 	}
-	
-	libraries ..= "\n" .. dumpLibMembers(lib.Members, apiDump.ScriptEnv.Libraries[name], name)
+
+	libraries ..= "\n"
+
+	if name ~= "Enum" then
+		libraries ..= dumpLibMembers(lib.Members, apiDump.ScriptEnv.Libraries[name], name)
+	else
+		-- thank you johnny
+		-- https://github.com/JohnnyMorganz/luau-lsp/blob/b700f428a23779c43be96e09cb999b16604289d5/scripts/globalTypes.d.luau#L59
+
+		local members = lib.Members
+		local enumList = "declare Enum: {\n"
+		local namesUnion = ""
+		local typesUnion = ""
+
+		local orderedMemberNames = keysOf(Enum)
+		table.sort(orderedMemberNames)
+
+		for _, e in orderedMemberNames do
+			local n = Enum[e]
+
+			definitionsFile ..= `declare extern type Enum{e} extends EnumItem with end\n`
+			definitionsFile ..= `declare extern type Enum{e}_INTERNAL extends Enum with\n`
+			namesUnion ..= ` | "{e}"`
+			typesUnion ..= ` | Enum{e}_INTERNAL`
+
+			assert(members[e], `Enum.{e} has no documentation`)
+
+			local totalcomment = ""
+
+			for _, comment in (if typeof(members[e].Description) == "table" then members[e].Description else { members[e].Description }) do
+				if not comment then
+					print(`Missing doc comment for Enum.{e}`)
+				end
+
+				totalcomment ..= `* { comment }\n`
+			end
+			totalcomment = totalcomment:sub(1, #totalcomment - 1)
+
+			local enumDocs = {
+				documentation = totalcomment,
+				keys = {}
+			}
+			documentationData[`@{DOCS_PREFIX}/global/Enum.{e}`] = enumDocs
+
+			if not members[e].Items then
+				warn(`Enum.{e} has no documentation for its items`)
+			end
+
+			local orderedItems = keysOf(n)
+			table.sort(orderedItems)
+
+			for _, k in orderedItems do
+				definitionsFile ..= `  {k}: Enum{e}\n`
+				if members[e].Items and not members[e].Items[k] then
+					warn(`Enum.{e}.{k} has no documentation`)
+				end
+
+				enumDocs.keys[k] = `@{DOCS_PREFIX}/enum/{e}.{k}`
+				documentationData[`@{DOCS_PREFIX}/enum/{e}.{k}`] = {
+					documentation = (members[e].Items or {})[k] or ""
+				}
+			end
+
+			definitionsFile ..= "end\n"
+			enumList ..= `  {e}: Enum{e}_INTERNAL,\n`
+		end
+
+		enumList ..= `  [{namesUnion}]: {typesUnion}\n}\n\n`
+		definitionsFile ..= enumList
+	end
 end
 
 definitionsFile ..= "\n\n"
@@ -750,5 +826,5 @@ print("Docs CI finish\n\n\n\n\n")
 
 if not _G.LspDefinitionsGeneratorDoNotShutdown then
 	-- close when we're done
-	game:GetService("Engine"):Exit()
+	Engine:Exit()
 end

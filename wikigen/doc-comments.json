@@ -129,13 +129,13 @@
               "Path"
             ]
           },
-          "SetMeshData": {
-            "Description": "Associates the provided mesh data with the provided path",
-            "Type": "(self, Id: string, MeshData: { Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } }) : ()"
-          },
           "SaveScene": {
             "Description": "Saves the list of `GameObject`s to the provided path, returning whether the operation succeeded",
             "Type": "(self, RootNodes: { GameObject }, Path: string) : (boolean, string?)"
+          },
+          "SetMeshData": {
+            "Description": "Associates the provided mesh data with the provided path",
+            "Type": "(self, Id: string, MeshData: { Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } }) : ()"
           }
         }
       },
@@ -165,6 +165,10 @@
           "Tags can be added to Objects with `Object:AddTag`, removed with `Object:RemoveTag`, and checked with `Object:HasTag`"
         ],
         "Methods": {
+          "GetCollections": {
+            "Description": "Returns a list of all collections that the Collections system has recognized. They may be empty. Order is *not* guaranteed",
+            "Out": "{ string }"
+          },
           "GetTagAddedSignal": {
             "Description": "Returns a signal that fires when the given tag is added to any Objects",
             "Out": "EventSignal<GameObject>",
@@ -179,10 +183,6 @@
             "Description": "Returns a list containing all Objects with the given tag",
             "Out": "{ GameObject }",
             "ParameterNames": "Tag"
-          },
-          "GetCollections": {
-            "Description": "Returns a list of all collections that the Collections system has recognized. They may be empty. Order is *not* guaranteed",
-            "Out": "{ string }"
           }
         }
       },
@@ -259,14 +259,14 @@
             "Description": "Returns the list of launch arguments given to the Engine. The first item is always a path to the Engine executable",
             "Out": "{ string }"
           },
+          "GetConfigValue": {
+            "Description": "Returns the value associated with the given Key in the Engine's loaded configuration (`phoenix.conf`)",
+            "Type": "(self, Key: string) : (JsonSerializable)"
+          },
           "GetCurrentVM": "Returns the name of the currently-bound VM",
           "GetExplorerSelections": {
             "Description": "Returns what is currently selected in the Explorer",
             "Type": "() : ({ GameObject })"
-          },
-          "GetConfigValue": {
-            "Description": "Returns the value associated with the given Key in the Engine's loaded configuration (`phoenix.conf`)",
-            "Type": "(self, Key: string) : (JsonSerializable)"
           },
           "GetToolNames": {
             "Description": "Returns a list of valid Engine tools",
@@ -395,8 +395,8 @@
           },
           "GetActionData": {
             "Description": "Retrives information about a previously-recorded Action by its Index (Indexes, separate from IDs, are in the range 0 <= Index < `ActionHistorySize`)",
-            "ParameterNames": "Index",
-            "Out": "{ Name: string, Events: { { Target: GameObject, Property: string, NewValue: unknown, PreviousValue: unknown } } }"
+            "Out": "{ Name: string, Events: { { Target: GameObject, Property: string, NewValue: unknown, PreviousValue: unknown } } }",
+            "ParameterNames": "Index"
           },
           "GetCannotRedoReason": "Returns a message explaining why `.CanRedo` is `false`",
           "GetCannotUndoReason": "Returns a message explaining why `.CanUndo` is `false`",
@@ -424,10 +424,13 @@
       "Mesh": {
         "Description": "A mesh composed of triangles",
         "Properties": {
-          "MeshAsset": "The path to the underlying `.hxmesh` file, or a built-in identifier like `!Quad` or `!Cube`",
           "CastsShadows": "Whether it casts shadows",
-          "FaceCulling": "Which faces of the mesh to cull based on viewing direction. See the `FaceCulling` enum",
+          "FaceCulling": {
+            "Description": "Which faces of the mesh to cull based on viewing direction. See the `FaceCulling` enum",
+            "Type": "EnumFaceCulling"
+          },
           "Material": "The name of the `.mtl` in the `resources/materials/` directory it should use",
+          "MeshAsset": "The path to the underlying `.hxmesh` file, or a built-in identifier like `!Quad` or `!Cube`",
           "MetallnessFactor": "Metallness modifier",
           "RoughnessFactor": "Roughness modifier",
           "Tint": "The Color it should be tinted with",
@@ -453,8 +456,8 @@
           "DebugContactPoints": "Whether Contact Points are rendered",
           "DebugSpatialHeat": "Whether Spatial Heat (spatial hash density) debug rendering is enabled",
           "Gravity": "The gravitational field strength",
-          "Timescale": "Slow-down or speed-up the simulation by changing this value from `1`",
-          "Simulating": "Whether the Physics simulation is running. IMPORTANT: The Editor sets this value to `true` and `false` when starting/stopping playtests"
+          "Simulating": "Whether the Physics simulation is running. IMPORTANT: The Editor sets this value to `true` and `false` when starting/stopping playtests",
+          "Timescale": "Slow-down or speed-up the simulation by changing this value from `1`"
         }
       },
       "PlayerInput": {
@@ -480,16 +483,22 @@
           "GetCursorPosition": "Returns the current position of the mouse cursor relative to the window as a `vector`",
           "IsKeyPressed": {
             "Description": "Returns whether the specified key (e.g. `Enum.Key.A`, `Enum.Key.One`) is currently being pressed",
-            "ParameterNames": "Key"
+            "Type": "(self, Key: EnumKey) : (boolean)"
           },
           "IsMouseButtonPressed": {
             "Description": "Returns whether the specified mouse button (`Enum.MouseButton.Left/Middle/Right`) is currently being pressed",
-            "ParameterNames": "MouseButton"
+            "Type": "(self, Button: EnumMouseButton) : (boolean)"
           }
         },
         "Properties": {
-          "Cursor": "The look of the cursor. See `Enum.Cursor`",
-          "CursorMode": "The current mode/behaviour of the cursor. Refer to the `Enum.CursorMode` enumeration",
+          "Cursor": {
+            "Description": "The look of the cursor. See `Enum.Cursor`",
+            "Type": "EnumCursor"
+          },
+          "CursorMode": {
+            "Description": "The current mode/behaviour of the cursor. Refer to the `Enum.CursorMode` enumeration",
+            "Type": "EnumCursorMode"
+          },
           "IsKeyboardSunk": "Whether the Engine is currently using keyboard input (such as for Dear ImGui). Do not process keyboard input if this is `true`",
           "IsMouseSunk": "Whether the Engine is currently using mouse input (such as for Dear ImGui). Do not process mouse input if this is `true`"
         }
@@ -506,17 +515,24 @@
       "Renderer": {
         "Description": "Interfacing with the Engine's rendering systems",
         "Methods": {
-          "SetShaderVariable": {
-            "Type": "(self, Shader: string, Variable: string, Value: boolean | number | vector | Color | Matrix, Type: number?) : ()",
-            "Description": "Sets a variable in a shader program (qualified `uniform`). The program will be loaded if it is not already in memory. `Type` is required when passing a `vector`, to differentiate between `Vector2` and `Vector3`. See `Enum.ValueType`"
-          },
           "SetShaderTextureVariable": {
-            "ParameterNames": [ "Shader", "Variable", "TexturePath" ],
-            "Description": "Sets a variable in a shader program to a 2D texture sampler for the provided image. The program will be loaded if it is not already in memory"
+            "Description": "Sets a variable in a shader program to a 2D texture sampler for the provided image. The program will be loaded if it is not already in memory",
+            "ParameterNames": [
+              "Shader",
+              "Variable",
+              "TexturePath"
+            ]
+          },
+          "SetShaderVariable": {
+            "Description": "Sets a variable in a shader program (qualified `uniform`). The program will be loaded if it is not already in memory. `Type` is required when passing a `vector`, to differentiate between `Vector2` and `Vector3`. See `Enum.ValueType`",
+            "Type": "(self, Shader: string, Variable: string, Value: boolean | number | vector | Color | Matrix, Type: EnumValueType?) : ()"
           },
           "SetViewport": {
-            "ParameterNames": [ "Position", "Size" ],
-            "Description": "Changes the location and size of where the viewport will be rendered-to on screen"
+            "Description": "Changes the location and size of where the viewport will be rendered-to on screen",
+            "ParameterNames": [
+              "Position",
+              "Size"
+            ]
           },
           "UnloadTexture": {
             "Description": "Removes the given texture from the Engine's cache, forcing it to be reloaded upon next use",
@@ -534,7 +550,10 @@
         "Description": "Something rigid that participates in the Physics simulation",
         "Properties": {
           "AngularVelocity": "Its rotational velocity",
-          "CollisionType": "Determines how collisions are detected. See the `CollisionType` enum",
+          "CollisionType": {
+            "Description": "Determines how collisions are detected. See the `CollisionType` enum",
+            "Type": "EnumCollisionType"
+          },
           "Density": "Its density (`Mass = Density * Size`)",
           "Friction": "Fraction of Velocity it should lose per second while in contact with another object while `PhysicsDynamics` is `true`",
           "GravityFactor": "Influence of the force of gravity",
@@ -900,46 +919,215 @@
         "Description": "Contains enumerations",
         "Members": {
           "CollisionType": {
-            "Description": [
-              "The different modes for `RigidBody.CollisionType`",
-              "`Cube`: A cube collision model",
-              "`Sphere`: A sphere collision model",
-              "`Hulls`: Load a set of convex hulls from `RigidBody.HullsFile`",
-              "`MeshComponent`: Use the mesh of the `Mesh` component attached to the same object as the `RigidBody`. Usually a bad idea unless the mesh is convex"
-            ],
-            "Type": "{ Cube: number, Sphere: number, Hulls: number, MeshComponent: number }"
+            "Description": "The different modes for `RigidBody.CollisionType`",
+            "Items": {
+              "Cube": "A cube collision model",
+              "Hulls": "Load a set of convex hulls from `RigidBody.HullsFile`",
+              "MeshComponent": "Use the mesh of the `Mesh` component attached to the same object as the `RigidBody`. Usually a bad idea unless the mesh is convex",
+              "Sphere": "A sphere collision model"
+            }
           },
           "Cursor": {
             "Description": "The specific icon of the mouse cursor",
-            "Type": "{ Arrow: number, TextInput: number, ResizeAll: number, PointingHand: number, Crosshair: number, ResizeHorizontal: number, ResizeVertical: number, ResizeNWSE: number, ResizeNESW: number, ResizeAll: number, NotAllowed: number }"
+            "Items": {
+              "Arrow": "The default system Arrow cursor",
+              "Crosshair": "A crosshair",
+              "NotAllowed": "A 'No Entry' icon",
+              "PointingHand": "As the name describes",
+              "ResizeAll": "4 arrows in all directions",
+              "ResizeHorizontal": "2 horizontal arrows",
+              "ResizeNESW": "2 diagonal arrows, going from the North-East to the South-West corner of the icon",
+              "ResizeNWSE": "2 diagonal arrows, going from the North-West to the South-East corner of the icon",
+              "ResizeVertical": "2 vertical arrows",
+              "TextInput": "A text-entry I-beam"
+            }
           },
           "CursorMode": {
             "Description": "The behaviour of the mouse cursor",
-            "Type": "{ Normal: number, Hidden: number, Disabled: number, Unavailable: number, Captured: number }"
+            "Items": {
+              "Captured": "Visible, locked to the bounds of the window",
+              "Disabled": "Invisible, locked to the bounds of the window",
+              "Hidden": "Invisible",
+              "Normal": "Normal behavior"
+            }
           },
           "FaceCulling": {
             "Description": "Culling modes for `Mesh.FaceCulling`",
-            "Type": "{ None: number, Front: number, Back: number }"
+            "Items": {
+              "Back": "Cull 'back' faces based on vertex winding order",
+              "Front": "Cull 'front' faces based on vertex winding order",
+              "None": "Faces are not culled"
+            }
           },
           "InputAction": {
             "Description": "The action that caused an Input Event (such as `PlayerInput.KeyEvent`) to fire",
-            "Type": "{ Release: number, Press: number, Repeat: number }"
+            "Items": {
+              "Pressed": "The key or mouse button was pressed",
+              "Released": "The key or mouse button was released",
+              "Repeated": "The key was held down until it repeated"
+            }
           },
           "Key": {
             "Description": "Keys, which may be passed to `PlayerInput:IsKeyPressed`",
-            "Type": "{ [string]: number }"
+            "Items": {
+              "A": "The A key",
+              "Apostrophe": "The Apostrophe key",
+              "B": "The B key",
+              "Backslash": "The Backslash key",
+              "Backspace": "The Backspace key",
+              "C": "The C key",
+              "CapsLock": "The Caps Lock key",
+              "Comma": "The Comma key",
+              "D": "The D key",
+              "Delete": "The Delete key",
+              "Down": "The Down arrow key",
+              "E": "The E key",
+              "Eight": "The Eight key",
+              "End": "The End key",
+              "Enter": "The Enter key",
+              "Equal": "The Equal sign key",
+              "Escape": "The Escape key",
+              "F": "The F key",
+              "F1": "The F1 key",
+              "F10": "The F10 key",
+              "F11": "The F11 key",
+              "F12": "The F12 key",
+              "F13": "The F13 key",
+              "F14": "The F14 key",
+              "F15": "The F15 key",
+              "F16": "The F16 key",
+              "F17": "The F17 key",
+              "F18": "The F18 key",
+              "F19": "The F19 key",
+              "F2": "The F2 key",
+              "F20": "The F20 key",
+              "F21": "The F21 key",
+              "F22": "The F22 key",
+              "F23": "The F23 key",
+              "F24": "The F24 key",
+              "F25": "The F25 key",
+              "F3": "The F3 key",
+              "F4": "The F4 key",
+              "F5": "The F5 key",
+              "F6": "The F6 key",
+              "F7": "The F7 key",
+              "F8": "The F8 key",
+              "F9": "The F9 key",
+              "Five": "The Five key",
+              "Four": "The Four key",
+              "G": "The G key",
+              "GraveAccent": "The Grave Accent key",
+              "H": "The H key",
+              "Home": "The Home key",
+              "I": "The I key",
+              "Insert": "The Insert key",
+              "J": "The J key",
+              "K": "The K key",
+              "L": "The L key",
+              "Left": "The Left arrow key",
+              "LeftAlt": "The Left Alt key",
+              "LeftBracket": "The Left Bracket key",
+              "LeftControl": "The Left Control key",
+              "LeftShift": "The Left Shift key",
+              "LeftSuper": "The Left Super key",
+              "M": "The M key",
+              "Minus": "The Minus key",
+              "N": "The N key",
+              "Nine": "The Nine key",
+              "NumLock": "The Number Lock key",
+              "Numpad0": "The Numpad 0 key",
+              "Numpad1": "The Numpad 1 key",
+              "Numpad2": "The Numpad 2 key",
+              "Numpad3": "The Numpad 3 key",
+              "Numpad4": "The Numpad 4 key",
+              "Numpad5": "The Numpad 5 key",
+              "Numpad6": "The Numpad 6 key",
+              "Numpad7": "The Numpad 7 key",
+              "Numpad8": "The Numpad 8 key",
+              "Numpad9": "The Numpad 9 key",
+              "NumpadAdd": "The Numpad Add key",
+              "NumpadDecimal": "The Numpad Decimal key",
+              "NumpadDivide": "The Numpad Divide key",
+              "NumpadEnter": "The Numpad Enter key",
+              "NumpadEqual": "The Numpad Equal key",
+              "NumpadMultiply": "The Numpad Multiply key",
+              "NumpadSubtract": "The Numpad Subtract key",
+              "O": "The O key",
+              "One": "The One key",
+              "P": "The P key",
+              "PageDown": "The Page Down key",
+              "PageUp": "The Page Up key",
+              "Pause": "The Pause key",
+              "Period": "The Period key",
+              "PrintScreen": "The Print Screen key",
+              "Q": "The Q key",
+              "R": "The R key",
+              "Right": "The Right arrow key",
+              "RightAlt": "The Right Alt key",
+              "RightBracket": "The Right Bracket key",
+              "RightControl": "The Right Control key",
+              "RightShift": "The Right Shift key",
+              "RightSuper": "The Right Super key",
+              "S": "The S key",
+              "ScrollLock": "The Scroll Lock key",
+              "Semicolon": "The Semicolon key",
+              "Seven": "The Seven key",
+              "Six": "The Six key",
+              "Slash": "The Slash key",
+              "Space": "The Space key",
+              "T": "The T key",
+              "Tab": "The Tab key",
+              "Three": "The Three key",
+              "Two": "The Two key",
+              "U": "The U key",
+              "Up": "The Up arrow key",
+              "V": "The V key",
+              "W": "The W key",
+              "World1": "The World1 key",
+              "World2": "The World2 key",
+              "X": "The X key",
+              "Y": "The Y key",
+              "Z": "The Z key",
+              "Zero": "The Zero key"
+            }
           },
           "LogType": {
             "Description": "The different types of log messages",
-            "Type": "{ None: number, Info: number, Warning: number, Error: number }"
+            "Items": {
+              "Error": "This is an error, like from `error`",
+              "Info": "This is an information log message, like from `print`",
+              "None": "No specified type",
+              "Warning": "This is a warning, like from `warn`"
+            }
           },
           "MouseButton": {
             "Description": "Mouse buttons, which may be passed to `PlayerInput:IsMouseButtonPressed`",
-            "Type": "{ Left: number, Middle: number, Right: number }"
+            "Items": {
+              "Left": "The left mouse button",
+              "Middle": "The middle mouse button (scroll wheel)",
+              "Right": "The right mouse button"
+            }
           },
           "ValueType": {
             "Description": "The types of value variants the Engine internally recognizes",
-            "Type": "{ Boolean: number, Integer: number, Double: number, String: number, Color: number, Vector2: number, Vector3: number, Matrix: number, GameObject: number, Function: number, Array: number, Map: number, EventSignal: number, InputEvent: number, Null: number, Any: number }"
+            "Items": {
+              "Any": "Equivalent to `unknown`. Can be any type",
+              "Array": "Equivalent to `{ unknown }`. An Array of anything",
+              "Boolean": "Equivalent to `boolean`. `true` or `false`",
+              "Color": "The `Color` datatype",
+              "Double": "The `number` type",
+              "EventSignal": "The `EventSignal` datatype",
+              "Function": "A function, equivalent to `(...unknown) -> (...unknown)",
+              "GameObject": "The `GameObject` datatype",
+              "InputEvent": "A union of `KeyInputEvent`, `MouseInputEvent` and `ScrollInputEvent`",
+              "Integer": "A whole number. Will be represented as `number` to Scripts",
+              "Map": "Equivalent to `{ [unknown]: unknown }`",
+              "Matrix": "The `Matrix` datatype",
+              "Null": "`nil`",
+              "String": "`string`",
+              "Vector2": "A `vector` with `0` as the Z-component",
+              "Vector3": "`vector`"
+            }
           }
         }
       },
@@ -1028,14 +1216,6 @@
               ]
             ],
             "Out": "{ [string]: 'f' | 'd' }"
-          },
-          "setunqualifiedroot": {
-            "Description": [
-              "Changes the meaning of non-qualified paths (e.g.: not beginning with `.` or `C:` etc) to act as aliases to the given path + `resources/` instead of referring to the CWD"
-            ],
-            "In": [
-              "Alias: string"
-            ]
           },
           "mkdir": {
             "Description": [
@@ -1131,6 +1311,14 @@
             "In": [
               "Path: string",
               "NewName: string"
+            ]
+          },
+          "setunqualifiedroot": {
+            "Description": [
+              "Changes the meaning of non-qualified paths (e.g.: not beginning with `.` or `C:` etc) to act as aliases to the given path + `resources/` instead of referring to the CWD"
+            ],
+            "In": [
+              "Alias: string"
             ]
           },
           "write": {

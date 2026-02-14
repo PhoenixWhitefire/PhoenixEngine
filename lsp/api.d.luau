@@ -4,15 +4,15 @@ export type EventSignal<T...> = {
 }
 
 declare extern type KeyInputEvent with
-	Key: index<typeof(Enum.Key), keyof<typeof(Enum.Key)>>
+	Key: EnumKey
 	Scancode: number
-	Action: index<typeof(Enum.InputAction), keyof<typeof(Enum.InputAction)>>
+	Action: EnumInputAction
 	Modifiers: number
 end
 
 declare extern type MouseButtonInputEvent with
-	Button: index<typeof(Enum.MouseButton), keyof<typeof(Enum.MouseButton)>>
-	Action: index<typeof(Enum.InputAction), keyof<typeof(Enum.InputAction)>>
+	Button: EnumMouseButton
+	Action: EnumInputAction
 	Modifiers: number
 end
 
@@ -22,6 +22,12 @@ declare extern type ScrollInputEvent with
 end
 
 export type JsonSerializable = nil | boolean | number | string | vector | { JsonSerializable } | { [string]: JsonSerializable }
+
+declare extern type Enum with
+end
+
+declare extern type EnumItem with
+end
 declare extern type Color with
   B: number
   G: number
@@ -91,8 +97,8 @@ declare extern type GameObject with
   function Duplicate(self) : (GameObject)
   function FindChild(self, ChildName: string) : (GameObject?)
   function FindChildWithComponent(self, Component: keyof<Creatables>) : (GameObject)
-  function ForEachChild(self, Callback: (unknown) -> (unknown)) : ()
-  function ForEachDescendant(self, Callback: (unknown) -> (unknown)) : ()
+  function ForEachChild(self, Callback: (...unknown) -> (...unknown)) : ()
+  function ForEachDescendant(self, Callback: (...unknown) -> (...unknown)) : ()
   function GetChildren(self) : { GameObject }
   function GetComponents(self) : keyof<Creatables>
   function GetDescendants(self) : { GameObject }
@@ -218,7 +224,7 @@ declare extern type History with
 end
 declare extern type Mesh with
   CastsShadows: boolean
-  FaceCulling: number
+  FaceCulling: EnumFaceCulling
   Material: string
   MeshAsset: string
   MetallnessFactor: number
@@ -243,14 +249,14 @@ declare extern type Physics with
   Timescale: number
 end
 declare extern type PlayerInput with
-  Cursor: number
-  CursorMode: number
+  Cursor: EnumCursor
+  CursorMode: EnumCursorMode
   IsKeyboardSunk: boolean 
   IsMouseSunk: boolean 
 
   function GetCursorPosition(self) : (vector)
-  function IsKeyPressed(self, Key: number) : (boolean)
-  function IsMouseButtonPressed(self, MouseButton: number) : (boolean)
+  function IsKeyPressed(self, Key: EnumKey) : (boolean)
+  function IsMouseButtonPressed(self, Button: EnumMouseButton) : (boolean)
 
   KeyEvent: EventSignal<KeyInputEvent>
   MouseButtonEvent: EventSignal<MouseButtonInputEvent>
@@ -267,11 +273,11 @@ declare extern type Renderer with
   Resolution: vector
   VSync: boolean
 
-  SetShaderVariable: ((_: Renderer, Shader: string, Variable: string, Value: boolean | number | Color | Matrix, Type: number?) -> ()) & ((_: Renderer, Shader: string, Variable: string, Value: vector, Type: number) -> ())  function UnloadTexture(self, Texture: string) : ()
+  SetShaderVariable: ((_: Renderer, Shader: string, Variable: string, Value: boolean | number | Color | Matrix, Type: EnumValueType?) -> ()) & ((_: Renderer, Shader: string, Variable: string, Value: vector, Type: EnumValueType) -> ())  function UnloadTexture(self, Texture: string) : ()
 end
 declare extern type RigidBody with
   AngularVelocity: vector
-  CollisionType: number
+  CollisionType: EnumCollisionType
   Density: number
   Friction: number
   GravityFactor: number
@@ -346,17 +352,212 @@ type Creatables = {
 	Renderer: Renderer,
 	Collections: Collections,
 }
+declare extern type EnumCollisionType extends EnumItem with end
+declare extern type EnumCollisionType_INTERNAL extends Enum with
+  Cube: EnumCollisionType
+  Hulls: EnumCollisionType
+  MeshComponent: EnumCollisionType
+  Sphere: EnumCollisionType
+end
+declare extern type EnumCursor extends EnumItem with end
+declare extern type EnumCursor_INTERNAL extends Enum with
+  Arrow: EnumCursor
+  Crosshair: EnumCursor
+  NotAllowed: EnumCursor
+  PointingHand: EnumCursor
+  ResizeAll: EnumCursor
+  ResizeHorizontal: EnumCursor
+  ResizeNESW: EnumCursor
+  ResizeNWSE: EnumCursor
+  ResizeVertical: EnumCursor
+  TextInput: EnumCursor
+end
+declare extern type EnumCursorMode extends EnumItem with end
+declare extern type EnumCursorMode_INTERNAL extends Enum with
+  Captured: EnumCursorMode
+  Disabled: EnumCursorMode
+  Hidden: EnumCursorMode
+  Normal: EnumCursorMode
+end
+declare extern type EnumFaceCulling extends EnumItem with end
+declare extern type EnumFaceCulling_INTERNAL extends Enum with
+  Back: EnumFaceCulling
+  Front: EnumFaceCulling
+  None: EnumFaceCulling
+end
+declare extern type EnumInputAction extends EnumItem with end
+declare extern type EnumInputAction_INTERNAL extends Enum with
+  Pressed: EnumInputAction
+  Released: EnumInputAction
+  Repeated: EnumInputAction
+end
+declare extern type EnumKey extends EnumItem with end
+declare extern type EnumKey_INTERNAL extends Enum with
+  A: EnumKey
+  Apostrophe: EnumKey
+  B: EnumKey
+  Backslash: EnumKey
+  Backspace: EnumKey
+  C: EnumKey
+  CapsLock: EnumKey
+  Comma: EnumKey
+  D: EnumKey
+  Delete: EnumKey
+  Down: EnumKey
+  E: EnumKey
+  Eight: EnumKey
+  End: EnumKey
+  Enter: EnumKey
+  Equal: EnumKey
+  Escape: EnumKey
+  F: EnumKey
+  F1: EnumKey
+  F10: EnumKey
+  F11: EnumKey
+  F12: EnumKey
+  F13: EnumKey
+  F14: EnumKey
+  F15: EnumKey
+  F16: EnumKey
+  F17: EnumKey
+  F18: EnumKey
+  F19: EnumKey
+  F2: EnumKey
+  F20: EnumKey
+  F21: EnumKey
+  F22: EnumKey
+  F23: EnumKey
+  F24: EnumKey
+  F25: EnumKey
+  F3: EnumKey
+  F4: EnumKey
+  F5: EnumKey
+  F6: EnumKey
+  F7: EnumKey
+  F8: EnumKey
+  F9: EnumKey
+  Five: EnumKey
+  Four: EnumKey
+  G: EnumKey
+  GraveAccent: EnumKey
+  H: EnumKey
+  Home: EnumKey
+  I: EnumKey
+  Insert: EnumKey
+  J: EnumKey
+  K: EnumKey
+  L: EnumKey
+  Left: EnumKey
+  LeftAlt: EnumKey
+  LeftBracket: EnumKey
+  LeftControl: EnumKey
+  LeftShift: EnumKey
+  LeftSuper: EnumKey
+  M: EnumKey
+  Minus: EnumKey
+  N: EnumKey
+  Nine: EnumKey
+  NumLock: EnumKey
+  Numpad0: EnumKey
+  Numpad1: EnumKey
+  Numpad2: EnumKey
+  Numpad3: EnumKey
+  Numpad4: EnumKey
+  Numpad5: EnumKey
+  Numpad6: EnumKey
+  Numpad7: EnumKey
+  Numpad8: EnumKey
+  Numpad9: EnumKey
+  NumpadAdd: EnumKey
+  NumpadDecimal: EnumKey
+  NumpadDivide: EnumKey
+  NumpadEnter: EnumKey
+  NumpadEqual: EnumKey
+  NumpadMultiply: EnumKey
+  NumpadSubtract: EnumKey
+  O: EnumKey
+  One: EnumKey
+  P: EnumKey
+  PageDown: EnumKey
+  PageUp: EnumKey
+  Pause: EnumKey
+  Period: EnumKey
+  PrintScreen: EnumKey
+  Q: EnumKey
+  R: EnumKey
+  Right: EnumKey
+  RightAlt: EnumKey
+  RightBracket: EnumKey
+  RightControl: EnumKey
+  RightShift: EnumKey
+  RightSuper: EnumKey
+  S: EnumKey
+  ScrollLock: EnumKey
+  Semicolon: EnumKey
+  Seven: EnumKey
+  Six: EnumKey
+  Slash: EnumKey
+  Space: EnumKey
+  T: EnumKey
+  Tab: EnumKey
+  Three: EnumKey
+  Two: EnumKey
+  U: EnumKey
+  Up: EnumKey
+  V: EnumKey
+  W: EnumKey
+  World1: EnumKey
+  World2: EnumKey
+  X: EnumKey
+  Y: EnumKey
+  Z: EnumKey
+  Zero: EnumKey
+end
+declare extern type EnumLogType extends EnumItem with end
+declare extern type EnumLogType_INTERNAL extends Enum with
+  Error: EnumLogType
+  Info: EnumLogType
+  None: EnumLogType
+  Warning: EnumLogType
+end
+declare extern type EnumMouseButton extends EnumItem with end
+declare extern type EnumMouseButton_INTERNAL extends Enum with
+  Left: EnumMouseButton
+  Middle: EnumMouseButton
+  Right: EnumMouseButton
+end
+declare extern type EnumValueType extends EnumItem with end
+declare extern type EnumValueType_INTERNAL extends Enum with
+  Any: EnumValueType
+  Array: EnumValueType
+  Boolean: EnumValueType
+  Color: EnumValueType
+  Double: EnumValueType
+  EventSignal: EnumValueType
+  Function: EnumValueType
+  GameObject: EnumValueType
+  InputEvent: EnumValueType
+  Integer: EnumValueType
+  Map: EnumValueType
+  Matrix: EnumValueType
+  Null: EnumValueType
+  String: EnumValueType
+  Vector2: EnumValueType
+  Vector3: EnumValueType
+end
 declare Enum: {
-  CollisionType: { Cube: number, Sphere: number, Hulls: number, MeshComponent: number },
-  Cursor: { Arrow: number, TextInput: number, ResizeAll: number, PointingHand: number, Crosshair: number, ResizeHorizontal: number, ResizeVertical: number, ResizeNWSE: number, ResizeNESW: number, ResizeAll: number, NotAllowed: number },
-  CursorMode: { Normal: number, Hidden: number, Disabled: number, Unavailable: number, Captured: number },
-  FaceCulling: { None: number, Front: number, Back: number },
-  InputAction: { Release: number, Press: number, Repeat: number },
-  Key: { [string]: number },
-  LogType: { None: number, Info: number, Warning: number, Error: number },
-  MouseButton: { Left: number, Middle: number, Right: number },
-  ValueType: { Boolean: number, Integer: number, Double: number, String: number, Color: number, Vector2: number, Vector3: number, Matrix: number, GameObject: number, Function: number, Array: number, Map: number, EventSignal: number, InputEvent: number, Null: number, Any: number }
+  CollisionType: EnumCollisionType_INTERNAL,
+  Cursor: EnumCursor_INTERNAL,
+  CursorMode: EnumCursorMode_INTERNAL,
+  FaceCulling: EnumFaceCulling_INTERNAL,
+  InputAction: EnumInputAction_INTERNAL,
+  Key: EnumKey_INTERNAL,
+  LogType: EnumLogType_INTERNAL,
+  MouseButton: EnumMouseButton_INTERNAL,
+  ValueType: EnumValueType_INTERNAL,
+  [ | "CollisionType" | "Cursor" | "CursorMode" | "FaceCulling" | "InputAction" | "Key" | "LogType" | "MouseButton" | "ValueType"]:  | EnumCollisionType_INTERNAL | EnumCursor_INTERNAL | EnumCursorMode_INTERNAL | EnumFaceCulling_INTERNAL | EnumInputAction_INTERNAL | EnumKey_INTERNAL | EnumLogType_INTERNAL | EnumMouseButton_INTERNAL | EnumValueType_INTERNAL
 }
+
 declare debug: {
 	traceback: ((msg: string?, level: number?) -> string) & (co: thread, msg: string?, level: number?) -> string,
 	info: (level: number, s: string) -> string,

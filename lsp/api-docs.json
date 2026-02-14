@@ -1,4 +1,502 @@
 {
+  "@phoenix/enum/CollisionType.Cube": {
+    "documentation": "A cube collision model"
+  },
+  "@phoenix/enum/CollisionType.Hulls": {
+    "documentation": "Load a set of convex hulls from `RigidBody.HullsFile`"
+  },
+  "@phoenix/enum/CollisionType.MeshComponent": {
+    "documentation": "Use the mesh of the `Mesh` component attached to the same object as the `RigidBody`. Usually a bad idea unless the mesh is convex"
+  },
+  "@phoenix/enum/CollisionType.Sphere": {
+    "documentation": "A sphere collision model"
+  },
+  "@phoenix/enum/Cursor.Arrow": {
+    "documentation": "The default system Arrow cursor"
+  },
+  "@phoenix/enum/Cursor.Crosshair": {
+    "documentation": "A crosshair"
+  },
+  "@phoenix/enum/Cursor.NotAllowed": {
+    "documentation": "A 'No Entry' icon"
+  },
+  "@phoenix/enum/Cursor.PointingHand": {
+    "documentation": "As the name describes"
+  },
+  "@phoenix/enum/Cursor.ResizeAll": {
+    "documentation": "4 arrows in all directions"
+  },
+  "@phoenix/enum/Cursor.ResizeHorizontal": {
+    "documentation": "2 horizontal arrows"
+  },
+  "@phoenix/enum/Cursor.ResizeNESW": {
+    "documentation": "2 diagonal arrows, going from the North-East to the South-West corner of the icon"
+  },
+  "@phoenix/enum/Cursor.ResizeNWSE": {
+    "documentation": "2 diagonal arrows, going from the North-West to the South-East corner of the icon"
+  },
+  "@phoenix/enum/Cursor.ResizeVertical": {
+    "documentation": "2 vertical arrows"
+  },
+  "@phoenix/enum/Cursor.TextInput": {
+    "documentation": "A text-entry I-beam"
+  },
+  "@phoenix/enum/CursorMode.Captured": {
+    "documentation": "Visible, locked to the bounds of the window"
+  },
+  "@phoenix/enum/CursorMode.Disabled": {
+    "documentation": "Invisible, locked to the bounds of the window"
+  },
+  "@phoenix/enum/CursorMode.Hidden": {
+    "documentation": "Invisible"
+  },
+  "@phoenix/enum/CursorMode.Normal": {
+    "documentation": "Normal behavior"
+  },
+  "@phoenix/enum/FaceCulling.Back": {
+    "documentation": "Cull 'back' faces based on vertex winding order"
+  },
+  "@phoenix/enum/FaceCulling.Front": {
+    "documentation": "Cull 'front' faces based on vertex winding order"
+  },
+  "@phoenix/enum/FaceCulling.None": {
+    "documentation": "Faces are not culled"
+  },
+  "@phoenix/enum/InputAction.Pressed": {
+    "documentation": "The key or mouse button was pressed"
+  },
+  "@phoenix/enum/InputAction.Released": {
+    "documentation": "The key or mouse button was released"
+  },
+  "@phoenix/enum/InputAction.Repeated": {
+    "documentation": "The key was held down until it repeated"
+  },
+  "@phoenix/enum/Key.A": {
+    "documentation": "The A key"
+  },
+  "@phoenix/enum/Key.Apostrophe": {
+    "documentation": "The Apostrophe key"
+  },
+  "@phoenix/enum/Key.B": {
+    "documentation": "The B key"
+  },
+  "@phoenix/enum/Key.Backslash": {
+    "documentation": "The Backslash key"
+  },
+  "@phoenix/enum/Key.Backspace": {
+    "documentation": "The Backspace key"
+  },
+  "@phoenix/enum/Key.C": {
+    "documentation": "The C key"
+  },
+  "@phoenix/enum/Key.CapsLock": {
+    "documentation": "The Caps Lock key"
+  },
+  "@phoenix/enum/Key.Comma": {
+    "documentation": "The Comma key"
+  },
+  "@phoenix/enum/Key.D": {
+    "documentation": "The D key"
+  },
+  "@phoenix/enum/Key.Delete": {
+    "documentation": "The Delete key"
+  },
+  "@phoenix/enum/Key.Down": {
+    "documentation": "The Down arrow key"
+  },
+  "@phoenix/enum/Key.E": {
+    "documentation": "The E key"
+  },
+  "@phoenix/enum/Key.Eight": {
+    "documentation": "The Eight key"
+  },
+  "@phoenix/enum/Key.End": {
+    "documentation": "The End key"
+  },
+  "@phoenix/enum/Key.Enter": {
+    "documentation": "The Enter key"
+  },
+  "@phoenix/enum/Key.Equal": {
+    "documentation": "The Equal sign key"
+  },
+  "@phoenix/enum/Key.Escape": {
+    "documentation": "The Escape key"
+  },
+  "@phoenix/enum/Key.F": {
+    "documentation": "The F key"
+  },
+  "@phoenix/enum/Key.F1": {
+    "documentation": "The F1 key"
+  },
+  "@phoenix/enum/Key.F10": {
+    "documentation": "The F10 key"
+  },
+  "@phoenix/enum/Key.F11": {
+    "documentation": "The F11 key"
+  },
+  "@phoenix/enum/Key.F12": {
+    "documentation": "The F12 key"
+  },
+  "@phoenix/enum/Key.F13": {
+    "documentation": "The F13 key"
+  },
+  "@phoenix/enum/Key.F14": {
+    "documentation": "The F14 key"
+  },
+  "@phoenix/enum/Key.F15": {
+    "documentation": "The F15 key"
+  },
+  "@phoenix/enum/Key.F16": {
+    "documentation": "The F16 key"
+  },
+  "@phoenix/enum/Key.F17": {
+    "documentation": "The F17 key"
+  },
+  "@phoenix/enum/Key.F18": {
+    "documentation": "The F18 key"
+  },
+  "@phoenix/enum/Key.F19": {
+    "documentation": "The F19 key"
+  },
+  "@phoenix/enum/Key.F2": {
+    "documentation": "The F2 key"
+  },
+  "@phoenix/enum/Key.F20": {
+    "documentation": "The F20 key"
+  },
+  "@phoenix/enum/Key.F21": {
+    "documentation": "The F21 key"
+  },
+  "@phoenix/enum/Key.F22": {
+    "documentation": "The F22 key"
+  },
+  "@phoenix/enum/Key.F23": {
+    "documentation": "The F23 key"
+  },
+  "@phoenix/enum/Key.F24": {
+    "documentation": "The F24 key"
+  },
+  "@phoenix/enum/Key.F25": {
+    "documentation": "The F25 key"
+  },
+  "@phoenix/enum/Key.F3": {
+    "documentation": "The F3 key"
+  },
+  "@phoenix/enum/Key.F4": {
+    "documentation": "The F4 key"
+  },
+  "@phoenix/enum/Key.F5": {
+    "documentation": "The F5 key"
+  },
+  "@phoenix/enum/Key.F6": {
+    "documentation": "The F6 key"
+  },
+  "@phoenix/enum/Key.F7": {
+    "documentation": "The F7 key"
+  },
+  "@phoenix/enum/Key.F8": {
+    "documentation": "The F8 key"
+  },
+  "@phoenix/enum/Key.F9": {
+    "documentation": "The F9 key"
+  },
+  "@phoenix/enum/Key.Five": {
+    "documentation": "The Five key"
+  },
+  "@phoenix/enum/Key.Four": {
+    "documentation": "The Four key"
+  },
+  "@phoenix/enum/Key.G": {
+    "documentation": "The G key"
+  },
+  "@phoenix/enum/Key.GraveAccent": {
+    "documentation": "The Grave Accent key"
+  },
+  "@phoenix/enum/Key.H": {
+    "documentation": "The H key"
+  },
+  "@phoenix/enum/Key.Home": {
+    "documentation": "The Home key"
+  },
+  "@phoenix/enum/Key.I": {
+    "documentation": "The I key"
+  },
+  "@phoenix/enum/Key.Insert": {
+    "documentation": "The Insert key"
+  },
+  "@phoenix/enum/Key.J": {
+    "documentation": "The J key"
+  },
+  "@phoenix/enum/Key.K": {
+    "documentation": "The K key"
+  },
+  "@phoenix/enum/Key.L": {
+    "documentation": "The L key"
+  },
+  "@phoenix/enum/Key.Left": {
+    "documentation": "The Left arrow key"
+  },
+  "@phoenix/enum/Key.LeftAlt": {
+    "documentation": "The Left Alt key"
+  },
+  "@phoenix/enum/Key.LeftBracket": {
+    "documentation": "The Left Bracket key"
+  },
+  "@phoenix/enum/Key.LeftControl": {
+    "documentation": "The Left Control key"
+  },
+  "@phoenix/enum/Key.LeftShift": {
+    "documentation": "The Left Shift key"
+  },
+  "@phoenix/enum/Key.LeftSuper": {
+    "documentation": "The Left Super key"
+  },
+  "@phoenix/enum/Key.M": {
+    "documentation": "The M key"
+  },
+  "@phoenix/enum/Key.Minus": {
+    "documentation": "The Minus key"
+  },
+  "@phoenix/enum/Key.N": {
+    "documentation": "The N key"
+  },
+  "@phoenix/enum/Key.Nine": {
+    "documentation": "The Nine key"
+  },
+  "@phoenix/enum/Key.NumLock": {
+    "documentation": "The Number Lock key"
+  },
+  "@phoenix/enum/Key.Numpad0": {
+    "documentation": "The Numpad 0 key"
+  },
+  "@phoenix/enum/Key.Numpad1": {
+    "documentation": "The Numpad 1 key"
+  },
+  "@phoenix/enum/Key.Numpad2": {
+    "documentation": "The Numpad 2 key"
+  },
+  "@phoenix/enum/Key.Numpad3": {
+    "documentation": "The Numpad 3 key"
+  },
+  "@phoenix/enum/Key.Numpad4": {
+    "documentation": "The Numpad 4 key"
+  },
+  "@phoenix/enum/Key.Numpad5": {
+    "documentation": "The Numpad 5 key"
+  },
+  "@phoenix/enum/Key.Numpad6": {
+    "documentation": "The Numpad 6 key"
+  },
+  "@phoenix/enum/Key.Numpad7": {
+    "documentation": "The Numpad 7 key"
+  },
+  "@phoenix/enum/Key.Numpad8": {
+    "documentation": "The Numpad 8 key"
+  },
+  "@phoenix/enum/Key.Numpad9": {
+    "documentation": "The Numpad 9 key"
+  },
+  "@phoenix/enum/Key.NumpadAdd": {
+    "documentation": "The Numpad Add key"
+  },
+  "@phoenix/enum/Key.NumpadDecimal": {
+    "documentation": "The Numpad Decimal key"
+  },
+  "@phoenix/enum/Key.NumpadDivide": {
+    "documentation": "The Numpad Divide key"
+  },
+  "@phoenix/enum/Key.NumpadEnter": {
+    "documentation": "The Numpad Enter key"
+  },
+  "@phoenix/enum/Key.NumpadEqual": {
+    "documentation": "The Numpad Equal key"
+  },
+  "@phoenix/enum/Key.NumpadMultiply": {
+    "documentation": "The Numpad Multiply key"
+  },
+  "@phoenix/enum/Key.NumpadSubtract": {
+    "documentation": "The Numpad Subtract key"
+  },
+  "@phoenix/enum/Key.O": {
+    "documentation": "The O key"
+  },
+  "@phoenix/enum/Key.One": {
+    "documentation": "The One key"
+  },
+  "@phoenix/enum/Key.P": {
+    "documentation": "The P key"
+  },
+  "@phoenix/enum/Key.PageDown": {
+    "documentation": "The Page Down key"
+  },
+  "@phoenix/enum/Key.PageUp": {
+    "documentation": "The Page Up key"
+  },
+  "@phoenix/enum/Key.Pause": {
+    "documentation": "The Pause key"
+  },
+  "@phoenix/enum/Key.Period": {
+    "documentation": "The Period key"
+  },
+  "@phoenix/enum/Key.PrintScreen": {
+    "documentation": "The Print Screen key"
+  },
+  "@phoenix/enum/Key.Q": {
+    "documentation": "The Q key"
+  },
+  "@phoenix/enum/Key.R": {
+    "documentation": "The R key"
+  },
+  "@phoenix/enum/Key.Right": {
+    "documentation": "The Right arrow key"
+  },
+  "@phoenix/enum/Key.RightAlt": {
+    "documentation": "The Right Alt key"
+  },
+  "@phoenix/enum/Key.RightBracket": {
+    "documentation": "The Right Bracket key"
+  },
+  "@phoenix/enum/Key.RightControl": {
+    "documentation": "The Right Control key"
+  },
+  "@phoenix/enum/Key.RightShift": {
+    "documentation": "The Right Shift key"
+  },
+  "@phoenix/enum/Key.RightSuper": {
+    "documentation": "The Right Super key"
+  },
+  "@phoenix/enum/Key.S": {
+    "documentation": "The S key"
+  },
+  "@phoenix/enum/Key.ScrollLock": {
+    "documentation": "The Scroll Lock key"
+  },
+  "@phoenix/enum/Key.Semicolon": {
+    "documentation": "The Semicolon key"
+  },
+  "@phoenix/enum/Key.Seven": {
+    "documentation": "The Seven key"
+  },
+  "@phoenix/enum/Key.Six": {
+    "documentation": "The Six key"
+  },
+  "@phoenix/enum/Key.Slash": {
+    "documentation": "The Slash key"
+  },
+  "@phoenix/enum/Key.Space": {
+    "documentation": "The Space key"
+  },
+  "@phoenix/enum/Key.T": {
+    "documentation": "The T key"
+  },
+  "@phoenix/enum/Key.Tab": {
+    "documentation": "The Tab key"
+  },
+  "@phoenix/enum/Key.Three": {
+    "documentation": "The Three key"
+  },
+  "@phoenix/enum/Key.Two": {
+    "documentation": "The Two key"
+  },
+  "@phoenix/enum/Key.U": {
+    "documentation": "The U key"
+  },
+  "@phoenix/enum/Key.Up": {
+    "documentation": "The Up arrow key"
+  },
+  "@phoenix/enum/Key.V": {
+    "documentation": "The V key"
+  },
+  "@phoenix/enum/Key.W": {
+    "documentation": "The W key"
+  },
+  "@phoenix/enum/Key.World1": {
+    "documentation": "The World1 key"
+  },
+  "@phoenix/enum/Key.World2": {
+    "documentation": "The World2 key"
+  },
+  "@phoenix/enum/Key.X": {
+    "documentation": "The X key"
+  },
+  "@phoenix/enum/Key.Y": {
+    "documentation": "The Y key"
+  },
+  "@phoenix/enum/Key.Z": {
+    "documentation": "The Z key"
+  },
+  "@phoenix/enum/Key.Zero": {
+    "documentation": "The Zero key"
+  },
+  "@phoenix/enum/LogType.Error": {
+    "documentation": "This is an error, like from `error`"
+  },
+  "@phoenix/enum/LogType.Info": {
+    "documentation": "This is an information log message, like from `print`"
+  },
+  "@phoenix/enum/LogType.None": {
+    "documentation": "No specified type"
+  },
+  "@phoenix/enum/LogType.Warning": {
+    "documentation": "This is a warning, like from `warn`"
+  },
+  "@phoenix/enum/MouseButton.Left": {
+    "documentation": "The left mouse button"
+  },
+  "@phoenix/enum/MouseButton.Middle": {
+    "documentation": "The middle mouse button (scroll wheel)"
+  },
+  "@phoenix/enum/MouseButton.Right": {
+    "documentation": "The right mouse button"
+  },
+  "@phoenix/enum/ValueType.Any": {
+    "documentation": "Equivalent to `unknown`. Can be any type"
+  },
+  "@phoenix/enum/ValueType.Array": {
+    "documentation": "Equivalent to `{ unknown }`. An Array of anything"
+  },
+  "@phoenix/enum/ValueType.Boolean": {
+    "documentation": "Equivalent to `boolean`. `true` or `false`"
+  },
+  "@phoenix/enum/ValueType.Color": {
+    "documentation": "The `Color` datatype"
+  },
+  "@phoenix/enum/ValueType.Double": {
+    "documentation": "The `number` type"
+  },
+  "@phoenix/enum/ValueType.EventSignal": {
+    "documentation": "The `EventSignal` datatype"
+  },
+  "@phoenix/enum/ValueType.Function": {
+    "documentation": "A function, equivalent to `(...unknown) -> (...unknown)"
+  },
+  "@phoenix/enum/ValueType.GameObject": {
+    "documentation": "The `GameObject` datatype"
+  },
+  "@phoenix/enum/ValueType.InputEvent": {
+    "documentation": "A union of `KeyInputEvent`, `MouseInputEvent` and `ScrollInputEvent`"
+  },
+  "@phoenix/enum/ValueType.Integer": {
+    "documentation": "A whole number. Will be represented as `number` to Scripts"
+  },
+  "@phoenix/enum/ValueType.Map": {
+    "documentation": "Equivalent to `{ [unknown]: unknown }`"
+  },
+  "@phoenix/enum/ValueType.Matrix": {
+    "documentation": "The `Matrix` datatype"
+  },
+  "@phoenix/enum/ValueType.Null": {
+    "documentation": "`nil`"
+  },
+  "@phoenix/enum/ValueType.String": {
+    "documentation": "`string`"
+  },
+  "@phoenix/enum/ValueType.Vector2": {
+    "documentation": "A `vector` with `0` as the Z-component"
+  },
+  "@phoenix/enum/ValueType.Vector3": {
+    "documentation": "`vector`"
+  },
   "@phoenix/global/Color": {
     "documentation": "* An RGB color"
   },
@@ -9,31 +507,215 @@
     "documentation": "* Contains enumerations"
   },
   "@phoenix/global/Enum.CollisionType": {
-    "documentation": "* The different modes for `RigidBody.CollisionType`\n* `Cube`: A cube collision model\n* `Sphere`: A sphere collision model\n* `Hulls`: Load a set of convex hulls from `RigidBody.HullsFile`\n* `MeshComponent`: Use the mesh of the `Mesh` component attached to the same object as the `RigidBody`. Usually a bad idea unless the mesh is convex"
+    "documentation": "* The different modes for `RigidBody.CollisionType`",
+    "keys": {
+      "Cube": "@phoenix/enum/CollisionType.Cube",
+      "Hulls": "@phoenix/enum/CollisionType.Hulls",
+      "MeshComponent": "@phoenix/enum/CollisionType.MeshComponent",
+      "Sphere": "@phoenix/enum/CollisionType.Sphere"
+    }
   },
   "@phoenix/global/Enum.Cursor": {
-    "documentation": "* The specific icon of the mouse cursor"
+    "documentation": "* The specific icon of the mouse cursor",
+    "keys": {
+      "Arrow": "@phoenix/enum/Cursor.Arrow",
+      "Crosshair": "@phoenix/enum/Cursor.Crosshair",
+      "NotAllowed": "@phoenix/enum/Cursor.NotAllowed",
+      "PointingHand": "@phoenix/enum/Cursor.PointingHand",
+      "ResizeAll": "@phoenix/enum/Cursor.ResizeAll",
+      "ResizeHorizontal": "@phoenix/enum/Cursor.ResizeHorizontal",
+      "ResizeNESW": "@phoenix/enum/Cursor.ResizeNESW",
+      "ResizeNWSE": "@phoenix/enum/Cursor.ResizeNWSE",
+      "ResizeVertical": "@phoenix/enum/Cursor.ResizeVertical",
+      "TextInput": "@phoenix/enum/Cursor.TextInput"
+    }
   },
   "@phoenix/global/Enum.CursorMode": {
-    "documentation": "* The behaviour of the mouse cursor"
+    "documentation": "* The behaviour of the mouse cursor",
+    "keys": {
+      "Captured": "@phoenix/enum/CursorMode.Captured",
+      "Disabled": "@phoenix/enum/CursorMode.Disabled",
+      "Hidden": "@phoenix/enum/CursorMode.Hidden",
+      "Normal": "@phoenix/enum/CursorMode.Normal"
+    }
   },
   "@phoenix/global/Enum.FaceCulling": {
-    "documentation": "* Culling modes for `Mesh.FaceCulling`"
+    "documentation": "* Culling modes for `Mesh.FaceCulling`",
+    "keys": {
+      "Back": "@phoenix/enum/FaceCulling.Back",
+      "Front": "@phoenix/enum/FaceCulling.Front",
+      "None": "@phoenix/enum/FaceCulling.None"
+    }
   },
   "@phoenix/global/Enum.InputAction": {
-    "documentation": "* The action that caused an Input Event (such as `PlayerInput.KeyEvent`) to fire"
+    "documentation": "* The action that caused an Input Event (such as `PlayerInput.KeyEvent`) to fire",
+    "keys": {
+      "Pressed": "@phoenix/enum/InputAction.Pressed",
+      "Released": "@phoenix/enum/InputAction.Released",
+      "Repeated": "@phoenix/enum/InputAction.Repeated"
+    }
   },
   "@phoenix/global/Enum.Key": {
-    "documentation": "* Keys, which may be passed to `PlayerInput:IsKeyPressed`"
+    "documentation": "* Keys, which may be passed to `PlayerInput:IsKeyPressed`",
+    "keys": {
+      "A": "@phoenix/enum/Key.A",
+      "Apostrophe": "@phoenix/enum/Key.Apostrophe",
+      "B": "@phoenix/enum/Key.B",
+      "Backslash": "@phoenix/enum/Key.Backslash",
+      "Backspace": "@phoenix/enum/Key.Backspace",
+      "C": "@phoenix/enum/Key.C",
+      "CapsLock": "@phoenix/enum/Key.CapsLock",
+      "Comma": "@phoenix/enum/Key.Comma",
+      "D": "@phoenix/enum/Key.D",
+      "Delete": "@phoenix/enum/Key.Delete",
+      "Down": "@phoenix/enum/Key.Down",
+      "E": "@phoenix/enum/Key.E",
+      "Eight": "@phoenix/enum/Key.Eight",
+      "End": "@phoenix/enum/Key.End",
+      "Enter": "@phoenix/enum/Key.Enter",
+      "Equal": "@phoenix/enum/Key.Equal",
+      "Escape": "@phoenix/enum/Key.Escape",
+      "F": "@phoenix/enum/Key.F",
+      "F1": "@phoenix/enum/Key.F1",
+      "F10": "@phoenix/enum/Key.F10",
+      "F11": "@phoenix/enum/Key.F11",
+      "F12": "@phoenix/enum/Key.F12",
+      "F13": "@phoenix/enum/Key.F13",
+      "F14": "@phoenix/enum/Key.F14",
+      "F15": "@phoenix/enum/Key.F15",
+      "F16": "@phoenix/enum/Key.F16",
+      "F17": "@phoenix/enum/Key.F17",
+      "F18": "@phoenix/enum/Key.F18",
+      "F19": "@phoenix/enum/Key.F19",
+      "F2": "@phoenix/enum/Key.F2",
+      "F20": "@phoenix/enum/Key.F20",
+      "F21": "@phoenix/enum/Key.F21",
+      "F22": "@phoenix/enum/Key.F22",
+      "F23": "@phoenix/enum/Key.F23",
+      "F24": "@phoenix/enum/Key.F24",
+      "F25": "@phoenix/enum/Key.F25",
+      "F3": "@phoenix/enum/Key.F3",
+      "F4": "@phoenix/enum/Key.F4",
+      "F5": "@phoenix/enum/Key.F5",
+      "F6": "@phoenix/enum/Key.F6",
+      "F7": "@phoenix/enum/Key.F7",
+      "F8": "@phoenix/enum/Key.F8",
+      "F9": "@phoenix/enum/Key.F9",
+      "Five": "@phoenix/enum/Key.Five",
+      "Four": "@phoenix/enum/Key.Four",
+      "G": "@phoenix/enum/Key.G",
+      "GraveAccent": "@phoenix/enum/Key.GraveAccent",
+      "H": "@phoenix/enum/Key.H",
+      "Home": "@phoenix/enum/Key.Home",
+      "I": "@phoenix/enum/Key.I",
+      "Insert": "@phoenix/enum/Key.Insert",
+      "J": "@phoenix/enum/Key.J",
+      "K": "@phoenix/enum/Key.K",
+      "L": "@phoenix/enum/Key.L",
+      "Left": "@phoenix/enum/Key.Left",
+      "LeftAlt": "@phoenix/enum/Key.LeftAlt",
+      "LeftBracket": "@phoenix/enum/Key.LeftBracket",
+      "LeftControl": "@phoenix/enum/Key.LeftControl",
+      "LeftShift": "@phoenix/enum/Key.LeftShift",
+      "LeftSuper": "@phoenix/enum/Key.LeftSuper",
+      "M": "@phoenix/enum/Key.M",
+      "Minus": "@phoenix/enum/Key.Minus",
+      "N": "@phoenix/enum/Key.N",
+      "Nine": "@phoenix/enum/Key.Nine",
+      "NumLock": "@phoenix/enum/Key.NumLock",
+      "Numpad0": "@phoenix/enum/Key.Numpad0",
+      "Numpad1": "@phoenix/enum/Key.Numpad1",
+      "Numpad2": "@phoenix/enum/Key.Numpad2",
+      "Numpad3": "@phoenix/enum/Key.Numpad3",
+      "Numpad4": "@phoenix/enum/Key.Numpad4",
+      "Numpad5": "@phoenix/enum/Key.Numpad5",
+      "Numpad6": "@phoenix/enum/Key.Numpad6",
+      "Numpad7": "@phoenix/enum/Key.Numpad7",
+      "Numpad8": "@phoenix/enum/Key.Numpad8",
+      "Numpad9": "@phoenix/enum/Key.Numpad9",
+      "NumpadAdd": "@phoenix/enum/Key.NumpadAdd",
+      "NumpadDecimal": "@phoenix/enum/Key.NumpadDecimal",
+      "NumpadDivide": "@phoenix/enum/Key.NumpadDivide",
+      "NumpadEnter": "@phoenix/enum/Key.NumpadEnter",
+      "NumpadEqual": "@phoenix/enum/Key.NumpadEqual",
+      "NumpadMultiply": "@phoenix/enum/Key.NumpadMultiply",
+      "NumpadSubtract": "@phoenix/enum/Key.NumpadSubtract",
+      "O": "@phoenix/enum/Key.O",
+      "One": "@phoenix/enum/Key.One",
+      "P": "@phoenix/enum/Key.P",
+      "PageDown": "@phoenix/enum/Key.PageDown",
+      "PageUp": "@phoenix/enum/Key.PageUp",
+      "Pause": "@phoenix/enum/Key.Pause",
+      "Period": "@phoenix/enum/Key.Period",
+      "PrintScreen": "@phoenix/enum/Key.PrintScreen",
+      "Q": "@phoenix/enum/Key.Q",
+      "R": "@phoenix/enum/Key.R",
+      "Right": "@phoenix/enum/Key.Right",
+      "RightAlt": "@phoenix/enum/Key.RightAlt",
+      "RightBracket": "@phoenix/enum/Key.RightBracket",
+      "RightControl": "@phoenix/enum/Key.RightControl",
+      "RightShift": "@phoenix/enum/Key.RightShift",
+      "RightSuper": "@phoenix/enum/Key.RightSuper",
+      "S": "@phoenix/enum/Key.S",
+      "ScrollLock": "@phoenix/enum/Key.ScrollLock",
+      "Semicolon": "@phoenix/enum/Key.Semicolon",
+      "Seven": "@phoenix/enum/Key.Seven",
+      "Six": "@phoenix/enum/Key.Six",
+      "Slash": "@phoenix/enum/Key.Slash",
+      "Space": "@phoenix/enum/Key.Space",
+      "T": "@phoenix/enum/Key.T",
+      "Tab": "@phoenix/enum/Key.Tab",
+      "Three": "@phoenix/enum/Key.Three",
+      "Two": "@phoenix/enum/Key.Two",
+      "U": "@phoenix/enum/Key.U",
+      "Up": "@phoenix/enum/Key.Up",
+      "V": "@phoenix/enum/Key.V",
+      "W": "@phoenix/enum/Key.W",
+      "World1": "@phoenix/enum/Key.World1",
+      "World2": "@phoenix/enum/Key.World2",
+      "X": "@phoenix/enum/Key.X",
+      "Y": "@phoenix/enum/Key.Y",
+      "Z": "@phoenix/enum/Key.Z",
+      "Zero": "@phoenix/enum/Key.Zero"
+    }
   },
   "@phoenix/global/Enum.LogType": {
-    "documentation": "* The different types of log messages"
+    "documentation": "* The different types of log messages",
+    "keys": {
+      "Error": "@phoenix/enum/LogType.Error",
+      "Info": "@phoenix/enum/LogType.Info",
+      "None": "@phoenix/enum/LogType.None",
+      "Warning": "@phoenix/enum/LogType.Warning"
+    }
   },
   "@phoenix/global/Enum.MouseButton": {
-    "documentation": "* Mouse buttons, which may be passed to `PlayerInput:IsMouseButtonPressed`"
+    "documentation": "* Mouse buttons, which may be passed to `PlayerInput:IsMouseButtonPressed`",
+    "keys": {
+      "Left": "@phoenix/enum/MouseButton.Left",
+      "Middle": "@phoenix/enum/MouseButton.Middle",
+      "Right": "@phoenix/enum/MouseButton.Right"
+    }
   },
   "@phoenix/global/Enum.ValueType": {
-    "documentation": "* The types of value variants the Engine internally recognizes"
+    "documentation": "* The types of value variants the Engine internally recognizes",
+    "keys": {
+      "Any": "@phoenix/enum/ValueType.Any",
+      "Array": "@phoenix/enum/ValueType.Array",
+      "Boolean": "@phoenix/enum/ValueType.Boolean",
+      "Color": "@phoenix/enum/ValueType.Color",
+      "Double": "@phoenix/enum/ValueType.Double",
+      "EventSignal": "@phoenix/enum/ValueType.EventSignal",
+      "Function": "@phoenix/enum/ValueType.Function",
+      "GameObject": "@phoenix/enum/ValueType.GameObject",
+      "InputEvent": "@phoenix/enum/ValueType.InputEvent",
+      "Integer": "@phoenix/enum/ValueType.Integer",
+      "Map": "@phoenix/enum/ValueType.Map",
+      "Matrix": "@phoenix/enum/ValueType.Matrix",
+      "Null": "@phoenix/enum/ValueType.Null",
+      "String": "@phoenix/enum/ValueType.String",
+      "Vector2": "@phoenix/enum/ValueType.Vector2",
+      "Vector3": "@phoenix/enum/ValueType.Vector3"
+    }
   },
   "@phoenix/global/EventConnection": {
     "documentation": "* A connection to an Event"
