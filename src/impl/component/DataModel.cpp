@@ -24,6 +24,7 @@ public:
     void DeleteComponent(uint32_t Id) override
     {
         EcDataModel& dm = m_Components.at(Id);
+        dm.Close();
 
         for (lua_State* L : dm.Modules)
             lua_resetthread(L);
@@ -129,6 +130,20 @@ public:
                     newObject->SetParent(dm->Object);
 
                     return { newObject->ToGenericValue() };
+                }
+            } },
+
+            { "BindToClose", {
+                { Reflection::ValueType::Function },
+                {},
+                [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                {
+                    EcDataModel* dm = static_cast<EcDataModel*>(p);
+                    if (dm->CloseCallback.Func)
+                        RAISE_RTF("Cannot overwrite Close callback of datamodel {}", dm->Object->GetFullName());
+
+                    dm->CloseCallback = inputs[0].AsFunction();
+                    return {};
                 }
             } }
         };
@@ -270,5 +285,29 @@ void EcDataModel::Bind()
     {
         Log::ErrorF("Invalid `LiveScripts` path '{}' ({}), expected to be a file or directory", LiveScripts, path);
         CanLoadModules = false;
+    }
+}
+
+void EcDataModel::Close()
+{
+    if (CloseCallback.Func)
+    {
+        (*CloseCallback.Func)({});
+        (*CloseCallback.Cleanup)();
+        delete CloseCallback.Func;
+        delete CloseCallback.Cleanup;
+
+        CloseCallback.Func = nullptr;
+        CloseCallback.Cleanup = nullptr;
+        CloseCallback.Reference = INT32_MAX;
+    }
+}
+
+void EcDataModel::NotifyAllOfShutdown()
+{
+    for (EcDataModel& dm : Instance.m_Components)
+    {
+        if (dm.Valid)
+            dm.Close();
     }
 }

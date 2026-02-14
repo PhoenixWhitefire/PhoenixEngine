@@ -235,7 +235,7 @@ static int fs_promptsave(lua_State* L)
 	{
 		filters.push_back(lua_tostring(L, 2));
 	}
-	else
+	else if (lua_istable(L, 2))
 	{
 		lua_pushnil(L);
 		while (lua_next(L, 2))
@@ -402,6 +402,22 @@ static int fs_execute(lua_State* L)
 	);
 }
 
+static int fs_resolvepath(lua_State* L)
+{
+	const std::string& resolved = FileRW::MakePathCwdRelative(luaL_checkstring(L, 1));
+
+	lua_pushlstring(L, resolved.data(), resolved.size());
+	return 1;
+}
+
+static int fs_resolvepathabsolute(lua_State* L)
+{
+	const std::string& resolved = FileRW::MakePathAbsolute(luaL_checkstring(L, 1));
+
+	lua_pushlstring(L, resolved.data(), resolved.size());
+	return 1;
+}
+
 static const luaL_Reg fs_funcs[] =
 {
     { "write", fs_write },
@@ -417,6 +433,8 @@ static const luaL_Reg fs_funcs[] =
 	{ "rename", fs_rename },
 	{ "remove", fs_remove },
 	{ "execute", fs_execute },
+	{ "resolvepath", fs_resolvepath },
+	{ "resolvepathabsolute", fs_resolvepathabsolute },
 
     { "promptsave", fs_promptsave },
     { "promptopen", fs_promptopen },

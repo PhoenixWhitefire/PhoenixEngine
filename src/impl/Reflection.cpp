@@ -117,12 +117,6 @@ Reflection::GenericValue::GenericValue(const glm::mat4& m)
 	fromMatrix(*this, m);
 }
 
-Reflection::GenericValue::GenericValue(const Reflection::GenericFunction& gf) // damn
-	: Type(ValueType::Function)
-{
-	Val.Func = new GenericFunction(gf); // damm
-}
-
 static void fromArray(Reflection::GenericValue& G, const std::span<const Reflection::GenericValue>& Array)
 {
 	G.Type = Reflection::ValueType::Array;
@@ -479,10 +473,10 @@ glm::mat4& Reflection::GenericValue::AsMatrix() const
 		? *Val.Mat
 		: WRONG_TYPE();
 }
-Reflection::GenericFunction& Reflection::GenericValue::AsFunction() const
+const Reflection::GenericFunction& Reflection::GenericValue::AsFunction() const
 {
 	return Type == ValueType::Function
-		? *Val.Func
+		? Val.Func
 		: WRONG_TYPE();
 }
 std::span<Reflection::GenericValue> Reflection::GenericValue::AsArray() const
@@ -534,11 +528,6 @@ static void deallocGv(Reflection::GenericValue* gv)
 	{
 		if (gv->Size + 1 > REFLECTION_GV_SSO)
 			Memory::Free(gv->Val.Str);
-		break;
-	}
-	case ValueType::Function:
-	{
-		delete gv->Val.Func;
 		break;
 	}
 

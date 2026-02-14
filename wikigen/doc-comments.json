@@ -192,6 +192,10 @@
           }
         },
         "Methods": {
+          "BindToClose": {
+            "Description": "Sets a callback that is invoked when the datamodel is being destroyed. May only be called once. Callback cannot yield",
+            "Type": "(self, Callback: () -> ()) : ()"
+          },
           "Close": "Closes the application with the specified exit code integer or 0",
           "GetService": {
             "Description": "Gets the Object representing the specified Service. If it does not exist yet in the Data Model, it is created",
@@ -329,13 +333,7 @@
           },
           "ShowMessageBox": {
             "Description": "Shows a message box to the player with the given specification. The returned number with be the selected option: `0` for Cancel/No, `1` for Ok/Yes, `2` for No in `yesnocancel`. This is a blocking operation and no scripts or other parts of the Engine run until the message is dismissed. Avoid using quotes and backticks in the message",
-            "ParameterNames": [
-              "Title",
-              "Message",
-              "Buttons",
-              "Icon",
-              "DefaultButton"
-            ]
+            "Type": "(self, Title: string, Message: string, Buttons: 'ok' | 'okcancel' | 'yesno' | 'yesnocancel' | nil, Icon: 'info' | 'warning' | 'error' | 'question' | nil, DefaultButton: number?) : (number)"
           }
         },
         "Properties": {
@@ -1275,7 +1273,7 @@
                 "'All files'"
               ]
             ],
-            "Out": "string"
+            "Out": "string?"
           },
           "read": {
             "Description": [
@@ -1305,6 +1303,14 @@
               "Path: string",
               "NewName: string"
             ]
+          },
+          "resolvepath": {
+            "Description": "Resolves the aliases of the path, converting it into the form `./path` or leaving it as another qualified variant",
+            "Type": "(Path: string) -> string"
+          },
+          "resolvepathabsolute": {
+            "Description": "Same as`fs.resolvepath`, however converts path in the CWD-relative form (`./path`) to be absolute (relative to system root directory)",
+            "Type": "(Path: string) -> string"
           },
           "setunqualifiedroot": {
             "Description": [

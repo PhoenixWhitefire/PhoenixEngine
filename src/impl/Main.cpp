@@ -730,7 +730,7 @@ static void init()
 	ObjectRef root = roots[0];
 	PHX_ENSURE_MSG(root->FindComponent<EcDataModel>(), "Root Object was not a DataModel!");
 
-	root->IncrementHardRefs();
+	//root->IncrementHardRefs();
 
 	engine->BindDataModel(root);
 }

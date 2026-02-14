@@ -816,6 +816,12 @@
   "@phoenix/global/fs.rename": {
     "documentation": "* Renames the file at the given `Path` to have the `NewName`\n* Throws an error upon failure"
   },
+  "@phoenix/global/fs.resolvepath": {
+    "documentation": "* Resolves the aliases of the path, converting it into the form `./path` or leaving it as another qualified variant"
+  },
+  "@phoenix/global/fs.resolvepathabsolute": {
+    "documentation": "* Same as`fs.resolvepath`, however converts path in the CWD-relative form (`./path`) to be absolute (relative to system root directory)"
+  },
   "@phoenix/global/fs.setunqualifiedroot": {
     "documentation": "* Changes the meaning of non-qualified paths (e.g.: not beginning with `.` or `C:` etc) to act as aliases to the given path + `resources/` instead of referring to the CWD"
   },
@@ -1116,6 +1122,9 @@
   "@phoenix/globaltype/DataModel.AreScriptsBound": {
     "documentation": "If this is `true`, attempting to change `.LiveScripts` will throw an error"
   },
+  "@phoenix/globaltype/DataModel.BindToClose": {
+    "documentation": "Sets a callback that is invoked when the datamodel is being destroyed. May only be called once. Callback cannot yield"
+  },
   "@phoenix/globaltype/DataModel.GetService": {
     "documentation": "Gets the Object representing the specified Service. If it does not exist yet in the Data Model, it is created"
   },
@@ -1215,9 +1224,6 @@
   "@phoenix/globaltype/Engine.OpenTextDocument": {
     "documentation": "Opens a text file. This requires Developer Mode to be enabled to have any effect"
   },
-  "@phoenix/globaltype/Engine.PollSystemEvents": {
-    "documentation": "Responds to signals sent to the application by the OS. This is done automatically at the start of each frame as well"
-  },
   "@phoenix/globaltype/Engine.ResetViewportInputRect": {
     "documentation": "Resets the Engine's understanding of where the viewport is on screen back to the default (occupying the entire window)"
   },
@@ -1277,9 +1283,6 @@
   },
   "@phoenix/globaltype/GameObject.Enabled": {
     "documentation": "If this is `false`, the Engine will not render, compute physics for or otherwise update this Object and its subtree"
-  },
-  "@phoenix/globaltype/GameObject.Exists": {
-    "documentation": "Whether or not the Object still exists. Will be false after calling `:Destroy`"
   },
   "@phoenix/globaltype/GameObject.FindChild": {
     "documentation": "Returns a child Object with the given name, or `nil` if one doesn't exist"

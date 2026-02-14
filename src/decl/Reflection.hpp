@@ -99,7 +99,12 @@ namespace Reflection
 	bool TypeFits(ValueType Target, ValueType Value);
 
 	struct GenericValue;
-	typedef std::function<std::vector<Reflection::GenericValue>(const std::vector<Reflection::GenericValue>&)> GenericFunction;
+	struct GenericFunction
+	{
+		std::function<std::vector<Reflection::GenericValue>(const std::vector<Reflection::GenericValue>&)>* Func = nullptr;
+		std::function<void()>* Cleanup = nullptr;
+		int Reference = INT32_MAX;
+	};
 
 	struct EventDescriptor;
 	struct EventSignal
@@ -120,7 +125,7 @@ namespace Reflection
 			char StrSso[REFLECTION_GV_SSO]; // small string optimization. largest elem is InputAction
 			glm::vec2 Vec2;
 			glm::vec3 Vec3;
-			GenericFunction* Func;
+			GenericFunction Func;
 			GenericValue* Array;
 			glm::mat4* Mat;
 			EventSignal Event;
@@ -145,7 +150,6 @@ namespace Reflection
 		GenericValue(glm::vec2);
 		GenericValue(const glm::vec3&);
 		GenericValue(const glm::mat4&);
-		GenericValue(const GenericFunction&);
 		GenericValue(const std::span<GenericValue>&);
 		GenericValue(const std::vector<GenericValue>&);
 		GenericValue(const std::unordered_map<GenericValue, GenericValue>&);
@@ -170,7 +174,7 @@ namespace Reflection
 		const glm::vec2 AsVector2() const;
 		glm::vec3& AsVector3() const;
 		glm::mat4& AsMatrix() const;
-		GenericFunction& AsFunction() const;
+		const GenericFunction& AsFunction() const;
 		std::span<GenericValue> AsArray() const;
 		std::unordered_map<GenericValue, GenericValue> AsMap() const;
 
@@ -292,7 +296,7 @@ namespace std
 			case ValueType::GameObject:
 				return h ^ std::hash<int64_t>()(g.Val.Int);
 			case ValueType::Function:
-				return h ^ std::hash<void*>()((void*)g.Val.Func);
+				return h ^ std::hash<void*>()((void*)g.Val.Func.Func);
 			case ValueType::Array: case ValueType::Map:
 			{
 				for (uint32_t i = 0; i < g.Size; i++)

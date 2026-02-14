@@ -27,7 +27,6 @@
       },
       "Properties": {
         "Enabled": "Boolean",
-        "Exists": "Boolean READONLY",
         "Name": "String",
         "ObjectId": "Integer READONLY",
         "Parent": "GameObject?",
@@ -81,6 +80,7 @@
           "OnFrameBegin": "(Double)"
         },
         "Methods": {
+          "BindToClose": "(Function) -> ()",
           "GetService": "(String) -> (GameObject)"
         },
         "Properties": {
@@ -121,7 +121,6 @@
           "GetToolNames": "() -> (Array)",
           "IsToolEnabled": "(String) -> (Boolean)",
           "OpenTextDocument": "(String, Integer?) -> ()",
-          "PollSystemEvents": "() -> ()",
           "ResetViewportInputRect": "() -> ()",
           "RunInVM": "(String, String, String?) -> (Boolean, String?)",
           "SaveConfig": "() -> (Boolean, String)",
@@ -387,6 +386,8 @@
         "read": "function",
         "remove": "function",
         "rename": "function",
+        "resolvepath": "function",
+        "resolvepathabsolute": "function",
         "setunqualifiedroot": "function",
         "write": "function"
       },

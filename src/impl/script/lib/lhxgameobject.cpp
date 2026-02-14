@@ -6,54 +6,64 @@
 
 #define OBJECT_REG "OBJECT"
 
-void luhx_pushgameobject(lua_State* L, const GameObject* Object)
+void luhx_pushgameobject(lua_State* L, GameObject* Object)
 {
-    if (!Object)
-		lua_pushnil(L); // null object properties are nil and falsey
-	else
+	if (!Object)
 	{
-		/*uint32_t* ptrToObj = (uint32_t*)lua_newuserdatadtor(
-			L,
-			sizeof(uint32_t),
-			[](void* ptrId)
-			{
-				uint32_t id = *(uint32_t*)ptrId;
-
-				if (GameObject* o = GameObject::GetObjectById(id))
-					o->DecrementHardRefs(); // removes the reference in `::Create`
-			}
-		);*/
-
-		lua_getfield(L, LUA_REGISTRYINDEX, OBJECT_REG);
-		if (lua_isnil(L, -1))
-		{
-			lua_newtable(L);
-			lua_pushvalue(L, -1);
-			lua_setfield(L, LUA_REGISTRYINDEX, OBJECT_REG);
-		}
-
-		lua_pushinteger(L, *(const int32_t*)&Object->ObjectId);
-		lua_gettable(L, -2); // OBJECT_REG[ObjectId]
-
-		if (!lua_isnil(L, -1))
-		{
-			lua_remove(L, -2); // remove the registry sub-table
-			return; // object already in the registry, return the same value (only way to make table key hashing work afaik)
-		}
-		lua_pop(L, 1); // dont need that nil
-
-		uint32_t* ptrToObj = (uint32_t*)lua_newuserdata(L, sizeof(uint32_t));
-		lua_pushinteger(L, *(const int32_t*)&Object->ObjectId);
-		lua_pushvalue(L, -2);
-
-		*ptrToObj = Object ? Object->ObjectId : PHX_GAMEOBJECT_NULL_ID;
-
-		luaL_getmetatable(L, "GameObject");
-		lua_setmetatable(L, -2);
-
-		lua_settable(L, -4);
-		lua_remove(L, -2); // remove the registry sub-table
+		lua_pushnil(L); // null objects are nil and false-y
+		return;
 	}
+
+	/*uint32_t* ptrToObj = (uint32_t*)lua_newuserdatadtor(
+		L,
+		sizeof(uint32_t),
+		[](void* ptrId)
+		{
+			uint32_t id = *(uint32_t*)ptrId;
+
+			if (GameObject* o = GameObject::GetObjectById(id))
+				o->DecrementHardRefs(); // removes the reference in `::Create`
+		}
+	);*/
+
+	lua_getfield(L, LUA_REGISTRYINDEX, OBJECT_REG);
+	if (lua_isnil(L, -1))
+	{
+		lua_newtable(L);
+		lua_pushvalue(L, -1);
+		lua_setfield(L, LUA_REGISTRYINDEX, OBJECT_REG);
+	}
+
+	lua_pushinteger(L, *(const int32_t*)&Object->ObjectId);
+	lua_gettable(L, -2); // OBJECT_REG[ObjectId]
+
+	if (!lua_isnil(L, -1))
+	{
+		lua_remove(L, -2); // remove the registry sub-table
+		return; // object already in the registry, return the same value (only way to make table key hashing work afaik)
+	}
+	lua_pop(L, 1); // dont need that nil
+
+	Object->IncrementHardRefs();
+
+	uint32_t* ptrToObj = (uint32_t*)lua_newuserdatadtor(
+		L,
+		sizeof(uint32_t),
+		[](void* ptrToId)
+		{
+			GameObject::GetObjectById(*(uint32_t*)ptrToId)->DecrementHardRefs();
+		}
+	);
+	lua_pushinteger(L, *(const int32_t*)&Object->ObjectId);
+	lua_pushvalue(L, -2);
+
+	*ptrToObj = Object ? Object->ObjectId : PHX_GAMEOBJECT_NULL_ID;
+
+	luaL_getmetatable(L, "GameObject");
+	lua_setmetatable(L, -2);
+
+	lua_settable(L, -4);
+	lua_remove(L, -2); // remove the registry sub-table
 }
 
 GameObject* luhx_checkgameobject(lua_State* L, int StackIndex)
@@ -107,15 +117,8 @@ static int obj_index(lua_State* L)
 
 	ZoneText(key, strlen(key));
 
-	if (strcmp(key, "Exists") == 0)
-	{
-		// whether or not it exists
-		lua_pushboolean(L, obj ? 1 : 0);
-		return 1;
-	}
-
     if (!obj)
-        luaL_error(L, "Tried to index '%s' of a deleted Game Object (use '.Exists' to check before accessing a member)", key);
+        luaL_error(L, "Tried to index '%s' of a deleted Game Object (bug!)", key);
 
     ReflectorRef ref;
 
@@ -155,11 +158,8 @@ static int obj_newindex(lua_State* L)
 
 	ZoneText(key, strlen(key));
 
-	if (strcmp(key, "Exists") == 0)
-		luaL_error(L, "%s", "'Exists' is read-only! - 21/12/2024");
-
     if (!obj)
-	    luaL_error(L, "Cannot assign to property '%s' of a delete GameObject", key);
+	    luaL_error(L, "Cannot assign to property '%s' of a deleted GameObject (bug!)", key);
 
 	if (const Reflection::PropertyDescriptor* prop = obj->FindProperty(key))
 	{

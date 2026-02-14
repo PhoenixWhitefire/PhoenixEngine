@@ -1132,10 +1132,18 @@ void Engine::Shutdown()
 	Log::Info("Engine destructing...");
 
 	Log::Info("Destroying DataModel...");
+	EcDataModel::NotifyAllOfShutdown();
+
 	DataModelRef->Destroy();
 	WorkspaceRef->Destroy();
 	DataModelRef.Clear();
 	WorkspaceRef.Clear();
+
+	for (GameObject& obj : GameObject::s_WorldArray)
+	{
+		if (!obj.IsDestructionPending && obj.Valid)
+			obj.Destroy();
+	}
 
 	for (GameObject::Collection& collection : GameObject::s_Collections)
 	{
@@ -1182,6 +1190,12 @@ void Engine::Shutdown()
 	if (Window)
 		glfwDestroyWindow(Window);
 	glfwTerminate();
+
+	for (const GameObject& obj : GameObject::s_WorldArray)
+	{
+		if (obj.Valid)
+			Log::WarningF("Object {} still has references!", obj.GetFullName());
+	}
 
 	EngineInstance = nullptr;
 }

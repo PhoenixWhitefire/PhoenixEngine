@@ -70,6 +70,7 @@ public:
                     DevCursor = glfwCreateStandardCursor(cursor);
                     glfwSetCursor(context, DevCursor);
                     DevCursorId = cursor;
+                    glfwPollEvents(); // update cursor for the OS if we decide to do some heavy work right after this that doesn't poll events
                 }
             )
         };

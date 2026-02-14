@@ -14,16 +14,6 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		REFLECTION_PROPERTY_SIMPLE(GameObject, Serializes, Boolean),
 		REFLECTION_PROPERTY("ObjectId", Integer, REFLECTION_PROPERTY_GET_SIMPLE(GameObject, ObjectId), nullptr),
 
-		REFLECTION_PROPERTY(
-			"Exists",
-			Boolean,
-			[](void*) -> Reflection::GenericValue
-			{
-				return true; // actual logic is handled in `obj_index`
-			},
-			nullptr
-		),
-
 		{ "Parent", Reflection::PropertyDescriptor(
 			"Parent",
 			REFLECTION_OPTIONAL(GameObject),
@@ -70,7 +60,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 					[gf](GameObject* g)
 					-> bool
 					{
-						std::vector<Reflection::GenericValue> rets = gf({ g->ToGenericValue() }); // damn
+						std::vector<Reflection::GenericValue> rets = (*gf.Func)({ g->ToGenericValue() }); // damn
 						PHX_ENSURE_MSG(rets.size() <= 1, "`:ForEachChild` expects none or one return value");
 
 						if (rets.size() == 0)
@@ -80,6 +70,9 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 					}
 				);
 
+				(*gf.Cleanup)();
+				delete gf.Func;
+				delete gf.Cleanup;
 				return {};
 			}
 		} },
@@ -96,7 +89,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 					[gf](GameObject* g)
 					-> bool
 					{
-						std::vector<Reflection::GenericValue> rets = gf({ g->ToGenericValue() }); // damn
+						std::vector<Reflection::GenericValue> rets = (*gf.Func)({ g->ToGenericValue() }); // damn
 						PHX_ENSURE_MSG(rets.size() <= 1, "`:ForEachChild` expects none or one return value");
 
 						if (rets.size() == 0)
@@ -106,6 +99,9 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 					}
 				);
 
+				(*gf.Cleanup)();
+				delete gf.Func;
+				delete gf.Cleanup;
 				return {};
 			}
 		} },
@@ -466,6 +462,7 @@ GameObject* GameObject::FromGenericValue(const Reflection::GenericValue& gv)
 			Reflection::TypeAsString(gv.Type)
 		);
 
+	assert(!GameObject::GetObjectById(static_cast<uint32_t>(gv.Val.Int)) ? gv.Val.Int == PHX_GAMEOBJECT_NULL_ID : true);
 	return GameObject::GetObjectById(static_cast<uint32_t>(gv.Val.Int));
 }
 
@@ -506,6 +503,8 @@ void GameObject::Destroy()
 
 	if (!IsDestructionPending)
 	{
+		m_HardRefCount++;
+
 		for (uint16_t tagId : Tags)
 		{
 			Collection& collection = s_Collections[tagId];
@@ -515,19 +514,27 @@ void GameObject::Destroy()
 		}
 		Tags.clear();
 
-		this->SetParent(nullptr);
-		this->IsDestructionPending = true;
+		for (const ReflectorRef& ref : Components)
+			s_ComponentManagers[(size_t)ref.Type]->DeleteComponent(ref.Id);
+		Components.clear();
 
-		DecrementHardRefs(); // removes the reference in `::Create`
+		this->SetParent(nullptr);
+
+		for (const ReflectorRef& ref : Components)
+		{
+			if (ref.Type == EntityComponent::DataModel)
+				((EcDataModel*)ref.Referred())->Close();
+		}
+
+		assert(m_HardRefCount > 1);
+		DecrementHardRefs(); // remove the ref added in `::Create`
+
+		m_HardRefCount--;
+		this->IsDestructionPending = true;
 	}
 
 	if (m_HardRefCount == 0 && Valid)
 	{
-		for (const ReflectorRef& ref : Components)
-			s_ComponentManagers[(size_t)ref.Type]->DeleteComponent(ref.Id);
-
-		Components.clear();
-
 		for (GameObject* child : this->GetChildren())
 			child->Destroy();
 
@@ -599,7 +606,14 @@ void GameObject::SetParent(GameObject* newParent)
 	Parent = PHX_GAMEOBJECT_NULL_ID;
 
 	if (oldParent)
+	{
 		oldParent->RemoveChild(this->ObjectId);
+
+		if (!newParent)
+			DecrementHardRefs();
+	}
+	else
+		IncrementHardRefs();
 
 	if (History* history = History::Get(); history->IsRecordingEnabled)
 	{
@@ -1104,8 +1118,7 @@ GameObject* GameObject::Create()
 	GameObject& created = s_WorldArray.back();
 
 	created.ObjectId = numObjects;
-	created.IncrementHardRefs(); // "i'm tired boss"
-
+	created.IncrementHardRefs();
 	return &created;
 }
 

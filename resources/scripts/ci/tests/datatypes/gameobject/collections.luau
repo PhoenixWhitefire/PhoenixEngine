@@ -95,7 +95,7 @@ return function(test: Types.Test, expect: Types.Expect)
         local o = GameObject.new("Mesh")
 
         local c1 = Collections:GetTagRemovedSignal("Test4"):Connect(function(g)
-            expect(g):toBeNil() -- object is destroyed, it won't be reflected to us
+            expect(g):toBe(o)
             expect(t4removed):toBe(false)
             t4removed = true
         end)

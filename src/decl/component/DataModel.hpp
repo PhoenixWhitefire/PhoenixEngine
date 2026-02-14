@@ -11,6 +11,8 @@ struct lua_State;
 struct EcDataModel : public Component<EntityComponent::DataModel>
 {
 	void Bind();
+	void Close();
+	static void NotifyAllOfShutdown();
 
 	std::string LiveScripts = "scripts/live";
 	std::string VM = ROOT_LVM_NAME;
@@ -18,6 +20,7 @@ struct EcDataModel : public Component<EntityComponent::DataModel>
 	ObjectRef Object;
 
 	std::vector<Reflection::EventCallback> OnFrameBeginCallbacks;
+	Reflection::GenericFunction CloseCallback;
 	std::vector<lua_State*> Modules;
 	bool CanLoadModules = true;
 	bool Valid = true;

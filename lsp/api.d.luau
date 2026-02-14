@@ -85,7 +85,6 @@ declare Matrix: {
 
 declare extern type GameObject with
   Enabled: boolean
-  Exists: boolean 
   Name: string
   ObjectId: number 
   Parent: GameObject?
@@ -152,6 +151,7 @@ declare extern type DataModel with
   Time: number 
   VM: string
 
+  function BindToClose(self, Callback: () -> ()) : ()
   function GetService(self, Service: 'Workspace' | 'Engine' | 'PlayerInput' | 'AssetManager' | 'History' | 'Physics' | 'Renderer' | 'Collections') : GameObject
 
   OnFrameBegin: EventSignal<(number)>
@@ -188,7 +188,6 @@ declare extern type Engine with
   function GetToolNames(self) : { string }
   function IsToolEnabled(self, ToolName: string) : (boolean)
   function OpenTextDocument(self, Path: string, Line: number?) : ()
-  function PollSystemEvents(self) : ()
   function ResetViewportInputRect(self) : ()
   function RunInVM(self, VmName: string, Code: string, ChunkName: string?) : (boolean, string?)
   function SaveConfig(self) : (boolean, string)
@@ -197,7 +196,7 @@ declare extern type Engine with
   function SetExplorerSelections(self, Selections: { GameObject }) : ()
   function SetToolEnabled(self, ToolName: string, Enabled: boolean) : ()
   function SetViewportInputRect(self, Position: vector, Size: vector) : ()
-  function ShowMessageBox(self, Title: string, Message: string, Buttons: string?, Icon: string?, DefaultButton: number?) : (number)
+  function ShowMessageBox(self, Title: string, Message: string, Buttons: 'ok' | 'okcancel' | 'yesno' | 'yesnocancel' | nil, Icon: 'info' | 'warning' | 'error' | 'question' | nil, DefaultButton: number?) : (number)
 
   OnMessageLogged: EventSignal<EnumLogType, string, string>
 end
@@ -574,10 +573,12 @@ declare fs: {
   mkdir: (( Path: string ) -> ()),
   promptopen: (( DefaultLocation: string?, Filter: ( { string } | string)?, FilterName: string?, AllowMultipleFiles: boolean? ) -> ({ string })),
   promptopenfolder: (( Title: string, DefaultDirectory: string? ) -> (string?)),
-  promptsave: (( DefaultLocation: string?, Filter: ( { string } | string)?, FilterName: string? ) -> (string)),
+  promptsave: (( DefaultLocation: string?, Filter: ( { string } | string)?, FilterName: string? ) -> (string?)),
   read: (( Path: string ) -> (string?, string?)),
   remove: (( Path: string ) -> ()),
   rename: (( Path: string, NewName: string ) -> ()),
+  resolvepath: (Path: string) -> string,
+  resolvepathabsolute: (Path: string) -> string,
   setunqualifiedroot: (( Alias: string ) -> ()),
   write: (( Path: string, Contents: string, CreateDirectories: boolean? ) -> ())
 }

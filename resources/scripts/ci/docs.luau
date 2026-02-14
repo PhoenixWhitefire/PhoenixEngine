@@ -195,25 +195,32 @@ local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, lib
 
 		if t[k] == "function" then
 			definitionsFile ..= `  { k }: `
-			assert(not v.Overloads or typeof(v.Overloads) == "string" or typeof(v.Overloads) == "table")
 
-			local ins = { v.In or "" }
-			if typeof(v.Overloads) == "string" then
-				table.insert(ins, v.Overloads)
+			if not v.Type then
+				assert(not v.Overloads or typeof(v.Overloads) == "string" or typeof(v.Overloads) == "table")
 
-			elseif v.Overloads then
-				assert(typeof(v.Overloads) == "table")
-				table.move(v.Overloads, 1, #v.Overloads, #ins + 1, ins)
+				local ins = { v.In or "" }
+				if typeof(v.Overloads) == "string" then
+					table.insert(ins, v.Overloads)
+
+				elseif v.Overloads then
+					assert(typeof(v.Overloads) == "table")
+					table.move(v.Overloads, 1, #v.Overloads, #ins + 1, ins)
+				end
+
+				for _, vIn in ins do
+					local docsig, defsig = dumpFuncSignature(libname, k, vIn, v.Out or "", v)
+					str ..= docsig
+					definitionsFile ..= `{ defsig } & `
+				end
+
+				definitionsFile = string.sub(definitionsFile, 1, #definitionsFile - 3)
+				definitionsFile ..= ",\n"
+			else
+				assert(typeof(v.Type) == "string")
+				str ..= `#### {libname}.{k}{v.Type}`
+				definitionsFile ..= v.Type .. ",\n"
 			end
-
-			for _, vIn in ins do
-				local docsig, defsig = dumpFuncSignature(libname, k, vIn, v.Out or "", v)
-				str ..= docsig
-				definitionsFile ..= `{ defsig } & `
-			end
-
-			definitionsFile = string.sub(definitionsFile, 1, #definitionsFile - 3)
-			definitionsFile ..= ",\n"
 		else
 			if not v.Type or typeof(v.Type) ~= "string" then
 				print("Error with member", k)

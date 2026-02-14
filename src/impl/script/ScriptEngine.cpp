@@ -565,6 +565,7 @@ Reflection::GenericValue ScriptEngine::L::ToGeneric(lua_State* L, int StackIndex
 		gv.Type = Reflection::ValueType::Function;
 
 		lua_State* CL = lua_newthread(L);
+		int ref = lua_ref(L, -1);
 		lua_pushvalue(L, StackIndex);
 		lua_xmove(L, CL, 1);
 
@@ -581,7 +582,7 @@ Reflection::GenericValue ScriptEngine::L::ToGeneric(lua_State* L, int StackIndex
 			ar.short_src, ar.currentline, fnname, ar.name ? ar.name : "<anonymous>"
 		);
 
-		gv.Val.Func = new Reflection::GenericFunction([CL, fndbinfo](const std::vector<Reflection::GenericValue>& Inputs)
+		gv.Val.Func.Func = new std::function([CL, fndbinfo](const std::vector<Reflection::GenericValue>& Inputs)
 			-> std::vector<Reflection::GenericValue>
 			{
 				lua_pushvalue(CL, -1); // keep the function value
@@ -626,6 +627,11 @@ Reflection::GenericValue ScriptEngine::L::ToGeneric(lua_State* L, int StackIndex
 
 				RAISE_RT(luaL_checkstring(CL, -1));
 			});
+
+		gv.Val.Func.Cleanup = new std::function([CL, ref]()
+		{
+			lua_unref(CL, ref);
+		});
 
 		return gv;
 	}

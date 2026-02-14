@@ -51,7 +51,7 @@ static int sig_namecall(lua_State* L)
 		lua_pop(L, 1);
 
 		EventConnectionData* ec = (EventConnectionData*)lua_newuserdata(eL, sizeof(EventConnectionData));
-		ec->DataModel.Reference = nullptr; // zero-initialization breaks some assumptions that IDs which are not `PHX_GAMEOBJECT_NULL_ID` are valid
+		ec->DataModel = nullptr; // zero-initialization breaks some assumptions that IDs which are not `PHX_GAMEOBJECT_NULL_ID` are valid
 		luaL_getmetatable(eL, "EventConnection"); // stack: ec, mt
 		lua_setmetatable(eL, -2); // stack: ec
 		lua_xpush(eL, L, -1);
@@ -73,7 +73,7 @@ static int sig_namecall(lua_State* L)
 		lua_pop(L, 1);
 
 		ReflectorRef reflector = ev->Reflector;
-		ObjectHandle dmRef = ec->DataModel;
+		ObjectRef dmRef = ec->DataModel;
 
 		lua_xpush(eL, cL, 2);
 
@@ -91,20 +91,17 @@ static int sig_namecall(lua_State* L)
 				ZoneText(spawnTrace.data(), spawnTrace.size());
 				(void)spawnTrace;
 
-				if (dmRef.HasValue())
-				{
-					GameObject* dm = dmRef.Dereference();
+				GameObject* dm = dmRef.Referred();
 
-					if (!dm || dm->IsDestructionPending || !dm->FindComponentByType(EntityComponent::DataModel))
-					{
-						// TODO
-						// I'm Glad I finally figured out what was going on, but there's probably a more important
-						// architectural problem behind this as well
-						// 14/12/2025
-						if (reflector.Referred())
-							rev->Disconnect(reflector.Referred(), ConnectionId);
-						return;
-					}
+				if (!dm || dm->IsDestructionPending || !dm->FindComponentByType(EntityComponent::DataModel))
+				{
+					// TODO
+					// I'm Glad I finally figured out what was going on, but there's probably a more important
+					// architectural problem behind this as well
+					// 14/12/2025
+					if (reflector.Referred())
+						rev->Disconnect(reflector.Referred(), ConnectionId);
+					return;
 				}
 
 				assert(Inputs.size() == rev->CallbackInputs.size());
@@ -135,7 +132,7 @@ static int sig_namecall(lua_State* L)
 					.DebugString = "DeferredEventResumption",
 					.Coroutine = co,
 					.CoroutineReference = runnerRef,
-					.DataModel = dmRef.Reference,
+					.DataModel = dmRef,
 					.RmEventCallback = {
 						.Event = rev,
 						.Reflector = reflector,

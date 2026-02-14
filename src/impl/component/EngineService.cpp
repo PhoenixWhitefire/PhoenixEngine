@@ -595,16 +595,6 @@ public:
                     return { writeSuccess, error };
                 }
             } },
-
-            { "PollSystemEvents", Reflection::MethodDescriptor{
-                {},
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
-                {
-                    glfwPollEvents();
-                    return {};
-                }
-            } }
         };
 
         return methods;

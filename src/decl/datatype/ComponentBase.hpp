@@ -62,13 +62,17 @@ public:
 
 	virtual void DeleteComponent(uint32_t Id) override
 	{
-		T& component = m_Components.at(Id);
-		component.Valid = false;
+		if (!m_DidShutdown)
+		{
+			T& component = m_Components.at(Id);
+			component.Valid = false;
+		}
 	}
 
 	virtual void Shutdown() override
 	{
 		m_Components.clear();
+		m_DidShutdown = true;
 	}
 
 	virtual const Reflection::StaticPropertyMap& GetProperties() override
@@ -106,6 +110,7 @@ public:
 	}
 
 	std::vector<T> m_Components;
+	bool m_DidShutdown = false;
 };
 
 template <EntityComponent T>

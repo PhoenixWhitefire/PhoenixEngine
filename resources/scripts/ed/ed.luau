@@ -29,6 +29,7 @@ local Project: Types.Project = {
 	Name = "Should not be visible",
 	IsTempPath = false
 }
+local restoreState = nil
 
 local RecentProjects: { string } = {}
 local EditorPreferences = {
@@ -37,7 +38,8 @@ local EditorPreferences = {
 	ClearOutputOnPlaytest = true,
 	CodeEditorPath = "code",
 	UseLightTheme = false,
-	Gamma = 2.2
+	Gamma = 2.2,
+	ClosingProjectSaveRequiresConfirmation = true
 }
 
 EditorPreferences = EditorPreferences :: { [keyof<typeof(EditorPreferences)>]: index<typeof(EditorPreferences), keyof<typeof(EditorPreferences)>> } & typeof(EditorPreferences)
@@ -260,8 +262,73 @@ local function saveToRecents(Path: string)
 	saveRecents()
 end
 
+local function tryToSave(datamodel: GameObject?, firstAttempt: string?)
+	if not datamodel then
+		Engine:ShowMessageBox("Save failed", "Failed to save: No datamodel", "ok", "error")
+		return
+	end
+
+	local succeeded, errorMessage
+
+	if not firstAttempt then
+		firstAttempt = fs.promptsave()
+
+		if not firstAttempt then
+			succeeded = false
+			errorMessage = "You did not select a path to start"
+		end
+	end
+
+	if firstAttempt then
+		succeeded, errorMessage = AssetManager:SaveScene({ datamodel }, firstAttempt)
+
+		if succeeded then
+			return
+		end
+	end
+
+	local path = firstAttempt
+
+	while true do
+		if Engine:ShowMessageBox(
+			"Retry?",
+			`Failed to save to {if path then fs.resolvepathabsolute(path) else "path"} because of error: {errorMessage}\n\n Select another path and retry?`,
+			"yesno",
+			"error",
+			1
+		) == 0 then
+			warn("Gave up trying to save")
+			return
+		end
+
+		path = fs.promptsave()
+		if not path then
+			errorMessage = "You did not select a save path"
+			continue
+		end
+
+		succeeded, errorMessage = AssetManager:SaveScene({ datamodel} , path)
+		if succeeded then
+			print("Saved")
+			break
+		end
+	end
+end
+
 local function saveProject()
-	assert(AssetManager:SaveScene({ assert(Project.DataModel) }, "@projres/scenes/root.world"))
+	local editingDatamodel = Project.DataModel
+
+	if CurrentStage == "ProjectPlaying" then
+		editingDatamodel = restoreState
+	end
+
+	tryToSave(editingDatamodel, "@projres/scenes/root.world")
+
+	if CurrentStage == "ProjectPlaying" then
+		if Engine:ShowMessageBox("Also save Playtest state?", "Would you also like to save the state of the Playtest world as a separate file?", "yesno", "question", 1) == 1 then
+			tryToSave(Project.DataModel)
+		end
+	end
 end
 
 local function openCodeEditor()
@@ -401,7 +468,6 @@ end
 
 local function openProject(ManualPath: string?)
 	PlayerInput.Cursor = Enum.Cursor.NotAllowed
-	Engine:PollSystemEvents()
 
 	xpcall(openProject_, function(err)
 		Engine:ShowMessageBox("Failed to open project", "Failed to open project: " .. tostring(err), "ok", "error")
@@ -498,7 +564,6 @@ end
 
 local function createNewProject()
 	PlayerInput.Cursor = Enum.Cursor.NotAllowed
-	Engine:PollSystemEvents()
 
 	xpcall(createNewProject_, function(err)
 		Engine:ShowMessageBox("Failed to create project", "Failed to create new project: " .. tostring(err), "ok", "error")
@@ -1115,6 +1180,11 @@ local function renderMainMenuBar(dt: number)
 		EditorPreferences.ClearOutputOnPlaytest = imgui.checkbox("Clear Output on Playtest", EditorPreferences.ClearOutputOnPlaytest)
 
 		EditorPreferences.Gamma = imgui.inputnumber("Gamma Correction", EditorPreferences.Gamma)
+
+		EditorPreferences.ClosingProjectSaveRequiresConfirmation = imgui.checkbox(
+			"Require confirmation for save when closing Project through `File` > `Close`",
+			EditorPreferences.ClosingProjectSaveRequiresConfirmation
+		)
 
 		imgui.urllink("https://youtu.be/YCjNT9qGjh4?t=7193")
 
@@ -1782,7 +1852,11 @@ function Stages.ProjectEditing_Leave(NextStage)
 	Engine:SetExplorerSelections({})
 
 	assert(Project.DataModel)
-	saveProject()
+	if not EditorPreferences.ClosingProjectSaveRequiresConfirmation
+		or Engine:ShowMessageBox("Save?", "Save datamodel before closing the current project?", "yesno", "question", 1) == 1
+	then
+		saveProject()
+	end
 
 	Project.DataModel:Destroy()
 	Project.Workspace = nil
@@ -1794,11 +1868,8 @@ function Stages.ProjectEditing_Leave(NextStage)
 	Engine:CloseVM(GameEditingVM)
 end
 
-local restoreState = nil
-
 function Stages.ProjectPlaying_Enter(DeltaTime: any)
 	PlayerInput.Cursor = Enum.Cursor.NotAllowed
-	Engine:PollSystemEvents() -- cursor will not appear until we've responded to the OS
 
 	assert(Project)
 	restoreState = Project.DataModel
@@ -1847,6 +1918,19 @@ function Stages.ProjectPlaying_Leave(DeltaTime)
 	PlayerInput.CursorMode = Enum.CursorMode.Normal
 end
 
+game:BindToClose(function()
+	if CurrentStage == "ProjectEditing" or CurrentStage == "ProjectPlaying" then
+		local choice = Engine:ShowMessageBox("Save", "Save current Editor file before closing?", "yesno", "warning", 1)
+
+		if choice == 0 then
+			warn("Quitting without saving")
+		else
+			print("Saving before quitting")
+			saveProject()
+		end
+	end
+end)
+
 changeStageTo("SelectProject")
 
 if table.find(Engine:GetCliArguments(), "-ed_ci") then
@@ -1873,7 +1957,14 @@ if table.find(Engine:GetCliArguments(), "-ed_ci") then
 			return
 		end
 
+		if CurrentStage ~= "ProjectEditing" then
+			warn(`Stage is {CurrentStage} and not ProjectEditing`)
+			Engine:Exit(1)
+			return
+		end
+
 		warn("Editor CI checks done")
+		CurrentStage = "SelectProject"
 		Engine:Exit()
 	end)
 end

@@ -45,7 +45,7 @@ int luhxopen_EventSignal(lua_State*);
 int luhxopen_EventConnection(lua_State*);
 int luhxopen_InputEvent(lua_State*);
 
-void luhx_pushgameobject(lua_State*, const GameObject*);
+void luhx_pushgameobject(lua_State*, GameObject*);
 void luhx_pushvector3(lua_State*, const glm::vec3&);
 void luhx_pushmatrix(lua_State*, const glm::mat4&);
 void luhx_pushcolor(lua_State*, const Color&);
@@ -64,7 +64,7 @@ struct EventSignalData
 struct EventConnectionData
 {
 	ReflectorRef Reflector;
-	ObjectHandle DataModel;
+	ObjectRef DataModel;
 	const Reflection::EventDescriptor* Event = nullptr;
 	lua_State* L = nullptr;
 	uint32_t ConnectionId = UINT32_MAX;

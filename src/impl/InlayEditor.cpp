@@ -268,6 +268,7 @@ void InlayEditor::Initialize(Renderer* renderer)
 	MtlEditorPreview.Initialize(256, 256);
 	MtlPreviewRenderer = renderer;
 	MtlPreviewCamera = GameObject::Create("Camera");
+	MtlPreviewCamera->Name = "MtlPreviewCamera";
 
 	EcCamera* cc = MtlPreviewCamera->FindComponent<EcCamera>();
 	cc->SetWorldTransform(MtlPreviewCamDefaultRotation * MtlPreviewCamOffset);
@@ -329,7 +330,7 @@ void InlayEditor::Initialize(Renderer* renderer)
 	ScriptEngine::L::DebugBreak = &debugBreakHook;
 	ScriptEngine::L::LeaveDebugger = debuggerLeaveCallback;
 
-	ObjectRef tempdm = GameObject::Create("DataModel");
+	ObjectHandle tempdm = GameObject::Create("DataModel");
 	ObjectRef tempwp = GameObject::Create("Workspace");
 	tempwp->SetParent(tempdm);
 	GameObject::s_DataModel = tempdm->ObjectId;
@@ -626,7 +627,20 @@ static void renderTextEditors()
 			ImGui::SetNextWindowFocus();
 
 		bool open = true;
-		if (!ImGui::Begin(std::format("{}###TextEditor_{}", std::filesystem::path(tab.FilePath).filename().string(), index).c_str(), &open))
+		bool render = ImGui::Begin(std::format("{}###TextEditor_{}", std::filesystem::path(tab.FilePath).filename().string(), index).c_str(), &open);
+
+		if (!open)
+		{
+			textEditorSaveFile(tab);
+			ImGui::End();
+
+			s_TextEditors.erase(s_TextEditors.begin() + index);
+			index--;
+
+			continue;
+		}
+
+		if (!render)
 		{
 			ImGui::End();
 
@@ -640,17 +654,6 @@ static void renderTextEditors()
 		}
 
 		tab.WasPreviouslyVisible = true;
-
-		if (!open)
-		{
-			textEditorSaveFile(tab);
-			ImGui::End();
-
-			s_TextEditors.erase(s_TextEditors.begin() + index);
-			index--;
-
-			continue;
-		}
 
 		// "Breakpoints" just highlight the entire line in blue with the theme I've set for ImGuiColorTextEdit,
 		// use that for the current line and maybe re-use the previous current-line indicator (which put a red marker on the line number)
@@ -1280,11 +1283,17 @@ enum class ContextMenuAction : uint8_t
 
 	__sectionSeparator
 };
+static const bool ContextMenuActionRequiresSelection[] = {
+	true,
+	true,
+	true,
+	false,
+	true
+};
 
 static std::vector<ContextMenuAction> ContextActionsForSelection;
 
-static const char* ContextMenuActionStrings[] =
-{
+static const char* ContextMenuActionStrings[] = {
 	"Duplicate",
 	"Delete",
 	"Save to File",
@@ -1397,10 +1406,16 @@ static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] =
 					return;
 				}
 
-				assert(Selections[0].Dereference());
-
-				for (ObjectRef r : roots)
-					r->SetParent(Selections[0].Dereference());
+				if (Selections.size() > 0)
+				{
+					for (ObjectRef r : roots)
+						r->SetParent(Selections[0].Dereference());
+				}
+				else
+				{
+					for (ObjectRef r : roots)
+						r->SetParent(ExplorerRoot);
+				}
 			}
 		}
 		else
@@ -2354,10 +2369,13 @@ static void renderExplorer()
 	if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
 		ImGui::OpenPopup(1979); // the mimic!!;
 
-	if (ImGui::IsWindowFocused())
+	if (ImGui::IsWindowHovered())
 	{
 		if (ImGui::IsKeyDown(ImGuiKey_F2) && Selections.size() > 0)
+		{
+			EngineJsonConfig["Tool_Properties"] = true;
 			FocusRenameSelection = true;
+		}
 
 		if (ImGui::IsKeyDown(ImGuiKey_Delete) && Selections.size() > 0)
 		{
@@ -2468,10 +2486,10 @@ static void renderExplorer()
 			{
 				const char* name = ContextMenuActionStrings[(uint8_t)action];
 
-				if (ImGui::MenuItem(name))
+				if ((Selections.size() > 0 || !ContextMenuActionRequiresSelection[(uint8_t)action]) &&  ImGui::MenuItem(name))
 				{
 					History* history = History::Get();
-					std::optional<size_t> id = action != ContextMenuAction::Rename ? history->TryBeginAction(name) : 0;
+					std::optional<size_t> id = action != ContextMenuAction::Rename ? history->TryBeginAction(name) : std::nullopt;
 
 					ContextMenuActionHandlers[(uint8_t)action]();
 
@@ -2879,6 +2897,9 @@ static void renderProperties()
 
 	if (Selections.size() > 0)
 	{
+		if (ImGui::IsWindowHovered() && ImGui::IsKeyDown(ImGuiKey_F2))
+			FocusRenameSelection = true;
+
 		uint32_t idSum = 0;
 		for (const ObjectHandle& sel : Selections)
 			idSum += sel->ObjectId;
@@ -3574,15 +3595,15 @@ void InlayEditor::OpenTextDocument(const std::string& Path, int Line)
 
 void InlayEditor::Shutdown()
 {
-	MtlPreviewCamera = nullptr;
-	ExplorerRoot = nullptr;
+	MtlPreviewCamera.Clear();
+	ExplorerRoot.Clear();
+	LastSelected.Clear();
+	ObjectInsertionTarget.Clear();
+	PrevEditSelections.clear();
 	Selections.clear();
 	VisibleTree.clear();
 	VisibleTreeWip.clear();
 	PickerTargets.clear();
-	LastSelected.Clear();
-	ObjectInsertionTarget.Clear();
-	PrevEditSelections.clear();
 	
 	for (TextEditorTab& tab : s_TextEditors)
 	{
