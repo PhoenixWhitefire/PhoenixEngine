@@ -96,8 +96,8 @@ declare extern type GameObject with
   function Duplicate(self) : (GameObject)
   function FindChild(self, ChildName: string) : (GameObject?)
   function FindChildWithComponent(self, Component: keyof<Creatables>) : (GameObject)
-  function ForEachChild(self, Callback: (...unknown) -> (...unknown)) : ()
-  function ForEachDescendant(self, Callback: (...unknown) -> (...unknown)) : ()
+  function ForEachChild(self, Callback: (Object: GameObject) -> boolean?) : ()
+  function ForEachDescendant(self, Callback: (Object: GameObject) -> boolean?) : ()
   function GetChildren(self) : { GameObject }
   function GetComponents(self) : keyof<Creatables>
   function GetDescendants(self) : { GameObject }

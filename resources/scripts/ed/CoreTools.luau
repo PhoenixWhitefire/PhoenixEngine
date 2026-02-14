@@ -106,10 +106,6 @@ function CoreTools.Update(Project: Types.Project)
         end
     end
 
-    if target and not target.Exists then
-        target = nil
-    end
-
     if not target or not workspace.SceneCamera then
         resetGizmo()
         return

@@ -39,7 +39,8 @@ local EditorPreferences = {
 	CodeEditorPath = "code",
 	UseLightTheme = false,
 	Gamma = 2.2,
-	ClosingProjectSaveRequiresConfirmation = true
+	ClosingProjectSaveRequiresConfirmation = true,
+	AutosaveInterval = 10
 }
 
 EditorPreferences = EditorPreferences :: { [keyof<typeof(EditorPreferences)>]: index<typeof(EditorPreferences), keyof<typeof(EditorPreferences)>> } & typeof(EditorPreferences)
@@ -78,6 +79,7 @@ local WasHoldingZKeyDown = false
 local WasHoldingYKeyDown = false
 local ErrorMessage = ""
 local ErrorMessageTimeRemaining = 0
+local LastAutosaved = 0
 
 History:EnableRecording()
 
@@ -110,10 +112,10 @@ if not fs.isdirectory("@cwd/projects") then
 	fs.mkdir("@cwd/projects")
 end
 
-local function setErrorNotification(Error)
+local function setErrorNotification(Error: string)
 	ErrorMessage = Error
 	ErrorMessageTimeRemaining = 2
-	warn("Undo/Redo operation failed:", Error)
+	warn(Error)
 end
 
 local function onError(err)
@@ -150,7 +152,7 @@ local function handleUndoRedoKeybinds()
 				local realError = error:sub(error:find(":") or 1, #error)
 				realError = realError:sub((realError:find(" ") or 0) + 1, #realError)
 
-				setErrorNotification(realError)
+				setErrorNotification("Undo failed: " .. realError)
 			end
 		end
 	end
@@ -167,7 +169,7 @@ local function handleUndoRedoKeybinds()
 				local realError = error:sub(error:find(":") or 1, #error)
 				realError = realError:sub((realError:find(" ") or 0) + 1, #realError)
 
-				setErrorNotification(realError)
+				setErrorNotification("Redo failed: " .. realError)
 			end
 		end
 	end
@@ -474,6 +476,7 @@ local function openProject(ManualPath: string?)
 	end, ManualPath)
 
 	PlayerInput.Cursor = Enum.Cursor.Arrow
+	LastAutosaved = game.Time
 end
 
 local SavedProjectsCache: { string }? = nil
@@ -1186,6 +1189,8 @@ local function renderMainMenuBar(dt: number)
 			EditorPreferences.ClosingProjectSaveRequiresConfirmation
 		)
 
+		EditorPreferences.AutosaveInterval = imgui.inputnumber("Autosave interval (in minutes)", EditorPreferences.AutosaveInterval)
+
 		imgui.urllink("https://youtu.be/YCjNT9qGjh4?t=7193")
 
 		if imgui.button("Save") then
@@ -1405,7 +1410,7 @@ local function renderViewport(DeltaTime: number)
 
 	for id, box in PrevSelections do
 		local sel = selmap[id]
-		if not sel or not sel.Exists or not sel:HasComponent("Transform") then
+		if not sel or not sel:HasComponent("Transform") then
 			box:Destroy()
 			PrevSelections[id] = nil
 		end
@@ -1570,7 +1575,6 @@ local function renderViewport(DeltaTime: number)
 	imgui.image("!Framebuffer:Main", nil, true)
 
 	imgui.endw()
-	
 end
 
 function Stages.SelectProject_Enter(DeltaTime)
@@ -1832,11 +1836,26 @@ function Stages.ProjectEditing_Enter()
 	workspace.SceneCamera.UseSimpleController = true
 end
 
+local ShowedAutosaveDelayedMessage = false
+
 function Stages.ProjectEditing(DeltaTime: any)
 	assert(typeof(DeltaTime) == "number")
 
 	renderMainMenuBar(DeltaTime)
 	renderViewport(DeltaTime)
+
+	if (game.Time - LastAutosaved) / 60 > EditorPreferences.AutosaveInterval then
+		if not History.CurrentActionName then
+			saveProject()
+			print("Autosaved")
+			LastAutosaved = game.Time
+			ShowedAutosaveDelayedMessage = false
+
+		elseif not ShowedAutosaveDelayedMessage then
+			setErrorNotification(`Autosave has been delayed until the { History.CurrentActionName } action finishes`)
+			ShowedAutosaveDelayedMessage = true
+		end
+	end
 end
 
 function Stages.ProjectEditing_Leave(NextStage)

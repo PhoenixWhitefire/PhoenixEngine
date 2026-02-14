@@ -32,11 +32,11 @@
         },
         "ForEachChild": {
           "Description": "For all children of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield",
-          "ParameterNames": "Callback"
+          "Type": "(self, Callback: (Object: GameObject) -> boolean?) : ()"
         },
         "ForEachDescendant": {
           "Description": "For all descendants of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield",
-          "ParameterNames": "Callback"
+          "Type": "(self, Callback: (Object: GameObject) -> boolean?) : ()"
         },
         "GetChildren": {
           "Description": "Returns a list of the Object's direct children",
