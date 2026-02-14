@@ -199,7 +199,7 @@ declare extern type Engine with
   function SetViewportInputRect(self, Position: vector, Size: vector) : ()
   function ShowMessageBox(self, Title: string, Message: string, Buttons: string?, Icon: string?, DefaultButton: number?) : (number)
 
-  OnMessageLogged: EventSignal<(number, string, string)>
+  OnMessageLogged: EventSignal<EnumLogType, string, string>
 end
 declare extern type History with
   ActionHistorySize: number 

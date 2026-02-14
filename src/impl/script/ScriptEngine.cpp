@@ -11,7 +11,6 @@
 #include "script/ScriptEngine.hpp"
 #include "script/luhx.hpp"
 #include "script/InputEvent.hpp"
-#include "script/enum/keys.hpp"
 #include "datatype/Color.hpp"
 #include "GlobalJsonConfig.hpp"
 #include "Engine.hpp"
@@ -1153,7 +1152,7 @@ static void* l_alloc(void*, void* ptr, size_t, size_t nsize)
 		return Memory::ReAlloc(ptr, (uint32_t)nsize, Memory::Category::Luau);
 }
 
-static void requireConfigInit(luarequire_Configuration* config)
+static void initRequireConfig(luarequire_Configuration* config)
 {
 	config->is_require_allowed = [](lua_State*, void*, const char*)
 		{
@@ -1192,7 +1191,24 @@ static void requireConfigInit(luarequire_Configuration* config)
 				std::string directModule = child.string() + ".luau";
 
 				if (!std::filesystem::exists(directModule))
-					return NAVIGATE_NOT_FOUND;
+				{
+					std::string file = name;
+					if (size_t pos = file.find_last_of(".luau"); pos != std::string::npos)
+					{
+						std::filesystem::path prevState = *curpath;
+
+						file = file.substr(0, pos - sizeof(".luau") + 2);
+						*curpath = *curpath / file;
+
+						if (!std::filesystem::is_regular_file(*curpath / "init.luau"))
+						{
+							*curpath = prevState;
+							return NAVIGATE_NOT_FOUND;
+						}
+					}
+					else
+						return NAVIGATE_NOT_FOUND;
+				}
 				else
 					child = directModule;
 			}
@@ -1207,7 +1223,23 @@ static void requireConfigInit(luarequire_Configuration* config)
 			if (std::filesystem::is_regular_file(*curpath) || std::filesystem::is_regular_file(*curpath / "init.luau"))
 				return true;
 			else
+			{
+				std::string file = curpath->filename().string();
+				if (size_t pos = file.find_last_of(".luau"); pos != std::string::npos)
+				{
+					std::filesystem::path prevState = *curpath;
+
+					file = file.substr(0, pos - sizeof(".luau") + 2);
+					*curpath = curpath->parent_path() / file;
+
+					if (std::filesystem::is_regular_file(*curpath / "init.luau"))
+						return true;
+					else
+						*curpath = prevState;
+				}
+
 				return false;
+			}
 		};
 	config->get_chunkname = [](lua_State*, void* ctx, char* buffer, size_t bufferSize, size_t* outSize)
 		{
@@ -1264,7 +1296,15 @@ static void requireConfigInit(luarequire_Configuration* config)
 			if (std::filesystem::is_regular_file(*curpath))
 				modulePath = curpath->string();
 			else
+			{
 				modulePath = (*curpath / "init.luau").string();
+
+				if (!std::filesystem::is_regular_file(modulePath))
+				{
+					std::string file = curpath->filename().string();
+					modulePath = (curpath->parent_path() / file.substr(0, file.find_last_of(".luau") - sizeof(".luau") + 2)).string();
+				}
+			}
 
 			// from `Luau/CLI/src/ReplRequirer.cpp` 13/08/2025
 
@@ -1322,164 +1362,6 @@ static void requireConfigInit(luarequire_Configuration* config)
 	assert(!config->get_alias);
 }
 
-static void openEnum(lua_State* L)
-{
-	lua_newtable(L);
-
-	lua_newtable(L);
-
-	for (int i = GLFW_KEY_SPACE; i <  GLFW_KEY_LAST; i++)
-	{
-		const char* kn = KeyNames[i];
-		if (!kn)
-			continue;
-
-		lua_pushinteger(L, i);
-		lua_setfield(L, -2, kn);
-	}
-
-	lua_setfield(L, -2, "Key");
-
-	lua_newtable(L);
-
-	lua_pushinteger(L, GLFW_MOUSE_BUTTON_LEFT);
-	lua_setfield(L, -2, "Left");
-
-	lua_pushinteger(L, GLFW_MOUSE_BUTTON_MIDDLE);
-	lua_setfield(L, -2, "Middle");
-
-	lua_pushinteger(L, GLFW_MOUSE_BUTTON_RIGHT);
-	lua_setfield(L, -2, "Right");
-
-	lua_setfield(L, -2, "MouseButton");
-
-	lua_newtable(L);
-
-	lua_pushinteger(L, GLFW_CURSOR_NORMAL);
-	lua_setfield(L, -2, "Normal");
-
-	lua_pushinteger(L, GLFW_CURSOR_HIDDEN);
-	lua_setfield(L, -2, "Hidden");
-
-	lua_pushinteger(L, GLFW_CURSOR_CAPTURED);
-	lua_setfield(L, -2, "Captured");
-
-	lua_pushinteger(L, GLFW_CURSOR_DISABLED);
-	lua_setfield(L, -2, "Disabled");
-
-	lua_setfield(L, -2, "CursorMode");
-
-	lua_newtable(L);
-
-	lua_pushinteger(L, 0);
-	lua_setfield(L, -2, "None");
-
-	lua_pushinteger(L, 1);
-	lua_setfield(L, -2, "Back");
-
-	lua_pushinteger(L, 2);
-	lua_setfield(L, -2, "Front");
-
-	lua_setfield(L, -2, "FaceCulling");
-
-	lua_newtable(L);
-
-	lua_pushinteger(L, 0);
-	lua_setfield(L, -2, "Cube");
-
-	lua_pushinteger(L, 1);
-	lua_setfield(L, -2, "Sphere");
-
-	lua_pushinteger(L, 2);
-	lua_setfield(L, -2, "Hulls");
-
-	lua_pushinteger(L, 3);
-	lua_setfield(L, -2, "MeshComponent");
-
-	lua_setfield(L, -2, "CollisionType");
-
-	lua_newtable(L);
-
-	lua_pushinteger(L, 0);
-	lua_setfield(L, -2, "None");
-
-	lua_pushinteger(L, 1);
-	lua_setfield(L, -2, "Info");
-
-	lua_pushinteger(L, 2);
-	lua_setfield(L, -2, "Warning");
-
-	lua_pushinteger(L, 3);
-	lua_setfield(L, -2, "Error");
-
-	lua_setfield(L, -2, "LogType");
-
-	lua_newtable(L);
-
-	lua_pushinteger(L, GLFW_RELEASE);
-	lua_setfield(L, -2, "Released");
-
-	lua_pushinteger(L, GLFW_PRESS);
-	lua_setfield(L, -2, "Pressed");
-
-	lua_pushinteger(L, GLFW_REPEAT);
-	lua_setfield(L, -2, "Repeated");
-
-	lua_setfield(L, -2, "InputAction");
-
-	lua_newtable(L);
-
-	// TODO: Of course, GLFW does not have a throbber cursor. Perfect.
-	lua_pushinteger(L, GLFW_ARROW_CURSOR);
-	lua_setfield(L, -2, "Arrow");
-
-	lua_pushinteger(L, GLFW_IBEAM_CURSOR);
-	lua_setfield(L, -2, "TextInput");
-
-	lua_pushinteger(L, GLFW_POINTING_HAND_CURSOR);
-	lua_setfield(L, -2, "PointingHand");
-
-	lua_pushinteger(L, GLFW_CROSSHAIR_CURSOR);
-	lua_setfield(L, -2, "Crosshair");
-
-	lua_pushinteger(L, GLFW_RESIZE_EW_CURSOR);
-	lua_setfield(L, -2, "ResizeHorizontal");
-
-	lua_pushinteger(L, GLFW_RESIZE_NS_CURSOR);
-	lua_setfield(L, -2, "ResizeVertical");
-
-	lua_pushinteger(L, GLFW_RESIZE_NWSE_CURSOR);
-	lua_setfield(L, -2, "ResizeNWSE");
-
-	lua_pushinteger(L, GLFW_RESIZE_NESW_CURSOR);
-	lua_setfield(L, -2, "ResizeNESW");
-
-	lua_pushinteger(L, GLFW_RESIZE_ALL_CURSOR);
-	lua_setfield(L, -2, "ResizeAll");
-
-	lua_pushinteger(L, GLFW_NOT_ALLOWED_CURSOR);
-	lua_setfield(L, -2, "NotAllowed");
-
-	lua_setfield(L, -2, "Cursor");
-
-	lua_newtable(L);
-
-	for (int i = Reflection::ValueType::Boolean; i < Reflection::ValueType::__lastBase; i++)
-	{
-		lua_pushinteger(L, i);
-		lua_setfield(L, -2, Reflection::TypeAsString((Reflection::ValueType)i).c_str());
-	}
-
-	lua_pushinteger(L, Reflection::ValueType::Any);
-	lua_setfield(L, -2, "Any");
-	lua_pushinteger(L, Reflection::ValueType::Null);
-	lua_setfield(L, -2, "Null");
-
-	lua_setfield(L, -2, "ValueType");
-
-	lua_setglobal(L, "Enum");
-}
-
 lua_State* ScriptEngine::L::Create(const std::string& VmName)
 {
 	ZoneScopedC(tracy::Color::LightSkyBlue);
@@ -1490,12 +1372,10 @@ lua_State* ScriptEngine::L::Create(const std::string& VmName)
 	// Load runtime-specific libraries
 	luhx_openlibs(state);
 
-	openEnum(state);
-
 	std::filesystem::path* requirePath = new std::filesystem::path;
 	luaopen_require(
 		state,
-		requireConfigInit,
+		initRequireConfig,
 		requirePath
 	);
 

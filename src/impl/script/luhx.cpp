@@ -11,6 +11,7 @@ static const luaL_Reg luhxlibs[] =
     { LUHX_TASKLIBNAME, luhxopen_task },
     { LUA_DBLIBNAME, luhxopen_debug},
 
+    { LUHX_ENUMLIBNAME, luhxopen_Enum },
     { LUHX_COLORLIBNAME, luhxopen_Color },
     { LUHX_MATRIXLIBNAME, luhxopen_Matrix },
     { LUHX_GAMEOBJECTLIBNAME, luhxopen_GameObject },

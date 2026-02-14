@@ -1149,7 +1149,7 @@ local ViewportRight = 0
 local ViewportLeft = 0
 local ViewportTop = 0
 local ViewportBottom = 0
-local Log: { { Closed: boolean, Message: { { Content: string, Newline: boolean, ExtraTags: string, CanInteract: boolean, Tooltip: string } }, Type: number, Time: string, Source: string? } } = {}
+local Log: { { Closed: boolean, Message: { { Content: string, Newline: boolean, ExtraTags: string, CanInteract: boolean, Tooltip: string } }, Type: EnumLogType, Time: string, Source: string? } } = {}
 local NewLogMessage = false
 
 local function canInteractWithLogSubMessage(ExtraTags: string): (boolean, string)
@@ -1198,7 +1198,7 @@ local function interactWithLogSubMessage(ExtraTags: string)
 	warn(`Failed to figure out the interaction for a log message with tags '{ExtraTags}'`)
 end
 
-Engine.OnMessageLogged:Connect(function(Type: number, Message: string, ExtraTags: string)
+Engine.OnMessageLogged:Connect(function(Type, Message, ExtraTags)
 	local createsNewline = false
 
 	if Message == " &&" then
@@ -1390,10 +1390,10 @@ local function renderViewport(DeltaTime: number)
 			imgui.popstylecolor()
 
 			local LogColors = {
-				[0] = { 1, 1, 1, 1 },
-				[1] = { 1, 1, 1, 1 },
-				[2] = { 255 / 255, 171 / 255, 61 / 255, 1 }, -- warning
-				[3] = { 255 / 255, 61 / 255, 61 / 255, 1 }   -- error
+				[Enum.LogType.None]    = { 1, 1, 1, 1 },
+				[Enum.LogType.Info]    = { 1, 1, 1, 1 },
+				[Enum.LogType.Warning] = { 255 / 255, 171 / 255, 61 / 255, 1 }, -- warning
+				[Enum.LogType.Error]   = { 255 / 255, 61 / 255, 61 / 255, 1 }   -- error
 			}
 
 			local logColor = LogColors[message.Type]

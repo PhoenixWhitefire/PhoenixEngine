@@ -22,12 +22,10 @@ type NodeGraph = {
     RootNodes: { Node }
 }
 
-local file_read = getfenv().file_read or function(Path: string)
-    error("Must be executed under Phoenix Engine")
-end
-
-local InitialState = file_read("shaders/ShaderGraphInitial.frag")
+local InitialState, InitialStateError = fs.read("shaders/ShaderGraphInitial.frag")
 local FinishCode = "\n\n//END SHADER GRAPH TRANSPILATION\n\n}"
+
+assert(InitialState, InitialStateError)
 
 local VariableDeclarationMap: { [string]: (string, Variable) -> (string) } = {
     Number = function(Name, Variable)

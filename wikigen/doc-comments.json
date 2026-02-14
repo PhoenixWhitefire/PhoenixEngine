@@ -3,11 +3,9 @@
     "Base": {
       "Events": {
         "OnTagAdded": {
-          "CallbackArguments": "string",
           "Description": "Fires when the Object receives a new tag, passing the tag to the callback"
         },
         "OnTagRemoved": {
-          "CallbackArguments": "string",
           "Description": "Fires when the Object loses a tag, passing the tag to the callback"
         }
       },
@@ -190,7 +188,6 @@
         "Description": "The root of the scene",
         "Events": {
           "OnFrameBegin": {
-            "CallbackArguments": "number",
             "Description": "Fires at the beginning of a frame, passing in the time elapsed since the last frame (delta time)"
           }
         },
@@ -230,7 +227,8 @@
         "Description": "Inspect and manipulate various parts of the Engine",
         "Events": {
           "OnMessageLogged": {
-            "Description": "Fires whenever a Log Message is created"
+            "Description": "Fires whenever a Log Message is created",
+            "ArgumentTypes": "EnumLogType, string, string"
           }
         },
         "Methods": {
@@ -356,7 +354,6 @@
         ],
         "Events": {
           "OnGreeted": {
-            "CallbackArguments": "string",
             "Description": "Fires when `:Greet` is called, and sends the response to the callback before the original caller of `:Greet` receives it"
           }
         },
@@ -465,17 +462,14 @@
         "Events": {
           "KeyEvent": {
             "ArgumentTypes": "KeyInputEvent",
-            "CallbackArguments": "KeyInputEvent",
             "Description": "Fires whenever a key-related event occurs"
           },
           "MouseButtonEvent": {
             "ArgumentTypes": "MouseButtonInputEvent",
-            "CallbackArguments": "MouseButtonInputEvent",
             "Description": "Fires whenever a mouse-button-related event occurs"
           },
           "ScrollEvent": {
             "ArgumentTypes": "ScrollInputEvent",
-            "CallbackArguments": "ScrollInputEvent",
             "Description": "Fires whenever the player scrolls with a scroll device (such as the mouse wheel)"
           }
         },
@@ -569,7 +563,6 @@
         "Description": "A sound",
         "Events": {
           "OnLoaded": {
-            "CallbackArguments": "string",
             "Description": "Fires when the Sound finishes loading, and whether it loaded successfully or not"
           }
         },
