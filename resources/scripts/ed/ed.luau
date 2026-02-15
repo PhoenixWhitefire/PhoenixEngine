@@ -39,7 +39,7 @@ local EditorPreferences = {
 	CodeEditorPath = "code",
 	UseLightTheme = false,
 	Gamma = 2.2,
-	ClosingProjectSaveRequiresConfirmation = true,
+	ClosingProjectSaveRequiresConfirmation = false,
 	AutosaveInterval = 10
 }
 
@@ -80,6 +80,8 @@ local WasHoldingYKeyDown = false
 local ErrorMessage = ""
 local ErrorMessageTimeRemaining = 0
 local LastAutosaved = 0
+local ViewportRenderPosition = vector.zero
+local ViewportRenderSize = vector.zero
 
 History:EnableRecording()
 
@@ -200,7 +202,7 @@ local function editorFrame(DeltaTime)
 
 	WasHoldingF5 = f5
 
-	CoreTools.Update(Project)
+	CoreTools.Update(Project, ViewportRenderPosition, ViewportRenderSize)
 	Stages[CurrentStage](DeltaTime)
 
 	WasHoldingDownM1 = PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Left)
@@ -1340,18 +1342,6 @@ end
 local LogMessageHovering: number = -1
 
 local function renderViewport(DeltaTime: number)
-	for index = 1, #PrevSelections do
-		if not PrevSelections[index] then
-			break
-		end
-
-		if not PrevSelections[index].Exists then
-			PrevSelections[index] = PrevSelections[#PrevSelections]
-			PrevSelections[#PrevSelections] = nil
-			index -= 1
-		end
-	end
-
 	if CurrentStage == "ProjectEditing" and Project.Workspace then
 		local mouseVec = workspace:ScreenPointToVector(PlayerInput:GetCursorPosition(), 1000)
 		local rayresult = if not PlayerInput.IsMouseSunk
@@ -1417,7 +1407,7 @@ local function renderViewport(DeltaTime: number)
 	end
 
 	PluginManager.OnUpdate(DeltaTime, CurrentStage)
-	CoreTools.Update(Project)
+	CoreTools.Update(Project, ViewportRenderPosition, ViewportRenderSize)
 	HistoryView.Render()
 	TagViewer.Render()
 
@@ -1550,9 +1540,11 @@ local function renderViewport(DeltaTime: number)
 	local ws = imgui.windowsize()
 
 	local ews = Renderer.Resolution
+	ViewportRenderPosition = vector.create(w.x, w.y)
+	ViewportRenderSize = vector.create(ws.x, ws.y)
 
 	imgui.setviewportdockspace(0, 19, ews.x, ews.y - (if BottomBarEnabled then 54 else 19))
-	Engine:SetViewportInputRect(vector.create(w.x, w.y), vector.create(ws.x, ws.y))
+	Engine:SetViewportInputRect(ViewportRenderPosition, ViewportRenderSize)
 
 	ViewportLeft = w.x - 15
 	ViewportRight = w.x + ws.x + 15

@@ -76,6 +76,10 @@ local IsSurfaceDragging = false
 local IsGizmoDragging = false
 local GizmoDragAxis = vector.zero
 local GizmoDragHandle = nil
+local GizmoDragStartWorldPoint = nil
+local GizmoDragStartObjectPosition = nil
+local GizmoDragStartTransform = nil
+local GizmoDragPlaneNormal = nil
 local BeganSurfaceDragAction: number? = nil
 local BeganGizmoDragAction: number? = nil
 
@@ -89,9 +93,84 @@ local function resetGizmo()
     GizmoPrevTargetTransform = Matrix.identity
     GizmoPrevTargetSize = vector.zero
     PrevDragMousePos = nil
+    GizmoDragStartWorldPoint = nil
+    GizmoDragStartObjectPosition = nil
+    GizmoDragPlaneNormal = nil
+    GizmoDragStartTransform = nil
 end
 
-function CoreTools.Update(Project: Types.Project)
+function rayPlaneIntersect(rayOrigin: vector, rayDir: vector, planePoint: vector, planeNormal: vector): vector?
+    local denom = vector.dot(rayDir, planeNormal)
+    if math.abs(denom) < 1e-6 then
+        return nil
+    end
+
+    local t = vector.dot(planePoint - rayOrigin, planeNormal) / denom
+    if t < 0 then
+        return nil
+    end
+
+    return rayOrigin + rayDir * t
+end
+
+local function findDxDyToKeepOnScreen(Point: vector, ViewportRenderPosition: vector, ViewportRenderSize: vector): (number, number)
+    local screenPos = workspace:WorldToScreenPoint(Point) - ViewportRenderPosition
+
+    local margin = 120
+    local width = ViewportRenderSize.x
+    local height = ViewportRenderSize.y
+
+    local dx = 0
+    local dy = 0
+
+    if screenPos.x < margin then
+        dx = -(margin - screenPos.x) / margin
+    elseif screenPos.x > width - margin then
+        dx = (screenPos.x - (width - margin)) / margin
+    end
+
+    if screenPos.y < margin then
+        dy = -(margin - screenPos.y) / margin
+    elseif screenPos.y > height - margin then
+        dy = (screenPos.y - (height - margin)) / margin
+    end
+
+    return dx, dy
+end
+
+local function _keepGizmoInView(target: GameObject & Transform, ViewportRenderPosition: vector, ViewportRenderSize: vector)
+    assert(GizmoDragHandle)
+
+    local cam = workspace.SceneCamera
+
+    local orbitSpeed = math.rad(15) -- degrees/sec
+    local dx, dy = 0, 0
+
+    for _, v in GizmoPieceToDirection do
+        local tdx, tdy = findDxDyToKeepOnScreen(v / 2 + target.Transform.Position, ViewportRenderPosition, ViewportRenderSize)
+
+        if math.abs(tdx) > math.abs(dx) then
+            dx = tdx
+        end
+        if math.abs(tdy) > math.abs(dy) then
+            dy = tdy
+        end
+    end
+
+    cam.Transform *= Matrix.fromAngles(-dy * orbitSpeed * 1/60, -dx * orbitSpeed * 1/60, 0)
+    cam.Transform *= Matrix.fromAngles(0, 0, -cam.Transform:ExtractAngles().z)
+
+    if dx ~= 0 or dy ~= 0 then
+        GizmoDragStartObjectPosition = target.Transform.Position
+    end
+
+    local axisLocal = assert(GizmoPieceToDirection[GizmoDragHandle])
+    local rotOnly = target.Transform - target.Transform.Position
+    local axisWorld = vector.normalize((rotOnly * axisLocal).Position)
+    GizmoDragPlaneNormal = vector.normalize(vector.cross(axisWorld, cam.Transform.Forward))
+end
+
+function CoreTools.Update(Project: Types.Project, ViewportRenderPosition: vector, ViewportRenderSize: vector)
     if not Project.Workspace then
         return
     end
@@ -111,7 +190,8 @@ function CoreTools.Update(Project: Types.Project)
         return
     end
 
-    local camPos = workspace.SceneCamera.Transform.Position
+    local cam = workspace.SceneCamera
+    local camPos = cam.Transform.Position
     local cpos = InputService:GetCursorPosition()
 
     local tryingToInteract = not InputService.IsMouseSunk and InputService:IsMouseButtonPressed(Enum.MouseButton.Left)
@@ -172,20 +252,32 @@ function CoreTools.Update(Project: Types.Project)
     GizmoPrevTargetTransform = target.Transform
     GizmoPrevTargetSize = target.Size
 
-    if gizmoHit then
-        if not IsGizmoDragging then
+    if tryingToInteract then
+        if not IsGizmoDragging and gizmoHit then
             PrevDragMousePos = cpos
-            GizmoDragAxis = vector.abs(assert(GizmoPieceToDirection[gizmoHit.Object]))
+
+            local axisLocal = assert(GizmoPieceToDirection[gizmoHit.Object])
+            local rotOnly = target.Transform - target.Transform.Position
+            local axisWorld = vector.normalize((rotOnly * axisLocal).Position)
+
+            GizmoDragAxis = assert(GizmoPieceToDirection[gizmoHit.Object]) --axisWorld
             GizmoDragHandle = gizmoHit.Object
+
+            GizmoDragStartTransform = target.Transform
+            GizmoDragStartObjectPosition = target.Transform.Position
+
+            local camForward = cam.Transform.Forward
+            GizmoDragPlaneNormal = vector.normalize(vector.cross(axisWorld, camForward))
+
+            GizmoDragStartWorldPoint = rayPlaneIntersect(camPos, mouseVector, target.Transform.Position, GizmoDragPlaneNormal)
 
             for p, _ in GizmoPieceToDirection do
                 p.Transparency = 0.8
             end
 
             GizmoDragHandle.Transparency = 0
+            IsGizmoDragging = true
         end
-
-        IsGizmoDragging = true
 
     elseif not tryingToInteract then
         IsGizmoDragging = false
@@ -201,22 +293,27 @@ function CoreTools.Update(Project: Types.Project)
         end
     end
 
-    if IsGizmoDragging then
+    local hit = IsGizmoDragging and GizmoDragStartObjectPosition and GizmoDragPlaneNormal and GizmoDragStartWorldPoint and rayPlaneIntersect(camPos, mouseVector, GizmoDragStartObjectPosition, GizmoDragPlaneNormal)
+
+    if hit then
         assert(GizmoDragHandle)
+        assert(GizmoDragStartWorldPoint)
+        assert(GizmoDragStartObjectPosition)
+        assert(GizmoDragStartTransform)
 
-        local dist = vector.magnitude(GizmoDragHandle.Transform.Position - camPos)
-
-        local oldMouseDir = workspace:ScreenPointToVector(PrevDragMousePos, dist)
-        local diff = (vector.normalize(mouseVector) * dist) - oldMouseDir
-
-        local move = vector.create(roundTo(diff.x, GizmoMoveIncrement), roundTo(diff.y, GizmoMoveIncrement), roundTo(diff.z, GizmoMoveIncrement)) * GizmoDragAxis
+        local delta = hit - GizmoDragStartWorldPoint
+        local projected = vector.dot(delta, GizmoDragAxis)
+        local amount = roundTo(projected, GizmoMoveIncrement)
+        local move = GizmoDragAxis * amount
 
         if vector.magnitude(move) > 0 and not BeganGizmoDragAction then
             BeganGizmoDragAction = HistoryService:TryBeginAction("GizmoDrag")
         end
 
-        target.Transform += move
+        target.Transform = Matrix.fromTranslation(move) * GizmoDragStartTransform
         PrevDragMousePos = cpos
+
+        --keepGizmoInView(target, ViewportRenderPosition, ViewportRenderSize)
     end
 end
 

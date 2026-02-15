@@ -50,7 +50,9 @@ declare extern type Matrix with
   function ExtractAngles(self): ( vector )
   function Inverse(self): ( Matrix )
   function Lerp(self, Target: Matrix, Delta: number): ( Matrix )
-  function __mul(self, Param_1: Matrix): ( Matrix )
+  function __add(self, Param_1: vector): ( Matrix )
+  function __mul(self, Param_1: Matrix | vector): ( Matrix )
+  function __sub(self, Param_1: vector): ( Matrix )
   C1R1: number
   C1R2: number
   C1R3: number
@@ -323,6 +325,7 @@ declare extern type Workspace with
   function GetObjectsInAabb(self, Position: vector, Size: vector, IgnoreList: { GameObject }?) : { GameObject & RigidBody & Transform }
   function Raycast(self, Origin: vector, CastVector: vector, FilterList: { GameObject }?, FilterIsIgnoreList: boolean?) : { Object: GameObject & RigidBody & Transform, Position: vector, Normal: vector }?
   function ScreenPointToVector(self, ScreenPoint: vector, Length: number?) : (vector)
+  function WorldToScreenPoint(self, WorldPoint: vector) : (vector, number)
 end
 
 

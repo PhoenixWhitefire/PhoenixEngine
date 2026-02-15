@@ -631,6 +631,10 @@
               "ScreenPoint",
               "Length"
             ]
+          },
+          "WorldToScreenPoint": {
+            "Description": "Converts the provided world coordinate (`vector`) into its location in screen-space pixel coordinates, additionally returning the depth",
+            "ParameterNames": "WorldPoint"
           }
         },
         "Properties": {
@@ -793,9 +797,19 @@
             "In": "Target: Matrix, Delta: number",
             "Out": "Matrix"
           },
+          ":__add": {
+            "Description": "Add a `vector` to a Matrix to directly offset its position by world space",
+            "In": "vector",
+            "Out": "Matrix"
+          },
+          ":__sub": {
+            "Description": "Subtract a `vector` from a Matrix to directly offset its position by world space",
+            "In": "vector",
+            "Out": "Matrix"
+          },
           ":__mul": {
-            "Description": "Two Matrices may be multiplied together with the `*` operator",
-            "In": "Matrix",
+            "Description": "Two Matrices, or a Matrix and a `vector`, may be multiplied together with the `*` operator",
+            "In": "Matrix | vector",
             "Out": "Matrix"
           },
           "C1R1": {

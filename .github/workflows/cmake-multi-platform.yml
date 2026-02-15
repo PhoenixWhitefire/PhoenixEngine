@@ -56,12 +56,12 @@ jobs:
     - name: Install Ubuntu dependencies
       if: runner.os == 'Linux'
       run: |
-        sudo apt update
-        sudo apt install libwayland-dev libwayland-bin wayland-protocols libxkbcommon-dev
-        sudo apt install xorg-dev
-        sudo apt install libdbus-1-dev
-        sudo apt install libegl1-mesa-dev libgl1-mesa-dev libwayland-egl1
-        sudo apt install libwayland-client0
+        sudo apt-get update
+        sudo apt-get install libwayland-dev libwayland-bin wayland-protocols libxkbcommon-dev
+        sudo apt-get install xorg-dev
+        sudo apt-get install libdbus-1-dev
+        sudo apt-get install libegl1-mesa-dev libgl1-mesa-dev libwayland-egl1
+        sudo apt-get install libwayland-client0
 
     - name: Configure CMake
       env:

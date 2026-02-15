@@ -86,6 +86,45 @@ public:
 				}
 			} },
 
+			{ "WorldToScreenPoint", {
+				{ Reflection::ValueType::Vector3 },
+				{ Reflection::ValueType::Vector2, Reflection::ValueType::Double },
+				[](void* p, const std::vector<Reflection::GenericValue>& inputs)
+				-> std::vector<Reflection::GenericValue>
+				{
+					Engine* engine = Engine::Get();
+					EcWorkspace* ew = static_cast<EcWorkspace*>(p);
+					EcCamera* cam = ew->GetSceneCamera()->FindComponent<EcCamera>();
+
+					glm::vec3 point = inputs[0].AsVector3();
+					ImVec2 viewportSize = engine->GetViewportInputRectSize();
+
+					const glm::mat4& trans = cam->GetWorldTransform();
+
+					glm::mat4 projection = glm::perspective(
+						glm::radians(cam->FieldOfView),
+						viewportSize.x / viewportSize.y,
+						cam->NearPlane,
+						cam->FarPlane
+					);
+
+					glm::vec3 position = glm::vec3(trans[3]);
+					glm::vec3 forwardVec = glm::vec3(trans[2]);
+
+					glm::mat4 view = glm::lookAt(
+						position,
+						position + forwardVec,
+						glm::vec3(trans[1])
+					);
+
+					glm::vec4 clip = projection * view * glm::vec4(point, 1.f);
+					glm::vec3 ndc = clip / clip.w;
+					glm::vec2 screen = (glm::vec2(ndc) * 0.5f + 0.5f) * glm::vec2(viewportSize.x, viewportSize.y);
+
+					return { screen + glm::vec2(engine->ViewportInputPosition.x, engine->ViewportInputPosition.y), ndc.z };
+				}
+			} },
+
 			{ "Raycast", {
 				{ Reflection::ValueType::Vector3, Reflection::ValueType::Vector3, REFLECTION_OPTIONAL(Array), REFLECTION_OPTIONAL(Boolean) },
 				{ REFLECTION_OPTIONAL(Map) },

@@ -1467,8 +1467,14 @@
   "@phoenix/globaltype/Matrix.Up": {
     "documentation": "* The Up basis vector of the Matrix\n"
   },
+  "@phoenix/globaltype/Matrix.__add": {
+    "documentation": "* Add a `vector` to a Matrix to directly offset its position by world space\n"
+  },
   "@phoenix/globaltype/Matrix.__mul": {
-    "documentation": "* Two Matrices may be multiplied together with the `*` operator\n"
+    "documentation": "* Two Matrices, or a Matrix and a `vector`, may be multiplied together with the `*` operator\n"
+  },
+  "@phoenix/globaltype/Matrix.__sub": {
+    "documentation": "* Subtract a `vector` from a Matrix to directly offset its position by world space\n"
   },
   "@phoenix/globaltype/Mesh.CastsShadows": {
     "documentation": "Whether it casts shadows"
@@ -1685,5 +1691,8 @@
   },
   "@phoenix/globaltype/Workspace.ScreenPointToVector": {
     "documentation": "Converts the provided screen coordinates to a world-space direction. `Length` is optional and `1.0` by default"
+  },
+  "@phoenix/globaltype/Workspace.WorldToScreenPoint": {
+    "documentation": "Converts the provided world coordinate (`vector`) into its location in screen-space pixel coordinates, additionally returning the depth"
   }
 }

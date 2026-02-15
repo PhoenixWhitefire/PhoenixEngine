@@ -291,7 +291,8 @@
         "Methods": {
           "GetObjectsInAabb": "(Vector3, Vector3, Array?) -> (Array)",
           "Raycast": "(Vector3, Vector3, Array?, Boolean?) -> (Map?)",
-          "ScreenPointToVector": "(Vector2, Double?) -> (Vector3)"
+          "ScreenPointToVector": "(Vector2, Double?) -> (Vector3)",
+          "WorldToScreenPoint": "(Vector3) -> (Vector2, Double)"
         },
         "Properties": {
           "SceneCamera": "GameObject?"
