@@ -501,7 +501,7 @@
     "documentation": "* An RGB color"
   },
   "@phoenix/global/Color.new": {
-    "documentation": "* Returns a Color with the provided R, G, and B values\n* Values are expected to be in the range 0 to 1"
+    "documentation": "* Returns a Color with the provided R, G, and B values\n* Values are expected to be in the range 0 to 1\n* This datatype is not hash consed! Two separate value-identical colors are not `rawequal` and will not behave as expected when used as table keys"
   },
   "@phoenix/global/Enum": {
     "documentation": "* Contains enumerations"
@@ -721,10 +721,10 @@
     "documentation": "* A connection to an Event"
   },
   "@phoenix/global/EventSignal": {
-    "documentation": "* An Event that can be connected to"
+    "documentation": "* An Event that can be connected to\n* This datatype is not hash consed! Two separate value-identical signals are not `rawequal` and will not behave as expected when used as table keys (e.g. `rawequal(game.OnFrameBegin, game.OnFrameBegin) == false`)"
   },
   "@phoenix/global/GameObject": {
-    "documentation": "* A Game Object\n* Game Objects have a \"base\" API (properties, methods, and events) that can be extended by giving them Components\n* The base API will be documented on the Component APIs page"
+    "documentation": "* A Game Object\n* Game Objects have a \"base\" API (properties, methods, and events) that can be extended by giving them Components\n* The base API will be documented on the Component APIs page\n* This datatype is hash consed, `t[game]` and `t[workspace.Parent]` are guaranteed to access the same value as `game` and `workspace.Parent` are `rawequal`"
   },
   "@phoenix/global/GameObject.fromId": {
     "documentation": "* Finds an Object by it's internal ID. Do not rely on the ID"
@@ -736,7 +736,7 @@
     "documentation": "* A list of all valid component names which can be passed into `.new`"
   },
   "@phoenix/global/Matrix": {
-    "documentation": "* A 4x4 transformation matrix"
+    "documentation": "* A 4x4 transformation matrix\n* This datatype is not hash consed! Two separate value-identical matrices are not `rawequal` and will not behave as expected when used as table keys"
   },
   "@phoenix/global/Matrix.fromAngles": {
     "documentation": "* Alias of `.fromEulerAnglesYXZ`"

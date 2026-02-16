@@ -40,7 +40,8 @@ local EditorPreferences = {
 	UseLightTheme = false,
 	Gamma = 2.2,
 	ClosingProjectSaveRequiresConfirmation = false,
-	AutosaveInterval = 10
+	AutosaveInterval = 10,
+	KeepGizmoInView = false
 }
 
 EditorPreferences = EditorPreferences :: { [keyof<typeof(EditorPreferences)>]: index<typeof(EditorPreferences), keyof<typeof(EditorPreferences)>> } & typeof(EditorPreferences)
@@ -202,7 +203,7 @@ local function editorFrame(DeltaTime)
 
 	WasHoldingF5 = f5
 
-	CoreTools.Update(Project, ViewportRenderPosition, ViewportRenderSize)
+	CoreTools.Update(Project, EditorPreferences, ViewportRenderPosition, ViewportRenderSize, DeltaTime)
 	Stages[CurrentStage](DeltaTime)
 
 	WasHoldingDownM1 = PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Left)
@@ -1192,6 +1193,7 @@ local function renderMainMenuBar(dt: number)
 		)
 
 		EditorPreferences.AutosaveInterval = imgui.inputnumber("Autosave interval (in minutes)", EditorPreferences.AutosaveInterval)
+		EditorPreferences.KeepGizmoInView = imgui.checkbox("Turn the camera to keep the gizmo handles in view while moving an object", EditorPreferences.KeepGizmoInView)
 
 		imgui.urllink("https://youtu.be/YCjNT9qGjh4?t=7193")
 
@@ -1407,7 +1409,7 @@ local function renderViewport(DeltaTime: number)
 	end
 
 	PluginManager.OnUpdate(DeltaTime, CurrentStage)
-	CoreTools.Update(Project, ViewportRenderPosition, ViewportRenderSize)
+	CoreTools.Update(Project, EditorPreferences, ViewportRenderPosition, ViewportRenderSize, DeltaTime)
 	HistoryView.Render()
 	TagViewer.Render()
 

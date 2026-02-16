@@ -304,7 +304,6 @@ static void createmetatable(lua_State* L)
 	lua_pushcfunction(L, mtx_newindex, "Matrix.__newindex");
 	lua_setfield(L, -2, "__newindex");
 
-	// TODO table key hashes?
 	lua_pushcfunction(L, mtx_eq, "Matrix.__eq");
 	lua_setfield(L, -2, "__eq");
 

@@ -654,7 +654,8 @@
           "new": {
             "Description": [
               "Returns a Color with the provided R, G, and B values",
-              "Values are expected to be in the range 0 to 1"
+              "Values are expected to be in the range 0 to 1",
+              "This datatype is not hash consed! Two separate value-identical colors are not `rawequal` and will not behave as expected when used as table keys"
             ],
             "In": "R: number, G: number, B: number",
             "Out": "Color",
@@ -693,7 +694,10 @@
         }
       },
       "EventSignal": {
-        "Description": "An Event that can be connected to",
+        "Description": [
+          "An Event that can be connected to",
+          "This datatype is not hash consed! Two separate value-identical signals are not `rawequal` and will not behave as expected when used as table keys (e.g. `rawequal(game.OnFrameBegin, game.OnFrameBegin) == false`)"
+        ],
         "Members": {
           ":Connect": {
             "Description": "Connect a callback to the Event",
@@ -710,7 +714,8 @@
         "Description": [
           "A Game Object",
           "Game Objects have a \"base\" API (properties, methods, and events) that can be extended by giving them Components",
-          "The base API will be documented on the Component APIs page"
+          "The base API will be documented on the Component APIs page",
+          "This datatype is hash consed, `t[game]` and `t[workspace.Parent]` are guaranteed to access the same value as `game` and `workspace.Parent` are `rawequal`"
         ],
         "Library": {
           "fromId": {
@@ -730,7 +735,10 @@
         }
       },
       "Matrix": {
-        "Description": "A 4x4 transformation matrix",
+        "Description": [
+          "A 4x4 transformation matrix",
+          "This datatype is not hash consed! Two separate value-identical matrices are not `rawequal` and will not behave as expected when used as table keys"
+        ],
         "Library": {
           "fromAngles": {
             "Description": "Alias of `.fromEulerAnglesYXZ`",

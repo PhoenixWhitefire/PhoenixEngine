@@ -138,7 +138,7 @@ local function findDxDyToKeepOnScreen(Point: vector, ViewportRenderPosition: vec
     return dx, dy
 end
 
-local function _keepGizmoInView(target: GameObject & Transform, ViewportRenderPosition: vector, ViewportRenderSize: vector)
+local function keepGizmoInView(target: GameObject & Transform, ViewportRenderPosition: vector, ViewportRenderSize: vector, DeltaTime: number)
     assert(GizmoDragHandle)
 
     local cam = workspace.SceneCamera
@@ -157,7 +157,7 @@ local function _keepGizmoInView(target: GameObject & Transform, ViewportRenderPo
         end
     end
 
-    cam.Transform *= Matrix.fromAngles(-dy * orbitSpeed * 1/60, -dx * orbitSpeed * 1/60, 0)
+    cam.Transform *= Matrix.fromAngles(-dy * orbitSpeed * DeltaTime, -dx * orbitSpeed * DeltaTime, 0)
     cam.Transform *= Matrix.fromAngles(0, 0, -cam.Transform:ExtractAngles().z)
 
     if dx ~= 0 or dy ~= 0 then
@@ -170,7 +170,7 @@ local function _keepGizmoInView(target: GameObject & Transform, ViewportRenderPo
     GizmoDragPlaneNormal = vector.normalize(vector.cross(axisWorld, cam.Transform.Forward))
 end
 
-function CoreTools.Update(Project: Types.Project, ViewportRenderPosition: vector, ViewportRenderSize: vector)
+function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRenderPosition: vector, ViewportRenderSize: vector, DeltaTime: number)
     if not Project.Workspace then
         return
     end
@@ -313,7 +313,9 @@ function CoreTools.Update(Project: Types.Project, ViewportRenderPosition: vector
         target.Transform = Matrix.fromTranslation(move) * GizmoDragStartTransform
         PrevDragMousePos = cpos
 
-        --keepGizmoInView(target, ViewportRenderPosition, ViewportRenderSize)
+        if EditorPreferences.KeepGizmoInView then
+            keepGizmoInView(target, ViewportRenderPosition, ViewportRenderSize, DeltaTime)
+        end
     end
 end
 
