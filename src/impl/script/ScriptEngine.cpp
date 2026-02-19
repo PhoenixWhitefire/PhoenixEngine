@@ -535,9 +535,6 @@ Reflection::GenericValue ScriptEngine::L::ToGeneric(lua_State* L, int StackIndex
 	}
 	case LUA_TUSERDATA:
 	{
-		// IMPORTANT!!
-		// Requires `LuauPreserveLudataRenaming` to be enabled in `Luau/VM/src/ltm.cpp`
-		// 11/09/2024
 		const char* tname = luaL_typename(L, StackIndex);
 
 		if (strcmp(tname, "Color") == 0)
