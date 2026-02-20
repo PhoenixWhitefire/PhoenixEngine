@@ -1,0 +1,18 @@
+# exclude GLFW and Glad
+target_compile_options(Vendor PRIVATE $<$<CONFIG:ReleaseTSan>:-fsanitize=thread>)
+target_compile_options(glm PRIVATE $<$<CONFIG:ReleaseTSan>:-fsanitize=thread>)
+target_compile_options(TracyClient PRIVATE $<$<CONFIG:ReleaseTSan>:-fsanitize=thread>)
+target_compile_options(Luau.Compiler PRIVATE $<$<CONFIG:ReleaseTSan>:-fsanitize=thread>)
+target_compile_options(Luau.Ast PRIVATE $<$<CONFIG:ReleaseTSan>:-fsanitize=thread>)
+target_compile_options(Luau.VM PRIVATE $<$<CONFIG:ReleaseTSan>:-fsanitize=thread>)
+target_compile_options(Luau.Require PRIVATE $<$<CONFIG:ReleaseTSan>:-fsanitize=thread>)
+target_compile_options(Luau.Config PRIVATE $<$<CONFIG:ReleaseTSan>:-fsanitize=thread>)
+
+target_compile_options(Vendor PRIVATE $<$<CONFIG:DebugTSan>:-fsanitize=thread>)
+target_compile_options(glm PRIVATE $<$<CONFIG:DebugTSan>:-fsanitize=thread>)
+target_compile_options(TracyClient PRIVATE $<$<CONFIG:DebugTSan>:-fsanitize=thread>)
+target_compile_options(Luau.Compiler PRIVATE $<$<CONFIG:DebugTSan>:-fsanitize=thread>)
+target_compile_options(Luau.Ast PRIVATE $<$<CONFIG:DebugTSan>:-fsanitize=thread>)
+target_compile_options(Luau.VM PRIVATE $<$<CONFIG:DebugTSan>:-fsanitize=thread>)
+target_compile_options(Luau.Require PRIVATE $<$<CONFIG:DebugTSan>:-fsanitize=thread>)
+target_compile_options(Luau.Config PRIVATE $<$<CONFIG:DebugTSan>:-fsanitize=thread>)

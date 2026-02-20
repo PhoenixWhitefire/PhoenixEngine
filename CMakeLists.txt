@@ -62,7 +62,21 @@ set(PHX_BUILD_TYPE $<IF:$<CONFIG:Debug>,Debug,$<IF:$<CONFIG:Release>,Release,$<I
 target_compile_definitions(PhoenixEngine PRIVATE PHX_BUILD_TYPE="${PHX_BUILD_TYPE}")
 
 if (MSVC)
+	include(cmake/msvc.txt)
+	target_compile_definitions(PhoenixEngine PRIVATE PHX_TARGET_COMPILER="MSVC")
 	target_compile_options(PhoenixEngine PRIVATE /wd4244)
+
+	message(STATUS "Recognized compiler as MSVC")
+
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+	include(cmake/gnug.txt)
+	target_compile_definitions(PhoenixEngine PRIVATE PHX_TARGET_COMPILER="G++")
+	target_link_libraries(PhoenixEngine PRIVATE X11) # audible sigh when i checked `imgui_impl_glfw.cpp` line 1266
+
+	message(STATUS "Recognized compiler as G++")
+
+else()
+	message(WARNING "Unsupported compiler - expected either MSVC or GNU (G++)")
 endif()
 
 target_link_libraries(PhoenixEngine PRIVATE
@@ -97,21 +111,8 @@ add_subdirectory(Vendor/tracy)
 add_subdirectory(Vendor/miniaudio)
 add_subdirectory(Vendor/glfw)
 
-if (MSVC)
-	include(cmake/cmake-msvc.txt)
-	target_compile_definitions(PhoenixEngine PRIVATE PHX_TARGET_COMPILER="MSVC")
-
-	message(STATUS "Recognized compiler as MSVC")
-
-elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-	include(cmake/cmake-gnug.txt)
-	target_compile_definitions(PhoenixEngine PRIVATE PHX_TARGET_COMPILER="G++")
-	target_link_libraries(PhoenixEngine PRIVATE X11) # audible sigh when i checked `imgui_impl_glfw.cpp` line 1266
-
-	message(STATUS "Recognized compiler as G++")
-
-else()
-	message(WARNING "Unsupported compiler - expected either MSVC or GNU (G++)")
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+	include(cmake/gnug-configuresubprojects.txt)
 endif()
 
 # organize VS folders
