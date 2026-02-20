@@ -49,6 +49,7 @@ struct TextEditorTab
 	int JumpToLine = 0; // line to jump to, `0` to not jump
 	int DebuggerCurrentLine = 0;
 	bool WasPreviouslyVisible = false;
+	bool SetUIFocus = false;
 };
 static std::vector<TextEditorTab> s_TextEditors;
 static auto s_EditorLuauLang = TextEditor::LanguageDefinition::Lua();
@@ -593,8 +594,13 @@ static std::string textFileContentsFromPath(const std::string& Path, std::ifstre
 static TextEditorTab& invokeTextEditor(const std::string& File)
 {
 	for (TextEditorTab& tab : s_TextEditors)
+	{
 		if (tab.FilePath == File)
+		{
+			tab.SetUIFocus = true;
 			return tab;
+		}
+	}
 
 	s_TextEditors.emplace_back();
 
@@ -623,8 +629,11 @@ static void renderTextEditors()
 	{
 		TextEditorTab& tab = s_TextEditors[index];
 
-		if (tab.JumpToLine > 0)
+		if (tab.JumpToLine > 0 || tab.SetUIFocus)
+		{
 			ImGui::SetNextWindowFocus();
+			tab.SetUIFocus = false;
+		}
 
 		bool open = true;
 		bool render = ImGui::Begin(std::format("{}###TextEditor_{}", std::filesystem::path(tab.FilePath).filename().string(), index).c_str(), &open);

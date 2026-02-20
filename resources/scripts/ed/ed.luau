@@ -1342,6 +1342,7 @@ local function isMouseWithinViewport()
 end
 
 local LogMessageHovering: number = -1
+local ViewportTakeFocusFrames = 0
 
 local function renderViewport(DeltaTime: number)
 	if CurrentStage == "ProjectEditing" and Project.Workspace then
@@ -1535,6 +1536,13 @@ local function renderViewport(DeltaTime: number)
 	end
 
 	local canInteract = IsHoveringViewportTitlebar or (not IsHoveringViewport and imgui.windowhovered("a | b"))
+
+	if ViewportTakeFocusFrames > 0 then
+		imgui.setnextwindowfocus()
+		ViewportTakeFocusFrames -= 1
+		canInteract = true
+	end
+
 	imgui.begin(Project.Name .. "###Viewport", if canInteract then "nb" else "ni | nb")
 
 	local cpos = PlayerInput:GetCursorPosition()
@@ -1909,6 +1917,7 @@ function Stages.ProjectPlaying_Enter(DeltaTime: any)
 	workspace.SceneCamera = projWp.SceneCamera
 
 	PlayerInput.Cursor = Enum.Cursor.Arrow
+	ViewportTakeFocusFrames = 2
 	return Project.DataModel -- Connect to the Project's datamodel `.OnFrameBegin`
 end
 
@@ -1929,6 +1938,7 @@ function Stages.ProjectPlaying_Leave(DeltaTime)
 	Engine:CloseVM(GameVM)
 
 	PlayerInput.CursorMode = Enum.CursorMode.Normal
+	ViewportTakeFocusFrames = 2
 end
 
 game:BindToClose(function()
