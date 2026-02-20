@@ -58,7 +58,7 @@ void Memory::FrameFinish()
 
 #else
 
-static std::array<size_t, static_cast<size_t>(Memory::Category::__count)> s_ActivityWip{ 0 };
+static std::array<std::atomic_size_t, static_cast<size_t>(Memory::Category::__count)> s_ActivityWip{ 0 };
 
 void* Memory::GetPointerInfo(void* Pointer, uint32_t* Size, uint8_t* Category)
 {
@@ -96,8 +96,8 @@ void* Memory::Alloc(uint32_t Size, Memory::Category MemCat)
 			TracyAlloc(ptr, Size);
 #endif
 
-		Counters[memIndex] += Size;
-		s_ActivityWip[memIndex] += Size;
+		Counters[memIndex].fetch_add(Size, std::memory_order_relaxed);
+		s_ActivityWip[memIndex].fetch_add(Size, std::memory_order_relaxed);
 
 		*(AllocHeader*)ptr = { .Size = Size, .Category = memIndex };
 
@@ -149,9 +149,10 @@ void* Memory::ReAlloc(void* Pointer, uint32_t Size, Memory::Category MemCat)
 		else
 			TracyAlloc(ptr, Size);
 #endif
-		Counters[memIndex] -= prevSize;
-		Counters[memIndex] += Size;
-		s_ActivityWip[memIndex] += prevSize + Size;
+
+		Counters[memIndex].fetch_sub(prevSize, std::memory_order_relaxed);
+		Counters[memIndex].fetch_add(Size, std::memory_order_relaxed);
+		s_ActivityWip[memIndex].fetch_add(prevSize + Size, std::memory_order_relaxed);
 
 		*(AllocHeader*)ptr = { .Size = Size, .Category = memIndex };
 
@@ -182,16 +183,19 @@ void Memory::Free(void* Pointer)
 #endif
 
 	assert(Counters[memcat] > 0);
-	Counters[memcat] -= size;
-	s_ActivityWip[memcat] += size;
+	Counters[memcat].fetch_sub(size, std::memory_order_relaxed);
+	Counters[memcat].fetch_add(size, std::memory_order_relaxed);
 
 	free(Pointer);
 }
 
 void Memory::FrameFinish()
 {
-	Activity = s_ActivityWip;
-	s_ActivityWip.fill(0);
+	for (size_t i = 0; i < Activity.size(); i++)
+	{
+		Activity[i] = s_ActivityWip[i].load();
+		s_ActivityWip[i] = 0;
+	}
 }
 
 void* operator new(size_t size)

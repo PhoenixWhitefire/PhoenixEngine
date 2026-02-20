@@ -19,8 +19,7 @@ typedef std::function<Texture*(ImageLoader_t, Texture*, std::string, uint32_t)> 
 
 // a 2x2 purple-and-black checkerboard
 // 23/10/2024
-static uint8_t MissingTextureBytes[] = 
-{
+static uint8_t MissingTextureBytes[] = {
 	static_cast<uint8_t>(0xFFu),
 	static_cast<uint8_t>(0x00u),
 	static_cast<uint8_t>(0xFFu),
@@ -391,7 +390,7 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 					ZoneScopedN("AsyncTextureLoad");
 					ZoneText(ActualPath.data(), ActualPath.size());
 
-					Texture asyncTexture{};
+					Texture asyncTexture;
 					asyncTexture.LoadedAsynchronously = true;
 					asyncTexture.ResourceId = newResourceId;
 

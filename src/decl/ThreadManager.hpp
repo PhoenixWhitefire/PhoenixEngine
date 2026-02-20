@@ -36,7 +36,7 @@ private:
 
 	void m_StopThreads();
 
-	std::vector<std::thread> m_Workers;
+	std::vector<std::jthread> m_Workers;
 
 	std::queue<Task> m_Tasks;
 	std::mutex m_TasksMutex;

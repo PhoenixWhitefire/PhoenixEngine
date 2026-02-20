@@ -127,7 +127,7 @@ void ThreadManager::Initialize(int NumThreadsOverride)
 					Task task;
 
 					{
-						std::unique_lock<std::mutex> lock{ m_TasksMutex };
+						std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(m_TasksMutex);
 
 						m_TasksCv.wait(
 							lock,
@@ -177,7 +177,7 @@ void ThreadManager::Dispatch(std::function<void()> Task, bool IsCritical)
 	}
 
 	{
-		std::unique_lock<std::mutex> lock{ m_TasksMutex };
+		std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(m_TasksMutex);
 		m_Tasks.emplace(std::move(Task), IsCritical);
 	}
 
@@ -189,15 +189,12 @@ void ThreadManager::m_StopThreads()
 	ZoneScoped;
 
 	{
-		std::unique_lock<std::mutex> lock{ m_TasksMutex };
+		std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(m_TasksMutex);
 		m_Stop = true;
 	}
 
 	m_TasksCv.notify_all();
-
-	for (std::thread& worker : m_Workers)
-		if (worker.joinable())
-			worker.join();
+	m_Workers.clear();
 }
 
 void ThreadManager::Shutdown()
@@ -205,7 +202,6 @@ void ThreadManager::Shutdown()
 	ZoneScoped;
 
 	m_StopThreads();
-
 	s_Instance = nullptr;
 }
 

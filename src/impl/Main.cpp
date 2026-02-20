@@ -305,9 +305,10 @@ static void drawDeveloperUI(double DeltaTime)
 		static std::array<double[255], GraphDatapoints> TimersHist;
 		static std::array<decltype(Memory::Counters), GraphDatapoints> HeapUsageHist;
 		static std::array<decltype(Memory::Counters), GraphDatapoints> HeapActivityHist;
+		static size_t GraphPointer = 0;
 
 		const double* times = Timing::FinalFrameTimes;
-		const std::array<size_t, (size_t)Memory::Category::__count>& memcounts = Memory::Counters;
+		const std::array<std::atomic_size_t, (size_t)Memory::Category::__count>& memcounts = Memory::Counters;
 		
 		uint8_t numTimers = Timing::StaticMagicTimerThing::s_NumTimers;
 
@@ -366,16 +367,15 @@ static void drawDeveloperUI(double DeltaTime)
 
 		if (!AreGraphsPaused)
 		{
-			for (size_t i = 0; i < GraphDatapoints - 1; i++)
+			memcpy(TimersHist[GraphPointer], times, sizeof(double) * 255);
+
+			for (size_t i = 0; i < HeapUsageHist[GraphPointer].size(); i++)
 			{
-				memcpy(TimersHist[i], TimersHist[i+1], sizeof(double) * 255);
-				HeapUsageHist[i] = HeapUsageHist[i+1];
-				HeapActivityHist[i] = HeapActivityHist[i+1];
+				HeapUsageHist[GraphPointer][i] = Memory::Counters[i].load();
+				HeapActivityHist[GraphPointer][i] = Memory::Activity[i].load();
 			}
 
-			memcpy(TimersHist[GraphDatapoints - 1], times, sizeof(double) * 255);
-			HeapUsageHist[GraphDatapoints - 1] = Memory::Counters;
-			HeapActivityHist[GraphDatapoints - 1] = Memory::Activity;
+			GraphPointer = (GraphPointer + 1) % GraphDatapoints;
 		}
 
 		ImGui::SeparatorText("Timers");
@@ -419,7 +419,7 @@ static void drawDeveloperUI(double DeltaTime)
 				ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth,
 				"%s: %zi",
 				Memory::CategoryNames[i],
-				memcounts[i]
+				memcounts[i].load()
 			);
 
 			if (open)

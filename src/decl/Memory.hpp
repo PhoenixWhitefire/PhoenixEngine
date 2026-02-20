@@ -9,6 +9,7 @@
 #include <unordered_set>
 #include <string>
 #include <vector>
+#include <atomic>
 #include <array>
 
 #define MEMCAT(cat) Memory::Category::cat
@@ -46,8 +47,8 @@ namespace Memory
 
 	void FrameFinish();
 
-	inline std::array<size_t, static_cast<size_t>(Category::__count)> Counters;
-	inline std::array<size_t, static_cast<size_t>(Category::__count)> Activity;
+	inline std::array<std::atomic_size_t, static_cast<size_t>(Category::__count)> Counters;
+	inline std::array<std::atomic_size_t, static_cast<size_t>(Category::__count)> Activity;
 
 	static inline const char* CategoryNames[] = {
 		"Default",

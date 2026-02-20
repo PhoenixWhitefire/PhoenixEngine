@@ -29,7 +29,7 @@ jobs:
 
       matrix:
         os: [windows-latest, ubuntu-latest]
-        build_type: [Debug, Release]
+        build_type: [Release, Debug, ReleaseTSan, DebugTSan]
         c_compiler: [cl, gcc]
         include:
           - os: windows-latest
@@ -43,6 +43,10 @@ jobs:
             c_compiler: gcc
           - os: windows-latest
             c_compiler: clang
+          - os: windows-latest
+            build_type: ReleaseTSan
+          - os: windows-latest
+            build_type: DebugTSan
           - os: ubuntu-latest
             c_compiler: clang
           - os: ubuntu-latest

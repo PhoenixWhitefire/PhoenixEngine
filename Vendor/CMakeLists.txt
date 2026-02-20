@@ -11,10 +11,6 @@ set(VEND_SRCS
 	"stb/stb_image.h"
 	"stb.cpp"
 	
-	"glad/gl.h"
-	"glad/gl.c"
-	"glad/KHR/khrplatform.h"
-	
 	"imgui/imgui.cpp"
 	"imgui/imgui.h"
 	"imgui/imgui_internal.h"
@@ -46,3 +42,6 @@ target_include_directories(Vendor PUBLIC
 	"glfw/include"
 	"tinyfd"
 )
+
+add_subdirectory(glad)
+add_dependencies(Vendor OpenGL)
