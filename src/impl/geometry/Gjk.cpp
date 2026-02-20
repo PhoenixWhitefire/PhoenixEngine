@@ -94,7 +94,7 @@ static glm::vec3 findFurthestPoint_Hulls(const EcRigidBody* Rb, glm::vec3 Direct
 		maxPoint = findFurthestPoint_Mesh(Rb, Direction, mesh, &maxDistance, maxPoint);
 	}
 
-	return maxPoint;
+	return Rb->HullMeshIds.size() > 0 ? maxPoint : glm::vec3();
 }
 
 static glm::vec3 findFurthestPoint(const EcRigidBody* Rb, glm::vec3 Direction)

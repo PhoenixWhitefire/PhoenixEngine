@@ -1779,7 +1779,7 @@ static void propertyTooltip(const std::string_view& PropName, EntityComponent Co
 	if (ForceRenderingTooltip.size() > 0 && PropName != ForceRenderingTooltip)
 		return;
 
-	if ((ImGui::IsItemHovered() && (!ImGui::GetIO().WantCaptureKeyboard || UserInput::ShouldIgnoreUIInputSinking())) || ForceRenderingTooltip.size() > 0)
+	if (ImGui::IsItemHovered() || ForceRenderingTooltip.size() > 0)
 	{
 		std::string PropNameStr = std::string(PropName);
 
