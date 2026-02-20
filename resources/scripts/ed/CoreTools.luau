@@ -1,4 +1,4 @@
-local InputService: PlayerInput = game:GetService("PlayerInput") :: any
+local PlayerInput: PlayerInput = game:GetService("PlayerInput") :: any
 local HistoryService: History = game:GetService("History") :: any
 local Engine: Engine = game:GetService("Engine") :: any
 
@@ -79,6 +79,7 @@ local GizmoDragHandle = nil
 local GizmoDragStartWorldPoint = nil
 local GizmoDragStartObjectPosition = nil
 local GizmoDragStartTransform = nil
+local GizmoDragStartSize = vector.one
 local GizmoDragPlaneNormal = nil
 local BeganSurfaceDragAction: number? = nil
 local BeganGizmoDragAction: number? = nil
@@ -192,9 +193,15 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
 
     local cam = workspace.SceneCamera
     local camPos = cam.Transform.Position
-    local cpos = InputService:GetCursorPosition()
+    local cpos = PlayerInput:GetCursorPosition()
 
-    local tryingToInteract = not InputService.IsMouseSunk and InputService:IsMouseButtonPressed(Enum.MouseButton.Left)
+    if PlayerInput:IsKeyPressed(Enum.Key.F) then
+        local pos = target.Transform.Position - (cam.Transform.Forward * math.max(target.Size.x, target.Size.y, target.Size.z) * 1.5)
+        -- TODO fix 180* flip
+        cam.Transform = Matrix.lookAt(pos, target.Transform.Position) * Matrix.fromAngles(0, math.pi, 0)
+    end
+
+    local tryingToInteract = not PlayerInput.IsMouseSunk and PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Left)
 
     local mouseVector = workspace:ScreenPointToVector(cpos, 1000)
     local gizmoHit = if tryingToInteract
@@ -260,11 +267,12 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
             local rotOnly = target.Transform - target.Transform.Position
             local axisWorld = vector.normalize((rotOnly * axisLocal).Position)
 
-            GizmoDragAxis = assert(GizmoPieceToDirection[gizmoHit.Object]) --axisWorld
+            GizmoDragAxis = assert(GizmoPieceToDirection[gizmoHit.Object])
             GizmoDragHandle = gizmoHit.Object
 
             GizmoDragStartTransform = target.Transform
             GizmoDragStartObjectPosition = target.Transform.Position
+            GizmoDragStartSize = target.Size
 
             local camForward = cam.Transform.Forward
             GizmoDragPlaneNormal = vector.normalize(vector.cross(axisWorld, camForward))
@@ -310,7 +318,17 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
             BeganGizmoDragAction = HistoryService:TryBeginAction("GizmoDrag")
         end
 
-        target.Transform = Matrix.fromTranslation(move) * GizmoDragStartTransform
+        if GizmoMode == 1 then
+            target.Transform = GizmoDragStartTransform * Matrix.fromTranslation(move)
+        else
+            local newSize = GizmoDragStartSize + GizmoPieceToDirection[GizmoDragHandle] * amount * math.sign(delta.x + delta.y + delta.z)
+
+            if newSize.x > 0 and newSize.y > 0 and newSize.z > 0 then
+                target.Size = newSize
+                target.Transform = GizmoDragStartTransform * Matrix.fromTranslation(move * 0.5)
+            end
+        end
+
         PrevDragMousePos = cpos
 
         if EditorPreferences.KeepGizmoInView then

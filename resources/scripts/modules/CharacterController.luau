@@ -1,5 +1,5 @@
 -- modules/character-controller.luau, 23/09/2024
-local InputService: PlayerInput = game:GetService("PlayerInput") :: any
+local PlayerInput: PlayerInput = game:GetService("PlayerInput") :: any
 
 local Controller = {}
 Controller.__index = Controller
@@ -93,7 +93,7 @@ function Controller.Update(self: Controller, DeltaTime: number)
 	)
 	
 	if floorRayHit then
-		if InputService:IsKeyPressed(Enum.Key.Space) and (self.totalTime - self.lastJumped) > self.JumpCooldown then
+		if PlayerInput:IsKeyPressed(Enum.Key.Space) and not PlayerInput.IsKeyboardSunk and (self.totalTime - self.lastJumped) > self.JumpCooldown then
 			impulse += vector.create(0, self.JumpImpulse, 0)
 			self.Character.LinearVelocity = vector.create(self.Character.LinearVelocity.x, 0, self.Character.LinearVelocity.z)
 			self.lastJumped = self.totalTime
@@ -135,8 +135,12 @@ function Controller.Update(self: Controller, DeltaTime: number)
 end
 
 function Controller.getMoveDirection(self: Controller)
-	local moveX = (if InputService:IsKeyPressed(Enum.Key.A) then 1 else 0) - (if InputService:IsKeyPressed(Enum.Key.D) then 1 else 0)
-	local moveZ = (if InputService:IsKeyPressed(Enum.Key.W) then 1 else 0) - (if InputService:IsKeyPressed(Enum.Key.S) then 1 else 0)
+	local moveX = (if PlayerInput:IsKeyPressed(Enum.Key.A) then 1 else 0) - (if PlayerInput:IsKeyPressed(Enum.Key.D) then 1 else 0)
+	local moveZ = (if PlayerInput:IsKeyPressed(Enum.Key.W) then 1 else 0) - (if PlayerInput:IsKeyPressed(Enum.Key.S) then 1 else 0)
+
+	if PlayerInput.IsKeyboardSunk then
+		moveX, moveZ = 0, 0
+	end
 	
 	local trans = self.Camera.Transform * Matrix.fromEulerAnglesXYZ(-self.cameraPitch, 0, 0) * Matrix.fromTranslation(moveX, 0, moveZ)
 	
@@ -159,16 +163,16 @@ function Controller.getMoveDirection(self: Controller)
 end
 
 function Controller.getRotationVector(self: Controller) : (number, number)
-	if InputService:IsMouseButtonPressed(Enum.MouseButton.Left) and not InputService.IsMouseSunk then
+	if PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Left) and not PlayerInput.IsMouseSunk then
 		self.isMouseLocked = true -- lock mouse with left-click
 		
-	elseif InputService:IsMouseButtonPressed(Enum.MouseButton.Right) and not InputService.IsMouseSunk then
+	elseif PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Right) and not PlayerInput.IsMouseSunk then
 		self.isMouseLocked = false -- unlock mouse with right-click
 	end
-	InputService.CursorMode = if self.isMouseLocked then Enum.CursorMode.Disabled else Enum.CursorMode.Normal
+	PlayerInput.CursorMode = if self.isMouseLocked then Enum.CursorMode.Disabled else Enum.CursorMode.Normal
 	
 	local rx, ry = 0, 0
-	local cursor = InputService:GetCursorPosition()
+	local cursor = PlayerInput:GetCursorPosition()
 	
 	if self.isMouseLocked then
 		rx, ry = (cursor.y - self.prevMouseY) / 400, (self.prevMouseX - cursor.x) / 400
@@ -180,8 +184,3 @@ function Controller.getRotationVector(self: Controller) : (number, number)
 end
 
 return Controller
-
-
-
-
-

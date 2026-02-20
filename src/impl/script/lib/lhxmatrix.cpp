@@ -120,7 +120,7 @@ static int matrix_lookAt(lua_State* L)
 
 	luhx_pushmatrix(
 		L,
-		glm::lookAt(glm::make_vec3(a), glm::make_vec3(b), glm::make_vec3(up))
+		glm::inverse(glm::lookAt(glm::make_vec3(a), glm::make_vec3(b), glm::make_vec3(up)))
 	);
 	return 1;
 }
