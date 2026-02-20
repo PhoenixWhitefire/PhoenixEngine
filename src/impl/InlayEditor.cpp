@@ -661,13 +661,15 @@ static void renderTextEditors()
 		if (tab.DebuggerCurrentLine > 0)
 			tab.Editor.SetBreakpoints({ tab.DebuggerCurrentLine });
 
+		tab.Editor.Render("TextEditor");
+
 		if (tab.JumpToLine > 0)
 		{
-			tab.Editor.SetCursorPosition({ tab.JumpToLine > 0 ? tab.JumpToLine - 1 : 0, 0 });
+			tab.Editor.SetCursorPosition({ 0, 0 }); // force scroll
+			tab.Editor.SetCursorPosition({ tab.JumpToLine - 1, 0 });
 			tab.JumpToLine = 0;
 		}
 
-		tab.Editor.Render("TextEditor");
 		ImGui::End();
 	}
 }
@@ -1777,9 +1779,9 @@ static void propertyTooltip(const std::string_view& PropName, EntityComponent Co
 	if (ForceRenderingTooltip.size() > 0 && PropName != ForceRenderingTooltip)
 		return;
 
-	if ((ImGui::IsItemHovered() && !ImGui::GetIO().WantCaptureKeyboard) || ForceRenderingTooltip.size() > 0)
+	if ((ImGui::IsItemHovered() && (!ImGui::GetIO().WantCaptureKeyboard || UserInput::ShouldIgnoreUIInputSinking())) || ForceRenderingTooltip.size() > 0)
 	{
-		std::string PropNameStr{ PropName };
+		std::string PropNameStr = std::string(PropName);
 
 		auto pcit = PropTips.find(PropNameStr);
 
@@ -4173,11 +4175,6 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 
 		invokeTextEditor(ar->short_src ? ar->short_src : "!InlineDocument:Unknown source").DebuggerCurrentLine = ar->currentline;
 
-		if (develUI)
-			engine->OnFrameRenderGui.Fire(dt);
-		else
-			renderTextEditors();
-
 		if (ImGui::Begin("Watch"))
 		{
 			static int Section = 0;
@@ -4508,6 +4505,11 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 				renderCoroutine(coroutine);
 		}
 		ImGui::End();
+
+		if (develUI)
+			engine->OnFrameRenderGui.Fire(dt);
+		else
+			renderTextEditors();
 
 		if (!quietBg)
 		{

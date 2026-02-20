@@ -850,6 +850,7 @@ static void processCliArgs(int argc, char** argv)
 
 int main(int argc, char** argv)
 {
+	Log::Initialize();
 	Log::Info("Application startup");
 	
 	Log::InfoF("Phoenix Engine");

@@ -1,6 +1,8 @@
+#include <tracy/Tracy.hpp>
 #include <iostream>
 #include <fstream>
 #include <format>
+#include <thread>
 #include <mutex>
 
 #include "Log.hpp"
@@ -8,19 +10,22 @@
 #include "Utilities.hpp"
 #include "FileRW.hpp"
 
-static std::string ProgramLog = "";
+static std::thread::id MainThreadId;
 static std::ofstream LogHandle;
-static bool DidInit = false;
+static std::string ProgramLog;
+
+struct ParallelLogEvent
+{
+	std::string Message;
+	std::string ExtraTags;
+	LogMessageType Type;
+};
+static std::mutex ParallelLogEventsMutex;
+static std::vector<ParallelLogEvent> ParallelLogEvents;
 
 void Log::Save()
 {
-	if (!DidInit)
-	{
-		PHX_CHECK(FileRW::WriteFile("./log.txt", ""));
-		LogHandle.open("./log.txt", std::ios_base::app);
-
-		DidInit = true;
-	}
+	ZoneScoped;
 
 	LogHandle << ProgramLog;
 	LogHandle.close();
@@ -31,6 +36,8 @@ void Log::Save()
 
 static void appendToLog(const std::string_view& Message, bool NoNewline = false)
 {
+	ZoneScoped;
+
 	static bool ThrewLogCapacityExceededException = false;
 
 	if (ThrewLogCapacityExceededException)
@@ -65,70 +72,140 @@ static void appendToLog(const std::string_view& Message, bool NoNewline = false)
 	}
 }
 
-static bool s_WithinLogCallstack = false;
-
 // Append message to log, which is saved to file every second
 // and when app shuts down
 // If the Message ends with `&&`, won't insert a newline automatically
 // 11/11/2024
 void Log::Append(const std::string_view& Message, const std::string_view& ExtraTags)
 {
+	ZoneScoped;
+
+	if (std::this_thread::get_id() != MainThreadId)
+	{
+		std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(ParallelLogEventsMutex);
+		ParallelLogEvents.push_back(ParallelLogEvent{
+			.Message = std::string(Message),
+			.ExtraTags = std::string(ExtraTags),
+			.Type = LogMessageType::None
+		});
+		return;
+	}
+
 	//if (ExtraTags != "")
 	//	appendToLog(ExtraTags, true);
 	appendToLog(Message, false);
 
-	// If our logging becomes recursive then stop
-	// TODO Preferably the events are deferred instead of never reaching
-	// our callbacks
-	if (!s_WithinLogCallstack)
-	{
-		s_WithinLogCallstack = true;
-		EcEngine::SignalNewLogMessage(LogMessageType::None, Message, ExtraTags);
-		s_WithinLogCallstack = false;
-	}
+	EcEngine::SignalNewLogMessage(LogMessageType::None, Message, ExtraTags);
 }
 
 void Log::Info(const std::string_view& Message, const std::string_view& ExtraTags)
 {
+	ZoneScoped;
+
+	if (std::this_thread::get_id() != MainThreadId)
+	{
+		std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(ParallelLogEventsMutex);
+		ParallelLogEvents.push_back(ParallelLogEvent{
+			.Message = std::string(Message),
+			.ExtraTags = std::string(ExtraTags),
+			.Type = LogMessageType::Info
+		});
+		return;
+	}
+
 	appendToLog("[INFO]", true);
 	//appendToLog(ExtraTags, true);
 	appendToLog(": ", true);
 	appendToLog(Message);
 
-	if (!s_WithinLogCallstack)
-	{
-		s_WithinLogCallstack = true;
-		EcEngine::SignalNewLogMessage(LogMessageType::Info, Message, ExtraTags);
-		s_WithinLogCallstack = false;
-	}
+	EcEngine::SignalNewLogMessage(LogMessageType::Info, Message, ExtraTags);
 }
 
 void Log::Warning(const std::string_view& Message, const std::string_view& ExtraTags)
 {
+	ZoneScoped;
+
+	if (std::this_thread::get_id() != MainThreadId)
+	{
+		std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(ParallelLogEventsMutex);
+		ParallelLogEvents.push_back(ParallelLogEvent{
+			.Message = std::string(Message),
+			.ExtraTags = std::string(ExtraTags),
+			.Type = LogMessageType::Warning
+		});
+		return;
+	}
+
 	appendToLog("[WARN]", true);
 	//appendToLog(ExtraTags, true);
 	appendToLog(": ", true);
 	appendToLog(Message);
 
-	if (!s_WithinLogCallstack)
-	{
-		s_WithinLogCallstack = true;
-		EcEngine::SignalNewLogMessage(LogMessageType::Warning, Message, ExtraTags);
-		s_WithinLogCallstack = false;
-	}
+	EcEngine::SignalNewLogMessage(LogMessageType::Warning, Message, ExtraTags);
 }
 
 void Log::Error(const std::string_view& Message, const std::string_view& ExtraTags)
 {
+	ZoneScoped;
+
+	if (std::this_thread::get_id() != MainThreadId)
+	{
+		std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(ParallelLogEventsMutex);
+		ParallelLogEvents.push_back(ParallelLogEvent{
+			.Message = std::string(Message),
+			.ExtraTags = std::string(ExtraTags),
+			.Type = LogMessageType::Error
+		});
+		return;
+	}
+
 	appendToLog("[ERRR]", true);
 	//appendToLog(ExtraTags, true);
 	appendToLog(": ", true);
 	appendToLog(Message);
 
-	if (!s_WithinLogCallstack)
+	EcEngine::SignalNewLogMessage(LogMessageType::Error, Message, ExtraTags);
+}
+
+void Log::Initialize()
+{
+	ZoneScoped;
+
+	MainThreadId = std::this_thread::get_id();
+
+	PHX_CHECK(FileRW::WriteFile("./log.txt", ""));
+	LogHandle.open("./log.txt", std::ios_base::app);
+}
+
+void Log::FlushParallelEvents()
+{
+	ZoneScoped;
+
+	std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(ParallelLogEventsMutex);
+
+	for (const ParallelLogEvent& ple : ParallelLogEvents)
 	{
-		s_WithinLogCallstack = true;
-		EcEngine::SignalNewLogMessage(LogMessageType::Error, Message, ExtraTags);
-		s_WithinLogCallstack = false;
+		switch (ple.Type)
+		{
+		case LogMessageType::None:
+			Log::Append(ple.Message, ple.ExtraTags);
+			break;
+
+		case LogMessageType::Info:
+			Log::Info(ple.Message, ple.ExtraTags);
+			break;
+
+		case LogMessageType::Warning:
+			Log::Warning(ple.Message, ple.ExtraTags);
+			break;
+
+		case LogMessageType::Error:
+			Log::Error(ple.Message, ple.ExtraTags);
+			break;
+
+		[[unlikely]] default: assert(false);
+		}
 	}
+
+	ParallelLogEvents.clear();
 }

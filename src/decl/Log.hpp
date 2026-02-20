@@ -10,6 +10,8 @@ namespace Log
 	void Error(const std::string_view&, const std::string_view& ExtraTags = "");
 	void Append(const std::string_view&, const std::string_view& ExtraTags = "");
 	void Save();
+	void Initialize();
+	void FlushParallelEvents();
 
 	template <typename ...Args>
 	void InfoF(std::format_string<Args...> fmt, Args&&... args)

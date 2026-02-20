@@ -880,6 +880,7 @@ void Engine::Start()
 			m_TextureManager.FinalizeAsyncLoadedTextures();
 		
 		m_MeshProvider.FinalizeAsyncLoadedMeshes();
+		Log::FlushParallelEvents();
 
 		if (skyboxFacesBeingLoaded.size() == 6 && !IsHeadlessMode)
 		{
