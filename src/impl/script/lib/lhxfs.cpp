@@ -14,8 +14,24 @@ static std::string unifyPath(const std::string& Str)
 	return newStr;
 }
 
+static void setSelfAlias(lua_State* L)
+{
+	lua_Debug ar = {};
+	if (!lua_getinfo(L, 1, "s", &ar) || strlen(ar.short_src) < 2)
+	{
+		FileRW::DefineAlias("self", "");
+		FileRW::DefineAlias("selfdir", "");
+		return;
+	}
+
+	FileRW::DefineAlias("self", ar.short_src);
+	FileRW::DefineAlias("selfdir", std::filesystem::path(ar.short_src).parent_path().string());
+}
+
 static int fs_write(lua_State* L)
 {
+	setSelfAlias(L);
+
     const char* path = luaL_checkstring(L, 1);
 	const char* contents = luaL_checkstring(L, 2);
 	bool createDirectories = luaL_optboolean(L, 3, false);
@@ -34,6 +50,8 @@ static int fs_write(lua_State* L)
 
 static int fs_read(lua_State* L)
 {
+	setSelfAlias(L);
+
     const char* path = luaL_checkstring(L, 1);
 
     bool success = true;
@@ -54,6 +72,8 @@ static int fs_read(lua_State* L)
 
 static int fs_listdir(lua_State* L)
 {
+	setSelfAlias(L);
+
     const char* path = luaL_checkstring(L, 1);
     size_t filterstrlen = 0;
 	const char* filterstr = luaL_optlstring(L, 2, "a", &filterstrlen);
@@ -115,6 +135,8 @@ static int fs_listdir(lua_State* L)
 
 static int fs_isfile(lua_State* L)
 {
+	setSelfAlias(L);
+
     const char* path = luaL_checkstring(L, 1);
 	lua_pushboolean(L, std::filesystem::is_regular_file(FileRW::MakePathCwdRelative(path)));
 
@@ -123,6 +145,8 @@ static int fs_isfile(lua_State* L)
 
 static int fs_isdirectory(lua_State* L)
 {
+	setSelfAlias(L);
+
     const char* path = luaL_checkstring(L, 1);
 	lua_pushboolean(L, std::filesystem::is_directory(FileRW::MakePathCwdRelative(path)));
 
@@ -154,6 +178,8 @@ static int fs_cwd(lua_State* L)
 
 static int fs_copy(lua_State* L)
 {
+	setSelfAlias(L);
+
 	std::error_code ec;
 
 	std::string from = FileRW::MakePathCwdRelative(luaL_checkstring(L, 1));
@@ -173,6 +199,8 @@ static int fs_copy(lua_State* L)
 
 static int fs_mkdir(lua_State* L)
 {
+	setSelfAlias(L);
+
 	std::error_code ec;
 	std::string realPath = FileRW::MakePathCwdRelative(luaL_checkstring(L, 1));
 	std::filesystem::create_directory(realPath, ec);
@@ -185,6 +213,8 @@ static int fs_mkdir(lua_State* L)
 
 static int fs_rename(lua_State* L)
 {
+	setSelfAlias(L);
+
 	std::error_code ec;
 
 	std::string path = FileRW::MakePathCwdRelative(luaL_checkstring(L, 1));
@@ -201,6 +231,8 @@ static int fs_rename(lua_State* L)
 
 static int fs_remove(lua_State* L)
 {
+	setSelfAlias(L);
+
 	std::error_code ec;
 	int numRemoved = (int)std::filesystem::remove_all(FileRW::MakePathCwdRelative(luaL_checkstring(L, 1)), ec);
 
@@ -228,6 +260,8 @@ static std::string normalizePath(std::string path)
 
 static int fs_promptsave(lua_State* L)
 {
+	setSelfAlias(L);
+
 	std::string defaultLocation = FileRW::MakePathAbsolute(luaL_optstring(L, 1, "./"));
 	std::vector<const char*> filters;
 
@@ -265,6 +299,8 @@ static int fs_promptsave(lua_State* L)
 
 static int fs_promptopen(lua_State* L)
 {
+	setSelfAlias(L);
+
 	std::string defaultLocation = FileRW::MakePathAbsolute(luaL_optstring(L, 1, "./"));
 	std::vector<const char*> filters;
 
@@ -334,6 +370,8 @@ static int fs_promptopen(lua_State* L)
 
 static int fs_promptopenfolder(lua_State* L)
 {
+	setSelfAlias(L);
+
 	const char* path = tinyfd_selectFolderDialog(
 		luaL_checkstring(L, 1),
 		luaL_optstring(L, 2, nullptr)
@@ -404,6 +442,8 @@ static int fs_execute(lua_State* L)
 
 static int fs_resolvepath(lua_State* L)
 {
+	setSelfAlias(L);
+
 	const std::string& resolved = FileRW::MakePathCwdRelative(luaL_checkstring(L, 1));
 
 	lua_pushlstring(L, resolved.data(), resolved.size());
@@ -412,6 +452,8 @@ static int fs_resolvepath(lua_State* L)
 
 static int fs_resolvepathabsolute(lua_State* L)
 {
+	setSelfAlias(L);
+
 	const std::string& resolved = FileRW::MakePathAbsolute(luaL_checkstring(L, 1));
 
 	lua_pushlstring(L, resolved.data(), resolved.size());
