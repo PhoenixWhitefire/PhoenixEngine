@@ -22,7 +22,7 @@ static const glm::vec3 CubePoints[] = {
     glm::vec3(-0.5f,  0.5f,  0.5f),
 };
 
-static glm::vec3 findFurthestPoint_Mesh(const EcRigidBody* Rb, glm::vec3 Direction, const Mesh& mesh, float* maxDistance, glm::vec3 maxPoint)
+static glm::vec3 findFurthestPoint_Mesh(const EcRigidBody* Rb, glm::vec3 Direction, const Mesh& mesh, float* maxDistance, glm::vec3 maxPoint, const glm::mat4& submeshTrans = glm::mat4(1.f))
 {
 	assert(mesh.MeshDataPreserved);
 
@@ -33,7 +33,7 @@ static glm::vec3 findFurthestPoint_Mesh(const EcRigidBody* Rb, glm::vec3 Directi
 	{
 		const Vertex& v = mesh.Vertices[ind];
 
-		glm::vec3 vworld = glm::vec3(ct->Transform * glm::vec4(v.Position * ct->Size, 1.f));
+		glm::vec3 vworld = glm::vec3(ct->Transform * submeshTrans * glm::vec4(v.Position * ct->Size, 1.f));
         float distance = glm::dot(vworld, Direction);
 
         if (distance > *maxDistance)
@@ -88,13 +88,13 @@ static glm::vec3 findFurthestPoint_Hulls(const EcRigidBody* Rb, glm::vec3 Direct
 	float maxDistance = -FLT_MAX;
 	glm::vec3 maxPoint;
 
-	for (uint32_t meshId : Rb->HullMeshIds)
+	for (const EcRigidBody::Hull& hull : Rb->Hulls)
 	{
-		const Mesh& mesh = meshProv->GetMeshResource(meshId);
-		maxPoint = findFurthestPoint_Mesh(Rb, Direction, mesh, &maxDistance, maxPoint);
+		const Mesh& mesh = meshProv->GetMeshResource(hull.MeshId);
+		maxPoint = findFurthestPoint_Mesh(Rb, Direction, mesh, &maxDistance, maxPoint, hull.Transform);
 	}
 
-	return Rb->HullMeshIds.size() > 0 ? maxPoint : glm::vec3();
+	return Rb->Hulls.size() > 0 ? maxPoint : glm::vec3();
 }
 
 static glm::vec3 findFurthestPoint(const EcRigidBody* Rb, glm::vec3 Direction)

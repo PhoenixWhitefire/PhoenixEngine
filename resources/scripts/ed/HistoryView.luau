@@ -4,10 +4,22 @@ local History: History = game:GetService("History") :: any
 local Viewer = {}
 Viewer.Open = false
 
+type Action = {
+    Name: string,
+    Events: {
+        {
+            Target: GameObject,
+            Property: string,
+            NewValue: unknown,
+            PreviousValue: unknown
+        }
+    }
+}
+
 local ActionDataCache = {}
 local ActionDataCacheWaypoint = 0
 
-local function renderAction(action, id)
+local function renderAction(action: Action, id)
     local open = imgui.treenode(`{action.Name}##{id}`)
 
     if open then
@@ -38,7 +50,7 @@ function Viewer.Render()
     if currentAction then
         imgui.pushstylecolor(0, { 1, 0, 0, 1 })
 
-        renderAction(History:GetCurrentActionData(), -1)
+        renderAction(currentAction, -1)
 
         imgui.popstylecolor()
     end

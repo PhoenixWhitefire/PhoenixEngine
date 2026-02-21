@@ -5,8 +5,8 @@ local Controller = {}
 Controller.__index = Controller
 
 type ControllerData = {
-	Character: GameObject & Mesh,
-	Camera: GameObject & Camera,
+	Character: GameObject & Mesh & RigidBody & Transform,
+	Camera: GameObject & Camera & Transform,
 
 	Acceleration: number,
 	JumpImpulse: number,
@@ -32,18 +32,18 @@ export type Controller = setmetatable<ControllerData, typeof(Controller)>
 function Controller.new(Camera: GameObject & Camera): Controller
 	return setmetatable({
 		Camera = Camera,
-		
+
 		Acceleration = 200,
 		JumpImpulse = 25,
 		JumpCooldown = 0.5,
 		MouseSensitivity = 60,
 		JumpRayDistance = 8,
-		
+
 		FirstPerson = true,
 		CameraOffset = Matrix.fromTranslation(0, 0, 0),
 		-- relative to the character, where to look when in third-person
 		CameraTargetOffset = vector.zero,
-		
+
 		prevMouseX = 0,
 		prevMouseY = 0,
 		isMouseLocked = false,
@@ -56,7 +56,7 @@ end
 
 function Controller.InitDefault(self: Controller, CharacterHeight)
 	CharacterHeight = CharacterHeight or 7.5
-	
+
 	local character: GameObject & Mesh & Transform & RigidBody = GameObject.new("Mesh") :: any
 	character:AddComponent("RigidBody")
 	character.Size = vector.create(CharacterHeight / 3, CharacterHeight, CharacterHeight / 3)
@@ -65,7 +65,7 @@ function Controller.InitDefault(self: Controller, CharacterHeight)
 	character.Restitution = 0
 	character.Friction = 250
 	character.Parent = workspace
-	
+
 	self.Character = character
 	self.Camera.UseSimpleController = false
 	self.CameraOffset = Matrix.fromTranslation(0, CharacterHeight * 0.4, 0)
@@ -74,24 +74,24 @@ end
 
 function Controller.Update(self: Controller, DeltaTime: number)
 	self.totalTime += DeltaTime
-	
+
 	local moveDirection, _ = self:getMoveDirection()
 	local rotationX, rotationY = self:getRotationVector()
-	
+
 	local charSize = self.Character.Size
-	
+
 	local floorRayHit = #workspace:GetObjectsInAabb(
-		self.Character.Transform.Position - vector.create(0, charSize.Y / 4, 0),
-		vector.create(charSize.x * 1.2, charSize.Y / 2, charSize.z * 1.2),
+		self.Character.Transform.Position - vector.create(0, charSize.y / 4, 0),
+		vector.create(charSize.x * 1.2, charSize.y / 2, charSize.z * 1.2),
 		{ self.Character }
 	) > 0
-	
+
 	local impulse = vector.create(
 		moveDirection.x * self.Acceleration * DeltaTime,
 		0,
 		moveDirection.z * self.Acceleration * DeltaTime
 	)
-	
+
 	if floorRayHit then
 		if PlayerInput:IsKeyPressed(Enum.Key.Space) and not PlayerInput.IsKeyboardSunk and (self.totalTime - self.lastJumped) > self.JumpCooldown then
 			impulse += vector.create(0, self.JumpImpulse, 0)
@@ -101,15 +101,15 @@ function Controller.Update(self: Controller, DeltaTime: number)
 	else
 		impulse *= 0.3
 	end
-	
+
 	local currentVelocity = self.Character.LinearVelocity
 	self.Character.LinearVelocity = currentVelocity + impulse
-	
+
 	self.Character.Transform *= Matrix.fromEulerAnglesXYZ(0, rotationY, 0)
-	
+
 	self.cameraPitch += rotationX
 	self.cameraPitch = math.clamp(self.cameraPitch, -math.rad(89), math.rad(89))
-	
+
 	local rollAdd = -vector.dot(vector.normalize(moveDirection), self.Camera.Transform.Right) * DeltaTime * 0.5
 	--rollAdd = moveDirection.X * 0.05
 	if rollAdd == rollAdd then
@@ -130,7 +130,7 @@ function Controller.Update(self: Controller, DeltaTime: number)
 						* self.CameraOffset
 						* Matrix.fromEulerAnglesXYZ(0, 0, self.roll)
 	end
-	
+
 	self.Camera.Transform = camTransform
 end
 
@@ -141,15 +141,15 @@ function Controller.getMoveDirection(self: Controller)
 	if PlayerInput.IsKeyboardSunk then
 		moveX, moveZ = 0, 0
 	end
-	
+
 	local trans = self.Camera.Transform * Matrix.fromEulerAnglesXYZ(-self.cameraPitch, 0, 0) * Matrix.fromTranslation(moveX, 0, moveZ)
-	
+
 	return vector.create(
 		trans.C4R1 - self.Camera.Transform.C4R1,
 		0,
 		trans.C4R3 - self.Camera.Transform.C4R3
 	), vector.create(moveX, 0, moveZ)
-	
+
 	--[[
 	local transrights = Camera.Transform
 	
@@ -165,21 +165,21 @@ end
 function Controller.getRotationVector(self: Controller) : (number, number)
 	if PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Left) and not PlayerInput.IsMouseSunk then
 		self.isMouseLocked = true -- lock mouse with left-click
-		
+
 	elseif PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Right) and not PlayerInput.IsMouseSunk then
 		self.isMouseLocked = false -- unlock mouse with right-click
 	end
 	PlayerInput.CursorMode = if self.isMouseLocked then Enum.CursorMode.Disabled else Enum.CursorMode.Normal
-	
+
 	local rx, ry = 0, 0
 	local cursor = PlayerInput:GetCursorPosition()
-	
+
 	if self.isMouseLocked then
 		rx, ry = (cursor.y - self.prevMouseY) / 400, (self.prevMouseX - cursor.x) / 400
 	end
-	
+
 	self.prevMouseX, self.prevMouseY = cursor.x, cursor.y
-	
+
 	return rx, ry
 end
 

@@ -207,12 +207,32 @@ void EcRigidBody::RecomputeAabb()
 	this->Mass = Density * CollisionAabb.Size.x * CollisionAabb.Size.y * CollisionAabb.Size.z;
 }
 
+static glm::mat4 getMatrixFromJson(const nlohmann::json& Json)
+{
+	glm::mat4 mat;
+	for (int col = 0; col < 4; col++)
+		for (int row = 0; row < 4; row++)
+			mat[col][row] = float(Json[col][row]);
+
+	return mat;
+}
+
 static void loadHullsFile(EcRigidBody* rb, const nlohmann::json& data)
 {
 	MeshProvider* meshProv = MeshProvider::Get();
 
 	for (size_t index = 0; index < data["Hulls"].size(); index++)
-		rb->HullMeshIds.push_back(meshProv->LoadFromPath((std::string)data["Hulls"][index]));
+	{
+		const nlohmann::json& hullData = data["Hulls"][index];
+
+		if (hullData.type() == nlohmann::json::value_t::string)
+			rb->Hulls.push_back(EcRigidBody::Hull{ .MeshId = meshProv->LoadFromPath((std::string)hullData) });
+		else
+			rb->Hulls.push_back(EcRigidBody::Hull{
+				.Transform = getMatrixFromJson(hullData["Transform"]),
+				.MeshId = data["Mesh"]
+			});
+	}
 }
 
 void EcRigidBody::SetHullsFile(const std::string& NewFile)
@@ -221,7 +241,7 @@ void EcRigidBody::SetHullsFile(const std::string& NewFile)
 		return;
 
 	HullsFile = NewFile;
-	HullMeshIds.clear();
+	Hulls.clear();
 
 	if (HullsFile.empty())
 		return;
@@ -253,8 +273,8 @@ void EcRigidBody::SetHullsFile(const std::string& NewFile)
 	}
 	catch (const nlohmann::json::type_error& err)
 	{
-		Log::ErrorF("Error while loading Hulls File '{}' for {}: {}", HullsFile, Object->GetFullName(), err.what());
-		HullMeshIds.clear();
+		Log::ErrorF("Error loading Hulls File '{}' for {}: {}", HullsFile, Object->GetFullName(), err.what());
+		Hulls.clear();
 		return;
 	}
 }

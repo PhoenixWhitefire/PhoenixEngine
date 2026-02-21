@@ -431,9 +431,10 @@ local function openProject_(ManualPath: string?)
 	end
 
 	-- TODO: creating another binding and adding an `assert(dm)` causes the type state to become `*error-type*`
+	assert(Project.DataModel)
 	Project.DataModel.Name = Project.Name
 
-	Project.Workspace = Project.DataModel:FindChildWithComponent("Workspace") :: any
+	Project.Workspace = Project.DataModel:FindChildWithComponent("Workspace")
 
 	if not Project.Workspace then
 		Project.Workspace = GameObject.new("Workspace")
@@ -443,6 +444,7 @@ local function openProject_(ManualPath: string?)
 		print("Re-created Workspace")
 	end
 
+	assert(Project.Workspace)
 	if not Project.Workspace.SceneCamera then
 		local cam = GameObject.new("Camera")
 		cam.Parent = Project.Workspace
@@ -1390,7 +1392,7 @@ local function renderViewport(DeltaTime: number)
 		selmap[sel.ObjectId] = sel
 
 		if not PrevSelections[sel.ObjectId] then
-			local new: Mesh & Transform = SelectionPart:Duplicate() :: any
+			local new: GameObject & Mesh & Transform = SelectionPart:Duplicate() :: any
 			new.Transform, new.Size = sel.Transform, sel.Size + vector.create(0.1, 0.1, 0.1)
 			new.Tint = Color.new(84/255, 150/255, 1)
 			new.Parent = workspace

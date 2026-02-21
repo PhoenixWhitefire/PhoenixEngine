@@ -40,7 +40,12 @@ struct EcRigidBody : public Component<EntityComponent::RigidBody>
     EcTransform* CurTransform; // Only used during the Physics phase
 
     std::string HullsFile;
-    std::vector<uint32_t> HullMeshIds;
+    struct Hull
+    {
+        glm::mat4 Transform = glm::mat4(1.f);
+        uint32_t MeshId = UINT32_MAX;
+    };
+    std::vector<Hull> Hulls;
 
     EnCollisionType CollisionType = EnCollisionType::Cube;
 

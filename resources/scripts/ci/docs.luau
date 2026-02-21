@@ -86,9 +86,8 @@ end
 local documentationData = {}
 
 local GameObjectOverrides = {
-	new = "(<T>(ComponentName: T | keyof<Creatables>) -> GameObject & index<Creatables, T>)"
-	-- cant figure out how to make the generic work in classes
-	--FindChildWithComponent = "<T>(self, ComponentName: keyof<Creatables> & T): (GameObject & index<Creatables, T>)?",
+	new = "(<T>(ComponentName: T | keyof<Creatables>) -> GameObject & index<Creatables, T>)",
+	FindChildWithComponent = "<T>(self, ComponentName: keyof<Creatables> & T) -> (GameObject & index<Creatables, T>)?",
 }
 
 local function dumpCreatables()
@@ -97,7 +96,8 @@ local function dumpCreatables()
 		SpotLight = " & Transform",
 		PointLight = " & Transform",
 		Model = " & Transform",
-		ParticleEmitter = " & Transform"
+		ParticleEmitter = " & Transform",
+		Camera = " & Transform"
 	}
 
 	definitionsFile ..= "\ntype Creatables = {\n"
@@ -332,7 +332,7 @@ local function dumpReflectionApi(t, d, cn)
 					documentation = desc
 				}
 
-				definitionsFile ..= `  { n }: { luautype }\n`
+				definitionsFile ..= `  { n }: { luautype },\n`
 			end
 		end
 
@@ -434,11 +434,13 @@ local function dumpReflectionApi(t, d, cn)
 				end
 
 				subst = GameObjectOverrides[n] or subst
+				subst = string.gsub(subst, " : ", " -> ")
+				subst = string.gsub(subst, "self", `self: {cn}`)
 
 				if n ~= "SetShaderVariable" then
-					definitionsFile ..= `  function { n }{ subst }\n`
+					definitionsFile ..= `  { n }: { subst },\n`
 				else
-					definitionsFile ..= "  SetShaderVariable: ((_: Renderer, Shader: string, Variable: string, Value: boolean | number | Color | Matrix, Type: EnumValueType?) -> ()) & ((_: Renderer, Shader: string, Variable: string, Value: vector, Type: EnumValueType) -> ())"
+					definitionsFile ..= "  SetShaderVariable: ((_: Renderer, Shader: string, Variable: string, Value: boolean | number | Color | Matrix, Type: EnumValueType?) -> ()) & ((_: Renderer, Shader: string, Variable: string, Value: vector, Type: EnumValueType) -> ()),\n"
 				end
 
 				if subst:find("Array") or subst:find("Map") then
@@ -466,7 +468,7 @@ local function dumpReflectionApi(t, d, cn)
 				documentationData[`@{DOCS_PREFIX}/globaltype/{cn}.{n}`] = {
 					documentation = d.Events[n].Description
 				}
-				definitionsFile ..= `  { n }: EventSignal<{d.Events[n].ArgumentTypes or rtolsub(v)}>\n`
+				definitionsFile ..= `  { n }: EventSignal<{d.Events[n].ArgumentTypes or rtolsub(v)}>,\n`
 			end
 		end
 	else
@@ -652,33 +654,34 @@ table.insert(orderedComponents, 1, "GameObject")
 for _, k in orderedComponents do
 	local v = apiDump.GameObject.Components[k]
 	local vd = docComments.GameObject.Components[k]
-	
+
 	if k == "GameObject" then
 		v = apiDump.GameObject.Base
 		vd = docComments.GameObject.Base
 	end
-	
-	definitionsFile ..= `declare extern type { k } with\n`
-	
+
+	-- intersections don't work with extern types
+	definitionsFile ..= `export type { k } = \{\n`
+
 	components ..= `## \`{ k }\`\n\n`
-	
+
 	if not vd then
 		print(`No docs for Component '{ k }'`)
 		definitionsFile ..= "end\n"
 		continue
 	end
-	
+
 	if vd.Description then
 		for _, d in (if typeof(vd.Description) == "table" then vd.Description else { vd.Description }) do
 			components ..= `* { d }\n`
 		end
-		
+
 		components ..= "\n"
 	end
-	
+
 	components ..= dumpReflectionApi(v, vd, k)
-	
-	definitionsFile ..= "end\n"
+
+	definitionsFile ..= "}\n"
 end
 
 definitionsFile ..= "\n\n"

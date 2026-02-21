@@ -15,7 +15,7 @@ local GizmoContainer = GameObject.new("Model")
 local GizmoPrevTarget: (GameObject & Transform)? = nil
 local GizmoPrevTargetTransform = Matrix.identity
 local GizmoPrevTargetSize = vector.zero
-local GizmoPieceToDirection = {}
+local GizmoPieceToDirection: { [GameObject & Mesh]: vector } = {}
 local GizmoPieces = {
     [vector.create( 1, 0, 0)] = { GameObject.new("Mesh"), GameObject.new("Mesh") },
     [vector.create(-1, 0, 0)] = { GameObject.new("Mesh"), GameObject.new("Mesh") },
@@ -75,7 +75,7 @@ local PrevDragMousePos: vector? = nil
 local IsSurfaceDragging = false
 local IsGizmoDragging = false
 local GizmoDragAxis = vector.zero
-local GizmoDragHandle = nil
+local GizmoDragHandle: (GameObject & Mesh & Transform)? = nil
 local GizmoDragStartWorldPoint = nil
 local GizmoDragStartObjectPosition = nil
 local GizmoDragStartTransform = nil
@@ -209,7 +209,7 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
                         else nil
 
     if tryingToInteract and not IsGizmoDragging and not gizmoHit then
-        local worldHit = Project.Workspace:Raycast(camPos, mouseVector, { if IsSurfaceDragging then target else nil })
+        local worldHit = Project.Workspace:Raycast(camPos, mouseVector, if IsSurfaceDragging then { target } else {})
 
         if worldHit and (IsSurfaceDragging or worldHit.Object == target) then
             assert(worldHit)
@@ -261,14 +261,17 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
 
     if tryingToInteract then
         if not IsGizmoDragging and gizmoHit then
+            assert(gizmoHit.Object:HasComponent("Mesh"))
+            local hit: GameObject & Mesh & Transform = gizmoHit.Object :: any
+
             PrevDragMousePos = cpos
 
-            local axisLocal = assert(GizmoPieceToDirection[gizmoHit.Object])
+            local axisLocal = assert(GizmoPieceToDirection[hit])
             local rotOnly = target.Transform - target.Transform.Position
             local axisWorld = vector.normalize((rotOnly * axisLocal).Position)
 
-            GizmoDragAxis = assert(GizmoPieceToDirection[gizmoHit.Object])
-            GizmoDragHandle = gizmoHit.Object
+            GizmoDragAxis = assert(GizmoPieceToDirection[hit])
+            GizmoDragHandle = hit
 
             GizmoDragStartTransform = target.Transform
             GizmoDragStartObjectPosition = target.Transform.Position

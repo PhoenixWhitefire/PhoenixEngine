@@ -85,248 +85,249 @@ declare Matrix: {
 }
 
 
-declare extern type GameObject with
-  Enabled: boolean
-  Name: string
-  ObjectId: number 
-  Parent: GameObject?
-  Serializes: boolean
+export type GameObject = {
+  Enabled: boolean,
+  Name: string,
+  ObjectId: number ,
+  Parent: GameObject?,
+  Serializes: boolean,
 
-  function AddComponent(self, Component: keyof<Creatables>) : ()
-  function AddTag(self, Tag: string) : ()
-  function Destroy(self) : ()
-  function Duplicate(self) : (GameObject)
-  function FindChild(self, ChildName: string) : (GameObject?)
-  function FindChildWithComponent(self, Component: keyof<Creatables>) : (GameObject)
-  function ForEachChild(self, Callback: (Object: GameObject) -> boolean?) : ()
-  function ForEachDescendant(self, Callback: (Object: GameObject) -> boolean?) : ()
-  function GetChildren(self) : { GameObject }
-  function GetComponents(self) : keyof<Creatables>
-  function GetDescendants(self) : { GameObject }
-  function GetFullName(self) : (string)
-  function GetTags(self) : { string }
-  function HasComponent(self, Component: keyof<Creatables>) : (boolean)
-  function HasTag(self, Tag: string) : (boolean)
-  function MergeWith(self, With: GameObject) : ()
-  function RemoveComponent(self, Component: keyof<Creatables>) : ()
-  function RemoveTag(self, Tag: string) : ()
+  AddComponent: (self: GameObject, Component: keyof<Creatables>) -> (),
+  AddTag: (self: GameObject, Tag: string) -> (),
+  Destroy: (self: GameObject) -> (),
+  Duplicate: (self: GameObject) -> (GameObject),
+  FindChild: (self: GameObject, ChildName: string) -> (GameObject?),
+  FindChildWithComponent: <T>(self: GameObject, ComponentName: keyof<Creatables> & T) -> (GameObject & index<Creatables, T>)?,
+  ForEachChild: (self: GameObject, Callback: (Object: GameObject) -> boolean?) -> (),
+  ForEachDescendant: (self: GameObject, Callback: (Object: GameObject) -> boolean?) -> (),
+  GetChildren: (self: GameObject) -> { GameObject },
+  GetComponents: (self: GameObject) -> keyof<Creatables>,
+  GetDescendants: (self: GameObject) -> { GameObject },
+  GetFullName: (self: GameObject) -> (string),
+  GetTags: (self: GameObject) -> { string },
+  HasComponent: (self: GameObject, Component: keyof<Creatables>) -> (boolean),
+  HasTag: (self: GameObject, Tag: string) -> (boolean),
+  MergeWith: (self: GameObject, With: GameObject) -> (),
+  RemoveComponent: (self: GameObject, Component: keyof<Creatables>) -> (),
+  RemoveTag: (self: GameObject, Tag: string) -> (),
 
-  OnTagAdded: EventSignal<(string)>
-  OnTagRemoved: EventSignal<(string)>
-end
-declare extern type Animation with
-  Animation: string
-  Looped: boolean
-  Playing: boolean
-  Ready: boolean 
-  Weight: number
-end
-declare extern type AssetManager with
+  OnTagAdded: EventSignal<(string)>,
+  OnTagRemoved: EventSignal<(string)>,
+}
+export type Animation = {
+  Animation: string,
+  Looped: boolean,
+  Playing: boolean,
+  Ready: boolean ,
+  Weight: number,
+}
+export type AssetManager = {
 
-  function GetMeshData(self, Id: string) : { Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } }
-  function ImportModel(self, Path: string) : GameObject & Model
-  function LoadScene(self, Path: string) : ({ GameObject }?, string)
-  function SaveMesh(self, Id: string, Path: string) : ()
-  function SaveScene(self, RootNodes: { GameObject }, Path: string) : (boolean, string?)
-  function SetMeshData(self, Id: string, MeshData: { Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } }) : ()
-end
-declare extern type Bone with
-  IsActive: boolean 
-  SkeletalBoneId: number 
-  TargetMesh: GameObject 
-  Transform: Matrix
-end
-declare extern type Camera with
-  FieldOfView: number
-  UseSimpleController: boolean
-end
-declare extern type Collections with
+  GetMeshData: (self: AssetManager, Id: string) -> { Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } },
+  ImportModel: (self: AssetManager, Path: string) -> GameObject & Model,
+  LoadScene: (self: AssetManager, Path: string) -> ({ GameObject }?, string),
+  SaveMesh: (self: AssetManager, Id: string, Path: string) -> (),
+  SaveScene: (self: AssetManager, RootNodes: { GameObject }, Path: string) -> (boolean, string?),
+  SetMeshData: (self: AssetManager, Id: string, MeshData: { Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } }) -> (),
+}
+export type Bone = {
+  IsActive: boolean ,
+  SkeletalBoneId: number ,
+  TargetMesh: GameObject ,
+  Transform: Matrix,
+}
+export type Camera = {
+  FieldOfView: number,
+  UseSimpleController: boolean,
+}
+export type Collections = {
 
-  function GetCollections(self) : { string }
-  function GetTagAddedSignal(self, Tag: string) : EventSignal<GameObject>
-  function GetTagRemovedSignal(self, Tag: string) : EventSignal<GameObject>
-  function GetTagged(self, Tag: string) : { GameObject }
-end
-declare extern type DataModel with
-  AreScriptsBound: boolean 
-  LiveScripts: string
-  Time: number 
-  VM: string
+  GetCollections: (self: Collections) -> { string },
+  GetTagAddedSignal: (self: Collections, Tag: string) -> EventSignal<GameObject>,
+  GetTagRemovedSignal: (self: Collections, Tag: string) -> EventSignal<GameObject>,
+  GetTagged: (self: Collections, Tag: string) -> { GameObject },
+}
+export type DataModel = {
+  AreScriptsBound: boolean ,
+  LiveScripts: string,
+  Time: number ,
+  VM: string,
 
-  function BindToClose(self, Callback: () -> ()) : ()
-  function GetService(self, Service: 'Workspace' | 'Engine' | 'PlayerInput' | 'AssetManager' | 'History' | 'Physics' | 'Renderer' | 'Collections') : GameObject
+  BindToClose: (self: DataModel, Callback: () -> ()) -> (),
+  GetService: (self: DataModel, Service: 'Workspace' | 'Engine' | 'PlayerInput' | 'AssetManager' | 'History' | 'Physics' | 'Renderer' | 'Collections') -> GameObject,
 
-  OnFrameBegin: EventSignal<(number)>
-end
-declare extern type DirectionalLight with
-  Brightness: number
-  Direction: vector
-  LightColor: Color
-  ShadowViewDistance: number
-  ShadowViewFarPlane: number
-  ShadowViewMoveWithCamera: boolean
-  ShadowViewNearPlane: number
-  ShadowViewOffset: vector
-  ShadowViewSize: number
-  ShadowViewSizeH: number
-  ShadowViewSizeV: number
-  Shadows: boolean
-end
-declare extern type Engine with
-  BoundDataModel: GameObject 
-  CommitHash: string 
-  Framerate: number 
-  FramerateCap: number
-  IsHeadless: boolean 
-  Version: string 
+  OnFrameBegin: EventSignal<(number)>,
+}
+export type DirectionalLight = {
+  Brightness: number,
+  Direction: vector,
+  LightColor: Color,
+  ShadowViewDistance: number,
+  ShadowViewFarPlane: number,
+  ShadowViewMoveWithCamera: boolean,
+  ShadowViewNearPlane: number,
+  ShadowViewOffset: vector,
+  ShadowViewSize: number,
+  ShadowViewSizeH: number,
+  ShadowViewSizeV: number,
+  Shadows: boolean,
+}
+export type Engine = {
+  BoundDataModel: GameObject ,
+  CommitHash: string ,
+  Framerate: number ,
+  FramerateCap: number,
+  IsHeadless: boolean ,
+  Version: string ,
 
-  function BindDataModel(self, DataModel:  GameObject & DataModel ) : ()
-  function CloseVM(self, VmName: string) : ()
-  function CreateVM(self, VmName: string) : ()
-  function Exit(self, ExitCode: number?) : ()
-  function GetCliArguments(self) : { string }
-  function GetConfigValue(self, Key: string) : (JsonSerializable)
-  function GetExplorerSelections(self) : ({ GameObject })
-  function GetToolNames(self) : { string }
-  function IsToolEnabled(self, ToolName: string) : (boolean)
-  function OpenTextDocument(self, Path: string, Line: number?) : ()
-  function ResetViewportInputRect(self) : ()
-  function RunInVM(self, VmName: string, Code: string, ChunkName: string?) : (boolean, string?)
-  function SaveConfig(self) : (boolean, string)
-  function SetConfigValue(self, Key: string, Value: JsonSerializable) : ()
-  function SetExplorerRoot(self, Root: GameObject) : ()
-  function SetExplorerSelections(self, Selections: { GameObject }) : ()
-  function SetToolEnabled(self, ToolName: string, Enabled: boolean) : ()
-  function SetViewportInputRect(self, Position: vector, Size: vector) : ()
-  function ShowMessageBox(self, Title: string, Message: string, Buttons: 'ok' | 'okcancel' | 'yesno' | 'yesnocancel' | nil, Icon: 'info' | 'warning' | 'error' | 'question' | nil, DefaultButton: number?) : (number)
+  BindDataModel: (self: Engine, DataModel:  GameObject & DataModel ) -> (),
+  CloseVM: (self: Engine, VmName: string) -> (),
+  CreateVM: (self: Engine, VmName: string) -> (),
+  Exit: (self: Engine, ExitCode: number?) -> (),
+  GetCliArguments: (self: Engine) -> { string },
+  GetConfigValue: (self: Engine, Key: string) -> (JsonSerializable),
+  GetExplorerSelections: (self: Engine) -> ({ GameObject }),
+  GetToolNames: (self: Engine) -> { string },
+  IsToolEnabled: (self: Engine, ToolName: string) -> (boolean),
+  OpenTextDocument: (self: Engine, Path: string, Line: number?) -> (),
+  ResetViewportInputRect: (self: Engine) -> (),
+  RunInVM: (self: Engine, VmName: string, Code: string, ChunkName: string?) -> (boolean, string?),
+  SaveConfig: (self: Engine) -> (boolean, string),
+  SetConfigValue: (self: Engine, Key: string, Value: JsonSerializable) -> (),
+  SetExplorerRoot: (self: Engine, Root: GameObject) -> (),
+  SetExplorerSelections: (self: Engine, Selections: { GameObject }) -> (),
+  SetToolEnabled: (self: Engine, ToolName: string, Enabled: boolean) -> (),
+  SetViewportInputRect: (self: Engine, Position: vector, Size: vector) -> (),
+  ShowMessageBox: (self: Engine, Title: string, Message: string, Buttons: 'ok' | 'okcancel' | 'yesno' | 'yesnocancel' | nil, Icon: 'info' | 'warning' | 'error' | 'question' | nil, DefaultButton: number?) -> (number),
 
-  OnMessageLogged: EventSignal<EnumLogType, string, string>
-end
-declare extern type History with
-  ActionHistorySize: number 
-  CanRedo: boolean 
-  CanUndo: boolean 
-  CurrentActionName: string? 
-  CurrentWaypoint: number 
-  IsRecordingAction: boolean 
-  TargetDataModel: GameObject
+  OnMessageLogged: EventSignal<EnumLogType, string, string>,
+}
+export type History = {
+  ActionHistorySize: number ,
+  CanRedo: boolean ,
+  CanUndo: boolean ,
+  CurrentActionName: string? ,
+  CurrentWaypoint: number ,
+  IsRecordingAction: boolean ,
+  TargetDataModel: GameObject,
 
-  function ClearHistory(self) : ()
-  function DiscardAction(self, Id: number) : ()
-  function EnableRecording(self) : ()
-  function FinishAction(self, Id: number) : ()
-  function GetActionData(self, Index: number) : { Name: string, Events: { { Target: GameObject, Property: string, NewValue: unknown, PreviousValue: unknown } } }
-  function GetCannotRedoReason(self) : (string)
-  function GetCannotUndoReason(self) : (string)
-  function GetCurrentActionData(self) : { Name: string, Events: { { Target: GameObject, Property: string, NewValue: unknown, PreviousValue: unknown } } }?
-  function Redo(self) : ()
-  function TryBeginAction(self, Name: string) : (number?)
-  function Undo(self) : ()
-end
-declare extern type Mesh with
-  CastsShadows: boolean
-  FaceCulling: EnumFaceCulling
-  Material: string
-  MeshAsset: string
-  MetallnessFactor: number
-  RoughnessFactor: number
-  Tint: Color
-  Transparency: number
-end
-declare extern type Model with
-end
-declare extern type ParticleEmitter with
-  Emitting: boolean
-  Lifetime: vector
-  ParticlesAreAttached: boolean
-  Rate: number
-end
-declare extern type Physics with
-  DebugCollisionAabbs: boolean
-  DebugContactPoints: boolean
-  DebugSpatialHeat: boolean
-  Gravity: vector
-  Simulating: boolean
-  Timescale: number
-end
-declare extern type PlayerInput with
-  Cursor: EnumCursor
-  CursorMode: EnumCursorMode
-  IsKeyboardSunk: boolean 
-  IsMouseSunk: boolean 
+  ClearHistory: (self: History) -> (),
+  DiscardAction: (self: History, Id: number) -> (),
+  EnableRecording: (self: History) -> (),
+  FinishAction: (self: History, Id: number) -> (),
+  GetActionData: (self: History, Index: number) -> { Name: string, Events: { { Target: GameObject, Property: string, NewValue: unknown, PreviousValue: unknown } } },
+  GetCannotRedoReason: (self: History) -> (string),
+  GetCannotUndoReason: (self: History) -> (string),
+  GetCurrentActionData: (self: History) -> { Name: string, Events: { { Target: GameObject, Property: string, NewValue: unknown, PreviousValue: unknown } } }?,
+  Redo: (self: History) -> (),
+  TryBeginAction: (self: History, Name: string) -> (number?),
+  Undo: (self: History) -> (),
+}
+export type Mesh = {
+  CastsShadows: boolean,
+  FaceCulling: EnumFaceCulling,
+  Material: string,
+  MeshAsset: string,
+  MetallnessFactor: number,
+  RoughnessFactor: number,
+  Tint: Color,
+  Transparency: number,
+}
+export type Model = {
+}
+export type ParticleEmitter = {
+  Emitting: boolean,
+  Lifetime: vector,
+  ParticlesAreAttached: boolean,
+  Rate: number,
+}
+export type Physics = {
+  DebugCollisionAabbs: boolean,
+  DebugContactPoints: boolean,
+  DebugSpatialHeat: boolean,
+  Gravity: vector,
+  Simulating: boolean,
+  Timescale: number,
+}
+export type PlayerInput = {
+  Cursor: EnumCursor,
+  CursorMode: EnumCursorMode,
+  IsKeyboardSunk: boolean ,
+  IsMouseSunk: boolean ,
 
-  function GetCursorPosition(self) : (vector)
-  function IsKeyPressed(self, Key: EnumKey) : (boolean)
-  function IsMouseButtonPressed(self, Button: EnumMouseButton) : (boolean)
+  GetCursorPosition: (self: PlayerInput) -> (vector),
+  IsKeyPressed: (self: PlayerInput, Key: EnumKey) -> (boolean),
+  IsMouseButtonPressed: (self: PlayerInput, Button: EnumMouseButton) -> (boolean),
 
-  KeyEvent: EventSignal<KeyInputEvent>
-  MouseButtonEvent: EventSignal<MouseButtonInputEvent>
-  ScrollEvent: EventSignal<ScrollInputEvent>
-end
-declare extern type PointLight with
-  Brightness: number
-  LightColor: Color
-  Range: number
-end
-declare extern type Renderer with
-  DebugWireframeRendering: boolean
-  IsFullscreen: boolean
-  Resolution: vector
-  VSync: boolean
+  KeyEvent: EventSignal<KeyInputEvent>,
+  MouseButtonEvent: EventSignal<MouseButtonInputEvent>,
+  ScrollEvent: EventSignal<ScrollInputEvent>,
+}
+export type PointLight = {
+  Brightness: number,
+  LightColor: Color,
+  Range: number,
+}
+export type Renderer = {
+  DebugWireframeRendering: boolean,
+  IsFullscreen: boolean,
+  Resolution: vector,
+  VSync: boolean,
 
-  SetShaderVariable: ((_: Renderer, Shader: string, Variable: string, Value: boolean | number | Color | Matrix, Type: EnumValueType?) -> ()) & ((_: Renderer, Shader: string, Variable: string, Value: vector, Type: EnumValueType) -> ())  function UnloadTexture(self, Texture: string) : ()
-end
-declare extern type RigidBody with
-  AngularVelocity: vector
-  CollisionType: EnumCollisionType
-  Density: number
-  Friction: number
-  GravityFactor: number
-  HullsFile: string
-  LinearVelocity: vector
-  PhysicsCollisions: boolean
-  PhysicsDynamics: boolean
-  PhysicsRotations: boolean
-  Restitution: number
-end
-declare extern type Sound with
-  FinishedLoading: boolean 
-  Length: number 
-  LoadSucceeded: boolean 
-  Looped: boolean
-  Playing: boolean
-  Position: number
-  SoundFile: string
-  Speed: number
-  Volume: number
+  SetShaderVariable: ((_: Renderer, Shader: string, Variable: string, Value: boolean | number | Color | Matrix, Type: EnumValueType?) -> ()) & ((_: Renderer, Shader: string, Variable: string, Value: vector, Type: EnumValueType) -> ()),
+  UnloadTexture: (self: Renderer, Texture: string) -> (),
+}
+export type RigidBody = {
+  AngularVelocity: vector,
+  CollisionType: EnumCollisionType,
+  Density: number,
+  Friction: number,
+  GravityFactor: number,
+  HullsFile: string,
+  LinearVelocity: vector,
+  PhysicsCollisions: boolean,
+  PhysicsDynamics: boolean,
+  PhysicsRotations: boolean,
+  Restitution: number,
+}
+export type Sound = {
+  FinishedLoading: boolean ,
+  Length: number ,
+  LoadSucceeded: boolean ,
+  Looped: boolean,
+  Playing: boolean,
+  Position: number,
+  SoundFile: string,
+  Speed: number,
+  Volume: number,
 
-  function Play(self) : ()
+  Play: (self: Sound) -> (),
 
-  OnLoaded: EventSignal<(boolean)>
-end
-declare extern type SpotLight with
-  Angle: number
-  Brightness: number
-  LightColor: Color
-  Range: number
-end
-declare extern type Transform with
-  LocalSize: vector 
-  LocalTransform: Matrix 
-  Size: vector
-  Transform: Matrix
-end
-declare extern type TreeLink with
-  Target: GameObject?
-end
-declare extern type Workspace with
-  SceneCamera: GameObject & Camera
+  OnLoaded: EventSignal<(boolean)>,
+}
+export type SpotLight = {
+  Angle: number,
+  Brightness: number,
+  LightColor: Color,
+  Range: number,
+}
+export type Transform = {
+  LocalSize: vector ,
+  LocalTransform: Matrix ,
+  Size: vector,
+  Transform: Matrix,
+}
+export type TreeLink = {
+  Target: GameObject?,
+}
+export type Workspace = {
+  SceneCamera: GameObject & Camera & Transform,
 
-  function GetObjectsInAabb(self, Position: vector, Size: vector, IgnoreList: { GameObject }?) : { GameObject & RigidBody & Transform }
-  function Raycast(self, Origin: vector, CastVector: vector, FilterList: { GameObject }?, FilterIsIgnoreList: boolean?) : { Object: GameObject & RigidBody & Transform, Position: vector, Normal: vector }?
-  function ScreenPointToVector(self, ScreenPoint: vector, Length: number?) : (vector)
-  function WorldToScreenPoint(self, WorldPoint: vector) : (vector, number)
-end
+  GetObjectsInAabb: (self: Workspace, Position: vector, Size: vector, IgnoreList: { GameObject }?) -> { GameObject & RigidBody & Transform },
+  Raycast: (self: Workspace, Origin: vector, CastVector: vector, FilterList: { GameObject }?, FilterIsIgnoreList: boolean?) -> { Object: GameObject & RigidBody & Transform, Position: vector, Normal: vector }?,
+  ScreenPointToVector: (self: Workspace, ScreenPoint: vector, Length: number?) -> (vector),
+  WorldToScreenPoint: (self: Workspace, WorldPoint: vector) -> (vector, number),
+}
 
 
 
@@ -340,7 +341,7 @@ type Creatables = {
 	PointLight: PointLight & Transform,
 	DirectionalLight: DirectionalLight,
 	SpotLight: SpotLight & Transform,
-	Camera: Camera,
+	Camera: Camera & Transform,
 	Animation: Animation,
 	Model: Model & Transform,
 	Bone: Bone,

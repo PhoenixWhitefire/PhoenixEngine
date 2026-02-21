@@ -640,7 +640,7 @@
         "Properties": {
           "SceneCamera": {
             "Description": "The `Camera` the Player sees the world through. If set to `nil`, a *fallback* is created at the origin",
-            "Type": "GameObject & Camera"
+            "Type": "GameObject & Camera & Transform"
           }
         }
       }
