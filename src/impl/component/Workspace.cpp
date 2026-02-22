@@ -355,7 +355,7 @@ SpatialCastResult EcWorkspace::Raycast(const glm::vec3& Origin, const glm::vec3&
 		for (uint32_t oid : CellObjects)
 		{
 			GameObject* p = GameObject::GetObjectById(oid);
-			if (!p)
+			if (!p || p->IsDestructionPending)
 				continue;
 
 			if (FilterIsIgnoreList)
