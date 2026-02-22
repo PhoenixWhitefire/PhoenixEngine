@@ -24,14 +24,14 @@
 
 static std::string errorString = "No error";
 
-static auto LoadModelAsMeshes(
+static auto loadModelAsMeshes(
 	const char* ModelFilePath,
 	glm::vec3 Size,
 	glm::vec3 Position,
 	bool AutoParent = true
 )
 {
-	ModelLoader Loader(ModelFilePath, AutoParent ? GameObject::s_DataModel : PHX_GAMEOBJECT_NULL_ID);
+	ModelLoader Loader = ModelLoader(ModelFilePath, AutoParent ? GameObject::s_DataModel : PHX_GAMEOBJECT_NULL_ID);
 
 	for (GameObject* object : Loader.LoadedObjs)
 	{
@@ -47,7 +47,7 @@ static auto LoadModelAsMeshes(
 	return Loader.LoadedObjs;
 }
 
-static glm::vec2 GetVector2FromJson(const nlohmann::json& Json)
+static glm::vec2 getVector2FromJson(const nlohmann::json& Json)
 {
 	glm::vec2 Vec2;
 
@@ -60,10 +60,9 @@ static glm::vec2 GetVector2FromJson(const nlohmann::json& Json)
 	}
 	catch (const nlohmann::json::type_error& TErr)
 	{
-		Log::Warning(
-			"Could not read Vector2: '"
-			+ std::string(TErr.what())
-			+ "'"
+		Log::WarningF(
+			"Could not read Vector2: {}",
+			TErr.what()
 		);
 	}
 	
@@ -71,7 +70,7 @@ static glm::vec2 GetVector2FromJson(const nlohmann::json& Json)
 	return Vec2;
 }
 
-static glm::vec3 GetVector3FromJson(const nlohmann::json& Json)
+static glm::vec3 getVector3FromJson(const nlohmann::json& Json)
 {
 	glm::vec3 Vec3;
 
@@ -85,17 +84,16 @@ static glm::vec3 GetVector3FromJson(const nlohmann::json& Json)
 	}
 	catch (const nlohmann::json::type_error& TErr)
 	{
-		Log::Warning(
-			"Could not read Vector3: '"
-			+ std::string(TErr.what())
-			+ "'"
+		Log::WarningF(
+			"Could not read Vector3: {}",
+			TErr.what()
 		);
 	}
 
 	return Vec3;
 }
 
-static Color GetColorFromJson(const nlohmann::json& Json)
+static Color getColorFromJson(const nlohmann::json& Json)
 {
 	Color col;
 
@@ -109,19 +107,18 @@ static Color GetColorFromJson(const nlohmann::json& Json)
 	}
 	catch (const nlohmann::json::type_error& TErr)
 	{
-		Log::Warning(
-			"Could not read Color: '"
-			+ std::string(TErr.what())
-			+ "'"
+		Log::WarningF(
+			"Could not read Color: {}",
+			TErr.what()
 		);
 	}
 
 	return col;
 }
 
-static glm::mat4 GetMatrixFromJson(const nlohmann::json& Json)
+static glm::mat4 getMatrixFromJson(const nlohmann::json& Json)
 {
-	glm::mat4 mat{};
+	glm::mat4 mat;
 
 	try
 	{
@@ -138,10 +135,9 @@ static glm::mat4 GetMatrixFromJson(const nlohmann::json& Json)
 	}
 	catch (const nlohmann::json::type_error& TErr)
 	{
-		Log::Warning(
-			"Could not read Matrix: '"
-			+ std::string(TErr.what())
-			+ "'"
+		Log::WarningF(
+			"Could not read Matrix: {}",
+			TErr.what()
 		);
 	}
 
@@ -163,7 +159,7 @@ static float getVersion(const std::string& MapFileContents)
 	return version;
 }
 
-static std::vector<ObjectRef> LoadMapVersion1(
+static std::vector<ObjectRef> loadSceneVersion1(
 	const std::string& Contents,
 	bool* SuccessPtr
 )
@@ -213,11 +209,11 @@ static std::vector<ObjectRef> LoadMapVersion1(
 
 		std::string ModelPath = PropObject["path"];
 
-		glm::vec3 Position = GetVector3FromJson(PropObject["position"]);
+		glm::vec3 Position = getVector3FromJson(PropObject["position"]);
 		//Vector3 Orientation = GetVector3FromJson(PropObject["orient"]);
-		glm::vec3 Size = GetVector3FromJson(PropObject["size"]);
+		glm::vec3 Size = getVector3FromJson(PropObject["size"]);
 
-		std::vector<ObjectRef> Model = LoadModelAsMeshes(ModelPath.c_str(), Size, Position);
+		std::vector<ObjectRef> Model = loadModelAsMeshes(ModelPath.c_str(), Size, Position);
 
 		std::string modelName = PropObject.value("name", "<UN-NAMED>");
 
@@ -296,12 +292,12 @@ static std::vector<ObjectRef> LoadMapVersion1(
 
 		NewObject->Name = Object.value("name", NewObject->Name);
 
-		glm::vec3 Position = GetVector3FromJson(Object["position"]);
+		glm::vec3 Position = getVector3FromJson(Object["position"]);
 		glm::vec3 Orientation{};
 
 		if (Object.find("orient") != Object.end())
 		{
-			Orientation = GetVector3FromJson(Object["orient"]);
+			Orientation = getVector3FromJson(Object["orient"]);
 			/*
 			Orientation = Vector3(
 				Orientation.Y,
@@ -331,9 +327,9 @@ static std::vector<ObjectRef> LoadMapVersion1(
 		);
 
 		if (Object.find("color") != Object.end())
-			cm->Tint = GetColorFromJson(Object["color"]);
+			cm->Tint = getColorFromJson(Object["color"]);
 
-		ct->Size = GetVector3FromJson(Object["size"]);
+		ct->Size = getVector3FromJson(Object["size"]);
 
 		if (Object.find("material") != Object.end())
 		{
@@ -369,12 +365,12 @@ static std::vector<ObjectRef> LoadMapVersion1(
 
 			ct->Transform = glm::translate(
 				glm::mat4(1.f),
-				(glm::vec3)GetVector3FromJson(LightObject["position"])
+				(glm::vec3)getVector3FromJson(LightObject["position"])
 			);
 		}
 		else
 		{
-			Object->FindComponent<EcDirectionalLight>()->Direction = GetVector3FromJson(LightObject["position"]);
+			Object->FindComponent<EcDirectionalLight>()->Direction = getVector3FromJson(LightObject["position"]);
 		}
 
 		//Light->LightColor = GetColorFromJson(LightObject["color"]);
@@ -453,7 +449,7 @@ static ObjectRef createObjectFromJsonItem(const nlohmann::json& Item, uint32_t I
 	}
 }
 
-static std::vector<ObjectRef> LoadMapVersion2(const std::string& Contents, float Version, bool* Success)
+static std::vector<ObjectRef> loadSceneVersion2(const std::string& Contents, float Version, bool* Success)
 {
 	ZoneScoped;
 
@@ -602,28 +598,28 @@ static std::vector<ObjectRef> LoadMapVersion2(const std::string& Contents, float
 
 			case Reflection::ValueType::Color:
 			{
-				assignment = GetColorFromJson(memberValue).ToGenericValue();
+				assignment = getColorFromJson(memberValue).ToGenericValue();
 
 				break;
 			}
 
 			case Reflection::ValueType::Vector2:
 			{
-				assignment = GetVector2FromJson(memberValue);
+				assignment = getVector2FromJson(memberValue);
 				
 				break;
 			}
 
 			case Reflection::ValueType::Vector3:
 			{
-				assignment = GetVector3FromJson(memberValue);
+				assignment = getVector3FromJson(memberValue);
 
 				break;
 			}
 
 			case Reflection::ValueType::Matrix:
 			{
-				assignment = GetMatrixFromJson(memberValue);
+				assignment = getMatrixFromJson(memberValue);
 
 				break;
 			}
@@ -751,10 +747,10 @@ std::vector<ObjectRef> SceneFormat::Deserialize(
 	std::vector<ObjectRef> objects{};
 
 	if (version >= 1.f && version < 2.f)
-		objects = LoadMapVersion1(jsonFileContents, SuccessPtr);
+		objects = loadSceneVersion1(jsonFileContents, SuccessPtr);
 
 	else if (version >= 2.f && version < 3.f)
-			objects = LoadMapVersion2(jsonFileContents, version, SuccessPtr);
+			objects = loadSceneVersion2(jsonFileContents, version, SuccessPtr);
 
 	else
 	{

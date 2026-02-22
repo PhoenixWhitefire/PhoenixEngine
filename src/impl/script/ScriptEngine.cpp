@@ -938,7 +938,16 @@ int ScriptEngine::L::HandleMethodCall(
 	// 15/08/2024
 }
 
+#ifdef __GNUG__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#endif
+
 #include <imgui_internal.h> // needed for `ImGuiContext`
+
+#ifdef __GNUG__
+#pragma GCC diagnostic pop
+#endif
 
 int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(YieldedCoroutine&)> Configure)
 {

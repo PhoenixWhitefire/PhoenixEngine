@@ -17943,8 +17943,17 @@ inline cached_power get_cached_power_for_binary_exponent(int e)
     JSON_ASSERT(kAlpha <= cached.e + e + 64);
     JSON_ASSERT(kGamma >= cached.e + e + 64);
 
+#ifdef __GNUG__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-overflow"
+#endif
+
     return cached;
 }
+
+#ifdef __GNUG__
+#pragma GCC diagnostic pop
+#endif
 
 /*!
 For n != 0, returns k, such that pow10 := 10^(k-1) <= n < 10^k.

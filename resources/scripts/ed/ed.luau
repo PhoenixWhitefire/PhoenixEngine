@@ -53,7 +53,6 @@ local GameVM = "GameVM"
 
 EditorCam.UseSimpleController = true
 EditorTl.Parent = workspace
--- EditorTl.Scripting = false -- TODO was not generated a type error for some reason
 Physics.Simulating = false
 
 local ToolOrder = {
@@ -430,13 +429,13 @@ local function openProject_(ManualPath: string?)
 		print("Re-created DataModel")
 	end
 
-	-- TODO: creating another binding and adding an `assert(dm)` causes the type state to become `*error-type*`
 	assert(Project.DataModel)
 	Project.DataModel.Name = Project.Name
 
 	Project.Workspace = Project.DataModel:FindChildWithComponent("Workspace")
 
 	if not Project.Workspace then
+		-- TODO luau: Project.Workspace is refining to `nil`
 		Project.Workspace = GameObject.new("Workspace")
 		Project.Workspace.SceneCamera = GameObject.new("Camera")
 		Project.Workspace.SceneCamera.Parent = Project.Workspace

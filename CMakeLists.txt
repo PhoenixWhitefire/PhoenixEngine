@@ -105,7 +105,7 @@ option(LUAU_BUILD_TESTS "Build tests" OFF)
 option(MINIAUDIO_NO_EXTRA_NODES                "Do not build extra node graph nodes" ON)
 
 add_subdirectory(Vendor)
-add_subdirectory(Vendor/luau)
+add_subdirectory(Vendor/luau EXCLUDE_FROM_ALL)
 add_subdirectory(Vendor/glm)
 add_subdirectory(Vendor/tracy)
 add_subdirectory(Vendor/miniaudio)

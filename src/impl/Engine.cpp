@@ -585,10 +585,6 @@ static GLuint startLoadingSkybox(std::vector<uint32_t>* skyboxFacesBeingLoaded)
 	return skyboxCubemap;
 }
 
-#include "imgui_internal.h"
-
-static ImGuiID ViewportNodeId = UINT32_MAX;
-
 ImVec2 Engine::GetViewportInputRectSize() const
 {
 	return OverrideDefaultViewportInputRect ? OverrideViewportInputSize : ImVec2{ (float)WindowSizeX, (float)WindowSizeY };
@@ -956,14 +952,14 @@ void Engine::Start()
 			ImGui::NewFrame();
 
 			if (!OverrideDefaultGuiViewportDockSpace)
-				ViewportNodeId = ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
+				ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
 			else
 			{
 				ImGuiViewport* viewport = ImGui::GetMainViewport();
 				viewport->WorkPos = OverrideViewportDockSpacePosition;
 				viewport->WorkSize = OverrideViewportDockSpaceSize;
 
-				ViewportNodeId = ImGui::DockSpaceOverViewport(0, viewport, ImGuiDockNodeFlags_PassthruCentralNode);
+				ImGui::DockSpaceOverViewport(0, viewport, ImGuiDockNodeFlags_PassthruCentralNode);
 			}
 		}
 

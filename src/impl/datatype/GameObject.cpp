@@ -301,7 +301,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 // https://stackoverflow.com/a/75891310
 struct HandleHasher
 {
-	size_t operator()(const ObjectHandle& a) const
+	size_t operator()(const ObjectHandle& a) const noexcept
     {
         return a.Reference.TargetId;
     }
@@ -631,7 +631,7 @@ void GameObject::SetParent(GameObject* newParent)
 
 	if (!newParent)
 	{
-		this->ForEachDescendant([](GameObject* d) -> bool {
+		this->ForEachDescendant([](GameObject* d) noexcept -> bool {
 			d->OwningDataModel = PHX_GAMEOBJECT_NULL_ID;
 			d->OwningWorkspace = PHX_GAMEOBJECT_NULL_ID;
 			return true;
@@ -653,7 +653,7 @@ void GameObject::SetParent(GameObject* newParent)
 
 	if (newOwningWorkspace != this->OwningWorkspace)
 	{
-		this->ForEachDescendant([newOwningWorkspace](GameObject* d) -> bool {
+		this->ForEachDescendant([newOwningWorkspace](GameObject* d) noexcept -> bool {
 			d->OwningWorkspace = newOwningWorkspace;
 			return true;
 		});
@@ -665,7 +665,7 @@ void GameObject::SetParent(GameObject* newParent)
 
 	if (newOwningDataModel != this->OwningDataModel)
 	{
-		this->ForEachDescendant([newOwningDataModel](GameObject* d) -> bool {
+		this->ForEachDescendant([newOwningDataModel](GameObject* d) noexcept -> bool {
 			d->OwningDataModel = newOwningDataModel;
 			return true;
 		});
@@ -1168,7 +1168,7 @@ GameObject::Collection& GameObject::GetCollection(const std::string& Name)
 			s_Collections[id].AddedEvent.Callbacks.push_back(Callback);
 			return (uint32_t)s_Collections[id].AddedEvent.Callbacks.size() - 1;
 		};
-		collection.AddedEvent.Descriptor->Disconnect = [id](void*, uint32_t ConnectionId)
+		collection.AddedEvent.Descriptor->Disconnect = [id](void*, uint32_t ConnectionId) noexcept
 		{
 			s_Collections[id].AddedEvent.Callbacks[ConnectionId] = nullptr;
 		};
@@ -1177,7 +1177,7 @@ GameObject::Collection& GameObject::GetCollection(const std::string& Name)
 			s_Collections[id].RemovedEvent.Callbacks.push_back(Callback);
 			return (uint32_t)s_Collections[id].RemovedEvent.Callbacks.size() - 1;
 		};
-		collection.RemovedEvent.Descriptor->Disconnect = [id](void*, uint32_t ConnectionId)
+		collection.RemovedEvent.Descriptor->Disconnect = [id](void*, uint32_t ConnectionId) noexcept
 		{
 			s_Collections[id].RemovedEvent.Callbacks[ConnectionId] = nullptr;
 		};

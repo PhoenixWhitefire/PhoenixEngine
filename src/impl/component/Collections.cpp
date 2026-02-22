@@ -11,7 +11,7 @@ public:
             { "GetCollections", Reflection::MethodDescriptor{
                 {},
                 { Reflection::ValueType::Array },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
                 {
                     std::vector<Reflection::GenericValue> tags;
                     for (const auto& it : GameObject::s_CollectionNameToId)

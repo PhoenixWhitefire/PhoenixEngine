@@ -35,7 +35,7 @@
             ec->n##Callbacks.push_back(Callback); \
             return (uint32_t)ec->n##Callbacks.size() - 1; \
         }, \
-        [](void* p, uint32_t Id) \
+        [](void* p, uint32_t Id) noexcept \
 		-> void \
         { \
             static_cast<c*>(p)->n##Callbacks[Id] = nullptr; \
@@ -288,8 +288,9 @@ namespace std
 			        ^ std::hash<float>()(g.Val.Vec3.z);
 			case ValueType::Matrix:
 			{
-				for (size_t i = 0; i < 4*4; i++)
-					h ^= std::hash<float>()(((float*)g.Val.Mat)[i]);
+				for (size_t i = 0; i < 4; i++)
+					for (size_t j = 0; j < 4; j++)
+						h ^= std::hash<float>()((*g.Val.Mat)[i][j]);
 
 				return h;
 			}

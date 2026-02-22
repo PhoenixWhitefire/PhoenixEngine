@@ -1,4 +1,14 @@
+#ifdef __GNUG__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#endif
+
 #include <imgui_internal.h>
+
+#ifdef __GNUG__
+#pragma GCC diagnostic pop
+#endif
+
 #include <string>
 
 #include "UserInput.hpp"

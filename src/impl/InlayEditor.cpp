@@ -5,7 +5,19 @@
 #include <glm/gtx/euler_angles.hpp>
 #include <imgui/imgui.h>
 #include <imgui/misc/cpp/imgui_stdlib.h>
+
+#ifdef __GNUG__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#endif
+
+// needed for ScrollToItem, BeginPopupEx, GetIO(context)
 #include <imgui_internal.h>
+
+#ifdef __GNUG__
+#pragma GCC diagnostic pop
+#endif
+
 #include <tracy/Tracy.hpp>
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
