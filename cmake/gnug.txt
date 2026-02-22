@@ -22,7 +22,6 @@ target_compile_options(PhoenixEngine PRIVATE
 	-Wno-sign-compare
 	-Wuninitialized
 	-Wno-format-truncation
-	-Wabi
 )
 
 # including Vendor/luau/Ast/include/luau/Ast.h
