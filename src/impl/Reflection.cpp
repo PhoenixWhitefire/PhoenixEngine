@@ -119,8 +119,6 @@ Reflection::GenericValue::GenericValue(const glm::mat4& m)
 
 static void fromArray(Reflection::GenericValue& G, const std::span<const Reflection::GenericValue>& Array)
 {
-	G.Type = Reflection::ValueType::Array;
-
 	size_t allocSize = Array.size() * sizeof(G);
 	if (allocSize == 0)
 	{
@@ -218,7 +216,6 @@ void Reflection::GenericValue::CopyInto(GenericValue& Target, const GenericValue
 	case ValueType::Map:
 	{
 		fromArray(Target, std::span(Source.Val.Array, Source.Size));
-		Target.Type = ValueType::Map;
 		break;
 	}
 

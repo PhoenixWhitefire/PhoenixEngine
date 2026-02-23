@@ -55,6 +55,7 @@ target_include_directories(PhoenixEngine PUBLIC
 	"Vendor/luau/Ast/include"
 	"Vendor/glfw/include"
 	"Vendor/tinyfd"
+	"Vendor/curl/include"
 )
 
 set(PHX_BUILD_TYPE $<IF:$<CONFIG:Debug>,Debug,$<IF:$<CONFIG:Release>,Release,$<IF:$<CONFIG:DebugTSan>,DebugTSan,ReleaseTSan>>>)
@@ -86,6 +87,7 @@ target_link_libraries(PhoenixEngine PRIVATE
 	miniaudio
 	$<IF:$<BOOL:${PHX_HEADLESS}>,,glfw>
 	TracyClient
+	libcurl
 
 	Luau.Compiler
 	Luau.Ast
@@ -103,6 +105,14 @@ add_compile_definitions($<$<CONFIG:Release>:TRACY_ON_DEMAND>)
 option(LUAU_BUILD_CLI "Build CLI" OFF)
 option(LUAU_BUILD_TESTS "Build tests" OFF)
 option(MINIAUDIO_NO_EXTRA_NODES                "Do not build extra node graph nodes" ON)
+option(BUILD_CURL_EXE "Build curl executable" OFF)
+option(BUILD_STATIC_LIBS "Build static libraries" ON)
+option(HTTP_ONLY "Disable all protocols except HTTP (This overrides all CURL_DISABLE_* options)" ON)
+option(BUILD_LIBCURL_DOCS "Build libcurl man pages" OFF)
+option(BUILD_MISC_DOCS "Build misc man pages (e.g. curl-config and mk-ca-bundle)" OFF)
+option(ENABLE_CURL_MANUAL "Build the man page for curl and enable its -M/--manual option" OFF)
+option(BUILD_TESTING "Build tests" OFF)
+option(BUILD_EXAMPLES "Build libcurl examples" OFF)
 
 add_subdirectory(Vendor)
 add_subdirectory(Vendor/luau EXCLUDE_FROM_ALL)
@@ -110,6 +120,7 @@ add_subdirectory(Vendor/glm)
 add_subdirectory(Vendor/tracy)
 add_subdirectory(Vendor/miniaudio)
 add_subdirectory(Vendor/glfw)
+add_subdirectory(Vendor/curl)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 	include(cmake/gnug-configuresubprojects.txt)
@@ -145,6 +156,7 @@ add_dependencies(PhoenixEngine
 	Luau.Compiler
 	Luau.Require
 	Luau.VM
+	libcurl
 )
 
 if (!PHX_HEADLESS)

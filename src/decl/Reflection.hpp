@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <format>
+#include <future>
 #include <span>
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -190,6 +191,7 @@ namespace Reflection
 	typedef Reflection::GenericValue(*PropertyGetter)(void*);
 	typedef void(*PropertySetter)(void*, const Reflection::GenericValue&);
 	typedef std::vector<Reflection::GenericValue>(*MethodFunction)(void*, const std::vector<Reflection::GenericValue>&);
+	typedef std::promise<std::vector<Reflection::GenericValue>>*(*YieldingMethodFunction)(void*, const std::vector<Reflection::GenericValue>&);
 
 	using EventCallback = std::function<void(const std::vector<Reflection::GenericValue>&, uint32_t)>;
 	using EventConnectFunction = std::function<uint32_t(void*, EventCallback)>;
@@ -213,10 +215,35 @@ namespace Reflection
 
 	struct MethodDescriptor
 	{
+		MethodDescriptor(
+			const std::vector<ValueType>& Inputs,
+			const std::vector<ValueType>& Outputs,
+			const MethodFunction Func
+		)
+		: Inputs(Inputs),
+		  Outputs(Outputs),
+		  Func(Func)
+		{
+		}
+
+		MethodDescriptor(
+			const std::vector<ValueType>& Inputs,
+			const std::vector<ValueType>& Outputs,
+			const YieldingMethodFunction YieldFunc
+		)
+		: Inputs(Inputs),
+		  Outputs(Outputs),
+		  YieldFunc(YieldFunc),
+		  Yields(true)
+		{
+		}
+
 		std::vector<ValueType> Inputs;
 		std::vector<ValueType> Outputs;
 
-		MethodFunction Func;
+		YieldingMethodFunction YieldFunc = nullptr;
+		MethodFunction Func = nullptr;
+		bool Yields = false;
 	};
 
 	struct EventDescriptor

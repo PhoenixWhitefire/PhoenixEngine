@@ -238,6 +238,7 @@ static int obj_namecall(lua_State* L)
 		luaL_error(L, "Error while invoking method '%s' of %s: %s", k, g->GetFullName().c_str(), err.what());
 	}
 
+	// Note: May be -1 for yielding
 	return numresults;
 }
 

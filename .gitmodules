@@ -30,3 +30,6 @@
 [submodule ".github/wiki"]
 	path = .github/wiki
 	url = https://github.com/PhoenixWhitefire/PhoenixEngine.wiki.git
+[submodule "Vendor/curl"]
+	path = Vendor/curl
+	url = https://github.com/curl/curl.git

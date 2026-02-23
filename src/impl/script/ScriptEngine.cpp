@@ -90,7 +90,7 @@ lua_Type ScriptEngine::ReflectionTypeToLuauType(Reflection::ValueType rvt)
 }
 
 static int shouldResume_Wait(
-	const ScriptEngine::YieldedCoroutine& CorInfo,
+	ScriptEngine::YieldedCoroutine& CorInfo,
 	lua_State* L
 )
 {
@@ -104,7 +104,7 @@ static int shouldResume_Wait(
 }
 
 static int shouldResume_Deferred(
-	const ScriptEngine::YieldedCoroutine& CorInfo,
+	ScriptEngine::YieldedCoroutine& CorInfo,
 	lua_State* L
 )
 {
@@ -120,38 +120,40 @@ static int shouldResume_Deferred(
 		return -1;
 }
 
-static int shouldResume_Future(const ScriptEngine::YieldedCoroutine& CorInfo, lua_State* L)
+static int shouldResume_Promise(ScriptEngine::YieldedCoroutine& CorInfo, lua_State* L)
 {
-	const std::shared_future<std::vector<Reflection::GenericValue>>& future = CorInfo.RmFuture;
+	assert(CorInfo.RmPromise);
+	const std::shared_future<std::vector<Reflection::GenericValue>>& future = CorInfo.RmPromise_Future;
 
-	if ( future.valid()
-		 && future.wait_for(std::chrono::seconds(0)) == std::future_status::ready
+	if (future.valid()
+		&& future.wait_for(std::chrono::seconds(0)) == std::future_status::ready
 	)
 	{
 		std::vector<Reflection::GenericValue> returnVals = future.get();
 		for (const Reflection::GenericValue& v : returnVals)
 			ScriptEngine::L::PushGenericValue(L, v);
 
+		delete CorInfo.RmPromise;
+		CorInfo.RmPromise = nullptr;
 		return (int)returnVals.size();
 	}
 	else
 		return -1;
 }
 
-static int shouldResume_Polled(const ScriptEngine::YieldedCoroutine& CorInfo, lua_State* L)
+static int shouldResume_Polled(ScriptEngine::YieldedCoroutine& CorInfo, lua_State* L)
 {
 	return CorInfo.RmPoll(L);
 }
 
-typedef int(*ResumptionModeHandler)(const ScriptEngine::YieldedCoroutine&, lua_State*);
+typedef int(*ResumptionModeHandler)(ScriptEngine::YieldedCoroutine&, lua_State*);
 
-static const ResumptionModeHandler s_ResumptionModeHandlers[] =
-{
+static const ResumptionModeHandler s_ResumptionModeHandlers[] = {
 	nullptr,
 
 	shouldResume_Wait,
 	shouldResume_Deferred,
-	shouldResume_Future,
+	shouldResume_Promise,
 	shouldResume_Polled,
 	shouldResume_Polled
 };
@@ -905,6 +907,21 @@ int ScriptEngine::L::HandleMethodCall(
 			inputs.back().Type = Reflection::ValueType::Vector2; // no native Vector2 type, but `vector` still works fine
 	}
 
+	if (func->Yields)
+	{
+		return ScriptEngine::L::Yield(
+			L,
+			func->Outputs.size(),
+			[func, inputs, Reflector](YieldedCoroutine& yc)
+			{
+				std::promise<std::vector<Reflection::GenericValue>>* sf = func->YieldFunc(Reflector.Referred(), inputs);
+				yc.Mode = YieldedCoroutine::ResumptionMode::Promise;
+				yc.RmPromise = sf;
+				yc.RmPromise_Future = sf->get_future().share();
+			}
+		);
+	}
+
 	// Now, onto the *REAL* business...
 	std::vector<Reflection::GenericValue> outputs;
 
@@ -1015,22 +1032,18 @@ int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yiel
 	lua_yield(L, NumResults);
 	lua_pushthread(L);
 
-	s_YieldedCoroutines.push_back(YieldedCoroutine{
+	YieldedCoroutine yc = YieldedCoroutine{
 		.Coroutine = L,
 		.CoroutineReference = lua_ref(L, -1),
 		.DataModel = dmObject,
 		.Mode = YieldedCoroutine::ResumptionMode::INVALID
-	});
-	YieldedCoroutine& yc = s_YieldedCoroutines.back();
-
-	std::string traceback;
-	L::DumpStacktrace(L, &traceback);
-
-	yc.DebugString = traceback;
+	};
+	L::DumpStacktrace(L, &yc.DebugString);
 
 	Configure(yc);
 	assert(yc.Mode != YieldedCoroutine::ResumptionMode::INVALID);
 
+	s_YieldedCoroutines.push_back(yc);
 	return -1; // like lua_yield
 }
 
@@ -1059,7 +1072,7 @@ void ScriptEngine::L::PushMethod(lua_State* L, const Reflection::MethodDescripto
 			{
 				Reflection::MethodDescriptor* fn =
 					static_cast<Reflection::MethodDescriptor*>(lua_tolightuserdata(L, lua_upvalueindex(1)));
-				auto& fc = *static_cast<decltype(Reflector)*>(lua_tolightuserdata(L, lua_upvalueindex(2)));
+				ReflectorRef& fc = *static_cast<ReflectorRef*>(lua_tolightuserdata(L, lua_upvalueindex(2)));
 
 				return ScriptEngine::L::HandleMethodCall(
 					L,

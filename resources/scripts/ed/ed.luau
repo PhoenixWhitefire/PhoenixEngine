@@ -4,6 +4,7 @@ local PlayerInput: PlayerInput = game:GetService("PlayerInput") :: any
 local Renderer: Renderer = game:GetService("Renderer") :: any
 local History: History = game:GetService("History") :: any
 local Physics: Physics = game:GetService("Physics") :: any
+local Network: Network = game:GetService("Network") :: any
 local Engine: Engine = game:GetService("Engine") :: any
 
 local FALLBACK_IMAGE = "@etextures/editor-icons/fallback.png"
@@ -926,6 +927,18 @@ local function getCenteredX(cursorx: number, cxavail: number, elementWidth: numb
 	return cursorx + cxavail / 2 - elementWidth / 2
 end
 
+local data = ""
+
+--[[
+local data = Network:MakeHttpRequestAsync("https://api.github.com/repos/PhoenixWhitefire/PhoenixEngine/commits/master")
+
+print(data, "= {")
+for k, v in data do
+	print(" ", k, "=", v)
+end
+print("}")
+]]
+
 local function renderMainMenuBar(dt: number)
 	local pushedCol = CurrentStage == "ProjectPlaying"
 
@@ -1121,7 +1134,7 @@ local function renderMainMenuBar(dt: number)
 
 		local ws = Renderer.Resolution
 
-		local ABOUT_SIZE_X, ABOUT_SIZE_Y = 375, 280
+		local ABOUT_SIZE_X, ABOUT_SIZE_Y = 375, 300
 
 		imgui.setnextwindowposition((ws.x - ABOUT_SIZE_X) / 2, (ws.y - ABOUT_SIZE_Y) / 2);
 		imgui.setnextwindowsize(ABOUT_SIZE_X, ABOUT_SIZE_Y);
@@ -1158,6 +1171,8 @@ local function renderMainMenuBar(dt: number)
 
 		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, ctsx), cursory)
 		imgui.urllink(Engine.CommitHash:sub(1, 8), `{ GITHUB_URL }/commit/{ Engine.CommitHash }`)
+
+		imgui.text(data)
 
 		imgui.endpopup()
 	end

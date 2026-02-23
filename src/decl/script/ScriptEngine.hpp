@@ -34,7 +34,7 @@ namespace ScriptEngine
 
 				Wait, // resume yielded thread at a specific time (`task.wait`)
 				Deferred, // resume arbitrary thread at a specific time and pass arguments
-				Future, // check the status of an `std::shared_future`
+				Promise, // promise
 				Polled, // poll a function,
 				DeferredEventResumption // poll a function
 			};
@@ -65,7 +65,8 @@ namespace ScriptEngine
 			} RmEventCallback;
 		};
 
-		std::shared_future<std::vector<Reflection::GenericValue>> RmFuture;
+		std::promise<std::vector<Reflection::GenericValue>>* RmPromise;
+		std::shared_future<std::vector<Reflection::GenericValue>> RmPromise_Future;
 		std::function<int(lua_State*)> RmPoll;
 
 		ResumptionMode Mode = ResumptionMode::INVALID;
