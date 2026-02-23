@@ -154,7 +154,7 @@ export type DataModel = {
   VM: string,
 
   BindToClose: (self: DataModel, Callback: () -> ()) -> (),
-  GetService: (self: DataModel, Service: 'Workspace' | 'Engine' | 'PlayerInput' | 'AssetManager' | 'History' | 'Physics' | 'Renderer' | 'Collections') -> GameObject,
+  GetService: (self: DataModel, Service: 'Engine' | 'PlayerInput' | 'AssetManager' | 'History' | 'Physics' | 'Renderer' | 'Collections' | 'Network') -> GameObject,
 
   OnFrameBegin: EventSignal<(number)>,
 }
@@ -234,6 +234,10 @@ export type Mesh = {
   Transparency: number,
 }
 export type Model = {
+}
+export type Network = {
+
+  MakeHttpRequestAsync: (self: Network, { Url: string, Method: nil | 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'PATCH', Headers: { [string]: string }?, Body: string? }) -> ({ Ok: false, Status: number, Error: string } | { Ok: true, Status: number, Headers: { [string]: string }, Body: string }),
 }
 export type ParticleEmitter = {
   Emitting: boolean,
@@ -354,6 +358,7 @@ type Creatables = {
 	Physics: Physics,
 	Renderer: Renderer,
 	Collections: Collections,
+	Network: Network,
 }
 declare extern type EnumCollisionType extends EnumItem with end
 declare extern type EnumCollisionType_INTERNAL extends Enum with

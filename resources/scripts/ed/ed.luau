@@ -930,13 +930,23 @@ end
 local data = ""
 
 --[[
-local data = Network:MakeHttpRequestAsync("https://api.github.com/repos/PhoenixWhitefire/PhoenixEngine/commits/master")
+local data = Network:MakeHttpRequestAsync({ Url = "https://phoenixwhitefire.github.io/net_test.txt" })
 
-print(data, "= {")
-for k, v in data do
-	print(" ", k, "=", v)
+local function printTable(t, depth: string)
+	print(depth .. tostring(t), "= {")
+	for k, v in t do
+		if typeof(v) ~= "table" then
+			print(depth .. " ", k, "=", v)
+		else
+			printTable(v, depth .. "  ")
+		end
+	end
+	print(depth .. "}")
 end
-print("}")
+
+printTable(data, "")
+
+Engine:Exit()
 ]]
 
 local function renderMainMenuBar(dt: number)

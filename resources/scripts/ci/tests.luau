@@ -182,16 +182,17 @@ local function runTests(t: TestsNode, depth)
 				succeeded += 1
 				appendlog(`Succeeded ({mstimestr})`)
 			else
-				local failReasonStartPos = errd[1]:find("FAILTEST:")
+				local errm = if typeof(errd) == "table" then errd[1] else errd
+				local failReasonStartPos = errm:find("FAILTEST:")
 
 				if failReasonStartPos then
-					appendlog(`FAILED ({mstimestr}): {string.sub(errd[1], failReasonStartPos + #("FAILTEST:"), #errd[1])}`)
+					appendlog(`FAILED ({mstimestr}): {string.sub(errm, failReasonStartPos + #("FAILTEST:"), #errd[1])}`)
 					failed += 1
 				else
 					appendlog("\n")
 					error(`TESTING ERROR: A test or the framework threw an unexpected error\n`
 						.. `Test {index}: "{entry.Name}"\n`
-						.. `Error:\n{errd[2]}-- End caught exception --`)
+						.. `Error:\n{errm}\n-- End caught exception --`)
 				end
 			end
 		else

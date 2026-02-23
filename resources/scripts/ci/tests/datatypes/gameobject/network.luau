@@ -3,6 +3,11 @@ local Types = require("@ci/test-types.luau")
 
 return function(test: Types.Test, expect: Types.Expect)
     test("Lemongrab", function()
-        expect(Network:MakeHttpRequestAsync("https://phoenixwhitefire.github.io/net_test.txt")):toBe({ Ok = true, Status = 200, Body = "Lemongrab\n" })
+        local response = Network:MakeHttpRequestAsync({ Url = "https://phoenixwhitefire.github.io/net_test.txt" })
+        expect(response.Ok):toBe(true)
+        assert(response.Ok)
+
+        expect(response.Status):toBe(200)
+        expect(response.Body):toBe("Lemongrab\n")
     end)
 end

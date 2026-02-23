@@ -402,7 +402,7 @@ std::string Reflection::GenericValue::ToString() const
 }
 
 // `::AsInteger` and `::AsDouble` have special errors
-#define WRONG_TYPE() RAISE_RTF("Called {} but Generic Value was a {}", __FUNCTION__, TypeAsString(Type))
+#define WRONG_TYPE() RAISE_RTF("Called `{}` but GenericValue was '{}' ({})", __FUNCTION__, ToString(), TypeAsString(Type))
 
 std::string Reflection::GenericValue::AsString() const
 {
@@ -485,6 +485,9 @@ std::span<Reflection::GenericValue> Reflection::GenericValue::AsArray() const
 }
 std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> Reflection::GenericValue::AsMap() const
 {
+	if (Type != ValueType::Map && Type != ValueType::Array)
+		WRONG_TYPE();
+
 	if (Size % 2 != 0)
 		RAISE_RTF("Map had an uneven number of array elements ({})", Size);
 

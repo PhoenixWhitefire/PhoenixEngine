@@ -1500,6 +1500,9 @@
   "@phoenix/globaltype/Mesh.Transparency": {
     "documentation": "Its transparency/translucency"
   },
+  "@phoenix/globaltype/Network.MakeHttpRequestAsync": {
+    "documentation": "Makes an HTTP request to the provided URL"
+  },
   "@phoenix/globaltype/ParticleEmitter.Emitting": {
     "documentation": "Whether the emitter should emit new particles"
   },

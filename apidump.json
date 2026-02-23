@@ -177,6 +177,11 @@
         }
       },
       "Model": {},
+      "Network": {
+        "Methods": {
+          "MakeHttpRequestAsync": "(Map) -> (Map)"
+        }
+      },
       "ParticleEmitter": {
         "Properties": {
           "Emitting": "Boolean",

@@ -636,11 +636,8 @@ Reflection::GenericValue ScriptEngine::L::ToGeneric(lua_State* L, int StackIndex
 	}
 	case LUA_TTABLE:
 	{
-		// 15/09/2024
-		// TODO
-		// Maps
-
 		std::vector<Reflection::GenericValue> items;
+		int keyType = LUA_TNONE;
 
 		lua_pushvalue(L, StackIndex);
 
@@ -649,12 +646,43 @@ Reflection::GenericValue ScriptEngine::L::ToGeneric(lua_State* L, int StackIndex
 
 		while (lua_next(L, -2) != 0)
 		{
+			int kt = lua_type(L, -2);
+			if (kt != keyType)
+			{
+				if (keyType == LUA_TNONE)
+					keyType = kt;
+				else
+					luaL_error(
+						L,
+						"Cannot mix table key types. Previous key type was %s, current key is '%s' (%s)",
+						lua_typename(L, keyType), luaL_tolstring(L, -2, nullptr), luaL_typename(L, -3)
+					);
+			}
+
+			items.push_back(L::ToGeneric(L, -2));
 			items.push_back(L::ToGeneric(L, -1));
+
 			lua_pop(L, 1);
 		}
 		lua_pop(L, 1);
 
-		return items;
+		if (keyType == LUA_TNUMBER)
+		{
+			std::vector<Reflection::GenericValue> array;
+			array.resize(items.size() / 2);
+
+			for (const Reflection::GenericValue& gv : items)
+				array.push_back(gv);
+
+			return array;
+		}
+		else
+		{
+			Reflection::GenericValue map = items;
+			map.Type = Reflection::ValueType::Map;
+
+			return map;
+		}
 	}
 	default:
 	{

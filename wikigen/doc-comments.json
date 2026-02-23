@@ -200,7 +200,7 @@
           "GetService": {
             "Description": "Gets the Object representing the specified Service. If it does not exist yet in the Data Model, it is created",
             "ParameterNames": "Service",
-            "Type": "('Workspace' | 'Engine' | 'PlayerInput' | 'AssetManager' | 'History' | 'Physics' | 'Renderer' | 'Collections') : GameObject"
+            "Type": "('Engine' | 'PlayerInput' | 'AssetManager' | 'History' | 'Physics' | 'Renderer' | 'Collections' | 'Network') : GameObject"
           }
         },
         "Properties": {
@@ -442,6 +442,15 @@
           "Lifetime": "The X and Y components act as a range of how long any particle can last, in seconds",
           "ParticlesAreAttached": "Whether the particles are attached to and move with the emitter",
           "Rate": "An integer indicating how many particles should be emitted per second (must be above or equal to `0`)"
+        }
+      },
+      "Network": {
+        "Description": "Networking",
+        "Methods": {
+          "MakeHttpRequestAsync": {
+            "Description": "Makes an HTTP request to the provided URL",
+            "Type": "(self, { Url: string, Method: nil | 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'PATCH', Headers: { [string]: string }?, Body: string? }) : ({ Ok: false, Status: number, Error: string } | { Ok: true, Status: number, Headers: { [string]: string }, Body: string })"
+          }
         }
       },
       "Physics": {
