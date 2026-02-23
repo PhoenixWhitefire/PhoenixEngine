@@ -638,6 +638,7 @@ Reflection::GenericValue ScriptEngine::L::ToGeneric(lua_State* L, int StackIndex
 	{
 		std::vector<Reflection::GenericValue> items;
 		int keyType = LUA_TNONE;
+		int lastIndex = 0;
 
 		lua_pushvalue(L, StackIndex);
 
@@ -649,6 +650,9 @@ Reflection::GenericValue ScriptEngine::L::ToGeneric(lua_State* L, int StackIndex
 			int kt = lua_type(L, -2);
 			if (kt != keyType)
 			{
+				if (kt != LUA_TNUMBER && kt != LUA_TSTRING)
+					luaL_error(L, "Expected number or string keys, got '%s' (%s)", luaL_tolstring(L, -2, nullptr), luaL_typename(L, -3));
+
 				if (keyType == LUA_TNONE)
 					keyType = kt;
 				else
@@ -659,6 +663,13 @@ Reflection::GenericValue ScriptEngine::L::ToGeneric(lua_State* L, int StackIndex
 					);
 			}
 
+			if (kt == LUA_TNUMBER && lua_tonumber(L, -2) != (float)lua_tointeger(L, -2))
+				luaL_error(L, "Numerical indices are expected to be integers, but got %f", lua_tonumber(L, -2));
+
+			if (kt == LUA_TNUMBER && (lua_tointeger(L, -2) < 1 || lua_tointeger(L, -2) != lastIndex + 1))
+				luaL_error(L, "Array indices are out-of-order. At index %i, last index %i", lua_tointeger(L, -2), lastIndex);
+			lastIndex = lua_tointeger(L, -2);
+
 			items.push_back(L::ToGeneric(L, -2));
 			items.push_back(L::ToGeneric(L, -1));
 
@@ -666,22 +677,22 @@ Reflection::GenericValue ScriptEngine::L::ToGeneric(lua_State* L, int StackIndex
 		}
 		lua_pop(L, 1);
 
-		if (keyType == LUA_TNUMBER)
-		{
-			std::vector<Reflection::GenericValue> array;
-			array.resize(items.size() / 2);
-
-			for (const Reflection::GenericValue& gv : items)
-				array.push_back(gv);
-
-			return array;
-		}
-		else
+		if (keyType == LUA_TSTRING)
 		{
 			Reflection::GenericValue map = items;
 			map.Type = Reflection::ValueType::Map;
 
 			return map;
+		}
+		else
+		{
+			std::vector<Reflection::GenericValue> array;
+			array.reserve(items.size() / 2);
+
+			for (uint32_t i = 1; i < items.size(); i += 2)
+				array.push_back(items[i]);
+
+			return array;
 		}
 	}
 	default:
