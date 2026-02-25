@@ -998,6 +998,14 @@ void Engine::Start()
 				&sun
 			);
 
+			// TODO weird skybox graphical corruption if we don't draw anything
+			if (CurrentScene.RenderList.size() == 0)
+				CurrentScene.RenderList.push_back(RenderItem{
+					.RenderMeshId = 1,
+					.MaterialId = m_MaterialManager.LoadFromPath("plastic"),
+					.Transparency = 1.f
+				});
+
 			if (m_Physics.DebugSpatialHeat)
 			{
 				workspaceComponent = WorkspaceRef->FindComponent<EcWorkspace>();

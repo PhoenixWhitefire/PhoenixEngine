@@ -315,8 +315,8 @@ namespace std
 			        ^ std::hash<float>()(g.Val.Vec3.z);
 			case ValueType::Matrix:
 			{
-				for (size_t i = 0; i < 4; i++)
-					for (size_t j = 0; j < 4; j++)
+				for (uint8_t i = 0; i < 4; i++)
+					for (uint8_t j = 0; j < 4; j++)
 						h ^= std::hash<float>()((*g.Val.Mat)[i][j]);
 
 				return h;
