@@ -133,8 +133,11 @@ set_property(TARGET TracyClient PROPERTY FOLDER "Vendor")
 set_property(TARGET glm PROPERTY FOLDER "Vendor")
 set_property(TARGET miniaudio PROPERTY FOLDER "Vendor")
 set_property(TARGET OpenGL PROPERTY FOLDER "Vendor")
-set_property(TARGET libcurl_object PROPERTY FOLDER "Vendor/Curl")
-set_property(TARGET libcurl_static PROPERTY FOLDER "Vendor/Curl")
+
+if (MSVC)
+	set_property(TARGET libcurl_object PROPERTY FOLDER "Vendor/Curl")
+	set_property(TARGET libcurl_static PROPERTY FOLDER "Vendor/Curl")
+endif()
 
 set_property(TARGET Luau.Require PROPERTY FOLDER "Vendor/Luau")
 set_property(TARGET Luau.Compiler PROPERTY FOLDER "Vendor/Luau")
