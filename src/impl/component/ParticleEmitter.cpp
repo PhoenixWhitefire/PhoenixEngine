@@ -19,9 +19,6 @@ public:
         m_Components.emplace_back();
         m_Components.back().Object = Object;
 
-		if (!Object->FindComponent<EcTransform>())
-			Object->AddComponent(EntityComponent::Transform);
-
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
 	

@@ -82,11 +82,50 @@ end
 
 declare extern type EnumItem with
 end
+
+type function IntersectCreatables(ty: type)
+	if ty:is("singleton") then
+		for i, c in Creatables:properties() do
+			if i:value() == ty:value() then
+				return c.read
+			end
+		end
+
+		error(`invalid component '{ty:value()}'`)
+
+	elseif ty:is("union") then
+		local results = {}
+
+		for _, t in ty:components() do
+			local found = false
+
+			for i, c in Creatables:properties() do
+				if i:value() == t:value() then
+					table.insert(results, c.read)
+					found = true
+					break
+				end
+			end
+
+			if not found then
+				error(`invalid component '{t:value()}'`)
+			end
+		end
+
+		return types.intersectionof(table.unpack(results))
+	end
+
+	error(`expected singleton or union, got {ty.tag}`)
+
+	return types.never
+end
 ]]
 local documentationData = {}
 
+local g = GameObject.new("hello")
+
 local GameObjectOverrides = {
-	new = "(<T>(ComponentName: T | keyof<Creatables>) -> GameObject & index<Creatables, T>)",
+	new = "(<T>(Components: { T }) -> GameObject & IntersectCreatables<T>)",
 	FindChildWithComponent = "<T>(self, ComponentName: keyof<Creatables> & T) -> (GameObject & index<Creatables, T>)?",
 }
 

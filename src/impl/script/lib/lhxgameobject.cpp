@@ -75,18 +75,27 @@ GameObject* luhx_checkgameobject(lua_State* L, int StackIndex)
 static int gameobject_new(lua_State* L)
 {
     GameObject* newObject = GameObject::Create();
-	if (lua_gettop(L) >= 1)
-		newObject->Name = luaL_checkstring(L, 1);
 
-	for (int i = 1; i <= lua_gettop(L); i++)
+	if (lua_type(L, 1) != LUA_TNONE)
 	{
-		const char* n = luaL_checkstring(L, i);
+		luaL_argcheck(L, lua_type(L, 1) == LUA_TTABLE, 1, "expected table for argument 1, or 0 arguments");
 
-		EntityComponent it = FindComponentTypeByName(n);
-		if (it == EntityComponent::None)
-			luaL_error(L, "Invalid component '%s'", n);
+		lua_pushnil(L);
+		while (lua_next(L, 1))
+		{
+			if (lua_type(L, -1) != LUA_TSTRING)
+			{
+				const char* vtn = luaL_typename(L, -1);
+				luaL_error(L, "Non-string '%s' (%s) in Components table", luaL_tolstring(L, -1, nullptr), vtn);
+			}
 
-		newObject->AddComponent(it);
+			const char* n = luaL_checkstring(L, -1);
+			EntityComponent ec = FindComponentTypeByName(n);
+
+			if (ec == EntityComponent::None)
+				luaL_error(L, "Invalid component '%s'", n);
+			newObject->AddComponent(ec);
+		}
 	}
 
     luhx_pushgameobject(L, newObject);
@@ -96,8 +105,8 @@ static int gameobject_new(lua_State* L)
 static int gameobject_fromId(lua_State* L)
 {
 	int oid = luaL_checkinteger(L, 1);
-	luhx_pushgameobject(L, GameObject::GetObjectById((uint32_t)oid));
 
+	luhx_pushgameobject(L, GameObject::GetObjectById((uint32_t)oid));
 	return 1;
 }
 

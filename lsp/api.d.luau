@@ -28,6 +28,7 @@ end
 
 declare extern type EnumItem with
 end
+
 declare extern type Color with
   B: number
   G: number
@@ -43,7 +44,7 @@ declare extern type EventConnection with
 end
 declare GameObject: {
   fromId: (( Id: number ) -> (GameObject?)),
-  new: (<T>(ComponentName: T | keyof<Creatables>) -> GameObject & index<Creatables, T>),
+  new: () -> (),
   validComponents: { string }
 }
 declare extern type Matrix with

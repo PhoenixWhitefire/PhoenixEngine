@@ -34,9 +34,6 @@ public:
     {
         m_Components.emplace_back();
 
-		if (!Object->FindComponent<EcTransform>())
-			Object->AddComponent(EntityComponent::Transform);
-
 		uint32_t id = static_cast<uint32_t>(m_Components.size() - 1);
 
 		EcMesh& cm = m_Components.back();

@@ -91,6 +91,15 @@ jobs:
       if: matrix.build_type == 'Release' && runner.os == 'Windows'
       run: cmake --build Vendor/tracy/profiler/build --config Release -j8 -t tracy-profiler
 
+    - name: Create launch shortcut (Windows)
+      if: runner.os == 'Windows'
+      shell: cmd
+      run: echo "\"x64/${{ matrix.build_type }}/PhoenixEngine.exe\"" > run.bat
+
+    - name: Create launch shortcut (Linux)
+      if: runner.os == 'Linux'
+      run: echo "x64/${{ matrix.build_type }}/PhoenixEngine" > run.sh
+
     - name: Upload build artifact (Windows)
       if: runner.os == 'Windows'
       uses: actions/upload-artifact@v4
@@ -114,7 +123,7 @@ jobs:
       if: runner.os == 'Linux'
       uses: actions/upload-artifact@v4
       with:
-        name: "Engine_${{ runner.os }}-${{ matrix.build_type }}"
+        name: "Phoenix_${{ runner.os }}-${{ matrix.build_type }}"
         path: |
           x64/Debug/PhoenixEngine
           x64/Release/PhoenixEngine

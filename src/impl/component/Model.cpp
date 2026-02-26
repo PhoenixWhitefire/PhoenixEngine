@@ -3,16 +3,6 @@
 
 class ModelManager : public ComponentManager<EcModel>
 {
-public:
-    uint32_t CreateComponent(GameObject* Object) override
-    {
-        m_Components.emplace_back();
-
-        if (!Object->FindComponentByType(EntityComponent::Transform))
-            Object->AddComponent(EntityComponent::Transform);
-        
-        return static_cast<uint32_t>(m_Components.size() - 1);
-    }
 };
 
 static inline ModelManager Instance;

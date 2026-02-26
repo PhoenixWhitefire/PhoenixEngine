@@ -81,11 +81,7 @@ public:
 		uint32_t id = ComponentManager<EcRigidBody>::CreateComponent(Object);
 		m_Components[id].Object = Object;
 
-		if (!Object->FindComponent<EcTransform>())
-			Object->AddComponent(EntityComponent::Transform);
-
 		updateSpatialHash(&m_Components[id]);
-
 		return id;
 	}
 

@@ -13,9 +13,6 @@ class CameraManager : public ComponentManager<EcCamera>
 public:
 	uint32_t CreateComponent(GameObject* Object) override
 	{
-		if (!Object->FindComponent<EcTransform>())
-			Object->AddComponent(EntityComponent::Transform);
-
 		m_Components.emplace_back();
 		m_Components.back().Object = Object;
 

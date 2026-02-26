@@ -80,6 +80,22 @@ static const std::string_view AddableComponents[] = {
 	"Transform"
 };
 
+static const EntityComponent AddableComponentExtras[] = {
+	EntityComponent::None,
+	EntityComponent::Transform,
+	EntityComponent::None,
+	EntityComponent::Transform,
+	EntityComponent::Transform,
+	EntityComponent::Transform,
+	EntityComponent::Transform,
+	EntityComponent::Transform,
+	EntityComponent::Transform,
+	EntityComponent::None,
+	EntityComponent::None
+};
+
+static_assert(std::size(AddableComponentExtras) == std::size(AddableComponents));
+
 static nlohmann::json DefaultNewMaterial =  {
 	{ "ColorMap", "textures/materials/plastic.png" },
 	{ "specExponent", 32.f },
@@ -2462,6 +2478,9 @@ static void renderExplorer()
 				GameObject* newObject = nullptr;
 
 				newObject = GameObject::Create(name);
+
+				if (EntityComponent extra = AddableComponentExtras[i]; extra != EntityComponent::None)
+					newObject->AddComponent(extra);
 
 				if (name == "Mesh")
 					newObject->AddComponent(EntityComponent::RigidBody);

@@ -9,16 +9,6 @@ REFLECTION_PROPERTY_SIMPLE(t, Brightness, Double) \
 class PointLightManager : public ComponentManager<EcPointLight>
 {
 public:
-    uint32_t CreateComponent(GameObject* Object) override
-    {
-        m_Components.emplace_back();
-		
-        if (!Object->FindComponent<EcTransform>())
-		    Object->AddComponent(EntityComponent::Transform);
-
-        return static_cast<uint32_t>(m_Components.size() - 1);
-    }
-
     const Reflection::StaticPropertyMap& GetProperties() override
     {
         static const Reflection::StaticPropertyMap props = 
@@ -107,16 +97,6 @@ public:
 class SpotLightManager : public ComponentManager<EcSpotLight>
 {
 public:
-    uint32_t CreateComponent(GameObject* Object) override
-    {
-        m_Components.emplace_back();
-		
-        if (!Object->FindComponent<EcTransform>())
-		    Object->AddComponent(EntityComponent::Transform);
-
-        return static_cast<uint32_t>(m_Components.size() - 1);
-    }
-
     const Reflection::StaticPropertyMap& GetProperties() override
     {
         static const Reflection::StaticPropertyMap props = 
@@ -131,6 +111,6 @@ public:
     }
 };
 
-static inline PointLightManager PlInstance{};
-static inline DirectionalLightManager DlInstance{};
-static inline SpotLightManager SlInstance{};
+static inline PointLightManager PlInstance;
+static inline DirectionalLightManager DlInstance;
+static inline SpotLightManager SlInstance;
