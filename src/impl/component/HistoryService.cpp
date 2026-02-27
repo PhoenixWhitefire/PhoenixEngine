@@ -108,7 +108,7 @@ public:
                     History* history = History::Get();
                     return GameObject::GetObjectById(history->TargetDataModel)->ToGenericValue();
                 },
-                [](void*, const Reflection::GenericValue& gv)
+                [](void*, const Reflection::GenericValue& gv, const Logging::Context&)
                 {
                     History* history = History::Get();
                     GameObject* newTarget = GameObject::FromGenericValue(gv);
@@ -151,7 +151,7 @@ public:
             { "EnableRecording", {
                 {},
                 {},
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>&, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     History* history = History::Get();
                     history->IsRecordingEnabled = true;
@@ -163,7 +163,7 @@ public:
             { "TryBeginAction", {
                 { Reflection::ValueType::String },
                 { REFLECTION_OPTIONAL(Integer) },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     History* history = History::Get();
                     std::optional<size_t> actionId = history->TryBeginAction(inputs[0].AsString());
@@ -178,7 +178,7 @@ public:
             { "FinishAction", {
                 { Reflection::ValueType::Integer },
                 {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     History* history = History::Get();
                     history->FinishAction((size_t)inputs[0].AsInteger());
@@ -190,7 +190,7 @@ public:
             { "DiscardAction", {
                 { Reflection::ValueType::Integer },
                 {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     History* history = History::Get();
                     history->DiscardAction((size_t)inputs[0].AsInteger());
@@ -202,7 +202,7 @@ public:
             { "ClearHistory", {
                 {},
                 {},
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>&, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     History* history = History::Get();
                     history->ClearHistory();
@@ -214,7 +214,7 @@ public:
             { "GetCannotUndoReason", {
                 {},
                 { Reflection::ValueType::String },
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>&, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     History* history = History::Get();
                     return { history->GetCannotUndoReason() };
@@ -224,7 +224,7 @@ public:
             { "GetCannotRedoReason", {
                 {},
                 { Reflection::ValueType::String },
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>&, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     History* history = History::Get();
                     return { history->GetCannotRedoReason() };
@@ -234,7 +234,7 @@ public:
             { "Undo", {
                 {},
                 {},
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>&, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     History* history = History::Get();
                     history->Undo();
@@ -246,7 +246,7 @@ public:
             { "Redo", {
                 {},
                 {},
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>&, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     History* history = History::Get();
                     history->Redo();
@@ -258,7 +258,7 @@ public:
             { "GetCurrentActionData", {
                 {},
                 { REFLECTION_OPTIONAL(Map) },
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>&, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     History* history = History::Get();
                     const std::optional<History::Action>& action = history->GetCurrentAction();
@@ -273,7 +273,7 @@ public:
             { "GetActionData", {
                 { Reflection::ValueType::Integer },
                 { Reflection::ValueType::Map },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     History* history = History::Get();
                     const History::Action& action = history->GetActionHistory().at(inputs[0].AsInteger());

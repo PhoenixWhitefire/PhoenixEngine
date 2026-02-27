@@ -7,8 +7,6 @@ local Physics: Physics = game:GetService("Physics") :: any
 local Network: Network = game:GetService("Network") :: any
 local Engine: Engine = game:GetService("Engine") :: any
 
-task.wait()
-
 local FALLBACK_IMAGE = "@etextures/editor-icons/fallback.png"
 local LOGO_IMAGE = "@etextures/logo.png"
 
@@ -21,6 +19,7 @@ type Stage = Types.Stage
 
 local CurrentStage: Stage = "None"
 local Stages: { [string]: ((number) -> ()) & ((string) -> (any)) } = {}
+local StageUpdateSignal: EventConnection?
 
 local EditorCam = assert(workspace.SceneCamera)
 local EditorTl = GameObject.new({ "TreeLink" })
@@ -140,9 +139,9 @@ end
 local changeStageTo: (NewStage: Stage) -> ()
 
 local function handleUndoRedoKeybinds()
-	local ctrlKeyDown = PlayerInput:IsKeyPressed(Enum.Key.LeftControl)
-	local zKeyDown = PlayerInput:IsKeyPressed(Enum.Key.Z)
-	local yKeyDown = PlayerInput:IsKeyPressed(Enum.Key.Y)
+	local ctrlKeyDown = not PlayerInput.IsKeyboardSunk and PlayerInput:IsKeyPressed(Enum.Key.LeftControl)
+	local zKeyDown    = not PlayerInput.IsKeyboardSunk and PlayerInput:IsKeyPressed(Enum.Key.Z)
+	local yKeyDown    = not PlayerInput.IsKeyboardSunk and PlayerInput:IsKeyPressed(Enum.Key.Y)
 
 	if ctrlKeyDown and zKeyDown then
 		if not WasHoldingCtrlKeyDown or not WasHoldingZKeyDown then
@@ -215,7 +214,7 @@ local function editorFrame(DeltaTime)
 	end
 end
 
-local StageUpdateSignal = game.OnFrameBegin:Connect(function(DeltaTime)
+local function stageUpdate(DeltaTime)
 	local s, e = (xpcall::any)(function(dt)
 		editorFrame(dt)
 	end, onError, DeltaTime)
@@ -223,10 +222,15 @@ local StageUpdateSignal = game.OnFrameBegin:Connect(function(DeltaTime)
 	if not s then
 		warn(`editorFrame error: {e}`)
 	end
-end)
+end
 
 changeStageTo = function(NewStage: Stage)
 	assert(Stages[NewStage])
+
+	if StageUpdateSignal then
+		StageUpdateSignal:Disconnect()
+		StageUpdateSignal = nil
+	end
 
 	if Stages[CurrentStage .. "_Leave"] then
 		Stages[CurrentStage .. "_Leave"](NewStage)
@@ -239,6 +243,7 @@ changeStageTo = function(NewStage: Stage)
 
 	PluginManager.OnEditorStageChanged(CurrentStage, NewStage)
 	CoreTools.OnEditorStageChanged(NewStage)
+	StageUpdateSignal = targetDm.OnFrameBegin:Connect(stageUpdate)
 
 	CurrentStage = NewStage
 end
@@ -1520,7 +1525,7 @@ local function renderViewport(DeltaTime: number)
 		local smid = 0
 
 		for mi, message in Log do
-			imgui.pushstylecolor(0, { 0.25, 0.25, 0.25, 1 })
+			imgui.pushstylecolor(0, { 0.35, 0.35, 0.35, 1 })
 
 			imgui.text(message.Time)
 
@@ -1549,9 +1554,18 @@ local function renderViewport(DeltaTime: number)
 					imgui.sameline()
 				end
 
+				local tooltip = subMessage.Tooltip
 				local context = subMessage.ExtraTags
-				if #context == 0 then
-					context = message.Message[1].ExtraTags
+				if #context <= 2 then
+					context = ""
+
+					for _, m in message.Message do
+						if #m.ExtraTags > 2 then
+							context = m.ExtraTags
+							tooltip = m.Tooltip
+							break
+						end
+					end
 				end
 
 				if (message.Source or subMessage.CanInteract) and LogMessageHovering == smid then
@@ -1566,16 +1580,34 @@ local function renderViewport(DeltaTime: number)
 					logMessageHoveringWip = smid
 				end
 
-				local tooltip = subMessage.Tooltip
 				if #tooltip == 0 then
-					tooltip = message.Message[1].Tooltip
+					for _, m in message.Message do
+						if #m.Tooltip > 0 then
+							tooltip = m.Tooltip
+							break
+						end
+					end
 				end
 
-				if #tooltip == 0 then
-					continue
-				end
+				if (#tooltip > 0 or #context > 0) and imgui.itemhovered() and imgui.begintooltip() then
+					if #tooltip > 0 then
+						imgui.text(tooltip)
+					end
 
-				imgui.setitemtooltip(tooltip)
+					if #context > 0 then
+						if #tooltip > 0 then
+							imgui.newline()
+						end
+
+						imgui.pushstylecolor(0, { 0.35, 0.35, 0.35, 1 })
+
+						imgui.text(context)
+
+						imgui.popstylecolor()
+					end
+
+					imgui.endtooltip()
+				end
 			end
 
 			imgui.popstylecolor()

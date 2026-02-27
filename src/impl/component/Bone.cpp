@@ -61,7 +61,7 @@ public:
 					else
 						return boneObj->Transform;
 				},
-				[](void* p, const Reflection::GenericValue& gv)
+				[](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
 				{
 					EcBone* boneObj = static_cast<EcBone*>(p);
 					Bone* realBone = getUnderlyingBone(boneObj);

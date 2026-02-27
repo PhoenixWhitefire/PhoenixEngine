@@ -95,7 +95,7 @@ public:
 				"PhysicsCollisions",
 				Boolean,
 				REFLECTION_PROPERTY_GET_SIMPLE(EcRigidBody, PhysicsCollisions),
-				[](void* p, const Reflection::GenericValue& gv)
+				[](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
 				{
 					EcRigidBody* crb = static_cast<EcRigidBody*>(p);
 					crb->PhysicsCollisions = gv.AsBoolean();
@@ -111,7 +111,7 @@ public:
 				{
 					return static_cast<uint32_t>(static_cast<EcRigidBody*>(p)->CollisionType);
 				},
-				[](void* p, const Reflection::GenericValue& gv)
+				[](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
 				{
 					static_cast<EcRigidBody*>(p)->CollisionType = static_cast<EnCollisionType>(gv.AsInteger());
 				}
@@ -127,7 +127,7 @@ public:
 				"Density",
 				Double,
 				REFLECTION_PROPERTY_GET_SIMPLE(EcRigidBody, Density),
-				[](void* p, const Reflection::GenericValue& gv)
+				[](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
 				{
 					EcRigidBody* crb = static_cast<EcRigidBody*>(p);
 					float dens = (float)gv.AsDouble();
@@ -144,7 +144,7 @@ public:
 				"HullsFile",
 				String,
 				REFLECTION_PROPERTY_GET_SIMPLE(EcRigidBody, HullsFile),
-				[](void* p, const Reflection::GenericValue& gv)
+				[](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
 				{
 					EcRigidBody* crb = static_cast<EcRigidBody*>(p);
 					crb->SetHullsFile(gv.AsString());
@@ -193,7 +193,7 @@ void EcRigidBody::RecomputeAabb()
 	{
 		if (PhysicsCollisions)
 		{
-			Log::WarningF("Object '{}' had a Collision Size in one or more dimensions greater than 10,000. Collisions will be disabled", Object->GetFullName());
+			Log.WarningF("Object '{}' had a Collision Size in one or more dimensions greater than 10,000. Collisions will be disabled", Object->GetFullName());
 			PhysicsCollisions = false;
 		}
 	}
@@ -247,7 +247,7 @@ void EcRigidBody::SetHullsFile(const std::string& NewFile)
 
 	if (!readSuccess)
 	{
-		Log::ErrorF("Failed to read Hulls File '{}' for {}: {}", HullsFile, Object->GetFullName(), hullsContent);
+		Log.ErrorF("Failed to read Hulls File '{}' for {}: {}", HullsFile, Object->GetFullName(), hullsContent);
 		return;
 	}
 
@@ -259,7 +259,7 @@ void EcRigidBody::SetHullsFile(const std::string& NewFile)
 	}
 	catch (const nlohmann::json::parse_error& err)
 	{
-		Log::ErrorF("Failed to parse Hulls File '{}' for {}: {}", HullsFile, Object->GetFullName(), err.what());
+		Log.ErrorF("Failed to parse Hulls File '{}' for {}: {}", HullsFile, Object->GetFullName(), err.what());
 		return;
 	}
 
@@ -269,7 +269,7 @@ void EcRigidBody::SetHullsFile(const std::string& NewFile)
 	}
 	catch (const nlohmann::json::type_error& err)
 	{
-		Log::ErrorF("Error loading Hulls File '{}' for {}: {}", HullsFile, Object->GetFullName(), err.what());
+		Log.ErrorF("Error loading Hulls File '{}' for {}: {}", HullsFile, Object->GetFullName(), err.what());
 		Hulls.clear();
 		return;
 	}

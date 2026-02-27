@@ -15,7 +15,7 @@ public:
                 "Animation",
                 String,
                 REFLECTION_PROPERTY_GET_SIMPLE(EcAnimation, Animation),
-                [](void* p, const Reflection::GenericValue& gv)
+                [](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
                 {
                     static_cast<EcAnimation*>(p)->SetAnimation(gv.AsStringView());
                 }
@@ -42,7 +42,7 @@ void EcAnimation::SetAnimation(const std::string_view& Asset)
 
     if (!found)
     {
-        Log::ErrorF("Cannot find animation file '{}'", Asset);
+        Log.ErrorF("Cannot find animation file '{}'", Asset);
         return;
     }
 
@@ -53,7 +53,7 @@ void EcAnimation::SetAnimation(const std::string_view& Asset)
     }
     catch(const nlohmann::json::parse_error& e)
     {
-        Log::ErrorF("Cannot parse animation file '{}': {}", Asset, e.what());
+        Log.ErrorF("Cannot parse animation file '{}': {}", Asset, e.what());
         return;
     }
     

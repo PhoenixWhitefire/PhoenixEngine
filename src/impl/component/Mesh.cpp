@@ -83,7 +83,7 @@ public:
 				{
 					return static_cast<uint32_t>(static_cast<EcMesh*>(p)->FaceCulling);
 				},
-				[](void* p, const Reflection::GenericValue& gv)
+				[](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
 				{
 					static_cast<EcMesh*>(p)->FaceCulling = static_cast<FaceCullingMode>(gv.AsInteger());
 				}
@@ -98,7 +98,7 @@ public:
 				"MeshAsset",
 				String,
 				REFLECTION_PROPERTY_GET_SIMPLE(EcMesh, Asset),
-				[](void* p, const Reflection::GenericValue& gv)
+				[](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
 				{
 					EcMesh* mesh = static_cast<EcMesh*>(p);
 					mesh->SetRenderMesh(gv.AsStringView());
@@ -116,7 +116,7 @@ public:
 				
 					return mtlManager->GetMaterialResource(m->MaterialId).Name;
 				},
-				[](void* p, const Reflection::GenericValue& gv)
+				[](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
 				{
 					EcMesh* m = static_cast<EcMesh*>(p);
 					MaterialManager* mtlManager = MaterialManager::Get();
@@ -195,7 +195,7 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 						boneObj = g;
 					else
 					{
-						Log::WarningF(
+						Log.WarningF(
 							"Non-bone with name '{}' under Mesh at {} will be removed for rig bone",
 							b.Name, obj->GetFullName()
 						);

@@ -137,6 +137,7 @@
           "Framerate": "Integer READONLY",
           "FramerateCap": "Integer",
           "IsHeadless": "Boolean READONLY",
+          "TargetPlatform": "String READONLY",
           "Version": "String READONLY"
         }
       },
@@ -407,6 +408,7 @@
         "beginmenubar": "function",
         "beginpopup": "function",
         "beginpopupmodal": "function",
+        "begintooltip": "function",
         "button": "function",
         "checkbox": "function",
         "closecurrentpopup": "function",
@@ -420,6 +422,7 @@
         "endmenu": "function",
         "endmenubar": "function",
         "endpopup": "function",
+        "endtooltip": "function",
         "endw": "function",
         "image": "function",
         "imagebutton": "function",
@@ -429,6 +432,7 @@
         "itemclicked": "function",
         "itemhovered": "function",
         "menuitem": "function",
+        "newline": "function",
         "openpopup": "function",
         "popid": "function",
         "popstylecolor": "function",

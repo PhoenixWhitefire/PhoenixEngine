@@ -278,7 +278,7 @@ Result Gjk::FindIntersection(const EcRigidBody* A, const EcRigidBody* B)
 		if (numIterations > 1e5)
 		{
 			result.HasIntersection = false;
-			Log::Warning("Too many iterations!", "Physics Gjk::FindIntersection");
+			Log.Warning("Too many iterations!", "Physics Gjk::FindIntersection");
 
 			return result;
 		}

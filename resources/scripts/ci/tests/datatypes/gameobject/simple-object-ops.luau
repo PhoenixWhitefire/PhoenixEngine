@@ -10,21 +10,21 @@ return function(test: Types.Test, expect: Types.Expect)
 		workspace.SceneCamera.FieldOfView = 90
 	end)
 	test("Parenting", function()
-		local new = GameObject.new("Bone")
+		local new = GameObject.new({ "Bone" })
 		new.Name = "NewObject"
 		new.Parent = workspace
 		expect(workspace:FindChild("NewObject") ~= nil):toBe(true)
 		new:Destroy()
 	end)
 	test("Un-Parent", function()
-		local new = GameObject.new("Bone")
+		local new = GameObject.new({ "Bone" })
 		new.Name = "NewObject"
 		new.Parent = workspace
 		new.Parent = nil
 		expect(workspace:FindChild("NewObject")):toBeNil()
 	end)
 	test("Un-Parent via :Destroy", function()
-		local new = GameObject.new("Bone")
+		local new = GameObject.new({ "Bone" })
 		new.Name = "NewObject"
 		new.Parent = workspace
 		new:Destroy()

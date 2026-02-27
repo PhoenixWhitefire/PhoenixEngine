@@ -57,8 +57,7 @@ end
 function Controller.InitDefault(self: Controller, CharacterHeight)
 	CharacterHeight = CharacterHeight or 7.5
 
-	local character: GameObject & Mesh & Transform & RigidBody = GameObject.new("Mesh") :: any
-	character:AddComponent("RigidBody")
+	local character: GameObject & Mesh & Transform & RigidBody = GameObject.new({ "Mesh", "RigidBody", "Transform" }) :: any
 	character.Size = vector.create(CharacterHeight / 3, CharacterHeight, CharacterHeight / 3)
 	character.PhysicsDynamics = true
 	character.PhysicsRotations = false
@@ -152,13 +151,13 @@ function Controller.getMoveDirection(self: Controller)
 
 	--[[
 	local transrights = Camera.Transform
-	
+
 	matrix_setv(transrights, 3, 0, matrix_getv(transrights, 3, 0) + (moveX * speed))
 	matrix_setv(transrights, 3, 1, matrix_getv(transrights, 3, 1) + (moveY * speed))
 	matrix_setv(transrights, 3, 2, matrix_getv(transrights, 3, 2) + (moveZ * speed))
-	
+
 	Camera.Transform = transrights -- We give the Camera some rights (this means `Object_Camera` is canonically trans)
-	
+
 	]]--
 end
 

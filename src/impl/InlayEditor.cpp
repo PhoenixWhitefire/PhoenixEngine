@@ -164,7 +164,7 @@ static void setErrorMessage(std::string errm)
 {
 	ErrorTooltipMessage = errm;
 	ErrorTooltipTimeRemaining = 2.5f;
-	Log::Error(errm);
+	Log.Error(errm);
 }
 
 static void copyStringToBuffer(char* Buffer, const std::string_view& String, size_t BufSize)
@@ -311,11 +311,11 @@ void InlayEditor::Initialize(Renderer* renderer)
 		if (readSuccess)
 			DocumentationJson = nlohmann::json::parse(contents);
 		else
-			Log::Warning("Documentation tooltips will not be available (`doc-comments.json` could not be read)");
+			Log.Warning("Documentation tooltips will not be available (`doc-comments.json` could not be read)");
 	}
 	catch (const nlohmann::json::parse_error& Err)
 	{
-		Log::ErrorF("Parse error reading doc comments for Editor: {}", Err.what());
+		Log.ErrorF("Parse error reading doc comments for Editor: {}", Err.what());
 	}
 
 	if (!DocumentationJson.is_null())
@@ -324,7 +324,7 @@ void InlayEditor::Initialize(Renderer* renderer)
 		
 		if (ObjectDocCommentsJson.is_null())
 		{
-			Log::Error("`doc-comments.json` malformed");
+			Log.Error("`doc-comments.json` malformed");
 
 			ObjectDocCommentsJson["Base"] = {};
 			ObjectDocCommentsJson["Components"] = {};
@@ -339,11 +339,11 @@ void InlayEditor::Initialize(Renderer* renderer)
 		if (readSuccess)
 			ApiDumpJson = nlohmann::json::parse(contents);
 		else
-			Log::Warning("Failed to read API Dump, some documentation information may be unavailable");
+			Log.Warning("Failed to read API Dump, some documentation information may be unavailable");
 	}
 	catch(const nlohmann::json::parse_error& e)
 	{
-		Log::ErrorF("Parse error reading API Dump: {}", e.what());
+		Log.ErrorF("Parse error reading API Dump: {}", e.what());
 	}
 
 	bool prologueFound = true;
@@ -514,7 +514,7 @@ static bool textEditorAskSaveFileAs(
 
 	if (!saveTargetRaw)
 	{
-		Log::Info("No file path selected in `textEditorAskSaveFileAs`");
+		Log.Info("No file path selected in `textEditorAskSaveFileAs`");
 		return false;
 	}
 	std::string savePath = FileRW::MakePathCwdRelative(saveTargetRaw);
@@ -522,7 +522,7 @@ static bool textEditorAskSaveFileAs(
 	std::string errMessage;
 	if (!FileRW::WriteFile(savePath, Contents, &errMessage))
 	{
-		Log::ErrorF("`textEditorAskSaveFileAs` save failed with {} to {}, re-prompting", savePath, errMessage);
+		Log.ErrorF("`textEditorAskSaveFileAs` save failed with {} to {}, re-prompting", savePath, errMessage);
 		return textEditorAskSaveFileAs(
 			true,
 			Contents,
@@ -1394,7 +1394,7 @@ static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] =
 				setErrorMessage(std::format("Failed to save to '{}', error: {}", path, error));
 		}
 		else
-			Log::Info("No save path select to save objects");
+			Log.Info("No save path select to save objects");
 	},
 
 	[]()
@@ -1458,7 +1458,7 @@ static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] =
 			}
 		}
 		else
-			Log::Info("No file selected to insert object from");
+			Log.Info("No file selected to insert object from");
 	},
 
 	[]()

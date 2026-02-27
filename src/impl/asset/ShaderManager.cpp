@@ -17,7 +17,7 @@
 else                                                                \
 	m_GpuId = ShaderManager::Get()->GetShaderResource(0).m_GpuId; } \
 
-#define SP_LOADERROR(str) { Log::Error(str); SP_TRYFALLBACK(); return; }
+#define SP_LOADERROR(str) { Log.Error(str); SP_TRYFALLBACK(); return; }
 
 static const std::string BaseShaderPath = "shaders/";
 
@@ -35,7 +35,7 @@ void ShaderProgram::Activate()
 
 		if (!glIsProgram(m_GpuId))
 		{
-			Log::ErrorF(
+			Log.ErrorF(
 				"Tried to ::Activate shader '{}', but it was (likely) deleted, and the fallback shader 'error' was also invalid.",
 				this->Name
 			);
@@ -107,7 +107,7 @@ void ShaderProgram::Activate()
 
 			[[unlikely]] default:
 			{
-				Log::WarningF(
+				Log.WarningF(
 					"Unrecognized uniform type '{}' trying to set '{}' for program '{}'",
 					Reflection::TypeAsString(value.Type), uniformName, this->Name
 				);
@@ -149,7 +149,7 @@ void ShaderProgram::Reload()
 		// TODO: a different function for error logging
 		// Should also fire a callback so that an Output can be implemented
 		// 13/07/2024
-		Log::ErrorF(
+		Log.ErrorF(
 			"Shader program '{}' does not exist! Geometry will appear magenta",
 			realShpPath
 		);
@@ -219,7 +219,7 @@ void ShaderProgram::Reload()
 
 		[[unlikely]] default:
 		{
-			Log::WarningF(
+			Log.WarningF(
 				"Shader Program '{}' tried to specify Uniform '{}', but it had unsupported type '{}'",
 				this->Name, uniformName, value.type_name()
 			);
@@ -443,7 +443,7 @@ bool ShaderProgram::m_CheckForErrors(uint32_t Object, const char* Type)
 				Type, this->Name, infoLog
 			);
 
-			Log::Error(errorString);
+			Log.Error(errorString);
 
 			if (this->Name == "error")
 				RAISE_RT("Failed to compile the required `error` Shader Pipeline");
@@ -465,7 +465,7 @@ bool ShaderProgram::m_CheckForErrors(uint32_t Object, const char* Type)
 		{
 			glGetProgramInfoLog(Object, 2048, NULL, infoLog);
 
-			Log::ErrorF(
+			Log.ErrorF(
 				"Error while linking shader program '{}':\n{}",
 				this->Name, infoLog
 			);

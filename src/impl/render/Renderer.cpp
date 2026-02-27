@@ -111,7 +111,7 @@ static void GLDebugCallback(
 		Id
 	);
 
-	Log::Warning(debugString);
+	Log.Warning(debugString);
 
 	// ID 131218:
 	// "Vertex shader in program is being recompiled based on GL state"
@@ -153,7 +153,7 @@ void Renderer::Initialize(uint32_t Width, uint32_t Height, GLFWwindow* MainWindo
 		glDebugMessageCallback(GLDebugCallback, nullptr);
 	}
 	else
-		Log::Warning("No `glDebugMessageCallback`");
+		Log.Warning("No `glDebugMessageCallback`");
 
 	glEnable(GL_MULTISAMPLE);
 	glEnable(GL_DEPTH_TEST);
@@ -169,11 +169,11 @@ void Renderer::Initialize(uint32_t Width, uint32_t Height, GLFWwindow* MainWindo
 	glGetIntegerv(GL_MINOR_VERSION, &glVersionMinor);
 	glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxVertexAttribs);
 
-	Log::InfoF(
+	Log.InfoF(
 		"Running OpenGL version {}.{}",
 		glVersionMajor, glVersionMinor
 	);
-	Log::InfoF("Max vertex attribs: {}", maxVertexAttribs);
+	Log.InfoF("Max vertex attribs: {}", maxVertexAttribs);
 
 	m_VertexArray.Initialize();
 	m_VertexBuffer.Initialize();
@@ -221,7 +221,7 @@ LightShadowsLocs[i] = "Lights[" #i "].Shadows";       }  \
 	assert(!s_Instance);
 	s_Instance = this;
 
-	Log::Info("Renderer initialized");
+	Log.Info("Renderer initialized");
 }
 
 Renderer* Renderer::Get()
@@ -258,7 +258,7 @@ void Renderer::ChangeResolution(uint32_t Width, uint32_t Height)
 	if (Width == 0 || Height == 0)
 		return;
 
-	Log::InfoF(
+	Log.InfoF(
 		"Changing window resolution: ({}, {}) -> ({}, {})",
 		m_Width,
 		m_Height,

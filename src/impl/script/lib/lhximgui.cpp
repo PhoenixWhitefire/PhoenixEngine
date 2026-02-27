@@ -909,6 +909,24 @@ static int imgui_demowindow(lua_State* L)
     return 1;
 }
 
+static int imgui_begintooltip(lua_State* L)
+{
+    lua_pushboolean(L, ImGui::BeginTooltip());
+    return 1;
+}
+
+static int imgui_endtooltip(lua_State*)
+{
+    ImGui::EndTooltip();
+    return 0;
+}
+
+static int imgui_newline(lua_State*)
+{
+    ImGui::NewLine();
+    return 0;
+}
+
 static luaL_Reg imgui_funcs[] =
 {
     { "begin", imgui_begin },
@@ -971,6 +989,9 @@ static luaL_Reg imgui_funcs[] =
     { "setnextitemwidth", imgui_setnextitemwidth },
     { "scrollherey", imgui_scrollherey },
     { "demowindow", imgui_demowindow },
+    { "begintooltip", imgui_begintooltip },
+    { "endtooltip", imgui_endtooltip },
+    { "newline", imgui_newline },
     { NULL, NULL }
 };
 

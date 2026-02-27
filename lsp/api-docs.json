@@ -861,6 +861,9 @@
   "@phoenix/global/imgui.beginpopupmodal": {
     "documentation": "* `ImGui::BeginPopupModal`"
   },
+  "@phoenix/global/imgui.begintooltip": {
+    "documentation": "* `ImGui::BeginTooltip`"
+  },
   "@phoenix/global/imgui.button": {
     "documentation": "* `ImGui::Button`"
   },
@@ -900,6 +903,9 @@
   "@phoenix/global/imgui.endpopup": {
     "documentation": "* `ImGui::EndPopup`"
   },
+  "@phoenix/global/imgui.endtooltip": {
+    "documentation": "* `ImGui::EndTooltip`"
+  },
   "@phoenix/global/imgui.endw": {
     "documentation": "* `ImGui::End`, `endw` and not `end` because `end` is a Luau keyword"
   },
@@ -926,6 +932,9 @@
   },
   "@phoenix/global/imgui.menuitem": {
     "documentation": "* `ImGui::MenuItem`"
+  },
+  "@phoenix/global/imgui.newline": {
+    "documentation": "* `ImGui::Newline`"
   },
   "@phoenix/global/imgui.openpopup": {
     "documentation": "* `ImGui::OpenPopup`"
@@ -1250,6 +1259,9 @@
   },
   "@phoenix/globaltype/Engine.ShowMessageBox": {
     "documentation": "Shows a message box to the player with the given specification. The returned number with be the selected option: `0` for Cancel/No, `1` for Ok/Yes, `2` for No in `yesnocancel`. This is a blocking operation and no scripts or other parts of the Engine run until the message is dismissed. Avoid using quotes and backticks in the message"
+  },
+  "@phoenix/globaltype/Engine.TargetPlatform": {
+    "documentation": "The target platform the Engine was compiled for (Windows or Linux, usually)"
   },
   "@phoenix/globaltype/Engine.Version": {
     "documentation": "The version of the Engine build"

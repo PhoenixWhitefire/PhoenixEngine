@@ -17,7 +17,7 @@ class RendererServiceManager : public ComponentManager<EcRendererService>
                     Engine* engine = Engine::Get();
                     return glm::vec2(engine->WindowSizeX, engine->WindowSizeY);
                 },
-                [](void*, const Reflection::GenericValue& gv)
+                [](void*, const Reflection::GenericValue& gv, const Logging::Context&)
                 {
                     Engine* engine = Engine::Get();
                     const glm::vec2& size = gv.AsVector2();
@@ -33,7 +33,7 @@ class RendererServiceManager : public ComponentManager<EcRendererService>
                     Engine* engine = Engine::Get();
                     return engine->IsFullscreen;
                 },
-                [](void*, const Reflection::GenericValue& gv)
+                [](void*, const Reflection::GenericValue& gv, const Logging::Context&)
                 {
                     Engine* engine = Engine::Get();
                     engine->SetIsFullscreen(gv.AsBoolean());
@@ -47,7 +47,7 @@ class RendererServiceManager : public ComponentManager<EcRendererService>
                     Engine* engine = Engine::Get();
                     return engine->VSync;
                 },
-                [](void*, const Reflection::GenericValue& gv)
+                [](void*, const Reflection::GenericValue& gv, const Logging::Context&)
                 {
                     Engine* engine = Engine::Get();
                     engine->VSync = gv.AsBoolean();
@@ -61,7 +61,7 @@ class RendererServiceManager : public ComponentManager<EcRendererService>
                     Engine* engine = Engine::Get();
                     return engine->DebugWireframeRendering;
                 },
-                [](void*, const Reflection::GenericValue& gv)
+                [](void*, const Reflection::GenericValue& gv, const Logging::Context&)
                 {
                     Engine* engine = Engine::Get();
                     engine->DebugWireframeRendering = gv.AsBoolean();
@@ -78,7 +78,7 @@ class RendererServiceManager : public ComponentManager<EcRendererService>
             { "UnloadTexture", Reflection::MethodDescriptor{
                 { Reflection::ValueType::String },
                 {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     TextureManager* texManager = TextureManager::Get();
                     uint32_t resId = texManager->LoadTextureFromPath(std::string(inputs[0].AsStringView()), false);
@@ -92,7 +92,7 @@ class RendererServiceManager : public ComponentManager<EcRendererService>
                 // Name of shader program, name of uniform, value, optional type of value (`Vector2` and `Vector3` are just `vector` in scripts)
                 { Reflection::ValueType::String, Reflection::ValueType::String, Reflection::ValueType::Any, REFLECTION_OPTIONAL(Integer) },
                 {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     ShaderManager* shaderManager = ShaderManager::Get();
                     ShaderProgram& shader = shaderManager->GetShaderResource(shaderManager->LoadFromPath(inputs[0].AsString()));
@@ -146,7 +146,7 @@ class RendererServiceManager : public ComponentManager<EcRendererService>
                 // Name of shader program, name of uniform, value, path to texture
                 { Reflection::ValueType::String, Reflection::ValueType::String, Reflection::ValueType::String },
                 {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     ShaderManager* shaderManager = ShaderManager::Get();
                     ShaderProgram& shader = shaderManager->GetShaderResource(shaderManager->LoadFromPath(inputs[0].AsString()));

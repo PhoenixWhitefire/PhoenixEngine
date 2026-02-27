@@ -34,7 +34,7 @@ void RenderMaterial::Reload()
 		}
 		catch (const nlohmann::json::parse_error& e)
 		{
-			Log::ErrorF(
+			Log.ErrorF(
 				"Parse error trying to load material {}: {}",
 				this->Name, e.what()
 			);
@@ -44,7 +44,7 @@ void RenderMaterial::Reload()
 	{
 		this->ShaderId = shdManager->LoadFromPath("error");
 
-		Log::Error("Unknown material: '" + this->Name + "'");
+		Log.Error("Unknown material: '" + this->Name + "'");
 
 		return;
 	}
@@ -60,7 +60,7 @@ void RenderMaterial::Reload()
 
 	if (polygonMode < 0 || polygonMode > 2)
 	{
-		Log::Error("Material had invalid polygon mode of " + std::to_string(polygonMode));
+		Log.Error("Material had invalid polygon mode of " + std::to_string(polygonMode));
 		polygonMode = 0;
 	}
 
@@ -207,7 +207,7 @@ uint32_t MaterialManager::LoadFromPath(const std::string_view& Name)
 		}
 		else
 		{
-			Log::Error("Failed to load material '" + fullPath + "'");
+			Log.Error("Failed to load material '" + fullPath + "'");
 
 			if (Name == "error")
 				RAISE_RT("Failed to load the 'error' material. It is required due to technical reasons (I'm lazy)");

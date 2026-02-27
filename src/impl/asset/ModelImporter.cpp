@@ -58,7 +58,7 @@ static std::string getTexturePath(
 
 		else
 		{
-			Log::WarningF("Unrecognized MIME '{}'", mimeType);
+			Log.WarningF("Unrecognized MIME '{}'", mimeType);
 			fileExtension = std::string(mimeType.begin() + 6, mimeType.end());
 		}
 
@@ -74,7 +74,7 @@ static std::string getTexturePath(
 		);
 
 		if (!writeSucceeded)
-			Log::WarningF(
+			Log.WarningF(
 				"Failed to extract image from Model '{}' (taking name as '{}') to path: {}",
 				ModelPath, ModelName, filePath
 			);
@@ -124,7 +124,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 	{
 		uint32_t glbVersion = readU32(textData, 4);
 		if (glbVersion != 2)
-			Log::WarningF(
+			Log.WarningF(
 				"GLB header declares version as '{}', when only `2` is supported. Unexpected behavior may occur.",
 				glbVersion
 			);
@@ -182,7 +182,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 
 		if (assetInfoJson.find("minVersion") != assetInfoJson.end())
 		{
-			Log::WarningF(
+			Log.WarningF(
 				"glTF file specifies `asset.minVersion` as '{}'. Unexpected behavior may occur.",
 				std::stof(assetInfoJson.value("minVersion", "2.0"))
 			);
@@ -192,7 +192,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 			float gltfVersion = std::stof(assetInfoJson.value("version", "2.0"));
 
 			if (gltfVersion < 2.f || gltfVersion >= 3.f)
-				Log::WarningF(
+				Log.WarningF(
 					"Expected glTF version >= 2.0 and < 3.0, got {}. Unexpected behavior may occur.",
 					gltfVersion
 				);
@@ -202,13 +202,13 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 		const nlohmann::json& usedExtensionsJson = m_JsonData["extensionsUsed"];
 
 		for (std::string v : requiredExtensionsJson)
-			Log::WarningF(
+			Log.WarningF(
 				"glTF file specifies 'required' extension '{}'. That's too bad, because no extensions are supported.",
 				v
 			);
 
 		for (std::string v : usedExtensionsJson)
-			Log::WarningF(
+			Log.WarningF(
 				"glTF file specifies extension '{}' is used. That's too bad, because no extensions are supported.",
 				v
 			);
@@ -732,7 +732,7 @@ void ModelLoader::m_BuildRig()
 	//size_t whereRes = saveDir.find("resources/");
 //
 	//if (whereRes == std::string::npos)
-	//	Log::WarningF(
+	//	Log.WarningF(
 	//		"ModelLoader cannot guarantee the animation will be saved within the Resources directory (Path was: '{}')",
 	//		m_File
 	//	);
@@ -916,7 +916,7 @@ std::vector<uint32_t> ModelLoader::m_GetUnsigned32s(const nlohmann::json& access
 		}
 	}
 	else
-		Log::Warning("Unrecognized mesh index type: " + std::to_string(componentType));
+		Log.Warning("Unrecognized mesh index type: " + std::to_string(componentType));
 
 	return indices;
 }

@@ -100,7 +100,7 @@ static T readFromConfiguration(const std::string_view& Key, const T& DefaultValu
 	}
 	catch (const nlohmann::json::type_error& Error)
 	{
-		Log::ErrorF(
+		Log.ErrorF(
 			"Error trying to read key '{}' of configuration: {}. Falling back to default value",
 			Key, Error.what()
 		);
@@ -157,15 +157,15 @@ void Engine::LoadConfiguration()
 	std::string_view resDir = readFromConfiguration("ResourcesDirectory", std::string_view("<NOT_SET>"));
 
 	if (resDir != "resources/")
-		Log::WarningF(
+		Log.WarningF(
 			"Resources Directory was changed to '{}' instead of 'resources/'. Prepare for unforeseen consequences.",
 			resDir
 		);
 
 	if (ConfigLoadSucceeded)
-		Log::Info("Configuration loaded");
+		Log.Info("Configuration loaded");
 	else
-		Log::Info(ConfigLoadErrorMessage);
+		Log.Info(ConfigLoadErrorMessage);
 }
 
 void Engine::Close()
@@ -263,7 +263,7 @@ void Engine::m_InitializeVideo()
 		RAISE_RTF("Failed to initialize GLFW: Code: {}, Error: {}", ec, error);
 	}
 
-	Log::InfoF("GLFW platform: {}", glfwGetPlatform());
+	Log.InfoF("GLFW platform: {}", glfwGetPlatform());
 
 	GLFWmonitor* primaryDisplay = glfwGetPrimaryMonitor();
 	
@@ -273,7 +273,7 @@ void Engine::m_InitializeVideo()
 	int requestedGLVersionMajor = requestedGLVersion[0];
 	int requestedGLVersionMinor = requestedGLVersion[1];
 
-	Log::InfoF(
+	Log.InfoF(
 		"Requesting a Core OpenGL context with version {}.{}",
 		requestedGLVersionMajor, requestedGLVersionMinor
 	);
@@ -300,11 +300,11 @@ void Engine::m_InitializeVideo()
 		RAISE_RTF("GLFW could not create the window\nCode: {}, Error: {}", ec, error);
 	}
 
-	Log::Info("Window created, initializing renderer...");
+	Log.Info("Window created, initializing renderer...");
 
 	this->RendererContext.Initialize(this->WindowSizeX, this->WindowSizeY, this->Window);
 
-	Log::Info("Registering callbacks...");
+	Log.Info("Registering callbacks...");
 
 	glfwSetWindowSizeCallback(Window, windowResizeCallback);
 	glfwSetWindowFocusCallback(Window, windowFocusChangedCallback);
@@ -312,10 +312,10 @@ void Engine::m_InitializeVideo()
 	glfwSetMouseButtonCallback(Window, windowMouseCallback);
 	glfwSetScrollCallback(Window, windowScrollCallback);
 
-	Log::Info("Finished initializing video");
+	Log.Info("Finished initializing video");
 
 #else
-	Log::Info("Skipping video initialization (headless build)");
+	Log.Info("Skipping video initialization (headless build)");
 #endif
 }
 
@@ -338,7 +338,7 @@ Engine::Engine()
 	FileRW::DefineAlias("scripts", "resources/scripts");
 	FileRW::DefineAlias("modules", "resources/scripts/modules");
 
-	Log::Info("Initializing managers...");
+	Log.Info("Initializing managers...");
 
 	m_ThreadManager.Initialize(EngineJsonConfig.value("ThreadManagerThreadCount", -1));
 
@@ -351,7 +351,7 @@ Engine::Engine()
 	{
 		ZoneScopedN("Blue Frame");
 
-		Log::Info("Blue frame...");
+		Log.Info("Blue frame...");
 
 		RendererContext.FrameBuffer.Unbind();
 
@@ -381,7 +381,7 @@ Engine::Engine()
 		);
 	}
 
-	Log::Info("Engine initialized");
+	Log.Info("Engine initialized");
 }
 
 static bool s_DebugCollisionAabbs = false;
@@ -791,10 +791,10 @@ void Engine::BindDataModel(GameObject* NewDataModel)
 
 void Engine::Start()
 {
-	Log::Info("Validating DataModel...");
+	Log.Info("Validating DataModel...");
 	ensureDataModelValid(DataModelRef.Dereference());
 
-	Log::Info("Final initializations...");
+	Log.Info("Final initializations...");
 
 	ScriptEngine::Initialize(); // can only do this after datamodel is bound
 
@@ -825,7 +825,7 @@ void Engine::Start()
 
 	m_IsRunning = true;
 
-	Log::Info("Main engine loop start");
+	Log.Info("Main engine loop start");
 
 	while ((!PHX_HEADLESS_BUILD && !IsHeadlessMode) ? (!glfwWindowShouldClose(Window) && m_IsRunning) : m_IsRunning)
 	{
@@ -834,13 +834,13 @@ void Engine::Start()
 
 		if (DataModelRef->IsDestructionPending)
 		{
-			Log::Warning("`::Destroy` called on DataModel, shutting down");
+			Log.Warning("`::Destroy` called on DataModel, shutting down");
 			break;
 		}
 
 		if (WorkspaceRef->IsDestructionPending)
 		{
-			Log::Warning("`::Destroy` called on Workspace, shutting down");
+			Log.Warning("`::Destroy` called on Workspace, shutting down");
 			break;
 		}
 
@@ -876,7 +876,7 @@ void Engine::Start()
 			m_TextureManager.FinalizeAsyncLoadedTextures();
 		
 		m_MeshProvider.FinalizeAsyncLoadedMeshes();
-		Log::FlushParallelEvents();
+		Logging::FlushParallelEvents();
 
 		if (skyboxFacesBeingLoaded.size() == 6 && !IsHeadlessMode)
 		{
@@ -1122,7 +1122,7 @@ void Engine::Start()
 			this->FramesPerSecond = m_DrawnFramesInSecond;
 			m_DrawnFramesInSecond = -1;
 
-			Log::Save();
+			Logging::Save();
 		}
 
 		Memory::FrameFinish();
@@ -1130,16 +1130,16 @@ void Engine::Start()
 		FrameMark;
 	}
 
-	Log::Info("Main loop exited");
+	Log.Info("Main loop exited");
 }
 
 void Engine::Shutdown()
 {
 	ZoneScoped;
 
-	Log::Info("Engine destructing...");
+	Log.Info("Engine destructing...");
 
-	Log::Info("Destroying DataModel...");
+	Log.Info("Destroying DataModel...");
 	EcDataModel::NotifyAllOfShutdown();
 
 	DataModelRef->Destroy();
@@ -1161,10 +1161,10 @@ void Engine::Shutdown()
 		collection.RemovedEvent.Descriptor = nullptr;
 	}
 
-	Log::Info("Shutting down script engine...");
+	Log.Info("Shutting down script engine...");
 	ScriptEngine::Shutdown();
 
-	Log::Info("Shutting down Component Managers...");
+	Log.Info("Shutting down Component Managers...");
 
 	// skip the first "None" component manager
 	for (size_t i = 1; i < (size_t)EntityComponent::__count; i++)
@@ -1175,7 +1175,7 @@ void Engine::Shutdown()
 		GameObject::s_ComponentManagers[i]->Shutdown();
 	}
 
-	Log::Info("Shutting down managers...");
+	Log.Info("Shutting down managers...");
 
 	m_MaterialManager.Shutdown();
 	m_TextureManager.Shutdown();
@@ -1184,7 +1184,7 @@ void Engine::Shutdown()
 
 	m_ThreadManager.Shutdown();
 
-	Log::Info("Shutting down libraries...");
+	Log.Info("Shutting down libraries...");
 
 	if (!IsHeadlessMode)
 	{
@@ -1193,7 +1193,7 @@ void Engine::Shutdown()
 		RendererContext.Shutdown();
 	}
 
-	Log::Info("Shutting down GLFW...");
+	Log.Info("Shutting down GLFW...");
 
 	if (Window)
 		glfwDestroyWindow(Window);
@@ -1202,7 +1202,7 @@ void Engine::Shutdown()
 	for (const GameObject& obj : GameObject::s_WorldArray)
 	{
 		if (obj.Valid)
-			Log::WarningF("Object {} still has references!", obj.GetFullName());
+			Log.WarningF("Object {} still has references!", obj.GetFullName());
 	}
 
 	EngineInstance = nullptr;

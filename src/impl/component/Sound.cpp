@@ -39,7 +39,7 @@ const Reflection::StaticPropertyMap& SoundManager::GetProperties()
 			"SoundFile",
 			String,
 			REFLECTION_PROPERTY_GET_SIMPLE(EcSound, SoundFile),
-			[](void* p, const Reflection::GenericValue& gv)
+			[](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
 			{
 				EcSound* sound = static_cast<EcSound*>(p);
 				std::string_view newFile = gv.AsStringView();
@@ -62,7 +62,7 @@ const Reflection::StaticPropertyMap& SoundManager::GetProperties()
 				EcSound* sound = static_cast<EcSound*>(p);
 				return sound->m_PlayRequested;
 			},
-			[](void* p, const Reflection::GenericValue& playing)
+			[](void* p, const Reflection::GenericValue& playing, const Logging::Context&)
 			{
 				EcSound* sound = static_cast<EcSound*>(p);
 				if (!sound->Object->Enabled && playing.AsBoolean())
@@ -76,7 +76,7 @@ const Reflection::StaticPropertyMap& SoundManager::GetProperties()
 			"Position",
 			Double,
 			REFLECTION_PROPERTY_GET_SIMPLE(EcSound, Position),
-			[](void* p, const Reflection::GenericValue& gv)
+			[](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
 			{
 				EcSound* sound = static_cast<EcSound*>(p);
 				double t = gv.AsDouble();
@@ -93,7 +93,7 @@ const Reflection::StaticPropertyMap& SoundManager::GetProperties()
 			"Volume",
 			Double,
 			REFLECTION_PROPERTY_GET_SIMPLE(EcSound, Volume),
-			[](void* p, const Reflection::GenericValue& gv)
+			[](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
 			{
 				float volume = static_cast<float>(gv.AsDouble());
 				if (volume < 0.f)
@@ -106,7 +106,7 @@ const Reflection::StaticPropertyMap& SoundManager::GetProperties()
 			"Speed",
 			Double,
 			REFLECTION_PROPERTY_GET_SIMPLE(EcSound, Speed),
-			[](void* p, const Reflection::GenericValue& gv)
+			[](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
 			{
 				float speed = static_cast<float>(gv.AsDouble());
 
@@ -134,7 +134,7 @@ const Reflection::StaticMethodMap& SoundManager::GetMethods()
 		{ "Play", Reflection::MethodDescriptor{
 			{},
 			{},
-			[](void* p, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+			[](void* p, const std::vector<Reflection::GenericValue>&, const Logging::Context&) -> std::vector<Reflection::GenericValue>
 			{
 				EcSound* sound = static_cast<EcSound*>(p);
 				sound->NextRequestedPosition = 0.f;
@@ -246,7 +246,7 @@ void EcSound::Reload()
 	)
 	{
 		FinishedLoading = true;
-		Log::ErrorF("Failed to load sound file '{}' for '{}', error code: {}", filePath, Object->GetFullName(), (int)result);
+		Log.ErrorF("Failed to load sound file '{}' for '{}', error code: {}", filePath, Object->GetFullName(), (int)result);
 		return;
 	}
 
@@ -254,7 +254,7 @@ void EcSound::Reload()
 
 	if (ma_result result = ma_sound_get_length_in_seconds(SoundInstance, &Length); result != MA_SUCCESS)
 	{
-		Log::ErrorF("Failed to get length of sound '{}', error code: {}", Object->GetFullName(), (int)result);
+		Log.ErrorF("Failed to get length of sound '{}', error code: {}", Object->GetFullName(), (int)result);
 		return;
 	}
 
@@ -275,18 +275,18 @@ void EcSound::Update(double)
 	if (!Object->Enabled && playing)
 	{
 		if (ma_result result = ma_sound_stop(SoundInstance); result != MA_SUCCESS)
-			Log::ErrorF("Failed to stop sound '{}' (disabled object), error code: {}", Object->GetFullName(), (int)result);
+			Log.ErrorF("Failed to stop sound '{}' (disabled object), error code: {}", Object->GetFullName(), (int)result);
 		return;
 	}
 
 	if (playing && !m_PlayRequested)
 	{
 		if (ma_result result = ma_sound_stop(SoundInstance); result != MA_SUCCESS)
-			Log::ErrorF("Failed to play sound '{}', error code: {}", Object->GetFullName(), (int)result);
+			Log.ErrorF("Failed to play sound '{}', error code: {}", Object->GetFullName(), (int)result);
 	}
 	else if (!playing && m_PlayRequested)
 		if (ma_result result = ma_sound_start(SoundInstance); result != MA_SUCCESS)
-			Log::ErrorF("Failed to stop sound '{}', error code: {}", Object->GetFullName(), (int)result);
+			Log.ErrorF("Failed to stop sound '{}', error code: {}", Object->GetFullName(), (int)result);
 
 	ma_sound_set_looping(SoundInstance, Looped); // TODO doesn't work
 	if (!Looped && Length - Position < 0.05f)
@@ -297,7 +297,7 @@ void EcSound::Update(double)
 	if (NextRequestedPosition >= 0.f)
 	{
 		if (ma_result result = ma_sound_seek_to_second(SoundInstance, NextRequestedPosition); result != MA_SUCCESS)
-			Log::ErrorF(
+			Log.ErrorF(
 				"Failed to seek to position {} (in seconds) for sound '{}', error code: {}",
 				NextRequestedPosition, Object->GetFullName(), (int)result
 			);
@@ -305,7 +305,7 @@ void EcSound::Update(double)
 	}
 
 	if (ma_result result = ma_sound_get_cursor_in_seconds(SoundInstance, &Position); result != MA_SUCCESS)
-		Log::ErrorF("Failed to get playback position of sound '{}', error code: {}", Object->GetFullName(), (int)result);
+		Log.ErrorF("Failed to get playback position of sound '{}', error code: {}", Object->GetFullName(), (int)result);
 
 	if (EcTransform* trans = Object->FindComponent<EcTransform>())
 	{

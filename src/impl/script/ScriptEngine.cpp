@@ -206,7 +206,7 @@ void ScriptEngine::StepScheduler()
 			int resumeStatus = L::Resume(coroutine, nullptr, nretvals);
 			if (resumeStatus != LUA_OK && resumeStatus != LUA_YIELD)
 			{
-				Log::ErrorF(
+				Log.ErrorF(
 					"Script resumption: {}",
 					lua_tostring(coroutine, -1)
 				);
@@ -581,7 +581,7 @@ Reflection::GenericValue ScriptEngine::L::ToGeneric(lua_State* L, int StackIndex
 			ar.short_src, ar.currentline, fnname, ar.name ? ar.name : "<anonymous>"
 		);
 
-		gv.Val.Func.Func = new std::function([CL, fndbinfo](const std::vector<Reflection::GenericValue>& Inputs)
+		gv.Val.Func.Func = new std::function([CL, fndbinfo](const std::vector<Reflection::GenericValue>& Inputs, const Logging::Context&)
 			-> std::vector<Reflection::GenericValue>
 			{
 				lua_pushvalue(CL, -1); // keep the function value
@@ -857,6 +857,10 @@ int ScriptEngine::L::HandleMethodCall(
 	ReflectorRef Reflector
 )
 {
+	lua_Debug ar = {};
+	lua_getinfo(L, 1, "sl", &ar);
+	Logging::Context logContext = { .ContextExtraTags = std::format("TextDocument:{},DocumentLine:{}", ar.short_src, ar.currentline) };
+
 	const std::vector<Reflection::ValueType>& paramTypes = func->Inputs;
 	int numArgs = lua_gettop(L) - 1;
 	assert(numArgs >= 0);
@@ -916,15 +920,9 @@ int ScriptEngine::L::HandleMethodCall(
 	}
 	else if (numArgs > numParams)
 	{
-		lua_Debug ar = {};
-		lua_getinfo(L, 1, "sln", &ar);
-
-		// this is just so that the Output can attribute the log message to a script
-		std::string extraTags = std::format("ScriptFunctionName:{},TextDocument:{},DocumentLine:{}", ar.name ? ar.name : "<anonymous>", ar.short_src , ar.currentline);
-
-		Log::Warning(
-			std::format("Function received {} more arguments than necessary", numArgs - numParams),
-			extraTags
+		logContext.WarningF(
+			"Function received {} more arguments than necessary",
+			numArgs - numParams
 		);
 	}
 
@@ -953,7 +951,7 @@ int ScriptEngine::L::HandleMethodCall(
 			func->Outputs.size(),
 			[func, inputs, Reflector](YieldedCoroutine& yc)
 			{
-				std::promise<std::vector<Reflection::GenericValue>>* sf = func->YieldFunc(Reflector.Referred(), inputs);
+				std::promise<std::vector<Reflection::GenericValue>>* sf = func->YieldFunc(Reflector.Referred(), inputs, Log);
 				yc.Mode = YieldedCoroutine::ResumptionMode::Promise;
 				yc.RmPromise = sf;
 				yc.RmPromise_Future = sf->get_future().share();
@@ -966,7 +964,7 @@ int ScriptEngine::L::HandleMethodCall(
 
 	try
 	{
-		outputs = func->Func(Reflector.Referred(), inputs);
+		outputs = func->Func(Reflector.Referred(), inputs, logContext);
 	}
 	catch (const std::runtime_error& err)
 	{
@@ -1151,7 +1149,7 @@ void ScriptEngine::L::DumpStacktrace(
 			Into->append("\n");
 		}
 		else
-			Log::Append(Message);
+			Log.Append(Message);
 	}
 	
 	for (int i = Level; lua_getinfo(L, i, "sln", &ar); i++)
@@ -1178,7 +1176,7 @@ void ScriptEngine::L::DumpStacktrace(
 		}
 
 		if (!Into)
-			Log::Append(line);
+			Log.Append(line);
 		else
 		{
 			Into->append(line);
@@ -1195,7 +1193,7 @@ void ScriptEngine::L::DumpStacktrace(
 		}
 		else
 		{
-			Log::AppendF("-- Spawning trace --\n{}", corUd->SpawnTrace);
+			Log.AppendF("-- Spawning trace --\n{}", corUd->SpawnTrace);
 		}
 	}
 

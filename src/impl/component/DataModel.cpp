@@ -54,7 +54,7 @@ public:
                 {
                     return static_cast<EcDataModel*>(p)->LiveScripts;
                 },
-                [](void* p, const Reflection::GenericValue& gv)
+                [](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
                 {
                     EcDataModel* dm = static_cast<EcDataModel*>(p);
                     if (dm->Modules.size() > 0)
@@ -82,7 +82,7 @@ public:
                 {
                     return static_cast<EcDataModel*>(p)->VM;
                 },
-                [](void* p, const Reflection::GenericValue& gv)
+                [](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
                 {
                     EcDataModel* dm = static_cast<EcDataModel*>(p);
                     if (dm->Modules.size() > 0)
@@ -102,7 +102,7 @@ public:
             { "GetService", {
                 { Reflection::ValueType::String },
                 { Reflection::ValueType::GameObject },
-                [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void* p, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     std::string service = std::string(inputs[0].AsStringView());
                     bool validService = false;
@@ -136,7 +136,7 @@ public:
             { "BindToClose", {
                 { Reflection::ValueType::Function },
                 {},
-                [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void* p, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     EcDataModel* dm = static_cast<EcDataModel*>(p);
                     if (dm->CloseCallback.Func)
@@ -182,7 +182,7 @@ static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
 
 	if (!readSuccess)
 	{
-		Log::ErrorF(
+		Log.ErrorF(
 			"Failed to load '{}': {}",
 			Module, source // `source` will be the error message
 		);
@@ -211,7 +211,7 @@ static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
 
 		if (resumeResult != LUA_OK && resumeResult != LUA_YIELD)
 		{
-			Log::ErrorF(
+			Log.ErrorF(
 				"DataModel Script init: {}",
 				lua_tostring(L, -1)
 			);
@@ -227,7 +227,7 @@ static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
 	}
 	else
 	{
-		Log::ErrorF(
+		Log.ErrorF(
 			"DataModel Script compilation: {}",
 			lua_tostring(L, -1)
 		);
@@ -283,7 +283,7 @@ void EcDataModel::Bind()
     }
     else
     {
-        Log::ErrorF("Invalid `LiveScripts` path '{}' ({}), expected to be a file or directory", LiveScripts, path);
+        Log.ErrorF("Invalid `LiveScripts` path '{}' ({}), expected to be a file or directory", LiveScripts, path);
         CanLoadModules = false;
     }
 }
@@ -292,7 +292,7 @@ void EcDataModel::Close()
 {
     if (CloseCallback.Func)
     {
-        (*CloseCallback.Func)({});
+        (*CloseCallback.Func)({}, { .ContextExtraTags = "Context:DataModelClose" });
         (*CloseCallback.Cleanup)();
         delete CloseCallback.Func;
         delete CloseCallback.Cleanup;

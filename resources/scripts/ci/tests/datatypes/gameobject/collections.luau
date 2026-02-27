@@ -92,7 +92,7 @@ return function(test: Types.Test, expect: Types.Expect)
         local t4removed = false
         local t4removedobj = false
 
-        local o = GameObject.new("Mesh")
+        local o = GameObject.new({ "Mesh" })
 
         local c1 = Collections:GetTagRemovedSignal("Test4"):Connect(function(g)
             expect(g):toBe(o)

@@ -11,7 +11,7 @@ public:
             { "GetCollections", Reflection::MethodDescriptor{
                 {},
                 { Reflection::ValueType::Array },
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>&, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     std::vector<Reflection::GenericValue> tags;
                     for (const auto& it : GameObject::s_CollectionNameToId)
@@ -24,7 +24,7 @@ public:
             { "GetTagged", Reflection::MethodDescriptor{
                 { Reflection::ValueType::String },
                 { Reflection::ValueType::Array },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     std::vector<Reflection::GenericValue> tagged;
 
@@ -47,7 +47,7 @@ public:
             { "GetTagAddedSignal", Reflection::MethodDescriptor{
                 { Reflection::ValueType::String },
                 { Reflection::ValueType::EventSignal },
-                [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void* p, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     const std::string tag = inputs[0].AsString();
                     const GameObject::Collection& collection = GameObject::GetCollection(tag);
@@ -67,7 +67,7 @@ public:
             { "GetTagRemovedSignal", Reflection::MethodDescriptor{
                 { Reflection::ValueType::String },
                 { Reflection::ValueType::EventSignal },
-                [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void* p, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     const std::string tag = inputs[0].AsString();
                     const GameObject::Collection& collection = GameObject::GetCollection(tag);

@@ -21,7 +21,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 			{
 				return static_cast<GameObject*>(p)->GetParent()->ToGenericValue();
 			},
-			[](void* p, const Reflection::GenericValue& gv)
+			[](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
 			{
 				static_cast<GameObject*>(p)->SetParent(GameObject::FromGenericValue(gv));
 			}
@@ -32,7 +32,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		{ "Destroy", Reflection::MethodDescriptor{
 			{},
 			{},
-			[](void* p, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+			[](void* p, const std::vector<Reflection::GenericValue>&, const Logging::Context&) -> std::vector<Reflection::GenericValue>
 			{
 				static_cast<GameObject*>(p)->Destroy();
 				return {};
@@ -42,7 +42,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		{ "GetFullName", Reflection::MethodDescriptor{
 			{},
 			{ Reflection::ValueType::String },
-			[](void* p, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+			[](void* p, const std::vector<Reflection::GenericValue>&, const Logging::Context&) -> std::vector<Reflection::GenericValue>
 			{
 				return { static_cast<GameObject*>(p)->GetFullName() };
 			}
@@ -51,7 +51,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		{ "ForEachChild", Reflection::MethodDescriptor{
 			{ Reflection::ValueType::Function },
 			{},
-			[](void* p, const std::vector<Reflection::GenericValue>& gv) -> std::vector<Reflection::GenericValue>
+			[](void* p, const std::vector<Reflection::GenericValue>& gv, const Logging::Context&) -> std::vector<Reflection::GenericValue>
 			{
 				const Reflection::GenericFunction& gf = gv.at(0).AsFunction(); // damn
 
@@ -60,7 +60,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 					[gf](GameObject* g)
 					-> bool
 					{
-						std::vector<Reflection::GenericValue> rets = (*gf.Func)({ g->ToGenericValue() }); // damn
+						std::vector<Reflection::GenericValue> rets = (*gf.Func)({ g->ToGenericValue() }, Log); // damn
 						PHX_ENSURE_MSG(rets.size() <= 1, "`:ForEachChild` expects none or one return value");
 
 						if (rets.size() == 0)
@@ -80,7 +80,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		{ "ForEachDescendant", Reflection::MethodDescriptor{
 			{ Reflection::ValueType::Function },
 			{},
-			[](void* p, const std::vector<Reflection::GenericValue>& gv) -> std::vector<Reflection::GenericValue>
+			[](void* p, const std::vector<Reflection::GenericValue>& gv, const Logging::Context&) -> std::vector<Reflection::GenericValue>
 			{
 				const Reflection::GenericFunction& gf = gv.at(0).AsFunction(); // damn
 
@@ -89,7 +89,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 					[gf](GameObject* g)
 					-> bool
 					{
-						std::vector<Reflection::GenericValue> rets = (*gf.Func)({ g->ToGenericValue() }); // damn
+						std::vector<Reflection::GenericValue> rets = (*gf.Func)({ g->ToGenericValue() }, Log); // damn
 						PHX_ENSURE_MSG(rets.size() <= 1, "`:ForEachChild` expects none or one return value");
 
 						if (rets.size() == 0)
@@ -109,7 +109,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		{ "GetChildren", Reflection::MethodDescriptor{
 			{},
 			{ Reflection::ValueType::Array },
-			[](void* p, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+			[](void* p, const std::vector<Reflection::GenericValue>&, const Logging::Context&) -> std::vector<Reflection::GenericValue>
 			{
 				std::vector<Reflection::GenericValue> retval;
 				for (GameObject* g : static_cast<GameObject*>(p)->GetChildren())
@@ -123,7 +123,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		{ "GetDescendants", Reflection::MethodDescriptor{
 			{},
 			{ Reflection::ValueType::Array },
-			[](void* p, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+			[](void* p, const std::vector<Reflection::GenericValue>&, const Logging::Context&) -> std::vector<Reflection::GenericValue>
 			{
 				std::vector<Reflection::GenericValue> retval;
 				for (GameObject* g : static_cast<GameObject*>(p)->GetDescendants())
@@ -137,7 +137,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		{ "Duplicate", Reflection::MethodDescriptor{
 			{},
 			{ Reflection::ValueType::GameObject },
-			[](void* p, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+			[](void* p, const std::vector<Reflection::GenericValue>&, const Logging::Context&) -> std::vector<Reflection::GenericValue>
 			{
 				GameObject* g = static_cast<GameObject*>(p);
 				return { g->Duplicate()->ToGenericValue() };
@@ -147,7 +147,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		{ "MergeWith", Reflection::MethodDescriptor{
 			{ Reflection::ValueType::GameObject },
 			{},
-			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+			[](void* p, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
 			{
 				GameObject* g = static_cast<GameObject*>(p);
 				GameObject* o = GameObject::FromGenericValue(inputs[0]);
@@ -160,7 +160,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		{ "FindChild", Reflection::MethodDescriptor{
 			{ Reflection::ValueType::String },
 			{ REFLECTION_OPTIONAL(GameObject) },
-			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+			[](void* p, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
 			{
 				GameObject* g = static_cast<GameObject*>(p);
 				return { g->FindChild(inputs[0].AsStringView())->ToGenericValue() };
@@ -170,7 +170,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		{ "FindChildWithComponent", Reflection::MethodDescriptor{
 			{ Reflection::ValueType::String },
 			{ REFLECTION_OPTIONAL(GameObject) },
-			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+			[](void* p, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
 			{
 				EntityComponent ec = FindComponentTypeByName(inputs[0].AsStringView());
 				if (ec == EntityComponent::None)
@@ -184,7 +184,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		{ "GetComponents", Reflection::MethodDescriptor{
 			{},
 			{ Reflection::ValueType::Array },
-			[](void* p, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+			[](void* p, const std::vector<Reflection::GenericValue>&, const Logging::Context&) -> std::vector<Reflection::GenericValue>
 			{
 				std::vector<Reflection::GenericValue> ret;
 
@@ -198,7 +198,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		{ "HasComponent", Reflection::MethodDescriptor{
 			{ Reflection::ValueType::String },
 			{ Reflection::ValueType::Boolean },
-			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+			[](void* p, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
 			{
 				EntityComponent ec = FindComponentTypeByName(inputs[0].AsStringView());
 				if (ec == EntityComponent::None)
@@ -215,7 +215,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		{ "AddComponent", Reflection::MethodDescriptor{
 			{ Reflection::ValueType::String },
 			{},
-			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+			[](void* p, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
 			{
 				EntityComponent ec = FindComponentTypeByName(inputs[0].AsStringView());
 				if (ec == EntityComponent::None)
@@ -231,7 +231,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		{ "RemoveComponent", Reflection::MethodDescriptor{
 			{ Reflection::ValueType::String },
 			{},
-			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+			[](void* p, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
 			{
 				EntityComponent ec = FindComponentTypeByName(inputs[0].AsStringView());
 				if (ec == EntityComponent::None)
@@ -247,7 +247,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		{ "AddTag", Reflection::MethodDescriptor{
 			{ Reflection::ValueType::String },
 			{},
-			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+			[](void* p, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
 			{
 				GameObject* obj = static_cast<GameObject*>(p);
 				obj->AddTag(inputs[0].AsString());
@@ -258,7 +258,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		{ "RemoveTag", Reflection::MethodDescriptor{
 			{ Reflection::ValueType::String },
 			{},
-			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+			[](void* p, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
 			{
 				GameObject* obj = static_cast<GameObject*>(p);
 				obj->RemoveTag(inputs[0].AsString());
@@ -269,7 +269,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		{ "HasTag", Reflection::MethodDescriptor{
 			{ Reflection::ValueType::String },
 			{ Reflection::ValueType::Boolean },
-			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+			[](void* p, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
 			{
 				GameObject* obj = static_cast<GameObject*>(p);
 
@@ -279,7 +279,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		{ "GetTags", Reflection::MethodDescriptor{
 			{},
 			{ Reflection::ValueType::Array },
-			[](void* p, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+			[](void* p, const std::vector<Reflection::GenericValue>&, const Logging::Context&) -> std::vector<Reflection::GenericValue>
 			{
 				GameObject* obj = static_cast<GameObject*>(p);
 				std::vector<Reflection::GenericValue> tags;
@@ -997,7 +997,7 @@ void GameObject::SetPropertyValue(const std::string_view& PropName, const Reflec
 		)
 		{
 			Reflection::GenericValue prevValue = prop->Get(ref.Referred());
-			prop->Set(ref.Referred(), Value);
+			prop->Set(ref.Referred(), Value, Log);
 
 			if (Value != prevValue)
 			{
@@ -1012,7 +1012,7 @@ void GameObject::SetPropertyValue(const std::string_view& PropName, const Reflec
 		}
 		else
 		{
-			prop->Set(ref.Referred(), Value);
+			prop->Set(ref.Referred(), Value, Log);
 		}
 
 		return;
@@ -1043,12 +1043,12 @@ Reflection::GenericValue GameObject::GetDefaultPropertyValue(const std::string_v
 	RAISE_RTF("Invalid property '{}' in GetDefaultPropertyValue", PropName);
 }
 
-std::vector<Reflection::GenericValue> GameObject::CallMethod(const std::string_view& FuncName, const std::vector<Reflection::GenericValue>& Inputs)
+std::vector<Reflection::GenericValue> GameObject::CallMethod(const std::string_view& FuncName, const std::vector<Reflection::GenericValue>& Inputs, const Logging::Context& Context)
 {
 	ReflectorRef ref;
 
 	if (const Reflection::MethodDescriptor* func = FindMethod(FuncName, &ref))
-		return func->Func(ref.Referred(), Inputs);
+		return func->Func(ref.Referred(), Inputs, Context);
 
 	RAISE_RTF("Invalid function '{}' in CallMethod", FuncName);
 }

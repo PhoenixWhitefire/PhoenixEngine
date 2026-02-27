@@ -25,7 +25,7 @@ void History::ClearHistory()
     m_ActionHistory = { { "<Initial Action>", {} } };
 
     if (m_CurrentAction.has_value())
-        Log::WarningF("`History::ClearHistory` called while Action {} was ongoing", m_CurrentAction->Name);
+        Log.WarningF("`History::ClearHistory` called while Action {} was ongoing", m_CurrentAction->Name);
 }
 
 std::optional<size_t> History::TryBeginAction(const std::string& Name)
@@ -35,7 +35,7 @@ std::optional<size_t> History::TryBeginAction(const std::string& Name)
 
     if (m_CurrentAction.has_value())
     {
-        Log::WarningF("`History::TryBeginAction` failed for {} because {} is still in progress", Name, m_CurrentAction->Name);
+        Log.WarningF("`History::TryBeginAction` failed for {} because {} is still in progress", Name, m_CurrentAction->Name);
         return std::nullopt;
     }
 
@@ -71,7 +71,7 @@ void History::FinishAction(size_t Id)
             m_ActionHistory = std::vector<Action>(m_ActionHistory.begin(), m_ActionHistory.begin() + m_CurrentWaypoint + 1);
         }
         else
-            Log::Warning("Failed to overwrite History - Please report this bug if you figure out a consistent repro!");
+            Log.Warning("Failed to overwrite History - Please report this bug if you figure out a consistent repro!");
     }
 
     m_ActionHistory.push_back(m_CurrentAction.value());
@@ -145,7 +145,7 @@ void History::Undo()
         void* p = event.Target.Referred();
         if (!p)
         {
-            Log::ErrorF(
+            Log.ErrorF(
                 "Cannot Undo event #{} in Action {}: Target of type {} with ID {} is not accessible",
                 i, lastAction.Name, s_EntityComponentNames[(size_t)event.Target.Type], event.Target.Id
             );
@@ -154,11 +154,11 @@ void History::Undo()
 
         try
         {
-            event.Property->Set(p, event.PreviousValue);
+            event.Property->Set(p, event.PreviousValue, { .ContextExtraTags = "LogContext:HistoryUndo" });
         }
         catch (const std::runtime_error& e)
         {
-            Log::ErrorF(
+            Log.ErrorF(
                 "Exception thrown while Undoing event #{} in Action {}: {}",
                 i, lastAction.Name, e.what()
             );
@@ -182,7 +182,7 @@ void History::Redo()
         void* p = event.Target.Referred();
         if (!p)
         {
-            Log::ErrorF(
+            Log.ErrorF(
                 "Cannot Redo event #{} in Action {}: Target of type {} with ID {} is not accessible",
                 i, nextAction.Name, s_EntityComponentNames[(size_t)event.Target.Type], event.Target.Id
             );
@@ -191,11 +191,11 @@ void History::Redo()
 
         try
         {
-            event.Property->Set(p, event.NewValue);
+            event.Property->Set(p, event.NewValue, { .ContextExtraTags = "LogContext:HistoryRedo" });
         }
         catch (const std::runtime_error& e)
         {
-            Log::ErrorF(
+            Log.ErrorF(
                 "Exception thrown while Redoing event #{} in Action {}: {}",
                 i, nextAction.Name, e.what()
             );

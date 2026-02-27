@@ -18,12 +18,12 @@ struct ParallelLogEvent
 {
 	std::string Message;
 	std::string ExtraTags;
-	LogMessageType Type;
+	Logging::MessageType Type;
 };
 static std::mutex ParallelLogEventsMutex;
 static std::vector<ParallelLogEvent> ParallelLogEvents;
 
-void Log::Save()
+void Logging::Save()
 {
 	ZoneScoped;
 
@@ -66,7 +66,7 @@ static void appendToLog(const std::string_view& Message, bool NoNewline = false)
 
 		// Log Size Limit Exceeded Throwing Exception
 		ProgramLog.append("\nLSLETE: Log size limit exceeded, throwing exception\n");
-		Log::Save();
+		Logging::Save();
 
 		RAISE_RT("Program log exceeds maximum size of 2e6 bytes (2 megabytes)");
 	}
@@ -76,17 +76,21 @@ static void appendToLog(const std::string_view& Message, bool NoNewline = false)
 // and when app shuts down
 // If the Message ends with `&&`, won't insert a newline automatically
 // 11/11/2024
-void Log::Append(const std::string_view& Message, const std::string_view& ExtraTags)
+void Logging::Context::Append(const std::string_view& Message, const std::string_view& ExtraTags) const
 {
 	ZoneScoped;
+
+	std::string tags = std::string(ExtraTags);
+	if (ContextExtraTags.size() > 0)
+		tags += "," + ContextExtraTags;
 
 	if (std::this_thread::get_id() != MainThreadId)
 	{
 		std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(ParallelLogEventsMutex);
 		ParallelLogEvents.push_back(ParallelLogEvent{
 			.Message = std::string(Message),
-			.ExtraTags = std::string(ExtraTags),
-			.Type = LogMessageType::None
+			.ExtraTags = tags,
+			.Type = Logging::MessageType::None
 		});
 		return;
 	}
@@ -95,20 +99,24 @@ void Log::Append(const std::string_view& Message, const std::string_view& ExtraT
 	//	appendToLog(ExtraTags, true);
 	appendToLog(Message, false);
 
-	EcEngine::SignalNewLogMessage(LogMessageType::None, Message, ExtraTags);
+	EcEngine::SignalNewLogMessage(Logging::MessageType::None, Message, tags);
 }
 
-void Log::Info(const std::string_view& Message, const std::string_view& ExtraTags)
+void Logging::Context::Info(const std::string_view& Message, const std::string_view& ExtraTags) const
 {
 	ZoneScoped;
+
+	std::string tags = std::string(ExtraTags);
+	if (ContextExtraTags.size() > 0)
+		tags += "," + ContextExtraTags;
 
 	if (std::this_thread::get_id() != MainThreadId)
 	{
 		std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(ParallelLogEventsMutex);
 		ParallelLogEvents.push_back(ParallelLogEvent{
 			.Message = std::string(Message),
-			.ExtraTags = std::string(ExtraTags),
-			.Type = LogMessageType::Info
+			.ExtraTags = tags,
+			.Type = Logging::MessageType::Info
 		});
 		return;
 	}
@@ -118,20 +126,24 @@ void Log::Info(const std::string_view& Message, const std::string_view& ExtraTag
 	appendToLog(": ", true);
 	appendToLog(Message);
 
-	EcEngine::SignalNewLogMessage(LogMessageType::Info, Message, ExtraTags);
+	EcEngine::SignalNewLogMessage(Logging::MessageType::Info, Message, tags);
 }
 
-void Log::Warning(const std::string_view& Message, const std::string_view& ExtraTags)
+void Logging::Context::Warning(const std::string_view& Message, const std::string_view& ExtraTags) const
 {
 	ZoneScoped;
+
+	std::string tags = std::string(ExtraTags);
+	if (ContextExtraTags.size() > 0)
+		tags += "," + ContextExtraTags;
 
 	if (std::this_thread::get_id() != MainThreadId)
 	{
 		std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(ParallelLogEventsMutex);
 		ParallelLogEvents.push_back(ParallelLogEvent{
 			.Message = std::string(Message),
-			.ExtraTags = std::string(ExtraTags),
-			.Type = LogMessageType::Warning
+			.ExtraTags = tags,
+			.Type = Logging::MessageType::Warning
 		});
 		return;
 	}
@@ -141,20 +153,24 @@ void Log::Warning(const std::string_view& Message, const std::string_view& Extra
 	appendToLog(": ", true);
 	appendToLog(Message);
 
-	EcEngine::SignalNewLogMessage(LogMessageType::Warning, Message, ExtraTags);
+	EcEngine::SignalNewLogMessage(Logging::MessageType::Warning, Message, tags);
 }
 
-void Log::Error(const std::string_view& Message, const std::string_view& ExtraTags)
+void Logging::Context::Error(const std::string_view& Message, const std::string_view& ExtraTags) const
 {
 	ZoneScoped;
+
+	std::string tags = std::string(ExtraTags);
+	if (ContextExtraTags.size() > 0)
+		tags += "," + ContextExtraTags;
 
 	if (std::this_thread::get_id() != MainThreadId)
 	{
 		std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(ParallelLogEventsMutex);
 		ParallelLogEvents.push_back(ParallelLogEvent{
 			.Message = std::string(Message),
-			.ExtraTags = std::string(ExtraTags),
-			.Type = LogMessageType::Error
+			.ExtraTags = tags,
+			.Type = Logging::MessageType::Error
 		});
 		return;
 	}
@@ -164,10 +180,10 @@ void Log::Error(const std::string_view& Message, const std::string_view& ExtraTa
 	appendToLog(": ", true);
 	appendToLog(Message);
 
-	EcEngine::SignalNewLogMessage(LogMessageType::Error, Message, ExtraTags);
+	EcEngine::SignalNewLogMessage(Logging::MessageType::Error, Message, tags);
 }
 
-void Log::Initialize()
+void Logging::Initialize()
 {
 	ZoneScoped;
 
@@ -175,9 +191,11 @@ void Log::Initialize()
 
 	PHX_CHECK(FileRW::WriteFile("./log.txt", ""));
 	LogHandle.open("./log.txt", std::ios_base::app);
+
+	Log = Context{ .ContextExtraTags = "LogContext:Global" };
 }
 
-void Log::FlushParallelEvents()
+void Logging::FlushParallelEvents()
 {
 	ZoneScoped;
 
@@ -185,22 +203,25 @@ void Log::FlushParallelEvents()
 
 	for (const ParallelLogEvent& ple : ParallelLogEvents)
 	{
+		std::string extraTags = ple.ExtraTags;
+		extraTags += "ParallelLog";
+
 		switch (ple.Type)
 		{
-		case LogMessageType::None:
-			Log::Append(ple.Message, ple.ExtraTags);
+		case Logging::MessageType::None:
+			Log.Append(ple.Message, ple.ExtraTags);
 			break;
 
-		case LogMessageType::Info:
-			Log::Info(ple.Message, ple.ExtraTags);
+		case Logging::MessageType::Info:
+			Log.Info(ple.Message, ple.ExtraTags);
 			break;
 
-		case LogMessageType::Warning:
-			Log::Warning(ple.Message, ple.ExtraTags);
+		case Logging::MessageType::Warning:
+			Log.Warning(ple.Message, ple.ExtraTags);
 			break;
 
-		case LogMessageType::Error:
-			Log::Error(ple.Message, ple.ExtraTags);
+		case Logging::MessageType::Error:
+			Log.Error(ple.Message, ple.ExtraTags);
 			break;
 
 		[[unlikely]] default: assert(false);

@@ -69,7 +69,7 @@ std::string FileRW::ReadFile(const std::string& ShortPath, bool* Success)
 			shortError += " Not a file"; // "Succeeds" on Linux for some reason
 
 		std::string fullError = std::format("Failed to read file '{}': {}", actualPath, shortError);
-		Log::Error(fullError);
+		Log.Error(fullError);
 
 		if (Success)
 			*Success = false;
@@ -103,7 +103,7 @@ bool FileRW::WriteFile(
 	{
 		std::string shortError = std::strerror(errno);
 		std::string fullError = std::format("Failed to write {} bytes to file '{}': {}", Contents.size(), path, shortError);
-		Log::Error(fullError);
+		Log.Error(fullError);
 
 		if (ErrorMessage)
 			*ErrorMessage = fullError;
@@ -163,7 +163,7 @@ static std::string resolveAliasRecursive(std::string Path)
 
 	if (aliasIt == s_AliasMap.end())
 	{
-		Log::ErrorF("Invalid alias '{}' in path '{}'", alias, Path);
+		Log.ErrorF("Invalid alias '{}' in path '{}'", alias, Path);
 		return Path;
 	}
 	else
@@ -179,7 +179,7 @@ std::string FileRW::MakePathCwdRelative(std::string Path)
 {
 	if (Path.size() == 0)
 	{
-		Log::Warning("`MakePathCwdRelative` given a path 0 bytes in length!");
+		Log.Warning("`MakePathCwdRelative` given a path 0 bytes in length!");
 		return Path;
 	}
 
@@ -229,7 +229,7 @@ std::string FileRW::MakePathAbsolute(std::string Path)
 {
 	if (Path.size() == 0)
 	{
-		Log::Warning("`MakePathAbsolute` given a path 0 bytes in length!");
+		Log.Warning("`MakePathAbsolute` given a path 0 bytes in length!");
 		return Path;
 	}
 

@@ -342,6 +342,7 @@
           "Framerate": "The Engine's current framerate",
           "FramerateCap": "The maximum framerate the Engine will reach before attempting to self-limit",
           "IsHeadless": "Whether the Engine is currently running in headless mode",
+          "TargetPlatform": "The target platform the Engine was compiled for (Windows or Linux, usually)",
           "Version": "The version of the Engine build"
         }
       },
@@ -1483,6 +1484,10 @@
             ],
             "Out": "boolean"
           },
+          "begintooltip": {
+            "Description": "`ImGui::BeginTooltip`",
+            "Out": "boolean"
+          },
           "button": {
             "Description": [
               "`ImGui::Button`"
@@ -1578,6 +1583,9 @@
               "`ImGui::EndPopup`"
             ]
           },
+          "endtooltip": {
+            "Description": "`ImGui::EndTooltip`"
+          },
           "endw": {
             "Description": [
               "`ImGui::End`, `endw` and not `end` because `end` is a Luau keyword"
@@ -1668,6 +1676,9 @@
               ]
             ],
             "Out": "boolean"
+          },
+          "newline": {
+            "Description": "`ImGui::Newline`"
           },
           "openpopup": {
             "Description": [

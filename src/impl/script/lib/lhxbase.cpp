@@ -51,14 +51,14 @@ static void appendToLog(lua_State* L)
 		const char* s = luaL_tolstring(L, i, &l); // convert to string using __tostring et al
 
 		if (i > 1)
-			Log::Append(" &&");
+			Log.Append(" &&");
 		else
-			Log::Append("&&");
+			Log.Append("&&");
 
 		if (i < n)
-			Log::Append(std::string(s) + "&&", extraTag);
+			Log.Append(std::string(s) + "&&", extraTag);
 		else
-			Log::Append(s, extraTag);
+			Log.Append(s, extraTag);
 
 		lua_pop(L, 1); // pop result
 	}
@@ -67,7 +67,7 @@ static void appendToLog(lua_State* L)
 static int base_print(lua_State* L)
 {
 	// this is just so that the Output can attribute the log message to a script
-	Log::Info("&&", getScriptTraceExtraTags(L));
+	Log.Info("&&", getScriptTraceExtraTags(L));
 	appendToLog(L);
 
 	return 0;
@@ -75,7 +75,7 @@ static int base_print(lua_State* L)
 
 static int base_warn(lua_State* L)
 {
-	Log::Warning("&&", getScriptTraceExtraTags(L));
+	Log.Warning("&&", getScriptTraceExtraTags(L));
 	appendToLog(L);
 
 	return 0;
@@ -83,7 +83,7 @@ static int base_warn(lua_State* L)
 
 static int base_appendlog(lua_State* L)
 {
-	Log::Append("&&", getScriptTraceExtraTags(L));
+	Log.Append("&&", getScriptTraceExtraTags(L));
 	appendToLog(L);
 
     return 0;

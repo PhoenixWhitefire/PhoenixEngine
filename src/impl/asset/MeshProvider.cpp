@@ -334,7 +334,7 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 
 			if (numJoints > 4)
 			{
-				Log::WarningF(
+				Log.WarningF(
 					"Vertex #{} specified {} joints, but only up to 4 are supported, clamping.",
 					vertexIndex, numJoints
 				);
@@ -370,7 +370,7 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 		uint32_t chId = readU32(contents, &cursor, &fileTooSmallError);
 
 		if (chId != BoneChId)
-			Log::ErrorF(
+			Log.ErrorF(
 				"Invalid BONE chunk, expected ID {}, got {}. Skipping",
 				BoneChId, chId
 			);
@@ -379,7 +379,7 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 			uint8_t numBones = readU8(contents, &cursor, &fileTooSmallError);
 
 			if (numBones == 0)
-				Log::Warning("Mesh had a BONE chunk and the IsRigged bit, but bone count is 0");
+				Log.Warning("Mesh had a BONE chunk and the IsRigged bit, but bone count is 0");
 
 			for (uint8_t boneIdx = 0; boneIdx < numBones; boneIdx++)
 			{
@@ -426,7 +426,7 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 
 				if (fileTooSmallError)
 				{
-					Log::ErrorF(
+					Log.ErrorF(
 						"Reached EoF trying to read Bone ID {}",
 						boneIdx
 					);
@@ -1048,7 +1048,7 @@ uint32_t MeshProvider::LoadFromPath(
 
 					if (!success)
 					{
-						Log::ErrorF(
+						Log.ErrorF(
 							"Failed to load mesh '{}' asynchronously: File could not be opened",
 							Path
 						);
@@ -1061,7 +1061,7 @@ uint32_t MeshProvider::LoadFromPath(
 					Mesh loadedMesh = this->Deserialize(contents, &error);
 					
 					if (error.size() > 0)
-						Log::ErrorF(
+						Log.ErrorF(
 							"Failed to load mesh '{}' asynchronously: {}",
 							Path, error
 						);
@@ -1089,7 +1089,7 @@ uint32_t MeshProvider::LoadFromPath(
 
 			if (!success)
 			{
-				Log::ErrorF(
+				Log.ErrorF(
 					"Failed to load mesh '{}' synchronously: File could not be opened",
 					Path
 				);
@@ -1103,7 +1103,7 @@ uint32_t MeshProvider::LoadFromPath(
 			
 			if (error.size() > 0)
 			{
-				Log::ErrorF(
+				Log.ErrorF(
 					"Failed to load mesh '{}' synchronously: {}",
 					Path, error
 				);

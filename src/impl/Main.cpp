@@ -274,14 +274,14 @@ static void doApiDump()
 {
 	ZoneScoped;
 
-	Log::Info("Dumping API...");
+	Log.Info("Dumping API...");
 
 	nlohmann::json apiDump;
 	apiDump["GameObject"] = GameObject::DumpApiToJson();
 	apiDump["ScriptEnv"] = ScriptEngine::DumpApiToJson();
 
 	PHX_CHECK(FileRW::WriteFile("./apidump.json", apiDump.dump(2)));
-	Log::Info("API dump finished");
+	Log.Info("API dump finished");
 }
 
 static void drawDeveloperUI(double DeltaTime)
@@ -491,7 +491,7 @@ static void drawDeveloperUI(double DeltaTime)
 				}
 				else
 				{
-					Log::Info("User did not select a save file path for the stats CSV");
+					Log.Info("User did not select a save file path for the stats CSV");
 					IsSamplingStats = false;
 				}
 			}
@@ -581,7 +581,7 @@ static void drawDeveloperUI(double DeltaTime)
 		if (ImGui::Button("Save Post FX settings"))
 		{
 			PHX_CHECK(FileRW::WriteFile("phoenix.conf", EngineJsonConfig.dump(2)));
-			Log::Info("The JSON Config overwrote the pre-existing 'phoenix.conf'.");
+			Log.Info("The JSON Config overwrote the pre-existing 'phoenix.conf'.");
 		}
 
 		ImGui::Checkbox("Wireframe rendering", &engine->DebugWireframeRendering);
@@ -606,11 +606,11 @@ static void handleCrash(const std::string_view& Error, const std::string_view& E
 	// Log Size Limit Exceeded Throwing Exception
 	if (!Error.starts_with("LSLETE"))
 	{
-		Log::Append(std::format(
+		Log.Append(std::format(
 			"CRASH - {}: {}",
 			ExceptionType, Error
 		));
-		Log::Save();
+		Log.Save();
 	}
 
 	std::string errMessage = std::format(
@@ -641,7 +641,7 @@ static void init()
 
 	if (!engine->IsHeadlessMode)
 	{
-		Log::InfoF(
+		Log.InfoF(
 			"Initializing Dear ImGui {}...",
 			IMGUI_VERSION
 		);
@@ -672,19 +672,19 @@ static void init()
 				std::filesystem::copy_file(defaultLayoutFile, "imgui.ini");
 		}
 	
-		Log::Info("Dear ImGui initialized");
+		Log.Info("Dear ImGui initialized");
 	
 		engine->OnFrameStart.Connect(handleInputs);
 	
 		if (EngineJsonConfig.value("Developer", false))
 		{
-			Log::Info("Developer-mode specific functionality");
+			Log.Info("Developer-mode specific functionality");
 			InlayEditor::Initialize(&engine->RendererContext);
 			engine->OnFrameRenderGui.Connect(drawDeveloperUI);
 		}
 	}
 
-	Log::Info("Loading Root Scene from file...");
+	Log.Info("Loading Root Scene from file...");
 
 	const std::string& mapFile = MapFileFromArgs ?
 									MapFileFromArgs
@@ -722,7 +722,7 @@ static void init()
 	PHX_ENSURE_MSG(worldLoadSuccess, "World failed to load: " + SceneFormat::GetLastErrorString());
 
 	if (roots.size() > 1)
-		Log::Warning("More than 1 root object in the World, anything other than the first will be ignored");
+		Log.Warning("More than 1 root object in the World, anything other than the first will be ignored");
 
 	PHX_ENSURE_MSG(!roots.empty(), "No root objects in World!");
 
@@ -749,13 +749,13 @@ static bool checkBoolArgument(const char* v, const char* arg, bool defaultVal)
 
 	if (v[alen] != ':')
 	{
-		Log::ErrorF("Malformed boolean argument '{}' (matching '{}')", v, arg);
+		Log.ErrorF("Malformed boolean argument '{}' (matching '{}')", v, arg);
 		return defaultVal;
 	}
 
 	if (vlen < alen + 2)
 	{
-		Log::ErrorF("Missing Y/N after '{}' (matching '{}')", v, arg);
+		Log.ErrorF("Missing Y/N after '{}' (matching '{}')", v, arg);
 		return defaultVal;
 	}
 
@@ -764,7 +764,7 @@ static bool checkBoolArgument(const char* v, const char* arg, bool defaultVal)
 	if (v[alen + 1] == 'N')
 		return false;
 
-	Log::ErrorF("Invalid option for boolean '{}' in '{}' (matching '{}'), expected Y/N", v[alen+1], v, arg);
+	Log.ErrorF("Invalid option for boolean '{}' in '{}' (matching '{}'), expected Y/N", v[alen+1], v, arg);
 	return defaultVal;
 }
 
@@ -788,7 +788,7 @@ static void processCliArgs(int argc, char** argv)
 				i++;
 			}
 			else
-				Log::Error("'-threads' argument from command-line was not followed by the desired Thread Count");
+				Log.Error("'-threads' argument from command-line was not followed by the desired Thread Count");
 		}
 		else if (strcmp(v, "-tracyim") == 0)
 		{
@@ -804,7 +804,7 @@ static void processCliArgs(int argc, char** argv)
 			{
 				MapFileFromArgs = argv[i + 1];
 
-				Log::InfoF(
+				Log.InfoF(
 					"Map to load specified from launch argument. Map was: {}",
 					MapFileFromArgs
 				);
@@ -812,7 +812,7 @@ static void processCliArgs(int argc, char** argv)
 				i++;
 			}
 			else
-				Log::Error("'-loadmap' argument from command-line was not followed by the desired File");
+				Log.Error("'-loadmap' argument from command-line was not followed by the desired File");
 		}
 		else if (strcmp(v, "-tool") == 0)
 		{
@@ -820,7 +820,7 @@ static void processCliArgs(int argc, char** argv)
 			{
 				ScriptTool = argv[i + 1];
 
-				Log::InfoF(
+				Log.InfoF(
 					"Standalone tool: {}",
 					ScriptTool
 				);
@@ -828,7 +828,7 @@ static void processCliArgs(int argc, char** argv)
 				i++;
 			}
 			else
-				Log::Error("'-tool' argument from command-line was not followed by the desired File");
+				Log.Error("'-tool' argument from command-line was not followed by the desired File");
 		}
 		else if (isBoolArgument(v, "-headless"))
 		{
@@ -849,11 +849,11 @@ static void processCliArgs(int argc, char** argv)
 
 int main(int argc, char** argv)
 {
-	Log::Initialize();
-	Log::Info("Application startup");
+	Logging::Initialize();
+	Log.Info("Application startup");
 	
-	Log::InfoF("Phoenix Engine");
-	Log::AppendF(
+	Log.InfoF("Phoenix Engine");
+	Log.AppendF(
 		"\tVersion: {}"
 		"\n\tCommit: {}"
 		"\n\tTarget platform: " PHX_TARGET_PLATFORM "\n\tTarget Compiler: " PHX_TARGET_COMPILER
@@ -862,13 +862,13 @@ int main(int argc, char** argv)
 		GetEngineVersion(), GetEngineCommitHash(), GetEngineBuildDate(), GetEngineBuildTime()
 	);
 
-	Log::Info("Command line: &&");
+	Log.Info("Command line: &&");
 
 	for (int i = 0; i < argc; i++)
 		if (i < argc - 1)
-			Log::AppendF(" {}&&", argv[i]);
+			Log.AppendF(" {}&&", argv[i]);
 		else
-			Log::AppendF(" {}", argv[i]);
+			Log.AppendF(" {}", argv[i]);
 
 	processCliArgs(argc, argv);
 
@@ -884,7 +884,7 @@ int main(int argc, char** argv)
 
 		engine.Start();
 
-		Log::Save(); // in case FileRW::WriteFile throws an exception
+		Logging::Save(); // in case FileRW::WriteFile throws an exception
 		
 		s_ExitCode = engine.ExitCode;
 		InlayEditor::Shutdown();
@@ -892,9 +892,8 @@ int main(int argc, char** argv)
 	}
 	PHX_MAIN_CRASHHANDLERS;
 
-	Log::Info("Application shutdown");
-
-	Log::Save();
+	Log.Info("Application shutdown");
+	Logging::Save();
 
 	return s_ExitCode;
 }

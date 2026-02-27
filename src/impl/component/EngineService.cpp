@@ -257,7 +257,7 @@ public:
                     Engine* engine = Engine::Get();
                     return engine->FpsCap;
                 },
-                [](void*, const Reflection::GenericValue& gv)
+                [](void*, const Reflection::GenericValue& gv, const Logging::Context&)
                 {
                     Engine* engine = Engine::Get();
                     engine->FpsCap = gv.AsInteger();
@@ -311,7 +311,7 @@ public:
             { "Exit", Reflection::MethodDescriptor{
                 { REFLECTION_OPTIONAL(Integer) },
                 {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     Engine* engine = Engine::Get();
 
@@ -328,7 +328,7 @@ public:
             { "BindDataModel", Reflection::MethodDescriptor{
                 { Reflection::ValueType::GameObject },
                 {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     Engine* engine = Engine::Get();
                     engine->BindDataModel(GameObject::FromGenericValue(inputs[0]));
@@ -340,7 +340,7 @@ public:
             { "SetExplorerRoot", Reflection::MethodDescriptor{
                 { Reflection::ValueType::GameObject },
                 {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     InlayEditor::SetExplorerRoot(GameObject::FromGenericValue(inputs[0]));
 
@@ -351,7 +351,7 @@ public:
             { "SetExplorerSelections", Reflection::MethodDescriptor{
                 { Reflection::ValueType::Array },
                 {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     const std::span<Reflection::GenericValue>& inner = inputs[0].AsArray();
 
@@ -369,7 +369,7 @@ public:
             { "GetExplorerSelections", Reflection::MethodDescriptor{
                 {},
                 { Reflection::ValueType::Array },
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>&, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     const auto& sels = InlayEditor::GetExplorerSelections();
 
@@ -386,7 +386,7 @@ public:
             { "CreateVM", Reflection::MethodDescriptor{
                 { Reflection::ValueType::String },
                 {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     ScriptEngine::RegisterNewVM(std::string(inputs[0].AsStringView()));
 
@@ -397,7 +397,7 @@ public:
             { "CloseVM", Reflection::MethodDescriptor{
                 { Reflection::ValueType::String },
                 {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     const auto& it = ScriptEngine::VMs.find(std::string(inputs[0].AsStringView()));
                     if (it == ScriptEngine::VMs.end())
@@ -413,7 +413,7 @@ public:
             { "RunInVM", Reflection::MethodDescriptor{
                 { Reflection::ValueType::String, Reflection::ValueType::String, REFLECTION_OPTIONAL(String) },
                 { Reflection::ValueType::Boolean, REFLECTION_OPTIONAL(String) },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     const std::string vmName = std::string(inputs[0].AsStringView());
 
@@ -433,7 +433,7 @@ public:
                         int result = lua_resume(ML, ML, 0);
 
                         if (result == LUA_ERRERR || result == LUA_ERRRUN || result == LUA_ERRMEM)
-                            Log::Error(lua_tostring(ML, -1), std::format("SourceChunkName:{}", chname));
+                            Log.Error(lua_tostring(ML, -1), std::format("SourceChunkName:{}", chname));
 
                         const char* const ResultToMessage[] = {
                             "ok",
@@ -455,7 +455,7 @@ public:
                         std::string message = lua_tostring(ML, -1);
                         lua_pop(vm.MainThread, 1); // pop off ML
 
-                        Log::Error(message, std::format("SourceChunkName:{}", chname));
+                        Log.Error(message, std::format("SourceChunkName:{}", chname));
                         return { false, message };
                     }
                 }
@@ -464,7 +464,7 @@ public:
             { "GetToolNames", Reflection::MethodDescriptor{
                 {},
                 { Reflection::ValueType::Array },
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>&, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     std::vector<Reflection::GenericValue> out;
                     out.reserve(std::size(Tools));
@@ -479,7 +479,7 @@ public:
             { "SetToolEnabled", Reflection::MethodDescriptor{
                 { Reflection::ValueType::String, Reflection::ValueType::Boolean },
                 {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     std::string requestedTool = checkValidTool(std::string(inputs[0].AsStringView()));
                     EngineJsonConfig[requestedTool] = inputs[1].AsBoolean();
@@ -491,7 +491,7 @@ public:
             { "IsToolEnabled", Reflection::MethodDescriptor{
                 { Reflection::ValueType::String },
                 { Reflection::ValueType::Boolean },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     return { (bool)EngineJsonConfig[checkValidTool(std::string(inputs[0].AsStringView()))] };
                 }
@@ -500,11 +500,33 @@ public:
             { "ShowMessageBox", Reflection::MethodDescriptor{
                 { Reflection::ValueType::String, Reflection::ValueType::String, REFLECTION_OPTIONAL(String), REFLECTION_OPTIONAL(String), REFLECTION_OPTIONAL(Integer) },
                 { Reflection::ValueType::Integer },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context& Context) -> std::vector<Reflection::GenericValue>
                 {
+                    std::string title = inputs[0].AsString();
+                    std::string message = inputs[1].AsString();
+
+                    if (title.find('`') != std::string::npos)
+                    {
+                        Context.WarningF("Backticks will be replaced with single-quotes in message box title '{}'", title);
+                        for (char& c : title)
+                        {
+                            if (c == '`')
+                                c = '\'';
+                        }
+                    }
+                    if (message.find('`') != std::string::npos)
+                    {
+                        Context.WarningF("Backticks will be replaced with single-quotes in message box message '{}'", message);
+                        for (char& c : message)
+                        {
+                            if (c == '`')
+                                c = '\'';
+                        }
+                    }
+
                     return { tinyfd_messageBox(
-                        inputs[0].AsStringView().data(),                              // title
-                        inputs[1].AsStringView().data(),                              // message
+                        title.data(),
+                        message.data(),
                         inputs.size() > 2 ? inputs[2].AsStringView().data() : "ok",   // buttons
                         inputs.size() > 3 ? inputs[3].AsStringView().data() : "info", // icon
                         inputs.size() > 4 ? inputs[4].AsInteger() : 1                 // default button
@@ -515,7 +537,7 @@ public:
             { "GetCliArguments", Reflection::MethodDescriptor{
                 {},
                 { Reflection::ValueType::Array },
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>&, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     Engine* engine = Engine::Get();
 
@@ -532,7 +554,7 @@ public:
             { "SetViewportInputRect", Reflection::MethodDescriptor{
                 { Reflection::ValueType::Vector2, Reflection::ValueType::Vector2 },
                 {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     Engine* engine = Engine::Get();
                     glm::vec2 viewportPosition = inputs[0].AsVector2();
@@ -549,7 +571,7 @@ public:
             { "ResetViewportInputRect", Reflection::MethodDescriptor{
                 {},
                 {},
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>&, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     Engine* engine = Engine::Get();
                     engine->OverrideDefaultViewportInputRect = false;
@@ -562,7 +584,7 @@ public:
             { "OpenTextDocument", Reflection::MethodDescriptor{
                 { Reflection::ValueType::String, REFLECTION_OPTIONAL(Integer) },
                 {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     InlayEditor::OpenTextDocument(
                         inputs[0].AsString(),
@@ -576,7 +598,7 @@ public:
             { "GetConfigValue", Reflection::MethodDescriptor{
                 { Reflection::ValueType::String },
                 { Reflection::ValueType::Any },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     return { jsonToGeneric(EngineJsonConfig[inputs[0].AsStringView()]) };
                 }
@@ -585,7 +607,7 @@ public:
             { "SetConfigValue", Reflection::MethodDescriptor{
                 { Reflection::ValueType::String, Reflection::ValueType::Any },
                 {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     EngineJsonConfig[inputs[0].AsStringView()] = genericToJson(inputs[1]);
 
@@ -596,7 +618,7 @@ public:
             { "SaveConfig", Reflection::MethodDescriptor{
                 {},
                 { Reflection::ValueType::Boolean, Reflection::ValueType::String },
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>&, const Logging::Context&) -> std::vector<Reflection::GenericValue>
                 {
                     std::string error;
                     bool writeSuccess = FileRW::WriteFile("./phoenix.conf", EngineJsonConfig.dump(2), &error);
@@ -621,7 +643,7 @@ public:
 
 static EngineServiceManager Instance;
 
-void EcEngine::SignalNewLogMessage(LogMessageType MessageType, const std::string_view& Message, const std::string_view& ExtraTags)
+void EcEngine::SignalNewLogMessage(Logging::MessageType MessageType, const std::string_view& Message, const std::string_view& ExtraTags)
 {
     for (const EcEngine& ce : Instance.m_Components)
     {

@@ -52,7 +52,7 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 		std::string fallbackPath = MissingTexPath;
 
 		if (texture.ImagePath != MissingTexPath)
-			Log::ErrorF(
+			Log.ErrorF(
 				"Failed to load texture '{}': {}",
 				texture.ImagePath, texture.FailureReason
 			);
@@ -83,7 +83,7 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 
 	if (texture.NumColorChannels < 1 || texture.NumColorChannels > 4)
 	{
-		Log::ErrorF(
+		Log.ErrorF(
 			"Unsupported number of color channels '{}' for texture '{}'",
 			texture.NumColorChannels, texture.ImagePath
 		);
@@ -255,7 +255,7 @@ static void emloadTexture(
 uint32_t TextureManager::Assign(const Texture& texture, const std::string& name)
 {
 	if (texture.TMP_ImageByteData != nullptr)
-		Log::WarningF(
+		Log.WarningF(
 			"The Texture being assigned to '{}' has non-NULL byte data and may create UB",
 			name
 		);

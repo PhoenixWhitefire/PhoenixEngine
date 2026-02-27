@@ -17,7 +17,7 @@
 #include "FileRW.hpp"
 #include "Log.hpp"
 
-#define SF_WARN(err, ...) Log::WarningF(     \
+#define SF_WARN(err, ...) Log.WarningF(     \
 	"Deserialization warning: " err,         \
 	__VA_ARGS__                              \
 )                                            \
@@ -60,7 +60,7 @@ static glm::vec2 getVector2FromJson(const nlohmann::json& Json)
 	}
 	catch (const nlohmann::json::type_error& TErr)
 	{
-		Log::WarningF(
+		Log.WarningF(
 			"Could not read Vector2: {}",
 			TErr.what()
 		);
@@ -84,7 +84,7 @@ static glm::vec3 getVector3FromJson(const nlohmann::json& Json)
 	}
 	catch (const nlohmann::json::type_error& TErr)
 	{
-		Log::WarningF(
+		Log.WarningF(
 			"Could not read Vector3: {}",
 			TErr.what()
 		);
@@ -107,7 +107,7 @@ static Color getColorFromJson(const nlohmann::json& Json)
 	}
 	catch (const nlohmann::json::type_error& TErr)
 	{
-		Log::WarningF(
+		Log.WarningF(
 			"Could not read Color: {}",
 			TErr.what()
 		);
@@ -135,7 +135,7 @@ static glm::mat4 getMatrixFromJson(const nlohmann::json& Json)
 	}
 	catch (const nlohmann::json::type_error& TErr)
 	{
-		Log::WarningF(
+		Log.WarningF(
 			"Could not read Matrix: {}",
 			TErr.what()
 		);
@@ -218,7 +218,7 @@ static std::vector<ObjectRef> loadSceneVersion1(
 		std::string modelName = PropObject.value("name", "<UN-NAMED>");
 
 		if (Model.empty())
-			Log::Warning(
+			Log.Warning(
 				std::format(
 					"Model '{}' in map file '{}' has no meshes!",
 					modelName,
@@ -385,6 +385,43 @@ static std::vector<ObjectRef> loadSceneVersion1(
 	return Objects;
 }
 
+// For Versions < 2.12, certain components would automatically add other components
+// Such as `Mesh` adding `Transform`. Replicate this behaviour for older scenes
+static void addLegacyComponentDependencies(GameObject* object)
+{
+	static const EntityComponent ComponentLegacyDependencies[] = {
+		EntityComponent::None,      // <NONE>
+		EntityComponent::None,      // Transform
+		EntityComponent::Transform, // Mesh
+		EntityComponent::Transform, // ParticleEmitter
+		EntityComponent::None,      // Sound
+		EntityComponent::None,      // Workspace
+		EntityComponent::None,      // DataModel
+		EntityComponent::Transform, // PointLight
+		EntityComponent::None,      // DirectionalLight
+		EntityComponent::Transform, // SpotLight
+		EntityComponent::Transform, // Camera
+		EntityComponent::None,      // Animation
+		EntityComponent::Transform, // Model
+		EntityComponent::None,      // Bone
+		EntityComponent::None,      // TreeLink
+		EntityComponent::None,      // Engine
+		EntityComponent::None,      // PlayerInput
+		EntityComponent::None,      // AssetManager
+		EntityComponent::None,      // History
+		EntityComponent::Transform, // RigidBody
+		// Nothing after
+	};
+
+	for (const ReflectorRef& r : object->Components)
+	{
+		if ((size_t)r.Type < std::size(ComponentLegacyDependencies))
+			if (EntityComponent dec = ComponentLegacyDependencies[(size_t)r.Type]; dec != EntityComponent::None)
+				if (!object->FindComponentByType(dec))
+					object->AddComponent(dec);
+	}
+}
+
 static ObjectRef createObjectFromJsonItem(const nlohmann::json& Item, uint32_t ItemIndex, float Version)
 {
 	if (Version == 2.f)
@@ -399,11 +436,13 @@ static ObjectRef createObjectFromJsonItem(const nlohmann::json& Item, uint32_t I
 		}
 
 		std::string className = classNameJson.value();
-
 		if (className == "Primitive")
 			className = "Mesh";
 
-		return GameObject::Create(className);
+		GameObject* object = GameObject::Create(className);
+		addLegacyComponentDependencies(object);
+
+		return object;
 	}
 	else
 	{
@@ -438,6 +477,9 @@ static ObjectRef createObjectFromJsonItem(const nlohmann::json& Item, uint32_t I
 			if (object->FindComponent<EcMesh>() && !object->FindComponent<EcRigidBody>())
 				object->AddComponent(EntityComponent::RigidBody);
 		}
+
+		if (Version < 2.12f)
+			addLegacyComponentDependencies(object);
 
 		if (const auto& tagIt = Item.find("$_tags"); tagIt != Item.end())
 		{
@@ -884,7 +926,7 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 		[[unlikely]] default:
 		{
 			assert(false);
-			Log::ErrorF(
+			Log.ErrorF(
 				"Cannot serialize property '{}' of {} because it has unserializable type {}", 
 				propName,
 				Object->GetFullName(),
@@ -934,7 +976,7 @@ std::string SceneFormat::Serialize(std::vector<GameObject*> Objects, const std::
 							+ std::to_string((int32_t)ymd.year());
 	
 	std::string contents = std::string("PHNXENGI\n")
-							+ "#Version 2.11\n"
+							+ "#Version 2.12\n"
 							+ "#Asset Scene\n"
 							+ "#Date " + dateStr + "\n"
 							+ "#SceneName " + SceneName + "\n"

@@ -73,7 +73,7 @@ public:
                 "Transform",
                 Matrix,
                 REFLECTION_PROPERTY_GET_SIMPLE(EcTransform, Transform),
-                [](void* p, const Reflection::GenericValue& gv)
+                [](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
                 {
                     ZoneScoped;
 
@@ -87,7 +87,7 @@ public:
                 "Size",
                 Vector3,
                 REFLECTION_PROPERTY_GET_SIMPLE(EcTransform, Size),
-                [](void* p, const Reflection::GenericValue& gv)
+                [](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
                 {
                     ZoneScoped;
 
@@ -104,7 +104,7 @@ public:
                 {
                     return static_cast<EcTransform*>(p)->LocalTransform;
                 },
-                (Reflection::PropertySetter)[](void* p, const Reflection::GenericValue& gv)
+                (Reflection::PropertySetter)[](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
                 {
                     ZoneScoped;
                     
@@ -122,7 +122,7 @@ public:
                 {
                     return static_cast<EcTransform*>(p)->LocalSize;
                 },
-                (Reflection::PropertySetter)[](void* p, const Reflection::GenericValue& gv)
+                (Reflection::PropertySetter)[](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
                 {
                     ZoneScoped;
                     

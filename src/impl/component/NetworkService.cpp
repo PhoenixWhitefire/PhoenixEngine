@@ -170,7 +170,7 @@ public:
             { "MakeHttpRequestAsync", Reflection::MethodDescriptor{
                 { Reflection::ValueType::Map },
                 { Reflection::ValueType::Map },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::promise<std::vector<Reflection::GenericValue>>*
+                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::promise<std::vector<Reflection::GenericValue>>*
                 {
                     std::promise<std::vector<Reflection::GenericValue>>* prom = new std::promise<std::vector<Reflection::GenericValue>>;
                     HttpRequest request = parseRequestFromReflection(inputs[0]);

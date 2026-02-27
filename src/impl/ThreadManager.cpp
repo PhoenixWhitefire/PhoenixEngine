@@ -112,7 +112,7 @@ void ThreadManager::Initialize(int NumThreadsOverride)
 	if (NumThreadsOverride > -1)
 		numThreads = static_cast<size_t>(NumThreadsOverride);
 
-	Log::InfoF("Creating {} parallel threads...", numThreads);
+	Log.InfoF("Creating {} parallel threads...", numThreads);
 
 	for (size_t i = 0; i < numThreads; i++)
 	{
@@ -162,7 +162,7 @@ void ThreadManager::Initialize(int NumThreadsOverride)
 
 	s_Instance = this;
 
-	Log::Info("ThreadManager initialized");
+	Log.Info("ThreadManager initialized");
 }
 
 void ThreadManager::Dispatch(std::function<void()> Task, bool IsCritical)
