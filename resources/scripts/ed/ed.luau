@@ -942,8 +942,25 @@ end
 
 local latestCommit = nil
 local canUpdate = false
+local isFetchingLatestCommitData = false
 
-task.defer(function()
+local function printTable(t, depth: string, n: string?, printFun: <T>(...T) -> ())
+	printFun = printFun or print
+
+	depth = depth or ""
+
+	printFun(depth .. (if n then n .. " =" else ""), tostring(t), "{")
+	for k, v in t do
+		if typeof(v) ~= "table" then
+			printFun(depth .. " ", k, "=", v)
+		else
+			printTable(v, depth .. "  ", k, printFun)
+		end
+	end
+	printFun(depth .. "}")
+end
+
+local function getLatestGitHubCommit()
 	local data = Network:MakeHttpRequestAsync({
 		Url = "https://api.github.com/repos/PhoenixWhitefire/PhoenixEngine/commits/main",
 		Headers = {
@@ -963,21 +980,9 @@ task.defer(function()
 		if latestCommit ~= Engine.CommitHash then
 			canUpdate = true
 		end
+	else
+		printTable(data, "", nil, warn)
 	end
-end)
-
-local function printTable(t, depth: string, n: string?)
-	depth = depth or ""
-
-	print(depth .. (if n then n .. " =" else ""), tostring(t), "{")
-	for k, v in t do
-		if typeof(v) ~= "table" then
-			print(depth .. " ", k, "=", v)
-		else
-			printTable(v, depth .. "  ", k)
-		end
-	end
-	print(depth .. "}")
 end
 
 local function renderMainMenuBar(dt: number)
@@ -1213,6 +1218,11 @@ local function renderMainMenuBar(dt: number)
 		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, ctsx), cursory)
 		imgui.urllink(Engine.CommitHash:sub(1, 8), `{ GITHUB_URL }/commit/{ Engine.CommitHash }`)
 		cursory += tts.y + 16
+
+		if not isFetchingLatestCommitData and not latestCommit then
+			isFetchingLatestCommitData = true
+			task.defer(getLatestGitHubCommit)
+		end
 
 		if latestCommit then
 			if latestCommit ~= Engine.CommitHash then
@@ -1528,9 +1538,7 @@ local function renderViewport(DeltaTime: number)
 		imgui.endw()
 	end
 
-	if OutputEnabled then
-		imgui.begin("Output")
-
+	if OutputEnabled and imgui.begin("Output", "h") then
 		local logMessageHoveringWip: number = -1
 		local smid = 0
 
@@ -1644,6 +1652,9 @@ local function renderViewport(DeltaTime: number)
 		imgui.endw()
 
 		LogMessageHovering = logMessageHoveringWip
+
+	elseif OutputEnabled then
+		imgui.endw()
 	end
 
 	local canInteract = IsHoveringViewportTitlebar or (not IsHoveringViewport and imgui.windowhovered("a | b"))
