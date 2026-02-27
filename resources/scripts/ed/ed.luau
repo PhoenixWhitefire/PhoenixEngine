@@ -437,6 +437,7 @@ local function openProject_(ManualPath: string?)
 	Project.DataModel.Name = Project.Name
 
 	Project.Workspace = Project.DataModel:FindChildWithComponent("Workspace")
+	Project.Workspace.Name = "Workspace"
 
 	if not Project.Workspace then
 		-- TODO luau: Project.Workspace is refining to `nil`
@@ -444,12 +445,16 @@ local function openProject_(ManualPath: string?)
 		Project.Workspace.SceneCamera = GameObject.new({ "Camera", "Transform" })
 		Project.Workspace.SceneCamera.Parent = Project.Workspace
 
+		Project.Workspace.Name = "Workspace"
+		Project.Workspace.SceneCamera.Name = "Camera"
+
 		print("Re-created Workspace")
 	end
 
 	assert(Project.Workspace)
 	if not Project.Workspace.SceneCamera then
 		local cam = GameObject.new({ "Camera", "Transform" })
+		cam.Name = "Camera"
 		cam.Parent = Project.Workspace
 		Project.Workspace.SceneCamera = cam
 	end
@@ -560,7 +565,12 @@ local function createNewProject_()
 	local dm = GameObject.new({ "DataModel" })
 	local projWp = GameObject.new({ "Workspace" })
 	local camera = GameObject.new({ "Camera", "Transform" })
-	GameObject.new({ "DirectionalLight" }).Parent = projWp
+	local dl = GameObject.new({ "DirectionalLight" })
+
+	projWp.Name = "Workspace"
+	camera.Name = "Camera"
+	dl.Name = "DirectionalLight"
+	dl.Parent = projWp
 
 	projWp.Parent = dm
 	camera.Parent = projWp
@@ -2013,6 +2023,7 @@ function Stages.ProjectPlaying_Enter(DeltaTime: any)
 	if not projWp.SceneCamera then
 		projWp.SceneCamera = GameObject.new({ "Camera", "Transform" })
 		projWp.SceneCamera.Parent = projWp
+		projWp.SceneCamera.Name = "Camera"
 	end
 
 	workspace.SceneCamera = projWp.SceneCamera
