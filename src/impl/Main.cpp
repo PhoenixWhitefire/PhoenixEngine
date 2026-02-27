@@ -857,9 +857,9 @@ int main(int argc, char** argv)
 		"\tVersion: {}"
 		"\n\tCommit: {}"
 		"\n\tTarget platform: " PHX_TARGET_PLATFORM "\n\tTarget Compiler: " PHX_TARGET_COMPILER
-		"\n\tBuild type: " PHX_BUILD_TYPE "\n\tMain.cpp last compiled: " __DATE__ " @ " __TIME__
+		"\n\tBuild type: " PHX_BUILD_TYPE "\n\tBuild date: {} @ {}"
 		"\n\tHeadless: " IS_HEADLESS_STR,
-		GetEngineVersion(), GetEngineCommitHash()
+		GetEngineVersion(), GetEngineCommitHash(), GetEngineBuildDate(), GetEngineBuildTime()
 	);
 
 	Log::Info("Command line: &&");

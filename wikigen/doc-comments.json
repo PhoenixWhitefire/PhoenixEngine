@@ -449,7 +449,7 @@
         "Methods": {
           "MakeHttpRequestAsync": {
             "Description": "Makes an HTTP request to the provided URL",
-            "Type": "(self, { Url: string, Method: nil | 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'PATCH', Headers: { [string]: string }?, Body: string? }) : ({ Ok: false, Status: number, Error: string } | { Ok: true, Status: number, Headers: { [string]: string }, Body: string })"
+            "Type": "(self, { Url: string, Method: nil | 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'PATCH', Headers: { [string]: string }?, Body: string? }) : ({ Ok: false, Status: number, Error: string?, Headers: { [string]: string }, Body: string } | { Ok: true, Status: number, Headers: { [string]: string }, Body: string })"
           }
         }
       },
@@ -1639,7 +1639,8 @@
             ],
             "In": [
               "Name: string",
-              "Value: string"
+              "Value: string",
+              "IsPassword: boolean?"
             ],
             "Out": "string"
           },
@@ -1739,8 +1740,7 @@
               "Sets the position of the Dear ImGui element cursor within the current window"
             ],
             "In": [
-              "X: number",
-              "Y: number"
+              "Position: vector"
             ]
           },
           "setitemtooltip": {

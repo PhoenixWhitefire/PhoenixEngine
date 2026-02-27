@@ -81,7 +81,7 @@ static int gameobject_new(lua_State* L)
 		luaL_argcheck(L, lua_type(L, 1) == LUA_TTABLE, 1, "expected table for argument 1, or 0 arguments");
 
 		lua_pushnil(L);
-		while (lua_next(L, 1))
+		while (lua_next(L, -2))
 		{
 			if (lua_type(L, -1) != LUA_TSTRING)
 			{
@@ -95,6 +95,8 @@ static int gameobject_new(lua_State* L)
 			if (ec == EntityComponent::None)
 				luaL_error(L, "Invalid component '%s'", n);
 			newObject->AddComponent(ec);
+
+			lua_pop(L, 1);
 		}
 	}
 

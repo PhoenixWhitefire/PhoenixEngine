@@ -122,10 +122,9 @@ end
 ]]
 local documentationData = {}
 
-local g = GameObject.new("hello")
-
 local GameObjectOverrides = {
-	new = "(<T>(Components: { T }) -> GameObject & IntersectCreatables<T>)",
+	--new = "(<T>(Components: { T }) -> GameObject & IntersectCreatables<T>)",
+	new = "({ string }) -> (GameObject)",
 	FindChildWithComponent = "<T>(self, ComponentName: keyof<Creatables> & T) -> (GameObject & index<Creatables, T>)?",
 }
 

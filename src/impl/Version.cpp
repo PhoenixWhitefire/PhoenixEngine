@@ -17,3 +17,13 @@ const char* GetEngineCommitHash()
 {
     return PHX_VERSION_HPP_ENGINE_GIT_COMMIT;
 }
+
+const char* GetEngineBuildDate()
+{
+    return __DATE__;
+}
+
+const char* GetEngineBuildTime()
+{
+    return __TIME__;
+}

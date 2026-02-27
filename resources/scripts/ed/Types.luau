@@ -1,5 +1,5 @@
 -- ed/Types.luau, 23/10/2025
-export type Stage = "None" | "SelectProject" | "ProjectEditing" | "ProjectPlaying"
+export type Stage = "None" | "SelectProject" | "ProjectEditing" | "ProjectPlaying" | "Update"
 
 export type ToolbarButton = {
     Text: string,

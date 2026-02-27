@@ -29,6 +29,42 @@ end
 declare extern type EnumItem with
 end
 
+type function IntersectCreatables(ty: type)
+	if ty:is("singleton") then
+		for i, c in Creatables:properties() do
+			if i:value() == ty:value() then
+				return c.read
+			end
+		end
+
+		error(`invalid component '{ty:value()}'`)
+
+	elseif ty:is("union") then
+		local results = {}
+
+		for _, t in ty:components() do
+			local found = false
+
+			for i, c in Creatables:properties() do
+				if i:value() == t:value() then
+					table.insert(results, c.read)
+					found = true
+					break
+				end
+			end
+
+			if not found then
+				error(`invalid component '{t:value()}'`)
+			end
+		end
+
+		return types.intersectionof(table.unpack(results))
+	end
+
+	error(`expected singleton or union, got {ty.tag}`)
+
+	return types.never
+end
 declare extern type Color with
   B: number
   G: number
@@ -44,7 +80,7 @@ declare extern type EventConnection with
 end
 declare GameObject: {
   fromId: (( Id: number ) -> (GameObject?)),
-  new: () -> (),
+  new: ({ string }) -> (GameObject),
   validComponents: { string }
 }
 declare extern type Matrix with
@@ -238,7 +274,7 @@ export type Model = {
 }
 export type Network = {
 
-  MakeHttpRequestAsync: (self: Network, { Url: string, Method: nil | 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'PATCH', Headers: { [string]: string }?, Body: string? }) -> ({ Ok: false, Status: number, Error: string } | { Ok: true, Status: number, Headers: { [string]: string }, Body: string }),
+  MakeHttpRequestAsync: (self: Network, { Url: string, Method: nil | 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'PATCH', Headers: { [string]: string }?, Body: string? }) -> ({ Ok: false, Status: number, Error: string?, Headers: { [string]: string }, Body: string } | { Ok: true, Status: number, Headers: { [string]: string }, Body: string }),
 }
 export type ParticleEmitter = {
   Emitting: boolean,
@@ -620,7 +656,7 @@ declare imgui: {
   imagebutton: (( Name: string, Image: string, Size: vector? ) -> (boolean)),
   indent: (( Indent: number? ) -> ()),
   inputnumber: (( Text: string, Value: number ) -> (number)),
-  inputstring: (( Name: string, Value: string ) -> (string)),
+  inputstring: (( Name: string, Value: string, IsPassword: boolean? ) -> (string)),
   itemclicked: ((  ) -> (boolean)),
   itemhovered: ((  ) -> (boolean)),
   menuitem: (( Text: string, Enabled: boolean? ) -> (boolean)),
@@ -633,7 +669,7 @@ declare imgui: {
   scrollherey: ((  ) -> ()),
   separator: ((  ) -> ()),
   separatortext: (( Text: string ) -> ()),
-  setcursorposition: (( X: number, Y: number ) -> ()),
+  setcursorposition: (( Position: vector ) -> ()),
   setitemtooltip: (( Text: string ) -> ()),
   setnextitemwidth: (( Width: number ) -> ()),
   setnextwindowfocus: ((  ) -> ()),

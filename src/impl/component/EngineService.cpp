@@ -282,6 +282,15 @@ public:
                 nullptr
             ),
             REFLECTION_PROPERTY(
+                "TargetPlatform",
+                String,
+                [](void*) -> Reflection::GenericValue
+                {
+                    return PHX_TARGET_PLATFORM;
+                },
+                nullptr
+            ),
+            REFLECTION_PROPERTY(
                 "BoundDataModel",
                 GameObject,
                 [](void*) -> Reflection::GenericValue

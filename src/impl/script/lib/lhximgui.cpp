@@ -269,7 +269,7 @@ static int imgui_inputstring(lua_State* L)
     const char* name = luaL_checkstring(L, 1);
 	std::string value = luaL_checkstring(L, 2);
     value.reserve(value.size() + 64);
-	ImGui::InputText(name, &value);
+	ImGui::InputText(name, &value, luaL_optboolean(L, 3, false) ? ImGuiInputTextFlags_Password : 0);
 
 	lua_pushlstring(L, value.data(), value.size());
 	return 1;
@@ -469,7 +469,15 @@ static int imgui_cursorposition(lua_State* L)
 
 static int imgui_setcursorposition(lua_State* L)
 {
-    ImGui::SetCursorPos({ (float)luaL_checknumber(L, 1), (float)luaL_checknumber(L, 2) });
+    if (lua_type(L, 1) == LUA_TVECTOR)
+    {
+        const float* v = luaL_checkvector(L, 1);
+        ImGui::SetCursorPos({ v[0], v[1] });
+    }
+    else
+    {
+        ImGui::SetCursorPos({ (float)luaL_checknumber(L, 1), (float)luaL_checknumber(L, 2) });
+    }
 
     return 0;
 }

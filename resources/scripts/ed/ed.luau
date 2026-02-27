@@ -7,6 +7,8 @@ local Physics: Physics = game:GetService("Physics") :: any
 local Network: Network = game:GetService("Network") :: any
 local Engine: Engine = game:GetService("Engine") :: any
 
+task.wait()
+
 local FALLBACK_IMAGE = "@etextures/editor-icons/fallback.png"
 local LOGO_IMAGE = "@etextures/logo.png"
 
@@ -18,11 +20,10 @@ local Types = require("./Types.luau")
 type Stage = Types.Stage
 
 local CurrentStage: Stage = "None"
-local StageUpdateSignal: EventConnection? = nil
 local Stages: { [string]: ((number) -> ()) & ((string) -> (any)) } = {}
 
 local EditorCam = assert(workspace.SceneCamera)
-local EditorTl = GameObject.new("TreeLink")
+local EditorTl = GameObject.new({ "TreeLink" })
 
 local Project: Types.Project = {
 	DataModel = nil,
@@ -214,11 +215,17 @@ local function editorFrame(DeltaTime)
 	end
 end
 
-changeStageTo = function(NewStage: Stage)
-	if StageUpdateSignal then
-		StageUpdateSignal:Disconnect()
-	end
+local StageUpdateSignal = game.OnFrameBegin:Connect(function(DeltaTime)
+	local s, e = (xpcall::any)(function(dt)
+		editorFrame(dt)
+	end, onError, DeltaTime)
 
+	if not s then
+		warn(`editorFrame error: {e}`)
+	end
+end)
+
+changeStageTo = function(NewStage: Stage)
 	assert(Stages[NewStage])
 
 	if Stages[CurrentStage .. "_Leave"] then
@@ -234,15 +241,6 @@ changeStageTo = function(NewStage: Stage)
 	CoreTools.OnEditorStageChanged(NewStage)
 
 	CurrentStage = NewStage
-	StageUpdateSignal = targetDm.OnFrameBegin:Connect(function(DeltaTime)
-		local s, e = (xpcall::any)(function(dt)
-			editorFrame(dt)
-		end, onError, DeltaTime)
-
-		if not s then
-			print(`editorFrame error: {e}`)
-		end
-	end)
 end
 
 local function saveRecents()
@@ -426,7 +424,7 @@ local function openProject_(ManualPath: string?)
 	end
 
 	if not Project.DataModel then
-		Project.DataModel = GameObject.new("DataModel")
+		Project.DataModel = GameObject.new({ "DataModel" })
 		print("Re-created DataModel")
 	end
 
@@ -437,8 +435,8 @@ local function openProject_(ManualPath: string?)
 
 	if not Project.Workspace then
 		-- TODO luau: Project.Workspace is refining to `nil`
-		Project.Workspace = GameObject.new("Workspace")
-		Project.Workspace.SceneCamera = GameObject.new("Camera")
+		Project.Workspace = GameObject.new({ "Workspace" })
+		Project.Workspace.SceneCamera = GameObject.new({ "Camera", "Transform" })
 		Project.Workspace.SceneCamera.Parent = Project.Workspace
 
 		print("Re-created Workspace")
@@ -446,7 +444,7 @@ local function openProject_(ManualPath: string?)
 
 	assert(Project.Workspace)
 	if not Project.Workspace.SceneCamera then
-		local cam = GameObject.new("Camera")
+		local cam = GameObject.new({ "Camera", "Transform" })
 		cam.Parent = Project.Workspace
 		Project.Workspace.SceneCamera = cam
 	end
@@ -554,10 +552,10 @@ local function createNewProject_()
 	fs.copy("@editres/scripts/defaultconfig.luau", "@projres/scripts/.config.luau")
 	fs.copy(LOGO_IMAGE, "@proj/icon.png")
 
-	local dm = GameObject.new("DataModel")
-	local projWp = GameObject.new("Workspace")
-	local camera = GameObject.new("Camera")
-	GameObject.new("DirectionalLight").Parent = projWp
+	local dm = GameObject.new({ "DataModel" })
+	local projWp = GameObject.new({ "Workspace" })
+	local camera = GameObject.new({ "Camera", "Transform" })
+	GameObject.new({ "DirectionalLight" }).Parent = projWp
 
 	projWp.Parent = dm
 	camera.Parent = projWp
@@ -927,27 +925,45 @@ local function getCenteredX(cursorx: number, cxavail: number, elementWidth: numb
 	return cursorx + cxavail / 2 - elementWidth / 2
 end
 
-local data = ""
+local latestCommit = nil
+local canUpdate = false
 
---[[
-local data = Network:MakeHttpRequestAsync({ Url = "https://phoenixwhitefire.github.io/net_test.txt" })
+task.defer(function()
+	local data = Network:MakeHttpRequestAsync({
+		Url = "https://api.github.com/repos/PhoenixWhitefire/PhoenixEngine/commits/main",
+		Headers = {
+			["User-Agent"] = "PhoenixEngine/Editor" -- GitHub requires a User Agent for their APIs
+		}
+	})
 
-local function printTable(t, depth: string)
-	print(depth .. tostring(t), "= {")
+	if data.Ok then
+		local response = json.parse(data.Body)
+		assert(typeof(response) == "table", "response from GitHub API was not a table")
+
+		local commit = (response :: { [string]: JsonSerializable }).sha
+		assert(typeof(commit) == "string", ".sha was not a string")
+
+		latestCommit = commit
+
+		if latestCommit ~= Engine.CommitHash then
+			canUpdate = true
+		end
+	end
+end)
+
+local function printTable(t, depth: string, n: string?)
+	depth = depth or ""
+
+	print(depth .. (if n then n .. " =" else ""), tostring(t), "{")
 	for k, v in t do
 		if typeof(v) ~= "table" then
 			print(depth .. " ", k, "=", v)
 		else
-			printTable(v, depth .. "  ")
+			printTable(v, depth .. "  ", k)
 		end
 	end
 	print(depth .. "}")
 end
-
-printTable(data, "")
-
-Engine:Exit()
-]]
 
 local function renderMainMenuBar(dt: number)
 	local pushedCol = CurrentStage == "ProjectPlaying"
@@ -1144,7 +1160,7 @@ local function renderMainMenuBar(dt: number)
 
 		local ws = Renderer.Resolution
 
-		local ABOUT_SIZE_X, ABOUT_SIZE_Y = 375, 300
+		local ABOUT_SIZE_X, ABOUT_SIZE_Y = 375, 340
 
 		imgui.setnextwindowposition((ws.x - ABOUT_SIZE_X) / 2, (ws.y - ABOUT_SIZE_Y) / 2);
 		imgui.setnextwindowsize(ABOUT_SIZE_X, ABOUT_SIZE_Y);
@@ -1181,8 +1197,36 @@ local function renderMainMenuBar(dt: number)
 
 		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, ctsx), cursory)
 		imgui.urllink(Engine.CommitHash:sub(1, 8), `{ GITHUB_URL }/commit/{ Engine.CommitHash }`)
+		cursory += tts.y + 16
 
-		imgui.text(data)
+		if latestCommit then
+			if latestCommit ~= Engine.CommitHash then
+				local ltsx = imgui.textsize("There is a newer version available.").x
+				local gtsx = imgui.textsize(`Latest: { (latestCommit or "AAAAAA"):sub(1, 8) }`).x
+				local btsx = imgui.textsize("Download").x
+
+				imgui.setcursorposition(getCenteredX(cursor.x, cxavail, ltsx), cursory)
+				imgui.text("There is a newer version available.")
+				cursory += tts.y + 2
+
+				imgui.setcursorposition(getCenteredX(cursor.x, cxavail, gtsx), cursory)
+				imgui.text(`Latest: { latestCommit:sub(1, 8) }`)
+				cursory += tts.y + 4
+
+				imgui.setcursorposition(getCenteredX(cursor.x, cxavail, btsx), cursory)
+
+				if canUpdate and imgui.button("Download") then
+					if CurrentStage ~= "SelectProject" then
+						Engine:ShowMessageBox("Update", "You must close the current project to update")
+					elseif fs.isfile("./update.zip") then
+						Engine:ShowMessageBox("Update", "Delete or rename the 'update.zip' file in the Editor's installation directory to proceed", "ok", "error")
+					else
+						imgui.closecurrentpopup()
+						changeStageTo("Update")
+					end
+				end
+			end
+		end
 
 		imgui.endpopup()
 	end
@@ -1240,8 +1284,7 @@ end
 
 local PrevSelections: { GameObject & Transform } = {}
 
-local SelectionPart: GameObject & Mesh & RigidBody & Transform = GameObject.new("Mesh") :: any
-SelectionPart:AddComponent("RigidBody")
+local SelectionPart: GameObject & Mesh & RigidBody & Transform = GameObject.new({ "Mesh", "RigidBody", "Transform" })
 SelectionPart.Material = "boxframe"
 SelectionPart.Tint = Color.new(166/255, 200/255, 1)
 SelectionPart.PhysicsCollisions = false
@@ -1936,7 +1979,7 @@ function Stages.ProjectPlaying_Enter(DeltaTime: any)
 	assert(projWp)
 
 	if not projWp.SceneCamera then
-		projWp.SceneCamera = GameObject.new("Camera")
+		projWp.SceneCamera = GameObject.new({ "Camera", "Transform" })
 		projWp.SceneCamera.Parent = projWp
 	end
 
@@ -1965,6 +2008,201 @@ function Stages.ProjectPlaying_Leave(DeltaTime)
 
 	PlayerInput.CursorMode = Enum.CursorMode.Normal
 	ViewportTakeFocusFrames = 2
+end
+
+local updateInProgress = false
+local updaterGitHubToken = ""
+local updaterLog = ""
+local updaterErr = nil
+local switchedToUpdater = 0
+
+function Stages.Update_Enter()
+	imgui.openpopup("Updater")
+	canUpdate = false
+	switchedToUpdater = game.Time
+end
+
+local function runUpdate()
+	updaterLog = "Update has started.\n"
+	updaterErr = nil
+
+	local headers = {
+		["Authorization"] = `Bearer { updaterGitHubToken }`,
+		["User-Agent"] = "PhoenixEngine/EditorUpdate"
+	}
+
+	updaterLog ..= "Finding latest workflow run...\n"
+	local workflowRunResponse = Network:MakeHttpRequestAsync({
+		Url = "https://api.github.com/repos/PhoenixWhitefire/PhoenixEngine/actions/workflows/cmake-multi-platform.yml/runs",
+		Headers = headers
+	})
+
+	if not workflowRunResponse.Ok then
+		error(`{ workflowRunResponse.Status } - { workflowRunResponse.Error }: { workflowRunResponse.Body }`)
+	end
+
+	local workflowRunResponseData = json.parse(workflowRunResponse.Body)
+	assert(typeof(workflowRunResponseData) == "table", "Workflow run response data was not a table")
+	workflowRunResponseData = workflowRunResponseData :: { [string]: JsonSerializable }
+
+	updaterLog ..= `Total count: { assert(workflowRunResponseData.total_count) }\n`
+	updaterLog ..= `Received: { #assert(workflowRunResponseData.workflow_runs :: { JsonSerializable }) }\n`
+
+	local latest = (workflowRunResponseData.workflow_runs :: { { [string]: JsonSerializable } })[1]
+	assert(latest)
+	assert(latest.status == "completed", "The latest workflow is not completed")
+
+	updaterLog ..= `Latest title: { assert(latest.display_title) }\n`
+	updaterLog ..= `Conclusion: { assert(latest.conclusion) }\n`
+
+	if latest.conclusion ~= "success" then
+		error(`Cannot proceed with update because the latest workflow resulted in { latest.conclusion }`)
+	end
+
+	local artifactsUrl = assert(latest.artifacts_url)
+	assert(typeof(artifactsUrl) == "string")
+	updaterLog ..= `Got artifacts URL: { artifactsUrl }\n`
+
+	local artifactsResponse = Network:MakeHttpRequestAsync({
+		Url = artifactsUrl,
+		Headers = headers
+	})
+
+	if not artifactsResponse.Ok then
+		error(`{ artifactsResponse.Status } - { artifactsResponse.Error }: { artifactsResponse.Body }`)
+	end
+
+	local artifactsData = json.parse(artifactsResponse.Body)
+	assert(typeof(artifactsData) == "table")
+	artifactsData = artifactsData :: { [string]: JsonSerializable }
+
+	updaterLog ..= `Artifacts count: { assert(artifactsData.total_count) }\n`
+	updaterLog ..= `Checking for { Engine.TargetPlatform } Release artifact...\n`
+
+	local releaseArtifact
+
+	for _, v in artifactsData.artifacts do
+		assert(typeof(v) == "table")
+		v = v :: { [string]: JsonSerializable }
+
+		local name = v.name
+		assert(typeof(name) == "string")
+
+		if name:find(Engine.TargetPlatform) and name:find("Release") then
+			releaseArtifact = v
+			break
+		end
+	end
+
+	if not releaseArtifact then
+		error(`Could not find { Engine.TargetPlatform }-Release artifact`)
+	end
+
+	updaterLog ..= "Found Release artifact\n"
+	local bytes = assert(releaseArtifact.size_in_bytes)
+	assert(typeof(bytes) == "number")
+
+	updaterLog ..= string.format("Downloading %.2fMB (%i bytes)...\n", bytes / 1000 / 1000, bytes)
+	local downloadUrl = assert(releaseArtifact.archive_download_url)
+	assert(typeof(downloadUrl) == "string")
+
+	local zipResponse = Network:MakeHttpRequestAsync({
+		Url = downloadUrl,
+		Headers = headers
+	})
+
+	if not zipResponse.Ok then
+		error(`{ zipResponse.Status } - { zipResponse.Error }: { zipResponse.Body }`)
+	end
+
+	updaterLog ..= `Got { #zipResponse.Body } bytes\n`
+	updaterLog ..= "Writing to update.zip...\n"
+
+	if fs.isfile("./update.zip") then
+		error("`update.zip` already exists in the installation directory!")
+	end
+
+	fs.write("./update.zip", zipResponse.Body)
+	updaterLog ..= "All done!\n"
+
+	task.wait() -- allow the `updaterLog` to be rendered
+	Engine:ShowMessageBox("Update", "Close the Editor, extract the 'update.zip' file into the Editor's directory, and you're all done!")
+end
+
+function Stages.Update(dt)
+	Stages.SelectProject(dt)
+
+	if game.Time - switchedToUpdater < 0.1 then
+		imgui.setnextwindowsize(750, 500)
+		imgui.setnextwindowposition(Renderer.Resolution.x / 2 - 750 / 2, Renderer.Resolution.y / 2 - 500 / 2)
+	end
+
+	if imgui.beginpopupmodal("Updater", true) then
+		imgui.text("The Updater will download the latest GitHub Actions artifact, which requires a GitHub token.")
+		imgui.urllink("Generate a Personal Access Token", "https://github.com/settings/personal-access-tokens")
+
+		imgui.text("GitHub token: ")
+		imgui.sameline()
+
+		imgui.setcursorposition(imgui.cursorposition() + vector.create(140, 0))
+		if not updateInProgress then
+			updaterGitHubToken = imgui.inputstring("##Token", updaterGitHubToken, true)
+		else
+			imgui.text(string.rep("*", #updaterGitHubToken))
+		end
+
+		if not updateInProgress then
+			local cxavail = imgui.contentregionavail().x
+			local cursor = imgui.cursorposition()
+			local btsx = imgui.textsize("Begin").x
+
+			imgui.setcursorposition(getCenteredX(cursor.x, cxavail, btsx), cursor.y)
+			if imgui.button("Begin") then
+				task.defer(function()
+					local s, e = (pcall :: any)(function()
+						runUpdate()
+					end)
+
+					if not s then
+						updaterLog ..= "Update failed:\n"
+						updaterErr = e
+					end
+				end)
+
+				updateInProgress = true
+			end
+		end
+
+		if #updaterLog > 0 then
+			imgui.separator()
+			imgui.text(updaterLog)
+
+			if updaterErr then
+				imgui.pushstylecolor(0, { 1, 0, 0, 1 })
+				imgui.text(updaterErr)
+				imgui.popstylecolor()
+			end
+		end
+
+		imgui.endw()
+
+	elseif game.Time - switchedToUpdater > 0.1 and (not updateInProgress or updaterErr) then
+		changeStageTo("SelectProject")
+
+	else
+		if game.Time - switchedToUpdater > 0.1 then
+			setErrorNotification("You can't do that")
+		end
+
+		imgui.openpopup("Updater")
+	end
+end
+
+function Stages.Update_Leave()
+	imgui.openpopup("About")
+	canUpdate = true
+	updaterErr = nil
+	updateInProgress = false
 end
 
 game:BindToClose(function()
