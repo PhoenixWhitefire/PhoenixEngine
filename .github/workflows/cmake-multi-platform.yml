@@ -147,6 +147,7 @@ jobs:
       if: runner.os == 'Windows' && matrix.build_type != 'Debug'
       shell: pwsh
       run: |
+        $ErrorActionPreference = 'Stop'
         . "x64\\${{ matrix.build_type }}\\PhoenixEngine.exe" -headless -tool scripts\\ci\\tests.luau
         . "x64\\${{ matrix.build_type }}\\PhoenixEngine.exe" -headless -ed_ci
 

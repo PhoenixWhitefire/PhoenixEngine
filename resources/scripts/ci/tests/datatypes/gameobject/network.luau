@@ -4,6 +4,12 @@ local Types = require("@ci/test-types.luau")
 return function(test: Types.Test, expect: Types.Expect)
     test("Lemongrab", function()
         local response = Network:MakeHttpRequestAsync({ Url = "https://phoenixwhitefire.github.io/net_test.txt" })
+
+        if not response.Ok then
+            warn(response.Body)
+            warn(response.Error)
+        end
+
         expect(response.Ok):toBe(true)
         assert(response.Ok)
 
