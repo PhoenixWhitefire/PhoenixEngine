@@ -610,7 +610,7 @@ static void handleCrash(const std::string_view& Error, const std::string_view& E
 			"CRASH - {}: {}",
 			ExceptionType, Error
 		));
-		Log.Save();
+		Logging::Save();
 	}
 
 	std::string errMessage = std::format(
