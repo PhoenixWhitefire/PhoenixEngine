@@ -117,6 +117,7 @@ jobs:
           debugger-layout.ini
           phoenix.conf
           Vendor/tracy/profiler/build/Release/tracy-profiler.exe
+          run.bat
         retention-days: 7
 
     - name: Upload build artifact (Ubuntu)
@@ -136,6 +137,7 @@ jobs:
           debugger-layout.ini
           phoenix.conf
           Vendor/tracy/profiler/build/tracy-profiler
+          run.sh
         retention-days: 7
 
     - name: Doc Gen (Windows)
