@@ -119,12 +119,15 @@ type function IntersectCreatables(ty: type)
 
 	return types.never
 end
+
+declare extern type __ENGINE_INTERNAL_USERDATA_PHANTOM_TYPE__ with
+end
 ]]
 local documentationData = {}
 
 local GameObjectOverrides = {
 	--new = "(<T>(Components: { T }) -> GameObject & IntersectCreatables<T>)",
-	new = "({ string }) -> (GameObject)",
+	new = "({ string }) -> (GameObject & any)",
 	FindChildWithComponent = "<T>(self, ComponentName: keyof<Creatables> & T) -> (GameObject & index<Creatables, T>)?",
 }
 
@@ -511,6 +514,11 @@ local function dumpReflectionApi(t, d, cn)
 		end
 	else
 		s = "No members defined\n"
+	end
+
+	if cn == "GameObject" then
+		definitionsFile ..= "\n"
+		definitionsFile ..= `  __phantom__: __ENGINE_INTERNAL_USERDATA_PHANTOM_TYPE__,\n`
 	end
 
 	s ..= "\n"

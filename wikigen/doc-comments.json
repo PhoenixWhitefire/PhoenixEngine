@@ -1737,22 +1737,11 @@
               "Text: string"
             ]
           },
-          "setcursorpos": {
-            "Description": [
-              "`ImGui::SetCursorPos`"
-            ],
-            "In": [
-              "X: number",
-              "Y: number"
-            ]
-          },
           "setcursorposition": {
             "Description": [
               "Sets the position of the Dear ImGui element cursor within the current window"
             ],
-            "In": [
-              "Position: vector"
-            ]
+            "Type": "((Position: vector) -> ()) & ((X: number, Y: number) -> ())"
           },
           "setitemtooltip": {
             "Description": [

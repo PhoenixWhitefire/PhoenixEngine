@@ -65,6 +65,9 @@ type function IntersectCreatables(ty: type)
 
 	return types.never
 end
+
+declare extern type __ENGINE_INTERNAL_USERDATA_PHANTOM_TYPE__ with
+end
 declare extern type Color with
   B: number
   G: number
@@ -80,7 +83,7 @@ declare extern type EventConnection with
 end
 declare GameObject: {
   fromId: (( Id: number ) -> (GameObject?)),
-  new: ({ string }) -> (GameObject),
+  new: ({ string }) -> (GameObject & any),
   validComponents: { string }
 }
 declare extern type Matrix with
@@ -150,6 +153,8 @@ export type GameObject = {
 
   OnTagAdded: EventSignal<(string)>,
   OnTagRemoved: EventSignal<(string)>,
+
+  __phantom__: __ENGINE_INTERNAL_USERDATA_PHANTOM_TYPE__,
 }
 export type Animation = {
   Animation: string,
@@ -673,7 +678,7 @@ declare imgui: {
   scrollherey: ((  ) -> ()),
   separator: ((  ) -> ()),
   separatortext: (( Text: string ) -> ()),
-  setcursorposition: (( Position: vector ) -> ()),
+  setcursorposition: ((Position: vector) -> ()) & ((X: number, Y: number) -> ()),
   setitemtooltip: (( Text: string ) -> ()),
   setnextitemwidth: (( Width: number ) -> ()),
   setnextwindowfocus: ((  ) -> ()),
