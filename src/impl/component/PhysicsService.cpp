@@ -14,7 +14,7 @@ public:
                 {
                     return Physics::Get()->Timescale;
                 },
-                [](void*, const Reflection::GenericValue& gv, const Logging::Context&)
+                [](void*, const Reflection::GenericValue& gv)
                 {
                     Physics::Get()->Timescale = gv.AsDouble();
                 }
@@ -27,7 +27,7 @@ public:
                 {
                     return Physics::Get()->Simulating;
                 },
-                [](void*, const Reflection::GenericValue& gv, const Logging::Context&)
+                [](void*, const Reflection::GenericValue& gv)
                 {
                     Physics::Get()->Simulating = gv.AsBoolean();
                 }
@@ -40,7 +40,7 @@ public:
                 {
                     return Physics::Get()->Gravity;
                 },
-                [](void*, const Reflection::GenericValue& gv, const Logging::Context&)
+                [](void*, const Reflection::GenericValue& gv)
                 {
                     Physics::Get()->Gravity = gv.AsVector3();
                 }
@@ -53,7 +53,7 @@ public:
                 {
                     return Physics::Get()->DebugCollisionAabbs;
                 },
-                [](void*, const Reflection::GenericValue& gv, const Logging::Context&)
+                [](void*, const Reflection::GenericValue& gv)
                 {
                     Physics::Get()->DebugCollisionAabbs = gv.AsBoolean();
                 }
@@ -66,7 +66,7 @@ public:
                 {
                     return Physics::Get()->DebugContactPoints;
                 },
-                [](void*, const Reflection::GenericValue& gv, const Logging::Context&)
+                [](void*, const Reflection::GenericValue& gv)
                 {
                     Physics::Get()->DebugContactPoints = gv.AsBoolean();
                 }
@@ -79,7 +79,7 @@ public:
                 {
                     return Physics::Get()->DebugSpatialHeat;
                 },
-                [](void*, const Reflection::GenericValue& gv, const Logging::Context&)
+                [](void*, const Reflection::GenericValue& gv)
                 {
                     Physics::Get()->DebugSpatialHeat = gv.AsBoolean();
                 }

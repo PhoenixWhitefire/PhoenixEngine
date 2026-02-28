@@ -22,7 +22,7 @@ class TreeLinkManager : public ComponentManager<EcTreeLink>
                     EcTreeLink* tl = static_cast<EcTreeLink*>(p);
                     return GameObject::s_ToGenericValue(tl->Target.Referred());
                 },
-                [](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
+                [](void* p, const Reflection::GenericValue& gv)
                 {
                     EcTreeLink* tl = static_cast<EcTreeLink*>(p);
                     GameObject* newTarget = GameObject::FromGenericValue(gv);

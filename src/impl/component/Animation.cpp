@@ -15,7 +15,7 @@ public:
                 "Animation",
                 String,
                 REFLECTION_PROPERTY_GET_SIMPLE(EcAnimation, Animation),
-                [](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
+                [](void* p, const Reflection::GenericValue& gv)
                 {
                     static_cast<EcAnimation*>(p)->SetAnimation(gv.AsStringView());
                 }

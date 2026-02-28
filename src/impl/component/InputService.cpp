@@ -31,7 +31,7 @@ public:
                 {
                     return { glfwGetInputMode(glfwGetCurrentContext(), GLFW_CURSOR) };
                 },
-                [](void*, const Reflection::GenericValue& gv, const Logging::Context&)
+                [](void*, const Reflection::GenericValue& gv)
                 {
                     glfwSetInputMode(glfwGetCurrentContext(), GLFW_CURSOR, (int)gv.AsInteger());
                 }
@@ -64,7 +64,7 @@ public:
                 {
                     return DevCursorId;
                 },
-                [](void*, const Reflection::GenericValue& gv, const Logging::Context&)
+                [](void*, const Reflection::GenericValue& gv)
                 {
                     int cursor = (int)gv.AsInteger();
                     if (cursor < GLFW_ARROW_CURSOR || cursor > GLFW_NOT_ALLOWED_CURSOR)
@@ -94,7 +94,7 @@ public:
             { "IsKeyPressed", Reflection::MethodDescriptor{
                 { Reflection::ValueType::Integer },
                 { Reflection::ValueType::Boolean },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
                 {
                     return { UserInput::IsKeyDown((int)inputs[0].AsInteger()) };
                 }
@@ -103,7 +103,7 @@ public:
             { "IsMouseButtonPressed", Reflection::MethodDescriptor{
                 { Reflection::ValueType::Integer },
                 { Reflection::ValueType::Boolean },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
                 {
                     return { UserInput::IsMouseButtonDown((int)inputs[0].AsInteger()) };
                 }
@@ -112,7 +112,7 @@ public:
             { "GetCursorPosition", Reflection::MethodDescriptor{
                 {},
                 { Reflection::ValueType::Vector2 },
-                [](void*, const std::vector<Reflection::GenericValue>&, const Logging::Context&) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
                 {
                     double x = 0;
                     double y = 0;

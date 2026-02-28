@@ -39,7 +39,7 @@ const Reflection::StaticPropertyMap& SoundManager::GetProperties()
 			"SoundFile",
 			String,
 			REFLECTION_PROPERTY_GET_SIMPLE(EcSound, SoundFile),
-			[](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
+			[](void* p, const Reflection::GenericValue& gv)
 			{
 				EcSound* sound = static_cast<EcSound*>(p);
 				std::string_view newFile = gv.AsStringView();
@@ -62,7 +62,7 @@ const Reflection::StaticPropertyMap& SoundManager::GetProperties()
 				EcSound* sound = static_cast<EcSound*>(p);
 				return sound->m_PlayRequested;
 			},
-			[](void* p, const Reflection::GenericValue& playing, const Logging::Context&)
+			[](void* p, const Reflection::GenericValue& playing)
 			{
 				EcSound* sound = static_cast<EcSound*>(p);
 				if (!sound->Object->Enabled && playing.AsBoolean())
@@ -76,7 +76,7 @@ const Reflection::StaticPropertyMap& SoundManager::GetProperties()
 			"Position",
 			Double,
 			REFLECTION_PROPERTY_GET_SIMPLE(EcSound, Position),
-			[](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
+			[](void* p, const Reflection::GenericValue& gv)
 			{
 				EcSound* sound = static_cast<EcSound*>(p);
 				double t = gv.AsDouble();
@@ -93,7 +93,7 @@ const Reflection::StaticPropertyMap& SoundManager::GetProperties()
 			"Volume",
 			Double,
 			REFLECTION_PROPERTY_GET_SIMPLE(EcSound, Volume),
-			[](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
+			[](void* p, const Reflection::GenericValue& gv)
 			{
 				float volume = static_cast<float>(gv.AsDouble());
 				if (volume < 0.f)
@@ -106,7 +106,7 @@ const Reflection::StaticPropertyMap& SoundManager::GetProperties()
 			"Speed",
 			Double,
 			REFLECTION_PROPERTY_GET_SIMPLE(EcSound, Speed),
-			[](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
+			[](void* p, const Reflection::GenericValue& gv)
 			{
 				float speed = static_cast<float>(gv.AsDouble());
 
@@ -134,7 +134,7 @@ const Reflection::StaticMethodMap& SoundManager::GetMethods()
 		{ "Play", Reflection::MethodDescriptor{
 			{},
 			{},
-			[](void* p, const std::vector<Reflection::GenericValue>&, const Logging::Context&) -> std::vector<Reflection::GenericValue>
+			[](void* p, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
 			{
 				EcSound* sound = static_cast<EcSound*>(p);
 				sound->NextRequestedPosition = 0.f;

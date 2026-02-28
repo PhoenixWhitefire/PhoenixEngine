@@ -112,8 +112,7 @@ static int gameobject_fromId(lua_State* L)
 	return 1;
 }
 
-static const luaL_Reg gameobject_funcs[] =
-{
+static const luaL_Reg gameobject_funcs[] = {
     { "new", gameobject_new },
 	{ "fromId", gameobject_fromId },
     { NULL, NULL }
@@ -163,6 +162,10 @@ static int obj_index(lua_State* L)
 static int obj_newindex(lua_State* L)
 {
 	ZoneScopedC(tracy::Color::LightSkyBlue);
+
+	lua_Debug ar = {};
+	lua_getinfo(L, 1, "sl", &ar);
+	Logging::ScopedContext sc = Logging::Context{ .ContextExtraTags = std::format("TextDocument:{},DocumentLine:{}", ar.short_src, ar.currentline) };
 
 	GameObject* obj = luhx_checkgameobject(L, 1);
 	const char* key = luaL_checkstring(L, 2);

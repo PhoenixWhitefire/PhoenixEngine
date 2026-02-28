@@ -54,7 +54,7 @@ public:
                 {
                     return static_cast<EcDataModel*>(p)->LiveScripts;
                 },
-                [](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
+                [](void* p, const Reflection::GenericValue& gv)
                 {
                     EcDataModel* dm = static_cast<EcDataModel*>(p);
                     if (dm->Modules.size() > 0)
@@ -82,7 +82,7 @@ public:
                 {
                     return static_cast<EcDataModel*>(p)->VM;
                 },
-                [](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
+                [](void* p, const Reflection::GenericValue& gv)
                 {
                     EcDataModel* dm = static_cast<EcDataModel*>(p);
                     if (dm->Modules.size() > 0)
@@ -102,7 +102,7 @@ public:
             { "GetService", {
                 { Reflection::ValueType::String },
                 { Reflection::ValueType::GameObject },
-                [](void* p, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
+                [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
                 {
                     std::string service = std::string(inputs[0].AsStringView());
                     bool validService = false;
@@ -136,7 +136,7 @@ public:
             { "BindToClose", {
                 { Reflection::ValueType::Function },
                 {},
-                [](void* p, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
+                [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
                 {
                     EcDataModel* dm = static_cast<EcDataModel*>(p);
                     if (dm->CloseCallback.Func)
@@ -292,7 +292,7 @@ void EcDataModel::Close()
 {
     if (CloseCallback.Func)
     {
-        (*CloseCallback.Func)({}, { .ContextExtraTags = "Context:DataModelClose" });
+        (*CloseCallback.Func)({});
         (*CloseCallback.Cleanup)();
         delete CloseCallback.Func;
         delete CloseCallback.Cleanup;

@@ -581,7 +581,7 @@ Reflection::GenericValue ScriptEngine::L::ToGeneric(lua_State* L, int StackIndex
 			ar.short_src, ar.currentline, fnname, ar.name ? ar.name : "<anonymous>"
 		);
 
-		gv.Val.Func.Func = new std::function([CL, fndbinfo](const std::vector<Reflection::GenericValue>& Inputs, const Logging::Context&)
+		gv.Val.Func.Func = new std::function([CL, fndbinfo](const std::vector<Reflection::GenericValue>& Inputs)
 			-> std::vector<Reflection::GenericValue>
 			{
 				lua_pushvalue(CL, -1); // keep the function value
@@ -859,7 +859,7 @@ int ScriptEngine::L::HandleMethodCall(
 {
 	lua_Debug ar = {};
 	lua_getinfo(L, 1, "sl", &ar);
-	Logging::Context logContext = { .ContextExtraTags = std::format("TextDocument:{},DocumentLine:{}", ar.short_src, ar.currentline) };
+	Logging::ScopedContext sc = Logging::Context{ .ContextExtraTags = std::format("TextDocument:{},DocumentLine:{}", ar.short_src, ar.currentline) };
 
 	const std::vector<Reflection::ValueType>& paramTypes = func->Inputs;
 	int numArgs = lua_gettop(L) - 1;
@@ -920,7 +920,7 @@ int ScriptEngine::L::HandleMethodCall(
 	}
 	else if (numArgs > numParams)
 	{
-		logContext.WarningF(
+		Log.WarningF(
 			"Function received {} more arguments than necessary",
 			numArgs - numParams
 		);
@@ -951,7 +951,7 @@ int ScriptEngine::L::HandleMethodCall(
 			func->Outputs.size(),
 			[func, inputs, Reflector](YieldedCoroutine& yc)
 			{
-				std::promise<std::vector<Reflection::GenericValue>>* sf = func->YieldFunc(Reflector.Referred(), inputs, Log);
+				std::promise<std::vector<Reflection::GenericValue>>* sf = func->YieldFunc(Reflector.Referred(), inputs);
 				yc.Mode = YieldedCoroutine::ResumptionMode::Promise;
 				yc.RmPromise = sf;
 				yc.RmPromise_Future = sf->get_future().share();
@@ -964,7 +964,7 @@ int ScriptEngine::L::HandleMethodCall(
 
 	try
 	{
-		outputs = func->Func(Reflector.Referred(), inputs, logContext);
+		outputs = func->Func(Reflector.Referred(), inputs);
 	}
 	catch (const std::runtime_error& err)
 	{

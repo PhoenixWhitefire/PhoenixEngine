@@ -192,7 +192,7 @@ void Logging::Initialize()
 	PHX_CHECK(FileRW::WriteFile("./log.txt", ""));
 	LogHandle.open("./log.txt", std::ios_base::app);
 
-	Log = Context{ .ContextExtraTags = "LogContext:Global" };
+	Log = Context{ .ContextExtraTags = "LogContext:Main" };
 }
 
 void Logging::FlushParallelEvents()
@@ -204,7 +204,7 @@ void Logging::FlushParallelEvents()
 	for (const ParallelLogEvent& ple : ParallelLogEvents)
 	{
 		std::string extraTags = ple.ExtraTags;
-		extraTags += "ParallelLog";
+		extraTags += ",ParallelLog";
 
 		switch (ple.Type)
 		{
@@ -229,4 +229,15 @@ void Logging::FlushParallelEvents()
 	}
 
 	ParallelLogEvents.clear();
+}
+
+Logging::ScopedContext::ScopedContext(const Logging::Context& Ctx)
+{
+	m_PrevContext = Log;
+	Log = Ctx;
+}
+
+Logging::ScopedContext::~ScopedContext()
+{
+	Log = m_PrevContext;
 }

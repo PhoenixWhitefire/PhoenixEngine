@@ -83,7 +83,7 @@ public:
 				{
 					return static_cast<uint32_t>(static_cast<EcMesh*>(p)->FaceCulling);
 				},
-				[](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
+				[](void* p, const Reflection::GenericValue& gv)
 				{
 					static_cast<EcMesh*>(p)->FaceCulling = static_cast<FaceCullingMode>(gv.AsInteger());
 				}
@@ -98,7 +98,7 @@ public:
 				"MeshAsset",
 				String,
 				REFLECTION_PROPERTY_GET_SIMPLE(EcMesh, Asset),
-				[](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
+				[](void* p, const Reflection::GenericValue& gv)
 				{
 					EcMesh* mesh = static_cast<EcMesh*>(p);
 					mesh->SetRenderMesh(gv.AsStringView());
@@ -116,7 +116,7 @@ public:
 				
 					return mtlManager->GetMaterialResource(m->MaterialId).Name;
 				},
-				[](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
+				[](void* p, const Reflection::GenericValue& gv)
 				{
 					EcMesh* m = static_cast<EcMesh*>(p);
 					MaterialManager* mtlManager = MaterialManager::Get();

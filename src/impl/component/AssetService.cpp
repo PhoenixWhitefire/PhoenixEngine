@@ -13,7 +13,7 @@ public:
             { "GetMeshData", Reflection::MethodDescriptor{
                 { Reflection::ValueType::String },
                 { Reflection::ValueType::Map },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
                 {
                     MeshProvider* meshProvider = MeshProvider::Get();
 
@@ -62,7 +62,7 @@ public:
             { "SetMeshData", Reflection::MethodDescriptor{
                 { Reflection::ValueType::String, Reflection::ValueType::Map },
                 {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
                 {
                     const std::string& name = std::string(inputs[0].AsStringView());
                     const std::unordered_map<Reflection::GenericValue, Reflection::GenericValue>& meshData = inputs[1].AsMap();
@@ -99,7 +99,7 @@ public:
             { "SaveMesh", Reflection::MethodDescriptor{
                 { Reflection::ValueType::String, Reflection::ValueType::String },
                 {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
                 {
                     const std::string& internalName = std::string(inputs[0].AsStringView());
 	                const std::string& savePath = std::string(inputs[0].AsStringView());
@@ -114,7 +114,7 @@ public:
             { "ImportModel", Reflection::MethodDescriptor{
                 { Reflection::ValueType::String },
                 { Reflection::ValueType::GameObject },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
                 {
                     const std::string& path = std::string(inputs[0].AsStringView());
 	                std::vector<ObjectRef> loaded = ModelLoader(path, PHX_GAMEOBJECT_NULL_ID).LoadedObjs;
@@ -126,7 +126,7 @@ public:
             { "LoadScene", Reflection::MethodDescriptor{
                 { Reflection::ValueType::String },
                 { REFLECTION_OPTIONAL(Array), REFLECTION_OPTIONAL(String) },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
                 {
                     bool readSuccess = true;
                     std::string contents = FileRW::ReadFile(inputs[0].AsString(), &readSuccess);
@@ -152,7 +152,7 @@ public:
             { "SaveScene", Reflection::MethodDescriptor{
                 { Reflection::ValueType::Array, Reflection::ValueType::String },
                 { Reflection::ValueType::Boolean, REFLECTION_OPTIONAL(String) },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&) -> std::vector<Reflection::GenericValue>
+                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
                 {
                     std::vector<GameObject*> objects;
                     objects.reserve(inputs[0].Size);

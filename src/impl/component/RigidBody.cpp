@@ -95,7 +95,7 @@ public:
 				"PhysicsCollisions",
 				Boolean,
 				REFLECTION_PROPERTY_GET_SIMPLE(EcRigidBody, PhysicsCollisions),
-				[](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
+				[](void* p, const Reflection::GenericValue& gv)
 				{
 					EcRigidBody* crb = static_cast<EcRigidBody*>(p);
 					crb->PhysicsCollisions = gv.AsBoolean();
@@ -111,7 +111,7 @@ public:
 				{
 					return static_cast<uint32_t>(static_cast<EcRigidBody*>(p)->CollisionType);
 				},
-				[](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
+				[](void* p, const Reflection::GenericValue& gv)
 				{
 					static_cast<EcRigidBody*>(p)->CollisionType = static_cast<EnCollisionType>(gv.AsInteger());
 				}
@@ -127,7 +127,7 @@ public:
 				"Density",
 				Double,
 				REFLECTION_PROPERTY_GET_SIMPLE(EcRigidBody, Density),
-				[](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
+				[](void* p, const Reflection::GenericValue& gv)
 				{
 					EcRigidBody* crb = static_cast<EcRigidBody*>(p);
 					float dens = (float)gv.AsDouble();
@@ -144,7 +144,7 @@ public:
 				"HullsFile",
 				String,
 				REFLECTION_PROPERTY_GET_SIMPLE(EcRigidBody, HullsFile),
-				[](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
+				[](void* p, const Reflection::GenericValue& gv)
 				{
 					EcRigidBody* crb = static_cast<EcRigidBody*>(p);
 					crb->SetHullsFile(gv.AsString());

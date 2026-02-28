@@ -43,6 +43,16 @@ namespace Logging
 		std::string ContextExtraTags;
 	};
 
+	class ScopedContext
+	{
+	public:
+		ScopedContext(const Context& Ctx);
+		~ScopedContext();
+
+	private:
+		Context m_PrevContext;
+	};
+
 	struct LogMessageType_
 	{
 	    enum LMT {
@@ -56,4 +66,4 @@ namespace Logging
 	using MessageType = LogMessageType_::LMT;
 };
 
-static inline Logging::Context Log;
+thread_local inline Logging::Context Log;

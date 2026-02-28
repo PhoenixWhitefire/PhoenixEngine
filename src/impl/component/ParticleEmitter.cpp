@@ -37,7 +37,7 @@ public:
 				{
 					return static_cast<EcParticleEmitter*>(g)->Rate;
 				},
-				[](void* g, const Reflection::GenericValue& gv, const Logging::Context&)
+				[](void* g, const Reflection::GenericValue& gv)
 				{
 					int64_t newRate = gv.AsInteger();
 					if (newRate < 0 || newRate > UINT32_MAX)

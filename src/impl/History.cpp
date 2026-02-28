@@ -137,6 +137,7 @@ void History::Undo()
         m_CurrentWaypoint = m_ActionHistory.size() - 1; // TODO not sure why this happens
 
     const Action& lastAction = m_ActionHistory[m_CurrentWaypoint];
+    Logging::ScopedContext sc = Logging::Context{ .ContextExtraTags = "HistoryUndo" };
 
     for (int64_t i = (size_t)lastAction.Events.size() - 1; i >= 0; i--)
     {
@@ -154,7 +155,7 @@ void History::Undo()
 
         try
         {
-            event.Property->Set(p, event.PreviousValue, { .ContextExtraTags = "LogContext:HistoryUndo" });
+            event.Property->Set(p, event.PreviousValue);
         }
         catch (const std::runtime_error& e)
         {
@@ -174,6 +175,7 @@ void History::Redo()
         RAISE_RT(GetCannotRedoReason());
 
     const Action& nextAction = m_ActionHistory[m_CurrentWaypoint + 1];
+    Logging::ScopedContext sc = Logging::Context{ .ContextExtraTags = "HistoryRedo" };
 
     for (size_t i = 0; i < nextAction.Events.size(); i++)
     {
@@ -191,7 +193,7 @@ void History::Redo()
 
         try
         {
-            event.Property->Set(p, event.NewValue, { .ContextExtraTags = "LogContext:HistoryRedo" });
+            event.Property->Set(p, event.NewValue);
         }
         catch (const std::runtime_error& e)
         {

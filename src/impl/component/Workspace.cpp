@@ -54,7 +54,7 @@ public:
 					else
 						return {}; // Null
 				},
-				[](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
+				[](void* p, const Reflection::GenericValue& gv)
 				{
 					static_cast<EcWorkspace*>(p)->SetSceneCamera(GameObject::FromGenericValue(gv));
 				}
@@ -71,7 +71,7 @@ public:
 			{ "ScreenPointToVector", {
 				{ Reflection::ValueType::Vector2, REFLECTION_OPTIONAL(Double) },
 				{ Reflection::ValueType::Vector3 },
-				[](void* p, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&)
+				[](void* p, const std::vector<Reflection::GenericValue>& inputs)
 				-> std::vector<Reflection::GenericValue>
 				{
 					EcWorkspace* w = static_cast<EcWorkspace*>(p);
@@ -89,7 +89,7 @@ public:
 			{ "WorldToScreenPoint", {
 				{ Reflection::ValueType::Vector3 },
 				{ Reflection::ValueType::Vector2, Reflection::ValueType::Double },
-				[](void* p, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&)
+				[](void* p, const std::vector<Reflection::GenericValue>& inputs)
 				-> std::vector<Reflection::GenericValue>
 				{
 					Engine* engine = Engine::Get();
@@ -128,7 +128,7 @@ public:
 			{ "Raycast", {
 				{ Reflection::ValueType::Vector3, Reflection::ValueType::Vector3, REFLECTION_OPTIONAL(Array), REFLECTION_OPTIONAL(Boolean) },
 				{ REFLECTION_OPTIONAL(Map) },
-				[](void* p, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&)
+				[](void* p, const std::vector<Reflection::GenericValue>& inputs)
 				-> std::vector<Reflection::GenericValue>
 				{
 					const glm::vec3& origin = inputs[0].AsVector3();
@@ -177,7 +177,7 @@ public:
 			{ "GetObjectsInAabb", {
 				{ Reflection::ValueType::Vector3, Reflection::ValueType::Vector3, REFLECTION_OPTIONAL(Array) },
 				{ Reflection::ValueType::Array },
-				[](void* p, const std::vector<Reflection::GenericValue>& inputs, const Logging::Context&)
+				[](void* p, const std::vector<Reflection::GenericValue>& inputs)
 				-> std::vector<Reflection::GenericValue>
 				{
 					const glm::vec3& position = inputs[0].AsVector3();

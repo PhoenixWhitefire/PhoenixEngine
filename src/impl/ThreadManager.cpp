@@ -90,14 +90,14 @@ static void SetThreadName(std::thread* thread, const char* threadName)
 static ThreadManager* s_Instance;
 
 const char* const s_WorkerFiberNames[] = {
-	"Phx_Worker1",
-	"Phx_Worker2",
-	"Phx_Worker3",
-	"Phx_Worker4",
-	"Phx_Worker5",
-	"Phx_Worker6",
-	"Phx_Worker7",
-	"Phx_Worker8"
+	"Phoenix1",
+	"Phoenix2",
+	"Phoenix3",
+	"Phoenix4",
+	"Phoenix5",
+	"Phoenix6",
+	"Phoenix7",
+	"Phoenix8"
 };
 
 // 09/05/2025
@@ -121,6 +121,8 @@ void ThreadManager::Initialize(int NumThreadsOverride)
 			{
 				TracyFiberEnter(s_WorkerFiberNames[i]);
 				SetThreadName(s_WorkerFiberNames[i]);
+				// thread-local
+				Log.ContextExtraTags = std::format("LogContext:{}", s_WorkerFiberNames[i]);
 
 				while (true)
 				{

@@ -14,12 +14,11 @@
 
 #include "datatype/EntityComponent.hpp"
 #include "script/InputEvent.hpp"
-#include "Log.hpp"
 
 #define REFLECTION_PROPERTY_GET_SIMPLE(c, n) [](void* p)->Reflection::GenericValue { return static_cast<c*>(p)->n; }
 #define REFLECTION_PROPERTY_GET_SIMPLE_TGN(c, n) [](void* p)->Reflection::GenericValue { return static_cast<c*>(p)->n.ToGenericValue(); }
-#define REFLECTION_PROPERTY_SET_SIMPLE(c, n, t) [](void* p, const Reflection::GenericValue& gv, const Logging::Context&)->void { static_cast<c*>(p)->n = gv.As##t(); }
-#define REFLECTION_PROPERTY_SET_SIMPLE_CTOR(c, n, t) [](void* p, const Reflection::GenericValue& gv, const Logging::Context&)->void { static_cast<c*>(p)->n = t(gv); }
+#define REFLECTION_PROPERTY_SET_SIMPLE(c, n, t) [](void* p, const Reflection::GenericValue& gv)->void { static_cast<c*>(p)->n = gv.As##t(); }
+#define REFLECTION_PROPERTY_SET_SIMPLE_CTOR(c, n, t) [](void* p, const Reflection::GenericValue& gv)->void { static_cast<c*>(p)->n = t(gv); }
 
 #define REFLECTION_PROPERTY(strn, t, g, s) { strn, { strn, Reflection::ValueType::t, (Reflection::PropertyGetter)g, (Reflection::PropertySetter)s } }
 
@@ -103,7 +102,7 @@ namespace Reflection
 	struct GenericValue;
 	struct GenericFunction
 	{
-		std::function<std::vector<Reflection::GenericValue>(const std::vector<Reflection::GenericValue>&, const Logging::Context&)>* Func = nullptr;
+		std::function<std::vector<Reflection::GenericValue>(const std::vector<Reflection::GenericValue>&)>* Func = nullptr;
 		std::function<void()>* Cleanup = nullptr;
 		int Reference = INT32_MAX;
 	};
@@ -190,9 +189,9 @@ namespace Reflection
 	};
 
 	typedef Reflection::GenericValue(*PropertyGetter)(void*);
-	typedef void(*PropertySetter)(void*, const Reflection::GenericValue&, const Logging::Context&);
-	typedef std::vector<Reflection::GenericValue>(*MethodFunction)(void*, const std::vector<Reflection::GenericValue>&, const Logging::Context&);
-	typedef std::promise<std::vector<Reflection::GenericValue>>*(*YieldingMethodFunction)(void*, const std::vector<Reflection::GenericValue>&, const Logging::Context&);
+	typedef void(*PropertySetter)(void*, const Reflection::GenericValue&);
+	typedef std::vector<Reflection::GenericValue>(*MethodFunction)(void*, const std::vector<Reflection::GenericValue>&);
+	typedef std::promise<std::vector<Reflection::GenericValue>>*(*YieldingMethodFunction)(void*, const std::vector<Reflection::GenericValue>&);
 
 	using EventCallback = std::function<void(const std::vector<Reflection::GenericValue>&, uint32_t)>;
 	using EventConnectFunction = std::function<uint32_t(void*, EventCallback)>;

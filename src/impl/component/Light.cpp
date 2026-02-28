@@ -49,7 +49,7 @@ public:
                 {
                     return static_cast<EcDirectionalLight*>(p)->Direction;
                 },
-                [](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
+                [](void* p, const Reflection::GenericValue& gv)
                 {
                     static_cast<EcDirectionalLight*>(p)->Direction = gv.AsVector3();
                 }
@@ -76,7 +76,7 @@ public:
                     else
                         return -1.f;
                 },
-                [](void* p, const Reflection::GenericValue& gv, const Logging::Context&)
+                [](void* p, const Reflection::GenericValue& gv)
                 {
                     EcDirectionalLight* d = static_cast<EcDirectionalLight*>(p);
 
