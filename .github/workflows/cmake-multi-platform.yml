@@ -128,6 +128,8 @@ jobs:
         path: |
           x64/Debug/PhoenixEngine
           x64/Release/PhoenixEngine
+          x64/DebugTSan/PhoenixEngine
+          x64/ReleaseTSan/PhoenixEngine
           resources/
           wikigen/
           .github/
