@@ -114,6 +114,7 @@ option(ENABLE_CURL_MANUAL "Build the man page for curl and enable its -M/--manua
 option(BUILD_TESTING "Build tests" OFF)
 option(BUILD_EXAMPLES "Build libcurl examples" OFF)
 option(CURL_USE_LIBPSL "Use libpsl" OFF) # TODO figure out how to install this on Windows github action runners
+set(CURL_ENABLE_SSL ON) # what the hell
 
 add_subdirectory(Vendor)
 add_subdirectory(Vendor/luau EXCLUDE_FROM_ALL)
