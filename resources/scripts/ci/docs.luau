@@ -509,6 +509,11 @@ local function dumpReflectionApi(t, d, cn)
 				documentationData[`@{DOCS_PREFIX}/globaltype/{cn}.{n}`] = {
 					documentation = d.Events[n].Description
 				}
+
+				if d.Events[n].ArgumentTypes then
+					assert(#string.split(d.Events[n].ArgumentTypes, ",") == #string.split(v, ","), `incorrect number of event callback argument types: {n} ({d.Events[n].ArgumentTypes}) vs {v}`)
+				end
+
 				definitionsFile ..= `  { n }: EventSignal<{d.Events[n].ArgumentTypes or rtolsub(v)}>,\n`
 			end
 		end

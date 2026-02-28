@@ -7,6 +7,7 @@
 
 #include "Log.hpp"
 #include "component/EngineService.hpp"
+#include "Reflection.hpp"
 #include "Utilities.hpp"
 #include "FileRW.hpp"
 
@@ -18,6 +19,7 @@ struct ParallelLogEvent
 {
 	std::string Message;
 	std::string ExtraTags;
+	Reflection::GenericValue Value;
 	Logging::MessageType Type;
 };
 static std::mutex ParallelLogEventsMutex;
@@ -82,7 +84,7 @@ void Logging::Context::Append(const std::string_view& Message, const std::string
 
 	std::string tags = std::string(ExtraTags);
 	if (ContextExtraTags.size() > 0)
-		tags += "," + ContextExtraTags;
+		tags += (tags.size() > 0 ? "," : "") + ContextExtraTags;
 
 	if (std::this_thread::get_id() != MainThreadId)
 	{
@@ -102,13 +104,40 @@ void Logging::Context::Append(const std::string_view& Message, const std::string
 	EcEngine::SignalNewLogMessage(Logging::MessageType::None, Message, tags);
 }
 
+void Logging::Context::AppendWithValue(const std::string_view& Message, const Reflection::GenericValue& Value, const std::string_view& ExtraTags) const
+{
+	ZoneScoped;
+
+	std::string tags = std::string(ExtraTags);
+	if (ContextExtraTags.size() > 0)
+		tags += (tags.size() > 0 ? "," : "") + ContextExtraTags;
+
+	if (std::this_thread::get_id() != MainThreadId)
+	{
+		std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(ParallelLogEventsMutex);
+		ParallelLogEvents.push_back(ParallelLogEvent{
+			.Message = std::string(Message),
+			.ExtraTags = tags,
+			.Value = Value,
+			.Type = Logging::MessageType::None
+		});
+		return;
+	}
+
+	//if (ExtraTags != "")
+	//	appendToLog(ExtraTags, true);
+	appendToLog(Message, false);
+
+	EcEngine::SignalNewLogMessage(Logging::MessageType::None, Message, tags, Value);
+}
+
 void Logging::Context::Info(const std::string_view& Message, const std::string_view& ExtraTags) const
 {
 	ZoneScoped;
 
 	std::string tags = std::string(ExtraTags);
 	if (ContextExtraTags.size() > 0)
-		tags += "," + ContextExtraTags;
+		tags += (tags.size() > 0 ? "," : "") + ContextExtraTags;
 
 	if (std::this_thread::get_id() != MainThreadId)
 	{
@@ -135,7 +164,7 @@ void Logging::Context::Warning(const std::string_view& Message, const std::strin
 
 	std::string tags = std::string(ExtraTags);
 	if (ContextExtraTags.size() > 0)
-		tags += "," + ContextExtraTags;
+		tags += (tags.size() > 0 ? "," : "") + ContextExtraTags;
 
 	if (std::this_thread::get_id() != MainThreadId)
 	{
@@ -162,7 +191,7 @@ void Logging::Context::Error(const std::string_view& Message, const std::string_
 
 	std::string tags = std::string(ExtraTags);
 	if (ContextExtraTags.size() > 0)
-		tags += "," + ContextExtraTags;
+		tags += (tags.size() > 0 ? "," : "") + ContextExtraTags;
 
 	if (std::this_thread::get_id() != MainThreadId)
 	{
@@ -209,9 +238,13 @@ void Logging::FlushParallelEvents()
 		switch (ple.Type)
 		{
 		case Logging::MessageType::None:
-			Log.Append(ple.Message, ple.ExtraTags);
+		{
+			if (ple.Value.Type == Reflection::ValueType::Null)
+				Log.Append(ple.Message, ple.ExtraTags);
+			else
+				Log.AppendWithValue(ple.Message, ple.Value, ple.ExtraTags);
 			break;
-
+		}
 		case Logging::MessageType::Info:
 			Log.Info(ple.Message, ple.ExtraTags);
 			break;

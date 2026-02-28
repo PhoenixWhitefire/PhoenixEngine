@@ -1322,38 +1322,53 @@ local ViewportRight = 0
 local ViewportLeft = 0
 local ViewportTop = 0
 local ViewportBottom = 0
-local Log: { { Closed: boolean, Message: { { Content: string, Newline: boolean, ExtraTags: string, CanInteract: boolean, Tooltip: string } }, Type: EnumLogType, Time: string, Source: string? } } = {}
 local NewLogMessage = false
 
-local function canInteractWithLogSubMessage(ExtraTags: string): (boolean, string)
-	local objectId = ExtraTags:match("Object:%d+")
+type LogMessageItem = {
+	Content: string,
+	DirectValue: unknown,
+	Newline: boolean,
+	ExtraTags: string,
+	CanInteract: boolean,
+	Tooltip: string
+}
+type LogMessage = {
+	Closed: boolean,
+	Message: { LogMessageItem },
+	Type: EnumLogType,
+	Time: string,
+	Source: string?,
+	Line: number?,
+	OpenTables: { [unknown]: boolean },
+	TablesWithAnyElements: { [unknown]: boolean? }
+}
 
-	if objectId then
-		local object = GameObject.fromId(assert(tonumber(objectId:sub(#("Object:") + 1))))
+local Log: { LogMessage } = {}
 
-		return true, `Select { tostring(object) }`
+local function canInteractWithLogSubMessage(ExtraTags: string, DirectValue: unknown, source: string?): (boolean, string)
+	if typeof(DirectValue) == "GameObject" then
+		return true, `Select { tostring(DirectValue) }`
 	end
 
 	local shortSrc = ExtraTags:match("TextDocument:.+,")
 
-	if shortSrc then
+	if shortSrc and (not source or not source:find("CommandBar")) then
 		local lineMatch = ExtraTags:match("DocumentLine:%d+")
+		shortSrc = shortSrc:sub(1, assert((shortSrc:find(","))))
 
 		return true, `Open { shortSrc:sub(#("TextDocument:") + 1, #shortSrc - 1) }{ if lineMatch then lineMatch:sub(#("DocumentLine:"), #lineMatch) else "" }`
+	end
+
+	if source and source:find("CommandBar") then
+		return false, "From Command Bar"
 	end
 
 	return false, ""
 end
 
-local function interactWithLogSubMessage(ExtraTags: string)
-	local objectId = ExtraTags:match("Object:%d+")
-
-	if objectId then
-		local object = GameObject.fromId(assert(tonumber(objectId:sub(#("Object:") + 1))))
-
-		if object then
-			Engine:SetExplorerSelections({ object })
-		end
+local function interactWithLogSubMessage(ExtraTags: string, Value: unknown)
+	if typeof(Value) == "GameObject" then
+		Engine:SetExplorerSelections({ Value })
 		return
 	end
 
@@ -1361,6 +1376,7 @@ local function interactWithLogSubMessage(ExtraTags: string)
 
 	if shortSrc then
 		local lineMatch = ExtraTags:match("DocumentLine:%d+")
+		shortSrc = shortSrc:sub(1, assert((shortSrc:find(","))))
 
 		local line = lineMatch and tonumber(lineMatch:sub(#("DocumentLine:") + 1))
 		Engine:OpenTextDocument(shortSrc:sub(#("TextDocument:") + 1, #shortSrc - 1), line)
@@ -1371,7 +1387,11 @@ local function interactWithLogSubMessage(ExtraTags: string)
 	warn(`Failed to figure out the interaction for a log message with tags '{ExtraTags}'`)
 end
 
-Engine.OnMessageLogged:Connect(function(Type, Message, ExtraTags)
+Engine.OnMessageLogged:Connect(function(Type, Message, ExtraTags, Value)
+	if type(Value) == "table" then
+		table.freeze(Value)
+	end
+
 	local createsNewline = false
 
 	if Message == " &&" then
@@ -1384,13 +1404,26 @@ Engine.OnMessageLogged:Connect(function(Type, Message, ExtraTags)
 		createsNewline = true
 	end
 
-	local canInteract, tooltip = canInteractWithLogSubMessage(ExtraTags)
+	local source = ExtraTags:match("TextDocument:.+,") or ExtraTags:match("SourceChunkName:.+,")
+	if source then
+		source = source:sub(#("TextDocument:") + 1, assert((source:find(","))) - 1)
+	end
+
+	local line = 1
+
+	if source then
+		local lineMatch = ExtraTags:match("DocumentLine:%d+")
+		line = lineMatch and tonumber(lineMatch:sub(#("DocumentLine:") + 1))
+	end
+
+	local canInteract, tooltip = canInteractWithLogSubMessage(ExtraTags, Value, source)
 
 	local lastLog = Log[#Log]
 	if lastLog and not lastLog.Closed then
 		if Type == Enum.LogType.None then
 			table.insert(lastLog.Message, {
 				Content = Message,
+				DirectValue = Value,
 				ExtraTags = ExtraTags,
 				CanInteract = canInteract,
 				Tooltip = tooltip,
@@ -1403,17 +1436,15 @@ Engine.OnMessageLogged:Connect(function(Type, Message, ExtraTags)
 		end
 	end
 
-	local source = ExtraTags:match("TextDocument:.+,") or ExtraTags:match("SourceChunkName:.+,")
-	if source then
-		source = source:sub(#("TextDocument:") + 1, #source - 1)
-	end
-
 	table.insert(Log, {
 		Closed = false,
-		Message = { { Content = Message, ExtraTags = ExtraTags, CanInteract = canInteract, Tooltip = tooltip, Newline = createsNewline } },
+		Message = { { Content = Message, DirectValue = Value, ExtraTags = ExtraTags, CanInteract = canInteract, Tooltip = tooltip, Newline = createsNewline } },
 		Type = Type,
 		Time = os.date("%H:%M:%S"),
-		Source = source
+		Source = source,
+		Line = line,
+		OpenTables = {},
+		TablesWithAnyElements = {}
 	})
 
 	NewLogMessage = true
@@ -1437,6 +1468,21 @@ end
 
 local LogMessageHovering: number = -1
 local ViewportTakeFocusFrames = 0
+local CommandBarActive = false
+
+PlayerInput.KeyEvent:Connect(function(kie: KeyInputEvent)
+	if not CommandBarActive or kie.Action ~= Enum.InputAction.Pressed or kie.Key ~= Enum.Key.Enter then
+		return
+	end
+
+	local commandBarAction = History:TryBeginAction("CommandBarCode")
+
+	Engine:RunInVM(if CurrentStage == "ProjectEditing" then GameEditingVM else GameVM, CommandBarCommand, "=CommandBar")
+
+	if commandBarAction then
+		History:FinishAction(commandBarAction)
+	end
+end)
 
 local function renderViewport(DeltaTime: number)
 	if CurrentStage == "ProjectEditing" and Project.Workspace then
@@ -1515,20 +1561,14 @@ local function renderViewport(DeltaTime: number)
 		imgui.setnextwindowsize(w.x, 35)
 		imgui.begin("Bottom Bar", "nt | nd | nr | ns")
 
+		imgui.setcursorposition(imgui.cursorposition() + vector.create(0, 2))
 		imgui.text("> ")
 		imgui.sameline()
+		imgui.setcursorposition(imgui.cursorposition() - vector.create(0, 2))
+
 		CommandBarCommand = imgui.inputstring("##Command", CommandBarCommand)
-		imgui.sameline()
+		CommandBarActive = imgui.itemactive()
 
-		if imgui.button("Run") then
-			local commandBarAction = History:TryBeginAction("CommandBarCode")
-
-			Engine:RunInVM(if CurrentStage == "ProjectEditing" then GameEditingVM else GameVM, CommandBarCommand, "=CommandBar")
-
-			if commandBarAction then
-				History:FinishAction(commandBarAction)
-			end
-		end
 		imgui.sameline()
 
 		local noteStr = `{ Engine.Framerate } FPS ({ CurrentStage }) | { Project.Name }`
@@ -1541,6 +1581,7 @@ local function renderViewport(DeltaTime: number)
 	if OutputEnabled and imgui.begin("Output", "h") then
 		local logMessageHoveringWip: number = -1
 		local smid = 0
+		local rightClickedLogMessage = false
 
 		for mi, message in Log do
 			imgui.pushstylecolor(0, { 0.35, 0.35, 0.35, 1 })
@@ -1574,7 +1615,7 @@ local function renderViewport(DeltaTime: number)
 
 				local tooltip = subMessage.Tooltip
 				local context = subMessage.ExtraTags
-				if #context <= 2 then
+				if #context <= 2 or context == "LogContext:Main" then
 					context = ""
 
 					for _, m in message.Message do
@@ -1586,17 +1627,8 @@ local function renderViewport(DeltaTime: number)
 					end
 				end
 
-				if (message.Source or subMessage.CanInteract) and LogMessageHovering == smid then
-					if imgui.textlink(subMessage.Content) then
-						interactWithLogSubMessage(context)
-					end
-				else
-					imgui.text(subMessage.Content)
-				end
-
-				if imgui.itemhovered() then
-					logMessageHoveringWip = smid
-				end
+				local _
+				_, tooltip = canInteractWithLogSubMessage(context, subMessage.DirectValue)
 
 				if #tooltip == 0 then
 					for _, m in message.Message do
@@ -1605,6 +1637,145 @@ local function renderViewport(DeltaTime: number)
 							break
 						end
 					end
+				end
+
+				local canInteract = (message.Source or subMessage.CanInteract) and LogMessageHovering == smid and tooltip ~= "From Command Bar"
+				local doInteract = false
+
+				if type(subMessage.DirectValue) == "table" then
+					if not message.OpenTables then
+						message.OpenTables = {}
+					end
+
+					if not message.TablesWithAnyElements then
+						message.TablesWithAnyElements = {}
+					end
+
+					local function hasAnyElements(t): boolean
+						local cached = message.TablesWithAnyElements[t]
+
+						if cached == nil then
+							for _ in t do
+								message.TablesWithAnyElements[t] = true
+								return true
+							end
+							message.TablesWithAnyElements[t] = false
+							return false
+						else
+							return cached
+						end
+					end
+
+					local startX = imgui.cursorposition().x
+
+					local function renderTable(t, sub)
+						imgui.pushid(tostring(t))
+
+						local open = message.OpenTables[t]
+						local hasElements = hasAnyElements(t)
+
+						local prev = imgui.cursorposition()
+						local nodeOpen = imgui.treenode("##", "ar | " .. (if not sub then "dlf" else "")  .. (if hasElements then "" else " lf"))
+						local after = imgui.cursorposition()
+
+						imgui.dummy(64, 64)
+						imgui.setcursorposition(prev + vector.create(16, 0))
+						imgui.text(if (open and hasElements) then "{" else (if hasElements then "{...}" else "{}"))
+						imgui.setcursorposition(after)
+
+						if nodeOpen then
+							message.OpenTables[t] = true
+
+							for k, v in t do
+								imgui.setcursorposition(imgui.cursorposition() + vector.create(startX, 0))
+
+								local kstr = k
+								if type(k) == "string" then
+									if not k:match("%W") then
+										kstr = k
+									else
+										kstr = `["{ k }"]`
+									end
+								else
+									kstr = `[{ k }]`
+								end
+
+								if type(v) == "table" then
+									if imgui.treenode(kstr :: string .. " = ", "dlf | lf") then
+										imgui.treepop()
+									end
+									imgui.sameline()
+									imgui.setcursorposition(imgui.cursorposition() - vector.create(8, 0))
+									renderTable(v, true)
+								else
+									if typeof(k) == "GameObject" then
+										if imgui.textlink(kstr) then
+											Engine:SetExplorerSelections({ k })
+										end
+										imgui.sameline()
+										imgui.text(" = ")
+									else
+										if imgui.treenode(kstr :: string .. " = ", "dlf | lf") then
+											imgui.treepop()
+										end
+									end
+
+									imgui.sameline()
+									imgui.setcursorposition(imgui.cursorposition() - vector.create(8, 0))
+
+									if typeof(v) == "GameObject" then
+										if imgui.textlink(tostring(v)) then
+											Engine:SetExplorerSelections({ v })
+										end
+									else
+										local vts = tostring(v) .. ","
+										if type(v) == "string" then
+											vts = `"{ v }",`
+										elseif type(v) ~= "number" and type(v) ~= "boolean" then
+											vts = `[{ v }],`
+										end
+
+										imgui.text(vts)
+									end
+								end
+							end
+
+							if hasElements then
+								imgui.setcursorposition(imgui.cursorposition() + vector.create(startX, 0))
+								imgui.text("}")
+							end
+
+							imgui.treepop()
+						else
+							message.OpenTables[t] = false
+						end
+
+						imgui.popid()
+					end
+
+					imgui.setcursorposition(imgui.cursorposition() - vector.create(8, 0))
+					renderTable(subMessage.DirectValue, false)
+				else
+					if canInteract then
+						doInteract = imgui.textlink(subMessage.Content)
+					else
+						imgui.text(subMessage.Content)
+					end
+				end
+
+				if doInteract then
+					interactWithLogSubMessage(context, subMessage.DirectValue)
+				end
+
+				if message.Source and message.Line and message.Source ~= "CommandBar" then
+					if imgui.itemclicked(Enum.MouseButton.Right) then
+						Engine:OpenTextDocument(message.Source, message.Line)
+						rightClickedLogMessage = true
+					end
+				end
+
+				if imgui.itemhovered() then
+					logMessageHoveringWip = smid
 				end
 
 				if (#tooltip > 0 or #context > 0) and imgui.itemhovered() and imgui.begintooltip() then
@@ -1637,7 +1808,7 @@ local function renderViewport(DeltaTime: number)
 			NewLogMessage = false
 		end
 
-		if imgui.windowhovered() and PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Right) then
+		if not rightClickedLogMessage and imgui.windowhovered() and PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Right) then
 			imgui.openpopup("OutputContextMenu")
 		end
 

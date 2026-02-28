@@ -189,7 +189,7 @@ void EcRigidBody::RecomputeAabb()
 	this->CollisionAabb.Position = (min + max) / 2.f;
 	this->CollisionAabb.Size = (max - min) / 2.f;
 
-	if (CollisionAabb.Size.x > 10000.f || CollisionAabb.Size.y > 10000.f || CollisionAabb.Size.z > 10000.f)
+	if (CollisionAabb.Size.x > 5000.f || CollisionAabb.Size.y > 5000.f || CollisionAabb.Size.z > 5000.f)
 	{
 		if (PhysicsCollisions)
 		{

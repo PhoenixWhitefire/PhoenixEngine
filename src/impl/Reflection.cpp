@@ -244,6 +244,11 @@ void Reflection::GenericValue::CopyInto(GenericValue& Target, const GenericValue
 		Target.Val.Input = Source.Val.Input;
 		break;
 	}
+	case ValueType::Function:
+	{
+		Target = "[function]";
+		break;
+	}
 	default:
 	{
 		assert(false);

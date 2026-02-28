@@ -108,7 +108,7 @@
       },
       "Engine": {
         "Events": {
-          "OnMessageLogged": "(Integer, String, String)"
+          "OnMessageLogged": "(Integer, String, String, Any)"
         },
         "Methods": {
           "BindDataModel": "(GameObject) -> ()",
@@ -429,6 +429,7 @@
         "indent": "function",
         "inputnumber": "function",
         "inputstring": "function",
+        "itemactive": "function",
         "itemclicked": "function",
         "itemhovered": "function",
         "menuitem": "function",

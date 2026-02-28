@@ -425,6 +425,7 @@ public:
 
                     const std::string code = std::string(inputs[1].AsStringView());
 	                const std::string chname = inputs.size() > 2 ? std::string(inputs[2].AsStringView()) : code;
+                    Logging::ScopedContext sc = Logging::Context{ .ContextExtraTags = std::format("SourceChunkName:{}", chname) };
 
 	                lua_State* ML = lua_newthread(vm.MainThread);
 
@@ -433,7 +434,11 @@ public:
                         int result = lua_resume(ML, ML, 0);
 
                         if (result == LUA_ERRERR || result == LUA_ERRRUN || result == LUA_ERRMEM)
-                            Log.Error(lua_tostring(ML, -1), std::format("SourceChunkName:{}", chname));
+                        {
+                            const char* err = luaL_tolstring(ML, -1, nullptr);
+                            Log.Error(err);
+                            lua_pop(ML, 1);
+                        }
 
                         const char* const ResultToMessage[] = {
                             "ok",
@@ -445,7 +450,15 @@ public:
                             "break"
                         };
 
-                        std::string message = ResultToMessage[result] ? ResultToMessage[result] : lua_tostring(ML, -1);
+                        std::string message;
+                        if (const char* mes = ResultToMessage[result])
+                            message = mes;
+                        else
+                        {
+                            message = luaL_tolstring(ML, -1, nullptr);
+                            lua_pop(ML, 1);
+                        }
+
                         lua_pop(vm.MainThread, 1); // pop off ML
 
                         return { result == LUA_OK, message };
@@ -455,7 +468,7 @@ public:
                         std::string message = lua_tostring(ML, -1);
                         lua_pop(vm.MainThread, 1); // pop off ML
 
-                        Log.Error(message, std::format("SourceChunkName:{}", chname));
+                        Log.Error(message);
                         return { false, message };
                     }
                 }
@@ -634,7 +647,7 @@ public:
     const Reflection::StaticEventMap& GetEvents() override
     {
         static const Reflection::StaticEventMap events = {
-            REFLECTION_EVENT(EcEngine, OnMessageLogged, Reflection::ValueType::Integer, Reflection::ValueType::String, Reflection::ValueType::String)
+            REFLECTION_EVENT(EcEngine, OnMessageLogged, Reflection::ValueType::Integer, Reflection::ValueType::String, Reflection::ValueType::String, Reflection::ValueType::Any)
         };
 
         return events;
@@ -643,11 +656,11 @@ public:
 
 static EngineServiceManager Instance;
 
-void EcEngine::SignalNewLogMessage(Logging::MessageType MessageType, const std::string_view& Message, const std::string_view& ExtraTags)
+void EcEngine::SignalNewLogMessage(Logging::MessageType MessageType, const std::string_view& Message, const std::string_view& ExtraTags, const Reflection::GenericValue& Value)
 {
     for (const EcEngine& ce : Instance.m_Components)
     {
         if (ce.Valid)
-            REFLECTION_SIGNAL_EVENT(ce.OnMessageLoggedCallbacks, (int)MessageType, Message, ExtraTags);
+            REFLECTION_SIGNAL_EVENT(ce.OnMessageLoggedCallbacks, (int)MessageType, Message, ExtraTags, Value);
     }
 }

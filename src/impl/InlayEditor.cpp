@@ -96,7 +96,7 @@ static const EntityComponent AddableComponentExtras[] = {
 
 static_assert(std::size(AddableComponentExtras) == std::size(AddableComponents));
 
-static nlohmann::json DefaultNewMaterial =  {
+static nlohmann::json DefaultNewMaterial = {
 	{ "ColorMap", "textures/materials/plastic.png" },
 	{ "specExponent", 32.f },
 	{ "specMultiply", 0.5f }
@@ -1647,9 +1647,13 @@ static void recursiveIterateTree(GameObject* current)
 			| ImGuiTreeNodeFlags_SpanAvailWidth
 			| ImGuiTreeNodeFlags_DrawLinesFull;
 
-		// make the insert button have better contrast
-		if (isInSelections(object) && object != InsertObjectButtonHoveredOver)
-			flags |= ImGuiTreeNodeFlags_Selected;
+		if (isInSelections(object))
+		{
+			// make the insert button have better contrast
+			if (object != InsertObjectButtonHoveredOver)
+				flags |= ImGuiTreeNodeFlags_Selected;
+			ExplorerShouldSeekToCurrentSelection = false;
+		}
 
 		if (object->Children.empty())
 			flags |= ImGuiTreeNodeFlags_Leaf;
@@ -1660,7 +1664,7 @@ static void recursiveIterateTree(GameObject* current)
 		if (primaryComponent.Type == EntityComponent::Transform && object->Components.size() > 1)
 			primaryComponent = object->Components[1];
 
-		if (ExplorerShouldSeekToCurrentSelection && Selections.size() > 0)
+		if (ExplorerShouldSeekToCurrentSelection)
 		{
 			std::vector<GameObject*> descs = object->GetDescendants();
 
@@ -2392,6 +2396,12 @@ static void renderExplorer()
 
 	if (EngineJsonConfig["Tool_Explorer"] == false)
 		return;
+
+	if (ExplorerShouldSeekToCurrentSelection && Selections.size() == 0)
+		ExplorerShouldSeekToCurrentSelection = false;
+
+	if (ExplorerShouldSeekToCurrentSelection)
+		ImGui::SetNextWindowFocus();
 
 	bool open = true;
 	bool render = ImGui::Begin("Explorer", &open);
@@ -3292,7 +3302,7 @@ static void renderProperties()
 
 					ImGui::InputText("##", &str);
 
-					if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
+					if (ImGui::IsItemClicked(ImGuiMouseButton_Left) && ImGui::IsWindowHovered())
 					{
 						if (ImGui::GetIO().KeyCtrl)
 						{
@@ -3301,6 +3311,7 @@ static void renderProperties()
 								GameObject* target = GameObject::FromGenericValue(newVal);
 								Selections = { target };
 								ExplorerShouldSeekToCurrentSelection = true;
+								EngineJsonConfig["Tool_Explorer"] = true;
 							}
 							else
 								Selections.clear();
@@ -3610,6 +3621,7 @@ void InlayEditor::SetExplorerSelections(const std::vector<ObjectHandle>& NewSele
 {
 	Selections = NewSelections;
 	ExplorerShouldSeekToCurrentSelection = true;
+	EngineJsonConfig["Tool_Explorer"] = true;
 }
 
 const std::vector<ObjectHandle>& InlayEditor::GetExplorerSelections()
@@ -3979,7 +3991,10 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 	breakReason = BreakReasons[Reason];
 
 	if (Reason == DebugBreakReason::Error)
-		errorMessage = lua_tostring(L, -1);
+	{
+		errorMessage = luaL_tolstring(L, -1, nullptr);
+		lua_pop(L, 1);
+	}
 	else
 		errorMessage = BreakExplanations[Reason];
 

@@ -140,6 +140,12 @@ static int imgui_itemhovered(lua_State* L)
 	return 1;
 }
 
+static int imgui_itemactive(lua_State* L)
+{
+    lua_pushboolean(L, ImGui::IsItemActive());
+    return 1;
+}
+
 static int imgui_anyitemactive(lua_State* L)
 {
     lua_pushboolean(L, ImGui::IsAnyItemActive());
@@ -179,8 +185,11 @@ static int imgui_windowhovered(lua_State* L)
 
 static int imgui_itemclicked(lua_State* L)
 {
-    lua_pushboolean(L, ImGui::IsItemClicked());
+    int button = luaL_optinteger(L, 1, 0);
+    if (button < 0 || button > ImGuiMouseButton_Middle)
+        luaL_error(L, "invalid mouse button '%i'", button);
 
+    lua_pushboolean(L, ImGui::IsItemClicked(button));
 	return 1;
 }
 
@@ -936,6 +945,7 @@ static luaL_Reg imgui_funcs[] =
     { "settooltip", imgui_settooltip },
     { "itemhovered", imgui_itemhovered },
     { "itemclicked", imgui_itemclicked },
+    { "itemactive", imgui_itemactive },
     { "anyitemactive", imgui_anyitemactive },
     { "windowhovered", imgui_windowhovered },
     { "text", imgui_text },

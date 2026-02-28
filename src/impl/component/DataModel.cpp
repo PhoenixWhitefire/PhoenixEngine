@@ -194,6 +194,8 @@ static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
     lua_State* L = lua_newthread(mainThread);
 	luaL_sandboxthread(L);
 
+    Logging::ScopedContext sc = Logging::Context{ .ContextExtraTags = std::format("TextDocument:{}", Module) };
+
 	int result = ScriptEngine::CompileAndLoad(L, source, "@" + FileRW::MakePathCwdRelative(Module));
 
 	if (result == 0)
@@ -211,10 +213,14 @@ static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
 
 		if (resumeResult != LUA_OK && resumeResult != LUA_YIELD)
 		{
-			Log.ErrorF(
-				"DataModel Script init: {}",
-				lua_tostring(L, -1)
-			);
+            lua_Debug ar = {};
+            lua_getinfo(L, 1, "l", &ar);
+
+			Log.Error(
+                std::format("DataModel Script init: {}", luaL_tolstring(L, -1, nullptr)),
+                std::format("TextDocument:{},DocumentLine:{}", Module, ar.currentline)
+            );
+            lua_pop(L, 1);
 			ScriptEngine::L::DumpStacktrace(L);
 
             lua_resetthread(L);

@@ -50,4 +50,3 @@ end
 print("Niko joined the party")
 
 return TestPlugin
-

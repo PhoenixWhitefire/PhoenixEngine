@@ -243,7 +243,7 @@ export type Engine = {
   SetViewportInputRect: (self: Engine, Position: vector, Size: vector) -> (),
   ShowMessageBox: (self: Engine, Title: string, Message: string, Buttons: 'ok' | 'okcancel' | 'yesno' | 'yesnocancel' | nil, Icon: 'info' | 'warning' | 'error' | 'question' | nil, DefaultButton: number?) -> (number),
 
-  OnMessageLogged: EventSignal<EnumLogType, string, string>,
+  OnMessageLogged: EventSignal<EnumLogType, string, string, unknown>,
 }
 export type History = {
   ActionHistorySize: number ,
@@ -665,7 +665,8 @@ declare imgui: {
   indent: (( Indent: number? ) -> ()),
   inputnumber: (( Text: string, Value: number ) -> (number)),
   inputstring: (( Name: string, Value: string, IsPassword: boolean? ) -> (string)),
-  itemclicked: ((  ) -> (boolean)),
+  itemactive: ((  ) -> (boolean)),
+  itemclicked: (( EnumMouseButton? ) -> (boolean)),
   itemhovered: ((  ) -> (boolean)),
   menuitem: (( Text: string, Enabled: boolean? ) -> (boolean)),
   newline: ((  ) -> ()),

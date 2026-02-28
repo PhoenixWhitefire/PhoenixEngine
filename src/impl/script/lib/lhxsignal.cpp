@@ -147,7 +147,7 @@ static int sig_namecall(lua_State* L)
 
 							for (size_t i = 0; i < Inputs.size(); i++)
 							{
-								assert(Inputs[i].Type == rev->CallbackInputs[i]);
+								assert(Reflection::TypeFits(rev->CallbackInputs[i], Inputs[i].Type));
 								ScriptEngine::L::PushGenericValue(L, Inputs[i]);
 							}
 

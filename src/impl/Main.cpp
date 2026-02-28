@@ -606,10 +606,10 @@ static void handleCrash(const std::string_view& Error, const std::string_view& E
 	// Log Size Limit Exceeded Throwing Exception
 	if (!Error.starts_with("LSLETE"))
 	{
-		Log.Append(std::format(
+		Log.AppendF(
 			"CRASH - {}: {}",
 			ExceptionType, Error
-		));
+		);
 		Logging::Save();
 	}
 

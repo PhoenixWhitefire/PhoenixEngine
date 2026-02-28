@@ -924,6 +924,9 @@
   "@phoenix/global/imgui.inputstring": {
     "documentation": "* `ImGui::InputText`"
   },
+  "@phoenix/global/imgui.itemactive": {
+    "documentation": "* `ImGui::IsItemActive`"
+  },
   "@phoenix/global/imgui.itemclicked": {
     "documentation": "* `ImGui::IsItemClicked`"
   },

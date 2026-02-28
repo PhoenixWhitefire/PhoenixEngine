@@ -3,6 +3,11 @@
 #include <string>
 #include <format>
 
+namespace Reflection
+{
+	struct GenericValue;
+}
+
 namespace Logging
 {
 	void Save();
@@ -15,6 +20,7 @@ namespace Logging
 		void Warning(const std::string_view&, const std::string_view& ExtraTags = "") const;
 		void Error(const std::string_view&, const std::string_view& ExtraTags = "") const;
 		void Append(const std::string_view&, const std::string_view& ExtraTags = "") const;
+		void AppendWithValue(const std::string_view&, const Reflection::GenericValue&, const std::string_view& ExtraTags = "") const;
 
 		template <typename ...Args>
 		void InfoF(std::format_string<Args...> fmt, Args&&... args) const

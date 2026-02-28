@@ -232,7 +232,7 @@
         "Events": {
           "OnMessageLogged": {
             "Description": "Fires whenever a Log Message is created",
-            "ArgumentTypes": "EnumLogType, string, string"
+            "ArgumentTypes": "EnumLogType, string, string, unknown"
           }
         },
         "Methods": {
@@ -1652,10 +1652,15 @@
             ],
             "Out": "string"
           },
+          "itemactive": {
+            "Description": "`ImGui::IsItemActive`",
+            "Out": "boolean"
+          },
           "itemclicked": {
             "Description": [
               "`ImGui::IsItemClicked`"
             ],
+            "In": "EnumMouseButton?",
             "Out": "boolean"
           },
           "itemhovered": {
