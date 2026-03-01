@@ -1230,6 +1230,9 @@
   "@phoenix/globaltype/Engine.IsToolEnabled": {
     "documentation": "Returns whether the given tool is enabled"
   },
+  "@phoenix/globaltype/Engine.Log": {
+    "documentation": "Logs a message"
+  },
   "@phoenix/globaltype/Engine.OnMessageLogged": {
     "documentation": "Fires whenever a Log Message is created"
   },

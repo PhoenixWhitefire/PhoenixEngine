@@ -428,16 +428,18 @@ public:
                     Logging::ScopedContext sc = Logging::Context{ .ContextExtraTags = std::format("SourceChunkName:{}", chname) };
 
 	                lua_State* ML = lua_newthread(vm.MainThread);
+                    luaL_sandboxthread(ML);
 
                     if (ScriptEngine::CompileAndLoad(ML, code, chname) == 0)
                     {
                         int result = lua_resume(ML, ML, 0);
+                        const char* err = nullptr;
 
                         if (result == LUA_ERRERR || result == LUA_ERRRUN || result == LUA_ERRMEM)
                         {
-                            const char* err = luaL_tolstring(ML, -1, nullptr);
-                            Log.Error(err);
-                            lua_pop(ML, 1);
+                            err = lua_tostring(ML, -1); // metatable check in `luaL_tolstring` can trigger an assertion `lua_getmetatable` `api_incr_top`
+                            if (!err)
+                                err = "unknown error";
                         }
 
                         const char* const ResultToMessage[] = {
@@ -454,10 +456,7 @@ public:
                         if (const char* mes = ResultToMessage[result])
                             message = mes;
                         else
-                        {
-                            message = luaL_tolstring(ML, -1, nullptr);
-                            lua_pop(ML, 1);
-                        }
+                            message = err;
 
                         lua_pop(vm.MainThread, 1); // pop off ML
 
@@ -639,6 +638,41 @@ public:
                     return { writeSuccess, error };
                 }
             } },
+
+            { "Log", Reflection::MethodDescriptor{
+                { Reflection::ValueType::String, Reflection::ValueType::Integer, REFLECTION_OPTIONAL(String) },
+                {},
+                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                {
+                    std::string_view message = inputs[0].AsStringView();
+                    int64_t type = inputs[1].AsInteger();
+                    std::string_view tags = inputs.size() > 2 ? inputs[2].AsStringView() : "";
+
+                    if (type < 0 || type > (int64_t)Logging::MessageType::Error)
+                        RAISE_RTF("Invalid log message type '{}'", type);
+
+                    Logging::MessageType mt = (Logging::MessageType)type;
+
+                    switch (mt)
+                    {
+                    case Logging::MessageType::None:
+                        Log.Append(message, tags);
+                        break;
+                    case Logging::MessageType::Info:
+                        Log.Info(message, tags);
+                        break;
+                    case Logging::MessageType::Warning:
+                        Log.Warning(message, tags);
+                        break;
+                    case Logging::MessageType::Error:
+                        Log.Error(message, tags);
+                        break;
+                    default: assert(false);
+                    }
+
+                    return {};
+                }
+            } }
         };
 
         return methods;

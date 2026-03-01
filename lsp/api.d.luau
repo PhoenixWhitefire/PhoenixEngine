@@ -232,6 +232,7 @@ export type Engine = {
   GetExplorerSelections: (self: Engine) -> ({ GameObject }),
   GetToolNames: (self: Engine) -> { string },
   IsToolEnabled: (self: Engine, ToolName: string) -> (boolean),
+  Log: (self: Engine, Message: string, Type: EnumLogType, ExtraTags: string?) -> (),
   OpenTextDocument: (self: Engine, Path: string, Line: number?) -> (),
   ResetViewportInputRect: (self: Engine) -> (),
   RunInVM: (self: Engine, VmName: string, Code: string, ChunkName: string?) -> (boolean, string?),

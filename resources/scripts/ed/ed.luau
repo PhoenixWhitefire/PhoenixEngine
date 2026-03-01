@@ -1484,7 +1484,11 @@ PlayerInput.KeyEvent:Connect(function(kie: KeyInputEvent)
 
 	local commandBarAction = History:TryBeginAction("CommandBarCode")
 
-	Engine:RunInVM(if CurrentStage == "ProjectEditing" then GameEditingVM else GameVM, CommandBarCommand, "=CommandBar")
+	local success, err = Engine:RunInVM(if CurrentStage == "ProjectEditing" then GameEditingVM else GameVM, CommandBarCommand, "=CommandBar")
+
+	if not success and err ~= "yield" then
+		Engine:Log(err or "unknown error", Enum.LogType.Error, "SourceChunkName:=CommandBar")
+	end
 
 	if commandBarAction then
 		History:FinishAction(commandBarAction)

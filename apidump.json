@@ -120,6 +120,7 @@
           "GetExplorerSelections": "() -> (Array)",
           "GetToolNames": "() -> (Array)",
           "IsToolEnabled": "(String) -> (Boolean)",
+          "Log": "(String, Integer, String?) -> ()",
           "OpenTextDocument": "(String, Integer?) -> ()",
           "ResetViewportInputRect": "() -> ()",
           "RunInVM": "(String, String, String?) -> (Boolean, String?)",

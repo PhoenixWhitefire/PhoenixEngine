@@ -278,6 +278,10 @@
             "Description": "Returns whether the given tool is enabled",
             "ParameterNames": "ToolName"
           },
+          "Log": {
+            "Description": "Logs a message",
+            "Type": "(self, Message: string, Type: EnumLogType, ExtraTags: string?) : ()"
+          },
           "OpenTextDocument": {
             "Description": "Opens a text file. This requires Developer Mode to be enabled to have any effect",
             "ParameterNames": [
