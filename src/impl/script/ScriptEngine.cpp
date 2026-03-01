@@ -686,9 +686,20 @@ static Reflection::GenericValue toGenericValue(lua_State* L, int StackIndex, int
 				else
 				{
 					lua_pop(L, 1);
-					lua_pushvalue(L, -1);
-					lua_pushboolean(L, true);
-					lua_settable(L, seenTablesIndex);
+
+					if (lua_gettop(L) > 50)
+					{
+						lua_pop(L, 1);
+						lua_pushliteral(L, "[stack limit exceeded]");
+					}
+					else
+					{
+						luaL_checkstack(L, 5, "table depth");
+
+						lua_pushvalue(L, -1);
+						lua_pushboolean(L, true);
+						lua_settable(L, seenTablesIndex);
+					}
 				}
 			}
 

@@ -545,6 +545,9 @@ static void textEditorSaveFile(TextEditorTab& Tab, bool AskSave = true)
 		return;
 	}
 
+	if (size_t lastChar = contents.find_last_not_of('\n'); lastChar != std::string::npos)
+		contents = contents.substr(0, lastChar + 1) + "\n";
+
 	if (Tab.FileStream)
 	{
 		if (Tab.FileStream->is_open())

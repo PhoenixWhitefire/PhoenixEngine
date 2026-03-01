@@ -961,6 +961,8 @@ local function printTable(t, depth: string, n: string?, printFun: <T>(...T) -> (
 end
 
 local function getLatestGitHubCommit()
+	print("hello?!")
+
 	local data = Network:MakeHttpRequestAsync({
 		Url = "https://api.github.com/repos/PhoenixWhitefire/PhoenixEngine/commits/main",
 		Headers = {
@@ -1250,6 +1252,11 @@ local function renderMainMenuBar(dt: number)
 						changeStageTo("Update")
 					end
 				end
+			else
+				local urutdtsx = imgui.textsize("You are on the latest available version.").x
+
+				imgui.setcursorposition(getCenteredX(cursor.x, cxavail, urutdtsx), cursory + 32)
+				imgui.text("You are on the latest available version.")
 			end
 		end
 
@@ -1668,14 +1675,14 @@ local function renderViewport(DeltaTime: number)
 
 					local startX = imgui.cursorposition().x
 
-					local function renderTable(t, sub)
+					local function renderTable(t: { [unknown]: unknown }, depth: number, pos: vector?)
 						imgui.pushid(tostring(t))
 
 						local open = message.OpenTables[t]
 						local hasElements = hasAnyElements(t)
 
 						local prev = imgui.cursorposition()
-						local nodeOpen = imgui.treenode("##", "ar | " .. (if not sub then "dlf" else "")  .. (if hasElements then "" else " lf"))
+						local nodeOpen = imgui.treenode("##", "aw | dc | ar | " .. (if depth == 0 then "dlf" else "")  .. (if hasElements then "" else " lf"))
 						local after = imgui.cursorposition()
 
 						imgui.dummy(64, 64)
@@ -1685,9 +1692,8 @@ local function renderViewport(DeltaTime: number)
 
 						if nodeOpen then
 							message.OpenTables[t] = true
-
 							for k, v in t do
-								imgui.setcursorposition(imgui.cursorposition() + vector.create(startX, 0))
+								imgui.setcursorposition(imgui.cursorposition() + vector.create(startX - 20, 0))
 
 								local kstr = k
 								if type(k) == "string" then
@@ -1701,12 +1707,13 @@ local function renderViewport(DeltaTime: number)
 								end
 
 								if type(v) == "table" then
+									local tpos = imgui.cursorposition()
 									if imgui.treenode(kstr :: string .. " = ", "dlf | lf") then
 										imgui.treepop()
 									end
 									imgui.sameline()
-									imgui.setcursorposition(imgui.cursorposition() - vector.create(8, 0))
-									renderTable(v, true)
+									imgui.setcursorposition(imgui.cursorposition() - vector.create(12, 0))
+									renderTable(v, depth + 1, tpos)
 								else
 									if typeof(k) == "GameObject" then
 										if imgui.textlink(kstr) then
@@ -1740,12 +1747,13 @@ local function renderViewport(DeltaTime: number)
 								end
 							end
 
+							imgui.treepop()
+
 							if hasElements then
-								imgui.setcursorposition(imgui.cursorposition() + vector.create(startX, 0))
+								local p = (if depth > 0 then assert(pos) + vector.create(13, 0) else prev)
+								imgui.setcursorposition(vector.create(assert(p.x) + 8, imgui.cursorposition().y))
 								imgui.text("}")
 							end
-
-							imgui.treepop()
 						else
 							message.OpenTables[t] = false
 						end
@@ -1754,7 +1762,7 @@ local function renderViewport(DeltaTime: number)
 					end
 
 					imgui.setcursorposition(imgui.cursorposition() - vector.create(8, 0))
-					renderTable(subMessage.DirectValue, false)
+					renderTable(subMessage.DirectValue, 0)
 				else
 					if canInteract then
 						doInteract = imgui.textlink(subMessage.Content)
