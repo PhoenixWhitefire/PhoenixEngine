@@ -83,9 +83,9 @@ end
 declare extern type EnumItem with
 end
 
-type function IntersectCreatables(ty: type)
+type function IntersectComponents(ty: type)
 	if ty:is("singleton") then
-		for i, c in Creatables:properties() do
+		for i, c in Components:properties() do
 			if i:value() == ty:value() then
 				return c.read
 			end
@@ -99,7 +99,7 @@ type function IntersectCreatables(ty: type)
 		for _, t in ty:components() do
 			local found = false
 
-			for i, c in Creatables:properties() do
+			for i, c in Components:properties() do
 				if i:value() == t:value() then
 					table.insert(results, c.read)
 					found = true
@@ -126,25 +126,34 @@ end
 local documentationData = {}
 
 local GameObjectOverrides = {
-	--new = "(<T>(Components: { T }) -> GameObject & IntersectCreatables<T>)",
-	new = "({ string }) -> (GameObject & any)",
-	FindChildWithComponent = "<T>(self, ComponentName: keyof<Creatables> & T) -> (GameObject & index<Creatables, T>)?",
+	fromComponents = "(<T>(Components: { T & keyof<Components> }) -> GameObject & IntersectComponents<T>)",
+	new = "(<T>(MainComponent: T & keyof<Creatables>) -> GameObject & index<Creatables, T>)",
+	--FindChildWithComponent = "<T>(self, ComponentName: keyof<Components> & T) -> (GameObject & index<Components, T>)?",
 }
 
 local function dumpCreatables()
 	local creatablesExtra = {
-		Mesh = " & Transform",
+		Mesh = " & RigidBody & Transform",
 		SpotLight = " & Transform",
 		PointLight = " & Transform",
 		Model = " & Transform",
 		ParticleEmitter = " & Transform",
-		Camera = " & Transform"
+		Camera = " & Transform",
+		RigidBody = " & Transform"
 	}
+
+	definitionsFile ..= "\ntype Components = {\n"
+
+	for _, v in GameObject.validComponents do
+		definitionsFile ..= `  {v}: {v},\n`
+	end
+
+	definitionsFile ..= "}"
 
 	definitionsFile ..= "\ntype Creatables = {\n"
 
 	for _, v in GameObject.validComponents do
-		definitionsFile ..= `\t{v}: {v}{if creatablesExtra[v] then creatablesExtra[v] else ""},\n`
+		definitionsFile ..= `  {v}: {v}{if creatablesExtra[v] then creatablesExtra[v] else ""},\n`
 	end
 
 	definitionsFile ..= "}"

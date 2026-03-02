@@ -726,11 +726,14 @@
   "@phoenix/global/GameObject": {
     "documentation": "* A Game Object\n* Game Objects have a \"base\" API (properties, methods, and events) that can be extended by giving them Components\n* The base API will be documented on the Component APIs page\n* This datatype is hash consed, `t[game]` and `t[workspace.Parent]` are guaranteed to access the same value as `game` and `workspace.Parent` are `rawequal`"
   },
+  "@phoenix/global/GameObject.fromComponents": {
+    "documentation": "* Creates an Object with only the specified Components"
+  },
   "@phoenix/global/GameObject.fromId": {
     "documentation": "* Finds an Object by it's internal ID. Do not rely on the ID"
   },
   "@phoenix/global/GameObject.new": {
-    "documentation": "* Creates a new GameObject with the provided Components, such as `GameObject.new(\"Mesh\")` or `GameObject.new(\"Model\", \"Animation\")`"
+    "documentation": "* Creates a new Object based on the specified Component, adding additional Components to make it more complete (such as `Mesh` receiving `Mesh`, `RigidBody` and `Transform` to make it fully functional)"
   },
   "@phoenix/global/GameObject.validComponents": {
     "documentation": "* A list of all valid component names which can be passed into `.new`"
@@ -1230,12 +1233,6 @@
   "@phoenix/globaltype/Engine.IsToolEnabled": {
     "documentation": "Returns whether the given tool is enabled"
   },
-  "@phoenix/globaltype/Engine.Log": {
-    "documentation": "Logs a message"
-  },
-  "@phoenix/globaltype/Engine.OnMessageLogged": {
-    "documentation": "Fires whenever a Log Message is created"
-  },
   "@phoenix/globaltype/Engine.OpenTextDocument": {
     "documentation": "Opens a text file. This requires Developer Mode to be enabled to have any effect"
   },
@@ -1415,6 +1412,12 @@
   },
   "@phoenix/globaltype/History.Undo": {
     "documentation": "Reverses the state of the scene to how it was before the last Action began. If `.CanUndo` is `false`, will throw an error"
+  },
+  "@phoenix/globaltype/Logging.OnMessaged": {
+    "documentation": "Fires whenever a Log Message is created"
+  },
+  "@phoenix/globaltype/Logging.Write": {
+    "documentation": "Log a message"
   },
   "@phoenix/globaltype/Matrix.C1R1": {
     "documentation": "* The value at Column 1, Row 1\n"

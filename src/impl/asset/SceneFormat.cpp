@@ -10,6 +10,7 @@
 #include "asset/PrimitiveMeshes.hpp"
 #include "asset/MaterialManager.hpp"
 #include "asset/ModelImporter.hpp"
+#include "datatype/ComponentDependencies.hpp"
 #include "component/Transform.hpp"
 #include "component/RigidBody.hpp"
 #include "component/Light.hpp"
@@ -389,36 +390,13 @@ static std::vector<ObjectRef> loadSceneVersion1(
 // Such as `Mesh` adding `Transform`. Replicate this behaviour for older scenes
 static void addLegacyComponentDependencies(GameObject* object)
 {
-	static const EntityComponent ComponentLegacyDependencies[] = {
-		EntityComponent::None,      // <NONE>
-		EntityComponent::None,      // Transform
-		EntityComponent::Transform, // Mesh
-		EntityComponent::Transform, // ParticleEmitter
-		EntityComponent::None,      // Sound
-		EntityComponent::None,      // Workspace
-		EntityComponent::None,      // DataModel
-		EntityComponent::Transform, // PointLight
-		EntityComponent::None,      // DirectionalLight
-		EntityComponent::Transform, // SpotLight
-		EntityComponent::Transform, // Camera
-		EntityComponent::None,      // Animation
-		EntityComponent::Transform, // Model
-		EntityComponent::None,      // Bone
-		EntityComponent::None,      // TreeLink
-		EntityComponent::None,      // Engine
-		EntityComponent::None,      // PlayerInput
-		EntityComponent::None,      // AssetManager
-		EntityComponent::None,      // History
-		EntityComponent::Transform, // RigidBody
-		// Nothing after
-	};
-
 	for (const ReflectorRef& r : object->Components)
 	{
-		if ((size_t)r.Type < std::size(ComponentLegacyDependencies))
-			if (EntityComponent dec = ComponentLegacyDependencies[(size_t)r.Type]; dec != EntityComponent::None)
-				if (!object->FindComponentByType(dec))
-					object->AddComponent(dec);
+		for (EntityComponent ecx : GetCommonDependenciesForComponent(r.Type))
+		{
+			if (!object->FindComponentByType(ecx))
+				object->AddComponent(ecx);
+		}
 	}
 }
 

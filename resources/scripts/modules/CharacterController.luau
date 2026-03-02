@@ -57,7 +57,7 @@ end
 function Controller.InitDefault(self: Controller, CharacterHeight)
 	CharacterHeight = CharacterHeight or 7.5
 
-	local character: GameObject & Mesh & Transform & RigidBody = GameObject.new({ "Mesh", "RigidBody", "Transform" }) :: any
+	local character = GameObject.new("Mesh")
 	character.Size = vector.create(CharacterHeight / 3, CharacterHeight, CharacterHeight / 3)
 	character.PhysicsDynamics = true
 	character.PhysicsRotations = false

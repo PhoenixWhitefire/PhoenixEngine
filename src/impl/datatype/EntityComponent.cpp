@@ -1,6 +1,7 @@
 #include "datatype/EntityComponent.hpp"
 #include "datatype/ComponentBase.hpp"
 #include "datatype/GameObject.hpp"
+#include "datatype/ComponentDependencies.hpp"
 
 const std::unordered_map<std::string_view, EntityComponent> s_ComponentNameToType = []()
 {
@@ -26,4 +27,13 @@ EntityComponent FindComponentTypeByName(const std::string_view& Name)
 void RegisterComponentManager(EntityComponent Type, IComponentManager* Manager)
 {
 	GameObject::s_ComponentManagers[(size_t)Type] = Manager;
+}
+
+const std::span<const EntityComponent> GetCommonDependenciesForComponent(EntityComponent ec)
+{
+	const auto& it = s_ComponentCommonDependencies.find(ec);
+	if (it == s_ComponentCommonDependencies.end())
+		return {};
+
+	return it->second;
 }

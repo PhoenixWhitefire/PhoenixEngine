@@ -20,6 +20,7 @@ Intended to be compatible with both Windows and Linux/Ubuntu.
 
 # Downloading
 You can download binaries from [Actions](https://github.com/PhoenixWhitefire/PhoenixEngine/actions). Pick one at the top with a checkmark, and choose the Release build for your system to [get started](https://github.com/PhoenixWhitefire/PhoenixEngine/wiki/Getting-Started).
+After downloading from Actions, you can launch the Editor through the `run.bat` or `run.sh` script.
 
 # Building
 

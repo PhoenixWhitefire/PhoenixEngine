@@ -11,18 +11,18 @@ local GizmoActive = true
 local GizmoMode = 1
 local GizmoMoveIncrement = 0.5
 
-local GizmoContainer = GameObject.new({ "Model" })
+local GizmoContainer = GameObject.new("Model")
 local GizmoPrevTarget: (GameObject & Transform)? = nil
 local GizmoPrevTargetTransform = Matrix.identity
 local GizmoPrevTargetSize = vector.zero
 local GizmoPieceToDirection: { [GameObject & Mesh]: vector } = {}
 local GizmoPieces = {
-    [vector.create( 1, 0, 0)] = { GameObject.new({ "Mesh", "RigidBody", "Transform" }), GameObject.new({ "Mesh", "RigidBody", "Transform" }) },
-    [vector.create(-1, 0, 0)] = { GameObject.new({ "Mesh", "RigidBody", "Transform" }), GameObject.new({ "Mesh", "RigidBody", "Transform" }) },
-    [vector.create(0,  1, 0)] = { GameObject.new({ "Mesh", "RigidBody", "Transform" }), GameObject.new({ "Mesh", "RigidBody", "Transform" }) },
-    [vector.create(0, -1, 0)] = { GameObject.new({ "Mesh", "RigidBody", "Transform" }), GameObject.new({ "Mesh", "RigidBody", "Transform" }) },
-    [vector.create(0, 0,  1)] = { GameObject.new({ "Mesh", "RigidBody", "Transform" }), GameObject.new({ "Mesh", "RigidBody", "Transform" }) },
-    [vector.create(0, 0, -1)] = { GameObject.new({ "Mesh", "RigidBody", "Transform" }), GameObject.new({ "Mesh", "RigidBody", "Transform" }) }
+    [vector.create( 1, 0, 0)] = { GameObject.new("Mesh"), GameObject.new("Mesh") },
+    [vector.create(-1, 0, 0)] = { GameObject.new("Mesh"), GameObject.new("Mesh") },
+    [vector.create(0,  1, 0)] = { GameObject.new("Mesh"), GameObject.new("Mesh") },
+    [vector.create(0, -1, 0)] = { GameObject.new("Mesh"), GameObject.new("Mesh") },
+    [vector.create(0, 0,  1)] = { GameObject.new("Mesh"), GameObject.new("Mesh") },
+    [vector.create(0, 0, -1)] = { GameObject.new("Mesh"), GameObject.new("Mesh") }
 }
 
 for direction, piece in GizmoPieces do

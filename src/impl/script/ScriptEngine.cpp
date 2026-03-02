@@ -206,11 +206,14 @@ void ScriptEngine::StepScheduler()
 			int resumeStatus = L::Resume(coroutine, nullptr, nretvals);
 			if (resumeStatus != LUA_OK && resumeStatus != LUA_YIELD)
 			{
+				int top = lua_gettop(coroutine);
+				const char* err = lua_tostring(coroutine, -1); // can't use `luaL_tolstring` because it might do a metatable check and trigger another exception
+
 				Log.ErrorF(
 					"Script resumption: {}",
-					luaL_tolstring(coroutine, -1, nullptr)
+					err ? err : "unknown error"
 				);
-				lua_pop(coroutine, 1);
+				lua_settop(coroutine, top);
 
 				L::DumpStacktrace(coroutine);
 			}

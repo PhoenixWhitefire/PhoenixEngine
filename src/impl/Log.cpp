@@ -6,7 +6,7 @@
 #include <mutex>
 
 #include "Log.hpp"
-#include "component/EngineService.hpp"
+#include "component/LoggingService.hpp"
 #include "Reflection.hpp"
 #include "Utilities.hpp"
 #include "FileRW.hpp"
@@ -101,7 +101,7 @@ void Logging::Context::Append(const std::string_view& Message, const std::string
 	//	appendToLog(ExtraTags, true);
 	appendToLog(Message, false);
 
-	EcEngine::SignalNewLogMessage(Logging::MessageType::None, Message, tags);
+	EcLoggingService::SignalNewLogMessage(Logging::MessageType::None, Message, tags);
 }
 
 void Logging::Context::AppendWithValue(const std::string_view& Message, const Reflection::GenericValue& Value, const std::string_view& ExtraTags) const
@@ -128,7 +128,7 @@ void Logging::Context::AppendWithValue(const std::string_view& Message, const Re
 	//	appendToLog(ExtraTags, true);
 	appendToLog(Message, false);
 
-	EcEngine::SignalNewLogMessage(Logging::MessageType::None, Message, tags, Value);
+	EcLoggingService::SignalNewLogMessage(Logging::MessageType::None, Message, tags, Value);
 }
 
 void Logging::Context::Info(const std::string_view& Message, const std::string_view& ExtraTags) const
@@ -155,7 +155,7 @@ void Logging::Context::Info(const std::string_view& Message, const std::string_v
 	appendToLog(": ", true);
 	appendToLog(Message);
 
-	EcEngine::SignalNewLogMessage(Logging::MessageType::Info, Message, tags);
+	EcLoggingService::SignalNewLogMessage(Logging::MessageType::Info, Message, tags);
 }
 
 void Logging::Context::Warning(const std::string_view& Message, const std::string_view& ExtraTags) const
@@ -182,7 +182,7 @@ void Logging::Context::Warning(const std::string_view& Message, const std::strin
 	appendToLog(": ", true);
 	appendToLog(Message);
 
-	EcEngine::SignalNewLogMessage(Logging::MessageType::Warning, Message, tags);
+	EcLoggingService::SignalNewLogMessage(Logging::MessageType::Warning, Message, tags);
 }
 
 void Logging::Context::Error(const std::string_view& Message, const std::string_view& ExtraTags) const
@@ -209,7 +209,33 @@ void Logging::Context::Error(const std::string_view& Message, const std::string_
 	appendToLog(": ", true);
 	appendToLog(Message);
 
-	EcEngine::SignalNewLogMessage(Logging::MessageType::Error, Message, tags);
+	EcLoggingService::SignalNewLogMessage(Logging::MessageType::Error, Message, tags);
+}
+
+void Logging::Context::Write(const std::string_view& Message, MessageType Type, const std::string_view& ExtraTags) const
+{
+	switch (Type)
+	{
+	case Logging::MessageType::None:
+		Log.Append(Message, ExtraTags);
+		break;
+
+	case Logging::MessageType::Info:
+		Log.Info(Message, ExtraTags);
+		break;
+
+	case Logging::MessageType::Warning:
+		Log.Warning(Message, ExtraTags);
+		break;
+
+	case Logging::MessageType::Error:
+		Log.Error(Message, ExtraTags);
+		break;
+
+	[[unlikely]] default:
+		assert(false);
+		Log.Error(Message, ExtraTags);
+	}
 }
 
 void Logging::Initialize()
@@ -235,30 +261,10 @@ void Logging::FlushParallelEvents()
 		std::string extraTags = ple.ExtraTags;
 		extraTags += ",ParallelLog";
 
-		switch (ple.Type)
-		{
-		case Logging::MessageType::None:
-		{
-			if (ple.Value.Type == Reflection::ValueType::Null)
-				Log.Append(ple.Message, ple.ExtraTags);
-			else
-				Log.AppendWithValue(ple.Message, ple.Value, ple.ExtraTags);
-			break;
-		}
-		case Logging::MessageType::Info:
-			Log.Info(ple.Message, ple.ExtraTags);
-			break;
-
-		case Logging::MessageType::Warning:
-			Log.Warning(ple.Message, ple.ExtraTags);
-			break;
-
-		case Logging::MessageType::Error:
-			Log.Error(ple.Message, ple.ExtraTags);
-			break;
-
-		[[unlikely]] default: assert(false);
-		}
+		if (ple.Type == MessageType::None && ple.Value.Type != Reflection::ValueType::Null)
+			Log.AppendWithValue(ple.Message, ple.Value, ple.ExtraTags);
+		else
+			Log.Write(ple.Message, ple.Type, ple.ExtraTags);
 	}
 
 	ParallelLogEvents.clear();

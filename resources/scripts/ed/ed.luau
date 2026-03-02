@@ -5,6 +5,7 @@ local Renderer: Renderer = game:GetService("Renderer") :: any
 local History: History = game:GetService("History") :: any
 local Physics: Physics = game:GetService("Physics") :: any
 local Network: Network = game:GetService("Network") :: any
+local Logging: Logging = game:GetService("Logging") :: any
 local Engine: Engine = game:GetService("Engine") :: any
 
 local FALLBACK_IMAGE = "@etextures/editor-icons/fallback.png"
@@ -22,7 +23,7 @@ local Stages: { [string]: ((number) -> ()) & ((string) -> (any)) } = {}
 local StageUpdateSignal: EventConnection?
 
 local EditorCam = assert(workspace.SceneCamera)
-local EditorTl = GameObject.new({ "TreeLink" })
+local EditorTl = GameObject.new("TreeLink")
 
 local Project: Types.Project = {
 	DataModel = nil,
@@ -429,7 +430,7 @@ local function openProject_(ManualPath: string?)
 	end
 
 	if not Project.DataModel then
-		Project.DataModel = GameObject.new({ "DataModel" })
+		Project.DataModel = GameObject.new("DataModel")
 		print("Re-created DataModel")
 	end
 
@@ -441,8 +442,8 @@ local function openProject_(ManualPath: string?)
 
 	if not Project.Workspace then
 		-- TODO luau: Project.Workspace is refining to `nil`
-		Project.Workspace = GameObject.new({ "Workspace" })
-		Project.Workspace.SceneCamera = GameObject.new({ "Camera", "Transform" })
+		Project.Workspace = GameObject.new("Workspace")
+		Project.Workspace.SceneCamera = GameObject.new("Camera")
 		Project.Workspace.SceneCamera.Parent = Project.Workspace
 
 		Project.Workspace.Name = "Workspace"
@@ -453,7 +454,7 @@ local function openProject_(ManualPath: string?)
 
 	assert(Project.Workspace)
 	if not Project.Workspace.SceneCamera then
-		local cam = GameObject.new({ "Camera", "Transform" })
+		local cam = GameObject.new("Camera")
 		cam.Name = "Camera"
 		cam.Parent = Project.Workspace
 		Project.Workspace.SceneCamera = cam
@@ -562,10 +563,10 @@ local function createNewProject_()
 	fs.copy("@editres/scripts/defaultconfig.luau", "@projres/scripts/.config.luau")
 	fs.copy(LOGO_IMAGE, "@proj/icon.png")
 
-	local dm = GameObject.new({ "DataModel" })
-	local projWp = GameObject.new({ "Workspace" })
-	local camera = GameObject.new({ "Camera", "Transform" })
-	local dl = GameObject.new({ "DirectionalLight" })
+	local dm = GameObject.new("DataModel")
+	local projWp = GameObject.new("Workspace")
+	local camera = GameObject.new("Camera")
+	local dl = GameObject.new("DirectionalLight")
 
 	projWp.Name = "Workspace"
 	camera.Name = "Camera"
@@ -944,7 +945,7 @@ local latestCommit = nil
 local canUpdate = false
 local isFetchingLatestCommitData = false
 
-local function printTable(t, depth: string, n: string?, printFun: <T>(...T) -> ())
+local function printTable<K, V>(t: { [K]: V }, depth: string, n: string?, printFun: <T>(...T) -> ())
 	printFun = printFun or print
 
 	depth = depth or ""
@@ -954,7 +955,7 @@ local function printTable(t, depth: string, n: string?, printFun: <T>(...T) -> (
 		if typeof(v) ~= "table" then
 			printFun(depth .. " ", k, "=", v)
 		else
-			printTable(v, depth .. "  ", k, printFun)
+			printTable(v, depth .. "  ", tostring(k), printFun)
 		end
 	end
 	printFun(depth .. "}")
@@ -983,7 +984,7 @@ local function getLatestGitHubCommit()
 			canUpdate = true
 		end
 	else
-		printTable(data, "", nil, warn)
+		printTable(data :: { [string]: index<typeof(data), keyof<typeof(data)>> }, "", nil, warn)
 	end
 end
 
@@ -1316,7 +1317,7 @@ end
 
 local PrevSelections: { GameObject & Transform } = {}
 
-local SelectionPart: GameObject & Mesh & RigidBody & Transform = GameObject.new({ "Mesh", "RigidBody", "Transform" })
+local SelectionPart: GameObject & Mesh & RigidBody & Transform = GameObject.new("Mesh")
 SelectionPart.Material = "boxframe"
 SelectionPart.Tint = Color.new(166/255, 200/255, 1)
 SelectionPart.PhysicsCollisions = false
@@ -1394,9 +1395,9 @@ local function interactWithLogSubMessage(ExtraTags: string, Value: unknown)
 	warn(`Failed to figure out the interaction for a log message with tags '{ExtraTags}'`)
 end
 
-Engine.OnMessageLogged:Connect(function(Type, Message, ExtraTags, Value)
+Logging.OnMessaged:Connect(function(Type, Message, ExtraTags, Value)
 	if type(Value) == "table" then
-		table.freeze(Value)
+		table.freeze(Value :: any)
 	end
 
 	local createsNewline = false
@@ -1443,16 +1444,27 @@ Engine.OnMessageLogged:Connect(function(Type, Message, ExtraTags, Value)
 		end
 	end
 
-	table.insert(Log, {
+	local firstItem: LogMessageItem = {
+		Content = Message,
+		DirectValue = Value,
+		ExtraTags = ExtraTags,
+		CanInteract = canInteract,
+		Tooltip = tooltip,
+		Newline = createsNewline
+	}
+
+	local logMessage: LogMessage = {
 		Closed = false,
-		Message = { { Content = Message, DirectValue = Value, ExtraTags = ExtraTags, CanInteract = canInteract, Tooltip = tooltip, Newline = createsNewline } },
+		Message = { firstItem },
 		Type = Type,
 		Time = os.date("%H:%M:%S"),
 		Source = source,
 		Line = line,
 		OpenTables = {},
 		TablesWithAnyElements = {}
-	})
+	}
+
+	table.insert(Log, logMessage)
 
 	NewLogMessage = true
 end)
@@ -1487,7 +1499,7 @@ PlayerInput.KeyEvent:Connect(function(kie: KeyInputEvent)
 	local success, err = Engine:RunInVM(if CurrentStage == "ProjectEditing" then GameEditingVM else GameVM, CommandBarCommand, "=CommandBar")
 
 	if not success and err ~= "yield" then
-		Engine:Log(err or "unknown error", Enum.LogType.Error, "SourceChunkName:=CommandBar")
+		Logging:Write(err or "unknown error", Enum.LogType.Error, "SourceChunkName:=CommandBar")
 	end
 
 	if commandBarAction then
@@ -2215,7 +2227,7 @@ function Stages.ProjectPlaying_Enter(DeltaTime: any)
 	assert(projWp)
 
 	if not projWp.SceneCamera then
-		projWp.SceneCamera = GameObject.new({ "Camera", "Transform" })
+		projWp.SceneCamera = GameObject.new("Camera")
 		projWp.SceneCamera.Parent = projWp
 		projWp.SceneCamera.Name = "Camera"
 	end
@@ -2316,6 +2328,7 @@ local function runUpdate()
 	updaterLog ..= `Artifacts count: { assert(artifactsData.total_count) }\n`
 	updaterLog ..= `Checking for { Engine.TargetPlatform } Release artifact...\n`
 
+	assert(typeof(artifactsData.artifacts) == "table")
 	local releaseArtifact
 
 	for _, v in artifactsData.artifacts do

@@ -200,7 +200,7 @@
           "GetService": {
             "Description": "Gets the Object representing the specified Service. If it does not exist yet in the Data Model, it is created",
             "ParameterNames": "Service",
-            "Type": "('Engine' | 'PlayerInput' | 'AssetManager' | 'History' | 'Physics' | 'Renderer' | 'Collections' | 'Network') : GameObject"
+            "Type": "('Engine' | 'PlayerInput' | 'AssetManager' | 'History' | 'Physics' | 'Renderer' | 'Collections' | 'Network' | 'Logging') : GameObject"
           }
         },
         "Properties": {
@@ -229,12 +229,6 @@
       },
       "Engine": {
         "Description": "Inspect and manipulate various parts of the Engine",
-        "Events": {
-          "OnMessageLogged": {
-            "Description": "Fires whenever a Log Message is created",
-            "ArgumentTypes": "EnumLogType, string, string, unknown"
-          }
-        },
         "Methods": {
           "BindDataModel": {
             "Description": "Switches Data Models to the specified Object",
@@ -277,10 +271,6 @@
           "IsToolEnabled": {
             "Description": "Returns whether the given tool is enabled",
             "ParameterNames": "ToolName"
-          },
-          "Log": {
-            "Description": "Logs a message",
-            "Type": "(self, Message: string, Type: EnumLogType, ExtraTags: string?) : ()"
           },
           "OpenTextDocument": {
             "Description": "Opens a text file. This requires Developer Mode to be enabled to have any effect",
@@ -419,6 +409,21 @@
           "CurrentWaypoint": "The ID of the Action that was last finished",
           "IsRecordingAction": "Whether an Action is currently being recorded by History",
           "TargetDataModel": "The DataModel that History will track"
+        }
+      },
+      "Logging": {
+        "Description": "Engine logging",
+        "Events": {
+          "OnMessaged": {
+            "Description": "Fires whenever a Log Message is created",
+            "ArgumentTypes": "EnumLogType, string, string, unknown"
+          }
+        },
+        "Methods": {
+          "Write": {
+            "Description": "Log a message",
+            "Type": "(self, Message: string, Type: EnumLogType, ExtraTags: string?) : ()"
+          }
         }
       },
       "Mesh": {
@@ -732,14 +737,19 @@
           "This datatype is hash consed, `t[game]` and `t[workspace.Parent]` are guaranteed to access the same value as `game` and `workspace.Parent` are `rawequal`"
         ],
         "Library": {
+          "fromComponents": {
+            "Description": "Creates an Object with only the specified Components",
+            "In": "Components: { string }",
+            "Out": "GameObject"
+          },
           "fromId": {
             "Description": "Finds an Object by it's internal ID. Do not rely on the ID",
             "In": "Id: number",
             "Out": "GameObject?"
           },
           "new": {
-            "Description": "Creates a new GameObject with the provided Components, such as `GameObject.new(\"Mesh\")` or `GameObject.new(\"Model\", \"Animation\")`",
-            "In": "...: string",
+            "Description": "Creates a new Object based on the specified Component, adding additional Components to make it more complete (such as `Mesh` receiving `Mesh`, `RigidBody` and `Transform` to make it fully functional)",
+            "In": "MainComponent: string",
             "Out": "GameObject"
           },
           "validComponents": {

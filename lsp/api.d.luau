@@ -29,9 +29,9 @@ end
 declare extern type EnumItem with
 end
 
-type function IntersectCreatables(ty: type)
+type function IntersectComponents(ty: type)
 	if ty:is("singleton") then
-		for i, c in Creatables:properties() do
+		for i, c in Components:properties() do
 			if i:value() == ty:value() then
 				return c.read
 			end
@@ -45,7 +45,7 @@ type function IntersectCreatables(ty: type)
 		for _, t in ty:components() do
 			local found = false
 
-			for i, c in Creatables:properties() do
+			for i, c in Components:properties() do
 				if i:value() == t:value() then
 					table.insert(results, c.read)
 					found = true
@@ -82,8 +82,9 @@ declare extern type EventConnection with
   Signal: unknown
 end
 declare GameObject: {
+  fromComponents: (<T>(Components: { T & keyof<Components> }) -> GameObject & IntersectComponents<T>),
   fromId: (( Id: number ) -> (GameObject?)),
-  new: ({ string }) -> (GameObject & any),
+  new: (<T>(MainComponent: T & keyof<Creatables>) -> GameObject & index<Creatables, T>),
   validComponents: { string }
 }
 declare extern type Matrix with
@@ -137,7 +138,7 @@ export type GameObject = {
   Destroy: (self: GameObject) -> (),
   Duplicate: (self: GameObject) -> (GameObject),
   FindChild: (self: GameObject, ChildName: string) -> (GameObject?),
-  FindChildWithComponent: <T>(self: GameObject, ComponentName: keyof<Creatables> & T) -> (GameObject & index<Creatables, T>)?,
+  FindChildWithComponent: (self: GameObject, Component: keyof<Creatables>) -> (GameObject),
   ForEachChild: (self: GameObject, Callback: (Object: GameObject) -> boolean?) -> (),
   ForEachDescendant: (self: GameObject, Callback: (Object: GameObject) -> boolean?) -> (),
   GetChildren: (self: GameObject) -> { GameObject },
@@ -196,7 +197,7 @@ export type DataModel = {
   VM: string,
 
   BindToClose: (self: DataModel, Callback: () -> ()) -> (),
-  GetService: (self: DataModel, Service: 'Engine' | 'PlayerInput' | 'AssetManager' | 'History' | 'Physics' | 'Renderer' | 'Collections' | 'Network') -> GameObject,
+  GetService: (self: DataModel, Service: 'Engine' | 'PlayerInput' | 'AssetManager' | 'History' | 'Physics' | 'Renderer' | 'Collections' | 'Network' | 'Logging') -> GameObject,
 
   OnFrameBegin: EventSignal<(number)>,
 }
@@ -232,7 +233,6 @@ export type Engine = {
   GetExplorerSelections: (self: Engine) -> ({ GameObject }),
   GetToolNames: (self: Engine) -> { string },
   IsToolEnabled: (self: Engine, ToolName: string) -> (boolean),
-  Log: (self: Engine, Message: string, Type: EnumLogType, ExtraTags: string?) -> (),
   OpenTextDocument: (self: Engine, Path: string, Line: number?) -> (),
   ResetViewportInputRect: (self: Engine) -> (),
   RunInVM: (self: Engine, VmName: string, Code: string, ChunkName: string?) -> (boolean, string?),
@@ -243,8 +243,6 @@ export type Engine = {
   SetToolEnabled: (self: Engine, ToolName: string, Enabled: boolean) -> (),
   SetViewportInputRect: (self: Engine, Position: vector, Size: vector) -> (),
   ShowMessageBox: (self: Engine, Title: string, Message: string, Buttons: 'ok' | 'okcancel' | 'yesno' | 'yesnocancel' | nil, Icon: 'info' | 'warning' | 'error' | 'question' | nil, DefaultButton: number?) -> (number),
-
-  OnMessageLogged: EventSignal<EnumLogType, string, string, unknown>,
 }
 export type History = {
   ActionHistorySize: number ,
@@ -266,6 +264,12 @@ export type History = {
   Redo: (self: History) -> (),
   TryBeginAction: (self: History, Name: string) -> (number?),
   Undo: (self: History) -> (),
+}
+export type Logging = {
+
+  Write: (self: Logging, Message: string, Type: EnumLogType, ExtraTags: string?) -> (),
+
+  OnMessaged: EventSignal<EnumLogType, string, string, unknown>,
 }
 export type Mesh = {
   CastsShadows: boolean,
@@ -379,30 +383,57 @@ export type Workspace = {
 
 
 
+type Components = {
+  Transform: Transform,
+  Mesh: Mesh,
+  ParticleEmitter: ParticleEmitter,
+  Sound: Sound,
+  Workspace: Workspace,
+  DataModel: DataModel,
+  PointLight: PointLight,
+  DirectionalLight: DirectionalLight,
+  SpotLight: SpotLight,
+  Camera: Camera,
+  Animation: Animation,
+  Model: Model,
+  Bone: Bone,
+  TreeLink: TreeLink,
+  Engine: Engine,
+  PlayerInput: PlayerInput,
+  AssetManager: AssetManager,
+  History: History,
+  RigidBody: RigidBody,
+  Physics: Physics,
+  Renderer: Renderer,
+  Collections: Collections,
+  Network: Network,
+  Logging: Logging,
+}
 type Creatables = {
-	Transform: Transform,
-	Mesh: Mesh & Transform,
-	ParticleEmitter: ParticleEmitter & Transform,
-	Sound: Sound,
-	Workspace: Workspace,
-	DataModel: DataModel,
-	PointLight: PointLight & Transform,
-	DirectionalLight: DirectionalLight,
-	SpotLight: SpotLight & Transform,
-	Camera: Camera & Transform,
-	Animation: Animation,
-	Model: Model & Transform,
-	Bone: Bone,
-	TreeLink: TreeLink,
-	Engine: Engine,
-	PlayerInput: PlayerInput,
-	AssetManager: AssetManager,
-	History: History,
-	RigidBody: RigidBody,
-	Physics: Physics,
-	Renderer: Renderer,
-	Collections: Collections,
-	Network: Network,
+  Transform: Transform,
+  Mesh: Mesh & RigidBody & Transform,
+  ParticleEmitter: ParticleEmitter & Transform,
+  Sound: Sound,
+  Workspace: Workspace,
+  DataModel: DataModel,
+  PointLight: PointLight & Transform,
+  DirectionalLight: DirectionalLight,
+  SpotLight: SpotLight & Transform,
+  Camera: Camera & Transform,
+  Animation: Animation,
+  Model: Model & Transform,
+  Bone: Bone,
+  TreeLink: TreeLink,
+  Engine: Engine,
+  PlayerInput: PlayerInput,
+  AssetManager: AssetManager,
+  History: History,
+  RigidBody: RigidBody & Transform,
+  Physics: Physics,
+  Renderer: Renderer,
+  Collections: Collections,
+  Network: Network,
+  Logging: Logging,
 }
 declare extern type EnumCollisionType extends EnumItem with end
 declare extern type EnumCollisionType_INTERNAL extends Enum with

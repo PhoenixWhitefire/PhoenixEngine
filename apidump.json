@@ -107,9 +107,6 @@
         }
       },
       "Engine": {
-        "Events": {
-          "OnMessageLogged": "(Integer, String, String, Any)"
-        },
         "Methods": {
           "BindDataModel": "(GameObject) -> ()",
           "CloseVM": "(String) -> ()",
@@ -120,7 +117,6 @@
           "GetExplorerSelections": "() -> (Array)",
           "GetToolNames": "() -> (Array)",
           "IsToolEnabled": "(String) -> (Boolean)",
-          "Log": "(String, Integer, String?) -> ()",
           "OpenTextDocument": "(String, Integer?) -> ()",
           "ResetViewportInputRect": "() -> ()",
           "RunInVM": "(String, String, String?) -> (Boolean, String?)",
@@ -164,6 +160,14 @@
           "CurrentWaypoint": "Integer READONLY",
           "IsRecordingAction": "Boolean READONLY",
           "TargetDataModel": "GameObject"
+        }
+      },
+      "Logging": {
+        "Events": {
+          "OnMessaged": "(Integer, String, String, Any)"
+        },
+        "Methods": {
+          "Write": "(String, Integer, String?) -> ()"
         }
       },
       "Mesh": {
@@ -324,6 +328,7 @@
       "EventSignal": {},
       "GameObject": {
         "Library": {
+          "fromComponents": "function",
           "fromId": "function",
           "new": "function",
           "validComponents": "table"

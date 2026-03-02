@@ -1,6 +1,7 @@
 #include <tracy/public/tracy/Tracy.hpp>
 #include <luau/VM/src/lstate.h>
 
+#include "datatype/ComponentDependencies.hpp"
 #include "script/ScriptEngine.hpp"
 #include "script/luhx.hpp"
 
@@ -74,6 +75,31 @@ GameObject* luhx_checkgameobject(lua_State* L, int StackIndex)
 
 static int gameobject_new(lua_State* L)
 {
+	size_t len = 0;
+	const char* component = luaL_optlstring(L, 1, nullptr, &len);
+
+	if (!component)
+	{
+		luhx_pushgameobject(L, GameObject::Create());
+		return 1;
+	}
+
+	EntityComponent ec = FindComponentTypeByName(std::string_view(component, len));
+	if (ec == EntityComponent::None)
+		luaL_error(L, "Invalid component name '%s'", component);
+
+	GameObject* newObject = GameObject::Create(ec);
+	newObject->Name = std::string(component, len);
+
+	for (EntityComponent ec : GetCommonDependenciesForComponent(ec))
+		newObject->AddComponent(ec);
+
+	luhx_pushgameobject(L, newObject);
+	return 1;
+}
+
+static int gameobject_fromComponents(lua_State* L)
+{
     GameObject* newObject = GameObject::Create();
 
 	if (lua_type(L, 1) != LUA_TNONE)
@@ -115,6 +141,7 @@ static int gameobject_fromId(lua_State* L)
 static const luaL_Reg gameobject_funcs[] = {
     { "new", gameobject_new },
 	{ "fromId", gameobject_fromId },
+	{ "fromComponents", gameobject_fromComponents },
     { NULL, NULL }
 };
 

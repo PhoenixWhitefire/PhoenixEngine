@@ -14,6 +14,18 @@ namespace Logging
 	void Initialize();
 	void FlushParallelEvents();
 
+	struct LogMessageType_
+	{
+	    enum LMT {
+	        None = 0,
+	        Info,
+	        Warning,
+	        Error
+	    };
+	};
+
+	using MessageType = LogMessageType_::LMT;
+
 	struct Context
 	{
 		void Info(const std::string_view&, const std::string_view& ExtraTags = "") const;
@@ -21,6 +33,7 @@ namespace Logging
 		void Error(const std::string_view&, const std::string_view& ExtraTags = "") const;
 		void Append(const std::string_view&, const std::string_view& ExtraTags = "") const;
 		void AppendWithValue(const std::string_view&, const Reflection::GenericValue&, const std::string_view& ExtraTags = "") const;
+		void Write(const std::string_view& Message, MessageType Type, const std::string_view& ExtraTags = "") const;
 
 		template <typename ...Args>
 		void InfoF(std::format_string<Args...> fmt, Args&&... args) const
@@ -58,18 +71,6 @@ namespace Logging
 	private:
 		Context m_PrevContext;
 	};
-
-	struct LogMessageType_
-	{
-	    enum LMT {
-	        None = 0,
-	        Info,
-	        Warning,
-	        Error
-	    };
-	};
-
-	using MessageType = LogMessageType_::LMT;
 };
 
 thread_local inline Logging::Context Log;

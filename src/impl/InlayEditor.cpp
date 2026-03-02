@@ -35,6 +35,7 @@
 #include "asset/SceneFormat.hpp"
 #include "asset/MeshProvider.hpp"
 
+#include "datatype/ComponentDependencies.hpp"
 #include "component/Camera.hpp"
 
 #include "GlobalJsonConfig.hpp"
@@ -79,22 +80,6 @@ static const std::string_view AddableComponents[] = {
 	"Sound",
 	"Transform"
 };
-
-static const EntityComponent AddableComponentExtras[] = {
-	EntityComponent::None,
-	EntityComponent::Transform,
-	EntityComponent::None,
-	EntityComponent::Transform,
-	EntityComponent::Transform,
-	EntityComponent::Transform,
-	EntityComponent::Transform,
-	EntityComponent::Transform,
-	EntityComponent::Transform,
-	EntityComponent::None,
-	EntityComponent::None
-};
-
-static_assert(std::size(AddableComponentExtras) == std::size(AddableComponents));
 
 static nlohmann::json DefaultNewMaterial = {
 	{ "ColorMap", "textures/materials/plastic.png" },
@@ -2492,11 +2477,8 @@ static void renderExplorer()
 
 				newObject = GameObject::Create(name);
 
-				if (EntityComponent extra = AddableComponentExtras[i]; extra != EntityComponent::None)
-					newObject->AddComponent(extra);
-
-				if (name == "Mesh")
-					newObject->AddComponent(EntityComponent::RigidBody);
+				for(EntityComponent ecx : GetCommonDependenciesForComponent(FindComponentTypeByName(name)))
+					newObject->AddComponent(ecx);
 
 				newObject->SetParent(ObjectInsertionTarget);
 				Selections = { newObject };
@@ -3995,8 +3977,11 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 
 	if (Reason == DebugBreakReason::Error)
 	{
-		errorMessage = luaL_tolstring(L, -1, nullptr);
-		lua_pop(L, 1);
+		int top = lua_gettop(L);
+		const char* err = lua_tostring(L, -1);
+		errorMessage = err ? err : "unknown error";
+		lua_settop(L, top); // in case `lua_tostring` pushed a value onto the stack
+		// we can't use `luaL_tolstring` because it'll do a metatable check that might throw another exception in an error state
 	}
 	else
 		errorMessage = BreakExplanations[Reason];

@@ -638,63 +638,10 @@ public:
                     return { writeSuccess, error };
                 }
             } },
-
-            { "Log", Reflection::MethodDescriptor{
-                { Reflection::ValueType::String, Reflection::ValueType::Integer, REFLECTION_OPTIONAL(String) },
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    std::string_view message = inputs[0].AsStringView();
-                    int64_t type = inputs[1].AsInteger();
-                    std::string_view tags = inputs.size() > 2 ? inputs[2].AsStringView() : "";
-
-                    if (type < 0 || type > (int64_t)Logging::MessageType::Error)
-                        RAISE_RTF("Invalid log message type '{}'", type);
-
-                    Logging::MessageType mt = (Logging::MessageType)type;
-
-                    switch (mt)
-                    {
-                    case Logging::MessageType::None:
-                        Log.Append(message, tags);
-                        break;
-                    case Logging::MessageType::Info:
-                        Log.Info(message, tags);
-                        break;
-                    case Logging::MessageType::Warning:
-                        Log.Warning(message, tags);
-                        break;
-                    case Logging::MessageType::Error:
-                        Log.Error(message, tags);
-                        break;
-                    default: assert(false);
-                    }
-
-                    return {};
-                }
-            } }
         };
 
         return methods;
     }
-
-    const Reflection::StaticEventMap& GetEvents() override
-    {
-        static const Reflection::StaticEventMap events = {
-            REFLECTION_EVENT(EcEngine, OnMessageLogged, Reflection::ValueType::Integer, Reflection::ValueType::String, Reflection::ValueType::String, Reflection::ValueType::Any)
-        };
-
-        return events;
-    }
 };
 
 static EngineServiceManager Instance;
-
-void EcEngine::SignalNewLogMessage(Logging::MessageType MessageType, const std::string_view& Message, const std::string_view& ExtraTags, const Reflection::GenericValue& Value)
-{
-    for (const EcEngine& ce : Instance.m_Components)
-    {
-        if (ce.Valid)
-            REFLECTION_SIGNAL_EVENT(ce.OnMessageLoggedCallbacks, (int)MessageType, Message, ExtraTags, Value);
-    }
-}

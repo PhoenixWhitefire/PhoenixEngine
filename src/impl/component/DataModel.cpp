@@ -216,8 +216,10 @@ static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
             lua_Debug ar = {};
             lua_getinfo(L, 1, "l", &ar);
 
+            const char* err = lua_tostring(L, -1);
+
 			Log.Error(
-                std::format("DataModel Script init: {}", luaL_tolstring(L, -1, nullptr)),
+                std::format("DataModel Script init: {}", err ? err : "unknown error"),
                 std::format("TextDocument:{},DocumentLine:{}", Module, ar.currentline)
             );
             lua_pop(L, 1);

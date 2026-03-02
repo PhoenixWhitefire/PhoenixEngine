@@ -58,7 +58,7 @@ return function(test: Types.Test, expect: Types.Expect)
 	end)
 	test("Value types", function()
 		expect(function()
-			json.encode({ GameObject.new({ "Animation" }), vector.zero })
+			json.encode({ GameObject.fromComponents({ "Animation" }), vector.zero })
 		end):toThrow("Cannot convert 'GameObject'")
 	end)
 end

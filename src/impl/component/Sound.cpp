@@ -26,6 +26,8 @@ void SoundManager::DeleteComponent(uint32_t Id)
 	EcSound& sound = m_Components[Id];
 	if (sound.SoundInstance)
 		ma_sound_uninit(sound.SoundInstance);
+
+	delete sound.SoundInstance;
 	sound.SoundInstance = nullptr;
 
 	ComponentManager<EcSound>::DeleteComponent(Id);
