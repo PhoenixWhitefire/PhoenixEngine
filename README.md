@@ -27,7 +27,7 @@ After downloading from Actions, you can launch the Editor through the `run.bat` 
 * Minimum CMake version of `3.28` (arbitrary, the one I use on Linux. I use `3.30` on Windows)
 * Compiler which supports C++ Standard `20` and C Standard `17` (G++/MSVC are intentionally supported)
 * For Windows, Visual Studio 2022 platform toolset `v143`
-* For Linux, ensure you have the `libwayland-dev`, `libxkbcommon-dev`, and `xorg-dev` packages installed
+* For Linux, ensure you have the `libssl-dev`, `libwayland-dev`, `libxkbcommon-dev`, and `xorg-dev` packages installed
     - For more information, visit [Dependencies for Wayland and X11](https://www.glfw.org/docs/latest/compile.html#compile_deps_wayland)
 
 
