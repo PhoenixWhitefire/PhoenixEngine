@@ -221,7 +221,7 @@ static void windowScrollCallback(GLFWwindow*, double xoffset, double yoffset)
 
 static void errorCallback(int code, const char* message)
 {
-	RAISE_RTF("Error occurred in GLFW:\nCode: {}, Message: {}", code, message);
+	Log.ErrorF("Error occurred in GLFW:\nCode: {}, Message: {}", code, message);
 }
 
 void Engine::m_InitializeVideo()
