@@ -458,8 +458,8 @@
         "Description": "Networking",
         "Methods": {
           "MakeHttpRequestAsync": {
-            "Description": "Makes an HTTP request to the provided URL",
-            "Type": "(self, { Url: string, Method: nil | 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'PATCH', Headers: { [string]: string }?, Body: string? }) : ({ Ok: false, Status: number, Error: string?, Headers: { [string]: string }, Body: string } | { Ok: true, Status: number, Headers: { [string]: string }, Body: string })"
+            "Description": "Makes an HTTP request to the provided URL. `Ok` will be false upon failure, and `Body` will contain the error message",
+            "Type": "(self, { Url: string, Method: nil | 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'PATCH', Headers: { [string]: string }?, Body: string? }) : ({ Ok: boolean, Status: number, Headers: { [string]: string }, Body: string })"
           }
         }
       },
@@ -503,7 +503,7 @@
         },
         "Properties": {
           "Cursor": {
-            "Description": "The look of the cursor. See `Enum.Cursor`",
+            "Description": "The look of the cursor. See `Enum.Cursor`. Setting this property is *slow* as it needs to poll the OS, avoid placing it in hot loops",
             "Type": "EnumCursor"
           },
           "CursorMode": {

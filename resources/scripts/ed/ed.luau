@@ -944,6 +944,7 @@ end
 local latestCommit = nil
 local canUpdate = false
 local isFetchingLatestCommitData = false
+local fetchCommitHashData = nil
 
 local function printTable<K, V>(t: { [K]: V }, depth: string, n: string?, printFun: <T>(...T) -> ())
 	printFun = printFun or print
@@ -962,8 +963,6 @@ local function printTable<K, V>(t: { [K]: V }, depth: string, n: string?, printF
 end
 
 local function getLatestGitHubCommit()
-	print("hello?!")
-
 	local data = Network:MakeHttpRequestAsync({
 		Url = "https://api.github.com/repos/PhoenixWhitefire/PhoenixEngine/commits/main",
 		Headers = {
@@ -985,7 +984,13 @@ local function getLatestGitHubCommit()
 		end
 	else
 		printTable(data :: { [string]: index<typeof(data), keyof<typeof(data)>> }, "", nil, warn)
+		fetchCommitHashData = data
 	end
+end
+
+local function textCentered(text, cursor, cxavail)
+	imgui.setcursorposition(getCenteredX(cursor.x, cxavail, imgui.textsize(text).x), cursor.y)
+	imgui.text(text)
 end
 
 local function renderMainMenuBar(dt: number)
@@ -1192,35 +1197,31 @@ local function renderMainMenuBar(dt: number)
 	if imgui.beginpopupmodal("About", true) then
 		local cxavail = imgui.contentregionavail().x
 		local cursor = imgui.cursorposition()
-		local cursory = cursor.y
 
 		local LOGO_SIZE = 150
 
-		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, LOGO_SIZE), cursory)
+		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, LOGO_SIZE), cursor.y)
 		imgui.image(LOGO_IMAGE, vector.create(LOGO_SIZE, LOGO_SIZE))
 
-		cursory += 160
+		cursor += vector.create(0, 160)
 
-		local tts = imgui.textsize("Phoenix Engine Editor")
-		local vtsx = imgui.textsize(Engine.Version).x
-		local ctsx = imgui.textsize(Engine.CommitHash:sub(1, 8)).x
-		local utsx = imgui.textsize(GITHUB_URL).x
+		local tts = imgui.textsize("")
 
-		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, tts.x), cursory)
-		imgui.text("Phoenix Engine Editor")
-		cursory += tts.y + 2
+		textCentered("Phoenix Engine Editor", cursor, cxavail)
+		cursor += vector.create(0, tts.y + 2)
 
-		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, vtsx), cursory)
-		imgui.text(Engine.Version)
-		cursory += tts.y + 15
+		textCentered(Engine.Version, cursor, cxavail)
+		cursor += vector.create(0, tts.y + 15)
 
-		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, utsx), cursory)
+		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, imgui.textsize(GITHUB_URL).x), cursor.y)
 		imgui.urllink(GITHUB_URL)
-		cursory += tts.y + 2
+		cursor += vector.create(0, tts.y + 2)
 
-		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, ctsx), cursory)
-		imgui.urllink(Engine.CommitHash:sub(1, 8), `{ GITHUB_URL }/commit/{ Engine.CommitHash }`)
-		cursory += tts.y + 16
+		local commitText = Engine.CommitHash:sub(1, 8)
+
+		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, imgui.textsize(commitText).x), cursor.y)
+		imgui.urllink(commitText, `{ GITHUB_URL }/commit/{ Engine.CommitHash }`)
+		cursor += vector.create(0, tts.y + 16)
 
 		if not isFetchingLatestCommitData and not latestCommit then
 			isFetchingLatestCommitData = true
@@ -1229,21 +1230,16 @@ local function renderMainMenuBar(dt: number)
 
 		if latestCommit then
 			if latestCommit ~= Engine.CommitHash then
-				local ltsx = imgui.textsize("There is a newer version available.").x
-				local gtsx = imgui.textsize(`Latest: { (latestCommit or "AAAAAA"):sub(1, 8) }`).x
-				local btsx = imgui.textsize("Download").x
+				textCentered("There is a newer version available.", cursor, cxavail)
+				cursor += vector.create(0, tts.y + 2)
 
-				imgui.setcursorposition(getCenteredX(cursor.x, cxavail, ltsx), cursory)
-				imgui.text("There is a newer version available.")
-				cursory += tts.y + 2
+				textCentered(`Latest: { latestCommit:sub(1, 8) }`, cursor, cxavail)
+				cursor += vector.create(0, tts.y + 4)
 
-				imgui.setcursorposition(getCenteredX(cursor.x, cxavail, gtsx), cursory)
-				imgui.text(`Latest: { latestCommit:sub(1, 8) }`)
-				cursory += tts.y + 4
+				local buttonText = "Download"
+				imgui.setcursorposition(getCenteredX(cursor.x, cxavail, imgui.textsize(buttonText).x), cursor.y)
 
-				imgui.setcursorposition(getCenteredX(cursor.x, cxavail, btsx), cursory)
-
-				if canUpdate and imgui.button("Download") then
+				if canUpdate and imgui.button(buttonText) then
 					if CurrentStage ~= "SelectProject" then
 						Engine:ShowMessageBox("Update", "You must close the current project to update")
 					elseif fs.isfile("./update.zip") then
@@ -1254,11 +1250,19 @@ local function renderMainMenuBar(dt: number)
 					end
 				end
 			else
-				local urutdtsx = imgui.textsize("You are on the latest available version.").x
+				local urutdText = "You are on the latest available version."
+				local urutdtsx = imgui.textsize(urutdText).x
 
-				imgui.setcursorposition(getCenteredX(cursor.x, cxavail, urutdtsx), cursory + 32)
-				imgui.text("You are on the latest available version.")
+				imgui.setcursorposition(getCenteredX(cursor.x, cxavail, urutdtsx), cursor.y + 32)
+				imgui.text(urutdText)
 			end
+		elseif fetchCommitHashData then
+			textCentered("Failed to check for updates.", cursor, cxavail)
+			cursor += vector.create(0, tts.y + 2)
+			textCentered(`Status: { fetchCommitHashData.Status }`, cursor, cxavail)
+			cursor += vector.create(0, tts.y + 2)
+			textCentered(`Error: { fetchCommitHashData.Body }`, cursor, cxavail)
+			imgui.setitemtooltip(fetchCommitHashData.Body)
 		end
 
 		imgui.endpopup()
@@ -2287,7 +2291,7 @@ local function runUpdate()
 	})
 
 	if not workflowRunResponse.Ok then
-		error(`{ workflowRunResponse.Status } - { workflowRunResponse.Error }: { workflowRunResponse.Body }`)
+		error(`{ workflowRunResponse.Status }: { workflowRunResponse.Body }`)
 	end
 
 	local workflowRunResponseData = json.parse(workflowRunResponse.Body)
@@ -2318,7 +2322,7 @@ local function runUpdate()
 	})
 
 	if not artifactsResponse.Ok then
-		error(`{ artifactsResponse.Status } - { artifactsResponse.Error }: { artifactsResponse.Body }`)
+		error(`{ artifactsResponse.Status }: { artifactsResponse.Body }`)
 	end
 
 	local artifactsData = json.parse(artifactsResponse.Body)
@@ -2362,7 +2366,7 @@ local function runUpdate()
 	})
 
 	if not zipResponse.Ok then
-		error(`{ zipResponse.Status } - { zipResponse.Error }: { zipResponse.Body }`)
+		error(`{ zipResponse.Status }: { zipResponse.Body }`)
 	end
 
 	updaterLog ..= `Got { #zipResponse.Body } bytes\n`

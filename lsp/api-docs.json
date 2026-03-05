@@ -1522,7 +1522,7 @@
     "documentation": "Its transparency/translucency"
   },
   "@phoenix/globaltype/Network.MakeHttpRequestAsync": {
-    "documentation": "Makes an HTTP request to the provided URL"
+    "documentation": "Makes an HTTP request to the provided URL. `Ok` will be false upon failure, and `Body` will contain the error message"
   },
   "@phoenix/globaltype/ParticleEmitter.Emitting": {
     "documentation": "Whether the emitter should emit new particles"
@@ -1555,7 +1555,7 @@
     "documentation": "Slow-down or speed-up the simulation by changing this value from `1`"
   },
   "@phoenix/globaltype/PlayerInput.Cursor": {
-    "documentation": "The look of the cursor. See `Enum.Cursor`"
+    "documentation": "The look of the cursor. See `Enum.Cursor`. Setting this property is *slow* as it needs to poll the OS, avoid placing it in hot loops"
   },
   "@phoenix/globaltype/PlayerInput.CursorMode": {
     "documentation": "The current mode/behaviour of the cursor. Refer to the `Enum.CursorMode` enumeration"

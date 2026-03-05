@@ -79,13 +79,13 @@ static void makeHttpRequest(const HttpRequest& request, std::promise<std::vector
 {
     std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> returnTable;
     returnTable["Status"] = 0;
-    returnTable["Body"] = "";
+    returnTable["Body"] = "Unknown error";
 
     CURL* curl = curl_easy_init();
     if (!curl)
     {
         returnTable["Ok"] = false;
-        returnTable["Error"] = "Failed to initialize Curl";
+        returnTable["Body"] = "Failed to initialize Curl";
 
         Out->set_value({ returnTable });
         return;
@@ -125,8 +125,7 @@ static void makeHttpRequest(const HttpRequest& request, std::promise<std::vector
     {
         returnTable["Ok"] = false;
         returnTable["Status"] = 0;
-        returnTable["Error"] = curl_easy_strerror(result);
-        returnTable["Body"] = returnTable["Error"];
+        returnTable["Body"] = curl_easy_strerror(result);
         Out->set_value({ returnTable });
 
         curl_easy_cleanup(curl);

@@ -119,9 +119,6 @@ type function IntersectComponents(ty: type)
 
 	return types.never
 end
-
-declare extern type __ENGINE_INTERNAL_USERDATA_PHANTOM_TYPE__ with
-end
 ]]
 local documentationData = {}
 
@@ -342,7 +339,7 @@ local function count(t: { any })
 	return n
 end
 
-local function dumpReflectionApi(t, d, cn)
+local function dumpReflectionApi(t, d, cn, externType)
 	local hasProps = t.Properties and (count(t.Properties) > 0)
 	local hasFuncs = t.Methods and (count(t.Methods) > 0)
 	local hasEvnts = t.Events and (count(t.Events) > 0)
@@ -382,7 +379,7 @@ local function dumpReflectionApi(t, d, cn)
 					documentation = desc
 				}
 
-				definitionsFile ..= `  { n }: { luautype },\n`
+				definitionsFile ..= `  { n }: { luautype }{ if externType then "" else "," }\n`
 			end
 		end
 
@@ -488,7 +485,7 @@ local function dumpReflectionApi(t, d, cn)
 				subst = string.gsub(subst, "self", `self: {cn}`)
 
 				if n ~= "SetShaderVariable" then
-					definitionsFile ..= `  { n }: { subst },\n`
+					definitionsFile ..= `  { n }: { subst }{ if externType then "" else "," }\n`
 				else
 					definitionsFile ..= "  SetShaderVariable: ((_: Renderer, Shader: string, Variable: string, Value: boolean | number | Color | Matrix, Type: EnumValueType?) -> ()) & ((_: Renderer, Shader: string, Variable: string, Value: vector, Type: EnumValueType) -> ()),\n"
 				end
@@ -523,18 +520,12 @@ local function dumpReflectionApi(t, d, cn)
 					assert(#string.split(d.Events[n].ArgumentTypes, ",") == #string.split(v, ","), `incorrect number of event callback argument types: {n} ({d.Events[n].ArgumentTypes}) vs {v}`)
 				end
 
-				definitionsFile ..= `  { n }: EventSignal<{d.Events[n].ArgumentTypes or rtolsub(v)}>,\n`
+				definitionsFile ..= `  { n }: EventSignal<{d.Events[n].ArgumentTypes or rtolsub(v)}>{ if externType then "" else "," }\n`
 			end
 		end
 	else
 		s = "No members defined\n"
 	end
-
-	if cn == "GameObject" then
-		definitionsFile ..= "\n"
-		definitionsFile ..= `  __phantom__: __ENGINE_INTERNAL_USERDATA_PHANTOM_TYPE__,\n`
-	end
-
 	s ..= "\n"
 
 	return s
@@ -715,13 +706,15 @@ for _, k in orderedComponents do
 	local v = apiDump.GameObject.Components[k]
 	local vd = docComments.GameObject.Components[k]
 
+	local isExternType = false
+
 	if k == "GameObject" then
 		v = apiDump.GameObject.Base
 		vd = docComments.GameObject.Base
+		isExternType = true
 	end
 
-	-- intersections don't work with extern types
-	definitionsFile ..= `export type { k } = \{\n`
+	definitionsFile ..= if isExternType then `declare extern type { k } with\n` else `export type { k } = \{\n`
 
 	components ..= `## \`{ k }\`\n\n`
 
@@ -739,9 +732,13 @@ for _, k in orderedComponents do
 		components ..= "\n"
 	end
 
-	components ..= dumpReflectionApi(v, vd, k)
+	components ..= dumpReflectionApi(v, vd, k, k == "GameObject")
 
-	definitionsFile ..= "}\n"
+	if isExternType then
+		definitionsFile ..= "end\n"
+	else
+		definitionsFile ..= "}\n"
+	end
 end
 
 definitionsFile ..= "\n\n"

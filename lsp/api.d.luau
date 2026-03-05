@@ -65,9 +65,6 @@ type function IntersectComponents(ty: type)
 
 	return types.never
 end
-
-declare extern type __ENGINE_INTERNAL_USERDATA_PHANTOM_TYPE__ with
-end
 declare extern type Color with
   B: number
   G: number
@@ -126,37 +123,35 @@ declare Matrix: {
 }
 
 
-export type GameObject = {
-  Enabled: boolean,
-  Name: string,
-  ObjectId: number ,
-  Parent: GameObject?,
-  Serializes: boolean,
+declare extern type GameObject with
+  Enabled: boolean
+  Name: string
+  ObjectId: number 
+  Parent: GameObject?
+  Serializes: boolean
 
-  AddComponent: (self: GameObject, Component: keyof<Creatables>) -> (),
-  AddTag: (self: GameObject, Tag: string) -> (),
-  Destroy: (self: GameObject) -> (),
-  Duplicate: (self: GameObject) -> (GameObject),
-  FindChild: (self: GameObject, ChildName: string) -> (GameObject?),
-  FindChildWithComponent: (self: GameObject, Component: keyof<Creatables>) -> (GameObject),
-  ForEachChild: (self: GameObject, Callback: (Object: GameObject) -> boolean?) -> (),
-  ForEachDescendant: (self: GameObject, Callback: (Object: GameObject) -> boolean?) -> (),
-  GetChildren: (self: GameObject) -> { GameObject },
-  GetComponents: (self: GameObject) -> keyof<Creatables>,
-  GetDescendants: (self: GameObject) -> { GameObject },
-  GetFullName: (self: GameObject) -> (string),
-  GetTags: (self: GameObject) -> { string },
-  HasComponent: (self: GameObject, Component: keyof<Creatables>) -> (boolean),
-  HasTag: (self: GameObject, Tag: string) -> (boolean),
-  MergeWith: (self: GameObject, With: GameObject) -> (),
-  RemoveComponent: (self: GameObject, Component: keyof<Creatables>) -> (),
-  RemoveTag: (self: GameObject, Tag: string) -> (),
+  AddComponent: (self: GameObject, Component: keyof<Creatables>) -> ()
+  AddTag: (self: GameObject, Tag: string) -> ()
+  Destroy: (self: GameObject) -> ()
+  Duplicate: (self: GameObject) -> (GameObject)
+  FindChild: (self: GameObject, ChildName: string) -> (GameObject?)
+  FindChildWithComponent: (self: GameObject, Component: keyof<Creatables>) -> (GameObject)
+  ForEachChild: (self: GameObject, Callback: (Object: GameObject) -> boolean?) -> ()
+  ForEachDescendant: (self: GameObject, Callback: (Object: GameObject) -> boolean?) -> ()
+  GetChildren: (self: GameObject) -> { GameObject }
+  GetComponents: (self: GameObject) -> keyof<Creatables>
+  GetDescendants: (self: GameObject) -> { GameObject }
+  GetFullName: (self: GameObject) -> (string)
+  GetTags: (self: GameObject) -> { string }
+  HasComponent: (self: GameObject, Component: keyof<Creatables>) -> (boolean)
+  HasTag: (self: GameObject, Tag: string) -> (boolean)
+  MergeWith: (self: GameObject, With: GameObject) -> ()
+  RemoveComponent: (self: GameObject, Component: keyof<Creatables>) -> ()
+  RemoveTag: (self: GameObject, Tag: string) -> ()
 
-  OnTagAdded: EventSignal<(string)>,
-  OnTagRemoved: EventSignal<(string)>,
-
-  __phantom__: __ENGINE_INTERNAL_USERDATA_PHANTOM_TYPE__,
-}
+  OnTagAdded: EventSignal<(string)>
+  OnTagRemoved: EventSignal<(string)>
+end
 export type Animation = {
   Animation: string,
   Looped: boolean,
@@ -285,7 +280,7 @@ export type Model = {
 }
 export type Network = {
 
-  MakeHttpRequestAsync: (self: Network, { Url: string, Method: nil | 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'PATCH', Headers: { [string]: string }?, Body: string? }) -> ({ Ok: false, Status: number, Error: string?, Headers: { [string]: string }, Body: string } | { Ok: true, Status: number, Headers: { [string]: string }, Body: string }),
+  MakeHttpRequestAsync: (self: Network, { Url: string, Method: nil | 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'PATCH', Headers: { [string]: string }?, Body: string? }) -> ({ Ok: boolean, Status: number, Headers: { [string]: string }, Body: string }),
 }
 export type ParticleEmitter = {
   Emitting: boolean,
