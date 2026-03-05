@@ -1813,6 +1813,13 @@
               "Height: number"
             ]
           },
+          "setstylecolor": {
+            "Description": "Directly sets a style color. \"Colors\" are 4-channel RGBA",
+            "In": [
+              "StyleIndex: number",
+              "Color: { number }"
+            ]
+          },
           "settooltip": {
             "Description": [
               "`ImGui::SetTooltip`"

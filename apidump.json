@@ -456,6 +456,7 @@
         "setnextwindowopen": "function",
         "setnextwindowposition": "function",
         "setnextwindowsize": "function",
+        "setstylecolor": "function",
         "settooltip": "function",
         "setviewportdockspace": "function",
         "setviewportdockspacedefault": "function",

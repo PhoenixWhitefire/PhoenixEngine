@@ -990,6 +990,9 @@
   "@phoenix/global/imgui.setnextwindowsize": {
     "documentation": "* `ImGui::SetNextWindowSize`"
   },
+  "@phoenix/global/imgui.setstylecolor": {
+    "documentation": "* Directly sets a style color. \"Colors\" are 4-channel RGBA"
+  },
   "@phoenix/global/imgui.settooltip": {
     "documentation": "* `ImGui::SetTooltip`"
   },

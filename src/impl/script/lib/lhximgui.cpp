@@ -936,6 +936,27 @@ static int imgui_newline(lua_State*)
     return 0;
 }
 
+static int imgui_setstylecolor(lua_State* L)
+{
+    lua_pushinteger(L, 1);
+    lua_gettable(L, 2);
+    lua_pushinteger(L, 2);
+    lua_gettable(L, 2);
+    lua_pushinteger(L, 3);
+    lua_gettable(L, 2);
+    lua_pushinteger(L, 4);
+    lua_gettable(L, 2);
+
+    ImVec4 col;
+    col.x = luaL_checknumber(L, -4);
+    col.y = luaL_checknumber(L, -3);
+    col.z = luaL_checknumber(L, -2);
+    col.w = luaL_checknumber(L, -1);
+
+    ImGui::GetStyle().Colors[luaL_checkinteger(L, 1)] = col;
+    return 0;
+}
+
 static luaL_Reg imgui_funcs[] =
 {
     { "begin", imgui_begin },
@@ -1002,6 +1023,7 @@ static luaL_Reg imgui_funcs[] =
     { "begintooltip", imgui_begintooltip },
     { "endtooltip", imgui_endtooltip },
     { "newline", imgui_newline },
+    { "setstylecolor", imgui_setstylecolor },
     { NULL, NULL }
 };
 

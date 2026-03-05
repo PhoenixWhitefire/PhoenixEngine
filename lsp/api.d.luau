@@ -713,6 +713,7 @@ declare imgui: {
   setnextwindowopen: (( Open: boolean? ) -> ()),
   setnextwindowposition: (( X: number, Y: number ) -> ()),
   setnextwindowsize: (( Width: number, Height: number ) -> ()),
+  setstylecolor: (( StyleIndex: number, Color: { number } ) -> ()),
   settooltip: (( Tooltip: string ) -> ()),
   setviewportdockspace: (( PositionX: number, PositionY: number, SizeX: number, SizeY: number ) -> ()),
   setviewportdockspacedefault: ((  ) -> ()),
