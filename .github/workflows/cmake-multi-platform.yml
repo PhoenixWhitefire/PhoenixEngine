@@ -104,7 +104,7 @@ jobs:
       if: runner.os == 'Windows'
       uses: actions/upload-artifact@v4
       with:
-        name: "Engine_${{ runner.os }}-${{ matrix.build_type }}"
+        name: "Phoenix_${{ runner.os }}-${{ matrix.build_type }}"
         path: |
           x64/Debug/PhoenixEngine.exe
           x64/Release/PhoenixEngine.exe
