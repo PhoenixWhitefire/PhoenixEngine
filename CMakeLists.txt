@@ -119,7 +119,7 @@ set(CURL_ENABLE_SSL ON) # what the hell
 add_subdirectory(Vendor)
 add_subdirectory(Vendor/luau EXCLUDE_FROM_ALL)
 add_subdirectory(Vendor/glm EXCLUDE_FROM_ALL)
-add_subdirectory(Vendor/tracy)
+add_subdirectory(Vendor/tracy EXCLUDE_FROM_ALL)
 add_subdirectory(Vendor/miniaudio EXCLUDE_FROM_ALL)
 add_subdirectory(Vendor/glfw EXCLUDE_FROM_ALL)
 add_subdirectory(Vendor/curl EXCLUDE_FROM_ALL)
