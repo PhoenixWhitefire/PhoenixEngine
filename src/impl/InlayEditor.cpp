@@ -1480,8 +1480,7 @@ static void onTreeItemClicked(GameObject* nodeClicked)
 {
 	if (IsPickingObject)
 	{
-		History* history = History::Get();
-		std::optional<size_t> action = history->TryBeginAction("SetObjectPropertiesToExplorerClick");
+		History::ScopedAction action = { "SetObjectPropertiesToExplorerClick" };
 
 		try
 		{
@@ -1492,9 +1491,6 @@ static void onTreeItemClicked(GameObject* nodeClicked)
 		{
 			setErrorMessage(Error.what());
 		}
-
-		if (action)
-			history->FinishAction(action.value());
 
 		// restore prev selections
 		Selections = PickerTargets;
@@ -1688,8 +1684,7 @@ static void recursiveIterateTree(GameObject* current)
 		{
 			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("Explorer_DragGameObject"))
 			{
-				History* history = History::Get();
-				std::optional<size_t> action = history->TryBeginAction("DragAndDropObject");
+				History::ScopedAction action = { "DragAndDropObject" };
 
 				uint32_t child = *(uint32_t*)payload->Data;
 
@@ -1701,9 +1696,6 @@ static void recursiveIterateTree(GameObject* current)
 				{
 					setErrorMessage(e.what());
 				}
-
-				if (action)
-					history->FinishAction(action.value());
 			}
 
 			ImGui::EndDragDropTarget();
@@ -2427,16 +2419,12 @@ static void renderExplorer()
 
 		if (ImGui::IsKeyDown(ImGuiKey_Delete) && Selections.size() > 0)
 		{
-			History* history = History::Get();
-			std::optional<size_t> id = history->TryBeginAction("Delete by hotkey");
+			History::ScopedAction action = { "Delete by hotkey" };
 
 			for (const ObjectHandle& sel : Selections)
 				sel->SetParent(nullptr); // We can't actually `::Destroy` it because then we won't be able to Undo it back
 
 			Selections.clear();
-
-			if (id)
-				history->FinishAction(id.value());
 		}
 	}
 
@@ -2529,7 +2517,6 @@ static void renderExplorer()
 		{
 			if (action == ContextMenuAction::__sectionSeparator)
 				ImGui::Separator();
-
 			else
 			{
 				const char* name = ContextMenuActionStrings[(uint8_t)action];
@@ -2555,15 +2542,11 @@ static void renderExplorer()
 
 				if (!ExplorerRoot->FindChildWithComponent(ec) && ImGui::MenuItem(serv.data()))
 				{
-					History* history = History::Get();
-					std::optional<size_t> action = history->TryBeginAction("InsertService");
+					History::ScopedAction action = { "InsertService" };
 
 					GameObject* newServ = GameObject::Create(ec);
 					newServ->SetParent(ExplorerRoot);
 					Selections = { newServ };
-
-					if (action)
-						history->FinishAction(action.value());
 				}
 			}
 
@@ -3028,7 +3011,7 @@ static void renderProperties()
 				}
 
 				std::string tooltip = getDescriptionAsString(
-					ObjectDocCommentsJson.value("Components", nlohmann::json::object()).value(comp, nlohmann::json::object())["Description"],
+					ObjectDocCommentsJson["Components"][comp]["Description"],
 					32
 				);
 				if (tooltip.size() > 1)
@@ -3176,6 +3159,7 @@ static void renderProperties()
 
 						ImGui::SetCursorPosX(halfWidth);
 						ImGui::TextUnformatted(curValStr.c_str());
+						ImGui::SetItemTooltip("%s", curValStr.c_str());
 					}
 				}
 
@@ -3331,14 +3315,10 @@ static void renderProperties()
 					{
 						if (ImGui::GetIO().KeyCtrl)
 						{
-							History* history = History::Get();
-							std::optional<size_t> action = history->TryBeginAction("SetObjectPropertyToNil");
+							History::ScopedAction action = { "SetObjectPropertyToNil" };
 
 							for (const ObjectHandle& object : Selections)
 								object->SetPropertyValue(propName, Reflection::GenericValue::Null());
-
-							if (action)
-								history->FinishAction(action.value());
 						}
 					}
 				}
@@ -3428,8 +3408,8 @@ static void renderProperties()
 					ImGui::Indent();
 
 					ImGui::InputFloat3("Position", pos);
-					valueWasEditedManual = ImGui::IsItemEdited();
-					deactivatedAfterEdit = ImGui::IsItemDeactivatedAfterEdit();
+					valueWasEditedManual |= ImGui::IsItemEdited();
+					deactivatedAfterEdit |= ImGui::IsItemDeactivatedAfterEdit();
 
 					ImGui::InputFloat3("Rotation", rotdegs);
 					ImGui::Unindent();
@@ -3467,23 +3447,12 @@ static void renderProperties()
 			}
 
 			static std::optional<size_t> BeganPropertyEditingAction;
-
-			static std::string PrevEditPropName;
-			static Reflection::GenericValue PrevEditNewValue;
-			const char* const EditPropertyTempName = "EditProperty_TEMP";
 			History* history = History::Get();
 
 			if ((ImGui::IsItemEdited() || valueWasEditedManual) && canChangeValue)
 			{
-				// Awful and hacky
-				PrevEditSelections = Selections;
-				PrevEditPropName = propName;
-				PrevEditNewValue = newVal;
-
-				if (history->CanUndo() && history->GetActionHistory().back().Name == EditPropertyTempName)
-					history->Undo();
-
-				BeganPropertyEditingAction = history->TryBeginAction(EditPropertyTempName);
+				if (!BeganPropertyEditingAction)
+					BeganPropertyEditingAction = history->TryBeginAction("EditProperty");
 
 				try
 				{
@@ -3494,42 +3463,13 @@ static void renderProperties()
 				{
 					setErrorMessage(Err.what());
 				}
-
-				if (BeganPropertyEditingAction)
-					history->FinishAction(BeganPropertyEditingAction.value());
 			}
 
-			if (deactivatedAfterEdit || ImGui::IsItemDeactivatedAfterEdit())
+			if (ImGui::IsItemDeactivatedAfterEdit() || deactivatedAfterEdit)
 			{
-				if (history->CanUndo() && history->GetActionHistory().back().Name == EditPropertyTempName)
-				{
-					history->Undo();
-
-					if (std::optional<size_t> began = history->TryBeginAction("EditProperty"))
-					{
-						try
-						{
-							for (const ObjectHandle& sel : PrevEditSelections)
-								sel->SetPropertyValue(PrevEditPropName, PrevEditNewValue);
-						}
-						catch (const std::runtime_error& Err)
-						{
-							setErrorMessage(Err.what());
-						}
-
-						if (history->GetCurrentAction()->Events.size() == 0)
-							history->DiscardAction(began.value()); // started typing, but didn't actually change the value in the end
-						else
-							history->FinishAction(began.value());
-					}
-					else
-					{
-						setErrorMessage(std::format(
-							"Could not begin History Action to re-apply properties after you finished interacting with {}{}",
-							PrevEditPropName, history->GetCurrentAction().has_value() ? std::format(". Blocked by the {} Action", history->GetCurrentAction()->Name) : ""
-						));
-					}
-				}
+				if (BeganPropertyEditingAction)
+					history->FinishAction(BeganPropertyEditingAction.value());
+				BeganPropertyEditingAction = std::nullopt;
 			}
 
 			ImGui::Separator();

@@ -140,9 +140,9 @@ end
 local changeStageTo: (NewStage: Stage) -> ()
 
 local function handleUndoRedoKeybinds()
-	local ctrlKeyDown = not PlayerInput.IsKeyboardSunk and PlayerInput:IsKeyPressed(Enum.Key.LeftControl)
-	local zKeyDown    = not PlayerInput.IsKeyboardSunk and PlayerInput:IsKeyPressed(Enum.Key.Z)
-	local yKeyDown    = not PlayerInput.IsKeyboardSunk and PlayerInput:IsKeyPressed(Enum.Key.Y)
+	local ctrlKeyDown = not imgui.anyitemactive() and PlayerInput:IsKeyPressed(Enum.Key.LeftControl)
+	local zKeyDown    = not imgui.anyitemactive() and PlayerInput:IsKeyPressed(Enum.Key.Z)
+	local yKeyDown    = not imgui.anyitemactive() and PlayerInput:IsKeyPressed(Enum.Key.Y)
 
 	if ctrlKeyDown and zKeyDown then
 		if not WasHoldingCtrlKeyDown or not WasHoldingZKeyDown then

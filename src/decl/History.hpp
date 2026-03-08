@@ -51,6 +51,16 @@ public:
     const std::vector<Action>& GetActionHistory() const;
     size_t GetCurrentWaypoint() const;
 
+    class ScopedAction
+    {
+    public:
+        ScopedAction(const std::string& Name);
+        ~ScopedAction();
+
+    private:
+        std::optional<size_t> m_Action;
+    };
+
 private:
     std::optional<Action> m_CurrentAction;
     std::vector<Action> m_ActionHistory = { { "<Initial Action>", {} } };

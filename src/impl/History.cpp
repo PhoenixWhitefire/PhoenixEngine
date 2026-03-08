@@ -14,6 +14,16 @@ void History::RecordEvent(const PropertyEvent& Event)
     if (!m_CurrentAction.has_value())
         return;
 
+    if (m_CurrentAction->Events.size() > 0)
+    {
+        PropertyEvent& back = m_CurrentAction->Events.back();
+        if (back.Target == Event.Target && back.Property == Event.Property)
+        {
+            back.NewValue = Event.NewValue;
+            return;
+        }
+    }
+
     m_CurrentAction->Events.push_back(Event);
 
     // `TargetDataModel`/`OwningDataModel` checks are done in `GameObject::SetPropertyValue`
@@ -23,6 +33,7 @@ void History::ClearHistory()
 {
     // We need to do this so that there's a waypoint to go *back* to when we Undo
     m_ActionHistory = { { "<Initial Action>", {} } };
+    m_CurrentWaypoint = 0;
 
     if (m_CurrentAction.has_value())
         Log.WarningF("`History::ClearHistory` called while Action {} was ongoing", m_CurrentAction->Name);
@@ -220,4 +231,23 @@ const std::vector<History::Action>& History::GetActionHistory() const
 size_t History::GetCurrentWaypoint() const
 {
     return m_CurrentWaypoint;
+}
+
+History::ScopedAction::ScopedAction(const std::string& Name)
+{
+    History* history = History::Get();
+    m_Action = history->TryBeginAction(Name);
+}
+
+History::ScopedAction::~ScopedAction()
+{
+    History* history = History::Get();
+
+    if (m_Action)
+    {
+        if (history->GetCurrentAction().value().Events.size() > 0)
+            history->FinishAction(m_Action.value());
+        else
+            history->DiscardAction(m_Action.value());
+    }
 }

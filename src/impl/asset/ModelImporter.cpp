@@ -253,6 +253,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 		case ModelNode::NodeType::Container:
 		{
 			object = GameObject::Create("Model");
+			object->AddComponent(EntityComponent::Transform);
 			break;
 		}
 
@@ -260,6 +261,8 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 		{
 			// TODO: cleanup code
 			object = GameObject::Create("Mesh");
+			object->AddComponent(EntityComponent::RigidBody);
+			object->AddComponent(EntityComponent::Transform);
 			EcMesh* meshObject = object->FindComponent<EcMesh>();
 
 			std::string saveDir = AssetPath;
@@ -404,9 +407,12 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 				? LoadedObjs[parentIndex].Referred()
 				: GameObject::GetObjectById(Parent)
 			);
+	}
 
-		if (EcTransform* ct = object->FindComponent<EcTransform>())
-			ct->RecomputeTransformTree();
+	for (const ObjectRef& obj : LoadedObjs)
+	{
+		if (EcTransform* et = obj->FindComponent<EcTransform>())
+			et->RecomputeTransformTree();
 	}
 
 	for (ObjectRef anim : m_Animations)

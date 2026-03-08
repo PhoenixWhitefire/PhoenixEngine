@@ -18,9 +18,17 @@ type Action = {
 
 local ActionDataCache = {}
 local ActionDataCacheWaypoint = 0
+local ContextMenuTargetId = 0
 
 local function renderAction(action: Action, id)
+    local openContextMenu = false
+
     local open = imgui.treenode(`{action.Name}##{id}`)
+
+    if imgui.itemclicked(Enum.MouseButton.Right) then
+        openContextMenu = true
+        ContextMenuTargetId = id
+    end
 
     if open then
         for i, e in action.Events do
@@ -28,6 +36,10 @@ local function renderAction(action: Action, id)
         end
 
         imgui.treepop()
+    end
+
+    if openContextMenu then
+        imgui.openpopup("ActionContextMenu")
     end
 end
 
@@ -72,6 +84,28 @@ function Viewer.Render()
         if i == History.CurrentWaypoint then
             imgui.popstylecolor()
         end
+    end
+
+    if imgui.beginpopup("ActionContextMenu") then
+        if imgui.menuitem("Go to here") then
+            local dir = math.sign(ContextMenuTargetId - History.CurrentWaypoint)
+
+            if dir ~= 0 then
+                for _ = History.CurrentWaypoint, ContextMenuTargetId, dir do
+                    if History.CurrentWaypoint == ContextMenuTargetId then
+                        break
+                    end
+
+                    if dir == -1 then
+                        History:Undo()
+                    else
+                        History:Redo()
+                    end
+                end
+            end
+        end
+
+        imgui.endpopup()
     end
 
     imgui.endw()
