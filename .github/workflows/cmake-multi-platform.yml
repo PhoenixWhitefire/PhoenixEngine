@@ -82,7 +82,7 @@ jobs:
 
     - name: Build
       # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
-      run: cmake --build ./ --parallel --config ${{ matrix.build_type }}
+      run: cmake --build ./ -j3 --config ${{ matrix.build_type }}
 
     - name: Configure CMake for Profiler
       if: matrix.build_type == 'Release' && runner.os == 'Windows'
@@ -90,7 +90,7 @@ jobs:
 
     - name: Build Profiler
       if: matrix.build_type == 'Release' && runner.os == 'Windows'
-      run: cmake --build Vendor/tracy/profiler/build --config Release --parallel -t tracy-profiler
+      run: cmake --build Vendor/tracy/profiler/build --config Release -j3 -t tracy-profiler
 
     - name: Create launch shortcut (Windows)
       if: runner.os == 'Windows'
