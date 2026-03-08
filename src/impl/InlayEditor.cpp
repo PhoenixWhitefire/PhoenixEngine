@@ -1330,8 +1330,7 @@ static const char* ContextMenuActionStrings[] = {
 
 typedef void(*ContextActionMenuHandlerFunc)(void);
 
-static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] =
-{
+static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] = {
 	[]()
 	{
 		std::vector<ObjectHandle> newSelections;
@@ -1481,6 +1480,9 @@ static void onTreeItemClicked(GameObject* nodeClicked)
 {
 	if (IsPickingObject)
 	{
+		History* history = History::Get();
+		std::optional<size_t> action = history->TryBeginAction("SetObjectPropertiesToExplorerClick");
+
 		try
 		{
 			for (const ObjectHandle& target : PickerTargets)
@@ -1490,6 +1492,9 @@ static void onTreeItemClicked(GameObject* nodeClicked)
 		{
 			setErrorMessage(Error.what());
 		}
+
+		if (action)
+			history->FinishAction(action.value());
 
 		// restore prev selections
 		Selections = PickerTargets;
@@ -1683,6 +1688,9 @@ static void recursiveIterateTree(GameObject* current)
 		{
 			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("Explorer_DragGameObject"))
 			{
+				History* history = History::Get();
+				std::optional<size_t> action = history->TryBeginAction("DragAndDropObject");
+
 				uint32_t child = *(uint32_t*)payload->Data;
 
 				try
@@ -1693,6 +1701,9 @@ static void recursiveIterateTree(GameObject* current)
 				{
 					setErrorMessage(e.what());
 				}
+
+				if (action)
+					history->FinishAction(action.value());
 			}
 
 			ImGui::EndDragDropTarget();
@@ -2544,9 +2555,15 @@ static void renderExplorer()
 
 				if (!ExplorerRoot->FindChildWithComponent(ec) && ImGui::MenuItem(serv.data()))
 				{
+					History* history = History::Get();
+					std::optional<size_t> action = history->TryBeginAction("InsertService");
+
 					GameObject* newServ = GameObject::Create(ec);
 					newServ->SetParent(ExplorerRoot);
 					Selections = { newServ };
+
+					if (action)
+						history->FinishAction(action.value());
 				}
 			}
 
@@ -3287,7 +3304,7 @@ static void renderProperties()
 
 					ImGui::InputText("##", &str);
 
-					if (ImGui::IsItemClicked(ImGuiMouseButton_Left) && ImGui::IsWindowHovered())
+					if (ImGui::IsItemActivated() && ImGui::IsWindowFocused())
 					{
 						if (ImGui::GetIO().KeyCtrl)
 						{
@@ -3310,12 +3327,20 @@ static void renderProperties()
 							Selections.clear();
 						}
 					}
-					else if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+					else if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+					{
 						if (ImGui::GetIO().KeyCtrl)
 						{
-							for (const ObjectHandle& object : PickerTargets)
-								object->SetPropertyValue(PickerTargetPropName, {});
+							History* history = History::Get();
+							std::optional<size_t> action = history->TryBeginAction("SetObjectPropertyToNil");
+
+							for (const ObjectHandle& object : Selections)
+								object->SetPropertyValue(propName, Reflection::GenericValue::Null());
+
+							if (action)
+								history->FinishAction(action.value());
 						}
+					}
 				}
 
 				break;

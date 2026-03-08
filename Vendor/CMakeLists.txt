@@ -44,4 +44,4 @@ target_include_directories(Vendor PUBLIC
 )
 
 add_subdirectory(glad)
-add_dependencies(Vendor OpenGL)
+add_dependencies(Vendor Glad)

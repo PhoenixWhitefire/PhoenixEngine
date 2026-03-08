@@ -5,7 +5,7 @@ set(CMAKE_C_STANDARD 17)
 set(CMAKE_VS_PLATFORM_TOOLSET v143)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-project(OpenGL)
+project(Glad)
 
 set(GL_SRCS
 	"gl.h"
@@ -13,11 +13,11 @@ set(GL_SRCS
 	"KHR/khrplatform.h"
 )
 
-add_library(OpenGL STATIC ${GL_SRCS})
+add_library(Glad STATIC ${GL_SRCS})
 
 source_group(TREE ./ FILES ${GL_SRCS})
 
-target_include_directories(OpenGL PUBLIC
+target_include_directories(Glad PUBLIC
 	"./"
     "../"
 )

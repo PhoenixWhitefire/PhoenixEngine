@@ -82,7 +82,7 @@ endif()
 
 target_link_libraries(PhoenixEngine PRIVATE
 	Vendor
-	OpenGL
+	Glad
 	glm
 	miniaudio
 	$<IF:$<BOOL:${PHX_HEADLESS}>,,glfw>
@@ -118,10 +118,10 @@ set(CURL_ENABLE_SSL ON) # what the hell
 
 add_subdirectory(Vendor)
 add_subdirectory(Vendor/luau EXCLUDE_FROM_ALL)
-add_subdirectory(Vendor/glm)
-add_subdirectory(Vendor/tracy)
-add_subdirectory(Vendor/miniaudio)
-add_subdirectory(Vendor/glfw)
+add_subdirectory(Vendor/glm EXCLUDE_FROM_ALL)
+add_subdirectory(Vendor/tracy EXCLUDE_FROM_ALL)
+add_subdirectory(Vendor/miniaudio EXCLUDE_FROM_ALL)
+add_subdirectory(Vendor/glfw EXCLUDE_FROM_ALL)
 add_subdirectory(Vendor/curl EXCLUDE_FROM_ALL)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
@@ -133,7 +133,7 @@ set_property(TARGET Vendor PROPERTY FOLDER "Vendor")
 set_property(TARGET TracyClient PROPERTY FOLDER "Vendor")
 set_property(TARGET glm PROPERTY FOLDER "Vendor")
 set_property(TARGET miniaudio PROPERTY FOLDER "Vendor")
-set_property(TARGET OpenGL PROPERTY FOLDER "Vendor")
+set_property(TARGET Glad PROPERTY FOLDER "Vendor")
 
 if (MSVC)
 	set_property(TARGET libcurl_object PROPERTY FOLDER "Vendor/Curl")
@@ -158,7 +158,7 @@ set_property(TARGET update_mappings PROPERTY FOLDER "Vendor/GLFW3")
 # build engine after all libs
 add_dependencies(PhoenixEngine
 	Vendor
-	OpenGL
+	Glad
 	TracyClient
 	glm
 	Luau.Compiler
