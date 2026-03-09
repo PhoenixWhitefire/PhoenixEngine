@@ -84,7 +84,7 @@ public:
                             .Position = vertex.at("Position").AsVector3(),
                             .Normal = vertex.at("Normal").AsVector3(),
                             .Paint = glm::vec4(paintData[0].AsDouble(), paintData[1].AsDouble(), paintData[2].AsDouble(), paintData[3].AsDouble()),
-                            .TextureUV = vertex.at("UV").AsVector2()
+                            .TextureUV = glm::vec2(vertex.at("UV").AsVector3())
                         });
                     }
 

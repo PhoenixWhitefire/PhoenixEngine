@@ -65,6 +65,8 @@ type function IntersectComponents(ty: type)
 
 	return types.never
 end
+
+declare function ______leakgenericshack<T>(_: T): T
 declare extern type Color with
   B: number
   G: number
@@ -133,7 +135,7 @@ declare extern type GameObject with
   AddComponent: (self: GameObject, Component: keyof<Creatables>) -> ()
   AddTag: (self: GameObject, Tag: string) -> ()
   Destroy: (self: GameObject) -> ()
-  Duplicate: (self: GameObject) -> (GameObject)
+  Duplicate: <T>(self: GameObject & T) -> (GameObject & T)
   FindChild: (self: GameObject, ChildName: string) -> (GameObject?)
   FindChildWithComponent: (self: GameObject, Component: keyof<Creatables>) -> (GameObject)
   ForEachChild: (self: GameObject, Callback: (Object: GameObject) -> boolean?) -> ()
@@ -161,12 +163,12 @@ export type Animation = {
 }
 export type AssetManager = {
 
-  GetMeshData: (self: AssetManager, Id: string) -> { Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } },
+  GetMeshData: (self: AssetManager, Id: string) -> { Vertices: { { Position: vector, Normal: vector, Paint: { number }, UV: vector } }, Indices: { number } },
   ImportModel: (self: AssetManager, Path: string) -> GameObject & Model,
   LoadScene: (self: AssetManager, Path: string) -> ({ GameObject }?, string),
   SaveMesh: (self: AssetManager, Id: string, Path: string) -> (),
   SaveScene: (self: AssetManager, RootNodes: { GameObject }, Path: string) -> (boolean, string?),
-  SetMeshData: (self: AssetManager, Id: string, MeshData: { Vertices: { { Position: vector, Normal: vector, Paint: { R: number, G: number, B: number, A: number }, UV: { number } } }, Indices: { number } }) -> (),
+  SetMeshData: (self: AssetManager, Id: string, MeshData: { Vertices: { { Position: vector, Normal: vector, Paint: { number }, UV: vector } }, Indices: { number } }) -> (),
 }
 export type Bone = {
   IsActive: boolean ,

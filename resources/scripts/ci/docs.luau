@@ -119,6 +119,8 @@ type function IntersectComponents(ty: type)
 
 	return types.never
 end
+
+declare function ______leakgenericshack<T>(_: T): T
 ]]
 local documentationData = {}
 
