@@ -25,9 +25,14 @@ bool UserInput::IsMouseButtonDown(int Button)
 
 bool UserInput::ShouldIgnoreUIInputSinking()
 {
-    if (GImGui && !ImGui::IsAnyItemActive() && GImGui->HoveredWindow)
-        if (std::string(GImGui->HoveredWindow->Name).find("WindowOverViewport") != std::string::npos)
-            return true;
+    if (!GImGui)
+        return false;
+
+    if (GImGui->HoveredWindow && std::string_view(GImGui->HoveredWindow->Name).find("WindowOverViewport") != std::string::npos)
+        return true;
+
+    if (ImGui::IsAnyItemActive() && std::string_view(GImGui->ActiveIdWindow->Name).find("WindowOverViewport") != std::string::npos)
+        return true;
 
     return false;
 }
