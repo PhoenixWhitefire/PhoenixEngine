@@ -223,4 +223,4 @@ print(`Testing session took { os.clock() - start } seconds. Tests themselves too
 
 appendlog("\n\n\n");
 
-((game:GetService("Engine") :: any) :: Engine):Exit(if failed == 0 then 0 else 1)
+game:GetService("Engine"):Exit(if failed == 0 then 0 else 1)

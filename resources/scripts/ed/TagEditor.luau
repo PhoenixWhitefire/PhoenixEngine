@@ -1,6 +1,6 @@
 -- TagEditor.luau, 01/02/2026
-local Collections: Collections = game:GetService("Collections") :: any
-local Engine: Engine = game:GetService("Engine") :: any
+local Collections = game:GetService("Collections")
+local Engine = game:GetService("Engine")
 
 local Viewer = {}
 Viewer.Open = false

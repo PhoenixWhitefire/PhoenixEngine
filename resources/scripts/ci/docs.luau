@@ -2,7 +2,7 @@
 
 print("Docs CI begin\n\n\n\n\n")
 
-local Engine: Engine = game:GetService("Engine") :: any
+local Engine = game:GetService("Engine")
 
 task.delay(5, function()
 	warn("Docgen appears to have hung - exiting")
@@ -121,7 +121,38 @@ type function IntersectComponents(ty: type)
 end
 
 declare function ______leakgenericshack<T>(_: T): T
+
+export type HistoryEvent = {
+	Name: string,
+	Events: {
+		{
+			Target: GameObject
+		}
+		& ({
+			Property: nil,
+			AddedComponent: string
+		}
+		| {
+			Property: nil,
+			RemovedComponent: string
+		}
+		| {
+			Property: string,
+			NewValue: unknown,
+			PreviousValue: unknown
+		})
+	}
+}
 ]]
+
+definitionsFile ..= "\ntype Services = {\n"
+
+for _, s in { "Engine", "PlayerInput", "AssetManager", "History", "Physics", "Renderer", "Collections", "Network", "Logging" } do
+	definitionsFile ..= `{s}: {s},\n`
+end
+
+definitionsFile ..= "}\n\n"
+
 local documentationData = {}
 
 local GameObjectOverrides = {

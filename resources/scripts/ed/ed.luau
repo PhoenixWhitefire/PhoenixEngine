@@ -1,12 +1,12 @@
 -- ed.luau, 14/09/2025
-local AssetManager: AssetManager = game:GetService("AssetManager") :: any
-local PlayerInput: PlayerInput = game:GetService("PlayerInput") :: any
-local Renderer: Renderer = game:GetService("Renderer") :: any
-local History: History = game:GetService("History") :: any
-local Physics: Physics = game:GetService("Physics") :: any
-local Network: Network = game:GetService("Network") :: any
-local Logging: Logging = game:GetService("Logging") :: any
-local Engine: Engine = game:GetService("Engine") :: any
+local AssetManager = game:GetService("AssetManager")
+local PlayerInput = game:GetService("PlayerInput")
+local Renderer = game:GetService("Renderer")
+local History = game:GetService("History")
+local Physics = game:GetService("Physics")
+local Network = game:GetService("Network")
+local Logging = game:GetService("Logging")
+local Engine = game:GetService("Engine")
 
 local FALLBACK_IMAGE = "@etextures/editor-icons/fallback.png"
 local LOGO_IMAGE = "@etextures/logo.png"
@@ -824,7 +824,7 @@ local GITHUB_URL = "https://github.com/PhoenixWhitefire/PhoenixEngine"
 
 local HoveringOverMenuBar = false
 local HoveringOverRibbonTab = false
-local RibbonPopupDistance = 12
+local RibbonPopupDistance = 18
 
 local function exportProject()
 	saveProject()
@@ -1175,7 +1175,7 @@ local function renderMainMenuBar(dt: number)
 
 			RibbonPopupDistance = TAB_HEIGHT -- fixes ribbon closing when enabling tools
 		else
-			RibbonPopupDistance = 12
+			RibbonPopupDistance = 18
 		end
 
 		TabButtonHovering = WipTabButtonHovering
@@ -1500,7 +1500,7 @@ PlayerInput.KeyEvent:Connect(function(kie: KeyInputEvent)
 
 	local commandBarAction = History:TryBeginAction("CommandBarCode")
 
-	local success, err = Engine:RunInVM(if CurrentStage == "ProjectEditing" then GameEditingVM else GameVM, CommandBarCommand, "=CommandBar")
+	local success, err = Engine:RunInVM(if CurrentStage == "ProjectEditing" then GameEditingVM else GameVM, CommandBarCommand, "@@projres/scripts/!CommandBar")
 
 	if not success and err ~= "yield" then
 		Logging:Write(err or "unknown error", Enum.LogType.Error, "SourceChunkName:=CommandBar")
@@ -1557,7 +1557,7 @@ local function renderViewport(DeltaTime: number)
 		selmap[sel.ObjectId] = sel
 
 		if not PrevSelections[sel.ObjectId] then
-			local new: GameObject & Mesh & Transform = SelectionPart:Duplicate() :: any
+			local new = SelectionPart:Duplicate()
 			new.Transform, new.Size = sel.Transform, sel.Size + vector.create(0.1, 0.1, 0.1)
 			new.Tint = Color.new(84/255, 150/255, 1)
 			new.Parent = workspace
@@ -2217,7 +2217,7 @@ function Stages.ProjectPlaying_Enter(DeltaTime: any)
 	restoreState = Project.DataModel
 
 	assert(Project.DataModel)
-	Project.DataModel = Project.DataModel:Duplicate() :: any
+	Project.DataModel = Project.DataModel:Duplicate()
 
 	Engine:SetExplorerRoot(Project.DataModel)
 	Engine:SetExplorerSelections({})

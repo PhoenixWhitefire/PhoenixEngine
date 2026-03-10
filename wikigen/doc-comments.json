@@ -202,8 +202,7 @@
           "Close": "Closes the application with the specified exit code integer or 0",
           "GetService": {
             "Description": "Gets the Object representing the specified Service. If it does not exist yet in the Data Model, it is created",
-            "ParameterNames": "Service",
-            "Type": "('Engine' | 'PlayerInput' | 'AssetManager' | 'History' | 'Physics' | 'Renderer' | 'Collections' | 'Network' | 'Logging') : GameObject"
+            "Type": "<T>(self, Service: keyof<Services> & T) : index<Services, T>"
           }
         },
         "Properties": {
@@ -388,14 +387,14 @@
           },
           "GetActionData": {
             "Description": "Retrives information about a previously-recorded Action by its Index (Indexes, separate from IDs, are in the range 0 <= Index < `ActionHistorySize`)",
-            "Out": "{ Name: string, Events: { { Target: GameObject, Property: string, NewValue: unknown, PreviousValue: unknown } } }",
+            "Out": "HistoryEvent",
             "ParameterNames": "Index"
           },
           "GetCannotRedoReason": "Returns a message explaining why `.CanRedo` is `false`",
           "GetCannotUndoReason": "Returns a message explaining why `.CanUndo` is `false`",
           "GetCurrentActionData": {
             "Description": "Retrieves information about the current Action being recorded",
-            "Out": "{ Name: string, Events: { { Target: GameObject, Property: string, NewValue: unknown, PreviousValue: unknown } } }?"
+            "Out": "HistoryEvent?"
           },
           "Redo": "Forwards the state of the scene to how it was before the last Undo. If `.CanRedo` is `false`, will throw an error",
           "TryBeginAction": {

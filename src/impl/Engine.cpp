@@ -421,7 +421,7 @@ static void traverseHierarchy(
 		EcTransform* ct = object->FindComponent<EcTransform>();
 		EcRigidBody* rb = ct ? object->FindComponent<EcRigidBody>() : nullptr;
 
-		if (rb)
+		if (rb && ct)
 		{
 			if (rb->PhysicsDynamics)
 				PhysicsWorld.Dynamics.emplace_back(object);
@@ -443,7 +443,7 @@ static void traverseHierarchy(
 				);
 		}
 
-		if (object3D)
+		if (object3D && ct)
 		{
 			if (object3D->Transparency > .95f || Engine::Get()->IsHeadlessMode)
 				continue;

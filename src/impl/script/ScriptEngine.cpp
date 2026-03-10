@@ -1306,7 +1306,7 @@ static void initRequireConfig(luarequire_Configuration* config)
 		{
 			// chunkname is prefixed with @
 			assert(chname[0] == '@');
-			((std::filesystem::path*)ctx)->assign(chname + 1);
+			((std::filesystem::path*)ctx)->assign(FileRW::MakePathCwdRelative(chname + 1));
 			return NAVIGATE_SUCCESS;
 		};
 	config->jump_to_alias = [](lua_State*, void*, const char*)

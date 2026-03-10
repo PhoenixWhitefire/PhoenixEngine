@@ -14,7 +14,7 @@ static Reflection::GenericValue dumpActionData(const History::Action& action)
     std::vector<Reflection::GenericValue> eventsVec;
     eventsVec.reserve(action.Events.size());
 
-    for (const History::PropertyEvent& event : action.Events)
+    for (const History::Event& event : action.Events)
     {
         std::vector<Reflection::GenericValue> eventData;
         eventData.reserve(4);
@@ -22,14 +22,32 @@ static Reflection::GenericValue dumpActionData(const History::Action& action)
         eventData.emplace_back("Target");
         eventData.emplace_back(event.TargetObject->ToGenericValue());
 
-        eventData.emplace_back("Property");
-        eventData.emplace_back(event.Property->Name);
+        if (event.Property.has_value())
+        {
+            eventData.emplace_back("Property");
+            eventData.emplace_back(event.Property->Name);
 
-        eventData.emplace_back("NewValue");
-        eventData.push_back(event.NewValue);
+            eventData.emplace_back("NewValue");
+            eventData.push_back(event.NewValue);
 
-        eventData.emplace_back("PreviousValue");
-        eventData.push_back(event.PreviousValue);
+            eventData.emplace_back("PreviousValue");
+            eventData.push_back(event.PreviousValue);
+        }
+        else
+        {
+            if (event.PreviousValue.IsNull())
+            {
+                assert(event.PreviousValue.IsNull());
+                eventData.emplace_back("AddedComponent");
+                eventData.push_back(s_EntityComponentNames[event.NewValue.AsInteger()]);
+            }
+            else
+            {
+                assert(event.NewValue.IsNull());
+                eventData.emplace_back("RemovedComponent");
+                eventData.push_back(s_EntityComponentNames[event.PreviousValue.AsInteger()]);
+            }
+        }
 
         Reflection::GenericValue eventValue = { eventData };
         eventValue.Type = Reflection::ValueType::Map;

@@ -1,5 +1,5 @@
 -- modules/character-controller.luau, 23/09/2024
-local PlayerInput: PlayerInput = game:GetService("PlayerInput") :: any
+local PlayerInput = game:GetService("PlayerInput")
 
 local Controller = {}
 Controller.__index = Controller

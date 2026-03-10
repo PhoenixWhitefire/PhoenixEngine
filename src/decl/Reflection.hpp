@@ -165,7 +165,9 @@ namespace Reflection
 		void Reset();
 
 		std::string ToString() const;
-		
+
+		bool IsNull() const;
+
 		// Throws errors if the type does not match
 		std::string AsString() const;
 		std::string_view AsStringView() const;

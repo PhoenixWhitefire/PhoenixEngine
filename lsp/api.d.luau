@@ -67,6 +67,41 @@ type function IntersectComponents(ty: type)
 end
 
 declare function ______leakgenericshack<T>(_: T): T
+
+export type HistoryEvent = {
+	Name: string,
+	Events: {
+		{
+			Target: GameObject
+		}
+		& ({
+			Property: nil,
+			AddedComponent: string
+		}
+		| {
+			Property: nil,
+			RemovedComponent: string
+		}
+		| {
+			Property: string,
+			NewValue: unknown,
+			PreviousValue: unknown
+		})
+	}
+}
+
+type Services = {
+Engine: Engine,
+PlayerInput: PlayerInput,
+AssetManager: AssetManager,
+History: History,
+Physics: Physics,
+Renderer: Renderer,
+Collections: Collections,
+Network: Network,
+Logging: Logging,
+}
+
 declare extern type Color with
   B: number
   G: number
@@ -194,7 +229,7 @@ export type DataModel = {
   VM: string,
 
   BindToClose: (self: DataModel, Callback: () -> ()) -> (),
-  GetService: (self: DataModel, Service: 'Engine' | 'PlayerInput' | 'AssetManager' | 'History' | 'Physics' | 'Renderer' | 'Collections' | 'Network' | 'Logging') -> GameObject,
+  GetService: <T>(self: DataModel, Service: keyof<Services> & T) -> index<Services, T>,
 
   OnFrameBegin: EventSignal<(number)>,
 }
@@ -254,10 +289,10 @@ export type History = {
   DiscardAction: (self: History, Id: number) -> (),
   EnableRecording: (self: History) -> (),
   FinishAction: (self: History, Id: number) -> (),
-  GetActionData: (self: History, Index: number) -> { Name: string, Events: { { Target: GameObject, Property: string, NewValue: unknown, PreviousValue: unknown } } },
+  GetActionData: (self: History, Index: number) -> HistoryEvent,
   GetCannotRedoReason: (self: History) -> (string),
   GetCannotUndoReason: (self: History) -> (string),
-  GetCurrentActionData: (self: History) -> { Name: string, Events: { { Target: GameObject, Property: string, NewValue: unknown, PreviousValue: unknown } } }?,
+  GetCurrentActionData: (self: History) -> HistoryEvent?,
   Redo: (self: History) -> (),
   TryBeginAction: (self: History, Name: string) -> (number?),
   Undo: (self: History) -> (),

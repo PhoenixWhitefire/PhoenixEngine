@@ -9,14 +9,14 @@ History* History::Get()
     return &instance;
 }
 
-void History::RecordEvent(const PropertyEvent& Event)
+void History::RecordEvent(const Event& Event)
 {
     if (!m_CurrentAction.has_value())
         return;
 
     if (m_CurrentAction->Events.size() > 0)
     {
-        PropertyEvent& back = m_CurrentAction->Events.back();
+        Event& back = m_CurrentAction->Events.back();
         if (back.Target == Event.Target && back.Property == Event.Property)
         {
             back.NewValue = Event.NewValue;
@@ -53,7 +53,7 @@ std::optional<size_t> History::TryBeginAction(const std::string& Name)
     static size_t ActionIdCounter = 0;
     ActionIdCounter++; // Should never be 0, we use 0 to indicate that we couldn't start an action
 
-    m_CurrentAction.emplace(Name, std::vector<PropertyEvent>(), ActionIdCounter);
+    m_CurrentAction.emplace(Name, std::vector<Event>(), ActionIdCounter);
     return ActionIdCounter;
 }
 
@@ -152,7 +152,7 @@ void History::Undo()
 
     for (int64_t i = (size_t)lastAction.Events.size() - 1; i >= 0; i--)
     {
-        const PropertyEvent& event = lastAction.Events[i];
+        const Event& event = lastAction.Events[i];
 
         void* p = event.Target.Referred();
         if (!p)
@@ -190,7 +190,7 @@ void History::Redo()
 
     for (size_t i = 0; i < nextAction.Events.size(); i++)
     {
-        const PropertyEvent& event = nextAction.Events[i];
+        const Event& event = nextAction.Events[i];
 
         void* p = event.Target.Referred();
         if (!p)

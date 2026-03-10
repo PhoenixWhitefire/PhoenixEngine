@@ -1,4 +1,4 @@
-local Network: Network = game:GetService("Network") :: any
+local Network = game:GetService("Network")
 local Types = require("@ci/test-types.luau")
 
 return function(test: Types.Test, expect: Types.Expect)
@@ -7,7 +7,6 @@ return function(test: Types.Test, expect: Types.Expect)
 
         if not response.Ok then
             warn(response.Body)
-            warn(response.Error)
         end
 
         expect(response.Ok):toBe(true)

@@ -406,6 +406,11 @@ std::string Reflection::GenericValue::ToString() const
 	}
 }
 
+bool Reflection::GenericValue::IsNull() const
+{
+	return Type == Reflection::ValueType::Null;
+}
+
 // `::AsInteger` and `::AsDouble` have special errors
 #define WRONG_TYPE() RAISE_RTF("Called `{}` but GenericValue was '{}' ({})", __FUNCTION__, ToString(), TypeAsString(Type))
 

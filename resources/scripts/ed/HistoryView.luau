@@ -1,5 +1,5 @@
 -- HistoryView.luau, 17/12/2025
-local History: History = game:GetService("History") :: any
+local History = game:GetService("History")
 
 local Viewer = {}
 Viewer.Open = false

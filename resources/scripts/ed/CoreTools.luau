@@ -1,6 +1,6 @@
-local PlayerInput: PlayerInput = game:GetService("PlayerInput") :: any
-local HistoryService: History = game:GetService("History") :: any
-local Engine: Engine = game:GetService("Engine") :: any
+local PlayerInput = game:GetService("PlayerInput")
+local History = game:GetService("History")
+local Engine = game:GetService("Engine")
 
 local CoreTools = {}
 CoreTools.EditorCanUseMouse = true
@@ -217,7 +217,7 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
 
             if PrevDragMousePos ~= cpos then
                 if not BeganSurfaceDragAction then
-                    BeganSurfaceDragAction = HistoryService:TryBeginAction("SurfaceDrag")
+                    BeganSurfaceDragAction = History:TryBeginAction("SurfaceDrag")
                 end
 
                 target.Transform = Matrix.fromTranslation(worldHit.Position + worldHit.Normal * target.Size / 2)
@@ -229,7 +229,7 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
         IsSurfaceDragging = false
 
         if BeganSurfaceDragAction then
-            HistoryService:FinishAction(BeganSurfaceDragAction)
+            History:FinishAction(BeganSurfaceDragAction)
             BeganSurfaceDragAction = nil
         end
     end
@@ -296,7 +296,7 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
         end
 
         if BeganGizmoDragAction then
-            HistoryService:FinishAction(BeganGizmoDragAction)
+            History:FinishAction(BeganGizmoDragAction)
             BeganGizmoDragAction = nil
         end
     end
@@ -315,7 +315,7 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
         local move = GizmoDragAxis * amount
 
         if vector.magnitude(move) > 0 and not BeganGizmoDragAction then
-            BeganGizmoDragAction = HistoryService:TryBeginAction("GizmoDrag")
+            BeganGizmoDragAction = History:TryBeginAction("GizmoDrag")
         end
 
         if GizmoMode == 1 then

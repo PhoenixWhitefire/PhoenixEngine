@@ -42,7 +42,7 @@ public:
                         vertex["UV"] = vert.TextureUV;
                         
                         std::vector<Reflection::GenericValue> paint;
-                        paint.reserve(4);
+                        paint.resize(4);
                         paint[0] = vert.Paint.x;
                         paint[1] = vert.Paint.y;
                         paint[2] = vert.Paint.z;

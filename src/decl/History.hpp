@@ -13,16 +13,20 @@ class History
 public:
     static History* Get();
 
-    struct PropertyEvent
+    struct Event
     {
         ReflectorRef Target;
         ObjectRef TargetObject;
-        const Reflection::PropertyDescriptor* Property = nullptr;
+
+        // If `Property` is not set, this is a Component add/remove event
+        // When added, `NewValue` will be the integer ID of the component, `PreviousValue` will be null
+        // When remove, `PreviousValue` will be the integer ID of the component, `NewValue` will be null
+        std::optional<const Reflection::PropertyDescriptor&> Property = nullptr;
         Reflection::GenericValue PreviousValue;
         Reflection::GenericValue NewValue;
     };
 
-    void RecordEvent(const PropertyEvent&);
+    void RecordEvent(const Event&);
     void ClearHistory();
 
     std::optional<size_t> TryBeginAction(const std::string&);
@@ -43,7 +47,7 @@ public:
     struct Action
     {
         std::string Name;
-        std::vector<PropertyEvent> Events;
+        std::vector<Event> Events;
         size_t Id = 0;
     };
 

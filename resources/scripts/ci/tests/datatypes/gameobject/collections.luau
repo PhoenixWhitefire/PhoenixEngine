@@ -1,4 +1,4 @@
-local Collections: Collections = game:GetService("Collections") :: any
+local Collections = game:GetService("Collections")
 local Types = require("@ci/test-types.luau")
 
 return function(test: Types.Test, expect: Types.Expect)
