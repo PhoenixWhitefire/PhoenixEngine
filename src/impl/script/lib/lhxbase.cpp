@@ -36,7 +36,8 @@ static void appendToLog(lua_State* L)
 
 		try
 		{
-			value = ScriptEngine::L::ToGeneric(L, i);
+			if (lua_istable(L, i) && luaL_getmetafield(L, i, "__tostring") == LUA_TNIL)
+				value = ScriptEngine::L::ToGeneric(L, i);
 		}
 		catch (const std::exception& e)
 		{

@@ -440,6 +440,7 @@ public:
                             err = lua_tostring(ML, -1); // metatable check in `luaL_tolstring` can trigger an assertion `lua_getmetatable` `api_incr_top`
                             if (!err)
                                 err = "unknown error";
+                            Log.Error(err);
                         }
 
                         const char* const ResultToMessage[] = {

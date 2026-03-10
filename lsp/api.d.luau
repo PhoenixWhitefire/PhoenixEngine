@@ -94,15 +94,15 @@ export type HistoryAction = {
 }
 
 type Services = {
-Engine: Engine,
-PlayerInput: PlayerInput,
-AssetManager: AssetManager,
-History: History,
-Physics: Physics,
-Renderer: Renderer,
-Collections: Collections,
-Network: Network,
-Logging: Logging,
+  Engine: Engine,
+  PlayerInput: PlayerInput,
+  AssetManager: AssetManager,
+  History: History,
+  Physics: Physics,
+  Renderer: Renderer,
+  Collections: Collections,
+  Network: Network,
+  Logging: Logging,
 }
 
 declare extern type Color with

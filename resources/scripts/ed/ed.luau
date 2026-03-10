@@ -1499,12 +1499,7 @@ PlayerInput.KeyEvent:Connect(function(kie: KeyInputEvent)
 	end
 
 	local commandBarAction = History:TryBeginAction("CommandBarCode")
-
-	local success, err = Engine:RunInVM(if CurrentStage == "ProjectEditing" then GameEditingVM else GameVM, CommandBarCommand, "@@projres/scripts/!CommandBar")
-
-	if not success and err ~= "yield" then
-		Logging:Write(err or "unknown error", Enum.LogType.Error, "SourceChunkName:=CommandBar")
-	end
+	Engine:RunInVM(if CurrentStage == "ProjectEditing" then GameEditingVM else GameVM, CommandBarCommand, "@@projres/scripts/!CommandBar")
 
 	if commandBarAction then
 		History:FinishAction(commandBarAction)
@@ -1586,6 +1581,7 @@ local function renderViewport(DeltaTime: number)
 
 		imgui.setnextwindowposition(0, w.y - 35)
 		imgui.setnextwindowsize(w.x, 35)
+
 		imgui.begin("Bottom Bar", "nt | nd | nr | ns")
 
 		imgui.setcursorposition(imgui.cursorposition() + vector.create(0, 2))

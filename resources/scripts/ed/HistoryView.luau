@@ -4,16 +4,11 @@ local History = game:GetService("History")
 local Viewer = {}
 Viewer.Open = false
 
-type Action = {
-    Name: string,
-    Events: { HistoryEvent }
-}
-
 local ActionDataCache = {}
 local ActionDataCacheWaypoint = 0
 local ContextMenuTargetId = 0
 
-local function renderAction(action: Action, id)
+local function renderAction(action: HistoryAction, id)
     local openContextMenu = false
 
     local open = imgui.treenode(`{action.Name}##{id}`)

@@ -151,7 +151,7 @@ export type HistoryAction = {
 definitionsFile ..= "\ntype Services = {\n"
 
 for _, s in { "Engine", "PlayerInput", "AssetManager", "History", "Physics", "Renderer", "Collections", "Network", "Logging" } do
-	definitionsFile ..= `{s}: {s},\n`
+	definitionsFile ..= `  {s}: {s},\n`
 end
 
 definitionsFile ..= "}\n\n"
