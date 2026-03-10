@@ -16,7 +16,7 @@ void History::RecordEvent(const Event& Event)
 
     if (m_CurrentAction->Events.size() > 0)
     {
-        Event& back = m_CurrentAction->Events.back();
+        History::Event& back = m_CurrentAction->Events.back();
         if (back.Target == Event.Target && back.Property == Event.Property)
         {
             back.NewValue = Event.NewValue;
@@ -32,7 +32,7 @@ void History::RecordEvent(const Event& Event)
 void History::ClearHistory()
 {
     // We need to do this so that there's a waypoint to go *back* to when we Undo
-    m_ActionHistory = { { "<Initial Action>", {} } };
+    m_ActionHistory = { Action{ .Name = "<Initial Action>" } };
     m_CurrentWaypoint = 0;
 
     if (m_CurrentAction.has_value())
@@ -148,7 +148,6 @@ void History::Undo()
         m_CurrentWaypoint = m_ActionHistory.size() - 1; // TODO not sure why this happens
 
     const Action& lastAction = m_ActionHistory[m_CurrentWaypoint];
-    Logging::ScopedContext sc = Logging::Context{ .ContextExtraTags = "HistoryUndo" };
 
     for (int64_t i = (size_t)lastAction.Events.size() - 1; i >= 0; i--)
     {
@@ -166,7 +165,30 @@ void History::Undo()
 
         try
         {
-            event.Property->Set(p, event.PreviousValue);
+            if (event.Property.has_value())
+            {
+                // event.Property.value()->Set(p, event.PreviousValue);
+                event.TargetObject->SetPropertyValue(event.Property.value()->Name, event.PreviousValue);
+            }
+            else
+            {
+                if (event.PreviousValue.IsNull())
+                {
+                    assert(!event.NewValue.IsNull());
+                    if (event.IsTag)
+                        event.TargetObject->RemoveTag(event.NewValue.AsString());
+                    else
+                        event.TargetObject->RemoveComponent((EntityComponent)event.NewValue.AsInteger());
+                }
+                else
+                {
+                    assert(!event.PreviousValue.IsNull());
+                    if (event.IsTag)
+                        event.TargetObject->AddTag(event.PreviousValue.AsString());
+                    else
+                        event.TargetObject->AddComponent((EntityComponent)event.PreviousValue.AsInteger());
+                }
+            }
         }
         catch (const std::runtime_error& e)
         {
@@ -186,7 +208,6 @@ void History::Redo()
         RAISE_RT(GetCannotRedoReason());
 
     const Action& nextAction = m_ActionHistory[m_CurrentWaypoint + 1];
-    Logging::ScopedContext sc = Logging::Context{ .ContextExtraTags = "HistoryRedo" };
 
     for (size_t i = 0; i < nextAction.Events.size(); i++)
     {
@@ -204,7 +225,30 @@ void History::Redo()
 
         try
         {
-            event.Property->Set(p, event.NewValue);
+            if (event.Property.has_value())
+            {
+                //event.Property.value()->Set(p, event.NewValue);
+                event.TargetObject->SetPropertyValue(event.Property.value()->Name, event.NewValue);
+            }
+            else
+            {
+                if (event.PreviousValue.IsNull())
+                {
+                    assert(!event.NewValue.IsNull());
+                    if (event.IsTag)
+                        event.TargetObject->AddTag(event.NewValue.AsString());
+                    else
+                        event.TargetObject->AddComponent((EntityComponent)event.NewValue.AsInteger());
+                }
+                else
+                {
+                    assert(!event.PreviousValue.IsNull());
+                    if (event.IsTag)
+                        event.TargetObject->RemoveTag(event.PreviousValue.AsString());
+                    else
+                        event.TargetObject->RemoveComponent((EntityComponent)event.PreviousValue.AsInteger());
+                }
+            }
         }
         catch (const std::runtime_error& e)
         {

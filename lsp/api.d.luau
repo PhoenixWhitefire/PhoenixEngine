@@ -69,25 +69,28 @@ end
 declare function ______leakgenericshack<T>(_: T): T
 
 export type HistoryEvent = {
+	Type: "Component",
+	Action: "Add" | "Remove",
+	Target: GameObject,
+	Component: string,
+}
+| {
+	Type: "Tag",
+	Action: "Add" | "Remove",
+	Target: GameObject,
+	Tag: string,
+}
+| {
+	Type: "PropertyChanged",
+	Target: GameObject,
+	Property: string,
+	NewValue: unknown,
+	PreviousValue: unknown
+}
+
+export type HistoryAction = {
 	Name: string,
-	Events: {
-		{
-			Target: GameObject
-		}
-		& ({
-			Property: nil,
-			AddedComponent: string
-		}
-		| {
-			Property: nil,
-			RemovedComponent: string
-		}
-		| {
-			Property: string,
-			NewValue: unknown,
-			PreviousValue: unknown
-		})
-	}
+	Events: { HistoryEvent }
 }
 
 type Services = {
@@ -289,10 +292,10 @@ export type History = {
   DiscardAction: (self: History, Id: number) -> (),
   EnableRecording: (self: History) -> (),
   FinishAction: (self: History, Id: number) -> (),
-  GetActionData: (self: History, Index: number) -> HistoryEvent,
+  GetActionData: (self: History, Index: number) -> HistoryAction,
   GetCannotRedoReason: (self: History) -> (string),
   GetCannotUndoReason: (self: History) -> (string),
-  GetCurrentActionData: (self: History) -> HistoryEvent?,
+  GetCurrentActionData: (self: History) -> HistoryAction?,
   Redo: (self: History) -> (),
   TryBeginAction: (self: History, Name: string) -> (number?),
   Undo: (self: History) -> (),

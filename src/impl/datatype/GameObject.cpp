@@ -873,6 +873,18 @@ uint32_t GameObject::AddComponent(EntityComponent Type)
 		MemberToComponentMap[it.first] = Components.back();
 	}
 
+	if (History* history = History::Get(); history->IsRecordingEnabled)
+	{
+		if (OwningDataModel == history->TargetDataModel)
+			history->RecordEvent({
+				.Target = { .Id = ObjectId },
+				.TargetObject = this,
+				.Property = std::nullopt,
+				.PreviousValue = Reflection::GenericValue::Null(),
+				.NewValue = (int64_t)Type
+			});
+	}
+
 	return componentId;
 }
 
@@ -884,6 +896,33 @@ void GameObject::RemoveComponent(EntityComponent Type)
 		if (it->Type == Type)
 		{
 			IComponentManager* manager = GameObject::s_ComponentManagers[(size_t)Type];
+
+			if (History* history = History::Get(); history->IsRecordingEnabled && OwningDataModel == history->TargetDataModel)
+			{
+				for (const auto& [ name, prop ] : manager->GetProperties())
+				{
+					Reflection::GenericValue val = GetPropertyValue(name);
+
+					// We need to keep track of all of the properties to restore
+					// when Undo'ing
+					history->RecordEvent({
+						.Target = { .Id = ObjectId },
+						.TargetObject = this,
+						.Property = &prop,
+						.PreviousValue = val,
+						.NewValue = val
+					});
+				}
+
+				history->RecordEvent({
+					.Target = { .Id = ObjectId },
+					.TargetObject = this,
+					.Property = std::nullopt,
+					.PreviousValue = (int64_t)Type,
+					.NewValue = Reflection::GenericValue::Null()
+				});
+			}
+
 			manager->DeleteComponent(it->Id);
 
 			for (const auto& it2 : manager->GetProperties())
@@ -903,7 +942,6 @@ void GameObject::RemoveComponent(EntityComponent Type)
 			}
 
 			Components.erase(it);
-
 			return;
 		}
 	
@@ -1203,6 +1241,19 @@ void GameObject::AddTag(const std::string& Tag)
 
 		REFLECTION_SIGNAL_EVENT(collection.AddedEvent.Callbacks, this->ToGenericValue());
 		REFLECTION_SIGNAL_EVENT(OnTagAddedCallbacks, Tag);
+
+		if (History* history = History::Get(); history->IsRecordingEnabled)
+		{
+			if (OwningDataModel == history->TargetDataModel)
+				history->RecordEvent({
+					.Target = { .Id = ObjectId },
+					.TargetObject = this,
+					.Property = std::nullopt,
+					.PreviousValue = Reflection::GenericValue::Null(),
+					.NewValue = Tag,
+					.IsTag = true
+				});
+		}
 	}
 }
 
@@ -1222,6 +1273,19 @@ void GameObject::RemoveTag(const std::string& Tag)
 		collection.Items.erase(std::find(collection.Items.begin(), collection.Items.end(), ObjectId));
 		REFLECTION_SIGNAL_EVENT(collection.RemovedEvent.Callbacks, this->ToGenericValue());
 		REFLECTION_SIGNAL_EVENT(OnTagRemovedCallbacks, Tag);
+
+		if (History* history = History::Get(); history->IsRecordingEnabled)
+		{
+			if (OwningDataModel == history->TargetDataModel)
+				history->RecordEvent({
+					.Target = { .Id = ObjectId },
+					.TargetObject = this,
+					.Property = std::nullopt,
+					.PreviousValue = Tag,
+					.NewValue = Reflection::GenericValue::Null(),
+					.IsTag = true
+				});
+		}
 	}
 }
 

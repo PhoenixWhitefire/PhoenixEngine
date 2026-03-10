@@ -123,25 +123,28 @@ end
 declare function ______leakgenericshack<T>(_: T): T
 
 export type HistoryEvent = {
+	Type: "Component",
+	Action: "Add" | "Remove",
+	Target: GameObject,
+	Component: string,
+}
+| {
+	Type: "Tag",
+	Action: "Add" | "Remove",
+	Target: GameObject,
+	Tag: string,
+}
+| {
+	Type: "PropertyChanged",
+	Target: GameObject,
+	Property: string,
+	NewValue: unknown,
+	PreviousValue: unknown
+}
+
+export type HistoryAction = {
 	Name: string,
-	Events: {
-		{
-			Target: GameObject
-		}
-		& ({
-			Property: nil,
-			AddedComponent: string
-		}
-		| {
-			Property: nil,
-			RemovedComponent: string
-		}
-		| {
-			Property: string,
-			NewValue: unknown,
-			PreviousValue: unknown
-		})
-	}
+	Events: { HistoryEvent }
 }
 ]]
 

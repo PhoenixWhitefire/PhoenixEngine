@@ -6,14 +6,7 @@ Viewer.Open = false
 
 type Action = {
     Name: string,
-    Events: {
-        {
-            Target: GameObject,
-            Property: string,
-            NewValue: unknown,
-            PreviousValue: unknown
-        }
-    }
+    Events: { HistoryEvent }
 }
 
 local ActionDataCache = {}
@@ -32,7 +25,16 @@ local function renderAction(action: Action, id)
 
     if open then
         for i, e in action.Events do
-            imgui.text(`#{i}: Change {e.Target}.{e.Property} from {e.PreviousValue} to {e.NewValue}`)
+            local str
+
+            if e.Type == "PropertyChanged" then
+                str = `#{i}: Change {e.Target}.{e.Property} from {e.PreviousValue} to {e.NewValue}`
+            else
+                str = `#{i}: { e.Action } { if e.Type == "Component" then e.Component else e.Tag } { e.Type:lower() } { if e.Action == "Add" then "to" else "from" } { e.Target }`
+            end
+
+            assert(str)
+            imgui.text(str)
         end
 
         imgui.treepop()

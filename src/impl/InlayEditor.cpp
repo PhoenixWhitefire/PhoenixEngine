@@ -3000,6 +3000,8 @@ static void renderProperties()
 			{
 				if (ImGui::MenuItem(comp.data()))
 				{
+					History::ScopedAction action = { "AddComponent" };
+
 					EntityComponent ec = FindComponentTypeByName(comp);
 					assert(ec != EntityComponent::None);
 
@@ -3034,6 +3036,8 @@ static void renderProperties()
 
 			if (ImGui::MenuItem("Remove"))
 			{
+				History::ScopedAction action = { "RemoveComponent" };
+
 				for (const ObjectHandle& obj : Selections)
 					if (obj->FindComponentByType(RemoveComponentPopupTarget))
 						obj->RemoveComponent(RemoveComponentPopupTarget);
@@ -3488,6 +3492,8 @@ static void renderProperties()
 
 			if (ImGui::Button("X", ImVec2(16.f, 16.f)))
 			{
+				History::ScopedAction action = { "RemoveTag" };
+
 				for (const ObjectHandle& sel : Selections)
 					sel->RemoveTag(std::string(tag));
 			}
@@ -3508,6 +3514,8 @@ static void renderProperties()
 
 			if (ImGui::IsItemDeactivatedAfterEdit() && strlen(EntryBuffer) > 0)
 			{
+				History::ScopedAction action = { "AddEnteredTag" };
+
 				for (const ObjectHandle& sel : Selections)
 					sel->AddTag(std::string(EntryBuffer));
 
@@ -3525,6 +3533,8 @@ static void renderProperties()
 			{
 				if (ImGui::MenuItem(name.data()))
 				{
+					History::ScopedAction action = { "AddEnteredTagFromList" };
+
 					for (const ObjectHandle& sel : Selections)
 						sel->AddTag(std::string(name));
 

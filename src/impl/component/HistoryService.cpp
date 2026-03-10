@@ -22,10 +22,14 @@ static Reflection::GenericValue dumpActionData(const History::Action& action)
         eventData.emplace_back("Target");
         eventData.emplace_back(event.TargetObject->ToGenericValue());
 
+        eventData.emplace_back("Type");
+
         if (event.Property.has_value())
         {
+            eventData.emplace_back("PropertyChanged");
+
             eventData.emplace_back("Property");
-            eventData.emplace_back(event.Property->Name);
+            eventData.emplace_back(event.Property.value()->Name);
 
             eventData.emplace_back("NewValue");
             eventData.push_back(event.NewValue);
@@ -38,14 +42,30 @@ static Reflection::GenericValue dumpActionData(const History::Action& action)
             if (event.PreviousValue.IsNull())
             {
                 assert(event.PreviousValue.IsNull());
-                eventData.emplace_back("AddedComponent");
-                eventData.push_back(s_EntityComponentNames[event.NewValue.AsInteger()]);
+                eventData.emplace_back(event.IsTag ? "Tag" : "Component");
+
+                eventData.emplace_back("Action");
+                eventData.emplace_back("Add");
+
+                eventData.emplace_back(event.IsTag ? "Tag" : "Component");
+                if (event.IsTag)
+                    eventData.push_back(event.NewValue.AsString());
+                else
+                    eventData.push_back(s_EntityComponentNames[event.NewValue.AsInteger()]);
             }
             else
             {
                 assert(event.NewValue.IsNull());
-                eventData.emplace_back("RemovedComponent");
-                eventData.push_back(s_EntityComponentNames[event.PreviousValue.AsInteger()]);
+                eventData.emplace_back(event.IsTag ? "Tag" : "Component");
+
+                eventData.emplace_back("Action");
+                eventData.emplace_back("Remove");
+
+                eventData.emplace_back(event.IsTag ? "Tag" : "Component");
+                if (event.IsTag)
+                    eventData.push_back(event.PreviousValue.AsString());
+                else
+                    eventData.push_back(s_EntityComponentNames[event.PreviousValue.AsInteger()]);
             }
         }
 

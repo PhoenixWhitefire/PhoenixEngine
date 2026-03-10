@@ -21,9 +21,11 @@ public:
         // If `Property` is not set, this is a Component add/remove event
         // When added, `NewValue` will be the integer ID of the component, `PreviousValue` will be null
         // When remove, `PreviousValue` will be the integer ID of the component, `NewValue` will be null
-        std::optional<const Reflection::PropertyDescriptor&> Property = nullptr;
+        // If `IsTag` is `true`, they will instead be names of a tag
+        std::optional<const Reflection::PropertyDescriptor*> Property;
         Reflection::GenericValue PreviousValue;
         Reflection::GenericValue NewValue;
+        bool IsTag = false;
     };
 
     void RecordEvent(const Event&);
