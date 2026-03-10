@@ -292,7 +292,7 @@ void MaterialManager::SaveToPath(const RenderMaterial& material, const std::stri
 
 	std::string filePath = "materials/" + namedyn + ".mtl";
 
-	std::string fileContents = "PHNXENGI\n#Asset Material\n#Date " + dateStr + "\n\n" + newMtlConfig.dump(2);
+	std::string fileContents = "PHOENIXF\n#Asset Material\n#Date " + dateStr + "\n\n" + newMtlConfig.dump(2);
 
 	PHX_CHECK(FileRW::WriteFile(
 		filePath,

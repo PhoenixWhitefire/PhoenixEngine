@@ -826,8 +826,34 @@ local HoveringOverMenuBar = false
 local HoveringOverRibbonTab = false
 local RibbonPopupDistance = 18
 
+local function findEnginePath(): string?
+	local commandPath = Engine:GetCliArguments()[1]
+
+	if fs.isfile("./" .. commandPath) then
+		return "./" .. commandPath
+	end
+
+	if fs.isfile(commandPath) then
+		return commandPath
+	end
+
+	local choice = Engine:ShowMessageBox("Export", "The Engine executable could not be detected automatically. Please select the Engine executable file.", "okcancel", "warning", 1)
+	if choice == 0 then
+		return nil
+	else
+		return fs.promptopen()[1]
+	end
+end
+
 local function exportProject()
 	saveProject()
+
+	local enginePath = findEnginePath()
+
+	if not enginePath then
+		print("Export cancelled")
+		return
+	end
 
 	imgui.openpopup("Export Project")
 	local exportName = Project.Name
@@ -924,10 +950,9 @@ local function exportProject()
 	fs.mkdir(exportTo)
 	fs.copy("@proj", exportTo)
 
-	local execPath = Engine:GetCliArguments()[1]
-	fs.copy(execPath, `{exportTo}/{Project.Name}{if execPath:find(".exe") then ".exe" else ""}`)
+	fs.copy(enginePath, `{exportTo}/{Project.Name}{if enginePath:find(".exe") then ".exe" else ""}`)
 
-	if execPath:find("x64/Debug") and execPath:find(".exe") then
+	if enginePath:find("x64/Debug") and enginePath:find(".exe") then
 		Engine:ShowMessageBox(
 			"Windows Debug build",
 			"Windows Debug builds cannot be distributed without additional dependencies"

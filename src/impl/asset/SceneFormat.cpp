@@ -953,7 +953,7 @@ std::string SceneFormat::Serialize(std::vector<GameObject*> Objects, const std::
 							+ std::to_string((uint32_t)ymd.month()) + "-"
 							+ std::to_string((int32_t)ymd.year());
 	
-	std::string contents = std::string("PHNXENGI\n")
+	std::string contents = std::string("PHOENIXF\n")
 							+ "#Version 2.12\n"
 							+ "#Asset Scene\n"
 							+ "#Date " + dateStr + "\n"

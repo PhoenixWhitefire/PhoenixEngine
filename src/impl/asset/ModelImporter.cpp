@@ -758,7 +758,7 @@ void ModelLoader::m_BuildRig()
 
 std::string ModelLoader::m_SerializeAnimation(const nlohmann::json& Animation)
 {
-	std::string data = "PHNXENGI/ANIM\n";
+	std::string data = "PHOENIXF/ANIM\n";
 	writeU32(data, 0);
 
 	std::set<int32_t> nodes;

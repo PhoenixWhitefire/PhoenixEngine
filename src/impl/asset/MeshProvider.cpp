@@ -499,7 +499,7 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 	if (mesh.Indices.size() > UINT32_MAX)
 		throw(std::runtime_error("Mesh has too many indices to serialize"));
 
-	std::string contents = "PHNXENGI\n#Asset Mesh\n";
+	std::string contents = "PHOENIXF\n#Asset Mesh\n";
 
 	bool hasPerVertexColor = false;
 	bool hasPerVertexAlpha = false;
