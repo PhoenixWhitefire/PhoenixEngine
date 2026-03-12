@@ -17,6 +17,9 @@ static inline const std::unordered_map<EntityComponent, std::vector<EntityCompon
     { EntityComponent::Model,           { EntityComponent::Transform }                             },
     { EntityComponent::ParticleEmitter, { EntityComponent::Transform }                             },
     { EntityComponent::RigidBody,       { EntityComponent::Transform }                             },
+    { EntityComponent::UIFrame,         { EntityComponent::UITransform }                           },
+    { EntityComponent::UIImage,         { EntityComponent::UITransform }                           },
+    { EntityComponent::UIButton,        { EntityComponent::UITransform, EntityComponent::UIFrame } }
 };
 
 const std::span<const EntityComponent> GetCommonDependenciesForComponent(EntityComponent ec);

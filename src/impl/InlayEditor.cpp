@@ -78,7 +78,10 @@ static const std::string_view AddableComponents[] = {
 	"ParticleEmitter",
 	"RigidBody",
 	"Sound",
-	"Transform"
+	"Transform",
+	"UIFrame",
+	"UIImage",
+	"UITransform"
 };
 
 static nlohmann::json DefaultNewMaterial = {
@@ -2453,18 +2456,17 @@ static void renderExplorer()
 	{
 		ImGui::SeparatorText("Insert");
 
-		History* history = History::Get();
-		std::optional<size_t> began = history->TryBeginAction("InsertObject");
-		bool inserted = false;
+		bool insertEmpty = ImGui::MenuItem("Empty Object");
+		ImGui::SetItemTooltip("An Object with no Components");
 
-		if (ImGui::MenuItem("Empty Object"))
+		if (insertEmpty)
 		{
+			History::ScopedAction action = { "InsertEmptyObject" };
+
 			GameObject* newObject = GameObject::Create();
 			newObject->SetParent(ObjectInsertionTarget);
 			Selections = { newObject };
-			inserted = true;
 		}
-		ImGui::SetItemTooltip("An Object with no Components");
 
 		for (size_t i = 0; i < std::size(AddableComponents); i++)
 		{
@@ -2472,6 +2474,8 @@ static void renderExplorer()
 
 			if (ImGui::MenuItem(name.data()))
 			{
+				History::ScopedAction action = { "InsertObject" };
+
 				GameObject* newObject = nullptr;
 
 				newObject = GameObject::Create(name);
@@ -2484,28 +2488,32 @@ static void renderExplorer()
 			
 				ExplorerShouldSeekToCurrentSelection = true;
 				ObjectInsertionTarget.Clear();
-
-				if (began)
-					inserted = true;
 			}
-			std::string tooltip = getDescriptionAsString(
-				ObjectDocCommentsJson.value("Components", nlohmann::json::object()).value(name, nlohmann::json::object())["Description"],
-				32
-			);
-			if (tooltip.size() > 1)
-				ImGui::SetItemTooltip("%s", tooltip.c_str());
-		}
 
-		if (began)
-		{
-			if (inserted)
-				history->FinishAction(began.value());
-			else
-				history->DiscardAction(began.value());
+			if (ImGui::IsItemHovered())
+			{
+				static std::unordered_map<std::string_view, std::string> cachedDescriptions;
+
+				std::string tooltip;
+				const auto& it = cachedDescriptions.find(name);
+
+				if (it == cachedDescriptions.end())
+				{
+					tooltip = getDescriptionAsString(
+						ObjectDocCommentsJson.value("Components", nlohmann::json::object()).value(name, nlohmann::json::object())["Description"],
+						32
+					);
+					cachedDescriptions[name] = tooltip;
+				}
+				else
+					tooltip = it->second;
+
+				if (tooltip.size() > 1)
+					ImGui::SetItemTooltip("%s", tooltip.data());
+			}
 		}
 
 		InsertObjectButtonHoveredOver = nullptr;
-
 		ImGui::EndPopup();
 	}
 	else
