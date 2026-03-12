@@ -20,6 +20,7 @@
 #include "component/InputService.hpp"
 #include "component/Transform.hpp"
 #include "component/RigidBody.hpp"
+#include "component/Interface.hpp"
 #include "component/TreeLink.hpp"
 #include "component/Camera.hpp"
 #include "component/Sound.hpp"
@@ -390,7 +391,7 @@ static void traverseHierarchy(
 	hx::vector<RenderItem, MEMCAT(Rendering)>& RenderList,
 	hx::vector<LightItem, MEMCAT(Rendering)>& LightList,
 	Physics::World& PhysicsWorld,
-	const ObjectHandle& Root,
+	GameObject* Root,
 	EcCamera* SceneCamera,
 	double DeltaTime,
 	EcDirectionalLight** Sun
@@ -401,27 +402,20 @@ static void traverseHierarchy(
 	static uint32_t boxframeMaterial = MaterialManager::Get()->LoadFromPath("boxframe");
 	static uint32_t cubeMesh = MeshProvider::Get()->LoadFromPath("!Cube");
 
-	std::vector<GameObject*> objectsRaw = Root->GetChildren();
-	// TODO 05/04/2025: FIXME
-	std::vector<ObjectHandle> objects;
-	objects.reserve(objectsRaw.size());
-
-	for (GameObject* o : objectsRaw)
-		objects.emplace_back(o);
-
-	for (ObjectHandle object : objects)
+	Root->ForEachChild([&](GameObject* object) -> bool
 	{
 		if (EcSound* sound = object->FindComponent<EcSound>())
 			sound->Update(DeltaTime);
 
 		if (!object->Enabled)
-			continue;
-			
-		EcMesh* object3D = object->FindComponent<EcMesh>();
+			return true; // continue
+
 		EcTransform* ct = object->FindComponent<EcTransform>();
+		// both useless without a Transform
+		EcMesh* cm = ct ? object->FindComponent<EcMesh>() : nullptr;
 		EcRigidBody* rb = ct ? object->FindComponent<EcRigidBody>() : nullptr;
 
-		if (rb && ct)
+		if (rb)
 		{
 			if (rb->PhysicsDynamics)
 				PhysicsWorld.Dynamics.emplace_back(object);
@@ -443,24 +437,24 @@ static void traverseHierarchy(
 				);
 		}
 
-		if (object3D && ct)
+		if (cm)
 		{
-			if (object3D->Transparency > .95f || Engine::Get()->IsHeadlessMode)
-				continue;
+			if (cm->Transparency > .95f || Engine::Get()->IsHeadlessMode)
+				return true; // continue
 
 			// TODO: frustum culling
 
 			RenderList.emplace_back(
-				object3D->RenderMeshId,
+				cm->RenderMeshId,
 				ct->Transform,
 				ct->Size,
-				object3D->MaterialId,
-				object3D->Tint,
-				object3D->Transparency,
-				object3D->MetallnessFactor,
-				object3D->RoughnessFactor,
-				object3D->FaceCulling,
-				object3D->CastsShadows
+				cm->MaterialId,
+				cm->Tint,
+				cm->Transparency,
+				cm->MetallnessFactor,
+				cm->RoughnessFactor,
+				cm->FaceCulling,
+				cm->CastsShadows
 			);
 		}
 
@@ -531,7 +525,103 @@ static void traverseHierarchy(
 			emitter->Update(DeltaTime);
 			emitter->AppendToRenderList(RenderList);
 		}
-	}
+
+		return true; // continue
+	});
+}
+
+static void traverseAndRenderUIHierarchy(
+	GameObject* Root,
+	Renderer& renderer,
+	ShaderProgram& shader,
+	const MeshProvider::GpuMesh& gpuMesh,
+	const glm::vec2 Position = glm::vec3(0.f, 0.f, 0.f),
+	const glm::vec2 Size = glm::vec3(1.f, 1.f, 1.f),
+	const float Rotation = 0.f
+)
+{
+	ZoneScoped;
+
+	Root->ForEachChild([&](GameObject* child) -> bool
+	{
+		if (!child->Enabled)
+			return true;
+
+		EcTreeLink* et = child->FindComponent<EcTreeLink>();
+		if (GameObject* targetInterface = (et ? et->Target.Referred() : nullptr))
+		{
+			traverseAndRenderUIHierarchy(targetInterface, renderer, shader, gpuMesh, Position, Size, Rotation);
+
+			return true; // continue
+		}
+
+		glm::vec2 currentPosition = Position;
+		glm::vec2 currentSize = Size;
+		float currentRotation = Rotation;
+
+		EcUITransform* uit = child->FindComponent<EcUITransform>();
+
+		if (uit)
+		{
+			currentPosition += uit->Position * currentSize;
+			currentSize *= uit->Size;
+			currentRotation += uit->Rotation;
+		}
+
+		shader.SetUniform("Position", currentPosition);
+		shader.SetUniform("Size", currentSize);
+		shader.SetUniform("Rotation", currentRotation);
+
+		if (EcUIFrame* uf = child->FindComponent<EcUIFrame>())
+		{
+			shader.SetUniform("BackgroundColor", uf->BackgroundColor.ToGenericValue());
+			shader.SetUniform("BackgroundTransparency", uf->BackgroundTransparency);
+			shader.SetUniform("IsImage", false);
+			shader.Activate();
+
+			glDrawElements(GL_TRIANGLES, gpuMesh.NumIndices, GL_UNSIGNED_INT, 0);
+			renderer.AccumulatedDrawCallCount++;
+		}
+
+		if (EcUIImage* uimg = child->FindComponent<EcUIImage>())
+		{
+			TextureManager* textureManager = TextureManager::Get();
+
+			shader.SetUniform("BackgroundColor", uimg->ImageTint.ToGenericValue());
+			shader.SetUniform("BackgroundTransparency", uimg->ImageTransparency);
+			shader.SetUniform("IsImage", true);
+			shader.SetTextureUniform("Image", textureManager->LoadTextureFromPath(uimg->Image));
+			shader.Activate();
+
+			glDrawElements(GL_TRIANGLES, gpuMesh.NumIndices, GL_UNSIGNED_INT, 0);
+			renderer.AccumulatedDrawCallCount++;
+		}
+
+		traverseAndRenderUIHierarchy(child, renderer, shader, gpuMesh, currentPosition, currentSize, currentRotation);
+		return true; // continue
+	});
+}
+
+static void renderUIElements(GameObject* Root, Renderer& renderer)
+{
+	ZoneScoped;
+	glDisable(GL_CULL_FACE);
+	glDepthFunc(GL_LEQUAL);
+
+	static MeshProvider* meshProvider = MeshProvider::Get();
+	static ShaderManager* shdManager = ShaderManager::Get();
+	static uint32_t quadMeshId = meshProvider->LoadFromPath("!Quad");
+
+	const Mesh& quadMesh = meshProvider->GetMeshResource(quadMeshId);
+	const MeshProvider::GpuMesh& gpuMesh = meshProvider->GetGpuMesh(quadMesh.GpuId);
+	gpuMesh.VertexArray.Bind();
+	gpuMesh.VertexBuffer.Bind();
+	gpuMesh.ElementBuffer.Bind();
+
+	static const uint32_t shaderId = shdManager->LoadFromPath("shaders/ui");
+	ShaderProgram& shader = shdManager->GetShaderResource(shaderId);
+
+	traverseAndRenderUIHierarchy(Root, renderer, shader, gpuMesh);
 }
 
 static GLuint startLoadingSkybox(std::vector<uint32_t>* skyboxFacesBeingLoaded)
@@ -658,14 +748,10 @@ void Engine::m_Render(double deltaTime)
 	//Main render pass
 	RendererContext.DrawScene(CurrentScene, renderMatrix, sceneCamera->GetWorldTransform(), GetRunningTime(), DebugWireframeRendering);
 
-	glViewport(0, 0, WindowSizeX, WindowSizeY);
-	glDisable(GL_DEPTH_TEST);
-	
-	this->OnFrameRenderGui.Fire(deltaTime);
+	if (GameObject* interface = DataModelRef->FindChildWithComponent(EntityComponent::Interface))
+		renderUIElements(interface, RendererContext);
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-	glEnable(GL_DEPTH_TEST);
 
 	//Do framebuffer stuff after everything is drawn
 	//RendererContext.FrameBuffer.Unbind();
@@ -736,6 +822,8 @@ void Engine::m_Render(double deltaTime)
 		);
 	}
 
+	glViewport(0, 0, WindowSizeX, WindowSizeY);
+
 	{
 		ZoneScopedN("MainPostProcessing");
 		RendererContext.DrawMesh(
@@ -758,6 +846,8 @@ void Engine::m_Render(double deltaTime)
 			0
 		);
 	}
+
+	this->OnFrameRenderGui.Fire(deltaTime);
 
 	{
 		ZoneScopedN("DearImGuiRender");

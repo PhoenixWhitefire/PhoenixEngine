@@ -1707,6 +1707,37 @@
   "@phoenix/globaltype/TreeLink.Target": {
     "documentation": "The target to link"
   },
+  "@phoenix/globaltype/UIButton.OnClicked": {},
+  "@phoenix/globaltype/UIFrame.BackgroundColor": {
+    "documentation": "The color of the frame"
+  },
+  "@phoenix/globaltype/UIFrame.BackgroundTransparency": {
+    "documentation": "Its transparency"
+  },
+  "@phoenix/globaltype/UIImage.Image": {
+    "documentation": "The path to the image"
+  },
+  "@phoenix/globaltype/UIImage.ImageTint": {
+    "documentation": "The color the image is tinted with"
+  },
+  "@phoenix/globaltype/UIImage.ImageTransparency": {
+    "documentation": "Its transparency"
+  },
+  "@phoenix/globaltype/UIText.Text": {
+    "documentation": "The text string to be displayed"
+  },
+  "@phoenix/globaltype/UITransform.Position": {
+    "documentation": "The 2D position, from `0`-`1`"
+  },
+  "@phoenix/globaltype/UITransform.Rotation": {
+    "documentation": "The 2D rotation (not functional)"
+  },
+  "@phoenix/globaltype/UITransform.Size": {
+    "documentation": "The 2D scale, from `0`-`1`"
+  },
+  "@phoenix/globaltype/UITransform.ZIndex": {
+    "documentation": "The ordering indexing, higher being further in front (not functional)"
+  },
   "@phoenix/globaltype/Workspace.GetObjectsInAabb": {
     "documentation": "Get a list of Objects whose bounds are within the AABB"
   },

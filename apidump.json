@@ -162,6 +162,7 @@
           "TargetDataModel": "GameObject"
         }
       },
+      "Interface": {},
       "Logging": {
         "Events": {
           "OnMessaged": "(Integer, String, String, Any)"
@@ -296,6 +297,37 @@
       "TreeLink": {
         "Properties": {
           "Target": "GameObject?"
+        }
+      },
+      "UIButton": {
+        "Events": {
+          "OnClicked": "()"
+        }
+      },
+      "UIFrame": {
+        "Properties": {
+          "BackgroundColor": "Color",
+          "BackgroundTransparency": "Double"
+        }
+      },
+      "UIImage": {
+        "Properties": {
+          "Image": "String",
+          "ImageTint": "Color",
+          "ImageTransparency": "Double"
+        }
+      },
+      "UIText": {
+        "Properties": {
+          "Text": "String"
+        }
+      },
+      "UITransform": {
+        "Properties": {
+          "Position": "Vector2",
+          "Rotation": "Double",
+          "Size": "Vector2",
+          "ZIndex": "Integer"
         }
       },
       "Workspace": {

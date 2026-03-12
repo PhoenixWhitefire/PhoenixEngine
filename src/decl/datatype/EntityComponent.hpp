@@ -32,6 +32,12 @@ enum class EntityComponent : uint8_t
 	Collections,
 	NetworkService,
 	Logging,
+	Interface,
+	UITransform,
+	UIFrame,
+	UIImage,
+	UIText,
+	UIButton,
 
 	__count
 };
@@ -61,7 +67,13 @@ static inline const std::string_view s_EntityComponentNames[] = {
 	"Renderer",
 	"Collections",
 	"Network",
-	"Logging"
+	"Logging",
+	"Interface",
+	"UITransform",
+	"UIFrame",
+	"UIImage",
+	"UIText",
+	"UIButton",
 };
 
 static_assert(std::size(s_EntityComponentNames) == (size_t)EntityComponent::__count);
@@ -75,7 +87,8 @@ const std::string_view s_DataModelServices[] = {
 	"Renderer",
 	"Collections",
 	"Network",
-	"Logging"
+	"Logging",
+	"Interface"
 };
 
 // component type and ID

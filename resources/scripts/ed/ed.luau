@@ -1,6 +1,7 @@
 -- ed.luau, 14/09/2025
 local AssetManager = game:GetService("AssetManager")
 local PlayerInput = game:GetService("PlayerInput")
+local Interface = game:GetService("Interface")
 local Renderer = game:GetService("Renderer")
 local History = game:GetService("History")
 local Physics = game:GetService("Physics")
@@ -24,6 +25,7 @@ local StageUpdateSignal: EventConnection?
 
 local EditorCam = assert(workspace.SceneCamera)
 local EditorTl = GameObject.new("TreeLink")
+local InterfaceLink = GameObject.new("TreeLink")
 
 local Project: Types.Project = {
 	DataModel = nil,
@@ -55,6 +57,7 @@ local GameVM = "GameVM"
 
 EditorCam.UseSimpleController = true
 EditorTl.Parent = workspace
+InterfaceLink.Parent = Interface
 Physics.Simulating = false
 
 local ToolOrder = {
@@ -462,6 +465,7 @@ local function openProject_(ManualPath: string?)
 
 	EditorCam.Transform = Project.Workspace.SceneCamera.Transform
 	EditorTl.Target = Project.Workspace
+	InterfaceLink.Target = Project.DataModel:GetService("Interface")
 
 	History:ClearHistory()
 	History.TargetDataModel = Project.DataModel
@@ -539,7 +543,7 @@ local function createNewProject_()
 	fs.mkdir("@projres/scripts/live")
 	fs.write("@projres/scripts/live/Main.luau", "print(\"Hello, World!\")\n")
 
-	for _, v in { "error", "worldUber", "worldUberTriProjected", "worldUberSkinned", "skybox", "boxframe", "particle", "postprocessing" } do
+	for _, v in { "error", "worldUber", "worldUberTriProjected", "worldUberSkinned", "skybox", "boxframe", "particle", "postprocessing", "ui" } do
 		if fs.isfile(`@editres/shaders/{v}.shp`) then
 			fs.copy(`@editres/shaders/{v}.shp`, `@projres/shaders/{v}.shp`)
 		end
@@ -560,6 +564,7 @@ local function createNewProject_()
 
 	fs.copy("@editres/textures/materials", "@projres/textures/materials")
 	fs.copy("@editres/textures/Sky1", "@projres/textures/Sky1")
+	fs.copy("@editres/textures/image-placeholder.png", "@projres/textures/image-placeholder.png")
 	fs.copy("@editres/scripts/defaultconfig.luau", "@projres/scripts/.config.luau")
 	fs.copy(LOGO_IMAGE, "@proj/icon.png")
 
@@ -2324,7 +2329,7 @@ local function runUpdate()
 
 	local latest = (workflowRunResponseData.workflow_runs :: { { [string]: JsonSerializable } })[1]
 	assert(latest)
-	assert(latest.status == "completed", "The latest workflow is not completed")
+	assert(latest.status == "completed", "The latest workflow is not finished yet, try again in a few minutes")
 
 	updaterLog ..= `Latest title: { assert(latest.display_title) }\n`
 	updaterLog ..= `Conclusion: { assert(latest.conclusion) }\n`

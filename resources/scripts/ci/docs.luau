@@ -150,7 +150,7 @@ export type HistoryAction = {
 
 definitionsFile ..= "\ntype Services = {\n"
 
-for _, s in { "Engine", "PlayerInput", "AssetManager", "History", "Physics", "Renderer", "Collections", "Network", "Logging" } do
+for _, s in { "Engine", "PlayerInput", "AssetManager", "History", "Physics", "Renderer", "Collections", "Network", "Logging", "Interface" } do
 	definitionsFile ..= `  {s}: {s},\n`
 end
 
@@ -542,7 +542,7 @@ local function dumpReflectionApi(t, d, cn, externType)
 			for _, n in orderedEvents do
 				local v = t.Events[n]
 
-				if not d.Events or not d.Events[n] or not d.Events[n].Description then
+				if not d.Events or not d.Events[n] or (typeof(d.Events[n]) == "table" and not d.Events[n].Description) then
 					print(`Missing doc comment for Event '{ cn }.{ n }'`)
 					continue
 				end

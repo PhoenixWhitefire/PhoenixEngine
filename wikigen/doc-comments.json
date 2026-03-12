@@ -202,7 +202,7 @@
           "Close": "Closes the application with the specified exit code integer or 0",
           "GetService": {
             "Description": "Gets the Object representing the specified Service. If it does not exist yet in the Data Model, it is created",
-            "Type": "<T>(self, Service: keyof<Services> & T) : index<Services, T>"
+            "Type": "<T>(self, Service: keyof<Services> & T) : GameObject & index<Services, T>"
           }
         },
         "Properties": {
@@ -412,6 +412,12 @@
           "IsRecordingAction": "Whether an Action is currently being recorded by History",
           "TargetDataModel": "The DataModel that History will track"
         }
+      },
+      "Interface": {
+        "Description": [
+          "Contains the player's interface elements",
+          "See `UITransform`, `UIFrame`, `UIText`, `UIImage`, and `UIButton`"
+        ]
       },
       "Logging": {
         "Description": "Engine logging",
@@ -627,6 +633,42 @@
         "Properties": {
           "Scripting": "Whether Scripts which descend from the `Target` will run",
           "Target": "The target to link"
+        }
+      },
+      "UIButton": {
+        "Description": "Button behaviour",
+        "Events": {
+          "OnClicked": "Fires when the button is clicked"
+        }
+      },
+      "UIFrame": {
+        "Description": "A frame",
+        "Properties": {
+          "BackgroundColor": "The color of the frame",
+          "BackgroundTransparency": "Its transparency"
+        }
+      },
+      "UIImage": {
+        "Description": "An image element",
+        "Properties": {
+          "Image": "The path to the image",
+          "ImageTint": "The color the image is tinted with",
+          "ImageTransparency": "Its transparency"
+        }
+      },
+      "UIText": {
+        "Description": "Text (not functional)",
+        "Properties": {
+          "Text": "The text string to be displayed"
+        }
+      },
+      "UITransform": {
+        "Description": "Offsets the element tree",
+        "Properties": {
+          "Position": "The 2D position, from `0`-`1`",
+          "Size": "The 2D scale, from `0`-`1`",
+          "Rotation": "The 2D rotation (not functional)",
+          "ZIndex": "The ordering indexing, higher being further in front (not functional)"
         }
       },
       "Workspace": {

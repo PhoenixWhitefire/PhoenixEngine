@@ -103,6 +103,7 @@ type Services = {
   Collections: Collections,
   Network: Network,
   Logging: Logging,
+  Interface: Interface,
 }
 
 declare extern type Color with
@@ -232,7 +233,7 @@ export type DataModel = {
   VM: string,
 
   BindToClose: (self: DataModel, Callback: () -> ()) -> (),
-  GetService: <T>(self: DataModel, Service: keyof<Services> & T) -> index<Services, T>,
+  GetService: <T>(self: DataModel, Service: keyof<Services> & T) -> GameObject & index<Services, T>,
 
   OnFrameBegin: EventSignal<(number)>,
 }
@@ -299,6 +300,8 @@ export type History = {
   Redo: (self: History) -> (),
   TryBeginAction: (self: History, Name: string) -> (number?),
   Undo: (self: History) -> (),
+}
+export type Interface = {
 }
 export type Logging = {
 
@@ -407,6 +410,28 @@ export type Transform = {
 export type TreeLink = {
   Target: GameObject?,
 }
+export type UIButton = {
+
+  OnClicked: EventSignal<()>,
+}
+export type UIFrame = {
+  BackgroundColor: Color,
+  BackgroundTransparency: number,
+}
+export type UIImage = {
+  Image: string,
+  ImageTint: Color,
+  ImageTransparency: number,
+}
+export type UIText = {
+  Text: string,
+}
+export type UITransform = {
+  Position: vector,
+  Rotation: number,
+  Size: vector,
+  ZIndex: number,
+}
 export type Workspace = {
   SceneCamera: GameObject & Camera & Transform,
 
@@ -443,6 +468,12 @@ type Components = {
   Collections: Collections,
   Network: Network,
   Logging: Logging,
+  Interface: Interface,
+  UITransform: UITransform,
+  UIFrame: UIFrame,
+  UIImage: UIImage,
+  UIText: UIText,
+  UIButton: UIButton,
 }
 type Creatables = {
   Transform: Transform,
@@ -469,6 +500,12 @@ type Creatables = {
   Collections: Collections,
   Network: Network,
   Logging: Logging,
+  Interface: Interface,
+  UITransform: UITransform,
+  UIFrame: UIFrame,
+  UIImage: UIImage,
+  UIText: UIText,
+  UIButton: UIButton,
 }
 declare extern type EnumCollisionType extends EnumItem with end
 declare extern type EnumCollisionType_INTERNAL extends Enum with

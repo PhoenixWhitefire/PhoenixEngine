@@ -1,5 +1,4 @@
 // Uber shader for world geometry
-
 #version 460 core
 
 layout (location = 0) in vec3 VertexPosition;
@@ -11,8 +10,6 @@ layout (location = 4) in mat4 InstanceTransform;
 layout (location = 8) in vec3 InstanceScale;
 layout (location = 9) in vec3 InstanceColor;
 layout (location = 10) in float InstanceTransparency;
-
-const int MAX_LIGHTS = 6;
 
 uniform mat4 RenderMatrix;
 
