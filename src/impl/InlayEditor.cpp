@@ -59,10 +59,12 @@ struct TextEditorTab
 	std::string FilePath;
 	std::ifstream* FileStream = nullptr;
 	std::vector<int> Breakpoints;
+	double LastCheckedIfUnderlyingFileExists = 0.f;
 	int JumpToLine = 0; // line to jump to, `0` to not jump
 	int DebuggerCurrentLine = 0;
 	bool WasPreviouslyVisible = false;
 	bool SetUIFocus = false;
+	bool HasUnderlyingFile = true;
 };
 static std::vector<TextEditorTab> s_TextEditors;
 static auto s_EditorLuauLang = TextEditor::LanguageDefinition::Lua();
@@ -464,6 +466,24 @@ static std::string getFileDirectory(const std::string& FilePath)
 #define UNSAVEDTAG "<NEW>"
 #define SAVINGTAG ">///SAVING...///<"
 
+static std::string escapeFileBody(const std::string& body)
+{
+	std::string newBody = body;
+	size_t size = newBody.size();
+
+	for (size_t i = 0; i < size; i++)
+	{
+		if (newBody[i] == '"' || newBody[i] == '\'' || newBody[i] == '`')
+		{
+			newBody.insert(newBody.begin() + i, '\\');
+			size = newBody.size();
+			i++;
+		}
+	}
+
+	return newBody;
+}
+
 static bool textEditorAskSaveFileAs(
 	bool AskSave,
 	const std::string& Contents,
@@ -473,10 +493,13 @@ static bool textEditorAskSaveFileAs(
 {
 	if (AskSave)
 	{
+		std::string truncated = Contents.substr(0, std::min((size_t)50ull, Contents.size()));
+		std::string displayedContents = escapeFileBody(truncated);
+
 		std::string message = std::format(
 			"{}\n\nLength: {} characters\nBody:\n{}{}",
 			Reason,
-			Contents.size(), Contents.substr(0, std::min((size_t)50ull, Contents.size())),
+			Contents.size(), displayedContents,
 			Contents.size() > (size_t)50ull ? "\n... (truncated)" : ""
 		);
 
@@ -544,7 +567,7 @@ static void textEditorSaveFile(TextEditorTab& Tab, bool AskSave = true)
 		Tab.FileStream = nullptr;
 	}
 
-	if (textEditorFile == UNSAVEDTAG || textEditorFile.empty())
+	if (textEditorFile == UNSAVEDTAG || textEditorFile.empty() || !std::filesystem::is_regular_file(textEditorFile))
 	{
 		static uint32_t ErrCount = 0;
 		ErrCount++;
@@ -643,6 +666,7 @@ static TextEditorTab& invokeTextEditor(const std::string& File)
 static void renderTextEditors()
 {
 	ZoneScopedC(tracy::Color::DarkSeaGreen);
+	double time = GetRunningTime();
 
 	for (int index = 0; index < (int)s_TextEditors.size(); index++)
 	{
@@ -654,8 +678,20 @@ static void renderTextEditors()
 			tab.SetUIFocus = false;
 		}
 
+		if (time - tab.LastCheckedIfUnderlyingFileExists > 0.5)
+		{
+			tab.HasUnderlyingFile = std::filesystem::is_regular_file(tab.FilePath);
+			tab.LastCheckedIfUnderlyingFileExists = time;
+		}
+
+		if (!tab.HasUnderlyingFile)
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 0.f, 0.f, 1.f));
+
 		bool open = true;
 		bool render = ImGui::Begin(std::format("{}###TextEditor_{}", std::filesystem::path(tab.FilePath).filename().string(), index).c_str(), &open);
+
+		if (!tab.HasUnderlyingFile)
+			ImGui::PopStyleColor();
 
 		if (!open)
 		{
@@ -2784,6 +2820,18 @@ static void recursiveRenderFilesystemNode(FilesystemNode& Node)
 
 		if (ImGui::MenuItem("Delete"))
 		{
+			if (!Node.IsDirectory)
+			{
+				for (size_t i = 0; i < s_TextEditors.size(); i++)
+				{
+					if (FileRW::MakePathCwdRelative(s_TextEditors[i].FilePath) == FileRW::MakePathCwdRelative(Node.Path.string()))
+					{
+						s_TextEditors.erase(s_TextEditors.begin() + i);
+						break;
+					}
+				}
+			}
+
 			std::error_code ec;
 			std::filesystem::remove_all(Node.Path, ec);
 
