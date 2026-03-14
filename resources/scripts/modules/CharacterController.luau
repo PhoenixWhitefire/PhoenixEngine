@@ -5,7 +5,7 @@ local Controller = {}
 Controller.__index = Controller
 
 type ControllerData = {
-	Character: GameObject & Mesh & RigidBody & Transform,
+	Character: (GameObject & Mesh & RigidBody & Transform)?,
 	Camera: GameObject & Camera & Transform,
 
 	Acceleration: number,
@@ -29,8 +29,8 @@ type ControllerData = {
 
 export type Controller = setmetatable<ControllerData, typeof(Controller)>
 
-function Controller.new(Camera: GameObject & Camera): Controller
-	return setmetatable({
+function Controller.new(Camera: GameObject & Camera & Transform): Controller
+	local controllerData: ControllerData = {
 		Camera = Camera,
 
 		Acceleration = 200,
@@ -51,7 +51,9 @@ function Controller.new(Camera: GameObject & Camera): Controller
 		lastJumped = 0,
 		cameraPitch = 0,
 		roll = 0
-	}, Controller) :: any
+	}
+
+	return setmetatable(controllerData, Controller)
 end
 
 function Controller.InitDefault(self: Controller, CharacterHeight)
@@ -72,9 +74,11 @@ function Controller.InitDefault(self: Controller, CharacterHeight)
 end
 
 function Controller.Update(self: Controller, DeltaTime: number)
+	assert(self.Character)
+
 	self.totalTime += DeltaTime
 
-	local moveDirection, _ = self:getMoveDirection()
+	local moveDirection = self:getMoveDirection()
 	local rotationX, rotationY = self:getRotationVector()
 
 	local charSize = self.Character.Size
@@ -109,9 +113,10 @@ function Controller.Update(self: Controller, DeltaTime: number)
 	self.cameraPitch += rotationX
 	self.cameraPitch = math.clamp(self.cameraPitch, -math.rad(89), math.rad(89))
 
+	-- Tilt camera based on movement direction
 	local rollAdd = -vector.dot(vector.normalize(moveDirection), self.Camera.Transform.Right) * DeltaTime * 0.5
-	--rollAdd = moveDirection.X * 0.05
-	if rollAdd == rollAdd then
+
+	if not math.isnan(rollAdd) then
 		self.roll += rollAdd
 	end
 
@@ -147,7 +152,7 @@ function Controller.getMoveDirection(self: Controller)
 		trans.C4R1 - self.Camera.Transform.C4R1,
 		0,
 		trans.C4R3 - self.Camera.Transform.C4R3
-	), vector.create(moveX, 0, moveZ)
+	)
 
 	--[[
 	local transrights = Camera.Transform

@@ -130,7 +130,7 @@ declare extern type Matrix with
   function Inverse(self): ( Matrix )
   function Lerp(self, Target: Matrix, Delta: number): ( Matrix )
   function __add(self, Param_1: vector): ( Matrix )
-  function __mul(self, Param_1: Matrix | vector): ( Matrix )
+  __mul: ((self: Matrix, b: Matrix) -> Matrix) & ((self: Matrix, v: vector) -> vector)
   function __sub(self, Param_1: vector): ( Matrix )
   C1R1: number
   C1R2: number
@@ -819,9 +819,9 @@ declare task: {
 
 
 declare _VMNAME: string
-declare function appendlog( ...: unknown ): ()
+declare function appendlog<T...>( ...: T... ): ()
 declare game: GameObject & DataModel
-declare function warn( ...: unknown ): ()
+declare function warn<T...>( ...: T... ): ()
 declare workspace: GameObject & Workspace
 
 

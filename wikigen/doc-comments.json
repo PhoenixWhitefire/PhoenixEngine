@@ -885,8 +885,7 @@
           },
           ":__mul": {
             "Description": "Two Matrices, or a Matrix and a `vector`, may be multiplied together with the `*` operator",
-            "In": "Matrix | vector",
-            "Out": "Matrix"
+            "Type": "((self: Matrix, b: Matrix) -> Matrix) & ((self: Matrix, v: vector) -> vector)"
           },
           "C1R1": {
             "Description": "The value at Column 1, Row 1",
@@ -982,14 +981,16 @@
       },
       "appendlog": {
         "Description": "Same as `print`, but does not prefix the log message with `[INFO]`",
-        "In": "...: unknown"
+        "Generics": "T...",
+        "In": "...: T..."
       },
       "game": {
         "Description": "The GameObject acting as the Data Model of the Engine"
       },
       "warn": {
         "Description": "Same as `print`, except generates a Warning message",
-        "In": "...: unknown"
+        "Generics": "T...",
+        "In": "...: T..."
       },
       "workspace": {
         "Description": "Shorthand for `game.Workspace`"
@@ -1006,7 +1007,8 @@
               "Hulls": "Load a set of convex hulls from `RigidBody.HullsFile`",
               "MeshComponent": "Use the mesh of the `Mesh` component attached to the same object as the `RigidBody`. Usually a bad idea unless the mesh is convex",
               "Sphere": "A sphere collision model"
-            }
+            },
+            "Type": "EnumCollisionType"
           },
           "Cursor": {
             "Description": "The specific icon of the mouse cursor",
@@ -1021,7 +1023,8 @@
               "ResizeNWSE": "2 diagonal arrows, going from the North-West to the South-East corner of the icon",
               "ResizeVertical": "2 vertical arrows",
               "TextInput": "A text-entry I-beam"
-            }
+            },
+            "Type": "EnumCursor"
           },
           "CursorMode": {
             "Description": "The behaviour of the mouse cursor",
@@ -1030,7 +1033,8 @@
               "Disabled": "Invisible, locked to the bounds of the window",
               "Hidden": "Invisible",
               "Normal": "Normal behavior"
-            }
+            },
+            "Type": "EnumCursorMode"
           },
           "FaceCulling": {
             "Description": "Culling modes for `Mesh.FaceCulling`",
@@ -1038,7 +1042,8 @@
               "Back": "Cull 'back' faces based on vertex winding order",
               "Front": "Cull 'front' faces based on vertex winding order",
               "None": "Faces are not culled"
-            }
+            },
+            "Type": "EnumFaceCulling"
           },
           "InputAction": {
             "Description": "The action that caused an Input Event (such as `PlayerInput.KeyEvent`) to fire",
@@ -1046,7 +1051,8 @@
               "Pressed": "The key or mouse button was pressed",
               "Released": "The key or mouse button was released",
               "Repeated": "The key was held down until it repeated"
-            }
+            },
+            "Type": "EnumInputAction"
           },
           "Key": {
             "Description": "Keys, which may be passed to `PlayerInput:IsKeyPressed`",
@@ -1170,7 +1176,8 @@
               "Y": "The Y key",
               "Z": "The Z key",
               "Zero": "The Zero key"
-            }
+            },
+            "Type": "EnumKey"
           },
           "LogType": {
             "Description": "The different types of log messages",
@@ -1179,7 +1186,8 @@
               "Info": "This is an information log message, like from `print`",
               "None": "No specified type",
               "Warning": "This is a warning, like from `warn`"
-            }
+            },
+            "Type": "EnumLogType"
           },
           "MouseButton": {
             "Description": "Mouse buttons, which may be passed to `PlayerInput:IsMouseButtonPressed`",
@@ -1187,7 +1195,8 @@
               "Left": "The left mouse button",
               "Middle": "The middle mouse button (scroll wheel)",
               "Right": "The right mouse button"
-            }
+            },
+            "Type": "EnumMouseButton"
           },
           "ValueType": {
             "Description": "The types of value variants the Engine internally recognizes",
@@ -1208,7 +1217,8 @@
               "String": "`string`",
               "Vector2": "A `vector` with `0` as the Z-component",
               "Vector3": "`vector`"
-            }
+            },
+            "Type": "EnumMouseButton"
           }
         }
       },
@@ -1993,7 +2003,7 @@
         "Description": "Encoding and decoding JSON files",
         "Members": {
           "encode": {
-            "Description": "Encodes the provided value into a JSON string. The default indentiation is 2 spaces",
+            "Description": "Encodes the provided value into a JSON string. The default indentation is 2 spaces",
             "In": [
               "Value: JsonSerializable",
               "Indent: number?"

@@ -258,14 +258,19 @@ static int mtx_eq(lua_State* L)
 static int mtx_mul(lua_State* L)
 {
     const glm::mat4& a = *(glm::mat4*)luaL_checkudata(L, 1, LUHX_MATRIXLIBNAME);
-	glm::mat4 b;
 
 	if (lua_isuserdata(L, 2))
-		b = *(glm::mat4*)luaL_checkudata(L, 2, LUHX_MATRIXLIBNAME);
+	{
+		const glm::mat4& b = *(glm::mat4*)luaL_checkudata(L, 2, LUHX_MATRIXLIBNAME);
+		luhx_pushmatrix(L, a * b);
+	}
 	else
-		b = glm::translate(glm::mat4(1.f), glm::make_vec3(luaL_checkvector(L, 2)));
+	{
+		glm::vec4 v = glm::vec4(glm::make_vec3(luaL_checkvector(L, 2)), 1.f);
+		glm::vec4 t = a * v;
+		lua_pushvector(L, t.x, t.y, t.z);
+	}
 
-	luhx_pushmatrix(L, a * b);
 	return 1;
 }
 

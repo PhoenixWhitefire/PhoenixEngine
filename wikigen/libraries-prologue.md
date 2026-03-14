@@ -1,2 +1,2 @@
-Libraries specific to the Phoenix Engine Luau runtime (Luhx)
+Libraries specific to the Phoenix Engine Luau runtime
 

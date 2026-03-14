@@ -1036,7 +1036,7 @@
     "documentation": "* Encoding and decoding JSON files"
   },
   "@phoenix/global/json.encode": {
-    "documentation": "* Encodes the provided value into a JSON string. The default indentiation is 2 spaces"
+    "documentation": "* Encodes the provided value into a JSON string. The default indentation is 2 spaces"
   },
   "@phoenix/global/json.parse": {
     "documentation": "* Decodes the JSON string and returns it as a value"

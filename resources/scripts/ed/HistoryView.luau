@@ -94,9 +94,19 @@ function Viewer.Render()
                     end
 
                     if dir == -1 then
-                        History:Undo()
+                        if History.CanUndo then
+                            History:Undo()
+                        else
+                            warn(`'Go to here' failed because { History:GetCannotUndoReason() }`)
+                            break
+                        end
                     else
-                        History:Redo()
+                        if History.CanRedo then
+                            History:Redo()
+                        else
+                            warn(`'Go to here' failed because { History:GetCannotRedoReason() }`)
+                            break
+                        end
                     end
                 end
             end

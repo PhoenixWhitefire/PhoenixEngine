@@ -568,7 +568,7 @@ local function dumpReflectionApi(t, d, cn, externType)
 end
 
 local alreadyAdded = {}
-local descsForMetafields = {
+local _descsForMetafields = {
 	__type = "Calling <code>typeof</code> on this object will return %s",
 	__mul = "You may multiply this object with another object via the <code>*</code> operator",
 	__div = "You may divide this object with another object via the <code>/</code> operator",
@@ -679,10 +679,15 @@ local function documentDatatype(name)
 				end
 			end
 
-			datatype ..= `#### \`{ rk }({ args }){ if returns then ": " .. returns else "" }\`\n`
+			if not v.Type then
+				datatype ..= `#### \`{ rk }({ args }){ if returns then ": " .. returns else "" }\`\n`
 
-			if name ~= "EventSignal" then
-				definitionsFile ..= `  function { rk }({ defargs }): ( { returns or "" } )\n`
+				if name ~= "EventSignal" then
+					definitionsFile ..= `  function { rk }({ defargs }): ( { returns or "" } )\n`
+				end
+			else
+				datatype ..= `#### \`{ rk }{ v.Type }\`\n`
+				definitionsFile ..= `  { rk }: { v.Type }\n`
 			end
 		else
 			datatype ..= `#### \`.{ k }: { v.Type }\`\n`

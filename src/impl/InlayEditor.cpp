@@ -3525,7 +3525,7 @@ static void renderProperties()
 				}
 			}
 
-			if (ImGui::IsItemDeactivatedAfterEdit() || deactivatedAfterEdit)
+			if (ImGui::IsItemDeactivatedAfterEdit() || deactivatedAfterEdit || !ImGui::IsAnyItemActive())
 			{
 				if (BeganPropertyEditingAction)
 					history->FinishAction(BeganPropertyEditingAction.value());
@@ -3533,7 +3533,6 @@ static void renderProperties()
 			}
 
 			ImGui::Separator();
-
 			ImGui::PopID();
 		}
 
