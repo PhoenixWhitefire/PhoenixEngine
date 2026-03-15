@@ -2559,7 +2559,8 @@ local function checkIfLatestVersionBuilt()
 	if #commitHashFetchResult == 40 and commitHashFetchResult ~= Engine.CommitHash then
 		Engine:ShowMessageBox(
 			"Version mismatch",
-			`Your source files are on commit { commitHashFetchResult:sub(1, 8) }, but the Engine is running on commit { Engine.CommitHash:sub(1, 8) }.\nYou may need to re-build the Engine.`
+			`Your source files are on commit { commitHashFetchResult:sub(1, 8) }, but the Engine is running on commit { Engine.CommitHash:sub(1, 8) }.`
+				.. "You may need to re-build the Engine. Behaviour of the Updater may be incorrect."
 		)
 	end
 end

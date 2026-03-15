@@ -217,10 +217,15 @@ static void handleInputs(double deltaTime)
 			RmbTrigger = true;
 
 		if (rmbPressed && !WasRmbPressed)
+		{
 			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
+			GuiIO->ConfigFlags |= ImGuiConfigFlags_NoMouse;
+		}
 		else if (!rmbPressed && WasRmbPressed)
+		{
 			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+			GuiIO->ConfigFlags &= ~ImGuiConfigFlags_NoMouse;
+		}
 
 		WasRmbPressed = !guiUsingMouse && rmbPressed;
 

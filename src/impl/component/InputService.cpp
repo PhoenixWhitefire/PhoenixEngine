@@ -33,7 +33,13 @@ public:
                 },
                 [](void*, const Reflection::GenericValue& gv)
                 {
-                    glfwSetInputMode(glfwGetCurrentContext(), GLFW_CURSOR, (int)gv.AsInteger());
+                    int newMode = (int)gv.AsInteger();
+                    if (newMode == GLFW_CURSOR_DISABLED)
+                        ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouse;
+                    else
+                        ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouse;
+
+                    glfwSetInputMode(glfwGetCurrentContext(), GLFW_CURSOR, newMode);
                 }
             ),
 
