@@ -654,6 +654,8 @@ static void init()
 		ImGui::StyleColorsDark();
 		GuiIO->ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 		GuiIO->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+		GuiIO->ConfigDpiScaleFonts = true;
+		GuiIO->ConfigDpiScaleViewports = true;
 
 		float displayScale = 0.f;
 		glfwGetMonitorContentScale(glfwGetPrimaryMonitor(), &displayScale, nullptr);

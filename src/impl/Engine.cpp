@@ -225,6 +225,42 @@ static void errorCallback(int code, const char* message)
 	Log.ErrorF("Error occurred in GLFW:\nCode: {}, Message: {}", code, message);
 }
 
+static void windowContentScaleCallback(GLFWwindow*, float x, float)
+{
+	static bool loadedVectorFont = false;
+	const ImGuiStyle& currentStyle = ImGui::GetStyle();
+	ImGuiIO& io = ImGui::GetIO();
+
+	ImGuiStyle newStyle;
+	memcpy(newStyle.Colors, currentStyle.Colors, sizeof(ImVec4) * ImGuiCol_COUNT);
+	newStyle.ScaleAllSizes(x);
+
+	if (x != 1.f)
+	{
+		if (!loadedVectorFont)
+			io.Fonts->AddFontDefaultVector();
+		loadedVectorFont = true;
+	}
+	else
+	{
+		if (loadedVectorFont)
+			io.Fonts->AddFontDefaultBitmap();
+		loadedVectorFont = false;
+	}
+
+	ImGui::GetStyle() = newStyle;
+}
+
+static void updateImGuiForDisplayScaling()
+{
+	GLFWwindow* window = glfwGetCurrentContext();
+
+	float xScale = 0.f;
+	float yScale = 0.f;
+	glfwGetWindowContentScale(window, &xScale, &yScale);
+	windowContentScaleCallback(window, xScale, yScale);
+}
+
 void Engine::m_InitializeVideo()
 {
 #if !PHX_HEADLESS_BUILD
@@ -312,6 +348,7 @@ void Engine::m_InitializeVideo()
 	glfwSetKeyCallback(Window, windowKeyCallback);
 	glfwSetMouseButtonCallback(Window, windowMouseCallback);
 	glfwSetScrollCallback(Window, windowScrollCallback);
+	glfwSetWindowContentScaleCallback(Window, windowContentScaleCallback);
 
 	Log.Info("Finished initializing video");
 
@@ -881,6 +918,9 @@ void Engine::BindDataModel(GameObject* NewDataModel)
 
 void Engine::Start()
 {
+	Log.Info("Scaling...");
+	updateImGuiForDisplayScaling();
+
 	Log.Info("Validating DataModel...");
 	ensureDataModelValid(DataModelRef.Dereference());
 

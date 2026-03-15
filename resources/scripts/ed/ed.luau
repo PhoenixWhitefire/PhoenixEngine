@@ -527,7 +527,11 @@ local function createNewProject_()
 	fs.write(fullPath .. "/phoenix.conf", json.encode({
 		GameTitle = Project.Name,
 		ResourcesDirectory = "resources/",
-		RootScene = "scenes/root.world"
+		RootScene = "scenes/root.world",
+		Engine = {
+			Version = Engine.Version,
+			Commit = Engine.CommitHash
+		}
 	}))
 
 	fs.mkdir("@projres")
@@ -667,7 +671,7 @@ end
 
 local function whyCannotPlaytest()
 	return if History.IsRecordingAction
-		then `You can't until the {assert(History.CurrentActionName)} Action finishes`
+		then `You can't until the { assert(History.CurrentActionName) } Action finishes`
 		else nil
 end
 
@@ -699,11 +703,14 @@ local function homeTab(_: number)
 				local imported = AssetManager:ImportModel(paths[1])
 
 				-- TODO type of `imported` becomes `nil` after this clause for some reason
-				--if not imported then
-				--	print("Failed to import")
-				--	History:DiscardCurrentAction()
-				--	return
-				--end
+				if imported then
+					print("Failed to import")
+					if importAction then
+						History:DiscardAction(importAction)
+					end
+
+					return
+				end
 
 				assert(Project.Workspace)
 				imported.Parent = Project.Workspace
@@ -2485,8 +2492,8 @@ function Stages.Update_Leave()
 	updateInProgress = false
 end
 
-game:BindToClose(function()
-	if CurrentStage == "ProjectEditing" or CurrentStage == "ProjectPlaying" then
+local function handleEngineShutdown()
+		if CurrentStage == "ProjectEditing" or CurrentStage == "ProjectPlaying" then
 		local choice = Engine:ShowMessageBox("Save", "Save current Editor file before closing?", "yesno", "warning", 1)
 
 		if choice == 0 then
@@ -2496,7 +2503,31 @@ game:BindToClose(function()
 			saveProject()
 		end
 	end
-end)
+end
+
+local function checkIfLatestVersionBuilt()
+	local commitHashFetchResult = fs.execute("git rev-parse HEAD")
+
+	-- commit hashes are 40 characters
+	if #commitHashFetchResult < 40 then
+		return
+	end
+
+	if #commitHashFetchResult == 41 and commitHashFetchResult:sub(41, 41) == "\n" then
+		-- ends with newline
+		commitHashFetchResult = commitHashFetchResult:sub(1, 40)
+	end
+
+	if #commitHashFetchResult == 40 and commitHashFetchResult ~= Engine.CommitHash then
+		Engine:ShowMessageBox(
+			"Version mismatch",
+			`Your source files are on commit { commitHashFetchResult:sub(1, 8) }, but the Engine is running on commit { Engine.CommitHash:sub(1, 8) }.\nYou may need to re-build the Engine.`
+		)
+	end
+end
+
+game:BindToClose(handleEngineShutdown)
+task.defer(checkIfLatestVersionBuilt)
 
 changeStageTo("SelectProject")
 
