@@ -912,6 +912,9 @@
   "@phoenix/global/imgui.endw": {
     "documentation": "* `ImGui::End`, `endw` and not `end` because `end` is a Luau keyword"
   },
+  "@phoenix/global/imgui.focuskeyboardhere": {
+    "documentation": "* `ImGui::SetKeyboardFocusHere`"
+  },
   "@phoenix/global/imgui.image": {
     "documentation": "* `ImGui::Image`"
   },

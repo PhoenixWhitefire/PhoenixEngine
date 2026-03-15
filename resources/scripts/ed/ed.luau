@@ -40,7 +40,7 @@ local EditorPreferences = {
 	AutoLaunchCodeEditorOnProjectOpen = false,
 	ClearOutputOnProjectOpen = true,
 	ClearOutputOnPlaytest = true,
-	CodeEditorPath = "code",
+	CodeEditorPath = nil :: string?,
 	UseLightTheme = false,
 	Gamma = 1,
 	ClosingProjectSaveRequiresConfirmation = false,
@@ -344,8 +344,25 @@ local function saveProject()
 	end
 end
 
+local openSettingsMenuToConfigureCodeEditor = false
+
 local function openCodeEditor()
-	print("Open code editor result: ", fs.execute(`{ EditorPreferences.CodeEditorPath } "{ fs.cwd() }/projects/{ Project.Name }"`))
+	if not EditorPreferences.CodeEditorPath or #EditorPreferences.CodeEditorPath == 0 then
+		Engine:ShowMessageBox(
+			"Configure Code Editor",
+			"You have not configured what Code Editor you would like the Editor to use.\n"
+			.. "You can set the command to launch your desired Code Editor in Editor Settings.\n"
+			.. "Look up the relevant command for your Code Editor. For example, the command for Visual Studio Code is 'code'."
+		)
+
+		openSettingsMenuToConfigureCodeEditor = true
+	else
+		local result = fs.execute(`{ EditorPreferences.CodeEditorPath } "{ fs.cwd() }/projects/{ Project.Name }"`)
+
+		if #result > 1 then
+			warn("Open code editor result: ", result)
+		end
+	end
 end
 
 local function openProject_(ManualPath: string?)
@@ -1036,6 +1053,9 @@ local function textCentered(text, cursor, cxavail)
 	imgui.text(text)
 end
 
+local wasSettingsOpen = false
+local didFocusCodeEditorSetting = false
+
 local function renderMainMenuBar(dt: number)
 	local pushedCol = CurrentStage == "ProjectPlaying"
 
@@ -1311,15 +1331,15 @@ local function renderMainMenuBar(dt: number)
 		imgui.endpopup()
 	end
 
-	if openSettingsWindow then
+	if openSettingsWindow or openSettingsMenuToConfigureCodeEditor then
 		imgui.openpopup("Editor Settings")
 
 		local SETTINGS_SIZE_X, SETTINGS_SIZE_Y = 420, 140
 
 		local ws = Renderer.Resolution
 
-		imgui.setnextwindowposition((ws.x - SETTINGS_SIZE_X) / 2, (ws.y - SETTINGS_SIZE_Y) / 2);
-		imgui.setnextwindowsize(SETTINGS_SIZE_X, SETTINGS_SIZE_Y);
+		imgui.setnextwindowposition((ws.x - SETTINGS_SIZE_X) / 2, (ws.y - SETTINGS_SIZE_Y) / 2)
+		imgui.setnextwindowsize(SETTINGS_SIZE_X, SETTINGS_SIZE_Y)
 	end
 
 	if imgui.beginpopupmodal("Editor Settings", true) then
@@ -1329,7 +1349,13 @@ local function renderMainMenuBar(dt: number)
 		end
 		EditorPreferences.UseLightTheme = lightMode
 
-		EditorPreferences.CodeEditorPath = imgui.inputstring("Code Editor path", EditorPreferences.CodeEditorPath)
+		if openSettingsMenuToConfigureCodeEditor and not didFocusCodeEditorSetting then
+			imgui.focuskeyboardhere()
+			didFocusCodeEditorSetting = true
+		end
+
+		EditorPreferences.CodeEditorPath = imgui.inputstring("Code Editor path", EditorPreferences.CodeEditorPath or "")
+
 		EditorPreferences.AutoLaunchCodeEditorOnProjectOpen = imgui.checkbox("Launch code editor on project open", EditorPreferences.AutoLaunchCodeEditorOnProjectOpen)
 
 		EditorPreferences.ClearOutputOnProjectOpen = imgui.checkbox("Clear Output on Project open", EditorPreferences.ClearOutputOnProjectOpen)
@@ -1348,18 +1374,27 @@ local function renderMainMenuBar(dt: number)
 
 		imgui.urllink("https://youtu.be/YCjNT9qGjh4?t=7193")
 
-		if imgui.button("Save") then
-			fs.write("./editor/settings.json", json.encode(EditorPreferences))
-			Engine:SetConfigValue("postfx_gamma", EditorPreferences.Gamma)
-			Engine:SaveConfig()
-		end
-
 		if imgui.treenode("##") then
 			imgui.urllink("Configure spyware settings", SPYWARE_SETTINGS_URL)
 			imgui.treepop()
 		end
 
 		imgui.endpopup()
+		wasSettingsOpen = true
+
+	elseif wasSettingsOpen then
+		wasSettingsOpen = false
+
+		fs.write("./editor/settings.json", json.encode(EditorPreferences))
+		Engine:SetConfigValue("postfx_gamma", EditorPreferences.Gamma)
+		Engine:SaveConfig()
+
+		if openSettingsMenuToConfigureCodeEditor and EditorPreferences.CodeEditorPath and #EditorPreferences.CodeEditorPath > 0 then
+			task.defer(openCodeEditor)
+		end
+
+		openSettingsMenuToConfigureCodeEditor = false
+		didFocusCodeEditorSetting = false
 	end
 end
 

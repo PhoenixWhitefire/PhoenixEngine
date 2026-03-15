@@ -1659,6 +1659,10 @@
               "`ImGui::End`, `endw` and not `end` because `end` is a Luau keyword"
             ]
           },
+          "focuskeyboardhere": {
+            "Description": "`ImGui::SetKeyboardFocusHere`",
+            "In": "Offset: number?"
+          },
           "image": {
             "Description": [
               "`ImGui::Image`"

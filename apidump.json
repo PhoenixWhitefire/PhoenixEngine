@@ -462,6 +462,7 @@
         "endpopup": "function",
         "endtooltip": "function",
         "endw": "function",
+        "focuskeyboardhere": "function",
         "image": "function",
         "imagebutton": "function",
         "indent": "function",

@@ -957,6 +957,12 @@ static int imgui_setstylecolor(lua_State* L)
     return 0;
 }
 
+static int imgui_focuskeyboardhere(lua_State* L)
+{
+    ImGui::SetKeyboardFocusHere(luaL_optinteger(L, 1, 0));
+    return 0;
+}
+
 static luaL_Reg imgui_funcs[] =
 {
     { "begin", imgui_begin },
@@ -1024,6 +1030,7 @@ static luaL_Reg imgui_funcs[] =
     { "endtooltip", imgui_endtooltip },
     { "newline", imgui_newline },
     { "setstylecolor", imgui_setstylecolor },
+    { "focuskeyboardhere", imgui_focuskeyboardhere },
     { NULL, NULL }
 };
 

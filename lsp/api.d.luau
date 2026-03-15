@@ -764,6 +764,7 @@ declare imgui: {
   endpopup: ((  ) -> ()),
   endtooltip: ((  ) -> ()),
   endw: ((  ) -> ()),
+  focuskeyboardhere: (( Offset: number? ) -> ()),
   image: (( ImagePath: string, Size: vector?, FlipVertically: boolean?, TintColor: { number }?, DoBilinearSmoothing: boolean? ) -> ()),
   imagebutton: (( Name: string, Image: string, Size: vector? ) -> (boolean)),
   indent: (( Indent: number? ) -> ()),
