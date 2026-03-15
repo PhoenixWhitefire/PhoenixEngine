@@ -173,8 +173,7 @@ static void handleInputs(double deltaTime)
 	
 	if (camera->UseSimpleController)
 	{
-		bool guiUsingMouse = !WasRmbPressed && (GuiIO->WantCaptureMouse && !UserInput::ShouldIgnoreUIInputSinking());
-		bool rmbPressed = !guiUsingMouse && UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT);
+		bool rmbPressed = (!GuiIO->WantCaptureMouse || UserInput::ShouldIgnoreUIInputSinking()) && UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT);
 
 		glm::mat4 camTrans = camera->GetWorldTransform();
 
@@ -227,7 +226,7 @@ static void handleInputs(double deltaTime)
 			GuiIO->ConfigFlags &= ~ImGuiConfigFlags_NoMouse;
 		}
 
-		WasRmbPressed = !guiUsingMouse && rmbPressed;
+		WasRmbPressed = rmbPressed;
 
 		if (rmbPressed)
 		{

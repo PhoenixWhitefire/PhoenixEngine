@@ -34,5 +34,8 @@ bool UserInput::ShouldIgnoreUIInputSinking()
     if (ImGui::IsAnyItemActive() && std::string_view(GImGui->ActiveIdWindow->Name).find("WindowOverViewport") != std::string::npos)
         return true;
 
+    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_NoMouse)
+        return true;
+
     return false;
 }

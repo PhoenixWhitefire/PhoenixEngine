@@ -585,7 +585,7 @@ static void traverseAndRenderUIHierarchy(
 			return true;
 
 		EcTreeLink* et = child->FindComponent<EcTreeLink>();
-		if (GameObject* targetInterface = (et ? et->Target.Referred() : nullptr))
+		if (GameObject* targetInterface = (et ? et->Target.Referred() : nullptr); targetInterface && targetInterface->OwningDataModel != PHX_GAMEOBJECT_NULL_ID)
 		{
 			traverseAndRenderUIHierarchy(targetInterface, renderer, shader, gpuMesh, Position, Size, Rotation);
 

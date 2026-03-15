@@ -45,7 +45,8 @@ local EditorPreferences = {
 	Gamma = 1,
 	ClosingProjectSaveRequiresConfirmation = false,
 	AutosaveInterval = 10,
-	KeepGizmoInView = false
+	KeepGizmoInView = false,
+	InvertTabButtonLitColors = false
 }
 
 EditorPreferences = EditorPreferences :: { [keyof<typeof(EditorPreferences)>]: index<typeof(EditorPreferences), keyof<typeof(EditorPreferences)>> } & typeof(EditorPreferences)
@@ -607,6 +608,9 @@ local TabButtonHovering: string? = nil
 local WipTabButtonHovering = TabButtonHovering
 local WindowHovering = false
 
+local LIT_COLOR = { 1, 1, 1, 0.05 }
+local UNLIT_COLOR = { 1, 1, 1, 0 }
+
 local function tabButton(Text: string, Icon: string, Enabled: boolean?, Lit: boolean?, Id: string?, Tooltip: string?): boolean
 	if Enabled == nil then
 		Enabled = true
@@ -626,9 +630,13 @@ local function tabButton(Text: string, Icon: string, Enabled: boolean?, Lit: boo
 		imgui.pushstylecolor(5, { 1, 1, 1, 1 })
 	end
 
+	local backgroundColor = if EditorPreferences.InvertTabButtonLitColors then LIT_COLOR else UNLIT_COLOR
+
 	if Lit then
-		imgui.pushstylecolor(3, { 1, 1, 1, 0.05 })
+		backgroundColor = if EditorPreferences.InvertTabButtonLitColors then UNLIT_COLOR else LIT_COLOR
 	end
+
+	imgui.pushstylecolor(3, backgroundColor)
 
 	imgui.beginchild(Text .. "_Selection", 120, 150, "b")
 
@@ -653,9 +661,7 @@ local function tabButton(Text: string, Icon: string, Enabled: boolean?, Lit: boo
 		imgui.settooltip(Tooltip)
 	end
 
-	if Lit then
-		imgui.popstylecolor()
-	end
+	imgui.popstylecolor()
 
 	if Id == TabButtonHovering then
 		imgui.popstylecolor()
@@ -703,8 +709,8 @@ local function homeTab(_: number)
 				local imported = AssetManager:ImportModel(paths[1])
 
 				-- TODO type of `imported` becomes `nil` after this clause for some reason
-				if imported then
-					print("Failed to import")
+				if not imported then
+					setErrorNotification("Failed to import")
 					if importAction then
 						History:DiscardAction(importAction)
 					end
@@ -1338,6 +1344,7 @@ local function renderMainMenuBar(dt: number)
 
 		EditorPreferences.AutosaveInterval = imgui.inputnumber("Autosave interval (in minutes)", EditorPreferences.AutosaveInterval)
 		EditorPreferences.KeepGizmoInView = imgui.checkbox("Turn the camera to keep the gizmo handles in view while moving an object", EditorPreferences.KeepGizmoInView)
+		EditorPreferences.InvertTabButtonLitColors = imgui.checkbox("Invert tab button active colors", EditorPreferences.InvertTabButtonLitColors)
 
 		imgui.urllink("https://youtu.be/YCjNT9qGjh4?t=7193")
 
@@ -2559,7 +2566,7 @@ local function checkIfLatestVersionBuilt()
 	if #commitHashFetchResult == 40 and commitHashFetchResult ~= Engine.CommitHash then
 		Engine:ShowMessageBox(
 			"Version mismatch",
-			`Your source files are on commit { commitHashFetchResult:sub(1, 8) }, but the Engine is running on commit { Engine.CommitHash:sub(1, 8) }.`
+			`Your source files are on commit { commitHashFetchResult:sub(1, 8) }, but the Engine is running on commit { Engine.CommitHash:sub(1, 8) }.\n`
 				.. "You may need to re-build the Engine. Behaviour of the Updater may be incorrect."
 		)
 	end
