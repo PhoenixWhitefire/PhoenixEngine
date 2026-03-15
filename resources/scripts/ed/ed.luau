@@ -2336,18 +2336,56 @@ local function runUpdate()
 
 	local latest = (workflowRunResponseData.workflow_runs :: { { [string]: JsonSerializable } })[1]
 	assert(latest)
-	assert(latest.status == "completed", "The latest workflow is not finished yet, try again in a few minutes")
 
 	updaterLog ..= `Latest title: { assert(latest.display_title) }\n`
-	updaterLog ..= `Conclusion: { assert(latest.conclusion) }\n`
-
-	if latest.conclusion ~= "success" then
-		error(`Cannot proceed with update because the latest workflow resulted in { latest.conclusion }`)
-	end
 
 	local artifactsUrl = assert(latest.artifacts_url)
 	assert(typeof(artifactsUrl) == "string")
 	updaterLog ..= `Got artifacts URL: { artifactsUrl }\n`
+
+	local jobsUrl = assert(latest.jobs_url)
+	assert(typeof(jobsUrl) == "string")
+	updaterLog ..= `Got jobs URL { jobsUrl }\n`
+
+	local jobsResponse = Network:MakeHttpRequestAsync({
+		Url = jobsUrl,
+		Headers = headers
+	})
+
+	if not jobsResponse.Ok then
+		error(`{ jobsResponse.Status }: { jobsResponse.Body }`)
+	end
+
+	local jobsJson = json.parse(jobsResponse.Body)
+	assert(typeof(jobsJson) == "table")
+
+	local jobs = (jobsJson :: { [string]: JsonSerializable }).jobs
+	assert(jobs and typeof(jobs) == "table")
+
+	local desiredName = `{ if Engine.TargetPlatform == "Linux" then "ubuntu" else Engine.TargetPlatform:lower() }`
+	local foundJob = false
+
+	for _, job in jobs do
+		assert(typeof(job) == "table")
+
+		local name =  (job :: { [string]: JsonSerializable }).name
+		assert(typeof(name) == "string")
+
+		if name:find(desiredName) and name:find("Release") then
+			if (job :: { [string]: JsonSerializable }).conclusion ~= "success" then
+				error("The Workflow Job for your platform failed or is still in progress.")
+			end
+
+			foundJob = true
+			break
+		end
+	end
+
+	if not foundJob then
+		error(`Could not find the Job for your platform ({ desiredName })`)
+	end
+
+	updaterLog ..= "Confirmed that the Job for your platform succeeded, proceeding to download artifact\n"
 
 	local artifactsResponse = Network:MakeHttpRequestAsync({
 		Url = artifactsUrl,
