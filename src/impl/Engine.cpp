@@ -115,7 +115,7 @@ void Engine::LoadConfiguration()
 	ZoneScoped;
 
 	bool ConfigLoadSucceeded = true;
-	std::string ConfigLoadErrorMessage = "Failed to load configuration file.";
+	std::string ConfigLoadErrorMessage = "Failed to load configuration file. Please ensure the Engine was launched from the correct directory.";
 	std::string ConfigAscii = FileRW::ReadFile("./phoenix.conf", &ConfigLoadSucceeded);
 
 	if (ConfigLoadSucceeded)
@@ -918,8 +918,11 @@ void Engine::BindDataModel(GameObject* NewDataModel)
 
 void Engine::Start()
 {
-	Log.Info("Scaling...");
-	updateImGuiForDisplayScaling();
+	if (!IsHeadlessMode)
+	{
+		Log.Info("Scaling...");
+		updateImGuiForDisplayScaling();
+	}
 
 	Log.Info("Validating DataModel...");
 	ensureDataModelValid(DataModelRef.Dereference());
