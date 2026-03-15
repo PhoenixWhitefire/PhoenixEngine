@@ -164,7 +164,7 @@ local function keepGizmoInView(target: GameObject & Transform, ViewportRenderPos
 
     local axisLocal = assert(GizmoPieceToDirection[GizmoDragHandle])
     local rotOnly = target.Transform - target.Transform.Position
-    local axisWorld = vector.normalize((rotOnly * axisLocal).Position)
+    local axisWorld = vector.normalize(rotOnly * axisLocal)
     GizmoDragPlaneNormal = vector.normalize(vector.cross(axisWorld, cam.Transform.Forward))
 end
 
@@ -183,7 +183,7 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
         end
     end
 
-    if not target or not workspace.SceneCamera then
+    if not target or not workspace.SceneCamera or target == workspace.SceneCamera then
         resetGizmo()
         return
     end
@@ -264,8 +264,9 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
             PrevDragMousePos = cpos
 
             local axisLocal = assert(GizmoPieceToDirection[hit])
-            local rotOnly = target.Transform - target.Transform.Position
-            local axisWorld = vector.normalize((rotOnly * axisLocal).Position)
+            -- TODO manual annotation is luau bug (inferring `never`)
+            local rotOnly: vector = target.Transform - target.Transform.Position
+            local axisWorld = vector.normalize(rotOnly * axisLocal)
 
             GizmoDragAxis = assert(GizmoPieceToDirection[hit])
             GizmoDragHandle = hit
