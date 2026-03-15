@@ -2902,7 +2902,7 @@ static void recursiveRenderFilesystemNode(FilesystemNode& Node)
 
 static void renderFilesViewer()
 {
-	if (EngineJsonConfig["Tool_ScriptExplorer"] == false)
+	if (EngineJsonConfig["Tool_Scripts"] == false)
 		return;
 
 	std::string name = FilesViewerRoot.Name;
@@ -2912,7 +2912,7 @@ static void renderFilesViewer()
 	bool render = ImGui::Begin(std::format("{}###FilesViewer", name).c_str(), &open);
 
 	if (!open)
-		EngineJsonConfig["Tool_ScriptExplorer"] = false;
+		EngineJsonConfig["Tool_Scripts"] = false;
 
 	if (!render)
 	{

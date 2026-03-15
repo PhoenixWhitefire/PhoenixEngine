@@ -19,7 +19,7 @@ static const std::string_view Tools[] = {
     "Tool_Shaders",
     "Tool_Settings",
     "Tool_Info",
-    "Tool_ScriptExplorer"
+    "Tool_Scripts"
 };
 
 static std::string checkValidTool(std::string toolName)
