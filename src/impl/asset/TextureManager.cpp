@@ -293,7 +293,7 @@ uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool Shoul
 		return 0;
 
 	std::string ResDir = EngineJsonConfig["ResourcesDirectory"];
-	std::string ActualPath = FileRW::MakePathCwdRelative(Path);
+	std::string ActualPath = FileRW::ResolvePathNormalized(Path);
 
 	auto it = m_StringToTextureId.find(ActualPath);
 	uint32_t forceResourceId = UINT32_MAX;

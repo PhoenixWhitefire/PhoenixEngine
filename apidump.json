@@ -430,6 +430,7 @@
         "promptsave": "function",
         "read": "function",
         "remove": "function",
+        "removealias": "function",
         "rename": "function",
         "resolvepath": "function",
         "resolvepathabsolute": "function",

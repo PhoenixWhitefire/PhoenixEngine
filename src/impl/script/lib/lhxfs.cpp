@@ -85,7 +85,7 @@ static int fs_listdir(lua_State* L)
 	std::error_code ec;
 	lua_newtable(L);
 
-	for (const auto& entry : std::filesystem::directory_iterator(FileRW::MakePathCwdRelative(path), ec))
+	for (const auto& entry : std::filesystem::directory_iterator(FileRW::ResolvePathNormalized(path), ec))
 	{
 		switch (filter)
 		{
@@ -128,7 +128,7 @@ static int fs_listdir(lua_State* L)
 	}
 
 	if (ec)
-		luaL_error(L, "listdir '%s': %s", FileRW::MakePathCwdRelative(path).c_str(), ec.message().c_str());
+		luaL_error(L, "listdir '%s': %s", FileRW::ResolvePathNormalized(path).c_str(), ec.message().c_str());
 
 	return 1;
 }
@@ -138,7 +138,7 @@ static int fs_isfile(lua_State* L)
 	setSelfAlias(L);
 
     const char* path = luaL_checkstring(L, 1);
-	lua_pushboolean(L, std::filesystem::is_regular_file(FileRW::MakePathCwdRelative(path)));
+	lua_pushboolean(L, std::filesystem::is_regular_file(FileRW::ResolvePathNormalized(path)));
 
 	return 1;
 }
@@ -148,7 +148,7 @@ static int fs_isdirectory(lua_State* L)
 	setSelfAlias(L);
 
     const char* path = luaL_checkstring(L, 1);
-	lua_pushboolean(L, std::filesystem::is_directory(FileRW::MakePathCwdRelative(path)));
+	lua_pushboolean(L, std::filesystem::is_directory(FileRW::ResolvePathNormalized(path)));
 
 	return 1;
 }
@@ -157,9 +157,19 @@ static int fs_definealias(lua_State* L)
 {
 	const char* aliasName = luaL_checkstring(L, 1);
 	if (aliasName[0] == '@')
-		luaL_error(L, "invalid alias name '%s' - alias names should not begin with '@' as it is most likely a misunderstanding", aliasName);
+		luaL_error(L, "invalid alias name '%s' - alias names should not begin with '@' as it is prepended automatically", aliasName);
 
 	FileRW::DefineAlias(aliasName, luaL_checkstring(L, 2));
+	return 0;
+}
+
+static int fs_removealias(lua_State* L)
+{
+	const char* aliasName = luaL_checkstring(L, 1);
+	if (aliasName[0] == '@')
+		luaL_error(L, "invalid alias name '%s' - alias names should not begin with '@' as it is prepended automatically", aliasName);
+
+	FileRW::RemoveAlias(aliasName);
 	return 0;
 }
 
@@ -182,8 +192,8 @@ static int fs_copy(lua_State* L)
 
 	std::error_code ec;
 
-	std::string from = FileRW::MakePathCwdRelative(luaL_checkstring(L, 1));
-	std::string to = FileRW::MakePathCwdRelative(luaL_checkstring(L, 2));
+	std::string from = FileRW::ResolvePathNormalized(luaL_checkstring(L, 1));
+	std::string to = FileRW::ResolvePathNormalized(luaL_checkstring(L, 2));
 	std::filesystem::copy(
 		from,
 		to,
@@ -202,7 +212,7 @@ static int fs_mkdir(lua_State* L)
 	setSelfAlias(L);
 
 	std::error_code ec;
-	std::string realPath = FileRW::MakePathCwdRelative(luaL_checkstring(L, 1));
+	std::string realPath = FileRW::ResolvePathNormalized(luaL_checkstring(L, 1));
 	std::filesystem::create_directory(realPath, ec);
 
 	if (ec)
@@ -217,7 +227,7 @@ static int fs_rename(lua_State* L)
 
 	std::error_code ec;
 
-	std::string path = FileRW::MakePathCwdRelative(luaL_checkstring(L, 1));
+	std::string path = FileRW::ResolvePathNormalized(luaL_checkstring(L, 1));
 	std::string name = luaL_checkstring(L, 2);
 
 	std::string fullnewpath = path.substr(0, path.find_last_of('/') + 1) + name;
@@ -234,7 +244,7 @@ static int fs_remove(lua_State* L)
 	setSelfAlias(L);
 
 	std::error_code ec;
-	int numRemoved = (int)std::filesystem::remove_all(FileRW::MakePathCwdRelative(luaL_checkstring(L, 1)), ec);
+	int numRemoved = (int)std::filesystem::remove_all(FileRW::ResolvePathNormalized(luaL_checkstring(L, 1)), ec);
 
 	if (ec)
 		luaL_error(L, "%s", ec.message().c_str());
@@ -255,14 +265,14 @@ static std::string normalizePath(std::string path)
 		if (path[i] == '\\')
 			path[i] = '/';
 
-	return FileRW::MakePathCwdRelative(path);
+	return FileRW::ResolvePathNormalized(path);
 }
 
 static int fs_promptsave(lua_State* L)
 {
 	setSelfAlias(L);
 
-	std::string defaultLocation = FileRW::MakePathAbsolute(luaL_optstring(L, 1, "./"));
+	std::string defaultLocation = FileRW::ResolvePathAbsolute(luaL_optstring(L, 1, "./"));
 	std::vector<const char*> filters;
 
 	if (lua_isstring(L, 2))
@@ -301,7 +311,7 @@ static int fs_promptopen(lua_State* L)
 {
 	setSelfAlias(L);
 
-	std::string defaultLocation = FileRW::MakePathAbsolute(luaL_optstring(L, 1, "./"));
+	std::string defaultLocation = FileRW::ResolvePathAbsolute(luaL_optstring(L, 1, "./"));
 	std::vector<const char*> filters;
 
 	if (lua_isstring(L, 2))
@@ -444,7 +454,7 @@ static int fs_resolvepath(lua_State* L)
 {
 	setSelfAlias(L);
 
-	const std::string& resolved = FileRW::MakePathCwdRelative(luaL_checkstring(L, 1));
+	const std::string& resolved = FileRW::ResolvePathNormalized(luaL_checkstring(L, 1));
 
 	lua_pushlstring(L, resolved.data(), resolved.size());
 	return 1;
@@ -454,7 +464,7 @@ static int fs_resolvepathabsolute(lua_State* L)
 {
 	setSelfAlias(L);
 
-	const std::string& resolved = FileRW::MakePathAbsolute(luaL_checkstring(L, 1));
+	const std::string& resolved = FileRW::ResolvePathAbsolute(luaL_checkstring(L, 1));
 
 	lua_pushlstring(L, resolved.data(), resolved.size());
 	return 1;
@@ -468,6 +478,7 @@ static const luaL_Reg fs_funcs[] =
     { "isfile", fs_isfile },
     { "isdirectory", fs_isdirectory },
 	{ "definealias", fs_definealias },
+	{ "removealias", fs_removealias },
 	{ "setunqualifiedroot", fs_setunqualifiedroot },
 	{ "cwd", fs_cwd },
 	{ "copy", fs_copy },

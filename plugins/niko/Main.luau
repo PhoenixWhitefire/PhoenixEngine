@@ -4,7 +4,7 @@ local TestPlugin: Types.Plugin = {
     Name = "Niko Plugin",
     Path = "",
     Description = "I love pancakes",
-    Icon = "@editres/textures/niko.png",
+    Icon = "@plugin/niko.png",
     ActiveStages = { "ProjectEditing" },
     ToolbarButtons = {}
 }
@@ -21,7 +21,7 @@ table.insert(TestPlugin.ToolbarButtons, {
             Button.Lit = true
         end)
     end,
-    Icon = "@editres/textures/niko.png"
+    Icon = "@plugin/niko.png"
 })
 
 function TestPlugin:OnEditorStageChanged(OldStage, NewStage)

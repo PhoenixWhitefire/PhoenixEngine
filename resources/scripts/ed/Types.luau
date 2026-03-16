@@ -15,6 +15,7 @@ export type Plugin = {
     Description: string?,
     Icon: string?,
     Path: string,
+    ParentPath: string?,
     ActiveStages: { Stage },
     ToolbarButtons: { ToolbarButton },
 

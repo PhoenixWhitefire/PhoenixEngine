@@ -30,9 +30,10 @@ namespace FileRW
 	// E.x.: with `::DefineAlias("modules", "scripts/modules")` the path
 	// "@modules/MyModule.luau" resolves to "scripts/modules/MyModule.luau"
 	void DefineAlias(const std::string& Alias, const std::string& Path);
+	void RemoveAlias(const std::string& Alias);
 	// When the path given begins with a `.` to indicate CWD, set the alias
 	void MakeCwdAliasOf(const std::string&);
 
-	std::string MakePathCwdRelative(std::string);
-	std::string MakePathAbsolute(std::string);
+	std::string ResolvePathNormalized(std::string);
+	std::string ResolvePathAbsolute(std::string);
 };

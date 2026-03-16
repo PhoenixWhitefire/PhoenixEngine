@@ -732,6 +732,7 @@ declare fs: {
   promptsave: (( DefaultLocation: string?, Filter: ( { string } | string)?, FilterName: string? ) -> (string?)),
   read: (( Path: string ) -> (string?, string?)),
   remove: (( Path: string ) -> ()),
+  removealias: (( Alias: string ) -> ()),
   rename: (( Path: string, NewName: string ) -> ()),
   resolvepath: (Path: string) -> string,
   resolvepathabsolute: (Path: string) -> string,

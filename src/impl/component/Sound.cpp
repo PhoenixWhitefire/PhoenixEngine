@@ -230,7 +230,7 @@ void EcSound::Reload()
 {
 	ZoneScoped;
 
-	std::string filePath = FileRW::MakePathCwdRelative(SoundFile);
+	std::string filePath = FileRW::ResolvePathNormalized(SoundFile);
 
 	if (SoundInstance)
 	{

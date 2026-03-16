@@ -517,7 +517,7 @@ static bool textEditorAskSaveFileAs(
 
 	const char* saveTargetRaw = tinyfd_saveFileDialog(
 		"Save Text Document",
-		FileRW::MakePathAbsolute("@projres/").c_str(),
+		FileRW::ResolvePathAbsolute("@projres/").c_str(),
 		0,
 		nullptr,
 		nullptr
@@ -528,7 +528,7 @@ static bool textEditorAskSaveFileAs(
 		Log.Info("No file path selected in `textEditorAskSaveFileAs`");
 		return false;
 	}
-	std::string savePath = FileRW::MakePathCwdRelative(saveTargetRaw);
+	std::string savePath = FileRW::ResolvePathNormalized(saveTargetRaw);
 
 	std::string errMessage;
 	if (!FileRW::WriteFile(savePath, Contents, &errMessage))
@@ -578,7 +578,7 @@ static void textEditorSaveFile(TextEditorTab& Tab, bool AskSave = true)
 	}
 	else
 	{
-		std::string realSaveLoc = FileRW::MakePathCwdRelative(textEditorFile);
+		std::string realSaveLoc = FileRW::ResolvePathNormalized(textEditorFile);
 
 		std::string error;
 		if (!FileRW::WriteFile(realSaveLoc, contents, &error))
@@ -597,7 +597,7 @@ static std::string textFileContentsFromPath(const std::string& Path, std::ifstre
 	if (Path.find("!InlineDocument:") != std::string::npos)
 		return { Path.begin() + strlen("!InlineDocument:"), Path.end() };
 
-	if (std::filesystem::is_directory(FileRW::MakePathCwdRelative(Path)))
+	if (std::filesystem::is_directory(FileRW::ResolvePathNormalized(Path)))
 	{
 		std::string error = std::format(
 			"File '{}' couldn't be read, it is a directory",
@@ -608,7 +608,7 @@ static std::string textFileContentsFromPath(const std::string& Path, std::ifstre
 		return error;
 	}
 
-	Stream = new std::ifstream(FileRW::MakePathCwdRelative(Path));
+	Stream = new std::ifstream(FileRW::ResolvePathNormalized(Path));
 
 	std::string scriptContents = "";
 
@@ -2631,7 +2631,7 @@ static void refreshFilesystemNode(FilesystemNode& Node)
 			if (it.path().filename().string() == Node.Name)
 				continue; // not sure
 
-			Node.DirectoryContents[it.path().filename().string()] = { .Path = FileRW::MakePathCwdRelative(it.path().string()), .Name = it.path().filename().string(), .IsDirectory = false };
+			Node.DirectoryContents[it.path().filename().string()] = { .Path = FileRW::ResolvePathNormalized(it.path().string()), .Name = it.path().filename().string(), .IsDirectory = false };
 		}
 		else if (std::filesystem::is_directory(it.path()))
 		{
@@ -2824,7 +2824,7 @@ static void recursiveRenderFilesystemNode(FilesystemNode& Node)
 			{
 				for (size_t i = 0; i < s_TextEditors.size(); i++)
 				{
-					if (FileRW::MakePathCwdRelative(s_TextEditors[i].FilePath) == FileRW::MakePathCwdRelative(Node.Path.string()))
+					if (FileRW::ResolvePathNormalized(s_TextEditors[i].FilePath) == FileRW::ResolvePathNormalized(Node.Path.string()))
 					{
 						s_TextEditors.erase(s_TextEditors.begin() + i);
 						break;
@@ -2921,7 +2921,7 @@ static void renderFilesViewer()
 	}
 
 	static std::string PreviousNonqualifiedRoot;
-	if (std::string newRoot = FileRW::MakePathCwdRelative("dummy"); newRoot != PreviousNonqualifiedRoot)
+	if (std::string newRoot = FileRW::ResolvePathNormalized("dummy"); newRoot != PreviousNonqualifiedRoot)
 	{
 		FilesViewLastRefreshed = 0.0;
 		FilesViewerRoot = FilesystemNode{ .Path = "scripts/", .Name = "Scripts" };
@@ -2930,7 +2930,7 @@ static void renderFilesViewer()
 
 	if (GetRunningTime() - FilesViewLastRefreshed > 2.f)
 	{
-		FilesViewerRoot.Path = std::filesystem::path(FileRW::MakePathCwdRelative(FilesViewerRootPath));
+		FilesViewerRoot.Path = std::filesystem::path(FileRW::ResolvePathNormalized(FilesViewerRootPath));
 		FilesViewerRoot.Name = FilesViewerRoot.Path.filename().string();
 		refreshFilesystemNode(FilesViewerRoot);
 		FilesViewLastRefreshed = GetRunningTime();
@@ -2957,7 +2957,7 @@ static void renderFilesViewer()
 
 		if (ImGui::MenuItem("Focus parent"))
 		{
-			FilesViewerRootPath = std::filesystem::absolute(FileRW::MakePathCwdRelative(FilesViewerRootPath)).parent_path().string();
+			FilesViewerRootPath = std::filesystem::absolute(FileRW::ResolvePathNormalized(FilesViewerRootPath)).parent_path().string();
 			FilesViewLastRefreshed = 0.0;
 		}
 

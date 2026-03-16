@@ -1306,7 +1306,7 @@ static void initRequireConfig(luarequire_Configuration* config)
 		{
 			// chunkname is prefixed with @
 			assert(chname[0] == '@');
-			((std::filesystem::path*)ctx)->assign(FileRW::MakePathCwdRelative(chname + 1));
+			((std::filesystem::path*)ctx)->assign(FileRW::ResolvePathNormalized(chname + 1));
 			return NAVIGATE_SUCCESS;
 		};
 	config->jump_to_alias = [](lua_State*, void*, const char*)
@@ -1429,7 +1429,6 @@ static void initRequireConfig(luarequire_Configuration* config)
 				return WRITE_BUFFER_TOO_SMALL;
 			
 			memcpy(buffer, contents.data(), contents.size());
-
 			return success ? WRITE_SUCCESS : WRITE_FAILURE;
 		};
 	config->load = [](lua_State* L, void* ctx, const char* /* path */, const char* chname, const char* ldname)

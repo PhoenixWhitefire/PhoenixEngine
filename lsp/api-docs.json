@@ -816,6 +816,9 @@
   "@phoenix/global/fs.remove": {
     "documentation": "* Removes everything at the given path\n* Throws an error upon failure"
   },
+  "@phoenix/global/fs.removealias": {
+    "documentation": "* Removes an alias previously defined with `fs.definealias`"
+  },
   "@phoenix/global/fs.rename": {
     "documentation": "* Renames the file at the given `Path` to have the `NewName`\n* Throws an error upon failure"
   },

@@ -9,18 +9,18 @@ type ToolbarButton = Types.ToolbarButton
 local PluginManager = {}
 PluginManager.Plugins = {} :: { Plugin }
 local IsPluginManagementWindowOpen = false
-local PluginSettings: { [string]: { Enabled: boolean } } = {}
+local PluginSettings: { [string]: { Enabled: boolean }? } = {}
 
 local PLUGIN_SETTINGS_PATH = "./editor/plugin-settings.json"
 
-local function getPluginSettings(plugin: Plugin): index<typeof(PluginSettings), string>
+local function getPluginSettings(plugin: Plugin)
     local settings = PluginSettings[plugin.Path]
     if not settings then
         settings = { Enabled = true }
         PluginSettings[plugin.Path] = settings
     end
 
-    return settings
+    return assert(settings)
 end
 
 local function renderPluginManagement()
@@ -80,32 +80,56 @@ local function renderPluginManagement()
     end
 end
 
-local function loadPluginsRecursive(ParentPath)
+local function setPluginAlias(ParentPath: string?)
+    if ParentPath then
+        fs.definealias("plugin", ParentPath)
+    end
+end
+
+local function loadPlugin(Path, ParentPath: string?)
+    local co, err = task.loadfile(Path)
+
+    if co then
+        local success, data: Plugin = coroutine.resume(co)
+
+        if success then
+            data.Path = Path:sub(assert((Path:find("/plugins"))) + 1, #Path)
+            data.ParentPath = ParentPath
+            --table.freeze(data)
+
+            if typeof(data.Icon) == "string" then
+                setPluginAlias(ParentPath)
+                data.Icon = fs.resolvepath(data.Icon)
+                fs.removealias("plugin")
+            end
+
+            table.insert(PluginManager.Plugins, data)
+
+            if getPluginSettings(data).Enabled and data.OnLoad then
+                data:OnLoad()
+            end
+        else
+            warn(`PluginManager: Failed to load-execute plugin { Path }: { data }`)
+        end
+    else
+        warn(`PluginManager: Failed to load plugin { Path }: { err }`)
+    end
+end
+
+local function loadPlugins(ParentPath)
     for path, type in fs.listdir(ParentPath) do
         if type == "f" then
             if path:sub(#path - 4, #path) == ".luau" then
-                local co, err = task.loadfile(path)
-
-                if co then
-                    local success, data: Plugin = coroutine.resume(co)
-
-                    if success then
-                        data.Path = path:sub(assert((path:find("/plugins"))) + 1, #path)
-                        --table.freeze(data)
-                        table.insert(PluginManager.Plugins, data)
-
-                        if getPluginSettings(data).Enabled and data.OnLoad then
-                            data:OnLoad()
-                        end
-                    else
-                        print(`Failed to load-execute plugin {path}: {data}`)
-                    end
-                else
-                    print(`Failed to load plugin {path}: {err}`)
-                end
+                loadPlugin(path)
             end
         else
-            loadPluginsRecursive(path)
+            local mainScriptPath = path .. "/Main.luau"
+
+            if fs.isfile(mainScriptPath) then
+                loadPlugin(mainScriptPath, path)
+            else
+                warn(`PluginManager: Expected { mainScriptPath } to be valid`)
+            end
         end
     end
 end
@@ -116,16 +140,24 @@ function PluginManager.Load()
     end
 
     if fs.isfile(PLUGIN_SETTINGS_PATH) then
-        PluginSettings = json.parse(fs.read(PLUGIN_SETTINGS_PATH) or "") or {}
+        local settings = json.parse(fs.read(PLUGIN_SETTINGS_PATH) or "")
+
+        if typeof(settings) == "table" then
+            PluginSettings = settings :: { [string]: { Enabled: boolean }? }
+        else
+            warn(`PluginManager: Settings file corrupt: '{ settings }' ({ typeof(settings) })`)
+        end
     end
 
-    loadPluginsRecursive("./plugins")
+    loadPlugins("./plugins")
 end
 
 function PluginManager.Shutdown()
     for _, plugin in PluginManager.Plugins do
         if plugin.OnShutdown then
+            setPluginAlias(plugin.ParentPath)
             plugin:OnShutdown()
+            fs.removealias("plugin")
         end
     end
 
@@ -135,7 +167,9 @@ end
 function PluginManager.OnEditorStageChanged(OldStage: EditorStage, NewStage: EditorStage)
     for _, plugin in PluginManager.Plugins do
         if getPluginSettings(plugin).Enabled and plugin.OnEditorStageChanged and table.find(plugin.ActiveStages, NewStage) then
+            setPluginAlias(plugin.ParentPath)
             plugin:OnEditorStageChanged(OldStage, NewStage)
+            fs.removealias("plugin")
         end
     end
 end
@@ -143,7 +177,9 @@ end
 function PluginManager.OnUpdate(DeltaTime: number, CurrentStage: EditorStage)
     for _, plugin in PluginManager.Plugins do
         if getPluginSettings(plugin).Enabled and plugin.OnUpdate and table.find(plugin.ActiveStages, CurrentStage) then
+            setPluginAlias(plugin.ParentPath)
             plugin:OnUpdate(DeltaTime)
+            fs.removealias("plugin")
         end
     end
 
@@ -180,6 +216,12 @@ function PluginManager.GetToolbarButtons(CurrentStage: EditorStage): { ToolbarBu
     for _, plugin in PluginManager.Plugins do
         if getPluginSettings(plugin).Enabled and table.find(plugin.ActiveStages, CurrentStage) then
             for _, t in plugin.ToolbarButtons do
+                if t.Icon and t.Icon:find("@") then
+                    setPluginAlias(plugin.ParentPath)
+                    t.Icon = fs.resolvepath(t.Icon)
+                    fs.removealias("plugin")
+                end
+
                 table.insert(buttons, t)
             end
         end

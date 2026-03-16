@@ -1394,6 +1394,10 @@
               "Path: string"
             ]
           },
+          "removealias": {
+            "Description": "Removes an alias previously defined with `fs.definealias`",
+            "In": "Alias: string"
+          },
           "rename": {
             "Description": [
               "Renames the file at the given `Path` to have the `NewName`",

@@ -196,7 +196,7 @@ static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
 
     Logging::ScopedContext sc = Logging::Context{ .ContextExtraTags = std::format("TextDocument:{}", Module) };
 
-	int result = ScriptEngine::CompileAndLoad(L, source, "@" + FileRW::MakePathCwdRelative(Module));
+	int result = ScriptEngine::CompileAndLoad(L, source, "@" + FileRW::ResolvePathNormalized(Module));
 
 	if (result == 0)
 	{
@@ -265,7 +265,7 @@ void EcDataModel::Bind()
 	// 24/12/2024
 	ObjectHandle dontKillMePlease = this->Object;
 
-    std::string path = FileRW::MakePathCwdRelative(LiveScripts);
+    std::string path = FileRW::ResolvePathNormalized(LiveScripts);
 
     if (std::filesystem::is_regular_file(path))
     {

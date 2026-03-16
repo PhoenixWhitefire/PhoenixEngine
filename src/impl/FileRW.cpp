@@ -36,7 +36,7 @@ std::string FileRW::ReadFile(const std::string& ShortPath, bool* Success)
 {
 	ZoneScoped;
 
-	const std::string actualPath = FileRW::MakePathCwdRelative(ShortPath);
+	const std::string actualPath = FileRW::ResolvePathNormalized(ShortPath);
 	ZoneText(ShortPath.data(), ShortPath.size());
 	ZoneText(actualPath.data(), actualPath.size());
 
@@ -86,7 +86,7 @@ bool FileRW::WriteFile(
 {
 	ZoneScoped;
 
-	std::string path = FileRW::MakePathCwdRelative(ShortPath);
+	std::string path = FileRW::ResolvePathNormalized(ShortPath);
 	ZoneText(ShortPath.data(), ShortPath.size());
 	ZoneText(path.data(), path.size());
 
@@ -120,7 +120,7 @@ bool FileRW::WriteFileCreateDirectories(
 {
 	ZoneScoped;
 
-	std::string path = FileRW::MakePathCwdRelative(ShortPath);
+	std::string path = FileRW::ResolvePathNormalized(ShortPath);
 	ZoneText(ShortPath.data(), ShortPath.size());
 	ZoneText(path.data(), path.size());
 
@@ -147,6 +147,12 @@ void FileRW::DefineAlias(const std::string& Alias, const std::string& Path)
 	s_AliasMap[Alias] = Path;
 }
 
+void FileRW::RemoveAlias(const std::string& Alias)
+{
+	if (const auto& it = s_AliasMap.find(Alias); it != s_AliasMap.end())
+		s_AliasMap.erase(it);
+}
+
 void FileRW::MakeCwdAliasOf(const std::string& Alias)
 {
 	s_CwdAliasing = Alias;
@@ -162,10 +168,7 @@ static std::string resolveAliasRecursive(std::string Path)
 	const auto& aliasIt = s_AliasMap.find(alias);
 
 	if (aliasIt == s_AliasMap.end())
-	{
-		Log.ErrorF("Invalid alias '{}' in path '{}'", alias, Path);
-		return Path;
-	}
+		RAISE_RTF("Invalid alias '{}' in path '{}'", alias, Path);
 	else
 		Path = aliasIt->second + Path.substr(aliasEnd, Path.size() - aliasEnd);
 
@@ -175,11 +178,11 @@ static std::string resolveAliasRecursive(std::string Path)
 	return Path;
 }
 
-std::string FileRW::MakePathCwdRelative(std::string Path)
+std::string FileRW::ResolvePathNormalized(std::string Path)
 {
 	if (Path.size() == 0)
 	{
-		Log.Warning("`MakePathCwdRelative` given a path 0 bytes in length!");
+		Log.Warning("`ResolvePathNormalized` given a path 0 bytes in length!");
 		return Path;
 	}
 
@@ -225,15 +228,15 @@ std::string FileRW::MakePathCwdRelative(std::string Path)
 	return Path;
 }
 
-std::string FileRW::MakePathAbsolute(std::string Path)
+std::string FileRW::ResolvePathAbsolute(std::string Path)
 {
 	if (Path.size() == 0)
 	{
-		Log.Warning("`MakePathAbsolute` given a path 0 bytes in length!");
+		Log.Warning("`ResolvePathAbsolute` given a path 0 bytes in length!");
 		return Path;
 	}
 
-	std::string cwd = MakePathCwdRelative(Path);
+	std::string cwd = ResolvePathNormalized(Path);
 	std::string abs = cwd;
 
 	if (abs[0] != '/' && abs[0] != '~' && (abs.size() < 2 || abs[1] != ':'))
