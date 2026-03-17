@@ -288,7 +288,7 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
             IsGizmoDragging = true
         end
 
-    elseif not tryingToInteract then
+    else
         IsGizmoDragging = false
 
         for _, pcs in GizmoPieces do

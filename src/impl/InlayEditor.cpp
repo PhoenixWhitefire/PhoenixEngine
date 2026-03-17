@@ -1714,7 +1714,7 @@ static void recursiveIterateTree(GameObject* current)
 		if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
 		{
 			ImGui::SetDragDropPayload("Explorer_DragGameObject", &object->ObjectId, sizeof(uint32_t));
-			ImGui::Text("Dragging %s", object->Name.c_str());
+			ImGui::Text("Moving %s", object->Name.c_str());
 			ImGui::EndDragDropSource();
 			nodeClicked = object;
 		}
@@ -2752,6 +2752,32 @@ static void recursiveRenderFilesystemNode(FilesystemNode& Node)
 	bool openScript = ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered();
 	bool hovered = ImGui::IsItemHovered();
 
+	if (ImGui::BeginDragDropSource())
+	{
+		const std::string& path = Node.Path.string();
+		ImGui::SetDragDropPayload("FileViewer", path.data(), (int)path.size());
+		ImGui::Text("Moving %s", Node.Path.filename().string().c_str());
+		ImGui::EndDragDropSource();
+	}
+
+	if (Node.IsDirectory && ImGui::BeginDragDropTarget())
+	{
+		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FileViewer"))
+		{
+			std::filesystem::path path = std::filesystem::path(std::string_view((const char*)payload->Data, payload->DataSize));
+
+			std::error_code ec;
+			std::filesystem::rename(path, Node.Path / path.filename(), ec);
+
+			if (ec)
+				setErrorMessage(ec.message());
+			else
+				FilesViewLastRefreshed = 0.f;
+		}
+
+		ImGui::EndDragDropTarget();
+	}
+
 	ImGui::PopStyleVar();
 
 	ImGui::SameLine();
@@ -2948,7 +2974,31 @@ static void renderFilesViewer()
 	for (auto& nodeIt : FilesViewerRoot.DirectoryContents)
 		recursiveRenderFilesystemNode(nodeIt.second);
 
-	if (ImGui::IsMouseClicked(ImGuiMouseButton_Right) && ImGui::IsWindowHovered() && !ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemHovered())
+	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 8.f);
+
+	ImVec2 rootDropTargetSize = ImGui::GetContentRegionAvail();
+	rootDropTargetSize.y = std::max(rootDropTargetSize.y, 16.f);
+
+	ImGui::Dummy(rootDropTargetSize);
+	if (ImGui::BeginDragDropTarget())
+	{
+		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FileViewer"))
+		{
+			std::filesystem::path path = std::filesystem::path(std::string_view((const char*)payload->Data, payload->DataSize));
+
+			std::error_code ec;
+			std::filesystem::rename(path, std::filesystem::path(FileRW::ResolvePathNormalized(FilesViewerRootPath)) / path.filename(), ec);
+
+			if (ec)
+				setErrorMessage(ec.message());
+			else
+				FilesViewLastRefreshed = 0.f;
+		}
+
+		ImGui::EndDragDropTarget();
+	}
+
+	if (ImGui::IsMouseClicked(ImGuiMouseButton_Right) && ImGui::IsWindowHovered() && !ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemHovered() && !ImGui::IsAnyItemActive())
 		ImGui::OpenPopup("ViewerContextMenu");
 
 	if (ImGui::BeginPopup("ViewerContextMenu"))
