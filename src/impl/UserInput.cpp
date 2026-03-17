@@ -33,7 +33,7 @@ bool UserInput::ShouldIgnoreUIInputSinking()
     if (!GImGui)
         return false;
 
-    if (ImGui::IsAnyItemActive())
+    if (ImGui::IsAnyItemActive() && std::string_view(GImGui->ActiveIdWindow->Name).find("WindowOverViewport") == std::string::npos)
         return false;
 
     if (isAnyMouseButtonDown() && GImGui->HoveredWindow && std::string_view(GImGui->HoveredWindow->Name).find("WindowOverViewport") == std::string::npos)
