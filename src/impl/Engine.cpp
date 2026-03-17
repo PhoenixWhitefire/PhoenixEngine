@@ -488,7 +488,7 @@ static void traverseHierarchy(
 				cm->MaterialId,
 				cm->Tint,
 				cm->Transparency,
-				cm->MetallnessFactor,
+				cm->MetalnessFactor,
 				cm->RoughnessFactor,
 				cm->FaceCulling,
 				cm->CastsShadows

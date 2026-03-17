@@ -314,7 +314,7 @@ export type Mesh = {
   FaceCulling: EnumFaceCulling,
   Material: string,
   MeshAsset: string,
-  MetallnessFactor: number,
+  MetalnessFactor: number,
   RoughnessFactor: number,
   Tint: Color,
   Transparency: number,

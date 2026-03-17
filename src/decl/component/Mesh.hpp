@@ -21,7 +21,7 @@ struct EcMesh : public Component<EntityComponent::Mesh>
 	uint32_t MaterialId = UINT32_MAX;
 
 	float Transparency = 0.f;
-	float MetallnessFactor = 1.f;
+	float MetalnessFactor = 1.f;
 	float RoughnessFactor = 1.f;
 
 	Color Tint = { 1.f, 1.f, 1.f };

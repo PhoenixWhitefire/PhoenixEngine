@@ -50,7 +50,7 @@ uniform float SpecularMultiplier;
 uniform float SpecularPower;
 
 uniform float Transparency;
-uniform float MetallnessFactor;
+uniform float MetalnessFactor;
 uniform float RoughnessFactor;
 uniform float EmissionStrength;
 

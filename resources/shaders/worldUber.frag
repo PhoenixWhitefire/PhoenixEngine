@@ -50,7 +50,7 @@ uniform vec3 LightAmbient = vec3(0.3f);
 uniform float SpecularMultiplier;
 uniform float SpecularPower;
 
-uniform float MetallnessFactor;
+uniform float MetalnessFactor;
 uniform float RoughnessFactor;
 uniform float EmissionStrength;
 
@@ -353,8 +353,8 @@ void main()
 
 	vec3 reflectDir = reflect(-ViewDirection, Normal);
 	//reflectDir.y = -reflectDir.y;
-	//vec3 ReflectedTint = textureLod(SkyboxCubemap, reflectDir, MetallicRoughnessSample.x * MetallnessFactor * 6.f).xyz;
-	//ReflectedTint *= mix(vec3(1.f, 1.f, 1.f), Frag_ColorTint, MetallicRoughnessSample.x * MetallnessFactor);
+	//vec3 ReflectedTint = textureLod(SkyboxCubemap, reflectDir, MetallicRoughnessSample.x * MetalnessFactor * 6.f).xyz;
+	//ReflectedTint *= mix(vec3(1.f, 1.f, 1.f), Frag_ColorTint, MetallicRoughnessSample.x * MetalnessFactor);
 
 	//Albedo = vec4(Albedo.xyz * Frag_ColorTint + ReflectedTint * MetallicRoughnessSample.y, Albedo.w);
 

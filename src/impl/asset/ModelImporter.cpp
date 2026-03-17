@@ -362,7 +362,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 			meshObject->MaterialId = mtlManager->LoadFromPath(materialName);
 			mtlManager->SaveToPath(mtlManager->GetMaterialResource(meshObject->MaterialId), materialName);
 
-			meshObject->MetallnessFactor = material.MetallicFactor;
+			meshObject->MetalnessFactor = material.MetallicFactor;
 			meshObject->RoughnessFactor = material.RoughnessFactor;
 		}
 

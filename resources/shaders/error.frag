@@ -50,7 +50,7 @@ uniform float SpecularMultiplier = 0.5f;
 uniform float SpecularPower = 16.0f;
 
 uniform float Transparency = 0.f;
-uniform float MetallnessFactor = 0.f;
+uniform float MetalnessFactor = 0.f;
 uniform float RoughnessFactor = 0.f;
 uniform float EmissionStrength = 0.f;
 

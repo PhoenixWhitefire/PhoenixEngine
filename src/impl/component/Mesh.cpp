@@ -90,7 +90,7 @@ public:
 			),
 
 			REFLECTION_PROPERTY_SIMPLE(EcMesh, Transparency, Double),
-			REFLECTION_PROPERTY_SIMPLE(EcMesh, MetallnessFactor, Double),
+			REFLECTION_PROPERTY_SIMPLE(EcMesh, MetalnessFactor, Double),
 			REFLECTION_PROPERTY_SIMPLE(EcMesh, RoughnessFactor, Double),
 			REFLECTION_PROPERTY_SIMPLE_NGV(EcMesh, Tint, Color),
 

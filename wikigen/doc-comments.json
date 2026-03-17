@@ -444,7 +444,7 @@
           },
           "Material": "The name of the `.mtl` in the `resources/materials/` directory it should use",
           "MeshAsset": "The path to the underlying `.hxmesh` file, or a built-in identifier like `!Quad` or `!Cube`",
-          "MetallnessFactor": "Metallness modifier",
+          "MetalnessFactor": "Metalness modifier",
           "RoughnessFactor": "Roughness modifier",
           "Tint": "The Color it should be tinted with",
           "Transparency": "Its transparency/translucency"

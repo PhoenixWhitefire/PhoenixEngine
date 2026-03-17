@@ -114,7 +114,7 @@ static Scene MtlPreviewScene = Scene{
 			.MaterialId = 0u,
 			.TintColor = glm::vec3(1.f),
 			.Transparency = 0.f,
-			.MetallnessFactor = 0.f,
+			.MetalnessFactor = 0.f,
 			.RoughnessFactor = 0.f,
 			.FaceCulling = FaceCullingMode::BackFace
 		}

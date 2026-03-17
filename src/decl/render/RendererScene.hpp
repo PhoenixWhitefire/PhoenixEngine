@@ -15,7 +15,7 @@ struct RenderItem
 	uint32_t MaterialId = UINT32_MAX;
 	glm::vec3 TintColor;
 	float Transparency = 0.f;
-	float MetallnessFactor = 0.f;
+	float MetalnessFactor = 0.f;
 	float RoughnessFactor = 0.f;
 
 	FaceCullingMode FaceCulling = FaceCullingMode::BackFace;

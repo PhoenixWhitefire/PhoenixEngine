@@ -177,7 +177,7 @@
           "FaceCulling": "Integer",
           "Material": "String",
           "MeshAsset": "String",
-          "MetallnessFactor": "Double",
+          "MetalnessFactor": "Double",
           "RoughnessFactor": "Double",
           "Tint": "Color",
           "Transparency": "Double"

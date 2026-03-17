@@ -556,6 +556,9 @@ static std::vector<ObjectRef> loadSceneVersion2(const std::string& Contents, flo
 			if (Version < 2.11f && propName == "Asset")
 				propName = "MeshAsset";
 
+			if (Version < 2.13f && propName == "MetallnessFactor")
+				propName = "MetalnessFactor";
+
 			const nlohmann::json& memberValue = propIt.value();
 
 			const Reflection::PropertyDescriptor* prop = newObject->FindProperty(propName);
@@ -954,7 +957,7 @@ std::string SceneFormat::Serialize(std::vector<GameObject*> Objects, const std::
 							+ std::to_string((int32_t)ymd.year());
 	
 	std::string contents = std::string("PHOENIXF\n")
-							+ "#Version 2.12\n"
+							+ "#Version 2.13\n"
 							+ "#Asset Scene\n"
 							+ "#Date " + dateStr + "\n"
 							+ "#SceneName " + SceneName + "\n"

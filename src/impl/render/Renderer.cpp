@@ -382,7 +382,7 @@ void Renderer::DrawScene(
 				hash = renderData.RenderMeshId
 						+ static_cast<uint64_t>(renderData.MaterialId * 500u)
 						+ (renderData.Transparency > 0.f ? 5000000ull : 0ull)
-						+ static_cast<uint64_t>(renderData.MetallnessFactor * 115)
+						+ static_cast<uint64_t>(renderData.MetalnessFactor * 115)
 						+ static_cast<uint64_t>(renderData.RoughnessFactor * 115);
 
 			auto it = instancingList.find(hash);
@@ -598,7 +598,7 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData, bool DebugWirefra
 	shader.SetUniform("SpecularMultiplier", material.SpecMultiply);
 	shader.SetUniform("SpecularPower", material.SpecExponent);
 
-	shader.SetUniform("MetallnessFactor", RenderData.MetallnessFactor);
+	shader.SetUniform("MetalnessFactor", RenderData.MetalnessFactor);
 	shader.SetUniform("RoughnessFactor", RenderData.RoughnessFactor);
 
 	shader.SetUniform(

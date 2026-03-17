@@ -1518,8 +1518,8 @@
   "@phoenix/globaltype/Mesh.MeshAsset": {
     "documentation": "The path to the underlying `.hxmesh` file, or a built-in identifier like `!Quad` or `!Cube`"
   },
-  "@phoenix/globaltype/Mesh.MetallnessFactor": {
-    "documentation": "Metallness modifier"
+  "@phoenix/globaltype/Mesh.MetalnessFactor": {
+    "documentation": "Metalness modifier"
   },
   "@phoenix/globaltype/Mesh.RoughnessFactor": {
     "documentation": "Roughness modifier"
