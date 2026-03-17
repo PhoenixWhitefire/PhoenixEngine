@@ -102,11 +102,13 @@ static int s_ExitCode = 0;
 #define pclose _pclose
 
 // 13/01/2025 windows and it's quirkyness
-#define LAUNCH_TRACY_CMD "\"Vendor\\tracy\\profiler\\build\\Release\\tracy-profiler.exe\" -a 127.0.0.1 -p 8086"
+#define TRACY_PATH "\"Vendor\\tracy\\profiler\\build\\Release\\tracy-profiler.exe\""
+#define LAUNCH_TRACY_CMD TRACY_PATH " -a 127.0.0.1 -p 8086"
 
 #else
 
-#define LAUNCH_TRACY_CMD "\"Vendor/tracy/profiler/build/tracy-profiler\" -a 127.0.0.1 -p 8086"
+#define TRACY_PATH "Vendor/tracy/profiler/build/tracy-profiler"
+#define LAUNCH_TRACY_CMD TRACY_PATH " -a 127.0.0.1 -p 8086"
 
 #endif
 
@@ -136,6 +138,19 @@ static std::string exec(const char* cmd)
 static void launchTracy()
 {
 #ifdef TRACY_ENABLE
+	if (!std::filesystem::is_regular_file(TRACY_PATH))
+	{
+		tinyfd_messageBox(
+			"Tracy Integration",
+			"The Tracy Profiler was not found in the expected location ('" TRACY_PATH "')"
+				" and cannot be launched.\nIt may have not been built or may have been misconfigured.",
+			"ok",
+			"error",
+			1
+		);
+		return;
+	}
+
 	if (WasTracyLaunched)
 		RAISE_RT("Tried to launch Tracy twice in one session");
 	WasTracyLaunched = true;
