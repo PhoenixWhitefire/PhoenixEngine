@@ -19,7 +19,8 @@ static const std::string_view Tools[] = {
     "Tool_Shaders",
     "Tool_Settings",
     "Tool_Info",
-    "Tool_Scripts"
+    "Tool_Scripts",
+    "Tool_Documentation"
 };
 
 static std::string checkValidTool(std::string toolName)
@@ -506,7 +507,7 @@ public:
                 { Reflection::ValueType::Boolean },
                 [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
                 {
-                    return { (bool)EngineJsonConfig[checkValidTool(std::string(inputs[0].AsStringView()))] };
+                    return { EngineJsonConfig.value(checkValidTool(std::string(inputs[0].AsStringView())), false) };
                 }
             } },
 

@@ -2442,7 +2442,7 @@ local function runUpdate()
 	assert(typeof(artifactsData) == "table")
 	artifactsData = artifactsData :: { [string]: JsonSerializable }
 
-	updaterLog ..= `Artifacts count: { assert(artifactsData.total_count) }\n`
+	updaterLog ..= `Artifact count: { assert(artifactsData.total_count) }\n`
 	updaterLog ..= `Checking for { Engine.TargetPlatform } Release artifact...\n`
 
 	assert(typeof(artifactsData.artifacts) == "table")

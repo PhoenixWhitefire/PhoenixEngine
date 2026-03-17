@@ -1836,10 +1836,10 @@ static const ImVec4 ApiFunctionColor = ImVec4(.91f, .41f, .12f, 1.f);
 static const ImVec4 ApiEventColor = ImVec4(1.f, .93f, 0.f, 1.f);
 static const ImVec4 ApiTypeColor = ImVec4(.62f, 0.f, .55f, 1.f);
 
-static bool DocumentationViewerOpen = false;
 static int DocumentationViewerSection = -1;
 static int DocumentationViewerSubPage = 0;
 static std::string DocumentationViewerSubPageName = "";
+static bool DocumentationViewerJumpingToPage = false;
 
 static std::string_view ForceRenderingTooltip = "";
 
@@ -1924,7 +1924,7 @@ static void propertyTooltip(const std::string_view& PropName, EntityComponent Co
 		{
 			if (ImGui::TextLink(PropName.data()))
 			{
-				DocumentationViewerOpen = true;
+				EngineJsonConfig["Tool_Documentation"] = true;
 				DocumentationViewerSection = 0;
 				DocumentationViewerSubPage = (int)Component;
 			}
@@ -2074,24 +2074,30 @@ static void renderApiMemberBulletpoint(const nlohmann::json::const_iterator& mem
 
 static void renderDocumentationViewer()
 {
-	if (!DocumentationViewerOpen)
+	if (!EngineJsonConfig.value("Tool_Documentation", false))
 		return;
 
 	bool open = true;
+	bool render = ImGui::Begin("Documentation Viewer", &open);
+	EngineJsonConfig["Tool_Documentation"] = open;
 
-	if (!ImGui::Begin("Documentation Viewer", &open))
+	if (!render)
 	{
 		ImGui::End();
-		DocumentationViewerOpen = open;
 		return;
 	}
 
 	ImGui::BeginChild(1983, ImGui::GetContentRegionAvail() * ImVec2(0.2f, 1.f), ImGuiChildFlags_Borders);
 
-	if (DocumentationViewerSection == 0)
+	if (DocumentationViewerJumpingToPage && DocumentationViewerSection == 0)
+	{
 		ImGui::SetNextItemOpen(true);
+		DocumentationViewerJumpingToPage = false;
+	}
 
-	bool sectionOpen = ImGui::TreeNodeEx("Game Object", DocumentationViewerSection == 0 ? ImGuiTreeNodeFlags_Selected : 0);
+	const ImGuiTreeNodeFlags NodeFlags = ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_OpenOnArrow;
+
+	bool sectionOpen = ImGui::TreeNodeEx("Game Object", (DocumentationViewerSection == 0 ? ImGuiTreeNodeFlags_Selected : 0) | NodeFlags);
 	if (ImGui::IsItemClicked())
 	{
 		DocumentationViewerSection = 0;
@@ -2102,7 +2108,7 @@ static void renderDocumentationViewer()
 	{
 		for (int i = 1; i < (int)EntityComponent::__count; i++)
 		{
-			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf;
+			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | NodeFlags;
 			flags |= (DocumentationViewerSection == 0 && DocumentationViewerSubPage == i) ? ImGuiTreeNodeFlags_Selected : 0;
 
 			float startX = ImGui::GetCursorPosX();
@@ -2145,10 +2151,13 @@ static void renderDocumentationViewer()
 		ImGui::TreePop();
 	}
 
-	if (DocumentationViewerSection == 1)
+	if (DocumentationViewerJumpingToPage && DocumentationViewerSection == 1)
+	{
 		ImGui::SetNextItemOpen(true);
+		DocumentationViewerJumpingToPage = false;
+	}
 
-	sectionOpen = ImGui::TreeNodeEx("Datatypes", DocumentationViewerSection == 1 ? ImGuiTreeNodeFlags_Selected : 0);
+	sectionOpen = ImGui::TreeNodeEx("Datatypes", (DocumentationViewerSection == 1 ? ImGuiTreeNodeFlags_Selected : 0) | NodeFlags);
 	if (ImGui::IsItemClicked())
 	{
 		DocumentationViewerSection = 1;
@@ -2161,7 +2170,7 @@ static void renderDocumentationViewer()
 	{
 		for (auto it = datatypesDoc.begin(); it != datatypesDoc.end(); it++)
 		{
-			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf;
+			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | NodeFlags;
 			flags |= (DocumentationViewerSection == 1 && DocumentationViewerSubPageName == it.key()) ? ImGuiTreeNodeFlags_Selected : 0;
 
 			bool popen = ImGui::TreeNodeEx(it.key().c_str(), flags);
@@ -2179,10 +2188,13 @@ static void renderDocumentationViewer()
 		ImGui::TreePop();
 	}
 
-	if (DocumentationViewerOpen)
+	if (DocumentationViewerJumpingToPage && DocumentationViewerSection == 2)
+	{
 		ImGui::SetNextItemOpen(true);
+		DocumentationViewerJumpingToPage = false;
+	}
 
-	sectionOpen = ImGui::TreeNodeEx("Libraries", DocumentationViewerSection == 2 ? ImGuiTreeNodeFlags_Selected : 0);
+	sectionOpen = ImGui::TreeNodeEx("Libraries", (DocumentationViewerSection == 2 ? ImGuiTreeNodeFlags_Selected : 0) | NodeFlags);
 	if (ImGui::IsItemClicked())
 	{
 		DocumentationViewerSection = 2;
@@ -2195,7 +2207,7 @@ static void renderDocumentationViewer()
 	{
 		for (auto it = librariesDoc.begin(); it != librariesDoc.end(); it++)
 		{
-			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf;
+			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | NodeFlags;
 			flags |= (DocumentationViewerSection == 2 && DocumentationViewerSubPageName == it.key()) ? ImGuiTreeNodeFlags_Selected : 0;
 
 			bool popen = ImGui::TreeNodeEx(it.key().c_str(), flags);
@@ -2213,10 +2225,7 @@ static void renderDocumentationViewer()
 		ImGui::TreePop();
 	}
 
-	if (DocumentationViewerSection == 3)
-		ImGui::SetNextItemOpen(true);
-
-	sectionOpen = ImGui::TreeNodeEx("Globals", ImGuiTreeNodeFlags_Leaf | (DocumentationViewerSection == 3 ? ImGuiTreeNodeFlags_Selected : 0));
+	sectionOpen = ImGui::TreeNodeEx("Globals", ImGuiTreeNodeFlags_Leaf | NodeFlags | (DocumentationViewerSection == 3 ? ImGuiTreeNodeFlags_Selected : 0));
 	if (ImGui::IsItemClicked())
 	{
 		DocumentationViewerSection = 3;
@@ -3039,9 +3048,10 @@ static void renderProperties()
 			}
 			else if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
 			{
-				DocumentationViewerOpen = true;
+				EngineJsonConfig["Tool_Documentation"] = true;
 				DocumentationViewerSection = 0;
 				DocumentationViewerSubPage = (int)ec;
+				DocumentationViewerJumpingToPage = true;
 			}
 
 			ImGui::SameLine();
@@ -3085,9 +3095,10 @@ static void renderProperties()
 
 			if (ImGui::MenuItem("Info"))
 			{
-				DocumentationViewerOpen = true;
+				EngineJsonConfig["Tool_Documentation"] = true;
 				DocumentationViewerSection = 0;
 				DocumentationViewerSubPage = (int)RemoveComponentPopupTarget;
+				DocumentationViewerJumpingToPage = true;
 			}
 
 			if (ImGui::MenuItem("Remove"))
