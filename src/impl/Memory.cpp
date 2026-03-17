@@ -184,7 +184,7 @@ void Memory::Free(void* Pointer)
 
 	assert(Counters[memcat] > 0);
 	Counters[memcat].fetch_sub(size, std::memory_order_relaxed);
-	Counters[memcat].fetch_add(size, std::memory_order_relaxed);
+	Activity[memcat].fetch_add(size, std::memory_order_relaxed);
 
 	free(Pointer);
 }
