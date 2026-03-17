@@ -23,19 +23,21 @@ bool UserInput::IsMouseButtonDown(int Button)
 	return glfwGetMouseButton(glfwGetCurrentContext(), Button) == GLFW_PRESS;
 }
 
+static bool isAnyMouseButtonDown()
+{
+    return UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT) || UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_LEFT);
+}
+
 bool UserInput::ShouldIgnoreUIInputSinking()
 {
     if (!GImGui)
         return false;
 
-    if (GImGui->HoveredWindow && std::string_view(GImGui->HoveredWindow->Name).find("WindowOverViewport") != std::string::npos)
-        return true;
+    if (ImGui::IsAnyItemActive())
+        return false;
 
-    if (ImGui::IsAnyItemActive() && std::string_view(GImGui->ActiveIdWindow->Name).find("WindowOverViewport") != std::string::npos)
-        return true;
+    if (isAnyMouseButtonDown() && GImGui->HoveredWindow && std::string_view(GImGui->HoveredWindow->Name).find("WindowOverViewport") == std::string::npos)
+        return false;
 
-    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_NoMouse)
-        return true;
-
-    return false;
+    return true;
 }

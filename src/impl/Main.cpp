@@ -358,30 +358,22 @@ static void drawDeveloperUI(double DeltaTime)
 		static bool AreGraphsPaused = false;
 
 		ImGui::BeginChild("Graphs", ImVec2(), ImGuiChildFlags_Borders);
-		ImGui::Text("Right-click to");
-		ImGui::SameLine();
 
 		ImGuiStyle style = ImGui::GetStyle();
-
 		ImGui::SetCursorPosY(ImGui::GetCursorPosY() - style.FramePadding.y);
 
 		if (AreGraphsPaused)
 		{
-			if (ImGui::Button("resume"))
+			if (ImGui::Button("Resume"))
 				AreGraphsPaused = false;
 		}
-		else if (ImGui::Button("pause"))
+		else if (ImGui::Button("Pause"))
 				AreGraphsPaused = true;
 
 		ImGui::SameLine();
 		ImGui::SetCursorPosY(ImGui::GetCursorPosY() - style.FramePadding.y);
 
 		ImGui::Text("graphs");
-		
-		if (GuiIO->WantCaptureMouse && RmbTrigger)
-			AreGraphsPaused = !AreGraphsPaused;
-		else
-			WasRmbPressed = false;
 
 		if (!AreGraphsPaused)
 		{
@@ -435,9 +427,9 @@ static void drawDeveloperUI(double DeltaTime)
 			bool open = ImGui::TreeNodeEx(
 				(void*)(int64_t)i,
 				ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth,
-				"%s: %zi",
+				"%s: %.2f KB",
 				Memory::CategoryNames[i],
-				memcounts[i].load()
+				(float)memcounts[i].load() / 1000.f
 			);
 
 			if (open)
