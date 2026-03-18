@@ -778,7 +778,12 @@ local function toolsTab(_: number)
 		local name = tool:sub(#("Tool_") + 1, #tool)
 		local enabled = Engine:IsToolEnabled(tool)
 
-		if tabButton(name, `@etextures/editor-icons/{name}.png`, true, enabled) then
+		local iconName = name
+		if iconName == "Renderer" then
+			iconName = "Settings"
+		end
+
+		if tabButton(name, `@etextures/editor-icons/{ iconName }.png`, true, enabled) then
 			Engine:SetToolEnabled(tool, not enabled)
 			Engine:SaveConfig()
 		end
@@ -1204,7 +1209,7 @@ local function renderMainMenuBar(dt: number)
 			openAboutWindow = true
 		end
 
-		if imgui.menuitem("Settings") then
+		if imgui.menuitem("Editor Settings") then
 			openSettingsWindow = true
 		end
 		

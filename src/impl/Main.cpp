@@ -531,10 +531,10 @@ static void drawDeveloperUI(double DeltaTime)
 	if (!infoOpen)
 		EngineJsonConfig["Tool_Info"] = false;
 
-	bool beganSettings = EngineJsonConfig["Tool_Settings"] != false;
+	bool beganSettings = EngineJsonConfig["Tool_Renderer"] != false;
 	bool settingsOpen = beganSettings;
 
-	if (beganSettings && ImGui::Begin("Settings", &settingsOpen))
+	if (beganSettings && ImGui::Begin("Renderer", &settingsOpen))
 	{
 		ImGui::Checkbox("VSync", &engine->VSync);
 
@@ -604,7 +604,7 @@ static void drawDeveloperUI(double DeltaTime)
 		ImGui::End();
 
 	if (!settingsOpen)
-		EngineJsonConfig["Tool_Settings"] = false;
+		EngineJsonConfig["Tool_Renderer"] = false;
 
 	InlayEditor::UpdateAndRender(DeltaTime);
 }

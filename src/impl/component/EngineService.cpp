@@ -17,7 +17,7 @@ static const std::string_view Tools[] = {
     "Tool_Properties",
     "Tool_Materials",
     "Tool_Shaders",
-    "Tool_Settings",
+    "Tool_Renderer",
     "Tool_Info",
     "Tool_Scripts",
     "Tool_Documentation"
