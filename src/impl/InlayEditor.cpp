@@ -65,6 +65,7 @@ struct TextEditorTab
 	bool WasPreviouslyVisible = false;
 	bool SetUIFocus = false;
 	bool HasUnderlyingFile = true;
+	bool WasEdited = false;
 };
 static std::vector<TextEditorTab> s_TextEditors;
 static auto s_EditorLuauLang = TextEditor::LanguageDefinition::Lua();
@@ -547,6 +548,8 @@ static bool textEditorAskSaveFileAs(
 
 static void textEditorSaveFile(TextEditorTab& Tab, bool AskSave = true)
 {
+	Tab.WasEdited = false;
+
 	std::string contents = Tab.Editor.GetText();
 	std::string textEditorFile = Tab.FilePath;
 
@@ -574,7 +577,10 @@ static void textEditorSaveFile(TextEditorTab& Tab, bool AskSave = true)
 
 		Tab.FilePath = SAVINGTAG;
 		if (!textEditorAskSaveFileAs(AskSave, contents))
+		{
 			Tab.FilePath = UNSAVEDTAG;
+			Tab.WasEdited = true;
+		}
 	}
 	else
 	{
@@ -583,11 +589,12 @@ static void textEditorSaveFile(TextEditorTab& Tab, bool AskSave = true)
 		std::string error;
 		if (!FileRW::WriteFile(realSaveLoc, contents, &error))
 		{
-			textEditorAskSaveFileAs(
+			if (!textEditorAskSaveFileAs(
 				true,
 				contents,
 				std::format("Couldn't save to {}: {}.\nClick YES to choose a different location, or NO to discard the file", error, realSaveLoc)
-			);
+			))
+				Tab.WasEdited = true;
 		}
 	}
 }
@@ -686,11 +693,13 @@ static void renderTextEditors()
 
 		if (!tab.HasUnderlyingFile)
 			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 0.f, 0.f, 1.f));
+		else if (tab.WasEdited)
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(255.f/255.f, 221.f/255.f, 128.f/255.f, 1.f));
 
 		bool open = true;
 		bool render = ImGui::Begin(std::format("{}###TextEditor_{}", std::filesystem::path(tab.FilePath).filename().string(), index).c_str(), &open);
 
-		if (!tab.HasUnderlyingFile)
+		if (!tab.HasUnderlyingFile || tab.WasEdited)
 			ImGui::PopStyleColor();
 
 		if (!open)
@@ -726,6 +735,9 @@ static void renderTextEditors()
 			tab.Editor.SetBreakpoints({ tab.DebuggerCurrentLine });
 
 		tab.Editor.Render("TextEditor");
+
+		if (tab.Editor.IsTextChanged())
+			tab.WasEdited = true;
 
 		if (tab.JumpToLine > 0)
 		{
@@ -4172,7 +4184,9 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 	}
 
 	int currfuncindex = getInfoSuccess ? lua_gettop(L) : 0;
-	invokeTextEditor(ar->short_src ? ar->short_src : "!InlineDocument:Unknown source").JumpToLine = ar->currentline;
+	TextEditorTab& tab = invokeTextEditor(ar->short_src ? ar->short_src : "!InlineDocument:Unknown source");
+	tab.DebuggerCurrentLine = ar->currentline;
+	tab.JumpToLine = ar->currentline;
 
 	static bool s_CallstackJumpToCurrentThread = false;
 	s_CallstackJumpToCurrentThread = true;
@@ -4341,8 +4355,6 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 			}
 		}
 		ImGui::End();
-
-		invokeTextEditor(ar->short_src ? ar->short_src : "!InlineDocument:Unknown source").DebuggerCurrentLine = ar->currentline;
 
 		if (ImGui::Begin("Watch"))
 		{

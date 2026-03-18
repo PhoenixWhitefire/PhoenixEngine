@@ -1482,7 +1482,15 @@ local function interactWithLogSubMessage(ExtraTags: string, Value: unknown)
 		return
 	end
 
-	warn(`Failed to figure out the interaction for a log message with tags '{ExtraTags}'`)
+	local doc = ExtraTags:match("TextDocument:.+")
+
+	if doc then
+		Engine:OpenTextDocument(doc:sub(#("TextDocument:") + 1, #doc))
+
+		return
+	end
+
+	warn(`Failed to figure out the interaction for a log message with tags '{ ExtraTags }'`)
 end
 
 Logging.OnMessaged:Connect(function(Type, Message, ExtraTags, Value)
@@ -1578,7 +1586,6 @@ local function isMouseWithinViewport()
 end
 
 local LogMessageHovering: number = -1
-local ViewportTakeFocusFrames = 0
 local CommandBarActive = false
 
 PlayerInput.KeyEvent:Connect(function(kie: KeyInputEvent)
@@ -1689,7 +1696,12 @@ local function renderViewport(DeltaTime: number)
 		imgui.endw()
 	end
 
-	if OutputEnabled and imgui.begin("Output", "h") then
+	local renderOutput = false
+	if OutputEnabled then
+		renderOutput, OutputEnabled = imgui.begin("Output", "h", true)
+	end
+
+	if renderOutput then
 		local logMessageHoveringWip: number = -1
 		local smid = 0
 		local rightClickedLogMessage = false
@@ -1725,7 +1737,7 @@ local function renderViewport(DeltaTime: number)
 				end
 
 				local tooltip = subMessage.Tooltip
-				local context = subMessage.ExtraTags
+				local context = message.Message[1].ExtraTags
 				if #context <= 2 or context == "LogContext:Main" then
 					context = ""
 
@@ -1950,22 +1962,11 @@ local function renderViewport(DeltaTime: number)
 			imgui.endpopup()
 		end
 
-		imgui.endw()
-
 		LogMessageHovering = logMessageHoveringWip
-
-	elseif OutputEnabled then
 		imgui.endw()
 	end
 
 	local canInteract = IsHoveringViewportTitlebar or (not IsHoveringViewport and imgui.windowhovered("a | b"))
-
-	if ViewportTakeFocusFrames > 0 then
-		imgui.setnextwindowfocus()
-		ViewportTakeFocusFrames -= 1
-		canInteract = true
-	end
-
 	imgui.begin(Project.Name .. "###Viewport", if canInteract then "nb" else "ni | nb")
 
 	local cpos = PlayerInput:GetCursorPosition()
@@ -2341,7 +2342,6 @@ function Stages.ProjectPlaying_Enter(DeltaTime: any)
 	workspace.SceneCamera = projWp.SceneCamera
 
 	PlayerInput.Cursor = Enum.Cursor.Arrow
-	ViewportTakeFocusFrames = 2
 	return Project.DataModel -- Connect to the Project's datamodel `.OnFrameBegin`
 end
 
@@ -2362,7 +2362,6 @@ function Stages.ProjectPlaying_Leave(DeltaTime)
 	Engine:CloseVM(GameVM)
 
 	PlayerInput.CursorMode = Enum.CursorMode.Normal
-	ViewportTakeFocusFrames = 2
 end
 
 local updateInProgress = false
