@@ -3308,6 +3308,9 @@ static void renderProperties()
 			ImVec2 cursorStart = ImGui::GetCursorPos();
 			ImGui::SetCursorPosX(halfWidth);
 
+			if ((propDesc->Type & ~Reflection::ValueType::Null) != Reflection::ValueType::Matrix)
+				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+
 			if (!doConflict)
 				propertyTooltip(propName, propToComponent[propName], propDesc->Type);
 
@@ -3523,8 +3526,7 @@ static void renderProperties()
 
 					glm::mat4 mat = curVal.AsMatrix();
 
-					float pos[3] =
-					{
+					float pos[3] = {
 						mat[3][0],
 						mat[3][1],
 						mat[3][2]
@@ -3532,7 +3534,7 @@ static void renderProperties()
 
 					// PLEASE GOD JUST WORK ALREADY
 					// 21/09/2024
-					glm::vec3 rotrads{};
+					glm::vec3 rotrads;
 
 					glm::extractEulerAngleYXZ(mat, rotrads.y, rotrads.x, rotrads.z);
 
@@ -3540,8 +3542,7 @@ static void renderProperties()
 					//mat = glm::rotate(mat, -rotrads[1], glm::vec3(0.f, 1.f, 0.f));
 					//mat = glm::rotate(mat, -rotrads[2], glm::vec3(0.f, 0.f, 1.f));
 
-					float rotdegs[3] =
-					{
+					float rotdegs[3] = {
 						glm::degrees(rotrads.x),
 						glm::degrees(rotrads.y),
 						glm::degrees(rotrads.z)
