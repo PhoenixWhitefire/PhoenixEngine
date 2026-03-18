@@ -3027,6 +3027,14 @@ static void renderFilesViewer()
 }
 
 static std::vector<ObjectHandle> PrevEditSelections;
+static const std::string_view AssetProperties[] = {
+	"MeshAsset", // Mesh
+	"Material",  // Mesh
+	"Image"      // UIImage
+};
+static const Reflection::PropertyDescriptor* AssetProperty = nullptr;
+static std::string AssetPropertyValue;
+static const Reflection::PropertyDescriptor* EditingProperty = nullptr;
 
 static void renderProperties()
 {
@@ -3234,7 +3242,6 @@ static void renderProperties()
 			ImGui::PushID(propItem.first);
 
 			const char* propNameCStr = propName.data();
-
 			bool doConflict = conflictingProps[propName];
 
 			if (!propDesc->Set)
@@ -3293,6 +3300,7 @@ static void renderProperties()
 			bool canChangeValue = true;
 			bool valueWasEditedManual = false;
 			bool deactivatedAfterEdit = false;
+			bool isAssetProp = false;
 
 			ImGui::TextUnformatted(propNameCStr);
 			ImGui::SameLine();
@@ -3308,7 +3316,16 @@ static void renderProperties()
 
 			case Reflection::ValueType::String:
 			{
-				std::string_view str = curVal.AsStringView();
+				for (const std::string_view& ap : AssetProperties)
+				{
+					if (propName == ap)
+					{
+						isAssetProp = true;
+						break;
+					}
+				}
+
+				std::string_view str = (isAssetProp && AssetProperty == propDesc) ? AssetPropertyValue : curVal.AsStringView();
 
 				const uint32_t INPUT_TEXT_BUFFER_ADDITIONAL = 64;
 				uint32_t allocSize = (uint32_t)str.size() + INPUT_TEXT_BUFFER_ADDITIONAL;
@@ -3330,11 +3347,22 @@ static void renderProperties()
 				ImGui::SetCursorPosX(halfWidth);
 				ImGui::InputText("##", buf, allocSize);
 
+				if (isAssetProp && ImGui::IsItemActive() && !AssetProperty)
+				{
+					AssetProperty = propDesc;
+					AssetPropertyValue = curVal.AsString();
+				}
+
 				if (focused)
 					ImGui::SetScrollX(0.f);
 
-				newVal = buf;
+				if (isAssetProp)
+				{
+					AssetPropertyValue = buf;
+					valueWasEditedManual = true;
+				}
 
+				newVal = buf;
 				Memory::Free(buf);
 				break;
 			}
@@ -3570,7 +3598,7 @@ static void renderProperties()
 			static std::optional<size_t> BeganPropertyEditingAction;
 			History* history = History::Get();
 
-			if ((ImGui::IsItemEdited() || valueWasEditedManual) && canChangeValue)
+			if ((ImGui::IsItemEdited() || valueWasEditedManual) && canChangeValue && (!isAssetProp || ImGui::IsItemDeactivatedAfterEdit() || deactivatedAfterEdit))
 			{
 				if (!BeganPropertyEditingAction)
 					BeganPropertyEditingAction = history->TryBeginAction("EditProperty");
@@ -3584,13 +3612,19 @@ static void renderProperties()
 				{
 					setErrorMessage(Err.what());
 				}
+
+				EditingProperty = propDesc;
 			}
 
-			if (ImGui::IsItemDeactivatedAfterEdit() || deactivatedAfterEdit || !ImGui::IsAnyItemActive())
+			if ((ImGui::IsItemDeactivatedAfterEdit() || deactivatedAfterEdit || !ImGui::IsAnyItemActive()) && EditingProperty)
 			{
 				if (BeganPropertyEditingAction)
 					history->FinishAction(BeganPropertyEditingAction.value());
 				BeganPropertyEditingAction = std::nullopt;
+
+				EditingProperty = nullptr;
+				AssetProperty = nullptr;
+				AssetPropertyValue.clear();
 			}
 
 			ImGui::Separator();
