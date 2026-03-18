@@ -485,6 +485,7 @@
         "separatortext": "function",
         "setcursorposition": "function",
         "setitemtooltip": "function",
+        "setnextitemopen": "function",
         "setnextitemwidth": "function",
         "setnextwindowfocus": "function",
         "setnextwindowopen": "function",

@@ -1436,7 +1436,9 @@ type LogMessage = {
 	Source: string?,
 	Line: number?,
 	OpenTables: { [unknown]: boolean },
-	TablesWithAnyElements: { [unknown]: boolean? }
+	TablesWithAnyElements: { [unknown]: boolean? },
+	TablePrettyOpen: { [string]: boolean },
+	TablePrettyChangeOpen: { [string]: boolean }
 }
 
 local Log: { LogMessage } = {}
@@ -1549,7 +1551,9 @@ Logging.OnMessaged:Connect(function(Type, Message, ExtraTags, Value)
 		Source = source,
 		Line = line,
 		OpenTables = {},
-		TablesWithAnyElements = {}
+		TablesWithAnyElements = {},
+		TablePrettyOpen = {},
+		TablePrettyChangeOpen = {}
 	}
 
 	table.insert(Log, logMessage)
@@ -1776,19 +1780,31 @@ local function renderViewport(DeltaTime: number)
 					local startX = imgui.cursorposition().x
 
 					local function renderTable(t: { [unknown]: unknown }, depth: number, pos: vector?)
-						imgui.pushid(tostring(t))
+						local id = tostring(t)
+						imgui.pushid(id)
 
 						local open = message.OpenTables[t]
 						local hasElements = hasAnyElements(t)
 
+						if message.TablePrettyChangeOpen[id] ~= nil then
+							imgui.setnextitemopen(message.TablePrettyChangeOpen[id])
+							message.TablePrettyChangeOpen[id] = nil
+						end
+
 						local prev = imgui.cursorposition()
-						local nodeOpen = imgui.treenode("##", "aw | dc | ar | " .. (if depth == 0 then "dlf" else "")  .. (if hasElements then "" else " lf"))
+						local nodeOpen = imgui.treenode("##", "aw | ar | " .. (if depth == 0 then "dlf" else "")  .. (if hasElements then "" else " lf"))
 						local after = imgui.cursorposition()
+
+						if imgui.itemclicked() then
+							message.TablePrettyChangeOpen[id] = not message.TablePrettyOpen[id]
+						end
 
 						imgui.dummy(64, 64)
 						imgui.setcursorposition(prev + vector.create(16, 0))
 						imgui.text(if (open and hasElements) then "{" else (if hasElements then "{...}" else "{}"))
 						imgui.setcursorposition(after)
+
+						message.TablePrettyOpen[id] = nodeOpen
 
 						if nodeOpen then
 							message.OpenTables[t] = true
@@ -1811,6 +1827,12 @@ local function renderViewport(DeltaTime: number)
 									if imgui.treenode(kstr :: string .. " = ", "dlf | lf") then
 										imgui.treepop()
 									end
+
+									if imgui.itemclicked() then
+										local cid = tostring(v)
+										message.TablePrettyChangeOpen[cid] = not message.TablePrettyOpen[cid]
+									end
+
 									imgui.sameline()
 									imgui.setcursorposition(imgui.cursorposition() - vector.create(12, 0))
 									renderTable(v, depth + 1, tpos)

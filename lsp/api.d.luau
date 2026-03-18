@@ -787,6 +787,7 @@ declare imgui: {
   separatortext: (( Text: string ) -> ()),
   setcursorposition: ((Position: vector) -> ()) & ((X: number, Y: number) -> ()),
   setitemtooltip: (( Text: string ) -> ()),
+  setnextitemopen: (( Open: boolean? ) -> ()),
   setnextitemwidth: (( Width: number ) -> ()),
   setnextwindowfocus: ((  ) -> ()),
   setnextwindowopen: (( Open: boolean? ) -> ()),

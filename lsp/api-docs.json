@@ -981,6 +981,9 @@
   "@phoenix/global/imgui.setitemtooltip": {
     "documentation": "* `ImGui::SetItemTooltip`"
   },
+  "@phoenix/global/imgui.setnextitemopen": {
+    "documentation": "* Forces the state of the next item to be open or closed\n* `ImGui::SetNextItemOpen`"
+  },
   "@phoenix/global/imgui.setnextitemwidth": {
     "documentation": "* Sets the width of the next item\n* `ImGui::SetNextItemWidth`"
   },

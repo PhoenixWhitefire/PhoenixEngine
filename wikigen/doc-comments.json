@@ -1832,6 +1832,13 @@
               "Text: string"
             ]
           },
+          "setnextitemopen": {
+            "Description": [
+              "Forces the state of the next item to be open or closed",
+              "`ImGui::SetNextItemOpen`"
+            ],
+            "In": "Open: boolean?"
+          },
           "setnextitemwidth": {
             "Description": [
               "Sets the width of the next item",
