@@ -730,6 +730,13 @@ static Reflection::GenericValue toGenericValue(lua_State* L, int StackIndex, int
 			items.push_back(toGenericValue(L, -2, Depth + 1));
 			items.push_back(toGenericValue(L, -1, Depth + 1));
 
+			if (lua_type(L, -1) == LUA_TTABLE)
+			{
+				lua_pushvalue(L, -1);
+				lua_pushnil(L);
+				lua_settable(L, seenTablesIndex);
+			}
+
 			if (Depth >= MAXDEPTH)
 				break;
 
