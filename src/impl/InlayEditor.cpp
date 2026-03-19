@@ -3048,6 +3048,187 @@ static const Reflection::PropertyDescriptor* AssetProperty = nullptr;
 static std::string AssetPropertyValue;
 static const Reflection::PropertyDescriptor* EditingProperty = nullptr;
 
+static void setProperties(const std::string_view& PropertyName, const Reflection::GenericValue& Value)
+{
+	for (const ObjectHandle& sel : Selections)
+		{
+			if (sel->FindProperty(PropertyName))
+			{
+				try
+				{
+					sel->SetPropertyValue(PropertyName, Value);
+				}
+				catch (const std::runtime_error& err)
+				{
+					setErrorMessage(err.what());
+				}
+			}
+		}
+}
+
+static bool openFileSelectorForAssetProp(const std::string_view& PropertyName)
+{
+	History::ScopedAction action = { "AssetSelector_FileDialog" };
+
+	const char* defaultPath = "resources/";
+	const char* filters[10] = {};
+	int nFilterPatterns = 0;
+	const char* filterDescription = "Asset";
+
+	if (PropertyName == "MeshAsset")
+	{
+		defaultPath = "meshes/";
+		filters[0] = "*.hxmesh";
+		nFilterPatterns = 1;
+		filterDescription = "Meshes";
+	}
+	else if (PropertyName == "Material")
+	{
+		defaultPath = "materials/";
+		filters[0] = "*.mtl";
+		nFilterPatterns = 1;
+		filterDescription = "Materials";
+	}
+	else if (PropertyName == "Image")
+	{
+		defaultPath = "textures/";
+		filters[0] = "*.png";
+		filters[1] = "*.jpeg";
+		filters[2] = "*.jpg";
+		filters[3] = "*.bmp";
+		filters[4] = "*.tga";
+		filters[5] = "*.gif";
+		filters[6] = "*.psd";
+		filters[7] = "*.pic";
+		filters[8] = "*.pnm";
+		filters[9] = "*.hdr";
+		nFilterPatterns = 4;
+		filterDescription = "Images";
+	}
+
+	const char* selectionCStr = tinyfd_openFileDialog(
+		"Select asset",
+		FileRW::ResolvePathAbsolute(defaultPath).c_str(),
+		nFilterPatterns,
+		filters,
+		filterDescription,
+		false
+	);
+
+	if (!selectionCStr)
+		return false;
+
+	std::string selection = selectionCStr;
+
+	if (size_t resLoc = selection.find("resources/"); resLoc == std::string::npos)
+	{
+		setErrorMessage("Selection must be within the Resources directory");
+		return false;
+	}
+	else
+		selection = selection.substr(resLoc + strlen("resources/"));
+
+	setProperties(PropertyName, selection);
+	return true;
+}
+
+static std::string stringToLowerCase(std::string str)
+{
+	for (char& c : str)
+		c = std::tolower(c);
+	return str;
+}
+
+static bool renderPropertyAssetSelector(const std::string_view& PropertyName, ImVec2 halfPos)
+{
+	static std::string AssetSearch;
+	static bool SearchFirstFrame = true;
+
+	if (ImGui::Button("..."))
+	{
+		if (PropertyName != "MeshAsset" && PropertyName != "Material")
+			return openFileSelectorForAssetProp(PropertyName);
+
+		ImGui::OpenPopup("SelectAsset");
+		AssetSearch.clear();
+		SearchFirstFrame = true;
+	}
+
+	bool didSet = false;
+	float screenPosY = ImGui::GetCursorScreenPos().y;
+
+	if (ImGui::BeginPopup("SelectAsset"))
+	{
+		assert(PropertyName == "MeshAsset" || PropertyName == "Material");
+		ImGui::SetWindowPos(ImVec2(halfPos.x, screenPosY));
+
+		if (SearchFirstFrame)
+		{
+			ImGui::SetKeyboardFocusHere();
+			SearchFirstFrame = false;
+		}
+
+		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+		ImGui::InputText("##Search", &AssetSearch);
+
+		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+		if (ImGui::Button("Open file"))
+		{
+			ImGui::CloseCurrentPopup();
+			ImGui::EndPopup();
+			return openFileSelectorForAssetProp(PropertyName);
+		}
+
+		std::string assetSearchLowercase = stringToLowerCase(AssetSearch);
+
+		if (PropertyName == "MeshAsset")
+		{
+			History::ScopedAction action = { "AssetSelector_Mesh" };
+
+			if ((AssetSearch.size() == 0 || std::string_view("!cube").find(assetSearchLowercase) != std::string::npos) && ImGui::MenuItem("!Cube"))
+			{
+				setProperties(PropertyName, "!Cube");
+				didSet = true;
+			}
+
+			if ((AssetSearch.size() == 0 || std::string_view("!sphere").find(assetSearchLowercase) != std::string::npos) &&ImGui::MenuItem("!Sphere"))
+			{
+				setProperties(PropertyName, "!Sphere");
+				didSet = true;
+			}
+
+			if ((AssetSearch.size() == 0 || std::string_view("!quad").find(assetSearchLowercase) != std::string::npos) &&ImGui::MenuItem("!Quad"))
+			{
+				setProperties(PropertyName, "!Quad");
+				didSet = true;
+			}
+		}
+		else if (PropertyName == "Material")
+		{
+			History::ScopedAction action = { "AssetSelector_Material" };
+
+			for (const RenderMaterial& material : MaterialManager::Get()->GetLoadedMaterials())
+			{
+				bool visible = AssetSearch.size() == 0 || stringToLowerCase(material.Name).find(assetSearchLowercase) != std::string::npos;
+
+				if (visible)
+				{
+					if (ImGui::MenuItem(material.Name.c_str()))
+					{
+						setProperties(PropertyName, material.Name);
+						didSet = true;
+					}
+					ImGui::SetItemTooltip("%s", material.Name.c_str());
+				}
+			}
+		}
+
+		ImGui::EndPopup();
+	}
+
+	return didSet;
+}
+
 static void renderProperties()
 {
 	ZoneScoped;
@@ -3321,7 +3502,7 @@ static void renderProperties()
 			ImGui::SetCursorPosX(halfWidth);
 
 			if ((propDesc->Type & ~Reflection::ValueType::Null) != Reflection::ValueType::Matrix)
-				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+				ImGui::SetNextItemWidth(halfWidth);
 
 			if (!doConflict)
 				propertyTooltip(propName, propToComponent[propName], propDesc->Type);
@@ -3336,6 +3517,7 @@ static void renderProperties()
 					if (propName == ap)
 					{
 						isAssetProp = true;
+						ImGui::SetNextItemWidth(halfWidth - ImGui::CalcTextSize("...").x - ImGui::GetStyle().FramePadding.x * 2.f);
 						break;
 					}
 				}
@@ -3359,23 +3541,34 @@ static void renderProperties()
 					focused = true;
 				}
 
-				ImGui::SetCursorPosX(halfWidth);
 				ImGui::InputText("##", buf, allocSize);
 
-				if (isAssetProp && ImGui::IsItemActive() && !AssetProperty)
+				if (isAssetProp)
 				{
-					AssetProperty = propDesc;
-					AssetPropertyValue = curVal.AsString();
+					if (ImGui::IsItemActive())
+					{
+						EditingProperty = propDesc;
+
+						if (!AssetProperty)
+						{
+							AssetProperty = propDesc;
+							AssetPropertyValue = curVal.AsString();
+						}
+
+						if (AssetProperty == propDesc)
+							AssetPropertyValue = buf;
+					}
+
+					if (AssetProperty == propDesc)
+						valueWasEditedManual = true;
+
+					ImGui::SameLine();
+					if (renderPropertyAssetSelector(propName, ImVec2(halfWidth, 0.f) + ImGui::GetWindowPos()))
+						AssetProperty = nullptr;
 				}
 
 				if (focused)
 					ImGui::SetScrollX(0.f);
-
-				if (isAssetProp)
-				{
-					AssetPropertyValue = buf;
-					valueWasEditedManual = true;
-				}
 
 				newVal = buf;
 				Memory::Free(buf);
@@ -3611,7 +3804,9 @@ static void renderProperties()
 			static std::optional<size_t> BeganPropertyEditingAction;
 			History* history = History::Get();
 
-			if ((ImGui::IsItemEdited() || valueWasEditedManual) && canChangeValue && (!isAssetProp || ImGui::IsItemDeactivatedAfterEdit() || deactivatedAfterEdit))
+			bool maybeFinishingAction = ImGui::IsItemDeactivatedAfterEdit() || deactivatedAfterEdit || !ImGui::IsAnyItemActive();
+
+			if ((ImGui::IsItemEdited() || valueWasEditedManual) && canChangeValue && (!isAssetProp || maybeFinishingAction))
 			{
 				if (!BeganPropertyEditingAction)
 					BeganPropertyEditingAction = history->TryBeginAction("EditProperty");
@@ -3629,7 +3824,7 @@ static void renderProperties()
 				EditingProperty = propDesc;
 			}
 
-			if ((ImGui::IsItemDeactivatedAfterEdit() || deactivatedAfterEdit || !ImGui::IsAnyItemActive()) && EditingProperty)
+			if (maybeFinishingAction && EditingProperty)
 			{
 				if (BeganPropertyEditingAction)
 					history->FinishAction(BeganPropertyEditingAction.value());
