@@ -67,56 +67,52 @@ public:
 
     const Reflection::StaticPropertyMap& GetProperties() override
     {
-        static const Reflection::StaticPropertyMap props = 
-        {
+        static const Reflection::StaticPropertyMap props = {
             REFLECTION_PROPERTY(
-                "Transform",
-                Matrix,
-                REFLECTION_PROPERTY_GET_SIMPLE(EcTransform, Transform),
-                [](void* p, const Reflection::GenericValue& gv)
-                {
-                    ZoneScoped;
-
-                    EcTransform* ct = static_cast<EcTransform*>(p);
-                    ct->SetWorldTransform(gv.AsMatrix());
-                    ct->RecomputeTransformTree();
-                }
-            ),
-
-            REFLECTION_PROPERTY(
-                "Size",
-                Vector3,
-                REFLECTION_PROPERTY_GET_SIMPLE(EcTransform, Size),
-                [](void* p, const Reflection::GenericValue& gv)
-                {
-                    ZoneScoped;
-
-                    EcTransform* ct = static_cast<EcTransform*>(p);
-                    ct->SetWorldSize(gv.AsVector3());
-                    ct->RecomputeTransformTree();
-                }
-            ),
-
-            { "LocalTransform", {
                 "LocalTransform",
-                Reflection::ValueType::Matrix, 
-                (Reflection::PropertyGetter)[](void* p)->Reflection::GenericValue
+                Matrix,
+                REFLECTION_PROPERTY_GET_SIMPLE(EcTransform, LocalTransform),
+                [](void* p, const Reflection::GenericValue& gv)
                 {
-                    return static_cast<EcTransform*>(p)->LocalTransform;
-                },
+                    ZoneScoped;
+
+                    EcTransform* ct = static_cast<EcTransform*>(p);
+                    ct->LocalTransform = gv.AsMatrix();
+                    ct->RecomputeTransformTree();
+                }
+            ),
+
+            REFLECTION_PROPERTY(
+                "LocalSize",
+                Vector3,
+                REFLECTION_PROPERTY_GET_SIMPLE(EcTransform, LocalSize),
+                [](void* p, const Reflection::GenericValue& gv)
+                {
+                    ZoneScoped;
+
+                    EcTransform* ct = static_cast<EcTransform*>(p);
+                    ct->LocalSize = gv.AsVector3();
+                    ct->RecomputeTransformTree();
+                }
+            ),
+
+            { "Transform", {
+                "Transform",
+                Reflection::ValueType::Matrix,
+                REFLECTION_PROPERTY_GET_SIMPLE(EcTransform, Transform),
                 (Reflection::PropertySetter)[](void* p, const Reflection::GenericValue& gv)
                 {
                     ZoneScoped;
                     
                     EcTransform* ct = static_cast<EcTransform*>(p);
-                    ct->LocalTransform = gv.AsMatrix();
+                    ct->SetWorldTransform(gv.AsMatrix());
                     ct->RecomputeTransformTree();
                 },
                 false
             } },
 
-            { "LocalSize", {
-                "LocalSize",
+            { "Size", {
+                "Size",
                 Reflection::ValueType::Vector3, 
                 (Reflection::PropertyGetter)[](void* p)->Reflection::GenericValue
                 {
@@ -127,7 +123,7 @@ public:
                     ZoneScoped;
                     
                     EcTransform* ct = static_cast<EcTransform*>(p);
-                    ct->LocalSize = gv.AsVector3();
+                    ct->SetWorldSize(gv.AsVector3());
                     ct->RecomputeTransformTree();
                 },
                 false
@@ -144,7 +140,7 @@ void EcTransform::SetWorldTransform(const glm::mat4& NewWorldTrans)
 {
     EcTransform* parent = Object->GetParent() ? Object->GetParent()->FindComponent<EcTransform>() : nullptr;
 
-    LocalTransform = parent ? (NewWorldTrans * glm::inverse(parent->Transform)) : NewWorldTrans;
+    LocalTransform = parent ? (glm::inverse(parent->Transform) * NewWorldTrans) : NewWorldTrans;
     Transform = NewWorldTrans;
 
     RecomputeTransformTree();

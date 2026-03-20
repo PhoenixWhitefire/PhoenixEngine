@@ -349,6 +349,8 @@ static GameObject* cloneRecursive(
 	{
 		if (!it.second->Set)
 			continue; // read-only
+		if (!it.second->Serializes)
+			continue; // Transform.Transform
 
 		Reflection::GenericValue rootVal = Root->GetPropertyValue(it.first);
 
