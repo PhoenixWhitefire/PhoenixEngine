@@ -932,10 +932,6 @@ void Engine::Start()
 	ScriptEngine::Initialize(); // can only do this after datamodel is bound
 
 	double RunningTime = GetRunningTime();
-
-	// `LastFrameBegan` is for deltatime
-	// `LastFrameEnded` is for FPS cap
-	double LastFrameBegan = RunningTime;
 	double LastFrameEnded = RunningTime;
 	double LastSecond = 0.f;
 
@@ -985,23 +981,23 @@ void Engine::Start()
 
 		double deltaTime = RunningTime - LastFrameEnded;
 		double fpsCapDelta = 1.f / throttledFpsCap;
-		double lastFrameTime = Timing::FinalFrameTimes[EntireFrameTimerScope.TimerId];
 
 		// make sure the order of timers is
 		// 0 - EntireFrame, 1 - FrameSleep, 2 - FrameWork
 		// `drawDeveloperUI` depends on this
-		static Timing::StaticMagicTimerThing FrameSleepTimerScope("FrameSleep");
+		static Timing::StaticMagicTimerThing FrameSleepTimer("FrameSleep");
+		static Timing::StaticMagicTimerThing FrameWorkTimer("FrameWork");
 
 		// Wait the appropriate amount of time between frames
 		if ((!VSync || !IsWindowFocused) && (deltaTime < fpsCapDelta))
 		{
-			Timing::ScopedTimer scoped(FrameSleepTimerScope.TimerId);
+			Timing::ScopedTimer scoped(FrameSleepTimer.TimerId);
 			ZoneScopedNC("SleepForFpsCap", tracy::Color::Wheat);
 
-			std::this_thread::sleep_for(std::chrono::duration<double>(fpsCapDelta - deltaTime - lastFrameTime));
+			std::this_thread::sleep_for(std::chrono::duration<double>(fpsCapDelta - deltaTime - Timing::FinalFrameTimes[FrameWorkTimer.TimerId]));
 		}
 
-		TIME_SCOPE_AS("FrameWork");
+		Timing::ScopedTimer framwWorkTimerScope(FrameWorkTimer.TimerId);
 
 		DataModelRef->FindComponent<EcDataModel>()->Bind();
 
@@ -1064,10 +1060,6 @@ void Engine::Start()
 		}
 
 		RunningTime = GetRunningTime();
-		deltaTime = RunningTime - LastFrameBegan;
-
-		LastFrameBegan = RunningTime;
-
 		this->OnFrameStart.Fire(deltaTime);
 
 		{
