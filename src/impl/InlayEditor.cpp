@@ -1108,7 +1108,7 @@ static void mtlEditorTexture(const char* Label, uint32_t* TextureIdPtr, char* Cu
 					std::string shortpath = fullpath.substr(resDirOffset + 10);
 					copyStringToBuffer(CurrentPath, shortpath, MATERIAL_TEXTUREPATH_BUFSIZE);
 				
-					uint32_t newtexid = TextureManager::Get()->LoadTextureFromPath(shortpath);
+					uint32_t newtexid = TextureManager::Get()->LoadFromPath(shortpath);
 					// i'm so silly 04/12/2024
 					*TextureIdPtr = newtexid;
 				}
@@ -1322,16 +1322,16 @@ static void renderMaterialEditor()
 
 	if (ImGui::Button("Save changes"))
 	{
-		curItem.ColorMap = texManager->LoadTextureFromPath(MtlDiffuseBuf);
+		curItem.ColorMap = texManager->LoadFromPath(MtlDiffuseBuf);
 
 		if (curItem.MetallicRoughnessMap != 0)
-			curItem.MetallicRoughnessMap = texManager->LoadTextureFromPath(MtlSpecBuf);
+			curItem.MetallicRoughnessMap = texManager->LoadFromPath(MtlSpecBuf);
 
 		if (curItem.NormalMap != 0)
-			curItem.NormalMap = texManager->LoadTextureFromPath(MtlNormalBuf);
+			curItem.NormalMap = texManager->LoadFromPath(MtlNormalBuf);
 
 		if (curItem.EmissionMap != 0)
-			curItem.EmissionMap = texManager->LoadTextureFromPath(MtlEmissionBuf);
+			curItem.EmissionMap = texManager->LoadFromPath(MtlEmissionBuf);
 
 		curItem.ShaderId = ShaderManager::Get()->LoadFromPath(MtlShpBuf);
 
@@ -1610,12 +1610,12 @@ static Texture getIconForComponent(EntityComponent Ec)
 		componentName = "Empty";
 
 	std::string classIconPath = "@editres/textures/editor-icons/" + componentName + ".png";
-	Texture tex = texManager->GetTextureResource(texManager->LoadTextureFromPath(classIconPath, true, false));
+	Texture tex = texManager->GetTextureResource(texManager->LoadFromPath(classIconPath, true, false));
 
 	if (tex.Status == Texture::LoadStatus::Failed && tex.ImagePath.find("fallback") == std::string::npos)
 	{
 		const std::string& fallbackPath = "@editres/textures/editor-icons/fallback.png";
-		Texture& fallback = texManager->GetTextureResource(texManager->LoadTextureFromPath(fallbackPath, true, false));
+		Texture& fallback = texManager->GetTextureResource(texManager->LoadFromPath(fallbackPath, true, false));
 		texManager->Assign(fallback, classIconPath);
 		tex = fallback;
 	}
@@ -2732,9 +2732,9 @@ static void createFileOrDirectory(FilesystemNode Parent, bool Directory)
 static void recursiveRenderFilesystemNode(FilesystemNode& Node)
 {
 	TextureManager* texManager = TextureManager::Get();
-	static uint32_t ScriptIconResource = texManager->LoadTextureFromPath("./resources/textures/editor-icons/Script.png", false, false);
-	static uint32_t FolderOpenIconResource = texManager->LoadTextureFromPath("./resources/textures/editor-icons/Folder_Open.png", false, false);
-	static uint32_t FolderClosedIconResource = texManager->LoadTextureFromPath("./resources/textures/editor-icons/Folder_Closed.png", false, false);
+	static uint32_t ScriptIconResource = texManager->LoadFromPath("./resources/textures/editor-icons/Script.png", false, false);
+	static uint32_t FolderOpenIconResource = texManager->LoadFromPath("./resources/textures/editor-icons/Folder_Open.png", false, false);
+	static uint32_t FolderClosedIconResource = texManager->LoadFromPath("./resources/textures/editor-icons/Folder_Closed.png", false, false);
 
 	ImGui::PushID(Node.Path.string().c_str());
 
@@ -3102,7 +3102,7 @@ static bool openFileSelectorForAssetProp(const std::string_view& PropertyName)
 		filters[7] = "*.pic";
 		filters[8] = "*.pnm";
 		filters[9] = "*.hdr";
-		nFilterPatterns = 4;
+		nFilterPatterns = 10;
 		filterDescription = "Images";
 	}
 
@@ -3139,28 +3139,31 @@ static std::string stringToLowerCase(std::string str)
 	return str;
 }
 
-static bool renderPropertyAssetSelector(const std::string_view& PropertyName, ImVec2 halfPos)
+static bool renderPropertyAssetSelector(const std::string_view& PropertyName, ImVec2, float FieldWidth)
 {
 	static std::string AssetSearch;
 	static bool SearchFirstFrame = true;
 
 	if (ImGui::Button("..."))
 	{
+		ImGui::ScrollToItem();
+
 		if (PropertyName != "MeshAsset" && PropertyName != "Material")
 			return openFileSelectorForAssetProp(PropertyName);
 
 		ImGui::OpenPopup("SelectAsset");
 		AssetSearch.clear();
+		AssetSearch.reserve(128);
 		SearchFirstFrame = true;
 	}
 
 	bool didSet = false;
-	float screenPosY = ImGui::GetCursorScreenPos().y;
+	//float screenPosY = ImGui::GetCursorScreenPos().y;
 
 	if (ImGui::BeginPopup("SelectAsset"))
 	{
 		assert(PropertyName == "MeshAsset" || PropertyName == "Material");
-		ImGui::SetWindowPos(ImVec2(halfPos.x, screenPosY));
+		//ImGui::SetWindowPos(ImVec2(HalfPos.x, screenPosY));
 
 		if (SearchFirstFrame)
 		{
@@ -3168,11 +3171,32 @@ static bool renderPropertyAssetSelector(const std::string_view& PropertyName, Im
 			SearchFirstFrame = false;
 		}
 
-		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-		ImGui::InputText("##Search", &AssetSearch);
+		ImGuiStyle& style = ImGui::GetStyle();
 
-		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-		if (ImGui::Button("Open file"))
+		float maxWidth = 0.f;
+		if (PropertyName == "MeshAsset")
+			maxWidth = FieldWidth;
+		else
+		{
+			for (const RenderMaterial& material : MaterialManager::Get()->GetLoadedMaterials())
+				maxWidth = std::max(maxWidth, ImGui::CalcTextSize(material.Name.c_str()).x);
+			maxWidth += style.FramePadding.x * 2.f + 8.f;
+		}
+
+		float width = maxWidth - style.FramePadding.x * 2.f - 16.f;
+		float newPadding = (16.f - ImGui::CalcTextSize("").y) / 2.f + style.FramePadding.y;
+		float prevPadding = style.FramePadding.y;
+
+		style.FramePadding.y = newPadding;
+		ImGui::SetNextItemWidth(width);
+		ImGui::InputTextWithHint("##Search", PropertyName.data(), &AssetSearch);
+		style.FramePadding.y = prevPadding;
+
+		static TextureManager* texManager = TextureManager::Get();
+		static uint32_t openIconId = texManager->LoadFromPath("@editres/textures/editor-icons/Folder_Open.png");
+
+		ImGui::SameLine();
+		if (ImGui::ImageButton("##OpenFile", texManager->GetTextureResource(openIconId).GpuId, ImVec2(16.f, 16.f)))
 		{
 			ImGui::CloseCurrentPopup();
 			ImGui::EndPopup();
@@ -3496,6 +3520,10 @@ static void renderProperties()
 			bool isAssetProp = false;
 
 			ImGui::TextUnformatted(propNameCStr);
+
+			if (!doConflict)
+				propertyTooltip(propName, propToComponent[propName], propDesc->Type);
+
 			ImGui::SameLine();
 
 			ImVec2 cursorStart = ImGui::GetCursorPos();
@@ -3503,9 +3531,6 @@ static void renderProperties()
 
 			if ((propDesc->Type & ~Reflection::ValueType::Null) != Reflection::ValueType::Matrix)
 				ImGui::SetNextItemWidth(halfWidth);
-
-			if (!doConflict)
-				propertyTooltip(propName, propToComponent[propName], propDesc->Type);
 
 			switch (propDesc->Type & ~Reflection::ValueType::Null)
 			{
@@ -3541,7 +3566,18 @@ static void renderProperties()
 					focused = true;
 				}
 
+				bool pushedStyleCol = false;
+
+				if (ImGui::IsPopupOpen("SelectAsset"))
+				{
+					ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(56.f/255.f, 142.f/255.f, 1.f, 1.f));
+					pushedStyleCol = true;
+				}
+
 				ImGui::InputText("##", buf, allocSize);
+
+				if (pushedStyleCol)
+					ImGui::PopStyleColor();
 
 				if (isAssetProp)
 				{
@@ -3563,7 +3599,7 @@ static void renderProperties()
 						valueWasEditedManual = true;
 
 					ImGui::SameLine();
-					if (renderPropertyAssetSelector(propName, ImVec2(halfWidth, 0.f) + ImGui::GetWindowPos()))
+					if (renderPropertyAssetSelector(propName, ImVec2(halfWidth, 0.f) + ImGui::GetWindowPos(), halfWidth))
 						AssetProperty = nullptr;
 				}
 

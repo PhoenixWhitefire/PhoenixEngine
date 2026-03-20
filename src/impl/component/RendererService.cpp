@@ -81,7 +81,7 @@ class RendererServiceManager : public ComponentManager<EcRendererService>
                 [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
                 {
                     TextureManager* texManager = TextureManager::Get();
-                    uint32_t resId = texManager->LoadTextureFromPath(std::string(inputs[0].AsStringView()), false);
+                    uint32_t resId = texManager->LoadFromPath(std::string(inputs[0].AsStringView()), false);
                     texManager->UnloadTexture(resId);
 
                     return {};
@@ -151,7 +151,7 @@ class RendererServiceManager : public ComponentManager<EcRendererService>
                     ShaderManager* shaderManager = ShaderManager::Get();
                     ShaderProgram& shader = shaderManager->GetShaderResource(shaderManager->LoadFromPath(inputs[0].AsString()));
 
-                    shader.SetTextureUniform(inputs[1].AsString(), TextureManager::Get()->LoadTextureFromPath(inputs[2].AsString()));
+                    shader.SetTextureUniform(inputs[1].AsString(), TextureManager::Get()->LoadFromPath(inputs[2].AsString()));
                     return {};
                 }
             } },*/

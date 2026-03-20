@@ -60,7 +60,7 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 			fallbackPath = "!Missing";
 
 		uint32_t texId = texture.ResourceId;
-		uint32_t replacementId = this->LoadTextureFromPath(
+		uint32_t replacementId = this->LoadFromPath(
 			fallbackPath,
 			false
 		);
@@ -287,7 +287,7 @@ uint32_t TextureManager::Assign(const Texture& texture, const std::string& name)
 	return assignedId;
 }
 
-uint32_t TextureManager::LoadTextureFromPath(const std::string& Path, bool ShouldLoadAsync, bool DoBilinearSmoothing)
+uint32_t TextureManager::LoadFromPath(const std::string& Path, bool ShouldLoadAsync, bool DoBilinearSmoothing)
 {
 	if (m_IsHeadless)
 		return 0;

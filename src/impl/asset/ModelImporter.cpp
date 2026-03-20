@@ -976,7 +976,7 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 	TextureManager* texManager = TextureManager::Get();
 
 	ModelLoader::MeshMaterial material;
-	material.BaseColorTexture = texManager->LoadTextureFromPath("!White");
+	material.BaseColorTexture = texManager->LoadFromPath("!White");
 
 	auto materialIdIt = Primitive.find("material");
 
@@ -1062,7 +1062,7 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 		m_Data
 	);
 
-	material.BaseColorTexture = texManager->LoadTextureFromPath(
+	material.BaseColorTexture = texManager->LoadFromPath(
 		baseColPath,
 		true,
 		baseColFilterBilinear
@@ -1080,7 +1080,7 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 			m_Data
 		);
 
-		material.MetallicRoughnessTexture = texManager->LoadTextureFromPath(
+		material.MetallicRoughnessTexture = texManager->LoadFromPath(
 			metallicRoughnessPath,
 			true,
 			baseColFilterBilinear
@@ -1097,7 +1097,7 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 			m_Data
 		);
 
-		material.NormalTexture = texManager->LoadTextureFromPath(
+		material.NormalTexture = texManager->LoadFromPath(
 			normalPath,
 			true,
 			baseColFilterBilinear
@@ -1114,7 +1114,7 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 			m_Data
 		);
 
-		material.EmissiveTexture = texManager->LoadTextureFromPath(
+		material.EmissiveTexture = texManager->LoadFromPath(
 			emissivePath,
 			true,
 			baseColFilterBilinear

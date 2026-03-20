@@ -63,10 +63,10 @@ public:
 		@param Should it be loaded in a separate thread without freezing the game (default `true`)
 		@return The Texture Resource ID (texture can be queried with `::GetTextureResource`)
 	*/
-	uint32_t LoadTextureFromPath(const std::string& Path, bool ShouldLoadAsync = true, bool DoBilinearSmoothing = true);
+	uint32_t LoadFromPath(const std::string& Path, bool ShouldLoadAsync = true, bool DoBilinearSmoothing = true);
 
 	/*
-		Assign the Texture to the given Name, it's Resource ID will be returned when queried with `::LoadTextureFromPath`
+		Assign the Texture to the given Name, it's Resource ID will be returned when queried with `::LoadFromPath`
 		IMPORTANT: If the `ResourceId` of the Texture is NOT `UINT32_MAX`, it will replace the Texture at that ID
 		@param The Texture
 		@param It's Internal Name

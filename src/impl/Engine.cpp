@@ -410,7 +410,7 @@ Engine::Engine()
 		m_SeparableBlurShader.SetUniform("Texture", 3);
 		m_SkyboxShader.SetUniform("SkyboxCubemap", 3);
 
-		m_DistortionTexture = m_TextureManager.LoadTextureFromPath("textures/screendistort.jpg");
+		m_DistortionTexture = m_TextureManager.LoadFromPath("textures/screendistort.jpg");
 
 		m_SunShadowMap.Initialize(
 			SunShadowMapResolutionSq, SunShadowMapResolutionSq,
@@ -627,7 +627,7 @@ static void traverseAndRenderUIHierarchy(
 			shader.SetUniform("BackgroundColor", uimg->ImageTint.ToGenericValue());
 			shader.SetUniform("BackgroundTransparency", uimg->ImageTransparency);
 			shader.SetUniform("IsImage", true);
-			shader.SetTextureUniform("Image", textureManager->LoadTextureFromPath(uimg->Image));
+			shader.SetTextureUniform("Image", textureManager->LoadFromPath(uimg->Image));
 			shader.Activate();
 
 			glDrawElements(GL_TRIANGLES, gpuMesh.NumIndices, GL_UNSIGNED_INT, 0);
@@ -691,7 +691,7 @@ static GLuint startLoadingSkybox(std::vector<uint32_t>* skyboxFacesBeingLoaded)
 	{
 		const std::string_view& face = SkyboxCubemapImages[faceIndex];
 
-		uint32_t tex = TextureManager::Get()->LoadTextureFromPath(std::format("{}{}.jpg", SkyPath, face));
+		uint32_t tex = TextureManager::Get()->LoadFromPath(std::format("{}{}.jpg", SkyPath, face));
 		skyboxFacesBeingLoaded->push_back(tex);
 
 		glTexImage2D(

@@ -108,7 +108,7 @@ void RenderMaterial::Reload()
 
 	bool doBilinearFiltering = jsonMaterialData.value("BilinearFiltering", jsonMaterialData.value("bilinearFiltering", true));
 
-	this->ColorMap = texManager->LoadTextureFromPath(jsonMaterialData.value(
+	this->ColorMap = texManager->LoadFromPath(jsonMaterialData.value(
 		"ColorMap",
 		jsonMaterialData.value("albedo", MissingTexPath)
 	), true, doBilinearFiltering);
@@ -118,17 +118,17 @@ void RenderMaterial::Reload()
 	std::string emissionPath = jsonMaterialData.value("EmissionMap", "");
 
 	if (metallicRoughnessPath != "")
-		this->MetallicRoughnessMap = texManager->LoadTextureFromPath(metallicRoughnessPath, true, doBilinearFiltering);
+		this->MetallicRoughnessMap = texManager->LoadFromPath(metallicRoughnessPath, true, doBilinearFiltering);
 	else
-		this->MetallicRoughnessMap = texManager->LoadTextureFromPath("!White", true, doBilinearFiltering);
+		this->MetallicRoughnessMap = texManager->LoadFromPath("!White", true, doBilinearFiltering);
 
 	if (normalPath != "")
-		this->NormalMap = texManager->LoadTextureFromPath(normalPath, true, doBilinearFiltering);
+		this->NormalMap = texManager->LoadFromPath(normalPath, true, doBilinearFiltering);
 	else
 		this->NormalMap = 0;
 
 	if (emissionPath != "")
-		this->EmissionMap = texManager->LoadTextureFromPath(emissionPath, true, doBilinearFiltering);
+		this->EmissionMap = texManager->LoadFromPath(emissionPath, true, doBilinearFiltering);
 	else
 		this->EmissionMap = 0;
 
