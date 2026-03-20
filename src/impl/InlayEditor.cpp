@@ -3139,7 +3139,7 @@ static std::string stringToLowerCase(std::string str)
 	return str;
 }
 
-static bool renderPropertyAssetSelector(const std::string_view& PropertyName, ImVec2, float FieldWidth)
+static bool renderPropertyAssetSelector(const std::string_view& PropertyName, float FieldWidth)
 {
 	static std::string AssetSearch;
 	static bool SearchFirstFrame = true;
@@ -3158,12 +3158,10 @@ static bool renderPropertyAssetSelector(const std::string_view& PropertyName, Im
 	}
 
 	bool didSet = false;
-	//float screenPosY = ImGui::GetCursorScreenPos().y;
 
 	if (ImGui::BeginPopup("SelectAsset"))
 	{
 		assert(PropertyName == "MeshAsset" || PropertyName == "Material");
-		//ImGui::SetWindowPos(ImVec2(HalfPos.x, screenPosY));
 
 		if (SearchFirstFrame)
 		{
@@ -3599,7 +3597,7 @@ static void renderProperties()
 						valueWasEditedManual = true;
 
 					ImGui::SameLine();
-					if (renderPropertyAssetSelector(propName, ImVec2(halfWidth, 0.f) + ImGui::GetWindowPos(), halfWidth))
+					if (renderPropertyAssetSelector(propName, halfWidth))
 						AssetProperty = nullptr;
 				}
 
