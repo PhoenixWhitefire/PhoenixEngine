@@ -153,7 +153,7 @@ jobs:
       shell: pwsh
       run: >
         . "x64\\${{ matrix.build_type }}\\PhoenixEngine.exe" -headless -tool scripts\\ci\\tests.luau
-        && "x64\\${{ matrix.build_type }}\\PhoenixEngine.exe" -headless -ed_ci
+        && . "x64\\${{ matrix.build_type }}\\PhoenixEngine.exe" -headless -ed_ci
 
     - name: Doc Gen (Ubuntu)
       if: runner.os == 'Linux'
