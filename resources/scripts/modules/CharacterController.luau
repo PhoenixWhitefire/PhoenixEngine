@@ -85,7 +85,7 @@ function Controller.Update(self: Controller, DeltaTime: number)
 
 	local floorRayHit = #workspace:GetObjectsInAabb(
 		self.Character.Transform.Position - vector.create(0, charSize.y / 4, 0),
-		vector.create(charSize.x * 1.2, charSize.y / 2, charSize.z * 1.2),
+		vector.create(charSize.x * 1.2, charSize.y / 1.8, charSize.z * 1.2),
 		{ self.Character }
 	) > 0
 
@@ -99,6 +99,7 @@ function Controller.Update(self: Controller, DeltaTime: number)
 		if PlayerInput:IsKeyPressed(Enum.Key.Space) and not PlayerInput.IsKeyboardSunk and (self.totalTime - self.lastJumped) > self.JumpCooldown then
 			impulse += vector.create(0, self.JumpImpulse, 0)
 			self.Character.LinearVelocity = vector.create(self.Character.LinearVelocity.x, 0, self.Character.LinearVelocity.z)
+			self.Character.Transform += vector.create(0, 0.5, 0)
 			self.lastJumped = self.totalTime
 		end
 	else
