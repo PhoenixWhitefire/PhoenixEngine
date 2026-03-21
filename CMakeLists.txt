@@ -107,15 +107,19 @@ option(LUAU_BUILD_TESTS "Build tests" OFF)
 option(MINIAUDIO_NO_EXTRA_NODES                "Do not build extra node graph nodes" ON)
 option(BUILD_CURL_EXE "Build curl executable" OFF)
 option(BUILD_STATIC_LIBS "Build static libraries" ON)
-option(HTTP_ONLY "Disable all protocols except HTTP (This overrides all CURL_DISABLE_* options)" ON)
+option(HTTP_ONLY "Disable all protocols except HTTP (This overrides all CURL_DISABLE_* options)" OFF)
 option(BUILD_LIBCURL_DOCS "Build libcurl man pages" OFF)
 option(BUILD_MISC_DOCS "Build misc man pages (e.g. curl-config and mk-ca-bundle)" OFF)
 option(ENABLE_CURL_MANUAL "Build the man page for curl and enable its -M/--manual option" OFF)
 option(BUILD_TESTING "Build tests" OFF)
 option(BUILD_EXAMPLES "Build libcurl examples" OFF)
 option(CURL_USE_LIBPSL "Use libpsl" OFF) # TODO figure out how to install this on Windows github action runners
-set(CURL_ENABLE_SSL ON) # what the hell
-option(CURL_ENABLE_SSL ON)
+
+if (MSVC)
+	# what
+	set(CURL_USE_SCHANNEL ON)
+	set(CURL_USE_OPENSSL OFF)
+endif()
 
 add_subdirectory(Vendor)
 add_subdirectory(Vendor/luau EXCLUDE_FROM_ALL)
