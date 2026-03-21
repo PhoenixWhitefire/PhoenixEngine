@@ -149,12 +149,12 @@ jobs:
         retention-days: 7
 
     - name: Doc Gen (Windows)
-      if: runner.os == 'Windows' && matrix.build_type != 'Debug'
+      if: runner.os == 'Windows'
       shell: pwsh
       run: ". \"x64\\${{ matrix.build_type }}\\PhoenixEngine.exe\" -headless -tool scripts\\ci\\docs.luau"
 
     - name: Test (Windows)
-      if: runner.os == 'Windows' && matrix.build_type != 'Debug'
+      if: runner.os == 'Windows'
       shell: pwsh
       run: >
         . "x64\\${{ matrix.build_type }}\\PhoenixEngine.exe" -headless -tool scripts\\ci\\tests.luau
