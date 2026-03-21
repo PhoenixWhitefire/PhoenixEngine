@@ -932,7 +932,7 @@ void Engine::Start()
 	ScriptEngine::Initialize(); // can only do this after datamodel is bound
 
 	double RunningTime = GetRunningTime();
-	double LastFrameEnded = RunningTime;
+	double LastFrame = RunningTime;
 	double LastSecond = 0.f;
 
 	std::vector<uint32_t> skyboxFacesBeingLoaded;
@@ -979,8 +979,9 @@ void Engine::Start()
 		this->FpsCap = std::clamp(this->FpsCap, 1, INT32_MAX);
 		int throttledFpsCap = IsWindowFocused ? FpsCap : 10;
 
-		double deltaTime = RunningTime - LastFrameEnded;
+		double deltaTime = RunningTime - LastFrame;
 		double fpsCapDelta = 1.f / throttledFpsCap;
+		LastFrame = RunningTime;
 
 		// make sure the order of timers is
 		// 0 - EntireFrame, 1 - FrameSleep, 2 - FrameWork
@@ -989,12 +990,12 @@ void Engine::Start()
 		static Timing::StaticMagicTimerThing FrameWorkTimer("FrameWork");
 
 		// Wait the appropriate amount of time between frames
-		if ((!VSync || !IsWindowFocused) && (deltaTime < fpsCapDelta))
+		if ((!VSync || !IsWindowFocused) && (Timing::FinalFrameTimes[FrameWorkTimer.TimerId] < fpsCapDelta))
 		{
 			Timing::ScopedTimer scoped(FrameSleepTimer.TimerId);
 			ZoneScopedNC("SleepForFpsCap", tracy::Color::Wheat);
 
-			std::this_thread::sleep_for(std::chrono::duration<double>(fpsCapDelta - deltaTime - Timing::FinalFrameTimes[FrameWorkTimer.TimerId]));
+			std::this_thread::sleep_for(std::chrono::duration<double>(fpsCapDelta - Timing::FinalFrameTimes[FrameWorkTimer.TimerId]));
 		}
 
 		Timing::ScopedTimer framwWorkTimerScope(FrameWorkTimer.TimerId);
@@ -1233,8 +1234,6 @@ void Engine::Start()
 
 		// End of frame
 		RunningTime = GetRunningTime();
-
-		LastFrameEnded = RunningTime;
 
 		m_DrawnFramesInSecond++;
 
