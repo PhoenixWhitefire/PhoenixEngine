@@ -67,6 +67,11 @@ jobs:
         sudo apt-get install libegl1-mesa-dev libgl1-mesa-dev libwayland-egl1
         sudo apt-get install libwayland-client0
 
+    - name: Setup PATH for Windows Address Sanitizer
+      if: runner.os == 'Windows'
+      shell: cmd
+      run: call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+
     - name: Configure CMake
       env:
         CXX: g++
