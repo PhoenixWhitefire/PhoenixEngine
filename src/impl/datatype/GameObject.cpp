@@ -191,7 +191,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 				for (const ReflectorRef& ref : static_cast<GameObject*>(p)->Components)
 					ret.emplace_back(s_EntityComponentNames[(size_t)ref.Type]);
 
-				return { ret };
+				return { Reflection::GenericValue(ret) };
 			}
 		} },
 
