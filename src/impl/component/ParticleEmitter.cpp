@@ -6,6 +6,7 @@
 #include "component/Transform.hpp"
 #include "asset/MaterialManager.hpp"
 #include "asset/MeshProvider.hpp"
+#include "render/Renderer.hpp"
 
 static std::default_random_engine s_RandGenerator = std::default_random_engine(static_cast<uint32_t>(time(NULL)));
 
@@ -45,23 +46,43 @@ public:
 				}
 			),
 		
-			/*
-			REFLECTION_DECLAREPROP(
-				"MaxParticles",
-				Integer,
-				[](Reflection::Reflectable* g)
+			REFLECTION_PROPERTY(
+				"Image",
+				String,
+				[](void* p) -> Reflection::GenericValue
 				{
-					return dynamic_cast<Object_ParticleEmitter*>(g)->MaxParticles;
+					EcParticleEmitter* ep = static_cast<EcParticleEmitter*>(p);
+					const Texture& tex = TextureManager::Get()->GetTextureResource(ep->Image);
+
+					return tex.ImagePath;
 				},
-				[](Reflection::Reflectable* g, Reflection::GenericValue gv)
+				[](void* p, const Reflection::GenericValue& gv)
 				{
-					int64_t newMax = gv.AsInteger();
-					if (newMax < 0 || newMax > UINT32_MAX)
-						RAISE_RT("ParticleEmitter.MaxParticles must be within uint32_t bounds (0 < MaxParticles <= 0xFFFFFFFFu)");
-					dynamic_cast<Object_ParticleEmitter*>(g)->MaxParticles = static_cast<uint32_t>(newMax);
+					EcParticleEmitter* ep = static_cast<EcParticleEmitter*>(p);
+					ep->Image = TextureManager::Get()->LoadFromPath(gv.AsString());
 				}
-			);
-			*/
+			),
+
+			REFLECTION_PROPERTY(
+				"BilinearFiltering",
+				Boolean,
+				[](void* p) -> Reflection::GenericValue
+				{
+					EcParticleEmitter* ep = static_cast<EcParticleEmitter*>(p);
+					const Texture& tex = TextureManager::Get()->GetTextureResource(ep->Image);
+
+					return tex.DoBilinearSmoothing;
+				},
+				[](void* p, const Reflection::GenericValue& gv)
+				{
+					TextureManager* textureManager = TextureManager::Get();
+
+					EcParticleEmitter* ep = static_cast<EcParticleEmitter*>(p);
+					const Texture& tex = textureManager->GetTextureResource(ep->Image);
+
+					ep->Image = textureManager->LoadFromPath(tex.ImagePath, true, gv.AsBoolean());
+				}
+			),
 
 			REFLECTION_PROPERTY_SIMPLE(EcParticleEmitter, Lifetime, Vector2)
         };
@@ -173,6 +194,7 @@ void EcParticleEmitter::Render(const glm::mat4& RenderMatrix)
 
 	static MeshProvider* meshProvider = MeshProvider::Get();
 	static ShaderManager* shdManager = ShaderManager::Get();
+	static Renderer* renderer = Renderer::Get();
 
 	static uint32_t QuadMeshId = meshProvider->LoadFromPath("!Quad");
 	static uint32_t ShaderId = shdManager->LoadFromPath("particle");
@@ -185,6 +207,8 @@ void EcParticleEmitter::Render(const glm::mat4& RenderMatrix)
 	quadGpu.VertexBuffer.Bind();
 	quadGpu.ElementBuffer.Bind();
 	particleShader.SetUniform("RenderMatrix", RenderMatrix);
+	glDisable(GL_CULL_FACE);
+	glEnable(GL_BLEND);
 
 	for (size_t index = 0; index < m_Particles.size(); index++)
 	{
@@ -220,5 +244,6 @@ void EcParticleEmitter::Render(const glm::mat4& RenderMatrix)
 		particleShader.Activate();
 
 		glDrawElements(GL_TRIANGLES, quadGpu.NumIndices, GL_UNSIGNED_INT, 0);
+		renderer->AccumulatedDrawCallCount++;
 	}
 }

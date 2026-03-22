@@ -305,7 +305,7 @@ uint32_t TextureManager::LoadFromPath(const std::string& Path, bool ShouldLoadAs
 
 		if (texture.Status != Texture::LoadStatus::Unloaded)
 		{
-			if (texture.DoBilinearSmoothing != DoBilinearSmoothing)
+			if (texture.DoBilinearSmoothing != DoBilinearSmoothing && Path[0] != '!')
 			{
 				assignName = ActualPath + (DoBilinearSmoothing ? "!B" : "!N");
 				const auto& vit = m_StringToTextureId.find(assignName);

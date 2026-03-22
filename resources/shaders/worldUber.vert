@@ -43,7 +43,7 @@ void main()
 	mat4 trans = Transform;
 	vec3 sca = Scale;
 	vec4 pain = vec4(ColorTint, 1.f) * VertexPaint;
-	
+
 	if (IsInstanced)
 	{
 		trans = InstanceTransform;
@@ -53,7 +53,7 @@ void main()
 
 	vec3 modelPos = VertexPosition * sca;
 	vec4 worldPos = trans * vec4(modelPos, 1.0f);
-	
+
 	data_out.VertexNormal = VertexNormal;
 	data_out.Paint = pain;
 	data_out.TextureUV = VertexUV;
@@ -64,6 +64,6 @@ void main()
 	data_out.Transform = trans;
 	data_out.RelativeToDirecLight = DirecLightProjection * worldPos;
 	data_out.CameraPosition = CameraPosition;
-	
+
 	gl_Position = vec4(data_out.WorldPosition, 1.f);
 }

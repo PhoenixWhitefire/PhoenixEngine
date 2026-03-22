@@ -793,14 +793,14 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 		renderUIElements(interface, RendererContext);
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glDisable(GL_BLEND);
+	glDisable(GL_DEPTH_TEST);
 
 	//Do framebuffer stuff after everything is drawn
 	//RendererContext.FrameBuffer.Unbind();
 
 	glActiveTexture(GL_TEXTURE1);
 	RendererContext.FrameBuffer.BindTexture();
-
-	glDisable(GL_DEPTH_TEST);
 
 	if (EngineJsonConfig.value("postfx_enabled", false))
 	{

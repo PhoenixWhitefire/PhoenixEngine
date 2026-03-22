@@ -3042,7 +3042,7 @@ static std::vector<ObjectHandle> PrevEditSelections;
 static const std::string_view AssetProperties[] = {
 	"MeshAsset", // Mesh
 	"Material",  // Mesh
-	"Image"      // UIImage
+	"Image"      // UIImage, ParticleEmitter
 };
 static const Reflection::PropertyDescriptor* AssetProperty = nullptr;
 static std::string AssetPropertyValue;
