@@ -11,11 +11,11 @@ template <class T>
 class ValueGradientKeypoint
 {
 public:
-	ValueGradientKeypoint(float Time, T Value, float Envelope = 0.f);
+	ValueGradientKeypoint(float Time, T Value, T Envelope = T(0.f));
 
 	float Time; // Time in the sequence
 	T Value; // Value at this point in time
-	float Envelope; // Random deviation
+	T Envelope; // Random deviation
 };
 
 template <class T>
@@ -25,9 +25,9 @@ public:
 	ValueGradient(const std::vector<ValueGradientKeypoint<T>>& InitKeys);
 	ValueGradient() = default;
 
-	T GetValue(float Time);
+	T GetValue(float Time) const;
 	void InsertKey(const ValueGradientKeypoint<T>& Key);
-	void InsertKey(float Time, T Value, float Envelope = 0.f);
+	void InsertKey(float Time, T Value, T Envelope = T(0.f));
 
 	std::vector<ValueGradientKeypoint<T>> GetKeys();
 	std::vector<T> GetKeysValues();
@@ -37,7 +37,7 @@ private:
 };
 
 template <class T>
-ValueGradientKeypoint<T>::ValueGradientKeypoint(float time, T value, float envelope)
+ValueGradientKeypoint<T>::ValueGradientKeypoint(float time, T value, T envelope)
 	: Time(time), Value(value), Envelope(envelope)
 {
 }
@@ -55,7 +55,7 @@ bool m_Compare(ValueGradientKeypoint<T> A, ValueGradientKeypoint<T> B)
 }
 
 template <class T>
-T ValueGradient<T>::GetValue(float Time)
+T ValueGradient<T>::GetValue(float Time) const
 {
 	if (m_Keys.empty())
 		return T();
@@ -82,8 +82,7 @@ T ValueGradient<T>::GetValue(float Time)
 		if (Time >= currentKey.Time && Time < nextKey.Time)
 		{
 			float alpha = (Time - currentKey.Time) / (nextKey.Time - currentKey.Time);
-
-			float enveLerp = currentKey.Envelope + (nextKey.Envelope - currentKey.Envelope) * alpha;
+			T enveLerp = currentKey.Envelope + (nextKey.Envelope - currentKey.Envelope) * alpha;
 
 			return ((nextKey.Value - currentKey.Value) * alpha + currentKey.Value) + (enveLerp * deviation);
 		}
@@ -119,7 +118,7 @@ void ValueGradient<T>::InsertKey(const ValueGradientKeypoint<T>& Key)
 }
 
 template <class T>
-void ValueGradient<T>::InsertKey(float Time, T Value, float Envelope)
+void ValueGradient<T>::InsertKey(float Time, T Value, T Envelope)
 {
 	m_Keys.emplace_back(Time, Value, Envelope);
 }

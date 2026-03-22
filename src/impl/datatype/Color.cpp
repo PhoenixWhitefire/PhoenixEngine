@@ -10,6 +10,13 @@ Color::Color()
 	this->B = 0.f;
 }
 
+Color::Color(float S)
+{
+	R = S;
+	G = S;
+	B = S;
+}
+
 Color::Color(float R, float G, float B)
 {
 	this->R = R;

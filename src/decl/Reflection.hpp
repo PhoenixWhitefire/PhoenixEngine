@@ -82,6 +82,9 @@ namespace Reflection
 
 		EventSignal,
 		InputEvent,
+		NumberGradient,
+		VectorGradient,
+		ColorGradient,
 
 		// BEFORE Null
 		__lastBase,

@@ -422,16 +422,15 @@ Engine::Engine()
 	Log.Info("Engine initialized");
 }
 
-static bool s_DebugCollisionAabbs = false;
-
 static void traverseHierarchy(
-	hx::vector<RenderItem, MEMCAT(Rendering)>& RenderList,
-	hx::vector<LightItem, MEMCAT(Rendering)>& LightList,
+	Scene& RendererScene,
 	Physics::World& PhysicsWorld,
+	std::vector<EcParticleEmitter*>& ParticleEmitters,
 	GameObject* Root,
 	EcCamera* SceneCamera,
 	double DeltaTime,
-	EcDirectionalLight** Sun
+	EcDirectionalLight** Sun,
+	bool DebugCollisionAabbs
 )
 {
 	ZoneScopedC(tracy::Color::LightGoldenrod);
@@ -459,8 +458,8 @@ static void traverseHierarchy(
 			else if (rb->PhysicsCollisions)
 				PhysicsWorld.Statics.emplace_back(object);
 
-			if (s_DebugCollisionAabbs && rb->PhysicsCollisions)
-				RenderList.emplace_back(
+			if (DebugCollisionAabbs && rb->PhysicsCollisions)
+				RendererScene.RenderList.emplace_back(
 					cubeMesh,
 					glm::translate(glm::mat4(1.f), rb->CollisionAabb.Position),
 					rb->CollisionAabb.Size,
@@ -481,7 +480,7 @@ static void traverseHierarchy(
 
 			// TODO: frustum culling
 
-			RenderList.emplace_back(
+			RendererScene.RenderList.emplace_back(
 				cm->RenderMeshId,
 				ct->Transform,
 				ct->Size,
@@ -497,13 +496,14 @@ static void traverseHierarchy(
 
 		if (EcTreeLink* link = object->FindComponent<EcTreeLink>(); link && link->Target.IsValid())
 			traverseHierarchy(
-				RenderList,
-				LightList,
+				RendererScene,
 				PhysicsWorld,
+				ParticleEmitters,
 				link->Target,
 				SceneCamera,
 				DeltaTime,
-				Sun
+				Sun,
+				DebugCollisionAabbs
 			);
 
 		EcDirectionalLight* directional = object->FindComponent<EcDirectionalLight>();
@@ -512,7 +512,7 @@ static void traverseHierarchy(
 		
 		if (directional)
 		{
-			LightList.push_back(LightItem{
+			RendererScene.LightingList.push_back(LightItem{
 				.Position = directional->Direction,
 				.LightColor = directional->LightColor * directional->Brightness,
 				.Type = LightType::Directional,
@@ -526,7 +526,7 @@ static void traverseHierarchy(
 		if (ct)
 		{
 			if (point)
-				LightList.push_back(LightItem{
+				RendererScene.LightingList.push_back(LightItem{
 					.Position = (glm::vec3)ct->Transform[3],
 					.LightColor = point->LightColor * point->Brightness,
 					.Range = point->Range,
@@ -535,7 +535,7 @@ static void traverseHierarchy(
 				});
 
 			if (spot)
-				LightList.push_back(LightItem{
+				RendererScene.LightingList.push_back(LightItem{
 					.Position = (glm::vec3)ct->Transform[3],
 					.LightColor = spot->LightColor * spot->Brightness,
 					.Range = spot->Range,
@@ -548,19 +548,20 @@ static void traverseHierarchy(
 
 		if (!object->GetChildren().empty())
 			traverseHierarchy(
-				RenderList,
-				LightList,
+				RendererScene,
 				PhysicsWorld,
+				ParticleEmitters,
 				object,
 				SceneCamera,
 				DeltaTime,
-				Sun
+				Sun,
+				DebugCollisionAabbs
 			);
 		
 		if (EcParticleEmitter* emitter = object->FindComponent<EcParticleEmitter>())
 		{
 			emitter->Update(DeltaTime);
-			emitter->AppendToRenderList(RenderList);
+			ParticleEmitters.push_back(emitter);
 		}
 
 		return true; // continue
@@ -717,7 +718,7 @@ ImVec2 Engine::GetViewportInputRectSize() const
 	return OverrideDefaultViewportInputRect ? OverrideViewportInputSize : ImVec2{ (float)WindowSizeX, (float)WindowSizeY };
 }
 
-void Engine::m_Render(double deltaTime)
+void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& particleEmitters)
 {
 	ZoneScoped;
 
@@ -782,8 +783,11 @@ void Engine::m_Render(double deltaTime)
 
 	glDepthFunc(GL_LESS);
 
-	//Main render pass
+	// Main render pass
 	RendererContext.DrawScene(CurrentScene, renderMatrix, sceneCamera->GetWorldTransform(), GetRunningTime(), DebugWireframeRendering);
+
+	for (EcParticleEmitter* emitter : particleEmitters)
+		emitter->Render(renderMatrix);
 
 	if (GameObject* interface = DataModelRef->FindChildWithComponent(EntityComponent::Interface))
 		renderUIElements(interface, RendererContext);
@@ -948,9 +952,8 @@ void Engine::Start()
 		.NumColorChannels = 3
 	}, "!Framebuffer:Main");
 
-	CurrentScene.RenderList.reserve(50);
-
 	Physics::World physWorld;
+	std::vector<EcParticleEmitter*> particleEmittersRenderList;
 
 	m_IsRunning = true;
 
@@ -1103,7 +1106,6 @@ void Engine::Start()
 		// (really need a generic `Ref` system)
 		sceneCamera = sceneCamObject->FindComponent<EcCamera>();
 
-		s_DebugCollisionAabbs = m_Physics.DebugCollisionAabbs;
 		EcDirectionalLight* sun = nullptr;
 		{
 			TIME_SCOPE_AS("TraverseHierarchy");
@@ -1112,16 +1114,18 @@ void Engine::Start()
 			CurrentScene.LightingList.clear();
 			physWorld.Dynamics.clear();
 			physWorld.Statics.clear();
+			particleEmittersRenderList.clear();
 
 			// Aggregate mesh and light data into lists
 			traverseHierarchy(
-				CurrentScene.RenderList,
-				CurrentScene.LightingList,
+				CurrentScene,
 				physWorld,
+				particleEmittersRenderList,
 				WorkspaceRef,
 				sceneCamera,
 				deltaTime,
-				&sun
+				&sun,
+				m_Physics.DebugCollisionAabbs
 			);
 
 			// TODO weird skybox graphical corruption if we don't draw anything
@@ -1226,11 +1230,9 @@ void Engine::Start()
 
 		if (!IsHeadlessMode)
 		{
-			m_Render(deltaTime);
+			m_Render(deltaTime, particleEmittersRenderList);
 			RendererContext.SwapBuffers();
 		}
-
-		//ScriptEngine::StepScheduler();
 
 		// End of frame
 		RunningTime = GetRunningTime();

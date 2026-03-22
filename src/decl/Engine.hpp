@@ -15,6 +15,7 @@
 #include "datatype/GameObject.hpp"
 #include "component/DataModel.hpp"
 #include "component/Workspace.hpp"
+#include "component/ParticleEmitter.hpp"
 
 #include "datatype/Event.hpp"
 #include "geometry/Physics.hpp"
@@ -86,7 +87,7 @@ public:
 
 private:
 	void m_InitializeVideo();
-	void m_Render(double DeltaTime);
+	void m_Render(double DeltaTime, const std::vector<EcParticleEmitter*>&);
 
 	int m_DrawnFramesInSecond = -1;
 	bool m_IsRunning = false;

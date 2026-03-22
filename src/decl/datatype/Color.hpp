@@ -14,6 +14,8 @@ public:
 	*/
 	Color();
 
+	Color(float S);
+
 	/**
 	Create a color from a range of 0 to 1
 	@param The R, G and B values of the color
@@ -28,7 +30,7 @@ public:
 
 	float R, G, B;
 
-	Color operator*(const Color& other)
+	Color operator*(const Color& other) const
 	{
 		return Color(
 			this->R * other.R,
@@ -37,12 +39,30 @@ public:
 		);
 	}
 
-	Color operator*(float other)
+	Color operator*(float other) const
 	{
 		return Color(
 			this->R * other,
 			this->G * other,
 			this->B * other
+		);
+	}
+
+	Color operator+(const Color& other) const
+	{
+		return Color(
+			R + other.R,
+			G + other.G,
+			B + other.B
+		);
+	}
+
+	Color operator-(const Color& other) const
+	{
+		return Color(
+			R - other.R,
+			G - other.G,
+			B - other.B
 		);
 	}
 

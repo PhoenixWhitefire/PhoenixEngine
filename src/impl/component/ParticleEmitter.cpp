@@ -1,15 +1,13 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glad/gl.h>
 
 #include "component/ParticleEmitter.hpp"
 #include "component/Transform.hpp"
 #include "asset/MaterialManager.hpp"
 #include "asset/MeshProvider.hpp"
 
-static uint32_t s_ParticleShaders = 0;
 static std::default_random_engine s_RandGenerator = std::default_random_engine(static_cast<uint32_t>(time(NULL)));
-
-static uint32_t QuadMeshId = 0;
 
 class ParticleEmitterManager : public ComponentManager<EcParticleEmitter>
 {
@@ -76,12 +74,7 @@ static inline ParticleEmitterManager Instance;
 
 EcParticleEmitter::EcParticleEmitter()
 {
-	if (s_ParticleShaders == 0)
-		s_ParticleShaders = ShaderManager::Get()->LoadFromPath("particle");
-
-	this->PossibleImages = { 1 };
-
-	this->VelocityOverTime.InsertKey(0.00f, glm::vec3(0.f, 5.0f, 0.f), 15.f);
+	this->VelocityOverTime.InsertKey(0.00f, glm::vec3(0.f, 5.0f, 0.f), glm::vec3(15.f));
 	this->VelocityOverTime.InsertKey(0.75f, glm::vec3(0.f, 2.5f, 0.f));
 	this->VelocityOverTime.InsertKey(1.00f, glm::vec3(0.f, 0.0f, 0.f));
 
@@ -95,9 +88,9 @@ EcParticleEmitter::EcParticleEmitter()
 
 size_t EcParticleEmitter::m_GetUsableParticleIndex()
 {
-	if (m_Particles.empty()) //Are there any particles at all?
+	if (m_Particles.empty()) // Are there any particles at all?
 	{
-		m_Particles.resize(1); //Resize array to length 1
+		m_Particles.resize(1); // Resize array to length 1
 
 		return 0;
 	}
@@ -108,7 +101,7 @@ size_t EcParticleEmitter::m_GetUsableParticleIndex()
 			Particle& particle = m_Particles[index];
 
 			if (particle.TimeAliveFor > particle.Lifetime)
-			{ //Get first inactive particle
+			{ // Get first inactive particle
 
 				//m_Particles.erase(index + m_Particles.begin());
 
@@ -127,31 +120,26 @@ void EcParticleEmitter::Update(double DeltaTime)
 	float deltaTimeForGLM = static_cast<float>(DeltaTime);
 	float timeBetweenSpawn = 1.f / this->Rate;
 
-	if (m_TimeSinceLastSpawn >= timeBetweenSpawn && !this->PossibleImages.empty() && this->Emitting)
+	if (m_TimeSinceLastSpawn >= timeBetweenSpawn && this->Emitting)
 	{
 		uint32_t numToSpawn = static_cast<uint32_t>(m_TimeSinceLastSpawn / timeBetweenSpawn);
 
 		m_TimeSinceLastSpawn = 0.f;
 
-		//Spawn a new particle
-
-		float numimages = (float)this->PossibleImages.size();
-
-		std::uniform_real_distribution<float> randIndex(0.f, numimages);
+		// Spawn a new particle
 		std::uniform_real_distribution<float> lifetimeDist(this->Lifetime.x, this->Lifetime.y);
 
 		EcTransform* ct = Object->FindComponent<EcTransform>();
 
 		for (uint32_t i = 0; i < numToSpawn; i++)
 		{
-			Particle newParticle
-			{
-				lifetimeDist(s_RandGenerator),
-				0.f,
-				1.f,
-				0.f,
-				this->PossibleImages[(uint32_t)randIndex(s_RandGenerator)],
-				this->ParticlesAreAttached ? glm::vec3{} : glm::vec3(ct->Transform[3])
+			Particle newParticle = {
+				.Lifetime = lifetimeDist(s_RandGenerator),
+				.TimeAliveFor = 0.f,
+				.Size = 1.f,
+				.Transparency = 0.f,
+				.Tint = Color(1.f, 1.f, 1.f),
+				.Position = this->ParticlesAreAttached ? glm::vec3() : glm::vec3(ct->Transform[3])
 			};
 
 			m_Particles[m_GetUsableParticleIndex()] = newParticle;
@@ -164,29 +152,39 @@ void EcParticleEmitter::Update(double DeltaTime)
 	{
 		particle.TimeAliveFor += static_cast<float>(DeltaTime);
 
-		float LifeProgress = particle.TimeAliveFor / particle.Lifetime;
+		float lifeProgress = particle.TimeAliveFor / particle.Lifetime;
 
-		particle.Position = particle.Position + (this->VelocityOverTime.GetValue(LifeProgress) * deltaTimeForGLM);
-		particle.Size = this->SizeOverTime.GetValue(LifeProgress);
+		particle.Position = particle.Position + (this->VelocityOverTime.GetValue(lifeProgress) * deltaTimeForGLM);
+		particle.Size = this->SizeOverTime.GetValue(lifeProgress);
 
-		particle.Transparency = this->TransparencyOverTime.GetValue(LifeProgress);
+		particle.Transparency = this->TransparencyOverTime.GetValue(lifeProgress);
+		particle.Tint = this->ColorOverTime.GetValue(lifeProgress);
 	}
 }
 
-void EcParticleEmitter::AppendToRenderList(hx::vector<RenderItem, MEMCAT(Rendering)>& RenderList)
+void EcParticleEmitter::Render(const glm::mat4& RenderMatrix)
 {
 	if (m_Particles.empty())
 		return;
 
-	RenderList.reserve(RenderList.size() + m_Particles.size());
-
-	if (QuadMeshId == 0)
-	{
-		MeshProvider* mp = MeshProvider::Get();
-		QuadMeshId = mp->LoadFromPath("!Quad");
-	}
-
 	EcTransform* ct = Object->FindComponent<EcTransform>();
+	if (!ct)
+		return;
+
+	static MeshProvider* meshProvider = MeshProvider::Get();
+	static ShaderManager* shdManager = ShaderManager::Get();
+
+	static uint32_t QuadMeshId = meshProvider->LoadFromPath("!Quad");
+	static uint32_t ShaderId = shdManager->LoadFromPath("particle");
+
+	ShaderProgram& particleShader = shdManager->GetShaderResource(ShaderId);
+	const Mesh& quadMesh = meshProvider->GetMeshResource(QuadMeshId);
+	const MeshProvider::GpuMesh& quadGpu = meshProvider->GetGpuMesh(quadMesh.GpuId);
+
+	quadGpu.VertexArray.Bind();
+	quadGpu.VertexBuffer.Bind();
+	quadGpu.ElementBuffer.Bind();
+	particleShader.SetUniform("RenderMatrix", RenderMatrix);
 
 	for (size_t index = 0; index < m_Particles.size(); index++)
 	{
@@ -214,16 +212,13 @@ void EcParticleEmitter::AppendToRenderList(hx::vector<RenderItem, MEMCAT(Renderi
 		if (ParticlesAreAttached)
 			transform *= ct->Transform;
 
-		RenderList.emplace_back(
-			QuadMeshId,
-			transform,
-			glm::vec3{ particle.Size },
-			MaterialManager::Get()->LoadFromPath("error"),
-			Color(1.f, 1.f, 1.f),
-			particle.Transparency,
-			0.f,
-			0.f,
-			FaceCullingMode::None
-		);
+		particleShader.SetUniform("Position", glm::vec3(transform[3]));
+		particleShader.SetUniform("Size", particle.Size);
+		particleShader.SetUniform("Tint", particle.Tint.ToGenericValue());
+		particleShader.SetUniform("Transparency", particle.Transparency);
+		particleShader.SetTextureUniform("Image", Image);
+		particleShader.Activate();
+
+		glDrawElements(GL_TRIANGLES, quadGpu.NumIndices, GL_UNSIGNED_INT, 0);
 	}
 }

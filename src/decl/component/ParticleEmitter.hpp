@@ -13,21 +13,21 @@ struct EcParticleEmitter : public Component<EntityComponent::ParticleEmitter>
 	EcParticleEmitter();
 
 	void Update(double);
-	void AppendToRenderList(hx::vector<RenderItem, MEMCAT(Rendering)>&);
+	void Render(const glm::mat4& RenderMatrix);
 
 	ObjectRef Object;
 
 	bool Emitting = true;
 	bool ParticlesAreAttached = false;
 
-	uint32_t Rate = 50; //Particles to be spawned every second
+	uint32_t Rate = 50; // Particles to be spawned every second
 	glm::vec2 Lifetime = { 1.5f, 2.f }; // Randomly chosen between the range X - Y;
 
-	std::vector<uint32_t> PossibleImages; //A random one is chosen every time a particle needs to be spawned
-
+	uint32_t Image = 1;
 	ValueGradient<float> TransparencyOverTime;
 	ValueGradient<float> SizeOverTime;
 	ValueGradient<glm::vec3> VelocityOverTime;
+	ValueGradient<Color> ColorOverTime;
 
 	struct Particle
 	{
@@ -35,8 +35,7 @@ struct EcParticleEmitter : public Component<EntityComponent::ParticleEmitter>
 		float TimeAliveFor = 0.f;
 		float Size = 1.f;
 		float Transparency = 0.f;
-
-		uint32_t Image = 0;
+		Color Tint = { 1.f, 1.f, 1.f };
 
 		glm::vec3 Position;
 	};

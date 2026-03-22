@@ -673,7 +673,10 @@ static std::string_view BaseNames[] =
 	"Map",
 
 	"EventSignal",
-	"InputEvent"
+	"InputEvent",
+	"NumberGradient",
+	"VectorGradient",
+	"ColorGradient"
 };
 
 static_assert(

@@ -500,7 +500,7 @@ void Renderer::DrawMesh(
 		break;
 	}
 
-	[[unlikely]] default: {}
+	[[unlikely]] default: assert(false);
 
 	}
 

@@ -4,7 +4,8 @@
 
 uniform sampler2D Image;
 
-uniform float Transparency = 0.5f;
+uniform float Transparency;
+uniform vec3 Tint;
 
 in vec2 Frag_TextureUV;
 
@@ -13,9 +14,5 @@ out vec4 FragColor;
 void main()
 {
 	vec4 Color = texture(Image, Frag_TextureUV);
-
-	if (Color.a == 0.1f)
-		//discard;
-
 	FragColor = vec4(1.0f, 0.0f, 1.0f, 1.0f);
 }

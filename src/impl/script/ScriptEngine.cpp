@@ -38,7 +38,10 @@ static const lua_Type s_ValueTypeToLuauType[] = {
 	LUA_TTABLE, // Map,
 
 	LUA_TUSERDATA, // EventSignal
-	LUA_TUSERDATA  // InputEvent
+	LUA_TUSERDATA, // InputEvent
+	LUA_TUSERDATA, // NumberGradient
+	LUA_TUSERDATA, // VectorGradient
+	LUA_TUSERDATA, // ColorGradient
 };
 static_assert(std::size(s_ValueTypeToLuauType) == Reflection::ValueType::__lastBase);
 
