@@ -18,6 +18,7 @@
 
 #include "component/ParticleEmitter.hpp"
 #include "component/InputService.hpp"
+#include "component/Environment.hpp"
 #include "component/Transform.hpp"
 #include "component/RigidBody.hpp"
 #include "component/Interface.hpp"
@@ -802,7 +803,7 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 	glActiveTexture(GL_TEXTURE1);
 	RendererContext.FrameBuffer.BindTexture();
 
-	if (EngineJsonConfig.value("postfx_enabled", false))
+	if (EcEnvironmentService::PostProcess)
 	{
 		ZoneScopedN("ApplyPostFxSettings");
 	
@@ -818,7 +819,7 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 	
 		m_PostFxShader.SetUniform(
 			"Gamma",
-			EngineJsonConfig.value("postfx_gamma", 1.f)
+			EcEnvironmentService::GammaCorrection
 		);
 		m_SkyboxShader.SetUniform(
 			"HdrEnabled",
@@ -856,10 +857,6 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 		m_SkyboxShader.SetUniform(
 			"HdrEnabled",
 			false
-		);
-		m_PostFxShader.SetUniform(
-			"Gamma",
-			EngineJsonConfig.value("postfx_gamma", 1.f)
 		);
 	}
 
@@ -1170,6 +1167,9 @@ void Engine::Start()
 
 			for (const RenderItem& ri : CurrentScene.RenderList)
 				CurrentScene.UsedShaders.insert(m_MaterialManager.GetMaterialResource(ri.MaterialId).ShaderId);
+
+			if (particleEmittersRenderList.size() > 0)
+				CurrentScene.UsedShaders.insert(m_ShaderManager.LoadFromPath("particle"));
 		}
 
 		if (!IsHeadlessMode && sun)
@@ -1223,7 +1223,15 @@ void Engine::Start()
 			RendererContext.DrawScene(sunScene, sunRenderMatrix, glm::mat4(1.f), RunningTime, DebugWireframeRendering);
 
 			for (uint32_t shdId : CurrentScene.UsedShaders)
-				m_ShaderManager.GetShaderResource(shdId).SetUniform("IsShadowMap", false);
+			{
+				ShaderProgram& shader = m_ShaderManager.GetShaderResource(shdId);
+				shader.SetUniform("IsShadowMap", false);
+				shader.SetUniform("LightAmbient", EcEnvironmentService::AmbientLight.ToGenericValue());
+
+				shader.SetUniform("Fog", EcEnvironmentService::Fog);
+				if (EcEnvironmentService::Fog)
+					shader.SetUniform("FogColor", EcEnvironmentService::FogColor.ToGenericValue());
+			}
 
 			glViewport(0, 0, WindowSizeX, WindowSizeY);
 		}

@@ -342,6 +342,16 @@
           "Version": "The version of the Engine build"
         }
       },
+      "Environment": {
+        "Description": "World lighting and ambiance",
+        "Properties": {
+          "AmbientLight": "Base environment ambient light color (Uniform: `LightAmbient`)",
+          "Fog": "Fog enablement (Uniform: `Fog`)",
+          "FogColor": "Color of the fog (Uniform: `FogColor`)",
+          "GammaCorrection": "Post-processor gamma correction amount (Uniform: `Gamma`)",
+          "PostProcess": "Post-processor enablement (Uniform: `PostFxEnabled`)"
+        }
+      },
       "Example": {
         "Description": [
           "An example to be made fun of and bullied",
@@ -456,7 +466,9 @@
       "ParticleEmitter": {
         "Description": "An emitter of 2D particles",
         "Properties": {
+          "BilinearFiltering": "Whether the particle image is smoothened",
           "Emitting": "Whether the emitter should emit new particles",
+          "Image": "The path to the image to use for the particles",
           "Lifetime": "The X and Y components act as a range of how long any particle can last, in seconds",
           "ParticlesAreAttached": "Whether the particles are attached to and move with the emitter",
           "Rate": "An integer indicating how many particles should be emitted per second (must be above or equal to `0`)"
@@ -1205,6 +1217,7 @@
               "Array": "Equivalent to `{ unknown }`. An Array of anything",
               "Boolean": "Equivalent to `boolean`. `true` or `false`",
               "Color": "The `Color` datatype",
+              "ColorGradient": "Color gradient (not implemented)",
               "Double": "The `number` type",
               "EventSignal": "The `EventSignal` datatype",
               "Function": "A function, equivalent to `(...unknown) -> (...unknown)",
@@ -1214,9 +1227,11 @@
               "Map": "Equivalent to `{ [unknown]: unknown }`",
               "Matrix": "The `Matrix` datatype",
               "Null": "`nil`",
+              "NumberGradient": "Number gradient (not implemented)",
               "String": "`string`",
               "Vector2": "A `vector` with `0` as the Z-component",
-              "Vector3": "`vector`"
+              "Vector3": "`vector`",
+              "VectorGradient": "Vector3 gradient (not implemented)"
             },
             "Type": "EnumMouseButton"
           }

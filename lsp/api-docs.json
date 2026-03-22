@@ -461,6 +461,9 @@
   "@phoenix/enum/ValueType.Color": {
     "documentation": "The `Color` datatype"
   },
+  "@phoenix/enum/ValueType.ColorGradient": {
+    "documentation": "Color gradient (not implemented)"
+  },
   "@phoenix/enum/ValueType.Double": {
     "documentation": "The `number` type"
   },
@@ -488,6 +491,9 @@
   "@phoenix/enum/ValueType.Null": {
     "documentation": "`nil`"
   },
+  "@phoenix/enum/ValueType.NumberGradient": {
+    "documentation": "Number gradient (not implemented)"
+  },
   "@phoenix/enum/ValueType.String": {
     "documentation": "`string`"
   },
@@ -496,6 +502,9 @@
   },
   "@phoenix/enum/ValueType.Vector3": {
     "documentation": "`vector`"
+  },
+  "@phoenix/enum/ValueType.VectorGradient": {
+    "documentation": "Vector3 gradient (not implemented)"
   },
   "@phoenix/global/Color": {
     "documentation": "* An RGB color"
@@ -703,6 +712,7 @@
       "Array": "@phoenix/enum/ValueType.Array",
       "Boolean": "@phoenix/enum/ValueType.Boolean",
       "Color": "@phoenix/enum/ValueType.Color",
+      "ColorGradient": "@phoenix/enum/ValueType.ColorGradient",
       "Double": "@phoenix/enum/ValueType.Double",
       "EventSignal": "@phoenix/enum/ValueType.EventSignal",
       "Function": "@phoenix/enum/ValueType.Function",
@@ -712,9 +722,11 @@
       "Map": "@phoenix/enum/ValueType.Map",
       "Matrix": "@phoenix/enum/ValueType.Matrix",
       "Null": "@phoenix/enum/ValueType.Null",
+      "NumberGradient": "@phoenix/enum/ValueType.NumberGradient",
       "String": "@phoenix/enum/ValueType.String",
       "Vector2": "@phoenix/enum/ValueType.Vector2",
-      "Vector3": "@phoenix/enum/ValueType.Vector3"
+      "Vector3": "@phoenix/enum/ValueType.Vector3",
+      "VectorGradient": "@phoenix/enum/ValueType.VectorGradient"
     }
   },
   "@phoenix/global/EventConnection": {
@@ -1281,6 +1293,21 @@
   "@phoenix/globaltype/Engine.Version": {
     "documentation": "The version of the Engine build"
   },
+  "@phoenix/globaltype/Environment.AmbientLight": {
+    "documentation": "Base environment ambient light color (Uniform: `LightAmbient`)"
+  },
+  "@phoenix/globaltype/Environment.Fog": {
+    "documentation": "Fog enablement (Uniform: `Fog`)"
+  },
+  "@phoenix/globaltype/Environment.FogColor": {
+    "documentation": "Color of the fog (Uniform: `FogColor`)"
+  },
+  "@phoenix/globaltype/Environment.GammaCorrection": {
+    "documentation": "Post-processor gamma correction amount (Uniform: `Gamma`)"
+  },
+  "@phoenix/globaltype/Environment.PostProcess": {
+    "documentation": "Post-processor enablement (Uniform: `PostFxEnabled`)"
+  },
   "@phoenix/globaltype/EventConnection.Connected": {
     "documentation": "* Whether the Connection is connected or not\n"
   },
@@ -1536,8 +1563,14 @@
   "@phoenix/globaltype/Network.MakeHttpRequestAsync": {
     "documentation": "Makes an HTTP request to the provided URL. `Ok` will be false upon failure, and `Body` will contain the error message"
   },
+  "@phoenix/globaltype/ParticleEmitter.BilinearFiltering": {
+    "documentation": "Whether the particle image is smoothened"
+  },
   "@phoenix/globaltype/ParticleEmitter.Emitting": {
     "documentation": "Whether the emitter should emit new particles"
+  },
+  "@phoenix/globaltype/ParticleEmitter.Image": {
+    "documentation": "The path to the image to use for the particles"
   },
   "@phoenix/globaltype/ParticleEmitter.Lifetime": {
     "documentation": "The X and Y components act as a range of how long any particle can last, in seconds"

@@ -104,6 +104,7 @@ type Services = {
   Network: Network,
   Logging: Logging,
   Interface: Interface,
+  Environment: Environment,
 }
 
 declare extern type Color with
@@ -280,6 +281,13 @@ export type Engine = {
   SetViewportInputRect: (self: Engine, Position: vector, Size: vector) -> (),
   ShowMessageBox: (self: Engine, Title: string, Message: string, Buttons: 'ok' | 'okcancel' | 'yesno' | 'yesnocancel' | nil, Icon: 'info' | 'warning' | 'error' | 'question' | nil, DefaultButton: number?) -> (number),
 }
+export type Environment = {
+  AmbientLight: Color,
+  Fog: boolean,
+  FogColor: Color,
+  GammaCorrection: number,
+  PostProcess: boolean,
+}
 export type History = {
   ActionHistorySize: number ,
   CanRedo: boolean ,
@@ -326,7 +334,9 @@ export type Network = {
   MakeHttpRequestAsync: (self: Network, { Url: string, Method: nil | 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'PATCH', Headers: { [string]: string }?, Body: string? }) -> ({ Ok: boolean, Status: number, Headers: { [string]: string }, Body: string }),
 }
 export type ParticleEmitter = {
+  BilinearFiltering: boolean,
   Emitting: boolean,
+  Image: string,
   Lifetime: vector,
   ParticlesAreAttached: boolean,
   Rate: number,
@@ -402,10 +412,10 @@ export type SpotLight = {
   Range: number,
 }
 export type Transform = {
-  LocalSize: vector ,
-  LocalTransform: Matrix ,
-  Size: vector,
-  Transform: Matrix,
+  LocalSize: vector,
+  LocalTransform: Matrix,
+  Size: vector ,
+  Transform: Matrix ,
 }
 export type TreeLink = {
   Target: GameObject?,
@@ -474,6 +484,7 @@ type Components = {
   UIImage: UIImage,
   UIText: UIText,
   UIButton: UIButton,
+  Environment: Environment,
 }
 type Creatables = {
   Transform: Transform,
@@ -506,6 +517,7 @@ type Creatables = {
   UIImage: UIImage,
   UIText: UIText,
   UIButton: UIButton,
+  Environment: Environment,
 }
 declare extern type EnumCollisionType extends EnumItem with end
 declare extern type EnumCollisionType_INTERNAL extends Enum with
@@ -687,6 +699,7 @@ declare extern type EnumValueType_INTERNAL extends Enum with
   Array: EnumValueType
   Boolean: EnumValueType
   Color: EnumValueType
+  ColorGradient: EnumValueType
   Double: EnumValueType
   EventSignal: EnumValueType
   Function: EnumValueType
@@ -696,9 +709,11 @@ declare extern type EnumValueType_INTERNAL extends Enum with
   Map: EnumValueType
   Matrix: EnumValueType
   Null: EnumValueType
+  NumberGradient: EnumValueType
   String: EnumValueType
   Vector2: EnumValueType
   Vector3: EnumValueType
+  VectorGradient: EnumValueType
 end
 declare Enum: {
   CollisionType: EnumCollisionType_INTERNAL,

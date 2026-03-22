@@ -37,12 +37,12 @@ local restoreState = nil
 
 local RecentProjects: { string } = {}
 local EditorPreferences = {
+	Version = 1,
 	AutoLaunchCodeEditorOnProjectOpen = false,
 	ClearOutputOnProjectOpen = true,
 	ClearOutputOnPlaytest = true,
 	CodeEditorPath = nil :: string?,
 	UseLightTheme = false,
-	Gamma = 1,
 	ClosingProjectSaveRequiresConfirmation = false,
 	AutosaveInterval = 10,
 	KeepGizmoInView = false,
@@ -102,8 +102,6 @@ for k: keyof<typeof(EditorPreferences)>, v in EditorPreferences do
 end
 
 EditorPreferences = savedEditorPreferences :: typeof(EditorPreferences)
-
-Engine:SetConfigValue("postfx_gamma", EditorPreferences.Gamma)
 
 if not Engine.IsHeadless then
 	imgui.stylecolors(if EditorPreferences.UseLightTheme then 'l' else 'd')
@@ -484,6 +482,8 @@ local function openProject_(ManualPath: string?)
 	EditorCam.Transform = Project.Workspace.SceneCamera.Transform
 	EditorTl.Target = Project.Workspace
 	InterfaceLink.Target = Project.DataModel:GetService("Interface")
+
+	Project.DataModel:GetService("Environment")
 
 	History:ClearHistory()
 	History.TargetDataModel = Project.DataModel
@@ -1366,8 +1366,6 @@ local function renderMainMenuBar(dt: number)
 		EditorPreferences.ClearOutputOnProjectOpen = imgui.checkbox("Clear Output on Project open", EditorPreferences.ClearOutputOnProjectOpen)
 		EditorPreferences.ClearOutputOnPlaytest = imgui.checkbox("Clear Output on Playtest", EditorPreferences.ClearOutputOnPlaytest)
 
-		EditorPreferences.Gamma = imgui.inputnumber("Gamma Correction", EditorPreferences.Gamma)
-
 		EditorPreferences.ClosingProjectSaveRequiresConfirmation = imgui.checkbox(
 			"Require confirmation for save when closing Project through `File` > `Close`",
 			EditorPreferences.ClosingProjectSaveRequiresConfirmation
@@ -1391,7 +1389,6 @@ local function renderMainMenuBar(dt: number)
 		wasSettingsOpen = false
 
 		fs.write("./editor/settings.json", json.encode(EditorPreferences))
-		Engine:SetConfigValue("postfx_gamma", EditorPreferences.Gamma)
 		Engine:SaveConfig()
 
 		if openSettingsMenuToConfigureCodeEditor and EditorPreferences.CodeEditorPath and #EditorPreferences.CodeEditorPath > 0 then

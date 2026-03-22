@@ -5,7 +5,6 @@
   "Uniforms": {
     "AlphaCutoff": 0.05000000074505806,
     "EmissionStrength": 0.0,
-    "Fog": false,
     "UseTriPlanarProjection": true
   },
   "Vertex": "shaders/worldUber.vert"

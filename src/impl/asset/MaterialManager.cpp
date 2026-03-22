@@ -11,13 +11,23 @@
 
 static const std::string MissingTexPath = "!Missing";
 
+static std::string getFilePath(const std::string& Material)
+{
+	if (Material.find("materials/") == std::string::npos && Material.find(".mtl") == std::string::npos)
+		return "materials/" + Material + ".mtl";
+	else
+		return Material;
+}
+
 void RenderMaterial::Reload()
 {
 	ZoneScoped;
 	ZoneTextF("%s", this->Name.c_str());
 
+	std::string filePath = getFilePath(this->Name);
+
 	bool matExists = true;
-	std::string fileData = FileRW::ReadFile("materials/" + this->Name + ".mtl", &matExists);
+	std::string fileData = FileRW::ReadFile(filePath, &matExists);
 
 	size_t jsonStartLoc = fileData.find("{");
 	std::string jsonFileContents = fileData.substr(jsonStartLoc);
@@ -189,7 +199,7 @@ uint32_t MaterialManager::LoadFromPath(const std::string_view& Name)
 
 	if (it == m_StringToMaterialId.end())
 	{
-		std::string fullPath = "materials/" + namedyn + ".mtl";
+		std::string fullPath = getFilePath(namedyn);
 		bool matExists = true;
 		std::string fileData = FileRW::ReadFile(fullPath, &matExists);
 
@@ -290,7 +300,7 @@ void MaterialManager::SaveToPath(const RenderMaterial& material, const std::stri
 		+ std::to_string((uint32_t)ymd.month()) + "-"
 		+ std::to_string((int32_t)ymd.year());
 
-	std::string filePath = "materials/" + namedyn + ".mtl";
+	std::string filePath = getFilePath(namedyn);
 
 	std::string fileContents = "PHOENIXF\n#Asset Material\n#Date " + dateStr + "\n\n" + newMtlConfig.dump(2);
 

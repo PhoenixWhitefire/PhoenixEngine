@@ -138,6 +138,15 @@
           "Version": "String READONLY"
         }
       },
+      "Environment": {
+        "Properties": {
+          "AmbientLight": "Color",
+          "Fog": "Boolean",
+          "FogColor": "Color",
+          "GammaCorrection": "Double",
+          "PostProcess": "Boolean"
+        }
+      },
       "History": {
         "Methods": {
           "ClearHistory": "() -> ()",
@@ -191,7 +200,9 @@
       },
       "ParticleEmitter": {
         "Properties": {
+          "BilinearFiltering": "Boolean",
           "Emitting": "Boolean",
+          "Image": "String",
           "Lifetime": "Vector2",
           "ParticlesAreAttached": "Boolean",
           "Rate": "Integer"
@@ -288,10 +299,10 @@
       },
       "Transform": {
         "Properties": {
-          "LocalSize": "Vector3 RUNTIMEONLY",
-          "LocalTransform": "Matrix RUNTIMEONLY",
-          "Size": "Vector3",
-          "Transform": "Matrix"
+          "LocalSize": "Vector3",
+          "LocalTransform": "Matrix",
+          "Size": "Vector3 RUNTIMEONLY",
+          "Transform": "Matrix RUNTIMEONLY"
         }
       },
       "TreeLink": {

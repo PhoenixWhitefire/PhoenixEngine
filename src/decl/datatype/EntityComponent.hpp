@@ -38,6 +38,7 @@ enum class EntityComponent : uint8_t
 	UIImage,
 	UIText,
 	UIButton,
+	Environment,
 
 	__count
 };
@@ -74,21 +75,23 @@ static inline const std::string_view s_EntityComponentNames[] = {
 	"UIImage",
 	"UIText",
 	"UIButton",
+	"Environment",
 };
 
 static_assert(std::size(s_EntityComponentNames) == (size_t)EntityComponent::__count);
 
 const std::string_view s_DataModelServices[] = {
-    "Engine",
-    "PlayerInput",
-    "AssetManager",
-    "History",
-	"Physics",
-	"Renderer",
+	"AssetManager",
 	"Collections",
-	"Network",
+    "Engine",
+	"Environment",
+	"History",
+	"Interface",
 	"Logging",
-	"Interface"
+	"Network",
+	"Physics",
+    "PlayerInput",
+	"Renderer",
 };
 
 // component type and ID

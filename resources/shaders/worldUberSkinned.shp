@@ -4,8 +4,7 @@
   "InheritUniformsOf": "",
   "Uniforms": {
     "AlphaCutoff": 0.05000000074505806,
-    "EmissionStrength": 0.0,
-    "Fog": false
+    "EmissionStrength": 0.0
   },
   "Vertex": "shaders/worldUberSkinned.vert"
 }

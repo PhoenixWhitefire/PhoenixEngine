@@ -290,7 +290,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 				22/12/2024
 			*/
 			std::string meshPath = "meshes/"
-									+ saveDir
+									+ m_ModelName
 									+ "/"
 									+ node.Name
 									+ ".hxmesh";
@@ -350,7 +350,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 
 			// `models/EmbeddedTexture.glb/Material.001`
 			std::string materialName = "models/"
-				+ saveDir
+				+ m_ModelName
 				+ "/"
 				+ material.Name;
 

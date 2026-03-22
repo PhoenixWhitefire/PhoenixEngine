@@ -22,7 +22,7 @@ uniform float BlurVignetteDistMul = 2.5f;
 uniform float BlurVignetteDistExp = 16.f;
 uniform int BlurVignetteSampleRadius = 4;
 
-uniform float Gamma = 2.2f;
+uniform float Gamma = 1.f;
 
 uniform float Time = 0.f;
 
