@@ -886,7 +886,9 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 	}
 
 	this->OnFrameRenderGui.Fire(deltaTime);
+	// Material Editor may screw up some stuff
 	glViewport(0, 0, WindowSizeX, WindowSizeY);
+	RendererContext.FrameBuffer.Unbind();
 
 	{
 		ZoneScopedN("DearImGuiRender");
