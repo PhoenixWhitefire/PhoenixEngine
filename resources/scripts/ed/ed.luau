@@ -291,6 +291,18 @@ local function tryToSave(datamodel: GameObject?, firstAttempt: string?)
 	end
 
 	if firstAttempt then
+		local modifiedDate, modifiedDateError = pcall(function()
+			local conf = json.parse(assert(fs.read("@project/phoenix.conf")))
+			assert(typeof(conf) == "table", `config was a { typeof(conf) } and not a table`);
+
+			(conf :: { [string]: JsonSerializable }).Saved = os.time()
+			fs.write("@project/phoenix.conf", json.encode(conf));
+		end)
+
+		if not modifiedDate then
+			warn(`Failed to set the Saved date for Project { fs.resolvepath("@project/phoenix.conf") }: { modifiedDateError }`)
+		end
+
 		succeeded, errorMessage = AssetManager:SaveScene({ datamodel }, firstAttempt)
 
 		if succeeded then
@@ -303,7 +315,7 @@ local function tryToSave(datamodel: GameObject?, firstAttempt: string?)
 	while true do
 		if Engine:ShowMessageBox(
 			"Retry?",
-			`Failed to save to {if path then fs.resolvepathabsolute(path) else "path"} because of error: {errorMessage}\n\n Select another path and retry?`,
+			`Failed to save to {if path then fs.resolvepathabsolute(path) else "path"} because of error: { errorMessage }\n\n Select another path and retry?`,
 			"yesno",
 			"error",
 			1
@@ -424,9 +436,9 @@ local function openProject_(ManualPath: string?)
 		game.OnFrameBegin:WaitUntil()
 	end
 
-	fs.definealias("proj", "@cwd/projects/" .. assert(path))
-	fs.definealias("projres", "@proj/resources")
-	fs.setunqualifiedroot("@proj/")
+	fs.definealias("project", "@cwd/projects/" .. assert(path))
+	fs.definealias("projres", "@project/resources")
+	fs.setunqualifiedroot("@project/")
 
 	assert(path)
 	local objects, error = AssetManager:LoadScene("@projres/scenes/root.world")
@@ -539,8 +551,8 @@ local function createNewProject_()
 	local fullPath = "@cwd/projects/" .. assert(Project.Name)
 	fs.mkdir(fullPath)
 
-	fs.definealias("proj", fullPath)
-	fs.definealias("projres", "@proj/resources")
+	fs.definealias("project", fullPath)
+	fs.definealias("projres", "@project/resources")
 
 	fs.write(fullPath .. "/phoenix.conf", json.encode({
 		GameTitle = Project.Name,
@@ -549,7 +561,8 @@ local function createNewProject_()
 		Engine = {
 			Version = Engine.Version,
 			Commit = Engine.CommitHash
-		}
+		},
+		Created = os.time()
 	}))
 
 	fs.mkdir("@projres")
@@ -588,7 +601,7 @@ local function createNewProject_()
 	fs.copy("@editres/textures/Sky1", "@projres/textures/Sky1")
 	fs.copy("@editres/textures/image-placeholder.png", "@projres/textures/image-placeholder.png")
 	fs.copy("@editres/scripts/defaultconfig.luau", "@projres/scripts/.config.luau")
-	fs.copy(LOGO_IMAGE, "@proj/icon.png")
+	fs.copy(LOGO_IMAGE, "@project/icon.png")
 
 	local dm = GameObject.new("DataModel")
 	local projWp = GameObject.new("Workspace")
@@ -988,7 +1001,7 @@ local function exportProject()
 	print("Exporting")
 
 	fs.mkdir(exportTo)
-	fs.copy("@proj", exportTo)
+	fs.copy("@project", exportTo)
 
 	fs.copy(enginePath, `{exportTo}/{Project.Name}{if enginePath:find(".exe") then ".exe" else ""}`)
 
@@ -1134,17 +1147,17 @@ local function renderMainMenuBar(dt: number)
 								local prevName = Project.Name
 
 								fs.rename("@cwd/projects/" .. Project.Name, newProjectName)
-								fs.definealias("proj", "@cwd/projects/" .. newProjectName)
+								fs.definealias("project", "@cwd/projects/" .. newProjectName)
 
 								Project.Name = newProjectName
 
-								local conf = json.parse(assert(fs.read("@proj/phoenix.conf")))
+								local conf = json.parse(assert(fs.read("@project/phoenix.conf")))
 								assert(typeof(conf) == "table")
 								-- TODO: fix cast
 								conf["GameTitle" :: string] = newProjectName
 
 								fs.write(
-									"@proj/phoenix.conf",
+									"@project/phoenix.conf",
 									json.encode(conf)
 								)
 
@@ -1157,7 +1170,7 @@ local function renderMainMenuBar(dt: number)
 
 						imgui.text("Project icon:")
 
-						if imgui.imagebutton("Icon", "@proj/icon.png", vector.create(150, 150)) then
+						if imgui.imagebutton("Icon", "@project/icon.png", vector.create(150, 150)) then
 							local buttonSelection = Engine:ShowMessageBox(
 								"Change icon?",
 								"Change the project icon? Note that the original icon file will be overwritten!",
@@ -1170,9 +1183,9 @@ local function renderMainMenuBar(dt: number)
 									local path = fs.promptopen("@etextures/", { "*.png" , "*.jpg", "*.jpeg" }, "Images")[1]
 
 									if path then
-										fs.remove("@proj/icon.png")
-										fs.copy(path, "@proj/icon.png")
-										Renderer:UnloadTexture("@proj/icon.png") -- force the texture to be reloaded
+										fs.remove("@project/icon.png")
+										fs.copy(path, "@project/icon.png")
+										Renderer:UnloadTexture("@project/icon.png") -- force the texture to be reloaded
 									else
 										print("No icon selected")
 									end
@@ -1192,7 +1205,7 @@ local function renderMainMenuBar(dt: number)
 			end
 
 			if imgui.menuitem("Close") then
-				task.defer(changeStageTo, "SelectProject" :: "SelectProject")
+				task.defer(changeStageTo, "SelectProject")
 			end
 		end
 
@@ -1964,7 +1977,17 @@ local function renderViewport(DeltaTime: number)
 	end
 
 	local canInteract = IsHoveringViewportTitlebar or (not IsHoveringViewport and imgui.windowhovered("a | b"))
-	imgui.begin(Project.Name .. "###Viewport", if canInteract then "nb" else "ni | nb")
+	local render, open = imgui.begin(Project.Name .. "###Viewport", if canInteract then "nb" else "ni | nb", true)
+
+	if not open then
+		task.defer(changeStageTo, "SelectProject")
+	end
+
+	if not render then
+		Engine:SetViewportInputRect(vector.zero, vector.create(1, 1))
+		imgui.endw()
+		return
+	end
 
 	local cpos = PlayerInput:GetCursorPosition()
 	local w = imgui.windowposition()
@@ -2066,7 +2089,7 @@ local function renderProjectSelectorTiles(Projects: { string })
 			end
 		end
 
-		imgui.image(`@cwd/projects/{proj}/icon.png`, vector.create(250, 250))
+		imgui.image(`@cwd/projects/{ proj }/icon.png`, vector.create(250, 250))
 		clicked, hovered = imgui.itemclicked(), imgui.itemhovered()
 		imgui.setcursorposition(cpos.x, cpos.y + 250)
 		imgui.text(proj)
@@ -2098,6 +2121,8 @@ end
 
 local function renderRenderProjects()
 	imgui.text("Recent")
+	imgui.newline()
+
 	local cpos = imgui.cursorposition()
 	imgui.setcursorposition(cpos.x, cpos.y + 10)
 
@@ -2135,6 +2160,8 @@ local function renderSavedProjects()
 	end
 
 	imgui.text("All Projects")
+	imgui.newline()
+
 	local cpos = imgui.cursorposition()
 	imgui.setcursorposition(cpos.x, cpos.y + 10)
 
@@ -2149,14 +2176,15 @@ local function renderSavedProjects()
 
 			local buttonSelection = Engine:ShowMessageBox(
 				"Are you sure?",
-				`Are you sure you want to delete '{name}'? This cannot be undone.`,
+				`Are you sure you want to delete '{ name }'? This cannot be undone.`,
 				"yesno",
 				"warning"
 			)
 
 			if buttonSelection == 1 then
-				fs.remove(`@cwd/projects/{name}`)
+				fs.remove(`@cwd/projects/{ name }`)
 
+				Renderer:UnloadTexture(`@cwd/projects/{ name }/icon.png`)
 				table.remove(RecentProjects, table.find(RecentProjects, name))
 				saveRecents()
 
@@ -2170,7 +2198,7 @@ end
 
 local ProjectCategories: { { Name: string, Icon: string, Render: (number) -> (), OnSwitchTo: (()->())? } } = {
 	{
-		Name = "Recents",
+		Name = "Recent",
 		Icon = "@etextures/editor-icons/recent.png",
 		Render = renderRenderProjects
 	},

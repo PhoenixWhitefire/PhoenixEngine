@@ -1272,8 +1272,8 @@ static void renderMaterialEditor()
 		PreviewRotStart = 0.f;
 	}
 
-	const GpuFrameBuffer& prevFbo = MtlPreviewRenderer->FrameBuffer;
-	//MtlPreviewRenderer->FrameBuffer = MtlEditorPreview;
+	GpuFrameBuffer prevFbo = MtlPreviewRenderer->FrameBuffer;
+	MtlPreviewRenderer->FrameBuffer = MtlEditorPreview;
 
 	MtlEditorPreview.Bind();
 	glViewport(0, 0, 256, 256);

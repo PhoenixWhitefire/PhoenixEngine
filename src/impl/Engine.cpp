@@ -886,6 +886,7 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 	}
 
 	this->OnFrameRenderGui.Fire(deltaTime);
+	glViewport(0, 0, WindowSizeX, WindowSizeY);
 
 	{
 		ZoneScopedN("DearImGuiRender");
