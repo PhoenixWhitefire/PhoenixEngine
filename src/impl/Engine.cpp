@@ -791,12 +791,12 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 	for (EcParticleEmitter* emitter : particleEmitters)
 		emitter->Render(renderMatrix);
 
-	if (GameObject* interface = DataModelRef->FindChildWithComponent(EntityComponent::Interface))
-		renderUIElements(interface, RendererContext);
-
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glDisable(GL_BLEND);
 	glDisable(GL_DEPTH_TEST);
+
+	if (GameObject* interface = DataModelRef->FindChildWithComponent(EntityComponent::Interface))
+		renderUIElements(interface, RendererContext);
 
 	//Do framebuffer stuff after everything is drawn
 	//RendererContext.FrameBuffer.Unbind();

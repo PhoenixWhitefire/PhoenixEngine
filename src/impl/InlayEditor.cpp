@@ -2670,24 +2670,35 @@ static void refreshFilesystemNode(FilesystemNode& Node)
 	std::error_code ec;
 	for (const auto& it : std::filesystem::directory_iterator(Node.Path, ec))
 	{
-		if (std::filesystem::is_regular_file(it.path()))
+		const std::filesystem::path& childPath = it.path();
+		const std::filesystem::path& childName = childPath.filename();
+
+		if (std::filesystem::is_regular_file(childPath))
 		{
-			if (it.path().filename().string() == Node.Name)
+			if (childName.string() == Node.Name)
 				continue; // not sure
 
-			Node.DirectoryContents[it.path().filename().string()] = { .Path = FileRW::ResolvePathNormalized(it.path().string()), .Name = it.path().filename().string(), .IsDirectory = false };
+			const std::string& childNameStr = childName.string();
+			if (childNameStr.find(".luau") == std::string::npos && childNameStr.find(".json") == std::string::npos
+				&& childNameStr.find(".frag") == std::string::npos && childNameStr.find(".geom") == std::string::npos
+				&& childNameStr.find(".vert") == std::string::npos && childNameStr.find(".conf") == std::string::npos
+				&& childNameStr.find(".mtl") == std::string::npos && childNameStr.find(".shp") == std::string::npos
+			)
+				continue;
+
+			Node.DirectoryContents[childName.string()] = { .Path = FileRW::ResolvePathNormalized(childPath.string()), .Name = childName.string(), .IsDirectory = false };
 		}
 		else if (std::filesystem::is_directory(it.path()))
 		{
 			FilesystemNode newNode = {
-				.Path = it.path(),
-				.Name = it.path().filename().string(),
+				.Path = childPath,
+				.Name = childName.string(),
 				.IsDirectory = true,
 			};
 
 			refreshFilesystemNode(newNode);
 
-			Node.DirectoryContents[it.path().filename().string()] = newNode;
+			Node.DirectoryContents[childName.string()] = newNode;
 		}
 	}
 

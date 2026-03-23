@@ -114,7 +114,7 @@ jobs:
     - name: Create launch shortcut (Windows)
       if: runner.os == 'Windows'
       shell: cmd
-      run: echo "\"x64/${{ matrix.build_type }}/PhoenixEngine.exe\"" > run.bat
+      run: echo "x64/${{ matrix.build_type }}/PhoenixEngine.exe" > run.bat
 
     - name: Create launch shortcut (Linux)
       if: runner.os == 'Linux'

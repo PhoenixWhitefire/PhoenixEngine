@@ -20,4 +20,6 @@ void main()
         vec4 imageCol = texture(Image, Frag_UV);
         FragColor = vec4(vec3(imageCol) * BackgroundColor, imageCol.a - BackgroundTransparency);
     }
+
+    FragColor = vec4(pow(FragColor.xyz, vec3(1.f / 2.2f)), FragColor.a);
 }

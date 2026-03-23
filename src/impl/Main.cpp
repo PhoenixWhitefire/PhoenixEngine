@@ -102,8 +102,8 @@ static int s_ExitCode = 0;
 #define pclose _pclose
 
 // 13/01/2025 windows and it's quirkyness
-#define TRACY_PATH "\"Vendor\\tracy\\profiler\\build\\Release\\tracy-profiler.exe\""
-#define LAUNCH_TRACY_CMD TRACY_PATH " -a 127.0.0.1 -p 8086"
+#define TRACY_PATH "Vendor\\tracy\\profiler\\build\\Release\\tracy-profiler.exe"
+#define LAUNCH_TRACY_CMD "\"" TRACY_PATH "\" -a 127.0.0.1 -p 8086"
 
 #else
 
