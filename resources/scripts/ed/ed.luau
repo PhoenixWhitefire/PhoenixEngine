@@ -1976,7 +1976,7 @@ local function renderViewport(DeltaTime: number)
 		imgui.endw()
 	end
 
-	local canInteract = IsHoveringViewportTitlebar or (not IsHoveringViewport and imgui.windowhovered("a | b"))
+	local canInteract = IsHoveringViewportTitlebar --or (not IsHoveringViewport and imgui.windowhovered("a | b"))
 	local render, open = imgui.begin(Project.Name .. "###Viewport", if canInteract then "nb" else "ni | nb", true)
 
 	if not open then

@@ -123,8 +123,8 @@ static Scene MtlPreviewScene = Scene{
 	// light source
 	.LightingList = {
 		LightItem{
-			.Position = glm::vec3{ 0.57f, 0.57f, 0.57f },
-			.LightColor = glm::vec3{ 1.f, 1.f, 1.f },
+			.Position = glm::vec3(0.57f),
+			.LightColor = glm::vec3(1.f),
 			.Type = LightType::Directional,
 			.Shadows = false
 		}
@@ -287,7 +287,8 @@ void InlayEditor::Initialize(Renderer* renderer)
 {
 	MtlEditorPreview.Initialize(256, 256);
 	MtlPreviewRenderer = renderer;
-	MtlPreviewCamera = GameObject::Create("Camera");
+	MtlPreviewCamera = GameObject::Create(EntityComponent::Camera);
+	MtlPreviewCamera->AddComponent(EntityComponent::Transform);
 	MtlPreviewCamera->Name = "MtlPreviewCamera";
 
 	EcCamera* cc = MtlPreviewCamera->FindComponent<EcCamera>();
@@ -1264,26 +1265,46 @@ static void renderMaterialEditor()
 			glm::radians(static_cast<float>((GetRunningTime() - PreviewRotStart) * 45.f)),
 			glm::vec3(0.f, 1.f, 0.f)
 		);
-		cc->SetWorldTransform(transform * MtlPreviewCamOffset);
+		cc->SetWorldTransform(transform * MtlPreviewCamOffset); // TODO no effect??
 	}
 	else
 	{
-		cc->SetWorldTransform(MtlPreviewCamDefaultRotation * MtlPreviewCamOffset);
+		cc->SetWorldTransform(MtlPreviewCamDefaultRotation * MtlPreviewCamOffset); // TODO no effect??
 		PreviewRotStart = 0.f;
 	}
 
-	GpuFrameBuffer prevFbo = MtlPreviewRenderer->FrameBuffer;
+	MeshProvider* meshProvider = MeshProvider::Get();
+
+	if (MtlPreviewScene.RenderList[0].RenderMeshId == 0)
+		MtlPreviewScene.RenderList[0].RenderMeshId = meshProvider->LoadFromPath("!Cube");
+
+	if (ImGui::IsItemClicked())
+		ImGui::OpenPopup("SelectPreviewShape");
+
+	if (ImGui::BeginPopup("SelectPreviewShape"))
+	{
+		for (const char* const shapeName : { "Cube", "Sphere", "Quad" })
+		{
+			if (ImGui::MenuItem(shapeName))
+			{
+				std::string shapeId = "!" + std::string(shapeName);
+				MtlPreviewScene.RenderList[0].RenderMeshId = meshProvider->LoadFromPath(shapeId);
+			}
+		}
+
+		ImGui::EndPopup();
+	}
+
+	const GpuFrameBuffer& prevFbo = MtlPreviewRenderer->FrameBuffer;
 	MtlPreviewRenderer->FrameBuffer = MtlEditorPreview;
+	MtlPreviewRenderer->FrameBuffer.Bind();
 
 	MtlEditorPreview.Bind();
 	glViewport(0, 0, 256, 256);
 	glClearColor(0.3f, 0.78f, 1.f, 1.f);
-	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-
-	static uint32_t CubeMeshId = MeshProvider::Get()->LoadFromPath("!Cube");
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT); // clear color as well because of the void
 
 	MtlPreviewScene.RenderList[0].MaterialId = static_cast<uint32_t>(MtlCurItem);
-	MtlPreviewScene.RenderList[0].RenderMeshId = CubeMeshId;
 	MtlPreviewScene.UsedShaders = { curItem.ShaderId };
 
 	MtlPreviewRenderer->DrawScene(
@@ -3228,9 +3249,12 @@ static bool renderPropertyAssetSelector(const std::string_view& PropertyName, fl
 		else if (PropertyName == "Material")
 		{
 			History::ScopedAction action = { "AssetSelector_Material" };
+			const std::vector<RenderMaterial>& materials = MaterialManager::Get()->GetLoadedMaterials();
 
-			for (const RenderMaterial& material : MaterialManager::Get()->GetLoadedMaterials())
+			for (int i = 0; i < (int)materials.size(); i++)
 			{
+				const RenderMaterial& material = materials[i];
+
 				bool visible = AssetSearch.size() == 0 || stringToLowerCase(material.Name).find(assetSearchLowercase) != std::string::npos;
 
 				if (visible)
@@ -3240,7 +3264,14 @@ static bool renderPropertyAssetSelector(const std::string_view& PropertyName, fl
 						setProperties(PropertyName, material.Name);
 						didSet = true;
 					}
-					ImGui::SetItemTooltip("%s", material.Name.c_str());
+
+					if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+					{
+						EngineJsonConfig["Tool_Materials"] = true;
+						MtlCurItem = i;
+					}
+
+					ImGui::SetItemTooltip("'%s'\n\nRight-click for details.", material.Name.c_str());
 				}
 			}
 		}
