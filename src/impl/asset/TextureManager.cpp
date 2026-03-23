@@ -107,7 +107,7 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 		glTexImage2D(
 			GL_TEXTURE_2D,
 			0,
-			GL_RGBA, //GL_SRGB8_ALPHA8,
+			texture.IsLinearSpace ? GL_SRGB8_ALPHA8 : GL_RGBA,
 			texture.Width,
 			texture.Height,
 			0,
@@ -228,11 +228,11 @@ static void emloadTexture(
 )
 {
 	ZoneScoped;
-
 	AsyncTexture->NumColorChannels = 4;
 
 	uint8_t* data = nullptr;
-	
+
+	if (ActualPath[0] != '!')
 	{
 		ZoneScopedN("stbi_load");
 
@@ -244,7 +244,21 @@ static void emloadTexture(
 			0
 		);
 	}
-	
+	else
+	{
+		if (ActualPath == "!White")
+			data = (uint8_t*)&WhiteTextureBytes;
+		else if (ActualPath == "!Black")
+			data = (uint8_t*)&BlackTextureBytes;
+		else
+		{
+			if (ActualPath != "!Missing")
+				Log.ErrorF("Invalid built-in texture in async texture load '{}'", ActualPath);
+
+			data = MissingTextureBytes;
+		}
+	}
+
 	AsyncTexture->Status = data ? Texture::LoadStatus::Succeeded : Texture::LoadStatus::Failed;
 	AsyncTexture->TMP_ImageByteData = data;
 
@@ -287,7 +301,7 @@ uint32_t TextureManager::Assign(const Texture& texture, const std::string& name)
 	return assignedId;
 }
 
-uint32_t TextureManager::LoadFromPath(const std::string& Path, bool ShouldLoadAsync, bool DoBilinearSmoothing)
+uint32_t TextureManager::LoadFromPath(const std::string& Path, bool ShouldLoadAsync, bool DoBilinearSmoothing, bool LoadInLinearSpace)
 {
 	if (m_IsHeadless)
 		return 0;
@@ -305,9 +319,9 @@ uint32_t TextureManager::LoadFromPath(const std::string& Path, bool ShouldLoadAs
 
 		if (texture.Status != Texture::LoadStatus::Unloaded)
 		{
-			if (texture.DoBilinearSmoothing != DoBilinearSmoothing && Path[0] != '!')
+			if ((texture.DoBilinearSmoothing != DoBilinearSmoothing || texture.IsLinearSpace != LoadInLinearSpace) && Path != "!Framebuffer:Main")
 			{
-				assignName = ActualPath + (DoBilinearSmoothing ? "!B" : "!N");
+				assignName = ActualPath + (DoBilinearSmoothing ? "!B," : "!N,") + (LoadInLinearSpace ? "L" : "S");
 				const auto& vit = m_StringToTextureId.find(assignName);
 
 				if (vit != m_StringToTextureId.end())
@@ -342,6 +356,7 @@ uint32_t TextureManager::LoadFromPath(const std::string& Path, bool ShouldLoadAs
 
 			newTexture = &this->GetTextureResource(newResourceId);
 			newTexture->DoBilinearSmoothing = DoBilinearSmoothing;
+			newTexture->IsLinearSpace = LoadInLinearSpace;
 			newTexture->GpuId = newGpuId;
 
 			glBindTexture(GL_TEXTURE_2D, newTexture->GpuId);
@@ -482,7 +497,8 @@ void TextureManager::FinalizeAsyncLoadedTextures()
 			if (loadedImage.TMP_ImageByteData)
 				memcpy(image.TMP_ImageByteData, loadedImage.TMP_ImageByteData, bufSize);
 
-			free(loadedImage.TMP_ImageByteData);
+			if (loadedImage.ImagePath[0] != '!' && image.ImagePath[0] != '!') // do not try to free builtin textures
+				free(loadedImage.TMP_ImageByteData);
 		}
 
 		m_UploadTextureToGpu(image);
@@ -512,8 +528,8 @@ void TextureManager::UnloadTexture(uint32_t Id)
 
 	if (tex.GpuId > 0 && tex.GpuId != UINT32_MAX)
 		glDeleteTextures(1, &tex.GpuId);
-	tex.GpuId = GetTextureResource(1).GpuId;
 
+	tex.GpuId = GetTextureResource(1).GpuId;
 	tex.Status = Texture::LoadStatus::Unloaded;
 }
 

@@ -31,6 +31,7 @@ struct Texture
 	DimensionType Type = DimensionType::Texture2D;
 	LoadStatus Status = LoadStatus::NotAttempted;
 	bool DoBilinearSmoothing = true;
+	bool IsLinearSpace = true;
 	
 	bool LoadedAsynchronously = false;
 
@@ -63,7 +64,7 @@ public:
 		@param Should it be loaded in a separate thread without freezing the game (default `true`)
 		@return The Texture Resource ID (texture can be queried with `::GetTextureResource`)
 	*/
-	uint32_t LoadFromPath(const std::string& Path, bool ShouldLoadAsync = true, bool DoBilinearSmoothing = true);
+	uint32_t LoadFromPath(const std::string& Path, bool ShouldLoadAsync = true, bool DoBilinearSmoothing = true, bool LoadInLinearSpace = true);
 
 	/*
 		Assign the Texture to the given Name, it's Resource ID will be returned when queried with `::LoadFromPath`
@@ -80,7 +81,7 @@ public:
 	Texture& GetTextureResource(uint32_t);
 
 	void UnloadTexture(uint32_t);
-	
+
 	void m_UploadTextureToGpu(Texture&);
 
 	std::vector<Texture> m_Textures;

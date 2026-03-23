@@ -700,7 +700,7 @@ static GLuint startLoadingSkybox(std::vector<uint32_t>* skyboxFacesBeingLoaded)
 		glTexImage2D(
 			GL_TEXTURE_CUBE_MAP_POSITIVE_X + faceIndex,
 			0,
-			GL_RGB, //GL_SRGB,
+			GL_SRGB,
 			1,
 			1,
 			0,
@@ -893,12 +893,12 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 
 	{
 		ZoneScopedN("DearImGuiRender");
-		//glDisable(GL_FRAMEBUFFER_SRGB);
+		glDisable(GL_FRAMEBUFFER_SRGB);
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-		//glEnable(GL_FRAMEBUFFER_SRGB);
+		glEnable(GL_FRAMEBUFFER_SRGB);
 	}
 
 	glEnable(GL_DEPTH_TEST);

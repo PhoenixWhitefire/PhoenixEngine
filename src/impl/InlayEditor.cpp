@@ -1325,10 +1325,12 @@ static void renderMaterialEditor()
 	ImGui::Combo("Polygon Mode", &curPolyMode, "Fill\0Line\0Point\0");
 	curItem.PolygonMode = static_cast<RenderMaterial::MaterialPolygonMode>(std::clamp(curPolyMode, 0, 2));
 
+	glEnable(GL_FRAMEBUFFER_SRGB);
 	mtlEditorTexture("Color Map: ", &curItem.ColorMap, MtlDiffuseBuf, false);
 	mtlEditorTexture("Metallic-Roughness Map: ", &curItem.MetallicRoughnessMap, MtlSpecBuf, false);
 	mtlEditorTexture("Normal Map: ", &curItem.NormalMap, MtlNormalBuf);
 	mtlEditorTexture("Emission Map:", &curItem.EmissionMap, MtlEmissionBuf);
+	glDisable(GL_FRAMEBUFFER_SRGB);
 
 	ImGui::Text("Shader Variable Overrides");
 
@@ -1631,12 +1633,12 @@ static Texture getIconForComponent(EntityComponent Ec)
 		componentName = "Empty";
 
 	std::string classIconPath = "@editres/textures/editor-icons/" + componentName + ".png";
-	Texture tex = texManager->GetTextureResource(texManager->LoadFromPath(classIconPath, true, false));
+	Texture tex = texManager->GetTextureResource(texManager->LoadFromPath(classIconPath, true, false, false));
 
 	if (tex.Status == Texture::LoadStatus::Failed && tex.ImagePath.find("fallback") == std::string::npos)
 	{
 		const std::string& fallbackPath = "@editres/textures/editor-icons/fallback.png";
-		Texture& fallback = texManager->GetTextureResource(texManager->LoadFromPath(fallbackPath, true, false));
+		Texture& fallback = texManager->GetTextureResource(texManager->LoadFromPath(fallbackPath, true, false, false));
 		texManager->Assign(fallback, classIconPath);
 		tex = fallback;
 	}
@@ -2753,9 +2755,9 @@ static void createFileOrDirectory(FilesystemNode Parent, bool Directory)
 static void recursiveRenderFilesystemNode(FilesystemNode& Node)
 {
 	TextureManager* texManager = TextureManager::Get();
-	static uint32_t ScriptIconResource = texManager->LoadFromPath("./resources/textures/editor-icons/Script.png", false, false);
-	static uint32_t FolderOpenIconResource = texManager->LoadFromPath("./resources/textures/editor-icons/Folder_Open.png", false, false);
-	static uint32_t FolderClosedIconResource = texManager->LoadFromPath("./resources/textures/editor-icons/Folder_Closed.png", false, false);
+	static uint32_t ScriptIconResource = texManager->LoadFromPath("./resources/textures/editor-icons/Script.png", true, false, false);
+	static uint32_t FolderOpenIconResource = texManager->LoadFromPath("./resources/textures/editor-icons/Folder_Open.png", true, false, false);
+	static uint32_t FolderClosedIconResource = texManager->LoadFromPath("./resources/textures/editor-icons/Folder_Closed.png", true, false, false);
 
 	ImGui::PushID(Node.Path.string().c_str());
 
@@ -3212,7 +3214,7 @@ static bool renderPropertyAssetSelector(const std::string_view& PropertyName, fl
 		style.FramePadding.y = prevPadding;
 
 		static TextureManager* texManager = TextureManager::Get();
-		static uint32_t openIconId = texManager->LoadFromPath("@editres/textures/editor-icons/Folder_Open.png");
+		static uint32_t openIconId = texManager->LoadFromPath("@editres/textures/editor-icons/Folder_Open.png", true, false, false);
 
 		ImGui::SameLine();
 		if (ImGui::ImageButton("##OpenFile", texManager->GetTextureResource(openIconId).GpuId, ImVec2(16.f, 16.f)))
