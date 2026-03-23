@@ -324,6 +324,7 @@ void Engine::m_InitializeVideo()
 	glfwWindowHint(GLFW_DOUBLEBUFFER, 1);
 	glfwWindowHint(GLFW_DEPTH_BITS, 24);
 	glfwWindowHint(GLFW_STENCIL_BITS, 8);
+	glfwWindowHint(GLFW_SRGB_CAPABLE, 1);
 
 	Window = glfwCreateWindow(
 		WindowSizeX, WindowSizeY,
@@ -699,7 +700,7 @@ static GLuint startLoadingSkybox(std::vector<uint32_t>* skyboxFacesBeingLoaded)
 		glTexImage2D(
 			GL_TEXTURE_CUBE_MAP_POSITIVE_X + faceIndex,
 			0,
-			GL_RGB,
+			GL_RGB, //GL_SRGB,
 			1,
 			1,
 			0,
@@ -892,8 +893,12 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 
 	{
 		ZoneScopedN("DearImGuiRender");
+		//glDisable(GL_FRAMEBUFFER_SRGB);
+
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+		//glEnable(GL_FRAMEBUFFER_SRGB);
 	}
 
 	glEnable(GL_DEPTH_TEST);

@@ -1265,11 +1265,11 @@ static void renderMaterialEditor()
 			glm::radians(static_cast<float>((GetRunningTime() - PreviewRotStart) * 45.f)),
 			glm::vec3(0.f, 1.f, 0.f)
 		);
-		cc->SetWorldTransform(transform * MtlPreviewCamOffset); // TODO no effect??
+		cc->SetWorldTransform(transform * MtlPreviewCamOffset);
 	}
 	else
 	{
-		cc->SetWorldTransform(MtlPreviewCamDefaultRotation * MtlPreviewCamOffset); // TODO no effect??
+		cc->SetWorldTransform(MtlPreviewCamDefaultRotation * MtlPreviewCamOffset);
 		PreviewRotStart = 0.f;
 	}
 
@@ -1295,7 +1295,7 @@ static void renderMaterialEditor()
 		ImGui::EndPopup();
 	}
 
-	const GpuFrameBuffer& prevFbo = MtlPreviewRenderer->FrameBuffer;
+	GpuFrameBuffer prevFbo = MtlPreviewRenderer->FrameBuffer;
 	MtlPreviewRenderer->FrameBuffer = MtlEditorPreview;
 	MtlPreviewRenderer->FrameBuffer.Bind();
 

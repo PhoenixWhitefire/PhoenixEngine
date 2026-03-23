@@ -107,7 +107,7 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 		glTexImage2D(
 			GL_TEXTURE_2D,
 			0,
-			GL_RGBA,
+			GL_RGBA, //GL_SRGB8_ALPHA8,
 			texture.Width,
 			texture.Height,
 			0,
