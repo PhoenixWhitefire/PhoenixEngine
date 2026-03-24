@@ -3,6 +3,7 @@
 set(PHX_TRACY_LIB_PATH Vendor/tracy/${PHX_BUILD_TYPE}/TracyClient)
 
 target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:ReleaseTSan>:-O3>)
+target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:ReleaseAUSan>:-O3>)
 target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Release>:-O3>)
 target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:-O0>)
 target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:-g3>)
@@ -30,15 +31,18 @@ set_property(SOURCE src/impl/script/ScriptEngine.cpp PROPERTY COMPILE_OPTIONS "-
 target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:ReleaseTSan>:-fsanitize=thread>)
 target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:DebugTSan>:-fsanitize=thread>)
 target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:-fsanitize=address,undefined>)
+target_compile_options(PhoenixEngine PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:ReleaseAUSan>>:-fsanitize=address,undefined>)
 
 target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:ReleaseTSan>:-flto -fsanitize=thread>)
 target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:DebugTSan>:-fsanitize=thread>)
 target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:Release>:-flto>)
 target_link_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:-fsanitize=address,undefined>)
+target_link_options(PhoenixEngine PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:ReleaseAUSan>>:-fsanitize=address,undefined>)
 
 target_link_libraries(PhoenixEngine PRIVATE stdc++)
 
 add_compile_options($<$<CONFIG:ReleaseTSan>:-O3>)
+add_compile_options($<$<CONFIG:ReleaseAUSan>:-O3>)
 add_compile_options($<$<CONFIG:DebugTSan>:-g3>)
 add_compile_options($<$<CONFIG:Release>:-O3>)
 add_compile_options($<$<CONFIG:Debug>:-fsanitize=address,undefined>)

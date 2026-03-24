@@ -80,7 +80,8 @@ void* Memory::GetPointerInfo(void* Pointer, uint32_t* Size, uint8_t* Category)
 
 void* Memory::Alloc(uint32_t Size, Memory::Category MemCat)
 {
-	assert(Size != 0);
+	if (Size == 0)
+		Size = 1;
 
 	Size += sizeof(AllocHeader);
 	void* ptr = malloc(Size);
@@ -112,6 +113,9 @@ void* Memory::Alloc(uint32_t Size, Memory::Category MemCat)
 
 void* Memory::ReAlloc(void* Pointer, uint32_t Size, Memory::Category MemCat)
 {
+	if (Size == 0)
+		Size = 1;
+
 	if (Pointer == nullptr)
 		return Alloc(Size, MemCat);
 

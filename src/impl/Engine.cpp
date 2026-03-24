@@ -389,18 +389,23 @@ Engine::Engine()
 
 	if (!PHX_HEADLESS_BUILD && !IsHeadlessMode)
 	{
-		ZoneScopedN("Blue Frame");
+		{
+			ZoneScopedN("Blue Frame");
+			Log.Info("Blue frame...");
 
-		Log.Info("Blue frame...");
+			RendererContext.FrameBuffer.Unbind();
 
-		RendererContext.FrameBuffer.Unbind();
+			glDisable(GL_FRAMEBUFFER_SRGB);
 
-		glClearColor(0.07f, 0.13f, 0.17f, 1.f);
-		glClear(GL_COLOR_BUFFER_BIT);
-		RendererContext.SwapBuffers();
-		glfwMaximizeWindow(Window); // Can only maximize after Texture Manager is initialized
+			glClearColor(0.07f, 0.13f, 0.17f, 1.f);
+			glClear(GL_COLOR_BUFFER_BIT);
+			RendererContext.SwapBuffers();
+			glfwMaximizeWindow(Window); // Can only maximize after Texture Manager is initialized
 
-		ZoneNamedN(miscshaders, "Misc shader load", true);
+			glDisable(GL_FRAMEBUFFER_SRGB);
+		}
+
+		ZoneScopedN("Load core shaders and sun shadowmap");
 
 		m_PostFxShader = m_ShaderManager.GetShaderResource(m_ShaderManager.LoadFromPath("postprocessing"));
 		m_SkyboxShader = m_ShaderManager.GetShaderResource(m_ShaderManager.LoadFromPath("skybox"));
@@ -862,9 +867,11 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 	}
 
 	glViewport(0, 0, WindowSizeX, WindowSizeY);
+	glDisable(GL_FRAMEBUFFER_SRGB);
 
 	{
 		ZoneScopedN("MainPostProcessing");
+
 		RendererContext.DrawMesh(
 			quadMesh,
 			m_PostFxShader,
@@ -893,15 +900,13 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 
 	{
 		ZoneScopedN("DearImGuiRender");
-		glDisable(GL_FRAMEBUFFER_SRGB);
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-		glEnable(GL_FRAMEBUFFER_SRGB);
 	}
 
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_FRAMEBUFFER_SRGB);
 }
 
 static void ensureDataModelValid(GameObject* DataModel)

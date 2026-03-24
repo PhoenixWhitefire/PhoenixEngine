@@ -5,12 +5,12 @@ PHNXENGI
 {
   "ColorMap": "textures/materials/plastic.jpg",
   "HasTranslucency": false,
-  "MetallicRoughnessMap": "!Missing",
+  "MetallicRoughnessMap": "!White",
   "PolygonMode": 0,
   "Shader": "worldUberTriProjected",
   "Uniforms": {
     "MaterialProjectionFactor": 0.05000000074505806
   },
-  "specExponent": 32.0,
-  "specMultiply": 0.5
+  "specExponent": 4.0,
+  "specMultiply": 0.25
 }

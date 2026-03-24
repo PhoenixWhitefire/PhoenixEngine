@@ -127,7 +127,7 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 	// 03/10/2024:
 	// little hack to `free` textures `Engine.cpp` doesn't
 	// manage (most of them)
-	if (texture.ImagePath.find("Sky") == std::string::npos && texture.ImagePath != "!Missing")
+	if (texture.ImagePath.find("Sky") == std::string::npos && texture.ImagePath[0] != '!')
 	{
 		free(texture.TMP_ImageByteData);
 		texture.TMP_ImageByteData = nullptr;
@@ -145,7 +145,7 @@ static void createAndUploadTextureData(const std::string& Name, uint8_t* Data, i
 	uint32_t newGpuId;
 	glGenTextures(1, &newGpuId);
 
-	s_Instance->m_Textures.emplace_back("!Missing", (uint32_t)s_Instance->m_Textures.size(), newGpuId);
+	s_Instance->m_Textures.emplace_back(Name, (uint32_t)s_Instance->m_Textures.size(), newGpuId);
 
 	Texture& tex = s_Instance->m_Textures.back();
 	tex.Width = Width;

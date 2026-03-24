@@ -14,8 +14,9 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 # Debug: Standard debug mode. Incremental linking. Tracy and ASan enabled
 # Release: Optimizations, LTCG, no Incremental linking, ASan disabled, Tracy in ON_DEMAND mode
 # but for distribution binaries to be `Release` for best performance (because Tracy introduces it's own overhead)
+# ReleaseAUSan: Address and UndefinedBehaviour sanitizers
 # 19/01/2025
-set(CMAKE_CONFIGURATION_TYPES "Debug;Release;DebugTSan;ReleaseTSan")
+set(CMAKE_CONFIGURATION_TYPES "Debug;Release;DebugTSan;ReleaseTSan;ReleaseAUSan")
 
 project(PhoenixEngine LANGUAGES C CXX)
 
@@ -58,7 +59,7 @@ target_include_directories(PhoenixEngine PUBLIC
 	"Vendor/curl/include"
 )
 
-set(PHX_BUILD_TYPE $<IF:$<CONFIG:Debug>,Debug,$<IF:$<CONFIG:Release>,Release,$<IF:$<CONFIG:DebugTSan>,DebugTSan,ReleaseTSan>>>)
+set(PHX_BUILD_TYPE $<IF:$<CONFIG:Debug>,Debug,$<IF:$<CONFIG:Release>,Release,$<IF:$<CONFIG:DebugTSan>,DebugTSan,$<IF:$<CONFIG:ReleaseAUSan>,ReleaseAUSan,ReleaseTSan>>>>)
 
 target_compile_definitions(PhoenixEngine PRIVATE PHX_BUILD_TYPE="${PHX_BUILD_TYPE}")
 

@@ -72,6 +72,7 @@ catch (...)                                                                     
 #include "Engine.hpp"
 
 #include "asset/SceneFormat.hpp"
+#include "component/Transform.hpp"
 #include "component/Camera.hpp"
 #include "script/ScriptEngine.hpp"
 
@@ -186,7 +187,7 @@ static void handleInputs(double deltaTime)
 	double mouseY;
 	glfwGetCursorPos(window, &mouseX, &mouseY);
 	
-	if (camera->UseSimpleController)
+	if (camera->UseSimpleController && camera->Object->FindComponent<EcTransform>())
 	{
 		bool rmbPressed = (!GuiIO->WantCaptureMouse || UserInput::ShouldIgnoreUIInputSinking()) && UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT);
 
@@ -905,6 +906,7 @@ int main(int argc, char** argv)
 	}
 	PHX_MAIN_CRASHHANDLERS;
 
+	Log.InfoF("The exit code is {}", s_ExitCode);
 	Log.Info("Application shutdown");
 	Logging::Save();
 
