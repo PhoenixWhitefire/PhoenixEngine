@@ -1604,7 +1604,18 @@ PlayerInput.KeyEvent:Connect(function(kie: KeyInputEvent)
 	end
 
 	local commandBarAction = History:TryBeginAction("CommandBarCode")
-	Engine:RunInVM(if CurrentStage == "ProjectEditing" then GameEditingVM else GameVM, CommandBarCommand, "@@projres/scripts/!CommandBar")
+
+	if #CommandBarCommand > 1 and CommandBarCommand:sub(1, 1) == "=" then
+		CommandBarCommand = `print({ CommandBarCommand:sub(2, #CommandBarCommand) })`
+	end
+
+	local success = Engine:RunInVM(if CurrentStage == "ProjectEditing" then GameEditingVM else GameVM, CommandBarCommand, "@@projres/scripts/!CommandBar")
+
+	if not success then
+		local cmd = CommandBarCommand
+		task.wait() -- wait for command bar to be un-focused, then show the command that ran
+		CommandBarCommand = cmd
+	end
 
 	if commandBarAction then
 		History:FinishAction(commandBarAction)

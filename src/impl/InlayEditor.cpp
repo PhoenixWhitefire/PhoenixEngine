@@ -2679,11 +2679,18 @@ static void refreshFilesystemNode(FilesystemNode& Node)
 				continue; // not sure
 
 			const std::string& childNameStr = childName.string();
-			if (childNameStr.find(".luau") == std::string::npos && childNameStr.find(".json") == std::string::npos
-				&& childNameStr.find(".frag") == std::string::npos && childNameStr.find(".geom") == std::string::npos
-				&& childNameStr.find(".vert") == std::string::npos && childNameStr.find(".conf") == std::string::npos
-				&& childNameStr.find(".mtl") == std::string::npos && childNameStr.find(".shp") == std::string::npos
-			)
+			bool isSupportedFileType = false;
+
+			for (const char* const extension : { ".luau", ".json", ".frag", ".geom", ".vert", ".conf", ".mtl", ".shp" })
+			{
+				if (childNameStr.ends_with(extension))
+				{
+					isSupportedFileType = true;
+					break;
+				}
+			}
+
+			if (!isSupportedFileType)
 				continue;
 
 			Node.DirectoryContents[childName.string()] = { .Path = FileRW::ResolvePathNormalized(childPath.string()), .Name = childName.string(), .IsDirectory = false };
