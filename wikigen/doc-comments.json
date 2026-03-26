@@ -696,7 +696,7 @@
             "Out": "{ GameObject & RigidBody & Transform }"
           },
           "Raycast": {
-            "Description": "Cast a ray",
+            "Description": "Cast a ray. This currently treats collisions as Axis-Aligned Bounding Boxes!",
             "In": "Origin: vector, CastVector: vector, FilterList: { GameObject }?, FilterIsIgnoreList: boolean?",
             "Out": "{ Object: GameObject & RigidBody & Transform, Position: vector, Normal: vector }?"
           },
