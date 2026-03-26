@@ -1234,7 +1234,11 @@ void Engine::Start()
 			}
 
 			RendererContext.DrawScene(sunScene, sunRenderMatrix, glm::mat4(1.f), RunningTime, DebugWireframeRendering);
+			glViewport(0, 0, WindowSizeX, WindowSizeY);
+		}
 
+		if (!IsHeadlessMode)
+		{
 			for (uint32_t shdId : CurrentScene.UsedShaders)
 			{
 				ShaderProgram& shader = m_ShaderManager.GetShaderResource(shdId);
@@ -1246,11 +1250,6 @@ void Engine::Start()
 					shader.SetUniform("FogColor", EcEnvironmentService::FogColor.ToGenericValue());
 			}
 
-			glViewport(0, 0, WindowSizeX, WindowSizeY);
-		}
-
-		if (!IsHeadlessMode)
-		{
 			m_Render(deltaTime, particleEmittersRenderList);
 			RendererContext.SwapBuffers();
 		}

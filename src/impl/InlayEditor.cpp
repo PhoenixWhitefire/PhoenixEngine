@@ -2850,18 +2850,22 @@ static void recursiveRenderFilesystemNode(FilesystemNode& Node)
 
 		if (!ImGui::IsItemActive() && !RenameFocusFirstFrame)
 		{
-			std::filesystem::path renamed = Node.Path.parent_path() / RenameNewValue;
-
-			if (renamed.filename() != Node.Path.filename() && std::filesystem::is_regular_file(renamed))
-				setErrorMessage("A file already exists in the folder with that name");
-
+			if (RenameNewValue.find('/') != std::string::npos || RenameNewValue.find('\\') != std::string::npos)
+				setErrorMessage("File name cannot have slashes");
 			else
 			{
-				std::error_code ec;
-				std::filesystem::rename(Node.Path, renamed, ec);
+				std::filesystem::path renamed = Node.Path.parent_path() / RenameNewValue;
 
-				if (ec)
-					setErrorMessage(ec.message());
+				if (renamed.filename() != Node.Path.filename() && std::filesystem::is_regular_file(renamed))
+					setErrorMessage("A file already exists in the folder with that name");
+				else
+				{
+					std::error_code ec;
+					std::filesystem::rename(Node.Path, renamed, ec);
+
+					if (ec)
+						setErrorMessage(ec.message());
+				}
 			}
 
 			RenameTarget.clear();

@@ -200,6 +200,9 @@ static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
 
 	if (result == 0)
 	{
+        ZoneScopedN("ResumeMain");
+        ZoneText(Module.data(), Module.size());
+
         ScriptEngine::L::PushGenericValue(L, Dm->Object->ToGenericValue());
         lua_setglobal(L, "game");
 

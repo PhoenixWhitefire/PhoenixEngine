@@ -34,6 +34,7 @@ local Project: Types.Project = {
 	IsTempPath = false
 }
 local restoreState = nil
+local SyncCoreAssetsOptions = { "AlwaysAsk" :: "AlwaysAsk", "AutomaticallyUpdate" :: "AutomaticallyUpdate", "DoNotUpdate" :: "DoNotUpdate" }
 
 local RecentProjects: { string } = {}
 local EditorPreferences = {
@@ -46,7 +47,8 @@ local EditorPreferences = {
 	ClosingProjectSaveRequiresConfirmation = false,
 	AutosaveInterval = 10,
 	KeepGizmoInView = false,
-	InvertTabButtonLitColors = false
+	InvertTabButtonLitColors = false,
+	SyncCoreAssets = "AlwaysAsk" :: index<typeof(SyncCoreAssetsOptions), number>
 }
 
 EditorPreferences = EditorPreferences :: { [keyof<typeof(EditorPreferences)>]: index<typeof(EditorPreferences), keyof<typeof(EditorPreferences)>> } & typeof(EditorPreferences)
@@ -295,7 +297,11 @@ local function tryToSave(datamodel: GameObject?, firstAttempt: string?)
 			local conf = json.parse(assert(fs.read("@project/phoenix.conf")))
 			assert(typeof(conf) == "table", `config was a { typeof(conf) } and not a table`);
 
-			(conf :: { [string]: JsonSerializable }).Saved = os.time()
+			(conf :: { [string]: JsonSerializable }).Saved = {
+				Time = os.time(),
+				EngineCommit = Engine.CommitHash,
+				EngineVersion = Engine.Version
+			}
 			fs.write("@project/phoenix.conf", json.encode(conf));
 		end)
 
@@ -375,6 +381,10 @@ local function openCodeEditor()
 	end
 end
 
+local function syncCoreAssets()
+
+end
+
 local function openProject_(ManualPath: string?)
 	local path = ManualPath
 	local selecting = not path
@@ -439,13 +449,63 @@ local function openProject_(ManualPath: string?)
 	fs.definealias("project", "@cwd/projects/" .. assert(path))
 	fs.definealias("projres", "@project/resources")
 	fs.setunqualifiedroot("@project/")
-
 	assert(path)
+
+	local config = json.parse(assert(fs.read("@project/phoenix.conf")))
+	assert(typeof(config) == "table", "Configuration file is corrupt")
+
+	config = config :: { [string]: JsonSerializable }
+	local coreAssetsOutOfDate = false;
+
+	--if EditorPreferences.SyncCoreAssets == "AlwaysAsk" or EditorPreferences.SyncCoreAssets == "AutomaticallyUpdate" then
+	if false then
+		if typeof(config.Saved) ~= "table" then
+			coreAssetsOutOfDate = true
+		else
+			local lastSavedWithCommit = (config.Saved :: { [string]: JsonSerializable }).EngineCommit
+
+			if typeof(lastSavedWithCommit) ~= "string" or lastSavedWithCommit ~= Engine.CommitHash then
+				coreAssetsOutOfDate = true
+			end
+		end
+	end
+
+	if coreAssetsOutOfDate then
+		local shouldSyncCoreAssets = false
+
+		if EditorPreferences.SyncCoreAssets == "AlwaysAsk" then
+			imgui.openpopup("Core assets out-of-date")
+			local co = coroutine.running()
+
+			local connection
+			connection = game.OnFrameBegin:Connect(function()
+				if imgui.beginpopupmodal("Core assets out-of-date", true) then
+					imgui.text("Built-in shaders for this project, such as `worldUber` and `postprocessing` may be out-of-date to the Editor.")
+
+					imgui.endpopup()
+				else
+					assert(connection)
+					connection:Disconnect()
+					coroutine.resume(co)
+				end
+			end)
+
+			coroutine.yield()
+
+		elseif EditorPreferences.SyncCoreAssets == "AutomaticallyUpdate" then
+			shouldSyncCoreAssets = true
+		end
+
+		if shouldSyncCoreAssets then
+			syncCoreAssets()
+		end
+	end
+
 	local objects, error = AssetManager:LoadScene("@projres/scenes/root.world")
 
 	if not objects then
 		error = error or "Unknown error"
-		Engine:ShowMessageBox("Project Error", `Couldn't open project '{path}': {error}`, "ok", "error")
+		Engine:ShowMessageBox("Project Error", `Couldn't open project '{ path }': { error }`, "ok", "error")
 
 		return
 	end
@@ -562,7 +622,11 @@ local function createNewProject_()
 			Version = Engine.Version,
 			Commit = Engine.CommitHash
 		},
-		Created = os.time()
+		Created = {
+			Time = os.time(),
+			EngineCommit = Engine.CommitHash,
+			EngineVersion = Engine.Version
+		}
 	}))
 
 	fs.mkdir("@projres")
@@ -1387,6 +1451,7 @@ local function renderMainMenuBar(dt: number)
 		EditorPreferences.AutosaveInterval = imgui.inputnumber("Autosave interval (in minutes)", EditorPreferences.AutosaveInterval)
 		EditorPreferences.KeepGizmoInView = imgui.checkbox("Turn the camera to keep the gizmo handles in view while moving an object", EditorPreferences.KeepGizmoInView)
 		EditorPreferences.InvertTabButtonLitColors = imgui.checkbox("Invert tab button active colors", EditorPreferences.InvertTabButtonLitColors)
+		--EditorPreferences.SyncCoreAssets = SyncCoreAssetsOptions[imgui.combo("Sync core assets", SyncCoreAssetsOptions :: { string }, assert(table.find(SyncCoreAssetsOptions, EditorPreferences.SyncCoreAssets)))]
 
 		imgui.urllink("https://youtu.be/YCjNT9qGjh4?t=7193")
 
@@ -1991,7 +2056,7 @@ local function renderViewport(DeltaTime: number)
 	local render, open = imgui.begin(Project.Name .. "###Viewport", if canInteract then "nb" else "ni | nb", true)
 
 	if not open then
-		task.defer(changeStageTo, "SelectProject")
+		task.defer(changeStageTo, "SelectProject" :: "SelectProject")
 	end
 
 	if not render then

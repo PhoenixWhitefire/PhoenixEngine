@@ -1784,7 +1784,7 @@
     "documentation": "Get a list of Objects whose bounds are within the AABB"
   },
   "@phoenix/globaltype/Workspace.Raycast": {
-    "documentation": "Cast a ray"
+    "documentation": "Cast a ray. This currently treats collisions as Axis-Aligned Bounding Boxes!"
   },
   "@phoenix/globaltype/Workspace.SceneCamera": {
     "documentation": "The `Camera` the Player sees the world through. If set to `nil`, a *fallback* is created at the origin"
