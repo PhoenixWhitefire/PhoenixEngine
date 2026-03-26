@@ -19,6 +19,7 @@ on:
       - "wikigen/**"
       - "*.md"
       - "apidump.json"
+  workflow_dispatch:
 
 jobs:
   build:
