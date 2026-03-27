@@ -1,5 +1,8 @@
 #include <algorithm>
-#include <float.h>
+#include <cfloat>
+#include <utility>
+#include <vector>
+
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/component_wise.hpp>
 #include <tracy/Tracy.hpp>
@@ -7,11 +10,60 @@
 #include "geometry/IntersectionLib.hpp"
 #include "geometry/Gjk.hpp"
 
-static const float EPSILON = 1e-8f;
+static constexpr float EPSILON = 1e-8f;
+static constexpr float EPA_EPSILON = 0.001f;
+static constexpr float EPA_MAX_ITER = 64.f;
 
 template<class T> static int sign(T v)
 {
 	return v < 0 ? -1 : (v > 0 ? 1 : 0);
+}
+
+struct EpaFace
+{
+	size_t A;
+	size_t B;
+	size_t C;
+	glm::vec3 Normal;
+	float Distance;
+};
+
+static EpaFace makeFace(const std::vector<Gjk::SupportPoint>& polytope, size_t a, size_t b, size_t c)
+{
+	const glm::vec3& pa = polytope[a].P;
+	const glm::vec3& pb = polytope[b].P;
+	const glm::vec3& pc = polytope[c].P;
+
+	glm::vec3 normal = glm::cross(pb - pa, pc - pa);
+	float len2 = glm::dot(normal, normal);
+
+	if (len2 <= 1e-20f)
+		return { a, b, c, glm::vec3(0.f), FLT_MAX };
+
+	normal /= std::sqrt(len2);
+	float distance = glm::dot(normal, pa);
+
+	if (distance < 0.f)
+	{
+		normal = -normal;
+		distance = -distance;
+	}
+
+	return { a, b, c, normal, distance };
+}
+
+static void addIfUniqueEdge(
+	std::vector<std::pair<size_t, size_t>>& edges,
+	size_t a,
+	size_t b
+)
+{
+	auto reverse = std::find(edges.begin(), edges.end(), std::make_pair(b, a));
+
+	if (reverse != edges.end())
+		edges.erase(reverse);
+	else
+		edges.emplace_back(a, b);
 }
 
 IntersectionLib::Intersection IntersectionLib::AabbAabb
@@ -23,49 +75,38 @@ IntersectionLib::Intersection IntersectionLib::AabbAabb
 )
 {
 	Intersection result{};
-	result.Occurred = false;
 
-	glm::vec3 aSizeHalf = ASize * .5f;
-	glm::vec3 bSizeHalf = BSize * .5f;
+	glm::vec3 aHalf = ASize * 0.5f;
+	glm::vec3 bHalf = BSize * 0.5f;
 
-	// https://noonat.github.io/intersect/
-	float dx = BPosition.x - APosition.x;
-	float px = (bSizeHalf.x + aSizeHalf.x) - std::abs(dx);
-	if (px <= 0.f)
-		return result;
+	glm::vec3 delta = BPosition - APosition;
+	glm::vec3 overlap = (aHalf + bHalf) - glm::abs(delta);
 
-	float dy = BPosition.y - APosition.y;
-	float py = (bSizeHalf.y + aSizeHalf.y) - std::abs(dy);
-	if (py <= 0.f)
-		return result;
-
-	float dz = BPosition.z - APosition.z;
-	float pz = (bSizeHalf.z + aSizeHalf.z) - std::abs(dz);
-	if (pz <= 0.f)
+	if (overlap.x <= 0.f || overlap.y <= 0.f || overlap.z <= 0.f)
 		return result;
 
 	result.Occurred = true;
 
-	if (px < py && px < pz)
+	if (overlap.x < overlap.y && overlap.x < overlap.z)
 	{
-		int sx = sign(dx);
-		result.Depth = px * sx;
+		int sx = sign(delta.x);
+		result.Depth = overlap.x * sx;
 		result.Normal = glm::vec3(-sx, 0.f, 0.f);
-		result.Position = glm::vec3(APosition.x + (aSizeHalf.x * sx), 0.f, 0.f);
+		result.Position = glm::vec3(APosition.x + aHalf.x * sx, BPosition.y, BPosition.z);
 	}
-	else if (py < px && py < pz)
+	else if (overlap.y < overlap.z)
 	{
-		int sy = sign(dy);
-		result.Depth = py * sy;
+		int sy = sign(delta.y);
+		result.Depth = overlap.y * sy;
 		result.Normal = glm::vec3(0.f, -sy, 0.f);
-		result.Position = glm::vec3(0.f, APosition.y + (aSizeHalf.y * sy), 0.f);
+		result.Position = glm::vec3(BPosition.x, APosition.y + aHalf.y * sy, BPosition.z);
 	}
-	else if (pz < py)
+	else
 	{
-		int sz = sign(dz);
-		result.Depth = pz * sz;
+		int sz = sign(delta.z);
+		result.Depth = overlap.z * sz;
 		result.Normal = glm::vec3(0.f, 0.f, -sz);
-		result.Position = glm::vec3(0.f, 0.f, APosition.z + (aSizeHalf.z * sz));
+		result.Position = glm::vec3(BPosition.x, BPosition.y, APosition.z + aHalf.z * sz);
 	}
 
 	return result;
@@ -80,18 +121,16 @@ IntersectionLib::Intersection IntersectionLib::RayAabb(
 )
 {
 	Intersection result{};
-	result.Occurred = false;
 
-	// games with gabe
-	// https://youtu.be/QxpgtVrjYrg?t=742
-	glm::vec3 invDirection = glm::vec3(
+	glm::vec3 invDirection(
 		Vector.x != 0.f ? 1.f / Vector.x : FLT_MAX,
 		Vector.y != 0.f ? 1.f / Vector.y : FLT_MAX,
 		Vector.z != 0.f ? 1.f / Vector.z : FLT_MAX
 	);
 
-	glm::vec3 min = BbPosition - BbSize / 2.f - Padding;
-	glm::vec3 max = BbPosition + BbSize / 2.f + Padding;
+	glm::vec3 half = BbSize * 0.5f;
+	glm::vec3 min = BbPosition - half - Padding;
+	glm::vec3 max = BbPosition + half + Padding;
 
 	glm::vec3 t1 = (min - Origin) * invDirection;
 	glm::vec3 t2 = (max - Origin) * invDirection;
@@ -99,13 +138,13 @@ IntersectionLib::Intersection IntersectionLib::RayAabb(
 	glm::vec3 tmin3 = glm::min(t1, t2);
 	glm::vec3 tmax3 = glm::max(t1, t2);
 
-	float tmin = std::max({ tmin3.x, tmin3.y, tmin3.z });
-	float tmax = std::min({ tmax3.x, tmax3.y, tmax3.z });
+	float tmin = std::max(tmin3.x, std::max(tmin3.y, tmin3.z));
+	float tmax = std::min(tmax3.x, std::min(tmax3.y, tmax3.z));
 
 	if (tmax < 0.f || tmin > tmax)
 		return result;
 
-	float t = (tmin < 0.f) ? tmax : tmin;
+	float t = tmin > 0.f ? tmin : tmax;
 	if (t <= 0.f)
 		return result;
 
@@ -114,11 +153,11 @@ IntersectionLib::Intersection IntersectionLib::RayAabb(
 	result.Time = t;
 
 	if (tmin == tmin3.x)
-		result.Normal.x = (invDirection.x < 0.f) ? 1.f : -1.f;
+		result.Normal.x = invDirection.x < 0.f ? 1.f : -1.f;
 	else if (tmin == tmin3.y)
-		result.Normal.y = (invDirection.y < 0.f) ? 1.f : -1.f;
-	else if (tmin == tmin3.z)
-		result.Normal.z = (invDirection.z < 0.f) ? 1.f : -1.f;
+		result.Normal.y = invDirection.y < 0.f ? 1.f : -1.f;
+	else
+		result.Normal.z = invDirection.z < 0.f ? 1.f : -1.f;
 
 	return result;
 }
@@ -131,33 +170,33 @@ IntersectionLib::SweptIntersection IntersectionLib::SweptAabbAabb(
 	const glm::vec3& Delta
 )
 {
-	if (glm::length(Delta) == 0.f)
+	SweptIntersection sweep{};
+
+	if (Delta.x == 0.f && Delta.y == 0.f && Delta.z == 0.f)
 	{
 		Intersection hit = AabbAabb(APosition, ASize, BPosition, BSize);
 
-		return {
-			BPosition,
-			hit,
-			hit.Occurred ? 0.f : 1.f
-		};
+		sweep.Position = BPosition;
+		sweep.Hit = hit;
+		sweep.Time = hit.Occurred ? 0.f : 1.f;
+		return sweep;
 	}
 
-	glm::vec3 bSizeHalf = BSize / 2.f;
-	SweptIntersection sweep;
-
-	sweep.Hit = RayAabb(BPosition, Delta, APosition, ASize, bSizeHalf);
+	glm::vec3 bHalf = BSize * 0.5f;
+	sweep.Hit = RayAabb(BPosition, Delta, APosition, ASize, bHalf);
 
 	if (sweep.Hit.Occurred)
 	{
 		sweep.Time = std::clamp(sweep.Hit.Time - EPSILON, 0.f, 1.f);
-		sweep.Position = BPosition + (Delta * sweep.Time);
+		sweep.Position = BPosition + Delta * sweep.Time;
 
+		glm::vec3 aHalf = ASize * 0.5f;
 		glm::vec3 direction = glm::normalize(Delta);
-		glm::vec3 aSizeHalf = ASize / 2.f;
 
 		sweep.Hit.Position = glm::clamp(
-			sweep.Hit.Position + (direction * bSizeHalf),
-			APosition - aSizeHalf, APosition + aSizeHalf
+			sweep.Hit.Position + direction * bHalf,
+			APosition - aHalf,
+			APosition + aHalf
 		);
 	}
 	else
@@ -169,182 +208,135 @@ IntersectionLib::SweptIntersection IntersectionLib::SweptAabbAabb(
 	return sweep;
 }
 
-// https://winter.dev/articles/epa-algorithm
-
-static std::pair<std::vector<glm::vec4>, size_t> getFaceNormals(const std::vector<Gjk::SupportPoint>& polytope, const std::vector<size_t>& faces)
+static std::pair<std::vector<EpaFace>, size_t> buildFaces(const std::vector<Gjk::SupportPoint>& polytope, const std::vector<size_t>& indices)
 {
-	std::vector<glm::vec4> normals;
-	size_t minTriangle = 0;
-	float  minDistance = FLT_MAX;
+	std::vector<EpaFace> faces;
+	faces.reserve(indices.size() / 3);
 
-	for (size_t i = 0; i < faces.size(); i += 3)
+	size_t minFace = 0;
+	float minDistance = FLT_MAX;
+
+	for (size_t i = 0; i < indices.size(); i += 3)
 	{
-		glm::vec3 a = polytope[faces[i]].P;
-		glm::vec3 b = polytope[faces[i + 1]].P;
-		glm::vec3 c = polytope[faces[i + 2]].P;
+		EpaFace face = makeFace(polytope, indices[i], indices[i + 1], indices[i + 2]);
+		faces.push_back(face);
 
-		glm::vec3 normal = glm::normalize(glm::cross(b - a, c - a));
-		float distance = glm::dot(normal, a);
-
-		if (distance < 0)
+		if (face.Distance < minDistance)
 		{
-			distance *= -1;
-			normal *= -1;
-		}
-
-		normals.emplace_back(normal, distance);
-
-		if (distance < minDistance)
-		{
-			minDistance = distance;
-			minTriangle = i / 3;
+			minDistance = face.Distance;
+			minFace = faces.size() - 1;
 		}
 	}
 
-	return { normals, minTriangle };
-}
-
-static void addIfUniqueEdge(
-	std::vector<std::pair<size_t, size_t>>& edges,
-	const std::vector<size_t>& faces,
-	size_t a,
-	size_t b
-)
-{
-	auto reverse = std::find(                       //      0--<--3
-		edges.begin(),                              //     / \ B /   A: 2-0
-		edges.end(),                                //    / A \ /    B: 0-2
-		std::make_pair(faces[b], faces[a]) //   1-->--2
-	);
-
-	if (reverse != edges.end())
-		edges.erase(reverse);
-
-	else
-		edges.emplace_back(faces[a], faces[b]);
+	return { std::move(faces), minFace };
 }
 
 static IntersectionLib::CollisionPoints epa(const Gjk::Simplex& Simp, const EcRigidBody* A, const EcRigidBody* B)
 {
 	ZoneScoped;
 
-	std::vector<Gjk::SupportPoint> polytope = { Simp.begin(), Simp.end() };
-	std::vector<size_t> faces = {
+	std::vector<Gjk::SupportPoint> polytope(Simp.begin(), Simp.end());
+	if (polytope.size() < 4)
+		return IntersectionLib::CollisionPoints{ .HasCollision = false };
+
+	std::vector<size_t> indices = {
 		0, 1, 2,
 		0, 3, 1,
 		0, 2, 3,
 		1, 3, 2
 	};
 
-	auto [normals, minFace] = getFaceNormals(polytope, faces);
+	auto [faces, minFace] = buildFaces(polytope, indices);
 
-	glm::vec3 minNormal;
-	float minDistance = -FLT_MAX;
-
-	while (minDistance == -FLT_MAX)
+	for (size_t iter = 0; iter < 64; ++iter)
 	{
-		minNormal = glm::vec3(normals[minFace]);
-		minDistance = normals[minFace].w;
+		if (faces.empty())
+			break;
 
-		Gjk::SupportPoint support = Gjk::Support(A, B, minNormal);
-		float sDistance = glm::dot(minNormal, support.P);
+		const EpaFace& face = faces[minFace];
+		glm::vec3 normal = face.Normal;
+		float distance = face.Distance;
 
-		if (abs(sDistance - minDistance) > 0.001f)
+		Gjk::SupportPoint support = Gjk::Support(A, B, normal);
+		float sDistance = glm::dot(normal, support.P);
+
+		if (sDistance - distance <= EPA_EPSILON)
 		{
-			minDistance = FLT_MAX;
+			const Gjk::SupportPoint& a = polytope[face.A];
+			const Gjk::SupportPoint& b = polytope[face.B];
+			const Gjk::SupportPoint& c = polytope[face.C];
 
-			std::vector<std::pair<size_t, size_t>> uniqueEdges;
+			glm::vec3 v0 = b.P - a.P;
+			glm::vec3 v1 = c.P - a.P;
+			glm::vec3 v2 = -a.P;
 
-			for (size_t i = 0; i < normals.size(); i++)
+			float d00 = glm::dot(v0, v0);
+			float d01 = glm::dot(v0, v1);
+			float d11 = glm::dot(v1, v1);
+			float d20 = glm::dot(v2, v0);
+			float d21 = glm::dot(v2, v1);
+			float denom = d00 * d11 - d01 * d01;
+
+			if (std::abs(denom) <= EPSILON)
+				return IntersectionLib::CollisionPoints{ .HasCollision = false };
+
+			float v = (d11 * d20 - d01 * d21) / denom;
+			float w = (d00 * d21 - d01 * d20) / denom;
+			float u = 1.f - v - w;
+
+			IntersectionLib::CollisionPoints points;
+			points.A = (u * a.A) + (v * b.A) + (w * c.A);
+			points.B = (u * a.B) + (v * b.B) + (w * c.B);
+			points.Normal = normal;
+			points.PenetrationDepth = distance;
+			points.HasCollision = true;
+
+			if (points.PenetrationDepth <= 0.f)
+				points.PenetrationDepth = EPA_EPSILON;
+
+			return points;
+		}
+
+		std::vector<std::pair<size_t, size_t>> edges;
+		edges.reserve(faces.size() * 3);
+
+		for (size_t i = 0; i < faces.size();)
+		{
+			const EpaFace& f = faces[i];
+			if (glm::dot(f.Normal, support.P) > glm::dot(f.Normal, polytope[f.A].P))
 			{
-				if (glm::dot(glm::vec3(normals[i]), support.P) > glm::dot(glm::vec3(normals[i]), polytope[faces[i * 3]].P))
-				{
-					size_t f = i * 3;
+				addIfUniqueEdge(edges, f.A, f.B);
+				addIfUniqueEdge(edges, f.B, f.C);
+				addIfUniqueEdge(edges, f.C, f.A);
 
-					addIfUniqueEdge(uniqueEdges, faces, f,     f + 1);
-					addIfUniqueEdge(uniqueEdges, faces, f + 1, f + 2);
-					addIfUniqueEdge(uniqueEdges, faces, f + 2, f   );
-
-					faces[f + 2] = faces.back(); faces.pop_back();
-					faces[f + 1] = faces.back(); faces.pop_back();
-					faces[f]     = faces.back(); faces.pop_back();
-
-					normals[i] = normals.back();
-					normals.pop_back();
-
-					i--;
-				}
-			}
-
-			std::vector<size_t> newFaces;
-			for (auto [edgeIndex1, edgeIndex2] : uniqueEdges)
-			{
-				newFaces.push_back(edgeIndex1);
-				newFaces.push_back(edgeIndex2);
-				newFaces.push_back(polytope.size());
-			}
-
-			polytope.push_back(support);
-
-			auto [newNormals, newMinFace] = getFaceNormals(polytope, newFaces);
-
-			float oldMinDistance = FLT_MAX;
-			for (size_t i = 0; i < normals.size(); i++)
-			{
-				if (float dist = normals[i].w; dist < oldMinDistance)
-				{
-					oldMinDistance = dist;
+				faces[i] = faces.back();
+				faces.pop_back();
+				if (minFace == faces.size())
 					minFace = i;
-				}
+				continue;
 			}
+			++i;
+		}
 
-			if (newNormals[newMinFace].w < oldMinDistance)
-				minFace = newMinFace + normals.size();
+		size_t newIndex = polytope.size();
+		polytope.push_back(support);
 
-			faces.insert(faces.end(), newFaces.begin(), newFaces.end());
-			normals.insert(normals.end(), newNormals.begin(), newNormals.end());
+		for (auto [a, b] : edges)
+			faces.push_back(makeFace(polytope, a, b, newIndex));
+
+		minFace = 0;
+		float minDistance = FLT_MAX;
+		for (size_t i = 0; i < faces.size(); ++i)
+		{
+			if (faces[i].Distance < minDistance)
+			{
+				minDistance = faces[i].Distance;
+				minFace = i;
+			}
 		}
 	}
 
-	size_t f = minFace * 3;
-	size_t i0 = faces[f];
-	size_t i1 = faces[f + 1];
-	size_t i2 = faces[f + 2];
-
-	const Gjk::SupportPoint& a = polytope[i0];
-	const Gjk::SupportPoint& b = polytope[i1];
-	const Gjk::SupportPoint& c = polytope[i2];
-
-	glm::vec3 v0 = b.P - a.P;
-	glm::vec3 v1 = c.P - a.P;
-	glm::vec3 v2 = -a.P;
-
-	float d00 = glm::dot(v0, v0);
-	float d01 = glm::dot(v0, v1);
-	float d11 = glm::dot(v1, v1);
-	float d20 = glm::dot(v2, v0);
-	float d21 = glm::dot(v2, v1);
-
-	float denom = d00 * d11 - d01 * d01;
-
-	float v = (d11 * d20 - d01 * d21) / denom;
-	float w = (d00 * d21 - d01 * d20) / denom;
-	float u = 1.f - v - w;
-
-	glm::vec3 contactA = (u * a.A) + (v * b.A) + (w * c.A);
-	glm::vec3 contactB = (u * a.B) + (v * b.B) + (w * c.B);
-
-	IntersectionLib::CollisionPoints points;
-	points.A = contactA;
-	points.B = contactB;
-	points.Normal = minNormal;
-	points.PenetrationDepth = minDistance + 0.001f;
-	points.HasCollision = true;
-
-	if (points.PenetrationDepth == FLT_MAX)
-		points.PenetrationDepth = 0.001f;
-
-	return points;
+	return IntersectionLib::CollisionPoints{ .HasCollision = false };
 }
 
 IntersectionLib::CollisionPoints IntersectionLib::Gjk(const EcRigidBody* A, const EcRigidBody* B)
@@ -355,6 +347,6 @@ IntersectionLib::CollisionPoints IntersectionLib::Gjk(const EcRigidBody* A, cons
 
 	if (!result.HasIntersection)
 		return CollisionPoints{ .HasCollision = false };
-	else
-		return epa(result.Simp, A, B);
+
+	return epa(result.Simp, A, B);
 }
