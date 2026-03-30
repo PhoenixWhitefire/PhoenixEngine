@@ -2700,7 +2700,7 @@ function Stages.Update_Leave()
 end
 
 local function handleEngineShutdown()
-		if CurrentStage == "ProjectEditing" or CurrentStage == "ProjectPlaying" then
+	if CurrentStage == "ProjectEditing" or CurrentStage == "ProjectPlaying" then
 		local choice = Engine:ShowMessageBox("Save", "Save current Editor file before closing?", "yesno", "warning", 1)
 
 		if choice == 0 then
