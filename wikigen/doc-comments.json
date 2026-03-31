@@ -212,6 +212,63 @@
           "VM": "The Luau Virtual Machine that Scripts bound to this Data Model will run in"
         }
       },
+      "DeveloperTools": {
+        "Description": "Built-in development tools",
+        "Properties": {
+          "DocumentationShown": "Whether the Documentation tool is enabled",
+          "ExplorerShown": "Whether the Explorer tool is enabled",
+          "InfoShown": "Whether the Info tool is enabled",
+          "Initialized": "Whether developer tools were ever initialized",
+          "MaterialsShown": "Whether the Materials tool is enabled",
+          "PropertiesShown": "Whether the Properties tool is enabled",
+          "RendererShown": "Whether the Renderer tool is enabled",
+          "ScriptsShown": "Whether the Scripts tool is enabled",
+          "SettingsShown": "Whether the Settings tool is enabled",
+          "ShadersShown": "Whether the Shaders tool is enabled"
+        },
+        "Methods": {
+          "GetExplorerSelections": {
+            "Description": "Returns what is currently selected in the Explorer",
+            "Type": "() : ({ GameObject })"
+          },
+          "GetToolNames": {
+            "Description": "Returns a list of valid Engine tools",
+            "Type": "() : { string }"
+          },
+          "Initialize": "Initializes the developer tools system if it was not already initialized",
+          "IsToolEnabled": {
+            "Description": "Returns whether the given tool is enabled",
+            "ParameterNames": "ToolName"
+          },
+          "OpenTextDocument": {
+            "Description": "Opens a text file. This requires Developer Mode to be enabled to have any effect",
+            "ParameterNames": [
+              "Path",
+              "Line"
+            ]
+          },
+          "SetExplorerRoot": {
+            "Description": "Changes the Root of the built-in Explorer's hierarchy view",
+            "ParameterNames": [
+              "Root"
+            ]
+          },
+          "SetExplorerSelections": {
+            "Description": "Changes the built-in Explorer's Object selections to the specified Objects",
+            "ParameterNames": [
+              "Selections"
+            ],
+            "Type": "({ GameObject }) : ()"
+          },
+          "SetToolEnabled": {
+            "Description": "Enabled/disables the given tool",
+            "ParameterNames": [
+              "ToolName",
+              "Enabled"
+            ]
+          }
+        }
+      },
       "DirectionalLight": {
         "Description": "Intended to model a large light source infinitely far away, like the Sun",
         "Properties": {
@@ -262,27 +319,7 @@
             "Type": "(self, Key: string) : (JsonSerializable)"
           },
           "GetCurrentVM": "Returns the name of the currently-bound VM",
-          "GetExplorerSelections": {
-            "Description": "Returns what is currently selected in the Explorer",
-            "Type": "() : ({ GameObject })"
-          },
-          "GetToolNames": {
-            "Description": "Returns a list of valid Engine tools",
-            "Type": "() : { string }"
-          },
-          "IsToolEnabled": {
-            "Description": "Returns whether the given tool is enabled",
-            "ParameterNames": "ToolName"
-          },
-          "OpenTextDocument": {
-            "Description": "Opens a text file. This requires Developer Mode to be enabled to have any effect",
-            "ParameterNames": [
-              "Path",
-              "Line"
-            ]
-          },
           "PollSystemEvents": "Responds to signals sent to the application by the OS. This is done automatically at the start of each frame as well",
-          "ResetViewportInputRect": "Resets the Engine's understanding of where the viewport is on screen back to the default (occupying the entire window)",
           "RunInVM": {
             "Description": "Runs the given code in the specified VM. Returns `false` and an error message upon failure or if the code does not finish executing (yield or break)",
             "ParameterNames": [
@@ -299,33 +336,6 @@
           "SetCurrentVM": {
             "Description": "Binds the given VM as the \"current\" one. This causes all Scripts which load afterward to use the specified VM, it does *not* change the VM of any Scripts loaded beforehand",
             "ParameterNames": "VmName"
-          },
-          "SetExplorerRoot": {
-            "Description": "Changes the Root of the built-in Explorer's hierarchy view",
-            "ParameterNames": [
-              "Root"
-            ]
-          },
-          "SetExplorerSelections": {
-            "Description": "Changes the built-in Explorer's Object selections to the specified Objects",
-            "ParameterNames": [
-              "Selections"
-            ],
-            "Type": "({ GameObject }) : ()"
-          },
-          "SetToolEnabled": {
-            "Description": "Enabled/disables the given tool",
-            "ParameterNames": [
-              "ToolName",
-              "Enabled"
-            ]
-          },
-          "SetViewportInputRect": {
-            "Description": "Configures the Engine to act as through the Viewport is at the given position with the given size. Does *not* change where the viewport is actually rendered",
-            "ParameterNames": [
-              "Position",
-              "Size"
-            ]
           },
           "ShowMessageBox": {
             "Description": "Shows a message box to the player with the given specification. The returned number with be the selected option: `0` for Cancel/No, `1` for Ok/Yes, `2` for No in `yesnocancel`. This is a blocking operation and no scripts or other parts of the Engine run until the message is dismissed. Avoid using quotes and backticks in the message",
@@ -519,6 +529,14 @@
           "IsMouseButtonPressed": {
             "Description": "Returns whether the specified mouse button (`Enum.MouseButton.Left/Middle/Right`) is currently being pressed",
             "Type": "(self, Button: EnumMouseButton) : (boolean)"
+          },
+          "ResetViewportInputRect": "Resets the Engine's understanding of where the viewport is on screen back to the default (occupying the entire window)",
+          "SetViewportInputRect": {
+            "Description": "Configures the Engine to act as through the Viewport is at the given position with the given size. Does *not* change where the viewport is actually rendered",
+            "ParameterNames": [
+              "Position",
+              "Size"
+            ]
           }
         },
         "Properties": {

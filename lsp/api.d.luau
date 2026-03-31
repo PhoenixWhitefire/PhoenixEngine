@@ -105,6 +105,7 @@ type Services = {
   Logging: Logging,
   Interface: Interface,
   Environment: Environment,
+  DeveloperTools: DeveloperTools,
 }
 
 declare extern type Color with
@@ -165,35 +166,35 @@ declare Matrix: {
 }
 
 
-declare extern type GameObject with
-  Enabled: boolean
-  Name: string
-  ObjectId: number 
-  Parent: GameObject?
-  Serializes: boolean
+export type GameObject = {
+  Enabled: boolean,
+  Name: string,
+  ObjectId: number ,
+  Parent: GameObject?,
+  Serializes: boolean,
 
-  AddComponent: (self: GameObject, Component: keyof<Creatables>) -> ()
-  AddTag: (self: GameObject, Tag: string) -> ()
-  Destroy: (self: GameObject) -> ()
-  Duplicate: <T>(self: GameObject & T) -> (GameObject & T)
-  FindChild: (self: GameObject, ChildName: string) -> (GameObject?)
-  FindChildWithComponent: (self: GameObject, Component: keyof<Creatables>) -> (GameObject)
-  ForEachChild: (self: GameObject, Callback: (Object: GameObject) -> boolean?) -> ()
-  ForEachDescendant: (self: GameObject, Callback: (Object: GameObject) -> boolean?) -> ()
-  GetChildren: (self: GameObject) -> { GameObject }
-  GetComponents: (self: GameObject) -> keyof<Creatables>
-  GetDescendants: (self: GameObject) -> { GameObject }
-  GetFullName: (self: GameObject) -> (string)
-  GetTags: (self: GameObject) -> { string }
-  HasComponent: (self: GameObject, Component: keyof<Creatables>) -> (boolean)
-  HasTag: (self: GameObject, Tag: string) -> (boolean)
-  MergeWith: (self: GameObject, With: GameObject) -> ()
-  RemoveComponent: (self: GameObject, Component: keyof<Creatables>) -> ()
-  RemoveTag: (self: GameObject, Tag: string) -> ()
+  AddComponent: (self: GameObject, Component: keyof<Creatables>) -> (),
+  AddTag: (self: GameObject, Tag: string) -> (),
+  Destroy: (self: GameObject) -> (),
+  Duplicate: <T>(self: GameObject & T) -> (GameObject & T),
+  FindChild: (self: GameObject, ChildName: string) -> (GameObject?),
+  FindChildWithComponent: (self: GameObject, Component: keyof<Creatables>) -> (GameObject),
+  ForEachChild: (self: GameObject, Callback: (Object: GameObject) -> boolean?) -> (),
+  ForEachDescendant: (self: GameObject, Callback: (Object: GameObject) -> boolean?) -> (),
+  GetChildren: (self: GameObject) -> { GameObject },
+  GetComponents: (self: GameObject) -> keyof<Creatables>,
+  GetDescendants: (self: GameObject) -> { GameObject },
+  GetFullName: (self: GameObject) -> (string),
+  GetTags: (self: GameObject) -> { string },
+  HasComponent: (self: GameObject, Component: keyof<Creatables>) -> (boolean),
+  HasTag: (self: GameObject, Tag: string) -> (boolean),
+  MergeWith: (self: GameObject, With: GameObject) -> (),
+  RemoveComponent: (self: GameObject, Component: keyof<Creatables>) -> (),
+  RemoveTag: (self: GameObject, Tag: string) -> (),
 
-  OnTagAdded: EventSignal<(string)>
-  OnTagRemoved: EventSignal<(string)>
-end
+  OnTagAdded: EventSignal<(string)>,
+  OnTagRemoved: EventSignal<(string)>,
+}
 export type Animation = {
   Animation: string,
   Looped: boolean,
@@ -238,6 +239,27 @@ export type DataModel = {
 
   OnFrameBegin: EventSignal<(number)>,
 }
+export type DeveloperTools = {
+  DocumentationShown: boolean,
+  ExplorerShown: boolean,
+  InfoShown: boolean,
+  Initialized: boolean ,
+  MaterialsShown: boolean,
+  PropertiesShown: boolean,
+  RendererShown: boolean,
+  ScriptsShown: boolean,
+  SettingsShown: boolean,
+  ShadersShown: boolean,
+
+  GetExplorerSelections: (self: DeveloperTools) -> ({ GameObject }),
+  GetToolNames: (self: DeveloperTools) -> { string },
+  Initialize: (self: DeveloperTools) -> (),
+  IsToolEnabled: (self: DeveloperTools, ToolName: string) -> (boolean),
+  OpenTextDocument: (self: DeveloperTools, Path: string, Line: number?) -> (),
+  SetExplorerRoot: (self: DeveloperTools, Root: GameObject) -> (),
+  SetExplorerSelections: (self: DeveloperTools, Selections: { GameObject }) -> (),
+  SetToolEnabled: (self: DeveloperTools, ToolName: string, Enabled: boolean) -> (),
+}
 export type DirectionalLight = {
   Brightness: number,
   Direction: vector,
@@ -267,18 +289,9 @@ export type Engine = {
   Exit: (self: Engine, ExitCode: number?) -> (),
   GetCliArguments: (self: Engine) -> { string },
   GetConfigValue: (self: Engine, Key: string) -> (JsonSerializable),
-  GetExplorerSelections: (self: Engine) -> ({ GameObject }),
-  GetToolNames: (self: Engine) -> { string },
-  IsToolEnabled: (self: Engine, ToolName: string) -> (boolean),
-  OpenTextDocument: (self: Engine, Path: string, Line: number?) -> (),
-  ResetViewportInputRect: (self: Engine) -> (),
   RunInVM: (self: Engine, VmName: string, Code: string, ChunkName: string?) -> (boolean, string?),
   SaveConfig: (self: Engine) -> (boolean, string),
   SetConfigValue: (self: Engine, Key: string, Value: JsonSerializable) -> (),
-  SetExplorerRoot: (self: Engine, Root: GameObject) -> (),
-  SetExplorerSelections: (self: Engine, Selections: { GameObject }) -> (),
-  SetToolEnabled: (self: Engine, ToolName: string, Enabled: boolean) -> (),
-  SetViewportInputRect: (self: Engine, Position: vector, Size: vector) -> (),
   ShowMessageBox: (self: Engine, Title: string, Message: string, Buttons: 'ok' | 'okcancel' | 'yesno' | 'yesnocancel' | nil, Icon: 'info' | 'warning' | 'error' | 'question' | nil, DefaultButton: number?) -> (number),
 }
 export type Environment = {
@@ -358,6 +371,8 @@ export type PlayerInput = {
   GetCursorPosition: (self: PlayerInput) -> (vector),
   IsKeyPressed: (self: PlayerInput, Key: EnumKey) -> (boolean),
   IsMouseButtonPressed: (self: PlayerInput, Button: EnumMouseButton) -> (boolean),
+  ResetViewportInputRect: (self: PlayerInput) -> (),
+  SetViewportInputRect: (self: PlayerInput, Position: vector, Size: vector) -> (),
 
   KeyEvent: EventSignal<KeyInputEvent>,
   MouseButtonEvent: EventSignal<MouseButtonInputEvent>,
@@ -485,6 +500,7 @@ type Components = {
   UIText: UIText,
   UIButton: UIButton,
   Environment: Environment,
+  DeveloperTools: DeveloperTools,
 }
 type Creatables = {
   Transform: Transform,
@@ -518,6 +534,7 @@ type Creatables = {
   UIText: UIText,
   UIButton: UIButton,
   Environment: Environment,
+  DeveloperTools: DeveloperTools,
 }
 declare extern type EnumCollisionType extends EnumItem with end
 declare extern type EnumCollisionType_INTERNAL extends Enum with

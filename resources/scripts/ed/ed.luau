@@ -1,4 +1,5 @@
 -- ed.luau, 14/09/2025
+local DeveloperTools = game:GetService("DeveloperTools")
 local AssetManager = game:GetService("AssetManager")
 local PlayerInput = game:GetService("PlayerInput")
 local Interface = game:GetService("Interface")
@@ -48,7 +49,9 @@ local EditorPreferences = {
 	AutosaveInterval = 10,
 	KeepGizmoInView = false,
 	InvertTabButtonLitColors = false,
-	SyncCoreAssets = "AlwaysAsk" :: index<typeof(SyncCoreAssetsOptions), number>
+	SyncCoreAssets = "AlwaysAsk" :: index<typeof(SyncCoreAssetsOptions), number>,
+	DevToolsOpen = { "Explorer", "Properties", "Scripts" },
+	ToolsOpen = { BottomBar = true, Output = true }
 }
 
 EditorPreferences = EditorPreferences :: { [keyof<typeof(EditorPreferences)>]: index<typeof(EditorPreferences), keyof<typeof(EditorPreferences)>> } & typeof(EditorPreferences)
@@ -64,16 +67,11 @@ InterfaceLink.Parent = Interface
 Physics.Simulating = false
 
 local ToolOrder = {
-	"Tool_Explorer",
-	"Tool_Properties"
+	"Explorer",
+	"Properties"
 }
 
-local BottomBarEnabled = Engine:GetConfigValue("Ed_Tool_BottomBarEnabled") or false
-local OutputEnabled = Engine:GetConfigValue("Ed_Tool_OutputEnabled") or false
-assert(typeof(BottomBarEnabled) == "boolean")
-assert(typeof(OutputEnabled) == "boolean")
-
-for _, tool in Engine:GetToolNames() do
+for _, tool in DeveloperTools:GetToolNames() do
 	if not table.find(ToolOrder, tool) then
 		table.insert(ToolOrder, tool)
 	end
@@ -104,6 +102,10 @@ for k: keyof<typeof(EditorPreferences)>, v in EditorPreferences do
 end
 
 EditorPreferences = savedEditorPreferences :: typeof(EditorPreferences)
+
+for _, devTool in EditorPreferences.DevToolsOpen do
+	DeveloperTools:SetToolEnabled(devTool, true)
+end
 
 if not Engine.IsHeadless then
 	imgui.stylecolors(if EditorPreferences.UseLightTheme then 'l' else 'd')
@@ -293,7 +295,7 @@ local function tryToSave(datamodel: GameObject?, firstAttempt: string?)
 	end
 
 	if firstAttempt then
-		local modifiedDate, modifiedDateError = pcall(function()
+		local modifiedDate, modifiedDateError = (pcall :: (() -> ()) -> (boolean, unknown))(function()
 			local conf = json.parse(assert(fs.read("@project/phoenix.conf")))
 			assert(typeof(conf) == "table", `config was a { typeof(conf) } and not a table`);
 
@@ -814,7 +816,7 @@ local function homeTab(_: number)
 
 				assert(Project.Workspace)
 				imported.Parent = Project.Workspace
-				Engine:SetExplorerSelections({ imported })
+				DeveloperTools:SetExplorerSelections({ imported })
 
 				if importAction then
 					History:FinishAction(importAction)
@@ -849,25 +851,43 @@ local function homeTab(_: number)
 end
 
 local WasToolEnabled = {}
+local didFocusCodeEditorSetting = false
+
+local function saveSettings()
+	EditorPreferences.DevToolsOpen = {}
+
+	for _, name in DeveloperTools:GetToolNames() do
+		if DeveloperTools:IsToolEnabled(name) then
+			table.insert(EditorPreferences.DevToolsOpen, name)
+		end
+	end
+
+	fs.write("./editor/settings.json", json.encode(EditorPreferences))
+
+	if openSettingsMenuToConfigureCodeEditor and EditorPreferences.CodeEditorPath and #EditorPreferences.CodeEditorPath > 0 then
+		task.defer(openCodeEditor)
+	end
+
+	openSettingsMenuToConfigureCodeEditor = false
+	didFocusCodeEditorSetting = false
+end
 
 local function toolsTab(_: number)
 	for _, tool in ToolOrder do
-		local name = tool:sub(#("Tool_") + 1, #tool)
-		local enabled = Engine:IsToolEnabled(tool)
+		local enabled = DeveloperTools:IsToolEnabled(tool)
 
-		local iconName = name
+		local iconName = tool
 		if iconName == "Renderer" then
 			iconName = "Settings"
 		end
 
-		if tabButton(name, `@etextures/editor-icons/{ iconName }.png`, true, enabled) then
-			Engine:SetToolEnabled(tool, not enabled)
-			Engine:SaveConfig()
+		if tabButton(tool, `@etextures/editor-icons/{ iconName }.png`, true, enabled) then
+			DeveloperTools:SetToolEnabled(tool, not enabled)
 		end
 
 		if WasToolEnabled[tool] ~= nil then
 			if WasToolEnabled[tool] ~= enabled then
-				Engine:SaveConfig()
+				saveSettings()
 			end
 		end
 
@@ -876,18 +896,16 @@ local function toolsTab(_: number)
 		imgui.sameline()
 	end
 
-	if tabButton("Bottom Bar", `@etextures/editor-icons/command-bar.png`, true, BottomBarEnabled) then
-		BottomBarEnabled = not BottomBarEnabled
-		Engine:SetConfigValue("Ed_Tool_BottomBarEnabled", BottomBarEnabled)
-		Engine:SaveConfig()
+	local bottomBarOpen = EditorPreferences.ToolsOpen.BottomBar
+	if tabButton("Bottom Bar", `@etextures/editor-icons/command-bar.png`, true, bottomBarOpen) then
+		EditorPreferences.ToolsOpen.BottomBar = not bottomBarOpen
 	end
 
 	imgui.sameline()
 
-	if tabButton("Output", `@etextures/editor-icons/command-bar.png`, true, OutputEnabled) then
-		OutputEnabled = not OutputEnabled
-		Engine:SetConfigValue("Ed_Tool_OutputEnabled", OutputEnabled)
-		Engine:SaveConfig()
+	local ouputOpen = EditorPreferences.ToolsOpen.Output
+	if tabButton("Output", `@etextures/editor-icons/command-bar.png`, true, ouputOpen) then
+		EditorPreferences.ToolsOpen.Output = not ouputOpen
 	end
 
 	imgui.dummy()
@@ -1136,7 +1154,6 @@ local function textCentered(text, cursor, cxavail)
 end
 
 local wasSettingsOpen = false
-local didFocusCodeEditorSetting = false
 
 local function renderMainMenuBar(dt: number)
 	local pushedCol = CurrentStage == "ProjectPlaying"
@@ -1269,7 +1286,8 @@ local function renderMainMenuBar(dt: number)
 			end
 
 			if imgui.menuitem("Close") then
-				task.defer(changeStageTo, "SelectProject")
+				-- TODO luau cast
+				task.defer(changeStageTo, "SelectProject" :: "SelectProject")
 			end
 		end
 
@@ -1465,16 +1483,7 @@ local function renderMainMenuBar(dt: number)
 
 	elseif wasSettingsOpen then
 		wasSettingsOpen = false
-
-		fs.write("./editor/settings.json", json.encode(EditorPreferences))
-		Engine:SaveConfig()
-
-		if openSettingsMenuToConfigureCodeEditor and EditorPreferences.CodeEditorPath and #EditorPreferences.CodeEditorPath > 0 then
-			task.defer(openCodeEditor)
-		end
-
-		openSettingsMenuToConfigureCodeEditor = false
-		didFocusCodeEditorSetting = false
+		saveSettings()
 	end
 end
 
@@ -1541,7 +1550,7 @@ end
 
 local function interactWithLogSubMessage(ExtraTags: string, Value: unknown)
 	if typeof(Value) == "GameObject" then
-		Engine:SetExplorerSelections({ Value })
+		DeveloperTools:SetExplorerSelections({ Value })
 		return
 	end
 
@@ -1552,7 +1561,7 @@ local function interactWithLogSubMessage(ExtraTags: string, Value: unknown)
 		shortSrc = shortSrc:sub(1, assert((shortSrc:find(","))))
 
 		local line = lineMatch and tonumber(lineMatch:sub(#("DocumentLine:") + 1))
-		Engine:OpenTextDocument(shortSrc:sub(#("TextDocument:") + 1, #shortSrc - 1), line)
+		DeveloperTools:OpenTextDocument(shortSrc:sub(#("TextDocument:") + 1, #shortSrc - 1), line)
 
 		return
 	end
@@ -1560,7 +1569,7 @@ local function interactWithLogSubMessage(ExtraTags: string, Value: unknown)
 	local doc = ExtraTags:match("TextDocument:.+")
 
 	if doc then
-		Engine:OpenTextDocument(doc:sub(#("TextDocument:") + 1, #doc))
+		DeveloperTools:OpenTextDocument(doc:sub(#("TextDocument:") + 1, #doc))
 
 		return
 	end
@@ -1687,104 +1696,10 @@ PlayerInput.KeyEvent:Connect(function(kie: KeyInputEvent)
 	end
 end)
 
-local function renderViewport(DeltaTime: number)
-	if CurrentStage == "ProjectEditing" and Project.Workspace then
-		local mouseVec = workspace:ScreenPointToVector(PlayerInput:GetCursorPosition(), 1000)
-		local rayresult = if not PlayerInput.IsMouseSunk
-							then Project.Workspace:Raycast(workspace.SceneCamera.Transform.Position, mouseVec, { SelectionPart })
-							else nil
-
-		if rayresult then
-			SelectionPart.Transform = rayresult.Object.Transform
-			SelectionPart.Size = rayresult.Object.Size + vector.create(0.05, 0.05, 0.05)
-			SelectionPart.Parent = workspace
-
-			if PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Left) and isMouseWithinViewport() then
-				if PlayerInput:IsKeyPressed(Enum.Key.LeftControl) then -- left control
-					local sels = Engine:GetExplorerSelections()
-
-					if not table.find(sels, rayresult.Object) then
-						table.insert(sels, rayresult.Object :: GameObject)
-					end
-
-					Engine:SetExplorerSelections(sels)
-				else
-					Engine:SetExplorerSelections({ rayresult.Object })
-				end
-			end
-		else
-			SelectionPart.Parent = nil
-		end
-	else
-		for _, v in PrevSelections do
-			v:Destroy()
-		end
-		PrevSelections = {}
-	end
-
-	local newSelections = Engine:GetExplorerSelections()
-	local selmap: { [number]: GameObject } = {}
-	for i, sel_ in newSelections do
-		if not sel_:HasComponent("Transform") then
-			continue
-		end
-
-		local sel = (sel_ :: any) :: GameObject & Transform
-		selmap[sel.ObjectId] = sel
-
-		if not PrevSelections[sel.ObjectId] then
-			local new = SelectionPart:Duplicate()
-			new.Transform, new.Size = sel.Transform, sel.Size + vector.create(0.1, 0.1, 0.1)
-			new.Tint = Color.new(84/255, 150/255, 1)
-			new.Parent = workspace
-			PrevSelections[sel.ObjectId] = new
-		else
-			local box = PrevSelections[sel.ObjectId]
-			box.Transform, box.Size = sel.Transform, sel.Size
-		end
-	end
-
-	for id, box in PrevSelections do
-		local sel = selmap[id]
-		if not sel or not sel:HasComponent("Transform") then
-			box:Destroy()
-			PrevSelections[id] = nil
-		end
-	end
-
-	PluginManager.OnUpdate(DeltaTime, CurrentStage)
-	CoreTools.Update(Project, EditorPreferences, ViewportRenderPosition, ViewportRenderSize, DeltaTime)
-	HistoryView.Render()
-	TagViewer.Render()
-
-	if BottomBarEnabled then
-		local w = Renderer.Resolution
-
-		imgui.setnextwindowposition(0, w.y - 35)
-		imgui.setnextwindowsize(w.x, 35)
-
-		imgui.begin("Bottom Bar", "nt | nd | nr | ns")
-
-		imgui.setcursorposition(imgui.cursorposition() + vector.create(0, 2))
-		imgui.text("> ")
-		imgui.sameline()
-		imgui.setcursorposition(imgui.cursorposition() - vector.create(0, 2))
-
-		CommandBarCommand = imgui.inputstring("##Command", CommandBarCommand)
-		CommandBarActive = imgui.itemactive()
-
-		imgui.sameline()
-
-		local noteStr = `{ Engine.Framerate } FPS ({ CurrentStage }) | { Project.Name }`
-		imgui.text(noteStr)
-		imgui.setitemtooltip(noteStr)
-
-		imgui.endw()
-	end
-
+local function renderOutput()
 	local renderOutput = false
-	if OutputEnabled then
-		renderOutput, OutputEnabled = imgui.begin("Output", "h", true)
+	if EditorPreferences.ToolsOpen.Output then
+		renderOutput, EditorPreferences.ToolsOpen.Output = imgui.begin("Output", "h", true)
 	end
 
 	if renderOutput then
@@ -1937,7 +1852,7 @@ local function renderViewport(DeltaTime: number)
 								else
 									if typeof(k) == "GameObject" then
 										if imgui.textlink(kstr) then
-											Engine:SetExplorerSelections({ k })
+											DeveloperTools:SetExplorerSelections({ k })
 										end
 										imgui.sameline()
 										imgui.text(" = ")
@@ -1952,7 +1867,7 @@ local function renderViewport(DeltaTime: number)
 
 									if typeof(v) == "GameObject" then
 										if imgui.textlink(tostring(v)) then
-											Engine:SetExplorerSelections({ v })
+											DeveloperTools:SetExplorerSelections({ v })
 										end
 									else
 										local vts = tostring(v) .. ","
@@ -1997,7 +1912,7 @@ local function renderViewport(DeltaTime: number)
 
 				if message.Source and message.Line and message.Source ~= "CommandBar" then
 					if imgui.itemclicked(Enum.MouseButton.Right) then
-						Engine:OpenTextDocument(message.Source, message.Line)
+						DeveloperTools:OpenTextDocument(message.Source, message.Line)
 						rightClickedLogMessage = true
 					end
 				end
@@ -2051,6 +1966,105 @@ local function renderViewport(DeltaTime: number)
 		LogMessageHovering = logMessageHoveringWip
 		imgui.endw()
 	end
+end
+
+local function renderViewport(DeltaTime: number)
+	if CurrentStage == "ProjectEditing" and Project.Workspace then
+		local mouseVec = workspace:ScreenPointToVector(PlayerInput:GetCursorPosition(), 1000)
+		local rayresult = if not PlayerInput.IsMouseSunk
+							then Project.Workspace:Raycast(workspace.SceneCamera.Transform.Position, mouseVec, { SelectionPart })
+							else nil
+
+		if rayresult then
+			SelectionPart.Transform = rayresult.Object.Transform
+			SelectionPart.Size = rayresult.Object.Size + vector.create(0.05, 0.05, 0.05)
+			SelectionPart.Parent = workspace
+
+			if PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Left) and isMouseWithinViewport() then
+				if PlayerInput:IsKeyPressed(Enum.Key.LeftControl) then -- left control
+					local sels = DeveloperTools:GetExplorerSelections()
+
+					if not table.find(sels, rayresult.Object) then
+						table.insert(sels, rayresult.Object :: GameObject)
+					end
+
+					DeveloperTools:SetExplorerSelections(sels)
+				else
+					DeveloperTools:SetExplorerSelections({ rayresult.Object })
+				end
+			end
+		else
+			SelectionPart.Parent = nil
+		end
+	else
+		for _, v in PrevSelections do
+			v:Destroy()
+		end
+		PrevSelections = {}
+	end
+
+	local newSelections = DeveloperTools:GetExplorerSelections()
+	local selmap: { [number]: GameObject } = {}
+	for i, sel_ in newSelections do
+		if not sel_:HasComponent("Transform") then
+			continue
+		end
+
+		local sel = (sel_ :: any) :: GameObject & Transform
+		selmap[sel.ObjectId] = sel
+
+		if not PrevSelections[sel.ObjectId] then
+			local new = SelectionPart:Duplicate()
+			-- TODO luau report bug
+			new.Transform, new.Size = sel.Transform, sel.Size + vector.create(0.1, 0.1, 0.1)
+			new.Tint = Color.new(84/255, 150/255, 1)
+			new.Parent = workspace
+			PrevSelections[sel.ObjectId] = new
+		else
+			local box = PrevSelections[sel.ObjectId]
+			box.Transform, box.Size = sel.Transform, sel.Size
+		end
+	end
+
+	for id, box in PrevSelections do
+		local sel = selmap[id]
+		if not sel or not sel:HasComponent("Transform") then
+			box:Destroy()
+			PrevSelections[id] = nil
+		end
+	end
+
+	PluginManager.OnUpdate(DeltaTime, CurrentStage)
+	CoreTools.Update(Project, EditorPreferences, ViewportRenderPosition, ViewportRenderSize, DeltaTime)
+	HistoryView.Render()
+	TagViewer.Render()
+
+	if EditorPreferences.ToolsOpen.BottomBar then
+		local w = Renderer.Resolution
+
+		imgui.setnextwindowposition(0, w.y - 35)
+		imgui.setnextwindowsize(w.x, 35)
+
+		imgui.begin("Bottom Bar", "nt | nd | nr | ns")
+
+		imgui.setcursorposition(imgui.cursorposition() + vector.create(0, 2))
+		imgui.text("> ")
+		imgui.sameline()
+		imgui.setcursorposition(imgui.cursorposition() - vector.create(0, 2))
+
+		CommandBarCommand = imgui.inputstring("##Command", CommandBarCommand)
+		CommandBarActive = imgui.itemactive()
+
+		imgui.sameline()
+
+		local noteStr = `{ Engine.Framerate } FPS ({ CurrentStage }) | { Project.Name }`
+		imgui.text(noteStr)
+		imgui.setitemtooltip(noteStr)
+
+		imgui.endw()
+	end
+
+	renderOutput()
 
 	local canInteract = IsHoveringViewportTitlebar --or (not IsHoveringViewport and imgui.windowhovered("a | b"))
 	local render, open = imgui.begin(Project.Name .. "###Viewport", if canInteract then "nb" else "ni | nb", true)
@@ -2060,7 +2074,7 @@ local function renderViewport(DeltaTime: number)
 	end
 
 	if not render then
-		Engine:SetViewportInputRect(vector.zero, vector.create(1, 1))
+		PlayerInput:SetViewportInputRect(vector.zero, vector.create(1, 1))
 		imgui.endw()
 		return
 	end
@@ -2073,8 +2087,8 @@ local function renderViewport(DeltaTime: number)
 	ViewportRenderPosition = vector.create(w.x, w.y)
 	ViewportRenderSize = vector.create(ws.x, ws.y)
 
-	imgui.setviewportdockspace(0, 19, ews.x, ews.y - (if BottomBarEnabled then 54 else 19))
-	Engine:SetViewportInputRect(ViewportRenderPosition, ViewportRenderSize)
+	imgui.setviewportdockspace(0, 19, ews.x, ews.y - (if EditorPreferences.ToolsOpen.BottomBar then 54 else 19))
+	PlayerInput:SetViewportInputRect(ViewportRenderPosition, ViewportRenderSize)
 
 	ViewportLeft = w.x - 15
 	ViewportRight = w.x + ws.x + 15
@@ -2356,8 +2370,8 @@ function Stages.ProjectEditing_Enter()
 	assert(Project.DataModel)
 	assert(Project.Workspace)
 
-	Engine:SetExplorerRoot(Project.DataModel)
-	Engine:SetExplorerSelections({})
+	DeveloperTools:SetExplorerRoot(Project.DataModel)
+	DeveloperTools:SetExplorerSelections({})
 	Physics.Simulating = false
 	workspace.SceneCamera = Project.Workspace.SceneCamera
 	workspace.SceneCamera.UseSimpleController = true
@@ -2394,8 +2408,8 @@ function Stages.ProjectEditing_Leave(NextStage)
 		return
 	end
 	
-	Engine:SetExplorerRoot(game)
-	Engine:SetExplorerSelections({})
+	DeveloperTools:SetExplorerRoot(game)
+	DeveloperTools:SetExplorerSelections({})
 
 	assert(Project.DataModel)
 	if not EditorPreferences.ClosingProjectSaveRequiresConfirmation
@@ -2423,8 +2437,8 @@ function Stages.ProjectPlaying_Enter(DeltaTime: any)
 	assert(Project.DataModel)
 	Project.DataModel = Project.DataModel:Duplicate()
 
-	Engine:SetExplorerRoot(Project.DataModel)
-	Engine:SetExplorerSelections({})
+	DeveloperTools:SetExplorerRoot(Project.DataModel)
+	DeveloperTools:SetExplorerSelections({})
 	Physics.Simulating = true
 
 	Project.DataModel.VM = GameVM
@@ -2457,7 +2471,7 @@ function Stages.ProjectPlaying_Leave(DeltaTime)
 
 	Project.DataModel:Destroy()
 	Project.DataModel = restoreState
-	Engine:SetExplorerRoot(Project.DataModel)
+	DeveloperTools:SetExplorerRoot(Project.DataModel)
 
 	Engine:BindDataModel(game)
 	Engine:CloseVM(GameVM)

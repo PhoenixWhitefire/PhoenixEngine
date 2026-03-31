@@ -6,4 +6,4 @@
 struct EcDeveloperToolsService : public Component<EntityComponent::DeveloperTools>
 {
     bool Valid = true;
-}
+};

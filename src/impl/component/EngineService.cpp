@@ -7,40 +7,9 @@
 #include "asset/TextureManager.hpp"
 #include "script/ScriptEngine.hpp"
 #include "GlobalJsonConfig.hpp"
-#include "InlayEditor.hpp"
 #include "Version.hpp"
 #include "Engine.hpp"
 #include "FileRW.hpp"
-
-static const std::string_view Tools[] = {
-    "Tool_Explorer",
-    "Tool_Properties",
-    "Tool_Materials",
-    "Tool_Shaders",
-    "Tool_Renderer",
-    "Tool_Info",
-    "Tool_Scripts",
-    "Tool_Documentation"
-};
-
-static std::string checkValidTool(std::string toolName)
-{
-    bool isValidTool = false;
-
-    for (const std::string_view& tool : Tools)
-    {
-        if (tool == toolName)
-        {
-            isValidTool = true;
-            break;
-        }
-    }
-
-    if (!isValidTool)
-        RAISE_RTF("Invalid tool '{}'", toolName);
-
-    return toolName;
-}
 
 // Also in `ScriptEngine.cpp`!!
 #define JSON_ENCODED_DATA_TAG "__HX_EncodedData"
@@ -338,52 +307,6 @@ public:
                 }
             } },
 
-            { "SetExplorerRoot", Reflection::MethodDescriptor{
-                { Reflection::ValueType::GameObject },
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    InlayEditor::SetExplorerRoot(GameObject::FromGenericValue(inputs[0]));
-
-                    return {};
-                }
-            } },
-
-            { "SetExplorerSelections", Reflection::MethodDescriptor{
-                { Reflection::ValueType::Array },
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    const std::span<Reflection::GenericValue>& inner = inputs[0].AsArray();
-
-                    std::vector<ObjectHandle> objects;
-                    objects.reserve(inner.size());
-
-                    for (const Reflection::GenericValue& gv : inner)
-                        objects.emplace_back(GameObject::FromGenericValue(gv));
-
-                    InlayEditor::SetExplorerSelections(objects);
-                    return {};
-                }
-            } },
-
-            { "GetExplorerSelections", Reflection::MethodDescriptor{
-                {},
-                { Reflection::ValueType::Array },
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
-                {
-                    const auto& sels = InlayEditor::GetExplorerSelections();
-
-                    std::vector<Reflection::GenericValue> out;
-                    out.reserve(sels.size());
-
-                    for (const ObjectHandle& obj : sels)
-                        out.push_back(obj->ToGenericValue());
-
-                    return { Reflection::GenericValue(out) };
-                }
-            } },
-
             { "CreateVM", Reflection::MethodDescriptor{
                 { Reflection::ValueType::String },
                 {},
@@ -475,42 +398,6 @@ public:
                 }
             } },
 
-            { "GetToolNames", Reflection::MethodDescriptor{
-                {},
-                { Reflection::ValueType::Array },
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
-                {
-                    std::vector<Reflection::GenericValue> out;
-                    out.reserve(std::size(Tools));
-
-                    for (const std::string_view& tool : Tools)
-                        out.emplace_back(tool);
-
-                    return { Reflection::GenericValue(out) };
-                }
-            } },
-
-            { "SetToolEnabled", Reflection::MethodDescriptor{
-                { Reflection::ValueType::String, Reflection::ValueType::Boolean },
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    std::string requestedTool = checkValidTool(std::string(inputs[0].AsStringView()));
-                    EngineJsonConfig[requestedTool] = inputs[1].AsBoolean();
-
-                    return {};
-                }
-            } },
-
-            { "IsToolEnabled", Reflection::MethodDescriptor{
-                { Reflection::ValueType::String },
-                { Reflection::ValueType::Boolean },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    return { EngineJsonConfig.value(checkValidTool(std::string(inputs[0].AsStringView())), false) };
-                }
-            } },
-
             { "ShowMessageBox", Reflection::MethodDescriptor{
                 { Reflection::ValueType::String, Reflection::ValueType::String, REFLECTION_OPTIONAL(String), REFLECTION_OPTIONAL(String), REFLECTION_OPTIONAL(Integer) },
                 { Reflection::ValueType::Integer },
@@ -562,50 +449,6 @@ public:
                         out.emplace_back(engine->argv[i]);
 
                     return { Reflection::GenericValue(out) };
-                }
-            } },
-
-            { "SetViewportInputRect", Reflection::MethodDescriptor{
-                { Reflection::ValueType::Vector2, Reflection::ValueType::Vector2 },
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    Engine* engine = Engine::Get();
-                    glm::vec2 viewportPosition = inputs[0].AsVector2();
-                    glm::vec2 viewportSize = inputs[1].AsVector2();
-
-                    engine->ViewportInputPosition = { viewportPosition.x, viewportPosition.y };
-                    engine->OverrideViewportInputSize = { viewportSize.x, viewportSize.y };
-                    engine->OverrideDefaultViewportInputRect = true;
-
-                    return {};
-                }
-            } },
-
-            { "ResetViewportInputRect", Reflection::MethodDescriptor{
-                {},
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
-                {
-                    Engine* engine = Engine::Get();
-                    engine->OverrideDefaultViewportInputRect = false;
-                    engine->ViewportInputPosition = {};
-
-                    return {};
-                }
-            } },
-
-            { "OpenTextDocument", Reflection::MethodDescriptor{
-                { Reflection::ValueType::String, REFLECTION_OPTIONAL(Integer) },
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    InlayEditor::OpenTextDocument(
-                        inputs[0].AsString(),
-                        inputs.size() > 1 ? (int)inputs[1].AsInteger() : 1
-                    );
-
-                    return {};
                 }
             } },
 

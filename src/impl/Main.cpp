@@ -307,8 +307,8 @@ static void init()
 		if (EngineJsonConfig.value("Developer", false))
 		{
 			Log.Info("Developer-mode specific functionality");
-			InlayEditor::Initialize(&engine->RendererContext);
-			engine->OnFrameRenderGui.Connect(drawDeveloperUI);
+			DeveloperTools::Initialize(&engine->RendererContext);
+			engine->OnFrameRenderGui.Connect(&DeveloperTools::Frame);
 		}
 	}
 
@@ -515,7 +515,7 @@ int main(int argc, char** argv)
 		Logging::Save(); // in case FileRW::WriteFile throws an exception
 		
 		s_ExitCode = engine.ExitCode;
-		InlayEditor::Shutdown();
+		DeveloperTools::Shutdown();
 		engine.Shutdown();
 	}
 	PHX_MAIN_CRASHHANDLERS;

@@ -43,6 +43,7 @@
 #include "UserInput.hpp"
 #include "History.hpp"
 #include "Timing.hpp"
+#include "Engine.hpp"
 #include "Memory.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
@@ -4003,7 +4004,7 @@ static std::string exec(const char* cmd)
 
 #endif
 
-static void launchTracy()
+void DeveloperTools::LaunchTracy()
 {
 #ifdef TRACY_ENABLE
 	if (!std::filesystem::is_regular_file(TRACY_PATH))
@@ -4092,7 +4093,7 @@ static void renderInfo(double DeltaTime)
 #ifdef TRACY_ENABLE
 		// 13/01/2025 hi hihihi hihiihii
 		if (!WasTracyLaunched && ImGui::Button("Open Profiler"))
-			launchTracy();
+			DeveloperTools::LaunchTracy();
 #endif
 
 		static bool AreGraphsPaused = false;
@@ -4372,7 +4373,7 @@ void DeveloperTools::Frame(double DeltaTime)
 	renderFilesViewer();
 	renderProperties();
 	renderDocumentationViewer();
-	renderInfo();
+	renderInfo(DeltaTime);
 	renderRendererSettings();
 }
 

@@ -1,6 +1,6 @@
 -- TagEditor.luau, 01/02/2026
+local DeveloperTools = game:GetService("DeveloperTools")
 local Collections = game:GetService("Collections")
-local Engine = game:GetService("Engine")
 
 local Viewer = {}
 Viewer.Open = false
@@ -24,12 +24,12 @@ function Viewer.Render()
     for _, tag in tags do
         if imgui.treenode(tag, "ar | dlf") then
             if imgui.itemclicked() then
-                Engine:SetExplorerSelections(Collections:GetTagged(tag))
+                DeveloperTools:SetExplorerSelections(Collections:GetTagged(tag))
             end
 
             for _, object in Collections:GetTagged(tag) do
                 if imgui.textlink(object:GetFullName()) then
-                    Engine:SetExplorerSelections({ object })
+                    DeveloperTools:SetExplorerSelections({ object })
                 end
             end
 

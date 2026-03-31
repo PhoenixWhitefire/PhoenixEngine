@@ -90,6 +90,30 @@
           "VM": "String"
         }
       },
+      "DeveloperTools": {
+        "Methods": {
+          "GetExplorerSelections": "() -> (Array)",
+          "GetToolNames": "() -> (Array)",
+          "Initialize": "() -> ()",
+          "IsToolEnabled": "(String) -> (Boolean)",
+          "OpenTextDocument": "(String, Integer?) -> ()",
+          "SetExplorerRoot": "(GameObject) -> ()",
+          "SetExplorerSelections": "(Array) -> ()",
+          "SetToolEnabled": "(String, Boolean) -> ()"
+        },
+        "Properties": {
+          "DocumentationShown": "Boolean",
+          "ExplorerShown": "Boolean",
+          "InfoShown": "Boolean",
+          "Initialized": "Boolean READONLY",
+          "MaterialsShown": "Boolean",
+          "PropertiesShown": "Boolean",
+          "RendererShown": "Boolean",
+          "ScriptsShown": "Boolean",
+          "SettingsShown": "Boolean",
+          "ShadersShown": "Boolean"
+        }
+      },
       "DirectionalLight": {
         "Properties": {
           "Brightness": "Double",
@@ -114,18 +138,9 @@
           "Exit": "(Integer?) -> ()",
           "GetCliArguments": "() -> (Array)",
           "GetConfigValue": "(String) -> (Any)",
-          "GetExplorerSelections": "() -> (Array)",
-          "GetToolNames": "() -> (Array)",
-          "IsToolEnabled": "(String) -> (Boolean)",
-          "OpenTextDocument": "(String, Integer?) -> ()",
-          "ResetViewportInputRect": "() -> ()",
           "RunInVM": "(String, String, String?) -> (Boolean, String?)",
           "SaveConfig": "() -> (Boolean, String)",
           "SetConfigValue": "(String, Any) -> ()",
-          "SetExplorerRoot": "(GameObject) -> ()",
-          "SetExplorerSelections": "(Array) -> ()",
-          "SetToolEnabled": "(String, Boolean) -> ()",
-          "SetViewportInputRect": "(Vector2, Vector2) -> ()",
           "ShowMessageBox": "(String, String, String?, String?, Integer?) -> (Integer)"
         },
         "Properties": {
@@ -227,7 +242,9 @@
         "Methods": {
           "GetCursorPosition": "() -> (Vector2)",
           "IsKeyPressed": "(Integer) -> (Boolean)",
-          "IsMouseButtonPressed": "(Integer) -> (Boolean)"
+          "IsMouseButtonPressed": "(Integer) -> (Boolean)",
+          "ResetViewportInputRect": "() -> ()",
+          "SetViewportInputRect": "(Vector2, Vector2) -> ()"
         },
         "Properties": {
           "Cursor": "Integer",

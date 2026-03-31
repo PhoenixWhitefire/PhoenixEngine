@@ -150,7 +150,7 @@ export type HistoryAction = {
 
 definitionsFile ..= "\ntype Services = {\n"
 
-for _, s in { "Engine", "PlayerInput", "AssetManager", "History", "Physics", "Renderer", "Collections", "Network", "Logging", "Interface", "Environment" } do
+for _, s in { "Engine", "PlayerInput", "AssetManager", "History", "Physics", "Renderer", "Collections", "Network", "Logging", "Interface", "Environment", "DeveloperTools" } do
 	definitionsFile ..= `  {s}: {s},\n`
 end
 
@@ -752,7 +752,7 @@ for _, k in orderedComponents do
 	if k == "GameObject" then
 		v = apiDump.GameObject.Base
 		vd = docComments.GameObject.Base
-		isExternType = true
+		--isExternType = true
 	end
 
 	definitionsFile ..= if isExternType then `declare extern type { k } with\n` else `export type { k } = \{\n`
@@ -773,7 +773,7 @@ for _, k in orderedComponents do
 		components ..= "\n"
 	end
 
-	components ..= dumpReflectionApi(v, vd, k, k == "GameObject")
+	components ..= dumpReflectionApi(v, vd, k, isExternType)
 
 	if isExternType then
 		definitionsFile ..= "end\n"

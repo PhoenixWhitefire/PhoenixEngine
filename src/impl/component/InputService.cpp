@@ -14,6 +14,7 @@
 #include "component/InputService.hpp"
 #include "UserInput.hpp"
 #include "Utilities.hpp"
+#include "Engine.hpp"
 
 static GLFWcursor* DevCursor = nullptr;
 static int DevCursorId = GLFW_ARROW_CURSOR;
@@ -125,6 +126,36 @@ public:
                     glfwGetCursorPos(glfwGetCurrentContext(), &x, &y);
 
                     return { glm::vec2(x, y) };
+                }
+            } },
+
+            { "SetViewportInputRect", Reflection::MethodDescriptor{
+                { Reflection::ValueType::Vector2, Reflection::ValueType::Vector2 },
+                {},
+                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                {
+                    Engine* engine = Engine::Get();
+                    glm::vec2 viewportPosition = inputs[0].AsVector2();
+                    glm::vec2 viewportSize = inputs[1].AsVector2();
+
+                    engine->ViewportInputPosition = { viewportPosition.x, viewportPosition.y };
+                    engine->OverrideViewportInputSize = { viewportSize.x, viewportSize.y };
+                    engine->OverrideDefaultViewportInputRect = true;
+
+                    return {};
+                }
+            } },
+
+            { "ResetViewportInputRect", Reflection::MethodDescriptor{
+                {},
+                {},
+                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+                {
+                    Engine* engine = Engine::Get();
+                    engine->OverrideDefaultViewportInputRect = false;
+                    engine->ViewportInputPosition = {};
+
+                    return {};
                 }
             } },
         };

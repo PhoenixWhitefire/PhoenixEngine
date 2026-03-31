@@ -1,3 +1,4 @@
+local DeveloperTools = game:GetService("DeveloperTools")
 local PlayerInput = game:GetService("PlayerInput")
 local History = game:GetService("History")
 local Engine = game:GetService("Engine")
@@ -173,12 +174,12 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
         return
     end
 
-    local selections = Engine:GetExplorerSelections()
+    local selections = DeveloperTools:GetExplorerSelections()
     local target: (GameObject & Transform)? = (if selections[1] and selections[1]:HasComponent("Transform") then selections[1] else nil) :: any
 
     if IsSurfaceDragging or IsGizmoDragging then
         if GizmoPrevTarget and (not target or target ~= GizmoPrevTarget) then
-            Engine:SetExplorerSelections({ GizmoPrevTarget })
+            DeveloperTools:SetExplorerSelections({ GizmoPrevTarget })
             target = GizmoPrevTarget
         end
     end
