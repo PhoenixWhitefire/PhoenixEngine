@@ -28,7 +28,7 @@
 #include <fstream>
 #include <set>
 
-#include "InlayEditor.hpp"
+#include "DeveloperTools.hpp"
 
 #include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
@@ -42,11 +42,10 @@
 #include "Utilities.hpp"
 #include "UserInput.hpp"
 #include "History.hpp"
+#include "Timing.hpp"
 #include "Memory.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
-
-bool InlayEditor::DidInitialize = false;
 
 constexpr uint32_t OBJECT_NEW_CLASSNAME_BUFSIZE = 16;
 constexpr uint32_t MATERIAL_NEW_NAME_BUFSIZE = 64;
@@ -283,7 +282,7 @@ static std::string findLuauTypeFromDocumentation(const nlohmann::json& Docs, con
 	return RuntimeType;
 }
 
-void InlayEditor::Initialize(Renderer* renderer)
+void DeveloperTools::Initialize(Renderer* renderer)
 {
 	MtlEditorPreview.Initialize(256, 256);
 	MtlPreviewRenderer = renderer;
@@ -431,7 +430,7 @@ void InlayEditor::Initialize(Renderer* renderer)
 	tempwp->Destroy();
 	tempdm->Destroy();
 
-	InlayEditor::DidInitialize = true;
+	DeveloperTools::Initialized = true;
 }
 
 static const char* mtlIterator(void*, int index)
@@ -936,20 +935,14 @@ static void renderShaderPipelinesEditor()
 {
 	ZoneScopedC(tracy::Color::DarkSeaGreen);
 
-	if (EngineJsonConfig["Tool_Shaders"] == false)
+	if (!DeveloperTools::ShadersShown)
 		return;
 
-	bool open = true;
-
-	if (!ImGui::Begin("Shader Pipelines", &open))
+	if (!ImGui::Begin("Shader Pipelines", &DeveloperTools::ShadersShown))
 	{
 		ImGui::End();
-
 		return;
 	}
-
-	if (!open)
-		EngineJsonConfig["Tool_Shaders"] = false;
 
 	ShaderManager* shdManager = ShaderManager::Get();
 	std::vector<ShaderProgram>& shaders = shdManager->GetLoadedShaders();
@@ -1164,19 +1157,14 @@ static void renderMaterialEditor()
 {
 	ZoneScopedC(tracy::Color::DarkSeaGreen);
 
-	if (EngineJsonConfig["Tool_Materials"] == false)
+	if (!DeveloperTools::MaterialsShown)
 		return;
 
-	bool open = true;
-
-	if (!ImGui::Begin("Materials", &open))
+	if (!ImGui::Begin("Materials", &DeveloperTools::MaterialsShown))
 	{
 		ImGui::End();
 		return;
 	}
-
-	if (!open)
-		EngineJsonConfig["Tool_Materials"] = false;
 
 	MaterialManager* mtlManager = MaterialManager::Get();
 	TextureManager* texManager = TextureManager::Get();
@@ -1959,7 +1947,7 @@ static void propertyTooltip(const std::string_view& PropName, EntityComponent Co
 		{
 			if (ImGui::TextLink(PropName.data()))
 			{
-				EngineJsonConfig["Tool_Documentation"] = true;
+				DeveloperTools::DocumentationShown = true;
 				DocumentationViewerSection = 0;
 				DocumentationViewerSubPage = (int)Component;
 			}
@@ -2109,14 +2097,10 @@ static void renderApiMemberBulletpoint(const nlohmann::json::const_iterator& mem
 
 static void renderDocumentationViewer()
 {
-	if (!EngineJsonConfig.value("Tool_Documentation", false))
+	if (!DeveloperTools::DocumentationShown)
 		return;
 
-	bool open = true;
-	bool render = ImGui::Begin("Documentation Viewer", &open);
-	EngineJsonConfig["Tool_Documentation"] = open;
-
-	if (!render)
+	if (!ImGui::Begin("Documentation Viewer", &DeveloperTools::DocumentationShown))
 	{
 		ImGui::End();
 		return;
@@ -2468,7 +2452,7 @@ static void renderExplorer()
 		}
 	}
 
-	if (EngineJsonConfig["Tool_Explorer"] == false)
+	if (!DeveloperTools::ExplorerShown)
 		return;
 
 	if (ExplorerShouldSeekToCurrentSelection && Selections.size() == 0)
@@ -2477,13 +2461,7 @@ static void renderExplorer()
 	if (ExplorerShouldSeekToCurrentSelection)
 		ImGui::SetNextWindowFocus();
 
-	bool open = true;
-	bool render = ImGui::Begin("Explorer", &open);
-
-	if (!open)
-		EngineJsonConfig["Tool_Explorer"] = false;
-
-	if (!render)
+	if (!ImGui::Begin("Explorer", &DeveloperTools::ExplorerShown))
 	{
 		ImGui::End();
 		return;
@@ -2496,7 +2474,7 @@ static void renderExplorer()
 	{
 		if (ImGui::IsKeyDown(ImGuiKey_F2) && Selections.size() > 0)
 		{
-			EngineJsonConfig["Tool_Properties"] = true;
+			DeveloperTools::PropertiesShown = true;
 			FocusRenameSelection = true;
 		}
 
@@ -2994,19 +2972,13 @@ static void recursiveRenderFilesystemNode(FilesystemNode& Node)
 
 static void renderFilesViewer()
 {
-	if (EngineJsonConfig["Tool_Scripts"] == false)
+	if (!DeveloperTools::ScriptsShown)
 		return;
 
 	std::string name = FilesViewerRoot.Name;
 	name[0] = toupper(name[0]);
 
-	bool open = true;
-	bool render = ImGui::Begin(std::format("{}###FilesViewer", name).c_str(), &open);
-
-	if (!open)
-		EngineJsonConfig["Tool_Scripts"] = false;
-
-	if (!render)
+	if (!ImGui::Begin(std::format("{}###FilesViewer", name).c_str(), &DeveloperTools::ScriptsShown))
 	{
 		ImGui::End();
 		return;
@@ -3291,7 +3263,7 @@ static bool renderPropertyAssetSelector(const std::string_view& PropertyName, fl
 
 					if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
 					{
-						EngineJsonConfig["Tool_Materials"] = true;
+						DeveloperTools::MaterialsShown = true;
 						MtlCurItem = i;
 					}
 
@@ -3310,16 +3282,10 @@ static void renderProperties()
 {
 	ZoneScoped;
 
-	if (EngineJsonConfig["Tool_Properties"] == false)
+	if (!DeveloperTools::PropertiesShown)
 		return;
 
-	bool open = true;
-	bool render = ImGui::Begin("Properties", &open, ImGuiWindowFlags_HorizontalScrollbar);
-
-	if (!open)
-		EngineJsonConfig["Tool_Properties"] = false;
-
-	if (!render)
+	if (!ImGui::Begin("Properties", &DeveloperTools::PropertiesShown, ImGuiWindowFlags_HorizontalScrollbar))
 	{
 		ImGui::End();
 		return;
@@ -3376,7 +3342,7 @@ static void renderProperties()
 			}
 			else if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
 			{
-				EngineJsonConfig["Tool_Documentation"] = true;
+				DeveloperTools::DocumentationShown = true;
 				DocumentationViewerSection = 0;
 				DocumentationViewerSubPage = (int)ec;
 				DocumentationViewerJumpingToPage = true;
@@ -3423,7 +3389,7 @@ static void renderProperties()
 
 			if (ImGui::MenuItem("Info"))
 			{
-				EngineJsonConfig["Tool_Documentation"] = true;
+				DeveloperTools::DocumentationShown = true;
 				DocumentationViewerSection = 0;
 				DocumentationViewerSubPage = (int)RemoveComponentPopupTarget;
 				DocumentationViewerJumpingToPage = true;
@@ -3743,7 +3709,7 @@ static void renderProperties()
 								GameObject* target = GameObject::FromGenericValue(newVal);
 								Selections = { target };
 								ExplorerShouldSeekToCurrentSelection = true;
-								EngineJsonConfig["Tool_Explorer"] = true;
+								DeveloperTools::ExplorerShown = true;
 							}
 							else
 								Selections.clear();
@@ -3998,7 +3964,396 @@ static void renderProperties()
 	ImGui::End();
 }
 
-void InlayEditor::UpdateAndRender(double DeltaTime)
+#ifdef _WIN32
+
+#define popen _popen
+#define pclose _pclose
+
+// 13/01/2025 windows and it's quirkyness
+#define TRACY_PATH "Vendor\\tracy\\profiler\\build\\Release\\tracy-profiler.exe"
+#define LAUNCH_TRACY_CMD "\"" TRACY_PATH "\" -a 127.0.0.1 -p 8086"
+
+#else
+
+#define TRACY_PATH "Vendor/tracy/profiler/build/tracy-profiler"
+#define LAUNCH_TRACY_CMD TRACY_PATH " -a 127.0.0.1 -p 8086"
+
+#endif
+
+#ifdef TRACY_ENABLE
+
+static bool WasTracyLaunched = false;
+
+// 13/01/2025: https://stackoverflow.com/a/478960
+static std::string exec(const char* cmd)
+{
+	std::array<char, 128> buffer{ 0 };
+	std::string result;
+	FILE* pipe = popen(cmd, "r");
+
+	if (!pipe)
+		RAISE_RT("popen() failed!");
+
+	while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe) != nullptr)
+		result += buffer.data();
+
+	pclose(pipe);
+	return result;
+}
+
+#endif
+
+static void launchTracy()
+{
+#ifdef TRACY_ENABLE
+	if (!std::filesystem::is_regular_file(TRACY_PATH))
+	{
+		tinyfd_messageBox(
+			"Tracy Integration",
+			"The Tracy Profiler was not found in the expected location ('" TRACY_PATH "')"
+				" and cannot be launched.\nIt may have not been built or may have been misconfigured.",
+			"ok",
+			"error",
+			1
+		);
+		return;
+	}
+
+	if (WasTracyLaunched)
+		RAISE_RT("Tried to launch Tracy twice in one session");
+	WasTracyLaunched = true;
+
+	std::thread(
+		[]()
+		{
+			exec(LAUNCH_TRACY_CMD);
+		}
+	).detach();
+
+#else
+
+	tinyfd_messageBox(
+		"Tracy Integration",
+		"Instrumentation was disabled for this build. You need to use a build with the `TRACY_ENABLE` macro definition.",
+		"ok",
+		"info",
+		1
+	);
+
+#endif
+}
+
+static void renderInfo(double DeltaTime)
+{
+	ZoneScopedC(tracy::Color::DarkOliveGreen);
+
+	Engine* engine = Engine::Get();
+
+	// We need to keep track of two different states,
+	// Whether we called `ImGui::Begin`, and whether the developer closed the window
+	// `ImGui::End` always needs to be called when `beganInfo` is `true`, even if
+	// `infoOpen` becomes `false`
+	bool beganInfo = DeveloperTools::InfoShown;
+	bool infoOpen = beganInfo;
+
+	if (beganInfo && ImGui::Begin("Info", &infoOpen))
+	{
+		constexpr size_t GraphDatapoints = 512;
+
+		static std::array<double[255], GraphDatapoints> TimersHist;
+		static std::array<decltype(Memory::Counters), GraphDatapoints> HeapUsageHist;
+		static std::array<decltype(Memory::Counters), GraphDatapoints> HeapActivityHist;
+		static size_t GraphPointer = 0;
+
+		const double* times = Timing::FinalFrameTimes;
+		const std::array<std::atomic_size_t, (size_t)Memory::Category::__count>& memcounts = Memory::Counters;
+
+		uint8_t numTimers = Timing::StaticMagicTimerThing::s_NumTimers;
+
+		// 0 - EntireFrame, 1 - FrameSleep, 2 - FrameWork, ...
+		assert(strcmp(Timing::TimerNames[2], "FrameWork") == 0);
+		size_t frameTime = static_cast<size_t>(times[1] * 1000);
+
+		static bool IsSamplingStats = false;
+		static std::string SampledCsv;
+
+		ImGui::Text("FPS: %d", engine->FramesPerSecond);
+		ImGui::Text("Frame time: %zims", frameTime);
+		ImGui::Text("Draw calls: %u", engine->RendererContext.AccumulatedDrawCallCount);
+
+		if (IsSamplingStats)
+			SampledCsv.append(std::format(
+				"{},{},{},",
+				engine->FramesPerSecond,
+				frameTime,
+				engine->RendererContext.AccumulatedDrawCallCount
+			));
+
+#ifdef TRACY_ENABLE
+		// 13/01/2025 hi hihihi hihiihii
+		if (!WasTracyLaunched && ImGui::Button("Open Profiler"))
+			launchTracy();
+#endif
+
+		static bool AreGraphsPaused = false;
+
+		ImGui::BeginChild("Graphs", ImVec2(), ImGuiChildFlags_Borders);
+
+		ImGuiStyle style = ImGui::GetStyle();
+		ImGui::SetCursorPosY(ImGui::GetCursorPosY() - style.FramePadding.y);
+
+		if (AreGraphsPaused)
+		{
+			if (ImGui::Button("Resume"))
+				AreGraphsPaused = false;
+		}
+		else if (ImGui::Button("Pause"))
+				AreGraphsPaused = true;
+
+		ImGui::SameLine();
+		ImGui::SetCursorPosY(ImGui::GetCursorPosY() - style.FramePadding.y);
+
+		ImGui::Text("graphs");
+
+		if (!AreGraphsPaused)
+		{
+			memcpy(TimersHist[GraphPointer], times, sizeof(double) * 255);
+
+			for (size_t i = 0; i < HeapUsageHist[GraphPointer].size(); i++)
+			{
+				HeapUsageHist[GraphPointer][i] = Memory::Counters[i].load();
+				HeapActivityHist[GraphPointer][i] = Memory::Activity[i].load();
+			}
+
+			GraphPointer = (GraphPointer + 1) % GraphDatapoints;
+		}
+
+		ImGui::SeparatorText("Timers");
+		ImGui::PushID("Timers");
+
+		for (int i = 0; i < numTimers; i++)
+		{
+			bool open = ImGui::TreeNodeEx(
+				(void*)(int64_t)i,
+				ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth,
+				"%s: %zims",
+				Timing::TimerNames[i],
+				static_cast<size_t>(times[i] * 1000)
+			);
+
+			if (open)
+			{
+				float usageValues[GraphDatapoints] = { 0 };
+
+				for (size_t hi = 0; hi < GraphDatapoints; hi++)
+					usageValues[hi] = (float)TimersHist[hi][i] * 1000.f;
+
+				ImGui::PlotLines("##", usageValues, GraphDatapoints, 0, nullptr, FLT_MAX, FLT_MAX, ImVec2(0, 100));
+
+				ImGui::TreePop(); // ocornut why do you do this to me
+			}
+		}
+
+		if (IsSamplingStats)
+			for (int i = 0; i < numTimers; i++)
+				SampledCsv.append(std::to_string(times[i]) + ",");
+
+		ImGui::PopID();
+		ImGui::SeparatorText("Heap");
+		ImGui::PushID("Heap");
+
+		for (int i = 0; i < (int)Memory::Category::__count; i++)
+		{
+			bool open = ImGui::TreeNodeEx(
+				(void*)(int64_t)i,
+				ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth,
+				"%s: %.2f KB",
+				Memory::CategoryNames[i],
+				(float)memcounts[i].load() / 1000.f
+			);
+
+			if (open)
+			{
+				float usageValues[GraphDatapoints] = { 0 };
+				float activityValues[GraphDatapoints] = { 0 };
+
+				for (size_t hi = 0; hi < GraphDatapoints; hi++)
+				{
+					usageValues[hi] = (float)HeapUsageHist[hi][i];
+					activityValues[hi] = (float)HeapActivityHist[hi][i];
+				}
+
+				ImGui::PlotLines("Usage", usageValues, GraphDatapoints, 0, nullptr, FLT_MAX, FLT_MAX, ImVec2(0, 100));
+				ImGui::PlotLines("Activity", activityValues, GraphDatapoints, 0, nullptr, FLT_MAX, FLT_MAX, ImVec2(0, 100));
+
+				ImGui::TreePop(); // ocornut why do you do this to me
+			}
+		}
+
+		if (IsSamplingStats)
+			for (int i = 0; i < (int)Memory::Category::__count; i++)
+				SampledCsv += std::to_string(memcounts[i]) + ",";
+
+		ImGui::PopID();
+		ImGui::EndChild();
+
+		ImGui::SeparatorText("Sampling");
+
+		static double NumSecondsSampled = 0.f;
+		static size_t NumFramesSampled = 0;
+
+		if (IsSamplingStats)
+		{
+			NumSecondsSampled += DeltaTime;
+			NumFramesSampled++;
+
+			ImGui::Text("Sampled %zi frames over %.1f seconds", NumFramesSampled, NumSecondsSampled);
+			ImGui::Text("Total size: %zi bytes (%zi bytes memory)", SampledCsv.size(), SampledCsv.capacity());
+
+			if (ImGui::Button("End sampling & save to CSV"))
+			{
+				const char* filters[] = { ".csv" };
+
+				const char* path = tinyfd_saveFileDialog(
+					"Save Stats CSV",
+					std::filesystem::current_path().string().c_str(),
+					1,
+					filters,
+					"Comma-Separated Value files"
+				);
+
+				if (path)
+				{
+					std::string err;
+					if (FileRW::WriteFile(path, SampledCsv, &err))
+					{
+						IsSamplingStats = false;
+					}
+					else
+					{
+						tinyfd_messageBox(
+							"Failed to save",
+							std::format("Couldn't save the CSV file to '{}': {}", path, err).c_str(),
+							"ok",
+							"error",
+							1
+						);
+					}
+				}
+				else
+				{
+					Log.Info("User did not select a save file path for the stats CSV");
+					IsSamplingStats = false;
+				}
+			}
+
+			SampledCsv += "\n";
+		}
+		else
+			if (ImGui::Button("Begin sampling"))
+			{
+				IsSamplingStats = true;
+				SampledCsv = "FPS,Frame Time,Draw Calls,";
+				NumSecondsSampled = 0.f;
+				NumFramesSampled = 0;
+
+				for (int i = 0; i < numTimers; i++)
+					SampledCsv += Timing::TimerNames[i] + std::string(",");
+				for (int i = 0; i < (int)Memory::Category::__count; i++)
+					SampledCsv += Memory::CategoryNames[i] + std::string(",");
+
+				SampledCsv += "\n";
+			}
+	}
+	if (beganInfo)
+		ImGui::End();
+
+	if (!infoOpen)
+		DeveloperTools::InfoShown = false;
+}
+
+static void renderRendererSettings()
+{
+	ZoneScopedC(tracy::Color::DarkOliveGreen);
+	Engine* engine = Engine::Get();
+
+	bool beganSettings = DeveloperTools::RendererShown != false;
+	bool settingsOpen = beganSettings;
+
+	if (beganSettings && ImGui::Begin("Renderer", &settingsOpen))
+	{
+		ImGui::Checkbox("VSync", &engine->VSync);
+
+		bool fullscreen = engine->IsFullscreen;
+		ImGui::Checkbox("Fullscreen", &fullscreen);
+
+		if (engine->IsFullscreen != fullscreen)
+			engine->SetIsFullscreen(fullscreen);
+
+		if (!engine->VSync)
+			ImGui::InputInt("FPS limit", &engine->FpsCap, 1, 30);
+
+		bool postFxEnabled = EngineJsonConfig.value("postfx_enabled", false);
+
+		ImGui::Checkbox("Post-Processing", &postFxEnabled);
+
+		EngineJsonConfig["postfx_enabled"] = postFxEnabled;
+
+		if (postFxEnabled)
+		{
+			float gammaCorrection = EngineJsonConfig.value("postfx_gamma", 1.f);
+
+			ImGui::InputFloat("Gamma", &gammaCorrection);
+
+			EngineJsonConfig["postfx_gamma"] = gammaCorrection;
+
+			bool blurVignette = EngineJsonConfig.value("postfx_blurvignette", false);
+			bool distortion = EngineJsonConfig.value("postfx_distortion", false);
+
+			ImGui::Checkbox("Blur vignette", &blurVignette);
+			ImGui::Checkbox("Distortion", &distortion);
+
+			EngineJsonConfig["postfx_blurvignette"] = blurVignette;
+			EngineJsonConfig["postfx_distortion"] = distortion;
+
+			if (EngineJsonConfig["postfx_blurvignette"])
+			{
+				float distFactorMultiplier = EngineJsonConfig.value("postfx_blurvignette_blurstrength", 2.f);
+				float weightExponent = EngineJsonConfig.value("postfx_blurvignette_weightexp", 2.f);
+				float weightMultiplier = EngineJsonConfig.value("postfx_blurvignette_weightmul", 2.5f);
+				float sampleRadius = EngineJsonConfig.value("postfx_blurvignette_sampleradius", 4.f);
+
+				ImGui::InputFloat("Vignette dist weight factor", &distFactorMultiplier);
+				ImGui::InputFloat("Vignette weight exponent", &weightExponent);
+				ImGui::InputFloat("Vignette weight multiplier", &weightMultiplier);
+				ImGui::InputFloat("Vignette sample radius", &sampleRadius);
+
+				EngineJsonConfig["postfx_blurvignette_blurstrength"] = distFactorMultiplier;
+				EngineJsonConfig["postfx_blurvignette_weightexp"] = weightExponent;
+				EngineJsonConfig["postfx_blurvignette_weightmul"] = weightMultiplier;
+				EngineJsonConfig["postfx_blurvignette_sampleradius"] = sampleRadius;
+			}
+		}
+
+		if (ImGui::Button("Save Post FX settings"))
+		{
+			PHX_CHECK(FileRW::WriteFile("phoenix.conf", EngineJsonConfig.dump(2)));
+			Log.Info("The JSON Config overwrote the pre-existing 'phoenix.conf'.");
+		}
+
+		ImGui::Checkbox("Wireframe rendering", &engine->DebugWireframeRendering);
+		ImGui::Checkbox("Debug Collision AABBs", &Physics::Get()->DebugCollisionAabbs);
+		ImGui::Checkbox("Debug Spatial Heat", &Physics::Get()->DebugSpatialHeat);
+		ImGui::Checkbox("Debug Contact Points", &Physics::Get()->DebugContactPoints);
+	}
+	if (beganSettings)
+		ImGui::End();
+
+	if (!settingsOpen)
+		DeveloperTools::RendererShown = false;
+}
+
+void DeveloperTools::Frame(double DeltaTime)
 {
 	ZoneScopedC(tracy::Color::DarkSeaGreen);
 
@@ -4017,21 +4372,23 @@ void InlayEditor::UpdateAndRender(double DeltaTime)
 	renderFilesViewer();
 	renderProperties();
 	renderDocumentationViewer();
+	renderInfo();
+	renderRendererSettings();
 }
 
-void InlayEditor::SetExplorerRoot(const ObjectHandle NewRoot)
+void DeveloperTools::SetExplorerRoot(const ObjectHandle NewRoot)
 {
 	ExplorerRoot = NewRoot;
 }
 
-void InlayEditor::SetExplorerSelections(const std::vector<ObjectHandle>& NewSelections)
+void DeveloperTools::SetExplorerSelections(const std::vector<ObjectHandle>& NewSelections)
 {
 	Selections = NewSelections;
 	ExplorerShouldSeekToCurrentSelection = true;
-	EngineJsonConfig["Tool_Explorer"] = true;
+	DeveloperTools::ExplorerShown = true;
 }
 
-const std::vector<ObjectHandle>& InlayEditor::GetExplorerSelections()
+const std::vector<ObjectHandle>& DeveloperTools::GetExplorerSelections()
 {
 	for (size_t i = 0; i < Selections.size(); i++)
 	{
@@ -4048,13 +4405,13 @@ const std::vector<ObjectHandle>& InlayEditor::GetExplorerSelections()
 	return Selections;
 }
 
-void InlayEditor::OpenTextDocument(const std::string& Path, int Line)
+void DeveloperTools::OpenTextDocument(const std::string& Path, int Line)
 {
 	TextEditorTab& tab = invokeTextEditor(Path);
 	tab.JumpToLine = Line;
 }
 
-void InlayEditor::Shutdown()
+void DeveloperTools::Shutdown()
 {
 	MtlPreviewCamera.Clear();
 	ExplorerRoot.Clear();
