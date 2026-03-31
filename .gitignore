@@ -16,6 +16,15 @@ CMakeCache.txt
 CMakeFiles
 imgui.ini
 *.a
+GITIGNORETHIS_*
+resources/models/
+*.ninja
+*.ninja_*
+*.vscode
+_deps/
+editor/
+projects/
+compile_commands.json
 
 # Shortcuts
 *.lnk
