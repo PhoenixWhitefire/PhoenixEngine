@@ -15,6 +15,7 @@ log.txt
 CMakeCache.txt
 CMakeFiles
 imgui.ini
+*.a
 
 # Shortcuts
 *.lnk
