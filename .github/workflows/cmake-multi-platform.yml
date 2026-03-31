@@ -176,7 +176,7 @@ jobs:
         && . "x64\\${{ matrix.build_type }}\\PhoenixEngine.exe" -headless -ed_ci
 
     - name: Doc Gen (Ubuntu)
-      if: runner.os == 'Linux'
+      if: runner.os == 'Linux' && matrix.build_type != 'ReleaseTSan'
       shell: bash
       run: "x64/${{ matrix.build_type }}/PhoenixEngine -headless -tool scripts/ci/docs.luau"
 
