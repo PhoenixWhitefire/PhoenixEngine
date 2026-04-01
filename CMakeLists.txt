@@ -8,7 +8,6 @@ set(CMAKE_C_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_VS_PLATFORM_TOOLSET v143)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # visual studio solution filter folders
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -28,6 +27,11 @@ file(GLOB_RECURSE PHX_SRCS
 )
 
 add_executable(PhoenixEngine ${PHX_SRCS})
+
+if (NOT MSVC)
+	target_compile_features(PhoenixEngine PRIVATE cxx_std_20)
+	target_compile_options(PhoenixEngine PRIVATE -std=gnu++20)
+endif()
 
 source_group(TREE src FILES ${PHX_SRCS})
 target_sources(PhoenixEngine PRIVATE README.md phoenix.conf)

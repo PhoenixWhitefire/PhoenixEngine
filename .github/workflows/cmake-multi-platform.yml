@@ -58,7 +58,7 @@ jobs:
       with:
         submodules: true
 
-    - name: Install Ubuntu dependencies
+    - name: Install Linux dependencies
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
@@ -67,6 +67,9 @@ jobs:
         sudo apt-get install libdbus-1-dev
         sudo apt-get install libegl1-mesa-dev libgl1-mesa-dev libwayland-egl1
         sudo apt-get install libwayland-client0
+        sudo apt-get install -y g++-12 gcc-12
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 100
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 100
 
     - name: Setup PATH for Windows Address Sanitizer
       if: runner.os == 'Windows'
@@ -95,8 +98,8 @@ jobs:
       # TODO removing causes the wrong build type to be selected?
       run: >
         cmake -B ./
-        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
-        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
+        -DCMAKE_CXX_COMPILER=g++-12
+        -DCMAKE_C_COMPILER=gcc-12
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         -S ${{ github.workspace }}
 
