@@ -1,5 +1,21 @@
 #include <GLFW/glfw3.h>
 
+#ifdef __GNUG__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
+#pragma GCC diagnostic ignored "-Wundef"
+#pragma GCC diagnostic ignored "-Wswitch-default"
+#pragma GCC diagnostic ignored "-Wtemplate-id-cdtor"
+#pragma GCC diagnostic ignored "-Wtype-limits"
+#pragma GCC diagnostic ignored "-Wunused-result"
+#endif
+
+#include <Vendor/filewatch/FileWatch.hpp>
+
+#ifdef __GNUG__
+#pragma GCC diagnostic pop
+#endif
+
 #include "script/luhx.hpp"
 #include "script/enum/keys.hpp"
 
@@ -157,6 +173,21 @@ int luhxopen_Enum(lua_State* L)
 	lua_setfield(L, -2, "Null");
 
 	lua_setfield(L, -2, "ValueType");
+
+	lua_newtable(L);
+
+	lua_pushinteger(L, (int)filewatch::Event::added);
+	lua_setfield(L, -2, "Added");
+	lua_pushinteger(L, (int)filewatch::Event::removed);
+	lua_setfield(L, -2, "Removed");
+	lua_pushinteger(L, (int)filewatch::Event::modified);
+	lua_setfield(L, -2, "Modified");
+	lua_pushinteger(L, (int)filewatch::Event::renamed_old);
+	lua_setfield(L, -2, "Renamed_Old");
+	lua_pushinteger(L, (int)filewatch::Event::renamed_new);
+	lua_setfield(L, -2, "Renamed_New");
+
+	lua_setfield(L, -2, "FileSystemEvent");
 
 	lua_setglobal(L, "Enum");
 

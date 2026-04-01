@@ -33,3 +33,6 @@
 [submodule "Vendor/curl"]
 	path = Vendor/curl
 	url = https://github.com/curl/curl.git
+[submodule "Vendor/filewatch"]
+	path = Vendor/filewatch
+	url = https://github.com/ThomasMonkman/filewatch.git

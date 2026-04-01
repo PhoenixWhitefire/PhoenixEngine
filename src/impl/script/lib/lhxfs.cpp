@@ -1,5 +1,21 @@
 #include <filesystem>
 
+#ifdef __GNUG__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
+#pragma GCC diagnostic ignored "-Wundef"
+#pragma GCC diagnostic ignored "-Wswitch-default"
+#pragma GCC diagnostic ignored "-Wtemplate-id-cdtor"
+#pragma GCC diagnostic ignored "-Wtype-limits"
+#pragma GCC diagnostic ignored "-Wunused-result"
+#endif
+
+#include <Vendor/filewatch/FileWatch.hpp>
+
+#ifdef __GNUG__
+#pragma GCC diagnostic pop
+#endif
+
 #include "script/luhx.hpp"
 #include "FileRW.hpp"
 
@@ -230,11 +246,31 @@ static int fs_rename(lua_State* L)
 	std::string path = FileRW::ResolvePathNormalized(luaL_checkstring(L, 1));
 	std::string name = luaL_checkstring(L, 2);
 
+	if (name.find('/') != std::string::npos)
+		luaL_error(L, "'%s' rename N:'%s': New name cannot have slashes (use `fs.move`)", path.c_str(), name.c_str());
+
 	std::string fullnewpath = path.substr(0, path.find_last_of('/') + 1) + name;
 	std::filesystem::rename(path, fullnewpath, ec);
 
 	if (ec)
-		luaL_error(L, "'%s' ren '%s': %s", path.c_str(), fullnewpath.c_str(), ec.message().c_str());
+		luaL_error(L, "'%s' rename P:'%s': %s", path.c_str(), fullnewpath.c_str(), ec.message().c_str());
+
+	return 0;
+}
+
+static int fs_move(lua_State* L)
+{
+	setSelfAlias(L);
+
+	std::error_code ec;
+
+	std::string path = FileRW::ResolvePathNormalized(luaL_checkstring(L, 1));
+	std::string newPath = luaL_checkstring(L, 2);
+
+	std::filesystem::rename(path, newPath, ec);
+
+	if (ec)
+		luaL_error(L, "'%s' move '%s': %s", path.c_str(), newPath.c_str(), ec.message().c_str());
 
 	return 0;
 }
@@ -470,8 +506,87 @@ static int fs_resolvepathabsolute(lua_State* L)
 	return 1;
 }
 
-static const luaL_Reg fs_funcs[] =
+struct WatcherData
 {
+	filewatch::FileWatch<std::string>* Watcher = nullptr;
+	lua_State* WL = nullptr;
+	int Ref = LUA_NOREF;
+};
+
+static void disconnectWatcher(WatcherData* data)
+{
+	delete data->Watcher;
+	lua_unref(data->WL, data->Ref);
+	lua_resetthread(data->WL);
+
+	delete data;
+}
+
+static int disconnectWatcherLFunc(lua_State* L)
+{
+	if (lua_isnil(L, lua_upvalueindex(1)))
+		luaL_error(L, "Disconnect function called multiple times");
+
+	void* data = lua_tolightuserdata(L, lua_upvalueindex(1));
+	disconnectWatcher((WatcherData*)data);
+
+	lua_pushnil(L);
+	lua_replace(L, lua_upvalueindex(1));
+
+	return 0;
+}
+
+static int fs_watch(lua_State* L)
+{
+	luaL_checktype(L, 2, LUA_TFUNCTION);
+
+	std::string path = luaL_checkstring(L, 1);
+
+	lua_State* WL = lua_newthread(L);
+	int ref = lua_ref(L, -1);
+	lua_pop(L, 1);
+	lua_xpush(L, WL, 2);
+
+	WatcherData* data = new WatcherData{
+		.WL = WL,
+		.Ref = ref
+	};
+
+	filewatch::FileWatch<std::string>* watcher = new filewatch::FileWatch<std::string>(
+		path,
+		[WL, path, data](const std::string& File, filewatch::Event Type)
+		{
+			lua_pushvalue(WL, -1);
+			lua_pushlstring(WL, File.data(), File.size());
+			lua_pushinteger(WL, (int)Type);
+
+			int status = ScriptEngine::L::ProtectedCall(WL, 2, 0, 0);
+
+			if (status != LUA_OK)
+			{
+				assert(status != LUA_YIELD && lua_isstring(WL, -1));
+
+				std::string err;
+				ScriptEngine::L::DumpStacktrace(WL, &err, 0, lua_tostring(WL, -1));
+				Log.Error(err);
+			}
+		}
+	);
+
+	data->Watcher = watcher;
+
+	lua_pushlightuserdata(L, data);
+	lua_pushcclosure(
+		L,
+		disconnectWatcherLFunc,
+		"disconnectFileWatcher",
+		1
+	);
+
+	return 1;
+}
+
+static const luaL_Reg fs_funcs[] = {
     { "write", fs_write },
     { "read", fs_read },
     { "listdir", fs_listdir },
@@ -484,10 +599,12 @@ static const luaL_Reg fs_funcs[] =
 	{ "copy", fs_copy },
 	{ "mkdir", fs_mkdir },
 	{ "rename", fs_rename },
+	{ "move", fs_move },
 	{ "remove", fs_remove },
 	{ "execute", fs_execute },
 	{ "resolvepath", fs_resolvepath },
 	{ "resolvepathabsolute", fs_resolvepathabsolute },
+	{ "watch", fs_watch },
 
     { "promptsave", fs_promptsave },
     { "promptopen", fs_promptopen },

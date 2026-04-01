@@ -569,6 +569,14 @@ declare extern type EnumFaceCulling_INTERNAL extends Enum with
   Front: EnumFaceCulling
   None: EnumFaceCulling
 end
+declare extern type EnumFileSystemEvent extends EnumItem with end
+declare extern type EnumFileSystemEvent_INTERNAL extends Enum with
+  Added: EnumFileSystemEvent
+  Modified: EnumFileSystemEvent
+  Removed: EnumFileSystemEvent
+  Renamed_New: EnumFileSystemEvent
+  Renamed_Old: EnumFileSystemEvent
+end
 declare extern type EnumInputAction extends EnumItem with end
 declare extern type EnumInputAction_INTERNAL extends Enum with
   Pressed: EnumInputAction
@@ -737,12 +745,13 @@ declare Enum: {
   Cursor: EnumCursor_INTERNAL,
   CursorMode: EnumCursorMode_INTERNAL,
   FaceCulling: EnumFaceCulling_INTERNAL,
+  FileSystemEvent: EnumFileSystemEvent_INTERNAL,
   InputAction: EnumInputAction_INTERNAL,
   Key: EnumKey_INTERNAL,
   LogType: EnumLogType_INTERNAL,
   MouseButton: EnumMouseButton_INTERNAL,
   ValueType: EnumValueType_INTERNAL,
-  [ | "CollisionType" | "Cursor" | "CursorMode" | "FaceCulling" | "InputAction" | "Key" | "LogType" | "MouseButton" | "ValueType"]:  | EnumCollisionType_INTERNAL | EnumCursor_INTERNAL | EnumCursorMode_INTERNAL | EnumFaceCulling_INTERNAL | EnumInputAction_INTERNAL | EnumKey_INTERNAL | EnumLogType_INTERNAL | EnumMouseButton_INTERNAL | EnumValueType_INTERNAL
+  [ | "CollisionType" | "Cursor" | "CursorMode" | "FaceCulling" | "FileSystemEvent" | "InputAction" | "Key" | "LogType" | "MouseButton" | "ValueType"]:  | EnumCollisionType_INTERNAL | EnumCursor_INTERNAL | EnumCursorMode_INTERNAL | EnumFaceCulling_INTERNAL | EnumFileSystemEvent_INTERNAL | EnumInputAction_INTERNAL | EnumKey_INTERNAL | EnumLogType_INTERNAL | EnumMouseButton_INTERNAL | EnumValueType_INTERNAL
 }
 
 declare debug: {
@@ -759,6 +768,7 @@ declare fs: {
   isfile: (( string ) -> (boolean)),
   listdir: (( Path: string, Filter: ('a' | 'f' | 'd')? ) -> ({ [string]: 'f' | 'd' })),
   mkdir: (( Path: string ) -> ()),
+  move: (( CurrentPath: string, NewPath: string ) -> ()),
   promptopen: (( DefaultLocation: string?, Filter: ( { string } | string)?, FilterName: string?, AllowMultipleFiles: boolean? ) -> ({ string })),
   promptopenfolder: (( Title: string, DefaultDirectory: string? ) -> (string?)),
   promptsave: (( DefaultLocation: string?, Filter: ( { string } | string)?, FilterName: string? ) -> (string?)),
@@ -769,6 +779,7 @@ declare fs: {
   resolvepath: (Path: string) -> string,
   resolvepathabsolute: (Path: string) -> string,
   setunqualifiedroot: (( Alias: string ) -> ()),
+  watch: (( Path: string, Callback: (Path: string, Event: EnumFileSystemEvent) -> () ) -> (() -> ())),
   write: (( Path: string, Contents: string, CreateDirectories: boolean? ) -> ())
 }
 declare imgui: {

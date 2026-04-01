@@ -1075,6 +1075,17 @@
             },
             "Type": "EnumFaceCulling"
           },
+          "FileSystemEvent": {
+            "Description": "Events that may invoke the `fs.watch` callback",
+            "Items": {
+              "Added": "When a file or folder is added",
+              "Modified": "When a file is modified",
+              "Removed": "When a file or folder is removed",
+              "Renamed_New": "When a file or folder is renamed, passing its new path to callback",
+              "Renamed_Old": "When a file or folder is renamed, passing its old path to callback"
+            },
+            "Type": "EnumFileSystemEvent"
+          },
           "InputAction": {
             "Description": "The action that caused an Input Event (such as `PlayerInput.KeyEvent`) to fire",
             "Items": {
@@ -1350,6 +1361,10 @@
               "Path: string"
             ]
           },
+          "move": {
+            "Description": "Moves a file or folder to a new path",
+            "In": "CurrentPath: string, NewPath: string"
+          },
           "promptopen": {
             "Description": [
               "Prompts the player to select a file to open",
@@ -1456,6 +1471,14 @@
             "In": [
               "Alias: string"
             ]
+          },
+          "watch": {
+            "Description": [
+              "Watch a file or directory for changes",
+              "Returns a function that, when called, disconnects the listener"
+            ],
+            "In": "Path: string, Callback: (Path: string, Event: EnumFileSystemEvent) -> ()",
+            "Out": "() -> ()"
           },
           "write": {
             "Description": [

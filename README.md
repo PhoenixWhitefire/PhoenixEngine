@@ -90,6 +90,7 @@ The following third-party projects were used/referenced during this Engine's dev
 * tinyfiledialogs - [Guillaume Vareille/tinyfiledialogs|@PhoenixWhitefire/tinyfd](https://github.com/PhoenixWhitefire/tinyfd)
 * ImGuiColorTextEdit - [@BalazsJako/ImGuiColorTextEdit](https://github.com/BalazsJako/ImGuiColorTextEdit)
 * Mozilla HTTP Reference - https://developer.mozilla.org
+* Filewatch - [@ThomasMonkman/filewatch](https://github.com/ThomasMonkman/filewatch)
 
 The [OpenGL YouTube tutorials](https://youtube.com/watch?v=XpBGwZNyUh0&list=PLPaoO-vpZnumdcb4tZc4x5Q-v7CkrQ6M-) of [Victor Gordan](https://github.com/VictorGordan/) (who I occasionally make fun of in the code comments) were referenced heavily during the creation of the rendering systems of this engine.
 Initially, this started out as a 1-to-1 follow-along of what he did, but I rewrote the entire thing to work in a better "Game Engine"-style architecture, as the tutorial had a simpler Model Viewer architecture that was not suitable for a Game Engine.

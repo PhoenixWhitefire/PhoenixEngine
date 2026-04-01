@@ -62,6 +62,21 @@
   "@phoenix/enum/FaceCulling.None": {
     "documentation": "Faces are not culled"
   },
+  "@phoenix/enum/FileSystemEvent.Added": {
+    "documentation": "When a file or folder is added"
+  },
+  "@phoenix/enum/FileSystemEvent.Modified": {
+    "documentation": "When a file is modified"
+  },
+  "@phoenix/enum/FileSystemEvent.Removed": {
+    "documentation": "When a file or folder is removed"
+  },
+  "@phoenix/enum/FileSystemEvent.Renamed_New": {
+    "documentation": "When a file or folder is renamed, passing its new path to callback"
+  },
+  "@phoenix/enum/FileSystemEvent.Renamed_Old": {
+    "documentation": "When a file or folder is renamed, passing its old path to callback"
+  },
   "@phoenix/enum/InputAction.Pressed": {
     "documentation": "The key or mouse button was pressed"
   },
@@ -556,6 +571,16 @@
       "None": "@phoenix/enum/FaceCulling.None"
     }
   },
+  "@phoenix/global/Enum.FileSystemEvent": {
+    "documentation": "* Events that may invoke the `fs.watch` callback",
+    "keys": {
+      "Added": "@phoenix/enum/FileSystemEvent.Added",
+      "Modified": "@phoenix/enum/FileSystemEvent.Modified",
+      "Removed": "@phoenix/enum/FileSystemEvent.Removed",
+      "Renamed_New": "@phoenix/enum/FileSystemEvent.Renamed_New",
+      "Renamed_Old": "@phoenix/enum/FileSystemEvent.Renamed_Old"
+    }
+  },
   "@phoenix/global/Enum.InputAction": {
     "documentation": "* The action that caused an Input Event (such as `PlayerInput.KeyEvent`) to fire",
     "keys": {
@@ -813,6 +838,9 @@
   "@phoenix/global/fs.mkdir": {
     "documentation": "* Creates a directory at the given path\n* Throws an error upon failure"
   },
+  "@phoenix/global/fs.move": {
+    "documentation": "* Moves a file or folder to a new path"
+  },
   "@phoenix/global/fs.promptopen": {
     "documentation": "* Prompts the player to select a file to open\n* Returns the list of files the player selected, or an empty list if the player cancelled the dialog\n* If the operation fails, returns `nil` instead"
   },
@@ -842,6 +870,9 @@
   },
   "@phoenix/global/fs.setunqualifiedroot": {
     "documentation": "* Changes the meaning of non-qualified paths (e.g.: not beginning with `.` or `C:` etc) to act as aliases to the given path + `resources/` instead of referring to the CWD"
+  },
+  "@phoenix/global/fs.watch": {
+    "documentation": "* Watch a file or directory for changes\n* Returns a function that, when called, disconnects the listener"
   },
   "@phoenix/global/fs.write": {
     "documentation": "* Overwrites/creates the file at `Path` with the provided `Contents`\n* Throws an error upon failure\n* If `CreateDirectories` is `true`, will automatically create missing intermediate directories to the file"

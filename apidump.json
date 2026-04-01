@@ -435,6 +435,7 @@
         "Cursor": "table",
         "CursorMode": "table",
         "FaceCulling": "table",
+        "FileSystemEvent": "table",
         "InputAction": "table",
         "Key": "table",
         "LogType": "table",
@@ -453,6 +454,7 @@
         "isfile": "function",
         "listdir": "function",
         "mkdir": "function",
+        "move": "function",
         "promptopen": "function",
         "promptopenfolder": "function",
         "promptsave": "function",
@@ -463,6 +465,7 @@
         "resolvepath": "function",
         "resolvepathabsolute": "function",
         "setunqualifiedroot": "function",
+        "watch": "function",
         "write": "function"
       },
       "imgui": {
