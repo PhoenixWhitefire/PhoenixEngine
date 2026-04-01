@@ -5,7 +5,6 @@
 #pragma GCC diagnostic ignored "-Wunknown-pragmas"
 #pragma GCC diagnostic ignored "-Wundef"
 #pragma GCC diagnostic ignored "-Wswitch-default"
-#pragma GCC diagnostic ignored "-Wtemplate-id-cdtor"
 #pragma GCC diagnostic ignored "-Wtype-limits"
 #pragma GCC diagnostic ignored "-Wunused-result"
 #endif
@@ -18,6 +17,11 @@
 
 #include "script/luhx.hpp"
 #include "FileRW.hpp"
+
+// windows??
+#ifdef Yield
+#undef Yield
+#endif
 
 static std::string unifyPath(const std::string& Str)
 {
