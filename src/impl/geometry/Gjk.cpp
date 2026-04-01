@@ -66,9 +66,9 @@ static glm::vec3 findFurthestPoint_Cube(const EcRigidBody* Rb, glm::vec3 Directi
 
 	glm::vec3 halfSize = Rb->CurTransform->Size / 2.f;
 
-	result.x = (localDir.x > 0) ? halfSize.x : -halfSize.x;
-	result.y = (localDir.y > 0) ? halfSize.y : -halfSize.y;
-	result.z = (localDir.z > 0) ? halfSize.z : -halfSize.z;
+	result.x = (localDir.x > 0.f) ? halfSize.x : -halfSize.x;
+	result.y = (localDir.y > 0.f) ? halfSize.y : -halfSize.y;
+	result.z = (localDir.z > 0.f) ? halfSize.z : -halfSize.z;
 
 	return rotation * result + glm::vec3(Rb->CurTransform->Transform[3]);
 }
@@ -127,7 +127,7 @@ SupportPoint Gjk::Support(const EcRigidBody* A, const EcRigidBody* B, const glm:
 
 bool Gjk::SameDirection(const glm::vec3& direction, const glm::vec3& ao)
 {
-    return glm::dot(direction, ao) > 0;
+    return glm::dot(direction, ao) > 0.f;
 }
 
 static bool line(Simplex& simp, glm::vec3& direction)
@@ -158,7 +158,7 @@ static bool triangle(Simplex& simp, glm::vec3& direction)
 
 	glm::vec3 ab = b.P - a.P;
 	glm::vec3 ac = c.P - a.P;
-	glm::vec3 ao =  -a.P;
+	glm::vec3 ao = -a.P;
 
 	glm::vec3 abc = glm::cross(ab, ac);
 
@@ -252,7 +252,6 @@ Result Gjk::FindIntersection(const EcRigidBody* A, const EcRigidBody* B)
     result.Simp.push_front(s);
 
     glm::vec3 direction = -s.P;
-
 	size_t numIterations = 0;
 
     while (true)
@@ -275,12 +274,72 @@ Result Gjk::FindIntersection(const EcRigidBody* A, const EcRigidBody* B)
 
 		numIterations++;
 
-		if (numIterations > 1e5)
+		if (numIterations > 64)
 		{
 			result.HasIntersection = false;
-			Log.Warning("Too many iterations!", "Physics Gjk::FindIntersection");
+			Log.Warning("Too many iterations in Gjk::FindIntersection", "Gjk::FindIntersection");
 
 			return result;
 		}
     }
+}
+
+RaycastResult Gjk::FindRayIntersection(const EcRigidBody* A, const glm::vec3& Origin, const glm::vec3& Direction, float Distance)
+{
+	float t = 0.f;
+	glm::vec3 point = Origin;
+
+	glm::vec3 dir = Direction;
+
+	SupportPoint s = {
+		.A = point,
+		.B = findFurthestPoint(A, -dir)
+	};
+	s.P = s.A - s.B;
+
+	RaycastResult result;
+	result.Simp.push_front(s);
+	result.HasIntersection = false;
+	dir = -s.P;
+
+	for (int i = 0; i < 64; i++)
+	{
+		s = {
+			.A = point,
+			.B = findFurthestPoint(A, -dir)
+		};
+		s.P = s.A - s.B;
+
+		result.Simp.push_front(s);
+
+		if (nextSimplex(result.Simp, dir))
+		{
+			result.HasIntersection = true;
+			result.Time = t;
+			result.Point = point;
+			result.Normal = glm::normalize(dir);
+
+			return result; // intersection
+		}
+
+		float dist = glm::dot(dir, Direction);
+
+		if (dist < 0.0001f)
+			return result; // no intersection
+
+		float step = glm::dot(dir, dir) / dist;
+
+		if (step <= 0.00001f)
+			return result; // no intersection
+
+		t += step;
+
+		if (t > Distance)
+			return result; // no intersection
+
+		point = Origin + Direction * t;
+	}
+
+	Log.Error("Iteration limit exhausted in FindRayIntersection", "Gjk::FindRayIntersection");
+	return result;
 }

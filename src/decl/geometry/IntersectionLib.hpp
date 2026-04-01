@@ -3,6 +3,7 @@
 #include <glm/matrix.hpp>
 
 #include "component/RigidBody.hpp"
+#include "geometry/Gjk.hpp"
 
 namespace IntersectionLib
 {
@@ -56,4 +57,5 @@ namespace IntersectionLib
 	);
 
 	CollisionPoints Gjk(const EcRigidBody* A, const EcRigidBody* B);
+	CollisionPoints GjkRay(const EcRigidBody* A, const glm::vec3& Origin, const glm::vec3& Direction, float Distance, Gjk::RaycastResult* RayResult);
 }

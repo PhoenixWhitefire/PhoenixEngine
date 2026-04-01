@@ -57,4 +57,15 @@ namespace Gjk
     SupportPoint Support(const EcRigidBody* A, const EcRigidBody* B, const glm::vec3& Direction);
     bool SameDirection(const glm::vec3& A, const glm::vec3& B);
     Result FindIntersection(const EcRigidBody* A, const EcRigidBody* B);
+
+	struct RaycastResult
+	{
+		Simplex Simp;
+		glm::vec3 Point;
+		glm::vec3 Normal;
+		float Time = 0.f;
+		bool HasIntersection = false;
+	};
+
+	RaycastResult FindRayIntersection(const EcRigidBody* A, const glm::vec3& Origin, const glm::vec3& Direction, float Distance);
 };

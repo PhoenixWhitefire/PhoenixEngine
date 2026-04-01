@@ -5,7 +5,6 @@
 #include <tracy/Tracy.hpp>
 
 #include "geometry/IntersectionLib.hpp"
-#include "geometry/Gjk.hpp"
 
 static const float EPSILON = 1e-8f;
 
@@ -357,4 +356,27 @@ IntersectionLib::CollisionPoints IntersectionLib::Gjk(const EcRigidBody* A, cons
 		return CollisionPoints{ .HasCollision = false };
 	else
 		return epa(result.Simp, A, B);
+}
+
+IntersectionLib::CollisionPoints IntersectionLib::GjkRay(const EcRigidBody* A, const glm::vec3& Origin, const glm::vec3& Direction, float Distance, Gjk::RaycastResult* RayResult)
+{
+	ZoneScoped;
+
+	*RayResult = Gjk::FindRayIntersection(A, Origin, Direction, Distance);
+
+	if (!RayResult->HasIntersection)
+		return CollisionPoints{ .HasCollision = false };
+	else
+	{
+		// hacky
+		EcTransform trans;
+		trans.Size = glm::vec3(0.001f);
+		trans.Transform[3] = glm::vec4(RayResult->Point, 1.f);
+
+		EcRigidBody sphere;
+		sphere.CollisionType = EnCollisionType::Sphere;
+		sphere.CurTransform = &trans;
+
+		return epa(RayResult->Simp, A, &sphere);
+	}
 }
