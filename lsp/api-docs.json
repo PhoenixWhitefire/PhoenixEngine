@@ -1141,6 +1141,9 @@
   "@phoenix/globaltype/AssetManager.LoadScene": {
     "documentation": "Loads `GameObject`s from the scene file at the provided path, returning a list of the root objects or `nil` and an error message upon failure"
   },
+  "@phoenix/globaltype/AssetManager.QueueLoadTexture": {
+    "documentation": "Queues a texture to be loaded"
+  },
   "@phoenix/globaltype/AssetManager.SaveMesh": {
     "documentation": "Saves the mesh data at the provided path to a file"
   },
@@ -1149,6 +1152,9 @@
   },
   "@phoenix/globaltype/AssetManager.SetMeshData": {
     "documentation": "Associates the provided mesh data with the provided path"
+  },
+  "@phoenix/globaltype/AssetManager.UnloadTexture": {
+    "documentation": "Removes the given texture from the Engine's cache, forcing it to be reloaded upon next use"
   },
   "@phoenix/globaltype/Bone.IsActive": {
     "documentation": "Whether or not the Bone Object is actively affecting a `Mesh`"
@@ -1711,11 +1717,11 @@
   "@phoenix/globaltype/Renderer.Resolution": {
     "documentation": "The size of the window, in pixels"
   },
+  "@phoenix/globaltype/Renderer.SetShaderTextureVariable": {
+    "documentation": "Sets a variable in a shader program to a 2D texture sampler for the provided image. The program will be loaded if it is not already in memory"
+  },
   "@phoenix/globaltype/Renderer.SetShaderVariable": {
     "documentation": "Sets a variable in a shader program (qualified `uniform`). The program will be loaded if it is not already in memory. `Type` is required when passing a `vector`, to differentiate between `Vector2` and `Vector3`. See `Enum.ValueType`"
-  },
-  "@phoenix/globaltype/Renderer.UnloadTexture": {
-    "documentation": "Removes the given texture from the Engine's cache, forcing it to be reloaded upon next use"
   },
   "@phoenix/globaltype/Renderer.VSync": {
     "documentation": "Whether Vertical Synchronization is enabled"

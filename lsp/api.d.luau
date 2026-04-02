@@ -207,9 +207,11 @@ export type AssetManager = {
   GetMeshData: (self: AssetManager, Id: string) -> { Vertices: { { Position: vector, Normal: vector, Paint: { number }, UV: vector } }, Indices: { number } },
   ImportModel: (self: AssetManager, Path: string) -> GameObject & Model,
   LoadScene: (self: AssetManager, Path: string) -> ({ GameObject }?, string),
+  QueueLoadTexture: (self: AssetManager, Path: string, BilinearFiltering: boolean, ImGui: boolean) -> (),
   SaveMesh: (self: AssetManager, Id: string, Path: string) -> (),
   SaveScene: (self: AssetManager, RootNodes: { GameObject }, Path: string) -> (boolean, string?),
   SetMeshData: (self: AssetManager, Id: string, MeshData: { Vertices: { { Position: vector, Normal: vector, Paint: { number }, UV: vector } }, Indices: { number } }) -> (),
+  UnloadTexture: (self: AssetManager, Texture: string) -> (),
 }
 export type Bone = {
   IsActive: boolean ,
@@ -389,8 +391,8 @@ export type Renderer = {
   Resolution: vector,
   VSync: boolean,
 
+  SetShaderTextureVariable: (self: Renderer, Shader: string, Variable: string, TexturePath: string, BilinearFiltering: boolean, InLinearColorSpace: boolean) -> (),
   SetShaderVariable: ((_: Renderer, Shader: string, Variable: string, Value: boolean | number | Color | Matrix, Type: EnumValueType?) -> ()) & ((_: Renderer, Shader: string, Variable: string, Value: vector, Type: EnumValueType) -> ()),
-  UnloadTexture: (self: Renderer, Texture: string) -> (),
 }
 export type RigidBody = {
   AngularVelocity: vector,

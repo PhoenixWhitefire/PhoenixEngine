@@ -123,6 +123,14 @@
             "Out": "({ GameObject }?, string)",
             "ParameterNames": "Path"
           },
+          "QueueLoadTexture": {
+            "Description": "Queues a texture to be loaded",
+            "ParameterNames": [
+              "Path",
+              "BilinearFiltering",
+              "ImGui"
+            ]
+          },
           "SaveMesh": {
             "Description": "Saves the mesh data at the provided path to a file",
             "ParameterNames": [
@@ -137,6 +145,10 @@
           "SetMeshData": {
             "Description": "Associates the provided mesh data with the provided path",
             "Type": "(self, Id: string, MeshData: { Vertices: { { Position: vector, Normal: vector, Paint: { number }, UV: vector } }, Indices: { number } }) : ()"
+          },
+          "UnloadTexture": {
+            "Description": "Removes the given texture from the Engine's cache, forcing it to be reloaded upon next use",
+            "ParameterNames": "Texture"
           }
         }
       },
@@ -569,7 +581,9 @@
             "ParameterNames": [
               "Shader",
               "Variable",
-              "TexturePath"
+              "TexturePath",
+              "BilinearFiltering",
+              "InLinearColorSpace"
             ]
           },
           "SetShaderVariable": {
@@ -582,10 +596,6 @@
               "Position",
               "Size"
             ]
-          },
-          "UnloadTexture": {
-            "Description": "Removes the given texture from the Engine's cache, forcing it to be reloaded upon next use",
-            "ParameterNames": "Texture"
           }
         },
         "Properties": {

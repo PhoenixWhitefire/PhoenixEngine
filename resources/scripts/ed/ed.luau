@@ -854,22 +854,28 @@ local WasToolEnabled = {}
 local didFocusCodeEditorSetting = false
 
 local function saveSettings()
-	EditorPreferences.DevToolsOpen = {}
+	local success, error = pcall(function()
+		EditorPreferences.DevToolsOpen = {}
 
-	for _, name in DeveloperTools:GetToolNames() do
-		if DeveloperTools:IsToolEnabled(name) then
-			table.insert(EditorPreferences.DevToolsOpen, name)
+		for _, name in DeveloperTools:GetToolNames() do
+			if DeveloperTools:IsToolEnabled(name) then
+				table.insert(EditorPreferences.DevToolsOpen, name)
+			end
 		end
+
+		fs.write("./editor/settings.json", json.encode(EditorPreferences))
+
+		if openSettingsMenuToConfigureCodeEditor and EditorPreferences.CodeEditorPath and #EditorPreferences.CodeEditorPath > 0 then
+			task.defer(openCodeEditor)
+		end
+
+		openSettingsMenuToConfigureCodeEditor = false
+		didFocusCodeEditorSetting = false
+	end)
+
+	if not success then
+		warn(`Failed to save settings: { error }`)
 	end
-
-	fs.write("./editor/settings.json", json.encode(EditorPreferences))
-
-	if openSettingsMenuToConfigureCodeEditor and EditorPreferences.CodeEditorPath and #EditorPreferences.CodeEditorPath > 0 then
-		task.defer(openCodeEditor)
-	end
-
-	openSettingsMenuToConfigureCodeEditor = false
-	didFocusCodeEditorSetting = false
 end
 
 local function toolsTab(_: number)
@@ -1266,7 +1272,7 @@ local function renderMainMenuBar(dt: number)
 									if path then
 										fs.remove("@project/icon.png")
 										fs.copy(path, "@project/icon.png")
-										Renderer:UnloadTexture("@project/icon.png") -- force the texture to be reloaded
+										AssetManager:UnloadTexture("@project/icon.png") -- force the texture to be reloaded
 									else
 										print("No icon selected")
 									end
@@ -2274,7 +2280,7 @@ local function renderSavedProjects()
 			if buttonSelection == 1 then
 				fs.remove(`@cwd/projects/{ name }`)
 
-				Renderer:UnloadTexture(`@cwd/projects/{ name }/icon.png`)
+				AssetManager:UnloadTexture(`@cwd/projects/{ name }/icon.png`)
 				table.remove(RecentProjects, table.find(RecentProjects, name))
 				saveRecents()
 
@@ -2375,6 +2381,12 @@ function Stages.ProjectEditing_Enter()
 	Physics.Simulating = false
 	workspace.SceneCamera = Project.Workspace.SceneCamera
 	workspace.SceneCamera.UseSimpleController = true
+
+	for icon, fstype in fs.listdir("@etextures/editor-icons") do
+		if fstype == "f" and icon:find(".png") then
+			AssetManager:QueueLoadTexture(icon, false, true)
+		end
+	end
 end
 
 local ShowedAutosaveDelayedMessage = false
@@ -2714,6 +2726,8 @@ function Stages.Update_Leave()
 end
 
 local function handleEngineShutdown()
+	saveSettings()
+
 	if CurrentStage == "ProjectEditing" or CurrentStage == "ProjectPlaying" then
 		local choice = Engine:ShowMessageBox("Save", "Save current Editor file before closing?", "yesno", "warning", 1)
 

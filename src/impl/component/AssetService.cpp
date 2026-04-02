@@ -1,4 +1,5 @@
 #include "component/AssetService.hpp"
+#include "asset/TextureManager.hpp"
 #include "asset/ModelImporter.hpp"
 #include "asset/MeshProvider.hpp"
 #include "asset/SceneFormat.hpp"
@@ -169,6 +170,31 @@ public:
                         return { false, error };
                     else
                         return { true, "" };
+                }
+            } },
+
+            { "QueueLoadTexture", Reflection::MethodDescriptor{
+                { Reflection::ValueType::String, Reflection::ValueType::Boolean, Reflection::ValueType::Boolean },
+                {},
+                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                {
+                    TextureManager* texManager = TextureManager::Get();
+                    texManager->LoadFromPath(inputs[0].AsString(), true, inputs[1].AsBoolean(), !inputs[2].AsBoolean());
+
+                    return {};
+                }
+            } },
+
+            { "UnloadTexture", Reflection::MethodDescriptor{
+                { Reflection::ValueType::String },
+                {},
+                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                {
+                    TextureManager* texManager = TextureManager::Get();
+                    uint32_t resId = texManager->LoadFromPath(inputs[0].AsString(), false);
+                    texManager->UnloadTexture(resId);
+
+                    return {};
                 }
             } },
         };

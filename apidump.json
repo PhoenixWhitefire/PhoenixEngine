@@ -48,9 +48,11 @@
           "GetMeshData": "(String) -> (Map)",
           "ImportModel": "(String) -> (GameObject)",
           "LoadScene": "(String) -> (Array?, String?)",
+          "QueueLoadTexture": "(String, Boolean, Boolean) -> ()",
           "SaveMesh": "(String, String) -> ()",
           "SaveScene": "(Array, String) -> (Boolean, String?)",
-          "SetMeshData": "(String, Map) -> ()"
+          "SetMeshData": "(String, Map) -> ()",
+          "UnloadTexture": "(String) -> ()"
         }
       },
       "Bone": {
@@ -262,8 +264,8 @@
       },
       "Renderer": {
         "Methods": {
-          "SetShaderVariable": "(String, String, Any, Integer?) -> ()",
-          "UnloadTexture": "(String) -> ()"
+          "SetShaderTextureVariable": "(String, String, String, Boolean, Boolean) -> ()",
+          "SetShaderVariable": "(String, String, Any, Integer?) -> ()"
         },
         "Properties": {
           "DebugWireframeRendering": "Boolean",

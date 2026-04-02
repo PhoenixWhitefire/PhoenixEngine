@@ -75,19 +75,6 @@ class RendererServiceManager : public ComponentManager<EcRendererService>
     virtual const Reflection::StaticMethodMap& GetMethods() override
     {
         static const Reflection::StaticMethodMap methods = {
-            { "UnloadTexture", Reflection::MethodDescriptor{
-                { Reflection::ValueType::String },
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    TextureManager* texManager = TextureManager::Get();
-                    uint32_t resId = texManager->LoadFromPath(std::string(inputs[0].AsStringView()), false);
-                    texManager->UnloadTexture(resId);
-
-                    return {};
-                }
-            } },
-
             { "SetShaderVariable", Reflection::MethodDescriptor{
                 // Name of shader program, name of uniform, value, optional type of value (`Vector2` and `Vector3` are just `vector` in scripts)
                 { Reflection::ValueType::String, Reflection::ValueType::String, Reflection::ValueType::Any, REFLECTION_OPTIONAL(Integer) },
@@ -141,20 +128,19 @@ class RendererServiceManager : public ComponentManager<EcRendererService>
                 }
             } },
 
-            /*
             { "SetShaderTextureVariable", Reflection::MethodDescriptor{
                 // Name of shader program, name of uniform, value, path to texture
-                { Reflection::ValueType::String, Reflection::ValueType::String, Reflection::ValueType::String },
+                { Reflection::ValueType::String, Reflection::ValueType::String, Reflection::ValueType::String, Reflection::ValueType::Boolean, Reflection::ValueType::Boolean },
                 {},
                 [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
                 {
                     ShaderManager* shaderManager = ShaderManager::Get();
                     ShaderProgram& shader = shaderManager->GetShaderResource(shaderManager->LoadFromPath(inputs[0].AsString()));
 
-                    shader.SetTextureUniform(inputs[1].AsString(), TextureManager::Get()->LoadFromPath(inputs[2].AsString()));
+                    shader.SetTextureUniform(inputs[1].AsString(), TextureManager::Get()->LoadFromPath(inputs[2].AsString(), inputs[3].AsBoolean()));
                     return {};
                 }
-            } },*/
+            } },
 
             // SetMaterialVariable
         };

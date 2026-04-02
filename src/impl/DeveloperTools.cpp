@@ -4788,6 +4788,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 		glfwSetInputMode(engine->Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
 		engine->RendererContext.FrameBuffer.Unbind();
+		glDisable(GL_FRAMEBUFFER_SRGB);
 	}
 	else
 	{
@@ -5400,6 +5401,7 @@ static void debuggerLeaveCallback()
 	prevContext = nullptr;
 
 	PHX_ENSURE_MSG(ImGui_ImplGlfw_InitForOpenGL(engine->Window, true), "Failed to initialize Dear ImGui for GLFW on Debugger shutdown");
+	glEnable(GL_FRAMEBUFFER_SRGB);
 
 	InDebugger = false;
 }
