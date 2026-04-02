@@ -2,7 +2,7 @@
 
 #include "Version.hpp"
 
-#define PHX_VERSION "Prototype 2026.1"
+#define PHX_VERSION "Prototype 2026.1+"
 
 const char* GetEngineVersion()
 {
