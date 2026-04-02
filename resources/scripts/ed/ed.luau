@@ -51,12 +51,7 @@ local EditorPreferences = {
 	InvertTabButtonLitColors = false,
 	SyncCoreAssets = "AlwaysAsk" :: index<typeof(SyncCoreAssetsOptions), number>,
 	DevToolsOpen = { "Explorer", "Properties", "Scripts" },
-	ToolsOpen = { BottomBar = true, Output = true },
-	APR26 = {
-		AgreedToTerms = false,
-		TrialPeriodRemaining = 65,
-		TrialExpired = false
-	}
+	ToolsOpen = { BottomBar = true, Output = true }
 }
 
 EditorPreferences = EditorPreferences :: { [keyof<typeof(EditorPreferences)>]: index<typeof(EditorPreferences), keyof<typeof(EditorPreferences)>> } & typeof(EditorPreferences)
@@ -193,8 +188,6 @@ local function handleUndoRedoKeybinds()
 	WasHoldingZKeyDown = zKeyDown
 	WasHoldingYKeyDown = yKeyDown
 end
-
-local apr2026ProductKey = "TEST-KEY1"
 
 local function editorFrame(DeltaTime)
 	MouseClick = (not WasHoldingDownM1) and PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Left)
@@ -1163,33 +1156,6 @@ end
 local wasSettingsOpen = false
 
 local function renderMainMenuBar(dt: number)
-		if EditorPreferences.APR26.AgreedToTerms then
-		EditorPreferences.APR26.TrialPeriodRemaining -= dt
-
-		if EditorPreferences.APR26.TrialPeriodRemaining <= 0 and not EditorPreferences.APR26.TrialExpired then
-			EditorPreferences.APR26.TrialExpired = true
-			saveSettings()
-			imgui.openpopup("Trial expired")
-		end
-
-		imgui.setnextwindowsize(250, 16)
-		imgui.setnextwindowposition(0, Renderer.Resolution.y - 24)
-		imgui.begin("TrialCountdown", "ns | nr | nm | ni | nt")
-		imgui.text(`Trial remaining: { math.floor(EditorPreferences.APR26.TrialPeriodRemaining / 60) }:{ string.format("%02d", EditorPreferences.APR26.TrialPeriodRemaining % 60) }`)
-		imgui.endw()
-	end
-
-	if imgui.beginpopupmodal("Trial expired", true) then
-		imgui.text("Your free trial has expired. Please enter a product key below:")
-		apr2026ProductKey = imgui.inputstring("##", apr2026ProductKey)
-		
-		if imgui.button("Activate") then
-			Engine:ShowMessageBox("Fatal Error", "Failed to rootkit")
-		end
-
-		imgui.endpopup()
-	end
-
 	local pushedCol = CurrentStage == "ProjectPlaying"
 
 	if pushedCol then
@@ -1404,7 +1370,7 @@ local function renderMainMenuBar(dt: number)
 
 		local tts = imgui.textsize("")
 
-		textCentered("Roblox2", cursor, cxavail)
+		textCentered("Phoenix Engine Editor", cursor, cxavail)
 		cursor += vector.create(0, tts.y + 2)
 
 		textCentered(Engine.Version, cursor, cxavail)
@@ -2821,13 +2787,4 @@ if table.find(Engine:GetCliArguments(), "-ed_ci") then
 		CurrentStage = "SelectProject"
 		Engine:Exit()
 	end)
-end
-
-if not EditorPreferences.APR26.AgreedToTerms then
-	task.wait(math.random(1, 15))
-
-	Engine:ShowMessageBox("Evaluation copy", "This copy is for evaluation purposes only. Please destroy all copies of the software after the trial period expires")
-	EditorPreferences.APR26.AgreedToTerms = true
-
-	saveSettings()
 end
