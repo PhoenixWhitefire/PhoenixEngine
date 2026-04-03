@@ -4,5 +4,6 @@
 
 struct EcModel : public Component<EntityComponent::Model>
 {
+	std::string ImportPath;
 	bool Valid = true;
 };

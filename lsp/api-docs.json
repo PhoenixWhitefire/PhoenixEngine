@@ -832,6 +832,9 @@
   "@phoenix/global/fs.isfile": {
     "documentation": "* Returns whether the specified Path refers to a file"
   },
+  "@phoenix/global/fs.lastwritten": {
+    "documentation": "* Returns the timestamp for when the file was last modified, in seconds since epoch"
+  },
   "@phoenix/global/fs.listdir": {
     "documentation": "* Returns a table of all the entries in the specified directory\n* The keys of the table is the path of the entry, while the values are the type of the entry\n* `f` is file, `d` is directory, and `a` is all"
   },
@@ -1152,6 +1155,12 @@
   },
   "@phoenix/globaltype/AssetManager.SetMeshData": {
     "documentation": "Associates the provided mesh data with the provided path"
+  },
+  "@phoenix/globaltype/AssetManager.UnloadMaterial": {
+    "documentation": "Removes the given Material path from the Engine's cache"
+  },
+  "@phoenix/globaltype/AssetManager.UnloadMesh": {
+    "documentation": "Removes the given Mesh path from the Engine's cache"
   },
   "@phoenix/globaltype/AssetManager.UnloadTexture": {
     "documentation": "Removes the given texture from the Engine's cache, forcing it to be reloaded upon next use"
@@ -1623,6 +1632,9 @@
   },
   "@phoenix/globaltype/Mesh.Transparency": {
     "documentation": "Its transparency/translucency"
+  },
+  "@phoenix/globaltype/Model.ImportPath": {
+    "documentation": "The original file a model was imported from"
   },
   "@phoenix/globaltype/Network.MakeHttpRequestAsync": {
     "documentation": "Makes an HTTP request to the provided URL. `Ok` will be false upon failure, and `Body` will contain the error message"

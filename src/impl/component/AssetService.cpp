@@ -1,4 +1,5 @@
 #include "component/AssetService.hpp"
+#include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
 #include "asset/ModelImporter.hpp"
 #include "asset/MeshProvider.hpp"
@@ -193,6 +194,30 @@ public:
                     TextureManager* texManager = TextureManager::Get();
                     uint32_t resId = texManager->LoadFromPath(inputs[0].AsString(), false);
                     texManager->UnloadTexture(resId);
+
+                    return {};
+                }
+            } },
+
+            { "UnloadMesh", Reflection::MethodDescriptor{
+                { Reflection::ValueType::String },
+                {},
+                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                {
+                    MeshProvider* meshProv = MeshProvider::Get();
+                    meshProv->UnloadMesh(inputs[0].AsString());
+
+                    return {};
+                }
+            } },
+
+            { "UnloadMaterial", Reflection::MethodDescriptor{
+                { Reflection::ValueType::String },
+                {},
+                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                {
+                    MaterialManager* materialManager = MaterialManager::Get();
+                    materialManager->UnloadMaterial(inputs[0].AsString());
 
                     return {};
                 }

@@ -319,3 +319,9 @@ std::vector<RenderMaterial>& MaterialManager::GetLoadedMaterials()
 {
 	return m_Materials;
 }
+
+void MaterialManager::UnloadMaterial(const std::string& Name)
+{
+	if (const auto& it = m_StringToMaterialId.find(Name); it != m_StringToMaterialId.end())
+		m_StringToMaterialId.erase(it);
+}

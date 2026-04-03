@@ -146,6 +146,14 @@
             "Description": "Associates the provided mesh data with the provided path",
             "Type": "(self, Id: string, MeshData: { Vertices: { { Position: vector, Normal: vector, Paint: { number }, UV: vector } }, Indices: { number } }) : ()"
           },
+          "UnloadMaterial": {
+            "Description": "Removes the given Material path from the Engine's cache",
+            "ParameterNames": "Material"
+          },
+          "UnloadMesh": {
+            "Description": "Removes the given Mesh path from the Engine's cache",
+            "ParameterNames": "Mesh"
+          },
           "UnloadTexture": {
             "Description": "Removes the given texture from the Engine's cache, forcing it to be reloaded upon next use",
             "ParameterNames": "Texture"
@@ -483,7 +491,10 @@
         }
       },
       "Model": {
-        "Description": "A container"
+        "Description": "A container",
+        "Properties": {
+          "ImportPath": "The original file a model was imported from"
+        }
       },
       "ParticleEmitter": {
         "Description": "An emitter of 2D particles",
@@ -1346,6 +1357,11 @@
               "Returns whether a File Dialog is currently visible to the Player and blocking any more file dialogs from being opened"
             ],
             "Out": "boolean"
+          },
+          "lastwritten": {
+            "Description": "Returns the timestamp for when the file was last modified, in seconds since epoch",
+            "In": "Path: string",
+            "Out": "number"
           },
           "listdir": {
             "Description": [

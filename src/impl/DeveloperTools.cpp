@@ -37,6 +37,7 @@
 
 #include "datatype/ComponentDependencies.hpp"
 #include "component/Camera.hpp"
+#include "component/Model.hpp"
 
 #include "GlobalJsonConfig.hpp"
 #include "Utilities.hpp"
@@ -1370,6 +1371,7 @@ enum class ContextMenuAction : uint8_t
 	SaveToFile,
 	LoadFromFile,
 	Rename,
+	AutoReimport,
 
 	__sectionSeparator
 };
@@ -1378,7 +1380,8 @@ static const bool ContextMenuActionRequiresSelection[] = {
 	true,
 	true,
 	false,
-	true
+	true,
+	true,
 };
 
 static std::vector<ContextMenuAction> ContextActionsForSelection;
@@ -1388,7 +1391,8 @@ static const char* ContextMenuActionStrings[] = {
 	"Delete",
 	"Save to File",
 	"Insert from File",
-	"Rename"
+	"Rename",
+	"Auto Re-importable",
 };
 
 typedef void(*ContextActionMenuHandlerFunc)(void);
@@ -1525,10 +1529,19 @@ static bool isInSelections(const ObjectHandle& obj)
 static std::vector<ContextMenuAction> getPossibleActionsForSelections()
 {
 	std::vector<ContextMenuAction> actions;
-	actions.reserve(4);
+	actions.reserve(6);
 
 	if (Selections.size() > 0)
 	{
+		for (const ObjectHandle& sel : Selections)
+		{
+			if (sel->FindComponent<EcModel>())
+			{
+				actions.push_back(ContextMenuAction::AutoReimport);
+				break;
+			}
+		}
+
 		actions.push_back(ContextMenuAction::Rename);
 		actions.push_back(ContextMenuAction::Duplicate);
 		actions.push_back(ContextMenuAction::Delete);
@@ -2588,15 +2601,52 @@ static void renderExplorer()
 			{
 				const char* name = ContextMenuActionStrings[(uint8_t)action];
 
-				if ((Selections.size() > 0 || !ContextMenuActionRequiresSelection[(uint8_t)action]) &&  ImGui::MenuItem(name))
+				if ((Selections.size() > 0 || !ContextMenuActionRequiresSelection[(uint8_t)action]))
 				{
 					History* history = History::Get();
-					std::optional<size_t> id = action != ContextMenuAction::Rename ? history->TryBeginAction(name) : std::nullopt;
 
-					ContextMenuActionHandlers[(uint8_t)action]();
+					if (action != ContextMenuAction::AutoReimport && ImGui::MenuItem(name))
+					{
+						std::optional<size_t> id = action != ContextMenuAction::Rename ? history->TryBeginAction(name) : std::nullopt;
 
-					if (id)
-						history->FinishAction(id.value());
+						ContextMenuActionHandlers[(uint8_t)action]();
+
+						if (id)
+							history->FinishAction(id.value());
+					}
+					else if (action == ContextMenuAction::AutoReimport)
+					{
+						const std::string ReimportableStr = "Ed_ReimportableModel";
+						bool autoReimport = false;
+
+						for (const ObjectHandle& sel : Selections)
+						{
+							if (sel->HasTag(ReimportableStr))
+							{
+								autoReimport = true;
+								break;
+							}
+						}
+
+						if (ImGui::Checkbox(name, &autoReimport))
+						{
+							std::optional<size_t> id = history->TryBeginAction("Change auto re-import setting");
+
+							if (autoReimport)
+							{
+								for (const ObjectHandle& sel : Selections)
+									sel->AddTag(ReimportableStr);
+							}
+							else
+							{
+								for (const ObjectHandle& sel : Selections)
+									sel->RemoveTag(ReimportableStr);
+							}
+
+							if (id)
+								history->FinishAction(id.value());
+						}
+					}
 				}
 			}
 		}
@@ -3058,9 +3108,10 @@ static void renderFilesViewer()
 
 static std::vector<ObjectHandle> PrevEditSelections;
 static const std::string_view AssetProperties[] = {
-	"MeshAsset", // Mesh
-	"Material",  // Mesh
-	"Image"      // UIImage, ParticleEmitter
+	"MeshAsset",  // Mesh
+	"Material",   // Mesh
+	"Image",      // UIImage, ParticleEmitter
+	"ImportPath", // Model
 };
 static const Reflection::PropertyDescriptor* AssetProperty = nullptr;
 static std::string AssetPropertyValue;
@@ -3538,6 +3589,7 @@ static void renderProperties()
 			bool valueWasEditedManual = false;
 			bool deactivatedAfterEdit = false;
 			bool isAssetProp = false;
+			bool assetPropHasSelector = false;
 
 			ImGui::TextUnformatted(propNameCStr);
 
@@ -3562,10 +3614,15 @@ static void renderProperties()
 					if (propName == ap)
 					{
 						isAssetProp = true;
-						ImGui::SetNextItemWidth(halfWidth - ImGui::CalcTextSize("...").x - ImGui::GetStyle().FramePadding.x * 2.f);
+						if (propName != "ImportPath")
+							assetPropHasSelector = true;
+
 						break;
 					}
 				}
+
+				if (assetPropHasSelector)
+					ImGui::SetNextItemWidth(halfWidth - ImGui::CalcTextSize("...").x - ImGui::GetStyle().FramePadding.x * 2.f);
 
 				std::string_view str = (isAssetProp && AssetProperty == propDesc) ? AssetPropertyValue : curVal.AsStringView();
 
@@ -3618,9 +3675,12 @@ static void renderProperties()
 					if (AssetProperty == propDesc)
 						valueWasEditedManual = true;
 
-					ImGui::SameLine();
-					if (renderPropertyAssetSelector(propName, halfWidth))
-						AssetProperty = nullptr;
+					if (assetPropHasSelector)
+					{
+						ImGui::SameLine();
+						if (renderPropertyAssetSelector(propName, halfWidth))
+							AssetProperty = nullptr;
+					}
 				}
 
 				if (focused)

@@ -161,9 +161,39 @@ static const ResumptionModeHandler s_ResumptionModeHandlers[] = {
 	shouldResume_Polled
 };
 
+static void processFileWatcherEvents()
+{
+	ZoneScoped;
+	using namespace ScriptEngine;
+
+	std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(s_ParallelFileWatcherEventsMutex);
+
+	for (const FileWatcherEvent& fwe : s_ParallelFileWatcherEvents)
+	{
+		lua_pushvalue(fwe.Thread, -1);
+		lua_pushlstring(fwe.Thread, fwe.File.data(), fwe.File.size());
+		lua_pushinteger(fwe.Thread, fwe.Type);
+
+		int status = ScriptEngine::L::ProtectedCall(fwe.Thread, 2, 0, 0);
+
+		if (status != LUA_OK)
+		{
+			assert(status != LUA_YIELD && lua_isstring(fwe.Thread, -1));
+
+			std::string err;
+			ScriptEngine::L::DumpStacktrace(fwe.Thread, &err, 0, lua_tostring(fwe.Thread, -1));
+			Log.Error(err);
+		}
+	}
+
+	s_ParallelFileWatcherEvents.clear();
+}
+
 void ScriptEngine::StepScheduler()
 {
 	ZoneScopedC(tracy::Color::LightSkyBlue);
+	processFileWatcherEvents();
+
 	s_YieldedCoroutinesProcessing = s_YieldedCoroutines;
 	s_YieldedCoroutines.clear();
 
@@ -271,7 +301,7 @@ void ScriptEngine::L::PushJson(lua_State* L, const nlohmann::json& v)
 	}
 	case nlohmann::json::value_t::number_unsigned:
 	{
-		lua_pushinteger(L, static_cast<int>((uint32_t)v));
+		lua_pushnumber(L, (double)((uint32_t)v));
 		break;
 	}
 	case nlohmann::json::value_t::number_float:
@@ -281,7 +311,8 @@ void ScriptEngine::L::PushJson(lua_State* L, const nlohmann::json& v)
 	}
 	case nlohmann::json::value_t::string:
 	{
-		lua_pushstring(L, ((std::string)v).c_str());
+		const std::string& str = v;
+		lua_pushlstring(L, str.data(), str.size());
 		break;
 	}
 	case nlohmann::json::value_t::array:
@@ -362,7 +393,17 @@ nlohmann::json ScriptEngine::L::ToJson(lua_State* L, int StackIndex, std::string
 	}
 	case LUA_TNUMBER:
 	{
-		return lua_tonumber(L, StackIndex);
+		double n = lua_tonumber(L, StackIndex);
+
+		if (std::floor(n) == n)
+		{
+			if (n >= 0)
+				return (uint32_t)n;
+			else
+				return (int32_t)n;
+		}
+
+		return n;
 	}
 	case LUA_TSTRING:
 	{

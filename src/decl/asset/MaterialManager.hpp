@@ -60,6 +60,8 @@ public:
 	// uses material NAME, not file path!
 	void SaveToPath(const RenderMaterial&, const std::string_view& Name);
 
+	void UnloadMaterial(const std::string&);
+
 	RenderMaterial& GetMaterialResource(uint32_t);
 
 private:

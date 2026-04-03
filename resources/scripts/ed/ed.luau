@@ -2,6 +2,7 @@
 local DeveloperTools = game:GetService("DeveloperTools")
 local AssetManager = game:GetService("AssetManager")
 local PlayerInput = game:GetService("PlayerInput")
+local Collections = game:GetService("Collections")
 local Interface = game:GetService("Interface")
 local Renderer = game:GetService("Renderer")
 local History = game:GetService("History")
@@ -12,6 +13,7 @@ local Engine = game:GetService("Engine")
 
 local FALLBACK_IMAGE = "@etextures/editor-icons/fallback.png"
 local LOGO_IMAGE = "@etextures/logo.png"
+local REIMPORTABLE_MODEL = "Ed_ReimportableModel"
 
 local PluginManager = require("./PluginManager.luau")
 local HistoryView = require("./HistoryView.luau")
@@ -51,7 +53,8 @@ local EditorPreferences = {
 	InvertTabButtonLitColors = false,
 	SyncCoreAssets = "AlwaysAsk" :: index<typeof(SyncCoreAssetsOptions), number>,
 	DevToolsOpen = { "Explorer", "Properties", "Scripts" },
-	ToolsOpen = { BottomBar = true, Output = true }
+	ToolsOpen = { BottomBar = true, Output = true },
+	AutoReimportModels = true,
 }
 
 EditorPreferences = EditorPreferences :: { [keyof<typeof(EditorPreferences)>]: index<typeof(EditorPreferences), keyof<typeof(EditorPreferences)>> } & typeof(EditorPreferences)
@@ -120,6 +123,13 @@ end
 
 if not fs.isdirectory("@cwd/projects") then
 	fs.mkdir("@cwd/projects")
+end
+
+local ReimportWatchers: { [string]: { Disconnect: () -> (), Models: { GameObject & Model } }? } = {}
+local ModelModifiedTimes: { [string]: number } = {}
+
+if fs.isfile("./editor/models.json") then
+	ModelModifiedTimes = json.parse(assert(fs.read("./editor/models.json"))) :: { [string]: number }
 end
 
 local function setErrorNotification(Error: string)
@@ -777,6 +787,55 @@ local function whyCannotPlaytest()
 		else nil
 end
 
+local function watchModelForReimporting(reimportable: GameObject & Model)
+	local watcher = ReimportWatchers[reimportable.ImportPath]
+
+	if watcher then
+		table.insert(watcher.Models, reimportable)
+		return
+	end
+
+	watcher = {
+		Models = { reimportable },
+		Disconnect = fs.watch(reimportable.ImportPath, function(_, EventType)
+			if EventType ~= Enum.FileSystemEvent.Modified then
+				return
+			end
+
+			if not EditorPreferences.AutoReimportModels then
+				return
+			end
+
+			assert(watcher)
+			print(`Re-importing { reimportable.ImportPath }`)
+
+			local imported = AssetManager:ImportModel(reimportable.ImportPath)
+			assert(imported, "Re-import failed")
+
+			local action = History:TryBeginAction("Auto re-import during session")
+
+			for _, model in watcher.Models :: { GameObject & Model } do
+				-- preserve tags, name, parent, object ID, treelinks
+
+				for _, child in model:GetChildren() do
+					child.Parent = nil -- Allow undo
+				end
+
+				for _, newChild in imported:GetChildren() do
+					newChild:Duplicate().Parent = model
+				end
+			end
+
+			if action then
+				History:FinishAction(action)
+			end
+
+			ModelModifiedTimes[reimportable.ImportPath] = fs.lastwritten(reimportable.ImportPath)
+		end)
+	}
+	ReimportWatchers[reimportable.ImportPath] = watcher
+end
+
 local function homeTab(_: number)
 	local startY = imgui.cursorposition().y
 
@@ -801,7 +860,6 @@ local function homeTab(_: number)
 
 			if paths[1] then
 				local importAction = History:TryBeginAction("Import Model")
-
 				local imported = AssetManager:ImportModel(paths[1])
 
 				-- TODO type of `imported` becomes `nil` after this clause for some reason
@@ -815,16 +873,26 @@ local function homeTab(_: number)
 				end
 
 				assert(Project.Workspace)
+				imported:AddTag(REIMPORTABLE_MODEL)
 				imported.Parent = Project.Workspace
 				DeveloperTools:SetExplorerSelections({ imported })
 
 				if importAction then
 					History:FinishAction(importAction)
 				end
+
+				ModelModifiedTimes[paths[1]] = fs.lastwritten(paths[1])
+				watchModelForReimporting(imported)
 			else
 				print("No model selected")
 			end
 		end)
+	end
+
+	imgui.sameline()
+
+	if tabButton("Auto re-import\nmodels", "@etextures/editor-icons/auto-reimport.png", true, EditorPreferences.AutoReimportModels) then
+		EditorPreferences.AutoReimportModels = not EditorPreferences.AutoReimportModels
 	end
 
 	imgui.sameline()
@@ -871,6 +939,8 @@ local function saveSettings()
 
 		openSettingsMenuToConfigureCodeEditor = false
 		didFocusCodeEditorSetting = false
+
+		fs.write("./editor/models.json", json.encode(ModelModifiedTimes :: { [string]: JsonSerializable }))
 	end)
 
 	if not success then
@@ -2372,7 +2442,7 @@ function Stages.SelectProject(DeltaTime: any) -- TODO type error when annotating
 	renderMainMenuBar(DeltaTime)
 end
 
-function Stages.ProjectEditing_Enter()
+function Stages.ProjectEditing_Enter(PreviousStage: Stage)
 	assert(Project.DataModel)
 	assert(Project.Workspace)
 
@@ -2382,9 +2452,49 @@ function Stages.ProjectEditing_Enter()
 	workspace.SceneCamera = Project.Workspace.SceneCamera
 	workspace.SceneCamera.UseSimpleController = true
 
-	for icon, fstype in fs.listdir("@etextures/editor-icons") do
-		if fstype == "f" and icon:find(".png") then
-			AssetManager:QueueLoadTexture(icon, false, true)
+	if PreviousStage == "SelectProject" then
+		for icon, fstype in fs.listdir("@etextures/editor-icons") do
+			if fstype == "f" and icon:find(".png") then
+				AssetManager:QueueLoadTexture(icon, false, true)
+			end
+		end
+
+		for _, reimportable in Collections:GetTagged(REIMPORTABLE_MODEL) :: { GameObject & Model & Transform } do
+			if not reimportable:HasComponent("Model") or not reimportable:HasComponent("Transform") then
+				continue
+			end
+
+			watchModelForReimporting(reimportable)
+		end
+
+		for path, watcher in ReimportWatchers do
+			assert(watcher)
+
+			if ModelModifiedTimes[path] and ModelModifiedTimes[path] < fs.lastwritten(path) then
+				print(`Re-importing { path }`)
+				local imported = AssetManager:ImportModel(path)
+				assert(imported, "Re-import failed on Project open")
+
+				local action = History:TryBeginAction("Auto re-import on Project open")
+
+				for _, model in watcher.Models :: { GameObject & Model } do
+					-- preserve tags, name, parent, object ID, treelinks
+
+					for _, child in model:GetChildren() do
+						child.Parent = nil -- Allow undo
+					end
+
+					for _, newChild in imported:GetChildren() do
+						newChild:Duplicate().Parent = model
+					end
+				end
+
+				if action then
+					History:FinishAction(action)
+				end
+
+				ModelModifiedTimes[path] = fs.lastwritten(path)
+			end
 		end
 	end
 end
@@ -2418,6 +2528,13 @@ function Stages.ProjectEditing_Leave(NextStage)
 		end
 
 		return
+	else
+		for _, watcher in ReimportWatchers do
+			assert(watcher)
+			watcher.Disconnect()
+		end
+
+		ReimportWatchers = {}
 	end
 	
 	DeveloperTools:SetExplorerRoot(game)
@@ -2761,6 +2878,40 @@ local function checkIfLatestVersionBuilt()
 		)
 	end
 end
+
+Collections:GetTagAddedSignal(REIMPORTABLE_MODEL):Connect(function(Object)
+	if not Object:HasComponent("Model") or not Object:HasComponent("Transform") then
+		return
+	end
+
+	watchModelForReimporting(Object :: GameObject & Model)
+end)
+
+Collections:GetTagRemovedSignal(REIMPORTABLE_MODEL):Connect(function(Object)
+	if not Object:HasComponent("Model") or not Object:HasComponent("Transform") then
+		return
+	end
+
+	local model = Object :: GameObject & Model
+	local watcher = ReimportWatchers[model.ImportPath]
+
+	if not watcher then
+		return
+	end
+
+	local index = table.find(watcher.Models, model)
+
+	if not index then
+		return
+	end
+
+	table.remove(watcher.Models, index)
+
+	if #watcher.Models == 0 then
+		watcher.Disconnect()
+		ReimportWatchers[model.ImportPath] = nil
+	end
+end)
 
 game:BindToClose(handleEngineShutdown)
 task.defer(checkIfLatestVersionBuilt)

@@ -1165,6 +1165,12 @@ void MeshProvider::FinalizeAsyncLoadedMeshes()
 	}
 }
 
+void MeshProvider::UnloadMesh(const std::string& Mesh)
+{
+	if (const auto& it = m_StringToMeshId.find(Mesh); it != m_StringToMeshId.end())
+		m_StringToMeshId.erase(it);
+}
+
 void MeshProvider::m_CreateAndUploadGpuMesh(Mesh& mesh)
 {
 	ZoneScoped;

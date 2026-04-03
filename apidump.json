@@ -52,6 +52,8 @@
           "SaveMesh": "(String, String) -> ()",
           "SaveScene": "(Array, String) -> (Boolean, String?)",
           "SetMeshData": "(String, Map) -> ()",
+          "UnloadMaterial": "(String) -> ()",
+          "UnloadMesh": "(String) -> ()",
           "UnloadTexture": "(String) -> ()"
         }
       },
@@ -209,7 +211,11 @@
           "Transparency": "Double"
         }
       },
-      "Model": {},
+      "Model": {
+        "Properties": {
+          "ImportPath": "String"
+        }
+      },
       "Network": {
         "Methods": {
           "MakeHttpRequestAsync": "(Map) -> (Map)"
@@ -454,6 +460,7 @@
         "execute": "function",
         "isdirectory": "function",
         "isfile": "function",
+        "lastwritten": "function",
         "listdir": "function",
         "mkdir": "function",
         "move": "function",

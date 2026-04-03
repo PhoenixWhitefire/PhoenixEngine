@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <chrono>
 
 #ifdef __GNUG__
 #pragma GCC diagnostic push
@@ -561,20 +562,13 @@ static int fs_watch(lua_State* L)
 		path,
 		[WL, path, data](const std::string& File, filewatch::Event Type)
 		{
-			lua_pushvalue(WL, -1);
-			lua_pushlstring(WL, File.data(), File.size());
-			lua_pushinteger(WL, (int)Type);
+			std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(ScriptEngine::s_ParallelFileWatcherEventsMutex);
 
-			int status = ScriptEngine::L::ProtectedCall(WL, 2, 0, 0);
-
-			if (status != LUA_OK)
-			{
-				assert(status != LUA_YIELD && lua_isstring(WL, -1));
-
-				std::string err;
-				ScriptEngine::L::DumpStacktrace(WL, &err, 0, lua_tostring(WL, -1));
-				Log.Error(err);
-			}
+			ScriptEngine::s_ParallelFileWatcherEvents.push_back(ScriptEngine::FileWatcherEvent{
+				.Thread = WL,
+				.File = File,
+				.Type = (int)Type
+			});
 		}
 	);
 
@@ -588,6 +582,18 @@ static int fs_watch(lua_State* L)
 		1
 	);
 
+	return 1;
+}
+
+static int fs_lastwritten(lua_State* L)
+{
+	std::string path = FileRW::ResolvePathNormalized(luaL_checkstring(L, 1));
+	std::filesystem::file_time_type lwt = std::filesystem::last_write_time(path);
+
+	auto systemTime = std::chrono::clock_cast<std::chrono::system_clock>(lwt);
+	size_t secondsSinceEpoch = std::chrono::duration_cast<std::chrono::seconds>(systemTime.time_since_epoch()).count();
+
+	lua_pushnumber(L, (double)secondsSinceEpoch);
 	return 1;
 }
 
@@ -610,6 +616,7 @@ static const luaL_Reg fs_funcs[] = {
 	{ "resolvepath", fs_resolvepath },
 	{ "resolvepathabsolute", fs_resolvepathabsolute },
 	{ "watch", fs_watch },
+	{ "lastwritten", fs_lastwritten },
 
     { "promptsave", fs_promptsave },
     { "promptopen", fs_promptopen },

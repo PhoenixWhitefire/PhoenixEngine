@@ -10,6 +10,7 @@
 #include "asset/TextureManager.hpp"
 #include "asset/MeshProvider.hpp"
 #include "component/Transform.hpp"
+#include "component/Model.hpp"
 #include "component/Mesh.hpp"
 #include "component/Bone.hpp"
 #include "GlobalJsonConfig.hpp"
@@ -252,15 +253,19 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 
 		case ModelNode::NodeType::Container:
 		{
-			object = GameObject::Create("Model");
+			object = GameObject::Create(EntityComponent::Model);
 			object->AddComponent(EntityComponent::Transform);
+
+			if (node.Parent == UINT32_MAX) // root node
+				object->FindComponent<EcModel>()->ImportPath = AssetPath;
+
 			break;
 		}
 
 		case ModelNode::NodeType::Primitive:
 		{
 			// TODO: cleanup code
-			object = GameObject::Create("Mesh");
+			object = GameObject::Create(EntityComponent::Mesh);
 			object->AddComponent(EntityComponent::RigidBody);
 			object->AddComponent(EntityComponent::Transform);
 			EcMesh* meshObject = object->FindComponent<EcMesh>();
@@ -295,6 +300,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 									+ node.Name
 									+ ".hxmesh";
 
+			meshProvider->UnloadMesh(meshPath);
 			meshProvider->Save(node.Data, meshPath);
 			meshObject->SetRenderMesh(meshPath);
 
@@ -359,6 +365,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 				materialJson.dump(2)
 			));
 
+			mtlManager->UnloadMaterial(materialName);
 			meshObject->MaterialId = mtlManager->LoadFromPath(materialName);
 			mtlManager->SaveToPath(mtlManager->GetMaterialResource(meshObject->MaterialId), materialName);
 
@@ -373,7 +380,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 
 		default:
 		{
-			object = GameObject::Create("Mesh");
+			object = GameObject::Create(EntityComponent::Mesh);
 		}
 
 		}

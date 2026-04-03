@@ -211,6 +211,8 @@ export type AssetManager = {
   SaveMesh: (self: AssetManager, Id: string, Path: string) -> (),
   SaveScene: (self: AssetManager, RootNodes: { GameObject }, Path: string) -> (boolean, string?),
   SetMeshData: (self: AssetManager, Id: string, MeshData: { Vertices: { { Position: vector, Normal: vector, Paint: { number }, UV: vector } }, Indices: { number } }) -> (),
+  UnloadMaterial: (self: AssetManager, Material: string) -> (),
+  UnloadMesh: (self: AssetManager, Mesh: string) -> (),
   UnloadTexture: (self: AssetManager, Texture: string) -> (),
 }
 export type Bone = {
@@ -343,6 +345,7 @@ export type Mesh = {
   Transparency: number,
 }
 export type Model = {
+  ImportPath: string,
 }
 export type Network = {
 
@@ -768,6 +771,7 @@ declare fs: {
   execute: (( Command: string ) -> (string)),
   isdirectory: (( string ) -> (boolean)),
   isfile: (( string ) -> (boolean)),
+  lastwritten: (( Path: string ) -> (number)),
   listdir: (( Path: string, Filter: ('a' | 'f' | 'd')? ) -> ({ [string]: 'f' | 'd' })),
   mkdir: (( Path: string ) -> ()),
   move: (( CurrentPath: string, NewPath: string ) -> ()),

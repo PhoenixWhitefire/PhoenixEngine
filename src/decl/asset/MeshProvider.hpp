@@ -59,6 +59,8 @@ public:
 	Mesh& GetMeshResource(uint32_t);
 	GpuMesh& GetGpuMesh(uint32_t);
 
+	void UnloadMesh(const std::string&);
+
 	bool IsHeadless = false;
 
 private:
