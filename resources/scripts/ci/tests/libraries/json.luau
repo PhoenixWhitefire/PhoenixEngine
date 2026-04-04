@@ -30,7 +30,7 @@ return function(test: Types.Test, expect: Types.Expect)
 	end)
 
 	test("Encode array", function()
-		expect(json.encode({ 1, 2, 3 }, 0)):toBe("[\n1.0,\n2.0,\n3.0\n]")
+		expect(json.encode({ 1, 2, 3 }, 0)):toBe("[\n1,\n2,\n3\n]")
 	end)
 	test("Decode array", function()
 		expect(json.parse("[ 1, 2, 3 ]")):toBe({ 1, 2, 3 })
