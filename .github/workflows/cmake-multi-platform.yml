@@ -67,7 +67,6 @@ jobs:
         sudo apt-get install libdbus-1-dev
         sudo apt-get install libegl1-mesa-dev libgl1-mesa-dev libwayland-egl1
         sudo apt-get install libwayland-client0
-        sudo apt-get install -y g++-12 gcc-12
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 100
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100
 
