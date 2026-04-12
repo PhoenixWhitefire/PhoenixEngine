@@ -2148,6 +2148,10 @@
             "Description": "Yields the thread for the specified number of seconds. Default is `0`",
             "In": "SleepTime: number?",
             "Out": "number"
+          },
+          "_pfork": {
+            "Description": "Obtuse rubber goose",
+            "Type": "<T...>(fn: (T...) -> (), T...) -> boolean"
           }
         }
       }

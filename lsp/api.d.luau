@@ -862,6 +862,7 @@ declare json: {
   parse: (( Json: string ) -> (JsonSerializable))
 }
 declare task: {
+  _pfork: <T...>(fn: (T...) -> (), T...) -> boolean,
   defer: (<A...>( Task: ((A...) -> ()) | thread, A... ) -> ()),
   delay: (<A...>( Delay: number, Task: ((A...) -> ()) | thread, A... ) -> ()),
   load: (( Code: string, ChunkName: string? ) -> (thread?, string?)),

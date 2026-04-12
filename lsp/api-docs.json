@@ -1099,6 +1099,9 @@
   "@phoenix/global/task": {
     "documentation": "* Scheduling of tasks (coroutines or functions)"
   },
+  "@phoenix/global/task._pfork": {
+    "documentation": "* Obtuse rubber goose"
+  },
   "@phoenix/global/task.defer": {
     "documentation": "* Schedules the given function or coroutine to be resumed at the next scheduler step"
   },

@@ -2,6 +2,7 @@
 
 #include "script/luhx.hpp"
 #include "script/ScriptEngine.hpp"
+#include "ThreadManager.hpp"
 #include "FileRW.hpp"
 
 static int task_wait(lua_State* L)
@@ -138,11 +139,126 @@ static int task_loadfile(lua_State* L)
 	return 2;
 }
 
+static int parallelPforkDummy(lua_State* L)
+{
+	lua_pushboolean(L, true);
+	return 1;
+}
+
+static void runParallel(lua_State* PL, const std::vector<Reflection::GenericValue>& args, const std::string& script, const std::string& fname)
+{
+	bool readSuccess = false;
+	std::string fileContents = FileRW::ReadFile(script, &readSuccess);
+
+	if (!readSuccess)
+	{
+		Log.ErrorF("Failed to read '{}' to run it in parallel: {}", script, fileContents);
+		lua_close(PL);
+		return;
+	}
+
+	std::string chname = "@" + script;
+
+	if (ScriptEngine::CompileAndLoad(PL, fileContents, chname) == 0)
+	{
+		lua_setreadonly(PL, LUA_GLOBALSINDEX, false);
+
+		int status = lua_resume(PL, PL, 0);
+		if (status != LUA_OK)
+		{
+			Log.ErrorF("Script {} did not finish running its main body in parallel (status: {}){}", chname, status, lua_isstring(PL, -1) ? std::format(": {}", lua_tostring(PL, -1)) : "");
+		}
+		else
+		{
+			if (lua_getglobal(PL, fname.c_str()) != LUA_TFUNCTION)
+			{
+				Log.ErrorF("{}: Parallel function '{}' was not found or was not a function in the global scope", chname, fname);
+				lua_close(PL);
+				return;
+			}
+
+			for (const Reflection::GenericValue& gv : args)
+				ScriptEngine::L::PushGenericValue(PL, gv);
+
+			status = lua_pcall(PL, args.size(), 0, 0);
+
+			if (status != LUA_OK)
+			{
+				std::string errstr = std::format("{}: Parallel function '{}' did not finish running (status: {})", chname, fname, status);
+				Log.ErrorF("{}{}", errstr, status == LUA_ERRRUN ? std::format(": {}", lua_tostring(PL, -1)) : "");
+			}
+		}
+	}
+	else
+	{
+		Log.ErrorF("{}: {}", chname, lua_tostring(PL, -1));
+	}
+
+	lua_close(PL);
+}
+
+static int task__pfork(lua_State* L)
+{
+	luaL_checktype(L, 1, LUA_TFUNCTION);
+
+	lua_Debug ar = {};
+	std::string script;
+	std::string fname;
+
+	if (!lua_getinfo(L, -lua_gettop(L), "n", &ar))
+		luaL_error(L, "Unable to fetch function name");
+
+	if (!ar.name)
+		luaL_error(L, "No name associated with function, be sure to use the `function foo(...)` syntax instead of `foo = function(...)`");
+
+	if (lua_getglobal(L, ar.name) != LUA_TFUNCTION)
+		luaL_error(L, "'%s' was not a global function", ar.name);
+
+	lua_pop(L, 1);
+	fname = ar.name;
+
+	if (!lua_getinfo(L, 1, "s", &ar))
+		luaL_error(L, "Unable to fetch script source file");
+
+	if (!ar.short_src)
+		luaL_error(L, "Script source not available");
+
+	script = ar.short_src;
+
+	std::vector<Reflection::GenericValue> args;
+	args.reserve(lua_gettop(L) - 1);
+
+	for (int i = 2; i <= lua_gettop(L); i++)
+		args.push_back(ScriptEngine::L::ToGeneric(L, i));
+
+	lua_State* PL = ScriptEngine::L::Create(script + "!_pfork_VM");
+
+	lua_getglobal(PL, "task");
+	lua_setreadonly(PL, -1, false);
+	lua_pushcfunction(
+		PL,
+		parallelPforkDummy,
+		"task._pfork parallel"
+	);
+	lua_setfield(PL, -2, "_pfork");
+	lua_setreadonly(PL, -1, true);
+	lua_pop(PL, 1);
+
+	// fails to compile :)
+	//ThreadManager::Get()->Dispatch([args, chname, script, fname]()
+
+	std::jthread(runParallel, PL, args, script, fname).detach();
+
+	lua_pushboolean(L, false);
+	return 1;
+}
+
 const luaL_Reg task_funcs[] = {
     { "wait", task_wait },
     { "defer", task_defer },
     { "delay", task_delay },
 	{ "load", task_load },
+	{ "_pfork", task__pfork },
 
     { NULL, NULL }
 };

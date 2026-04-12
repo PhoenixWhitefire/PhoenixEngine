@@ -551,6 +551,7 @@
         "parse": "function"
       },
       "task": {
+        "_pfork": "function",
         "defer": "function",
         "delay": "function",
         "load": "function",
