@@ -1100,7 +1100,7 @@
     "documentation": "* Scheduling of tasks (coroutines or functions)"
   },
   "@phoenix/global/task._pfork": {
-    "documentation": "* Obtuse rubber goose"
+    "documentation": "* Obtuse rubber goose\n* Re-executes a copy of the script from the beginning in Parallel, then calls the global function given to it, passing arguments\n* Returns `true` if this is parallel execution, or `false` if this is the serial execution\n* In the parallel execution, the script cannot yield\n* Using this API will likely result in a crash or memory corruption, as no thread synchronization is used"
   },
   "@phoenix/global/task.defer": {
     "documentation": "* Schedules the given function or coroutine to be resumed at the next scheduler step"

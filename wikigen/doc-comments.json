@@ -2150,7 +2150,13 @@
             "Out": "number"
           },
           "_pfork": {
-            "Description": "Obtuse rubber goose",
+            "Description": [
+              "Obtuse rubber goose",
+              "Re-executes a copy of the script from the beginning in Parallel, then calls the global function given to it, passing arguments",
+              "Returns `true` if this is parallel execution, or `false` if this is the serial execution",
+              "In the parallel execution, the script cannot yield",
+              "Using this API will likely result in a crash or memory corruption, as no thread synchronization is used"
+            ],
             "Type": "<T...>(fn: (T...) -> (), T...) -> boolean"
           }
         }
