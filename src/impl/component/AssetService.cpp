@@ -157,7 +157,7 @@ const Reflection::StaticMethodMap& AssetServiceComponentManager::GetMethods()
                 objects.reserve(inputs[0].Size);
 
                 for (const Reflection::GenericValue& gv : inputs[0].AsArray())
-                    objects.push_back(GameObject::FromGenericValue(gv));
+                    objects.push_back(GameObjectManager::Get()->FromGenericValue(gv));
 
                 std::string ser = SceneFormat::Serialize(objects, inputs[1].AsString());
 

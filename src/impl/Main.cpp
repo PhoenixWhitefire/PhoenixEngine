@@ -325,10 +325,10 @@ static void init()
 		roots = SceneFormat::Deserialize(FileRW::ReadFile(mapFile), &worldLoadSuccess);
 	else
 	{
-		ObjectRef dm = GameObject::Create(EntityComponent::DataModel);
-		ObjectRef wp = GameObject::Create(EntityComponent::Workspace);
-		ObjectRef cam = GameObject::Create(EntityComponent::Camera);
-		ObjectRef light = GameObject::Create(EntityComponent::DirectionalLight);
+		ObjectRef dm = GameObjectManager::s_Create(EntityComponent::DataModel);
+		ObjectRef wp = GameObjectManager::s_Create(EntityComponent::Workspace);
+		ObjectRef cam = GameObjectManager::s_Create(EntityComponent::Camera);
+		ObjectRef light = GameObjectManager::s_Create(EntityComponent::DirectionalLight);
 
 		wp->SetParent(dm);
 		cam->SetParent(wp);
@@ -503,6 +503,8 @@ int main(int argc, char** argv)
 	try
 	{
 		Engine engine;
+		Log.Info("GameObjectManagerReady");
+
 		if (DoApiDump)
 			doApiDump();
 
@@ -520,6 +522,7 @@ int main(int argc, char** argv)
 	}
 	PHX_MAIN_CRASHHANDLERS;
 
+	Log.Info("GameObjectManagerDead");
 	Log.InfoF("The exit code is {}", s_ExitCode);
 	Log.Info("Application shutdown");
 	Logging::Save();

@@ -34,7 +34,7 @@ struct EcMesh : public Component<EntityComponent::Mesh>
 	bool Valid = true;
 };
 
-class MeshComponentManager : public ComponentManager<EcMesh, MeshComponentManager>
+class MeshComponentManager : public ComponentManager<EcMesh>
 {
 public:
     uint32_t CreateComponent(GameObject* Object) override;

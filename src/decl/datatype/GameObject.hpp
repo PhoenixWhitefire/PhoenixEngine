@@ -26,7 +26,7 @@ public:
 		EntityComponent type = T::Type;
 		for (const ReflectorRef& ref : Components)
 			if (ref.Type == type)
-				return static_cast<T*>(GameObject::s_ComponentManagers[(size_t)type]->GetComponent(ref.Id));
+				return static_cast<T*>(GetComponentManagerByComponentType(type)->GetComponent(ref.Id));
 
 		return nullptr;
 	}
@@ -116,6 +116,58 @@ private:
 	uint16_t m_HardRefCount = 0;
 };
 
+class GameObjectManager
+{
+public:
+	GameObjectManager();
+	~GameObjectManager();
+
+	static GameObjectManager* Get();
+
+	// create with a component
+	GameObject* Create(EntityComponent);
+	GameObject* Create(const std::string_view&);
+	// create empty object
+	GameObject* Create();
+
+	template <class T>
+	static GameObject* s_Create(T A)
+	{
+		return Get()->Create(A);
+	}
+
+	GameObject* FindById(uint32_t);
+	GameObject* FromGenericValue(const Reflection::GenericValue&);
+
+	uint32_t DataModel = PHX_GAMEOBJECT_NULL_ID;
+	hx::vector<GameObject, MEMCAT(GameObject)> WorldArray;
+	std::array<IComponentManager*, (size_t)EntityComponent::__count> ComponentManagers;
+
+	struct Collection
+	{
+		std::string Name;
+		std::vector<uint32_t> Items;
+
+		struct Event
+		{
+			// We want these to exist in the same memory location for the entire lifetime of the Engine
+			Reflection::EventDescriptor* Descriptor = nullptr;
+			std::vector<Reflection::EventCallback> Callbacks;
+		};
+
+		Event AddedEvent;
+		Event RemovedEvent;
+
+		uint16_t Id = UINT16_MAX;
+	};
+
+	std::vector<Collection> Collections;
+	std::unordered_map<std::string, uint16_t> CollectionNameToId;
+
+	// Returns a reference to a Collection, creating one if it does not exist
+	Collection& GetCollection(const std::string&);
+};
+
 // `GameObject*` directly has the least overhead. `ObjectRef`, a little more,
 // and `ObjectHandle`, more than that.
 // Use `GameObject*` when you know the World Array won't get re-allocated
@@ -143,12 +195,12 @@ struct ObjectRef
 
 	GameObject* Referred() const
 	{
-		return GameObject::GetObjectById(TargetId);
+		return GameObjectManager::Get()->FindById(TargetId);
 	}
 
 	bool IsValid() const
 	{
-		return GameObject::GetObjectById(TargetId) != nullptr;
+		return GameObjectManager::Get()->FindById(TargetId) != nullptr;
 	}
 
 	bool operator == (const ObjectRef& them) const
@@ -221,6 +273,9 @@ struct ObjectHandle
 
 	~ObjectHandle()
 	{
+		if (!HasValue())
+			return;
+
 		if (GameObject* obj = Reference.Referred())
 		{
 			obj->DecrementHardRefs();
@@ -291,47 +346,4 @@ struct ObjectHandle
 	{
 		return Dereference();
 	}
-};
-
-class GameObjectManager
-{
-public:
-	static GameObjectManager* Get();
-
-	// create with a component
-	ObjectHandle Create(EntityComponent);
-	ObjectHandle Create(const std::string_view&);
-	// create empty object
-	ObjectHandle Create();
-
-	ObjectRef GetById(uint32_t);
-	ObjectRef FromGenericValue(const Reflection::GenericValue&);
-
-	uint32_t DataModel = PHX_GAMEOBJECT_NULL_ID;
-	hx::vector<GameObject, MEMCAT(GameObject)> WorldArray;
-	std::array<IComponentManager*, (size_t)EntityComponent::__count> ComponentManagers;
-
-	struct Collection
-	{
-		std::string Name;
-		std::vector<uint32_t> Items;
-
-		struct Event
-		{
-			// We want these to exist in the same memory location for the entire lifetime of the Engine
-			Reflection::EventDescriptor* Descriptor = nullptr;
-			std::vector<Reflection::EventCallback> Callbacks;
-		};
-
-		Event AddedEvent;
-		Event RemovedEvent;
-
-		uint16_t Id = UINT16_MAX;
-	};
-
-	std::vector<Collection> Collections;
-	std::unordered_map<std::string, uint16_t> CollectionNameToId;
-
-	// Returns a reference to a Collection, creating one if it does not exist
-	static Collection& GetCollection(const std::string&);
 };

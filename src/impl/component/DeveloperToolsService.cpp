@@ -88,7 +88,7 @@ const Reflection::StaticMethodMap& DeveloperToolsComponentManager::GetMethods()
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
-                DeveloperTools::SetExplorerRoot(GameObject::FromGenericValue(inputs[0]));
+                DeveloperTools::SetExplorerRoot(GameObjectManager::Get()->FromGenericValue(inputs[0]));
 
                 return {};
             }
@@ -105,7 +105,7 @@ const Reflection::StaticMethodMap& DeveloperToolsComponentManager::GetMethods()
                 objects.reserve(inner.size());
 
                 for (const Reflection::GenericValue& gv : inner)
-                    objects.emplace_back(GameObject::FromGenericValue(gv));
+                    objects.emplace_back(GameObjectManager::Get()->FromGenericValue(gv));
 
                 DeveloperTools::SetExplorerSelections(objects);
                 return {};

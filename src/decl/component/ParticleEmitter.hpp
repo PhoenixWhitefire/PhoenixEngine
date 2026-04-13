@@ -51,4 +51,5 @@ class ParticleEmitterComponentManager : public ComponentManager<EcParticleEmitte
 {
 public:
     uint32_t CreateComponent(GameObject* Object) override;
+	const Reflection::StaticPropertyMap& GetProperties() override;
 };

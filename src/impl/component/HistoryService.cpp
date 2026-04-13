@@ -141,12 +141,12 @@ const Reflection::StaticPropertyMap& HistoryComponentManager::GetProperties()
             [](void*) -> Reflection::GenericValue
             {
                 History* history = History::Get();
-                return GameObject::GetObjectById(history->TargetDataModel)->ToGenericValue();
+                return GameObjectManager::Get()->FindById(history->TargetDataModel)->ToGenericValue();
             },
             [](void*, const Reflection::GenericValue& gv)
             {
                 History* history = History::Get();
-                GameObject* newTarget = GameObject::FromGenericValue(gv);
+                GameObject* newTarget = GameObjectManager::Get()->FromGenericValue(gv);
 
                 if (!newTarget->FindComponentByType(EntityComponent::DataModel))
                     RAISE_RTF("Object {} is not a DataModel!", newTarget->GetFullName());

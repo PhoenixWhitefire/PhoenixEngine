@@ -23,7 +23,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 			},
 			[](void* p, const Reflection::GenericValue& gv)
 			{
-				static_cast<GameObject*>(p)->SetParent(GameObject::FromGenericValue(gv));
+				static_cast<GameObject*>(p)->SetParent(GameObjectManager::Get()->FromGenericValue(gv));
 			}
 		) }
 	},
@@ -150,7 +150,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
 			{
 				GameObject* g = static_cast<GameObject*>(p);
-				GameObject* o = GameObject::FromGenericValue(inputs[0]);
+				GameObject* o = GameObjectManager::Get()->FromGenericValue(inputs[0]);
 
 				g->MergeWith(o);
 				return { g->ToGenericValue() };
@@ -285,7 +285,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 				std::vector<Reflection::GenericValue> tags;
 
 				for (uint16_t tagId : obj->Tags)
-					tags.emplace_back(s_Collections[tagId].Name);
+					tags.emplace_back(GameObjectManager::Get()->Collections[tagId].Name);
 
 				return { Reflection::GenericValue(tags) };
 			}
@@ -310,9 +310,9 @@ struct HandleHasher
 void* ReflectorRef::Referred() const
 {
 	if (Type == EntityComponent::None)
-		return (void*)GameObject::GetObjectById(Id);
+		return (void*)GameObjectManager::Get()->FindById(Id);
 	else
-		return GameObject::s_ComponentManagers[(size_t)Type]->GetComponent(Id);
+		return GetComponentManagerByComponentType(Type)->GetComponent(Id);
 }
 
 static GameObject* cloneRecursive(
@@ -322,7 +322,7 @@ static GameObject* cloneRecursive(
 	std::unordered_map<ObjectHandle, ObjectHandle, HandleHasher> OriginalToCloneMap = {}
 )
 {
-	ObjectHandle newObj = GameObject::Create();
+	ObjectHandle newObj = GameObjectManager::Get()->Create();
 
 	for (const ReflectorRef& ref : Root->Components)
 		newObj->AddComponent(ref.Type);
@@ -356,7 +356,7 @@ static GameObject* cloneRecursive(
 
 		if (rootVal.Type == Reflection::ValueType::GameObject)
 		{
-			ObjectHandle ref = GameObject::FromGenericValue(rootVal);
+			ObjectHandle ref = GameObjectManager::Get()->FromGenericValue(rootVal);
 			if (!ref.HasValue())
 				continue;
 
@@ -414,11 +414,11 @@ static void mergeRecursive(
 				// TODO 29/05/2025
 				// not sure what it means if this is NULL, i kinda forgor how this
 				// whole thing works
-				GameObject* g = GameObject::FromGenericValue(v);
+				GameObject* g = GameObjectManager::Get()->FromGenericValue(v);
 
 				auto moit = MergedOverrides.find(g ? g->ObjectId : PHX_GAMEOBJECT_NULL_ID);
 				if (moit != MergedOverrides.end())
-					v = GameObject::GetObjectById(moit->second)->ToGenericValue();
+					v = GameObjectManager::Get()->FindById(moit->second)->ToGenericValue();
 			}
 
 			me->SetPropertyValue(it.first, v);
@@ -429,7 +429,7 @@ static void mergeRecursive(
 		{
 			Reflection::GenericValue v = d->GetPropertyValue(it.first);
 
-			if (v.Type == Reflection::ValueType::GameObject && GameObject::FromGenericValue(v)->ObjectId == other->ObjectId)
+			if (v.Type == Reflection::ValueType::GameObject && GameObjectManager::Get()->FromGenericValue(v)->ObjectId == other->ObjectId)
 				d->SetPropertyValue(it.first, me->ToGenericValue());
 		}
 }
@@ -453,7 +453,7 @@ void GameObject::MergeWith(GameObject* Other)
 	Other->Destroy();
 }
 
-GameObject* GameObject::FromGenericValue(const Reflection::GenericValue& gv)
+GameObject* GameObjectManager::FromGenericValue(const Reflection::GenericValue& gv)
 {
 	if (gv.Type == Reflection::ValueType::Null)
 		return nullptr;
@@ -464,17 +464,16 @@ GameObject* GameObject::FromGenericValue(const Reflection::GenericValue& gv)
 			Reflection::TypeAsString(gv.Type)
 		);
 
-	assert(!GameObject::GetObjectById(static_cast<uint32_t>(gv.Val.Int)) ? gv.Val.Int == PHX_GAMEOBJECT_NULL_ID : true);
-	return GameObject::GetObjectById(static_cast<uint32_t>(gv.Val.Int));
+	assert(!GameObjectManager::Get()->FindById(static_cast<uint32_t>(gv.Val.Int)) ? gv.Val.Int == PHX_GAMEOBJECT_NULL_ID : true);
+	return GameObjectManager::Get()->FindById(static_cast<uint32_t>(gv.Val.Int));
 }
 
-GameObject* GameObject::GetObjectById(uint32_t Id)
+GameObject* GameObjectManager::FindById(uint32_t Id)
 {
-	if (Id == PHX_GAMEOBJECT_NULL_ID || Id == 0 || Id >= s_WorldArray.size())
+	if (Id == PHX_GAMEOBJECT_NULL_ID || Id == 0 || Id >= WorldArray.size())
 		return nullptr;
 
-	GameObject& obj = s_WorldArray[Id];
-	
+	GameObject& obj = WorldArray[Id];
 	return obj.Valid ? &obj : nullptr;
 }
 
@@ -505,19 +504,21 @@ void GameObject::Destroy()
 
 	if (!IsDestructionPending)
 	{
+		GameObjectManager* ObjectManager = GameObjectManager::Get();
+
 		m_HardRefCount++;
 
 		for (uint16_t tagId : Tags)
 		{
-			Collection& collection = s_Collections[tagId];
+			GameObjectManager::Collection& collection = ObjectManager->Collections[tagId];
 			collection.Items.erase(std::find(collection.Items.begin(), collection.Items.end(), ObjectId));
 			REFLECTION_SIGNAL_EVENT(collection.RemovedEvent.Callbacks, this->ToGenericValue());
-			REFLECTION_SIGNAL_EVENT(OnTagRemovedCallbacks, s_Collections[tagId].Name);
+			REFLECTION_SIGNAL_EVENT(OnTagRemovedCallbacks, ObjectManager->Collections[tagId].Name);
 		}
 		Tags.clear();
 
 		for (const ReflectorRef& ref : Components)
-			s_ComponentManagers[(size_t)ref.Type]->DeleteComponent(ref.Id);
+			GetComponentManagerByComponentType(ref.Type)->DeleteComponent(ref.Id);
 		Components.clear();
 
 		this->SetParent(nullptr);
@@ -597,7 +598,7 @@ void GameObject::SetParent(GameObject* newParent)
 			GetFullName()
 		);
 
-	GameObject* oldParent = GetObjectById(Parent);
+	GameObject* oldParent = GameObjectManager::Get()->FindById(Parent);
 
 	if (newParent == oldParent)
 		return;
@@ -712,7 +713,7 @@ void GameObject::RemoveChild(uint32_t id)
 		Children.erase(it);
 
 		// TODO HACK check ::Destroy
-		//if (GameObject* ch = GameObject::GetObjectById(id))
+		//if (GameObject* ch = GameObjectManager::Get()->FindById(id))
 		//	ch->DecrementHardRefs();
 	}
 	else
@@ -740,39 +741,41 @@ Reflection::GenericValue GameObject::ToGenericValue() const
 
 GameObject* GameObject::GetParent() const
 {
-	return GameObject::GetObjectById(this->Parent);
+	return GameObjectManager::Get()->FindById(this->Parent);
 }
 
 void GameObject::ForEachChild(const std::function<bool(GameObject*)>& Callback)
 {
-	size_t beforeSize = s_WorldArray.size();
+	GameObjectManager* ObjectManager = GameObjectManager::Get();
+	size_t beforeSize = ObjectManager->WorldArray.size();
 
 	for (uint32_t id : Children)
 	{
-		GameObject* child = GameObject::GetObjectById(id);
+		GameObject* child = GameObjectManager::Get()->FindById(id);
 		assert(child);
 
 		if (bool shouldContinue = Callback(child); !shouldContinue)
 			break;
 
-		if (s_WorldArray.size() != beforeSize)
+		if (ObjectManager->WorldArray.size() != beforeSize)
 			RAISE_RT("Callback cannot create objects"); // `this` may get re-allocated, very very bad
 	}
 }
 
 bool GameObject::ForEachDescendant(const std::function<bool(GameObject*)>& Callback)
 {
-	size_t beforeSize = s_WorldArray.size();
+	GameObjectManager* ObjectManager = GameObjectManager::Get();
+	size_t beforeSize = ObjectManager->WorldArray.size();
 
 	for (uint32_t id : Children)
 	{
-		GameObject* child = GameObject::GetObjectById(id);
+		GameObject* child = GameObjectManager::Get()->FindById(id);
 		assert(child);
 
 		if (bool shouldContinue = Callback(child); !shouldContinue)
 			return true;
 
-		if (s_WorldArray.size() != beforeSize)
+		if (ObjectManager->WorldArray.size() != beforeSize)
 			RAISE_RT("Callback cannot create objects"); // `this` may get re-allocated, very very bad
 
 		if (child->ForEachDescendant(Callback))
@@ -789,7 +792,7 @@ std::vector<GameObject*> GameObject::GetChildren()
 
 	for (uint32_t id : Children)
 	{
-		GameObject* child = GameObject::GetObjectById(id);
+		GameObject* child = GameObjectManager::Get()->FindById(id);
 		assert(child);
 		children.push_back(child);
 	}
@@ -806,7 +809,7 @@ std::vector<GameObject*> GameObject::GetDescendants()
 
 	for (uint32_t id : Children)
 	{
-		GameObject* child = GameObject::GetObjectById(id);
+		GameObject* child = GameObjectManager::Get()->FindById(id);
 		assert(child);
 		descendants.push_back(child);
 
@@ -821,7 +824,7 @@ GameObject* GameObject::FindChild(const std::string_view& ChildName)
 {
 	for (uint32_t index = 0; index < Children.size(); index++)
 	{
-		GameObject* child = GameObject::GetObjectById(Children[index]);
+		GameObject* child = GameObjectManager::Get()->FindById(Children[index]);
 		assert(child);
 
 		if (child->Name == ChildName)
@@ -836,7 +839,7 @@ GameObject* GameObject::FindChildWithComponent(EntityComponent Component)
 {
 	for (uint32_t index = 0; index < Children.size(); index++)
 	{
-		GameObject* child = GameObject::GetObjectById(Children[index]);
+		GameObject* child = GameObjectManager::Get()->FindById(Children[index]);
 		assert(child);
 
 		if (child->FindComponentByType(Component))
@@ -854,7 +857,7 @@ uint32_t GameObject::AddComponent(EntityComponent Type)
 	if (FindComponentByType(Type))
 		RAISE_RT("Already have that component");
 	
-	IComponentManager* manager = GameObject::s_ComponentManagers[(size_t)Type];
+	IComponentManager* manager = GetComponentManagerByComponentType(Type);
 	Components.emplace_back(manager->CreateComponent(this), Type);
 
 	uint32_t componentId = Components.back().Id;
@@ -897,7 +900,7 @@ void GameObject::RemoveComponent(EntityComponent Type)
 	for (auto it = Components.begin(); it < Components.end(); it++)
 		if (it->Type == Type)
 		{
-			IComponentManager* manager = GameObject::s_ComponentManagers[(size_t)Type];
+			IComponentManager* manager = GetComponentManagerByComponentType(Type);
 
 			if (History* history = History::Get(); history->IsRecordingEnabled && OwningDataModel == history->TargetDataModel)
 			{
@@ -1076,7 +1079,7 @@ Reflection::GenericValue GameObject::GetDefaultPropertyValue(const std::string_v
 		}
 		else
 		{
-			return s_ComponentManagers[(size_t)ref.Type]->GetDefaultPropertyValue(PropName);
+			return GetComponentManagerByComponentType(ref.Type)->GetDefaultPropertyValue(PropName);
 		}
 	}
 
@@ -1128,21 +1131,21 @@ void* GameObject::FindComponentByType(EntityComponent Type)
 
 	for (const ReflectorRef& ref : Components)
 		if (ref.Type == Type)
-			return GameObject::s_ComponentManagers[(size_t)Type]->GetComponent(ref.Id);
+			return GetComponentManagerByComponentType(Type)->GetComponent(ref.Id);
 	
 	return nullptr;
 }
 
-GameObject* GameObject::Create()
+GameObject* GameObjectManager::Create()
 {
-	if (s_WorldArray.size() == 0)
+	if (WorldArray.size() == 0)
 	{
-		s_WorldArray.emplace_back();
-		s_WorldArray[0].Name = "<RESERVED INVALID SLOT>";
-		s_WorldArray[0].Valid = false;
+		WorldArray.emplace_back();
+		WorldArray[0].Name = "<RESERVED INVALID SLOT>";
+		WorldArray[0].Valid = false;
 	}
 
-	uint32_t numObjects = static_cast<uint32_t>(s_WorldArray.size());
+	uint32_t numObjects = static_cast<uint32_t>(WorldArray.size());
 
 	if (numObjects >= UINT32_MAX - 1)
 		RAISE_RT("Reached end of GameObject ID space (2^32 - 1)");
@@ -1150,82 +1153,82 @@ GameObject* GameObject::Create()
 #ifndef NDEBUG
 
 	// cause as many re-allocations as possible to catch stale pointers
-	s_WorldArray.shrink_to_fit();
+	WorldArray.shrink_to_fit();
 
 #endif
 
-	s_WorldArray.emplace_back();
-	GameObject& created = s_WorldArray.back();
+	WorldArray.emplace_back();
+	GameObject& created = WorldArray.back();
 
 	created.ObjectId = numObjects;
 	created.IncrementHardRefs();
 	return &created;
 }
 
-GameObject* GameObject::Create(EntityComponent FirstComponent)
+GameObject* GameObjectManager::Create(EntityComponent FirstComponent)
 {
-	GameObject* created = GameObject::Create();
+	GameObject* created = Create();
 	created->AddComponent(FirstComponent);
 	created->Name = s_EntityComponentNames[(size_t)FirstComponent];
 
 	return created;
 }
 
-GameObject* GameObject::Create(const std::string_view& FirstComponent)
+GameObject* GameObjectManager::Create(const std::string_view& FirstComponent)
 {
 	if (FirstComponent == "Primitive")
-		return GameObject::Create("Mesh");
+		return Create("Mesh");
 
 	EntityComponent it = FindComponentTypeByName(FirstComponent);
 
 	if (it == EntityComponent::None)
 		RAISE_RTF("Invalid Component Name '{}'", FirstComponent);
 	else
-		return GameObject::Create(it);
+		return Create(it);
 }
 
-GameObject::Collection& GameObject::GetCollection(const std::string& Name)
+GameObjectManager::Collection& GameObjectManager::GetCollection(const std::string& Name)
 {
-	const auto& it = s_CollectionNameToId.find(Name);
+	const auto& it = CollectionNameToId.find(Name);
 
-	if (it == s_CollectionNameToId.end())
+	if (it == CollectionNameToId.end())
 	{
-		if (s_Collections.size() >= UINT16_MAX)
+		if (Collections.size() >= UINT16_MAX)
 			RAISE_RTF("Cannot create collection '{}' because we have reached the limit of 2^16", Name);
 
-		uint16_t id = static_cast<uint16_t>(s_Collections.size());
-		s_CollectionNameToId[Name] = id;
-		s_Collections.push_back(Collection{ .AddedEvent = { .Descriptor = new Reflection::EventDescriptor }, .RemovedEvent = { .Descriptor = new Reflection::EventDescriptor } });
+		uint16_t id = static_cast<uint16_t>(Collections.size());
+		CollectionNameToId[Name] = id;
+		Collections.push_back(Collection{ .AddedEvent = { .Descriptor = new Reflection::EventDescriptor }, .RemovedEvent = { .Descriptor = new Reflection::EventDescriptor } });
 
-		Collection& collection = s_Collections[id];
+		Collection& collection = Collections[id];
 		collection.Name = Name;
 		collection.Id = id;
 
 		collection.AddedEvent.Descriptor->CallbackInputs = { Reflection::ValueType::GameObject };
 		collection.RemovedEvent.Descriptor->CallbackInputs = { Reflection::ValueType::GameObject };
-		collection.AddedEvent.Descriptor->Connect = [id](void*, Reflection::EventCallback Callback) -> uint32_t
+		collection.AddedEvent.Descriptor->Connect = [this, id](void*, Reflection::EventCallback Callback) -> uint32_t
 		{
-			s_Collections[id].AddedEvent.Callbacks.push_back(Callback);
-			return (uint32_t)s_Collections[id].AddedEvent.Callbacks.size() - 1;
+			Collections[id].AddedEvent.Callbacks.push_back(Callback);
+			return (uint32_t)Collections[id].AddedEvent.Callbacks.size() - 1;
 		};
-		collection.AddedEvent.Descriptor->Disconnect = [id](void*, uint32_t ConnectionId) noexcept
+		collection.AddedEvent.Descriptor->Disconnect = [this, id](void*, uint32_t ConnectionId) noexcept
 		{
-			s_Collections[id].AddedEvent.Callbacks[ConnectionId] = nullptr;
+			Collections[id].AddedEvent.Callbacks[ConnectionId] = nullptr;
 		};
-		collection.RemovedEvent.Descriptor->Connect = [id](void*, Reflection::EventCallback Callback) -> uint32_t
+		collection.RemovedEvent.Descriptor->Connect = [this, id](void*, Reflection::EventCallback Callback) -> uint32_t
 		{
-			s_Collections[id].RemovedEvent.Callbacks.push_back(Callback);
-			return (uint32_t)s_Collections[id].RemovedEvent.Callbacks.size() - 1;
+			Collections[id].RemovedEvent.Callbacks.push_back(Callback);
+			return (uint32_t)Collections[id].RemovedEvent.Callbacks.size() - 1;
 		};
-		collection.RemovedEvent.Descriptor->Disconnect = [id](void*, uint32_t ConnectionId) noexcept
+		collection.RemovedEvent.Descriptor->Disconnect = [this, id](void*, uint32_t ConnectionId) noexcept
 		{
-			s_Collections[id].RemovedEvent.Callbacks[ConnectionId] = nullptr;
+			Collections[id].RemovedEvent.Callbacks[ConnectionId] = nullptr;
 		};
 
 		return collection;
 	}
 	else
-		return s_Collections[it->second];
+		return Collections[it->second];
 }
 
 void GameObject::AddTag(const std::string& Tag)
@@ -1233,7 +1236,7 @@ void GameObject::AddTag(const std::string& Tag)
 	if (IsDestructionPending)
 		RAISE_RTF("Cannot call `:AddTag` on Object {} which was destroyed", GetFullName());
 
-	Collection& collection = GetCollection(Tag);
+	GameObjectManager::Collection& collection = GameObjectManager::Get()->GetCollection(Tag);
 	bool alreadyHave = std::find(Tags.begin(), Tags.end(), collection.Id) != Tags.end();
 
 	if (!alreadyHave)
@@ -1261,9 +1264,10 @@ void GameObject::AddTag(const std::string& Tag)
 
 void GameObject::RemoveTag(const std::string& Tag)
 {
-	const auto& it = s_CollectionNameToId.find(Tag);
+	GameObjectManager* ObjectManager = GameObjectManager::Get();
+	const auto& it = ObjectManager->CollectionNameToId.find(Tag);
 
-	if (it == s_CollectionNameToId.end())
+	if (it == ObjectManager->CollectionNameToId.end())
 		return;
 
 	const auto& tagIt = std::find(Tags.begin(), Tags.end(), it->second);
@@ -1271,7 +1275,7 @@ void GameObject::RemoveTag(const std::string& Tag)
 	{
 		Tags.erase(tagIt);
 
-		Collection& collection = s_Collections[it->second];
+		GameObjectManager::Collection& collection = ObjectManager->Collections[it->second];
 		collection.Items.erase(std::find(collection.Items.begin(), collection.Items.end(), ObjectId));
 		REFLECTION_SIGNAL_EVENT(collection.RemovedEvent.Callbacks, this->ToGenericValue());
 		REFLECTION_SIGNAL_EVENT(OnTagRemovedCallbacks, Tag);
@@ -1291,11 +1295,32 @@ void GameObject::RemoveTag(const std::string& Tag)
 	}
 }
 
+static GameObjectManager* ObjectManagerInstance = nullptr;
+
+GameObjectManager::GameObjectManager()
+{
+	assert(!ObjectManagerInstance);
+	ObjectManagerInstance = this;
+}
+
+GameObjectManager::~GameObjectManager()
+{
+	assert(ObjectManagerInstance);
+	ObjectManagerInstance = nullptr;
+}
+
+GameObjectManager* GameObjectManager::Get()
+{
+	assert(ObjectManagerInstance);
+	return ObjectManagerInstance;
+}
+
 bool GameObject::HasTag(const std::string& Tag)
 {
-	const auto& it = s_CollectionNameToId.find(Tag);
+	GameObjectManager* ObjectManager = GameObjectManager::Get();
+	const auto& it = ObjectManager->CollectionNameToId.find(Tag);
 
-	if (it == s_CollectionNameToId.end())
+	if (it == ObjectManager->CollectionNameToId.end())
 		return false;
 
 	const auto& tagIt = std::find(Tags.begin(), Tags.end(), it->second);
@@ -1306,7 +1331,7 @@ static void dumpProperties(const Reflection::StaticPropertyMap& Properties, nloh
 {
 	for (const auto& propIt : Properties)
 	{
-		std::string pstr{ Reflection::TypeAsString(propIt.second.Type) };
+		std::string pstr = Reflection::TypeAsString(propIt.second.Type);
 
 		if (!propIt.second.Set)
 			pstr += " READONLY";
@@ -1366,7 +1391,7 @@ nlohmann::json GameObject::DumpApiToJson()
 	
 	for (size_t i = 0; i < (size_t)EntityComponent::__count; i++)
 	{
-		IComponentManager* manager = s_ComponentManagers[i];
+		IComponentManager* manager = GameObjectManager::Get()->ComponentManagers[i];
 
 		if (!manager)
 			continue;

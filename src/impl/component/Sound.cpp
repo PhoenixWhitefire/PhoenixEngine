@@ -27,7 +27,7 @@ void SoundComponentManager::DeleteComponent(uint32_t Id)
 	delete sound.SoundInstance;
 	sound.SoundInstance = nullptr;
 
-	ComponentManager<EcSound, SoundComponentManager>::DeleteComponent(Id);
+	ComponentManager<EcSound>::DeleteComponent(Id);
 }
 
 const Reflection::StaticPropertyMap& SoundComponentManager::GetProperties()
@@ -212,7 +212,7 @@ void SoundComponentManager::Shutdown()
 	//AudioAssets.clear();
 
 	ma_engine_uninit(&AudioEngine);
-	ComponentManager<EcSound, SoundComponentManager>::Shutdown();
+	ComponentManager<EcSound>::Shutdown();
 }
 
 void EcSound::Reload()
@@ -232,7 +232,7 @@ void EcSound::Reload()
 	LoadSucceeded = false;
 	Length = 0.f;
 
-	if (ma_result result = ma_sound_init_from_file(&SoundComponentManager::Get()->AudioEngine, filePath.c_str(), 0, NULL, NULL, SoundInstance);
+	if (ma_result result = ma_sound_init_from_file(&((SoundComponentManager*)SoundComponentManager::Get())->AudioEngine, filePath.c_str(), 0, NULL, NULL, SoundInstance);
 		result != MA_SUCCESS
 	)
 	{

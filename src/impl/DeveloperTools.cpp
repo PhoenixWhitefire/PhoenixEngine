@@ -288,7 +288,7 @@ void DeveloperTools::Initialize(Renderer* renderer)
 {
 	MtlEditorPreview.Initialize(256, 256);
 	MtlPreviewRenderer = renderer;
-	MtlPreviewCamera = GameObject::Create(EntityComponent::Camera);
+	MtlPreviewCamera = GameObjectManager::s_Create(EntityComponent::Camera);
 	MtlPreviewCamera->AddComponent(EntityComponent::Transform);
 	MtlPreviewCamera->Name = "MtlPreviewCamera";
 
@@ -352,10 +352,10 @@ void DeveloperTools::Initialize(Renderer* renderer)
 	ScriptEngine::L::DebugBreak = &debugBreakHook;
 	ScriptEngine::L::LeaveDebugger = debuggerLeaveCallback;
 
-	ObjectHandle tempdm = GameObject::Create("DataModel");
-	ObjectRef tempwp = GameObject::Create("Workspace");
+	ObjectHandle tempdm = GameObjectManager::s_Create("DataModel");
+	ObjectHandle tempwp = GameObjectManager::s_Create("Workspace");
 	tempwp->SetParent(tempdm);
-	GameObject::s_DataModel = tempdm->ObjectId;
+	GameObjectManager::Get()->DataModel = tempdm->ObjectId;
 
 	s_EditorLuauLang.mTokenRegexStrings[5].first = "[a-zA-Z_][a-zA-Z0-9_\\.]*"; // allow identifiers to have `.` so that `task.defer` etc can match as one single token
 	s_EditorLuauLang.mTokenRegexStrings.push_back({ "\\`(?:\\.|[^\\`{]|\\{[^}]*\\})*\\`", TextEditor::PaletteIndex::String }); // string interpolation
@@ -1761,12 +1761,11 @@ static void recursiveIterateTree(GameObject* current)
 			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("Explorer_DragGameObject"))
 			{
 				History::ScopedAction action = { "DragAndDropObject" };
-
 				uint32_t child = *(uint32_t*)payload->Data;
 
 				try
 				{
-					GameObject::GetObjectById(child)->SetParent(object);
+					GameObjectManager::Get()->FindById(child)->SetParent(object);
 				}
 				catch (const std::runtime_error& e)
 				{
@@ -2121,6 +2120,9 @@ static void renderDocumentationViewer()
 	}
 
 	ImGui::BeginChild(1983, ImGui::GetContentRegionAvail() * ImVec2(0.2f, 1.f), ImGuiChildFlags_Borders);
+
+	if (DocumentationViewerJumpingToPage)
+		ImGui::SetWindowFocus();
 
 	if (DocumentationViewerJumpingToPage && DocumentationViewerSection == 0)
 	{
@@ -2529,8 +2531,10 @@ static void renderDocumentationViewer()
 	}
 
 	ImGui::EndChild();
-
 	ImGui::End();
+
+	assert(!DocumentationViewerJumpingToPage);
+	DocumentationViewerJumpingToPage = false;
 }
 
 static void renderExplorer()
@@ -2618,7 +2622,7 @@ static void renderExplorer()
 		{
 			History::ScopedAction action = { "InsertEmptyObject" };
 
-			GameObject* newObject = GameObject::Create();
+			ObjectHandle newObject = GameObjectManager::Get()->Create();
 			newObject->SetParent(ObjectInsertionTarget);
 			Selections = { newObject };
 		}
@@ -2631,9 +2635,7 @@ static void renderExplorer()
 			{
 				History::ScopedAction action = { "InsertObject" };
 
-				GameObject* newObject = nullptr;
-
-				newObject = GameObject::Create(name);
+				ObjectHandle newObject = GameObjectManager::s_Create(name);
 
 				for(EntityComponent ecx : GetCommonDependenciesForComponent(FindComponentTypeByName(name)))
 					newObject->AddComponent(ecx);
@@ -2744,7 +2746,7 @@ static void renderExplorer()
 				{
 					History::ScopedAction action = { "InsertService" };
 
-					GameObject* newServ = GameObject::Create(ec);
+					ObjectHandle newServ = GameObjectManager::s_Create(ec);
 					newServ->SetParent(ExplorerRoot);
 					Selections = { newServ };
 				}
@@ -3584,7 +3586,7 @@ static void renderProperties()
 			}
 
 			for (uint16_t tag : sel->Tags)
-				tags.push_back(GameObject::s_Collections[tag].Name);
+				tags.push_back(GameObjectManager::Get()->Collections[tag].Name);
 		}
 
 		using PropsIteratorType = std::pair<std::string_view, std::pair<const Reflection::PropertyDescriptor*, Reflection::GenericValue>>;
@@ -3836,7 +3838,7 @@ static void renderProperties()
 				}
 				else
 				{
-					GameObject* referenced = GameObject::FromGenericValue(newVal);
+					GameObject* referenced = GameObjectManager::Get()->FromGenericValue(newVal);
 					std::string str = "";
 
 					if (referenced)
@@ -3850,7 +3852,7 @@ static void renderProperties()
 						{
 							if (referenced)
 							{
-								GameObject* target = GameObject::FromGenericValue(newVal);
+								GameObject* target = GameObjectManager::Get()->FromGenericValue(newVal);
 								Selections = { target };
 								ExplorerShouldSeekToCurrentSelection = true;
 								DeveloperTools::ExplorerShown = true;
@@ -4080,8 +4082,8 @@ static void renderProperties()
 			}
 
 			std::vector<std::string_view> collectionNames;
-			collectionNames.reserve(GameObject::s_Collections.size());
-			for (const GameObject::Collection& collection : GameObject::s_Collections)
+			collectionNames.reserve(GameObjectManager::Get()->Collections.size());
+			for (const GameObjectManager::Collection& collection : GameObjectManager::Get()->Collections)
 				collectionNames.emplace_back(collection.Name);
 
 			std::sort(collectionNames.begin(), collectionNames.end());
@@ -4502,7 +4504,7 @@ void DeveloperTools::Frame(double DeltaTime)
 	ZoneScopedC(tracy::Color::DarkSeaGreen);
 
 	if (!ExplorerRoot.Reference.Referred())
-		ExplorerRoot = GameObject::GetObjectById(GameObject::s_DataModel);
+		ExplorerRoot = GameObjectManager::Get()->FindById(GameObjectManager::Get()->DataModel);
 
 	ErrorTooltipTimeRemaining -= DeltaTime;
 

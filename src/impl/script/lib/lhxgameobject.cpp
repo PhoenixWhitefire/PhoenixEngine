@@ -52,7 +52,7 @@ void luhx_pushgameobject(lua_State* L, GameObject* Object)
 		sizeof(uint32_t),
 		[](void* ptrToId)
 		{
-			GameObject::GetObjectById(*(uint32_t*)ptrToId)->DecrementHardRefs();
+			GameObjectManager::Get()->FindById(*(uint32_t*)ptrToId)->DecrementHardRefs();
 		}
 	);
 	lua_pushinteger(L, *(const int32_t*)&Object->ObjectId);
@@ -70,7 +70,7 @@ void luhx_pushgameobject(lua_State* L, GameObject* Object)
 GameObject* luhx_checkgameobject(lua_State* L, int StackIndex)
 {
     uint32_t* idptr = (uint32_t*)luaL_checkudata(L, StackIndex, "GameObject");
-    return GameObject::GetObjectById(*idptr);
+    return GameObjectManager::Get()->FindById(*idptr);
 }
 
 static int gameobject_new(lua_State* L)
@@ -80,7 +80,7 @@ static int gameobject_new(lua_State* L)
 
 	if (!component)
 	{
-		luhx_pushgameobject(L, GameObject::Create());
+		luhx_pushgameobject(L, GameObjectManager::Get()->Create());
 		return 1;
 	}
 
@@ -88,7 +88,7 @@ static int gameobject_new(lua_State* L)
 	if (ec == EntityComponent::None)
 		luaL_error(L, "Invalid component name '%s'", component);
 
-	GameObject* newObject = GameObject::Create(ec);
+	GameObject* newObject = GameObjectManager::s_Create(ec);
 	newObject->Name = std::string(component, len);
 
 	for (EntityComponent ec : GetCommonDependenciesForComponent(ec))
@@ -100,7 +100,7 @@ static int gameobject_new(lua_State* L)
 
 static int gameobject_fromComponents(lua_State* L)
 {
-    GameObject* newObject = GameObject::Create();
+    GameObject* newObject = GameObjectManager::Get()->Create();
 
 	if (lua_type(L, 1) != LUA_TNONE)
 	{
@@ -134,7 +134,7 @@ static int gameobject_fromId(lua_State* L)
 {
 	int oid = luaL_checkinteger(L, 1);
 
-	luhx_pushgameobject(L, GameObject::GetObjectById((uint32_t)oid));
+	luhx_pushgameobject(L, GameObjectManager::Get()->FindById((uint32_t)oid));
 	return 1;
 }
 

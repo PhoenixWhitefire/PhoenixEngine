@@ -67,7 +67,7 @@ static int sig_namecall(lua_State* L)
 		Reflection::GenericValue dmgv = ScriptEngine::L::ToGeneric(L, -1);
 		if (dmgv.Type == Reflection::ValueType::GameObject)
 		{
-			GameObject* dm = GameObject::FromGenericValue(dmgv);
+			GameObject* dm = GameObjectManager::Get()->FromGenericValue(dmgv);
 			ec->DataModel = dm;
 		}
 		lua_pop(L, 1);
@@ -239,7 +239,7 @@ static int sig_eq(lua_State* L)
 static int sig_tostring(lua_State* L)
 {
     EventSignalData* ev = (EventSignalData*)luaL_checkudata(L, 1, "EventSignal");
-	GameObject* obj = GameObject::GetObjectById(ev->Reflector.Id);
+	GameObject* obj = GameObjectManager::Get()->FindById(ev->Reflector.Id);
 
 	std::string source = ev->Reflector.Type == EntityComponent::None
 		? (obj ? obj->GetFullName() + "." : "GameObject::")

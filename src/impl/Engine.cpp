@@ -371,7 +371,6 @@ Engine::Engine()
 	this->LoadConfiguration();
 	m_InitializeVideo();
 
-	GameObject::s_WorldArray.reserve(32);
 	FileRW::DefineAlias("cwd", std::filesystem::current_path().string());
 	FileRW::DefineAlias("editres", "resources/");
 	FileRW::DefineAlias("projres", "resources/");
@@ -927,7 +926,7 @@ void Engine::BindDataModel(GameObject* NewDataModel)
 	WorkspaceRef = NewDataModel->FindChild("Workspace");
 	assert(WorkspaceRef.Dereference());
 
-	GameObject::s_DataModel = NewDataModel->ObjectId;
+	ObjectManager.DataModel = NewDataModel->ObjectId;
 }
 
 void Engine::Start()
@@ -1107,7 +1106,7 @@ void Engine::Start()
 		EcCamera* sceneCamera = sceneCamObject->FindComponent<EcCamera>();
 
 		if (!IsHeadlessMode)
-			workspaceComponent->Update();
+			workspaceComponent->UpdateSoundListener();
 
 		REFLECTION_SIGNAL_EVENT(DataModelRef->FindComponent<EcDataModel>()->OnFrameBeginCallbacks, deltaTime);
 		ScriptEngine::StepScheduler(); // scripts may try to draw Dear ImGui, this needs to be AFTER `ImGui::NewFrame`
@@ -1286,20 +1285,20 @@ void Engine::Shutdown()
 	Log.Info("Engine destructing...");
 
 	Log.Info("Destroying DataModel...");
-	EcDataModel::NotifyAllOfShutdown();
+	ComponentManagers.DataModel.NotifyAllOfShutdown();
 
 	DataModelRef->Destroy();
 	WorkspaceRef->Destroy();
 	DataModelRef.Clear();
 	WorkspaceRef.Clear();
 
-	for (GameObject& obj : GameObject::s_WorldArray)
+	for (GameObject& obj : ObjectManager.WorldArray)
 	{
 		if (!obj.IsDestructionPending && obj.Valid)
 			obj.Destroy();
 	}
 
-	for (GameObject::Collection& collection : GameObject::s_Collections)
+	for (GameObjectManager::Collection& collection : ObjectManager.Collections)
 	{
 		delete collection.AddedEvent.Descriptor;
 		delete collection.RemovedEvent.Descriptor;
@@ -1318,7 +1317,7 @@ void Engine::Shutdown()
 		ZoneScopedN("Shutdown Component");
 		ZoneText(s_EntityComponentNames[i].data(), s_EntityComponentNames[i].size());
 
-		GameObject::s_ComponentManagers[i]->Shutdown();
+		ObjectManager.ComponentManagers[i]->Shutdown();
 	}
 
 	Log.Info("Shutting down managers...");
@@ -1345,7 +1344,7 @@ void Engine::Shutdown()
 		glfwDestroyWindow(Window);
 	glfwTerminate();
 
-	for (const GameObject& obj : GameObject::s_WorldArray)
+	for (const GameObject& obj : ObjectManager.WorldArray)
 	{
 		if (obj.Valid)
 			Log.WarningF("Object {} still has references!", obj.GetFullName());

@@ -150,7 +150,7 @@ static void resolveCollisions(Physics::World& World, float DeltaTime, Physics* p
 
 	hx::vector<Collision, MEMCAT(Physics)> collisions;
 
-	EcWorkspace* workspace = GameObject::GetObjectById(World.Dynamics[0]->OwningWorkspace)->FindComponent<EcWorkspace>();
+	EcWorkspace* workspace = GameObjectManager::Get()->FindById(World.Dynamics[0]->OwningWorkspace)->FindComponent<EcWorkspace>();
 
 	for (size_t aid = 0; aid < World.Dynamics.size(); aid++)
 	{
@@ -176,7 +176,7 @@ static void resolveCollisions(Physics::World& World, float DeltaTime, Physics* p
 				if (oid == a->ObjectId)
 					continue;
 
-				GameObject* b = GameObject::GetObjectById(oid);
+				GameObject* b = GameObjectManager::Get()->FindById(oid);
 				EcRigidBody* brb = b ? b->FindComponent<EcRigidBody>() : nullptr;
 
 				if (!brb || !brb->PhysicsCollisions)

@@ -25,13 +25,13 @@ public:
 void RegisterComponentManager(EntityComponent Type, IComponentManager*);
 IComponentManager* GetComponentManagerByComponentType(EntityComponent Type);
 
-template <class T, class U = ComponentManager<T>>
+template <class T>
 class ComponentManager : public IComponentManager
 {
 public:
-	static U* Get()
+	static ComponentManager* Get()
 	{
-		return (U*)GetComponentManagerByComponentType(T::Type);
+		return (ComponentManager*)GetComponentManagerByComponentType(T::Type);
 	}
 
 	virtual uint32_t CreateComponent(GameObject*) override

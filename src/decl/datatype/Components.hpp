@@ -27,7 +27,7 @@
 #include "component/TreeLink.hpp"
 #include "component/Workspace.hpp"
 
-struct ComponentManagers
+struct AllComponentManagers
 {
     AnimationComponentManager Animation;
     AssetServiceComponentManager AssetService;
@@ -51,7 +51,7 @@ struct ComponentManagers
     SpotLightComponentManager SpotLight;
     LoggingComponentManager LoggingService;
     MeshComponentManager Mesh;
-    DataModelComponentManager Model;
+    ModelComponentManager Model;
     NetworkComponentManager NetworkService;
     ParticleEmitterComponentManager ParticleEmitter;
     PhysicsComponentManager PhysicsService;

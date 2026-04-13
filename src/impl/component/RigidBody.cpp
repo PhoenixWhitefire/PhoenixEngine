@@ -41,7 +41,7 @@ static void updateSpatialHash(EcRigidBody* crb)
 	if (!crb->PhysicsCollisions)
 		return;
 
-	GameObject* ocw = GameObject::GetObjectById(crb->Object->OwningWorkspace);
+	GameObject* ocw = GameObjectManager::Get()->FindById(crb->Object->OwningWorkspace);
 	EcWorkspace* cw = ocw ? ocw->FindComponent<EcWorkspace>() : nullptr;
 	crb->PrevWorkspace = ocw;
 

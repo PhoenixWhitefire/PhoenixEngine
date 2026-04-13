@@ -193,7 +193,7 @@ static nlohmann::json genericToJson(const Reflection::GenericValue& Value, std::
 	}
 }
 
-const Reflection::StaticPropertyMap& GetProperties() override
+const Reflection::StaticPropertyMap& EngineComponentManager::GetProperties()
 {
     static const Reflection::StaticPropertyMap props = {
         REFLECTION_PROPERTY(
@@ -272,7 +272,7 @@ const Reflection::StaticPropertyMap& GetProperties() override
     return props;
 }
 
-const Reflection::StaticMethodMap& GetMethods() override
+const Reflection::StaticMethodMap& EngineComponentManager::GetMethods()
 {
     static const Reflection::StaticMethodMap methods = {
         { "Exit", Reflection::MethodDescriptor{
@@ -298,7 +298,7 @@ const Reflection::StaticMethodMap& GetMethods() override
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 Engine* engine = Engine::Get();
-                engine->BindDataModel(GameObject::FromGenericValue(inputs[0]));
+                engine->BindDataModel(GameObjectManager::Get()->FromGenericValue(inputs[0]));
 
                 return {};
             }

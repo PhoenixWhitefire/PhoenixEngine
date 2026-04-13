@@ -253,7 +253,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 
 		case ModelNode::NodeType::Container:
 		{
-			object = GameObject::Create(EntityComponent::Model);
+			object = GameObjectManager::s_Create(EntityComponent::Model);
 			object->AddComponent(EntityComponent::Transform);
 
 			if (node.Parent == UINT32_MAX) // root node
@@ -265,7 +265,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 		case ModelNode::NodeType::Primitive:
 		{
 			// TODO: cleanup code
-			object = GameObject::Create(EntityComponent::Mesh);
+			object = GameObjectManager::s_Create(EntityComponent::Mesh);
 			object->AddComponent(EntityComponent::RigidBody);
 			object->AddComponent(EntityComponent::Transform);
 			EcMesh* meshObject = object->FindComponent<EcMesh>();
@@ -380,7 +380,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 
 		default:
 		{
-			object = GameObject::Create(EntityComponent::Mesh);
+			object = GameObjectManager::s_Create(EntityComponent::Mesh);
 		}
 
 		}
@@ -407,12 +407,12 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 
 		uint32_t parentIndex = node.Parent;
 		if (parentIndex == UINT32_MAX) // root node
-			object->SetParent(GameObject::GetObjectById(Parent));
+			object->SetParent(GameObjectManager::Get()->FindById(Parent));
 		else
 			object->SetParent(
 				this->LoadedObjs.at(parentIndex) != object
 				? LoadedObjs[parentIndex].Referred()
-				: GameObject::GetObjectById(Parent)
+				: GameObjectManager::Get()->FindById(Parent)
 			);
 	}
 

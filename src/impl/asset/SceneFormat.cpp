@@ -18,10 +18,10 @@
 #include "FileRW.hpp"
 #include "Log.hpp"
 
-#define SF_WARN(err, ...) Log.WarningF(     \
-	"Deserialization warning: " err,         \
-	__VA_ARGS__                              \
-)                                            \
+#define SF_WARN(err, ...) Log.WarningF( \
+	"Deserialization warning: " err,    \
+	__VA_ARGS__                         \
+)                                       \
 
 static std::string errorString = "No error";
 
@@ -32,7 +32,7 @@ static auto loadModelAsMeshes(
 	bool AutoParent = true
 )
 {
-	ModelLoader Loader = ModelLoader(ModelFilePath, AutoParent ? GameObject::s_DataModel : PHX_GAMEOBJECT_NULL_ID);
+	ModelLoader Loader = ModelLoader(ModelFilePath, AutoParent ? GameObjectManager::Get()->DataModel : PHX_GAMEOBJECT_NULL_ID);
 
 	for (GameObject* object : Loader.LoadedObjs)
 	{
@@ -230,7 +230,7 @@ static std::vector<ObjectRef> loadSceneVersion1(
 		{
 			if (Model.size() > 1)
 			{
-				GameObject* container = GameObject::Create("Model");
+				GameObject* container = GameObjectManager::s_Create("Model");
 
 				for (size_t index = 0; index < Model.size(); index++)
 				{
@@ -285,7 +285,7 @@ static std::vector<ObjectRef> loadSceneVersion1(
 	{
 		const nlohmann::json& Object = PartsNode[Index];
 
-		GameObject* NewObject = GameObject::Create("Primitive");
+		GameObject* NewObject = GameObjectManager::s_Create("Primitive");
 		Objects.push_back(NewObject);
 
 		EcTransform* ct = NewObject->FindComponent<EcTransform>();
@@ -357,7 +357,7 @@ static std::vector<ObjectRef> loadSceneVersion1(
 
 		std::string LightType = LightObject["type"];
 
-		GameObject* Object = GameObject::Create(LightType);
+		GameObject* Object = GameObjectManager::s_Create(LightType);
 		Objects.push_back(Object);
 
 		if (LightType != "DirectionalLight")
@@ -417,7 +417,7 @@ static ObjectRef createObjectFromJsonItem(const nlohmann::json& Item, uint32_t I
 		if (className == "Primitive")
 			className = "Mesh";
 
-		GameObject* object = GameObject::Create(className);
+		GameObject* object = GameObjectManager::s_Create(className);
 		addLegacyComponentDependencies(object);
 
 		return object;
@@ -433,7 +433,7 @@ static ObjectRef createObjectFromJsonItem(const nlohmann::json& Item, uint32_t I
 			return nullptr;
 		}
 
-		ObjectRef object = GameObject::Create();
+		ObjectRef object = GameObjectManager::Get()->Create();
 
 		for (auto it = components.value().begin(); it != components.value().end(); it++)
 		{
@@ -888,7 +888,7 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 
 		case Reflection::ValueType::GameObject:
 		{
-			GameObject* target = GameObject::FromGenericValue(value);
+			GameObject* target = GameObjectManager::Get()->FromGenericValue(value);
 
 			if (target && !target->IsDestructionPending)
 				item[serializedAs] = target->ObjectId;
@@ -922,7 +922,7 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 	{
 		item["$_tags"] = nlohmann::json::array();
 		for (uint16_t tagId : Object->Tags)
-			item["$_tags"].push_back(GameObject::s_Collections[tagId].Name);
+			item["$_tags"].push_back(GameObjectManager::Get()->Collections[tagId].Name);
 	}
 
 	return item;

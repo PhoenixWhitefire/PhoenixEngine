@@ -38,7 +38,7 @@ struct EcSound : public Component<EntityComponent::Sound>
 	bool Valid = true;
 };
 
-class SoundComponentManager : public ComponentManager<EcSound, SoundComponentManager>
+class SoundComponentManager : public ComponentManager<EcSound>
 {
 public:
 	SoundComponentManager();

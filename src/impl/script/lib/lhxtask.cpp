@@ -51,7 +51,7 @@ static void schedule(lua_State* L, double sleepTime, int taskStackIndex, int num
 
 	lua_getglobal(L, "game");
 	Reflection::GenericValue dmgv = ScriptEngine::L::ToGeneric(L, -1);
-	GameObject* dm = GameObject::FromGenericValue(dmgv);
+	GameObject* dm = GameObjectManager::Get()->FromGenericValue(dmgv);
 
 	ScriptEngine::YieldedCoroutine yc = {
 		.Coroutine = DL,

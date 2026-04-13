@@ -123,7 +123,7 @@ const Reflection::StaticMethodMap& DataModelComponentManager::GetMethods()
                 if (GameObject* preExisting = dm->Object->FindChildWithComponent(it))
                     return { preExisting->ToGenericValue() };
 
-                GameObject* newObject = GameObject::Create(it);
+                GameObject* newObject = GameObjectManager::s_Create(it);
                 newObject->SetParent(dm->Object);
 
                 return { newObject->ToGenericValue() };

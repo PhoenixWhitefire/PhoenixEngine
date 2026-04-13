@@ -486,7 +486,7 @@
     "documentation": "The `EventSignal` datatype"
   },
   "@phoenix/enum/ValueType.Function": {
-    "documentation": "A function, equivalent to `(...unknown) -> (...unknown)"
+    "documentation": "A function, equivalent to `(...unknown) -> (...unknown)`"
   },
   "@phoenix/enum/ValueType.GameObject": {
     "documentation": "The `GameObject` datatype"

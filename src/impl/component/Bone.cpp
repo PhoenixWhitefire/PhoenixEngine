@@ -10,7 +10,7 @@
 static EcMesh* getTargetMesh(EcBone* Bone)
 {
 	if (Bone->TargetMesh != UINT32_MAX)
-		return (EcMesh*)GameObject::s_ComponentManagers[(size_t)EntityComponent::Mesh]->GetComponent(Bone->TargetMesh);
+		return (EcMesh*)GetComponentManagerByComponentType(EntityComponent::Mesh)->GetComponent(Bone->TargetMesh);
 	else
 		return nullptr;
 }

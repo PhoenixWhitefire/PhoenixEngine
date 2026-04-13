@@ -44,10 +44,12 @@ public:
 
 	ImVec2 GetViewportInputRectSize() const;
 
+	GameObjectManager ObjectManager;
+	AllComponentManagers ComponentManagers;
+
 	// Use `BindDataModel` when switching DataModels
 	ObjectHandle DataModelRef;
 	ObjectHandle WorkspaceRef;
-	ComponentManagers ComponentManagers;
 
 	Renderer RendererContext;
 	GLFWwindow* Window = nullptr;

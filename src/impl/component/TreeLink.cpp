@@ -23,7 +23,7 @@ const Reflection::StaticPropertyMap& TreeLinkComponentManager::GetProperties()
             [](void* p, const Reflection::GenericValue& gv)
             {
                 EcTreeLink* tl = static_cast<EcTreeLink*>(p);
-                GameObject* newTarget = GameObject::FromGenericValue(gv);
+                GameObject* newTarget = GameObjectManager::Get()->FromGenericValue(gv);
 
                 if (!newTarget)
                 {
@@ -38,7 +38,7 @@ const Reflection::StaticPropertyMap& TreeLinkComponentManager::GetProperties()
                     // code to prevent infinite recursion is too complicated for me to care right now
                     RAISE_RT("TreeLink cannot target another TreeLink");
 
-                tl->Target = GameObject::FromGenericValue(gv);
+                tl->Target = GameObjectManager::Get()->FromGenericValue(gv);
             }
         } }
     };

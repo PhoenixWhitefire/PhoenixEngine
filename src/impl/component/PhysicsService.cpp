@@ -3,7 +3,7 @@
 
 #define PROPERTY_PROXY(n, t) REFLECTION_PROPERTY( \
     #n, \
-    Boolean, \
+    t, \
     [](void*) -> Reflection::GenericValue \
     { \
         return Physics::Get()->n; \
@@ -17,7 +17,7 @@
 const Reflection::StaticPropertyMap& PhysicsComponentManager::GetProperties()
 {
     static const Reflection::StaticPropertyMap props = {
-        PROPERTY_PROXY(Timescale, Boolean),
+        PROPERTY_PROXY(Timescale, Double),
         PROPERTY_PROXY(Simulating, Boolean),
         PROPERTY_PROXY(Gravity, Vector3),
         PROPERTY_PROXY(DebugCollisionAabbs, Boolean),

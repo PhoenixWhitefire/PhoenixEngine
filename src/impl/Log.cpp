@@ -24,6 +24,7 @@ struct ParallelLogEvent
 };
 static std::mutex ParallelLogEventsMutex;
 static std::vector<ParallelLogEvent> ParallelLogEvents;
+static bool s_IsGameObjectManagerReady = false;
 
 void Logging::Save()
 {
@@ -101,7 +102,8 @@ void Logging::Context::Append(const std::string_view& Message, const std::string
 	//	appendToLog(ExtraTags, true);
 	appendToLog(Message, false);
 
-	EcLoggingService::SignalNewLogMessage(Logging::MessageType::None, Message, tags);
+	if (s_IsGameObjectManagerReady)
+		((LoggingComponentManager*)LoggingComponentManager::Get())->SignalNewLogMessage(Logging::MessageType::None, Message, tags);
 }
 
 void Logging::Context::AppendWithValue(const std::string_view& Message, const Reflection::GenericValue& Value, const std::string_view& ExtraTags) const
@@ -128,7 +130,8 @@ void Logging::Context::AppendWithValue(const std::string_view& Message, const Re
 	//	appendToLog(ExtraTags, true);
 	appendToLog(Message, false);
 
-	EcLoggingService::SignalNewLogMessage(Logging::MessageType::None, Message, tags, Value);
+	if (s_IsGameObjectManagerReady)
+		((LoggingComponentManager*)LoggingComponentManager::Get())->SignalNewLogMessage(Logging::MessageType::None, Message, tags, Value);
 }
 
 void Logging::Context::Info(const std::string_view& Message, const std::string_view& ExtraTags) const
@@ -155,7 +158,13 @@ void Logging::Context::Info(const std::string_view& Message, const std::string_v
 	appendToLog(": ", true);
 	appendToLog(Message);
 
-	EcLoggingService::SignalNewLogMessage(Logging::MessageType::Info, Message, tags);
+	if (!s_IsGameObjectManagerReady && Message == "GameObjectManagerReady")
+		s_IsGameObjectManagerReady = true;
+	else if (s_IsGameObjectManagerReady && Message == "GameObjectManagerDead")
+		s_IsGameObjectManagerReady = false;
+
+	if (s_IsGameObjectManagerReady)
+		((LoggingComponentManager*)LoggingComponentManager::Get())->SignalNewLogMessage(Logging::MessageType::Info, Message, tags);
 }
 
 void Logging::Context::Warning(const std::string_view& Message, const std::string_view& ExtraTags) const
@@ -182,7 +191,8 @@ void Logging::Context::Warning(const std::string_view& Message, const std::strin
 	appendToLog(": ", true);
 	appendToLog(Message);
 
-	EcLoggingService::SignalNewLogMessage(Logging::MessageType::Warning, Message, tags);
+	if (s_IsGameObjectManagerReady)
+		((LoggingComponentManager*)LoggingComponentManager::Get())->SignalNewLogMessage(Logging::MessageType::Warning, Message, tags);
 }
 
 void Logging::Context::Error(const std::string_view& Message, const std::string_view& ExtraTags) const
@@ -209,7 +219,8 @@ void Logging::Context::Error(const std::string_view& Message, const std::string_
 	appendToLog(": ", true);
 	appendToLog(Message);
 
-	EcLoggingService::SignalNewLogMessage(Logging::MessageType::Error, Message, tags);
+	if (s_IsGameObjectManagerReady)
+		((LoggingComponentManager*)LoggingComponentManager::Get())->SignalNewLogMessage(Logging::MessageType::Error, Message, tags);
 }
 
 void Logging::Context::Write(const std::string_view& Message, MessageType Type, const std::string_view& ExtraTags) const

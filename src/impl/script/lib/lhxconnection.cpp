@@ -92,7 +92,7 @@ static int conn_tostring(lua_State* L)
 	lua_gettable(L, LUA_REGISTRYINDEX);
 
 	EventSignalData* ev = (EventSignalData*)luaL_checkudata(L, -1, "EventSignal");
-	GameObject* obj = GameObject::GetObjectById(ev->Reflector.Id);
+	GameObject* obj = GameObjectManager::Get()->FindById(ev->Reflector.Id);
 
 	std::string source = ev->Reflector.Type == EntityComponent::None
 		? (obj ? obj->GetFullName() + "." : "GameObject::")

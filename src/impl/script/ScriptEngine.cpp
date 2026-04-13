@@ -917,7 +917,7 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 	}
 	case Reflection::ValueType::GameObject:
 	{
-		luhx_pushgameobject(L, GameObject::FromGenericValue(gv));
+		luhx_pushgameobject(L, GameObjectManager::Get()->FromGenericValue(gv));
 		break;
 	}
 	case Reflection::ValueType::Array:
@@ -1195,7 +1195,7 @@ int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yiel
 	// TODO a kind of hack to get what datamodel we're in
 	lua_getglobal(L, "game");
 	Reflection::GenericValue datamodelVal = ScriptEngine::L::ToGeneric(L, -1);
-	GameObject* dmObject = GameObject::FromGenericValue(datamodelVal);
+	GameObject* dmObject = GameObjectManager::Get()->FromGenericValue(datamodelVal);
 	assert(dmObject);
 	// need to do that before `lua_yield` because of thread chicanery idk how it works
 
@@ -1284,7 +1284,7 @@ void ScriptEngine::L::DumpStacktrace(
 		else
 			Log.Append(Message);
 	}
-	
+
 	for (int i = Level; lua_getinfo(L, i, "sln", &ar); i++)
 	{
 		std::string line = "from ";
@@ -1577,10 +1577,12 @@ lua_State* ScriptEngine::L::Create(const std::string& VmName)
 	lua_pushlightuserdatatagged(state, requirePath, 67);
 	lua_settable(state, LUA_ENVIRONINDEX);
 
-	luhx_pushgameobject(state, GameObject::GetObjectById(GameObject::s_DataModel));
+	GameObjectManager* ObjectManager = GameObjectManager::Get();
+
+	luhx_pushgameobject(state, ObjectManager->FindById(ObjectManager->DataModel));
 	lua_setglobal(state, "game");
 
-	luhx_pushgameobject(state, GameObject::GetObjectById(GameObject::s_DataModel)->FindChild("Workspace"));
+	luhx_pushgameobject(state, ObjectManager->FindById(ObjectManager->DataModel)->FindChild("Workspace"));
 	lua_setglobal(state, "workspace");
 
 	lua_pushlstring(state, VmName.data(), VmName.size());
@@ -1732,10 +1734,10 @@ lua_Status ScriptEngine::L::ProtectedCall(lua_State* L, int narg, int nret, int 
 
 nlohmann::json ScriptEngine::DumpApiToJson()
 {
-	ObjectRef tempdm = GameObject::Create("DataModel");
-	ObjectRef tempwp = GameObject::Create("Workspace");
+	ObjectRef tempdm = GameObjectManager::s_Create("DataModel");
+	ObjectRef tempwp = GameObjectManager::s_Create("Workspace");
 	tempwp->SetParent(tempdm);
-	GameObject::s_DataModel = tempdm->ObjectId;
+	GameObjectManager::Get()->DataModel = tempdm->ObjectId;
 	
 	lua_State* base = lua_newstate(l_alloc, nullptr);
 	lua_State* luhx = L::Create("ApiDump");
@@ -1801,7 +1803,7 @@ nlohmann::json ScriptEngine::DumpApiToJson()
 				{
 					std::string type = tn;
 
-					GameObject* obj = GameObject::FromGenericValue(L::ToGeneric(luhx, -1));
+					GameObject* obj = GameObjectManager::Get()->FromGenericValue(L::ToGeneric(luhx, -1));
 
 					for (const ReflectorRef& ref : obj->Components)
 					{
@@ -1878,7 +1880,7 @@ nlohmann::json ScriptEngine::DumpApiToJson()
 	L::Close(luhx);
 	lua_close(base);
 
-	GameObject::s_DataModel = PHX_GAMEOBJECT_NULL_ID;
+	GameObjectManager::Get()->DataModel = PHX_GAMEOBJECT_NULL_ID;
 	tempdm->Destroy();
 	
 	return json;

@@ -13,7 +13,7 @@ static ObjectHandle s_FallbackCamera;
 
 static GameObject* createCamera()
 {
-	GameObject* camera = GameObject::Create("Camera");
+	GameObject* camera = GameObjectManager::s_Create("Camera");
 	camera->FindComponent<EcCamera>()->UseSimpleController = true;
 	camera->Name = "FallbackCamera";
 
@@ -52,7 +52,7 @@ const Reflection::StaticPropertyMap& WorkspaceComponentManager::GetProperties()
 			},
 			[](void* p, const Reflection::GenericValue& gv)
 			{
-				static_cast<EcWorkspace*>(p)->SetSceneCamera(GameObject::FromGenericValue(gv));
+				static_cast<EcWorkspace*>(p)->SetSceneCamera(GameObjectManager::Get()->FromGenericValue(gv));
 			}
 		} }
     };
@@ -137,7 +137,7 @@ const Reflection::StaticMethodMap& WorkspaceComponentManager::GetMethods()
 					filterList.reserve(filterListGv.size());
 
 					for (const Reflection::GenericValue& gv : filterListGv)
-						filterList.push_back(GameObject::FromGenericValue(gv));
+						filterList.push_back(GameObjectManager::Get()->FromGenericValue(gv));
 				}
 
 				SpatialCastResult result = static_cast<EcWorkspace*>(p)->Raycast(origin, vector, filterList, inputs.size() > 3 ? inputs[3].AsBoolean() : true);
@@ -185,7 +185,7 @@ const Reflection::StaticMethodMap& WorkspaceComponentManager::GetMethods()
 					ignoreList.reserve(ignorelistgv.size());
 
 					for (const Reflection::GenericValue& gv : ignorelistgv)
-						ignoreList.push_back(GameObject::FromGenericValue(gv));
+						ignoreList.push_back(GameObjectManager::Get()->FromGenericValue(gv));
 				}
 
 				std::vector<GameObject*> objects = static_cast<EcWorkspace*>(p)->GetObjectsInAabb(position, origin, ignoreList);
@@ -194,7 +194,7 @@ const Reflection::StaticMethodMap& WorkspaceComponentManager::GetMethods()
 				for (size_t i = 0; i < objects.size(); i++)
 					gv[i] = objects[i]->ToGenericValue();
 
-					return { Reflection::GenericValue(gv) };
+				return { Reflection::GenericValue(gv) };
 			}
 		} }
 	};
@@ -348,7 +348,7 @@ SpatialCastResult EcWorkspace::Raycast(const glm::vec3& Origin, const glm::vec3&
 
 		for (uint32_t oid : CellObjects)
 		{
-			GameObject* p = GameObject::GetObjectById(oid);
+			GameObject* p = GameObjectManager::Get()->FindById(oid);
 			if (!p || p->IsDestructionPending || p->OwningWorkspace != Object->ObjectId)
 				continue;
 
@@ -479,7 +479,7 @@ GameObject* EcWorkspace::GetSceneCamera() const
 	if (!s_FallbackCamera.HasValue())
 		s_FallbackCamera = createCamera();
 
-	GameObject* sceneCam = GameObject::GetObjectById(m_SceneCameraId);
+	GameObject* sceneCam = GameObjectManager::Get()->FindById(m_SceneCameraId);
 
 	if (sceneCam && !sceneCam->FindComponent<EcCamera>())
 	{
@@ -509,6 +509,6 @@ void EcWorkspace::SetSceneCamera(GameObject* NewCam)
 
 void EcWorkspace::UpdateSoundListener() const
 {
-	SoundComponentManager* soundManager = SoundComponentManager::Get();
+	SoundComponentManager* soundManager = (SoundComponentManager*)SoundComponentManager::Get();
 	soundManager->UpdateListener(GetSceneCamera()->FindComponent<EcCamera>()->GetWorldTransform());
 }

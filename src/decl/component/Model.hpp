@@ -8,7 +8,7 @@ struct EcModel : public Component<EntityComponent::Model>
 	bool Valid = true;
 };
 
-class ModelManager : public ComponentManager<EcModel>
+class ModelComponentManager : public ComponentManager<EcModel>
 {
 public:
     const Reflection::StaticPropertyMap& GetProperties() override;

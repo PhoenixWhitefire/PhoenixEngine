@@ -11,7 +11,7 @@ const Reflection::StaticMethodMap& CollectionsComponentManager::GetMethods()
             [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
             {
                 std::vector<Reflection::GenericValue> tags;
-                for (const auto& it : GameObject::s_CollectionNameToId)
+                for (const auto& it : GameObjectManager::Get()->CollectionNameToId)
                     tags.emplace_back(it.first);
 
                 return { Reflection::GenericValue(tags) };
@@ -23,15 +23,17 @@ const Reflection::StaticMethodMap& CollectionsComponentManager::GetMethods()
             { Reflection::ValueType::Array },
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
+                GameObjectManager* ObjectManager = GameObjectManager::Get();
+
                 std::vector<Reflection::GenericValue> tagged;
 
-                const auto& it = GameObject::s_CollectionNameToId.find(inputs[0].AsString());
-                if (it == GameObject::s_CollectionNameToId.end())
+                const auto& it = ObjectManager->CollectionNameToId.find(inputs[0].AsString());
+                if (it == ObjectManager->CollectionNameToId.end())
                     return { Reflection::GenericValue(std::vector<Reflection::GenericValue>()) };
 
-                for (uint32_t objectId : GameObject::s_Collections[it->second].Items)
+                for (uint32_t objectId : ObjectManager->Collections[it->second].Items)
                 {
-                    GameObject* object = GameObject::GetObjectById(objectId);
+                    GameObject* object = ObjectManager->FindById(objectId);
 
                     if (object && !object->IsDestructionPending)
                         tagged.push_back(object->ToGenericValue());
@@ -47,7 +49,7 @@ const Reflection::StaticMethodMap& CollectionsComponentManager::GetMethods()
             [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 const std::string tag = inputs[0].AsString();
-                const GameObject::Collection& collection = GameObject::GetCollection(tag);
+                const GameObjectManager::Collection& collection = GameObjectManager::Get()->GetCollection(tag);
 
                 Reflection::GenericValue gv;
                 gv.Val.Event = {
@@ -67,7 +69,7 @@ const Reflection::StaticMethodMap& CollectionsComponentManager::GetMethods()
             [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 const std::string tag = inputs[0].AsString();
-                const GameObject::Collection& collection = GameObject::GetCollection(tag);
+                const GameObjectManager::Collection& collection = GameObjectManager::Get()->GetCollection(tag);
 
                 Reflection::GenericValue gv;
                 gv.Val.Event = {

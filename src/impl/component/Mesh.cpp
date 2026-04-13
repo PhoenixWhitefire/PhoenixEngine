@@ -15,7 +15,7 @@ static void tryMarkFreeSkinnedMeshPseudoAsset(EcMesh& mesh)
 		meshAsset.Bones.size() > 0
 	)
 	{
-		MeshComponentManager::Get()->FreeSkinnedMeshPseudoAssets[mesh.Asset].push_back(mesh.RenderMeshId);
+		((MeshComponentManager*)MeshComponentManager::Get())->FreeSkinnedMeshPseudoAssets[mesh.Asset].push_back(mesh.RenderMeshId);
 
 		MeshProvider::GpuMesh& gpuMesh = MeshProvider::Get()->GetGpuMesh(meshAsset.GpuId);
 
@@ -47,7 +47,7 @@ void MeshComponentManager::DeleteComponent(uint32_t Id)
 	EcMesh& mesh = m_Components[Id];
 	tryMarkFreeSkinnedMeshPseudoAsset(mesh);
 
-	ComponentManager<EcMesh, MeshComponentManager>::DeleteComponent(Id);
+	ComponentManager<EcMesh>::DeleteComponent(Id);
 }
 
 Reflection::GenericValue MeshComponentManager::GetDefaultPropertyValue(const std::string_view& Property)
@@ -152,7 +152,7 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 
 			uint32_t meshId = UINT32_MAX;
 
-			if (std::vector<uint32_t>& freelist = MeshComponentManager::Get()->FreeSkinnedMeshPseudoAssets[meshPathStr];
+			if (std::vector<uint32_t>& freelist = ((MeshComponentManager*)MeshComponentManager::Get())->FreeSkinnedMeshPseudoAssets[meshPathStr];
 				freelist.size() == 0
 			)
 			{
@@ -178,8 +178,8 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 			for (uint8_t boneId = 0; boneId < meshAfter.Bones.size(); boneId++)
 			{
 				const Bone& b = meshAfter.Bones[boneId];
-			
-				ObjectRef boneObj;
+
+				ObjectHandle boneObj;
 				if (GameObject* g = obj->FindChild(b.Name))
 				{
 					if (g->FindComponent<EcBone>())
@@ -192,12 +192,12 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 						);
 
 						g->Destroy();
-						boneObj = GameObject::Create(EntityComponent::Bone);
+						boneObj = GameObjectManager::Get()->Create(EntityComponent::Bone);
 					}
 				}
 				else
-					boneObj = GameObject::Create(EntityComponent::Bone);
-				
+					boneObj = GameObjectManager::Get()->Create(EntityComponent::Bone);
+
 				EcBone* bone = boneObj->FindComponent<EcBone>();
 
 				boneObj->SetParent(b.Parent == UINT8_MAX
@@ -206,7 +206,7 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 				);
 				boneObj->Name = b.Name;
 				boneObj->Serializes = false;
-				
+
 				bone->Transform = b.Transform;
 				bone->SkeletalBoneId = boneId;
 				bone->TargetMesh = cm->ComponentId;

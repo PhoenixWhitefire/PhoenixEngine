@@ -318,7 +318,7 @@ std::string Reflection::GenericValue::ToString() const
 
 	case ValueType::GameObject:
 	{
-		GameObject* object = GameObject::FromGenericValue(*this);
+		GameObject* object = GameObjectManager::Get()->FromGenericValue(*this);
 		return object ? object->GetFullName() : "NULL GameObject";
 	}
 	
