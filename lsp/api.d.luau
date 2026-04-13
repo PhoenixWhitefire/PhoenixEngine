@@ -544,71 +544,130 @@ type Creatables = {
 declare extern type EnumCollisionType extends EnumItem with end
 declare extern type EnumCollisionType_INTERNAL extends Enum with
   Cube: EnumCollisionType
+  Sphere: EnumCollisionType
   Hulls: EnumCollisionType
   MeshComponent: EnumCollisionType
-  Sphere: EnumCollisionType
 end
 declare extern type EnumCursor extends EnumItem with end
 declare extern type EnumCursor_INTERNAL extends Enum with
   Arrow: EnumCursor
-  Crosshair: EnumCursor
-  NotAllowed: EnumCursor
-  PointingHand: EnumCursor
-  ResizeAll: EnumCursor
-  ResizeHorizontal: EnumCursor
-  ResizeNESW: EnumCursor
-  ResizeNWSE: EnumCursor
-  ResizeVertical: EnumCursor
   TextInput: EnumCursor
+  Crosshair: EnumCursor
+  PointingHand: EnumCursor
+  ResizeHorizontal: EnumCursor
+  ResizeVertical: EnumCursor
+  ResizeNWSE: EnumCursor
+  ResizeNESW: EnumCursor
+  ResizeAll: EnumCursor
+  NotAllowed: EnumCursor
 end
 declare extern type EnumCursorMode extends EnumItem with end
 declare extern type EnumCursorMode_INTERNAL extends Enum with
-  Captured: EnumCursorMode
-  Disabled: EnumCursorMode
-  Hidden: EnumCursorMode
   Normal: EnumCursorMode
+  Hidden: EnumCursorMode
+  Disabled: EnumCursorMode
+  Captured: EnumCursorMode
 end
 declare extern type EnumFaceCulling extends EnumItem with end
 declare extern type EnumFaceCulling_INTERNAL extends Enum with
+  None: EnumFaceCulling
   Back: EnumFaceCulling
   Front: EnumFaceCulling
-  None: EnumFaceCulling
 end
 declare extern type EnumFileSystemEvent extends EnumItem with end
 declare extern type EnumFileSystemEvent_INTERNAL extends Enum with
   Added: EnumFileSystemEvent
-  Modified: EnumFileSystemEvent
   Removed: EnumFileSystemEvent
-  Renamed_New: EnumFileSystemEvent
+  Modified: EnumFileSystemEvent
   Renamed_Old: EnumFileSystemEvent
+  Renamed_New: EnumFileSystemEvent
 end
 declare extern type EnumInputAction extends EnumItem with end
 declare extern type EnumInputAction_INTERNAL extends Enum with
-  Pressed: EnumInputAction
   Released: EnumInputAction
+  Pressed: EnumInputAction
   Repeated: EnumInputAction
 end
 declare extern type EnumKey extends EnumItem with end
 declare extern type EnumKey_INTERNAL extends Enum with
-  A: EnumKey
+  Space: EnumKey
   Apostrophe: EnumKey
-  B: EnumKey
-  Backslash: EnumKey
-  Backspace: EnumKey
-  C: EnumKey
-  CapsLock: EnumKey
   Comma: EnumKey
-  D: EnumKey
-  Delete: EnumKey
-  Down: EnumKey
-  E: EnumKey
+  Minus: EnumKey
+  Period: EnumKey
+  Slash: EnumKey
+  Zero: EnumKey
+  One: EnumKey
+  Two: EnumKey
+  Three: EnumKey
+  Four: EnumKey
+  Five: EnumKey
+  Six: EnumKey
+  Seven: EnumKey
   Eight: EnumKey
-  End: EnumKey
-  Enter: EnumKey
+  Nine: EnumKey
+  Semicolon: EnumKey
   Equal: EnumKey
-  Escape: EnumKey
+  A: EnumKey
+  B: EnumKey
+  C: EnumKey
+  D: EnumKey
+  E: EnumKey
   F: EnumKey
+  G: EnumKey
+  H: EnumKey
+  I: EnumKey
+  J: EnumKey
+  K: EnumKey
+  L: EnumKey
+  M: EnumKey
+  N: EnumKey
+  O: EnumKey
+  P: EnumKey
+  Q: EnumKey
+  R: EnumKey
+  S: EnumKey
+  T: EnumKey
+  U: EnumKey
+  V: EnumKey
+  W: EnumKey
+  X: EnumKey
+  Y: EnumKey
+  Z: EnumKey
+  LeftBracket: EnumKey
+  Backslash: EnumKey
+  RightBracket: EnumKey
+  GraveAccent: EnumKey
+  World1: EnumKey
+  World2: EnumKey
+  Escape: EnumKey
+  Enter: EnumKey
+  Tab: EnumKey
+  Backspace: EnumKey
+  Insert: EnumKey
+  Delete: EnumKey
+  Right: EnumKey
+  Left: EnumKey
+  Down: EnumKey
+  Up: EnumKey
+  PageUp: EnumKey
+  PageDown: EnumKey
+  Home: EnumKey
+  End: EnumKey
+  CapsLock: EnumKey
+  ScrollLock: EnumKey
+  NumLock: EnumKey
+  PrintScreen: EnumKey
+  Pause: EnumKey
   F1: EnumKey
+  F2: EnumKey
+  F3: EnumKey
+  F4: EnumKey
+  F5: EnumKey
+  F6: EnumKey
+  F7: EnumKey
+  F8: EnumKey
+  F9: EnumKey
   F10: EnumKey
   F11: EnumKey
   F12: EnumKey
@@ -619,42 +678,12 @@ declare extern type EnumKey_INTERNAL extends Enum with
   F17: EnumKey
   F18: EnumKey
   F19: EnumKey
-  F2: EnumKey
   F20: EnumKey
   F21: EnumKey
   F22: EnumKey
   F23: EnumKey
   F24: EnumKey
   F25: EnumKey
-  F3: EnumKey
-  F4: EnumKey
-  F5: EnumKey
-  F6: EnumKey
-  F7: EnumKey
-  F8: EnumKey
-  F9: EnumKey
-  Five: EnumKey
-  Four: EnumKey
-  G: EnumKey
-  GraveAccent: EnumKey
-  H: EnumKey
-  Home: EnumKey
-  I: EnumKey
-  Insert: EnumKey
-  J: EnumKey
-  K: EnumKey
-  L: EnumKey
-  Left: EnumKey
-  LeftAlt: EnumKey
-  LeftBracket: EnumKey
-  LeftControl: EnumKey
-  LeftShift: EnumKey
-  LeftSuper: EnumKey
-  M: EnumKey
-  Minus: EnumKey
-  N: EnumKey
-  Nine: EnumKey
-  NumLock: EnumKey
   Numpad0: EnumKey
   Numpad1: EnumKey
   Numpad2: EnumKey
@@ -665,85 +694,56 @@ declare extern type EnumKey_INTERNAL extends Enum with
   Numpad7: EnumKey
   Numpad8: EnumKey
   Numpad9: EnumKey
-  NumpadAdd: EnumKey
   NumpadDecimal: EnumKey
   NumpadDivide: EnumKey
-  NumpadEnter: EnumKey
-  NumpadEqual: EnumKey
   NumpadMultiply: EnumKey
   NumpadSubtract: EnumKey
-  O: EnumKey
-  One: EnumKey
-  P: EnumKey
-  PageDown: EnumKey
-  PageUp: EnumKey
-  Pause: EnumKey
-  Period: EnumKey
-  PrintScreen: EnumKey
-  Q: EnumKey
-  R: EnumKey
-  Right: EnumKey
-  RightAlt: EnumKey
-  RightBracket: EnumKey
-  RightControl: EnumKey
+  NumpadAdd: EnumKey
+  NumpadEnter: EnumKey
+  NumpadEqual: EnumKey
+  LeftShift: EnumKey
+  LeftControl: EnumKey
+  LeftAlt: EnumKey
+  LeftSuper: EnumKey
   RightShift: EnumKey
+  RightControl: EnumKey
+  RightAlt: EnumKey
   RightSuper: EnumKey
-  S: EnumKey
-  ScrollLock: EnumKey
-  Semicolon: EnumKey
-  Seven: EnumKey
-  Six: EnumKey
-  Slash: EnumKey
-  Space: EnumKey
-  T: EnumKey
-  Tab: EnumKey
-  Three: EnumKey
-  Two: EnumKey
-  U: EnumKey
-  Up: EnumKey
-  V: EnumKey
-  W: EnumKey
-  World1: EnumKey
-  World2: EnumKey
-  X: EnumKey
-  Y: EnumKey
-  Z: EnumKey
-  Zero: EnumKey
 end
 declare extern type EnumLogType extends EnumItem with end
 declare extern type EnumLogType_INTERNAL extends Enum with
-  Error: EnumLogType
-  Info: EnumLogType
   None: EnumLogType
+  Info: EnumLogType
   Warning: EnumLogType
+  Error: EnumLogType
 end
 declare extern type EnumMouseButton extends EnumItem with end
 declare extern type EnumMouseButton_INTERNAL extends Enum with
   Left: EnumMouseButton
-  Middle: EnumMouseButton
   Right: EnumMouseButton
+  Middle: EnumMouseButton
 end
 declare extern type EnumValueType extends EnumItem with end
 declare extern type EnumValueType_INTERNAL extends Enum with
-  Any: EnumValueType
-  Array: EnumValueType
   Boolean: EnumValueType
-  Color: EnumValueType
-  ColorGradient: EnumValueType
-  Double: EnumValueType
-  EventSignal: EnumValueType
-  Function: EnumValueType
-  GameObject: EnumValueType
-  InputEvent: EnumValueType
   Integer: EnumValueType
-  Map: EnumValueType
-  Matrix: EnumValueType
-  Null: EnumValueType
-  NumberGradient: EnumValueType
+  Double: EnumValueType
   String: EnumValueType
+  Color: EnumValueType
   Vector2: EnumValueType
   Vector3: EnumValueType
+  Matrix: EnumValueType
+  GameObject: EnumValueType
+  Function: EnumValueType
+  Array: EnumValueType
+  Map: EnumValueType
+  EventSignal: EnumValueType
+  InputEvent: EnumValueType
+  NumberGradient: EnumValueType
   VectorGradient: EnumValueType
+  ColorGradient: EnumValueType
+  Null: EnumValueType
+  Any: EnumValueType
 end
 declare Enum: {
   CollisionType: EnumCollisionType_INTERNAL,

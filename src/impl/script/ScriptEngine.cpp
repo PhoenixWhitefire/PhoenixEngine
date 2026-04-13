@@ -1826,7 +1826,23 @@ nlohmann::json ScriptEngine::DumpApiToJson()
 						) || librarySpecificMembers.size() == 0
 					)
 					{
-						lib[luaL_checkstring(luhx, -2)] = luaL_typename(luhx, -1);
+						if (k == "Enum")
+						{
+							nlohmann::json enu;
+
+							lua_pushnil(luhx);
+							while (lua_next(luhx, -2))
+							{
+								enu[luaL_checkstring(luhx, -2)] = lua_tointeger(luhx, -1);
+								lua_pop(luhx, 1);
+							}
+
+							lib[luaL_checkstring(luhx, -2)] = enu;
+						}
+						else
+						{
+							lib[luaL_checkstring(luhx, -2)] = luaL_typename(luhx, -1);
+						}
 					}
 
 					lua_pop(luhx, 1);

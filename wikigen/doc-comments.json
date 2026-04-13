@@ -1049,7 +1049,10 @@
     },
     "Libraries": {
       "Enum": {
-        "Description": "Contains enumerations",
+        "Description": [
+          "Contains enumerations",
+          "See the Enums page for details"
+        ],
         "Members": {
           "CollisionType": {
             "Description": "The different modes for `RigidBody.CollisionType`",

@@ -20,20 +20,24 @@ local datatypesPrologue = fs.read(BASE_PATH .. "/datatypes-prologue.md")
 local librariesPrologue = fs.read(BASE_PATH .. "/libraries-prologue.md")
 local globalsPrologue = fs.read(BASE_PATH .. "/globals-prologue.md")
 local componentsPrologue = fs.read(BASE_PATH .. "/components-prologue.md")
+local enumsPrologue = fs.read(BASE_PATH .. "/enums-prologue.md")
 
 assert(datatypesPrologue)
 assert(librariesPrologue)
 assert(globalsPrologue)
 assert(componentsPrologue)
+assert(enumsPrologue)
 
 datatypesPrologue = "## Datatypes\n\n" .. datatypesPrologue
 librariesPrologue = "## Libraries\n\n" .. librariesPrologue
 globalsPrologue = "## Globals\n\n" .. globalsPrologue
+enumsPrologue = "## Enumerations\n\n" .. enumsPrologue
 
 local datatypes = ""
 local libraries = ""
 local globals = ""
 local components = componentsPrologue .. "\n\n"
+local enums = enumsPrologue .. "\n\n"
 
 local function keysOf<T>(t: { [T]: any }) : { T }
 	local kt = {}
@@ -841,6 +845,11 @@ for _, name in orderedLibraries do
 				totalcomment ..= `* { comment }\n`
 			end
 			totalcomment = totalcomment:sub(1, #totalcomment - 1)
+			enums ..= `### \`{e}\`\n{totalcomment}\n\n`
+			enums ..= [[
+|Name|Description|Value|
+|---|---|---|
+]]
 
 			local enumDocs = {
 				documentation = totalcomment,
@@ -852,23 +861,32 @@ for _, name in orderedLibraries do
 				warn(`Enum.{e} has no documentation for its items`)
 			end
 
-			local orderedItems = keysOf(n)
-			table.sort(orderedItems)
+			type Item = { Name: string, Value: number }
+			local orderedItems: { Item } = {}
+			for k, i in n :: { [string]: number } do
+				table.insert(orderedItems, { Name = k, Value = i })
+			end
 
-			for _, k in orderedItems do
-				definitionsFile ..= `  {k}: Enum{e}\n`
-				if members[e].Items and not members[e].Items[k] then
-					warn(`Enum.{e}.{k} has no documentation`)
+			table.sort(orderedItems, function(a: Item, b: Item)
+				return a.Value < b.Value
+			end)
+
+			for _, item in orderedItems do
+				definitionsFile ..= `  {item.Name}: Enum{e}\n`
+				if members[e].Items and not members[e].Items[item.Name] then
+					warn(`Enum.{e}.{item.Name} has no documentation`)
 				end
 
-				enumDocs.keys[k] = `@{DOCS_PREFIX}/enum/{e}.{k}`
-				documentationData[`@{DOCS_PREFIX}/enum/{e}.{k}`] = {
-					documentation = (members[e].Items or {})[k] or ""
+				enumDocs.keys[item.Name] = `@{DOCS_PREFIX}/enum/{e}.{item.Name}`
+				documentationData[`@{DOCS_PREFIX}/enum/{e}.{item.Name}`] = {
+					documentation = (members[e].Items or {})[item.Name] or ""
 				}
+				enums ..= `|{item.Name}|{(members[e].Items or {})[item.Name] or ""}|{item.Value}|\n`
 			end
 
 			definitionsFile ..= "end\n"
 			enumList ..= `  {e}: Enum{e}_INTERNAL,\n`
+			enums ..= "\n\n"
 		end
 
 		enumList ..= `  [{namesUnion}]: {typesUnion}\n}\n\n`
@@ -926,6 +944,7 @@ local scriptenv = datatypesPrologue .. datatypes .. librariesPrologue .. librari
 
 fs.write(WIKI_PATH .. "/API-‐-Script-Environment.md", scriptenv)
 fs.write(WIKI_PATH .. "/API-‐-Components.md", components)
+fs.write(WIKI_PATH .. "/API-‐-Enums.md", enums)
 
 fs.write("./lsp/api.d.luau", definitionsFile)
 fs.write("./lsp/api-docs.json", json.encode(documentationData))
