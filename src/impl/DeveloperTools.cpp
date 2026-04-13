@@ -2268,6 +2268,44 @@ static void renderDocumentationViewer()
 	if (sectionOpen)
 		ImGui::TreePop();
 
+	if (DocumentationViewerJumpingToPage && DocumentationViewerSection == 4)
+	{
+		ImGui::SetNextItemOpen(true);
+		DocumentationViewerJumpingToPage = false;
+	}
+
+	sectionOpen = ImGui::TreeNodeEx("Enums", (DocumentationViewerSection == 4 ? ImGuiTreeNodeFlags_Selected : 0) | NodeFlags);
+	if (ImGui::IsItemClicked())
+	{
+		DocumentationViewerSection = 4;
+		DocumentationViewerSubPage = -1;
+		DocumentationViewerSubPageName = "";
+	}
+
+	const nlohmann::json& enumsDoc = DocumentationJson["ScriptEnv"]["Libraries"]["Enum"];
+
+	if (sectionOpen)
+	{
+		for (auto it = enumsDoc["Members"].begin(); it != enumsDoc["Members"].end(); it++)
+		{
+			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | NodeFlags;
+			flags |= (DocumentationViewerSection == 4 && DocumentationViewerSubPageName == it.key()) ? ImGuiTreeNodeFlags_Selected : 0;
+
+			bool popen = ImGui::TreeNodeEx(it.key().c_str(), flags);
+
+			if (ImGui::IsItemClicked())
+			{
+				DocumentationViewerSection = 4;
+				DocumentationViewerSubPageName = it.key();
+			}
+
+			if (popen)
+				ImGui::TreePop();
+		}
+
+		ImGui::TreePop();
+	}
+
 	ImGui::EndChild();
 
 	ImGui::SameLine();
@@ -2433,6 +2471,51 @@ static void renderDocumentationViewer()
 				renderFunctionSignature(memberIt);
 
 			renderDescription(member["Description"], nCharsPerLine);
+		}
+
+		break;
+	}
+
+	case 4:
+	{
+		if (DocumentationViewerSubPageName.empty())
+		{
+			ImGui::SeparatorText("Enumerations");
+			renderDescription(enumsDoc["Description"], nCharsPerLine);
+		}
+		else
+		{
+			ImGui::SeparatorText(DocumentationViewerSubPageName.c_str());
+
+			const nlohmann::json& enuDoc = enumsDoc["Members"][DocumentationViewerSubPageName];
+			const nlohmann::json& enuApi = ApiDumpJson["ScriptEnv"]["Libraries"]["Enum"][DocumentationViewerSubPageName];
+			const nlohmann::json& items = enuDoc["Items"];
+			renderDescription(enuDoc["Description"], nCharsPerLine);
+			ImGui::NewLine();
+
+			if (ImGui::BeginTable("Enum", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
+			{
+				ImGui::TableSetupColumn("Name");
+				ImGui::TableSetupColumn("Description");
+				ImGui::TableSetupColumn("Value");
+				ImGui::TableHeadersRow();
+
+				for (auto it = items.begin(); it != items.end(); it++)
+				{
+					ImGui::TableNextRow();
+
+					ImGui::TableSetColumnIndex(0);
+					ImGui::TextUnformatted(it.key().c_str());
+
+					ImGui::TableSetColumnIndex(1);
+					ImGui::TextUnformatted(addLinebreaks((const std::string&)it.value(), nCharsPerLine / 3 - 4).c_str());
+
+					ImGui::TableSetColumnIndex(2);
+					ImGui::Text("%d", (int)enuApi[it.key()]);
+				}
+
+				ImGui::EndTable();
+			}
 		}
 
 		break;
