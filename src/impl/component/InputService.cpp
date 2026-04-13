@@ -19,149 +19,146 @@
 static GLFWcursor* DevCursor = nullptr;
 static int DevCursorId = GLFW_ARROW_CURSOR;
 
-class InputServiceManager : public ComponentManager<EcPlayerInput>
+const Reflection::StaticPropertyMap& PlayerInputComponentManager::GetProperties()
 {
-public:
-    const Reflection::StaticPropertyMap& GetProperties() override
-    {
-        static const Reflection::StaticPropertyMap props = {
-            REFLECTION_PROPERTY(
-                "CursorMode",
-                Integer,
-                [](void*) -> Reflection::GenericValue
-                {
-                    return { glfwGetInputMode(glfwGetCurrentContext(), GLFW_CURSOR) };
-                },
-                [](void*, const Reflection::GenericValue& gv)
-                {
-                    int newMode = (int)gv.AsInteger();
-                    if (newMode == GLFW_CURSOR_DISABLED)
-                        ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouse;
-                    else
-                        ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouse;
+    static const Reflection::StaticPropertyMap props = {
+        REFLECTION_PROPERTY(
+            "CursorMode",
+            Integer,
+            [](void*) -> Reflection::GenericValue
+            {
+                return { glfwGetInputMode(glfwGetCurrentContext(), GLFW_CURSOR) };
+            },
+            [](void*, const Reflection::GenericValue& gv)
+            {
+                int newMode = (int)gv.AsInteger();
+                if (newMode == GLFW_CURSOR_DISABLED)
+                    ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouse;
+                else
+                    ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouse;
 
-                    glfwSetInputMode(glfwGetCurrentContext(), GLFW_CURSOR, newMode);
-                }
-            ),
+                glfwSetInputMode(glfwGetCurrentContext(), GLFW_CURSOR, newMode);
+            }
+        ),
 
-            REFLECTION_PROPERTY(
-                "IsKeyboardSunk",
-                Boolean,
-                [](void*) -> Reflection::GenericValue
-                {
-                    return { UserInput::ShouldIgnoreUIInputSinking() ? false : ImGui::GetIO().WantCaptureKeyboard };
-                },
-                nullptr
-            ),
+        REFLECTION_PROPERTY(
+            "IsKeyboardSunk",
+            Boolean,
+            [](void*) -> Reflection::GenericValue
+            {
+                return { UserInput::ShouldIgnoreUIInputSinking() ? false : ImGui::GetIO().WantCaptureKeyboard };
+            },
+            nullptr
+        ),
 
-            REFLECTION_PROPERTY(
-                "IsMouseSunk",
-                Boolean,
-                [](void*) -> Reflection::GenericValue
-                {
-                    return { UserInput::ShouldIgnoreUIInputSinking() ? false : ImGui::GetIO().WantCaptureMouse };
-                },
-                nullptr
-            ),
+        REFLECTION_PROPERTY(
+            "IsMouseSunk",
+            Boolean,
+            [](void*) -> Reflection::GenericValue
+            {
+                return { UserInput::ShouldIgnoreUIInputSinking() ? false : ImGui::GetIO().WantCaptureMouse };
+            },
+            nullptr
+        ),
 
-            REFLECTION_PROPERTY(
-                "Cursor",
-                Integer,
-                [](void*) -> Reflection::GenericValue
-                {
-                    return DevCursorId;
-                },
-                [](void*, const Reflection::GenericValue& gv)
-                {
-                    int cursor = (int)gv.AsInteger();
-                    if (cursor < GLFW_ARROW_CURSOR || cursor > GLFW_NOT_ALLOWED_CURSOR)
-                        RAISE_RTF("Invalid cursor '{}'", cursor);
+        REFLECTION_PROPERTY(
+            "Cursor",
+            Integer,
+            [](void*) -> Reflection::GenericValue
+            {
+                return DevCursorId;
+            },
+            [](void*, const Reflection::GenericValue& gv)
+            {
+                int cursor = (int)gv.AsInteger();
+                if (cursor < GLFW_ARROW_CURSOR || cursor > GLFW_NOT_ALLOWED_CURSOR)
+                    RAISE_RTF("Invalid cursor '{}'", cursor);
 
-                    GLFWwindow* context = glfwGetCurrentContext();
-                    if (!context)
-                        return;
+                GLFWwindow* context = glfwGetCurrentContext();
+                if (!context)
+                    return;
 
-                    if (DevCursor)
-                        glfwDestroyCursor(DevCursor);
+                if (DevCursor)
+                    glfwDestroyCursor(DevCursor);
 
-                    DevCursor = glfwCreateStandardCursor(cursor);
-                    glfwSetCursor(context, DevCursor);
-                    DevCursorId = cursor;
-                    glfwPollEvents(); // update cursor for the OS if we decide to do some heavy work right after this that doesn't poll events
-                }
-            )
-        };
+                DevCursor = glfwCreateStandardCursor(cursor);
+                glfwSetCursor(context, DevCursor);
+                DevCursorId = cursor;
+                glfwPollEvents(); // update cursor for the OS if we decide to do some heavy work right after this that doesn't poll events
+            }
+        )
+    };
 
-        return props;
-    }
+    return props;
+}
 
-    const Reflection::StaticMethodMap& GetMethods() override
-    {
-        static const Reflection::StaticMethodMap methods = {
-            { "IsKeyPressed", Reflection::MethodDescriptor{
-                { Reflection::ValueType::Integer },
-                { Reflection::ValueType::Boolean },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    return { UserInput::IsKeyDown((int)inputs[0].AsInteger()) };
-                }
-            } },
+const Reflection::StaticMethodMap& PlayerInputComponentManager::GetMethods()
+{
+    static const Reflection::StaticMethodMap methods = {
+        { "IsKeyPressed", Reflection::MethodDescriptor{
+            { Reflection::ValueType::Integer },
+            { Reflection::ValueType::Boolean },
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                return { UserInput::IsKeyDown((int)inputs[0].AsInteger()) };
+            }
+        } },
 
-            { "IsMouseButtonPressed", Reflection::MethodDescriptor{
-                { Reflection::ValueType::Integer },
-                { Reflection::ValueType::Boolean },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    return { UserInput::IsMouseButtonDown((int)inputs[0].AsInteger()) };
-                }
-            } },
+        { "IsMouseButtonPressed", Reflection::MethodDescriptor{
+            { Reflection::ValueType::Integer },
+            { Reflection::ValueType::Boolean },
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                return { UserInput::IsMouseButtonDown((int)inputs[0].AsInteger()) };
+            }
+        } },
 
-            { "GetCursorPosition", Reflection::MethodDescriptor{
-                {},
-                { Reflection::ValueType::Vector2 },
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
-                {
-                    double x = 0;
-                    double y = 0;
-                    glfwGetCursorPos(glfwGetCurrentContext(), &x, &y);
+        { "GetCursorPosition", Reflection::MethodDescriptor{
+            {},
+            { Reflection::ValueType::Vector2 },
+            [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+            {
+                double x = 0;
+                double y = 0;
+                glfwGetCursorPos(glfwGetCurrentContext(), &x, &y);
 
-                    return { glm::vec2(x, y) };
-                }
-            } },
+                return { glm::vec2(x, y) };
+            }
+        } },
 
-            { "SetViewportInputRect", Reflection::MethodDescriptor{
-                { Reflection::ValueType::Vector2, Reflection::ValueType::Vector2 },
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    Engine* engine = Engine::Get();
-                    glm::vec2 viewportPosition = inputs[0].AsVector2();
-                    glm::vec2 viewportSize = inputs[1].AsVector2();
+        { "SetViewportInputRect", Reflection::MethodDescriptor{
+            { Reflection::ValueType::Vector2, Reflection::ValueType::Vector2 },
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                Engine* engine = Engine::Get();
+                glm::vec2 viewportPosition = inputs[0].AsVector2();
+                glm::vec2 viewportSize = inputs[1].AsVector2();
 
-                    engine->ViewportInputPosition = { viewportPosition.x, viewportPosition.y };
-                    engine->OverrideViewportInputSize = { viewportSize.x, viewportSize.y };
-                    engine->OverrideDefaultViewportInputRect = true;
+                engine->ViewportInputPosition = { viewportPosition.x, viewportPosition.y };
+                engine->OverrideViewportInputSize = { viewportSize.x, viewportSize.y };
+                engine->OverrideDefaultViewportInputRect = true;
 
-                    return {};
-                }
-            } },
+                return {};
+            }
+        } },
 
-            { "ResetViewportInputRect", Reflection::MethodDescriptor{
-                {},
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
-                {
-                    Engine* engine = Engine::Get();
-                    engine->OverrideDefaultViewportInputRect = false;
-                    engine->ViewportInputPosition = {};
+        { "ResetViewportInputRect", Reflection::MethodDescriptor{
+            {},
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+            {
+                Engine* engine = Engine::Get();
+                engine->OverrideDefaultViewportInputRect = false;
+                engine->ViewportInputPosition = {};
 
-                    return {};
-                }
-            } },
-        };
+                return {};
+            }
+        } },
+    };
 
-        return methods;
-    }
+    return methods;
+}
 
 // TODO: report bug
 #ifdef __GNUG__
@@ -170,30 +167,27 @@ public:
 #pragma GCC diagnostic ignored "-Wstringop-overflow"
 #endif
 
-    const Reflection::StaticEventMap& GetEvents() override
-    {
-        static const Reflection::StaticEventMap events = {
-            REFLECTION_EVENT(EcPlayerInput, KeyEvent, Reflection::ValueType::InputEvent),
-            REFLECTION_EVENT(EcPlayerInput, MouseButtonEvent, Reflection::ValueType::InputEvent),
-            REFLECTION_EVENT(EcPlayerInput, ScrollEvent, Reflection::ValueType::InputEvent)
-        };
+const Reflection::StaticEventMap& PlayerInputComponentManager::GetEvents()
+{
+    static const Reflection::StaticEventMap events = {
+        REFLECTION_EVENT(EcPlayerInput, KeyEvent, Reflection::ValueType::InputEvent),
+        REFLECTION_EVENT(EcPlayerInput, MouseButtonEvent, Reflection::ValueType::InputEvent),
+        REFLECTION_EVENT(EcPlayerInput, ScrollEvent, Reflection::ValueType::InputEvent)
+    };
 
-        return events;
-    }
+    return events;
+}
 
 #ifdef __GNUG__
 #pragma GCC diagnostic pop
 #pragma GCC diagnostic pop
 #endif
 
-    void Shutdown() override
+void PlayerInputComponentManager::Shutdown()
+{
+    if (DevCursor)
     {
-        if (DevCursor)
-        {
-            glfwDestroyCursor(DevCursor);
-            DevCursor = nullptr;
-        }
+        glfwDestroyCursor(DevCursor);
+        DevCursor = nullptr;
     }
-};
-
-static InputServiceManager Instance;
+}

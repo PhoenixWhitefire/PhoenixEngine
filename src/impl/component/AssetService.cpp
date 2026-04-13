@@ -6,226 +6,220 @@
 #include "asset/SceneFormat.hpp"
 #include "FileRW.hpp"
 
-class AssetServiceManager : public ComponentManager<EcAssetService>
+const Reflection::StaticMethodMap& AssetServiceComponentManager::GetMethods()
 {
-public:
-    const Reflection::StaticMethodMap& GetMethods() override
-    {
-        static const Reflection::StaticMethodMap methods = {
-            { "GetMeshData", Reflection::MethodDescriptor{
-                { Reflection::ValueType::String },
-                { Reflection::ValueType::Map },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+    static const Reflection::StaticMethodMap methods = {
+        { "GetMeshData", Reflection::MethodDescriptor{
+            { Reflection::ValueType::String },
+            { Reflection::ValueType::Map },
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                MeshProvider* meshProvider = MeshProvider::Get();
+
+	            uint32_t meshId = meshProvider->LoadFromPath(std::string(inputs[0].AsStringView()), false, true);
+	            Mesh& mesh = meshProvider->GetMeshResource(meshId);
+
+                std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> meshData;
+                std::vector<Reflection::GenericValue> indices;
+                indices.reserve(mesh.Indices.size());
+
+                for (uint32_t ind : mesh.Indices)
+                    indices.emplace_back(ind);
+
+                meshData["Indices"] = indices;
+
+                std::vector<Reflection::GenericValue> vertices;
+                vertices.reserve(mesh.Vertices.size());
+
+                for (const Vertex& vert : mesh.Vertices)
                 {
-                    MeshProvider* meshProvider = MeshProvider::Get();
+                    std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> vertex;
+                    vertex.reserve(4);
 
-	                uint32_t meshId = meshProvider->LoadFromPath(std::string(inputs[0].AsStringView()), false, true);
-	                Mesh& mesh = meshProvider->GetMeshResource(meshId);
+                    vertex["Position"] = vert.Position;
+                    vertex["Normal"] = vert.Normal;
+                    vertex["UV"] = vert.TextureUV;
 
-                    std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> meshData;
-                    std::vector<Reflection::GenericValue> indices;
-                    indices.reserve(mesh.Indices.size());
+                    std::vector<Reflection::GenericValue> paint;
+                    paint.resize(4);
+                    paint[0] = vert.Paint.x;
+                    paint[1] = vert.Paint.y;
+                    paint[2] = vert.Paint.z;
+                    paint[3] = vert.Paint.w;
 
-                    for (uint32_t ind : mesh.Indices)
-                        indices.emplace_back(ind);
+                    vertex["Paint"] = paint;
 
-                    meshData["Indices"] = indices;
-
-                    std::vector<Reflection::GenericValue> vertices;
-                    vertices.reserve(mesh.Vertices.size());
-
-                    for (const Vertex& vert : mesh.Vertices)
-                    {
-                        std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> vertex;
-                        vertex.reserve(4);
-
-                        vertex["Position"] = vert.Position;
-                        vertex["Normal"] = vert.Normal;
-                        vertex["UV"] = vert.TextureUV;
-                        
-                        std::vector<Reflection::GenericValue> paint;
-                        paint.resize(4);
-                        paint[0] = vert.Paint.x;
-                        paint[1] = vert.Paint.y;
-                        paint[2] = vert.Paint.z;
-                        paint[3] = vert.Paint.w;
-
-                        vertex["Paint"] = paint;
-
-                        vertices.emplace_back(vertex);
-                    }
-
-                    meshData["Vertices"] = vertices;
-
-                    return { Reflection::GenericValue(meshData) };
+                    vertices.emplace_back(vertex);
                 }
-            } },
 
-            { "SetMeshData", Reflection::MethodDescriptor{
-                { Reflection::ValueType::String, Reflection::ValueType::Map },
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                meshData["Vertices"] = vertices;
+
+                return { Reflection::GenericValue(meshData) };
+            }
+        } },
+
+        { "SetMeshData", Reflection::MethodDescriptor{
+            { Reflection::ValueType::String, Reflection::ValueType::Map },
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                const std::string& name = std::string(inputs[0].AsStringView());
+                const std::unordered_map<Reflection::GenericValue, Reflection::GenericValue>& meshData = inputs[1].AsMap();
+
+                std::span<Reflection::GenericValue> vertices = meshData.at("Vertices").AsArray();
+                std::span<Reflection::GenericValue> indices = meshData.at("Indices").AsArray();
+
+	            Mesh mesh;
+	            mesh.MeshDataPreserved = true;
+                mesh.Vertices.reserve(vertices.size());
+                mesh.Indices.reserve(indices.size());
+
+                for (const Reflection::GenericValue& vertexData : vertices)
                 {
-                    const std::string& name = std::string(inputs[0].AsStringView());
-                    const std::unordered_map<Reflection::GenericValue, Reflection::GenericValue>& meshData = inputs[1].AsMap();
+                    std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> vertex = vertexData.AsMap();
+                    std::span<Reflection::GenericValue> paintData = vertex.at("Paint").AsArray();
 
-                    std::span<Reflection::GenericValue> vertices = meshData.at("Vertices").AsArray();
-                    std::span<Reflection::GenericValue> indices = meshData.at("Indices").AsArray();
-
-	                Mesh mesh;
-	                mesh.MeshDataPreserved = true;
-                    mesh.Vertices.reserve(vertices.size());
-                    mesh.Indices.reserve(indices.size());
-
-                    for (const Reflection::GenericValue& vertexData : vertices)
-                    {
-                        std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> vertex = vertexData.AsMap();
-                        std::span<Reflection::GenericValue> paintData = vertex.at("Paint").AsArray();
-
-                        mesh.Vertices.push_back(Vertex{
-                            .Position = vertex.at("Position").AsVector3(),
-                            .Normal = vertex.at("Normal").AsVector3(),
-                            .Paint = glm::vec4(paintData[0].AsDouble(), paintData[1].AsDouble(), paintData[2].AsDouble(), paintData[3].AsDouble()),
-                            .TextureUV = glm::vec2(vertex.at("UV").AsVector3())
-                        });
-                    }
-
-                    for (const Reflection::GenericValue& indexData : indices)
-                        mesh.Indices.push_back((uint32_t)indexData.AsInteger());
-
-                    MeshProvider::Get()->Assign(mesh, name);
-                    return {};
+                    mesh.Vertices.push_back(Vertex{
+                        .Position = vertex.at("Position").AsVector3(),
+                        .Normal = vertex.at("Normal").AsVector3(),
+                        .Paint = glm::vec4(paintData[0].AsDouble(), paintData[1].AsDouble(), paintData[2].AsDouble(), paintData[3].AsDouble()),
+                        .TextureUV = glm::vec2(vertex.at("UV").AsVector3())
+                    });
                 }
-            } },
 
-            { "SaveMesh", Reflection::MethodDescriptor{
-                { Reflection::ValueType::String, Reflection::ValueType::String },
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    const std::string& internalName = std::string(inputs[0].AsStringView());
-	                const std::string& savePath = std::string(inputs[0].AsStringView());
+                for (const Reflection::GenericValue& indexData : indices)
+                    mesh.Indices.push_back((uint32_t)indexData.AsInteger());
 
-                    MeshProvider* meshProv = MeshProvider::Get();
-	                meshProv->Save(meshProv->LoadFromPath(internalName), savePath);
+                MeshProvider::Get()->Assign(mesh, name);
+                return {};
+            }
+        } },
 
-                    return {};
-                }
-            } },
+        { "SaveMesh", Reflection::MethodDescriptor{
+            { Reflection::ValueType::String, Reflection::ValueType::String },
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                const std::string& internalName = std::string(inputs[0].AsStringView());
+	            const std::string& savePath = std::string(inputs[0].AsStringView());
 
-            { "ImportModel", Reflection::MethodDescriptor{
-                { Reflection::ValueType::String },
-                { Reflection::ValueType::GameObject },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    const std::string& path = std::string(inputs[0].AsStringView());
-	                std::vector<ObjectRef> loaded = ModelLoader(path, PHX_GAMEOBJECT_NULL_ID).LoadedObjs;
+                MeshProvider* meshProv = MeshProvider::Get();
+	            meshProv->Save(meshProv->LoadFromPath(internalName), savePath);
 
-                    return { loaded.at(0)->ToGenericValue() };
-                }
-            } },
+                return {};
+            }
+        } },
 
-            { "LoadScene", Reflection::MethodDescriptor{
-                { Reflection::ValueType::String },
-                { REFLECTION_OPTIONAL(Array), REFLECTION_OPTIONAL(String) },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    bool readSuccess = true;
-                    std::string contents = FileRW::ReadFile(inputs[0].AsString(), &readSuccess);
+        { "ImportModel", Reflection::MethodDescriptor{
+            { Reflection::ValueType::String },
+            { Reflection::ValueType::GameObject },
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                const std::string& path = std::string(inputs[0].AsStringView());
+	            std::vector<ObjectRef> loaded = ModelLoader(path, PHX_GAMEOBJECT_NULL_ID).LoadedObjs;
 
-                    if (!readSuccess)
-                        return { Reflection::GenericValue::Null(), contents };
+                return { loaded.at(0)->ToGenericValue() };
+            }
+        } },
 
-                    std::vector<ObjectRef> objects = SceneFormat::Deserialize(contents, &readSuccess);
+        { "LoadScene", Reflection::MethodDescriptor{
+            { Reflection::ValueType::String },
+            { REFLECTION_OPTIONAL(Array), REFLECTION_OPTIONAL(String) },
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                bool readSuccess = true;
+                std::string contents = FileRW::ReadFile(inputs[0].AsString(), &readSuccess);
 
-                    if (!readSuccess)
-                        return { Reflection::GenericValue::Null(), SceneFormat::GetLastErrorString() };
+                if (!readSuccess)
+                    return { Reflection::GenericValue::Null(), contents };
 
-                    std::vector<Reflection::GenericValue> returnArray;
-                    returnArray.reserve(objects.size());
+                std::vector<ObjectRef> objects = SceneFormat::Deserialize(contents, &readSuccess);
 
-                    for (const ObjectRef& obj : objects)
-                        returnArray.push_back(obj->ToGenericValue());
+                if (!readSuccess)
+                    return { Reflection::GenericValue::Null(), SceneFormat::GetLastErrorString() };
 
-                    return { Reflection::GenericValue(returnArray), "" };
-                }
-            } },
+                std::vector<Reflection::GenericValue> returnArray;
+                returnArray.reserve(objects.size());
 
-            { "SaveScene", Reflection::MethodDescriptor{
-                { Reflection::ValueType::Array, Reflection::ValueType::String },
-                { Reflection::ValueType::Boolean, REFLECTION_OPTIONAL(String) },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    std::vector<GameObject*> objects;
-                    objects.reserve(inputs[0].Size);
+                for (const ObjectRef& obj : objects)
+                    returnArray.push_back(obj->ToGenericValue());
 
-                    for (const Reflection::GenericValue& gv : inputs[0].AsArray())
-                        objects.push_back(GameObject::FromGenericValue(gv));
+                return { Reflection::GenericValue(returnArray), "" };
+            }
+        } },
 
-                    std::string ser = SceneFormat::Serialize(objects, inputs[1].AsString());
+        { "SaveScene", Reflection::MethodDescriptor{
+            { Reflection::ValueType::Array, Reflection::ValueType::String },
+            { Reflection::ValueType::Boolean, REFLECTION_OPTIONAL(String) },
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                std::vector<GameObject*> objects;
+                objects.reserve(inputs[0].Size);
 
-                    std::string error;
-                    bool writeSuccess = FileRW::WriteFileCreateDirectories(inputs[1].AsString(), ser, &error);
+                for (const Reflection::GenericValue& gv : inputs[0].AsArray())
+                    objects.push_back(GameObject::FromGenericValue(gv));
 
-                    if (!writeSuccess)
-                        return { false, error };
-                    else
-                        return { true, "" };
-                }
-            } },
+                std::string ser = SceneFormat::Serialize(objects, inputs[1].AsString());
 
-            { "QueueLoadTexture", Reflection::MethodDescriptor{
-                { Reflection::ValueType::String, Reflection::ValueType::Boolean, Reflection::ValueType::Boolean },
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    TextureManager* texManager = TextureManager::Get();
-                    texManager->LoadFromPath(inputs[0].AsString(), true, inputs[1].AsBoolean(), !inputs[2].AsBoolean());
+                std::string error;
+                bool writeSuccess = FileRW::WriteFileCreateDirectories(inputs[1].AsString(), ser, &error);
 
-                    return {};
-                }
-            } },
+                if (!writeSuccess)
+                    return { false, error };
+                else
+                    return { true, "" };
+            }
+        } },
 
-            { "UnloadTexture", Reflection::MethodDescriptor{
-                { Reflection::ValueType::String },
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    TextureManager* texManager = TextureManager::Get();
-                    uint32_t resId = texManager->LoadFromPath(inputs[0].AsString(), false);
-                    texManager->UnloadTexture(resId);
+        { "QueueLoadTexture", Reflection::MethodDescriptor{
+            { Reflection::ValueType::String, Reflection::ValueType::Boolean, Reflection::ValueType::Boolean },
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                TextureManager* texManager = TextureManager::Get();
+                texManager->LoadFromPath(inputs[0].AsString(), true, inputs[1].AsBoolean(), !inputs[2].AsBoolean());
 
-                    return {};
-                }
-            } },
+                return {};
+            }
+        } },
 
-            { "UnloadMesh", Reflection::MethodDescriptor{
-                { Reflection::ValueType::String },
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    MeshProvider* meshProv = MeshProvider::Get();
-                    meshProv->UnloadMesh(inputs[0].AsString());
+        { "UnloadTexture", Reflection::MethodDescriptor{
+            { Reflection::ValueType::String },
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                TextureManager* texManager = TextureManager::Get();
+                uint32_t resId = texManager->LoadFromPath(inputs[0].AsString(), false);
+                texManager->UnloadTexture(resId);
 
-                    return {};
-                }
-            } },
+                return {};
+            }
+        } },
 
-            { "UnloadMaterial", Reflection::MethodDescriptor{
-                { Reflection::ValueType::String },
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    MaterialManager* materialManager = MaterialManager::Get();
-                    materialManager->UnloadMaterial(inputs[0].AsString());
+        { "UnloadMesh", Reflection::MethodDescriptor{
+            { Reflection::ValueType::String },
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                MeshProvider* meshProv = MeshProvider::Get();
+                meshProv->UnloadMesh(inputs[0].AsString());
 
-                    return {};
-                }
-            } },
-        };
+                return {};
+            }
+        } },
 
-        return methods;
-    }
-};
+        { "UnloadMaterial", Reflection::MethodDescriptor{
+            { Reflection::ValueType::String },
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                MaterialManager* materialManager = MaterialManager::Get();
+                materialManager->UnloadMaterial(inputs[0].AsString());
 
-static AssetServiceManager Instance;
+                return {};
+            }
+        } },
+    };
+
+    return methods;
+}

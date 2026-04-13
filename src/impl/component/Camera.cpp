@@ -8,29 +8,23 @@
 #include "component/Transform.hpp"
 #include "UserInput.hpp"
 
-class CameraManager : public ComponentManager<EcCamera>
+uint32_t CameraComponentManager::CreateComponent(GameObject* Object)
 {
-public:
-	uint32_t CreateComponent(GameObject* Object) override
-	{
-		m_Components.emplace_back();
-		m_Components.back().Object = Object;
+	m_Components.emplace_back();
+	m_Components.back().Object = Object;
 
-		return static_cast<uint32_t>(m_Components.size() - 1);
-	}
+	return static_cast<uint32_t>(m_Components.size() - 1);
+}
 
-    const Reflection::StaticPropertyMap& GetProperties() override
-    {
-        static const Reflection::StaticPropertyMap props = {
-			REFLECTION_PROPERTY_SIMPLE(EcCamera, UseSimpleController, Boolean),
-			REFLECTION_PROPERTY_SIMPLE(EcCamera, FieldOfView, Double)
-        };
+const Reflection::StaticPropertyMap& CameraComponentManager::GetProperties()
+{
+    static const Reflection::StaticPropertyMap props = {
+		REFLECTION_PROPERTY_SIMPLE(EcCamera, UseSimpleController, Boolean),
+		REFLECTION_PROPERTY_SIMPLE(EcCamera, FieldOfView, Double)
+    };
 
-        return props;
-    }
-};
-
-static inline CameraManager Instance;
+    return props;
+}
 
 glm::mat4 EcCamera::GetRenderMatrix(float AspectRatio) const
 {

@@ -1,5 +1,4 @@
 // RigidBody.hpp, 22/01/2026
-
 #pragma once
 
 #include "datatype/GameObject.hpp"
@@ -54,4 +53,11 @@ struct EcRigidBody : public Component<EntityComponent::RigidBody>
     bool PhysicsRotations = false;
 
     bool Valid = true;
+};
+
+class RigidBodyComponentManager : public ComponentManager<EcRigidBody>
+{
+public:
+	uint32_t CreateComponent(GameObject* Object) override;
+    const Reflection::StaticPropertyMap& GetProperties() override;
 };

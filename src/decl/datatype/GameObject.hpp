@@ -20,44 +20,6 @@
 class GameObject
 {
 public:
-	static GameObject* FromGenericValue(const Reflection::GenericValue&);
-
-	// create with a component
-	static GameObject* Create(EntityComponent);
-	static GameObject* Create(const std::string_view&);
-	// create empty object
-	static GameObject* Create();
-
-	static GameObject* GetObjectById(uint32_t);
-
-	static inline uint32_t s_DataModel = PHX_GAMEOBJECT_NULL_ID;
-	static inline hx::vector<GameObject, MEMCAT(GameObject)> s_WorldArray;
-	static inline std::array<IComponentManager*, (size_t)EntityComponent::__count> s_ComponentManagers;
-
-	struct Collection
-	{
-		std::string Name;
-		std::vector<uint32_t> Items;
-
-		struct Event
-		{
-			// We want these to exist in the same memory location for the entire lifetime of the Engine
-			Reflection::EventDescriptor* Descriptor = nullptr;
-			std::vector<Reflection::EventCallback> Callbacks;
-		};
-
-		Event AddedEvent;
-		Event RemovedEvent;
-
-		uint16_t Id = UINT16_MAX;
-	};
-
-	static inline std::vector<Collection> s_Collections;
-	static inline std::unordered_map<std::string, uint16_t> s_CollectionNameToId;
-
-	// Returns a reference to a Collection, creating one if it does not exist
-	static Collection& GetCollection(const std::string&);
-
 	template <class T>
 	T* FindComponent()
 	{
@@ -134,11 +96,6 @@ public:
 	uint32_t OwningDataModel = PHX_GAMEOBJECT_NULL_ID;
 	uint32_t OwningWorkspace = PHX_GAMEOBJECT_NULL_ID;
 
-	bool Enabled = true;
-	bool Serializes = true;
-	bool IsDestructionPending = false;
-	bool Valid = true;
-
 	std::vector<uint32_t> Children;
 	std::vector<ReflectorRef> Components;
 	Reflection::Api ComponentApis;
@@ -146,6 +103,11 @@ public:
 	std::vector<uint16_t> Tags;
 	std::vector<Reflection::EventCallback> OnTagAddedCallbacks;
 	std::vector<Reflection::EventCallback> OnTagRemovedCallbacks;
+
+	bool Enabled = true;
+	bool Serializes = true;
+	bool IsDestructionPending = false;
+	bool Valid = true;
 
 	static nlohmann::json DumpApiToJson();
 	static const Reflection::StaticApi s_Api;
@@ -329,4 +291,47 @@ struct ObjectHandle
 	{
 		return Dereference();
 	}
+};
+
+class GameObjectManager
+{
+public:
+	static GameObjectManager* Get();
+
+	// create with a component
+	ObjectHandle Create(EntityComponent);
+	ObjectHandle Create(const std::string_view&);
+	// create empty object
+	ObjectHandle Create();
+
+	ObjectRef GetById(uint32_t);
+	ObjectRef FromGenericValue(const Reflection::GenericValue&);
+
+	uint32_t DataModel = PHX_GAMEOBJECT_NULL_ID;
+	hx::vector<GameObject, MEMCAT(GameObject)> WorldArray;
+	std::array<IComponentManager*, (size_t)EntityComponent::__count> ComponentManagers;
+
+	struct Collection
+	{
+		std::string Name;
+		std::vector<uint32_t> Items;
+
+		struct Event
+		{
+			// We want these to exist in the same memory location for the entire lifetime of the Engine
+			Reflection::EventDescriptor* Descriptor = nullptr;
+			std::vector<Reflection::EventCallback> Callbacks;
+		};
+
+		Event AddedEvent;
+		Event RemovedEvent;
+
+		uint16_t Id = UINT16_MAX;
+	};
+
+	std::vector<Collection> Collections;
+	std::unordered_map<std::string, uint16_t> CollectionNameToId;
+
+	// Returns a reference to a Collection, creating one if it does not exist
+	static Collection& GetCollection(const std::string&);
 };

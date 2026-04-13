@@ -31,3 +31,10 @@ struct EcCamera : public Component<EntityComponent::Camera>
 
 	ObjectRef Object;
 };
+
+class CameraComponentManager : public ComponentManager<EcCamera>
+{
+public:
+	uint32_t CreateComponent(GameObject* Object) override;
+	const Reflection::StaticPropertyMap& GetProperties() override;
+};

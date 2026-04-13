@@ -16,3 +16,9 @@ struct EcAnimation : public Component<EntityComponent::Animation>
     bool Ready = false;
     bool Valid = true;
 };
+
+class AnimationComponentManager : public ComponentManager<EcAnimation>
+{
+public:
+    const Reflection::StaticPropertyMap& GetProperties() override;
+};

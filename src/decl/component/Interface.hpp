@@ -50,3 +50,37 @@ struct EcUIButton : public Component<EntityComponent::UIButton>
 
     bool Valid = true;
 };
+
+class InterfaceComponentManager : public ComponentManager<EcInterfaceService>
+{
+};
+
+class UITransformComponentManager : public ComponentManager<EcUITransform>
+{
+public:
+    const Reflection::StaticPropertyMap& GetProperties() override;
+};
+
+class UIFrameComponentManager : public ComponentManager<EcUIFrame>
+{
+public:
+    const Reflection::StaticPropertyMap& GetProperties() override;
+};
+
+class UIImageComponentManager : public ComponentManager<EcUIImage>
+{
+public:
+    const Reflection::StaticPropertyMap& GetProperties() override;
+};
+
+class UITextComponentManager : public ComponentManager<EcUIText>
+{
+public:
+    const Reflection::StaticPropertyMap& GetProperties() override;
+};
+
+class UIButtonComponentManager : public ComponentManager<EcUIButton>
+{
+public:
+    const Reflection::StaticEventMap& GetEvents() override;
+};

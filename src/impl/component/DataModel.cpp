@@ -10,146 +10,143 @@
 #include "FileRW.hpp"
 #include "Log.hpp"
 
-class DataModelManager : public ComponentManager<EcDataModel>
+uint32_t DataModelComponentManager::CreateComponent(GameObject* Object)
 {
-public:
-    uint32_t CreateComponent(GameObject* Object) override
-    {
-        uint32_t id = ComponentManager<EcDataModel>::CreateComponent(Object);
-        m_Components.back().Object = Object;
+    uint32_t id = ComponentManager<EcDataModel>::CreateComponent(Object);
+    m_Components.back().Object = Object;
 
-        return id;
-    }
+    return id;
+}
 
-    void DeleteComponent(uint32_t Id) override
-    {
-        EcDataModel& dm = m_Components.at(Id);
-        dm.Close();
+void DataModelComponentManager::DeleteComponent(uint32_t Id)
+{
+    EcDataModel& dm = m_Components.at(Id);
+    dm.Close();
 
-        for (lua_State* L : dm.Modules)
-            lua_resetthread(L);
-        dm.Modules.clear();
+    for (lua_State* L : dm.Modules)
+        lua_resetthread(L);
+    dm.Modules.clear();
 
-		ComponentManager<EcDataModel>::DeleteComponent(Id);
-    }
+	ComponentManager<EcDataModel>::DeleteComponent(Id);
+}
 
-    const Reflection::StaticPropertyMap& GetProperties() override
-    {
-        static const Reflection::StaticPropertyMap props = {
-            REFLECTION_PROPERTY(
-                "Time",
-                Double,
-                [](void*)
-                -> Reflection::GenericValue
-                {
-                    return GetRunningTime();
-                },
-                nullptr
-            ),
+const Reflection::StaticPropertyMap& DataModelComponentManager::GetProperties()
+{
+    static const Reflection::StaticPropertyMap props = {
+        REFLECTION_PROPERTY(
+            "Time",
+            Double,
+            [](void*)
+            -> Reflection::GenericValue
+            {
+                return GetRunningTime();
+            },
+            nullptr
+        ),
 
-            REFLECTION_PROPERTY(
-                "LiveScripts",
-                String,
-                [](void* p) -> Reflection::GenericValue
-                {
-                    return static_cast<EcDataModel*>(p)->LiveScripts;
-                },
-                [](void* p, const Reflection::GenericValue& gv)
-                {
-                    EcDataModel* dm = static_cast<EcDataModel*>(p);
-                    if (dm->Modules.size() > 0)
-                        RAISE_RT("`LiveScripts` of a DataModel cannot be changed after it is bound!");
+        REFLECTION_PROPERTY(
+            "LiveScripts",
+            String,
+            [](void* p) -> Reflection::GenericValue
+            {
+                return static_cast<EcDataModel*>(p)->LiveScripts;
+            },
+            [](void* p, const Reflection::GenericValue& gv)
+            {
+                EcDataModel* dm = static_cast<EcDataModel*>(p);
+                if (dm->Modules.size() > 0)
+                    RAISE_RT("`LiveScripts` of a DataModel cannot be changed after it is bound!");
 
-                    dm->LiveScripts = gv.AsString();
-                    dm->CanLoadModules = true;
-                }
-            ),
+                dm->LiveScripts = gv.AsString();
+                dm->CanLoadModules = true;
+            }
+        ),
 
-            REFLECTION_PROPERTY(
-                "AreScriptsBound",
-                Boolean,
-                [](void* p) -> Reflection::GenericValue
-                {
-                    return static_cast<EcDataModel*>(p)->Modules.size() > 0;
-                },
-                nullptr
-            ),
+        REFLECTION_PROPERTY(
+            "AreScriptsBound",
+            Boolean,
+            [](void* p) -> Reflection::GenericValue
+            {
+                return static_cast<EcDataModel*>(p)->Modules.size() > 0;
+            },
+            nullptr
+        ),
 
-            REFLECTION_PROPERTY(
-                "VM",
-                String,
-                [](void* p) -> Reflection::GenericValue
-                {
-                    return static_cast<EcDataModel*>(p)->VM;
-                },
-                [](void* p, const Reflection::GenericValue& gv)
-                {
-                    EcDataModel* dm = static_cast<EcDataModel*>(p);
-                    if (dm->Modules.size() > 0)
-                        RAISE_RTF("Cannot change the VM of {} because Scripts have already been bound!", dm->Object->GetFullName());
+        REFLECTION_PROPERTY(
+            "VM",
+            String,
+            [](void* p) -> Reflection::GenericValue
+            {
+                return static_cast<EcDataModel*>(p)->VM;
+            },
+            [](void* p, const Reflection::GenericValue& gv)
+            {
+                EcDataModel* dm = static_cast<EcDataModel*>(p);
+                if (dm->Modules.size() > 0)
+                    RAISE_RTF("Cannot change the VM of {} because Scripts have already been bound!", dm->Object->GetFullName());
 
-                    dm->VM = gv.AsString();
-                }
-            )
-        };
+                dm->VM = gv.AsString();
+            }
+        )
+    };
 
-        return props;
-    }
+    return props;
+}
 
-    const Reflection::StaticMethodMap& GetMethods() override
-    {
-        static const Reflection::StaticMethodMap methods = {
-            { "GetService", {
-                { Reflection::ValueType::String },
-                { Reflection::ValueType::GameObject },
-                [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    std::string service = std::string(inputs[0].AsStringView());
-                    bool validService = false;
+const Reflection::StaticMethodMap& DataModelComponentManager::GetMethods()
+{
+    static const Reflection::StaticMethodMap methods = {
+        { "GetService", {
+            { Reflection::ValueType::String },
+            { Reflection::ValueType::GameObject },
+            [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                std::string service = std::string(inputs[0].AsStringView());
+                bool validService = false;
 
-                    for (const std::string_view& serv : s_DataModelServices)
-                        if (serv == service)
-                        {
-                            validService = true;
-                            break;
-                        }
+                for (const std::string_view& serv : s_DataModelServices)
+                    if (serv == service)
+                    {
+                        validService = true;
+                        break;
+                    }
 
-                    if (!validService)
-                        RAISE_RTF("'{}' is not a valid Service!", service);
+                if (!validService)
+                    RAISE_RTF("'{}' is not a valid Service!", service);
 
-                    EcDataModel* dm = static_cast<EcDataModel*>(p);
-                    EntityComponent it = FindComponentTypeByName(service);
+                EcDataModel* dm = static_cast<EcDataModel*>(p);
+                EntityComponent it = FindComponentTypeByName(service);
 
-                    if (it == EntityComponent::None)
-                        RAISE_RTF("Could not map Service name '{}' to a Component", service);
+                if (it == EntityComponent::None)
+                    RAISE_RTF("Could not map Service name '{}' to a Component", service);
 
-                    if (GameObject* preExisting = dm->Object->FindChildWithComponent(it))
-                        return { preExisting->ToGenericValue() };
+                if (GameObject* preExisting = dm->Object->FindChildWithComponent(it))
+                    return { preExisting->ToGenericValue() };
 
-                    GameObject* newObject = GameObject::Create(it);
-                    newObject->SetParent(dm->Object);
+                GameObject* newObject = GameObject::Create(it);
+                newObject->SetParent(dm->Object);
 
-                    return { newObject->ToGenericValue() };
-                }
-            } },
+                return { newObject->ToGenericValue() };
+            }
+        } },
 
-            { "BindToClose", {
-                { Reflection::ValueType::Function },
-                {},
-                [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    EcDataModel* dm = static_cast<EcDataModel*>(p);
-                    if (dm->CloseCallback.Func)
-                        RAISE_RTF("Cannot overwrite Close callback of datamodel {}", dm->Object->GetFullName());
+        { "BindToClose", {
+            { Reflection::ValueType::Function },
+            {},
+            [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                EcDataModel* dm = static_cast<EcDataModel*>(p);
+                if (dm->CloseCallback.Func)
+                    RAISE_RTF("Cannot overwrite Close callback of datamodel {}", dm->Object->GetFullName());
 
-                    dm->CloseCallback = inputs[0].AsFunction();
-                    return {};
-                }
-            } }
-        };
+                dm->CloseCallback = inputs[0].AsFunction();
+                return {};
+            }
+        } }
+    };
 
-        return methods;
-    }
+    return methods;
+}
 
 // TODO: report bug
 #ifdef __GNUG__
@@ -158,22 +155,19 @@ public:
 #pragma GCC diagnostic ignored "-Wstringop-overflow"
 #endif
 
-    const Reflection::StaticEventMap& GetEvents() override
-    {
-        static Reflection::StaticEventMap events = {
-            REFLECTION_EVENT(EcDataModel, OnFrameBegin, Reflection::ValueType::Double)
-        };
+const Reflection::StaticEventMap& DataModelComponentManager::GetEvents()
+{
+    static Reflection::StaticEventMap events = {
+        REFLECTION_EVENT(EcDataModel, OnFrameBegin, Reflection::ValueType::Double)
+    };
 
-        return events;
-    }
+    return events;
+}
 
 #ifdef __GNUG__
 #pragma GCC diagnostic pop
 #pragma GCC diagnostic pop
 #endif
-};
-
-static inline DataModelManager Instance;
 
 static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
 {
@@ -314,9 +308,9 @@ void EcDataModel::Close()
     }
 }
 
-void EcDataModel::NotifyAllOfShutdown()
+void DataModelComponentManager::NotifyAllOfShutdown()
 {
-    for (EcDataModel& dm : Instance.m_Components)
+    for (EcDataModel& dm : m_Components)
     {
         if (dm.Valid)
             dm.Close();

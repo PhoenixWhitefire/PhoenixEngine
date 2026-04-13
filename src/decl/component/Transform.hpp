@@ -22,3 +22,10 @@ struct EcTransform : public Component<EntityComponent::Transform>
     ObjectRef Object;
     bool Valid = true;
 };
+
+class TransformComponentManager : ComponentManager<EcTransform>
+{
+public:
+    uint32_t CreateComponent(GameObject* Object) override;
+    const Reflection::StaticPropertyMap& GetProperties() override;
+};

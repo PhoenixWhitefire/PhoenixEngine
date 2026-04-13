@@ -1273,7 +1273,7 @@
               "ColorGradient": "Color gradient (not implemented)",
               "Double": "The `number` type",
               "EventSignal": "The `EventSignal` datatype",
-              "Function": "A function, equivalent to `(...unknown) -> (...unknown)",
+              "Function": "A function, equivalent to `(...unknown) -> (...unknown)`",
               "GameObject": "The `GameObject` datatype",
               "InputEvent": "A union of `KeyInputEvent`, `MouseInputEvent` and `ScrollInputEvent`",
               "Integer": "A whole number. Will be represented as `number` to Scripts",

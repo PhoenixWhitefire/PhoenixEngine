@@ -5,32 +5,26 @@
 #include "datatype/GameObject.hpp"
 #include "FileRW.hpp"
 
-class AnimationManager : public ComponentManager<EcAnimation>
+const Reflection::StaticPropertyMap& AnimationComponentManager::GetProperties()
 {
-public:
-    const Reflection::StaticPropertyMap& GetProperties() override
-    {
-        static const Reflection::StaticPropertyMap props = {
-            REFLECTION_PROPERTY(
-                "Animation",
-                String,
-                REFLECTION_PROPERTY_GET_SIMPLE(EcAnimation, Animation),
-                [](void* p, const Reflection::GenericValue& gv)
-                {
-                    static_cast<EcAnimation*>(p)->SetAnimation(gv.AsStringView());
-                }
-            ),
+    static const Reflection::StaticPropertyMap props = {
+        REFLECTION_PROPERTY(
+            "Animation",
+            String,
+            REFLECTION_PROPERTY_GET_SIMPLE(EcAnimation, Animation),
+            [](void* p, const Reflection::GenericValue& gv)
+            {
+                static_cast<EcAnimation*>(p)->SetAnimation(gv.AsStringView());
+            }
+        ),
 
-            REFLECTION_PROPERTY_SIMPLE(EcAnimation, Weight, Double),
-            REFLECTION_PROPERTY_SIMPLE(EcAnimation, Playing, Boolean),
-            REFLECTION_PROPERTY_SIMPLE(EcAnimation, Looped, Boolean),
-            REFLECTION_PROPERTY("Ready", Boolean, REFLECTION_PROPERTY_GET_SIMPLE(EcAnimation, Ready), nullptr)
-        };
-        return props;
-    }
-};
-
-static inline AnimationManager Instance;
+        REFLECTION_PROPERTY_SIMPLE(EcAnimation, Weight, Double),
+        REFLECTION_PROPERTY_SIMPLE(EcAnimation, Playing, Boolean),
+        REFLECTION_PROPERTY_SIMPLE(EcAnimation, Looped, Boolean),
+        REFLECTION_PROPERTY("Ready", Boolean, REFLECTION_PROPERTY_GET_SIMPLE(EcAnimation, Ready), nullptr)
+    };
+    return props;
+}
 
 void EcAnimation::SetAnimation(const std::string_view& Asset)
 {

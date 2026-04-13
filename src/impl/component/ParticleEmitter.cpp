@@ -10,88 +10,80 @@
 
 static std::default_random_engine s_RandGenerator = std::default_random_engine(static_cast<uint32_t>(time(NULL)));
 
-class ParticleEmitterManager : public ComponentManager<EcParticleEmitter>
+uint32_t ParticleEmitterComponentManager::CreateComponent(GameObject* Object)
 {
-public:
-    uint32_t CreateComponent(GameObject* Object) override
-    {
-        m_Components.emplace_back();
-        m_Components.back().Object = Object;
+    m_Components.emplace_back();
+    m_Components.back().Object = Object;
 
-        return static_cast<uint32_t>(m_Components.size() - 1);
-    }
+    return static_cast<uint32_t>(m_Components.size() - 1);
+}
 	
-    const Reflection::StaticPropertyMap& GetProperties() override
-    {
-        static const Reflection::StaticPropertyMap props = 
-        {
-            REFLECTION_PROPERTY_SIMPLE(EcParticleEmitter, Emitting, Boolean),
-			REFLECTION_PROPERTY_SIMPLE(EcParticleEmitter, ParticlesAreAttached, Boolean),
+const Reflection::StaticPropertyMap& ParticleEmitterComponentManager::GetProperties()
+{
+    static const Reflection::StaticPropertyMap props = {
+        REFLECTION_PROPERTY_SIMPLE(EcParticleEmitter, Emitting, Boolean),
+		REFLECTION_PROPERTY_SIMPLE(EcParticleEmitter, ParticlesAreAttached, Boolean),
 
-			REFLECTION_PROPERTY(
-				"Rate",
-				Integer,
-				[](void* g)
-				-> Reflection::GenericValue
-				{
-					return static_cast<EcParticleEmitter*>(g)->Rate;
-				},
-				[](void* g, const Reflection::GenericValue& gv)
-				{
-					int64_t newRate = gv.AsInteger();
-					if (newRate < 0 || newRate > UINT32_MAX)
-						RAISE_RTF("Rate must be within uint32_t bounds (0 <= Rate <= 0xFFFFFFFFu), got {}", newRate);
-					static_cast<EcParticleEmitter*>(g)->Rate = static_cast<uint32_t>(newRate);
-
-				}
-			),
+		REFLECTION_PROPERTY(
+			"Rate",
+			Integer,
+			[](void* g)
+			-> Reflection::GenericValue
+			{
+				return static_cast<EcParticleEmitter*>(g)->Rate;
+			},
+			[](void* g, const Reflection::GenericValue& gv)
+			{
+				int64_t newRate = gv.AsInteger();
+				if (newRate < 0 || newRate > UINT32_MAX)
+					RAISE_RTF("Rate must be within uint32_t bounds (0 <= Rate <= 0xFFFFFFFFu), got {}", newRate);
+				static_cast<EcParticleEmitter*>(g)->Rate = static_cast<uint32_t>(newRate);
+			}
+		),
 		
-			REFLECTION_PROPERTY(
-				"Image",
-				String,
-				[](void* p) -> Reflection::GenericValue
-				{
-					EcParticleEmitter* ep = static_cast<EcParticleEmitter*>(p);
-					const Texture& tex = TextureManager::Get()->GetTextureResource(ep->Image);
+		REFLECTION_PROPERTY(
+			"Image",
+			String,
+			[](void* p) -> Reflection::GenericValue
+			{
+				EcParticleEmitter* ep = static_cast<EcParticleEmitter*>(p);
+				const Texture& tex = TextureManager::Get()->GetTextureResource(ep->Image);
 
-					return tex.ImagePath;
-				},
-				[](void* p, const Reflection::GenericValue& gv)
-				{
-					EcParticleEmitter* ep = static_cast<EcParticleEmitter*>(p);
-					ep->Image = TextureManager::Get()->LoadFromPath(gv.AsString());
-				}
-			),
+				return tex.ImagePath;
+			},
+			[](void* p, const Reflection::GenericValue& gv)
+			{
+				EcParticleEmitter* ep = static_cast<EcParticleEmitter*>(p);
+				ep->Image = TextureManager::Get()->LoadFromPath(gv.AsString());
+			}
+		),
 
-			REFLECTION_PROPERTY(
-				"BilinearFiltering",
-				Boolean,
-				[](void* p) -> Reflection::GenericValue
-				{
-					EcParticleEmitter* ep = static_cast<EcParticleEmitter*>(p);
-					const Texture& tex = TextureManager::Get()->GetTextureResource(ep->Image);
+		REFLECTION_PROPERTY(
+			"BilinearFiltering",
+			Boolean,
+			[](void* p) -> Reflection::GenericValue
+			{
+				EcParticleEmitter* ep = static_cast<EcParticleEmitter*>(p);
+				const Texture& tex = TextureManager::Get()->GetTextureResource(ep->Image);
 
-					return tex.DoBilinearSmoothing;
-				},
-				[](void* p, const Reflection::GenericValue& gv)
-				{
-					TextureManager* textureManager = TextureManager::Get();
+				return tex.DoBilinearSmoothing;
+			},
+			[](void* p, const Reflection::GenericValue& gv)
+			{
+				TextureManager* textureManager = TextureManager::Get();
 
-					EcParticleEmitter* ep = static_cast<EcParticleEmitter*>(p);
-					const Texture& tex = textureManager->GetTextureResource(ep->Image);
+				EcParticleEmitter* ep = static_cast<EcParticleEmitter*>(p);
+				const Texture& tex = textureManager->GetTextureResource(ep->Image);
 
-					ep->Image = textureManager->LoadFromPath(tex.ImagePath, true, gv.AsBoolean());
-				}
-			),
+				ep->Image = textureManager->LoadFromPath(tex.ImagePath, true, gv.AsBoolean());
+			}
+		),
 
-			REFLECTION_PROPERTY_SIMPLE(EcParticleEmitter, Lifetime, Vector2)
-        };
+		REFLECTION_PROPERTY_SIMPLE(EcParticleEmitter, Lifetime, Vector2)
+    };
 
-        return props;
-    }
-};
-
-static inline ParticleEmitterManager Instance;
+    return props;
+}
 
 EcParticleEmitter::EcParticleEmitter()
 {

@@ -1,0 +1,64 @@
+// Components.hpp - Every single Component and Component Manager, 13/04/2026
+#pragma once
+
+#include "component/Animation.hpp"
+#include "component/AssetService.hpp"
+#include "component/Bone.hpp"
+#include "component/Camera.hpp"
+#include "component/Collections.hpp"
+#include "component/DataModel.hpp"
+#include "component/DeveloperToolsService.hpp"
+#include "component/EngineService.hpp"
+#include "component/Environment.hpp"
+#include "component/HistoryService.hpp"
+#include "component/InputService.hpp"
+#include "component/Interface.hpp"
+#include "component/Light.hpp"
+#include "component/LoggingService.hpp"
+#include "component/Mesh.hpp"
+#include "component/Model.hpp"
+#include "component/NetworkService.hpp"
+#include "component/ParticleEmitter.hpp"
+#include "component/PhysicsService.hpp"
+#include "component/RendererService.hpp"
+#include "component/RigidBody.hpp"
+#include "component/Sound.hpp"
+#include "component/Transform.hpp"
+#include "component/TreeLink.hpp"
+#include "component/Workspace.hpp"
+
+struct ComponentManagers
+{
+    AnimationComponentManager Animation;
+    AssetServiceComponentManager AssetService;
+    BoneComponentManager Bone;
+    CameraComponentManager Camera;
+    CollectionsComponentManager Collections;
+    DataModelComponentManager DataModel;
+    DeveloperToolsComponentManager DeveloperToolsService;
+    EngineComponentManager EngineService;
+    EnvironmentComponentManager Environment;
+    HistoryComponentManager HistoryService;
+    PlayerInputComponentManager PlayerInput;
+    InterfaceComponentManager Interface;
+    UITransformComponentManager UITransform;
+    UIFrameComponentManager UIFrame;
+    UIImageComponentManager UIImage;
+    UITextComponentManager UIText;
+    UIButtonComponentManager UIButton;
+    PointLightComponentManager PointLight;
+    DirectionalLightComponentManager DirectionalLight;
+    SpotLightComponentManager SpotLight;
+    LoggingComponentManager LoggingService;
+    MeshComponentManager Mesh;
+    DataModelComponentManager Model;
+    NetworkComponentManager NetworkService;
+    ParticleEmitterComponentManager ParticleEmitter;
+    PhysicsComponentManager PhysicsService;
+    RendererComponentManager RendererService;
+    RigidBodyComponentManager RigidBody;
+    SoundComponentManager Sound;
+    TransformComponentManager Transform;
+    TreeLinkComponentManager TreeLink;
+    WorkspaceComponentManager Workspace;
+};

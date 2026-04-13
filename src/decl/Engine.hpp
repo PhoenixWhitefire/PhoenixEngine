@@ -13,9 +13,7 @@
 #include "ThreadManager.hpp"
 
 #include "datatype/GameObject.hpp"
-#include "component/DataModel.hpp"
-#include "component/Workspace.hpp"
-#include "component/ParticleEmitter.hpp"
+#include "datatype/Components.hpp"
 
 #include "datatype/Event.hpp"
 #include "geometry/Physics.hpp"
@@ -49,6 +47,7 @@ public:
 	// Use `BindDataModel` when switching DataModels
 	ObjectHandle DataModelRef;
 	ObjectHandle WorkspaceRef;
+	ComponentManagers ComponentManagers;
 
 	Renderer RendererContext;
 	GLFWwindow* Window = nullptr;

@@ -13,3 +13,11 @@ struct EcPlayerInput : public Component<EntityComponent::PlayerInput>
 
     bool Valid = true;
 };
+
+class PlayerInputComponentManager : public ComponentManager<EcPlayerInput>
+{
+    const Reflection::StaticPropertyMap& GetProperties() override;
+    const Reflection::StaticMethodMap& GetMethods() override;
+    const Reflection::StaticEventMap& GetEvents() override;
+    void Shutdown() override;
+};

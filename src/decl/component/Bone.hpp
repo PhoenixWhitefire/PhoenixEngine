@@ -13,3 +13,10 @@ struct EcBone : public Component<EntityComponent::Bone>
 	ObjectRef Object;
 	bool Valid = true;
 };
+
+class BoneComponentManager : public ComponentManager<EcBone>
+{
+public:
+	uint32_t CreateComponent(GameObject* Object) override;
+	const Reflection::StaticPropertyMap& GetProperties() override;
+};

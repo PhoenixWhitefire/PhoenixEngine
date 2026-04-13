@@ -83,246 +83,240 @@ static Reflection::GenericValue dumpActionData(const History::Action& action)
     return { actionValue };
 }
 
-class HistoryServiceManager : ComponentManager<EcHistoryService>
+const Reflection::StaticPropertyMap& HistoryComponentManager::GetProperties()
 {
-public:
-    const Reflection::StaticPropertyMap& GetProperties() override
-    {
-        static const Reflection::StaticPropertyMap props = {
-            REFLECTION_PROPERTY(
-                "CurrentWaypoint",
-                Integer,
-                [](void*) -> Reflection::GenericValue
-                {
-                    History* history = History::Get();
-                    return (int64_t)history->GetCurrentWaypoint();
-                },
-                nullptr
-            ),
+    static const Reflection::StaticPropertyMap props = {
+        REFLECTION_PROPERTY(
+            "CurrentWaypoint",
+            Integer,
+            [](void*) -> Reflection::GenericValue
+            {
+                History* history = History::Get();
+                return (int64_t)history->GetCurrentWaypoint();
+            },
+            nullptr
+        ),
 
-            { "CurrentActionName", {
-                "CurrentActionName",
-                REFLECTION_OPTIONAL(String),
-                [](void*) -> Reflection::GenericValue
-                {
-                    History* history = History::Get();
-                    const std::optional<History::Action>& currentAction = history->GetCurrentAction();
+        { "CurrentActionName", {
+            "CurrentActionName",
+            REFLECTION_OPTIONAL(String),
+            [](void*) -> Reflection::GenericValue
+            {
+                History* history = History::Get();
+                const std::optional<History::Action>& currentAction = history->GetCurrentAction();
 
-                    if (currentAction.has_value())
-                        return currentAction->Name;
-                    else
-                        return {};
-                },
-                nullptr
-            } },
-
-            REFLECTION_PROPERTY(
-                "ActionHistorySize",
-                Integer,
-                [](void*) -> Reflection::GenericValue
-                {
-                    History* history = History::Get();
-                    return (int64_t)history->GetActionHistory().size();
-                },
-                nullptr
-            ),
-
-            REFLECTION_PROPERTY(
-                "IsRecordingAction",
-                Boolean,
-                [](void*) -> Reflection::GenericValue
-                {
-                    History* history = History::Get();
-                    return history->GetCurrentAction().has_value();
-                },
-                nullptr
-            ),
-
-            REFLECTION_PROPERTY(
-                "TargetDataModel",
-                GameObject,
-                [](void*) -> Reflection::GenericValue
-                {
-                    History* history = History::Get();
-                    return GameObject::GetObjectById(history->TargetDataModel)->ToGenericValue();
-                },
-                [](void*, const Reflection::GenericValue& gv)
-                {
-                    History* history = History::Get();
-                    GameObject* newTarget = GameObject::FromGenericValue(gv);
-
-                    if (!newTarget->FindComponentByType(EntityComponent::DataModel))
-                        RAISE_RTF("Object {} is not a DataModel!", newTarget->GetFullName());
-
-                    history->TargetDataModel = newTarget->ObjectId;
-                }
-            ),
-
-            REFLECTION_PROPERTY(
-                "CanUndo",
-                Boolean,
-                [](void*) -> Reflection::GenericValue
-                {
-                    History* history = History::Get();
-                    return history->CanUndo();
-                },
-                nullptr
-            ),
-            REFLECTION_PROPERTY(
-                "CanRedo",
-                Boolean,
-                [](void*) -> Reflection::GenericValue
-                {
-                    History* history = History::Get();
-                    return history->CanRedo();
-                },
-                nullptr
-            )
-        };
-
-        return props;
-    }
-
-    const Reflection::StaticMethodMap& GetMethods() override
-    {
-        static const Reflection::StaticMethodMap methods = {
-            { "EnableRecording", {
-                {},
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
-                {
-                    History* history = History::Get();
-                    history->IsRecordingEnabled = true;
-
+                if (currentAction.has_value())
+                    return currentAction->Name;
+                else
                     return {};
-                }
-            } },
+            },
+            nullptr
+        } },
 
-            { "TryBeginAction", {
-                { Reflection::ValueType::String },
-                { REFLECTION_OPTIONAL(Integer) },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    History* history = History::Get();
-                    std::optional<size_t> actionId = history->TryBeginAction(inputs[0].AsString());
+        REFLECTION_PROPERTY(
+            "ActionHistorySize",
+            Integer,
+            [](void*) -> Reflection::GenericValue
+            {
+                History* history = History::Get();
+                return (int64_t)history->GetActionHistory().size();
+            },
+            nullptr
+        ),
 
-                    if (!actionId)
-                        return { Reflection::GenericValue::Null() };
-                    else
-                        return { (uint32_t)actionId.value() };
-                }
-            } },
+        REFLECTION_PROPERTY(
+            "IsRecordingAction",
+            Boolean,
+            [](void*) -> Reflection::GenericValue
+            {
+                History* history = History::Get();
+                return history->GetCurrentAction().has_value();
+            },
+            nullptr
+        ),
 
-            { "FinishAction", {
-                { Reflection::ValueType::Integer },
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    History* history = History::Get();
-                    history->FinishAction((size_t)inputs[0].AsInteger());
+        REFLECTION_PROPERTY(
+            "TargetDataModel",
+            GameObject,
+            [](void*) -> Reflection::GenericValue
+            {
+                History* history = History::Get();
+                return GameObject::GetObjectById(history->TargetDataModel)->ToGenericValue();
+            },
+            [](void*, const Reflection::GenericValue& gv)
+            {
+                History* history = History::Get();
+                GameObject* newTarget = GameObject::FromGenericValue(gv);
 
-                    return {};
-                }
-            } },
+                if (!newTarget->FindComponentByType(EntityComponent::DataModel))
+                    RAISE_RTF("Object {} is not a DataModel!", newTarget->GetFullName());
 
-            { "DiscardAction", {
-                { Reflection::ValueType::Integer },
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    History* history = History::Get();
-                    history->DiscardAction((size_t)inputs[0].AsInteger());
+                history->TargetDataModel = newTarget->ObjectId;
+            }
+        ),
 
-                    return {};
-                }
-            } },
+        REFLECTION_PROPERTY(
+            "CanUndo",
+            Boolean,
+            [](void*) -> Reflection::GenericValue
+            {
+                History* history = History::Get();
+                return history->CanUndo();
+            },
+            nullptr
+        ),
+        REFLECTION_PROPERTY(
+            "CanRedo",
+            Boolean,
+            [](void*) -> Reflection::GenericValue
+            {
+                History* history = History::Get();
+                return history->CanRedo();
+            },
+            nullptr
+        )
+    };
 
-            { "ClearHistory", {
-                {},
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
-                {
-                    History* history = History::Get();
-                    history->ClearHistory();
+    return props;
+}
 
-                    return {};
-                }
-            } },
+const Reflection::StaticMethodMap& HistoryComponentManager::GetMethods()
+{
+    static const Reflection::StaticMethodMap methods = {
+        { "EnableRecording", {
+            {},
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+            {
+                History* history = History::Get();
+                history->IsRecordingEnabled = true;
 
-            { "GetCannotUndoReason", {
-                {},
-                { Reflection::ValueType::String },
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
-                {
-                    History* history = History::Get();
-                    return { history->GetCannotUndoReason() };
-                }
-            } },
+                return {};
+            }
+        } },
 
-            { "GetCannotRedoReason", {
-                {},
-                { Reflection::ValueType::String },
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
-                {
-                    History* history = History::Get();
-                    return { history->GetCannotRedoReason() };
-                }
-            } },
+        { "TryBeginAction", {
+            { Reflection::ValueType::String },
+            { REFLECTION_OPTIONAL(Integer) },
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                History* history = History::Get();
+                std::optional<size_t> actionId = history->TryBeginAction(inputs[0].AsString());
 
-            { "Undo", {
-                {},
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
-                {
-                    History* history = History::Get();
-                    history->Undo();
+                if (!actionId)
+                    return { Reflection::GenericValue::Null() };
+                else
+                    return { (uint32_t)actionId.value() };
+            }
+        } },
 
-                    return {};
-                }
-            } },
+        { "FinishAction", {
+            { Reflection::ValueType::Integer },
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                History* history = History::Get();
+                history->FinishAction((size_t)inputs[0].AsInteger());
 
-            { "Redo", {
-                {},
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
-                {
-                    History* history = History::Get();
-                    history->Redo();
+                return {};
+            }
+        } },
 
-                    return {};
-                }
-            } },
+        { "DiscardAction", {
+            { Reflection::ValueType::Integer },
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                History* history = History::Get();
+                history->DiscardAction((size_t)inputs[0].AsInteger());
 
-            { "GetCurrentActionData", {
-                {},
-                { REFLECTION_OPTIONAL(Map) },
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
-                {
-                    History* history = History::Get();
-                    const std::optional<History::Action>& action = history->GetCurrentAction();
+                return {};
+            }
+        } },
 
-                    if (!action.has_value())
-                        return { Reflection::GenericValue::Null() };
+        { "ClearHistory", {
+            {},
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+            {
+                History* history = History::Get();
+                history->ClearHistory();
 
-                    return { dumpActionData(*action) };
-                }
-            } },
+                return {};
+            }
+        } },
 
-            { "GetActionData", {
-                { Reflection::ValueType::Integer },
-                { Reflection::ValueType::Map },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    History* history = History::Get();
-                    const History::Action& action = history->GetActionHistory().at(inputs[0].AsInteger());
+        { "GetCannotUndoReason", {
+            {},
+            { Reflection::ValueType::String },
+            [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+            {
+                History* history = History::Get();
+                return { history->GetCannotUndoReason() };
+            }
+        } },
 
-                    return { dumpActionData(action) };
-                }
-            } },
-        };
+        { "GetCannotRedoReason", {
+            {},
+            { Reflection::ValueType::String },
+            [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+            {
+                History* history = History::Get();
+                return { history->GetCannotRedoReason() };
+            }
+        } },
 
-        return methods;
-    }
-};
+        { "Undo", {
+            {},
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+            {
+                History* history = History::Get();
+                history->Undo();
 
-static HistoryServiceManager Instance;
+                return {};
+            }
+        } },
+
+        { "Redo", {
+            {},
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+            {
+                History* history = History::Get();
+                history->Redo();
+
+                return {};
+            }
+        } },
+
+        { "GetCurrentActionData", {
+            {},
+            { REFLECTION_OPTIONAL(Map) },
+            [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+            {
+                History* history = History::Get();
+                const std::optional<History::Action>& action = history->GetCurrentAction();
+
+                if (!action.has_value())
+                    return { Reflection::GenericValue::Null() };
+
+                return { dumpActionData(*action) };
+            }
+        } },
+
+        { "GetActionData", {
+            { Reflection::ValueType::Integer },
+            { Reflection::ValueType::Map },
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                History* history = History::Get();
+                const History::Action& action = history->GetActionHistory().at(inputs[0].AsInteger());
+
+                return { dumpActionData(action) };
+            }
+        } },
+    };
+
+    return methods;
+}

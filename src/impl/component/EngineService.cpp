@@ -193,300 +193,294 @@ static nlohmann::json genericToJson(const Reflection::GenericValue& Value, std::
 	}
 }
 
-class EngineServiceManager : public ComponentManager<EcEngine>
+const Reflection::StaticPropertyMap& GetProperties() override
 {
-public:
-    const Reflection::StaticPropertyMap& GetProperties() override
-    {
-        static const Reflection::StaticPropertyMap props = {
-            REFLECTION_PROPERTY(
-                "IsHeadless",
-                Boolean,
-                [](void*) -> Reflection::GenericValue
+    static const Reflection::StaticPropertyMap props = {
+        REFLECTION_PROPERTY(
+            "IsHeadless",
+            Boolean,
+            [](void*) -> Reflection::GenericValue
+            {
+                Engine* engine = Engine::Get();
+                return engine->IsHeadlessMode;
+            },
+            nullptr
+        ),
+        REFLECTION_PROPERTY(
+            "Framerate",
+            Integer,
+            [](void*) -> Reflection::GenericValue
+            {
+                Engine* engine = Engine::Get();
+                return engine->FramesPerSecond;
+            },
+            nullptr
+        ),
+        REFLECTION_PROPERTY(
+            "FramerateCap",
+            Integer,
+            [](void*) -> Reflection::GenericValue
+            {
+                Engine* engine = Engine::Get();
+                return engine->FpsCap;
+            },
+            [](void*, const Reflection::GenericValue& gv)
+            {
+                Engine* engine = Engine::Get();
+                engine->FpsCap = gv.AsInteger();
+            }
+        ),
+        REFLECTION_PROPERTY(
+            "Version",
+            String,
+            [](void*) -> Reflection::GenericValue
+            {
+                return GetEngineVersion();
+            },
+            nullptr
+        ),
+        REFLECTION_PROPERTY(
+            "CommitHash",
+            String,
+            [](void*) -> Reflection::GenericValue
+            {
+                return GetEngineCommitHash();
+            },
+            nullptr
+        ),
+        REFLECTION_PROPERTY(
+            "TargetPlatform",
+            String,
+            [](void*) -> Reflection::GenericValue
+            {
+                return PHX_TARGET_PLATFORM;
+            },
+            nullptr
+        ),
+        REFLECTION_PROPERTY(
+            "BoundDataModel",
+            GameObject,
+            [](void*) -> Reflection::GenericValue
+            {
+                Engine* engine = Engine::Get();
+                return engine->DataModelRef->ToGenericValue();
+            },
+            nullptr
+        )
+    };
+
+    return props;
+}
+
+const Reflection::StaticMethodMap& GetMethods() override
+{
+    static const Reflection::StaticMethodMap methods = {
+        { "Exit", Reflection::MethodDescriptor{
+            { REFLECTION_OPTIONAL(Integer) },
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                Engine* engine = Engine::Get();
+
+                int64_t exitCode = inputs.size() > 0 ? inputs[0].AsInteger() : 0;
+                // don't overwite a "failure" code with an 'ok' code
+                if (engine->ExitCode == 0)
+                    engine->ExitCode = exitCode;
+
+                engine->Close();
+                return {};
+            }
+        } },
+
+        { "BindDataModel", Reflection::MethodDescriptor{
+            { Reflection::ValueType::GameObject },
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                Engine* engine = Engine::Get();
+                engine->BindDataModel(GameObject::FromGenericValue(inputs[0]));
+
+                return {};
+            }
+        } },
+
+        { "CreateVM", Reflection::MethodDescriptor{
+            { Reflection::ValueType::String },
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                ScriptEngine::RegisterNewVM(std::string(inputs[0].AsStringView()));
+
+                return {};
+            }
+        } },
+
+        { "CloseVM", Reflection::MethodDescriptor{
+            { Reflection::ValueType::String },
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                const auto& it = ScriptEngine::VMs.find(std::string(inputs[0].AsStringView()));
+                if (it == ScriptEngine::VMs.end())
+                    RAISE_RT("Invalid VM");
+
+                ScriptEngine::L::Close(it->second.MainThread);
+                ScriptEngine::VMs.erase(it);
+
+                return {};
+            }
+        } },
+
+        { "RunInVM", Reflection::MethodDescriptor{
+            { Reflection::ValueType::String, Reflection::ValueType::String, REFLECTION_OPTIONAL(String) },
+            { Reflection::ValueType::Boolean, REFLECTION_OPTIONAL(String) },
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                const std::string vmName = std::string(inputs[0].AsStringView());
+
+                const auto& it = ScriptEngine::VMs.find(vmName);
+                if (it == ScriptEngine::VMs.end())
+                    RAISE_RTF("Invalid VM '{}'", vmName);
+
+                const ScriptEngine::LuauVM& vm = it->second;
+
+                const std::string code = std::string(inputs[1].AsStringView());
+	            const std::string chname = inputs.size() > 2 ? std::string(inputs[2].AsStringView()) : code;
+                Logging::ScopedContext sc = Logging::Context{ .ContextExtraTags = std::format("SourceChunkName:{}", chname) };
+
+	            lua_State* ML = lua_newthread(vm.MainThread);
+                luaL_sandboxthread(ML);
+
+                if (ScriptEngine::CompileAndLoad(ML, code, chname) == 0)
                 {
-                    Engine* engine = Engine::Get();
-                    return engine->IsHeadlessMode;
-                },
-                nullptr
-            ),
-            REFLECTION_PROPERTY(
-                "Framerate",
-                Integer,
-                [](void*) -> Reflection::GenericValue
-                {
-                    Engine* engine = Engine::Get();
-                    return engine->FramesPerSecond;
-                },
-                nullptr
-            ),
-            REFLECTION_PROPERTY(
-                "FramerateCap",
-                Integer,
-                [](void*) -> Reflection::GenericValue
-                {
-                    Engine* engine = Engine::Get();
-                    return engine->FpsCap;
-                },
-                [](void*, const Reflection::GenericValue& gv)
-                {
-                    Engine* engine = Engine::Get();
-                    engine->FpsCap = gv.AsInteger();
-                }
-            ),
-            REFLECTION_PROPERTY(
-                "Version",
-                String,
-                [](void*) -> Reflection::GenericValue
-                {
-                    return GetEngineVersion();
-                },
-                nullptr
-            ),
-            REFLECTION_PROPERTY(
-                "CommitHash",
-                String,
-                [](void*) -> Reflection::GenericValue
-                {
-                    return GetEngineCommitHash();
-                },
-                nullptr
-            ),
-            REFLECTION_PROPERTY(
-                "TargetPlatform",
-                String,
-                [](void*) -> Reflection::GenericValue
-                {
-                    return PHX_TARGET_PLATFORM;
-                },
-                nullptr
-            ),
-            REFLECTION_PROPERTY(
-                "BoundDataModel",
-                GameObject,
-                [](void*) -> Reflection::GenericValue
-                {
-                    Engine* engine = Engine::Get();
-                    return engine->DataModelRef->ToGenericValue();
-                },
-                nullptr
-            )
-        };
+                    int result = lua_resume(ML, ML, 0);
+                    const char* err = nullptr;
 
-        return props;
-    }
-
-    const Reflection::StaticMethodMap& GetMethods() override
-    {
-        static const Reflection::StaticMethodMap methods = {
-            { "Exit", Reflection::MethodDescriptor{
-                { REFLECTION_OPTIONAL(Integer) },
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    Engine* engine = Engine::Get();
-
-                    int64_t exitCode = inputs.size() > 0 ? inputs[0].AsInteger() : 0;
-                    // don't overwite a "failure" code with an 'ok' code
-                    if (engine->ExitCode == 0)
-                        engine->ExitCode = exitCode;
-
-                    engine->Close();
-                    return {};
-                }
-            } },
-
-            { "BindDataModel", Reflection::MethodDescriptor{
-                { Reflection::ValueType::GameObject },
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    Engine* engine = Engine::Get();
-                    engine->BindDataModel(GameObject::FromGenericValue(inputs[0]));
-
-                    return {};
-                }
-            } },
-
-            { "CreateVM", Reflection::MethodDescriptor{
-                { Reflection::ValueType::String },
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    ScriptEngine::RegisterNewVM(std::string(inputs[0].AsStringView()));
-
-                    return {};
-                }
-            } },
-
-            { "CloseVM", Reflection::MethodDescriptor{
-                { Reflection::ValueType::String },
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    const auto& it = ScriptEngine::VMs.find(std::string(inputs[0].AsStringView()));
-                    if (it == ScriptEngine::VMs.end())
-                        RAISE_RT("Invalid VM");
-
-                    ScriptEngine::L::Close(it->second.MainThread);
-                    ScriptEngine::VMs.erase(it);
-
-                    return {};
-                }
-            } },
-
-            { "RunInVM", Reflection::MethodDescriptor{
-                { Reflection::ValueType::String, Reflection::ValueType::String, REFLECTION_OPTIONAL(String) },
-                { Reflection::ValueType::Boolean, REFLECTION_OPTIONAL(String) },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    const std::string vmName = std::string(inputs[0].AsStringView());
-
-                    const auto& it = ScriptEngine::VMs.find(vmName);
-                    if (it == ScriptEngine::VMs.end())
-                        RAISE_RTF("Invalid VM '{}'", vmName);
-
-                    const ScriptEngine::LuauVM& vm = it->second;
-
-                    const std::string code = std::string(inputs[1].AsStringView());
-	                const std::string chname = inputs.size() > 2 ? std::string(inputs[2].AsStringView()) : code;
-                    Logging::ScopedContext sc = Logging::Context{ .ContextExtraTags = std::format("SourceChunkName:{}", chname) };
-
-	                lua_State* ML = lua_newthread(vm.MainThread);
-                    luaL_sandboxthread(ML);
-
-                    if (ScriptEngine::CompileAndLoad(ML, code, chname) == 0)
+                    if (result == LUA_ERRERR || result == LUA_ERRRUN || result == LUA_ERRMEM)
                     {
-                        int result = lua_resume(ML, ML, 0);
-                        const char* err = nullptr;
-
-                        if (result == LUA_ERRERR || result == LUA_ERRRUN || result == LUA_ERRMEM)
-                        {
-                            err = lua_tostring(ML, -1); // metatable check in `luaL_tolstring` can trigger an assertion `lua_getmetatable` `api_incr_top`
-                            if (!err)
-                                err = "unknown error";
-                            Log.Error(err);
-                        }
-
-                        const char* const ResultToMessage[] = {
-                            "ok",
-                            "yield",
-                            nullptr,
-                            nullptr,
-                            nullptr,
-                            nullptr,
-                            "break"
-                        };
-
-                        std::string message;
-                        if (const char* mes = ResultToMessage[result])
-                            message = mes;
-                        else
-                            message = err;
-
-                        lua_pop(vm.MainThread, 1); // pop off ML
-
-                        return { result == LUA_OK, message };
-	                }
-	                else
-                    {
-                        std::string message = lua_tostring(ML, -1);
-                        lua_pop(vm.MainThread, 1); // pop off ML
-
-                        Log.Error(message);
-                        return { false, message };
-                    }
-                }
-            } },
-
-            { "ShowMessageBox", Reflection::MethodDescriptor{
-                { Reflection::ValueType::String, Reflection::ValueType::String, REFLECTION_OPTIONAL(String), REFLECTION_OPTIONAL(String), REFLECTION_OPTIONAL(Integer) },
-                { Reflection::ValueType::Integer },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    std::string title = inputs[0].AsString();
-                    std::string message = inputs[1].AsString();
-
-                    if (title.find('`') != std::string::npos)
-                    {
-                        Log.WarningF("Backticks will be replaced with single-quotes in message box title '{}'", title);
-                        for (char& c : title)
-                        {
-                            if (c == '`')
-                                c = '\'';
-                        }
-                    }
-                    if (message.find('`') != std::string::npos)
-                    {
-                        Log.WarningF("Backticks will be replaced with single-quotes in message box message '{}'", message);
-                        for (char& c : message)
-                        {
-                            if (c == '`')
-                                c = '\'';
-                        }
+                        err = lua_tostring(ML, -1); // metatable check in `luaL_tolstring` can trigger an assertion `lua_getmetatable` `api_incr_top`
+                        if (!err)
+                            err = "unknown error";
+                        Log.Error(err);
                     }
 
-                    return { tinyfd_messageBox(
-                        title.data(),
-                        message.data(),
-                        inputs.size() > 2 ? inputs[2].AsStringView().data() : "ok",   // buttons
-                        inputs.size() > 3 ? inputs[3].AsStringView().data() : "info", // icon
-                        inputs.size() > 4 ? inputs[4].AsInteger() : 1                 // default button
-                    ) };
-                }
-            } },
+                    const char* const ResultToMessage[] = {
+                        "ok",
+                        "yield",
+                        nullptr,
+                        nullptr,
+                        nullptr,
+                        nullptr,
+                        "break"
+                    };
 
-            { "GetCliArguments", Reflection::MethodDescriptor{
-                {},
-                { Reflection::ValueType::Array },
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+                    std::string message;
+                    if (const char* mes = ResultToMessage[result])
+                        message = mes;
+                    else
+                        message = err;
+
+                    lua_pop(vm.MainThread, 1); // pop off ML
+
+                    return { result == LUA_OK, message };
+	            }
+	            else
                 {
-                    Engine* engine = Engine::Get();
+                    std::string message = lua_tostring(ML, -1);
+                    lua_pop(vm.MainThread, 1); // pop off ML
 
-                    std::vector<Reflection::GenericValue> out;
-                    out.reserve(engine->argc);
-
-                    for (int i = 0; i < engine->argc; i++)
-                        out.emplace_back(engine->argv[i]);
-
-                    return { Reflection::GenericValue(out) };
+                    Log.Error(message);
+                    return { false, message };
                 }
-            } },
+            }
+        } },
 
-            { "GetConfigValue", Reflection::MethodDescriptor{
-                { Reflection::ValueType::String },
-                { Reflection::ValueType::Any },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+        { "ShowMessageBox", Reflection::MethodDescriptor{
+            { Reflection::ValueType::String, Reflection::ValueType::String, REFLECTION_OPTIONAL(String), REFLECTION_OPTIONAL(String), REFLECTION_OPTIONAL(Integer) },
+            { Reflection::ValueType::Integer },
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                std::string title = inputs[0].AsString();
+                std::string message = inputs[1].AsString();
+
+                if (title.find('`') != std::string::npos)
                 {
-                    return { jsonToGeneric(EngineJsonConfig[inputs[0].AsStringView()]) };
+                    Log.WarningF("Backticks will be replaced with single-quotes in message box title '{}'", title);
+                    for (char& c : title)
+                    {
+                        if (c == '`')
+                            c = '\'';
+                    }
                 }
-            } },
-
-            { "SetConfigValue", Reflection::MethodDescriptor{
-                { Reflection::ValueType::String, Reflection::ValueType::Any },
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+                if (message.find('`') != std::string::npos)
                 {
-                    EngineJsonConfig[inputs[0].AsStringView()] = genericToJson(inputs[1]);
-
-                    return {};
+                    Log.WarningF("Backticks will be replaced with single-quotes in message box message '{}'", message);
+                    for (char& c : message)
+                    {
+                        if (c == '`')
+                            c = '\'';
+                    }
                 }
-            } },
 
-            { "SaveConfig", Reflection::MethodDescriptor{
-                {},
-                { Reflection::ValueType::Boolean, Reflection::ValueType::String },
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
-                {
-                    std::string error;
-                    bool writeSuccess = FileRW::WriteFile("./phoenix.conf", EngineJsonConfig.dump(2), &error);
+                return { tinyfd_messageBox(
+                    title.data(),
+                    message.data(),
+                    inputs.size() > 2 ? inputs[2].AsStringView().data() : "ok",   // buttons
+                    inputs.size() > 3 ? inputs[3].AsStringView().data() : "info", // icon
+                    inputs.size() > 4 ? inputs[4].AsInteger() : 1                 // default button
+                ) };
+            }
+        } },
 
-                    return { writeSuccess, error };
-                }
-            } },
-        };
+        { "GetCliArguments", Reflection::MethodDescriptor{
+            {},
+            { Reflection::ValueType::Array },
+            [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+            {
+                Engine* engine = Engine::Get();
 
-        return methods;
-    }
-};
+                std::vector<Reflection::GenericValue> out;
+                out.reserve(engine->argc);
 
-static EngineServiceManager Instance;
+                for (int i = 0; i < engine->argc; i++)
+                    out.emplace_back(engine->argv[i]);
+
+                return { Reflection::GenericValue(out) };
+            }
+        } },
+
+        { "GetConfigValue", Reflection::MethodDescriptor{
+            { Reflection::ValueType::String },
+            { Reflection::ValueType::Any },
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                return { jsonToGeneric(EngineJsonConfig[inputs[0].AsStringView()]) };
+            }
+        } },
+
+        { "SetConfigValue", Reflection::MethodDescriptor{
+            { Reflection::ValueType::String, Reflection::ValueType::Any },
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                EngineJsonConfig[inputs[0].AsStringView()] = genericToJson(inputs[1]);
+
+                return {};
+            }
+        } },
+
+        { "SaveConfig", Reflection::MethodDescriptor{
+            {},
+            { Reflection::ValueType::Boolean, Reflection::ValueType::String },
+            [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+            {
+                std::string error;
+                bool writeSuccess = FileRW::WriteFile("./phoenix.conf", EngineJsonConfig.dump(2), &error);
+
+                return { writeSuccess, error };
+            }
+        } },
+    };
+
+    return methods;
+}

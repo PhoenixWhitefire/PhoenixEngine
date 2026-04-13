@@ -14,3 +14,9 @@ struct EcEnvironmentService : public Component<EntityComponent::Environment>
 
     bool Valid = true;
 };
+
+class EnvironmentComponentManager : public ComponentManager<EcEnvironmentService>
+{
+public:
+    const Reflection::StaticPropertyMap& GetProperties() override;
+};

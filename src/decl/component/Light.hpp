@@ -29,12 +29,28 @@ struct EcDirectionalLight : public EcLight<EntityComponent::DirectionalLight>
 	float ShadowViewNearPlane = 0.1f;
 	bool ShadowViewMoveWithCamera = true;
 	bool Shadows = false;
-
-	ObjectRef Object;
 };
 
 struct EcSpotLight : public EcLight<EntityComponent::SpotLight>
 {
 	float Range = 16.f;
 	float Angle = 0.95f;
+};
+
+class PointLightComponentManager : public ComponentManager<EcPointLight>
+{
+public:
+    const Reflection::StaticPropertyMap& GetProperties() override;
+};
+
+class DirectionalLightComponentManager : public ComponentManager<EcDirectionalLight>
+{
+public:
+    const Reflection::StaticPropertyMap& GetProperties() override;
+};
+
+class SpotLightComponentManager : public ComponentManager<EcSpotLight>
+{
+public:
+    const Reflection::StaticPropertyMap& GetProperties() override;
 };

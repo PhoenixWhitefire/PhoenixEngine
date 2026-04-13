@@ -12,7 +12,6 @@ struct EcDataModel : public Component<EntityComponent::DataModel>
 {
 	void Bind();
 	void Close();
-	static void NotifyAllOfShutdown();
 
 	std::string LiveScripts = "scripts/live";
 	std::string VM = ROOT_LVM_NAME;
@@ -24,4 +23,16 @@ struct EcDataModel : public Component<EntityComponent::DataModel>
 	std::vector<lua_State*> Modules;
 	bool CanLoadModules = true;
 	bool Valid = true;
+};
+
+class DataModelComponentManager : public ComponentManager<EcDataModel>
+{
+public:
+	uint32_t CreateComponent(GameObject* Object) override;
+	void DeleteComponent(uint32_t Id) override;
+	const Reflection::StaticPropertyMap& GetProperties() override;
+	const Reflection::StaticMethodMap& GetMethods() override;
+	const Reflection::StaticEventMap& GetEvents() override;
+
+	void NotifyAllOfShutdown();
 };

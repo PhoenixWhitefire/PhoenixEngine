@@ -73,90 +73,84 @@ static void updateSpatialHash(EcRigidBody* crb)
 			}
 }
 
-class RigidBodyManager : public ComponentManager<EcRigidBody>
+uint32_t RigidBodyComponentManager::CreateComponent(GameObject* Object)
 {
-public:
-	virtual uint32_t CreateComponent(GameObject* Object) override
-	{
-		uint32_t id = ComponentManager<EcRigidBody>::CreateComponent(Object);
-		m_Components[id].Object = Object;
+	uint32_t id = ComponentManager<EcRigidBody>::CreateComponent(Object);
+	m_Components[id].Object = Object;
 
-		updateSpatialHash(&m_Components[id]);
-		return id;
-	}
+	updateSpatialHash(&m_Components[id]);
+	return id;
+}
 
-	virtual const Reflection::StaticPropertyMap& GetProperties() override
-	{
-		static const Reflection::StaticPropertyMap props = {
-			REFLECTION_PROPERTY_SIMPLE(EcRigidBody, PhysicsDynamics, Boolean),
-			REFLECTION_PROPERTY_SIMPLE(EcRigidBody, PhysicsRotations, Boolean),
+const Reflection::StaticPropertyMap& RigidBodyComponentManager::GetProperties()
+{
+	static const Reflection::StaticPropertyMap props = {
+		REFLECTION_PROPERTY_SIMPLE(EcRigidBody, PhysicsDynamics, Boolean),
+		REFLECTION_PROPERTY_SIMPLE(EcRigidBody, PhysicsRotations, Boolean),
 
-			REFLECTION_PROPERTY(
-				"PhysicsCollisions",
-				Boolean,
-				REFLECTION_PROPERTY_GET_SIMPLE(EcRigidBody, PhysicsCollisions),
-				[](void* p, const Reflection::GenericValue& gv)
-				{
-					EcRigidBody* crb = static_cast<EcRigidBody*>(p);
-					crb->PhysicsCollisions = gv.AsBoolean();
-					updateSpatialHash(crb);
-				}
-			),
+		REFLECTION_PROPERTY(
+			"PhysicsCollisions",
+			Boolean,
+			REFLECTION_PROPERTY_GET_SIMPLE(EcRigidBody, PhysicsCollisions),
+			[](void* p, const Reflection::GenericValue& gv)
+			{
+				EcRigidBody* crb = static_cast<EcRigidBody*>(p);
+				crb->PhysicsCollisions = gv.AsBoolean();
+				updateSpatialHash(crb);
+			}
+		),
 
-			REFLECTION_PROPERTY(
-				"CollisionType",
-				Integer,
-				[](void* p)
-				-> Reflection::GenericValue
-				{
-					return static_cast<uint32_t>(static_cast<EcRigidBody*>(p)->CollisionType);
-				},
-				[](void* p, const Reflection::GenericValue& gv)
-				{
-					static_cast<EcRigidBody*>(p)->CollisionType = static_cast<EnCollisionType>(gv.AsInteger());
-				}
-			),
+		REFLECTION_PROPERTY(
+			"CollisionType",
+			Integer,
+			[](void* p)
+			-> Reflection::GenericValue
+			{
+				return static_cast<uint32_t>(static_cast<EcRigidBody*>(p)->CollisionType);
+			},
+			[](void* p, const Reflection::GenericValue& gv)
+			{
+				static_cast<EcRigidBody*>(p)->CollisionType = static_cast<EnCollisionType>(gv.AsInteger());
+			}
+		),
 
-			REFLECTION_PROPERTY_SIMPLE(EcRigidBody, LinearVelocity, Vector3),
-			REFLECTION_PROPERTY_SIMPLE(EcRigidBody, AngularVelocity, Vector3),
-			REFLECTION_PROPERTY_SIMPLE(EcRigidBody, Friction, Double),
-			REFLECTION_PROPERTY_SIMPLE(EcRigidBody, Restitution, Double),
-			REFLECTION_PROPERTY_SIMPLE(EcRigidBody, GravityFactor, Double),
+		REFLECTION_PROPERTY_SIMPLE(EcRigidBody, LinearVelocity, Vector3),
+		REFLECTION_PROPERTY_SIMPLE(EcRigidBody, AngularVelocity, Vector3),
+		REFLECTION_PROPERTY_SIMPLE(EcRigidBody, Friction, Double),
+		REFLECTION_PROPERTY_SIMPLE(EcRigidBody, Restitution, Double),
+		REFLECTION_PROPERTY_SIMPLE(EcRigidBody, GravityFactor, Double),
 
-			REFLECTION_PROPERTY(
-				"Density",
-				Double,
-				REFLECTION_PROPERTY_GET_SIMPLE(EcRigidBody, Density),
-				[](void* p, const Reflection::GenericValue& gv)
-				{
-					EcRigidBody* crb = static_cast<EcRigidBody*>(p);
-					float dens = (float)gv.AsDouble();
+		REFLECTION_PROPERTY(
+			"Density",
+			Double,
+			REFLECTION_PROPERTY_GET_SIMPLE(EcRigidBody, Density),
+			[](void* p, const Reflection::GenericValue& gv)
+			{
+				EcRigidBody* crb = static_cast<EcRigidBody*>(p);
+				float dens = (float)gv.AsDouble();
 
-					if (dens < 0.001f)
-						RAISE_RT("Minimum density is 0.001");
+				if (dens < 0.001f)
+					RAISE_RT("Minimum density is 0.001");
 
-					crb->Density = dens;
-					crb->Mass = dens * crb->CollisionAabb.Size.x * crb->CollisionAabb.Size.y * crb->CollisionAabb.Size.z;
-				}
-			),
+				crb->Density = dens;
+				crb->Mass = dens * crb->CollisionAabb.Size.x * crb->CollisionAabb.Size.y * crb->CollisionAabb.Size.z;
+			}
+		),
 
-			REFLECTION_PROPERTY(
-				"HullsFile",
-				String,
-				REFLECTION_PROPERTY_GET_SIMPLE(EcRigidBody, HullsFile),
-				[](void* p, const Reflection::GenericValue& gv)
-				{
-					EcRigidBody* crb = static_cast<EcRigidBody*>(p);
-					crb->SetHullsFile(gv.AsString());
-				}
-			)
-		};
+		REFLECTION_PROPERTY(
+			"HullsFile",
+			String,
+			REFLECTION_PROPERTY_GET_SIMPLE(EcRigidBody, HullsFile),
+			[](void* p, const Reflection::GenericValue& gv)
+			{
+				EcRigidBody* crb = static_cast<EcRigidBody*>(p);
+				crb->SetHullsFile(gv.AsString());
+			}
+		)
+	};
 
-		return props;
-	}
-};
-
-static RigidBodyManager Instance;
+	return props;
+}
 
 void EcRigidBody::RecomputeAabb()
 {

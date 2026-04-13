@@ -44,7 +44,7 @@ namespace std
 
 struct EcWorkspace : public Component<EntityComponent::Workspace>
 {
-	void Update() const;
+	void UpdateSoundListener() const;
 
 	GameObject* GetSceneCamera() const;
 	void SetSceneCamera(GameObject*);
@@ -59,4 +59,13 @@ struct EcWorkspace : public Component<EntityComponent::Workspace>
 	uint32_t m_SceneCameraId = PHX_GAMEOBJECT_NULL_ID;
 	ObjectRef Object;
 	bool Valid = true;
+};
+
+class WorkspaceComponentManager : public ComponentManager<EcWorkspace>
+{
+public:
+	const Reflection::StaticPropertyMap& GetProperties() override;
+	const Reflection::StaticMethodMap& GetMethods() override;
+    uint32_t CreateComponent(GameObject* Object) override;
+	void Shutdown() override;
 };

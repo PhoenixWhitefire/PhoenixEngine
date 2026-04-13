@@ -1,16 +1,10 @@
 #include "component/Model.hpp"
-#include "datatype/GameObject.hpp"
 
-class ModelManager : public ComponentManager<EcModel>
+const Reflection::StaticPropertyMap& ModelComponentManager::GetProperties()
 {
-    virtual const Reflection::StaticPropertyMap& GetProperties() override
-    {
-        static const Reflection::StaticPropertyMap props = {
-            REFLECTION_PROPERTY_SIMPLE(EcModel, ImportPath, String)
-        };
+    static const Reflection::StaticPropertyMap props = {
+        REFLECTION_PROPERTY_SIMPLE(EcModel, ImportPath, String)
+    };
 
-        return props;
-    }
-};
-
-static inline ModelManager Instance;
+    return props;
+}

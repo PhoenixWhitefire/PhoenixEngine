@@ -162,35 +162,29 @@ static void makeHttpRequest(const HttpRequest& request, std::promise<std::vector
     curl_easy_cleanup(curl);
 }
 
-class NetworkServiceManager : public ComponentManager<EcNetworkService>
+const Reflection::StaticMethodMap& NetworkComponentManager::GetMethods()
 {
-public:
-    const Reflection::StaticMethodMap& GetMethods() override
-    {
-        static const Reflection::StaticMethodMap methods = {
-            { "MakeHttpRequestAsync", Reflection::MethodDescriptor{
-                { Reflection::ValueType::Map },
-                { Reflection::ValueType::Map },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::promise<std::vector<Reflection::GenericValue>>*
-                {
-                    std::promise<std::vector<Reflection::GenericValue>>* prom = new std::promise<std::vector<Reflection::GenericValue>>;
-                    HttpRequest request = parseRequestFromReflection(inputs[0]);
+    static const Reflection::StaticMethodMap methods = {
+        { "MakeHttpRequestAsync", Reflection::MethodDescriptor{
+            { Reflection::ValueType::Map },
+            { Reflection::ValueType::Map },
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::promise<std::vector<Reflection::GenericValue>>*
+            {
+                std::promise<std::vector<Reflection::GenericValue>>* prom = new std::promise<std::vector<Reflection::GenericValue>>;
+                HttpRequest request = parseRequestFromReflection(inputs[0]);
 
-                    ThreadManager::Get()->Dispatch(
-                        [request, prom]()
-                        {
-                            makeHttpRequest(request, prom);
-                        },
-                        true
-                    );
+                ThreadManager::Get()->Dispatch(
+                    [request, prom]()
+                    {
+                        makeHttpRequest(request, prom);
+                    },
+                    true
+                );
 
-                    return prom;
-                }
-            } }
-        };
+                return prom;
+            }
+        } }
+    };
 
-        return methods;
-    }
-};
-
-static NetworkServiceManager Instance;
+    return methods;
+}

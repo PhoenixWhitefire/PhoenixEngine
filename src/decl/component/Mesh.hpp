@@ -13,10 +13,6 @@ struct EcMesh : public Component<EntityComponent::Mesh>
 {
 	void SetRenderMesh(const std::string_view&);
 
-	bool CastsShadows = true;
-
-	FaceCullingMode FaceCulling = FaceCullingMode::BackFace;
-
 	uint32_t RenderMeshId = UINT32_MAX;
 	uint32_t MaterialId = UINT32_MAX;
 
@@ -32,5 +28,20 @@ struct EcMesh : public Component<EntityComponent::Mesh>
 	uint32_t ComponentId = UINT32_MAX;
 
 	ObjectRef Object;
+	FaceCullingMode FaceCulling = FaceCullingMode::BackFace;
+	bool CastsShadows = true;
+
 	bool Valid = true;
+};
+
+class MeshComponentManager : public ComponentManager<EcMesh, MeshComponentManager>
+{
+public:
+    uint32_t CreateComponent(GameObject* Object) override;
+	void DeleteComponent(uint32_t Id) override;
+	Reflection::GenericValue GetDefaultPropertyValue(const std::string_view& Property) override;
+	Reflection::GenericValue GetDefaultPropertyValue(const Reflection::PropertyDescriptor* Property) override;
+	const Reflection::StaticPropertyMap& GetProperties() override;
+
+	std::unordered_map<std::string, std::vector<uint32_t>> FreeSkinnedMeshPseudoAssets;
 };

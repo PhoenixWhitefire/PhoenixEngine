@@ -9,15 +9,13 @@
 #include "component/RigidBody.hpp"
 #include "component/Bone.hpp"
 
-static std::unordered_map<std::string, std::vector<uint32_t>> FreeSkinnedMeshPseudoAssets;
-
 static void tryMarkFreeSkinnedMeshPseudoAsset(EcMesh& mesh)
 {
 	if (Mesh& meshAsset = MeshProvider::Get()->GetMeshResource(mesh.RenderMeshId);
 		meshAsset.Bones.size() > 0
 	)
 	{
-		FreeSkinnedMeshPseudoAssets[mesh.Asset].push_back(mesh.RenderMeshId);
+		MeshComponentManager::Get()->FreeSkinnedMeshPseudoAssets[mesh.Asset].push_back(mesh.RenderMeshId);
 
 		MeshProvider::GpuMesh& gpuMesh = MeshProvider::Get()->GetGpuMesh(meshAsset.GpuId);
 
@@ -27,110 +25,103 @@ static void tryMarkFreeSkinnedMeshPseudoAsset(EcMesh& mesh)
 	}
 }
 
-class MeshManager : public ComponentManager<EcMesh>
+uint32_t MeshComponentManager::CreateComponent(GameObject* Object)
 {
-public:
-    uint32_t CreateComponent(GameObject* Object) override
-    {
-        m_Components.emplace_back();
+    m_Components.emplace_back();
 
-		uint32_t id = static_cast<uint32_t>(m_Components.size() - 1);
+	uint32_t id = static_cast<uint32_t>(m_Components.size() - 1);
 
-		EcMesh& cm = m_Components.back();
-		cm.MaterialId = MaterialManager::Get()->LoadFromPath("plastic");
-		cm.RenderMeshId = MeshProvider::Get()->LoadFromPath("!Cube");
-		cm.ComponentId = id;
-		cm.Object = Object;
+	EcMesh& cm = m_Components.back();
+	cm.MaterialId = MaterialManager::Get()->LoadFromPath("plastic");
+	cm.RenderMeshId = MeshProvider::Get()->LoadFromPath("!Cube");
+	cm.ComponentId = id;
+	cm.Object = Object;
 		
-        return id;
-    }
+    return id;
+}
 
-    void DeleteComponent(uint32_t Id) override
-    {
-        // TODO id reuse with handles that have a counter per re-use to reduce memory growth
+void MeshComponentManager::DeleteComponent(uint32_t Id)
+{
+    // TODO id reuse with handles that have a counter per re-use to reduce memory growth
 
-		EcMesh& mesh = m_Components[Id];
-		tryMarkFreeSkinnedMeshPseudoAsset(mesh);
+	EcMesh& mesh = m_Components[Id];
+	tryMarkFreeSkinnedMeshPseudoAsset(mesh);
 
-		ComponentManager<EcMesh>::DeleteComponent(Id);
-    }
+	ComponentManager<EcMesh, MeshComponentManager>::DeleteComponent(Id);
+}
 
-	virtual Reflection::GenericValue GetDefaultPropertyValue(const std::string_view& Property) override
-	{
-		return GetDefaultPropertyValue(&GetProperties().at(Property));
-	}
+Reflection::GenericValue MeshComponentManager::GetDefaultPropertyValue(const std::string_view& Property)
+{
+	return GetDefaultPropertyValue(&GetProperties().at(Property));
+}
 
-	virtual Reflection::GenericValue GetDefaultPropertyValue(const Reflection::PropertyDescriptor* Property) override
-	{
-		static EcMesh Defaults;
-		Defaults.MaterialId = MaterialManager::Get()->LoadFromPath("plastic");
-		Defaults.RenderMeshId = MeshProvider::Get()->LoadFromPath("!Cube");
+Reflection::GenericValue MeshComponentManager::GetDefaultPropertyValue(const Reflection::PropertyDescriptor* Property)
+{
+	static EcMesh Defaults;
+	Defaults.MaterialId = MaterialManager::Get()->LoadFromPath("plastic");
+	Defaults.RenderMeshId = MeshProvider::Get()->LoadFromPath("!Cube");
 
-		return Property->Get((void*)&Defaults);
-	}
+	return Property->Get((void*)&Defaults);
+}
 
-    const Reflection::StaticPropertyMap& GetProperties() override
-    {
-        static const Reflection::StaticPropertyMap props = 
-        {
-			REFLECTION_PROPERTY_SIMPLE(EcMesh, CastsShadows, Boolean),
+const Reflection::StaticPropertyMap& MeshComponentManager::GetProperties()
+{
+    static const Reflection::StaticPropertyMap props = {
+		REFLECTION_PROPERTY_SIMPLE(EcMesh, CastsShadows, Boolean),
 
-			REFLECTION_PROPERTY(
-				"FaceCulling",
-				Integer,
-				[](void* p)
-				-> Reflection::GenericValue
-				{
-					return static_cast<uint32_t>(static_cast<EcMesh*>(p)->FaceCulling);
-				},
-				[](void* p, const Reflection::GenericValue& gv)
-				{
-					static_cast<EcMesh*>(p)->FaceCulling = static_cast<FaceCullingMode>(gv.AsInteger());
-				}
-			),
+		REFLECTION_PROPERTY(
+			"FaceCulling",
+			Integer,
+			[](void* p)
+			-> Reflection::GenericValue
+			{
+				return static_cast<uint32_t>(static_cast<EcMesh*>(p)->FaceCulling);
+			},
+			[](void* p, const Reflection::GenericValue& gv)
+			{
+				static_cast<EcMesh*>(p)->FaceCulling = static_cast<FaceCullingMode>(gv.AsInteger());
+			}
+		),
 
-			REFLECTION_PROPERTY_SIMPLE(EcMesh, Transparency, Double),
-			REFLECTION_PROPERTY_SIMPLE(EcMesh, MetalnessFactor, Double),
-			REFLECTION_PROPERTY_SIMPLE(EcMesh, RoughnessFactor, Double),
-			REFLECTION_PROPERTY_SIMPLE_NGV(EcMesh, Tint, Color),
+		REFLECTION_PROPERTY_SIMPLE(EcMesh, Transparency, Double),
+		REFLECTION_PROPERTY_SIMPLE(EcMesh, MetalnessFactor, Double),
+		REFLECTION_PROPERTY_SIMPLE(EcMesh, RoughnessFactor, Double),
+		REFLECTION_PROPERTY_SIMPLE_NGV(EcMesh, Tint, Color),
 
-			REFLECTION_PROPERTY(
-				"MeshAsset",
-				String,
-				REFLECTION_PROPERTY_GET_SIMPLE(EcMesh, Asset),
-				[](void* p, const Reflection::GenericValue& gv)
-				{
-					EcMesh* mesh = static_cast<EcMesh*>(p);
-					mesh->SetRenderMesh(gv.AsStringView());
-				}
-			),
+		REFLECTION_PROPERTY(
+			"MeshAsset",
+			String,
+			REFLECTION_PROPERTY_GET_SIMPLE(EcMesh, Asset),
+			[](void* p, const Reflection::GenericValue& gv)
+			{
+				EcMesh* mesh = static_cast<EcMesh*>(p);
+				mesh->SetRenderMesh(gv.AsStringView());
+			}
+		),
 
-			REFLECTION_PROPERTY(
-				"Material",
-				String,
-				[](void* p)
-				-> Reflection::GenericValue
-				{
-					EcMesh* m = static_cast<EcMesh*>(p);
-					MaterialManager* mtlManager = MaterialManager::Get();
-				
-					return mtlManager->GetMaterialResource(m->MaterialId).Name;
-				},
-				[](void* p, const Reflection::GenericValue& gv)
-				{
-					EcMesh* m = static_cast<EcMesh*>(p);
-					MaterialManager* mtlManager = MaterialManager::Get();
-				
-					m->MaterialId = mtlManager->LoadFromPath(gv.AsStringView());
-				}
-			)
-        };
+		REFLECTION_PROPERTY(
+			"Material",
+			String,
+			[](void* p)
+			-> Reflection::GenericValue
+			{
+				EcMesh* m = static_cast<EcMesh*>(p);
+				MaterialManager* mtlManager = MaterialManager::Get();
 
-        return props;
-    }
-};
+				return mtlManager->GetMaterialResource(m->MaterialId).Name;
+			},
+			[](void* p, const Reflection::GenericValue& gv)
+			{
+				EcMesh* m = static_cast<EcMesh*>(p);
+				MaterialManager* mtlManager = MaterialManager::Get();
 
-static inline MeshManager Instance;
+				m->MaterialId = mtlManager->LoadFromPath(gv.AsStringView());
+			}
+		)
+    };
+
+    return props;
+}
 
 void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 {
@@ -161,7 +152,7 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 
 			uint32_t meshId = UINT32_MAX;
 
-			if (std::vector<uint32_t>& freelist = FreeSkinnedMeshPseudoAssets[meshPathStr];
+			if (std::vector<uint32_t>& freelist = MeshComponentManager::Get()->FreeSkinnedMeshPseudoAssets[meshPathStr];
 				freelist.size() == 0
 			)
 			{

@@ -38,10 +38,10 @@ struct EcSound : public Component<EntityComponent::Sound>
 	bool Valid = true;
 };
 
-class SoundManager : public ComponentManager<EcSound>
+class SoundComponentManager : public ComponentManager<EcSound, SoundComponentManager>
 {
 public:
-	static SoundManager& Get();
+	SoundComponentManager();
 
 	uint32_t CreateComponent(GameObject*) override;
 	void DeleteComponent(uint32_t) override;
@@ -49,13 +49,9 @@ public:
 	const Reflection::StaticMethodMap& GetMethods() override;
 	const Reflection::StaticEventMap& GetEvents() override;
 
-	void Initialize();
-	void Update(const glm::mat4& CameraTransform);
+	void UpdateListener(const glm::mat4& CameraTransform);
 	void Shutdown() override;
 
 	ma_engine AudioEngine;
 	double LastTick = 0.f;
-
-private:
-	bool m_DidInit = false;
 };

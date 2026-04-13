@@ -20,195 +20,186 @@ static GameObject* createCamera()
 	return camera;
 }
 
-class WorkspaceManager : public ComponentManager<EcWorkspace>
+uint32_t WorkspaceComponentManager::CreateComponent(GameObject* Object)
 {
-public:
-    uint32_t CreateComponent(GameObject* Object) override
-    {
-        m_Components.emplace_back();
-		m_Components.back().Object = Object;
+    m_Components.emplace_back();
+	m_Components.back().Object = Object;
 
-        return static_cast<uint32_t>(m_Components.size() - 1);
-    }
+    return static_cast<uint32_t>(m_Components.size() - 1);
+}
 	
-	void Shutdown() override
-	{
-		s_FallbackCamera.Clear();
-		ComponentManager<EcWorkspace>::Shutdown();
-	}
+void WorkspaceComponentManager::Shutdown()
+{
+	s_FallbackCamera.Clear();
+	ComponentManager<EcWorkspace>::Shutdown();
+}
 
-    const Reflection::StaticPropertyMap& GetProperties() override
-    {
-        static const Reflection::StaticPropertyMap props = 
-        {
-			{ "SceneCamera", {
-				"SceneCamera",
-				REFLECTION_OPTIONAL(GameObject),
-				[](void* p)
-				-> Reflection::GenericValue
-				{
-					GameObject* cam = static_cast<EcWorkspace*>(p)->GetSceneCamera();
+const Reflection::StaticPropertyMap& WorkspaceComponentManager::GetProperties()
+{
+    static const Reflection::StaticPropertyMap props = {
+		{ "SceneCamera", {
+			"SceneCamera",
+			REFLECTION_OPTIONAL(GameObject),
+			[](void* p)
+			-> Reflection::GenericValue
+			{
+				GameObject* cam = static_cast<EcWorkspace*>(p)->GetSceneCamera();
 
-					if (cam->ObjectId != s_FallbackCamera->ObjectId)
-						return cam->ToGenericValue();
-					else
-						return {}; // Null
-				},
-				[](void* p, const Reflection::GenericValue& gv)
+				if (cam->ObjectId != s_FallbackCamera->ObjectId)
+					return cam->ToGenericValue();
+				else
+					return {}; // Null
+			},
+			[](void* p, const Reflection::GenericValue& gv)
+			{
+				static_cast<EcWorkspace*>(p)->SetSceneCamera(GameObject::FromGenericValue(gv));
+			}
+		} }
+    };
+
+    return props;
+}
+
+const Reflection::StaticMethodMap& WorkspaceComponentManager::GetMethods()
+{
+    static const Reflection::StaticMethodMap funcs = {
+		{ "ScreenPointToVector", {
+			{ Reflection::ValueType::Vector2, REFLECTION_OPTIONAL(Double) },
+			{ Reflection::ValueType::Vector3 },
+			[](void* p, const std::vector<Reflection::GenericValue>& inputs)
+			-> std::vector<Reflection::GenericValue>
+			{
+				EcWorkspace* w = static_cast<EcWorkspace*>(p);
+
+				glm::vec2 point = inputs[0].AsVector2();
+				float length = 1.f;
+
+				if (inputs.size() > 1)
+					length = (float)inputs[1].AsDouble();
+
+				return { w->ScreenPointToVector(point, length) };
+			}
+		} },
+
+		{ "WorldToScreenPoint", {
+			{ Reflection::ValueType::Vector3 },
+			{ Reflection::ValueType::Vector2, Reflection::ValueType::Double },
+			[](void* p, const std::vector<Reflection::GenericValue>& inputs)
+			-> std::vector<Reflection::GenericValue>
+			{
+				Engine* engine = Engine::Get();
+				EcWorkspace* ew = static_cast<EcWorkspace*>(p);
+				EcCamera* cam = ew->GetSceneCamera()->FindComponent<EcCamera>();
+
+				glm::vec3 point = inputs[0].AsVector3();
+				ImVec2 viewportSize = engine->GetViewportInputRectSize();
+
+				const glm::mat4& trans = cam->GetWorldTransform();
+
+				glm::mat4 projection = glm::perspective(
+					glm::radians(cam->FieldOfView),
+					viewportSize.x / viewportSize.y,
+					cam->NearPlane,
+					cam->FarPlane
+				);
+
+				glm::vec3 position = glm::vec3(trans[3]);
+				glm::vec3 forwardVec = glm::vec3(trans[2]);
+
+				glm::mat4 view = glm::lookAt(
+					position,
+					position + forwardVec,
+					glm::vec3(trans[1])
+				);
+
+				glm::vec4 clip = projection * view * glm::vec4(point, 1.f);
+				glm::vec3 ndc = clip / clip.w;
+				glm::vec2 screen = (glm::vec2(ndc) * 0.5f + 0.5f) * glm::vec2(viewportSize.x, viewportSize.y);
+
+				return { screen + glm::vec2(engine->ViewportInputPosition.x, engine->ViewportInputPosition.y), ndc.z };
+			}
+		} },
+
+		{ "Raycast", {
+			{ Reflection::ValueType::Vector3, Reflection::ValueType::Vector3, REFLECTION_OPTIONAL(Array), REFLECTION_OPTIONAL(Boolean) },
+			{ REFLECTION_OPTIONAL(Map) },
+			[](void* p, const std::vector<Reflection::GenericValue>& inputs)
+			-> std::vector<Reflection::GenericValue>
+			{
+				const glm::vec3& origin = inputs[0].AsVector3();
+				const glm::vec3& vector = inputs[1].AsVector3();
+
+				std::vector<GameObject*> filterList;
+
+				if (inputs.size() > 2)
 				{
-					static_cast<EcWorkspace*>(p)->SetSceneCamera(GameObject::FromGenericValue(gv));
+					const std::span<Reflection::GenericValue>& filterListGv = inputs[2].AsArray();
+					filterList.reserve(filterListGv.size());
+
+					for (const Reflection::GenericValue& gv : filterListGv)
+						filterList.push_back(GameObject::FromGenericValue(gv));
 				}
-			} }
-        };
 
-        return props;
-    }
-
-    const Reflection::StaticMethodMap& GetMethods() override
-    {
-        static const Reflection::StaticMethodMap funcs =
-		{
-			{ "ScreenPointToVector", {
-				{ Reflection::ValueType::Vector2, REFLECTION_OPTIONAL(Double) },
-				{ Reflection::ValueType::Vector3 },
-				[](void* p, const std::vector<Reflection::GenericValue>& inputs)
-				-> std::vector<Reflection::GenericValue>
-				{
-					EcWorkspace* w = static_cast<EcWorkspace*>(p);
-
-					glm::vec2 point = inputs[0].AsVector2();
-					float length = 1.f;
-
-					if (inputs.size() > 1)
-						length = (float)inputs[1].AsDouble();
-
-					return { w->ScreenPointToVector(point, length) };
-				}
-			} },
-
-			{ "WorldToScreenPoint", {
-				{ Reflection::ValueType::Vector3 },
-				{ Reflection::ValueType::Vector2, Reflection::ValueType::Double },
-				[](void* p, const std::vector<Reflection::GenericValue>& inputs)
-				-> std::vector<Reflection::GenericValue>
-				{
-					Engine* engine = Engine::Get();
-					EcWorkspace* ew = static_cast<EcWorkspace*>(p);
-					EcCamera* cam = ew->GetSceneCamera()->FindComponent<EcCamera>();
-
-					glm::vec3 point = inputs[0].AsVector3();
-					ImVec2 viewportSize = engine->GetViewportInputRectSize();
-
-					const glm::mat4& trans = cam->GetWorldTransform();
-
-					glm::mat4 projection = glm::perspective(
-						glm::radians(cam->FieldOfView),
-						viewportSize.x / viewportSize.y,
-						cam->NearPlane,
-						cam->FarPlane
-					);
-
-					glm::vec3 position = glm::vec3(trans[3]);
-					glm::vec3 forwardVec = glm::vec3(trans[2]);
-
-					glm::mat4 view = glm::lookAt(
-						position,
-						position + forwardVec,
-						glm::vec3(trans[1])
-					);
-
-					glm::vec4 clip = projection * view * glm::vec4(point, 1.f);
-					glm::vec3 ndc = clip / clip.w;
-					glm::vec2 screen = (glm::vec2(ndc) * 0.5f + 0.5f) * glm::vec2(viewportSize.x, viewportSize.y);
-
-					return { screen + glm::vec2(engine->ViewportInputPosition.x, engine->ViewportInputPosition.y), ndc.z };
-				}
-			} },
-
-			{ "Raycast", {
-				{ Reflection::ValueType::Vector3, Reflection::ValueType::Vector3, REFLECTION_OPTIONAL(Array), REFLECTION_OPTIONAL(Boolean) },
-				{ REFLECTION_OPTIONAL(Map) },
-				[](void* p, const std::vector<Reflection::GenericValue>& inputs)
-				-> std::vector<Reflection::GenericValue>
-				{
-					const glm::vec3& origin = inputs[0].AsVector3();
-					const glm::vec3& vector = inputs[1].AsVector3();
-
-					std::vector<GameObject*> filterList;
-
-					if (inputs.size() > 2)
-					{
-						const std::span<Reflection::GenericValue>& filterListGv = inputs[2].AsArray();
-						filterList.reserve(filterListGv.size());
-
-						for (const Reflection::GenericValue& gv : filterListGv)
-							filterList.push_back(GameObject::FromGenericValue(gv));
-					}
-
-					SpatialCastResult result = static_cast<EcWorkspace*>(p)->Raycast(origin, vector, filterList, inputs.size() > 3 ? inputs[3].AsBoolean() : true);
+				SpatialCastResult result = static_cast<EcWorkspace*>(p)->Raycast(origin, vector, filterList, inputs.size() > 3 ? inputs[3].AsBoolean() : true);
 					
-					if (!result.Occurred)
-						return { Reflection::GenericValue::Null()};
-
-					else
-					{
-						// TODO make datatypes easier to create
-						// this should definitely be a `SpatialCastResult` datatype
-						std::vector<Reflection::GenericValue> vals;
-						vals.reserve(6);
-
-						vals.emplace_back("Object");
-						vals.emplace_back(result.Object->ToGenericValue());
-
-						vals.emplace_back("Position");
-						vals.emplace_back(result.Position);
-
-						vals.emplace_back("Normal");
-						vals.emplace_back(result.Normal);
-
-						Reflection::GenericValue gv(vals);
-						gv.Type = Reflection::ValueType::Map;
-
-						return { gv };
-					}
-				}
-			} },
-
-			{ "GetObjectsInAabb", {
-				{ Reflection::ValueType::Vector3, Reflection::ValueType::Vector3, REFLECTION_OPTIONAL(Array) },
-				{ Reflection::ValueType::Array },
-				[](void* p, const std::vector<Reflection::GenericValue>& inputs)
-				-> std::vector<Reflection::GenericValue>
+				if (!result.Occurred)
+					return { Reflection::GenericValue::Null()};
+				else
 				{
-					const glm::vec3& position = inputs[0].AsVector3();
-					const glm::vec3& origin = inputs[1].AsVector3();
+					// TODO make datatypes easier to create
+					// this should definitely be a `SpatialCastResult` datatype
+					std::vector<Reflection::GenericValue> vals;
+					vals.reserve(6);
 
-					std::vector<GameObject*> ignoreList;
+					vals.emplace_back("Object");
+					vals.emplace_back(result.Object->ToGenericValue());
 
-					if (inputs.size() > 2)
-					{
-						const std::span<Reflection::GenericValue>& ignorelistgv = inputs[2].AsArray();
-						ignoreList.reserve(ignorelistgv.size());
+					vals.emplace_back("Position");
+					vals.emplace_back(result.Position);
 
-						for (const Reflection::GenericValue& gv : ignorelistgv)
-							ignoreList.push_back(GameObject::FromGenericValue(gv));
-					}
+					vals.emplace_back("Normal");
+					vals.emplace_back(result.Normal);
 
-					std::vector<GameObject*> objects = static_cast<EcWorkspace*>(p)->GetObjectsInAabb(position, origin, ignoreList);
+					Reflection::GenericValue gv(vals);
+					gv.Type = Reflection::ValueType::Map;
 
-					std::vector<Reflection::GenericValue> gv(objects.size());
-					for (size_t i = 0; i < objects.size(); i++)
-						gv[i] = objects[i]->ToGenericValue();
+					return { gv };
+				}
+			}
+		} },
+
+		{ "GetObjectsInAabb", {
+			{ Reflection::ValueType::Vector3, Reflection::ValueType::Vector3, REFLECTION_OPTIONAL(Array) },
+			{ Reflection::ValueType::Array },
+			[](void* p, const std::vector<Reflection::GenericValue>& inputs)
+			-> std::vector<Reflection::GenericValue>
+			{
+				const glm::vec3& position = inputs[0].AsVector3();
+				const glm::vec3& origin = inputs[1].AsVector3();
+
+				std::vector<GameObject*> ignoreList;
+
+				if (inputs.size() > 2)
+				{
+					const std::span<Reflection::GenericValue>& ignorelistgv = inputs[2].AsArray();
+					ignoreList.reserve(ignorelistgv.size());
+
+					for (const Reflection::GenericValue& gv : ignorelistgv)
+						ignoreList.push_back(GameObject::FromGenericValue(gv));
+				}
+
+				std::vector<GameObject*> objects = static_cast<EcWorkspace*>(p)->GetObjectsInAabb(position, origin, ignoreList);
+
+				std::vector<Reflection::GenericValue> gv(objects.size());
+				for (size_t i = 0; i < objects.size(); i++)
+					gv[i] = objects[i]->ToGenericValue();
 
 					return { Reflection::GenericValue(gv) };
-				}
-			} }
-		};
-        return funcs;
-    }
-};
-
-static inline WorkspaceManager Instance;
+			}
+		} }
+	};
+    return funcs;
+}
 
 glm::vec3 EcWorkspace::ScreenPointToVector(glm::vec2 point, float length) const
 {
@@ -516,8 +507,8 @@ void EcWorkspace::SetSceneCamera(GameObject* NewCam)
 		nc->FindComponent<EcCamera>()->IsSceneCamera = true;
 }
 
-void EcWorkspace::Update() const
+void EcWorkspace::UpdateSoundListener() const
 {
-	SoundManager& soundManager = SoundManager::Get();
-	soundManager.Update(GetSceneCamera()->FindComponent<EcCamera>()->GetWorldTransform());
+	SoundComponentManager* soundManager = SoundComponentManager::Get();
+	soundManager->UpdateListener(GetSceneCamera()->FindComponent<EcCamera>()->GetWorldTransform());
 }

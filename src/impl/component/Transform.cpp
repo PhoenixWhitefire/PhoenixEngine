@@ -54,87 +54,81 @@ static void recomputeWorldTransforms(EcTransform* ct)
     recomputeChildrenWorldTransformsRecursive(ct->Object);
 }
 
-class TransformsManager : ComponentManager<EcTransform>
+uint32_t TransformComponentManager::CreateComponent(GameObject* Object)
 {
-public:
-    uint32_t CreateComponent(GameObject* Object) override
-    {
-        m_Components.emplace_back();
-        m_Components.back().Object = Object;
+    m_Components.emplace_back();
+    m_Components.back().Object = Object;
 
-        return static_cast<uint32_t>(m_Components.size() - 1);
-    }
+    return static_cast<uint32_t>(m_Components.size() - 1);
+}
 
-    const Reflection::StaticPropertyMap& GetProperties() override
-    {
-        static const Reflection::StaticPropertyMap props = {
-            REFLECTION_PROPERTY(
-                "LocalTransform",
-                Matrix,
-                REFLECTION_PROPERTY_GET_SIMPLE(EcTransform, LocalTransform),
-                [](void* p, const Reflection::GenericValue& gv)
-                {
-                    ZoneScoped;
+const Reflection::StaticPropertyMap& TransformComponentManager::GetProperties()
+{
+    static const Reflection::StaticPropertyMap props = {
+        REFLECTION_PROPERTY(
+            "LocalTransform",
+            Matrix,
+            REFLECTION_PROPERTY_GET_SIMPLE(EcTransform, LocalTransform),
+            [](void* p, const Reflection::GenericValue& gv)
+            {
+                ZoneScoped;
 
-                    EcTransform* ct = static_cast<EcTransform*>(p);
-                    ct->LocalTransform = gv.AsMatrix();
-                    ct->RecomputeTransformTree();
-                }
-            ),
+                EcTransform* ct = static_cast<EcTransform*>(p);
+                ct->LocalTransform = gv.AsMatrix();
+                ct->RecomputeTransformTree();
+            }
+        ),
 
-            REFLECTION_PROPERTY(
-                "LocalSize",
-                Vector3,
-                REFLECTION_PROPERTY_GET_SIMPLE(EcTransform, LocalSize),
-                [](void* p, const Reflection::GenericValue& gv)
-                {
-                    ZoneScoped;
+        REFLECTION_PROPERTY(
+            "LocalSize",
+            Vector3,
+            REFLECTION_PROPERTY_GET_SIMPLE(EcTransform, LocalSize),
+            [](void* p, const Reflection::GenericValue& gv)
+            {
+                ZoneScoped;
 
-                    EcTransform* ct = static_cast<EcTransform*>(p);
-                    ct->LocalSize = gv.AsVector3();
-                    ct->RecomputeTransformTree();
-                }
-            ),
+                EcTransform* ct = static_cast<EcTransform*>(p);
+                ct->LocalSize = gv.AsVector3();
+                ct->RecomputeTransformTree();
+            }
+        ),
 
-            { "Transform", {
-                "Transform",
-                Reflection::ValueType::Matrix,
-                REFLECTION_PROPERTY_GET_SIMPLE(EcTransform, Transform),
-                (Reflection::PropertySetter)[](void* p, const Reflection::GenericValue& gv)
-                {
-                    ZoneScoped;
+        { "Transform", {
+            "Transform",
+            Reflection::ValueType::Matrix,
+            REFLECTION_PROPERTY_GET_SIMPLE(EcTransform, Transform),
+            (Reflection::PropertySetter)[](void* p, const Reflection::GenericValue& gv)
+            {
+                ZoneScoped;
                     
-                    EcTransform* ct = static_cast<EcTransform*>(p);
-                    ct->SetWorldTransform(gv.AsMatrix());
-                    ct->RecomputeTransformTree();
-                },
-                false
-            } },
+                EcTransform* ct = static_cast<EcTransform*>(p);
+                ct->SetWorldTransform(gv.AsMatrix());
+                ct->RecomputeTransformTree();
+            },
+            false
+        } },
 
-            { "Size", {
-                "Size",
-                Reflection::ValueType::Vector3, 
-                (Reflection::PropertyGetter)[](void* p)->Reflection::GenericValue
-                {
-                    return static_cast<EcTransform*>(p)->LocalSize;
-                },
-                (Reflection::PropertySetter)[](void* p, const Reflection::GenericValue& gv)
-                {
-                    ZoneScoped;
+        { "Size", {
+            "Size",
+            Reflection::ValueType::Vector3,
+            (Reflection::PropertyGetter)[](void* p)->Reflection::GenericValue
+            {
+                return static_cast<EcTransform*>(p)->LocalSize;
+            },
+            (Reflection::PropertySetter)[](void* p, const Reflection::GenericValue& gv)
+            {
+                ZoneScoped;
                     
-                    EcTransform* ct = static_cast<EcTransform*>(p);
-                    ct->SetWorldSize(gv.AsVector3());
-                    ct->RecomputeTransformTree();
-                },
-                false
-            } }
-        };
+                EcTransform* ct = static_cast<EcTransform*>(p);
+                ct->SetWorldSize(gv.AsVector3());
+                ct->RecomputeTransformTree();
+            },
+            false
+        } }
+    };
 
-        return props;
-    }
-};
-
-static inline TransformsManager Instance;
+    return props;
+}
 
 void EcTransform::SetWorldTransform(const glm::mat4& NewWorldTrans)
 {

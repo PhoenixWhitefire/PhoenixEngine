@@ -7,11 +7,8 @@
 #include "FileRW.hpp"
 #include "Log.hpp"
 
-uint32_t SoundManager::CreateComponent(GameObject* Object)
+uint32_t SoundComponentManager::CreateComponent(GameObject* Object)
 {
-	if (!m_DidInit)
-		Initialize();
-	
     m_Components.emplace_back();
 	m_Components.back().Object = Object;
 	m_Components.back().EcId = static_cast<uint32_t>(m_Components.size() - 1);
@@ -20,7 +17,7 @@ uint32_t SoundManager::CreateComponent(GameObject* Object)
     return static_cast<uint32_t>(m_Components.size() - 1);
 }
 
-void SoundManager::DeleteComponent(uint32_t Id)
+void SoundComponentManager::DeleteComponent(uint32_t Id)
 {
     // TODO id reuse with handles that have a counter per re-use to reduce memory growth
 	EcSound& sound = m_Components[Id];
@@ -30,10 +27,10 @@ void SoundManager::DeleteComponent(uint32_t Id)
 	delete sound.SoundInstance;
 	sound.SoundInstance = nullptr;
 
-	ComponentManager<EcSound>::DeleteComponent(Id);
+	ComponentManager<EcSound, SoundComponentManager>::DeleteComponent(Id);
 }
 
-const Reflection::StaticPropertyMap& SoundManager::GetProperties()
+const Reflection::StaticPropertyMap& SoundComponentManager::GetProperties()
 {
     static const Reflection::StaticPropertyMap props = 
     {
@@ -130,7 +127,7 @@ const Reflection::StaticPropertyMap& SoundManager::GetProperties()
     return props;
 }
 
-const Reflection::StaticMethodMap& SoundManager::GetMethods()
+const Reflection::StaticMethodMap& SoundComponentManager::GetMethods()
 {
 	static const Reflection::StaticMethodMap methods = {
 		{ "Play", Reflection::MethodDescriptor{
@@ -157,7 +154,7 @@ const Reflection::StaticMethodMap& SoundManager::GetMethods()
 #pragma GCC diagnostic ignored "-Wstringop-overflow"
 #endif
 
-const Reflection::StaticEventMap& SoundManager::GetEvents()
+const Reflection::StaticEventMap& SoundComponentManager::GetEvents()
 {
 	static const Reflection::StaticEventMap events =
 	{
@@ -172,7 +169,7 @@ const Reflection::StaticEventMap& SoundManager::GetEvents()
 #pragma GCC diagnostic pop
 #endif
 
-void SoundManager::Initialize()
+SoundComponentManager::SoundComponentManager()
 {
 	ZoneScoped;
 
@@ -196,10 +193,9 @@ void SoundManager::Initialize()
 		RAISE_RTF("Audio Engine init failed, error code: {}", (int)initResult);
 
 	m_Components.reserve(16);
-	m_DidInit = true;
 }
 
-void SoundManager::Update(const glm::mat4& CameraTransform)
+void SoundComponentManager::UpdateListener(const glm::mat4& CameraTransform)
 {
 	ZoneScoped;
 
@@ -211,19 +207,12 @@ void SoundManager::Update(const glm::mat4& CameraTransform)
 	LastTick = GetRunningTime();
 }
 
-void SoundManager::Shutdown()
+void SoundComponentManager::Shutdown()
 {
 	//AudioAssets.clear();
 
 	ma_engine_uninit(&AudioEngine);
-	ComponentManager<EcSound>::Shutdown();
-}
-
-static inline SoundManager Manager{};
-
-SoundManager& SoundManager::Get()
-{
-	return Manager;
+	ComponentManager<EcSound, SoundComponentManager>::Shutdown();
 }
 
 void EcSound::Reload()
@@ -243,7 +232,7 @@ void EcSound::Reload()
 	LoadSucceeded = false;
 	Length = 0.f;
 
-	if (ma_result result = ma_sound_init_from_file(&Manager.AudioEngine, filePath.c_str(), 0, NULL, NULL, SoundInstance);
+	if (ma_result result = ma_sound_init_from_file(&SoundComponentManager::Get()->AudioEngine, filePath.c_str(), 0, NULL, NULL, SoundInstance);
 		result != MA_SUCCESS
 	)
 	{

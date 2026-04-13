@@ -17,9 +17,6 @@ struct EcParticleEmitter : public Component<EntityComponent::ParticleEmitter>
 
 	ObjectRef Object;
 
-	bool Emitting = true;
-	bool ParticlesAreAttached = false;
-
 	uint32_t Rate = 50; // Particles to be spawned every second
 	glm::vec2 Lifetime = { 1.5f, 2.f }; // Randomly chosen between the range X - Y;
 
@@ -45,5 +42,13 @@ struct EcParticleEmitter : public Component<EntityComponent::ParticleEmitter>
 	std::vector<Particle> m_Particles;
 
 	double m_TimeSinceLastSpawn = 0.f;
+	bool Emitting = true;
+	bool ParticlesAreAttached = false;
 	bool Valid = true;
+};
+
+class ParticleEmitterComponentManager : public ComponentManager<EcParticleEmitter>
+{
+public:
+    uint32_t CreateComponent(GameObject* Object) override;
 };

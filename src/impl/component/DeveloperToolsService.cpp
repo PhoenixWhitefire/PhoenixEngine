@@ -37,154 +37,148 @@ static bool* getTool(const std::string_view& toolName)
     RAISE_RTF("Invalid tool '{}'", toolName);
 }
 
-class DeveloperToolsServiceManager : public ComponentManager<EcDeveloperToolsService>
+const Reflection::StaticPropertyMap& DeveloperToolsComponentManager::GetProperties()
 {
-public:
-    const Reflection::StaticPropertyMap& GetProperties() override
-    {
-        static const Reflection::StaticPropertyMap props = {
-            REFLECTION_PROPERTY(
-                "Initialized",
-                Boolean,
-                [](void*) -> Reflection::GenericValue
+    static const Reflection::StaticPropertyMap props = {
+        REFLECTION_PROPERTY(
+            "Initialized",
+            Boolean,
+            [](void*) -> Reflection::GenericValue
+            {
+                return DeveloperTools::Initialized;
+            },
+            nullptr
+        ),
+
+        PROPERTY_PROXY(DocumentationShown),
+        PROPERTY_PROXY(ExplorerShown),
+        PROPERTY_PROXY(InfoShown),
+        PROPERTY_PROXY(MaterialsShown),
+        PROPERTY_PROXY(PropertiesShown),
+        PROPERTY_PROXY(RendererShown),
+        PROPERTY_PROXY(ScriptsShown),
+        PROPERTY_PROXY(SettingsShown),
+        PROPERTY_PROXY(ShadersShown),
+    };
+
+    return props;
+}
+
+const Reflection::StaticMethodMap& DeveloperToolsComponentManager::GetMethods()
+{
+    static const Reflection::StaticMethodMap methods = {
+        { "Initialize", Reflection::MethodDescriptor{
+            {},
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+            {
+                if (DeveloperTools::Initialized)
                 {
-                    return DeveloperTools::Initialized;
-                },
-                nullptr
-            ),
-
-            PROPERTY_PROXY(DocumentationShown),
-            PROPERTY_PROXY(ExplorerShown),
-            PROPERTY_PROXY(InfoShown),
-            PROPERTY_PROXY(MaterialsShown),
-            PROPERTY_PROXY(PropertiesShown),
-            PROPERTY_PROXY(RendererShown),
-            PROPERTY_PROXY(ScriptsShown),
-            PROPERTY_PROXY(SettingsShown),
-            PROPERTY_PROXY(ShadersShown),
-        };
-
-        return props;
-    }
-
-    const Reflection::StaticMethodMap& GetMethods() override
-    {
-        static const Reflection::StaticMethodMap methods = {
-            { "Initialize", Reflection::MethodDescriptor{
-                {},
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
-                {
-                    if (DeveloperTools::Initialized)
-                    {
-                        Log.Warning("Called `DeveloperTools:Initialize` but they were already initialized");
-                        return {};
-                    }
-
-                    DeveloperTools::Initialize(Renderer::Get());
+                    Log.Warning("Called `DeveloperTools:Initialize` but they were already initialized");
                     return {};
                 }
-            } },
 
-            { "SetExplorerRoot", Reflection::MethodDescriptor{
-                { Reflection::ValueType::GameObject },
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    DeveloperTools::SetExplorerRoot(GameObject::FromGenericValue(inputs[0]));
+                DeveloperTools::Initialize(Renderer::Get());
+                return {};
+            }
+        } },
 
-                    return {};
-                }
-            } },
+        { "SetExplorerRoot", Reflection::MethodDescriptor{
+            { Reflection::ValueType::GameObject },
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                DeveloperTools::SetExplorerRoot(GameObject::FromGenericValue(inputs[0]));
 
-            { "SetExplorerSelections", Reflection::MethodDescriptor{
-                { Reflection::ValueType::Array },
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    const std::span<Reflection::GenericValue>& inner = inputs[0].AsArray();
+                return {};
+            }
+        } },
 
-                    std::vector<ObjectHandle> objects;
-                    objects.reserve(inner.size());
+        { "SetExplorerSelections", Reflection::MethodDescriptor{
+            { Reflection::ValueType::Array },
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                const std::span<Reflection::GenericValue>& inner = inputs[0].AsArray();
 
-                    for (const Reflection::GenericValue& gv : inner)
-                        objects.emplace_back(GameObject::FromGenericValue(gv));
+                std::vector<ObjectHandle> objects;
+                objects.reserve(inner.size());
 
-                    DeveloperTools::SetExplorerSelections(objects);
-                    return {};
-                }
-            } },
+                for (const Reflection::GenericValue& gv : inner)
+                    objects.emplace_back(GameObject::FromGenericValue(gv));
 
-            { "GetExplorerSelections", Reflection::MethodDescriptor{
-                {},
-                { Reflection::ValueType::Array },
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
-                {
-                    const auto& sels = DeveloperTools::GetExplorerSelections();
+                DeveloperTools::SetExplorerSelections(objects);
+                return {};
+            }
+        } },
 
-                    std::vector<Reflection::GenericValue> out;
-                    out.reserve(sels.size());
+        { "GetExplorerSelections", Reflection::MethodDescriptor{
+            {},
+            { Reflection::ValueType::Array },
+            [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+            {
+                const auto& sels = DeveloperTools::GetExplorerSelections();
 
-                    for (const ObjectHandle& obj : sels)
-                        out.push_back(obj->ToGenericValue());
+                std::vector<Reflection::GenericValue> out;
+                out.reserve(sels.size());
 
-                    return { Reflection::GenericValue(out) };
-                }
-            } },
+                for (const ObjectHandle& obj : sels)
+                    out.push_back(obj->ToGenericValue());
 
-            { "GetToolNames", Reflection::MethodDescriptor{
-                {},
-                { Reflection::ValueType::Array },
-                [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
-                {
-                    std::vector<Reflection::GenericValue> out;
-                    out.reserve(std::size(Tools));
+                return { Reflection::GenericValue(out) };
+            }
+        } },
 
-                    for (const auto& [ tool, _ ] : Tools)
-                        out.emplace_back(tool);
+        { "GetToolNames", Reflection::MethodDescriptor{
+            {},
+            { Reflection::ValueType::Array },
+            [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+            {
+                std::vector<Reflection::GenericValue> out;
+                out.reserve(std::size(Tools));
 
-                    return { Reflection::GenericValue(out) };
-                }
-            } },
+                for (const auto& [ tool, _ ] : Tools)
+                    out.emplace_back(tool);
 
-            { "SetToolEnabled", Reflection::MethodDescriptor{
-                { Reflection::ValueType::String, Reflection::ValueType::Boolean },
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    bool* enabledPtr = getTool(inputs[0].AsStringView());
-                    *enabledPtr = inputs[1].AsBoolean();
+                return { Reflection::GenericValue(out) };
+            }
+        } },
 
-                    return {};
-                }
-            } },
+        { "SetToolEnabled", Reflection::MethodDescriptor{
+            { Reflection::ValueType::String, Reflection::ValueType::Boolean },
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                bool* enabledPtr = getTool(inputs[0].AsStringView());
+                *enabledPtr = inputs[1].AsBoolean();
 
-            { "IsToolEnabled", Reflection::MethodDescriptor{
-                { Reflection::ValueType::String },
-                { Reflection::ValueType::Boolean },
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    return { *getTool(inputs[0].AsStringView()) };
-                }
-            } },
+                return {};
+            }
+        } },
 
-            { "OpenTextDocument", Reflection::MethodDescriptor{
-                { Reflection::ValueType::String, REFLECTION_OPTIONAL(Integer) },
-                {},
-                [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-                {
-                    DeveloperTools::OpenTextDocument(
-                        inputs[0].AsString(),
-                        inputs.size() > 1 ? (int)inputs[1].AsInteger() : 1
-                    );
+        { "IsToolEnabled", Reflection::MethodDescriptor{
+            { Reflection::ValueType::String },
+            { Reflection::ValueType::Boolean },
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                return { *getTool(inputs[0].AsStringView()) };
+            }
+        } },
 
-                    return {};
-                }
-            } },
-        };
+        { "OpenTextDocument", Reflection::MethodDescriptor{
+            { Reflection::ValueType::String, REFLECTION_OPTIONAL(Integer) },
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                DeveloperTools::OpenTextDocument(
+                    inputs[0].AsString(),
+                    inputs.size() > 1 ? (int)inputs[1].AsInteger() : 1
+                );
 
-        return methods;
-    }
-};
+                return {};
+            }
+        } },
+    };
 
-static DeveloperToolsServiceManager Instance;
+    return methods;
+}

@@ -26,7 +26,14 @@ EntityComponent FindComponentTypeByName(const std::string_view& Name)
 
 void RegisterComponentManager(EntityComponent Type, IComponentManager* Manager)
 {
-	GameObject::s_ComponentManagers[(size_t)Type] = Manager;
+	assert(GameObjectManager::Get()->ComponentManagers[(size_t)Type] == nullptr);
+	GameObjectManager::Get()->ComponentManagers[(size_t)Type] = Manager;
+}
+
+IComponentManager* GetComponentManagerByComponentType(EntityComponent Type)
+{
+	assert(GameObjectManager::Get()->ComponentManagers[(size_t)Type] != nullptr);
+	return GameObjectManager::Get()->ComponentManagers[(size_t)Type];
 }
 
 const std::span<const EntityComponent> GetCommonDependenciesForComponent(EntityComponent ec)
