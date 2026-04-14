@@ -651,8 +651,7 @@ local function createNewProject_()
 	fs.mkdir("@projres/textures/materials")
 
 	fs.mkdir("@projres/scripts/modules")
-	fs.mkdir("@projres/scripts/live")
-	fs.write("@projres/scripts/live/Main.luau", "print(\"Hello, World!\")\n")
+	fs.write("@projres/scripts/Main.luau", "print(\"Hello, World!\")\n")
 
 	for _, v in { "error", "worldUber", "worldUberTriProjected", "worldUberSkinned", "skybox", "boxframe", "particle", "postprocessing", "ui" } do
 		if fs.isfile(`@editres/shaders/{v}.shp`) then

@@ -13,7 +13,7 @@ struct EcDataModel : public Component<EntityComponent::DataModel>
 	void Bind();
 	void Close();
 
-	std::string LiveScripts = "scripts/live";
+	std::string LiveScripts = "scripts/Main.luau";
 	std::string VM = ROOT_LVM_NAME;
 	uint32_t Workspace = UINT32_MAX;
 	ObjectRef Object;
