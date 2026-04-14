@@ -110,7 +110,7 @@
         "Methods": {
           "GetMeshData": {
             "Description": "Returns the provided mesh data associated with the provided path",
-            "Out": "{ Vertices: { { Position: vector, Normal: vector, Paint: { number }, UV: vector } }, Indices: { number } }",
+            "Out": "MeshAssetData",
             "ParameterNames": "Id"
           },
           "ImportModel": {
@@ -144,7 +144,7 @@
           },
           "SetMeshData": {
             "Description": "Associates the provided mesh data with the provided path",
-            "Type": "(self, Id: string, MeshData: { Vertices: { { Position: vector, Normal: vector, Paint: { number }, UV: vector } }, Indices: { number } }) : ()"
+            "Type": "(self, Id: string, MeshData: MeshAssetData) : ()"
           },
           "UnloadMaterial": {
             "Description": "Removes the given Material path from the Engine's cache",

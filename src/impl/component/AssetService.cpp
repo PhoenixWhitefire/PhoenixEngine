@@ -24,7 +24,7 @@ const Reflection::StaticMethodMap& AssetServiceComponentManager::GetMethods()
                 indices.reserve(mesh.Indices.size());
 
                 for (uint32_t ind : mesh.Indices)
-                    indices.emplace_back(ind);
+                    indices.emplace_back((int64_t)ind + 1);
 
                 meshData["Indices"] = indices;
 
@@ -88,7 +88,15 @@ const Reflection::StaticMethodMap& AssetServiceComponentManager::GetMethods()
                 }
 
                 for (const Reflection::GenericValue& indexData : indices)
-                    mesh.Indices.push_back((uint32_t)indexData.AsInteger());
+                {
+                    int64_t i = indexData.AsInteger();
+                    if (i <= 0)
+                        RAISE_RTF("Got invalid index '{}', must be positive (index into Vertices table)", i);
+                    else if (i > UINT32_MAX)
+                        RAISE_RTF("Got invalid index '{}', out of 32-bit unsigned integer range (0..{} inclusive)", i, UINT32_MAX);
+
+                    mesh.Indices.push_back((uint32_t)i - 1);
+                }
 
                 MeshProvider::Get()->Assign(mesh, name);
                 return {};

@@ -93,6 +93,18 @@ export type HistoryAction = {
 	Events: { HistoryEvent }
 }
 
+export type MeshAssetData = {
+	Vertices: {
+		{
+			Position: vector,
+			Normal: vector,
+			Paint: { number },
+			UV: vector
+		}
+	},
+	Indices: { number }
+}
+
 type Services = {
   Engine: Engine,
   PlayerInput: PlayerInput,
@@ -204,13 +216,13 @@ export type Animation = {
 }
 export type AssetManager = {
 
-  GetMeshData: (self: AssetManager, Id: string) -> { Vertices: { { Position: vector, Normal: vector, Paint: { number }, UV: vector } }, Indices: { number } },
+  GetMeshData: (self: AssetManager, Id: string) -> MeshAssetData,
   ImportModel: (self: AssetManager, Path: string) -> GameObject & Model,
   LoadScene: (self: AssetManager, Path: string) -> ({ GameObject }?, string),
   QueueLoadTexture: (self: AssetManager, Path: string, BilinearFiltering: boolean, ImGui: boolean) -> (),
   SaveMesh: (self: AssetManager, Id: string, Path: string) -> (),
   SaveScene: (self: AssetManager, RootNodes: { GameObject }, Path: string) -> (boolean, string?),
-  SetMeshData: (self: AssetManager, Id: string, MeshData: { Vertices: { { Position: vector, Normal: vector, Paint: { number }, UV: vector } }, Indices: { number } }) -> (),
+  SetMeshData: (self: AssetManager, Id: string, MeshData: MeshAssetData) -> (),
   UnloadMaterial: (self: AssetManager, Material: string) -> (),
   UnloadMesh: (self: AssetManager, Mesh: string) -> (),
   UnloadTexture: (self: AssetManager, Texture: string) -> (),

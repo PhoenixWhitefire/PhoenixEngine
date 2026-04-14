@@ -150,6 +150,18 @@ export type HistoryAction = {
 	Name: string,
 	Events: { HistoryEvent }
 }
+
+export type MeshAssetData = {
+	Vertices: {
+		{
+			Position: vector,
+			Normal: vector,
+			Paint: { number },
+			UV: vector
+		}
+	},
+	Indices: { number }
+}
 ]]
 
 definitionsFile ..= "\ntype Services = {\n"
