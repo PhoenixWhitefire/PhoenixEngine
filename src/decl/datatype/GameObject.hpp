@@ -141,7 +141,7 @@ public:
 
 	uint32_t DataModel = PHX_GAMEOBJECT_NULL_ID;
 	hx::vector<GameObject, MEMCAT(GameObject)> WorldArray;
-	std::array<IComponentManager*, (size_t)EntityComponent::__count> ComponentManagers;
+	std::array<IComponentManager*, (size_t)EntityComponent::__count> ComponentManagers{};
 
 	struct Collection
 	{
