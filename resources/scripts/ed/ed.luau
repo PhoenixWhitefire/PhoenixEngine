@@ -34,7 +34,8 @@ local Project: Types.Project = {
 	DataModel = nil,
 	Workspace = nil,
 	Name = "Should not be visible",
-	IsTempPath = false
+	IsTempPath = false,
+	HasGitRepository = false,
 }
 local restoreState = nil
 local SyncCoreAssetsOptions = { "AlwaysAsk" :: "AlwaysAsk", "AutomaticallyUpdate" :: "AutomaticallyUpdate", "DoNotUpdate" :: "DoNotUpdate" }
@@ -144,7 +145,7 @@ local function onError(err)
 		errorMessage ..= "\n\nThe Editor will perform a save to the file 'resources/scenes/autosave.world', please ensure nothing important is stored at that location before proceeding."
 	end
 
-	print(errorMessage)
+	Logging:Write(errorMessage, Enum.LogType.Error)
 	Engine:ShowMessageBox("Editor Error", errorMessage, "ok", "error")
 
 	if Project.DataModel then
@@ -582,6 +583,7 @@ local function openProject_(ManualPath: string?)
 	Engine:BindDataModel(game)
 
 	Project.DataModel.LiveScripts = module
+	Project.HasGitRepository = fs.isdirectory("@project/.git")
 
 	if EditorPreferences.AutoLaunchCodeEditorOnProjectOpen then
 		openCodeEditor()
@@ -1229,6 +1231,8 @@ local function textCentered(text, cursor, cxavail)
 end
 
 local wasSettingsOpen = false
+local OpenGitCommitMenu = false
+local GitStatusResult = ""
 
 local function renderMainMenuBar(dt: number)
 	local pushedCol = CurrentStage == "ProjectPlaying"
@@ -1356,6 +1360,26 @@ local function renderMainMenuBar(dt: number)
 				end)
 			end
 
+			if imgui.beginmenu("Git") then
+				if not Project.HasGitRepository then
+					if imgui.menuitem("Initialize repository") then
+						task.defer(function()
+							print(fs.execute(`git -C "{ fs.resolvepath("@project") }" init`))
+							Project.HasGitRepository = fs.isdirectory("@project/.git")
+						end)
+					end
+				else
+					if imgui.menuitem("Commit") then
+						task.defer(function()
+							GitStatusResult = fs.execute(`git -C "{ fs.resolvepath("@project") }" status`)
+							OpenGitCommitMenu = true
+						end)
+					end
+				end
+
+				imgui.endmenu()
+			end
+
 			if imgui.menuitem("Export") then
 				task.defer(exportProject)
 			end
@@ -1382,8 +1406,18 @@ local function renderMainMenuBar(dt: number)
 		if imgui.menuitem("Editor Settings") then
 			openSettingsWindow = true
 		end
-		
+
 		imgui.endmenu()
+	end
+
+	if OpenGitCommitMenu then
+		imgui.openpopup("Commit")
+		OpenGitCommitMenu = false
+	end
+
+	if imgui.beginpopupmodal("Commit", true) then
+		imgui.text(GitStatusResult)
+		imgui.endpopup()
 	end
 
 	if CurrentStage ~= "SelectProject" then

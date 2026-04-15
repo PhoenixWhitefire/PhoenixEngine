@@ -29,7 +29,8 @@ export type Project = {
     DataModel: (GameObject & DataModel)?,
     Workspace: (GameObject & Workspace)?,
     Name: string,
-    IsTempPath: boolean
+    IsTempPath: boolean,
+    HasGitRepository: boolean,
 }
 
 return true
