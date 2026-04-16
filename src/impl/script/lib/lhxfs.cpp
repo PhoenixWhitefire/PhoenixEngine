@@ -542,6 +542,13 @@ static int disconnectWatcherLFunc(lua_State* L)
 	return 0;
 }
 
+struct FileWatcherEvent
+{
+	lua_State* Thread = nullptr;
+	std::string File;
+	int Type = 0;
+};
+
 static int fs_watch(lua_State* L)
 {
 	luaL_checktype(L, 2, LUA_TFUNCTION);
@@ -562,12 +569,29 @@ static int fs_watch(lua_State* L)
 		path,
 		[WL, path, data](const std::string& File, filewatch::Event Type)
 		{
-			std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(ScriptEngine::s_ParallelFileWatcherEventsMutex);
-
-			ScriptEngine::s_ParallelFileWatcherEvents.push_back(ScriptEngine::FileWatcherEvent{
+			FileWatcherEvent fwe = {
 				.Thread = WL,
 				.File = File,
 				.Type = (int)Type
+			};
+
+			std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(ScriptEngine::s_ParallelEventsMutex);
+			ScriptEngine::s_ParallelEvents.push_back([fwe]()
+			{
+				lua_pushvalue(fwe.Thread, -1);
+				lua_pushlstring(fwe.Thread, fwe.File.data(), fwe.File.size());
+				lua_pushinteger(fwe.Thread, fwe.Type);
+
+				int status = ScriptEngine::L::ProtectedCall(fwe.Thread, 2, 0, 0);
+
+				if (status != LUA_OK)
+				{
+					assert(status != LUA_YIELD && lua_isstring(fwe.Thread, -1));
+
+					std::string err;
+					ScriptEngine::L::DumpStacktrace(fwe.Thread, &err, 0, lua_tostring(fwe.Thread, -1));
+					Log.Error(err);
+				}
 			});
 		}
 	);

@@ -145,7 +145,7 @@ static int parallelPforkDummy(lua_State* L)
 	return 1;
 }
 
-static void runParallel(lua_State* PL, const std::vector<Reflection::GenericValue>& args, const std::string& script, const std::string& fname)
+static void runParallel(lua_State* PL, const std::vector<Reflection::GenericValue>& args, const std::string& script, const std::string& fname, lua_State* callbackThread, int callbackRef)
 {
 	bool readSuccess = false;
 	std::string fileContents = FileRW::ReadFile(script, &readSuccess);
@@ -180,12 +180,28 @@ static void runParallel(lua_State* PL, const std::vector<Reflection::GenericValu
 			for (const Reflection::GenericValue& gv : args)
 				ScriptEngine::L::PushGenericValue(PL, gv);
 
-			status = lua_pcall(PL, args.size(), 0, 0);
+			status = lua_pcall(PL, args.size(), LUA_MULTRET, 0);
 
 			if (status != LUA_OK)
 			{
 				std::string errstr = std::format("{}: Parallel function '{}' did not finish running (status: {})", chname, fname, status);
 				Log.ErrorF("{}{}", errstr, status == LUA_ERRRUN ? std::format(": {}", lua_tostring(PL, -1)) : "");
+			}
+			else if (callbackThread)
+			{
+				std::unique_lock<std::mutex> parallelEventsLock = std::unique_lock<std::mutex>(ScriptEngine::s_ParallelEventsMutex);
+				ScriptEngine::s_ParallelEvents.push_back([PL, callbackThread, callbackRef, chname]()
+				{
+					for (int i = 2; i <= lua_gettop(PL); i++)
+						ScriptEngine::L::PushGenericValue(callbackThread, ScriptEngine::L::ToGeneric(PL, i));
+
+					int cbStatus = ScriptEngine::L::ProtectedCall(callbackThread, lua_gettop(PL) - 1, 0, 0);
+
+					if (cbStatus == LUA_ERRRUN)
+						Log.ErrorF("{}: Callback errored: {}", chname, lua_tostring(callbackThread, -1));
+
+					lua_unref(callbackThread, callbackRef);
+				});
 			}
 		}
 	}
@@ -194,12 +210,25 @@ static void runParallel(lua_State* PL, const std::vector<Reflection::GenericValu
 		Log.ErrorF("{}: {}", chname, lua_tostring(PL, -1));
 	}
 
-	lua_close(PL);
+	if (!callbackThread)
+		lua_close(PL);
 }
 
 static int task__pfork(lua_State* L)
 {
 	luaL_checktype(L, 1, LUA_TFUNCTION);
+
+	lua_State* callbackThread = nullptr;
+	int callbackRef = LUA_NOREF;
+
+	if (!lua_isnoneornil(L, 2))
+	{
+		luaL_checktype(L, 2, LUA_TFUNCTION);
+		callbackThread = lua_newthread(L);
+		callbackRef = lua_ref(L, -1);
+		lua_xpush(L, callbackThread, 2);
+		lua_pop(L, 1);
+	}
 
 	lua_Debug ar = {};
 	std::string script;
@@ -226,9 +255,9 @@ static int task__pfork(lua_State* L)
 	script = ar.short_src;
 
 	std::vector<Reflection::GenericValue> args;
-	args.reserve(lua_gettop(L) - 1);
+	args.reserve(lua_gettop(L) - 2);
 
-	for (int i = 2; i <= lua_gettop(L); i++)
+	for (int i = 3; i <= lua_gettop(L); i++)
 		args.push_back(ScriptEngine::L::ToGeneric(L, i));
 
 	lua_State* PL = ScriptEngine::L::Create(script + "!_pfork_VM");
@@ -247,7 +276,7 @@ static int task__pfork(lua_State* L)
 	// fails to compile :)
 	//ThreadManager::Get()->Dispatch([args, chname, script, fname]()
 
-	std::jthread(runParallel, PL, args, script, fname).detach();
+	std::jthread(runParallel, PL, args, script, fname, callbackThread, callbackRef).detach();
 
 	lua_pushboolean(L, false);
 	return 1;

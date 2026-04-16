@@ -10,7 +10,10 @@ static std::string getScriptTraceExtraTags(lua_State* L)
 	lua_Debug ar = {};
 	lua_getinfo(L, 1, "sl", &ar);
 
-	return std::format("TextDocument:{},DocumentLine:{}", ar.short_src , ar.currentline);
+	if (ar.short_src)
+		return std::format("TextDocument:{},DocumentLine:{}", ar.short_src, ar.currentline);
+	else
+		return "";
 }
 
 static void appendToLog(lua_State* L)

@@ -161,38 +161,21 @@ static const ResumptionModeHandler s_ResumptionModeHandlers[] = {
 	shouldResume_Polled
 };
 
-static void processFileWatcherEvents()
+static void processParallelEvents()
 {
 	ZoneScoped;
-	using namespace ScriptEngine;
+	std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(ScriptEngine::s_ParallelEventsMutex);
 
-	std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(s_ParallelFileWatcherEventsMutex);
+	for (const auto& pe : ScriptEngine::s_ParallelEvents)
+		pe();
 
-	for (const FileWatcherEvent& fwe : s_ParallelFileWatcherEvents)
-	{
-		lua_pushvalue(fwe.Thread, -1);
-		lua_pushlstring(fwe.Thread, fwe.File.data(), fwe.File.size());
-		lua_pushinteger(fwe.Thread, fwe.Type);
-
-		int status = ScriptEngine::L::ProtectedCall(fwe.Thread, 2, 0, 0);
-
-		if (status != LUA_OK)
-		{
-			assert(status != LUA_YIELD && lua_isstring(fwe.Thread, -1));
-
-			std::string err;
-			ScriptEngine::L::DumpStacktrace(fwe.Thread, &err, 0, lua_tostring(fwe.Thread, -1));
-			Log.Error(err);
-		}
-	}
-
-	s_ParallelFileWatcherEvents.clear();
+	ScriptEngine::s_ParallelEvents.clear();
 }
 
 void ScriptEngine::StepScheduler()
 {
 	ZoneScopedC(tracy::Color::LightSkyBlue);
-	processFileWatcherEvents();
+	processParallelEvents();
 
 	s_YieldedCoroutinesProcessing = s_YieldedCoroutines;
 	s_YieldedCoroutines.clear();
@@ -1882,6 +1865,6 @@ nlohmann::json ScriptEngine::DumpApiToJson()
 
 	GameObjectManager::Get()->DataModel = PHX_GAMEOBJECT_NULL_ID;
 	tempdm->Destroy();
-	
+
 	return json;
 }

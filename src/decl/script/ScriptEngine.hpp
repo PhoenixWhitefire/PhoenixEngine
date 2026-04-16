@@ -75,15 +75,8 @@ namespace ScriptEngine
 	inline std::vector<YieldedCoroutine> s_YieldedCoroutines;
 	inline std::vector<YieldedCoroutine> s_YieldedCoroutinesProcessing;
 
-	struct FileWatcherEvent
-	{
-		lua_State* Thread = nullptr;
-		std::string File;
-		int Type = 0;
-	};
-
-	inline std::mutex s_ParallelFileWatcherEventsMutex;
-	inline std::vector<FileWatcherEvent> s_ParallelFileWatcherEvents;
+	inline std::mutex s_ParallelEventsMutex;
+	inline std::vector<std::function<void()>> s_ParallelEvents;
 
 	struct LuauVM
 	{
