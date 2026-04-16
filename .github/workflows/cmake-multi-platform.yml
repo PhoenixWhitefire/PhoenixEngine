@@ -117,7 +117,7 @@ jobs:
     - name: Move executable (Windows)
       if: runner.os == 'Windows'
       shell: cmd
-      run: move "x64/${{ matrix.build_type }}/PhoenixEngine.exe" "./PhoenixEngine.exe"
+      run: Get-ChildItem -Recurse -Filter PhoenixEngine.exe
 
     - name: Move executable (Linux)
       if: runner.os == 'Linux'
