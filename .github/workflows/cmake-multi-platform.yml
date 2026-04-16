@@ -116,7 +116,7 @@ jobs:
 
     - name: Move executable (Windows)
       if: runner.os == 'Windows'
-      shell: cmd
+      shell: pwsh
       run: Get-ChildItem -Recurse -Filter PhoenixEngine.exe
 
     - name: Move executable (Linux)

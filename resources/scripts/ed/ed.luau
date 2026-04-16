@@ -2895,7 +2895,7 @@ function Stages.Update(dt)
 			end
 		end
 
-		imgui.endw()
+		imgui.endpopup()
 
 	elseif game.Time - switchedToUpdater > 0.1 and (not updateInProgress or updaterErr) then
 		changeStageTo("SelectProject")
