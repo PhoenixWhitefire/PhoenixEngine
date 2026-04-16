@@ -1234,10 +1234,12 @@ end
 local wasSettingsOpen = false
 local OpenGitCommitMenu = false
 local GitStatusResult = ""
+local GitDiffResult = ""
 local GitCommitMessage = ""
 
 local function getGitStatus()
 	GitStatusResult = fs.execute(`git -C "{ fs.resolvepath("@project") }" status`)
+	GitDiffResult = fs.execute(`git -C "{ fs.resolvepath("@project") }" diff`)
 end
 
 local function renderMainMenuBar(dt: number)
@@ -1428,16 +1430,24 @@ local function renderMainMenuBar(dt: number)
 		if GitStatusResult:find("nothing to commit") then
 			imgui.text("No changes to commit.")
 		else
+			local diffOpen = imgui.treenode("Diff", "dlf | fw")
+
+			if diffOpen then
+				imgui.text(GitDiffResult)
+				imgui.treepop()
+			end
+
 			local tsy = imgui.textsize("").y
 
 			local cavail = imgui.contentregionavail()
 			local cxavail = cavail.x
 			local cursor = imgui.cursorposition()
 
-			imgui.setcursorposition(vector.create(cursor.x, cavail.y + tsy * 5))
+			imgui.setcursorposition(vector.create(cursor.x, cavail.y + tsy * 4 + 20))
 			imgui.dummy()
 
 			imgui.text("All files will be committed automatically.\nCommit message:")
+			imgui.setnextitemwidth(cxavail)
 			GitCommitMessage = imgui.inputstring("##CommitMessage", GitCommitMessage)
 
 			if #GitCommitMessage == 0 then
@@ -1446,7 +1456,7 @@ local function renderMainMenuBar(dt: number)
 
 			cursor = imgui.cursorposition()
 			local buttonText = "Commit"
-			imgui.setcursorposition(getCenteredX(cursor.x, cxavail, imgui.textsize(buttonText).x), imgui.windowsize().y - tsy * 2 - 4)
+			imgui.setcursorposition(getCenteredX(cursor.x, cxavail, imgui.textsize(buttonText).x), cavail.y + tsy * 10 + 20)
 
 			if imgui.button(buttonText) then
 				task.defer(function()
@@ -2898,7 +2908,7 @@ function Stages.Update(dt)
 		imgui.endpopup()
 
 	elseif game.Time - switchedToUpdater > 0.1 and (not updateInProgress or updaterErr) then
-		changeStageTo("SelectProject")
+		changeStageTo("SelectProject" :: "SelectProject")
 
 	else
 		if game.Time - switchedToUpdater > 0.1 then

@@ -23,7 +23,7 @@
 	__VA_ARGS__                         \
 )                                       \
 
-static std::string errorString = "No error";
+thread_local std::string errorString = "No error";
 
 static auto loadModelAsMeshes(
 	const char* ModelFilePath,
@@ -508,11 +508,12 @@ static std::vector<ObjectRef> loadSceneVersion2(const std::string& Contents, flo
 
 	const nlohmann::json& gameObjectsNode = jsonData["GameObjects"];
 
+	std::vector<std::pair<int64_t,  ObjectRef>> objects;
 	std::unordered_map<int64_t, ObjectRef> objectsMap;
 	std::unordered_map<int64_t, int64_t> realIdToSceneId;
 	std::unordered_map<uint32_t, std::unordered_map<std::string, uint32_t>> objectProps;
 
-	objectsMap.reserve(gameObjectsNode.size());
+	objects.reserve(gameObjectsNode.size());
 	realIdToSceneId.reserve(gameObjectsNode.size());
 
 	for (uint32_t itemIndex = 0; itemIndex < gameObjectsNode.size(); itemIndex++)
@@ -539,6 +540,7 @@ static std::vector<ObjectRef> loadSceneVersion2(const std::string& Contents, flo
 			}
 
 			objectsMap.insert(std::pair(itemObjectId, newObject));
+			objects.push_back(std::pair(itemObjectId, newObject));
 			realIdToSceneId.insert(std::pair(newObject->ObjectId, itemObjectId));
 		}
 
@@ -687,12 +689,11 @@ static std::vector<ObjectRef> loadSceneVersion2(const std::string& Contents, flo
 		}
 	}
 
-	std::vector<ObjectRef> objects;
-	objects.reserve(objectsMap.size());
-
 	ZoneNamedN(fixupzone, "FixupObjectReferentProperties", true);
 
-	for (auto& it : objectsMap)
+	std::vector<ObjectRef> rootObjects;
+
+	for (auto& it : objects)
 	{
 		ObjectRef object = it.second;
 
@@ -701,7 +702,7 @@ static std::vector<ObjectRef> loadSceneVersion2(const std::string& Contents, flo
 		// *is not part of the scene!*
 		// 04/09/2024
 		if (objectProps[object->ObjectId].find("Parent") == objectProps[object->ObjectId].end())
-			objects.push_back(object);
+			rootObjects.push_back(object);
 
 		for (auto& objectProp : objectProps[object->ObjectId])
 		{
@@ -740,7 +741,7 @@ static std::vector<ObjectRef> loadSceneVersion2(const std::string& Contents, flo
 		}
 	}
 
-	return objects;
+	return rootObjects;
 }
 
 std::vector<ObjectRef> SceneFormat::Deserialize(
@@ -789,12 +790,31 @@ std::vector<ObjectRef> SceneFormat::Deserialize(
 	return objects;
 }
 
-static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = false)
+struct Serializer
+{
+	void SerializeObject(GameObject* Object, bool IsRootNode = false);
+	uint32_t IdCounter = 0;
+	std::unordered_map<uint32_t, uint32_t> RealIdToSceneId;
+	std::unordered_map<uint32_t, std::vector<std::pair<uint32_t, std::string_view>>> PendingIdReplacement;
+	nlohmann::json Items;
+};
+
+void Serializer::SerializeObject(GameObject* Object, bool IsRootNode)
 {
 	ZoneScoped;
 
 	nlohmann::json item;
 	item["$_components"] = nlohmann::json::array();
+	item["$_objectId"] = IdCounter;
+	RealIdToSceneId[Object->ObjectId] = IdCounter;
+
+	if (const auto& it = PendingIdReplacement.find(Object->ObjectId); it != PendingIdReplacement.end())
+	{
+		for (const std::pair<uint32_t, std::string_view>& replacement : it->second)
+			Items[replacement.first][replacement.second] = IdCounter;
+	}
+
+	IdCounter++;
 
 	for (const ReflectorRef& handle : Object->Components)
 		item["$_components"].push_back(s_EntityComponentNames[(size_t)handle.Type]);
@@ -807,7 +827,7 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 		if (!propInfo->Serializes)
 			continue;
 
-		if (!propInfo->Set && propName != "ObjectId")
+		if (!propInfo->Set)
 			continue;
 
 		// !! IMPORTANT !!
@@ -816,12 +836,6 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 		// 04/09/2024
 		if (IsRootNode && propName == "Parent")
 			continue;
-
-		std::string_view serializedAs = propName;
-
-		if (serializedAs == "ObjectId")
-			// it's read-only but still needs to be stored to preserve hierarchy information
-			serializedAs = "$_objectId";
 
 		Reflection::GenericValue value = Object->GetPropertyValue(propName);
 
@@ -833,54 +847,54 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 		
 		case Reflection::ValueType::Boolean:
 		{
-			item[serializedAs] = value.AsBoolean();
+			item[propName] = value.AsBoolean();
 			break;
 		}
 		case Reflection::ValueType::Integer:
 		{
-			item[serializedAs] = value.AsInteger();
+			item[propName] = value.AsInteger();
 			break;
 		}
 		case Reflection::ValueType::Double:
 		{
-			item[serializedAs] = value.AsDouble();
+			item[propName] = value.AsDouble();
 			break;
 		}
 		case Reflection::ValueType::String:
 		{
-			item[serializedAs] = value.AsStringView();
+			item[propName] = value.AsStringView();
 			break;
 		}
 		
 		case Reflection::ValueType::Color:
 		{
-			Color col(value);
-			item[serializedAs] = { col.R, col.G, col.B };
+			Color col = Color(value);
+			item[propName] = { col.R, col.G, col.B };
 			break;
 		}
 		case Reflection::ValueType::Vector2:
 		{
 			const glm::vec2 vec = value.AsVector2();
-			item[serializedAs] = { vec.x, vec.y };
+			item[propName] = { vec.x, vec.y };
 			break;
 		}
 		case Reflection::ValueType::Vector3:
 		{
 			glm::vec3& vec = value.AsVector3();
-			item[serializedAs] = { vec.x, vec.y, vec.z };
+			item[propName] = { vec.x, vec.y, vec.z };
 			break;
 		}
 		case Reflection::ValueType::Matrix:
 		{
 			glm::mat4 mat = value.AsMatrix();
-			item[serializedAs] = nlohmann::json::array();
+			item[propName] = nlohmann::json::array();
 
 			for (int col = 0; col < 4; col++)
 			{
-				item[serializedAs][col] = nlohmann::json::array();
+				item[propName][col] = nlohmann::json::array();
 
 				for (int row = 0; row < 4; row++)
-					item[serializedAs][col][row] = mat[col][row];
+					item[propName][col][row] = mat[col][row];
 			}
 				
 			break;
@@ -891,16 +905,26 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 			GameObject* target = GameObjectManager::Get()->FromGenericValue(value);
 
 			if (target && !target->IsDestructionPending)
-				item[serializedAs] = target->ObjectId;
+			{
+				const auto& it = RealIdToSceneId.find(target->ObjectId);
+				if (it != RealIdToSceneId.end())
+					item[propName] = it->second;
+				else
+				{
+					item[propName] = PHX_GAMEOBJECT_NULL_ID;
+					std::vector<std::pair<uint32_t, std::string_view>>& replacements = PendingIdReplacement[target->ObjectId];
+					replacements.push_back(std::pair(Items.size(), propName));
+				}
+			}
 			else
-				item[serializedAs] = PHX_GAMEOBJECT_NULL_ID;
+				item[propName] = PHX_GAMEOBJECT_NULL_ID;
 			
 			break;
 		}
 
 		case Reflection::ValueType::Null:
 		{
-			item[serializedAs] = nlohmann::json(); // save as Null
+			item[propName] = nlohmann::json(); // save as Null
 			break;
 		}
 
@@ -925,7 +949,7 @@ static nlohmann::json serializeObject(GameObject* Object, bool IsRootNode = fals
 			item["$_tags"].push_back(GameObjectManager::Get()->Collections[tagId].Name);
 	}
 
-	return item;
+	Items.push_back(item);
 }
 
 std::string SceneFormat::Serialize(std::vector<GameObject*> Objects, const std::string& SceneName)
@@ -935,18 +959,18 @@ std::string SceneFormat::Serialize(std::vector<GameObject*> Objects, const std::
 	nlohmann::json json;
 	json["SceneName"] = SceneName;
 
-	nlohmann::json objectsArray = nlohmann::json::array();
+	Serializer serializer;
 
 	for (GameObject* rootObject : Objects)
 	{
-		objectsArray.push_back(serializeObject(rootObject, /* IsRootNode = */ true));
+		serializer.SerializeObject(rootObject, /* IsRootNode = */ true);
 		
 		for (GameObject* desc : rootObject->GetDescendants())
 			if (desc->Serializes)
-				objectsArray.push_back(serializeObject(desc));
+				serializer.SerializeObject(desc);
 	}
 
-	json["GameObjects"] = objectsArray;
+	json["GameObjects"] = serializer.Items;
 
 	std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
 	std::chrono::year_month_day ymd = std::chrono::floor<std::chrono::days>(now);
