@@ -222,7 +222,7 @@ export type AssetManager = {
   QueueLoadTexture: (self: AssetManager, Path: string, BilinearFiltering: boolean, ImGui: boolean) -> (),
   SaveMesh: (self: AssetManager, Id: string, Path: string) -> (),
   SaveScene: (self: AssetManager, RootNodes: { GameObject }, Path: string) -> (boolean, string?),
-  SetMeshData: (self: AssetManager, Id: string, MeshData: MeshAssetData) -> (),
+  SetMeshData: (self: AssetManager, Id: string, MeshData: MeshAssetData | buffer) -> (),
   UnloadMaterial: (self: AssetManager, Material: string) -> (),
   UnloadMesh: (self: AssetManager, Mesh: string) -> (),
   UnloadTexture: (self: AssetManager, Texture: string) -> (),
@@ -741,6 +741,7 @@ declare extern type EnumValueType_INTERNAL extends Enum with
   Integer: EnumValueType
   Double: EnumValueType
   String: EnumValueType
+  Buffer: EnumValueType
   Color: EnumValueType
   Vector2: EnumValueType
   Vector3: EnumValueType

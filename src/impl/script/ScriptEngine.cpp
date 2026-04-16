@@ -25,6 +25,7 @@ static const lua_Type s_ValueTypeToLuauType[] = {
 	LUA_TNUMBER, // Integer
 	LUA_TNUMBER, // Double
 	LUA_TSTRING,
+	LUA_TBUFFER,
 
 	LUA_TUSERDATA, // Color
 	LUA_TVECTOR,   // Vector2
@@ -568,9 +569,21 @@ static Reflection::GenericValue toGenericValue(lua_State* L, int StackIndex, int
 	}
 	case LUA_TSTRING:
 	{
-		Reflection::GenericValue str = luaL_tolstring(L, StackIndex, nullptr);
+		size_t len = 0;
+		const char* str = luaL_tolstring(L, StackIndex, &len);
+		Reflection::GenericValue val = std::string_view(str, len);
+
 		lua_pop(L, 1);
-		return str;
+		return val;
+	}
+	case LUA_TBUFFER:
+	{
+		size_t len = 0;
+		void* p = lua_tobuffer(L, StackIndex, &len);
+		Reflection::GenericValue val = std::string_view((char*)p, len);
+		val.Type = Reflection::ValueType::Buffer;
+
+		return val;
 	}
 	case LUA_TVECTOR:
 	{
@@ -876,6 +889,13 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 	case Reflection::ValueType::String:
 	{
 		lua_pushlstring(L, gv.AsStringView().data(), gv.AsStringView().size());
+		break;
+	}
+	case Reflection::ValueType::Buffer:
+	{
+		void* p = lua_newbuffer(L, gv.Size);
+		memcpy(p, gv.Val.Str, gv.Size);
+
 		break;
 	}
 	case Reflection::ValueType::Vector2:

@@ -144,7 +144,7 @@
           },
           "SetMeshData": {
             "Description": "Associates the provided mesh data with the provided path",
-            "Type": "(self, Id: string, MeshData: MeshAssetData) : ()"
+            "Type": "(self, Id: string, MeshData: MeshAssetData | buffer) : ()"
           },
           "UnloadMaterial": {
             "Description": "Removes the given Material path from the Engine's cache",
@@ -1269,6 +1269,7 @@
               "Any": "Equivalent to `unknown`. Can be any type",
               "Array": "Equivalent to `{ unknown }`. An Array of anything",
               "Boolean": "Equivalent to `boolean`. `true` or `false`",
+              "Buffer": "Luau `buffer`s",
               "Color": "The `Color` datatype",
               "ColorGradient": "Color gradient (not implemented)",
               "Double": "The `number` type",

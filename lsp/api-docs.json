@@ -473,6 +473,9 @@
   "@phoenix/enum/ValueType.Boolean": {
     "documentation": "Equivalent to `boolean`. `true` or `false`"
   },
+  "@phoenix/enum/ValueType.Buffer": {
+    "documentation": "Luau `buffer`s"
+  },
   "@phoenix/enum/ValueType.Color": {
     "documentation": "The `Color` datatype"
   },
@@ -736,6 +739,7 @@
       "Any": "@phoenix/enum/ValueType.Any",
       "Array": "@phoenix/enum/ValueType.Array",
       "Boolean": "@phoenix/enum/ValueType.Boolean",
+      "Buffer": "@phoenix/enum/ValueType.Buffer",
       "Color": "@phoenix/enum/ValueType.Color",
       "ColorGradient": "@phoenix/enum/ValueType.ColorGradient",
       "Double": "@phoenix/enum/ValueType.Double",

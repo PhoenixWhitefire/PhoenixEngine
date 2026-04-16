@@ -187,7 +187,7 @@ void Reflection::GenericValue::CopyInto(GenericValue& Target, const GenericValue
 	{
 	case ValueType::Null:
 		return;
-	case ValueType::String:
+	case ValueType::String: case ValueType::Buffer:
 	{
 		std::string_view str = Source.AsStringView();
 		fromString(Target, str.data());
@@ -534,7 +534,7 @@ static void deallocGv(Reflection::GenericValue* gv)
 		Memory::Free(gv->Val.Array);
 		break;
 	}
-	case ValueType::String:
+	case ValueType::String: case ValueType::Buffer:
 	{
 		if (gv->Size + 1 > REFLECTION_GV_SSO)
 			Memory::Free(gv->Val.Str);
@@ -571,7 +571,7 @@ bool Reflection::GenericValue::operator==(const Reflection::GenericValue& Other)
 	case ValueType::Null:
 		return true;
 
-	case ValueType::String:
+	case ValueType::String: case ValueType::Buffer:
 	{
 		if (this->Size + 1 > REFLECTION_GV_SSO)
 		{
@@ -652,14 +652,14 @@ Reflection::GenericValue& Reflection::GenericValue::operator=(const Reflection::
 	return *this;
 }
 
-static std::string_view BaseNames[] =
-{
+static std::string_view BaseNames[] = {
 	"<Erroneous>",
 
 	"Boolean",
 	"Integer",
 	"Double",
 	"String",
+	"Buffer",
 
 	"Color",
 	"Vector2",

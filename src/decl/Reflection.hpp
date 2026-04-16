@@ -64,6 +64,7 @@ namespace Reflection
 		Integer,
 		Double,
 		String,
+		Buffer,
 
 		Color,
 		Vector2,

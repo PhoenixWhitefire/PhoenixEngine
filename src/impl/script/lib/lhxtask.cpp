@@ -1,4 +1,5 @@
 #include <luau/VM/src/lstate.h>
+#include <tracy/Tracy.hpp>
 
 #include "script/luhx.hpp"
 #include "script/ScriptEngine.hpp"
@@ -147,6 +148,8 @@ static int parallelPforkDummy(lua_State* L)
 
 static void runParallel(lua_State* PL, const std::vector<Reflection::GenericValue>& args, const std::string& script, const std::string& fname, lua_State* callbackThread, int callbackRef)
 {
+	ZoneScoped;
+
 	bool readSuccess = false;
 	std::string fileContents = FileRW::ReadFile(script, &readSuccess);
 
@@ -161,6 +164,8 @@ static void runParallel(lua_State* PL, const std::vector<Reflection::GenericValu
 
 	if (ScriptEngine::CompileAndLoad(PL, fileContents, chname) == 0)
 	{
+		ZoneScopedN("Run");
+
 		lua_setreadonly(PL, LUA_GLOBALSINDEX, false);
 
 		int status = lua_resume(PL, PL, 0);
@@ -192,6 +197,8 @@ static void runParallel(lua_State* PL, const std::vector<Reflection::GenericValu
 				std::unique_lock<std::mutex> parallelEventsLock = std::unique_lock<std::mutex>(ScriptEngine::s_ParallelEventsMutex);
 				ScriptEngine::s_ParallelEvents.push_back([PL, callbackThread, callbackRef, chname]()
 				{
+					ZoneScopedN("RunPostParallelCallback");
+
 					for (int i = 2; i <= lua_gettop(PL); i++)
 						ScriptEngine::L::PushGenericValue(callbackThread, ScriptEngine::L::ToGeneric(PL, i));
 
