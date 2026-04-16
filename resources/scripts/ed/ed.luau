@@ -56,6 +56,7 @@ local EditorPreferences = {
 	DevToolsOpen = { "Explorer", "Properties", "Scripts" },
 	ToolsOpen = { BottomBar = true, Output = true },
 	AutoReimportModels = true,
+	GitIntegration = false,
 }
 
 EditorPreferences = EditorPreferences :: { [keyof<typeof(EditorPreferences)>]: index<typeof(EditorPreferences), keyof<typeof(EditorPreferences)>> } & typeof(EditorPreferences)
@@ -1233,6 +1234,11 @@ end
 local wasSettingsOpen = false
 local OpenGitCommitMenu = false
 local GitStatusResult = ""
+local GitCommitMessage = ""
+
+local function getGitStatus()
+	GitStatusResult = fs.execute(`git -C "{ fs.resolvepath("@project") }" status`)
+end
 
 local function renderMainMenuBar(dt: number)
 	local pushedCol = CurrentStage == "ProjectPlaying"
@@ -1360,7 +1366,7 @@ local function renderMainMenuBar(dt: number)
 				end)
 			end
 
-			if imgui.beginmenu("Git") then
+			if EditorPreferences.GitIntegration and imgui.beginmenu("Git") then
 				if not Project.HasGitRepository then
 					if imgui.menuitem("Initialize repository") then
 						task.defer(function()
@@ -1371,7 +1377,7 @@ local function renderMainMenuBar(dt: number)
 				else
 					if imgui.menuitem("Commit") then
 						task.defer(function()
-							GitStatusResult = fs.execute(`git -C "{ fs.resolvepath("@project") }" status`)
+							getGitStatus()
 							OpenGitCommitMenu = true
 						end)
 					end
@@ -1417,6 +1423,40 @@ local function renderMainMenuBar(dt: number)
 
 	if imgui.beginpopupmodal("Commit", true) then
 		imgui.text(GitStatusResult)
+		imgui.separator()
+
+		if GitStatusResult:find("nothing to commit") then
+			imgui.text("No changes to commit.")
+		else
+			local tsy = imgui.textsize("").y
+
+			local cavail = imgui.contentregionavail()
+			local cxavail = cavail.x
+			local cursor = imgui.cursorposition()
+
+			imgui.setcursorposition(vector.create(cursor.x, cavail.y + tsy * 5))
+			imgui.dummy()
+
+			imgui.text("All files will be committed automatically.\nCommit message:")
+			GitCommitMessage = imgui.inputstring("##CommitMessage", GitCommitMessage)
+
+			if #GitCommitMessage == 0 then
+				imgui.text("Please enter a commit message.")
+			end
+
+			cursor = imgui.cursorposition()
+			local buttonText = "Commit"
+			imgui.setcursorposition(getCenteredX(cursor.x, cxavail, imgui.textsize(buttonText).x), imgui.windowsize().y - tsy * 2 - 4)
+
+			if imgui.button(buttonText) then
+				task.defer(function()
+					GitCommitMessage = string.gsub(GitCommitMessage, '"', '\\"')
+					print(fs.execute(`git -C { fs.resolvepath("@project") } commit -m "{ GitCommitMessage }" -a`))
+					getGitStatus()
+				end)
+			end
+		end
+
 		imgui.endpopup()
 	end
 
@@ -1579,6 +1619,7 @@ local function renderMainMenuBar(dt: number)
 		EditorPreferences.KeepGizmoInView = imgui.checkbox("Turn the camera to keep the gizmo handles in view while moving an object", EditorPreferences.KeepGizmoInView)
 		EditorPreferences.InvertTabButtonLitColors = imgui.checkbox("Invert tab button active colors", EditorPreferences.InvertTabButtonLitColors)
 		--EditorPreferences.SyncCoreAssets = SyncCoreAssetsOptions[imgui.combo("Sync core assets", SyncCoreAssetsOptions :: { string }, assert(table.find(SyncCoreAssetsOptions, EditorPreferences.SyncCoreAssets)))]
+		EditorPreferences.GitIntegration = imgui.checkbox("Git integration", EditorPreferences.GitIntegration)
 
 		imgui.urllink("https://youtu.be/YCjNT9qGjh4?t=7193")
 
