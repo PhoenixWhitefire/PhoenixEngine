@@ -3196,7 +3196,8 @@ static const std::string_view AssetProperties[] = {
 	"MeshAsset",  // Mesh
 	"Material",   // Mesh
 	"Image",      // UIImage, ParticleEmitter
-	"ImportPath", // Model
+	"ImportPath", // Model,
+	"SoundFile",  // Sound
 };
 static const Reflection::PropertyDescriptor* AssetProperty = nullptr;
 static std::string AssetPropertyValue;
@@ -3258,6 +3259,15 @@ static bool openFileSelectorForAssetProp(const std::string_view& PropertyName)
 		filters[9] = "*.hdr";
 		nFilterPatterns = 10;
 		filterDescription = "Images";
+	}
+	else if (PropertyName == "SoundFile")
+	{
+		defaultPath = "sounds/";
+		filters[0] = "*.wav";
+		filters[1] = "*.mp3";
+		filters[2] = "*.ogg";
+		nFilterPatterns = 3;
+		filterDescription = "Sounds";
 	}
 
 	const char* selectionCStr = tinyfd_openFileDialog(
@@ -3707,7 +3717,7 @@ static void renderProperties()
 				}
 
 				if (assetPropHasSelector)
-					ImGui::SetNextItemWidth(halfWidth - ImGui::CalcTextSize("...").x - ImGui::GetStyle().FramePadding.x * 2.f);
+					ImGui::SetNextItemWidth(halfWidth - ImGui::CalcTextSize("...").x - ImGui::GetStyle().FramePadding.x * 4.f);
 
 				std::string_view str = (isAssetProp && AssetProperty == propDesc) ? AssetPropertyValue : curVal.AsStringView();
 
