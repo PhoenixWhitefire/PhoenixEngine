@@ -2795,7 +2795,7 @@ static void refreshFilesystemNode(FilesystemNode& Node)
 			const std::string& childNameStr = childName.string();
 			bool isSupportedFileType = false;
 
-			for (const char* const extension : { ".luau", ".json", ".frag", ".geom", ".vert", ".conf", ".mtl", ".shp" })
+			for (const char* const extension : { ".luau", ".json", ".frag", ".geom", ".vert", ".conf", ".editor", ".mtl", ".shp" })
 			{
 				if (childNameStr.ends_with(extension))
 				{
