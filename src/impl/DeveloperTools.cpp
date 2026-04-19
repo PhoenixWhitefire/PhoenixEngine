@@ -2767,6 +2767,7 @@ struct FilesystemNode // Either a file or a directory
 	std::filesystem::path Path;
 	std::string Name;
 	bool IsDirectory = false;
+	bool IsSymlink = false;
 };
 
 static double FilesViewLastRefreshed = 0.0;
@@ -2807,7 +2808,12 @@ static void refreshFilesystemNode(FilesystemNode& Node)
 			if (!isSupportedFileType)
 				continue;
 
-			Node.DirectoryContents[childName.string()] = { .Path = FileRW::ResolvePathNormalized(childPath.string()), .Name = childName.string(), .IsDirectory = false };
+			Node.DirectoryContents[childName.string()] = {
+				.Path = FileRW::ResolvePathNormalized(childPath.string()),
+				.Name = childName.string(),
+				.IsDirectory = false,
+				.IsSymlink = std::filesystem::is_symlink(childPath),
+			};
 		}
 		else if (std::filesystem::is_directory(it.path()))
 		{
@@ -2815,6 +2821,7 @@ static void refreshFilesystemNode(FilesystemNode& Node)
 				.Path = childPath,
 				.Name = childName.string(),
 				.IsDirectory = true,
+				.IsSymlink = std::filesystem::is_symlink(childPath),
 			};
 
 			refreshFilesystemNode(newNode);
@@ -2919,6 +2926,9 @@ static void recursiveRenderFilesystemNode(FilesystemNode& Node)
 	bool openScript = ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered();
 	bool hovered = ImGui::IsItemHovered();
 
+	if (Node.IsSymlink)
+		ImGui::SetItemTooltip("This node is a symlink.\nYou cannot view or edit it unless you un-link it.");
+
 	if (ImGui::BeginDragDropSource())
 	{
 		const std::string& path = Node.Path.string();
@@ -2993,15 +3003,65 @@ static void recursiveRenderFilesystemNode(FilesystemNode& Node)
 	ImGui::SetCursorPosX(ImGui::GetCursorPosX() - ImGui::CalcTextSize((" " + displayedNodeName).c_str()).x - style.IndentSpacing - 4.f);
 	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 2.f); // not the faintest idea
 
-	ImGui::Image(
+	float tintScale = Node.IsSymlink ? 0.5f : 1.f;
+
+	ImGui::ImageWithBg(
 		texManager->GetTextureResource(Node.IsDirectory ? (open ? FolderOpenIconResource : FolderClosedIconResource) : ScriptIconResource).GpuId,
-		ImVec2(18.f, 16.f)
+		ImVec2(18.f, 16.f),
+		ImVec2(0.f, 0.f),
+		ImVec2(1.f, 1.f),
+		ImVec4(0.f, 0.f, 0.f, 0.f),
+		ImVec4(tintScale, tintScale, tintScale, 1.f)
 	);
 	openScript = openScript || (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered());
 	hovered = hovered || ImGui::IsItemHovered();
 
 	if (hovered && ImGui::IsMouseDown(ImGuiMouseButton_Right))
-		ImGui::OpenPopup("FileContextMenu");
+	{
+		if (Node.IsSymlink)
+		{
+			// TODO: Doesn't work.
+			// ImGui::OpenPopup("SymlinkContextMenu");
+		}
+		else
+			ImGui::OpenPopup("FileContextMenu");
+	}
+
+	if (ImGui::BeginPopup("SymlinkContextMenu"))
+	{
+		if (ImGui::MenuItem("Unlink and create copy"))
+		{
+			std::error_code ec;
+			std::filesystem::path target = std::filesystem::read_symlink(Node.Path, ec);
+
+			if (ec)
+			{
+				setErrorMessage("Error reading symlink: " + ec.message());
+			}
+			else
+			{
+				std::filesystem::remove(target, ec);
+
+				if (ec)
+				{
+					setErrorMessage("Error removing symlink: " + ec.message());
+				}
+				else
+				{
+					std::filesystem::copy(target, Node.Path.parent_path(), std::filesystem::copy_options::recursive, ec);
+
+					if (ec)
+					{
+						setErrorMessage("Error copying symlink target: " + ec.message());
+					}
+				}
+			}
+
+			FilesViewLastRefreshed = 0.f;
+		}
+
+		ImGui::EndPopup();
+	}
 
 	if (ImGui::BeginPopup("FileContextMenu"))
 	{
@@ -3053,7 +3113,7 @@ static void recursiveRenderFilesystemNode(FilesystemNode& Node)
 	if (Node.Path == ContextMenuTarget && !ImGui::IsPopupOpen("FileContextMenu"))
 		ContextMenuTarget.clear();
 
-	if (!Node.IsDirectory && openScript && ImGui::IsWindowFocused())
+	if (!Node.IsDirectory && !Node.IsSymlink && openScript && ImGui::IsWindowFocused())
 		invokeTextEditor(Node.Path.string());
 
 	ImGui::SetCursorPos(afterNodePos);
