@@ -462,7 +462,7 @@ local function handleCoreAssetsSymlinkMigration(config)
 		end
 	end
 
-	if needsMigration then
+	if needsMigration and not Engine.IsHeadless then
 		imgui.openpopup("Migrate core assets to symlink")
 		local choiceIndex = 1
 
