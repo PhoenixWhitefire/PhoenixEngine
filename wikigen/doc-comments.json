@@ -1362,6 +1362,11 @@
             ],
             "Out": "boolean"
           },
+          "issymlink": {
+            "Description": "Returns whether the node at the specified path is a symbolic link",
+            "In": "Path: string",
+            "Out": "boolean"
+          },
           "lastwritten": {
             "Description": "Returns the timestamp for when the file was last modified, in seconds since epoch",
             "In": "Path: string",
@@ -1501,6 +1506,12 @@
             "In": [
               "Alias: string"
             ]
+          },
+          "symlink": {
+            "Description": [
+              "Creates a symlink at `Path` referring to `Target`"
+            ],
+            "In": "Path: string, Target: string"
           },
           "watch": {
             "Description": [

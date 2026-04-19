@@ -38,7 +38,6 @@ local Project: Types.Project = {
 	HasGitRepository = false,
 }
 local restoreState = nil
-local SyncCoreAssetsOptions = { "AlwaysAsk" :: "AlwaysAsk", "AutomaticallyUpdate" :: "AutomaticallyUpdate", "DoNotUpdate" :: "DoNotUpdate" }
 
 local RecentProjects: { string } = {}
 local EditorPreferences = {
@@ -52,7 +51,6 @@ local EditorPreferences = {
 	AutosaveInterval = 5,
 	KeepGizmoInView = false,
 	InvertTabButtonLitColors = false,
-	SyncCoreAssets = "AlwaysAsk" :: index<typeof(SyncCoreAssetsOptions), number>,
 	DevToolsOpen = { "Explorer", "Properties", "Scripts" },
 	ToolsOpen = { BottomBar = true, Output = true },
 	AutoReimportModels = true,
@@ -404,8 +402,101 @@ local function openCodeEditor()
 	end
 end
 
-local function syncCoreAssets()
+local CoreAssets = {
+	"shaders/ui.shp",
+	"shaders/ui.vert",
+	"shaders/ui.frag",
+	"shaders/worldUber.shp",
+	"shaders/worldUber.vert",
+	"shaders/worldUber.frag",
+	"shaders/worldUber.geom",
+	"shaders/worldUberSkinned.shp",
+	"shaders/worldUberSkinned.vert",
+}
 
+local function areAllCoreAssetsUnlinked()
+	for _, a in CoreAssets do
+		if fs.issymlink(a) then
+			return false
+		end
+	end
+
+	return true
+end
+
+local function linkCoreAssets()
+	for _, a in CoreAssets do
+		if fs.isfile(a) and not fs.issymlink(a) then
+			fs.remove(a)
+			fs.symlink(a, `{ fs.cwd() }/resources/{ a }`)
+		end
+	end
+end
+
+local function handleCoreAssetsSymlinkMigration(config)
+	local editorconf = json.parse(assert(fs.read("@project/phoenix.conf")))
+	assert(typeof(editorconf) == "table")
+	editorconf = editorconf :: { [string]: JsonSerializable }
+
+	local SymlinkMigrationChoices = {
+		Migrated = 1,
+		RemindLater = 2,
+		DoNotMigrate = 3
+	}
+
+	if editorconf.CoreAssetsSymlinkMigrationChoice then
+		if editorconf.CoreAssetsSymlinkMigrationChoice == SymlinkMigrationChoices.Migrated or editorconf.CoreAssetsSymlinkMigrationChoice == SymlinkMigrationChoices.DoNotMigrate then
+			return
+		end
+	end
+
+	local needsMigration = false
+
+	if typeof(config.Saved) ~= "table" then
+		needsMigration = true
+	else
+		local lastSavedWithCommit = (config.Saved :: { [string]: JsonSerializable }).EngineCommit
+
+		if typeof(lastSavedWithCommit) ~= "string" or areAllCoreAssetsUnlinked() then
+			needsMigration = true
+		end
+	end
+
+	if needsMigration then
+		imgui.openpopup("Migrate core assets to symlink")
+		local choiceIndex = 1
+
+		local connection; connection = game.OnFrameBegin:Connect(function()
+			if imgui.beginpopupmodal("Migrate core assets to symlink") then
+				imgui.text("It looks like some core engine assets (UI shaders, `worldUber`, etc) are currently stored as plain copies in your Project.")
+				imgui.text("This can cause incompatibilities with future versions of the Editor.")
+				imgui.text("It is recommended that you link these assets to the Editor's internal copy to prevent mismatches.")
+
+				choiceIndex = imgui.combo("Choice", { "Migrate and link", "Ignore until next time", "Do not migrate" }, choiceIndex)
+
+				imgui.setnextitemwidth(imgui.contentregionavail().x)
+				if imgui.button("Continue") then
+					assert(connection)
+					connection:Disconnect()
+
+					editorconf = json.parse(assert(fs.read("@project/phoenix.conf")))
+					assert(typeof(editorconf) == "table");
+					(editorconf :: any).CoreAssetsSymlinkMigrationChoice = choiceIndex
+
+					fs.write("@project/phoenix.conf", json.encode(editorconf))
+
+					if choiceIndex == SymlinkMigrationChoices.Migrated then
+						task.defer(linkCoreAssets)
+					end
+				end
+
+				imgui.endpopup()
+			else
+				assert(connection)
+				connection:Disconnect()
+			end
+		end)
+	end
 end
 
 local function openProject_(ManualPath: string?)
@@ -482,51 +573,7 @@ local function openProject_(ManualPath: string?)
 	assert(typeof(config) == "table", "Configuration file is corrupt")
 
 	config = config :: { [string]: JsonSerializable }
-	local coreAssetsOutOfDate = false;
-
-	--if EditorPreferences.SyncCoreAssets == "AlwaysAsk" or EditorPreferences.SyncCoreAssets == "AutomaticallyUpdate" then
-	if false then
-		if typeof(config.Saved) ~= "table" then
-			coreAssetsOutOfDate = true
-		else
-			local lastSavedWithCommit = (config.Saved :: { [string]: JsonSerializable }).EngineCommit
-
-			if typeof(lastSavedWithCommit) ~= "string" or lastSavedWithCommit ~= Engine.CommitHash then
-				coreAssetsOutOfDate = true
-			end
-		end
-	end
-
-	if coreAssetsOutOfDate then
-		local shouldSyncCoreAssets = false
-
-		if EditorPreferences.SyncCoreAssets == "AlwaysAsk" then
-			imgui.openpopup("Core assets out-of-date")
-			local co = coroutine.running()
-
-			local connection
-			connection = game.OnFrameBegin:Connect(function()
-				if imgui.beginpopupmodal("Core assets out-of-date", true) then
-					imgui.text("Built-in shaders for this project, such as `worldUber` and `postprocessing` may be out-of-date to the Editor.")
-
-					imgui.endpopup()
-				else
-					assert(connection)
-					connection:Disconnect()
-					coroutine.resume(co)
-				end
-			end)
-
-			coroutine.yield()
-
-		elseif EditorPreferences.SyncCoreAssets == "AutomaticallyUpdate" then
-			shouldSyncCoreAssets = true
-		end
-
-		if shouldSyncCoreAssets then
-			syncCoreAssets()
-		end
-	end
+	handleCoreAssetsSymlinkMigration(config)
 
 	local objects, error = AssetManager:LoadScene("@projres/scenes/root.world")
 
@@ -1648,7 +1695,6 @@ local function renderMainMenuBar(dt: number)
 		EditorPreferences.AutosaveInterval = imgui.inputnumber("Autosave interval (in minutes)", EditorPreferences.AutosaveInterval)
 		EditorPreferences.KeepGizmoInView = imgui.checkbox("Turn the camera to keep the gizmo handles in view while moving an object", EditorPreferences.KeepGizmoInView)
 		EditorPreferences.InvertTabButtonLitColors = imgui.checkbox("Invert tab button active colors", EditorPreferences.InvertTabButtonLitColors)
-		--EditorPreferences.SyncCoreAssets = SyncCoreAssetsOptions[imgui.combo("Sync core assets", SyncCoreAssetsOptions :: { string }, assert(table.find(SyncCoreAssetsOptions, EditorPreferences.SyncCoreAssets)))]
 		EditorPreferences.GitIntegration = imgui.checkbox("Git integration", EditorPreferences.GitIntegration)
 
 		imgui.urllink("https://youtu.be/YCjNT9qGjh4?t=7193")

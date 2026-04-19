@@ -645,6 +645,7 @@
         "execute": "function",
         "isdirectory": "function",
         "isfile": "function",
+        "issymlink": "function",
         "lastwritten": "function",
         "listdir": "function",
         "mkdir": "function",
@@ -659,6 +660,7 @@
         "resolvepath": "function",
         "resolvepathabsolute": "function",
         "setunqualifiedroot": "function",
+        "symlink": "function",
         "watch": "function",
         "write": "function"
       },

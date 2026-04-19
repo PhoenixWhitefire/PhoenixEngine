@@ -175,6 +175,14 @@ static int fs_isdirectory(lua_State* L)
 	return 1;
 }
 
+static int fs_issymlink(lua_State* L)
+{
+	setSelfAlias(L);
+
+	lua_pushboolean(L, std::filesystem::is_symlink(FileRW::ResolvePathNormalized(luaL_checkstring(L, 1))));
+	return 1;
+}
+
 static int fs_definealias(lua_State* L)
 {
 	const char* aliasName = luaL_checkstring(L, 1);
@@ -239,6 +247,22 @@ static int fs_mkdir(lua_State* L)
 
 	if (ec)
 		luaL_error(L, "'%s': %s", realPath.c_str(), ec.message().c_str());
+
+	return 0;
+}
+
+static int fs_symlink(lua_State* L)
+{
+	setSelfAlias(L);
+
+	std::string symlinkPath = FileRW::ResolvePathNormalized(luaL_checkstring(L, 1));
+	std::string target = FileRW::ResolvePathAbsolute(luaL_checkstring(L, 2));
+
+	std::error_code ec;
+	std::filesystem::create_symlink(target, symlinkPath, ec);
+
+	if (ec)
+		luaL_error(L, "Failed to symlink '%s' -> '%s': %s", symlinkPath.c_str(), target.c_str(), ec.message().c_str());
 
 	return 0;
 }
@@ -552,6 +576,7 @@ struct FileWatcherEvent
 static int fs_watch(lua_State* L)
 {
 	luaL_checktype(L, 2, LUA_TFUNCTION);
+	setSelfAlias(L);
 
 	std::string path = luaL_checkstring(L, 1);
 
@@ -611,6 +636,8 @@ static int fs_watch(lua_State* L)
 
 static int fs_lastwritten(lua_State* L)
 {
+	setSelfAlias(L);
+
 	std::string path = FileRW::ResolvePathNormalized(luaL_checkstring(L, 1));
 	std::filesystem::file_time_type lwt = std::filesystem::last_write_time(path);
 
@@ -627,12 +654,14 @@ static const luaL_Reg fs_funcs[] = {
     { "listdir", fs_listdir },
     { "isfile", fs_isfile },
     { "isdirectory", fs_isdirectory },
+	{ "issymlink", fs_issymlink },
 	{ "definealias", fs_definealias },
 	{ "removealias", fs_removealias },
 	{ "setunqualifiedroot", fs_setunqualifiedroot },
 	{ "cwd", fs_cwd },
 	{ "copy", fs_copy },
 	{ "mkdir", fs_mkdir },
+	{ "symlink", fs_symlink },
 	{ "rename", fs_rename },
 	{ "move", fs_move },
 	{ "remove", fs_remove },

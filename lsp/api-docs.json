@@ -836,6 +836,9 @@
   "@phoenix/global/fs.isfile": {
     "documentation": "* Returns whether the specified Path refers to a file"
   },
+  "@phoenix/global/fs.issymlink": {
+    "documentation": "* Returns whether the node at the specified path is a symbolic link"
+  },
   "@phoenix/global/fs.lastwritten": {
     "documentation": "* Returns the timestamp for when the file was last modified, in seconds since epoch"
   },
@@ -877,6 +880,9 @@
   },
   "@phoenix/global/fs.setunqualifiedroot": {
     "documentation": "* Changes the meaning of non-qualified paths (e.g.: not beginning with `.` or `C:` etc) to act as aliases to the given path + `resources/` instead of referring to the CWD"
+  },
+  "@phoenix/global/fs.symlink": {
+    "documentation": "* Creates a symlink at `Path` referring to `Target`"
   },
   "@phoenix/global/fs.watch": {
     "documentation": "* Watch a file or directory for changes\n* Returns a function that, when called, disconnects the listener"
