@@ -1468,6 +1468,11 @@
             ],
             "Out": "string?, string?"
           },
+          "readsymlink": {
+            "Description": "Returns what the target of the symlink at the given path is",
+            "In": "Path: string",
+            "Out": "string"
+          },
           "remove": {
             "Description": [
               "Removes everything at the given path",

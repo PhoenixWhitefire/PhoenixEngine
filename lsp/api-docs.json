@@ -863,6 +863,9 @@
   "@phoenix/global/fs.read": {
     "documentation": "* Reads the file at the given address, and returns the contents\n* If the file could not be read, returns `nil` and an error message"
   },
+  "@phoenix/global/fs.readsymlink": {
+    "documentation": "* Returns what the target of the symlink at the given path is"
+  },
   "@phoenix/global/fs.remove": {
     "documentation": "* Removes everything at the given path\n* Throws an error upon failure"
   },

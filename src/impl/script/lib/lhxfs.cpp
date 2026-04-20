@@ -227,7 +227,7 @@ static int fs_copy(lua_State* L)
 	std::filesystem::copy(
 		from,
 		to,
-		std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing,
+		std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing | std::filesystem::copy_options::copy_symlinks,
 		ec
 	);
 
@@ -265,6 +265,22 @@ static int fs_symlink(lua_State* L)
 		luaL_error(L, "Failed to symlink '%s' -> '%s': %s", symlinkPath.c_str(), target.c_str(), ec.message().c_str());
 
 	return 0;
+}
+
+static int fs_readsymlink(lua_State* L)
+{
+	setSelfAlias(L);
+
+	const char* link = luaL_checkstring(L, 1);
+
+	std::error_code ec;
+	std::string target = std::filesystem::read_symlink(link).string();
+
+	if (ec)
+		luaL_error(L, "Failed to read symlink '%s': %s", link, ec.message().c_str());
+
+	lua_pushlstring(L, target.data(), target.size());
+	return 1;
 }
 
 static int fs_rename(lua_State* L)
@@ -662,6 +678,7 @@ static const luaL_Reg fs_funcs[] = {
 	{ "copy", fs_copy },
 	{ "mkdir", fs_mkdir },
 	{ "symlink", fs_symlink },
+	{ "readsymlink", fs_readsymlink },
 	{ "rename", fs_rename },
 	{ "move", fs_move },
 	{ "remove", fs_remove },

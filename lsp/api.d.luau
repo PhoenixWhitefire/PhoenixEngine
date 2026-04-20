@@ -795,6 +795,7 @@ declare fs: {
   promptopenfolder: (( Title: string, DefaultDirectory: string? ) -> (string?)),
   promptsave: (( DefaultLocation: string?, Filter: ( { string } | string)?, FilterName: string? ) -> (string?)),
   read: (( Path: string ) -> (string?, string?)),
+  readsymlink: (( Path: string ) -> (string)),
   remove: (( Path: string ) -> ()),
   removealias: (( Alias: string ) -> ()),
   rename: (( Path: string, NewName: string ) -> ()),

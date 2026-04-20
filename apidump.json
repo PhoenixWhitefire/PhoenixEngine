@@ -654,6 +654,7 @@
         "promptopenfolder": "function",
         "promptsave": "function",
         "read": "function",
+        "readsymlink": "function",
         "remove": "function",
         "removealias": "function",
         "rename": "function",

@@ -14,6 +14,7 @@ local Engine = game:GetService("Engine")
 local FALLBACK_IMAGE = "@etextures/editor-icons/fallback.png"
 local LOGO_IMAGE = "@etextures/logo.png"
 local REIMPORTABLE_MODEL = "Ed_ReimportableModel"
+local EDITOR_BUILD = 2
 
 local PluginManager = require("./PluginManager.luau")
 local HistoryView = require("./HistoryView.luau")
@@ -311,7 +312,8 @@ local function tryToSave(datamodel: GameObject?, firstAttempt: string?)
 
 			(conf :: { [string]: JsonSerializable }).Saved = {
 				EngineCommit = Engine.CommitHash,
-				EngineVersion = Engine.Version
+				EngineVersion = Engine.Version,
+				EditorBuild = EDITOR_BUILD,
 			}
 			fs.write("@project/phoenix.conf", json.encode(conf));
 
@@ -403,6 +405,8 @@ local function openCodeEditor()
 end
 
 local CoreAssets = {
+	"shaders/error.shp",
+	"shaders/error.frag",
 	"shaders/ui.shp",
 	"shaders/ui.vert",
 	"shaders/ui.frag",
@@ -412,22 +416,27 @@ local CoreAssets = {
 	"shaders/worldUber.geom",
 	"shaders/worldUberSkinned.shp",
 	"shaders/worldUberSkinned.vert",
+	"shaders/worldUberTriProjected.shp",
+	"shaders/skybox.shp",
+	"shaders/skybox.vert",
+	"shaders/skybox.frag",
+	"shaders/particle.shp",
+	"shaders/particle.vert",
+	"shaders/particle.frag",
+	"shaders/postprocessing.shp",
+	"shaders/postprocessing.vert",
+	"shaders/postprocessing.frag",
+	"shaders/boxframe.shp",
+	"shaders/boxframe.frag",
 }
-
-local function areAllCoreAssetsUnlinked()
-	for _, a in CoreAssets do
-		if fs.issymlink(a) then
-			return false
-		end
-	end
-
-	return true
-end
 
 local function linkCoreAssets()
 	for _, a in CoreAssets do
 		if fs.isfile(a) and not fs.issymlink(a) then
 			fs.remove(a)
+		end
+
+		if not fs.issymlink(a) then
 			fs.symlink(a, `{ fs.cwd() }/resources/{ a }`)
 		end
 	end
@@ -444,25 +453,22 @@ local function handleCoreAssetsSymlinkMigration(config)
 		DoNotMigrate = 3
 	}
 
-	if editorconf.CoreAssetsSymlinkMigrationChoice then
-		if editorconf.CoreAssetsSymlinkMigrationChoice == SymlinkMigrationChoices.Migrated or editorconf.CoreAssetsSymlinkMigrationChoice == SymlinkMigrationChoices.DoNotMigrate then
+	local lastSavedData = editorconf.Saved
+
+	if lastSavedData then
+		assert(typeof(lastSavedData) == "table")
+		lastSavedData = lastSavedData :: { [string]: JsonSerializable }
+
+		if typeof(lastSavedData.EditorBuild) == "number" and lastSavedData.EditorBuild >= 2 then
 			return
 		end
 	end
 
-	local needsMigration = false
-
-	if typeof(config.Saved) ~= "table" then
-		needsMigration = true
-	else
-		local lastSavedWithCommit = (config.Saved :: { [string]: JsonSerializable }).EngineCommit
-
-		if typeof(lastSavedWithCommit) ~= "string" or areAllCoreAssetsUnlinked() then
-			needsMigration = true
-		end
+	if editorconf.CoreAssetsSymlinkMigrationChoice == SymlinkMigrationChoices.DoNotMigrate then
+		return
 	end
 
-	if needsMigration and not Engine.IsHeadless then
+	if Engine.IsHeadless then
 		imgui.openpopup("Migrate core assets to symlink")
 		local choiceIndex = 1
 
@@ -689,20 +695,20 @@ local function createNewProject_()
 
 	fs.definealias("project", fullPath)
 	fs.definealias("projres", "@project/resources")
+	fs.setunqualifiedroot("@project/")
 
 	fs.write("@project/phoenix.conf", json.encode({
 		GameTitle = Project.Name,
 		ResourcesDirectory = "resources/",
 		RootScene = "scenes/root.world",
-		Engine = {
-			Version = Engine.Version,
-			Commit = Engine.CommitHash
-		},
 		Created = {
 			Time = os.time(),
 			EngineCommit = Engine.CommitHash,
-			EngineVersion = Engine.Version
-		}
+			EngineVersion = Engine.Version,
+		},
+		Saved = {
+			EditorBuild = EDITOR_BUILD,
+		},
 	}))
 	fs.write("@project/phoenix.editor", "{}")
 
@@ -718,20 +724,7 @@ local function createNewProject_()
 	fs.mkdir("@projres/scripts/modules")
 	fs.write("@projres/scripts/Main.luau", "print(\"Hello, World!\")\n")
 
-	for _, v in { "error", "worldUber", "worldUberTriProjected", "worldUberSkinned", "skybox", "boxframe", "particle", "postprocessing", "ui" } do
-		if fs.isfile(`@editres/shaders/{v}.shp`) then
-			fs.copy(`@editres/shaders/{v}.shp`, `@projres/shaders/{v}.shp`)
-		end
-		if fs.isfile(`@editres/shaders/{v}.vert`) then
-			fs.copy(`@editres/shaders/{v}.vert`, `@projres/shaders/{v}.vert`)
-		end
-		if fs.isfile(`@editres/shaders/{v}.frag`) then
-			fs.copy(`@editres/shaders/{v}.frag`, `@projres/shaders/{v}.frag`)
-		end
-		if fs.isfile(`@editres/shaders/{v}.geom`) then
-			fs.copy(`@editres/shaders/{v}.geom`, `@projres/shaders/{v}.geom`)
-		end
-	end
+	linkCoreAssets()
 
 	for _, v in { "brick", "error", "neon", "plastic", "smoothplastic", "wood", "woodplanks" } do
 		fs.copy(`@editres/materials/{v}.mtl`, `@projres/materials/{v}.mtl`)
@@ -1099,7 +1092,7 @@ local GITHUB_URL = "https://github.com/PhoenixWhitefire/PhoenixEngine"
 
 local HoveringOverMenuBar = false
 local HoveringOverRibbonTab = false
-local RibbonPopupDistance = 18
+local RibbonPopupDistance = 16
 
 local function findEnginePath(): string?
 	local commandPath = Engine:GetCliArguments()[1]
@@ -1224,8 +1217,17 @@ local function exportProject()
 
 	fs.mkdir(exportTo)
 	fs.copy("@project", exportTo)
+	fs.remove(`{ exportTo }/phoenix.editor`)
 
 	fs.copy(enginePath, `{exportTo}/{Project.Name}{if enginePath:find(".exe") then ".exe" else ""}`)
+
+	for _, a in CoreAssets do
+		local path = `{ exportTo }/resources/{ a }`
+		if fs.issymlink(path) then
+			fs.remove(path)
+			fs.copy(`./resources/{ a }`, path)
+		end
+	end
 
 	if enginePath:find("x64/Debug") and enginePath:find(".exe") then
 		Engine:ShowMessageBox(
@@ -1564,7 +1566,7 @@ local function renderMainMenuBar(dt: number)
 
 			RibbonPopupDistance = TAB_HEIGHT -- fixes ribbon closing when enabling tools
 		else
-			RibbonPopupDistance = 18
+			RibbonPopupDistance = 16
 		end
 
 		TabButtonHovering = WipTabButtonHovering
@@ -2439,6 +2441,25 @@ local function renderProjectSelectorTiles(Projects: { string })
 	SelectorHoveringOver = hoveringOverWip
 end
 
+local function promptDeleteProject(Name)
+	local buttonSelection = Engine:ShowMessageBox(
+		"Are you sure?",
+		`Are you sure you want to delete '{ Name }'? This cannot be undone.`,
+		"yesno",
+		"warning"
+	)
+
+	if buttonSelection == 1 then
+		fs.remove(`@cwd/projects/{ Name }`)
+
+		AssetManager:UnloadTexture(`@cwd/projects/{ Name }/icon.png`)
+		table.remove(RecentProjects, table.find(RecentProjects, Name))
+		saveRecents()
+
+		SavedProjectsCache = nil
+	end
+end
+
 local function renderRenderProjects()
 	imgui.text("Recent")
 	imgui.newline()
@@ -2456,6 +2477,10 @@ local function renderRenderProjects()
 			table.remove(RecentProjects, ProjectContextMenuTarget)
 			-- TODO: fix cast
 			fs.write(EDITOR_RECENT_PROJECTS_PATH, json.encode(RecentProjects :: JsonSerializable))
+		end
+
+		if imgui.menuitem("Delete") then
+			promptDeleteProject(RecentProjects[ProjectContextMenuTarget])
 		end
 
 		imgui.endpopup()
@@ -2493,23 +2518,7 @@ local function renderSavedProjects()
 	if imgui.beginpopup("ProjectContextMenu") then
 		if SavedProjectsCache and imgui.menuitem("Delete") then
 			local name = SavedProjectsCache[ProjectContextMenuTarget]
-
-			local buttonSelection = Engine:ShowMessageBox(
-				"Are you sure?",
-				`Are you sure you want to delete '{ name }'? This cannot be undone.`,
-				"yesno",
-				"warning"
-			)
-
-			if buttonSelection == 1 then
-				fs.remove(`@cwd/projects/{ name }`)
-
-				AssetManager:UnloadTexture(`@cwd/projects/{ name }/icon.png`)
-				table.remove(RecentProjects, table.find(RecentProjects, name))
-				saveRecents()
-
-				SavedProjectsCache = nil
-			end
+			promptDeleteProject(name)
 		end
 	
 		imgui.endpopup()
