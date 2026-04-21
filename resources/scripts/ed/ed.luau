@@ -14,7 +14,7 @@ local Engine = game:GetService("Engine")
 local FALLBACK_IMAGE = "@etextures/editor-icons/fallback.png"
 local LOGO_IMAGE = "@etextures/logo.png"
 local REIMPORTABLE_MODEL = "Ed_ReimportableModel"
-local EDITOR_BUILD = 2
+local EDITOR_BUILD = 3
 
 local PluginManager = require("./PluginManager.luau")
 local HistoryView = require("./HistoryView.luau")
@@ -122,8 +122,8 @@ if not fs.isdirectory("@cwd/editor") then
 	fs.mkdir("@cwd/editor")
 end
 
-if not fs.isdirectory("@cwd/projects") then
-	fs.mkdir("@cwd/projects")
+if not fs.isdirectory("@home/Documents/Phoenix Projects") then
+	fs.mkdir("@home/Documents/Phoenix Projects")
 end
 
 local ReimportWatchers: { [string]: { Disconnect: () -> (), Models: { GameObject & Model } }? } = {}
@@ -396,7 +396,7 @@ local function openCodeEditor()
 
 		openSettingsMenuToConfigureCodeEditor = true
 	else
-		local result = fs.execute(`{ EditorPreferences.CodeEditorPath } "{ fs.cwd() }/projects/{ Project.Name }"`)
+		local result = fs.execute(`{ EditorPreferences.CodeEditorPath } "{ fs.home() }/Documents/Phoenix Projects/{ Project.Name }"`)
 
 		if #result > 1 then
 			warn("Open code editor result: ", result)
@@ -428,9 +428,14 @@ local CoreAssets = {
 	"shaders/postprocessing.frag",
 	"shaders/boxframe.shp",
 	"shaders/boxframe.frag",
+	"shaders/include/worldCommon.frag",
 }
 
 local function linkCoreAssets()
+	if not fs.isdirectory("shaders/include") then
+		fs.mkdir("shaders/include")
+	end
+
 	for _, a in CoreAssets do
 		if fs.isfile(a) and not fs.issymlink(a) then
 			fs.remove(a)
@@ -459,16 +464,12 @@ local function handleCoreAssetsSymlinkMigration(config)
 		assert(typeof(lastSavedData) == "table")
 		lastSavedData = lastSavedData :: { [string]: JsonSerializable }
 
-		if typeof(lastSavedData.EditorBuild) == "number" and lastSavedData.EditorBuild >= 2 then
+		if typeof(lastSavedData.EditorBuild) == "number" and lastSavedData.EditorBuild >= 3 then
 			return
 		end
 	end
 
-	if editorconf.CoreAssetsSymlinkMigrationChoice == SymlinkMigrationChoices.DoNotMigrate then
-		return
-	end
-
-	if Engine.IsHeadless then
+	if not Engine.IsHeadless then
 		imgui.openpopup("Migrate core assets to symlink")
 		local choiceIndex = 1
 
@@ -524,7 +525,7 @@ local function openProject_(ManualPath: string?)
 
 		imgui.text("Projects")
 
-		for proj, type in fs.listdir("@cwd/projects") do
+		for proj, type in fs.listdir("@home/Documents/Phoenix Projects") do
 			if type ~= "d" then
 				continue
 			end
@@ -566,7 +567,7 @@ local function openProject_(ManualPath: string?)
 		game.OnFrameBegin:WaitUntil()
 	end
 
-	fs.definealias("project", "@cwd/projects/" .. assert(path))
+	fs.definealias("project", "@home/Documents/Phoenix Projects/" .. assert(path))
 	fs.definealias("projres", "@project/resources")
 	fs.setunqualifiedroot("@project/")
 	assert(path)
@@ -672,14 +673,14 @@ end
 local SavedProjectsCache: { string }? = nil
 
 local function createNewProject_()
-	if not fs.isdirectory("@cwd/projects") then
-		fs.mkdir("@cwd/projects")
+	if not fs.isdirectory("@home/Documents/Phoenix Projects") then
+		fs.mkdir("@home/Documents/Phoenix Projects")
 	end
 
 	local name = "New Project "
 	local nameIndex = 1
 
-	while fs.isdirectory("@cwd/projects/" .. name .. nameIndex) do
+	while fs.isdirectory("@home/Documents/Phoenix Projects/" .. name .. nameIndex) do
 		nameIndex += 1
 
 		if nameIndex > 99 then
@@ -690,7 +691,7 @@ local function createNewProject_()
 	Project.Name = name .. nameIndex
 	Project.IsTempPath = true
 
-	local fullPath = "@cwd/projects/" .. assert(Project.Name)
+	local fullPath = "@home/Documents/Phoenix Projects/" .. assert(Project.Name)
 	fs.mkdir(fullPath)
 
 	fs.definealias("project", fullPath)
@@ -717,6 +718,7 @@ local function createNewProject_()
 	fs.mkdir("@projres/scenes")
 	fs.mkdir("@projres/sounds")
 	fs.mkdir("@projres/shaders")
+	fs.mkdir("@projres/shaders/include")
 	fs.mkdir("@projres/scripts")
 	fs.mkdir("@projres/textures")
 	fs.mkdir("@projres/textures/materials")
@@ -1379,8 +1381,8 @@ local function renderMainMenuBar(dt: number)
 							if buttonSelection == 1 then
 								local prevName = Project.Name
 
-								fs.rename("@cwd/projects/" .. Project.Name, newProjectName)
-								fs.definealias("project", "@cwd/projects/" .. newProjectName)
+								fs.rename("@home/Documents/Phoenix Projects/" .. Project.Name, newProjectName)
+								fs.definealias("project", "@home/Documents/Phoenix Projects/" .. newProjectName)
 
 								Project.Name = newProjectName
 
@@ -2411,7 +2413,7 @@ local function renderProjectSelectorTiles(Projects: { string })
 			end
 		end
 
-		imgui.image(`@cwd/projects/{ proj }/icon.png`, vector.create(250, 250))
+		imgui.image(`@home/Documents/Phoenix Projects/{ proj }/icon.png`, vector.create(250, 250))
 		clicked, hovered = imgui.itemclicked(), imgui.itemhovered()
 		imgui.setcursorposition(cpos.x, cpos.y + 250)
 		imgui.text(proj)
@@ -2450,9 +2452,9 @@ local function promptDeleteProject(Name)
 	)
 
 	if buttonSelection == 1 then
-		fs.remove(`@cwd/projects/{ Name }`)
+		fs.remove(`@home/Documents/Phoenix Projects/{ Name }`)
 
-		AssetManager:UnloadTexture(`@cwd/projects/{ Name }/icon.png`)
+		AssetManager:UnloadTexture(`@home/Documents/Phoenix Projects/{ Name }/icon.png`)
 		table.remove(RecentProjects, table.find(RecentProjects, Name))
 		saveRecents()
 
@@ -2492,7 +2494,7 @@ local function renderSavedProjects()
 		SavedProjectsCache = {}
 		assert(SavedProjectsCache)
 
-		for path, type in fs.listdir("@cwd/projects") do
+		for path, type in fs.listdir("@home/Documents/Phoenix Projects") do
 			if type == "d" and fs.isfile(path .. "/phoenix.conf") then
 				local conf = json.parse(assert(fs.read(path .. "/phoenix.conf")))
 				assert(typeof(conf) == "table")

@@ -830,6 +830,9 @@
   "@phoenix/global/fs.execute": {
     "documentation": "* Executes a shell command"
   },
+  "@phoenix/global/fs.home": {
+    "documentation": "* Fetches the user's 'home' or profile directory\n* Returns the Current Working Directory if it cannot be determined"
+  },
   "@phoenix/global/fs.isdirectory": {
     "documentation": "* Returns whether the specified Path refers to a directory"
   },

@@ -191,14 +191,15 @@ void Renderer::Initialize(uint32_t Width, uint32_t Height, GLFWwindow* MainWindo
 
 	glGenBuffers(1, &InstancingBuffer);
 
-#define SETLIGHTLOCS(i) { LightLocs[i] = "Lights[" #i "]"; \
-LightPosLocs[i] = "Lights[" #i "].Position";             \
-LightColLocs[i] = "Lights[" #i "].Color";                \
-LightTypeLocs[i] = "Lights[" #i "].Type";                \
-LightRangeLocs[i] = "Lights[" #i "].Range";              \
-LightAngLocs[i] = "Lights[" #i "].Angle";                \
-LightDirLocs[i] = "Lights[" #i "].SpotLightDirection";   \
-LightShadowsLocs[i] = "Lights[" #i "].Shadows";       }  \
+#define SETLIGHTLOCS(i) {                                          \
+LightLocs[i] = "Phoenix_Lights[" #i "]";                           \
+LightPosLocs[i]     = "Phoenix_Lights[" #i "].Position";           \
+LightColLocs[i]     = "Phoenix_Lights[" #i "].Color";              \
+LightTypeLocs[i]    = "Phoenix_Lights[" #i "].Type";               \
+LightRangeLocs[i]   = "Phoenix_Lights[" #i "].Range";              \
+LightAngLocs[i]     = "Phoenix_Lights[" #i "].Angle";              \
+LightDirLocs[i]     = "Phoenix_Lights[" #i "].SpotLightDirection"; \
+LightShadowsLocs[i] = "Phoenix_Lights[" #i "].Shadows";       }
 
 	SETLIGHTLOCS(0);
 	SETLIGHTLOCS(1);
@@ -306,12 +307,12 @@ void Renderer::DrawScene(
 			{
 				ShaderProgram& shader = shdManager->GetShaderResource(shaderId);
 
-				shader.SetUniform("RenderMatrix", RenderMatrix);
-				shader.SetUniform("CameraPosition", glm::vec3(CameraTransform[3]));
-				shader.SetUniform("Time", RunningTime);
-				shader.SetUniform("SkyboxCubemap", 3);
+				shader.SetUniform("Phoenix_RenderMatrix", RenderMatrix);
+				shader.SetUniform("Phoenix_CameraPosition", glm::vec3(CameraTransform[3]));
+				shader.SetUniform("Phoenix_Time", RunningTime);
+				shader.SetUniform("Phoenix_SkyboxCubemap", 3);
 
-				shader.SetUniform("FrameBuffer", 0);
+				shader.SetUniform("Phoenix_FramebufferTexture", 0);
 
 				// TODO 05/09/2024
 				// Branching in shader VS separate array uniforms?
@@ -339,7 +340,7 @@ void Renderer::DrawScene(
 				}
 
 				shader.SetUniform(
-					"NumLights",
+					"Phoenix_NumLights",
 					std::min(
 						static_cast<int>(Scene.LightingList.size()),
 						SHADER_MAX_LIGHTS
@@ -533,16 +534,16 @@ void Renderer::DrawMesh(
 
 	if (NumInstances > 0)
 	{
-		Shader.SetUniform("IsInstanced", true);
+		Shader.SetUniform("Phoenix_IsInstanced", true);
 		Shader.Activate();
 
 		glDrawElementsInstanced(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, 0, NumInstances);
 	}
 	else
 	{
-		Shader.SetUniform("IsInstanced", false);
-		Shader.SetUniform("Transform", Transform);
-		Shader.SetUniform("Scale", Size);
+		Shader.SetUniform("Phoenix_IsInstanced", false);
+		Shader.SetUniform("Phoenix_Transform", Transform);
+		Shader.SetUniform("Phoenix_Scale", Size);
 		Shader.Activate();
 
 		glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, 0);
@@ -596,29 +597,16 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData, bool DebugWirefra
 	else // the gosh darn grass model is practically 50% transparent
 		glDisable(GL_BLEND);
 	
-	shader.SetUniform("SpecularMultiplier", material.SpecMultiply);
-	shader.SetUniform("SpecularPower", material.SpecExponent);
+	shader.SetUniform("Phoenix_SpecularMultiplier", material.SpecMultiply);
+	shader.SetUniform("Phoenix_SpecularPower", material.SpecExponent);
 
-	shader.SetUniform("MetalnessFactor", RenderData.MetalnessFactor);
-	shader.SetUniform("RoughnessFactor", RenderData.RoughnessFactor);
+	shader.SetUniform("Phoenix_MetalnessFactor", RenderData.MetalnessFactor);
+	shader.SetUniform("Phoenix_RoughnessFactor", RenderData.RoughnessFactor);
 
 	shader.SetUniform(
-		"ColorTint",
+		"Phoenix_ColorTint",
 		RenderData.TintColor
 	);
-
-	/*
-		TODO 05/09/2024:
-
-		I'm conflicted whether to allow multiple textures of the same type
-
-		PROS:
-		* Texture "masking"
-		* Multiple UV map support
-		
-		CONS:
-		* Extra machinery and boilerplate, and it's overall more effort
-	*/
 
 	//shader.SetTextureUniform("ColorMap", material.ColorMap);
 	//shader.SetTextureUniform("MetallicRoughnessMap", material.MetallicRoughnessMap);
@@ -633,21 +621,21 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData, bool DebugWirefra
 
 	if (material.NormalMap != 0)
 	{
-		shader.SetUniform("HasNormalMap", true);
+		shader.SetUniform("Phoenix_HasNormalMap", true);
 		glActiveTexture(GL_TEXTURE12);
 		glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(material.NormalMap).GpuId);
 	}
 	else
-		shader.SetUniform("HasNormalMap", false);
+		shader.SetUniform("Phoenix_HasNormalMap", false);
 
 	if (material.EmissionMap != 0)
 	{
-		shader.SetUniform("HasEmissionMap", true);
+		shader.SetUniform("Phoenix_HasEmissionMap", true);
 		glActiveTexture(GL_TEXTURE13);
 		glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(material.EmissionMap).GpuId);
 	}
 	else
-		shader.SetUniform("HasEmissionMap", false);
+		shader.SetUniform("Phoenix_HasEmissionMap", false);
 
 	// apply the uniforms for the shader program...
 	shader.ApplyDefaultUniforms();

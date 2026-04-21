@@ -216,6 +216,16 @@ static int fs_cwd(lua_State* L)
 	return 1;
 }
 
+extern std::string GetUserHomeDirectoryPath();
+
+static int fs_home(lua_State* L)
+{
+	std::string home = GetUserHomeDirectoryPath();
+
+	lua_pushlstring(L, home.data(), home.size());
+	return 1;
+}
+
 static int fs_copy(lua_State* L)
 {
 	setSelfAlias(L);
@@ -675,6 +685,7 @@ static const luaL_Reg fs_funcs[] = {
 	{ "removealias", fs_removealias },
 	{ "setunqualifiedroot", fs_setunqualifiedroot },
 	{ "cwd", fs_cwd },
+	{ "home", fs_home },
 	{ "copy", fs_copy },
 	{ "mkdir", fs_mkdir },
 	{ "symlink", fs_symlink },

@@ -784,6 +784,7 @@ declare fs: {
   cwd: ((  ) -> (string)),
   definealias: (( Alias: string, For: string ) -> ()),
   execute: (( Command: string ) -> (string)),
+  home: ((  ) -> (string?)),
   isdirectory: (( string ) -> (boolean)),
   isfile: (( string ) -> (boolean)),
   issymlink: (( Path: string ) -> (boolean)),

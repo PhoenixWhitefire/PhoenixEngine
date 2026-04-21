@@ -149,10 +149,10 @@ void RenderMaterial::Reload()
 
 	ShaderProgram& shader = GetShader();
 	// reserved slots for material textures
-	shader.SetUniform("ColorMap", 10);
-	shader.SetUniform("MetallicRoughnessMap", 11);
-	shader.SetUniform("NormalMap", 12);
-	shader.SetUniform("EmissionMap", 13);
+	shader.SetUniform("Phoenix_Material.ColorMap", 10);
+	shader.SetUniform("Phoenix_Material.MetallicRoughnessMap", 11);
+	shader.SetUniform("Phoenix_Material.NormalMap", 12);
+	shader.SetUniform("Phoenix_Material.EmissionMap", 13);
 }
 
 ShaderProgram& RenderMaterial::GetShader() const

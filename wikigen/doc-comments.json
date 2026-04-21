@@ -1338,6 +1338,13 @@
             "In": "Command: string",
             "Out": "string"
           },
+          "home": {
+            "Description": [
+              "Fetches the user's 'home' or profile directory",
+              "Returns the Current Working Directory if it cannot be determined"
+            ],
+            "Out": "string?"
+          },
           "isdirectory": {
             "Description": [
               "Returns whether the specified Path refers to a directory"

@@ -361,6 +361,38 @@ void Engine::m_InitializeVideo()
 
 const int32_t SunShadowMapResolutionSq = 2048;
 
+std::string GetUserHomeDirectoryPath();
+
+std::string GetUserHomeDirectoryPath()
+{
+	std::string home;
+
+#ifdef _WIN32
+	const char* homeCstr = std::getenv("USERPROFILE");
+
+	if (!homeCstr)
+	{
+		const char* drive = std::getenv("HOMEDRIVE");
+		const char* path = std::getenv("HOMEPATH");
+		if (drive && path)
+			home = std::string(drive) + "/" + std::string(path);
+		else
+			home = std::filesystem::current_path().string();
+	}
+	else
+	{
+		home = homeCstr;
+	}
+#else
+	if (const char* homePath = std::getenv("HOME"))
+		home = homePath;
+	else
+		home = std::filesystem::current_path().string();
+#endif
+
+	return home;
+}
+
 Engine::Engine()
 {
 	ZoneScopedC(tracy::Color::Aqua);
@@ -372,6 +404,7 @@ Engine::Engine()
 	m_InitializeVideo();
 
 	FileRW::DefineAlias("cwd", std::filesystem::current_path().string());
+	FileRW::DefineAlias("home", GetUserHomeDirectoryPath());
 	FileRW::DefineAlias("editres", "resources/");
 	FileRW::DefineAlias("projres", "resources/");
 	FileRW::DefineAlias("scripts", "resources/scripts");

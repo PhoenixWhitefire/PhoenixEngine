@@ -643,6 +643,7 @@
         "cwd": "function",
         "definealias": "function",
         "execute": "function",
+        "home": "function",
         "isdirectory": "function",
         "isfile": "function",
         "issymlink": "function",
