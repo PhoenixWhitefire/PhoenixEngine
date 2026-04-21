@@ -2,7 +2,7 @@
 #include <string>
 #include <format>
 
-#include <glad/gl.h>
+#include <glad/include/glad/gl.h>
 #include <glm/matrix.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -408,13 +408,11 @@ Engine::Engine()
 
 		m_PostFxShader = m_ShaderManager.GetShaderResource(m_ShaderManager.LoadFromPath("postprocessing"));
 		m_SkyboxShader = m_ShaderManager.GetShaderResource(m_ShaderManager.LoadFromPath("skybox"));
-		m_SeparableBlurShader = m_ShaderManager.GetShaderResource(m_ShaderManager.LoadFromPath("separableblur"));
 
-		m_PostFxShader.SetUniform("Texture", 1);
-		m_PostFxShader.SetUniform("DistortionTexture", 2);
-		m_PostFxShader.SetUniform("BloomTexture", 3);
-		m_SeparableBlurShader.SetUniform("Texture", 3);
-		m_SkyboxShader.SetUniform("SkyboxCubemap", 3);
+		m_PostFxShader.SetUniform("Phoenix_FramebufferTexture", 1);
+		m_PostFxShader.SetUniform("Phoenix_DistortionTexture", 2);
+		//m_PostFxShader.SetUniform("Phoenix_BloomTexture", 3);
+		m_SkyboxShader.SetUniform("Phoenix_SkyboxCubemap", 3);
 
 		m_DistortionTexture = m_TextureManager.LoadFromPath("textures/screendistort.jpg");
 
@@ -612,15 +610,15 @@ static void traverseAndRenderUIHierarchy(
 			currentRotation += uit->Rotation;
 		}
 
-		shader.SetUniform("Position", currentPosition);
-		shader.SetUniform("Size", currentSize);
-		shader.SetUniform("Rotation", currentRotation);
+		shader.SetUniform("Phoenix_Position", currentPosition);
+		shader.SetUniform("Phoenix_Size", currentSize);
+		shader.SetUniform("Phoenix_Rotation", currentRotation);
 
 		if (EcUIFrame* uf = child->FindComponent<EcUIFrame>())
 		{
-			shader.SetUniform("BackgroundColor", uf->BackgroundColor.ToGenericValue());
-			shader.SetUniform("BackgroundTransparency", uf->BackgroundTransparency);
-			shader.SetUniform("IsImage", false);
+			shader.SetUniform("Phoenix_BackgroundColor", uf->BackgroundColor.ToGenericValue());
+			shader.SetUniform("Phoenix_BackgroundTransparency", uf->BackgroundTransparency);
+			shader.SetUniform("Phoenix_IsImage", false);
 			shader.Activate();
 
 			glDrawElements(GL_TRIANGLES, gpuMesh.NumIndices, GL_UNSIGNED_INT, 0);
@@ -631,10 +629,10 @@ static void traverseAndRenderUIHierarchy(
 		{
 			TextureManager* textureManager = TextureManager::Get();
 
-			shader.SetUniform("BackgroundColor", uimg->ImageTint.ToGenericValue());
-			shader.SetUniform("BackgroundTransparency", uimg->ImageTransparency);
-			shader.SetUniform("IsImage", true);
-			shader.SetTextureUniform("Image", textureManager->LoadFromPath(uimg->Image));
+			shader.SetUniform("Phoenix_BackgroundColor", uimg->ImageTint.ToGenericValue());
+			shader.SetUniform("Phoenix_BackgroundTransparency", uimg->ImageTransparency);
+			shader.SetUniform("Phoenix_IsImage", true);
+			shader.SetTextureUniform("Phoenix_Image", textureManager->LoadFromPath(uimg->Image));
 			shader.Activate();
 
 			glDrawElements(GL_TRIANGLES, gpuMesh.NumIndices, GL_UNSIGNED_INT, 0);
@@ -762,8 +760,8 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 
 	glm::mat4 skyRenderMatrix = projection * view;
 
-	m_SkyboxShader.SetUniform("RenderMatrix", skyRenderMatrix);
-	m_SkyboxShader.SetUniform("Time", GetRunningTime());
+	m_SkyboxShader.SetUniform("Phoenix_RenderMatrix", skyRenderMatrix);
+	m_SkyboxShader.SetUniform("Phoenix_Time", GetRunningTime());
 
 	glActiveTexture(GL_TEXTURE3);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, m_SkyboxCubemap);
@@ -811,56 +809,36 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 	if (EcEnvironmentService::PostProcess)
 	{
 		ZoneScopedN("ApplyPostFxSettings");
-	
-		m_PostFxShader.SetUniform("PostFxEnabled", 1);
+
+		m_PostFxShader.SetUniform("Phoenix_PostFxEnabled", 1);
 		m_PostFxShader.SetUniform(
-			"ScreenEdgeBlurEnabled",
+			"Phoenix_ScreenEdgeBlurEnabled",
 			EngineJsonConfig.value("postfx_blurvignette", false)
 		);
 		m_PostFxShader.SetUniform(
-			"DistortionEnabled",
+			"Phoenix_DistortionEnabled",
 			EngineJsonConfig.value("postfx_distortion", false)
 		);
-	
+
 		m_PostFxShader.SetUniform(
-			"Gamma",
+			"Phoenix_Gamma",
 			EcEnvironmentService::GammaCorrection
 		);
 		m_SkyboxShader.SetUniform(
-			"HdrEnabled",
+			"Phoenix_HdrEnabled",
 			true
 		);
-	
-		if (EngineJsonConfig.find("postfx_blurvignette_blurstrength") != EngineJsonConfig.end())
-		{
-			m_PostFxShader.SetUniform(
-				"BlurVignetteStrength",
-				(float)EngineJsonConfig["postfx_blurvignette_blurstrength"]
-			);
-			m_PostFxShader.SetUniform(
-				"BlurVignetteDistMul",
-				(float)EngineJsonConfig["postfx_blurvignette_weightmul"]
-			);
-			m_PostFxShader.SetUniform(
-				"BlurVignetteDistExp",
-				(float)EngineJsonConfig["postfx_blurvignette_weightexp"]
-			);
-			m_PostFxShader.SetUniform(
-				"BlurVignetteSampleRadius",
-				(int)EngineJsonConfig["postfx_blurvignette_sampleradius"]
-			);
-		}
-	
-		m_PostFxShader.SetUniform("Time", GetRunningTime());
-	
+
+		m_PostFxShader.SetUniform("Phoenix_Time", GetRunningTime());
+
 		glActiveTexture(GL_TEXTURE2);
 		glBindTexture(GL_TEXTURE_2D, m_TextureManager.GetTextureResource(m_DistortionTexture).GpuId);
 	}
 	else
 	{
-		m_PostFxShader.SetUniform("PostFxEnabled", 0);
+		m_PostFxShader.SetUniform("Phoenix_PostFxEnabled", 0);
 		m_SkyboxShader.SetUniform(
-			"HdrEnabled",
+			"Phoenix_HdrEnabled",
 			false
 		);
 	}
@@ -881,7 +859,7 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 		);
 
 		RendererContext.FrameBuffer.Unbind();
-		m_PostFxShader.SetUniform("PostFxEnabled", 0);
+		m_PostFxShader.SetUniform("Phoenix_PostFxEnabled", 0);
 		RendererContext.DrawMesh(
 			quadMesh,
 			m_PostFxShader,
@@ -1223,13 +1201,13 @@ void Engine::Start()
 			for (uint32_t shdId : CurrentScene.UsedShaders)
 			{
 				ShaderProgram& shd = m_ShaderManager.GetShaderResource(shdId);
-				shd.SetUniform("IsShadowMap", true);
+				shd.SetUniform("Phoenix_IsShadowMap", true);
 
 				glActiveTexture(GL_TEXTURE0 + 101);
 				m_SunShadowMap.BindTexture();
-				shd.SetUniform("ShadowAtlas", 101);
+				shd.SetUniform("Phoenix_ShadowAtlas", 101);
 
-				shd.SetUniform("DirecLightProjection", sunRenderMatrix);
+				shd.SetUniform("Phoenix_DirectionalLightProjection", sunRenderMatrix);
 			}
 
 			RendererContext.DrawScene(sunScene, sunRenderMatrix, glm::mat4(1.f), RunningTime, DebugWireframeRendering);
@@ -1241,12 +1219,12 @@ void Engine::Start()
 			for (uint32_t shdId : CurrentScene.UsedShaders)
 			{
 				ShaderProgram& shader = m_ShaderManager.GetShaderResource(shdId);
-				shader.SetUniform("IsShadowMap", false);
-				shader.SetUniform("LightAmbient", EcEnvironmentService::AmbientLight.ToGenericValue());
+				shader.SetUniform("Phoenix_IsShadowMap", false);
+				shader.SetUniform("Phoenix_LightAmbient", EcEnvironmentService::AmbientLight.ToGenericValue());
 
-				shader.SetUniform("Fog", EcEnvironmentService::Fog);
+				shader.SetUniform("Phoenix_Fog", EcEnvironmentService::Fog);
 				if (EcEnvironmentService::Fog)
-					shader.SetUniform("FogColor", EcEnvironmentService::FogColor.ToGenericValue());
+					shader.SetUniform("Phoenix_FogColor", EcEnvironmentService::FogColor.ToGenericValue());
 			}
 
 			m_Render(deltaTime, particleEmittersRenderList);

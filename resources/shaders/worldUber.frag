@@ -4,72 +4,15 @@
 // - 21/06/2024
 
 #version 460 core
+#extension GL_ARB_shading_language_include : require
 
-const int MAX_LIGHTS = 16;
+#include "/include/worldCommon.frag"
 
-/*
-LIGHT TYPE IDS:
-- Directional lights = 0
-- Point lights = 1
-- Spot lights = 2
+#ifndef USE_TRI_PLANAR_PROJECTION
+#define USE_TRI_PLANAR_PROJECTION false
+#endif
 
-When Directional light, Position = Direction
-*/
-struct LightObject
-{
-	int Type;
-	bool Shadows;
-
-	// generic, applies to all light types (i.e., directional, point, spot lights)
-	vec3 Position;
-	vec3 Color;
-
-	// point lights and spotlights
-	float Range;
-	// spotlights
-	vec3 SpotLightDirection;
-	float Angle;
-};
-
-uniform LightObject Lights[MAX_LIGHTS];
-
-uniform sampler2D ShadowAtlas;
-
-uniform int NumLights;
-
-uniform sampler2D FrameBuffer;
-
-uniform sampler2D ColorMap;
-uniform sampler2D MetallicRoughnessMap;
-uniform bool HasNormalMap;
-uniform sampler2D NormalMap;
-uniform bool HasEmissionMap;
-uniform sampler2D EmissionMap;
-
-uniform vec3 LightAmbient = vec3(0.3f);
-uniform float SpecularMultiplier;
-uniform float SpecularPower;
-
-uniform float MetalnessFactor;
-uniform float RoughnessFactor;
-uniform float EmissionStrength;
-
-uniform samplerCube SkyboxCubemap;
-
-uniform float NearZ = 0.1f;
-uniform float FarZ = 1000.0f;
-
-uniform bool Fog;
-uniform vec3 FogColor = vec3(0.85f, 0.85f, 0.90f);
-
-uniform bool UseTriPlanarProjection;
 uniform float MaterialProjectionFactor;
-
-uniform float AlphaCutoff = 0.5f;
-
-uniform bool IsShadowMap;
-uniform bool DebugOverdraw = false;
-uniform bool DebugLightInfluence = false;
 
 in vec3 Frag_ModelPosition;
 in vec3 Frag_WorldPosition;
@@ -112,7 +55,7 @@ float SpotLight(vec3 LightToPosition, vec3 Direction, float OuterCone, float Inn
 
 float LinearizeDepth(float d)
 {
-	return (2.0f * NearZ * FarZ) / (FarZ + NearZ - (d * 2.0f - 1.0f) * (FarZ - NearZ));
+	return (2.0f * Phoenix_NearZ * Phoenix_FarZ) / (Phoenix_FarZ + Phoenix_NearZ - (d * 2.0f - 1.0f) * (Phoenix_FarZ - Phoenix_NearZ));
 }
 
 float LogisticDepth(float Steepness, float Offset)
@@ -125,7 +68,7 @@ float LogisticDepth(float Steepness, float Offset)
 // Calculates what a light would add to a pixel
 vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 {
-	LightObject Light = Lights[Index];
+	LightObject Light = Phoenix_Lights[Index];
 
 	vec3 LightPosition = Light.Position;
 	vec3 LightColor = Light.Color;
@@ -150,11 +93,11 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 				float bias = min(0.05 * (dot(Normal, Incoming)), 0.000005);
 
 				const int SampleRadius = 1;
-				vec2 texelSize = 1.f / textureSize(ShadowAtlas, 0);
+				vec2 texelSize = 1.f / textureSize(Phoenix_ShadowAtlas, 0);
 				for (int y = -SampleRadius; y <= SampleRadius; y++)
 					for (int x = -SampleRadius; x <= SampleRadius; x++)
 					{
-						float pcfDepth = texture(ShadowAtlas, lightCoords.xy + vec2(x, y) * texelSize).r;
+						float pcfDepth = texture(Phoenix_ShadowAtlas, lightCoords.xy + vec2(x, y) * texelSize).r;
 						shadow += currentDepth - bias > pcfDepth ? 1.f : 0.f;
 					}
 
@@ -170,10 +113,10 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 		if (Diffuse > 0.f && shadow == 0.f)
 		{
 			vec3 reflectDir = reflect(-Incoming, Normal);
-			Specular = pow(max(dot(Outgoing, reflectDir), 0.f), SpecularPower);
+			Specular = pow(max(dot(Outgoing, reflectDir), 0.f), Phoenix_Material.SpecularPower);
 		}
 
-		float SpecularTerm = SpecMapValue * Specular * SpecularMultiplier;
+		float SpecularTerm = SpecMapValue * Specular * Phoenix_Material.SpecularMultiplier;
 
 		return (Diffuse * (1.f - shadow) + SpecularTerm * (1.f - shadow) * Intensity) * LightColor;
 	}
@@ -192,11 +135,11 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 
 			vec3 reflectionVector = reflect(-Incoming, Normal);
 
-			Specular = pow(max(dot(Outgoing, reflectionVector), 0.f), SpecularPower);
+			Specular = pow(max(dot(Outgoing, reflectionVector), 0.f), Phoenix_Material.SpecularPower);
 		}
 
 		float Intensity = PointLight(LightToPosition, Light.Range);
-		float SpecularTerm = SpecMapValue * Specular * SpecularMultiplier;
+		float SpecularTerm = SpecMapValue * Specular * Phoenix_Material.SpecularMultiplier;
 
 		return ((Diffuse * Intensity) + SpecularTerm * Intensity) * LightColor;
 	}
@@ -215,11 +158,11 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 
 			vec3 reflectionVector = reflect(-Incoming, Normal);
 
-			Specular = pow(max(dot(Outgoing, reflectionVector), 0.f), SpecularPower);
+			Specular = pow(max(dot(Outgoing, reflectionVector), 0.f), Phoenix_Material.SpecularPower);
 		}
 
 		float Intensity = SpotLight(LightToPosition, Light.SpotLightDirection, Light.Angle, Light.Angle - 0.05f, Light.Range);
-		float SpecularTerm = SpecMapValue * Specular * SpecularMultiplier;
+		float SpecularTerm = SpecMapValue * Specular * Phoenix_Material.SpecularMultiplier;
 
 		return ((Diffuse * Intensity) + SpecularTerm * Intensity) * LightColor;
 	}
@@ -243,17 +186,17 @@ void main()
 
 	if (gl_FragCoord.x < 512 && gl_FragCoord.y < 512)
 	{
-		FragColor = vec4(texture(ShadowAtlas, gl_FragCoord.xy / 512.f).rrr, 1.f);
+		FragColor = vec4(texture(Phoenix_ShadowAtlas, gl_FragCoord.xy / 512.f).rrr, 1.f);
 		return;
 	}
 
 #endif
 
-	float mipLevel = textureQueryLod(ColorMap, Frag_TextureUV).x;
+	float mipLevel = textureQueryLod(Phoenix_Material.ColorMap, Frag_TextureUV).x;
 
-	if (IsShadowMap)
+	if (Phoenix_IsShadowMap)
 	{
-		if (textureLod(ColorMap, Frag_TextureUV, mipLevel).w < AlphaCutoff)
+		if (textureLod(Phoenix_Material.ColorMap, Frag_TextureUV, mipLevel).w < Phoenix_Material.AlphaCutoff)
 			discard;
 
 		FragColor = vec4(gl_FragCoord.z, gl_FragCoord.z, gl_FragCoord.z, 1.f);
@@ -273,16 +216,16 @@ void main()
 	vec3 EmissionSample = vec3(1.f, 1.f, 1.f);
 	vec3 NormalSample;
 
-	if (!UseTriPlanarProjection)
+	if (!USE_TRI_PLANAR_PROJECTION)
 	{
-		MetallicRoughnessSample = textureLod(MetallicRoughnessMap, Frag_TextureUV, mipLevel).rg;
-		Albedo = textureLod(ColorMap, Frag_TextureUV, mipLevel);
+		MetallicRoughnessSample = textureLod(Phoenix_Material.MetallicRoughnessMap, Frag_TextureUV, mipLevel).rg;
+		Albedo = textureLod(Phoenix_Material.ColorMap, Frag_TextureUV, mipLevel);
 
-		if (HasNormalMap)
-			NormalSample = (textureLod(NormalMap, Frag_TextureUV, mipLevel).xyz - vec3(0.f, 0.f, 1.f)) * 2.f - 1.f;
+		if (Phoenix_Material.HasNormalMap)
+			NormalSample = (textureLod(Phoenix_Material.NormalMap, Frag_TextureUV, mipLevel).xyz - vec3(0.f, 0.f, 1.f)) * 2.f - 1.f;
 
-		if (HasEmissionMap)
-			EmissionSample = textureLod(EmissionMap, Frag_TextureUV, mipLevel).xyz;
+		if (Phoenix_Material.HasEmissionMap)
+			EmissionSample = textureLod(Phoenix_Material.EmissionMap, Frag_TextureUV, mipLevel).xyz;
 	}
 	else
 	{
@@ -291,33 +234,33 @@ void main()
 		vec2 uvYAxis = Frag_ModelPosition.xz * vec2(-1.f, 1.f) * MaterialProjectionFactor;
 		vec2 uvZAxis = -Frag_ModelPosition.xy * MaterialProjectionFactor;
 		
-		vec4 xAxis = textureLod(ColorMap, uvXAxis, mipLevel);
-		vec4 yAxis = textureLod(ColorMap, uvYAxis, mipLevel);
-		vec4 zAxis = textureLod(ColorMap, uvZAxis, mipLevel);
+		vec4 xAxis = textureLod(Phoenix_Material.ColorMap, uvXAxis, mipLevel);
+		vec4 yAxis = textureLod(Phoenix_Material.ColorMap, uvYAxis, mipLevel);
+		vec4 zAxis = textureLod(Phoenix_Material.ColorMap, uvZAxis, mipLevel);
 
 		Albedo = xAxis * blending.x + yAxis * blending.y + zAxis * blending.z;
 
-		vec2 specXAxis = textureLod(MetallicRoughnessMap, uvXAxis, mipLevel).rg;
-		vec2 specYAxis = textureLod(MetallicRoughnessMap, uvYAxis, mipLevel).rg;
-		vec2 specZAxis = textureLod(MetallicRoughnessMap, uvZAxis, mipLevel).rg;
+		vec2 specXAxis = textureLod(Phoenix_Material.MetallicRoughnessMap, uvXAxis, mipLevel).rg;
+		vec2 specYAxis = textureLod(Phoenix_Material.MetallicRoughnessMap, uvYAxis, mipLevel).rg;
+		vec2 specZAxis = textureLod(Phoenix_Material.MetallicRoughnessMap, uvZAxis, mipLevel).rg;
 
 		MetallicRoughnessSample = specXAxis * blending.x + specYAxis * blending.y + specZAxis * blending.z;
 
-		if (HasNormalMap)
+		if (Phoenix_Material.HasNormalMap)
 		{
-			vec3 normXAxis = textureLod(NormalMap, uvXAxis, mipLevel).rgb;
-			vec3 normYAxis = textureLod(NormalMap, uvYAxis, mipLevel).rgb;
-			vec3 normZAxis = textureLod(NormalMap, uvZAxis, mipLevel).rgb;
+			vec3 normXAxis = textureLod(Phoenix_Material.NormalMap, uvXAxis, mipLevel).rgb;
+			vec3 normYAxis = textureLod(Phoenix_Material.NormalMap, uvYAxis, mipLevel).rgb;
+			vec3 normZAxis = textureLod(Phoenix_Material.NormalMap, uvZAxis, mipLevel).rgb;
 
 			NormalSample = normXAxis * blending.x + normYAxis * blending.y + normZAxis * blending.z;
 			//vertexNormal += (normSample - vec3(0.f, 0.f, 1.f)) * 2.f - 1.f;
 		}
 
-		if (HasEmissionMap)
+		if (Phoenix_Material.HasEmissionMap)
 		{
-			vec3 emissionXAxis = textureLod(EmissionMap, uvXAxis, mipLevel).rgb;
-			vec3 emissionYAxis = textureLod(EmissionMap, uvYAxis, mipLevel).rgb;
-			vec3 emissionZAxis = textureLod(EmissionMap, uvZAxis, mipLevel).rgb;
+			vec3 emissionXAxis = textureLod(Phoenix_Material.EmissionMap, uvXAxis, mipLevel).rgb;
+			vec3 emissionYAxis = textureLod(Phoenix_Material.EmissionMap, uvYAxis, mipLevel).rgb;
+			vec3 emissionZAxis = textureLod(Phoenix_Material.EmissionMap, uvZAxis, mipLevel).rgb;
 
 			EmissionSample = emissionXAxis * blending.x + emissionYAxis * blending.y + emissionZAxis * blending.z;
 		}
@@ -332,14 +275,14 @@ void main()
 	
 	Albedo = vec4(Albedo.xyz * Frag_Paint.xyz, Albedo.w * Frag_Paint.w);
 
-	if (Albedo.a < AlphaCutoff)
+	if (Albedo.a < Phoenix_Material.AlphaCutoff)
 		discard;
 	
-	if (DebugOverdraw)
+	if (Phoenix_DebugOverdraw)
 	{
 		// accumulate a red color with overdraw
 		// 27/10/2024 i rlly thought this would work but nah not really
-		float prevValue = texture(FrameBuffer, gl_FragCoord.xy).r;
+		float prevValue = texture(Phoenix_FramebufferTexture, gl_FragCoord.xy).r;
 		if (prevValue > 0.f)
 			FragColor = vec4(1.f, 0.f, 0.f, 1.f);
 		//gl_FragDepth = 0.f;
@@ -360,8 +303,8 @@ void main()
 
 	//Albedo = vec4(mix(ReflectedTint, Albedo.xyz * Frag_ColorTint, MetallicRoughnessSample.y * RoughnessFactor), Albedo.w);
 	
-	if (EmissionStrength <= 0)
-		for (int LightIndex = 0; LightIndex < NumLights; LightIndex++)
+	if (Phoenix_Material.EmissionStrength <= 0)
+		for (int LightIndex = 0; LightIndex < Phoenix_NumLights; LightIndex++)
 			LightInfluence += CalculateLight(
 				LightIndex,
 				Normal,
@@ -369,16 +312,16 @@ void main()
 				MetallicRoughnessSample.y
 			);
 	else
-		LightInfluence = EmissionSample * EmissionStrength + LightAmbient;
+		LightInfluence = EmissionSample * Phoenix_Material.EmissionStrength + Phoenix_LightAmbient;
 	
-	if (!DebugLightInfluence)
-		LightInfluence += LightAmbient;
+	if (!Phoenix_DebugLightInfluence)
+		LightInfluence += Phoenix_LightAmbient;
 	vec3 FragCol3 = (LightInfluence/* + textureLod(SkyboxCubemap, reflectDir, 11).xyz*/);
 
-	if (!DebugLightInfluence)
+	if (!Phoenix_DebugLightInfluence)
 		FragCol3 *= Albedo.xyz;
 
-	if (Fog)
+	if (Phoenix_Fog)
 	{
 		//float Depth = LogisticDepth(0.01f, 100.0f);
 
@@ -387,12 +330,12 @@ void main()
 
 		float FogDensity = FogStart / FogEnd;
 
-		float Distance = LinearizeDepth(gl_FragCoord.z) * FarZ;
+		float Distance = LinearizeDepth(gl_FragCoord.z) * Phoenix_FarZ;
 		float FogFactor = clamp((FogEnd - Distance) / (FogEnd - FogStart), 0.0, 1.0); //Linear fog
 
 		//float FogFactor = pow(2.0f, -pow(Distance * FogDensity, 2));
 		
-		FragCol3 = FogColor + (FragCol3 - FogColor) * FogFactor;
+		FragCol3 = Phoenix_FogColor + (FragCol3 - Phoenix_FogColor) * FogFactor;
 	}
 
 	FragColor = vec4(FragCol3, Albedo.w);

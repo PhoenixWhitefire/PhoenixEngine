@@ -42,6 +42,8 @@ int GLAD_GL_VERSION_4_3 = 0;
 int GLAD_GL_VERSION_4_4 = 0;
 int GLAD_GL_VERSION_4_5 = 0;
 int GLAD_GL_VERSION_4_6 = 0;
+int GLAD_GL_ARB_debug_output = 0;
+int GLAD_GL_ARB_shading_language_include = 0;
 
 
 
@@ -115,6 +117,7 @@ PFNGLCLIPCONTROLPROC glad_glClipControl = NULL;
 PFNGLCOLORMASKPROC glad_glColorMask = NULL;
 PFNGLCOLORMASKIPROC glad_glColorMaski = NULL;
 PFNGLCOMPILESHADERPROC glad_glCompileShader = NULL;
+PFNGLCOMPILESHADERINCLUDEARBPROC glad_glCompileShaderIncludeARB = NULL;
 PFNGLCOMPRESSEDTEXIMAGE1DPROC glad_glCompressedTexImage1D = NULL;
 PFNGLCOMPRESSEDTEXIMAGE2DPROC glad_glCompressedTexImage2D = NULL;
 PFNGLCOMPRESSEDTEXIMAGE3DPROC glad_glCompressedTexImage3D = NULL;
@@ -149,10 +152,14 @@ PFNGLCREATETRANSFORMFEEDBACKSPROC glad_glCreateTransformFeedbacks = NULL;
 PFNGLCREATEVERTEXARRAYSPROC glad_glCreateVertexArrays = NULL;
 PFNGLCULLFACEPROC glad_glCullFace = NULL;
 PFNGLDEBUGMESSAGECALLBACKPROC glad_glDebugMessageCallback = NULL;
+PFNGLDEBUGMESSAGECALLBACKARBPROC glad_glDebugMessageCallbackARB = NULL;
 PFNGLDEBUGMESSAGECONTROLPROC glad_glDebugMessageControl = NULL;
+PFNGLDEBUGMESSAGECONTROLARBPROC glad_glDebugMessageControlARB = NULL;
 PFNGLDEBUGMESSAGEINSERTPROC glad_glDebugMessageInsert = NULL;
+PFNGLDEBUGMESSAGEINSERTARBPROC glad_glDebugMessageInsertARB = NULL;
 PFNGLDELETEBUFFERSPROC glad_glDeleteBuffers = NULL;
 PFNGLDELETEFRAMEBUFFERSPROC glad_glDeleteFramebuffers = NULL;
+PFNGLDELETENAMEDSTRINGARBPROC glad_glDeleteNamedStringARB = NULL;
 PFNGLDELETEPROGRAMPROC glad_glDeleteProgram = NULL;
 PFNGLDELETEPROGRAMPIPELINESPROC glad_glDeleteProgramPipelines = NULL;
 PFNGLDELETEQUERIESPROC glad_glDeleteQueries = NULL;
@@ -249,6 +256,7 @@ PFNGLGETCOMPRESSEDTEXIMAGEPROC glad_glGetCompressedTexImage = NULL;
 PFNGLGETCOMPRESSEDTEXTUREIMAGEPROC glad_glGetCompressedTextureImage = NULL;
 PFNGLGETCOMPRESSEDTEXTURESUBIMAGEPROC glad_glGetCompressedTextureSubImage = NULL;
 PFNGLGETDEBUGMESSAGELOGPROC glad_glGetDebugMessageLog = NULL;
+PFNGLGETDEBUGMESSAGELOGARBPROC glad_glGetDebugMessageLogARB = NULL;
 PFNGLGETDOUBLEI_VPROC glad_glGetDoublei_v = NULL;
 PFNGLGETDOUBLEVPROC glad_glGetDoublev = NULL;
 PFNGLGETERRORPROC glad_glGetError = NULL;
@@ -273,6 +281,8 @@ PFNGLGETNAMEDBUFFERSUBDATAPROC glad_glGetNamedBufferSubData = NULL;
 PFNGLGETNAMEDFRAMEBUFFERATTACHMENTPARAMETERIVPROC glad_glGetNamedFramebufferAttachmentParameteriv = NULL;
 PFNGLGETNAMEDFRAMEBUFFERPARAMETERIVPROC glad_glGetNamedFramebufferParameteriv = NULL;
 PFNGLGETNAMEDRENDERBUFFERPARAMETERIVPROC glad_glGetNamedRenderbufferParameteriv = NULL;
+PFNGLGETNAMEDSTRINGARBPROC glad_glGetNamedStringARB = NULL;
+PFNGLGETNAMEDSTRINGIVARBPROC glad_glGetNamedStringivARB = NULL;
 PFNGLGETOBJECTLABELPROC glad_glGetObjectLabel = NULL;
 PFNGLGETOBJECTPTRLABELPROC glad_glGetObjectPtrLabel = NULL;
 PFNGLGETPOINTERVPROC glad_glGetPointerv = NULL;
@@ -368,6 +378,7 @@ PFNGLISBUFFERPROC glad_glIsBuffer = NULL;
 PFNGLISENABLEDPROC glad_glIsEnabled = NULL;
 PFNGLISENABLEDIPROC glad_glIsEnabledi = NULL;
 PFNGLISFRAMEBUFFERPROC glad_glIsFramebuffer = NULL;
+PFNGLISNAMEDSTRINGARBPROC glad_glIsNamedStringARB = NULL;
 PFNGLISPROGRAMPROC glad_glIsProgram = NULL;
 PFNGLISPROGRAMPIPELINEPROC glad_glIsProgramPipeline = NULL;
 PFNGLISQUERYPROC glad_glIsQuery = NULL;
@@ -407,6 +418,7 @@ PFNGLNAMEDFRAMEBUFFERTEXTUREPROC glad_glNamedFramebufferTexture = NULL;
 PFNGLNAMEDFRAMEBUFFERTEXTURELAYERPROC glad_glNamedFramebufferTextureLayer = NULL;
 PFNGLNAMEDRENDERBUFFERSTORAGEPROC glad_glNamedRenderbufferStorage = NULL;
 PFNGLNAMEDRENDERBUFFERSTORAGEMULTISAMPLEPROC glad_glNamedRenderbufferStorageMultisample = NULL;
+PFNGLNAMEDSTRINGARBPROC glad_glNamedStringARB = NULL;
 PFNGLOBJECTLABELPROC glad_glObjectLabel = NULL;
 PFNGLOBJECTPTRLABELPROC glad_glObjectPtrLabel = NULL;
 PFNGLPATCHPARAMETERFVPROC glad_glPatchParameterfv = NULL;
@@ -1422,6 +1434,22 @@ static void glad_gl_load_GL_VERSION_4_6( GLADuserptrloadfunc load, void* userptr
     glad_glPolygonOffsetClamp = (PFNGLPOLYGONOFFSETCLAMPPROC) load(userptr, "glPolygonOffsetClamp");
     glad_glSpecializeShader = (PFNGLSPECIALIZESHADERPROC) load(userptr, "glSpecializeShader");
 }
+static void glad_gl_load_GL_ARB_debug_output( GLADuserptrloadfunc load, void* userptr) {
+    if(!GLAD_GL_ARB_debug_output) return;
+    glad_glDebugMessageCallbackARB = (PFNGLDEBUGMESSAGECALLBACKARBPROC) load(userptr, "glDebugMessageCallbackARB");
+    glad_glDebugMessageControlARB = (PFNGLDEBUGMESSAGECONTROLARBPROC) load(userptr, "glDebugMessageControlARB");
+    glad_glDebugMessageInsertARB = (PFNGLDEBUGMESSAGEINSERTARBPROC) load(userptr, "glDebugMessageInsertARB");
+    glad_glGetDebugMessageLogARB = (PFNGLGETDEBUGMESSAGELOGARBPROC) load(userptr, "glGetDebugMessageLogARB");
+}
+static void glad_gl_load_GL_ARB_shading_language_include( GLADuserptrloadfunc load, void* userptr) {
+    if(!GLAD_GL_ARB_shading_language_include) return;
+    glad_glCompileShaderIncludeARB = (PFNGLCOMPILESHADERINCLUDEARBPROC) load(userptr, "glCompileShaderIncludeARB");
+    glad_glDeleteNamedStringARB = (PFNGLDELETENAMEDSTRINGARBPROC) load(userptr, "glDeleteNamedStringARB");
+    glad_glGetNamedStringARB = (PFNGLGETNAMEDSTRINGARBPROC) load(userptr, "glGetNamedStringARB");
+    glad_glGetNamedStringivARB = (PFNGLGETNAMEDSTRINGIVARBPROC) load(userptr, "glGetNamedStringivARB");
+    glad_glIsNamedStringARB = (PFNGLISNAMEDSTRINGARBPROC) load(userptr, "glIsNamedStringARB");
+    glad_glNamedStringARB = (PFNGLNAMEDSTRINGARBPROC) load(userptr, "glNamedStringARB");
+}
 
 
 
@@ -1517,7 +1545,8 @@ static int glad_gl_find_extensions_gl(void) {
     char **exts_i = NULL;
     if (!glad_gl_get_extensions(&exts, &exts_i)) return 0;
 
-    GLAD_UNUSED(glad_gl_has_extension);
+    GLAD_GL_ARB_debug_output = glad_gl_has_extension(exts, exts_i, "GL_ARB_debug_output");
+    GLAD_GL_ARB_shading_language_include = glad_gl_has_extension(exts, exts_i, "GL_ARB_shading_language_include");
 
     glad_gl_free_extensions(exts_i);
 
@@ -1599,6 +1628,8 @@ int gladLoadGLUserPtr( GLADuserptrloadfunc load, void *userptr) {
     glad_gl_load_GL_VERSION_4_6(load, userptr);
 
     if (!glad_gl_find_extensions_gl()) return 0;
+    glad_gl_load_GL_ARB_debug_output(load, userptr);
+    glad_gl_load_GL_ARB_shading_language_include(load, userptr);
 
 
 

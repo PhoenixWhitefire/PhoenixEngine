@@ -119,6 +119,46 @@ void ShaderProgram::Activate()
 	m_PendingUniforms.clear();
 }
 
+static void addDefinition(std::string& ShaderSource, const std::string& Definition)
+{
+	bool inComment = false;
+	size_t insertPosition = 0;
+
+	for (size_t i = 0; i < ShaderSource.size(); i++)
+	{
+		char c = ShaderSource[i];
+		char next = ShaderSource[i+1];
+
+		if (!inComment && c == '/' && next == '*')
+		{
+			inComment = true;
+			i++;
+		}
+		else if (inComment && c == '*' && next == '/')
+		{
+			inComment = false;
+			i++;
+		}
+
+		if (inComment)
+			continue;
+
+		if (c == '#' && (i == 0 || ShaderSource[i - 1] == '\n'))
+		{
+			for (size_t ii = i; ii < ShaderSource.size(); ii++)
+			{
+				if (ShaderSource[ii] == '\n')
+				{
+					insertPosition = ii+1;
+					break;
+				}
+			}
+			break;
+		}
+	}
+	ShaderSource.insert(insertPosition, Definition);
+}
+
 void ShaderProgram::Reload()
 {
 	ZoneScoped;
@@ -273,6 +313,17 @@ void ShaderProgram::Reload()
 			"Could not load Geometry shader for program {}! File specified: {}",
 			this->Name, GeometryShader
 		));
+
+	if (const auto& definitions = shpJson["Definitions"]; definitions.is_object())
+	{
+		for (auto it = definitions.begin(); it != definitions.end(); it++)
+		{
+			std::string definition = std::format("#define {} {}\n", it.key(), (std::string)it.value());
+			addDefinition(vertexStrSource, definition);
+			addDefinition(fragmentStrSource, definition);
+			addDefinition(geometryStrSource, definition);
+		}
+	}
 
 	const char* vertexSource = vertexStrSource.c_str();
 	const char* fragmentSource = fragmentStrSource.c_str();
@@ -496,11 +547,34 @@ ShaderManager::~ShaderManager()
 	assert(!s_Instance);
 }
 
+static void addIncludes(std::filesystem::path Path)
+{
+	for (const auto& it : std::filesystem::directory_iterator(FileRW::ResolvePathNormalized(Path)))
+	{
+		if (it.is_directory())
+			addIncludes(it.path());
+		else if (it.is_regular_file())
+		{
+			std::string name = it.path().string();
+			if (size_t shadersPos = name.find("include/"); shadersPos != std::string::npos)
+				name = name.substr(shadersPos - 1);
+			else
+				Log.WarningF("Bad shader include path '{}'", it.path().string());
+
+			glNamedStringARB(GL_SHADER_INCLUDE_ARB, -1, name.c_str(), -1, FileRW::ReadFile(it.path().string()).c_str());
+		}
+	}
+}
+
 void ShaderManager::Initialize(bool InitIsHeadless)
 {
 	ZoneScoped;
 
 	this->IsHeadless = InitIsHeadless;
+
+	if (!IsHeadless)
+		addIncludes(FileRW::ResolvePathNormalized("shaders/include"));
+
 	s_Instance = this;
 }
 

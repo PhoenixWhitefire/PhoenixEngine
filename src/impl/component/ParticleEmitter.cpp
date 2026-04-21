@@ -228,11 +228,11 @@ void EcParticleEmitter::Render(const glm::mat4& RenderMatrix)
 		if (ParticlesAreAttached)
 			transform *= ct->Transform;
 
-		particleShader.SetUniform("Position", glm::vec3(transform[3]));
-		particleShader.SetUniform("Size", particle.Size);
-		particleShader.SetUniform("Tint", particle.Tint.ToGenericValue());
-		particleShader.SetUniform("Transparency", particle.Transparency);
-		particleShader.SetTextureUniform("Image", Image);
+		particleShader.SetUniform("Phoenix_Position", glm::vec3(transform[3]));
+		particleShader.SetUniform("Phoenix_Size", particle.Size);
+		particleShader.SetUniform("Phoenix_Tint", particle.Tint.ToGenericValue());
+		particleShader.SetUniform("Phoenix_Transparency", particle.Transparency);
+		particleShader.SetTextureUniform("Phoenix_Image", Image);
 		particleShader.Activate();
 
 		glDrawElements(GL_TRIANGLES, quadGpu.NumIndices, GL_UNSIGNED_INT, 0);

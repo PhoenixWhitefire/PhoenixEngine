@@ -5,7 +5,7 @@
 
 #version 460 core
 
-uniform bool IsShadowMap;
+uniform bool Phoenix_IsShadowMap;
 
 in vec3 Frag_ModelPosition;
 in vec3 Frag_WorldPosition;
@@ -22,7 +22,7 @@ out vec4 FragColor;
 
 void main()
 {
-	if (IsShadowMap)
+	if (Phoenix_IsShadowMap)
 		discard;
 
 	FragColor = vec4(Frag_Paint.xyz, 1.f - Frag_Transparency);

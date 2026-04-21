@@ -8,9 +8,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 project(Glad)
 
 set(GL_SRCS
-	"gl.h"
-	"gl.c"
-	"KHR/khrplatform.h"
+	"include/glad/gl.h"
+	"src/gl.c"
+	"include/KHR/khrplatform.h"
 )
 
 add_library(Glad STATIC ${GL_SRCS})
@@ -20,4 +20,5 @@ source_group(TREE ./ FILES ${GL_SRCS})
 target_include_directories(Glad PUBLIC
 	"./"
     "../"
+	"include/"
 )

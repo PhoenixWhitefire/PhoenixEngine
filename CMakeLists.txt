@@ -63,6 +63,7 @@ target_include_directories(PhoenixEngine PUBLIC
 	"Vendor/glfw/include"
 	"Vendor/tinyfd"
 	"Vendor/curl/include"
+	"Vendor/glad/include"
 )
 
 set(PHX_BUILD_TYPE $<IF:$<CONFIG:Debug>,Debug,$<IF:$<CONFIG:Release>,Release,$<IF:$<CONFIG:DebugTSan>,DebugTSan,$<IF:$<CONFIG:ReleaseAUSan>,ReleaseAUSan,ReleaseTSan>>>>)

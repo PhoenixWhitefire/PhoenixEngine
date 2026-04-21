@@ -14,19 +14,17 @@ layout (location = 10) in float InstanceTransparency;
 // skinned meshes
 layout (location = 11) in mat4 SkinnedVertexTransform;
 
-const int MAX_LIGHTS = 6;
+uniform mat4 Phoenix_RenderMatrix;
 
-uniform mat4 RenderMatrix;
+uniform mat4 Phoenix_Transform;
+uniform vec3 Phoenix_Scale;
+uniform vec3 Phoenix_ColorTint;
+uniform bool Phoenix_IsInstanced;
 
-uniform mat4 Transform;
-uniform vec3 Scale;
-uniform vec3 ColorTint;
-uniform bool IsInstanced;
+uniform float Phoenix_Time;
+uniform mat4 Phoenix_DirectionalLightProjection;
 
-uniform float Time;
-uniform mat4 DirecLightProjection;
-
-uniform vec3 CameraPosition;
+uniform vec3 Phoenix_CameraPosition;
 
 out DATA
 {
@@ -45,11 +43,11 @@ out DATA
 
 void main()
 {
-	mat4 trans = Transform;
-	vec3 sca = Scale;
-	vec4 pain = vec4(ColorTint, 1.f) * VertexPaint;
+	mat4 trans = Phoenix_Transform;
+	vec3 sca = Phoenix_Scale;
+	vec4 pain = vec4(Phoenix_ColorTint, 1.f) * VertexPaint;
 	
-	if (IsInstanced)
+	if (Phoenix_IsInstanced)
 	{
 		trans = InstanceTransform;
 		sca = InstanceScale;
@@ -62,12 +60,12 @@ void main()
 	data_out.Paint = pain;
 	data_out.TextureUV = VertexUV;
 	data_out.Transparency = InstanceTransparency;
-	data_out.RenderMatrix = RenderMatrix;
+	data_out.RenderMatrix = Phoenix_RenderMatrix;
 	data_out.ModelPosition = VertexPosition * sca;
 	data_out.WorldPosition = vec3(trans * vec4(data_out.ModelPosition, 1.0f));
 	data_out.Transform = trans;
-	data_out.RelativeToDirecLight = DirecLightProjection * vec4(data_out.WorldPosition, 1.f);
-	data_out.CameraPosition = CameraPosition;
+	data_out.RelativeToDirecLight = Phoenix_DirectionalLightProjection * vec4(data_out.WorldPosition, 1.f);
+	data_out.CameraPosition = Phoenix_CameraPosition;
 	
 	gl_Position = vec4(data_out.WorldPosition, 1.f);
 }

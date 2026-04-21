@@ -6,15 +6,15 @@ in vec3 FragIn_Direction;
 
 out vec4 FragColor;
 
-uniform samplerCube SkyboxCubemap;
-uniform bool HdrEnabled = false;
-uniform bool DebugOverdraw = false;
+uniform samplerCube Phoenix_SkyboxCubemap;
+uniform bool Phoenix_HdrEnabled = false;
+uniform bool Phoenix_DebugOverdraw = false;
 
-uniform float Time = 0.f;
+uniform float Phoenix_Time = 0.f;
 
 void main()
 {
-	if (DebugOverdraw)
+	if (Phoenix_DebugOverdraw)
 	{
 		FragColor = vec4(0.f, 0.f, 0.f, 1.f);
 		return;
@@ -22,7 +22,7 @@ void main()
 	
 	//FragColor = vec4(FragIn_Direction, 1.f);
 
-	FragColor = texture(SkyboxCubemap, FragIn_Direction);
+	FragColor = texture(Phoenix_SkyboxCubemap, FragIn_Direction);
 	
 	vec4 realCol = FragColor;
 	
