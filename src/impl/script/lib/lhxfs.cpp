@@ -474,9 +474,14 @@ static int fs_promptopenfolder(lua_State* L)
 {
 	setSelfAlias(L);
 
+	std::string defaultFolder;
+
+	if (!lua_isnoneornil(L, 2))
+		defaultFolder = FileRW::ResolvePathAbsolute(luaL_checkstring(L, 2));
+
 	const char* path = tinyfd_selectFolderDialog(
 		luaL_checkstring(L, 1),
-		luaL_optstring(L, 2, nullptr)
+		defaultFolder.size() > 0 ? defaultFolder.c_str() : nullptr
 	);
 
 	if (path)

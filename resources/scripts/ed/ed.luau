@@ -56,6 +56,7 @@ local EditorPreferences = {
 	ToolsOpen = { BottomBar = true, Output = true },
 	AutoReimportModels = true,
 	GitIntegration = false,
+	ProjectsDirectory = "@home/Documents/Phoenix Projects",
 }
 
 EditorPreferences = EditorPreferences :: { [keyof<typeof(EditorPreferences)>]: index<typeof(EditorPreferences), keyof<typeof(EditorPreferences)>> } & typeof(EditorPreferences)
@@ -122,8 +123,8 @@ if not fs.isdirectory("./editor") then
 	fs.mkdir("./editor")
 end
 
-if not fs.isdirectory("@home/Documents/Phoenix Projects") then
-	fs.mkdir("@home/Documents/Phoenix Projects")
+if not fs.isdirectory(EditorPreferences.ProjectsDirectory) then
+	fs.mkdir(EditorPreferences.ProjectsDirectory)
 end
 
 local ReimportWatchers: { [string]: { Disconnect: () -> (), Models: { GameObject & Model } }? } = {}
@@ -525,7 +526,7 @@ local function openProject_(ManualPath: string?)
 
 		imgui.text("Projects")
 
-		for proj, type in fs.listdir("@home/Documents/Phoenix Projects") do
+		for proj, type in fs.listdir(EditorPreferences.ProjectsDirectory) do
 			if type ~= "d" then
 				continue
 			end
@@ -567,7 +568,7 @@ local function openProject_(ManualPath: string?)
 		game.OnFrameBegin:WaitUntil()
 	end
 
-	fs.definealias("project", "@home/Documents/Phoenix Projects/" .. assert(path))
+	fs.definealias("project", `{ EditorPreferences.ProjectsDirectory }/{ assert(path) }`)
 	fs.definealias("projres", "@project/resources")
 	fs.setunqualifiedroot("@project/")
 	assert(path)
@@ -673,14 +674,14 @@ end
 local SavedProjectsCache: { string }? = nil
 
 local function createNewProject_()
-	if not fs.isdirectory("@home/Documents/Phoenix Projects") then
-		fs.mkdir("@home/Documents/Phoenix Projects")
+	if not fs.isdirectory(EditorPreferences.ProjectsDirectory) then
+		fs.mkdir(EditorPreferences.ProjectsDirectory)
 	end
 
 	local name = "New Project "
 	local nameIndex = 1
 
-	while fs.isdirectory("@home/Documents/Phoenix Projects/" .. name .. nameIndex) do
+	while fs.isdirectory(`{ EditorPreferences.ProjectsDirectory }/{ name .. nameIndex }`) do
 		nameIndex += 1
 
 		if nameIndex > 99 then
@@ -691,7 +692,7 @@ local function createNewProject_()
 	Project.Name = name .. nameIndex
 	Project.IsTempPath = true
 
-	local fullPath = "@home/Documents/Phoenix Projects/" .. assert(Project.Name)
+	local fullPath = `{ EditorPreferences.ProjectsDirectory }/{ assert(Project.Name) }`
 	fs.mkdir(fullPath)
 
 	fs.definealias("project", fullPath)
@@ -1381,8 +1382,8 @@ local function renderMainMenuBar(dt: number)
 							if buttonSelection == 1 then
 								local prevName = Project.Name
 
-								fs.rename("@home/Documents/Phoenix Projects/" .. Project.Name, newProjectName)
-								fs.definealias("project", "@home/Documents/Phoenix Projects/" .. newProjectName)
+								fs.rename(`{ EditorPreferences.ProjectsDirectory }/{ Project.Name }`, newProjectName)
+								fs.definealias("project", `{ EditorPreferences.ProjectsDirectory }/{ newProjectName }`)
 
 								Project.Name = newProjectName
 
@@ -1700,6 +1701,52 @@ local function renderMainMenuBar(dt: number)
 		EditorPreferences.KeepGizmoInView = imgui.checkbox("Turn the camera to keep the gizmo handles in view while moving an object", EditorPreferences.KeepGizmoInView)
 		EditorPreferences.InvertTabButtonLitColors = imgui.checkbox("Invert tab button active colors", EditorPreferences.InvertTabButtonLitColors)
 		EditorPreferences.GitIntegration = imgui.checkbox("Git integration", EditorPreferences.GitIntegration)
+
+		imgui.separator()
+
+		imgui.text(`Your projects directory is:\n{ EditorPreferences.ProjectsDirectory }`)
+		imgui.setitemtooltip(EditorPreferences.ProjectsDirectory)
+
+		if imgui.button("Change") then
+			local newDir = fs.promptopenfolder("Select Projects directory", EditorPreferences.ProjectsDirectory)
+
+			if newDir and fs.resolvepathabsolute(newDir) ~= fs.resolvepathabsolute(EditorPreferences.ProjectsDirectory) then
+				local copySuccess, err = pcall(function()
+					fs.copy(EditorPreferences.ProjectsDirectory, newDir)
+				end)
+
+				if not copySuccess then
+					Engine:ShowMessageBox(
+						"Failed to copy projects",
+						`Failed to copy your projects from '{ EditorPreferences.ProjectsDirectory }' to '{ newDir }'.\n\nError: { err }\n\n`
+						.. `Your Projects directory has not been updated.`,
+						"ok",
+						"error"
+					)
+				else
+					local prevDir = EditorPreferences.ProjectsDirectory
+					EditorPreferences.ProjectsDirectory = newDir
+
+					local choice = Engine:ShowMessageBox(
+						"Delete previous directory?",
+						"Your projects appear to have been copied successfully to the new directory.\nWould you like to delete the old directory?",
+						"yesno",
+						"question",
+						0
+					)
+
+					if choice == 1 then
+						local deleteSuccess, deleteError = pcall(function()
+							fs.remove(prevDir)
+						end)
+
+						if not deleteSuccess then
+							Engine:ShowMessageBox("Deletion failed", `Failed to delete your old Projects directory: { deleteError }`, "ok", "error")
+						end
+					end
+				end
+			end
+		end
 
 		imgui.urllink("https://youtu.be/YCjNT9qGjh4?t=7193")
 
@@ -2422,7 +2469,7 @@ local function renderProjectSelectorTiles(Projects: { string })
 			end
 		end
 
-		imgui.image(`@home/Documents/Phoenix Projects/{ proj }/icon.png`, vector.create(250, 250))
+		imgui.image(`{ EditorPreferences.ProjectsDirectory }/{ proj }/icon.png`, vector.create(250, 250))
 		clicked, hovered = imgui.itemclicked(), imgui.itemhovered()
 		imgui.setcursorposition(cpos.x, cpos.y + 250)
 		imgui.text(proj)
@@ -2461,9 +2508,9 @@ local function promptDeleteProject(Name)
 	)
 
 	if buttonSelection == 1 then
-		fs.remove(`@home/Documents/Phoenix Projects/{ Name }`)
+		fs.remove(`{ EditorPreferences.ProjectsDirectory }/{ Name }`)
 
-		AssetManager:UnloadTexture(`@home/Documents/Phoenix Projects/{ Name }/icon.png`)
+		AssetManager:UnloadTexture(`{ EditorPreferences.ProjectsDirectory }/{ Name }/icon.png`)
 		table.remove(RecentProjects, table.find(RecentProjects, Name))
 		saveRecents()
 
@@ -2508,7 +2555,7 @@ local function renderSavedProjects()
 		SavedProjectsCache = {}
 		assert(SavedProjectsCache)
 
-		for path, type in fs.listdir("@home/Documents/Phoenix Projects") do
+		for path, type in fs.listdir(EditorPreferences.ProjectsDirectory) do
 			if type == "d" and fs.isfile(path .. "/phoenix.conf") then
 				local conf = json.parse(assert(fs.read(path .. "/phoenix.conf")))
 				assert(typeof(conf) == "table")
