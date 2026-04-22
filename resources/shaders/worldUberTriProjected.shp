@@ -1,9 +1,9 @@
 {
-  "Fragment": "shaders/worldUber.frag",
-  "Geometry": "shaders/worldUber.geom",
-  "InheritUniformsOf": "worldUber",
   "Definitions": {
     "USE_TRI_PLANAR_PROJECTION": "true"
   },
+  "Fragment": "shaders/worldUber.frag",
+  "Geometry": "shaders/worldUber.geom",
+  "InheritUniformsOf": "worldUber",
   "Vertex": "shaders/worldUber.vert"
 }

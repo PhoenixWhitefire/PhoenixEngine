@@ -309,10 +309,10 @@ uint32_t TextureManager::LoadFromPath(const std::string& Path, bool ShouldLoadAs
 	std::string ResDir = EngineJsonConfig["ResourcesDirectory"];
 	std::string ActualPath = FileRW::ResolvePathNormalized(Path);
 
-	auto it = m_StringToTextureId.find(ActualPath);
+	auto it = m_StringToTextureId.find(Path);
 	uint32_t forceResourceId = UINT32_MAX;
-	std::string assignName = ActualPath;
-	
+	std::string assignName = Path;
+
 	if (it != m_StringToTextureId.end())
 	{
 		const Texture& texture = m_Textures.at(it->second);
@@ -321,7 +321,7 @@ uint32_t TextureManager::LoadFromPath(const std::string& Path, bool ShouldLoadAs
 		{
 			if ((texture.DoBilinearSmoothing != DoBilinearSmoothing || texture.IsLinearSpace != LoadInLinearSpace) && Path != "!Framebuffer:Main")
 			{
-				assignName = ActualPath + (DoBilinearSmoothing ? "!B," : "!N,") + (LoadInLinearSpace ? "L" : "S");
+				assignName = Path + (DoBilinearSmoothing ? "!B," : "!N,") + (LoadInLinearSpace ? "L" : "S");
 				const auto& vit = m_StringToTextureId.find(assignName);
 
 				if (vit != m_StringToTextureId.end())
@@ -350,7 +350,7 @@ uint32_t TextureManager::LoadFromPath(const std::string& Path, bool ShouldLoadAs
 			glGenTextures(1, &newGpuId);
 
 			if (forceResourceId == UINT32_MAX)
-				newResourceId = this->Assign({ .ImagePath = ActualPath, .ResourceId = UINT32_MAX }, assignName);
+				newResourceId = this->Assign({ .ImagePath = Path, .ResourceId = UINT32_MAX }, assignName);
 			else
 				newResourceId = forceResourceId;
 

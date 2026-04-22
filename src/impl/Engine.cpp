@@ -477,7 +477,7 @@ static void traverseHierarchy(
 
 	Root->ForEachChild([&](GameObject* object) -> bool
 	{
-		if (EcSound* sound = object->FindComponent<EcSound>())
+		if (EcSound* sound = object->FindComponent<EcSound>(); sound && !Engine::Get()->IsHeadlessMode)
 			sound->Update(DeltaTime);
 
 		if (!object->Enabled)

@@ -731,6 +731,7 @@
         "treenode": "function",
         "treepop": "function",
         "urllink": "function",
+        "windowappearing": "function",
         "windowhovered": "function",
         "windowposition": "function",
         "windowsize": "function"

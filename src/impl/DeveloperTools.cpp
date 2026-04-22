@@ -141,7 +141,6 @@ static std::string ErrorTooltipMessage = "No Error Dummy";
 static double ErrorTooltipTimeRemaining = 0.f;
 
 static char MtlCreateNameBuf[MATERIAL_NEW_NAME_BUFSIZE] = "material";
-static char MtlLoadNameBuf[MATERIAL_NEW_NAME_BUFSIZE] = "material";
 static char MtlDiffuseBuf[MATERIAL_TEXTUREPATH_BUFSIZE] = { 0 };
 static char MtlSpecBuf[MATERIAL_TEXTUREPATH_BUFSIZE] = { 0 };
 static char MtlNormalBuf[MATERIAL_TEXTUREPATH_BUFSIZE] = { 0 };
@@ -299,7 +298,7 @@ void DeveloperTools::Initialize(Renderer* renderer)
 	try
 	{
 		bool readSuccess = true;
-		std::string contents = FileRW::ReadFile("@cwd/wikigen/doc-comments.json", &readSuccess);
+		std::string contents = FileRW::ReadFile("./wikigen/doc-comments.json", &readSuccess);
 
 		if (readSuccess)
 			DocumentationJson = nlohmann::json::parse(contents);
@@ -327,7 +326,7 @@ void DeveloperTools::Initialize(Renderer* renderer)
 	try
 	{
 		bool readSuccess = false;
-		std::string contents = FileRW::ReadFile("@cwd/apidump.json", &readSuccess);
+		std::string contents = FileRW::ReadFile("./apidump.json", &readSuccess);
 
 		if (readSuccess)
 			ApiDumpJson = nlohmann::json::parse(contents);
@@ -340,14 +339,14 @@ void DeveloperTools::Initialize(Renderer* renderer)
 	}
 
 	bool prologueFound = true;
-	DatatypesDocPrologue = FileRW::ReadFile("@cwd/wikigen/datatypes-prologue.md", &prologueFound);
-	PHX_CHECK(prologueFound && "Datatypes prologue - @cwd/wikigen/datatypes-prologue.md");
+	DatatypesDocPrologue = FileRW::ReadFile("./wikigen/datatypes-prologue.md", &prologueFound);
+	PHX_CHECK(prologueFound && "Datatypes prologue - ./wikigen/datatypes-prologue.md");
 
-	LibrariesDocPrologue = FileRW::ReadFile("@cwd/wikigen/libraries-prologue.md", &prologueFound);
-	PHX_CHECK(prologueFound && "Libraries prologue - @cwd/wikigen/libraries-prologue.md");
+	LibrariesDocPrologue = FileRW::ReadFile("./wikigen/libraries-prologue.md", &prologueFound);
+	PHX_CHECK(prologueFound && "Libraries prologue - ./wikigen/libraries-prologue.md");
 
-	GlobalsDocPrologue = FileRW::ReadFile("@cwd/wikigen/globals-prologue.md", &prologueFound);
-	PHX_CHECK(prologueFound && "Globals prologue - @cwd/wikigen/globals-prologue.md");
+	GlobalsDocPrologue = FileRW::ReadFile("./wikigen/globals-prologue.md", &prologueFound);
+	PHX_CHECK(prologueFound && "Globals prologue - ./wikigen/globals-prologue.md");
 
 	ScriptEngine::L::DebugBreak = &debugBreakHook;
 	ScriptEngine::L::LeaveDebugger = debuggerLeaveCallback;
@@ -445,24 +444,7 @@ static const char* mtlIterator(void*, int index)
 
 static std::string getFileDirectory(const std::string& FilePath)
 {
-	size_t lastFwdSlash = FilePath.find_last_of("/");
-	std::string cwd = std::filesystem::current_path().string() + "/";
-
-	if (lastFwdSlash == std::string::npos)
-#ifdef _WIN32
-		return cwd + "resources\\";
-#else
-		return cwd + "resources/";
-#endif
-	else
-	{
-		std::string fileDir = FilePath.substr(0, lastFwdSlash + 1);
-
-		if (fileDir.find("resources/") == std::string::npos)
-			fileDir = "resources/" + fileDir;
-
-		return cwd + fileDir + "/";
-	}
+	return std::filesystem::path(FilePath).parent_path().string();
 }
 
 #define EDCHECKEXPR(expr) { if (!(expr)) { setErrorMessage(#expr " failed"); } }
@@ -754,11 +736,17 @@ static void renderTextEditors()
 
 static void uniformsEditor(
 	std::unordered_map<std::string, Reflection::GenericValue>& Uniforms,
-	int* Selection, const char* Name
+	int* Selection, const char* Name,
+	const std::string& AncestorShader = ""
 )
 {
 	ZoneScopedC(tracy::Color::DarkSeaGreen);
-	ImGui::BeginChild(Name, ImVec2(), ImGuiChildFlags_Borders);
+
+	if (!ImGui::CollapsingHeader(Name))
+		return;
+
+	ImVec2 winSize = ImGui::GetWindowSize();
+	ImGui::BeginChild(Name, ImVec2(0.f, 0.f), ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY);
 
 	if ((*Selection) + 1ull > Uniforms.size())
 		*Selection = -1;
@@ -766,37 +754,54 @@ static void uniformsEditor(
 	static int NewTypeId = 0;
 
 	static std::string NewUniformNameBuf;
-	NewUniformNameBuf.resize(32);
+	NewUniformNameBuf.reserve(32);
 
-	ImGui::InputText("Variable Name", &NewUniformNameBuf);
-	ImGui::Combo("Variable Type", &NewTypeId, "Boolean\0Integer\0Float\0");
-
-	if (ImGui::Button("Add"))
+	if (AncestorShader.size() == 0 && ImGui::Button("+", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
 	{
-		Reflection::GenericValue initialValue;
+		ImGui::OpenPopup("AddShaderUniform");
+		NewUniformNameBuf.clear();
+		NewTypeId = 0;
+	}
 
-		switch (NewTypeId)
+	if (ImGui::BeginPopup("AddShaderUniform"))
+	{
+		if (ImGui::IsWindowAppearing())
+			ImGui::SetKeyboardFocusHere();
+
+		ImGui::InputText("Variable Name", &NewUniformNameBuf);
+		ImGui::Combo("Variable Type", &NewTypeId, "Float\0Integer\0Boolean\0");
+
+		if (ImGui::Button("Add", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
 		{
-		case 0:
-		{
-			initialValue = true;
-			break;
-		}
-		case 1:
-		{
-			initialValue = 0;
-			break;
-		}
-		case 2:
-		{
-			initialValue = 0.f;
-			break;
-		}
-		default:
-			assert(false);
+			Reflection::GenericValue initialValue;
+
+			switch (NewTypeId)
+			{
+			case 2:
+			{
+				initialValue = true;
+				break;
+			}
+			case 1:
+			{
+				initialValue = 0;
+				break;
+			}
+			case 0:
+			{
+				initialValue = 0.f;
+				break;
+			}
+			default:
+				assert(false);
+			}
+
+			Uniforms[NewUniformNameBuf] = initialValue;
+			*Selection = Uniforms.size() - 1;
+			ImGui::CloseCurrentPopup();
 		}
 
-		Uniforms[NewUniformNameBuf] = initialValue;
+		ImGui::EndPopup();
 	}
 
 	std::vector<std::string> uniformsArray;
@@ -805,8 +810,9 @@ static void uniformsEditor(
 	for (auto& it : Uniforms)
 		uniformsArray.push_back(it.first);
 
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 	ImGui::ListBox(
-		Name,
+		"##List",
 		Selection,
 		[](void* ud, int index)
 		{
@@ -820,55 +826,151 @@ static void uniformsEditor(
 	if (*Selection != -1 && uniformsArray.size() >= 1)
 	{
 		const std::string& name = uniformsArray.at(*Selection);
-		Reflection::GenericValue value = Uniforms[name];
+		Reflection::GenericValue& value = Uniforms[name];
+
+		if (AncestorShader.size() == 0)
+		{
+			static std::string NameEditBuf;
+			NameEditBuf = name;
+
+			if (ImGui::InputText("Name", &NameEditBuf, ImGuiInputTextFlags_EnterReturnsTrue))
+			{
+				Uniforms[NameEditBuf] = value;
+				value = Uniforms[NameEditBuf];
+				Uniforms.erase(name);
+			}
+
+			switch (value.Type)
+			{
+			case Reflection::ValueType::Boolean:
+			{
+				ImGui::Checkbox("Value", &value.Val.Bool);
+				break;
+			}
+			case Reflection::ValueType::Integer:
+			{
+				int32_t curVal = static_cast<int32_t>(value.AsInteger());
+				ImGui::InputInt("Value", &curVal);
+
+				value = curVal;
+				break;
+			}
+			case Reflection::ValueType::Double:
+			{
+				ImGui::InputDouble("Value", &value.Val.Double);
+				break;
+			}
+			default:
+			{
+				ImGui::Text(
+					"<Type ID:%i ('%s') editing not supported>",
+					(int)value.Type,
+					Reflection::TypeAsString(value.Type).data()
+				);
+				break;
+			}
+			}
+
+			ImGui::SetNextItemWidth(winSize.x);
+			if (ImGui::Button("Remove"))
+				Uniforms.erase(NameEditBuf);
+		}
+		else
+		{
+			ImGui::Text("Modify inherited uniforms through the ancestor shader (%s)", AncestorShader.c_str());
+			ImGui::Text("Name: %s", name.c_str());
+			ImGui::Text("Value: %s", value.ToString().c_str());
+		}
+	}
+
+	ImGui::EndChild();
+}
+
+static void shaderPreprocessorDefinitionsEditor(
+	std::unordered_map<std::string, std::string>& Definitions,
+	int* Selection, const char* Name
+)
+{
+	ZoneScopedC(tracy::Color::DarkSeaGreen);
+
+	if (!ImGui::CollapsingHeader(Name))
+		return;
+
+	ImVec2 winSize = ImGui::GetWindowSize();
+	ImGui::BeginChild(Name, ImVec2(0.f, winSize.y / 4.f), ImGuiChildFlags_Borders);
+
+	if ((*Selection) + 1ull > Definitions.size())
+		*Selection = -1;
+
+	static std::string NewDefNameBuf;
+	static std::string NewDefValueBuf;
+	NewDefNameBuf.reserve(32);
+	NewDefValueBuf.reserve(16);
+
+	if (ImGui::Button("+", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
+	{
+		ImGui::OpenPopup("AddShaderDefinition");
+		NewDefNameBuf.clear();
+		NewDefValueBuf.clear();
+	}
+
+	if (ImGui::BeginPopup("AddShaderDefinition"))
+	{
+		if (ImGui::IsWindowAppearing())
+			ImGui::SetKeyboardFocusHere();
+
+		ImGui::InputText("Name", &NewDefNameBuf);
+		ImGui::InputText("Value", &NewDefValueBuf);
+
+		if (ImGui::Button("Add", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
+		{
+			Definitions[NewDefNameBuf] = NewDefValueBuf;
+			*Selection = Definitions.size() - 1;
+			ImGui::CloseCurrentPopup();
+		}
+
+		ImGui::EndPopup();
+	}
+
+	std::vector<std::string> defsArray;
+	defsArray.reserve(Definitions.size());
+
+	for (auto& it : Definitions)
+		defsArray.push_back(it.first);
+
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+	ImGui::ListBox(
+		"##List",
+		Selection,
+		[](void* ud, int index)
+		{
+			std::vector<std::string>* uniforms = (std::vector<std::string>*)ud;
+			return uniforms->at(index).c_str();
+		},
+		&defsArray,
+		static_cast<int>(Definitions.size())
+	);
+
+	if (*Selection != -1 && defsArray.size() >= 1)
+	{
+		const std::string& name = defsArray.at(*Selection);
+		std::string& value = Definitions[name];
 
 		static std::string NameEditBuf;
 		NameEditBuf = name;
 
-		ImGui::InputText("Name", &NameEditBuf);
-
-		Reflection::GenericValue newValue = value;
-
-		switch (value.Type)
+		if (ImGui::InputText("Name", &NameEditBuf, ImGuiInputTextFlags_EnterReturnsTrue))
 		{
-		case Reflection::ValueType::Boolean:
-		{
-			bool curVal = value.AsBoolean();
-			ImGui::Checkbox("Value", &curVal);
-
-			newValue = curVal;
-			break;
-		}
-		case Reflection::ValueType::Integer:
-		{
-			int32_t curVal = static_cast<int32_t>(value.AsInteger());
-			ImGui::InputInt("Value", &curVal);
-
-			newValue = curVal;
-			break;
-		}
-		case Reflection::ValueType::Double:
-		{
-			ImGui::InputDouble("Value", &value.Val.Double);
-
-			newValue = value;
-			break;
-		}
-		default:
-		{
-			ImGui::Text(
-				"<Type ID:%i ('%s') editing not supported>",
-				(int)value.Type,
-				Reflection::TypeAsString(value.Type).data()
-			);
-			break;
-		}
+			Definitions[NameEditBuf] = value;
+			value = Definitions[NameEditBuf];
+			Definitions.erase(name);
 		}
 
-		if (name != NameEditBuf)
-			Uniforms.erase(name);
+		ImGui::InputText("Value", &value);
 
-		Uniforms[NameEditBuf] = newValue;
+		ImGui::SetNextItemWidth(winSize.x);
+		if (ImGui::Button("Remove"))
+			Definitions.erase(NameEditBuf);
 	}
 
 	ImGui::EndChild();
@@ -933,6 +1035,19 @@ static void shaderPipelineShaderSelect(const std::string& Label, std::string* Ta
 	}
 }
 
+static void collectInheritedUniforms(std::unordered_map<std::string, Reflection::GenericValue>& inheritedUniforms, const ShaderProgram& sp)
+{
+	if (sp.UniformsAncestor.size() > 0)
+	{
+		ShaderManager* shdManager = ShaderManager::Get();
+		const ShaderProgram& ancestor = shdManager->GetShaderResource(shdManager->LoadFromPath(sp.UniformsAncestor));
+
+		// override ancestral uniforms
+		collectInheritedUniforms(inheritedUniforms, ancestor);
+		inheritedUniforms.insert(ancestor.DefaultUniforms.begin(), ancestor.DefaultUniforms.end());
+	}
+}
+
 static void renderShaderPipelinesEditor()
 {
 	ZoneScopedC(tracy::Color::DarkSeaGreen);
@@ -949,27 +1064,49 @@ static void renderShaderPipelinesEditor()
 	ShaderManager* shdManager = ShaderManager::Get();
 	std::vector<ShaderProgram>& shaders = shdManager->GetLoadedShaders();
 
+	static int curItemIdx = -1;
 	static std::string NewShdName = "";
 	NewShdName.reserve(64);
 
-	ImGui::InputText("New Blank Pipeline", &NewShdName);
-
-	if (ImGui::Button("Create"))
+	if (ImGui::Button("+", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
 	{
-		ShaderProgram np;
-		np.Name = NewShdName;
-		np.VertexShader = "worldUber.vert";
-		np.FragmentShader = "worldUber.frag";
-		
-		np.Save();
+		ImGui::OpenPopup("CreateNewPipeline");
+		NewShdName.clear();
+	}
+	ImGui::SetItemTooltip("Create new pipeline");
 
-		shdManager->LoadFromPath(NewShdName);
+	if (ImGui::BeginPopup("CreateNewPipeline"))
+	{
+		if (ImGui::IsWindowAppearing())
+			ImGui::SetKeyboardFocusHere();
+
+		ImGui::InputText("Name", &NewShdName);
+
+		if (ImGui::Button("Add", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
+		{
+			std::string realShpPath = (NewShdName.find("shaders/") == std::string::npos ? "shaders/" : "") + NewShdName + ".shp";
+
+			if (!std::filesystem::is_regular_file(FileRW::ResolvePathNormalized(realShpPath)))
+			{
+				ShaderProgram np;
+				np.Name = NewShdName;
+				np.VertexShader = "worldUber.vert";
+				np.GeometryShader = "worldUber.geom";
+				np.FragmentShader = "worldUber.frag";
+
+				np.Save();
+			}
+
+			curItemIdx = (int)shdManager->LoadFromPath(NewShdName);
+			ImGui::CloseCurrentPopup();
+		}
+
+		ImGui::EndPopup();
 	}
 
-	static int curItemIdx = -1;
-
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 	ImGui::ListBox(
-		"Loaded Pipelines",
+		"##LoadedPipelines",
 		&curItemIdx,
 		[](void* udat, int idx)
 		-> const char*
@@ -990,44 +1127,26 @@ static void renderShaderPipelinesEditor()
 
 		static int MainUniformSelectionIdx = -1;
 		static int InheritedUniformSelectionIdx = -1;
+		static int PreprocDefinitionSelectionIdx = -1;
 
 		ImGui::Text("Inherit variables of: ");
 		ImGui::SameLine();
 
 		curItem.UniformsAncestor.reserve(64);
-
 		ImGui::InputText("##", &curItem.UniformsAncestor);
 
-		std::unordered_map<std::string, Reflection::GenericValue> mainUniforms = curItem.DefaultUniforms;
+		std::unordered_map<std::string, Reflection::GenericValue>& mainUniforms = curItem.DefaultUniforms;
 		std::unordered_map<std::string, Reflection::GenericValue> inheritedUniforms;
-
-		if (curItem.UniformsAncestor.size() > 0)
-		{
-			const ShaderProgram& ancestor = shdManager->GetShaderResource(shdManager->LoadFromPath(curItem.UniformsAncestor));
-			// do NOT show inherited uniforms to the developer unless they are modified to
-			// reduce clutter
-			for (const auto& it : ancestor.DefaultUniforms)
-				if (const auto& cit = mainUniforms.find(it.first);
-					cit != mainUniforms.end() && cit->second == it.second
-				)
-				{
-					inheritedUniforms[it.first] = it.second;
-					mainUniforms.erase(cit);
-				}
-		}
+		collectInheritedUniforms(inheritedUniforms, curItem);
 
 		uniformsEditor(mainUniforms, &MainUniformSelectionIdx, "Uniforms");
 
 		if (inheritedUniforms.size() > 0)
-			uniformsEditor(inheritedUniforms, &InheritedUniformSelectionIdx, "Inherited Uniforms");
+			uniformsEditor(inheritedUniforms, &InheritedUniformSelectionIdx, "Inherited Uniforms", /* AncestorShader = */ curItem.UniformsAncestor);
 
-		for (const auto& it : mainUniforms)
-			curItem.DefaultUniforms[it.first] = it.second;
+		shaderPreprocessorDefinitionsEditor(curItem.PreprocessorDefinitions, &PreprocDefinitionSelectionIdx, "Preprocessor Definitions");
 
-		for (const auto& it : inheritedUniforms)
-			curItem.DefaultUniforms[it.first] = it.second;
-
-		if (ImGui::Button("Save & Reload"))
+		if (ImGui::Button("Save & Reload", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
 		{
 			curItem.Save();
 			curItem.Reload();
@@ -1064,64 +1183,68 @@ static void mtlEditorTexture(const char* Label, uint32_t* TextureIdPtr, char* Cu
 
 	const Texture& tx = texManager->GetTextureResource(*TextureIdPtr);
 
-	if (ImGui::GetIO().KeyCtrl || addTextureDialog)
+	CurrentPath[MATERIAL_TEXTUREPATH_BUFSIZE - 1] = 0;
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize("...").x - ImGui::GetStyle().FramePadding.x * 2.f - 4.f);
+	ImGui::InputText("##", CurrentPath, MATERIAL_TEXTUREPATH_BUFSIZE);
+
+	if (ImGui::IsItemDeactivatedAfterEdit())
 	{
-		bool fileDialogRequested = addTextureDialog ? true : ImGui::TextLink(CurrentPath);
-		ImGui::SetItemTooltip("Open file dialog");
+		uint32_t newtexid = texManager->LoadFromPath(CurrentPath);
+		// i'm so silly 04/12/2024
+		// x2 22/04/2026
+		*TextureIdPtr = newtexid;
+	}
 
-		if (fileDialogRequested)
+	ImGui::SameLine();
+	bool fileDialogRequested = addTextureDialog ? true : ImGui::Button("...");
+	ImGui::SetItemTooltip("Open file dialog");
+
+	if (fileDialogRequested)
+	{
+		std::string texdir = getFileDirectory(CurrentPath);
+		const char* filter[] = { "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.psd", "*.gif", "*.hdr" };
+
+		const char* path = tinyfd_openFileDialog(
+			"Select Texture",
+			texdir.c_str(),
+			sizeof(filter) / sizeof(*filter),
+			filter,
+			"Images",
+			false
+		);
+
+		if (path)
 		{
-			std::string texdir = getFileDirectory(CurrentPath);
-			const char* filter[] = { "*.png", "*.jpg", "*.jpeg" };
+			std::string fullpath = path;
 
-			const char* path = tinyfd_openFileDialog(
-				"Select Texture",
-				texdir.c_str(),
-				3,
-				filter,
-				"Images",
-				false
-			);
+			// windows SMELLS :( 18/02/2025
+			size_t off = fullpath.find_first_of("\\");
 
-			if (path)
+			while (off != std::string::npos)
+				off = fullpath.replace(off, 1, "/").find_first_of("\\");
+
+			size_t resDirOffset = fullpath.find("resources/");
+
+			if (resDirOffset == std::string::npos)
 			{
-				std::string fullpath = path;
-	
-				// windows SMELLS :( 18/02/2025
-				size_t off = fullpath.find_first_of("\\");
-	
-				while (off != std::string::npos)
-					off = fullpath.replace(off, 1, "/").find_first_of("\\");
-	
-				size_t resDirOffset = fullpath.find("resources/");
-	
-				if (resDirOffset == std::string::npos)
-				{
-					setErrorMessage("Selection must be within the Project's `resources/` directory!");
-				}
-				else
-				{
-					std::string shortpath = fullpath.substr(resDirOffset + 10);
-					copyStringToBuffer(CurrentPath, shortpath, MATERIAL_TEXTUREPATH_BUFSIZE);
-				
-					uint32_t newtexid = TextureManager::Get()->LoadFromPath(shortpath);
-					// i'm so silly 04/12/2024
-					*TextureIdPtr = newtexid;
-				}
+				setErrorMessage("Selection must be within the Project's `resources/` directory!");
+			}
+			else
+			{
+				std::string shortpath = fullpath.substr(resDirOffset + 10);
+				copyStringToBuffer(CurrentPath, shortpath, MATERIAL_TEXTUREPATH_BUFSIZE);
+
+				uint32_t newtexid = texManager->LoadFromPath(shortpath);
+				// i'm so silly 04/12/2024
+				*TextureIdPtr = newtexid;
 			}
 		}
-
-		if (addTextureDialog)
-		{
-			ImGui::PopID();
-			return;
-		}
 	}
-	else
+
+	if (addTextureDialog)
 	{
-		CurrentPath[MATERIAL_TEXTUREPATH_BUFSIZE - 1] = 0;
-		ImGui::InputText("##", CurrentPath, MATERIAL_TEXTUREPATH_BUFSIZE);
-		ImGui::SetItemTooltip("Enter path directly, or hold CTRL to use a file dialog");
+		ImGui::PopID();
+		return;
 	}
 
 	if (CanRemove && ImGui::Button("Remove"))
@@ -1150,6 +1273,14 @@ static void mtlEditorTexture(const char* Label, uint32_t* TextureIdPtr, char* Cu
 	ImGui::PopID();
 }
 
+static std::string getMaterialFilePath(const std::string& Material)
+{
+	if (Material.find("materials/") == std::string::npos && Material.find(".mtl") == std::string::npos)
+		return "materials/" + Material + ".mtl";
+	else
+		return Material;
+}
+
 // 02/09/2024
 // That one Gianni Matragrano shitpost where it's a
 // baguette with a doge face on a white background low-res
@@ -1171,29 +1302,43 @@ static void renderMaterialEditor()
 	MaterialManager* mtlManager = MaterialManager::Get();
 	TextureManager* texManager = TextureManager::Get();
 
-	ImGui::InputText("Load material", MtlLoadNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
-	ImGui::SetItemTooltip("The name of the material to load in, NOT the file path");
-
-	if (ImGui::Button("Load"))
-		mtlManager->LoadFromPath(MtlLoadNameBuf);
-
-	ImGui::InputText("New blank material", MtlCreateNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
-	ImGui::SetItemTooltip("The name of the new blank material");
-
-	if (ImGui::Button("Create"))
+	if (ImGui::Button("+", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
 	{
-		EDCHECKEXPR(FileRW::WriteFile(
-			"materials/" + std::string(MtlCreateNameBuf) + ".mtl",
-			DefaultNewMaterial.dump(2)
-		));
+		ImGui::OpenPopup("CreateOrLoadMaterial");
+		memset(MtlCreateNameBuf, '\0', MATERIAL_NEW_NAME_BUFSIZE);
+	}
 
-		mtlManager->LoadFromPath(MtlCreateNameBuf);
+	if (ImGui::BeginPopup("CreateOrLoadMaterial"))
+	{
+		if (ImGui::IsWindowAppearing())
+			ImGui::SetKeyboardFocusHere();
+
+		ImGui::InputText("Name", MtlCreateNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
+
+		if (ImGui::Button("Add", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
+		{
+			std::string path = getMaterialFilePath(MtlCreateNameBuf);
+
+			if (!std::filesystem::is_regular_file(FileRW::ResolvePathNormalized(path)))
+			{
+				EDCHECKEXPR(FileRW::WriteFile(
+					path,
+					DefaultNewMaterial.dump(2)
+				));
+			}
+
+			MtlCurItem = (int)mtlManager->LoadFromPath(MtlCreateNameBuf);
+			ImGui::CloseCurrentPopup();
+		}
+
+		ImGui::EndPopup();
 	}
 
 	std::vector<RenderMaterial>& loadedMaterials = mtlManager->GetLoadedMaterials();
 
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 	ImGui::ListBox(
-		"Loaded materials",
+		"##Loaded",
 		&MtlCurItem,
 		&mtlIterator,
 		nullptr,
@@ -1309,7 +1454,31 @@ static void renderMaterialEditor()
 	MtlPreviewRenderer->FrameBuffer.Bind();
 	glViewport(0, 0, prevFbo.Width, prevFbo.Height);
 
-	ImGui::InputText("Shader", MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
+	ImGui::Text("Shader:");
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize("...").x - ImGui::GetStyle().FramePadding.x - 4.f);
+	ImGui::InputText("##Shader", MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
+	ImGui::SameLine();
+
+	if (ImGui::Button("..."))
+		ImGui::OpenPopup("SelectShaderForMaterial");
+
+	if (ImGui::BeginPopup("SelectShaderForMaterial"))
+	{
+		ShaderManager* shdManager = ShaderManager::Get();
+		std::vector<ShaderProgram>& shaders = shdManager->GetLoadedShaders();
+
+		for (const ShaderProgram& sp : shaders)
+		{
+			if (ImGui::MenuItem(sp.Name.c_str()))
+			{
+				memcpy(MtlShpBuf, sp.Name.data(), std::min(sp.Name.size(), (size_t)MATERIAL_TEXTUREPATH_BUFSIZE));
+				MtlShpBuf[std::min(sp.Name.size(), (size_t)MATERIAL_TEXTUREPATH_BUFSIZE - 1)] = '\0';
+			}
+		}
+
+		ImGui::EndPopup();
+	}
 
 	int curPolyMode = static_cast<uint8_t>(curItem.PolygonMode);
 	ImGui::Combo("Polygon Mode", &curPolyMode, "Fill\0Line\0Point\0");
@@ -1322,8 +1491,6 @@ static void renderMaterialEditor()
 	mtlEditorTexture("Emission Map:", &curItem.EmissionMap, MtlEmissionBuf);
 	glDisable(GL_FRAMEBUFFER_SRGB);
 
-	ImGui::Text("Shader Variable Overrides");
-
 	uniformsEditor(curItem.Uniforms, &SelectedUniformIdx, "Variables");
 
 	ImGui::Checkbox("Has translucency", &curItem.HasTranslucency);
@@ -1333,7 +1500,7 @@ static void renderMaterialEditor()
 	ImGui::InputText("Save As", &s_SaveNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
 	ImGui::SetItemTooltip("By default, this will be the name of the material you are editing, thus overwriting it");
 
-	if (ImGui::Button("Save changes"))
+	if (ImGui::Button("Save changes", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
 	{
 		curItem.ColorMap = texManager->LoadFromPath(MtlDiffuseBuf);
 

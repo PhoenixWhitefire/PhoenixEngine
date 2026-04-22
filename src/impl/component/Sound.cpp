@@ -189,8 +189,11 @@ SoundComponentManager::SoundComponentManager()
 			Memory::Free(P);
 		};
 
-	if (ma_result initResult = ma_engine_init(&config, &AudioEngine); initResult != MA_SUCCESS)
-		RAISE_RTF("Audio Engine init failed, error code: {}", (int)initResult);
+	if (!IsHeadless)
+	{
+		if (ma_result initResult = ma_engine_init(&config, &AudioEngine); initResult != MA_SUCCESS)
+			RAISE_RTF("Audio Engine init failed, error code: {}", (int)initResult);
+	}
 
 	m_Components.reserve(16);
 }
@@ -198,28 +201,30 @@ SoundComponentManager::SoundComponentManager()
 void SoundComponentManager::UpdateListener(const glm::mat4& CameraTransform)
 {
 	ZoneScoped;
+	assert(!IsHeadless);
 
 	ma_engine_listener_set_position(&AudioEngine, 0, CameraTransform[3][0], CameraTransform[3][2], CameraTransform[3][2]);
 
 	const glm::vec4& forward = CameraTransform[2];
 	ma_engine_listener_set_direction(&AudioEngine, 0, forward[0], forward[1], forward[2]);
-
-	LastTick = GetRunningTime();
 }
 
 void SoundComponentManager::Shutdown()
 {
 	//AudioAssets.clear();
 
-	ma_engine_uninit(&AudioEngine);
+	if (!IsHeadless)
+		ma_engine_uninit(&AudioEngine);
 	ComponentManager<EcSound>::Shutdown();
 }
 
 void EcSound::Reload()
 {
 	ZoneScoped;
-
 	std::string filePath = FileRW::ResolvePathNormalized(SoundFile);
+
+	if (((SoundComponentManager*)SoundComponentManager::Get())->IsHeadless)
+		return;
 
 	if (SoundInstance)
 	{
@@ -257,6 +262,7 @@ void EcSound::Reload()
 void EcSound::Update(double)
 {
 	ZoneScoped;
+	assert(!((SoundComponentManager*)SoundComponentManager::Get())->IsHeadless);
 
 	if (!SoundInstance)
 		return;

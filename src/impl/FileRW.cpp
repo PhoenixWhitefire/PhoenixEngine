@@ -139,7 +139,7 @@ bool FileRW::WriteFileCreateDirectories(
 }
 
 static std::unordered_map<std::string, std::string> s_AliasMap;
-static std::string s_CwdAliasing;
+static std::string s_CwdAliasing = "./";
 
 void FileRW::DefineAlias(const std::string& Alias, const std::string& Path)
 {
@@ -178,8 +178,23 @@ static std::string resolveAliasRecursive(std::string Path)
 	return Path;
 }
 
-std::string FileRW::ResolvePathNormalized(std::string Path)
+static bool isQualified(const std::string& Path)
 {
+	// TODO: allow paths specified in resource files (eg materials and levels etc) to not have to start from the root
+	// and start from resources/ automatically
+	// currently, files that *are* from the root are specified by beginning the path with `.` (such as `./`)
+	// find a better method?
+	// 12/01/2025: `.` is for preceding `./`, `:` is for drive letters, such as
+	// `C:`, where we don't need to do anything
+	// 23/02/2025: `/` is for Linux paths which begin at the home directory, starting with a `/home`
+	// 19/08/2025: `~` is a shortcut for `/home/<USERNAME>` on linux
+	return Path[0] == '.' || Path[0] == '/' || Path[0] == '~' || (Path.size() >= 2 && Path[1] == ':');
+}
+
+std::string FileRW::ResolvePathNormalized(std::string PathToNormalize)
+{
+	std::string Path = PathToNormalize;
+
 	if (Path.size() == 0)
 	{
 		Log.Warning("`ResolvePathNormalized` given a path 0 bytes in length!");
@@ -196,17 +211,8 @@ std::string FileRW::ResolvePathNormalized(std::string Path)
 							? EngineJsonConfig.value("ResourcesDirectory", "resources/")
 							: "resources/";
 
-	// TODO: allow paths specified in resource files (eg materials and levels etc) to not have to start from the root
-	// and start from resources/ automatically
-	// currently, files that *are* from the root are specified by beginning the path with `.` (such as `./`)
-	// find a better method?
-	// 12/01/2025: `.` is for preceding `./`, `:` is for drive letters, such as
-	// `C:`, where we don't need to do anything
-	// 23/02/2025: `/` is for Linux paths which begin at the home directory, starting with a `/home`
-	// 19/08/2025: `~` is a shortcut for `/home/<USERNAME>` on linux
 	size_t whereRes = Path.find(resdir);
-
-	if ((Path[0] != '.' && Path[0] != '/' && Path[0] != '~' && (Path.size() < 2 || Path[1] != ':')))
+	if (!isQualified(Path))
 	{
 		if (whereRes == std::string::npos)
 			Path.insert(0, resdir);
@@ -218,11 +224,9 @@ std::string FileRW::ResolvePathNormalized(std::string Path)
 				Path = resolveAliasRecursive(Path);
 		}
 	}
-	
-	if (std::string cwd = std::filesystem::current_path().string(); Path.find(cwd) != std::string::npos)
-		Path = Path.substr(cwd.size() + 1, Path.size() - cwd.size() - 1);
 
-	if (Path[0] != '.' && Path[0] != '/' && Path[0] != '~' && (Path.size() < 2 || Path[1] != ':'))
+	assert(Path[0] != '@');
+	if (!isQualified(Path))
 		Path = "./" + Path;
 
 	return Path;

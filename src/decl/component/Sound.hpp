@@ -53,5 +53,5 @@ public:
 	void Shutdown() override;
 
 	ma_engine AudioEngine;
-	double LastTick = 0.f;
+	bool IsHeadless = false;
 };

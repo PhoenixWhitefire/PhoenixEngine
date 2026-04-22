@@ -115,11 +115,11 @@ if not Engine.IsHeadless then
 	imgui.stylecolors(if EditorPreferences.UseLightTheme then 'l' else 'd')
 end
 
-fs.definealias("editres", "@cwd/resources")
+fs.definealias("editres", "./resources")
 fs.definealias("etextures", "@editres/textures")
 
-if not fs.isdirectory("@cwd/editor") then
-	fs.mkdir("@cwd/editor")
+if not fs.isdirectory("./editor") then
+	fs.mkdir("./editor")
 end
 
 if not fs.isdirectory("@home/Documents/Phoenix Projects") then
@@ -2366,7 +2366,11 @@ function Stages.SelectProject_Enter(DeltaTime)
 	SavedProjectsCache = nil
 
 	PluginManager.Shutdown()
-	fs.setunqualifiedroot("")
+	fs.setunqualifiedroot("./")
+
+	for _, tool in DeveloperTools:GetToolNames() do
+		DeveloperTools:SetToolEnabled(tool, false)
+	end
 end
 
 function Stages.SelectProject_Leave(DeltaTime)
@@ -2375,9 +2379,14 @@ function Stages.SelectProject_Leave(DeltaTime)
 	if EditorPreferences.ClearOutputOnProjectOpen then
 		Log = {}
 	end
+
+	for _, tool in EditorPreferences.DevToolsOpen do
+		DeveloperTools:SetToolEnabled(tool, true)
+	end
 end
 
 local SelectorHoveringOver: number? = nil
+local OpenProjectContextMenu = false
 local ProjectContextMenuTarget = 0
 
 local function renderProjectSelectorTiles(Projects: { string })
@@ -2408,7 +2417,7 @@ local function renderProjectSelectorTiles(Projects: { string })
 			imgui.popstylecolor()
 
 			if PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Right) then
-				imgui.openpopup("ProjectContextMenu")
+				OpenProjectContextMenu = true
 				ProjectContextMenuTarget = i
 			end
 		end
@@ -2474,6 +2483,11 @@ local function renderRenderProjects()
 
 	renderProjectSelectorTiles(RecentProjects)
 
+	if OpenProjectContextMenu then
+		imgui.openpopup("ProjectContextMenu")
+		OpenProjectContextMenu = false
+	end
+
 	if imgui.beginpopup("ProjectContextMenu") then
 		if imgui.menuitem("Remove from Recents") then
 			table.remove(RecentProjects, ProjectContextMenuTarget)
@@ -2516,6 +2530,11 @@ local function renderSavedProjects()
 	imgui.setcursorposition(cpos.x + 10, cpos.y)
 
 	renderProjectSelectorTiles(assert(SavedProjectsCache))
+
+	if OpenProjectContextMenu then
+		imgui.openpopup("ProjectContextMenu")
+		OpenProjectContextMenu = false
+	end
 	
 	if imgui.beginpopup("ProjectContextMenu") then
 		if SavedProjectsCache and imgui.menuitem("Delete") then

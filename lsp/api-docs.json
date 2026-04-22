@@ -885,7 +885,7 @@
     "documentation": "* Same as`fs.resolvepath`, however converts path in the CWD-relative form (`./path`) to be absolute (relative to system root directory)"
   },
   "@phoenix/global/fs.setunqualifiedroot": {
-    "documentation": "* Changes the meaning of non-qualified paths (e.g.: not beginning with `.` or `C:` etc) to act as aliases to the given path + `resources/` instead of referring to the CWD"
+    "documentation": "* Changes the meaning of non-qualified paths (e.g.: not beginning with `.` or `C:` etc) to act as aliases to the given path + `resources/` instead of referring to the CWD\n* The default is `./`"
   },
   "@phoenix/global/fs.symlink": {
     "documentation": "* Creates a symlink at `Path` referring to `Target`"
@@ -1093,6 +1093,9 @@
   },
   "@phoenix/global/imgui.urllink": {
     "documentation": "* Similar to `imgui.textlink`, however, will open the given URL upon being clicked\n* `Url` will be `Text` if not provided\n* `ImGui::TextLinkOpenUrl`"
+  },
+  "@phoenix/global/imgui.windowappearing": {
+    "documentation": "* `ImGui::WindowAppearing`"
   },
   "@phoenix/global/imgui.windowhovered": {
     "documentation": "* `ImGui::IsWindowHovered`"
@@ -1386,19 +1389,19 @@
     "documentation": "The version of the Engine build"
   },
   "@phoenix/globaltype/Environment.AmbientLight": {
-    "documentation": "Base environment ambient light color (Uniform: `LightAmbient`)"
+    "documentation": "Base environment ambient light color (Uniform: `Phoenix_LightAmbient`)"
   },
   "@phoenix/globaltype/Environment.Fog": {
-    "documentation": "Fog enablement (Uniform: `Fog`)"
+    "documentation": "Fog enablement (Uniform: `Phoenix_Fog`)"
   },
   "@phoenix/globaltype/Environment.FogColor": {
-    "documentation": "Color of the fog (Uniform: `FogColor`)"
+    "documentation": "Color of the fog (Uniform: `Phoenix_FogColor`)"
   },
   "@phoenix/globaltype/Environment.GammaCorrection": {
-    "documentation": "Post-processor gamma correction amount (Uniform: `Gamma`)"
+    "documentation": "Post-processor gamma correction amount (Uniform: `Phoenix_Gamma`)"
   },
   "@phoenix/globaltype/Environment.PostProcess": {
-    "documentation": "Post-processor enablement (Uniform: `PostFxEnabled`)"
+    "documentation": "Post-processor enablement (Uniform: `Phoenix_PostFxEnabled`)"
   },
   "@phoenix/globaltype/EventConnection.Connected": {
     "documentation": "* Whether the Connection is connected or not\n"

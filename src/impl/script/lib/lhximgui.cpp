@@ -183,6 +183,12 @@ static int imgui_windowhovered(lua_State* L)
     return 1;
 }
 
+static int imgui_windowappearing(lua_State* L)
+{
+    lua_pushboolean(L, ImGui::IsWindowAppearing());
+    return 1;
+}
+
 static int imgui_itemclicked(lua_State* L)
 {
     int button = luaL_optinteger(L, 1, 0);
@@ -981,6 +987,7 @@ static luaL_Reg imgui_funcs[] =
     { "itemactive", imgui_itemactive },
     { "anyitemactive", imgui_anyitemactive },
     { "windowhovered", imgui_windowhovered },
+    { "windowappearing", imgui_windowappearing },
     { "text", imgui_text },
     { "image", imgui_image },
     { "imagebutton", imgui_imagebutton },

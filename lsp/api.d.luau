@@ -784,7 +784,7 @@ declare fs: {
   cwd: ((  ) -> (string)),
   definealias: (( Alias: string, For: string ) -> ()),
   execute: (( Command: string ) -> (string)),
-  home: ((  ) -> (string?)),
+  home: ((  ) -> (string)),
   isdirectory: (( string ) -> (boolean)),
   isfile: (( string ) -> (boolean)),
   issymlink: (( Path: string ) -> (boolean)),
@@ -872,6 +872,7 @@ declare imgui: {
   treenode: (( Text: string, Flags: string? ) -> (boolean)),
   treepop: ((  ) -> ()),
   urllink: (( Text: string, Url: string? ) -> (boolean)),
+  windowappearing: ((  ) -> (boolean)),
   windowhovered: (( Flags: string? ) -> (boolean)),
   windowposition: ((  ) -> (vector)),
   windowsize: ((  ) -> (vector))

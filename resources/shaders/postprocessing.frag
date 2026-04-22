@@ -9,25 +9,22 @@ in vec2 Frag_UV;
 
 out vec4 FragColor;
 
-uniform sampler2D Texture;
+uniform sampler2D Phoenix_FramebufferTexture;
 
-uniform bool PostFxEnabled = false;
-uniform sampler2D DistortionTexture;
-uniform sampler2D BloomTexture;
-uniform bool ScreenEdgeBlurEnabled = false;
-uniform bool DistortionEnabled = false;
+uniform bool Phoenix_PostFxEnabled = false;
+uniform sampler2D Phoenix_DistortionTexture;
+//uniform sampler2D Phoenix_BloomTexture;
+uniform bool Phoenix_ScreenEdgeBlurEnabled = false;
+uniform bool Phoenix_DistortionEnabled = false;
 
 uniform float BlurVignetteStrength = 2.f;
 uniform float BlurVignetteDistMul = 2.5f;
 uniform float BlurVignetteDistExp = 16.f;
 uniform int BlurVignetteSampleRadius = 4;
 
-uniform float Gamma = 1.f;
-
-uniform float Time = 0.f;
-
+uniform float Phoenix_Gamma = 1.f;
+uniform float Phoenix_Time = 0.f;
 const vec2 Center = vec2(0.5f, 0.5f);
-
 const vec3 White = vec3(1.0f, 1.0f, 1.0f);
 
 float roundTo(float n, float to)
@@ -48,22 +45,22 @@ float getBrightness(vec3 Value)
 
 void main()
 {
-	if (!PostFxEnabled)
+	if (!Phoenix_PostFxEnabled)
 	{
-		FragColor = texture(Texture, Frag_UV);
-		FragColor.rgb = pow(FragColor.rgb, vec3(1.f / Gamma));
+		FragColor = texture(Phoenix_FramebufferTexture, Frag_UV);
+		FragColor.rgb = pow(FragColor.rgb, vec3(1.f / Phoenix_Gamma));
 		return;
 	}
 
-	ivec2 TextureSize = textureSize(Texture, 0);
+	ivec2 TextureSize = textureSize(Phoenix_FramebufferTexture, 0);
 
 	// the size of the pixel relative to the screen
 	vec2 PixelScale = vec2(1.0f / TextureSize.x, 1.0f / TextureSize.y);
 
 	vec2 UVOffset = vec2(0.f, 0.f);
 
-	if (DistortionEnabled)
-		UVOffset = (texture(DistortionTexture, Frag_UV).xy - Center) * (sin(Time) * 5);
+	if (Phoenix_DistortionEnabled)
+		UVOffset = (texture(Phoenix_DistortionTexture, Frag_UV).xy - Center) * (sin(Phoenix_Time) * 5);
 
 	vec2 sampleUV = Frag_UV + UVOffset;
 
@@ -74,10 +71,10 @@ void main()
 	}
 
 	vec2 actualSamplePixel = ivec2(sampleUV * TextureSize);
-	vec3 Color = texture(Texture, sampleUV).xyz;
-	
-	float gamma = Gamma;
-	
+	vec3 Color = texture(Phoenix_FramebufferTexture, sampleUV).xyz;
+
+	float gamma = Phoenix_Gamma;
+
 	/*if (Time > 10.f)
 	{
 	        float t = Time - 5.f;
@@ -85,12 +82,12 @@ void main()
 		gamma = mix(1.f, 1.5f, clamp(t - 10.f, 0.f, t) / 10.f);
 	}*/
 
-	Color += texture(BloomTexture, sampleUV).xyz;
+	//Color += texture(BloomTexture, sampleUV).xyz;
 	
 	/*
 	// https://youtu.be/wbn5ULLtkHs?t=271
 	float Lin = getBrightness(Color);
-	float Lavg = getBrightness(textureLod(Texture, sampleUV, 10).xyz);
+	float Lavg = getBrightness(textureLod(Phoenix_FramebufferTexture, sampleUV, 10).xyz);
 
 	float logLrw = log10(Lavg) + 0.84f;
 	float alphaRw = 0.4f * logLrw + 2.92f;
@@ -104,7 +101,7 @@ void main()
 	Color = Color / Lin * Lout;
 	Color *= 0.6f;
 	*/
-	if (ScreenEdgeBlurEnabled)
+	if (Phoenix_ScreenEdgeBlurEnabled)
 	{
 		vec3 BlurredColor;
 
@@ -126,7 +123,7 @@ void main()
 				float DistFactor = 1.f - Dist;
 				float SampleWeight = pow(DistFactor * 1.f, 1.f) * BlurSampleBaseWeight;
 
-				vec3 SampleCol = texture(Texture, Frag_UV + (vec2(x, y) * PixelScale) + UVOffset).xyz;
+				vec3 SampleCol = texture(Phoenix_FramebufferTexture, Frag_UV + (vec2(x, y) * PixelScale) + UVOffset).xyz;
 				BlurredColor += SampleCol * SampleWeight;
 			}
 		}

@@ -375,11 +375,11 @@
       "Environment": {
         "Description": "World lighting and ambiance",
         "Properties": {
-          "AmbientLight": "Base environment ambient light color (Uniform: `LightAmbient`)",
-          "Fog": "Fog enablement (Uniform: `Fog`)",
-          "FogColor": "Color of the fog (Uniform: `FogColor`)",
-          "GammaCorrection": "Post-processor gamma correction amount (Uniform: `Gamma`)",
-          "PostProcess": "Post-processor enablement (Uniform: `PostFxEnabled`)"
+          "AmbientLight": "Base environment ambient light color (Uniform: `Phoenix_LightAmbient`)",
+          "Fog": "Fog enablement (Uniform: `Phoenix_Fog`)",
+          "FogColor": "Color of the fog (Uniform: `Phoenix_FogColor`)",
+          "GammaCorrection": "Post-processor gamma correction amount (Uniform: `Phoenix_Gamma`)",
+          "PostProcess": "Post-processor enablement (Uniform: `Phoenix_PostFxEnabled`)"
         }
       },
       "Example": {
@@ -1343,7 +1343,7 @@
               "Fetches the user's 'home' or profile directory",
               "Returns the Current Working Directory if it cannot be determined"
             ],
-            "Out": "string?"
+            "Out": "string"
           },
           "isdirectory": {
             "Description": [
@@ -1513,7 +1513,8 @@
           },
           "setunqualifiedroot": {
             "Description": [
-              "Changes the meaning of non-qualified paths (e.g.: not beginning with `.` or `C:` etc) to act as aliases to the given path + `resources/` instead of referring to the CWD"
+              "Changes the meaning of non-qualified paths (e.g.: not beginning with `.` or `C:` etc) to act as aliases to the given path + `resources/` instead of referring to the CWD",
+              "The default is `./`"
             ],
             "In": [
               "Alias: string"
@@ -2094,6 +2095,10 @@
                 "Text"
               ]
             ],
+            "Out": "boolean"
+          },
+          "windowappearing": {
+            "Description": "`ImGui::WindowAppearing`",
             "Out": "boolean"
           },
           "windowhovered": {

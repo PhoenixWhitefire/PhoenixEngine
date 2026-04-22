@@ -53,6 +53,8 @@ void ShaderProgram::Activate()
 
 		if (int32_t uniformLoc = m_GetUniformLocation(uniformName.c_str()); uniformLoc > -1)
 		{
+			m_CurrentUniformState[uniformName] = value;
+
 			switch (value.Type)
 			{
 			case Reflection::ValueType::Boolean:
@@ -169,7 +171,19 @@ void ShaderProgram::Reload()
 	if (!isHeadless)
 	{
 		if (m_GpuId != UINT32_MAX)
+		{
 			glDeleteProgram(m_GpuId);
+
+			VertexShader.clear();
+			FragmentShader.clear();
+			GeometryShader = "<NOT_SPECIFIED>";
+
+			DefaultUniforms.clear();
+			UniformsAncestor.clear();
+			PreprocessorDefinitions.clear();
+
+			m_PendingUniforms.clear();
+		}
 
 		m_GpuId = glCreateProgram();
 	}
@@ -204,30 +218,8 @@ void ShaderProgram::Reload()
 
 	nlohmann::json shpJson = nlohmann::json::parse(shpContents);
 
-	/*
-		Certain SP's may just be another SP, but with a specific uniform
-		(such as `worldUberTriProjected` really just being `worldUber` with
-		the `UseTriPlanarProjection` uniform)
-
-		Reduce duplicate configuration by allowing for "inheritance" of uniforms
-		Do this *before* loading the SP-specific uniforms, so that inherited ones
-		may be overriden
-		Even means you can have lineages
-	*/
 	if (const auto uancestorIt = shpJson.find("InheritUniformsOf"); uancestorIt != shpJson.end())
-	{
 		UniformsAncestor = uancestorIt.value();
-
-		if (UniformsAncestor != "")
-		{
-			ShaderManager* shdManager = ShaderManager::Get();
-
-			uint32_t ancestorId = shdManager->LoadFromPath(UniformsAncestor);
-			ShaderProgram& ancestor = shdManager->GetShaderResource(ancestorId);
-
-			DefaultUniforms.insert(ancestor.DefaultUniforms.begin(), ancestor.DefaultUniforms.end());
-		}
-	}
 
 	for (auto memberIt = shpJson["Uniforms"].begin(); memberIt != shpJson["Uniforms"].end(); ++memberIt)
 	{
@@ -314,6 +306,8 @@ void ShaderProgram::Reload()
 			this->Name, GeometryShader
 		));
 
+	PreprocessorDefinitions.clear();
+
 	if (const auto& definitions = shpJson["Definitions"]; definitions.is_object())
 	{
 		for (auto it = definitions.begin(); it != definitions.end(); it++)
@@ -322,6 +316,8 @@ void ShaderProgram::Reload()
 			addDefinition(vertexStrSource, definition);
 			addDefinition(fragmentStrSource, definition);
 			addDefinition(geometryStrSource, definition);
+
+			PreprocessorDefinitions[it.key()] = (std::string)it.value();
 		}
 	}
 
@@ -377,6 +373,9 @@ void ShaderProgram::Reload()
 
 	if (hasGeometryShader)
 		glDeleteShader(geometryShader);
+
+	for (const auto& it : m_CurrentUniformState)
+		SetUniform(it.first, it.second); // restore uniforms
 }
 
 void ShaderProgram::Delete()
@@ -391,7 +390,7 @@ void ShaderProgram::Save()
 {
 	ZoneScoped;
 
-	nlohmann::json fileJson{};
+	nlohmann::json fileJson;
 
 	fileJson["Vertex"] = VertexShader;
 	fileJson["Fragment"] = FragmentShader;
@@ -399,7 +398,7 @@ void ShaderProgram::Save()
 
 	fileJson["InheritUniformsOf"] = UniformsAncestor;
 
-	for (auto& it : this->DefaultUniforms)
+	for (const auto& it : this->DefaultUniforms)
 	{
 		const Reflection::GenericValue& value = it.second;
 
@@ -421,16 +420,35 @@ void ShaderProgram::Save()
 			break;
 		}
 
-		[[unlikely]] default: { assert(false); }
+		[[unlikely]] default: assert(false);
 		}
 	}
+
+	for (const auto& it : PreprocessorDefinitions)
+		fileJson["Definitions"][it.first] = it.second;
 
 	PHX_CHECK(FileRW::WriteFile(BaseShaderPath + Name + ".shp", fileJson.dump(2)));
 }
 
+static void applyInheritedUniforms(ShaderProgram& sp)
+{
+	if (sp.UniformsAncestor != "")
+	{
+		ShaderManager* shdManager = ShaderManager::Get();
+
+		uint32_t ancestorId = shdManager->LoadFromPath(sp.UniformsAncestor);
+		ShaderProgram& ancestor = shdManager->GetShaderResource(ancestorId);
+
+		for (const auto& it : ancestor.DefaultUniforms)
+			sp.SetUniform(it.first.c_str(), it.second);
+	}
+}
+
 void ShaderProgram::ApplyDefaultUniforms()
 {
-	for (auto& it : DefaultUniforms)
+	applyInheritedUniforms(*this);
+
+	for (const auto& it : DefaultUniforms)
 		this->SetUniform(it.first.c_str(), it.second);
 }
 
@@ -549,7 +567,7 @@ ShaderManager::~ShaderManager()
 
 static void addIncludes(std::filesystem::path Path)
 {
-	for (const auto& it : std::filesystem::directory_iterator(FileRW::ResolvePathNormalized(Path)))
+	for (const auto& it : std::filesystem::directory_iterator(FileRW::ResolvePathNormalized(Path.string())))
 	{
 		if (it.is_directory())
 			addIncludes(it.path());
@@ -605,7 +623,7 @@ uint32_t ShaderManager::LoadFromPath(const std::string_view& ProgramName)
 		// DON'T DO `m_Shaders.back` because `::Reload` could cause
 		// `m_Shaders` to get re-allocated, causing it to be garbage data
 		// 28/11/2024
-		ShaderProgram shader{};
+		ShaderProgram shader;
 		shader.Name = ProgramName;
 		shader.Reload();
 

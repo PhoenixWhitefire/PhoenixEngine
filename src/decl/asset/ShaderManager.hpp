@@ -37,13 +37,16 @@ public:
 	std::unordered_map<std::string, Reflection::GenericValue> DefaultUniforms;
 	std::string UniformsAncestor;
 
+	std::unordered_map<std::string, std::string> PreprocessorDefinitions;
+
 private:
 	bool m_CheckForErrors(uint32_t Object, const char* Type);
 	int32_t m_GetUniformLocation(const char*) const;
 
 	uint32_t m_GpuId = UINT32_MAX;
 
-	std::unordered_map<std::string, Reflection::GenericValue> m_PendingUniforms{};
+	std::unordered_map<std::string, Reflection::GenericValue> m_PendingUniforms;
+	std::unordered_map<std::string, Reflection::GenericValue> m_CurrentUniformState;
 };
 
 class ShaderManager
