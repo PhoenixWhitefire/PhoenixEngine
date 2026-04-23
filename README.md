@@ -24,6 +24,8 @@ After downloading from Actions, you can launch the Editor through the main execu
 
 # Building
 
+On Linux, you may use the `bash shell/l_setupandbuild.sh <CONFIG>` (where `CONFIG` is one of `Debug`, `Release`, `[Debug/Release]TSan`, or `ReleaseAUSan`) to download dependencies, configure CMake and build the engine through 1 command. Otherwise, you may follow these instructions.
+
 * Minimum CMake version of `3.28` (arbitrary, the one I use on Linux. I use `3.30` on Windows)
 * Compiler which supports C++ Standard `20` and C Standard `17` (G++/MSVC are intentionally supported)
 * For Windows, Visual Studio 2022 platform toolset `v143`
