@@ -25,6 +25,7 @@ _deps/
 editor/
 projects/
 compile_commands.json
+build/
 
 # Shortcuts
 *.lnk

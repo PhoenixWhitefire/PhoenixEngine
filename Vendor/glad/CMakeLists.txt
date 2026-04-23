@@ -15,7 +15,7 @@ set(GL_SRCS
 
 add_library(Glad STATIC ${GL_SRCS})
 
-source_group(TREE ./ FILES ${GL_SRCS})
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${GL_SRCS})
 
 target_include_directories(Glad PUBLIC
 	"./"

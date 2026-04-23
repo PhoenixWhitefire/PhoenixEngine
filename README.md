@@ -34,15 +34,14 @@ After downloading from Actions, you can launch the Editor through the `run.bat` 
 1. `git clone https://github.com/PhoenixWhitefire/PhoenixEngine --recursive --depth=1`, or just use the `Code <>` button
     * `--recursive` clones submodules as well (check the `Vendor` directory)
     * `--depth 1` causes only the current commit to be fetched, reducing download times
-2. `cmake -B "./"` in the root directory
-    * On Linux/with Ninja, I use `cmake -B "./" -G "Ninja Multi-Config"` specifically
-    * When using Visual Studio Code, set the Generator to "Ninja Multi-Config", and change the "Build Directory" setting to just `${workspaceFolder}`
+2. `cmake -B "build"` in the root directory
+    * On Linux/with Ninja, I use `cmake -B "build" -G "Ninja Multi-Config"` specifically
     
 3. Open the resulting project in your IDE of choice
-4. Build with `cmake --build . --config <CONFIG>` or equivalent in your IDE, with `CONFIG` being one of:
+4. Build with `cmake --build build --config <CONFIG>` or equivalent in your IDE, with `CONFIG` being one of:
 	* `Debug`: Standard Debug build, no optimizations, Address Sanitizer and Tracy
 	* `Release`: All optimizations, including Link-Time/Whole-Program optimization, no Address Sanitizer, Tracy in `ON_DEMAND` mode
-5. Run it in the root directory with a command such as `x64/Release/PhoenixEngine` (Linux Bash), `. "x64/Release/PhoenixEngine"` (Windows Terminal), or `"x64/Release/PhoenixEngine"` (Windows Command Prompt)
+5. Run it in the root directory with a command such as `build/Release/PhoenixEngine` (Linux Bash), `. "x64/Release/PhoenixEngine"` (Windows Terminal), or `"x64/Release/PhoenixEngine"` (Windows Command Prompt)
 
 6. (Optional) I have not configured the Tracy Profiler standalone application to build along with the rest of the Engine, you will need to build it manually. The "Start Profiling" button in the Info widget, as well as the `-tracyim` launch argument, all assume you have built the Profiler yourself and that it is in the expected directory. You can do this with the following commands:
     * `cd Vendor/tracy/profiler`

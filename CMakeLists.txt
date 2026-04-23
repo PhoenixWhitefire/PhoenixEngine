@@ -33,7 +33,7 @@ if (NOT MSVC)
 	target_compile_options(PhoenixEngine PRIVATE -std=gnu++20)
 endif()
 
-source_group(TREE src FILES ${PHX_SRCS})
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/src" FILES ${PHX_SRCS})
 target_sources(PhoenixEngine PRIVATE README.md phoenix.conf)
 
 set_target_properties(PhoenixEngine PROPERTIES OUTPUT_NAME PhoenixEngine)
@@ -114,7 +114,6 @@ option(LUAU_BUILD_CLI "Build CLI" OFF)
 option(LUAU_BUILD_TESTS "Build tests" OFF)
 option(MINIAUDIO_NO_EXTRA_NODES                "Do not build extra node graph nodes" ON)
 option(BUILD_CURL_EXE "Build curl executable" OFF)
-option(BUILD_STATIC_LIBS "Build static libraries" ON)
 option(HTTP_ONLY "Disable all protocols except HTTP (This overrides all CURL_DISABLE_* options)" OFF)
 option(BUILD_LIBCURL_DOCS "Build libcurl man pages" OFF)
 option(BUILD_MISC_DOCS "Build misc man pages (e.g. curl-config and mk-ca-bundle)" OFF)
@@ -188,16 +187,9 @@ set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT P
 
 set_target_properties(PhoenixEngine
     PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/x64/${PHX_BUILD_TYPE}"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/x64/${PHX_BUILD_TYPE}"
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/x64/${PHX_BUILD_TYPE}"
-)
-
-set_target_properties(Vendor
-    PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Vendor/x64/${PHX_BUILD_TYPE}"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Vendor/x64/${PHX_BUILD_TYPE}"
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Vendor/x64/${PHX_BUILD_TYPE}"
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${PHX_BUILD_TYPE}"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${PHX_BUILD_TYPE}"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${PHX_BUILD_TYPE}"
 )
 
 # Get the full Git commit hash

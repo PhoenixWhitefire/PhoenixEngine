@@ -33,7 +33,7 @@ set(VEND_SRCS
 
 add_library(Vendor STATIC ${VEND_SRCS})
 
-source_group(TREE ./ FILES ${VEND_SRCS})
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${VEND_SRCS})
 
 target_include_directories(Vendor PUBLIC
 	"./"

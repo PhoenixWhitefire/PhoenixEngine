@@ -81,7 +81,7 @@ jobs:
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
       # TODO removing causes the wrong build type to be selected?
       run: >
-        cmake -B ./
+        cmake -B x64
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
@@ -96,7 +96,7 @@ jobs:
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
       # TODO removing causes the wrong build type to be selected?
       run: >
-        cmake -B ./
+        cmake -B x64
         -DCMAKE_CXX_COMPILER=g++-14
         -DCMAKE_C_COMPILER=gcc-14
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
