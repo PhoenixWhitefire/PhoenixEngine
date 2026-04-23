@@ -1,3 +1,3 @@
 #!/bin/bash
 
-x64/Debug/PhoenixEngine -apidump -tool scripts/ci/docs.luau -headless $@
+build/Debug/PhoenixEngine -apidump -tool scripts/ci/docs.luau -headless $@

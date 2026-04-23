@@ -20,14 +20,14 @@ Intended to be compatible with both Windows and Linux/Ubuntu.
 
 # Downloading
 You can download binaries from [Actions](https://github.com/PhoenixWhitefire/PhoenixEngine/actions). Pick one at the top with a checkmark, and choose the Release build for your system to [get started](https://github.com/PhoenixWhitefire/PhoenixEngine/wiki/Getting-Started).
-After downloading from Actions, you can launch the Editor through the `run.bat` or `run.sh` script.
+After downloading from Actions, you can launch the Editor through the main executable.
 
 # Building
 
 * Minimum CMake version of `3.28` (arbitrary, the one I use on Linux. I use `3.30` on Windows)
 * Compiler which supports C++ Standard `20` and C Standard `17` (G++/MSVC are intentionally supported)
 * For Windows, Visual Studio 2022 platform toolset `v143`
-* For Linux, ensure you have the `libssl-dev`, `libwayland-dev`, `libxkbcommon-dev`, and `xorg-dev` packages installed
+* For Linux, run the `shell/l_dependencies.sh` script to ensure all the necessary development packages are available on your system (uses APT!)
     - For more information, visit [Dependencies for Wayland and X11](https://www.glfw.org/docs/latest/compile.html#compile_deps_wayland)
 
 
@@ -35,18 +35,20 @@ After downloading from Actions, you can launch the Editor through the `run.bat` 
     * `--recursive` clones submodules as well (check the `Vendor` directory)
     * `--depth 1` causes only the current commit to be fetched, reducing download times
 2. `cmake -B "build"` in the root directory
-    * On Linux/with Ninja, I use `cmake -B "build" -G "Ninja Multi-Config"` specifically
+    * On Linux, you may run `bash shell/l_chmod.sh && shell/l_configure.sh` in the root Git directory
     
 3. Open the resulting project in your IDE of choice
-4. Build with `cmake --build build --config <CONFIG>` or equivalent in your IDE, with `CONFIG` being one of:
+4. Build with `shell/l_build.sh <CONFIG>` or equivalent in your IDE, with `CONFIG` being one of:
 	* `Debug`: Standard Debug build, no optimizations, Address Sanitizer and Tracy
 	* `Release`: All optimizations, including Link-Time/Whole-Program optimization, no Address Sanitizer, Tracy in `ON_DEMAND` mode
+    * `DebugTSan`/`ReleaseTSan`: Debug/Release with Thread sanitizer
+    * `ReleaseAUSan`: Release with Address and Undefined-behaviour sanitizer
 5. Run it in the root directory with a command such as `build/Release/PhoenixEngine` (Linux Bash), `. "x64/Release/PhoenixEngine"` (Windows Terminal), or `"x64/Release/PhoenixEngine"` (Windows Command Prompt)
 
-6. (Optional) I have not configured the Tracy Profiler standalone application to build along with the rest of the Engine, you will need to build it manually. The "Start Profiling" button in the Info widget, as well as the `-tracyim` launch argument, all assume you have built the Profiler yourself and that it is in the expected directory. You can do this with the following commands:
+6. (Optional) I have not configured the Tracy Profiler standalone application to build along with the rest of the Engine, you will need to build it manually. The "Start Profiling" button in the Info widget, as well as the `-tracyim` launch argument, all assume you have built the Profiler yourself and that it is in the expected directory. You can do this with either `shell/l_buildprofiler.sh`, or with the following equivalent commands:
     * `cd Vendor/tracy/profiler`
     * `cmake -B build -G Ninja` (You can omit `-G Ninja` if you're OK with it using Make or whatever CMake decides is appropriate by default)
-    * `cmake --build build --config Release`
+    * `cmake --build build --config Release -j7`
     
     By the end, you should have a binary at the location `Vendor/tracy/profiler/build/tracy-profiler`.
 
