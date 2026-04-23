@@ -1711,39 +1711,29 @@ local function renderMainMenuBar(dt: number)
 			local newDir = fs.promptopenfolder("Select Projects directory", EditorPreferences.ProjectsDirectory)
 
 			if newDir and fs.resolvepathabsolute(newDir) ~= fs.resolvepathabsolute(EditorPreferences.ProjectsDirectory) then
-				local copySuccess, err = pcall(function()
-					fs.copy(EditorPreferences.ProjectsDirectory, newDir)
+				local moveSuccess, err = pcall(function()
+					for p, t in fs.listdir(EditorPreferences.ProjectsDirectory) do
+						local subst, count = p:gsub(fs.resolvepathabsolute(EditorPreferences.ProjectsDirectory), fs.resolvepathabsolute(newDir))
+
+						if count == 0 then
+							error(`Failed to substitute '{fs.resolvepathabsolute(newDir)}' to replace '{fs.resolvepathabsolute(EditorPreferences.ProjectsDirectory)}' in '{p}'`)
+						end
+
+						fs.move(p, subst)
+					end
 				end)
 
-				if not copySuccess then
+				if not moveSuccess then
 					Engine:ShowMessageBox(
-						"Failed to copy projects",
-						`Failed to copy your projects from '{ EditorPreferences.ProjectsDirectory }' to '{ newDir }'.\n\nError: { err }\n\n`
+						"Failed to move projects",
+						`Failed to move your projects from '{ fs.resolvepathabsolute(EditorPreferences.ProjectsDirectory) }' to '{ fs.resolvepathabsolute(newDir) }'.\n\nError: { err }\n\n`
 						.. `Your Projects directory has not been updated.`,
 						"ok",
 						"error"
 					)
 				else
-					local prevDir = EditorPreferences.ProjectsDirectory
+					fs.remove(EditorPreferences.ProjectsDirectory)
 					EditorPreferences.ProjectsDirectory = newDir
-
-					local choice = Engine:ShowMessageBox(
-						"Delete previous directory?",
-						"Your projects appear to have been copied successfully to the new directory.\nWould you like to delete the old directory?",
-						"yesno",
-						"question",
-						0
-					)
-
-					if choice == 1 then
-						local deleteSuccess, deleteError = pcall(function()
-							fs.remove(prevDir)
-						end)
-
-						if not deleteSuccess then
-							Engine:ShowMessageBox("Deletion failed", `Failed to delete your old Projects directory: { deleteError }`, "ok", "error")
-						end
-					end
 				end
 			end
 		end
