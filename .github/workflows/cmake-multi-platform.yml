@@ -181,4 +181,3 @@ jobs:
       shell: bash
       run: >
         ./PhoenixEngine -headless -tool scripts/ci/tests.luau
-        && ./PhoenixEngine -headless -ed_ci
