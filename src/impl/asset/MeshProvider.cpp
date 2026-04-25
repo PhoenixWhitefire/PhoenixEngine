@@ -88,7 +88,7 @@ static uint8_t readU8(const std::string_view& str, size_t* offset, bool* fileToo
 		return UINT8_MAX;
 	}
 
-	uint8_t u8 = 0.f;
+	uint8_t u8 = 0;
 	memcpy(&u8, str.data() + *offset, sizeof(uint8_t));
 	(*offset)++;
 
@@ -97,11 +97,8 @@ static uint8_t readU8(const std::string_view& str, size_t* offset, bool* fileToo
 
 static void writeU16(std::string& vec, uint16_t v)
 {
-	if (vec.capacity() - vec.size() < 2)
-		vec.reserve(vec.capacity());
-
 	vec.resize(vec.size() + 2);
-	memcpy(&vec[vec.size() - 4], &v, sizeof(uint16_t));
+	memcpy(&vec[vec.size() - 2], &v, sizeof(uint16_t));
 }
 
 static void writeU32(std::string& vec, uint32_t v)
@@ -326,7 +323,7 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 		}
 
 		std::array<uint8_t, 4> bones{ UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX };
-		std::array<float, 4> weights{ FLT_MAX, FLT_MAX, FLT_MAX };
+		std::array<float, 4> weights{ FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX };
 
 		if (isRigged)
 		{
@@ -823,10 +820,10 @@ static void finishAndUploadMesh(Mesh& mesh, MeshProvider::GpuMesh& gpuMesh, bool
 
 	vao.Bind();
 
-	vao.LinkAttrib(vbo, 0, 3, GL_FLOAT, sizeof(Vertex), (void*)0);
-	vao.LinkAttrib(vbo, 1, 3, GL_FLOAT, sizeof(Vertex), (void*)(3 * sizeof(float)));
-	vao.LinkAttrib(vbo, 2, 4, GL_FLOAT, sizeof(Vertex), (void*)(6 * sizeof(float)));
-	vao.LinkAttrib(vbo, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)(10 * sizeof(float)));
+	vao.LinkAttrib(vbo, 0, 3, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, Position));
+	vao.LinkAttrib(vbo, 1, 3, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, Normal));
+	vao.LinkAttrib(vbo, 2, 4, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, Paint));
+	vao.LinkAttrib(vbo, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, TextureUV));
 
 	vbo.SetBufferData(mesh.Vertices, BufferUsageHint::Static);
 	ebo.SetBufferData(mesh.Indices, BufferUsageHint::Static);
@@ -838,67 +835,81 @@ static void finishAndUploadMesh(Mesh& mesh, MeshProvider::GpuMesh& gpuMesh, bool
 
 	Renderer* renderer = Renderer::Get();
 
-	assert(renderer->InstancingBuffer != UINT32_MAX);
-	glBindBuffer(GL_ARRAY_BUFFER, renderer->InstancingBuffer);
-
-	constexpr int32_t instanceStride = sizeof(Renderer::InstanceDrawInfo);
-
-	// `Transform` matrix
-	// 4 vec4's
-	glEnableVertexAttribArray(4);
-	glEnableVertexAttribArray(5);
-	glEnableVertexAttribArray(6);
-	glEnableVertexAttribArray(7);
-	glVertexAttribDivisor(4, 1);
-	glVertexAttribDivisor(5, 1);
-	glVertexAttribDivisor(6, 1);
-	glVertexAttribDivisor(7, 1);
-
-	glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, TransformRow1));
-	glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, TransformRow2));
-	glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, TransformRow3));
-	glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, TransformRow4));
-
-	// vec3s
-	// scale
-	glEnableVertexAttribArray(8);
-	// color
-	glEnableVertexAttribArray(9);
-	glVertexAttribDivisor(8, 1);
-	glVertexAttribDivisor(9, 1);
-
-	glVertexAttribPointer(8, 3, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, Scale));
-	glVertexAttribPointer(9, 3, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, Color));
-
-	glEnableVertexAttribArray(10);
-	glVertexAttribDivisor(10, 1);
-
-	glVertexAttribPointer(10, 1, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, Transparency));
-
-	if (mesh.Bones.size() > 0)
+	if (mesh.Bones.size() == 0)
 	{
-		glGenBuffers(1, &gpuMesh.SkinningBuffer);
-		glBindBuffer(GL_ARRAY_BUFFER, gpuMesh.SkinningBuffer);
+		assert(renderer->InstancingBuffer != UINT32_MAX);
+		glBindBuffer(GL_ARRAY_BUFFER, renderer->InstancingBuffer);
 
-		constexpr size_t skinnerStride = sizeof(glm::mat4);
+		constexpr int32_t instanceStride = sizeof(Renderer::InstanceDrawInfo);
+
+		// `Transform` matrix
+		// 4 vec4's
+		glEnableVertexAttribArray(4);
+		glEnableVertexAttribArray(5);
+		glEnableVertexAttribArray(6);
+		glEnableVertexAttribArray(7);
+		glVertexAttribDivisor(4, 1);
+		glVertexAttribDivisor(5, 1);
+		glVertexAttribDivisor(6, 1);
+		glVertexAttribDivisor(7, 1);
+
+		glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, TransformRow1));
+		glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, TransformRow2));
+		glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, TransformRow3));
+		glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, TransformRow4));
+
+		// vec3s
+		// scale
+		glEnableVertexAttribArray(8);
+		// color
+		glEnableVertexAttribArray(9);
+		glVertexAttribDivisor(8, 1);
+		glVertexAttribDivisor(9, 1);
+
+		glVertexAttribPointer(8, 3, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, Scale));
+		glVertexAttribPointer(9, 3, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, Color));
+
+		glEnableVertexAttribArray(10);
+		glVertexAttribDivisor(10, 1);
+
+		glVertexAttribPointer(10, 1, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, Transparency));
+	}
+	else
+	{
+		gpuMesh.BoneMatrices.reserve(mesh.Bones.size());
+
+		for (const Bone& b : mesh.Bones)
+			gpuMesh.BoneMatrices.push_back(b.Transform * b.InverseBind);
+
+		glGenBuffers(1, &gpuMesh.VertexJointDataBuffer);
+		glBindBuffer(GL_ARRAY_BUFFER, gpuMesh.VertexJointDataBuffer);
+		gpuMesh.VertexArray.Bind();
+
+		constexpr size_t skinnerStride = sizeof(Vertex::InfluencingJoints) + sizeof(Vertex::JointWeights);
 
 		glEnableVertexAttribArray(11);
 		glEnableVertexAttribArray(12);
-		glEnableVertexAttribArray(13);
-		glEnableVertexAttribArray(14);
+		glVertexAttribDivisor(11, 0);
+		glVertexAttribDivisor(12, 0);
 
-		glVertexAttribPointer(11, 4, GL_FLOAT, GL_FALSE, skinnerStride, (void*)0);
-		glVertexAttribPointer(12, 4, GL_FLOAT, GL_FALSE, skinnerStride, (void*)(sizeof(glm::vec4) * 1));
-		glVertexAttribPointer(13, 4, GL_FLOAT, GL_FALSE, skinnerStride, (void*)(sizeof(glm::vec4) * 2));
-		glVertexAttribPointer(14, 4, GL_FLOAT, GL_FALSE, skinnerStride, (void*)(sizeof(glm::vec4) * 3));
+		glVertexAttribIPointer(11, 4, GL_UNSIGNED_BYTE, skinnerStride, (void*)0);
+		glVertexAttribPointer(12, 4, GL_FLOAT, GL_FALSE, skinnerStride, (void*)4);
 
-		gpuMesh.SkinningData.resize(mesh.Vertices.size(), glm::mat4(1.f));
+		std::vector<uint8_t> data;
+		data.resize(mesh.Vertices.size() * 4 + mesh.Vertices.size() * sizeof(float) * 4);
+
+		for (uint32_t vi = 0; vi < mesh.Vertices.size(); vi++)
+		{
+			const Vertex& v = mesh.Vertices[vi];
+			memcpy(data.data() + vi * skinnerStride, v.InfluencingJoints.data(), sizeof(uint8_t) * 4);
+			memcpy(data.data() + vi * skinnerStride + 4, v.JointWeights.data(), sizeof(float) * 4);
+		}
 
 		glBufferData(
 			GL_ARRAY_BUFFER,
-			gpuMesh.SkinningData.size() * sizeof(glm::mat4),
-			gpuMesh.SkinningData.data(),
-			GL_STREAM_DRAW
+			data.size(),
+			data.data(),
+			GL_STATIC_DRAW
 		);
 
 		for (uint8_t bi = 0; bi < mesh.Bones.size(); bi++)

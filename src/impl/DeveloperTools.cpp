@@ -5590,6 +5590,9 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 				if (treeNodeIdentifier.size() > numCoroutineIdChars)
 					treeNodeIdentifier = std::string(treeNodeIdentifier.begin(), treeNodeIdentifier.begin() + numCoroutineIdChars - 3) + "...";
 
+				if (s_CallstackJumpToCurrentThread && coroutine == L)
+					ImGui::SetNextItemOpen(true);
+
 				bool open = ImGui::TreeNodeEx(coroutine, ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_OpenOnArrow, "%s", treeNodeIdentifier.c_str());
 				ImGui::PopStyleColor();
 				ImGui::SetItemTooltip("%s", identifier.c_str());

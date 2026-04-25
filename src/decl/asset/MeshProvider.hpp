@@ -25,8 +25,8 @@ public:
 		GpuVertexBuffer VertexBuffer;
 		GpuElementBuffer ElementBuffer;
 		uint32_t NumIndices = UINT32_MAX;
-		uint32_t SkinningBuffer = UINT32_MAX;
-		std::vector<glm::mat4> SkinningData;
+		uint32_t VertexJointDataBuffer = UINT32_MAX;
+		std::vector<glm::mat4> BoneMatrices;
 	};
 
 	void Shutdown();

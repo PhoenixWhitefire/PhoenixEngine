@@ -20,7 +20,7 @@ static void tryMarkFreeSkinnedMeshPseudoAsset(EcMesh& mesh)
 		MeshProvider::GpuMesh& gpuMesh = MeshProvider::Get()->GetGpuMesh(meshAsset.GpuId);
 
 		// reset all vertex transformations
-		for (glm::mat4& t : gpuMesh.SkinningData)
+		for (glm::mat4& t : gpuMesh.BoneMatrices)
 			t = glm::mat4(1.f);
 	}
 }

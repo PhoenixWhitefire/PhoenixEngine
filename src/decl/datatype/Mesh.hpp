@@ -20,7 +20,7 @@ struct Vertex
 	glm::vec2 TextureUV;
 	// skinned mesh animation, 4 bones max per vert
 	std::array<uint8_t, 4> InfluencingJoints = { UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX };
-	std::array<float, 4> JointWeights = { FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX };
+	std::array<float, 4> JointWeights = { 0.f, 0.f, 0.f, 0.f };
 };
 
 struct Bone

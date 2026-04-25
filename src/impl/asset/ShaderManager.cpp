@@ -15,7 +15,7 @@
 #define SP_TRYFALLBACK() { if (this->Name == "error")               \
 	RAISE_RT("Fallback Shader failed to load");                     \
 else                                                                \
-	m_GpuId = ShaderManager::Get()->GetShaderResource(0).m_GpuId; } \
+	GpuId = ShaderManager::Get()->GetShaderResource(0).GpuId; } \
 
 #define SP_LOADERROR(str) { Log.Error(str); SP_TRYFALLBACK(); return; }
 
@@ -28,12 +28,12 @@ void ShaderProgram::Activate()
 	if (ShaderManager::Get()->IsHeadless)
 		return;
 
-	if (!glIsProgram(m_GpuId))
+	if (!glIsProgram(GpuId))
 	{
 		ShaderManager* shdManager = ShaderManager::Get();
-		m_GpuId = shdManager->GetShaderResource(shdManager->LoadFromPath("error")).m_GpuId;
+		GpuId = shdManager->GetShaderResource(shdManager->LoadFromPath("error")).GpuId;
 
-		if (!glIsProgram(m_GpuId))
+		if (!glIsProgram(GpuId))
 		{
 			Log.ErrorF(
 				"Tried to ::Activate shader '{}', but it was (likely) deleted, and the fallback shader 'error' was also invalid.",
@@ -44,7 +44,7 @@ void ShaderProgram::Activate()
 		}
 	}
 
-	glUseProgram(m_GpuId);
+	glUseProgram(GpuId);
 
 	for (auto& pair : m_PendingUniforms)
 	{
@@ -170,9 +170,9 @@ void ShaderProgram::Reload()
 
 	if (!isHeadless)
 	{
-		if (m_GpuId != UINT32_MAX)
+		if (GpuId != UINT32_MAX)
 		{
-			glDeleteProgram(m_GpuId);
+			glDeleteProgram(GpuId);
 
 			VertexShader.clear();
 			FragmentShader.clear();
@@ -185,7 +185,7 @@ void ShaderProgram::Reload()
 			m_PendingUniforms.clear();
 		}
 
-		m_GpuId = glCreateProgram();
+		GpuId = glCreateProgram();
 	}
 
 	bool shpExists = true;
@@ -211,8 +211,7 @@ void ShaderProgram::Reload()
 		ShaderManager* shpManager = ShaderManager::Get();
 		ShaderProgram& fallback = shpManager->GetShaderResource(0);
 
-		m_GpuId = fallback.m_GpuId;
-
+		GpuId = fallback.GpuId;
 		return;
 	}
 
@@ -354,17 +353,17 @@ void ShaderProgram::Reload()
 	if (m_CheckForErrors(fragmentShader, "fragment shader"))
 		return;
 
-	glAttachShader(m_GpuId, vertexShader);
-	glAttachShader(m_GpuId, fragmentShader);
+	glAttachShader(GpuId, vertexShader);
+	glAttachShader(GpuId, fragmentShader);
 
 	if (hasGeometryShader)
-		glAttachShader(m_GpuId, geometryShader);
+		glAttachShader(GpuId, geometryShader);
 
 	glEnableVertexAttribArray(0);
 
-	glLinkProgram(m_GpuId);
+	glLinkProgram(GpuId);
 
-	if (m_CheckForErrors(m_GpuId, "shader program"))
+	if (m_CheckForErrors(GpuId, "shader program"))
 		return;
 
 	//free shader code from memory, they've already been compiled so aren't needed anymore
@@ -380,10 +379,10 @@ void ShaderProgram::Reload()
 
 void ShaderProgram::Delete()
 {
-	if (!ShaderManager::Get()->IsHeadless && glIsProgram(m_GpuId))
-		glDeleteProgram(m_GpuId);
+	if (!ShaderManager::Get()->IsHeadless && glIsProgram(GpuId))
+		glDeleteProgram(GpuId);
 
-	m_GpuId = UINT32_MAX;
+	GpuId = UINT32_MAX;
 }
 
 void ShaderProgram::Save()
@@ -455,7 +454,7 @@ void ShaderProgram::ApplyDefaultUniforms()
 int32_t ShaderProgram::m_GetUniformLocation(const char* Uniform) const
 {
 	assert(!ShaderManager::Get()->IsHeadless);
-	return glGetUniformLocation(m_GpuId, Uniform);
+	return glGetUniformLocation(GpuId, Uniform);
 }
 
 void ShaderProgram::SetUniform(const std::string_view& UniformName, const Reflection::GenericValue& Value)
@@ -498,7 +497,7 @@ bool ShaderProgram::m_CheckForErrors(uint32_t Object, const char* Type)
 
 	char infoLog[2048];
 
-	if (Object != m_GpuId)
+	if (Object != GpuId)
 	{
 		GLint hasCompiled;
 		glGetShaderiv(Object, GL_COMPILE_STATUS, &hasCompiled);
@@ -518,15 +517,14 @@ bool ShaderProgram::m_CheckForErrors(uint32_t Object, const char* Type)
 				RAISE_RT("Failed to compile the required `error` Shader Pipeline");
 
 			ShaderManager* shdManager = ShaderManager::Get();
-
-			m_GpuId = shdManager->GetShaderResource(shdManager->LoadFromPath("error")).m_GpuId;
+			GpuId = shdManager->GetShaderResource(shdManager->LoadFromPath("error")).GpuId;
 
 			return true;
 		}
 	}
 	else
 	{
-		int hasLinked;
+		int hasLinked = 0;
 
 		glGetProgramiv(Object, GL_LINK_STATUS, &hasLinked);
 
@@ -543,8 +541,7 @@ bool ShaderProgram::m_CheckForErrors(uint32_t Object, const char* Type)
 				RAISE_RT("Failed to link the required `error` Shader Pipeline");
 
 			ShaderManager* shdManager = ShaderManager::Get();
-
-			m_GpuId = shdManager->GetShaderResource(shdManager->LoadFromPath("error")).m_GpuId;
+			GpuId = shdManager->GetShaderResource(shdManager->LoadFromPath("error")).GpuId;
 
 			return true;
 		}

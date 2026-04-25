@@ -182,10 +182,10 @@ void Renderer::Initialize(uint32_t Width, uint32_t Height, GLFWwindow* MainWindo
 
 	m_VertexArray.Bind();
 
-	m_VertexArray.LinkAttrib(m_VertexBuffer, 0, 3, GL_FLOAT, sizeof(Vertex), (void*)0);
-	m_VertexArray.LinkAttrib(m_VertexBuffer, 1, 3, GL_FLOAT, sizeof(Vertex), (void*)(3 * sizeof(float)));
-	m_VertexArray.LinkAttrib(m_VertexBuffer, 2, 3, GL_FLOAT, sizeof(Vertex), (void*)(6 * sizeof(float)));
-	m_VertexArray.LinkAttrib(m_VertexBuffer, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)(9 * sizeof(float)));
+	m_VertexArray.LinkAttrib(m_VertexBuffer, 0, 3, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, Position));
+	m_VertexArray.LinkAttrib(m_VertexBuffer, 1, 3, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, Normal));
+	m_VertexArray.LinkAttrib(m_VertexBuffer, 2, 4, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, Paint));
+	m_VertexArray.LinkAttrib(m_VertexBuffer, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, TextureUV));
 
 	this->FrameBuffer.Initialize(m_Width, m_Height, m_MsaaSamples);
 
@@ -428,7 +428,6 @@ void Renderer::DrawScene(
 			gpuMesh.VertexArray.Bind();
 
 			glBindBuffer(GL_ARRAY_BUFFER, InstancingBuffer);
-
 			glBufferData(
 				GL_ARRAY_BUFFER,
 				drawInfos.size() * sizeof(InstanceDrawInfo),
@@ -437,27 +436,51 @@ void Renderer::DrawScene(
 			);
 		}
 
+		const RenderMaterial& material = mtlManager->GetMaterialResource(renderData.MaterialId);
+		ShaderProgram& shader = material.GetShader();
+		shader.Activate();
+
 		if (mesh.Bones.size() > 0)
 		{
 			ZoneNamedNC(uploadZoneSkinned, "UploadSkinningTransforms", tracy::Color::Khaki2, true);
 
-			glBindBuffer(GL_ARRAY_BUFFER, gpuMesh.SkinningBuffer);
+			const char* const BoneLocs[] = {
+				"Phoenix_BoneMatrices[0]",
+				"Phoenix_BoneMatrices[1]",
+				"Phoenix_BoneMatrices[2]",
+				"Phoenix_BoneMatrices[3]",
+				"Phoenix_BoneMatrices[4]",
+				"Phoenix_BoneMatrices[5]",
+				"Phoenix_BoneMatrices[6]",
+				"Phoenix_BoneMatrices[7]",
+				"Phoenix_BoneMatrices[8]",
+				"Phoenix_BoneMatrices[9]",
+				"Phoenix_BoneMatrices[10]",
+				"Phoenix_BoneMatrices[11]",
+				"Phoenix_BoneMatrices[12]",
+				"Phoenix_BoneMatrices[13]",
+				"Phoenix_BoneMatrices[14]",
+				"Phoenix_BoneMatrices[15]",
+				"Phoenix_BoneMatrices[16]",
+				"Phoenix_BoneMatrices[17]",
+				"Phoenix_BoneMatrices[18]",
+				"Phoenix_BoneMatrices[19]",
+				"Phoenix_BoneMatrices[20]",
+				"Phoenix_BoneMatrices[21]",
+				"Phoenix_BoneMatrices[22]",
+				"Phoenix_BoneMatrices[23]",
+				"Phoenix_BoneMatrices[24]",
+				"Phoenix_BoneMatrices[25]",
+			};
 
-			glBufferData(
-				GL_ARRAY_BUFFER,
-				gpuMesh.SkinningData.size() * sizeof(glm::mat4),
-				gpuMesh.SkinningData.data(),
-				GL_STREAM_DRAW
-			);
+			for (uint32_t bi = 0; bi < mesh.Bones.size(); bi++)
+				glUniformMatrix4fv(glGetUniformLocation(shader.GpuId, BoneLocs[bi]), 1, GL_FALSE, glm::value_ptr(gpuMesh.BoneMatrices[bi]));
 		}
 
-		RenderMaterial& material = mtlManager->GetMaterialResource(renderData.MaterialId);
-
 		m_SetMaterialData(renderData, DebugWireframeRendering);
-
 		this->DrawMesh(
 			mesh,
-			material.GetShader(),
+			shader,
 			renderData.Size,
 			renderData.Transform,
 			renderData.FaceCulling,

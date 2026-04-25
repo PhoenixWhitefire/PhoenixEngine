@@ -24,7 +24,7 @@ local Types = require("./Types.luau")
 type Stage = Types.Stage
 
 local CurrentStage: Stage = "None"
-local Stages: { [string]: ((number) -> ()) & ((string) -> (any)) } = {}
+local Stages: { [string]: ((number) -> ()) & ((Stage) -> (GameObject & DataModel)?) } = {}
 local StageUpdateSignal: EventConnection?
 
 local EditorCam = assert(workspace.SceneCamera)
@@ -136,7 +136,7 @@ end
 
 local function setErrorNotification(Error: string)
 	ErrorMessage = Error
-	ErrorMessageTimeRemaining = 2
+	ErrorMessageTimeRemaining = 5
 	warn(Error)
 end
 
@@ -226,11 +226,6 @@ local function editorFrame(DeltaTime)
 	Stages[CurrentStage](DeltaTime)
 
 	WasHoldingDownM1 = PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Left)
-
-	if ErrorMessageTimeRemaining > 0 then
-		imgui.settooltip(ErrorMessage)
-		ErrorMessageTimeRemaining -= DeltaTime
-	end
 end
 
 local function stageUpdate(DeltaTime)
@@ -920,11 +915,12 @@ local function homeTab(_: number)
 
 			if paths[1] then
 				local importAction = History:TryBeginAction("Import Model")
-				local imported = AssetManager:ImportModel(paths[1])
+				local success, importedOrError = pcall(function()
+					return AssetManager:ImportModel(paths[1])
+				end)
 
-				-- TODO type of `imported` becomes `nil` after this clause for some reason
-				if not imported then
-					setErrorNotification("Failed to import")
+				if not success then
+					setErrorNotification(`Failed to import: { importedOrError }`)
 					if importAction then
 						History:DiscardAction(importAction)
 					end
@@ -933,16 +929,16 @@ local function homeTab(_: number)
 				end
 
 				assert(Project.Workspace)
-				imported:AddTag(REIMPORTABLE_MODEL)
-				imported.Parent = Project.Workspace
-				DeveloperTools:SetExplorerSelections({ imported })
+				importedOrError:AddTag(REIMPORTABLE_MODEL)
+				importedOrError.Parent = Project.Workspace
+				DeveloperTools:SetExplorerSelections({ importedOrError })
 
 				if importAction then
 					History:FinishAction(importAction)
 				end
 
 				ModelModifiedTimes[paths[1]] = fs.lastwritten(paths[1])
-				watchModelForReimporting(imported)
+				watchModelForReimporting(importedOrError)
 			else
 				print("No model selected")
 			end
@@ -1311,6 +1307,15 @@ local function getGitStatus()
 end
 
 local function renderMainMenuBar(dt: number)
+	if ErrorMessageTimeRemaining > 0 then
+		imgui.settooltip(ErrorMessage)
+
+		-- after e.g. trying to import a model, the DT will be very high
+		if dt < 0.5 then
+			ErrorMessageTimeRemaining -= dt
+		end
+	end
+
 	local pushedCol = CurrentStage == "ProjectPlaying"
 
 	if pushedCol then
@@ -2602,7 +2607,7 @@ local ProjectCategories: { { Name: string, Icon: string, Render: (number) -> (),
 local SelectedProjectsCategory = 1
 local PrevSelectedProjectsCategory = 0
 
-function Stages.SelectProject(DeltaTime: any) -- TODO type error when annotating `DeltaTime` as `number`
+function Stages.SelectProject(DeltaTime: number)
 	assert(typeof(DeltaTime) == "number")
 
 	if imgui.beginfullscreen("Start Page", 0, 18) then
@@ -2718,6 +2723,8 @@ function Stages.ProjectEditing_Enter(PreviousStage: Stage)
 			end
 		end
 	end
+
+	return nil
 end
 
 local ShowedAutosaveDelayedMessage = false
@@ -2778,7 +2785,7 @@ function Stages.ProjectEditing_Leave(NextStage)
 	Engine:CloseVM(GameEditingVM)
 end
 
-function Stages.ProjectPlaying_Enter(DeltaTime: any)
+function Stages.ProjectPlaying_Enter(Stage: Stage)
 	PlayerInput.Cursor = Enum.Cursor.NotAllowed
 
 	assert(Project)
@@ -2988,7 +2995,7 @@ local function runUpdate()
 	Engine:ShowMessageBox("Update", "Close the Editor, extract the 'update.zip' file into the Editor's directory, and you're all done!")
 end
 
-function Stages.Update(dt)
+function Stages.Update(dt: number)
 	Stages.SelectProject(dt)
 
 	if game.Time - switchedToUpdater < 0.1 then

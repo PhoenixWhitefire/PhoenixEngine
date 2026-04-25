@@ -442,21 +442,24 @@ ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(
 	// Get all accessor indices
 	uint32_t posAccInd = attributes["POSITION"];
 	uint32_t normalAccInd = attributes["NORMAL"];
-	uint32_t texAccInd = attributes["TEXCOORD_0"];
 	uint32_t indAccInd = primitive["indices"];
 
-	auto colAccIt = attributes.find("COLOR_0");
-	auto jointsAccIt = attributes.find("JOINTS_0");
-	auto weightsAccIt = attributes.find("WEIGHTS_0");
+	const auto& texAccIt = attributes.find("TEXCOORD_0");
+	const auto& colAccIt = attributes.find("COLOR_0");
+	const auto& jointsAccIt = attributes.find("JOINTS_0");
+	const auto& weightsAccIt = attributes.find("WEIGHTS_0");
 
 	// Use accessor indices to get all vertices components
 	std::vector<glm::vec3> positions = m_GetAndGroupFloatsVec3(accessors[posAccInd]);
 	std::vector<glm::vec3> normals = m_GetAndGroupFloatsVec3(accessors[normalAccInd]);
-	std::vector<glm::vec2> texUVs = m_GetAndGroupFloatsVec2(accessors[texAccInd]);
+	std::vector<glm::vec2> texUVs;
 
-	std::vector<glm::vec4> cols{};
-	std::vector<glm::tvec4<uint8_t>> joints{};
-	std::vector<glm::vec4> weights{};
+	if (texAccIt != attributes.end())
+		texUVs = m_GetAndGroupFloatsVec2(accessors[(uint32_t)texAccIt.value()]);
+
+	std::vector<glm::vec4> cols;
+	std::vector<glm::tvec4<uint8_t>> joints;
+	std::vector<glm::vec4> weights;
 
 	if (colAccIt != attributes.end())
 		cols = m_GetAndGroupFloatsVec4(accessors[(uint32_t)colAccIt.value()]);
@@ -1149,21 +1152,21 @@ std::vector<Vertex> ModelLoader::m_AssembleVertices
 	if (Joints.size() == Positions.size())
 		for (size_t i = 0; i < Positions.size(); i++)
 			vertices.emplace_back(
-				Positions[i],
-				Normals[i],
-				Colors[i],
-				TexUVs[i],
-				std::array<uint8_t, 4>{ Joints[i].x, Joints[i].y, Joints[i].z, Joints[i].w },
-				std::array<float, 4>{ Weights[i].x, Weights[i].y, Weights[i].z, Weights[i].w }
+				Positions.at(i),
+				Normals.at(i),
+				Colors.at(i),
+				TexUVs.size() > 0 ? TexUVs.at(i) : glm::vec2(),
+				std::array<uint8_t, 4>{ Joints.at(i).x, Joints.at(i).y, Joints.at(i).z, Joints.at(i).w },
+				std::array<float, 4>{ Weights.at(i).x, Weights.at(i).y, Weights.at(i).z, Weights.at(i).w }
 			);
 
 	else
 		for (size_t i = 0; i < Positions.size(); i++)
 			vertices.emplace_back(
-				Positions[i],
-				Normals[i],
-				Colors[i],
-				TexUVs[i],
+				Positions.at(i),
+				Normals.at(i),
+				Colors.at(i),
+				TexUVs.size() > 0 ? TexUVs.at(i) : glm::vec2(),
 				std::array<uint8_t, 4>{ UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX },
 				std::array<float, 4>{ FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX }
 			);

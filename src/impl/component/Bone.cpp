@@ -84,10 +84,13 @@ const Reflection::StaticPropertyMap& BoneComponentManager::GetProperties()
 						parent = parentBone.Parent;
 					}
 
+					gpuMesh.BoneMatrices[boneObj->SkeletalBoneId] = accumulatedTransform * realBone->InverseBind;
+
+					/*
 					for (auto [vi, ji] : realBone->TargetVertices)
 					{
 						const Vertex& v = meshData.Vertices[vi];
-						gpuMesh.SkinningData[vi] = accumulatedTransform * glm::interpolate(glm::mat4(1.f), realBone->Transform, v.JointWeights[ji]);
+						gpuMesh.BoneMatrices[vi] = accumulatedTransform * glm::interpolate(glm::mat4(1.f), realBone->Transform, v.JointWeights[ji]);
 					}
 
 					accumulatedTransform *= realBone->Transform;
@@ -103,6 +106,7 @@ const Reflection::StaticPropertyMap& BoneComponentManager::GetProperties()
 							gpuMesh.SkinningData[vi] = accumulatedTransform * glm::interpolate(glm::mat4(1.f), childBone.Transform, v.JointWeights[ji]);
 						}
 					}
+					*/
 				}
 				else
 					boneObj->Transform = gv.AsMatrix();
