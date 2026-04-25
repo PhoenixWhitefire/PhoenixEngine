@@ -37,9 +37,7 @@ struct Texture
 
 	// De-allocated after the Texture is uploaded to the GPU
 	uint8_t* TMP_ImageByteData = nullptr;
-	// If image loading fails, set to the `const char*` returned by
-	// `stbi_failure_reason`
-	const char* FailureReason = nullptr;
+	std::string FailureReason;
 };
 
 class TextureManager
