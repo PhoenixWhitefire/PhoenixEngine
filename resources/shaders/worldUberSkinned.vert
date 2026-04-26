@@ -57,20 +57,23 @@ void main()
 		pain = vec4(InstanceColor, 1.f) * VertexPaint;
 	}
 
-	mat4 skin = JointsWeights.x * Phoenix_BoneMatrices[JointsIndices.x]
-					+ JointsWeights.y * Phoenix_BoneMatrices[JointsIndices.y]
-					+ JointsWeights.z * Phoenix_BoneMatrices[JointsIndices.z]
-					+ JointsWeights.w * Phoenix_BoneMatrices[JointsIndices.w];
+	mat4 skin = mat4(1.f);
 
-	//trans *= skin;
+	if (JointsWeights.x + JointsWeights.y + JointsWeights.z + JointsWeights.w > 0.0)
+	{
+	    skin = JointsWeights.x * Phoenix_BoneMatrices[JointsIndices.x]
+				+ JointsWeights.y * Phoenix_BoneMatrices[JointsIndices.y]
+				+ JointsWeights.z * Phoenix_BoneMatrices[JointsIndices.z]
+				+ JointsWeights.w * Phoenix_BoneMatrices[JointsIndices.w];
+	}
 
 	data_out.VertexNormal = VertexNormal;
-	data_out.Paint = pain;
+	data_out.Paint = vec4(JointsIndices.xyz == vec3(0.f) ? vec3(1.f) : vec3(0.f), 1.f);
 	data_out.TextureUV = VertexUV;
-	data_out.Transparency = 0.f;//InstanceTransparency;
+	data_out.Transparency = InstanceTransparency;
 	data_out.RenderMatrix = Phoenix_RenderMatrix;
-	data_out.ModelPosition = VertexPosition * sca;
-	data_out.WorldPosition = vec3(trans * (/*skin * */ vec4(data_out.ModelPosition, 1.0f)));
+	data_out.ModelPosition = sca * vec3(skin * vec4(VertexPosition, 1.f));
+	data_out.WorldPosition = vec3(trans * vec4(data_out.ModelPosition, 1.0f));
 	data_out.Transform = trans;
 	data_out.RelativeToDirecLight = Phoenix_DirectionalLightProjection * vec4(data_out.WorldPosition, 1.f);
 	data_out.CameraPosition = Phoenix_CameraPosition;

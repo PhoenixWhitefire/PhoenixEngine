@@ -84,7 +84,7 @@ const Reflection::StaticPropertyMap& BoneComponentManager::GetProperties()
 						parent = parentBone.Parent;
 					}
 
-					gpuMesh.BoneMatrices[boneObj->SkeletalBoneId] = accumulatedTransform * realBone->InverseBind;
+					gpuMesh.BoneMatrices[boneObj->SkeletalBoneId] = (accumulatedTransform * realBone->Transform) * realBone->InverseBind;
 
 					/*
 					for (auto [vi, ji] : realBone->TargetVertices)

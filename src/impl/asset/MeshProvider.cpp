@@ -194,25 +194,25 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 	bool quantizedNormals = vertexMeta & 0b00100000;
 	bool skinCorrections  = vertexMeta & 0b01000000;
 
-	glm::vec3 uniformVertexNormal{};
-	glm::vec4 uniformVertexRGBA{ 1.f, 1.f, 1.f, 1.f };
+	glm::vec3 uniformVertexNormal;
+	glm::vec4 uniformVertexRGBA = { 1.f, 1.f, 1.f, 1.f };
 
 	if (!hasVertexNormal)
-		uniformVertexNormal = glm::vec3
-		{
-			readF32(contents, &headerPtr, &fileTooSmallError),
-			readF32(contents, &headerPtr, &fileTooSmallError),
-			readF32(contents, &headerPtr, &fileTooSmallError)
-		};
+	{
+		float nx = readF32(contents, &headerPtr, &fileTooSmallError);
+		float ny = readF32(contents, &headerPtr, &fileTooSmallError);
+		float nz = readF32(contents, &headerPtr, &fileTooSmallError);
+		uniformVertexNormal = glm::vec3(nx, ny, nz);
+	}
 
 	if (!hasVertexColor)
-		uniformVertexRGBA = glm::vec4
-		{
-			readF32(contents, &headerPtr, &fileTooSmallError),
-			readF32(contents, &headerPtr, &fileTooSmallError),
-			readF32(contents, &headerPtr, &fileTooSmallError),
-			1.f
-		};
+	{
+		float r = readF32(contents, &headerPtr, &fileTooSmallError);
+		float g = readF32(contents, &headerPtr, &fileTooSmallError);
+		float b = readF32(contents, &headerPtr, &fileTooSmallError);
+
+		uniformVertexRGBA = glm::vec4(r, g, b, 1.f);
+	}
 
 	if (!hasVertexOpacity)
 		uniformVertexRGBA.w = readF32(contents, &headerPtr, &fileTooSmallError);
@@ -319,8 +319,8 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 			v = readF32(contents, &cursor, &fileTooSmallError);
 		}
 
-		std::array<uint8_t, 4> bones{ UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX };
-		std::array<float, 4> weights{ FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX };
+		std::array<uint8_t, 4> bones = { 0, 0, 0, 0 };
+		std::array<float, 4> weights = { 0.f, 0.f, 0.f, 0.f };
 
 		if (isRigged)
 		{
@@ -347,10 +347,10 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 		}
 
 		mesh.Vertices.emplace_back(
-			glm::vec3{ px, py, pz },
-			glm::vec3{ nx, ny, nz },
-			glm::vec4{ r, g, b, a },
-			glm::vec2{ u, v },
+			glm::vec3(px, py, pz),
+			glm::vec3(nx, ny, nz),
+			glm::vec4(r, g, b, a),
+			glm::vec2(u, v),
 			bones,
 			weights
 		);
@@ -384,27 +384,31 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 				bone.Name = std::string(contents, cursor, nameLen);
 				cursor += nameLen;
 
-				bone.InverseBind =
-				{
-					readF32(contents, &cursor, &fileTooSmallError),
-					readF32(contents, &cursor, &fileTooSmallError),
-					readF32(contents, &cursor, &fileTooSmallError),
-					readF32(contents, &cursor, &fileTooSmallError),
+				float a1b1 = readF32(contents, &cursor, &fileTooSmallError);
+				float a1b2 = readF32(contents, &cursor, &fileTooSmallError);
+				float a1b3 = readF32(contents, &cursor, &fileTooSmallError);
+				float a1b4 = readF32(contents, &cursor, &fileTooSmallError);
 
-					readF32(contents, &cursor, &fileTooSmallError),
-					readF32(contents, &cursor, &fileTooSmallError),
-					readF32(contents, &cursor, &fileTooSmallError),
-					readF32(contents, &cursor, &fileTooSmallError),
+				float a2b1 = readF32(contents, &cursor, &fileTooSmallError);
+				float a2b2 = readF32(contents, &cursor, &fileTooSmallError);
+				float a2b3 = readF32(contents, &cursor, &fileTooSmallError);
+				float a2b4 = readF32(contents, &cursor, &fileTooSmallError);
 
-					readF32(contents, &cursor, &fileTooSmallError),
-					readF32(contents, &cursor, &fileTooSmallError),
-					readF32(contents, &cursor, &fileTooSmallError),
-					readF32(contents, &cursor, &fileTooSmallError),
+				float a3b1 = readF32(contents, &cursor, &fileTooSmallError);
+				float a3b2 = readF32(contents, &cursor, &fileTooSmallError);
+				float a3b3 = readF32(contents, &cursor, &fileTooSmallError);
+				float a3b4 = readF32(contents, &cursor, &fileTooSmallError);
 
-					readF32(contents, &cursor, &fileTooSmallError),
-					readF32(contents, &cursor, &fileTooSmallError),
-					readF32(contents, &cursor, &fileTooSmallError),
-					readF32(contents, &cursor, &fileTooSmallError)
+				float a4b1 = readF32(contents, &cursor, &fileTooSmallError);
+				float a4b2 = readF32(contents, &cursor, &fileTooSmallError);
+				float a4b3 = readF32(contents, &cursor, &fileTooSmallError);
+				float a4b4 = readF32(contents, &cursor, &fileTooSmallError);
+
+				bone.InverseBind = {
+					a1b1, a1b2, a1b3, a1b4,
+					a2b1, a2b2, a2b3, a2b4,
+					a3b1, a3b2, a3b3, a3b4,
+					a4b1, a4b2, a4b3, a4b4,
 				};
 
 				if (skinCorrections)

@@ -214,7 +214,6 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 			);
 
 		// actually load the model
-
 		m_Nodes.emplace_back(
 			m_ModelName,
 			UINT32_MAX,
@@ -224,10 +223,10 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 
 		ZoneScopedN("ParseNodes");
 
-		for (const nlohmann::json& scene : m_JsonData["scenes"])
-			// root nodes
-			for (uint32_t node : scene["nodes"])
-				m_TraverseNode(node, 0);
+		int mainSceneId = m_JsonData["scene"];
+		// root nodes
+		for (uint32_t node : m_JsonData["scenes"][mainSceneId]["nodes"])
+			m_TraverseNode(node, 0);
 
 		m_BuildRig();
 	}
@@ -476,8 +475,8 @@ ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(
 	}
 
 	// normalize and center the mesh 11/01/2024
-	glm::vec3 extMax;
-	glm::vec3 extMin;
+	glm::vec3 extMax = glm::vec3(-FLT_MAX);
+	glm::vec3 extMin = glm::vec3(FLT_MAX);
 
 	for (const glm::vec3& position : positions)
 	{
@@ -504,8 +503,11 @@ ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(
 	glm::mat4 matT = glm::translate(glm::mat4(1.f), -center);
 	glm::mat4 matM = matS * matT;
 
-	for (glm::vec3& position : positions)
-		position = glm::vec3(matM * glm::vec4(position, 1.f));
+	if (m_JsonData.find("animations") == m_JsonData.end())
+	{
+		for (glm::vec3& position : positions)
+			position = glm::vec3(matM * glm::vec4(position, 1.f));
+	}
 
 	// Combine all the vertex components and also get the indices and textures
 	std::vector<Vertex> vertices = m_AssembleVertices(positions, normals, texUVs, cols, joints, weights);
@@ -541,8 +543,7 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From)
 	{
 		const nlohmann::json& trans = transIt.value();
 
-		float transValues[3] = 
-		{
+		float transValues[3] = {
 			trans[0],
 			trans[1],
 			trans[2]
@@ -556,8 +557,7 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From)
 	{
 		const nlohmann::json& rot = rotIt.value();
 
-		float rotValues[4] =
-		{
+		float rotValues[4] = {
 			rot[3],
 			rot[0],
 			rot[1],
@@ -571,8 +571,7 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From)
 	{
 		const nlohmann::json& sca = scaleIt.value();
 
-		float scaleValues[3] = 
-		{
+		float scaleValues[3] = {
 			sca[0],
 			sca[1],
 			sca[2]
@@ -817,10 +816,13 @@ std::vector<float> ModelLoader::m_GetFloats(const nlohmann::json& accessor)
 
 	// Get properties from the bufferView
 	const nlohmann::json& bufferView = m_JsonData["bufferViews"][buffViewInd];
+	if (bufferView.find("byteStride") != bufferView.end())
+		RAISE_RT("m_GetFloats: byteStrides are not supported!");
+
 	uint32_t byteOffset = bufferView["byteOffset"];
 
 	// Interpret the type and store it into numPerVert
-	uint32_t numPerVert{};
+	uint32_t numPerVert = 0;
 	if (type == "SCALAR")
 		numPerVert = 1;
 
@@ -839,7 +841,7 @@ std::vector<float> ModelLoader::m_GetFloats(const nlohmann::json& accessor)
 	else
 		RAISE_RT("Could not decode GLTF model: Invalid type '{}' (not SCALAR, VEC2, VEC3, or VEC4)", type);
 
-	uint32_t componentSize{};
+	uint32_t componentSize = 0;
 	switch (componentType)
 	{
 	case 5123:
@@ -896,6 +898,9 @@ std::vector<uint32_t> ModelLoader::m_GetUnsigned32s(const nlohmann::json& access
 
 	// Get properties from the bufferView
 	const nlohmann::json& bufferView = m_JsonData["bufferViews"][buffViewInd];
+	if (bufferView.find("byteStride") != bufferView.end())
+		RAISE_RT("m_GetUnsigned32s: byteStrides are not supported!");
+
 	uint32_t byteOffset = bufferView.value("byteOffset", 0);
 
 	// Get indices with regards to their type: uint32_t, uint16_t, or short
@@ -950,6 +955,9 @@ std::vector<uint8_t> ModelLoader::m_GetUBytes(const nlohmann::json& accessor)
 
 	// Get properties from the bufferView
 	const nlohmann::json& bufferView = m_JsonData["bufferViews"][buffViewInd];
+	if (bufferView.find("byteStride") != bufferView.end())
+		RAISE_RT("m_GetUBytes: byteStrides are not supported!");
+
 	uint32_t byteOffset = bufferView["byteOffset"];
 
 	// Interpret the type and store it into numPerVert
@@ -968,6 +976,9 @@ std::vector<uint8_t> ModelLoader::m_GetUBytes(const nlohmann::json& accessor)
 
 	else
 		RAISE_RT("Could not decode GLTF model: Invalid type '{}' (not SCALAR, VEC2, VEC3, or VEC4)", type);
+
+	if (const auto& it = bufferView.find("componentType"); it != bufferView.end() && it.value() != 5121)
+		RAISE_RT("componentTypes other than 5121 are not supported for m_GetUBytes");
 
 	// Go over all the bytes in the data at the correct place using the properties from above
 	uint32_t beginningOfData = byteOffset + accByteOffset;
@@ -1208,9 +1219,9 @@ std::vector<glm::vec3> ModelLoader::m_GetAndGroupFloatsVec3(const nlohmann::json
 
 	for (size_t i = 0; i < floats.size(); i += 3)
 		vectors.emplace_back(
-			floats[i+2ull],
+			floats[i+0ull],
 			floats[i+1ull],
-			floats[i+0ull]
+			floats[i+2ull]
 		);
 
 	return vectors;
@@ -1228,18 +1239,18 @@ std::vector<glm::vec4> ModelLoader::m_GetAndGroupFloatsVec4(const nlohmann::json
 	if (Accessor["type"] == "VEC4")
 		for (size_t i = 0; i < floats.size(); i += 4)
 			vectors.emplace_back(
-				floats[i + 3ull],
-				floats[i + 2ull],
+				floats[i + 0ull],
 				floats[i + 1ull],
-				floats[i + 0ull]
+				floats[i + 2ull],
+				floats[i + 3ull]
 			);
 
 	else if (Accessor["type"] == "VEC3")
 		for (size_t i = 0; i < floats.size(); i += 3)
 			vectors.emplace_back(
-				floats[i + 2ull],
-				floats[i + 1ull],
 				floats[i + 0ull],
+				floats[i + 1ull],
+				floats[i + 2ull],
 				1.f
 			);
 
@@ -1298,10 +1309,10 @@ std::vector<glm::tvec4<uint8_t>> ModelLoader::m_GetAndGroupUBytesVec4(const nloh
 
 	for (size_t i = 0; i < ubytes.size(); i += 4)
 		vectors.emplace_back(
-			ubytes[i + 3ull],
-			ubytes[i + 2ull],
+			ubytes[i + 0ull],
 			ubytes[i + 1ull],
-			ubytes[i + 0ull]
+			ubytes[i + 2ull],
+			ubytes[i + 3ull]
 		);
 
 	return vectors;
