@@ -1061,12 +1061,12 @@ int ScriptEngine::L::HandleMethodCall(
 	assert(luaL_checkudata(L, 1, "GameObject"));
 	std::vector<Reflection::GenericValue> inputs;
 
-	for (int index = 0; index < numArgs; index++)
+	for (int index = 1; index <= numArgs; index++)
 	{
-		Reflection::ValueType paramType = paramTypes[index];
+		Reflection::ValueType paramType = paramTypes[index - 1];
 
 		ScriptEngine::L::CheckType(L, paramType, index + 1);
-		inputs.push_back(L::ToGeneric(L, index + 2));
+		inputs.push_back(L::ToGeneric(L, index + 1));
 
 		if (paramType == Reflection::ValueType::Vector2)
 			inputs.back().Type = Reflection::ValueType::Vector2; // no native Vector2 type, but `vector` still works fine
