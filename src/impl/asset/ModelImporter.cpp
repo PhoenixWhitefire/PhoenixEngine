@@ -508,6 +508,12 @@ ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(
 		for (glm::vec3& position : positions)
 			position = glm::vec3(matM * glm::vec4(position, 1.f));
 	}
+	else
+	{
+		for (glm::vec3& position : positions)
+			position = glm::vec3(matT * glm::vec4(position, 1.f));
+		size = glm::vec3(1.f);
+	}
 
 	// Combine all the vertex components and also get the indices and textures
 	std::vector<Vertex> vertices = m_AssembleVertices(positions, normals, texUVs, cols, joints, weights);
@@ -816,9 +822,9 @@ std::vector<float> ModelLoader::m_GetFloats(const nlohmann::json& accessor)
 
 	// Get properties from the bufferView
 	const nlohmann::json& bufferView = m_JsonData["bufferViews"][buffViewInd];
-	if (bufferView.find("byteStride") != bufferView.end())
-		RAISE_RT("m_GetFloats: byteStrides are not supported!");
+	const auto& byteStrideIt = bufferView.find("byteStride");
 
+	uint32_t byteStride = byteStrideIt != bufferView.end() ? (uint32_t)byteStrideIt.value() : 0;
 	uint32_t byteOffset = bufferView["byteOffset"];
 
 	// Interpret the type and store it into numPerVert
@@ -860,7 +866,8 @@ std::vector<float> ModelLoader::m_GetFloats(const nlohmann::json& accessor)
 
 	// Go over all the bytes in the data at the correct place using the properties from above
 	uint32_t beginningOfData = byteOffset + accByteOffset;
-	uint32_t lengthOfData = count * componentSize * numPerVert;
+	uint32_t lengthOfData = count * (byteStride > 0 ? byteStride : componentSize * numPerVert);
+	uint32_t componentCounter = 0;
 	for (uint32_t i = beginningOfData; i < beginningOfData + lengthOfData;)
 	{
 		if (componentType == 5126)
@@ -879,6 +886,13 @@ std::vector<float> ModelLoader::m_GetFloats(const nlohmann::json& accessor)
 		}
 		else
 			RAISE_RT("huh??");
+
+		if (byteStride > 0)
+		{
+			componentCounter++;
+			if (componentCounter % numPerVert == 0)
+				i += byteStride - componentSize * numPerVert;
+		}
 	}
 
 	return floatVec;
@@ -955,13 +969,13 @@ std::vector<uint8_t> ModelLoader::m_GetUBytes(const nlohmann::json& accessor)
 
 	// Get properties from the bufferView
 	const nlohmann::json& bufferView = m_JsonData["bufferViews"][buffViewInd];
-	if (bufferView.find("byteStride") != bufferView.end())
-		RAISE_RT("m_GetUBytes: byteStrides are not supported!");
+	const auto& byteStrideIt = bufferView.find("byteStride");
 
+	uint32_t byteStride = byteStrideIt != bufferView.end() ? (uint32_t)byteStrideIt.value() : 0;
 	uint32_t byteOffset = bufferView["byteOffset"];
 
 	// Interpret the type and store it into numPerVert
-	uint32_t numPerVert;
+	uint32_t numPerVert = 0;
 	if (type == "SCALAR")
 		numPerVert = 1;
 
@@ -977,14 +991,40 @@ std::vector<uint8_t> ModelLoader::m_GetUBytes(const nlohmann::json& accessor)
 	else
 		RAISE_RT("Could not decode GLTF model: Invalid type '{}' (not SCALAR, VEC2, VEC3, or VEC4)", type);
 
-	if (const auto& it = bufferView.find("componentType"); it != bufferView.end() && it.value() != 5121)
-		RAISE_RT("componentTypes other than 5121 are not supported for m_GetUBytes");
+	uint32_t componentType = 5121;
+	uint32_t componentSize = 1;
+
+	if (const auto& it = accessor.find("componentType"); it != accessor.end())
+	{
+		componentType = it.value();
+		if (componentType != 5121 && componentType != 5123)
+			RAISE_RT("Unsupported componentType '{}' in m_GetUBytes, expected 5121 or 5123", (int)it.value());
+	}
+
+	if (componentType == 5123)
+		componentSize = 2;
 
 	// Go over all the bytes in the data at the correct place using the properties from above
 	uint32_t beginningOfData = byteOffset + accByteOffset;
-	uint32_t lengthOfData = count * numPerVert;
+	uint32_t lengthOfData = count * (byteStride > 0 ? byteStride : componentSize * numPerVert);
+	uint32_t componentCounter = 0;
 	for (uint32_t i = beginningOfData; i < beginningOfData + lengthOfData;)
-		ubytesVec.push_back(*(uint8_t*)&m_Data[i++]);
+	{
+		if (componentSize == 1)
+			ubytesVec.push_back(*(uint8_t*)&m_Data[i++]);
+		else
+		{
+			ubytesVec.push_back(*(uint16_t*)&m_Data[i++]);
+			i+=1;
+		}
+
+		if (byteStride > 0)
+		{
+			componentCounter++;
+			if (componentCounter % numPerVert == 0)
+				i += byteStride - numPerVert * componentSize;
+		}
+	}
 
 	return ubytesVec;
 }

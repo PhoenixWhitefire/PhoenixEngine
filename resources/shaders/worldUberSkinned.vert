@@ -68,7 +68,7 @@ void main()
 	}
 
 	data_out.VertexNormal = VertexNormal;
-	data_out.Paint = vec4(JointsIndices.xyz == vec3(0.f) ? vec3(1.f) : vec3(0.f), 1.f);
+	data_out.Paint = pain;//vec4(JointsIndices.xyz == vec3(0.f) ? vec3(1.f) : vec3(0.f), 1.f);
 	data_out.TextureUV = VertexUV;
 	data_out.Transparency = InstanceTransparency;
 	data_out.RenderMatrix = Phoenix_RenderMatrix;
