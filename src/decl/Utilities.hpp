@@ -1,7 +1,7 @@
 #pragma once
 
-#define RAISE_RT(error) throw(std::runtime_error(error))
-#define RAISE_RTF(fmtstr, ...) RAISE_RT(std::format(fmtstr, __VA_ARGS__))
+#define RAISE_RT_NF(error) throw(std::runtime_error(error))
+#define RAISE_RT(fmtstr, ...) RAISE_RT_NF(std::format(fmtstr "" __VA_OPT__(,) __VA_ARGS__))
 
 // 24/01/2025
 // an assert, but also at runtime
@@ -30,6 +30,4 @@
 
 #include "Log.hpp"
 
-void CopyStringToBuffer(char* buf, uint32_t capacity, const std::string_view& string = "");
-char* BufferInitialize(uint32_t capacity, const std::string_view& value = "");
 double GetRunningTime();

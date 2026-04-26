@@ -17,7 +17,7 @@ const Reflection::StaticMethodMap& LoggingComponentManager::GetMethods()
                 std::string_view tags = inputs.size() > 2 ? inputs[2].AsStringView() : "";
 
                 if (type < 0 || type > (int64_t)Logging::MessageType::Error)
-                    RAISE_RTF("Invalid log message type '{}'", type);
+                    RAISE_RT("Invalid log message type '{}'", type);
 
                 Logging::MessageType mt = (Logging::MessageType)type;
                 Log.Write(message, mt, tags);

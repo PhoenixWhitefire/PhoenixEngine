@@ -20,7 +20,7 @@ static void fromString(Reflection::GenericValue& G, const char* Data)
 		G.Val.Str = (char*)Memory::Alloc(G.Size + 1, Memory::Category::Reflection);
 
 		if (!G.Val.Str)
-			RAISE_RTF("Failed to allocate {} bytes for string in fromString", G.Size);
+			RAISE_RT("Failed to allocate {} bytes for string in fromString", G.Size);
 
 		memcpy(G.Val.Str, Data, G.Size);
 		G.Val.Str[G.Size] = 0;
@@ -94,7 +94,7 @@ static void fromMatrix(Reflection::GenericValue& G, const glm::mat4& M)
 	G.Size = sizeof(M);
 
 	if (!G.Val.Mat)
-		RAISE_RTF("Failed to allocate {} bytes in fromMatrix", sizeof(M));
+		RAISE_RT("Failed to allocate {} bytes in fromMatrix", sizeof(M));
 
 	memcpy(G.Val.Mat, &M, sizeof(M));
 }
@@ -130,7 +130,7 @@ static void fromArray(Reflection::GenericValue& G, const std::span<const Reflect
 	G.Val.Array = (Reflection::GenericValue*)Memory::Alloc((uint32_t)allocSize, Memory::Category::Reflection);
 
 	if (!G.Val.Array)
-		RAISE_RTF("Failed to allocate {} bytes in fromArray (length {}, GV Size {})", allocSize, Array.size(), sizeof(G));
+		RAISE_RT("Failed to allocate {} bytes in fromArray (length {}, GV Size {})", allocSize, Array.size(), sizeof(G));
 
 	for (size_t i = 0; i < Array.size(); i++)
 		// placement-new to avoid 1 excess layer of indirection
@@ -412,7 +412,7 @@ bool Reflection::GenericValue::IsNull() const
 }
 
 // `::AsInteger` and `::AsDouble` have special errors
-#define WRONG_TYPE() RAISE_RTF("Called `{}` but GenericValue was '{}' ({})", __FUNCTION__, ToString(), TypeAsString(Type))
+#define WRONG_TYPE() RAISE_RT("Called `{}` but GenericValue was '{}' ({})", __FUNCTION__, ToString(), TypeAsString(Type))
 
 std::string Reflection::GenericValue::AsString() const
 {
@@ -449,7 +449,7 @@ double Reflection::GenericValue::AsDouble() const
 		return (double)Val.Int;
 
 	// special error message
-	RAISE_RTF("GenericValue was not a number (Integer/ Double ), but instead a {}", TypeAsString(Type));
+	RAISE_RT("GenericValue was not a number (Integer/ Double ), but instead a {}", TypeAsString(Type));
 }
 int64_t Reflection::GenericValue::AsInteger() const
 {
@@ -459,7 +459,7 @@ int64_t Reflection::GenericValue::AsInteger() const
 	else if (Type == ValueType::Double)
 		return (int64_t)Val.Double;
 
-	RAISE_RTF("GenericValue was not a number ( Integer /Double), but instead a {}", TypeAsString(Type));
+	RAISE_RT("GenericValue was not a number ( Integer /Double), but instead a {}", TypeAsString(Type));
 }
 
 const glm::vec2 Reflection::GenericValue::AsVector2() const
@@ -489,7 +489,7 @@ const Reflection::GenericFunction& Reflection::GenericValue::AsFunction() const
 std::span<Reflection::GenericValue> Reflection::GenericValue::AsArray() const
 {
 	if (this->Type != Reflection::ValueType::Array)
-		RAISE_RTF("GenericValue was not an Array, but instead a {}", TypeAsString(Type));
+		RAISE_RT("GenericValue was not an Array, but instead a {}", TypeAsString(Type));
 
 	return std::span(Val.Array, Size);
 }
@@ -499,7 +499,7 @@ std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> Reflectio
 		WRONG_TYPE();
 
 	if (Size % 2 != 0)
-		RAISE_RTF("Map had an uneven number of array elements ({})", Size);
+		RAISE_RT("Map had an uneven number of array elements ({})", Size);
 
 	std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> map;
 	for (uint32_t i = 0; i < Size; i += 2)

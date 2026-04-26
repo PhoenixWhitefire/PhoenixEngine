@@ -2,6 +2,7 @@
 
 #include <imgui.h>
 #include <imgui/misc/cpp/imgui_stdlib.h>
+#include <lualib.h>
 
 #include "script/luhx.hpp"
 #include "asset/TextureManager.hpp"

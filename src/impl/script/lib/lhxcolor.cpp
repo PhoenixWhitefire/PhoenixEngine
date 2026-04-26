@@ -1,3 +1,5 @@
+#include <lualib.h>
+
 #include "script/luhx.hpp"
 #include "datatype/Color.hpp"
 

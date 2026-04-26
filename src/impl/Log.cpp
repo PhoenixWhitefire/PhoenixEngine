@@ -24,7 +24,6 @@ struct ParallelLogEvent
 };
 static std::mutex ParallelLogEventsMutex;
 static std::vector<ParallelLogEvent> ParallelLogEvents;
-static bool s_IsGameObjectManagerReady = false;
 
 void Logging::Save()
 {
@@ -102,7 +101,7 @@ void Logging::Context::Append(const std::string_view& Message, const std::string
 	//	appendToLog(ExtraTags, true);
 	appendToLog(Message, false);
 
-	if (s_IsGameObjectManagerReady)
+	if (IsGameObjectManagerAlive)
 		((LoggingComponentManager*)LoggingComponentManager::Get())->SignalNewLogMessage(Logging::MessageType::None, Message, tags);
 }
 
@@ -130,7 +129,7 @@ void Logging::Context::AppendWithValue(const std::string_view& Message, const Re
 	//	appendToLog(ExtraTags, true);
 	appendToLog(Message, false);
 
-	if (s_IsGameObjectManagerReady)
+	if (IsGameObjectManagerAlive)
 		((LoggingComponentManager*)LoggingComponentManager::Get())->SignalNewLogMessage(Logging::MessageType::None, Message, tags, Value);
 }
 
@@ -158,12 +157,7 @@ void Logging::Context::Info(const std::string_view& Message, const std::string_v
 	appendToLog(": ", true);
 	appendToLog(Message);
 
-	if (!s_IsGameObjectManagerReady && Message == "GameObjectManagerReady")
-		s_IsGameObjectManagerReady = true;
-	else if (s_IsGameObjectManagerReady && Message == "GameObjectManagerDead")
-		s_IsGameObjectManagerReady = false;
-
-	if (s_IsGameObjectManagerReady)
+	if (IsGameObjectManagerAlive)
 		((LoggingComponentManager*)LoggingComponentManager::Get())->SignalNewLogMessage(Logging::MessageType::Info, Message, tags);
 }
 
@@ -191,7 +185,7 @@ void Logging::Context::Warning(const std::string_view& Message, const std::strin
 	appendToLog(": ", true);
 	appendToLog(Message);
 
-	if (s_IsGameObjectManagerReady)
+	if (IsGameObjectManagerAlive)
 		((LoggingComponentManager*)LoggingComponentManager::Get())->SignalNewLogMessage(Logging::MessageType::Warning, Message, tags);
 }
 
@@ -219,7 +213,7 @@ void Logging::Context::Error(const std::string_view& Message, const std::string_
 	appendToLog(": ", true);
 	appendToLog(Message);
 
-	if (s_IsGameObjectManagerReady)
+	if (IsGameObjectManagerAlive)
 		((LoggingComponentManager*)LoggingComponentManager::Get())->SignalNewLogMessage(Logging::MessageType::Error, Message, tags);
 }
 

@@ -168,7 +168,7 @@ static std::string resolveAliasRecursive(std::string Path)
 	const auto& aliasIt = s_AliasMap.find(alias);
 
 	if (aliasIt == s_AliasMap.end())
-		RAISE_RTF("Invalid alias '{}' in path '{}'", alias, Path);
+		RAISE_RT("Invalid alias '{}' in path '{}'", alias, Path);
 	else
 		Path = aliasIt->second + Path.substr(aliasEnd, Path.size() - aliasEnd);
 

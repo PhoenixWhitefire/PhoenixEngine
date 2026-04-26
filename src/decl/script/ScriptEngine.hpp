@@ -5,15 +5,13 @@
 #include <unordered_map>
 #include <future>
 #include <thread>
-#include <luau/Compiler/include/luacode.h>
 #include <lua.h>
 
-#include "Reflection.hpp"
 #include "datatype/GameObject.hpp"
-#include "script/luhx.hpp"
 
-#define LUA_ASSERT(res, err, ...) { if (!(res)) { luaL_errorL(L, err, __VA_ARGS__); } }
 #define ROOT_LVM_NAME "RootLVM"
+
+class EventConnectionData;
 
 namespace ScriptEngine
 {

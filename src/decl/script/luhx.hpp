@@ -3,13 +3,13 @@
 
 #pragma once
 
-#include <lua.h>
-#include <lualib.h>
 #include <glm/mat4x4.hpp>
 
 #include "datatype/GameObject.hpp"
-#include "datatype/Color.hpp"
-#include "script/InputEvent.hpp"
+
+class InputEvent;
+class Color;
+struct lua_State;
 
 void luhx_openlibs(lua_State*);
 
@@ -68,7 +68,7 @@ struct EventConnectionData
 	const Reflection::EventDescriptor* Event = nullptr;
 	lua_State* L = nullptr;
 	uint32_t ConnectionId = UINT32_MAX;
-	int SpawningThreadRef = LUA_NOREF;
-	int ThreadRef = LUA_NOREF;
-	int SignalRef = LUA_NOREF;
+	int SpawningThreadRef = -1;
+	int ThreadRef = -1;
+	int SignalRef = -1;
 };

@@ -6,7 +6,6 @@
 #include <tracy/Tracy.hpp>
 
 #include "asset/TextureManager.hpp"
-#include "GlobalJsonConfig.hpp"
 #include "ThreadManager.hpp"
 #include "Utilities.hpp"
 #include "FileRW.hpp"
@@ -39,8 +38,6 @@ static uint8_t MissingTextureBytes[] = {
 
 static uint32_t WhiteTextureBytes = 0xFFFFFF;
 static uint32_t BlackTextureBytes = 0x000000;
-
-static bool s_TextureManagerShutdown = false;
 
 void TextureManager::m_UploadTextureToGpu(Texture& texture)
 {
@@ -190,8 +187,6 @@ void TextureManager::Shutdown()
 		return;
 	}
 
-	s_TextureManagerShutdown = true;
-
 	std::vector<uint32_t> textureGpuIds;
 	textureGpuIds.reserve(m_Textures.size());
 
@@ -306,7 +301,6 @@ uint32_t TextureManager::LoadFromPath(const std::string& Path, bool ShouldLoadAs
 	if (m_IsHeadless)
 		return 0;
 
-	std::string ResDir = EngineJsonConfig["ResourcesDirectory"];
 	std::string ActualPath = FileRW::ResolvePathNormalized(Path);
 
 	auto it = m_StringToTextureId.find(Path);

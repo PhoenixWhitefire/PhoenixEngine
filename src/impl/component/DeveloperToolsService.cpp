@@ -34,7 +34,7 @@ static bool* getTool(const std::string_view& toolName)
             return shownPtr;
     }
 
-    RAISE_RTF("Invalid tool '{}'", toolName);
+    RAISE_RT("Invalid tool '{}'", toolName);
 }
 
 const Reflection::StaticPropertyMap& DeveloperToolsComponentManager::GetProperties()

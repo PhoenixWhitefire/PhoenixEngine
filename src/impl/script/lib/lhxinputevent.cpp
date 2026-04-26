@@ -1,4 +1,6 @@
 // lhxinputevent.cpp, 02/01/2026
+#include <lualib.h>
+
 #include "script/luhx.hpp"
 #include "script/InputEvent.hpp"
 #include "Reflection.hpp"

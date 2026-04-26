@@ -83,7 +83,7 @@ const Reflection::StaticPropertyMap& DataModelComponentManager::GetProperties()
             {
                 EcDataModel* dm = static_cast<EcDataModel*>(p);
                 if (dm->Modules.size() > 0)
-                    RAISE_RTF("Cannot change the VM of {} because Scripts have already been bound!", dm->Object->GetFullName());
+                    RAISE_RT("Cannot change the VM of {} because Scripts have already been bound!", dm->Object->GetFullName());
 
                 dm->VM = gv.AsString();
             }
@@ -112,13 +112,13 @@ const Reflection::StaticMethodMap& DataModelComponentManager::GetMethods()
                     }
 
                 if (!validService)
-                    RAISE_RTF("'{}' is not a valid Service!", service);
+                    RAISE_RT("'{}' is not a valid Service!", service);
 
                 EcDataModel* dm = static_cast<EcDataModel*>(p);
                 EntityComponent it = FindComponentTypeByName(service);
 
                 if (it == EntityComponent::None)
-                    RAISE_RTF("Could not map Service name '{}' to a Component", service);
+                    RAISE_RT("Could not map Service name '{}' to a Component", service);
 
                 if (GameObject* preExisting = dm->Object->FindChildWithComponent(it))
                     return { preExisting->ToGenericValue() };
@@ -137,7 +137,7 @@ const Reflection::StaticMethodMap& DataModelComponentManager::GetMethods()
             {
                 EcDataModel* dm = static_cast<EcDataModel*>(p);
                 if (dm->CloseCallback.Func)
-                    RAISE_RTF("Cannot overwrite Close callback of datamodel {}", dm->Object->GetFullName());
+                    RAISE_RT("Cannot overwrite Close callback of datamodel {}", dm->Object->GetFullName());
 
                 dm->CloseCallback = inputs[0].AsFunction();
                 return {};

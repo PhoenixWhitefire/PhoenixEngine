@@ -2,6 +2,7 @@
 
 #include <tinyfiledialogs.h>
 #include <tracy/Tracy.hpp>
+#include <lualib.h>
 
 #include "component/EngineService.hpp"
 #include "asset/TextureManager.hpp"
@@ -64,7 +65,7 @@ static Reflection::GenericValue jsonToGeneric(const nlohmann::json& v)
 				if (type == "vector")
                     val = { glm::vec3(encoded[0], encoded[1], encoded[2]) };
 				else
-					RAISE_RTF("Unknown encoded datatype '{}'", type);
+					RAISE_RT("Unknown encoded datatype '{}'", type);
 			}
 			else
 				val = jsonToGeneric(data);
@@ -87,15 +88,15 @@ static Reflection::GenericValue jsonToGeneric(const nlohmann::json& v)
 
 #define ERROR_CONTEXTUALIZED_NVARARGS(e) { \
 if (Context.size() > 0) \
-	RAISE_RTF(e " (serializing {})", Context); \
+	RAISE_RT(e " (serializing {})", Context); \
 else \
 	RAISE_RT(e); } \
 
 #define ERROR_CONTEXTUALIZED(e, ...) { \
 if (Context.size() > 0) \
-	RAISE_RTF(e " in {}", __VA_ARGS__, Context); \
+	RAISE_RT(e " in {}", __VA_ARGS__, Context); \
 else \
-	RAISE_RTF(e, __VA_ARGS__); } \
+	RAISE_RT(e, __VA_ARGS__); } \
 
 static nlohmann::json genericToJson(const Reflection::GenericValue& Value, std::string Context = "")
 {
@@ -340,7 +341,7 @@ const Reflection::StaticMethodMap& EngineComponentManager::GetMethods()
 
                 const auto& it = ScriptEngine::VMs.find(vmName);
                 if (it == ScriptEngine::VMs.end())
-                    RAISE_RTF("Invalid VM '{}'", vmName);
+                    RAISE_RT("Invalid VM '{}'", vmName);
 
                 const ScriptEngine::LuauVM& vm = it->second;
 

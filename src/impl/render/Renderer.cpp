@@ -40,8 +40,7 @@ extern "C"
 
 #define SHADER_MAX_LIGHTS 16
 
-static std::unordered_map<GLenum, std::string> GLEnumToStringMap =
-{
+static std::unordered_map<GLenum, std::string> GLEnumToStringMap = {
 	{ GL_DEBUG_SOURCE_API, "OpenGL"},
 	{ GL_DEBUG_SOURCE_WINDOW_SYSTEM, "Window system" },
 	{ GL_DEBUG_SOURCE_SHADER_COMPILER, "Shader compiler" },
@@ -101,7 +100,7 @@ static void GLDebugCallback(
 	// "Buffer object X will use VIDEO memory as the source for buffer object operations"
 	if (Id == 131185)
 		return;
-	
+
 	std::string debugString = std::format(
 		"GL Debug callback:\n\tType: {}\n\tSeverity: {}\n\tMessage: {}\n\tSource: {}\n\tError ID: {}\n",
 		glEnumToString(TypeId),
@@ -117,7 +116,7 @@ static void GLDebugCallback(
 	// "Vertex shader in program is being recompiled based on GL state"
 	if (Id != 131218 && SeverityId > GL_DEBUG_SEVERITY_NOTIFICATION)
 		if (EngineJsonConfig.value("render_glerrorsarefatal", true))
-			RAISE_RT(debugString);
+			RAISE_RT_NF(debugString);
 }
 
 static Renderer* s_Instance = nullptr;

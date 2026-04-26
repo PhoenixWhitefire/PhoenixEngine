@@ -503,7 +503,7 @@ int main(int argc, char** argv)
 	try
 	{
 		Engine engine;
-		Log.Info("GameObjectManagerReady");
+		Logging::IsGameObjectManagerAlive = true;
 
 		if (DoApiDump)
 			doApiDump();
@@ -522,7 +522,7 @@ int main(int argc, char** argv)
 	}
 	PHX_MAIN_CRASHHANDLERS;
 
-	Log.Info("GameObjectManagerDead");
+	Logging::IsGameObjectManagerAlive = false;
 	Log.InfoF("The exit code is {}", s_ExitCode);
 	Log.Info("Application shutdown");
 	Logging::Save();

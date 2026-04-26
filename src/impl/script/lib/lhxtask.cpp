@@ -1,5 +1,5 @@
-#include <luau/VM/src/lstate.h>
 #include <tracy/Tracy.hpp>
+#include <lualib.h>
 
 #include "script/luhx.hpp"
 #include "script/ScriptEngine.hpp"
@@ -98,7 +98,7 @@ static int task_load(lua_State* L)
 
 	// new thread needs to have the globals sandboxed
 	luaL_sandboxthread(ML);
-	ScriptEngine::L::DumpStacktrace(L, &((ScriptEngine::L::StateUserdata*)ML->userdata)->SpawnTrace);
+	ScriptEngine::L::DumpStacktrace(L, &((ScriptEngine::L::StateUserdata*)lua_getthreaddata(ML))->SpawnTrace);
 
 	if (ScriptEngine::CompileAndLoad(ML, code, chname) == 0)
 	{

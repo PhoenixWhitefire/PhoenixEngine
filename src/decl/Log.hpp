@@ -2,6 +2,7 @@
 
 #include <string>
 #include <format>
+#include <atomic>
 
 namespace Reflection
 {
@@ -16,7 +17,7 @@ namespace Logging
 
 	struct LogMessageType_
 	{
-	    enum LMT {
+	    enum LMT : uint8_t {
 	        None = 0,
 	        Info,
 	        Warning,
@@ -71,6 +72,8 @@ namespace Logging
 	private:
 		Context m_PrevContext;
 	};
+
+	inline std::atomic_bool IsGameObjectManagerAlive = false;
 };
 
 thread_local inline Logging::Context Log;

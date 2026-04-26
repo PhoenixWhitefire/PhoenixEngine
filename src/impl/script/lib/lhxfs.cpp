@@ -1,5 +1,6 @@
 #include <filesystem>
 #include <chrono>
+#include <lualib.h>
 
 #ifdef __GNUG__
 #pragma GCC diagnostic push

@@ -1,4 +1,4 @@
-#include <luau/VM/src/lstate.h>
+#include <lualib.h>
 
 #include "script/luhx.hpp"
 #include "script/ScriptEngine.hpp"

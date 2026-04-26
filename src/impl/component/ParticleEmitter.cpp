@@ -36,7 +36,7 @@ const Reflection::StaticPropertyMap& ParticleEmitterComponentManager::GetPropert
 			{
 				int64_t newRate = gv.AsInteger();
 				if (newRate < 0 || newRate > UINT32_MAX)
-					RAISE_RTF("Rate must be within uint32_t bounds (0 <= Rate <= 0xFFFFFFFFu), got {}", newRate);
+					RAISE_RT("Rate must be within uint32_t bounds (0 <= Rate <= 0xFFFFFFFFu), got {}", newRate);
 				static_cast<EcParticleEmitter*>(g)->Rate = static_cast<uint32_t>(newRate);
 			}
 		),

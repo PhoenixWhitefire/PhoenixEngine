@@ -22,7 +22,6 @@
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <ImGuiColorTextEdit/TextEditor.h>
-#include <luau/VM/src/lstate.h>
 #include <tinyfiledialogs.h>
 #include <lualib.h>
 #include <fstream>
@@ -158,10 +157,25 @@ static void setErrorMessage(std::string errm)
 	Log.Error(errm);
 }
 
-static void copyStringToBuffer(char* Buffer, const std::string_view& String, size_t BufSize)
+static void copyStringToBuffer(char* buf, uint32_t capacity, const std::string_view& string)
 {
-	for (size_t i = 0; i < BufSize; i++)
-		Buffer[i] = String.size() > i ? String.at(i) : 0;
+	for (uint32_t i = 0; i < capacity; i++)
+		buf[i] = i < string.length() ? string.at(i) : 0;
+
+	buf[capacity - 1] = 0;
+}
+
+static char* bufferInitialize(uint32_t capacity, const std::string_view& value)
+{
+	char* buf = (char*)Memory::Alloc(capacity);
+
+	if (!buf)
+		RAISE_RT("Failed to allocate {} bytes in BufferInitialize", capacity + 1);
+
+	buf[capacity - 1] = 0;
+	copyStringToBuffer(buf, capacity, value);
+
+	return buf;
 }
 
 #include "script/ScriptEngine.hpp"
@@ -1232,7 +1246,7 @@ static void mtlEditorTexture(const char* Label, uint32_t* TextureIdPtr, char* Cu
 			else
 			{
 				std::string shortpath = fullpath.substr(resDirOffset + 10);
-				copyStringToBuffer(CurrentPath, shortpath, MATERIAL_TEXTUREPATH_BUFSIZE);
+				copyStringToBuffer(CurrentPath, MATERIAL_TEXTUREPATH_BUFSIZE, shortpath);
 
 				uint32_t newtexid = texManager->LoadFromPath(shortpath);
 				// i'm so silly 04/12/2024
@@ -1366,13 +1380,13 @@ static void renderMaterialEditor()
 
 	if (MtlCurItem != MtlPrevItem)
 	{
-		copyStringToBuffer(MtlShpBuf, curItem.GetShader().Name, MATERIAL_TEXTUREPATH_BUFSIZE);
+		copyStringToBuffer(MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE, curItem.GetShader().Name);
 		s_SaveNameBuf = curItem.Name;
 
-		copyStringToBuffer(MtlDiffuseBuf, colorMap.ImagePath, MATERIAL_TEXTUREPATH_BUFSIZE);
-		copyStringToBuffer(MtlSpecBuf, metallicRoughnessMap.ImagePath, MATERIAL_TEXTUREPATH_BUFSIZE);
-		copyStringToBuffer(MtlNormalBuf, normalMap.ImagePath, MATERIAL_TEXTUREPATH_BUFSIZE);
-		copyStringToBuffer(MtlEmissionBuf, emissionMap.ImagePath, MATERIAL_TEXTUREPATH_BUFSIZE);
+		copyStringToBuffer(MtlDiffuseBuf, MATERIAL_TEXTUREPATH_BUFSIZE, colorMap.ImagePath);
+		copyStringToBuffer(MtlSpecBuf, MATERIAL_TEXTUREPATH_BUFSIZE, metallicRoughnessMap.ImagePath);
+		copyStringToBuffer(MtlNormalBuf, MATERIAL_TEXTUREPATH_BUFSIZE, normalMap.ImagePath);
+		copyStringToBuffer(MtlEmissionBuf, MATERIAL_TEXTUREPATH_BUFSIZE, emissionMap.ImagePath);
 
 		SelectedUniformIdx = -1;
 	}
@@ -3951,11 +3965,11 @@ static void renderProperties()
 				const uint32_t INPUT_TEXT_BUFFER_ADDITIONAL = 64;
 				uint32_t allocSize = (uint32_t)str.size() + INPUT_TEXT_BUFFER_ADDITIONAL;
 
-				char* buf = BufferInitialize(
+				char* buf = bufferInitialize(
 					allocSize,
 					"<Initial Value 29/09/2024 Hey guys How we doing today>"
 				);
-				CopyStringToBuffer(buf, allocSize, doConflict ? "" : str);
+				copyStringToBuffer(buf, allocSize, doConflict ? "" : str);
 
 				bool focused = false;
 				if (FocusRenameSelection && propName == "Name")
@@ -5148,7 +5162,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 	else
 		errorMessage = BreakExplanations[Reason];
 
-	ScriptEngine::L::StateUserdata* corUd = (ScriptEngine::L::StateUserdata*)L->userdata;
+	ScriptEngine::L::StateUserdata* corUd = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(L);
 
 	if (!InDebugger)
 	{
@@ -5387,8 +5401,8 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 			ImGui::Combo("Variables", &Section, "Locals\0Upvalues\0Environment\0Registry\0Stack\0");
 
 			ImGui::BeginChild("VariablesSection", ImVec2(), ImGuiChildFlags_Borders);
-			int initialStatus = lua_status(L);
-			L->status = LUA_OK; // avoid hitting assertion due to potential calls to `__tostring` metamethods
+			//int initialStatus = lua_status(L);
+			// L->status = LUA_OK; // avoid hitting assertion due to potential calls to `__tostring` metamethods
 			
 			switch (Section)
 			{
@@ -5483,7 +5497,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 			[[unlikely]] default: { assert(false); }
 
 			}
-			L->status = initialStatus;
+			//L->status = initialStatus;
 			ImGui::EndChild();
 		}
 		ImGui::End();
@@ -5536,7 +5550,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 						getInfoSuccess = true;
 				}
 
-				const auto ud = (ScriptEngine::L::StateUserdata*)coroutine->userdata;
+				const auto ud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(coroutine);
 				std::string identifier = std::format("{}:{}", car.short_src ? car.short_src : (ud ? ud->SpawnTrace : "MainThread"), car.currentline);
 				std::string targetFile = car.short_src ? car.short_src : "";
 				int targetLine = ar->currentline;
@@ -5696,9 +5710,9 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 						ImGui::PopID();
 					}
 
-					if (coroutine->userdata)
+					if (lua_getthreaddata(coroutine))
 					{
-						const ScriptEngine::L::StateUserdata* ud = (const ScriptEngine::L::StateUserdata*)coroutine->userdata;
+						const ScriptEngine::L::StateUserdata* ud = (const ScriptEngine::L::StateUserdata*)lua_getthreaddata(coroutine);
 						ImGui::SeparatorText("Spawn trace");
 						ImGui::TextUnformatted(ud->SpawnTrace.c_str());
 					}
@@ -5710,7 +5724,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 			};
 
 			renderCoroutine(vm.MainThread);
-			for (lua_State* coroutine : ((ScriptEngine::L::StateUserdata*)vm.MainThread->userdata)->Coroutines)
+			for (lua_State* coroutine : ((ScriptEngine::L::StateUserdata*)lua_getthreaddata(vm.MainThread))->Coroutines)
 				renderCoroutine(coroutine);
 		}
 		ImGui::End();

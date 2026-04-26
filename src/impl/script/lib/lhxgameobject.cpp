@@ -1,5 +1,5 @@
 #include <tracy/public/tracy/Tracy.hpp>
-#include <luau/VM/src/lstate.h>
+#include <lualib.h>
 
 #include "datatype/ComponentDependencies.hpp"
 #include "script/ScriptEngine.hpp"
@@ -251,7 +251,7 @@ static int obj_namecall(lua_State* L)
 	ZoneScopedC(tracy::Color::LightSkyBlue);
 
 	GameObject* g = luhx_checkgameobject(L, 1);
-	const char* k = L->namecall->data; // this is weird 10/01/2025
+	const char* k = lua_namecallatom(L, nullptr);
 
 	if (!g)
 		luaL_error(L, "Tried to call '%s' of a de-allocated GameObject with ID %u", k, *(uint32_t*)lua_touserdata(L, 1));

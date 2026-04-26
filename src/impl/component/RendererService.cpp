@@ -95,7 +95,7 @@ const Reflection::StaticMethodMap& RendererComponentManager::GetMethods()
                 }
 
                 if (vt != val.Type)
-                    RAISE_RTF("Mismatch between type of value ({}) and Type argument ({})", Reflection::TypeAsString(val.Type), Reflection::TypeAsString(vt));
+                    RAISE_RT("Mismatch between type of value ({}) and Type argument ({})", Reflection::TypeAsString(val.Type), Reflection::TypeAsString(vt));
 
                 using Reflection::ValueType;
                 const Reflection::ValueType AllowedTypes[] = {
@@ -119,7 +119,7 @@ const Reflection::StaticMethodMap& RendererComponentManager::GetMethods()
                 }
 
                 if (!allowed)
-                    RAISE_RTF("{}s are not an allowed shader variable type!", Reflection::TypeAsString(vt));
+                    RAISE_RT("{}s are not an allowed shader variable type!", Reflection::TypeAsString(vt));
 
                 shader.DefaultUniforms[inputs[1].AsString()] = val;
                 return {};

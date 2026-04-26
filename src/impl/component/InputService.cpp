@@ -72,7 +72,7 @@ const Reflection::StaticPropertyMap& PlayerInputComponentManager::GetProperties(
             {
                 int cursor = (int)gv.AsInteger();
                 if (cursor < GLFW_ARROW_CURSOR || cursor > GLFW_NOT_ALLOWED_CURSOR)
-                    RAISE_RTF("Invalid cursor '{}'", cursor);
+                    RAISE_RT("Invalid cursor '{}'", cursor);
 
                 GLFWwindow* context = glfwGetCurrentContext();
                 if (!context)

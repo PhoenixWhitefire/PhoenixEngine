@@ -25,7 +25,7 @@ static HttpRequest parseRequestFromReflection(const Reflection::GenericValue& gv
     if (urlIt == map.end())
         RAISE_RT("Expected `Url` field in request data");
     if (urlIt->second.Type != Reflection::ValueType::String)
-        RAISE_RTF("Expected `Url` to be a string, got '{}' ({})", urlIt->second.ToString(), Reflection::TypeAsString(urlIt->second.Type));
+        RAISE_RT("Expected `Url` to be a string, got '{}' ({})", urlIt->second.ToString(), Reflection::TypeAsString(urlIt->second.Type));
 
     HttpRequest request;
     request.Url = urlIt->second.AsString();
@@ -33,22 +33,22 @@ static HttpRequest parseRequestFromReflection(const Reflection::GenericValue& gv
     if (methodIt != map.end())
     {
         if (methodIt->second.Type != Reflection::ValueType::String)
-            RAISE_RTF("Expected `Method` to be a string, got '{}' ({})", methodIt->second.ToString(), Reflection::TypeAsString(methodIt->second.Type));
+            RAISE_RT("Expected `Method` to be a string, got '{}' ({})", methodIt->second.ToString(), Reflection::TypeAsString(methodIt->second.Type));
         request.Method = methodIt->second.AsString();
     }
 
     if (headersIt != map.end())
     {
         if (headersIt->second.Type != Reflection::ValueType::Map && headersIt->second.Type != Reflection::ValueType::Array)
-            RAISE_RTF("Expected `Body` to be a string, got '{}' ({})", bodyIt->second.ToString(), Reflection::TypeAsString(bodyIt->second.Type));
+            RAISE_RT("Expected `Body` to be a string, got '{}' ({})", bodyIt->second.ToString(), Reflection::TypeAsString(bodyIt->second.Type));
 
         std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> headersGv = headersIt->second.AsMap();
         for (const auto& pair : headersGv)
         {
             if (pair.first.Type != Reflection::ValueType::String)
-                RAISE_RTF("Expected Key of Header to be a string, got '{}' ({})", pair.first.ToString(), Reflection::TypeAsString(pair.first.Type));
+                RAISE_RT("Expected Key of Header to be a string, got '{}' ({})", pair.first.ToString(), Reflection::TypeAsString(pair.first.Type));
             if (pair.second.Type != Reflection::ValueType::String)
-                RAISE_RTF("Expected Value of Header to be a string, got '{}' ({})", pair.second.ToString(), Reflection::TypeAsString(pair.second.Type));
+                RAISE_RT("Expected Value of Header to be a string, got '{}' ({})", pair.second.ToString(), Reflection::TypeAsString(pair.second.Type));
 
             request.Headers.emplace_back(pair.first.AsString(), pair.second.AsString());
         }
@@ -57,7 +57,7 @@ static HttpRequest parseRequestFromReflection(const Reflection::GenericValue& gv
     if (bodyIt != map.end())
     {
         if (bodyIt->second.Type != Reflection::ValueType::String)
-            RAISE_RTF("Expected `Body` to be a string, got '{}' ({})", bodyIt->second.ToString(), Reflection::TypeAsString(bodyIt->second.Type));
+            RAISE_RT("Expected `Body` to be a string, got '{}' ({})", bodyIt->second.ToString(), Reflection::TypeAsString(bodyIt->second.Type));
         request.Body = bodyIt->second.AsString();
     }
 

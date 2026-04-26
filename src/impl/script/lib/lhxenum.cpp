@@ -1,4 +1,5 @@
 #include <GLFW/glfw3.h>
+#include <lualib.h>
 
 #ifdef __GNUG__
 #pragma GCC diagnostic push

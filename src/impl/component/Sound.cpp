@@ -172,27 +172,26 @@ const Reflection::StaticEventMap& SoundComponentManager::GetEvents()
 SoundComponentManager::SoundComponentManager()
 {
 	ZoneScoped;
-
-	ma_engine_config config = {};
-	config.allocationCallbacks.onMalloc = [](size_t Size, void*)
-		{
-			assert(Size <= UINT32_MAX);
-			return Memory::Alloc((uint32_t)Size, MEMCAT(Sound));
-		};
-	config.allocationCallbacks.onRealloc = [](void* Pointer, size_t Size, void*)
-		{
-			assert(Size <= UINT32_MAX);
-			return Memory::ReAlloc(Pointer, (uint32_t)Size, MEMCAT(Sound));
-		};
-	config.allocationCallbacks.onFree = [](void* P, void*)
-		{
-			Memory::Free(P);
-		};
-
 	if (!IsHeadless)
 	{
+		ma_engine_config config = {};
+		config.allocationCallbacks.onMalloc = [](size_t Size, void*)
+			{
+				assert(Size <= UINT32_MAX);
+				return Memory::Alloc((uint32_t)Size, MEMCAT(Sound));
+			};
+		config.allocationCallbacks.onRealloc = [](void* Pointer, size_t Size, void*)
+			{
+				assert(Size <= UINT32_MAX);
+				return Memory::ReAlloc(Pointer, (uint32_t)Size, MEMCAT(Sound));
+			};
+		config.allocationCallbacks.onFree = [](void* P, void*)
+			{
+				Memory::Free(P);
+			};
+
 		if (ma_result initResult = ma_engine_init(&config, &AudioEngine); initResult != MA_SUCCESS)
-			RAISE_RTF("Audio Engine init failed, error code: {}", (int)initResult);
+			RAISE_RT("Audio Engine init failed, error code: {}", (int)initResult);
 	}
 
 	m_Components.reserve(16);

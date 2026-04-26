@@ -33,9 +33,9 @@ static void loadMeshDataFromMap(const std::vector<Reflection::GenericValue>& inp
     {
         int64_t i = indexData.AsInteger();
         if (i <= 0)
-            RAISE_RTF("Got invalid index '{}', must be positive (index into Vertices table)", i);
+            RAISE_RT("Got invalid index '{}', must be positive (index into Vertices table)", i);
         else if (i > UINT32_MAX)
-            RAISE_RTF("Got invalid index '{}', out of 32-bit unsigned integer range (0..{} inclusive)", i, UINT32_MAX);
+            RAISE_RT("Got invalid index '{}', out of 32-bit unsigned integer range (0..{} inclusive)", i, UINT32_MAX);
 
         mesh.Indices.push_back((uint32_t)i - 1);
     }
@@ -106,7 +106,7 @@ static void loadMeshDataFromBuffer(const std::vector<Reflection::GenericValue>& 
     const std::string_view& buffer = std::string_view(inputs[1].Val.Str, inputs[1].Size);
 
     if (buffer.size() < sizeof(uint32_t) * 2)
-        RAISE_RTF("Expected buffer to have at least {} bytes, got {}", sizeof(uint32_t) * 2, buffer.size());
+        RAISE_RT("Expected buffer to have at least {} bytes, got {}", sizeof(uint32_t) * 2, buffer.size());
 
     bool notEnoughData = false;
     size_t cursor = 0;
@@ -126,14 +126,14 @@ static void loadMeshDataFromBuffer(const std::vector<Reflection::GenericValue>& 
         float pz = readF32(buffer, &cursor, &notEnoughData);
 
         if (notEnoughData)
-            RAISE_RTF("Reached end of buffer reading positions of vertex {} (offset: {})", vi + 1, cursor);
+            RAISE_RT("Reached end of buffer reading positions of vertex {} (offset: {})", vi + 1, cursor);
 
         float nx = readF32(buffer, &cursor, &notEnoughData);
         float ny = readF32(buffer, &cursor, &notEnoughData);
         float nz = readF32(buffer, &cursor, &notEnoughData);
 
         if (notEnoughData)
-            RAISE_RTF("Reached end of buffer reading normals of vertex {} (offset: {})", vi + 1, cursor);
+            RAISE_RT("Reached end of buffer reading normals of vertex {} (offset: {})", vi + 1, cursor);
 
         float r = (float)readU8(buffer, &cursor, &notEnoughData) / 255.f;
         float g = (float)readU8(buffer, &cursor, &notEnoughData) / 255.f;
@@ -141,13 +141,13 @@ static void loadMeshDataFromBuffer(const std::vector<Reflection::GenericValue>& 
         float a = (float)readU8(buffer, &cursor, &notEnoughData) / 255.f;
 
         if (notEnoughData)
-            RAISE_RTF("Reached end of buffer reading paint of vertex {} (offset: {})", vi + 1, cursor);
+            RAISE_RT("Reached end of buffer reading paint of vertex {} (offset: {})", vi + 1, cursor);
 
         float u = readF32(buffer, &cursor, &notEnoughData);
         float v = readF32(buffer, &cursor, &notEnoughData);
 
         if (notEnoughData)
-            RAISE_RTF("Reached end of buffer reading UVs of vertex {} (offset: {})", vi + 1, cursor);
+            RAISE_RT("Reached end of buffer reading UVs of vertex {} (offset: {})", vi + 1, cursor);
 
         mesh.Vertices.push_back(Vertex{
             .Position = glm::vec3(px, py, pz),
@@ -161,10 +161,10 @@ static void loadMeshDataFromBuffer(const std::vector<Reflection::GenericValue>& 
     {
         uint32_t u32 = readU32(buffer, &cursor, &notEnoughData);
         if (notEnoughData)
-            RAISE_RTF("Reached of buffer reading index {} (offset: {})", ii + 1, cursor);
+            RAISE_RT("Reached of buffer reading index {} (offset: {})", ii + 1, cursor);
 
         if (u32 == 0)
-            RAISE_RTF("Expected 1-based indices, but index {} is 0", ii + 1);
+            RAISE_RT("Expected 1-based indices, but index {} is 0", ii + 1);
 
         mesh.Indices.push_back(u32 - 1);
     }
@@ -237,7 +237,7 @@ const Reflection::StaticMethodMap& AssetServiceComponentManager::GetMethods()
                 else if (inputs[1].Type == Reflection::ValueType::Buffer)
                     loadMeshDataFromBuffer(inputs, mesh);
                 else
-                    RAISE_RTF("Expected mesh data to be buffer or map (table), got '{}' ()", inputs[1].ToString(), Reflection::TypeAsString(inputs[1].Type));
+                    RAISE_RT("Expected mesh data to be buffer or map (table), got '{}' ()", inputs[1].ToString(), Reflection::TypeAsString(inputs[1].Type));
 
                 MeshProvider::Get()->Assign(mesh, name);
                 return {};

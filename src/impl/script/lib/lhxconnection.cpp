@@ -1,11 +1,11 @@
-#include <luau/VM/src/lstate.h>
+#include <lualib.h>
 
 #include "script/luhx.hpp"
 #include "script/ScriptEngine.hpp"
 
 static int conn_namecall(lua_State* L)
 {
-	if (strcmp(L->namecall->data, "Disconnect") == 0)
+	if (strcmp(lua_namecallatom(L, nullptr), "Disconnect") == 0)
 	{
 		EventConnectionData* ec = (EventConnectionData*)luaL_checkudata(L, 1, "EventConnection");
 
@@ -18,7 +18,7 @@ static int conn_namecall(lua_State* L)
 			ec->Event->Disconnect(p, ec->ConnectionId);
 		ec->ConnectionId = UINT32_MAX;
 
-		ScriptEngine::L::StateUserdata* ud = (ScriptEngine::L::StateUserdata*)ec->L->userdata;
+		ScriptEngine::L::StateUserdata* ud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(ec->L);
 		if (ud->EventConnections.size() > 0)
 		{
 			const auto& it = std::find(ud->EventConnections.begin(), ud->EventConnections.end(), ec);
@@ -61,7 +61,7 @@ static int conn_namecall(lua_State* L)
 		lua_unref(L, ec->SpawningThreadRef);
 	}
 	else
-		luaL_error(L, "No such method of Event Connection known as '%s'", L->namecall->data);
+		luaL_error(L, "No such method of Event Connection known as '%s'", lua_namecallatom(L, nullptr));
 
 	return 0;
 }

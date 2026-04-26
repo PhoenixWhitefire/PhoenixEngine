@@ -1,5 +1,5 @@
-#include <tracy/public/tracy/Tracy.hpp>
-#include <luau/VM/src/lstate.h>
+#include <tracy/Tracy.hpp>
+#include <lualib.h>
 
 #include "script/luhx.hpp"
 #include "script/ScriptEngine.hpp"
@@ -22,7 +22,7 @@ void luhx_pushsignal(
 
 static int sig_namecall(lua_State* L)
 {
-	if (strcmp(L->namecall->data, "Connect") == 0)
+	if (strcmp(lua_namecallatom(L, nullptr), "Connect") == 0)
 	{
 		luaL_checktype(L, 2, LUA_TFUNCTION);
 
@@ -87,7 +87,7 @@ static int sig_namecall(lua_State* L)
 				if (ec->ConnectionId == UINT32_MAX)
 					return; // Event has been disconnected, so our various threads may have been de-allocated
 
-				const std::string& spawnTrace = ((ScriptEngine::L::StateUserdata*)eL->userdata)->SpawnTrace;
+				const std::string& spawnTrace = ((ScriptEngine::L::StateUserdata*)lua_getthreaddata(eL))->SpawnTrace;
 				ZoneText(spawnTrace.data(), spawnTrace.size());
 				(void)spawnTrace;
 
@@ -114,7 +114,7 @@ static int sig_namecall(lua_State* L)
 				// there cannot be more than one instance of it
 				// running concurrently. thus, we can re-use a single thread
 				// instead of creating a new one for each invocation
-				if (cL->status == LUA_YIELD)
+				if (lua_status(cL) == LUA_YIELD)
 				{
 					lua_State* nL = lua_newthread(eL);
 					lua_xpush(eL, nL, 2);
@@ -169,11 +169,11 @@ static int sig_namecall(lua_State* L)
 		ec->SpawningThreadRef = lua_ref(L, -1);
 		lua_pop(L, 1);
 
-		((ScriptEngine::L::StateUserdata*)L->userdata)->EventConnections.push_back(ec);
+		((ScriptEngine::L::StateUserdata*)lua_getthreaddata(L))->EventConnections.push_back(ec);
 
 		return 1;
 	}
-	else if (strcmp(L->namecall->data, "WaitUntil") == 0)
+	else if (strcmp(lua_namecallatom(L, nullptr), "WaitUntil") == 0)
 	{
 		EventSignalData* ev = (EventSignalData*)luaL_checkudata(L, 1, "EventSignal");
 		const Reflection::EventDescriptor* rev = ev->Event;
@@ -224,7 +224,7 @@ static int sig_namecall(lua_State* L)
 		);
 	}
 	else
-		luaL_error(L, "No such method of Event Signal known as '%s'", L->namecall->data);
+		luaL_error(L, "No such method of Event Signal known as '%s'", lua_namecallatom(L, nullptr));
 }
 
 static int sig_eq(lua_State* L)

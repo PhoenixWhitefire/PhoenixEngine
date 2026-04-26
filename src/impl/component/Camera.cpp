@@ -58,5 +58,5 @@ void EcCamera::SetWorldTransform(const glm::mat4& NewTrans)
 	if (EcTransform* et = (Object.Referred() ? Object->FindComponent<EcTransform>() : nullptr))
 		et->SetWorldTransform(NewTrans);
 	else
-		RAISE_RTF("Tried to set the World Transform of the camera at {}, but it does not have a Transform component!", (Object.Referred() ? Object->GetFullName() : "<UH OH>"));
+		RAISE_RT("Tried to set the World Transform of the camera at {}, but it does not have a Transform component!", (Object.Referred() ? Object->GetFullName() : "<UH OH>"));
 }

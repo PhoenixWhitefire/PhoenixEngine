@@ -1,7 +1,6 @@
 // History.hpp, 17/12/2025 - Undo-Redo backend
 
 #include "History.hpp"
-#include "GlobalJsonConfig.hpp"
 
 History* History::Get()
 {
@@ -63,7 +62,7 @@ void History::FinishAction(size_t Id)
         RAISE_RT("Called `History::FinishAction` but no action was started!");
 
     if (m_CurrentAction->Id != Id)
-        RAISE_RTF("Action ID {} was not valid in `History::FinishAction`", Id);
+        RAISE_RT("Action ID {} was not valid in `History::FinishAction`", Id);
 
     if (m_CurrentAction->Events.size() == 0)
     {
@@ -97,7 +96,7 @@ void History::DiscardAction(size_t Id)
         RAISE_RT("Called `History::DiscardAction` but no action was started!");
 
     if (m_CurrentAction->Id != Id)
-        RAISE_RTF("Action ID {} was not valid in `History::FinishAction`", Id);
+        RAISE_RT("Action ID {} was not valid in `History::FinishAction`", Id);
 
     m_CurrentAction.reset();
 }
@@ -142,7 +141,7 @@ bool History::CanRedo() const
 void History::Undo()
 {
     if (!CanUndo())
-        RAISE_RT(GetCannotUndoReason());
+        RAISE_RT_NF(GetCannotUndoReason());
 
     if (m_CurrentWaypoint > m_ActionHistory.size() - 1)
         m_CurrentWaypoint = m_ActionHistory.size() - 1; // TODO not sure why this happens
@@ -205,7 +204,7 @@ void History::Undo()
 void History::Redo()
 {
     if (!CanRedo())
-        RAISE_RT(GetCannotRedoReason());
+        RAISE_RT_NF(GetCannotRedoReason());
 
     const Action& nextAction = m_ActionHistory[m_CurrentWaypoint + 1];
 

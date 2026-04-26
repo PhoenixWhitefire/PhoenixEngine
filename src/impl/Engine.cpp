@@ -298,7 +298,7 @@ void Engine::m_InitializeVideo()
 	{
 		const char* error = nullptr;
 		int ec = glfwGetError(&error);
-		RAISE_RTF("Failed to initialize GLFW: Code: {}, Error: {}", ec, error);
+		RAISE_RT("Failed to initialize GLFW: Code: {}, Error: {}", ec, error);
 	}
 
 	Log.InfoF("GLFW platform: {}", glfwGetPlatform());
@@ -336,7 +336,7 @@ void Engine::m_InitializeVideo()
 	{
 		const char* error = nullptr;
 		int ec = glfwGetError(&error);
-		RAISE_RTF("GLFW could not create the window\nCode: {}, Error: {}", ec, error);
+		RAISE_RT("GLFW could not create the window\nCode: {}, Error: {}", ec, error);
 	}
 
 	Log.Info("Window created, initializing renderer...");
@@ -924,9 +924,9 @@ static void ensureDataModelValid(GameObject* DataModel)
 	PHX_ENSURE_MSG(DataModel, "DataModel is NULL!");
 
 	GameObject* workspace = DataModel->FindChild("Workspace");
-	PHX_ENSURE(workspace /* , "DataModel has no Workspace!" */);
-	PHX_ENSURE(workspace->FindComponent<EcWorkspace>() /*, "Workspace masquerading!" */);
-	PHX_ENSURE(DataModel->FindComponent<EcDataModel>() /*, "DataModel masquerading!" */);
+	PHX_ENSURE_MSG(workspace, "DataModel has no Workspace!");
+	PHX_ENSURE_MSG(workspace->FindComponent<EcWorkspace>(), "Workspace masquerading!");
+	PHX_ENSURE_MSG(DataModel->FindComponent<EcDataModel>(), "DataModel masquerading!");
 }
 
 void Engine::BindDataModel(GameObject* NewDataModel)

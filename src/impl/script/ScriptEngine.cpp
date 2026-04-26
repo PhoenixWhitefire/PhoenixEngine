@@ -1,6 +1,5 @@
 #include <luau/Require/include/Luau/Require.h>
-#include <luau/VM/include/lualib.h>
-#include <luau/VM/src/lstate.h>
+#include <lualib.h>
 #include <Luau/Compiler.h>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/mat4x4.hpp>
@@ -9,11 +8,8 @@
 #include <tracy/Tracy.hpp>
 
 #include "script/ScriptEngine.hpp"
-#include "script/luhx.hpp"
-#include "script/InputEvent.hpp"
 #include "datatype/Color.hpp"
-#include "GlobalJsonConfig.hpp"
-#include "Engine.hpp"
+#include "script/luhx.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
@@ -48,7 +44,7 @@ static_assert(std::size(s_ValueTypeToLuauType) == Reflection::ValueType::__lastB
 
 static int luauAssertHandler(const char* expression, const char* file, int line, const char* function)
 {
-	RAISE_RTF("Luau assertion failed:\n\tExpression: {}\n\tIn: {}:{} in {}", expression, file, line, function);
+	RAISE_RT("Luau assertion failed:\n\tExpression: {}\n\tIn: {}:{} in {}", expression, file, line, function);
 }
 
 void ScriptEngine::Initialize()
@@ -627,7 +623,7 @@ static Reflection::GenericValue toGenericValue(lua_State* L, int StackIndex, int
 		lua_getinfo(L, 0, "n", &ar);
 		std::string fnname = ar.name;
 		if (fnname == "__namecall")
-			fnname = L->namecall->data;
+			fnname = lua_namecallatom(L, nullptr);
 
 		lua_getinfo(L, 1, "sln", &ar);
 		fndbinfo = std::format(
@@ -678,7 +674,7 @@ static Reflection::GenericValue toGenericValue(lua_State* L, int StackIndex, int
 					return retvals;
 				}
 
-				RAISE_RT(luaL_checkstring(CL, -1));
+				RAISE_RT_NF(luaL_checkstring(CL, -1));
 			});
 
 		gv.Val.Func.Cleanup = new std::function([CL, ref]()
@@ -1069,11 +1065,7 @@ int ScriptEngine::L::HandleMethodCall(
 	{
 		Reflection::ValueType paramType = paramTypes[index];
 
-		// offset the stack so the error message gives the correct argument number
-		// without this, the first argument would be reported as "argument #2"
-		L->base++;
 		ScriptEngine::L::CheckType(L, paramType, index + 1);
-		L->base--;
 		inputs.push_back(L::ToGeneric(L, index + 2));
 
 		if (paramType == Reflection::ValueType::Vector2)
@@ -1147,7 +1139,7 @@ int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yiel
 	{
 		lua_Debug ar;
 		lua_getinfo(L, 0, "n", &ar);
-		RAISE_RTF(
+		RAISE_RT(
 			"Cannot yield with '{}' while in Dear ImGui section",
 			ar.name ? ar.name : "<unknown>"
 		);	
@@ -1179,20 +1171,20 @@ int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yiel
 		lua_Debug yieldar;
 		lua_getinfo(L, 0, "n", &yieldar);
 
-		RAISE_RTF(
+		RAISE_RT(
 			"{}:{} in {}: Cannot yield right now with '{}', blocked by the following functions:\n{}",
 			ar.short_src, ar.currentline, ar.name ? ar.name : "<anonymous>", yieldar.name ? yieldar.name : "<unknown>", blockers.c_str()
 		);
 	}
 
-	if (L->nCcalls > L->baseCcalls)
+	if (!lua_isyieldable(L))
 	{
 		// if a `lua_Exception` is thrown by `lua_yield`, we hit an assertion in
 		// `ldo.cpp` line 137
 		// LUAU_ASSERT(e.getThread() == L)
 		lua_Debug yieldar;
 		lua_getinfo(L, 0, "n", &yieldar);
-		RAISE_RTF("Cannot yield with '{}' right now", ar.name ? ar.name : "<unknown>");
+		RAISE_RT("Cannot yield with '{}' right now (across metamethod/C-call boundary)", ar.name ? ar.name : "<unknown>");
 	}
 
 	// TODO a kind of hack to get what datamodel we're in
@@ -1306,7 +1298,7 @@ void ScriptEngine::L::DumpStacktrace(
 			line.append(" in ");
 
 			if (i == 0 && strcmp(ar.name, "__namecall") == 0)
-				line.append(L->namecall->data);
+				line.append(lua_namecallatom(L, nullptr));
 			else
 				line.append(ar.name);
 		}
@@ -1320,7 +1312,7 @@ void ScriptEngine::L::DumpStacktrace(
 		}
 	}
 
-	if (StateUserdata* corUd = (StateUserdata*)L->userdata; corUd && corUd->SpawnTrace.size() > 0)
+	if (StateUserdata* corUd = (StateUserdata*)lua_getthreaddata(L); corUd && corUd->SpawnTrace.size() > 0)
 	{
 		if (Into)
 		{
@@ -1513,7 +1505,7 @@ static void initRequireConfig(luarequire_Configuration* config)
 
 			// new thread needs to have the globals sandboxed
 			luaL_sandboxthread(ML);
-			ScriptEngine::L::DumpStacktrace(L, &((ScriptEngine::L::StateUserdata*)ML->userdata)->SpawnTrace);
+			ScriptEngine::L::DumpStacktrace(L, &((ScriptEngine::L::StateUserdata*)lua_getthreaddata(ML))->SpawnTrace);
 
 			bool readSuccess = true;
 			std::string contents = FileRW::ReadFile(modulePath, &readSuccess);
@@ -1613,18 +1605,18 @@ lua_State* ScriptEngine::L::Create(const std::string& VmName)
 			{
 				StateUserdata* ud = new StateUserdata;
 				DumpStacktrace(LP, &ud->SpawnTrace);
-				L->userdata = ud;
+				lua_setthreaddata(L, ud);
 
-				StateUserdata* vmud = (StateUserdata*)lua_mainthread(L)->userdata;
+				StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(lua_mainthread(L));
 				vmud->Coroutines.push_back(L);
 				ud->VM = vmud->VM;
 			}
 			else
 			{
-				StateUserdata* vmud = (StateUserdata*)lua_mainthread(L)->userdata;
+				StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(lua_mainthread(L));
 				vmud->Coroutines.erase(std::find(vmud->Coroutines.begin(), vmud->Coroutines.end(), L));
 
-				StateUserdata* ud = (StateUserdata*)L->userdata;
+				StateUserdata* ud = (StateUserdata*)lua_getthreaddata(L);
 				for (EventConnectionData* ec : ud->EventConnections)
 				{
 					assert(ec->ConnectionId != UINT32_MAX);
@@ -1634,13 +1626,13 @@ lua_State* ScriptEngine::L::Create(const std::string& VmName)
 				}
 
 				ud->EventConnections.clear();
-				delete (StateUserdata*)L->userdata;
+				delete (StateUserdata*)lua_getthreaddata(L);
 			}
 		};
 
 	StateUserdata* ud = new StateUserdata;
 	ud->VM = VmName;
-	state->userdata = (void*)ud;
+	lua_setthreaddata(state, ud);
 
 	luaL_sandbox(state);
 	return state;
@@ -1671,11 +1663,11 @@ void ScriptEngine::L::Close(lua_State* L)
 		}
 	}
 
-	StateUserdata* vmud = (StateUserdata*)L->userdata;
+	StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(L);
 
 	for (lua_State* co : vmud->Coroutines)
 	{
-		StateUserdata* ud = (StateUserdata*)co->userdata;
+		StateUserdata* ud = (StateUserdata*)lua_getthreaddata(co);
 		for (EventConnectionData* ec : ud->EventConnections)
 		{
 			assert(ec->ConnectionId != UINT32_MAX);

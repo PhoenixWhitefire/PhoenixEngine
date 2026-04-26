@@ -174,7 +174,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 			{
 				EntityComponent ec = FindComponentTypeByName(inputs[0].AsStringView());
 				if (ec == EntityComponent::None)
-					RAISE_RTF("Invalid component type '{}'", inputs[0].AsStringView());
+					RAISE_RT("Invalid component type '{}'", inputs[0].AsStringView());
 
 				GameObject* g = static_cast<GameObject*>(p);
 				return { g->FindChildWithComponent(ec)->ToGenericValue() };
@@ -459,7 +459,7 @@ GameObject* GameObjectManager::FromGenericValue(const Reflection::GenericValue& 
 		return nullptr;
 
 	if (gv.Type != Reflection::ValueType::GameObject)
-		RAISE_RTF(
+		RAISE_RT(
 			"Tried to GameObject::FromGenericValue, but GenericValue had Type '{}' instead",
 			Reflection::TypeAsString(gv.Type)
 		);
@@ -577,7 +577,7 @@ void GameObject::SetParent(GameObject* newParent)
 	ZoneScoped;
 
 	if (this->IsDestructionPending)
-		RAISE_RTF(
+		RAISE_RT(
 			"Tried to re-parent {} to {}, but its Parent has been locked due to `:Destroy`",
 
 			GetFullName(),
@@ -587,13 +587,13 @@ void GameObject::SetParent(GameObject* newParent)
 	if (newParent != this)
 	{
 		if (newParent && newParent->IsDescendantOf(this))
-			RAISE_RTF(
+			RAISE_RT(
 				"Tried to make {} a descendant of itself",
 				GetFullName()
 			);
 	}
 	else
-		RAISE_RTF(
+		RAISE_RT(
 			"Tried to make {} its own parent",
 			GetFullName()
 		);
@@ -687,7 +687,7 @@ void GameObject::AddChild(GameObject* c)
 	ZoneScoped;
 
 	if (c->ObjectId == this->ObjectId)
-		RAISE_RTF(
+		RAISE_RT(
 			"::AddChild called on Object ID:{} (`{}`) with itself as the adopt'ed",
 			this->ObjectId, GetFullName()
 		);
@@ -717,7 +717,7 @@ void GameObject::RemoveChild(uint32_t id)
 		//	ch->DecrementHardRefs();
 	}
 	else
-		RAISE_RTF("ID:{} is _not my ({}) sonnn~_", ObjectId, id);
+		RAISE_RT("ID:{} is _not my ({}) sonnn~_", ObjectId, id);
 }
 
 Reflection::GenericValue GameObject::s_ToGenericValue(const GameObject* Object)
@@ -1023,7 +1023,7 @@ Reflection::GenericValue GameObject::GetPropertyValue(const std::string_view& Pr
 		return prop->Get(ref.Referred());
 	}
 
-	RAISE_RTF("Invalid property '{}' in GetPropertyValue", PropName);
+	RAISE_RT("Invalid property '{}' in GetPropertyValue", PropName);
 }
 
 void GameObject::SetPropertyValue(const std::string_view& PropName, const Reflection::GenericValue& Value)
@@ -1061,7 +1061,7 @@ void GameObject::SetPropertyValue(const std::string_view& PropName, const Reflec
 		return;
 	}
 
-	RAISE_RTF("Invalid property '{}' in SetPropertyValue", PropName);
+	RAISE_RT("Invalid property '{}' in SetPropertyValue", PropName);
 }
 
 Reflection::GenericValue GameObject::GetDefaultPropertyValue(const std::string_view& PropName)
@@ -1083,7 +1083,7 @@ Reflection::GenericValue GameObject::GetDefaultPropertyValue(const std::string_v
 		}
 	}
 
-	RAISE_RTF("Invalid property '{}' in GetDefaultPropertyValue", PropName);
+	RAISE_RT("Invalid property '{}' in GetDefaultPropertyValue", PropName);
 }
 
 std::vector<Reflection::GenericValue> GameObject::CallMethod(const std::string_view& FuncName, const std::vector<Reflection::GenericValue>& Inputs)
@@ -1093,7 +1093,7 @@ std::vector<Reflection::GenericValue> GameObject::CallMethod(const std::string_v
 	if (const Reflection::MethodDescriptor* func = FindMethod(FuncName, &ref))
 		return func->Func(ref.Referred(), Inputs);
 
-	RAISE_RTF("Invalid function '{}' in CallMethod", FuncName);
+	RAISE_RT("Invalid function '{}' in CallMethod", FuncName);
 }
 
 Reflection::PropertyMap GameObject::GetProperties() const
@@ -1182,7 +1182,7 @@ GameObject* GameObjectManager::Create(const std::string_view& FirstComponent)
 	EntityComponent it = FindComponentTypeByName(FirstComponent);
 
 	if (it == EntityComponent::None)
-		RAISE_RTF("Invalid Component Name '{}'", FirstComponent);
+		RAISE_RT("Invalid Component Name '{}'", FirstComponent);
 	else
 		return Create(it);
 }
@@ -1194,7 +1194,7 @@ GameObjectManager::Collection& GameObjectManager::GetCollection(const std::strin
 	if (it == CollectionNameToId.end())
 	{
 		if (Collections.size() >= UINT16_MAX)
-			RAISE_RTF("Cannot create collection '{}' because we have reached the limit of 2^16", Name);
+			RAISE_RT("Cannot create collection '{}' because we have reached the limit of 2^16", Name);
 
 		uint16_t id = static_cast<uint16_t>(Collections.size());
 		CollectionNameToId[Name] = id;
@@ -1234,7 +1234,7 @@ GameObjectManager::Collection& GameObjectManager::GetCollection(const std::strin
 void GameObject::AddTag(const std::string& Tag)
 {
 	if (IsDestructionPending)
-		RAISE_RTF("Cannot call `:AddTag` on Object {} which was destroyed", GetFullName());
+		RAISE_RT("Cannot call `:AddTag` on Object {} which was destroyed", GetFullName());
 
 	GameObjectManager::Collection& collection = GameObjectManager::Get()->GetCollection(Tag);
 	bool alreadyHave = std::find(Tags.begin(), Tags.end(), collection.Id) != Tags.end();
