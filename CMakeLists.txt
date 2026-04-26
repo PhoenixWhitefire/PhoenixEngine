@@ -73,7 +73,7 @@ target_compile_definitions(PhoenixEngine PRIVATE PHX_BUILD_TYPE="${PHX_BUILD_TYP
 if (MSVC)
 	include(cmake/msvc.txt)
 	target_compile_definitions(PhoenixEngine PRIVATE PHX_TARGET_COMPILER="MSVC")
-	target_compile_options(PhoenixEngine PRIVATE /wd4244)
+	target_compile_options(PhoenixEngine PRIVATE /wd4244 /Zc:preprocessor)
 
 	message(STATUS "Recognized compiler as MSVC")
 

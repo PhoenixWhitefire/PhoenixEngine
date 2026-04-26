@@ -73,7 +73,8 @@ namespace Logging
 		Context m_PrevContext;
 	};
 
-	inline std::atomic_bool IsGameObjectManagerAlive = false;
+	// Only accessed by main thread because log event script callbacks are only processed on main thread
+	inline bool IsGameObjectManagerAlive = false;
 };
 
 thread_local inline Logging::Context Log;
