@@ -27,7 +27,7 @@ uniform mat4 Phoenix_DirectionalLightProjection;
 
 uniform vec3 Phoenix_CameraPosition;
 
-uniform mat4 Phoenix_BoneMatrices[26];
+uniform mat4 Phoenix_BoneMatrices[128];
 
 out DATA
 {

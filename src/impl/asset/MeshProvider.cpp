@@ -103,9 +103,6 @@ static void writeU16(std::string& vec, uint16_t v)
 
 static void writeU32(std::string& vec, uint32_t v)
 {
-	if (vec.capacity() - vec.size() < 4)
-		vec.reserve(vec.capacity());
-
 	vec.resize(vec.size() + 4);
 	memcpy(&vec[vec.size() - 4], &v, sizeof(uint32_t));
 }
@@ -533,7 +530,7 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 
 	// TODO fix
 	// corrupts mesh UVs and normals
-	bool quantizedFloats = false; //true;  <-- not working properly
+	bool quantizedFloats = true;
 	bool quantizedNormals = false; //true; <-- not working properly
 
 	for (const Vertex& v : mesh.Vertices)

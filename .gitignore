@@ -17,7 +17,6 @@ CMakeFiles
 imgui.ini
 *.a
 GITIGNORETHIS_*
-resources/models/
 *.ninja
 *.ninja_*
 *.vscode

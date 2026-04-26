@@ -39,6 +39,7 @@ extern "C"
 #include "Log.hpp"
 
 #define SHADER_MAX_LIGHTS 16
+#define SHADER_MAX_BONES 128
 
 static std::unordered_map<GLenum, std::string> GLEnumToStringMap = {
 	{ GL_DEBUG_SOURCE_API, "OpenGL"},
@@ -64,14 +65,15 @@ static std::unordered_map<GLenum, std::string> GLEnumToStringMap = {
 	{ GL_DEBUG_TYPE_OTHER, "Other" }
 };
 
-const char* LightLocs[SHADER_MAX_LIGHTS] = { 0 };
-const char* LightPosLocs[SHADER_MAX_LIGHTS] = { 0 };
-const char* LightColLocs[SHADER_MAX_LIGHTS] = { 0 };
-const char* LightTypeLocs[SHADER_MAX_LIGHTS] = { 0 };
-const char* LightRangeLocs[SHADER_MAX_LIGHTS] = { 0 };
-const char* LightAngLocs[SHADER_MAX_LIGHTS] = { 0 };
-const char* LightDirLocs[SHADER_MAX_LIGHTS] = { 0 };
-const char* LightShadowsLocs[SHADER_MAX_LIGHTS] = { 0 };
+static std::array<const char*, SHADER_MAX_LIGHTS> LightLocs = {};
+static std::array<const char*, SHADER_MAX_LIGHTS> LightPosLocs = {};
+static std::array<const char*, SHADER_MAX_LIGHTS> LightColLocs = {};
+static std::array<const char*, SHADER_MAX_LIGHTS> LightTypeLocs = {};
+static std::array<const char*, SHADER_MAX_LIGHTS> LightRangeLocs = {};
+static std::array<const char*, SHADER_MAX_LIGHTS> LightAngLocs = {};
+static std::array<const char*, SHADER_MAX_LIGHTS> LightDirLocs = {};
+static std::array<const char*, SHADER_MAX_LIGHTS> LightShadowsLocs = {};
+static std::array<std::string, SHADER_MAX_BONES> BoneLocs = {};
 
 static std::string glEnumToString(GLenum Id)
 {
@@ -218,6 +220,9 @@ LightShadowsLocs[i] = "Phoenix_Lights[" #i "].Shadows";       }
 	SETLIGHTLOCS(15);
 
 #undef SETLIGHTLOCS
+
+	for (size_t i = 0; i < SHADER_MAX_BONES; i++)
+		BoneLocs[i] = std::format("Phoenix_BoneMatrices[{}]", i);
 
 	assert(!s_Instance);
 	s_Instance = this;
@@ -443,37 +448,8 @@ void Renderer::DrawScene(
 		{
 			ZoneNamedNC(uploadZoneSkinned, "UploadSkinningTransforms", tracy::Color::Khaki2, true);
 
-			const char* const BoneLocs[] = {
-				"Phoenix_BoneMatrices[0]",
-				"Phoenix_BoneMatrices[1]",
-				"Phoenix_BoneMatrices[2]",
-				"Phoenix_BoneMatrices[3]",
-				"Phoenix_BoneMatrices[4]",
-				"Phoenix_BoneMatrices[5]",
-				"Phoenix_BoneMatrices[6]",
-				"Phoenix_BoneMatrices[7]",
-				"Phoenix_BoneMatrices[8]",
-				"Phoenix_BoneMatrices[9]",
-				"Phoenix_BoneMatrices[10]",
-				"Phoenix_BoneMatrices[11]",
-				"Phoenix_BoneMatrices[12]",
-				"Phoenix_BoneMatrices[13]",
-				"Phoenix_BoneMatrices[14]",
-				"Phoenix_BoneMatrices[15]",
-				"Phoenix_BoneMatrices[16]",
-				"Phoenix_BoneMatrices[17]",
-				"Phoenix_BoneMatrices[18]",
-				"Phoenix_BoneMatrices[19]",
-				"Phoenix_BoneMatrices[20]",
-				"Phoenix_BoneMatrices[21]",
-				"Phoenix_BoneMatrices[22]",
-				"Phoenix_BoneMatrices[23]",
-				"Phoenix_BoneMatrices[24]",
-				"Phoenix_BoneMatrices[25]",
-			};
-
-			for (uint32_t bi = 0; bi < mesh.Bones.size(); bi++)
-				glUniformMatrix4fv(glGetUniformLocation(shader.GpuId, BoneLocs[bi]), 1, GL_FALSE, glm::value_ptr(gpuMesh.BoneMatrices[bi]));
+			for (uint32_t bi = 0; bi < mesh.Bones.size() && bi < BoneLocs.size(); bi++)
+				glUniformMatrix4fv(glGetUniformLocation(shader.GpuId, BoneLocs[bi].c_str()), 1, GL_FALSE, glm::value_ptr(gpuMesh.BoneMatrices[bi]));
 		}
 
 		m_SetMaterialData(renderData, DebugWireframeRendering);
