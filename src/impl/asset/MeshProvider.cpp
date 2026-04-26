@@ -832,46 +832,44 @@ static void finishAndUploadMesh(Mesh& mesh, MeshProvider::GpuMesh& gpuMesh, bool
 
 	Renderer* renderer = Renderer::Get();
 
-	if (mesh.Bones.size() == 0)
-	{
-		assert(renderer->InstancingBuffer != UINT32_MAX);
-		glBindBuffer(GL_ARRAY_BUFFER, renderer->InstancingBuffer);
+	assert(renderer->InstancingBuffer != UINT32_MAX);
+	glBindBuffer(GL_ARRAY_BUFFER, renderer->InstancingBuffer);
 
-		constexpr int32_t instanceStride = sizeof(Renderer::InstanceDrawInfo);
+	constexpr int32_t instanceStride = sizeof(Renderer::InstanceDrawInfo);
 
-		// `Transform` matrix
-		// 4 vec4's
-		glEnableVertexAttribArray(4);
-		glEnableVertexAttribArray(5);
-		glEnableVertexAttribArray(6);
-		glEnableVertexAttribArray(7);
-		glVertexAttribDivisor(4, 1);
-		glVertexAttribDivisor(5, 1);
-		glVertexAttribDivisor(6, 1);
-		glVertexAttribDivisor(7, 1);
+	// `Transform` matrix
+	// 4 vec4's
+	glEnableVertexAttribArray(4);
+	glEnableVertexAttribArray(5);
+	glEnableVertexAttribArray(6);
+	glEnableVertexAttribArray(7);
+	glVertexAttribDivisor(4, 1);
+	glVertexAttribDivisor(5, 1);
+	glVertexAttribDivisor(6, 1);
+	glVertexAttribDivisor(7, 1);
 
-		glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, TransformRow1));
-		glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, TransformRow2));
-		glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, TransformRow3));
-		glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, TransformRow4));
+	glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, TransformRow1));
+	glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, TransformRow2));
+	glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, TransformRow3));
+	glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, TransformRow4));
 
-		// vec3s
-		// scale
-		glEnableVertexAttribArray(8);
-		// color
-		glEnableVertexAttribArray(9);
-		glVertexAttribDivisor(8, 1);
-		glVertexAttribDivisor(9, 1);
+	// vec3s
+	// scale
+	glEnableVertexAttribArray(8);
+	// color
+	glEnableVertexAttribArray(9);
+	glVertexAttribDivisor(8, 1);
+	glVertexAttribDivisor(9, 1);
 
-		glVertexAttribPointer(8, 3, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, Scale));
-		glVertexAttribPointer(9, 3, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, Color));
+	glVertexAttribPointer(8, 3, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, Scale));
+	glVertexAttribPointer(9, 3, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, Color));
 
-		glEnableVertexAttribArray(10);
-		glVertexAttribDivisor(10, 1);
+	glEnableVertexAttribArray(10);
+	glVertexAttribDivisor(10, 1);
 
-		glVertexAttribPointer(10, 1, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, Transparency));
-	}
-	else
+	glVertexAttribPointer(10, 1, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, Transparency));
+
+	if (mesh.Bones.size() > 0)
 	{
 		gpuMesh.BoneMatrices.reserve(mesh.Bones.size());
 

@@ -50,19 +50,19 @@ void main()
 	vec3 sca = Phoenix_Scale;
 	vec4 pain = vec4(Phoenix_ColorTint, 1.f) * VertexPaint;
 
-	//if (Phoenix_IsInstanced)
-	//{
-	//	trans = InstanceTransform;
-	//	sca = InstanceScale;
-	//	pain = vec4(InstanceColor, 1.f) * VertexPaint;
-	//}
+	if (Phoenix_IsInstanced)
+	{
+		trans = InstanceTransform;
+		sca = InstanceScale;
+		pain = vec4(InstanceColor, 1.f) * VertexPaint;
+	}
 
-	//mat4 skin = JointsWeights.x * Phoenix_BoneMatrices[JointsIndices.x]
-	//				+ JointsWeights.y * Phoenix_BoneMatrices[JointsIndices.y]
-	//				+ JointsWeights.z * Phoenix_BoneMatrices[JointsIndices.z]
-	//				+ JointsWeights.w * Phoenix_BoneMatrices[JointsIndices.w];
+	mat4 skin = JointsWeights.x * Phoenix_BoneMatrices[JointsIndices.x]
+					+ JointsWeights.y * Phoenix_BoneMatrices[JointsIndices.y]
+					+ JointsWeights.z * Phoenix_BoneMatrices[JointsIndices.z]
+					+ JointsWeights.w * Phoenix_BoneMatrices[JointsIndices.w];
 
-	//trans *= SkinnedVertexTransform;
+	//trans *= skin;
 
 	data_out.VertexNormal = VertexNormal;
 	data_out.Paint = pain;

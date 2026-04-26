@@ -310,6 +310,8 @@ void Renderer::DrawScene(
 			for (uint32_t shaderId : Scene.UsedShaders)
 			{
 				ShaderProgram& shader = shdManager->GetShaderResource(shaderId);
+				if (shader.GpuId == UINT32_MAX)
+					continue;
 
 				shader.SetUniform("Phoenix_RenderMatrix", RenderMatrix);
 				shader.SetUniform("Phoenix_CameraPosition", glm::vec3(CameraTransform[3]));
@@ -358,6 +360,9 @@ void Renderer::DrawScene(
 		for (size_t renderItemIndex = 0; renderItemIndex < Scene.RenderList.size(); renderItemIndex++)
 		{
 			const RenderItem& renderData = Scene.RenderList[renderItemIndex];
+			const ShaderProgram& shader = mtlManager->GetMaterialResource(renderData.MaterialId).GetShader();
+			if (shader.GpuId == UINT32_MAX)
+				continue;
 
 			// the MESH, MATERIAL, TRANSPARENCY and REFLECTIVITY must be the same
 				// for a set of objects to be instanced together
@@ -474,7 +479,6 @@ void Renderer::DrawMesh(
 )
 {
 	ZoneScopedC(tracy::Color::HotPink);
-
 	AccumulatedDrawCallCount++;
 
 	switch (FaceCulling)

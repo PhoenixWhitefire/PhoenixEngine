@@ -494,44 +494,37 @@ void ShaderProgram::SetTextureUniform(const std::string_view& UniformName, uint3
 bool ShaderProgram::m_CheckForErrors(uint32_t Object, const char* Type)
 {
 	assert(!ShaderManager::Get()->IsHeadless);
-
-	char infoLog[2048];
+	char infoLog[2048] = {};
 
 	if (Object != GpuId)
 	{
-		GLint hasCompiled;
+		GLint hasCompiled = 0;
 		glGetShaderiv(Object, GL_COMPILE_STATUS, &hasCompiled);
 
 		if (hasCompiled == GL_FALSE)
 		{
-			glGetShaderInfoLog(Object, 2048, NULL, infoLog);
-
-			std::string errorString = std::format(
+			glGetShaderInfoLog(Object, sizeof(infoLog) / sizeof(*infoLog), nullptr, infoLog);
+			Log.ErrorF(
 				"Error while compiling {} for program '{}':\n{}",
 				Type, this->Name, infoLog
 			);
 
-			Log.Error(errorString);
-
 			if (this->Name == "error")
 				RAISE_RT("Failed to compile the required `error` Shader Pipeline");
 
-			ShaderManager* shdManager = ShaderManager::Get();
-			GpuId = shdManager->GetShaderResource(shdManager->LoadFromPath("error")).GpuId;
-
+			glDeleteProgram(GpuId);
+			GpuId = UINT32_MAX;
 			return true;
 		}
 	}
 	else
 	{
 		int hasLinked = 0;
-
 		glGetProgramiv(Object, GL_LINK_STATUS, &hasLinked);
 
 		if (hasLinked == GL_FALSE)
 		{
-			glGetProgramInfoLog(Object, 2048, NULL, infoLog);
-
+			glGetProgramInfoLog(Object, sizeof(infoLog) / sizeof(*infoLog), nullptr, infoLog);
 			Log.ErrorF(
 				"Error while linking shader program '{}':\n{}",
 				this->Name, infoLog
@@ -540,9 +533,8 @@ bool ShaderProgram::m_CheckForErrors(uint32_t Object, const char* Type)
 			if (this->Name == "error")
 				RAISE_RT("Failed to link the required `error` Shader Pipeline");
 
-			ShaderManager* shdManager = ShaderManager::Get();
-			GpuId = shdManager->GetShaderResource(shdManager->LoadFromPath("error")).GpuId;
-
+			glDeleteProgram(GpuId);
+			GpuId = UINT32_MAX;
 			return true;
 		}
 	}
@@ -586,11 +578,13 @@ void ShaderManager::Initialize(bool InitIsHeadless)
 	ZoneScoped;
 
 	this->IsHeadless = InitIsHeadless;
+	s_Instance = this;
 
 	if (!IsHeadless)
+	{
 		addIncludes(FileRW::ResolvePathNormalized("shaders/include"));
-
-	s_Instance = this;
+		LoadFromPath("error");
+	}
 }
 
 ShaderManager* ShaderManager::Get()
@@ -625,7 +619,6 @@ uint32_t ShaderManager::LoadFromPath(const std::string_view& ProgramName)
 		shader.Reload();
 
 		m_Shaders[resourceId] = shader;
-
 		return resourceId;
 	}
 }

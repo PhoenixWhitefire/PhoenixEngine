@@ -3544,6 +3544,26 @@ static std::string stringToLowerCase(std::string str)
 	return str;
 }
 
+static void followAssetProperty(const std::string_view& PropertyName, const std::string_view& Value)
+{
+	if (PropertyName == "Material")
+	{
+		MaterialManager* mtlManager = MaterialManager::Get();
+		const std::vector<RenderMaterial>& materials = mtlManager->GetLoadedMaterials();
+
+		for (int i = 0; i < materials.size(); i++)
+		{
+			const RenderMaterial& mtl = materials[i];
+			if (mtl.Name == Value)
+			{
+				MtlCurItem = i;
+				DeveloperTools::MaterialsShown = true;
+				break;
+			}
+		}
+	}
+}
+
 static bool renderPropertyAssetSelector(const std::string_view& PropertyName, float FieldWidth)
 {
 	static std::string AssetSearch;
@@ -3994,6 +4014,9 @@ static void renderProperties()
 
 				if (isAssetProp)
 				{
+					if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+						followAssetProperty(propName, str);
+
 					if (ImGui::IsItemActive())
 					{
 						EditingProperty = propDesc;
