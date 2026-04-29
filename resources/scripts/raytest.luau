@@ -9,7 +9,7 @@ local function debugVector(v: vector, col: Color?)
     mesh.Parent = workspace
     mesh.Transform = Matrix.lookAt(workspace.SceneCamera.Transform.Position, workspace.SceneCamera.Transform.Position + v) * Matrix.fromTranslation(0, 0, -vector.magnitude(v) / 2)
     mesh.Size = vector.create(1, 1, vector.magnitude(v))
-    mesh.FaceCulling = 0
+    mesh.FaceCulling = Enum.FaceCulling.None
     mesh.Material = "boxframe"
 
     if col then
@@ -56,7 +56,7 @@ game.OnFrameBegin:Connect(function()
         M2WasDown = false
     end
 
-    if PlayerInput:IsMouseButtonPressed(Enum.Key.One) then
+    if PlayerInput:IsKeyPressed(Enum.Key.One) then
         for _, part in Parts do
             part:Destroy()
         end

@@ -1,7 +1,6 @@
 local DeveloperTools = game:GetService("DeveloperTools")
 local PlayerInput = game:GetService("PlayerInput")
 local History = game:GetService("History")
-local Engine = game:GetService("Engine")
 
 local CoreTools = {}
 CoreTools.EditorCanUseMouse = true
