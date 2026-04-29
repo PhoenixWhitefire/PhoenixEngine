@@ -12,10 +12,10 @@ static std::default_random_engine s_RandGenerator = std::default_random_engine(s
 
 uint32_t ParticleEmitterComponentManager::CreateComponent(GameObject* Object)
 {
-    m_Components.emplace_back();
-    m_Components.back().Object = Object;
+	uint32_t id = ComponentManager<EcParticleEmitter>::CreateComponent(Object);
+    m_Components[id].Object = Object;
 
-    return static_cast<uint32_t>(m_Components.size() - 1);
+    return id;
 }
 	
 const Reflection::StaticPropertyMap& ParticleEmitterComponentManager::GetProperties()

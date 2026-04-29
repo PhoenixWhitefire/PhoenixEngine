@@ -209,12 +209,19 @@ export type GameObject = {
   OnTagAdded: EventSignal<(string)>,
   OnTagRemoved: EventSignal<(string)>,
 }
-export type Animation = {
+export type AnimationAsset = {
   Animation: string,
+}
+export type AnimationState = {
   Looped: boolean,
   Playing: boolean,
-  Ready: boolean ,
+  Time: number,
   Weight: number,
+}
+export type Animator = {
+  Animating: boolean,
+
+  LoadAnimation: (self: Animator, AnimationAsset) -> AnimationState,
 }
 export type AssetManager = {
 
@@ -498,7 +505,7 @@ type Components = {
   DirectionalLight: DirectionalLight,
   SpotLight: SpotLight,
   Camera: Camera,
-  Animation: Animation,
+  AnimationAsset: AnimationAsset,
   Model: Model,
   Bone: Bone,
   TreeLink: TreeLink,
@@ -520,6 +527,8 @@ type Components = {
   UIButton: UIButton,
   Environment: Environment,
   DeveloperTools: DeveloperTools,
+  Animator: Animator,
+  AnimationState: AnimationState,
 }
 type Creatables = {
   Transform: Transform,
@@ -532,7 +541,7 @@ type Creatables = {
   DirectionalLight: DirectionalLight,
   SpotLight: SpotLight & Transform,
   Camera: Camera & Transform,
-  Animation: Animation,
+  AnimationAsset: AnimationAsset,
   Model: Model & Transform,
   Bone: Bone,
   TreeLink: TreeLink,
@@ -554,6 +563,8 @@ type Creatables = {
   UIButton: UIButton,
   Environment: Environment,
   DeveloperTools: DeveloperTools,
+  Animator: Animator,
+  AnimationState: AnimationState,
 }
 declare extern type EnumCollisionType extends EnumItem with end
 declare extern type EnumCollisionType_INTERNAL extends Enum with

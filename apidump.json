@@ -34,13 +34,25 @@
       }
     },
     "Components": {
-      "Animation": {
+      "AnimationAsset": {
         "Properties": {
-          "Animation": "String",
+          "Animation": "String"
+        }
+      },
+      "AnimationState": {
+        "Properties": {
           "Looped": "Boolean",
           "Playing": "Boolean",
-          "Ready": "Boolean READONLY",
+          "Time": "Double",
           "Weight": "Double"
+        }
+      },
+      "Animator": {
+        "Methods": {
+          "LoadAnimation": "(GameObject) -> (GameObject)"
+        },
+        "Properties": {
+          "Animating": "Boolean"
         }
       },
       "AssetManager": {

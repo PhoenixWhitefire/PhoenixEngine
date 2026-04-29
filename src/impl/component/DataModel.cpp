@@ -13,7 +13,7 @@
 uint32_t DataModelComponentManager::CreateComponent(GameObject* Object)
 {
     uint32_t id = ComponentManager<EcDataModel>::CreateComponent(Object);
-    m_Components.back().Object = Object;
+    m_Components[id].Object = Object;
 
     return id;
 }

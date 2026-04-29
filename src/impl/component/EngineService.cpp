@@ -187,7 +187,7 @@ static nlohmann::json genericToJson(const Reflection::GenericValue& Value, std::
 	[[unlikely]] default:
 	{
 		ERROR_CONTEXTUALIZED(
-			"Cannot convert '%s' (%s) to a JSON value",
+			"Cannot serialize '%s' (%s) to a JSON value",
 			Value.ToString(), Reflection::TypeAsString(Value.Type)
 		);
 	}

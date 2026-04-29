@@ -1,8 +1,7 @@
 // Simple meshes
-
 #pragma once
 
-#include "datatype/Mesh.hpp"
+#include "asset/Mesh.hpp"
 
 namespace PrimitiveMeshes
 {

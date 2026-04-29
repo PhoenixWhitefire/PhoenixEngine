@@ -1142,20 +1142,26 @@
   "@phoenix/global/workspace": {
     "documentation": "* Shorthand for `game.Workspace`"
   },
-  "@phoenix/globaltype/Animation.Animation": {
+  "@phoenix/globaltype/AnimationAsset.Animation": {
     "documentation": "The animation file"
   },
-  "@phoenix/globaltype/Animation.Looped": {
-    "documentation": "Whether the Animation should loop when it reaches the end"
+  "@phoenix/globaltype/AnimationState.Looped": {
+    "documentation": "Whether the track should loop when it reaches the end"
   },
-  "@phoenix/globaltype/Animation.Playing": {
-    "documentation": "Whether the Animation is playing"
+  "@phoenix/globaltype/AnimationState.Playing": {
+    "documentation": "Whether the track is playing"
   },
-  "@phoenix/globaltype/Animation.Ready": {
-    "documentation": "Whether the Animation can be played"
+  "@phoenix/globaltype/AnimationState.Time": {
+    "documentation": "The current time position of the track"
   },
-  "@phoenix/globaltype/Animation.Weight": {
-    "documentation": "The influence the Animation has over the rig"
+  "@phoenix/globaltype/AnimationState.Weight": {
+    "documentation": "The influence the track has over the rig"
+  },
+  "@phoenix/globaltype/Animator.Animating": {
+    "documentation": "Whether the `Animator` will step its animations"
+  },
+  "@phoenix/globaltype/Animator.LoadAnimation": {
+    "documentation": "Load an animation asset into the `Animator` to prepare it for playback"
   },
   "@phoenix/globaltype/AssetManager.GetMeshData": {
     "documentation": "Returns the provided mesh data associated with the provided path"

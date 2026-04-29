@@ -22,10 +22,10 @@ static GameObject* createCamera()
 
 uint32_t WorkspaceComponentManager::CreateComponent(GameObject* Object)
 {
-    m_Components.emplace_back();
-	m_Components.back().Object = Object;
+	uint32_t id = ComponentManager<EcWorkspace>::CreateComponent(Object);
+	m_Components[id].Object = Object;
 
-    return static_cast<uint32_t>(m_Components.size() - 1);
+    return id;
 }
 	
 void WorkspaceComponentManager::Shutdown()

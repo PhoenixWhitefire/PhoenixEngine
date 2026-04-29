@@ -10,6 +10,7 @@
 #include "asset/TextureManager.hpp"
 #include "asset/MeshProvider.hpp"
 #include "component/Transform.hpp"
+#include "component/Animation.hpp"
 #include "component/Model.hpp"
 #include "component/Mesh.hpp"
 #include "component/Bone.hpp"
@@ -420,7 +421,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 			et->RecomputeTransformTree();
 	}
 
-	for (ObjectRef anim : m_Animations)
+	for (const ObjectHandle& anim : m_Animations)
 		anim->SetParent(LoadedObjs.at(0));
 }
 
@@ -677,32 +678,24 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From)
 	{
 		const nlohmann::json& children = chIt.value();
 
-		if (children.size() == 1)
-			// there's no point having a container that houses just 1 node
-			// 31/12/2024
-		{
-			m_Nodes.erase(m_Nodes.end() - 1);
-			m_TraverseNode(children[0], From);
-		}
-		else
-			for (const nlohmann::json& subnode : children)
-				m_TraverseNode(subnode, myIndex);
+		for (const nlohmann::json& subnode : children)
+			m_TraverseNode(subnode, myIndex);
 	}
 }
 
-//static void writeU16(std::string& vec, uint16_t v)
-//{
-//	vec.push_back(*(int8_t*)&v);
-//	vec.push_back(*((int8_t*)&v + 1ull));
-//}
-
-static void writeU32(std::string& vec, uint32_t v)
+static void writeU16(std::string& vec, uint16_t v)
 {
 	vec.push_back(*(int8_t*)&v);
 	vec.push_back(*((int8_t*)&v + 1ull));
-	vec.push_back(*((int8_t*)&v + 2ull));
-	vec.push_back(*((int8_t*)&v + 3ull));
 }
+
+//static void writeU32(std::string& vec, uint32_t v)
+//{
+//	vec.push_back(*(int8_t*)&v);
+//	vec.push_back(*((int8_t*)&v + 1ull));
+//	vec.push_back(*((int8_t*)&v + 2ull));
+//	vec.push_back(*((int8_t*)&v + 3ull));
+//}
 
 /*
 static void writeF32(std::string& vec, float v)
@@ -748,38 +741,32 @@ void ModelLoader::m_BuildRig()
 		}
 	}
 
-	//std::string saveDir = m_File;
-	//size_t whereRes = saveDir.find("resources/");
-//
-	//if (whereRes == std::string::npos)
-	//	Log.WarningF(
-	//		"ModelLoader cannot guarantee the animation will be saved within the Resources directory (Path was: '{}')",
-	//		m_File
-	//	);
-	//else
-	//	saveDir = saveDir.substr(whereRes + 10, saveDir.size() - whereRes);
-//
-	//for (const nlohmann::json& animationJson : m_JsonData.value("animations", nlohmann::json::array()))
-	//{
-	//	GameObject* anim = GameObject::Create("Animation");
-	//	anim->Name = animationJson["name"];
-	//	m_Animations.push_back(anim);
-//
-	//	std::string animData = m_SerializeAnimation(animationJson);
-	//	PHX_CHECK(FileRW::WriteFile("animations/" + saveDir + "/" + anim->Name + ".hxanimation", animData));
-	//}
+	for (const nlohmann::json& animationJson : m_JsonData.value("animations", nlohmann::json::array()))
+	{
+		std::string name = animationJson.value("name", "UnnamedAnimation" + std::to_string(m_Animations.size()));;
+		std::string path = "animations/" + m_ModelName + "/" + name + ".hxanimation";
+
+		ObjectHandle anim = GameObjectManager::s_Create(EntityComponent::AnimationAsset);
+		EcAnimationAsset* eaa = anim->FindComponent<EcAnimationAsset>();
+		assert(eaa);
+
+		anim->Name = name;
+		eaa->Animation = path;
+		m_Animations.push_back(anim);
+
+		std::string animData = m_SerializeAnimation(animationJson);
+		PHX_CHECK(FileRW::WriteFileCreateDirectories(path, animData));
+	}
 }
 
 std::string ModelLoader::m_SerializeAnimation(const nlohmann::json& Animation)
 {
 	std::string data = "PHOENIXF/ANIM\n";
-	writeU32(data, 0);
+	writeU16(data, 0); // align to 8 bytes
 
 	std::set<int32_t> nodes;
 	for (const nlohmann::json& channel : Animation.value("channels", nlohmann::json::array()))
-	{
 		nodes.insert((int32_t)channel["target"]["node"]);
-	}
 
 	assert(nodes.size() < UINT8_MAX);
 	uint8_t u8nodessize = (uint8_t)nodes.size();

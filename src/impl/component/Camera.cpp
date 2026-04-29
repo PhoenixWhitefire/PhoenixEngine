@@ -10,10 +10,10 @@
 
 uint32_t CameraComponentManager::CreateComponent(GameObject* Object)
 {
-	m_Components.emplace_back();
-	m_Components.back().Object = Object;
+	uint32_t id = ComponentManager<EcCamera>::CreateComponent(Object);
+	m_Components[id].Object = Object;
 
-	return static_cast<uint32_t>(m_Components.size() - 1);
+	return id;
 }
 
 const Reflection::StaticPropertyMap& CameraComponentManager::GetProperties()

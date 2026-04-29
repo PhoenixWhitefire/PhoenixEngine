@@ -27,16 +27,14 @@ static void tryMarkFreeSkinnedMeshPseudoAsset(EcMesh& mesh)
 
 uint32_t MeshComponentManager::CreateComponent(GameObject* Object)
 {
-    m_Components.emplace_back();
+	uint32_t id = ComponentManager<EcMesh>::CreateComponent(Object);
 
-	uint32_t id = static_cast<uint32_t>(m_Components.size() - 1);
-
-	EcMesh& cm = m_Components.back();
+	EcMesh& cm = m_Components[id];
 	cm.MaterialId = MaterialManager::Get()->LoadFromPath("plastic");
 	cm.RenderMeshId = MeshProvider::Get()->LoadFromPath("!Cube");
 	cm.ComponentId = id;
 	cm.Object = Object;
-		
+
     return id;
 }
 

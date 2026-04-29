@@ -503,7 +503,7 @@ nlohmann::json ScriptEngine::L::ToJson(lua_State* L, int StackIndex, std::string
 		const char* vstr = luaL_tolstring(L, StackIndex, nullptr);
 
 		ERROR_CONTEXTUALIZED(
-			"Cannot convert '%s' (%s) to a JSON value",
+			"Cannot serialize '%s' (%s) to a JSON value",
 			vstr, vtname
 		);
 	}

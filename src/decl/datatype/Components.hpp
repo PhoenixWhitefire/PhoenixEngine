@@ -29,7 +29,9 @@
 
 struct AllComponentManagers
 {
-    AnimationComponentManager Animation;
+    AnimatorComponentManager Animator;
+    AnimationAssetComponentManager AnimationAsset;
+    AnimationStateComponentManager AnimationState;
     AssetServiceComponentManager AssetService;
     BoneComponentManager Bone;
     CameraComponentManager Camera;

@@ -91,18 +91,35 @@
       }
     },
     "Components": {
-      "Animation": {
+      "Animator": {
         "Description": [
-          "Represents an Animation",
+          "Animates",
           "Not functional currently"
         ],
-        "Methods": {},
+        "Methods": {
+          "LoadAnimation": {
+            "Description": "Load an animation asset into the `Animator` to prepare it for playback",
+            "In": "AnimationAsset",
+            "Out": "AnimationState"
+          }
+        },
         "Properties": {
-          "Animation": "The animation file",
-          "Looped": "Whether the Animation should loop when it reaches the end",
-          "Playing": "Whether the Animation is playing",
-          "Ready": "Whether the Animation can be played",
-          "Weight": "The influence the Animation has over the rig"
+          "Animating": "Whether the `Animator` will step its animations"
+        }
+      },
+      "AnimationAsset": {
+        "Description": "A reference to a specific animation asset file",
+        "Properties": {
+          "Animation": "The animation file"
+        }
+      },
+      "AnimationState": {
+        "Description": "The playback state of a specific animation asset that is loaded in an `Animator`",
+        "Properties": {
+          "Looped": "Whether the track should loop when it reaches the end",
+          "Playing": "Whether the track is playing",
+          "Time": "The current time position of the track",
+          "Weight": "The influence the track has over the rig"
         }
       },
       "AssetManager": {

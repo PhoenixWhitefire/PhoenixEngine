@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "datatype/Mesh.hpp"
+#include "asset/Mesh.hpp"
 
 enum class BufferUsageHint : uint8_t { Static, Dynamic };
 

@@ -18,7 +18,7 @@ enum class EntityComponent : uint8_t
 	DirectionalLight,
 	SpotLight,
 	Camera,
-	Animation,
+	AnimationAsset,
 	Model,
 	Bone,
 	TreeLink,
@@ -40,6 +40,8 @@ enum class EntityComponent : uint8_t
 	UIButton,
 	Environment,
 	DeveloperTools,
+	Animator,
+	AnimationState,
 
 	__count
 };
@@ -56,7 +58,7 @@ static inline const std::string_view s_EntityComponentNames[] = {
 	"DirectionalLight",
 	"SpotLight",
 	"Camera",
-	"Animation",
+	"AnimationAsset",
 	"Model",
 	"Bone",
 	"TreeLink",
@@ -78,6 +80,8 @@ static inline const std::string_view s_EntityComponentNames[] = {
 	"UIButton",
 	"Environment",
 	"DeveloperTools",
+	"Animator",
+	"AnimationState",
 };
 
 static_assert(std::size(s_EntityComponentNames) == (size_t)EntityComponent::__count);

@@ -56,10 +56,10 @@ static void recomputeWorldTransforms(EcTransform* ct)
 
 uint32_t TransformComponentManager::CreateComponent(GameObject* Object)
 {
-    m_Components.emplace_back();
-    m_Components.back().Object = Object;
+    uint32_t id = ComponentManager<EcTransform>::CreateComponent(Object);
+    m_Components[id].Object = Object;
 
-    return static_cast<uint32_t>(m_Components.size() - 1);
+    return id;
 }
 
 const Reflection::StaticPropertyMap& TransformComponentManager::GetProperties()

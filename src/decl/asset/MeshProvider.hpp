@@ -6,7 +6,7 @@
 #include <functional>
 #include <future>
 
-#include "datatype/Mesh.hpp"
+#include "asset/Mesh.hpp"
 #include "render/GpuBuffers.hpp"
 
 class MeshProvider

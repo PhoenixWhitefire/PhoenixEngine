@@ -35,10 +35,10 @@ static Bone* getUnderlyingBone(EcBone* BoneComponent)
 
 uint32_t BoneComponentManager::CreateComponent(GameObject* Object)
 {
-    m_Components.emplace_back();
-	m_Components.back().Object = Object;
+	uint32_t id = ComponentManager<EcBone>::CreateComponent(Object);
+	m_Components[id].Object = Object;
 
-    return static_cast<uint32_t>(m_Components.size() - 1);
+    return id;
 }
 	
 const Reflection::StaticPropertyMap& BoneComponentManager::GetProperties()
@@ -61,55 +61,7 @@ const Reflection::StaticPropertyMap& BoneComponentManager::GetProperties()
 			[](void* p, const Reflection::GenericValue& gv)
 			{
 				EcBone* boneObj = static_cast<EcBone*>(p);
-				Bone* realBone = getUnderlyingBone(boneObj);
-					
-				if (realBone)
-				{
-					ZoneScopedN("UpdateSkinningTransforms");
-
-					realBone->Transform = gv.AsMatrix();
-
-					EcMesh* mesh = getTargetMesh(boneObj);
-
-					Mesh& meshData = MeshProvider::Get()->GetMeshResource(mesh->RenderMeshId);
-					MeshProvider::GpuMesh& gpuMesh = MeshProvider::Get()->GetGpuMesh(meshData.GpuId);
-
-					glm::mat4 accumulatedTransform = { 1.f };
-					uint8_t parent = realBone->Parent;
-
-					while (parent != UINT8_MAX)
-					{
-						const Bone& parentBone = meshData.Bones[parent];
-						accumulatedTransform = parentBone.Transform * accumulatedTransform;
-						parent = parentBone.Parent;
-					}
-
-					gpuMesh.BoneMatrices[boneObj->SkeletalBoneId] = (accumulatedTransform * realBone->Transform) * realBone->InverseBind;
-
-					/*
-					for (auto [vi, ji] : realBone->TargetVertices)
-					{
-						const Vertex& v = meshData.Vertices[vi];
-						gpuMesh.BoneMatrices[vi] = accumulatedTransform * glm::interpolate(glm::mat4(1.f), realBone->Transform, v.JointWeights[ji]);
-					}
-
-					accumulatedTransform *= realBone->Transform;
-
-					for (const Bone& childBone : meshData.Bones)
-					{
-						if (childBone.Parent != boneObj->SkeletalBoneId)
-							continue;
-
-						for (auto [vi, ji] : childBone.TargetVertices)
-						{
-							const Vertex& v = meshData.Vertices[vi];
-							gpuMesh.SkinningData[vi] = accumulatedTransform * glm::interpolate(glm::mat4(1.f), childBone.Transform, v.JointWeights[ji]);
-						}
-					}
-					*/
-				}
-				else
-					boneObj->Transform = gv.AsMatrix();
+				boneObj->SetTransform(gv.AsMatrix());
 			}
 		),
 
@@ -150,4 +102,56 @@ const Reflection::StaticPropertyMap& BoneComponentManager::GetProperties()
 	};
 
     return props;
+}
+
+void EcBone::SetTransform(const glm::mat4& trans)
+{
+	Bone* realBone = getUnderlyingBone(this);
+
+	if (realBone)
+	{
+		ZoneScopedN("UpdateSkinningTransforms");
+		realBone->Transform = trans;
+
+		EcMesh* mesh = getTargetMesh(this);
+
+		Mesh& meshData = MeshProvider::Get()->GetMeshResource(mesh->RenderMeshId);
+		MeshProvider::GpuMesh& gpuMesh = MeshProvider::Get()->GetGpuMesh(meshData.GpuId);
+
+		glm::mat4 accumulatedTransform = { 1.f };
+		uint8_t parent = realBone->Parent;
+
+		while (parent != UINT8_MAX)
+		{
+			const Bone& parentBone = meshData.Bones[parent];
+			accumulatedTransform = parentBone.Transform * accumulatedTransform;
+			parent = parentBone.Parent;
+		}
+
+		gpuMesh.BoneMatrices[SkeletalBoneId] = (accumulatedTransform * realBone->Transform) * realBone->InverseBind;
+
+		/*
+		for (auto [vi, ji] : realBone->TargetVertices)
+		{
+			const Vertex& v = meshData.Vertices[vi];
+			gpuMesh.BoneMatrices[vi] = accumulatedTransform * glm::interpolate(glm::mat4(1.f), realBone->Transform, v.JointWeights[ji]);
+		}
+
+		accumulatedTransform *= realBone->Transform;
+
+		for (const Bone& childBone : meshData.Bones)
+		{
+			if (childBone.Parent != boneObj->SkeletalBoneId)
+				continue;
+
+			for (auto [vi, ji] : childBone.TargetVertices)
+			{
+				const Vertex& v = meshData.Vertices[vi];
+				gpuMesh.SkinningData[vi] = accumulatedTransform * glm::interpolate(glm::mat4(1.f), childBone.Transform, v.JointWeights[ji]);
+			}
+		}
+		*/
+	}
+	else
+		Transform = trans;
 }

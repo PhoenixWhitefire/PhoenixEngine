@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "datatype/GameObject.hpp"
-#include "datatype/Mesh.hpp"
+#include "asset/Mesh.hpp"
 
 class ModelLoader
 {
@@ -108,7 +108,7 @@ private:
 
 	std::vector<ModelNode> m_Nodes;
 	std::unordered_map<int32_t, uint32_t> m_NodeIdToIndex;
-	std::vector<ObjectRef> m_Animations;
+	std::vector<ObjectHandle> m_Animations;
 	bool m_HasSkinning = false;
 
 	std::string m_Data;
