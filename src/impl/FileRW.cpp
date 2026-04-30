@@ -229,6 +229,10 @@ std::string FileRW::ResolvePathNormalized(std::string PathToNormalize)
 	if (!isQualified(Path))
 		Path = "./" + Path;
 
+	for (char& c : Path)
+		if (c == '\\')
+			c = '/';
+
 	return Path;
 }
 

@@ -562,7 +562,7 @@ static void addIncludes(std::filesystem::path Path)
 			addIncludes(it.path());
 		else if (it.is_regular_file())
 		{
-			std::string name = it.path().string();
+			std::string name = FileRW::ResolvePathNormalized(it.path().string());
 			if (size_t shadersPos = name.find("include/"); shadersPos != std::string::npos)
 				name = name.substr(shadersPos - 1);
 			else

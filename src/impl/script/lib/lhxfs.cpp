@@ -486,7 +486,7 @@ static int fs_promptopenfolder(lua_State* L)
 	);
 
 	if (path)
-		lua_pushstring(L, path);
+		lua_pushstring(L, normalizePath(path).c_str());
 	else
 		lua_pushnil(L);
 
