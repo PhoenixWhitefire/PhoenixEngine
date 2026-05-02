@@ -14,7 +14,7 @@ local Engine = game:GetService("Engine")
 local FALLBACK_IMAGE = "@etextures/editor-icons/fallback.png"
 local LOGO_IMAGE = "@etextures/logo.png"
 local REIMPORTABLE_MODEL = "Ed_ReimportableModel"
-local EDITOR_BUILD = 3
+local EDITOR_BUILD = 4
 
 local PluginManager = require("./PluginManager.luau")
 local HistoryView = require("./HistoryView.luau")
@@ -118,6 +118,7 @@ end
 
 fs.definealias("editres", "./resources")
 fs.definealias("etextures", "@editres/textures")
+fs.definealias("base", "./resources")
 
 if not fs.isdirectory("./editor") then
 	fs.mkdir("./editor")
@@ -427,23 +428,21 @@ local CoreAssets = {
 	"shaders/include/worldCommon.frag",
 }
 
-local function linkCoreAssets()
+local function stubCoreAssets()
 	if not fs.isdirectory("shaders/include") then
 		fs.mkdir("shaders/include")
 	end
 
 	for _, a in CoreAssets do
-		if fs.isfile(a) and not fs.issymlink(a) then
+		if fs.isfile(a) then
 			fs.remove(a)
 		end
 
-		if not fs.issymlink(a) then
-			fs.symlink(a, `{ fs.cwd() }/resources/{ a }`)
-		end
+		fs.write(a, "")
 	end
 end
 
-local function handleCoreAssetsSymlinkMigration(config)
+local function handleCoreAssetAliasMigration(config)
 	local editorconf = json.parse(assert(fs.read("@project/phoenix.conf")))
 	assert(typeof(editorconf) == "table")
 	editorconf = editorconf :: { [string]: JsonSerializable }
@@ -460,22 +459,22 @@ local function handleCoreAssetsSymlinkMigration(config)
 		assert(typeof(lastSavedData) == "table")
 		lastSavedData = lastSavedData :: { [string]: JsonSerializable }
 
-		if typeof(lastSavedData.EditorBuild) == "number" and lastSavedData.EditorBuild >= 3 then
+		if typeof(lastSavedData.EditorBuild) == "number" and lastSavedData.EditorBuild >= 4 then
 			return
 		end
 	end
 
 	if not Engine.IsHeadless then
-		imgui.openpopup("Migrate core assets to symlink")
+		imgui.openpopup("Migrate core assets to alias")
 		local choiceIndex = 1
 
 		local connection; connection = game.OnFrameBegin:Connect(function()
-			if imgui.beginpopupmodal("Migrate core assets to symlink") then
-				imgui.text("It looks like some core engine assets (UI shaders, `worldUber`, etc) are currently stored as plain copies in your Project.")
+			if imgui.beginpopupmodal("Migrate core assets to alias") then
+				imgui.text("It looks like some core engine assets (UI shaders, `worldUber`, etc) are not currently referred by aliases.")
 				imgui.text("This can cause incompatibilities with future versions of the Editor.")
-				imgui.text("It is recommended that you link these assets to the Editor's internal copy to prevent mismatches.")
+				imgui.text("It is recommended that you migrate these to use the `@base` alias.")
 
-				choiceIndex = imgui.combo("Choice", { "Migrate and link", "Ignore until next time", "Do not migrate" }, choiceIndex)
+				choiceIndex = imgui.combo("Choice", { "Migrate and alias", "Ignore until next time", "Do not migrate" }, choiceIndex)
 
 				imgui.setnextitemwidth(imgui.contentregionavail().x)
 				if imgui.button("Continue") then
@@ -484,12 +483,13 @@ local function handleCoreAssetsSymlinkMigration(config)
 
 					editorconf = json.parse(assert(fs.read("@project/phoenix.conf")))
 					assert(typeof(editorconf) == "table");
-					(editorconf :: any).CoreAssetsSymlinkMigrationChoice = choiceIndex
+					(editorconf :: any).CoreAssetsSymlinkMigrationChoice = choiceIndex;
+					(editorconf :: any).Saved.EditorBuild = EDITOR_BUILD
 
 					fs.write("@project/phoenix.conf", json.encode(editorconf))
 
 					if choiceIndex == SymlinkMigrationChoices.Migrated then
-						task.defer(linkCoreAssets)
+						task.defer(stubCoreAssets)
 					end
 				end
 
@@ -576,7 +576,7 @@ local function openProject_(ManualPath: string?)
 	assert(typeof(config) == "table", "Configuration file is corrupt")
 
 	config = config :: { [string]: JsonSerializable }
-	handleCoreAssetsSymlinkMigration(config)
+	handleCoreAssetAliasMigration(config)
 
 	local objects, error = AssetManager:LoadScene("@projres/scenes/root.world")
 
@@ -722,7 +722,7 @@ local function createNewProject_()
 	fs.mkdir("@projres/scripts/modules")
 	fs.write("@projres/scripts/Main.luau", "print(\"Hello, World!\")\n")
 
-	linkCoreAssets()
+	stubCoreAssets()
 
 	for _, v in { "brick", "error", "neon", "plastic", "smoothplastic", "wood", "woodplanks" } do
 		fs.copy(`@editres/materials/{v}.mtl`, `@projres/materials/{v}.mtl`)
@@ -1222,7 +1222,7 @@ local function exportProject()
 
 	for _, a in CoreAssets do
 		local path = `{ exportTo }/resources/{ a }`
-		if fs.issymlink(path) then
+		if fs.isfile(path) then
 			fs.remove(path)
 			fs.copy(`./resources/{ a }`, path)
 		end
@@ -2239,8 +2239,9 @@ local function renderOutput()
 		end
 
 		LogMessageHovering = logMessageHoveringWip
-		imgui.endw()
 	end
+
+	imgui.endw()
 end
 
 local function renderViewport(DeltaTime: number)

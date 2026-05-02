@@ -26,17 +26,6 @@
 #undef Yield
 #endif
 
-static std::string unifyPath(const std::string& Str)
-{
-	std::string newStr = Str;
-
-	for (char& c : newStr)
-		if (c == '\\')
-			c = '/';
-
-	return newStr;
-}
-
 static void setSelfAlias(lua_State* L)
 {
 	lua_Debug ar = {};
@@ -116,7 +105,7 @@ static int fs_listdir(lua_State* L)
 		{
 			if (std::filesystem::is_regular_file(entry))
 			{
-				std::string entryPath = unifyPath(entry.path().string());
+				std::string entryPath = FileRW::ResolvePathNormalized(entry.path().string());
 				lua_pushstring(L, entryPath.c_str());
 				lua_pushstring(L, "f");
 				lua_settable(L, -3);
@@ -127,7 +116,7 @@ static int fs_listdir(lua_State* L)
 		{
 			if (std::filesystem::is_directory(entry))
 			{
-				std::string entryPath = unifyPath(entry.path().string());
+				std::string entryPath = FileRW::ResolvePathNormalized(entry.path().string());
 				lua_pushstring(L, entryPath.c_str());
 				lua_pushstring(L, "d");
 				lua_settable(L, -3);
@@ -136,7 +125,7 @@ static int fs_listdir(lua_State* L)
 		}
 		default:
 		{
-			std::string entryPath = unifyPath(entry.path().string());
+			std::string entryPath = FileRW::ResolvePathNormalized(entry.path().string());
 			lua_pushstring(L, entryPath.c_str());
 
 			if (std::filesystem::is_directory(entry))
@@ -352,15 +341,6 @@ static int fs_remove(lua_State* L)
 
 #include "script/ScriptEngine.hpp"
 
-static std::string normalizePath(std::string path)
-{
-	for (size_t i = 0; i < path.size(); i++)
-		if (path[i] == '\\')
-			path[i] = '/';
-
-	return FileRW::ResolvePathNormalized(path);
-}
-
 static int fs_promptsave(lua_State* L)
 {
 	setSelfAlias(L);
@@ -393,7 +373,7 @@ static int fs_promptsave(lua_State* L)
 	);
 
 	if (path)
-		lua_pushstring(L, normalizePath(path).c_str());
+		lua_pushstring(L, FileRW::ResolvePathNormalized(path).c_str());
 	else
 		lua_pushnil(L);
 
@@ -449,7 +429,7 @@ static int fs_promptopen(lua_State* L)
 				nfiles++;
 
 				lua_pushinteger(L, nfiles);
-				lua_pushstring(L, normalizePath(file).c_str());
+				lua_pushstring(L, FileRW::ResolvePathNormalized(file).c_str());
 				lua_settable(L, -3);
 
 				lastOff = i+1;
@@ -463,7 +443,7 @@ static int fs_promptopen(lua_State* L)
 		if (file.size() != 0)
 		{
 			lua_pushinteger(L, 1);
-			lua_pushstring(L, normalizePath(file).c_str());
+			lua_pushstring(L, FileRW::ResolvePathNormalized(file).c_str());
 			lua_settable(L, -3);
 		}
 	}
@@ -486,7 +466,7 @@ static int fs_promptopenfolder(lua_State* L)
 	);
 
 	if (path)
-		lua_pushstring(L, normalizePath(path).c_str());
+		lua_pushstring(L, FileRW::ResolvePathNormalized(path).c_str());
 	else
 		lua_pushnil(L);
 

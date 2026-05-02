@@ -1,4 +1,4 @@
 {
-  "Fragment": "@editres/shaders/ui.frag",
-  "Vertex": "@editres/shaders/ui.vert"
+  "Fragment": "@base/shaders/ui.frag",
+  "Vertex": "@base/shaders/ui.vert"
 }

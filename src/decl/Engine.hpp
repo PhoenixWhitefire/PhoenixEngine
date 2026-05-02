@@ -109,7 +109,6 @@ private:
 	ShaderProgram m_SkyboxShader;
 	ShaderProgram m_SeparableBlurShader;
 	uint32_t m_SkyboxCubemap = UINT32_MAX;
-	uint32_t m_DistortionTexture = UINT32_MAX;
 	GpuFrameBuffer m_SunShadowMap;
 
 	uint32_t m_FboResourceId = UINT32_MAX;

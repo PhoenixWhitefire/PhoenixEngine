@@ -5736,8 +5736,11 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 					if (lua_getthreaddata(coroutine))
 					{
 						const ScriptEngine::L::StateUserdata* ud = (const ScriptEngine::L::StateUserdata*)lua_getthreaddata(coroutine);
-						ImGui::SeparatorText("Spawn trace");
-						ImGui::TextUnformatted(ud->SpawnTrace.c_str());
+						if (ud->SpawnTrace.size() > 0)
+						{
+							ImGui::SeparatorText("Spawn trace");
+							ImGui::TextUnformatted(ud->SpawnTrace.c_str());
+						}
 					}
 
 					ImGui::TreePop();

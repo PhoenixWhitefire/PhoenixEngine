@@ -1,6 +1,6 @@
 {
-  "Fragment": "shaders/worldUber.frag",
-  "Geometry": "shaders/worldUber.geom",
+  "Fragment": "@base/shaders/worldUber.frag",
+  "Geometry": "@base/shaders/worldUber.geom",
   "InheritUniformsOf": "worldUber",
-  "Vertex": "shaders/worldUberSkinned.vert"
+  "Vertex": "@base/shaders/worldUberSkinned.vert"
 }

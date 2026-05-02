@@ -12,10 +12,10 @@ out vec4 FragColor;
 uniform sampler2D Phoenix_FramebufferTexture;
 
 uniform bool Phoenix_PostFxEnabled = false;
-uniform sampler2D Phoenix_DistortionTexture;
+// uniform sampler2D Phoenix_DistortionTexture;
 //uniform sampler2D Phoenix_BloomTexture;
 uniform bool Phoenix_ScreenEdgeBlurEnabled = false;
-uniform bool Phoenix_DistortionEnabled = false;
+// uniform bool Phoenix_DistortionEnabled = false;
 
 uniform float BlurVignetteStrength = 2.f;
 uniform float BlurVignetteDistMul = 2.5f;
@@ -59,8 +59,8 @@ void main()
 
 	vec2 UVOffset = vec2(0.f, 0.f);
 
-	if (Phoenix_DistortionEnabled)
-		UVOffset = (texture(Phoenix_DistortionTexture, Frag_UV).xy - Center) * (sin(Phoenix_Time) * 5);
+	//if (Phoenix_DistortionEnabled)
+	//	UVOffset = (texture(Phoenix_DistortionTexture, Frag_UV).xy - Center) * (sin(Phoenix_Time) * 5);
 
 	vec2 sampleUV = Frag_UV + UVOffset;
 

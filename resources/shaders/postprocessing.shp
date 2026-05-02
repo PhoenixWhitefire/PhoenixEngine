@@ -1,4 +1,6 @@
 {
-    "Vertex": "postprocessing.vert",
-    "Fragment": "postprocessing.frag"
+  "Fragment": "@base/shaders/postprocessing.frag",
+  "Geometry": "<NOT_SPECIFIED>",
+  "InheritUniformsOf": "",
+  "Vertex": "@base/shaders/postprocessing.vert"
 }

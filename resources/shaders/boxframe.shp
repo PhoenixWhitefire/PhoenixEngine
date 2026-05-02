@@ -1,6 +1,6 @@
 {
-  "Fragment": "shaders/boxframe.frag",
-  "Geometry": "shaders/worldUber.geom",
+  "Fragment": "@base/shaders/boxframe.frag",
+  "Geometry": "@base/shaders/worldUber.geom",
   "InheritUniformsOf": "",
-  "Vertex": "shaders/worldUber.vert"
+  "Vertex": "@base/shaders/worldUber.vert"
 }

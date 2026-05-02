@@ -525,7 +525,7 @@ int ScriptEngine::CompileAndLoad(lua_State* L, const std::string& SourceCode, co
 	};
 
 	Luau::CompileOptions compileOptions;
-	compileOptions.optimizationLevel = 2;
+	compileOptions.optimizationLevel = L::DebugBreak ? 2 : 1;
 	compileOptions.debugLevel = L::DebugBreak ? 2 : 1;
 	compileOptions.mutableGlobals = mutableGlobals;
 

@@ -161,6 +161,11 @@ static void addDefinition(std::string& ShaderSource, const std::string& Definiti
 	ShaderSource.insert(insertPosition, Definition);
 }
 
+static std::string normalizeName(const std::string& Name)
+{
+	return Name.find("shaders/") == std::string::npos ? BaseShaderPath + Name + ".shp" : Name;
+}
+
 void ShaderProgram::Reload()
 {
 	ZoneScoped;
@@ -189,7 +194,7 @@ void ShaderProgram::Reload()
 	}
 
 	bool shpExists = true;
-	std::string realShpPath = (Name.find("shaders/") == std::string::npos ? BaseShaderPath : "") + Name + ".shp";
+	std::string realShpPath = normalizeName(Name);
 	std::string shpContents = FileRW::ReadFile(
 		realShpPath,
 		&shpExists
@@ -200,9 +205,6 @@ void ShaderProgram::Reload()
 		if (this->Name == "error")
 			RAISE_RT("Cannot load the fallback Shader Program ('error.shp'), giving up.");
 
-		// TODO: a different function for error logging
-		// Should also fire a callback so that an Output can be implemented
-		// 13/07/2024
 		Log.ErrorF(
 			"Shader program '{}' does not exist! Geometry will appear magenta",
 			realShpPath
@@ -426,7 +428,7 @@ void ShaderProgram::Save()
 	for (const auto& it : PreprocessorDefinitions)
 		fileJson["Definitions"][it.first] = it.second;
 
-	PHX_CHECK(FileRW::WriteFile(BaseShaderPath + Name + ".shp", fileJson.dump(2)));
+	PHX_CHECK(FileRW::WriteFile(normalizeName(Name), fileJson.dump(2)));
 }
 
 static void applyInheritedUniforms(ShaderProgram& sp)

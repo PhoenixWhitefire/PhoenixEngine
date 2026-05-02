@@ -1,6 +1,6 @@
 {
-  "Fragment": "shaders/worldUber.frag",
-  "Geometry": "shaders/worldUber.geom",
+  "Fragment": "@base/shaders/worldUber.frag",
+  "Geometry": "@base/shaders/worldUber.geom",
   "InheritUniformsOf": "",
   "Uniforms": {
     "Phoenix_Material.AlphaCutoff": 0.05000000074505806,
@@ -8,5 +8,5 @@
     "Phoenix_Material.SpecularMultiplier": 0.5,
     "Phoenix_Material.SpecularPower": 8.0
   },
-  "Vertex": "shaders/worldUber.vert"
+  "Vertex": "@base/shaders/worldUber.vert"
 }

@@ -405,10 +405,9 @@ Engine::Engine()
 
 	FileRW::DefineAlias("cwd", std::filesystem::current_path().string());
 	FileRW::DefineAlias("home", GetUserHomeDirectoryPath());
-	FileRW::DefineAlias("editres", "resources/");
-	FileRW::DefineAlias("projres", "resources/");
-	FileRW::DefineAlias("scripts", "resources/scripts");
-	FileRW::DefineAlias("modules", "resources/scripts/modules");
+	FileRW::DefineAlias("editres", "resources");
+	FileRW::DefineAlias("projres", "resources");
+	FileRW::DefineAlias("base", "resources");
 
 	Log.Info("Initializing managers...");
 
@@ -439,15 +438,12 @@ Engine::Engine()
 
 		ZoneScopedN("Load core shaders and sun shadowmap");
 
-		m_PostFxShader = m_ShaderManager.GetShaderResource(m_ShaderManager.LoadFromPath("postprocessing"));
-		m_SkyboxShader = m_ShaderManager.GetShaderResource(m_ShaderManager.LoadFromPath("skybox"));
+		m_PostFxShader = m_ShaderManager.GetShaderResource(m_ShaderManager.LoadFromPath("@base/shaders/postprocessing.shp"));
+		m_SkyboxShader = m_ShaderManager.GetShaderResource(m_ShaderManager.LoadFromPath("@base/shaders/skybox.shp"));
 
 		m_PostFxShader.SetUniform("Phoenix_FramebufferTexture", 1);
-		m_PostFxShader.SetUniform("Phoenix_DistortionTexture", 2);
 		//m_PostFxShader.SetUniform("Phoenix_BloomTexture", 3);
 		m_SkyboxShader.SetUniform("Phoenix_SkyboxCubemap", 3);
-
-		m_DistortionTexture = m_TextureManager.LoadFromPath("textures/screendistort.jpg");
 
 		m_SunShadowMap.Initialize(
 			SunShadowMapResolutionSq, SunShadowMapResolutionSq,
@@ -472,7 +468,7 @@ static void traverseHierarchy(
 {
 	ZoneScopedC(tracy::Color::LightGoldenrod);
 
-	static uint32_t boxframeMaterial = MaterialManager::Get()->LoadFromPath("boxframe");
+	static uint32_t boxframeMaterial = UINT32_MAX;
 	static uint32_t cubeMesh = MeshProvider::Get()->LoadFromPath("!Cube");
 
 	Root->ForEachChild([&](GameObject* object) -> bool
@@ -496,6 +492,10 @@ static void traverseHierarchy(
 				PhysicsWorld.Statics.emplace_back(object);
 
 			if (DebugCollisionAabbs && rb->PhysicsCollisions)
+			{
+				if (boxframeMaterial == UINT32_MAX)
+					boxframeMaterial = MaterialManager::Get()->LoadFromPath("@base/materials/boxframe.mtl");
+
 				RendererScene.RenderList.emplace_back(
 					cubeMesh,
 					glm::translate(glm::mat4(1.f), rb->CollisionAabb.Position),
@@ -508,6 +508,7 @@ static void traverseHierarchy(
 					FaceCullingMode::None,
 					false
 				);
+			}
 		}
 
 		if (cm)
@@ -693,7 +694,7 @@ static void renderUIElements(GameObject* Root, Renderer& renderer)
 	gpuMesh.VertexBuffer.Bind();
 	gpuMesh.ElementBuffer.Bind();
 
-	static const uint32_t shaderId = shdManager->LoadFromPath("shaders/ui");
+	static const uint32_t shaderId = shdManager->LoadFromPath("@base/shaders/ui.shp");
 	ShaderProgram& shader = shdManager->GetShaderResource(shaderId);
 
 	traverseAndRenderUIHierarchy(Root, renderer, shader, gpuMesh);
@@ -799,6 +800,8 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 	glActiveTexture(GL_TEXTURE3);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, m_SkyboxCubemap);
 
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 	RendererContext.FrameBuffer.Bind();
 
 	glViewport(
@@ -806,8 +809,8 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 		(int)viewportSize.x, (int)viewportSize.y
 	);
 
-	glClear(/*GL_COLOR_BUFFER_BIT |*/ GL_DEPTH_BUFFER_BIT);
-	glDepthFunc(GL_LEQUAL);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glDisable(GL_DEPTH_TEST);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	RendererContext.DrawMesh(
@@ -818,7 +821,7 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 		FaceCullingMode::FrontFace // Cull the Outside, not the Inside
 	);
 
-	glDepthFunc(GL_LESS);
+	glEnable(GL_DEPTH_TEST);
 
 	// Main render pass
 	RendererContext.DrawScene(CurrentScene, renderMatrix, sceneCamera->GetWorldTransform(), GetRunningTime(), DebugWireframeRendering);
@@ -834,7 +837,6 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 		renderUIElements(interface, RendererContext);
 
 	//Do framebuffer stuff after everything is drawn
-	//RendererContext.FrameBuffer.Unbind();
 
 	glActiveTexture(GL_TEXTURE1);
 	RendererContext.FrameBuffer.BindTexture();
@@ -863,9 +865,6 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 		);
 
 		m_PostFxShader.SetUniform("Phoenix_Time", GetRunningTime());
-
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, m_TextureManager.GetTextureResource(m_DistortionTexture).GpuId);
 	}
 	else
 	{
@@ -887,7 +886,7 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 			m_PostFxShader,
 			{ 2.f, 2.f, 2.f },
 			glm::mat4(1.f),
-			FaceCullingMode::BackFace,
+			FaceCullingMode::None,
 			0
 		);
 
@@ -898,7 +897,7 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 			m_PostFxShader,
 			{ 2.f, 2.f, 2.f },
 			glm::mat4(1.f),
-			FaceCullingMode::BackFace,
+			FaceCullingMode::None,
 			0
 		);
 	}
@@ -1152,7 +1151,7 @@ void Engine::Start()
 			if (CurrentScene.RenderList.size() == 0)
 				CurrentScene.RenderList.push_back(RenderItem{
 					.RenderMeshId = 1,
-					.MaterialId = m_MaterialManager.LoadFromPath("plastic"),
+					.MaterialId = m_MaterialManager.LoadFromPath("@base/materials/plastic.mtl"),
 					.Transparency = 1.f
 				});
 
@@ -1170,7 +1169,7 @@ void Engine::Start()
 						.RenderMeshId = 0,
 						.Transform = glm::translate(glm::mat4(1.f), (glm::vec3)it.first),
 						.Size = glm::vec3(SPATIAL_HASH_GRID_SIZE),
-						.MaterialId = m_MaterialManager.LoadFromPath("neon"),
+						.MaterialId = m_MaterialManager.LoadFromPath("@base/materials/neon.mtl"),
 						.TintColor = glm::vec3(1.f, 0.f, 0.f),
 						.Transparency = std::clamp(1.f - ((float)(it.second.size() + 5) / 64.f), 0.2f, 1.f),
 						.FaceCulling = FaceCullingMode::None
@@ -1192,7 +1191,7 @@ void Engine::Start()
 				CurrentScene.UsedShaders.insert(m_MaterialManager.GetMaterialResource(ri.MaterialId).ShaderId);
 
 			if (particleEmittersRenderList.size() > 0)
-				CurrentScene.UsedShaders.insert(m_ShaderManager.LoadFromPath("particle"));
+				CurrentScene.UsedShaders.insert(m_ShaderManager.LoadFromPath("@base/shaders/particle.shp"));
 		}
 
 		if (!IsHeadlessMode && sun)
