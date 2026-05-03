@@ -91,7 +91,7 @@ The following third-party projects were used/referenced during this Engine's dev
 * `miniaudio` - [@mackron/miniaudio](https://github.com/mackron/miniaudio)
 * GLFW - [@glfw/glfw](https://github.com/glfw/glfw)
 * tinyfiledialogs - [Guillaume Vareille/tinyfiledialogs|@PhoenixWhitefire/tinyfd](https://github.com/PhoenixWhitefire/tinyfd)
-* ImGuiColorTextEdit - [@BalazsJako/ImGuiColorTextEdit](https://github.com/BalazsJako/ImGuiColorTextEdit)
+* ImGuiColorTextEdit - [@dfranx/ImGuiColorTextEdit](https://github.com/dfranx/ImGuiColorTextEdit)
 * Mozilla HTTP Reference - https://developer.mozilla.org
 * Filewatch - [@ThomasMonkman/filewatch](https://github.com/ThomasMonkman/filewatch)
 
