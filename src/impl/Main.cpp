@@ -404,11 +404,11 @@ static void processCliArgs(int argc, char** argv)
 	{
 		const char* v = argv[i];
 
-		if (isBoolArgument(v, "-dev"))
+		if (isBoolArgument(v, "--dev"))
 		{
-			EngineJsonConfig["Developer"] = checkBoolArgument(v, "-dev", true);
+			EngineJsonConfig["Developer"] = checkBoolArgument(v, "--dev", true);
 		}
-		else if (strcmp(v, "-threads") == 0)
+		else if (strcmp(v, "--threads") == 0)
 		{
 			if (i + 1 < argc)
 			{
@@ -416,17 +416,17 @@ static void processCliArgs(int argc, char** argv)
 				i++;
 			}
 			else
-				Log.Error("'-threads' argument from command-line was not followed by the desired Thread Count");
+				Log.Error("'--threads' argument from command-line was not followed by the desired Thread Count");
 		}
-		else if (strcmp(v, "-tracyim") == 0)
+		else if (strcmp(v, "--tracy") == 0)
 		{
 			DeveloperTools::LaunchTracy();
 		}
-		else if (strcmp(v, "-apidump") == 0)
+		else if (strcmp(v, "--apidump") == 0)
 		{
 			DoApiDump = true;
 		}
-		else if (strcmp(v, "-loadmap") == 0)
+		else if (strcmp(v, "--loadmap") == 0)
 		{
 			if (i + 1 < argc)
 			{
@@ -440,9 +440,9 @@ static void processCliArgs(int argc, char** argv)
 				i++;
 			}
 			else
-				Log.Error("'-loadmap' argument from command-line was not followed by the desired File");
+				Log.Error("'--loadmap' argument from command-line was not followed by the desired File");
 		}
-		else if (strcmp(v, "-tool") == 0)
+		else if (strcmp(v, "--tool") == 0)
 		{
 			if (i + 1 < argc)
 			{
@@ -456,15 +456,19 @@ static void processCliArgs(int argc, char** argv)
 				i++;
 			}
 			else
-				Log.Error("'-tool' argument from command-line was not followed by the desired File");
+				Log.Error("'--tool' argument from command-line was not followed by the desired File");
 		}
-		else if (isBoolArgument(v, "-headless"))
+		else if (isBoolArgument(v, "--headless"))
 		{
-			EngineJsonConfig["Headless"] = checkBoolArgument(v, "-headless", true);
+			EngineJsonConfig["Headless"] = checkBoolArgument(v, "--headless", true);
 		}
-		else if (strcmp(v, "-x11") == 0)
+		else if (strcmp(v, "--x11") == 0)
 		{
 			glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
+		}
+		else
+		{
+			Log.InfoF("Argument '{}' was not processed by Engine", v);
 		}
 	}
 }

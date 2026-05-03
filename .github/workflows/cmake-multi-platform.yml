@@ -162,22 +162,22 @@ jobs:
     - name: Doc Gen (Windows)
       if: runner.os == 'Windows'
       shell: pwsh
-      run: ". \".\\PhoenixEngine.exe\" -headless -tool scripts\\ci\\docs.luau"
+      run: ". \".\\PhoenixEngine.exe\" --headless --tool scripts\\ci\\docs.luau"
 
     - name: Test (Windows)
       if: runner.os == 'Windows'
       shell: pwsh
       run: >
-        . ".\PhoenixEngine.exe" -headless -tool scripts\\ci\\tests.luau
-        && . ".\PhoenixEngine.exe" -headless -ed_ci
+        . ".\PhoenixEngine.exe" --headless --tool scripts\\ci\\tests.luau
+        && . ".\PhoenixEngine.exe" --headless -ed_ci
 
     - name: Doc Gen (Ubuntu)
       if: runner.os == 'Linux' && matrix.build_type != 'ReleaseTSan' && matrix.build_type != 'DebugTSan'
       shell: bash
-      run: "./PhoenixEngine -headless -tool scripts/ci/docs.luau"
+      run: "./PhoenixEngine --headless --tool scripts/ci/docs.luau"
 
     - name: Test (Ubuntu)
       if: runner.os == 'Linux' && matrix.build_type != 'ReleaseTSan' && matrix.build_type != 'DebugTSan'
       shell: bash
       run: >
-        ./PhoenixEngine -headless -tool scripts/ci/tests.luau
+        ./PhoenixEngine --headless --tool scripts/ci/tests.luau
