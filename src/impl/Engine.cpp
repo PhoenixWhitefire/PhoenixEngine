@@ -405,9 +405,8 @@ Engine::Engine()
 
 	FileRW::DefineAlias("cwd", std::filesystem::current_path().string());
 	FileRW::DefineAlias("home", GetUserHomeDirectoryPath());
-	FileRW::DefineAlias("editres", "resources");
-	FileRW::DefineAlias("projres", "resources");
 	FileRW::DefineAlias("base", "resources");
+	FileRW::DefineAlias("project", ".");
 
 	Log.Info("Initializing managers...");
 

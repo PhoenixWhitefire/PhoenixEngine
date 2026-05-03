@@ -16,6 +16,10 @@ local LOGO_IMAGE = "@etextures/logo.png"
 local REIMPORTABLE_MODEL = "Ed_ReimportableModel"
 local EDITOR_BUILD = 4
 
+fs.definealias("editres", "./resources")
+fs.definealias("etextures", "@editres/textures")
+fs.definealias("base", "./resources")
+
 local PluginManager = require("./PluginManager.luau")
 local HistoryView = require("./HistoryView.luau")
 local TagViewer = require("./TagEditor.luau")
@@ -115,10 +119,6 @@ end
 if not Engine.IsHeadless then
 	imgui.stylecolors(if EditorPreferences.UseLightTheme then 'l' else 'd')
 end
-
-fs.definealias("editres", "./resources")
-fs.definealias("etextures", "@editres/textures")
-fs.definealias("base", "./resources")
 
 if not fs.isdirectory("./editor") then
 	fs.mkdir("./editor")
