@@ -59,7 +59,7 @@ local EditorPreferences = {
 	DevToolsOpen = { "Explorer", "Properties", "Scripts" },
 	ToolsOpen = { BottomBar = true, Output = true },
 	AutoReimportModels = true,
-	GitIntegration = false,
+	GitIntegration = true,
 	ProjectsDirectory = "@home/Documents/Phoenix Projects",
 }
 
@@ -1456,6 +1456,7 @@ local function renderMainMenuBar(dt: number)
 				else
 					if imgui.menuitem("Commit") then
 						task.defer(function()
+							saveProject()
 							getGitStatus()
 							OpenGitCommitMenu = true
 						end)
