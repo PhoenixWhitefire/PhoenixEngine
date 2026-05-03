@@ -3183,3 +3183,13 @@ if table.find(Engine:GetCliArguments(), "-ed_ci") then
 		Engine:Exit()
 	end)
 end
+
+local loadProjectIndex = table.find(Engine:GetCliArguments(), "--project")
+if loadProjectIndex then
+	local name = Engine:GetCliArguments()[loadProjectIndex + 1]
+	if not name then
+		Logging:Write("`--project` specified without the project name!", Enum.LogType.Error)
+	else
+		openProject(name)
+	end
+end

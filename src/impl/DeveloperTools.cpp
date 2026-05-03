@@ -9,6 +9,9 @@
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif
 
+// needed for ScrollToItem, BeginPopupEx, GetIO(context)
+#include <imgui_internal.h>
+
 #ifdef __GNUG__
 #pragma GCC diagnostic pop
 #endif
@@ -19,8 +22,6 @@
 #include <ImGuiColorTextEdit/TextEditor.h>
 #include <imgui/misc/cpp/imgui_stdlib.h>
 #include <tinyfiledialogs.h>
-// needed for ScrollToItem, BeginPopupEx, GetIO(context)
-#include <imgui_internal.h>
 #include <lualib.h>
 #include <fstream>
 #include <set>
@@ -297,6 +298,8 @@ static std::string findLuauTypeFromDocumentation(const nlohmann::json& Docs, con
 
 void DeveloperTools::Initialize(Renderer* renderer)
 {
+	FileRW::DefineAlias("editres", "./resources");
+
 	MtlEditorPreview.Initialize(256, 256);
 	MtlPreviewRenderer = renderer;
 	MtlPreviewCamera = GameObjectManager::s_Create(EntityComponent::Camera);
