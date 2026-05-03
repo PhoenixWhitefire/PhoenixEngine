@@ -1498,6 +1498,7 @@ local function renderMainMenuBar(dt: number)
 	if OpenGitCommitMenu then
 		imgui.openpopup("Commit")
 		OpenGitCommitMenu = false
+		GitCommitMessage = ""
 	end
 
 	if imgui.beginpopupmodal("Commit", true) then
@@ -1514,14 +1515,14 @@ local function renderMainMenuBar(dt: number)
 				imgui.treepop()
 			end
 
-			local tsy = imgui.textsize("").y
+			--local tsy = imgui.textsize("").y
 
 			local cavail = imgui.contentregionavail()
 			local cxavail = cavail.x
 			local cursor = imgui.cursorposition()
 
-			imgui.setcursorposition(vector.create(cursor.x, cavail.y + tsy * 4 + 20))
-			imgui.dummy()
+			--imgui.setcursorposition(vector.create(cursor.x, cavail.y + tsy * 4 + 20))
+			--imgui.dummy()
 
 			imgui.text("All files will be committed automatically.\nCommit message:")
 			imgui.setnextitemwidth(cxavail)
@@ -1533,12 +1534,13 @@ local function renderMainMenuBar(dt: number)
 
 			cursor = imgui.cursorposition()
 			local buttonText = "Commit"
-			imgui.setcursorposition(getCenteredX(cursor.x, cxavail, imgui.textsize(buttonText).x), cavail.y + tsy * 10 + 20)
+			imgui.setcursorposition(getCenteredX(cursor.x, cxavail, imgui.textsize(buttonText).x), cursor.y + 10)
 
 			if imgui.button(buttonText) then
 				task.defer(function()
 					GitCommitMessage = string.gsub(GitCommitMessage, '"', '\\"')
-					print(fs.execute(`git -C { fs.resolvepath("@project") } commit -m "{ GitCommitMessage }" -a`))
+					print(fs.execute(`git -C "{ fs.resolvepath("@project") }" add .`))
+					print(fs.execute(`git -C "{ fs.resolvepath("@project") }" commit -m "{ GitCommitMessage }" -a`))
 					getGitStatus()
 				end)
 			end
