@@ -135,6 +135,9 @@ if fs.isfile("./editor/models.json") then
 	ModelModifiedTimes = json.parse(assert(fs.read("./editor/models.json"))) :: { [string]: number }
 end
 
+local GitIsAvailable = fs.execute("git --version"):find("git version") ~= nil
+print(if GitIsAvailable then "Git is available" else "Git is not available")
+
 local function setErrorNotification(Error: string)
 	ErrorMessage = Error
 	ErrorMessageTimeRemaining = 5
@@ -1302,8 +1305,12 @@ local GitDiffResult = ""
 local GitCommitMessage = ""
 
 local function getGitStatus()
-	GitStatusResult = fs.execute(`git -C "{ fs.resolvepath("@project") }" status`)
-	GitDiffResult = fs.execute(`git -C "{ fs.resolvepath("@project") }" diff`)
+	if GitIsAvailable then
+		GitStatusResult = fs.execute(`git -C "{ fs.resolvepath("@project") }" status`)
+		GitDiffResult = fs.execute(`git -C "{ fs.resolvepath("@project") }" diff`)
+	else
+		GitStatusResult = "Git is not available on your system, please ensure it is installed correctly."
+	end
 end
 
 local function renderMainMenuBar(dt: number)
@@ -1421,7 +1428,7 @@ local function renderMainMenuBar(dt: number)
 
 							if buttonSelection == 1 then
 								task.defer(function()
-									local path = fs.promptopen("@etextures/", { "*.png" , "*.jpg", "*.jpeg" }, "Images")[1]
+									local path = fs.promptopen(nil, { "*.png" , "*.jpg", "*.jpeg" }, "Images")[1]
 
 									if path then
 										fs.remove("@project/icon.png")
@@ -1441,7 +1448,7 @@ local function renderMainMenuBar(dt: number)
 				end)
 			end
 
-			if EditorPreferences.GitIntegration and imgui.beginmenu("Git") then
+			if EditorPreferences.GitIntegration and imgui.beginmenu("Git", GitIsAvailable) then
 				if not Project.HasGitRepository then
 					if imgui.menuitem("Initialize repository") then
 						task.defer(function()
@@ -1464,6 +1471,9 @@ local function renderMainMenuBar(dt: number)
 				end
 
 				imgui.endmenu()
+			end
+			if not GitIsAvailable then
+				imgui.setitemtooltip("Git was not detected on your system, please ensure it is installed correctly")
 			end
 
 			if imgui.menuitem("Export") then

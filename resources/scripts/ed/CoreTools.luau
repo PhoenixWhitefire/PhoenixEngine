@@ -192,7 +192,7 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
     local camPos = cam.Transform.Position
     local cpos = PlayerInput:GetCursorPosition()
 
-    if PlayerInput:IsKeyPressed(Enum.Key.F) then
+    if PlayerInput:IsKeyPressed(Enum.Key.F) and not PlayerInput.IsKeyboardSunk then
         local pos = target.Transform.Position - (cam.Transform.Forward * math.max(target.Size.x, target.Size.y, target.Size.z) * 1.5)
         -- TODO fix 180* flip
         cam.Transform = Matrix.lookAt(pos, target.Transform.Position) * Matrix.fromAngles(0, math.pi, 0)
