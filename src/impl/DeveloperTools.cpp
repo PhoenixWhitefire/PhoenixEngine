@@ -3,16 +3,11 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/euler_angles.hpp>
-#include <imgui/imgui.h>
-#include <imgui/misc/cpp/imgui_stdlib.h>
 
 #ifdef __GNUG__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif
-
-// needed for ScrollToItem, BeginPopupEx, GetIO(context)
-#include <imgui_internal.h>
 
 #ifdef __GNUG__
 #pragma GCC diagnostic pop
@@ -22,7 +17,10 @@
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <ImGuiColorTextEdit/TextEditor.h>
+#include <imgui/misc/cpp/imgui_stdlib.h>
 #include <tinyfiledialogs.h>
+// needed for ScrollToItem, BeginPopupEx, GetIO(context)
+#include <imgui_internal.h>
 #include <lualib.h>
 #include <fstream>
 #include <set>
@@ -396,9 +394,9 @@ void DeveloperTools::Initialize(Renderer* renderer)
 												: datatypesDocs.find(name) != datatypesDocs.end() ? datatypesDocs[name]
 												: "Standard Luau";
 
-		s_EditorLuauLang.mIdentifiers[name] = TextEditor::Identifier{
-			.mDeclaration = std::format("{}: {}\n{}", name, findLuauTypeFromDocumentation(mainDescriptionData, luaL_typename(L, -1)), getDescriptionAsString(mainDescriptionData, 64))
-		};
+		s_EditorLuauLang.mIdentifiers[name] = TextEditor::Identifier(
+			std::format("{}: {}\n{}", name, findLuauTypeFromDocumentation(mainDescriptionData, luaL_typename(L, -1)), getDescriptionAsString(mainDescriptionData, 64))
+		);
 
 		if (lua_type(L, -1) == LUA_TTABLE && name != "_G")
 		{
@@ -426,12 +424,11 @@ void DeveloperTools::Initialize(Renderer* renderer)
 				) : nlohmann::json::object();
 
 				nlohmann::json descriptionData = docs.value(innerName, nlohmann::json{{ "Description", "Standard Luau" }});
-
 				std::string fullName = std::format("{}.{}", name, innerName);
 
-				s_EditorLuauLang.mIdentifiers[fullName] = TextEditor::Identifier{
-					.mDeclaration = std::format("{}: {}\n{}", fullName, findLuauTypeFromDocumentation(descriptionData, luaL_typename(L, -1)), getDescriptionAsString(descriptionData, 64))
-				};
+				s_EditorLuauLang.mIdentifiers[fullName] = TextEditor::Identifier(
+					std::format("{}: {}\n{}", fullName, findLuauTypeFromDocumentation(descriptionData, luaL_typename(L, -1)), getDescriptionAsString(descriptionData, 64))
+				);
 
 				lua_pop(L, 1);
 			}
@@ -638,6 +635,8 @@ static std::string textFileContentsFromPath(const std::string& Path, std::ifstre
 	}
 }
 
+static std::optional<TextEditor::DebugAction> s_QueuedDebuggerAction = std::nullopt;
+
 static TextEditorTab& invokeTextEditor(const std::string& File)
 {
 	for (TextEditorTab& tab : s_TextEditors)
@@ -652,6 +651,7 @@ static TextEditorTab& invokeTextEditor(const std::string& File)
 	s_TextEditors.emplace_back();
 
 	TextEditorTab& tab = s_TextEditors.back();
+	tab.SetUIFocus = true;
 
 	if (File.find(".luau") != std::string::npos)
 		tab.Editor.SetLanguageDefinition(s_EditorLuauLang);
@@ -664,6 +664,10 @@ static TextEditorTab& invokeTextEditor(const std::string& File)
 
 	tab.FilePath = File;
 	tab.Editor.SetText(textFileContentsFromPath(File, tab.FileStream));
+	tab.Editor.OnDebuggerAction = [](TextEditor*, TextEditor::DebugAction action)
+	{
+		s_QueuedDebuggerAction = action;
+	};
 
 	return tab;
 }
@@ -726,11 +730,8 @@ static void renderTextEditors()
 
 		tab.WasPreviouslyVisible = true;
 
-		// "Breakpoints" just highlight the entire line in blue with the theme I've set for ImGuiColorTextEdit,
-		// use that for the current line and maybe re-use the previous current-line indicator (which put a red marker on the line number)
-		// as the breakpoint indicator
 		if (tab.DebuggerCurrentLine > 0)
-			tab.Editor.SetBreakpoints({ tab.DebuggerCurrentLine });
+			tab.Editor.SetCurrentLineIndicator(tab.DebuggerCurrentLine);
 
 		tab.Editor.Render("TextEditor");
 
@@ -1946,7 +1947,10 @@ static void recursiveIterateTree(GameObject* current)
 
 				try
 				{
-					GameObjectManager::Get()->FindById(child)->SetParent(object);
+					if (GameObject* dragging = GameObjectManager::Get()->FindById(child))
+						dragging->SetParent(object);
+					else
+						setErrorMessage("Object was deleted");
 				}
 				catch (const std::runtime_error& e)
 				{
@@ -2789,6 +2793,33 @@ static void renderExplorer()
 
 	VisibleTreeWip.clear();
 	recursiveIterateTree(ExplorerRoot);
+
+	ImVec2 rootDropTargetSize = ImGui::GetContentRegionAvail();
+	rootDropTargetSize.y = std::max(rootDropTargetSize.y, 16.f);
+
+	ImGui::Dummy(rootDropTargetSize);
+	if (ImGui::BeginDragDropTarget())
+	{
+		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("Explorer_DragGameObject"))
+		{
+			History::ScopedAction action = { "DragAndDropObject" };
+			uint32_t child = *(uint32_t*)payload->Data;
+
+			try
+			{
+				if (GameObject* dragging = GameObjectManager::Get()->FindById(child))
+					dragging->SetParent(ExplorerRoot);
+				else
+					setErrorMessage("Object was deleted");
+			}
+			catch (const std::runtime_error& e)
+			{
+				setErrorMessage(e.what());
+			}
+		}
+
+		ImGui::EndDragDropTarget();
+	}
 
 	VisibleTree = VisibleTreeWip;
 
@@ -5040,8 +5071,11 @@ static bool debugVariable(lua_State* L, bool CanEdit = true)
 		}
 		default:
 		{
-			valueString = std::format("{} ({})", luaL_tolstring(L, -1, nullptr), vtn);
-			lua_pop(L, 1);
+			int top = lua_gettop(L);
+			size_t len = 0;
+			const char* str = lua_tolstring(L, -1, nullptr);
+			valueString = std::format("{} ({})", std::string_view(str, len), vtn);
+			lua_settop(L, top);
 		}
 		}
 
@@ -5087,8 +5121,10 @@ static bool debugVariable(lua_State* L, bool CanEdit = true)
 			}
 			case LUA_TSTRING:
 			{
+				int top = lua_gettop(L);
 				size_t len = 0;
 				const char* str = lua_tolstring(L, -1, &len);
+				lua_settop(L, top);
 
 				char* buf = new char[len + 64];
 				memcpy(buf, str, len);
@@ -5186,6 +5222,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 		errorMessage = BreakExplanations[Reason];
 
 	ScriptEngine::L::StateUserdata* corUd = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(L);
+	s_QueuedDebuggerAction.reset();
 
 	if (!InDebugger)
 	{
@@ -5247,19 +5284,31 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 
 	int currfuncindex = getInfoSuccess ? lua_gettop(L) : 0;
 	TextEditorTab& tab = invokeTextEditor(ar->short_src ? ar->short_src : "!InlineDocument:Unknown source");
+	for (TextEditorTab& otherTab : s_TextEditors)
+	{
+		otherTab.DebuggerCurrentLine = 0;
+		otherTab.JumpToLine = 0;
+		otherTab.SetUIFocus = false;
+	}
+
 	tab.DebuggerCurrentLine = ar->currentline;
 	tab.JumpToLine = ar->currentline;
+	tab.SetUIFocus = true;
 
 	static bool s_CallstackJumpToCurrentThread = false;
 	s_CallstackJumpToCurrentThread = true;
 
 	static int CurrentVMIndex = 0;
 
+	int cvii = 0;
 	for (auto it = ScriptEngine::VMs.begin(); it != ScriptEngine::VMs.end(); it++)
 	{
 		if (it->first == corUd->VM)
+		{
+			CurrentVMIndex = cvii;
 			break;
-		CurrentVMIndex++;
+		}
+		cvii++;
 	}
 
 	while (!glfwWindowShouldClose(engine->Window) && running)
@@ -5287,8 +5336,9 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 			ImGui::SetItemTooltip("%s", errorMessage.c_str());
 			ImGui::Text("VM: %s", corUd->VM.c_str());
 
-			if (ImGui::Button("Resume (F5)") || ImGui::IsKeyDown(ImGuiKey_F5))
+			if (s_QueuedDebuggerAction == TextEditor::DebugAction::Continue || s_QueuedDebuggerAction == TextEditor::DebugAction::Stop || ImGui::IsKeyDown(ImGuiKey_F5))
 			{
+				s_QueuedDebuggerAction.reset();
 				lua_callbacks(L)->debugstep = nullptr;
 				running = false;
 			}
@@ -5308,9 +5358,10 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 			else
 				s_WasF8Down = false;
 
-			if (ScriptEngine::L::DebugBreak && Reason != DebugBreakReason::Error && (ImGui::Button("Step over (F7)") || (isF7Down && !s_WasF7Down)))
+			if (ScriptEngine::L::DebugBreak && Reason != DebugBreakReason::Error && (s_QueuedDebuggerAction == TextEditor::DebugAction::Step || s_QueuedDebuggerAction == TextEditor::DebugAction::StepOut || (isF7Down && !s_WasF7Down)))
 			{
 				ImGui::SaveIniSettingsToDisk("debugger-layout.ini");
+				s_QueuedDebuggerAction.reset();
 
 				if (Reason == ScriptEngine::L::DebugBreakReason::DebuggerStep)
 				{
@@ -5351,9 +5402,10 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 
 			s_WasF7Down = isF7Down;
 
-			if (ScriptEngine::L::DebugBreak && Reason != DebugBreakReason::Error && (ImGui::Button("Single-step (F8)") || isF8Down))
+			if (ScriptEngine::L::DebugBreak && Reason != DebugBreakReason::Error && (s_QueuedDebuggerAction == TextEditor::DebugAction::StepInto || isF8Down))
 			{
 				ImGui::SaveIniSettingsToDisk("debugger-layout.ini");
+				s_QueuedDebuggerAction.reset();
 
 				if (Reason == ScriptEngine::L::DebugBreakReason::DebuggerStep)
 				{
@@ -5707,6 +5759,10 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 
 						if (car.currentline > 0)
 						{
+							std::string_view srcShortened = car.short_src;
+							if (size_t loc = srcShortened.find("scripts/"); loc != std::string::npos)
+								srcShortened = std::string_view(srcShortened.begin() + loc, srcShortened.end());
+
 							ImGui::PushStyleColor(
 								ImGuiCol_TextLink,
 								ImVec4(1.f, 1.f, 1.f, 1.f) - ImGui::GetStyleColorVec4(ImGuiCol_WindowBg) + ImVec4(0.f, 0.f, 0.f, 1.f)
@@ -5714,7 +5770,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 
 							if (ImGui::TextLink(std::format(
 								"{}:{} in {}",
-								car.short_src, car.currentline, car.name ? car.name : "<anonmyous>"
+								srcShortened, car.currentline, car.name ? car.name : "<anonmyous>"
 							).c_str()))
 							{
 								invokeTextEditor(car.short_src).JumpToLine = car.currentline;
@@ -5828,5 +5884,9 @@ static void debuggerLeaveCallback()
 	PHX_ENSURE_MSG(ImGui_ImplGlfw_InitForOpenGL(engine->Window, true), "Failed to initialize Dear ImGui for GLFW on Debugger shutdown");
 	glEnable(GL_FRAMEBUFFER_SRGB);
 
+	for (TextEditorTab& tab : s_TextEditors)
+		tab.Editor.SetCurrentLineIndicator(0);
+
+	s_QueuedDebuggerAction.reset();
 	InDebugger = false;
 }

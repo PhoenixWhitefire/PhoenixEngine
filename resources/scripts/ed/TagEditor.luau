@@ -41,5 +41,3 @@ function Viewer.Render()
 end
 
 return Viewer
-
-
