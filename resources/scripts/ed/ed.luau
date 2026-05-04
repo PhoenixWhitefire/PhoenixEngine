@@ -168,14 +168,14 @@ local function handleUndoRedoKeybinds()
 
 	if ctrlKeyDown and zKeyDown then
 		if not WasHoldingCtrlKeyDown or not WasHoldingZKeyDown then
-			local success: boolean, error: string? = (pcall::any)(function()
+			local success, error = pcall(function()
 				History:Undo()
 			end)
 
 			if not success then
 				assert(error)
 
-				local realError = error:sub(error:find(":") or 1, #error)
+				local realError = if typeof(error) == "string" then error:sub(error:find(":") or 1, #error) else tostring(error)
 				realError = realError:sub((realError:find(" ") or 0) + 1, #realError)
 
 				setErrorNotification("Undo failed: " .. realError)
@@ -185,14 +185,14 @@ local function handleUndoRedoKeybinds()
 
 	if ctrlKeyDown and yKeyDown then
 		if not WasHoldingCtrlKeyDown or not WasHoldingYKeyDown then
-			local success: boolean, error: string? = (pcall::any)(function()
+			local success, error = pcall(function()
 				History:Redo()
 			end)
 
 			if not success then
 				assert(error)
 
-				local realError = error:sub(error:find(":") or 1, #error)
+				local realError = if typeof(error) == "string" then error:sub(error:find(":") or 1, #error) else tostring(error)
 				realError = realError:sub((realError:find(" ") or 0) + 1, #realError)
 
 				setErrorNotification("Redo failed: " .. realError)
@@ -1363,6 +1363,16 @@ local function renderMainMenuBar(dt: number)
 
 			if imgui.menuitem("Open in Code Editor") then
 				task.defer(openCodeEditor)
+			end
+
+			if imgui.menuitem("Open Project folder") then
+				task.defer(function()
+					if Engine.TargetPlatform == "Window" then
+						fs.execute(`start "{ fs.resolvepathabsolute("@project") }"`)
+					else
+						fs.execute(`xdg-open "{ fs.resolvepathabsolute("@project") }"`)
+					end
+				end)
 			end
 		end
 
