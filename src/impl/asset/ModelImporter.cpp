@@ -241,11 +241,12 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 	MaterialManager* mtlManager = MaterialManager::Get();
 	MeshProvider* meshProvider = MeshProvider::Get();
 
-	LoadedObjs.reserve(m_Nodes.size() + 1);
+	std::vector<ObjectHandle> loadedObjects;
+	loadedObjects.reserve(m_Nodes.size() + 1);
 
 	for (ModelLoader::ModelNode& node : m_Nodes)
 	{
-		ObjectRef object;
+		ObjectHandle object;
 
 		switch (node.Type)
 		{
@@ -402,27 +403,29 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 
 		object->Name = node.Name;
 
-		LoadedObjs.push_back(object);
+		loadedObjects.push_back(object);
 
 		uint32_t parentIndex = node.Parent;
 		if (parentIndex == UINT32_MAX) // root node
 			object->SetParent(GameObjectManager::Get()->FindById(Parent));
 		else
 			object->SetParent(
-				this->LoadedObjs.at(parentIndex) != object
-				? LoadedObjs[parentIndex].Referred()
+				loadedObjects.at(parentIndex) != object
+				? loadedObjects[parentIndex].Dereference()
 				: GameObjectManager::Get()->FindById(Parent)
 			);
 	}
 
-	for (const ObjectRef& obj : LoadedObjs)
+	for (const ObjectHandle& obj : loadedObjects)
 	{
 		if (EcTransform* et = obj->FindComponent<EcTransform>())
 			et->RecomputeTransformTree();
+
+		assert(obj->HardRefCount > 0);
 	}
 
 	for (const ObjectHandle& anim : m_Animations)
-		anim->SetParent(LoadedObjs.at(0));
+		anim->SetParent(loadedObjects.at(0));
 }
 
 ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(

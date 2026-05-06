@@ -35,6 +35,7 @@ extern "C"
 #include "asset/TextureManager.hpp"
 #include "asset/MeshProvider.hpp"
 #include "GlobalJsonConfig.hpp"
+#include "Utilities.hpp"
 #include "Timing.hpp"
 #include "Log.hpp"
 

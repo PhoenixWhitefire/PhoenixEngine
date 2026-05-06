@@ -4,7 +4,6 @@
 // Replaceable when multi-datamodel is implemented
 #pragma once
 
-#include "datatype/GameObject.hpp"
 #include "datatype/ComponentBase.hpp"
 
 struct EcTreeLink : public Component<EntityComponent::TreeLink>

@@ -1540,8 +1540,8 @@ static void renderMaterialEditor()
 }
 
 static std::vector<ObjectHandle> Selections;
-static std::vector<ObjectRef> VisibleTree;
-static std::vector<ObjectRef> VisibleTreeWip;
+static std::vector<ObjectHandle> VisibleTree;
+static std::vector<ObjectHandle> VisibleTreeWip;
 static ObjectHandle LastSelected;
 static ObjectHandle ObjectInsertionTarget = nullptr;
 static bool IsPickingObject = false;
@@ -1676,7 +1676,7 @@ static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] = {
 					return;
 				}
 
-				std::vector<ObjectRef> roots = SceneFormat::Deserialize(contents, &readSuccess);
+				std::vector<ObjectHandle> roots = SceneFormat::Deserialize(contents, &readSuccess);
 
 				if (!readSuccess)
 				{
@@ -1686,12 +1686,12 @@ static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] = {
 
 				if (Selections.size() > 0)
 				{
-					for (ObjectRef r : roots)
+					for (const ObjectHandle& r : roots)
 						r->SetParent(Selections[0].Dereference());
 				}
 				else
 				{
-					for (ObjectRef r : roots)
+					for (const ObjectHandle& r : roots)
 						r->SetParent(ExplorerRoot);
 				}
 			}
@@ -1737,7 +1737,7 @@ static std::vector<ContextMenuAction> getPossibleActionsForSelections()
 	return actions;
 }
 
-static void onTreeItemClicked(GameObject* nodeClicked)
+static void onTreeItemClicked(const ObjectHandle& nodeClicked)
 {
 	if (IsPickingObject)
 	{
@@ -1787,14 +1787,14 @@ static void onTreeItemClicked(GameObject* nodeClicked)
 			if (start > end)
 			{
 				// doesn't seem to work unless it is copied fsr
-				std::vector<ObjectRef>::iterator temp = end;
+				std::vector<ObjectHandle>::iterator temp = end;
 				end = start;
 				start = temp;
 			}
 
 			// 25/01/2025 this feels weird, like surely there's a better way
 			// to iterate between `start` and `end`
-			for (const ObjectRef& middle : std::span<ObjectRef>(start, end))
+			for (const ObjectHandle& middle : std::span<ObjectHandle>(start, end))
 				if (!isInSelections(middle))
 					Selections.push_back(middle);
 		}
@@ -1869,16 +1869,15 @@ static std::string getDescriptionForComponent(EntityComponent Ec)
 	return Descriptions[index];
 }
 
-// lifetiem of this value is just `recursiveIterateTree`, which does not create any objects
-static GameObject* InsertObjectButtonHoveredOver = nullptr;
+static ObjectHandle InsertObjectButtonHoveredOver = nullptr;
 
-static void recursiveIterateTree(GameObject* current)
+static void recursiveIterateTree(const ObjectHandle& current)
 {
 	ZoneScopedC(tracy::Color::DarkSeaGreen);
 
 	// https://github.com/ocornut/imgui/issues/581#issuecomment-216054349
 	// 07/10/2024
-	GameObject* nodeClicked = nullptr;
+	ObjectHandle nodeClicked = nullptr;
 
 	if (ExplorerShouldSeekToCurrentSelection && isInSelections(current))
 	{
@@ -1888,7 +1887,7 @@ static void recursiveIterateTree(GameObject* current)
 
 	InsertObjectButtonHoveredOver = nullptr;
 
-	current->ForEachChild([&](GameObject* object)
+	current->ForEachChild([&](const ObjectHandle& object)
 	{
 		ImGui::PushID((int)object->ObjectId);
 
@@ -1916,9 +1915,9 @@ static void recursiveIterateTree(GameObject* current)
 
 		if (ExplorerShouldSeekToCurrentSelection)
 		{
-			std::vector<GameObject*> descs = object->GetDescendants();
+			std::vector<ObjectHandle> descs = object->GetDescendants();
 
-			for (GameObject* desc : descs)
+			for (const ObjectHandle& desc : descs)
 				if (isInSelections(desc))
 				{
 					ImGui::SetNextItemOpen(true);
@@ -2795,7 +2794,7 @@ static void renderExplorer()
 	}
 
 	VisibleTreeWip.clear();
-	recursiveIterateTree(ExplorerRoot);
+	recursiveIterateTree(ExplorerRoot.Dereference());
 
 	ImVec2 rootDropTargetSize = ImGui::GetContentRegionAvail();
 	rootDropTargetSize.y = std::max(rootDropTargetSize.y, 16.f);

@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include "datatype/GameObject.hpp"
+#include "datatype/ComponentBase.hpp"
 
 struct EcBone : public Component<EntityComponent::Bone>
 {

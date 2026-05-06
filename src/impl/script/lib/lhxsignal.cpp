@@ -12,6 +12,7 @@ void luhx_pushsignal(
 )
 {
 	EventSignalData* ev = (EventSignalData*)lua_newuserdata(L, sizeof(EventSignalData));
+	*ev = {};
 	ev->Reflector = Reflector;
 	ev->EventName = EventName;
 	ev->Event = Event;
@@ -51,7 +52,8 @@ static int sig_namecall(lua_State* L)
 		lua_pop(L, 1);
 
 		EventConnectionData* ec = (EventConnectionData*)lua_newuserdata(eL, sizeof(EventConnectionData));
-		ec->DataModel = nullptr; // zero-initialization breaks some assumptions that IDs which are not `PHX_GAMEOBJECT_NULL_ID` are valid
+		*ec = {};
+		//ec->DataModel = nullptr; // zero-initialization breaks some assumptions that IDs which are not `PHX_GAMEOBJECT_NULL_ID` are valid
 		luaL_getmetatable(eL, "EventConnection"); // stack: ec, mt
 		lua_setmetatable(eL, -2); // stack: ec
 		lua_xpush(eL, L, -1);
@@ -239,13 +241,18 @@ static int sig_eq(lua_State* L)
 static int sig_tostring(lua_State* L)
 {
     EventSignalData* ev = (EventSignalData*)luaL_checkudata(L, 1, "EventSignal");
-	GameObject* obj = GameObjectManager::Get()->FindById(ev->Reflector.Id);
 
-	std::string source = ev->Reflector.Type == EntityComponent::None
-		? (obj ? obj->GetFullName() + "." : "GameObject::")
-		: std::format("{}::", s_EntityComponentNames[(size_t)ev->Reflector.Type]);
+	if (ev->Reflector.Type == EntityComponent::None)
+	{
+		GameObject* target = (GameObject*)ev->Reflector.Referred();
+		PHX_ENSURE(target);
+		lua_pushfstring(L, "%s->%s", target->GetFullName().c_str(), ev->EventName);
+	}
+	else
+	{
+		lua_pushfstring(L, "%s::%s", s_EntityComponentNames[ev->Reflector.Type].data(), ev->EventName);
+	}
 
-	lua_pushfstring(L, "%s%s", source.c_str(), ev->EventName);
 	return 1;
 }
 

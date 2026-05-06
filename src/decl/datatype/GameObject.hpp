@@ -63,31 +63,28 @@ public:
 
 	// preferable to use this instead of `::GetChildren`/`::GetDescendants`
 	// because it does not require any memory allocations
-	void ForEachChild(const std::function<bool(GameObject*)>&);
-	bool ForEachDescendant(const std::function<bool(GameObject*)>&);
-	std::vector<GameObject*> GetChildren();
-	std::vector<GameObject*> GetDescendants();
+	void ForEachChild(const std::function<bool(const ObjectHandle&)>&);
+	bool ForEachDescendant(const std::function<bool(const ObjectHandle&)>&);
+	std::vector<ObjectHandle> GetChildren();
+	std::vector<ObjectHandle> GetDescendants();
 
 	GameObject* GetParent() const;
 	GameObject* FindChild(const std::string_view&);
 	GameObject* FindChildWithComponent(EntityComponent);
-	
+
 	bool IsDescendantOf(const GameObject*) const;
 
 	std::string GetFullName() const;
 
-	void SetParent(GameObject*);
-	void AddChild(GameObject*);
+	void SetParent(const ObjectHandle&);
+	void AddChild(const ObjectHandle&);
 	void RemoveChild(uint32_t);
 
 	// performs a 1-1 copy, including copying the `Parent` property
-	GameObject* Duplicate();
-	// destructively combines the passed object with the current object
-	// passed object will be deleted
-	void MergeWith(GameObject*);
+	ObjectHandle Duplicate();
 
-	static Reflection::GenericValue s_ToGenericValue(const GameObject*);
-	Reflection::GenericValue ToGenericValue() const;
+	static Reflection::GenericValue s_ToGenericValue(GameObject*);
+	Reflection::GenericValue ToGenericValue();
 
 	std::string Name = "GameObject";
 
@@ -104,6 +101,8 @@ public:
 	std::vector<Reflection::EventCallback> OnTagAddedCallbacks;
 	std::vector<Reflection::EventCallback> OnTagRemovedCallbacks;
 
+	uint16_t HardRefCount = 0;
+
 	bool Enabled = true;
 	bool Serializes = true;
 	bool IsDestructionPending = false;
@@ -111,9 +110,6 @@ public:
 
 	static nlohmann::json DumpApiToJson();
 	static const Reflection::StaticApi s_Api;
-
-private:
-	uint16_t m_HardRefCount = 0;
 };
 
 class GameObjectManager
@@ -125,13 +121,13 @@ public:
 	static GameObjectManager* Get();
 
 	// create with a component
-	GameObject* Create(EntityComponent);
-	GameObject* Create(const std::string_view&);
+	ObjectHandle Create(EntityComponent);
+	ObjectHandle Create(const std::string_view&);
 	// create empty object
-	GameObject* Create();
+	ObjectHandle Create();
 
 	template <class T>
-	static GameObject* s_Create(T A)
+	static ObjectHandle s_Create(T A)
 	{
 		return Get()->Create(A);
 	}
@@ -166,184 +162,4 @@ public:
 
 	// Returns a reference to a Collection, creating one if it does not exist
 	Collection& GetCollection(const std::string&);
-};
-
-// `GameObject*` directly has the least overhead. `ObjectRef`, a little more,
-// and `ObjectHandle`, more than that.
-// Use `GameObject*` when you know the World Array won't get re-allocated
-// for the scope of your variable.
-// Use `ObjectRef` when you know nothing will try to delete your Object.
-// Use `ObjectHandle` when you can't trust anybody.
-// 
-// 20/09/2025
-
-// `ObjectRef`: a weak reference to a GameObject
-struct ObjectRef
-{
-	ObjectRef() = default;
-
-	ObjectRef(GameObject* Object)
-	{
-		if (Object)
-		{
-			assert(Object->Valid);
-			TargetId = Object->ObjectId;
-		}
-		else
-			TargetId = PHX_GAMEOBJECT_NULL_ID;
-	}
-
-	GameObject* Referred() const
-	{
-		return GameObjectManager::Get()->FindById(TargetId);
-	}
-
-	bool IsValid() const
-	{
-		return GameObjectManager::Get()->FindById(TargetId) != nullptr;
-	}
-
-	bool operator == (const ObjectRef& them) const
-	{
-		return TargetId == them.TargetId;
-	}
-
-	GameObject* operator -> () const
-	{
-		GameObject* object = Referred();
-		assert(object);
-
-		return object;
-	}
-
-	operator GameObject* () const
-	{
-		return Referred();
-	}
-
-	uint32_t TargetId = PHX_GAMEOBJECT_NULL_ID;
-};
-
-// `ObjectHandle`: a strong reference to a GameObject, prevents it from being de-alloc'd
-struct ObjectHandle
-{
-	ObjectRef Reference;
-
-	ObjectHandle() = default;
-
-	ObjectHandle(GameObject* Object)
-	{
-		Reference = Object;
-		
-		if (Object)
-			Object->IncrementHardRefs();
-	}
-
-	ObjectHandle(const ObjectRef& Other)
-	{
-		if (GameObject* prevObj = Reference.Referred())
-			prevObj->DecrementHardRefs();
-
-		Reference = Other;
-
-		if (GameObject* newObject = Reference.Referred())
-			newObject->IncrementHardRefs();
-	}
-
-	ObjectHandle(const ObjectHandle& Other)
-	{
-		if (GameObject* prevObj = Reference.Referred())
-			prevObj->DecrementHardRefs();
-
-		Reference = Other.Reference;
-
-		if (GameObject* newObj = Reference.Referred())
-			newObj->IncrementHardRefs();
-	}
-	ObjectHandle(const ObjectHandle&& Other)
-	{
-		if (GameObject* prevObj = Reference.Referred())
-			prevObj->DecrementHardRefs();
-
-		Reference = Other.Reference;
-
-		if (GameObject* newObj = Reference.Referred())
-			newObj->IncrementHardRefs();
-	}
-
-	~ObjectHandle()
-	{
-		if (!HasValue())
-			return;
-
-		if (GameObject* obj = Reference.Referred())
-		{
-			obj->DecrementHardRefs();
-			Reference = nullptr;
-		}
-	}
-
-	bool HasValue() const
-	{
-		return Reference.TargetId != PHX_GAMEOBJECT_NULL_ID;
-	}
-
-	GameObject* Dereference() const
-	{
-		// Double-free'd or `::Dereference` called on a default-constructed Ref
-		assert(HasValue());
-
-		GameObject* object = Reference.Referred();
-		assert(object);
-
-		return object;
-	}
-
-	void Clear()
-	{
-		if (HasValue())
-			Dereference()->DecrementHardRefs();
-
-		Reference = nullptr;
-	}
-
-	bool operator == (const ObjectHandle& them) const
-	{
-		return Reference == them.Reference;
-	}
-
-	GameObject* operator -> () const
-	{
-		return Dereference();
-	}
-
-	ObjectHandle& operator = (const ObjectHandle&& ref)
-	{
-		if (HasValue())
-			Dereference()->DecrementHardRefs();
-
-		Reference = ref.Reference;
-
-		if (HasValue())
-			Dereference()->IncrementHardRefs();
-
-		return *this;
-	}
-	ObjectHandle& operator = (const ObjectHandle& ref)
-	{
-		if (HasValue())
-			Dereference()->DecrementHardRefs();
-
-		Reference = ref.Reference;
-
-		if (HasValue())
-			Dereference()->IncrementHardRefs();
-
-		return *this;
-	}
-
-	operator GameObject* () const
-	{
-		return Dereference();
-	}
 };

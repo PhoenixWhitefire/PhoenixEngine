@@ -46,8 +46,8 @@ struct EcWorkspace : public Component<EntityComponent::Workspace>
 {
 	void UpdateSoundListener() const;
 
-	GameObject* GetSceneCamera() const;
-	void SetSceneCamera(GameObject*);
+	ObjectHandle GetSceneCamera() const;
+	void SetSceneCamera(const ObjectHandle&);
 
 	glm::vec3 ScreenPointToVector(glm::vec2 ScreenPosition, float Length) const;
 
@@ -67,5 +67,6 @@ public:
 	const Reflection::StaticPropertyMap& GetProperties() override;
 	const Reflection::StaticMethodMap& GetMethods() override;
     uint32_t CreateComponent(GameObject* Object) override;
+	void DeleteComponent(uint32_t) override;
 	void Shutdown() override;
 };

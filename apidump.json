@@ -21,7 +21,6 @@
         "GetTags": "() -> (Array)",
         "HasComponent": "(String) -> (Boolean)",
         "HasTag": "(String) -> (Boolean)",
-        "MergeWith": "(GameObject) -> ()",
         "RemoveComponent": "(String) -> ()",
         "RemoveTag": "(String) -> ()"
       },

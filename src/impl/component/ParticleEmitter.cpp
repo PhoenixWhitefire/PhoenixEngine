@@ -4,9 +4,11 @@
 
 #include "component/ParticleEmitter.hpp"
 #include "component/Transform.hpp"
+#include "datatype/GameObject.hpp"
 #include "asset/MaterialManager.hpp"
 #include "asset/MeshProvider.hpp"
 #include "render/Renderer.hpp"
+#include "Utilities.hpp"
 
 static std::default_random_engine s_RandGenerator = std::default_random_engine(static_cast<uint32_t>(time(NULL)));
 

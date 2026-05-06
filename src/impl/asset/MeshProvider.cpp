@@ -12,6 +12,7 @@
 #include "render/GpuBuffers.hpp"
 #include "ThreadManager.hpp"
 #include "render/Renderer.hpp"
+#include "Utilities.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
@@ -780,7 +781,8 @@ void MeshProvider::Save(const Mesh& mesh, const std::string_view& Path)
 	ZoneScoped;
 
 	std::string contents = this->Serialize(mesh);
-	PHX_CHECK(FileRW::WriteFileCreateDirectories(std::string(Path), contents));
+	if (!FileRW::WriteFileCreateDirectories(std::string(Path), contents))
+		RAISE_RT("Failed to save mesh to '{}'", Path);
 }
 
 void MeshProvider::Save(uint32_t Id, const std::string_view& Path)

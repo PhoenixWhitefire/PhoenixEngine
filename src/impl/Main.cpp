@@ -319,16 +319,16 @@ static void init()
 									: EngineJsonConfig.value("RootScene", "scenes/root.world");
 	
 	bool worldLoadSuccess = true;
-	std::vector<ObjectRef> roots;
+	std::vector<ObjectHandle> roots;
 
 	if (!ScriptTool)
 		roots = SceneFormat::Deserialize(FileRW::ReadFile(mapFile), &worldLoadSuccess);
 	else
 	{
-		ObjectRef dm = GameObjectManager::s_Create(EntityComponent::DataModel);
-		ObjectRef wp = GameObjectManager::s_Create(EntityComponent::Workspace);
-		ObjectRef cam = GameObjectManager::s_Create(EntityComponent::Camera);
-		ObjectRef light = GameObjectManager::s_Create(EntityComponent::DirectionalLight);
+		ObjectHandle dm = GameObjectManager::s_Create(EntityComponent::DataModel);
+		ObjectHandle wp = GameObjectManager::s_Create(EntityComponent::Workspace);
+		ObjectHandle cam = GameObjectManager::s_Create(EntityComponent::Camera);
+		ObjectHandle light = GameObjectManager::s_Create(EntityComponent::DirectionalLight);
 
 		wp->SetParent(dm);
 		cam->SetParent(wp);
@@ -354,7 +354,7 @@ static void init()
 
 	PHX_ENSURE_MSG(!roots.empty(), "No root objects in World!");
 
-	ObjectRef root = roots[0];
+	const ObjectHandle& root = roots[0];
 	PHX_ENSURE_MSG(root->FindComponent<EcDataModel>(), "Root Object was not a DataModel!");
 
 	engine->BindDataModel(root);
@@ -519,7 +519,7 @@ int main(int argc, char** argv)
 		engine.Start();
 
 		Logging::Save(); // in case FileRW::WriteFile throws an exception
-		
+
 		s_ExitCode = engine.ExitCode;
 		DeveloperTools::Shutdown();
 		engine.Shutdown();

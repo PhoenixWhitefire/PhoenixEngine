@@ -30,8 +30,9 @@ for direction, piece in GizmoPieces do
     piece[1].Tint, piece[2].Tint = col, col
     piece[1].Material, piece[2].Material = "unlit", "unlit"
     piece[1].Size, piece[2].Size = vector.one * 0.5, vector.one * 0.5
+    piece[1].Name, piece[2].Name = `Gizmo_{direction}_1`, `Gizmo_{direction}_2`
     piece[1].Parent, piece[2].Parent = GizmoContainer, GizmoContainer
-    
+
     piece[2].Transparency = 0.5
 
     GizmoPieceToDirection[piece[1]] = direction

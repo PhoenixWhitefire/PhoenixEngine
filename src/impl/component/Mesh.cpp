@@ -167,7 +167,7 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 			EcMesh* cm = obj->FindComponent<EcMesh>();
 			cm->RenderMeshId = meshId;
 
-			for (GameObject* ch : obj->GetChildren())
+			for (const ObjectHandle& ch : obj->GetChildren())
 				if (ch->FindComponent<EcBone>())
 					ch->Destroy();
 

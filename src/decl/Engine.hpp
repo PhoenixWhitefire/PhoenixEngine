@@ -39,7 +39,7 @@ public:
 	void OnWindowResized(int NewSizeX, int NewSizeY);
 
 	void LoadConfiguration();
-	void BindDataModel(GameObject*);
+	void BindDataModel(const ObjectHandle&);
 	void Close();
 
 	ImVec2 GetViewportInputRectSize() const;

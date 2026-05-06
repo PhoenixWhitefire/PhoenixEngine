@@ -25,29 +25,6 @@
 
 thread_local std::string errorString = "No error";
 
-static auto loadModelAsMeshes(
-	const char* ModelFilePath,
-	glm::vec3 Size,
-	glm::vec3 Position,
-	bool AutoParent = true
-)
-{
-	ModelLoader Loader = ModelLoader(ModelFilePath, AutoParent ? GameObjectManager::Get()->DataModel : PHX_GAMEOBJECT_NULL_ID);
-
-	for (GameObject* object : Loader.LoadedObjs)
-	{
-		EcTransform* mesh = object->FindComponent<EcTransform>();
-
-		if (mesh)
-		{
-			mesh->Transform = glm::translate(mesh->Transform, (glm::vec3)Position);
-			mesh->Size = mesh->Size * Size;
-		}
-	}
-
-	return Loader.LoadedObjs;
-}
-
 static glm::vec2 getVector2FromJson(const nlohmann::json& Json)
 {
 	glm::vec2 Vec2;
@@ -160,7 +137,7 @@ static float getVersion(const std::string& MapFileContents)
 	return version;
 }
 
-static std::vector<ObjectRef> loadSceneVersion1(
+static std::vector<ObjectHandle> loadSceneVersion1(
 	const std::string& Contents,
 	bool* SuccessPtr
 )
@@ -192,7 +169,7 @@ static std::vector<ObjectRef> loadSceneVersion1(
 	const nlohmann::json& ModelsNode = JsonData.value("props", nlohmann::json{});
 	const nlohmann::json& LightsNode = JsonData["lights"];
 
-	std::vector<ObjectRef> Objects;
+	std::vector<ObjectHandle> Objects;
 	Objects.reserve(PartsNode.size() + ModelsNode.size() + LightsNode.size());
 
 	for (uint32_t Index = 0; Index < ModelsNode.size(); Index++)
@@ -214,42 +191,18 @@ static std::vector<ObjectRef> loadSceneVersion1(
 		//Vector3 Orientation = GetVector3FromJson(PropObject["orient"]);
 		glm::vec3 Size = getVector3FromJson(PropObject["size"]);
 
-		std::vector<ObjectRef> Model = loadModelAsMeshes(ModelPath.c_str(), Size, Position);
-
-		std::string modelName = PropObject.value("name", "<UN-NAMED>");
-
-		if (Model.empty())
-			Log.Warning(
-				std::format(
-					"Model '{}' in map file '{}' has no meshes!",
-					modelName,
-					sceneName
-				)
-			);
-		else
+		ModelLoader Loader = ModelLoader(ModelPath.c_str(), PHX_GAMEOBJECT_NULL_ID);
+		if (EcTransform* trans = Loader.Model->FindComponent<EcTransform>())
 		{
-			if (Model.size() > 1)
-			{
-				GameObject* container = GameObjectManager::s_Create("Model");
-
-				for (size_t index = 0; index < Model.size(); index++)
-				{
-					GameObject* mesh = Model[index].Referred();
-					mesh->SetParent(container);
-				}
-
-				container->Name = modelName;
-
-				Objects.push_back(container);
-			}
-			else
-			{
-				Model[0]->Name = modelName;
-				Objects.push_back(Model[0]);
-			}
+			trans->Transform = glm::translate(glm::mat4(1.f), Position);
+			trans->Size = Size;
 		}
 
-		for (GameObject* obj : Model)
+		std::string modelName = PropObject.value("name", "<UN-NAMED>");
+		Loader.Model->Name = modelName;
+		Objects.push_back(Loader.Model);
+
+		for (const ObjectHandle& obj : Loader.Model->GetDescendants())
 		{
 			auto prop_3d = obj->FindComponent<EcMesh>();
 
@@ -285,7 +238,7 @@ static std::vector<ObjectRef> loadSceneVersion1(
 	{
 		const nlohmann::json& Object = PartsNode[Index];
 
-		GameObject* NewObject = GameObjectManager::s_Create("Primitive");
+		ObjectHandle NewObject = GameObjectManager::s_Create("Mesh");
 		Objects.push_back(NewObject);
 
 		EcTransform* ct = NewObject->FindComponent<EcTransform>();
@@ -357,7 +310,7 @@ static std::vector<ObjectRef> loadSceneVersion1(
 
 		std::string LightType = LightObject["type"];
 
-		GameObject* Object = GameObjectManager::s_Create(LightType);
+		ObjectHandle Object = GameObjectManager::s_Create(LightType);
 		Objects.push_back(Object);
 
 		if (LightType != "DirectionalLight")
@@ -388,7 +341,7 @@ static std::vector<ObjectRef> loadSceneVersion1(
 
 // For Versions < 2.12, certain components would automatically add other components
 // Such as `Mesh` adding `Transform`. Replicate this behaviour for older scenes
-static void addLegacyComponentDependencies(GameObject* object)
+static void addLegacyComponentDependencies(const ObjectHandle& object)
 {
 	for (const ReflectorRef& r : object->Components)
 	{
@@ -400,7 +353,7 @@ static void addLegacyComponentDependencies(GameObject* object)
 	}
 }
 
-static ObjectRef createObjectFromJsonItem(const nlohmann::json& Item, uint32_t ItemIndex, float Version)
+static ObjectHandle createObjectFromJsonItem(const nlohmann::json& Item, uint32_t ItemIndex, float Version)
 {
 	if (Version == 2.f)
 	{
@@ -417,7 +370,7 @@ static ObjectRef createObjectFromJsonItem(const nlohmann::json& Item, uint32_t I
 		if (className == "Primitive")
 			className = "Mesh";
 
-		GameObject* object = GameObjectManager::s_Create(className);
+		ObjectHandle object = GameObjectManager::s_Create(className);
 		addLegacyComponentDependencies(object);
 
 		return object;
@@ -433,7 +386,7 @@ static ObjectRef createObjectFromJsonItem(const nlohmann::json& Item, uint32_t I
 			return nullptr;
 		}
 
-		ObjectRef object = GameObjectManager::Get()->Create();
+		ObjectHandle object = GameObjectManager::Get()->Create();
 
 		for (auto it = components.value().begin(); it != components.value().end(); it++)
 		{
@@ -469,10 +422,9 @@ static ObjectRef createObjectFromJsonItem(const nlohmann::json& Item, uint32_t I
 	}
 }
 
-static std::vector<ObjectRef> loadSceneVersion2(const std::string& Contents, float Version, bool* Success)
+static std::vector<ObjectHandle> loadSceneVersion2(const std::string& Contents, float Version, bool* Success)
 {
 	ZoneScoped;
-
 	nlohmann::json jsonData;
 
 	try
@@ -508,8 +460,8 @@ static std::vector<ObjectRef> loadSceneVersion2(const std::string& Contents, flo
 
 	const nlohmann::json& gameObjectsNode = jsonData["GameObjects"];
 
-	std::vector<std::pair<int64_t,  ObjectRef>> objects;
-	std::unordered_map<int64_t, ObjectRef> objectsMap;
+	std::vector<std::pair<int64_t,  ObjectHandle>> objects;
+	std::unordered_map<int64_t, ObjectHandle> objectsMap;
 	std::unordered_map<int64_t, int64_t> realIdToSceneId;
 	std::unordered_map<uint32_t, std::unordered_map<std::string, uint32_t>> objectProps;
 
@@ -519,8 +471,7 @@ static std::vector<ObjectRef> loadSceneVersion2(const std::string& Contents, flo
 	for (uint32_t itemIndex = 0; itemIndex < gameObjectsNode.size(); itemIndex++)
 	{
 		const nlohmann::json& item = gameObjectsNode[itemIndex];
-
-		ObjectRef newObject = createObjectFromJsonItem(item, itemIndex, Version);
+		ObjectHandle newObject = createObjectFromJsonItem(item, itemIndex, Version);
 
 		std::string name = item.find("Name") != item.end() ? (std::string)item["Name"] : newObject->Name;
 
@@ -691,11 +642,11 @@ static std::vector<ObjectRef> loadSceneVersion2(const std::string& Contents, flo
 
 	ZoneNamedN(fixupzone, "FixupObjectReferentProperties", true);
 
-	std::vector<ObjectRef> rootObjects;
+	std::vector<ObjectHandle> rootObjects;
 
 	for (auto& it : objects)
 	{
-		ObjectRef object = it.second;
+		ObjectHandle object = it.second;
 
 		// !! IMPORTANT !!
 		// The `Parent` key *should not* be set for Root Nodes as their parent
@@ -744,7 +695,7 @@ static std::vector<ObjectRef> loadSceneVersion2(const std::string& Contents, flo
 	return rootObjects;
 }
 
-std::vector<ObjectRef> SceneFormat::Deserialize(
+std::vector<ObjectHandle> SceneFormat::Deserialize(
 	const std::string& Contents,
 	bool* SuccessPtr
 )
@@ -752,7 +703,6 @@ std::vector<ObjectRef> SceneFormat::Deserialize(
 	ZoneScoped;
 
 	float version = getVersion(Contents);
-
 	size_t jsonStartLoc = Contents.find_first_of("{");
 
 	if (jsonStartLoc == std::string::npos)
@@ -767,15 +717,12 @@ std::vector<ObjectRef> SceneFormat::Deserialize(
 	}
 
 	std::string jsonFileContents = Contents.substr(jsonStartLoc);
-
-	std::vector<ObjectRef> objects{};
+	std::vector<ObjectHandle> objects;
 
 	if (version >= 1.f && version < 2.f)
 		objects = loadSceneVersion1(jsonFileContents, SuccessPtr);
-
 	else if (version >= 2.f && version < 3.f)
 			objects = loadSceneVersion2(jsonFileContents, version, SuccessPtr);
-
 	else
 	{
 		errorString = std::format(
@@ -964,10 +911,13 @@ std::string SceneFormat::Serialize(std::vector<GameObject*> Objects, const std::
 	for (GameObject* rootObject : Objects)
 	{
 		serializer.SerializeObject(rootObject, /* IsRootNode = */ true);
-		
-		for (GameObject* desc : rootObject->GetDescendants())
+
+		rootObject->ForEachDescendant([&serializer](const ObjectHandle& desc)
+		{
 			if (desc->Serializes)
-				serializer.SerializeObject(desc);
+				serializer.SerializeObject(desc.Dereference());
+			return true;
+		});
 	}
 
 	json["GameObjects"] = serializer.Items;

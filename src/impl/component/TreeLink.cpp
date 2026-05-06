@@ -1,4 +1,5 @@
 #include "component/TreeLink.hpp"
+#include "datatype/GameObject.hpp"
 
 uint32_t TreeLinkComponentManager::CreateComponent(GameObject* Object)
 {

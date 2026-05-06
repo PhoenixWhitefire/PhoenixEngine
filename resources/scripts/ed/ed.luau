@@ -34,6 +34,8 @@ local StageUpdateSignal: EventConnection?
 local EditorCam = assert(workspace.SceneCamera)
 local EditorTl = GameObject.new("TreeLink")
 local InterfaceLink = GameObject.new("TreeLink")
+EditorTl.Name = "EditorTl"
+InterfaceLink.Name = "InterfaceLink"
 
 local Project: Types.Project = {
 	DataModel = nil,
@@ -610,18 +612,18 @@ local function openProject_(ManualPath: string?)
 
 	-- TODO luau
 	Project.Workspace = assert(Project.DataModel :: any):FindChildWithComponent("Workspace")
-	assert(Project.Workspace).Name = "Workspace"
-
 	if not Project.Workspace then
 		-- TODO luau: Project.Workspace is refining to `nil`
 		Project.Workspace = GameObject.new("Workspace")
+		assert(Project.Workspace)
+
 		Project.Workspace.SceneCamera = GameObject.new("Camera")
 		Project.Workspace.SceneCamera.Parent = Project.Workspace
 
 		Project.Workspace.Name = "Workspace"
 		Project.Workspace.SceneCamera.Name = "Camera"
 
-		print("Re-created Workspace")
+		warn("Re-created Workspace")
 	end
 
 	assert(Project.Workspace)
@@ -1340,7 +1342,7 @@ local function renderMainMenuBar(dt: number)
 	end
 
 	local mainMenuCursorY = PlayerInput:GetCursorPosition().y
-	HoveringOverMenuBar = mainMenuCursorY < RibbonPopupDistance
+	HoveringOverMenuBar = mainMenuCursorY < RibbonPopupDistance and PlayerInput.CursorMode == Enum.CursorMode.Normal
 
 	local openAboutWindow = false
 	local openSettingsWindow = false
@@ -1789,6 +1791,7 @@ SelectionPart.Material = "boxframe"
 SelectionPart.Tint = Color.new(166/255, 200/255, 1)
 SelectionPart.PhysicsCollisions = false
 SelectionPart.FaceCulling = Enum.FaceCulling.None
+SelectionPart.Name = "SelectionPart"
 
 local CommandBarCommand = ""
 local IsHoveringViewportTitlebar = false

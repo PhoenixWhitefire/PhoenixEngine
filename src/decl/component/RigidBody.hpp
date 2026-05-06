@@ -1,7 +1,6 @@
 // RigidBody.hpp, 22/01/2026
 #pragma once
 
-#include "datatype/GameObject.hpp"
 #include "component/Transform.hpp"
 
 enum class EnCollisionType : uint8_t

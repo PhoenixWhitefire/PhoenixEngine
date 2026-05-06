@@ -265,9 +265,9 @@ const Reflection::StaticMethodMap& AssetServiceComponentManager::GetMethods()
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 const std::string& path = std::string(inputs[0].AsStringView());
-	            std::vector<ObjectRef> loaded = ModelLoader(path, PHX_GAMEOBJECT_NULL_ID).LoadedObjs;
+	            ObjectHandle loaded = ModelLoader(path, PHX_GAMEOBJECT_NULL_ID).Model;
 
-                return { loaded.at(0)->ToGenericValue() };
+                return { loaded->ToGenericValue() };
             }
         } },
 
@@ -282,7 +282,7 @@ const Reflection::StaticMethodMap& AssetServiceComponentManager::GetMethods()
                 if (!readSuccess)
                     return { Reflection::GenericValue::Null(), contents };
 
-                std::vector<ObjectRef> objects = SceneFormat::Deserialize(contents, &readSuccess);
+                std::vector<ObjectHandle> objects = SceneFormat::Deserialize(contents, &readSuccess);
 
                 if (!readSuccess)
                     return { Reflection::GenericValue::Null(), SceneFormat::GetLastErrorString() };
@@ -290,7 +290,7 @@ const Reflection::StaticMethodMap& AssetServiceComponentManager::GetMethods()
                 std::vector<Reflection::GenericValue> returnArray;
                 returnArray.reserve(objects.size());
 
-                for (const ObjectRef& obj : objects)
+                for (const ObjectHandle& obj : objects)
                     returnArray.push_back(obj->ToGenericValue());
 
                 return { Reflection::GenericValue(returnArray), "" };

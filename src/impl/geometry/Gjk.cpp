@@ -8,6 +8,7 @@
 
 #include "geometry/Gjk.hpp"
 #include "component/Mesh.hpp"
+#include "datatype/GameObject.hpp"
 #include "asset/MeshProvider.hpp"
 
 static const glm::vec3 CubePoints[] = {

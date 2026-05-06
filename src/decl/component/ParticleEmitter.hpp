@@ -5,7 +5,7 @@
 
 #include "render/RendererScene.hpp"
 
-#include "datatype/GameObject.hpp"
+#include "datatype/ComponentBase.hpp"
 #include "datatype/ValueGradient.hpp"
 
 struct EcParticleEmitter : public Component<EntityComponent::ParticleEmitter>

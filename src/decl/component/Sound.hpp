@@ -9,7 +9,6 @@
 #include <miniaudio/miniaudio.h>
 #include <glm/mat4x4.hpp>
 
-#include "datatype/GameObject.hpp"
 #include "datatype/ComponentBase.hpp"
 
 struct EcSound : public Component<EntityComponent::Sound>
@@ -29,7 +28,7 @@ struct EcSound : public Component<EntityComponent::Sound>
 	float NextRequestedPosition = -1.f;
 
 	ObjectRef Object;
-	uint32_t EcId = PHX_GAMEOBJECT_NULL_ID;
+	uint32_t EcId = UINT32_MAX;
 
 	std::vector<Reflection::EventCallback> OnLoadedCallbacks;
 	ma_sound* SoundInstance;

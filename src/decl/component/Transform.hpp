@@ -2,7 +2,6 @@
 
 #include <glm/mat4x4.hpp>
 
-#include "datatype/GameObject.hpp"
 #include "datatype/ComponentBase.hpp"
 
 struct EcTransform : public Component<EntityComponent::Transform>

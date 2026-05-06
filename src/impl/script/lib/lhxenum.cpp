@@ -19,6 +19,7 @@
 
 #include "script/luhx.hpp"
 #include "script/enum/keys.hpp"
+#include "Reflection.hpp"
 
 int luhxopen_Enum(lua_State* L)
 {

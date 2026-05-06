@@ -187,7 +187,7 @@ static void resolveCollisions(Physics::World& World, float DeltaTime, Physics* p
 				IntersectionLib::CollisionPoints collisionPoints = IntersectionLib::Gjk(arb, brb);
 
 				if (collisionPoints.HasCollision)
-					collisions.emplace_back(a, b, collisionPoints);
+					collisions.emplace_back(a.Dereference(), b, collisionPoints);
 
 				brb->CurTransform = nullptr;
 			}

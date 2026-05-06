@@ -470,7 +470,7 @@ static void traverseHierarchy(
 	static uint32_t boxframeMaterial = UINT32_MAX;
 	static uint32_t cubeMesh = MeshProvider::Get()->LoadFromPath("!Cube");
 
-	Root->ForEachChild([&](GameObject* object) -> bool
+	Root->ForEachChild([&](const ObjectHandle& object) -> bool
 	{
 		if (EcSound* sound = object->FindComponent<EcSound>(); sound && !Engine::Get()->IsHeadlessMode)
 			sound->Update(DeltaTime);
@@ -588,7 +588,7 @@ static void traverseHierarchy(
 				RendererScene,
 				PhysicsWorld,
 				ParticleEmitters,
-				object,
+				object.Dereference(),
 				SceneCamera,
 				DeltaTime,
 				Sun,
@@ -617,7 +617,7 @@ static void traverseAndRenderUIHierarchy(
 {
 	ZoneScoped;
 
-	Root->ForEachChild([&](GameObject* child) -> bool
+	Root->ForEachChild([&](const ObjectHandle& child) -> bool
 	{
 		if (!child->Enabled)
 			return true;
@@ -672,7 +672,7 @@ static void traverseAndRenderUIHierarchy(
 			renderer.AccumulatedDrawCallCount++;
 		}
 
-		traverseAndRenderUIHierarchy(child, renderer, shader, gpuMesh, currentPosition, currentSize, currentRotation);
+		traverseAndRenderUIHierarchy(child.Dereference(), renderer, shader, gpuMesh, currentPosition, currentSize, currentRotation);
 		return true; // continue
 	});
 }
@@ -752,7 +752,7 @@ static GLuint startLoadingSkybox(std::vector<uint32_t>* skyboxFacesBeingLoaded)
 
 ImVec2 Engine::GetViewportInputRectSize() const
 {
-	return OverrideDefaultViewportInputRect ? OverrideViewportInputSize : ImVec2{ (float)WindowSizeX, (float)WindowSizeY };
+	return OverrideDefaultViewportInputRect ? OverrideViewportInputSize : ImVec2((float)WindowSizeX, (float)WindowSizeY);
 }
 
 void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& particleEmitters)
@@ -770,7 +770,7 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 	ImVec2 viewportSize = GetViewportInputRectSize();
 	float aspectRatio = viewportSize.x / viewportSize.y;
 
-	ObjectHandle sceneCamObject = WorkspaceRef->FindComponent<EcWorkspace>()->GetSceneCamera();
+	const ObjectHandle& sceneCamObject = WorkspaceRef->FindComponent<EcWorkspace>()->GetSceneCamera();
 	EcCamera* sceneCamera = sceneCamObject->FindComponent<EcCamera>();
 
 	// we do this AFTER  `traverseHierarchy` in case any Scripts
@@ -917,7 +917,7 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 	glEnable(GL_FRAMEBUFFER_SRGB);
 }
 
-static void ensureDataModelValid(GameObject* DataModel)
+static void ensureDataModelValid(const ObjectHandle& DataModel)
 {
 	PHX_ENSURE_MSG(DataModel, "DataModel is NULL!");
 
@@ -927,7 +927,7 @@ static void ensureDataModelValid(GameObject* DataModel)
 	PHX_ENSURE_MSG(DataModel->FindComponent<EcDataModel>(), "DataModel masquerading!");
 }
 
-void Engine::BindDataModel(GameObject* NewDataModel)
+void Engine::BindDataModel(const ObjectHandle& NewDataModel)
 {
 	ensureDataModelValid(NewDataModel);
 
@@ -1025,7 +1025,7 @@ void Engine::Start()
 
 		if (!IsHeadlessMode)
 			m_TextureManager.FinalizeAsyncLoadedTextures();
-		
+
 		m_MeshProvider.FinalizeAsyncLoadedMeshes();
 		Logging::FlushParallelEvents();
 
@@ -1139,7 +1139,7 @@ void Engine::Start()
 				CurrentScene,
 				physWorld,
 				particleEmittersRenderList,
-				WorkspaceRef,
+				WorkspaceRef.Dereference(),
 				sceneCamera,
 				deltaTime,
 				&sun,
@@ -1355,8 +1355,10 @@ void Engine::Shutdown()
 
 	for (const GameObject& obj : ObjectManager.WorldArray)
 	{
-		if (obj.Valid)
+		if (obj.HardRefCount > 0)
 			Log.WarningF("Object {} still has references!", obj.GetFullName());
+		else if (obj.Valid)
+			Log.WarningF("Object {} left dangling!", obj.GetFullName());
 	}
 
 	EngineInstance = nullptr;

@@ -19,7 +19,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 			REFLECTION_OPTIONAL(GameObject),
 			[](void* p) -> Reflection::GenericValue
 			{
-				return static_cast<GameObject*>(p)->GetParent()->ToGenericValue();
+				return GameObject::s_ToGenericValue(static_cast<GameObject*>(p)->GetParent());
 			},
 			[](void* p, const Reflection::GenericValue& gv)
 			{
@@ -57,7 +57,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 
 				static_cast<GameObject*>(p)->ForEachChild(
 					// damn
-					[gf](GameObject* g)
+					[gf](const ObjectHandle& g)
 					-> bool
 					{
 						std::vector<Reflection::GenericValue> rets = (*gf.Func)({ g->ToGenericValue() }); // damn
@@ -86,7 +86,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 
 				static_cast<GameObject*>(p)->ForEachDescendant(
 					// damn
-					[gf](GameObject* g)
+					[gf](const ObjectHandle& g)
 					-> bool
 					{
 						std::vector<Reflection::GenericValue> rets = (*gf.Func)({ g->ToGenericValue() }); // damn
@@ -112,7 +112,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 			[](void* p, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
 			{
 				std::vector<Reflection::GenericValue> retval;
-				for (GameObject* g : static_cast<GameObject*>(p)->GetChildren())
+				for (const ObjectHandle& g : static_cast<GameObject*>(p)->GetChildren())
 					retval.push_back(g->ToGenericValue());
 
 				// ctor for ValueType::Array
@@ -126,7 +126,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 			[](void* p, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
 			{
 				std::vector<Reflection::GenericValue> retval;
-				for (GameObject* g : static_cast<GameObject*>(p)->GetDescendants())
+				for (const ObjectHandle& g : static_cast<GameObject*>(p)->GetDescendants())
 					retval.push_back(g->ToGenericValue());
 
 				// ctor for ValueType::Array
@@ -144,26 +144,13 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 			}
 		} },
 
-		{ "MergeWith", Reflection::MethodDescriptor{
-			{ Reflection::ValueType::GameObject },
-			{},
-			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-			{
-				GameObject* g = static_cast<GameObject*>(p);
-				GameObject* o = GameObjectManager::Get()->FromGenericValue(inputs[0]);
-
-				g->MergeWith(o);
-				return { g->ToGenericValue() };
-			}
-		} },
-
 		{ "FindChild", Reflection::MethodDescriptor{
 			{ Reflection::ValueType::String },
 			{ REFLECTION_OPTIONAL(GameObject) },
 			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
 			{
 				GameObject* g = static_cast<GameObject*>(p);
-				return { g->FindChild(inputs[0].AsStringView())->ToGenericValue() };
+				return { GameObject::s_ToGenericValue(g->FindChild(inputs[0].AsStringView())) };
 			}
 		} },
 
@@ -177,7 +164,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 					RAISE_RT("Invalid component type '{}'", inputs[0].AsStringView());
 
 				GameObject* g = static_cast<GameObject*>(p);
-				return { g->FindChildWithComponent(ec)->ToGenericValue() };
+				return { GameObject::s_ToGenericValue(g->FindChildWithComponent(ec)) };
 			}
 		} },
 
@@ -315,8 +302,8 @@ void* ReflectorRef::Referred() const
 		return GetComponentManagerByComponentType(Type)->GetComponent(Id);
 }
 
-static GameObject* cloneRecursive(
-	ObjectHandle Root,
+static ObjectHandle cloneRecursive(
+	const ObjectHandle& Root,
 	// u_m < og-child, vector < pair < clone-object-referencing-ogchild, property-referencing-ogchild > > >
 	std::unordered_map<ObjectHandle, std::vector<std::pair<ObjectHandle, std::string_view>>, HandleHasher> OverwritesMap = {},
 	std::unordered_map<ObjectHandle, ObjectHandle, HandleHasher> OriginalToCloneMap = {}
@@ -326,6 +313,9 @@ static GameObject* cloneRecursive(
 
 	for (const ReflectorRef& ref : Root->Components)
 		newObj->AddComponent(ref.Type);
+
+	for (uint16_t tag : Root->Tags)
+		newObj->Tags.push_back(tag);
 
 	auto overwritesIt = OverwritesMap.find(Root);
 
@@ -338,12 +328,7 @@ static GameObject* cloneRecursive(
 		overwritesIt->second.clear();
 	}
 
-	std::vector<GameObject*> rootDescsRaw = Root->GetDescendants();
-	std::vector<ObjectHandle> rootDescs;
-	rootDescs.reserve(rootDescsRaw.size());
-
-	for (GameObject* d : rootDescsRaw)
-		rootDescs.emplace_back(d);
+	std::vector<ObjectHandle> rootDescs = Root->GetDescendants();
 
 	for (auto& it : Root->GetProperties())
 	{
@@ -373,11 +358,7 @@ static GameObject* cloneRecursive(
 		newObj->SetPropertyValue(it.first, rootVal);
 	}
 
-	std::vector<ObjectHandle> chrefs;
-	for (GameObject* ch : Root->GetChildren())
-		chrefs.emplace_back(ch);
-
-	for (const ObjectHandle& ch : chrefs)
+	for (const ObjectHandle& ch : Root->GetChildren())
 	{
 		if (ch->Serializes)
 			cloneRecursive(ch, OverwritesMap, OriginalToCloneMap)->SetParent(newObj);
@@ -386,71 +367,10 @@ static GameObject* cloneRecursive(
 	return newObj;
 }
 
-static void mergeRecursive(
-	ObjectRef me,
-	ObjectRef other,
-	std::unordered_map<uint32_t, uint32_t>& MergedOverrides
-)
-{
-	MergedOverrides[other->ObjectId] = me->ObjectId;
-
-	for (ObjectRef ch : other->GetChildren())
-		if (GameObject* og = me->FindChild(ch->Name))
-			mergeRecursive(og, ch, MergedOverrides);
-		else
-			ch->SetParent(me);
-	
-	for (const ReflectorRef& ref : other->Components)
-		if (!me->FindComponentByType(ref.Type))
-			me->AddComponent(ref.Type);
-
-	for (auto& it : other->GetProperties())
-		if (it.second->Set && it.first != "Parent")
-		{
-			Reflection::GenericValue v = other->GetPropertyValue(it.first);
-
-			if (v.Type == Reflection::ValueType::GameObject)
-			{
-				// TODO 29/05/2025
-				// not sure what it means if this is NULL, i kinda forgor how this
-				// whole thing works
-				GameObject* g = GameObjectManager::Get()->FromGenericValue(v);
-
-				auto moit = MergedOverrides.find(g ? g->ObjectId : PHX_GAMEOBJECT_NULL_ID);
-				if (moit != MergedOverrides.end())
-					v = GameObjectManager::Get()->FindById(moit->second)->ToGenericValue();
-			}
-
-			me->SetPropertyValue(it.first, v);
-		}
-
-	for (ObjectRef d : me->GetDescendants())
-		for (auto& it : d->GetProperties())
-		{
-			Reflection::GenericValue v = d->GetPropertyValue(it.first);
-
-			if (v.Type == Reflection::ValueType::GameObject && GameObjectManager::Get()->FromGenericValue(v)->ObjectId == other->ObjectId)
-				d->SetPropertyValue(it.first, me->ToGenericValue());
-		}
-}
-
-GameObject* GameObject::Duplicate()
+ObjectHandle GameObject::Duplicate()
 {
 	ZoneScoped;
 	return cloneRecursive(this);
-}
-
-void GameObject::MergeWith(GameObject* Other)
-{
-	ZoneScoped;
-
-	// not sure if i actually need to do this
-	// 24/12/2024
-	std::unordered_map<uint32_t, uint32_t> mergedOverridesDummy;
-
-	mergeRecursive(this, Other, mergedOverridesDummy);
-
-	Other->Destroy();
 }
 
 GameObject* GameObjectManager::FromGenericValue(const Reflection::GenericValue& gv)
@@ -470,29 +390,32 @@ GameObject* GameObjectManager::FromGenericValue(const Reflection::GenericValue& 
 
 GameObject* GameObjectManager::FindById(uint32_t Id)
 {
-	if (Id == PHX_GAMEOBJECT_NULL_ID || Id == 0 || Id >= WorldArray.size())
+	assert(Id > 0);
+
+	if (Id == PHX_GAMEOBJECT_NULL_ID || Id >= WorldArray.size())
 		return nullptr;
 
 	GameObject& obj = WorldArray[Id];
-	return obj.Valid ? &obj : nullptr;
+	assert(obj.Valid);
+	return &obj;
 }
 
 void GameObject::IncrementHardRefs()
 {
-	m_HardRefCount++;
+	HardRefCount++;
 
-	if (m_HardRefCount > UINT16_MAX - 1)
+	if (HardRefCount > UINT16_MAX - 1)
 		RAISE_RT("Too many hard refs!");
 }
 
 void GameObject::DecrementHardRefs()
 {
-	if (m_HardRefCount == 0)
+	if (HardRefCount == 0)
 		RAISE_RT("Tried to decrement hard refs, with no hard references!");
 
-	m_HardRefCount--;
+	HardRefCount--;
 
-	if (m_HardRefCount == 0)
+	if (HardRefCount == 0)
 		Destroy();
 }
 
@@ -505,13 +428,14 @@ void GameObject::Destroy()
 	if (!IsDestructionPending)
 	{
 		GameObjectManager* ObjectManager = GameObjectManager::Get();
-
-		m_HardRefCount++;
+		HardRefCount++;
 
 		for (uint16_t tagId : Tags)
 		{
 			GameObjectManager::Collection& collection = ObjectManager->Collections[tagId];
-			collection.Items.erase(std::find(collection.Items.begin(), collection.Items.end(), ObjectId));
+			if (const auto& it = std::find(collection.Items.begin(), collection.Items.end(), ObjectId); it != collection.Items.end())
+				collection.Items.erase(it);
+
 			REFLECTION_SIGNAL_EVENT(collection.RemovedEvent.Callbacks, this->ToGenericValue());
 			REFLECTION_SIGNAL_EVENT(OnTagRemovedCallbacks, ObjectManager->Collections[tagId].Name);
 		}
@@ -529,16 +453,14 @@ void GameObject::Destroy()
 				((EcDataModel*)ref.Referred())->Close();
 		}
 
-		assert(m_HardRefCount > 1);
-		DecrementHardRefs(); // remove the ref added in `::Create`
-
-		m_HardRefCount--;
+		assert(HardRefCount > 0);
+		HardRefCount--;
 		this->IsDestructionPending = true;
 	}
 
-	if (m_HardRefCount == 0 && Valid)
+	if (HardRefCount == 0 && Valid)
 	{
-		for (GameObject* child : this->GetChildren())
+		for (const ObjectHandle& child : this->GetChildren())
 			child->Destroy();
 
 		Valid = false;
@@ -572,7 +494,7 @@ bool GameObject::IsDescendantOf(const GameObject* Object) const
 	return false;
 }
 
-void GameObject::SetParent(GameObject* newParent)
+void GameObject::SetParent(const ObjectHandle& newParent)
 {
 	ZoneScoped;
 
@@ -598,10 +520,10 @@ void GameObject::SetParent(GameObject* newParent)
 			GetFullName()
 		);
 
-	GameObject* oldParent = GameObjectManager::Get()->FindById(Parent);
-
-	if (newParent == oldParent)
+	if (newParent.Reference.TargetId == Parent)
 		return;
+
+	GameObject* oldParent = GameObjectManager::Get()->FindById(Parent);
 
 	// we HAVE to do this BEFORE `::RemoveChild`, otherwise
 	// it could get called twice in a row due to `::DecrementHardRefs`
@@ -627,14 +549,14 @@ void GameObject::SetParent(GameObject* newParent)
 				.TargetObject = this,
 				.Property = &s_Api.Properties.at("Parent"),
 				.PreviousValue = GameObject::s_ToGenericValue(oldParent),
-				.NewValue = GameObject::s_ToGenericValue(newParent)
+				.NewValue = GameObject::s_ToGenericValue(newParent.Reference.Referred())
 			});
 		}
 	}
 
 	if (!newParent)
 	{
-		this->ForEachDescendant([](GameObject* d) noexcept -> bool {
+		this->ForEachDescendant([](const ObjectHandle& d) noexcept -> bool {
 			d->OwningDataModel = PHX_GAMEOBJECT_NULL_ID;
 			d->OwningWorkspace = PHX_GAMEOBJECT_NULL_ID;
 			return true;
@@ -656,7 +578,7 @@ void GameObject::SetParent(GameObject* newParent)
 
 	if (newOwningWorkspace != this->OwningWorkspace)
 	{
-		this->ForEachDescendant([newOwningWorkspace](GameObject* d) noexcept -> bool {
+		this->ForEachDescendant([newOwningWorkspace](const ObjectHandle& d) noexcept -> bool {
 			d->OwningWorkspace = newOwningWorkspace;
 			return true;
 		});
@@ -668,7 +590,7 @@ void GameObject::SetParent(GameObject* newParent)
 
 	if (newOwningDataModel != this->OwningDataModel)
 	{
-		this->ForEachDescendant([newOwningDataModel](GameObject* d) noexcept -> bool {
+		this->ForEachDescendant([newOwningDataModel](const ObjectHandle& d) noexcept -> bool {
 			d->OwningDataModel = newOwningDataModel;
 			return true;
 		});
@@ -682,7 +604,7 @@ void GameObject::SetParent(GameObject* newParent)
 	newParent->AddChild(this);
 }
 
-void GameObject::AddChild(GameObject* c)
+void GameObject::AddChild(const ObjectHandle& c)
 {
 	ZoneScoped;
 
@@ -720,22 +642,31 @@ void GameObject::RemoveChild(uint32_t id)
 		RAISE_RT("ID:{} is _not my ({}) sonnn~_", ObjectId, id);
 }
 
-Reflection::GenericValue GameObject::s_ToGenericValue(const GameObject* Object)
+Reflection::GenericValue GameObject::s_ToGenericValue(GameObject* Object)
 {
-	// TODO GCC bug?? will segfault on the ternary unless this is marked `volatile`
-	volatile Reflection::GenericValue gv;
-	gv.Type = Reflection::ValueType::GameObject;
-	gv.Val.Int = Object ? Object->ObjectId : PHX_GAMEOBJECT_NULL_ID;
+    // TODO GCC bug?? will segfault on the ternary unless this is marked `volatile`
+    volatile Reflection::GenericValue gv;
+    gv.Type = Reflection::ValueType::GameObject;
+    gv.Val.Int = Object ? Object->ObjectId : PHX_GAMEOBJECT_NULL_ID;
 
-	Reflection::GenericValue gv2;
-	gv2.Type = Reflection::ValueType::GameObject;
-	gv2.Val.Int = gv.Val.Int;
+    Reflection::GenericValue gv2;
+    gv2.Type = Reflection::ValueType::GameObject;
+    gv2.Val.Int = gv.Val.Int;
 
-	return gv2;
+    if (Object)
+    {
+        // Decremented by destructor of `GenericValue`
+        // TODO GVOBJECT
+        Object->IncrementHardRefs();
+        Object->IncrementHardRefs(); // there's gv and gv2
+    }
+
+    return gv2;
 }
 
-Reflection::GenericValue GameObject::ToGenericValue() const
+Reflection::GenericValue GameObject::ToGenericValue()
 {
+	assert(this);
 	return s_ToGenericValue(this);
 }
 
@@ -744,7 +675,7 @@ GameObject* GameObject::GetParent() const
 	return GameObjectManager::Get()->FindById(this->Parent);
 }
 
-void GameObject::ForEachChild(const std::function<bool(GameObject*)>& Callback)
+void GameObject::ForEachChild(const std::function<bool(const ObjectHandle&)>& Callback)
 {
 	GameObjectManager* ObjectManager = GameObjectManager::Get();
 	size_t beforeSize = ObjectManager->WorldArray.size();
@@ -762,7 +693,7 @@ void GameObject::ForEachChild(const std::function<bool(GameObject*)>& Callback)
 	}
 }
 
-bool GameObject::ForEachDescendant(const std::function<bool(GameObject*)>& Callback)
+bool GameObject::ForEachDescendant(const std::function<bool(const ObjectHandle&)>& Callback)
 {
 	GameObjectManager* ObjectManager = GameObjectManager::Get();
 	size_t beforeSize = ObjectManager->WorldArray.size();
@@ -785,35 +716,35 @@ bool GameObject::ForEachDescendant(const std::function<bool(GameObject*)>& Callb
 	return false;
 }
 
-std::vector<GameObject*> GameObject::GetChildren()
+std::vector<ObjectHandle> GameObject::GetChildren()
 {
-	std::vector<GameObject*> children;
+	std::vector<ObjectHandle> children;
 	children.reserve(Children.size());
 
 	for (uint32_t id : Children)
 	{
 		GameObject* child = GameObjectManager::Get()->FindById(id);
 		assert(child);
-		children.push_back(child);
+		children.emplace_back(child);
 	}
 
 	return children;
 }
 
-std::vector<GameObject*> GameObject::GetDescendants()
+std::vector<ObjectHandle> GameObject::GetDescendants()
 {
 	ZoneScoped;
 
-	std::vector<GameObject*> descendants;
+	std::vector<ObjectHandle> descendants;
 	descendants.reserve(Children.size());
 
 	for (uint32_t id : Children)
 	{
 		GameObject* child = GameObjectManager::Get()->FindById(id);
 		assert(child);
-		descendants.push_back(child);
+		descendants.emplace_back(child);
 
-		std::vector<GameObject*> childrenDescendants = child->GetDescendants();
+		std::vector<ObjectHandle> childrenDescendants = child->GetDescendants();
 		std::copy(childrenDescendants.begin(), childrenDescendants.end(), std::back_inserter(descendants));
 	}
 
@@ -822,9 +753,9 @@ std::vector<GameObject*> GameObject::GetDescendants()
 
 GameObject* GameObject::FindChild(const std::string_view& ChildName)
 {
-	for (uint32_t index = 0; index < Children.size(); index++)
+	for (uint32_t id : Children)
 	{
-		GameObject* child = GameObjectManager::Get()->FindById(Children[index]);
+		GameObject* child = GameObjectManager::Get()->FindById(id);
 		assert(child);
 
 		if (child->Name == ChildName)
@@ -837,9 +768,9 @@ GameObject* GameObject::FindChild(const std::string_view& ChildName)
 
 GameObject* GameObject::FindChildWithComponent(EntityComponent Component)
 {
-	for (uint32_t index = 0; index < Children.size(); index++)
+	for (uint32_t id : Children)
 	{
-		GameObject* child = GameObjectManager::Get()->FindById(Children[index]);
+		GameObject* child = GameObjectManager::Get()->FindById(id);
 		assert(child);
 
 		if (child->FindComponentByType(Component))
@@ -1136,7 +1067,7 @@ void* GameObject::FindComponentByType(EntityComponent Type)
 	return nullptr;
 }
 
-GameObject* GameObjectManager::Create()
+ObjectHandle GameObjectManager::Create()
 {
 	if (WorldArray.size() == 0)
 	{
@@ -1161,24 +1092,20 @@ GameObject* GameObjectManager::Create()
 	GameObject& created = WorldArray.back();
 
 	created.ObjectId = numObjects;
-	created.IncrementHardRefs();
 	return &created;
 }
 
-GameObject* GameObjectManager::Create(EntityComponent FirstComponent)
+ObjectHandle GameObjectManager::Create(EntityComponent FirstComponent)
 {
-	GameObject* created = Create();
+	ObjectHandle created = Create();
 	created->AddComponent(FirstComponent);
 	created->Name = s_EntityComponentNames[(size_t)FirstComponent];
 
 	return created;
 }
 
-GameObject* GameObjectManager::Create(const std::string_view& FirstComponent)
+ObjectHandle GameObjectManager::Create(const std::string_view& FirstComponent)
 {
-	if (FirstComponent == "Primitive")
-		return Create("Mesh");
-
 	EntityComponent it = FindComponentTypeByName(FirstComponent);
 
 	if (it == EntityComponent::None)

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "datatype/GameObject.hpp"
 #include "datatype/ComponentBase.hpp"
 #include "datatype/Color.hpp"
 

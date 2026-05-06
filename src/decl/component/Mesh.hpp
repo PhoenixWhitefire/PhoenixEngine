@@ -3,7 +3,6 @@
 #include <string>
 #include <glm/vec3.hpp>
 
-#include "datatype/GameObject.hpp"
 #include "datatype/ComponentBase.hpp"
 #include "datatype/Color.hpp"
 

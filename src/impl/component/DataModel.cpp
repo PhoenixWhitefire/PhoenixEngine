@@ -123,7 +123,7 @@ const Reflection::StaticMethodMap& DataModelComponentManager::GetMethods()
                 if (GameObject* preExisting = dm->Object->FindChildWithComponent(it))
                     return { preExisting->ToGenericValue() };
 
-                GameObject* newObject = GameObjectManager::s_Create(it);
+                ObjectHandle newObject = GameObjectManager::s_Create(it);
                 newObject->SetParent(dm->Object);
 
                 return { newObject->ToGenericValue() };
@@ -249,18 +249,10 @@ void EcDataModel::Bind()
 	ZoneScopedC(tracy::Color::LightSkyBlue);
 
     if (Modules.size() > 0 || LiveScripts.empty() || !CanLoadModules)
-    {
         return;
-    }
 
-	std::string fullName = Object->GetFullName();
-	ZoneTextF("DataModel: %s\nScripts: %s", fullName.c_str(), LiveScripts.c_str());
-
-	// prevent ourselves from being deleted by the code we run.
-	// if that code errors, it'll be a use-after-free as we try
-	// to access `m_L` to get the error message
-	// 24/12/2024
-	ObjectHandle dontKillMePlease = this->Object;
+    std::string fullName = Object->GetFullName();
+    ZoneTextF("DataModel: %s\nScripts: %s", fullName.c_str(), LiveScripts.c_str());
 
     std::string path = FileRW::ResolvePathNormalized(LiveScripts);
 

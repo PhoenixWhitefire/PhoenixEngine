@@ -5,11 +5,16 @@
 
 #include <glm/mat4x4.hpp>
 
-#include "datatype/GameObject.hpp"
+#include "datatype/EntityComponent.hpp"
 
 class InputEvent;
 class Color;
 struct lua_State;
+
+namespace Reflection
+{
+	class EventDescriptor;
+};
 
 void luhx_openlibs(lua_State*);
 

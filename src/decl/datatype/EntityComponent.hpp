@@ -4,7 +4,11 @@
 #include <string_view>
 #include <unordered_map>
 
-enum class EntityComponent : uint8_t
+#include "datatype/Ref.hpp"
+
+struct EntityComponent_
+{
+enum EC : uint8_t
 {
 	None,
 
@@ -45,6 +49,9 @@ enum class EntityComponent : uint8_t
 
 	__count
 };
+};
+
+using EntityComponent = EntityComponent_::EC;
 
 static inline const std::string_view s_EntityComponentNames[] = {
 	"<NONE>",

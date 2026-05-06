@@ -202,7 +202,6 @@ export type GameObject = {
   GetTags: (self: GameObject) -> { string },
   HasComponent: (self: GameObject, Component: keyof<Creatables>) -> (boolean),
   HasTag: (self: GameObject, Tag: string) -> (boolean),
-  MergeWith: (self: GameObject, With: GameObject) -> (),
   RemoveComponent: (self: GameObject, Component: keyof<Creatables>) -> (),
   RemoveTag: (self: GameObject, Tag: string) -> (),
 

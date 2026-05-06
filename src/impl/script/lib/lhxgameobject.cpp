@@ -80,7 +80,7 @@ static int gameobject_new(lua_State* L)
 
 	if (!component)
 	{
-		luhx_pushgameobject(L, GameObjectManager::Get()->Create());
+		luhx_pushgameobject(L, GameObjectManager::Get()->Create().Dereference());
 		return 1;
 	}
 
@@ -88,19 +88,19 @@ static int gameobject_new(lua_State* L)
 	if (ec == EntityComponent::None)
 		luaL_error(L, "Invalid component name '%s'", component);
 
-	GameObject* newObject = GameObjectManager::s_Create(ec);
+	ObjectHandle newObject = GameObjectManager::s_Create(ec);
 	newObject->Name = std::string(component, len);
 
 	for (EntityComponent ec : GetCommonDependenciesForComponent(ec))
 		newObject->AddComponent(ec);
 
-	luhx_pushgameobject(L, newObject);
+	luhx_pushgameobject(L, newObject.Dereference());
 	return 1;
 }
 
 static int gameobject_fromComponents(lua_State* L)
 {
-    GameObject* newObject = GameObjectManager::Get()->Create();
+    ObjectHandle newObject = GameObjectManager::Get()->Create();
 
 	if (lua_type(L, 1) != LUA_TNONE)
 	{
@@ -126,7 +126,7 @@ static int gameobject_fromComponents(lua_State* L)
 		}
 	}
 
-    luhx_pushgameobject(L, newObject);
+    luhx_pushgameobject(L, newObject.Dereference());
 	return 1;
 }
 

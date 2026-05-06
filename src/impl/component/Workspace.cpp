@@ -11,9 +11,9 @@
 
 static ObjectHandle s_FallbackCamera;
 
-static GameObject* createCamera()
+static ObjectHandle createCamera()
 {
-	GameObject* camera = GameObjectManager::s_Create("Camera");
+	ObjectHandle camera = GameObjectManager::s_Create("Camera");
 	camera->FindComponent<EcCamera>()->UseSimpleController = true;
 	camera->Name = "FallbackCamera";
 
@@ -26,6 +26,17 @@ uint32_t WorkspaceComponentManager::CreateComponent(GameObject* Object)
 	m_Components[id].Object = Object;
 
     return id;
+}
+
+void WorkspaceComponentManager::DeleteComponent(uint32_t Id)
+{
+	if (uint32_t sceneCamId = m_Components[Id].m_SceneCameraId; sceneCamId != PHX_GAMEOBJECT_NULL_ID && sceneCamId != s_FallbackCamera->ObjectId)
+	{
+		GameObjectManager::Get()->FindById(sceneCamId)->DecrementHardRefs();
+		m_Components[Id].m_SceneCameraId = PHX_GAMEOBJECT_NULL_ID;
+	}
+
+	ComponentManager<EcWorkspace>::DeleteComponent(Id);
 }
 	
 void WorkspaceComponentManager::Shutdown()
@@ -43,7 +54,7 @@ const Reflection::StaticPropertyMap& WorkspaceComponentManager::GetProperties()
 			[](void* p)
 			-> Reflection::GenericValue
 			{
-				GameObject* cam = static_cast<EcWorkspace*>(p)->GetSceneCamera();
+				const ObjectHandle& cam = static_cast<EcWorkspace*>(p)->GetSceneCamera();
 
 				if (cam->ObjectId != s_FallbackCamera->ObjectId)
 					return cam->ToGenericValue();
@@ -447,7 +458,7 @@ std::vector<GameObject*> EcWorkspace::GetObjectsInAabb(const glm::vec3& Position
 	IntersectionLib::Intersection intersection;
 	std::vector<GameObject*> hits;
 
-	for (GameObject* p : Object->GetDescendants())
+	for (const ObjectHandle& p : Object->GetDescendants())
 	{
 		if (std::find(IgnoreList.begin(), IgnoreList.end(), p) != IgnoreList.end())
 			continue;
@@ -467,19 +478,19 @@ std::vector<GameObject*> EcWorkspace::GetObjectsInAabb(const glm::vec3& Position
 			);
         
 			if (hit.Occurred)
-				hits.push_back(p);
+				hits.push_back(p.Dereference());
 		}
 	}
 
 	return hits;
 }
 
-GameObject* EcWorkspace::GetSceneCamera() const
+ObjectHandle EcWorkspace::GetSceneCamera() const
 {
 	if (!s_FallbackCamera.HasValue())
 		s_FallbackCamera = createCamera();
 
-	GameObject* sceneCam = GameObjectManager::Get()->FindById(m_SceneCameraId);
+	ObjectHandle sceneCam = GameObjectManager::Get()->FindById(m_SceneCameraId);
 
 	if (sceneCam && !sceneCam->FindComponent<EcCamera>())
 	{
@@ -487,24 +498,32 @@ GameObject* EcWorkspace::GetSceneCamera() const
 		sceneCam = nullptr;
 	}
 
-	return sceneCam ? sceneCam : s_FallbackCamera.Dereference();
+	return sceneCam ? sceneCam : s_FallbackCamera;
 }
 
-void EcWorkspace::SetSceneCamera(GameObject* NewCam)
+void EcWorkspace::SetSceneCamera(const ObjectHandle& NewCam)
 {
-	ObjectRef nc = NewCam;
-
 	if (NewCam && !NewCam->FindComponent<EcCamera>())
 		RAISE_RT("Must have a Camera component!");
 
-	if (GameObject* prevCam = GetSceneCamera())
-		if (ObjectRef(prevCam) != nc)
+	if (const ObjectHandle& prevCam = GetSceneCamera())
+	{
+		if (prevCam != NewCam)
+		{
 			prevCam->FindComponent<EcCamera>()->IsSceneCamera = false;
+			if (prevCam->ObjectId != s_FallbackCamera->ObjectId)
+				prevCam->DecrementHardRefs();
+		}
+	}
 
-	m_SceneCameraId = nc ? nc->ObjectId : UINT32_MAX;
+	m_SceneCameraId = NewCam ? NewCam->ObjectId : UINT32_MAX;
 
-	if (nc.Referred())
-		nc->FindComponent<EcCamera>()->IsSceneCamera = true;
+	if (NewCam)
+	{
+		NewCam->FindComponent<EcCamera>()->IsSceneCamera = true;
+		if (NewCam->ObjectId != s_FallbackCamera->ObjectId)
+			NewCam->IncrementHardRefs();
+	}
 }
 
 void EcWorkspace::UpdateSoundListener() const

@@ -1472,9 +1472,6 @@
   "@phoenix/globaltype/GameObject.HasTag": {
     "documentation": "Returns whether or not the Object has the given `Collections` tag"
   },
-  "@phoenix/globaltype/GameObject.MergeWith": {
-    "documentation": "Merges the Objects together, replacing descendants with the same name"
-  },
   "@phoenix/globaltype/GameObject.Name": {
     "documentation": "The name of the Object, usually what was passed into `GameObject.new`"
   },

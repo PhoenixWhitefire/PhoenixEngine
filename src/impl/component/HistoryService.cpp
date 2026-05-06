@@ -141,7 +141,7 @@ const Reflection::StaticPropertyMap& HistoryComponentManager::GetProperties()
             [](void*) -> Reflection::GenericValue
             {
                 History* history = History::Get();
-                return GameObjectManager::Get()->FindById(history->TargetDataModel)->ToGenericValue();
+                return GameObject::s_ToGenericValue(GameObjectManager::Get()->FindById(history->TargetDataModel));
             },
             [](void*, const Reflection::GenericValue& gv)
             {

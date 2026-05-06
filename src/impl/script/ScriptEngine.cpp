@@ -600,8 +600,15 @@ static Reflection::GenericValue toGenericValue(lua_State* L, int StackIndex, int
 		}
 		else if (strcmp(tname, "GameObject") == 0)
 		{
-			Reflection::GenericValue gv = *(uint32_t*)lua_touserdata(L, StackIndex);
+			uint32_t id = *(uint32_t*)lua_touserdata(L, StackIndex);
+			Reflection::GenericValue gv = id;
 			gv.Type = Reflection::ValueType::GameObject;
+
+			if (id != PHX_GAMEOBJECT_NULL_ID)
+			{
+				// TODO GVOBJECT decremented in destructor of GenericValue
+				GameObjectManager::Get()->FindById(id)->IncrementHardRefs();
+			}
 
 			return gv;
 		}
@@ -1729,11 +1736,11 @@ lua_Status ScriptEngine::L::ProtectedCall(lua_State* L, int narg, int nret, int 
 
 nlohmann::json ScriptEngine::DumpApiToJson()
 {
-	ObjectRef tempdm = GameObjectManager::s_Create("DataModel");
-	ObjectRef tempwp = GameObjectManager::s_Create("Workspace");
+	ObjectHandle tempdm = GameObjectManager::s_Create("DataModel");
+	ObjectHandle tempwp = GameObjectManager::s_Create("Workspace");
 	tempwp->SetParent(tempdm);
 	GameObjectManager::Get()->DataModel = tempdm->ObjectId;
-	
+
 	lua_State* base = lua_newstate(l_alloc, nullptr);
 	lua_State* luhx = L::Create("ApiDump");
 	// Load Standard Library ('print' etc)

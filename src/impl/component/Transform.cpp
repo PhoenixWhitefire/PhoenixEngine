@@ -4,23 +4,23 @@
 #include "component/RigidBody.hpp"
 #include "datatype/GameObject.hpp"
 
-static void recomputeAabbRecursive(GameObject* Object)
+static void recomputeAabbRecursive(const ObjectHandle& Object)
 {
     if (EcRigidBody* crb = Object->FindComponent<EcRigidBody>())
         crb->RecomputeAabb();
 
-    Object->ForEachChild([](GameObject* Child) -> bool
+    Object->ForEachChild([](const ObjectHandle& Child) -> bool
     {
         recomputeAabbRecursive(Child);
         return true;
     });
 }
 
-static void recomputeChildrenWorldTransformsRecursive(GameObject* Object)
+static void recomputeChildrenWorldTransformsRecursive(const ObjectHandle& Object)
 {
     EcTransform* pct = Object->FindComponent<EcTransform>();
 
-    Object->ForEachChild([Object, pct](GameObject* Child) -> bool
+    Object->ForEachChild([Object, pct](const ObjectHandle& Child) -> bool
     {
         if (EcTransform* ct = Child->FindComponent<EcTransform>())
         {

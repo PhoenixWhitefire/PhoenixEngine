@@ -1,6 +1,9 @@
 // DeveloperTools service, 31/03/2026
 #include "component/DeveloperToolsService.hpp"
+#include "datatype/GameObject.hpp"
 #include "DeveloperTools.hpp"
+#include "Utilities.hpp"
+#include "Log.hpp"
 
 #define PROPERTY_PROXY(n) REFLECTION_PROPERTY( \
     #n, \

@@ -10,8 +10,7 @@ class ModelLoader
 {
 public:
 	ModelLoader(const std::string& AssetPath, uint32_t Parent);
-
-	std::vector<ObjectRef> LoadedObjs;
+	ObjectHandle Model;
 
 private:
 	struct MeshMaterial
@@ -21,14 +20,14 @@ private:
 		std::string Name;
 
 		glm::vec4 BaseColorFactor = { 1.f, 1.f, 1.f, 1.f };
-		uint32_t BaseColorTexture{};
+		uint32_t BaseColorTexture = UINT32_MAX;
 
 		float MetallicFactor = 1.f;
 		float RoughnessFactor = 1.f;
 
-		uint32_t MetallicRoughnessTexture{};
-		uint32_t NormalTexture{};
-		uint32_t EmissiveTexture{};
+		uint32_t MetallicRoughnessTexture = UINT32_MAX;
+		uint32_t NormalTexture = UINT32_MAX;
+		uint32_t EmissiveTexture = UINT32_MAX;
 
 		glm::vec3 EmissiveFactor = { 0.f, 0.f, 0.f };
 

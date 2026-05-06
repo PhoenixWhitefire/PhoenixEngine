@@ -229,9 +229,20 @@ void Reflection::GenericValue::CopyInto(GenericValue& Target, const GenericValue
 		Target.Val.Double = Source.Val.Double;
 		break;
 	}
-	case ValueType::Integer: case ValueType::GameObject:
+	case ValueType::Integer:
 	{
 		Target.Val.Int = Source.Val.Int;
+		break;
+	}
+	case ValueType::GameObject:
+	{
+		Target.Val.Int = Source.Val.Int;
+		if (Target.Val.Int != PHX_GAMEOBJECT_NULL_ID)
+		{
+			GameObject* object = GameObjectManager::Get()->FromGenericValue(Target);
+			object->IncrementHardRefs();
+		}
+
 		break;
 	}
 	case ValueType::EventSignal:
@@ -540,6 +551,15 @@ static void deallocGv(Reflection::GenericValue* gv)
 			Memory::Free(gv->Val.Str);
 		break;
 	}
+	case ValueType::GameObject:
+	{
+		if (gv->Val.Int != PHX_GAMEOBJECT_NULL_ID)
+		{
+			GameObject* object = GameObjectManager::Get()->FromGenericValue(*gv);
+			object->DecrementHardRefs();
+		}
+		break;
+	}
 
 	default: {}
 	}
@@ -647,6 +667,7 @@ Reflection::GenericValue& Reflection::GenericValue::operator=(Reflection::Generi
 
 Reflection::GenericValue& Reflection::GenericValue::operator=(const Reflection::GenericValue& Other)
 {
+	deallocGv(this);
 	CopyInto(*this, Other);
 
 	return *this;
@@ -676,7 +697,7 @@ static std::string_view BaseNames[] = {
 	"InputEvent",
 	"NumberGradient",
 	"VectorGradient",
-	"ColorGradient"
+	"ColorGradient",
 };
 
 static_assert(

@@ -4,7 +4,6 @@
 #include <string>
 
 #include "datatype/ComponentBase.hpp"
-#include "datatype/GameObject.hpp"
 
 struct EcAnimationAsset : public Component<EntityComponent::AnimationAsset>
 {
