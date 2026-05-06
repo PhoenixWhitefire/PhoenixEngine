@@ -7,13 +7,13 @@
 
 #include "datatype/EntityComponent.hpp"
 
-class InputEvent;
+struct InputEvent;
 class Color;
 struct lua_State;
 
 namespace Reflection
 {
-	class EventDescriptor;
+	struct EventDescriptor;
 };
 
 void luhx_openlibs(lua_State*);

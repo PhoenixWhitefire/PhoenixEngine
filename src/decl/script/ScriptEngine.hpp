@@ -11,7 +11,7 @@
 
 #define ROOT_LVM_NAME "RootLVM"
 
-class EventConnectionData;
+struct EventConnectionData;
 
 namespace ScriptEngine
 {
