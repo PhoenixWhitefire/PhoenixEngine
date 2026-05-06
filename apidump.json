@@ -161,6 +161,7 @@
         "Properties": {
           "BoundDataModel": "GameObject READONLY",
           "CommitHash": "String READONLY",
+          "CommitTag": "String READONLY",
           "Framerate": "Integer READONLY",
           "FramerateCap": "Integer",
           "IsHeadless": "Boolean READONLY",

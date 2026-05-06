@@ -1355,6 +1355,9 @@
   "@phoenix/globaltype/Engine.CommitHash": {
     "documentation": "The Git commit that was used to produce this Engine build"
   },
+  "@phoenix/globaltype/Engine.CommitTag": {
+    "documentation": "The relationship between the Engine's commit at the nearest Release tag"
+  },
   "@phoenix/globaltype/Engine.CreateVM": {
     "documentation": "Creates a new Luau VM with the given name. The `workspace` and `game` globals of the VM are taken from the currently-bound DataModel"
   },

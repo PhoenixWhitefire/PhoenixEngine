@@ -301,6 +301,7 @@ export type DirectionalLight = {
 export type Engine = {
   read BoundDataModel: GameObject ,
   read CommitHash: string ,
+  read CommitTag: string ,
   read Framerate: number ,
   FramerateCap: number,
   read IsHeadless: boolean ,

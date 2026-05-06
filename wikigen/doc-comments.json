@@ -382,6 +382,7 @@
         "Properties": {
           "BoundDataModel": "The DataModel object that is currently bound",
           "CommitHash": "The Git commit that was used to produce this Engine build",
+          "CommitTag": "The relationship between the Engine's commit at the nearest Release tag",
           "Framerate": "The Engine's current framerate",
           "FramerateCap": "The maximum framerate the Engine will reach before attempting to self-limit",
           "IsHeadless": "Whether the Engine is currently running in headless mode",

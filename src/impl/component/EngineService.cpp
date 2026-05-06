@@ -250,6 +250,15 @@ const Reflection::StaticPropertyMap& EngineComponentManager::GetProperties()
             nullptr
         ),
         REFLECTION_PROPERTY(
+            "CommitTag",
+            String,
+            [](void*) -> Reflection::GenericValue
+            {
+                return GetEngineCommitTag();
+            },
+            nullptr
+        ),
+        REFLECTION_PROPERTY(
             "TargetPlatform",
             String,
             [](void*) -> Reflection::GenericValue

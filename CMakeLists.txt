@@ -207,6 +207,24 @@ if (NOT GIT_COMMAND_RESULT EQUAL 0)
     set(GIT_COMMIT_HASH "Unknown")
 endif()
 
-message("The Git commit hash is ${GIT_COMMIT_HASH}")
+# Commit tag (if available)
+execute_process(
+    COMMAND git describe --tags
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_COMMIT_TAG
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE GIT_COMMAND_RESULT
+)
 
-set_property(SOURCE src/impl/Version.cpp PROPERTY COMPILE_DEFINITIONS "PHX_VERSION_HPP_ENGINE_GIT_COMMIT=\"${GIT_COMMIT_HASH}\"")
+if (NOT GIT_COMMAND_RESULT EQUAL 0)
+    message(WARNING "Unable to detect the current Engine Git commit tag.")
+    set(GIT_COMMIT_TAG "Unknown")
+endif()
+
+message("The Git commit hash is ${GIT_COMMIT_HASH}")
+message("The Git commit tag is ${GIT_COMMIT_TAG}")
+
+set_property(SOURCE src/impl/Version.cpp PROPERTY COMPILE_DEFINITIONS
+	"PHX_VERSION_HPP_ENGINE_GIT_COMMIT=\"${GIT_COMMIT_HASH}\""
+	"PHX_VERSION_HPP_ENGINE_GIT_COMMIT_TAG=\"${GIT_COMMIT_TAG}\""
+)

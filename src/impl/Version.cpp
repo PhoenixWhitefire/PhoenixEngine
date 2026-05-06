@@ -10,12 +10,21 @@ const char* GetEngineVersion()
 }
 
 #ifndef PHX_VERSION_HPP_ENGINE_GIT_COMMIT
-#define PHX_VERSION_HPP_ENGINE_GIT_COMMIT "Build system did not define `PHX_VERSION_HPP_ENGINE_GIT_COMMIT`"
+#define PHX_VERSION_HPP_ENGINE_GIT_COMMIT "Unknown(e=2)"
+#endif
+
+#ifndef PHX_VERSION_HPP_ENGINE_GIT_COMMIT_TAG
+#define PHX_VERSION_HPP_ENGINE_GIT_COMMIT_TAG "Unknown(e=2)"
 #endif
 
 const char* GetEngineCommitHash()
 {
     return PHX_VERSION_HPP_ENGINE_GIT_COMMIT;
+}
+
+const char* GetEngineCommitTag()
+{
+    return PHX_VERSION_HPP_ENGINE_GIT_COMMIT_TAG;
 }
 
 const char* GetEngineBuildDate()

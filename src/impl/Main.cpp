@@ -488,10 +488,13 @@ int main(int argc, char** argv)
 	Log.AppendF(
 		"\tVersion: {}"
 		"\n\tCommit: {}"
-		"\n\tTarget platform: " PHX_TARGET_PLATFORM "\n\tTarget compiler: " PHX_TARGET_COMPILER
-		"\n\tBuild type: " PHX_BUILD_TYPE "\n\tBuild date: {} @ {}"
+		"\n\tTag: {}"
+		"\n\tTarget platform: " PHX_TARGET_PLATFORM
+		"\n\tTarget compiler: " PHX_TARGET_COMPILER
+		"\n\tBuild type: " PHX_BUILD_TYPE
+		"\n\tBuild date: {} @ {}"
 		"\n\tHeadless: " IS_HEADLESS_STR,
-		GetEngineVersion(), GetEngineCommitHash(), GetEngineBuildDate(), GetEngineBuildTime()
+		GetEngineVersion(), GetEngineCommitHash(), GetEngineCommitTag(), GetEngineBuildDate(), GetEngineBuildTime()
 	);
 
 	Log.Info("Command line: &&");

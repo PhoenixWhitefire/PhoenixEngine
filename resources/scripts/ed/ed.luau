@@ -1641,7 +1641,7 @@ local function renderMainMenuBar(dt: number)
 		imgui.urllink(GITHUB_URL)
 		cursor += vector.create(0, tts.y + 2)
 
-		local commitText = Engine.CommitHash:sub(1, 8)
+		local commitText = `{ Engine.CommitTag } ({ Engine.CommitHash:sub(1, 8) })`
 
 		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, imgui.textsize(commitText).x), cursor.y)
 		imgui.urllink(commitText, `{ GITHUB_URL }/commit/{ Engine.CommitHash }`)
