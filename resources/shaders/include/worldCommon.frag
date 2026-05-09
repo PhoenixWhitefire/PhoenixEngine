@@ -1,4 +1,4 @@
-#version 460 core
+//#version 460 core
 
 #ifndef USE_TRI_PLANAR_PROJECTION
 #define USE_TRI_PLANAR_PROJECTION false
