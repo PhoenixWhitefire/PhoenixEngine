@@ -150,12 +150,11 @@ set_property(TARGET Glad PROPERTY FOLDER "Vendor")
 if (MSVC)
 	set_property(TARGET libcurl_object PROPERTY FOLDER "Vendor/Curl")
 	set_property(TARGET libcurl_static PROPERTY FOLDER "Vendor/Curl")
-	# MSVC only??
-	set_property(TARGET Luau.Bytecode PROPERTY FOLDER "Vendor/Luau")
 endif()
 
 set_property(TARGET Luau.Compiler PROPERTY FOLDER "Vendor/Luau")
 set_property(TARGET Luau.Analysis PROPERTY FOLDER "Vendor/Luau")
+set_property(TARGET Luau.Bytecode PROPERTY FOLDER "Vendor/Luau")
 set_property(TARGET Luau.Require PROPERTY FOLDER "Vendor/Luau")
 set_property(TARGET Luau.CLI.lib PROPERTY FOLDER "Vendor/Luau")
 set_property(TARGET Luau.CodeGen PROPERTY FOLDER "Vendor/Luau")
