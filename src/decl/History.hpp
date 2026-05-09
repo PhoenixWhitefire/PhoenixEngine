@@ -13,6 +13,10 @@ class History
 public:
     static History* Get();
 
+    History();
+    ~History();
+    void Shutdown();
+
     struct Event
     {
         ReflectorRef Target;

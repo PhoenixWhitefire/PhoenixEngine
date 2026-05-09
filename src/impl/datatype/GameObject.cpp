@@ -685,6 +685,9 @@ void GameObject::ForEachChild(const std::function<bool(const ObjectHandle&)>& Ca
 		GameObject* child = GameObjectManager::Get()->FindById(id);
 		assert(child);
 
+		if (child->Parent != ObjectId)
+			continue; // callback changed parents
+
 		if (bool shouldContinue = Callback(child); !shouldContinue)
 			break;
 
@@ -702,6 +705,9 @@ bool GameObject::ForEachDescendant(const std::function<bool(const ObjectHandle&)
 	{
 		GameObject* child = GameObjectManager::Get()->FindById(id);
 		assert(child);
+
+		if (child->Parent != ObjectId)
+			continue; // callback changed parents
 
 		if (bool shouldContinue = Callback(child); !shouldContinue)
 			return true;

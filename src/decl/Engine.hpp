@@ -11,6 +11,7 @@
 #include "asset/ShaderManager.hpp"
 #include "asset/MeshProvider.hpp"
 #include "ThreadManager.hpp"
+#include "History.hpp"
 
 #include "datatype/GameObject.hpp"
 #include "datatype/Components.hpp"
@@ -104,6 +105,7 @@ private:
 	ShaderManager m_ShaderManager;
 	MeshProvider m_MeshProvider;
 	Physics m_Physics;
+	History m_History;
 
 	ShaderProgram m_PostFxShader;
 	ShaderProgram m_SkyboxShader;

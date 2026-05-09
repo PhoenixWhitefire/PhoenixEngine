@@ -70,7 +70,6 @@ static std::vector<TextEditorTab> s_TextEditors;
 static auto s_EditorLuauLang = TextEditor::LanguageDefinition::Lua();
 
 static const std::string_view AddableComponents[] = {
-	"Animation",
 	"Camera",
 	"DirectionalLight",
 	"PointLight",
@@ -102,6 +101,7 @@ static std::string GlobalsDocPrologue;
 static std::unordered_map<std::string, std::string> ClassIcons;
 
 static bool ExplorerShouldSeekToCurrentSelection = false;
+static bool ExplorerShouldSeekToCurrentSelection_Frame = false;
 
 static GpuFrameBuffer MtlEditorPreview;
 static Scene MtlPreviewScene = Scene{
@@ -1882,7 +1882,7 @@ static void recursiveIterateTree(const ObjectHandle& current)
 	if (ExplorerShouldSeekToCurrentSelection && isInSelections(current))
 	{
 		ExplorerShouldSeekToCurrentSelection = false;
-		ImGui::ScrollToItem();
+		ImGui::SetScrollHereY();
 	}
 
 	InsertObjectButtonHoveredOver = nullptr;
@@ -1901,7 +1901,17 @@ static void recursiveIterateTree(const ObjectHandle& current)
 			// make the insert button have better contrast
 			if (object != InsertObjectButtonHoveredOver)
 				flags |= ImGuiTreeNodeFlags_Selected;
-			ExplorerShouldSeekToCurrentSelection = false;
+
+			if (ExplorerShouldSeekToCurrentSelection)
+			{
+				if (!ExplorerShouldSeekToCurrentSelection_Frame)
+				{
+					ExplorerShouldSeekToCurrentSelection = false;
+					ImGui::SetScrollHereY();
+				}
+				else
+					ExplorerShouldSeekToCurrentSelection_Frame = false;
+			}
 		}
 
 		if (object->Children.empty())
@@ -1921,6 +1931,7 @@ static void recursiveIterateTree(const ObjectHandle& current)
 				if (isInSelections(desc))
 				{
 					ImGui::SetNextItemOpen(true);
+					flags |= ImGuiTreeNodeFlags_DefaultOpen;
 					break;
 				}
 		}
@@ -1930,7 +1941,7 @@ static void recursiveIterateTree(const ObjectHandle& current)
 		bool openInserter = false;
 		bool isHovered = false;
 
-		bool open = ImGui::TreeNodeEx((const void*)nullptr, flags, "%s", "");
+		bool open = ImGui::TreeNodeEx(object->Name.c_str(), flags, "%s", "");
 
 		if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
 		{
@@ -1950,7 +1961,14 @@ static void recursiveIterateTree(const ObjectHandle& current)
 				try
 				{
 					if (GameObject* dragging = GameObjectManager::Get()->FindById(child))
+					{
 						dragging->SetParent(object);
+						if (!ImGui::IsKeyDown(ImGuiKey_LeftShift))
+						{
+							ExplorerShouldSeekToCurrentSelection = true;
+							ExplorerShouldSeekToCurrentSelection_Frame = true;
+						}
+					}
 					else
 						setErrorMessage("Object was deleted");
 				}
@@ -2031,7 +2049,8 @@ static void recursiveIterateTree(const ObjectHandle& current)
 
 		if (open)
 		{
-			recursiveIterateTree(object);
+			if (object->Children.size() > 0)
+				recursiveIterateTree(object);
 			ImGui::TreePop();
 		}
 
@@ -2810,7 +2829,11 @@ static void renderExplorer()
 			try
 			{
 				if (GameObject* dragging = GameObjectManager::Get()->FindById(child))
+				{
 					dragging->SetParent(ExplorerRoot);
+					if (!ImGui::IsKeyDown(ImGuiKey_LeftShift))
+							ExplorerShouldSeekToCurrentSelection = true;
+				}
 				else
 					setErrorMessage("Object was deleted");
 			}
@@ -2839,6 +2862,7 @@ static void renderExplorer()
 			ObjectHandle newObject = GameObjectManager::Get()->Create();
 			newObject->SetParent(ObjectInsertionTarget);
 			Selections = { newObject };
+			ExplorerShouldSeekToCurrentSelection = true;
 		}
 
 		for (size_t i = 0; i < std::size(AddableComponents); i++)

@@ -1318,8 +1318,10 @@ void Engine::Shutdown()
 	Log.Info("Shutting down script engine...");
 	ScriptEngine::Shutdown();
 
-	Log.Info("Shutting down Component Managers...");
+	Log.Info("Shutting down History...");
+	m_History.Shutdown();
 
+	Log.Info("Shutting down Component Managers...");
 	// skip the first "None" component manager
 	for (size_t i = 1; i < (size_t)EntityComponent::__count; i++)
 	{

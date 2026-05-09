@@ -2,10 +2,35 @@
 
 #include "History.hpp"
 
+static History* Instance = nullptr;
+
+History::History()
+{
+    assert(!Instance);
+    Instance = this;
+}
+
+History::~History()
+{
+    assert(Instance);
+    Instance = nullptr;
+}
+
 History* History::Get()
 {
-    static History instance;
-    return &instance;
+    assert(Instance);
+    return Instance;
+}
+
+void History::Shutdown()
+{
+    m_ActionHistory.clear();
+
+    if (m_CurrentAction.has_value())
+    {
+        Log.WarningF("History shutting down with '{}' still in progress", m_CurrentAction->Name);
+        m_CurrentAction.reset();
+    }
 }
 
 void History::RecordEvent(const Event& Event)
