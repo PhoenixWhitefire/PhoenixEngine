@@ -43,16 +43,28 @@ static void setSelfAlias(lua_State* L)
 static int fs_write(lua_State* L)
 {
 	setSelfAlias(L);
-	size_t len = 0;
 
     const char* path = luaL_checkstring(L, 1);
-	const char* contents = luaL_checklstring(L, 2, &len);
+	std::string_view contents;
+	size_t len = 0;
+
+	if (lua_isstring(L, 2))
+	{
+		const char* cstr = luaL_checklstring(L, 2, &len);
+		contents = std::string_view(cstr, len);
+	}
+	else if (lua_isbuffer(L, 2))
+	{
+		const void* buf = luaL_checkbuffer(L, 2, &len);
+		contents = std::string_view((const char*)buf, len);
+	}
+
 	bool createDirectories = luaL_optboolean(L, 3, false);
 	std::string errorMessage;
 
     bool success = createDirectories ?
-					FileRW::WriteFileCreateDirectories(path, std::string_view(contents, len), &errorMessage)
-					: FileRW::WriteFile(path, std::string_view(contents, len), &errorMessage);
+					FileRW::WriteFileCreateDirectories(path, contents, &errorMessage)
+					: FileRW::WriteFile(path, contents, &errorMessage);
 
 	if (!success)
 		luaL_error(L, "%s", errorMessage.c_str());

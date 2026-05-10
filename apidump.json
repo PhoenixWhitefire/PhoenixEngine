@@ -92,10 +92,12 @@
       },
       "DataModel": {
         "Events": {
+          "Closing": "()",
           "OnFrameBegin": "(Double)"
         },
         "Methods": {
           "BindToClose": "(Function) -> ()",
+          "Close": "(Integer?) -> ()",
           "GetService": "(String) -> (GameObject)"
         },
         "Properties": {
@@ -148,12 +150,8 @@
       "Engine": {
         "Methods": {
           "BindDataModel": "(GameObject) -> ()",
-          "CloseVM": "(String) -> ()",
-          "CreateVM": "(String) -> ()",
-          "Exit": "(Integer?) -> ()",
           "GetCliArguments": "() -> (Array)",
           "GetConfigValue": "(String) -> (Any)",
-          "RunInVM": "(String, String, String?) -> (Boolean, String?)",
           "SaveConfig": "() -> (Boolean, String)",
           "SetConfigValue": "(String, Any) -> ()",
           "ShowMessageBox": "(String, String, String?, String?, Integer?) -> (Integer)"
@@ -307,6 +305,14 @@
           "Restitution": "Double"
         }
       },
+      "ScriptEngine": {
+        "Methods": {
+          "CloseVM": "(String) -> ()",
+          "CompileToBytecode": "(String) -> (Buffer)",
+          "CreateVM": "(String) -> ()",
+          "RunInVM": "(String, String, String?) -> (Boolean, String?)"
+        }
+      },
       "Sound": {
         "Events": {
           "OnLoaded": "(Boolean)"
@@ -423,13 +429,13 @@
       },
       "Matrix": {
         "Library": {
-          "fromAngles": "function",
-          "fromEulerAnglesXYZ": "function",
-          "fromEulerAnglesYXZ": "function",
-          "fromTranslation": "function",
           "identity": "Matrix",
           "lookAt": "function",
-          "new": "function"
+          "new": "function",
+          "rotated": "function",
+          "rotatedXYZ": "function",
+          "rotatedYXZ": "function",
+          "translated": "function"
         },
         "Metatable": {
           "__add": "function",
@@ -445,9 +451,9 @@
     "Globals": {
       "_VMNAME": "string",
       "appendlog": "function",
-      "game": "GameObject & DataModel",
+      "game": "GameObject & EcDataModel",
       "warn": "function",
-      "workspace": "GameObject & Workspace"
+      "workspace": "GameObject & EcWorkspace"
     },
     "Libraries": {
       "Enum": {

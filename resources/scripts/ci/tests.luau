@@ -6,7 +6,7 @@ task.wait(0.04)
 
 task.delay(15, function()
 	warn("Tests appear to have hung - exiting")
-	game:GetService("Engine"):Exit(1)
+	game:Close(1)
 end)
 
 local start = os.clock()
@@ -223,4 +223,4 @@ print(`Testing session took { os.clock() - start } seconds. Tests themselves too
 
 appendlog("\n\n\n");
 
-game:GetService("Engine"):Exit(if failed == 0 then 0 else 1)
+game:Close(if failed == 0 then 0 else 1)

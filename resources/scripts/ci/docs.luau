@@ -2,11 +2,9 @@
 
 print("Docs CI begin\n\n\n\n\n")
 
-local Engine = game:GetService("Engine")
-
 task.delay(5, function()
 	warn("Docgen appears to have hung - exiting")
-	Engine:Exit(1)
+	game:Close(1)
 end)
 
 local BASE_PATH = "./wikigen"
@@ -168,8 +166,8 @@ export type MeshAssetData = {
 
 definitionsFile ..= "\ntype Services = {\n"
 
-for _, s in { "Engine", "PlayerInput", "AssetManager", "History", "Physics", "Renderer", "Collections", "Network", "Logging", "Interface", "Environment", "DeveloperTools" } do
-	definitionsFile ..= `  {s}: {s},\n`
+for _, s in { "Engine", "PlayerInput", "AssetManager", "History", "Physics", "Renderer", "Collections", "Network", "Logging", "Interface", "Environment", "DeveloperTools", "ScriptEngine" } do
+	definitionsFile ..= `  {s}: Ec{s},\n`
 end
 
 definitionsFile ..= "}\n\n"
@@ -184,19 +182,19 @@ local GameObjectOverrides = {
 
 local function dumpCreatables()
 	local creatablesExtra = {
-		Mesh = " & RigidBody & Transform",
-		SpotLight = " & Transform",
-		PointLight = " & Transform",
-		Model = " & Transform",
-		ParticleEmitter = " & Transform",
-		Camera = " & Transform",
-		RigidBody = " & Transform"
+		Mesh = " & EcRigidBody & EcTransform",
+		SpotLight = " & EcTransform",
+		PointLight = " & EcTransform",
+		Model = " & EcTransform",
+		ParticleEmitter = " & EcTransform",
+		Camera = " & EcTransform",
+		RigidBody = " & EcTransform"
 	}
 
 	definitionsFile ..= "\ntype Components = {\n"
 
 	for _, v in GameObject.validComponents do
-		definitionsFile ..= `  {v}: {v},\n`
+		definitionsFile ..= `  {v}: Ec{v},\n`
 	end
 
 	definitionsFile ..= "}"
@@ -204,7 +202,7 @@ local function dumpCreatables()
 	definitionsFile ..= "\ntype Creatables = {\n"
 
 	for _, v in GameObject.validComponents do
-		definitionsFile ..= `  {v}: {v}{if creatablesExtra[v] then creatablesExtra[v] else ""},\n`
+		definitionsFile ..= `  {v}: Ec{v}{if creatablesExtra[v] then creatablesExtra[v] else ""},\n`
 	end
 
 	definitionsFile ..= "}"
@@ -363,6 +361,7 @@ end
 
 local rtol: { [string]: string } = {
 	Boolean = "boolean",
+	Buffer = "buffer",
 	Integer = "number",
 	Double = "number",
 	String = "string",
@@ -538,12 +537,12 @@ local function dumpReflectionApi(t, d, cn, externType)
 
 				subst = GameObjectOverrides[n] or subst
 				subst = string.gsub(subst, " : ", " -> ")
-				subst = string.gsub(subst, "self", `self: {cn}`)
+				subst = string.gsub(subst, "self", `self: { if cn == "GameObject" then "" else "Ec" }{cn}`)
 
 				if n ~= "SetShaderVariable" then
 					definitionsFile ..= `  { n }: { subst }{ if externType then "" else "," }\n`
 				else
-					definitionsFile ..= "  SetShaderVariable: ((_: Renderer, Shader: string, Variable: string, Value: boolean | number | Color | Matrix, Type: EnumValueType?) -> ()) & ((_: Renderer, Shader: string, Variable: string, Value: vector, Type: EnumValueType) -> ()),\n"
+					definitionsFile ..= "  SetShaderVariable: ((_: EcRenderer, Shader: string, Variable: string, Value: boolean | number | Color | Matrix, Type: EnumValueType?) -> ()) & ((_: EcRenderer, Shader: string, Variable: string, Value: vector, Type: EnumValueType) -> ()),\n"
 				end
 
 				if subst:find("Array") or subst:find("Map") then
@@ -775,7 +774,7 @@ for _, k in orderedComponents do
 		--isExternType = true
 	end
 
-	definitionsFile ..= if isExternType then `declare extern type { k } with\n` else `export type { k } = \{\n`
+	definitionsFile ..= if isExternType then `declare extern type { k } with\n` else `export type { if k == "GameObject" then "" else "Ec" }{ k } = \{\n`
 
 	components ..= `## \`{ k }\`\n\n`
 
@@ -969,5 +968,5 @@ print("Docs CI finish\n\n\n\n\n")
 
 if not _G.LspDefinitionsGeneratorDoNotShutdown then
 	-- close when we're done
-	Engine:Exit()
+	game:Close()
 end

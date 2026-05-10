@@ -54,7 +54,7 @@ jobs:
             c_compiler: cl
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         submodules: true
 
@@ -143,7 +143,7 @@ jobs:
 
     - name: Upload build artifact (Ubuntu)
       if: runner.os == 'Linux'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: "Phoenix_${{ runner.os }}-${{ matrix.build_type }}"
         path: |

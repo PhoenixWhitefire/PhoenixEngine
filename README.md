@@ -1,9 +1,5 @@
 # PhoenixEngine
 
-*✨ core dumped ✨*
-
-<hr>
-
 <img src=".github/assets/pretty1_13-06-2024_bsky.jpg"/>
 
 <small> [*Demo videos*](https://www.youtube.com/@pwf2k) </small>

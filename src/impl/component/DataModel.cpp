@@ -142,7 +142,28 @@ const Reflection::StaticMethodMap& DataModelComponentManager::GetMethods()
                 dm->CloseCallback = inputs[0].AsFunction();
                 return {};
             }
-        } }
+        } },
+
+        { "Close", Reflection::MethodDescriptor{
+            { REFLECTION_OPTIONAL(Integer) },
+            {},
+            [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                EcDataModel* dm = static_cast<EcDataModel*>(p);
+
+                int64_t exitCode = inputs.size() > 0 ? (int)inputs[0].AsInteger() : 0;
+
+                if (exitCode >= INT32_MIN && exitCode <= INT32_MAX)
+                    dm->ExitCode = (int)exitCode;
+                else
+                    RAISE_RT("Exit code '{}' is out of bounds for a 32-bit integer ([{}, {}])", exitCode, INT32_MIN, INT32_MAX);
+
+                dm->Closed = true;
+                REFLECTION_SIGNAL_EVENT(dm->ClosingCallbacks);
+
+                return {};
+            }
+        } },
     };
 
     return methods;
@@ -158,7 +179,8 @@ const Reflection::StaticMethodMap& DataModelComponentManager::GetMethods()
 const Reflection::StaticEventMap& DataModelComponentManager::GetEvents()
 {
     static Reflection::StaticEventMap events = {
-        REFLECTION_EVENT(EcDataModel, OnFrameBegin, Reflection::ValueType::Double)
+        REFLECTION_EVENT(EcDataModel, OnFrameBegin, Reflection::ValueType::Double),
+        REFLECTION_EVENT(EcDataModel, Closing),
     };
 
     return events;
@@ -171,14 +193,28 @@ const Reflection::StaticEventMap& DataModelComponentManager::GetEvents()
 
 static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
 {
+    std::string modulePath = Module;
+    bool isAotBytecode = false;
+
+    if (!std::filesystem::is_regular_file(FileRW::ResolvePathNormalized(modulePath)))
+    {
+        if (std::filesystem::is_regular_file(FileRW::ResolvePathNormalized(modulePath + ".luau")))
+            modulePath.append(".luau");
+        else if (std::filesystem::is_regular_file(FileRW::ResolvePathNormalized(modulePath + ".luauc")))
+        {
+            modulePath.append(".luauc");
+            isAotBytecode = true;
+        }
+    }
+
     bool readSuccess = true;
-	std::string source = FileRW::ReadFile(Module, &readSuccess);
+	std::string sourceCodeOrBytecode = FileRW::ReadFile(modulePath, &readSuccess);
 
 	if (!readSuccess)
 	{
 		Log.ErrorF(
 			"Failed to load '{}': {}",
-			Module, source // `source` will be the error message
+			Module, sourceCodeOrBytecode // `sourceCodeOrBytecode` will be the error message
 		);
 
 		return nullptr;
@@ -189,8 +225,14 @@ static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
 	luaL_sandboxthread(L);
 
     Logging::ScopedContext sc = Logging::Context{ .ContextExtraTags = std::format("TextDocument:{}", Module) };
+    std::string bytecode;
 
-	int result = ScriptEngine::CompileAndLoad(L, source, "@" + FileRW::ResolvePathNormalized(Module));
+    if (isAotBytecode)
+        bytecode = sourceCodeOrBytecode;
+    else
+        bytecode = ScriptEngine::CompileBytecode(sourceCodeOrBytecode);
+
+    int result = ScriptEngine::LoadBytecode(L, bytecode, "@" + FileRW::ResolvePathNormalized(Module));
 
 	if (result == 0)
 	{
@@ -289,6 +331,8 @@ void EcDataModel::Close()
 {
     if (CloseCallback.Func)
     {
+        REFLECTION_SIGNAL_EVENT(ClosingCallbacks);
+
         (*CloseCallback.Func)({});
         (*CloseCallback.Cleanup)();
         delete CloseCallback.Func;

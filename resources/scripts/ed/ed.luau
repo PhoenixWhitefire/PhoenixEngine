@@ -1,6 +1,7 @@
 -- ed.luau, 14/09/2025
 local DeveloperTools = game:GetService("DeveloperTools")
 local AssetManager = game:GetService("AssetManager")
+local ScriptEngine = game:GetService("ScriptEngine")
 local PlayerInput = game:GetService("PlayerInput")
 local Collections = game:GetService("Collections")
 local Interface = game:GetService("Interface")
@@ -28,7 +29,7 @@ local Types = require("./Types.luau")
 type Stage = Types.Stage
 
 local CurrentStage: Stage = "None"
-local Stages: { [string]: ((number) -> ()) & ((Stage) -> (GameObject & DataModel)?) } = {}
+local Stages: { [string]: ((number) -> ()) & ((Stage) -> (GameObject & EcDataModel)?) } = {}
 local StageUpdateSignal: EventConnection?
 
 local EditorCam = assert(workspace.SceneCamera)
@@ -130,7 +131,7 @@ if not fs.isdirectory(EditorPreferences.ProjectsDirectory) then
 	fs.mkdir(EditorPreferences.ProjectsDirectory)
 end
 
-local ReimportWatchers: { [string]: { Disconnect: () -> (), Models: { GameObject & Model } }? } = {}
+local ReimportWatchers: { [string]: { Disconnect: () -> (), Models: { GameObject & EcModel } }? } = {}
 local ModelModifiedTimes: { [string]: number } = {}
 
 if fs.isfile("./editor/models.json") then
@@ -649,7 +650,7 @@ local function openProject_(ManualPath: string?)
 	Project.DataModel.LiveScripts = ""
 
 	Engine:BindDataModel(Project.DataModel)
-	Engine:CreateVM(GameEditingVM)
+	ScriptEngine:CreateVM(GameEditingVM)
 	Engine:BindDataModel(game)
 
 	Project.DataModel.LiveScripts = module
@@ -847,7 +848,7 @@ local function whyCannotPlaytest()
 		else nil
 end
 
-local function watchModelForReimporting(reimportable: GameObject & Model)
+local function watchModelForReimporting(reimportable: GameObject & EcModel)
 	local watcher = ReimportWatchers[reimportable.ImportPath]
 
 	if watcher then
@@ -874,7 +875,7 @@ local function watchModelForReimporting(reimportable: GameObject & Model)
 
 			local action = History:TryBeginAction("Auto re-import during session")
 
-			for _, model in watcher.Models :: { GameObject & Model } do
+			for _, model in watcher.Models :: { GameObject & EcModel } do
 				-- preserve tags, name, parent, object ID, treelinks
 
 				for _, child in model:GetChildren() do
@@ -1784,9 +1785,9 @@ local function renderMainMenuBar(dt: number)
 	end
 end
 
-local PrevSelections: { GameObject & Transform } = {}
+local PrevSelections: { GameObject & EcTransform } = {}
 
-local SelectionPart: GameObject & Mesh & RigidBody & Transform = GameObject.new("Mesh")
+local SelectionPart = GameObject.new("Mesh")
 SelectionPart.Material = "boxframe"
 SelectionPart.Tint = Color.new(166/255, 200/255, 1)
 SelectionPart.PhysicsCollisions = false
@@ -1981,7 +1982,7 @@ PlayerInput.KeyEvent:Connect(function(kie: KeyInputEvent)
 		CommandBarCommand = `print({ CommandBarCommand:sub(2, #CommandBarCommand) })`
 	end
 
-	local success = Engine:RunInVM(if CurrentStage == "ProjectEditing" then GameEditingVM else GameVM, CommandBarCommand, "@@projres/scripts/!CommandBar")
+	local success = ScriptEngine:RunInVM(if CurrentStage == "ProjectEditing" then GameEditingVM else GameVM, CommandBarCommand, "@@projres/scripts/!CommandBar")
 
 	if not success then
 		local cmd = CommandBarCommand
@@ -2312,7 +2313,7 @@ local function renderViewport(DeltaTime: number)
 			continue
 		end
 
-		local sel = (sel_ :: any) :: GameObject & Transform
+		local sel = (sel_ :: any) :: GameObject & EcTransform
 		selmap[sel.ObjectId] = sel
 
 		if not PrevSelections[sel.ObjectId] then
@@ -2695,6 +2696,8 @@ function Stages.SelectProject(DeltaTime: number)
 	renderMainMenuBar(DeltaTime)
 end
 
+local ProjectClosedByDataModelConnection = nil
+
 function Stages.ProjectEditing_Enter(PreviousStage: Stage)
 	assert(Project.DataModel)
 	assert(Project.Workspace)
@@ -2712,7 +2715,7 @@ function Stages.ProjectEditing_Enter(PreviousStage: Stage)
 			end
 		end
 
-		for _, reimportable in Collections:GetTagged(REIMPORTABLE_MODEL) :: { GameObject & Model & Transform } do
+		for _, reimportable in Collections:GetTagged(REIMPORTABLE_MODEL) :: { GameObject & EcModel & EcTransform } do
 			if not reimportable:HasComponent("Model") or not reimportable:HasComponent("Transform") then
 				continue
 			end
@@ -2730,7 +2733,7 @@ function Stages.ProjectEditing_Enter(PreviousStage: Stage)
 
 				local action = History:TryBeginAction("Auto re-import on Project open")
 
-				for _, model in watcher.Models :: { GameObject & Model } do
+				for _, model in watcher.Models :: { GameObject & EcModel } do
 					-- preserve tags, name, parent, object ID, treelinks
 
 					for _, child in model:GetChildren() do
@@ -2749,6 +2752,14 @@ function Stages.ProjectEditing_Enter(PreviousStage: Stage)
 				ModelModifiedTimes[path] = fs.lastwritten(path)
 			end
 		end
+
+		ProjectClosedByDataModelConnection = Project.DataModel.Closing:Connect(function()
+			assert(ProjectClosedByDataModelConnection)
+
+			ProjectClosedByDataModelConnection:Disconnect()
+			ProjectClosedByDataModelConnection = nil
+			changeStageTo("SelectProject")
+		end)
 	end
 
 	return nil
@@ -2809,8 +2820,10 @@ function Stages.ProjectEditing_Leave(NextStage)
 	Project.DataModel = nil
 
 	Engine:SaveConfig()
-	Engine:CloseVM(GameEditingVM)
+	ScriptEngine:CloseVM(GameEditingVM)
 end
+
+local GameClosedConnection = nil
 
 function Stages.ProjectPlaying_Enter(Stage: Stage)
 	PlayerInput.Cursor = Enum.Cursor.NotAllowed
@@ -2828,7 +2841,7 @@ function Stages.ProjectPlaying_Enter(Stage: Stage)
 
 	Project.DataModel.VM = GameVM
 	Engine:BindDataModel(Project.DataModel) -- Set the `game` and `workspace` variables to the correct values in game scripts
-	Engine:CreateVM(GameVM)
+	ScriptEngine:CreateVM(GameVM)
 
 	local projWp = Project.Workspace
 	assert(projWp)
@@ -2840,6 +2853,14 @@ function Stages.ProjectPlaying_Enter(Stage: Stage)
 	end
 
 	workspace.SceneCamera = projWp.SceneCamera
+
+	GameClosedConnection = Project.DataModel.Closing:Connect(function()
+		assert(GameClosedConnection)
+
+		GameClosedConnection:Disconnect()
+		GameClosedConnection = nil
+		changeStageTo("ProjectEditing")
+	end)
 
 	PlayerInput.Cursor = Enum.Cursor.Arrow
 	return Project.DataModel -- Connect to the Project's datamodel `.OnFrameBegin`
@@ -2859,7 +2880,7 @@ function Stages.ProjectPlaying_Leave(DeltaTime)
 	DeveloperTools:SetExplorerRoot(Project.DataModel)
 
 	Engine:BindDataModel(game)
-	Engine:CloseVM(GameVM)
+	ScriptEngine:CloseVM(GameVM)
 
 	PlayerInput.CursorMode = Enum.CursorMode.Normal
 end
@@ -3140,7 +3161,7 @@ Collections:GetTagAddedSignal(REIMPORTABLE_MODEL):Connect(function(Object)
 		return
 	end
 
-	watchModelForReimporting(Object :: GameObject & Model)
+	watchModelForReimporting(Object :: GameObject & EcModel)
 end)
 
 Collections:GetTagRemovedSignal(REIMPORTABLE_MODEL):Connect(function(Object)
@@ -3148,7 +3169,7 @@ Collections:GetTagRemovedSignal(REIMPORTABLE_MODEL):Connect(function(Object)
 		return
 	end
 
-	local model = Object :: GameObject & Model
+	local model = Object :: GameObject & EcModel
 	local watcher = ReimportWatchers[model.ImportPath]
 
 	if not watcher then
@@ -3185,7 +3206,7 @@ if table.find(Engine:GetCliArguments(), "-ed_ci") then
 
 		task.delay(5, function()
 			warn("Potential CI stall - Exiting")
-			Engine:Exit(1)
+			game:Close(1)
 		end)
 
 		local success = xpcall(createNewProject_, function(err)
@@ -3194,19 +3215,19 @@ if table.find(Engine:GetCliArguments(), "-ed_ci") then
 
 		if not success then
 			warn("Failed to create new project!")
-			Engine:Exit(1)
+			game:Close(1)
 			return
 		end
 
 		if CurrentStage ~= "ProjectEditing" then
 			warn(`Stage is {CurrentStage} and not ProjectEditing`)
-			Engine:Exit(1)
+			game:Close(1)
 			return
 		end
 
 		warn("Editor CI checks done")
 		CurrentStage = "SelectProject"
-		Engine:Exit()
+		game:Close()
 	end)
 end
 

@@ -12,10 +12,10 @@ local GizmoMode = 1
 local GizmoMoveIncrement = 0.5
 
 local GizmoContainer = GameObject.new("Model")
-local GizmoPrevTarget: (GameObject & Transform)? = nil
+local GizmoPrevTarget: (GameObject & EcTransform)? = nil
 local GizmoPrevTargetTransform = Matrix.identity
 local GizmoPrevTargetSize = vector.zero
-local GizmoPieceToDirection: { [GameObject & Mesh]: vector } = {}
+local GizmoPieceToDirection: { [GameObject & EcMesh]: vector } = {}
 local GizmoPieces = {
     [vector.create( 1, 0, 0)] = { GameObject.new("Mesh"), GameObject.new("Mesh") },
     [vector.create(-1, 0, 0)] = { GameObject.new("Mesh"), GameObject.new("Mesh") },
@@ -73,7 +73,7 @@ local PrevDragMousePos: vector? = nil
 local IsSurfaceDragging = false
 local IsGizmoDragging = false
 local GizmoDragAxis = vector.zero
-local GizmoDragHandle: (GameObject & Mesh & Transform)? = nil
+local GizmoDragHandle: (GameObject & EcMesh & EcTransform)? = nil
 local GizmoDragStartWorldPoint = nil
 local GizmoDragStartObjectPosition = nil
 local GizmoDragStartTransform = nil
@@ -137,7 +137,7 @@ local function findDxDyToKeepOnScreen(Point: vector, ViewportRenderPosition: vec
     return dx, dy
 end
 
-local function keepGizmoInView(target: GameObject & Transform, ViewportRenderPosition: vector, ViewportRenderSize: vector, DeltaTime: number)
+local function keepGizmoInView(target: GameObject & EcTransform, ViewportRenderPosition: vector, ViewportRenderSize: vector, DeltaTime: number)
     assert(GizmoDragHandle)
 
     local cam = workspace.SceneCamera
@@ -156,8 +156,8 @@ local function keepGizmoInView(target: GameObject & Transform, ViewportRenderPos
         end
     end
 
-    cam.Transform *= Matrix.fromAngles(-dy * orbitSpeed * DeltaTime, -dx * orbitSpeed * DeltaTime, 0)
-    cam.Transform *= Matrix.fromAngles(0, 0, -cam.Transform:ExtractAngles().z)
+    cam.Transform *= Matrix.rotated(-dy * orbitSpeed * DeltaTime, -dx * orbitSpeed * DeltaTime, 0)
+    cam.Transform *= Matrix.rotated(0, 0, -cam.Transform:ExtractAngles().z)
 
     if dx ~= 0 or dy ~= 0 then
         GizmoDragStartObjectPosition = target.Transform.Position
@@ -175,7 +175,7 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
     end
 
     local selections = DeveloperTools:GetExplorerSelections()
-    local target: (GameObject & Transform)? = (if selections[1] and selections[1]:HasComponent("Transform") then selections[1] else nil) :: any
+    local target: (GameObject & EcTransform)? = (if selections[1] and selections[1]:HasComponent("Transform") then selections[1] else nil) :: any
 
     if IsSurfaceDragging or IsGizmoDragging then
         if GizmoPrevTarget and (not target or target ~= GizmoPrevTarget) then
@@ -196,7 +196,7 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
     if PlayerInput:IsKeyPressed(Enum.Key.F) and not PlayerInput.IsKeyboardSunk then
         local pos = target.Transform.Position - (cam.Transform.Forward * math.max(target.Size.x, target.Size.y, target.Size.z) * 1.5)
         -- TODO fix 180* flip
-        cam.Transform = Matrix.lookAt(pos, target.Transform.Position) * Matrix.fromAngles(0, math.pi, 0)
+        cam.Transform = Matrix.lookAt(pos, target.Transform.Position) * Matrix.rotated(0, math.pi, 0)
     end
 
     local tryingToInteract = not PlayerInput.IsMouseSunk and PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Left)
@@ -221,7 +221,7 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
                     BeganSurfaceDragAction = History:TryBeginAction("SurfaceDrag")
                 end
 
-                target.Transform = Matrix.fromTranslation(worldHit.Position + worldHit.Normal * target.Size / 2)
+                target.Transform = Matrix.translated(worldHit.Position + worldHit.Normal * target.Size / 2)
             end
 
             IsSurfaceDragging = true
@@ -248,7 +248,7 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
 
     if target ~= GizmoPrevTarget or target.Transform ~= GizmoPrevTargetTransform or target.Size ~= GizmoPrevTargetSize then
         for direction, piece in GizmoPieces do
-            local trans = target.Transform * Matrix.fromTranslation(direction * target.Size * 0.5 + direction * vector.one)
+            local trans = target.Transform * Matrix.translated(direction * target.Size * 0.5 + direction * vector.one)
             piece[1].Transform, piece[2].Transform = trans, trans
         end
     end
@@ -260,7 +260,7 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
     if tryingToInteract then
         if not IsGizmoDragging and gizmoHit then
             assert(gizmoHit.Object:HasComponent("Mesh"))
-            local hit: GameObject & Mesh & Transform = gizmoHit.Object :: any
+            local hit: GameObject & EcMesh & EcTransform = gizmoHit.Object :: any
 
             PrevDragMousePos = cpos
 
@@ -321,13 +321,13 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
         end
 
         if GizmoMode == 1 then
-            target.Transform = GizmoDragStartTransform * Matrix.fromTranslation(move)
+            target.Transform = GizmoDragStartTransform * Matrix.translated(move)
         else
             local newSize = GizmoDragStartSize + GizmoPieceToDirection[GizmoDragHandle] * amount * math.sign(delta.x + delta.y + delta.z)
 
             if newSize.x > 0 and newSize.y > 0 and newSize.z > 0 then
                 target.Size = newSize
-                target.Transform = GizmoDragStartTransform * Matrix.fromTranslation(move * 0.5)
+                target.Transform = GizmoDragStartTransform * Matrix.translated(move * 0.5)
             end
         end
 

@@ -51,6 +51,7 @@ public:
 	// Use `BindDataModel` when switching DataModels
 	ObjectHandle DataModelRef;
 	ObjectHandle WorkspaceRef;
+	ObjectHandle PrimaryDataModel;
 
 	Renderer RendererContext;
 	GLFWwindow* Window = nullptr;

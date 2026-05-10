@@ -99,8 +99,8 @@
         "Methods": {
           "LoadAnimation": {
             "Description": "Load an animation asset into the `Animator` to prepare it for playback",
-            "In": "AnimationAsset",
-            "Out": "AnimationState"
+            "In": "EcAnimationAsset",
+            "Out": "EcAnimationState"
           }
         },
         "Properties": {
@@ -132,7 +132,7 @@
           },
           "ImportModel": {
             "Description": "Imports the glTF 2.0 model at the provided path and returns it as a `Model` GameObject",
-            "Out": "GameObject & Model",
+            "Out": "GameObject & EcModel",
             "ParameterNames": "Path"
           },
           "LoadScene": {
@@ -227,6 +227,9 @@
       "DataModel": {
         "Description": "The root of the scene",
         "Events": {
+          "Closing": {
+            "Description": "This event fires when the datamodel is closing. Do not yield within the callback as the thread may never be resumed again"
+          },
           "OnFrameBegin": {
             "Description": "Fires at the beginning of a frame, passing in the time elapsed since the last frame (delta time)"
           }
@@ -236,7 +239,10 @@
             "Description": "Sets a callback that is invoked when the datamodel is being destroyed. May only be called once. Callback cannot yield",
             "Type": "(self, Callback: () -> ()) : ()"
           },
-          "Close": "Closes the application with the specified exit code integer or 0",
+          "Close": {
+            "Description": "Closes the application with the specified exit code integer or 0",
+            "ParameterNames": "ExitCode"
+          },
           "GetService": {
             "Description": "Gets the Object representing the specified Service. If it does not exist yet in the Data Model, it is created",
             "Type": "<T>(self, Service: keyof<Services> & T) : GameObject & index<Services, T>"
@@ -331,15 +337,7 @@
             "ParameterNames": [
               "DataModel"
             ],
-            "Type": "( GameObject & DataModel ) : ()"
-          },
-          "CloseVM": {
-            "Description": "Closes the specified Luau VM, releasing its resources",
-            "ParameterNames": "VmName"
-          },
-          "CreateVM": {
-            "Description": "Creates a new Luau VM with the given name. The `workspace` and `game` globals of the VM are taken from the currently-bound DataModel",
-            "ParameterNames": "VmName"
+            "Type": "( GameObject & EcDataModel ) : ()"
           },
           "Exit": {
             "Description": "Shuts down the Engine and exits the process with the specified Exit Code (or 0 by default)",
@@ -357,14 +355,6 @@
           },
           "GetCurrentVM": "Returns the name of the currently-bound VM",
           "PollSystemEvents": "Responds to signals sent to the application by the OS. This is done automatically at the start of each frame as well",
-          "RunInVM": {
-            "Description": "Runs the given code in the specified VM. Returns `false` and an error message upon failure or if the code does not finish executing (yield or break)",
-            "ParameterNames": [
-              "VmName",
-              "Code",
-              "ChunkName"
-            ]
-          },
           "SaveConfig": "Saves the Engine's current configuration state to the configuration file (`phoenix.conf`)",
           "SetConfigValue": {
             "Description": "Sets `Key` to `Value` in the Engine's loaded configuration without saving it to file",
@@ -653,6 +643,31 @@
           "Restitution": "Restitution"
         }
       },
+      "ScriptEngine": {
+        "Description": "Managing Luau",
+        "Methods": {
+          "CloseVM": {
+            "Description": "Closes the specified Luau VM, releasing its resources",
+            "ParameterNames": "VmName"
+          },
+          "CompileToBytecode": {
+            "Description": "Compiles the given Luau source code to Luau bytecode",
+            "ParameterNames": "Source"
+          },
+          "CreateVM": {
+            "Description": "Creates a new Luau VM with the given name. The `workspace` and `game` globals of the VM are taken from the currently-bound DataModel",
+            "ParameterNames": "VmName"
+          },
+          "RunInVM": {
+            "Description": "Runs the given code in the specified VM. Returns `false` and an error message upon failure or if the code does not finish executing (yield or break)",
+            "ParameterNames": [
+              "VmName",
+              "Code",
+              "ChunkName"
+            ]
+          }
+        }
+      },
       "Sound": {
         "Description": "A sound",
         "Events": {
@@ -750,12 +765,12 @@
           "GetObjectsInAabb": {
             "Description": "Get a list of Objects whose bounds are within the AABB",
             "In": "Position: vector, Size: vector, IgnoreList: { GameObject }?",
-            "Out": "{ GameObject & RigidBody & Transform }"
+            "Out": "{ GameObject & EcRigidBody & EcTransform }"
           },
           "Raycast": {
             "Description": "Cast a ray. This currently treats collisions as Axis-Aligned Bounding Boxes!",
             "In": "Origin: vector, CastVector: vector, FilterList: { GameObject }?, FilterIsIgnoreList: boolean?",
-            "Out": "{ Object: GameObject & RigidBody & Transform, Position: vector, Normal: vector }?"
+            "Out": "{ Object: GameObject & EcRigidBody & EcTransform, Position: vector, Normal: vector }?"
           },
           "ScreenPointToVector": {
             "Description": "Converts the provided screen coordinates to a world-space direction. `Length` is optional and `1.0` by default",
@@ -772,7 +787,7 @@
         "Properties": {
           "SceneCamera": {
             "Description": "The `Camera` the Player sees the world through. If set to `nil`, a *fallback* is created at the origin",
-            "Type": "GameObject & Camera & Transform"
+            "Type": "GameObject & EcCamera & EcTransform"
           }
         }
       }
@@ -877,23 +892,7 @@
           "This datatype is not hash consed! Two separate value-identical matrices are not `rawequal` and will not behave as expected when used as table keys"
         ],
         "Library": {
-          "fromAngles": {
-            "Description": "Alias of `.fromEulerAnglesYXZ`",
-            "In": "X: number, Y: number, Z: number",
-            "Out": "Matrix",
-            "Overloads": [
-              "Angles: vector"
-            ]
-          },
-          "fromEulerAnglesXYZ": {
-            "Description": "Creates a Matrix which has been rotated by the given Euler angles (in radians) with the rotation order X-Y-Z",
-            "In": "X: number, Y: number, Z: number",
-            "Out": "Matrix",
-            "Overloads": [
-              "Angles: vector"
-            ]
-          },
-          "fromEulerAnglesYXZ": {
+          "rotated": {
             "Description": "Creates a Matrix which has been rotated by the given Euler angles (in radians) with the rotation order Y-X-Z",
             "In": "X: number, Y: number, Z: number",
             "Out": "Matrix",
@@ -901,7 +900,23 @@
               "Angles: vector"
             ]
           },
-          "fromTranslation": {
+          "rotatedXYZ": {
+            "Description": "Creates a Matrix which has been rotated by the given Euler angles (in radians) with the rotation order X-Y-Z",
+            "In": "X: number, Y: number, Z: number",
+            "Out": "Matrix",
+            "Overloads": [
+              "Angles: vector"
+            ]
+          },
+          "rotatedYXZ": {
+            "Description": "Creates a Matrix which has been rotated by the given Euler angles (in radians) with the rotation order Y-X-Z",
+            "In": "X: number, Y: number, Z: number",
+            "Out": "Matrix",
+            "Overloads": [
+              "Angles: vector"
+            ]
+          },
+          "translated": {
             "Description": "Creates a Matrix which has been translated to the given coordinates (specified as either a `vector` or the individual X, Y, and Z components)",
             "In": "Position: vector",
             "Out": "Matrix",
@@ -919,13 +934,8 @@
             "Out": "Matrix"
           },
           "new": {
-            "Description": "Creates a new identity matrix when given no arguments, or a translated matrix otherwise (like `.fromTranslation`)",
-            "In": "",
-            "Out": "Matrix",
-            "Overloads": [
-              "X: number, Y: number, Z: number",
-              "Position: vector"
-            ]
+            "Description": "Returns a new identity matrix",
+            "Out": "Matrix"
           }
         },
         "Members": {
@@ -1560,7 +1570,7 @@
             ],
             "In": [
               "Path: string",
-              "Contents: string",
+              "Contents: string | buffer",
               [
                 "CreateDirectories: boolean?",
                 "false"

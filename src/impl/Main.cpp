@@ -358,6 +358,7 @@ static void init()
 	PHX_ENSURE_MSG(root->FindComponent<EcDataModel>(), "Root Object was not a DataModel!");
 
 	engine->BindDataModel(root);
+	engine->PrimaryDataModel = root;
 }
 
 static bool isBoolArgument(const char* v, const char* param)

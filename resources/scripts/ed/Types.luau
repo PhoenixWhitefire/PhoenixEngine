@@ -26,8 +26,8 @@ export type Plugin = {
 }
 
 export type Project = {
-    DataModel: (GameObject & DataModel)?,
-    Workspace: (GameObject & Workspace)?,
+    DataModel: (GameObject & EcDataModel)?,
+    Workspace: (GameObject & EcWorkspace)?,
     Name: string,
     IsTempPath: boolean,
     HasGitRepository: boolean,

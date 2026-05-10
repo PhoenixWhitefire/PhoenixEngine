@@ -5,8 +5,8 @@ local Controller = {}
 Controller.__index = Controller
 
 type ControllerData = {
-	Character: (GameObject & Mesh & RigidBody & Transform)?,
-	Camera: GameObject & Camera & Transform,
+	Character: (GameObject & EcMesh & EcRigidBody & EcTransform)?,
+	Camera: GameObject & EcCamera & EcTransform,
 
 	Acceleration: number,
 	JumpImpulse: number,
@@ -29,7 +29,7 @@ type ControllerData = {
 
 export type Controller = setmetatable<ControllerData, typeof(Controller)>
 
-function Controller.new(Camera: GameObject & Camera & Transform): Controller
+function Controller.new(Camera: GameObject & EcCamera & EcTransform): Controller
 	local controllerData: ControllerData = {
 		Camera = Camera,
 
@@ -40,7 +40,7 @@ function Controller.new(Camera: GameObject & Camera & Transform): Controller
 		JumpRayDistance = 8,
 
 		FirstPerson = true,
-		CameraOffset = Matrix.fromTranslation(0, 0, 0),
+		CameraOffset = Matrix.identity,
 		-- relative to the character, where to look when in third-person
 		CameraTargetOffset = vector.zero,
 
@@ -69,7 +69,7 @@ function Controller.InitDefault(self: Controller, CharacterHeight)
 
 	self.Character = character
 	self.Camera.UseSimpleController = false
-	self.CameraOffset = Matrix.fromTranslation(0, CharacterHeight * 0.4, 0)
+	self.CameraOffset = Matrix.translated(0, CharacterHeight * 0.4, 0)
 	self.JumpRayDistance = CharacterHeight * 0.6
 end
 
@@ -109,7 +109,7 @@ function Controller.Update(self: Controller, DeltaTime: number)
 	local currentVelocity = self.Character.LinearVelocity
 	self.Character.LinearVelocity = currentVelocity + impulse
 
-	self.Character.Transform *= Matrix.fromEulerAnglesXYZ(0, rotationY, 0)
+	self.Character.Transform *= Matrix.rotated(0, rotationY, 0)
 
 	self.cameraPitch += rotationX
 	self.cameraPitch = math.clamp(self.cameraPitch, -math.rad(89), math.rad(89))
@@ -128,12 +128,12 @@ function Controller.Update(self: Controller, DeltaTime: number)
 	if self.FirstPerson then
 		camTransform = self.Character.Transform
 						* self.CameraOffset
-						* Matrix.fromEulerAnglesXYZ(self.cameraPitch, 0, self.roll)
+						* Matrix.rotated(self.cameraPitch, 0, self.roll)
 	else
 		camTransform = self.Character.Transform
-						* Matrix.fromEulerAnglesXYZ(self.cameraPitch, 0, 0)
+						* Matrix.rotated(self.cameraPitch, 0, 0)
 						* self.CameraOffset
-						* Matrix.fromEulerAnglesXYZ(0, 0, self.roll)
+						* Matrix.rotated(0, 0, self.roll)
 	end
 
 	self.Camera.Transform = camTransform
@@ -147,7 +147,7 @@ function Controller.getMoveDirection(self: Controller)
 		moveX, moveZ = 0, 0
 	end
 
-	local trans = self.Camera.Transform * Matrix.fromEulerAnglesXYZ(-self.cameraPitch, 0, 0) * Matrix.fromTranslation(moveX, 0, moveZ)
+	local trans = self.Camera.Transform * Matrix.rotated(-self.cameraPitch, 0, 0) * Matrix.translated(moveX, 0, moveZ)
 
 	return vector.create(
 		trans.C4R1 - self.Camera.Transform.C4R1,

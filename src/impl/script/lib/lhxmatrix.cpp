@@ -18,7 +18,7 @@ void luhx_pushmatrix(lua_State* L, const glm::mat4& mtx)
     lua_setmetatable(L, -2);
 }
 
-static int matrix_fromTranslation(lua_State* L)
+static int matrix_translated(lua_State* L)
 {
     glm::mat4 m = glm::mat4(1.f);
 
@@ -47,7 +47,7 @@ static int matrix_fromTranslation(lua_State* L)
 	default:
 		luaL_error(
 			L,
-			"`Matrix.fromTranslation` expected 1 or 3 arguments, got %i",
+			"`Matrix.translated` expected 1 or 3 arguments, got %i",
 			numArgs
 		);
 	}
@@ -58,24 +58,11 @@ static int matrix_fromTranslation(lua_State* L)
 
 static int matrix_new(lua_State* L)
 {
-    int narg = lua_gettop(L);
-
-    if (narg == 0)
-    {
-        glm::mat4 matrix = glm::mat4(1.f);
-
-        luhx_pushmatrix(L, matrix);
-        return 1;
-    }
-    else if (narg == 1 || narg == 3)
-    {
-        return matrix_fromTranslation(L);
-    }
-
-    luaL_error(L, "Expected 0, 1 or 3 arguments to `Matrix.new`, got %i", narg);
+    luhx_pushmatrix(L, glm::mat4(1.f));
+	return 1;
 }
 
-static int matrix_fromEulerAnglesXYZ(lua_State* L)
+static int matrix_rotatedXYZ(lua_State* L)
 {
     glm::vec3 ang;
 
@@ -93,7 +80,7 @@ static int matrix_fromEulerAnglesXYZ(lua_State* L)
 	return 1;
 }
 
-static int matrix_fromEulerAnglesYXZ(lua_State* L)
+static int matrix_rotatedYXZ(lua_State* L)
 {
     glm::vec3 ang;
 
@@ -126,13 +113,12 @@ static int matrix_lookAt(lua_State* L)
 	return 1;
 }
 
-static const luaL_Reg matrix_funcs[] =
-{
+static const luaL_Reg matrix_funcs[] = {
 	{ "new", matrix_new },
-    { "fromTranslation", matrix_fromTranslation },
-    { "fromEulerAnglesXYZ", matrix_fromEulerAnglesXYZ },
-	{ "fromEulerAnglesYXZ", matrix_fromEulerAnglesYXZ },
-	{ "fromAngles", matrix_fromEulerAnglesYXZ },
+    { "translated", matrix_translated },
+    { "rotatedXYZ", matrix_rotatedXYZ },
+	{ "rotatedYXZ", matrix_rotatedYXZ},
+	{ "rotated", matrix_rotatedYXZ },
     { "lookAt", matrix_lookAt },
 
 	{ NULL, NULL }

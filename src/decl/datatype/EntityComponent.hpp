@@ -46,6 +46,7 @@ enum EC : uint8_t
 	DeveloperTools,
 	Animator,
 	AnimationState,
+	ScriptEngine,
 
 	__count
 };
@@ -89,6 +90,7 @@ static inline const std::string_view s_EntityComponentNames[] = {
 	"DeveloperTools",
 	"Animator",
 	"AnimationState",
+	"ScriptEngine",
 };
 
 static_assert(std::size(s_EntityComponentNames) == (size_t)EntityComponent::__count);
@@ -106,6 +108,7 @@ const std::string_view s_DataModelServices[] = {
     "PlayerInput",
 	"Renderer",
 	"DeveloperTools",
+	"ScriptEngine",
 };
 
 // component type and ID

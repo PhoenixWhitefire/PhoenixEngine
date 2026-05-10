@@ -19,8 +19,12 @@ struct EcDataModel : public Component<EntityComponent::DataModel>
 	ObjectRef Object;
 
 	std::vector<Reflection::EventCallback> OnFrameBeginCallbacks;
+	std::vector<Reflection::EventCallback> ClosingCallbacks;
 	Reflection::GenericFunction CloseCallback;
 	std::vector<lua_State*> Modules;
+
+	int ExitCode = 0;
+	bool Closed = false;
 	bool CanLoadModules = true;
 	bool Valid = true;
 };

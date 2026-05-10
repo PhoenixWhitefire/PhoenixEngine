@@ -511,11 +511,10 @@ nlohmann::json ScriptEngine::L::ToJson(lua_State* L, int StackIndex, std::string
 }
 #undef ERROR_CONTEXTUALIZED
 
-int ScriptEngine::CompileAndLoad(lua_State* L, const std::string& SourceCode, const std::string& ChunkName)
+std::string ScriptEngine::CompileBytecode(const std::string_view& SourceCode)
 {
 	ZoneScoped;
-	ZoneText(ChunkName.data(), ChunkName.size());
-	
+
 	// Tell Luau that these are mutable. Otherwise, GETIMPORT optimizations
 	// will cause them to be treated as constants and only invoke their `__index` functions
 	// once and cache the result
@@ -529,9 +528,26 @@ int ScriptEngine::CompileAndLoad(lua_State* L, const std::string& SourceCode, co
 	compileOptions.debugLevel = L::DebugBreak ? 1 : 2;
 	compileOptions.mutableGlobals = mutableGlobals;
 
-	std::string bytecode = Luau::compile(SourceCode, compileOptions);
+	std::string bytecode = Luau::compile(std::string(SourceCode), compileOptions);
+	return bytecode;
+}
 
-	int result = luau_load(L, ChunkName.c_str(), bytecode.data(), bytecode.size(), 0);
+int ScriptEngine::LoadBytecode(lua_State* L, const std::string_view& Bytecode, const std::string& ChunkName)
+{
+	ZoneScoped;
+	ZoneText(ChunkName.data(), ChunkName.size());
+
+	return luau_load(L, ChunkName.c_str(), Bytecode.data(), Bytecode.size(), 0);
+}
+
+int ScriptEngine::CompileAndLoad(lua_State* L, const std::string_view& SourceCode, const std::string& ChunkName)
+{
+	ZoneScoped;
+	ZoneText(ChunkName.data(), ChunkName.size());
+
+	std::string bytecode = CompileBytecode(SourceCode);
+	int result = LoadBytecode(L, bytecode, ChunkName);
+
 	return result;
 }
 
@@ -1386,8 +1402,9 @@ static void initRequireConfig(luarequire_Configuration* config)
 			if (!std::filesystem::exists(child))
 			{
 				std::string directModule = child.string() + ".luau";
+				std::string bytecode = child.string() + ".luauc";
 
-				if (!std::filesystem::exists(directModule))
+				if (!std::filesystem::exists(directModule) && !std::filesystem::exists(bytecode))
 				{
 					std::string file = name;
 					if (size_t pos = file.find_last_of(".luau"); pos != std::string::npos)
@@ -1407,7 +1424,7 @@ static void initRequireConfig(luarequire_Configuration* config)
 						return NAVIGATE_NOT_FOUND;
 				}
 				else
-					child = directModule;
+					child = std::filesystem::exists(directModule) ? directModule : bytecode;
 			}
 
 			*curpath = child;
@@ -1514,17 +1531,26 @@ static void initRequireConfig(luarequire_Configuration* config)
 			luaL_sandboxthread(ML);
 			ScriptEngine::L::DumpStacktrace(L, &((ScriptEngine::L::StateUserdata*)lua_getthreaddata(ML))->SpawnTrace);
 
+			bool isAotBytecode = modulePath.find(".luauc") != std::string::npos;
+			std::string bytecode;
+
 			bool readSuccess = true;
-			std::string contents = FileRW::ReadFile(modulePath, &readSuccess);
+			std::string sourceCodeOrBytecode = FileRW::ReadFile(modulePath, &readSuccess);
 
 			if (!readSuccess)
 			{
 				lua_pop(GL, 1);
-				luaL_error(L, "%s", contents.c_str());
+				// `sourceCodeOrBytecode` or error message from `FileRW::ReadFile`
+				luaL_error(L, "%s", sourceCodeOrBytecode.c_str());
 				return 1;
 			}
 
-			if (ScriptEngine::CompileAndLoad(ML, contents, chname) == 0)
+			if (isAotBytecode)
+				bytecode = sourceCodeOrBytecode;
+			else
+				bytecode = ScriptEngine::CompileBytecode(sourceCodeOrBytecode);
+
+			if (ScriptEngine::LoadBytecode(ML, bytecode, chname) == 0)
 			{
 				lua_pushstring(ML, ldname);
 				lua_setglobal(ML, "_LOADNAME");
@@ -1809,7 +1835,7 @@ nlohmann::json ScriptEngine::DumpApiToJson()
 
 					for (const ReflectorRef& ref : obj->Components)
 					{
-						type.append(" & ");
+						type.append(" & Ec");
 						type.append(s_EntityComponentNames[(uint8_t)ref.Type]);
 					}
 

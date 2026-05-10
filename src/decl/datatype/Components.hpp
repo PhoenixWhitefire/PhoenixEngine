@@ -26,6 +26,7 @@
 #include "component/Transform.hpp"
 #include "component/TreeLink.hpp"
 #include "component/Workspace.hpp"
+#include "component/ScriptEngineService.hpp"
 
 struct AllComponentManagers
 {
@@ -63,4 +64,5 @@ struct AllComponentManagers
     TransformComponentManager Transform;
     TreeLinkComponentManager TreeLink;
     WorkspaceComponentManager Workspace;
+    ScriptEngineComponentManager ScriptEngine;
 };

@@ -984,13 +984,28 @@ void Engine::Start()
 
 		if (DataModelRef->IsDestructionPending)
 		{
-			Log.Warning("`::Destroy` called on DataModel, shutting down");
+			Log.Warning("`Destroy` called on DataModel, shutting down");
 			break;
 		}
 
 		if (WorkspaceRef->IsDestructionPending)
 		{
-			Log.Warning("`::Destroy` called on Workspace, shutting down");
+			Log.Warning("`Destroy` called on Workspace, shutting down");
+			break;
+		}
+
+		if (EcDataModel* dm = PrimaryDataModel->FindComponent<EcDataModel>())
+		{
+			if (dm->Closed)
+			{
+				ExitCode = dm->ExitCode;
+				Close();
+				// run for an additional frame to process callbacks
+			}
+		}
+		else
+		{
+			Log.Warning("DataModel component removed from Primary Data Model, shutting down");
 			break;
 		}
 
@@ -1295,6 +1310,7 @@ void Engine::Shutdown()
 
 	Log.Info("Destroying DataModel...");
 	ComponentManagers.DataModel.NotifyAllOfShutdown();
+	ScriptEngine::StepScheduler(); // step event callbacks
 
 	DataModelRef->Destroy();
 	WorkspaceRef->Destroy();
