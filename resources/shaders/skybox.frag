@@ -7,10 +7,24 @@ in vec3 FragIn_Direction;
 out vec4 FragColor;
 
 uniform samplerCube Phoenix_SkyboxCubemap;
+uniform sampler2D Phoenix_SkyboxEquirectangular;
+uniform bool Phoenix_IsSkyboxEquirectangular = false;
 uniform bool Phoenix_HdrEnabled = false;
 uniform bool Phoenix_DebugOverdraw = false;
 
 uniform float Phoenix_Time = 0.f;
+
+#define PI 3.14159265359
+
+// https://discussions.unity.com/t/equirectangular-projection-shader-code/347527/3
+vec2 RadialCoords(vec3 a_coords)
+{
+    vec3 a_coords_n = normalize(a_coords);
+    float lon = atan(a_coords_n.z, a_coords_n.x);
+    float lat = acos(a_coords_n.y);
+    vec2 sphereCoords = vec2(lon, lat) * (1.0 / PI);
+    return vec2(1 - (sphereCoords.x * 0.5 + 0.5), 1 - sphereCoords.y);
+}
 
 void main()
 {
@@ -19,32 +33,16 @@ void main()
 		FragColor = vec4(0.f, 0.f, 0.f, 1.f);
 		return;
 	}
-	
+
 	//FragColor = vec4(FragIn_Direction, 1.f);
 
-	FragColor = texture(Phoenix_SkyboxCubemap, FragIn_Direction);
-	
-	vec4 realCol = FragColor;
-	
-	/*if (Time > 10.f)
+	if (Phoenix_IsSkyboxEquirectangular)
 	{
-	        float t = Time - 5.f;
-	        
-		FragColor *= mix(vec4(1.f, 1.f, 1.f, 1.f), vec4(0.25f, 0.f, 0.f, 1.f), clamp((t - 5.f) / 12, 0.f, 1.f));
-		
-		float swayMul = clamp(clamp(t - 16.f, 0.f, t) / 16.f, 0.f, 1.f);
-		float contrastChangeAlpha = clamp(clamp((t - 12.5f) + sin(t) * 1.7f * swayMul, 0.f, t) / 12.f, 0.f, 1.f);
-		
-		if (length(vec3(realCol)) > contrastChangeAlpha + 0.5f + (sin(t) * 0.1f))
-		{
-			FragColor *= mix(vec4(1.f, 1.f, 1.f, 1.f), vec4(3.f, 0.1f, 0.1f, 1.f), contrastChangeAlpha);
-		}
-		else
-		{
-		        FragColor *= mix(vec4(1.f, 1.f, 1.f, 1.f), vec4(0.5f, 0.5f, 0.5f, 1.f), contrastChangeAlpha);
-		}
-	}*/
-
-	//if (HdrEnabled)
-	//	FragColor = vec4(FragColor.xyz * 2.f, 1.f);
+		vec2 equiUV = RadialCoords(FragIn_Direction);
+		FragColor = vec4(texture(Phoenix_SkyboxEquirectangular, equiUV).xyz, 1.f);
+	}
+	else
+	{
+		FragColor = texture(Phoenix_SkyboxCubemap, FragIn_Direction);
+	}
 }

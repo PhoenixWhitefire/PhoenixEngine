@@ -1,0 +1,18 @@
+buildType:
+  default: Debug
+  choices:
+    Debug:
+      short: Debug
+      buildType: Debug
+    Release:
+      short: Release
+      buildType: Release
+    DebugTSan:
+      short: DebugTSan
+      buildType: DebugTSan
+    ReleaseTSan:
+      short: ReleaseTSan
+      buildType: ReleaseTSan
+    ReleaseAUSan:
+      short: ReleaseAUSan
+      buildType: ReleaseAUSan

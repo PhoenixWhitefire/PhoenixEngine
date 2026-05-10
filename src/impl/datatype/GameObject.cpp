@@ -644,24 +644,17 @@ void GameObject::RemoveChild(uint32_t id)
 
 Reflection::GenericValue GameObject::s_ToGenericValue(GameObject* Object)
 {
-    // TODO GCC bug?? will segfault on the ternary unless this is marked `volatile`
-    volatile Reflection::GenericValue gv;
+    Reflection::GenericValue gv = Object ? Object->ObjectId : PHX_GAMEOBJECT_NULL_ID;
     gv.Type = Reflection::ValueType::GameObject;
-    gv.Val.Int = Object ? Object->ObjectId : PHX_GAMEOBJECT_NULL_ID;
-
-    Reflection::GenericValue gv2;
-    gv2.Type = Reflection::ValueType::GameObject;
-    gv2.Val.Int = gv.Val.Int;
 
     if (Object)
     {
         // Decremented by destructor of `GenericValue`
         // TODO GVOBJECT
         Object->IncrementHardRefs();
-        Object->IncrementHardRefs(); // there's gv and gv2
     }
 
-    return gv2;
+    return gv;
 }
 
 Reflection::GenericValue GameObject::ToGenericValue()

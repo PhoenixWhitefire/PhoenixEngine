@@ -699,57 +699,6 @@ static void renderUIElements(GameObject* Root, Renderer& renderer)
 	traverseAndRenderUIHierarchy(Root, renderer, shader, gpuMesh);
 }
 
-static GLuint startLoadingSkybox(std::vector<uint32_t>* skyboxFacesBeingLoaded)
-{
-	ZoneScoped;
-
-	if (Engine::Get()->IsHeadlessMode)
-		return 0;
-
-	const std::string_view SkyPath = "textures/Sky1/";
-	const std::string_view SkyboxCubemapImages[6] = {
-		"right",
-		"left",
-		"top",
-		"bottom",
-		"front",
-		"back"
-	};
-
-	GLuint skyboxCubemap = 0;
-	glGenTextures(1, &skyboxCubemap);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemap);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-	for (uint8_t faceIndex = 0; faceIndex < 6; faceIndex++)
-	{
-		const std::string_view& face = SkyboxCubemapImages[faceIndex];
-
-		uint32_t tex = TextureManager::Get()->LoadFromPath(std::format("{}{}.jpg", SkyPath, face));
-		skyboxFacesBeingLoaded->push_back(tex);
-
-		glTexImage2D(
-			GL_TEXTURE_CUBE_MAP_POSITIVE_X + faceIndex,
-			0,
-			GL_SRGB,
-			1,
-			1,
-			0,
-			GL_RED,
-			GL_UNSIGNED_BYTE,
-			TextureManager::Get()->GetTextureResource(tex).TMP_ImageByteData
-		);
-	}
-
-	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
-
-	return skyboxCubemap;
-}
-
 ImVec2 Engine::GetViewportInputRectSize() const
 {
 	return OverrideDefaultViewportInputRect ? OverrideViewportInputSize : ImVec2((float)WindowSizeX, (float)WindowSizeY);
@@ -797,7 +746,17 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 	m_SkyboxShader.SetUniform("Phoenix_Time", GetRunningTime());
 
 	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, m_SkyboxCubemap);
+
+	if (EcEnvironmentService::SkyboxIsEquirectangularImage)
+	{
+		glBindTexture(GL_TEXTURE_2D, EcEnvironmentService::SkyboxTextureGpuId);
+		m_SkyboxShader.SetUniform("Phoenix_IsSkyboxEquirectangular", true);
+	}
+	else
+	{
+		glBindTexture(GL_TEXTURE_CUBE_MAP, EcEnvironmentService::SkyboxTextureGpuId);
+		m_SkyboxShader.SetUniform("Phoenix_IsSkyboxEquirectangular", false);
+	}
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -957,10 +916,7 @@ void Engine::Start()
 	double LastFrame = RunningTime;
 	double LastSecond = 0.f;
 
-	std::vector<uint32_t> skyboxFacesBeingLoaded;
-	skyboxFacesBeingLoaded.reserve(6);
-
-	m_SkyboxCubemap = startLoadingSkybox(&skyboxFacesBeingLoaded);
+	EcEnvironmentService::ChangeSkybox(EcEnvironmentService::Skybox);
 
 	m_FboResourceId = m_TextureManager.Assign({
 		.ImagePath = "!Framebuffer:Main",
@@ -1044,11 +1000,11 @@ void Engine::Start()
 		m_MeshProvider.FinalizeAsyncLoadedMeshes();
 		Logging::FlushParallelEvents();
 
-		if (skyboxFacesBeingLoaded.size() == 6 && !IsHeadlessMode)
+		if (EcEnvironmentService::SkyboxFacesBeingLoaded.size() == 6 && !IsHeadlessMode)
 		{
 			bool skyboxLoaded = true;
 
-			for (uint32_t skyboxFace : skyboxFacesBeingLoaded)
+			for (uint32_t skyboxFace : EcEnvironmentService::SkyboxFacesBeingLoaded)
 			{
 				Texture& texture = m_TextureManager.GetTextureResource(skyboxFace);
 
@@ -1063,11 +1019,11 @@ void Engine::Start()
 			{
 				ZoneScopedN("UploadSkyboxToGpu");
 				
-				glBindTexture(GL_TEXTURE_CUBE_MAP, m_SkyboxCubemap);
+				glBindTexture(GL_TEXTURE_CUBE_MAP, EcEnvironmentService::SkyboxTextureGpuId);
 
 				for (int skyboxFaceIndex = 0; skyboxFaceIndex < 6; skyboxFaceIndex++)
 				{
-					Texture& texture = m_TextureManager.GetTextureResource(skyboxFacesBeingLoaded.at(skyboxFaceIndex));
+					Texture& texture = m_TextureManager.GetTextureResource(EcEnvironmentService::SkyboxFacesBeingLoaded.at(skyboxFaceIndex));
 
 					glTexImage2D(
 						GL_TEXTURE_CUBE_MAP_POSITIVE_X + skyboxFaceIndex,
@@ -1091,8 +1047,7 @@ void Engine::Start()
 				}
 
 				glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
-
-				skyboxFacesBeingLoaded.clear();
+				EcEnvironmentService::SkyboxFacesBeingLoaded.clear();
 			}
 		}
 

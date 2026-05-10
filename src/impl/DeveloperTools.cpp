@@ -3496,6 +3496,7 @@ static const std::string_view AssetProperties[] = {
 	"Image",      // UIImage, ParticleEmitter
 	"ImportPath", // Model,
 	"SoundFile",  // Sound
+	"Skybox",     // Environment
 };
 static const Reflection::PropertyDescriptor* AssetProperty = nullptr;
 static std::string AssetPropertyValue;
@@ -3542,7 +3543,7 @@ static bool openFileSelectorForAssetProp(const std::string_view& PropertyName)
 		nFilterPatterns = 1;
 		filterDescription = "Materials";
 	}
-	else if (PropertyName == "Image")
+	else if (PropertyName == "Image" || PropertyName == "Skybox")
 	{
 		defaultPath = "textures/";
 		filters[0] = "*.png";
@@ -3580,7 +3581,7 @@ static bool openFileSelectorForAssetProp(const std::string_view& PropertyName)
 	if (!selectionCStr)
 		return false;
 
-	std::string selection = selectionCStr;
+	std::string_view selection = selectionCStr;
 
 	if (size_t resLoc = selection.find("resources/"); resLoc == std::string::npos)
 	{
@@ -3621,16 +3622,116 @@ static void followAssetProperty(const std::string_view& PropertyName, const std:
 	}
 }
 
+static std::string AssetSearch;
+static bool SearchFirstFrame = true;
+
+static bool propertyAssetSelectorList(const std::string_view& PropertyName, float FieldWidth)
+{
+	bool didSet = false;
+
+	if (SearchFirstFrame)
+	{
+		ImGui::SetKeyboardFocusHere();
+		SearchFirstFrame = false;
+	}
+
+	ImGuiStyle& style = ImGui::GetStyle();
+
+	float maxWidth = 0.f;
+	if (PropertyName == "MeshAsset")
+		maxWidth = FieldWidth;
+	else
+	{
+		for (const RenderMaterial& material : MaterialManager::Get()->GetLoadedMaterials())
+			maxWidth = std::max(maxWidth, ImGui::CalcTextSize(material.Name.c_str()).x);
+		maxWidth += style.FramePadding.x * 2.f + 8.f;
+	}
+
+	float width = maxWidth - style.FramePadding.x * 2.f - 16.f;
+	float newPadding = (16.f - ImGui::CalcTextSize("").y) / 2.f + style.FramePadding.y;
+	float prevPadding = style.FramePadding.y;
+
+	style.FramePadding.y = newPadding;
+	ImGui::SetNextItemWidth(width);
+	ImGui::InputTextWithHint("##Search", PropertyName.data(), &AssetSearch);
+	style.FramePadding.y = prevPadding;
+
+	static TextureManager* texManager = TextureManager::Get();
+	static uint32_t openIconId = texManager->LoadFromPath("@editres/textures/editor-icons/Folder_Open.png", true, false, false);
+
+	ImGui::SameLine();
+	if (ImGui::ImageButton("##OpenFile", texManager->GetTextureResource(openIconId).GpuId, ImVec2(16.f, 16.f)))
+	{
+		ImGui::CloseCurrentPopup();
+		ImGui::EndPopup();
+		return openFileSelectorForAssetProp(PropertyName);
+	}
+
+	std::string assetSearchLowercase = stringToLowerCase(AssetSearch);
+
+	if (PropertyName == "MeshAsset")
+	{
+		History::ScopedAction action = { "AssetSelector_Mesh" };
+
+		if ((AssetSearch.size() == 0 || std::string_view("!cube").find(assetSearchLowercase) != std::string::npos) && ImGui::MenuItem("!Cube"))
+		{
+			setProperties(PropertyName, "!Cube");
+			didSet = true;
+		}
+
+		if ((AssetSearch.size() == 0 || std::string_view("!sphere").find(assetSearchLowercase) != std::string::npos) &&ImGui::MenuItem("!Sphere"))
+		{
+			setProperties(PropertyName, "!Sphere");
+			didSet = true;
+		}
+
+		if ((AssetSearch.size() == 0 || std::string_view("!quad").find(assetSearchLowercase) != std::string::npos) &&ImGui::MenuItem("!Quad"))
+		{
+			setProperties(PropertyName, "!Quad");
+			didSet = true;
+		}
+	}
+	else if (PropertyName == "Material")
+	{
+		History::ScopedAction action = { "AssetSelector_Material" };
+		const std::vector<RenderMaterial>& materials = MaterialManager::Get()->GetLoadedMaterials();
+
+		for (int i = 0; i < (int)materials.size(); i++)
+		{
+			const RenderMaterial& material = materials[i];
+
+			bool visible = AssetSearch.size() == 0 || stringToLowerCase(material.Name).find(assetSearchLowercase) != std::string::npos;
+
+			if (visible)
+			{
+				if (ImGui::MenuItem(material.Name.c_str()))
+				{
+					setProperties(PropertyName, material.Name);
+					didSet = true;
+				}
+
+				if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+				{
+					DeveloperTools::MaterialsShown = true;
+					MtlCurItem = i;
+				}
+
+				ImGui::SetItemTooltip("'%s'\n\nRight-click for details.", material.Name.c_str());
+			}
+		}
+	}
+
+	ImGui::EndPopup();
+	return didSet;
+}
+
 static bool renderPropertyAssetSelector(const std::string_view& PropertyName, float FieldWidth)
 {
-	static std::string AssetSearch;
-	static bool SearchFirstFrame = true;
-
 	if (ImGui::Button("..."))
 	{
 		ImGui::ScrollToItem();
 
-		if (PropertyName != "MeshAsset" && PropertyName != "Material")
+		if (PropertyName != "MeshAsset" && PropertyName != "Material" && PropertyName != "Skybox")
 			return openFileSelectorForAssetProp(PropertyName);
 
 		ImGui::OpenPopup("SelectAsset");
@@ -3643,101 +3744,47 @@ static bool renderPropertyAssetSelector(const std::string_view& PropertyName, fl
 
 	if (ImGui::BeginPopup("SelectAsset"))
 	{
-		assert(PropertyName == "MeshAsset" || PropertyName == "Material");
+		assert(PropertyName == "MeshAsset" || PropertyName == "Material" || PropertyName == "Skybox");
 
-		if (SearchFirstFrame)
+		if (PropertyName == "Skybox")
 		{
-			ImGui::SetKeyboardFocusHere();
-			SearchFirstFrame = false;
-		}
-
-		ImGuiStyle& style = ImGui::GetStyle();
-
-		float maxWidth = 0.f;
-		if (PropertyName == "MeshAsset")
-			maxWidth = FieldWidth;
-		else
-		{
-			for (const RenderMaterial& material : MaterialManager::Get()->GetLoadedMaterials())
-				maxWidth = std::max(maxWidth, ImGui::CalcTextSize(material.Name.c_str()).x);
-			maxWidth += style.FramePadding.x * 2.f + 8.f;
-		}
-
-		float width = maxWidth - style.FramePadding.x * 2.f - 16.f;
-		float newPadding = (16.f - ImGui::CalcTextSize("").y) / 2.f + style.FramePadding.y;
-		float prevPadding = style.FramePadding.y;
-
-		style.FramePadding.y = newPadding;
-		ImGui::SetNextItemWidth(width);
-		ImGui::InputTextWithHint("##Search", PropertyName.data(), &AssetSearch);
-		style.FramePadding.y = prevPadding;
-
-		static TextureManager* texManager = TextureManager::Get();
-		static uint32_t openIconId = texManager->LoadFromPath("@editres/textures/editor-icons/Folder_Open.png", true, false, false);
-
-		ImGui::SameLine();
-		if (ImGui::ImageButton("##OpenFile", texManager->GetTextureResource(openIconId).GpuId, ImVec2(16.f, 16.f)))
-		{
-			ImGui::CloseCurrentPopup();
-			ImGui::EndPopup();
-			return openFileSelectorForAssetProp(PropertyName);
-		}
-
-		std::string assetSearchLowercase = stringToLowerCase(AssetSearch);
-
-		if (PropertyName == "MeshAsset")
-		{
-			History::ScopedAction action = { "AssetSelector_Mesh" };
-
-			if ((AssetSearch.size() == 0 || std::string_view("!cube").find(assetSearchLowercase) != std::string::npos) && ImGui::MenuItem("!Cube"))
+			if (ImGui::MenuItem("Single equirectangular"))
 			{
-				setProperties(PropertyName, "!Cube");
-				didSet = true;
+				ImGui::EndPopup();
+				return openFileSelectorForAssetProp(PropertyName);
 			}
-
-			if ((AssetSearch.size() == 0 || std::string_view("!sphere").find(assetSearchLowercase) != std::string::npos) &&ImGui::MenuItem("!Sphere"))
+			else if (ImGui::MenuItem("Cubemap directory"))
 			{
-				setProperties(PropertyName, "!Sphere");
-				didSet = true;
-			}
+				ImGui::EndPopup();
 
-			if ((AssetSearch.size() == 0 || std::string_view("!quad").find(assetSearchLowercase) != std::string::npos) &&ImGui::MenuItem("!Quad"))
-			{
-				setProperties(PropertyName, "!Quad");
-				didSet = true;
-			}
-		}
-		else if (PropertyName == "Material")
-		{
-			History::ScopedAction action = { "AssetSelector_Material" };
-			const std::vector<RenderMaterial>& materials = MaterialManager::Get()->GetLoadedMaterials();
+				History::ScopedAction action = { "AssetSelector_FileDialog_SkyboxCubemapDirectory" };
 
-			for (int i = 0; i < (int)materials.size(); i++)
-			{
-				const RenderMaterial& material = materials[i];
+				const char* selectionCStr = tinyfd_selectFolderDialog(
+					"Select skybox cubemap directory",
+					FileRW::ResolvePathAbsolute("textures/").c_str()
+				);
 
-				bool visible = AssetSearch.size() == 0 || stringToLowerCase(material.Name).find(assetSearchLowercase) != std::string::npos;
+				if (!selectionCStr)
+					return false;
 
-				if (visible)
+				std::string_view selection = selectionCStr;
+
+				if (size_t resLoc = selection.find("resources/"); resLoc == std::string::npos)
 				{
-					if (ImGui::MenuItem(material.Name.c_str()))
-					{
-						setProperties(PropertyName, material.Name);
-						didSet = true;
-					}
-
-					if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
-					{
-						DeveloperTools::MaterialsShown = true;
-						MtlCurItem = i;
-					}
-
-					ImGui::SetItemTooltip("'%s'\n\nRight-click for details.", material.Name.c_str());
+					setErrorMessage("Selection must be within the Resources directory");
+					return false;
 				}
-			}
-		}
+				else
+					selection = selection.substr(resLoc + strlen("resources/"));
 
-		ImGui::EndPopup();
+				setProperties(PropertyName, selection);
+				return true;
+			}
+
+			ImGui::EndPopup();
+		}
+		else
+			didSet = propertyAssetSelectorList(PropertyName, FieldWidth);
 	}
 
 	return didSet;
