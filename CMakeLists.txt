@@ -39,7 +39,14 @@ target_sources(PhoenixEngine PRIVATE README.md phoenix.conf)
 set_target_properties(PhoenixEngine PROPERTIES OUTPUT_NAME PhoenixEngine)
 
 target_compile_definitions(PhoenixEngine PRIVATE $<$<CONFIG:Release>:NDEBUG TRACY_ON_DEMAND>)
-target_compile_definitions(PhoenixEngine PRIVATE PHX_TARGET_PLATFORM="${CMAKE_SYSTEM_NAME}" TRACY_ENABLE TRACY_FIBERS)
+
+set(PHX_BUILD_TYPE $<IF:$<CONFIG:Debug>,Debug,$<IF:$<CONFIG:Release>,Release,$<IF:$<CONFIG:DebugTSan>,DebugTSan,$<IF:$<CONFIG:ReleaseAUSan>,ReleaseAUSan,ReleaseTSan>>>>)
+
+if (MSVC OR NOT (PHX_BUILD_TYPE STREQUAL "DebugTSan"))
+	target_compile_definitions(PhoenixEngine PRIVATE PHX_TARGET_PLATFORM="${CMAKE_SYSTEM_NAME}" TRACY_ENABLE TRACY_FIBERS)
+elseif()
+	target_compile_definitions(PhoenixEngine PRIVATE PHX_TARGET_PLATFORM="${CMAKE_SYSTEM_NAME}")
+endif()
 
 option(PHX_HEADLESS "Build in Headless mode" OFF)
 
@@ -65,8 +72,6 @@ target_include_directories(PhoenixEngine PUBLIC
 	"Vendor/curl/include"
 	"Vendor/glad/include"
 )
-
-set(PHX_BUILD_TYPE $<IF:$<CONFIG:Debug>,Debug,$<IF:$<CONFIG:Release>,Release,$<IF:$<CONFIG:DebugTSan>,DebugTSan,$<IF:$<CONFIG:ReleaseAUSan>,ReleaseAUSan,ReleaseTSan>>>>)
 
 target_compile_definitions(PhoenixEngine PRIVATE PHX_BUILD_TYPE="${PHX_BUILD_TYPE}")
 
