@@ -815,7 +815,7 @@ static void uniformsEditor(
 			}
 
 			Uniforms[NewUniformNameBuf] = initialValue;
-			*Selection = Uniforms.size() - 1;
+			*Selection = (int)Uniforms.size() - 1;
 			ImGui::CloseCurrentPopup();
 		}
 
@@ -943,7 +943,7 @@ static void shaderPreprocessorDefinitionsEditor(
 		if (ImGui::Button("Add", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
 		{
 			Definitions[NewDefNameBuf] = NewDefValueBuf;
-			*Selection = Definitions.size() - 1;
+			*Selection = (int)Definitions.size() - 1;
 			ImGui::CloseCurrentPopup();
 		}
 

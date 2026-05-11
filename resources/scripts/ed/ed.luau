@@ -3206,15 +3206,15 @@ end)
 game:BindToClose(handleEngineShutdown)
 task.defer(checkIfLatestVersionBuilt)
 
-changeStageTo("SelectProject")
-
 if table.find(Engine:GetCliArguments(), "-ed_ci") then
+	task.defer(changeStageTo, "SelectProject")
+
 	if StageUpdateSignal then
 		StageUpdateSignal:Disconnect()
 		StageUpdateSignal = nil
 	end
 
-	task.defer(function()
+	coroutine.wrap(function()
 		warn("Running Editor CI checks")
 
 		task.delay(5, function()
@@ -3241,7 +3241,9 @@ if table.find(Engine:GetCliArguments(), "-ed_ci") then
 		warn("Editor CI checks done")
 		CurrentStage = "SelectProject"
 		game:Close()
-	end)
+	end)()
+else
+	changeStageTo("SelectProject")
 end
 
 local loadProjectIndex = table.find(Engine:GetCliArguments(), "--project")
