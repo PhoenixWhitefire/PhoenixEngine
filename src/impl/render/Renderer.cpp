@@ -31,6 +31,7 @@ extern "C"
 #include <glad/gl.h>
 
 #include "render/Renderer.hpp"
+#include "render/TextureSlots.hpp"
 #include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
 #include "asset/MeshProvider.hpp"
@@ -167,16 +168,19 @@ void Renderer::Initialize(uint32_t Width, uint32_t Height, GLFWwindow* MainWindo
 
 	int glVersionMajor, glVersionMinor = 0;
 	int maxVertexAttribs = 0;
+	int textureSlots = 0;
 
 	glGetIntegerv(GL_MAJOR_VERSION, &glVersionMajor);
 	glGetIntegerv(GL_MINOR_VERSION, &glVersionMinor);
 	glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxVertexAttribs);
+	glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &textureSlots);
 
 	Log.InfoF(
 		"Running OpenGL version {}.{}",
 		glVersionMajor, glVersionMinor
 	);
 	Log.InfoF("Max vertex attribs: {}", maxVertexAttribs);
+	Log.InfoF("Texture slots: {}", textureSlots);
 
 	m_VertexArray.Initialize();
 	m_VertexBuffer.Initialize();
@@ -300,7 +304,7 @@ void Renderer::DrawScene(
 	{
 		ZoneScopedNC("Prepare", tracy::Color::AliceBlue);
 
-		glActiveTexture(GL_TEXTURE0);
+		glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::Framebuffer);
 		this->FrameBuffer.BindTexture();
 
 		ShaderManager* shdManager = ShaderManager::Get();
@@ -317,9 +321,10 @@ void Renderer::DrawScene(
 				shader.SetUniform("Phoenix_RenderMatrix", RenderMatrix);
 				shader.SetUniform("Phoenix_CameraPosition", glm::vec3(CameraTransform[3]));
 				shader.SetUniform("Phoenix_Time", RunningTime);
-				shader.SetUniform("Phoenix_SkyboxCubemap", 3);
+				shader.SetUniform("Phoenix_SkyboxCubemap", ReservedTextureSlot::SkyboxCubemap);
+				shader.SetUniform("Phoenix_SkyboxEquirectangular", ReservedTextureSlot::SkyboxEquirectangular);
 
-				shader.SetUniform("Phoenix_FramebufferTexture", 0);
+				shader.SetUniform("Phoenix_FramebufferTexture", ReservedTextureSlot::Framebuffer);
 
 				// TODO 05/09/2024
 				// Branching in shader VS separate array uniforms?
@@ -599,12 +604,12 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData, bool DebugWirefra
 		glEnable(GL_BLEND);
 	else // the gosh darn grass model is practically 50% transparent
 		glDisable(GL_BLEND);
-	
-	shader.SetUniform("Phoenix_SpecularMultiplier", material.SpecMultiply);
-	shader.SetUniform("Phoenix_SpecularPower", material.SpecExponent);
 
-	shader.SetUniform("Phoenix_MetalnessFactor", RenderData.MetalnessFactor);
-	shader.SetUniform("Phoenix_RoughnessFactor", RenderData.RoughnessFactor);
+	shader.SetUniform("Phoenix_Material.SpecularMultiplier", material.SpecMultiply);
+	shader.SetUniform("Phoenix_Material.SpecularPower", material.SpecExponent);
+
+	shader.SetUniform("Phoenix_Material.MetalnessFactor", RenderData.MetalnessFactor);
+	shader.SetUniform("Phoenix_Material.RoughnessFactor", RenderData.RoughnessFactor);
 
 	shader.SetUniform(
 		"Phoenix_ColorTint",
@@ -616,29 +621,29 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData, bool DebugWirefra
 
 	TextureManager* texManager = TextureManager::Get();
 
-	glActiveTexture(GL_TEXTURE10);
+	glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::MaterialColorMap);
 	glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(material.ColorMap).GpuId);
 
-	glActiveTexture(GL_TEXTURE11);
+	glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::MaterialMetallicRoughnessMap);
 	glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(material.MetallicRoughnessMap).GpuId);
 
 	if (material.NormalMap != 0)
 	{
-		shader.SetUniform("Phoenix_HasNormalMap", true);
-		glActiveTexture(GL_TEXTURE12);
+		shader.SetUniform("Phoenix_Material.HasNormalMap", true);
+		glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::MaterialNormalMap);
 		glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(material.NormalMap).GpuId);
 	}
 	else
-		shader.SetUniform("Phoenix_HasNormalMap", false);
+		shader.SetUniform("Phoenix_Material.HasNormalMap", false);
 
 	if (material.EmissionMap != 0)
 	{
-		shader.SetUniform("Phoenix_HasEmissionMap", true);
-		glActiveTexture(GL_TEXTURE13);
+		shader.SetUniform("Phoenix_Material.HasEmissionMap", true);
+		glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::MaterialEmissionMap);
 		glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(material.EmissionMap).GpuId);
 	}
 	else
-		shader.SetUniform("Phoenix_HasEmissionMap", false);
+		shader.SetUniform("Phoenix_Material.HasEmissionMap", false);
 
 	// apply the uniforms for the shader program...
 	shader.ApplyDefaultUniforms();

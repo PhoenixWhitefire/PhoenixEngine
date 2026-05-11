@@ -158,8 +158,6 @@ void GpuFrameBuffer::Initialize(int TargetWidth, int TargetHeight, int MSSamples
 	
 	GLenum binding = MSSamples > 0 ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D;
 
-	glActiveTexture(GL_TEXTURE0);
-
 	glGenTextures(1, &GpuTextureId);
 	glBindTexture(binding, GpuTextureId);
 	

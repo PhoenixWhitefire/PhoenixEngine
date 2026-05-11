@@ -7,6 +7,7 @@
 #include "asset/ShaderManager.hpp"
 
 #include "asset/TextureManager.hpp"
+#include "render/TextureSlots.hpp"
 #include "datatype/Color.hpp"
 #include "Utilities.hpp"
 #include "FileRW.hpp"
@@ -479,7 +480,7 @@ void ShaderProgram::SetTextureUniform(const std::string_view& UniformName, uint3
 		TextureId = WhiteTextureId;
 
 	uint32_t gpuId = texManager->GetTextureResource(TextureId).GpuId;
-	uint32_t slot = gpuId + 15; // the first 15 units are "reserved"
+	uint32_t slot = ReservedTextureSlot::ReservedEnd + gpuId;
 
 	m_PendingUniforms[std::string(UniformName)] = slot;
 

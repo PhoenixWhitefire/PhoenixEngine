@@ -5,6 +5,7 @@
 
 #include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
+#include "render/TextureSlots.hpp"
 #include "Utilities.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
@@ -149,10 +150,10 @@ void RenderMaterial::Reload()
 
 	ShaderProgram& shader = GetShader();
 	// reserved slots for material textures
-	shader.SetUniform("Phoenix_Material.ColorMap", 10);
-	shader.SetUniform("Phoenix_Material.MetallicRoughnessMap", 11);
-	shader.SetUniform("Phoenix_Material.NormalMap", 12);
-	shader.SetUniform("Phoenix_Material.EmissionMap", 13);
+	shader.SetUniform("Phoenix_Material.ColorMap", ReservedTextureSlot::MaterialColorMap);
+	shader.SetUniform("Phoenix_Material.MetallicRoughnessMap", ReservedTextureSlot::MaterialMetallicRoughnessMap);
+	shader.SetUniform("Phoenix_Material.NormalMap", ReservedTextureSlot::MaterialNormalMap);
+	shader.SetUniform("Phoenix_Material.EmissionMap", ReservedTextureSlot::MaterialEmissionMap);
 }
 
 ShaderProgram& RenderMaterial::GetShader() const

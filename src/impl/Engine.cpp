@@ -27,6 +27,7 @@
 #include "component/Sound.hpp"
 #include "component/Light.hpp"
 #include "script/ScriptEngine.hpp"
+#include "render/TextureSlots.hpp"
 #include "GlobalJsonConfig.hpp"
 #include "ThreadManager.hpp"
 #include "UserInput.hpp"
@@ -440,9 +441,10 @@ Engine::Engine()
 		m_PostFxShader = m_ShaderManager.GetShaderResource(m_ShaderManager.LoadFromPath("@base/shaders/postprocessing.shp"));
 		m_SkyboxShader = m_ShaderManager.GetShaderResource(m_ShaderManager.LoadFromPath("@base/shaders/skybox.shp"));
 
-		m_PostFxShader.SetUniform("Phoenix_FramebufferTexture", 1);
+		m_PostFxShader.SetUniform("Phoenix_FramebufferTexture", ReservedTextureSlot::PostProcessFramebuffer);
+		m_SkyboxShader.SetUniform("Phoenix_SkyboxEquirectangular", ReservedTextureSlot::SkyboxEquirectangular);
+		m_SkyboxShader.SetUniform("Phoenix_SkyboxCubemap", ReservedTextureSlot::SkyboxCubemap);
 		//m_PostFxShader.SetUniform("Phoenix_BloomTexture", 3);
-		m_SkyboxShader.SetUniform("Phoenix_SkyboxCubemap", 3);
 
 		m_SunShadowMap.Initialize(
 			SunShadowMapResolutionSq, SunShadowMapResolutionSq,
@@ -745,15 +747,15 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 	m_SkyboxShader.SetUniform("Phoenix_RenderMatrix", skyRenderMatrix);
 	m_SkyboxShader.SetUniform("Phoenix_Time", GetRunningTime());
 
-	glActiveTexture(GL_TEXTURE3);
-
 	if (EcEnvironmentService::SkyboxIsEquirectangularImage)
 	{
+		glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::SkyboxEquirectangular);
 		glBindTexture(GL_TEXTURE_2D, EcEnvironmentService::SkyboxTextureGpuId);
 		m_SkyboxShader.SetUniform("Phoenix_IsSkyboxEquirectangular", true);
 	}
 	else
 	{
+		glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::SkyboxCubemap);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, EcEnvironmentService::SkyboxTextureGpuId);
 		m_SkyboxShader.SetUniform("Phoenix_IsSkyboxEquirectangular", false);
 	}
@@ -796,7 +798,7 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 
 	//Do framebuffer stuff after everything is drawn
 
-	glActiveTexture(GL_TEXTURE1);
+	glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::PostProcessFramebuffer);
 	RendererContext.FrameBuffer.BindTexture();
 
 	if (EcEnvironmentService::PostProcess)
@@ -826,7 +828,7 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 	}
 	else
 	{
-		m_PostFxShader.SetUniform("Phoenix_PostFxEnabled", 0);
+		m_PostFxShader.SetUniform("Phoenix_PostFxEnabled", false);
 		m_SkyboxShader.SetUniform(
 			"Phoenix_HdrEnabled",
 			false
@@ -849,7 +851,7 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 		);
 
 		RendererContext.FrameBuffer.Unbind();
-		m_PostFxShader.SetUniform("Phoenix_PostFxEnabled", 0);
+		m_PostFxShader.SetUniform("Phoenix_PostFxEnabled", false);
 		RendererContext.DrawMesh(
 			quadMesh,
 			m_PostFxShader,
@@ -895,6 +897,12 @@ void Engine::BindDataModel(const ObjectHandle& NewDataModel)
 	assert(WorkspaceRef.Dereference());
 
 	ObjectManager.DataModel = NewDataModel->ObjectId;
+
+	if (const ObjectHandle& envobj = NewDataModel->FindChildWithComponent(EntityComponent::Environment))
+	{
+		if (EcEnvironmentService* env = envobj->FindComponent<EcEnvironmentService>())
+			env->ChangeSkybox(env->Skybox);
+	}
 }
 
 void Engine::Start()
@@ -1204,9 +1212,9 @@ void Engine::Start()
 				ShaderProgram& shd = m_ShaderManager.GetShaderResource(shdId);
 				shd.SetUniform("Phoenix_IsShadowMap", true);
 
-				glActiveTexture(GL_TEXTURE0 + 101);
+				glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::Shadowmap);
 				m_SunShadowMap.BindTexture();
-				shd.SetUniform("Phoenix_ShadowAtlas", 101);
+				shd.SetUniform("Phoenix_ShadowAtlas", ReservedTextureSlot::Shadowmap);
 
 				shd.SetUniform("Phoenix_DirectionalLightProjection", sunRenderMatrix);
 			}

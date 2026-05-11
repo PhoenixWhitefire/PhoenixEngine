@@ -5,6 +5,7 @@
 
 #include "component/Environment.hpp"
 #include "asset/TextureManager.hpp"
+#include "render/TextureSlots.hpp"
 #include "Utilities.hpp"
 #include "Engine.hpp"
 #include "FileRW.hpp"
@@ -67,21 +68,27 @@ void EcEnvironmentService::ChangeSkybox(const std::string_view& pathStr)
     {
         for (const std::string_view& face : SkyboxFaces)
         {
-            if (!std::filesystem::is_regular_file((path / face).string() + ".jpg"))
-                RAISE_RT("Invalid skybox path '{}': Is a directory, but does not have file for the {} face (expected at {})", path.string(), face, (path / face / ".jpg").string());
+            std::string facePath = (path / face).string() + ".jpg";
+            if (!std::filesystem::is_regular_file(facePath))
+                RAISE_RT("Invalid skybox path '{}': Is a directory, but does not have file for the {} face (expected at {})", path.string(), face, facePath);
         }
         isEquirect = false;
-        EcEnvironmentService::Skybox = path;
+        EcEnvironmentService::Skybox = pathStr;
         EcEnvironmentService::SkyboxTextureGpuId = startLoadingSkyboxCubemap();
     }
     else if (pathStr[0] == '!' || std::filesystem::is_regular_file(path))
     {
         isEquirect = true;
-        EcEnvironmentService::Skybox = path;
+        EcEnvironmentService::Skybox = pathStr;
 
         TextureManager* texManager = TextureManager::Get();
         uint32_t textureResourceId = texManager->LoadFromPath(path.string());
         EcEnvironmentService::SkyboxTextureGpuId = texManager->GetTextureResource(textureResourceId).GpuId;
+
+        glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::SkyboxEquirectangular);
+        glBindTexture(GL_TEXTURE_2D, EcEnvironmentService::SkyboxTextureGpuId);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     }
     else
         RAISE_RT("Invalid skybox path '{}': Expected file or directory", path.string());
