@@ -860,7 +860,7 @@ void Serializer::SerializeObject(GameObject* Object, bool IsRootNode)
 				{
 					item[propName] = PHX_GAMEOBJECT_NULL_ID;
 					std::vector<std::pair<uint32_t, std::string_view>>& replacements = PendingIdReplacement[target->ObjectId];
-					replacements.push_back(std::pair((uin32_t)Items.size(), propName));
+					replacements.push_back(std::pair((uint32_t)Items.size(), propName));
 				}
 			}
 			else
