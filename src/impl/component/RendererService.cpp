@@ -145,3 +145,11 @@ const Reflection::StaticMethodMap& RendererComponentManager::GetMethods()
 
     return methods;
 }
+
+void RendererComponentManager::BindService(uint32_t)
+{
+}
+
+void RendererComponentManager::UnbindService()
+{
+}

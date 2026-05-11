@@ -387,7 +387,8 @@
           "Fog": "Fog enablement (Uniform: `Phoenix_Fog`)",
           "FogColor": "Color of the fog (Uniform: `Phoenix_FogColor`)",
           "GammaCorrection": "Post-processor gamma correction amount (Uniform: `Phoenix_Gamma`)",
-          "PostProcess": "Post-processor enablement (Uniform: `Phoenix_PostFxEnabled`)"
+          "PostProcess": "Post-processor enablement (Uniform: `Phoenix_PostFxEnabled`)",
+          "Skybox": "The skybox asset. May either be a path directly to an equirectangular panorama image, or a directory containing `[right/left/top/bottom/front/back].jpg` (cubemap). Will error when attempting to assign an invalid path. Cubemap directory paths must contain '`Sky`' (case-sensitive) somewhere in them :)"
         }
       },
       "Example": {
@@ -526,6 +527,12 @@
       },
       "Physics": {
         "Description": "Manipulate the Physics simulation of the Engine",
+        "Methods": {
+          "SetSimulationForcePaused": {
+            "Description": "If passed `true`, forces the simulation to be paused, regardless of the value of `.Simulating`",
+            "ParameterNames": "Paused"
+          }
+        },
         "Properties": {
           "DebugCollisionAabbs": "Whether physics collision AABBs are rendered",
           "DebugContactPoints": "Whether Contact Points are rendered",

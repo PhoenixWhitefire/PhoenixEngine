@@ -385,3 +385,11 @@ const Reflection::StaticMethodMap& EngineComponentManager::GetMethods()
 
     return methods;
 }
+
+void EngineComponentManager::BindService(uint32_t)
+{
+}
+
+void EngineComponentManager::UnbindService()
+{
+}

@@ -324,6 +324,7 @@ export type EcEnvironment = {
   FogColor: Color,
   GammaCorrection: number,
   PostProcess: boolean,
+  Skybox: string,
 }
 export type EcHistory = {
   read ActionHistorySize: number ,
@@ -386,6 +387,8 @@ export type EcPhysics = {
   Gravity: vector,
   Simulating: boolean,
   Timescale: number,
+
+  SetSimulationForcePaused: (self: EcPhysics, Paused: boolean) -> (),
 }
 export type EcPlayerInput = {
   Cursor: EnumCursor,

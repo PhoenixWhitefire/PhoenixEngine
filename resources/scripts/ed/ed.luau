@@ -33,10 +33,12 @@ local Stages: { [string]: ((number) -> ()) & ((Stage) -> (GameObject & EcDataMod
 local StageUpdateSignal: EventConnection?
 
 local EditorCam = assert(workspace.SceneCamera)
-local EditorTl = GameObject.new("TreeLink")
+local WorkspaceLink = GameObject.new("TreeLink")
 local InterfaceLink = GameObject.new("TreeLink")
-EditorTl.Name = "EditorTl"
+local ServicesLink = GameObject.new("TreeLink")
+WorkspaceLink.Name = "WorkspaceLink"
 InterfaceLink.Name = "InterfaceLink"
+ServicesLink.Name = "ServicesLink"
 
 local Project: Types.Project = {
 	DataModel = nil,
@@ -74,9 +76,10 @@ local GameEditingVM = "GameEditingVM"
 local GameVM = "GameVM"
 
 EditorCam.UseSimpleController = true
-EditorTl.Parent = workspace
+WorkspaceLink.Parent = workspace
 InterfaceLink.Parent = Interface
 Physics.Simulating = false
+Physics:SetSimulationForcePaused(true)
 
 local ToolOrder = {
 	"Explorer",
@@ -636,8 +639,10 @@ local function openProject_(ManualPath: string?)
 	end
 
 	EditorCam.Transform = Project.Workspace.SceneCamera.Transform
-	EditorTl.Target = Project.Workspace
+	WorkspaceLink.Target = Project.Workspace
 	InterfaceLink.Target = Project.DataModel:GetService("Interface")
+	ServicesLink.Target = Project.DataModel
+	ServicesLink.Parent = game
 
 	Project.DataModel:GetService("Environment")
 
@@ -2862,6 +2867,8 @@ function Stages.ProjectPlaying_Enter(Stage: Stage)
 		changeStageTo("ProjectEditing")
 	end)
 
+	Physics:SetSimulationForcePaused(false)
+
 	PlayerInput.Cursor = Enum.Cursor.Arrow
 	return Project.DataModel -- Connect to the Project's datamodel `.OnFrameBegin`
 end
@@ -2875,12 +2882,14 @@ function Stages.ProjectPlaying_Leave(DeltaTime)
 	assert(restoreState)
 	assert(Project.DataModel)
 
+	Engine:BindDataModel(game)
+
 	Project.DataModel:Destroy()
 	Project.DataModel = restoreState
 	DeveloperTools:SetExplorerRoot(Project.DataModel)
 
-	Engine:BindDataModel(game)
 	ScriptEngine:CloseVM(GameVM)
+	Physics:SetSimulationForcePaused(true)
 
 	PlayerInput.CursorMode = Enum.CursorMode.Normal
 end
@@ -3130,6 +3139,10 @@ local function handleEngineShutdown()
 		else
 			print("Saving before quitting")
 			saveProject()
+		end
+
+		if Project.DataModel then
+			Project.DataModel:Destroy()
 		end
 	end
 end

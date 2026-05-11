@@ -39,7 +39,7 @@ void main()
 	if (Phoenix_IsSkyboxEquirectangular)
 	{
 		vec2 equiUV = RadialCoords(FragIn_Direction);
-		FragColor = vec4(texture(Phoenix_SkyboxEquirectangular, equiUV).xyz, 1.f);
+		FragColor = vec4(texture(Phoenix_SkyboxEquirectangular, vec2(1.f) - equiUV).xyz, 1.f);
 	}
 	else
 	{

@@ -124,6 +124,7 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 	// 03/10/2024:
 	// little hack to `free` textures `Engine.cpp` doesn't
 	// manage (most of them)
+	// 11/05/2026: Check is mirrored in `EcEnvironmentService::ChangeSkybox`
 	if (texture.ImagePath.find("Sky") == std::string::npos && texture.ImagePath[0] != '!')
 	{
 		free(texture.TMP_ImageByteData);

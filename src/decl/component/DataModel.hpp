@@ -12,6 +12,8 @@ struct EcDataModel : public Component<EntityComponent::DataModel>
 {
 	void Bind();
 	void Close();
+	void BindServices();
+	void UnbindServices();
 
 	std::string LiveScripts = "scripts/Main.luau";
 	std::string VM = ROOT_LVM_NAME;
@@ -22,6 +24,7 @@ struct EcDataModel : public Component<EntityComponent::DataModel>
 	std::vector<Reflection::EventCallback> ClosingCallbacks;
 	Reflection::GenericFunction CloseCallback;
 	std::vector<lua_State*> Modules;
+	std::vector<EntityComponent> BoundServices;
 
 	int ExitCode = 0;
 	bool Closed = false;

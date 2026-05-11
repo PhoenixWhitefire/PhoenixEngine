@@ -19,14 +19,19 @@ static const std::string_view SkyboxFaces[6] = {
 	"back"
 };
 
-static uint32_t startLoadingSkyboxCubemap()
+static std::unordered_map<std::string, uint32_t> CachedSkyboxCubemaps;
+
+static uint32_t startLoadingSkyboxCubemap(EcEnvironmentService* env)
 {
 	ZoneScoped;
 
 	if (Engine::Get()->IsHeadlessMode)
 		return 0;
 
-	GLuint skyboxCubemap = 0;
+    if (const auto& it = CachedSkyboxCubemaps.find(env->Skybox); it != CachedSkyboxCubemaps.end())
+        return it->second;
+
+    GLuint skyboxCubemap = 0;
 	glGenTextures(1, &skyboxCubemap);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemap);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -35,12 +40,14 @@ static uint32_t startLoadingSkyboxCubemap()
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
+    CachedSkyboxCubemaps[env->Skybox] = skyboxCubemap;
+
 	for (uint8_t faceIndex = 0; faceIndex < 6; faceIndex++)
 	{
 		const std::string_view& face = SkyboxFaces[faceIndex];
 
-		uint32_t tex = TextureManager::Get()->LoadFromPath(std::format("{}/{}.jpg", EcEnvironmentService::Skybox, face));
-		EcEnvironmentService::SkyboxFacesBeingLoaded.push_back(tex);
+		uint32_t tex = TextureManager::Get()->LoadFromPath(std::format("{}/{}.jpg", env->Skybox, face));
+		env->SkyboxFacesBeingLoaded.push_back(tex);
 
 		glTexImage2D(
 			GL_TEXTURE_CUBE_MAP_POSITIVE_X + faceIndex,
@@ -61,51 +68,72 @@ static uint32_t startLoadingSkyboxCubemap()
 
 void EcEnvironmentService::ChangeSkybox(const std::string_view& pathStr)
 {
-    bool isEquirect = false;
-
     std::filesystem::path path = FileRW::ResolvePathNormalized(std::string(pathStr));
     if (pathStr[0] != '!' && std::filesystem::is_directory(path))
     {
+        // Check mirrors the one in `TextureManager::m_UploadTextureToGpu`
+        // It intentionally does not free the texture to allow the Engine to put
+        // it into the cubemap in the main loop
+        if (pathStr.find("Sky") == std::string::npos && pathStr[0] != '!')
+            RAISE_RT("Invalid skybox path '{}': Cubemap directory paths must have 'Sky' (case-sensitive) somewhere in it :)", pathStr);
+
         for (const std::string_view& face : SkyboxFaces)
         {
             std::string facePath = (path / face).string() + ".jpg";
             if (!std::filesystem::is_regular_file(facePath))
                 RAISE_RT("Invalid skybox path '{}': Is a directory, but does not have file for the {} face (expected at {})", path.string(), face, facePath);
         }
-        isEquirect = false;
-        EcEnvironmentService::Skybox = pathStr;
-        EcEnvironmentService::SkyboxTextureGpuId = startLoadingSkyboxCubemap();
+
+        SkyboxIsEquirectangularImage = false;
+        Skybox = pathStr;
+        SkyboxTextureGpuId = startLoadingSkyboxCubemap(this);
     }
     else if (pathStr[0] == '!' || std::filesystem::is_regular_file(path))
     {
-        isEquirect = true;
+        SkyboxIsEquirectangularImage = true;
         EcEnvironmentService::Skybox = pathStr;
 
         TextureManager* texManager = TextureManager::Get();
         uint32_t textureResourceId = texManager->LoadFromPath(path.string());
-        EcEnvironmentService::SkyboxTextureGpuId = texManager->GetTextureResource(textureResourceId).GpuId;
+        SkyboxTextureGpuId = texManager->GetTextureResource(textureResourceId).GpuId;
 
         glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::SkyboxEquirectangular);
-        glBindTexture(GL_TEXTURE_2D, EcEnvironmentService::SkyboxTextureGpuId);
+        glBindTexture(GL_TEXTURE_2D, SkyboxTextureGpuId);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     }
     else
         RAISE_RT("Invalid skybox path '{}': Expected file or directory", path.string());
-
-    EcEnvironmentService::SkyboxIsEquirectangularImage = isEquirect;
 }
 
-EcEnvironmentService::EcEnvironmentService()
-{
-    static bool DidInit = false;
-    if (DidInit)
-        return;
-    DidInit = true;
+static EcEnvironmentService DefaultInstance;
 
-    EcEnvironmentService::SkyboxTextureGpuId = TextureManager::Get()->LoadFromPath("!White");
-    EcEnvironmentService::SkyboxIsEquirectangularImage = true;
-    EcEnvironmentService::SkyboxFacesBeingLoaded.reserve(6);
+void EnvironmentComponentManager::BindService(uint32_t Id)
+{
+    EcEnvironmentService* env = (EcEnvironmentService*)GetComponent(Id);
+    env->ChangeSkybox(env->Skybox);
+    ServiceInstance = env->Object;
+}
+
+void EnvironmentComponentManager::UnbindService()
+{
+    ServiceInstance.Clear();
+}
+
+EcEnvironmentService* EnvironmentComponentManager::GetService() const
+{
+    if (ServiceInstance && ServiceInstance->FindComponent<EcEnvironmentService>())
+        return ServiceInstance->FindComponent<EcEnvironmentService>();
+    else
+        return &DefaultInstance;
+}
+
+uint32_t EnvironmentComponentManager::CreateComponent(GameObject* Object)
+{
+    uint32_t id = ComponentManager<EcEnvironmentService>::CreateComponent(Object);
+    m_Components[id].Object = Object;
+
+    return id;
 }
 
 const Reflection::StaticPropertyMap& EnvironmentComponentManager::GetProperties()
@@ -120,13 +148,13 @@ const Reflection::StaticPropertyMap& EnvironmentComponentManager::GetProperties(
         REFLECTION_PROPERTY(
             "Skybox",
             String,
-            [](void*) -> Reflection::GenericValue
+            [](void* p) -> Reflection::GenericValue
             {
-                return EcEnvironmentService::Skybox;
+                return static_cast<EcEnvironmentService*>(p)->Skybox;
             },
-            [](void*, const Reflection::GenericValue& gv)
+            [](void* p, const Reflection::GenericValue& gv)
             {
-                EcEnvironmentService::ChangeSkybox(gv.AsStringView());
+                static_cast<EcEnvironmentService*>(p)->ChangeSkybox(gv.AsStringView());
             }
         )
     };

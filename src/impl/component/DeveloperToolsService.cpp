@@ -40,6 +40,14 @@ static bool* getTool(const std::string_view& toolName)
     RAISE_RT("Invalid tool '{}'", toolName);
 }
 
+void DeveloperToolsComponentManager::BindService(uint32_t)
+{
+}
+
+void DeveloperToolsComponentManager::UnbindService()
+{
+}
+
 const Reflection::StaticPropertyMap& DeveloperToolsComponentManager::GetProperties()
 {
     static const Reflection::StaticPropertyMap props = {

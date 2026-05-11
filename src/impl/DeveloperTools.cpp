@@ -4884,7 +4884,9 @@ void DeveloperTools::Frame(double DeltaTime)
 	if (!ExplorerRoot.Reference.Referred())
 		ExplorerRoot = GameObjectManager::Get()->FindById(GameObjectManager::Get()->DataModel);
 
-	ErrorTooltipTimeRemaining -= DeltaTime;
+	// Right after a dialog, dt will be large
+	if (DeltaTime < 0.5f)
+		ErrorTooltipTimeRemaining -= DeltaTime;
 
 	if (ErrorTooltipTimeRemaining > 0.f)
 		ImGui::SetTooltip("%s", ErrorTooltipMessage.c_str());

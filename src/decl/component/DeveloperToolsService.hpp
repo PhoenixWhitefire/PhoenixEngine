@@ -13,4 +13,7 @@ class DeveloperToolsComponentManager : public ComponentManager<EcDeveloperToolsS
 public:
     const Reflection::StaticPropertyMap& GetProperties() override;
     const Reflection::StaticMethodMap& GetMethods() override;
+
+    void BindService(uint32_t) override;
+    void UnbindService() override;
 };

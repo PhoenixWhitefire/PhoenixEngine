@@ -747,16 +747,18 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 	m_SkyboxShader.SetUniform("Phoenix_RenderMatrix", skyRenderMatrix);
 	m_SkyboxShader.SetUniform("Phoenix_Time", GetRunningTime());
 
-	if (EcEnvironmentService::SkyboxIsEquirectangularImage)
+	const EcEnvironmentService* env = ComponentManagers.Environment.GetService();
+
+	if (env->SkyboxIsEquirectangularImage)
 	{
 		glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::SkyboxEquirectangular);
-		glBindTexture(GL_TEXTURE_2D, EcEnvironmentService::SkyboxTextureGpuId);
+		glBindTexture(GL_TEXTURE_2D, env->SkyboxTextureGpuId);
 		m_SkyboxShader.SetUniform("Phoenix_IsSkyboxEquirectangular", true);
 	}
 	else
 	{
 		glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::SkyboxCubemap);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, EcEnvironmentService::SkyboxTextureGpuId);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, env->SkyboxTextureGpuId);
 		m_SkyboxShader.SetUniform("Phoenix_IsSkyboxEquirectangular", false);
 	}
 
@@ -801,7 +803,7 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 	glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::PostProcessFramebuffer);
 	RendererContext.FrameBuffer.BindTexture();
 
-	if (EcEnvironmentService::PostProcess)
+	if (env->PostProcess)
 	{
 		ZoneScopedN("ApplyPostFxSettings");
 
@@ -817,7 +819,7 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 
 		m_PostFxShader.SetUniform(
 			"Phoenix_Gamma",
-			EcEnvironmentService::GammaCorrection
+			env->GammaCorrection
 		);
 		m_SkyboxShader.SetUniform(
 			"Phoenix_HdrEnabled",
@@ -880,6 +882,7 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 
 static void ensureDataModelValid(const ObjectHandle& DataModel)
 {
+	ZoneScoped;
 	PHX_ENSURE_MSG(DataModel, "DataModel is NULL!");
 
 	GameObject* workspace = DataModel->FindChild("Workspace");
@@ -890,19 +893,23 @@ static void ensureDataModelValid(const ObjectHandle& DataModel)
 
 void Engine::BindDataModel(const ObjectHandle& NewDataModel)
 {
+	ZoneScoped;
 	ensureDataModelValid(NewDataModel);
+
+	if (DataModelRef)
+	{
+		EcDataModel* dm = DataModelRef->FindComponent<EcDataModel>();
+		PHX_ENSURE(dm);
+
+		dm->UnbindServices();
+	}
 
 	DataModelRef = NewDataModel;
 	WorkspaceRef = NewDataModel->FindChild("Workspace");
 	assert(WorkspaceRef.Dereference());
 
 	ObjectManager.DataModel = NewDataModel->ObjectId;
-
-	if (const ObjectHandle& envobj = NewDataModel->FindChildWithComponent(EntityComponent::Environment))
-	{
-		if (EcEnvironmentService* env = envobj->FindComponent<EcEnvironmentService>())
-			env->ChangeSkybox(env->Skybox);
-	}
+	NewDataModel->FindComponent<EcDataModel>()->BindServices();
 }
 
 void Engine::Start()
@@ -924,7 +931,7 @@ void Engine::Start()
 	double LastFrame = RunningTime;
 	double LastSecond = 0.f;
 
-	EcEnvironmentService::ChangeSkybox(EcEnvironmentService::Skybox);
+	ComponentManagers.Environment.GetService()->ChangeSkybox(ComponentManagers.Environment.GetService()->Skybox);
 
 	m_FboResourceId = m_TextureManager.Assign({
 		.ImagePath = "!Framebuffer:Main",
@@ -1008,11 +1015,11 @@ void Engine::Start()
 		m_MeshProvider.FinalizeAsyncLoadedMeshes();
 		Logging::FlushParallelEvents();
 
-		if (EcEnvironmentService::SkyboxFacesBeingLoaded.size() == 6 && !IsHeadlessMode)
+		if (EcEnvironmentService* env = ComponentManagers.Environment.GetService(); env->SkyboxFacesBeingLoaded.size() == 6 && !IsHeadlessMode)
 		{
 			bool skyboxLoaded = true;
 
-			for (uint32_t skyboxFace : EcEnvironmentService::SkyboxFacesBeingLoaded)
+			for (uint32_t skyboxFace : env->SkyboxFacesBeingLoaded)
 			{
 				Texture& texture = m_TextureManager.GetTextureResource(skyboxFace);
 
@@ -1027,11 +1034,11 @@ void Engine::Start()
 			{
 				ZoneScopedN("UploadSkyboxToGpu");
 				
-				glBindTexture(GL_TEXTURE_CUBE_MAP, EcEnvironmentService::SkyboxTextureGpuId);
+				glBindTexture(GL_TEXTURE_CUBE_MAP, env->SkyboxTextureGpuId);
 
 				for (int skyboxFaceIndex = 0; skyboxFaceIndex < 6; skyboxFaceIndex++)
 				{
-					Texture& texture = m_TextureManager.GetTextureResource(EcEnvironmentService::SkyboxFacesBeingLoaded.at(skyboxFaceIndex));
+					Texture& texture = m_TextureManager.GetTextureResource(env->SkyboxFacesBeingLoaded.at(skyboxFaceIndex));
 
 					glTexImage2D(
 						GL_TEXTURE_CUBE_MAP_POSITIVE_X + skyboxFaceIndex,
@@ -1055,7 +1062,7 @@ void Engine::Start()
 				}
 
 				glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
-				EcEnvironmentService::SkyboxFacesBeingLoaded.clear();
+				env->SkyboxFacesBeingLoaded.clear();
 			}
 		}
 
@@ -1157,7 +1164,7 @@ void Engine::Start()
 			sceneCamera = sceneCamObject->FindComponent<EcCamera>();
 		}
 
-		if (m_Physics.Simulating && physWorld.Dynamics.size() > 0)
+		if (m_Physics.Simulating && !m_Physics.SimulatingForcePaused && physWorld.Dynamics.size() > 0)
 			m_Physics.Step(physWorld, deltaTime * m_Physics.Timescale);
 
 		if (!IsHeadlessMode)
@@ -1225,15 +1232,17 @@ void Engine::Start()
 
 		if (!IsHeadlessMode)
 		{
+			EcEnvironmentService* env = ComponentManagers.Environment.GetService();
+
 			for (uint32_t shdId : CurrentScene.UsedShaders)
 			{
 				ShaderProgram& shader = m_ShaderManager.GetShaderResource(shdId);
 				shader.SetUniform("Phoenix_IsShadowMap", false);
-				shader.SetUniform("Phoenix_LightAmbient", EcEnvironmentService::AmbientLight.ToGenericValue());
+				shader.SetUniform("Phoenix_LightAmbient", env->AmbientLight.ToGenericValue());
 
-				shader.SetUniform("Phoenix_Fog", EcEnvironmentService::Fog);
-				if (EcEnvironmentService::Fog)
-					shader.SetUniform("Phoenix_FogColor", EcEnvironmentService::FogColor.ToGenericValue());
+				shader.SetUniform("Phoenix_Fog", env->Fog);
+				if (env->Fog)
+					shader.SetUniform("Phoenix_FogColor", env->FogColor.ToGenericValue());
 			}
 
 			m_Render(deltaTime, particleEmittersRenderList);

@@ -6,19 +6,21 @@
 
 struct EcEnvironmentService : public Component<EntityComponent::Environment>
 {
-    EcEnvironmentService();
+    void ChangeSkybox(const std::string_view& Path);
 
-    static void ChangeSkybox(const std::string_view& Path);
+    ObjectRef Object;
 
-    static inline Color AmbientLight = { .3f, .3f, .3f };
-    static inline bool PostProcess = false;
-    static inline bool Fog = false;
-    static inline Color FogColor = { 0.85f, 0.85f, 0.90f };
-    static inline float GammaCorrection = 1.f;
-    static inline std::string Skybox = "textures/Sky1";
-    static inline uint32_t SkyboxTextureGpuId = UINT32_MAX;
-    static inline bool SkyboxIsEquirectangularImage = true;
-    static inline std::vector<uint32_t> SkyboxFacesBeingLoaded;
+    Color AmbientLight = { .3f, .3f, .3f };
+    Color FogColor = { 0.85f, 0.85f, 0.90f };
+    float GammaCorrection = 1.f;
+
+    std::vector<uint32_t> SkyboxFacesBeingLoaded;
+    std::string Skybox = "textures/Sky1";
+    uint32_t SkyboxTextureGpuId = UINT32_MAX;
+    bool SkyboxIsEquirectangularImage = true;
+
+    bool PostProcess = false;
+    bool Fog = false;
 
     bool Valid = true;
 };
@@ -27,4 +29,11 @@ class EnvironmentComponentManager : public ComponentManager<EcEnvironmentService
 {
 public:
     const Reflection::StaticPropertyMap& GetProperties() override;
+    uint32_t CreateComponent(GameObject*) override;
+
+    void BindService(uint32_t) override;
+    void UnbindService() override;
+
+    EcEnvironmentService* GetService() const;
+    ObjectHandle ServiceInstance;
 };

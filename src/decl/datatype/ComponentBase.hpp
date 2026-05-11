@@ -8,11 +8,13 @@ class GameObject;
 class IComponentManager
 {
 public:
-	virtual uint32_t CreateComponent(GameObject* /* Object */) = 0;
+	virtual uint32_t CreateComponent(GameObject* Object) = 0;
 	virtual std::vector<void*> GetComponents() = 0;
 	virtual void ForEachComponent(const std::function<bool(void*)>) = 0;
 	virtual void* GetComponent(uint32_t) = 0;
-	virtual void DeleteComponent(uint32_t /* ComponentId */) = 0;
+	virtual void DeleteComponent(uint32_t ComponentId) = 0;
+	virtual void BindService(uint32_t) = 0;
+	virtual void UnbindService() = 0;
 	virtual void Shutdown() = 0;
 
 	virtual const Reflection::StaticPropertyMap& GetProperties() = 0;
@@ -73,6 +75,14 @@ public:
 			T& component = m_Components.at(Id);
 			component.Valid = false;
 		}
+	}
+
+	virtual void BindService(uint32_t) override
+	{
+	}
+
+	virtual void UnbindService() override
+	{
 	}
 
 	virtual void Shutdown() override

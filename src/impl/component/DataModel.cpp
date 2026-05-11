@@ -6,6 +6,7 @@
 #include <tracy/Tracy.hpp>
 
 #include "component/DataModel.hpp"
+#include "component/TreeLink.hpp"
 #include "script/ScriptEngine.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
@@ -351,4 +352,52 @@ void DataModelComponentManager::NotifyAllOfShutdown()
         if (dm.Valid)
             dm.Close();
     }
+}
+
+static void bindServices(const ObjectHandle& Root, std::vector<EntityComponent>& BoundServices)
+{
+    EcTreeLink* treeLink = nullptr;
+
+    for (const ObjectHandle& obj : Root->GetChildren())
+    {
+        if (EcTreeLink* tl = obj->FindComponent<EcTreeLink>())
+        {
+            treeLink = tl;
+            break;
+        }
+    }
+
+    if (treeLink && treeLink->Target.IsValid())
+    {
+        bindServices(treeLink->Target.Referred(), BoundServices);
+    }
+    else
+    {
+        for (const ObjectHandle& obj : Root->GetChildren())
+        {
+            for (ReflectorRef& ref : obj->Components)
+            {
+                GetComponentManagerByComponentType(ref.Type)->BindService(ref.Id);
+
+                if (std::find(BoundServices.begin(), BoundServices.end(), ref.Type) == BoundServices.end())
+                    BoundServices.push_back(ref.Type);
+
+                if (ref.Type == EntityComponent::TreeLink)
+                    treeLink = ref.Get<EcTreeLink>();
+            }
+        }
+    }
+}
+
+void EcDataModel::BindServices()
+{
+    bindServices(Object, BoundServices);
+}
+
+void EcDataModel::UnbindServices()
+{
+    for (EntityComponent ec : BoundServices)
+        GetComponentManagerByComponentType(ec)->UnbindService();
+
+    BoundServices.clear();
 }

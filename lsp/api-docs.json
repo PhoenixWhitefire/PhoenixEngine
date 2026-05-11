@@ -1406,6 +1406,9 @@
   "@phoenix/globaltype/Environment.PostProcess": {
     "documentation": "Post-processor enablement (Uniform: `Phoenix_PostFxEnabled`)"
   },
+  "@phoenix/globaltype/Environment.Skybox": {
+    "documentation": "The skybox asset. May either be a path directly to an equirectangular panorama image, or a directory containing `[right/left/top/bottom/front/back].jpg` (cubemap). Will error when attempting to assign an invalid path. Cubemap directory paths must contain '`Sky`' (case-sensitive) somewhere in them :)"
+  },
   "@phoenix/globaltype/EventConnection.Connected": {
     "documentation": "* Whether the Connection is connected or not\n"
   },
@@ -1690,6 +1693,9 @@
   },
   "@phoenix/globaltype/Physics.Gravity": {
     "documentation": "The gravitational field strength"
+  },
+  "@phoenix/globaltype/Physics.SetSimulationForcePaused": {
+    "documentation": "If passed `true`, forces the simulation to be paused, regardless of the value of `.Simulating`"
   },
   "@phoenix/globaltype/Physics.Simulating": {
     "documentation": "Whether the Physics simulation is running. IMPORTANT: The Editor sets this value to `true` and `false` when starting/stopping playtests"
