@@ -110,7 +110,9 @@ target_link_libraries(PhoenixEngine PRIVATE
 )
 
 # not letting me put multiple definitions in the same expression waaa
-add_compile_definitions(TRACY_ENABLE TRACY_FIBERS)
+if (MSVC OR NOT (PHX_BUILD_TYPE STREQUAL "DebugTSan"))
+	add_compile_definitions(TRACY_ENABLE TRACY_FIBERS)
+endif()
 add_compile_definitions($<$<CONFIG:Release>:NDEBUG>)
 add_compile_definitions($<$<CONFIG:Release>:TRACY_ON_DEMAND>)
 
