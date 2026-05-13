@@ -210,7 +210,9 @@ static int imgui_text(lua_State* L)
 static int imgui_image(lua_State* L)
 {
     TextureManager* texManager = TextureManager::Get();
-	uint32_t resId = texManager->LoadFromPath(luaL_checkstring(L, 1), true, luaL_optboolean(L, 5, true), false);
+    bool bilinearSmoothed = luaL_optboolean(L, 5, true);
+
+	uint32_t resId = texManager->LoadFromPath(luaL_checkstring(L, 1), true, bilinearSmoothed, false);
 	const Texture& texture = texManager->GetTextureResource(resId);
 
     ImVec2 texSize = ImVec2(texture.Width, texture.Height);
@@ -246,13 +248,19 @@ static int imgui_image(lua_State* L)
             tintcol.w = luaL_checknumber(L, -1);
     }
 
-	ImGui::ImageWithBg(
-		texture.GpuId,
-		texSize,
+    if (!bilinearSmoothed)
+        ImGui::GetWindowDrawList()->AddCallback(ImGui::GetPlatformIO().DrawCallback_SetSamplerNearest);
+
+    ImGui::ImageWithBg(
+        texture.GpuId,
+        texSize,
         uv0, uv1,
         ImVec4(),
         tintcol
-	);
+    );
+
+    if (!bilinearSmoothed)
+        ImGui::GetWindowDrawList()->AddCallback(ImGui::GetPlatformIO().DrawCallback_SetSamplerLinear);
 
     return 0;
 }

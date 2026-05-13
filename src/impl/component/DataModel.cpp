@@ -28,6 +28,7 @@ void DataModelComponentManager::DeleteComponent(uint32_t Id)
         lua_resetthread(L);
     dm.Modules.clear();
 
+    dm.UnbindServices();
 	ComponentManager<EcDataModel>::DeleteComponent(Id);
 }
 
