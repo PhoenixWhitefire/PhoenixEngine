@@ -1,6 +1,7 @@
 #include <format>
 #include <mutex>
 #include <functional>
+#include <cstring>
 #include <glad/gl.h>
 #include <stb/stb_image.h>
 #include <tracy/Tracy.hpp>
@@ -18,7 +19,7 @@ typedef std::function<Texture*(ImageLoader_t, Texture*, std::string, uint32_t)> 
 
 // a 2x2 purple-and-black checkerboard
 // 23/10/2024
-static uint8_t MissingTextureBytes[] = {
+static constexpr uint8_t MissingTextureBytes[] = {
 	static_cast<uint8_t>(0xFFu),
 	static_cast<uint8_t>(0x00u),
 	static_cast<uint8_t>(0xFFu),
@@ -36,8 +37,8 @@ static uint8_t MissingTextureBytes[] = {
 	static_cast<uint8_t>(0xFFu),
 };
 
-static uint32_t WhiteTextureBytes = 0xFFFFFF;
-static uint32_t BlackTextureBytes = 0x000000;
+static constexpr uint32_t WhiteTextureBytes = 0xFFFFFF;
+static constexpr uint32_t BlackTextureBytes = 0x000000;
 
 void TextureManager::m_UploadTextureToGpu(Texture& texture)
 {
@@ -169,9 +170,9 @@ void TextureManager::Initialize(bool IsHeadless)
 	// ID 0 means no texture
 	m_Textures.emplace_back();
 
-	createAndUploadTextureData("!Missing", MissingTextureBytes, 2, 2);
-	createAndUploadTextureData("!White", (uint8_t*)&WhiteTextureBytes, 1, 1);
-	createAndUploadTextureData("!Black", (uint8_t*)&BlackTextureBytes, 1, 1);
+	createAndUploadTextureData("!Missing", const_cast<uint8_t*>(MissingTextureBytes), 2, 2);
+	createAndUploadTextureData("!White", const_cast<uint8_t*>((const uint8_t*)&WhiteTextureBytes), 1, 1);
+	createAndUploadTextureData("!Black", const_cast<uint8_t*>((const uint8_t*)&BlackTextureBytes), 1, 1);
 }
 
 void TextureManager::Shutdown()
@@ -237,15 +238,15 @@ static void emloadTexture(
 	else
 	{
 		if (ActualPath == "!White")
-			data = (uint8_t*)&WhiteTextureBytes;
+			data = const_cast<uint8_t*>((const uint8_t*)&WhiteTextureBytes);
 		else if (ActualPath == "!Black")
-			data = (uint8_t*)&BlackTextureBytes;
+			data = const_cast<uint8_t*>((const uint8_t*)&BlackTextureBytes);
 		else
 		{
 			if (ActualPath != "!Missing")
 				Log.ErrorF("Invalid built-in texture in async texture load '{}'", ActualPath);
 
-			data = MissingTextureBytes;
+			data = const_cast<uint8_t*>(MissingTextureBytes);
 		}
 	}
 
