@@ -153,12 +153,6 @@ static void createAndUploadTextureData(const std::string& Name, uint8_t* Data, i
 	tex.Status = Texture::LoadStatus::Succeeded;
 
 	glBindTexture(GL_TEXTURE_2D, tex.GpuId);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
 	s_Instance->m_UploadTextureToGpu(tex);
 }
 
@@ -379,8 +373,7 @@ uint32_t TextureManager::LoadFromPath(const std::string& Path, bool ShouldLoadAs
 
 			static const uint32_t BlackPixel = 0u;
 
-			glTexImage2D
-			(
+			glTexImage2D(
 				GL_TEXTURE_2D,
 				0,
 				GL_RGBA,
@@ -424,6 +417,7 @@ uint32_t TextureManager::LoadFromPath(const std::string& Path, bool ShouldLoadAs
 			m_UploadTextureToGpu(*newTexture);
 		}
 
+		glBindTexture(GL_TEXTURE_2D, 0);
 		return newResourceId;
 	}
 	else

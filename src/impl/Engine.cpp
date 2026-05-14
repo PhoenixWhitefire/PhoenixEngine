@@ -1225,6 +1225,8 @@ void Engine::Start()
 			}
 
 			RendererContext.DrawScene(sunScene, sunRenderMatrix, glm::mat4(1.f), RunningTime, DebugWireframeRendering);
+			m_SunShadowMap.Unbind();
+
 			glViewport(0, 0, WindowSizeX, WindowSizeY);
 		}
 

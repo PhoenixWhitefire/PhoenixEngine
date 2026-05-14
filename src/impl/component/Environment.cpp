@@ -99,8 +99,11 @@ void EcEnvironmentService::ChangeSkybox(const std::string_view& pathStr)
 
         glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::SkyboxEquirectangular);
         glBindTexture(GL_TEXTURE_2D, SkyboxTextureGpuId);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glBindTexture(GL_TEXTURE_2D, 0);
     }
     else
         RAISE_RT("Invalid skybox path '{}': Expected file or directory", path.string());

@@ -212,6 +212,11 @@ local function handleUndoRedoKeybinds()
 end
 
 local function editorFrame(DeltaTime)
+	if not workspace.SceneCamera then
+		workspace.SceneCamera = GameObject.new("Camera")
+		workspace.SceneCamera.Parent = workspace
+	end
+
 	MouseClick = (not WasHoldingDownM1) and PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Left)
 	local f5 = PlayerInput:IsKeyPressed(Enum.Key.F5)
 
