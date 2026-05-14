@@ -130,7 +130,7 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 		tryMarkFreeSkinnedMeshPseudoAsset(*this);
 
 	MeshProvider* meshProvider = MeshProvider::Get();
-	ObjectRef obj = Object;
+	ObjectHandle obj = Object;
 	std::string meshPathStr = std::string(MeshPath);
 
 	this->RenderMeshId = meshProvider->LoadFromPath(
@@ -199,7 +199,7 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 				EcBone* bone = boneObj->FindComponent<EcBone>();
 
 				boneObj->SetParent(b.Parent == UINT8_MAX
-					? obj.Referred()
+					? obj.Dereference()
 					: obj->FindChild(meshAfter.Bones[b.Parent].Name)
 				);
 				boneObj->Name = b.Name;

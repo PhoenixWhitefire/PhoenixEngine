@@ -762,8 +762,6 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 		m_SkyboxShader.SetUniform("Phoenix_IsSkyboxEquirectangular", false);
 	}
 
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 	RendererContext.FrameBuffer.Bind();
 
 	glViewport(

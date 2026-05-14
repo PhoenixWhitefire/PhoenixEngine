@@ -309,9 +309,9 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 			nlohmann::json materialJson;
 
 			if (m_HasSkinning)
-				materialJson["Shader"] = "worldUberSkinned";
+				materialJson["Shader"] = "@base/shaders/worldUberSkinned.shp";
 			else
-				materialJson["Shader"] = "worldUber";
+				materialJson["Shader"] = "@base/shaders/worldUber.shp";
 
 			const ModelLoader::MeshMaterial& material = node.Material;
 
@@ -407,7 +407,10 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 
 		uint32_t parentIndex = node.Parent;
 		if (parentIndex == UINT32_MAX) // root node
-			object->SetParent(GameObjectManager::Get()->FindById(Parent));
+		{
+			assert(loadedObjects.size() == 1);
+			Model = object;
+		}
 		else
 			object->SetParent(
 				loadedObjects.at(parentIndex) != object

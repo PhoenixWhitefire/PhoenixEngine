@@ -605,6 +605,12 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData, bool DebugWirefra
 	else // the gosh darn grass model is practically 50% transparent
 		glDisable(GL_BLEND);
 
+	// apply the uniforms for the shader program...
+	shader.ApplyDefaultUniforms();
+	// ... then the material uniforms...
+	material.ApplyUniforms();
+	// ... so that the material can override uniforms in the SP
+
 	shader.SetUniform("Phoenix_Material.SpecularMultiplier", material.SpecMultiply);
 	shader.SetUniform("Phoenix_Material.SpecularPower", material.SpecExponent);
 
@@ -644,12 +650,6 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData, bool DebugWirefra
 	}
 	else
 		shader.SetUniform("Phoenix_Material.HasEmissionMap", false);
-
-	// apply the uniforms for the shader program...
-	shader.ApplyDefaultUniforms();
-	// ... then the material uniforms...
-	material.ApplyUniforms();
-	// ... so that the material can override uniforms in the SP
 }
 
 void Renderer::SwapBuffers()
