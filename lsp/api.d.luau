@@ -228,7 +228,7 @@ export type EcAssetManager = {
   GetMeshData: (self: EcAssetManager, Id: string) -> MeshAssetData,
   ImportModel: (self: EcAssetManager, Path: string) -> GameObject & EcModel,
   LoadScene: (self: EcAssetManager, Path: string) -> ({ GameObject }?, string),
-  QueueLoadTexture: (self: EcAssetManager, Path: string, BilinearFiltering: boolean, ImGui: boolean) -> (),
+  QueueLoadTexture: (self: EcAssetManager, Path: string, LoadInLinearSpace: boolean?) -> (),
   SaveMesh: (self: EcAssetManager, Id: string, Path: string) -> (),
   SaveScene: (self: EcAssetManager, RootNodes: { GameObject }, Path: string) -> (boolean, string?),
   SetMeshData: (self: EcAssetManager, Id: string, MeshData: MeshAssetData | buffer) -> (),
@@ -373,10 +373,10 @@ export type EcNetwork = {
   MakeHttpRequestAsync: (self: EcNetwork, { Url: string, Method: nil | 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'PATCH', Headers: { [string]: string }?, Body: string? }) -> ({ Ok: boolean, Status: number, Headers: { [string]: string }, Body: string }),
 }
 export type EcParticleEmitter = {
-  BilinearFiltering: boolean,
   Emitting: boolean,
   Image: string,
   Lifetime: vector,
+  LinearlySmoothened: boolean,
   ParticlesAreAttached: boolean,
   Rate: number,
 }
@@ -417,7 +417,7 @@ export type EcRenderer = {
   Resolution: vector,
   VSync: boolean,
 
-  SetShaderTextureVariable: (self: EcRenderer, Shader: string, Variable: string, TexturePath: string, BilinearFiltering: boolean, InLinearColorSpace: boolean) -> (),
+  SetShaderTextureVariable: (self: EcRenderer, Shader: string, Variable: string, TexturePath: string, InLinearColorSpace: boolean) -> (),
   SetShaderVariable: ((_: EcRenderer, Shader: string, Variable: string, Value: boolean | number | Color | Matrix, Type: EnumValueType?) -> ()) & ((_: EcRenderer, Shader: string, Variable: string, Value: vector, Type: EnumValueType) -> ()),
 }
 export type EcRigidBody = {
@@ -856,7 +856,7 @@ declare imgui: {
   endtooltip: ((  ) -> ()),
   endw: ((  ) -> ()),
   focuskeyboardhere: (( Offset: number? ) -> ()),
-  image: (( ImagePath: string, Size: vector?, FlipVertically: boolean?, TintColor: { number }?, DoBilinearSmoothing: boolean? ) -> ()),
+  image: (( ImagePath: string, Size: vector?, FlipVertically: boolean?, TintColor: { number }?, LinearlySmooth: boolean? ) -> ()),
   imagebutton: (( Name: string, Image: string, Size: vector? ) -> (boolean)),
   indent: (( Indent: number? ) -> ()),
   inputnumber: (( Text: string, Value: number ) -> (number)),
@@ -872,6 +872,7 @@ declare imgui: {
   pushid: (( Id: string ) -> ()),
   pushstylecolor: (( StyleIndex: number, Color: { number } ) -> ()),
   sameline: ((  ) -> ()),
+  scalefactor: ((  ) -> (number)),
   scrollherey: ((  ) -> ()),
   separator: ((  ) -> ()),
   separatortext: (( Text: string ) -> ()),

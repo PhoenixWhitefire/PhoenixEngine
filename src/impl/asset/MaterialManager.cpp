@@ -117,29 +117,27 @@ void RenderMaterial::Reload()
 		}
 	}
 
-	bool doBilinearFiltering = jsonMaterialData.value("BilinearFiltering", jsonMaterialData.value("bilinearFiltering", true));
-
 	this->ColorMap = texManager->LoadFromPath(jsonMaterialData.value(
 		"ColorMap",
 		jsonMaterialData.value("albedo", MissingTexPath)
-	), true, doBilinearFiltering);
+	), true);
 
 	std::string metallicRoughnessPath = jsonMaterialData.value("MetallicRoughnessMap", jsonMaterialData.value("specular", ""));
 	std::string normalPath = jsonMaterialData.value("NormalMap", "");
 	std::string emissionPath = jsonMaterialData.value("EmissionMap", "");
 
 	if (metallicRoughnessPath != "")
-		this->MetallicRoughnessMap = texManager->LoadFromPath(metallicRoughnessPath, true, doBilinearFiltering);
+		this->MetallicRoughnessMap = texManager->LoadFromPath(metallicRoughnessPath, true);
 	else
-		this->MetallicRoughnessMap = texManager->LoadFromPath("!White", true, doBilinearFiltering);
+		this->MetallicRoughnessMap = texManager->LoadFromPath("!White", true);
 
 	if (normalPath != "")
-		this->NormalMap = texManager->LoadFromPath(normalPath, true, doBilinearFiltering);
+		this->NormalMap = texManager->LoadFromPath(normalPath, true);
 	else
 		this->NormalMap = 0;
 
 	if (emissionPath != "")
-		this->EmissionMap = texManager->LoadFromPath(emissionPath, true, doBilinearFiltering);
+		this->EmissionMap = texManager->LoadFromPath(emissionPath, true);
 	else
 		this->EmissionMap = 0;
 
@@ -260,6 +258,7 @@ void MaterialManager::SaveToPath(const RenderMaterial& material, const std::stri
 	newMtlConfig["specExponent"] = material.SpecExponent;
 	newMtlConfig["specMultiply"] = material.SpecMultiply;
 	newMtlConfig["HasTranslucency"] = material.HasTranslucency;
+	newMtlConfig["BilinearFiltering"] = material.LinearlySmoothened;
 	newMtlConfig["Shader"] = material.GetShader().Name;
 	newMtlConfig["PolygonMode"] = static_cast<int>(material.PolygonMode);
 

@@ -2721,7 +2721,7 @@ function Stages.ProjectEditing_Enter(PreviousStage: Stage)
 	if PreviousStage == "SelectProject" then
 		for icon, fstype in fs.listdir("@etextures/editor-icons") do
 			if fstype == "f" and icon:find(".png") then
-				AssetManager:QueueLoadTexture(icon, false, true)
+				AssetManager:QueueLoadTexture(icon, false)
 			end
 		end
 
@@ -3212,7 +3212,8 @@ game:BindToClose(handleEngineShutdown)
 task.defer(checkIfLatestVersionBuilt)
 
 if table.find(Engine:GetCliArguments(), "-ed_ci") then
-	task.defer(changeStageTo, "SelectProject")
+	-- TODO luau cast
+	task.defer(changeStageTo, "SelectProject" :: "SelectProject")
 
 	if StageUpdateSignal then
 		StageUpdateSignal:Disconnect()

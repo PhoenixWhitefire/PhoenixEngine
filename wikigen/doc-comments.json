@@ -141,11 +141,10 @@
             "ParameterNames": "Path"
           },
           "QueueLoadTexture": {
-            "Description": "Queues a texture to be loaded",
+            "Description": "Queues a texture to be preloaded",
             "ParameterNames": [
               "Path",
-              "BilinearFiltering",
-              "ImGui"
+              "LoadInLinearSpace"
             ]
           },
           "SaveMesh": {
@@ -508,10 +507,10 @@
       "ParticleEmitter": {
         "Description": "An emitter of 2D particles",
         "Properties": {
-          "BilinearFiltering": "Whether the particle image is smoothened",
           "Emitting": "Whether the emitter should emit new particles",
           "Image": "The path to the image to use for the particles",
           "Lifetime": "The X and Y components act as a range of how long any particle can last, in seconds",
+          "LinearlySmoothened": "Whether the particle image is smoothened",
           "ParticlesAreAttached": "Whether the particles are attached to and move with the emitter",
           "Rate": "An integer indicating how many particles should be emitted per second (must be above or equal to `0`)"
         }
@@ -608,7 +607,6 @@
               "Shader",
               "Variable",
               "TexturePath",
-              "BilinearFiltering",
               "InLinearColorSpace"
             ]
           },
@@ -1828,7 +1826,7 @@
                 "{ 1, 1, 1, 1 }"
               ],
               [
-                "DoBilinearSmoothing: boolean?",
+                "LinearlySmooth: boolean?",
                 "true"
               ]
             ]
@@ -1946,6 +1944,10 @@
             "Description": [
               "`ImGui::SameLine`"
             ]
+          },
+          "scalefactor": {
+            "Description": "UI scale factor",
+            "Out": "number"
           },
           "scrollherey": {
             "Description": "`ImGui::SetScrollHereY`"

@@ -465,7 +465,7 @@ void ShaderProgram::SetUniform(const std::string_view& UniformName, const Reflec
 	m_PendingUniforms[std::string(UniformName)] = Value;
 }
 
-void ShaderProgram::SetTextureUniform(const std::string_view& UniformName, uint32_t TextureId, Texture::DimensionType Type)
+uint32_t ShaderProgram::SetTextureUniform(const std::string_view& UniformName, uint32_t TextureId, Texture::DimensionType Type, uint32_t Unit)
 {
 	static GLenum DimensionTypeToGLDimension[] = {
 		GL_TEXTURE_2D,
@@ -480,18 +480,20 @@ void ShaderProgram::SetTextureUniform(const std::string_view& UniformName, uint3
 		TextureId = WhiteTextureId;
 
 	uint32_t gpuId = texManager->GetTextureResource(TextureId).GpuId;
-	uint32_t slot = ReservedTextureSlot::ReservedEnd + gpuId;
+	uint32_t slot = Unit == UINT32_MAX ? ReservedTextureSlot::ReservedEnd + gpuId : Unit;
 
 	m_PendingUniforms[std::string(UniformName)] = slot;
 
 	if (ShaderManager::Get()->IsHeadless)
-		return;
+		return slot;
 
 	glActiveTexture(GL_TEXTURE0 + slot);
 	glBindTexture(
 		DimensionTypeToGLDimension[(uint8_t)Type],
 		gpuId
 	);
+
+	return slot;
 }
 
 bool ShaderProgram::m_CheckForErrors(uint32_t Object, const char* Type)

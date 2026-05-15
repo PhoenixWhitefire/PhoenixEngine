@@ -18,6 +18,8 @@
 #pragma GCC diagnostic pop
 #endif
 
+#include <tracy/Tracy.hpp>
+
 #include "script/luhx.hpp"
 #include "FileRW.hpp"
 
@@ -355,6 +357,7 @@ static int fs_remove(lua_State* L)
 
 static int fs_promptsave(lua_State* L)
 {
+	ZoneScoped;
 	setSelfAlias(L);
 
 	std::string defaultLocation = FileRW::ResolvePathAbsolute(luaL_optstring(L, 1, "./"));
@@ -394,6 +397,7 @@ static int fs_promptsave(lua_State* L)
 
 static int fs_promptopen(lua_State* L)
 {
+	ZoneScoped;
 	setSelfAlias(L);
 
 	std::string defaultLocation = FileRW::ResolvePathAbsolute(luaL_optstring(L, 1, "./"));
@@ -465,6 +469,7 @@ static int fs_promptopen(lua_State* L)
 
 static int fs_promptopenfolder(lua_State* L)
 {
+	ZoneScoped;
 	setSelfAlias(L);
 
 	std::string defaultFolder;

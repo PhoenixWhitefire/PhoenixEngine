@@ -1820,12 +1820,12 @@ static Texture getIconForComponent(EntityComponent Ec)
 		componentName = "Empty";
 
 	std::string classIconPath = "@editres/textures/editor-icons/" + componentName + ".png";
-	Texture tex = texManager->GetTextureResource(texManager->LoadFromPath(classIconPath, true, false, false));
+	Texture tex = texManager->GetTextureResource(texManager->LoadFromPath(classIconPath, true, false));
 
 	if (tex.Status == Texture::LoadStatus::Failed && tex.ImagePath.find("fallback") == std::string::npos)
 	{
 		const std::string& fallbackPath = "@editres/textures/editor-icons/fallback.png";
-		Texture& fallback = texManager->GetTextureResource(texManager->LoadFromPath(fallbackPath, true, false, false));
+		Texture& fallback = texManager->GetTextureResource(texManager->LoadFromPath(fallbackPath, true, false));
 		texManager->Assign(fallback, classIconPath);
 		tex = fallback;
 	}
@@ -3132,9 +3132,9 @@ static void createFileOrDirectory(FilesystemNode Parent, bool Directory)
 static void recursiveRenderFilesystemNode(FilesystemNode& Node)
 {
 	TextureManager* texManager = TextureManager::Get();
-	static uint32_t ScriptIconResource = texManager->LoadFromPath("./resources/textures/editor-icons/Script.png", true, false, false);
-	static uint32_t FolderOpenIconResource = texManager->LoadFromPath("./resources/textures/editor-icons/Folder_Open.png", true, false, false);
-	static uint32_t FolderClosedIconResource = texManager->LoadFromPath("./resources/textures/editor-icons/Folder_Closed.png", true, false, false);
+	static uint32_t ScriptIconResource = texManager->LoadFromPath("./resources/textures/editor-icons/Script.png", true, false);
+	static uint32_t FolderOpenIconResource = texManager->LoadFromPath("./resources/textures/editor-icons/Folder_Open.png", true, false);
+	static uint32_t FolderClosedIconResource = texManager->LoadFromPath("./resources/textures/editor-icons/Folder_Closed.png", true, false);
 
 	ImGui::PushID(Node.Path.string().c_str());
 
@@ -3243,6 +3243,8 @@ static void recursiveRenderFilesystemNode(FilesystemNode& Node)
 
 	float tintScale = Node.IsSymlink ? 0.5f : 1.f;
 
+	ImGui::GetWindowDrawList()->AddCallback(ImGui::GetPlatformIO().DrawCallback_SetSamplerNearest);
+
 	ImGui::ImageWithBg(
 		texManager->GetTextureResource(Node.IsDirectory ? (open ? FolderOpenIconResource : FolderClosedIconResource) : ScriptIconResource).GpuId,
 		ImVec2(18.f, 16.f),
@@ -3251,6 +3253,9 @@ static void recursiveRenderFilesystemNode(FilesystemNode& Node)
 		ImVec4(0.f, 0.f, 0.f, 0.f),
 		ImVec4(tintScale, tintScale, tintScale, 1.f)
 	);
+
+	ImGui::GetWindowDrawList()->AddCallback(ImGui::GetPlatformIO().DrawCallback_SetSamplerLinear);
+
 	openScript = openScript || (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered());
 	hovered = hovered || ImGui::IsItemHovered();
 
@@ -3657,10 +3662,17 @@ static bool propertyAssetSelectorList(const std::string_view& PropertyName, floa
 	style.FramePadding.y = prevPadding;
 
 	static TextureManager* texManager = TextureManager::Get();
-	static uint32_t openIconId = texManager->LoadFromPath("@editres/textures/editor-icons/Folder_Open.png", true, false, false);
+	static uint32_t openIconId = texManager->LoadFromPath("@editres/textures/editor-icons/Folder_Open.png", true, false);
 
 	ImGui::SameLine();
-	if (ImGui::ImageButton("##OpenFile", texManager->GetTextureResource(openIconId).GpuId, ImVec2(16.f, 16.f)))
+
+	ImGui::GetWindowDrawList()->AddCallback(ImGui::GetPlatformIO().DrawCallback_SetSamplerNearest);
+
+	bool openFile = ImGui::ImageButton("##OpenFile", texManager->GetTextureResource(openIconId).GpuId, ImVec2(16.f, 16.f));
+
+	ImGui::GetWindowDrawList()->AddCallback(ImGui::GetPlatformIO().DrawCallback_SetSamplerLinear);
+
+	if (openFile)
 	{
 		ImGui::CloseCurrentPopup();
 		ImGui::EndPopup();
@@ -3924,7 +3936,7 @@ static void renderProperties()
 		std::unordered_map<std::string_view, std::pair<const Reflection::PropertyDescriptor*, Reflection::GenericValue>> props;
 		std::unordered_map<std::string_view, bool> conflictingProps;
 		std::unordered_map<std::string_view, EntityComponent> propToComponent;
-		std::vector<std::string_view> tags;
+		std::set<std::string_view> tags;
 
 		for (const ObjectHandle& sel : Selections)
 		{
@@ -3961,7 +3973,7 @@ static void renderProperties()
 			}
 
 			for (uint16_t tag : sel->Tags)
-				tags.push_back(GameObjectManager::Get()->Collections[tag].Name);
+				tags.insert(GameObjectManager::Get()->Collections[tag].Name);
 		}
 
 		using PropsIteratorType = std::pair<std::string_view, std::pair<const Reflection::PropertyDescriptor*, Reflection::GenericValue>>;
@@ -3971,7 +3983,6 @@ static void renderProperties()
 			{
 				return a.first < b.first;
 			});
-		std::sort(tags.begin(), tags.end());
 
 		float cavailX = ImGui::GetContentRegionAvail().x;
 		float halfWidth = cavailX / 2.f;
@@ -4447,6 +4458,10 @@ static void renderProperties()
 		if (ImGui::BeginPopup("AddTags"))
 		{
 			static char EntryBuffer[64] = { 0 };
+
+			if (ImGui::IsWindowAppearing())
+				ImGui::SetKeyboardFocusHere();
+
 			ImGui::InputText("##", EntryBuffer, 64);
 
 			if (ImGui::IsItemDeactivatedAfterEdit() && strlen(EntryBuffer) > 0)

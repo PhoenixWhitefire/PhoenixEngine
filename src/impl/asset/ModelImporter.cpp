@@ -352,7 +352,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 			if (material.AlphaMode == MeshMaterial::MaterialAlphaMode::Mask)
 				materialJson["Uniforms"]["AlphaCutoff"] = material.AlphaCutoff;
 
-			materialJson["BilinearFiltering"] = colorTex.DoBilinearSmoothing;
+			materialJson["BilinearFiltering"] = material.LinearlySmoothened;
 
 			// `models/EmbeddedTexture.glb/Material.001`
 			std::string materialName = "models/"
@@ -1099,13 +1099,11 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 	if (baseColSourceIndex < 0)
 		return material;
 
-	bool baseColFilterBilinear = true;
-
 	if (baseColTex.find("sampler") != baseColTex.end())
 		// 9729 == LINEAR 
 		// https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#schema-reference-sampler
-		baseColFilterBilinear = m_JsonData["samplers"][(int)baseColTex["sampler"]]["magFilter"] == 9729;
-	
+		material.LinearlySmoothened = m_JsonData["samplers"][(int)baseColTex["sampler"]]["magFilter"] == 9729;
+
 	std::string baseColPath = getTexturePath(
 		// cut off `resources/`
 		m_File,
@@ -1117,11 +1115,8 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 
 	material.BaseColorTexture = texManager->LoadFromPath(
 		baseColPath,
-		true,
-		baseColFilterBilinear
+		true
 	);
-
-	texManager->GetTextureResource(material.BaseColorTexture).DoBilinearSmoothing = baseColFilterBilinear;
 
 	if (pbrDescription.find("metallicRoughnessTexture") != pbrDescription.end())
 	{
@@ -1135,8 +1130,7 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 
 		material.MetallicRoughnessTexture = texManager->LoadFromPath(
 			metallicRoughnessPath,
-			true,
-			baseColFilterBilinear
+			true
 		);
 	}
 
@@ -1152,8 +1146,7 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 
 		material.NormalTexture = texManager->LoadFromPath(
 			normalPath,
-			true,
-			baseColFilterBilinear
+			true
 		);
 	}
 
@@ -1169,8 +1162,7 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 
 		material.EmissiveTexture = texManager->LoadFromPath(
 			emissivePath,
-			true,
-			baseColFilterBilinear
+			true
 		);
 	}
 

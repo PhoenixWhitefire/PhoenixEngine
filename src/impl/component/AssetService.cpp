@@ -321,12 +321,12 @@ const Reflection::StaticMethodMap& AssetServiceComponentManager::GetMethods()
         } },
 
         { "QueueLoadTexture", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String, Reflection::ValueType::Boolean, Reflection::ValueType::Boolean },
+            { Reflection::ValueType::String, REFLECTION_OPTIONAL(Boolean) },
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 TextureManager* texManager = TextureManager::Get();
-                texManager->LoadFromPath(inputs[0].AsString(), true, inputs[1].AsBoolean(), !inputs[2].AsBoolean());
+                texManager->LoadFromPath(inputs[0].AsString(), true, inputs.size() > 1 ? inputs[1].AsBoolean() : true);
 
                 return {};
             }

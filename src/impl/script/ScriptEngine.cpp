@@ -1402,7 +1402,7 @@ static void initRequireConfig(luarequire_Configuration* config)
 			if (!std::filesystem::exists(child))
 			{
 				std::string directModule = child.string() + ".luau";
-				std::string bytecode = child.string() + ".luauc";
+				std::string bytecode = directModule + "c"; // `.luauc`
 
 				if (!std::filesystem::exists(directModule) && !std::filesystem::exists(bytecode))
 				{

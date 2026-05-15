@@ -7,6 +7,7 @@
 #include "datatype/GameObject.hpp"
 #include "asset/MaterialManager.hpp"
 #include "asset/MeshProvider.hpp"
+#include "render/TextureSlots.hpp"
 #include "render/Renderer.hpp"
 #include "Utilities.hpp"
 
@@ -15,6 +16,7 @@ static std::default_random_engine s_RandGenerator = std::default_random_engine(s
 uint32_t ParticleEmitterComponentManager::CreateComponent(GameObject* Object)
 {
 	uint32_t id = ComponentManager<EcParticleEmitter>::CreateComponent(Object);
+	m_Components[id].Image = TextureManager::Get()->LoadFromPath("textures/image-placeholder.png");
     m_Components[id].Object = Object;
 
     return id;
@@ -61,23 +63,17 @@ const Reflection::StaticPropertyMap& ParticleEmitterComponentManager::GetPropert
 		),
 
 		REFLECTION_PROPERTY(
-			"BilinearFiltering",
+			"LinearlySmoothened",
 			Boolean,
 			[](void* p) -> Reflection::GenericValue
 			{
 				EcParticleEmitter* ep = static_cast<EcParticleEmitter*>(p);
-				const Texture& tex = TextureManager::Get()->GetTextureResource(ep->Image);
-
-				return tex.DoBilinearSmoothing;
+				return ep->LinearlySmoothened;
 			},
 			[](void* p, const Reflection::GenericValue& gv)
 			{
-				TextureManager* textureManager = TextureManager::Get();
-
 				EcParticleEmitter* ep = static_cast<EcParticleEmitter*>(p);
-				const Texture& tex = textureManager->GetTextureResource(ep->Image);
-
-				ep->Image = textureManager->LoadFromPath(tex.ImagePath, true, gv.AsBoolean());
+				ep->LinearlySmoothened = gv.AsBoolean();
 			}
 		),
 
@@ -186,12 +182,13 @@ void EcParticleEmitter::Render(const glm::mat4& RenderMatrix)
 	if (!ct)
 		return;
 
-	static MeshProvider* meshProvider = MeshProvider::Get();
-	static ShaderManager* shdManager = ShaderManager::Get();
-	static Renderer* renderer = Renderer::Get();
+	TextureManager* texManager = TextureManager::Get();
+	MeshProvider* meshProvider = MeshProvider::Get();
+	ShaderManager* shdManager = ShaderManager::Get();
+	Renderer* renderer = Renderer::Get();
 
 	static uint32_t QuadMeshId = meshProvider->LoadFromPath("!Quad");
-	static uint32_t ShaderId = shdManager->LoadFromPath("@base/shaders/particle");
+	static uint32_t ShaderId = shdManager->LoadFromPath("@base/shaders/particle.shp");
 
 	ShaderProgram& particleShader = shdManager->GetShaderResource(ShaderId);
 	const Mesh& quadMesh = meshProvider->GetMeshResource(QuadMeshId);
@@ -234,10 +231,16 @@ void EcParticleEmitter::Render(const glm::mat4& RenderMatrix)
 		particleShader.SetUniform("Phoenix_Size", particle.Size);
 		particleShader.SetUniform("Phoenix_Tint", particle.Tint.ToGenericValue());
 		particleShader.SetUniform("Phoenix_Transparency", particle.Transparency);
-		particleShader.SetTextureUniform("Phoenix_Image", Image);
+		particleShader.SetTextureUniform("Phoenix_Image", Image, Texture::DimensionType::Texture2D, ReservedTextureSlot::ParticleImage);
 		particleShader.Activate();
+
+		if (!LinearlySmoothened)
+			texManager->BindNearestNeighbourSampler(0);
 
 		glDrawElements(GL_TRIANGLES, quadGpu.NumIndices, GL_UNSIGNED_INT, 0);
 		renderer->AccumulatedDrawCallCount++;
+
+		if (!LinearlySmoothened)
+			texManager->UnbindSampler(0);
 	}
 }

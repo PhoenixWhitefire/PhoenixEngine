@@ -31,10 +31,11 @@ private:
 
 		glm::vec3 EmissiveFactor = { 0.f, 0.f, 0.f };
 
-		bool DoubleSided = false;
-
-		MaterialAlphaMode AlphaMode = MaterialAlphaMode::Opaque;
 		float AlphaCutoff = .5f;
+		MaterialAlphaMode AlphaMode = MaterialAlphaMode::Opaque;
+
+		bool DoubleSided = false;
+		bool LinearlySmoothened = true;
 	};
 
 	struct ModelNode

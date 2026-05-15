@@ -244,8 +244,13 @@ std::string FileRW::ResolvePathAbsolute(std::string Path)
 		return Path;
 	}
 
-	std::string cwd = ResolvePathNormalized(Path);
-	std::string abs = cwd;
+	if (Path[0] == '!')
+		return Path;
+
+	std::string abs = ResolvePathNormalized(Path);
+
+	if (abs[0] == '.' && abs.size() > 2)
+		abs = abs.substr(2);
 
 	if (abs[0] != '/' && abs[0] != '~' && (abs.size() < 2 || abs[1] != ':'))
 		abs = (std::filesystem::current_path() / abs).string();

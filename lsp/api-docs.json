@@ -1028,6 +1028,9 @@
   "@phoenix/global/imgui.sameline": {
     "documentation": "* `ImGui::SameLine`"
   },
+  "@phoenix/global/imgui.scalefactor": {
+    "documentation": "* UI scale factor"
+  },
   "@phoenix/global/imgui.scrollherey": {
     "documentation": "* `ImGui::SetScrollHereY`"
   },
@@ -1173,7 +1176,7 @@
     "documentation": "Loads `GameObject`s from the scene file at the provided path, returning a list of the root objects or `nil` and an error message upon failure"
   },
   "@phoenix/globaltype/AssetManager.QueueLoadTexture": {
-    "documentation": "Queues a texture to be loaded"
+    "documentation": "Queues a texture to be preloaded"
   },
   "@phoenix/globaltype/AssetManager.SaveMesh": {
     "documentation": "Saves the mesh data at the provided path to a file"
@@ -1664,9 +1667,6 @@
   "@phoenix/globaltype/Network.MakeHttpRequestAsync": {
     "documentation": "Makes an HTTP request to the provided URL. `Ok` will be false upon failure, and `Body` will contain the error message"
   },
-  "@phoenix/globaltype/ParticleEmitter.BilinearFiltering": {
-    "documentation": "Whether the particle image is smoothened"
-  },
   "@phoenix/globaltype/ParticleEmitter.Emitting": {
     "documentation": "Whether the emitter should emit new particles"
   },
@@ -1675,6 +1675,9 @@
   },
   "@phoenix/globaltype/ParticleEmitter.Lifetime": {
     "documentation": "The X and Y components act as a range of how long any particle can last, in seconds"
+  },
+  "@phoenix/globaltype/ParticleEmitter.LinearlySmoothened": {
+    "documentation": "Whether the particle image is smoothened"
   },
   "@phoenix/globaltype/ParticleEmitter.ParticlesAreAttached": {
     "documentation": "Whether the particles are attached to and move with the emitter"

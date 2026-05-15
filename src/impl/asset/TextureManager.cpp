@@ -157,6 +157,23 @@ static void createAndUploadTextureData(const std::string& Name, uint8_t* Data, i
 	s_Instance->m_UploadTextureToGpu(tex);
 }
 
+void TextureManager::BindNearestNeighbourSampler(uint32_t Unit)
+{
+	assert(m_NearestNeighbourTextureSampler != UINT32_MAX);
+	glBindSampler(Unit, m_NearestNeighbourTextureSampler);
+}
+
+void TextureManager::BindLinearSampler(uint32_t Unit)
+{
+	assert(m_LinearTextureSampler != UINT32_MAX);
+	glBindSampler(Unit, m_LinearTextureSampler);
+}
+
+void TextureManager::UnbindSampler(uint32_t Unit)
+{
+	glBindSampler(Unit, 0);
+}
+
 void TextureManager::Initialize(bool IsHeadless)
 {
 	ZoneScoped;
@@ -173,6 +190,19 @@ void TextureManager::Initialize(bool IsHeadless)
 	createAndUploadTextureData("!Missing", const_cast<uint8_t*>(MissingTextureBytes), 2, 2);
 	createAndUploadTextureData("!White", const_cast<uint8_t*>((const uint8_t*)&WhiteTextureBytes), 1, 1);
 	createAndUploadTextureData("!Black", const_cast<uint8_t*>((const uint8_t*)&BlackTextureBytes), 1, 1);
+
+	glGenSamplers(1, &m_NearestNeighbourTextureSampler);
+	glGenSamplers(1, &m_LinearTextureSampler);
+
+	BindNearestNeighbourSampler(0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	BindLinearSampler(0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	UnbindSampler(0);
 }
 
 void TextureManager::Shutdown()
@@ -190,6 +220,11 @@ void TextureManager::Shutdown()
 		textureGpuIds.push_back(texture.GpuId);
 
 	glDeleteTextures(static_cast<int32_t>(m_Textures.size()), textureGpuIds.data());
+	glDeleteSamplers(1, &m_NearestNeighbourTextureSampler);
+	glDeleteSamplers(2, &m_LinearTextureSampler);
+
+	m_NearestNeighbourTextureSampler = UINT32_MAX;
+	m_LinearTextureSampler = UINT32_MAX;
 
 	m_Textures.clear();
 	m_StringToTextureId.clear();
@@ -292,16 +327,16 @@ uint32_t TextureManager::Assign(const Texture& texture, const std::string& name)
 	return assignedId;
 }
 
-uint32_t TextureManager::LoadFromPath(const std::string& Path, bool ShouldLoadAsync, bool DoBilinearSmoothing, bool LoadInLinearSpace)
+uint32_t TextureManager::LoadFromPath(const std::string& Path, bool ShouldLoadAsync, bool LoadInLinearSpace)
 {
 	if (m_IsHeadless)
 		return 0;
 
 	std::string ActualPath = FileRW::ResolvePathNormalized(Path);
 
-	auto it = m_StringToTextureId.find(Path);
+	auto it = m_StringToTextureId.find(ActualPath);
 	uint32_t forceResourceId = UINT32_MAX;
-	std::string assignName = Path;
+	std::string assignName = ActualPath;
 
 	if (it != m_StringToTextureId.end())
 	{
@@ -309,9 +344,9 @@ uint32_t TextureManager::LoadFromPath(const std::string& Path, bool ShouldLoadAs
 
 		if (texture.Status != Texture::LoadStatus::Unloaded)
 		{
-			if ((texture.DoBilinearSmoothing != DoBilinearSmoothing || texture.IsLinearSpace != LoadInLinearSpace) && Path != "!Framebuffer:Main")
+			if (texture.IsLinearSpace != LoadInLinearSpace && ActualPath != "!Framebuffer:Main")
 			{
-				assignName = Path + (DoBilinearSmoothing ? "!B," : "!N,") + (LoadInLinearSpace ? "L" : "S");
+				assignName += (LoadInLinearSpace ? "L" : "S");
 				const auto& vit = m_StringToTextureId.find(assignName);
 
 				if (vit != m_StringToTextureId.end())
@@ -340,27 +375,15 @@ uint32_t TextureManager::LoadFromPath(const std::string& Path, bool ShouldLoadAs
 			glGenTextures(1, &newGpuId);
 
 			if (forceResourceId == UINT32_MAX)
-				newResourceId = this->Assign({ .ImagePath = Path, .ResourceId = UINT32_MAX }, assignName);
+				newResourceId = this->Assign({ .ImagePath = ActualPath, .ResourceId = UINT32_MAX }, assignName);
 			else
 				newResourceId = forceResourceId;
 
 			newTexture = &this->GetTextureResource(newResourceId);
-			newTexture->DoBilinearSmoothing = DoBilinearSmoothing;
 			newTexture->IsLinearSpace = LoadInLinearSpace;
 			newTexture->GpuId = newGpuId;
 
 			glBindTexture(GL_TEXTURE_2D, newTexture->GpuId);
-
-			if (DoBilinearSmoothing)
-			{
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			}
-			else
-			{
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			}
 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);

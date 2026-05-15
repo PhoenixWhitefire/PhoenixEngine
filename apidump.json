@@ -59,7 +59,7 @@
           "GetMeshData": "(String) -> (Map)",
           "ImportModel": "(String) -> (GameObject)",
           "LoadScene": "(String) -> (Array?, String?)",
-          "QueueLoadTexture": "(String, Boolean, Boolean) -> ()",
+          "QueueLoadTexture": "(String, Boolean?) -> ()",
           "SaveMesh": "(String, String) -> ()",
           "SaveScene": "(Array, String) -> (Boolean, String?)",
           "SetMeshData": "(String, Any) -> ()",
@@ -234,10 +234,10 @@
       },
       "ParticleEmitter": {
         "Properties": {
-          "BilinearFiltering": "Boolean",
           "Emitting": "Boolean",
           "Image": "String",
           "Lifetime": "Vector2",
+          "LinearlySmoothened": "Boolean",
           "ParticlesAreAttached": "Boolean",
           "Rate": "Integer"
         }
@@ -284,7 +284,7 @@
       },
       "Renderer": {
         "Methods": {
-          "SetShaderTextureVariable": "(String, String, String, Boolean, Boolean) -> ()",
+          "SetShaderTextureVariable": "(String, String, String, Boolean) -> ()",
           "SetShaderVariable": "(String, String, Any, Integer?) -> ()"
         },
         "Properties": {
@@ -731,6 +731,7 @@
         "pushid": "function",
         "pushstylecolor": "function",
         "sameline": "function",
+        "scalefactor": "function",
         "scrollherey": "function",
         "separator": "function",
         "separatortext": "function",

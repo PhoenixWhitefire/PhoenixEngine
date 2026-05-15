@@ -210,9 +210,9 @@ static int imgui_text(lua_State* L)
 static int imgui_image(lua_State* L)
 {
     TextureManager* texManager = TextureManager::Get();
-    bool bilinearSmoothed = luaL_optboolean(L, 5, true);
+    bool linearSmoothed = luaL_optboolean(L, 5, true);
 
-	uint32_t resId = texManager->LoadFromPath(luaL_checkstring(L, 1), true, bilinearSmoothed, false);
+	uint32_t resId = texManager->LoadFromPath(luaL_checkstring(L, 1), true, false);
 	const Texture& texture = texManager->GetTextureResource(resId);
 
     ImVec2 texSize = ImVec2(texture.Width, texture.Height);
@@ -248,7 +248,7 @@ static int imgui_image(lua_State* L)
             tintcol.w = luaL_checknumber(L, -1);
     }
 
-    if (!bilinearSmoothed)
+    if (!linearSmoothed)
         ImGui::GetWindowDrawList()->AddCallback(ImGui::GetPlatformIO().DrawCallback_SetSamplerNearest);
 
     ImGui::ImageWithBg(
@@ -259,7 +259,7 @@ static int imgui_image(lua_State* L)
         tintcol
     );
 
-    if (!bilinearSmoothed)
+    if (!linearSmoothed)
         ImGui::GetWindowDrawList()->AddCallback(ImGui::GetPlatformIO().DrawCallback_SetSamplerLinear);
 
     return 0;
@@ -268,7 +268,8 @@ static int imgui_image(lua_State* L)
 static int imgui_imagebutton(lua_State* L)
 {
     TextureManager* texManager = TextureManager::Get();
-	uint32_t resId = texManager->LoadFromPath(luaL_checkstring(L, 2), true, luaL_optboolean(L, 4, true), false);
+    bool linearSmoothed = luaL_optboolean(L, 4, true);
+	uint32_t resId = texManager->LoadFromPath(luaL_checkstring(L, 2), true, false);
 	const Texture& texture = texManager->GetTextureResource(resId);
 
     ImVec2 imgSize = ImVec2(texture.Width, texture.Height);
@@ -279,11 +280,17 @@ static int imgui_imagebutton(lua_State* L)
         imgSize = { vec[0], vec[1] };
     }
 
+    if (!linearSmoothed)
+        ImGui::GetWindowDrawList()->AddCallback(ImGui::GetPlatformIO().DrawCallback_SetSamplerNearest);
+
     lua_pushboolean(L, ImGui::ImageButton(
         luaL_checkstring(L, 1),
         texture.GpuId,
         imgSize
     ));
+
+    if (!linearSmoothed)
+        ImGui::GetWindowDrawList()->AddCallback(ImGui::GetPlatformIO().DrawCallback_SetSamplerLinear);
 
     return 1;
 }
@@ -984,6 +991,12 @@ static int imgui_focuskeyboardhere(lua_State* L)
     return 0;
 }
 
+static int imgui_scalefactor(lua_State* L)
+{
+    lua_pushnumber(L, Engine::Get()->ScaleFactor);
+    return 1;
+}
+
 static luaL_Reg imgui_funcs[] =
 {
     { "begin", imgui_begin },
@@ -1054,6 +1067,7 @@ static luaL_Reg imgui_funcs[] =
     { "newline", imgui_newline },
     { "setstylecolor", imgui_setstylecolor },
     { "focuskeyboardhere", imgui_focuskeyboardhere },
+    { "scalefactor", imgui_scalefactor },
     { NULL, NULL }
 };
 

@@ -44,6 +44,8 @@ struct EcParticleEmitter : public Component<EntityComponent::ParticleEmitter>
 	double m_TimeSinceLastSpawn = 0.f;
 	bool Emitting = true;
 	bool ParticlesAreAttached = false;
+	bool LinearlySmoothened = true;
+
 	bool Valid = true;
 };
 

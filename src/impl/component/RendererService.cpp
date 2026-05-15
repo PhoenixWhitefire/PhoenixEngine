@@ -128,7 +128,7 @@ const Reflection::StaticMethodMap& RendererComponentManager::GetMethods()
 
         { "SetShaderTextureVariable", Reflection::MethodDescriptor{
             // Name of shader program, name of uniform, value, path to texture
-            { Reflection::ValueType::String, Reflection::ValueType::String, Reflection::ValueType::String, Reflection::ValueType::Boolean, Reflection::ValueType::Boolean },
+            { Reflection::ValueType::String, Reflection::ValueType::String, Reflection::ValueType::String, Reflection::ValueType::Boolean },
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {

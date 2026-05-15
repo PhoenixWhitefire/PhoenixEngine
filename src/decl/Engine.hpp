@@ -75,6 +75,7 @@ public:
 
 	int WindowSizeX = 0;
 	int WindowSizeY = 0;
+	float ScaleFactor = 1.f;
 	
 	int FramesPerSecond = 0;
 	int FpsCap = 60;

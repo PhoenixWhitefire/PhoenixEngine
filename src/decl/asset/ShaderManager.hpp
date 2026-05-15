@@ -19,10 +19,12 @@ public:
 	// to be set with the provided value
 	void SetUniform(const std::string_view&, const Reflection::GenericValue&);
 	// Sets a Texture Uniform to the Texture residing at the Resource ID Provided
-	void SetTextureUniform(
+	// Returns the unit it was bound to
+	uint32_t SetTextureUniform(
 		const std::string_view&,
-		uint32_t,
-		Texture::DimensionType Type = Texture::DimensionType::Texture2D
+		uint32_t TextureId,
+		Texture::DimensionType Type = Texture::DimensionType::Texture2D,
+		uint32_t Unit = UINT32_MAX
 	);
 	// THIS DOES NOT FLUSH THE UNIFORMS!
 	// it acts just like `SetUniform`, but it's intended to reset the state

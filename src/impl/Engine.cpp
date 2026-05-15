@@ -251,6 +251,8 @@ static void windowContentScaleCallback(GLFWwindow*, float x, float)
 	}
 
 	ImGui::GetStyle() = newStyle;
+
+	Engine::Get()->ScaleFactor = x;
 }
 
 static void updateImGuiForDisplayScaling()
@@ -943,6 +945,7 @@ void Engine::Start()
 	std::vector<EcParticleEmitter*> particleEmittersRenderList;
 
 	m_IsRunning = true;
+	bool firstFrame = true;
 
 	Log.Info("Main engine loop start");
 
@@ -995,7 +998,7 @@ void Engine::Start()
 		static Timing::StaticMagicTimerThing FrameWorkTimer("FrameWork");
 
 		// Wait the appropriate amount of time between frames
-		if ((!VSync || !IsWindowFocused) && (Timing::FinalFrameTimes[FrameWorkTimer.TimerId] < fpsCapDelta))
+		if ((!VSync || !IsWindowFocused) && (Timing::FinalFrameTimes[FrameWorkTimer.TimerId] < fpsCapDelta) && !firstFrame)
 		{
 			Timing::ScopedTimer scoped(FrameSleepTimer.TimerId);
 			ZoneScopedNC("SleepForFpsCap", tracy::Color::Wheat);
@@ -1003,6 +1006,7 @@ void Engine::Start()
 			std::this_thread::sleep_for(std::chrono::duration<double>(fpsCapDelta - Timing::FinalFrameTimes[FrameWorkTimer.TimerId]));
 		}
 
+		firstFrame = false;
 		Timing::ScopedTimer framwWorkTimerScope(FrameWorkTimer.TimerId);
 
 		DataModelRef->FindComponent<EcDataModel>()->Bind();

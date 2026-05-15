@@ -187,7 +187,21 @@ static void resolveCollisions(Physics::World& World, float DeltaTime, Physics* p
 				IntersectionLib::CollisionPoints collisionPoints = IntersectionLib::Gjk(arb, brb);
 
 				if (collisionPoints.HasCollision)
+				{
 					collisions.emplace_back(a.Dereference(), b, collisionPoints);
+
+					if (brb->PhysicsDynamics)
+					{
+						IntersectionLib::CollisionPoints points2 = {
+							.A = collisionPoints.B,
+							.B = collisionPoints.A,
+							.Normal = -collisionPoints.Normal,
+							.PenetrationDepth = collisionPoints.PenetrationDepth,
+							.HasCollision = collisionPoints.HasCollision,
+						};
+						collisions.emplace_back(b, a.Dereference(), points2);
+					}
+				}
 
 				brb->CurTransform = nullptr;
 			}
@@ -209,7 +223,7 @@ static void resolveCollisions(Physics::World& World, float DeltaTime, Physics* p
 		glm::vec3 vRel = arb->LinearVelocity - (brb->PhysicsDynamics ? brb->LinearVelocity : glm::vec3(0.f));
 		float vn = glm::dot(vRel, points.Normal);
 
-		if (arb->PhysicsDynamics && !brb->PhysicsDynamics)
+		//if (arb->PhysicsDynamics && !brb->PhysicsDynamics)
 		{
 			if (vn > 0.f)
 			{
@@ -221,13 +235,16 @@ static void resolveCollisions(Physics::World& World, float DeltaTime, Physics* p
 				if (arb->PhysicsRotations)
 				{
 					glm::vec3 r = points.A - arb->CollisionAabb.Position; // lever arm
-					arb->AngularVelocity += glm::cross(r, points.Normal) * points.PenetrationDepth * 10.f;
+					arb->AngularVelocity += glm::cross(r, points.Normal) * points.PenetrationDepth * 100.f;
 				}
 			}
 
 			// position correction to prevent sinking
 			if (points.PenetrationDepth < 0.1f)
-				at->Transform[3] += glm::vec4(points.Normal * -points.PenetrationDepth * 2.f, 0.f);;
+			{
+				at->Transform[3] += glm::vec4(points.Normal * -points.PenetrationDepth * 2.f, 0.f);
+				arb->LinearVelocity += points.Normal * -points.PenetrationDepth * 64.f;
+			}
 
 			arb->NetForce *= glm::vec3(1.f) - points.Normal;
 			arb->NetForce -= arb->LinearVelocity * (glm::vec3(1.f) - points.Normal) * arb->Friction;
@@ -250,6 +267,7 @@ static void resolveCollisions(Physics::World& World, float DeltaTime, Physics* p
 				});
 			}
 		}
+		/*
 		else // Not finished yet
 		{
 			// Transfer of velocity
@@ -261,7 +279,7 @@ static void resolveCollisions(Physics::World& World, float DeltaTime, Physics* p
 			//arb->LinearVelocity += reactionForce;
 
 			arb->RecomputeAabb();
-		}
+		}*/
 		assert(arb->PhysicsDynamics); // `A` should always be the dynamic one, unless it's D v D where both are dynamic
 	}
 }

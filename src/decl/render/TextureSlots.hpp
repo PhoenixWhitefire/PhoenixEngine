@@ -11,6 +11,7 @@ struct ReservedTextureSlot
     static constexpr uint32_t SkyboxCubemap = 2;
     static constexpr uint32_t SkyboxEquirectangular = 3;
     static constexpr uint32_t Shadowmap = 4;
+    static constexpr uint32_t ParticleImage = 5;
 
     static constexpr uint32_t MaterialColorMap = 10;
     static constexpr uint32_t MaterialMetallicRoughnessMap = 11;

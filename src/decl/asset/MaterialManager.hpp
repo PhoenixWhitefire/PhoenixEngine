@@ -25,7 +25,6 @@ struct RenderMaterial
 	uint32_t NormalMap = 0;
 	uint32_t EmissionMap = 0;
 
-	bool HasTranslucency = false;
 	float SpecExponent = 0.f;
 	float SpecMultiply = 0.f;
 
@@ -36,9 +35,11 @@ struct RenderMaterial
 		Points = 2
 	};
 
-	MaterialPolygonMode PolygonMode = MaterialPolygonMode::Fill;
-
 	std::unordered_map<std::string, Reflection::GenericValue> Uniforms;
+
+	MaterialPolygonMode PolygonMode = MaterialPolygonMode::Fill;
+	bool HasTranslucency = false;
+	bool LinearlySmoothened = true;
 };
 
 class MaterialManager
