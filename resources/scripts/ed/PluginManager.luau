@@ -24,6 +24,8 @@ local function getPluginSettings(plugin: Plugin)
 end
 
 local function renderPluginManagement()
+    imgui.setnextwindowsize(0, 250)
+
     local render, open = imgui.begin("Plugin Manager", "", true)
     if not render or not open then
         imgui.endw()
@@ -32,6 +34,10 @@ local function renderPluginManagement()
     end
 
     local pluginSettingsChanged = false
+
+    if next(PluginManager.Plugins) == nil then
+        imgui.text("You don't have any plugins installed\n:)")
+    end
 
     for _, plugin in PluginManager.Plugins do
         imgui.pushid(plugin.Path)

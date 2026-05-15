@@ -813,15 +813,17 @@ local function tabButton(Text: string, Icon: string, Enabled: boolean?, Lit: boo
 		backgroundColor = if EditorPreferences.InvertTabButtonLitColors then UNLIT_COLOR else LIT_COLOR
 	end
 
+	local sf = imgui.scalefactor()
+
 	imgui.pushstylecolor(3, backgroundColor)
 
-	imgui.beginchild(Text .. "_Selection", 120, 150, "b")
+	imgui.beginchild(Text .. "_Selection", 120 * sf, 150 * sf, "b")
 
 	local clicked, hovered = false, false
 	local cpos = imgui.cursorposition()
 	imgui.setcursorposition(cpos.x + 2, cpos.y)
 
-	imgui.image(Icon, vector.create(100, 100), false, tint, false)
+	imgui.image(Icon, vector.create(100, 100) * sf, false, tint, false)
 	clicked, hovered = imgui.itemclicked(), imgui.itemhovered()
 	imgui.text(Text)
 	clicked, hovered = clicked or imgui.itemclicked(), hovered or imgui.itemhovered()
@@ -1336,6 +1338,7 @@ local function renderMainMenuBar(dt: number)
 		end
 	end
 
+	local sf = imgui.scalefactor()
 	local pushedCol = CurrentStage == "ProjectPlaying"
 
 	if pushedCol then
@@ -1568,7 +1571,7 @@ local function renderMainMenuBar(dt: number)
 
 			cursor = imgui.cursorposition()
 			local buttonText = "Commit"
-			imgui.setcursorposition(getCenteredX(cursor.x, cxavail, imgui.textsize(buttonText).x), cursor.y + 10)
+			imgui.setcursorposition(getCenteredX(cursor.x, cxavail, imgui.textsize(buttonText).x), cursor.y + 10 * sf)
 
 			if imgui.button(buttonText) then
 				task.defer(function()
@@ -1598,9 +1601,9 @@ local function renderMainMenuBar(dt: number)
 		if (HoveringOverMenuBar or HoveringOverRibbonTab or TabButtonHovering ~= nil or WindowHovering) and not PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Right) then
 			local windowWidth = Renderer.Resolution.x
 
-			local TAB_HEIGHT = 175
+			local TAB_HEIGHT = 175 * sf
 
-			imgui.setnextwindowposition(0, 16)
+			imgui.setnextwindowposition(0, 16 * sf)
 			imgui.setnextwindowsize(windowWidth, TAB_HEIGHT)
 
 			imgui.begin("RibbonTabContents", "nt | nr | nm | nc | ns | h")
@@ -1610,7 +1613,7 @@ local function renderMainMenuBar(dt: number)
 
 			RibbonPopupDistance = TAB_HEIGHT -- fixes ribbon closing when enabling tools
 		else
-			RibbonPopupDistance = 16
+			RibbonPopupDistance = 16 * sf
 		end
 
 		TabButtonHovering = WipTabButtonHovering
@@ -1623,7 +1626,7 @@ local function renderMainMenuBar(dt: number)
 
 		local ws = Renderer.Resolution
 
-		local ABOUT_SIZE_X, ABOUT_SIZE_Y = 375, 340
+		local ABOUT_SIZE_X, ABOUT_SIZE_Y = 375 * sf, 340 * sf
 
 		imgui.setnextwindowposition((ws.x - ABOUT_SIZE_X) / 2, (ws.y - ABOUT_SIZE_Y) / 2);
 		imgui.setnextwindowsize(ABOUT_SIZE_X, ABOUT_SIZE_Y);
@@ -1633,30 +1636,30 @@ local function renderMainMenuBar(dt: number)
 		local cxavail = imgui.contentregionavail().x
 		local cursor = imgui.cursorposition()
 
-		local LOGO_SIZE = 150
+		local LOGO_SIZE = 150 * sf
 
 		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, LOGO_SIZE), cursor.y)
 		imgui.image(LOGO_IMAGE, vector.create(LOGO_SIZE, LOGO_SIZE))
 
-		cursor += vector.create(0, 160)
+		cursor += vector.create(0, 160 * sf)
 
 		local tts = imgui.textsize("")
 
 		textCentered("Phoenix Engine Editor", cursor, cxavail)
-		cursor += vector.create(0, tts.y + 2)
+		cursor += vector.create(0, tts.y + 2 * sf)
 
 		textCentered(Engine.Version, cursor, cxavail)
-		cursor += vector.create(0, tts.y + 15)
+		cursor += vector.create(0, tts.y + 15 * sf)
 
 		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, imgui.textsize(GITHUB_URL).x), cursor.y)
 		imgui.urllink(GITHUB_URL)
-		cursor += vector.create(0, tts.y + 2)
+		cursor += vector.create(0, tts.y + 2 * sf)
 
 		local commitText = `{ Engine.CommitTag } ({ Engine.CommitHash:sub(1, 8) })`
 
 		imgui.setcursorposition(getCenteredX(cursor.x, cxavail, imgui.textsize(commitText).x), cursor.y)
 		imgui.urllink(commitText, `{ GITHUB_URL }/commit/{ Engine.CommitHash }`)
-		cursor += vector.create(0, tts.y + 16)
+		cursor += vector.create(0, tts.y + 16 * sf)
 
 		if not isFetchingLatestCommitData and not latestCommit then
 			isFetchingLatestCommitData = true
@@ -1666,10 +1669,10 @@ local function renderMainMenuBar(dt: number)
 		if latestCommit then
 			if latestCommit ~= Engine.CommitHash then
 				textCentered("There is a newer version available.", cursor, cxavail)
-				cursor += vector.create(0, tts.y + 2)
+				cursor += vector.create(0, tts.y + 2 * sf)
 
 				textCentered(`Latest: { latestCommit:sub(1, 8) }`, cursor, cxavail)
-				cursor += vector.create(0, tts.y + 4)
+				cursor += vector.create(0, tts.y + 4 * sf)
 
 				local buttonText = "Download"
 				imgui.setcursorposition(getCenteredX(cursor.x, cxavail, imgui.textsize(buttonText).x), cursor.y)
@@ -1688,14 +1691,14 @@ local function renderMainMenuBar(dt: number)
 				local urutdText = "You are on the latest available version."
 				local urutdtsx = imgui.textsize(urutdText).x
 
-				imgui.setcursorposition(getCenteredX(cursor.x, cxavail, urutdtsx), cursor.y + 32)
+				imgui.setcursorposition(getCenteredX(cursor.x, cxavail, urutdtsx), cursor.y + 32 * sf)
 				imgui.text(urutdText)
 			end
 		elseif fetchCommitHashData then
 			textCentered("Failed to check for updates.", cursor, cxavail)
-			cursor += vector.create(0, tts.y + 2)
+			cursor += vector.create(0, tts.y + 2 * sf)
 			textCentered(`Status: { fetchCommitHashData.Status }`, cursor, cxavail)
-			cursor += vector.create(0, tts.y + 2)
+			cursor += vector.create(0, tts.y + 2 * sf)
 			textCentered(`Error: { fetchCommitHashData.Body }`, cursor, cxavail)
 			imgui.setitemtooltip(fetchCommitHashData.Body)
 		end
@@ -1706,7 +1709,7 @@ local function renderMainMenuBar(dt: number)
 	if openSettingsWindow or openSettingsMenuToConfigureCodeEditor then
 		imgui.openpopup("Editor Settings")
 
-		local SETTINGS_SIZE_X, SETTINGS_SIZE_Y = 420, 140
+		local SETTINGS_SIZE_X, SETTINGS_SIZE_Y = 420 * sf, 140 * sf
 
 		local ws = Renderer.Resolution
 
