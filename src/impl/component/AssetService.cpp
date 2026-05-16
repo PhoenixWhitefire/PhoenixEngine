@@ -4,6 +4,7 @@
 #include "asset/ModelImporter.hpp"
 #include "asset/MeshProvider.hpp"
 #include "asset/SceneFormat.hpp"
+#include "asset/Binary.hpp"
 #include "FileRW.hpp"
 
 static void loadMeshDataFromMap(const std::vector<Reflection::GenericValue>& inputs, Mesh& mesh)
@@ -41,66 +42,6 @@ static void loadMeshDataFromMap(const std::vector<Reflection::GenericValue>& inp
     }
 }
 
-static uint8_t readU8(const std::string_view& vec, size_t offset, bool* fileTooSmallPtr)
-{
-	if (*fileTooSmallPtr || vec.size() < offset + 1)
-	{
-		*fileTooSmallPtr = true;
-		return UINT8_MAX;
-	}
-
-	uint8_t u8 = 0;
-	memcpy(&u8, vec.data() + offset, sizeof(uint8_t));
-
-	return u8;
-}
-
-static uint8_t readU8(const std::string_view& vec, size_t* offset, bool* fileTooSmallPtr)
-{
-	uint8_t u8 = readU8(vec, *offset, fileTooSmallPtr);
-	*offset += 1ull;
-
-	return u8;
-}
-
-static uint32_t readU32(const std::string_view& vec, size_t offset, bool* fileTooSmallPtr)
-{
-	if (*fileTooSmallPtr || vec.size() < offset + 4)
-	{
-		*fileTooSmallPtr = true;
-		return UINT32_MAX;
-	}
-
-	uint32_t u32 = 0;
-	memcpy(&u32, vec.data() + offset, sizeof(uint32_t));
-
-	return u32;
-}
-
-static uint32_t readU32(const std::string_view& vec, size_t* offset, bool* fileTooSmallPtr)
-{
-	uint32_t u32 = readU32(vec, *offset, fileTooSmallPtr);
-	*offset += 4ull;
-
-	return u32;
-}
-
-static float readF32(const std::string_view& vec, size_t* offset, bool* fileTooSmallPtr)
-{
-	if (*fileTooSmallPtr || vec.size() < (*offset) + 4)
-	{
-		*fileTooSmallPtr = true;
-		return FLT_MAX;
-	}
-
-	float f32 = 0.f;
-	memcpy(&f32, vec.data() + *offset, sizeof(float));
-
-	*offset += 4ull;
-
-	return f32;
-}
-
 static void loadMeshDataFromBuffer(const std::vector<Reflection::GenericValue>& inputs, Mesh& mesh)
 {
     const std::string_view& buffer = std::string_view(inputs[1].Val.Str, inputs[1].Size);
@@ -110,8 +51,8 @@ static void loadMeshDataFromBuffer(const std::vector<Reflection::GenericValue>& 
 
     bool notEnoughData = false;
     size_t cursor = 0;
-    uint32_t numVerts = readU32(buffer, &cursor, &notEnoughData);
-    uint32_t numInds = readU32(buffer, &cursor, &notEnoughData);
+    uint32_t numVerts = ReadU32(buffer, &cursor, &notEnoughData);
+    uint32_t numInds = ReadU32(buffer, &cursor, &notEnoughData);
 
     if (numInds == 0)
         return;
@@ -121,30 +62,30 @@ static void loadMeshDataFromBuffer(const std::vector<Reflection::GenericValue>& 
 
     for (uint32_t vi = 0; vi < numVerts; vi++)
     {
-        float px = readF32(buffer, &cursor, &notEnoughData);
-        float py = readF32(buffer, &cursor, &notEnoughData);
-        float pz = readF32(buffer, &cursor, &notEnoughData);
+        float px = ReadF32(buffer, &cursor, &notEnoughData);
+        float py = ReadF32(buffer, &cursor, &notEnoughData);
+        float pz = ReadF32(buffer, &cursor, &notEnoughData);
 
         if (notEnoughData)
             RAISE_RT("Reached end of buffer reading positions of vertex {} (offset: {})", vi + 1, cursor);
 
-        float nx = readF32(buffer, &cursor, &notEnoughData);
-        float ny = readF32(buffer, &cursor, &notEnoughData);
-        float nz = readF32(buffer, &cursor, &notEnoughData);
+        float nx = ReadF32(buffer, &cursor, &notEnoughData);
+        float ny = ReadF32(buffer, &cursor, &notEnoughData);
+        float nz = ReadF32(buffer, &cursor, &notEnoughData);
 
         if (notEnoughData)
             RAISE_RT("Reached end of buffer reading normals of vertex {} (offset: {})", vi + 1, cursor);
 
-        float r = (float)readU8(buffer, &cursor, &notEnoughData) / 255.f;
-        float g = (float)readU8(buffer, &cursor, &notEnoughData) / 255.f;
-        float b = (float)readU8(buffer, &cursor, &notEnoughData) / 255.f;
-        float a = (float)readU8(buffer, &cursor, &notEnoughData) / 255.f;
+        float r = (float)ReadU8(buffer, &cursor, &notEnoughData) / 255.f;
+        float g = (float)ReadU8(buffer, &cursor, &notEnoughData) / 255.f;
+        float b = (float)ReadU8(buffer, &cursor, &notEnoughData) / 255.f;
+        float a = (float)ReadU8(buffer, &cursor, &notEnoughData) / 255.f;
 
         if (notEnoughData)
             RAISE_RT("Reached end of buffer reading paint of vertex {} (offset: {})", vi + 1, cursor);
 
-        float u = readF32(buffer, &cursor, &notEnoughData);
-        float v = readF32(buffer, &cursor, &notEnoughData);
+        float u = ReadF32(buffer, &cursor, &notEnoughData);
+        float v = ReadF32(buffer, &cursor, &notEnoughData);
 
         if (notEnoughData)
             RAISE_RT("Reached end of buffer reading UVs of vertex {} (offset: {})", vi + 1, cursor);
@@ -159,7 +100,7 @@ static void loadMeshDataFromBuffer(const std::vector<Reflection::GenericValue>& 
 
     for (uint32_t ii = 0; ii < numInds; ii++)
     {
-        uint32_t u32 = readU32(buffer, &cursor, &notEnoughData);
+        uint32_t u32 = ReadU32(buffer, &cursor, &notEnoughData);
         if (notEnoughData)
             RAISE_RT("Reached of buffer reading index {} (offset: {})", ii + 1, cursor);
 

@@ -226,7 +226,7 @@ export type EcAnimator = {
 export type EcAssetManager = {
 
   GetMeshData: (self: EcAssetManager, Id: string) -> MeshAssetData,
-  ImportModel: (self: EcAssetManager, Path: string) -> GameObject & EcModel,
+  ImportModel: (self: EcAssetManager, Path: string) -> GameObject & EcModel & EcTransform,
   LoadScene: (self: EcAssetManager, Path: string) -> ({ GameObject }?, string),
   QueueLoadTexture: (self: EcAssetManager, Path: string, LoadInLinearSpace: boolean?) -> (),
   SaveMesh: (self: EcAssetManager, Id: string, Path: string) -> (),

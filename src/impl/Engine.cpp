@@ -22,6 +22,7 @@
 #include "component/Transform.hpp"
 #include "component/RigidBody.hpp"
 #include "component/Interface.hpp"
+#include "component/Animation.hpp"
 #include "component/TreeLink.hpp"
 #include "component/Camera.hpp"
 #include "component/Sound.hpp"
@@ -587,7 +588,10 @@ static void traverseHierarchy(
 				});
 		}
 
-		if (!object->GetChildren().empty())
+		if (EcAnimator* animator = object->FindComponent<EcAnimator>())
+			animator->Step(DeltaTime);
+
+		if (!object->Children.empty())
 			traverseHierarchy(
 				RendererScene,
 				PhysicsWorld,

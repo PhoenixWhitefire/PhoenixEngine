@@ -36,8 +36,8 @@ struct AnimationData
 {
     struct Pose
     {
-        std::string Bone;
-        glm::mat4 Transform;
+        glm::mat4 Transform = glm::mat4(1.f);
+        uint16_t BoneId = 0;
     };
 
     struct Keyframe
@@ -48,6 +48,7 @@ struct AnimationData
 
     std::string Path;
     std::vector<Keyframe> Keyframes;
+    std::vector<std::string> Bones;
     float Length = 0.f;
 };
 
@@ -73,6 +74,8 @@ struct EcAnimator : public Component<EntityComponent::Animator>
 class AnimatorComponentManager : public ComponentManager<EcAnimator>
 {
 public:
+    uint32_t CreateComponent(GameObject*) override;
+
     const Reflection::StaticPropertyMap& GetProperties() override;
     const Reflection::StaticMethodMap& GetMethods() override;
 

@@ -951,6 +951,12 @@ local function homeTab(_: number)
 				importedOrError.Parent = Project.Workspace
 				DeveloperTools:SetExplorerSelections({ importedOrError })
 
+				local hit = Project.Workspace:Raycast(workspace.SceneCamera.Transform.Position, workspace.SceneCamera.Transform.Forward * 50)
+
+				if hit then
+					importedOrError.Transform = Matrix.translated(hit.Position)
+				end
+
 				if importAction then
 					History:FinishAction(importAction)
 				end

@@ -2,7 +2,10 @@
 #include <Vendor/nljson.hpp>
 
 #include "component/Animation.hpp"
+#include "component/Transform.hpp"
+#include "component/Bone.hpp"
 #include "datatype/GameObject.hpp"
+#include "asset/Binary.hpp"
 #include "FileRW.hpp"
 
 const Reflection::StaticPropertyMap& AnimationAssetComponentManager::GetProperties()
@@ -18,6 +21,7 @@ const Reflection::StaticPropertyMap& AnimationAssetComponentManager::GetProperti
             }
         ),
     };
+
     return props;
 }
 
@@ -39,10 +43,8 @@ void EcAnimationAsset::SetAnimation(const std::string& Asset)
     }
 
     uint32_t id = acm->Animations.size();
-    acm->Animations.emplace_back();
+    AnimationData& data = acm->Animations.emplace_back();
     acm->RegisteredAnimations[path] = id;
-
-    AnimationData& data = acm->Animations.back();
     data.Path = path;
 
     bool found = false;
@@ -54,18 +56,90 @@ void EcAnimationAsset::SetAnimation(const std::string& Asset)
         return;
     }
 
-    nlohmann::json json;
-    try
+    constexpr std::string_view Magic = "PHOENIXF/ANIM\n\0";
+
+    if (animFileContents.find(Magic) != 0)
     {
-        json = nlohmann::json::parse(animFileContents);
-    }
-    catch(const nlohmann::json::parse_error& e)
-    {
-        Log.ErrorF("Cannot parse animation file '{}': {}", path, e.what());
+        Log.ErrorF("Invalid or corrupt animation file: Invalid magic");
         return;
     }
 
-    // TODO
+    std::string_view animationData = std::string_view(animFileContents.begin() + Magic.size(), animFileContents.end());
+    size_t cursor = 0;
+    bool eof = false;
+    cursor += 4; // flags
+
+    data.Length = ReadF32(animationData, &cursor, &eof);
+    if (eof)
+        RAISE_RT("Reached end of animation file trying to read animation length");
+
+    uint32_t keyframeCount = ReadU32(animationData, &cursor, &eof);
+    if (eof)
+        RAISE_RT("Reached end of animation file trying to read keyframe count");
+
+    data.Keyframes.reserve(keyframeCount);
+    uint16_t boneCount = ReadU16(animationData, &cursor, &eof);
+    if (eof)
+        RAISE_RT("Reached end of animation file trying to read bone count");
+
+    data.Bones.reserve(boneCount);
+
+    for (uint16_t bi = 0; bi < boneCount; bi++)
+    {
+        uint8_t nameLength = ReadU8(animationData, &cursor, &eof);
+        if (eof)
+            RAISE_RT("Reached end of animation file trying to read bone names");
+
+        data.Bones.emplace_back(animationData.begin() + cursor, nameLength);
+        cursor += nameLength;
+    }
+
+    for (uint32_t keyframeIndex = 0; keyframeIndex < keyframeCount; keyframeIndex++)
+    {
+        AnimationData::Keyframe& kf = data.Keyframes.emplace_back();
+        kf.Time = ReadF32(animationData, &cursor, &eof);
+
+        uint8_t poseCount = ReadU8(animationData, &cursor, &eof);
+        kf.Poses.reserve(poseCount);
+
+        for (uint8_t poseIndex = 0; poseIndex < poseCount; poseIndex++)
+        {
+            AnimationData::Pose& pose = kf.Poses.emplace_back();
+            pose.BoneId = ReadU16(animationData, &cursor, &eof);
+
+            float a1b1 = ReadF32(animationData, &cursor, &eof);
+			float a1b2 = ReadF32(animationData, &cursor, &eof);
+			float a1b3 = ReadF32(animationData, &cursor, &eof);
+			float a1b4 = ReadF32(animationData, &cursor, &eof);
+
+			float a2b1 = ReadF32(animationData, &cursor, &eof);
+			float a2b2 = ReadF32(animationData, &cursor, &eof);
+			float a2b3 = ReadF32(animationData, &cursor, &eof);
+			float a2b4 = ReadF32(animationData, &cursor, &eof);
+
+		    float a3b1 = ReadF32(animationData, &cursor, &eof);
+		    float a3b2 = ReadF32(animationData, &cursor, &eof);
+		    float a3b3 = ReadF32(animationData, &cursor, &eof);
+		    float a3b4 = ReadF32(animationData, &cursor, &eof);
+
+			float a4b1 = ReadF32(animationData, &cursor, &eof);
+			float a4b2 = ReadF32(animationData, &cursor, &eof);
+			float a4b3 = ReadF32(animationData, &cursor, &eof);
+			float a4b4 = ReadF32(animationData, &cursor, &eof);
+
+			pose.Transform = {
+				a1b1, a1b2, a1b3, a1b4,
+				a2b1, a2b2, a2b3, a2b4,
+				a3b1, a3b2, a3b3, a3b4,
+				a4b1, a4b2, a4b3, a4b4,
+			};
+        }
+
+        if (eof)
+            RAISE_RT("Reached end of animation file reading keyframe {} of {}", keyframeIndex, keyframeCount);
+    }
+
+    AssetId = id;
 }
 
 const Reflection::StaticPropertyMap& AnimationStateComponentManager::GetProperties()
@@ -76,7 +150,16 @@ const Reflection::StaticPropertyMap& AnimationStateComponentManager::GetProperti
         REFLECTION_PROPERTY_SIMPLE(EcAnimationState, Playing, Boolean),
         REFLECTION_PROPERTY_SIMPLE(EcAnimationState, Looped, Boolean),
     };
+
     return props;
+}
+
+uint32_t AnimatorComponentManager::CreateComponent(GameObject* Object)
+{
+    uint32_t id = ComponentManager<EcAnimator>::CreateComponent(Object);
+    m_Components[id].Object = Object;
+
+    return id;
 }
 
 const Reflection::StaticPropertyMap& AnimatorComponentManager::GetProperties()
@@ -84,6 +167,7 @@ const Reflection::StaticPropertyMap& AnimatorComponentManager::GetProperties()
     static const Reflection::StaticPropertyMap props = {
         REFLECTION_PROPERTY_SIMPLE(EcAnimator, Animating, Boolean),
     };
+
     return props;
 }
 
@@ -99,12 +183,17 @@ const Reflection::StaticMethodMap& AnimatorComponentManager::GetMethods()
                 GameObject* animAsset = GameObjectManager::Get()->FromGenericValue(inputs[0]);
 
                 if (EcAnimationAsset* eaa = animAsset->FindComponent<EcAnimationAsset>())
+                {
+                    if (eaa->AssetId == UINT32_MAX)
+                        eaa->SetAnimation(eaa->Animation);
                     return { ea->LoadAnimation(eaa->AssetId)->ToGenericValue() };
+                }
                 else
                     RAISE_RT("GameObject must have an `AnimationAsset` component");
             }
         } },
     };
+
     return methods;
 }
 
@@ -124,9 +213,71 @@ ObjectHandle EcAnimator::LoadAnimation(uint32_t Id)
     assert(eas);
 
     eas->AnimationAssetId = Id;
+    Animations.push_back(stateObj);
+
     return stateObj;
 }
 
-void EcAnimator::Step(double /* DeltaTime */)
+void EcAnimator::Step(double DeltaTime)
 {
+    AnimatorComponentManager* acm = (AnimatorComponentManager*)AnimatorComponentManager::Get();
+
+    for (const ObjectHandle& animObj : Animations)
+    {
+        EcAnimationState* animationState = animObj->FindComponent<EcAnimationState>();
+        if (!animationState || !animationState->Playing)
+            continue;
+
+        const AnimationData& animation = acm->Animations.at(animationState->AnimationAssetId);
+
+        animationState->Time += DeltaTime;
+        if (animationState->Time > animation.Length)
+        {
+            if (animationState->Looped)
+                animationState->Time = 0.f;
+            else
+            {
+                animationState->Playing = false;
+                continue;
+            }
+        }
+
+        const AnimationData::Keyframe* nearestKeyframe = nullptr;
+
+        for (const AnimationData::Keyframe& kf : animation.Keyframes)
+        {
+            if (!nearestKeyframe || std::abs(kf.Time - animationState->Time) < std::abs(nearestKeyframe->Time - animationState->Time))
+                nearestKeyframe = &kf;
+        }
+
+        if (!nearestKeyframe)
+            continue;
+
+        for (const AnimationData::Pose& pose : nearestKeyframe->Poses)
+        {
+            const std::string& name = animation.Bones[pose.BoneId];
+
+            Object->ForEachDescendant([&](const ObjectHandle& desc)
+            {
+                if (desc->Name == name)
+                {
+                    if (EcBone* cb = desc->FindComponent<EcBone>())
+                    {
+                        cb->SetTransform(pose.Transform);
+                    }
+                    else if (EcTransform* ct = desc->FindComponent<EcTransform>())
+                    {
+                        ct->LocalTransform = pose.Transform;
+                        ct->RecomputeTransformTree();
+                    }
+                    else
+                        return true;
+
+                    return false;
+                }
+
+                return true;
+            });
+        }
+    }
 }

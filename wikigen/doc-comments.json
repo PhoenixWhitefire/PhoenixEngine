@@ -132,7 +132,7 @@
           },
           "ImportModel": {
             "Description": "Imports the glTF 2.0 model at the provided path and returns it as a `Model` GameObject",
-            "Out": "GameObject & EcModel",
+            "Out": "GameObject & EcModel & EcTransform",
             "ParameterNames": "Path"
           },
           "LoadScene": {

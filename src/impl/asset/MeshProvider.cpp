@@ -9,6 +9,7 @@
 
 #include "asset/MeshProvider.hpp"
 #include "asset/PrimitiveMeshes.hpp"
+#include "asset/Binary.hpp"
 #include "render/GpuBuffers.hpp"
 #include "ThreadManager.hpp"
 #include "render/Renderer.hpp"
@@ -20,98 +21,6 @@
 
 // is this even correct??
 constexpr uint32_t BoneChId = ('B' << 24) | ('O' << 16) | ('N' << 8) | 'E';
-
-static uint16_t readU16(const std::string_view& vec, size_t offset, bool* fileTooSmallPtr)
-{
-	if (*fileTooSmallPtr || vec.size() < offset + 2)
-	{
-		*fileTooSmallPtr = true;
-		return UINT16_MAX;
-	}
-
-	uint16_t u16 = 0;
-	memcpy(&u16, vec.data() + offset, sizeof(uint16_t));
-
-	return u16;
-}
-
-static uint16_t readU16(const std::string_view& vec, size_t* offset, bool* fileTooSmallPtr)
-{
-	uint16_t u16 = readU16(vec, *offset, fileTooSmallPtr);
-	*offset += 2ull;
-
-	return u16;
-}
-
-static uint32_t readU32(const std::string_view& vec, size_t offset, bool* fileTooSmallPtr)
-{
-	if (*fileTooSmallPtr || vec.size() < offset + 4)
-	{
-		*fileTooSmallPtr = true;
-		return UINT32_MAX;
-	}
-
-	uint32_t u32 = 0;
-	memcpy(&u32, vec.data() + offset, sizeof(uint32_t));
-
-	return u32;
-}
-
-static uint32_t readU32(const std::string_view& vec, size_t* offset, bool* fileTooSmallPtr)
-{
-	uint32_t u32 = readU32(vec, *offset, fileTooSmallPtr);
-	*offset += 4ull;
-
-	return u32;
-}
-
-static float readF32(const std::string_view& vec, size_t* offset, bool* fileTooSmallPtr)
-{
-	if (*fileTooSmallPtr || vec.size() < (*offset) + 4)
-	{
-		*fileTooSmallPtr = true;
-		return FLT_MAX;
-	}
-
-	float f32 = 0.f;
-	memcpy(&f32, vec.data() + *offset, sizeof(float));
-
-	*offset += 4ull;
-
-	return f32;
-}
-
-static uint8_t readU8(const std::string_view& str, size_t* offset, bool* fileTooSmallPtr)
-{
-	if (*fileTooSmallPtr || str.size() - 1 < *offset)
-	{
-		*fileTooSmallPtr = true;
-		return UINT8_MAX;
-	}
-
-	uint8_t u8 = 0;
-	memcpy(&u8, str.data() + *offset, sizeof(uint8_t));
-	(*offset)++;
-
-	return u8;
-}
-
-static void writeU16(std::string& vec, uint16_t v)
-{
-	vec.resize(vec.size() + 2);
-	memcpy(&vec[vec.size() - 2], &v, sizeof(uint16_t));
-}
-
-static void writeU32(std::string& vec, uint32_t v)
-{
-	vec.resize(vec.size() + 4);
-	memcpy(&vec[vec.size() - 4], &v, sizeof(uint32_t));
-}
-
-static void writeF32(std::string& vec, float v)
-{
-	writeU32(vec, std::bit_cast<uint32_t, float>(v));
-}
 
 static float getVersion(const std::string_view& MapFileContents)
 {
@@ -180,9 +89,9 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 	bool fileTooSmallError = false;
 
 	// vertex metadata
-	uint32_t vertexMeta = readU32(contents, &headerPtr, &fileTooSmallError);
-	uint32_t numVerts = readU32(contents, &headerPtr, &fileTooSmallError);
-	uint32_t numIndices = readU32(contents, &headerPtr, &fileTooSmallError);
+	uint32_t vertexMeta = ReadU32(contents, &headerPtr, &fileTooSmallError);
+	uint32_t numVerts = ReadU32(contents, &headerPtr, &fileTooSmallError);
+	uint32_t numIndices = ReadU32(contents, &headerPtr, &fileTooSmallError);
 
 	if (fileTooSmallError)
 		MESHPROVIDER_ERROR("This should have been caught earlier, but header was smaller than 12 bytes");
@@ -200,23 +109,23 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 
 	if (!hasVertexNormal)
 	{
-		float nx = readF32(contents, &headerPtr, &fileTooSmallError);
-		float ny = readF32(contents, &headerPtr, &fileTooSmallError);
-		float nz = readF32(contents, &headerPtr, &fileTooSmallError);
+		float nx = ReadF32(contents, &headerPtr, &fileTooSmallError);
+		float ny = ReadF32(contents, &headerPtr, &fileTooSmallError);
+		float nz = ReadF32(contents, &headerPtr, &fileTooSmallError);
 		uniformVertexNormal = glm::vec3(nx, ny, nz);
 	}
 
 	if (!hasVertexColor)
 	{
-		float r = readF32(contents, &headerPtr, &fileTooSmallError);
-		float g = readF32(contents, &headerPtr, &fileTooSmallError);
-		float b = readF32(contents, &headerPtr, &fileTooSmallError);
+		float r = ReadF32(contents, &headerPtr, &fileTooSmallError);
+		float g = ReadF32(contents, &headerPtr, &fileTooSmallError);
+		float b = ReadF32(contents, &headerPtr, &fileTooSmallError);
 
 		uniformVertexRGBA = glm::vec4(r, g, b, 1.f);
 	}
 
 	if (!hasVertexOpacity)
-		uniformVertexRGBA.w = readF32(contents, &headerPtr, &fileTooSmallError);
+		uniformVertexRGBA.w = ReadF32(contents, &headerPtr, &fileTooSmallError);
 
 	if (fileTooSmallError)
 		MESHPROVIDER_ERROR("File ended during preamble");
@@ -246,9 +155,9 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 
 	for (uint32_t vertexIndex = 0; vertexIndex < numVerts; vertexIndex++)
 	{
-		float px = readF32(contents, &cursor, &fileTooSmallError);
-		float py = readF32(contents, &cursor, &fileTooSmallError);
-		float pz = readF32(contents, &cursor, &fileTooSmallError);
+		float px = ReadF32(contents, &cursor, &fileTooSmallError);
+		float py = ReadF32(contents, &cursor, &fileTooSmallError);
+		float pz = ReadF32(contents, &cursor, &fileTooSmallError);
 
 		float nx = uniformVertexNormal.x;
 		float ny = uniformVertexNormal.y;
@@ -258,7 +167,7 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 		{
 			if (quantizedNormals)
 			{
-				uint32_t normal = readU32(contents, &cursor, &fileTooSmallError);
+				uint32_t normal = ReadU32(contents, &cursor, &fileTooSmallError);
 
 				// 10 bits per component, not 16!!
 				uint16_t x = static_cast<uint16_t>(normal) & 0b0000001111111111;
@@ -271,9 +180,9 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 			}
 			else
 			{
-				nx = readF32(contents, &cursor, &fileTooSmallError);
-				ny = readF32(contents, &cursor, &fileTooSmallError);
-				nz = readF32(contents, &cursor, &fileTooSmallError);
+				nx = ReadF32(contents, &cursor, &fileTooSmallError);
+				ny = ReadF32(contents, &cursor, &fileTooSmallError);
+				nz = ReadF32(contents, &cursor, &fileTooSmallError);
 			}
 		}
 
@@ -286,24 +195,24 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 		{
 			if (quantizedFloats)
 			{
-				r = readU8(contents, &cursor, &fileTooSmallError) / 255.f;
-				g = readU8(contents, &cursor, &fileTooSmallError) / 255.f;
-				b = readU8(contents, &cursor, &fileTooSmallError) / 255.f;
+				r = ReadU8(contents, &cursor, &fileTooSmallError) / 255.f;
+				g = ReadU8(contents, &cursor, &fileTooSmallError) / 255.f;
+				b = ReadU8(contents, &cursor, &fileTooSmallError) / 255.f;
 			}
 			else
 			{
-				r = readF32(contents, &cursor, &fileTooSmallError);
-				g = readF32(contents, &cursor, &fileTooSmallError);
-				b = readF32(contents, &cursor, &fileTooSmallError);
+				r = ReadF32(contents, &cursor, &fileTooSmallError);
+				g = ReadF32(contents, &cursor, &fileTooSmallError);
+				b = ReadF32(contents, &cursor, &fileTooSmallError);
 			}
 		}
 
 		if (hasVertexOpacity)
 		{
 			if (quantizedFloats)
-				a = readU8(contents, &cursor, &fileTooSmallError) / 255.f;
+				a = ReadU8(contents, &cursor, &fileTooSmallError) / 255.f;
 			else
-				a = readF32(contents, &cursor, &fileTooSmallError);
+				a = ReadF32(contents, &cursor, &fileTooSmallError);
 		}
 
 		float u = 0.f;
@@ -311,13 +220,13 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 
 		if (quantizedFloats)
 		{
-			u = readU16(contents, &cursor, &fileTooSmallError) / (float)UINT16_MAX;
-			v = readU16(contents, &cursor, &fileTooSmallError) / (float)UINT16_MAX;
+			u = ReadU16(contents, &cursor, &fileTooSmallError) / (float)UINT16_MAX;
+			v = ReadU16(contents, &cursor, &fileTooSmallError) / (float)UINT16_MAX;
 		}
 		else
 		{
-			u = readF32(contents, &cursor, &fileTooSmallError);
-			v = readF32(contents, &cursor, &fileTooSmallError);
+			u = ReadF32(contents, &cursor, &fileTooSmallError);
+			v = ReadF32(contents, &cursor, &fileTooSmallError);
 		}
 
 		std::array<uint8_t, 4> bones = { 0, 0, 0, 0 };
@@ -325,7 +234,7 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 
 		if (isRigged)
 		{
-			uint8_t numJoints = readU8(contents, &cursor, &fileTooSmallError);
+			uint8_t numJoints = ReadU8(contents, &cursor, &fileTooSmallError);
 
 			if (numJoints > 4)
 			{
@@ -339,8 +248,8 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 
 			for (uint8_t i = 0; i < numJoints; i++)
 			{
-				uint8_t boneId = readU8(contents, &cursor, &fileTooSmallError);
-				float boneWeight = readF32(contents, &cursor, &fileTooSmallError);
+				uint8_t boneId = ReadU8(contents, &cursor, &fileTooSmallError);
+				float boneWeight = ReadF32(contents, &cursor, &fileTooSmallError);
 
 				bones[i] = boneId;
 				weights[i] = boneWeight;
@@ -358,11 +267,11 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 	}
 
 	for (uint32_t indexIndex = 0; indexIndex < numIndices; indexIndex++)
-		mesh.Indices.push_back(readU32(contents, &cursor, &fileTooSmallError));
+		mesh.Indices.push_back(ReadU32(contents, &cursor, &fileTooSmallError));
 
 	if (isRigged)
 	{
-		uint32_t chId = readU32(contents, &cursor, &fileTooSmallError);
+		uint32_t chId = ReadU32(contents, &cursor, &fileTooSmallError);
 
 		if (chId != BoneChId)
 			Log.ErrorF(
@@ -371,7 +280,7 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 			);
 		else
 		{
-			uint8_t numBones = readU8(contents, &cursor, &fileTooSmallError);
+			uint8_t numBones = ReadU8(contents, &cursor, &fileTooSmallError);
 
 			if (numBones == 0)
 				Log.Warning("Mesh had a BONE chunk and the IsRigged bit, but bone count is 0");
@@ -381,29 +290,29 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 				mesh.Bones.emplace_back();
 				Bone& bone = mesh.Bones.back();
 
-				uint8_t nameLen = readU8(contents, &cursor, &fileTooSmallError);
+				uint8_t nameLen = ReadU8(contents, &cursor, &fileTooSmallError);
 				bone.Name = std::string(contents, cursor, nameLen);
 				cursor += nameLen;
 
-				float a1b1 = readF32(contents, &cursor, &fileTooSmallError);
-				float a1b2 = readF32(contents, &cursor, &fileTooSmallError);
-				float a1b3 = readF32(contents, &cursor, &fileTooSmallError);
-				float a1b4 = readF32(contents, &cursor, &fileTooSmallError);
+				float a1b1 = ReadF32(contents, &cursor, &fileTooSmallError);
+				float a1b2 = ReadF32(contents, &cursor, &fileTooSmallError);
+				float a1b3 = ReadF32(contents, &cursor, &fileTooSmallError);
+				float a1b4 = ReadF32(contents, &cursor, &fileTooSmallError);
 
-				float a2b1 = readF32(contents, &cursor, &fileTooSmallError);
-				float a2b2 = readF32(contents, &cursor, &fileTooSmallError);
-				float a2b3 = readF32(contents, &cursor, &fileTooSmallError);
-				float a2b4 = readF32(contents, &cursor, &fileTooSmallError);
+				float a2b1 = ReadF32(contents, &cursor, &fileTooSmallError);
+				float a2b2 = ReadF32(contents, &cursor, &fileTooSmallError);
+				float a2b3 = ReadF32(contents, &cursor, &fileTooSmallError);
+				float a2b4 = ReadF32(contents, &cursor, &fileTooSmallError);
 
-				float a3b1 = readF32(contents, &cursor, &fileTooSmallError);
-				float a3b2 = readF32(contents, &cursor, &fileTooSmallError);
-				float a3b3 = readF32(contents, &cursor, &fileTooSmallError);
-				float a3b4 = readF32(contents, &cursor, &fileTooSmallError);
+				float a3b1 = ReadF32(contents, &cursor, &fileTooSmallError);
+				float a3b2 = ReadF32(contents, &cursor, &fileTooSmallError);
+				float a3b3 = ReadF32(contents, &cursor, &fileTooSmallError);
+				float a3b4 = ReadF32(contents, &cursor, &fileTooSmallError);
 
-				float a4b1 = readF32(contents, &cursor, &fileTooSmallError);
-				float a4b2 = readF32(contents, &cursor, &fileTooSmallError);
-				float a4b3 = readF32(contents, &cursor, &fileTooSmallError);
-				float a4b4 = readF32(contents, &cursor, &fileTooSmallError);
+				float a4b1 = ReadF32(contents, &cursor, &fileTooSmallError);
+				float a4b2 = ReadF32(contents, &cursor, &fileTooSmallError);
+				float a4b3 = ReadF32(contents, &cursor, &fileTooSmallError);
+				float a4b4 = ReadF32(contents, &cursor, &fileTooSmallError);
 
 				bone.InverseBind = {
 					a1b1, a1b2, a1b3, a1b4,
@@ -414,7 +323,7 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 
 				if (skinCorrections)
 				{
-					bone.Parent = readU8(contents, &cursor, &fileTooSmallError);
+					bone.Parent = ReadU8(contents, &cursor, &fileTooSmallError);
 				}
 				else
 				{
@@ -592,7 +501,7 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 	// also just realizing that this header isnt actually 1 byte...
 	// god i am stupid. i always thought in my head this was 1 byte i do not remember
 	// making it 4 bytes as being intentional
-	writeU32(
+	WriteU32(
 		contents,
 		0b00000100 // hasVertexNormal
 			+ (hasPerVertexAlpha ? 0b00000001 : 0)
@@ -607,24 +516,24 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 			// skinCorrections revision
 			+ 0b01000000
 	);
-	writeU32(contents, static_cast<uint32_t>(mesh.Vertices.size()));
-	writeU32(contents, static_cast<uint32_t>(mesh.Indices.size()));
+	WriteU32(contents, static_cast<uint32_t>(mesh.Vertices.size()));
+	WriteU32(contents, static_cast<uint32_t>(mesh.Indices.size()));
 
 	if (!hasPerVertexColor)
 	{
-		writeF32(contents, uniformVertexCol.x);
-		writeF32(contents, uniformVertexCol.y);
-		writeF32(contents, uniformVertexCol.z);
+		WriteF32(contents, uniformVertexCol.x);
+		WriteF32(contents, uniformVertexCol.y);
+		WriteF32(contents, uniformVertexCol.z);
 	}
 
 	if (!hasPerVertexAlpha)
-		writeF32(contents, uniformVertexAlpha);
+		WriteF32(contents, uniformVertexAlpha);
 
 	for (const Vertex& v : mesh.Vertices)
 	{
-		writeF32(contents, v.Position.x);
-		writeF32(contents, v.Position.y);
-		writeF32(contents, v.Position.z);
+		WriteF32(contents, v.Position.x);
+		WriteF32(contents, v.Position.y);
+		WriteF32(contents, v.Position.z);
 
 		if (quantizedNormals)
 		{
@@ -640,13 +549,13 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 			normal += y << 10;
 			normal += z << 20;
 
-			writeU32(contents, normal);
+			WriteU32(contents, normal);
 		}
 		else
 		{
-			writeF32(contents, v.Normal.x);
-			writeF32(contents, v.Normal.y);
-			writeF32(contents, v.Normal.z);
+			WriteF32(contents, v.Normal.x);
+			WriteF32(contents, v.Normal.y);
+			WriteF32(contents, v.Normal.z);
 		}
 
 		if (hasPerVertexColor)
@@ -657,15 +566,15 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 				uint8_t g = static_cast<uint8_t>(v.Paint.y * UINT8_MAX);
 				uint8_t b = static_cast<uint8_t>(v.Paint.z * UINT8_MAX);
 
-				contents.push_back(*(int8_t*)&r);
-				contents.push_back(*(int8_t*)&g);
-				contents.push_back(*(int8_t*)&b);
+				WriteU8(contents, r);
+				WriteU8(contents, g);
+				WriteU8(contents, b);
 			}
 			else
 			{
-				writeF32(contents, v.Paint.x);
-				writeF32(contents, v.Paint.y);
-				writeF32(contents, v.Paint.z);
+				WriteF32(contents, v.Paint.x);
+				WriteF32(contents, v.Paint.y);
+				WriteF32(contents, v.Paint.z);
 			}
 		}
 
@@ -674,21 +583,21 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 			if (quantizedFloats)
 			{
 				uint8_t a = static_cast<uint8_t>(v.Paint.w * UINT8_MAX);
-				contents.push_back(*(int8_t*)&a);
+				WriteU8(contents, a);
 			}
 			else
-				writeF32(contents, v.Paint.w);
+				WriteF32(contents, v.Paint.w);
 		}
 
 		if (quantizedFloats)
 		{
-			writeU16(contents, static_cast<uint16_t>(std::clamp(v.TextureUV.x, 0.f, 1.f) * UINT16_MAX));
-			writeU16(contents, static_cast<uint16_t>(std::clamp(v.TextureUV.y, 0.f, 1.f) * UINT16_MAX));
+			WriteU16(contents, static_cast<uint16_t>(std::clamp(v.TextureUV.x, 0.f, 1.f) * UINT16_MAX));
+			WriteU16(contents, static_cast<uint16_t>(std::clamp(v.TextureUV.y, 0.f, 1.f) * UINT16_MAX));
 		}
 		else
 		{
-			writeF32(contents, v.TextureUV.x);
-			writeF32(contents, v.TextureUV.y);
+			WriteF32(contents, v.TextureUV.x);
+			WriteF32(contents, v.TextureUV.y);
 		}
 
 		if (isRigged)
@@ -701,25 +610,25 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 
 			// bone id, then weight
 			// felt easier
-			contents.push_back(*(const int8_t*)&v.InfluencingJoints[0]);
-			writeF32(contents, v.JointWeights[0]);
+			WriteU8(contents, v.InfluencingJoints[0]);
+			WriteF32(contents, v.JointWeights[0]);
 
-			contents.push_back(*(const int8_t*)&v.InfluencingJoints[1]);
-			writeF32(contents, v.JointWeights[1]);
+			WriteU8(contents, v.InfluencingJoints[1]);
+			WriteF32(contents, v.JointWeights[1]);
 
-			contents.push_back(*(const int8_t*)&v.InfluencingJoints[2]);
-			writeF32(contents, v.JointWeights[2]);
+			WriteU8(contents, v.InfluencingJoints[2]);
+			WriteF32(contents, v.JointWeights[2]);
 
-			contents.push_back(*(const int8_t*)&v.InfluencingJoints[3]);
-			writeF32(contents, v.JointWeights[3]);
+			WriteU8(contents, v.InfluencingJoints[3]);
+			WriteF32(contents, v.JointWeights[3]);
 		}
 	}
 
 	for (uint32_t i : mesh.Indices)
-		writeU32(contents, i);
+		WriteU32(contents, i);
 
 	// why'd i do that... idk
-	writeU32(contents, BoneChId);
+	WriteU32(contents, BoneChId);
 
 	uint8_t numBones = static_cast<uint8_t>(mesh.Bones.size());
 	contents.push_back(*(const int8_t*)&numBones);
@@ -727,29 +636,29 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 	for (const Bone& b : mesh.Bones)
 	{
 		uint8_t nameLen = static_cast<uint8_t>(b.Name.size());
-		contents.push_back(*(const int8_t*)&nameLen);
+		WriteU8(contents, nameLen);
 		contents += b.Name;
 
 		// 4x4 inverse bind matrix
-		writeF32(contents, b.InverseBind[0][0]);
-		writeF32(contents, b.InverseBind[0][1]);
-		writeF32(contents, b.InverseBind[0][2]);
-		writeF32(contents, b.InverseBind[0][3]);
+		WriteF32(contents, b.InverseBind[0][0]);
+		WriteF32(contents, b.InverseBind[0][1]);
+		WriteF32(contents, b.InverseBind[0][2]);
+		WriteF32(contents, b.InverseBind[0][3]);
 
-		writeF32(contents, b.InverseBind[1][0]);
-		writeF32(contents, b.InverseBind[1][1]);
-		writeF32(contents, b.InverseBind[1][2]);
-		writeF32(contents, b.InverseBind[1][3]);
+		WriteF32(contents, b.InverseBind[1][0]);
+		WriteF32(contents, b.InverseBind[1][1]);
+		WriteF32(contents, b.InverseBind[1][2]);
+		WriteF32(contents, b.InverseBind[1][3]);
 
-		writeF32(contents, b.InverseBind[2][0]);
-		writeF32(contents, b.InverseBind[2][1]);
-		writeF32(contents, b.InverseBind[2][2]);
-		writeF32(contents, b.InverseBind[2][3]);
+		WriteF32(contents, b.InverseBind[2][0]);
+		WriteF32(contents, b.InverseBind[2][1]);
+		WriteF32(contents, b.InverseBind[2][2]);
+		WriteF32(contents, b.InverseBind[2][3]);
 
-		writeF32(contents, b.InverseBind[3][0]);
-		writeF32(contents, b.InverseBind[3][1]);
-		writeF32(contents, b.InverseBind[3][2]);
-		writeF32(contents, b.InverseBind[3][3]);
+		WriteF32(contents, b.InverseBind[3][0]);
+		WriteF32(contents, b.InverseBind[3][1]);
+		WriteF32(contents, b.InverseBind[3][2]);
+		WriteF32(contents, b.InverseBind[3][3]);
 
 		contents.push_back(*(const char*)&b.Parent);
 	}

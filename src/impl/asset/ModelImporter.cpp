@@ -9,6 +9,7 @@
 #include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
 #include "asset/MeshProvider.hpp"
+#include "asset/Binary.hpp"
 #include "component/Transform.hpp"
 #include "component/Animation.hpp"
 #include "component/Model.hpp"
@@ -18,10 +19,8 @@
 #include "FileRW.hpp"
 #include "Log.hpp"
 
-static uint32_t readU32(const std::string_view& vec, size_t offset)
-{
-	return *(const uint32_t*)&vec.at(offset);
-}
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/euler_angles.hpp>
 
 static std::string getTexturePath(
 	const std::string& ModelPath,
@@ -123,7 +122,12 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 	// https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#binary-header
 	if (std::string_view(textData.begin(), textData.begin() + 4) == "glTF")
 	{
-		uint32_t glbVersion = readU32(textData, 4);
+		bool reachedEof = false;
+
+		uint32_t glbVersion = ReadU32(textData, 4, &reachedEof);
+		if (reachedEof)
+			RAISE_RT("Reached end of file when reading glTF version");
+
 		if (glbVersion != 2)
 			Log.WarningF(
 				"GLB header declares version as '{}', when only `2` is supported. Unexpected behavior may occur.",
@@ -132,8 +136,11 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 
 		// header is 12 bytes
 		// chunks begin past it
-		uint32_t jsonChLength = readU32(textData, 12);
-		uint32_t jsonChType = readU32(textData, 16);
+		uint32_t jsonChLength = ReadU32(textData, 12, &reachedEof);
+		uint32_t jsonChType = ReadU32(textData, 16, &reachedEof);
+
+		if (reachedEof)
+			RAISE_RT("Reached end of file when reading JSON chunk header");
 
 		if (jsonChType != 0x4E4F534A)
 			RAISE_RT(
@@ -150,8 +157,11 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 		// 12 byte header + 4 byte chunk length + 4 byte chunk type
 		std::string_view binaryChunk{ textData.begin() + 20ull + jsonChLength, textData.end() };
 
-		uint32_t binaryChLength = readU32(binaryChunk, 0);
-		uint32_t binaryChType = readU32(binaryChunk, 4);
+		uint32_t binaryChLength = ReadU32(binaryChunk, (size_t)0, &reachedEof);
+		uint32_t binaryChType = ReadU32(binaryChunk, 4, &reachedEof);
+
+		if (reachedEof)
+			RAISE_RT("Reached end of file when reading BIN chunk header");
 
 		if (binaryChType != 0x004E4942)
 			RAISE_RT(
@@ -269,19 +279,6 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 			object->AddComponent(EntityComponent::RigidBody);
 			object->AddComponent(EntityComponent::Transform);
 			EcMesh* meshObject = object->FindComponent<EcMesh>();
-
-			std::string saveDir = AssetPath;
-			size_t assetNameCutoff = saveDir.find_last_of('/');
-
-			if (assetNameCutoff == std::string::npos)
-				assetNameCutoff = 0;
-			else
-				assetNameCutoff++;
-
-			saveDir = saveDir.substr(assetNameCutoff, saveDir.size() - assetNameCutoff);
-
-			if (size_t extensionLoc = saveDir.find('.'); extensionLoc != std::string::npos)
-				saveDir = saveDir.substr(0, saveDir.size() - extensionLoc);
 
 			/*
 				When;
@@ -427,8 +424,13 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 		assert(obj->HardRefCount > 0);
 	}
 
-	for (const ObjectHandle& anim : m_Animations)
-		anim->SetParent(loadedObjects.at(0));
+	if (m_Animations.size() > 0)
+	{
+		Model->AddComponent(EntityComponent::Animator);
+
+		for (const ObjectHandle& anim : m_Animations)
+			anim->SetParent(loadedObjects.at(0));
+	}
 }
 
 ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(
@@ -525,7 +527,7 @@ ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(
 	// Combine all the vertex components and also get the indices and textures
 	std::vector<Vertex> vertices = m_AssembleVertices(positions, normals, texUVs, cols, joints, weights);
 	std::vector<uint32_t> indices = m_GetUnsigned32s(accessors[indAccInd]);
-	
+
 	return ModelNode{
 		// e.g. "Cube", "Cube2" on 2nd prim, "_UNNAMED-0_" w/o name and 1st prim
 		.Name = MeshData.value(
@@ -689,27 +691,6 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From)
 	}
 }
 
-static void writeU16(std::string& vec, uint16_t v)
-{
-	vec.push_back(*(int8_t*)&v);
-	vec.push_back(*((int8_t*)&v + 1ull));
-}
-
-//static void writeU32(std::string& vec, uint32_t v)
-//{
-//	vec.push_back(*(int8_t*)&v);
-//	vec.push_back(*((int8_t*)&v + 1ull));
-//	vec.push_back(*((int8_t*)&v + 2ull));
-//	vec.push_back(*((int8_t*)&v + 3ull));
-//}
-
-/*
-static void writeF32(std::string& vec, float v)
-{
-	writeU32(vec, std::bit_cast<uint32_t, float>(v));
-}
-*/
-
 void ModelLoader::m_BuildRig()
 {
 	ZoneScoped;
@@ -767,23 +748,126 @@ void ModelLoader::m_BuildRig()
 
 std::string ModelLoader::m_SerializeAnimation(const nlohmann::json& Animation)
 {
-	std::string data = "PHOENIXF/ANIM\n";
-	writeU16(data, 0); // align to 8 bytes
+	const nlohmann::json& channels = Animation.at("channels");
+	const nlohmann::json& samplers = Animation.at("samplers");
+	std::string data = "PHOENIXF/ANIM\n\0";
 
-	std::set<int32_t> nodes;
-	for (const nlohmann::json& channel : Animation.value("channels", nlohmann::json::array()))
-		nodes.insert((int32_t)channel["target"]["node"]);
+	// use `std::map` to order keyframes
+	std::map<float, AnimationData::Keyframe> keyframes;
+	std::vector<std::string> boneNames;
+	float animLength = 0.f;
 
-	assert(nodes.size() < UINT8_MAX);
-	uint8_t u8nodessize = (uint8_t)nodes.size();
-	data.push_back(*(int8_t*)&u8nodessize);
+	for (const nlohmann::json& chan : channels)
+	{
+		const nlohmann::json& sampler = samplers[(uint32_t)chan.at("sampler")];
+		const nlohmann::json& target = chan.at("target");
+		const std::string& path = target.at("path");
+		int32_t nodeId = target.at("node");
 
-	//for (int32_t i : nodes)
-	//{
-	//	const ModelNode& node = m_Nodes[i];
-	//	writeU16(data, (uint16_t)node.Name.size());
-	//	data.append(node.Name);
-	//}
+		const ModelNode& boneNode = m_Nodes[m_NodeIdToIndex.at(nodeId)];
+
+		const auto& boneIdIt = std::find(boneNames.begin(), boneNames.end(), boneNode.Name);
+		uint16_t boneId = UINT16_MAX;
+
+		if (boneIdIt != boneNames.end())
+			boneId = boneIdIt - boneNames.begin();
+		else
+		{
+			if (boneNames.size() >= UINT16_MAX)
+				RAISE_RT("Animation affects too many bones to be serialized (>{})", UINT16_MAX);
+
+			boneId = (uint16_t)boneNames.size();
+			boneNames.push_back(boneNode.Name);
+		}
+
+		std::vector<float> times = m_GetFloats(m_JsonData["accessors"][(int32_t)sampler.at("input")]);
+		std::vector<glm::vec4> vectors = m_GetAndGroupFloatsVec4(m_JsonData["accessors"][(int32_t)sampler.at("output")]);
+
+		for (size_t i = 0; i < times.size(); i++)
+		{
+			float t = times[i];
+			const glm::vec4& v = vectors[i];
+			glm::mat4 trans = glm::mat4(1.f);
+
+			if (path == "translation")
+				trans = glm::translate(trans, glm::vec3(v));
+			else if (path == "rotation")
+				trans = glm::eulerAngleYXZ(v.x, v.y, v.z);
+			else if (path == "scale")
+				trans = glm::scale(trans, glm::vec3(v));
+			else
+				RAISE_RT("Invalid animation channel path '{}'", path);
+
+			AnimationData::Keyframe& keyframe = keyframes[t];
+			keyframe.Time = t;
+
+			AnimationData::Pose* pose = nullptr;
+
+			for (AnimationData::Pose& p : keyframe.Poses)
+			{
+				if (p.BoneId == boneId)
+				{
+					pose = &p;
+					break;
+				}
+			}
+
+			if (!pose)
+				pose = &keyframe.Poses.emplace_back();
+
+			pose->Transform *= trans;
+			pose->BoneId = boneId;
+
+			animLength = std::max(animLength, t);
+		}
+	}
+
+	WriteU32(data, 0); // flags
+	WriteF32(data, animLength);
+	WriteU32(data, keyframes.size());
+	WriteU16(data, (uint16_t)boneNames.size());
+
+	for (const std::string& name : boneNames)
+	{
+		if (name.size() > UINT8_MAX)
+			RAISE_RT("Bone names cannot exceed 255 characters");
+		data.push_back((uint8_t)name.size());
+		data.append(name);
+	}
+
+	for (const auto& [ t, kf ] : keyframes)
+	{
+		if (kf.Poses.size() > UINT8_MAX)
+			RAISE_RT("Keyframe at {} seconds affects too many bones (>255)", t);
+
+		WriteF32(data, t);
+		WriteU8(data, (uint8_t)kf.Poses.size());
+
+		for (const AnimationData::Pose& pose : kf.Poses)
+		{
+			WriteU16(data, pose.BoneId);
+
+			WriteF32(data, pose.Transform[0][0]);
+			WriteF32(data, pose.Transform[0][1]);
+			WriteF32(data, pose.Transform[0][2]);
+			WriteF32(data, pose.Transform[0][3]);
+
+			WriteF32(data, pose.Transform[1][0]);
+			WriteF32(data, pose.Transform[1][1]);
+			WriteF32(data, pose.Transform[1][2]);
+			WriteF32(data, pose.Transform[1][3]);
+
+			WriteF32(data, pose.Transform[2][0]);
+			WriteF32(data, pose.Transform[2][1]);
+			WriteF32(data, pose.Transform[2][2]);
+			WriteF32(data, pose.Transform[2][3]);
+
+			WriteF32(data, pose.Transform[3][0]);
+			WriteF32(data, pose.Transform[3][1]);
+			WriteF32(data, pose.Transform[3][2]);
+			WriteF32(data, pose.Transform[3][3]);
+		}
+	}
 
 	return data;
 }
@@ -865,14 +949,16 @@ std::vector<float> ModelLoader::m_GetFloats(const nlohmann::json& accessor)
 	{
 		if (componentType == 5126)
 		{
-			float value = *(float*)&m_Data[i++];
+			float value = 0.f;
+			memcpy(&value, &m_Data[i++], sizeof(value));
 			floatVec.push_back(value);
 
 			i += 3;
 		}
 		else if (componentType == 5123)
 		{
-			uint16_t us = *(uint16_t*)&m_Data[i++];
+			uint16_t us = 0;
+			memcpy(&us, &m_Data[i++], sizeof(us));
 			floatVec.push_back(us / 65535.f);
 
 			i += 1;
@@ -916,7 +1002,8 @@ std::vector<uint32_t> ModelLoader::m_GetUnsigned32s(const nlohmann::json& access
 	{
 		for (uint32_t i = beginningOfData; i < byteOffset + accByteOffset + count * 4;)
 		{
-			uint32_t value = *(uint32_t*)&m_Data[i++];
+			uint32_t value = 0;
+			memcpy(&value, &m_Data[i++], sizeof(value));
 			indices.push_back(value);
 
 			i += 3;
@@ -926,7 +1013,8 @@ std::vector<uint32_t> ModelLoader::m_GetUnsigned32s(const nlohmann::json& access
 	{
 		for (uint32_t i = beginningOfData; i < byteOffset + accByteOffset + count * 2;)
 		{
-			uint16_t value = *(uint16_t*)&m_Data[i++];
+			uint16_t value = 0;
+			memcpy(&value, &m_Data[i++], sizeof(value));
 			indices.push_back(value);
 
 			i += 1;
@@ -936,7 +1024,8 @@ std::vector<uint32_t> ModelLoader::m_GetUnsigned32s(const nlohmann::json& access
 	{
 		for (uint32_t i = beginningOfData; i < byteOffset + accByteOffset + count * 2;)
 		{
-			short value = *(short*)&m_Data[i++];
+			short value = 0;
+			memcpy(&value, &m_Data[i++], sizeof(value));
 			indices.push_back(value);
 
 			i += 1;
@@ -1004,10 +1093,18 @@ std::vector<uint8_t> ModelLoader::m_GetUBytes(const nlohmann::json& accessor)
 	for (uint32_t i = beginningOfData; i < beginningOfData + lengthOfData;)
 	{
 		if (componentSize == 1)
-			ubytesVec.push_back(*(uint8_t*)&m_Data[i++]);
+		{
+			uint8_t v = 0;
+			memcpy(&v, &m_Data[i++], sizeof(v));
+
+			ubytesVec.push_back(v);
+		}
 		else
 		{
-			ubytesVec.push_back(*(uint16_t*)&m_Data[i++]);
+			uint16_t v = 0;
+			memcpy(&v, &m_Data[i++], sizeof(v));
+
+			ubytesVec.push_back(v);
 			i+=1;
 		}
 
