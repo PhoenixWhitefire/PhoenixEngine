@@ -93,8 +93,7 @@
     "Components": {
       "Animator": {
         "Description": [
-          "Animates",
-          "Not functional currently"
+          "Animates"
         ],
         "Methods": {
           "LoadAnimation": {
@@ -119,7 +118,7 @@
           "Looped": "Whether the track should loop when it reaches the end",
           "Playing": "Whether the track is playing",
           "Time": "The current time position of the track",
-          "Weight": "The influence the track has over the rig"
+          "Weight": "The influence the track has over the rig. Not implemented yet"
         }
       },
       "AssetManager": {

@@ -1158,7 +1158,7 @@
     "documentation": "The current time position of the track"
   },
   "@phoenix/globaltype/AnimationState.Weight": {
-    "documentation": "The influence the track has over the rig"
+    "documentation": "The influence the track has over the rig. Not implemented yet"
   },
   "@phoenix/globaltype/Animator.Animating": {
     "documentation": "Whether the `Animator` will step its animations"
