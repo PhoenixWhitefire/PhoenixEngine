@@ -2,6 +2,7 @@
 #include <cstring>
 #include <cfloat>
 #include <string>
+#include <bit>
 
 #include "asset/Binary.hpp"
 
