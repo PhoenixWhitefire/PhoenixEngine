@@ -90,7 +90,7 @@ void EcAnimationAsset::SetAnimation(const std::string& Asset)
         if (eof)
             RAISE_RT("Reached end of animation file trying to read bone names");
 
-        data.Bones.emplace_back(animationData.begin() + cursor, nameLength);
+        data.Bones.emplace_back(animationData.data() + cursor, nameLength);
         cursor += nameLength;
     }
 
