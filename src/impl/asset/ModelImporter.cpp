@@ -399,7 +399,6 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 		}
 
 		object->Name = node.Name;
-
 		loadedObjects.push_back(object);
 
 		uint32_t parentIndex = node.Parent;
@@ -483,9 +482,8 @@ ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(
 		weights = m_GetAndGroupFloatsVec4(accessors[weightsAcc]);
 	}
 
-	// normalize and center the mesh 11/01/2024
 	glm::vec3 extMax = glm::vec3(-FLT_MAX);
-	glm::vec3 extMin = glm::vec3(FLT_MAX);
+	glm::vec3 extMin = glm::vec3( FLT_MAX);
 
 	for (const glm::vec3& position : positions)
 	{
@@ -498,31 +496,8 @@ ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(
 		extMin.z = std::min(extMin.z, position.z);
 	}
 
-	glm::vec3 size = (extMax - extMin);
 	glm::vec3 center = (extMin + extMax) * .5f;
-
-	glm::vec3 sizeInv = glm::vec3(
-		size.x > 0.f ? (1.f/size.x) : 1.f,
-		size.y > 0.f ? (1.f/size.y) : 1.f,
-		size.z > 0.f ? (1.f/size.z) : 1.f
-	);
-
-	//https://stackoverflow.com/a/69808766
-	glm::mat4 matS = glm::scale(glm::mat4(1.f), sizeInv);
-	glm::mat4 matT = glm::translate(glm::mat4(1.f), -center);
-	glm::mat4 matM = matS * matT;
-
-	if (m_JsonData.find("animations") == m_JsonData.end())
-	{
-		for (glm::vec3& position : positions)
-			position = glm::vec3(matM * glm::vec4(position, 1.f));
-	}
-	else
-	{
-		for (glm::vec3& position : positions)
-			position = glm::vec3(matT * glm::vec4(position, 1.f));
-		size = glm::vec3(1.f);
-	}
+	glm::vec3 size = (extMax - extMin);
 
 	// Combine all the vertex components and also get the indices and textures
 	std::vector<Vertex> vertices = m_AssembleVertices(positions, normals, texUVs, cols, joints, weights);
@@ -538,10 +513,10 @@ ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(
 		.Parent = 0u,
 		.Type= ModelNode::NodeType::Primitive,
 
-		.Data = Mesh{ vertices, indices },
+		.Data = Mesh{ .Vertices = vertices, .Indices = indices, .AssetOrigin = center, .AssetSize = size },
 		.Material = m_GetMaterial(primitive),
-		.LocalTransform = Transform * glm::translate(glm::mat4(1.f), center),
-		.LocalScale = Scale * size
+		.LocalTransform = Transform,
+		.LocalScale = Scale
 	};
 }
 
@@ -656,9 +631,8 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From)
 			if (isSkinned)
 			{
 				const nlohmann::json& jointsJson = skinJson["joints"];
-
 				std::vector<glm::mat4> invBindMatrices;
-				invBindMatrices.resize(jointsJson.size(), 1.f);
+				node.Bones.reserve(jointsJson.size());
 
 				if (const auto invBindMtx = skinJson.find("inverseBindMatrices"); invBindMtx != skinJson.end())
 				{
@@ -697,6 +671,9 @@ void ModelLoader::m_BuildRig()
 
 	for (ModelNode& node : m_Nodes)
 	{
+		if (node.Type != ModelNode::NodeType::Primitive)
+			continue;
+
 		for (const ModelNode::BoneInfo& jointDesc : node.Bones)
 		{
 			uint32_t jointNodeIndex = m_NodeIdToIndex.at(jointDesc.NodeId);

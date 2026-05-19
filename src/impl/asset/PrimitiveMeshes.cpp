@@ -79,7 +79,11 @@ Mesh PrimitiveMeshes::Cube()
 		22, 21, 20
 	};
 
-	return Mesh{ vertices, indices, {}, UINT32_MAX, true };
+	return Mesh{
+		.Vertices = vertices,
+		.Indices = indices,
+		.MeshDataPreserved = true,
+	};
 }
 
 Mesh PrimitiveMeshes::Quad()
@@ -96,7 +100,11 @@ Mesh PrimitiveMeshes::Quad()
 		3, 0, 2
 	};
 
-	return Mesh{ vertices, indices, {}, UINT32_MAX, true };
+	return Mesh{
+		.Vertices = vertices,
+		.Indices = indices,
+		.MeshDataPreserved = true,
+	};
 }
 
 Mesh PrimitiveMeshes::Sphere()
@@ -152,5 +160,9 @@ Mesh PrimitiveMeshes::Sphere()
 	    }
 	}
 
-	return Mesh{ vertices, indices, {}, UINT32_MAX, true };
+	return Mesh{
+		.Vertices = vertices,
+		.Indices = indices,
+		.MeshDataPreserved = true,
+	};
 }

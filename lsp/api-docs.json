@@ -1497,7 +1497,7 @@
     "documentation": "Removes the given `Collections` tag from the Object. Has no effect if the Object does not have the tag"
   },
   "@phoenix/globaltype/GameObject.Serializes": {
-    "documentation": "Whether or not the Object should be saved with the scene if it is serialized with `scene.save`, and whether `:Duplicate` will duplicate it (only applies to descendants)"
+    "documentation": "Whether or not the Object should be saved with the scene if it is serialized with `AssetManager:SaveScene`, and whether `:Duplicate` will duplicate it (only applies to descendants)"
   },
   "@phoenix/globaltype/History.ActionHistorySize": {
     "documentation": "The total number of Actions that have finished being recorded"

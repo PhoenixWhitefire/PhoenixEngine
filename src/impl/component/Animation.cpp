@@ -213,6 +213,7 @@ ObjectHandle EcAnimator::LoadAnimation(uint32_t Id)
     assert(eas);
 
     eas->AnimationAssetId = Id;
+    stateObj->Serializes = false;
     Animations.push_back(stateObj);
 
     return stateObj;
@@ -233,19 +234,17 @@ void EcAnimator::Step(double DeltaTime)
         animationState->Time += DeltaTime;
         if (animationState->Time > animation.Length)
         {
-            if (animationState->Looped)
-                animationState->Time = 0.f;
-            else
-            {
+            animationState->Time = 0.f;
+
+            if (!animationState->Looped)
                 animationState->Playing = false;
-                continue;
-            }
         }
 
         const AnimationData::Keyframe* nearestKeyframe = nullptr;
 
         for (const AnimationData::Keyframe& kf : animation.Keyframes)
         {
+            // no interpolation for now
             if (!nearestKeyframe || std::abs(kf.Time - animationState->Time) < std::abs(nearestKeyframe->Time - animationState->Time))
                 nearestKeyframe = &kf;
         }
@@ -273,7 +272,7 @@ void EcAnimator::Step(double DeltaTime)
                     else
                         return true;
 
-                    return false;
+                    //return false;
                 }
 
                 return true;

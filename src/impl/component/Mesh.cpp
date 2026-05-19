@@ -172,6 +172,7 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 					ch->Destroy();
 
 			Mesh& meshAfter = meshProvider->GetMeshResource(meshId);
+			std::unordered_map<std::string_view, ObjectRef> boneNameToObject;
 
 			for (uint8_t boneId = 0; boneId < meshAfter.Bones.size(); boneId++)
 			{
@@ -198,16 +199,30 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 
 				EcBone* bone = boneObj->FindComponent<EcBone>();
 
-				boneObj->SetParent(b.Parent == UINT8_MAX
-					? obj.Dereference()
-					: obj->FindChild(meshAfter.Bones[b.Parent].Name)
-				);
+				ObjectHandle parent;
+
+				if (b.Parent == UINT8_MAX)
+					parent = obj;
+				else
+				{
+					const std::string& parentName = meshAfter.Bones[b.Parent].Name;
+					const auto& it = boneNameToObject.find(parentName);
+
+					if (it == boneNameToObject.end())
+						Log.ErrorF("Bone '{}' has parent '{}', which was not found in the rig", b.Name, parentName);
+					else
+						parent = it->second;
+				}
+
+				boneObj->SetParent(parent);
 				boneObj->Name = b.Name;
 				boneObj->Serializes = false;
 
 				bone->Transform = b.Transform;
 				bone->SkeletalBoneId = boneId;
 				bone->TargetMesh = cm->ComponentId;
+
+				boneNameToObject[b.Name] = boneObj.Reference;
 			}
 		}
 	);

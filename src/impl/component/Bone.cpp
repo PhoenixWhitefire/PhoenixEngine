@@ -131,23 +131,23 @@ void EcBone::SetTransform(const glm::mat4& trans)
 		gpuMesh.BoneMatrices[SkeletalBoneId] = (accumulatedTransform * realBone->Transform) * realBone->InverseBind;
 
 		/*
-		for (auto [vi, ji] : realBone->TargetVertices)
+		for (uint8_t bid = 0; bid < meshData.Bones.size(); bid++)
 		{
-			const Vertex& v = meshData.Vertices[vi];
-			gpuMesh.BoneMatrices[vi] = accumulatedTransform * glm::interpolate(glm::mat4(1.f), realBone->Transform, v.JointWeights[ji]);
-		}
+			const Bone& child = meshData.Bones[bid];
 
-		accumulatedTransform *= realBone->Transform;
-
-		for (const Bone& childBone : meshData.Bones)
-		{
-			if (childBone.Parent != boneObj->SkeletalBoneId)
-				continue;
-
-			for (auto [vi, ji] : childBone.TargetVertices)
+			if (child.Parent == SkeletalBoneId)
 			{
-				const Vertex& v = meshData.Vertices[vi];
-				gpuMesh.SkinningData[vi] = accumulatedTransform * glm::interpolate(glm::mat4(1.f), childBone.Transform, v.JointWeights[ji]);
+				glm::mat4 accumulatedChildTransform = { 1.f };
+				uint8_t childParent = child.Parent;
+
+				while (childParent != UINT8_MAX)
+				{
+					const Bone& parentBone = meshData.Bones[childParent];
+					accumulatedChildTransform = parentBone.Transform * accumulatedChildTransform;
+					childParent = parentBone.Parent;
+				}
+
+				gpuMesh.BoneMatrices[bid] = (accumulatedChildTransform * child.Transform) * child.InverseBind;
 			}
 		}
 		*/

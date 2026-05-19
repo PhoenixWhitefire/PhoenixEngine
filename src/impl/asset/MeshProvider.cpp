@@ -75,34 +75,49 @@ static Mesh loadMeshVersion1(const std::string_view& FileContents, std::string* 
 
 static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* ErrorMessagePtr)
 {
-	size_t binaryStartLoc = FileContents.find_first_of('$');
+    size_t binaryStartLoc = FileContents.find_first_of('$');
 
-	if (binaryStartLoc == std::string::npos)
-		MESHPROVIDER_ERROR("File did not contain a binary data begin symbol ('$')");
+    if (binaryStartLoc == std::string::npos)
+        MESHPROVIDER_ERROR("File did not contain a binary data begin symbol ('$')");
 
-	std::string_view contents{ FileContents.begin() + binaryStartLoc + 1, FileContents.end() };
+    std::string_view contents{ FileContents.begin() + binaryStartLoc + 1, FileContents.end() };
 
-	if (contents.size() < 12)
-		MESHPROVIDER_ERROR("File cannot contain header as binary data is smaller than 12 bytes");
+    if (contents.size() < 12)
+        MESHPROVIDER_ERROR("File cannot contain header as binary data is smaller than 12 bytes");
 
-	size_t headerPtr{};
-	bool fileTooSmallError = false;
+    size_t headerPtr = 0;
+    bool fileTooSmallError = false;
 
-	// vertex metadata
-	uint32_t vertexMeta = ReadU32(contents, &headerPtr, &fileTooSmallError);
-	uint32_t numVerts = ReadU32(contents, &headerPtr, &fileTooSmallError);
-	uint32_t numIndices = ReadU32(contents, &headerPtr, &fileTooSmallError);
+    // vertex metadata
+    uint32_t vertexMeta = ReadU32(contents, &headerPtr, &fileTooSmallError);
+    uint32_t numVerts = ReadU32(contents, &headerPtr, &fileTooSmallError);
+    uint32_t numIndices = ReadU32(contents, &headerPtr, &fileTooSmallError);
 
-	if (fileTooSmallError)
-		MESHPROVIDER_ERROR("This should have been caught earlier, but header was smaller than 12 bytes");
+    if (fileTooSmallError)
+        MESHPROVIDER_ERROR("This should have been caught earlier, but header was smaller than 12 bytes");
 
-	bool hasVertexOpacity = vertexMeta & 0b00000001;
-	bool hasVertexColor   = vertexMeta & 0b00000010;
-	bool hasVertexNormal  = vertexMeta & 0b00000100;
-	bool isRigged         = vertexMeta & 0b00001000;
-	bool quantizedFloats  = vertexMeta & 0b00010000;
-	bool quantizedNormals = vertexMeta & 0b00100000;
-	bool skinCorrections  = vertexMeta & 0b01000000;
+    bool hasVertexOpacity = vertexMeta & 0b00000001;
+    bool hasVertexColor   = vertexMeta & 0b00000010;
+    bool hasVertexNormal  = vertexMeta & 0b00000100;
+    bool isRigged         = vertexMeta & 0b00001000;
+    bool quantizedFloats  = vertexMeta & 0b00010000;
+    bool quantizedNormals = vertexMeta & 0b00100000;
+    bool skinCorrections  = vertexMeta & 0b01000000;
+    bool isNonNormalized  = vertexMeta & 0b10000000;
+
+	glm::vec3 assetOrigin;
+    glm::vec3 assetSize = { 1.f, 1.f, 1.f };
+
+    if (isNonNormalized)
+    {
+		assetOrigin.x = ReadF32(contents, &headerPtr, &fileTooSmallError);
+        assetOrigin.y = ReadF32(contents, &headerPtr, &fileTooSmallError);
+        assetOrigin.z = ReadF32(contents, &headerPtr, &fileTooSmallError);
+
+        assetSize.x = ReadF32(contents, &headerPtr, &fileTooSmallError);
+        assetSize.y = ReadF32(contents, &headerPtr, &fileTooSmallError);
+        assetSize.z = ReadF32(contents, &headerPtr, &fileTooSmallError);
+    }
 
 	glm::vec3 uniformVertexNormal;
 	glm::vec4 uniformVertexRGBA = { 1.f, 1.f, 1.f, 1.f };
@@ -147,9 +162,11 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 			totalExpectedDataSize, actualDataSize
 		));
 
-	Mesh mesh{};
+	Mesh mesh;
 	mesh.Vertices.reserve(numVerts);
 	mesh.Indices.reserve(numIndices);
+	mesh.AssetOrigin = assetOrigin;
+	mesh.AssetSize = assetSize;
 
 	size_t cursor = headerPtr;
 
@@ -515,9 +532,19 @@ std::string MeshProvider::Serialize(const Mesh& mesh)
 			+ (quantizedNormals  ? 0b00100000 : 0)
 			// skinCorrections revision
 			+ 0b01000000
+			// stop normalizing meshes to be centered + 1x1x1
+			+ 0b10000000
 	);
 	WriteU32(contents, static_cast<uint32_t>(mesh.Vertices.size()));
 	WriteU32(contents, static_cast<uint32_t>(mesh.Indices.size()));
+
+	WriteF32(contents, mesh.AssetOrigin.x);
+	WriteF32(contents, mesh.AssetOrigin.y);
+	WriteF32(contents, mesh.AssetOrigin.z);
+
+	WriteF32(contents, mesh.AssetSize.x);
+	WriteF32(contents, mesh.AssetSize.y);
+	WriteF32(contents, mesh.AssetSize.z);
 
 	if (!hasPerVertexColor)
 	{
@@ -699,32 +726,12 @@ void MeshProvider::Save(uint32_t Id, const std::string_view& Path)
 	this->Save(m_Meshes.at(Id), Path);
 }
 
-static void finishAndUploadMesh(Mesh& mesh, MeshProvider::GpuMesh& gpuMesh, bool IsHeadless)
+static void finishAndUploadMesh(Mesh& mesh, MeshProvider::GpuMesh& gpuMesh, bool Headless)
 {
 	ZoneScoped;
 
-	if (IsHeadless)
-	{
-		for (uint8_t bi = 0; bi < mesh.Bones.size(); bi++)
-		{
-			Bone& bone = mesh.Bones[bi];
-
-			for (uint32_t vi = 0; vi < mesh.Vertices.size(); vi++)
-			{
-				const Vertex& v = mesh.Vertices[vi];
-
-				for (uint8_t ji = 0; ji < v.InfluencingJoints.size(); ji++)
-					if (v.InfluencingJoints[ji] == bi
-						&& v.JointWeights[ji] > 0.f
-					)
-						bone.TargetVertices.emplace_back(vi, ji);
-			}
-
-			// generally not ever going to be modified again
-			bone.TargetVertices.shrink_to_fit();
-		}
+	if (Headless)
 		return;
-	}
 
 	GpuVertexArray& vao = gpuMesh.VertexArray;
 	GpuVertexBuffer& vbo = gpuMesh.VertexBuffer;
@@ -821,25 +828,6 @@ static void finishAndUploadMesh(Mesh& mesh, MeshProvider::GpuMesh& gpuMesh, bool
 			data.data(),
 			GL_STATIC_DRAW
 		);
-
-		for (uint8_t bi = 0; bi < mesh.Bones.size(); bi++)
-		{
-			Bone& bone = mesh.Bones[bi];
-
-			for (uint32_t vi = 0; vi < mesh.Vertices.size(); vi++)
-			{
-				const Vertex& v = mesh.Vertices[vi];
-
-				for (uint8_t ji = 0; ji < v.InfluencingJoints.size(); ji++)
-					if (v.InfluencingJoints[ji] == bi
-						&& v.JointWeights[ji] > 0.f
-					)
-						bone.TargetVertices.emplace_back(vi, ji);
-			}
-
-			// generally not ever going to be modified again
-			bone.TargetVertices.shrink_to_fit();
-		}
 	}
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -1036,7 +1024,7 @@ uint32_t MeshProvider::LoadFromPath(
 			}
 
 			m_CreateAndUploadGpuMesh(mesh);
-			
+
 			return this->Assign(mesh, Path);
 		}
 	}

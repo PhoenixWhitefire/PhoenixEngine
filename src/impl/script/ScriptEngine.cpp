@@ -828,7 +828,8 @@ static Reflection::GenericValue toGenericValue(lua_State* L, int StackIndex, int
 	default:
 	{
 		const char* tname = luaL_typename(L, StackIndex);
-		luaL_error(L, "Could not convert type '%s' to a GenericValue (no conversion case)", tname);
+		//luaL_error(L, "Could not convert type '%s' to a GenericValue (no conversion case)", tname);
+		return tname;
 	}
 	}
 }

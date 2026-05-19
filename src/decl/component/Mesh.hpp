@@ -14,19 +14,18 @@ struct EcMesh : public Component<EntityComponent::Mesh>
 
 	uint32_t RenderMeshId = UINT32_MAX;
 	uint32_t MaterialId = UINT32_MAX;
+	Color Tint = { 1.f, 1.f, 1.f };
 
 	float Transparency = 0.f;
 	float MetalnessFactor = 1.f;
 	float RoughnessFactor = 1.f;
 
-	Color Tint = { 1.f, 1.f, 1.f };
-
 	std::string Asset = "!Cube";
 	uint32_t GpuSkinningBuffer = UINT32_MAX;
 
 	uint32_t ComponentId = UINT32_MAX;
-
 	ObjectRef Object;
+
 	FaceCullingMode FaceCulling = FaceCullingMode::BackFace;
 	bool CastsShadows = true;
 
