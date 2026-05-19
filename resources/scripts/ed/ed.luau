@@ -103,6 +103,8 @@ local ErrorMessageTimeRemaining = 0
 local LastAutosaved = 0
 local ViewportRenderPosition = vector.zero
 local ViewportRenderSize = vector.zero
+local CommandBarHistory: { string } = {}
+local CommandBarHistoryCursor = 1
 
 History:EnableRecording()
 
@@ -121,6 +123,11 @@ EditorPreferences = savedEditorPreferences :: typeof(EditorPreferences)
 for _, devTool in EditorPreferences.DevToolsOpen do
 	DeveloperTools:SetToolEnabled(devTool, true)
 end
+
+local commandBarSavedHistory = if fs.isfile("./editor/command-history.json") then json.parse(assert(fs.read("./editor/command-history.json"))) else {}
+assert(typeof(commandBarSavedHistory) == "table")
+CommandBarHistory = commandBarSavedHistory :: any
+CommandBarHistoryCursor = #CommandBarHistory
 
 if not Engine.IsHeadless then
 	imgui.stylecolors(if EditorPreferences.UseLightTheme then 'l' else 'd')
@@ -1021,6 +1028,7 @@ local function saveSettings()
 		didFocusCodeEditorSetting = false
 
 		fs.write("./editor/models.json", json.encode(ModelModifiedTimes :: { [string]: JsonSerializable }))
+		fs.write("./editor/command-history.json", json.encode(CommandBarHistory))
 	end)
 
 	if not success then
@@ -1814,6 +1822,8 @@ SelectionPart.FaceCulling = Enum.FaceCulling.None
 SelectionPart.Name = "SelectionPart"
 
 local CommandBarCommand = ""
+local CommandBarBlinkFrame = 0
+local CommandBarPostRun = false
 local IsHoveringViewportTitlebar = false
 local IsHoveringViewport = false
 local ViewportRight = 0
@@ -1990,9 +2000,15 @@ end
 local LogMessageHovering: number = -1
 local CommandBarActive = false
 
-PlayerInput.KeyEvent:Connect(function(kie: KeyInputEvent)
-	if not CommandBarActive or kie.Action ~= Enum.InputAction.Pressed or kie.Key ~= Enum.Key.Enter then
-		return
+local function runCurrentCommand()
+	if #CommandBarHistory == 0 or CommandBarHistory[#CommandBarHistory] ~= CommandBarCommand then
+		table.insert(CommandBarHistory, CommandBarCommand)
+
+		if #CommandBarHistory > 100 then
+			table.remove(CommandBarHistory, 1)
+		end
+
+		CommandBarHistoryCursor = #CommandBarHistory
 	end
 
 	local commandBarAction = History:TryBeginAction("CommandBarCode")
@@ -2011,6 +2027,30 @@ PlayerInput.KeyEvent:Connect(function(kie: KeyInputEvent)
 
 	if commandBarAction then
 		History:FinishAction(commandBarAction)
+	end
+
+	CommandBarPostRun = true
+end
+
+PlayerInput.KeyEvent:Connect(function(kie: KeyInputEvent)
+	if not CommandBarActive or kie.Action ~= Enum.InputAction.Pressed then
+		return
+	end
+
+	if kie.Key == Enum.Key.Enter then
+		runCurrentCommand()
+	elseif #CommandBarHistory > 0 then
+		if kie.Key == Enum.Key.Up and CommandBarHistoryCursor > 1 then
+			CommandBarHistoryCursor -= 1
+			CommandBarCommand = assert(CommandBarHistory[CommandBarHistoryCursor])
+			CommandBarBlinkFrame = 1
+		end
+
+		if kie.Key == Enum.Key.Down and CommandBarHistoryCursor < #CommandBarHistory then
+			CommandBarHistoryCursor += 1
+			CommandBarCommand = assert(CommandBarHistory[CommandBarHistoryCursor])
+			CommandBarBlinkFrame = 1
+		end
 	end
 end)
 
@@ -2375,8 +2415,21 @@ local function renderViewport(DeltaTime: number)
 		imgui.sameline()
 		imgui.setcursorposition(imgui.cursorposition() - vector.create(0, 2))
 
-		CommandBarCommand = imgui.inputstring("##Command", CommandBarCommand)
+		CommandBarCommand = imgui.inputstring(if CommandBarBlinkFrame == 1 then "##CommandBarBlinking" else "##Command", CommandBarCommand)
 		CommandBarActive = imgui.itemactive()
+
+		if CommandBarBlinkFrame == 1 then
+			CommandBarBlinkFrame += 1
+
+		elseif CommandBarBlinkFrame == 2 then
+			CommandBarBlinkFrame = 0
+			imgui.focuskeyboardhere(-1)
+		end
+
+		if CommandBarPostRun then
+			imgui.focuskeyboardhere(-1)
+			CommandBarPostRun = false
+		end
 
 		imgui.sameline()
 

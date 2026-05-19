@@ -2777,7 +2777,7 @@ static void renderExplorer()
 	if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
 		ImGui::OpenPopup(1979); // the mimic!!;
 
-	if (ImGui::IsWindowHovered())
+	if (!ImGui::IsAnyItemActive())
 	{
 		if (ImGui::IsKeyDown(ImGuiKey_F2) && Selections.size() > 0)
 		{
@@ -2793,6 +2793,7 @@ static void renderExplorer()
 				sel->SetParent(nullptr); // We can't actually `::Destroy` it because then we won't be able to Undo it back
 
 			Selections.clear();
+			ImGui::SetWindowFocus();
 		}
 	}
 
@@ -5606,19 +5607,21 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 			{
 				for (int i = 1; i < ar->nupvals; i++)
 				{
-					const char* name = lua_getupvalue(L, currfuncindex, i);
-				
-					if (!name)
+					const char* nameCstr = lua_getupvalue(L, currfuncindex, i);
+
+					if (!nameCstr)
 						break;
-				
-					lua_pushstring(L, name);
+
+					std::string name = nameCstr[0] != '\0' ? nameCstr : std::format("[upvalue{}]", i);
+
+					lua_pushstring(L, name.c_str());
 					lua_pushvalue(L, -2);
 
 					if (debugVariable(L) && lua_setupvalue(L, currfuncindex, i))
 						lua_pop(L, 1);
 					else
 						lua_pop(L, 2);
-				
+
 					lua_pop(L, 1);
 				}
 
@@ -5781,7 +5784,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 				ImGui::SetCursorPosX(ImGui::GetWindowSize().x * 0.75f + ImGui::CalcTextSize("OK FIN").x);
 
 				const LuauStatusDisplayInfo& lsdi = LuauStatuses[lua_status(coroutine)];
-				const LuauCoroutineStatusDisplayInfo& lcsdi = LuauCoroutineStatuses[lua_costatus(nullptr, coroutine)];
+				const LuauCoroutineStatusDisplayInfo& lcsdi = LuauCoroutineStatuses[lua_costatus(lua_mainthread(coroutine), coroutine)];
 
 				ImGui::PushStyleColor(ImGuiCol_Text, lsdi.Color);
 				ImGui::TextUnformatted(lsdi.Id);
